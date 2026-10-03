@@ -5,6 +5,8 @@
 <p align="center"><b>Watch digital TV and listen to digital radio with a software-defined radio.</b><br>
 Free and open source. macOS, Windows and Linux.</p>
 
+<p align="center"><a href="https://github.com/adswill/OnAir/releases/download/v0.1.0/OnAir_promo_v0.1.0.mp4"><b>Watch the overview video</b></a></p>
+
 ---
 
 OnAir turns a low-cost SDR (a HackRF, and many other radios) into a complete digital broadcast receiver. Plug in an antenna, pick a channel, and watch live TV or listen to digital radio, while seeing exactly what the receiver is doing: the spectrum, the signal quality, the constellations, the echoes in your reception.
