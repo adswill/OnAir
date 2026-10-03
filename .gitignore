@@ -1,0 +1,15 @@
+*.cs8
+*.ts
+.DS_Store
+build-asan/
+build-packages/
+build-portable/
+build-release
+build-release/
+build-shots
+build/
+recordings/
+build-windows*/
+release/
+build-packages-arm/
+assets/

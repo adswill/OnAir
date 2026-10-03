@@ -1,0 +1,4 @@
+FROM ubuntu:24.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y build-essential file cmake pkg-config gdb libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev \
+    libglfw3-dev xvfb libgl1-mesa-dri libglx-mesa0 fonts-dejavu-core libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev && rm -rf /var/lib/apt/lists/*

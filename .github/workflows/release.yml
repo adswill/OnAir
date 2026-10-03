@@ -1,0 +1,78 @@
+name: Release
+
+# Builds the installers when a version tag is pushed (git tag v0.1.0 && git push --tags) and attaches them to a GitHub release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    name: macOS disk image
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: brew install cmake pkg-config hackrf soapysdr libusb ffmpeg glfw
+      - name: Build the app and the .dmg
+        run: tools/package/make_dmg.sh
+      - uses: actions/upload-artifact@v4
+        with: { name: macos-dmg, path: build-release/*.dmg }
+
+  linux:
+    name: Linux ${{ matrix.arch }} packages
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - { arch: x86_64, os: ubuntu-24.04 }
+          - { arch: arm64, os: ubuntu-24.04-arm }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential file cmake pkg-config libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libglfw3-dev
+      - name: Build
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=ON -DCMAKE_INSTALL_PREFIX=/usr
+          cmake --build build -j 4 --target dect2 dect2cli dect2scan
+      - name: Package
+        run: cd build && cpack -G "DEB;TGZ"
+      - uses: actions/upload-artifact@v4
+        with: { name: "linux-${{ matrix.arch }}", path: "build/onair*.deb\nbuild/onair-*.tar.gz" }
+
+  windows:
+    name: Windows x64 installer and zip
+    runs-on: windows-2022
+    defaults: { run: { shell: 'msys2 {0}' } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            zip
+            mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-pkgconf
+            mingw-w64-x86_64-ffmpeg mingw-w64-x86_64-glfw mingw-w64-x86_64-hackrf mingw-w64-x86_64-soapysdr
+            mingw-w64-x86_64-libiconv mingw-w64-x86_64-nsis
+      - name: Build and package
+        run: tools/package/make_windows.sh
+      - uses: actions/upload-artifact@v4
+        with: { name: windows-x64, path: "build-windows/OnAir-*.zip\nbuild-windows/OnAir-*-setup.exe" }
+
+  publish:
+    name: Attach to the release
+    needs: [macos, linux, windows]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: dist, merge-multiple: true }
+      - name: Create the release
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: gh release create "${GITHUB_REF_NAME}" dist/* --repo "${GITHUB_REPOSITORY}" --title "OnAir ${GITHUB_REF_NAME}" --generate-notes
