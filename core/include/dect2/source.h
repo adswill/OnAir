@@ -38,16 +38,18 @@ struct TuneSettings {
 };
 
 struct DeviceInfo {
-    enum Kind { Synthetic, File, HackRF, Soapy } kind = Synthetic;
+    enum Kind { Synthetic, File, HackRF, Soapy, Native } kind = Synthetic;   // Native: a radio driven by its own library (experimental), see source_native.cpp
     std::string name;   // display name
     std::string serial; // HackRF serial / file path
     std::string board;  // "HackRF One", "HackRF Pro", "airspy", "sdrplay", ...
     // generic radios (SoapySDR)
     std::string soapyArgs;     // device arguments, e.g. "driver=airspy,serial=..."
+    std::string nativeArgs;    // what the radio's own library wants to open it (index, serial, URI, ...)
     double maxRateHz = 0;      // fastest complex sample rate the radio offers (0 = unknown)
     double minRateHz = 0;
     double gainMinDb = 0, gainMaxDb = 0;
-    bool isRadio() const { return kind == HackRF || kind == Soapy; }
+    bool isRadio() const { return kind == HackRF || kind == Soapy || kind == Native; }
+    bool isGeneric() const { return kind == Soapy || kind == Native; }   // one overall gain, a sample-rate range reported by the radio
 };
 
 class IqSource {
@@ -64,7 +66,10 @@ std::vector<DeviceInfo> listHackrfDevices(std::string& err);
 // Every other radio that SoapySDR knows (Airspy, SDRplay, RTL-SDR, PlutoSDR, LimeSDR, BladeRF, USRP, ...). Empty when built without SoapySDR.
 std::vector<DeviceInfo> listSoapyDevices(std::string& err);
 bool soapySupported();
-// Every radio found: HackRF first, then the SoapySDR ones.
+// Radios driven by their own libraries when those are installed: RTL-SDR, Airspy, BladeRF, LimeSDR, PlutoSDR, USRP (experimental).
+std::vector<DeviceInfo> listNativeDevices(std::string& err);
+std::unique_ptr<IqSource> makeNativeSource(const DeviceInfo& d);
+// Every radio found: HackRF first, then the native ones, then the SoapySDR ones (a radio found natively is not listed again through SoapySDR).
 std::vector<DeviceInfo> listRadios(std::string& err);
 std::unique_ptr<IqSource> makeSource(const DeviceInfo& d);
 

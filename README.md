@@ -52,7 +52,7 @@ New to all this? Press **Tour** and a friendly little TV will walk you through i
 
 ## Supported radios
 
-OnAir supports the **HackRF One and HackRF Pro** natively. Many other radios work through [SoapySDR](https://github.com/pothosware/SoapySDR) (Airspy, SDRplay, PlutoSDR, BladeRF, LimeSDR, USRP, RTL-SDR and others) once their SoapySDR module is installed; they appear in the source menu automatically.
+OnAir supports the **HackRF One and HackRF Pro** natively. **RTL-SDR, Airspy, BladeRF, LimeSDR, PlutoSDR and USRP** radios are driven directly too (marked "experimental" in the radio list) as soon as the manufacturer's driver library is installed, and nothing else has to be set up. Every other radio, such as the SDRplay RSP, works through [SoapySDR](https://github.com/pothosware/SoapySDR) once its SoapySDR module is installed. Radios that are found appear in the source list next to the HackRF, and the gain control becomes one overall gain slider.
 
 A TV channel needs a radio that can sample fast enough, roughly 1 million samples per second per MHz of channel width:
 
@@ -62,7 +62,7 @@ A TV channel needs a radio that can sample fast enough, roughly 1 million sample
 | Airspy R2, SDRplay | Should work | Yes |
 | RTL-SDR | No | Yes |
 
-The HackRF is the radio the project is developed and tested with; the others are supported through SoapySDR and have had less real-world testing. On Windows, RTL-SDR and Airspy radios are included; other radios need their own SoapySDR driver.
+The HackRF is the radio the project is developed and tested with; the others have had less real-world testing. On Windows, RTL-SDR and Airspy radios are included in the installer.
 
 ## Good to know
 

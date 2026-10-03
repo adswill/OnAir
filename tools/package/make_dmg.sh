@@ -32,6 +32,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 python3 tools/package/bundle_macos.py "$APP"
 # the app is signed ad hoc (no developer certificate): macOS shows a one-time "unidentified developer" prompt on first launch
+python3 tools/package/scrub_paths.py "$APP"   # no build-machine paths in the shipped files (before signing)
 for f in "$APP"/Contents/Frameworks/*.dylib; do codesign --force -s - "$f" >/dev/null 2>&1; done
 codesign --force --deep -s - "$APP" >/dev/null 2>&1
 STAGE=$BUILD/dmg

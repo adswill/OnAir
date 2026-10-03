@@ -20,9 +20,30 @@
 #include <cstdint>
 #include <functional>
 #include <utility>
+#include <chrono>
+#include <string>
 #include <vector>
 
 namespace dect2 {
+
+// Where the receiver thread spends its time (shown in the log when a source stops): resampler, P1 search, guard check, symbols, FFTs, data stage.
+namespace {
+struct StageClock {
+    double sec[6] = {0, 0, 0, 0, 0, 0};
+    std::chrono::steady_clock::time_point t0;
+    int which;
+    explicit StageClock(int w) : t0(std::chrono::steady_clock::now()), which(w) {}
+    ~StageClock() { g()[which] += std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count(); }
+    static double* g() { static double v[6] = {0, 0, 0, 0, 0, 0}; return v; }
+};
+}
+std::string t2rxProfile() {
+    const double* v = StageClock::g();
+    char b[200];
+    snprintf(b, sizeof b, "receiver stages (s): resampler %.2f, P1 search %.2f, guard check %.2f, symbols %.2f (including FFT %.2f and data stage %.2f)", v[0], v[1], v[2], v[3], v[4], v[5]);
+    return b;
+}
+
 
 using cd = std::complex<double>;
 static constexpr double kTwoPi = 6.283185307179586;
@@ -520,7 +541,7 @@ struct T2Receiver::Impl {
                 int64_t s = f.anchor + gridOff + (int64_t)std::llround((double)f.next * (N + G) * (1.0 + sro));
                 if (s + N + G + 40 > end()) { stalled = true; break; }
                 int idx = f.next++;
-                processSymbol(s, idx); // may clear `frames` (loss of lock / guard-interval correction)
+                { StageClock sc(3); processSymbol(s, idx); } // may clear `frames` (loss of lock / guard-interval correction)
             }
             if (stalled || frames.empty()) break;
             frames.pop_front();
@@ -529,6 +550,7 @@ struct T2Receiver::Impl {
 
     // FFT of the symbol that starts at s (guard included); returns the K central carriers, CFO-corrected.
     void fftCells(int64_t s, std::vector<cf32>& cells, int K) {
+        StageClock sc(4);
         const int N = fftN, G = guard;
         int back = std::min(G / 4, 32);
         int64_t w0 = s + G - back;
@@ -885,6 +907,7 @@ struct T2Receiver::Impl {
 
     // Scattered-pilot channel estimation for the data / frame-closing symbols of the frame just received.
     void runDataStage() {
+        StageClock sc(5);
         const FftMode* fm = fftModeFromS2(fftCode);
         if (!fm || !l1preOk) return;
         const int L = frameSyms, N = fftN, G = guard;
@@ -1294,8 +1317,8 @@ struct T2Receiver::Impl {
     // ------------------------------------------------------------ driver
     void run() {
         for (int guardLoop = 0; guardLoop < 8; guardLoop++) {
-            scanP1();
-            if (state == 1) evaluateGi();
+            { StageClock sc(1); scanP1(); }
+            if (state == 1) { StageClock sc(2); evaluateGi(); }
             if (state == 2) processFrames();
             if (state == 2 && frames.empty() && lastP1Seen > 0 && end() - lastP1Seen > (int64_t)(std::max(frameLen, 0.35 * fn) * 3 + 2 * fn * 0.05)) {
                 state = 0; // no P1 for a long while
@@ -1420,7 +1443,7 @@ void T2Receiver::reset() {
 void T2Receiver::feed(const cf32* x, size_t n) {
     Impl& I = *p_;
     if (!I.rateOk || I.fn <= 0) return;
-    if (I.decimate) { I.rsOut.clear(); I.resampler.process(x, n, I.rsOut); I.buf.insert(I.buf.end(), I.rsOut.begin(), I.rsOut.end()); }
+    if (I.decimate) { StageClock sc(0); I.rsOut.clear(); I.resampler.process(x, n, I.rsOut); I.buf.insert(I.buf.end(), I.rsOut.begin(), I.rsOut.end()); }
     else I.buf.insert(I.buf.end(), x, x + n);
     I.run();
 }

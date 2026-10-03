@@ -22,6 +22,8 @@ mkdir -p "$OUT/lib/SoapySDR/modules0.8"
 cp "$P"/lib/SoapySDR/modules0.8/*.dll "$OUT/lib/SoapySDR/modules0.8/"
 LIBDIR=$(dirname "$(x86_64-w64-mingw32-g++ -print-file-name=libstdc++-6.dll)")
 for f in "$LIBDIR/libstdc++-6.dll" "$LIBDIR/libgcc_s_seh-1.dll" "$LIBDIR/../bin/libwinpthread-1.dll"; do [ -f "$f" ] && cp "$f" "$OUT/" || echo "warning: $f not found"; done
+for f in "$OUT"/*.dll "$OUT"/lib/SoapySDR/modules0.8/*.dll; do [ -f "$f" ] && $S --strip-unneeded "$f" 2>/dev/null; done   # debugging information makes libstdc++ alone 29 MB
+python3 tools/package/scrub_paths.py "$OUT"   # no build-machine paths in the shipped files
 cp LICENSE "$OUT/LICENSE.txt"
 cat > "$OUT/README.txt" <<'TXT'
 OnAir - DVB-T2 / DVB-T / ATSC / DAB receiver (Windows x64, needs a CPU with AVX2)

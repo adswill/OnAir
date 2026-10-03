@@ -386,7 +386,16 @@ std::vector<DeviceInfo> listSoapyDevices(std::string&) { return {}; }
 std::vector<DeviceInfo> listRadios(std::string& err) {
     std::vector<DeviceInfo> out = listHackrfDevices(err);
     std::string e2;
-    for (auto& d : listSoapyDevices(e2)) out.push_back(d);
+    const std::vector<DeviceInfo> native = listNativeDevices(e2);
+    for (auto& d : native) out.push_back(d);
+    if (err.empty()) err = e2;
+    // the SoapySDR driver names of the radios that are also available natively
+    auto soapyName = [](const std::string& b) { return b == "pluto" ? std::string("plutosdr") : b == "usrp" ? std::string("uhd") : b == "lime" ? std::string("lime") : b; };
+    for (auto& d : listSoapyDevices(e2)) {
+        bool dup = false;
+        for (auto& n : native) if (soapyName(n.board) == d.board) dup = true;
+        if (!dup) out.push_back(d);
+    }
     if (err.empty()) err = e2;
     return out;
 }
@@ -397,6 +406,7 @@ std::unique_ptr<IqSource> makeSource(const DeviceInfo& d) {
 #ifdef DECT2_HAVE_SOAPY
     case DeviceInfo::Soapy: return makeSoapySource(d);
 #endif
+    case DeviceInfo::Native: return makeNativeSource(d);
     case DeviceInfo::Synthetic: return std::make_unique<SyntheticSource>();
     default: return nullptr;
     }

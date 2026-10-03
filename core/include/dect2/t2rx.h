@@ -14,6 +14,8 @@
 #include <vector>
 
 namespace dect2 {
+std::string t2rxProfile();   // time per stage of the DVB-T2 receiver thread, for the log
+
 
 struct P1Info {
     bool valid = false;

@@ -373,7 +373,26 @@ GpuLdpc::GpuLdpc() : p_(new Impl) {
     if (!create || !compile) return;
     static const D3D_FEATURE_LEVEL levels[] = {D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0};
     D3D_FEATURE_LEVEL got = D3D_FEATURE_LEVEL_11_0;
-    if (FAILED(create(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, levels, 2, D3D11_SDK_VERSION, d.dev.put(), &got, d.ctx.put()))) return;
+    // On laptops with two graphics chips the default adapter is often the weak integrated one: take the one with the most own video memory.
+    Com<IDXGIAdapter> best;
+    if (HMODULE hDxgi = LoadLibraryA("dxgi.dll")) {
+        typedef HRESULT(WINAPI * PFN_FACTORY)(REFIID, void**);
+        if (auto mk = (PFN_FACTORY)GetProcAddress(hDxgi, "CreateDXGIFactory1")) {
+            Com<IDXGIFactory1> fac;
+            if (SUCCEEDED(mk(__uuidof(IDXGIFactory1), (void**)fac.put()))) {
+                SIZE_T bestMem = 0;
+                for (UINT i = 0;; i++) {
+                    Com<IDXGIAdapter> a;
+                    if (fac->EnumAdapters(i, a.put()) != S_OK) break;
+                    DXGI_ADAPTER_DESC ds{};
+                    if (FAILED(a->GetDesc(&ds)) || ds.VendorId == 0x1414) continue;
+                    fprintf(stderr, "GpuLdpc: adapter %u: %ls, %zu MB\n", i, ds.Description, (size_t)(ds.DedicatedVideoMemory >> 20));
+                    if (!best || ds.DedicatedVideoMemory > bestMem) { best = std::move(a); bestMem = ds.DedicatedVideoMemory; }
+                }
+            }
+        }
+    }
+    if (FAILED(create(best.p, best ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, levels, 2, D3D11_SDK_VERSION, d.dev.put(), &got, d.ctx.put()))) { fprintf(stderr, "GpuLdpc: no Direct3D 11 device\n"); return; }
     // a compute shader for 360 threads and structured buffers needs a real feature level 11 device
     if (got < D3D_FEATURE_LEVEL_11_0) { d.dev.reset(); d.ctx.reset(); return; }
     {
@@ -408,6 +427,7 @@ GpuLdpc::GpuLdpc() : p_(new Impl) {
     cd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     if (FAILED(d.dev->CreateBuffer(&cd, nullptr, d.cbuf.put()))) { d.dev.reset(); d.ctx.reset(); return; }
     d.ready = true;
+    fprintf(stderr, "GpuLdpc: using \"%s\"\n", d.name.c_str());
     // Self-test: shader compilers and drivers differ, and a wrong decoder is far worse than a slow one. A few noisy blocks are decoded on the
     // GPU and the result must be the transmitted data; otherwise the GPU decoder switches itself off and the CPU decoder is used.
     if (!selfTest()) { d.ready = false; fprintf(stderr, "GpuLdpc: self-test failed on \"%s\", using the CPU decoder\n", d.name.c_str()); }

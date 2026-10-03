@@ -1,5 +1,6 @@
 #include "dect2/engine.h"
 #include "dect2/dvbt.h"
+#include "dect2/t2rx.h"
 #include <chrono>
 #include "dect2/platform.h"
 #include <cstdio>
@@ -85,7 +86,7 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     char b[160];
     snprintf(b, sizeof b, "source started: %s  fs=%.4f Msps", dev.name.c_str(), rate_.load() / 1e6);
     log(b);
-    if (dev.kind == DeviceInfo::Soapy) {
+    if (dev.isGeneric()) {
         snprintf(b, sizeof b, "tuned %.3f MHz  gain %.0f dB", tune.centerHz / 1e6, tune.gainDb);
         log(b);
     }
@@ -111,6 +112,7 @@ void Engine::stop() {
         double dur = nSamp_ / std::max(1.0, rate_.load());
         snprintf(b, sizeof b, "source stopped (CPU load: spectrum %.0f%%, receiver %.0f%% of real time)", 100 * tSpec_ / std::max(1e-9, dur), 100 * tRx_ / std::max(1e-9, dur));
         log(b);
+        log(t2rxProfile());
     }
     running_ = false;
 }

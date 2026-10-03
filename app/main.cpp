@@ -1,4 +1,7 @@
 // OnAir — digital TV receiver (DVB-T2, DVB-T, ATSC) for macOS. Phase 0 shell: sources, spectrum, waterfall, status, log.
+#ifdef _WIN32
+#include <direct.h>
+#endif
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "implot.h"
@@ -276,8 +279,8 @@ static void applyBandwidth(App& a) {
     a.tune.sampleRate = kBw[a.bwIdx].mhz >= 7 ? 10e6 : 8e6;
     {   // a radio that cannot reach that rate runs as fast as it can (the source picks the nearest rate it offers)
         const DeviceInfo& dv = a.devices[a.devIdx];
-        if (dv.kind == DeviceInfo::Soapy && dv.maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, dv.maxRateHz);
-        if (dv.kind == DeviceInfo::Soapy && a.tune.gainDb > dv.gainMaxDb && dv.gainMaxDb > 0) a.tune.gainDb = dv.gainMaxDb;
+        if (dv.isGeneric() && dv.maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, dv.maxRateHz);
+        if (dv.isGeneric() && a.tune.gainDb > dv.gainMaxDb && dv.gainMaxDb > 0) a.tune.gainDb = dv.gainMaxDb;
     }
     a.tune.basebandFilterHz = 0;
     a.tune.bandwidthMhz = kBw[a.bwIdx].mhz;
@@ -286,8 +289,8 @@ static void applyBandwidth(App& a) {
     if (a.dabMode) {   // a DAB ensemble is 1.536 MHz wide: 2.048 Msps is the natural rate (RTL-SDR dongles do it too)
         a.tune.bandwidthMhz = 1.7; a.tune.sampleRate = 2.048e6; a.tune.basebandFilterHz = 1.75e6;
         const DeviceInfo& dv = a.devices[a.devIdx];
-        if (dv.kind == DeviceInfo::Soapy && dv.maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, dv.maxRateHz);
-    } else if (a.atscMode) { a.tune.bandwidthMhz = 6; a.tune.sampleRate = 8e6; if (a.devices[a.devIdx].kind == DeviceInfo::Soapy && a.devices[a.devIdx].maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, a.devices[a.devIdx].maxRateHz); }   // an ATSC channel is always 6 MHz wide
+        if (dv.isGeneric() && dv.maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, dv.maxRateHz);
+    } else if (a.atscMode) { a.tune.bandwidthMhz = 6; a.tune.sampleRate = 8e6; if (a.devices[a.devIdx].isGeneric() && a.devices[a.devIdx].maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, a.devices[a.devIdx].maxRateHz); }   // an ATSC channel is always 6 MHz wide
 }
 
 static std::string openFileDialog() { return plat::openFileDialog(); }
@@ -453,7 +456,7 @@ static void toolbar(App& a) {
 
     bool isHw = a.devices[a.devIdx].isRadio();
     const DeviceInfo& curDev = a.devices[a.devIdx];
-    const bool generic = curDev.kind == DeviceInfo::Soapy;
+    const bool generic = curDev.isGeneric();
     bool isFile = a.devices[a.devIdx].kind == DeviceInfo::File;
 
     vSeparator();
@@ -579,7 +582,13 @@ static void toolbar(App& a) {
             }
             ImGui::EndCombo();
         }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("LDPC decoding backend.\nCPU: NEON on all cores. GPU: Metal compute.\nAuto: CPU until it falls behind real time, then GPU.");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("LDPC decoding backend.\n"
+#ifdef __APPLE__
+            "CPU: NEON on all cores. GPU: Metal compute.\n"
+#else
+            "CPU: AVX2 on all cores. GPU: Direct3D 11 compute (Windows).\n"
+#endif
+            "Auto: CPU until it falls behind real time, then GPU.");
     }
     ImGui::SameLine(0, 14 * gUi);
     {
@@ -2580,7 +2589,7 @@ static void routeTab(App& a, const std::string& name) {
 static void gainControl(App& a) {
     if (!a.engine.running() || a.devices[a.devIdx].kind == DeviceInfo::File) { a.sweep = GainSweep(); return; }
     const DeviceInfo& cd = a.devices[a.devIdx];
-    const bool generic = cd.kind == DeviceInfo::Soapy;
+    const bool generic = cd.isGeneric();
     const int gmax = generic ? std::max(1, (int)cd.gainMaxDb) : 0;
     a.agc.setGenericMax(gmax);
     GainSetting g = generic ? genericGain((int)std::lround(a.tune.gainDb), gmax) : GainSetting{a.tune.lnaDb, a.tune.vgaDb, a.tune.ampOn};
@@ -2961,6 +2970,16 @@ static void drawUI(App& a, ImVec2 disp) {
 // ------------------------------------------------------------------ main
 
 int main(int argc, char** argv) {
+#ifdef _WIN32
+    {   // the program has no console window: keep its messages in a log file next to the settings
+        if (const char* ap = getenv("APPDATA")) {
+            const std::string dir = std::string(ap) + "\\OnAir";
+            _mkdir(dir.c_str());
+            FILE* unused = freopen((dir + "\\onair.log").c_str(), "w", stderr);
+            (void)unused;
+        }
+    }
+#endif
     if (!dect2::cpuSupportsBuild()) {
         plat::showFatalError("OnAir", "This version of OnAir needs a processor with AVX2 and FMA instructions (any Intel or AMD processor from about 2013 on).");
         return 1;
@@ -3107,7 +3126,7 @@ int main(int argc, char** argv) {
             if (stress && app.engine.running() && ++stressFrame % 100 == 0) {
                 stressStep++;
                 app.freqMhz = 522.0 + 0.5 * (stressStep % 4);
-                if (app.devices[app.devIdx].kind == DeviceInfo::Soapy) app.tune.gainDb = 20 + 5 * (stressStep % 5);
+                if (app.devices[app.devIdx].isGeneric()) app.tune.gainDb = 20 + 5 * (stressStep % 5);
                 else { app.tune.lnaDb = 16 + 8 * (stressStep % 3); app.tune.vgaDb = 20 + 4 * (stressStep % 4); app.tune.ampOn = stressStep % 2; }
                 app.tune.centerHz = app.freqMhz * 1e6;
                 app.engine.retune(app.tune);

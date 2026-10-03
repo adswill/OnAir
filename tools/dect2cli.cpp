@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
         if (list.empty()) { fprintf(stderr, "no radio found (HackRF or SoapySDR) %s\n", err.c_str()); return 1; }
         dev = list[0];
         printf("device: %s\n", dev.name.c_str());
-        if (dev.kind == DeviceInfo::Soapy) {
+        if (dev.isGeneric()) {
             if (dev.maxRateHz > 0) tune.sampleRate = std::min(tune.sampleRate, dev.maxRateHz);
             if (tune.gainDb == 30) tune.gainDb = std::max(dev.gainMinDb, dev.gainMaxDb * 0.6);   // a sensible start; --gain overrides
             printf("radio: up to %.2f Msps, gain %.0f..%.0f dB, using %.2f Msps / %.0f dB\n", dev.maxRateHz / 1e6, dev.gainMinDb, dev.gainMaxDb, tune.sampleRate / 1e6, tune.gainDb);
