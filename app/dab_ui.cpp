@@ -137,8 +137,8 @@ void dabPanels(App& a) {
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
     ImGui::TextDisabled("Impulse response (echoes)");
-    if (ImPlot::BeginPlot("##dcir", sz, ImPlotFlags_NoLegend | ImPlotFlags_NoTitle)) {
-        ImPlot::SetupAxes("us", nullptr, 0, ImPlotAxisFlags_NoTickLabels);
+    if (plt::BeginPlot("##dcir", sz, plt::Flags_NoLegend | plt::Flags_NoTitle)) {
+        plt::SetupAxes("us", nullptr, 0, plt::AxisFlags_NoTickLabels);
         if (!d.cir.empty()) {
             const int n = (int)d.cir.size();
             int pk = 0;
@@ -156,12 +156,12 @@ void dabPanels(App& a) {
             std::sort(order.begin(), order.end(), [&](int p, int q) { return x[(size_t)p] < x[(size_t)q]; });
             std::vector<double> xs2(n), ys2(n);
             for (int i = 0; i < n; i++) { xs2[(size_t)i] = x[(size_t)order[(size_t)i]]; ys2[(size_t)i] = y[(size_t)order[(size_t)i]]; }
-            ImPlot::SetupAxisLimits(ImAxis_X1, -60, 120, ImPlotCond_Always);
-            ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 1.05, ImPlotCond_Always);
-            ImPlotSpec sp; sp.LineColor = pal::accent(); sp.LineWeight = 1.2f;
-            ImPlot::PlotLine("cir", xs2.data(), ys2.data(), n, sp);
+            plt::SetupAxisLimits(plt::X1, -60, 120, plt::Cond_Always);
+            plt::SetupAxisLimits(plt::Y1, 0, 1.05, plt::Cond_Always);
+            plt::Spec sp; sp.LineColor = pal::accent(); sp.LineWeight = 1.2f;
+            plt::PlotLine("cir", xs2.data(), ys2.data(), n, sp);
         }
-        ImPlot::EndPlot();
+        plt::EndPlot();
     }
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);

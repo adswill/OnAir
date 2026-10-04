@@ -4,6 +4,7 @@
 #include "atsc_tel.h"
 #include "ring.h"
 #include <functional>
+#include <vector>
 #include <memory>
 #include <cstdint>
 
@@ -28,6 +29,8 @@ public:
     // true: when the field worker is busy the sample thread waits for it (files, tests). false (default): fields are dropped and the
     // decoder restarts, which is what a live source needs so that the sample path never stalls.
     void setBlocking(bool b);
+    // Test hook: called with the equalised symbol levels (kFieldSyms of them, field sync segment first) of every decoded field.
+    void setLevelTap(std::function<void(const std::vector<float>& levels)> f);
 
 private:
     struct Impl;

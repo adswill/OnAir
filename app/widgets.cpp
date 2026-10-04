@@ -116,30 +116,30 @@ void lamp(const char* label, int state /*0 grey 1 green 2 amber 3 red*/, int ico
 }
 
 void scatter(const char* id, const std::vector<cf32>& pts, ImVec2 size, double lim, ImVec4 col) {
-    if (ImPlot::BeginPlot(id, size, ImPlotFlags_NoLegend | ImPlotFlags_NoTitle | ImPlotFlags_Equal)) {
-        ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoTickLabels, ImPlotAxisFlags_NoTickLabels);
-        ImPlot::SetupAxisLimits(ImAxis_X1, -lim, lim, ImPlotCond_Always);
-        ImPlot::SetupAxisLimits(ImAxis_Y1, -lim, lim, ImPlotCond_Always);
+    if (plt::BeginPlot(id, size, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_Equal)) {
+        plt::SetupAxes(nullptr, nullptr, plt::AxisFlags_NoTickLabels, plt::AxisFlags_NoTickLabels);
+        plt::SetupAxisLimits(plt::X1, -lim, lim, plt::Cond_Always);
+        plt::SetupAxisLimits(plt::Y1, -lim, lim, plt::Cond_Always);
         if (!pts.empty()) {
-            ImPlotSpec sp;
-            sp.Marker = ImPlotMarker_Circle; sp.MarkerSize = 1.6f; sp.Stride = sizeof(cf32);
+            plt::Spec sp;
+            sp.Marker = plt::Marker_Circle; sp.MarkerSize = 1.6f; sp.Stride = sizeof(cf32);
             sp.MarkerFillColor = col; sp.MarkerLineColor = col; sp.LineColor = col;
             const float* d = reinterpret_cast<const float*>(pts.data());
-            ImPlot::PlotScatter("pts", d, d + 1, (int)pts.size(), sp);
+            plt::PlotScatter("pts", d, d + 1, (int)pts.size(), sp);
         }
-        ImPlot::EndPlot();
+        plt::EndPlot();
     }
 }
 
 void historyPlot(const char* id, const char* ylabel, const std::deque<float>& h, ImVec2 size) {
-    if (ImPlot::BeginPlot(id, size, ImPlotFlags_NoLegend | ImPlotFlags_NoTitle)) {
-        ImPlot::SetupAxes("samples (~30/s)", ylabel, 0, ImPlotAxisFlags_AutoFit);
-        ImPlot::SetupAxisLimits(ImAxis_X1, 0, 600, ImPlotCond_Always);
+    if (plt::BeginPlot(id, size, plt::Flags_NoLegend | plt::Flags_NoTitle)) {
+        plt::SetupAxes("samples (~30/s)", ylabel, 0, plt::AxisFlags_AutoFit);
+        plt::SetupAxisLimits(plt::X1, 0, 600, plt::Cond_Always);
         if (!h.empty()) {
             std::vector<float> v(h.begin(), h.end());
-            ImPlot::PlotLine("h", v.data(), (int)v.size());
+            plt::PlotLine("h", v.data(), (int)v.size());
         }
-        ImPlot::EndPlot();
+        plt::EndPlot();
     }
 }
 

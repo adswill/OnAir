@@ -48,6 +48,31 @@ def is_system(dep):
 done = {}   # real path -> bundled name
 queue = [exe]
 bundled = []
+
+# The radio libraries that OnAir loads at run time when they are present (the native drivers): they go into the app too, so that nothing has
+# to be installed next to it. Every version name a driver may ask for is kept (the symlinks of the Homebrew copy become symlinks here).
+import glob
+links = []
+for stem in ["rtlsdr", "airspy", "bladeRF", "iio", "LimeSuite", "uhd"]:
+    for d in SEARCH[:2]:
+        for src in sorted(glob.glob(os.path.join(d, "lib%s.*dylib" % stem)) + glob.glob(os.path.join(d, "lib%s*.dylib" % stem))):
+            name = os.path.basename(src)
+            if name.endswith(".a") or os.path.exists(os.path.join(fw, name)): continue
+            real = os.path.realpath(src)
+            if os.path.islink(src):
+                links.append((name, os.path.basename(real)))
+                if real not in done:
+                    dst = os.path.join(fw, os.path.basename(real))
+                    shutil.copy2(real, dst); os.chmod(dst, 0o755)
+                    done[real] = os.path.basename(real)
+                    bundled.append(dst); queue.append(dst)
+            else:
+                dst = os.path.join(fw, name)
+                shutil.copy2(real, dst); os.chmod(dst, 0o755)
+                done[real] = name
+                bundled.append(dst); queue.append(dst)
+for name, target in links:
+    if name != target and not os.path.exists(os.path.join(fw, name)): os.symlink(target, os.path.join(fw, name))
 while queue:
     cur = queue.pop()
     for dep in deps(cur):
@@ -57,7 +82,7 @@ while queue:
         if real not in done:
             done[real] = name
             dst = os.path.join(fw, name)
-            shutil.copy2(real, dst)
+            if os.path.abspath(real) != os.path.abspath(dst): shutil.copy2(real, dst)   # a library found in the app itself is already in place
             os.chmod(dst, 0o755)
             bundled.append(dst)
             queue.append(dst)

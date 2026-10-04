@@ -1,5 +1,6 @@
 // the Scan tab and the Outputs tab (network tuner, files, UDP)
 #include "app.h"
+#include <random>
 
 void scanTab(App& a) {
     if (a.dabMode) { dabScanTab(a); return; }
@@ -174,6 +175,42 @@ void outputsTab(App& a) {
         }
         ImGui::TextDisabled("Open the playlist in VLC or any IPTV app; /guide.xml has the programme guide. Plex and Jellyfin: add an HDHomeRun at that address.");
         ImGui::TextDisabled("Without a key, anyone on your network can watch while \"share on the network\" is on.");
+    }
+    if (airplay::available()) {
+        ImGui::Spacing();
+        ImGui::TextColored(ImVec4(0.45f, 0.75f, 1, 1), "Cast to a TV (AirPlay)");
+        const int sid = a.engine.player().selected();
+        const airplay::State st = airplay::state();
+        ImGui::BeginDisabled(sid < 0 || st == airplay::State::Choosing);
+        const ImVec2 at = ImGui::GetCursorScreenPos();
+        const bool pressed = ImGui::Button("Cast the playing service...");
+        const ImVec2 sz = ImGui::GetItemRectSize();
+        ImGui::EndDisabled();
+        if (sid < 0 && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("Play a service first (click it in the list).");
+        if (pressed) {
+            // an Apple TV fetches the stream from this computer: the network tuner must be reachable from the network, with a key
+            NetTunerStats ns = a.net.stats();
+            if (!ns.running || !a.netLan || !a.netKey[0]) {
+                if (!a.netKey[0]) snprintf(a.netKey, sizeof a.netKey, "%08x", (unsigned)std::random_device{}());
+                a.net.stop();
+                a.netLan = true;
+                NetTunerConfig nc; nc.port = std::max(1024, std::min(65535, a.netPort)); nc.localOnly = false; nc.key = a.netKey;
+                a.netOn = a.net.start(nc);
+                a.engine.log(a.netOn ? "network tuner on port " + std::to_string(nc.port) + " (for casting)" : "network tuner: " + a.net.stats().error);
+                ns = a.net.stats();
+            }
+            const auto addrs = a.net.addresses();
+            if (ns.running && !addrs.empty()) {
+                const std::string url = "http://" + addrs[0] + ":" + std::to_string(ns.port) + "/hls/" + std::to_string(sid) + "/index.m3u8?key=" + a.netKey;
+                airplay::choose(gWindow, at.x, at.y, sz.x, sz.y, url);
+                a.engine.log("casting " + url);
+            } else a.engine.log("casting: the network tuner is not reachable from the network");
+        }
+        ImGui::SameLine();
+        if (st == airplay::State::Casting) { ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1), "casting"); ImGui::SameLine(); if (ImGui::SmallButton("stop casting")) airplay::stop(); }
+        else if (st == airplay::State::Choosing) ImGui::TextDisabled("choose a device in the list...");
+        else if (st == airplay::State::Failed) ImGui::TextColored(ImVec4(0.95f, 0.4f, 0.3f, 1), "%s", airplay::message().c_str());
+        ImGui::TextDisabled("Starting takes several seconds. The picture is H.264 or HEVC as broadcast; the sound is converted to AAC. OnAir plays on as usual: mute it here if you do not want it twice.");
     }
 }
 

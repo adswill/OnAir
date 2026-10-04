@@ -29,7 +29,7 @@ The standard is detected automatically, and one switch at the top of the window 
 - **Live player.** Picture, sound, subtitles, teletext, programme guide and multiple audio tracks, with automatic repair of short signal dropouts so weak reception stays watchable.
 - **See your signal.** Spectrum and waterfall, every constellation, signal-to-noise and error figures, a single quality score, and an echo (multipath) detector.
 - **Find the best reception.** A channel scanner, automatic gain tuning, and a direction finder that helps you aim the antenna.
-- **Share it.** A built-in network tuner streams your channels to VLC, phones, Plex or Jellyfin over your home network. You can also record to a file or send the stream out over UDP.
+- **Share it.** A built-in network tuner streams your channels to VLC, phones, Plex or Jellyfin over your home network, as a plain stream or as HLS for browsers and phones. On a Mac you can cast the playing service to an Apple TV or AirPlay TV. You can also record to a file or send the stream out over UDP.
 - **Try it without hardware.** The first-start tour and the **Tour** button play a built-in demo signal, so you can explore everything before buying a radio.
 - **Fast.** Error correction runs on the GPU where available, and with optimised vector code on the CPU everywhere else.
 
@@ -37,11 +37,11 @@ The standard is detected automatically, and one switch at the top of the window 
 
 Download the installer for your system from the **[Releases](../../releases)** page. There is nothing to compile.
 
-**macOS** (Apple silicon, macOS 15 or later): open the `.dmg` and drag OnAir to Applications. The app is not yet signed with a developer certificate, so on the first launch right-click it and choose *Open*.
+**macOS** (macOS 15 or later, Apple silicon and Intel): open the `.dmg` for your Mac (`arm64` for Apple silicon, `x86_64` for Intel) and drag OnAir to Applications. The app is not yet signed with a developer certificate, so on the first launch right-click it and choose *Open*.
 
 **Windows** (64-bit): run the `OnAir-…-setup.exe` installer (or unpack the `.zip` and start `OnAir.exe`). For a HackRF, RTL-SDR or Airspy, install the WinUSB driver once with [Zadig](https://zadig.akeo.ie). Windows may warn about an unknown publisher because the installer is not code-signed.
 
-**Linux** (Debian and Ubuntu): install the `.deb` with `sudo apt install ./onair_<version>_<arch>.deb` and start OnAir from the menu or with `onair`. Both x86-64 and arm64 packages are provided, plus a `.tar.gz`.
+**Linux:** the `.deb` installs on any current Debian or Ubuntu (it carries its own video decoder, so it does not depend on the version of FFmpeg your system has): `sudo apt install ./onair_<version>_<arch>.deb`, then start OnAir from the menu or with `onair`. For other distributions there is a `-portable.tar.gz` with everything inside: unpack it and run `bin/onair`. x86-64 and arm64 packages are provided.
 
 ## Getting started
 
@@ -54,7 +54,7 @@ New to all this? Press **Tour** and a friendly little TV will walk you through i
 
 ## Supported radios
 
-OnAir supports the **HackRF One and HackRF Pro** natively. **RTL-SDR, Airspy, BladeRF, LimeSDR, PlutoSDR and USRP** radios are driven directly too (marked "experimental" in the radio list) as soon as the manufacturer's driver library is installed, and nothing else has to be set up. Every other radio, such as the SDRplay RSP, works through [SoapySDR](https://github.com/pothosware/SoapySDR) once its SoapySDR module is installed. Radios that are found appear in the source list next to the HackRF, and the gain control becomes one overall gain slider.
+OnAir supports the **HackRF One and HackRF Pro** natively, and drives **RTL-SDR, Airspy, BladeRF, LimeSDR, PlutoSDR and USRP** radios directly too (marked "experimental" in the radio list). The libraries those radios need are included in the downloads, so there is nothing else to install, with these exceptions: on macOS the PlutoSDR library is not included yet, and on Windows the LimeSDR and USRP libraries are not (install the manufacturer's software for those). On Windows a radio also needs its USB driver once, see the install notes above. Every other radio, such as the SDRplay RSP, works through [SoapySDR](https://github.com/pothosware/SoapySDR) once its SoapySDR module is installed. Radios that are found appear in the source list next to the HackRF, and the gain control becomes one overall gain slider.
 
 A TV channel needs a radio that can sample fast enough, roughly 1 million samples per second per MHz of channel width:
 
@@ -119,4 +119,4 @@ for the intended target.
 
 ## License
 
-OnAir is released under the **GNU General Public License v3.0 or later**, see [LICENSE](LICENSE). It includes [Dear ImGui](https://github.com/ocornut/imgui), [ImPlot](https://github.com/epezent/implot) and [miniaudio](https://github.com/mackron/miniaudio), each under its own permissive license, and uses [FFmpeg](https://ffmpeg.org), [GLFW](https://www.glfw.org) and [libhackrf](https://github.com/greatscottgadgets/hackrf).
+OnAir is released under the **GNU General Public License v3.0 or later**, see [LICENSE](LICENSE). It includes [Dear ImGui](https://github.com/ocornut/imgui) and [miniaudio](https://github.com/mackron/miniaudio), each under its own permissive license, and uses [FFmpeg](https://ffmpeg.org), [GLFW](https://www.glfw.org), [libusb](https://libusb.info) and [libhackrf](https://github.com/greatscottgadgets/hackrf).

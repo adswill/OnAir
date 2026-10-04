@@ -8,7 +8,7 @@
 #endif
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
-#include "implot.h"
+#include "plot.h"
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -18,6 +18,7 @@
 #include "dect2/gpu_ldpc.h"
 #include "dect2/t2rx.h"
 #include "dect2/nettuner.h"
+#include "airplay.h"
 #include "dect2/timecompat.h"
 #include "dect2/platform.h"
 #include "dect2/scanner.h"

@@ -163,6 +163,7 @@ struct Core {
     bool fsSeen = false;
     FieldDecoder dec;
     std::function<void(const uint8_t*, size_t, double)> cb;
+    std::function<void(const std::vector<float>&)> levelTap;
     // ---- statistics
     AtscTelemetry t;
     std::vector<float> lastTaps;
@@ -172,6 +173,7 @@ struct Core {
     // equaliser working state
     std::vector<float> w;
     float bias = 0;
+    double gainCorr = 1.0;   // the equaliser (a minimum-mean-square one) shrinks its output a little in noise: this puts the levels back where the decoder expects them
 
     void configure(double rateHz) {
         fin = rateHz;
@@ -214,7 +216,7 @@ struct Core {
         pllCnt = 0; dcInit = false; dc = 0; pw = 0; pilotLock = false; pilotGood = 0; pilotRel = 0;
         d.clear(); dBase = 0; accIdx = 0; acc.assign(kSegSamples, 0.f); lastSearch = 0; lastPeak = -1; peakRun = 0;
         seg = false; tau = 0; rate = 2.0; rr = 0; segPos = 0; segSyms.clear(); lowQ = 0; syncQ = 0;
-        raw.clear(); rawBase = 0; symAbs = 0; segAbs = 0;
+        raw.clear(); rawBase = 0; symAbs = 0; segAbs = 0; gainCorr = 1.0;
         fieldLock = false; fieldStartSeg = -1; fsMisses = 0; lastFsSeg = -1; fsSeen = false; pendingStart = -1;
         workerReset();
         tsFlow = 0;
@@ -254,7 +256,8 @@ struct Core {
                 pllCnt = 0;
                 float e = fastAtan2(pf.imag(), pf.real());
                 e = std::max(-1.2f, std::min(1.2f, e));
-                const float alpha = tracking ? 0.0035f : 0.035f, beta = alpha * alpha / 4.0f / (tracking ? 1.0f : 4.0f);
+                static const float kPa = getenv("ATSC_PA") ? (float)atof(getenv("ATSC_PA")) : 0.0035f;
+                const float alpha = tracking ? kPa : 0.035f, beta = alpha * alpha / 4.0f / (tracking ? 1.0f : 4.0f);
                 const float xa = alpha * e;                   // phase correction, at most about 0.04 rad: a small-angle rotation is exact enough
                 ph *= cf32(1.f - 0.5f * xa * xa, -xa);
                 omega += beta * e;
@@ -747,7 +750,8 @@ struct Core {
         float fsLv[kSegSyms];
         for (int i = 0; i < kSegSyms; i++) fsLv[i] = levelOf(fsSym[i]);
         const double tM0 = now();
-        const bool usePrev = havePrev && cleanFields >= 2;
+        static const bool noDfe = getenv("ATSC_NODFE") != nullptr;   // test: the plain equaliser only
+        const bool usePrev = havePrev && cleanFields >= 2 && !noDfe;
         Taps tp;
         bool trained;
         std::vector<float> lv, hv;
@@ -811,7 +815,9 @@ struct Core {
         FieldDecoder backup = dec;      // for the second try below
         FieldStats st;
         std::vector<uint8_t> out((size_t)kDataSegs * kTsBytes), psym((size_t)kFieldSyms, 0);
-        int np = dec.decode(lv.data(), out.data(), &st, psym.data());
+        auto scaled = [&](const std::vector<float>& v) { std::vector<float> r(v); if (gainCorr != 1.0) for (auto& x : r) x = (float)(x * gainCorr); return r; };
+        const std::vector<float> lvd = scaled(lv);
+        int np = dec.decode(lvd.data(), out.data(), &st, psym.data());
         bool secondTry = false;
         // A badly decoded field gets a second try with the other kind of equaliser: after the decision feedback one (which can run away
         // after a wrong decision) the plain one; after the plain one a decision feedback equaliser trained on this field's own decisions.
@@ -832,7 +838,8 @@ struct Core {
                     dec = backup;
                     FieldStats st2;
                     std::vector<uint8_t> out2((size_t)kDataSegs * kTsBytes), psym2((size_t)kFieldSyms, 0);
-                    const int np2 = dec.decode(lv2.data(), out2.data(), &st2, psym2.data());
+                    const std::vector<float> lv2d = scaled(lv2);
+                    const int np2 = dec.decode(lv2d.data(), out2.data(), &st2, psym2.data());
                     if (st2.rsFailed < st.rsFailed) {
                         secondTry = true;
                         st = st2; np = np2; out = std::move(out2); psym = std::move(psym2); lv = std::move(lv2); hv = std::move(hv2); tp = alt; eqLast = alt;
@@ -843,7 +850,40 @@ struct Core {
         }
         tVit += now() - tM2;
         if (dbg) fprintf(stderr, "[atsc] field start %lld parity %d: snr %.1f data %.1f  RS clean %d corr %d fail %d np %d%s%s\n", (long long)(f0 / kSegSyms), job.parity, snr, dataSnrAvg, st.rsClean, st.rsCorrected, st.rsFailed, np, usePrev ? "  (DFE, trained with the previous field)" : "", secondTry ? "  (second try with the other equaliser)" : "");
-        if (st.segments == kDataSegs && st.rsFailed == 0) cleanFields++; else cleanFields = 0;
+        // The gain of the equalised levels against the decoded symbols (decision directed): the next field is corrected by it.
+        if (st.segments > 0 && st.rsFailed * 2 <= st.segments) {
+            double sxy = 0, sxx = 0;
+            for (int i = kSegSyms; i < kFieldSyms; i++) {
+                if (i % kSegSyms < 4) continue;
+                const double t = levelOf(psym[(size_t)i]);
+                sxy += (double)lv[(size_t)i] * gainCorr * t; sxx += t * t;
+            }
+            if (sxx > 0 && sxy > 0) {
+                const double g = sxy / sxx;   // 1 when the levels sit where the decoder expects them
+                gainCorr = std::max(0.95, std::min(1.15, gainCorr / std::pow(g, 0.7)));
+            }
+        }
+        // The noise on the equalised symbols, measured against the symbols of the decoded trellis path: unlike the distance to the nearest of the
+        // eight levels (which cannot exceed one level step and so reads too good on a noisy signal) this stays honest down to low SNR.
+        double pathMse = 1e9;   // mean square distance of the equalised symbols to the decoded path: the noise power while the path is right
+        if (st.segments > 0) {
+            double dd = 0; int cnt = 0;
+            for (int i = kSegSyms; i < kFieldSyms; i++) {
+                if (i % kSegSyms < 4) continue;
+                const double e = lv[(size_t)i] * gainCorr - levelOf(psym[(size_t)i]);
+                dd += e * e; cnt++;
+            }
+            if (cnt > 0) {
+                pathMse = dd / cnt;
+                if (st.rsFailed * 4 <= st.segments) {
+                    const double dsnr = 10.0 * std::log10(21.0 / std::max(pathMse, 1e-6));
+                    dataSnrAvg = dataSnrAvg == 0 ? dsnr : dataSnrAvg + 0.3 * (dsnr - dataSnrAvg);
+                }
+            }
+        }
+        if (levelTap) levelTap(lv);
+        // a field whose decisions are good enough (not necessarily perfect: the trellis path is right far more often than Reed-Solomon) trains the next one
+        if (st.segments == kDataSegs && pathMse < 1.6) cleanFields++; else cleanFields = 0;
         {   // this field's decisions train the next field
             prevS = job.s; prevBase = job.base; prevF0 = f0; prevY = lv;
             levelsFromPath(fsLv, psym, hv, tp.B, prevLv);
@@ -896,6 +936,7 @@ void AtscReceiver::reset() { if (p_->c.ok) p_->c.reset(); }
 void AtscReceiver::flush() { p_->c.flush(); }
 void AtscReceiver::setBlocking(bool b) { p_->c.blocking = b; }
 bool AtscReceiver::rateOk() const { return p_->c.ok; }
+void AtscReceiver::setLevelTap(std::function<void(const std::vector<float>&)> f) { p_->c.levelTap = std::move(f); }
 void AtscReceiver::setPacketCallback(std::function<void(const uint8_t*, size_t, double)> cb) { p_->c.cb = std::move(cb); }
 void AtscReceiver::feed(const cf32* x, size_t n) {
     if (!p_->c.ok || !n) return;

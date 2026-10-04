@@ -1,0 +1,5 @@
+# The image the Linux packages are built in. It is deliberately an OLD Ubuntu (22.04): a program built against an old glibc runs on newer
+# systems, not the other way round. It has no FFmpeg development packages: FFmpeg is built static (tools/package/build_ffmpeg_static.sh).
+FROM ubuntu:22.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y build-essential file cmake pkg-config git curl xz-utils nasm patchelf libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libglfw3-dev librtlsdr0 libairspy0 libbladerf2 libiio0 liblimesuite20.10-1 libuhd4.1.0 && rm -rf /var/lib/apt/lists/*

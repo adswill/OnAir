@@ -96,5 +96,26 @@ for mod in "soapyrtlsdr-0.3.0.tar.gz SoapyRTLSDR-soapy-rtlsdr-0.3.0 librtlsdrSup
     cmake --build build-$2 -j$JOBS >/dev/null && cmake --install build-$2 >/dev/null; }
 done
 
+# --- the same two libraries as DLLs of their own (libusb inside): the native drivers of OnAir load rtlsdr.dll / airspy.dll by name from the program's folder
+[ -f "$P/bin/librtlsdr.dll" ] || { step "librtlsdr.dll"
+  cmake rtl-build "-DCMAKE_SHARED_LINKER_FLAGS=-L$P/lib" >/dev/null && cmake --build rtl-build -j$JOBS --target rtlsdr >/dev/null && cp rtl-build/src/librtlsdr.dll "$P/bin/"; }
+[ -f "$P/bin/libairspy.dll" ] || { step "libairspy.dll"
+  cmake --build airspy-build -j$JOBS --target airspy >/dev/null; cp "$(find "$WORK" -name libairspy.dll -path '*src*' | head -1)" "$P/bin/libairspy.dll"; }
+
+# --- BladeRF and PlutoSDR (libbladeRF, libiio with libxml2): DLLs of their own, shipped next to OnAir.exe (the native drivers load them by name).
+# Needs bladeRF-2023.02.tar.gz, no-OS-0bba46e.tar.gz (a part of the bladeRF source that git keeps as a submodule), libiio-0.25.tar.gz and
+# libxml2-2.12.9.tar.xz in build-windows-deps/src. LimeSuite and UHD are not built: their Windows drivers need Cypress/FTDI libraries or Boost.
+[ -f "$P/lib/libxml2.a" ] || { step libxml2; unpack libxml2-2.12.9.tar.xz libxml2-2.12.9
+  cmake -S libxml2-2.12.9 -B xml-build "-DCMAKE_TOOLCHAIN_FILE=$TC" -DCMAKE_INSTALL_PREFIX=$P -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DBUILD_SHARED_LIBS=OFF -DLIBXML2_WITH_ICONV=OFF -DLIBXML2_WITH_LZMA=OFF -DLIBXML2_WITH_ZLIB=OFF -DLIBXML2_WITH_PYTHON=OFF -DLIBXML2_WITH_PROGRAMS=OFF -DLIBXML2_WITH_TESTS=OFF -DLIBXML2_WITH_HTTP=OFF -DLIBXML2_WITH_FTP=OFF >/dev/null
+  cmake --build xml-build -j$JOBS >/dev/null && cmake --install xml-build >/dev/null; }
+[ -f "$P/bin/libiio.dll" ] || { step libiio; unpack libiio-0.25.tar.gz libiio-0.25
+  cmake -S libiio-0.25 -B iio-build "-DCMAKE_TOOLCHAIN_FILE=$TC" -DCMAKE_INSTALL_PREFIX=$P -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DWITH_USB_BACKEND=ON -DWITH_NETWORK_BACKEND=OFF -DWITH_LOCAL_BACKEND=OFF -DWITH_SERIAL_BACKEND=OFF -DWITH_ZSTD=OFF -DWITH_TESTS=OFF -DWITH_EXAMPLES=OFF -DENABLE_PACKAGING=OFF -DINSTALL_UDEV_RULE=OFF -DCPP_BINDINGS=OFF -DPYTHON_BINDINGS=OFF -DWITH_IIOD=OFF -DBUILD_SHARED_LIBS=ON -DLIBUSB_INCLUDE_DIR=$P/include/libusb-1.0 -DLIBUSB_LIBRARIES=$P/lib/libusb-1.0.a -DLIBXML2_LIBRARIES=$P/lib/libxml2.a -DLIBXML2_INCLUDE_DIR=$P/include/libxml2 "-DCMAKE_C_FLAGS=-DLIBXML_STATIC" "-DCMAKE_SHARED_LINKER_FLAGS=-L$P/lib" >/dev/null
+  cmake --build iio-build -j$JOBS >/dev/null && cp iio-build/libiio.dll "$P/bin/"; }
+[ -f "$P/bin/libbladeRF.dll" ] || { step libbladeRF; unpack bladeRF-2023.02.tar.gz bladeRF-2023.02
+  mkdir -p bladeRF-2023.02/thirdparty/analogdevicesinc/no-OS && tar xzf "$SRC/no-OS-0bba46e.tar.gz" -C bladeRF-2023.02/thirdparty/analogdevicesinc/no-OS --strip-components=1
+  find bladeRF-2023.02/host \( -name CMakeLists.txt -o -name "*.cmake" \) -exec sed -i.bak 's/-Werror//g' {} \;   # a newer compiler than the one the project was written for warns about more
+  cmake -S bladeRF-2023.02/host -B blade-build "-DCMAKE_TOOLCHAIN_FILE=$TC" -DCMAKE_INSTALL_PREFIX=$P -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DENABLE_BACKEND_LIBUSB=ON -DENABLE_BACKEND_CYPRESS=OFF -DBUILD_DOCUMENTATION=OFF -DENABLE_FX3_BUILD=OFF -DENABLE_HOST_BUILD=ON -DBUILD_BLADERF_CLI=OFF -DENABLE_UDEV_RULES=OFF -DINSTALL_UDEV_RULES=OFF -DBUILD_NATIVE=OFF -DLIBUSB_PATH=$P -DLIBUSB_INCLUDE_DIRS=$P/include/libusb-1.0 -DLIBUSB_LIBRARIES=$P/lib/libusb-1.0.a "-DCMAKE_C_FLAGS=-std=gnu11" "-DCMAKE_SHARED_LINKER_FLAGS=-L$P/lib" >/dev/null
+  cmake --build blade-build -j$JOBS --target libbladerf_shared >/dev/null && cp blade-build/output/libbladeRF.dll "$P/bin/"; }
+
 step done
 echo "$P"; ls "$P/lib"/*.a

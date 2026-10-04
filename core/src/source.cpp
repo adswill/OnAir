@@ -23,6 +23,10 @@
 
 namespace dect2 {
 
+// hackrf_usb.cpp
+std::unique_ptr<IqSource> makeUsbHackrfSource(const std::string& serial);
+std::vector<DeviceInfo> listUsbHackrfDevices(std::string& err);
+
 using Clock = std::chrono::steady_clock;
 
 // ---------------------------------------------------------------- HackRF
@@ -135,6 +139,34 @@ private:
     hackrf_device* dev_ = nullptr;
     IqRing* ring_ = nullptr;
     double rate_ = 0;
+};
+
+// Our own USB driver first (hackrf_usb.cpp); libhackrf when it cannot open the radio (or always, with DECT2_LIBHACKRF=1 in the environment).
+class HackrfAuto : public IqSource {
+public:
+    explicit HackrfAuto(std::string serial) : serial_(std::move(serial)) {}
+    ~HackrfAuto() override { stop(); }
+    bool start(const TuneSettings& s, IqRing& ring, std::string& err) override {
+        stop();
+        std::string ownErr;
+        if (!getenv("DECT2_LIBHACKRF")) {
+            auto u = makeUsbHackrfSource(serial_);
+            if (u->start(s, ring, ownErr)) { impl_ = std::move(u); if (getenv("DECT2_DEBUG")) fprintf(stderr, "HackRF: own USB driver\n"); return true; }
+            if (getenv("DECT2_DEBUG")) fprintf(stderr, "HackRF: own USB driver failed (%s), trying libhackrf\n", ownErr.c_str());
+        }
+        auto l = std::make_unique<HackrfSource>(serial_);
+        std::string libErr;
+        if (l->start(s, ring, libErr)) { impl_ = std::move(l); if (getenv("DECT2_DEBUG")) fprintf(stderr, "HackRF: libhackrf\n"); return true; }
+        err = ownErr.empty() ? libErr : ownErr;   // the message of the driver that was tried first
+        return false;
+    }
+    void stop() override { if (impl_) { impl_->stop(); impl_.reset(); } }
+    bool retune(const TuneSettings& s, std::string& err) override { return impl_ ? impl_->retune(s, err) : false; }
+    double sampleRate() const override { return impl_ ? impl_->sampleRate() : 0; }
+    bool realtimeHardware() const override { return true; }
+private:
+    std::string serial_;
+    std::unique_ptr<IqSource> impl_;
 };
 
 // ---------------------------------------------------------------- paced thread base
@@ -349,6 +381,10 @@ private:
 
 std::vector<DeviceInfo> listHackrfDevices(std::string& err) {
     std::vector<DeviceInfo> out;
+    if (!getenv("DECT2_LIBHACKRF")) {
+        out = listUsbHackrfDevices(err);
+        if (!out.empty()) return out;
+    }
     if (!hackrfAcquire(err)) return out;
     hackrf_device_list_t* l = hackrf_device_list();
     if (l) {
@@ -361,7 +397,7 @@ std::vector<DeviceInfo> listHackrfDevices(std::string& err) {
             {
                 hackrf_device* dev = nullptr;
                 if (hackrf_open_by_serial(d.serial.c_str(), &dev) == HACKRF_SUCCESS) {
-                    uint8_t id = BOARD_ID_UNDETECTED;
+                    uint8_t id = 0xFF;   // undetected (older libhackrf headers have no name for it)
                     if (hackrf_board_id_read(dev, &id) == HACKRF_SUCCESS) d.board = hackrf_board_id_name((hackrf_board_id)id);
                     hackrf_close(dev);
                 }
@@ -402,7 +438,7 @@ std::vector<DeviceInfo> listRadios(std::string& err) {
 
 std::unique_ptr<IqSource> makeSource(const DeviceInfo& d) {
     switch (d.kind) {
-    case DeviceInfo::HackRF: return std::make_unique<HackrfSource>(d.serial);
+    case DeviceInfo::HackRF: return std::make_unique<HackrfAuto>(d.serial);
 #ifdef DECT2_HAVE_SOAPY
     case DeviceInfo::Soapy: return makeSoapySource(d);
 #endif

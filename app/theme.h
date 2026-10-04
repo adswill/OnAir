@@ -1,7 +1,7 @@
 // Dark "instrument" theme: flat neutral greys, thin rules, one muted accent.
 #pragma once
 #include "imgui.h"
-#include "implot.h"
+#include "plot.h"
 
 // One accent colour for data and highlights; red / amber / green appear only where they mean a status.
 namespace pal {
@@ -47,12 +47,9 @@ inline void applyTheme() {
     c[ImGuiCol_Text]          = ImVec4(0.82f, 0.84f, 0.85f, 1);
     c[ImGuiCol_TextDisabled]  = ImVec4(0.45f, 0.47f, 0.49f, 1);
 
-    ImPlotStyle& p = ImPlot::GetStyle();
-    p.Colors[ImPlotCol_PlotBg]     = ImVec4(0.02f, 0.021f, 0.023f, 1);
-    p.Colors[ImPlotCol_FrameBg]    = ImVec4(0, 0, 0, 0);
-    p.Colors[ImPlotCol_PlotBorder] = ImVec4(0.24f, 0.25f, 0.26f, 1);
-    p.Colors[ImPlotCol_AxisGrid]   = ImVec4(0.60f, 0.62f, 0.64f, 0.16f);
-    p.Colors[ImPlotCol_AxisText]   = ImVec4(0.62f, 0.64f, 0.66f, 1);
-    p.PlotPadding = ImVec2(4, 4);
-    p.PlotBorderSize = 1;
+    plt::Style& p = plt::GetStyle();   // the plots: dark plate, thin border, faint grid
+    p.PlotBg  = ImVec4(0.02f, 0.021f, 0.023f, 1);
+    p.Border  = ImVec4(0.24f, 0.25f, 0.26f, 1);
+    p.Grid    = ImVec4(0.60f, 0.62f, 0.64f, 0.16f);
+    p.Text    = ImVec4(0.62f, 0.64f, 0.66f, 1);
 }

@@ -22,35 +22,35 @@ void syncTab(App& a) {
     const RxTelemetry& rx = a.rx;
     float h = ImGui::GetContentRegionAvail().y;
     ImGui::TextDisabled("P1 detector - C-A-B correlation (peak > 0.30 triggers an S1/S2 decode)");
-    if (ImPlot::BeginPlot("##p1", ImVec2(-1, h * 0.33f), ImPlotFlags_NoLegend | ImPlotFlags_NoTitle)) {
-        ImPlot::SetupAxes("time (ms)", "correlation");
-        ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 1.05, ImPlotCond_Always);
+    if (plt::BeginPlot("##p1", ImVec2(-1, h * 0.33f), plt::Flags_NoLegend | plt::Flags_NoTitle)) {
+        plt::SetupAxes("time (ms)", "correlation");
+        plt::SetupAxisLimits(plt::Y1, 0, 1.05, plt::Cond_Always);
         if (!rx.p1Trace.empty() && rx.nativeRate > 0) {
             std::vector<float> xv(rx.p1Trace.size());
             double dt = kTraceDecim / rx.nativeRate * 1e3;
             for (size_t i = 0; i < xv.size(); i++) xv[i] = (float)((i - (double)xv.size()) * dt);
-            ImPlot::SetupAxisLimits(ImAxis_X1, xv.front(), 0, ImPlotCond_Always);
-            ImPlot::PlotLine("m", xv.data(), rx.p1Trace.data(), (int)xv.size());
+            plt::SetupAxisLimits(plt::X1, xv.front(), 0, plt::Cond_Always);
+            plt::PlotLine("m", xv.data(), rx.p1Trace.data(), (int)xv.size());
             float tx[2] = {xv.front(), 0}, ty[2] = {0.30f, 0.30f};
-            ImPlotSpec ts; ts.LineColor = ImVec4(0.9f, 0.7f, 0.2f, 0.7f);
-            ImPlot::PlotLine("thr", tx, ty, 2, ts);
+            plt::Spec ts; ts.LineColor = ImVec4(0.9f, 0.7f, 0.2f, 0.7f);
+            plt::PlotLine("thr", tx, ty, 2, ts);
         }
-        ImPlot::EndPlot();
+        plt::EndPlot();
     }
     float w = ImGui::GetContentRegionAvail().x;
     ImGui::TextDisabled("guard-interval score (mean cyclic-prefix correlation over 3 symbols)");
-    if (ImPlot::BeginPlot("##gi", ImVec2(w * 0.38f, -1), ImPlotFlags_NoLegend | ImPlotFlags_NoTitle)) {
-        ImPlot::SetupAxes(nullptr, "score", ImPlotAxisFlags_NoGridLines, 0);
-        ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 1.05, ImPlotCond_Always);
-        ImPlot::SetupAxisLimits(ImAxis_X1, -0.6, kNumGi - 0.4, ImPlotCond_Always);
+    if (plt::BeginPlot("##gi", ImVec2(w * 0.38f, -1), plt::Flags_NoLegend | plt::Flags_NoTitle)) {
+        plt::SetupAxes(nullptr, "score", plt::AxisFlags_NoGridLines, 0);
+        plt::SetupAxisLimits(plt::Y1, 0, 1.05, plt::Cond_Always);
+        plt::SetupAxisLimits(plt::X1, -0.6, kNumGi - 0.4, plt::Cond_Always);
         double pos[kNumGi]; const char* lab[kNumGi];
         for (int i = 0; i < kNumGi; i++) { pos[i] = i; lab[i] = guardName(i); }
-        ImPlot::SetupAxisTicks(ImAxis_X1, pos, kNumGi, lab);
+        plt::SetupAxisTicks(plt::X1, pos, kNumGi, lab);
         float sc[kNumGi], x[kNumGi];
         for (int i = 0; i < kNumGi; i++) { sc[i] = rx.giScore[i]; x[i] = (float)i; }
-        ImPlotSpec bs; bs.FillColor = ImVec4(0.45f, 0.65f, 1.0f, 0.85f);
-        ImPlot::PlotBars("gi", x, sc, kNumGi, 0.7, bs);
-        ImPlot::EndPlot();
+        plt::Spec bs; bs.FillColor = ImVec4(0.45f, 0.65f, 1.0f, 0.85f);
+        plt::PlotBars("gi", x, sc, kNumGi, 0.7, bs);
+        plt::EndPlot();
     }
     ImGui::SameLine();
     ImGui::BeginChild("hist", ImVec2(0, -1));
@@ -76,31 +76,31 @@ void historyTab(App& a) {
     std::vector<float> xs(a.hist.size());
     for (size_t i = 0; i < xs.size(); i++) xs[i] = (float)(a.hist[i].t - nowT);
     auto series = [&](const char* id, const char* ylab, std::initializer_list<std::pair<const char*, float App::HistSample::*>> ser, double ymin, double ymax, bool fixed, bool last) {
-        if (!ImPlot::BeginPlot(id, ImVec2(0, 0), ImPlotFlags_NoTitle | ImPlotFlags_NoLegend)) return;
-        ImPlot::SetupAxes(last ? "seconds ago" : nullptr, nullptr, last ? 0 : ImPlotAxisFlags_NoTickLabels, fixed ? 0 : ImPlotAxisFlags_AutoFit);
-        ImPlot::SetupAxisLimits(ImAxis_X1, -a.histWindow, 0, ImPlotCond_Always);
-        if (fixed) ImPlot::SetupAxisLimits(ImAxis_Y1, ymin, ymax, ImPlotCond_Once);
+        if (!plt::BeginPlot(id, ImVec2(0, 0), plt::Flags_NoTitle | plt::Flags_NoLegend)) return;
+        plt::SetupAxes(last ? "seconds ago" : nullptr, nullptr, last ? 0 : plt::AxisFlags_NoTickLabels, fixed ? 0 : plt::AxisFlags_AutoFit);
+        plt::SetupAxisLimits(plt::X1, -a.histWindow, 0, plt::Cond_Always);
+        if (fixed) plt::SetupAxisLimits(plt::Y1, ymin, ymax, plt::Cond_Once);
         int k = 0;
         static const ImVec4 cols[3] = {ImVec4(0.45f, 0.75f, 1, 1), ImVec4(0.95f, 0.7f, 0.2f, 1), ImVec4(0.4f, 0.85f, 0.5f, 1)};
         for (auto& s : ser) {
             std::vector<float> ys(a.hist.size());
             for (size_t i = 0; i < ys.size(); i++) ys[i] = a.hist[i].*(s.second);
-            ImPlotSpec sp; sp.LineColor = cols[k++ % 3]; sp.LineWeight = 1.6f;
-            ImPlot::PlotLine(s.first, xs.data(), ys.data(), (int)xs.size(), sp);
+            plt::Spec sp; sp.LineColor = cols[k++ % 3]; sp.LineWeight = 1.6f;
+            plt::PlotLine(s.first, xs.data(), ys.data(), (int)xs.size(), sp);
         }
         {   // caption inside the plot instead of a rotated axis label (the plots are short)
-            const ImPlotRect lim = ImPlot::GetPlotLimits();
+            const plt::Rect lim = plt::GetPlotLimits();
             const float tw = ImGui::CalcTextSize(ylab).x;
-            ImPlot::PlotText(ylab, lim.X.Min, lim.Y.Max, ImVec2(tw * 0.5f + 8, 10));
+            plt::PlotText(ylab, lim.X.Min, lim.Y.Max, ImVec2(tw * 0.5f + 8, 10));
         }
-        ImPlot::EndPlot();
+        plt::EndPlot();
     };
-    if (ImPlot::BeginSubplots("##hist", 4, 1, ImVec2(-1, -1), ImPlotSubplotFlags_LinkAllX | ImPlotSubplotFlags_NoTitle | ImPlotSubplotFlags_NoLegend | ImPlotSubplotFlags_NoMenus)) {
+    if (plt::BeginSubplots("##hist", 4, 1, ImVec2(-1, -1), plt::Subplot_LinkAllX | plt::Subplot_NoTitle | plt::Subplot_NoLegend | plt::Subplot_NoMenus)) {
         series("quality (%)##h1", "quality %", {{"quality", &App::HistSample::quality}}, 0, 100, true, false);
         series("SNR / MER (dB)##h2", "SNR / MER dB", {{"data SNR", &App::HistSample::snr}, {"MER", &App::HistSample::mer}}, 0, 0, false, false);
         series("FEC block loss (%)##h3", "lost blocks %", {{"lost blocks", &App::HistSample::loss}}, 0, 100, true, false);
         series("ADC level (dBFS)##h4", "ADC dBFS", {{"rms", &App::HistSample::level}}, -60, 0, true, true);
-        ImPlot::EndSubplots();
+        plt::EndSubplots();
     }
 }
 
@@ -286,54 +286,54 @@ void atscPanels(App& a) {
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + gap);
     ImGui::BeginGroup();
     ImGui::TextDisabled("Equalised levels (%zu symbols)", at.levels.size());
-    if (ImPlot::BeginPlot("##ah", sz, ImPlotFlags_NoLegend | ImPlotFlags_NoTitle | ImPlotFlags_NoMouseText)) {
-        ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoTickLabels, ImPlotAxisFlags_NoTickLabels);
-        ImPlot::SetupAxisLimits(ImAxis_X1, -9, 9, ImPlotCond_Always);
+    if (plt::BeginPlot("##ah", sz, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_NoMouseText)) {
+        plt::SetupAxes(nullptr, nullptr, plt::AxisFlags_NoTickLabels, plt::AxisFlags_NoTickLabels);
+        plt::SetupAxisLimits(plt::X1, -9, 9, plt::Cond_Always);
         constexpr int NB = 72;
         float cnt[NB] = {}, xs[NB];
         for (int i = 0; i < NB; i++) xs[i] = -9.f + (i + 0.5f) * 18.f / NB;
         float mx = 1;
         for (float v : at.levels) { const int k = (int)((v + 9.f) / 18.f * NB); if (k >= 0 && k < NB) mx = std::max(mx, ++cnt[k]); }
-        ImPlot::SetupAxisLimits(ImAxis_Y1, 0, mx * 1.15, ImPlotCond_Always);
-        ImPlotSpec sp; sp.FillColor = pal::accent(0.85f); sp.LineColor = pal::accent();
-        ImPlot::PlotBars("levels", xs, cnt, NB, 18.0 / NB * 0.9, sp);
+        plt::SetupAxisLimits(plt::Y1, 0, mx * 1.15, plt::Cond_Always);
+        plt::Spec sp; sp.FillColor = pal::accent(0.85f); sp.LineColor = pal::accent();
+        plt::PlotBars("levels", xs, cnt, NB, 18.0 / NB * 0.9, sp);
         const double lv[8] = {-7, -5, -3, -1, 1, 3, 5, 7};
-        ImPlotSpec gs; gs.LineColor = ImVec4(1, 1, 1, 0.35f);
-        ImPlot::PlotInfLines("ideal", lv, 8, gs);
-        ImPlot::EndPlot();
+        plt::Spec gs; gs.LineColor = ImVec4(1, 1, 1, 0.35f);
+        plt::PlotInfLines("ideal", lv, 8, gs);
+        plt::EndPlot();
     }
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
     ImGui::TextDisabled("Equaliser response (%zu taps)", at.eqTaps.size());
-    if (ImPlot::BeginPlot("##ae", sz, ImPlotFlags_NoLegend | ImPlotFlags_NoTitle | ImPlotFlags_NoMouseText)) {
-        ImPlot::SetupAxes("symbols", nullptr, 0, ImPlotAxisFlags_AutoFit);
+    if (plt::BeginPlot("##ae", sz, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_NoMouseText)) {
+        plt::SetupAxes("symbols", nullptr, 0, plt::AxisFlags_AutoFit);
         if (!at.eqTaps.empty()) {
             std::vector<float> xs(at.eqTaps.size());
             for (size_t i = 0; i < xs.size(); i++) xs[i] = (float)(at.eqCursor - (int)i);   // symbols relative to the main tap: positive = echoes of later symbols
-            ImPlot::SetupAxisLimits(ImAxis_X1, -(double)(at.eqTaps.size() - 1 - at.eqCursor) - 1, (double)at.eqCursor + 1, ImPlotCond_Always);
-            ImPlotSpec sp; sp.LineColor = pal::accent();
-            ImPlot::PlotLine("taps", xs.data(), at.eqTaps.data(), (int)xs.size(), sp);
+            plt::SetupAxisLimits(plt::X1, -(double)(at.eqTaps.size() - 1 - at.eqCursor) - 1, (double)at.eqCursor + 1, plt::Cond_Always);
+            plt::Spec sp; sp.LineColor = pal::accent();
+            plt::PlotLine("taps", xs.data(), at.eqTaps.data(), (int)xs.size(), sp);
         }
-        ImPlot::EndPlot();
+        plt::EndPlot();
     }
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
     ImGui::TextDisabled("Symbol levels in sequence");
-    if (ImPlot::BeginPlot("##as", sz, ImPlotFlags_NoLegend | ImPlotFlags_NoTitle | ImPlotFlags_NoMouseText)) {
-        ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoTickLabels, ImPlotAxisFlags_NoTickLabels);
-        ImPlot::SetupAxisLimits(ImAxis_Y1, -9, 9, ImPlotCond_Always);
-        ImPlot::SetupAxisLimits(ImAxis_X1, 0, std::max<size_t>(2, at.levels.size()), ImPlotCond_Always);
+    if (plt::BeginPlot("##as", sz, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_NoMouseText)) {
+        plt::SetupAxes(nullptr, nullptr, plt::AxisFlags_NoTickLabels, plt::AxisFlags_NoTickLabels);
+        plt::SetupAxisLimits(plt::Y1, -9, 9, plt::Cond_Always);
+        plt::SetupAxisLimits(plt::X1, 0, std::max<size_t>(2, at.levels.size()), plt::Cond_Always);
         if (!at.levels.empty()) {
-            ImPlotSpec sp; sp.Marker = ImPlotMarker_Circle; sp.MarkerSize = 1.3f;
+            plt::Spec sp; sp.Marker = plt::Marker_Circle; sp.MarkerSize = 1.3f;
             sp.MarkerFillColor = sp.MarkerLineColor = sp.LineColor = pal::accent(0.6f);
-            ImPlot::PlotScatter("l", at.levels.data(), (int)at.levels.size(), 1.0, 0.0, sp);
+            plt::PlotScatter("l", at.levels.data(), (int)at.levels.size(), 1.0, 0.0, sp);
         }
         const double lv[8] = {-7, -5, -3, -1, 1, 3, 5, 7};
-        ImPlotSpec gs; gs.LineColor = ImVec4(1, 1, 1, 0.25f); gs.Flags = ImPlotInfLinesFlags_Horizontal;
-        ImPlot::PlotInfLines("ideal", lv, 8, gs);
-        ImPlot::EndPlot();
+        plt::Spec gs; gs.LineColor = ImVec4(1, 1, 1, 0.25f); gs.Flags = plt::InfLines_Horizontal;
+        plt::PlotInfLines("ideal", lv, 8, gs);
+        plt::EndPlot();
     }
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
@@ -387,16 +387,16 @@ void constellationsTab(App& a) {
         const bool haveStats = a.cst.mod == rx.plpFec.mod && !a.cst.pts.empty();
         if (a.constView == 1 && haveStats) constDensityPlot(a, sz);
         else if (a.constView == 2 && haveStats) constClusterPlot(a, sz);
-        else if (ImPlot::BeginPlot("##c2", sz, ImPlotFlags_NoLegend | ImPlotFlags_NoTitle | ImPlotFlags_Equal)) {
-            ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoTickLabels, ImPlotAxisFlags_NoTickLabels);
-            ImPlot::SetupAxisLimits(ImAxis_X1, -1.4, 1.4, ImPlotCond_Always);
-            ImPlot::SetupAxisLimits(ImAxis_Y1, -1.4, 1.4, ImPlotCond_Always);
+        else if (plt::BeginPlot("##c2", sz, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_Equal)) {
+            plt::SetupAxes(nullptr, nullptr, plt::AxisFlags_NoTickLabels, plt::AxisFlags_NoTickLabels);
+            plt::SetupAxisLimits(plt::X1, -1.4, 1.4, plt::Cond_Always);
+            plt::SetupAxisLimits(plt::Y1, -1.4, 1.4, plt::Cond_Always);
             auto draw = [&](const char* id, const std::vector<cf32>& v, ImVec4 col) {
                 if (v.empty()) return;
-                ImPlotSpec sp; sp.Marker = ImPlotMarker_Circle; sp.MarkerSize = 1.3f; sp.Stride = sizeof(cf32);
+                plt::Spec sp; sp.Marker = plt::Marker_Circle; sp.MarkerSize = 1.3f; sp.Stride = sizeof(cf32);
                 sp.MarkerFillColor = col; sp.MarkerLineColor = col; sp.LineColor = col;
                 const float* d = reinterpret_cast<const float*>(v.data());
-                ImPlot::PlotScatter(id, d, d + 1, (int)v.size(), sp);
+                plt::PlotScatter(id, d, d + 1, (int)v.size(), sp);
             };
             draw("ok", good, pal::accent(0.60f));
             draw("err", bad, ImVec4(0.88f, 0.52f, 0.40f, 0.75f));
@@ -404,12 +404,12 @@ void constellationsTab(App& a) {
                 const int M = 2 * (rx.plpFec.mod + 1);
                 std::vector<cf32> grid;
                 for (unsigned l = 0; l < (1u << M); l++) grid.push_back(qamPoint(rx.plpFec.mod, false, l));
-                ImPlotSpec gs; gs.Marker = ImPlotMarker_Cross; gs.MarkerSize = 4.f; gs.Stride = sizeof(cf32);
+                plt::Spec gs; gs.Marker = plt::Marker_Cross; gs.MarkerSize = 4.f; gs.Stride = sizeof(cf32);
                 gs.MarkerFillColor = gs.MarkerLineColor = gs.LineColor = ImVec4(1, 1, 1, 0.85f);
                 const float* g = reinterpret_cast<const float*>(grid.data());
-                ImPlot::PlotScatter("ideal", g, g + 1, (int)grid.size(), gs);
+                plt::PlotScatter("ideal", g, g + 1, (int)grid.size(), gs);
             }
-            ImPlot::EndPlot();
+            plt::EndPlot();
         }
         ImGui::PushID("cview");
         if (pillButton("cells", a.constView == 0, 8)) a.constView = 0;
@@ -420,24 +420,24 @@ void constellationsTab(App& a) {
         ImGui::PopID();
         if (a.constView == 2 && ImGui::IsItemHovered()) ImGui::SetTooltip("One ring per transmitted point: centre = average received position, radius = 1 sigma of the error.\nColour is relative to the average ring: green = tighter, red = looser.\nAt this MER the rings overlap their neighbours; the LDPC code corrects the resulting errors.");
     } else if (rx.standard == 1 && rx.dvbt.tpsOk) {
-        if (ImPlot::BeginPlot("##c2", sz, ImPlotFlags_NoLegend | ImPlotFlags_NoTitle | ImPlotFlags_Equal)) {
-            ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoTickLabels, ImPlotAxisFlags_NoTickLabels);
-            ImPlot::SetupAxisLimits(ImAxis_X1, -1.5, 1.5, ImPlotCond_Always);
-            ImPlot::SetupAxisLimits(ImAxis_Y1, -1.5, 1.5, ImPlotCond_Always);
+        if (plt::BeginPlot("##c2", sz, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_Equal)) {
+            plt::SetupAxes(nullptr, nullptr, plt::AxisFlags_NoTickLabels, plt::AxisFlags_NoTickLabels);
+            plt::SetupAxisLimits(plt::X1, -1.5, 1.5, plt::Cond_Always);
+            plt::SetupAxisLimits(plt::Y1, -1.5, 1.5, plt::Cond_Always);
             if (!rx.eqData.empty()) {
-                ImPlotSpec sp; sp.Marker = ImPlotMarker_Circle; sp.MarkerSize = 1.3f; sp.Stride = sizeof(cf32);
+                plt::Spec sp; sp.Marker = plt::Marker_Circle; sp.MarkerSize = 1.3f; sp.Stride = sizeof(cf32);
                 const ImVec4 col(0.35f, 0.62f, 1.0f, 0.55f);
                 sp.MarkerFillColor = col; sp.MarkerLineColor = col; sp.LineColor = col;
                 const float* d = reinterpret_cast<const float*>(rx.eqData.data());
-                ImPlot::PlotScatter("data", d, d + 1, (int)rx.eqData.size(), sp);
+                plt::PlotScatter("data", d, d + 1, (int)rx.eqData.size(), sp);
             }
             std::vector<dvbt::cf32> pts;
             dvbt::constellation(rx.dvbt.mod, 0, pts);
-            ImPlotSpec gs; gs.Marker = ImPlotMarker_Cross; gs.MarkerSize = 4.f; gs.Stride = sizeof(dvbt::cf32);
+            plt::Spec gs; gs.Marker = plt::Marker_Cross; gs.MarkerSize = 4.f; gs.Stride = sizeof(dvbt::cf32);
             gs.MarkerFillColor = gs.MarkerLineColor = gs.LineColor = ImVec4(1, 1, 1, 0.85f);
             const float* g = reinterpret_cast<const float*>(pts.data());
-            ImPlot::PlotScatter("ideal", g, g + 1, (int)pts.size(), gs);
-            ImPlot::EndPlot();
+            plt::PlotScatter("ideal", g, g + 1, (int)pts.size(), gs);
+            plt::EndPlot();
         }
     } else
         scatter("##c2", rx.eqData, sz, 1.8, pal::accent(0.6f));
@@ -464,24 +464,24 @@ void channelTab(App& a) {
     std::vector<float> xs(rx.chMagDb.size());
     for (size_t i = 0; i < xs.size(); i++) xs[i] = (float)(a.freqMhz + ((double)(i * rx.chDecim) - (rx.chCarriers - 1) / 2.0) * binMhz);
     ImGui::TextDisabled("|H(f)| from P2 pilots, dB (%d carriers%s)", rx.chCarriers, rx.extCarriers ? ", extended" : "");
-    if (ImPlot::BeginPlot("##chm", ImVec2(-1, std::max(60.f, h * 0.5f)), ImPlotFlags_NoLegend | ImPlotFlags_NoTitle)) {
-        ImPlot::SetupAxes("frequency (MHz)", "dB", 0, ImPlotAxisFlags_AutoFit);
-        ImPlot::SetupAxisFormat(ImAxis_X1, "%.2f");
-        ImPlot::SetupAxisLimits(ImAxis_X1, xs.front(), xs.back(), ImPlotCond_Always);
-        ImPlotSpec sp; sp.LineColor = pal::accent();
-        ImPlot::PlotLine("mag", xs.data(), rx.chMagDb.data(), (int)xs.size(), sp);
-        ImPlot::EndPlot();
+    if (plt::BeginPlot("##chm", ImVec2(-1, std::max(60.f, h * 0.5f)), plt::Flags_NoLegend | plt::Flags_NoTitle)) {
+        plt::SetupAxes("frequency (MHz)", "dB", 0, plt::AxisFlags_AutoFit);
+        plt::SetupAxisFormat(plt::X1, "%.2f");
+        plt::SetupAxisLimits(plt::X1, xs.front(), xs.back(), plt::Cond_Always);
+        plt::Spec sp; sp.LineColor = pal::accent();
+        plt::PlotLine("mag", xs.data(), rx.chMagDb.data(), (int)xs.size(), sp);
+        plt::EndPlot();
     }
     ImGui::TextDisabled("phase of H(f), rad (slope = timing, curvature = echoes)");
-    if (ImPlot::BeginPlot("##chp", ImVec2(-1, -1), ImPlotFlags_NoLegend | ImPlotFlags_NoTitle)) {
-        ImPlot::SetupAxes("frequency (MHz)", "rad");
-        ImPlot::SetupAxisFormat(ImAxis_X1, "%.2f");
-        ImPlot::SetupAxisLimits(ImAxis_X1, xs.front(), xs.back(), ImPlotCond_Always);
-        ImPlot::SetupAxisLimits(ImAxis_Y1, -3.3, 3.3, ImPlotCond_Always);
-        ImPlotSpec sp; sp.LineColor = ImVec4(0.95f, 0.7f, 0.2f, 1); sp.Marker = ImPlotMarker_Circle; sp.MarkerSize = 1.2f;
+    if (plt::BeginPlot("##chp", ImVec2(-1, -1), plt::Flags_NoLegend | plt::Flags_NoTitle)) {
+        plt::SetupAxes("frequency (MHz)", "rad");
+        plt::SetupAxisFormat(plt::X1, "%.2f");
+        plt::SetupAxisLimits(plt::X1, xs.front(), xs.back(), plt::Cond_Always);
+        plt::SetupAxisLimits(plt::Y1, -3.3, 3.3, plt::Cond_Always);
+        plt::Spec sp; sp.LineColor = ImVec4(0.95f, 0.7f, 0.2f, 1); sp.Marker = plt::Marker_Circle; sp.MarkerSize = 1.2f;
         sp.LineWeight = 0.0f;
-        ImPlot::PlotScatter("ph", xs.data(), rx.chPhase.data(), (int)xs.size(), sp);
-        ImPlot::EndPlot();
+        plt::PlotScatter("ph", xs.data(), rx.chPhase.data(), (int)xs.size(), sp);
+        plt::EndPlot();
     }
 }
 
@@ -492,16 +492,16 @@ void impulseTab(App& a) {
     double usPerSample = 1e6 / rx.nativeRate;
     for (size_t i = 0; i < xs.size(); i++) xs[i] = (float)((rx.irTauMin + (double)i) * usPerSample);
     ImGui::TextDisabled("power-delay profile (dB rel. strongest path). Shaded: guard interval (%.1f us)", rx.guard * usPerSample);
-    if (ImPlot::BeginPlot("##ir", ImVec2(-1, -1), ImPlotFlags_NoLegend | ImPlotFlags_NoTitle)) {
-        ImPlot::SetupAxes("delay (us)", "dB");
-        ImPlot::SetupAxisLimits(ImAxis_Y1, -80, 5, ImPlotCond_Once);
-        ImPlot::SetupAxisLimits(ImAxis_X1, xs.front(), xs.back(), ImPlotCond_Once);
+    if (plt::BeginPlot("##ir", ImVec2(-1, -1), plt::Flags_NoLegend | plt::Flags_NoTitle)) {
+        plt::SetupAxes("delay (us)", "dB");
+        plt::SetupAxisLimits(plt::Y1, -80, 5, plt::Cond_Once);
+        plt::SetupAxisLimits(plt::X1, xs.front(), xs.back(), plt::Cond_Once);
         double gx[2] = {0, rx.guard * usPerSample}, gy[2] = {5, 5};
-        ImPlotSpec gs; gs.FillColor = ImVec4(0.15f, 0.55f, 0.20f, 0.18f); gs.LineColor = ImVec4(0, 0, 0, 0);
-        ImPlot::PlotShaded("gi", gx, gy, 2, -80.0, gs);
-        ImPlotSpec sp; sp.LineColor = ImVec4(0.45f, 0.75f, 1, 1);
-        ImPlot::PlotLine("pdp", xs.data(), rx.irDb.data(), (int)xs.size(), sp);
-        ImPlot::EndPlot();
+        plt::Spec gs; gs.FillColor = ImVec4(0.15f, 0.55f, 0.20f, 0.18f); gs.LineColor = ImVec4(0, 0, 0, 0);
+        plt::PlotShaded("gi", gx, gy, 2, -80.0, gs);
+        plt::Spec sp; sp.LineColor = ImVec4(0.45f, 0.75f, 1, 1);
+        plt::PlotLine("pdp", xs.data(), rx.irDb.data(), (int)xs.size(), sp);
+        plt::EndPlot();
     }
 }
 
@@ -512,13 +512,13 @@ void snrTab(App& a) {
     std::vector<float> xs(rx.snrDb.size());
     for (size_t i = 0; i < xs.size(); i++) xs[i] = (float)(a.freqMhz + ((double)(i * rx.snrStep) - (rx.chCarriers - 1) / 2.0) * binMhz);
     ImGui::Text("pilot-derived SNR across the channel (scattered pilots, smoothed over %d points); mean %.1f dB", 21, rx.p2SnrDb);
-    if (ImPlot::BeginPlot("##snrc", ImVec2(-1, -1), ImPlotFlags_NoLegend | ImPlotFlags_NoTitle)) {
-        ImPlot::SetupAxes("frequency (MHz)", "SNR (dB)", 0, ImPlotAxisFlags_AutoFit);
-        ImPlot::SetupAxisFormat(ImAxis_X1, "%.2f");
-        ImPlot::SetupAxisLimits(ImAxis_X1, xs.front(), xs.back(), ImPlotCond_Always);
-        ImPlotSpec sp; sp.LineColor = ImVec4(0.35f, 0.85f, 0.45f, 1);
-        ImPlot::PlotLine("snr", xs.data(), rx.snrDb.data(), (int)xs.size(), sp);
-        ImPlot::EndPlot();
+    if (plt::BeginPlot("##snrc", ImVec2(-1, -1), plt::Flags_NoLegend | plt::Flags_NoTitle)) {
+        plt::SetupAxes("frequency (MHz)", "SNR (dB)", 0, plt::AxisFlags_AutoFit);
+        plt::SetupAxisFormat(plt::X1, "%.2f");
+        plt::SetupAxisLimits(plt::X1, xs.front(), xs.back(), plt::Cond_Always);
+        plt::Spec sp; sp.LineColor = ImVec4(0.35f, 0.85f, 0.45f, 1);
+        plt::PlotLine("snr", xs.data(), rx.snrDb.data(), (int)xs.size(), sp);
+        plt::EndPlot();
     }
 }
 

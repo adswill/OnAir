@@ -29,11 +29,11 @@ Threads: the analysis thread runs the receiver (it must never wait for the inter
 | `tools/` | `dect2cli` (receiver on the command line), `dect2scan` (channel scanner), `package/` (installer scripts), `dev/` (developer helpers) |
 | `tests/` | unit tests, benchmarks and a fuzzer; run with `ctest` |
 | `packaging/` | icons, Windows installer script and toolchain file, Linux resources |
-| `third_party/` | Dear ImGui, ImPlot and miniaudio, with their licences |
+| `third_party/` | Dear ImGui and miniaudio, with their licences |
 
 ## The app
 
-`app/app.h` holds the `App` struct (all interface state) and the list of panels. `main.cpp` has the window loop and the layout. The panels are grouped: `toolbar.cpp` (top bar, status bar), `plots.cpp`, `analysis_tabs.cpp` (receiver analysis tabs), `tv.cpp` (player and guide), `scan_outputs.cpp`, `antenna.cpp`, `dab_ui.cpp`, `wizard.cpp` (first-run tour), and `widgets.cpp` (small shared pieces). Drawing goes through `gfx.h` (Metal on macOS, OpenGL elsewhere), and `platform.h` hides file dialogs and settings storage per operating system.
+`app/app.h` holds the `App` struct (all interface state) and the list of panels. `main.cpp` has the window loop and the layout. The panels are grouped: `toolbar.cpp` (top bar, status bar), `plots.cpp`, `plot.cpp` (our own plotting library on ImGui's draw lists: axes, lines, dots, bars, images, heat maps, panning and zooming), `analysis_tabs.cpp` (receiver analysis tabs), `tv.cpp` (player and guide), `scan_outputs.cpp`, `antenna.cpp`, `dab_ui.cpp`, `wizard.cpp` (first-run tour), and `widgets.cpp` (small shared pieces). Drawing goes through `gfx.h` (Metal on macOS, OpenGL elsewhere), and `platform.h` hides file dialogs and settings storage per operating system.
 
 ## Platform notes
 

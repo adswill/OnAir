@@ -231,7 +231,6 @@ int main(int argc, char** argv) {
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImPlot::CreateContext();
     gfx::Backend* gfxBackend = gfx::create(window);
     if (!gfxBackend) { fprintf(stderr, "could not start the graphics back end\n"); return 1; }
     gGfx = gfxBackend;
@@ -240,7 +239,6 @@ int main(int argc, char** argv) {
     io.IniFilename = nullptr;
     applyTheme();
     static ImGuiStyle baseStyle = ImGui::GetStyle();   // the style at scale 1
-    static ImPlotStyle basePlotStyle = ImPlot::GetStyle();
 
     App app;
     ImFont* ui = nullptr;
@@ -333,13 +331,7 @@ int main(int argc, char** argv) {
                     st = baseStyle;
                     st.ScaleAllSizes(s);
                     st.FontScaleDpi = s;
-                    ImPlotStyle& ps = ImPlot::GetStyle();
-                    ps = basePlotStyle;
-                    ps.PlotPadding = ImVec2(basePlotStyle.PlotPadding.x * s, basePlotStyle.PlotPadding.y * s);
-                    ps.LabelPadding = ImVec2(basePlotStyle.LabelPadding.x * s, basePlotStyle.LabelPadding.y * s);
-                    ps.LegendPadding = ImVec2(basePlotStyle.LegendPadding.x * s, basePlotStyle.LegendPadding.y * s);
-                    ps.MinorTickLen = ImVec2(basePlotStyle.MinorTickLen.x * s, basePlotStyle.MinorTickLen.y * s);
-                    ps.MajorTickLen = ImVec2(basePlotStyle.MajorTickLen.x * s, basePlotStyle.MajorTickLen.y * s);
+                    plt::GetStyle().Scale = s;
                 }
             }
 #endif
@@ -398,7 +390,6 @@ int main(int argc, char** argv) {
     app.engine.stop();
     gfxBackend->shutdown();
     ImGui_ImplGlfw_Shutdown();
-    ImPlot::DestroyContext();
     ImGui::DestroyContext();
     glfwDestroyWindow(window);
     glfwTerminate();

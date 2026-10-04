@@ -1,5 +1,6 @@
-// Backend for everything except macOS: miniaudio (ALSA / PulseAudio / PipeWire on Linux, WASAPI on Windows). If no sound device can be
-// opened (a headless machine, CI), a null device with correct timing is used so that playback and A/V sync still behave.
+// The fallback sound backend for Windows and Linux: miniaudio (ALSA / PulseAudio / PipeWire on Linux, WASAPI on Windows), used when our own
+// backend (audioout_native.cpp) cannot open the sound device, or when DECT2_AUDIO=miniaudio is set. If no sound device can be opened (a
+// headless machine, CI), a null device with correct timing is used so that playback and A/V sync still behave.
 #include "audioout_impl.h"
 #define MA_NO_DECODING
 #define MA_NO_ENCODING
@@ -45,7 +46,7 @@ void close(Backend* b) {
 }
 }
 
-bool audioBackendStart(AudioOut::Impl* I, int rate) {
+bool audioMiniaudioStart(AudioOut::Impl* I, int rate) {
     auto* b = new Backend;
     if (!open(b, I, rate, nullptr, 0)) {
         close(b);
@@ -57,7 +58,7 @@ bool audioBackendStart(AudioOut::Impl* I, int rate) {
     return true;
 }
 
-void audioBackendStop(AudioOut::Impl* I) {
+void audioMiniaudioStop(AudioOut::Impl* I) {
     auto* b = static_cast<Backend*>(I->backend);
     if (!b) return;
     close(b);

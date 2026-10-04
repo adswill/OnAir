@@ -1,4 +1,5 @@
 #include "dect2/nettuner.h"
+#include "dect2/hls.h"
 #include "netcompat.h"
 #include "dect2/timecompat.h"
 #ifndef _WIN32
@@ -8,9 +9,12 @@
 #include <condition_variable>
 #include <cstring>
 #include <deque>
+#include <functional>
 #include <list>
+#include <map>
 #include <memory>
 #include <mutex>
+#include <random>
 #include <thread>
 #include <ctime>
 
@@ -75,6 +79,94 @@ struct NetTuner::Impl {
     std::atomic<int> live{0};   // connection threads still running
     std::string error;
 
+    // HTTP Live Streaming: one pipeline per service that somebody asked for, stopped again when nobody has fetched from it for a while
+    struct HlsEntry {
+        std::shared_ptr<Client> client;
+        std::unique_ptr<HlsPipeline> pipe;
+        std::atomic<bool> quit{false};
+        std::vector<uint8_t> rest;
+        size_t restOff = 0;
+        std::chrono::steady_clock::time_point created = std::chrono::steady_clock::now();
+    };
+    std::mutex hmu;
+    std::map<int, std::shared_ptr<HlsEntry>> hls;
+
+    void dropHls(const std::shared_ptr<HlsEntry>& e) {
+        e->quit = true;
+        e->client->cv.notify_all();
+        e->pipe->stop();
+        std::lock_guard<std::mutex> lk(mu);
+        clients.remove(e->client);
+    }
+    void pruneHls() {   // hmu held
+        for (auto it = hls.begin(); it != hls.end();) {
+            const bool idle = it->second->pipe->idleSeconds() > 30 && std::chrono::steady_clock::now() - it->second->created > std::chrono::seconds(30);
+            if (idle || !running) { dropHls(it->second); it = hls.erase(it); } else ++it;
+        }
+    }
+    std::shared_ptr<HlsEntry> hlsFor(int sid) {
+        std::lock_guard<std::mutex> lk(hmu);
+        pruneHls();
+        auto it = hls.find(sid);
+        if (it != hls.end()) return it->second;
+        auto e = std::make_shared<HlsEntry>();
+        e->client = std::make_shared<Client>();
+        e->client->sid = sid;
+        e->client->filter.select(sid);
+        HlsEntry* raw = e.get();
+        char tok[16];
+        snprintf(tok, sizeof tok, "%08x_", (unsigned)(std::random_device{}()));
+        e->pipe = std::make_unique<HlsPipeline>([this, raw](uint8_t* buf, int size) -> int {
+            while (running && !raw->quit) {
+                if (raw->restOff < raw->rest.size()) {
+                    const size_t n = std::min((size_t)size, raw->rest.size() - raw->restOff);
+                    memcpy(buf, raw->rest.data() + raw->restOff, n);
+                    raw->restOff += n;
+                    return (int)n;
+                }
+                std::vector<uint8_t> chunk;
+                {
+                    std::unique_lock<std::mutex> lk(raw->client->mu);
+                    raw->client->cv.wait_for(lk, std::chrono::milliseconds(250), [&] { return !raw->client->q.empty() || raw->quit || !running; });
+                    if (!raw->client->q.empty()) { chunk = std::move(raw->client->q.front()); raw->client->q.pop_front(); raw->client->bytes -= chunk.size(); }
+                }
+                if (!chunk.empty()) { raw->rest = std::move(chunk); raw->restOff = 0; }
+            }
+            return 0;
+        }, tok);
+        { std::lock_guard<std::mutex> l2(mu); clients.push_back(e->client); }
+        e->pipe->start();
+        hls[sid] = e;
+        return e;
+    }
+    void stopHls() {
+        std::lock_guard<std::mutex> lk(hmu);
+        for (auto& kv : hls) dropHls(kv.second);
+        hls.clear();
+    }
+
+    // /hls/<service>/index.m3u8 and the segments next to it
+    void serveHls(const std::string& path, const std::function<void(int, const char*, const std::string&)>& reply) {
+        const size_t slash = path.find('/', 5);
+        if (slash == std::string::npos) { reply(404, "text/plain", "not found"); return; }
+        const int sid = atoi(path.c_str() + 5);
+        const std::string name = path.substr(slash + 1);
+        auto e = hlsFor(sid);
+        std::string body, type;
+        // the first request starts the pipeline: give it time to produce the first segments
+        for (int i = 0; i < 100 && running; i++) {
+            if (e->pipe->get(name, body, type)) { reply(200, type.c_str(), body); return; }
+            if (!e->pipe->error().empty()) break;
+            if (name != "index.m3u8") break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        }
+        const std::string err = e->pipe->error();
+        if (!err.empty()) {
+            { std::lock_guard<std::mutex> lk(hmu); auto it = hls.find(sid); if (it != hls.end() && it->second == e) { dropHls(e); hls.erase(it); } }
+            reply(500, "text/plain", err);
+        } else reply(name == "index.m3u8" ? 503 : 404, "text/plain", "the stream is not ready yet");
+    }
+
     explicit Impl(Engine& e) : eng(e) {}
 
     // called from the receiver thread for every burst of transport stream packets: must stay fast
@@ -101,7 +193,7 @@ struct NetTuner::Impl {
     }
 
     static std::string respond(int code, const char* type, const std::string& body) {
-        std::string h = "HTTP/1.1 " + std::to_string(code) + (code == 200 ? " OK" : code == 401 ? " Unauthorized" : " Not Found") + "\r\nContent-Type: " + type +
+        std::string h = "HTTP/1.1 " + std::to_string(code) + (code == 200 ? " OK" : code == 401 ? " Unauthorized" : code == 500 ? " Internal Server Error" : code == 503 ? " Service Unavailable" : " Not Found") + "\r\nContent-Type: " + type +
                         "\r\nContent-Length: " + std::to_string(body.size()) + "\r\nConnection: close\r\nCache-Control: no-cache\r\n\r\n";
         return h + body;
     }
@@ -129,12 +221,16 @@ struct NetTuner::Impl {
         if (host.empty()) host = "127.0.0.1:" + std::to_string(cfg.port);
         const std::string keyQ = cfg.key.empty() ? "" : "?key=" + cfg.key;
         auto reply = [&](int code, const char* type, const std::string& body) { std::string s = respond(code, type, body); sendAll(fd, s.data(), s.size()); sockClose(fd); };
-        if (!authorised(query)) { reply(401, "text/plain", "a key is required"); return; }
+        // the segment names of a stream contain a random token that only the (keyed) playlist reveals: players fetch them without the key
+        const bool hlsSegment = path.rfind("/hls/", 0) == 0 && path.size() > 3 && path.compare(path.size() - 3, 3, ".ts") == 0;
+        if (!hlsSegment && !authorised(query)) { reply(401, "text/plain", "a key is required"); return; }
 
         const TsSnapshot snap = eng.tsSnapshot();
         std::vector<const TsService*> svc;
         for (const auto& s : snap.services) if (s.havePmt && (s.type == 1 || s.type == 2 || s.type == 3 || s.type == 0x0A || s.type == 0x11 || s.type == 0x16 || s.type == 0x19 || s.type == 0x1F)) svc.push_back(&s);
         const std::string base = "http://" + host;
+
+        if (path.rfind("/hls/", 0) == 0) { serveHls(path, reply); return; }
 
         if (path.rfind("/stream/", 0) == 0) {
             const int sid = atoi(path.c_str() + 8);
@@ -200,7 +296,7 @@ struct NetTuner::Impl {
             std::string h = "<!doctype html><meta charset=utf-8><title>OnAir</title><body style=\"font:15px monospace;background:#101214;color:#d0d4d6;padding:20px\"><h2>OnAir network tuner</h2>";
             h += "<p><a style=color:#7fb8cf href=\"/lineup.m3u" + keyQ + "\">lineup.m3u</a> &middot; <a style=color:#7fb8cf href=\"/guide.xml" + keyQ + "\">guide.xml</a></p>";
             if (svc.empty()) h += "<p>No channels yet: start the receiver and wait for a lock.</p>";
-            for (auto* s : svc) h += "<p>" + xmlEscape(s->name) + " &mdash; <a style=color:#7fb8cf href=\"/stream/" + std::to_string(s->id) + keyQ + "\">stream</a></p>";
+            for (auto* s : svc) h += "<p>" + xmlEscape(s->name) + " &mdash; <a style=color:#7fb8cf href=\"/stream/" + std::to_string(s->id) + keyQ + "\">stream</a> &middot; <a style=color:#7fb8cf href=\"/hls/" + std::to_string(s->id) + "/index.m3u8" + keyQ + "\">HLS</a></p>";
             reply(200, "text/html; charset=utf-8", h);
         } else reply(404, "text/plain", "not found");
     }
@@ -244,6 +340,7 @@ bool NetTuner::start(const NetTunerConfig& c) {
 void NetTuner::stop() {
     if (!p_->running.exchange(false)) return;
     p_->eng.setPacketTap(nullptr);
+    p_->stopHls();
     sockShutdown(p_->lsock); sockClose(p_->lsock); p_->lsock = kBadSock;
     if (p_->acceptor.joinable()) p_->acceptor.join();
     std::unique_lock<std::mutex> lk(p_->mu);

@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: brew install cmake pkg-config hackrf soapysdr libusb ffmpeg glfw
+        run: brew install cmake pkg-config hackrf soapysdr libusb ffmpeg glfw librtlsdr airspy libbladerf limesuite uhd   # the radio libraries go into the app (tools/package/bundle_macos.py)
       - name: Build the app and the .dmg
         run: tools/package/make_dmg.sh
       - uses: actions/upload-artifact@v4
@@ -35,20 +35,30 @@ jobs:
     strategy:
       matrix:
         include:
-          - { arch: x86_64, os: ubuntu-24.04 }
-          - { arch: arm64, os: ubuntu-24.04-arm }
+          # built on the oldest Ubuntu that is still supported: a program built on an old system runs on newer ones
+          - { arch: x86_64, os: ubuntu-22.04 }
+          - { arch: arm64, os: ubuntu-22.04-arm }
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential file cmake pkg-config libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libglfw3-dev
+          sudo apt-get install -y build-essential file cmake pkg-config nasm patchelf curl xz-utils libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libglfw3-dev
+      - name: Cache the static FFmpeg
+        id: ffmpeg
+        uses: actions/cache@v4
+        with: { path: ~/ffmpeg, key: "ffmpeg-8.0-static-${{ matrix.arch }}-${{ hashFiles('tools/package/build_ffmpeg_static.sh') }}" }
+      - name: Build FFmpeg (static, only what OnAir uses: the packages must not depend on the FFmpeg of the system they are installed on)
+        if: steps.ffmpeg.outputs.cache-hit != 'true'
+        run: tools/package/build_ffmpeg_static.sh "$HOME/ffmpeg"
       - name: Build
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=ON -DCMAKE_INSTALL_PREFIX=/usr
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=ON -DCMAKE_INSTALL_PREFIX=/usr -DDECT2_FFMPEG_PREFIX="$HOME/ffmpeg"
           cmake --build build -j 4 --target dect2 dect2cli dect2scan
       - name: Package
-        run: cd build && cpack -G "DEB;TGZ"
+        run: |
+          cd build && cpack -G "DEB;TGZ"
+          SRC="$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/tools/package/make_portable_linux.sh" "$PWD" "$PWD"
       - uses: actions/upload-artifact@v4
         with: { name: "linux-${{ matrix.arch }}", path: "build/onair*.deb\nbuild/onair-*.tar.gz" }
 

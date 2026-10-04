@@ -18,6 +18,8 @@ $S -o "$OUT/onair-scan.exe" $BUILD/dect2scan.exe
 # generic radios: SoapySDR with the RTL-SDR and Airspy drivers, and the C++ runtime they share with the program
 P=$ONAIR_WIN_PREFIX
 cp "$P/bin/libSoapySDR.dll" "$OUT/"
+# the radios OnAir drives by itself: their libraries next to the program (nothing to install)
+for d in librtlsdr libairspy libbladeRF libLimeSuite libiio; do [ -f "$P/bin/$d.dll" ] && cp "$P/bin/$d.dll" "$OUT/"; done
 mkdir -p "$OUT/lib/SoapySDR/modules0.8"
 cp "$P"/lib/SoapySDR/modules0.8/*.dll "$OUT/lib/SoapySDR/modules0.8/"
 LIBDIR=$(dirname "$(x86_64-w64-mingw32-g++ -print-file-name=libstdc++-6.dll)")

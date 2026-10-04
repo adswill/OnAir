@@ -10,6 +10,7 @@ namespace dect2 {
 
 struct AudioOut::Impl {
     void* backend = nullptr;          // owned by the backend implementation
+    int backendKind = 0;              // 1 our own backend, 2 the miniaudio fallback (Windows, Linux)
     std::vector<float> ring;          // interleaved stereo
     size_t frames = 0;                // ring capacity in frames (power of two)
     std::atomic<uint64_t> w{0}, r{0}; // frame counters
@@ -25,6 +26,8 @@ struct AudioOut::Impl {
 };
 
 bool audioBackendStart(AudioOut::Impl* impl, int sampleRate);   // false: no device
+bool audioMiniaudioStart(AudioOut::Impl* impl, int sampleRate);   // the miniaudio fallback (Windows, Linux)
+void audioMiniaudioStop(AudioOut::Impl* impl);
 void audioBackendStop(AudioOut::Impl* impl);
 
 } // namespace dect2

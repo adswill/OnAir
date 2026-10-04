@@ -14,12 +14,12 @@ void refreshDevices(App& a) {
     DeviceInfo s; s.kind = DeviceInfo::Synthetic; s.name = "Synthetic test signal (DVB-T2 8K, 8 MHz)"; a.devices.push_back(s);
     DeviceInfo f; f.kind = DeviceInfo::File; f.name = "IQ recording file…"; a.devices.push_back(f);
     std::string err;
-    for (auto& d : listHackrfDevices(err)) a.devices.push_back(d);
+    // HackRF, the radios with a native driver (RTL-SDR, Airspy, BladeRF, LimeSDR, PlutoSDR, USRP) and the rest through SoapySDR
+    for (auto& d : listRadios(err)) a.devices.push_back(d);
     a.hackrfErr = err;
-    const size_t nHack = a.devices.size() - 2;
-    std::string serr;
-    for (auto& d : listSoapyDevices(serr)) a.devices.push_back(d);
-    a.engine.log("device scan: " + std::to_string(nHack) + " HackRF, " + std::to_string(a.devices.size() - 2 - nHack) + " other radio(s)" + (soapySupported() ? "" : " (built without SoapySDR)") + (serr.empty() ? "" : "  " + serr));
+    size_t nHack = 0;
+    for (const auto& d : a.devices) if (d.kind == DeviceInfo::HackRF) nHack++;
+    a.engine.log("device scan: " + std::to_string(nHack) + " HackRF, " + std::to_string(a.devices.size() - 2 - nHack) + " other radio(s)" + (soapySupported() ? "" : " (built without SoapySDR)"));
 }
 
 void applyBandwidth(App& a) {
