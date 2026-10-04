@@ -43,7 +43,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential file cmake pkg-config nasm patchelf curl xz-utils libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libglfw3-dev
+          sudo apt-get install -y build-essential file cmake pkg-config nasm patchelf curl xz-utils libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libglfw3-dev librtlsdr0 libairspy0 libbladerf2 libiio0 liblimesuite20.10-1 libuhd4.1.0
       - name: Cache the static FFmpeg
         id: ffmpeg
         uses: actions/cache@v4
@@ -51,16 +51,18 @@ jobs:
       - name: "Build FFmpeg (static, only what OnAir uses, so that the packages do not depend on the FFmpeg of the system they are installed on)"
         if: steps.ffmpeg.outputs.cache-hit != 'true'
         run: tools/package/build_ffmpeg_static.sh "$HOME/ffmpeg"
+      - name: Gather the radio libraries
+        run: tools/package/collect_radio_libs_linux.sh "$GITHUB_WORKSPACE/build/radiolibs"
       - name: Build
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=ON -DCMAKE_INSTALL_PREFIX=/usr -DDECT2_FFMPEG_PREFIX="$HOME/ffmpeg"
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=ON -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_SKIP_INSTALL_ALL_DEPENDENCY=ON -DDECT2_FFMPEG_PREFIX="$HOME/ffmpeg" -DDECT2_RADIO_LIB_DIR="$GITHUB_WORKSPACE/build/radiolibs"
           cmake --build build -j 4 --target dect2 dect2cli dect2scan
       - name: Package
         run: |
           cd build && cpack -G "DEB;TGZ"
           SRC="$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/tools/package/make_portable_linux.sh" "$PWD" "$PWD"
       - uses: actions/upload-artifact@v4
-        with: { name: "linux-${{ matrix.arch }}", path: "build/onair*.deb\nbuild/onair-*.tar.gz" }
+        with: { name: "linux-${{ matrix.arch }}", path: "build/onair_*.deb\nbuild/onair-*-portable.tar.gz" }
 
   windows:
     name: Windows x64 installer and zip
