@@ -45,7 +45,9 @@ TXT
 echo "$BUILD/OnAir-$VERSION-windows-x64.zip"
 
 if command -v makensis >/dev/null 2>&1; then
-  makensis -V2 -DVERSION="$VERSION" -DSRC="$(cygpath -w "$PWD/$OUT")" -DICON="$(cygpath -w "$PWD/packaging/windows/OnAir.ico")" -DOUTFILE="$(cygpath -w "$PWD/$BUILD/OnAir-$VERSION-windows-x64-setup.exe")" packaging/windows/onair.nsi
+  # Windows paths with forward slashes, and no MSYS path conversion of the arguments (it breaks the -D definitions)
+  export MSYS2_ARG_CONV_EXCL="*"
+  makensis -V2 -DVERSION="$VERSION" -DSRC="$(cygpath -m "$PWD/$OUT")" -DICON="$(cygpath -m "$PWD/packaging/windows/OnAir.ico")" -DOUTFILE="$(cygpath -m "$PWD/$BUILD/OnAir-$VERSION-windows-x64-setup.exe")" "$(cygpath -m "$PWD/packaging/windows/onair.nsi")"
   echo "$BUILD/OnAir-$VERSION-windows-x64-setup.exe"
 else
   echo "makensis not found: only the zip was made"
