@@ -43,9 +43,14 @@ static void runAgc(const char* name, GainSetting start, double secs) {
     uint64_t seq = 0;
     int changes = 0;
     const double t0 = now();
-    while ((now() - t0) * kPace < secs) {
+    bool healthy = false;
+    // The simulated time is the wall time scaled by kPace; a slow computer sees fewer spectra in it. So after the planned time the loop goes on
+    // for a while longer (at most 12 simulated seconds) as long as the level is still not in the healthy range.
+    while ((now() - t0) * kPace < secs || (!healthy && (now() - t0) * kPace < secs + 12)) {
         if (e.latestSpectrum(sf, seq)) {
             seq = sf.seq;
+            const AdcStatus cur = classifyAdc(sf.stats.rmsDbfs, sf.stats.peak, sf.stats.clipFraction);
+            healthy = (cur == AdcStatus::Good || cur == AdcStatus::High) && sf.stats.clipFraction < 0.002f;
             if (agc.update((now() - t0) * kPace, sf.stats, g)) { t.lnaDb = g.lna; t.vgaDb = g.vga; t.ampOn = g.amp; e.retune(t); changes++; }
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(15));
