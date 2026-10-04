@@ -16,8 +16,9 @@ jobs:
           - { name: "Linux x86_64", os: ubuntu-24.04, extra: "" }
           - { name: "Linux arm64", os: ubuntu-24.04-arm, extra: "" }
           - { name: "Linux x86_64 (scalar code paths)", os: ubuntu-24.04, extra: "-DDECT2_NO_SIMD=ON" }
-          - { name: "macOS arm64", os: macos-14, extra: "" }
-          - { name: "macOS arm64 (portable DSP, no SIMD)", os: macos-14, extra: "-DDECT2_PORTABLE=ON -DDECT2_NO_SIMD=ON" }
+          - { name: "macOS arm64", os: macos-15, extra: "" }
+          - { name: "macOS Intel (x86_64)", os: macos-15-intel, extra: "" }
+          - { name: "macOS arm64 (portable DSP, no SIMD)", os: macos-15, extra: "-DDECT2_PORTABLE=ON -DDECT2_NO_SIMD=ON" }
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies (Linux)
@@ -43,11 +44,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
+          msystem: UCRT64   # the MINGW64 environment has no hackrf and soapysdr packages
           update: true
           install: >-
-            mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-pkgconf
-            mingw-w64-x86_64-ffmpeg mingw-w64-x86_64-glfw mingw-w64-x86_64-hackrf mingw-w64-x86_64-soapysdr mingw-w64-x86_64-libiconv
+            mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-ffmpeg mingw-w64-ucrt-x86_64-glfw mingw-w64-ucrt-x86_64-hackrf mingw-w64-ucrt-x86_64-soapysdr mingw-w64-ucrt-x86_64-libiconv
       - name: Configure and build (app, tools, tests)
         run: |
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON
@@ -64,8 +65,9 @@ jobs:
         include:
           - { name: "Linux x86_64, OpenGL", os: ubuntu-24.04, extra: "" }
           - { name: "Linux arm64, OpenGL", os: ubuntu-24.04-arm, extra: "" }
-          - { name: "macOS arm64, Metal", os: macos-14, extra: "" }
-          - { name: "macOS arm64, OpenGL", os: macos-14, extra: "-DDECT2_UI_BACKEND=OpenGL3" }
+          - { name: "macOS arm64, Metal", os: macos-15, extra: "" }
+          - { name: "macOS arm64, OpenGL", os: macos-15, extra: "-DDECT2_UI_BACKEND=OpenGL3" }
+          - { name: "macOS Intel, Metal", os: macos-15-intel, extra: "" }
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies (Linux)
@@ -80,41 +82,3 @@ jobs:
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=OFF ${{ matrix.extra }}
       - name: Build the app
         run: cmake --build build -j 4 --target dect2
-
-  sanitize:
-    name: Linux x86_64 (AddressSanitizer + UBSan)
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake pkg-config libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev
-      - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDECT2_BUILD_APP=OFF -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -g -O1"
-      - name: Build
-        run: cmake --build build -j 4 --target test_gain test_channel test_atsc_fec fuzz_rx
-      - name: "Test the ones that failed on plain x86_64"
-        run: |
-          export ASAN_OPTIONS=detect_leaks=0:abort_on_error=0
-          ./build/test_gain || true
-          ./build/test_channel || true
-
-  backtrace:
-    name: Linux x86_64 (gdb backtrace of test_gain)
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake pkg-config gdb libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev
-      - name: Configure and build (optimised, with debug symbols)
-        run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=OFF -DCMAKE_CXX_FLAGS="-g"
-          cmake --build build -j 4 --target test_gain
-      - name: "Run under gdb (several tries, the crash is intermittent)"
-        run: |
-          for i in 1 2 3; do
-            gdb -batch -ex "handle SIGPIPE nostop" -ex run -ex "thread apply all bt 12" --args ./build/test_gain 2>&1 | tail -80
-          done

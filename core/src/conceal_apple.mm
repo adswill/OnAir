@@ -8,7 +8,17 @@
 #include <cstring>
 #include <mutex>
 
+// The frame-rate-conversion API is in the macOS 15.4 SDK (Xcode 16.3) and later. Building with an older SDK (some CI images) still works:
+// the machine-learning path is then left out and the portable motion search is used.
+#if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 150400 && __has_include(<VideoToolbox/VTFrameProcessor.h>)
+#define DECT2_APPLE_ML 1
+#else
+#define DECT2_APPLE_ML 0
+#endif
+
 namespace dect2 {
+
+#if DECT2_APPLE_ML
 
 namespace {
 
@@ -114,5 +124,10 @@ bool interpolateGapApple(const VideoFrame& A, const VideoFrame& B, int count, st
     }
     return false;
 }
+
+#else   // older SDK: no machine-learning interpolation
+bool appleInterpolationAvailable() { return false; }
+bool interpolateGapApple(const VideoFrame&, const VideoFrame&, int, std::vector<std::shared_ptr<VideoFrame>>&) { return false; }
+#endif
 
 } // namespace dect2

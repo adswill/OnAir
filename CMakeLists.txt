@@ -29,7 +29,7 @@ option(DECT2_BUILD_TESTS "Build the tests, tools and benchmarks" ON)
 option(DECT2_PORTABLE "Use the portable DSP kernels instead of Accelerate (macOS)" OFF)
 option(DECT2_WITH_SOAPY "Support generic radios (Airspy, SDRplay, RTL-SDR, PlutoSDR, LimeSDR, ...) through SoapySDR when it is installed" ON)
 option(DECT2_NO_SIMD "Disable the SIMD intrinsics and use the plain C++ code" OFF)
-option(DECT2_WIN_AVX2 "Windows x86-64: build the LDPC decoder for AVX2 (all CPUs since 2013); Windows has no runtime dispatch like Linux" ON)
+option(DECT2_WIN_AVX2 "Windows and macOS on x86-64: build the receiver for AVX2 (all CPUs since 2013); these systems have no runtime dispatch like Linux" ON)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(HACKRF REQUIRED libhackrf)   # plain variables: some package managers list include paths that do not exist
@@ -76,6 +76,11 @@ if(APPLE)
   # Metal LDPC decoder and CoreAudio output
   target_sources(dect2core PRIVATE core/src/gpu_ldpc.mm core/src/audioout_coreaudio.mm core/src/conceal_apple.mm)
   set_source_files_properties(core/src/gpu_ldpc.mm core/src/conceal_apple.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
+  if(DECT2_WIN_AVX2 AND (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64" OR CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64"))
+    # Intel Mac: no runtime dispatch like on Linux, so the whole receiver is built for AVX2 (the program checks for it at start and says so if missing)
+    target_compile_options(dect2core PRIVATE -mavx2 -mfma)
+    target_compile_definitions(dect2core PUBLIC DECT2_REQUIRES_AVX2)
+  endif()
   target_link_libraries(dect2core PUBLIC "-framework Accelerate" "-framework AudioToolbox" "-framework CoreAudio" "-framework CoreFoundation" "-framework Metal" "-framework Foundation" "-framework VideoToolbox" "-framework CoreMedia" "-framework CoreVideo" pthread iconv)
 else()
   # no GPU decoder yet (stub), audio through miniaudio
