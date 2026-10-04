@@ -1,0 +1,186 @@
+// small reusable widgets: pill buttons, lamps, gauges, scatter and history plots, formatting helpers
+#include "app.h"
+
+bool tabItem(const char* name, Ic icon) {
+    ImGuiTabItemFlags fl = 0;
+    if (!gForceTab.empty() && gForceTab == name) { fl = ImGuiTabItemFlags_SetSelected; gForceTab.clear(); }
+    // the label is padded with spaces to leave room for the icon, which is drawn over that gap
+    const float gap = iconSize() + 5.f;
+    const int nSp = (int)std::ceil(gap / ImGui::CalcTextSize(" ").x);
+    const std::string label = std::string(nSp, ' ') + name + "###" + name;
+    const bool open = ImGui::BeginTabItem(label.c_str(), nullptr, fl);
+    const ImVec2 r0 = ImGui::GetItemRectMin(), r1 = ImGui::GetItemRectMax();
+    icons::draw(icon, ImVec2(r0.x + ImGui::GetStyle().FramePadding.x + iconSize() * 0.5f + 1.f, (r0.y + r1.y) * 0.5f), iconSize() * 0.92f,
+                open ? IM_COL32(255, 255, 255, 255) : IM_COL32(140, 154, 170, 255));
+    return open;
+}
+
+void toggleFullscreen() {
+    if (!gWindow) return;
+    if (glfwGetWindowMonitor(gWindow)) { glfwSetWindowMonitor(gWindow, nullptr, gWinX, gWinY, gWinW, gWinH, 0); return; }
+    glfwGetWindowPos(gWindow, &gWinX, &gWinY); glfwGetWindowSize(gWindow, &gWinW, &gWinH);
+    GLFWmonitor* m = glfwGetPrimaryMonitor();
+    const GLFWvidmode* vm = glfwGetVideoMode(m);
+    glfwSetWindowMonitor(gWindow, m, 0, 0, vm->width, vm->height, vm->refreshRate);
+}
+
+bool pillButton(const char* label, bool selected, float padX) {
+    ImGui::PushID(label);
+    const ImVec2 ts = ImGui::CalcTextSize(label);
+    const ImVec2 sz(ts.x + padX * 2, ImGui::GetFrameHeight() - 3);
+    const ImVec2 p = ImGui::GetCursorScreenPos();
+    const bool clicked = ImGui::InvisibleButton("##pill", sz);
+    const bool hov = ImGui::IsItemHovered();
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    const ImU32 bg = selected ? IM_COL32(52, 92, 108, 255) : hov ? IM_COL32(46, 56, 68, 255) : IM_COL32(30, 35, 42, 255);
+    dl->AddRectFilled(p, ImVec2(p.x + sz.x, p.y + sz.y), bg, 3.f);
+    dl->AddText(ImVec2(p.x + padX, p.y + (sz.y - ts.y) * 0.5f), selected ? IM_COL32(255, 255, 255, 255) : IM_COL32(176, 184, 194, 255), label);
+    ImGui::PopID();
+    return clicked;
+}
+
+// A row of pills that switches between sub-views of a tab. Returns the selected index.
+int subNav(const char* id, int& cur, std::initializer_list<const char*> names) {
+    ImGui::PushID(id);
+    int i = 0;
+    for (const char* n : names) { if (i) ImGui::SameLine(0, 6 * gUi); if (pillButton(n, cur == i)) cur = i; i++; }
+    ImGui::PopID();
+    ImGui::Spacing();
+    return cur;
+}
+
+// Small rounded label drawn at an absolute position; returns its width.
+float tagAt(ImDrawList* dl, ImVec2 pos, const char* text, ImU32 bg, ImU32 fg) {
+    const ImVec2 ts = ImGui::CalcTextSize(text);
+    const float w = ts.x + 10, h = ts.y + 2;
+    dl->AddRectFilled(pos, ImVec2(pos.x + w, pos.y + h), bg, 3.f);
+    dl->AddText(ImVec2(pos.x + 5, pos.y + 1), fg, text);
+    return w;
+}
+
+void gaugePill(float width, float frac, ImU32 fill, const char* text) {
+    const float h = ImGui::GetFrameHeight() - 2;
+    ImVec2 p = ImGui::GetCursorScreenPos();
+    p.y += 1;
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    dl->AddRectFilled(p, ImVec2(p.x + width, p.y + h), IM_COL32(14, 16, 20, 255), 3.f);
+    frac = std::min(1.f, std::max(0.f, frac));
+    if (frac > 0.02f) dl->AddRectFilled(p, ImVec2(p.x + std::max(h, width * frac), p.y + h), fill, 3.f);
+    dl->AddRect(p, ImVec2(p.x + width, p.y + h), IM_COL32(52, 58, 66, 255), 3.f);
+    const ImVec2 ts = ImGui::CalcTextSize(text);
+    dl->AddText(ImVec2(p.x + (width - ts.x) * 0.5f, p.y + (h - ts.y) * 0.5f), IM_COL32(240, 244, 248, 255), text);
+    ImGui::Dummy(ImVec2(width, h));
+}
+
+void lamp(const char* label, int state /*0 grey 1 green 2 amber 3 red*/, int icon) {
+    ImVec4 c = state == 1 ? pal::okGreen() : state == 2 ? pal::warnAmber()
+             : state == 3 ? pal::badRed() : ImVec4(0.26f, 0.29f, 0.33f, 1);
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    ImVec2 p = ImGui::GetCursorScreenPos();
+    const ImU32 cu = ImGui::ColorConvertFloat4ToU32(c);
+    (void)icon;
+    const float sq = 7.f, cy = p.y + ImGui::GetTextLineHeight() * 0.5f;
+    if (state) dl->AddRectFilled(ImVec2(p.x + 1, cy - sq * 0.5f), ImVec2(p.x + 1 + sq, cy + sq * 0.5f), cu);
+    else dl->AddRect(ImVec2(p.x + 1, cy - sq * 0.5f), ImVec2(p.x + 1 + sq, cy + sq * 0.5f), cu);
+    ImGui::Dummy(ImVec2(sq + 5, ImGui::GetTextLineHeight()));
+    ImGui::SameLine(0, 0);
+    ImGui::TextDisabled("%s", label);
+    static const struct { const char* k; const char* tip; } kTips[] = {
+        {"IQ", "Sample stream. Green: the ADC level is in a healthy range. Amber: too low or high. Red: clipping."},
+        {"P1", "DVB-T2: the P1 preamble symbol (frame start and mode) is being found."},
+        {"GI", "Guard interval and symbol timing are locked."},
+        {"L1-pre", "DVB-T2: the L1 pre-signalling block (frame structure) decodes with a good CRC."},
+        {"L1-post", "DVB-T2: the L1 post-signalling block (PLP list, modulation) decodes with a good CRC."},
+        {"Frame", "A full T2 frame is being received and equalised."},
+        {"LDPC", "Forward error correction, inner code: share of blocks that decode."},
+        {"BCH", "Forward error correction, outer code: share of blocks that decode."},
+        {"TS", "Transport stream: services found, continuity errors counted."},
+        {"Video", "The player is decoding and showing pictures."},
+        {"Audio", "The player has audio buffered and playing."},
+        {"Sync", "DVB-T: OFDM symbol sync from the cyclic prefix."},
+        {"TPS", "DVB-T: the transmission parameter signalling bits are decoded."},
+        {"Chan", "Channel estimate from the pilots is valid."},
+        {"Viterbi", "DVB-T: the convolutional decoder found the packet sync."},
+        {"RS", "Reed-Solomon outer code: share of packets that are clean."},
+        {"Pilot", "ATSC: the 8-VSB pilot carrier is locked."},
+        {"Seg", "ATSC: data segment sync found."},
+        {"Field", "ATSC: field sync found."},
+        {"Eq", "ATSC: the equaliser is trained."},
+        {"Trellis", "ATSC: the trellis decoder produces a valid transport stream."}};
+    {
+        const ImVec2 mx = ImGui::GetItemRectMax();
+        if (ImGui::IsMouseHoveringRect(p, ImVec2(mx.x, p.y + ImGui::GetTextLineHeight()))) {
+            for (auto& e : kTips) if (!strcmp(e.k, label)) { ImGui::SetTooltip("%s", e.tip); break; }
+        }
+    }
+}
+
+void scatter(const char* id, const std::vector<cf32>& pts, ImVec2 size, double lim, ImVec4 col) {
+    if (ImPlot::BeginPlot(id, size, ImPlotFlags_NoLegend | ImPlotFlags_NoTitle | ImPlotFlags_Equal)) {
+        ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoTickLabels, ImPlotAxisFlags_NoTickLabels);
+        ImPlot::SetupAxisLimits(ImAxis_X1, -lim, lim, ImPlotCond_Always);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, -lim, lim, ImPlotCond_Always);
+        if (!pts.empty()) {
+            ImPlotSpec sp;
+            sp.Marker = ImPlotMarker_Circle; sp.MarkerSize = 1.6f; sp.Stride = sizeof(cf32);
+            sp.MarkerFillColor = col; sp.MarkerLineColor = col; sp.LineColor = col;
+            const float* d = reinterpret_cast<const float*>(pts.data());
+            ImPlot::PlotScatter("pts", d, d + 1, (int)pts.size(), sp);
+        }
+        ImPlot::EndPlot();
+    }
+}
+
+void historyPlot(const char* id, const char* ylabel, const std::deque<float>& h, ImVec2 size) {
+    if (ImPlot::BeginPlot(id, size, ImPlotFlags_NoLegend | ImPlotFlags_NoTitle)) {
+        ImPlot::SetupAxes("samples (~30/s)", ylabel, 0, ImPlotAxisFlags_AutoFit);
+        ImPlot::SetupAxisLimits(ImAxis_X1, 0, 600, ImPlotCond_Always);
+        if (!h.empty()) {
+            std::vector<float> v(h.begin(), h.end());
+            ImPlot::PlotLine("h", v.data(), (int)v.size());
+        }
+        ImPlot::EndPlot();
+    }
+}
+
+std::string fmtLocal(int64_t utc, const char* f) {
+    time_t t = (time_t)utc; struct tm m; dect2::localTime(t, &m);
+    char b[48]; strftime(b, sizeof b, f, &m);
+    return b;
+}
+
+const char* genreName(int g) {
+    static const char* n[] = {"", "Movie / drama", "News / current affairs", "Show / game show", "Sports", "Children's / youth", "Music / ballet / dance", "Arts / culture", "Social / political / economics", "Education / science", "Leisure / hobbies"};
+    return g >= 1 && g <= 10 ? n[g] : "";
+}
+
+const char* fmtKbps(char* b, size_t n, double k) { if (k >= 1000) snprintf(b, n, "%.2f Mbit/s", k / 1000); else snprintf(b, n, "%.0f kbit/s", k); return b; }
+
+void qualityBar(App& a, float width) {
+    const QualityReport& q = a.quality.report();
+    const bool run = a.engine.running();
+    const float pct = run && q.valid ? (float)q.percent : 0.f;
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    ImVec2 p = ImGui::GetCursorScreenPos();
+    const float h = ImGui::GetFrameHeight();
+    dl->AddRectFilled(p, ImVec2(p.x + width, p.y + h), IM_COL32(120, 28, 28, 255), 3.f); // red = nothing yet
+    const float t = pct / 100.f;
+    const ImVec4 lo(0.95f, 0.55f, 0.15f, 1), hi(0.25f, 0.85f, 0.35f, 1);
+    const ImVec4 col(lo.x + (hi.x - lo.x) * t, lo.y + (hi.y - lo.y) * t, lo.z + (hi.z - lo.z) * t, 1);
+    if (pct > 0) dl->AddRectFilled(p, ImVec2(p.x + width * t, p.y + h), ImGui::ColorConvertFloat4ToU32(col), 3.f);
+    dl->AddRect(p, ImVec2(p.x + width, p.y + h), IM_COL32(70, 76, 84, 255), 3.f);
+    char txt[96];
+    if (!run || !q.valid) snprintf(txt, sizeof txt, "signal quality: %s", run ? "no lock" : "-");
+    else snprintf(txt, sizeof txt, "signal quality %.0f%%  %s", q.percent, q.label.c_str());
+    ImVec2 ts = ImGui::CalcTextSize(txt);
+    dl->AddText(ImVec2(p.x + (width - ts.x) * 0.5f, p.y + (h - ts.y) * 0.5f), IM_COL32(235, 238, 242, 255), txt);
+    ImGui::Dummy(ImVec2(width, h));
+    if (ImGui::IsItemHovered() && run && q.valid) {
+        ImGui::BeginTooltip();
+        ImGui::Text("data SNR %.1f dB, needed for this modulation/code rate about %.1f dB", q.snrDb, q.requiredDb);
+        ImGui::Text("margin %+.1f dB, FEC blocks decoded %.1f%% (last frames)", q.marginDb, q.fecOk * 100);
+        ImGui::TextDisabled("0 dB margin is the edge of reception (25%%); +6 dB or more is comfortable.");
+        ImGui::EndTooltip();
+    }
+}
+

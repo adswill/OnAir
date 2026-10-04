@@ -5,6 +5,7 @@
 #import <CoreVideo/CoreVideo.h>
 #import <Foundation/Foundation.h>
 #import <VideoToolbox/VideoToolbox.h>
+#import <objc/message.h>
 #include <cstring>
 #include <mutex>
 
@@ -63,7 +64,14 @@ void readBuffer(CVPixelBufferRef pb, VideoFrame& f, int w, int h) {
 } // namespace
 
 bool appleInterpolationAvailable() {
-    if (@available(macOS 15.4, *)) return [VTFrameRateConversionConfiguration isSupported];
+    if (@available(macOS 15.4, *)) {
+        // the class property is called `supported` in some SDKs and `isSupported` in others: ask the class which one it has
+        Class c = NSClassFromString(@"VTFrameRateConversionConfiguration");
+        for (NSString* name in @[@"isSupported", @"supported"]) {
+            SEL sel = NSSelectorFromString(name);
+            if (c && [c respondsToSelector:sel]) return ((BOOL (*)(id, SEL))objc_msgSend)((id)c, sel);
+        }
+    }
     return false;
 }
 

@@ -1,7 +1,9 @@
+// First-run tour with Onny the TV.
+#include "app.h"
+
 // First-run tour with Onny the TV: a friendly guide that explains the window, plays the synthetic demo signal and helps pick a radio.
 // Included by main.cpp (needs App, setFamily, refreshDevices, savePrefs, gForceTab).
 
-enum WizTarget { TgNone = 0, TgSwitch, TgToolbar, TgMain, TgRight, TgConst, TgCount };
 
 struct WizStep {
     const char* text;
@@ -34,20 +36,20 @@ static const WizStep kWiz[] = {
 };
 static const int kWizSteps = (int)(sizeof kWiz / sizeof *kWiz);
 
-static void wizFinish(App& a) {
+void wizFinish(App& a) {
     a.wizOpen = false;
     plat::prefs().setB("wizardDone", true);
     plat::prefs().flush();
 }
 
-static void wizEnter(App& a, int step) {
+void wizEnter(App& a, int step) {
     a.wizStep = std::max(0, std::min(kWizSteps - 1, step));
     a.wizStepT = ImGui::GetTime();
     a.wizAcked = false;
     if (kWiz[a.wizStep].tab) gForceTab = kWiz[a.wizStep].tab;
 }
 
-static void wizAction(App& a, int step) {
+void wizAction(App& a, int step) {
     if (step == 2) {   // start the synthetic demo
         for (int i = 0; i < (int)a.devices.size(); i++) if (a.devices[i].kind == DeviceInfo::Synthetic) a.devIdx = i;
         setFamily(a, 0);
@@ -63,7 +65,7 @@ static void wizAction(App& a, int step) {
     }
 }
 
-static void wizard(App& a, ImVec2 disp) {
+void wizard(App& a, ImVec2 disp) {
     if (!a.wizOpen) return;
     const double now = ImGui::GetTime();
     const WizStep& st = kWiz[a.wizStep];
@@ -160,3 +162,4 @@ static void wizard(App& a, ImVec2 disp) {
     }
     ImGui::End();
 }
+

@@ -115,7 +115,7 @@ if(DECT2_BUILD_APP)
   set(IMGUI_SOURCES
     third_party/imgui/imgui.cpp third_party/imgui/imgui_draw.cpp third_party/imgui/imgui_tables.cpp third_party/imgui/imgui_widgets.cpp
     third_party/imgui/backends/imgui_impl_glfw.cpp third_party/implot/implot.cpp third_party/implot/implot_items.cpp)
-  set(APP_SOURCES app/main.cpp app/gfx_png.cpp)
+  set(APP_SOURCES app/main.cpp app/app_state.cpp app/widgets.cpp app/toolbar.cpp app/plots.cpp app/analysis_tabs.cpp app/tv.cpp app/scan_outputs.cpp app/antenna.cpp app/dab_ui.cpp app/wizard.cpp app/gfx_png.cpp)
   if(DECT2_UI_BACKEND STREQUAL "Metal")
     if(NOT APPLE)
       message(FATAL_ERROR "The Metal back end needs macOS")

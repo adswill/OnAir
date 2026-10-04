@@ -42,6 +42,12 @@ static double movingAreaError(const VideoFrame& a, const VideoFrame& truth, cons
 }
 
 int main() {
+    // the repair has a time budget for live playback; the quality checks must not depend on how fast this computer is
+#ifdef _WIN32
+    _putenv_s("DECT2_CONCEAL_MS", "1000000000");
+#else
+    setenv("DECT2_CONCEAL_MS", "1000000000", 1);
+#endif
     // ---- the CPU motion search at a small size: a bright box moving 160 pixels to the right, the gap has 5 pictures
     {
         const int w = 640, h = 360;

@@ -1,3 +1,6 @@
+// DAB / DAB+ digital radio panels.
+#include "app.h"
+
 // DAB / DAB+ screens (included by main.cpp): channel plan, status lines, constellation panels, station list and player,
 // the Radio and Ensemble tabs, and the Band III scanner.
 
@@ -11,13 +14,13 @@ static const DabChan kDabCh[] = {
     {"13A", 230.784}, {"13B", 232.496}, {"13C", 234.208}, {"13D", 235.776}, {"13E", 237.488}, {"13F", 239.200}};
 static constexpr int kNumDabCh = (int)(sizeof kDabCh / sizeof *kDabCh);
 
-static const char* dabChannelName(double mhz) {
+const char* dabChannelName(double mhz) {
     for (const auto& c : kDabCh) if (std::fabs(c.mhz - mhz) < 0.05) return c.name;
     return nullptr;
 }
 
 // A selector of DAB channels, used instead of the bandwidth box in DAB mode. Returns true when the frequency changed.
-static bool dabChannelCombo(App& a) {
+bool dabChannelCombo(App& a) {
     const char* cur = dabChannelName(a.freqMhz);
     char lbl[48];
     snprintf(lbl, sizeof lbl, cur ? "%s  %.3f MHz" : "Channel", cur ? cur : "", a.freqMhz);
@@ -36,7 +39,7 @@ static bool dabChannelCombo(App& a) {
 }
 
 // ------------------------------------------------------------------ status lines
-static void dabStatus(App& a) {
+void dabStatus(App& a) {
     const bool run = a.engine.running();
     const SignalStats& st = a.spec.stats;
     const DabTelemetry& d = a.rx.dab;
@@ -111,7 +114,7 @@ static void dabStatus(App& a) {
 }
 
 // ------------------------------------------------------------------ constellation row
-static void dabHistory(App& a) {
+void dabHistory(App& a) {
     if (a.dabStation >= 0 && a.dabMode && a.engine.running()) { a.engine.dabSelect(a.dabStation); a.engine.dabAudio().setVolume(a.volume); a.dabStation = -1; }
     static uint64_t lastSeq = 0;
     if (a.rx.standard != 3 || a.rx.seq == lastSeq) return;
@@ -120,7 +123,7 @@ static void dabHistory(App& a) {
     if (a.rx.dab.state == 2) { push(a.dabSnrH, (float)a.rx.dab.snrDb); push(a.dabFicH, (float)a.rx.dab.ficRecentOk); }
 }
 
-static void dabPanels(App& a) {
+void dabPanels(App& a) {
     const DabTelemetry& d = a.rx.dab;
     const float availW = ImGui::GetContentRegionAvail().x, availH = ImGui::GetContentRegionAvail().y;
     const float side = std::max(90.f, std::min(availH - 26.f - ImGui::GetFrameHeight(), availW / 4.f - 16.f));
@@ -174,7 +177,7 @@ static void dabPanels(App& a) {
 }
 
 // ------------------------------------------------------------------ stations (right panel)
-static std::string dabSubText(const DabEnsemble& e, int sub) {
+std::string dabSubText(const DabEnsemble& e, int sub) {
     auto it = e.subs.find(sub);
     if (it == e.subs.end()) return "";
     const DabSubchannel& s = it->second;
@@ -184,7 +187,7 @@ static std::string dabSubText(const DabEnsemble& e, int sub) {
     return b;
 }
 
-static void dabSelectStation(App& a, int sub, bool play) {
+void dabSelectStation(App& a, int sub, bool play) {
     if (play) {
         a.engine.dabSelect(sub);
         a.engine.dabAudio().setVolume(a.volume);
@@ -192,7 +195,7 @@ static void dabSelectStation(App& a, int sub, bool play) {
     } else a.engine.dabSelect(-1);
 }
 
-static void dabStations(App& a) {
+void dabStations(App& a) {
     const bool run = a.engine.running();
     const DabEnsemble ens = a.engine.dabEnsemble();
     const int cur = a.engine.dabSelected();
@@ -268,7 +271,7 @@ static void dabStations(App& a) {
 }
 
 // ------------------------------------------------------------------ tabs
-static void dabRadioTab(App& a) {
+void dabRadioTab(App& a) {
     const DabEnsemble ens = a.engine.dabEnsemble();
     const int cur = a.engine.dabSelected();
     if (ens.services.empty()) { ImGui::TextDisabled(a.engine.running() ? "waiting for the ensemble information (a second or two)..." : "start the receiver on a DAB channel (5A to 13F)"); return; }
@@ -309,7 +312,7 @@ static void dabRadioTab(App& a) {
     }
 }
 
-static void dabEnsembleTab(App& a) {
+void dabEnsembleTab(App& a) {
     const DabTelemetry& d = a.rx.dab;
     const DabEnsemble ens = a.engine.dabEnsemble();
     ImGui::TextDisabled("DAB receiver, transmission mode I: null symbol and phase reference sync, DQPSK, fast information channel, EEP sub-channels, DAB+ superframes");
@@ -344,7 +347,7 @@ static void dabEnsembleTab(App& a) {
 }
 
 // ------------------------------------------------------------------ scanner (Band III, one ensemble per channel)
-static void dabScanTab(App& a) {
+void dabScanTab(App& a) {
     App::DabScan& s = a.dabScan;
     const bool run = a.engine.running();
     ImGui::TextDisabled("Tunes through the 38 Band III channels (5A to 13F) and lists the ensembles with their stations. About a minute.");
@@ -391,7 +394,7 @@ static void dabScanTab(App& a) {
 }
 
 // The scan state machine, called every frame
-static void dabScanStep(App& a) {
+void dabScanStep(App& a) {
     App::DabScan& s = a.dabScan;
     if (!s.running) return;
     if (!a.engine.running()) { s.running = false; return; }
@@ -427,3 +430,4 @@ static void dabScanStep(App& a) {
     if (s.idx + 1 >= kNumDabCh) { s.running = false; a.freqMhz = s.savedFreq; a.tune.centerHz = a.freqMhz * 1e6; a.engine.retuneReset(a.tune); a.engine.log("DAB scan finished"); }
     else tuneTo(s.idx + 1);
 }
+
