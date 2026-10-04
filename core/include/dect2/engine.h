@@ -62,6 +62,8 @@ public:
 
     // Latest spectrum snapshot; returns true if newer than `lastSeq`.
     bool latestSpectrum(SpectrumFrame& out, uint64_t lastSeq);
+    // no spectrum fft when headless, autobw needs it
+    void setSpectrumEnabled(bool on) { analyzer_.setTransform(on); }
 
     bool latestRx(RxTelemetry& out, uint64_t lastSeq);
     void setPlpDump(std::function<void(const PlpResult&)> cb) { plpDump_ = std::move(cb); }

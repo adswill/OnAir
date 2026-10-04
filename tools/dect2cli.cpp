@@ -110,6 +110,7 @@ int main(int argc, char** argv) {
     e.setComputeMode(computeMode);
     e.setStandard(standard);
     e.setBandwidthAuto(autoBw);
+    e.setSpectrumEnabled(autoBw);   // cli doesn't show the spectrum
     if (!e.start(dev, tune, file)) {
         size_t n; for (auto& l : e.logSnapshot(n)) fprintf(stderr, "%s\n", l.c_str());
         return 1;

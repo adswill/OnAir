@@ -25,9 +25,10 @@ public:
     ~SpectrumAnalyzer();
     size_t fftSize() const { return n_; }
 
-    // Consume samples; average power over everything fed since the last takeFrame().
+    // consume samples, averages up to 32 blocks per frame
     void feed(const cf32* x, size_t n);
     bool takeFrame(SpectrumFrame& out); // false if nothing accumulated
+    void setTransform(bool on);         // off = stats only
     void reset();                       // forget accumulated data (after retuning)
 
 private:

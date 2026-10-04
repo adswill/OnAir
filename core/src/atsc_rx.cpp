@@ -13,6 +13,8 @@
 #include <mutex>
 #include <thread>
 #include "dect2/dsp_compat.h"
+#include "dect2/platform.h"
+#include "dect2/simd.h"
 #if defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
 #include <arm_neon.h>
 #include <cstdint>
@@ -23,6 +25,46 @@
 
 namespace dect2 {
 namespace atsc {
+
+// stage A filter for outputs k0..k1, safe to split across threads
+DECT2_MULTIVERSION void pfbBlock(const float* taps, int J, int NPH, const float* re, const float* im, int64_t base,
+                                 double pos0, double step, size_t k0, size_t k1, float* outRe, float* outIm) {
+    const int T = 2 * J;
+    for (size_t k = k0; k < k1; k++) {
+        const double pos = pos0 + (double)k * step;
+        int64_t i0 = (int64_t)std::floor(pos);
+        int phi = (int)((pos - (double)i0) * NPH + 0.5);
+        if (phi >= NPH) { phi = 0; i0++; }
+        const float* tp = &taps[(size_t)phi * T];
+        const size_t b0 = (size_t)(i0 - base - J + 1);
+        const float* pr = &re[b0];
+        const float* pi_ = &im[b0];
+        float sr = 0, si = 0;
+        int j = 0;
+#if defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
+        float32x4_t ar = vdupq_n_f32(0), ai = vdupq_n_f32(0);
+        for (; j + 4 <= T; j += 4) {
+            const float32x4_t t4 = vld1q_f32(tp + j);
+            ar = vfmaq_f32(ar, vld1q_f32(pr + j), t4);
+            ai = vfmaq_f32(ai, vld1q_f32(pi_ + j), t4);
+        }
+        sr = vaddvq_f32(ar); si = vaddvq_f32(ai);
+#elif defined(__GNUC__) && !defined(DECT2_NO_SIMD)
+        // arrays didn't vectorise, vector type does
+        typedef float v8 __attribute__((vector_size(32)));
+        v8 ar = {}, ai = {};
+        for (; j + 8 <= T; j += 8) {
+            v8 t8, r8, i8;
+            std::memcpy(&t8, tp + j, sizeof t8); std::memcpy(&r8, pr + j, sizeof r8); std::memcpy(&i8, pi_ + j, sizeof i8);
+            ar += r8 * t8; ai += i8 * t8;
+        }
+        sr = ((ar[0] + ar[4]) + (ar[1] + ar[5])) + ((ar[2] + ar[6]) + (ar[3] + ar[7]));
+        si = ((ai[0] + ai[4]) + (ai[1] + ai[5])) + ((ai[2] + ai[6]) + (ai[3] + ai[7]));
+#endif
+        for (; j < T; j++) { sr += pr[j] * tp[j]; si += pi_[j] * tp[j]; }
+        outRe[k] = sr; outIm[k] = si;
+    }
+}
 
 namespace {
 constexpr double kPi = 3.14159265358979323846;
@@ -35,6 +77,18 @@ constexpr int kInterpJ = 8;                             // symbol interpolator h
 constexpr int kInterpPh = 64;
 
 inline cf32 expj(double a) { return cf32((float)std::cos(a), (float)std::sin(a)); }
+
+// cheaper atan2, good enough for the pll
+inline float fastAtan2(float y, float x) {
+    const float ax = std::fabs(x), ay = std::fabs(y);
+    const float mx = std::max(ax, ay), mn = std::min(ax, ay);
+    if (mx == 0.f) return 0.f;
+    const float a = mn / mx, s = a * a;
+    float r = (((-0.0464964749f * s + 0.15931422f) * s - 0.327622764f) * s) * a + a;
+    if (ay > ax) r = 1.57079637f - r;
+    if (x < 0) r = 3.14159274f - r;
+    return y < 0 ? -r : r;
+}
 
 // Solves (A + lambda I) w = b for a symmetric positive definite A (dimension n, row-major), in place
 bool solveSpd(std::vector<double>& A, std::vector<double>& b, int n) {
@@ -65,6 +119,8 @@ struct Core {
     int NPH = 128;
     std::vector<float> taps;
     std::vector<float> inRe, inIm;   // input samples, split
+    std::vector<float> pfRe, pfIm;
+    bool splitA = std::thread::hardware_concurrency() >= 2;
     uint64_t inBase = 0;
     double pos = 0, step = 0;
     // ---- stage B: pilot loop
@@ -177,40 +233,26 @@ struct Core {
         for (const cf32& v : in) { inRe.push_back(v.real()); inIm.push_back(v.imag()); }
         std::vector<float> dchunk;
         dchunk.reserve(inRe.size() * 3);
-        const int T = 2 * J;
-        while (pos + J + 2 < (double)(inBase + inRe.size())) {
-            int64_t i0 = (int64_t)std::floor(pos);
-            int phi = (int)((pos - (double)i0) * NPH + 0.5);
-            if (phi >= NPH) { phi = 0; i0++; }
-            const float* tp = &taps[(size_t)phi * T];
-            const size_t b0 = (size_t)(i0 - (int64_t)inBase - J + 1);
-            const float* pr = &inRe[b0];
-            const float* pi_ = &inIm[b0];
-            float re = 0, im = 0;
-#if defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
-            {
-                float32x4_t ar = vdupq_n_f32(0), ai = vdupq_n_f32(0);
-                int j = 0;
-                for (; j + 4 <= T; j += 4) {
-                    const float32x4_t t4 = vld1q_f32(tp + j);
-                    ar = vfmaq_f32(ar, vld1q_f32(pr + j), t4);
-                    ai = vfmaq_f32(ai, vld1q_f32(pi_ + j), t4);
-                }
-                re = vaddvq_f32(ar); im = vaddvq_f32(ai);
-                for (; j < T; j++) { re += pr[j] * tp[j]; im += pi_[j] * tp[j]; }
-            }
-#else
-            for (int j = 0; j < T; j++) { re += pr[j] * tp[j]; im += pi_[j] * tp[j]; }
-#endif
-            pos += step;
+        const double room = (double)(inBase + inRe.size()) - J - 2 - pos;
+        const size_t nOut = room > 0 ? (size_t)std::ceil(room / step) : 0;
+        pfRe.resize(nOut);
+        pfIm.resize(nOut);
+        auto filter = [&](size_t k0, size_t k1) { pfbBlock(taps.data(), J, NPH, inRe.data(), inIm.data(), (int64_t)inBase, pos, step, k0, k1, pfRe.data(), pfIm.data()); };
+        if (splitA && nOut >= 4096) {   // split across two threads
+            std::thread helper([&] { setThreadPriority(ThreadPriority::Realtime); filter(nOut / 2, nOut); });
+            filter(0, nOut / 2);
+            helper.join();
+        } else filter(0, nOut);
+        pos += (double)nOut * step;
+        for (size_t k = 0; k < nOut; k++) {
             // pilot loop
-            const cf32 z = cf32(re, im) * ph;
+            const cf32 z = cf32(pfRe[k], pfIm[k]) * ph;
             ph *= rot;
             pf += (float)(tracking ? pfAt : pfA) * (z - pf);
             dchunk.push_back(z.real());
             if (++pllCnt >= 4) {
                 pllCnt = 0;
-                float e = std::atan2(pf.imag(), pf.real());
+                float e = fastAtan2(pf.imag(), pf.real());
                 e = std::max(-1.2f, std::min(1.2f, e));
                 const float alpha = tracking ? 0.0035f : 0.035f, beta = alpha * alpha / 4.0f / (tracking ? 1.0f : 4.0f);
                 const float xa = alpha * e;                   // phase correction, at most about 0.04 rad: a small-angle rotation is exact enough
@@ -246,11 +288,14 @@ struct Core {
             dc = m; pw = p; dcInit = true;
         }
         const double a = 4e-7;
-        for (float& v : dchunk) {
+        double g = 0;
+        for (size_t i = 0; i < dchunk.size(); i++) {
+            float& v = dchunk[i];
             dc += a * (v - dc);
             const double c = v - dc;
             pw += a * (c * c - pw);
-            v = (float)(c * (4.58 / std::sqrt(std::max(pw, 1e-12))));
+            if ((i & 63) == 0) g = 4.58 / std::sqrt(std::max(pw, 1e-12));   // pw moves slowly
+            v = (float)(c * g);
         }
         // pilot lock: the filtered carrier sits on the real axis and is strong enough; once it has for a while the loop is narrowed
         {
