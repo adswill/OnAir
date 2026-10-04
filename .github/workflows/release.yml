@@ -12,6 +12,8 @@ permissions:
 jobs:
   macos:
     name: macOS disk image (${{ matrix.arch }})
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "15.0"
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
