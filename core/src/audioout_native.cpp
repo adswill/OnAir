@@ -92,7 +92,7 @@ void threadMain(NativeBackend* b, AudioOut::Impl* I, int rate) {
     Wasapi w;
     bool open = w.open(rate);
     b->ok = open; b->opened = true;
-    if (!open) { CoUninitialize(); return; }
+    if (!open) { w.close(); CoUninitialize(); return; }   // release the COM objects while COM is still there
     while (!b->stop) {
         const DWORD r = WaitForSingleObject(w.event, 200);
         if (b->stop) break;
