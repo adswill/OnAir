@@ -7,6 +7,7 @@
 #include "dect2/atsc_gen.h"
 #include "dect2/atsc_rx.h"
 #include "dect2/dvbt_gen.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
