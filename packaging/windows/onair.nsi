@@ -1,4 +1,7 @@
 ; NSIS installer for OnAir. Built by tools/package/make_windows.sh: makensis -DVERSION=... -DSRC=<folder> -DOUTFILE=<setup.exe>
+!ifndef SEP
+  !define SEP "/"
+!endif
 !include "MUI2.nsh"
 Name "OnAir"
 OutFile "${OUTFILE}"
@@ -9,7 +12,7 @@ RequestExecutionLevel admin
 !define MUI_ICON "${ICON}"
 !define MUI_UNICON "${ICON}"
 !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_LICENSE "${SRC}/LICENSE.txt"
+!insertmacro MUI_PAGE_LICENSE "${SRC}${SEP}LICENSE.txt"
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_RUN "$INSTDIR\OnAir.exe"
@@ -27,7 +30,7 @@ Section "OnAir"
   Delete "$DESKTOP\OnAir.lnk"
   SetShellVarContext all   ; the program is installed for all users: so are its shortcuts
   SetOutPath "$INSTDIR"
-  File /r "${SRC}/*.*"
+  File /r "${SRC}${SEP}*.*"
   WriteRegStr HKLM "Software\OnAir" "Install_Dir" "$INSTDIR"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OnAir" "DisplayName" "OnAir"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OnAir" "DisplayVersion" "${VERSION}"
