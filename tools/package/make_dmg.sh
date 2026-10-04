@@ -1,13 +1,16 @@
 #!/bin/bash
 # Build OnAir.app (with its libraries inside) and a .dmg disk image for macOS.
 #   tools/package/make_dmg.sh [version]
-set -e
+set -euo pipefail
 cd "$(dirname "$0")/../.."
 VERSION=${1:-$(grep -m1 'project(' CMakeLists.txt | sed -E 's/.*VERSION ([0-9.]+).*/\1/')}
 ARCH=$(uname -m)
 BUILD=build-release
-cmake -S . -B $BUILD -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_TESTS=OFF -DDECT2_BUILD_APP=ON >/dev/null
-cmake --build $BUILD -j"$(sysctl -n hw.ncpu)" --target dect2 2>&1 | grep -E "error" -A3 || true
+# Homebrew dependencies from the macOS 15 release runners set the supported floor.
+MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-15.0}
+export MACOSX_DEPLOYMENT_TARGET
+cmake -S . -B $BUILD -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_TESTS=OFF -DDECT2_BUILD_APP=ON -DCMAKE_OSX_DEPLOYMENT_TARGET="$MACOSX_DEPLOYMENT_TARGET"
+cmake --build $BUILD -j"$(sysctl -n hw.ncpu)" --target dect2
 APP=$BUILD/OnAir.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
@@ -25,12 +28,13 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>$VERSION</string>
   <key>CFBundleVersion</key><string>$VERSION</string>
-  <key>LSMinimumSystemVersion</key><string>12.0</string>
+  <key>LSMinimumSystemVersion</key><string>$MACOSX_DEPLOYMENT_TARGET</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
 </dict></plist>
 PLIST
 python3 tools/package/bundle_macos.py "$APP"
+python3 tools/package/check_macos_target.py "$APP"
 # the app is signed ad hoc (no developer certificate): macOS shows a one-time "unidentified developer" prompt on first launch
 python3 tools/package/scrub_paths.py "$APP"   # no build-machine paths in the shipped files (before signing)
 for f in "$APP"/Contents/Frameworks/*.dylib; do codesign --force -s - "$f" >/dev/null 2>&1; done

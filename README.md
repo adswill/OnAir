@@ -37,7 +37,7 @@ The standard is detected automatically, and one switch at the top of the window 
 
 Download the installer for your system from the **[Releases](../../releases)** page. There is nothing to compile.
 
-**macOS** (Apple silicon): open the `.dmg` and drag OnAir to Applications. The app is not yet signed with a developer certificate, so on the first launch right-click it and choose *Open*.
+**macOS** (Apple silicon, macOS 15 or later): open the `.dmg` and drag OnAir to Applications. The app is not yet signed with a developer certificate, so on the first launch right-click it and choose *Open*.
 
 **Windows** (64-bit): run the `OnAir-…-setup.exe` installer (or unpack the `.zip` and start `OnAir.exe`). For a HackRF, RTL-SDR or Airspy, install the WinUSB driver once with [Zadig](https://zadig.akeo.ie). Windows may warn about an unknown publisher because the installer is not code-signed.
 
@@ -97,6 +97,15 @@ build/dect2cli --file capture.cs8 --rate 10 --format cs8 --play <service id>
 ```
 
 Useful options: `DECT2_UI_BACKEND` (Metal or OpenGL3), `DECT2_WITH_SOAPY`, and `DECT2_PORTABLE` / `DECT2_NO_SIMD` for plain C++ code paths on unusual CPUs.
+
+To build a self-contained macOS app and disk image, run `tools/package/make_dmg.sh`.
+It targets macOS 15.0 by default and uses the same minimum version in the executable
+and the app metadata. Override it with `MACOSX_DEPLOYMENT_TARGET` if needed.
+Every bundled library must also support that version: setting a lower deployment
+target does not rebuild Homebrew libraries. Packaging stops if any executable or
+library requires a newer macOS. Build releases on macOS 15 with compatible
+Homebrew dependencies, as in the release workflow, or rebuild the dependencies
+for the intended target.
 
 ## Project layout
 

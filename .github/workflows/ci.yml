@@ -82,3 +82,11 @@ jobs:
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=OFF ${{ matrix.extra }}
       - name: Build the app
         run: cmake --build build -j 4 --target dect2
+      - name: Test macOS packaging checks
+        if: runner.os == 'macOS'
+        run: python3 -m unittest discover -s tools/package -p 'test_*.py' -v
+      - name: Build and validate the macOS disk image
+        if: runner.os == 'macOS' && matrix.extra == ''
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "15.0"
+        run: tools/package/make_dmg.sh
