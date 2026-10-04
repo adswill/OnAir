@@ -66,6 +66,8 @@ A TV channel needs a radio that can sample fast enough, roughly 1 million sample
 
 The HackRF is the radio the project is developed and tested with; the others have had less real-world testing. On Windows, RTL-SDR and Airspy radios are included in the installer.
 
+Notes for specific radios are in [DEVICES.md](DEVICES.md).
+
 ## Good to know
 
 - Encrypted (scrambled) services cannot be decoded.

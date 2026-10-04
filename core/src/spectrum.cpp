@@ -1,11 +1,14 @@
 #include "dect2/spectrum.h"
 #include "dect2/dsp_compat.h"
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdint>
 #include <vector>
 
 namespace dect2 {
+
+constexpr size_t kMaxBlocksPerFrame = 32;
 
 struct SpectrumAnalyzer::Impl {
     int log2n = 0;
@@ -18,6 +21,7 @@ struct SpectrumAnalyzer::Impl {
     uint64_t count = 0, clip = 0;
     uint32_t hist[64] = {};
     uint64_t seq = 0;
+    std::atomic<bool> transform{true};
 };
 
 SpectrumAnalyzer::SpectrumAnalyzer(size_t fftSize) : p_(new Impl), n_(fftSize) {
@@ -48,9 +52,11 @@ void SpectrumAnalyzer::feed(const cf32* x, size_t n) {
     }
     s.count += n;
 
+    // display doesn't need every block
+    if (!s.transform || s.blocks >= kMaxBlocksPerFrame) { s.pending.clear(); return; }
     s.pending.insert(s.pending.end(), x, x + n);
     size_t off = 0;
-    while (s.pending.size() - off >= n_) {
+    while (s.pending.size() - off >= n_ && s.blocks < kMaxBlocksPerFrame) {
         const cf32* b = s.pending.data() + off;
         for (size_t i = 0; i < n_; i++) {
             s.re[i] = b[i].real() * s.window[i];
@@ -64,6 +70,8 @@ void SpectrumAnalyzer::feed(const cf32* x, size_t n) {
     s.pending.erase(s.pending.begin(), s.pending.begin() + off);
 }
 
+void SpectrumAnalyzer::setTransform(bool on) { p_->transform = on; }
+
 void SpectrumAnalyzer::reset() {
     Impl& s = *p_;
     std::fill(s.accum.begin(), s.accum.end(), 0.f);
@@ -74,10 +82,10 @@ void SpectrumAnalyzer::reset() {
 
 bool SpectrumAnalyzer::takeFrame(SpectrumFrame& out) {
     Impl& s = *p_;
-    if (s.blocks == 0 || s.count == 0) return false;
+    if (s.count == 0 || (s.blocks == 0 && s.transform)) return false;
     out.dbfs.resize(n_);
     // normalise so the sum over bins equals total power (dBFS/bin)
-    float inv = 1.0f / ((float)s.blocks * (float)n_ * (float)n_);
+    float inv = 1.0f / ((float)std::max<size_t>(s.blocks, 1) * (float)n_ * (float)n_);
     for (size_t i = 0; i < n_; i++) {
         size_t src = (i + n_ / 2) % n_; // DC-centre
         out.dbfs[i] = 10.0f * std::log10(std::max(s.accum[src] * inv, 1e-14f));
