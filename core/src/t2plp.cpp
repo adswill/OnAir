@@ -206,9 +206,17 @@ PlpResult PlpDecoder::decodeNow(const PlpJob& job, int threads, bool useGpu, con
     return res;
 }
 
+bool PlpDecoder::autoStartsOnGpu() const {
+#ifdef _WIN32
+    return gpuOk_ && GpuLdpc::instance().dedicatedMemoryMb() >= 1024;
+#else
+    return gpuOk_;
+#endif
+}
+
 PlpDecoder::PlpDecoder(int threads) {
     gpuOk_ = GpuLdpc::instance().available();
-    autoGpu_ = gpuOk_;   // Auto starts on the GPU
+    autoGpu_ = autoStartsOnGpu();   // Auto starts on the GPU
     threads_ = threads > 0 ? threads : std::max(1u, std::thread::hardware_concurrency());
     th_ = std::thread([this] { loop(); });
 }
@@ -272,11 +280,20 @@ void PlpDecoder::loop() {
             pathFrames_++;
             // the first frames of a path include its start-up (shader compile, buffer allocation): they do not count
             // after a switch the new path gets a long trial (about 15 s) before it can be left again, so two struggling paths do not take turns
-            const bool struggling = pathFrames_ > (switched_ ? 60 : 4) && (r.decodeMs > 0.7 * frameMs || dropping);
+#ifdef _WIN32
+            // A discrete graphics card is the preferred path here. Its first frames are slow (shader compile, buffers) and, with the window
+            // drawing on the same chip, it can sit a little above 70 % of a frame without ever falling behind. So it gets a longer warm-up,
+            // and it is left for the CPU only when the CPU has actually been measured faster or the decoder is losing frames.
+            const bool discrete = r.usedGpu && autoStartsOnGpu();
+#else
+            const bool discrete = false;
+#endif
+            const int warmUp = switched_ ? 60 : (discrete ? 20 : 4);
+            const bool struggling = pathFrames_ > warmUp && (r.decodeMs > 0.7 * frameMs || dropping);
             slowRun_ = struggling ? slowRun_ + 1 : 0;
             if (slowRun_ >= (dropping ? 2 : 3)) {   // (one slow frame is usually a one-off, such as a new code being set up)
                 const double other = r.usedGpu ? emaCpuMs_ : emaGpuMs_;   // 0 = not measured yet
-                if (other <= 0 || other < ema * 0.9) { if (getenv("DECT2_AUTOLOG")) fprintf(stderr, "[auto] %s -> %s after %.0f ms (frame %.0f ms); other path %.0f ms\n", r.usedGpu ? "GPU" : "CPU", r.usedGpu ? "CPU" : "GPU", r.decodeMs, frameMs, other); autoGpu_ = !r.usedGpu; slowRun_ = 0; pathFrames_ = 0; switched_ = true; }
+                if (other > 0 ? other < ema * 0.9 : (!discrete || dropping)) { if (getenv("DECT2_AUTOLOG")) fprintf(stderr, "[auto] %s -> %s after %.0f ms (frame %.0f ms); other path %.0f ms\n", r.usedGpu ? "GPU" : "CPU", r.usedGpu ? "CPU" : "GPU", r.decodeMs, frameMs, other); autoGpu_ = !r.usedGpu; slowRun_ = 0; pathFrames_ = 0; switched_ = true; }
             }
         }
         {

@@ -26,6 +26,9 @@
 
 namespace dect2 {
 
+// Wait/hold times of the analysis thread around the transport-stream lock (diagnostics, shown by the GUI status log).
+std::string engineWaitProfile();
+
 struct FileOptions {
     std::string path;
     FileFormat format = FileFormat::CS8;
@@ -45,6 +48,8 @@ public:
     bool retuneReset(const TuneSettings& tune);
     uint64_t resetCount() const { return resets_.load(); }
     bool running() const { return running_; }
+    // A live radio that has stopped delivering samples (unplugged, or its USB connection broke). A HackRF is reopened when it comes back.
+    bool radioLost() const { return radioLost_; }
     void setComputeMode(int m) { rx_.setComputeMode(m); }
     void selectPlp(int id) { rx_.selectPlp(id); }
     // Which standard to decode: 0 = automatic (alternates between DVB-T2 and DVB-T until one locks), 1 = DVB-T2, 2 = DVB-T, 3 = ATSC, 4 = DAB
@@ -59,6 +64,7 @@ public:
     double activeBandwidth() const { return bwActive_.load(); }
     double detectedBandwidth() const { return bwDetected_.load(); }   // last bandwidth the detector settled on (0 = none yet)
     uint64_t droppedSamples() const { return ring_.dropped(); }
+    std::string loadProfile() const;   // seconds the analysis thread spent on the spectrum and on the receiver, and the signal it has processed (diagnostics)
 
     // Latest spectrum snapshot; returns true if newer than `lastSeq`.
     bool latestSpectrum(SpectrumFrame& out, uint64_t lastSeq);
@@ -147,6 +153,13 @@ private:
     RxTelemetry rxTel_;
     std::thread th_;
     std::atomic<bool> running_{false}, stopReq_{false};
+    void watchRadio();
+    std::atomic<bool> radioLost_{false};
+    std::mutex tuneMu_;                 // lastDev_ / lastTune_: what to reopen the radio with
+    DeviceInfo lastDev_;
+    TuneSettings lastTune_;
+    std::chrono::steady_clock::time_point lastSamples_{}, nextReconnect_{};
+    std::string reconnectErr_;
     std::atomic<double> rate_{0};
 
     std::mutex specMu_;

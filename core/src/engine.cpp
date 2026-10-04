@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <map>
 #include <mutex>
+#include <atomic>
 #include <string>
 #include <thread>
 #include <utility>
@@ -26,6 +27,12 @@ void Engine::log(const std::string& line) {
     std::lock_guard<std::mutex> lk(logMu_);
     log_.push_back(buf + line);
     if (log_.size() > 5000) log_.erase(log_.begin(), log_.begin() + 1000);
+}
+
+std::string Engine::loadProfile() const {
+    char b[200];
+    snprintf(b, sizeof b, "analysis thread: spectrum %.2f s, receiver %.2f s for %.2f s of signal processed", tSpec_, tRx_, nSamp_ / std::max(1.0, rate_.load()));
+    return b;
 }
 
 std::vector<std::string> Engine::logSnapshot(size_t& total) {
@@ -55,10 +62,24 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     }
     if (!err.empty()) log("note: " + err);
     rate_ = src_->sampleRate();
+    {
+        std::lock_guard<std::mutex> lk(tuneMu_);
+        lastDev_ = dev; lastTune_ = tune;
+    }
+    radioLost_ = false; lastSamples_ = std::chrono::steady_clock::now(); reconnectErr_.clear();
     logP1Count_ = 0; logGi_ = -2; logState_ = -1; logFrameSyms_ = 0;
     bwMhz_ = tune.bandwidthMhz; bwActive_ = bwMhz_;
     bwDetected_ = 0; bwReset_ = true; bwReq_ = false;
     rx_.configure(rate_, tune.bandwidthMhz);
+    {   // the resampler on its own thread: live radios on Windows by default (not yet tried elsewhere); DECT2_PIPELINE=0/1 forces it off/on
+#ifdef _WIN32
+        bool pipe = src_->realtimeHardware();
+#else
+        bool pipe = false;
+#endif
+        if (const char* e = getenv("DECT2_PIPELINE")) pipe = atoi(e) != 0;
+        rx_.setPipelined(pipe);
+    }
     rxT_.configure(rate_, tune.bandwidthMhz);
     rxT_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });
     rxA_.configure(rate_);
@@ -121,6 +142,7 @@ bool Engine::retune(const TuneSettings& tune) {
     if (!src_) return false;
     std::string err;
     if (!src_->retune(tune, err)) { log("retune failed: " + err); return false; }
+    { std::lock_guard<std::mutex> lk(tuneMu_); lastTune_ = tune; }
     return true;
 }
 
@@ -128,6 +150,7 @@ bool Engine::retuneReset(const TuneSettings& tune) {
     if (!src_) return false;
     std::string err;
     if (!src_->retune(tune, err)) { log("retune failed: " + err); return false; }
+    { std::lock_guard<std::mutex> lk(tuneMu_); lastTune_ = tune; }
     resetReq_ = true;
     return true;
 }
@@ -284,9 +307,24 @@ void Engine::logDvbtEvents(const RxTelemetry& t) {
     }
 }
 
+namespace {
+// How long the analysis thread waits for, and holds, the transport-stream lock while it hands a decoded frame on (see engineWaitProfile()).
+std::atomic<uint64_t> gPlpFrames{0}, gPlpWaitUs{0}, gPlpHoldUs{0}, gPlpPushUs{0};
+inline uint64_t usSince(std::chrono::steady_clock::time_point t) { return (uint64_t)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - t).count(); }
+}
+
+std::string engineWaitProfile() {
+    char b[200];
+    snprintf(b, sizeof b, "analysis thread, per decoded frame: lock wait %.2f ms, lock held %.2f ms (player push %.2f ms); %llu frames", 1e-3 * gPlpWaitUs / std::max<uint64_t>(1, gPlpFrames), 1e-3 * gPlpHoldUs / std::max<uint64_t>(1, gPlpFrames), 1e-3 * gPlpPushUs / std::max<uint64_t>(1, gPlpFrames), (unsigned long long)gPlpFrames.load());
+    return b;
+}
+
 void Engine::onPlp(const PlpResult& r) {
     if (getenv("DECT2_FRAMESTATS")) fprintf(stderr, "[frame] t2 %d: blocks %d ok %d bad %d MER %.1f preBER %.3f iters %.1f\n", r.t2Frame, r.blocks, r.blocksOk, r.bchFailed, r.merDb, r.preBer, r.avgLdpcIters);
+    const auto tWait0 = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lk(tsMu_);
+    gPlpWaitUs += usSince(tWait0);
+    struct HoldTimer { std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now(); ~HoldTimer() { gPlpHoldUs += usSince(t0); gPlpFrames++; } } holdTimer;
     frameBuf_.clear();
     if (lastT2Frame_ >= 0 && ((r.t2Frame - lastT2Frame_) & 0xFF) != 1) { unpack_.lost(); demux_.markLoss(); }
     lastT2Frame_ = r.t2Frame;
@@ -298,7 +336,7 @@ void Engine::onPlp(const PlpResult& r) {
     tsSnap_ = demux_.snapshot();
     outputs_.packets(frameBuf_.data(), frameBuf_.size() / 188, &tsSnap_);
     if (tap_) tap_(frameBuf_.data(), frameBuf_.size() / 188, &tsSnap_);
-    if (player_.selected() >= 0) player_.push(frameBuf_.data(), frameBuf_.size() / 188, tsSnap_);
+    if (player_.selected() >= 0) { const auto tp = std::chrono::steady_clock::now(); player_.push(frameBuf_.data(), frameBuf_.size() / 188, tsSnap_); gPlpPushUs += usSince(tp); }
     frameBuf_.clear();
     outputs_.burstDone(r.frameSec);
 }
@@ -359,6 +397,38 @@ bool Engine::latestSpectrum(SpectrumFrame& out, uint64_t lastSeq) {
     return true;
 }
 
+// A radio that was delivering samples and stops (the cable was pulled) is reported, and a HackRF is opened again with the settings in use
+// as soon as it is back, so that the receiver carries on by itself.
+void Engine::watchRadio() {
+    if (!src_ || !src_->realtimeHardware()) return;
+    using namespace std::chrono;
+    const auto now = steady_clock::now();
+    if (!radioLost_) {
+        if (now - lastSamples_ > seconds(2)) {
+            radioLost_ = true;
+            nextReconnect_ = now + seconds(1);
+            log(lastDev_.kind == DeviceInfo::HackRF ? "radio stopped sending samples (unplugged?) - waiting for it to come back" : "radio stopped sending samples - press Stop and Start to open it again");
+        }
+        return;
+    }
+    if (lastDev_.kind != DeviceInfo::HackRF || now < nextReconnect_) return;
+    nextReconnect_ = now + seconds(2);
+    TuneSettings tune;
+    { std::lock_guard<std::mutex> lk(tuneMu_); tune = lastTune_; }
+    src_->stop();
+    std::string err;
+    if (src_->start(tune, ring_, err)) {
+        radioLost_ = false;
+        lastSamples_ = steady_clock::now();
+        reconnectErr_.clear();
+        resetReq_ = true;   // the receiver starts again from the new samples
+        log("radio reconnected");
+    } else if (err != reconnectErr_) {
+        reconnectErr_ = err;
+        log("radio not available yet: " + err);
+    }
+}
+
 void Engine::analysisLoop() {
     setThreadPriority(ThreadPriority::Realtime); // the sample path must never wait for decoders or the UI
     std::vector<cf32> buf(1 << 16);
@@ -368,8 +438,9 @@ void Engine::analysisLoop() {
     while (!stopReq_) {
         if (resetReq_.exchange(false)) { applyReset(); rxSeq = 0; }
         size_t n;
-        while ((n = ring_.read(buf.data(), buf.size())) > 0) { auto a0 = std::chrono::steady_clock::now(); analyzer_.feed(buf.data(), n); auto a1 = std::chrono::steady_clock::now(); feedRx(buf.data(), n); auto a2 = std::chrono::steady_clock::now(); tSpec_ += std::chrono::duration<double>(a1 - a0).count(); tRx_ += std::chrono::duration<double>(a2 - a1).count(); nSamp_ += n; if (std::chrono::steady_clock::now() > next + std::chrono::milliseconds(250)) break; } // keep publishing spectrum/telemetry even when the receiver is behind
+        while ((n = ring_.read(buf.data(), buf.size())) > 0) { auto a0 = std::chrono::steady_clock::now(); lastSamples_ = a0; analyzer_.feed(buf.data(), n); auto a1 = std::chrono::steady_clock::now(); feedRx(buf.data(), n); auto a2 = std::chrono::steady_clock::now(); tSpec_ += std::chrono::duration<double>(a1 - a0).count(); tRx_ += std::chrono::duration<double>(a2 - a1).count(); nSamp_ += n; if (std::chrono::steady_clock::now() > next + std::chrono::milliseconds(250)) break; } // keep publishing spectrum/telemetry even when the receiver is behind
         next += std::chrono::milliseconds(33);
+        watchRadio();
         {
             RxTelemetry t;
             const bool dvbt = activeStd_.load() == 1;
@@ -426,7 +497,7 @@ void Engine::analysisLoop() {
         // keep reading while we wait so the ring never fills
         while (std::chrono::steady_clock::now() < next && !stopReq_) {
             size_t m = ring_.read(buf.data(), buf.size());
-            if (m) { auto a0 = std::chrono::steady_clock::now(); analyzer_.feed(buf.data(), m); auto a1 = std::chrono::steady_clock::now(); feedRx(buf.data(), m); auto a2 = std::chrono::steady_clock::now(); tSpec_ += std::chrono::duration<double>(a1 - a0).count(); tRx_ += std::chrono::duration<double>(a2 - a1).count(); nSamp_ += m; }
+            if (m) { auto a0 = std::chrono::steady_clock::now(); lastSamples_ = a0; analyzer_.feed(buf.data(), m); auto a1 = std::chrono::steady_clock::now(); feedRx(buf.data(), m); auto a2 = std::chrono::steady_clock::now(); tSpec_ += std::chrono::duration<double>(a1 - a0).count(); tRx_ += std::chrono::duration<double>(a2 - a1).count(); nSamp_ += m; }
             else std::this_thread::sleep_for(std::chrono::milliseconds(2));
         }
     }

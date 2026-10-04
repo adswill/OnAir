@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
 if(APPLE)
-  project(OnAir VERSION 0.1.0 LANGUAGES C CXX OBJCXX)
+  project(OnAir VERSION 0.1.1 LANGUAGES C CXX OBJCXX)
   set(CMAKE_OBJCXX_STANDARD 20)
 else()
-  project(OnAir VERSION 0.1.0 LANGUAGES C CXX)
+  project(OnAir VERSION 0.1.1 LANGUAGES C CXX)
 endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -80,7 +80,7 @@ if(APPLE)
 else()
   # no GPU decoder yet (stub), audio through miniaudio
   if(WIN32)
-    target_sources(dect2core PRIVATE core/src/gpu_ldpc_d3d11.cpp core/src/audioout_miniaudio.cpp)   # Direct3D 11 compute
+    target_sources(dect2core PRIVATE core/src/gpu_ldpc_d3d11.cpp core/src/conceal_d3d11.cpp core/src/audioout_miniaudio.cpp)   # Direct3D 11 compute
   else()
     target_sources(dect2core PRIVATE core/src/gpu_ldpc_stub.cpp core/src/audioout_miniaudio.cpp)
   endif()

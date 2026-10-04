@@ -128,6 +128,10 @@ public:
     void configure(double inputRateHz, double bandwidthMhz);
     void reset();
     void feed(const cf32* x, size_t n);
+    // For live radios: the resampler runs on its own thread, a little ahead of the rest of the receiver, and feed() returns without waiting
+    // for the samples to be processed (they are, in order, by a later call). Off (the default) feed() is synchronous: file sources and
+    // tests see everything processed when it returns.
+    void setPipelined(bool on);
     bool telemetry(RxTelemetry& out, uint64_t lastSeq);
     // Called (on the receiver thread) for every decoded PLP frame, in order.
     // LDPC compute backend: 0 = CPU, 1 = GPU, 2 = auto (GPU once the CPU can't keep up)

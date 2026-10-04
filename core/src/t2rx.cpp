@@ -1,6 +1,7 @@
 #include "dect2/t2rx.h"
 #include "dect2/t2ofdm.h"
 #include "dect2/resampler.h"
+#include "dect2/platform.h"
 #include "dect2/t2pilots.h"
 #include "dect2/t2l1.h"
 #include "dect2/t2interleave.h"
@@ -21,6 +22,8 @@
 #include <functional>
 #include <utility>
 #include <chrono>
+#include <condition_variable>
+#include <thread>
 #include <string>
 #include <vector>
 
@@ -29,18 +32,17 @@ namespace dect2 {
 // Where the receiver thread spends its time (shown in the log when a source stops): resampler, P1 search, guard check, symbols, FFTs, data stage.
 namespace {
 struct StageClock {
-    double sec[6] = {0, 0, 0, 0, 0, 0};
-    std::chrono::steady_clock::time_point t0;
+        std::chrono::steady_clock::time_point t0;
     int which;
     explicit StageClock(int w) : t0(std::chrono::steady_clock::now()), which(w) {}
     ~StageClock() { g()[which] += std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count(); }
-    static double* g() { static double v[6] = {0, 0, 0, 0, 0, 0}; return v; }
+    static double* g() { static double v[9] = {}; return v; }
 };
 }
 std::string t2rxProfile() {
     const double* v = StageClock::g();
-    char b[200];
-    snprintf(b, sizeof b, "receiver stages (s): resampler %.2f, P1 search %.2f, guard check %.2f, symbols %.2f (including FFT %.2f and data stage %.2f)", v[0], v[1], v[2], v[3], v[4], v[5]);
+    char b[300];
+    snprintf(b, sizeof b, "receiver stages (s): resampler %.2f, P1 search %.2f, guard check %.2f, symbols %.2f (including FFT %.2f and data stage %.2f; CP/timing %.2f, display %.2f, P2 stage %.2f)", v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8]);
     return b;
 }
 
@@ -53,6 +55,8 @@ namespace {
 constexpr double kP1Threshold = 0.30; // C-A-B correlation needed to try decoding
 constexpr double kP1MinConf = 0.40;   // decoded S1/S2 sequence correlation needed to accept
 constexpr int kPeakHalfWidth = 700;
+inline bool trackDisabled() { static const bool v = getenv("DECT2_NOTRACK") != nullptr; return v; }   // switch the windowed P1 search off
+constexpr int kTrackWindow = 1200;    // half width of the window around the expected P1 once locked (samples at the native rate)
 
 struct Frame {
     int64_t anchor;      // absolute index of the first symbol after P1
@@ -68,6 +72,59 @@ struct T2Receiver::Impl {
     bool decimate = false, rateOk = true;
     RationalResampler resampler;
     std::vector<cf32> rsOut;
+
+    // ---- optional resampler stage on its own thread (live radios): input chunks go in, resampled chunks come back in the same order
+    struct Stage {
+        std::thread th;
+        std::mutex mu;      // the queues
+        std::mutex rsMu;    // the resampler: held by the worker while it resamples, and by whoever reconfigures or resets it
+        std::condition_variable cvIn, cvSpace;
+        std::deque<std::pair<uint64_t, std::vector<cf32>>> in, out;
+        uint64_t gen = 0;   // bumped by a reset: chunks of an earlier generation are dropped
+        bool stop = false;
+    } stage;
+    static constexpr size_t kStageMaxIn = 32;
+    bool pipelined = false;
+
+    void stageLoop() {
+        setThreadPriority(ThreadPriority::Realtime);
+        for (;;) {
+            std::pair<uint64_t, std::vector<cf32>> item;
+            {
+                std::unique_lock<std::mutex> lk(stage.mu);
+                stage.cvIn.wait(lk, [&] { return stage.stop || !stage.in.empty(); });
+                if (stage.stop) return;
+                item = std::move(stage.in.front());
+                stage.in.pop_front();
+            }
+            stage.cvSpace.notify_all();
+            std::vector<cf32> res;
+            {
+                std::lock_guard<std::mutex> rl(stage.rsMu);
+                StageClock sc(0);
+                resampler.process(item.second.data(), item.second.size(), res);
+            }
+            std::lock_guard<std::mutex> lk(stage.mu);
+            if (item.first == stage.gen) stage.out.emplace_back(item.first, std::move(res));
+        }
+    }
+    void stageStart() {
+        { std::lock_guard<std::mutex> lk(stage.mu); stage.stop = false; }
+        stage.th = std::thread([this] { stageLoop(); });
+    }
+    void stageStop() {
+        if (!stage.th.joinable()) return;
+        { std::lock_guard<std::mutex> lk(stage.mu); stage.stop = true; stage.gen++; stage.in.clear(); stage.out.clear(); }
+        stage.cvIn.notify_all();
+        stage.cvSpace.notify_all();
+        stage.th.join();
+    }
+    void stageFlush() {   // forget everything that is queued or being resampled
+        std::lock_guard<std::mutex> lk(stage.mu);
+        stage.gen++; stage.in.clear(); stage.out.clear();
+        stage.cvSpace.notify_all();
+    }
+    ~Impl() { stageStop(); }
 
     // ---- native-rate buffer
     std::vector<cf32> buf;
@@ -89,6 +146,13 @@ struct T2Receiver::Impl {
     // ---- P1 scanner
     int64_t scanPos = 0;
     bool scanFirst = true;
+    std::vector<cd> pq1, pq2;   // scanP1 scratch (prefix sums), kept to avoid reallocating per chunk
+    int64_t trackKeep = -1;               // samples from here on stay buffered while tracking, so a missed P1 can be searched for again
+    int trackMiss = 0, trackFrames = 0;   // windowed P1 search: expected P1s not found in a row, P1s accepted since the last full pass
+    double trackExpect = 0;               // where the next P1 is expected (absolute sample index), 0 = not set
+    int64_t trackFullUntil = 0;           // search everything up to here
+    std::vector<double> pe;
+    std::vector<float> m;
     std::array<cd, 1024> phiTab; // exp(-j 2 pi g / 1024)
     int64_t lastP1Abs = INT64_MIN / 2;
     double rejectedPos = 0;
@@ -180,12 +244,14 @@ struct T2Receiver::Impl {
     }
 
     void resetAll() {
-        resampler.reset();
+        stageFlush();
+        { std::lock_guard<std::mutex> rl(stage.rsMu); resampler.reset(); }
         buf.clear();
         base = 0;
         scanPos = 0;
         scanFirst = true;
         lastP1Abs = INT64_MIN / 2;
+        trackMiss = trackFrames = 0; trackExpect = 0; trackFullUntil = 0; trackKeep = -1;
         trace.clear();
         state = 0;
         p1 = P1Info();
@@ -212,43 +278,40 @@ struct T2Receiver::Impl {
     }
 
     // ------------------------------------------------------------ P1 detection
-    void scanP1() {
-        const int64_t W = kPeakHalfWidth;
-        int64_t e = end();
-        int64_t lo = std::max(scanPos, base);
-        if (e - lo < kP1Len + 4 * W + 16) return;
-        int64_t len = e - lo;
-        int64_t lastD = len - kP1Len; // last valid d index (relative)
-        std::vector<cd> pq1(len + 1), pq2(len + 1);
-        std::vector<double> pe(len + 1);
-        for (int64_t i = 0; i < len; i++) {
-            const cf32 x = at(lo + i);
+    // The P1 correlator metric for the start positions d in [d0, d1] (relative to lo), into m[]. The prefix sums start at d0, so a call that
+    // starts at 0 gives exactly the numbers the whole-chunk computation always gave.
+    void p1Metric(int64_t lo, int64_t len, int64_t d0, int64_t d1) {
+        const int64_t n = d1 + kP1Len - d0;   // samples covered: relative indices [d0, d1 + kP1Len)
+        pq1.resize(n + 1); pq2.resize(n + 1); pe.resize(n + 1);
+        pq1[0] = 0; pq2[0] = 0; pe[0] = 0;
+        // every index read is inside the buffer: lo >= base, lo + len == end(), and the offsets are guarded by the conditions below
+        const cf32* xs = buf.data() + (lo - base);
+        for (int64_t j = 0; j < n; j++) {
+            const int64_t i = d0 + j;
+            const cf32 x = xs[i];
             cd xc(x.real(), x.imag());
             cd ph = phiTab[(lo + i) & 1023];
             cd q1 = 0, q2 = 0;
-            if (i + kP1CLen < len) { cf32 y = at(lo + i + kP1CLen); q1 = xc * std::conj(cd(y.real(), y.imag())) * ph; }
-            if (i >= kP1BLen) { cf32 y = at(lo + i - kP1BLen); q2 = xc * std::conj(cd(y.real(), y.imag())) * ph; }
-            pq1[i + 1] = pq1[i] + q1;
-            pq2[i + 1] = pq2[i] + q2;
-            pe[i + 1] = pe[i] + (double)x.real() * x.real() + (double)x.imag() * x.imag();
+            if (i + kP1CLen < len) { cf32 y = xs[i + kP1CLen]; q1 = xc * std::conj(cd(y.real(), y.imag())) * ph; }
+            if (i >= kP1BLen) { cf32 y = xs[i - kP1BLen]; q2 = xc * std::conj(cd(y.real(), y.imag())) * ph; }
+            pq1[j + 1] = pq1[j] + q1;
+            pq2[j + 1] = pq2[j] + q2;
+            pe[j + 1] = pe[j] + (double)x.real() * x.real() + (double)x.imag() * x.imag();
         }
-        std::vector<float> m(lastD + 1);
-        for (int64_t d = 0; d <= lastD; d++) {
-            cd sc = pq1[d + kP1CLen] - pq1[d];
-            cd sb = pq2[d + kP1Len] - pq2[d + kP1CLen + kP1ALen];
-            double en = 0.5 * (pe[d + kP1Len] - pe[d]);
+        for (int64_t d = d0; d <= d1; d++) {
+            const int64_t jd = d - d0;
+            cd sc = pq1[jd + kP1CLen] - pq1[jd];
+            cd sb = pq2[jd + kP1Len] - pq2[jd + kP1CLen + kP1ALen];
+            double en = 0.5 * (pe[jd + kP1Len] - pe[jd]);
             m[d] = en > 1e-12 ? (float)((std::abs(sc) + std::abs(sb)) / en) : 0.f;
         }
-        int64_t cLo = scanFirst ? 0 : W;
-        int64_t cHi = lastD - W;
-        // decimated trace of the region that becomes final in this pass
-        for (int64_t d = cLo; d + kTraceDecim <= cHi + 1; d += kTraceDecim) {
-            float mx = 0;
-            for (int k = 0; k < kTraceDecim; k++) mx = std::max(mx, m[d + k]);
-            trace.push_back(mx);
-        }
-        if (trace.size() > 2048) trace.erase(trace.begin(), trace.begin() + (trace.size() - 2048));
-        for (int64_t d = cLo; d <= cHi; d++) {
+    }
+
+    // Picks the P1 candidates among d in [dA, dB] (relative to lo) out of m[] and hands them on; true if one was accepted.
+    bool p1Detect(int64_t lo, int64_t lastD, int64_t dA, int64_t dB) {
+        const int64_t W = kPeakHalfWidth;
+        const double before = prevPos;
+        for (int64_t d = dA; d <= dB; d++) {
             if (m[d] < kP1Threshold) continue;
             bool peak = true;
             for (int64_t k = std::max<int64_t>(0, d - W); k <= std::min(lastD, d + W); k++)
@@ -259,6 +322,68 @@ struct T2Receiver::Impl {
             handleP1Candidate(dAbs, m[d]);
             d += W;
         }
+        return prevPos != before;
+    }
+
+    void scanP1() {
+        const int64_t W = kPeakHalfWidth;
+        int64_t e = end();
+        int64_t lo = std::max(scanPos, base);
+        if (e - lo < kP1Len + 4 * W + 16) return;
+        int64_t len = e - lo;
+        int64_t lastD = len - kP1Len; // last valid d index (relative)
+        int64_t cLo = scanFirst ? 0 : W;
+        int64_t cHi = lastD - W;
+        m.assign(lastD + 1, 0.f);
+        // Once locked, the next P1 is expected one frame after the last one, so only a window around that position is searched (a P1 is
+        // 2048 samples in a frame of two million). A window that comes up empty is widened, after three misses the whole range is searched
+        // again until a P1 is accepted, and every 20 frames one frame's worth is searched in full to catch a change at the transmitter.
+        const bool noTrack = trackDisabled();
+        bool tracked = !noTrack && state == 2 && frameLen > 0 && prevPos >= 0 && trackMiss < 3;
+        if (tracked && trackFrames >= 20) { trackFrames = 0; trackFullUntil = lo + cHi + (int64_t)frameLen; }
+        if (tracked && lo + cLo < trackFullUntil) tracked = false;
+        int64_t fullFrom = cLo;   // where a search of the whole range takes over
+        if (tracked) {
+            // A window that comes up empty means a P1 was lost or the stream jumped (samples dropped): go back to just after the last
+            // accepted P1 - those samples are still buffered - and search everything from there, as the plain scanner would have.
+            auto rewind = [&]() {
+                trackMiss = 3;
+                scanPos = std::max<int64_t>(trackKeep, base);
+                scanFirst = true;
+            };
+            int64_t from = cLo;
+            while (from <= cHi) {
+                if (state != 2 || frameLen <= 0 || prevPos < 0) { tracked = false; fullFrom = from; break; }
+                if (trackExpect <= 0) trackExpect = prevPos + frameLen;
+                const int64_t wLo = (int64_t)std::floor(trackExpect) - kTrackWindow - lo, wHi = (int64_t)std::ceil(trackExpect) + kTrackWindow - lo;
+                if (wHi < from) {   // this expected P1 lies behind the scan front: it was not seen
+                    if (getenv("DECT2_DEBUG")) fprintf(stderr, "  [dbg] tracked P1 behind the scan front (expected %.0f): searching everything again\n", trackExpect);
+                    rewind();
+                    return;
+                }
+                if (wLo > cHi) break;   // not reached yet
+                const int64_t dA = std::max(from, wLo), dB = std::min(cHi, wHi);
+                p1Metric(lo, len, std::max<int64_t>(0, dA - W), std::min(lastD, dB + W));
+                if (p1Detect(lo, lastD, dA, dB)) { from = dB + 1; continue; }   // (trackExpect is updated on acceptance)
+                if (wHi <= cHi) {   // the whole window was searched without finding a P1
+                    if (getenv("DECT2_DEBUG")) { float mx = 0; for (int64_t k = std::max<int64_t>(0, wLo); k <= std::min(lastD, wHi); k++) mx = std::max(mx, m[k]); fprintf(stderr, "  [dbg] no P1 in the window around %.0f (+-%d), best metric %.2f: searching everything again\n", trackExpect, kTrackWindow, mx); }
+                    rewind();
+                    return;
+                }
+                break;   // the window goes on in the next chunk
+            }
+        }
+        if (!tracked && fullFrom <= cHi) {
+            p1Metric(lo, len, std::max<int64_t>(0, fullFrom - W), std::min(lastD, cHi + W));
+            p1Detect(lo, lastD, fullFrom, cHi);
+        }
+        // decimated trace of the region that becomes final in this pass (zero where the search skipped it)
+        for (int64_t d = cLo; d + kTraceDecim <= cHi + 1; d += kTraceDecim) {
+            float mx = 0;
+            for (int k = 0; k < kTraceDecim; k++) mx = std::max(mx, m[d + k]);
+            trace.push_back(mx);
+        }
+        if (trace.size() > 2048) trace.erase(trace.begin(), trace.begin() + (trace.size() - 2048));
         scanFirst = false;
         scanPos = lo + lastD - 2 * W;
     }
@@ -453,6 +578,7 @@ struct T2Receiver::Impl {
         }
         if (prevPos >= 0) onFrameSpacing(pos - prevPos);
         prevPos = pos;
+        trackMiss = 0; trackExpect = pos + frameLen; trackFrames++; trackKeep = (int64_t)pos + 2 * kP1Len;
         if (state == 2 && frameSyms > 0) {
             Frame f;
             f.anchor = (int64_t)std::llround(pos) + kP1Len;
@@ -1225,6 +1351,8 @@ struct T2Receiver::Impl {
             }
             return c;
         };
+        {
+        StageClock scCp(6);
         double e;
         cd c = cpCorr(s, e);
         double rho = e > 0 ? std::abs(c) / e : 0;
@@ -1259,11 +1387,12 @@ struct T2Receiver::Impl {
         }
         timingAvg += 0.05 * (off - timingAvg);
         if (std::fabs(timingAvg) > 6 && rho > 0.3) { pendingGridOff += (int64_t)std::llround(timingAvg); timingAvg = 0; } // applied at the next frame start
+        }
 
         if (k < nP2) {
             if ((int)p2cells.size() != nP2) p2cells.assign(nP2, {});
             fftCells(s, p2cells[k], kMax);
-            if (k == nP2 - 1) runP2Stage();
+            if (k == nP2 - 1) { StageClock sc(8); runP2Stage(); }
         }
         if (l1preOk && frameSyms > 0 && k < frameSyms && k >= 0) {
             if ((int)frameCells.size() != frameSyms) frameCells.assign(frameSyms, {});
@@ -1275,9 +1404,12 @@ struct T2Receiver::Impl {
         symbols++;
         symCounter++;
         // display: FFT consecutive symbol pairs, at a limited rate
-        int stride = std::max(2, (int)std::lround(fn / (N + G) / 100.0));
+        // (about 25 pairs a second is plenty for a constellation plot; with 32K symbols the old figure of 100 gave a stride of 2,
+        // i.e. an extra full-size FFT with per-sample sin/cos on every single symbol)
+        int stride = std::max(2, (int)std::lround(fn / (N + G) / 25.0));
         int phase = (int)(symCounter % stride);
         if (phase > 1) return;
+        StageClock scDisp(7);
         int back = std::min(G / 4, 32);
         int64_t w0 = s + G - back;
         fr.assign(N, 0.f); fi.assign(N, 0.f);
@@ -1325,6 +1457,7 @@ struct T2Receiver::Impl {
             }
             // limit memory
             int64_t need = scanPos;
+            if (trackKeep >= 0 && state == 2 && frameLen > 0 && prevPos >= 0 && !trackDisabled()) need = std::min(need, trackKeep);
             if (state == 1) need = std::min(need, giAnchor);
             if (!frames.empty()) need = std::min(need, frames.front().anchor);
             int64_t drop = need - base - 4096;
@@ -1430,7 +1563,10 @@ void T2Receiver::configure(double inputRateHz, double bandwidthMhz) {
     std::lock_guard<std::mutex> lk(I.mu);
     I.inRate = inputRateHz;
     I.fn = nativeRateHz(bandwidthMhz);
-    I.rateOk = I.resampler.configure(inputRateHz, I.fn) && inputRateHz >= 7.9e6 * (bandwidthMhz / 8.0);
+    {
+        std::lock_guard<std::mutex> rl(I.stage.rsMu);
+        I.rateOk = I.resampler.configure(inputRateHz, I.fn) && inputRateHz >= 7.9e6 * (bandwidthMhz / 8.0);
+    }
     I.decimate = I.rateOk && !I.resampler.passthrough();
     I.resetAll();
 }
@@ -1443,9 +1579,36 @@ void T2Receiver::reset() {
 void T2Receiver::feed(const cf32* x, size_t n) {
     Impl& I = *p_;
     if (!I.rateOk || I.fn <= 0) return;
+    if (I.pipelined && I.decimate) {
+        {
+            std::unique_lock<std::mutex> lk(I.stage.mu);
+            I.stage.cvSpace.wait(lk, [&] { return I.stage.in.size() < Impl::kStageMaxIn || I.stage.stop; });
+            I.stage.in.emplace_back(I.stage.gen, std::vector<cf32>(x, x + n));
+        }
+        I.stage.cvIn.notify_one();
+        for (;;) {   // process what the stage has finished, in order
+            std::vector<cf32> res;
+            {
+                std::lock_guard<std::mutex> lk(I.stage.mu);
+                if (I.stage.out.empty()) break;
+                res = std::move(I.stage.out.front().second);
+                I.stage.out.pop_front();
+            }
+            I.buf.insert(I.buf.end(), res.begin(), res.end());
+            I.run();
+        }
+        return;
+    }
     if (I.decimate) { StageClock sc(0); I.rsOut.clear(); I.resampler.process(x, n, I.rsOut); I.buf.insert(I.buf.end(), I.rsOut.begin(), I.rsOut.end()); }
     else I.buf.insert(I.buf.end(), x, x + n);
     I.run();
+}
+
+void T2Receiver::setPipelined(bool on) {
+    Impl& I = *p_;
+    if (on == I.pipelined) return;
+    if (on) I.stageStart(); else I.stageStop();
+    I.pipelined = on;
 }
 
 void T2Receiver::selectPlp(int id) { p_->plpSelect = id; }

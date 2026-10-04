@@ -228,6 +228,7 @@ struct GpuLdpc::Impl {
     Com<ID3D11ComputeShader> csLdpc, csFinish, csInit;
     Com<ID3D11Buffer> cbuf;
     std::string name = "none";
+    size_t dedicatedMb = 0;   // of the chosen adapter
     std::mutex mu;
     bool ready = false;
 
@@ -375,24 +376,27 @@ GpuLdpc::GpuLdpc() : p_(new Impl) {
     D3D_FEATURE_LEVEL got = D3D_FEATURE_LEVEL_11_0;
     // On laptops with two graphics chips the default adapter is often the weak integrated one: take the one with the most own video memory.
     Com<IDXGIAdapter> best;
+    SIZE_T chosenMem = 0;
     if (HMODULE hDxgi = LoadLibraryA("dxgi.dll")) {
         typedef HRESULT(WINAPI * PFN_FACTORY)(REFIID, void**);
         if (auto mk = (PFN_FACTORY)GetProcAddress(hDxgi, "CreateDXGIFactory1")) {
             Com<IDXGIFactory1> fac;
             if (SUCCEEDED(mk(__uuidof(IDXGIFactory1), (void**)fac.put()))) {
                 SIZE_T bestMem = 0;
+                const int forced = getenv("DECT2_GPU_ADAPTER") ? atoi(getenv("DECT2_GPU_ADAPTER")) : -1;   // for comparisons: use this adapter index
                 for (UINT i = 0;; i++) {
                     Com<IDXGIAdapter> a;
                     if (fac->EnumAdapters(i, a.put()) != S_OK) break;
                     DXGI_ADAPTER_DESC ds{};
                     if (FAILED(a->GetDesc(&ds)) || ds.VendorId == 0x1414) continue;
                     fprintf(stderr, "GpuLdpc: adapter %u: %ls, %zu MB\n", i, ds.Description, (size_t)(ds.DedicatedVideoMemory >> 20));
-                    if (!best || ds.DedicatedVideoMemory > bestMem) { best = std::move(a); bestMem = ds.DedicatedVideoMemory; }
+                    if (forced >= 0 ? (int)i == forced : (!best || ds.DedicatedVideoMemory > bestMem)) { best = std::move(a); bestMem = chosenMem = ds.DedicatedVideoMemory; }
                 }
             }
         }
     }
     if (FAILED(create(best.p, best ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, levels, 2, D3D11_SDK_VERSION, d.dev.put(), &got, d.ctx.put()))) { fprintf(stderr, "GpuLdpc: no Direct3D 11 device\n"); return; }
+    d.dedicatedMb = (size_t)(chosenMem >> 20);
     // a compute shader for 360 threads and structured buffers needs a real feature level 11 device
     if (got < D3D_FEATURE_LEVEL_11_0) { d.dev.reset(); d.ctx.reset(); return; }
     {
@@ -462,6 +466,7 @@ GpuLdpc::~GpuLdpc() = default;
 GpuLdpc& GpuLdpc::instance() { static GpuLdpc g; return g; }
 bool GpuLdpc::available() const { return p_->ready; }
 const char* GpuLdpc::deviceName() const { return p_->name.c_str(); }
+size_t GpuLdpc::dedicatedMemoryMb() const { return p_->dedicatedMb; }
 
 bool GpuLdpc::decode(const LdpcCode& code, const float* llr, int nb, int maxIter, uint8_t* hard, uint8_t* ok, int* iters) {
     if (!available() || code.q() * 360 != code.n() - code.k()) return false;

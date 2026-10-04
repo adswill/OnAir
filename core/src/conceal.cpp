@@ -1,9 +1,13 @@
 #include "dect2/conceal.h"
+#include "conceal_internal.h"
 #include "dect2/fftutil.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <atomic>
+#include <chrono>
 #include <thread>
+#include "dect2/platform.h"
 #include <cstdlib>
 #include <cstdio>
 
@@ -40,8 +44,9 @@ inline float bilin(const uint8_t* pl, int w, int h, float x, float y) {
 
 } // namespace
 
-static bool interpolateGapSoftware(const VideoFrame& A, const VideoFrame& B, int count, std::vector<std::shared_ptr<VideoFrame>>& out, bool cutCheckOnly) {
-    if (count <= 0 || A.w != B.w || A.h != B.h || A.w < 64 || A.h < 64) return false;
+// ---- motion between the two real pictures of a gap (once per gap)
+static bool estimateMotion(const VideoFrame& A, const VideoFrame& B, GapMotion& gm, double& sadPerPixel) {
+    if (A.w != B.w || A.h != B.h || A.w < 64 || A.h < 64) return false;
     if (!A.rgba.empty() || !B.rgba.empty() || A.y.size() != (size_t)A.w * A.h || B.y.size() != A.y.size() || A.uv.size() != B.uv.size() || A.uv.size() < (size_t)A.w * A.h / 2) return false;
     const int w = A.w, h = A.h;
     // ---- block matching, two levels. Level 1 on an eighth-resolution luma image (4x4 blocks = 32x32 pixels, search +-10 = +-80 pixels:
@@ -133,23 +138,35 @@ static bool interpolateGapSoftware(const VideoFrame& A, const VideoFrame& B, int
         std::sort(hist.begin(), hist.end(), [](auto& a, auto& b) { return a.first > b.first; });
         for (size_t i = 0; i < hist.size() && i < 6; i++) if (hist[i].first >= 2) motions.push_back({hist[i].second.first * 4, hist[i].second.second * 4});   // full-resolution pixels
     }
-    // A scene cut inside the gap: even with the best motion the two pictures do not match. Morphing across a cut looks like a smear,
-    // so show the nearer real picture instead.
-    {
+    {   // how well the two pictures match with the best motion: a large value means a scene cut inside the gap
         double tot = 0;
         for (int by = 0; by < bh; by++) for (int bx = 0; bx < bw; bx++) tot += (double)std::min(sadAt(pa, pb, 8, bx, by, mvx[(size_t)by * bw + bx], mvy[(size_t)by * bw + bx]), sadAt(pa, pb, 8, bx, by, 0, 0)) / 64.0;
-        if (getenv("DECT2_MVDEBUG")) fprintf(stderr, "avg block SAD per pixel %.1f\n", tot / ((double)bw * bh));
-        if (cutCheckOnly && tot / ((double)bw * bh) <= 8.5) return false;   // no scene cut: the caller interpolates in another way
-        if (tot / ((double)bw * bh) > 8.5) {
-            for (int k = 0; k < count; k++) {
-                const VideoFrame& src = (k + 1) * 2 <= count + 1 ? A : B;
-                auto f = std::make_shared<VideoFrame>(src);
-                f->interlaced = src.interlaced;
-                out.push_back(std::move(f));
-            }
-            return true;
-        }
+        sadPerPixel = tot / ((double)bw * bh);
+        if (getenv("DECT2_MVDEBUG")) fprintf(stderr, "avg block SAD per pixel %.1f\n", sadPerPixel);
     }
+    gm.bw = bw; gm.bh = bh;
+    gm.mvx = std::move(mvx); gm.mvy = std::move(mvy); gm.motions = std::move(motions);
+    return true;
+}
+
+// Morphing across a scene cut looks like a smear, so show the nearer real picture instead.
+static void copyNearer(const VideoFrame& A, const VideoFrame& B, int count, std::vector<std::shared_ptr<VideoFrame>>& out) {
+    for (int k = 0; k < count; k++) {
+        const VideoFrame& src = (k + 1) * 2 <= count + 1 ? A : B;
+        auto f = std::make_shared<VideoFrame>(src);
+        f->interlaced = src.interlaced;
+        out.push_back(std::move(f));
+    }
+}
+constexpr double kSceneCutSad = 8.5;
+
+// ---- the pictures between them, on the CPU
+static void synthesizeCpu(const VideoFrame& A, const VideoFrame& B, int count, const GapMotion& gm, std::vector<std::shared_ptr<VideoFrame>>& out) {
+    const int w = A.w, h = A.h;
+    const int bw = gm.bw, bh = gm.bh;
+    const std::vector<int8_t>& mvx = gm.mvx;
+    const std::vector<int8_t>& mvy = gm.mvy;
+    const std::vector<std::pair<int, int>>& motions = gm.motions;
     if (getenv("DECT2_MVDEBUG")) { for (int by = 0; by < bh; by++) { for (int bx = 0; bx < bw; bx++) fprintf(stderr, "%3d,%3d ", mvx[(size_t)by * bw + bx], mvy[(size_t)by * bw + bx]); fprintf(stderr, "\n"); } }
     if (getenv("DECT2_MVDEBUG")) { for (int by = 0; by < bh; by++) { for (int bx = 0; bx < bw; bx++) fprintf(stderr, "%3d,%3d ", mvx[(size_t)by * bw + bx], mvy[(size_t)by * bw + bx]); fprintf(stderr, "\n"); } }
     // ---- synthesis. The vectors describe motion from picture A's grid, so for a picture at time t every moving block is projected
@@ -162,9 +179,21 @@ static bool interpolateGapSoftware(const VideoFrame& A, const VideoFrame& B, int
         bU[(size_t)j * cw + i] = B.uv[(size_t)j * w + 2 * i]; bV[(size_t)j * cw + i] = B.uv[(size_t)j * w + 2 * i + 1];
     }
     const int cs = 4, gw = w / cs, gh = h / cs;
-    std::vector<int16_t> cvx((size_t)gw * gh), cvy((size_t)gw * gh);
-    std::vector<uint8_t> cset((size_t)gw * gh);
-    for (int k = 0; k < count; k++) {
+    // The pictures of a gap are independent of each other once the motion is known, so they are made on a few background threads,
+    // and the whole job has a time budget: a picture that does not fit gets a copy of the nearer real picture. (At full HD one picture takes
+    // about 0.2 s here; without a budget a gap of 30 pictures would stop the player's reader, and with it the audio, for six seconds.)
+    static const double budgetMs = getenv("DECT2_CONCEAL_MS") ? atof(getenv("DECT2_CONCEAL_MS")) : 600.0;
+    const auto tStart = std::chrono::steady_clock::now();
+    std::vector<std::shared_ptr<VideoFrame>> res((size_t)count);
+    auto nearer = [&](int k) {
+        const VideoFrame& src = (k + 1) * 2 <= count + 1 ? A : B;
+        auto f = std::make_shared<VideoFrame>(src);
+        f->interlaced = src.interlaced;
+        return f;
+    };
+    auto synth = [&](int k) {
+        std::vector<int16_t> cvx((size_t)gw * gh), cvy((size_t)gw * gh);
+        std::vector<uint8_t> cset((size_t)gw * gh);
         const float t = (float)(k + 1) / (float)(count + 1);
         auto f = std::make_shared<VideoFrame>();
         f->w = w; f->h = h; f->bt709 = A.bt709; f->fullRange = A.fullRange; f->interlaced = false;
@@ -226,10 +255,35 @@ static bool interpolateGapSoftware(const VideoFrame& A, const VideoFrame& B, int
                         f->uv[(size_t)y * w + 2 * x + 1] = (uint8_t)std::min(255.f, std::max(0.f, va * (1 - wb) + vb * wb + 0.5f));
                     }
             }
-        out.push_back(std::move(f));
+        res[(size_t)k] = std::move(f);
+    };
+    std::atomic<int> nextPic{0};
+    auto worker = [&](bool background) {
+        if (background) setThreadPriority(ThreadPriority::Background);
+        for (int k; (k = nextPic++) < count;) {
+            const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tStart).count();
+            if (k > 0 && ms > budgetMs) res[(size_t)k] = nearer(k);
+            else synth(k);
+        }
+    };
+    const int nThreads = std::max(1, std::min(count, (int)std::min(4u, std::max(1u, std::thread::hardware_concurrency() / 4))));
+    std::vector<std::thread> pool;
+    for (int i = 1; i < nThreads; i++) pool.emplace_back(worker, true);
+    worker(false);
+    for (auto& t : pool) t.join();
+    for (auto& f : res) out.push_back(std::move(f));
     }
+
+static bool interpolateGapSoftware(const VideoFrame& A, const VideoFrame& B, int count, std::vector<std::shared_ptr<VideoFrame>>& out, bool cutCheckOnly) {
+    if (count <= 0) return false;
+    GapMotion gm; double sad = 0;
+    if (!estimateMotion(A, B, gm, sad)) return false;
+    if (cutCheckOnly && sad <= kSceneCutSad) return false;   // no scene cut: the caller interpolates in another way
+    if (sad > kSceneCutSad) { copyNearer(A, B, count, out); return true; }
+    synthesizeCpu(A, B, count, gm, out);
     return true;
 }
+
 
 
 #ifndef __APPLE__
@@ -249,8 +303,40 @@ void prepareInterpolation(int w, int h) {
     }).detach();
 }
 
+#ifdef _WIN32
+// The Direct3D 11 synthesis is used once it has proved itself: a short test repair on the GPU must agree with the CPU's.
+static bool gpuSynthesisUsable() {
+    static const bool ok = [] {
+        if (getenv("DECT2_SWINTERP") || !d3d11ConcealAvailable()) return false;
+        const int w = 128, h = 96;
+        auto make = [&](int boxX) {
+            VideoFrame f; f.w = w; f.h = h; f.y.assign((size_t)w * h, 0); f.uv.assign((size_t)w * h / 2, 128);
+            for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) f.y[(size_t)y * w + x] = (uint8_t)(90 + 40 * std::sin(x * 0.07) * std::cos(y * 0.05) + 20 * std::sin(x * 0.31 + y * 0.17));
+            for (int y = 30; y < 66; y++) for (int x = boxX; x < boxX + 32; x++) if (x >= 0 && x < w) { f.y[(size_t)y * w + x] = 230; f.uv[(size_t)(y / 2) * w + (x & ~1)] = 200; }
+            return f;
+        };
+        VideoFrame A = make(10), B = make(70);
+        GapMotion gm; double sad = 0;
+        std::vector<std::shared_ptr<VideoFrame>> cpu, gpu;
+        if (!estimateMotion(A, B, gm, sad) || sad > kSceneCutSad) return false;
+        synthesizeCpu(A, B, 3, gm, cpu);
+        if (!d3d11Synthesize(A, B, 3, gm, gpu) || gpu.size() != cpu.size()) { fprintf(stderr, "Conceal: self-test failed on \"%s\", using the CPU repair\n", d3d11ConcealDevice()); return false; }
+        double err = 0; size_t n = 0;
+        for (size_t k = 0; k < cpu.size(); k++) for (size_t i = 0; i < cpu[k]->y.size(); i++) { err += std::abs((int)cpu[k]->y[i] - (int)gpu[k]->y[i]); n++; }
+        const double mean = err / (double)std::max<size_t>(1, n);
+        if (mean > 1.0) { fprintf(stderr, "Conceal: self-test failed on \"%s\" (mean luma difference %.2f), using the CPU repair\n", d3d11ConcealDevice(), mean); return false; }
+        return true;
+    }();
+    return ok;
+}
+#endif
+
 const char* interpolationBackend() {
-    return appleInterpolationAvailable() && !getenv("DECT2_SWINTERP") ? "Apple ML" : "motion search";
+    if (appleInterpolationAvailable() && !getenv("DECT2_SWINTERP")) return "Apple ML";
+#ifdef _WIN32
+    if (gpuSynthesisUsable()) return "Direct3D 11";
+#endif
+    return "motion search";
 }
 
 bool interpolateGap(const VideoFrame& A, const VideoFrame& B, int count, std::vector<std::shared_ptr<VideoFrame>>& out) {
@@ -259,7 +345,35 @@ bool interpolateGap(const VideoFrame& A, const VideoFrame& B, int count, std::ve
         if (interpolateGapSoftware(A, B, count, out, true)) return true;
         if (interpolateGapApple(A, B, count, out)) return true;
     }
+#ifdef _WIN32
+    if (count >= 1 && gpuSynthesisUsable()) {
+        GapMotion gm; double sad = 0;
+        if (!estimateMotion(A, B, gm, sad)) return false;
+        if (sad > kSceneCutSad) { copyNearer(A, B, count, out); return true; }
+        if (d3d11Synthesize(A, B, count, gm, out)) return true;
+        synthesizeCpu(A, B, count, gm, out);   // the GPU refused this gap: the CPU makes it
+        return true;
+    }
+#endif
     return interpolateGapSoftware(A, B, count, out, false);
+}
+
+// the two backends separately, for tests and comparisons
+bool interpolateGapCpu(const VideoFrame& A, const VideoFrame& B, int count, std::vector<std::shared_ptr<VideoFrame>>& out) {
+    return interpolateGapSoftware(A, B, count, out, false);
+}
+
+bool interpolateGapGpu(const VideoFrame& A, const VideoFrame& B, int count, std::vector<std::shared_ptr<VideoFrame>>& out) {
+#ifdef _WIN32
+    if (count < 1 || !gpuSynthesisUsable()) return false;
+    GapMotion gm; double sad = 0;
+    if (!estimateMotion(A, B, gm, sad)) return false;
+    if (sad > kSceneCutSad) { copyNearer(A, B, count, out); return true; }
+    return d3d11Synthesize(A, B, count, gm, out);
+#else
+    (void)A; (void)B; (void)count; (void)out;
+    return false;
+#endif
 }
 
 } // namespace dect2

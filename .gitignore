@@ -13,3 +13,11 @@ build-windows*/
 release/
 build-packages-arm/
 assets/
+
+# internal notes, not for the public repo
+FEATURES.md
+TASKS.md
+PROJECT_BRIEF.md
+docs/
+laptop_brief.md
+laptop_prompt.md

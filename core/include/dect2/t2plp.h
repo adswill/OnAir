@@ -61,9 +61,11 @@ public:
     int pending() const;
     uint64_t dropped() const { return dropped_; }
     static PlpResult decodeNow(const PlpJob& job, int threads, bool useGpu = false, const std::atomic<int>* backlog = nullptr);
-    // 0 = CPU, 1 = GPU, 2 = auto (CPU until it falls behind, then GPU)
-    // Auto means: the GPU whenever there is one (decoding on the CPU only keeps up on easy signals, and a frame that is late is a hole in the picture)
-    void setMode(int m) { mode_ = m; autoGpu_ = m == 2 && gpuOk_; switched_ = false; pathFrames_ = 0; slowRun_ = 0; }
+    // 0 = CPU, 1 = GPU, 2 = auto
+    // Auto means: the GPU whenever there is one (decoding on the CPU only keeps up on easy signals, and a frame that is late is a hole in the picture).
+    // On Windows only a discrete graphics card counts: integrated graphics (not measured) starts on the CPU and is tried when that falls behind.
+    void setMode(int m) { mode_ = m; autoGpu_ = m == 2 && autoStartsOnGpu(); switched_ = false; pathFrames_ = 0; slowRun_ = 0; }
+    bool autoStartsOnGpu() const;
     int mode() const { return mode_; }
     bool gpuAvailable() const { return gpuOk_; }
     bool autoOnGpu() const { return autoGpu_; }

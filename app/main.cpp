@@ -11,6 +11,8 @@
 
 
 #include "dect2/engine.h"
+#include "dect2/gpu_ldpc.h"
+#include "dect2/t2rx.h"
 #include "dect2/nettuner.h"
 #include "dect2/timecompat.h"
 #include "dect2/platform.h"
@@ -582,13 +584,19 @@ static void toolbar(App& a) {
             }
             ImGui::EndCombo();
         }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("LDPC decoding backend.\n"
+        if (ImGui::IsItemHovered()) {
+            const char* gpuName = GpuLdpc::instance().deviceName();
+            ImGui::SetTooltip("LDPC decoding backend.\n"
 #ifdef __APPLE__
-            "CPU: NEON on all cores. GPU: Metal compute.\n"
+                "CPU: NEON on all cores. GPU: Metal compute.\n"
+                "Auto: the GPU when there is one, the CPU otherwise.\n"
 #else
-            "CPU: AVX2 on all cores. GPU: Direct3D 11 compute (Windows).\n"
+                "CPU: AVX2 on all cores. GPU: Direct3D 11 compute (Windows).\n"
+                "Auto: the GPU when a discrete graphics card is found, otherwise the CPU\n"
+                "first and the GPU if it falls behind real time.\n"
 #endif
-            "Auto: CPU until it falls behind real time, then GPU.");
+                "Graphics: %s", a.rx.gpuAvailable ? gpuName : "none usable");
+        }
     }
     ImGui::SameLine(0, 14 * gUi);
     {
@@ -774,6 +782,7 @@ static void statusBar(App& a) {
     };
     char b[96];
     if (!run) ro("State", "stopped", ImVec4(0.6f, 0.64f, 0.68f, 1));
+    else if (a.engine.radioLost()) ro("State", "radio disconnected", ImVec4(0.95f, 0.35f, 0.3f, 1));
     else if (rx.state == 2) ro("State", "Locked", ImVec4(0.35f, 0.90f, 0.45f, 1));
     else if (rx.state == 1) ro("State", "syncing", ImVec4(0.95f, 0.75f, 0.2f, 1));
     else ro("State", "searching", ImVec4(0.6f, 0.64f, 0.68f, 1));
@@ -3146,6 +3155,18 @@ int main(int argc, char** argv) {
                 if (glfwGetTime() - pT0 > 2.0) { fprintf(stderr, "ui: %.1f fps, build %.2f ms avg / %.1f ms max\n", pN / (glfwGetTime() - pT0), 1e3 * pAcc / pN, 1e3 * pMax); pAcc = pMax = 0; pN = 0; pT0 = glfwGetTime(); }
             }
             const bool shotNow = shotPath && ++shotFrame == (hackrfStart ? (app.playReq >= 0 || app.engine.player().selected() >= 0 ? 2400 : 900) : 400);
+            static const bool statlog = getenv("DECT2_STATLOG") != nullptr;   // a status line every 10 s on stderr (the log file on Windows): DECT2_STATLOG=1
+            static double sT0 = glfwGetTime();
+            if (statlog && app.engine.running() && glfwGetTime() - sT0 >= 10.0) {
+                sT0 = glfwGetTime();
+                const PlayerStats ps = app.engine.player().stats();
+                fprintf(stderr, "stat: dropped %llu, PLP frames dropped %llu, decode %.0f ms on %s (mode %d), blocks ok %llu bad %llu, player %s hw=%d decoded %llu shown %llu late %llu buf %.0f ms underruns %d A/V %+.0f ms\n",
+                        (unsigned long long)app.engine.droppedSamples(), (unsigned long long)app.rx.plpFramesDropped, app.rx.plpDecodeMs, app.rx.plpOnGpu ? "GPU" : "CPU", app.rx.computeMode,
+                        (unsigned long long)app.rx.blocksOk, (unsigned long long)app.rx.blocksBad, ps.status.c_str(), ps.hardware, (unsigned long long)ps.decoded, (unsigned long long)ps.shown, (unsigned long long)ps.late, ps.audioBufferMs, ps.underruns, ps.avOffsetMs);
+                fprintf(stderr, "stat: %s\n", t2rxProfile().c_str());
+                fprintf(stderr, "stat: %s\n", engineWaitProfile().c_str());
+                fprintf(stderr, "stat: %s\n", app.engine.loadProfile().c_str());
+            }
             gfxBackend->endFrame(ImGui::GetDrawData(), shotNow ? shotPath : nullptr);
             if (shotNow) {
                 { PlayerStats ps = app.engine.player().stats(); { BbStats bb = app.engine.bbStats(); fprintf(stderr, "stream: BB frames %llu lost %llu, PLP frames dropped by busy decoder %llu, FEC blocks ok %llu bad %llu, samples dropped %llu, CPU decode %.0f ms\n", (unsigned long long)bb.frames, (unsigned long long)bb.framesLost, (unsigned long long)app.rx.plpFramesDropped, (unsigned long long)app.rx.blocksOk, (unsigned long long)app.rx.blocksBad, (unsigned long long)app.engine.droppedSamples(), app.rx.plpDecodeMs); }

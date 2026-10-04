@@ -64,7 +64,7 @@ int AudioOut::write(const float* s, int frames) {
 }
 
 void AudioOut::flush() { p_->flushReq = true; }
-int AudioOut::bufferedFrames() const { return (int)(p_->w.load() - p_->r.load()); }
+int AudioOut::bufferedFrames() const { return p_->flushReq.load() ? 0 : (int)(p_->w.load() - p_->r.load()); }   // audio about to be thrown away does not count
 uint64_t AudioOut::writtenFrames() const { return p_->written.load(); }
 uint64_t AudioOut::playedFrames() const { return p_->played.load(); }
 void AudioOut::setVolume(float v) { p_->volume = v; }

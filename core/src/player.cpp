@@ -143,8 +143,10 @@ void Player::setAudioTrack(int i) { p_->trackChange = i; }
 std::vector<AudioTrackInfo> Player::audioTracks() const { std::lock_guard<std::mutex> lk(p_->smu); return p_->tracks; }
 
 PlayerStats Player::stats() const {
-    std::lock_guard<std::mutex> lk(p_->smu);
-    PlayerStats s = p_->st;
+    // The statistics lock must not be held while the picture-queue lock is taken: the player thread (and videoFrame()) take them in the
+    // opposite order, and two threads each holding one and waiting for the other freeze the interface for good.
+    PlayerStats s;
+    { std::lock_guard<std::mutex> lk(p_->smu); s = p_->st; }
     s.audioBufferMs = audio_.bufferedFrames() * 1000.0 / audio_.sampleRate();
     s.underruns = audio_.underruns();
     { std::lock_guard<std::mutex> l2(p_->vmu); s.videoQueue = (int)p_->vq.size(); }
@@ -342,6 +344,7 @@ void Player::threadMain() {
         AVFrame* frame = av_frame_alloc();
         AVFrame* sw = av_frame_alloc();
         double lastVPts = 0, vFrameDur = 0.04;
+        double recentSteps[32]; int recentN = 0;   // picture intervals seen lately: the stream's own frame rate (the container metadata can claim the field rate)
         std::shared_ptr<VideoFrame> lastVf;
         // picture repair: after a loss on the video stream the pictures are suspect until a clean keyframe; they are held back and
         // replaced by pictures generated from the last good one and the keyframe (if that is not too far apart)
@@ -402,6 +405,21 @@ void Player::threadMain() {
                 if (!haveVPts) return;
                 vf->pts = lastVPts + vFrameDur;
                 I.st.errors += 0;
+            }
+            // The metadata can give the field rate (50) for a stream whose pictures come 25 times a second; every picture would then look
+            // like a hole in the sequence and be "repaired". So the typical interval is taken from the timestamps themselves.
+            if (haveVPts) {
+                const double step = vf->pts - lastVPts;
+                if (step > 0.005 && step < 0.1) {   // an ordinary picture interval (a hole or a jump is longer)
+                    recentSteps[recentN++ % 32] = step;
+                    if (recentN >= 8) {
+                        double tmp[32];
+                        const int cnt = std::min(recentN, 32);
+                        std::copy(recentSteps, recentSteps + cnt, tmp);
+                        std::nth_element(tmp, tmp + cnt / 2, tmp + cnt);
+                        vFrameDur = tmp[cnt / 2];
+                    }
+                }
             }
             lastVPts = vf->pts; haveVPts = true;
             // DVB subtitle overlay: only frames that carry a subtitle are converted to RGBA on the CPU
@@ -474,7 +492,10 @@ void Player::threadMain() {
                     if (lastVf && lastVf->rgba.empty() && D > 1.5 * vFrameDur && D <= 1.6) {
                         const int cnt = std::min(48, (int)std::lround(D / vFrameDur) - 1);
                         std::vector<std::shared_ptr<VideoFrame>> mid;
-                        if (cnt >= 1 && interpolateGap(*lastVf, *vf, cnt, mid)) {
+                        const auto tI0 = std::chrono::steady_clock::now();
+                        const bool madeMid = cnt >= 1 && interpolateGap(*lastVf, *vf, cnt, mid);
+                        if (getenv("DECT2_PLAYDEBUG")) fprintf(stderr, "[play] repair: %d pictures between two %dx%d pictures took %.0f ms (%s)\n", cnt, w, h, std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tI0).count(), interpolationBackend());
+                        if (madeMid) {
                             for (int k = 0; k < (int)mid.size(); k++) mid[(size_t)k]->pts = lastVf->pts + (k + 1) * D / (cnt + 1);
                             for (auto& m : mid) pushPlain(m);
                             lastVf = mid.back();
@@ -496,7 +517,10 @@ void Player::threadMain() {
                 if (gap > 1.75 * vFrameDur && gap <= 1.5) {
                     const int cnt = std::min(40, (int)std::lround(gap / vFrameDur) - 1);
                     std::vector<std::shared_ptr<VideoFrame>> mid;
-                    if (cnt >= 1 && interpolateGap(*lastVf, *vf, cnt, mid)) {
+                    const auto tI0 = std::chrono::steady_clock::now();
+                    const bool madeMid = cnt >= 1 && interpolateGap(*lastVf, *vf, cnt, mid);
+                    if (getenv("DECT2_PLAYDEBUG")) fprintf(stderr, "[play] gap fill: %d pictures took %.0f ms (%s)\n", cnt, std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tI0).count(), interpolationBackend());
+                    if (madeMid) {
                         std::lock_guard<std::mutex> lk(I.vmu);
                         for (int k = 0; k < (int)mid.size(); k++) { mid[(size_t)k]->pts = lastVf->pts + (k + 1) * gap / (cnt + 1); I.vq.push_back(mid[(size_t)k]); }
                         std::lock_guard<std::mutex> sl(I.smu);
@@ -555,7 +579,10 @@ void Player::threadMain() {
                     bool had = I.baseValid;
                     if (getenv("DECT2_PLAYDEBUG")) fprintf(stderr, "[play] audio clock reset: pts %.3f expected %.3f (had=%d)\n", pts, I.nextPts, (int)had);
                     I.basePts = pts;
-                    I.baseIndex = audio_.writtenFrames();
+                    // the device index at which this frame will be played: what has been played plus what is still queued ahead of it.
+                    // (Not the number of frames ever written: audio thrown away by a flush at a service change is counted there but never
+                    // played, and the clock would then stay invalid for as long as that audio was long, with every picture dropped as late.)
+                    I.baseIndex = audio_.playedFrames() + (uint64_t)std::max(0, audio_.bufferedFrames());
                     I.baseValid = true;
                     if (had) { std::lock_guard<std::mutex> l2(I.vmu); I.vq.clear(); } // genuine timestamp jump: drop stale pictures
                 }
