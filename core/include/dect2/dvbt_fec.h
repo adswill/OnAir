@@ -46,7 +46,6 @@ private:
     std::vector<uint8_t> out_;
     int blocksSinceSync_ = 0, syncMisses_ = 0;
     float llrScale_ = 8.f;
-    unsigned prbs_ = 0xA9;
     void descramblePacket(uint8_t* pkt, int g);
 };
 

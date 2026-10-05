@@ -153,20 +153,30 @@ void FecDecoder::process(bool) {
     after_.erase(after_.begin(), after_.begin() + pos);
 }
 
+namespace {
+// The energy dispersal sequence restarts with every group of 8 packets, so packet g of a group always sees the same bytes
+struct DispersalTable {
+    uint8_t b[8][188] = {};
+    DispersalTable() {
+        unsigned prbs = 0xA9;
+        auto clock8 = [&] {
+            unsigned res = 0;
+            for (int i = 0; i < 8; i++) {
+                const unsigned fb = ((prbs >> 13) ^ (prbs >> 14)) & 1;
+                prbs = ((prbs << 1) | fb) & 0x7FFF;
+                res = (res << 1) | fb;
+            }
+            return (uint8_t)res;
+        };
+        for (int g = 0; g < 8; g++) { for (int k = 1; k < 188; k++) b[g][k] = clock8(); clock8(); }   // the sync byte is not scrambled
+    }
+};
+}
+
 void FecDecoder::descramblePacket(uint8_t* pkt, int g) {
-    if (g == 0) prbs_ = 0xA9;
-    auto clock8 = [&] {
-        unsigned res = 0;
-        for (int i = 0; i < 8; i++) {
-            const unsigned fb = ((prbs_ >> 13) ^ (prbs_ >> 14)) & 1;
-            prbs_ = ((prbs_ << 1) | fb) & 0x7FFF;
-            res = (res << 1) | fb;
-        }
-        return res;
-    };
+    static const DispersalTable t;
     pkt[0] = 0x47;
-    for (int k = 1; k < 188; k++) pkt[k] ^= (uint8_t)clock8();
-    clock8();
+    for (int k = 1; k < 188; k++) pkt[k] ^= t.b[g][k];
 }
 
 void FecDecoder::takePackets(std::vector<uint8_t>& out) {

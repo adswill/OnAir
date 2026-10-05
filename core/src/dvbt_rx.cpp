@@ -420,7 +420,15 @@ struct DvbtReceiver::Impl {
         const double phi = accPhi, slope = accSlope;
         // derotate the whole symbol by (phi + slope*(k-kc))
         std::vector<cf32> Yc(K);
-        for (int k = 0; k < K; k++) { const double a = -(phi + slope * (k - kc)); Yc[k] = Y[k] * cf32((float)std::cos(a), (float)std::sin(a)); }
+        {   // phasor recurrence: a sine and a cosine per carrier would cost more than the rest of the symbol
+            cd w = std::polar(1.0, -(phi - slope * kc));
+            const cd ws = std::polar(1.0, -slope);
+            for (int k = 0; k < K; k++) {
+                Yc[k] = Y[k] * cf32((float)w.real(), (float)w.imag());
+                w *= ws;
+                if ((k & 255) == 255) w /= std::abs(w);
+            }
+        }
         for (size_t i = 0; i < cp.size(); i++) {
             const cf32 v = Yc[cp[i]] / pilotValue(cp[i]);
             cpRef[i] = cpRefValid ? cpRef[i] * 0.85f + v * 0.15f : v;

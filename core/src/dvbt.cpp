@@ -6,6 +6,10 @@
 #include <cstring>
 #include <mutex>
 #include <thread>
+#if (defined(__x86_64__) || defined(_M_X64)) && !defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
+#include <emmintrin.h>
+#define DECT2_VITERBI_SSE2 1
+#endif
 
 namespace dect2 {
 namespace dvbt {
@@ -378,10 +382,14 @@ void symbolDeinterleave(int mode, int symIdx, const cf32* in, const float* n0in,
 
 void bitDeinterleave(const float* in, int mod, int words, float* out) {
     const int v = bitsPerCell(mod);
+    int src[6];   // the divisions by a run-time v cost more than the copying, so they are done once
+    for (int k = 0; k < v; k++) src[k] = (k / (v / 2)) + 2 * (k % (v / 2));
     for (int b = 0; b + 126 <= words; b += 126) {
         float d[6][126];
-        for (int w = 0; w < 126; w++) for (int e = 0; e < v; e++) d[e][hCol(w, e)] = in[(size_t)(b + w) * v + e];
-        for (int i = 0; i < 126; i++) for (int k = 0; k < v; k++) out[(size_t)(b + i) * v + k] = d[(k / (v / 2)) + 2 * (k % (v / 2))][i];
+        const float* p = in + (size_t)b * v;
+        for (int e = 0; e < v; e++) { int c = hCol(0, e); for (int w = 0; w < 126; w++) { d[e][c] = p[(size_t)w * v + e]; if (++c == 126) c = 0; } }
+        float* q = out + (size_t)b * v;
+        for (int i = 0; i < 126; i++) for (int k = 0; k < v; k++) q[(size_t)i * v + k] = d[src[k]][i];
     }
 }
 
@@ -389,20 +397,21 @@ void Viterbi::depuncture(const float* llr, size_t n, int rate, int phase, std::v
     static const int kPat[5][7] = {{3, 0, 0, 0, 0, 0, 0}, {3, 2, 0, 0, 0, 0, 0}, {3, 2, 1, 0, 0, 0, 0}, {3, 2, 1, 2, 1, 0, 0}, {3, 2, 2, 2, 1, 2, 1}};
     static const int kLen[5] = {1, 2, 3, 5, 7};
     const int k = kLen[rate];
-    soft.clear();
-    soft.reserve(n * 2);
+    soft.resize(n * 2);   // every step takes at least one value
+    int8_t* o = soft.data();
     size_t i = 0;
     int step = phase % k;
-    auto q = [&](float v) { const float s = v * scale; return (int8_t)std::max(-127.f, std::min(127.f, std::round(s))); };
+    // std::round without the library call: clamp, then round half away from zero (exact in double)
+    auto q = [&](float v) { const float s = std::max(-127.f, std::min(127.f, v * scale)); return (int8_t)(int)((double)s + (s < 0 ? -0.5 : 0.5)); };
     while (i < n) {
         const int pat = kPat[rate][step];
         int8_t x = 0, y = 0;
         if (pat & 1) { if (i >= n) break; x = q(llr[i++]); }
         if (pat & 2) { if (i >= n) break; y = q(llr[i++]); }
-        soft.push_back(x);
-        soft.push_back(y);
+        o[0] = x; o[1] = y; o += 2;
         if (++step == k) step = 0;
     }
+    soft.resize((size_t)(o - soft.data()));
 }
 
 namespace {
@@ -493,6 +502,79 @@ void viterbiRange(const int8_t* soft, size_t steps, std::vector<uint8_t>& bits, 
     }
     if (metricOut) *metricOut = off + bm;
 }
+#elif defined(DECT2_VITERBI_SSE2)
+// SSE2 path (every x86-64 CPU): the same butterflies as the NEON path, eight states per register. The scalar loop below decodes
+// about 4 M steps/s, far short of the 20+ Mbit/s of a 64-QAM multiplex even on four threads.
+struct SseTables {
+    alignas(16) int16_t sigX[32], sigY[32];
+    SseTables() {
+        for (int j = 0; j < 32; j++) {
+            const unsigned reg = (unsigned)(2 * j);
+            sigX[j] = __builtin_parity(reg & 0x79) ? -1 : 1;
+            sigY[j] = __builtin_parity(reg & 0x5B) ? -1 : 1;
+        }
+    }
+};
+const SseTables& sseTables() { static SseTables t; return t; }
+
+// the even and the odd lanes of a:b (old[2j] and old[2j+1])
+inline void deinterleave(__m128i a, __m128i b, __m128i& ev, __m128i& od) {
+    ev = _mm_packs_epi32(_mm_srai_epi32(_mm_slli_epi32(a, 16), 16), _mm_srai_epi32(_mm_slli_epi32(b, 16), 16));
+    od = _mm_packs_epi32(_mm_srai_epi32(a, 16), _mm_srai_epi32(b, 16));
+}
+
+inline int16_t hmax(__m128i v) {
+    v = _mm_max_epi16(v, _mm_shuffle_epi32(v, _MM_SHUFFLE(1, 0, 3, 2)));
+    v = _mm_max_epi16(v, _mm_shuffle_epi32(v, _MM_SHUFFLE(2, 3, 0, 1)));
+    v = _mm_max_epi16(v, _mm_shufflelo_epi16(v, _MM_SHUFFLE(2, 3, 0, 1)));
+    return (int16_t)_mm_cvtsi128_si32(v);
+}
+
+void viterbiRange(const int8_t* soft, size_t steps, std::vector<uint8_t>& bits, long* metricOut) {
+    const SseTables& T = sseTables();
+    std::vector<uint64_t> dec(steps);
+    long off = 0;
+    alignas(16) int16_t pm[64] = {}, nm[64];
+    __m128i sigX[4], sigY[4];
+    for (int q = 0; q < 4; q++) { sigX[q] = _mm_load_si128((const __m128i*)(T.sigX + 8 * q)); sigY[q] = _mm_load_si128((const __m128i*)(T.sigY + 8 * q)); }
+    for (size_t t = 0; t < steps; t++) {
+        const __m128i a = _mm_set1_epi16(soft[2 * t]), b = _mm_set1_epi16(soft[2 * t + 1]);
+        __m128i lo[4], hi[4];
+        for (int q = 0; q < 4; q++) {
+            __m128i A, B;
+            deinterleave(_mm_load_si128((const __m128i*)(pm + 16 * q)), _mm_load_si128((const __m128i*)(pm + 16 * q + 8)), A, B);
+            const __m128i M = _mm_add_epi16(_mm_mullo_epi16(sigX[q], a), _mm_mullo_epi16(sigY[q], b));
+            const __m128i p0 = _mm_adds_epi16(A, M), p1 = _mm_subs_epi16(B, M);
+            const __m128i r0 = _mm_subs_epi16(A, M), r1 = _mm_adds_epi16(B, M);
+            _mm_store_si128((__m128i*)(nm + 8 * q), _mm_max_epi16(p0, p1));
+            _mm_store_si128((__m128i*)(nm + 32 + 8 * q), _mm_max_epi16(r0, r1));
+            lo[q] = _mm_cmpgt_epi16(p1, p0);
+            hi[q] = _mm_cmpgt_epi16(r1, r0);
+        }
+        const uint64_t l = (uint64_t)(uint32_t)_mm_movemask_epi8(_mm_packs_epi16(lo[0], lo[1])) | (uint64_t)(uint32_t)_mm_movemask_epi8(_mm_packs_epi16(lo[2], lo[3])) << 16;
+        const uint64_t h = (uint64_t)(uint32_t)_mm_movemask_epi8(_mm_packs_epi16(hi[0], hi[1])) | (uint64_t)(uint32_t)_mm_movemask_epi8(_mm_packs_epi16(hi[2], hi[3])) << 16;
+        dec[t] = l | h << 32;
+        // renormalise every 4 steps so int16 never saturates
+        if ((t & 3) == 3) {
+            __m128i mx = _mm_load_si128((const __m128i*)nm);
+            for (int q = 1; q < 8; q++) mx = _mm_max_epi16(mx, _mm_load_si128((const __m128i*)(nm + 8 * q)));
+            const int16_t m = hmax(mx);
+            off += m;
+            const __m128i mv = _mm_set1_epi16(m);
+            for (int q = 0; q < 8; q++) _mm_store_si128((__m128i*)(pm + 8 * q), _mm_sub_epi16(_mm_load_si128((const __m128i*)(nm + 8 * q)), mv));
+        } else memcpy(pm, nm, sizeof pm);
+    }
+    int state = 0;
+    int bm = pm[0];
+    for (int s = 1; s < 64; s++) if (pm[s] > bm) { bm = pm[s]; state = s; }
+    bits.assign(steps, 0);
+    for (size_t t = steps; t-- > 0;) {
+        bits[t] = (uint8_t)(state >> 5);
+        const int b = (int)((dec[t] >> state) & 1);
+        state = ((state & 31) << 1) | b;
+    }
+    if (metricOut) *metricOut = off + bm;
+}
 #else
 void viterbiRange(const int8_t* soft, size_t steps, std::vector<uint8_t>& bits, long* metricOut) {
     const Trellis& T = trellis();
@@ -544,9 +626,13 @@ void Viterbi::decode(const std::vector<int8_t>& soft, std::vector<uint8_t>& out,
     };
     if (threads <= 1 || chunks <= 1) { for (size_t c = 0; c < chunks; c++) work(c); }
     else {
+        // The calling thread takes chunks too. Left waiting in join() for the whole block, it tends to be woken on an efficiency
+        // core of a hybrid CPU and runs the rest of the receiver there: twice as slow overall as decoding on one thread.
         std::atomic<size_t> next{0};
+        auto loop = [&] { for (size_t c; (c = next++) < chunks;) work(c); };
         std::vector<std::thread> ts;
-        for (int t = 0; t < std::min<size_t>(threads, chunks); t++) ts.emplace_back([&] { for (size_t c; (c = next++) < chunks;) work(c); });
+        for (int t = 1; t < std::min<size_t>(threads, chunks); t++) ts.emplace_back(loop);
+        loop();
         for (auto& t : ts) t.join();
     }
     if (metric) { long s = 0; for (long m : metrics) s += m; *metric = s; }
