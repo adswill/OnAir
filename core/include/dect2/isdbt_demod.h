@@ -35,6 +35,8 @@ public:
     double snrDb() const;                         // of the data carriers after equalisation (from the pilots)
     // for the display: equalised data cells of the last symbol (subsampled), and channel magnitude per carrier
     const std::vector<cf32>& eqCells() const;
+    // the last symbol after the common phase and timing correction (K carriers)
+    const std::vector<cf32>& corrected() const;
     const std::vector<float>& channelDb() const;
     uint64_t symbolsDone() const;
     // centre of the delay window of the channel estimate, in samples relative to the start of the FFT window (see GridInterpolator)

@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <cstdio>
+#include <cstdlib>
 #include <deque>
 #include <thread>
 
@@ -13,6 +15,7 @@ namespace isdbt {
 namespace {
 const int kBranchDelay[4][6] = {{0, 120, 0, 0, 0, 0}, {0, 120, 0, 0, 0, 0}, {0, 40, 80, 120, 0, 0}, {0, 24, 48, 72, 96, 120}};
 constexpr float kErasure = 1e9f;   // noise variance given to cells that have not been received
+constexpr double kNoiseCal = 1.0;  // correction of the pilot-based noise estimate (calibrated against simulations)
 
 struct Prbs {
     unsigned r = 0;
@@ -153,12 +156,19 @@ struct Demod::Impl {
     bool started = false;
     uint64_t symbols = 0;
     // channel estimation, one grid per run of synchronous segments
-    struct Run { int p0, p1; std::vector<cf32> grid; std::vector<cf32> H; int filled = 0; };
+    struct Run { int p0, p1; std::vector<cf32> grid; std::vector<uint8_t> gv; std::vector<cf32> H; int filled = 0; std::complex<double> lag{0, 0}; };
     std::vector<Run> runs;
     GridInterpolator interp;
     std::vector<cf32> prevY;
     bool prevValid = false;
     double sigma2 = 1e-3, snr = 0;
+    // common phase and phase ramp (timing) of the symbols against the pilots, as running totals so that nothing has to be unwrapped
+    double accPhi = 0, accSlope = 0;
+    bool trackOn = true;
+    std::vector<int> cpK;                 // carriers with a constant pilot: continual pilots of differential segments and the last carrier
+    std::vector<cf32> cpRef;
+    bool cpRefValid = false;
+    std::vector<cf32> Yd;                 // the symbol after the correction
     std::vector<cf32> eq;
     std::vector<float> chDb;
     // time de-interleaver: delay lines per segment and data carrier
@@ -173,6 +183,14 @@ struct Demod::Impl {
         segmentLayout(p, seg);
         for (int i = 0; i < 3; i++) if (p.layer[i].used()) layer[i].configure(mode, p.layer[i]); else layer[i] = LayerDecoder();
         started = false; symbols = 0; prevValid = false; sigma2 = 1e-3;
+        accPhi = accSlope = 0; cpRefValid = false;
+        cpK.clear();
+        for (int pos = 0; pos < kSegments; pos++) {
+            const int s = kSegmentAtPosition[pos];
+            if (seg[s].layer >= 0 && seg[s].diff) cpK.push_back(pos * cps);
+        }
+        cpK.push_back(K - 1);
+        cpRef.assign(cpK.size(), cf32(1, 0));
         // runs of adjacent synchronous segments in frequency order
         runs.clear();
         for (int pos = 0; pos < kSegments;) {
@@ -183,6 +201,7 @@ struct Demod::Impl {
                 Run r; r.p0 = pos; r.p1 = q;
                 const int carriers = (q - pos + 1) * cps + (q == kSegments - 1 ? 1 : 0);
                 r.grid.assign((size_t)(carriers + 2) / 3, cf32(0, 0));
+                r.gv.assign(r.grid.size(), 0);
                 runs.push_back(std::move(r));
                 pos = q + 1;
             } else pos++;
@@ -202,9 +221,89 @@ struct Demod::Impl {
         chDb.assign((size_t)K, -100.f);
     }
 
-    void pushSymbol(const cf32* Y, int symIdx) {
-        if (!started) { if (symIdx != 0) return; started = true; }
+    // pilot values of the carriers with constant pilots
+    cf32 cpPilot(int k) const {
+        if (k == K - 1) return cf32(lastCarrierValue(mode), 0);
+        const int pos = k / cps;
+        return cf32(pilotValue(prbsW(mode, kSegmentAtPosition[pos])[0]), 0);
+    }
+
+    void track(const cf32* Yraw, int symIdx) {
+        const int kc = K / 2;
+        const int sp = symIdx % 4;
+        double sw = 0, sx = 0, sy = 0, sxx = 0, sxy = 0, tot = 0;
+        std::complex<double> acc(0, 0);
+        auto addPoint = [&](int k, cf32 z, cf32 ref) {
+            // z: pilot-normalised value after the previous correction, ref: its expected value (the channel)
+            const double a = accPhi + accSlope * (double)(k - kc);
+            const std::complex<double> r = std::complex<double>(z.real(), z.imag()) * std::polar(1.0, -a) * std::conj(std::complex<double>(ref.real(), ref.imag()));
+            const double w = std::abs(r);
+            if (w < 1e-12) return;
+            acc += r / w;
+            tot += 1;
+            sw += w;
+            (void)sx; (void)sy; (void)sxx; (void)sxy;
+        };
+        (void)addPoint; (void)sp; (void)tot; (void)acc; (void)sw;
+        // two passes: a common phase first, then a ramp from the residual
+        struct P { int k; double ph; double w; };
+        std::vector<P> pts;
+        auto collect = [&](int k, cf32 z, cf32 ref) {
+            const double a = accPhi + accSlope * (double)(k - kc);
+            const std::complex<double> r = std::complex<double>(z.real(), z.imag()) * std::polar(1.0, -a) * std::conj(std::complex<double>(ref.real(), ref.imag()));
+            const double w = std::abs(r);
+            if (w < 1e-12) return;
+            pts.push_back({k, std::arg(r), w});
+        };
+        for (auto& r : runs) {
+            if (r.filled < 4 || r.H.empty()) continue;
+            const int k0 = r.p0 * cps;
+            for (int pos = r.p0; pos <= r.p1; pos++) {
+                const auto& w = prbsW(mode, kSegmentAtPosition[pos]);
+                for (int i = 3 * sp; i < cps; i += 12) {
+                    const int k = pos * cps + i;
+                    collect(k, Yraw[k] / pilotValue(w[(size_t)i]), r.H[(size_t)(k - k0)]);
+                }
+            }
+        }
+        if (cpRefValid && runs.empty()) for (size_t j = 0; j < cpK.size(); j++) {
+            // a continual pilot that belongs to a differential segment (or the last carrier)
+            const int k = cpK[j];
+            if (k == K - 1 || (seg[kSegmentAtPosition[k / cps]].diff)) collect(k, Yraw[k] / cpPilot(k), cpRef[j]);
+        }
+        if (!pts.empty()) {
+            std::complex<double> sum(0, 0);
+            for (auto& q : pts) sum += std::polar(q.w, q.ph);
+            const double phi0 = std::arg(sum);
+            double Sw = 0, Sx = 0, Sy = 0, Sxx = 0, Sxy = 0;
+            for (auto& q : pts) {
+                double d = q.ph - phi0;
+                while (d > M_PI) d -= 2 * M_PI;
+                while (d < -M_PI) d += 2 * M_PI;
+                const double x = (double)(q.k - kc);
+                Sw += q.w; Sx += q.w * x; Sy += q.w * d; Sxx += q.w * x * x; Sxy += q.w * x * d;
+            }
+            double dSlope = 0, dPhi = phi0;
+            const double det = Sw * Sxx - Sx * Sx;
+            if (pts.size() >= 6 && det > 1e-12 * Sw * Sw) { dSlope = (Sw * Sxy - Sx * Sy) / det; dPhi = phi0 + (Sy - dSlope * Sx) / Sw; }
+            accPhi += dPhi; accSlope += dSlope;
+            if (getenv("ISDBT_DEBUG3") && symbols > 100 && symbols < 118) fprintf(stderr, "[track] sym %llu pts %zu dPhi %.4f dSlope %.3g accSlope %.4f (per symbol %.3g) accPhi %.2f\n", (unsigned long long)symbols, pts.size(), dPhi, dSlope, accSlope, accSlope / std::max<uint64_t>(1, symbols), accPhi);
+        }
+        Yd.resize((size_t)K);
+        for (int k = 0; k < K; k++) { const double a = -(accPhi + accSlope * (double)(k - kc)); Yd[(size_t)k] = Yraw[k] * cf32((float)std::cos(a), (float)std::sin(a)); }
+        for (size_t j = 0; j < cpK.size(); j++) {
+            const int k = cpK[j];
+            const cf32 v = Yd[(size_t)k] / cpPilot(k);
+            cpRef[j] = cpRefValid ? cpRef[j] * 0.85f + v * 0.15f : v;
+        }
+        cpRefValid = true;
+    }
+
+    void pushSymbol(const cf32* Yraw, int symIdx) {
+        if (!started && symIdx == 0) started = true;   // the layer decoders begin with a whole frame; tracking and channel estimation run all the time
         symbols++;
+        const cf32* Y;
+        if (trackOn) { track(Yraw, symIdx); Y = Yd.data(); } else Y = Yraw;
         const uint16_t* rnd = mode == 1 ? tables::kRandomizing1 : mode == 2 ? tables::kRandomizing2 : tables::kRandomizing3;
         std::vector<uint8_t> roles((size_t)cps);
         // per segment: received data values and their noise variance, in data-carrier order
@@ -221,15 +320,27 @@ struct Demod::Impl {
                 const auto& w = prbsW(mode, s);
                 for (int i = 3 * sp; i < cps; i += 12) {
                     const int k = pos * cps + i;
-                    r.grid[(size_t)(k - k0) / 3] = Y[k] / pilotValue(w[(size_t)i]);
+                    const size_t g = (size_t)(k - k0) / 3;
+                    const cf32 nvv = Y[k] / pilotValue(w[(size_t)i]);
+                    // the same pilot four symbols ago: the difference is noise (twice), the channel hardly moves in that time
+                    if (r.gv[g]) { noiseAcc += 0.5 * std::norm(nvv - r.grid[g]); noiseCnt++; }
+                    r.grid[g] = nvv; r.gv[g] = 1;
                 }
             }
             if (r.p1 == kSegments - 1) r.grid[(size_t)(carriers - 1) / 3] = Y[K - 1] / lastCarrierValue(mode);
             if (r.filled < 4) r.filled++;
             if (r.filled < 4) continue;
-            interp.run(r.grid, 3, carriers, N, tau0, r.H, 1.0);
-            // noise: spread of neighbouring pilot estimates
-            for (size_t g = 1; g + 1 < r.grid.size(); g += 4) { noiseAcc += std::norm(r.grid[g + 1] - r.grid[g]) * 0.5; noiseCnt++; }
+            // the delay of the channel (the phase slope of the pilot grid), so that the interpolator sees a nearly flat grid and the ends of the run are
+            // extended correctly; averaged over a few symbols
+            {
+                std::complex<double> c(0, 0);
+                for (size_t g = 0; g + 1 < r.grid.size(); g++) c += std::complex<double>(r.grid[g + 1].real(), r.grid[g + 1].imag()) * std::conj(std::complex<double>(r.grid[g].real(), r.grid[g].imag()));
+                const double m = std::abs(c);
+                if (m > 0) c /= m;
+                r.lag = r.lag == std::complex<double>(0, 0) ? c : 0.85 * r.lag + 0.15 * c;
+            }
+            const double tauRun = r.lag == std::complex<double>(0, 0) ? tau0 : -std::arg(r.lag) * (double)N / (2.0 * M_PI * 3.0);
+            interp.run(r.grid, 3, carriers, N, tauRun, r.H, 1.0);
             for (int pos = r.p0; pos <= r.p1; pos++) {
                 const int s = kSegmentAtPosition[pos];
                 segmentRoles(mode, s, false, symIdx, roles.data());
@@ -247,10 +358,41 @@ struct Demod::Impl {
                 }
             }
         }
+        if (noiseCnt == 0 && runs.empty() && cpRefValid) {
+            for (size_t j = 0; j + 1 < cpK.size(); j++) { noiseAcc += std::norm(Y[(size_t)cpK[j]] / cpPilot(cpK[j]) - cpRef[j]); noiseCnt++; }
+            noiseAcc *= 1.2;
+        }
         if (noiseCnt > 0) {
-            const double s2 = std::max(1e-9, noiseAcc / (double)noiseCnt * (16.0 / 9.0));
+            const double s2 = std::max(1e-9, noiseAcc / (double)noiseCnt * (16.0 / 9.0) * kNoiseCal);
             sigma2 = 0.9 * sigma2 + 0.1 * s2;
-            // the pilot variance of the estimates is in the units of H; Y-domain noise is the same number
+            // power of the channel against the noise
+            double hp = 0; long hn = 0;
+            for (auto& rr : runs) for (size_t i = 0; i < rr.H.size(); i += 7) { hp += std::norm(rr.H[i]); hn++; }
+            if (hn) snr = 10 * std::log10(std::max(1e-9, hp / (double)hn / sigma2));
+        }
+        if (getenv("ISDBT_EVM")) {
+            static double evm[13][8]; static long cnt[13][8];
+            for (int pos = 0; pos < kSegments; pos++) {
+                const int s = kSegmentAtPosition[pos];
+                if (seg[s].layer < 0 || seg[s].diff || val[(size_t)s].empty()) continue;
+                const int mod = p.layer[seg[s].layer].mod;
+                for (int i = 0; i < dps; i++) {
+                    const cf32 v = val[(size_t)s][(size_t)i];
+                    if (nv[(size_t)s][(size_t)i] > 1e5f) continue;
+                    float best = 1e9f;
+                    for (unsigned lab = 0; lab < (1u << bitsPerCell(mod)); lab++) best = std::min(best, std::norm(v - mapLabel(mod, lab)));
+                    // position in the segment in 8 slots of data carriers (to see edge effects)
+                    const int slot = i * 8 / dps;
+                    evm[pos][slot] += best; cnt[pos][slot]++;
+                }
+            }
+            if (symbols % 408 == 0) {
+                fprintf(stderr, "[evm dB] ");
+                for (int pos = 0; pos < kSegments; pos++) { double a = 0; long n = 0; for (int sl = 0; sl < 8; sl++) { a += evm[pos][sl]; n += cnt[pos][sl]; } fprintf(stderr, "%5.1f ", n ? 10 * std::log10(std::max(1e-12, a / (double)n)) : 0.0); }
+                fprintf(stderr, "\n");
+                for (auto& r : evm) for (double& x : r) x = 0;
+                for (auto& r : cnt) for (long& x : r) x = 0;
+            }
         }
         // ---- differential segments: phase step against the preceding symbol
         for (int pos = 0; pos < kSegments; pos++) {
@@ -324,7 +466,7 @@ struct Demod::Impl {
                 nn[li][(size_t)local * dps + (size_t)i] = x;
             }
         }
-        for (int li = 0; li < 3; li++) if (p.layer[li].used()) layer[li].pushSymbol(cells[li].data(), nn[li].data());
+        if (started) for (int li = 0; li < 3; li++) if (p.layer[li].used()) layer[li].pushSymbol(cells[li].data(), nn[li].data());
         if (symbols % 8 == 0) {
             eq.clear();
             for (int s = 0; s < kSegments; s++) if (!val[(size_t)s].empty() && !seg[s].diff) for (int i = 0; i < dps; i += 4) if (nv[(size_t)s][(size_t)i] < 1e6f) eq.push_back(val[(size_t)s][(size_t)i]);
@@ -381,6 +523,7 @@ const LayerStats& Demod::layerStats(int layer) const { return impl_->layer[layer
 double Demod::noiseVariance() const { return impl_->sigma2; }
 double Demod::snrDb() const { return impl_->snr; }
 const std::vector<cf32>& Demod::eqCells() const { return impl_->eq; }
+const std::vector<cf32>& Demod::corrected() const { return impl_->trackOn ? impl_->Yd : impl_->prevY; }
 const std::vector<float>& Demod::channelDb() const { return impl_->chDb; }
 uint64_t Demod::symbolsDone() const { return impl_->symbols; }
 

@@ -34,7 +34,7 @@ struct RxTelemetry {
     AtscTelemetry atsc;          // valid when standard == 2
     DabTelemetry dab;            // valid when standard == 3
     uint64_t seq = 0;
-    int standard = 0;            // 0 DVB-T2, 1 DVB-T, 2 ATSC, 3 DAB, 4 ATSC 3.0 (details: Engine::atsc3Telemetry)
+    int standard = 0;            // 0 DVB-T2, 1 DVB-T, 2 ATSC, 3 DAB, 4 ATSC 3.0 (details: Engine::atsc3Telemetry), 5 ISDB-T
     struct Dvbt {                // DVB-T only: TPS parameters and the channel decoder's statistics
         bool tpsOk = false, fecSync = false;
         int mode = 0, guard = 0, mod = 0, hier = 0, crHp = 0, crLp = 0, cellId = 0, frameIdx = 0, punctPhase = 0;
@@ -42,6 +42,13 @@ struct RxTelemetry {
         double viterbiMargin = 0, secSinceTps = 0;
         int symbolIdx = 0;
     } dvbt;
+    struct Isdbt {               // ISDB-T only: the TMCC parameters and the statistics of the three layers
+        bool tmccOk = false;
+        int mode = 0, guard = 0, symbolIdx = -1, intShift = 0, switching = 15;
+        bool partial = false, emergency = false;
+        double secSinceTmcc = 0;
+        struct Lay { int segments = 0, mod = 0, rate = 0, ti = 0; uint64_t packets = 0, rsClean = 0, rsCorrected = 0, rsFailed = 0; double viterbi = 0; bool synced = false; } layer[3];
+    } isdbt;
     bool rateOk = true;
     bool decimating = false;
     double inputRate = 0, nativeRate = 0;
