@@ -54,6 +54,8 @@ class Scanner {
 public:
     Scanner();
     ~Scanner();
+    // Whether this radio can scan with these settings (so the caller can find out before stopping the receiver).
+    static bool check(const DeviceInfo& dev, const ScanConfig& cfg, std::string& err);
     bool start(const DeviceInfo& dev, const ScanConfig& cfg, std::string& err);
     void stop();
     ScanProgress progress() const;

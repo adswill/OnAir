@@ -261,6 +261,10 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_audio PRIVATE dect2core)
   add_test(NAME audio COMMAND test_audio)
 
+  add_executable(test_scan_radios tests/test_scan_radios.cpp)
+  target_link_libraries(test_scan_radios PRIVATE dect2core)
+  add_test(NAME scan_radios COMMAND test_scan_radios)
+
   add_executable(test_hls tests/test_hls.cpp)
   target_link_libraries(test_hls PRIVATE dect2core)
   add_test(NAME hls COMMAND test_hls)

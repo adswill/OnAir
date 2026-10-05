@@ -29,9 +29,22 @@ std::vector<double> Scanner::channels(const ScanConfig& c) {
 ScanProgress Scanner::progress() const { std::lock_guard<std::mutex> lk(mu_); return prog_; }
 std::vector<ScanResult> Scanner::results() const { std::lock_guard<std::mutex> lk(mu_); return results_; }
 
+bool Scanner::check(const DeviceInfo& dev, const ScanConfig& cfg, std::string& err) {
+    if (!dev.isRadio()) { err = "scanning needs a radio (the synthetic signal and recordings cannot be scanned)"; return false; }
+    // a radio that cannot reach the sample rate a channel needs would only see part of it
+    const double needMhz = cfg.atsc ? 6.0 : cfg.bwMhz;
+    if (dev.isGeneric() && dev.maxRateHz > 0 && dev.maxRateHz < needMhz * 1e6 * 1.15) {
+        char b[200];
+        snprintf(b, sizeof b, "%s reaches at most %.1f Msps, too low for a %.0f MHz channel (it needs about %.1f)", dev.name.c_str(), dev.maxRateHz / 1e6, needMhz, needMhz * 1.15);
+        err = b;
+        return false;
+    }
+    return true;
+}
+
 bool Scanner::start(const DeviceInfo& dev, const ScanConfig& cfg, std::string& err) {
     stop();
-    if (dev.kind != DeviceInfo::HackRF) { err = "scanning needs a HackRF"; return false; }
+    if (!check(dev, cfg, err)) return false;
     cfg_ = cfg;
     dev_ = dev;
     cancel_ = false;
@@ -73,11 +86,16 @@ void Scanner::run() {
     tune.sampleRate = cfg_.bwMhz >= 7 || cfg_.autoBandwidth ? 10e6 : 8e6;
     tune.centerHz = freqs.empty() ? 0 : freqs[0] * 1e6;
     if (cfg_.atsc) { tune.bandwidthMhz = 6; tune.sampleRate = 8e6; e.setStandard(3); }   // ATSC: always 6 MHz, no bandwidth detection
+    // other radios than the HackRF report the rates and gains they can do
+    if (dev_.isGeneric()) {
+        if (dev_.maxRateHz > 0) tune.sampleRate = std::min(tune.sampleRate, dev_.maxRateHz);
+        if (dev_.gainMaxDb > 0 && tune.gainDb > dev_.gainMaxDb) tune.gainDb = dev_.gainMaxDb;
+    }
     FileOptions fo;
     if (!e.start(dev_, tune, fo)) {
         std::lock_guard<std::mutex> lk(mu_);
         prog_.running = false;
-        prog_.phase = "could not open the HackRF";
+        prog_.phase = std::string("could not open ") + (dev_.kind == DeviceInfo::HackRF ? "the HackRF" : dev_.name.c_str());
         return;
     }
     auto setPhase = [&](const char* ph, int idx, double f) {

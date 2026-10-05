@@ -7,8 +7,10 @@ void scanTab(App& a) {
     ScanProgress pr = a.scanner.progress();
     auto res = a.scanner.results();
     int hw = -1;
-    for (int i = 0; i < (int)a.devices.size(); i++) if (a.devices[i].isRadio()) hw = i;
+    if (a.devices[a.devIdx].isRadio()) hw = a.devIdx;   // the radio chosen in the toolbar, else the last one in the list
+    else for (int i = 0; i < (int)a.devices.size(); i++) if (a.devices[i].isRadio()) hw = i;
     if (hw < 0) { ImGui::TextDisabled("Scanning needs a radio (HackRF, Airspy, SDRplay, ...)."); return; }
+    static std::string scanErr;
     ImGui::BeginDisabled(pr.running);
     const char* presetsDvb[] = {"UHF 474-858 MHz (8 MHz)", "VHF III 174-230 MHz (7 MHz)", "Custom"};
     const char* presetsAtsc[] = {"US UHF ch 14-36 (470-608 MHz)", "US VHF high ch 7-13 (174-216 MHz)", "Custom"};
@@ -35,15 +37,20 @@ void scanTab(App& a) {
     if (a.scanCfg.stepMHz < 1) a.scanCfg.stepMHz = 1;
     if (!pr.running) {
         if (ImGui::Button("  Start scan  ")) {
-            a.scanWasRunning = a.engine.running();
-            if (a.scanWasRunning) a.engine.stop();
             a.scanCfg.tune = a.tune;
             a.scanCfg.atsc = a.atscMode;
             std::string err;
-            if (!a.scanner.start(a.devices[hw], a.scanCfg, err)) a.engine.log("scan: " + err);
+            if (!Scanner::check(a.devices[hw], a.scanCfg, err)) { a.engine.log("scan: " + err); scanErr = err; }   // before the receiver is stopped
+            else {
+                a.scanWasRunning = a.engine.running();
+                if (a.scanWasRunning) a.engine.stop();
+                if (!a.scanner.start(a.devices[hw], a.scanCfg, err)) { a.engine.log("scan: " + err); scanErr = err; }
+                else scanErr.clear();
+            }
         }
         ImGui::SameLine();
         ImGui::TextDisabled("%s  (uses the gains from the toolbar; stops the receiver while scanning)", pr.phase.c_str());
+        if (!scanErr.empty()) ImGui::TextColored(ImVec4(0.95f, 0.45f, 0.3f, 1), "Cannot scan: %s", scanErr.c_str());
     } else {
         if (ImGui::Button("  Stop scan  ")) a.scanner.stop();
         ImGui::SameLine();
