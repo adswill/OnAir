@@ -15,9 +15,13 @@ void scanTab(App& a) {
     ImGui::BeginDisabled(pr.running);
     const char* presetsDvb[] = {"UHF 474-858 MHz (8 MHz)", "VHF III 174-230 MHz (7 MHz)", "Custom"};
     const char* presetsAtsc[] = {"US UHF ch 14-36 (470-608 MHz)", "US VHF high ch 7-13 (174-216 MHz)", "Custom"};
+    const char* presetsIsdbt[] = {"UHF ch 13-62 (473-767 MHz)", "VHF high ch 7-13 (177-213 MHz)", "Custom"};
     ImGui::SetNextItemWidth(260 * gUi);
-    if (ImGui::Combo("##range", &a.scanPreset, a.atscMode ? presetsAtsc : presetsDvb, 3)) {
-        if (a.atscMode) {
+    if (ImGui::Combo("##range", &a.scanPreset, a.isdbtMode ? presetsIsdbt : a.atscMode ? presetsAtsc : presetsDvb, 3)) {
+        if (a.isdbtMode) {   // the centres of the 6 MHz channels are 1/7 MHz above a whole number
+            if (a.scanPreset == 0) { a.scanCfg.startMHz = 473.143; a.scanCfg.stopMHz = 767.143; a.scanCfg.stepMHz = 6; a.scanCfg.bwMhz = 6; }
+            if (a.scanPreset == 1) { a.scanCfg.startMHz = 177.143; a.scanCfg.stopMHz = 213.143; a.scanCfg.stepMHz = 6; a.scanCfg.bwMhz = 6; }
+        } else if (a.atscMode) {
             if (a.scanPreset == 0) { a.scanCfg.startMHz = 473; a.scanCfg.stopMHz = 605; a.scanCfg.stepMHz = 6; a.scanCfg.bwMhz = 6; }
             if (a.scanPreset == 1) { a.scanCfg.startMHz = 177; a.scanCfg.stopMHz = 213; a.scanCfg.stepMHz = 6; a.scanCfg.bwMhz = 6; }
         } else {
@@ -39,7 +43,8 @@ void scanTab(App& a) {
     if (!pr.running) {
         if (ImGui::Button("  Start scan  ")) {
             a.scanCfg.tune = a.tune;
-            a.scanCfg.atsc = a.atscMode;
+            a.scanCfg.atsc = a.atscMode && !a.isdbtMode;
+            a.scanCfg.isdbt = a.isdbtMode;
             std::string err;
             if (!Scanner::check(a.devices[hw], a.scanCfg, err)) { a.engine.log("scan: " + err); scanErr = err; }   // before the receiver is stopped
             else {

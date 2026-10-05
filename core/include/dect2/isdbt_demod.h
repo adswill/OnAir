@@ -35,6 +35,10 @@ public:
     double snrDb() const;                         // of the data carriers after equalisation (from the pilots)
     // for the display: equalised data cells of the last symbol (subsampled), and channel magnitude per carrier
     const std::vector<cf32>& eqCells() const;
+    // channel estimate over the whole band (K entries; stretches without scattered pilots hold the nearest value), and the equalised
+    // scattered pilots of the last symbol (about +-1), for the display
+    void channel(std::vector<cf32>& H) const;
+    const std::vector<cf32>& pilotCells() const;
     // the last symbol after the common phase and timing correction (K carriers)
     const std::vector<cf32>& corrected() const;
     const std::vector<float>& channelDb() const;

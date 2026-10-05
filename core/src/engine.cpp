@@ -1,5 +1,6 @@
 #include "dect2/engine.h"
 #include "dect2/dvbt.h"
+#include "dect2/isdbt.h"
 #include "dect2/t2rx.h"
 #include <chrono>
 #include "dect2/platform.h"
@@ -86,6 +87,9 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     rxA_.setBlocking(!src_->realtimeHardware());
     rxA_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the ATSC worker thread
     rxD_.configure(rate_);
+    rxI_.configure(rate_);
+    rxI_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });
+    logIMode_ = logIGi_ = logITmcc_ = -1; logISync_ = false;
     rxA3_.configure(rate_);
     rxA3_.setBlocking(!src_->realtimeHardware());
     rxA3_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the ATSC 3.0 worker thread
@@ -93,7 +97,7 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     { std::lock_guard<std::mutex> lk(atsc3Mu_); atsc3Tel_ = Atsc3Telemetry(); }
     dabSeq_ = 0; logDState_ = -1; logDEns_ = false;
     atscSeq_ = 0; logAState_ = -1;
-    activeStd_ = stdMode_.load() == 2 ? 1 : stdMode_.load() == 3 ? 2 : stdMode_.load() == 4 ? 3 : stdMode_.load() == 5 ? 4 : 0;
+    activeStd_ = stdMode_.load() == 2 ? 1 : stdMode_.load() == 3 ? 2 : stdMode_.load() == 4 ? 3 : stdMode_.load() == 5 ? 4 : stdMode_.load() == 6 ? 5 : 0;
     autoMark_ = 0; lastLockSec_ = 0; logTMode_ = logTGi_ = logTTps_ = -1; logTFec_ = false;
     {
         std::lock_guard<std::mutex> lk(tsMu_);
@@ -112,6 +116,11 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     if (stdMode_ == 5 && rate_.load() < 6.5e6) {
         char m[200];
         snprintf(m, sizeof m, "sample rate %.2f Msps is too low for an ATSC 3.0 channel (about 6.5 Msps or more is needed) - the receiver cannot lock with this radio", rate_.load() / 1e6);
+        log(m);
+    }
+    if (stdMode_ == 6 && rate_.load() < 6.0e6) {
+        char m[200];
+        snprintf(m, sizeof m, "sample rate %.2f Msps is too low for an ISDB-T channel (about 6 Msps or more is needed) - the receiver cannot lock with this radio", rate_.load() / 1e6);
         log(m);
     }
     char b[160];
@@ -173,6 +182,7 @@ void Engine::applyReset() {
     rxA_.reset();
     rxD_.reset();
     rxA3_.reset();
+    rxI_.reset();
     autoMark_ = nSamp_ / std::max(1.0, rate_.load()); lastLockSec_ = autoMark_;
     analyzer_.reset();
     {
@@ -215,7 +225,7 @@ void Engine::onTsPackets(const uint8_t* pk, size_t n, double secs) {
 // so idle searching costs one receiver, not two.
 void Engine::feedRx(const cf32* x, size_t n) {
     const int a = activeStd_.load();
-    if (a == 4) rxA3_.feed(x, n); else if (a == 3) rxD_.feed(x, n); else if (a == 2) rxA_.feed(x, n); else if (a == 1) rxT_.feed(x, n); else rx_.feed(x, n);
+    if (a == 5) rxI_.feed(x, n); else if (a == 4) rxA3_.feed(x, n); else if (a == 3) rxD_.feed(x, n); else if (a == 2) rxA_.feed(x, n); else if (a == 1) rxT_.feed(x, n); else rx_.feed(x, n);
 }
 
 void Engine::changeBandwidth(double mhz) {
@@ -260,6 +270,7 @@ void Engine::autoSelect(const RxTelemetry& t, bool tLocked) {
         else if (m == 3 && activeStd_ != 2) { activeStd_ = 2; rxA_.reset(); }
         else if (m == 4 && activeStd_ != 3) { activeStd_ = 3; rxD_.reset(); }
         else if (m == 5 && activeStd_ != 4) { activeStd_ = 4; rxA3_.reset(); }
+        else if (m == 6 && activeStd_ != 5) { activeStd_ = 5; rxI_.reset(); }
         autoMark_ = lastLockSec_ = now;
         return;
     }
@@ -313,6 +324,37 @@ void Engine::logAtscEvents(const RxTelemetry& t) {
         log(nm[level]);
         if (level >= 3) { char b[120]; snprintf(b, sizeof b, "ATSC: carrier offset %+.0f Hz, symbol clock %+.1f ppm, SNR %.1f dB", a.cfoHz, a.sroPpm, a.snrDb); log(b); }
         logAState_ = level;
+    }
+}
+
+void Engine::logIsdbtEvents(const RxTelemetry& t) {
+    char b[240];
+    if (t.fftN && (t.fftN != logIMode_ || t.giIdx != logIGi_)) {
+        snprintf(b, sizeof b, "ISDB-T found: mode %d (%s carrier spacing), guard interval %s, CFO %+.1f Hz", t.isdbt.mode ? t.isdbt.mode : (t.fftN == 2048 ? 1 : t.fftN == 4096 ? 2 : 3),
+                 t.fftN == 2048 ? "4 kHz" : t.fftN == 4096 ? "2 kHz" : "1 kHz", isdbt::guardName(t.giIdx), t.cfoHz);
+        log(b);
+        logIMode_ = t.fftN; logIGi_ = t.giIdx;
+    }
+    const int tm = t.isdbt.tmccOk ? 1 : 0;
+    if (tm != logITmcc_) {
+        if (tm) {
+            std::string s;
+            for (int i = 0; i < 3; i++) {
+                const auto& L = t.isdbt.layer[i];
+                if (!L.segments) continue;
+                snprintf(b, sizeof b, "%s%c: %d segment%s %s %s", s.empty() ? "" : ", ", 'A' + i, L.segments, L.segments == 1 ? "" : "s", isdbt::modName(L.mod), isdbt::rateName(L.rate));
+                s += b;
+            }
+            snprintf(b, sizeof b, "TMCC decoded: %s%s", s.c_str(), t.isdbt.partial ? " (with a one-segment layer)" : "");
+            log(b);
+        } else if (logITmcc_ == 1) log("TMCC lost");
+        logITmcc_ = tm;
+    }
+    bool sync = false;
+    for (int i = 0; i < 3; i++) sync |= t.isdbt.layer[i].synced;
+    if (sync != logISync_) {
+        log(sync ? "transport stream locked (Viterbi + Reed-Solomon)" : "transport stream sync lost");
+        logISync_ = sync;
     }
 }
 
@@ -489,6 +531,13 @@ void Engine::analysisLoop() {
                     t.blocksBad = at.rsFailed;
                     t.rateOk = rxA_.rateOk();
                     logAtscEvents(t);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    rxTel_ = std::move(t);
+                }
+            } else if (activeStd_.load() == 5) {
+                if (rxI_.telemetry(t, rxSeq)) {
+                    rxSeq = t.seq;
+                    logIsdbtEvents(t);
                     std::lock_guard<std::mutex> lk(rxMu_);
                     rxTel_ = std::move(t);
                 }

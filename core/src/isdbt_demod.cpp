@@ -169,6 +169,7 @@ struct Demod::Impl {
     std::vector<cf32> cpRef;
     bool cpRefValid = false;
     std::vector<cf32> Yd;                 // the symbol after the correction
+    std::vector<cf32> pilotShow;
     std::vector<cf32> eq;
     std::vector<float> chDb;
     // time de-interleaver: delay lines per segment and data carrier
@@ -341,6 +342,13 @@ struct Demod::Impl {
             }
             const double tauRun = r.lag == std::complex<double>(0, 0) ? tau0 : -std::arg(r.lag) * (double)N / (2.0 * M_PI * 3.0);
             interp.run(r.grid, 3, carriers, N, tauRun, r.H, 1.0);
+            if (symbols % 4 == 0) {
+                if (&r == &runs.front()) pilotShow.clear();
+                for (int pos = r.p0; pos <= r.p1; pos++) {
+                    const auto& w = prbsW(mode, kSegmentAtPosition[pos]);
+                    for (int i = 3 * sp; i < cps; i += 12) { const int k = pos * cps + i; const cf32 h = r.H[(size_t)(k - k0)]; if (std::norm(h) > 1e-12f) pilotShow.push_back(Y[k] / pilotValue(w[(size_t)i]) / h); }
+                }
+            }
             for (int pos = r.p0; pos <= r.p1; pos++) {
                 const int s = kSegmentAtPosition[pos];
                 segmentRoles(mode, s, false, symIdx, roles.data());
@@ -523,6 +531,21 @@ const LayerStats& Demod::layerStats(int layer) const { return impl_->layer[layer
 double Demod::noiseVariance() const { return impl_->sigma2; }
 double Demod::snrDb() const { return impl_->snr; }
 const std::vector<cf32>& Demod::eqCells() const { return impl_->eq; }
+const std::vector<cf32>& Demod::pilotCells() const { return impl_->pilotShow; }
+void Demod::channel(std::vector<cf32>& H) const {
+    const Impl& I = *impl_;
+    H.assign((size_t)I.K, cf32(0, 0));
+    std::vector<uint8_t> have((size_t)I.K, 0);
+    for (const auto& r : I.runs) {
+        const int k0 = r.p0 * I.cps;
+        for (size_t i = 0; i < r.H.size() && (size_t)k0 + i < (size_t)I.K; i++) { H[(size_t)k0 + i] = r.H[i]; have[(size_t)k0 + i] = 1; }
+    }
+    // gaps (differential segments have no scattered pilots): hold the nearest estimate
+    cf32 last(0, 0); bool seen = false;
+    for (int k = 0; k < I.K; k++) { if (have[(size_t)k]) { last = H[(size_t)k]; seen = true; } else if (seen) H[(size_t)k] = last; }
+    seen = false; last = cf32(0, 0);
+    for (int k = I.K - 1; k >= 0; k--) { if (have[(size_t)k]) { last = H[(size_t)k]; seen = true; } else if (!have[(size_t)k] && std::norm(H[(size_t)k]) == 0 && seen) H[(size_t)k] = last; }
+}
 const std::vector<cf32>& Demod::corrected() const { return impl_->trackOn ? impl_->Yd : impl_->prevY; }
 const std::vector<float>& Demod::channelDb() const { return impl_->chDb; }
 uint64_t Demod::symbolsDone() const { return impl_->symbols; }

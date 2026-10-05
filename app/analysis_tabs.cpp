@@ -367,18 +367,18 @@ void constellationsTab(App& a) {
     char cap[96];
     auto caption = [&](const char* fmt, auto... args) { snprintf(cap, sizeof cap, fmt, args...); ImGui::TextDisabled("%s", cap); };
     ImGui::BeginGroup();
-    if (rx.standard == 1) caption("TPS carriers, DBPSK (%zu cells)", rx.p1Const.size()); else caption("P1 carriers (%zu cells)", rx.p1Const.size());
+    if (rx.standard == 5) caption("TMCC carriers, DBPSK (%zu cells)", rx.p1Const.size()); else if (rx.standard == 1) caption("TPS carriers, DBPSK (%zu cells)", rx.p1Const.size()); else caption("P1 carriers (%zu cells)", rx.p1Const.size());
     scatter("##c1", rx.p1Const, sz, 2.5, pal::accent(0.9f));
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    if (rx.standard == 1) caption("Pilots, equalised (%zu cells)", rx.eqCells.size()); else caption("P2 cells, equalised (%zu cells)", rx.eqCells.size());
+    if (rx.standard == 1 || rx.standard == 5) caption("Pilots, equalised (%zu cells)", rx.eqCells.size()); else caption("P2 cells, equalised (%zu cells)", rx.eqCells.size());
     scatter("##ceq", rx.eqCells, sz, 2.0, pal::accent(0.8f));
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
     if (!rx.plpConst.empty()) caption("PLP %d, decoded cells  MER %.1f dB", rx.plpId, rx.plpMerDb);
-    else if (rx.standard == 1) caption("Data cells, equalised (%zu cells)", rx.eqData.size());
+    else if (rx.standard == 1 || rx.standard == 5) caption("Data cells, equalised (%zu cells)", rx.eqData.size());
     else caption("Data cells, equalised (frame %llu)", (unsigned long long)rx.dataFrames);
     if (!rx.plpConst.empty()) {
         // cells of correctly decoded FEC blocks; points beyond the decision distance from the transmitted point are red

@@ -131,7 +131,7 @@ if(DECT2_BUILD_APP)
   set(IMGUI_SOURCES
     third_party/imgui/imgui.cpp third_party/imgui/imgui_draw.cpp third_party/imgui/imgui_tables.cpp third_party/imgui/imgui_widgets.cpp
     third_party/imgui/backends/imgui_impl_glfw.cpp)
-  set(APP_SOURCES app/main.cpp app/app_state.cpp app/widgets.cpp app/toolbar.cpp app/plots.cpp app/analysis_tabs.cpp app/tv.cpp app/scan_outputs.cpp app/antenna.cpp app/dab_ui.cpp app/atsc3_ui.cpp app/wizard.cpp app/plot.cpp app/gfx_png.cpp)
+  set(APP_SOURCES app/main.cpp app/app_state.cpp app/widgets.cpp app/toolbar.cpp app/plots.cpp app/analysis_tabs.cpp app/tv.cpp app/scan_outputs.cpp app/antenna.cpp app/dab_ui.cpp app/atsc3_ui.cpp app/isdbt_ui.cpp app/wizard.cpp app/plot.cpp app/gfx_png.cpp)
   if(DECT2_UI_BACKEND STREQUAL "Metal")
     if(NOT APPLE)
       message(FATAL_ERROR "The Metal back end needs macOS")
@@ -356,6 +356,12 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_atsc3_stream tests/test_atsc3_stream.cpp)
   target_link_libraries(test_atsc3_stream PRIVATE dect2core)
   add_test(NAME atsc3_stream COMMAND test_atsc3_stream ${CMAKE_SOURCE_DIR}/tests/data/route_video.mp4 ${CMAKE_SOURCE_DIR}/tests/data/route_audio.mp4)
+
+  add_executable(isdbtgen tools/isdbtgen.cpp)
+  target_link_libraries(isdbtgen PRIVATE dect2core)
+
+  add_executable(isdbtrx tools/isdbtrx.cpp)
+  target_link_libraries(isdbtrx PRIVATE dect2core)
 
   add_executable(atsc3rx tools/atsc3rx.cpp)
   target_link_libraries(atsc3rx PRIVATE dect2core)

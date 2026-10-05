@@ -33,6 +33,7 @@ void overviewTab(App& a) {
 void receiverTab(App& a) {
     if (a.dabMode) { dabEnsembleTab(a); return; }
     if (a.atsc3Mode) { atsc3ReceiverTab(a); return; }
+    if (a.isdbtMode) { isdbtReceiverTab(a); return; }
     if (a.rx.standard == 2 || a.atscMode) {
         const AtscTelemetry& at = a.rx.atsc;
         ImGui::TextDisabled("ATSC 8-VSB receiver: matched filter, pilot loop, symbol clock, field sync, per-field equaliser, trellis, Reed-Solomon");
@@ -152,7 +153,7 @@ void drawUI(App& a, ImVec2 disp) {
     ImGui::SameLine(disp.x - 64);
     if (ImGui::SmallButton("Tour")) { a.wizOpen = true; a.wizX = -1; a.wizStep = 0; a.wizStepT = ImGui::GetTime(); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Take the guided tour with Onny");
-    a.tgMin[TgSwitch] = ImVec2(sw0.x - 2, sw0.y - 2); a.tgMax[TgSwitch] = ImVec2(sw0.x + 330, ImGui::GetCursorScreenPos().y);
+    a.tgMin[TgSwitch] = ImVec2(sw0.x - 2, sw0.y - 2); a.tgMax[TgSwitch] = ImVec2(sw0.x + 420, ImGui::GetCursorScreenPos().y);
     ImGui::Separator();
     statusBar(a);
     ImGui::Separator();
@@ -286,6 +287,7 @@ int main(int argc, char** argv) {
         if (std::string(argv[i]) == "--tab" && i + 1 < argc) routeTab(app, argv[++i]);
         if (std::string(argv[i]) == "--atsc") setFamily(app, 1);
         if (std::string(argv[i]) == "--atsc3") setFamily(app, 3);
+        if (std::string(argv[i]) == "--isdbt") setFamily(app, 4);
         if (std::string(argv[i]) == "--dab") setFamily(app, 2);
         if (std::string(argv[i]) == "--rate" && i + 1 < argc) app.file.sampleRate = atof(argv[++i]) * 1e6;
         if (std::string(argv[i]) == "--freq" && i + 1 < argc) app.freqMhz = atof(argv[++i]);

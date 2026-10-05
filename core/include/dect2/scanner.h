@@ -15,6 +15,7 @@ struct ScanConfig {
     double startMHz = 474, stopMHz = 858, stepMHz = 8;
     double bwMhz = 8;
     bool atsc = false;             // scan for ATSC 8-VSB (6 MHz channels, centre frequencies of the US/Korea raster)
+    bool isdbt = false;            // scan for ISDB-T (6 MHz channels, 13 segments)
     bool autoBandwidth = true;     // measure the width of each signal found and decode it with the matching channel bandwidth
     bool identifyServices = true;
     double occupancyDb = 5.0;      // in-band power must exceed the out-of-band floor by this much

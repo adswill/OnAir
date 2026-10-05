@@ -50,6 +50,42 @@ void QualityMeter::update(const RxTelemetry& rx) {
         rep_ = r;
         return;
     }
+    if (rx.standard == 5) {   // ISDB-T: the layer that carries most of the data sets the requirement
+        if (!rx.isdbt.tmccOk) { if (rx.state != 2) { rep_ = QualityReport(); rep_.label = "no lock"; } return; }
+        const uint64_t good = rx.blocksOk, bad = rx.blocksBad;
+        if (lastOk_ != ~0ull && (good >= lastOk_ && bad >= lastBad_) && (good - lastOk_ + bad - lastBad_) > 0) {
+            hist_.push_back({good - lastOk_, bad - lastBad_});
+            if (hist_.size() > 40) hist_.pop_front();
+        }
+        lastOk_ = good; lastBad_ = bad; lastFrames_ = 0;
+        uint64_t ok = 0, ng = 0;
+        for (auto& h : hist_) { ok += h.first; ng += h.second; }
+        double need = 0, bestRate = -1;
+        for (int i = 0; i < 3; i++) {
+            const auto& L = rx.isdbt.layer[i];
+            if (!L.segments) continue;
+            const double bits = (double)L.segments * (L.mod == 3 ? 6 : L.mod == 2 ? 4 : 2) * (L.rate == 0 ? 0.5 : L.rate == 1 ? 2.0 / 3 : L.rate == 2 ? 0.75 : L.rate == 3 ? 5.0 / 6 : 7.0 / 8);
+            if (bits > bestRate) {
+                bestRate = bits;
+                need = L.mod == 0 ? dvbtRequiredDb(0, L.rate) + 3.0 : dvbtRequiredDb(L.mod - 1, L.rate);   // DQPSK: about 3 dB more than QPSK
+            }
+        }
+        QualityReport r;
+        r.valid = true;
+        r.snrDb = rx.dataSnrDb;
+        r.requiredDb = need;
+        r.marginDb = r.snrDb - r.requiredDb;
+        bool sync = false;
+        for (int i = 0; i < 3; i++) sync |= rx.isdbt.layer[i].synced;
+        r.fecOk = (ok + ng) ? (double)ok / (double)(ok + ng) : (sync ? 1.0 : 0.0);
+        const double qs = std::max(0.0, std::min(100.0, 25.0 + r.marginDb * 12.5));
+        const double qq = qs * (sync ? r.fecOk * r.fecOk : 0.5);
+        smooth_ = rep_.valid ? smooth_ + 0.25 * (qq - smooth_) : qq;
+        r.percent = smooth_;
+        r.label = r.percent >= 85 ? "excellent" : r.percent >= 65 ? "good" : r.percent >= 40 ? "marginal" : "poor";
+        rep_ = r;
+        return;
+    }
     if (rx.standard == 1) {
         if (!rx.dvbt.tpsOk) { if (rx.state != 2) { rep_ = QualityReport(); rep_.label = "no lock"; } return; }
         const uint64_t good = rx.dvbt.rsClean + rx.dvbt.rsCorrected, bad = rx.dvbt.rsFailed;

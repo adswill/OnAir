@@ -3,6 +3,7 @@
 #include "dect2/fftutil.h"
 #include "dect2/isdbt.h"
 #include "dect2/isdbt_demod.h"
+#include "dect2/t2ofdm.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -76,6 +77,7 @@ struct IsdbtReceiver::Impl {
     uint64_t frameStartAbs = 0;
     std::vector<cf32> prevTmcc;                    // TMCC carriers of the previous symbol
     std::vector<float> tmccSoft;                   // soft bit values of the symbols of the current frame
+    std::vector<cf32> tmccShow;                    // differentially detected TMCC carriers of a recent symbol, for the display
     int tmccFailures = 0;
     double secSinceTmcc = 0;
     Demod demod;
@@ -404,6 +406,10 @@ struct IsdbtReceiver::Impl {
             for (size_t j = 0; j < tmccK.size(); j++) { const cf32 a = Yc[(size_t)tmccK[j]], c = prevTmcc[j]; num += (a * std::conj(c)).real(); den += std::abs(a) * std::abs(c); }
             soft = den > 0 ? (float)(-num / den) : 0.f;
         }
+        if (symbols % 3 == 0 && !prevTmcc.empty() && (int)Yc.size() == K) {
+            tmccShow.clear();
+            for (size_t j = 0; j < tmccK.size() && j < prevTmcc.size(); j++) { const cf32 z = Yc[(size_t)tmccK[j]] * std::conj(prevTmcc[j]); const float m = std::abs(z); if (m > 1e-9f) tmccShow.push_back(z / m); }
+        }
         prevTmcc.resize(tmccK.size());
         if ((int)Yc.size() == K) for (size_t j = 0; j < tmccK.size(); j++) prevTmcc[j] = Yc[(size_t)tmccK[j]];
         if (symIdx == 0) tmccSoft.clear();
@@ -464,6 +470,24 @@ struct IsdbtReceiver::Impl {
         t.dataSnrDb = (float)demod.snrDb();
         t.cpSnrDb = t.dataSnrDb;
         t.eqData = demod.eqCells();
+        t.eqCells = demod.pilotCells();
+        t.p1Const = tmccShow;
+        if (state == 2) {
+            std::vector<cf32> Hf;
+            demod.channel(Hf);
+            const int dec = std::max(1, K / 2048);
+            t.chMagDb.clear(); t.chPhase.clear();
+            bool any = false;
+            for (int k = 0; k < K; k += dec) { const float m = std::abs(Hf[(size_t)k]); any |= m > 0; t.chMagDb.push_back(20.f * std::log10(std::max(1e-6f, m))); t.chPhase.push_back(std::arg(Hf[(size_t)k])); }
+            t.chValid = any; t.chDecim = dec; t.chCarriers = K;
+            if (any) { t.irTauMin = -N / 16; impulseResponse(Hf, N, t.irTauMin, G + std::max(8, G / 4), back + G / 8, t.irDb); }
+            const std::vector<cf32>& Yc = demod.corrected();
+            t.rawCells.clear();
+            if ((int)Yc.size() == K) {
+                const int st2 = std::max(1, K / 1500);
+                for (int k = 0; k < K; k += st2) { const float m = std::abs(Hf[(size_t)k]); if (m > 1e-6f) t.rawCells.push_back(Yc[(size_t)k] / m); }
+            }
+        }
         t.secSinceP1 = secSinceTmcc;
         t.l1preOk = tmccOk; t.l1postOk = tmccOk;
         t.isdbt.tmccOk = tmccOk; t.isdbt.mode = mode; t.isdbt.guard = gi; t.isdbt.intShift = intShift; t.isdbt.secSinceTmcc = secSinceTmcc;

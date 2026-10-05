@@ -1,4 +1,5 @@
 #include "dect2/scanner.h"
+#include "dect2/isdbt.h"
 #include "dect2/bandwidth.h"
 #include "dect2/dvbt.h"
 #include <algorithm>
@@ -32,7 +33,7 @@ std::vector<ScanResult> Scanner::results() const { std::lock_guard<std::mutex> l
 bool Scanner::check(const DeviceInfo& dev, const ScanConfig& cfg, std::string& err) {
     if (!dev.isRadio()) { err = "scanning needs a radio (the synthetic signal and recordings cannot be scanned)"; return false; }
     // a radio that cannot reach the sample rate a channel needs would only see part of it
-    const double needMhz = cfg.atsc ? 6.0 : cfg.bwMhz;
+    const double needMhz = cfg.atsc || cfg.isdbt ? 6.0 : cfg.bwMhz;
     if (dev.isGeneric() && dev.maxRateHz > 0 && dev.maxRateHz < needMhz * 1e6 * 1.15) {
         char b[200];
         snprintf(b, sizeof b, "%s reaches at most %.1f Msps, too low for a %.0f MHz channel (it needs about %.1f)", dev.name.c_str(), dev.maxRateHz / 1e6, needMhz, needMhz * 1.15);
@@ -86,6 +87,7 @@ void Scanner::run() {
     tune.sampleRate = cfg_.bwMhz >= 7 || cfg_.autoBandwidth ? 10e6 : 8e6;
     tune.centerHz = freqs.empty() ? 0 : freqs[0] * 1e6;
     if (cfg_.atsc) { tune.bandwidthMhz = 6; tune.sampleRate = 8e6; e.setStandard(3); }   // ATSC: always 6 MHz, no bandwidth detection
+    if (cfg_.isdbt) { tune.bandwidthMhz = 6; tune.sampleRate = 8e6; e.setStandard(6); }   // ISDB-T: 6 MHz channels as well
     // other radios than the HackRF report the rates and gains they can do
     if (dev_.isGeneric()) {
         if (dev_.maxRateHz > 0) tune.sampleRate = std::min(tune.sampleRate, dev_.maxRateHz);
@@ -148,7 +150,7 @@ void Scanner::run() {
         (void)floorSum; (void)nFl;
         r.occupied = r.occupancyDb >= cfg_.occupancyDb;
         // the width of the signal: occupied if a flat-topped signal is there, and decoded with that channel bandwidth
-        if (cfg_.autoBandwidth && !cfg_.atsc) {
+        if (cfg_.autoBandwidth && !cfg_.atsc && !cfg_.isdbt) {
             const BandwidthEstimate be = bwDet.estimate();
             if (be.valid) {
                 r.occupied = true;
@@ -171,15 +173,23 @@ void Scanner::run() {
         }
 
         // ---- try to lock DVB-T2
-        setPhase("looking for DVB-T2 / DVB-T", (int)i, f);
+        setPhase(cfg_.isdbt ? "looking for ISDB-T" : "looking for DVB-T2 / DVB-T", (int)i, f);
         RxTelemetry t;
         uint64_t rxSeq = 0;
         auto tl = Clock::now();
-        bool l1 = false, tlock = false, alock = false;
+        bool l1 = false, tlock = false, alock = false, ilock = false;
         while (std::chrono::duration<double>(Clock::now() - tl).count() < cfg_.lockTimeoutSec && !cancel_) {
             if (e.latestRx(t, rxSeq)) {
                 rxSeq = t.seq;
-                if (t.standard == 2) {
+                if (t.standard == 5) {
+                    if (t.isdbt.tmccOk) {
+                        ilock = true;
+                        bool sync = false;
+                        for (int k = 0; k < 3; k++) sync |= t.isdbt.layer[k].synced;
+                        if (sync) break;
+                        if (std::chrono::duration<double>(Clock::now() - tl).count() > cfg_.lockTimeoutSec - 0.8) break;
+                    }
+                } else if (t.standard == 2) {
                     if (t.atsc.fieldSync && t.atsc.eqTrained) { alock = true; if (t.atsc.tsOk) break; }
                 } else if (t.standard == 1) {
                     if (t.dvbt.tpsOk) { tlock = true; if (t.dvbt.fecSync && t.dataValid) break; if (std::chrono::duration<double>(Clock::now() - tl).count() > cfg_.lockTimeoutSec - 0.8) break; }
@@ -188,8 +198,8 @@ void Scanner::run() {
             std::this_thread::sleep_for(std::chrono::milliseconds(25));
         }
         if (cancel_) break;
-        if (!l1 && !tlock && !alock) {
-            r.note = cfg_.atsc ? "signal present, no ATSC" : t.p1Count > 0 ? "T2 preamble found, L1 not decodable (weak?)" : "signal present, no DVB-T2";
+        if (!l1 && !tlock && !alock && !ilock) {
+            r.note = cfg_.isdbt ? "signal present, no ISDB-T" : cfg_.atsc ? "signal present, no ATSC" : t.p1Count > 0 ? "T2 preamble found, L1 not decodable (weak?)" : "signal present, no DVB-T2";
             if (t.p1Count > 0 && t.p1.valid) {
                 const FftMode* fm = fftModeFromS2(t.p1.s2field1);
                 r.mode = std::string(s1Name(t.p1.s1)) + " " + (fm ? fm->name : "?");
@@ -201,7 +211,21 @@ void Scanner::run() {
         }
         r.t2 = true;
         r.l1post = t.l1postOk;
-        if (alock) {
+        if (ilock) {
+            r.standard = "ISDB-T";
+            char b[200];
+            snprintf(b, sizeof b, "ISDB-T mode %d, GI %s, %d segments%s", t.isdbt.mode, isdbt::guardName(t.giIdx), t.isdbt.layer[0].segments + t.isdbt.layer[1].segments + t.isdbt.layer[2].segments, t.isdbt.partial ? " (with a one-segment layer)" : "");
+            r.mode = b;
+            std::string s;
+            for (int k = 0; k < 3; k++) {
+                const auto& L = t.isdbt.layer[k];
+                if (!L.segments) continue;
+                snprintf(b, sizeof b, "%s%c: %d x %s %s", s.empty() ? "" : ", ", 'A' + k, L.segments, isdbt::modName(L.mod), isdbt::rateName(L.rate));
+                s += b;
+            }
+            r.plpInfo = s;
+            r.snrDb = t.dataSnrDb;
+        } else if (alock) {
             r.standard = "ATSC";
             r.mode = "8-VSB, 6 MHz";
             char b[120];
@@ -226,11 +250,11 @@ void Scanner::run() {
             r.mode = b;
             r.cellId = p.cellId; r.networkId = p.networkId;
         }
-        if (!tlock && !alock) {
+        if (!tlock && !alock && !ilock) {
         r.snrDb = t.dataValid ? t.dataSnrDb : t.p2SnrDb;
         if (t.plpMerDb > 0) r.snrDb = (float)t.plpMerDb;
         }
-        if (!tlock && !alock && t.l1postOk) {
+        if (!tlock && !alock && !ilock && t.l1postOk) {
             static const char* modN[] = {"QPSK", "16-QAM", "64-QAM", "256-QAM"};
             std::string s;
             for (size_t k = 0; k < t.l1post.plps.size(); k++) {
@@ -262,7 +286,7 @@ void Scanner::run() {
             r.muxKbps = ts.muxKbps;
             e.latestRx(t, 0);
             if (t.standard == 2) r.snrDb = (float)t.atsc.snrDb;
-            else if (t.standard == 1) r.snrDb = t.dataSnrDb;
+            else if (t.standard == 1 || t.standard == 5) r.snrDb = t.dataSnrDb;
             else if (t.plpValid && t.plpMerDb > 0) r.snrDb = (float)t.plpMerDb; else if (t.dataValid) r.snrDb = t.dataSnrDb;
             uint64_t tot = t.blocksOk + t.blocksBad;
             r.fecGood = tot ? (double)t.blocksOk / tot : 0;
