@@ -111,6 +111,8 @@ bool tmccCorrect(uint8_t bits184[184], const float* reliability);
 constexpr uint8_t kTmccSync0[16] = {0,0,1,1,0,1,0,1,1,1,1,0,1,1,1,0};
 // The 204 bits B0..B203 of one frame (B0 is the reference, left at 0): evenFrame picks the synchronising word, diff the segment type
 void tmccFrameBits(const uint8_t info[kTmccInfoBits], bool evenFrame, bool diffSegment, uint8_t bits[kSymbolsPerFrame]);
+// Band carrier numbers of the TMCC carriers of the segment at frequency position pos (0..12)
+std::vector<int> tmccCarrierList(int mode, int pos, bool diffSegment);
 LayerInfo toLayerInfo(const Layer& l);
 bool fromLayerInfo(const LayerInfo& li, Layer& l);
 Tmcc tmccFromParams(const Params& p);

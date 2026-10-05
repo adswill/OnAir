@@ -21,6 +21,8 @@ public:
     ~Demod();
     // Parameters of the signal (from the TMCC). Starts over.
     void configure(const Params& p);
+    // The TMCC information bits (102) once they are known: the TMCC carriers then serve as pilots for the common phase and timing slope too
+    void setTmccInfo(const uint8_t info[kTmccInfoBits]);
     const Params& params() const { return p_; }
     // One symbol: Y has totalCarriers(mode) entries ordered by carrier number; symIdx is the symbol's place in the frame (0..203).
     // Decoding starts at the first symbol with symIdx == 0.

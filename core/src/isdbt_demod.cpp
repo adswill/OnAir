@@ -170,6 +170,9 @@ struct Demod::Impl {
     bool cpRefValid = false;
     std::vector<cf32> Yd;                 // the symbol after the correction
     std::vector<cf32> pilotShow;
+    bool haveTmcc = false;
+    uint8_t tmccBits[2][kSymbolsPerFrame] = {};            // [0] differential segments, [1] synchronous ones
+    std::vector<std::pair<int, int>> tmccCar;              // (carrier, 0 differential / 1 synchronous)
     std::vector<cf32> eq;
     std::vector<float> chDb;
     // time de-interleaver: delay lines per segment and data carrier
@@ -183,6 +186,13 @@ struct Demod::Impl {
         cps = carriersPerSegment(mode); dps = dataPerSegment(mode); K = totalCarriers(mode); N = fftN(mode);
         segmentLayout(p, seg);
         for (int i = 0; i < 3; i++) if (p.layer[i].used()) layer[i].configure(mode, p.layer[i]); else layer[i] = LayerDecoder();
+        haveTmcc = false;
+        tmccCar.clear();
+        for (int pos = 0; pos < kSegments; pos++) {
+            const int s = kSegmentAtPosition[pos];
+            if (seg[s].layer < 0) continue;
+            for (int k : tmccCarrierList(mode, pos, seg[s].diff)) tmccCar.push_back({k, seg[s].diff ? 0 : 1});
+        }
         started = false; symbols = 0; prevValid = false; sigma2 = 1e-3;
         accPhi = accSlope = 0; cpRefValid = false;
         cpK.clear();
@@ -267,6 +277,9 @@ struct Demod::Impl {
                 }
             }
         }
+        // the TMCC carriers: their sign flips are known once the TMCC is decoded, so against the preceding symbol they are pilots at fixed places
+        if (haveTmcc && prevValid && symIdx >= 17)
+            for (const auto& tc : tmccCar) collect(tc.first, Yraw[tc.first], prevY[(size_t)tc.first] * (tmccBits[tc.second][symIdx] ? -1.f : 1.f));
         if (cpRefValid && runs.empty()) for (size_t j = 0; j < cpK.size(); j++) {
             // a continual pilot that belongs to a differential segment (or the last carrier)
             const int k = cpK[j];
@@ -369,6 +382,11 @@ struct Demod::Impl {
         if (noiseCnt == 0 && runs.empty() && cpRefValid) {
             for (size_t j = 0; j + 1 < cpK.size(); j++) { noiseAcc += std::norm(Y[(size_t)cpK[j]] / cpPilot(cpK[j]) - cpRef[j]); noiseCnt++; }
             noiseAcc *= 1.2;
+        }
+        if (runs.empty() && sigma2 > 0) {   // without scattered pilots: the signal power of all carriers against the noise from the continual pilots
+            double pw = 0; long n = 0;
+            for (int k = 0; k < K; k += 5) { pw += std::norm(Y[k]); n++; }
+            if (n) snr = 10 * std::log10(std::max(1e-9, (pw / (double)n - sigma2) / sigma2));
         }
         if (noiseCnt > 0) {
             const double s2 = std::max(1e-9, noiseAcc / (double)noiseCnt * (16.0 / 9.0) * kNoiseCal);
@@ -486,6 +504,12 @@ struct Demod::Impl {
 Demod::Demod() : impl_(new Impl) {}
 Demod::~Demod() = default;
 void Demod::configure(const Params& p) { p_ = p; impl_->configure(p); }
+void Demod::setTmccInfo(const uint8_t info[kTmccInfoBits]) {
+    Impl& I = *impl_;
+    tmccFrameBits(info, true, true, I.tmccBits[0]);
+    tmccFrameBits(info, true, false, I.tmccBits[1]);
+    I.haveTmcc = true;
+}
 void Demod::pushSymbol(const cf32* Y, int symIdx) { impl_->pushSymbol(Y, symIdx); }
 void Demod::setDelayCentre(double tau0) { impl_->tau0 = tau0; }
 void Demod::takePackets(int layer, std::vector<uint8_t>& out) {

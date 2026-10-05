@@ -27,7 +27,7 @@ static bool run(const Case& c) {
     std::vector<cf32> sig, frame;
     for (int f = 0; f < c.frames; f++) { gen.nextFrame(frame); sig.insert(sig.end(), frame.begin(), frame.end()); }
     // echo (in the 8.127 MHz domain)
-    if (c.echoDb > 0) {
+    if (c.echoDelay > 0) {
         std::vector<cf32> e(sig.size());
         const float a = (float)std::pow(10.0, -c.echoDb / 20.0);
         for (size_t i = 0; i < sig.size(); i++) e[i] = sig[i] + (i >= (size_t)c.echoDelay ? a * sig[i - (size_t)c.echoDelay] * cf32(0.6f, 0.8f) : cf32(0, 0));
@@ -123,6 +123,18 @@ int main(int argc, char** argv) {
         {
             Params p; p.mode = 2; p.guard = kGi4; p.layer[0] = L(13, k16Qam, kR34);
             cases.push_back({"mode 2, 13 seg 16QAM 3/4, echo -6 dB at 40 samples, 22 dB", p, 12, 10e6, -2000, 22, 0, 6, 40});
+        }
+        {
+            Params p; p.mode = 2; p.guard = kGi8; p.layer[0] = L(13, kDqpsk, kR23, 2);
+            cases.push_back({"mode 2, 13 seg DQPSK 2/3 (no scattered pilots), 9 Msps, CFO 12 kHz", p, 30, 9e6, 12000, 20, 10, 0, 0});
+        }
+        {
+            Params p; p.mode = 3; p.guard = kGi8; p.layer[0] = L(13, k16Qam, kR12);
+            cases.push_back({"mode 3, 13 seg 16QAM 1/2, 0 dB echo at 700 samples (inside the guard), 24 dB", p, 16, 10e6, 4000, 24, 0, 0, 700});
+        }
+        {
+            Params p; p.mode = 1; p.guard = kGi16; p.partial = true; p.layer[0] = L(1, kQpsk, kR12, 0); p.layer[1] = L(12, kQpsk, kR23, 0);
+            cases.push_back({"mode 1, partial + QPSK 2/3 at a low 7 dB, 20 Msps", p, 40, 20e6, -9000, 7, 5, 0, 0});
         }
     }
     for (auto& c : cases) run(c);

@@ -275,6 +275,19 @@ void tmccFrameBits(const uint8_t info[kTmccInfoBits], bool evenFrame, bool diffS
     std::memcpy(bits + 122, par, 82);
 }
 
+std::vector<int> tmccCarrierList(int mode, int pos, bool diff) {
+    std::vector<int> v;
+    const int cps = carriersPerSegment(mode);
+    using namespace tables;
+    auto add = [&](const uint16_t (*t)[13], int rows) { for (int r = 0; r < rows; r++) v.push_back(pos * cps + t[r][pos]); };
+    if (diff) {
+        if (mode == 1) add(kDiffTmcc1, 5); else if (mode == 2) add(kDiffTmcc2, 10); else add(kDiffTmcc3, 20);
+    } else {
+        if (mode == 1) add(kSyncTmcc1, 1); else if (mode == 2) add(kSyncTmcc2, 2); else add(kSyncTmcc3, 4);
+    }
+    return v;
+}
+
 LayerInfo toLayerInfo(const Layer& l) {
     LayerInfo li;
     if (!l.used()) return li;

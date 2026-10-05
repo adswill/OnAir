@@ -21,19 +21,7 @@ using namespace isdbt;
 using cd = std::complex<double>;
 
 namespace {
-// carriers of the TMCC of a segment (band carrier numbers)
-std::vector<int> tmccCarriers(int mode, int pos, bool diff) {
-    std::vector<int> v;
-    const int cps = carriersPerSegment(mode);
-    using namespace tables;
-    auto add = [&](const uint16_t (*t)[13], int rows) { for (int r = 0; r < rows; r++) v.push_back(pos * cps + t[r][pos]); };
-    if (diff) {
-        if (mode == 1) add(kDiffTmcc1, 5); else if (mode == 2) add(kDiffTmcc2, 10); else add(kDiffTmcc3, 20);
-    } else {
-        if (mode == 1) add(kSyncTmcc1, 1); else if (mode == 2) add(kSyncTmcc2, 2); else add(kSyncTmcc3, 4);
-    }
-    return v;
-}
+std::vector<int> tmccCarriers(int mode, int pos, bool diff) { return tmccCarrierList(mode, pos, diff); }
 }
 
 struct IsdbtReceiver::Impl {
@@ -329,29 +317,28 @@ struct IsdbtReceiver::Impl {
         uint8_t exp[2][kSymbolsPerFrame];
         tmccFrameBits(info, even, true, exp[0]);
         tmccFrameBits(info, even, false, exp[1]);
-        int used = 0, agree = 0;
+        // one pooled measure over the TMCC carriers of all segments: a carrier in a deep fade adds nothing and costs little, where a vote per segment
+        // would lose the segments whose few carriers all fade together
+        int used = 0;
+        double c = 0, mag = 0;
         for (int pos = 0; pos < kSegments; pos++) {
             const int sn = kSegmentAtPosition[pos];
             if (seg[sn].layer < 0) continue;
             used++;
             const auto ks = tmccCarriers(mode, pos, seg[sn].diff);
             const uint8_t* e = exp[seg[sn].diff ? 0 : 1];
-            double c = 0, mag = 0;
             for (int i = 1; i < kSymbolsPerFrame; i++) {
                 const int n = f + i;
                 if (n >= (int)spec.size()) break;
-                double num = 0, den = 0;
                 for (int k : ks) {
                     const cf32 a = spec[(size_t)n][(size_t)(k + s + R)], cc = spec[(size_t)(n - 1)][(size_t)(k + s + R)];
-                    num += (a * std::conj(cc) * unturn).real();
-                    den += std::abs(a) * std::abs(cc);
+                    const double num = (a * std::conj(cc) * unturn).real();
+                    c += -num * (e[i] ? 1.0 : -1.0);
+                    mag += std::abs(a) * std::abs(cc);
                 }
-                const double b = den > 0 ? -num / den : 0.0;
-                c += b * (e[i] ? 1.0 : -1.0); mag += std::fabs(b);
             }
-            if (mag > 0 && c / mag > 0.25) agree++;
         }
-        return used > 0 && agree * 10 >= used * 7;
+        return used > 0 && mag > 0 && c / mag > 0.3;
     }
 
     bool tryDecode(const std::vector<float>& b, int H, int s, int pos, bool diff) {
@@ -384,6 +371,7 @@ struct IsdbtReceiver::Impl {
             tmccFailures = 0; secSinceTmcc = 0;
             demod.configure(prm);
             demod.setDelayCentre((double)back + G / 2.0);
+            demod.setTmccInfo(info);
             prevTmcc.clear(); tmccSoft.clear();
             detect = 2;
             return true;
@@ -443,7 +431,7 @@ struct IsdbtReceiver::Impl {
                 if (paramsFromTmcc(t, q)) {
                     ok = true;
                     tmcc = t;
-                    if (!(q == prm)) { prm = q; demod.configure(prm); demod.setDelayCentre((double)back + G / 2.0); }
+                    if (!(q == prm)) { prm = q; demod.configure(prm); demod.setDelayCentre((double)back + G / 2.0); uint8_t inf2[kTmccInfoBits]; std::memcpy(inf2, w, kTmccInfoBits); demod.setTmccInfo(inf2); }
                 }
             }
         }
