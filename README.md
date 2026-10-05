@@ -5,7 +5,7 @@
 <p align="center"><b>Watch digital TV and listen to digital radio with a software-defined radio.</b><br>
 Free and open source. macOS, Windows and Linux.</p>
 
-<p align="center"><a href="https://github.com/adswill/OnAir/releases/download/v0.1.0/OnAir_promo_v0.1.0.mp4"><b>Watch the overview video</b></a></p>
+<p align="center"><a href="https://github.com/adswill/OnAir/releases/download/v0.1.0/OnAir_promo_v0.1.0.mp4"><b>Watch the overview video</b></a> &nbsp;·&nbsp; <a href="https://discord.gg/Kky9c6atm"><b>Join the Discord</b></a> for support and feature requests</p>
 
 ---
 
@@ -106,6 +106,10 @@ target does not rebuild Homebrew libraries. Packaging stops if any executable or
 library requires a newer macOS. Build releases on macOS 15 with compatible
 Homebrew dependencies, as in the release workflow, or rebuild the dependencies
 for the intended target.
+
+## Support and community
+
+The [OnAir Discord server](https://discord.gg/Kky9c6atm) is the place for **support**, **feature requests**, questions, and sharing what you receive. Bugs can also go in [GitHub Issues](https://github.com/adswill/OnAir/issues).
 
 ## Project layout
 
