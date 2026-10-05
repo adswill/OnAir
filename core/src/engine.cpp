@@ -86,9 +86,14 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     rxA_.setBlocking(!src_->realtimeHardware());
     rxA_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the ATSC worker thread
     rxD_.configure(rate_);
+    rxA3_.configure(rate_);
+    rxA3_.setBlocking(!src_->realtimeHardware());
+    rxA3_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the ATSC 3.0 worker thread
+    atsc3Seq_ = 0; logA3State_ = -1; logA3Svc_ = false;
+    { std::lock_guard<std::mutex> lk(atsc3Mu_); atsc3Tel_ = Atsc3Telemetry(); }
     dabSeq_ = 0; logDState_ = -1; logDEns_ = false;
     atscSeq_ = 0; logAState_ = -1;
-    activeStd_ = stdMode_.load() == 2 ? 1 : stdMode_.load() == 3 ? 2 : stdMode_.load() == 4 ? 3 : 0;
+    activeStd_ = stdMode_.load() == 2 ? 1 : stdMode_.load() == 3 ? 2 : stdMode_.load() == 4 ? 3 : stdMode_.load() == 5 ? 4 : 0;
     autoMark_ = 0; lastLockSec_ = 0; logTMode_ = logTGi_ = logTTps_ = -1; logTFec_ = false;
     {
         std::lock_guard<std::mutex> lk(tsMu_);
@@ -103,6 +108,11 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
         RxTelemetry t;
         if (!rx_.telemetry(t, 0)) {}
         if (t.seq && !t.rateOk) log("sample rate is not 1x or 2x the native rate for this bandwidth - only spectrum available");
+    }
+    if (stdMode_ == 5 && rate_.load() < 6.5e6) {
+        char m[200];
+        snprintf(m, sizeof m, "sample rate %.2f Msps is too low for an ATSC 3.0 channel (about 6.5 Msps or more is needed) - the receiver cannot lock with this radio", rate_.load() / 1e6);
+        log(m);
     }
     char b[160];
     snprintf(b, sizeof b, "source started: %s  fs=%.4f Msps", dev.name.c_str(), rate_.load() / 1e6);
@@ -135,6 +145,7 @@ void Engine::stop() {
         log(b);
         log(t2rxProfile());
     }
+    rxA3_.stop();
     running_ = false;
 }
 
@@ -161,6 +172,7 @@ void Engine::applyReset() {
     rxT_.reset();
     rxA_.reset();
     rxD_.reset();
+    rxA3_.reset();
     autoMark_ = nSamp_ / std::max(1.0, rate_.load()); lastLockSec_ = autoMark_;
     analyzer_.reset();
     {
@@ -203,7 +215,7 @@ void Engine::onTsPackets(const uint8_t* pk, size_t n, double secs) {
 // so idle searching costs one receiver, not two.
 void Engine::feedRx(const cf32* x, size_t n) {
     const int a = activeStd_.load();
-    if (a == 3) rxD_.feed(x, n); else if (a == 2) rxA_.feed(x, n); else if (a == 1) rxT_.feed(x, n); else rx_.feed(x, n);
+    if (a == 4) rxA3_.feed(x, n); else if (a == 3) rxD_.feed(x, n); else if (a == 2) rxA_.feed(x, n); else if (a == 1) rxT_.feed(x, n); else rx_.feed(x, n);
 }
 
 void Engine::changeBandwidth(double mhz) {
@@ -247,6 +259,7 @@ void Engine::autoSelect(const RxTelemetry& t, bool tLocked) {
         else if (m == 2 && activeStd_ != 1) { activeStd_ = 1; rxT_.reset(); }
         else if (m == 3 && activeStd_ != 2) { activeStd_ = 2; rxA_.reset(); }
         else if (m == 4 && activeStd_ != 3) { activeStd_ = 3; rxD_.reset(); }
+        else if (m == 5 && activeStd_ != 4) { activeStd_ = 4; rxA3_.reset(); }
         autoMark_ = lastLockSec_ = now;
         return;
     }
@@ -273,6 +286,23 @@ void Engine::logDabEvents(const RxTelemetry& t) {
         log(b);
         logDEns_ = true;
     } else if (!d.ensemble) logDEns_ = false;
+}
+
+void Engine::logAtsc3Events(const Atsc3Telemetry& a) {
+    const int st = a.locked ? 2 : a.bootstraps > 0 ? 1 : 0;
+    if (st != logA3State_) {
+        char b[200];
+        if (st == 2) snprintf(b, sizeof b, "ATSC 3.0: frames decoding, carrier offset %.0f Hz", a.cfoHz);
+        else if (st == 1) snprintf(b, sizeof b, "ATSC 3.0: bootstrap found, waiting for a frame that decodes");
+        else snprintf(b, sizeof b, "ATSC 3.0: searching for a bootstrap");
+        log(b);
+        logA3State_ = st;
+    }
+    const bool svc = a.serviceReady;
+    if (svc != logA3Svc_) {
+        logA3Svc_ = svc;
+        if (svc) { char b[160]; snprintf(b, sizeof b, "ATSC 3.0: signaling of service %d received", a.selected); log(b); }
+    }
 }
 
 void Engine::logAtscEvents(const RxTelemetry& t) {
@@ -397,7 +427,7 @@ bool Engine::latestSpectrum(SpectrumFrame& out, uint64_t lastSeq) {
     return true;
 }
 
-// A radio that was delivering samples and stops (the cable was pulled) is reported, and a HackRF is opened again with the settings in use
+// A radio that was delivering samples and stops (the cable was pulled) is reported, and it is opened again with the settings in use
 // as soon as it is back, so that the receiver carries on by itself.
 void Engine::watchRadio() {
     if (!src_ || !src_->realtimeHardware()) return;
@@ -407,11 +437,11 @@ void Engine::watchRadio() {
         if (now - lastSamples_ > seconds(2)) {
             radioLost_ = true;
             nextReconnect_ = now + seconds(1);
-            log(lastDev_.kind == DeviceInfo::HackRF ? "radio stopped sending samples (unplugged?) - waiting for it to come back" : "radio stopped sending samples - press Stop and Start to open it again");
+            log("radio stopped sending samples (unplugged?) - waiting for it to come back");
         }
         return;
     }
-    if (lastDev_.kind != DeviceInfo::HackRF || now < nextReconnect_) return;
+    if (!lastDev_.isRadio() || now < nextReconnect_) return;
     nextReconnect_ = now + seconds(2);
     TuneSettings tune;
     { std::lock_guard<std::mutex> lk(tuneMu_); tune = lastTune_; }
@@ -459,6 +489,25 @@ void Engine::analysisLoop() {
                     t.blocksBad = at.rsFailed;
                     t.rateOk = rxA_.rateOk();
                     logAtscEvents(t);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    rxTel_ = std::move(t);
+                }
+            } else if (activeStd_.load() == 4) {
+                Atsc3Telemetry at;
+                if (rxA3_.telemetry(at, atsc3Seq_)) {
+                    atsc3Seq_ = at.seq;
+                    t.standard = 4;
+                    t.seq = at.seq;
+                    t.state = at.locked ? 2 : at.bootstraps > 0 ? 1 : 0;
+                    t.cfoHz = at.cfoHz;
+                    t.dataValid = at.locked && at.serviceReady;
+                    t.blocksOk = at.bbPackets - at.bbBad; t.blocksBad = at.bbBad;
+                    t.rateOk = true;
+                    logAtsc3Events(at);
+                    {
+                        std::lock_guard<std::mutex> lk(atsc3Mu_);
+                        atsc3Tel_ = at;
+                    }
                     std::lock_guard<std::mutex> lk(rxMu_);
                     rxTel_ = std::move(t);
                 }

@@ -20,9 +20,12 @@ It is built for people who want a receiver that is both easy to use and honest a
 | **DVB-T2** | Europe, Middle East, Africa, Asia, Australia | Digital TV |
 | **DVB-T** | Same regions, older networks | Digital TV |
 | **ATSC 1.0** | North America, South Korea | Digital TV |
+| **ATSC 3.0** (NextGen TV), *experimental* | North America, South Korea | Digital TV |
 | **DAB / DAB+** | Europe, Australia and more | Digital radio |
 
-The standard is detected automatically, and one switch at the top of the window selects the family you want.
+The DVB standard is detected automatically, and one switch at the top of the window selects the family you want (DVB, ATSC, ATSC 3.0 or DAB).
+
+**ATSC 3.0 is experimental.** The whole receiver chain is built from the published specifications and works on simulated signals (carrier offset, noise and echoes included): synchronisation, error correction, link layer, ROUTE and playback of HEVC video with AAC audio. It has not yet been checked against a real broadcast, so details such as the scrambler or interleaver may need fixing once a real recording is available. Services that use MMTP or AC-4 audio are not supported yet, and it needs a radio that can sample at 6.5 Msps or faster. If you have an ATSC 3.0 recording or can try it on air, please tell us on Discord.
 
 ## Highlights
 

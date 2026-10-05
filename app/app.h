@@ -165,9 +165,10 @@ struct App {
         struct Pt { double n = 0, ei = 0, eq = 0, e2 = 0; };
         std::vector<Pt> pts;                             // per transmitted point: count, mean error, summed squared error
     } cst;
-    bool atscMode = false;    // standard family: false = DVB (T2/T), true = ATSC
+    bool atscMode = false;    // ATSC channel plan and 6 MHz settings: families 1 (ATSC 1.0) and 3 (ATSC 3.0)
+    bool atsc3Mode = false;   // ATSC 3.0 (family 3)
     bool dabMode = false;     // DAB / DAB+ (family 2)
-    int family = 0;           // 0 DVB, 1 ATSC, 2 DAB
+    int family = 0;           // 0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0
     std::deque<float> dabSnrH, dabFicH;
     struct DabScan {
         bool running = false; int idx = -1; double t0 = 0, lockT = 0, savedFreq = 218.64;
@@ -367,6 +368,9 @@ void historyTab(App& a);
 void frameMapTab(App& a);
 void signallingTab(App& a);
 void atscPanels(App& a);
+void atsc3Status(App& a);
+bool atsc3Quality(App& a, QualityReport& q);   // the signal-quality bar for ATSC 3.0 (share of decoded blocks); false when there is nothing to show
+void atsc3ReceiverTab(App& a);
 void constellationsTab(App& a);
 void channelTab(App& a);
 void impulseTab(App& a);

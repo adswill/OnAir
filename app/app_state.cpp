@@ -2,12 +2,12 @@
 #include "app.h"
 
 void setFamily(App& a, int f) {
-    a.family = f; a.atscMode = f == 1; a.dabMode = f == 2;
+    a.family = f; a.atscMode = f == 1 || f == 3; a.atsc3Mode = f == 3; a.dabMode = f == 2;
     if (f == 2 && !(a.freqMhz >= 174 && a.freqMhz <= 240)) a.freqMhz = 218.640;
 }
 
-// what to tell the engine: 0 auto, 1 DVB-T2, 2 DVB-T, 3 ATSC, 4 DAB
-int engineStd(const App& a) { return a.family == 1 ? 3 : a.family == 2 ? 4 : a.stdMode; }
+// what to tell the engine: 0 auto, 1 DVB-T2, 2 DVB-T, 3 ATSC, 4 DAB, 5 ATSC 3.0
+int engineStd(const App& a) { return a.family == 1 ? 3 : a.family == 2 ? 4 : a.family == 3 ? 5 : a.stdMode; }
 
 void refreshDevices(App& a) {
     a.devices.clear();
@@ -32,7 +32,7 @@ void applyBandwidth(App& a) {
     }
     a.tune.basebandFilterHz = 0;
     a.tune.bandwidthMhz = kBw[a.bwIdx].mhz;
-    a.tune.synth.atsc = a.atscMode;
+    a.tune.synth.atsc = a.family == 1;
     a.tune.synth.dab = a.dabMode;
     if (a.dabMode) {   // a DAB ensemble is 1.536 MHz wide: 2.048 Msps is the natural rate (RTL-SDR dongles do it too)
         a.tune.bandwidthMhz = 1.7; a.tune.sampleRate = 2.048e6; a.tune.basebandFilterHz = 1.75e6;
@@ -52,7 +52,7 @@ void loadPrefs(App& a) {
     if (d.has("vga")) a.tune.vgaDb = (int)d.getI("vga", a.tune.vgaDb);
     if (d.has("gain")) a.tune.gainDb = d.getD("gain", a.tune.gainDb);
     a.tune.ampOn = d.getB("amp", false);
-    if (d.has("family")) { const int f = (int)d.getI("family", 0); a.family = f; a.atscMode = f == 1; a.dabMode = f == 2; }
+    if (d.has("family")) { const int f = (int)d.getI("family", 0); a.family = f; a.atscMode = f == 1 || f == 3; a.atsc3Mode = f == 3; a.dabMode = f == 2; }
     if (d.has("compute")) a.computeMode = (int)d.getI("compute", a.computeMode);
     if (d.has("standard")) a.stdMode = (int)d.getI("standard", a.stdMode);
     a.bwIdx = std::max(0, std::min((int)(sizeof kBw / sizeof *kBw) - 1, (int)d.getI("bw", 0)));

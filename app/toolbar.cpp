@@ -160,8 +160,8 @@ void toolbar(App& a) {
                 "Graphics: %s", a.rx.gpuAvailable ? gpuName : "none usable");
         }
     }
-    ImGui::SameLine(0, 14 * gUi);
-    {
+    if (a.family == 0) {   // ATSC, ATSC 3.0 and DAB have one standard each: nothing to choose
+        ImGui::SameLine(0, 14 * gUi);
         static const char* names[] = {"Auto", "DVB-T2", "DVB-T"};
         char lbl[48];
         const int act = a.engine.activeStandard();
@@ -274,6 +274,7 @@ void sourceOptions(App& a) {
 
 void statusBar(App& a) {
     if (a.dabMode) { dabStatus(a); return; }
+    if (a.atsc3Mode) { atsc3Status(a); return; }
     const bool run = a.engine.running();
     const SignalStats& st = a.spec.stats;
     const RxTelemetry& rx = a.rx;
@@ -462,44 +463,47 @@ void gainControl(App& a) {
 // DVB <-> ATSC switch under the tuner settings
 void standardSwitch(App& a) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
-    const char* names[3] = {"DVB", "ATSC", "DAB / DAB+"};
-    const ImU32 cols[3] = {IM_COL32(52, 92, 108, 255), IM_COL32(150, 100, 30, 255), IM_COL32(40, 130, 96, 255)};
+    // the order on screen; the numbers are the families (0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0), which are also stored in the settings
+    static const int order[4] = {0, 1, 3, 2};
+    static const char* names[4] = {"DVB", "ATSC", "ATSC 3.0", "DAB / DAB+"};
+    static const ImU32 cols[4] = {IM_COL32(52, 92, 108, 255), IM_COL32(150, 100, 30, 255), IM_COL32(150, 70, 40, 255), IM_COL32(40, 130, 96, 255)};
     const float h = ImGui::GetFrameHeight() - 2;
-    const float segW[3] = {ImGui::CalcTextSize(names[0]).x + 22, ImGui::CalcTextSize(names[1]).x + 22, ImGui::CalcTextSize(names[2]).x + 22};
-    const float total = segW[0] + segW[1] + segW[2];
+    float segW[4], total = 0;
+    for (int i = 0; i < 4; i++) { segW[i] = ImGui::CalcTextSize(names[order[i] == 3 ? 2 : order[i] == 2 ? 3 : order[i]]).x + 22; total += segW[i]; }
     const ImVec2 p = ImGui::GetCursorScreenPos();
     ImGui::AlignTextToFramePadding();
-    // track, sliding knob under the selected segment, three labels
     dl->AddRectFilled(p, ImVec2(p.x + total, p.y + h), IM_COL32(18, 22, 28, 255), 3.f);
     dl->AddRect(p, ImVec2(p.x + total, p.y + h), IM_COL32(52, 60, 72, 255), 3.f);
-    float x = p.x;
-    float selX = p.x, selW = segW[0];
-    for (int i = 0; i < 3; i++) { if (i == a.family) { selX = x; selW = segW[i]; } x += segW[i]; }
-    // animate the knob
+    float x = p.x, selX = p.x, selW = segW[0];
+    int selPos = 0;
+    for (int i = 0; i < 4; i++) { if (order[i] == a.family) { selX = x; selW = segW[i]; selPos = i; } x += segW[i]; }
     static float knobX = -1, knobW = 0;
     if (knobX < 0) { knobX = selX - p.x; knobW = selW; }
     knobX += (selX - p.x - knobX) * 0.35f; knobW += (selW - knobW) * 0.35f;
-    dl->AddRectFilled(ImVec2(p.x + knobX + 2, p.y + 2), ImVec2(p.x + knobX + knobW - 2, p.y + h - 2), cols[a.family], 3.f);
+    dl->AddRectFilled(ImVec2(p.x + knobX + 2, p.y + 2), ImVec2(p.x + knobX + knobW - 2, p.y + h - 2), cols[selPos], 3.f);
     x = p.x;
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 4; i++) {
+        const int fam = order[i];
+        const char* nm = names[i];
         ImGui::SetCursorScreenPos(ImVec2(x, p.y));
         ImGui::PushID(i);
         if (ImGui::InvisibleButton("##seg", ImVec2(segW[i], h))) {
-            if (a.engine.running()) a.engine.log("stop the receiver before switching between DVB, ATSC and DAB");
-            else if (i != a.family) { setFamily(a, i); savePrefs(a); }
+            if (a.engine.running()) a.engine.log("stop the receiver before switching between DVB, ATSC, ATSC 3.0 and DAB");
+            else if (fam != a.family) { setFamily(a, fam); savePrefs(a); }
         }
         const bool hov = ImGui::IsItemHovered();
         ImGui::PopID();
-        const ImVec2 ts = ImGui::CalcTextSize(names[i]);
-        dl->AddText(ImVec2(x + (segW[i] - ts.x) * 0.5f, p.y + (h - ts.y) * 0.5f), i == a.family ? IM_COL32(255, 255, 255, 255) : hov ? IM_COL32(220, 228, 236, 255) : IM_COL32(140, 152, 166, 255), names[i]);
+        const ImVec2 ts = ImGui::CalcTextSize(nm);
+        dl->AddText(ImVec2(x + (segW[i] - ts.x) * 0.5f, p.y + (h - ts.y) * 0.5f), fam == a.family ? IM_COL32(255, 255, 255, 255) : hov ? IM_COL32(220, 228, 236, 255) : IM_COL32(140, 152, 166, 255), nm);
         x += segW[i];
     }
     ImGui::SetCursorScreenPos(ImVec2(p.x + total + 14, p.y));
     ImGui::AlignTextToFramePadding();
     if (a.family == 1) ImGui::TextDisabled("ATSC 8-VSB, 6 MHz channel (the DVB-only settings are off)");
+    else if (a.family == 3) ImGui::TextDisabled("ATSC 3.0 (NextGen TV), 6 MHz channel, ROUTE services");
     else if (a.family == 2) ImGui::TextDisabled("DAB / DAB+ digital radio, Band III channels 5A to 13F");
     else ImGui::TextDisabled("DVB-T2 / DVB-T, detected automatically");
     ImGui::SetCursorScreenPos(ImVec2(p.x, p.y + h + ImGui::GetStyle().ItemSpacing.y));
-    if (ImGui::IsMouseHoveringRect(p, ImVec2(p.x + total, p.y + h))) ImGui::SetTooltip("Left: DVB (T2 and T, automatic).\nMiddle: ATSC (US, Canada, Mexico, South Korea).\nRight: DAB / DAB+ digital radio.");
+    if (ImGui::IsMouseHoveringRect(p, ImVec2(p.x + total, p.y + h))) ImGui::SetTooltip("DVB (T2 and T, automatic).\nATSC 1.0 (8-VSB: US, Canada, Mexico, South Korea).\nATSC 3.0 (NextGen TV).\nDAB / DAB+ digital radio.");
 }
 

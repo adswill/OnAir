@@ -4,6 +4,7 @@
 
 void scanTab(App& a) {
     if (a.dabMode) { dabScanTab(a); return; }
+    if (a.atsc3Mode) { ImGui::TextDisabled("Channel scanning does not know ATSC 3.0 yet.\nTune to a channel with the frequency field in the toolbar; the receiver finds the bootstrap by itself."); return; }
     ScanProgress pr = a.scanner.progress();
     auto res = a.scanner.results();
     int hw = -1;

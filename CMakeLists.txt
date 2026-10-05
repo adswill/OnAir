@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
 if(APPLE)
-  project(OnAir VERSION 0.1.2 LANGUAGES C CXX OBJCXX)
+  project(OnAir VERSION 0.1.3 LANGUAGES C CXX OBJCXX)
   set(CMAKE_OBJCXX_STANDARD 20)
 else()
-  project(OnAir VERSION 0.1.2 LANGUAGES C CXX)
+  project(OnAir VERSION 0.1.3 LANGUAGES C CXX)
 endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -56,7 +56,7 @@ if(DECT2_WITH_SOAPY)
   pkg_check_modules(SOAPY SoapySDR)
 endif()
 
-add_library(dect2core STATIC core/src/source.cpp core/src/spectrum.cpp core/src/engine.cpp core/src/t2_tables.cpp core/src/t2gen.cpp core/src/t2rx.cpp core/src/t2rx_sync.cpp core/src/t2rx_symbols.cpp core/src/t2rx_l1.cpp core/src/t2rx_data.cpp core/src/t2pilots.cpp core/src/t2ofdm.cpp core/src/ldpc.cpp core/src/t2l1.cpp core/src/t2interleave.cpp core/src/t2fec_tables.cpp core/src/t2fec.cpp core/src/t2plp.cpp core/src/resampler.cpp core/src/bbunpack.cpp core/src/ts.cpp core/src/tsout.cpp core/src/scanner.cpp core/src/gain.cpp core/src/channel.cpp core/src/direction.cpp core/src/dsp_compat.cpp core/src/bandwidth.cpp core/src/atsc.cpp core/src/atsc_gen.cpp core/src/atsc_rx.cpp core/src/quality.cpp core/src/teletext.cpp core/src/dvbt.cpp core/src/dvbt_fec.cpp core/src/dvbt_gen.cpp core/src/dvbt_rx.cpp core/src/player.cpp core/src/audioout.cpp core/src/t2_pilot_tables.cpp core/src/dab_fec.cpp core/src/dab_rx.cpp core/src/dab_audio.cpp core/src/conceal.cpp core/src/nettuner.cpp core/src/hls.cpp core/src/hackrf_usb.cpp core/src/demo_ts.cpp core/src/source_native.cpp core/src/source_rtlsdr.cpp core/src/source_airspy.cpp core/src/source_bladerf.cpp core/src/source_limesdr.cpp core/src/source_plutosdr.cpp core/src/source_usrp.cpp)
+add_library(dect2core STATIC core/src/source.cpp core/src/spectrum.cpp core/src/engine.cpp core/src/t2_tables.cpp core/src/t2gen.cpp core/src/t2rx.cpp core/src/t2rx_sync.cpp core/src/t2rx_symbols.cpp core/src/t2rx_l1.cpp core/src/t2rx_data.cpp core/src/t2pilots.cpp core/src/t2ofdm.cpp core/src/ldpc.cpp core/src/t2l1.cpp core/src/t2interleave.cpp core/src/t2fec_tables.cpp core/src/t2fec.cpp core/src/t2plp.cpp core/src/resampler.cpp core/src/bbunpack.cpp core/src/ts.cpp core/src/tsout.cpp core/src/scanner.cpp core/src/gain.cpp core/src/channel.cpp core/src/direction.cpp core/src/dsp_compat.cpp core/src/bandwidth.cpp core/src/atsc.cpp core/src/atsc_gen.cpp core/src/atsc_rx.cpp core/src/atsc3_bootstrap.cpp core/src/atsc3_ofdm.cpp core/src/atsc3_tables.cpp core/src/atsc3_ldpc.cpp core/src/atsc3_ldpc_tables.cpp core/src/atsc3_ldpc_tables64.cpp core/src/atsc3_data_tables.cpp core/src/atsc3_l1.cpp core/src/atsc3_sync.cpp core/src/atsc3_rx.cpp core/src/atsc3_receiver.cpp core/src/atsc3_frame.cpp core/src/atsc3_remux.cpp core/src/atsc3_route.cpp core/src/atsc3_ip.cpp core/src/inflate.cpp core/src/xmlmini.cpp core/src/atsc3_alp.cpp core/src/atsc3_ti.cpp core/src/atsc3_subframe.cpp core/src/atsc3_cellmux.cpp core/src/atsc3_bb.cpp core/src/atsc3_bicm.cpp core/src/atsc3_preamble.cpp core/src/atsc3_constellations.cpp core/src/quality.cpp core/src/teletext.cpp core/src/dvbt.cpp core/src/dvbt_fec.cpp core/src/dvbt_gen.cpp core/src/dvbt_rx.cpp core/src/player.cpp core/src/audioout.cpp core/src/t2_pilot_tables.cpp core/src/dab_fec.cpp core/src/dab_rx.cpp core/src/dab_audio.cpp core/src/conceal.cpp core/src/nettuner.cpp core/src/hls.cpp core/src/hackrf_usb.cpp core/src/demo_ts.cpp core/src/source_native.cpp core/src/source_rtlsdr.cpp core/src/source_airspy.cpp core/src/source_bladerf.cpp core/src/source_limesdr.cpp core/src/source_plutosdr.cpp core/src/source_usrp.cpp)
 target_include_directories(dect2core PUBLIC core/include)
 if(SOAPY_FOUND)
   message(STATUS "SoapySDR ${SOAPY_VERSION}: generic radios enabled")
@@ -131,7 +131,7 @@ if(DECT2_BUILD_APP)
   set(IMGUI_SOURCES
     third_party/imgui/imgui.cpp third_party/imgui/imgui_draw.cpp third_party/imgui/imgui_tables.cpp third_party/imgui/imgui_widgets.cpp
     third_party/imgui/backends/imgui_impl_glfw.cpp)
-  set(APP_SOURCES app/main.cpp app/app_state.cpp app/widgets.cpp app/toolbar.cpp app/plots.cpp app/analysis_tabs.cpp app/tv.cpp app/scan_outputs.cpp app/antenna.cpp app/dab_ui.cpp app/wizard.cpp app/plot.cpp app/gfx_png.cpp)
+  set(APP_SOURCES app/main.cpp app/app_state.cpp app/widgets.cpp app/toolbar.cpp app/plots.cpp app/analysis_tabs.cpp app/tv.cpp app/scan_outputs.cpp app/antenna.cpp app/dab_ui.cpp app/atsc3_ui.cpp app/wizard.cpp app/plot.cpp app/gfx_png.cpp)
   if(DECT2_UI_BACKEND STREQUAL "Metal")
     if(NOT APPLE)
       message(FATAL_ERROR "The Metal back end needs macOS")
@@ -260,6 +260,96 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_audio tests/test_audio.cpp)
   target_link_libraries(test_audio PRIVATE dect2core)
   add_test(NAME audio COMMAND test_audio)
+
+  add_executable(test_atsc3_bootstrap tests/test_atsc3_bootstrap.cpp)
+  target_link_libraries(test_atsc3_bootstrap PRIVATE dect2core)
+  add_test(NAME atsc3_bootstrap COMMAND test_atsc3_bootstrap)
+
+  add_executable(test_atsc3_ofdm tests/test_atsc3_ofdm.cpp)
+  target_link_libraries(test_atsc3_ofdm PRIVATE dect2core)
+  add_test(NAME atsc3_ofdm COMMAND test_atsc3_ofdm)
+
+  add_executable(test_atsc3_ldpc tests/test_atsc3_ldpc.cpp)
+  target_link_libraries(test_atsc3_ldpc PRIVATE dect2core)
+  add_test(NAME atsc3_ldpc COMMAND test_atsc3_ldpc)
+
+  add_executable(test_atsc3_l1 tests/test_atsc3_l1.cpp)
+  target_link_libraries(test_atsc3_l1 PRIVATE dect2core)
+  add_test(NAME atsc3_l1 COMMAND test_atsc3_l1)
+
+  add_executable(test_atsc3_l1detail tests/test_atsc3_l1detail.cpp)
+  target_link_libraries(test_atsc3_l1detail PRIVATE dect2core)
+  add_test(NAME atsc3_l1detail COMMAND test_atsc3_l1detail)
+
+  add_executable(test_atsc3_preamble tests/test_atsc3_preamble.cpp)
+  target_link_libraries(test_atsc3_preamble PRIVATE dect2core)
+  add_test(NAME atsc3_preamble COMMAND test_atsc3_preamble)
+
+  add_executable(test_atsc3_bicm tests/test_atsc3_bicm.cpp)
+  target_link_libraries(test_atsc3_bicm PRIVATE dect2core)
+  add_test(NAME atsc3_bicm COMMAND test_atsc3_bicm)
+
+  add_executable(test_atsc3_bb tests/test_atsc3_bb.cpp)
+  target_link_libraries(test_atsc3_bb PRIVATE dect2core)
+  add_test(NAME atsc3_bb COMMAND test_atsc3_bb)
+
+  add_executable(test_atsc3_subframe tests/test_atsc3_subframe.cpp)
+  target_link_libraries(test_atsc3_subframe PRIVATE dect2core)
+  add_test(NAME atsc3_subframe COMMAND test_atsc3_subframe)
+
+  add_executable(test_atsc3_datapath tests/test_atsc3_datapath.cpp)
+  target_link_libraries(test_atsc3_datapath PRIVATE dect2core)
+  add_test(NAME atsc3_datapath COMMAND test_atsc3_datapath)
+
+  add_executable(test_atsc3_ti tests/test_atsc3_ti.cpp)
+  target_link_libraries(test_atsc3_ti PRIVATE dect2core)
+  add_test(NAME atsc3_ti COMMAND test_atsc3_ti)
+
+  add_executable(test_atsc3_alp tests/test_atsc3_alp.cpp)
+  target_link_libraries(test_atsc3_alp PRIVATE dect2core)
+  add_test(NAME atsc3_alp COMMAND test_atsc3_alp)
+
+  add_executable(test_atsc3_signaling tests/test_atsc3_signaling.cpp)
+  target_link_libraries(test_atsc3_signaling PRIVATE dect2core)
+  add_test(NAME atsc3_signaling COMMAND test_atsc3_signaling)
+
+  add_executable(test_atsc3_lls tests/test_atsc3_lls.cpp)
+  target_link_libraries(test_atsc3_lls PRIVATE dect2core)
+  add_test(NAME atsc3_lls COMMAND test_atsc3_lls)
+
+  add_executable(test_atsc3_route tests/test_atsc3_route.cpp)
+  target_link_libraries(test_atsc3_route PRIVATE dect2core)
+  add_test(NAME atsc3_route COMMAND test_atsc3_route)
+
+  add_executable(test_atsc3_remux tests/test_atsc3_remux.cpp)
+  target_link_libraries(test_atsc3_remux PRIVATE dect2core)
+  add_test(NAME atsc3_remux COMMAND test_atsc3_remux ${CMAKE_SOURCE_DIR}/tests/data/route_video.mp4 ${CMAKE_SOURCE_DIR}/tests/data/route_audio.mp4)
+
+  add_executable(test_atsc3_frame tests/test_atsc3_frame.cpp)
+  target_link_libraries(test_atsc3_frame PRIVATE dect2core)
+  add_test(NAME atsc3_frame COMMAND test_atsc3_frame)
+
+  add_executable(test_atsc3_receiver tests/test_atsc3_receiver.cpp)
+  target_link_libraries(test_atsc3_receiver PRIVATE dect2core)
+  add_test(NAME atsc3_receiver COMMAND test_atsc3_receiver ${CMAKE_SOURCE_DIR}/tests/data/route_video.mp4 ${CMAKE_SOURCE_DIR}/tests/data/route_audio.mp4)
+
+  add_executable(test_atsc3_sync tests/test_atsc3_sync.cpp)
+  target_link_libraries(test_atsc3_sync PRIVATE dect2core)
+  add_test(NAME atsc3_sync COMMAND test_atsc3_sync)
+
+  add_executable(test_atsc3_stream tests/test_atsc3_stream.cpp)
+  target_link_libraries(test_atsc3_stream PRIVATE dect2core)
+  add_test(NAME atsc3_stream COMMAND test_atsc3_stream ${CMAKE_SOURCE_DIR}/tests/data/route_video.mp4 ${CMAKE_SOURCE_DIR}/tests/data/route_audio.mp4)
+
+  add_executable(atsc3rx tools/atsc3rx.cpp)
+  target_link_libraries(atsc3rx PRIVATE dect2core)
+
+  add_executable(atsc3gen tools/atsc3gen.cpp)
+  target_link_libraries(atsc3gen PRIVATE dect2core)
+
+  add_executable(test_atsc3_engine tests/test_atsc3_engine.cpp)
+  target_link_libraries(test_atsc3_engine PRIVATE dect2core)
+  add_test(NAME atsc3_engine COMMAND test_atsc3_engine ${CMAKE_SOURCE_DIR}/tests/data/route_video.mp4 ${CMAKE_SOURCE_DIR}/tests/data/route_audio.mp4)
 
   add_executable(test_scan_radios tests/test_scan_radios.cpp)
   target_link_libraries(test_scan_radios PRIVATE dect2core)

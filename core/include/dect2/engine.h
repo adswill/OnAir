@@ -6,6 +6,7 @@
 #include "dvbt_rx.h"
 #include "atsc_rx.h"
 #include "dab.h"
+#include "atsc3_rx.h"
 #include "bbunpack.h"
 #include "ts.h"
 #include "tsout.h"
@@ -52,10 +53,10 @@ public:
     bool radioLost() const { return radioLost_; }
     void setComputeMode(int m) { rx_.setComputeMode(m); }
     void selectPlp(int id) { rx_.selectPlp(id); }
-    // Which standard to decode: 0 = automatic (alternates between DVB-T2 and DVB-T until one locks), 1 = DVB-T2, 2 = DVB-T, 3 = ATSC, 4 = DAB
+    // Which standard to decode: 0 = automatic (alternates between DVB-T2 and DVB-T until one locks), 1 = DVB-T2, 2 = DVB-T, 3 = ATSC, 4 = DAB, 5 = ATSC 3.0
     void setStandard(int m) { stdMode_ = m; stdReq_ = true; }
     int standardMode() const { return stdMode_.load(); }
-    int activeStandard() const { return activeStd_.load(); }  // 0 = DVB-T2, 1 = DVB-T, 2 = ATSC, 3 = DAB
+    int activeStandard() const { return activeStd_.load(); }  // 0 = DVB-T2, 1 = DVB-T, 2 = ATSC, 3 = DAB, 4 = ATSC 3.0
     double sampleRate() const { return rate_; }
     // Channel bandwidth: with automatic detection on, the engine measures the width of the signal in the spectrum while nothing is
     // locked and reconfigures the receivers by itself. setBandwidth() forces a value (used by the scanner).
@@ -90,6 +91,9 @@ public:
     int dabSelected() const { return rxD_.selected(); }
     DabAudio& dabAudio() { return rxD_.audio(); }
     TeletextDecoder& teletext() { return ttx_; }
+    // ATSC 3.0: the service list and statistics, and which service to receive (-1 = the first video service)
+    bool atsc3Telemetry(Atsc3Telemetry& t) const { std::lock_guard<std::mutex> lk(atsc3Mu_); t = atsc3Tel_; return atsc3Tel_.seq != 0; }
+    void atsc3Select(int serviceId) { rxA3_.selectService(serviceId); }
 
     // Log
     void log(const std::string& line);
@@ -126,6 +130,12 @@ private:
     DvbtReceiver rxT_;
     AtscReceiver rxA_;
     DabReceiver rxD_;
+    Atsc3Rx rxA3_;
+    mutable std::mutex atsc3Mu_;
+    Atsc3Telemetry atsc3Tel_;
+    uint64_t atsc3Seq_ = 0;
+    int logA3State_ = -1;
+    bool logA3Svc_ = false;
     uint64_t dabSeq_ = 0;
     int logDState_ = -1;
     bool logDEns_ = false;
@@ -133,6 +143,7 @@ private:
     uint64_t atscSeq_ = 0;
     int logAState_ = -1;
     void logAtscEvents(const RxTelemetry& t);
+    void logAtsc3Events(const Atsc3Telemetry& a);
     std::atomic<int> stdMode_{0}, activeStd_{0};
     std::atomic<bool> stdReq_{false};
     double autoMark_ = 0, lastLockSec_ = 0;

@@ -274,7 +274,9 @@ void Player::threadMain() {
                 avcodec_parameters_to_context(vctx, fmt->streams[vIdx]->codecpar);
                 AVBufferRef* hwdev = nullptr;
                 const char* swEnv = getenv("DECT2_SWVIDEO");
-                const bool hwOk = hwAllowed_ && !(swEnv && *swEnv);   // (the user switch and the environment override)
+                // (the user switch and the environment override); a picture size that is not known yet (the stream was joined before its first parameter
+                // sets) rules hardware decoding out, because it cannot be opened without it: the software decoder learns the size from the stream
+                const bool hwOk = hwAllowed_ && !(swEnv && *swEnv) && fmt->streams[vIdx]->codecpar->width > 0 && fmt->streams[vIdx]->codecpar->height > 0;
                 // damaged streams: let the decoder conceal missing slices and keep outputting pictures instead of waiting for a keyframe
                 vctx->flags |= AV_CODEC_FLAG_OUTPUT_CORRUPT;
                 vctx->flags2 |= AV_CODEC_FLAG2_SHOW_ALL;

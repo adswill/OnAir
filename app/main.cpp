@@ -32,6 +32,7 @@ void overviewTab(App& a) {
 
 void receiverTab(App& a) {
     if (a.dabMode) { dabEnsembleTab(a); return; }
+    if (a.atsc3Mode) { atsc3ReceiverTab(a); return; }
     if (a.rx.standard == 2 || a.atscMode) {
         const AtscTelemetry& at = a.rx.atsc;
         ImGui::TextDisabled("ATSC 8-VSB receiver: matched filter, pilot loop, symbol clock, field sync, per-field equaliser, trellis, Reed-Solomon");
@@ -156,7 +157,7 @@ void drawUI(App& a, ImVec2 disp) {
     statusBar(a);
     ImGui::Separator();
 
-    float logH = 250 * gUi, rightW = 350 * gUi;
+    float logH = (a.atsc3Mode ? 0 : 250) * gUi, rightW = 350 * gUi;   // ATSC 3.0 has no constellation panels yet
     float mainH = ImGui::GetContentRegionAvail().y - logH - 6;
     ImGui::BeginChild("main", ImVec2(disp.x - rightW - 16 * gUi, mainH));
     a.tgMin[TgMain] = ImGui::GetWindowPos(); a.tgMax[TgMain] = ImVec2(a.tgMin[TgMain].x + ImGui::GetWindowSize().x, a.tgMin[TgMain].y + ImGui::GetWindowSize().y);
@@ -178,11 +179,13 @@ void drawUI(App& a, ImVec2 disp) {
     rightPanel(a);
     ImGui::EndChild();
 
-    ImGui::Separator();
-    ImGui::BeginChild("constellations", ImVec2(0, 0));
-    a.tgMin[TgConst] = ImGui::GetWindowPos(); a.tgMax[TgConst] = ImVec2(a.tgMin[TgConst].x + ImGui::GetWindowSize().x, a.tgMin[TgConst].y + ImGui::GetWindowSize().y);
-    constellationsTab(a);
-    ImGui::EndChild();
+    if (!a.atsc3Mode) {
+        ImGui::Separator();
+        ImGui::BeginChild("constellations", ImVec2(0, 0));
+        a.tgMin[TgConst] = ImGui::GetWindowPos(); a.tgMax[TgConst] = ImVec2(a.tgMin[TgConst].x + ImGui::GetWindowSize().x, a.tgMin[TgConst].y + ImGui::GetWindowSize().y);
+        constellationsTab(a);
+        ImGui::EndChild();
+    } else a.tgMin[TgConst] = a.tgMax[TgConst] = ImVec2(0, 0);
     ImGui::End();
     wizard(a, disp);
     if (a.popOut) {
@@ -282,6 +285,7 @@ int main(int argc, char** argv) {
         if (std::string(argv[i]) == "--shot" && i + 1 < argc) shotPath = argv[++i];
         if (std::string(argv[i]) == "--tab" && i + 1 < argc) routeTab(app, argv[++i]);
         if (std::string(argv[i]) == "--atsc") setFamily(app, 1);
+        if (std::string(argv[i]) == "--atsc3") setFamily(app, 3);
         if (std::string(argv[i]) == "--dab") setFamily(app, 2);
         if (std::string(argv[i]) == "--rate" && i + 1 < argc) app.file.sampleRate = atof(argv[++i]) * 1e6;
         if (std::string(argv[i]) == "--freq" && i + 1 < argc) app.freqMhz = atof(argv[++i]);

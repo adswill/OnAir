@@ -157,7 +157,9 @@ const char* genreName(int g) {
 const char* fmtKbps(char* b, size_t n, double k) { if (k >= 1000) snprintf(b, n, "%.2f Mbit/s", k / 1000); else snprintf(b, n, "%.0f kbit/s", k); return b; }
 
 void qualityBar(App& a, float width) {
-    const QualityReport& q = a.quality.report();
+    QualityReport a3q;
+    const bool a3 = a.atsc3Mode && atsc3Quality(a, a3q);
+    const QualityReport& q = a3 ? a3q : a.quality.report();
     const bool run = a.engine.running();
     const float pct = run && q.valid ? (float)q.percent : 0.f;
     ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -177,9 +179,14 @@ void qualityBar(App& a, float width) {
     ImGui::Dummy(ImVec2(width, h));
     if (ImGui::IsItemHovered() && run && q.valid) {
         ImGui::BeginTooltip();
-        ImGui::Text("data SNR %.1f dB, needed for this modulation/code rate about %.1f dB", q.snrDb, q.requiredDb);
-        ImGui::Text("margin %+.1f dB, FEC blocks decoded %.1f%% (last frames)", q.marginDb, q.fecOk * 100);
-        ImGui::TextDisabled("0 dB margin is the edge of reception (25%%); +6 dB or more is comfortable.");
+        if (a3) {
+            ImGui::Text("FEC blocks decoded in the last frame: %.1f%%", q.fecOk * 100);
+            ImGui::TextDisabled("ATSC 3.0 does not report a signal-to-noise ratio yet; this bar shows how much of the data decodes.");
+        } else {
+            ImGui::Text("data SNR %.1f dB, needed for this modulation/code rate about %.1f dB", q.snrDb, q.requiredDb);
+            ImGui::Text("margin %+.1f dB, FEC blocks decoded %.1f%% (last frames)", q.marginDb, q.fecOk * 100);
+            ImGui::TextDisabled("0 dB margin is the edge of reception (25%%); +6 dB or more is comfortable.");
+        }
         ImGui::EndTooltip();
     }
 }
