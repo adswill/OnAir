@@ -30,6 +30,8 @@ option(DECT2_PORTABLE "Use the portable DSP kernels instead of Accelerate (macOS
 option(DECT2_WITH_SOAPY "Support generic radios (Airspy, SDRplay, RTL-SDR, PlutoSDR, LimeSDR, ...) through SoapySDR when it is installed" ON)
 option(DECT2_NO_SIMD "Disable the SIMD intrinsics and use the plain C++ code" OFF)
 option(DECT2_WIN_AVX2 "Windows and macOS on x86-64: build the receiver for AVX2 (all CPUs since 2013); these systems have no runtime dispatch like Linux" ON)
+option(DECT2_COPY_RUNTIME_DLLS "Windows (MinGW): after each build, copy the DLLs the programs need next to them so they start from the build folder" ${MINGW})
+set(DECT2_EXTRA_RUNTIME_DLLS "" CACHE STRING "Windows: more DLLs to copy next to the programs, such as a radio library (LimeSuite.dll, rtlsdr.dll ...), separated by semicolons")
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(HACKRF REQUIRED libhackrf)   # plain variables: some package managers list include paths that do not exist
@@ -478,4 +480,16 @@ if(DECT2_BUILD_APP AND NOT APPLE)
   set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "zenity")
   set(CPACK_DEBIAN_PACKAGE_SUGGESTS "hackrf, librtlsdr0, libairspy0, libbladerf2, libiio0, soapysdr-module-all")
   include(CPack)
+endif()
+
+if(DECT2_COPY_RUNTIME_DLLS AND MINGW)
+  get_filename_component(DECT2_RUNTIME_DLL_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)   # the MSYS2 (or mingw-w64) bin folder holds every DLL the programs link to
+  foreach(t dect2 dect2cli dect2scan)
+    if(TARGET ${t})
+      add_custom_command(TARGET ${t} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} "-DEXE=$<TARGET_FILE:${t}>" "-DSEARCH_DIR=${DECT2_RUNTIME_DLL_DIR}" "-DOBJDUMP=${CMAKE_OBJDUMP}"
+                "-DEXTRA=${DECT2_EXTRA_RUNTIME_DLLS}" -P ${CMAKE_SOURCE_DIR}/packaging/windows/copy_runtime_dlls.cmake
+        VERBATIM)
+    endif()
+  endforeach()
 endif()
