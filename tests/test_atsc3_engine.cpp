@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
 #include <random>
 #include <thread>
@@ -45,7 +46,8 @@ int main(int argc, char** argv) {
         wave.insert(wave.end(), one.begin(), one.end());
     }
     const float sigma = (float)std::sqrt(std::pow(10.0, -26.0 / 10.0) / 2.0);
-    const char* path = "/tmp/dect2_atsc3_test.cs8";
+    const std::string pathStr = (std::filesystem::temp_directory_path() / "dect2_atsc3_test.cs8").string();   // a native Windows program has no /tmp
+    const char* path = pathStr.c_str();
     {
         std::ofstream o(path, std::ios::binary);
         std::vector<int8_t> b8;

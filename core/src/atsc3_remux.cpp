@@ -74,7 +74,12 @@ struct Atsc3Remux::Impl {
         }
     }
 
+    // FFmpeg 7 made the data of the write callback const; older versions (Ubuntu 24.04 has 6.1) want it without
+#if LIBAVFORMAT_VERSION_MAJOR >= 61
     static int writeCb(void* opaque, const uint8_t* buf, int size) {
+#else
+    static int writeCb(void* opaque, uint8_t* buf, int size) {
+#endif
         Impl* im = (Impl*)opaque;
         std::lock_guard<std::mutex> lk(im->omu);
         // a reader that is far behind loses the oldest bytes instead of growing without limit
