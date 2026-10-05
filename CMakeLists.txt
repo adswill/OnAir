@@ -210,6 +210,10 @@ if(DECT2_BUILD_TESTS)
   add_executable(bench_threshold tests/bench_threshold.cpp)
   target_link_libraries(bench_threshold PRIVATE dect2core)
 
+  add_executable(bench_resample tests/bench_resample.cpp)
+  target_link_libraries(bench_resample PRIVATE dect2core)
+  add_executable(bench_rx tests/bench_rx.cpp)
+  target_link_libraries(bench_rx PRIVATE dect2core)
   add_executable(bench_fec tests/bench_fec.cpp)
   target_link_libraries(bench_fec PRIVATE dect2core)
 
@@ -399,6 +403,10 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_teletext tests/test_teletext.cpp)
   target_link_libraries(test_teletext PRIVATE dect2core)
   add_test(NAME teletext COMMAND test_teletext)
+
+  add_executable(test_overload tests/test_overload.cpp)
+  target_link_libraries(test_overload PRIVATE dect2core)
+  add_test(NAME overload COMMAND test_overload)
 
   add_executable(test_modes tests/test_modes.cpp)
   target_link_libraries(test_modes PRIVATE dect2core)

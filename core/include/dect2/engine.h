@@ -103,6 +103,7 @@ public:
 
 private:
     void analysisLoop();
+    void catchUp();
     void logRxEvents(const RxTelemetry& t);
     std::function<void(const PlpResult&)> plpDump_;
     void onPlp(const PlpResult& r);
@@ -173,7 +174,8 @@ private:
     std::mutex tuneMu_;                 // lastDev_ / lastTune_: what to reopen the radio with
     DeviceInfo lastDev_;
     TuneSettings lastTune_;
-    std::chrono::steady_clock::time_point lastSamples_{}, nextReconnect_{};
+    std::chrono::steady_clock::time_point lastSamples_{}, nextReconnect_{}, lastSkipLog_{};
+    uint64_t skippedSamples_ = 0, skipEvents_ = 0;   // analysis thread only
     std::string reconnectErr_;
     std::atomic<double> rate_{0};
 

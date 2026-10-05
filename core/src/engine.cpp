@@ -501,6 +501,23 @@ void Engine::watchRadio() {
     }
 }
 
+// The receiver cannot keep up (the ring is more than half backlog): jump to the newest samples in one go. One clean gap that the receiver
+// resynchronises after is far better than the radio thread dropping a few samples out of every chunk, which ruins every frame.
+void Engine::catchUp() {
+    const size_t skipped = ring_.dropBacklog();
+    if (!skipped) return;
+    if (activeStd_.load() == 0) rx_.markGap(skipped);
+    skippedSamples_ += skipped;
+    skipEvents_++;
+    const auto now = std::chrono::steady_clock::now();
+    if (now - lastSkipLog_ > std::chrono::seconds(10)) {
+        lastSkipLog_ = now;
+        char b[200];
+        snprintf(b, sizeof b, "the receiver cannot keep up with the sample rate: skipped %.2f s of signal (%llu skips so far). Close other programs, use a narrower channel or a lower sample rate", skipped / std::max(1.0, rate_.load()), (unsigned long long)skipEvents_);
+        log(b);
+    }
+}
+
 void Engine::analysisLoop() {
     setThreadPriority(ThreadPriority::Realtime); // the sample path must never wait for decoders or the UI
     std::vector<cf32> buf(1 << 16);
@@ -510,6 +527,7 @@ void Engine::analysisLoop() {
     while (!stopReq_) {
         if (resetReq_.exchange(false)) { applyReset(); rxSeq = 0; }
         size_t n;
+        catchUp();
         while ((n = ring_.read(buf.data(), buf.size())) > 0) { auto a0 = std::chrono::steady_clock::now(); lastSamples_ = a0; analyzer_.feed(buf.data(), n); auto a1 = std::chrono::steady_clock::now(); feedRx(buf.data(), n); auto a2 = std::chrono::steady_clock::now(); tSpec_ += std::chrono::duration<double>(a1 - a0).count(); tRx_ += std::chrono::duration<double>(a2 - a1).count(); nSamp_ += n; if (std::chrono::steady_clock::now() > next + std::chrono::milliseconds(250)) break; } // keep publishing spectrum/telemetry even when the receiver is behind
         next += std::chrono::milliseconds(33);
         watchRadio();
@@ -594,6 +612,7 @@ void Engine::analysisLoop() {
         }
         // keep reading while we wait so the ring never fills
         while (std::chrono::steady_clock::now() < next && !stopReq_) {
+            catchUp();
             size_t m = ring_.read(buf.data(), buf.size());
             if (m) { auto a0 = std::chrono::steady_clock::now(); lastSamples_ = a0; analyzer_.feed(buf.data(), m); auto a1 = std::chrono::steady_clock::now(); feedRx(buf.data(), m); auto a2 = std::chrono::steady_clock::now(); tSpec_ += std::chrono::duration<double>(a1 - a0).count(); tRx_ += std::chrono::duration<double>(a2 - a1).count(); nSamp_ += m; }
             else std::this_thread::sleep_for(std::chrono::milliseconds(2));

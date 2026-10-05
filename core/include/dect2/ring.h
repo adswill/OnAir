@@ -39,6 +39,23 @@ public:
         return m;
     }
 
+    // Consumer. When the consumer is too slow the ring fills and the producer can only write the few samples that happen to be free,
+    // which spreads tiny gaps over every frame and nothing decodes. Throwing the whole backlog away in one go leaves one clean gap and
+    // intact signal in between. Keeps the newest `keep` samples and returns how many were discarded (counted as dropped).
+    size_t skipToNewest(size_t keep) {
+        size_t r = r_.load(std::memory_order_relaxed);
+        size_t w = w_.load(std::memory_order_acquire);
+        size_t avail = w - r;
+        if (avail <= keep) return 0;
+        size_t skip = avail - keep;
+        r_.store(r + skip, std::memory_order_release);
+        dropped_.fetch_add(skip, std::memory_order_relaxed);
+        return skip;
+    }
+
+    // The policy built on skipToNewest(): when more than half of the ring is backlog, jump to the newest tenth of it.
+    size_t dropBacklog() { return available() > buf_.size() / 2 ? skipToNewest(buf_.size() / 16) : 0; }
+
     size_t available() const { return w_.load(std::memory_order_acquire) - r_.load(std::memory_order_acquire); }
     uint64_t dropped() const { return dropped_.load(std::memory_order_relaxed); }
     void clear() { r_.store(w_.load(std::memory_order_acquire), std::memory_order_release); }

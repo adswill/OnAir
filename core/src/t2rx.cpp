@@ -25,10 +25,34 @@ void T2Receiver::Impl::stageLoop() {
         {
             std::lock_guard<std::mutex> rl(stage.rsMu);
             StageClock sc(0);
-            resampler.process(item.second.data(), item.second.size(), res);
+            if (item.second.empty()) resampler.reset();   // a gap marker: the filter history from before the gap is of no use
+            else resampler.process(item.second.data(), item.second.size(), res);
         }
         std::lock_guard<std::mutex> lk(stage.mu);
         if (item.first == stage.gen) stage.out.emplace_back(item.first, std::move(res));
+    }
+}
+
+void T2Receiver::Impl::gapReset(size_t skippedIn) {
+    frames.clear(); frameCells.clear(); p2cells.clear(); prevCells.clear();
+    chValid = false;
+    haveRejected = false;
+    pendingGridOff = 0;
+    // The skipped samples still happened on the transmitter's timeline: move the sample index on by their length (at the native rate) so that
+    // the P1 cadence carries on, and look for the next P1 where the frame length puts it. Lost for good only if that guess is off by more
+    // than the search window, in which case the windowed search falls back to searching everything.
+    const double skippedNative = inRate > 0 ? (double)skippedIn * fn / inRate : 0.0;
+    base += (int64_t)buf.size() + (int64_t)std::llround(skippedNative);
+    buf.clear();
+    scanPos = base; scanFirst = true;
+    lastP1Abs = INT64_MIN / 2;
+    if (state == 2 && frameLen > 0 && prevPos >= 0) {
+        const double k = std::max(1.0, std::ceil(((double)base - prevPos) / frameLen));
+        prevPos += (k - 1.0) * frameLen;   // a virtual previous P1, one frame before the expected one
+        trackExpect = prevPos + frameLen;
+        trackMiss = 0; trackFullUntil = 0; trackKeep = base;
+    } else {
+        prevPos = -1; trackMiss = 3; trackExpect = 0; trackFullUntil = 0; trackKeep = -1;
     }
 }
 
@@ -212,6 +236,12 @@ void T2Receiver::feed(const cf32* x, size_t n) {
                 res = std::move(I.stage.out.front().second);
                 I.stage.out.pop_front();
             }
+            if (res.empty()) {   // a gap marker
+                size_t skipped = 0;
+                { std::lock_guard<std::mutex> lk(I.stage.mu); if (!I.stage.gaps.empty()) { skipped = I.stage.gaps.front(); I.stage.gaps.pop_front(); } }
+                I.gapReset(skipped);
+                continue;
+            }
             I.buf.insert(I.buf.end(), res.begin(), res.end());
             I.run();
         }
@@ -220,6 +250,23 @@ void T2Receiver::feed(const cf32* x, size_t n) {
     if (I.decimate) { StageClock sc(0); I.rsOut.clear(); I.resampler.process(x, n, I.rsOut); I.buf.insert(I.buf.end(), I.rsOut.begin(), I.rsOut.end()); }
     else I.buf.insert(I.buf.end(), x, x + n);
     I.run();
+}
+
+void T2Receiver::markGap(size_t skippedSamples) {
+    Impl& I = *p_;
+    if (!I.rateOk || I.fn <= 0) return;
+    if (I.pipelined && I.decimate) {   // goes through the resampler thread so that it lands between the right two chunks
+        {
+            std::unique_lock<std::mutex> lk(I.stage.mu);
+            I.stage.cvSpace.wait(lk, [&] { return I.stage.in.size() < Impl::kStageMaxIn || I.stage.stop; });
+            I.stage.in.emplace_back(I.stage.gen, std::vector<cf32>());
+            I.stage.gaps.push_back(skippedSamples);
+        }
+        I.stage.cvIn.notify_one();
+        return;
+    }
+    if (I.decimate) { std::lock_guard<std::mutex> rl(I.stage.rsMu); I.resampler.reset(); }
+    I.gapReset(skippedSamples);
 }
 
 void T2Receiver::setPipelined(bool on) {

@@ -78,26 +78,28 @@ struct T2Receiver::Impl {
         std::condition_variable cvIn, cvSpace;
         std::deque<std::pair<uint64_t, std::vector<cf32>>> in, out;
         uint64_t gen = 0;   // bumped by a reset: chunks of an earlier generation are dropped
+        std::deque<size_t> gaps;   // sizes of the gaps whose (empty) marker chunks are queued, in the same order
         bool stop = false;
     } stage;
     static constexpr size_t kStageMaxIn = 32;
     bool pipelined = false;
 
     void stageLoop();
+    void gapReset(size_t skippedIn);   // `skippedIn` input samples were thrown away: forget the frames in flight and look for the next P1 where the frame cadence puts it
     void stageStart() {
         { std::lock_guard<std::mutex> lk(stage.mu); stage.stop = false; }
         stage.th = std::thread([this] { stageLoop(); });
     }
     void stageStop() {
         if (!stage.th.joinable()) return;
-        { std::lock_guard<std::mutex> lk(stage.mu); stage.stop = true; stage.gen++; stage.in.clear(); stage.out.clear(); }
+        { std::lock_guard<std::mutex> lk(stage.mu); stage.stop = true; stage.gen++; stage.in.clear(); stage.out.clear(); stage.gaps.clear(); }
         stage.cvIn.notify_all();
         stage.cvSpace.notify_all();
         stage.th.join();
     }
     void stageFlush() {   // forget everything that is queued or being resampled
         std::lock_guard<std::mutex> lk(stage.mu);
-        stage.gen++; stage.in.clear(); stage.out.clear();
+        stage.gen++; stage.in.clear(); stage.out.clear(); stage.gaps.clear();
         stage.cvSpace.notify_all();
     }
     ~Impl() { stageStop(); }
@@ -117,6 +119,9 @@ struct T2Receiver::Impl {
 
     // ---- FFT
     std::vector<float> fr, fi;
+    std::vector<cd> cpP;       // processSymbol scratch: per-sample cyclic-prefix products
+    std::vector<double> cpE;
+    void derotate(int64_t w0, double ph0, double dph);   // fr/fi = the N samples at w0, rotated by exp(j (ph0 + dph n))
     void doFft(int log2n, bool inverse = false) { fftSplit(fr.data(), fi.data(), log2n, inverse); }
 
     // ---- P1 scanner

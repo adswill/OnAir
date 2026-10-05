@@ -20,21 +20,34 @@ void T2Receiver::Impl::processFrames() {
     }
 }
 
+// Copy N samples from `w0` into fr/fi, rotated by exp(j (ph0 + dph n)). A sin and cos per sample cost more than the FFT itself for a 16K or 32K
+// symbol, so a phasor is stepped instead and re-anchored exactly every 256 samples (its error stays far below float precision).
+void T2Receiver::Impl::derotate(int64_t w0, double ph0, double dph) {
+    const int N = fftN;
+    fr.assign(N, 0.f); fi.assign(N, 0.f);
+    const cd step(std::cos(dph), std::sin(dph));
+    for (int n0 = 0; n0 < N; n0 += 256) {
+        const double a = ph0 + dph * n0;
+        cd z(std::cos(a), std::sin(a));
+        const int n1 = std::min(N, n0 + 256);
+        for (int n = n0; n < n1; n++) {
+            const cf32 x = at(w0 + n);
+            const float cs = (float)z.real(), sn = (float)z.imag();
+            fr[n] = x.real() * cs - x.imag() * sn;
+            fi[n] = x.real() * sn + x.imag() * cs;
+            z *= step;
+        }
+    }
+}
+
 void T2Receiver::Impl::fftCells(int64_t s, std::vector<cf32>& cells, int K) {
     StageClock sc(4);
     const int N = fftN, G = guard;
     int back = std::min(G / 4, 32);
     int64_t w0 = s + G - back;
-    fr.assign(N, 0.f); fi.assign(N, 0.f);
     double dph = -kTwoPi * frameCfo / fn;
     double ph0 = dph * (double)(w0 - curAnchor);
-    for (int n = 0; n < N; n++) {
-        cf32 x = at(w0 + n);
-        double a = ph0 + dph * n;
-        float cs = (float)std::cos(a), sn = (float)std::sin(a);
-        fr[n] = x.real() * cs - x.imag() * sn;
-        fi[n] = x.real() * sn + x.imag() * cs;
-    }
+    derotate(w0, ph0, dph);
     doFft((int)std::lround(std::log2((double)N)));
     cells.resize(K);
     for (int kk = 0; kk < K; kk++) {
@@ -47,21 +60,31 @@ void T2Receiver::Impl::fftCells(int64_t s, std::vector<cf32>& cells, int K) {
 void T2Receiver::Impl::processSymbol(int64_t s, int k) {
     const int N = fftN, G = guard;
     if (k == 0) { frameCfo = cfoEst; curAnchor = s; }
-    // cyclic-prefix correlation
-    auto cpCorr = [&](int64_t st, double& e) {
-        cd c = 0;
-        e = 0;
-        for (int n = 0; n < G; n++) {
-            cf32 a = at(st + n), b = at(st + n + N);
-            c += cd(a.real(), a.imag()) * std::conj(cd(b.real(), b.imag()));
-            e += 0.5 * (std::norm(cd(a.real(), a.imag())) + std::norm(cd(b.real(), b.imag())));
-        }
-        return c;
-    };
+    // cyclic-prefix correlation, at the nominal position and at every offset in -D..D (for the timing error): the products are formed once
+    // and the windows of G samples are slid along them, instead of summing G samples for each of the 2D+1 offsets
     {
     StageClock scCp(6);
-    double e;
-    cd c = cpCorr(s, e);
+    const int D = std::min(8, std::max(2, G / 8));
+    const int Lw = G + 2 * D;
+    cpP.resize(Lw); cpE.resize(Lw);
+    for (int i = 0; i < Lw; i++) {
+        const cf32 a = at(s - D + i), b = at(s - D + i + N);
+        cpP[i] = cd(a.real(), a.imag()) * std::conj(cd(b.real(), b.imag()));
+        cpE[i] = 0.5 * ((double)std::norm(a) + (double)std::norm(b));
+    }
+    cd cw = 0;
+    double ew = 0;
+    for (int i = 0; i < G; i++) { cw += cpP[i]; ew += cpE[i]; }
+    double mags[17];
+    cd c = 0;
+    double e = 0;
+    for (int dd = -D; dd <= D; dd++) {
+        mags[dd + D] = ew > 0 ? std::abs(cw) / ew : 0;
+        if (dd == 0) { c = cw; e = ew; }
+        if (dd < D) { cw += cpP[dd + D + G] - cpP[dd + D]; ew += cpE[dd + D + G] - cpE[dd + D]; }
+    }
+    int best = D;
+    for (int i = 0; i <= 2 * D; i++) if (mags[i] > mags[best]) best = i;
     double rho = e > 0 ? std::abs(c) / e : 0;
     cpCorrAvg += 0.1 * (rho - cpCorrAvg);
     if (rho > 0.15) {
@@ -77,15 +100,6 @@ void T2Receiver::Impl::processSymbol(int64_t s, int k) {
         return;
     }
     // timing error from the CP correlation peak
-    int D = std::min(8, std::max(2, G / 8));
-    double mags[17];
-    int best = D;
-    for (int dd = -D; dd <= D; dd++) {
-        double ee;
-        cd cc = cpCorr(s + dd, ee);
-        mags[dd + D] = ee > 0 ? std::abs(cc) / ee : 0;
-        if (mags[dd + D] > mags[best]) best = dd + D;
-    }
     double off = best - D;
     if (best > 0 && best < 2 * D) {
         double a = mags[best - 1], b = mags[best], cc = mags[best + 1];
@@ -119,16 +133,9 @@ void T2Receiver::Impl::processSymbol(int64_t s, int k) {
     StageClock scDisp(7);
     int back = std::min(G / 4, 32);
     int64_t w0 = s + G - back;
-    fr.assign(N, 0.f); fi.assign(N, 0.f);
     double ph0 = -kTwoPi * cfoEst * (double)(w0 - s) / fn;
     double dph = -kTwoPi * cfoEst / fn;
-    for (int n = 0; n < N; n++) {
-        cf32 x = at(w0 + n);
-        double a = ph0 + dph * n;
-        float cs = (float)std::cos(a), sn = (float)std::sin(a);
-        fr[n] = x.real() * cs - x.imag() * sn;
-        fi[n] = x.real() * sn + x.imag() * cs;
-    }
+    derotate(w0, ph0, dph);
     doFft((int)std::lround(std::log2((double)N)));
     int K = carriers;
     std::vector<cf32> cells(K);

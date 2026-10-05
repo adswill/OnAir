@@ -1,6 +1,6 @@
 // Where does the receiver's error correction fall off a cliff? Frame error rate against SNR for one DVB-T2 mode, comparing the production
 // decoder (normalised min-sum, 50 iterations, then a retry pass) with a floating-point sum-product reference with many iterations.
-//   bench_threshold [mod 0..3] [rate 0..] [rotation 0|1] [blocks per point] [snr_from snr_to step]
+//   bench_threshold [mod 0..3] [rate 0..] [rotation 0|1] [blocks per point] [snr_from snr_to step] [short 0|1]
 #include "dect2/t2fec.h"
 #include <cmath>
 #include <cstdio>
@@ -46,7 +46,7 @@ static bool decodeBp(const LdpcCode& L, const std::vector<float>& llr, int maxIt
 
 int main(int argc, char** argv) {
     PlpFec f;
-    f.shortFrame = false;
+    f.shortFrame = argc > 8 && atoi(argv[8]) != 0;
     f.mod = argc > 1 ? atoi(argv[1]) : 2;
     f.rate = argc > 2 ? atoi(argv[2]) : 2;
     f.rotation = argc > 3 ? atoi(argv[3]) != 0 : true;
@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
     const BchCode& bch = bchFor(f);
     const auto& map = bitInterleaverMap(f);
     const int bps = d.bitsPerCell, cells = d.cellsPerBlock;
-    printf("mod %d rate %d rot %d: %d blocks per point\n   SNR   production   sum-product(100)\n", f.mod, f.rate, (int)f.rotation, blocks);
+    printf("%s mod %d rate %d rot %d: %d blocks per point\n   SNR   production   sum-product(100)\n", f.shortFrame ? "short" : "normal", f.mod, f.rate, (int)f.rotation, blocks);
     for (float snr = s0; snr <= s1 + 1e-4f; snr += ds) {
         std::atomic<int> fails{0}, failsBp{0}, next{0};
         auto worker = [&](unsigned seed) {
