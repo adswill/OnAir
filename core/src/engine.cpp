@@ -503,7 +503,9 @@ void Engine::watchRadio() {
 
 // The receiver cannot keep up (the ring is more than half backlog): jump to the newest samples in one go. One clean gap that the receiver
 // resynchronises after is far better than the radio thread dropping a few samples out of every chunk, which ruins every frame.
+// Only for live radios: a recording or the synthetic signal waits for a slow receiver instead (see the paced source), and must never lose samples.
 void Engine::catchUp() {
+    if (!src_ || !src_->realtimeHardware()) return;
     const size_t skipped = ring_.dropBacklog();
     if (!skipped) return;
     if (activeStd_.load() == 0) rx_.markGap(skipped);
