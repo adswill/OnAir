@@ -64,6 +64,8 @@ void loadPrefs(App& a) {
     if (d.has("udpPort")) a.out.port = (int)d.getI("udpPort", a.out.port);
     a.out.rtp = d.getB("udpRtp", false);
     a.out.dropNull = d.getB("dropNull", false);
+    a.updCheck = d.getB("updCheck", true); a.updAuto = d.getB("updAuto", true); a.updPre = d.getB("updPre", true);
+    a.updLast = d.getD("updLast", 0); a.updSkip = d.getS("updSkip", "");
     a.channels = d.getChannels();
 }
 
@@ -86,6 +88,8 @@ void savePrefs(const App& a) {
     d.setI("udpPort", a.out.port);
     d.setB("udpRtp", a.out.rtp);
     d.setB("dropNull", a.out.dropNull);
+    d.setB("updCheck", a.updCheck); d.setB("updAuto", a.updAuto); d.setB("updPre", a.updPre);
+    d.setD("updLast", a.updLast); d.setS("updSkip", a.updSkip);
     d.flush();
 }
 

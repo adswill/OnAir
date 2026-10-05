@@ -30,6 +30,10 @@ The DVB standard is detected automatically, and one switch at the top of the win
 
 **ISDB-T is experimental too.** It follows the ARIB STD-B31 specification (all three modes, all guard intervals, DQPSK, QPSK, 16QAM and 64QAM, the 13 segments in up to three layers including the one-segment layer, TMCC, the time and frequency interleavers, Viterbi and Reed-Solomon) and decodes simulated signals exactly, with carrier offset, clock error, noise and echoes, at 6 to 20 Msps. It has not been checked against a real broadcast yet, so details may need adjusting once a real recording is available. Channel names written in the Japanese character set are not converted yet. The channel scanner covers the 6 MHz raster of Japan and Brazil. To try it without a signal, `isdbtgen --out sample.cs8` (built with the tools) makes a recording that carries the built-in test programme: open it as an IQ recording, 10 Msps, CS8, with ISDB-T selected. A recording from a real transmitter would help a lot; please share one on Discord.
 
+## Updates
+
+OnAir checks GitHub for a newer version a few seconds after it starts (and then at most once a day), downloads the package for your system in the background, checks it against the SHA-256 that GitHub lists for the file, and puts it in place when you close the program. The button at the top right (`v0.1.3`) shows the state and has the settings: turn the check off, turn the automatic install off (you then get a button instead), or leave out pre-releases. On macOS it replaces `OnAir.app`, on Windows it runs the installer quietly (Windows asks for permission), on Linux it replaces the portable folder; a `.deb` install asks for your password through the system's installer. Only github.com is contacted, and nothing is sent but the usual request.
+
 ## Highlights
 
 - **Live player.** Picture, sound, subtitles, teletext, programme guide and multiple audio tracks, with automatic repair of short signal dropouts so weak reception stays watchable.

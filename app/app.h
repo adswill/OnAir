@@ -22,6 +22,7 @@
 #include "dect2/timecompat.h"
 #include "dect2/platform.h"
 #include "dect2/scanner.h"
+#include "dect2/updater.h"
 #include "dect2/gain.h"
 #include "dect2/channel.h"
 #include "dect2/dvbt.h"
@@ -230,6 +231,10 @@ struct App {
     ScanConfig scanCfg;
     int scanPreset = 0;
     bool scanWasRunning = false;
+    std::unique_ptr<Updater> upd;      // update check and installer
+    bool updCheck = true, updAuto = true, updPre = true, updStarted = false;
+    double updLast = 0;                // when the last check was made (seconds since 1970)
+    std::string updSkip;               // a version the user chose to skip
     DirectionFinder dir;
     int antKind = 0;          // 0 directional, 1 dipole / indoor, 2 omnidirectional
     bool dirAgcWas = false;
@@ -374,6 +379,9 @@ bool atsc3Quality(App& a, QualityReport& q);   // the signal-quality bar for ATS
 void atsc3ReceiverTab(App& a);
 void isdbtStatus(App& a);
 void isdbtReceiverTab(App& a);
+void updateTick(App& a);
+void updateButton(App& a);
+bool updateOnExit(App& a);
 void constellationsTab(App& a);
 void channelTab(App& a);
 void impulseTab(App& a);

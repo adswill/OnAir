@@ -150,6 +150,8 @@ void drawUI(App& a, ImVec2 disp) {
     a.tgMin[TgToolbar] = ImVec2(tb0.x - 4, tb0.y - 3); a.tgMax[TgToolbar] = ImVec2(tb0.x + ImGui::GetContentRegionAvail().x + 4, ImGui::GetCursorScreenPos().y);
     const ImVec2 sw0 = ImGui::GetCursorScreenPos();
     standardSwitch(a);
+    ImGui::SameLine(disp.x - 64 - 150 * gUi);
+    updateButton(a);
     ImGui::SameLine(disp.x - 64);
     if (ImGui::SmallButton("Tour")) { a.wizOpen = true; a.wizX = -1; a.wizStep = 0; a.wizStepT = ImGui::GetTime(); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Take the guided tour with Onny");
@@ -319,6 +321,7 @@ int main(int argc, char** argv) {
     while (!glfwWindowShouldClose(window)) {
         {
             glfwPollEvents();
+            updateTick(app);
             int w, h;
             glfwGetFramebufferSize(window, &w, &h);
             if (w == 0 || h == 0) { glfwWaitEventsTimeout(0.1); continue; }
@@ -394,6 +397,7 @@ int main(int argc, char** argv) {
         }
     }
     app.engine.stop();
+    updateOnExit(app);   // a downloaded update replaces this program once it has ended
     gfxBackend->shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
