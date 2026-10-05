@@ -11,7 +11,9 @@ static int fails = 0;
 static std::mt19937 rng(5);
 
 // occupied = 0.952 * bw, edges roll off over ~0.1 MHz; the capture filter rolls off near the edge of the capture
-static std::vector<float> spectrum(double fsMhz, double bw, double snrDb, bool neighbours, bool fades, double offsetMhz = 0) {
+// filterMhz: corner of a capture filter narrower than the channel (0 = none): the HackRF's 3.5 MHz setting measures as a 5th order
+// lowpass with its corner at 2.1 MHz, 16 dB down at 3 MHz. It shapes the signal; the floor behind it is the converter's.
+static std::vector<float> spectrum(double fsMhz, double bw, double snrDb, bool neighbours, bool fades, double offsetMhz = 0, double filterMhz = 0) {
     const int n = 4096;
     std::vector<float> d(n);
     std::normal_distribution<double> nd(0, 0.8);
@@ -25,15 +27,16 @@ static std::vector<float> spectrum(double fsMhz, double bw, double snrDb, bool n
         if (fades) ripple *= 1.0 - 0.9 * std::exp(-std::pow((f - 1.3) / 0.12, 2));   // a deep notch inside the band
         lin += level * sig * ripple;
         if (neighbours) lin += level * 0.9 * (flat(offsetMhz + bw + 0.4, occ / 2) + flat(offsetMhz - bw - 0.4, occ / 2));
+        if (filterMhz > 0) lin = std::pow(10.0, floorDb / 10.0) + (lin - std::pow(10.0, floorDb / 10.0)) / (1.0 + std::pow(f / filterMhz, 10));
         if (std::fabs(f) < 0.03) lin += level * 4;   // DC spike
         d[i] = (float)(10 * std::log10(lin) + nd(rng));
     }
     return d;
 }
 
-static BandwidthEstimate run(double fs, double bw, double snr, bool nb, bool fades, double off = 0) {
+static BandwidthEstimate run(double fs, double bw, double snr, bool nb, bool fades, double off = 0, double filt = 0) {
     BandwidthDetector det;
-    for (int k = 0; k < 15; k++) det.add(spectrum(fs, bw, snr, nb, fades, off), fs);
+    for (int k = 0; k < 15; k++) det.add(spectrum(fs, bw, snr, nb, fades, off, filt), fs);
     return det.estimate();
 }
 
@@ -49,6 +52,18 @@ int main() {
     }
     printf("%d cases, %d wrong\n", n, bad);
     fails += bad;
+    {   // through the HackRF's filter at the app's rates (8 Msps for channels up to 6 MHz, 10 above): a 7 MHz channel read as 6
+        int fn = 0, fbad = 0;
+        for (double fs : {8.0, 10.0}) for (double bw : bws) for (double snr : {20.0, 30.0, 36.0}) for (int fd = 0; fd < 2; fd++) for (double off : {0.0, 0.3}) {
+            if (bw == 8 && fs < 9) continue;   // no room at 8 Msps
+            if (bw == 8 && snr < 25) continue;   // the edges of an 8 MHz channel are 25 dB down there, under the floor: nothing to find
+            BandwidthEstimate e = run(fs, bw, snr, false, fd, off, 2.1);
+            fn++;
+            if (!e.valid || e.bwMhz != bw) { printf("FAIL: filtered fs %.0f bw %.0f snr %.0f fade %d off %.1f -> valid %d occ %.2f bw %.1f\n", fs, bw, snr, fd, off, e.valid, e.occupiedMhz, e.bwMhz); fbad++; }
+        }
+        printf("%d cases through the capture filter, %d wrong\n", fn, fbad);
+        fails += fbad;
+    }
     {   // noise only: nothing to report
         BandwidthDetector det;
         std::normal_distribution<double> nd(-90, 0.8);

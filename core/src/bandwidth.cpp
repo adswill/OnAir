@@ -67,6 +67,16 @@ BandwidthEstimate BandwidthDetector::estimate() const {
     for (size_t i = mid; i + 1 < n; i++) { if (db[i] >= thr) { hi = i; below = 0; } else if (++below >= gap) break; }
     below = 0;
     for (size_t i = mid; i > 0; i--) { if (db[i] >= thr) { lo = i; below = 0; } else if (++below >= gap) break; }
+    // A capture filter narrower than the channel (the HackRF's, at its default width) rolls the plateau off towards the edges, so
+    // the half-height point lies inside the channel: a 7 MHz channel read as 6 MHz, and at 6 MHz the narrower capture kept it
+    // there. The edge of the OFDM spectrum is still a sharp step down to the floor. Walk on outwards while the level falls by less
+    // than half (in dB above the floor) over 0.15 MHz: a filter skirt does, that step does not, and a flat top stops at once.
+    {
+        const int r = std::max(1, (int)std::lround(0.15 / binMhz));
+        auto inBand = [&](size_t i, size_t ref) { return std::fabs(freq(i)) < 0.96 * nyq && db[i] > F + 3.0 && db[i] >= F + 0.5 * (db[ref] - F); };
+        while (hi + 1 < n && inBand(hi + 1, hi + 1 - r)) hi++;
+        while (lo > 0 && lo - 1 + r < n && inBand(lo - 1, lo - 1 + r)) lo--;
+    }
     e.occupiedMhz = freq(hi) - freq(lo);
     e.bwMhz = snapBandwidth(e.occupiedMhz);
     e.valid = e.occupiedMhz > 1.0;
