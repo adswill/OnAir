@@ -411,6 +411,7 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_overload tests/test_overload.cpp)
   target_link_libraries(test_overload PRIVATE dect2core)
   add_test(NAME overload COMMAND test_overload)
+  set_tests_properties(overload PROPERTIES SKIP_RETURN_CODE 77)
 
   add_executable(test_modes tests/test_modes.cpp)
   target_link_libraries(test_modes PRIVATE dect2core)

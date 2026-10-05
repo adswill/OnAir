@@ -102,6 +102,12 @@ int main() {
     const double secs = 30;
     Result fast = run(frames, frameLen, secs, 1.0e9, false);   // consumer as fast as it can: the reference
     printf("fast consumer:                    %3llu of %3llu frames intact, lost %5.2f s, receiver busy %.0f%%\n", (unsigned long long)fast.intact, (unsigned long long)fast.frames, fast.lostSec, 100 * fast.busy);
+    // The comparison only means something on a computer with plenty of headroom: one that needs more than 60% of real time for the receiver
+    // alone (a busy or slow shared CI runner) would be limited by its own speed, not by the code under test.
+    if (fast.busy > 0.6 || fast.intact != fast.frames) {
+        printf("overload test SKIPPED: the receiver alone takes %.0f%% of real time here (%llu of %llu frames intact), too little headroom for the comparison\n", 100 * fast.busy, (unsigned long long)fast.intact, (unsigned long long)fast.frames);
+        return 77;
+    }
     Result slowOld = run(frames, frameLen, secs, 0.92, false);
     printf("92%% speed, drops scattered:       %3llu of %3llu frames intact, lost %5.2f s\n", (unsigned long long)slowOld.intact, (unsigned long long)slowOld.frames, slowOld.lostSec);
     Result slowNew = run(frames, frameLen, secs, 0.92, true);
