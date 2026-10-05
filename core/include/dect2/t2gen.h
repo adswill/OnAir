@@ -24,6 +24,13 @@ struct TxParams {
     int dataSymbols = 0; // symbols per frame after P1 (incl. P2); 0 = auto (~60 ms)
     int l1Mod = 1;       // L1-post modulation: 0 BPSK 1 QPSK 2 16QAM 3 64QAM
     bool l1Scrambled = true;
+    // Carry a real transport stream in PLP 0 (baseband framing, BCH, LDPC, bit/cell/time interleaving, mapping) instead of random cells.
+    bool payload = false;
+    bool plpShort = false;   // 16200-bit FEC frames (T2-Lite uses these, with the extra code rates 1/3 and 2/5)
+    int plpMod = 2;          // 0 QPSK 1 16QAM 2 64QAM 3 256QAM
+    int plpCod = 2;          // 0..7 = 1/2 3/5 2/3 3/4 4/5 5/6 1/3 2/5
+    bool plpRot = true;      // rotated constellation
+    int plpTi = 3;           // time-interleaver blocks per frame (0 = none)
     int cellId = 0x1001, networkId = 0x3085, systemId = 0x8001;
     uint32_t seed = 1;
 };
@@ -43,6 +50,9 @@ public:
     int symbolsPerFrame() const { return symbols_; }
     size_t frameLength() const { return (size_t)kP1Len + (size_t)symbols_ * (n_ + g_); }
     void nextFrame(std::vector<cf32>& out); // one full frame: P1 + symbols
+    // With payload: the baseband frames (BBHEADER + data field + padding, before scrambling) sent in the last frame, one per FEC block.
+    const std::vector<std::vector<uint8_t>>& lastBbFrames() const { return lastBb_; }
+    int plpBlocks() const { return plpBlocks_; }
 
     struct Impl;
 
@@ -53,6 +63,8 @@ private:
     L1Pre pre_;
     L1Post post_;
     int frameNo_ = 0;
+    int plpBlocks_ = 0;
+    std::vector<std::vector<uint8_t>> lastBb_;
     int n_, g_, k_, symbols_, nP2_;
 };
 

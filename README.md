@@ -17,7 +17,7 @@ It is built for people who want a receiver that is both easy to use and honest a
 
 | Standard | Where it is used | Content |
 |---|---|---|
-| **DVB-T2** | Europe, Middle East, Africa, Asia, Australia | Digital TV |
+| **DVB-T2** (including T2-Lite) | Europe, Middle East, Africa, Asia, Australia | Digital TV |
 | **DVB-T** | Same regions, older networks | Digital TV |
 | **ATSC 1.0** | North America, South Korea | Digital TV |
 | **ATSC 3.0** (NextGen TV), *experimental* | North America, South Korea | Digital TV |
@@ -25,6 +25,8 @@ It is built for people who want a receiver that is both easy to use and honest a
 | **DAB / DAB+** | Europe, Australia and more | Digital radio |
 
 The DVB standard is detected automatically, and one switch at the top of the window selects the family you want (DVB, ATSC, ATSC 3.0, ISDB-T or DAB).
+
+**T2-Lite** (the 1/3 and 2/5 code rates, short FEC frames, 1.7 MHz channels) is decoded like any other DVB-T2 signal. It is checked end to end on simulated signals from QPSK to 256-QAM, and the error correction sits where theory says it should; it has not been tried on a real T2-Lite broadcast. A T2-Lite signal that shares a channel with a normal T2 one (in its future-extension frames) is not decoded: the normal T2 part keeps working.
 
 **ATSC 3.0 is experimental.** The whole receiver chain is built from the published specifications and works on simulated signals (carrier offset, noise and echoes included): synchronisation, error correction, link layer, ROUTE and playback of HEVC video with AAC audio. It has not yet been checked against a real broadcast, so details such as the scrambler or interleaver may need fixing once a real recording is available. Services that use MMTP or AC-4 audio are not supported yet, and it needs a radio that can sample at 6.5 Msps or faster. If you have an ATSC 3.0 recording or can try it on air, please tell us on Discord.
 

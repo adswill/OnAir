@@ -404,6 +404,10 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_teletext PRIVATE dect2core)
   add_test(NAME teletext COMMAND test_teletext)
 
+  add_executable(test_t2_payload tests/test_t2_payload.cpp)
+  target_link_libraries(test_t2_payload PRIVATE dect2core)
+  add_test(NAME t2_payload COMMAND test_t2_payload)
+
   add_executable(test_overload tests/test_overload.cpp)
   target_link_libraries(test_overload PRIVATE dect2core)
   add_test(NAME overload COMMAND test_overload)

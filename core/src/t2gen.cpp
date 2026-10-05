@@ -1,5 +1,6 @@
 #include "dect2/t2gen.h"
 #include "dect2/t2interleave.h"
+#include "dect2/t2fec.h"
 #include "dect2/dsp_compat.h"
 #include <cmath>
 #include <cstring>
@@ -103,6 +104,28 @@ T2Generator::T2Generator(const TxParams& p) : i_(new Impl), p_(p) {
     post_.plps[0].numBlocksMax = 100; post_.plps[0].groupId = 1; post_.plps[0].timeIlLength = 3; post_.plps[0].plpMode = 1;
     post_.dyn.resize(1);
     post_.dyn[0].numBlocks = 100;
+    pre_.lite = (p.s1 == 3 || p.s1 == 4) ? 1 : 0;
+    if (p.payload) {
+        L1PlpConf& c = post_.plps[0];
+        c.mod = p.plpMod; c.cod = p.plpCod; c.rotation = p.plpRot ? 1 : 0; c.fecType = p.plpShort ? 0 : 1; c.timeIlLength = p.plpTi;
+        PlpFec f; f.shortFrame = p.plpShort; f.rate = p.plpCod; f.mod = p.plpMod; f.rotation = p.plpRot;
+        const FecDims d = fecDims(f);
+        // how many FEC blocks fit: the P2 cells left after L1, plus the data cells of every data symbol
+        post_.frameIdx = 0;
+        L1Pre pre = pre_;
+        const int nPost = (int)encodeL1Post(pre, post_, nP2_, false).size();
+        const int nPre = (int)encodeL1Pre(pre).size();
+        long cap = (long)nP2_ * pm_->p2DataCells() - nPre - nPost;
+        std::vector<uint8_t> types;
+        for (int s = nP2_; s < symbols_; s++) {
+            pm_->symbolTypes(s, symbols_, types);
+            for (int k = 0; k < k_; k++) cap += types[k] == kCellData;
+        }
+        plpBlocks_ = d.ok ? (int)(cap / d.cellsPerBlock) : 0;
+        c.numBlocksMax = plpBlocks_;
+        post_.dyn[0].numBlocks = plpBlocks_;
+        post_.dyn[0].start = 0;
+    }
 }
 
 T2Generator::~T2Generator() {
@@ -129,7 +152,52 @@ void T2Generator::nextFrame(std::vector<cf32>& out) {
     std::vector<cf32> stream;
     stream.insert(stream.end(), preCells.begin(), preCells.end());
     stream.insert(stream.end(), postCells.begin(), postCells.end());
+    // PLP payload cells (only with p_.payload): they follow L1 in the P2 symbols and carry on through the data symbols
+    std::vector<cf32> plp;
+    size_t plpUsed = 0;
+    if (p_.payload && plpBlocks_ > 0) {
+        PlpFec f; f.shortFrame = p_.plpShort; f.rate = p_.plpCod; f.mod = p_.plpMod; f.rotation = p_.plpRot;
+        const FecDims d = fecDims(f);
+        const LdpcCode& ldpc = ldpcFor(f);
+        const BchCode& bch = bchFor(f);
+        const auto& map = bitInterleaverMap(f);
+        const uint8_t* rnd = bbRandomiser();
+        lastBb_.assign(plpBlocks_, {});
+        std::vector<cf32> cells;
+        for (int b = 0; b < plpBlocks_; b++) {
+            // a transport stream of 188-byte packets in normal mode: each unit is the CRC-8 of the previous packet, then 187 bytes
+            const int npk = (d.kBch - 80) / 1504;
+            std::vector<uint8_t> bits(d.kBch, 0);
+            BbHeader h;
+            h.tsGs = 3; h.sisMis = 1; h.ccmAcm = 1; h.upl = 1504; h.dfl = npk * 1504; h.sync = 0x47; h.syncd = 0;
+            buildBbHeader(h, bits.data());
+            uint8_t prevCrc = 0;
+            for (int k = 0; k < npk; k++) {
+                uint8_t pay[187];
+                for (int j = 0; j < 187; j++) pay[j] = (uint8_t)(I.rng() >> 11);
+                size_t o = 80 + (size_t)k * 1504;
+                auto putByte = [&](size_t at, uint8_t v) { for (int q = 0; q < 8; q++) bits[at + q] = (v >> (7 - q)) & 1; };
+                putByte(o, prevCrc);
+                for (int j = 0; j < 187; j++) putByte(o + 8 + (size_t)j * 8, pay[j]);
+                // CRC-8 (x^8+x^7+x^6+x^4+x^2+1) of the 187 payload bytes
+                unsigned crc = 0;
+                for (int j = 0; j < 187; j++) for (int q = 7; q >= 0; q--) { unsigned fb = ((crc >> 7) & 1) ^ ((pay[j] >> q) & 1); crc = (crc << 1) & 0xff; if (fb) crc ^= 0xD5; }
+                prevCrc = (uint8_t)crc;
+            }
+            lastBb_[b] = bits;
+            for (int i = 0; i < d.kBch; i++) bits[i] ^= rnd[i];
+            bch.encode(bits, d.kBch);
+            ldpc.encode(bits);
+            std::vector<uint16_t> lab(d.cellsPerBlock);
+            for (int c = 0; c < d.cellsPerBlock; c++) { unsigned l = 0; for (int k = 0; k < d.bitsPerCell; k++) l = (l << 1) | bits[map[(size_t)c * d.bitsPerCell + k]]; lab[c] = (uint16_t)l; }
+            std::vector<cf32> cl;
+            qamMapBlock(f, lab, cl);
+            cells.insert(cells.end(), cl.begin(), cl.end());
+        }
+        cellInterleave(f, plpBlocks_, p_.plpTi, cells, plp);
+    }
     while ((int)stream.size() < nP2_ * cP2) {
+        if (plpUsed < plp.size()) { stream.push_back(plp[plpUsed++]); continue; }
         uint32_t r = I.rng();
         stream.push_back(cf32((r & 1) ? 0.70710678f : -0.70710678f, (r & 2) ? 0.70710678f : -0.70710678f));
     }
@@ -145,7 +213,20 @@ void T2Generator::nextFrame(std::vector<cf32>& out) {
     frameNo_++;
     for (int s = 0; s < symbols_; s++) {
         pm_->symbolTypes(s, symbols_, types);
-        int p2idx = 0;
+        int p2idx = 0, dIdx = 0;
+        // data symbol: the cells in logical order, spread over the data carriers by the frequency interleaver
+        std::vector<cf32> logical, carrierCell;
+        std::vector<int> Hd;
+        if (s >= nP2_) {
+            int cD = 0;
+            for (int k = 0; k < k_; k++) cD += types[k] == kCellData;
+            logical.resize(cD);
+            for (int j = 0; j < cD; j++) {
+                if (plpUsed < plp.size()) logical[j] = plp[plpUsed++];
+                else { uint32_t r = I.rng(); logical[j] = cf32((r & 1) ? a : -a, (r & 2) ? a : -a); }
+            }
+            freqInterleaverSeq(p_.s2field1, cD, (s & 1) != 0, Hd);
+        }
         std::fill(I.re.begin(), I.re.end(), 0.f);
         std::fill(I.im.begin(), I.im.end(), 0.f);
         for (int k = 0; k < k_; k++) {
@@ -158,9 +239,9 @@ void T2Generator::nextFrame(std::vector<cf32>& out) {
                     I.re[bin] = v.real();
                     I.im[bin] = v.imag();
                 } else {
-                    uint32_t r = I.rng();
-                    I.re[bin] = (r & 1) ? a : -a;
-                    I.im[bin] = (r & 2) ? a : -a;
+                    const cf32 v = logical[Hd[dIdx++]];
+                    I.re[bin] = v.real();
+                    I.im[bin] = v.imag();
                 }
             } break;
             case kCellP2Papr:
