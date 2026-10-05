@@ -3,6 +3,7 @@
 #include "dect2/fftutil.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <atomic>
 #include <chrono>
@@ -84,8 +85,8 @@ static bool estimateMotion(const VideoFrame& A, const VideoFrame& B, GapMotion& 
     };
     auto sadAt = [&](const Plane& P, const Plane& Q, int bsz, int bx, int by, int dx, int dy) {
         const int y0 = by * bsz + dy, x0 = bx * bsz + dx;
-        if (y0 < 0 || x0 < 0 || y0 + bsz > Q.h || x0 + bsz > Q.w) return (long)1 << 40;
-        long sad = 0;
+        if (y0 < 0 || x0 < 0 || y0 + bsz > Q.h || x0 + bsz > Q.w) return (int64_t)1 << 40;
+        int64_t sad = 0;
         for (int j = 0; j < bsz; j++) { const uint8_t* a = &P.v[(size_t)(by * bsz + j) * P.w + (size_t)bx * bsz]; const uint8_t* b = &Q.v[(size_t)(y0 + j) * Q.w + (size_t)x0]; for (int i = 0; i < bsz; i++) sad += std::abs((int)a[i] - (int)b[i]); }
         return sad;
     };
@@ -96,7 +97,7 @@ static bool estimateMotion(const VideoFrame& A, const VideoFrame& B, GapMotion& 
             for (int bx = 0; bx < bw; bx++) {
                 const auto c1 = search(P8, Q8, 4, bx, by, 0, 0, 20, 1);                 // eighth-resolution units
                 auto f = search(P4, Q4, 8, bx, by, c1.first * 2, c1.second * 2, 2, 2);   // quarter-resolution units
-                const long s0 = sadAt(P4, Q4, 8, bx, by, 0, 0), s1 = sadAt(P4, Q4, 8, bx, by, f.first, f.second);
+                const int64_t s0 = sadAt(P4, Q4, 8, bx, by, 0, 0), s1 = sadAt(P4, Q4, 8, bx, by, f.first, f.second);
                 if (s1 * 10 > s0 * 7) f = {0, 0};   // no convincing match: the block stays put
                 vx[(size_t)by * bw + bx] = (int8_t)std::max(-127, std::min(127, f.first)); vy[(size_t)by * bw + bx] = (int8_t)std::max(-127, std::min(127, f.second));
             }
@@ -114,7 +115,7 @@ static bool estimateMotion(const VideoFrame& A, const VideoFrame& B, GapMotion& 
                     const int mx = ax[4], my = ay[4];
                     const int ox = vx[(size_t)by * bw + bx], oy = vy[(size_t)by * bw + bx];
                     if (mx == ox && my == oy) continue;
-                    const long so = sadAt(P4, Q4, 8, bx, by, ox, oy), sm = sadAt(P4, Q4, 8, bx, by, mx, my);
+                    const int64_t so = sadAt(P4, Q4, 8, bx, by, ox, oy), sm = sadAt(P4, Q4, 8, bx, by, mx, my);
                     if (sm <= so + 64 + so / 20) { nx[(size_t)by * bw + bx] = (int8_t)mx; ny[(size_t)by * bw + bx] = (int8_t)my; }
                 }
             vx = nx; vy = ny;

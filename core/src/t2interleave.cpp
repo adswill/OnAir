@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <map>
 #include <mutex>
 #include "dect2/t2interleave.h"
@@ -69,8 +70,8 @@ static void freqInterleaverSeqCompute(int fftCode, int nCells, bool oddSymbol, s
 // The sequence only depends on (FFT size, active cells, symbol parity): compute it once.
 void freqInterleaverSeq(int fftCode, int nCells, bool oddSymbol, std::vector<int>& H) {
     static std::mutex mu;
-    static std::map<long, std::vector<int>> cache;
-    const long key = ((long)fftCode << 40) | ((long)nCells << 1) | (oddSymbol ? 1 : 0);
+    static std::map<int64_t, std::vector<int>> cache;
+    const int64_t key = ((int64_t)fftCode << 40) | ((int64_t)nCells << 1) | (oddSymbol ? 1 : 0);
     std::lock_guard<std::mutex> lk(mu);
     auto it = cache.find(key);
     if (it == cache.end()) {
