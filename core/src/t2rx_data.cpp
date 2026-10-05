@@ -77,15 +77,23 @@ void T2Receiver::Impl::runDataStage() {
     for (int l = 0; l < L; l++) if ((int)frameCells[l].size() != kMax) return;
     PilotConfig pc;
     pc.fftCode = fftCode; pc.ext = l1pre.bwtExt != 0; pc.pp = l1pre.pilotPattern; pc.tr = (l1pre.papr & 2) != 0; pc.giIdx = giIdx;
-    PilotMap pm(pc);
+    {
+        const PilotConfig& c0 = dsCache.pc;
+        if (!dsCache.pm || dsCache.L != L || c0.fftCode != pc.fftCode || c0.ext != pc.ext || c0.pp != pc.pp || c0.tr != pc.tr || c0.giIdx != pc.giIdx) {
+            dsCache.pm.reset(new PilotMap(pc));
+            dsCache.pc = pc; dsCache.L = L;
+            dsCache.types.assign(L, {});
+            if (dsCache.pm->valid()) for (int l = 0; l < L; l++) dsCache.pm->symbolTypes(l, L, dsCache.types[l]);
+        }
+    }
+    const PilotMap& pm = *dsCache.pm;
     if (!pm.valid()) { dataValid = false; return; }
     const int K = pm.carriers(), off = (kMax - K) / 2, dx = pm.dx(), dy = pm.dy();
     const int M = (K - 1) / dx + 1;
     struct Obs { int l; cf32 v; uint8_t type; };
     std::vector<std::vector<Obs>> obs(M);
-    std::vector<std::vector<uint8_t>> types(L);
+    const std::vector<std::vector<uint8_t>>& types = dsCache.types;
     for (int l = 0; l < L; l++) {
-        pm.symbolTypes(l, L, types[l]);
         for (int n = 0; n < M; n++) {
             int k = dx * n;
             uint8_t t = types[l][k];
@@ -136,19 +144,22 @@ void T2Receiver::Impl::runDataStage() {
         double cumA = 0, cumB = 0;
         std::vector<int> cont;
         std::vector<cd> prod;
-        std::vector<cf32> prevRaw = frameCells[nP2]; // raw (uncorrected) cells of the previous symbol
+        // raw (uncorrected) cells of the previous symbol, kept at its continual-pilot carriers only (the only ones that are compared)
+        std::vector<cf32> prevRaw(K), curRaw(K);
+        for (int kk = 0; kk < K; kk++) if (types[nP2][kk] == kCellContinual) prevRaw[kk] = frameCells[nP2][off + kk];
         for (int l = nP2 + 1; l < L; l++) {
-            std::vector<cf32> curRaw = frameCells[l];
             cont.clear(); prod.clear();
             for (int kk = 0; kk < K; kk++) {
-                if (types[l][kk] != kCellContinual || types[l - 1][kk] != kCellContinual) continue;
+                if (types[l][kk] != kCellContinual) continue;
+                curRaw[kk] = frameCells[l][off + kk];
+                if (types[l - 1][kk] != kCellContinual) continue;
                 cf32 za = frameCells[l][off + kk] / pm.pilot(l, kk, kCellContinual).real();
-                cf32 zb = prevRaw[off + kk] / pm.pilot(l - 1, kk, kCellContinual).real();
+                cf32 zb = prevRaw[kk] / pm.pilot(l - 1, kk, kCellContinual).real();
                 cd pr = cd(za.real(), za.imag()) * std::conj(cd(zb.real(), zb.imag()));
                 cont.push_back(kk);
                 prod.push_back(pr);
             }
-            prevRaw = curRaw;
+            std::swap(prevRaw, curRaw);
             if (cont.size() < 4) continue;
             // slope from phase differences of neighbouring pilots
             cd sl = 0;
@@ -166,9 +177,14 @@ void T2Receiver::Impl::runDataStage() {
             cumA += alpha;
             cumB += beta;
             if (getenv("DECT2_DEBUG") && l < nP2 + 14) fprintf(stderr, "  [dbg] sym %d: alpha %+.3f beta*10k %+.3f (cum %+.2f, %+.2f) pilots %zu\n", l, alpha, beta * 1e4, cumA, cumB * 1e4, cont.size());
-            for (int kk = 0; kk < K; kk++) {
-                double ph = -(cumA + cumB * (kk - (K - 1) / 2.0));
-                frameCells[l][off + kk] *= cf32((float)std::cos(ph), (float)std::sin(ph));
+            // rotate by exp(-j (cumA + cumB (kk - (K-1)/2))): a phasor stepped along the carriers, re-anchored every 256 (a sin and cos per cell is slow)
+            const cd stepR(std::cos(-cumB), std::sin(-cumB));
+            cf32* row = &frameCells[l][off];
+            for (int k0 = 0; k0 < K; k0 += 256) {
+                const double ph = -(cumA + cumB * (k0 - (K - 1) / 2.0));
+                cd z(std::cos(ph), std::sin(ph));
+                const int k1 = std::min(K, k0 + 256);
+                for (int kk = k0; kk < k1; kk++) { row[kk] *= cf32((float)z.real(), (float)z.imag()); z *= stepR; }
             }
         }
         if (getenv("DECT2_DEBUG")) {
@@ -323,15 +339,28 @@ void T2Receiver::Impl::runDataStage() {
             fprintf(stderr, "\n");
         }
     }
+    // The grid is linear in the symbol index (a + b (l - lbar) per grid point) and the interpolator is linear, so it is run twice per
+    // frame, on the grid at the middle data symbol and on the slopes, instead of once per symbol: H(l) = H(lc) + (l - lc) * Hslope.
+    const int lc = firstData + (L - firstData) / 2;
+    std::vector<cf32> Hmid, Hslope;
+    {
+        const double tau0 = (double)back + (chDelayKnown ? chDelayCentre : G / 2.0);
+        const double cut = chDelayKnown ? std::min(1.0, chDelayHalf / ((double)N / (2.0 * dx))) : 1.0;
+        for (int n = 0; n < M; n++) grid[n] = fa[n] + fb[n] * ((float)lc - flbar[n]);
+        interp.run(grid, dx, K, N, tau0, Hmid, cut);
+        interp.run(fb, dx, K, N, tau0, Hslope, cut);
+    }
+    // the equalised cells are only kept for the display, which thins them to about 6000: store every step-th one
+    size_t totalData = 0;
+    for (int l = firstData; l < L; l++) for (int kk = 0; kk < K; kk++) totalData += types[l][kk] == kCellData;
+    const size_t dispStep = std::max<size_t>(1, totalData / 6000);
+    size_t dispIdx = 0;
+    H.resize(K);
     for (int l = firstData; l < L; l++) {
-        for (int n = 0; n < M; n++) grid[n] = fa[n] + fb[n] * ((float)l - flbar[n]);
-        {
-            double tau0 = (double)back + (chDelayKnown ? chDelayCentre : G / 2.0);
-            double cut = chDelayKnown ? std::min(1.0, chDelayHalf / ((double)N / (2.0 * dx))) : 1.0;
-            interp.run(grid, dx, K, N, tau0, H, cut);
-        }
+        const float dl = (float)(l - lc);
+        for (int kk = 0; kk < K; kk++) H[kk] = Hmid[kk] + dl * Hslope[kk];
         for (int kk = 0; kk < K; kk++)
-            if (types[l][kk] == kCellData) all.push_back(frameCells[l][off + kk] / H[kk]);
+            if (types[l][kk] == kCellData) { if (dispIdx++ % dispStep == 0) all.push_back(frameCells[l][off + kk] / H[kk]); }
         if (wantPlp) {
             int cD = 0;
             for (int kk = 0; kk < K; kk++) cD += types[l][kk] == kCellData;
@@ -355,8 +384,7 @@ void T2Receiver::Impl::runDataStage() {
     }
     if (wantPlp) submitPlp(dstream, dn0, sigma2);
     eqData.clear();
-    size_t step = std::max<size_t>(1, all.size() / 6000);
-    for (size_t i = 0; i < all.size(); i += step) eqData.push_back(all[i]);
+    eqData = std::move(all);
     dataValid = true;
     dataDx = dx; dataDy = dy; dataPp = pc.pp;
     dataFrames++;

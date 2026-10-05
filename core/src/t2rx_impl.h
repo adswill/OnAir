@@ -22,6 +22,7 @@
 #include <functional>
 #include <utility>
 #include <chrono>
+#include <memory>
 #include <condition_variable>
 #include <thread>
 #include <string>
@@ -169,6 +170,12 @@ struct T2Receiver::Impl {
     int kMax = 0;
     std::vector<std::vector<cf32>> p2cells;
     GridInterpolator interp;
+    // data stage: the pilot map and the cell types of every symbol only change with the signal configuration, not from frame to frame
+    struct DsCache {
+        PilotConfig pc; int L = 0;
+        std::unique_ptr<PilotMap> pm;
+        std::vector<std::vector<uint8_t>> types;
+    } dsCache;
     bool chValid = false, extDetected = false;
     std::vector<cf32> chH;
     int chK = 0, irMin = 0;

@@ -32,5 +32,5 @@ int main(int argc, char** argv) {
     stopHogs = true;
     for (auto& h : hogs) h.join();
     size_t tot = 0;
-    for (auto& l : e.logSnapshot(tot)) if (l.find("CPU load") != std::string::npos) printf("%s\n", l.c_str());
+    for (auto& l : e.logSnapshot(tot)) if (l.find("CPU load") != std::string::npos || l.find("keep up") != std::string::npos) printf("%s\n", l.c_str());
 }
