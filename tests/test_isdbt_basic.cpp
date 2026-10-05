@@ -165,6 +165,22 @@ int main() {
             }
         CHECK(bad == 0, "64QAM is a Gray mapping");
     }
+    // the fast demapper agrees with the comparison against every point
+    {
+        std::mt19937 rng(9);
+        std::normal_distribution<float> nd(0.f, 0.6f);
+        double worst = 0;
+        for (int mod : {kQpsk, k16Qam, k64Qam}) {
+            for (int k = 0; k < 20000; k++) {
+                const cf32 z(nd(rng), nd(rng));
+                float a[6], b[6];
+                demapCell(mod, z, 0.05f, a);
+                demapCellGeneric(mod, z, 0.05f, b);
+                for (int i = 0; i < bitsPerCell(mod); i++) worst = std::max(worst, (double)std::fabs(a[i] - b[i]) / (1.0 + std::fabs(b[i])));
+            }
+        }
+        CHECK(worst < 1e-3, "fast demapper differs from the reference by %g", worst);
+    }
     printf(fails ? "isdbt basic: FAILED\n" : "isdbt basic: ok\n");
     return fails ? 1 : 0;
 }

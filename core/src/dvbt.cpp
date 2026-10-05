@@ -552,18 +552,28 @@ void Viterbi::decode(const std::vector<int8_t>& soft, std::vector<uint8_t>& out,
     if (metric) { long s = 0; for (long m : metrics) s += m; *metric = s; }
 }
 
+namespace {
+// products with alpha^i for every byte, so that a syndrome is one table lookup and one exclusive or per byte
+struct RsMulTab {
+    uint8_t t[16][256];
+    RsMulTab() { const Gf& f = gf(); for (int i = 0; i < 16; i++) for (int v = 0; v < 256; v++) t[i][v] = f.mul((uint8_t)v, f.exp[i]); }
+};
+const RsMulTab& rsMulTab() { static RsMulTab m; return m; }
+inline bool rsSyndromes(const uint8_t* r, uint8_t* S) {
+    const RsMulTab& m = rsMulTab();
+    uint8_t s[16] = {};
+    for (int j = 0; j < 204; j++) { const uint8_t b = r[j]; for (int i = 0; i < 16; i++) s[i] = m.t[i][s[i]] ^ b; }
+    uint8_t any = 0;
+    for (int i = 0; i < 16; i++) { S[i] = s[i]; any |= s[i]; }
+    return any != 0;
+}
+}
+
 int rsDecode(uint8_t* r) {
     const Gf& f = gf();
     // syndromes S_i = r(alpha^i), r as polynomial with byte 0 the highest degree (203)
     uint8_t S[16];
-    bool any = false;
-    for (int i = 0; i < 16; i++) {
-        uint8_t s = 0;
-        for (int j = 0; j < 204; j++) s = f.mul(s, f.exp[i]) ^ r[j];
-        S[i] = s;
-        any |= s != 0;
-    }
-    if (!any) return 0;
+    if (!rsSyndromes(r, S)) return 0;
     // Berlekamp-Massey
     uint8_t C[17] = {1}, B[17] = {1};
     int L = 0, m = 1;
@@ -603,7 +613,8 @@ int rsDecode(uint8_t* r) {
         r[203 - p] ^= e;
     }
     // verify
-    for (int i = 0; i < 16; i++) { uint8_t s = 0; for (int j = 0; j < 204; j++) s = f.mul(s, f.exp[i]) ^ r[j]; if (s) return -1; }
+    uint8_t S2[16];
+    if (rsSyndromes(r, S2)) return -1;
     return cnt;
 }
 

@@ -344,7 +344,53 @@ cf32 mapLabel(int mod, unsigned label) {
     return cf32((float)axisLevel(mod, ib) * n, (float)axisLevel(mod, qb) * n);
 }
 
+namespace {
+inline float sq(float v) { return v * v; }
+inline float clampf(float v, float lo, float hi) { return v < lo ? lo : v > hi ? hi : v; }
+}
+
 void demapCell(int mod, cf32 z, float n0, float* llr) {
+    // closed forms of the max-log bit decisions per axis (levels in units of the constellation spacing; see axisLevel for the labelling)
+    const float inv = 1.f / std::max(n0, 1e-12f);
+    if (mod == kQpsk || mod == kDqpsk) {
+        const float n = 1.f / std::sqrt(2.f);
+        // levels +-n: d(bit 0 at +) - d(bit 1 at -) ... (x - n)^2 - (x + n)^2 = -4 n x, so llr = (d1 - d0) / n0 = 4 n x / n0
+        llr[0] = 4.f * n * z.real() * inv;
+        llr[1] = 4.f * n * z.imag() * inv;
+        return;
+    }
+    if (mod == k16Qam) {
+        const float n = 1.f / std::sqrt(10.f), n2 = n * n;
+        for (int axis = 0; axis < 2; axis++) {
+            const float u = (axis == 0 ? z.real() : z.imag()) / n;
+            // first bit: 0 for the positive levels {1, 3}
+            const float dpos = std::min(sq(u - 1.f), sq(u - 3.f)), dneg = std::min(sq(u + 1.f), sq(u + 3.f));
+            // second bit: 0 for the outer levels +-3, 1 for the inner levels +-1
+            const float a = std::fabs(u);
+            const float dout = sq(a - 3.f), din = sq(a - 1.f);
+            llr[axis] = (dneg - dpos) * n2 * inv;
+            llr[2 + axis] = (din - dout) * n2 * inv;
+        }
+        return;
+    }
+    const float n = 1.f / std::sqrt(42.f), n2 = n * n;
+    for (int axis = 0; axis < 2; axis++) {
+        const float u = (axis == 0 ? z.real() : z.imag()) / n;
+        const float a = std::fabs(u);
+        // first bit: 0 for the positive levels {1, 3, 5, 7}
+        const float lp = clampf(2.f * std::floor((u - 1.f) * 0.5f + 0.5f) + 1.f, 1.f, 7.f), ln = clampf(2.f * std::floor((-u - 1.f) * 0.5f + 0.5f) + 1.f, 1.f, 7.f);
+        const float dpos = sq(u - lp), dneg = sq(u + ln);
+        // second bit: 0 for |level| in {5, 7}, 1 for {1, 3}
+        const float d0b = std::min(sq(a - 5.f), sq(a - 7.f)), d1b = std::min(sq(a - 1.f), sq(a - 3.f));
+        // third bit: 0 for |level| in {1, 7}, 1 for {3, 5}
+        const float d0c = std::min(sq(a - 1.f), sq(a - 7.f)), d1c = std::min(sq(a - 3.f), sq(a - 5.f));
+        llr[axis] = (dneg - dpos) * n2 * inv;
+        llr[2 + axis] = (d1b - d0b) * n2 * inv;
+        llr[4 + axis] = (d1c - d0c) * n2 * inv;
+    }
+}
+
+void demapCellGeneric(int mod, cf32 z, float n0, float* llr) {
     const int m = bitsPerCell(mod);
     const int half = m / 2;
     const float n = norm(mod);

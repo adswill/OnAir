@@ -57,7 +57,7 @@ void ExactResampler::process(const cf32* in, size_t n, std::vector<cf32>& out) {
     for (;;) {
         const long i0 = (long)std::floor(pos_);
         const long base = i0 - (half_ - 1);
-        if (base + taps_ > avail) break;
+        if (base + stride_ > avail) break;   // the dot product runs over the padded length
         const int p = (int)std::lround((pos_ - (double)i0) * phases_);
         const float* h = &bank_[(size_t)p * (size_t)stride_];
         const float* r = &re_[(size_t)base];

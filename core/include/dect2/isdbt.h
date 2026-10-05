@@ -124,6 +124,8 @@ bool paramsFromTmcc(const Tmcc& t, Params& p);
 cf32 mapLabel(int mod, unsigned label);
 // Bit LLRs for one cell (llr > 0: bit 0), n0: noise variance of the cell; b0 first
 void demapCell(int mod, cf32 z, float n0, float* llr);
+// The same by comparing with every point (reference for the tests)
+void demapCellGeneric(int mod, cf32 z, float n0, float* llr);
 
 // ---- the tables (generated from the standard)
 namespace tables {
