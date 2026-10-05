@@ -34,7 +34,7 @@ static cf32 sincSample(const std::vector<cf32>& x, double pos) {
 
 struct Result { bool locked = false, tps = false; size_t packets = 0, good = 0, bad = 0; double snr = 0, secs = 0; int level = 0; RxTelemetry tel; };
 
-static Result run(const dvbt::Params& p, int frames, double snrDb, double cfoHz, double echoDb, int echoDelay, double sroPpm, double bwMhz = 8) {
+static Result run(const dvbt::Params& p, int frames, double snrDb, double cfoHz, double echoDb, int echoDelay, double sroPpm, double bwMhz = 8, double dcRel = 0) {
     const double fn = nativeRateHz(bwMhz);
     // transmit: packets carry a counter so the receiver output can be checked
     uint32_t counter = 0;
@@ -74,6 +74,9 @@ static Result run(const dvbt::Params& p, int frames, double snrDb, double cfoHz,
     for (int s = 0; s < symbolsTotal; s++) { gen.nextSymbol(sym); tx.insert(tx.end(), sym.begin(), sym.end()); }
     // some lead-in of noise
     std::vector<cf32> outv;
+    double pw = 0;
+    for (const cf32& v : tx) pw += std::norm(v);
+    const cf32 dc = cf32(1.f, -0.5f) * (float)(dcRel * std::sqrt(pw / std::max<size_t>(1, tx.size())));   // the radio's LO leakage
     for (int i = 0; i < 40000; i++) outv.push_back(cf32(nd(rng), nd(rng)) * (float)sigma);
     double pos = 1;
     const double step = 1.0 + sroPpm * 1e-6;
@@ -83,7 +86,7 @@ static Result run(const dvbt::Params& p, int frames, double snrDb, double cfoHz,
         if (echoDb > 0) { const cf32 e = delay[dpos % delay.size()]; delay[dpos % delay.size()] = v; v += e * (float)std::pow(10.0, -echoDb / 20.0); dpos++; }
         phase += dph;
         v *= cf32((float)std::cos(phase), (float)std::sin(phase));
-        v += cf32(nd(rng), nd(rng)) * (float)sigma;
+        v += cf32(nd(rng), nd(rng)) * (float)sigma + dc;
         outv.push_back(v);
     }
     auto t0 = std::chrono::steady_clock::now();
@@ -110,6 +113,13 @@ int main() {
         const bool ok = r.tps && r.good > 50 && r.bad * 20 <= r.good + r.bad;
         printf("%-42s lock %d tps %d (mode %d gi %d mod %d cr %d)  packets %zu good %zu bad %zu  SNR %.1f dB  %.2fs  %s\n", c.name, r.locked, r.tps, r.tel.dvbt.mode, r.tel.dvbt.guard, r.tel.dvbt.mod, r.tel.dvbt.crHp, r.packets, r.good, r.bad, r.snr, r.secs, ok ? "OK" : "FAILED");
         CHECK(ok, "%s", c.name);
+    }
+    {   // a HackRF's DC spike sits on the centre carrier, a continual pilot in 8K mode (Australian 7 MHz channel, off by -150 Hz)
+        dvbt::Params p; p.mode = dvbt::k8K; p.guard = dvbt::kGi16; p.mod = dvbt::k64Qam; p.crHp = p.crLp = dvbt::kR34;
+        const Result r = run(p, 8, 30, -150, 0, 0, 0, 7, 0.1);
+        const bool ok = r.tps && r.good > 50 && r.bad * 20 <= r.good + r.bad;
+        printf("%-42s lock %d tps %d  packets %zu good %zu bad %zu  SNR %.1f dB  %.2fs  %s\n", "8K 64-QAM 7 MHz, DC spike, CFO -150 Hz", r.locked, r.tps, r.packets, r.good, r.bad, r.snr, r.secs, ok ? "OK" : "FAILED");
+        CHECK(ok, "DC spike on the centre pilot");
     }
     printf(fails ? "DVB-T receiver tests FAILED\n" : "DVB-T receiver tests passed\n");
     return fails ? 1 : 0;

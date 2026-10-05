@@ -30,6 +30,9 @@ struct DvbtReceiver::Impl {
     RationalResampler resampler;
     bool decimate = false, rateOk = true;
     std::vector<cf32> rsOut;
+    std::vector<cf32> dcOut;
+    cd dc = 0;                    // DC of the input (the radio's LO leakage)
+    bool dcValid = false;
     std::vector<cf32> buf;
     int64_t base = 0;
     int64_t end() const { return base + (int64_t)buf.size(); }
@@ -110,7 +113,7 @@ struct DvbtReceiver::Impl {
         for (int i = 0; i < 4; i++) { hypVotes[i] = 0; hypScore[i] = 0; }
         grid.clear(); gridAge.clear(); cpRef.clear(); cpRefValid = false; gridFilled = 0;
         fec.reset(); streamSecs = 0; symbols = 0; packetsOut = 0; detect = 0;
-        buf.clear(); base = 0; resampler.reset();
+        buf.clear(); base = 0; resampler.reset(); dc = 0; dcValid = false;
         eqShow.clear(); rawShow.clear(); chMag.clear(); chPh.clear(); irDb.clear();
     }
 
@@ -562,6 +565,19 @@ int DvbtReceiver::detectLevel() const { return p_->detect.load(); }
 void DvbtReceiver::feed(const cf32* x, size_t n) {
     Impl& I = *p_;
     if (!I.rateOk || !n) return;
+    // A radio's DC spike lands on the centre carrier, which in 8K mode is a continual pilot. 20 dB above the other pilots, it would
+    // steer the phase and timing tracking (weighted by power) on its own and nothing decodes. Remove it with a notch about 2 Hz wide.
+    {
+        double sr = 0, si = 0;
+        for (size_t i = 0; i < n; i++) { sr += x[i].real(); si += x[i].imag(); }
+        const cd mean(sr / (double)n, si / (double)n);
+        if (!I.dcValid) { I.dc = mean; I.dcValid = true; }
+        else I.dc += (1.0 - std::exp(-2 * M_PI * 2.0 * (double)n / I.inRate)) * (mean - I.dc);
+        const cf32 dc((float)I.dc.real(), (float)I.dc.imag());
+        I.dcOut.resize(n);
+        for (size_t i = 0; i < n; i++) I.dcOut[i] = x[i] - dc;
+        x = I.dcOut.data();
+    }
     if (I.decimate) { I.rsOut.clear(); I.resampler.process(x, n, I.rsOut); I.buf.insert(I.buf.end(), I.rsOut.begin(), I.rsOut.end()); }
     else I.buf.insert(I.buf.end(), x, x + n);
     // work through the buffer
