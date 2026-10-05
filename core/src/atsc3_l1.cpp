@@ -141,7 +141,8 @@ std::vector<cf32> encodeBlock(const Prot& p, std::vector<uint8_t> bits) {
     }
     std::vector<uint8_t> word;
     for (int i = 0; i < z.nouter; i++) word.push_back(cw[pos[i]]);
-    for (int i = 0; i < z.nrep; i++) word.push_back(cw[p.kldpc + i]);
+    // repetition longer than the parity (L1-Detail mode 1, A/322 Figure 6.23): the parity is sent once and the first bits again
+    for (int i = 0; i < z.nrep; i++) word.push_back(cw[p.kldpc + i % p.nparity]);
     for (int i = 0; i < p.nparity - z.npunc; i++) word.push_back(cw[p.kldpc + i]);
     if ((int)word.size() != z.total) return {};
     const auto& cons = signallingConstellation(p.nuc);
@@ -177,7 +178,7 @@ bool decodeBlock(const Prot& p, const cf32* cells, float noiseVar, int ksig, std
     for (int i = 0; i < p.kldpc; i++) llr[i] = 30.f;   // zero padding bits are known zeros
     for (int i = 0; i < z.nouter; i++) llr[pos[i]] = word[i];
     std::vector<float> par(p.nparity, 0.f);
-    for (int i = 0; i < z.nrep; i++) par[i] += word[z.nouter + i];
+    for (int i = 0; i < z.nrep; i++) par[i % p.nparity] += word[z.nouter + i];
     for (int i = 0; i < p.nparity - z.npunc; i++) par[i] += word[z.nouter + z.nrep + i];
     // undo the group-wise permutation (X_pi(j) = Y_j) and the parity interleaver
     std::vector<float> x(p.nparity, 0.f);
