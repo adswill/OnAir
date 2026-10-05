@@ -427,7 +427,7 @@ bool Engine::latestSpectrum(SpectrumFrame& out, uint64_t lastSeq) {
     return true;
 }
 
-// A radio that was delivering samples and stops (the cable was pulled) is reported, and it is opened again with the settings in use
+// A radio that was delivering samples and stops (the cable was pulled) is reported, and a HackRF is opened again with the settings in use
 // as soon as it is back, so that the receiver carries on by itself.
 void Engine::watchRadio() {
     if (!src_ || !src_->realtimeHardware()) return;
@@ -437,11 +437,11 @@ void Engine::watchRadio() {
         if (now - lastSamples_ > seconds(2)) {
             radioLost_ = true;
             nextReconnect_ = now + seconds(1);
-            log("radio stopped sending samples (unplugged?) - waiting for it to come back");
+            log(lastDev_.kind == DeviceInfo::HackRF ? "radio stopped sending samples (unplugged?) - waiting for it to come back" : "radio stopped sending samples - press Stop and Start to open it again");
         }
         return;
     }
-    if (!lastDev_.isRadio() || now < nextReconnect_) return;
+    if (lastDev_.kind != DeviceInfo::HackRF || now < nextReconnect_) return;
     nextReconnect_ = now + seconds(2);
     TuneSettings tune;
     { std::lock_guard<std::mutex> lk(tuneMu_); tune = lastTune_; }
