@@ -257,7 +257,9 @@ struct DabReceiver::Impl {
             const double v = std::max(1e-3, err2 / (double)cnt);
             snrDb = -10.0 * std::log10(v);
             constel.assign(q.begin() + (long)(8 * kCarriers), q.begin() + (long)(9 * kCarriers));
-            for (auto& c : constel) { const float m = std::abs(c); if (m > 1e-9f) c *= std::sqrt(m) / m; }   // compress the radius: four clusters on the diagonals
+            double msum = 0;
+            for (auto& c : constel) { const float m = std::abs(c); if (m > 1e-9f) c *= std::sqrt(m) / m; msum += std::sqrt(m); }   // compress the radius: four clusters on the diagonals
+            if (msum > 1e-9) { const float g = (float)(constel.size() / msum); for (auto& c : constel) c *= g; }   // unit mean radius, whatever the input level
         }
         decodeFic();
         decodeMsc();

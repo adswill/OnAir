@@ -119,7 +119,7 @@ void dabHistory(App& a) {
     static uint64_t lastSeq = 0;
     if (a.rx.standard != 3 || a.rx.seq == lastSeq) return;
     lastSeq = a.rx.seq;
-    auto push = [](std::deque<float>& dq, float v) { dq.push_back(v); if (dq.size() > 300) dq.pop_front(); };
+    auto push = [](std::deque<float>& dq, float v) { dq.push_back(v); if (dq.size() > 600) dq.pop_front(); };
     if (a.rx.dab.state == 2) { push(a.dabSnrH, (float)a.rx.dab.snrDb); push(a.dabFicH, (float)a.rx.dab.ficRecentOk); }
 }
 
