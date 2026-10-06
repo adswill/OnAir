@@ -16,6 +16,23 @@
 
 namespace dect2 {
 
+// Short filters (the channel-estimate interpolators have 16 taps): eight outputs at a time, one broadcast tap against eight
+// neighbouring inputs per step, instead of one dot product (with its reduction and call overhead) per output.
+DECT2_MULTIVERSION void convCorrShort(const float* a, const float* f, float* c, int strideC, int n, int p) {
+    int i = 0;
+    for (; i + 8 <= n; i += 8) {
+        float acc[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+        const float* x = a + i;
+        for (int k = 0; k < p; k++) { const float fk = f[k]; for (int l = 0; l < 8; l++) acc[l] += fk * x[k + l]; }
+        for (int l = 0; l < 8; l++) c[(size_t)(i + l) * strideC] = acc[l];
+    }
+    for (; i < n; i++) {
+        float s = 0;
+        for (int k = 0; k < p; k++) s += f[k] * a[i + k];
+        c[(size_t)i * strideC] = s;
+    }
+}
+
 #ifdef DECT2_USE_ACCELERATE
 
 void fftSplit(float* re, float* im, int log2n, bool inverse) {
@@ -30,7 +47,10 @@ void fftSplit(float* re, float* im, int log2n, bool inverse) {
     DSPSplitComplex sc{re, im};
     vDSP_fft_zip(s, &sc, 1, log2n, inverse ? FFT_INVERSE : FFT_FORWARD);
 }
-void convCorr(const float* a, const float* f, float* c, int strideC, int n, int p) { vDSP_conv(a, 1, f, 1, c, strideC, (vDSP_Length)n, (vDSP_Length)p); }
+void convCorr(const float* a, const float* f, float* c, int strideC, int n, int p) {
+    if (p <= 32) convCorrShort(a, f, c, strideC, n, p);
+    else vDSP_conv(a, 1, f, 1, c, strideC, (vDSP_Length)n, (vDSP_Length)p);
+}
 void desamp(const float* a, int decim, const float* f, float* c, int n, int p) { vDSP_desamp(a, decim, f, c, (vDSP_Length)n, (vDSP_Length)p); }
 void hannWindowNorm(float* w, int n) { vDSP_hann_window(w, n, vDSP_HANN_NORM); }
 void syrkLowerT(const float* x, int rows, int n, float* a) { cblas_ssyrk(CblasRowMajor, CblasLower, CblasTrans, n, rows, 1.f, x, n, 0.f, a, n); }
@@ -108,6 +128,7 @@ void fftSplit(float* re, float* im, int log2n, bool inverse) {
 }
 
 DECT2_MULTIVERSION void convCorr(const float* a, const float* f, float* c, int strideC, int n, int p) {
+    if (p <= 32) { convCorrShort(a, f, c, strideC, n, p); return; }
     for (int i = 0; i < n; i++) {
         float acc[8] = {0, 0, 0, 0, 0, 0, 0, 0};
         const float* x = a + i;

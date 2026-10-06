@@ -209,14 +209,17 @@ struct DvbtReceiver::Impl {
     void transform(int64_t s) {
         const int64_t w = s + G - back;
         const double ph0 = -2.0 * M_PI * epsFrac * (double)(w % 1048576) / N;
-        cd cur(std::cos(ph0), std::sin(ph0));
-        const cd rot(std::cos(-2.0 * M_PI * epsFrac / N), std::sin(-2.0 * M_PI * epsFrac / N));
-        for (int i = 0; i < N; i++) {
-            const cf32 v = at(w + i);
-            const cd o = cd(v.real(), v.imag()) * cur;
-            fbuf[i] = cf32((float)o.real(), (float)o.imag());
-            cur *= rot;
-            if ((i & 255) == 255) cur /= std::abs(cur);
+        const double dph = -2.0 * M_PI * epsFrac / N;
+        // fractional carrier-offset correction: an exact phasor at the start of every block of 64 samples and a table for the
+        // offsets inside it, so no phasor recurrence runs through the whole symbol (and the multiplications vectorise)
+        constexpr int B = 64;
+        cf32 tab[B];
+        for (int i = 0; i < B; i++) tab[i] = cf32((float)std::cos(dph * i), (float)std::sin(dph * i));
+        const cf32* src = &at(w);
+        for (int i0 = 0; i0 < N; i0 += B) {
+            const double a = ph0 + dph * i0;
+            const cf32 c0((float)std::cos(a), (float)std::sin(a));
+            for (int j = 0; j < B; j++) fbuf[i0 + j] = src[i0 + j] * (c0 * tab[j]);
         }
         fft->forward(fbuf.data());
         Y.resize(K);
@@ -224,12 +227,31 @@ struct DvbtReceiver::Impl {
     }
 
     // CP correlation around the expected position: timing error and fractional CFO
+    // sum over n samples of a[i] * conj(b[i]), in single precision with eight lanes (the compiler vectorises it)
+    static cd corrSum(const cf32* a, const cf32* b, int n) {
+        float re[8] = {}, im[8] = {};
+        const int n8 = n & ~7;
+        for (int i = 0; i < n8; i += 8)
+            for (int j = 0; j < 8; j++) {
+                const float ar = a[i + j].real(), ai = a[i + j].imag(), br = b[i + j].real(), bi = b[i + j].imag();
+                re[j] += ar * br + ai * bi; im[j] += ai * br - ar * bi;
+            }
+        double sr = 0, si = 0;
+        for (int j = 0; j < 8; j++) { sr += re[j]; si += im[j]; }
+        for (int i = n8; i < n; i++) { sr += (double)a[i].real() * b[i].real() + (double)a[i].imag() * b[i].imag(); si += (double)a[i].imag() * b[i].real() - (double)a[i].real() * b[i].imag(); }
+        return cd(sr, si);
+    }
     void cpTrack(int64_t s, double& err, double& epsRaw, double& mag, double& rho) {
         double bestM = -1; int bestD = 0; cd bestC = 0;
         double ms[13];
+        // the 13 windows (offsets -6..6) overlap in all but two samples: one full sum, then each step drops one product and adds one
+        const cf32* x = &at(s - 6);
+        cd c = corrSum(x, x + N, G);
         for (int d = -6; d <= 6; d++) {
-            cd c = 0;
-            for (int i = 0; i < G; i++) { const cf32 a = at(s + d + i), b = at(s + d + i + N); c += cd(a.real(), a.imag()) * std::conj(cd(b.real(), b.imag())); }
+            if (d > -6) {
+                const cf32 o = x[d + 5], on = x[d + 5 + N], n1 = x[d + 5 + G], n1n = x[d + 5 + G + N];
+                c += cd(n1.real(), n1.imag()) * std::conj(cd(n1n.real(), n1n.imag())) - cd(o.real(), o.imag()) * std::conj(cd(on.real(), on.imag()));
+            }
             const double m = std::abs(c);
             ms[d + 6] = m;
             if (m > bestM) { bestM = m; bestD = d; bestC = c; }
@@ -245,7 +267,12 @@ struct DvbtReceiver::Impl {
         mag = bestM;
         // correlation coefficient: |sum| against the energy of the two copies; near 1 on a clean signal, near 0 where there is none
         double e = 0;
-        for (int i = 0; i < G; i++) { const cf32 a = at(s + bestD + i), b = at(s + bestD + i + N); e += 0.5 * ((double)std::norm(a) + (double)std::norm(b)); }
+        {
+            const cf32* pa = &at(s + bestD);
+            float ea[8] = {};
+            for (int i = 0; i < G; i += 8) for (int j = 0; j < 8; j++) ea[j] += std::norm(pa[i + j]) + std::norm(pa[i + j + N]);
+            for (int j = 0; j < 8; j++) e += 0.5 * (double)ea[j];
+        }
         rho = e > 1e-12 ? bestM / e : 0.0;
     }
 
