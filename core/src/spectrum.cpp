@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdint>
 #include <vector>
+#include <mutex>
 
 namespace dect2 {
 
@@ -22,6 +23,7 @@ struct SpectrumAnalyzer::Impl {
     uint32_t hist[64] = {};
     uint64_t seq = 0;
     std::atomic<bool> transform{true};
+    std::mutex mu;   // the worker thread feeds, the analysis thread takes frames and resets
 };
 
 SpectrumAnalyzer::SpectrumAnalyzer(size_t fftSize) : p_(new Impl), n_(fftSize) {
@@ -39,16 +41,31 @@ SpectrumAnalyzer::~SpectrumAnalyzer() {
 
 void SpectrumAnalyzer::feed(const cf32* x, size_t n) {
     Impl& s = *p_;
-    for (size_t i = 0; i < n; i++) {
-        float I = x[i].real(), Q = x[i].imag();
-        s.sumSq += (double)I * I + (double)Q * Q;
-        s.sumI += I;
-        s.sumQ += Q;
-        float m = std::max(std::fabs(I), std::fabs(Q));
-        s.peak = std::max(s.peak, m);
-        if (m >= 126.0f / 128.0f) s.clip++;
-        s.hist[(int)std::min(63.f, std::fabs(I) * 64)]++;   // clamp as a float: (int) of a huge value is INT_MIN on x86
-        s.hist[(int)std::min(63.f, std::fabs(Q) * 64)]++;
+    std::lock_guard<std::mutex> lk(s.mu);
+    // Power, DC and peak over every sample, in eight float lanes per piece of 4096 samples (summed into doubles between pieces).
+    // The ADC histogram and the clip count look at every fourth sample, each counted four times: they are display statistics.
+    for (size_t p0 = 0; p0 < n; p0 += 4096) {
+        const size_t pn = std::min<size_t>(4096, n - p0), p8 = pn & ~(size_t)7;
+        const cf32* y = x + p0;
+        float sq[8] = {}, si[8] = {}, sqq[8] = {}, pk[8] = {};
+        for (size_t i = 0; i < p8; i += 8)
+            for (int j = 0; j < 8; j++) {
+                const float I = y[i + j].real(), Q = y[i + j].imag();
+                sq[j] += I * I + Q * Q; si[j] += I; sqq[j] += Q;
+                pk[j] = std::max(pk[j], std::max(std::fabs(I), std::fabs(Q)));
+            }
+        for (int j = 0; j < 8; j++) { s.sumSq += sq[j]; s.sumI += si[j]; s.sumQ += sqq[j]; s.peak = std::max(s.peak, pk[j]); }
+        for (size_t i = p8; i < pn; i++) {
+            const float I = y[i].real(), Q = y[i].imag();
+            s.sumSq += (double)I * I + (double)Q * Q; s.sumI += I; s.sumQ += Q;
+            s.peak = std::max(s.peak, std::max(std::fabs(I), std::fabs(Q)));
+        }
+        for (size_t i = 0; i < pn; i += 4) {
+            const float I = y[i].real(), Q = y[i].imag();
+            if (std::max(std::fabs(I), std::fabs(Q)) >= 126.0f / 128.0f) s.clip += 4;
+            s.hist[(int)std::min(63.f, std::fabs(I) * 64)] += 4;   // clamp as a float: (int) of a huge value is INT_MIN on x86
+            s.hist[(int)std::min(63.f, std::fabs(Q) * 64)] += 4;
+        }
     }
     s.count += n;
 
@@ -74,6 +91,7 @@ void SpectrumAnalyzer::setTransform(bool on) { p_->transform = on; }
 
 void SpectrumAnalyzer::reset() {
     Impl& s = *p_;
+    std::lock_guard<std::mutex> lk(s.mu);
     std::fill(s.accum.begin(), s.accum.end(), 0.f);
     s.pending.clear();
     s.blocks = 0; s.sumSq = s.sumI = s.sumQ = 0; s.peak = 0; s.count = s.clip = 0;
@@ -82,6 +100,7 @@ void SpectrumAnalyzer::reset() {
 
 bool SpectrumAnalyzer::takeFrame(SpectrumFrame& out) {
     Impl& s = *p_;
+    std::lock_guard<std::mutex> lk(s.mu);
     if (s.count == 0 || (s.blocks == 0 && s.transform)) return false;
     out.dbfs.resize(n_);
     // normalise so the sum over bins equals total power (dBFS/bin)

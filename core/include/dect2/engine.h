@@ -15,6 +15,8 @@
 #include "teletext.h"
 #include "bandwidth.h"
 #include <atomic>
+#include <condition_variable>
+#include <deque>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -103,6 +105,14 @@ public:
 
 private:
     void analysisLoop();
+    // the spectrum is computed on its own thread, so that it never holds up the receiver (it takes a seventh of a slow core)
+    void spectrumLoop();
+    void feedSpectrum(const cf32* x, size_t n);
+    std::thread specTh_;
+    std::mutex specQMu_;
+    std::condition_variable specQCv_;
+    std::deque<std::vector<cf32>> specQ_;
+    bool specStop_ = false;
     void catchUp();
     void logRxEvents(const RxTelemetry& t);
     std::function<void(const PlpResult&)> plpDump_;

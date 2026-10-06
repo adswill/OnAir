@@ -40,7 +40,7 @@ void Engine::log(const std::string& line) {
 
 std::string Engine::loadProfile() const {
     char b[200];
-    snprintf(b, sizeof b, "analysis thread: spectrum %.2f s, receiver %.2f s for %.2f s of signal processed", tSpec_, tRx_, nSamp_ / std::max(1.0, rate_.load()));
+    snprintf(b, sizeof b, "analysis thread: receiver %.2f s for %.2f s of signal processed (the spectrum thread used %.2f s)", tRx_, nSamp_ / std::max(1.0, rate_.load()), tSpec_);
     return b;
 }
 
@@ -145,6 +145,9 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     tSpec_ = tRx_ = 0; nSamp_ = 0;
     stopReq_ = false;
     running_ = true;
+    specStop_ = false;
+    specQ_.clear();
+    specTh_ = std::thread([this] { spectrumLoop(); });
     th_ = std::thread([this] { analysisLoop(); });
     return true;
 }
@@ -154,6 +157,12 @@ void Engine::stop() {
     if (!running_ && !src_) return;
     stopReq_ = true;
     if (th_.joinable()) th_.join();
+    {
+        std::lock_guard<std::mutex> lk(specQMu_);
+        specStop_ = true;
+    }
+    specQCv_.notify_all();
+    if (specTh_.joinable()) specTh_.join();
     if (src_) {
         src_->stop(); src_.reset();
         char b[160];
@@ -528,6 +537,31 @@ void Engine::catchUp() {
     }
 }
 
+void Engine::feedSpectrum(const cf32* x, size_t n) {
+    {
+        std::lock_guard<std::mutex> lk(specQMu_);
+        if (specQ_.size() >= 6) return;   // the display is statistical: when the spectrum thread is behind, skip a piece
+        specQ_.emplace_back(x, x + n);
+    }
+    specQCv_.notify_one();
+}
+
+void Engine::spectrumLoop() {
+    std::vector<cf32> chunk;
+    for (;;) {
+        {
+            std::unique_lock<std::mutex> lk(specQMu_);
+            specQCv_.wait(lk, [this] { return specStop_ || !specQ_.empty(); });
+            if (specQ_.empty()) return;   // stopping
+            chunk = std::move(specQ_.front());
+            specQ_.pop_front();
+        }
+        const auto a0 = std::chrono::steady_clock::now();
+        analyzer_.feed(chunk.data(), chunk.size());
+        tSpec_ += std::chrono::duration<double>(std::chrono::steady_clock::now() - a0).count();
+    }
+}
+
 void Engine::analysisLoop() {
     setThreadPriority(ThreadPriority::Realtime); // the sample path must never wait for decoders or the UI
     std::vector<cf32> buf(1 << 16);
@@ -538,7 +572,7 @@ void Engine::analysisLoop() {
         if (resetReq_.exchange(false)) { applyReset(); rxSeq = 0; }
         size_t n;
         catchUp();
-        while ((n = ring_.read(buf.data(), buf.size())) > 0) { dropNonFinite(buf.data(), n); auto a0 = std::chrono::steady_clock::now(); lastSamples_ = a0; analyzer_.feed(buf.data(), n); auto a1 = std::chrono::steady_clock::now(); feedRx(buf.data(), n); auto a2 = std::chrono::steady_clock::now(); tSpec_ += std::chrono::duration<double>(a1 - a0).count(); tRx_ += std::chrono::duration<double>(a2 - a1).count(); nSamp_ += n; if (std::chrono::steady_clock::now() > next + std::chrono::milliseconds(250)) break; } // keep publishing spectrum/telemetry even when the receiver is behind
+        while ((n = ring_.read(buf.data(), buf.size())) > 0) { dropNonFinite(buf.data(), n); auto a0 = std::chrono::steady_clock::now(); lastSamples_ = a0; feedSpectrum(buf.data(), n); feedRx(buf.data(), n); auto a2 = std::chrono::steady_clock::now(); tRx_ += std::chrono::duration<double>(a2 - a0).count(); nSamp_ += n; if (std::chrono::steady_clock::now() > next + std::chrono::milliseconds(250)) break; } // keep publishing spectrum/telemetry even when the receiver is behind
         next += std::chrono::milliseconds(33);
         watchRadio();
         {
@@ -624,7 +658,7 @@ void Engine::analysisLoop() {
         while (std::chrono::steady_clock::now() < next && !stopReq_) {
             catchUp();
             size_t m = ring_.read(buf.data(), buf.size());
-            if (m) { dropNonFinite(buf.data(), m); auto a0 = std::chrono::steady_clock::now(); lastSamples_ = a0; analyzer_.feed(buf.data(), m); auto a1 = std::chrono::steady_clock::now(); feedRx(buf.data(), m); auto a2 = std::chrono::steady_clock::now(); tSpec_ += std::chrono::duration<double>(a1 - a0).count(); tRx_ += std::chrono::duration<double>(a2 - a1).count(); nSamp_ += m; }
+            if (m) { dropNonFinite(buf.data(), m); auto a0 = std::chrono::steady_clock::now(); lastSamples_ = a0; feedSpectrum(buf.data(), m); feedRx(buf.data(), m); auto a2 = std::chrono::steady_clock::now(); tRx_ += std::chrono::duration<double>(a2 - a0).count(); nSamp_ += m; }
             else std::this_thread::sleep_for(std::chrono::milliseconds(2));
         }
     }
