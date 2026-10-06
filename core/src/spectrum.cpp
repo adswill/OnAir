@@ -47,8 +47,8 @@ void SpectrumAnalyzer::feed(const cf32* x, size_t n) {
         float m = std::max(std::fabs(I), std::fabs(Q));
         s.peak = std::max(s.peak, m);
         if (m >= 126.0f / 128.0f) s.clip++;
-        s.hist[std::min(63, (int)(std::fabs(I) * 64))]++;
-        s.hist[std::min(63, (int)(std::fabs(Q) * 64))]++;
+        s.hist[(int)std::min(63.f, std::fabs(I) * 64)]++;   // clamp as a float: (int) of a huge value is INT_MIN on x86
+        s.hist[(int)std::min(63.f, std::fabs(Q) * 64)]++;
     }
     s.count += n;
 

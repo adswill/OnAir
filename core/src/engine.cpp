@@ -4,6 +4,7 @@
 #include "dect2/t2rx.h"
 #include <chrono>
 #include "dect2/platform.h"
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <algorithm>
@@ -17,6 +18,13 @@
 #include <vector>
 
 namespace dect2 {
+
+// A radio that delivers floating-point samples (LimeSDR, SoapySDR, a cf32 recording) can hand over NaN or infinite values after a
+// glitch or with mismatched firmware. They would poison every filter, FFT and gain loop after them, so they become silence here.
+static void dropNonFinite(cf32* x, size_t n) {
+    for (size_t i = 0; i < n; i++)
+        if (!std::isfinite(x[i].real()) || !std::isfinite(x[i].imag())) x[i] = cf32(0.f, 0.f);
+}
 
 Engine::Engine() : t0_(std::chrono::steady_clock::now()) {}
 Engine::~Engine() { stop(); }
@@ -530,7 +538,7 @@ void Engine::analysisLoop() {
         if (resetReq_.exchange(false)) { applyReset(); rxSeq = 0; }
         size_t n;
         catchUp();
-        while ((n = ring_.read(buf.data(), buf.size())) > 0) { auto a0 = std::chrono::steady_clock::now(); lastSamples_ = a0; analyzer_.feed(buf.data(), n); auto a1 = std::chrono::steady_clock::now(); feedRx(buf.data(), n); auto a2 = std::chrono::steady_clock::now(); tSpec_ += std::chrono::duration<double>(a1 - a0).count(); tRx_ += std::chrono::duration<double>(a2 - a1).count(); nSamp_ += n; if (std::chrono::steady_clock::now() > next + std::chrono::milliseconds(250)) break; } // keep publishing spectrum/telemetry even when the receiver is behind
+        while ((n = ring_.read(buf.data(), buf.size())) > 0) { dropNonFinite(buf.data(), n); auto a0 = std::chrono::steady_clock::now(); lastSamples_ = a0; analyzer_.feed(buf.data(), n); auto a1 = std::chrono::steady_clock::now(); feedRx(buf.data(), n); auto a2 = std::chrono::steady_clock::now(); tSpec_ += std::chrono::duration<double>(a1 - a0).count(); tRx_ += std::chrono::duration<double>(a2 - a1).count(); nSamp_ += n; if (std::chrono::steady_clock::now() > next + std::chrono::milliseconds(250)) break; } // keep publishing spectrum/telemetry even when the receiver is behind
         next += std::chrono::milliseconds(33);
         watchRadio();
         {
@@ -616,7 +624,7 @@ void Engine::analysisLoop() {
         while (std::chrono::steady_clock::now() < next && !stopReq_) {
             catchUp();
             size_t m = ring_.read(buf.data(), buf.size());
-            if (m) { auto a0 = std::chrono::steady_clock::now(); lastSamples_ = a0; analyzer_.feed(buf.data(), m); auto a1 = std::chrono::steady_clock::now(); feedRx(buf.data(), m); auto a2 = std::chrono::steady_clock::now(); tSpec_ += std::chrono::duration<double>(a1 - a0).count(); tRx_ += std::chrono::duration<double>(a2 - a1).count(); nSamp_ += m; }
+            if (m) { dropNonFinite(buf.data(), m); auto a0 = std::chrono::steady_clock::now(); lastSamples_ = a0; analyzer_.feed(buf.data(), m); auto a1 = std::chrono::steady_clock::now(); feedRx(buf.data(), m); auto a2 = std::chrono::steady_clock::now(); tSpec_ += std::chrono::duration<double>(a1 - a0).count(); tRx_ += std::chrono::duration<double>(a2 - a1).count(); nSamp_ += m; }
             else std::this_thread::sleep_for(std::chrono::milliseconds(2));
         }
     }
