@@ -246,5 +246,19 @@ int main() {
         CHECK(found, "TVCT service missing");
         printf("ATSC PSIP (TVCT) checked\n");
     }
+    {
+        // a corrupt packet that error correction missed: section start with a pointer field past the end of the payload
+        TsDemux b;
+        for (int ptr : {183, 184, 200, 255}) {
+            uint8_t p[188];
+            memset(p, 0xFF, sizeof p);
+            p[0] = 0x47; p[1] = 0x40; p[2] = 0x00; p[3] = 0x10;   // PAT PID, payload unit start, payload only
+            p[4] = (uint8_t)ptr;
+            b.feed(p);
+            p[1] = 0x00; p[3] = 0x11;                              // and a continuation packet after it
+            b.feed(p);
+        }
+        printf("bad pointer fields survived\n");
+    }
     return fails ? 1 : 0;
 }

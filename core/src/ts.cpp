@@ -180,6 +180,9 @@ void TsDemux::feed(const uint8_t* p) {
     int n = 188 - off;
     if (pusi) {
         int ptr = d[0];
+        // a pointer past the end of the packet: a corrupt packet that error correction missed (a Reed-Solomon miscorrection). Forget the
+        // partial section and wait for the next one, rather than building a section from a backwards range.
+        if (1 + ptr > n) { sb.data.clear(); sb.active = false; return; }
         if (sb.active && ptr > 0 && ptr < n) { sb.data.insert(sb.data.end(), d + 1, d + 1 + ptr); }
         // the previous section may be complete now
         auto tryEmit = [&]() {
