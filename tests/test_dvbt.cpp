@@ -45,6 +45,15 @@ static void testTps() {
         CHECK(fi == f && q.mode == k8K && q.guard == kGi8 && q.mod == k16Qam && q.crHp == kR34 && q.hier == 0, "TPS fields frame %d", f);
         b[40] ^= 1; // a corrupted BCH-protected bit must be rejected
         CHECK(!tpsDecode(b.data(), q, fi, odd), "TPS accepted a corrupted block");
+        // ... unless correction is asked for: the BCH code fixes one or two errors anywhere in s1..s67, sync word included
+        for (int e2 : {-1, 3, 66}) {
+            auto c = tpsBits(p, f);
+            c[40] ^= 1;
+            if (e2 >= 0) c[e2] ^= 1;
+            Params r; int fr = -1; bool o2 = false;
+            CHECK(tpsDecode(c.data(), r, fr, o2, 2) && fr == f && r.mod == k16Qam && r.crHp == kR34 && r.guard == kGi8,
+                  "TPS frame %d with errors at 40 and %d not corrected", f, e2);
+        }
     }
     printf("TPS encode/decode, sync words and BCH checked\n");
 }
