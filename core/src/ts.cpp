@@ -213,8 +213,10 @@ void TsDemux::feed(const uint8_t* p) {
 void TsDemux::section(int pid, const uint8_t* s, int len) {
     if (len < 8) return;
     const int tid = s[0];
-    const bool syntax = s[1] & 0x80;
-    if (syntax && mpegCrc32(s, len) != 0) return;
+    // Every table parsed here carries a CRC_32 except the TDT (the TOT has one although its syntax indicator is 0). Decide by the
+    // table id, not by the syntax bit: a corrupted section whose syntax bit reads 0 would otherwise skip the check and fill the
+    // service list with phantom programs from a damaged PAT.
+    if (tid != 0x70 && mpegCrc32(s, len) != 0) return;
     if (tid == 0x00) parsePat(s, len);
     else if (tid == 0x02) parsePmt(pid, s, len);
     else if (tid == 0x42) parseSdt(s, len);

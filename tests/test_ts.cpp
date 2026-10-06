@@ -260,5 +260,19 @@ int main() {
         }
         printf("bad pointer fields survived\n");
     }
+    {
+        // a damaged PAT whose section_syntax_indicator reads 0: its CRC must still be checked, or it adds a phantom program
+        TsDemux b;
+        int c3 = 0;
+        std::vector<uint8_t> bad = {0x00, 0x30, 13, 0x00, 0x07, 0xC1, 0, 0, 0xC8, 0x25, 0xE3, 0x72};   // program 51237 -> PMT 0x372
+        std::vector<uint8_t> sec = section(bad);
+        sec.back() ^= 0x5A;                                                                         // and a CRC that does not match
+        feedSection(b, 0, sec, c3);
+        feedSection(b, 0, sec, c3);
+        bool phantom = false;
+        for (auto& sv : b.snapshot().services) if (sv.id == 51237) phantom = true;
+        CHECK(!phantom, "a PAT with a bad CRC and syntax bit 0 created program 51237");
+        printf("damaged PAT without syntax bit rejected\n");
+    }
     return fails ? 1 : 0;
 }
