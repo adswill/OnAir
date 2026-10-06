@@ -1,17 +1,20 @@
 #include "dect2/dvbt_rx.h"
 #include "dect2/dvbt_fec.h"
 #include "dect2/fftutil.h"
+#include "dect2/platform.h"
 #include "dect2/resampler.h"
 #include "dect2/t2.h"
 #include "dect2/t2ofdm.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <condition_variable>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <deque>
 #include <mutex>
+#include <thread>
 #include <complex>
 #include <cstdint>
 #include <functional>
@@ -56,8 +59,10 @@ struct DvbtReceiver::Impl {
     int intSymbols = 0;
     uint64_t absSym = 0;          // symbols processed since lock
     int back = 0;
-    std::unique_ptr<Fft> fft;
-    std::vector<cf32> fbuf;
+    int log2N = 0;
+    std::vector<float> fre, fim;      // the FFT of the current symbol (split real / imaginary)
+    std::vector<cf32> win;            // a symbol that reaches outside the buffer, read sample by sample
+    int displayEvery = 6;             // symbols between two updates of the display data (about 30 a second)
     std::atomic<int> detect{0};
     int agreeCount = 0, agreeMode = -1, agreeGi = -1;
     int64_t acqLastEnd = 0;
@@ -88,12 +93,134 @@ struct DvbtReceiver::Impl {
     int gridFilled = 0;
     double sigma2 = 0.05;             // noise variance of Y (per complex carrier)
     double snrDb = 0;
-    FecDecoder fec;
-    std::vector<uint8_t> pktBuf;
-    double streamSecs = 0;
     uint64_t symbols = 0;
-    uint64_t packetsOut = 0;
     std::function<void(const uint8_t*, size_t, double)> cb;
+
+    // ---- channel decoder (de-interleavers, Viterbi, Reed-Solomon) on its own thread: it is about half of the work, and decoding one
+    // block while the next symbols are demodulated spreads the receiver over two cores (plus the Viterbi helpers). Symbols, resets and
+    // parameter changes reach it in order through a queue.
+    struct FecJob {
+        enum Kind { Symbol, Reset, Configure } kind = Symbol;
+        Params prm;
+        int symIdx = 0;
+        double secs = 0;
+        std::vector<cf32> cells;
+        std::vector<float> n0;
+    };
+    FecDecoder fec;                   // owned by the worker (or by whoever holds fecMu while the worker is idle)
+    std::vector<uint8_t> pktBuf;      // worker
+    double streamSecs = 0;            // worker: signal time not yet reported with packets
+    std::thread fecThread;
+    std::mutex fecMu;
+    std::condition_variable fecCv, fecSpace;
+    std::deque<FecJob> fecJobs;
+    std::vector<FecJob> fecSpare;     // storage of finished jobs, reused (an 8K symbol is 72 kB)
+    bool fecStop = false, fecBusy = false;
+    FecStats fecStats;                // the decoder's statistics after the last job, for the telemetry
+    uint64_t fecDrops = 0;            // times the decoder fell behind a live radio and its backlog was dropped
+    std::atomic<bool> blocking{true}; // wait for the decoder instead of dropping symbols (files, tests)
+
+    ~Impl() { stopFec(); }
+
+    void stopFec() {
+        { std::lock_guard<std::mutex> lk(fecMu); fecStop = true; }
+        fecCv.notify_all();
+        fecSpace.notify_all();
+        if (fecThread.joinable()) fecThread.join();
+        std::lock_guard<std::mutex> lk(fecMu);
+        fecStop = false;
+        fecJobs.clear();
+    }
+
+    // Empties the queue, waits for the job in progress and resets the decoder: no packet from before the reset arrives after it.
+    void resetFec() {
+        std::unique_lock<std::mutex> lk(fecMu);
+        for (auto& j : fecJobs) if (j.kind == FecJob::Symbol) fecSpare.push_back(std::move(j));
+        fecJobs.clear();
+        fecSpace.wait(lk, [&] { return !fecBusy; });
+        fec.reset();
+        fecStats = fec.stats();
+        fecDrops = 0;
+        streamSecs = 0;
+        pktBuf.clear();
+    }
+
+    FecJob newJob() {
+        std::lock_guard<std::mutex> lk(fecMu);
+        if (fecSpare.empty()) return FecJob();
+        FecJob j = std::move(fecSpare.back());
+        fecSpare.pop_back();
+        return j;
+    }
+
+    void postFec(FecJob&& j) {
+        // a quarter of a second of symbols: room for the decoder to be held up for a moment without anything being lost
+        const size_t maxJobs = std::max<size_t>(64, (size_t)(0.25 * fn / std::max(1, N + G)));
+        {
+            std::unique_lock<std::mutex> lk(fecMu);
+            if (!fecThread.joinable()) fecThread = std::thread([this] { fecLoop(); });
+            if (blocking) fecSpace.wait(lk, [&] { return fecJobs.size() < maxJobs || fecStop; });
+            else if (fecJobs.size() >= maxJobs) {
+                // the decoder cannot keep up with a live radio: drop the backlog in one go and let it start again cleanly
+                for (auto& q : fecJobs) if (q.kind == FecJob::Symbol) fecSpare.push_back(std::move(q));
+                fecJobs.clear();
+                FecJob r;
+                r.kind = FecJob::Reset;
+                fecJobs.push_back(std::move(r));
+                fecDrops++;
+            }
+            fecJobs.push_back(std::move(j));
+        }
+        fecCv.notify_one();
+    }
+
+    void postFecControl(FecJob::Kind kind, const Params& p = Params()) {
+        FecJob j;
+        j.kind = kind;
+        j.prm = p;
+        postFec(std::move(j));
+    }
+
+    void fecLoop() {
+        setThreadPriority(ThreadPriority::Realtime);   // like the analysis thread: the decoder must keep up with the radio
+        for (;;) {
+            FecJob j;
+            {
+                std::unique_lock<std::mutex> lk(fecMu);
+                fecCv.wait(lk, [&] { return fecStop || !fecJobs.empty(); });
+                if (fecStop) return;
+                j = std::move(fecJobs.front());
+                fecJobs.pop_front();
+                fecBusy = true;
+            }
+            fecSpace.notify_all();
+            if (j.kind == FecJob::Reset) { fec.reset(); streamSecs = 0; }
+            else if (j.kind == FecJob::Configure) fec.configure(j.prm);
+            else {
+                fec.pushSymbol(j.cells.data(), j.n0.data(), j.symIdx);
+                streamSecs += j.secs;
+                fec.takePackets(pktBuf);
+                if (!pktBuf.empty()) {
+                    detect = 3;
+                    if (cb) cb(pktBuf.data(), pktBuf.size() / 188, streamSecs);
+                    streamSecs = 0;
+                    pktBuf.clear();
+                }
+            }
+            {
+                std::lock_guard<std::mutex> lk(fecMu);
+                fecStats = fec.stats();
+                fecBusy = false;
+                if (j.kind == FecJob::Symbol && fecSpare.size() < 64) fecSpare.push_back(std::move(j));
+            }
+            fecSpace.notify_all();
+        }
+    }
+
+    void flushFec() {
+        std::unique_lock<std::mutex> lk(fecMu);
+        fecSpace.wait(lk, [&] { return (fecJobs.empty() && !fecBusy) || !fecThread.joinable(); });
+    }
 
     // ---- telemetry
     std::mutex mu;
@@ -108,11 +235,11 @@ struct DvbtReceiver::Impl {
 
     void reset() {
         state = 0; mode = gi = -1; N = G = K = 0; symStart = 0; epsFrac = 0; intShift = 0; intLocked = false;
-        intScore.clear(); intSymbols = 0; absSym = 0; fft.reset(); agreeCount = 0; agreeMode = agreeGi = -1; acqLastEnd = 0;
+        intScore.clear(); intSymbols = 0; absSym = 0; agreeCount = 0; agreeMode = agreeGi = -1; acqLastEnd = 0;
         tpsBitsSeen.clear(); tpsBase = 0; prevTps.clear(); prevValid = false; tpsOk = false; tpsFailures = 0; secSinceTps = 0;
         for (int i = 0; i < 4; i++) { hypVotes[i] = 0; hypScore[i] = 0; }
         grid.clear(); gridAge.clear(); cpRef.clear(); cpRefValid = false; gridFilled = 0;
-        fec.reset(); streamSecs = 0; symbols = 0; packetsOut = 0; detect = 0;
+        resetFec(); symbols = 0; detect = 0;
         buf.clear(); base = 0; resampler.reset(); dc = 0; dcValid = false;
         eqShow.clear(); rawShow.clear(); chMag.clear(); chPh.clear(); irDb.clear();
     }
@@ -182,14 +309,16 @@ struct DvbtReceiver::Impl {
         timingAcc = 0; accPhi = accSlope = 0;
         epsFrac = -std::arg(best.corr) / (2 * M_PI);   // c = sum y[n] conj(y[n+N]) has phase -2 pi eps
         back = std::min(G / 4, 24);
-        fft = std::make_unique<Fft>(N);
-        fbuf.assign(N, cf32(0, 0));
+        log2N = 0;
+        while ((1 << log2N) < N) log2N++;
+        fre.assign(N, 0.f); fim.assign(N, 0.f);
+        displayEvery = std::max(1, (int)std::lround(0.033 * fn / (N + G)));
         intScore.assign(41, 0.0); intSymbols = 0; intLocked = false; intShift = 0;
         tpsBitsSeen.clear(); tpsBase = 0; prevValid = false; tpsOk = false; absSym = 0;
         grid.assign((size_t)(K + 2) / 3 + 1, cf32(0, 0)); gridAge.assign(grid.size(), 255);
         cpRef.assign(continualPilots(mode).size(), cf32(1, 0)); cpRefValid = false; gridFilled = 0;
         for (int i = 0; i < 4; i++) { hypVotes[i] = 0; hypScore[i] = 0; }
-        fec.reset();
+        postFecControl(FecJob::Reset);
         state = 1;
         return true;
     }
@@ -201,16 +330,23 @@ struct DvbtReceiver::Impl {
         const double ph0 = -2.0 * M_PI * epsFrac * (double)(w % 1048576) / N;
         cd cur(std::cos(ph0), std::sin(ph0));
         const cd rot(std::cos(-2.0 * M_PI * epsFrac / N), std::sin(-2.0 * M_PI * epsFrac / N));
+        const cf32* x;
+        if (w >= base && w + N <= end()) x = buf.data() + (w - base);
+        else { win.resize(N); for (int i = 0; i < N; i++) win[i] = at(w + i); x = win.data(); }
+        float* re = fre.data();
+        float* im = fim.data();
         for (int i = 0; i < N; i++) {
-            const cf32 v = at(w + i);
-            const cd o = cd(v.real(), v.imag()) * cur;
-            fbuf[i] = cf32((float)o.real(), (float)o.imag());
+            const cd o = cd(x[i].real(), x[i].imag()) * cur;
+            re[i] = (float)o.real();
+            im[i] = (float)o.imag();
             cur *= rot;
             if ((i & 255) == 255) cur /= std::abs(cur);
         }
-        fft->forward(fbuf.data());
+        fftSplit(re, im, log2N, false);
+        // carrier k sits in bin (k + intShift - kc) mod N
         Y.resize(K);
-        for (int k = 0; k < K; k++) Y[k] = fbuf[(((k + intShift - kc) % N) + N) % N];
+        int b = ((intShift - kc) % N + N) % N;
+        for (int k = 0; k < K; k++) { Y[k] = cf32(re[b], im[b]); if (++b == N) b = 0; }
     }
 
     // CP correlation around the expected position: timing error and fractional CFO
@@ -240,9 +376,10 @@ struct DvbtReceiver::Impl {
     // integer CFO: continual pilots keep their value in every symbol, so Y_l[k+s] conj(Y_{l-1}[k+s]) has one common phase when s is right
     std::vector<cf32> prevRawFull;     // previous symbol's full FFT (for the integer search over a range of shifts)
     void integerSearch(int64_t s) {
-        // transform without carrier shift into fbuf for the next symbol, keep the previous one
+        // the transform without carrier shift (fre / fim) for the next symbol, keep the previous one
         if (prevRawFull.size() != (size_t)N) prevRawFull.assign(N, cf32(0, 0));
-        std::vector<cf32> cur(fbuf.begin(), fbuf.end());
+        std::vector<cf32> cur(N);
+        for (int i = 0; i < N; i++) cur[i] = cf32(fre[i], fim[i]);
         (void)s;
         if (intSymbols > 0) {
             const auto& cp = continualPilots(mode);
@@ -289,7 +426,7 @@ struct DvbtReceiver::Impl {
         }
         transform(s);
         if (!intLocked) {
-            // search needs the unshifted transform: the shifted Y is only a re-indexing of fbuf, which is intact after transform()
+            // search needs the unshifted transform: the shifted Y is only a re-indexing of fre / fim, which are intact after transform()
             integerSearch(s);
             symStart += P;
             absSym++;
@@ -362,7 +499,7 @@ struct DvbtReceiver::Impl {
                 tpsOk = true;
                 secSinceTps = 0;
                 tpsFailures = 0;
-                fec.configure(prm);
+                postFecControl(FecJob::Configure, prm);
                 // everything before this point has been consumed; the symbols after p+67 are processed from now on, but the
                 // symbol index of the current symbol is derived from the frame start
                 return;
@@ -381,7 +518,7 @@ struct DvbtReceiver::Impl {
             tpsFailures = 0;
             secSinceTps = 0;
             frameIdx = fi;
-            if (!(q == prm)) { prm = q; fec.configure(prm); }
+            if (!(q == prm)) { prm = q; postFecControl(FecJob::Configure, prm); }
         } else if (++tpsFailures >= 3) {
             // lost: start over with a fresh acquisition
             tpsOk = false; state = 0; detect = 1; agreeCount = 0;
@@ -462,8 +599,11 @@ struct DvbtReceiver::Impl {
         std::vector<uint8_t> roles;
         carrierRoles(mode, symIdx, roles);
         const int Nd = dataCarriers(mode);
-        std::vector<cf32> eq(Nd);
-        std::vector<float> n0(Nd);
+        FecJob job = newJob();
+        job.cells.resize(Nd);
+        job.n0.resize(Nd);
+        cf32* eq = job.cells.data();
+        float* n0 = job.n0.data();
         int di = 0;
         for (int k = 0; k < K && di < Nd; k++) {
             if (roles[k] != 0) continue;
@@ -473,20 +613,9 @@ struct DvbtReceiver::Impl {
             di++;
         }
         if (di != Nd) return;
-        fec.pushSymbol(eq.data(), n0.data(), symIdx);
-        streamSecs += (double)(N + G) / fn;
-        const FecStats& fs = fec.stats();
-        fec.takePackets(pktBuf);
-        if (!pktBuf.empty()) {
-            packetsOut += pktBuf.size() / 188;
-            detect = 3;
-            if (cb) cb(pktBuf.data(), pktBuf.size() / 188, streamSecs);
-            streamSecs = 0;
-            pktBuf.clear();
-        } else if (detect.load() < 2) detect = 2;
-        (void)fs;
+        if (detect.load() < 2) detect = 2;
         // ---- display data
-        if (symbols % 6 == 0) {
+        if (symbols % displayEvery == 0) {
             eqShow.clear();
             const int step = std::max(1, Nd / 1500);
             for (int i = 0; i < Nd; i += step) eqShow.push_back(eq[i]);
@@ -509,6 +638,10 @@ struct DvbtReceiver::Impl {
             snrDb = 10 * std::log10(std::max(1e-9, sn / sigma2));
         }
         lastTpsK = tpsK.size();
+        job.kind = FecJob::Symbol;
+        job.symIdx = symIdx;
+        job.secs = (double)(N + G) / fn;
+        postFec(std::move(job));
     }
     int chDecimV = 1;
     size_t lastTpsK = 0;
@@ -540,7 +673,8 @@ struct DvbtReceiver::Impl {
         t.l1preOk = tpsOk; t.l1postOk = tpsOk;
         t.dvbt.tpsOk = tpsOk; t.dvbt.mode = mode; t.dvbt.guard = gi;
         if (tpsOk) { t.dvbt.mod = prm.mod; t.dvbt.hier = prm.hier; t.dvbt.crHp = prm.crHp; t.dvbt.crLp = prm.crLp; t.dvbt.cellId = prm.cellId; t.dvbt.frameIdx = frameIdx; }
-        const FecStats& fs = fec.stats();
+        FecStats fs;
+        { std::lock_guard<std::mutex> lk(fecMu); fs = fecStats; t.plpFramesDropped = fecDrops; }
         t.dvbt.fecSync = fs.syncLocked; t.dvbt.packets = fs.packets; t.dvbt.rsClean = fs.rsClean; t.dvbt.rsCorrected = fs.rsCorrected; t.dvbt.rsFailed = fs.rsFailed;
         t.dvbt.viterbiMargin = fs.viterbiMargin; t.dvbt.punctPhase = fs.punctPhase; t.dvbt.secSinceTps = secSinceTps;
         t.dvbt.symbolIdx = tpsOk ? (int)((absSym - frameStartAbs) % 68) : -1;
@@ -568,6 +702,8 @@ void DvbtReceiver::configure(double inputRateHz, double bandwidthMhz) {
 void DvbtReceiver::reset() { Impl& I = *p_; const double r = I.inRate, b = I.bwMhz; configure(r, b); }
 
 void DvbtReceiver::setPacketCallback(std::function<void(const uint8_t*, size_t, double)> cb) { p_->cb = std::move(cb); }
+void DvbtReceiver::setBlocking(bool b) { p_->blocking = b; }
+void DvbtReceiver::flush() { p_->flushFec(); p_->publish(); }
 int DvbtReceiver::detectLevel() const { return p_->detect.load(); }
 
 void DvbtReceiver::feed(const cf32* x, size_t n) {

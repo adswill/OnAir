@@ -44,6 +44,8 @@ private:
     bool haveGroup_ = false;
     int warm_ = 0;                         // blocks still to discard while the de-interleaver fills
     std::vector<uint8_t> out_;
+    std::vector<int8_t> soft_, window_;    // buffers of one block, kept to save allocations
+    std::vector<uint8_t> dec_, by_, di_;
     int blocksSinceSync_ = 0, syncMisses_ = 0;
     float llrScale_ = 8.f;
     void descramblePacket(uint8_t* pkt, int g);

@@ -164,7 +164,7 @@ private:
     void logDvbtEvents(const RxTelemetry& t);
     void logIsdbtEvents(const RxTelemetry& t);
     int logIMode_ = -1, logIGi_ = -1, logITmcc_ = -1; bool logISync_ = false;
-    int logTMode_ = -1, logTGi_ = -1, logTTps_ = -1; bool logTFec_ = false;
+    int logTMode_ = -1, logTGi_ = -1, logTTps_ = -1; bool logTFec_ = false; uint64_t logTDrops_ = 0;
     std::mutex rxMu_;
     RxTelemetry rxTel_;
     std::thread th_;

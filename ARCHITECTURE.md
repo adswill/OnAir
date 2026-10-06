@@ -17,7 +17,7 @@ radio ──► ring buffer ──► Engine ──► standard receiver ──�
 5. **Player** (`player.cpp`) decodes video and audio with FFmpeg, keeps the audio clock, and repairs short gaps (`conceal*.cpp`: Apple's model on macOS, a Direct3D 11 version on Windows, a CPU motion search elsewhere).
 6. **Outputs** (`tsout.cpp`, `nettuner.cpp`): recording, UDP/RTP, and the built-in network tuner (HDHomeRun-style, M3U and XMLTV).
 
-Threads: the analysis thread runs the receiver (it must never wait for the interface), the error-correction work runs on helper threads or the GPU, the player has its own reader thread and audio callback, and the interface runs on the main thread.
+Threads: the analysis thread runs the receiver (it must never wait for the interface), the error-correction work runs on helper threads or the GPU (DVB-T and ATSC hand it to a decoder thread of their own, fed through a queue), the player has its own reader thread and audio callback, and the interface runs on the main thread.
 
 ## Folders
 

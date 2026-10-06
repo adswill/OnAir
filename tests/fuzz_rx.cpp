@@ -133,6 +133,7 @@ int main() {
                 if (rng() % 25 == 0) rx.reset();
                 if (rng() % 40 == 0) rx.configure(fs, 8);
             }
+            rx.flush();
             RxTelemetry t; rx.telemetry(t, 0);
             printf("DVB-T fuzz round %d ok (%.1f s) state %d packets %zu\n", round, secs(), t.state, pk);
         }

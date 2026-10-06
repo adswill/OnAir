@@ -82,7 +82,8 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
         rx_.setPipelined(pipe);
     }
     rxT_.configure(rate_, tune.bandwidthMhz);
-    rxT_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });
+    rxT_.setBlocking(!src_->realtimeHardware());
+    rxT_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the DVB-T decoder thread
     rxA_.configure(rate_);
     rxA_.setBlocking(!src_->realtimeHardware());
     rxA_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the ATSC worker thread
@@ -98,7 +99,7 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     dabSeq_ = 0; logDState_ = -1; logDEns_ = false;
     atscSeq_ = 0; logAState_ = -1;
     activeStd_ = stdMode_.load() == 2 ? 1 : stdMode_.load() == 3 ? 2 : stdMode_.load() == 4 ? 3 : stdMode_.load() == 5 ? 4 : stdMode_.load() == 6 ? 5 : 0;
-    autoMark_ = 0; lastLockSec_ = 0; logTMode_ = logTGi_ = logTTps_ = -1; logTFec_ = false;
+    autoMark_ = 0; lastLockSec_ = 0; logTMode_ = logTGi_ = logTTps_ = -1; logTFec_ = false; logTDrops_ = 0;
     {
         std::lock_guard<std::mutex> lk(tsMu_);
         demux_.reset();
@@ -376,6 +377,15 @@ void Engine::logDvbtEvents(const RxTelemetry& t) {
     if (t.dvbt.fecSync != logTFec_) {
         log(t.dvbt.fecSync ? "transport stream locked (Viterbi + Reed-Solomon)" : "transport stream sync lost");
         logTFec_ = t.dvbt.fecSync;
+    }
+    if (t.plpFramesDropped != logTDrops_) {   // the channel decoder thread fell behind a live radio and started again (or a reset cleared the count)
+        const auto now = std::chrono::steady_clock::now();
+        if (t.plpFramesDropped > logTDrops_ && now - lastSkipLog_ > std::chrono::seconds(10)) {
+            lastSkipLog_ = now;
+            snprintf(b, sizeof b, "the DVB-T error correction cannot keep up: restarted it %llu time(s). Close other programs or use a faster computer", (unsigned long long)t.plpFramesDropped);
+            log(b);
+        }
+        logTDrops_ = t.plpFramesDropped;
     }
 }
 

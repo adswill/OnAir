@@ -91,6 +91,7 @@ static Result run(const dvbt::Params& p, int frames, double snrDb, double cfoHz,
     }
     auto t0 = std::chrono::steady_clock::now();
     for (size_t i = 0; i < outv.size(); i += 1 << 14) rx.feed(outv.data() + i, std::min<size_t>(1 << 14, outv.size() - i));
+    rx.flush();   // the channel decoder runs on its own thread
     r.secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
     rx.telemetry(r.tel, 0);
     r.locked = r.tel.state >= 1; r.tps = r.tel.dvbt.tpsOk; r.snr = r.tel.dataSnrDb; r.level = rx.detectLevel();
