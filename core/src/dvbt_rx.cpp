@@ -422,6 +422,13 @@ struct DvbtReceiver::Impl {
         if (cpRefValid) {
             // The symbol's common phase and phase ramp (timing) relative to the continual-pilot reference. The running totals
             // accumulate small per-symbol corrections, so nothing ever has to be unwrapped even when the clock drifts for minutes.
+            // A step of the timing loop is not small: moving the window by d samples turns carrier f by 2 pi f d / N, nearly +-pi at
+            // the band edges in 8K, so the fit below wraps and misses most of it, and the next symbols decode against a wrong channel.
+            // The step is known, so add its ramp first and let the fit measure only what is left.
+            if (winShift != 0) {
+                accSlope += 2 * M_PI * winShift / N;
+                accPhi += 2 * M_PI * (double)intShift * winShift / N;
+            }
             std::vector<cd> z(cp.size());
             cd tot = 0;
             for (size_t i = 0; i < cp.size(); i++) {
