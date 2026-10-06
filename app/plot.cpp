@@ -19,6 +19,7 @@ struct AxisSetup {
     Cond cond = Cond_Once;
     int flags = 0;
     std::string label, fmt;
+    double unit = 1;   // the labels show value * unit
     Scale scale = Scale_Linear;
     std::vector<double> tickPos;
     std::vector<std::string> tickLab;
@@ -125,10 +126,11 @@ std::vector<Tick> makeTicks(int a, double pixels, double minPixelsPerTick) {
         }
         return out;
     }
-    const double lo = C.lo[a], hi = C.hi[a];
+    // nice steps in the units of the labels
+    const double u = A.unit, lo = std::min(C.lo[a] * u, C.hi[a] * u), hi = std::max(C.lo[a] * u, C.hi[a] * u);
     const double step = niceStep(hi - lo, std::max(2.0, pixels / minPixelsPerTick));
     if (!(step > 0) || !std::isfinite(step)) return out;
-    for (double v = std::ceil(lo / step - 1e-9) * step; v <= hi + step * 1e-9 && out.size() < 200; v += step) out.push_back({v, formatTick(a, v, step)});
+    for (double v = std::ceil(lo / step - 1e-9) * step; v <= hi + step * 1e-9 && out.size() < 200; v += step) out.push_back({v / u, formatTick(a, v, step)});
     return out;
 }
 
@@ -292,6 +294,7 @@ void SetupAxisLimits(Axis a, double mn, double mx, Cond cond) {
     C.ax[a].min = mn; C.ax[a].max = mx; C.ax[a].cond = cond; C.ax[a].haveLimits = true;
 }
 void SetupAxisFormat(Axis a, const char* fmt) { if (C.active) C.ax[a].fmt = fmt ? fmt : ""; }
+void SetupAxisUnit(Axis a, double unit) { if (C.active && unit > 0 && std::isfinite(unit)) C.ax[a].unit = unit; }
 void SetupAxisScale(Axis a, Scale s) { if (C.active) C.ax[a].scale = s; }
 void SetupAxisTicks(Axis a, const double* v, int n, const char* const* labels) {
     if (!C.active) return;
@@ -489,7 +492,7 @@ void EndPlot() {
     if (C.hovered && !(C.flags & Flags_NoMouseText)) {
         const Point m = GetPlotMousePos();
         char b[64];
-        snprintf(b, sizeof b, "%.4g, %.4g", m.x, m.y);
+        snprintf(b, sizeof b, "%.4g, %.4g", m.x * C.ax[0].unit, m.y * C.ax[1].unit);
         const ImVec2 s = ImGui::CalcTextSize(b);
         C.dl->AddText(ImVec2(C.plot.Max.x - s.x - 5 * sc, C.plot.Max.y - s.y - 3 * sc), txt, b);
     }

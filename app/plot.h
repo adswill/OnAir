@@ -63,6 +63,7 @@ void EndSubplots();
 void SetupAxes(const char* xLabel, const char* yLabel, int xFlags = 0, int yFlags = 0);
 void SetupAxisLimits(Axis axis, double min, double max, Cond cond = Cond_Once);
 void SetupAxisFormat(Axis axis, const char* fmt);
+void SetupAxisUnit(Axis axis, double unit);   // data in one unit, tick labels in another: a label shows value * unit
 void SetupAxisScale(Axis axis, Scale scale);
 void SetupAxisTicks(Axis axis, const double* values, int n, const char* const* labels);
 

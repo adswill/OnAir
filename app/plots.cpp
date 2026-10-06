@@ -38,7 +38,25 @@ void spectrumPlot(App& a, ImVec2 size) {
 
 void waterfallPlot(App& a, ImVec2 size) {
     const int H = Waterfall::H;
-    double secs = H * a.frameDt;
+    // The time scale is worked out once and kept until the plot changes size (or the first real measure of the row time is in),
+    // so the labels never move while the picture scrolls under them.
+    struct Scale { ImVec2 avail{-1, -1}; bool measured = false; double dt = 0; std::vector<double> pos; std::vector<std::string> lab; };
+    static Scale sc;
+    const ImVec2 avail = ImGui::GetContentRegionAvail();
+    const bool measured = a.wf.nStamps >= 128;
+    if (avail.x != sc.avail.x || avail.y != sc.avail.y || measured != sc.measured) {
+        sc.avail = avail; sc.measured = measured; sc.dt = a.wf.rowDt;
+        // a 1-2-5 step that gives a label about every three text lines
+        const double secs = H * sc.dt, want = std::max(2.0, (double)avail.y / (ImGui::GetTextLineHeight() * 3));
+        const double raw = secs / want, mag = std::pow(10.0, std::floor(std::log10(raw))), n = raw / mag;
+        const double step = (n < 1.5 ? 1 : n < 3 ? 2 : n < 7 ? 5 : 10) * mag;
+        const int dec = std::max(0, (int)std::ceil(-std::log10(step) - 1e-9));
+        sc.pos.clear(); sc.lab.clear();
+        for (double s = 0; s <= secs + 1e-9; s += step) {
+            char b[32]; snprintf(b, sizeof b, "%.*f", dec, s > 0 ? -s : 0.0);
+            sc.pos.push_back(-s / sc.dt); sc.lab.push_back(b);
+        }
+    }
     if (plt::BeginPlot("##wf", size, plt::Flags_NoLegend | plt::Flags_NoTitle)) {
         plt::SetupAxes("frequency (MHz)", "seconds ago");
         double fs = (a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate) / 1e6;
@@ -47,13 +65,23 @@ void waterfallPlot(App& a, ImVec2 size) {
         const bool moved = lastC != a.freqMhz || lastFs != fs;
         lastC = a.freqMhz; lastFs = fs;
         plt::SetupAxisLimits(plt::X1, x0, x1, moved ? plt::Cond_Always : plt::Cond_Once);
-        plt::SetupAxisLimits(plt::Y1, -secs, 0, plt::Cond_Once);
+        // y is in rows, so the picture keeps its size while the measured row time wanders; the labels are the fixed scale above
+        plt::SetupAxisLimits(plt::Y1, -H, 0, plt::Cond_Always);
+        plt::SetupAxisUnit(plt::Y1, sc.dt);
+        std::vector<const char*> labs;
+        for (auto& s : sc.lab) labs.push_back(s.c_str());
+        plt::SetupAxisTicks(plt::Y1, sc.pos.data(), (int)sc.pos.size(), labs.data());
         plt::SetupAxisFormat(plt::X1, "%.2f");
+        // rows arrive at the engine's ~30 Hz, the screen draws faster: slide down by the part of a row that is due since the last one,
+        // so the picture moves at an even speed instead of jumping a row at a time
+        const double frac = a.wf.pushT > 0 ? std::min(1.0, std::max(0.0, (glfwGetTime() - a.wf.pushT) / a.wf.rowDt)) : 0;
         int w = a.wf.writeRow;
-        double secA = (H - w) * a.frameDt;
-        plt::PlotImage("a", a.wf.img->texture(), plt::Point(x0, -secA), plt::Point(x1, 0), ImVec2(0, (float)w / H), ImVec2(1, 1));
+        ImTextureID tex = a.wf.img->texture();
+        plt::PlotImage("a", tex, plt::Point(x0, -(H - w) - frac), plt::Point(x1, -frac), ImVec2(0, (float)w / H), ImVec2(1, 1));
         if (w > 0)
-            plt::PlotImage("b", a.wf.img->texture(), plt::Point(x0, -secs), plt::Point(x1, -secA), ImVec2(0, 0), ImVec2(1, (float)w / H));
+            plt::PlotImage("b", tex, plt::Point(x0, -H - frac), plt::Point(x1, -(H - w) - frac), ImVec2(0, 0), ImVec2(1, (float)w / H));
+        const float vNew = (w + 0.5f) / H;   // the gap above: the newest row, stretched
+        if (frac > 0) plt::PlotImage("top", tex, plt::Point(x0, -frac), plt::Point(x1, 0), ImVec2(0, vNew), ImVec2(1, vNew));
         plt::EndPlot();
     }
 }
