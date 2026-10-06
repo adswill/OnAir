@@ -50,6 +50,8 @@ struct DvbtReceiver::Impl {
     int winShift = 0;             // this window's start minus (previous start + one symbol)
     double accPhi = 0, accSlope = 0;   // running common phase and phase ramp relative to the continual-pilot reference
     double epsFrac = 0;           // fractional carrier-frequency offset in subcarrier spacings (tracked)
+    double rhoAvg = 0;            // usual strength of the cyclic-prefix correlation (|sum| / energy), from the symbols that were fine
+    int lowRun = 0;               // symbols in a row whose correlation has collapsed: the receiver has lost the symbol timing
     int intShift = 0;
     bool intLocked = false;
     std::vector<double> intScore; // accumulated pilot-coherence metric per candidate shift
@@ -107,7 +109,7 @@ struct DvbtReceiver::Impl {
     int64_t lastPublishSym = -100;
 
     void reset() {
-        state = 0; mode = gi = -1; N = G = K = 0; symStart = 0; epsFrac = 0; intShift = 0; intLocked = false;
+        state = 0; mode = gi = -1; N = G = K = 0; symStart = 0; epsFrac = 0; intShift = 0; intLocked = false; rhoAvg = 0; lowRun = 0; streaming = false; phaseCheck = false; postResync = 0;
         intScore.clear(); intSymbols = 0; absSym = 0; fft.reset(); agreeCount = 0; agreeMode = agreeGi = -1; acqLastEnd = 0;
         tpsBitsSeen.clear(); tpsBase = 0; prevTps.clear(); prevValid = false; prevWin = INT64_MIN; tpsOk = false; tpsFailures = 0; secSinceTps = 0;
         for (int i = 0; i < 4; i++) { hypVotes[i] = 0; hypScore[i] = 0; }
@@ -187,7 +189,7 @@ struct DvbtReceiver::Impl {
         while (s < base + (int64_t)buf.size() - (int64_t)(6 * P)) s += P;
         while (s - P >= base + 16) s -= P;
         symStart = (double)s;
-        timingAcc = 0; timingDrift = 0; accPhi = accSlope = 0;
+        timingAcc = 0; timingDrift = 0; accPhi = accSlope = 0; rhoAvg = 0; lowRun = 0;
         epsFrac = -std::arg(best.corr) / (2 * M_PI);   // c = sum y[n] conj(y[n+N]) has phase -2 pi eps
         back = std::min(G / 4, 24);
         fft = std::make_unique<Fft>(N);
@@ -197,7 +199,7 @@ struct DvbtReceiver::Impl {
         grid.assign((size_t)(K + 2) / 3 + 1, cf32(0, 0)); gridAge.assign(grid.size(), 255);
         cpRef.assign(continualPilots(mode).size(), cf32(1, 0)); cpRefValid = false; gridFilled = 0;
         for (int i = 0; i < 4; i++) { hypVotes[i] = 0; hypScore[i] = 0; }
-        fec.reset();
+        fec.reset(); streaming = false; phaseCheck = false; postResync = 0;
         state = 1;
         return true;
     }
@@ -222,7 +224,7 @@ struct DvbtReceiver::Impl {
     }
 
     // CP correlation around the expected position: timing error and fractional CFO
-    void cpTrack(int64_t s, double& err, double& epsRaw, double& mag) {
+    void cpTrack(int64_t s, double& err, double& epsRaw, double& mag, double& rho) {
         double bestM = -1; int bestD = 0; cd bestC = 0;
         double ms[13];
         for (int d = -6; d <= 6; d++) {
@@ -241,7 +243,57 @@ struct DvbtReceiver::Impl {
         err = bestD + frac;
         epsRaw = -std::arg(bestC) / (2 * M_PI);
         mag = bestM;
+        // correlation coefficient: |sum| against the energy of the two copies; near 1 on a clean signal, near 0 where there is none
+        double e = 0;
+        for (int i = 0; i < G; i++) { const cf32 a = at(s + bestD + i), b = at(s + bestD + i + N); e += 0.5 * ((double)std::norm(a) + (double)std::norm(b)); }
+        rho = e > 1e-12 ? bestM / e : 0.0;
     }
+
+    // The cyclic-prefix correlation has collapsed for good: the symbol timing is wrong by more than the tracking loop can pull in (samples were
+    // lost, the clock jumped) or the signal is gone. Look for the symbol boundary anywhere in one symbol length, using running sums so that the
+    // whole search is about as cheap as one symbol. Found: carry on at the new timing, keeping the frame position and the channel type. Not
+    // found: start the acquisition at once instead of waiting for three failed TPS frames (a quarter of a second).
+    // Returns false when more samples are needed first.
+    bool resync(int64_t s) {
+        const int P = N + G;
+        const int64_t need = s + 2 * (int64_t)P + N + 64;
+        if (need > end()) return false;
+        std::vector<cd> cum((size_t)(P + G) + 1);
+        std::vector<double> en((size_t)(P + G) + 1);
+        cum[0] = 0; en[0] = 0;
+        for (int i = 0; i < P + G; i++) {
+            const cf32 a = at(s + i), b = at(s + i + N);
+            cum[(size_t)i + 1] = cum[(size_t)i] + cd(a.real(), a.imag()) * std::conj(cd(b.real(), b.imag()));
+            en[(size_t)i + 1] = en[(size_t)i] + 0.5 * ((double)std::norm(a) + (double)std::norm(b));
+        }
+        int bestD = 0; double bestRho = -1;
+        for (int d = 0; d < P; d++) {
+            const double e = en[(size_t)(d + G)] - en[(size_t)d];
+            const double r = e > 1e-12 ? std::abs(cum[(size_t)(d + G)] - cum[(size_t)d]) / e : 0.0;
+            if (r > bestRho) { bestRho = r; bestD = d; }
+        }
+        lowRun = 0;
+        if (getenv("DECT2_DEBUG")) fprintf(stderr, "  [dbg] resync at sym %llu: best offset %d (rho %.2f, usual %.2f)\n", (unsigned long long)absSym, bestD >= P / 2 ? bestD - P : bestD, bestRho, rhoAvg);
+        if (bestRho >= std::max(0.3, 0.5 * rhoAvg)) {
+            // The boundary repeats every P samples. Take the shift nearest to zero, not the first one ahead: if some samples (less than half a
+            // symbol) went missing, the symbol that follows starts a little earlier than expected, and stepping back keeps the receiver's count of
+            // symbols (and so the frame position and the transport stream alignment) right. A step ahead by almost a whole symbol would skip one.
+            if (bestD >= P / 2) bestD -= P;
+            symStart = (double)(s + bestD);
+            timingAcc = 0; accPhi = accSlope = 0;
+            prevValid = false; prevWin = INT64_MIN; winShift = 0;
+            cpRefValid = false; std::fill(gridAge.begin(), gridAge.end(), (uint8_t)255); gridFilled = 0;
+            resyncs++;
+            phaseCheck = true; postResync = 2;
+            return true;
+        }
+        tpsOk = false; state = 0; detect = 1; agreeCount = 0;
+        return true;
+    }
+    uint64_t resyncs = 0;
+    bool streaming = false;       // the error correction has been fed symbols without a break since the last acquisition
+    bool phaseCheck = false;      // after a resync: check once which of the four scattered-pilot positions the next good symbol has
+    int postResync = 0;           // frame checks still to come after a resync: the first one is expected to fail (that frame holds the gap)
 
     static double wrap(double v) { while (v > 0.5) v -= 1; while (v < -0.5) v += 1; return v; }
 
@@ -281,19 +333,31 @@ struct DvbtReceiver::Impl {
         int64_t s = (int64_t)std::llround(symStart);
         if (s + P + N + 32 > end()) return false;
         if (s - 16 < base) { symStart += P; return true; } // fell behind the buffer: skip
-        double terr, eraw, mag;
-        cpTrack(s, terr, eraw, mag);
+        double terr, eraw, mag, rho;
+        cpTrack(s, terr, eraw, mag, rho);
+        // how reliable is this symbol's correlation? Against its usual strength, from the symbols that were fine
+        const bool collapsed = rhoAvg > 0 && absSym > 40 && rho < 0.3 * rhoAvg;
+        if (!collapsed) rhoAvg = rhoAvg == 0 ? rho : rhoAvg + (absSym < 200 ? 0.05 : 0.005) * (rho - rhoAvg);
+        lowRun = collapsed ? lowRun + 1 : 0;
+        if (lowRun >= 12) {
+            if (!resync(s)) return false;
+            return true;
+        }
         // timing loop (the CP correlation peak sits at the symbol start). Proportional plus integral: the integral learns the drift
         // of the sample clock, so the proportional part can stay small. With echoes the CP correlation peak is broad and noisy, and a
         // fast loop dithered the window by a sample tens of times a second, each step disturbing the channel estimate. It runs fast
         // for the first symbols after acquisition (to learn a clock offset of tens of ppm) and then slow.
+        // A symbol whose correlation has collapsed says nothing about timing or frequency: noise would walk both loops away (a swing of half a
+        // subcarrier was seen on a real recording), so they hold still until the correlation is back or the receiver has resynchronised.
         const bool pullIn = absSym < 500;
-        timingDrift += (pullIn ? 0.0016 : 0.000025) * terr;
-        timingAcc += (pullIn ? 0.08 : 0.01) * terr + timingDrift;
+        if (!collapsed) {
+            timingDrift += (pullIn ? 0.0016 : 0.000025) * terr;
+            timingAcc += (pullIn ? 0.08 : 0.01) * terr + timingDrift;
+        } else timingAcc += timingDrift;
         if (std::fabs(timingAcc) >= 1.0) { const double stp = std::round(timingAcc); symStart += stp; timingAcc -= stp; }
         // fractional CFO loop
         const double d = wrap(eraw - wrapFrac(epsFrac));
-        epsFrac += 0.15 * d;
+        if (!collapsed) epsFrac += 0.15 * d;
         if (epsFrac > 0.5 || epsFrac < -0.5) {
             // roll the integer part into the carrier shift
             const double step = epsFrac > 0 ? 1.0 : -1.0;
@@ -361,7 +425,20 @@ struct DvbtReceiver::Impl {
             // channel estimate not meaningful yet: only accumulate the pilot-phase votes and wait for TPS
             return;
         }
-        estimateAndDecode(symIdx);
+        if (phaseCheck && lowRun == 0) {
+            // the first good symbol after a resync: whole symbols may have gone missing with the lost samples. Move the frame position on by that
+            // many and give the error correction the same number of erased symbols, so that its bit stream stays aligned.
+            phaseCheck = false;
+            const int delta = scatteredPhaseDelta(symIdx);
+            if (getenv("DECT2_DEBUG")) fprintf(stderr, "  [dbg] scattered pilot check at sym %llu: the real stream is %d symbol(s) ahead of the count\n", (unsigned long long)absSym, delta);
+            if (delta > 0) {
+                if (streaming) for (int i = 0; i < delta; i++) pushErasure((symIdx + i) % 68);
+                frameStartAbs -= (uint64_t)delta;
+                symIdx = (symIdx + delta) % 68;
+            }
+        }
+        if (lowRun > 0) { if (streaming) pushErasure(symIdx); }   // this symbol's correlation has collapsed: nothing to decode, nothing to learn from
+        else estimateAndDecode(symIdx);
         // per-frame TPS re-check at the frame boundary
         if (symIdx == 67) verifyFrame();
     }
@@ -402,14 +479,63 @@ struct DvbtReceiver::Impl {
         uint8_t b[68];
         for (int i = 0; i < 68; i++) { const int v = tpsBitsSeen[f0 - tpsBase + i]; b[i] = v < 0 ? 0 : (uint8_t)v; }
         Params q; int fi; bool odd;
-        if (tpsDecode(b, q, fi, odd, 2) && q.mode == mode && q.guard == gi) {
+        const bool frameOk = tpsDecode(b, q, fi, odd, 2) && q.mode == mode && q.guard == gi;
+        if (frameOk) {
+            postResync = 0;
             tpsFailures = 0;
             secSinceTps = 0;
             frameIdx = fi;
             if (!(q == prm)) { prm = q; fec.configure(prm); }
+        } else if (postResync > 0) {
+            // After a resync the first frame that comes round holds the gap and is expected to fail. If the second one fails too, whole symbols went
+            // missing (more than the scattered-pilot check can tell, which is only the position modulo four): look for the TPS block again at once,
+            // keeping the symbol timing, the carrier offset and the channel, instead of waiting for three failures and starting from scratch.
+            if (--postResync == 0) { tpsOk = false; tpsFailures = 0; }
         } else if (++tpsFailures >= 3) {
+            if (getenv("DECT2_DEBUG")) fprintf(stderr, "  [dbg] TPS verification failed 3 times at sym %llu: start over\n", (unsigned long long)absSym);
             // lost: start over with a fresh acquisition
             tpsOk = false; state = 0; detect = 1; agreeCount = 0;
+        }
+    }
+
+    // A symbol that carries no information (its correlation has collapsed, or the channel estimate is still being rebuilt after a resync) must
+    // still go through the error correction as a symbol of erased cells. Leaving it out would shift the bit stream by a whole symbol, and the
+    // sync bytes, which bypass the interleaver, would still look right while every block fails.
+    // Which of the four scattered-pilot positions does this symbol (in Y) have, against the one the receiver's symbol count says? The pilots sit on
+    // carriers 3 * (symbol index mod 4) + 12 j with known signs, so the right position shows as pilots whose neighbours (12 carriers apart) agree
+    // in phase, and a wrong one does not. Returns how many symbols the real stream is ahead of the count (0..3), or 0 when it cannot tell.
+    int scatteredPhaseDelta(int symIdx) const {
+        double score[4];
+        for (int h = 0; h < 4; h++) {
+            cd sum = 0, prev = 0; double mag = 0; bool have = false;
+            for (int k = 3 * h; k < K; k += 12) {
+                const cd v = cd(Y[k].real(), Y[k].imag()) * (double)pilotValue(k);
+                if (have) { const cd z = v * std::conj(prev); sum += z; mag += std::abs(z); }
+                prev = v; have = true;
+            }
+            score[h] = mag > 0 ? std::abs(sum) / mag : 0;
+        }
+        int best = 0;
+        for (int h = 1; h < 4; h++) if (score[h] > score[best]) best = h;
+        double second = 0;
+        for (int h = 0; h < 4; h++) if (h != best) second = std::max(second, score[h]);
+        if (score[best] < 0.5 || score[best] < 1.5 * second) return 0;
+        return ((best - symIdx % 4) % 4 + 4) % 4;
+    }
+
+    void pushErasure(int symIdx) {
+        const int Nd = dataCarriers(mode);
+        std::vector<cf32> eq((size_t)Nd, cf32(0, 0));
+        std::vector<float> n0((size_t)Nd, 1e6f);
+        fec.pushSymbol(eq.data(), n0.data(), symIdx);
+        streamSecs += (double)(N + G) / fn;
+        fec.takePackets(pktBuf);
+        if (!pktBuf.empty()) {
+            packetsOut += pktBuf.size() / 188;
+            detect = 3;
+            if (cb) cb(pktBuf.data(), pktBuf.size() / 188, streamSecs);
+            streamSecs = 0;
+            pktBuf.clear();
         }
     }
 
@@ -470,7 +596,7 @@ struct DvbtReceiver::Impl {
         for (size_t i = 0; i < cp.size(); i++) if (cp[i] % 3 == 0) { grid[cp[i] / 3] = cpRef[i]; gridAge[cp[i] / 3] = 0; }
         for (auto& a : gridAge) if (a < 250) a++;
         gridFilled++;
-        if (gridFilled < 4) return;
+        if (gridFilled < 4) { if (streaming) pushErasure(symIdx); return; }
         const double tau0 = (double)back + (double)G / 2.0;
         std::vector<cf32> g((size_t)(K + 2) / 3);
         for (size_t n = 0; n < g.size(); n++) g[n] = grid[n];
@@ -491,6 +617,7 @@ struct DvbtReceiver::Impl {
         }
         if (di != Nd) return;
         fec.pushSymbol(eq.data(), n0.data(), symIdx);
+        streaming = true;
         streamSecs += (double)(N + G) / fn;
         const FecStats& fs = fec.stats();
         fec.takePackets(pktBuf);
