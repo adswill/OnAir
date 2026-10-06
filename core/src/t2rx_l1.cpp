@@ -6,10 +6,10 @@ namespace dect2 {
 bool T2Receiver::Impl::p2Hypothesis(bool ext, bool final) {
     const FftMode* fm = fftModeFromS2(fftCode);
     const int G = guard, N = fftN;
-    PilotConfig pc; pc.fftCode = fftCode; pc.ext = ext; pc.pp = 0;
-    PilotMap pm(pc);
-    if (!pm.valid()) { pc.pp = 1; pm = PilotMap(pc); }
-    if (!pm.valid()) return false;
+    const PilotMap* pmp = &cachedPilotMap(fftCode, ext, 0);
+    if (!pmp->valid()) pmp = &cachedPilotMap(fftCode, ext, 1);
+    if (!pmp->valid()) return false;
+    const PilotMap& pm = *pmp;
     const int K = pm.carriers(), off = (kMax - K) / 2;
     const int S = fftCode == 5 ? 6 : 3;
     const int M = (K - 1) / S + 1;
@@ -203,9 +203,9 @@ bool T2Receiver::Impl::p2Hypothesis(bool ext, bool final) {
 }
 
 int T2Receiver::Impl::p2IntegerShift() {
-    PilotConfig pc; pc.fftCode = fftCode; pc.ext = false; pc.pp = 0;
-    PilotMap pm(pc);
-    for (int q = 1; !pm.valid() && q < 8; q++) { pc.pp = q; pm = PilotMap(pc); }
+    const PilotMap* pmp = &cachedPilotMap(fftCode, false, 0);
+    for (int q = 1; !pmp->valid() && q < 8; q++) pmp = &cachedPilotMap(fftCode, false, q);
+    const PilotMap& pm = *pmp;
     if (!pm.valid() || p2cells.empty() || (int)p2cells[0].size() != kMax) return 0;
     const int K = pm.carriers(), off = (kMax - K) / 2;
     const int S = fftCode == 5 ? 6 : 3;
