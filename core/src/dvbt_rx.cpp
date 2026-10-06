@@ -128,6 +128,7 @@ struct DvbtReceiver::Impl {
             const int64_t Dn = B - n;
             // products y[i] conj(y[i+n]) and energies, as cumulative sums
             std::vector<cd> cum(Dn + 1);
+            std::vector<double> rr;
             std::vector<double> en(Dn + 1);
             cd acc = 0; double ea = 0;
             cum[0] = 0; en[0] = 0;
@@ -144,11 +145,18 @@ struct DvbtReceiver::Impl {
                 std::vector<double> F(P, 0.0);
                 std::vector<cd> Fc(P, cd(0, 0));
                 std::vector<int> cnt(P, 0);
+                // runs on every block while searching, so keep it lean: the normalised magnitudes in one plain loop the compiler can
+                // vectorise (sqrt of the norm: std::abs goes through the much slower overflow-safe hypot), then the fold by symbol phase
+                // with a wrapping index instead of d % P
+                rr.resize((size_t)D);
                 for (int64_t d = 0; d < D; d++) {
-                    const cd c = cum[d + G_] - cum[d];
+                    const double cr = cum[d + G_].real() - cum[d].real(), ci = cum[d + G_].imag() - cum[d].imag();
                     const double e = en[d + G_] - en[d];
-                    const double r = e > 1e-12 ? std::abs(c) / e : 0.0;
-                    F[d % P] += r; Fc[d % P] += c; cnt[d % P]++;
+                    rr[d] = e > 1e-12 ? std::sqrt(cr * cr + ci * ci) / e : 0.0;
+                }
+                for (int64_t d = 0, ph = 0; d < D; d++) {
+                    F[ph] += rr[d]; Fc[ph] += cum[d + G_] - cum[d]; cnt[ph]++;
+                    if (++ph == P) ph = 0;
                 }
                 double mx = 0, mean = 0; int arg = 0;
                 for (int i = 0; i < P; i++) { if (cnt[i]) F[i] /= cnt[i]; mean += F[i]; if (F[i] > mx) { mx = F[i]; arg = i; } }
