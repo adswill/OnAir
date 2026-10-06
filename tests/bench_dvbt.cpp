@@ -9,7 +9,7 @@
 #include <cmath>
 #include <random>
 #include <vector>
-#include <sys/resource.h>
+#include <ctime>
 using namespace dect2;
 int main(int argc, char** argv) {
     const int frames = argc > 1 ? atoi(argv[1]) : 60;
@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
     rx.configure(fn, 8);
     size_t packets = 0;
     rx.setPacketCallback([&](const uint8_t*, size_t n, double) { packets += n; });
-    auto cpu = [] { rusage u; getrusage(RUSAGE_SELF, &u); return u.ru_utime.tv_sec + u.ru_utime.tv_usec * 1e-6 + u.ru_stime.tv_sec + u.ru_stime.tv_usec * 1e-6; };
+    auto cpu = [] { return (double)std::clock() / CLOCKS_PER_SEC; };   // CPU time of the whole process
     fprintf(stderr, "feeding\n");
     const double c0 = cpu();
     auto t0 = std::chrono::steady_clock::now();
