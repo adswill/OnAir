@@ -358,7 +358,7 @@ L1Result decodeL1Pre(const std::vector<cf32>& y, float n0, L1Pre& out) {
     for (int i = 0; i < NBCH_PARITY; i++) llr[KBCH14 + i] = y[k++].real() * sc;
     for (int i = 0; i < FRAME_SHORT - NBCH14; i++) if (!punct[i]) llr[NBCH14 + i] = y[k++].real() * sc;
     std::vector<uint8_t> hard;
-    bool ok = ldpcPre().decode(llr, 60, hard, &r.ldpcIters);
+    bool ok = ldpcPre().decodeFast(llr, 100, hard, &r.ldpcIters, 0.8f);
     (void)ok;
     std::vector<uint8_t> info(hard.begin(), hard.begin() + 168);
     uint32_t want = 0;
@@ -475,7 +475,7 @@ L1Result decodeL1Post(const std::vector<cf32>& y, float n0, const L1Pre& pre, in
     for (int n = 0; n < NBCH_PARITY; n++) llr[KBCH12 + n] = ls[k++] * sc;
     for (int n = 0; n < FRAME_SHORT - NBCH12; n++) if (!punct[n]) { if (k < ls.size()) llr[NBCH12 + n] = ls[k++] * sc; }
     std::vector<uint8_t> hard;
-    ldpcPost().decode(llr, 60, hard, &r.ldpcIters);
+    ldpcPost().decodeFast(llr, 100, hard, &r.ldpcIters, 0.8f);
     r.bchOk = bchCheck(hard, NBCH12);
     std::vector<uint8_t> bits;
     for (int n = 0; n < KBCH12; n++) if (!pad[n]) bits.push_back(hard[n]);

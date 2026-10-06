@@ -130,6 +130,7 @@ struct T2Receiver::Impl {
     bool scanFirst = true;
     std::vector<cd> pq1, pq2;   // scanP1 scratch (prefix sums), kept to avoid reallocating per chunk
     int64_t trackKeep = -1;               // samples from here on stay buffered while tracking, so a missed P1 can be searched for again
+    std::vector<std::pair<int64_t, int64_t>> done;   // stretches of `m` the last P1 search filled in
     int trackMiss = 0, trackFrames = 0;   // windowed P1 search: expected P1s not found in a row, P1s accepted since the last full pass
     double trackExpect = 0;               // where the next P1 is expected (absolute sample index), 0 = not set
     int64_t trackFullUntil = 0;           // search everything up to here

@@ -9,17 +9,26 @@ void T2Receiver::Impl::p1Metric(int64_t lo, int64_t len, int64_t d0, int64_t d1)
     pq1[0] = 0; pq2[0] = 0; pe[0] = 0;
     // every index read is inside the buffer: lo >= base, lo + len == end(), and the offsets are guarded by the conditions below
     const cf32* xs = buf.data() + (lo - base);
+    // plain real arithmetic: std::complex<double> multiplies go through a slow NaN-checking library call
+    double a1r = 0, a1i = 0, a2r = 0, a2i = 0, ae = 0;
     for (int64_t j = 0; j < n; j++) {
         const int64_t i = d0 + j;
-        const cf32 x = xs[i];
-        cd xc(x.real(), x.imag());
-        cd ph = phiTab[(lo + i) & 1023];
-        cd q1 = 0, q2 = 0;
-        if (i + kP1CLen < len) { cf32 y = xs[i + kP1CLen]; q1 = xc * std::conj(cd(y.real(), y.imag())) * ph; }
-        if (i >= kP1BLen) { cf32 y = xs[i - kP1BLen]; q2 = xc * std::conj(cd(y.real(), y.imag())) * ph; }
-        pq1[j + 1] = pq1[j] + q1;
-        pq2[j + 1] = pq2[j] + q2;
-        pe[j + 1] = pe[j] + (double)x.real() * x.real() + (double)x.imag() * x.imag();
+        const double xr = xs[i].real(), xi = xs[i].imag();
+        const cd& ph = phiTab[(lo + i) & 1023];
+        if (i + kP1CLen < len) {   // x * conj(y) * ph
+            const double yr = xs[i + kP1CLen].real(), yi = xs[i + kP1CLen].imag();
+            const double tr = xr * yr + xi * yi, ti = xi * yr - xr * yi;
+            a1r += tr * ph.real() - ti * ph.imag(); a1i += tr * ph.imag() + ti * ph.real();
+        }
+        if (i >= kP1BLen) {
+            const double yr = xs[i - kP1BLen].real(), yi = xs[i - kP1BLen].imag();
+            const double tr = xr * yr + xi * yi, ti = xi * yr - xr * yi;
+            a2r += tr * ph.real() - ti * ph.imag(); a2i += tr * ph.imag() + ti * ph.real();
+        }
+        ae += xr * xr + xi * xi;
+        pq1[j + 1] = cd(a1r, a1i);
+        pq2[j + 1] = cd(a2r, a2i);
+        pe[j + 1] = ae;
     }
     for (int64_t d = d0; d <= d1; d++) {
         const int64_t jd = d - d0;
@@ -56,7 +65,8 @@ void T2Receiver::Impl::scanP1() {
     int64_t lastD = len - kP1Len; // last valid d index (relative)
     int64_t cLo = scanFirst ? 0 : W;
     int64_t cHi = lastD - W;
-    m.assign(lastD + 1, 0.f);
+    if ((int64_t)m.size() != lastD + 1) m.resize(lastD + 1);   // only the searched stretches are written (and recorded in `done`); the rest is never read
+    done.clear();
     // Once locked, the next P1 is expected one frame after the last one, so only a window around that position is searched (a P1 is
     // 2048 samples in a frame of two million). A window that comes up empty is widened, after three misses the whole range is searched
     // again until a P1 is accepted, and every 20 frames one frame's worth is searched in full to catch a change at the transmitter.
@@ -86,6 +96,7 @@ void T2Receiver::Impl::scanP1() {
             if (wLo > cHi) break;   // not reached yet
             const int64_t dA = std::max(from, wLo), dB = std::min(cHi, wHi);
             p1Metric(lo, len, std::max<int64_t>(0, dA - W), std::min(lastD, dB + W));
+            done.emplace_back(dA, dB);
             if (p1Detect(lo, lastD, dA, dB)) { from = dB + 1; continue; }   // (trackExpect is updated on acceptance)
             if (wHi <= cHi) {   // the whole window was searched without finding a P1
                 if (getenv("DECT2_DEBUG")) { float mx = 0; for (int64_t k = std::max<int64_t>(0, wLo); k <= std::min(lastD, wHi); k++) mx = std::max(mx, m[k]); fprintf(stderr, "  [dbg] no P1 in the window around %.0f (+-%d), best metric %.2f: searching everything again\n", trackExpect, kTrackWindow, mx); }
@@ -97,12 +108,15 @@ void T2Receiver::Impl::scanP1() {
     }
     if (!tracked && fullFrom <= cHi) {
         p1Metric(lo, len, std::max<int64_t>(0, fullFrom - W), std::min(lastD, cHi + W));
+        done.emplace_back(fullFrom, cHi);
         p1Detect(lo, lastD, fullFrom, cHi);
     }
     // decimated trace of the region that becomes final in this pass (zero where the search skipped it)
     for (int64_t d = cLo; d + kTraceDecim <= cHi + 1; d += kTraceDecim) {
         float mx = 0;
-        for (int k = 0; k < kTraceDecim; k++) mx = std::max(mx, m[d + k]);
+        for (const auto& r : done)
+            if (r.first <= d + kTraceDecim - 1 && r.second >= d)
+                for (int k = 0; k < kTraceDecim; k++) if (d + k >= r.first && d + k <= r.second) mx = std::max(mx, m[d + k]);
         trace.push_back(mx);
     }
     if (trace.size() > 2048) trace.erase(trace.begin(), trace.begin() + (trace.size() - 2048));
@@ -174,19 +188,23 @@ T2Receiver::Impl::P1Decode T2Receiver::Impl::decodeP1(int64_t d, double cfoC) {
             best.s2 = i2;
             best.cfo = cfo;
             best.z.assign(z.begin(), z.end());
-            // sub-sample timing from the phase slope of the (now known) differential bits
+            // sub-sample timing from the phase slope of the (now known) differential bits; carriers with the same spacing to
+            // their neighbour share a phasor, so the signed differentials are summed per spacing first
+            cd perDf[16] = {};
+            for (int i = 1; i < 384; i++) {
+                int sg = 1;
+                if (i < 64) sg = 1 - 2 * bit(kS1Patterns[i1], i);
+                else if (i < 320) sg = 1 - 2 * bit(kS2Patterns[i2], i - 64);
+                else sg = 1 - 2 * bit(kS1Patterns[i1], i - 320);
+                int df = kP1ActiveCarriers[i] - kP1ActiveCarriers[i - 1];
+                if (df < 1 || df >= 16) df = 0;   // (not expected: slot 0 is unused)
+                perDf[df] += cd(z[i].real() * sg, z[i].imag() * sg);
+            }
             double bestMag = -1, bestDelta = 0;
             for (double delta = -24; delta <= 24; delta += 0.1) {
                 cd acc = 0;
-                for (int i = 1; i < 384; i++) {
-                    int sg = 1;
-                    if (i < 64) sg = 1 - 2 * bit(kS1Patterns[i1], i);
-                    else if (i < 320) sg = 1 - 2 * bit(kS2Patterns[i2], i - 64);
-                    else sg = 1 - 2 * bit(kS1Patterns[i1], i - 320);
-                    double df = kP1ActiveCarriers[i] - kP1ActiveCarriers[i - 1];
-                    cd w(z[i].real() * sg, z[i].imag() * sg);
-                    acc += w * std::polar(1.0, -kTwoPi * delta * df / 1024.0);
-                }
+                for (int df = 1; df < 16; df++)
+                    if (perDf[df] != cd(0, 0)) acc += perDf[df] * std::polar(1.0, -kTwoPi * delta * df / 1024.0);
                 if (std::abs(acc) > bestMag) { bestMag = std::abs(acc); bestDelta = delta; }
             }
             best.frac = bestDelta;
