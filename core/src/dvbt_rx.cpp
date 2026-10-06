@@ -45,6 +45,9 @@ struct DvbtReceiver::Impl {
     int mode = -1, gi = -1, N = 0, G = 0, K = 0, kc = 0;
     double symStart = 0;          // absolute index of the CP start of the next symbol (kept integer; steps are rare)
     double timingAcc = 0;         // fractional timing error accumulated by the loop
+    double timingDrift = 0;       // samples per symbol the window drifts (sample clock offset), learnt by the loop
+    int64_t prevWin = INT64_MIN;  // start of the previous symbol's FFT window
+    int winShift = 0;             // this window's start minus (previous start + one symbol)
     double accPhi = 0, accSlope = 0;   // running common phase and phase ramp relative to the continual-pilot reference
     double epsFrac = 0;           // fractional carrier-frequency offset in subcarrier spacings (tracked)
     int intShift = 0;
@@ -106,7 +109,7 @@ struct DvbtReceiver::Impl {
     void reset() {
         state = 0; mode = gi = -1; N = G = K = 0; symStart = 0; epsFrac = 0; intShift = 0; intLocked = false;
         intScore.clear(); intSymbols = 0; absSym = 0; fft.reset(); agreeCount = 0; agreeMode = agreeGi = -1; acqLastEnd = 0;
-        tpsBitsSeen.clear(); tpsBase = 0; prevTps.clear(); prevValid = false; tpsOk = false; tpsFailures = 0; secSinceTps = 0;
+        tpsBitsSeen.clear(); tpsBase = 0; prevTps.clear(); prevValid = false; prevWin = INT64_MIN; tpsOk = false; tpsFailures = 0; secSinceTps = 0;
         for (int i = 0; i < 4; i++) { hypVotes[i] = 0; hypScore[i] = 0; }
         grid.clear(); gridAge.clear(); cpRef.clear(); cpRefValid = false; gridFilled = 0;
         fec.reset(); streamSecs = 0; symbols = 0; packetsOut = 0; detect = 0;
@@ -184,13 +187,13 @@ struct DvbtReceiver::Impl {
         while (s < base + (int64_t)buf.size() - (int64_t)(6 * P)) s += P;
         while (s - P >= base + 16) s -= P;
         symStart = (double)s;
-        timingAcc = 0; accPhi = accSlope = 0;
+        timingAcc = 0; timingDrift = 0; accPhi = accSlope = 0;
         epsFrac = -std::arg(best.corr) / (2 * M_PI);   // c = sum y[n] conj(y[n+N]) has phase -2 pi eps
         back = std::min(G / 4, 24);
         fft = std::make_unique<Fft>(N);
         fbuf.assign(N, cf32(0, 0));
         intScore.assign(41, 0.0); intSymbols = 0; intLocked = false; intShift = 0;
-        tpsBitsSeen.clear(); tpsBase = 0; prevValid = false; tpsOk = false; absSym = 0;
+        tpsBitsSeen.clear(); tpsBase = 0; prevValid = false; prevWin = INT64_MIN; tpsOk = false; absSym = 0;
         grid.assign((size_t)(K + 2) / 3 + 1, cf32(0, 0)); gridAge.assign(grid.size(), 255);
         cpRef.assign(continualPilots(mode).size(), cf32(1, 0)); cpRefValid = false; gridFilled = 0;
         for (int i = 0; i < 4; i++) { hypVotes[i] = 0; hypScore[i] = 0; }
@@ -280,8 +283,13 @@ struct DvbtReceiver::Impl {
         if (s - 16 < base) { symStart += P; return true; } // fell behind the buffer: skip
         double terr, eraw, mag;
         cpTrack(s, terr, eraw, mag);
-        // timing loop (the CP correlation peak sits at the symbol start)
-        timingAcc += 0.08 * terr;
+        // timing loop (the CP correlation peak sits at the symbol start). Proportional plus integral: the integral learns the drift
+        // of the sample clock, so the proportional part can stay small. With echoes the CP correlation peak is broad and noisy, and a
+        // fast loop dithered the window by a sample tens of times a second, each step disturbing the channel estimate. It runs fast
+        // for the first symbols after acquisition (to learn a clock offset of tens of ppm) and then slow.
+        const bool pullIn = absSym < 500;
+        timingDrift += (pullIn ? 0.0016 : 0.000025) * terr;
+        timingAcc += (pullIn ? 0.08 : 0.01) * terr + timingDrift;
         if (std::fabs(timingAcc) >= 1.0) { const double stp = std::round(timingAcc); symStart += stp; timingAcc -= stp; }
         // fractional CFO loop
         const double d = wrap(eraw - wrapFrac(epsFrac));
@@ -292,6 +300,10 @@ struct DvbtReceiver::Impl {
             epsFrac -= step;
             if (intLocked) intShift += (int)step;
         }
+        // how far this window moved against the previous one beyond one symbol (the timing loop's steps), for the TPS differential
+        winShift = prevWin == INT64_MIN ? 0 : (int)(s - prevWin - P);
+        if (std::abs(winShift) > 16) { winShift = 0; prevValid = false; }   // a skipped symbol: no valid previous one
+        prevWin = s;
         transform(s);
         if (!intLocked) {
             // search needs the unshifted transform: the shifted Y is only a re-indexing of fbuf, which is intact after transform()
@@ -315,7 +327,15 @@ struct DvbtReceiver::Impl {
         // ---- TPS bit for this symbol: differential BPSK against the previous symbol
         if (prevValid && prevTps.size() == tpsK.size()) {
             double acc = 0;
-            for (size_t i = 0; i < tpsK.size(); i++) acc += (Y[tpsK[i]] * std::conj(prevTps[i])).real();
+            // When the timing loop moved the FFT window by d samples since the previous symbol, carrier f turned by 2 pi f d / N:
+            // turn the previous symbol's TPS cells the same way, or the differential products partly cancel and the bit can flip.
+            if (winShift != 0) {
+                for (size_t i = 0; i < tpsK.size(); i++) {
+                    const double a = 2 * M_PI * (double)(tpsK[i] + intShift - kc) * winShift / N;
+                    acc += (Y[tpsK[i]] * std::conj(prevTps[i] * cf32((float)std::cos(a), (float)std::sin(a)))).real();
+                }
+            } else
+                for (size_t i = 0; i < tpsK.size(); i++) acc += (Y[tpsK[i]] * std::conj(prevTps[i])).real();
             tpsBitsSeen.push_back(acc < 0 ? 1 : 0);
         } else tpsBitsSeen.push_back(-1);
         if (prevValid && prevTps.size() == tpsK.size() && symbols % 3 == 0) {
@@ -382,7 +402,7 @@ struct DvbtReceiver::Impl {
         uint8_t b[68];
         for (int i = 0; i < 68; i++) { const int v = tpsBitsSeen[f0 - tpsBase + i]; b[i] = v < 0 ? 0 : (uint8_t)v; }
         Params q; int fi; bool odd;
-        if (tpsDecode(b, q, fi, odd) && q.mode == mode && q.guard == gi) {
+        if (tpsDecode(b, q, fi, odd, 2) && q.mode == mode && q.guard == gi) {
             tpsFailures = 0;
             secSinceTps = 0;
             frameIdx = fi;

@@ -95,7 +95,7 @@ static Result run(const dvbt::Params& p, int frames, double snrDb, double cfoHz,
 }
 
 int main() {
-    struct C { int mode, gi, mod, cr; double snr, cfo, echo; int echoDelay; double sro; const char* name; } cases[] = {
+    struct C { int mode, gi, mod, cr; double snr, cfo, echo; int echoDelay; double sro; const char* name; int frames = 0; } cases[] = {
         {dvbt::k2K, dvbt::kGi8, dvbt::kQpsk, dvbt::kR12, 30, 0, 0, 0, 0, "2K QPSK 1/2 clean"},
         {dvbt::k2K, dvbt::kGi32, dvbt::k64Qam, dvbt::kR34, 35, 0, 0, 0, 0, "2K 64-QAM 3/4 GI 1/32 clean"},
         {dvbt::k8K, dvbt::kGi8, dvbt::k16Qam, dvbt::kR23, 30, 0, 0, 0, 0, "8K 16-QAM 2/3 GI 1/8 clean"},
@@ -103,10 +103,13 @@ int main() {
         {dvbt::k8K, dvbt::kGi16, dvbt::k64Qam, dvbt::kR34, 30, 1800, 0, 0, 0, "8K 64-QAM + CFO 1.8 kHz"},
         {dvbt::k2K, dvbt::kGi4, dvbt::k16Qam, dvbt::kR23, 30, 0, 8, 60, 0, "2K 16-QAM echo -8 dB at 60 samples"},
         {dvbt::k8K, dvbt::kGi8, dvbt::k64Qam, dvbt::kR23, 32, 0, 0, 0, 20, "8K 64-QAM + sample-rate offset 20 ppm"},
+        // long enough for a slow timing loop to fall behind a cheap radio's clock, with the shortest guard to fall out of
+        {dvbt::k8K, dvbt::kGi32, dvbt::k64Qam, dvbt::kR23, 32, 0, 0, 0, 20, "8K 64-QAM GI 1/32 + 20 ppm, 40 frames", 40},
+        {dvbt::k8K, dvbt::kGi32, dvbt::k64Qam, dvbt::kR23, 32, 0, 0, 0, -20, "8K 64-QAM GI 1/32 - 20 ppm, 40 frames", 40},
     };
     for (auto& c : cases) {
         dvbt::Params p; p.mode = c.mode; p.guard = c.gi; p.mod = c.mod; p.crHp = c.cr; p.crLp = c.cr;
-        const Result r = run(p, c.mode == dvbt::k8K ? 8 : 20, c.snr, c.cfo, c.echo, c.echoDelay, c.sro);
+        const Result r = run(p, c.frames ? c.frames : c.mode == dvbt::k8K ? 8 : 20, c.snr, c.cfo, c.echo, c.echoDelay, c.sro);
         const bool ok = r.tps && r.good > 50 && r.bad * 20 <= r.good + r.bad;
         printf("%-42s lock %d tps %d (mode %d gi %d mod %d cr %d)  packets %zu good %zu bad %zu  SNR %.1f dB  %.2fs  %s\n", c.name, r.locked, r.tps, r.tel.dvbt.mode, r.tel.dvbt.guard, r.tel.dvbt.mod, r.tel.dvbt.crHp, r.packets, r.good, r.bad, r.snr, r.secs, ok ? "OK" : "FAILED");
         CHECK(ok, "%s", c.name);
