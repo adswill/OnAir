@@ -38,6 +38,7 @@ struct LimeApi {
     int (DECT2_CALL* start_stream)(stream_t*) = nullptr;
     int (DECT2_CALL* stop_stream)(stream_t*) = nullptr;
     int (DECT2_CALL* recv_stream)(stream_t*, void*, size_t, meta_t*, unsigned) = nullptr;
+    int (DECT2_CALL* get_clock_freq)(lms_device_t*, size_t, double*) = nullptr;   // optional
     bool ok = false;
     DynLib lib;
     LimeApi() {
@@ -49,6 +50,7 @@ struct LimeApi {
              lib.get(set_gain_db, "LMS_SetGaindB") && lib.get(calibrate, "LMS_Calibrate") && lib.get(setup_stream, "LMS_SetupStream") &&
              lib.get(destroy_stream, "LMS_DestroyStream") && lib.get(start_stream, "LMS_StartStream") && lib.get(stop_stream, "LMS_StopStream") &&
              lib.get(recv_stream, "LMS_RecvStream");
+        if (ok) lib.get(get_clock_freq, "LMS_GetClockFreq");
     }
 };
 LimeApi& lime() { static LimeApi a; return a; }
@@ -61,6 +63,14 @@ public:
 protected:
     bool openDevice(const TuneSettings& s, std::string& err) override {
         if (lime().open(&dev_, info_.c_str(), nullptr) != 0 || !dev_) { dev_ = nullptr; err = "LimeSDR: cannot open the radio (in use, or the driver is missing)"; return false; }
+        // On some USB controllers a LimeSDR-USB misdetects its reference clock (10 MHz instead of 30.72 MHz) on every other open, and
+        // LMS_Init then fails. Closing and opening once more clears it; a board that really runs on a 10 MHz reference just opens twice.
+        double refHz = 0;
+        if (lime().get_clock_freq && lime().get_clock_freq(dev_, 0 /* LMS_CLOCK_REF */, &refHz) == 0 && refHz == 10e6) {
+            lime().close(dev_);
+            dev_ = nullptr;
+            if (lime().open(&dev_, info_.c_str(), nullptr) != 0 || !dev_) { dev_ = nullptr; err = "LimeSDR: cannot open the radio again after a reference clock misdetection"; return false; }
+        }
         if (lime().init(dev_) != 0) { err = "LimeSDR: initialisation failed"; return false; }
         if (lime().enable_channel(dev_, false, 0, true) != 0) { err = "LimeSDR: cannot enable the receiver"; return false; }
         return configure(s, err, false);
