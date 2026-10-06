@@ -63,6 +63,11 @@ void toolbar(App& a) {
     vSeparator();
     ImGui::BeginDisabled(!isHw);
     ImGui::TextDisabled("GAIN"); ImGui::SameLine(0, 5 * gUi);
+    // the gain control under the mouse steps with the up and down arrow keys (one step per press, repeating while held)
+    auto arrowStep = [](int step) {
+        if (!ImGui::IsItemHovered() || ImGui::GetIO().WantTextInput) return 0;
+        return (ImGui::IsKeyPressed(ImGuiKey_UpArrow) ? step : 0) - (ImGui::IsKeyPressed(ImGuiKey_DownArrow) ? step : 0);
+    };
     if (generic) {
         ImGui::SameLine();
         ImGui::SetNextItemWidth(150 * gUi);
@@ -70,6 +75,11 @@ void toolbar(App& a) {
         ImGui::SliderFloat("##gain", &gdb, (float)curDev.gainMinDb, (float)std::max(curDev.gainMaxDb, curDev.gainMinDb + 1.0), "%.0f dB");
         a.tune.gainDb = std::round(gdb);
         if (ImGui::IsItemDeactivatedAfterEdit()) retune = true, a.agcOn = false;
+        if (const int d = arrowStep(1)) {
+            a.tune.gainDb = std::clamp(a.tune.gainDb + d, std::round(curDev.gainMinDb), std::round(std::max(curDev.gainMaxDb, curDev.gainMinDb + 1.0)));
+            retune = true, a.agcOn = false;
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Gain. With the mouse over it, the up and down arrow keys change it by 1 dB.");
     } else {
     ImGui::TextDisabled("LNA");
     ImGui::SameLine();
@@ -78,6 +88,8 @@ void toolbar(App& a) {
     ImGui::SliderInt("##lna", &lna, 0, 40, "%d dB");
     a.tune.lnaDb = (lna + 4) / 8 * 8; // hardware steps are 8 dB
     if (ImGui::IsItemDeactivatedAfterEdit()) retune = true, a.agcOn = false;
+    if (const int d = arrowStep(8)) { a.tune.lnaDb = std::clamp(a.tune.lnaDb + d, 0, 40); retune = true, a.agcOn = false; }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("LNA gain (0-40 dB). With the mouse over it, the up and down arrow keys change it by 8 dB.");
     ImGui::SameLine();
     ImGui::TextDisabled("VGA");
     ImGui::SameLine();
@@ -86,6 +98,8 @@ void toolbar(App& a) {
     ImGui::SliderInt("##vga", &vga, 0, 62, "%d dB");
     a.tune.vgaDb = (vga + 1) / 2 * 2; // 2 dB steps
     if (ImGui::IsItemDeactivatedAfterEdit()) retune = true, a.agcOn = false;
+    if (const int d = arrowStep(2)) { a.tune.vgaDb = std::clamp(a.tune.vgaDb + d, 0, 62); retune = true, a.agcOn = false; }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("VGA gain (0-62 dB). With the mouse over it, the up and down arrow keys change it by 2 dB.");
     ImGui::SameLine();
     if (ImGui::Checkbox("Amp", &a.tune.ampOn)) retune = true, a.agcOn = false;
     }
