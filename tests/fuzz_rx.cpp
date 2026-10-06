@@ -6,6 +6,7 @@
 #include "dect2/atsc_gen.h"
 #include "dect2/dvbt_gen.h"
 #include "dect2/t2gen.h"
+#include "dect2/spectrum.h"
 #include "dect2/t2rx.h"
 #include <chrono>
 #include <cmath>
@@ -60,6 +61,17 @@ int main() {
         }
         feedChunks(rx, v);
         printf("NaN/Inf fft %d ok (%.1f s)\n", fft, secs());
+    }
+    // 2b. the same and huge values into the spectrum analyzer (floating-point radios: LimeSDR, SoapySDR, cf32 recordings)
+    {
+        SpectrumAnalyzer sa;
+        std::vector<cf32> v(1 << 16, cf32(0.1f, -0.1f));
+        const float bad[5] = {NAN, INFINITY, -INFINITY, 1e30f, -3e9f};
+        for (int k = 0; k < 500; k++) v[rng() % v.size()] = cf32(bad[rng() % 5], bad[rng() % 5]);
+        for (int r = 0; r < 4; r++) sa.feed(v.data(), v.size());
+        SpectrumFrame f;
+        sa.takeFrame(f);
+        printf("NaN/Inf/huge spectrum ok (%.1f s)\n", secs());
     }
     // 3. valid signal with bursts of corruption, dropped chunks, repeated chunks and resets
     for (int round = 0; round < 3; round++) {
