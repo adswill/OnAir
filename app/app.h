@@ -195,6 +195,11 @@ struct App {
         struct Res { std::string name, label, stations; double mhz = 0; bool found = false; float snr = 0; };
         std::vector<Res> results;
     } dabScan;
+    struct FmScan {
+        bool running = false; int idx = -1; double t0 = 0, lockT = 0, savedFreq = 100.0;
+        struct Res { std::string label; double mhz = 0; bool found = false; float snr = 0; bool stereo = false; };
+        std::vector<Res> results;
+    } fmScan;
     bool bwAuto = true;       // the engine measures the channel width and switches by itself
     double freqMhz = 522.0;
     bool autoScroll = true;
@@ -444,6 +449,8 @@ void dabRadioTab(App& a);
 void dabEnsembleTab(App& a);
 void dabScanTab(App& a);
 void dabScanStep(App& a);
+void fmScanTab(App& a);
+void fmScanStep(App& a);
 // fm_ui.cpp
 bool fmFrequencyCombo(App& a);
 void fmStatus(App& a);

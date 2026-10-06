@@ -96,6 +96,7 @@ void drawUI(App& a, ImVec2 disp) {
     dabHistory(a);
     fmHistory(a);
     dabScanStep(a);
+    fmScanStep(a);
     harvestScan(a);
     if (a.engine.running() && glfwGetTime() - a.epgT > 1.0) {
         a.epg = a.engine.epg();

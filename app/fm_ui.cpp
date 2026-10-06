@@ -232,3 +232,123 @@ void fmRdsDisplay(App& a) {
         ImGui::TextDisabled("Programme Type: %s", fm.ptyText.c_str());
     }
 }
+
+// FM Band Scanner (87.5-108 MHz in 100 kHz steps)
+void fmScanTab(App& a) {
+    App::FmScan& s = a.fmScan;
+    const bool running = a.engine.running();
+    const bool live = running && a.rx.standard == 6;
+    const FmTelemetry& fm = a.rx.fm;
+    
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextDisabled("Scan the FM band 87.5-108 MHz");
+    ImGui::SameLine(0, 20 * gUi);
+    bool startScan = false;
+    if (!s.running) {
+        if (ImGui::Button("Start Scan", ImVec2(120 * gUi, 0))) {
+            s.running = true;
+            s.idx = 0;
+            s.results.clear();
+            s.t0 = glfwGetTime();
+            s.lockT = s.t0;
+            s.savedFreq = a.freqMhz;
+            startScan = true;
+        }
+    } else {
+        if (ImGui::Button("Stop Scan", ImVec2(120 * gUi, 0))) s.running = false;
+    }
+    ImGui::SameLine(0, 10 * gUi);
+    ImGui::TextDisabled("Found: %zu stations", s.results.size());
+    
+    if (s.running && live && fm.state == 2) {
+        // Scan in progress - detected a locked signal
+        bool alreadyFound = false;
+        for (auto& r : s.results) {
+            if (std::fabs(r.mhz - a.freqMhz) < 0.05) {
+                alreadyFound = true;
+                if (fm.snrDb > r.snr) r.snr = fm.snrDb;
+                if (fm.stereo) r.stereo = true;
+                break;
+            }
+        }
+        if (!alreadyFound) {
+            App::FmScan::Res res;
+            char buf[32];
+            snprintf(buf, sizeof buf, "%.2f MHz", a.freqMhz);
+            res.label = buf;
+            res.mhz = a.freqMhz;
+            res.snr = fm.snrDb;
+            res.stereo = fm.stereo;
+            res.found = true;
+            s.results.push_back(res);
+        }
+        s.lockT = glfwGetTime();
+    }
+    
+    ImGui::Spacing();
+    if (ImGui::BeginTable("fmscan", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit)) {
+        ImGui::TableSetupColumn("Frequency", ImGuiTableColumnFlags_WidthFixed, 100);
+        ImGui::TableSetupColumn("SNR", ImGuiTableColumnFlags_WidthFixed, 80);
+        ImGui::TableSetupColumn("Stereo", ImGuiTableColumnFlags_WidthFixed, 60);
+        ImGui::TableSetupColumn("##action", ImGuiTableColumnFlags_WidthFixed, 60);
+        ImGui::TableHeadersRow();
+        
+        for (size_t i = 0; i < s.results.size(); i++) {
+            auto& r = s.results[i];
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(r.label.c_str());
+            ImGui::TableNextColumn();
+            char snr[32];
+            snprintf(snr, sizeof snr, "%.1f dB", r.snr);
+            ImGui::TextUnformatted(snr);
+            ImGui::TableNextColumn();
+            ImGui::TextDisabled("%s", r.stereo ? "Yes" : "No");
+            ImGui::TableNextColumn();
+            ImGui::PushID((int)i);
+            if (ImGui::SmallButton("Go")) {
+                a.freqMhz = r.mhz;
+                a.tune.centerHz = a.freqMhz * 1e6;
+                a.engine.retune(a.tune);
+            }
+            ImGui::PopID();
+        }
+        ImGui::EndTable();
+    }
+}
+
+void fmScanStep(App& a) {
+    App::FmScan& s = a.fmScan;
+    if (!s.running) return;
+    
+    const double now = glfwGetTime();
+    const double elapsed = now - s.t0;
+    const double lockTime = now - s.lockT;
+    
+    // Frequencies to scan: 87.5 to 108 MHz in 100 kHz steps
+    static const double kFmStart = 87.5;
+    static const double kFmEnd = 108.0;
+    static const double kFmStep = 0.1;  // 100 kHz
+    static const int kNumFrequencies = (int)((kFmEnd - kFmStart) / kFmStep) + 1;
+    
+    // Move to next frequency after 1.5 seconds per station (enough time to lock)
+    if (lockTime > 1.5 || s.idx == 0) {
+        if (s.idx < kNumFrequencies) {
+            double nextFreq = kFmStart + s.idx * kFmStep;
+            a.freqMhz = nextFreq;
+            a.tune.centerHz = a.freqMhz * 1e6;
+            a.engine.retuneReset(a.tune);
+            s.lockT = now;
+            s.idx++;
+        } else {
+            // Scan complete
+            s.running = false;
+            a.freqMhz = s.savedFreq;
+            a.tune.centerHz = a.freqMhz * 1e6;
+            a.engine.retuneReset(a.tune);
+            if (!s.results.empty()) {
+                a.engine.log("FM scan: found " + std::to_string(s.results.size()) + " stations");
+            }
+        }
+    }
+}
