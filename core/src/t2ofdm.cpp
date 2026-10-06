@@ -30,6 +30,13 @@ void GridInterpolator::build(int S, double cutoff) {
         // vDSP_conv computes a correlation, which is what the polyphase sum needs
         for (int t = 0; t < T; t++) taps_[(size_t)p * T + t] = (float)(h[t] / sum);
     }
+    // a phase whose kernel is a unit impulse (phase 0: the other taps are 1e-17) only copies the grid
+    copyPhase_.assign(S, 0);
+    for (int p = 0; p < S; p++) {
+        bool impulse = taps_[(size_t)p * T + kHalf - 1] == 1.f;
+        for (int t = 0; t < T && impulse; t++) impulse = t == kHalf - 1 || std::fabs(taps_[(size_t)p * T + t]) < 1e-12f;
+        copyPhase_[p] = impulse;
+    }
     // grid smoothing: windowed-sinc lowpass at `cutoff` of the grid Nyquist
     smoothHalf_ = cutoff >= 0.9 ? 0 : std::min(48, std::max(6, (int)std::ceil(5.0 / cutoff)));
     smooth_.clear();
@@ -94,6 +101,10 @@ void GridInterpolator::run(const std::vector<cf32>& grid, int S, int K, int N, d
     // stage 2: polyphase interpolation, one phase at a time (strided output)
     ore_.assign((size_t)S * M + S, 0.f); oim_.assign((size_t)S * M + S, 0.f);
     for (int p = 0; p < S; p++) {
+        if (copyPhase_[p]) {
+            for (int n = 0; n < M; n++) { ore_[(size_t)n * S + p] = gr[pad + n]; oim_[(size_t)n * S + p] = gi[pad + n]; }
+            continue;
+        }
         const float* h = &taps_[(size_t)p * T];
         // out[n] = sum_t h[t] * g[n + t - (kHalf - 1)]  -> input starts at g[-(kHalf-1)] = gr[pad - (kHalf-1)]
         convCorr(gr + pad - (kHalf - 1), h, ore_.data() + p, S, M, T);

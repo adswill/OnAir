@@ -21,6 +21,7 @@ private:
     int smoothHalf_ = 0;
     std::vector<float> taps_;                // interpolation polyphase kernels [phase][tap], stored reversed for the correlation (convCorr)
     std::vector<float> smooth_;              // grid smoothing kernel (reversed)
+    std::vector<char> copyPhase_;            // phases whose kernel is a unit impulse
     void build(int S, double cutoff);
     std::vector<float> pre_, pim_, sre_, sim_, ore_, oim_;
 };
