@@ -30,7 +30,7 @@ option(DECT2_PORTABLE "Use the portable DSP kernels instead of Accelerate (macOS
 option(DECT2_WITH_SOAPY "Support generic radios (Airspy, SDRplay, RTL-SDR, PlutoSDR, LimeSDR, ...) through SoapySDR when it is installed" ON)
 option(DECT2_NO_SIMD "Disable the SIMD intrinsics and use the plain C++ code" OFF)
 option(DECT2_WIN_AVX2 "Windows and macOS on x86-64: build the receiver for AVX2 (all CPUs since 2013); these systems have no runtime dispatch like Linux" ON)
-option(DECT2_COPY_RUNTIME_DLLS "Windows (MinGW): after each build, copy the DLLs the programs need next to them so they start from the build folder" ${MINGW})
+option(DECT2_COPY_RUNTIME_DLLS "Windows (MinGW): after each build, copy the DLLs the programs need next to them so they start from the build folder (off by default: the CI and release builds package their own DLLs)" OFF)
 set(DECT2_EXTRA_RUNTIME_DLLS "" CACHE STRING "Windows: more DLLs to copy next to the programs, such as a radio library (LimeSuite.dll, rtlsdr.dll ...), separated by semicolons")
 
 find_package(PkgConfig REQUIRED)

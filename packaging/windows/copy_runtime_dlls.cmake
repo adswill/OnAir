@@ -14,8 +14,14 @@ file(GET_RUNTIME_DEPENDENCIES
   EXECUTABLES "${EXE}"
   RESOLVED_DEPENDENCIES_VAR resolved
   UNRESOLVED_DEPENDENCIES_VAR unresolved   # the Windows system DLLs: not searched for, not copied
+  CONFLICTING_DEPENDENCIES_PREFIX conflicts   # a DLL that an earlier program already copied next to this one is found in two places
   DIRECTORIES "${search}"
   PRE_EXCLUDE_REGEXES "^api-ms-" "^ext-ms-")
+# a DLL found both next to the program and in the compiler's folder is a conflict, not an error: keep every path, the filter below
+# only takes the ones from the compiler's folder
+foreach(name IN LISTS conflicts_FILENAMES)
+  list(APPEND resolved ${conflicts_${name}})
+endforeach()
 set(copy "")
 foreach(dll IN LISTS resolved)
   file(TO_CMAKE_PATH "${dll}" dll)
