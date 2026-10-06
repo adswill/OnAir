@@ -169,9 +169,10 @@ void drawUI(App& a, ImVec2 disp) {
     if (ImGui::BeginTabBar("tabs")) {
         if (tabItem("Overview", Ic::Grid)) { overviewTab(a); ImGui::EndTabItem(); }
         if (a.dabMode) { if (tabItem("Radio", Ic::Radio)) { dabRadioTab(a); ImGui::EndTabItem(); } }
+        else if (a.fmMode) { if (tabItem("Info", Ic::Radio)) { fmStatus(a); ImGui::EndTabItem(); } }
         else if (tabItem("TV", Ic::Tv)) { tvTab(a); ImGui::EndTabItem(); }
-        if (tabItem(a.dabMode ? "Ensemble" : "Receiver", Ic::Antenna)) { receiverTab(a); ImGui::EndTabItem(); }
-        if (!a.dabMode && tabItem("Stream", Ic::Layers)) { streamTab(a); ImGui::EndTabItem(); }
+        if (!a.fmMode && tabItem(a.dabMode ? "Ensemble" : "Receiver", Ic::Antenna)) { receiverTab(a); ImGui::EndTabItem(); }
+        if (!a.dabMode && !a.fmMode && tabItem("Stream", Ic::Layers)) { streamTab(a); ImGui::EndTabItem(); }
         if (tabItem("Scan", Ic::Scan)) { scanTab(a); ImGui::EndTabItem(); }
         if (tabItem("Antenna", Ic::Compass)) { antennaTab(a); ImGui::EndTabItem(); }
         if (tabItem("History", Ic::Chart)) { historyLogTab(a); ImGui::EndTabItem(); }
