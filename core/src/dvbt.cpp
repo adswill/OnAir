@@ -6,6 +6,9 @@
 #include <cstring>
 #include <mutex>
 #include <thread>
+#if defined(__SSE2__) && !defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
+#include <emmintrin.h>
+#endif
 
 namespace dect2 {
 namespace dvbt {
@@ -480,6 +483,78 @@ void viterbiRange(const int8_t* soft, size_t steps, std::vector<uint8_t>& bits, 
             off += vmaxvq_s16(mx);
             const int16x8_t m = vdupq_n_s16(vmaxvq_s16(mx));
             for (int q = 0; q < 8; q++) vst1q_s16(pm + 8 * q, vsubq_s16(vld1q_s16(nm + 8 * q), m));
+        } else memcpy(pm, nm, sizeof pm);
+    }
+    int state = 0;
+    int bm = pm[0];
+    for (int s = 1; s < 64; s++) if (pm[s] > bm) { bm = pm[s]; state = s; }
+    bits.assign(steps, 0);
+    for (size_t t = steps; t-- > 0;) {
+        bits[t] = (uint8_t)(state >> 5);
+        const int b = (int)((dec[t] >> state) & 1);
+        state = ((state & 31) << 1) | b;
+    }
+    if (metricOut) *metricOut = off + bm;
+}
+#elif defined(__SSE2__) && !defined(DECT2_NO_SIMD)
+// SSE2 path (every x86-64 CPU): the same butterflies and int16 metrics as the NEON path above, eight states per register.
+struct SseTables {
+    alignas(16) int16_t sigX[32], sigY[32];
+    SseTables() {
+        for (int j = 0; j < 32; j++) {
+            const unsigned reg = (unsigned)(2 * j);
+            sigX[j] = __builtin_parity(reg & 0x79) ? -1 : 1;
+            sigY[j] = __builtin_parity(reg & 0x5B) ? -1 : 1;
+        }
+    }
+};
+const SseTables& sseTables() { static SseTables t; return t; }
+
+// states 16q..16q+15: the even ones (old[2j]) to A, the odd ones (old[2j+1]) to B, like NEON's vld2q_s16
+inline void deinterleave(const int16_t* p, __m128i& A, __m128i& B) {
+    const __m128i x0 = _mm_load_si128((const __m128i*)p), x1 = _mm_load_si128((const __m128i*)(p + 8));
+    A = _mm_packs_epi32(_mm_srai_epi32(_mm_slli_epi32(x0, 16), 16), _mm_srai_epi32(_mm_slli_epi32(x1, 16), 16));
+    B = _mm_packs_epi32(_mm_srai_epi32(x0, 16), _mm_srai_epi32(x1, 16));
+}
+// one bit per lane of a comparison result, lane i to bit i
+inline uint8_t maskBits(__m128i m) { return (uint8_t)_mm_movemask_epi8(_mm_packs_epi16(m, _mm_setzero_si128())); }
+inline int16_t maxLane(__m128i v) {
+    v = _mm_max_epi16(v, _mm_shuffle_epi32(v, _MM_SHUFFLE(1, 0, 3, 2)));
+    v = _mm_max_epi16(v, _mm_shuffle_epi32(v, _MM_SHUFFLE(2, 3, 0, 1)));
+    v = _mm_max_epi16(v, _mm_shufflelo_epi16(v, _MM_SHUFFLE(2, 3, 0, 1)));
+    return (int16_t)_mm_cvtsi128_si32(v);
+}
+
+void viterbiRange(const int8_t* soft, size_t steps, std::vector<uint8_t>& bits, long* metricOut) {
+    const SseTables& T = sseTables();
+    std::vector<uint64_t> dec(steps);
+    long off = 0; // total subtracted by the renormalisation: the absolute path metric is off + pm
+    alignas(16) int16_t pm[64] = {}, nm[64];
+    __m128i sigX[4], sigY[4];
+    for (int q = 0; q < 4; q++) { sigX[q] = _mm_load_si128((const __m128i*)(T.sigX + 8 * q)); sigY[q] = _mm_load_si128((const __m128i*)(T.sigY + 8 * q)); }
+    for (size_t t = 0; t < steps; t++) {
+        const __m128i a = _mm_set1_epi16(soft[2 * t]), b = _mm_set1_epi16(soft[2 * t + 1]);
+        uint64_t d = 0;
+        for (int q = 0; q < 4; q++) {
+            __m128i A, B;
+            deinterleave(pm + 16 * q, A, B);
+            const __m128i M = _mm_add_epi16(_mm_mullo_epi16(sigX[q], a), _mm_mullo_epi16(sigY[q], b));
+            const __m128i p0 = _mm_adds_epi16(A, M), p1 = _mm_subs_epi16(B, M);
+            const __m128i r0 = _mm_subs_epi16(A, M), r1 = _mm_adds_epi16(B, M);
+            _mm_store_si128((__m128i*)(nm + 8 * q), _mm_max_epi16(p0, p1));
+            _mm_store_si128((__m128i*)(nm + 32 + 8 * q), _mm_max_epi16(r0, r1));
+            d |= (uint64_t)maskBits(_mm_cmpgt_epi16(p1, p0)) << (8 * q);
+            d |= (uint64_t)maskBits(_mm_cmpgt_epi16(r1, r0)) << (32 + 8 * q);
+        }
+        dec[t] = d;
+        // renormalise every 4 steps so int16 never saturates
+        if ((t & 3) == 3) {
+            __m128i mx = _mm_load_si128((const __m128i*)nm);
+            for (int q = 1; q < 8; q++) mx = _mm_max_epi16(mx, _mm_load_si128((const __m128i*)(nm + 8 * q)));
+            const int16_t top = maxLane(mx);
+            off += top;
+            const __m128i m = _mm_set1_epi16(top);
+            for (int q = 0; q < 8; q++) _mm_store_si128((__m128i*)(pm + 8 * q), _mm_sub_epi16(_mm_load_si128((const __m128i*)(nm + 8 * q)), m));
         } else memcpy(pm, nm, sizeof pm);
     }
     int state = 0;
