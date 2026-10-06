@@ -8,8 +8,8 @@ void setFamily(App& a, int f) {
     if (f == 5 && !(a.freqMhz >= 87.5 && a.freqMhz <= 108)) a.freqMhz = 100.0;     // FM band, default to 100 MHz
 }
 
-// what to tell the engine: 0 DVB-T2, 1 DVB-T, 2 ATSC, 3 DAB, 4 ATSC 3.0, 5 ISDB-T, 6 FM
-int engineStd(const App& a) { return a.family == 1 ? 2 : a.family == 2 ? 3 : a.family == 3 ? 4 : a.family == 4 ? 5 : a.family == 5 ? 6 : a.stdMode; }
+// what to tell the engine: 0 auto, 1 DVB-T2, 2 DVB-T, 3 ATSC, 4 DAB, 5 ATSC 3.0, 6 ISDB-T, 7 FM (Engine::start maps these to activeStandard())
+int engineStd(const App& a) { return a.family == 1 ? 3 : a.family == 2 ? 4 : a.family == 3 ? 5 : a.family == 4 ? 6 : a.family == 5 ? 7 : a.stdMode; }
 
 void refreshDevices(App& a) {
     a.devices.clear();
