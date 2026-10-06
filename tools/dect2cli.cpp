@@ -9,7 +9,9 @@
 #include "dect2/nettuner.h"
 #include "dect2/platform.h"
 #include "dect2/timecompat.h"
+#include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -17,6 +19,7 @@
 #include <thread>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 using namespace dect2;
 static const auto gT0 = std::chrono::steady_clock::now();
@@ -35,7 +38,9 @@ int main(int argc, char** argv) {
     bool continue_t2 = true;
     MultipathDetector mpd;
     QualityMeter qm;
-    bool useFile = false, haveDev = false, synthetic = false;
+    bool useFile = false, haveDev = false, synthetic = false, listen = false;
+    std::string wavPath;
+    std::vector<int16_t> wav;
     std::string record;
     OutputConfig out;
     for (int i = 1; i < argc; i++) {
@@ -53,6 +58,8 @@ int main(int argc, char** argv) {
         else if (a == "--serve") servePort = atoi(next());
         else if (a == "--lan") serveLan = true;
         else if (a == "--synthetic") synthetic = true;
+        else if (a == "--wav") wavPath = next();   // FM: write the sound to a 48 kHz stereo WAV file
+        else if (a == "--listen") listen = true;   // FM: play the sound (the command line is silent otherwise)
         else if (a == "--demo") tune.synth.demoTv = true;   // synthetic DVB-T / ATSC carries the test-card programme
         else if (a == "--atsc") { tune.synth.atsc = true; tune.bandwidthMhz = 6; tune.sampleRate = 8e6; standard = 3; }   // ATSC 8-VSB (synthetic, or with --file at 8 Msps)
         else if (a == "--dvbt") { tune.synth.dvbt = true; synthetic = true; }                 // synthetic source generates DVB-T
@@ -61,7 +68,7 @@ int main(int argc, char** argv) {
         else if (a == "--dvbt-mod") tune.synth.dvbtMod = atoi(next());     // 0 QPSK, 1 16-QAM, 2 64-QAM
         else if (a == "--dvbt-rate") tune.synth.dvbtRate = atoi(next());   // 0..4 = 1/2, 2/3, 3/4, 5/6, 7/8
         else if (a == "--snr") tune.synth.snrDb = atof(next());
-        else if (a == "--standard") { std::string v = next(); standard = v == "t2" ? 1 : v == "t" || v == "dvbt" ? 2 : v == "atsc" ? 3 : v == "dab" ? 4 : v == "atsc3" ? 5 : v == "isdbt" ? 6 : 0; }
+        else if (a == "--standard") { std::string v = next(); standard = v == "t2" ? 1 : v == "t" || v == "dvbt" ? 2 : v == "atsc" ? 3 : v == "dab" ? 4 : v == "atsc3" ? 5 : v == "isdbt" ? 6 : v == "fm" ? 7 : 0; if (standard == 7) { tune.bandwidthMhz = 0.25; tune.sampleRate = 4e6; tune.basebandFilterHz = 2.5e6; } }
         else if (a == "--compute") { std::string v = next(); computeMode = v == "cpu" ? 0 : v == "gpu" ? 1 : 2; }
         else if (a == "--file") { useFile = true; file.path = next(); file.format = guessFormat(file.path); }
         else if (a == "--rate") file.sampleRate = atof(next()) * 1e6;
@@ -75,7 +82,7 @@ int main(int argc, char** argv) {
         else if (a == "--no-null") out.dropNull = true;
     }
     tune.centerHz = freq * 1e6;
-    tune.sampleRate = tune.bandwidthMhz >= 7 ? 10e6 : 8e6; // HackRF Pro: exact tuning only at <= 10 Msps
+    if (standard != 7) tune.sampleRate = tune.bandwidthMhz >= 7 ? 10e6 : 8e6; // HackRF Pro: exact tuning only at <= 10 Msps
     if (useFile) { dev.kind = DeviceInfo::File; dev.name = file.path; file.loop = false; }
     else if (synthetic) { dev.kind = DeviceInfo::Synthetic; dev.name = "synthetic"; }
     else {
@@ -108,6 +115,10 @@ int main(int argc, char** argv) {
         printf("network tuner on port %d (%s)\n", servePort, serveLan ? "whole network" : "this computer only");
     }
     e.setComputeMode(computeMode);
+    e.fm().setSilent(!listen);
+    if (!wavPath.empty()) e.fm().setAudioTap([&wav](const float* l, const float* r, size_t n) {
+        for (size_t i = 0; i < n; i++) { wav.push_back((int16_t)std::lround(std::max(-1.f, std::min(1.f, l[i])) * 32767)); wav.push_back((int16_t)std::lround(std::max(-1.f, std::min(1.f, r[i])) * 32767)); }
+    });
     e.setStandard(standard);
     e.setBandwidthAuto(autoBw);
     e.setSpectrumEnabled(autoBw);   // cli doesn't show the spectrum
@@ -157,7 +168,13 @@ int main(int argc, char** argv) {
         auto lines = e.logSnapshot(n);
         for (; shown < lines.size(); shown++) printf("  log: %s\n", lines[shown].c_str());
         if (out.udp) { OutputStats os = e.outputStats(); printf("  udp: sent %llu queue %.0f ms dropped %llu\n", (unsigned long long)os.udpDatagrams, os.udpQueueMs, (unsigned long long)os.udpDropped); }
-        if (t.standard == 2) {
+        if (t.standard == 6) {
+            const FmTelemetry& f = t.fm;
+            printf("level %6.1f dBFS | FM %.3f MHz state %d carrier %d | SNR %4.1f dB | CFO %+7.0f Hz dev %2.0f kHz | %s pilot %.1f%% | RDS %s %3.0f%% groups %llu PI %04X '%s' [%s] %s | dropped %llu\n",
+                   f.levelDbfs, freq, f.state, f.carrier, f.snrDb, f.cfoHz, f.devKhz, f.stereo ? "STEREO" : "mono  ", f.pilotPct, f.rdsSync ? "sync" : "----", f.rdsBlockOkPct,
+                   (unsigned long long)f.rdsGroups, f.piCode, f.psName.c_str(), f.ptyText.c_str(), f.radioText.c_str(), (unsigned long long)e.droppedSamples());
+            continue_t2 = false;
+        } else if (t.standard == 2) {
             const AtscTelemetry& a = t.atsc;
             printf("level %6.1f dBFS | ATSC pilot %d seg %d field %d ts %d | CFO %+7.0f Hz SRO %+6.1f ppm | SNR %.1f dB (data %.1f) sync %.2f | fields %llu RS clean %llu corrected %llu failed %llu | dropped %llu\n",
                    sf.stats.rmsDbfs, a.pilot, a.segSync, a.fieldSync, a.tsOk, a.cfoHz, a.sroPpm, a.snrDb, a.dataSnrDb, a.syncQuality, (unsigned long long)a.fields,
@@ -230,6 +247,18 @@ int main(int argc, char** argv) {
         if (os.udpOpen) printf("udp: %llu datagrams, dropped %llu\n", (unsigned long long)os.udpDatagrams, (unsigned long long)os.udpDropped);
     }
     e.stop();
+    if (!wavPath.empty()) {
+        if (FILE* f = fopen(wavPath.c_str(), "wb")) {
+            const uint32_t bytes = (uint32_t)(wav.size() * 2), rate = 48000, br = rate * 4;
+            const uint16_t fmt = 1, ch = 2, ba = 4, bits = 16;
+            const uint32_t riff = 36 + bytes, fl = 16;
+            fwrite("RIFF", 1, 4, f); fwrite(&riff, 4, 1, f); fwrite("WAVEfmt ", 1, 8, f); fwrite(&fl, 4, 1, f); fwrite(&fmt, 2, 1, f); fwrite(&ch, 2, 1, f);
+            fwrite(&rate, 4, 1, f); fwrite(&br, 4, 1, f); fwrite(&ba, 2, 1, f); fwrite(&bits, 2, 1, f); fwrite("data", 1, 4, f); fwrite(&bytes, 4, 1, f);
+            fwrite(wav.data(), 2, wav.size(), f);
+            fclose(f);
+            printf("wrote %s (%.1f s)\n", wavPath.c_str(), wav.size() / 2 / 48000.0);
+        }
+    }
     { size_t n; auto lines = e.logSnapshot(n); for (; shown < lines.size(); shown++) printf("  log: %s\n", lines[shown].c_str()); }
     if (playSid >= 0 && getenv("DECT2_FREEZE")) printf("VIDEO: %d pictures, %d freezes > 150 ms, %.1f s frozen in total\n", pics, freezes, freezeSecs);
     return 0;
