@@ -8,6 +8,7 @@ build-release
 build-release/
 build-shots
 build/
+build-prof/
 recordings/
 build-windows*/
 release/
