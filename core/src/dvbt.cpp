@@ -99,13 +99,26 @@ bool tpsSync(const uint8_t* b, bool& odd) {
     return false;
 }
 
-bool tpsDecode(const uint8_t bits[68], Params& p, int& frameIdx, bool& odd) {
-    if (!tpsSync(bits + 1, odd)) return false;
+bool tpsDecode(const uint8_t bits[68], Params& p, int& frameIdx, bool& odd, int maxFix) {
     std::array<uint8_t, 68> s;
     for (int i = 0; i < 68; i++) s[i] = bits[i] & 1;
-    std::array<uint8_t, 68> chk = s;
-    tpsBch(chk);
-    for (int i = 54; i < 68; i++) if (chk[i] != s[i]) return false;
+    auto valid = [&]() {
+        if (!tpsSync(s.data() + 1, odd)) return false;
+        std::array<uint8_t, 68> chk = s;
+        tpsBch(chk);
+        for (int i = 54; i < 68; i++) if (chk[i] != s[i]) return false;
+        return true;
+    };
+    // The BCH code (67,53) corrects two errors: when the block does not check, look for the codeword within maxFix flips of
+    // s1..s67 (s0 is only the differential reference). By brute force: at most 2278 candidates once per frame.
+    bool ok = valid();
+    for (int i = 1; !ok && maxFix >= 1 && i < 68; i++) {
+        s[i] ^= 1;
+        ok = valid();
+        for (int j = i + 1; !ok && maxFix >= 2 && j < 68; j++) { s[j] ^= 1; ok = valid(); if (!ok) s[j] ^= 1; }
+        if (!ok) s[i] ^= 1;
+    }
+    if (!ok) return false;
     auto get = [&](int a, int b) { unsigned v = 0; for (int i = a; i <= b; i++) v = (v << 1) | s[i]; return (int)v; };
     const int len = get(17, 22);
     if (len != 0x17 && len != 0x1F) return false;

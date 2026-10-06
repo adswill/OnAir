@@ -61,7 +61,8 @@ inline float pilotValue(int k) { return (prbsW()[k] ? -1.f : 1.f) * 4.f / 3.f; }
 // Bits s0..s67 of the TPS block for a frame (frameIdx 0..3 inside the superframe)
 std::array<uint8_t, 68> tpsBits(const Params& p, int frameIdx);
 // Validates a received 68-bit block (sync word, BCH) and extracts the parameters. `oddFrame` tells which sync word matched.
-bool tpsDecode(const uint8_t bits[68], Params& p, int& frameIdx, bool& oddSyncWord);
+// maxFix: how many bit errors (0..2) the BCH code may correct. 0 for searching a frame start, 2 once the frame is known.
+bool tpsDecode(const uint8_t bits[68], Params& p, int& frameIdx, bool& oddSyncWord, int maxFix = 0);
 bool tpsSync(const uint8_t* bits /*s1..s16*/, bool& odd);
 
 // ---- constellation (label -> point) for the given alpha (1, 2, 4); unit average power for alpha = 1, normalised for others
