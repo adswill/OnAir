@@ -34,7 +34,7 @@ The DVB standard is detected automatically, and one switch at the top of the win
 
 ## Updates
 
-OnAir checks GitHub for a newer version a few seconds after it starts (and then at most once a day), downloads the package for your system in the background, checks it against the SHA-256 that GitHub lists for the file, and puts it in place when you close the program. The button at the top right (`v0.1.4`) shows the state and has the settings: turn the check off, turn the automatic install off (you then get a button instead), or leave out pre-releases. On macOS it replaces `OnAir.app`, on Windows it runs the installer quietly (Windows asks for permission), on Linux it replaces the portable folder; a `.deb` install asks for your password through the system's installer. Only github.com is contacted, and nothing is sent but the usual request.
+OnAir checks GitHub for a newer version a few seconds after it starts (and then at most once a day), downloads the package for your system in the background, checks it against the SHA-256 that GitHub lists for the file, and puts it in place when you close the program. The button at the top right (`v0.1.5`) shows the state and has the settings: turn the check off, turn the automatic install off (you then get a button instead), or leave out pre-releases. On macOS it replaces `OnAir.app`, on Windows it runs the installer quietly (Windows asks for permission), on Linux it replaces the portable folder; a `.deb` install asks for your password through the system's installer. Only github.com is contacted, and nothing is sent but the usual request.
 
 ## Highlights
 
