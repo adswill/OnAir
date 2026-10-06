@@ -97,6 +97,7 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     rxD_.configure(rate_);
     rxI_.configure(rate_);
     rxI_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });
+    rxFm_.configure(rate_);
     logIMode_ = logIGi_ = logITmcc_ = -1; logISync_ = false;
     rxA3_.configure(rate_);
     rxA3_.setBlocking(!src_->realtimeHardware());
@@ -105,7 +106,7 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     { std::lock_guard<std::mutex> lk(atsc3Mu_); atsc3Tel_ = Atsc3Telemetry(); }
     dabSeq_ = 0; logDState_ = -1; logDEns_ = false;
     atscSeq_ = 0; logAState_ = -1;
-    activeStd_ = stdMode_.load() == 2 ? 1 : stdMode_.load() == 3 ? 2 : stdMode_.load() == 4 ? 3 : stdMode_.load() == 5 ? 4 : stdMode_.load() == 6 ? 5 : 0;
+    activeStd_ = stdMode_.load() == 2 ? 1 : stdMode_.load() == 3 ? 2 : stdMode_.load() == 4 ? 3 : stdMode_.load() == 5 ? 4 : stdMode_.load() == 6 ? 5 : stdMode_.load() == 7 ? 6 : 0;
     autoMark_ = 0; lastLockSec_ = 0; logTMode_ = logTGi_ = logTTps_ = -1; logTFec_ = false;
     {
         std::lock_guard<std::mutex> lk(tsMu_);
@@ -242,7 +243,7 @@ void Engine::onTsPackets(const uint8_t* pk, size_t n, double secs) {
 // so idle searching costs one receiver, not two.
 void Engine::feedRx(const cf32* x, size_t n) {
     const int a = activeStd_.load();
-    if (a == 5) rxI_.feed(x, n); else if (a == 4) rxA3_.feed(x, n); else if (a == 3) rxD_.feed(x, n); else if (a == 2) rxA_.feed(x, n); else if (a == 1) rxT_.feed(x, n); else rx_.feed(x, n);
+    if (a == 5) rxI_.feed(x, n); else if (a == 4) rxA3_.feed(x, n); else if (a == 3) rxD_.feed(x, n); else if (a == 2) rxA_.feed(x, n); else if (a == 1) rxT_.feed(x, n); else if (a == 6) rxFm_.feed(x, n); else rx_.feed(x, n);
 }
 
 void Engine::changeBandwidth(double mhz) {
@@ -636,6 +637,21 @@ void Engine::analysisLoop() {
                     t.rateOk = true;
                     t.dab = std::move(dt);
                     logDabEvents(t);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    rxTel_ = std::move(t);
+                }
+            } else if (activeStd_.load() == 6) {
+                FmTelemetry ft;
+                if (rxFm_.telemetry(ft, fmSeq_)) {
+                    fmSeq_ = ft.seq;
+                    t.standard = 6;
+                    t.seq = ft.seq;
+                    t.state = ft.state;
+                    t.cfoHz = ft.cfoHz;
+                    t.dataValid = ft.state >= 1;
+                    t.dataSnrDb = ft.snrDb;
+                    t.rateOk = true;
+                    t.fm = std::move(ft);
                     std::lock_guard<std::mutex> lk(rxMu_);
                     rxTel_ = std::move(t);
                 }

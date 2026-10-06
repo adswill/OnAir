@@ -357,6 +357,7 @@ void atscPanels(App& a) {
 
 void constellationsTab(App& a) {
     if (a.dabMode) { dabPanels(a); return; }
+    if (a.fmMode) { fmPanels(a); return; }
     if (a.rx.standard == 2) { atscPanels(a); return; }
     const RxTelemetry& rx = a.rx;
     const float availW = ImGui::GetContentRegionAvail().x, availH = ImGui::GetContentRegionAvail().y;

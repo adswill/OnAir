@@ -186,8 +186,10 @@ struct App {
     bool atsc3Mode = false;   // ATSC 3.0 (family 3)
     bool isdbtMode = false;   // ISDB-T (family 4)
     bool dabMode = false;     // DAB / DAB+ (family 2)
-    int family = 0;           // 0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T
+    bool fmMode = false;      // FM radio (family 5)
+    int family = 0;           // 0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T, 5 FM
     std::deque<float> dabSnrH, dabFicH;
+    std::deque<float> fmSnrH, fmPilotH, fmRdsH;
     struct DabScan {
         bool running = false; int idx = -1; double t0 = 0, lockT = 0, savedFreq = 218.64;
         struct Res { std::string name, label, stations; double mhz = 0; bool found = false; float snr = 0; };
@@ -442,6 +444,12 @@ void dabRadioTab(App& a);
 void dabEnsembleTab(App& a);
 void dabScanTab(App& a);
 void dabScanStep(App& a);
+// fm_ui.cpp
+bool fmFrequencyCombo(App& a);
+void fmStatus(App& a);
+void fmHistory(App& a);
+void fmPanels(App& a);
+void fmRdsDisplay(App& a);
 // wizard.cpp
 void wizEnter(App& a, int step);
 void wizAction(App& a, int step);

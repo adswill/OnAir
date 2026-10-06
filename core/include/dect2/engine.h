@@ -8,6 +8,7 @@
 #include "dab.h"
 #include "atsc3_rx.h"
 #include "isdbt_rx.h"
+#include "fm_rx.h"
 #include "bbunpack.h"
 #include "ts.h"
 #include "tsout.h"
@@ -56,10 +57,10 @@ public:
     bool radioLost() const { return radioLost_; }
     void setComputeMode(int m) { rx_.setComputeMode(m); }
     void selectPlp(int id) { rx_.selectPlp(id); }
-    // Which standard to decode: 0 = automatic (alternates between DVB-T2 and DVB-T until one locks), 1 = DVB-T2, 2 = DVB-T, 3 = ATSC, 4 = DAB, 5 = ATSC 3.0, 6 = ISDB-T
+    // Which standard to decode: 0 = automatic (alternates between DVB-T2 and DVB-T until one locks), 1 = DVB-T2, 2 = DVB-T, 3 = ATSC, 4 = DAB, 5 = ATSC 3.0, 6 = ISDB-T, 7 = FM
     void setStandard(int m) { stdMode_ = m; stdReq_ = true; }
     int standardMode() const { return stdMode_.load(); }
-    int activeStandard() const { return activeStd_.load(); }  // 0 = DVB-T2, 1 = DVB-T, 2 = ATSC, 3 = DAB, 4 = ATSC 3.0, 5 = ISDB-T
+    int activeStandard() const { return activeStd_.load(); }  // 0 = DVB-T2, 1 = DVB-T, 2 = ATSC, 3 = DAB, 4 = ATSC 3.0, 5 = ISDB-T, 6 = FM
     double sampleRate() const { return rate_; }
     // Channel bandwidth: with automatic detection on, the engine measures the width of the signal in the spectrum while nothing is
     // locked and reconfigures the receivers by itself. setBandwidth() forces a value (used by the scanner).
@@ -144,12 +145,14 @@ private:
     DabReceiver rxD_;
     Atsc3Rx rxA3_;
     IsdbtReceiver rxI_;
+    FmReceiver rxFm_;
     mutable std::mutex atsc3Mu_;
     Atsc3Telemetry atsc3Tel_;
     uint64_t atsc3Seq_ = 0;
     int logA3State_ = -1;
     bool logA3Svc_ = false;
     uint64_t dabSeq_ = 0;
+    uint64_t fmSeq_ = 0;
     int logDState_ = -1;
     bool logDEns_ = false;
     void logDabEvents(const RxTelemetry& t);

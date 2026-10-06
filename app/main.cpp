@@ -94,6 +94,7 @@ void drawUI(App& a, ImVec2 disp) {
     ingestSpectrum(a);
     ingestRx(a);
     dabHistory(a);
+    fmHistory(a);
     dabScanStep(a);
     harvestScan(a);
     if (a.engine.running() && glfwGetTime() - a.epgT > 1.0) {

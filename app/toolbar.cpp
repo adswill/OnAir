@@ -32,10 +32,11 @@ void toolbar(App& a) {
     ImGui::InputDouble("##freq", &a.freqMhz, 0, 0, "%.3f MHz");
     if (ImGui::IsItemDeactivatedAfterEdit()) retune = true;
     ImGui::SameLine(0, 10 * gUi);
-    ImGui::TextDisabled(a.dabMode ? "CH" : "BW");
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip(a.dabMode ? "DAB channel" : "Channel bandwidth");
+    ImGui::TextDisabled(a.dabMode ? "CH" : a.fmMode ? "Freq" : "BW");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip(a.dabMode ? "DAB channel" : a.fmMode ? "FM frequency" : "Channel bandwidth");
     ImGui::SameLine(0, 5 * gUi);
     if (a.dabMode) { if (dabChannelCombo(a)) retune = true; }
+    else if (a.fmMode) { if (fmFrequencyCombo(a)) retune = true; }
     else {
     ImGui::SetNextItemWidth((a.bwAuto ? 125 : 80) * gUi);
     {
@@ -274,6 +275,7 @@ void sourceOptions(App& a) {
 
 void statusBar(App& a) {
     if (a.dabMode) { dabStatus(a); return; }
+    if (a.fmMode) { fmStatus(a); return; }
     if (a.atsc3Mode) { atsc3Status(a); return; }
     if (a.isdbtMode) { isdbtStatus(a); return; }
     const bool run = a.engine.running();
@@ -465,25 +467,25 @@ void gainControl(App& a) {
 void standardSwitch(App& a) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
     // the order on screen; the numbers are the families (0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T), which are also stored in the settings
-    static const int order[5] = {0, 1, 3, 4, 2};
-    static const char* names[5] = {"DVB", "ATSC", "ATSC 3.0", "ISDB-T", "DAB / DAB+"};
-    static const ImU32 cols[5] = {IM_COL32(52, 92, 108, 255), IM_COL32(150, 100, 30, 255), IM_COL32(150, 70, 40, 255), IM_COL32(120, 70, 140, 255), IM_COL32(40, 130, 96, 255)};
+    static const int order[6] = {0, 1, 3, 4, 2, 5};
+    static const char* names[6] = {"DVB", "ATSC", "ATSC 3.0", "ISDB-T", "DAB / DAB+", "FM"};
+    static const ImU32 cols[6] = {IM_COL32(52, 92, 108, 255), IM_COL32(150, 100, 30, 255), IM_COL32(150, 70, 40, 255), IM_COL32(120, 70, 140, 255), IM_COL32(40, 130, 96, 255), IM_COL32(140, 90, 100, 255)};
     const float h = ImGui::GetFrameHeight() - 2;
-    float segW[5], total = 0;
-    for (int i = 0; i < 5; i++) { segW[i] = ImGui::CalcTextSize(names[i]).x + 22; total += segW[i]; }
+    float segW[6], total = 0;
+    for (int i = 0; i < 6; i++) { segW[i] = ImGui::CalcTextSize(names[i]).x + 22; total += segW[i]; }
     const ImVec2 p = ImGui::GetCursorScreenPos();
     ImGui::AlignTextToFramePadding();
     dl->AddRectFilled(p, ImVec2(p.x + total, p.y + h), IM_COL32(18, 22, 28, 255), 3.f);
     dl->AddRect(p, ImVec2(p.x + total, p.y + h), IM_COL32(52, 60, 72, 255), 3.f);
     float x = p.x, selX = p.x, selW = segW[0];
     int selPos = 0;
-    for (int i = 0; i < 5; i++) { if (order[i] == a.family) { selX = x; selW = segW[i]; selPos = i; } x += segW[i]; }
+    for (int i = 0; i < 6; i++) { if (order[i] == a.family) { selX = x; selW = segW[i]; selPos = i; } x += segW[i]; }
     static float knobX = -1, knobW = 0;
     if (knobX < 0) { knobX = selX - p.x; knobW = selW; }
     knobX += (selX - p.x - knobX) * 0.35f; knobW += (selW - knobW) * 0.35f;
     dl->AddRectFilled(ImVec2(p.x + knobX + 2, p.y + 2), ImVec2(p.x + knobX + knobW - 2, p.y + h - 2), cols[selPos], 3.f);
     x = p.x;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 6; i++) {
         const int fam = order[i];
         const char* nm = names[i];
         ImGui::SetCursorScreenPos(ImVec2(x, p.y));
@@ -504,8 +506,9 @@ void standardSwitch(App& a) {
     else if (a.family == 3) ImGui::TextDisabled("ATSC 3.0 (NextGen TV), 6 MHz channel, ROUTE services");
     else if (a.family == 4) ImGui::TextDisabled("ISDB-T (Japan, Brazil and most of South America), 6 MHz channel, 13 segments");
     else if (a.family == 2) ImGui::TextDisabled("DAB / DAB+ digital radio, Band III channels 5A to 13F");
+    else if (a.family == 5) ImGui::TextDisabled("FM broadcast radio (87.5 - 108 MHz), stereo and RDS");
     else ImGui::TextDisabled("DVB-T2 / DVB-T, detected automatically");
     ImGui::SetCursorScreenPos(ImVec2(p.x, p.y + h + ImGui::GetStyle().ItemSpacing.y));
-    if (ImGui::IsMouseHoveringRect(p, ImVec2(p.x + total, p.y + h))) ImGui::SetTooltip("DVB (T2 and T, automatic).\nATSC 1.0 (8-VSB: US, Canada, Mexico, South Korea).\nATSC 3.0 (NextGen TV).\nISDB-T (Japan, Brazil and most of South America).\nDAB / DAB+ digital radio.");
+    if (ImGui::IsMouseHoveringRect(p, ImVec2(p.x + total, p.y + h))) ImGui::SetTooltip("DVB (T2 and T, automatic).\nATSC 1.0 (8-VSB: US, Canada, Mexico, South Korea).\nATSC 3.0 (NextGen TV).\nISDB-T (Japan, Brazil and most of South America).\nDAB / DAB+ digital radio.\nFM broadcast radio (87.5 - 108 MHz).");
 }
 
