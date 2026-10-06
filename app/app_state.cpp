@@ -104,10 +104,8 @@ void ingestSpectrum(App& a) {
         a.smooth[i] += 0.35f * (f.dbfs[i] - a.smooth[i]);
         a.peak[i] = std::max(a.peak[i] - 0.15f, f.dbfs[i]);
     }
-    double t = glfwGetTime();
-    if (a.lastFrameT > 0) a.frameDt = a.frameDt * 0.9 + (t - a.lastFrameT) * 0.1;
-    a.lastFrameT = t;
     a.wf.push(f.dbfs);
+    a.wf.stamp(glfwGetTime());
 }
 
 void ingestRx(App& a) {

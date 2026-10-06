@@ -55,6 +55,22 @@ struct Waterfall {
     std::vector<uint32_t> lut;
     int writeRow = 0; // newest row; older rows follow at writeRow+1 ... wrapping
     int filled = 0;
+    double pushT = 0; // when the newest row came in (glfwGetTime)
+    double rowDt = 1.0 / 30; // steady seconds per row, for the time labels and the scrolling
+    double stamps[128] = {};
+    int nStamps = 0;
+
+    // average over the last 128 rows, and move only when that drifts by more than 2%: the labels stay put
+    void stamp(double t) {
+        const int N = 128;
+        if (nStamps >= N) {
+            const double dt = (t - stamps[nStamps % N]) / N;
+            if (dt > 0 && std::fabs(dt - rowDt) > 0.02 * rowDt) rowDt = dt;
+        } else if (nStamps >= 8) rowDt = (t - stamps[0]) / nStamps;   // starting up: whatever we have
+        stamps[nStamps % N] = t;
+        nStamps++;
+        pushT = t;
+    }
     float minDb = -100, maxDb = -32;
 
     void init(gfx::Backend* gfx) {
@@ -187,7 +203,6 @@ struct App {
     Waterfall wf;
     float yMin = -110, yMax = -30;
     bool peakHold = true;
-    double lastFrameT = 0, frameDt = 1.0 / 30;
     ImFont* mono = nullptr;
     ImFont* ui = nullptr;
     std::string hackrfErr;
