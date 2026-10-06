@@ -241,7 +241,7 @@ void fmScanTab(App& a) {
     if (!s.running) {
         ImGui::BeginDisabled(!run);
         if (iconButton(Ic::Scan, "Scan FM Band", IM_COL32(32, 96, 140, 255), IM_COL32(44, 124, 178, 255))) {
-            s.running = true; s.idx = 0; s.t0 = 0; s.results.clear(); s.savedFreq = a.freqMhz;
+            s.running = true; s.idx = 0; s.t0 = ImGui::GetTime(); s.lockT = s.t0; s.results.clear(); s.savedFreq = a.freqMhz;
         }
         ImGui::EndDisabled();
         if (!run) { ImGui::SameLine(); ImGui::TextDisabled("start the receiver first"); }
@@ -317,14 +317,15 @@ void fmScanStep(App& a) {
         s.lockT = now;
     };
     
-    if (s.idx == 0 && s.t0 == 0) {
+    const FmTelemetry& fm = a.rx.fm;
+    const bool locked = a.rx.standard == 6 && fm.state == 2;
+
+    // First call after button press: tune to the first frequency
+    if (s.idx == 0 && (now - s.t0) < 0.05) {
         tuneTo(0);
         return;
     }
-    
-    const FmTelemetry& fm = a.rx.fm;
-    const bool locked = a.rx.standard == 6 && fm.state == 2;
-    
+
     // Dwell 1.5 seconds per frequency
     if (lockTime >= 1.5) {
         App::FmScan::Res r;
