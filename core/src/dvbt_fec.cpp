@@ -127,6 +127,7 @@ void FecDecoder::process(bool) {
     while (after_.size() - pos >= 204) {
         uint8_t* blk = &after_[pos];
         if (warm_ > 0) { warm_--; pos += 204; continue; }
+        const bool syncByteOk = blk[0] == 0x47 || blk[0] == 0xB8;   // before decoding: is the alignment still right?
         const int r = rsDecode(blk);
         st_.packets++;
         uint8_t pkt[188];
@@ -146,8 +147,12 @@ void FecDecoder::process(bool) {
         }
         // lost sync? 0x47/0xB8 expected at the start of every block
         if (r >= 0 && pkt[0] != 0x47) { /* descramble() restored it */ }
-        if (r < 0) { if (++syncMisses_ > 40) { st_.syncLocked = false; bitOffset_ = -1; bits_.clear(); bytes_.clear(); after_.clear(); syncMisses_ = 0; st_.phaseLocked = false; carry_.clear(); return; } }
-        else syncMisses_ = 0;
+        // Lost sync only when the alignment is gone, not merely when blocks fail: through a fade the stream stays aligned and byte 0
+        // of a block still reads 0x47 / 0xB8 even when the rest cannot be corrected. A misaligned stream shows one about once in 128
+        // blocks, so a long run without one means the bits slipped. Dropping sync on every burst of failed blocks threw away the
+        // alignment many times a second on a weak signal, and each new search cost a decoding block (16 symbols) of packets.
+        if (r >= 0 || syncByteOk) syncMisses_ = 0;
+        else if (++syncMisses_ > 100) { st_.syncLocked = false; bitOffset_ = -1; bits_.clear(); bytes_.clear(); after_.clear(); syncMisses_ = 0; st_.phaseLocked = false; carry_.clear(); return; }
         pos += 204;
     }
     after_.erase(after_.begin(), after_.begin() + pos);
