@@ -94,6 +94,7 @@ public:
     void dabSelect(int subId) { rxD_.select(subId); }
     int dabSelected() const { return rxD_.selected(); }
     DabAudio& dabAudio() { return rxD_.audio(); }
+    FmReceiver& fm() { return rxFm_; }   // volume, mute and de-emphasis of the FM receiver
     TeletextDecoder& teletext() { return ttx_; }
     // ATSC 3.0: the service list and statistics, and which service to receive (-1 = the first video service)
     bool atsc3Telemetry(Atsc3Telemetry& t) const { std::lock_guard<std::mutex> lk(atsc3Mu_); t = atsc3Tel_; return atsc3Tel_.seq != 0; }

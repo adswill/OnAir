@@ -98,6 +98,7 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     rxI_.configure(rate_);
     rxI_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });
     rxFm_.configure(rate_);
+    if (stdMode_.load() == 7 && !rxFm_.ready()) log("FM needs a sample rate of at least 500 ksps");
     logIMode_ = logIGi_ = logITmcc_ = -1; logISync_ = false;
     rxA3_.configure(rate_);
     rxA3_.setBlocking(!src_->realtimeHardware());
@@ -201,6 +202,7 @@ void Engine::applyReset() {
     rxD_.reset();
     rxA3_.reset();
     rxI_.reset();
+    rxFm_.reset();
     autoMark_ = nSamp_ / std::max(1.0, rate_.load()); lastLockSec_ = autoMark_;
     analyzer_.reset();
     {
