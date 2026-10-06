@@ -40,6 +40,10 @@ void applyBandwidth(App& a) {
         a.tune.bandwidthMhz = 1.7; a.tune.sampleRate = 2.048e6; a.tune.basebandFilterHz = 1.75e6;
         const DeviceInfo& dv = a.devices[a.devIdx];
         if (dv.isGeneric() && dv.maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, dv.maxRateHz);
+    } else if (a.fmMode) {   // one 200 kHz station; 4 Msps keeps the neighbours that fold in from the sides well down
+        a.tune.bandwidthMhz = 0.25; a.tune.sampleRate = 4e6; a.tune.basebandFilterHz = 2.5e6;
+        const DeviceInfo& dv = a.devices[a.devIdx];
+        if (dv.isGeneric() && dv.maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, dv.maxRateHz);
     } else if (a.atscMode) { a.tune.bandwidthMhz = 6; a.tune.sampleRate = 8e6; if (a.devices[a.devIdx].isGeneric() && a.devices[a.devIdx].maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, a.devices[a.devIdx].maxRateHz); }   // an ATSC channel is always 6 MHz wide
 }
 
@@ -54,7 +58,8 @@ void loadPrefs(App& a) {
     if (d.has("vga")) a.tune.vgaDb = (int)d.getI("vga", a.tune.vgaDb);
     if (d.has("gain")) a.tune.gainDb = d.getD("gain", a.tune.gainDb);
     a.tune.ampOn = d.getB("amp", false);
-    if (d.has("family")) { const int f = (int)d.getI("family", 0); a.family = f; a.atscMode = f == 1 || f == 3 || f == 4; a.atsc3Mode = f == 3; a.isdbtMode = f == 4; a.dabMode = f == 2; }
+    if (d.has("family")) { const int f = (int)d.getI("family", 0); a.family = f; a.atscMode = f == 1 || f == 3 || f == 4; a.atsc3Mode = f == 3; a.isdbtMode = f == 4; a.dabMode = f == 2; a.fmMode = f == 5; if (a.fmMode && !(a.freqMhz >= 87.5 && a.freqMhz <= 108)) a.freqMhz = 100.0; }
+    if (d.has("fmDeemph")) a.fmDeemph = d.getI("fmDeemph", 50) == 75 ? 75 : 50;
     if (d.has("compute")) a.computeMode = (int)d.getI("compute", a.computeMode);
     if (d.has("standard")) a.stdMode = (int)d.getI("standard", a.stdMode);
     a.bwIdx = std::max(0, std::min((int)(sizeof kBw / sizeof *kBw) - 1, (int)d.getI("bw", 0)));
@@ -78,6 +83,7 @@ void savePrefs(const App& a) {
     d.setD("gain", a.tune.gainDb);
     d.setB("amp", a.tune.ampOn);
     d.setI("family", a.family);
+    d.setI("fmDeemph", a.fmDeemph);
     d.setChannels(a.channels);
     d.setI("compute", a.computeMode);
     d.setI("standard", a.stdMode);
@@ -163,6 +169,14 @@ void ingestRx(App& a) {
             h.sro = a.rx.state == 2 ? (float)a.rx.sroPpm : NAN;
             h.level = a.spec.stats.rmsDbfs; h.clip = a.spec.stats.clipFraction * 100.f;
             h.quality = a.quality.report().valid ? (float)a.quality.report().percent : NAN;
+            h.aux = NAN;
+            if (a.fmMode) {   // FM has no FEC blocks and no MER: the history shows how clean the station is and how well RDS comes through
+                const FmTelemetry& fm = a.rx.fm;
+                const bool ok = a.rx.standard == 6 && fm.carrier;
+                h.snr = ok ? fm.snrDb : NAN; h.mer = NAN; h.loss = NAN; h.cfo = h.sro = NAN;
+                h.quality = ok ? std::min(100.f, std::max(0.f, fm.snrDb / 45.f * 100.f)) : NAN;
+                h.aux = ok && fm.rdsSync ? fm.rdsBlockOkPct : NAN;
+            }
             a.hist.push_back(h);
             if (a.hist.size() > 3600) a.hist.pop_front();
             a.histT = nowT;

@@ -190,14 +190,16 @@ struct App {
     int family = 0;           // 0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T, 5 FM
     std::deque<float> dabSnrH, dabFicH;
     std::deque<float> fmSnrH, fmPilotH, fmRdsH;
+    int fmDeemph = 50;        // FM de-emphasis in microseconds: 50 (Europe, Middle East, most of the world) or 75 (Americas, South Korea)
     struct DabScan {
         bool running = false; int idx = -1; double t0 = 0, lockT = 0, savedFreq = 218.64;
         struct Res { std::string name, label, stations; double mhz = 0; bool found = false; float snr = 0; };
         std::vector<Res> results;
     } dabScan;
     struct FmScan {
-        bool running = false; int idx = -1; double t0 = 0, lockT = 0, savedFreq = 100.0;
-        struct Res { std::string label; double mhz = 0; bool found = false; float snr = 0; bool stereo = false; };
+        bool running = false; int phase = 0; int idx = -1; double t0 = 0, savedFreq = 100.0; uint64_t seq0 = 0, rxSeq0 = 0;   // seq0: spectrum frame, rxSeq0: receiver report at the moment of tuning; phase 0 surveys the band, phase 1 checks each candidate
+        std::vector<double> cand;
+        struct Res { std::string name, pty; double mhz = 0; bool found = false, stereo = false, rds = false; float snr = 0; };
         std::vector<Res> results;
     } fmScan;
     bool bwAuto = true;       // the engine measures the channel width and switches by itself
@@ -223,7 +225,7 @@ struct App {
     char udpHost[64] = "127.0.0.1";
     char filePath[512] = "";
     std::deque<float> hCfo, hSnr, hTiming;
-    struct HistSample { float t, snr, mer, loss, cfo, sro, level, clip, quality; };
+    struct HistSample { float t, snr, mer, loss, cfo, sro, level, clip, quality, aux; };   // aux: FM, the share of RDS blocks received intact
     std::deque<HistSample> hist;      // 4 samples per second, last 15 minutes
     double histT = 0;
     uint64_t histOk = 0, histBad = 0;
@@ -384,6 +386,7 @@ void sourceOptions(App& a);
 void statusBar(App& a);
 void gainControl(App& a);
 void standardSwitch(App& a);
+extern float gSwitchWidth;
 // plots.cpp
 void spectrumPlot(App& a, ImVec2 size);
 void waterfallPlot(App& a, ImVec2 size);
@@ -456,7 +459,9 @@ bool fmFrequencyCombo(App& a);
 void fmStatus(App& a);
 void fmHistory(App& a);
 void fmPanels(App& a);
-void fmRdsDisplay(App& a);
+void fmRadioTab(App& a);
+void fmRadioPanel(App& a);
+void fmTune(App& a, double mhz);
 // wizard.cpp
 void wizEnter(App& a, int step);
 void wizAction(App& a, int step);

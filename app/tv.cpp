@@ -304,6 +304,7 @@ void rightPanel(App& a) {
     }
     ImGui::Spacing();
     if (a.dabMode) { dabStations(a); return; }
+    if (a.fmMode) { fmRadioPanel(a); return; }
     sectionHeader(Ic::Tv, "Services");
     // ---- service cards
     const float cardH = 68;

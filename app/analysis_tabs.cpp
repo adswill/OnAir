@@ -71,7 +71,9 @@ void historyTab(App& a) {
         ImGui::TextDisabled("window");
         for (int i = 0; i < 4; i++) { ImGui::SameLine(0, 6 * gUi); if (pillButton(names[i], a.histWindow == wins[i])) a.histWindow = wins[i]; }
         ImGui::SameLine(0, 14 * gUi);
-        ImGui::TextDisabled("gaps in a line mean the receiver was not locked; CFO and SRO are on Receiver > Sync");
+        if (a.fmMode) ImGui::TextDisabled("gaps in a line mean there was no station on the frequency");
+        else if (a.dabMode) ImGui::TextDisabled("gaps in a line mean the receiver was not locked");
+        else ImGui::TextDisabled("gaps in a line mean the receiver was not locked; CFO and SRO are on Receiver > Sync");
     }
     std::vector<float> xs(a.hist.size());
     for (size_t i = 0; i < xs.size(); i++) xs[i] = (float)(a.hist[i].t - nowT);
@@ -97,8 +99,13 @@ void historyTab(App& a) {
     };
     if (plt::BeginSubplots("##hist", 4, 1, ImVec2(-1, -1), plt::Subplot_LinkAllX | plt::Subplot_NoTitle | plt::Subplot_NoLegend | plt::Subplot_NoMenus)) {
         series("quality (%)##h1", "quality %", {{"quality", &App::HistSample::quality}}, 0, 100, true, false);
-        series("SNR / MER (dB)##h2", "SNR / MER dB", {{"data SNR", &App::HistSample::snr}, {"MER", &App::HistSample::mer}}, 0, 0, false, false);
-        series("FEC block loss (%)##h3", "lost blocks %", {{"lost blocks", &App::HistSample::loss}}, 0, 100, true, false);
+        if (a.fmMode) {
+            series("audio SNR (dB)##h2", "audio SNR dB", {{"audio SNR", &App::HistSample::snr}}, 0, 0, false, false);
+            series("RDS blocks ok (%)##h3", "RDS blocks ok %", {{"RDS blocks ok", &App::HistSample::aux}}, 0, 100, true, false);
+        } else {
+            series("SNR / MER (dB)##h2", "SNR / MER dB", {{"data SNR", &App::HistSample::snr}, {"MER", &App::HistSample::mer}}, 0, 0, false, false);
+            series("FEC block loss (%)##h3", "lost blocks %", {{"lost blocks", &App::HistSample::loss}}, 0, 100, true, false);
+        }
         series("ADC level (dBFS)##h4", "ADC dBFS", {{"rms", &App::HistSample::level}}, -60, 0, true, true);
         plt::EndSubplots();
     }

@@ -23,8 +23,9 @@ It is built for people who want a receiver that is both easy to use and honest a
 | **ATSC 3.0** (NextGen TV), *experimental* | North America, South Korea | Digital TV |
 | **ISDB-T**, *experimental* | Japan, Brazil and most of South America, Philippines | Digital TV and one-segment mobile TV |
 | **DAB / DAB+** | Europe, Australia and more | Digital radio |
+| **FM radio** (87.5 - 108 MHz) | Worldwide | Analogue radio: stereo, and RDS (station name, radio text, programme type, traffic flags) |
 
-The DVB standard is detected automatically, and one switch at the top of the window selects the family you want (DVB, ATSC, ATSC 3.0, ISDB-T or DAB).
+The DVB standard is detected automatically, and one switch at the top of the window selects the family you want (DVB, ATSC, ATSC 3.0, ISDB-T, DAB or FM).
 
 **T2-Lite** (the 1/3 and 2/5 code rates, short FEC frames, 1.7 MHz channels) is decoded like any other DVB-T2 signal. It is checked end to end on simulated signals from QPSK to 256-QAM, and the error correction sits where theory says it should; it has not been tried on a real T2-Lite broadcast. A T2-Lite signal that shares a channel with a normal T2 one (in its future-extension frames) is not decoded: the normal T2 part keeps working.
 
@@ -70,7 +71,7 @@ OnAir supports the **HackRF One and HackRF Pro** natively, and drives **RTL-SDR,
 
 A TV channel needs a radio that can sample fast enough, roughly 1 million samples per second per MHz of channel width:
 
-| Radio class | Wide TV channels (6-8 MHz) | DAB radio, narrow channels |
+| Radio class | Wide TV channels (6-8 MHz) | DAB and FM radio, narrow channels |
 |---|---|---|
 | HackRF, PlutoSDR, BladeRF, LimeSDR, USRP | Yes | Yes |
 | Airspy R2, SDRplay | Should work | Yes |

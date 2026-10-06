@@ -157,7 +157,7 @@ void drawUI(App& a, ImVec2 disp) {
     ImGui::SameLine(disp.x - 64);
     if (ImGui::SmallButton("Tour")) { a.wizOpen = true; a.wizX = -1; a.wizStep = 0; a.wizStepT = ImGui::GetTime(); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Take the guided tour with Onny");
-    a.tgMin[TgSwitch] = ImVec2(sw0.x - 2, sw0.y - 2); a.tgMax[TgSwitch] = ImVec2(sw0.x + 420, ImGui::GetCursorScreenPos().y);
+    a.tgMin[TgSwitch] = ImVec2(sw0.x - 2, sw0.y - 2); a.tgMax[TgSwitch] = ImVec2(sw0.x + gSwitchWidth + 20, ImGui::GetCursorScreenPos().y);
     ImGui::Separator();
     statusBar(a);
     ImGui::Separator();
@@ -169,7 +169,7 @@ void drawUI(App& a, ImVec2 disp) {
     if (ImGui::BeginTabBar("tabs")) {
         if (tabItem("Overview", Ic::Grid)) { overviewTab(a); ImGui::EndTabItem(); }
         if (a.dabMode) { if (tabItem("Radio", Ic::Radio)) { dabRadioTab(a); ImGui::EndTabItem(); } }
-        else if (a.fmMode) { if (tabItem("Info", Ic::Radio)) { fmStatus(a); ImGui::EndTabItem(); } }
+        else if (a.fmMode) { if (tabItem("Radio", Ic::Radio)) { fmRadioTab(a); ImGui::EndTabItem(); } }
         else if (tabItem("TV", Ic::Tv)) { tvTab(a); ImGui::EndTabItem(); }
         if (!a.fmMode && tabItem(a.dabMode ? "Ensemble" : "Receiver", Ic::Antenna)) { receiverTab(a); ImGui::EndTabItem(); }
         if (!a.dabMode && !a.fmMode && tabItem("Stream", Ic::Layers)) { streamTab(a); ImGui::EndTabItem(); }
@@ -224,6 +224,7 @@ int main(int argc, char** argv) {
     }
     glfwInit();
     gfx::windowHints();
+    for (int i = 1; i < argc; i++) if (std::string(argv[i]) == "--hidden") glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);   // dev: with --shot, render without showing the window
     GLFWwindow* window = glfwCreateWindow(1500, 900, "OnAir", nullptr, nullptr);
     if (!window) return 1;
 #ifndef __APPLE__
@@ -284,16 +285,23 @@ int main(int argc, char** argv) {
     bool autostart = false, hackrfStart = false, fileStart = false, stress = false;
     int stressFrame = 0, stressStep = 0;
     const char* shotPath = nullptr;
+    double shotAfter = 0;      // dev: take the --shot after this many seconds instead of after a number of frames
+    bool fmScanAuto = false;   // dev: start the FM band scan as soon as the receiver runs
     int shotFrame = 0;
     for (int i = 1; i < argc; i++) {
         if (std::string(argv[i]) == "--autostart") autostart = true;
         if (std::string(argv[i]) == "--stress") stress = true;   // dev: retune frequency and gain every second, like moving the controls
         if (std::string(argv[i]) == "--shot" && i + 1 < argc) shotPath = argv[++i];
+        if (std::string(argv[i]) == "--shotdelay" && i + 1 < argc) shotAfter = atof(argv[++i]);
+        if (std::string(argv[i]) == "--fmscan") fmScanAuto = true;
+        if (std::string(argv[i]) == "--mute") { app.muted = true; app.volume = 0; }
         if (std::string(argv[i]) == "--tab" && i + 1 < argc) routeTab(app, argv[++i]);
+        if (std::string(argv[i]) == "--dvb") setFamily(app, 0);
         if (std::string(argv[i]) == "--atsc") setFamily(app, 1);
         if (std::string(argv[i]) == "--atsc3") setFamily(app, 3);
         if (std::string(argv[i]) == "--isdbt") setFamily(app, 4);
         if (std::string(argv[i]) == "--dab") setFamily(app, 2);
+        if (std::string(argv[i]) == "--fm") setFamily(app, 5);
         if (std::string(argv[i]) == "--rate" && i + 1 < argc) app.file.sampleRate = atof(argv[++i]) * 1e6;
         if (std::string(argv[i]) == "--freq" && i + 1 < argc) app.freqMhz = atof(argv[++i]);
         if (std::string(argv[i]) == "--station" && i + 1 < argc) app.dabStation = atoi(argv[++i]);
@@ -356,6 +364,10 @@ int main(int argc, char** argv) {
                 app.engine.setComputeMode(app.computeMode); app.engine.setStandard(engineStd(app));
                 app.engine.start(app.devices[app.devIdx], app.tune, app.file);
             }
+            if (fmScanAuto && app.fmMode && app.engine.running() && glfwGetTime() > 3.0) {
+                fmScanAuto = false;
+                app.fmScan.running = true; app.fmScan.phase = 0; app.fmScan.idx = -1; app.fmScan.t0 = 0; app.fmScan.results.clear(); app.fmScan.cand.clear(); app.fmScan.savedFreq = app.freqMhz;
+            }
             if (stress && app.engine.running() && ++stressFrame % 100 == 0) {
                 stressStep++;
                 app.freqMhz = 522.0 + 0.5 * (stressStep % 4);
@@ -378,7 +390,7 @@ int main(int argc, char** argv) {
                 pAcc += d; pMax = std::max(pMax, d); pN++;
                 if (glfwGetTime() - pT0 > 2.0) { fprintf(stderr, "ui: %.1f fps, build %.2f ms avg / %.1f ms max\n", pN / (glfwGetTime() - pT0), 1e3 * pAcc / pN, 1e3 * pMax); pAcc = pMax = 0; pN = 0; pT0 = glfwGetTime(); }
             }
-            const bool shotNow = shotPath && ++shotFrame == (hackrfStart ? (app.playReq >= 0 || app.engine.player().selected() >= 0 ? 2400 : 900) : 400);
+            const bool shotNow = shotPath && (shotAfter > 0 ? glfwGetTime() > shotAfter : ++shotFrame == (hackrfStart ? (app.playReq >= 0 || app.engine.player().selected() >= 0 ? 2400 : 900) : 400));
             static const bool statlog = getenv("DECT2_STATLOG") != nullptr;   // a status line every 10 s on stderr (the log file on Windows): DECT2_STATLOG=1
             static double sT0 = glfwGetTime();
             if (statlog && app.engine.running() && glfwGetTime() - sT0 >= 10.0) {

@@ -32,8 +32,8 @@ void toolbar(App& a) {
     ImGui::InputDouble("##freq", &a.freqMhz, 0, 0, "%.3f MHz");
     if (ImGui::IsItemDeactivatedAfterEdit()) retune = true;
     ImGui::SameLine(0, 10 * gUi);
-    ImGui::TextDisabled(a.dabMode ? "CH" : a.fmMode ? "Freq" : "BW");
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip(a.dabMode ? "DAB channel" : a.fmMode ? "FM frequency" : "Channel bandwidth");
+    ImGui::TextDisabled(a.dabMode ? "CH" : a.fmMode ? "FM" : "BW");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip(a.dabMode ? "DAB channel" : a.fmMode ? "FM station" : "Channel bandwidth");
     ImGui::SameLine(0, 5 * gUi);
     if (a.dabMode) { if (dabChannelCombo(a)) retune = true; }
     else if (a.fmMode) { if (fmFrequencyCombo(a)) retune = true; }
@@ -129,7 +129,7 @@ void toolbar(App& a) {
         if (stopClicked) a.engine.stop();
     }
 
-    if (a.family != 2) {
+    if (a.family == 0 || a.family == 3) {   // the LDPC decoder is used by DVB-T2 and ATSC 3.0 only
     vSeparator();
     {
         static const char* modes[] = {"CPU", "GPU", "Auto"};
@@ -161,8 +161,9 @@ void toolbar(App& a) {
                 "Graphics: %s", a.rx.gpuAvailable ? gpuName : "none usable");
         }
     }
-    if (a.family == 0) {   // ATSC, ATSC 3.0, ISDB-T and DAB have one standard each: nothing to choose
-        ImGui::SameLine(0, 14 * gUi);
+    }
+    if (a.family == 0) {   // the other families have one standard each: nothing to choose
+        vSeparator();
         static const char* names[] = {"Auto", "DVB-T2", "DVB-T"};
         char lbl[48];
         const int act = a.engine.activeStandard();
@@ -177,12 +178,12 @@ void toolbar(App& a) {
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Which broadcast standard to decode.\nAuto alternates between DVB-T2 and DVB-T until one locks.");
     }
 
-    }
-
     if (retune && running) {
+        const bool moved = std::fabs(a.tune.centerHz - a.freqMhz * 1e6) > 1;
         a.tune.centerHz = a.freqMhz * 1e6;
         a.engine.log("retune " + std::to_string(a.freqMhz) + " MHz");
-        a.engine.retune(a.tune);
+        if (a.fmMode && moved) a.engine.retuneReset(a.tune);   // forget the old station's name and flush its sound
+        else a.engine.retune(a.tune);
         a.peak.clear();
         savePrefs(a);
     }
@@ -198,10 +199,18 @@ void sourceOptions(App& a) {
         bool ch = false;
         ImGui::TextDisabled("synthetic");
         ImGui::SameLine();
-        if (!a.atscMode && ImGui::Checkbox("DVB-T", &sc.dvbt)) ch = true;
+        if (a.family == 3 || a.family == 4 || a.family == 5) {   // there is no built-in test signal for these
+            ImGui::TextDisabled("no built-in test signal for %s: choose a radio or a recording file as the source", a.family == 3 ? "ATSC 3.0" : a.family == 4 ? "ISDB-T" : "FM");
+            return;
+        }
+        if (a.family == 0 && ImGui::Checkbox("DVB-T", &sc.dvbt)) ch = true;
         ImGui::SameLine();
-        if (a.atscMode) {
+        if (a.family == 1) {
             ImGui::TextDisabled("ATSC 8-VSB, 6 MHz");
+            ImGui::SameLine(0, 14 * gUi);
+        } else if (a.family == 2) {
+            ImGui::TextDisabled("DAB ensemble, transmission mode I");
+            ImGui::SameLine(0, 14 * gUi);
         } else if (sc.dvbt) {
             static const char* fftN[] = {"2K", "8K"}; static const char* gis[] = {"1/32", "1/16", "1/8", "1/4"};
             static const char* mods[] = {"QPSK", "16-QAM", "64-QAM"}; static const char* rates[] = {"1/2", "2/3", "3/4", "5/6", "7/8"};
@@ -463,52 +472,88 @@ void gainControl(App& a) {
     }
 }
 
-// DVB <-> ATSC switch under the tuner settings
+// The receiver modes. Adding a mode is one row here (and its family number in app.h / setFamily).
+// The families are also stored in the settings: 0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T, 5 FM.
+struct ModeDef { int family; const char* name; int group; ImU32 col; const char* blurb; const char* tip; };
+static const ModeDef kModes[] = {
+    {0, "DVB",        0, IM_COL32(52, 92, 108, 255),  "DVB-T2 / DVB-T, detected automatically",                                    "DVB-T2 and DVB-T, automatic (Europe, Middle East, Africa, Asia, Australia)"},
+    {1, "ATSC",       0, IM_COL32(150, 100, 30, 255), "ATSC 8-VSB, 6 MHz channel (the DVB-only settings are off)",                 "ATSC 1.0, 8-VSB (US, Canada, Mexico, South Korea)"},
+    {3, "ATSC 3.0",   0, IM_COL32(150, 70, 40, 255),  "ATSC 3.0 (NextGen TV), 6 MHz channel, ROUTE services",                      "ATSC 3.0, NextGen TV"},
+    {4, "ISDB-T",     0, IM_COL32(120, 70, 140, 255), "ISDB-T (Japan, Brazil and most of South America), 6 MHz channel, 13 segments", "ISDB-T (Japan, Brazil, South America)"},
+    {2, "DAB / DAB+", 1, IM_COL32(40, 130, 96, 255),  "DAB / DAB+ digital radio, Band III channels 5A to 13F",                     "DAB and DAB+ digital radio"},
+    {5, "FM",         1, IM_COL32(140, 90, 100, 255), "FM broadcast radio (87.5 - 108 MHz), stereo and RDS",                       "FM broadcast radio with stereo and RDS"},
+};
+static constexpr int kNumModes = (int)(sizeof kModes / sizeof *kModes);
+static const char* kGroupNames[] = {"TV", "RADIO"};
+float gSwitchWidth = 420;   // width of the mode selector as drawn (the guided tour points at it)
+
+static void selectMode(App& a, int fam) {
+    if (a.engine.running()) a.engine.log("stop the receiver before switching mode");
+    else if (fam != a.family) { setFamily(a, fam); savePrefs(a); }
+}
+
+// Mode selector: the modes in groups (TV, radio) as one segmented control each; a drop-down when the window is too narrow for them all
 void standardSwitch(App& a) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
-    // the order on screen; the numbers are the families (0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T), which are also stored in the settings
-    static const int order[6] = {0, 1, 3, 4, 2, 5};
-    static const char* names[6] = {"DVB", "ATSC", "ATSC 3.0", "ISDB-T", "DAB / DAB+", "FM"};
-    static const ImU32 cols[6] = {IM_COL32(52, 92, 108, 255), IM_COL32(150, 100, 30, 255), IM_COL32(150, 70, 40, 255), IM_COL32(120, 70, 140, 255), IM_COL32(40, 130, 96, 255), IM_COL32(140, 90, 100, 255)};
     const float h = ImGui::GetFrameHeight() - 2;
-    float segW[6], total = 0;
-    for (int i = 0; i < 6; i++) { segW[i] = ImGui::CalcTextSize(names[i]).x + 22; total += segW[i]; }
     const ImVec2 p = ImGui::GetCursorScreenPos();
-    ImGui::AlignTextToFramePadding();
-    dl->AddRectFilled(p, ImVec2(p.x + total, p.y + h), IM_COL32(18, 22, 28, 255), 3.f);
-    dl->AddRect(p, ImVec2(p.x + total, p.y + h), IM_COL32(52, 60, 72, 255), 3.f);
-    float x = p.x, selX = p.x, selW = segW[0];
-    int selPos = 0;
-    for (int i = 0; i < 6; i++) { if (order[i] == a.family) { selX = x; selW = segW[i]; selPos = i; } x += segW[i]; }
-    static float knobX = -1, knobW = 0;
-    if (knobX < 0) { knobX = selX - p.x; knobW = selW; }
-    knobX += (selX - p.x - knobX) * 0.35f; knobW += (selW - knobW) * 0.35f;
-    dl->AddRectFilled(ImVec2(p.x + knobX + 2, p.y + 2), ImVec2(p.x + knobX + knobW - 2, p.y + h - 2), cols[selPos], 3.f);
-    x = p.x;
-    for (int i = 0; i < 6; i++) {
-        const int fam = order[i];
-        const char* nm = names[i];
-        ImGui::SetCursorScreenPos(ImVec2(x, p.y));
-        ImGui::PushID(i);
-        if (ImGui::InvisibleButton("##seg", ImVec2(segW[i], h))) {
-            if (a.engine.running()) a.engine.log("stop the receiver before switching between DVB, ATSC, ATSC 3.0, ISDB-T and DAB");
-            else if (fam != a.family) { setFamily(a, fam); savePrefs(a); }
+    const ModeDef* cur = &kModes[0];
+    for (const auto& m : kModes) if (m.family == a.family) cur = &m;
+
+    float segW[kNumModes], segX[kNumModes], capX[2] = {0, 0}, grpL[2] = {0, 0}, grpR[2] = {0, 0}, capW[2];
+    for (int g = 0; g < 2; g++) capW[g] = ImGui::CalcTextSize(kGroupNames[g]).x;
+    float x = p.x;
+    for (int g = 0; g < 2; g++) {
+        capX[g] = x; x += capW[g] + 8;
+        grpL[g] = x;
+        for (int i = 0; i < kNumModes; i++) if (kModes[i].group == g) { segW[i] = ImGui::CalcTextSize(kModes[i].name).x + 22; segX[i] = x; x += segW[i]; }
+        grpR[g] = x;
+        x += 18;
+    }
+    const float total = x - 18 - p.x;
+    const float room = ImGui::GetContentRegionAvail().x - 150 * gUi;   // keep the right-hand buttons clear
+    if (total > room || getenv("DECT2_NARROW")) {   // too narrow: one drop-down with the same groups
+        gSwitchWidth = 170 * gUi;
+        ImGui::SetNextItemWidth(gSwitchWidth);
+        if (ImGui::BeginCombo("##mode", cur->name)) {
+            for (int g = 0; g < 2; g++) {
+                if (g) ImGui::Separator();
+                ImGui::TextDisabled("%s", kGroupNames[g]);
+                for (const auto& m : kModes) if (m.group == g && ImGui::Selectable(m.name, m.family == a.family)) selectMode(a, m.family);
+            }
+            ImGui::EndCombo();
         }
+        ImGui::SameLine(0, 14 * gUi);
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextDisabled("%s", cur->blurb);
+        return;
+    }
+    gSwitchWidth = total;
+    ImGui::AlignTextToFramePadding();
+    for (int g = 0; g < 2; g++) {
+        const ImVec2 ts = ImGui::CalcTextSize(kGroupNames[g]);
+        dl->AddText(ImVec2(capX[g], p.y + (h - ts.y) * 0.5f), IM_COL32(96, 108, 122, 255), kGroupNames[g]);
+        dl->AddRectFilled(ImVec2(grpL[g], p.y), ImVec2(grpR[g], p.y + h), IM_COL32(18, 22, 28, 255), 3.f);
+        dl->AddRect(ImVec2(grpL[g], p.y), ImVec2(grpR[g], p.y + h), IM_COL32(52, 60, 72, 255), 3.f);
+    }
+    int selPos = 0;
+    for (int i = 0; i < kNumModes; i++) if (kModes[i].family == a.family) selPos = i;
+    static float knobX = -1, knobW = 0;
+    if (knobX < 0) { knobX = segX[selPos]; knobW = segW[selPos]; }
+    knobX += (segX[selPos] - knobX) * 0.35f; knobW += (segW[selPos] - knobW) * 0.35f;
+    dl->AddRectFilled(ImVec2(knobX + 2, p.y + 2), ImVec2(knobX + knobW - 2, p.y + h - 2), kModes[selPos].col, 3.f);
+    for (int i = 0; i < kNumModes; i++) {
+        ImGui::SetCursorScreenPos(ImVec2(segX[i], p.y));
+        ImGui::PushID(i);
+        if (ImGui::InvisibleButton("##seg", ImVec2(segW[i], h))) selectMode(a, kModes[i].family);
         const bool hov = ImGui::IsItemHovered();
+        if (hov) ImGui::SetTooltip("%s", kModes[i].tip);
         ImGui::PopID();
-        const ImVec2 ts = ImGui::CalcTextSize(nm);
-        dl->AddText(ImVec2(x + (segW[i] - ts.x) * 0.5f, p.y + (h - ts.y) * 0.5f), fam == a.family ? IM_COL32(255, 255, 255, 255) : hov ? IM_COL32(220, 228, 236, 255) : IM_COL32(140, 152, 166, 255), nm);
-        x += segW[i];
+        const ImVec2 ts = ImGui::CalcTextSize(kModes[i].name);
+        dl->AddText(ImVec2(segX[i] + (segW[i] - ts.x) * 0.5f, p.y + (h - ts.y) * 0.5f), kModes[i].family == a.family ? IM_COL32(255, 255, 255, 255) : hov ? IM_COL32(220, 228, 236, 255) : IM_COL32(140, 152, 166, 255), kModes[i].name);
     }
     ImGui::SetCursorScreenPos(ImVec2(p.x + total + 14, p.y));
     ImGui::AlignTextToFramePadding();
-    if (a.family == 1) ImGui::TextDisabled("ATSC 8-VSB, 6 MHz channel (the DVB-only settings are off)");
-    else if (a.family == 3) ImGui::TextDisabled("ATSC 3.0 (NextGen TV), 6 MHz channel, ROUTE services");
-    else if (a.family == 4) ImGui::TextDisabled("ISDB-T (Japan, Brazil and most of South America), 6 MHz channel, 13 segments");
-    else if (a.family == 2) ImGui::TextDisabled("DAB / DAB+ digital radio, Band III channels 5A to 13F");
-    else if (a.family == 5) ImGui::TextDisabled("FM broadcast radio (87.5 - 108 MHz), stereo and RDS");
-    else ImGui::TextDisabled("DVB-T2 / DVB-T, detected automatically");
+    ImGui::TextDisabled("%s", cur->blurb);
     ImGui::SetCursorScreenPos(ImVec2(p.x, p.y + h + ImGui::GetStyle().ItemSpacing.y));
-    if (ImGui::IsMouseHoveringRect(p, ImVec2(p.x + total, p.y + h))) ImGui::SetTooltip("DVB (T2 and T, automatic).\nATSC 1.0 (8-VSB: US, Canada, Mexico, South Korea).\nATSC 3.0 (NextGen TV).\nISDB-T (Japan, Brazil and most of South America).\nDAB / DAB+ digital radio.\nFM broadcast radio (87.5 - 108 MHz).");
 }
-
