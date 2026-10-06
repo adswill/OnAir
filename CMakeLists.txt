@@ -216,6 +216,8 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(bench_resample PRIVATE dect2core)
   add_executable(bench_rx tests/bench_rx.cpp)
   target_link_libraries(bench_rx PRIVATE dect2core)
+  add_executable(bench_dvbt tests/bench_dvbt.cpp)
+  target_link_libraries(bench_dvbt PRIVATE dect2core)
   add_executable(bench_fec tests/bench_fec.cpp)
   target_link_libraries(bench_fec PRIVATE dect2core)
 

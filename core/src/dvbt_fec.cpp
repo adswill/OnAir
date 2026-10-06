@@ -46,7 +46,14 @@ void FecDecoder::process(bool) {
     if (llrQueue_.empty()) return;
     // normalise the soft values: the demapper's LLRs scale with 1/noise, the Viterbi works on small integers
     double mean = 0;
-    for (float v : llrQueue_) mean += std::fabs(v);
+    {   // eight independent partial sums, which the compiler turns into vector additions
+        const float* p = llrQueue_.data();
+        const size_t n = llrQueue_.size(), n8 = n & ~(size_t)7;
+        float acc[8] = {};
+        for (size_t i = 0; i < n8; i += 8) for (int j = 0; j < 8; j++) acc[j] += std::fabs(p[i + j]);
+        for (int j = 0; j < 8; j++) mean += acc[j];
+        for (size_t i = n8; i < n; i++) mean += std::fabs(p[i]);
+    }
     mean /= (double)llrQueue_.size();
     const float scale = (float)(std::min(40.0, 22.0 / std::max(1e-6, mean)));
     llrScale_ = scale;
@@ -118,7 +125,7 @@ void FecDecoder::process(bool) {
     const size_t nb = bits_.size() / 8 / 12 * 12;
     if (!nb) return;
     std::vector<uint8_t> by(nb), di(nb);
-    for (size_t i = 0; i < nb; i++) { unsigned c = 0; for (int j = 0; j < 8; j++) c = (c << 1) | bits_[8 * i + j]; by[i] = (uint8_t)c; }
+    for (size_t i = 0; i < nb; i++) { uint64_t x; memcpy(&x, &bits_[8 * i], 8); by[i] = (uint8_t)(((x & 0x0101010101010101ull) * 0x8040201008040201ull) >> 56); }   // eight 0/1 bytes -> one byte, first bit highest (little-endian host)
     bits_.erase(bits_.begin(), bits_.begin() + nb * 8);
     deint_.process(by.data(), di.data(), nb);
     after_.insert(after_.end(), di.begin(), di.end());
@@ -159,19 +166,29 @@ void FecDecoder::process(bool) {
 }
 
 void FecDecoder::descramblePacket(uint8_t* pkt, int g) {
-    if (g == 0) prbs_ = 0xA9;
-    auto clock8 = [&] {
-        unsigned res = 0;
-        for (int i = 0; i < 8; i++) {
-            const unsigned fb = ((prbs_ >> 13) ^ (prbs_ >> 14)) & 1;
-            prbs_ = ((prbs_ << 1) | fb) & 0x7FFF;
-            res = (res << 1) | fb;
+    // The scrambler restarts every eight packets and runs on through each packet's sync byte, so its output is the same
+    // 8 x 188 bytes every time: generate it once.
+    static const std::vector<uint8_t> ks = [] {
+        std::vector<uint8_t> t(8 * 188, 0);
+        unsigned reg = 0xA9;
+        auto clock8 = [&] {
+            unsigned res = 0;
+            for (int i = 0; i < 8; i++) {
+                const unsigned fb = ((reg >> 13) ^ (reg >> 14)) & 1;
+                reg = ((reg << 1) | fb) & 0x7FFF;
+                res = (res << 1) | fb;
+            }
+            return (uint8_t)res;
+        };
+        for (int p = 0; p < 8; p++) {
+            for (int k = 1; k < 188; k++) t[p * 188 + k] = clock8();
+            clock8();
         }
-        return res;
-    };
+        return t;
+    }();
+    const uint8_t* key = &ks[(size_t)(g & 7) * 188];
     pkt[0] = 0x47;
-    for (int k = 1; k < 188; k++) pkt[k] ^= (uint8_t)clock8();
-    clock8();
+    for (int k = 1; k < 188; k++) pkt[k] ^= key[k];
 }
 
 void FecDecoder::takePackets(std::vector<uint8_t>& out) {

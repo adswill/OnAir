@@ -9,6 +9,9 @@
 #if defined(__SSE2__) && !defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
 #include <emmintrin.h>
 #endif
+#if defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
+#include <arm_neon.h>
+#endif
 
 namespace dect2 {
 namespace dvbt {
@@ -333,6 +336,14 @@ struct AxisTables {
     // for label bit j: which axis (0 I, 1 Q) and the grid of f(y) = min(bit=1) - min(bit=0) over axis levels
     int axis[6];
     std::vector<float> lut[6];
+    // the same function as a sum of ramps, f(y) = f0 + s0 (y - y0) + sum_i ds_i max(0, y - bp_i): exact, and four cells at a time in
+    // SIMD registers instead of a table lookup per bit (kMaxKinks breakpoints at most; `ramps` false when a bit needs more)
+    static constexpr int kMaxKinks = 8;
+    bool ramps = true;
+    float y0[6], f0[6], s0[6];
+    int nk[6];
+    float bp[6][kMaxKinks], ds[6][kMaxKinks];
+    float yMax = 0;   // largest input the table covers (the demapper clamps to [-R, yMax], like the table lookup does)
 };
 const AxisTables& tables(int mod, int hier) {
     static AxisTables t[3][4];
@@ -363,15 +374,127 @@ const AxisTables& tables(int mod, int hier) {
                 }
                 T.lut[j][g] = m1 - m0;
             }
+            // ramp form from the exact function: the breakpoints can only lie halfway between two levels of the axis
+            std::vector<float> lev;
+            for (int i = 0; i < (1 << m); i++) lev.push_back(movesRe ? pts[i].real() : pts[i].imag());
+            std::sort(lev.begin(), lev.end());
+            lev.erase(std::unique(lev.begin(), lev.end(), [](float a, float b) { return std::fabs(a - b) < 1e-6f; }), lev.end());
+            std::vector<float> cand;
+            for (size_t a = 0; a < lev.size(); a++) for (size_t b = a + 1; b < lev.size(); b++) cand.push_back(0.5f * (lev[a] + lev[b]));
+            std::sort(cand.begin(), cand.end());
+            cand.erase(std::unique(cand.begin(), cand.end(), [](float a, float b) { return std::fabs(a - b) < 1e-6f; }), cand.end());
+            auto exact = [&](float y) {
+                float m0 = 1e30f, m1 = 1e30f;
+                for (int i = 0; i < (1 << m); i++) {
+                    const float c = movesRe ? pts[i].real() : pts[i].imag();
+                    const float e = (y - c) * (y - c);
+                    if ((i >> sh) & 1) m1 = std::min(m1, e); else m0 = std::min(m0, e);
+                }
+                return m1 - m0;
+            };
+            // slope in each interval between breakpoints, from two points well inside it
+            std::vector<float> edges;
+            edges.push_back(-T.R - 1.f);
+            for (float c : cand) edges.push_back(c);
+            edges.push_back(T.R + 1.f);
+            std::vector<float> slope;
+            for (size_t i = 0; i + 1 < edges.size(); i++) {
+                const float lo = edges[i], hi = edges[i + 1], w = hi - lo;
+                slope.push_back((exact(lo + 0.75f * w) - exact(lo + 0.25f * w)) / (0.5f * w));
+            }
+            T.y0[j] = -T.R - 1.f; T.f0[j] = exact(T.y0[j]); T.s0[j] = slope[0];
+            T.nk[j] = 0;
+            for (size_t i = 1; i < slope.size(); i++) {
+                const float d = slope[i] - slope[i - 1];
+                if (std::fabs(d) < 1e-4f) continue;
+                if (T.nk[j] >= AxisTables::kMaxKinks) { T.ramps = false; break; }
+                T.bp[j][T.nk[j]] = cand[i - 1]; T.ds[j][T.nk[j]] = d; T.nk[j]++;
+            }
         }
+        T.yMax = -T.R + ((float)AxisTables::G - 0.001f) / T.scale;
     });
     return t[mod][hier];
 }
 } // namespace
 
+#if (defined(__ARM_NEON) || defined(__SSE2__)) && !defined(DECT2_NO_SIMD)
+#define DECT2_DEMAP_SIMD 1
+namespace {
+#if defined(__ARM_NEON)
+using F4 = float32x4_t;
+inline F4 f4set(float x) { return vdupq_n_f32(x); }
+inline F4 f4add(F4 a, F4 b) { return vaddq_f32(a, b); }
+inline F4 f4sub(F4 a, F4 b) { return vsubq_f32(a, b); }
+inline F4 f4mul(F4 a, F4 b) { return vmulq_f32(a, b); }
+inline F4 f4max(F4 a, F4 b) { return vmaxq_f32(a, b); }
+inline F4 f4min(F4 a, F4 b) { return vminq_f32(a, b); }
+inline F4 f4div(F4 a, F4 b) { return vdivq_f32(a, b); }
+inline void f4load2(const float* p, F4& re, F4& im) { const float32x4x2_t v = vld2q_f32(p); re = v.val[0]; im = v.val[1]; }
+inline F4 f4load(const float* p) { return vld1q_f32(p); }
+// bits j and j+1 of four cells -> (c0 j j+1)(c1 ..)(c2 ..)(c3 ..) as two registers
+inline void f4zip(F4 a, F4 b, F4& lo, F4& hi) { const float32x4x2_t z = vzipq_f32(a, b); lo = z.val[0]; hi = z.val[1]; }
+inline void f4store2(float* p, F4 v, int half) { vst1_f32(p, half ? vget_high_f32(v) : vget_low_f32(v)); }
+#else
+using F4 = __m128;
+inline F4 f4set(float x) { return _mm_set1_ps(x); }
+inline F4 f4add(F4 a, F4 b) { return _mm_add_ps(a, b); }
+inline F4 f4sub(F4 a, F4 b) { return _mm_sub_ps(a, b); }
+inline F4 f4mul(F4 a, F4 b) { return _mm_mul_ps(a, b); }
+inline F4 f4max(F4 a, F4 b) { return _mm_max_ps(a, b); }
+inline F4 f4min(F4 a, F4 b) { return _mm_min_ps(a, b); }
+inline F4 f4div(F4 a, F4 b) { return _mm_div_ps(a, b); }
+inline void f4load2(const float* p, F4& re, F4& im) {
+    const __m128 a = _mm_loadu_ps(p), b = _mm_loadu_ps(p + 4);
+    re = _mm_shuffle_ps(a, b, _MM_SHUFFLE(2, 0, 2, 0)); im = _mm_shuffle_ps(a, b, _MM_SHUFFLE(3, 1, 3, 1));
+}
+inline F4 f4load(const float* p) { return _mm_loadu_ps(p); }
+inline void f4zip(F4 a, F4 b, F4& lo, F4& hi) { lo = _mm_unpacklo_ps(a, b); hi = _mm_unpackhi_ps(a, b); }
+inline void f4store2(float* p, F4 v, int half) { if (half) _mm_storeh_pi((__m64*)p, v); else _mm_storel_pi((__m64*)p, v); }
+#endif
+}   // namespace
+
+// four cells per step, the LLR of every bit from its ramp sum; llr[c * m + j] as before
+static void demapRamps(const AxisTables& T, const cf32* cells, const float* n0, int count, float* llr) {
+    const int m = T.nbits;
+    const F4 lo = f4set(-T.R), hi = f4set(T.yMax), tiny = f4set(1e-9f), two = f4set(2.f), zero = f4set(0.f), one = f4set(1.f);
+    int c = 0;
+    for (; c + 4 <= count; c += 4) {
+        F4 y[2];
+        f4load2(reinterpret_cast<const float*>(cells + c), y[0], y[1]);
+        const F4 w = f4div(one, f4max(tiny, f4mul(two, f4load(n0 + c))));
+        F4 v[6];
+        for (int j = 0; j < m; j++) {
+            const F4 yy = f4min(f4max(y[T.axis[j]], lo), hi);
+            F4 f = f4add(f4set(T.f0[j]), f4mul(f4set(T.s0[j]), f4sub(yy, f4set(T.y0[j]))));
+            for (int i = 0; i < T.nk[j]; i++) f = f4add(f, f4mul(f4set(T.ds[j][i]), f4max(zero, f4sub(yy, f4set(T.bp[j][i])))));
+            v[j] = f4mul(w, f);
+        }
+        for (int p = 0; p < m / 2; p++) {
+            F4 za, zb;
+            f4zip(v[2 * p], v[2 * p + 1], za, zb);
+            for (int cc = 0; cc < 4; cc++) f4store2(llr + (size_t)(c + cc) * m + 2 * p, cc < 2 ? za : zb, cc & 1);
+        }
+    }
+    // the last few cells, the same arithmetic one at a time
+    for (; c < count; c++) {
+        const float w = 1.f / std::max(1e-9f, 2 * n0[c]);
+        const float yv[2] = {cells[c].real(), cells[c].imag()};
+        for (int j = 0; j < m; j++) {
+            const float yy = std::min(std::max(yv[T.axis[j]], -T.R), T.yMax);
+            float f = T.f0[j] + T.s0[j] * (yy - T.y0[j]);
+            for (int i = 0; i < T.nk[j]; i++) f += T.ds[j][i] * std::max(0.f, yy - T.bp[j][i]);
+            llr[(size_t)c * m + j] = w * f;
+        }
+    }
+}
+#endif
+
 void demap(const cf32* cells, const float* n0, int count, int mod, int hier, float* llr) {
     const AxisTables& T = tables(mod, hier);
     const int m = T.nbits;
+#ifdef DECT2_DEMAP_SIMD
+    if (T.ramps && m % 2 == 0) { demapRamps(T, cells, n0, count, llr); return; }
+#endif
     for (int c = 0; c < count; c++) {
         const float w = 1.f / std::max(1e-9f, 2 * n0[c]);
         const float y[2] = {cells[c].real(), cells[c].imag()};
@@ -394,10 +517,47 @@ void symbolDeinterleave(int mode, int symIdx, const cf32* in, const float* n0in,
 
 void bitDeinterleave(const float* in, int mod, int words, float* out) {
     const int v = bitsPerCell(mod);
+    // output element i*v+k of a 126-word block comes from input element w*v+e with e the interleaver branch of bit k and
+    // w the word whose column in that branch is i: a fixed permutation, built once
+    static std::vector<uint16_t> perm[3];
+    static std::once_flag once[3];
+    std::call_once(once[mod], [&] {
+        perm[mod].resize((size_t)126 * v);
+        for (int i = 0; i < 126; i++)
+            for (int k = 0; k < v; k++) {
+                const int e = (k / (v / 2)) + 2 * (k % (v / 2));
+                static const int off[6] = {0, 63, 105, 42, 21, 84};
+                perm[mod][(size_t)i * v + k] = (uint16_t)(((i - off[e] + 126) % 126) * v + e);
+            }
+    });
+    const uint16_t* P = perm[mod].data();
+    const int blockLen = 126 * v;
     for (int b = 0; b + 126 <= words; b += 126) {
-        float d[6][126];
-        for (int w = 0; w < 126; w++) for (int e = 0; e < v; e++) d[e][hCol(w, e)] = in[(size_t)(b + w) * v + e];
-        for (int i = 0; i < 126; i++) for (int k = 0; k < v; k++) out[(size_t)(b + i) * v + k] = d[(k / (v / 2)) + 2 * (k % (v / 2))][i];
+        const float* src = in + (size_t)b * v;
+        float* dst = out + (size_t)b * v;
+        for (int j = 0; j < blockLen; j++) dst[j] = src[P[j]];
+    }
+}
+
+// llr * scale, rounded to nearest and limited to +-127
+static void quantise(const float* llr, size_t n, float scale, int8_t* q) {
+    size_t j = 0;
+#if defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
+    const float32x4_t sc = vdupq_n_f32(scale);
+    for (; j + 8 <= n; j += 8) {
+        const int32x4_t a = vcvtaq_s32_f32(vmulq_f32(vld1q_f32(llr + j), sc)), b = vcvtaq_s32_f32(vmulq_f32(vld1q_f32(llr + j + 4), sc));
+        vst1_s8(q + j, vqmovn_s16(vcombine_s16(vqmovn_s32(a), vqmovn_s32(b))));
+    }
+#elif defined(__SSE2__) && !defined(DECT2_NO_SIMD)
+    const __m128 sc = _mm_set1_ps(scale);
+    for (; j + 8 <= n; j += 8) {
+        const __m128i a = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(llr + j), sc)), b = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(llr + j + 4), sc));
+        _mm_storel_epi64((__m128i*)(q + j), _mm_packs_epi16(_mm_packs_epi32(a, b), _mm_setzero_si128()));
+    }
+#endif
+    for (; j < n; j++) {
+        const float v = std::max(-127.f, std::min(127.f, llr[j] * scale));
+        q[j] = (int8_t)(int)(v + (v < 0 ? -0.5f : 0.5f));
     }
 }
 
@@ -405,20 +565,41 @@ void Viterbi::depuncture(const float* llr, size_t n, int rate, int phase, std::v
     static const int kPat[5][7] = {{3, 0, 0, 0, 0, 0, 0}, {3, 2, 0, 0, 0, 0, 0}, {3, 2, 1, 0, 0, 0, 0}, {3, 2, 1, 2, 1, 0, 0}, {3, 2, 2, 2, 1, 2, 1}};
     static const int kLen[5] = {1, 2, 3, 5, 7};
     const int k = kLen[rate];
-    soft.clear();
-    soft.reserve(n * 2);
-    size_t i = 0;
+    // quantise everything first (a plain loop the compiler vectorises), then spread the values over the two outputs of each step
+    static thread_local std::vector<int8_t> q;
+    q.resize(n);
+    quantise(llr, n, scale, q.data());
+    int ones = 0;
+    for (int j = 0; j < k; j++) ones += (kPat[rate][j] & 1) + ((kPat[rate][j] >> 1) & 1);
+    // whole puncturing periods: the position in the output period (2k values) of each of the `ones` input values, from this phase
+    int pos[16], np = 0;
+    for (int j = 0; j < k; j++) {
+        const int pat = kPat[rate][(phase % k + j) % k];
+        if (pat & 1) pos[np++] = 2 * j;
+        if (pat & 2) pos[np++] = 2 * j + 1;
+    }
+    const size_t periods = n / ones;
+    soft.assign((periods + 1) * k * 2, 0);
+    int8_t* o = soft.data();
+    for (size_t p = 0; p < periods; p++) {
+        int8_t* op = o + p * 2 * k;
+        const int8_t* qp = q.data() + p * ones;
+        for (int j = 0; j < ones; j++) op[pos[j]] = qp[j];
+    }
+    // what is left after the last whole period: the same step by step walk, which also decides what happens to an incomplete last step
+    size_t i = periods * ones;
     int step = phase % k;
-    auto q = [&](float v) { const float s = v * scale; return (int8_t)std::max(-127.f, std::min(127.f, std::round(s))); };
+    size_t out = periods * 2 * k;
     while (i < n) {
         const int pat = kPat[rate][step];
         int8_t x = 0, y = 0;
-        if (pat & 1) { if (i >= n) break; x = q(llr[i++]); }
-        if (pat & 2) { if (i >= n) break; y = q(llr[i++]); }
-        soft.push_back(x);
-        soft.push_back(y);
+        if (pat & 1) { if (i >= n) break; x = q[i++]; }
+        if (pat & 2) { if (i >= n) break; y = q[i++]; }
+        o[out++] = x;
+        o[out++] = y;
         if (++step == k) step = 0;
     }
+    soft.resize(out);
 }
 
 namespace {
@@ -459,45 +640,55 @@ struct NeonTables {
 };
 const NeonTables& neonTables() { static NeonTables t; return t; }
 
-inline uint8_t maskBits(uint16x8_t m) {
-    static const uint16_t w[8] = {1, 2, 4, 8, 16, 32, 64, 128};
-    return (uint8_t)vaddvq_u16(vandq_u16(m, vld1q_u16(w)));
-}
 
 void viterbiRange(const int8_t* soft, size_t steps, std::vector<uint8_t>& bits, long* metricOut) {
     const NeonTables& T = neonTables();
     std::vector<uint64_t> dec(steps);
     long off = 0; // total subtracted by the renormalisation: the absolute path metric is off + pm
-    alignas(16) int16_t pm[64] = {}, nm[64];
+    alignas(16) int16_t pm[64] = {};
     int16x8_t sigX[4], sigY[4];
     for (int q = 0; q < 4; q++) { sigX[q] = vld1q_s16(T.sigX + 8 * q); sigY[q] = vld1q_s16(T.sigY + 8 * q); }
+    // The 64 path metrics live in eight registers for the whole run (no store and reload per step: that round trip made the
+    // chain of steps latency-bound). N[q] holds states 8q..8q+7.
+    int16x8_t N[8];
+    for (int q = 0; q < 8; q++) N[q] = vdupq_n_s16(0);
+    static const uint8_t w8[16] = {1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128};
+    const uint8x16_t wt = vld1q_u8(w8);
     for (size_t t = 0; t < steps; t++) {
         const int16_t a = soft[2 * t], b = soft[2 * t + 1];
-        int16x8x2_t o[4];
-        for (int q = 0; q < 4; q++) o[q] = vld2q_s16(pm + 16 * q);
-        uint8_t lo[4], hi[4];
+        int16x8_t nn[8];
+        uint16x8_t lo[4], hi[4];
         for (int q = 0; q < 4; q++) {
-            const int16x8_t M = vaddq_s16(vmulq_n_s16(sigX[q], a), vmulq_n_s16(sigY[q], b));
-            const int16x8_t A = o[q].val[0], B = o[q].val[1];
+            const int16x8x2_t o = vuzpq_s16(N[2 * q], N[2 * q + 1]);   // even states, odd states
+            const int16x8_t M = vmlaq_n_s16(vmulq_n_s16(sigX[q], a), sigY[q], b);
+            const int16x8_t A = o.val[0], B = o.val[1];
             const int16x8_t p0 = vqaddq_s16(A, M), p1 = vqsubq_s16(B, M);
             const int16x8_t r0 = vqsubq_s16(A, M), r1 = vqaddq_s16(B, M);
-            vst1q_s16(nm + 8 * q, vmaxq_s16(p0, p1));
-            vst1q_s16(nm + 32 + 8 * q, vmaxq_s16(r0, r1));
-            lo[q] = maskBits(vcgtq_s16(p1, p0));
-            hi[q] = maskBits(vcgtq_s16(r1, r0));
+            nn[q] = vmaxq_s16(p0, p1);
+            nn[4 + q] = vmaxq_s16(r0, r1);
+            lo[q] = vcgtq_s16(p1, p0);
+            hi[q] = vcgtq_s16(r1, r0);
         }
-        uint64_t d = 0;
-        for (int q = 0; q < 4; q++) { d |= (uint64_t)lo[q] << (8 * q); d |= (uint64_t)hi[q] << (32 + 8 * q); }
-        dec[t] = d;
+        // the 64 decision bits (lane i of the 64 comparison results -> bit i): narrow to bytes, weight by 1,2,4..128 and add
+        // neighbours three times, which leaves each group of eight lanes as one byte
+        const uint8x16_t c0 = vandq_u8(vcombine_u8(vmovn_u16(lo[0]), vmovn_u16(lo[1])), wt);
+        const uint8x16_t c1 = vandq_u8(vcombine_u8(vmovn_u16(lo[2]), vmovn_u16(lo[3])), wt);
+        const uint8x16_t c2 = vandq_u8(vcombine_u8(vmovn_u16(hi[0]), vmovn_u16(hi[1])), wt);
+        const uint8x16_t c3 = vandq_u8(vcombine_u8(vmovn_u16(hi[2]), vmovn_u16(hi[3])), wt);
+        uint8x16_t r = vpaddq_u8(vpaddq_u8(c0, c1), vpaddq_u8(c2, c3));
+        r = vpaddq_u8(r, r);
+        dec[t] = vgetq_lane_u64(vreinterpretq_u64_u8(r), 0);
         // renormalise every 4 steps so int16 never saturates
         if ((t & 3) == 3) {
-            int16x8_t mx = vld1q_s16(nm);
-            for (int q = 1; q < 8; q++) mx = vmaxq_s16(mx, vld1q_s16(nm + 8 * q));
-            off += vmaxvq_s16(mx);
-            const int16x8_t m = vdupq_n_s16(vmaxvq_s16(mx));
-            for (int q = 0; q < 8; q++) vst1q_s16(pm + 8 * q, vsubq_s16(vld1q_s16(nm + 8 * q), m));
-        } else memcpy(pm, nm, sizeof pm);
+            int16x8_t mx = nn[0];
+            for (int q = 1; q < 8; q++) mx = vmaxq_s16(mx, nn[q]);
+            const int16_t top = vmaxvq_s16(mx);
+            off += top;
+            const int16x8_t m = vdupq_n_s16(top);
+            for (int q = 0; q < 8; q++) N[q] = vsubq_s16(nn[q], m);
+        } else for (int q = 0; q < 8; q++) N[q] = nn[q];
     }
+    for (int q = 0; q < 8; q++) vst1q_s16(pm + 8 * q, N[q]);
     int state = 0;
     int bm = pm[0];
     for (int s = 1; s < 64; s++) if (pm[s] > bm) { bm = pm[s]; state = s; }
@@ -524,8 +715,7 @@ struct SseTables {
 const SseTables& sseTables() { static SseTables t; return t; }
 
 // states 16q..16q+15: the even ones (old[2j]) to A, the odd ones (old[2j+1]) to B, like NEON's vld2q_s16
-inline void deinterleave(const int16_t* p, __m128i& A, __m128i& B) {
-    const __m128i x0 = _mm_load_si128((const __m128i*)p), x1 = _mm_load_si128((const __m128i*)(p + 8));
+inline void deinterleave(const __m128i x0, const __m128i x1, __m128i& A, __m128i& B) {
     A = _mm_packs_epi32(_mm_srai_epi32(_mm_slli_epi32(x0, 16), 16), _mm_srai_epi32(_mm_slli_epi32(x1, 16), 16));
     B = _mm_packs_epi32(_mm_srai_epi32(x0, 16), _mm_srai_epi32(x1, 16));
 }
@@ -542,34 +732,39 @@ void viterbiRange(const int8_t* soft, size_t steps, std::vector<uint8_t>& bits, 
     const SseTables& T = sseTables();
     std::vector<uint64_t> dec(steps);
     long off = 0; // total subtracted by the renormalisation: the absolute path metric is off + pm
-    alignas(16) int16_t pm[64] = {}, nm[64];
+    alignas(16) int16_t pm[64] = {};
     __m128i sigX[4], sigY[4];
     for (int q = 0; q < 4; q++) { sigX[q] = _mm_load_si128((const __m128i*)(T.sigX + 8 * q)); sigY[q] = _mm_load_si128((const __m128i*)(T.sigY + 8 * q)); }
+    // the 64 path metrics stay in eight registers (N[q] = states 8q..8q+7) instead of a store and reload per step
+    __m128i N[8];
+    for (int q = 0; q < 8; q++) N[q] = _mm_setzero_si128();
     for (size_t t = 0; t < steps; t++) {
         const __m128i a = _mm_set1_epi16(soft[2 * t]), b = _mm_set1_epi16(soft[2 * t + 1]);
+        __m128i nn[8];
         uint64_t d = 0;
         for (int q = 0; q < 4; q++) {
             __m128i A, B;
-            deinterleave(pm + 16 * q, A, B);
+            deinterleave(N[2 * q], N[2 * q + 1], A, B);
             const __m128i M = _mm_add_epi16(_mm_mullo_epi16(sigX[q], a), _mm_mullo_epi16(sigY[q], b));
             const __m128i p0 = _mm_adds_epi16(A, M), p1 = _mm_subs_epi16(B, M);
             const __m128i r0 = _mm_subs_epi16(A, M), r1 = _mm_adds_epi16(B, M);
-            _mm_store_si128((__m128i*)(nm + 8 * q), _mm_max_epi16(p0, p1));
-            _mm_store_si128((__m128i*)(nm + 32 + 8 * q), _mm_max_epi16(r0, r1));
+            nn[q] = _mm_max_epi16(p0, p1);
+            nn[4 + q] = _mm_max_epi16(r0, r1);
             d |= (uint64_t)maskBits(_mm_cmpgt_epi16(p1, p0)) << (8 * q);
             d |= (uint64_t)maskBits(_mm_cmpgt_epi16(r1, r0)) << (32 + 8 * q);
         }
         dec[t] = d;
         // renormalise every 4 steps so int16 never saturates
         if ((t & 3) == 3) {
-            __m128i mx = _mm_load_si128((const __m128i*)nm);
-            for (int q = 1; q < 8; q++) mx = _mm_max_epi16(mx, _mm_load_si128((const __m128i*)(nm + 8 * q)));
+            __m128i mx = nn[0];
+            for (int q = 1; q < 8; q++) mx = _mm_max_epi16(mx, nn[q]);
             const int16_t top = maxLane(mx);
             off += top;
             const __m128i m = _mm_set1_epi16(top);
-            for (int q = 0; q < 8; q++) _mm_store_si128((__m128i*)(pm + 8 * q), _mm_sub_epi16(_mm_load_si128((const __m128i*)(nm + 8 * q)), m));
-        } else memcpy(pm, nm, sizeof pm);
+            for (int q = 0; q < 8; q++) N[q] = _mm_sub_epi16(nn[q], m);
+        } else for (int q = 0; q < 8; q++) N[q] = nn[q];
     }
+    for (int q = 0; q < 8; q++) _mm_store_si128((__m128i*)(pm + 8 * q), N[q]);
     int state = 0;
     int bm = pm[0];
     for (int s = 1; s < 64; s++) if (pm[s] > bm) { bm = pm[s]; state = s; }
