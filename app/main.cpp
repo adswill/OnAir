@@ -111,7 +111,7 @@ void mainTabs(App& a) {
         if (tabItem("Overview", Ic::Grid)) { overviewTab(a); ImGui::EndTabItem(); }
         if (const ModeUi* mu = modeUi(a.family)) {   // a mode added after FM: its own tabs
             if (mu->tab && tabItem(mu->tabName ? mu->tabName : "Mode", mu->tabIcon)) { mu->tab(a); ImGui::EndTabItem(); }
-            else if (!mu->tab && tabItem("TV", Ic::Tv)) { tvTab(a); ImGui::EndTabItem(); }
+            else if (!mu->tab && mu->stream && tabItem("TV", Ic::Tv)) { tvTab(a); ImGui::EndTabItem(); }
             if (mu->receiver && tabItem("Receiver", Ic::Antenna)) { receiverTab(a); ImGui::EndTabItem(); }
             if (mu->stream && tabItem("Stream", Ic::Layers)) { streamTab(a); ImGui::EndTabItem(); }
             if (mu->scan && tabItem("Scan", Ic::Scan)) { scanTab(a); ImGui::EndTabItem(); }

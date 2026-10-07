@@ -6,8 +6,7 @@ static std::string synthLabel(const App& a) {
     switch (a.family) {
     case 0: return "Synthetic test signal (DVB-T2 8K, 8 MHz)";
     case 1: return "Synthetic test signal (ATSC 8-VSB)";
-    case 2: return "Synthetic test signal (DAB ensemble)";
-    case 3: return "Synthetic test signal (none for this mode)";
+    case 2: case 3: return "Synthetic test signal (none for this mode)";
     case 4: return "Synthetic test signal (ISDB-T)";
     case 5: return "Synthetic test signal (FM stereo, RDS)";
     default: { const ModeTuning* mt = modeTuning(a.family + 2); return std::string("Synthetic test signal (") + (mt ? mt->name : "?") + ")"; }

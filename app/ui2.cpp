@@ -1013,7 +1013,7 @@ void bodyPanel(App& a, float bodyH, ImVec2 disp) {
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     const float rightW = 236 * gUi, leftW = W - rightW - gap;
     const bool synth = a.devices[a.devIdx].kind == DeviceInfo::Synthetic || (a.devices[a.devIdx].kind == DeviceInfo::File && !a.engine.running());
-    const float sdrH = (synth ? 196 : 148) * gUi, ledH = 80 * gUi, anaH = (a.atsc3Mode ? 0 : 224) * gUi;
+    const float sdrH = (synth ? 196 : 148) * gUi + (modeUi(a.family) && modeUi(a.family)->tuner ? 70 * gUi : 0), ledH = 80 * gUi, anaH = (a.atsc3Mode ? 0 : 224) * gUi;
     const float wfH = H - sdrH - ledH - anaH - (anaH > 0 ? 3 : 2) * vgap;
     ImGui::BeginGroup();
     {   // SDR settings: run, frequency, what is received, level and volume; then the source, tuner and gain controls

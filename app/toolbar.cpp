@@ -237,12 +237,18 @@ void sourceOptions(App& a) {
         if (const ModeUi* mu = modeUi(a.family)) {   // a mode added after FM: its own test signal and options
             bool c2 = false;
             if (mu->synth) mu->synth(a, c2);
-            else ImGui::TextDisabled("no built-in test signal for this mode: choose a radio or a recording file as the source");
+            else {   // the mode has no options of its own: noise and carrier offset, which every test signal follows
+                ImGui::TextDisabled("%s test signal", modeTuning(a.family + 2)->name);
+                ImGui::SameLine(0, 14 * gUi); ImGui::TextDisabled("SNR"); ImGui::SameLine(); ImGui::SetNextItemWidth(90 * gUi);
+                float snr = (float)sc.snrDb; if (ImGui::SliderFloat("##ssnr", &snr, 5, 45, "%.0f dB")) { sc.snrDb = snr; c2 = true; }
+                ImGui::SameLine(); ImGui::TextDisabled("CFO"); ImGui::SameLine(); ImGui::SetNextItemWidth(110 * gUi);
+                float cfo = (float)(sc.cfoHz / 1e3); if (ImGui::SliderFloat("##scfo", &cfo, -20, 20, "%.2f kHz")) { sc.cfoHz = cfo * 1e3; c2 = true; }
+            }
             if (c2 && running) a.engine.retune(a.tune);
             return;
         }
-        if (a.family == 3) {   // there is no built-in test signal for ATSC 3.0
-            ImGui::TextDisabled("no built-in test signal for ATSC 3.0: choose a radio or a recording file as the source");
+        if (a.family == 3 || a.family == 2) {   // there is no built-in test signal for ATSC 3.0 and DAB
+            ImGui::TextDisabled("no built-in test signal for %s: choose a radio or a recording file as the source", a.family == 3 ? "ATSC 3.0" : "DAB");
             return;
         }
         if (a.family == 4 || a.family == 5) {   // ISDB-T and FM: fixed signals, with noise and carrier offset to play with
