@@ -163,24 +163,39 @@ void constellation(int mod, int hier, std::vector<cf32>& pts) {
 }
 
 // ============================================================================ transmit chain
-void scramble(const uint8_t* ts, size_t packets, uint8_t* out) {
-    unsigned reg = 0;
-    auto clock8 = [&] {
-        unsigned res = 0;
-        for (int i = 0; i < 8; i++) {
-            const unsigned fb = ((reg >> 13) ^ (reg >> 14)) & 1;
-            reg = ((reg << 1) | fb) & 0x7FFF;
-            res = (res << 1) | fb;
+namespace {
+// the energy dispersal sequence: byte k (1..187) of packet g (0..7) of a group of eight
+struct DispersalSeq {
+    uint8_t b[8][188];
+    DispersalSeq() {
+        unsigned reg = 0xA9;
+        auto clock8 = [&] {
+            unsigned res = 0;
+            for (int i = 0; i < 8; i++) {
+                const unsigned fb = ((reg >> 13) ^ (reg >> 14)) & 1;
+                reg = ((reg << 1) | fb) & 0x7FFF;
+                res = (res << 1) | fb;
+            }
+            return res;
+        };
+        for (int g = 0; g < 8; g++) {
+            b[g][0] = 0;
+            for (int k = 1; k < 188; k++) b[g][k] = (uint8_t)clock8();
+            clock8();   // the PRBS runs over the sync byte of the next packet
         }
-        return res;
-    };
+    }
+};
+const DispersalSeq& dispersalSeq() { static const DispersalSeq d; return d; }
+}
+
+void scramble(const uint8_t* ts, size_t packets, uint8_t* out) {
+    const DispersalSeq& D = dispersalSeq();
     for (size_t p = 0; p < packets; p++) {
-        if (p % 8 == 0) reg = 0xA9;
         const uint8_t* in = ts + p * 188;
         uint8_t* o = out + p * 188;
+        const uint8_t* q = D.b[p % 8];
         o[0] = (p % 8 == 0) ? 0xB8 : 0x47;
-        for (int k = 1; k < 188; k++) o[k] = in[k] ^ (uint8_t)clock8();
-        clock8(); // the PRBS runs over the sync byte of the next packet
+        for (int k = 1; k < 188; k++) o[k] = in[k] ^ q[k];
     }
 }
 
@@ -216,17 +231,36 @@ const std::array<uint8_t, 16>& rsGen() {
 }
 } // namespace
 
-void rsEncode(const uint8_t* in, uint8_t* out) {
-    const Gf& f = gf();
-    const auto& G = rsGen();
-    uint8_t par[16] = {};
-    for (int i = 0; i < 188; i++) {
-        out[i] = in[i];
-        const uint8_t fb = in[i] ^ par[0];
-        for (int j = 0; j < 15; j++) par[j] = par[j + 1] ^ f.mul(fb, G[15 - j]);
-        par[15] = f.mul(fb, G[0]);
+namespace {
+// fb * generator for every feedback byte: one row of 16 bytes per value, so that one division step is two 64-bit exclusive ors
+struct RsRows {
+    alignas(8) uint8_t row[256][16];
+    RsRows() {
+        const Gf& f = gf();
+        const auto& G = rsGen();
+        for (int v = 0; v < 256; v++) {
+            for (int j = 0; j < 15; j++) row[v][j] = f.mul((uint8_t)v, G[15 - j]);
+            row[v][15] = f.mul((uint8_t)v, G[0]);
+        }
     }
-    memcpy(out + 188, par, 16);
+};
+const RsRows& rsRows() { static const RsRows r; return r; }
+}
+
+void rsEncode(const uint8_t* in, uint8_t* out) {
+    const RsRows& R = rsRows();
+    uint8_t b[188 + 16 + 8] = {};   // the message, then the remainder builds up in the bytes behind it
+    memcpy(b, in, 188);
+    for (int i = 0; i < 188; i++) {
+        const uint8_t fb = b[i];
+        if (!fb) continue;
+        uint64_t x[2], y[2];
+        memcpy(x, b + i + 1, 16); memcpy(y, R.row[fb], 16);
+        x[0] ^= y[0]; x[1] ^= y[1];
+        memcpy(b + i + 1, x, 16);
+    }
+    memcpy(out, in, 188);
+    memcpy(out + 188, b + 188, 16);
 }
 
 ConvInterleaver::ConvInterleaver(bool inverse) : inverse_(inverse) {
@@ -235,32 +269,62 @@ ConvInterleaver::ConvInterleaver(bool inverse) : inverse_(inverse) {
     for (int j = 0; j < 12; j++) fifo_[j].assign((size_t)17 * (inverse ? 11 - j : j), 0);
 }
 void ConvInterleaver::process(const uint8_t* in, uint8_t* out, size_t n) {
-    for (size_t i = 0; i < n; i++) {
-        const int j = (int)(i % 12);
+    // every branch is a delay line over every twelfth byte: output k is the oldest of the stored bytes while there are any, then the input
+    // that came D inputs earlier; the line then holds the last D inputs
+    std::vector<uint8_t> copy;
+    if (in == out) { copy.assign(in, in + n); in = copy.data(); }   // the branches read inputs that an in-place run would already have overwritten
+    for (int j = 0; j < 12; j++) {
         auto& f = fifo_[j];
-        if (f.empty()) { out[i] = in[i]; continue; }
-        out[i] = f[pos_[j]];
-        f[pos_[j]] = in[i];
-        if (++pos_[j] == f.size()) pos_[j] = 0;
+        const size_t D = f.size();
+        const size_t nj = n > (size_t)j ? (n - (size_t)j + 11) / 12 : 0;
+        if (!D) { for (size_t k = 0, i = (size_t)j; k < nj; k++, i += 12) out[i] = in[i]; continue; }
+        // stored bytes in order, oldest first
+        uint8_t stored[17 * 11];
+        for (size_t k = 0; k < D; k++) stored[k] = f[(pos_[j] + k) % D];
+        size_t i = (size_t)j;
+        for (size_t k = 0; k < nj; k++, i += 12) out[i] = k < D ? stored[k] : in[i - D * 12];
+        if (nj >= D) for (size_t k = 0; k < D; k++) f[k] = in[(size_t)j + (nj - D + k) * 12];
+        else {
+            for (size_t k = nj; k < D; k++) f[k - nj] = stored[k];
+            for (size_t k = 0; k < nj; k++) f[D - nj + k] = in[(size_t)j + k * 12];
+        }
+        pos_[j] = 0;
     }
+}
+
+namespace {
+// (x, y) code bits for every register state, bit 0 = x
+struct InnerTab {
+    uint8_t xy[128];
+    InnerTab() { for (unsigned r = 0; r < 128; r++) xy[r] = (uint8_t)(__builtin_parity(r & 0x79) | (__builtin_parity(r & 0x5B) << 1)); }
+};
 }
 
 void InnerEncoder::encode(const std::vector<uint8_t>& bits, std::vector<uint8_t>& coded) {
     // pattern per input step: bit0 = X present, bit1 = Y present
     static const int kPat[5][7] = {{3, 0, 0, 0, 0, 0, 0}, {3, 2, 0, 0, 0, 0, 0}, {3, 2, 1, 0, 0, 0, 0}, {3, 2, 1, 2, 1, 0, 0}, {3, 2, 2, 2, 1, 2, 1}};
     static const int kLen[5] = {1, 2, 3, 5, 7};
+    static const InnerTab tab;
     const int k = kLen[rate_];
-    coded.clear();
-    coded.reserve(bits.size() * 2);
-    for (size_t i = 0; i < bits.size(); i++) {
-        reg_ |= (unsigned)(bits[i] & 1) << 7;
-        reg_ >>= 1;
-        const unsigned x = __builtin_parity(reg_ & 0x79), y = __builtin_parity(reg_ & 0x5B);
-        const int pat = kPat[rate_][step_ % k];
-        step_++;
-        if (pat & 1) coded.push_back((uint8_t)x);
-        if (pat & 2) coded.push_back((uint8_t)y);
+    const size_t n = bits.size();
+    coded.resize(2 * n + 1);
+    uint8_t* o = coded.data();
+    size_t w = 0;
+    unsigned reg = reg_;
+    int ph = (int)(step_ % (size_t)k);
+    for (size_t i = 0; i < n; i++) {
+        reg |= (unsigned)(bits[i] & 1) << 7;
+        reg >>= 1;
+        const unsigned v = tab.xy[reg & 127];
+        const int pat = kPat[rate_][ph];
+        if (++ph == k) ph = 0;
+        // x always written, kept when the pattern has it; then y the same way (a dropped value is overwritten by the next one)
+        o[w] = (uint8_t)(v & 1); w += (size_t)(pat & 1);
+        o[w] = (uint8_t)(v >> 1); w += (size_t)((pat >> 1) & 1);
     }
+    reg_ = reg;
+    step_ += n;
+    coded.resize(w);
 }
 
 namespace {
@@ -270,18 +334,26 @@ inline int hCol(int w, int e) { static const int off[6] = {0, 63, 105, 42, 21, 8
 void bitInterleave(const std::vector<uint8_t>& coded, int mod, std::vector<uint8_t>& words) {
     const int v = bitsPerCell(mod);
     const size_t nw = coded.size() / v;
+    // output word w, bit e (MSB first) is bit k(e) of input word hCol(w, e) of the block: a fixed table per modulation
+    static uint16_t src[3][126 * 6];
+    static uint8_t shiftTab[3][6];
+    static std::once_flag once[3];
+    std::call_once(once[mod], [&] {
+        for (int e = 0; e < v; e++) {
+            int kk = 0;
+            for (int k = 0; k < v; k++) if ((k / (v / 2)) + 2 * (k % (v / 2)) == e) kk = k;
+            shiftTab[mod][e] = (uint8_t)(v - kk - 1);
+        }
+        for (int w = 0; w < 126; w++) for (int e = 0; e < v; e++) src[mod][w * v + e] = (uint16_t)hCol(w, e);
+    });
     std::vector<uint8_t> w0(nw);
     for (size_t i = 0; i < nw; i++) { unsigned c = 0; for (int j = 0; j < v; j++) c = (c << 1) | coded[i * v + j]; w0[i] = (uint8_t)c; }
     words.assign(nw, 0);
     for (size_t b = 0; b + 126 <= nw; b += 126) {
-        uint8_t d[6][126];
-        for (int i = 0; i < 126; i++) {
-            const int c = w0[b + i];
-            for (int k = 0; k < v; k++) d[(k / (v / 2)) + 2 * (k % (v / 2))][i] = (c >> (v - k - 1)) & 1;
-        }
+        const uint8_t* in = &w0[b];
         for (int w = 0; w < 126; w++) {
             unsigned val = 0;
-            for (int e = 0; e < v; e++) val = (val << 1) | d[e][hCol(w, e)];
+            for (int e = 0; e < v; e++) val = (val << 1) | ((in[src[mod][w * v + e]] >> shiftTab[mod][e]) & 1u);
             words[b + w] = (uint8_t)val;
         }
     }
