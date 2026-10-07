@@ -443,6 +443,7 @@ void volumeControl(App& a, float w) {
     ImGui::SetNextItemWidth(w - 34 * gUi);
     float vol = a.volume * 100.f;
     if (ImGui::SliderFloat("##vol", &vol, 0, 100, "%.0f %%")) { a.volume = vol / 100.f; a.engine.player().setVolume(a.volume); a.engine.dabAudio().setVolume(a.volume); }
+    if (ImGui::IsItemHovered() && a.family == 9) ImGui::SetTooltip("DMR voice audio is not decoded: AMBE+2 is proprietary, so there is no sound.");
 }
 
 void topBar(App& a, ImVec2 disp) {

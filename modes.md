@@ -13,23 +13,23 @@ What OnAir decodes today, and what could still be added, **ordered by popularity
 | ISDB-T (incl. ISDB-Tb) | TV | Experimental |
 | DAB / DAB+ | Radio | |
 | FM (stereo, RDS) | Radio | Checked on live stations |
+| DVB-S / S2 (S2X partly) | TV | Synthetic signals only; needs an LNB and a dish |
+| DTMB | TV | Synthetic signals only |
+| Analog TV (PAL, SECAM, NTSC) | TV | Synthetic signals only; no NICAM |
+| DRM30 | Radio | Synthetic signals only; AAC core audio |
+| ADS-B / Mode S | Data | Synthetic signals only |
+| DMR | Data | Synthetic signals only; no voice audio (AMBE+2) |
 
 ## To add, most popular first
 
 | # | Mode | Kind | Where it is used | Needs | Effort |
 |---|---|---|---|---|---|
-| 1 | DVB-S / S2 / S2X | TV (satellite) | Worldwide, big in the Middle East | An LNB (L-band 950-2150 MHz); reuses the LDPC and BCH from DVB-T2 | L |
 | 2 | AM broadcast (long, medium, shortwave) | Radio | Worldwide | Plain demodulator; HF needs an upconverter on a HackRF One | S |
-| 3 | ADS-B | Utility | Aircraft, 1090 MHz | Bit slicer and message decoder | S |
 | 4 | DVB-C / C2 | TV (cable) | Europe, Middle East | Cable connection; QAM, 6-8 MHz | M |
-| 5 | DTMB / DTMB-A | TV | China, Hong Kong, Cuba, Pakistan | 8 MHz TDS-OFDM and LDPC | L |
 | 6 | Airband voice, ACARS, VDL2 | Utility | Aircraft, 118-137 MHz | AM demodulator (shared with 2), data decoders | S-M |
-| 7 | Analog PAL / SECAM / NTSC | TV | A few countries still | Video demodulator, sync, sound subcarrier | M |
 | 8 | AIS | Utility | Ships, 162 MHz | Narrow FM / GMSK decoder | S |
-| 9 | DMR | Digital voice | Amateur and commercial | 4FSK decoder; audio needs an external vocoder | M |
 | 10 | Weather satellites (NOAA APT, Meteor LRPT) | Utility | 137 MHz | APT is simple, LRPT is QPSK with error correction | M |
 | 11 | HD Radio (NRSC-5) | Radio | US FM and AM | OFDM; the audio codec is licensed | L |
-| 12 | DRM30 / DRM+ | Radio | Shortwave, medium wave, FM band | OFDM and xHE-AAC decoding | L |
 | 13 | P25 | Digital voice | North America public safety | C4FM decoder; external vocoder | M |
 | 14 | TETRA | Digital voice | Europe, Middle East public safety | pi/4-DQPSK TDMA; external codec | L |
 | 15 | POCSAG / FLEX | Utility | Paging | FSK decoder | S |

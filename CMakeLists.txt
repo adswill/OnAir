@@ -189,7 +189,6 @@ if(DECT2_BUILD_APP)
   target_link_libraries(dect2 PRIVATE dect2core imgui)
   if(APPLE)
     target_link_libraries(dect2 PRIVATE "-framework AVFoundation" "-framework AVKit" "-framework CoreLocation" "-framework ImageIO" "-framework CoreGraphics")
-    target_link_options(dect2 PRIVATE "LINKER:-sectcreate,__TEXT,__info_plist,${CMAKE_SOURCE_DIR}/packaging/macos/Info.plist")   # the location service wants a usage text; a plain program carries it in this section
   endif()
   if(WIN32)
     target_link_libraries(dect2 PRIVATE comdlg32 ole32)
