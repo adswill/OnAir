@@ -62,13 +62,22 @@ jobs:
       - name: "Installer: radio libraries load"
         run: bash check_radios.sh "C:/Program Files/OnAir"
 
-      # no graphics card on the runner: the app may not get a window, so this step only reports
+      # The runner has no graphics driver, so no OpenGL 3: a copy of the installed app gets Mesa's software OpenGL
+      # (llvmpipe) next to it for this check only.
+      - name: "App: software OpenGL for the runner"
+        run: |
+          gh release download --repo pal1000/mesa-dist-win -p '*-release-msvc.7z' -D mesa
+          7z x -y -omesa mesa/*.7z > /dev/null
+          cp -r "C:/Program Files/OnAir" app
+          cp mesa/x64/*.dll app/
+          ls app
+
       - name: "App: starts and draws a frame"
-        continue-on-error: true
+        env: { GALLIUM_DRIVER: llvmpipe }
         run: |
           set +e
-          cd "C:/Program Files/OnAir"
-          timeout 90 ./OnAir.exe --hidden --mute --shot "$GITHUB_WORKSPACE/shot.png"; echo "exit $?"
+          cd app
+          timeout 120 ./OnAir.exe --hidden --mute --shot "$GITHUB_WORKSPACE/shot.png"; echo "exit $?"
           ls -la "$GITHUB_WORKSPACE/shot.png" || true
           cat "$APPDATA/OnAir/onair.log" || echo "no log at $APPDATA/OnAir/onair.log"
           [ -f "$GITHUB_WORKSPACE/shot.png" ]
