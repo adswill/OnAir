@@ -34,14 +34,11 @@ public:
     }
     double sampleRate() const override { return rate_; }
     void generate(cf32* out, size_t n) override {
-        buf_.clear();
-        gen_->generate(n, buf_);
-        for (size_t i = 0; i < n; i++) out[i] = buf_[i] * 0.3f;
+        gen_->generate(out, n, 0.3f);
     }
 private:
     double rate_;
     std::unique_ptr<FmGenerator> gen_;
-    std::vector<cf32> buf_;
 };
 
 class IsdbtSynth : public ModeSynth {

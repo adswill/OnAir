@@ -5,6 +5,7 @@
 //   MPX -> x exp(-j 3*pilot) -> low-pass -> 19 kHz -> carrier phase from the squared signal -> matched filter -> bits -> blocks -> groups
 #include "dect2/fm_rx.h"
 #include "dect2/audioout.h"
+#include "dect2/dsp_compat.h"
 #include "dect2/fftutil.h"
 #include "dect2/resampler.h"
 #include <algorithm>
@@ -50,31 +51,64 @@ std::vector<float> designLowpass(double fpass, double fstop, double fs, double a
     return h;
 }
 
-// FIR filter that keeps one output in D (T is float or cf32)
-template <class T>
-class DecimFir {
+// FIR filter that keeps one output in D, on real data: the decimating correlation of the dsp_compat kernels over the history and the new samples
+class FloatFir {
 public:
-    void design(std::vector<float> taps, int d) { h_ = std::move(taps); d_ = std::max(1, d); reset(); }
-    void reset() { hist_.assign(h_.size() - 1, T()); cnt_ = 0; }
-    void process(const T* in, size_t n, std::vector<T>& out) {
-        const size_t nt = h_.size();
-        x_.assign(hist_.begin(), hist_.end());
-        x_.insert(x_.end(), in, in + n);
-        const size_t base = nt - 1;
-        for (size_t j = d_ - cnt_ - 1; j < n; j += d_) {
-            const T* p = x_.data() + base + j;
-            T acc = T();
-            for (size_t k = 0; k < nt; k++) acc += p[-(ptrdiff_t)k] * h_[k];
-            out.push_back(acc);
+    void design(const std::vector<float>& taps, int d) {
+        nt_ = taps.size(); rev_.assign(taps.rbegin(), taps.rend()); d_ = std::max(1, d); reset();
+    }
+    void reset() { hist_.assign(nt_ - 1, 0.f); cnt_ = 0; }
+    // appends the outputs to out
+    void process(const float* in, size_t n, std::vector<float>& out) {
+        const size_t base = nt_ - 1;
+        x_.resize(base + n);
+        std::memcpy(x_.data(), hist_.data(), base * sizeof(float));
+        std::memcpy(x_.data() + base, in, n * sizeof(float));
+        const size_t j0 = (size_t)(d_ - cnt_ - 1);
+        if (j0 < n) {
+            const size_t nout = (n - j0 + (size_t)d_ - 1) / (size_t)d_;
+            const size_t o = out.size();
+            out.resize(o + nout);
+            desamp(x_.data() + j0, d_, rev_.data(), out.data() + o, (int)nout, (int)nt_);
         }
-        cnt_ = (int)((cnt_ + n) % d_);
-        hist_.assign(x_.end() - (ptrdiff_t)base, x_.end());
+        cnt_ = (int)(((size_t)cnt_ + n) % (size_t)d_);
+        std::memcpy(hist_.data(), x_.data() + n, base * sizeof(float));
     }
     int decim() const { return d_; }
 private:
-    std::vector<float> h_;
-    std::vector<T> hist_, x_;
+    std::vector<float> rev_, hist_, x_;
+    size_t nt_ = 1;
     int d_ = 1, cnt_ = 0;
+};
+
+// the same on complex data: the real and the imaginary parts are filtered as two real streams
+template <class T> class DecimFir;
+template <> class DecimFir<float> {
+public:
+    void design(std::vector<float> taps, int d) { f_.design(taps, d); }
+    void reset() { f_.reset(); }
+    void process(const float* in, size_t n, std::vector<float>& out) { f_.process(in, n, out); }
+    int decim() const { return f_.decim(); }
+private:
+    FloatFir f_;
+};
+template <> class DecimFir<cf32> {
+public:
+    void design(std::vector<float> taps, int d) { fr_.design(taps, d); fi_.design(taps, d); }
+    void reset() { fr_.reset(); fi_.reset(); }
+    void process(const cf32* in, size_t n, std::vector<cf32>& out) {
+        inR_.resize(n); inI_.resize(n);
+        for (size_t i = 0; i < n; i++) { inR_[i] = in[i].real(); inI_[i] = in[i].imag(); }
+        oR_.clear(); oI_.clear();
+        fr_.process(inR_.data(), n, oR_); fi_.process(inI_.data(), n, oI_);
+        const size_t o = out.size(), m = oR_.size();
+        out.resize(o + m);
+        for (size_t i = 0; i < m; i++) out[o + i] = cf32(oR_[i], oI_[i]);
+    }
+    int decim() const { return fr_.decim(); }
+private:
+    FloatFir fr_, fi_;
+    std::vector<float> inR_, inI_, oR_, oI_;
 };
 
 struct Biquad {

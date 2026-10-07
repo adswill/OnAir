@@ -31,6 +31,7 @@ class FmGenerator {
 public:
     explicit FmGenerator(const FmGenConfig& c);
     void generate(size_t n, std::vector<cf32>& out);   // appends n samples
+    void generate(cf32* out, size_t n, float gain = 1.f);   // writes n samples, scaled by gain
 
 private:
     void nextGroup();
@@ -39,6 +40,9 @@ private:
     double t_ = 0;                 // seconds
     double ph_ = 0;                // carrier phase
     double lph_ = 0, rph_ = 0;
+    // oscillators by recurrence (real, imaginary): the two tones, the pilot, the RDS bit clock; renormalised every block
+    double lo_[2] = {1, 0}, ro_[2] = {1, 0}, po_[2] = {1, 0}, bo_[2] = {1, 0};
+    uint64_t noiseState_ = 0;      // pseudo random positions in the Gaussian table
     double lGain_ = 1, rGain_ = 1; // pre-emphasis gain at the tone frequencies
     std::vector<uint8_t> bits_;    // differentially coded RDS bits, queued
     size_t bitBase_ = 0;           // stream index of bits_[0]

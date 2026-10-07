@@ -1,5 +1,6 @@
 // FM broadcast transmitter for tests (see fm_gen.h).
 #include "dect2/fm_gen.h"
+#include "fm_noise.h"
 #include <algorithm>
 #include <cmath>
 
@@ -63,35 +64,85 @@ void FmGenerator::nextGroup() {
     }
 }
 
+namespace {
+inline void rotate(double* o, double cr, double ci) { const double r = o[0] * cr - o[1] * ci; o[1] = o[0] * ci + o[1] * cr; o[0] = r; }
+inline void renorm(double* o) { const double m = 1.0 / std::sqrt(o[0] * o[0] + o[1] * o[1]); o[0] *= m; o[1] *= m; }
+}
+
 void FmGenerator::generate(size_t n, std::vector<cf32>& out) {
+    const size_t o = out.size();
+    out.resize(o + n);
+    generate(out.data() + o, n);
+}
+
+void FmGenerator::generate(cf32* dst, size_t n, float gain) {
     const double fs = c_.rate, dt = 1.0 / fs;
-    const double sigma = std::sqrt(std::pow(10.0, -c_.cnrDb / 10.0) * fs / 200e3 / 2.0);
-    std::normal_distribution<double> nd(0.0, 1.0);
-    const double amp = 0.3;                     // headroom for the ADC
+    const bool noisy = c_.cnrDb < 150;
+    const float sigma = noisy ? gain * (float)(0.3 * std::sqrt(std::pow(10.0, -c_.cnrDb / 10.0) * fs / 200e3 / 2.0)) : 0.f;
+    const double amp = 0.3 * gain;              // headroom for the ADC
     const double pilot = c_.pilotPct / 100.0, rdsAmp = c_.rdsDevKhz / 75.0;
-    for (size_t i = 0; i < n; i++) {
-        const double pp = 2 * kPi * 19000.0 * t_;
-        double l = c_.leftAmp * lGain_ * std::sin(lph_), r = c_.rightAmp * rGain_ * std::sin(rph_);
-        double mpx;
-        if (c_.stereo) mpx = 0.45 * (l + r) + 0.45 * (l - r) * std::sin(2 * pp) + pilot * std::sin(pp);
-        else mpx = 0.9 * 0.5 * (l + r);
-        if (c_.rds) {
-            const double pos = t_ * kRdsBaud;
-            const size_t bi = (size_t)pos;
-            while (bitBase_ + bits_.size() <= bi + 1) nextGroup();
-            if (bi - bitBase_ > 4096) { bits_.erase(bits_.begin(), bits_.begin() + 4000); bitBase_ += 4000; }
-            const double u = pos - std::floor(pos);
-            const double sym = bits_[bi - bitBase_] ? 1.0 : -1.0;
-            mpx += rdsAmp * sym * std::sin(2 * kPi * u) * std::cos(3 * pp);
+    const double lc = std::cos(2 * kPi * c_.leftHz * dt), ls = std::sin(2 * kPi * c_.leftHz * dt);
+    const double rc = std::cos(2 * kPi * c_.rightHz * dt), rs = std::sin(2 * kPi * c_.rightHz * dt);
+    const double pc = std::cos(2 * kPi * 19000.0 * dt), ps = std::sin(2 * kPi * 19000.0 * dt);
+    const double bc = std::cos(2 * kPi * kRdsBaud * dt), bs = std::sin(2 * kPi * kRdsBaud * dt);
+    const double lA = c_.leftAmp * lGain_, rA = c_.rightAmp * rGain_;
+    const double dphMul = 2 * kPi * 75000.0 * dt, dphCfo = 2 * kPi * c_.cfoHz * dt;
+    const FmNoiseTable& tab = FmNoiseTable::get();
+    const float* nz = tab.t.data();
+    const uint64_t nmask = tab.t.size() - 1;
+    uint64_t ns = noiseState_ ? noiseState_ : (0x9E3779B97F4A7C15ull ^ ((uint64_t)c_.seed * 0xD1B54A32D192ED03ull)) | 1;
+    constexpr size_t kBlk = 512;
+    float rr[kBlk], qq[kBlk];
+    for (size_t i0 = 0; i0 < n; i0 += kBlk) {
+        const size_t nb = std::min(kBlk, n - i0);
+        renorm(lo_); renorm(ro_); renorm(po_); renorm(bo_);
+        // the multiplex and the carrier phase, a sample at a time (recurrences)
+        for (size_t i = 0; i < nb; i++) {
+            const double l = lA * lo_[1], r = rA * ro_[1];
+            const double s1 = po_[1], c1 = po_[0];                     // sin and cos of the pilot phase
+            double mpx;
+            if (c_.stereo) {
+                const double s2 = 2 * s1 * c1;
+                mpx = 0.45 * (l + r) + 0.45 * (l - r) * s2 + pilot * s1;
+            } else mpx = 0.9 * 0.5 * (l + r);
+            if (c_.rds) {
+                const double pos = t_ * kRdsBaud;
+                const size_t bi = (size_t)pos;
+                while (bitBase_ + bits_.size() <= bi + 1) nextGroup();
+                if (bi - bitBase_ > 4096) { bits_.erase(bits_.begin(), bits_.begin() + 4000); bitBase_ += 4000; }
+                const double sym = bits_[bi - bitBase_] ? 1.0 : -1.0;
+                const double c3 = c1 * (c1 * c1 - 3 * s1 * s1);       // cos of three times the pilot phase
+                mpx += rdsAmp * sym * bo_[1] * c3;
+            }
+            ph_ += dphCfo + dphMul * mpx;
+            if (ph_ > kPi || ph_ < -kPi) ph_ -= 2 * kPi * std::nearbyint(ph_ * (0.5 / kPi));
+            // quadrant and remainder of the phase for the sine and cosine below
+            const double kq = std::nearbyint(ph_ * (2.0 / kPi));
+            rr[i] = (float)((ph_ - kq * 1.5707963267948966) - kq * 6.123233995736766e-17);
+            qq[i] = (float)kq;
+            rotate(lo_, lc, ls); rotate(ro_, rc, rs); rotate(po_, pc, ps); rotate(bo_, bc, bs);
+            t_ += dt;
         }
-        ph_ += 2 * kPi * (c_.cfoHz + 75000.0 * mpx) * dt;
-        ph_ = std::fmod(ph_, 2 * kPi);
-        cf32 v((float)(amp * std::cos(ph_) + amp * sigma * nd(rng_)), (float)(amp * std::sin(ph_) + amp * sigma * nd(rng_)));
-        out.push_back(v);
-        lph_ = std::fmod(lph_ + 2 * kPi * c_.leftHz * dt, 2 * kPi);
-        rph_ = std::fmod(rph_ + 2 * kPi * c_.rightHz * dt, 2 * kPi);
-        t_ += dt;
+        // sine and cosine of the carrier phase: polynomials on |r| <= pi / 4, the quadrant picks the pair (written so that the compiler vectorises it)
+        const float a0 = (float)amp;
+        cf32* d = dst + i0;
+        for (size_t i = 0; i < nb; i++) {
+            const float r = rr[i], r2 = r * r;
+            const float sp = r * (1.f + r2 * (-1.f / 6 + r2 * (1.f / 120 + r2 * (-1.f / 5040 + r2 * (1.f / 362880)))));
+            const float cp = 1.f + r2 * (-0.5f + r2 * (1.f / 24 + r2 * (-1.f / 720 + r2 * (1.f / 40320 + r2 * (-1.f / 3628800)))));
+            const int q = ((int)qq[i]) & 3;
+            const float sn = (q & 1) ? cp : sp, cs = (q & 1) ? sp : cp;
+            const float sg = (q & 2) ? -a0 : a0, cg = (q == 1 || q == 2) ? -a0 : a0;
+            d[i] = cf32(cg * cs, sg * sn);
+        }
+        if (noisy) {
+            for (size_t i = 0; i < nb; i++) {
+                ns ^= ns << 13; ns ^= ns >> 7; ns ^= ns << 17;
+                d[i] += cf32(sigma * nz[ns & nmask], sigma * nz[(ns >> 24) & nmask]);
+            }
+        }
     }
+    noiseState_ = ns;
 }
 
 } // namespace dect2
