@@ -7,6 +7,7 @@
 #include <limits>
 #include <mutex>
 #include <stdexcept>
+#include <type_traits>
 
 namespace dect2::dtmb {
 
@@ -212,73 +213,105 @@ LdpcCode::Result LdpcCode::Decoder::decode(const float* llr, uint8_t* info, int 
         }
         lv[Z] = 0.f;
     }
-    std::fill(r_.begin(), r_.end(), 0.f);
     Result res;
+    auto emitInfo = [&] {
+        for (int j = 0; j < e; j++) {
+            const float* lv = &lv_[(size_t)(c + j) * 128];
+            uint8_t t[128];
+            for (int i = 0; i < 128; i++) t[i] = (uint8_t)(lv[i] < 0.f);
+            std::memcpy(info + j * Z, t, (size_t)Z);
+        }
+    };
     {   // mostly erased input
         int zeros = 0;
         for (int i = 0; i < kLdpcSent; i++) zeros += llr[i] == 0.f;
         if (zeros > kLdpcSent / 3) {
-            for (int j = 0; j < e; j++) for (int i = 0; i < Z; i++) info[j * Z + i] = (uint8_t)(lv_[(size_t)(c + j) * 128 + (size_t)i] < 0.f);
+            emitInfo();
             res.iterations = 1;
             return res;
         }
     }
     float min1[128], min2[128];
-    int idx[128];
     uint32_t sg[128];
+    static const float zeros[128] = {};
+    constexpr float kHuge = std::numeric_limits<float>::max();
     for (int iter = 1; iter <= maxIter; iter++) {
         for (int row = 0; row < c; row++) {
             const auto& edges = code_.rows_[(size_t)row];
             const int deg = (int)edges.size();
             const int eBase = code_.edgeBase_[(size_t)row];
-            for (int i = 0; i < Z; i++) { min1[i] = std::numeric_limits<float>::max(); min2[i] = min1[i]; idx[i] = -1; sg[i] = 0; }
+            // The totals of the columns of the row are gathered into q_ in check order (a rotation by the shift of the edge), so that the two
+            // passes below run over whole 128 lane rows (lane 127 is padding and stays zero).
             for (int b = 0; b < deg; b++) {
                 const float* lv = &lv_[(size_t)edges[(size_t)b].col * 128];
-                const float* ro = &r_[(size_t)(eBase + b) * 128];
-                float* q = &q_[(size_t)b * 128];
+                float* qb = &q_[(size_t)b * 128];
                 const int sh = edges[(size_t)b].shift;
-                const int n1 = Z - sh;
-                for (int i = 0; i < n1; i++) q[i] = lv[i + sh] - ro[i];
-                for (int i = n1; i < Z; i++) q[i] = lv[i + sh - Z] - ro[i];
-                for (int i = 0; i < Z; i++) {
-                    const float a = std::fabs(q[i]);
-                    const bool lt1 = a < min1[i];
-                    const bool lt2 = a < min2[i];
-                    min2[i] = lt1 ? min1[i] : (lt2 ? a : min2[i]);
-                    idx[i] = lt1 ? b : idx[i];
-                    min1[i] = lt1 ? a : min1[i];
-                    sg[i] ^= std::bit_cast<uint32_t>(q[i]) & 0x80000000u;
+                std::memcpy(qb, lv + sh, (size_t)(Z - sh) * sizeof(float));
+                std::memcpy(qb + (Z - sh), lv, (size_t)sh * sizeof(float));
+                qb[Z] = 0.f;
+            }
+            // Pass 1: the two smallest magnitudes and the product of the signs of the variable-to-check messages q = total - old check message.
+            // (q is computed again in pass 2 instead of being stored: the same subtraction gives the same bits.)
+            {
+                const float* __restrict qb = &q_[0];
+                const float* __restrict ro = iter == 1 ? zeros : &r_[(size_t)eBase * 128];
+                for (int i = 0; i < 128; i++) {
+                    const float q = qb[i] - ro[i];
+                    min1[i] = std::fabs(q); min2[i] = kHuge; sg[i] = std::bit_cast<uint32_t>(q) & 0x80000000u;
                 }
             }
-            for (int b = 0; b < deg; b++) {
-                float* lv = &lv_[(size_t)edges[(size_t)b].col * 128];
-                float* rn = &r_[(size_t)(eBase + b) * 128];
-                float* q = &q_[(size_t)b * 128];
-                const int sh = edges[(size_t)b].shift;
-                const int n1 = Z - sh;
-                for (int i = 0; i < Z; i++) {
-                    const float m = (idx[i] == b ? min2[i] : min1[i]) * alpha;
-                    const uint32_t sign = sg[i] ^ (std::bit_cast<uint32_t>(q[i]) & 0x80000000u);
-                    const float v = std::bit_cast<float>(std::bit_cast<uint32_t>(m) | sign);
-                    rn[i] = v;
-                    q[i] += v;
+            for (int b = 1; b < deg; b++) {
+                const float* __restrict qb = &q_[(size_t)b * 128];
+                const float* __restrict ro = iter == 1 ? zeros : &r_[(size_t)(eBase + b) * 128];
+                for (int i = 0; i < 128; i++) {
+                    const float q = qb[i] - ro[i], a = std::fabs(q);
+                    min2[i] = std::min(min2[i], std::max(a, min1[i]));
+                    min1[i] = std::min(min1[i], a);
+                    sg[i] ^= std::bit_cast<uint32_t>(q) & 0x80000000u;
                 }
-                for (int i = 0; i < n1; i++) lv[i + sh] = std::max(-kClip, std::min(kClip, q[i]));
-                for (int i = n1; i < Z; i++) lv[i + sh - Z] = std::max(-kClip, std::min(kClip, q[i]));
             }
+            // Pass 2: new check messages (the edge holding the minimum gets the second minimum; with a tie both values are equal) and totals.
+            // The messages of the first iteration start from zero (r_ is not cleared), hence the two instances.
+            auto pass2 = [&](auto firstIter) {
+                for (int b = 0; b < deg; b++) {
+                    float* __restrict qb = &q_[(size_t)b * 128];
+                    float* __restrict rn = &r_[(size_t)(eBase + b) * 128];
+                    for (int i = 0; i < 128; i++) {
+                        const float q = qb[i] - (firstIter ? 0.f : rn[i]), a = std::fabs(q);
+                        const float m = (a == min1[i] ? min2[i] : min1[i]) * alpha;
+                        const uint32_t sign = sg[i] ^ (std::bit_cast<uint32_t>(q) & 0x80000000u);
+                        const float v = std::bit_cast<float>(std::bit_cast<uint32_t>(m) | sign);
+                        rn[i] = v;
+                        qb[i] = std::max(-kClip, std::min(kClip, q + v));
+                    }
+                    float* lv = &lv_[(size_t)edges[(size_t)b].col * 128];
+                    const int sh = edges[(size_t)b].shift;
+                    std::memcpy(lv + sh, qb, (size_t)(Z - sh) * sizeof(float));
+                    std::memcpy(lv, qb + (Z - sh), (size_t)sh * sizeof(float));
+                }
+            };
+            if (iter == 1) pass2(std::true_type{}); else pass2(std::false_type{});
         }
-        // hard decisions and the parity checks
-        for (int col = 0; col < 59; col++) {
-            const float* lv = &lv_[(size_t)col * 128];
-            uint64_t lo = 0, hi = 0;
-            for (int i = 0; i < 64; i++) lo |= (uint64_t)(lv[i] < 0.f) << i;
-            for (int i = 64; i < Z; i++) hi |= (uint64_t)(lv[i] < 0.f) << (i - 64);
-            hard_[(size_t)col * 2] = lo; hard_[(size_t)col * 2 + 1] = hi;
-        }
+        // hard decisions (a column is packed when a check first needs it) and the parity checks
+        uint64_t have = 0;
+        auto hardOf = [&](int col) {
+            if (!((have >> col) & 1)) {
+                const float* u = &lv_[(size_t)col * 128];
+                uint64_t w[2] = {0, 0};
+                for (int g = 0; g < 16; g++) {
+                    uint32_t byte = 0;
+                    for (int k = 0; k < 8; k++) byte |= (uint32_t)(u[g * 8 + k] < 0.f) << k;
+                    w[g >> 3] |= (uint64_t)byte << (8 * (g & 7));
+                }
+                hard_[(size_t)col * 2] = w[0]; hard_[(size_t)col * 2 + 1] = w[1] & kMaskHi;   // bit 127 is the padding slot
+                have |= 1ull << col;
+            }
+            return Bits{hard_[(size_t)col * 2], hard_[(size_t)col * 2 + 1]};
+        };
         int badRows = 0;
         for (int row = 0; row < c; row++) {
             Bits acc;
-            for (const Edge& ed : code_.rows_[(size_t)row]) acc = acc ^ rotr(Bits{hard_[(size_t)ed.col * 2], hard_[(size_t)ed.col * 2 + 1]}, ed.shift);
+            for (const Edge& ed : code_.rows_[(size_t)row]) acc = acc ^ rotr(hardOf(ed.col), ed.shift);
             if (!zero(acc)) { badRows++; if (iter < 12) break; }   // before iteration 12 only whether all checks hold matters
         }
         res.iterations = iter;
@@ -287,13 +320,13 @@ LdpcCode::Result LdpcCode::Decoder::decode(const float* llr, uint8_t* info, int 
             int weight = 0;
             for (int row = 0; row < c; row++) {
                 Bits acc;
-                for (const Edge& ed : code_.rows_[(size_t)row]) acc = acc ^ rotr(Bits{hard_[(size_t)ed.col * 2], hard_[(size_t)ed.col * 2 + 1]}, ed.shift);
+                for (const Edge& ed : code_.rows_[(size_t)row]) acc = acc ^ rotr(hardOf(ed.col), ed.shift);
                 weight += std::popcount(acc.lo) + std::popcount(acc.hi);
             }
             if (weight > code_.c_ * Z / 3) break;
         }
     }
-    for (int j = 0; j < e; j++) for (int i = 0; i < Z; i++) info[j * Z + i] = (uint8_t)(lv_[(size_t)(c + j) * 128 + (size_t)i] < 0.f);
+    emitInfo();
     return res;
 }
 
