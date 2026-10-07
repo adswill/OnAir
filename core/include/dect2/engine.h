@@ -15,6 +15,7 @@
 #include "dmr_rx.h"
 #include "drm_rx.h"
 #include "adsb_rx.h"
+#include "gnss_rx.h"
 #include "bbunpack.h"
 #include "ts.h"
 #include "tsout.h"
@@ -64,10 +65,10 @@ public:
     void setComputeMode(int m) { rx_.setComputeMode(m); }
     void selectPlp(int id) { rx_.selectPlp(id); }
     // Which standard to decode: 0 = automatic (alternates between DVB-T2 and DVB-T until one locks), 1 = DVB-T2, 2 = DVB-T, 3 = ATSC, 4 = DAB, 5 = ATSC 3.0, 6 = ISDB-T, 7 = FM,
-    // 8 = DVB-S/S2, 9 = DTMB, 10 = analog TV, 11 = DMR, 12 = DRM, 13 = ADS-B
+    // 8 = DVB-S/S2, 9 = DTMB, 10 = analog TV, 11 = DMR, 12 = DRM, 13 = ADS-B, 14 = GNSS
     void setStandard(int m) { stdMode_ = m; stdReq_ = true; }
     int standardMode() const { return stdMode_.load(); }
-    int activeStandard() const { return activeStd_.load(); }  // 0 = DVB-T2, 1 = DVB-T, 2 = ATSC, 3 = DAB, 4 = ATSC 3.0, 5 = ISDB-T, 6 = FM, 7 = DVB-S/S2, 8 = DTMB, 9 = analog TV, 10 = DMR, 11 = DRM, 12 = ADS-B (always the standard code minus one)
+    int activeStandard() const { return activeStd_.load(); }  // 0 = DVB-T2, 1 = DVB-T, 2 = ATSC, 3 = DAB, 4 = ATSC 3.0, 5 = ISDB-T, 6 = FM, 7 = DVB-S/S2, 8 = DTMB, 9 = analog TV, 10 = DMR, 11 = DRM, 12 = ADS-B, 13 = GNSS (always the standard code minus one)
     double sampleRate() const { return rate_; }
     // Channel bandwidth: with automatic detection on, the engine measures the width of the signal in the spectrum while nothing is
     // locked and reconfigures the receivers by itself. setBandwidth() forces a value (used by the scanner).
@@ -108,6 +109,7 @@ public:
     DmrReceiver& dmr() { return rxDmr_; }   // DMR: the receiver's own controls and results (the interface reads telemetry through latestRx)
     DrmReceiver& drm() { return rxDrm_; }   // DRM: the receiver's own controls and results (the interface reads telemetry through latestRx)
     AdsbReceiver& adsb() { return rxAdsb_; }   // ADS-B: the receiver's own controls and results (the interface reads telemetry through latestRx)
+    GnssReceiver& gnss() { return rxGnss_; }   // GNSS: the receiver's own controls and results (the interface reads telemetry through latestRx)
     TeletextDecoder& teletext() { return ttx_; }
     // ATSC 3.0: the service list and statistics, and which service to receive (-1 = the first video service)
     bool atsc3Telemetry(Atsc3Telemetry& t) const { std::lock_guard<std::mutex> lk(atsc3Mu_); t = atsc3Tel_; return atsc3Tel_.seq != 0; }
@@ -166,7 +168,8 @@ private:
     DmrReceiver rxDmr_;
     DrmReceiver rxDrm_;
     AdsbReceiver rxAdsb_;
-    uint64_t modeSeq_[6] = {};      // the last report taken from each of the modes added after FM (same order as above)
+    GnssReceiver rxGnss_;
+    uint64_t modeSeq_[7] = {};      // the last report taken from each of the modes added after FM (same order as above)
     mutable std::mutex atsc3Mu_;
     Atsc3Telemetry atsc3Tel_;
     uint64_t atsc3Seq_ = 0;
@@ -201,6 +204,10 @@ private:
     int logTMode_ = -1, logTGi_ = -1, logTTps_ = -1; bool logTFec_ = false;
     std::mutex rxMu_;
     RxTelemetry rxTel_;
+    // Every receiver counts its reports from 1, so after a change of mode (or a restart) its numbers would lie below the last one the interface
+    // took and latestRx() would hold them back. The published report therefore carries a number of the engine that only grows. Under rxMu_.
+    uint64_t rxPub_ = 0;
+    void publishRx(RxTelemetry&& t) { t.seq = ++rxPub_; rxTel_ = std::move(t); }
     std::thread th_;
     std::atomic<bool> running_{false}, stopReq_{false};
     void watchRadio();

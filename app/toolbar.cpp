@@ -247,12 +247,8 @@ void sourceOptions(App& a) {
             if (c2 && running) a.engine.retune(a.tune);
             return;
         }
-        if (a.family == 3 || a.family == 2) {   // there is no built-in test signal for ATSC 3.0 and DAB
-            ImGui::TextDisabled("no built-in test signal for %s: choose a radio or a recording file as the source", a.family == 3 ? "ATSC 3.0" : "DAB");
-            return;
-        }
-        if (a.family == 4 || a.family == 5) {   // ISDB-T and FM: fixed signals, with noise and carrier offset to play with
-            ImGui::TextDisabled(a.family == 4 ? "ISDB-T mode 3, test programme" : "FM stereo with RDS, 1 kHz left and 3 kHz right");
+        if (a.family >= 2 && a.family <= 5) {   // DAB, ATSC 3.0, ISDB-T and FM: fixed signals, with noise and carrier offset to play with
+            ImGui::TextDisabled(a.family == 2 ? "DAB+ ensemble OnAir DAB, 4 services (tones and a melody)" : a.family == 3 ? "ATSC 3.0 test card, QPSK 8/15" : a.family == 4 ? "ISDB-T mode 3, test programme" : "FM stereo with RDS, 1 kHz left and 3 kHz right");
             ImGui::SameLine(0, 14 * gUi); ImGui::TextDisabled("SNR"); ImGui::SameLine(); ImGui::SetNextItemWidth(90 * gUi);
             float snr = (float)sc.snrDb; if (ImGui::SliderFloat("##ssnr", &snr, 5, 45, "%.0f dB")) { sc.snrDb = snr; ch = true; }
             ImGui::SameLine(); ImGui::TextDisabled("CFO"); ImGui::SameLine(); ImGui::SetNextItemWidth(110 * gUi);
@@ -531,7 +527,7 @@ void gainControl(App& a) {
 }
 
 // The receiver modes. Adding a mode is one row here (and its family number in app.h / setFamily).
-// The families are also stored in the settings: 0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T, 5 FM, 6 DVB-S/S2, 7 DTMB, 8 analog TV, 9 DMR, 10 DRM, 11 ADS-B.
+// The families are also stored in the settings: 0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T, 5 FM, 6 DVB-S/S2, 7 DTMB, 8 analog TV, 9 DMR, 10 DRM, 11 ADS-B, 12 GNSS.
 // Within a group the rows are shown in this order; the keys 1-9 pick the modes in the same order.
 const ModeDef kModes[] = {
     {0, "DVB",        0, IM_COL32(52, 92, 108, 255),  "DVB-T2 / DVB-T, detected automatically",                                    "DVB-T2 and DVB-T, automatic (Europe, Middle East, Africa, Asia, Australia)", "T2 and T, automatic",   ImVec4(0.36f, 0.74f, 0.86f, 1)},
@@ -545,6 +541,7 @@ const ModeDef kModes[] = {
     {5, "FM",         1, IM_COL32(140, 90, 100, 255), "FM broadcast radio (87.5 - 108 MHz), stereo and RDS",                       "FM broadcast radio with stereo and RDS",                                      "Stereo and RDS",        ImVec4(0.95f, 0.52f, 0.62f, 1)},
     {10, "DRM", 1, IM_COL32(48, 112, 128, 255), "DRM30 and DRM+ digital radio (shortwave, medium wave, VHF)", "DRM digital radio: DRM30 below 30 MHz, DRM+ in the VHF bands", "SW, MW, VHF", ImVec4(0.46f, 0.82f, 0.82f, 1)},
     {11, "ADS-B", 2, IM_COL32(58, 98, 160, 255), "ADS-B / Mode S: aircraft on 1090 MHz", "ADS-B aircraft position and identity reports", "Aircraft, 1090 MHz", ImVec4(0.52f, 0.74f, 0.98f, 1)},
+    {12, "GNSS", 2, IM_COL32(130, 112, 52, 255), "GNSS satellites (GPS, GLONASS, BeiDou, Galileo) around 1575 MHz, needs an active antenna", "GNSS: satellite tracking and position fix", "GPS, GLONASS, BeiDou", ImVec4(0.90f, 0.78f, 0.42f, 1)},
     {9, "DMR", 2, IM_COL32(70, 120, 70, 255), "DMR two-slot digital voice and data, 12.5 kHz channel", "DMR (Digital Mobile Radio), two-slot TDMA", "Digital voice", ImVec4(0.62f, 0.84f, 0.46f, 1)},
 };
 const int kNumModes = (int)(sizeof kModes / sizeof *kModes);

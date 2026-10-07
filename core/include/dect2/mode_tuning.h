@@ -6,7 +6,7 @@
 namespace dect2 {
 
 struct ModeTuning {
-    int stdMode = 0;             // the engine standard code (Engine::setStandard): 8 DVB-S/S2, 9 DTMB, 10 analog TV, 11 DMR, 12 DRM, 13 ADS-B
+    int stdMode = 0;             // the engine standard code (Engine::setStandard): 8 DVB-S/S2, 9 DTMB, 10 analog TV, 11 DMR, 12 DRM, 13 ADS-B, 14 GNSS
     const char* id = "";         // short name: dect2cli --standard <id>, and the prefix of the mode's files
     const char* name = "";       // shown in the app
     double minMhz = 1, maxMhz = 6000, defMhz = 100;   // tuning range, and the frequency a fresh start uses

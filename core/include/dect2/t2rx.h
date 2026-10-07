@@ -12,6 +12,7 @@
 #include "dmr_tel.h"
 #include "drm_tel.h"
 #include "adsb_tel.h"
+#include "gnss_tel.h"
 #include "t2.h"
 #include "t2l1.h"
 #include "t2plp.h"
@@ -47,6 +48,7 @@ struct RxTelemetry {
     DmrTelemetry dmr;     // valid when standard == 10
     DrmTelemetry drm;     // valid when standard == 11
     AdsbTelemetry adsb;    // valid when standard == 12
+    GnssTelemetry gnss;      // valid when standard == 13
     uint64_t seq = 0;
     int standard = 0;            // 0 DVB-T2, 1 DVB-T, 2 ATSC, 3 DAB, 4 ATSC 3.0 (details: Engine::atsc3Telemetry), 5 ISDB-T, 6 FM, 7 DVB-S/S2, 8 DTMB, 9 analog TV, 10 DMR, 11 DRM, 12 ADS-B
     struct Dvbt {                // DVB-T only: TPS parameters and the channel decoder's statistics

@@ -11,6 +11,10 @@
 #include "dect2/drm_gen.h"
 #include "dect2/adsb_rx.h"
 #include "dect2/adsb_gen.h"
+#include "dect2/atsc3_synth.h"
+#include "dect2/dab_gen.h"
+#include "dect2/gnss_rx.h"
+#include "dect2/gnss_gen.h"
 #include "dect2/modes.h"
 #include "dect2/demo_ts.h"
 #include "dect2/exact_resampler.h"
@@ -91,7 +95,7 @@ private:
 }
 
 static const std::vector<ModeTuning>& table() {
-    static const std::vector<ModeTuning> t = {dvbsTuning(), dtmbTuning(), atvTuning(), dmrTuning(), drmTuning(), adsbTuning()};
+    static const std::vector<ModeTuning> t = {dvbsTuning(), dtmbTuning(), atvTuning(), dmrTuning(), drmTuning(), adsbTuning(), gnssTuning()};
     return t;
 }
 
@@ -107,6 +111,8 @@ const ModeTuning* modeTuningById(const std::string& id) {
 
 std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, double sampleRate) {
     switch (stdMode) {
+    case 4: return makeDabSynth(cfg, sampleRate);
+    case 5: return makeAtsc3Synth(cfg, sampleRate);
     case 6: return std::make_unique<IsdbtSynth>(cfg, sampleRate);
     case 7: return std::make_unique<FmSynth>(cfg, sampleRate);
     case 8: return makeDvbsSynth(cfg, sampleRate);
@@ -115,6 +121,7 @@ std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, do
     case 11: return makeDmrSynth(cfg, sampleRate);
     case 12: return makeDrmSynth(cfg, sampleRate);
     case 13: return makeAdsbSynth(cfg, sampleRate);
+    case 14: return makeGnssSynth(cfg, sampleRate);
     default: return nullptr;
     }
 }
@@ -127,6 +134,7 @@ std::string modeSummary(const RxTelemetry& t) {
     case 10: return dmrSummary(t.dmr);
     case 11: return drmSummary(t.drm);
     case 12: return adsbSummary(t.adsb);
+    case 13: return gnssSummary(t.gnss);
     default: return "";
     }
 }

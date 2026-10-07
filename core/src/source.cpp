@@ -1,5 +1,6 @@
 #include "dect2/mode_synth.h"
 #include "dect2/source.h"
+#include "dect2/gen_util.h"
 #include "dect2/demo_ts.h"
 #include "dect2/dvbt_gen.h"
 #include "dect2/atsc_gen.h"
@@ -279,7 +280,7 @@ public:
 
 protected:
     double pace() override { std::lock_guard<std::mutex> lk(mu_); return cfg_.pace > 0.01 ? cfg_.pace : 1.0; }
-    double effectiveRate(const TuneSettings& s) override { if (s.synth.mode >= 6) return s.sampleRate > 0 ? s.sampleRate : 2e6; return s.synth.atsc ? (s.sampleRate > 0 && s.sampleRate < 12e6 ? s.sampleRate : 8e6) : nativeRateHz(s.bandwidthMhz); }
+    double effectiveRate(const TuneSettings& s) override { if (s.synth.mode >= 4) return s.sampleRate > 0 ? s.sampleRate : 2e6; return s.synth.atsc ? (s.sampleRate > 0 && s.sampleRate < 12e6 ? s.sampleRate : 8e6) : nativeRateHz(s.bandwidthMhz); }
     bool prepare(const TuneSettings& s, std::string&) override {
         cfg_ = s.synth;
         gainDb_ = s.lnaDb + s.vgaDb + (s.ampOn ? 14 : 0);
@@ -305,7 +306,7 @@ protected:
 
     size_t produce(cf32* dst, size_t maxN) override {
         std::lock_guard<std::mutex> lk(mu_);
-        if (cfg_.mode >= 6) return produceMode(dst, maxN);
+        if (cfg_.mode >= 4) return produceMode(dst, maxN);
         if (cfg_.atsc) {
             if (regen_ || !agen_) {
                 atsc::ChannelConfig cc;
@@ -339,7 +340,11 @@ protected:
         const float ea = cfg_.echoDb > 0 ? (float)std::pow(10.0, -cfg_.echoDb / 20.0) : 0.f;
         const int ed = std::min<int>(std::max(1, cfg_.echoDelay), (int)delay_.size() - 1);
         const double dph = 2 * M_PI * cfg_.cfoHz / rate_;
-        std::normal_distribution<float> nd(0.f, 1.f);
+        // noise from a table and the carrier offset as an oscillator recurrence: std::normal_distribution and sin/cos per sample cost more than the generator
+        nz_.assign(maxN, cf32(0, 0));
+        noise_.add(nz_.data(), maxN, (float)nsig);
+        cf32 osc = cf32((float)std::cos(phase_), (float)std::sin(phase_));
+        const cf32 oscStep = cf32((float)std::cos(dph), (float)std::sin(dph));
         const float gain = 0.25f * (cfg_.gainModel ? (float)std::pow(10.0, (gainDb_ - 62) / 20.0) : 1.f); // leave ADC headroom: OFDM peak/rms is ~12 dB
         for (size_t i = 0; i < maxN; i++) {
             size_t i0 = (size_t)pos_;
@@ -363,8 +368,10 @@ protected:
             phase_ += dph;
             if (phase_ > M_PI) phase_ -= 2 * M_PI;
             if (phase_ < -M_PI) phase_ += 2 * M_PI;
-            v *= cf32((float)std::cos(phase_), (float)std::sin(phase_));
-            v += cf32(nd(rng_), nd(rng_)) * (float)nsig;
+            if ((i & 255) == 255) osc = cf32((float)std::cos(phase_), (float)std::sin(phase_));   // back on the exact phase
+            else osc *= oscStep;
+            v *= osc;
+            v += nz_[i];
             v *= gain;
             // 8-bit ADC, like the HackRF
             auto q = [](float x) { return std::round(std::min(127.f, std::max(-128.f, x * 128.f))) / 128.f; };
@@ -391,7 +398,8 @@ private:
     std::vector<cf32> sbuf_, frame_, delay_;
     double pos_ = 1, phase_ = 0;
     size_t dpos_ = 0;
-    std::mt19937 rng_{99};
+    genutil::NoiseSource noise_{99};
+    std::vector<cf32> nz_;
     int gainDb_ = 62;
 };
 
