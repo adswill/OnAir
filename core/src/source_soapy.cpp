@@ -30,15 +30,21 @@ namespace dect2 {
 namespace {
 
 // Windows: the driver modules are shipped next to the program (<program folder>\lib\SoapySDR\modules0.8), so SoapySDR is told where its root is.
+// Always, even when the computer already has SOAPY_SDR_ROOT or SOAPY_SDR_PLUGIN_PATH set by other SDR software (PothosSDR does): their modules
+// are built for another SoapySDR and fail to load in OnAir's, and then no radio is found at all.
 void soapyLocateModules() {
 #ifdef _WIN32
     static const bool once = [] {
-        if (!getenv("SOAPY_SDR_ROOT")) {
-            char path[MAX_PATH * 2] = {0};
-            if (GetModuleFileNameA(nullptr, path, (DWORD)sizeof path - 1)) {
-                std::string dir = path;
-                const size_t cut = dir.find_last_of("\\/");
-                if (cut != std::string::npos) { dir.resize(cut); _putenv_s("SOAPY_SDR_ROOT", dir.c_str()); }
+        char path[MAX_PATH * 2] = {0};
+        if (GetModuleFileNameA(nullptr, path, (DWORD)sizeof path - 1)) {
+            std::string dir = path;
+            const size_t cut = dir.find_last_of("\\/");
+            if (cut != std::string::npos) {
+                dir.resize(cut);
+                if (const char* old = getenv("SOAPY_SDR_ROOT")) if (dir != old) fprintf(stderr, "SoapySDR: ignoring SOAPY_SDR_ROOT=%s, using the modules in %s\n", old, dir.c_str());
+                if (const char* old = getenv("SOAPY_SDR_PLUGIN_PATH")) fprintf(stderr, "SoapySDR: ignoring SOAPY_SDR_PLUGIN_PATH=%s\n", old);
+                _putenv_s("SOAPY_SDR_ROOT", dir.c_str());
+                _putenv_s("SOAPY_SDR_PLUGIN_PATH", "");   // an empty value removes it
             }
         }
         return true;

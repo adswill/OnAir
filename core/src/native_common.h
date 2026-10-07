@@ -71,7 +71,9 @@ private:
     static std::string base(const std::string& n) { const size_t s = n.find_last_of("/\\"); return s == std::string::npos ? n : n.substr(s + 1); }
     bool tryOpen(const std::string& n) {
 #ifdef _WIN32
-        h = (void*)LoadLibraryA(n.c_str());
+        // a full path: the libraries it needs in turn are looked for in its own folder first as well
+        const bool full = n.find('\\') != std::string::npos || n.find('/') != std::string::npos;
+        h = full ? (void*)LoadLibraryExA(n.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH) : (void*)LoadLibraryA(n.c_str());
 #else
         h = dlopen(n.c_str(), RTLD_NOW | RTLD_LOCAL);
 #endif
@@ -85,6 +87,17 @@ private:
 inline std::vector<std::string> libNames(const char* stem, std::initializer_list<const char*> soVersions, std::initializer_list<const char*> winNames) {
     std::vector<std::string> v;
 #if defined(_WIN32)
+    // The copies shipped in the program's folder first, by full path: a bare name would let Windows hand over another program's copy of the
+    // same library from the PATH (SDR#, PothosSDR and others install their own rtlsdr.dll / airspy.dll), and that may not work with OnAir.
+    // Bare names only after that, for radios whose library is not shipped with OnAir and that the user installed.
+    {
+        char path[MAX_PATH * 2] = {0};
+        if (GetModuleFileNameA(nullptr, path, (DWORD)sizeof path - 1)) {
+            std::string dir = path;
+            const size_t cut = dir.find_last_of("\\/");
+            if (cut != std::string::npos) { dir.resize(cut + 1); for (const char* w : winNames) v.push_back(dir + w); }
+        }
+    }
     for (const char* w : winNames) v.push_back(w);
     (void)stem; (void)soVersions;
 #elif defined(__APPLE__)
