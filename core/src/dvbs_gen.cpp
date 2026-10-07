@@ -157,21 +157,28 @@ void DvbsSignal::generate(cf32* out, size_t n) {
     const bool iq = cfg_.iqGainDb != 0 || cfg_.iqPhaseDeg != 0;
     const double gI = std::pow(10.0, cfg_.iqGainDb / 40.0), gQ = 1.0 / gI, pr = cfg_.iqPhaseDeg * kPi / 180.0 / 2;
     const float cp = (float)std::cos(pr), sp = (float)std::sin(pr);
+    const bool cfo = cfg_.cfoHz != 0, dc = cfg_.dcOffset != 0;
+    const float dcv = (float)(cfg_.dcOffset * cfg_.level), sc = scale_;
+    // the carrier offset oscillator runs in double precision, written out (the library complex product tests for NaN results every time)
+    double rr = rot_.real(), ri = rot_.imag();
+    const double sr = step_.real(), si = step_.imag();
     for (size_t j = 0; j < n; j++) {
-        cf32 v = out[j] * scale_;
-        if (pn_) v *= std::polar(1.0f, (float)pn_->next());
-        if (cfg_.cfoHz != 0) {
-            v *= cf32((float)rot_.real(), (float)rot_.imag());
-            rot_ *= step_;
-            if ((++rotCount_ & 1023) == 0) rot_ /= std::abs(rot_);
+        float vr = out[j].real() * sc, vi = out[j].imag() * sc;
+        if (pn_) { const cf32 w = std::polar(1.0f, (float)pn_->next()); const float t = vr * w.real() - vi * w.imag(); vi = vr * w.imag() + vi * w.real(); vr = t; }
+        if (cfo) {
+            const float cr = (float)rr, ci = (float)ri;
+            const float t = vr * cr - vi * ci; vi = vr * ci + vi * cr; vr = t;
+            const double nr = rr * sr - ri * si; ri = rr * si + ri * sr; rr = nr;
+            if ((++rotCount_ & 1023) == 0) { const double inv = 1.0 / std::sqrt(rr * rr + ri * ri); rr *= inv; ri *= inv; }
         }
         if (iq) {
-            const float i0 = v.real(), q0 = v.imag();
-            v = cf32((float)gI * (i0 * cp - q0 * sp), (float)gQ * (q0 * cp - i0 * sp));
+            const float i0 = vr, q0 = vi;
+            vr = (float)gI * (i0 * cp - q0 * sp); vi = (float)gQ * (q0 * cp - i0 * sp);
         }
-        if (cfg_.dcOffset != 0) v += cf32((float)(cfg_.dcOffset * cfg_.level), (float)(cfg_.dcOffset * cfg_.level));
-        out[j] = v;
+        if (dc) { vr += dcv; vi += dcv; }
+        out[j] = cf32(vr, vi);
     }
+    rot_ = std::complex<double>(rr, ri);
 }
 
 DvbsSignalConfig dvbsConfigFromSynth(const SynthConfig& sc, double fs) {
