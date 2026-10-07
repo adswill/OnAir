@@ -114,7 +114,8 @@ struct MtlBackend : Backend {
         layer = [CAMetalLayer layer];
         layer.device = gDevice;
         layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
-        layer.framebufferOnly = NO;
+        // a framebuffer-only layer lets the GPU compress and skip the copies; only the dev screenshot reads the picture back
+        layer.framebufferOnly = [[NSProcessInfo processInfo].arguments containsObject:@"--shot"] ? NO : YES;
         nswin.contentView.layer = layer;
         nswin.contentView.wantsLayer = YES;
         rpd = [MTLRenderPassDescriptor new];
@@ -123,7 +124,7 @@ struct MtlBackend : Backend {
     Video* createVideo(int w, int h) override { return new MtlVideo(w, h); }
     void newFrame(int fbW, int fbH, const float c[4]) override {
       @autoreleasepool {
-        layer.drawableSize = CGSizeMake(fbW, fbH);
+        if ((int)layer.drawableSize.width != fbW || (int)layer.drawableSize.height != fbH) layer.drawableSize = CGSizeMake(fbW, fbH);
         drawable = [layer nextDrawable];
         cb = [gQueue commandBuffer];
         rpd.colorAttachments[0].clearColor = MTLClearColorMake(c[0], c[1], c[2], c[3]);

@@ -374,8 +374,27 @@ int main(int argc, char** argv) {
         if (std::string(argv[i]) == "--amp") app.tune.ampOn = true;
     }
     double last = glfwGetTime();
+    double frameNext = 0, lastInputT = 0;
     while (!glfwWindowShouldClose(window)) {
         {
+            {   // frame pacing: the screen is only redrawn as often as it can change, otherwise the loop would run at the refresh rate of the display (120 Hz on
+                // a ProMotion Mac) and draw the same spectrum three times over. Input wakes the loop at once; --shot keeps the unpaced loop its frame counts rely on.
+                const double t = glfwGetTime();
+                const bool shown = glfwGetWindowAttrib(window, GLFW_VISIBLE) && !glfwGetWindowAttrib(window, GLFW_ICONIFIED);
+                const bool focused = glfwGetWindowAttrib(window, GLFW_FOCUSED) != 0;
+                double interval = 0;
+                if (!shotPath) {
+                    if (!shown) interval = 0.25;
+                    else if (t - lastInputT < 1.0 || app.engine.player().selected() >= 0) interval = 1.0 / 60;      // typing, dragging, video
+                    else if (app.engine.running()) interval = focused ? 1.0 / 30 : 1.0 / 15;                          // spectrum and waterfall
+                    else interval = focused ? 0.1 : 0.25;                                                            // nothing is moving
+                }
+                if (interval > 0 && frameNext > t) {
+                    glfwWaitEventsTimeout(frameNext - t);
+                    if (glfwGetTime() < frameNext - 0.002) lastInputT = glfwGetTime();                               // woken early: an event
+                }
+                frameNext = glfwGetTime() + interval;
+            }
             glfwPollEvents();
             updateTick(app);
             int w, h;
