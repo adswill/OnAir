@@ -15,6 +15,7 @@
 
 
 #include "dect2/engine.h"
+#include "dect2/modes.h"
 #include "dect2/gpu_ldpc.h"
 #include "dect2/t2rx.h"
 #include "dect2/nettuner.h"
@@ -73,15 +74,27 @@ struct Waterfall {
     }
     float minDb = -100, maxDb = -32;
 
+    void palette() { if (lut.size() == 256) for (int i = 0; i < 256; i++) lut[i] = jet(i / 255.0f); }   // after the interface palette changed
     void init(gfx::Backend* gfx) {
         img = gfx->createImage(W, H, 0xFF000000u);
         lut.resize(256);
         for (int i = 0; i < 256; i++) lut[i] = jet(i / 255.0f);
     }
     static uint32_t jet(float v) {
-        // calm single-hue ramp: near-black navy, deep blue, teal, pale ice
-        static const float stops[5][3] = {{6, 10, 20}, {16, 38, 70}, {30, 100, 140}, {110, 190, 205}, {240, 250, 250}};
-        v = std::min(1.f, std::max(0.f, v)) * 4.f;
+        v = std::min(1.f, std::max(0.f, v));
+        if (pal::wfMode() == 2) {   // Turbo (Google's colour map), with the noise floor fading to black
+            const float t = 0.12f + 0.84f * v;
+            auto poly = [&](float a0, float a1, float a2, float a3, float a4, float a5) { return std::min(1.f, std::max(0.f, a0 + t * (a1 + t * (a2 + t * (a3 + t * (a4 + t * a5)))))); };
+            const float r = poly(0.13572138f, 4.61539260f, -42.66032258f, 132.13108234f, -152.94239396f, 59.28637943f);
+            const float g = poly(0.09140261f, 2.19418839f, 4.84296658f, -14.18503333f, 4.27729857f, 2.82956604f);
+            const float b = poly(0.10667330f, 12.64194608f, -60.58204836f, 110.36276771f, -89.90310912f, 27.34824973f);
+            const float f = std::min(1.f, v / 0.22f), k = f * f * (3 - 2 * f);   // smoothstep: black at the bottom
+            return 0xFF000000u | ((uint32_t)(b * k * 255 + 0.5f) << 16) | ((uint32_t)(g * k * 255 + 0.5f) << 8) | (uint32_t)(r * k * 255 + 0.5f);
+        }
+        static const float cool[5][3] = {{6, 10, 20}, {16, 38, 70}, {30, 100, 140}, {110, 190, 205}, {240, 250, 250}};
+        static const float grey[5][3] = {{0, 0, 0}, {34, 34, 33}, {96, 95, 92}, {170, 168, 162}, {244, 242, 236}};
+        const float (*stops)[3] = pal::wfMode() == 1 ? grey : cool;
+        v *= 4.f;
         const int i = std::min(3, (int)v);
         const float f = v - i;
         auto ch = [&](int k) { return (uint32_t)(stops[i][k] + (stops[i + 1][k] - stops[i][k]) * f + 0.5f); };
@@ -187,7 +200,12 @@ struct App {
     bool isdbtMode = false;   // ISDB-T (family 4)
     bool dabMode = false;     // DAB / DAB+ (family 2)
     bool fmMode = false;      // FM radio (family 5)
-    int family = 0;           // 0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T, 5 FM
+    bool newUi = true;        // the new interface (ui2.cpp) instead of the classic one (View > Classic interface)
+    struct FamGain { int lna = 32, vga = 20; bool amp = true, known = false; } famGain[16];   // the radio gains remembered for each mode
+    double famFreq[16] = {};  // the frequency each of the modes added after FM was last tuned to (0 = never)
+    int uiVariant = 0;        // layout of the new interface: 0 sidebar (the default), 1 scope, 2 tiles, 3 faceplate, 4-6 scope children, 7 panel
+    int uiTheme = 1;          // its palette: 0 terminal, 1 instrument, 2 mono
+    int family = 0;           // 0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T, 5 FM, 6 DVB-S/S2, 7 DTMB, 8 analog TV, 9 DMR, 10 DRM, 11 ADS-B (6 and up: see ModeUi; engine standard code = family + 2)
     std::deque<float> dabSnrH, dabFicH;
     std::deque<float> fmSnrH, fmPilotH, fmRdsH;
     int fmDeemph = 50;        // FM de-emphasis in microseconds: 50 (Europe, Middle East, most of the world) or 75 (Americas, South Korea)
@@ -387,6 +405,43 @@ void statusBar(App& a);
 void gainControl(App& a);
 void standardSwitch(App& a);
 extern float gSwitchWidth;
+// The receiver modes (toolbar.cpp). Adding a mode is one row there.
+struct ModeDef { int family; const char* name; int group; ImU32 col; const char* blurb; const char* tip; const char* sub; ImVec4 accent; };
+extern const ModeDef kModes[];
+extern const int kNumModes;
+extern const char* const kGroupNames[3];
+// The screens of a mode added after FM (family 6 and up). Each mode has one in its app/<mode>_ui.cpp and modeui.cpp lists them; the shell calls whichever
+// entry is set where it would draw the DVB version. A null entry means: nothing of this kind for the mode (or the default noted).
+struct ModeMeter { const char* label; const char* fmt; double v, lo, hi; int level; };   // one bar of the meter bank; level 0 neutral, 1 good, 2 marginal, 3 bad
+struct ModeUi {
+    const char* sideTitle = "SERVICES";                 // title of the list on the right: SERVICES, STATIONS, AIRCRAFT, CALLS ...
+    const char* tabName = nullptr;                      // the mode's own main tab, drawn instead of the TV tab (null: the TV tab, for the TV modes)
+    Ic tabIcon = Ic::Tv;
+    void (*tab)(App&) = nullptr;
+    void (*receiver)(App&) = nullptr;                   // the Receiver tab: what the receiver is doing (null: no tab)
+    bool stream = false;                                // show the Stream tab (transport stream, outputs): the modes that make a transport stream
+    void (*list)(App&) = nullptr;                       // the list on the right (null: the service cards of the TV modes)
+    void (*panels)(App&) = nullptr;                     // the analysis row at the bottom, where the TV modes have the constellations
+    void (*status)(App&) = nullptr;                     // the status bar
+    void (*summary)(const App&, std::string& line1, std::string& line2) = nullptr;   // the two lines in the top bar
+    void (*tuner)(App&, bool& retune) = nullptr;        // the mode's own tuning controls (symbol rate, standard, ...); set retune to apply
+    void (*decoder)(App&, bool& retune) = nullptr;      // its decoder options
+    void (*synth)(App&, bool& changed) = nullptr;       // options of the built-in test signal (SynthConfig::mode, modeOpt, modeVal); set changed to restart it
+    void (*scan)(App&) = nullptr;                       // the Scan tab (null: a note)
+    void (*tick)(App&) = nullptr;                       // every frame while the mode is selected: push volume and mute to the receiver, run scans, collect histories
+    void (*meters)(const App&, std::vector<ModeMeter>& out) = nullptr;   // the meter bank of the Scope: Meters layout
+};
+const ModeUi* modeUi(int family);                       // modeui.cpp: nullptr for the original families (0 to 5)
+const char* listTitle(const App& a, bool upper);        // "STATIONS", "SERVICES" or the mode's own, for the list on the right
+void selectMode(App& a, int family);
+void startReceiver(App& a);     // what the Start button does
+enum TbPart { TbSource = 1, TbFreq = 2, TbTuner = 4, TbGain = 8, TbDecoder = 16, TbAll = 31 };
+void toolbarParts(App& a, int mask, bool vertical);   // pieces of the top bar, for the sidebar of the new interface
+void receiverGlance(App& a, float w, float h);       // analysis_tabs.cpp: a few key/value lines about the receiver
+void tuneFreq(App& a, double mhz);                     // set the frequency now (resets the FM receiver)
+void mainTabs(App& a);          // the tab bar with the tabs that fit the current mode (main.cpp)
+void drawShell2(App& a, ImVec2 disp);   // ui2.cpp: the new interface
+void applyUiTheme(App& a);              // ui2.cpp: classic or new colours and shapes
 // plots.cpp
 void spectrumPlot(App& a, ImVec2 size);
 void waterfallPlot(App& a, ImVec2 size);

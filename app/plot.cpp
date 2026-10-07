@@ -69,7 +69,7 @@ const ImVec4 kDeep[] = {ImVec4(0.298f, 0.447f, 0.690f, 1), ImVec4(0.867f, 0.518f
 
 ImVec4 pick(const ImVec4& c) {   // automatic colour: the next of the palette
     if (c.w >= 0) return c;
-    return kDeep[C.autoColor++ % 8];
+    return gStyle.AutoColors[C.autoColor++ % 8];
 }
 
 double tr(int a, double v) {   // data value to the axis' own scale

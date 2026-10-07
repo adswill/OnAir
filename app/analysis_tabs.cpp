@@ -4,7 +4,7 @@
 void syncTab(App& a) {
     if (a.rx.standard == 1) {
         const RxTelemetry& rx = a.rx;
-        ImGui::TextColored(ImVec4(0.45f, 0.75f, 1, 1), "DVB-T synchronisation");
+        ImGui::TextColored(pal::heading(), "DVB-T synchronisation");
         if (rx.state == 0) { ImGui::TextDisabled("looking for a cyclic prefix: the FFT size (2K/8K) and guard interval are found from the correlation of each symbol's guard with its end"); return; }
         if (ImGui::BeginTable("synct", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg)) {
             ImGui::TableSetupColumn("k", ImGuiTableColumnFlags_WidthFixed, 220);
@@ -48,7 +48,7 @@ void syncTab(App& a) {
         plt::SetupAxisTicks(plt::X1, pos, kNumGi, lab);
         float sc[kNumGi], x[kNumGi];
         for (int i = 0; i < kNumGi; i++) { sc[i] = rx.giScore[i]; x[i] = (float)i; }
-        plt::Spec bs; bs.FillColor = ImVec4(0.45f, 0.65f, 1.0f, 0.85f);
+        plt::Spec bs; bs.FillColor = pal::dev() ? pal::accent(0.85f) : ImVec4(0.45f, 0.65f, 1.0f, 0.85f);
         plt::PlotBars("gi", x, sc, kNumGi, 0.7, bs);
         plt::EndPlot();
     }
@@ -83,7 +83,7 @@ void historyTab(App& a) {
         plt::SetupAxisLimits(plt::X1, -a.histWindow, 0, plt::Cond_Always);
         if (fixed) plt::SetupAxisLimits(plt::Y1, ymin, ymax, plt::Cond_Once);
         int k = 0;
-        static const ImVec4 cols[3] = {ImVec4(0.45f, 0.75f, 1, 1), ImVec4(0.95f, 0.7f, 0.2f, 1), ImVec4(0.4f, 0.85f, 0.5f, 1)};
+        const ImVec4 cols[3] = {pal::dev() ? pal::accent() : ImVec4(0.45f, 0.75f, 1, 1), ImVec4(0.95f, 0.7f, 0.2f, 1), ImVec4(0.4f, 0.85f, 0.5f, 1)};
         for (auto& s : ser) {
             std::vector<float> ys(a.hist.size());
             for (size_t i = 0; i < ys.size(); i++) ys[i] = a.hist[i].*(s.second);
@@ -186,7 +186,7 @@ void signallingTab(App& a) {
         if (!rx.dvbt.tpsOk) { ImGui::TextDisabled("TPS (transmission parameter signalling) has not been decoded yet"); return; }
         static const char* modes[] = {"2K", "8K"}; static const char* hier[] = {"non-hierarchical", "hierarchical, alpha = 1", "hierarchical, alpha = 2", "hierarchical, alpha = 4"};
         dvbt::Params q; q.mode = rx.dvbt.mode; q.guard = rx.dvbt.guard; q.mod = rx.dvbt.mod; q.hier = rx.dvbt.hier; q.crHp = rx.dvbt.crHp; q.crLp = rx.dvbt.crLp;
-        ImGui::TextColored(ImVec4(0.45f, 0.75f, 1, 1), "DVB-T transmission parameters (TPS, EN 300 744)");
+        ImGui::TextColored(pal::heading(), "DVB-T transmission parameters (TPS, EN 300 744)");
         if (ImGui::BeginTable("tps", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg)) {
             ImGui::TableSetupColumn("k", ImGuiTableColumnFlags_WidthFixed, 200);
             auto row = [&](const char* k, const char* fmt, auto... args) { ImGui::TableNextRow(); ImGui::TableNextColumn(); ImGui::TextDisabled("%s", k); ImGui::TableNextColumn(); char b[160]; snprintf(b, sizeof b, fmt, args...); ImGui::TextUnformatted(b); };
@@ -212,7 +212,7 @@ void signallingTab(App& a) {
         va_list ap; va_start(ap, fmt); vsnprintf(b, sizeof b, fmt, ap); va_end(ap);
         ImGui::TextDisabled("%-22s", k); ImGui::SameLine(); ImGui::TextUnformatted(b);
     };
-    ImGui::TextColored(ImVec4(0.45f, 0.75f, 1, 1), "P1 preamble");
+    ImGui::TextColored(pal::heading(), "P1 preamble");
     if (rx.p1.valid) {
         const FftMode* fm = fftModeFromS2(rx.p1.s2field1);
         row("S1", "%d  %s", rx.p1.s1, s1Name(rx.p1.s1));
@@ -225,7 +225,7 @@ void signallingTab(App& a) {
         row("last P1", "%.2f s ago", rx.secSinceP1);
     } else ImGui::TextDisabled("no P1 decoded yet");
     ImGui::Spacing();
-    ImGui::TextColored(ImVec4(0.45f, 0.75f, 1, 1), "OFDM / frame (blind, before L1-pre)");
+    ImGui::TextColored(pal::heading(), "OFDM / frame (blind, before L1-pre)");
     if (rx.state >= 1) {
         row("FFT size", "%d", rx.fftN);
         row("carriers (normal)", "%d", rx.carriers);
@@ -242,7 +242,7 @@ void signallingTab(App& a) {
         row("symbols processed", "%llu", (unsigned long long)rx.symbols);
     }
     ImGui::Spacing();
-    ImGui::TextColored(ImVec4(0.45f, 0.75f, 1, 1), "L1-pre   (decoded %llu, failed %llu, LDPC iterations %d)", (unsigned long long)rx.l1preGood, (unsigned long long)rx.l1preBad, rx.l1Iters);
+    ImGui::TextColored(pal::heading(), "L1-pre   (decoded %llu, failed %llu, LDPC iterations %d)", (unsigned long long)rx.l1preGood, (unsigned long long)rx.l1preBad, rx.l1Iters);
     if (rx.l1preGood > 0) {
         const L1Pre& p = rx.l1pre;
         static const char* paprN[] = {"off", "ACE", "TR", "ACE + TR"};
@@ -262,7 +262,7 @@ void signallingTab(App& a) {
         row("RF channels", "%d (current %d)  regen %d  tx-id %d", p.numRf, p.curRf, p.regen, p.txIdAvail);
     } else ImGui::TextDisabled("not decoded yet");
     ImGui::Spacing();
-    ImGui::TextColored(ImVec4(0.45f, 0.75f, 1, 1), "L1-post   (decoded %llu, failed %llu)", (unsigned long long)rx.l1postGood, (unsigned long long)rx.l1postBad);
+    ImGui::TextColored(pal::heading(), "L1-post   (decoded %llu, failed %llu)", (unsigned long long)rx.l1postGood, (unsigned long long)rx.l1postBad);
     if (rx.l1postGood > 0) {
         const L1Post& q = rx.l1post;
         static const char* cod[] = {"1/2", "3/5", "2/3", "3/4", "4/5", "5/6", "1/3", "2/5"};
@@ -362,14 +362,55 @@ void atscPanels(App& a) {
     ImGui::EndGroup();
 }
 
+// A compact read-out next to the constellations (new interface): the numbers that say how the receiver is doing
+void receiverGlance(App& a, float w, float h) {
+    const RxTelemetry& rx = a.rx;
+    if (const ModeUi* mu = modeUi(a.family)) if (mu->receiver) { mu->receiver(a); return; }
+    ImGui::TextDisabled("Receiver");
+    ImGui::BeginChild("##glance", ImVec2(w, std::max(40.f, h - ImGui::GetTextLineHeightWithSpacing())), 0, ImGuiWindowFlags_NoScrollbar);
+    auto kv = [&](const char* k, const char* fmt, auto... v) {
+        ImGui::TextDisabled("%s", k); ImGui::SameLine(112 * gUi);
+        ImGui::PushFont(a.mono, 0); ImGui::Text(fmt, v...); ImGui::PopFont();
+    };
+    const bool run = a.engine.running();
+    kv("state", "%s", !run ? "stopped" : rx.state == 2 ? "locked" : "searching");
+    if (run) {
+        if (rx.standard == 0) {
+            kv("SNR", "%.1f dB", rx.dataValid ? rx.dataSnrDb : rx.cpSnrDb);
+            kv("carrier offset", "%+.0f Hz", rx.cfoHz);
+            kv("clock offset", "%+.2f ppm", rx.sroPpm);
+            kv("FFT / guard", "%d / %s", rx.fftN, rx.giIdx >= 0 ? guardName(rx.giIdx) : "-");
+            kv("L1 pre / post", "%llu / %llu ok", (unsigned long long)rx.l1preGood, (unsigned long long)rx.l1postGood);
+            kv("FEC blocks", "%llu ok, %llu bad", (unsigned long long)rx.blocksOk, (unsigned long long)rx.blocksBad);
+            if (rx.plpMerDb > 0) kv("MER", "%.1f dB", rx.plpMerDb);
+        } else if (rx.standard == 1) {
+            kv("SNR", "%.1f dB", rx.dataSnrDb);
+            kv("carrier offset", "%+.0f Hz", rx.cfoHz);
+            kv("FFT / guard", "%d / %s", rx.fftN, rx.giIdx >= 0 ? dvbt::guardName(rx.giIdx) : "-");
+            kv("TPS", "%s", rx.dvbt.tpsOk ? "ok" : "searching");
+            if (rx.dvbt.tpsOk) kv("modulation", "%s %s", dvbt::modName(rx.dvbt.mod), dvbt::rateName(rx.dvbt.crHp));
+            kv("packets", "%llu", (unsigned long long)rx.dvbt.packets);
+            kv("Reed-Solomon", "%llu fixed, %llu failed", (unsigned long long)rx.dvbt.rsCorrected, (unsigned long long)rx.dvbt.rsFailed);
+        } else {
+            kv("SNR", "%.1f dB", rx.dataSnrDb);
+            kv("carrier offset", "%+.0f Hz", rx.cfoHz);
+        }
+        kv("dropped", "%llu", (unsigned long long)a.engine.droppedSamples());
+    }
+    ImGui::EndChild();
+}
+
 void constellationsTab(App& a) {
+    if (const ModeUi* mu = modeUi(a.family)) { if (mu->panels) mu->panels(a); return; }
     if (a.dabMode) { dabPanels(a); return; }
     if (a.fmMode) { fmPanels(a); return; }
     if (a.rx.standard == 2) { atscPanels(a); return; }
     const RxTelemetry& rx = a.rx;
     const float availW = ImGui::GetContentRegionAvail().x, availH = ImGui::GetContentRegionAvail().y;
-    const float side = std::max(90.f, std::min(availH - 26.f - ImGui::GetFrameHeight(), availW / 4.f - 16.f));
-    const float gap = std::max(6.f, (availW - 4 * side) / 5.f);
+    const bool glance = pal::dev();   // the new interface packs the plots to the left and uses the rest for numbers
+    const float side = glance ? std::max(90.f, std::min(availH - 26.f - ImGui::GetFrameHeight(), availW * 0.62f / 4.f - 12.f))
+                              : std::max(90.f, std::min(availH - 26.f - ImGui::GetFrameHeight(), availW / 4.f - 16.f));
+    const float gap = glance ? 12 * gUi : std::max(6.f, (availW - 4 * side) / 5.f);
     const ImVec2 sz(side, side);
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + gap);
     char cap[96];
@@ -455,6 +496,12 @@ void constellationsTab(App& a) {
     caption("OFDM cells, raw (%zu cells)", rx.rawCells.size());
     scatter("##c3", rx.rawCells, sz, 3.0, pal::accent(0.7f));
     ImGui::EndGroup();
+    if (glance) {
+        ImGui::SameLine(0, 2 * gap);
+        ImGui::BeginGroup();
+        receiverGlance(a, std::max(150.f, ImGui::GetContentRegionAvail().x - gap), side + ImGui::GetTextLineHeightWithSpacing());
+        ImGui::EndGroup();
+    }
 }
 
 void channelTab(App& a) {
@@ -507,7 +554,7 @@ void impulseTab(App& a) {
         double gx[2] = {0, rx.guard * usPerSample}, gy[2] = {5, 5};
         plt::Spec gs; gs.FillColor = ImVec4(0.15f, 0.55f, 0.20f, 0.18f); gs.LineColor = ImVec4(0, 0, 0, 0);
         plt::PlotShaded("gi", gx, gy, 2, -80.0, gs);
-        plt::Spec sp; sp.LineColor = ImVec4(0.45f, 0.75f, 1, 1);
+        plt::Spec sp; sp.LineColor = pal::dev() ? pal::accent() : ImVec4(0.45f, 0.75f, 1, 1);
         plt::PlotLine("pdp", xs.data(), rx.irDb.data(), (int)xs.size(), sp);
         plt::EndPlot();
     }
@@ -533,7 +580,7 @@ void snrTab(App& a) {
 void fecTab(App& a) {
     if (a.rx.standard == 1) {
         const RxTelemetry& rx = a.rx;
-        ImGui::TextColored(ImVec4(0.45f, 0.75f, 1, 1), "DVB-T channel decoder: de-interleaving, Viterbi (inner code), outer de-interleaver, Reed-Solomon (204,188)");
+        ImGui::TextColored(pal::heading(), "DVB-T channel decoder: de-interleaving, Viterbi (inner code), outer de-interleaver, Reed-Solomon (204,188)");
         if (!rx.dvbt.tpsOk) { ImGui::TextDisabled("waiting for TPS"); return; }
         const double tot = (double)(rx.dvbt.rsClean + rx.dvbt.rsCorrected + rx.dvbt.rsFailed);
         if (ImGui::BeginTable("fect", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg)) {
@@ -565,19 +612,19 @@ void fecTab(App& a) {
         return;
     }
     static const char* modN[] = {"QPSK", "16-QAM", "64-QAM", "256-QAM"};
-    ImGui::TextColored(ImVec4(0.45f, 0.75f, 1, 1), "PLP %d", rx.plpId);
+    ImGui::TextColored(pal::heading(), "PLP %d", rx.plpId);
     row("FEC frame / code rate", "%s, %s", rx.plpFec.shortFrame ? "short (16200)" : "normal (64800)", rateName(rx.plpFec.rate));
     row("constellation", "%s%s", modN[rx.plpFec.mod & 3], rx.plpFec.rotation ? ", rotated + cyclic Q delay" : "");
     row("FEC blocks per frame", "%d", rx.plpBlocks);
     ImGui::Spacing();
-    ImGui::TextColored(ImVec4(0.45f, 0.75f, 1, 1), "decoder (all frames since start)");
+    ImGui::TextColored(pal::heading(), "decoder (all frames since start)");
     double tot = (double)(rx.blocksOk + rx.blocksBad);
     row("frames decoded", "%llu  (dropped, decoder busy: %llu)", (unsigned long long)rx.plpFrames, (unsigned long long)rx.plpFramesDropped);
     row("FEC blocks OK / failed", "%llu / %llu  (%.2f%% good)", (unsigned long long)rx.blocksOk, (unsigned long long)rx.blocksBad, tot ? 100.0 * rx.blocksOk / tot : 0.0);
     row("BB headers with valid CRC", "%llu", (unsigned long long)rx.headersOk);
     row("BCH bit errors corrected", "%llu", (unsigned long long)rx.plpBchCorrected);
     ImGui::Spacing();
-    ImGui::TextColored(ImVec4(0.45f, 0.75f, 1, 1), "last frame");
+    ImGui::TextColored(pal::heading(), "last frame");
     row("MER", "%.1f dB", rx.plpMerDb);
     row("BER before LDPC", "%.2e", rx.plpPreBer);
     row("LDPC iterations (average)", "%.1f", rx.plpIters);

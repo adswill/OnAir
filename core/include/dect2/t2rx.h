@@ -6,6 +6,12 @@
 #include "atsc_tel.h"
 #include "dab_tel.h"
 #include "fm_tel.h"
+#include "dvbs_tel.h"
+#include "dtmb_tel.h"
+#include "atv_tel.h"
+#include "dmr_tel.h"
+#include "drm_tel.h"
+#include "adsb_tel.h"
 #include "t2.h"
 #include "t2l1.h"
 #include "t2plp.h"
@@ -35,8 +41,14 @@ struct RxTelemetry {
     AtscTelemetry atsc;          // valid when standard == 2
     DabTelemetry dab;            // valid when standard == 3
     FmTelemetry fm;              // valid when standard == 6
+    DvbsTelemetry dvbs;    // valid when standard == 7
+    DtmbTelemetry dtmb;    // valid when standard == 8
+    AtvTelemetry atv;     // valid when standard == 9
+    DmrTelemetry dmr;     // valid when standard == 10
+    DrmTelemetry drm;     // valid when standard == 11
+    AdsbTelemetry adsb;    // valid when standard == 12
     uint64_t seq = 0;
-    int standard = 0;            // 0 DVB-T2, 1 DVB-T, 2 ATSC, 3 DAB, 4 ATSC 3.0 (details: Engine::atsc3Telemetry), 5 ISDB-T, 6 FM
+    int standard = 0;            // 0 DVB-T2, 1 DVB-T, 2 ATSC, 3 DAB, 4 ATSC 3.0 (details: Engine::atsc3Telemetry), 5 ISDB-T, 6 FM, 7 DVB-S/S2, 8 DTMB, 9 analog TV, 10 DMR, 11 DRM, 12 ADS-B
     struct Dvbt {                // DVB-T only: TPS parameters and the channel decoder's statistics
         bool tpsOk = false, fecSync = false;
         int mode = 0, guard = 0, mod = 0, hier = 0, crHp = 0, crLp = 0, cellId = 0, frameIdx = 0, punctPhase = 0;

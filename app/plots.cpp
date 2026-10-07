@@ -18,8 +18,10 @@ void spectrumPlot(App& a, ImVec2 size) {
             double bw = kBw[a.bwIdx].mhz;
             double xo[2] = {a.freqMhz - bw / 2 * 0.95, a.freqMhz + bw / 2 * 0.95};
             double yo[2] = {a.yMax, a.yMax};
+            if (!pal::dev()) {   // the dev palette draws no tinted band behind the signal
             plt::Spec band; band.FillColor = pal::accent(0.10f); band.LineColor = ImVec4(0, 0, 0, 0);
             plt::PlotShaded("band", xo, yo, 2, a.yMin, band);
+            }
             if (a.peakHold) {
                 plt::Spec ps; ps.LineColor = pal::grey(0.40f); ps.LineWeight = 1.0f;
                 std::vector<double> yp(a.peak.begin(), a.peak.end());
@@ -31,6 +33,19 @@ void spectrumPlot(App& a, ImVec2 size) {
             double cx[2] = {a.freqMhz, a.freqMhz}, cy[2] = {a.yMin, a.yMax};
             plt::Spec cs; cs.LineColor = pal::grey(0.35f);
             plt::PlotLine("centre", cx, cy, 2, cs);
+            if (a.fmMode && pal::dev()) {   // the stations the scan found, as bookmarks (as in SDR++)
+                const plt::Rect lim = plt::GetPlotLimits();
+                int k = 0;
+                for (const auto& r : a.fmScan.results) {
+                    if (!r.found || r.mhz < lim.X.Min || r.mhz > lim.X.Max) continue;
+                    double mx[2] = {r.mhz, r.mhz}, my[2] = {a.yMin, a.yMax};
+                    plt::Spec ms; ms.LineColor = ImVec4(0.85f, 0.85f, 0.85f, 0.22f);
+                    char id[16]; snprintf(id, sizeof id, "mark%d", k++);
+                    plt::PlotLine(id, mx, my, 2, ms);
+                    char lb[48]; snprintf(lb, sizeof lb, "%s", r.name.empty() ? "" : r.name.c_str());
+                    if (lb[0]) plt::PlotText(lb, r.mhz, a.yMax, ImVec2(ImGui::CalcTextSize(lb).x * 0.5f + 4, 10 + (k % 2) * 13));
+                }
+            }
         }
         plt::EndPlot();
     }

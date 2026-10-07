@@ -103,7 +103,7 @@ void fmStatus(App& a) {
     ImGui::AlignTextToFramePadding();
     iconInline(Ic::Gauge, iconDim(), 0.9f); ImGui::SameLine(0, 4 * gUi); ImGui::TextDisabled("Level"); ImGui::SameLine(0, 5 * gUi);
     {
-        const ImU32 col = adc == AdcStatus::Overload ? IM_COL32(176, 66, 58, 255) : adc == AdcStatus::Good ? IM_COL32(40, 112, 150, 255) : IM_COL32(176, 130, 48, 255);
+        const ImU32 col = adc == AdcStatus::Overload ? IM_COL32(176, 66, 58, 255) : adc == AdcStatus::Good ? pal::remap(IM_COL32(40, 112, 150, 255)) : IM_COL32(176, 130, 48, 255);
         snprintf(b, sizeof b, run ? "%.1f dBFS" : "-", st.rmsDbfs);
         gaugePill(130, run ? (st.rmsDbfs + 60.f) / 60.f : 0.f, col, b);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("ADC level of the whole captured band (rms). %s\npeak %.2f   clip %.3f%%   DC %+.3f / %+.3f", adcAdvice(adc).c_str(), st.peak, st.clipFraction * 100, st.dcI, st.dcQ);
@@ -114,7 +114,7 @@ void fmStatus(App& a) {
     {
         const bool ok = live && fm.carrier;
         const float t = ok ? std::min(1.f, std::max(0.f, fm.snrDb / 45.f)) : 0.f;
-        const ImU32 col = t < 0.25f ? IM_COL32(176, 66, 58, 255) : t < 0.5f ? IM_COL32(176, 130, 48, 255) : IM_COL32(40, 112, 150, 255);
+        const ImU32 col = t < 0.25f ? IM_COL32(176, 66, 58, 255) : t < 0.5f ? IM_COL32(176, 130, 48, 255) : pal::remap(IM_COL32(40, 112, 150, 255));
         snprintf(b, sizeof b, ok ? "%.0f%%  %s" : "-", t * 100, t > 0.8f ? "excellent" : t > 0.55f ? "good" : t > 0.3f ? "fair" : "poor");
         gaugePill(130, t, col, b);
         if (ImGui::IsItemHovered() && live) ImGui::SetTooltip("Audio signal-to-noise ratio %.1f dB (45 dB and up is studio-clean).\nChannel power %.1f dBFS.", fm.snrDb, fm.levelDbfs);
@@ -159,9 +159,12 @@ void fmPanels(App& a) {
     const FmTelemetry& fm = a.rx.fm;
     const bool live = a.engine.running() && a.rx.standard == 6;
     const float availW = ImGui::GetContentRegionAvail().x, availH = ImGui::GetContentRegionAvail().y;
-    const float side = std::max(90.f, std::min(availH - 26.f - ImGui::GetFrameHeight(), availW / 4.f - 16.f));
-    const float gap = std::max(6.f, (availW - 4 * side) / 5.f);
-    const ImVec2 sz(side, side);
+    const float gap = 12 * gUi;
+    const float plotH = std::max(90.f, availH - 26.f - ImGui::GetFrameHeight());
+    const float sqW = std::min(plotH, std::max(120.f, availW * 0.25f));                    // the square plot keeps its own width,
+    const float colW = std::max(120.f, (availW - 5 * gap - sqW) / 3.f);                    // the other three share the rest
+    const ImVec2 sz(colW, plotH);
+    const ImVec2 sq(sqW, sqW);        // the symbol plot stays square
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + gap);
     ImGui::BeginGroup();
     ImGui::TextDisabled("Multiplex spectrum (kHz)");
@@ -188,7 +191,7 @@ void fmPanels(App& a) {
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
     ImGui::TextDisabled("RDS symbols (%zu)", fm.rdsConst.size());
-    scatter("##fmrds", live ? fm.rdsConst : std::vector<cf32>(), sz, 2.6, pal::accent(0.40f));
+    scatter("##fmrds", live ? fm.rdsConst : std::vector<cf32>(), sq, 2.6, pal::accent(0.40f));
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
@@ -240,14 +243,52 @@ void fmRadioPanel(App& a) {
         ImGui::EndTable();
     }
     ImGui::Spacing();
+    if (pal::dev()) {   // compact now-playing, then the scanned stations fill the rest of the panel
+        ImGui::BeginChild("fmnow", ImVec2(0, 74 * gUi), ImGuiChildFlags_Borders);
+        const std::string ps = live ? fmTrim(fm.psName) : "";
+        char big[48];
+        snprintf(big, sizeof big, "%.1f MHz", a.freqMhz);
+        ImGui::PushFont(a.ui, 20.f);
+        ImGui::TextUnformatted(big);
+        ImGui::PopFont();
+        ImGui::SameLine(0, 10 * gUi);
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(!run ? "stopped" : !live ? "no station" : ps.empty() ? "reading name..." : ps.c_str());
+        if (live && !fm.radioText.empty()) { ImGui::PushTextWrapPos(ImGui::GetContentRegionAvail().x + ImGui::GetCursorPosX()); ImGui::TextDisabled("%s", fm.radioText.c_str()); ImGui::PopTextWrapPos(); }
+        ImGui::EndChild();
+        ImGui::Spacing();
+        sectionHeader(Ic::Radio, "Stations");
+        ImGui::BeginChild("##fmstations", ImVec2(0, 0));
+        size_t found = 0;
+        for (const auto& r : a.fmScan.results) if (r.found) found++;
+        if (!found) ImGui::TextDisabled("Run the band scan (Scan tab) to list stations.");
+        else if (ImGui::BeginTable("fmst", 3, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
+            ImGui::TableSetupColumn("MHz", ImGuiTableColumnFlags_WidthFixed, 52 * gUi); ImGui::TableSetupColumn("Station"); ImGui::TableSetupColumn("SNR", ImGuiTableColumnFlags_WidthFixed, 44 * gUi);
+            for (size_t i = 0; i < a.fmScan.results.size(); i++) {
+                const auto& r = a.fmScan.results[i];
+                if (!r.found) continue;
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::PushID((int)i);
+                char fl[16]; snprintf(fl, sizeof fl, "%.1f", r.mhz);
+                if (ImGui::Selectable(fl, std::fabs(r.mhz - a.freqMhz) < 0.05, ImGuiSelectableFlags_SpanAllColumns) && !a.fmScan.running) fmTune(a, r.mhz);
+                ImGui::PopID();
+                ImGui::TableNextColumn(); ImGui::TextUnformatted(r.name.empty() ? "-" : r.name.c_str());
+                ImGui::TableNextColumn(); ImGui::TextDisabled("%.0f dB", r.snr);
+            }
+            ImGui::EndTable();
+        }
+        ImGui::EndChild();
+        return;
+    }
     {
         const float vh = std::max(60.f, ImGui::GetContentRegionAvail().y - 30.f);
         ImGui::BeginChild("fmnow", ImVec2(0, vh), ImGuiChildFlags_Borders);
         const std::string ps = live ? fmTrim(fm.psName) : "";
         const ImVec2 p = ImGui::GetCursorScreenPos();
         const float cw = ImGui::GetContentRegionAvail().x;
-        icons::draw(Ic::Radio, ImVec2(p.x + cw * 0.5f, p.y + 28), 36.f, live ? IM_COL32(120, 200, 255, 255) : IM_COL32(70, 80, 92, 255));
-        ImGui::Dummy(ImVec2(1 * gUi, 52 * gUi));
+        if (!pal::dev()) icons::draw(Ic::Radio, ImVec2(p.x + cw * 0.5f, p.y + 28), 36.f, live ? pal::remap(IM_COL32(120, 200, 255, 255)) : IM_COL32(70, 80, 92, 255));
+        ImGui::Dummy(ImVec2(1 * gUi, (pal::dev() ? 6 : 52) * gUi));
         char big[48];
         snprintf(big, sizeof big, "%.1f MHz", a.freqMhz);
         ImGui::PushFont(a.ui, 26.f);
@@ -269,7 +310,7 @@ void fmRadioTab(App& a) {
     const bool live = a.engine.running() && a.rx.standard == 6 && fm.carrier;
     ImGui::AlignTextToFramePadding();
     ImGui::PushFont(a.ui, 26.f);
-    ImGui::TextColored(ImVec4(0.55f, 0.80f, 1.f, 1), "%.1f MHz", a.freqMhz);
+    ImGui::TextColored(pal::dev() ? pal::accent() : ImVec4(0.55f, 0.80f, 1.f, 1), "%.1f MHz", a.freqMhz);
     ImGui::PopFont();
     ImGui::SameLine(0, 14 * gUi);
     const std::string ps = live ? fmTrim(fm.psName) : "";
@@ -344,7 +385,7 @@ void fmScanTab(App& a) {
     ImGui::Spacing();
     if (!s.running) {
         ImGui::BeginDisabled(!run);
-        if (iconButton(Ic::Scan, "Scan FM band", IM_COL32(32, 96, 140, 255), IM_COL32(44, 124, 178, 255))) {
+        if (iconButton(Ic::Scan, "Scan FM band", pal::remap(IM_COL32(32, 96, 140, 255)), pal::remap(IM_COL32(44, 124, 178, 255)))) {
             s.running = true; s.phase = 0; s.idx = -1; s.t0 = 0; s.results.clear(); s.cand.clear(); s.savedFreq = a.freqMhz;
         }
         ImGui::EndDisabled();
@@ -407,6 +448,7 @@ void fmScanStep(App& a) {
         a.freqMhz = s.savedFreq; a.tune.centerHz = a.freqMhz * 1e6; a.engine.retuneReset(a.tune);
         size_t n = 0; for (const auto& r : s.results) if (r.found) n++;
         a.engine.log("FM scan: " + std::to_string(n) + " stations");
+        savePrefs(a);
     };
 
     if (s.phase == 0) {

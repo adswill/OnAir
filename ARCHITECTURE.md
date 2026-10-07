@@ -33,7 +33,7 @@ Threads: the analysis thread runs the receiver (it must never wait for the inter
 
 ## The app
 
-`app/app.h` holds the `App` struct (all interface state) and the list of panels. `main.cpp` has the window loop and the layout. The panels are grouped: `toolbar.cpp` (top bar, status bar), `plots.cpp`, `plot.cpp` (our own plotting library on ImGui's draw lists: axes, lines, dots, bars, images, heat maps, panning and zooming), `analysis_tabs.cpp` (receiver analysis tabs), `tv.cpp` (player and guide), `scan_outputs.cpp`, `antenna.cpp`, `dab_ui.cpp`, `fm_ui.cpp`, `wizard.cpp` (first-run tour), and `widgets.cpp` (small shared pieces). Drawing goes through `gfx.h` (Metal on macOS, OpenGL elsewhere), and `platform.h` hides file dialogs and settings storage per operating system.
+`app/app.h` holds the `App` struct (all interface state) and the list of panels. `main.cpp` has the window loop and the layout. The panels are grouped: `toolbar.cpp` (top bar, status bar), `plots.cpp`, `plot.cpp` (our own plotting library on ImGui's draw lists: axes, lines, dots, bars, images, heat maps, panning and zooming), `analysis_tabs.cpp` (receiver analysis tabs), `tv.cpp` (player and guide), `scan_outputs.cpp`, `antenna.cpp`, `dab_ui.cpp`, `fm_ui.cpp`, `ui2.cpp` (the new interface shell: menu bar, top bar, the Panel / Sidebar / Scope / Tiles layouts and the palettes; the classic shell stays in `main.cpp` and is one click away under View), `wizard.cpp` (first-run tour), and `widgets.cpp` (small shared pieces). Drawing goes through `gfx.h` (Metal on macOS, OpenGL elsewhere), and `platform.h` hides file dialogs and settings storage per operating system.
 
 ## Platform notes
 

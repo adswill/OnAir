@@ -1,11 +1,26 @@
 // the top bar, the source options, the status bar, gain control and the standard switch
 #include "app.h"
 
-void toolbar(App& a) {
+void startReceiver(App& a) {
+    const bool isFile = a.devices[a.devIdx].kind == DeviceInfo::File;
+    a.tune.centerHz = a.freqMhz * 1e6;
+    applyBandwidth(a);
+    if (isFile) { const double r = guessSampleRate(a.file.path); if (r > 0) a.file.sampleRate = r; } // the name says the rate
+    if (isFile && a.file.path.empty()) a.engine.log("choose an IQ file first");
+    else {
+        a.engine.setComputeMode(a.computeMode); a.engine.setStandard(engineStd(a));
+        a.engine.start(a.devices[a.devIdx], a.tune, a.file);
+        savePrefs(a);
+        a.smooth.clear(); a.peak.clear(); a.lastSeq = 0;
+    }
+}
+
+void toolbarParts(App& a, int mask, bool vertical) {
     bool running = a.engine.running();
+    bool retune = false;
     ImGui::AlignTextToFramePadding();
-    ImGui::TextColored(pal::accent(), "ONAIR");
-    ImGui::SameLine(0, 16 * gUi);
+    if (!a.newUi) { ImGui::TextColored(pal::accent(), "ONAIR"); ImGui::SameLine(0, 16 * gUi); }
+    if (mask & TbSource) {
     ImGui::TextDisabled("SRC"); ImGui::SameLine(0, 5 * gUi);
     ImGui::SetNextItemWidth(190 * gUi);
     ImGui::BeginDisabled(running);
@@ -17,21 +32,26 @@ void toolbar(App& a) {
     ImGui::SameLine();
     if (iconFlat(Ic::Refresh, "Rescan for devices")) refreshDevices(a), a.devIdx = std::min(a.devIdx, (int)a.devices.size() - 1);
     ImGui::EndDisabled();
+    }
 
     bool isHw = a.devices[a.devIdx].isRadio();
     const DeviceInfo& curDev = a.devices[a.devIdx];
     const bool generic = curDev.isGeneric();
     bool isFile = a.devices[a.devIdx].kind == DeviceInfo::File;
 
-    vSeparator();
+    if (mask & TbFreq) {
+    if (!vertical) vSeparator();
     ImGui::TextDisabled("FREQ");
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Centre frequency");
     ImGui::SameLine(0, 5 * gUi);
     ImGui::SetNextItemWidth(110 * gUi);
-    bool retune = false;
     ImGui::InputDouble("##freq", &a.freqMhz, 0, 0, "%.3f MHz");
     if (ImGui::IsItemDeactivatedAfterEdit()) retune = true;
-    ImGui::SameLine(0, 10 * gUi);
+    }
+    const ModeUi* mu = modeUi(a.family);
+    if (mask & TbTuner) {
+    if (mu) { if (mu->tuner) { if (!vertical && (mask & TbFreq)) ImGui::SameLine(0, 10 * gUi); mu->tuner(a, retune); } } else {
+    if (!vertical && (mask & TbFreq)) ImGui::SameLine(0, 10 * gUi);
     ImGui::TextDisabled(a.dabMode ? "CH" : a.fmMode ? "FM" : "BW");
     if (ImGui::IsItemHovered()) ImGui::SetTooltip(a.dabMode ? "DAB channel" : a.fmMode ? "FM station" : "Channel bandwidth");
     ImGui::SameLine(0, 5 * gUi);
@@ -60,10 +80,13 @@ void toolbar(App& a) {
         }
     }
     }
+    }
+    }
 
-    vSeparator();
+    if (mask & TbGain) {
+    if (!a.newUi) vSeparator();   // the new interface starts the gain controls on a second row
     ImGui::BeginDisabled(!isHw);
-    ImGui::TextDisabled("GAIN"); ImGui::SameLine(0, 5 * gUi);
+    if (!vertical) { ImGui::TextDisabled("GAIN"); ImGui::SameLine(0, 5 * gUi); }
     if (generic) {
         ImGui::SameLine();
         ImGui::SetNextItemWidth(150 * gUi);
@@ -73,27 +96,27 @@ void toolbar(App& a) {
         if (ImGui::IsItemDeactivatedAfterEdit()) retune = true, a.agcOn = false;
     } else {
     ImGui::TextDisabled("LNA");
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(78 * gUi);
+    ImGui::SameLine(vertical ? 54 * gUi : 0);
+    ImGui::SetNextItemWidth((vertical ? 150 : 78) * gUi);
     int lna = a.tune.lnaDb;
     ImGui::SliderInt("##lna", &lna, 0, 40, "%d dB");
     a.tune.lnaDb = (lna + 4) / 8 * 8; // hardware steps are 8 dB
     if (ImGui::IsItemDeactivatedAfterEdit()) retune = true, a.agcOn = false;
-    ImGui::SameLine();
+    if (!vertical) ImGui::SameLine();
     ImGui::TextDisabled("VGA");
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(78 * gUi);
+    ImGui::SameLine(vertical ? 54 * gUi : 0);
+    ImGui::SetNextItemWidth((vertical ? 150 : 78) * gUi);
     int vga = a.tune.vgaDb;
     ImGui::SliderInt("##vga", &vga, 0, 62, "%d dB");
     a.tune.vgaDb = (vga + 1) / 2 * 2; // 2 dB steps
     if (ImGui::IsItemDeactivatedAfterEdit()) retune = true, a.agcOn = false;
-    ImGui::SameLine();
+    if (!vertical) ImGui::SameLine();
     if (ImGui::Checkbox("Amp", &a.tune.ampOn)) retune = true, a.agcOn = false;
     }
     ImGui::SameLine();
     if (ImGui::Checkbox("AGC", &a.agcOn)) { a.agc.reset(); }
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("Keep the ADC level in a healthy window (about -16 dBFS rms, no clipping) by adjusting LNA, VGA and amp.\nTouching a gain control turns it off.");
-    ImGui::SameLine();
+    if (vertical) ImGui::SameLine(0, 14 * gUi); else ImGui::SameLine();
     if (a.sweep.active()) {
         if (ImGui::Button("Stop tune")) { a.sweep = GainSweep(); }
     } else if (ImGui::Button("Auto-tune") && running) {
@@ -103,34 +126,26 @@ void toolbar(App& a) {
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("Gain helper: tries LNA/VGA/amp combinations for about 40 s and keeps the one with the best SNR that does not clip.\nNeeds a signal the receiver can lock to.");
     ImGui::EndDisabled();
     if (!isHw && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("Gain controls apply to radios only (not to a recording or the synthetic signal)");
+    }
 
+    if (!a.newUi) {   // the new interface has its Start button in the side rail
     vSeparator();
     if (!running) {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.10f, 0.42f, 0.28f, 1)); ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.14f, 0.56f, 0.36f, 1));
         const bool startClicked = iconButton(Ic::Play, "Start", IM_COL32(40, 70, 82, 255), IM_COL32(56, 94, 110, 255)) || a.wizStart;
         a.wizStart = false;
         ImGui::PopStyleColor(2);
-        if (startClicked) {
-            a.tune.centerHz = a.freqMhz * 1e6;
-            applyBandwidth(a);
-            if (isFile) { const double r = guessSampleRate(a.file.path); if (r > 0) a.file.sampleRate = r; } // the name says the rate
-            if (isFile && a.file.path.empty()) a.engine.log("choose an IQ file first");
-            else {
-                a.engine.setComputeMode(a.computeMode); a.engine.setStandard(engineStd(a));
-                a.engine.start(a.devices[a.devIdx], a.tune, a.file);
-                savePrefs(a);
-                a.smooth.clear(); a.peak.clear(); a.lastSeq = 0;
-            }
-        }
+        if (startClicked) startReceiver(a);
     } else {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.55f, 0.16f, 0.16f, 1)); ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.70f, 0.22f, 0.22f, 1));
         const bool stopClicked = iconButton(Ic::Stop, "Stop", IM_COL32(112, 48, 48, 255), IM_COL32(146, 62, 62, 255));
         ImGui::PopStyleColor(2);
         if (stopClicked) a.engine.stop();
     }
+    }
 
-    if (a.family == 0 || a.family == 3) {   // the LDPC decoder is used by DVB-T2 and ATSC 3.0 only
-    vSeparator();
+    if ((mask & TbDecoder) && (a.family == 0 || a.family == 3)) {   // the LDPC decoder is used by DVB-T2 and ATSC 3.0 only
+    if (!vertical) vSeparator();
     {
         static const char* modes[] = {"CPU", "GPU", "Auto"};
         char lbl[48];
@@ -162,8 +177,8 @@ void toolbar(App& a) {
         }
     }
     }
-    if (a.family == 0) {   // the other families have one standard each: nothing to choose
-        vSeparator();
+    if ((mask & TbDecoder) && a.family == 0) {   // the other families have one standard each: nothing to choose
+        if (!vertical) vSeparator();
         static const char* names[] = {"Auto", "DVB-T2", "DVB-T"};
         char lbl[48];
         const int act = a.engine.activeStandard();
@@ -178,11 +193,16 @@ void toolbar(App& a) {
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Which broadcast standard to decode.\nAuto alternates between DVB-T2 and DVB-T until one locks.");
     }
 
+    if ((mask & TbDecoder) && mu && mu->decoder) {
+        if (!vertical) vSeparator();
+        mu->decoder(a, retune);
+    }
+
     if (retune && running) {
         const bool moved = std::fabs(a.tune.centerHz - a.freqMhz * 1e6) > 1;
         a.tune.centerHz = a.freqMhz * 1e6;
         a.engine.log("retune " + std::to_string(a.freqMhz) + " MHz");
-        if (a.fmMode && moved) a.engine.retuneReset(a.tune);   // forget the old station's name and flush its sound
+        if ((a.fmMode || a.family >= 6) && moved) a.engine.retuneReset(a.tune);   // forget the old station's name and flush its sound
         else a.engine.retune(a.tune);
         a.peak.clear();
         savePrefs(a);
@@ -191,6 +211,21 @@ void toolbar(App& a) {
 }
 
 // Options of the selected source that are not gain/frequency: the synthetic generator's parameters, or the IQ file.
+
+void toolbar(App& a) { toolbarParts(a, TbAll, false); }
+
+void tuneFreq(App& a, double mhz) {
+    const bool moved = std::fabs(a.tune.centerHz - mhz * 1e6) > 1;
+    a.freqMhz = mhz;
+    a.tune.centerHz = mhz * 1e6;
+    if (a.engine.running()) {
+        if ((a.fmMode || a.family >= 6) && moved) a.engine.retuneReset(a.tune);   // forget the old station's name and flush its sound
+        else a.engine.retune(a.tune);
+        a.peak.clear();
+    }
+    savePrefs(a);
+}
+
 void sourceOptions(App& a) {
     bool running = a.engine.running();
     bool isFile = a.devices[a.devIdx].kind == DeviceInfo::File;
@@ -199,6 +234,13 @@ void sourceOptions(App& a) {
         bool ch = false;
         ImGui::TextDisabled("synthetic");
         ImGui::SameLine();
+        if (const ModeUi* mu = modeUi(a.family)) {   // a mode added after FM: its own test signal and options
+            bool c2 = false;
+            if (mu->synth) mu->synth(a, c2);
+            else ImGui::TextDisabled("no built-in test signal for this mode: choose a radio or a recording file as the source");
+            if (c2 && running) a.engine.retune(a.tune);
+            return;
+        }
         if (a.family == 3 || a.family == 4 || a.family == 5) {   // there is no built-in test signal for these
             ImGui::TextDisabled("no built-in test signal for %s: choose a radio or a recording file as the source", a.family == 3 ? "ATSC 3.0" : a.family == 4 ? "ISDB-T" : "FM");
             return;
@@ -283,6 +325,7 @@ void sourceOptions(App& a) {
 }
 
 void statusBar(App& a) {
+    if (const ModeUi* mu = modeUi(a.family)) if (mu->status) { mu->status(a); return; }
     if (a.dabMode) { dabStatus(a); return; }
     if (a.fmMode) { fmStatus(a); return; }
     if (a.atsc3Mode) { atsc3Status(a); return; }
@@ -400,7 +443,7 @@ void statusBar(App& a) {
     ImGui::AlignTextToFramePadding();
     iconInline(Ic::Gauge, iconDim(), 0.9f); ImGui::SameLine(0, 4 * gUi); ImGui::TextDisabled("Level"); ImGui::SameLine(0, 5 * gUi);
     {
-        const ImU32 col = adc == AdcStatus::Overload ? IM_COL32(176, 66, 58, 255) : adc == AdcStatus::Good ? IM_COL32(40, 112, 150, 255) : IM_COL32(176, 130, 48, 255);
+        const ImU32 col = adc == AdcStatus::Overload ? IM_COL32(176, 66, 58, 255) : adc == AdcStatus::Good ? pal::remap(IM_COL32(40, 112, 150, 255)) : IM_COL32(176, 130, 48, 255);
         snprintf(b, sizeof b, run ? "%.1f dBFS" : "-", st.rmsDbfs);
         gaugePill(130, run ? (st.rmsDbfs + 60.f) / 60.f : 0.f, col, b);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("ADC level (rms). %s\npeak %.2f   clip %.3f%%   DC %+.3f / %+.3f", adcAdvice(adc).c_str(), st.peak, st.clipFraction * 100, st.dcI, st.dcQ);
@@ -411,7 +454,7 @@ void statusBar(App& a) {
     {
         const QualityReport& q = a.quality.report();
         const float t = run && q.valid ? (float)q.percent / 100.f : 0.f;
-        const ImU32 col = t < 0.25f ? IM_COL32(176, 66, 58, 255) : t < 0.5f ? IM_COL32(176, 130, 48, 255) : IM_COL32(40, 112, 150, 255);
+        const ImU32 col = t < 0.25f ? IM_COL32(176, 66, 58, 255) : t < 0.5f ? IM_COL32(176, 130, 48, 255) : pal::remap(IM_COL32(40, 112, 150, 255));
         snprintf(b, sizeof b, run && q.valid ? "%.0f%%  %s" : "-", q.percent, q.label.c_str());
         gaugePill(130, t, col, b);
         if (ImGui::IsItemHovered() && run && q.valid) ImGui::SetTooltip("data SNR %.1f dB, needed about %.1f dB (margin %+.1f dB)\nFEC blocks decoded %.1f%%", q.snrDb, q.requiredDb, q.marginDb, q.fecOk * 100);
@@ -435,7 +478,7 @@ void statusBar(App& a) {
     }
     if (run && a.devices[a.devIdx].kind != DeviceInfo::File) {
         ImGui::AlignTextToFramePadding();
-        if (a.sweep.active()) ImGui::TextColored(ImVec4(0.45f, 0.75f, 1, 1), "gain helper %d/%d ...", std::max(0, a.sweep.current()) + 1, (int)a.sweep.entries().size());
+        if (a.sweep.active()) ImGui::TextColored(pal::heading(), "gain helper %d/%d ...", std::max(0, a.sweep.current()) + 1, (int)a.sweep.entries().size());
         else if (adc == AdcStatus::Overload) ImGui::TextColored(ImVec4(0.95f, 0.35f, 0.25f, 1), "ADC OVERLOAD - %s", a.agcOn ? "AGC is lowering the gain" : "reduce the gain (or enable AGC)");
         else if (adc == AdcStatus::High) ImGui::TextColored(ImVec4(0.95f, 0.70f, 0.15f, 1), "ADC level high");
         else if (adc == AdcStatus::Low) ImGui::TextColored(ImVec4(0.95f, 0.70f, 0.15f, 1), "ADC level low - raise the gain");
@@ -473,21 +516,27 @@ void gainControl(App& a) {
 }
 
 // The receiver modes. Adding a mode is one row here (and its family number in app.h / setFamily).
-// The families are also stored in the settings: 0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T, 5 FM.
-struct ModeDef { int family; const char* name; int group; ImU32 col; const char* blurb; const char* tip; };
-static const ModeDef kModes[] = {
-    {0, "DVB",        0, IM_COL32(52, 92, 108, 255),  "DVB-T2 / DVB-T, detected automatically",                                    "DVB-T2 and DVB-T, automatic (Europe, Middle East, Africa, Asia, Australia)"},
-    {1, "ATSC",       0, IM_COL32(150, 100, 30, 255), "ATSC 8-VSB, 6 MHz channel (the DVB-only settings are off)",                 "ATSC 1.0, 8-VSB (US, Canada, Mexico, South Korea)"},
-    {3, "ATSC 3.0",   0, IM_COL32(150, 70, 40, 255),  "ATSC 3.0 (NextGen TV), 6 MHz channel, ROUTE services",                      "ATSC 3.0, NextGen TV"},
-    {4, "ISDB-T",     0, IM_COL32(120, 70, 140, 255), "ISDB-T (Japan, Brazil and most of South America), 6 MHz channel, 13 segments", "ISDB-T (Japan, Brazil, South America)"},
-    {2, "DAB / DAB+", 1, IM_COL32(40, 130, 96, 255),  "DAB / DAB+ digital radio, Band III channels 5A to 13F",                     "DAB and DAB+ digital radio"},
-    {5, "FM",         1, IM_COL32(140, 90, 100, 255), "FM broadcast radio (87.5 - 108 MHz), stereo and RDS",                       "FM broadcast radio with stereo and RDS"},
+// The families are also stored in the settings: 0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T, 5 FM, 6 DVB-S/S2, 7 DTMB, 8 analog TV, 9 DMR, 10 DRM, 11 ADS-B.
+// Within a group the rows are shown in this order; the keys 1-9 pick the modes in the same order.
+const ModeDef kModes[] = {
+    {0, "DVB",        0, IM_COL32(52, 92, 108, 255),  "DVB-T2 / DVB-T, detected automatically",                                    "DVB-T2 and DVB-T, automatic (Europe, Middle East, Africa, Asia, Australia)", "T2 and T, automatic",   ImVec4(0.36f, 0.74f, 0.86f, 1)},
+    {1, "ATSC",       0, IM_COL32(150, 100, 30, 255), "ATSC 8-VSB, 6 MHz channel (the DVB-only settings are off)",                 "ATSC 1.0, 8-VSB (US, Canada, Mexico, South Korea)",                           "8-VSB, North America",  ImVec4(0.95f, 0.66f, 0.26f, 1)},
+    {3, "ATSC 3.0",   0, IM_COL32(150, 70, 40, 255),  "ATSC 3.0 (NextGen TV), 6 MHz channel, ROUTE services",                      "ATSC 3.0, NextGen TV",                                                        "NextGen TV",            ImVec4(0.95f, 0.50f, 0.36f, 1)},
+    {4, "ISDB-T",     0, IM_COL32(120, 70, 140, 255), "ISDB-T (Japan, Brazil and most of South America), 6 MHz channel, 13 segments", "ISDB-T (Japan, Brazil, South America)",                                  "Japan, Brazil",         ImVec4(0.72f, 0.56f, 0.92f, 1)},
+    {6, "DVB-S/S2", 0, IM_COL32(52, 96, 150, 255), "DVB-S, DVB-S2 and DVB-S2X satellite TV (L-band IF through an LNB)", "DVB-S / S2 / S2X satellite television, needs a dish and an LNB", "Satellite", ImVec4(0.42f, 0.64f, 0.96f, 1)},
+    {7, "DTMB", 0, IM_COL32(150, 62, 74, 255), "DTMB / DTMB-A digital TV (China, Hong Kong), 8 MHz channel", "DTMB digital terrestrial television (China, Hong Kong, Macau, Cuba, Pakistan)", "China, Hong Kong", ImVec4(0.92f, 0.46f, 0.50f, 1)},
+    {8, "Analog TV", 0, IM_COL32(100, 102, 112, 255), "Analogue TV: PAL, SECAM and NTSC with FM sound", "Analogue television (PAL, SECAM, NTSC)", "PAL, SECAM, NTSC", ImVec4(0.76f, 0.79f, 0.84f, 1)},
+    {2, "DAB / DAB+", 1, IM_COL32(40, 130, 96, 255),  "DAB / DAB+ digital radio, Band III channels 5A to 13F",                     "DAB and DAB+ digital radio",                                                  "Digital radio",         ImVec4(0.36f, 0.82f, 0.58f, 1)},
+    {5, "FM",         1, IM_COL32(140, 90, 100, 255), "FM broadcast radio (87.5 - 108 MHz), stereo and RDS",                       "FM broadcast radio with stereo and RDS",                                      "Stereo and RDS",        ImVec4(0.95f, 0.52f, 0.62f, 1)},
+    {10, "DRM", 1, IM_COL32(48, 112, 128, 255), "DRM30 and DRM+ digital radio (shortwave, medium wave, VHF)", "DRM digital radio: DRM30 below 30 MHz, DRM+ in the VHF bands", "SW, MW, VHF", ImVec4(0.46f, 0.82f, 0.82f, 1)},
+    {11, "ADS-B", 2, IM_COL32(58, 98, 160, 255), "ADS-B / Mode S: aircraft on 1090 MHz", "ADS-B aircraft position and identity reports", "Aircraft, 1090 MHz", ImVec4(0.52f, 0.74f, 0.98f, 1)},
+    {9, "DMR", 2, IM_COL32(70, 120, 70, 255), "DMR two-slot digital voice and data, 12.5 kHz channel", "DMR (Digital Mobile Radio), two-slot TDMA", "Digital voice", ImVec4(0.62f, 0.84f, 0.46f, 1)},
 };
-static constexpr int kNumModes = (int)(sizeof kModes / sizeof *kModes);
-static const char* kGroupNames[] = {"TV", "RADIO"};
+const int kNumModes = (int)(sizeof kModes / sizeof *kModes);
+const char* const kGroupNames[3] = {"TV", "RADIO", "DATA"};
 float gSwitchWidth = 420;   // width of the mode selector as drawn (the guided tour points at it)
 
-static void selectMode(App& a, int fam) {
+void selectMode(App& a, int fam) {
     if (a.engine.running()) a.engine.log("stop the receiver before switching mode");
     else if (fam != a.family) { setFamily(a, fam); savePrefs(a); }
 }
@@ -500,10 +549,10 @@ void standardSwitch(App& a) {
     const ModeDef* cur = &kModes[0];
     for (const auto& m : kModes) if (m.family == a.family) cur = &m;
 
-    float segW[kNumModes], segX[kNumModes], capX[2] = {0, 0}, grpL[2] = {0, 0}, grpR[2] = {0, 0}, capW[2];
-    for (int g = 0; g < 2; g++) capW[g] = ImGui::CalcTextSize(kGroupNames[g]).x;
+    float segW[16], segX[16], capX[3] = {0, 0, 0}, grpL[3] = {0, 0, 0}, grpR[3] = {0, 0, 0}, capW[3];
+    for (int g = 0; g < 3; g++) capW[g] = ImGui::CalcTextSize(kGroupNames[g]).x;
     float x = p.x;
-    for (int g = 0; g < 2; g++) {
+    for (int g = 0; g < 3; g++) {
         capX[g] = x; x += capW[g] + 8;
         grpL[g] = x;
         for (int i = 0; i < kNumModes; i++) if (kModes[i].group == g) { segW[i] = ImGui::CalcTextSize(kModes[i].name).x + 22; segX[i] = x; x += segW[i]; }
@@ -516,7 +565,7 @@ void standardSwitch(App& a) {
         gSwitchWidth = 170 * gUi;
         ImGui::SetNextItemWidth(gSwitchWidth);
         if (ImGui::BeginCombo("##mode", cur->name)) {
-            for (int g = 0; g < 2; g++) {
+            for (int g = 0; g < 3; g++) {
                 if (g) ImGui::Separator();
                 ImGui::TextDisabled("%s", kGroupNames[g]);
                 for (const auto& m : kModes) if (m.group == g && ImGui::Selectable(m.name, m.family == a.family)) selectMode(a, m.family);
@@ -530,7 +579,7 @@ void standardSwitch(App& a) {
     }
     gSwitchWidth = total;
     ImGui::AlignTextToFramePadding();
-    for (int g = 0; g < 2; g++) {
+    for (int g = 0; g < 3; g++) {
         const ImVec2 ts = ImGui::CalcTextSize(kGroupNames[g]);
         dl->AddText(ImVec2(capX[g], p.y + (h - ts.y) * 0.5f), IM_COL32(96, 108, 122, 255), kGroupNames[g]);
         dl->AddRectFilled(ImVec2(grpL[g], p.y), ImVec2(grpR[g], p.y + h), IM_COL32(18, 22, 28, 255), 3.f);

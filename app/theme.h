@@ -5,10 +5,30 @@
 
 // One accent colour for data and highlights; red / amber / green appear only where they mean a status.
 namespace pal {
-inline ImVec4 accent(float a = 1.f) { return ImVec4(0.45f, 0.72f, 0.82f, a); }
+inline ImVec4& accentRef() { static ImVec4 v(0.45f, 0.72f, 0.82f, 1.f); return v; }   // the new interface recolours it per mode
+inline ImVec4 accent(float a = 1.f) { ImVec4 c = accentRef(); c.w = a; return c; }
 inline ImVec4 okGreen() { return ImVec4(0.40f, 0.76f, 0.52f, 1); }
 inline ImVec4 warnAmber() { return ImVec4(0.90f, 0.70f, 0.28f, 1); }
 inline ImVec4 badRed() { return ImVec4(0.88f, 0.38f, 0.34f, 1); }
+inline bool& dev() { static bool v = false; return v; }
+// heading text in panels: blue in the classic interface, soft white in the new one
+inline ImVec4 heading() { return dev() ? ImVec4(0.92f, 0.90f, 0.84f, 1) : ImVec4(0.45f, 0.75f, 1, 1); }
+inline bool& panel() { static bool v = false; return v; }   // the Panel layout: status lamps are round LEDs
+inline int& wfMode() { static int m = 0; return m; }   // waterfall colours: 0 classic blue-teal, 1 plain grey, 2 turbo (the dev palettes)
+inline float rnd(float r) { return dev() ? 0.f : r; }   // corner radius: none in the dev palette   // the new interface's palette: warm greys and one amber accent
+// the classic interface's blue and teal fills, mapped to the dev palette when it is on
+inline ImU32* tones() { static ImU32 t[5] = {IM_COL32(166, 122, 46, 255), IM_COL32(86, 68, 36, 255), IM_COL32(110, 84, 36, 255), IM_COL32(168, 146, 104, 255), IM_COL32(232, 190, 112, 255)}; return t; }
+inline ImU32 remap(ImU32 c) {
+    if (!dev()) return c;
+    struct M { ImU32 from; int tone; };
+    static const M m[] = {
+        {IM_COL32(40, 112, 150, 255), 0}, {IM_COL32(52, 92, 108, 255), 1}, {IM_COL32(24, 106, 166, 255), 2}, {IM_COL32(32, 96, 140, 255), 1},
+        {IM_COL32(44, 124, 178, 255), 2}, {IM_COL32(132, 158, 184, 255), 3}, {IM_COL32(115, 184, 209, 255), 4}, {IM_COL32(120, 200, 255, 255), 4},
+        {IM_COL32(56, 94, 110, 255), 2}, {IM_COL32(40, 70, 82, 255), 1},
+    };
+    for (const M& x : m) if (x.from == c) return tones()[x.tone];
+    return c;
+}
 inline ImVec4 grey(float a = 1.f) { return ImVec4(0.58f, 0.60f, 0.62f, a); }
 }
 

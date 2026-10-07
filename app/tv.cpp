@@ -122,7 +122,7 @@ void guideTab(App& a) {
             if (e.end() < now - 1800) continue; // hide what ended more than half an hour ago
             const bool cur = e.start <= now && now < e.end();
             const std::string day = fmtLocal(e.start, "%a %d %b");
-            if (day != lastDay) { ImGui::TableNextRow(); ImGui::TableNextColumn(); ImGui::TextColored(ImVec4(0.45f, 0.75f, 1, 1), "%s", day.c_str()); lastDay = day; }
+            if (day != lastDay) { ImGui::TableNextRow(); ImGui::TableNextColumn(); ImGui::TextColored(pal::heading(), "%s", day.c_str()); lastDay = day; }
             ImGui::TableNextRow();
             if (cur) ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, IM_COL32(40, 110, 60, 110));
             ImGui::TableNextColumn();
@@ -282,6 +282,7 @@ void playerTab(App& a) {
 }
 
 void rightPanel(App& a) {
+    if (const ModeUi* mu = modeUi(a.family)) if (mu->list) { mu->list(a); return; }
     const bool run = a.engine.running();
     ImDrawList* dl = ImGui::GetWindowDrawList();
     // ---- clock: broadcast time (TDT) when the stream has one, otherwise this computer's clock
@@ -290,6 +291,11 @@ void rightPanel(App& a) {
         time_t t = (time_t)now; struct tm m; dect2::gmTime(t, &m);
         char hm[16], ss[8], date[40];
         strftime(hm, sizeof hm, "%H:%M", &m); strftime(ss, sizeof ss, ":%S", &m); strftime(date, sizeof date, "%a %d %b %Y", &m);
+        if (pal::dev()) {   // one plain line: 14:41:34 UTC
+            ImGui::Text("%s%s", hm, ss);
+            ImGui::SameLine(0, 6 * gUi);
+            ImGui::TextDisabled("UTC");
+        } else {
         ImGui::PushFont(a.ui, 40.f);
         ImGui::TextUnformatted(hm);
         ImGui::PopFont();
@@ -298,6 +304,7 @@ void rightPanel(App& a) {
         ImGui::TextDisabled("UTC");
         ImGui::TextDisabled("%s", ss);
         ImGui::EndGroup();
+        }
         ImGui::TextDisabled("%s", date);
         ImGui::SameLine(0, 10 * gUi);
         ImGui::TextDisabled("local %s   (%s)", fmtLocal(now, "%H:%M").c_str(), a.ts.utcNow ? "broadcast time" : "computer clock");
@@ -323,12 +330,12 @@ void rightPanel(App& a) {
         const bool clicked = ImGui::InvisibleButton("##card", ImVec2(w, cardH));
         const bool hov = ImGui::IsItemHovered();
         if (clicked) { if (sel) a.engine.player().select(-1); else { a.engine.player().select(sv.id); a.engine.player().setVolume(a.volume); } }
-        dl->AddRectFilled(p, ImVec2(p.x + w, p.y + cardH - 4), sel ? IM_COL32(30, 36, 40, 255) : hov ? IM_COL32(26, 27, 29, 255) : IM_COL32(16, 17, 19, 255), 4.f);
-        dl->AddRect(p, ImVec2(p.x + w, p.y + cardH - 4), sel ? IM_COL32(115, 184, 209, 255) : IM_COL32(48, 50, 52, 255), 4.f, 0, sel ? 1.6f : 1.f);
+        dl->AddRectFilled(p, ImVec2(p.x + w, p.y + cardH - 4), sel ? IM_COL32(30, 36, 40, 255) : hov ? IM_COL32(26, 27, 29, 255) : IM_COL32(16, 17, 19, 255), pal::rnd(4.f));
+        dl->AddRect(p, ImVec2(p.x + w, p.y + cardH - 4), sel ? pal::remap(IM_COL32(115, 184, 209, 255)) : IM_COL32(48, 50, 52, 255), 4.f, 0, sel ? 1.6f : 1.f);
         // name and bit rate
         const std::string name = sv.name.empty() ? "service " + std::to_string(sv.id) : sv.name;
         const bool isRadio = sv.type == 0x02 || sv.type == 0x0A || (!hasVideo && !ac.empty());
-        icons::draw(isRadio ? Ic::Radio : Ic::Tv, ImVec2(p.x + 20, p.y + 15), 17.f, sel ? IM_COL32(120, 200, 255, 255) : IM_COL32(120, 136, 156, 255), dl);
+        if (!pal::dev()) icons::draw(isRadio ? Ic::Radio : Ic::Tv, ImVec2(p.x + 20, p.y + 15), 17.f, sel ? pal::remap(IM_COL32(120, 200, 255, 255)) : IM_COL32(120, 136, 156, 255), dl);
         dl->AddText(a.ui, 16.f, ImVec2(p.x + 34, p.y + 6), IM_COL32(245, 247, 250, 255), name.c_str());
         char kbs[32]; fmtKbps(kbs, sizeof kbs, kb);
         const ImVec2 ks = ImGui::CalcTextSize(kbs);
@@ -406,10 +413,10 @@ void rightPanel(App& a) {
         iconLabel(Ic::Link, "Outputs", iconAccent());
         ImGui::SameLine(0, 10 * gUi);
         iconInline(Ic::File, os.fileOpen ? IM_COL32(120, 190, 235, 255) : IM_COL32(86, 94, 104, 255), 0.9f); ImGui::SameLine(0, 3 * gUi);
-        ImGui::TextColored(os.fileOpen ? ImVec4(0.55f, 0.76f, 0.92f, 1) : ImVec4(0.45f, 0.48f, 0.52f, 1), "file");
+        ImGui::TextColored(os.fileOpen ? (pal::dev() ? pal::accent() : ImVec4(0.55f, 0.76f, 0.92f, 1)) : ImVec4(0.45f, 0.48f, 0.52f, 1), "file");
         ImGui::SameLine(0, 10 * gUi);
         iconInline(Ic::Globe, os.udpOpen ? IM_COL32(120, 190, 235, 255) : IM_COL32(86, 94, 104, 255), 0.9f); ImGui::SameLine(0, 3 * gUi);
-        ImGui::TextColored(os.udpOpen ? ImVec4(0.55f, 0.76f, 0.92f, 1) : ImVec4(0.45f, 0.48f, 0.52f, 1), "udp");
+        ImGui::TextColored(os.udpOpen ? (pal::dev() ? pal::accent() : ImVec4(0.55f, 0.76f, 0.92f, 1)) : ImVec4(0.45f, 0.48f, 0.52f, 1), "udp");
         if (os.fileOpen) { ImGui::SameLine(); ImGui::TextDisabled("%.1f MB", os.fileBytes / 1e6); }
         if (os.udpOpen) { ImGui::SameLine(); ImGui::TextDisabled("%s:%d%s", a.udpHost, a.out.port, a.out.rtp ? " RTP" : ""); }
     }

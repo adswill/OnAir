@@ -3,6 +3,7 @@
 //   dect2cli --file path.cs8 --rate Msps [--format cs8|cu8|cf32] [--bw MHz] [--secs N]
 //   dect2cli --record out.cs8 --secs N   (HackRF only; raw IQ capture at the 2x native rate)
 #include "dect2/engine.h"
+#include "dect2/modes.h"
 #include "dect2/dvbt.h"
 #include "dect2/channel.h"
 #include "dect2/quality.h"
@@ -33,6 +34,7 @@ int main(int argc, char** argv) {
     TuneSettings tune;
     FileOptions file;
     double freq = 522, secs = 10;
+    bool freqSet = false;
     int computeMode = 2, playSid = -1, standard = 0, servePort = 0; bool serveLan = false;
     uint64_t vseq = 0;
     bool continue_t2 = true;
@@ -47,7 +49,7 @@ int main(int argc, char** argv) {
         std::string a = argv[i];
         auto next = [&]() { return i + 1 < argc ? argv[++i] : (char*)""; };
         if (a == "--hackrf") haveDev = true;
-        else if (a == "--freq") freq = atof(next());
+        else if (a == "--freq") { freq = atof(next()); freqSet = true; }
         else if (a == "--lna") tune.lnaDb = atoi(next());
         else if (a == "--vga") tune.vgaDb = atoi(next());
         else if (a == "--amp") tune.ampOn = true;
@@ -68,7 +70,13 @@ int main(int argc, char** argv) {
         else if (a == "--dvbt-mod") tune.synth.dvbtMod = atoi(next());     // 0 QPSK, 1 16-QAM, 2 64-QAM
         else if (a == "--dvbt-rate") tune.synth.dvbtRate = atoi(next());   // 0..4 = 1/2, 2/3, 3/4, 5/6, 7/8
         else if (a == "--snr") tune.synth.snrDb = atof(next());
-        else if (a == "--standard") { std::string v = next(); standard = v == "t2" ? 1 : v == "t" || v == "dvbt" ? 2 : v == "atsc" ? 3 : v == "dab" ? 4 : v == "atsc3" ? 5 : v == "isdbt" ? 6 : v == "fm" ? 7 : 0; if (standard == 7) { tune.bandwidthMhz = 0.25; tune.sampleRate = 4e6; tune.basebandFilterHz = 2.5e6; } }
+        else if (a == "--sopt") { const int k = atoi(next()); const int v = atoi(next()); if (k >= 0 && k < 8) tune.synth.modeOpt[k] = v; }       // option k of the mode's test signal (see its <mode>_gen.h)
+        else if (a == "--sval") { const int k = atoi(next()); const double v = atof(next()); if (k >= 0 && k < 4) tune.synth.modeVal[k] = v; }   // value k of the mode's test signal
+        else if (a == "--standard") { std::string v = next(); standard = v == "t2" ? 1 : v == "t" || v == "dvbt" ? 2 : v == "atsc" ? 3 : v == "dab" ? 4 : v == "atsc3" ? 5 : v == "isdbt" ? 6 : v == "fm" ? 7 : 0; if (standard == 7) { tune.bandwidthMhz = 0.25; tune.sampleRate = 4e6; tune.basebandFilterHz = 2.5e6; }
+            if (const ModeTuning* mt = modeTuningById(v)) {   // dvbs, dtmb, atv, dmr, drm, adsb: the tuning table of the mode says how to set the radio up
+                standard = mt->stdMode; tune.bandwidthMhz = mt->bandwidthMhz; tune.sampleRate = mt->sampleRate; tune.basebandFilterHz = mt->basebandHz;
+                if (!freqSet) freq = mt->defMhz;
+            } }
         else if (a == "--compute") { std::string v = next(); computeMode = v == "cpu" ? 0 : v == "gpu" ? 1 : 2; }
         else if (a == "--file") { useFile = true; file.path = next(); file.format = guessFormat(file.path); }
         else if (a == "--rate") file.sampleRate = atof(next()) * 1e6;
@@ -82,7 +90,8 @@ int main(int argc, char** argv) {
         else if (a == "--no-null") out.dropNull = true;
     }
     tune.centerHz = freq * 1e6;
-    if (standard != 7) tune.sampleRate = tune.bandwidthMhz >= 7 ? 10e6 : 8e6; // HackRF Pro: exact tuning only at <= 10 Msps
+    tune.synth.mode = standard >= 8 ? standard : 0;   // the synthetic source plays that mode's test signal
+    if (standard != 7 && standard < 8) tune.sampleRate = tune.bandwidthMhz >= 7 ? 10e6 : 8e6; // HackRF Pro: exact tuning only at <= 10 Msps
     if (useFile) { dev.kind = DeviceInfo::File; dev.name = file.path; file.loop = false; }
     else if (synthetic) { dev.kind = DeviceInfo::Synthetic; dev.name = "synthetic"; }
     else {
@@ -173,6 +182,9 @@ int main(int argc, char** argv) {
             printf("level %6.1f dBFS | FM %.3f MHz state %d carrier %d | SNR %4.1f dB | CFO %+7.0f Hz dev %2.0f kHz | %s pilot %.1f%% | RDS %s %3.0f%% groups %llu PI %04X '%s' [%s] %s | dropped %llu\n",
                    f.levelDbfs, freq, f.state, f.carrier, f.snrDb, f.cfoHz, f.devKhz, f.stereo ? "STEREO" : "mono  ", f.pilotPct, f.rdsSync ? "sync" : "----", f.rdsBlockOkPct,
                    (unsigned long long)f.rdsGroups, f.piCode, f.psName.c_str(), f.ptyText.c_str(), f.radioText.c_str(), (unsigned long long)e.droppedSamples());
+            continue_t2 = false;
+        } else if (t.standard >= 7) {
+            printf("level %6.1f dBFS | %s | dropped %llu\n", sf.stats.rmsDbfs, modeSummary(t).c_str(), (unsigned long long)e.droppedSamples());
             continue_t2 = false;
         } else if (t.standard == 2) {
             const AtscTelemetry& a = t.atsc;

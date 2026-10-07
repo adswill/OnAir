@@ -23,6 +23,9 @@ struct SynthConfig {
     int dvbtMode = 1, dvbtGuard = 2, dvbtMod = 2, dvbtRate = 1; // 8K, GI 1/8, 64-QAM, 2/3
     double pace = 1.0;     // 1 = real time; below 1 the signal runs in slow motion (tests on slow machines: the receiver gets 1/pace times the time)
     bool gainModel = false; // scale the level with the LNA/VGA/amp gains (for testing AGC): 62 dB total = the nominal level
+    int mode = 0;           // 0: the DVB / ATSC / DAB settings above; 8 and up: the test signal of that engine standard (see mode_synth.h)
+    int modeOpt[8] = {};    // options of that test signal; every mode says what they mean in its <mode>_gen.h
+    double modeVal[4] = {};
 };
 
 struct TuneSettings {

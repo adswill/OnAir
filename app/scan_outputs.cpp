@@ -3,6 +3,7 @@
 #include <random>
 
 void scanTab(App& a) {
+    if (const ModeUi* mu = modeUi(a.family)) { if (mu->scan) mu->scan(a); else ImGui::TextDisabled("Scanning is not available for this mode yet. Tune with the frequency field."); return; }
     if (a.dabMode) { dabScanTab(a); return; }
     if (a.fmMode) { fmScanTab(a); return; }
     if (a.atsc3Mode) { ImGui::TextDisabled("Channel scanning does not know ATSC 3.0 yet.\nTune to a channel with the frequency field in the toolbar; the receiver finds the bootstrap by itself."); return; }
@@ -110,7 +111,7 @@ void scanTab(App& a) {
 
 void outputsTab(App& a) {
     bool ch = false;
-    ImGui::TextColored(ImVec4(0.45f, 0.75f, 1, 1), "What to send");
+    ImGui::TextColored(pal::heading(), "What to send");
     {
         std::string cur = "Whole multiplex";
         for (auto& sv : a.ts.services) if (sv.id == a.selService) cur = sv.name.empty() ? "service " + std::to_string(sv.id) : sv.name;
@@ -127,7 +128,7 @@ void outputsTab(App& a) {
     if (ImGui::Checkbox("remove null packets", &a.out.dropNull)) ch = true;
     ImGui::SameLine(); ImGui::TextDisabled("(a single service is always rewritten with its own PAT)");
     ImGui::Spacing();
-    ImGui::TextColored(ImVec4(0.45f, 0.75f, 1, 1), "File (.ts)");
+    ImGui::TextColored(pal::heading(), "File (.ts)");
     ImGui::SetNextItemWidth(520 * gUi);
     ImGui::InputText("##fp", a.filePath, sizeof a.filePath);
     ImGui::SameLine();
@@ -135,7 +136,7 @@ void outputsTab(App& a) {
     ImGui::SameLine();
     if (ImGui::Checkbox("record", &a.out.file)) ch = true;
     ImGui::Spacing();
-    ImGui::TextColored(ImVec4(0.45f, 0.75f, 1, 1), "UDP");
+    ImGui::TextColored(pal::heading(), "UDP");
     ImGui::SetNextItemWidth(200 * gUi);
     if (ImGui::InputText("address", a.udpHost, sizeof a.udpHost)) {}
     ImGui::SameLine(); ImGui::SetNextItemWidth(90 * gUi);
@@ -159,7 +160,7 @@ void outputsTab(App& a) {
     ImGui::PopFont();
     if (!os.error.empty()) ImGui::TextColored(ImVec4(0.95f, 0.4f, 0.3f, 1), "%s", os.error.c_str());
     ImGui::Spacing();
-    ImGui::TextColored(ImVec4(0.45f, 0.75f, 1, 1), "Network tuner");
+    ImGui::TextColored(pal::heading(), "Network tuner");
     {
         const NetTunerStats ns = a.net.stats();
         bool apply = false;
@@ -192,7 +193,7 @@ void outputsTab(App& a) {
     }
     if (airplay::available()) {
         ImGui::Spacing();
-        ImGui::TextColored(ImVec4(0.45f, 0.75f, 1, 1), "Cast to a TV (AirPlay)");
+        ImGui::TextColored(pal::heading(), "Cast to a TV (AirPlay)");
         const int sid = a.engine.player().selected();
         const airplay::State st = airplay::state();
         ImGui::BeginDisabled(sid < 0 || st == airplay::State::Choosing);

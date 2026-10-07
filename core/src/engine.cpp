@@ -1,6 +1,7 @@
 #include "dect2/engine.h"
 #include "dect2/dvbt.h"
 #include "dect2/isdbt.h"
+#include "dect2/modes.h"
 #include "dect2/t2rx.h"
 #include <chrono>
 #include "dect2/platform.h"
@@ -25,6 +26,9 @@ static void dropNonFinite(cf32* x, size_t n) {
     for (size_t i = 0; i < n; i++)
         if (!std::isfinite(x[i].real()) || !std::isfinite(x[i].imag())) x[i] = cf32(0.f, 0.f);
 }
+
+// The receiver that runs for an engine standard code (setStandard): 0 and 1 are DVB-T2, 2 DVB-T, ... so it is the code minus one
+static int activeStdFor(int stdMode) { return stdMode >= 2 ? stdMode - 1 : 0; }
 
 Engine::Engine() : t0_(std::chrono::steady_clock::now()) {}
 Engine::~Engine() { stop(); }
@@ -99,6 +103,26 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     rxI_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });
     rxFm_.configure(rate_);
     if (stdMode_.load() == 7 && !rxFm_.ready()) log("FM needs a sample rate of at least 500 ksps");
+    rxDvbs_.configure(rate_);
+    rxDvbs_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the receiver thread
+    rxDvbs_.setLogCallback([this](const std::string& s) { log(s); });
+    rxDtmb_.configure(rate_);
+    rxDtmb_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the receiver thread
+    rxDtmb_.setLogCallback([this](const std::string& s) { log(s); });
+    rxAtv_.configure(rate_);
+    rxAtv_.setLogCallback([this](const std::string& s) { log(s); });
+    rxDmr_.configure(rate_);
+    rxDmr_.setLogCallback([this](const std::string& s) { log(s); });
+    rxDrm_.configure(rate_);
+    rxDrm_.setLogCallback([this](const std::string& s) { log(s); });
+    rxAdsb_.configure(rate_);
+    rxAdsb_.setLogCallback([this](const std::string& s) { log(s); });
+    if (const ModeTuning* mt = modeTuning(stdMode_.load()))
+        if (rate_.load() < mt->minSampleRate - 1) {
+            char m[200];
+            snprintf(m, sizeof m, "sample rate %.2f Msps is too low for %s (at least %.2f Msps is needed) - the receiver cannot work with this radio", rate_.load() / 1e6, mt->name, mt->minSampleRate / 1e6);
+            log(m);
+        }
     logIMode_ = logIGi_ = logITmcc_ = -1; logISync_ = false;
     rxA3_.configure(rate_);
     rxA3_.setBlocking(!src_->realtimeHardware());
@@ -106,8 +130,9 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     atsc3Seq_ = 0; logA3State_ = -1; logA3Svc_ = false;
     { std::lock_guard<std::mutex> lk(atsc3Mu_); atsc3Tel_ = Atsc3Telemetry(); }
     dabSeq_ = 0; logDState_ = -1; logDEns_ = false;
+    for (auto& s : modeSeq_) s = 0;
     atscSeq_ = 0; logAState_ = -1;
-    activeStd_ = stdMode_.load() == 2 ? 1 : stdMode_.load() == 3 ? 2 : stdMode_.load() == 4 ? 3 : stdMode_.load() == 5 ? 4 : stdMode_.load() == 6 ? 5 : stdMode_.load() == 7 ? 6 : 0;
+    activeStd_ = activeStdFor(stdMode_.load());
     autoMark_ = 0; lastLockSec_ = 0; logTMode_ = logTGi_ = logTTps_ = -1; logTFec_ = false;
     {
         std::lock_guard<std::mutex> lk(tsMu_);
@@ -203,6 +228,12 @@ void Engine::applyReset() {
     rxA3_.reset();
     rxI_.reset();
     rxFm_.reset();
+    rxDvbs_.reset();
+    rxDtmb_.reset();
+    rxAtv_.reset();
+    rxDmr_.reset();
+    rxDrm_.reset();
+    rxAdsb_.reset();
     autoMark_ = nSamp_ / std::max(1.0, rate_.load()); lastLockSec_ = autoMark_;
     analyzer_.reset();
     {
@@ -245,7 +276,7 @@ void Engine::onTsPackets(const uint8_t* pk, size_t n, double secs) {
 // so idle searching costs one receiver, not two.
 void Engine::feedRx(const cf32* x, size_t n) {
     const int a = activeStd_.load();
-    if (a == 5) rxI_.feed(x, n); else if (a == 4) rxA3_.feed(x, n); else if (a == 3) rxD_.feed(x, n); else if (a == 2) rxA_.feed(x, n); else if (a == 1) rxT_.feed(x, n); else if (a == 6) rxFm_.feed(x, n); else rx_.feed(x, n);
+    if (a == 5) rxI_.feed(x, n); else if (a == 4) rxA3_.feed(x, n); else if (a == 3) rxD_.feed(x, n); else if (a == 2) rxA_.feed(x, n); else if (a == 1) rxT_.feed(x, n); else if (a == 6) rxFm_.feed(x, n); else if (a == 7) rxDvbs_.feed(x, n); else if (a == 8) rxDtmb_.feed(x, n); else if (a == 9) rxAtv_.feed(x, n); else if (a == 10) rxDmr_.feed(x, n); else if (a == 11) rxDrm_.feed(x, n); else if (a == 12) rxAdsb_.feed(x, n); else rx_.feed(x, n);
 }
 
 void Engine::changeBandwidth(double mhz) {
@@ -285,12 +316,25 @@ void Engine::autoSelect(const RxTelemetry& t, bool tLocked) {
     const double now = nSamp_ / std::max(1.0, rate_.load());
     if (stdReq_.exchange(false)) {
         const int m = stdMode_.load();
-        if (m == 1 && activeStd_ != 0) { activeStd_ = 0; rx_.reset(); }
-        else if (m == 2 && activeStd_ != 1) { activeStd_ = 1; rxT_.reset(); }
-        else if (m == 3 && activeStd_ != 2) { activeStd_ = 2; rxA_.reset(); }
-        else if (m == 4 && activeStd_ != 3) { activeStd_ = 3; rxD_.reset(); }
-        else if (m == 5 && activeStd_ != 4) { activeStd_ = 4; rxA3_.reset(); }
-        else if (m == 6 && activeStd_ != 5) { activeStd_ = 5; rxI_.reset(); }
+        if (m >= 1 && activeStd_ != activeStdFor(m)) {
+            activeStd_ = activeStdFor(m);
+            switch (activeStd_.load()) {
+            case 0: rx_.reset(); break;
+            case 1: rxT_.reset(); break;
+            case 2: rxA_.reset(); break;
+            case 3: rxD_.reset(); break;
+            case 4: rxA3_.reset(); break;
+            case 5: rxI_.reset(); break;
+            case 6: rxFm_.reset(); break;
+            case 7: rxDvbs_.reset(); break;
+            case 8: rxDtmb_.reset(); break;
+            case 9: rxAtv_.reset(); break;
+            case 10: rxDmr_.reset(); break;
+            case 11: rxDrm_.reset(); break;
+            case 12: rxAdsb_.reset(); break;
+            default: break;
+            }
+        }
         autoMark_ = lastLockSec_ = now;
         return;
     }
@@ -654,6 +698,102 @@ void Engine::analysisLoop() {
                     t.dataSnrDb = ft.snrDb;
                     t.rateOk = true;
                     t.fm = std::move(ft);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    rxTel_ = std::move(t);
+                }
+            } else if (activeStd_.load() == 7) {
+                DvbsTelemetry mt;
+                if (rxDvbs_.telemetry(mt, modeSeq_[0])) {
+                    modeSeq_[0] = mt.seq;
+                    t.standard = 7;
+                    t.seq = mt.seq;
+                    t.state = mt.state;
+                    t.cfoHz = mt.cfoHz;
+                    t.dataValid = mt.dataValid;
+                    t.dataSnrDb = mt.snrDb;
+                    t.blocksOk = mt.blocksOk; t.blocksBad = mt.blocksBad;
+                    t.rateOk = rxDvbs_.ready();
+                    t.dvbs = std::move(mt);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    rxTel_ = std::move(t);
+                }
+            } else if (activeStd_.load() == 8) {
+                DtmbTelemetry mt;
+                if (rxDtmb_.telemetry(mt, modeSeq_[1])) {
+                    modeSeq_[1] = mt.seq;
+                    t.standard = 8;
+                    t.seq = mt.seq;
+                    t.state = mt.state;
+                    t.cfoHz = mt.cfoHz;
+                    t.dataValid = mt.dataValid;
+                    t.dataSnrDb = mt.snrDb;
+                    t.blocksOk = mt.blocksOk; t.blocksBad = mt.blocksBad;
+                    t.rateOk = rxDtmb_.ready();
+                    t.dtmb = std::move(mt);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    rxTel_ = std::move(t);
+                }
+            } else if (activeStd_.load() == 9) {
+                AtvTelemetry mt;
+                if (rxAtv_.telemetry(mt, modeSeq_[2])) {
+                    modeSeq_[2] = mt.seq;
+                    t.standard = 9;
+                    t.seq = mt.seq;
+                    t.state = mt.state;
+                    t.cfoHz = mt.cfoHz;
+                    t.dataValid = mt.dataValid;
+                    t.dataSnrDb = mt.snrDb;
+                    t.blocksOk = mt.blocksOk; t.blocksBad = mt.blocksBad;
+                    t.rateOk = rxAtv_.ready();
+                    t.atv = std::move(mt);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    rxTel_ = std::move(t);
+                }
+            } else if (activeStd_.load() == 10) {
+                DmrTelemetry mt;
+                if (rxDmr_.telemetry(mt, modeSeq_[3])) {
+                    modeSeq_[3] = mt.seq;
+                    t.standard = 10;
+                    t.seq = mt.seq;
+                    t.state = mt.state;
+                    t.cfoHz = mt.cfoHz;
+                    t.dataValid = mt.dataValid;
+                    t.dataSnrDb = mt.snrDb;
+                    t.blocksOk = mt.blocksOk; t.blocksBad = mt.blocksBad;
+                    t.rateOk = rxDmr_.ready();
+                    t.dmr = std::move(mt);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    rxTel_ = std::move(t);
+                }
+            } else if (activeStd_.load() == 11) {
+                DrmTelemetry mt;
+                if (rxDrm_.telemetry(mt, modeSeq_[4])) {
+                    modeSeq_[4] = mt.seq;
+                    t.standard = 11;
+                    t.seq = mt.seq;
+                    t.state = mt.state;
+                    t.cfoHz = mt.cfoHz;
+                    t.dataValid = mt.dataValid;
+                    t.dataSnrDb = mt.snrDb;
+                    t.blocksOk = mt.blocksOk; t.blocksBad = mt.blocksBad;
+                    t.rateOk = rxDrm_.ready();
+                    t.drm = std::move(mt);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    rxTel_ = std::move(t);
+                }
+            } else if (activeStd_.load() == 12) {
+                AdsbTelemetry mt;
+                if (rxAdsb_.telemetry(mt, modeSeq_[5])) {
+                    modeSeq_[5] = mt.seq;
+                    t.standard = 12;
+                    t.seq = mt.seq;
+                    t.state = mt.state;
+                    t.cfoHz = mt.cfoHz;
+                    t.dataValid = mt.dataValid;
+                    t.dataSnrDb = mt.snrDb;
+                    t.blocksOk = mt.blocksOk; t.blocksBad = mt.blocksBad;
+                    t.rateOk = rxAdsb_.ready();
+                    t.adsb = std::move(mt);
                     std::lock_guard<std::mutex> lk(rxMu_);
                     rxTel_ = std::move(t);
                 }

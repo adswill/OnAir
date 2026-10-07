@@ -1,3 +1,4 @@
+#include "dect2/mode_synth.h"
 #include "dect2/source.h"
 #include "dect2/demo_ts.h"
 #include "dect2/dvbt_gen.h"
@@ -262,7 +263,7 @@ private:
     std::vector<uint8_t> raw_;
 };
 
-// ---------------------------------------------------------------- synthetic DVB-T2-like signal
+// ---------------------------------------------------------------- synthetic DVB-T2-like signal (and the test signals of the other modes, see mode_synth.h)
 
 class SyntheticSource : public PacedSource {
 public:
@@ -278,7 +279,7 @@ public:
 
 protected:
     double pace() override { std::lock_guard<std::mutex> lk(mu_); return cfg_.pace > 0.01 ? cfg_.pace : 1.0; }
-    double effectiveRate(const TuneSettings& s) override { return s.synth.atsc ? (s.sampleRate > 0 && s.sampleRate < 12e6 ? s.sampleRate : 8e6) : nativeRateHz(s.bandwidthMhz); }
+    double effectiveRate(const TuneSettings& s) override { if (s.synth.mode >= 8) return s.sampleRate > 0 ? s.sampleRate : 2e6; return s.synth.atsc ? (s.sampleRate > 0 && s.sampleRate < 12e6 ? s.sampleRate : 8e6) : nativeRateHz(s.bandwidthMhz); }
     bool prepare(const TuneSettings& s, std::string&) override {
         cfg_ = s.synth;
         gainDb_ = s.lnaDb + s.vgaDb + (s.ampOn ? 14 : 0);
@@ -286,8 +287,25 @@ protected:
         return true;
     }
 
+    size_t produceMode(cf32* dst, size_t maxN) {   // the test signal of a mode added after FM
+        if (regen_ || !ms_ || msMode_ != cfg_.mode) {
+            ms_ = makeModeSynth(cfg_.mode, cfg_, rate_);
+            msMode_ = cfg_.mode;
+            regen_ = false;
+            if (!ms_) log_("no built-in test signal for this mode yet: the source sends silence");
+        }
+        if (!ms_) { std::fill(dst, dst + maxN, cf32(0.f, 0.f)); return maxN; }
+        ms_->generate(dst, maxN);
+        const float g = cfg_.gainModel ? (float)std::pow(10.0, (gainDb_ - 62) / 20.0) : 1.f;
+        auto q = [](float x) { return std::round(std::min(127.f, std::max(-128.f, x * 128.f))) / 128.f; };
+        for (size_t i = 0; i < maxN; i++) dst[i] = cf32(q(dst[i].real() * g), q(dst[i].imag() * g));
+        return maxN;
+    }
+    static void log_(const char* m) { if (getenv("DECT2_DEBUG")) fprintf(stderr, "%s\n", m); }
+
     size_t produce(cf32* dst, size_t maxN) override {
         std::lock_guard<std::mutex> lk(mu_);
+        if (cfg_.mode >= 8) return produceMode(dst, maxN);
         if (cfg_.atsc) {
             if (regen_ || !agen_) {
                 atsc::ChannelConfig cc;
@@ -362,6 +380,8 @@ protected:
 
 private:
     std::unique_ptr<atsc::Generator> agen_;
+    std::unique_ptr<ModeSynth> ms_;
+    int msMode_ = 0;
     std::vector<cf32> atmp_;
     std::mutex mu_;
     SynthConfig cfg_;

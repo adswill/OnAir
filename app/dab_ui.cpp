@@ -87,7 +87,7 @@ void dabStatus(App& a) {
     ImGui::AlignTextToFramePadding();
     iconInline(Ic::Gauge, iconDim(), 0.9f); ImGui::SameLine(0, 4 * gUi); ImGui::TextDisabled("Level"); ImGui::SameLine(0, 5 * gUi);
     {
-        const ImU32 col = adc == AdcStatus::Overload ? IM_COL32(176, 66, 58, 255) : adc == AdcStatus::Good ? IM_COL32(40, 112, 150, 255) : IM_COL32(176, 130, 48, 255);
+        const ImU32 col = adc == AdcStatus::Overload ? IM_COL32(176, 66, 58, 255) : adc == AdcStatus::Good ? pal::remap(IM_COL32(40, 112, 150, 255)) : IM_COL32(176, 130, 48, 255);
         snprintf(b, sizeof b, run ? "%.1f dBFS" : "-", st.rmsDbfs);
         gaugePill(130, run ? (st.rmsDbfs + 60.f) / 60.f : 0.f, col, b);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("ADC level (rms). %s\npeak %.2f   clip %.3f%%   DC %+.3f / %+.3f", adcAdvice(adc).c_str(), st.peak, st.clipFraction * 100, st.dcI, st.dcQ);
@@ -97,7 +97,7 @@ void dabStatus(App& a) {
     iconInline(Ic::Signal, iconDim(), 0.9f); ImGui::SameLine(0, 4 * gUi); ImGui::TextDisabled("Signal"); ImGui::SameLine(0, 5 * gUi);
     {
         const float t = live && d.state == 2 ? std::min(1.f, std::max(0.f, (float)((d.snrDb - 4.0) / 18.0))) : 0.f;
-        const ImU32 col = t < 0.25f ? IM_COL32(176, 66, 58, 255) : t < 0.5f ? IM_COL32(176, 130, 48, 255) : IM_COL32(40, 112, 150, 255);
+        const ImU32 col = t < 0.25f ? IM_COL32(176, 66, 58, 255) : t < 0.5f ? IM_COL32(176, 130, 48, 255) : pal::remap(IM_COL32(40, 112, 150, 255));
         snprintf(b, sizeof b, live && d.state == 2 ? "%.0f%%  %s" : "-", t * 100, t > 0.8f ? "excellent" : t > 0.55f ? "good" : t > 0.3f ? "fair" : "poor");
         gaugePill(130, t, col, b);
         if (ImGui::IsItemHovered() && live) ImGui::SetTooltip("DAB needs roughly 10 dB SNR for error-free audio.\nSNR %.1f dB, FIC blocks ok %d of 12 in the last frame.", d.snrDb, d.ficRecentOk);
@@ -126,13 +126,16 @@ void dabHistory(App& a) {
 void dabPanels(App& a) {
     const DabTelemetry& d = a.rx.dab;
     const float availW = ImGui::GetContentRegionAvail().x, availH = ImGui::GetContentRegionAvail().y;
-    const float side = std::max(90.f, std::min(availH - 26.f - ImGui::GetFrameHeight(), availW / 4.f - 16.f));
-    const float gap = std::max(6.f, (availW - 4 * side) / 5.f);
-    const ImVec2 sz(side, side);
+    const float gap = 12 * gUi;
+    const float plotH = std::max(90.f, availH - 26.f - ImGui::GetFrameHeight());
+    const float sqW = std::min(plotH, std::max(120.f, availW * 0.25f));                    // the square plot keeps its own width,
+    const float colW = std::max(120.f, (availW - 5 * gap - sqW) / 3.f);                    // the other three share the rest
+    const ImVec2 sz(colW, plotH);
+    const ImVec2 sq(sqW, sqW);        // the cell plot stays square
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + gap);
     ImGui::BeginGroup();
     ImGui::TextDisabled("DQPSK cells (%zu)", d.constellation.size());
-    scatter("##d1", d.constellation, sz, 1.8, pal::accent(0.40f));
+    scatter("##d1", d.constellation, sq, 1.8, pal::accent(0.40f));
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
@@ -216,8 +219,8 @@ void dabStations(App& a) {
         const bool hov = ImGui::IsItemHovered();
         if (clicked) dabSelectStation(a, ac->subId, !sel);
         dl->AddRectFilled(p, ImVec2(p.x + w, p.y + cardH - 4), sel ? IM_COL32(30, 36, 40, 255) : hov ? IM_COL32(26, 27, 29, 255) : IM_COL32(16, 17, 19, 255), 4.f);
-        dl->AddRect(p, ImVec2(p.x + w, p.y + cardH - 4), sel ? IM_COL32(115, 184, 209, 255) : IM_COL32(48, 50, 52, 255), 4.f, 0, sel ? 1.6f : 1.f);
-        icons::draw(sel ? Ic::Speaker : Ic::Radio, ImVec2(p.x + 20, p.y + 15), 17.f, sel ? IM_COL32(120, 200, 255, 255) : IM_COL32(120, 136, 156, 255), dl);
+        dl->AddRect(p, ImVec2(p.x + w, p.y + cardH - 4), sel ? pal::remap(IM_COL32(115, 184, 209, 255)) : IM_COL32(48, 50, 52, 255), 4.f, 0, sel ? 1.6f : 1.f);
+        icons::draw(sel ? Ic::Speaker : Ic::Radio, ImVec2(p.x + 20, p.y + 15), 17.f, sel ? pal::remap(IM_COL32(120, 200, 255, 255)) : IM_COL32(120, 136, 156, 255), dl);
         const std::string name = sv->label.empty() ? "service " + std::to_string(sv->sid) : sv->label;
         dl->AddText(a.ui, 16.f, ImVec2(p.x + 34, p.y + 6), IM_COL32(245, 247, 250, 255), name.c_str());
         float x = p.x + 10;
@@ -260,8 +263,8 @@ void dabStations(App& a) {
         for (const auto& kv : ens.services) { const DabComponent* ac = kv.second.audio(); if (ac && ac->subId == cur) { name = kv.second.label; dls = kv.second.dls; } }
         const ImVec2 p = ImGui::GetCursorScreenPos();
         const float cw = ImGui::GetContentRegionAvail().x;
-        icons::draw(Ic::Radio, ImVec2(p.x + cw * 0.5f, p.y + 28), 36.f, cur >= 0 ? IM_COL32(120, 200, 255, 255) : IM_COL32(70, 80, 92, 255));
-        ImGui::Dummy(ImVec2(1 * gUi, 52 * gUi));
+        if (!pal::dev()) icons::draw(Ic::Radio, ImVec2(p.x + cw * 0.5f, p.y + 28), 36.f, cur >= 0 ? pal::remap(IM_COL32(120, 200, 255, 255)) : IM_COL32(70, 80, 92, 255));
+        ImGui::Dummy(ImVec2(1 * gUi, (pal::dev() ? 6 : 52) * gUi));
         const ImVec2 ts = ImGui::CalcTextSize(name.c_str());
         ImGui::SetCursorPosX(std::max(0.f, (cw - ts.x) * 0.5f));
         ImGui::TextUnformatted(name.c_str());
@@ -277,7 +280,7 @@ void dabRadioTab(App& a) {
     if (ens.services.empty()) { ImGui::TextDisabled(a.engine.running() ? "waiting for the ensemble information (a second or two)..." : "start the receiver on a DAB channel (5A to 13F)"); return; }
     ImGui::AlignTextToFramePadding();
     ImGui::PushFont(a.ui, 20.f);
-    ImGui::TextColored(ImVec4(0.55f, 0.80f, 1.f, 1), "%s", ens.label.empty() ? "DAB ensemble" : ens.label.c_str());
+    ImGui::TextColored(pal::dev() ? pal::accent() : ImVec4(0.55f, 0.80f, 1.f, 1), "%s", ens.label.empty() ? "DAB ensemble" : ens.label.c_str());
     ImGui::PopFont();
     ImGui::SameLine(0, 12 * gUi);
     ImGui::TextDisabled("%zu stations   ensemble id %04X", ens.services.size(), ens.eid);
@@ -354,7 +357,7 @@ void dabScanTab(App& a) {
     ImGui::Spacing();
     if (!s.running) {
         ImGui::BeginDisabled(!run);
-        if (iconButton(Ic::Scan, "Scan Band III", IM_COL32(32, 96, 140, 255), IM_COL32(44, 124, 178, 255))) {
+        if (iconButton(Ic::Scan, "Scan Band III", pal::remap(IM_COL32(32, 96, 140, 255)), pal::remap(IM_COL32(44, 124, 178, 255)))) {
             s.running = true; s.idx = -1; s.t0 = 0; s.results.clear(); s.savedFreq = a.freqMhz;
             a.engine.dabSelect(-1);
         }

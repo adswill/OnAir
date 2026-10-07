@@ -1,0 +1,506 @@
+// DVB-S/S2 receiver, see dvbs_rx.h.
+#include "dect2/dvbs_rx.h"
+#include "dect2/dvbs_s2.h"
+#include "dvbs_carrier.h"
+#include "dvbs_front.h"
+#include "dvbs_s1.h"
+#include "dvbs_s2hunt.h"
+#include "dvbs_s2rx.h"
+#include "dvbs_spec.h"
+#include "dvbs_symthread.h"
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <cmath>
+#include <cstring>
+#include <mutex>
+#include <thread>
+
+namespace dect2 {
+using namespace dvbs;
+
+double dvbsMaxSymbolRate(double fs, double rollOff) { return fs / (1.3 * (1.0 + rollOff)); }
+double dvbsMinAutoSymbolRate(double fs) { return std::max(60e3, fs * 40.0 / 4096.0 * 2.5); }   // about 40 spectrum bins across the carrier
+
+ModeTuning dvbsTuning() {
+    ModeTuning t;
+    t.stdMode = 8; t.id = "dvbs"; t.name = "DVB-S/S2";
+    t.minMhz = 700; t.maxMhz = 2400; t.defMhz = 1500.0;       // the L-band IF of an LNB: 950 to 2150 MHz, 739 MHz for the QO-100 narrow band transponder
+    t.sampleRate = 10000000.0; t.basebandHz = 8000000.0; t.bandwidthMhz = 8;
+    t.minSampleRate = 2000000.0;
+    return t;
+}
+
+namespace {
+using clk = std::chrono::steady_clock;
+constexpr size_t kHuntWindow = 49152;       // (DVB-S)        // symbols a DVB-S attempt looks at: 16384 for the carrier loop to settle, 32768 to find the code
+constexpr size_t kHuntKeep = 294912;        // symbols kept for the frame search of DVB-S2: up to eight long frames, the more the weaker a signal it finds
+constexpr size_t kS2Window = 262144;
+constexpr size_t kCellsMax = 2048;
+
+double snapRollOff(double a) {
+    static const double v[6] = {0.35, 0.25, 0.20, 0.15, 0.10, 0.05};
+    double best = v[0];
+    for (double x : v) if (std::fabs(x - a) < std::fabs(best - a)) best = x;
+    return best;
+}
+} // namespace
+
+struct DvbsReceiver::Impl {
+    enum Mode { kSearch = 0, kHunt = 1, kS1 = 2, kS2 = 3 };
+
+    // ---- settings from other threads
+    std::atomic<double> manualRs{0}, rollHint{0};
+    std::atomic<int> stdHint{0}, isiSel{-1}, plCode{-1};
+    std::atomic<bool> blocking{false};
+    std::atomic<bool> resetReq{false}, restartReq{false};
+    std::mutex cbMu;
+    std::function<void(const std::string&)> logCb;
+    std::function<void(const uint8_t*, size_t, double)> pktCb;
+
+    // ---- state of the receiver thread
+    double fs = 0;
+    Mode mode = kSearch;
+    std::atomic<uint64_t> inputCount{0};
+    uint64_t reportAt = 0;
+    SpectrumEstimator spec;
+    SpectrumResult specRes;
+    std::vector<float> psdDb;
+    int searchTries = 0;
+    DvbsFront front;
+    std::vector<cf32> sym, y;
+    uint64_t symTotal = 0;
+    bool timingNarrow = false, recentred = false;
+    double rsUsed = 0, rollUsed = 0.35;
+    int rollSource = 0;
+    // hunting
+    std::vector<cf32> huntBuf;
+    uint64_t huntSinceTry = 0;
+    double rsNominal = 0;                       // the rate the spectrum (or the user) gave; hunts that fail try rates a little either side of it
+    int huntFails = 0, ditherIdx = 0, huntCycles = 0;     // failed attempts at one rate, the rate in the dither list, complete lists tried
+    // DVB-S: the carrier loop and the decoder run on a thread of their own, fed with the symbols of the front end
+    QpskPll pll;
+    S1Decoder s1;
+    SymbolThread s1th;
+    std::vector<cf32> s1y;
+    std::vector<uint8_t> s1pk;
+    uint64_t s1Symbols = 0, s1Mark = 0;      // symbols the thread has processed, and at the last packet delivery
+    std::atomic<bool> s1Lost{false};
+    std::atomic<double> rateNow{0};          // symbol rate of the front end, kept for the threads
+    struct S1Snap {
+        bool started = false, synced = false, inverted = false;
+        int rate = 0, consecutiveBad = 0;
+        float lock = 0, snrDb = 0;
+        double freq = 0, byteErrors = 0;
+        uint64_t rsClean = 0, rsCorrected = 0, rsFailed = 0;
+    } s1Snap;
+    std::mutex s1Mu, cellMu;
+    uint64_t s2Symbols = 0;
+    std::atomic<bool> tsLockFlag{false};
+    // DVB-S2
+    S2Rx s2;
+    // packets and counters
+    std::vector<uint8_t> pk;
+    std::atomic<uint64_t> packets{0};
+    std::atomic<uint64_t> packetsBad{0};
+    std::atomic<uint64_t> lockSinceInput{0};
+    std::vector<cf32> cells;
+    size_t cellPos = 0;
+    std::vector<float> merHist;
+    uint64_t rateMark = 0, ratePackets = 0;
+    double netBitrate = 0;
+    // telemetry
+    std::mutex tmu;
+    DvbsTelemetry tel;
+    uint64_t seq = 0;
+    uint64_t seqBase = 0;
+
+    void log(const std::string& s) {
+        std::function<void(const std::string&)> cb;
+        { std::lock_guard<std::mutex> lk(cbMu); cb = logCb; }
+        if (cb) cb(s);
+    }
+    void logf(const char* f, double a = 0, double b = 0, const char* c = "", const char* d = "") {
+        char buf[200];
+        snprintf(buf, sizeof buf, f, a, b, c, d);
+        log(buf);
+    }
+
+    void resetState() {
+        mode = kSearch;
+        inputCount = 0; reportAt = 0;
+        spec.reset();
+        specRes = SpectrumResult();
+        searchTries = 0;
+        sym.clear(); y.clear();
+        symTotal = 0; timingNarrow = false; recentred = false;
+        huntBuf.clear(); huntSinceTry = 0;
+        s1th.stop();
+        s1.reset(); s1Symbols = 0; s1Mark = 0; s1Lost = false;
+        s2.stop();
+        packets = 0; packetsBad = 0;
+        lockSinceInput = 0; tsLockFlag = false;
+        { std::lock_guard<std::mutex> lk(cellMu); cells.clear(); cellPos = 0; }
+        merHist.clear();
+        rateMark = 0; ratePackets = 0; netBitrate = 0;
+        psdDb.clear();
+    }
+
+    // ------------------------------------------------------------------------ search: spectrum -> front end
+    void doSearch() {
+        if (spec.segments() < 48) return;
+        specRes = spec.analyse();
+        spec.display(psdDb, 512);
+        const double manual = manualRs.load();
+        const bool carrier = specRes.valid && specRes.zscore >= 8.f && specRes.fitRms < 2.5f;
+        const double rs = manual > 0 ? manual : specRes.rateHz;
+        if (!carrier || rs < dvbsMinAutoSymbolRate(fs) * (manual > 0 ? 0.0 : 1.0) || rs > dvbsMaxSymbolRate(fs, 0.35) * 1.02) {
+            spec.reset();
+            searchTries++;
+            return;
+        }
+        startFront(specRes, rs);
+    }
+
+    void startFront(const SpectrumResult& r, double rs) {
+        double roll = 0.35;
+        rollSource = 0;
+        if (rollHint.load() > 0) { roll = rollHint.load(); rollSource = 1; }
+        else if (r.rollOff > 0 && r.snrDb > 15.0f) { roll = snapRollOff(r.rollOff); rollSource = 1; }
+        DvbsFront::Config c;
+        c.fs = fs; c.symbolRate = rs; c.centerHz = r.centerHz; c.rollOff = roll;
+        front.configure(c);
+        front.timer().setLoop(0.02, 0.707);
+        rsUsed = rs; rollUsed = roll;
+        symTotal = 0; timingNarrow = false; recentred = false;
+        huntBuf.clear(); huntSinceTry = 0;
+        rsNominal = rs; huntFails = 0; ditherIdx = 0; huntCycles = 0;
+        mode = kHunt;
+        logf("carrier found: %.3f Msym/s, %+.0f kHz from the centre", rs / 1e6, r.centerHz / 1e3);
+    }
+
+    // ------------------------------------------------------------------------ the symbol path
+    void runFront(const cf32* x, size_t n) {
+        sym.clear();
+        front.process(x, n, sym);
+        if (sym.empty()) return;
+        symTotal += sym.size();
+        rateNow = front.symbolRateNow();
+        if (!timingNarrow && symTotal > 40000) { front.timer().setLoop(0.004, 0.707); timingNarrow = true; }
+        if (!recentred && symTotal > 200000) { front.recentre(); recentred = true; }
+        switch (mode) {
+        case kHunt: huntPush(); break;
+        case kS1: s1Push(); break;
+        case kS2: s2Push(); break;
+        default: break;
+        }
+    }
+
+    void addCells(const cf32* z, size_t n) {
+        std::lock_guard<std::mutex> lk(cellMu);
+        if (cells.size() < kCellsMax) cells.resize(kCellsMax, cf32());
+        for (size_t i = 0; i < n; i += 4) { cells[cellPos] = z[i]; cellPos = (cellPos + 1) % kCellsMax; }   // every fourth symbol keeps the display current
+    }
+
+    void huntPush() {
+        huntBuf.insert(huntBuf.end(), sym.begin(), sym.end());
+        if (huntBuf.size() > 2 * kHuntKeep) huntBuf.erase(huntBuf.begin(), huntBuf.end() - (std::ptrdiff_t)kHuntKeep);
+        huntSinceTry += sym.size();
+        // a signal that is not there is looked for less often: the interval doubles after each complete round of rates, up to four times as long
+        const uint64_t interval = std::max<uint64_t>(65536, (uint64_t)(0.15 * rsUsed)) * (uint64_t)std::min(4, 1 << std::min(huntCycles, 2));
+        if (huntBuf.size() >= kHuntWindow && huntSinceTry >= interval && symTotal > 20000) {
+            huntSinceTry = 0;
+            if (tryDvbs2() || tryDvbs()) { huntFails = 0; return; }
+            // The spectrum gives the symbol rate to a percent or two at best, and in noise the timing loop cannot pull in much more than that:
+            // after a few attempts the rate is moved a little and the front end starts again
+            if (++huntFails >= 3 && huntBuf.size() >= 150000) {
+                static const double d[6] = {0.012, -0.012, 0.024, -0.024, 0.036, -0.036};
+                const double f = ditherIdx < 6 ? d[ditherIdx] : 0.0;
+                ditherIdx = (ditherIdx + 1) % 7;
+                if (ditherIdx == 0) huntCycles++;
+                huntFails = 0;
+                DvbsFront::Config c = front.config();
+                c.symbolRate = rsNominal * (1.0 + f);
+                front.configure(c);
+                front.timer().setLoop(0.02, 0.707);
+                rsUsed = c.symbolRate;
+                symTotal = 0; timingNarrow = false; recentred = false;
+                huntBuf.clear(); huntSinceTry = 0;
+            }
+        }
+    }
+
+    bool tryDvbs2() {
+        if (stdHint.load() == 1 || huntBuf.size() < 100000) return false;
+        const size_t n = std::min(huntBuf.size(), kS2Window);
+        const cf32* w = huntBuf.data() + huntBuf.size() - n;
+        const S2HuntResult h = s2Hunt(w, n);
+        if (!h.ok) return false;
+        s2.setSymbolRate(front.symbolRateNow());
+        s2.setPlCode(plCode.load());
+        s2.setIsi(isiSel.load());
+        s2.setBlocking(blocking.load());
+        s2.setPacketCallback([this](const uint8_t* p, size_t np, double secs) {
+            std::function<void(const uint8_t*, size_t, double)> cb;
+            { std::lock_guard<std::mutex> lk(cbMu); cb = pktCb; }
+            packets.fetch_add(np);
+            if (!tsLockFlag.exchange(true)) { lockSinceInput = inputCount.load(); log("transport stream lock"); }
+            if (cb) cb(p, np, secs);
+        });
+        s2.setLogCallback([this](const std::string& m) { log(m); });
+        s2.start(h, w, n);
+        front.timer().setLoop(0.001, 0.707);       // the frames carry the timing now: a narrow loop wanders less
+        s2Symbols = 0;
+        mode = kS2;
+        int mod, rate;
+        if (h.modcod != 0 && s2ModcodSplit(h.modcod, mod, rate))
+            log(std::string("DVB-S2, ") + s2ModName(mod) + " " + s2RateName(rate) + (h.shortFrame ? " short" : "") + (h.pilots ? " pilots" : "") + (h.inverted ? ", spectrum inverted" : ""));
+        else log("DVB-S2, dummy frames");
+        return true;
+    }
+
+    void s2Push() {
+        s2Symbols += sym.size();
+        s2.push(sym.data(), sym.size());
+        if (s2.lost()) {
+            s2.stop();
+            tsLockFlag = false;
+            mode = kHunt; huntBuf.clear(); huntSinceTry = 0;
+        }
+    }
+
+    bool tryDvbs() {
+        if (stdHint.load() == 2) return false;
+        const cf32* w = huntBuf.data() + huntBuf.size() - kHuntWindow;
+        const QpskEstimate e = qpskEstimate(w, 16384);
+        if (!e.ok) return false;
+        std::vector<cf32> yy(kHuntWindow);
+        QpskPll p;
+        p.start(e.freq, e.phase, 0.02);
+        p.process(w, 16384, yy.data());
+        p.setBandwidth(0.005);
+        p.process(w + 16384, kHuntWindow - 16384, yy.data() + 16384);
+        const S1Hypothesis h = s1Search(yy.data() + 16384, kHuntWindow - 16384);
+        if (!h.ok) return false;
+        pll = p;
+        s1.start(h, kHuntWindow - 16384);
+        s1Symbols = 0; s1Mark = 0; s1Lost = false;
+        snapS1();
+        s1th.start([this](const cf32* z, size_t m) { s1Work(z, m); }, 1u << 22, blocking.load());
+        mode = kS1;
+        static const char* rn[5] = {"1/2", "2/3", "3/4", "5/6", "7/8"};
+        log(std::string("DVB-S, QPSK ") + rn[h.rate] + ((h.variant & 2) ? ", spectrum inverted" : ""));
+        return true;
+    }
+
+    // runs on the DVB-S thread
+    void s1Work(const cf32* z, size_t n) {
+        s1y.resize(n);
+        pll.process(z, n, s1y.data());
+        addCells(s1y.data(), n);
+        s1Symbols += n;
+        if (s1.started()) {
+            s1.push(s1y.data(), n);
+            s1pk.clear();
+            s1.takePackets(s1pk);
+            deliver();
+        }
+        if (!s1.started()) {                 // the decoder lost its hypothesis: look again
+            log("DVB-S: sync lost");
+            tsLockFlag = false;
+            s1Lost = true;
+        } else if (!s1.synced() && s1Symbols > 600000) {
+            log("DVB-S: no packet sync, searching again");
+            s1.reset();
+            s1Lost = true;
+        }
+        snapS1();
+    }
+
+    void snapS1() {
+        std::lock_guard<std::mutex> lk(s1Mu);
+        s1Snap.started = s1.started(); s1Snap.synced = s1.synced(); s1Snap.inverted = (s1.hypothesis().variant & 2) != 0;
+        s1Snap.rate = s1.rate(); s1Snap.consecutiveBad = s1.consecutiveBad();
+        s1Snap.lock = pll.lock(); s1Snap.snrDb = pll.snrDb(); s1Snap.freq = pll.freq();
+        s1Snap.byteErrors = s1.byteErrorRate();
+        s1Snap.rsClean = s1.rsClean; s1Snap.rsCorrected = s1.rsCorrected; s1Snap.rsFailed = s1.rsFailed;
+    }
+
+    void s1Push() {
+        s1th.push(sym.data(), sym.size());
+        if (s1Lost.load()) {
+            s1th.stop();
+            s1Lost = false;
+            mode = kHunt; huntBuf.clear(); huntSinceTry = 0;
+        }
+    }
+
+    void deliver() {
+        if (s1pk.empty()) return;
+        const size_t np = s1pk.size() / 188;
+        uint64_t bad = 0;
+        for (size_t i = 0; i < np; i++) if (s1pk[i * 188 + 1] & 0x80) bad++;
+        packets += np; packetsBad += bad;
+        const double secs = (double)(s1Symbols - s1Mark) / std::max(1.0, rateNow.load());
+        s1Mark = s1Symbols;
+        std::function<void(const uint8_t*, size_t, double)> cb;
+        { std::lock_guard<std::mutex> lk(cbMu); cb = pktCb; }
+        if (cb) cb(s1pk.data(), np, secs);
+        if (np > bad && !tsLockFlag.exchange(true)) { lockSinceInput = inputCount.load(); log("transport stream lock"); }
+    }
+
+    // ------------------------------------------------------------------------ telemetry
+    void publish() {
+        DvbsTelemetry t;
+        const double nowSec = (double)inputCount / fs;
+        t.standard = mode == kS1 ? 1 : mode == kS2 ? 2 : 0;
+        t.symbolRate = mode == kSearch ? (specRes.valid ? specRes.rateHz : 0) : front.symbolRateNow();
+        t.symbolRateManual = manualRs.load() > 0;
+        t.symbolRateSpectrum = specRes.valid ? specRes.rateHz : 0;
+        t.symbolRateLoop = mode == kSearch ? 0 : front.symbolRateNow();
+        t.spectrumSnrDb = specRes.valid ? specRes.snrDb : 0;
+        t.spectrumFitRms = specRes.fitRms;
+        t.rollOff = (float)rollUsed;
+        t.rollOffSource = rollSource;
+        t.lockSpectrum = mode != kSearch;
+        t.lockTiming = mode != kSearch && timingNarrow && front.timer().errorRms() > 0 && front.timer().errorRms() < 0.6f;
+        t.psdDb = psdDb;
+        t.psdSpanHz = fs;
+        t.carrierLoHz = specRes.valid ? specRes.edgeLoHz : 0;
+        t.carrierHiHz = specRes.valid ? specRes.edgeHiHz : 0;
+        t.cfoHz = specRes.valid ? specRes.centerHz : 0;
+        if (mode == kS1) {
+            S1Snap q;
+            { std::lock_guard<std::mutex> lk(s1Mu); q = s1Snap; }
+            t.modulation = 0; t.modulationName = "QPSK";
+            static const char* rn[5] = {"1/2", "2/3", "3/4", "5/6", "7/8"};
+            t.codeRate = rn[q.rate];
+            t.inverted = q.inverted;
+            t.lockCarrier = q.lock > 0.4f;
+            t.snrDb = q.snrDb; t.merDb = q.snrDb;
+            t.cfoHz = front.config().centerHz + q.freq * front.symbolRateNow();
+            t.lockFrame = q.synced;
+            t.rsClean = q.rsClean; t.rsCorrected = q.rsCorrected; t.rsFailed = q.rsFailed;
+            t.blocksOk = q.rsClean + q.rsCorrected; t.blocksBad = q.rsFailed;
+            t.lockFec = q.synced && q.consecutiveBad < 8;
+            // bit error rate after the Viterbi decoder, from the bytes Reed-Solomon had to change (about 1.5 bit errors in a byte it changes); too low when blocks fail
+            t.preFecBer = q.rsClean + q.rsCorrected > 100 ? (float)std::min(0.5, q.byteErrors * 1.5 / 8.0) : -1.f;
+        } else if (mode == kS2) {
+            const S2Stats s = s2.stats();
+            if (s.mod >= 0) { t.modulation = s.mod; t.modulationName = s2ModName(s.mod); t.codeRate = s2RateName(s.rate); }
+            t.modcod = s.modcod; t.frameSize = s.shortFrame ? 2 : 1; t.pilots = s.pilots; t.vcm = s.vcm; t.isi = s.isi;
+            t.plScramblingCode = plCode.load() < 0 ? 0 : plCode.load();
+            t.inverted = s2.inverted();
+            t.merDb = (float)s.merDb; t.snrDb = (float)s.merDb;
+            t.lockCarrier = s2.carrierLocked();
+            t.cfoHz = front.config().centerHz + s.carrierRadPerSym / (2 * 3.14159265358979) * front.symbolRateNow();
+            t.lockFrame = s2.tracking() && s.consecutiveHeaderBad == 0 && s.framesSeen > 0;
+            t.lockFec = s.consecutiveBad < 3 && s.fecOk > 0;
+            t.blocksOk = s.fecOk; t.blocksBad = s.fecBad;
+            t.bchOk = s.fecOk; t.bchBad = s.bchBad;
+            t.ldpcIterAvg = (float)s.ldpcIterAvg;
+            t.preFecBer = (float)s.berPre;
+            t.framesSeen = s.framesSeen; t.framesDummy = s.framesDummy; t.crcErrors = s.crcErrors; t.gseFrames = s.gseFrames;
+            if (s.roSignalled >= 0 && s.roSignalled < 3) { t.rollOff = s.roSignalled == 0 ? 0.35f : s.roSignalled == 1 ? 0.25f : 0.20f; t.rollOffSource = 2; }
+            if (s.gseFrames > 0 && s.tsGs != 3) t.signalNote = "generic stream (GSE) seen: not converted to a transport stream";
+            { std::lock_guard<std::mutex> lk(cellMu); s2.cells(cells); }
+        } else if (mode == kHunt) {
+            t.snrDb = specRes.valid ? specRes.snrDb : 0;
+        } else {
+            t.snrDb = 0;
+        }
+        { const S2Stats s = mode == kS2 ? s2.stats() : S2Stats(); t.packetsBad = mode == kS2 ? s.packetsBad : packetsBad.load(); }
+        t.packets = packets.load();
+        t.tsLock = tsLockFlag.load() && t.lockFec;
+        t.dataValid = t.tsLock;
+        t.secsSinceLock = t.tsLock ? nowSec - (double)lockSinceInput / fs : 0;
+        t.netBitrate = netBitrate;
+        t.state = t.dataValid ? 2 : (mode == kSearch ? 0 : 1);
+        {
+            std::lock_guard<std::mutex> lk(cellMu);
+            if (!cells.empty()) {
+                const size_t n = std::min(cells.size(), kCellsMax);
+                t.cells.assign(cells.end() - (std::ptrdiff_t)n, cells.end());
+            }
+        }
+        // the transport stream bit rate over the last second or so
+        if (inputCount.load() - rateMark >= (uint64_t)fs) {
+            const double dt = (double)(inputCount.load() - rateMark) / fs;
+            const uint64_t pk = packets.load();
+            netBitrate = (double)(pk - ratePackets) * 188.0 * 8.0 / dt;
+            rateMark = inputCount.load(); ratePackets = pk;
+        }
+        merHist.push_back(t.merDb);
+        if (merHist.size() > 120) merHist.erase(merHist.begin());
+        t.merHistory = merHist;
+        {
+            std::lock_guard<std::mutex> lk(tmu);
+            seq++;
+            t.seq = seq;
+            tel = std::move(t);
+        }
+    }
+};
+
+// ============================================================================ the class
+DvbsReceiver::DvbsReceiver() : p_(std::make_unique<Impl>()) {}
+DvbsReceiver::~DvbsReceiver() {
+    // the threads use the members of Impl: stop them while those are all alive
+    p_->s1th.stop();
+    p_->s2.stop();
+}
+
+void DvbsReceiver::configure(double inputRateHz) {
+    p_->fs = inputRateHz;
+    p_->spec.configure(inputRateHz, 4096);
+    p_->spec.setStride((size_t)std::max(4096.0, inputRateHz * 0.004));
+    p_->resetState();
+}
+bool DvbsReceiver::ready() const { return p_->fs >= dvbsTuning().minSampleRate - 1; }
+void DvbsReceiver::reset() { p_->resetReq = true; }
+void DvbsReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->cbMu); p_->logCb = std::move(cb); }
+void DvbsReceiver::setPacketCallback(std::function<void(const uint8_t*, size_t, double)> cb) { std::lock_guard<std::mutex> lk(p_->cbMu); p_->pktCb = std::move(cb); }
+void DvbsReceiver::setSymbolRate(double hz) { if (hz != p_->manualRs.load()) { p_->manualRs = hz; p_->restartReq = true; } }
+void DvbsReceiver::setStandardHint(int s) { if (s != p_->stdHint.load()) { p_->stdHint = s; p_->restartReq = true; } }
+void DvbsReceiver::setRollOff(double r) { if (r != p_->rollHint.load()) { p_->rollHint = r; p_->restartReq = true; } }
+void DvbsReceiver::setIsi(int isi) { p_->isiSel = isi; }
+void DvbsReceiver::setPlScrambling(int n) { p_->plCode = n; }
+void DvbsReceiver::setBlocking(bool b) { p_->blocking = b; }
+void DvbsReceiver::flush() {
+    Impl& I = *p_;
+    if (I.mode == Impl::kS1) I.s1th.sync();
+    else if (I.mode == Impl::kS2) I.s2.drain();
+    I.publish();
+}
+
+bool DvbsReceiver::telemetry(DvbsTelemetry& out, uint64_t lastSeq) {
+    std::lock_guard<std::mutex> lk(p_->tmu);
+    if (p_->seq <= lastSeq) return false;
+    out = p_->tel;
+    return true;
+}
+
+void DvbsReceiver::feed(const cf32* x, size_t n) {
+    Impl& I = *p_;
+    if (n == 0 || !ready()) return;
+    if (I.resetReq.exchange(false) || I.restartReq.exchange(false)) {
+        const uint64_t keep = I.seq;
+        I.resetState();
+        I.seq = keep;
+    }
+    I.inputCount += n;
+    I.spec.push(x, n);
+    if (I.mode == Impl::kSearch) I.doSearch();
+    else I.runFront(x, n);
+    if (I.inputCount >= I.reportAt) {
+        I.reportAt = I.inputCount + (uint64_t)(0.25 * I.fs);
+        if (I.mode != Impl::kSearch && I.spec.segments() >= 8) {
+            I.specRes = I.spec.analyse();
+            I.spec.display(I.psdDb, 512);
+            I.spec.reset();
+        }
+        I.publish();
+    }
+}
+
+} // namespace dect2

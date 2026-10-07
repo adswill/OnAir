@@ -172,6 +172,7 @@ inline float iconSize() { return ImGui::GetFontSize() * 0.95f; }
 
 // Icon inline with the text line, advances the cursor (use SameLine afterwards as usual)
 inline void iconInline(Ic id, ImU32 col, float scale = 1.f) {
+    if (pal::dev()) { ImGui::Dummy(ImVec2(0, ImGui::GetTextLineHeight())); return; }   // the dev palette has no decorative icons
     const float s = iconSize() * scale;
     const ImVec2 p = ImGui::GetCursorScreenPos();
     const float lh = ImGui::GetTextLineHeight();
@@ -180,7 +181,7 @@ inline void iconInline(Ic id, ImU32 col, float scale = 1.f) {
 }
 
 inline ImU32 iconDim() { return IM_COL32(120, 132, 148, 255); }
-inline ImU32 iconAccent() { return IM_COL32(132, 158, 184, 255); }
+inline ImU32 iconAccent() { return pal::remap(IM_COL32(132, 158, 184, 255)); }
 
 // Icon followed by a dim label ("icon  text") on the current line
 inline void iconLabel(Ic id, const char* text, ImU32 col = 0) {
@@ -192,15 +193,22 @@ inline void iconLabel(Ic id, const char* text, ImU32 col = 0) {
 // Rounded button with an icon and a label; returns true when clicked
 inline bool iconButton(Ic id, const char* label, ImU32 bg, ImU32 bgHover, ImU32 fg = IM_COL32(245, 248, 250, 255), float padX = 10) {
     ImGui::PushID(label);
-    const float s = iconSize();
+    const float s = pal::dev() ? 0.f : iconSize();
     const ImVec2 ts = label[0] ? ImGui::CalcTextSize(label) : ImVec2(0, 0);
-    const ImVec2 sz(padX * 2 + s + (label[0] ? 6 + ts.x : 0), ImGui::GetFrameHeight());
+    const ImVec2 sz(padX * 2 + s + (label[0] && s > 0 ? 6 : 0) + ts.x * (label[0] ? 1.f : 0.f), ImGui::GetFrameHeight());
     const ImVec2 p = ImGui::GetCursorScreenPos();
     const bool clicked = ImGui::InvisibleButton("##ib", sz);
     ImDrawList* dl = ImGui::GetWindowDrawList();
-    dl->AddRectFilled(p, ImVec2(p.x + sz.x, p.y + sz.y), ImGui::IsItemHovered() ? bgHover : bg, 0.f);
-    icons::draw(id, ImVec2(p.x + padX + s * 0.5f, p.y + sz.y * 0.5f), s * 0.9f, fg);
-    if (label[0]) dl->AddText(ImVec2(p.x + padX + s + 6, p.y + (sz.y - ts.y) * 0.5f), fg, label);
+    if (pal::dev()) {   // flat: an outline and the label, no fill, no icon
+        const bool hov = ImGui::IsItemHovered();
+        if (hov) dl->AddRectFilled(p, ImVec2(p.x + sz.x, p.y + sz.y), IM_COL32(255, 245, 220, 14));
+        dl->AddRect(p, ImVec2(p.x + sz.x, p.y + sz.y), hov ? IM_COL32(214, 200, 170, 255) : IM_COL32(60, 60, 56, 255));
+        if (label[0]) dl->AddText(ImVec2(p.x + padX, p.y + (sz.y - ts.y) * 0.5f), IM_COL32(222, 218, 205, 255), label);
+    } else {
+        dl->AddRectFilled(p, ImVec2(p.x + sz.x, p.y + sz.y), pal::remap(ImGui::IsItemHovered() ? bgHover : bg), 0.f);
+        icons::draw(id, ImVec2(p.x + padX + s * 0.5f, p.y + sz.y * 0.5f), s * 0.9f, fg);
+        if (label[0]) dl->AddText(ImVec2(p.x + padX + s + 6, p.y + (sz.y - ts.y) * 0.5f), fg, label);
+    }
     ImGui::PopID();
     return clicked;
 }
@@ -213,7 +221,7 @@ inline bool iconFlat(Ic id, const char* tip, bool active = false) {
     const bool clicked = ImGui::InvisibleButton("##if", ImVec2(h, h));
     const bool hov = ImGui::IsItemHovered();
     ImDrawList* dl = ImGui::GetWindowDrawList();
-    if (hov || active) dl->AddRectFilled(p, ImVec2(p.x + h, p.y + h), active ? IM_COL32(24, 106, 166, 255) : IM_COL32(46, 56, 68, 255), 5.f);
+    if (hov || active) dl->AddRectFilled(p, ImVec2(p.x + h, p.y + h), active ? pal::remap(IM_COL32(24, 106, 166, 255)) : IM_COL32(46, 56, 68, 255), pal::rnd(5.f));
     icons::draw(id, ImVec2(p.x + h * 0.5f, p.y + h * 0.5f), h * 0.62f, hov || active ? IM_COL32(255, 255, 255, 255) : IM_COL32(170, 182, 196, 255));
     if (hov && tip && tip[0]) ImGui::SetTooltip("%s", tip);
     ImGui::PopID();
@@ -224,11 +232,11 @@ inline bool iconFlat(Ic id, const char* tip, bool active = false) {
 inline void sectionHeader(Ic id, const char* text) {
     iconInline(id, iconAccent());
     ImGui::SameLine(0, 5 * gUi);
-    ImGui::TextColored(ImVec4(0.70f, 0.76f, 0.84f, 1), "%s", text);
+    ImGui::TextColored(pal::dev() ? ImVec4(0.66f, 0.64f, 0.60f, 1) : ImVec4(0.70f, 0.76f, 0.84f, 1), "%s", text);
     ImGui::SameLine(0, 8 * gUi);
     const ImVec2 p = ImGui::GetCursorScreenPos();
     const float w = std::max(1.f, ImGui::GetContentRegionAvail().x), lh = ImGui::GetTextLineHeight();
-    ImGui::GetWindowDrawList()->AddLine(ImVec2(p.x, p.y + lh * 0.5f), ImVec2(p.x + w, p.y + lh * 0.5f), IM_COL32(44, 52, 63, 255));
+    ImGui::GetWindowDrawList()->AddLine(ImVec2(p.x, p.y + lh * 0.5f), ImVec2(p.x + w, p.y + lh * 0.5f), pal::dev() ? IM_COL32(44, 44, 42, 255) : IM_COL32(44, 52, 63, 255));
     ImGui::Dummy(ImVec2(w, lh));
 }
 

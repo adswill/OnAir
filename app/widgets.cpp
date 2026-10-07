@@ -5,12 +5,12 @@ bool tabItem(const char* name, Ic icon) {
     ImGuiTabItemFlags fl = 0;
     if (!gForceTab.empty() && gForceTab == name) { fl = ImGuiTabItemFlags_SetSelected; gForceTab.clear(); }
     // the label is padded with spaces to leave room for the icon, which is drawn over that gap
-    const float gap = iconSize() + 5.f;
+    const float gap = pal::dev() ? 0.f : iconSize() + 5.f;
     const int nSp = (int)std::ceil(gap / ImGui::CalcTextSize(" ").x);
     const std::string label = std::string(nSp, ' ') + name + "###" + name;
     const bool open = ImGui::BeginTabItem(label.c_str(), nullptr, fl);
     const ImVec2 r0 = ImGui::GetItemRectMin(), r1 = ImGui::GetItemRectMax();
-    icons::draw(icon, ImVec2(r0.x + ImGui::GetStyle().FramePadding.x + iconSize() * 0.5f + 1.f, (r0.y + r1.y) * 0.5f), iconSize() * 0.92f,
+    if (!pal::dev()) icons::draw(icon, ImVec2(r0.x + ImGui::GetStyle().FramePadding.x + iconSize() * 0.5f + 1.f, (r0.y + r1.y) * 0.5f), iconSize() * 0.92f,
                 open ? IM_COL32(255, 255, 255, 255) : IM_COL32(140, 154, 170, 255));
     return open;
 }
@@ -32,8 +32,8 @@ bool pillButton(const char* label, bool selected, float padX) {
     const bool clicked = ImGui::InvisibleButton("##pill", sz);
     const bool hov = ImGui::IsItemHovered();
     ImDrawList* dl = ImGui::GetWindowDrawList();
-    const ImU32 bg = selected ? IM_COL32(52, 92, 108, 255) : hov ? IM_COL32(46, 56, 68, 255) : IM_COL32(30, 35, 42, 255);
-    dl->AddRectFilled(p, ImVec2(p.x + sz.x, p.y + sz.y), bg, 3.f);
+    const ImU32 bg = selected ? pal::remap(IM_COL32(52, 92, 108, 255)) : hov ? IM_COL32(46, 56, 68, 255) : IM_COL32(30, 35, 42, 255);
+    dl->AddRectFilled(p, ImVec2(p.x + sz.x, p.y + sz.y), bg, pal::rnd(3.f));
     dl->AddText(ImVec2(p.x + padX, p.y + (sz.y - ts.y) * 0.5f), selected ? IM_COL32(255, 255, 255, 255) : IM_COL32(176, 184, 194, 255), label);
     ImGui::PopID();
     return clicked;
@@ -53,7 +53,7 @@ int subNav(const char* id, int& cur, std::initializer_list<const char*> names) {
 float tagAt(ImDrawList* dl, ImVec2 pos, const char* text, ImU32 bg, ImU32 fg) {
     const ImVec2 ts = ImGui::CalcTextSize(text);
     const float w = ts.x + 10, h = ts.y + 2;
-    dl->AddRectFilled(pos, ImVec2(pos.x + w, pos.y + h), bg, 3.f);
+    dl->AddRectFilled(pos, ImVec2(pos.x + w, pos.y + h), bg, pal::rnd(3.f));
     dl->AddText(ImVec2(pos.x + 5, pos.y + 1), fg, text);
     return w;
 }
@@ -63,10 +63,10 @@ void gaugePill(float width, float frac, ImU32 fill, const char* text) {
     ImVec2 p = ImGui::GetCursorScreenPos();
     p.y += 1;
     ImDrawList* dl = ImGui::GetWindowDrawList();
-    dl->AddRectFilled(p, ImVec2(p.x + width, p.y + h), IM_COL32(14, 16, 20, 255), 3.f);
+    dl->AddRectFilled(p, ImVec2(p.x + width, p.y + h), pal::dev() ? IM_COL32(8, 8, 8, 255) : IM_COL32(14, 16, 20, 255), pal::rnd(3.f));
     frac = std::min(1.f, std::max(0.f, frac));
-    if (frac > 0.02f) dl->AddRectFilled(p, ImVec2(p.x + std::max(h, width * frac), p.y + h), fill, 3.f);
-    dl->AddRect(p, ImVec2(p.x + width, p.y + h), IM_COL32(52, 58, 66, 255), 3.f);
+    if (frac > 0.02f) dl->AddRectFilled(p, ImVec2(p.x + std::max(pal::dev() ? 1.f : h, width * frac), p.y + h), pal::remap(fill), pal::rnd(3.f));
+    dl->AddRect(p, ImVec2(p.x + width, p.y + h), pal::dev() ? IM_COL32(44, 44, 42, 255) : IM_COL32(52, 58, 66, 255), pal::rnd(3.f));
     const ImVec2 ts = ImGui::CalcTextSize(text);
     dl->AddText(ImVec2(p.x + (width - ts.x) * 0.5f, p.y + (h - ts.y) * 0.5f), IM_COL32(240, 244, 248, 255), text);
     ImGui::Dummy(ImVec2(width, h));
@@ -80,9 +80,20 @@ void lamp(const char* label, int state /*0 grey 1 green 2 amber 3 red*/, int ico
     const ImU32 cu = ImGui::ColorConvertFloat4ToU32(c);
     (void)icon;
     const float sq = 7.f, cy = p.y + ImGui::GetTextLineHeight() * 0.5f;
+    if (pal::panel()) {   // a round LED in a dark bezel, with a small highlight when lit
+        const ImVec2 c(p.x + 6.f * gUi, cy);
+        dl->AddCircleFilled(c, 6.f * gUi, IM_COL32(8, 8, 8, 255));
+        dl->AddCircle(c, 6.f * gUi, IM_COL32(70, 70, 68, 255), 0, 1.f);
+        if (state) {
+            dl->AddCircleFilled(c, 4.4f * gUi, cu);
+            dl->AddCircleFilled(ImVec2(c.x - 1.4f * gUi, c.y - 1.6f * gUi), 1.5f * gUi, IM_COL32(255, 255, 255, 120));
+        } else dl->AddCircleFilled(c, 4.4f * gUi, IM_COL32(30, 31, 31, 255));
+        ImGui::Dummy(ImVec2(14.f * gUi, ImGui::GetTextLineHeight()));
+    } else {
     if (state) dl->AddRectFilled(ImVec2(p.x + 1, cy - sq * 0.5f), ImVec2(p.x + 1 + sq, cy + sq * 0.5f), cu);
     else dl->AddRect(ImVec2(p.x + 1, cy - sq * 0.5f), ImVec2(p.x + 1 + sq, cy + sq * 0.5f), cu);
     ImGui::Dummy(ImVec2(sq + 5, ImGui::GetTextLineHeight()));
+    }
     ImGui::SameLine(0, 0);
     ImGui::TextDisabled("%s", label);
     static const struct { const char* k; const char* tip; } kTips[] = {
@@ -165,12 +176,12 @@ void qualityBar(App& a, float width) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
     ImVec2 p = ImGui::GetCursorScreenPos();
     const float h = ImGui::GetFrameHeight();
-    dl->AddRectFilled(p, ImVec2(p.x + width, p.y + h), IM_COL32(120, 28, 28, 255), 3.f); // red = nothing yet
+    dl->AddRectFilled(p, ImVec2(p.x + width, p.y + h), pal::dev() ? IM_COL32(8, 8, 8, 255) : IM_COL32(120, 28, 28, 255), pal::rnd(3.f)); // red = nothing yet
     const float t = pct / 100.f;
     const ImVec4 lo(0.95f, 0.55f, 0.15f, 1), hi(0.25f, 0.85f, 0.35f, 1);
-    const ImVec4 col(lo.x + (hi.x - lo.x) * t, lo.y + (hi.y - lo.y) * t, lo.z + (hi.z - lo.z) * t, 1);
-    if (pct > 0) dl->AddRectFilled(p, ImVec2(p.x + width * t, p.y + h), ImGui::ColorConvertFloat4ToU32(col), 3.f);
-    dl->AddRect(p, ImVec2(p.x + width, p.y + h), IM_COL32(70, 76, 84, 255), 3.f);
+    const ImVec4 col = pal::dev() ? ImVec4(0.65f, 0.48f, 0.18f, 1) : ImVec4(lo.x + (hi.x - lo.x) * t, lo.y + (hi.y - lo.y) * t, lo.z + (hi.z - lo.z) * t, 1);   // the dev palette has no red-to-green blend
+    if (pct > 0) dl->AddRectFilled(p, ImVec2(p.x + width * t, p.y + h), ImGui::ColorConvertFloat4ToU32(col), pal::rnd(3.f));
+    dl->AddRect(p, ImVec2(p.x + width, p.y + h), pal::dev() ? IM_COL32(44, 44, 42, 255) : IM_COL32(70, 76, 84, 255), pal::rnd(3.f));
     char txt[96];
     if (!run || !q.valid) snprintf(txt, sizeof txt, "signal quality: %s", run ? "no lock" : "-");
     else snprintf(txt, sizeof txt, "signal quality %.0f%%  %s", q.percent, q.label.c_str());
@@ -182,6 +193,9 @@ void qualityBar(App& a, float width) {
         if (a3) {
             ImGui::Text("FEC blocks decoded in the last frame: %.1f%%", q.fecOk * 100);
             ImGui::TextDisabled("ATSC 3.0 does not report a signal-to-noise ratio yet; this bar shows how much of the data decodes.");
+        } else if (q.requiredDb <= 0) {   // the modes with no table of required SNR
+            ImGui::Text("data SNR %.1f dB, data decoded %.1f%% (last frames)", q.snrDb, q.fecOk * 100);
+            ImGui::TextDisabled("This bar shows how much of the recent data decodes.");
         } else {
             ImGui::Text("data SNR %.1f dB, needed for this modulation/code rate about %.1f dB", q.snrDb, q.requiredDb);
             ImGui::Text("margin %+.1f dB, FEC blocks decoded %.1f%% (last frames)", q.marginDb, q.fecOk * 100);

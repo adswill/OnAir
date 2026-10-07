@@ -50,6 +50,27 @@ void QualityMeter::update(const RxTelemetry& rx) {
         rep_ = r;
         return;
     }
+    if (rx.standard >= 7) {   // the modes added after FM (DVB-S/S2, DTMB, ...): there is no table of required SNR, so the score is how much of the recent data decoded
+        if (rx.state != 2 && !rx.dataValid) { rep_ = QualityReport(); rep_.label = "no lock"; return; }
+        const uint64_t good = rx.blocksOk, bad = rx.blocksBad;
+        if (lastOk_ != ~0ull && (good >= lastOk_ && bad >= lastBad_) && (good - lastOk_ + bad - lastBad_) > 0) {
+            hist_.push_back({good - lastOk_, bad - lastBad_});
+            if (hist_.size() > 40) hist_.pop_front();
+        }
+        lastOk_ = good; lastBad_ = bad; lastFrames_ = 0;
+        uint64_t ok = 0, ng = 0;
+        for (auto& h : hist_) { ok += h.first; ng += h.second; }
+        QualityReport r;
+        r.valid = true;
+        r.snrDb = rx.dataSnrDb;
+        r.fecOk = (ok + ng) ? (double)ok / (double)(ok + ng) : (rx.dataValid ? 1.0 : 0.0);
+        const double q = 100.0 * r.fecOk * r.fecOk * (rx.dataValid ? 1.0 : 0.5);
+        smooth_ = rep_.valid ? smooth_ + 0.25 * (q - smooth_) : q;
+        r.percent = smooth_;
+        r.label = r.percent >= 85 ? "excellent" : r.percent >= 65 ? "good" : r.percent >= 40 ? "marginal" : "poor";
+        rep_ = r;
+        return;
+    }
     if (rx.standard == 5) {   // ISDB-T: the layer that carries most of the data sets the requirement
         if (!rx.isdbt.tmccOk) { if (rx.state != 2) { rep_ = QualityReport(); rep_.label = "no lock"; } return; }
         const uint64_t good = rx.blocksOk, bad = rx.blocksBad;
