@@ -301,7 +301,7 @@ static void testSnr() {
 static void testOffsets() {
     const dabgen::TxConfig tc = baseConfig();
     for (double rate : {2.048e6, 10e6}) {
-        for (double cfo : {-5000.0, -2490.0, -1234.5, 0.0, 700.0, 2510.0, 3300.0, 5000.0}) {
+        for (double cfo : {-5000.0, -4500.0, -3500.0, -2500.0, -2490.0, -1500.0, -1234.5, 0.0, 700.0, 1500.0, 2500.0, 2510.0, 3300.0, 3500.0, 4500.0, 5000.0}) {   // 1.5, 2.5, ... spacings: half a carrier spacing is where the integer search ties
             SynthConfig sc;
             sc.snrDb = 25; sc.cfoHz = cfo;
             const Result r = run(tc, sc, rate, 5.0, 65536, 1, false);
@@ -310,14 +310,6 @@ static void testOffsets() {
             printf("%s: locked %d, estimated %+.1f Hz, FIB ok %.2f%%, AU bad %llu\n", what, r.tel.state == 2, r.tel.cfoHz, 100 * fibRatio(r), (unsigned long long)r.st.auBad);
             checkClean(r, tc, what);
             CHECK(std::fabs(r.tel.cfoHz - cfo) < 25, "%s: the receiver reads %+.1f Hz", what, r.tel.cfoHz);
-        }
-        {
-            // exactly half a carrier spacing (2500 Hz): the receiver's integer carrier search and its fractional estimate tie, and it can settle one carrier off
-            // (all FIBs bad). Offsets 10 Hz either side work (checked above). Reported, not asserted: it is a receiver limitation, not the signal.
-            SynthConfig sc;
-            sc.snrDb = 25; sc.cfoHz = -2500;
-            const Result r = run(tc, sc, rate, 5.0, 65536, 1, false);
-            printf("%.3f Msps, carrier offset -2500.0 Hz (exactly 2.5 carrier spacings, informational): locked %d, estimated %+.1f Hz, FIB ok %.2f%%\n", rate / 1e6, r.tel.state == 2, r.tel.cfoHz, 100 * fibRatio(r));
         }
         for (double ppm : {-20.0, -5.0, 5.0, 20.0}) {
             SynthConfig sc;

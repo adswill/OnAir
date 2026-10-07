@@ -186,6 +186,7 @@ struct DabReceiver::Impl {
         if (nextU < base + 128) { state = 0; return true; }
         uint64_t U = nextU;
         std::vector<cf32> R, tmp;
+        const bool wasFresh = fresh;
         if (!fresh) {   // refine the timing with the phase reference correlation (the window sits inside the guard interval)
             const uint64_t p = U - 64;
             windowFft(p, cfo, R);
@@ -212,7 +213,23 @@ struct DabReceiver::Impl {
             }
             const double e = std::arg(acc) / (2.0 * kPi);
             const double d = e - cfo;
-            cfo += d - std::round(d);
+            double nc = cfo + d - std::round(d);
+            if (wasFresh) {
+                // The integer part comes from the search at the start and the cyclic prefix only knows the offset modulo one carrier spacing. At an
+                // offset of n + 1/2 spacings both neighbours of the true value look equally good in the search and the unwrapping above may take
+                // the wrong one, a whole spacing off. The first frame after a lock therefore picks the candidate with the sharpest phase reference peak.
+                double bestC = nc;
+                float bestPk = -1.f;
+                for (int k = -1; k <= 1; k++) {
+                    std::vector<cf32> Rc, tc;
+                    int ix;
+                    windowFft(U, nc + k, Rc);
+                    const float pk = cirOf(Rc, 0, ix, tc);
+                    if (pk > bestPk) { bestPk = pk; bestC = nc + k; }
+                }
+                nc = bestC;
+            }
+            cfo = nc;
         }
         // demodulate all symbols
         std::vector<cf32> prev, cur;
