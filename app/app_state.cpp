@@ -60,7 +60,13 @@ void refreshDevices(App& a) {
     a.hackrfErr = err;
     size_t nHack = 0;
     for (const auto& d : a.devices) if (d.kind == DeviceInfo::HackRF) nHack++;
-    a.engine.log("device scan: " + std::to_string(nHack) + " HackRF, " + std::to_string(a.devices.size() - 2 - nHack) + " other radio(s)" + (soapySupported() ? "" : " (built without SoapySDR)"));
+    const std::string line = "device scan: " + std::to_string(nHack) + " HackRF, " + std::to_string(a.devices.size() - 2 - nHack) + " other radio(s)" + (soapySupported() ? "" : " (built without SoapySDR)");
+    a.engine.log(line);
+    // also in the log file (onair.log on Windows), with every radio and any error: what a user can send when a radio does not show up
+    fprintf(stderr, "%s\n", line.c_str());
+    for (size_t i = 2; i < a.devices.size(); i++) fprintf(stderr, "  %s\n", a.devices[i].name.c_str());
+    if (!err.empty()) fprintf(stderr, "  error: %s\n", err.c_str());
+    fflush(stderr);
 }
 
 void applyBandwidth(App& a) {

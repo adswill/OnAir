@@ -54,7 +54,9 @@ struct DynLib {
             }
             return false;
         }
-        for (const auto& n : names) if (tryOpen(n)) return true;
+        // The outcome always goes to the log (stderr; onair.log on Windows): when a radio does not show up, this says which library was used or why none was
+        for (const auto& n : names) if (tryOpen(n)) { fprintf(stderr, "radio library: %s\n", n.c_str()); fflush(stderr); return true; }
+        if (!names.empty()) { fprintf(stderr, "radio library not found: %s\n", base(names.back()).c_str()); fflush(stderr); }
         return false;
     }
     template <class F> bool get(F& fn, const char* name) {
@@ -74,11 +76,14 @@ private:
         // a full path: the libraries it needs in turn are looked for in its own folder first as well
         const bool full = n.find('\\') != std::string::npos || n.find('/') != std::string::npos;
         h = full ? (void*)LoadLibraryExA(n.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH) : (void*)LoadLibraryA(n.c_str());
+        if (!h && full && GetFileAttributesA(n.c_str()) != INVALID_FILE_ATTRIBUTES) {   // the file is there but does not load: a library it needs is missing, or it was blocked
+            fprintf(stderr, "radio library %s is there but does not load (Windows error %lu)\n", n.c_str(), (unsigned long)GetLastError());
+            fflush(stderr);
+        }
 #else
         h = dlopen(n.c_str(), RTLD_NOW | RTLD_LOCAL);
 #endif
         if (h) path = n;
-        if (h && getenv("DECT2_DEBUG")) fprintf(stderr, "native radio library loaded: %s\n", n.c_str());
         return h != nullptr;
     }
 };

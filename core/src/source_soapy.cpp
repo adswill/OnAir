@@ -6,6 +6,7 @@
 #include <SoapySDR/Errors.h>
 #include <SoapySDR/Formats.h>
 #include <SoapySDR/Types.h>
+#include <SoapySDR/Version.hpp>
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -211,7 +212,10 @@ std::vector<DeviceInfo> listSoapyDevices(std::string& err) {
                 }
             } catch (...) {}
             out.push_back(d);
+            fprintf(stderr, "SoapySDR: found %s (driver %s)\n", d.name.c_str(), driver.c_str());
         }
+        fprintf(stderr, "SoapySDR %s: %zu radio(s) besides HackRF\n", SoapySDR::getAPIVersion().c_str(), out.size());
+        fflush(stderr);
     } catch (const std::exception& e) {
         err = std::string("SoapySDR: ") + e.what();
     }
