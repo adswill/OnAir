@@ -1,12 +1,8 @@
 # Full check: every platform and code path, all tests including the slow ones.
-# Runs nightly, on release tags and by hand (Actions tab > Full CI > Run workflow).
+# CI normally runs locally (tools/ci_local.sh --full); this one only runs by hand: Actions tab > Full CI > Run workflow.
 name: Full CI
 
 on:
-  schedule:
-    - cron: '0 2 * * *'
-  push:
-    tags: ['v*']
   workflow_dispatch:
 
 jobs:

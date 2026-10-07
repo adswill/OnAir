@@ -1,11 +1,10 @@
-# Quick check on every push: builds the app, tools and tests on Linux, macOS and Windows and runs
-# the fast tests in parallel. The slow tests and the other code paths run in ci-full.yml.
+# Quick check: builds the app, tools and tests on Linux, macOS and Windows and runs the fast tests in
+# parallel. The slow tests and the other code paths run in ci-full.yml. CI normally runs locally
+# (tools/ci_local.sh); this one only runs by hand: Actions tab > CI > Run workflow.
 name: CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  workflow_dispatch:
 
 # A newer push cancels the run still going for an older one.
 concurrency:
