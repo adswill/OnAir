@@ -282,12 +282,13 @@ LdpcCode::Result LdpcCode::Decoder::decode(const float* llr, uint8_t* info, int 
                         const uint32_t sign = sg[i] ^ (std::bit_cast<uint32_t>(q) & 0x80000000u);
                         const float v = std::bit_cast<float>(std::bit_cast<uint32_t>(m) | sign);
                         rn[i] = v;
-                        qb[i] = std::max(-kClip, std::min(kClip, q + v));
+                        qb[i] = q + v;
                     }
                     float* lv = &lv_[(size_t)edges[(size_t)b].col * 128];
                     const int sh = edges[(size_t)b].shift;
-                    std::memcpy(lv + sh, qb, (size_t)(Z - sh) * sizeof(float));
-                    std::memcpy(lv, qb + (Z - sh), (size_t)sh * sizeof(float));
+                    const int n1 = Z - sh;
+                    for (int i = 0; i < n1; i++) lv[i + sh] = std::max(-kClip, std::min(kClip, qb[i]));
+                    for (int i = n1; i < Z; i++) lv[i + sh - Z] = std::max(-kClip, std::min(kClip, qb[i]));
                 }
             };
             if (iter == 1) pass2(std::true_type{}); else pass2(std::false_type{});
@@ -340,9 +341,28 @@ const LdpcCode& ldpcCode(Rate r) {
 // ---------------------------------------------------------------- BCH
 namespace {
 constexpr uint32_t kBchPoly = 0x409;   // x^10 + x^3 + 1
+// Eight bits at a time: (rem << 8) mod p is a table of 1024 entries, the byte is added to it (the byte has fewer bits than the polynomial).
 uint32_t bchRem(const uint8_t* bits, int n, int extraZeros) {
+    static const std::array<uint16_t, 1024> shift8 = [] {
+        std::array<uint16_t, 1024> t{};
+        for (uint32_t r = 0; r < 1024; r++) {
+            uint32_t v = r;
+            for (int k = 0; k < 8; k++) { v <<= 1; if (v & 0x400u) v ^= kBchPoly; }
+            t[r] = (uint16_t)v;
+        }
+        return t;
+    }();
     uint32_t rem = 0;
-    for (int i = 0; i < n + extraZeros; i++) {
+    int i = 0;
+    if constexpr (std::endian::native == std::endian::little) {
+        for (; i + 8 <= n; i += 8) {
+            uint64_t v;
+            std::memcpy(&v, bits + i, 8);   // one bit per byte, the first bit in the lowest byte: gather them into a byte, the first bit on top
+            const uint32_t byte = (uint32_t)((v * 0x8040201008040201ull) >> 56);
+            rem = shift8[rem] ^ byte;
+        }
+    }
+    for (; i < n + extraZeros; i++) {
         rem = (rem << 1) | (i < n ? bits[i] : 0u);
         if (rem & 0x400u) rem ^= kBchPoly;
     }
