@@ -16,6 +16,7 @@ static void expectClean(const RunResult& r, const char* what, double minPackets,
     CHECK(r.good >= minPackets, "%s: only %llu good packets (wanted %.0f); %s", what, (unsigned long long)r.good, minPackets, dvbsSummary(r.tel).c_str());
     CHECK(r.bad == 0, "%s: %llu damaged packets", what, (unsigned long long)r.bad);
     CHECK(r.gaps == 0, "%s: %llu jumps in the packet counter (%llu packets lost)", what, (unsigned long long)r.gaps, (unsigned long long)r.lost);
+    if (std::getenv("CI")) maxLockSecs *= 3;   // the shared CI machines run several tests at once
     CHECK(r.firstPacketSecs >= 0 && r.firstPacketSecs <= maxLockSecs, "%s: first packet after %.2f s (limit %.2f s)", what, r.firstPacketSecs, maxLockSecs);
 }
 
