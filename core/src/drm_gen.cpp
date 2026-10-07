@@ -480,15 +480,25 @@ public:
     double sampleRate() const override { return rate_; }
 
     void generate(cf32* out, size_t n) override {
-        for (size_t i = 0; i < n; i++) {
-            while ((size_t)pos_ + 3 >= buf_.size()) refill();
-            const size_t i0 = (size_t)pos_;
-            const float t = (float)(pos_ - (double)i0);
-            // Catmull-Rom interpolation of the 192 kHz stream (the signal is far narrower than the band, so images do not matter)
-            const cf32 p0 = buf_[i0 - 1], p1 = buf_[i0], p2 = buf_[i0 + 1], p3 = buf_[i0 + 2];
-            const cf32 v = p1 + 0.5f * t * ((p2 - p0) + t * ((2.f * p0 - 5.f * p1 + 4.f * p2 - p3) + t * (3.f * (p1 - p2) + p3 - p0)));
-            out[i] = v * scale_;
-            pos_ += step_;
+        constexpr size_t kBlk = 512;
+        for (size_t o = 0; o < n; o += kBlk) {
+            const size_t nb = std::min(kBlk, n - o);
+            // the 192 kHz stream this block reads, made in one go
+            while ((size_t)(pos_ + step_ * (double)(nb - 1)) + 3 >= buf_.size()) refill();
+            const float* b = reinterpret_cast<const float*>(buf_.data());
+            float* d = reinterpret_cast<float*>(out + o);
+            for (size_t i = 0; i < nb; i++) {
+                const double pos = pos_ + step_ * (double)i;
+                const size_t i0 = (size_t)pos;
+                const float t = (float)(pos - (double)i0);
+                // Catmull-Rom interpolation of the 192 kHz stream (the signal is far narrower than the band, so images do not matter), real and imaginary part alike
+                const float* p = b + 2 * (i0 - 1);
+                for (int c = 0; c < 2; c++) {
+                    const float p0 = p[c], p1 = p[2 + c], p2 = p[4 + c], p3 = p[6 + c];
+                    d[2 * i + (size_t)c] = scale_ * (p1 + 0.5f * t * ((p2 - p0) + t * ((2.f * p0 - 5.f * p1 + 4.f * p2 - p3) + t * (3.f * (p1 - p2) + p3 - p0))));
+                }
+            }
+            pos_ += step_ * (double)nb;
         }
         // drop what is behind us
         const size_t keep = (size_t)pos_ - 1;
@@ -500,10 +510,20 @@ private:
         std::vector<cf32> s;
         tx_->superFrame(s);
         // centre the occupied carriers on 0 Hz
-        for (size_t i = 0; i < s.size(); i++) {
-            s[i] *= cf32(std::polar(1.0, cphase_));
-            cphase_ -= 2 * M_PI * centre_ / 48000.0;
-            if (cphase_ < -2 * M_PI) cphase_ += 2 * M_PI;
+        {
+            // by a rotating phasor (renormalised every 1024 samples) instead of a sine and cosine for every sample
+            const double w = -2 * M_PI * centre_ / 48000.0;
+            const float wr = (float)std::cos(w), wi = (float)std::sin(w);
+            float zr = (float)std::cos(cphase_), zi = (float)std::sin(cphase_);
+            for (size_t i = 0; i < s.size(); i++) {
+                const float re = s[i].real(), im = s[i].imag();
+                s[i] = cf32(re * zr - im * zi, re * zi + im * zr);
+                const float t = zr * wr - zi * wi;
+                zi = zr * wi + zi * wr; zr = t;
+                if ((i & 1023) == 1023) { const float m = 1.f / std::sqrt(zr * zr + zi * zi); zr *= m; zi *= m; }
+            }
+            cphase_ += w * (double)s.size();
+            cphase_ = std::fmod(cphase_, 2 * M_PI);
         }
         if (chan_) chan_->process(s.data(), s.size());
         if (echoAmp_ > 0) {
@@ -521,11 +541,18 @@ private:
         std::vector<cf32> u;
         up_.process(s.data(), s.size(), u);
         // carrier offset at 192 kHz
-        for (size_t i = 0; i < u.size(); i++) {
-            u[i] *= cf32(std::polar(1.0, phase_));
-            phase_ += 2 * M_PI * sc_.cfoHz / 192000.0;
-            if (phase_ > 2 * M_PI) phase_ -= 2 * M_PI;
-            if (phase_ < -2 * M_PI) phase_ += 2 * M_PI;
+        if (sc_.cfoHz != 0 || phase_ != 0) {
+            const double w = 2 * M_PI * sc_.cfoHz / 192000.0;
+            const float wr = (float)std::cos(w), wi = (float)std::sin(w);
+            float zr = (float)std::cos(phase_), zi = (float)std::sin(phase_);
+            for (size_t i = 0; i < u.size(); i++) {
+                const float re = u[i].real(), im = u[i].imag();
+                u[i] = cf32(re * zr - im * zi, re * zi + im * zr);
+                const float t = zr * wr - zi * wi;
+                zi = zr * wi + zi * wr; zr = t;
+                if ((i & 1023) == 1023) { const float m = 1.f / std::sqrt(zr * zr + zi * zi); zr *= m; zi *= m; }
+            }
+            phase_ = std::fmod(phase_ + w * (double)u.size(), 2 * M_PI);
         }
         buf_.insert(buf_.end(), u.begin(), u.end());
     }

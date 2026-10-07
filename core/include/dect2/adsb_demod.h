@@ -47,6 +47,7 @@ private:
     void compact();
     void updateNoise(float bin);
     void endBlock();
+    std::vector<uint8_t> flag_;      // scratch of makeBins: the bins that pass the first test of the preamble search
     void updateNoiseRun(const float* bins, size_t n);   // updateNoise for n bins in a row
     float pulseThreshold() const { return n0_ * std::max(kPulse_, 1.0f + 2.4f * cv_); }   // what a pulse window must exceed
 
@@ -57,6 +58,7 @@ private:
     cf32 hist_[11];                                 // the last input samples before the next chunk
     float taps_[12] = {};
     std::vector<cf32> tmp_, z_;
+    std::vector<float> tmpR_, tmpI_, yR_, yI_;       // the upsampler's work arrays: real and imaginary parts apart
     Sink sink_;
     float kPulse_ = 3.0f, kGap_ = 2.0f;
 

@@ -39,18 +39,26 @@ struct Programme {
     static constexpr double kNotes[16] = {261.63, 261.63, 392.00, 392.00, 440.00, 440.00, 392.00, 0, 349.23, 349.23, 329.63, 329.63, 293.66, 293.66, 261.63, 0};
     double gain(double f) const { const double w = 2 * kPi * f * preUs * 1e-6; return std::sqrt(1 + w * w); }
     // audio at time t, multiplied by the pre-emphasis gain
+    // sin(2 pi x) for any x (a Taylor series on the quarter turn, error below 1e-10)
+    static double sinTurns(double x) {
+        double r = x - std::nearbyint(x);                            // -0.5 .. 0.5 turns
+        r = r > 0.25 ? 0.5 - r : r < -0.25 ? -0.5 - r : r;
+        const double y = 2 * kPi * r, y2 = y * y;
+        return y * (1 + y2 * (-1.0 / 6 + y2 * (1.0 / 120 + y2 * (-1.0 / 5040 + y2 * (1.0 / 362880 + y2 * (-1.0 / 39916800 + y2 * (1.0 / 6227020800.0 + y2 * (-1.0 / 1307674368000.0))))))));
+    }
     double at(double t) const {
         double f = 1000, env = 1;
-        if (mode == 0) { env = std::fmod(t, 1.5) < 1.3 ? 1 : 0; }
+        if (mode == 0) { const double u = t * (1.0 / 1.5); env = (u - std::floor(u)) * 1.5 < 1.3 ? 1 : 0; }
         else if (mode == 1) {
             const double ts = t / 0.35;
-            const int note = (int)std::fmod(std::floor(ts), 16.0);
-            const double x = ts - std::floor(ts);
+            const double fl = std::floor(ts);
+            const int note = (int)(fl - 16.0 * std::floor(fl * (1.0 / 16.0)));
+            const double x = ts - fl;
             f = kNotes[note];
             env = f > 0 ? std::min(1.0, std::min(x, 1 - x) * 20) : 0;
         } else if (mode != 4) return 0;
         if (f <= 0 || env <= 0) return 0;
-        return amp * env * gain(f) * std::sin(2 * kPi * f * t);
+        return amp * env * gain(f) * sinTurns(f * t);
     }
 };
 
@@ -108,6 +116,7 @@ struct AtvGenerator::Impl {
     Programme prog;
     double sndPh = 0;                                // the sound carrier phase, radians in [-pi, pi]
     std::vector<float> sPh;
+    std::vector<double> sPhD;
     uint64_t audioBlock = ~0ull;
     double audioA0 = 0, audioA1 = 0, audioDt = 0;
     std::vector<cf32> ghost;
@@ -583,7 +592,7 @@ struct AtvGenerator::Impl {
         w0 -= 2 * kPi * std::nearbyint(w0 / (2 * kPi));                  // the carrier step modulo a turn, so that one correction a sample is enough
         const double dk = 2 * kPi * dev * dt;
         constexpr uint64_t B = 32;
-        sPh.resize(n);
+        sPh.resize(n); sPhD.resize(n);
         double ph = sndPh;
         size_t i = 0;
         while (i < n) {
@@ -596,15 +605,14 @@ struct AtvGenerator::Impl {
             // up to the end of this block of 32 samples the audio is a straight line: the phase advances by a constant plus a ramp
             const size_t m0 = (size_t)(k % B), cnt = std::min<size_t>(n - i, (size_t)B - m0);
             const double slope = (audioA1 - audioA0) / (double)B;
-            double au = audioA0 + slope * (double)m0;
-            for (size_t q = 0; q < cnt; q++, au += slope) {
-                ph += w0 + dk * au;                                     // the carrier and the deviation, as phase
-                ph = ph > kPi ? ph - 2 * kPi : ph < -kPi ? ph + 2 * kPi : ph;     // into [-pi, pi] (the step is below pi + 0.1)
-                sPh[i + q] = (float)ph;
-            }
+            const double inc0 = w0 + dk * (audioA0 + slope * (double)m0), dinc = dk * slope;   // the carrier and the deviation, as phase
+            double* pd = &sPhD[i];
+            for (size_t q = 0; q < cnt; q++) { ph += inc0 + dinc * (double)q; pd[q] = ph; }
             i += cnt;
         }
-        sndPh = ph;
+        // the phase into [-pi, pi]
+        for (size_t q = 0; q < n; q++) sPh[q] = (float)(sPhD[q] - 2 * kPi * std::nearbyint(sPhD[q] * (0.5 / kPi)));
+        sndPh = ph - 2 * kPi * std::nearbyint(ph * (0.5 / kPi));
         for (size_t i = 0; i < n; i++) {
             const float x = sPh[i];
             float y = x + 1.5707963f;

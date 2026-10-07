@@ -1,5 +1,6 @@
 // ADS-B pulse demodulator (see adsb_demod.h).
 #include "dect2/adsb_demod.h"
+#include "dect2/dsp_compat.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -71,16 +72,17 @@ void AdsbDemod::feed(const cf32* x, size_t n) {
     while (n) {
         if (up_) {
             const size_t m = std::min<size_t>(n, 2048);
-            std::copy(hist_, hist_ + 11, tmp_.begin());
-            for (size_t j = 0; j < m; j++) tmp_[11 + j] = cf32(clean(x[j].real()), clean(x[j].imag()));
+            // the real and the imaginary parts as two real streams through the 12 taps (the correlation kernel of dsp_compat)
+            tmpR_.resize(11 + m); tmpI_.resize(11 + m); yR_.resize(m); yI_.resize(m);
+            for (int k = 0; k < 11; k++) { tmpR_[(size_t)k] = hist_[k].real(); tmpI_[(size_t)k] = hist_[k].imag(); }
+            for (size_t j = 0; j < m; j++) { tmpR_[11 + j] = clean(x[j].real()); tmpI_[11 + j] = clean(x[j].imag()); }
+            desamp(tmpR_.data(), 1, taps_, yR_.data(), (int)m, 12);
+            desamp(tmpI_.data(), 1, taps_, yI_.data(), (int)m, 12);
             for (size_t j = 0; j < m; j++) {
-                const cf32* w = tmp_.data() + j;
-                float re = 0, im = 0;
-                for (int k = 0; k < 12; k++) { re += taps_[k] * w[k].real(); im += taps_[k] * w[k].imag(); }
-                z_[2 * j] = w[5];
-                z_[2 * j + 1] = cf32(re, im);
+                z_[2 * j] = cf32(tmpR_[j + 5], tmpI_[j + 5]);
+                z_[2 * j + 1] = cf32(yR_[j], yI_[j]);
             }
-            std::copy(tmp_.begin() + m, tmp_.begin() + m + 11, hist_);
+            for (int k = 0; k < 11; k++) hist_[k] = cf32(tmpR_[m + (size_t)k], tmpI_[m + (size_t)k]);
             pushSamples(z_.data(), 2 * m);
             x += m; n -= m;
         } else {
@@ -112,14 +114,26 @@ void AdsbDemod::pushSamples(const cf32* x, size_t m) {
             dcRe_ = sr / c; dcIm_ = si / c; dcInit_ = true;
         }
         const float dr = dcRe_, di = dcIm_;
-        float sr = 0, si = 0, bp = 0;
-        for (size_t j = 0; j < c; j++) {
+        // four lanes of partial sums (a single running sum would make every addition wait for the last, and keep the loop from vectorising)
+        float sr4[4] = {0, 0, 0, 0}, si4[4] = {0, 0, 0, 0}, bp4[4] = {0, 0, 0, 0};
+        size_t j = 0;
+        for (; j + 4 <= c; j += 4) {
+            for (size_t l = 0; l < 4; l++) {
+                const float xr = clean(b[2 * (j + l)]), xi = clean(b[2 * (j + l) + 1]);
+                const float re = xr - dr, im = xi - di;
+                const float p = re * re + im * im;
+                pw[i + j + l] = p;
+                bp4[l] += p; sr4[l] += xr; si4[l] += xi;
+            }
+        }
+        for (; j < c; j++) {
             const float xr = clean(b[2 * j]), xi = clean(b[2 * j + 1]);
             const float re = xr - dr, im = xi - di;
             const float p = re * re + im * im;
             pw[i + j] = p;
-            bp += p; sr += xr; si += xi;
+            bp4[0] += p; sr4[0] += xr; si4[0] += xi;
         }
+        float bp = (bp4[0] + bp4[1]) + (bp4[2] + bp4[3]), sr = (sr4[0] + sr4[1]) + (sr4[2] + sr4[3]), si = (si4[0] + si4[1]) + (si4[2] + si4[3]);
         bp /= c;
         if (!noiseReady_ || bp < 4.0f * n0_) {
             const float k = beta * (float)c / 64.0f;
@@ -183,16 +197,25 @@ void AdsbDemod::makeBins() {
     const double base = (double)smpBase_;
     double x0 = (double)next * spb_ - base;
     double f0 = F(x0);
-    if (spb_ == 1.0) {
-        // one bin a sample (4 Msps): the bin is the mean of the straight line between two samples, the bins start on the samples
-        const int64_t j0 = next - (int64_t)smpBase_;
-        if (j0 >= 0 && j0 + 3 <= (int64_t)len) {
-            const size_t cnt = (size_t)((int64_t)len - 2 - j0);
+    if (spb_ >= 1.0 && spb_ <= 16.0 && spb_ == (double)(int)spb_) {
+        // a whole number of samples a bin (1 at 4 Msps in, 2 for the interpolated 2 to 4.4 Msps): the bins start on samples, and a bin is the mean of
+        // the straight lines between the samples, half weights on the two ends
+        const int s = (int)spb_;
+        const double x0i = (double)next * spb_ - base;                       // integer: sample index of the first new bin
+        const int64_t js = (int64_t)x0i;
+        if (js >= 0 && js + s + 2 <= (int64_t)len) {
+            const size_t cnt = (size_t)(((int64_t)len - 2 - s - js) / s) + 1;     // bins with js + k s + s < len - 1
             const size_t o = bin_.size();
             bin_.resize(o + cnt);
             float* out = bin_.data() + o;
-            const float* p = pw + j0;
-            for (size_t q = 0; q < cnt; q++) out[q] = 0.5f * (p[q] + p[q + 1]);
+            const float* p = pw + js;
+            const float inv = 1.f / (float)s;
+            for (size_t q = 0; q < cnt; q++) {
+                const float* a = p + q * (size_t)s;
+                float sum = 0.5f * (a[0] + a[s]);
+                for (int k = 1; k < s; k++) sum += a[k];
+                out[q] = sum * inv;
+            }
             updateNoiseRun(out, cnt);
             next += (int64_t)cnt;
         }
@@ -217,10 +240,21 @@ void AdsbDemod::makeBins() {
     const int64_t last = binEnd - 32;
     const size_t need = (size_t)std::max<int64_t>(0, last - binBase_);
     if (score_.size() < need) score_.resize(need, 0.f);
+    // the cheapest rejection first, for all bins at once (plain arithmetic, so that it vectorises): both of the first two pulses (windows of
+    // two bins, 0.5 us, at 0 and 1 us) have to be above the threshold
+    const size_t nflag = last > b ? (size_t)(last - b) : 0;
+    flag_.resize(nflag);
+    if (noiseReady_ && nflag) {
+        const float* fp = bn + (b - binBase_);
+        const float thr2 = 2.f * thr;
+        uint8_t* fl = flag_.data();
+        for (size_t q = 0; q < nflag; q++) fl[q] = (uint8_t)((fp[q] + fp[q + 1] > thr2) & (fp[q + 4] + fp[q + 5] > thr2));
+    }
+    const int64_t b0 = b;
     for (; b < last; b++) {
         const float* p = bn + (b - binBase_);
         float s = 0;
-        if (noiseReady_) {
+        if (noiseReady_ && flag_[(size_t)(b - b0)]) {
             // windows of two bins (0.5 us): the four pulses first, the cheapest rejection
             const float h0 = p[0] + p[1], h1 = p[4] + p[5];
             if (h0 * 0.5f > thr && h1 * 0.5f > thr) {
