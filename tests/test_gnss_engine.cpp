@@ -4,6 +4,7 @@
 #include "dect2/gnss_gen.h"
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <cstdio>
 #include <thread>
 using namespace dect2;
@@ -22,7 +23,8 @@ static int fails = 0;
 
 int main() {
     const double rate = 4e6;
-    const double pace = SANITIZED ? 0.2 : 2.0;               // faster than a radio when it can, slower under a sanitiser
+    // faster than a radio when it can, slower under a sanitiser; real time on the shared CI machines, which run several tests at once
+    const double pace = SANITIZED ? 0.2 : std::getenv("CI") ? 1.0 : 2.0;
     const double signalSecs = SANITIZED ? 6 : 36;            // the fix comes after 26 s
     Engine e;
     DeviceInfo dev;                                          // the synthetic source

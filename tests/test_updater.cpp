@@ -155,6 +155,8 @@ int main() {
         waitpid(child, &stt, 0);
         for (int i = 0; i < 100 && slurp(app + "/Contents/Info.plist") != "<plist>new</plist>"; i++) std::this_thread::sleep_for(std::chrono::milliseconds(100));
         CHECK(slurp(app + "/Contents/Info.plist") == "<plist>new</plist>" && slurp(app + "/Contents/MacOS/OnAir") == "#!/bin/sh\necho new\n", "mac: the app was replaced");
+        // the helper removes the staging folder just after the swap: give it the time on a busy machine
+        for (int i = 0; i < 100 && fs::exists((base / "Applications" / ".OnAir-update").string()); i++) std::this_thread::sleep_for(std::chrono::milliseconds(100));
         CHECK(!fs::exists((base / "Applications" / ".OnAir-update").string()), "mac: the staging folder is gone");
     }
 #endif
