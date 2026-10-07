@@ -156,20 +156,25 @@ void AdsbMixer::add(const AdsbTx& tx) {
     bursts_.push_back(std::move(b));
 }
 
-void AdsbMixer::render(cf32* out, size_t n) {
-    std::fill(out, out + n, cf32(0.f, 0.f));
+void AdsbMixer::render(cf32* out, size_t n, bool clear) {
+    if (clear) std::fill(out, out + n, cf32(0.f, 0.f));
     const int64_t end = pos_ + (int64_t)n;
     for (auto& b : bursts_) {
         int64_t i = b.first + (int64_t)b.at;           // the next sample of this burst to render
         if (i >= end) continue;                        // it starts after this block
         const int64_t stop = std::min(end, b.first + (int64_t)b.env.size());
+        float zr = b.z.real(), zi = b.z.imag();
+        const float wr = b.w.real(), wi = b.w.imag();
         for (; i < stop; i++) {
             const size_t k = (size_t)(i - b.first);
-            out[i - pos_] += b.z * (b.env[k] * b.amp);
-            b.z *= b.w;
+            const float e = b.env[k] * b.amp;
+            out[i - pos_] += cf32(zr * e, zi * e);
+            const float t = zr * wr - zi * wi;
+            zi = zr * wi + zi * wr; zr = t;
             b.at = k + 1;
-            if ((k & 255) == 255) b.z /= std::abs(b.z);
+            if ((k & 255) == 255) { const float m = 1.f / std::sqrt(zr * zr + zi * zi); zr *= m; zi *= m; }
         }
+        b.z = cf32(zr, zi);
     }
     pos_ = end;
     bursts_.erase(std::remove_if(bursts_.begin(), bursts_.end(), [&](const Burst& b) { return b.first + (int64_t)b.env.size() <= pos_; }), bursts_.end());
@@ -221,7 +226,10 @@ void AdsbNoise::setSnr(double snrDb) {
     sigma_ = (float)std::sqrt(white / 2.0);                // per component
 }
 
-void AdsbNoise::add(cf32* x, size_t n) {
+void AdsbNoise::add(cf32* x, size_t n) { run<false>(x, n); }
+void AdsbNoise::fill(cf32* x, size_t n) { run<true>(x, n); }
+
+template <bool kSet> void AdsbNoise::run(cf32* x, size_t n) {
     const NoiseTable& tab = noiseTable();
     const float* nz = tab.t.data();
     const uint64_t mask = tab.t.size() - 1;
@@ -240,7 +248,7 @@ void AdsbNoise::add(cf32* x, size_t n) {
             };
             ni = run(ni, 0); nq = run(nq, 1);
         }
-        x[i] += cf32(ni, nq);
+        if (kSet) x[i] = cf32(ni, nq); else x[i] += cf32(ni, nq);
     }
 }
 
@@ -522,14 +530,11 @@ public:
             horizon_ = until + 0.05;
             for (AdsbTx& t : tx_) { t.cfoHz += cfg_.cfoHz; mix_.add(t); }
         }
-        mix_.render(out, n);
-        noise_.add(out, n);
+        noise_.fill(out, n);
+        mix_.render(out, n, false);
         // keep the sum of overlapping bursts inside the converter's range
-        for (size_t i = 0; i < n; i++) {
-            float re = out[i].real(), im = out[i].imag();
-            re = std::clamp(re, -0.95f, 0.95f); im = std::clamp(im, -0.95f, 0.95f);
-            out[i] = cf32(re, im);
-        }
+        float* o = reinterpret_cast<float*>(out);
+        for (size_t i = 0; i < 2 * n; i++) o[i] = std::clamp(o[i], -0.95f, 0.95f);
     }
 
     bool configure(const SynthConfig& c) override {

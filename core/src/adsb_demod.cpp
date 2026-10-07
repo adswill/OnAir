@@ -132,11 +132,30 @@ void AdsbDemod::pushSamples(const cf32* x, size_t m) {
     samples_ += m;
 }
 
-void AdsbDemod::updateNoise(float m) {
-    const float w = 0.5f * (m + prevBin_);             // a window of 0.5 us
-    prevBin_ = m;
-    blockSum_ += m; blockSumW_ += w; blockSumW2_ += (double)w * w;
-    if (++blockCount_ < kBlockBins) return;
+void AdsbDemod::updateNoise(float m) { updateNoiseRun(&m, 1); }
+
+// The bins are taken a block of kBlockBins at a time: each block gives its mean and the spread of its half-microsecond windows, and the
+// lower quartile of the last 16 blocks is the noise level.
+void AdsbDemod::updateNoiseRun(const float* m, size_t n) {
+    size_t i = 0;
+    while (i < n) {
+        const size_t take = std::min(n - i, (size_t)(kBlockBins - blockCount_));
+        double sum = blockSum_, sumW = blockSumW_, sumW2 = blockSumW2_;
+        float prev = prevBin_;
+        for (size_t k = 0; k < take; k++) {
+            const float v = m[i + k];
+            const float w = 0.5f * (v + prev);             // a window of 0.5 us
+            prev = v;
+            sum += v; sumW += w; sumW2 += (double)w * w;
+        }
+        blockSum_ = sum; blockSumW_ = sumW; blockSumW2_ = sumW2; prevBin_ = prev;
+        blockCount_ += (int)take;
+        i += take;
+        if (blockCount_ >= kBlockBins) endBlock();
+    }
+}
+
+void AdsbDemod::endBlock() {
     const double meanW = blockSumW_ / kBlockBins;
     blocks_[blockPos_] = (float)(blockSum_ / kBlockBins);
     blockCv_[blockPos_] = (float)(std::sqrt(std::max(0.0, blockSumW2_ / kBlockBins - meanW * meanW)) / std::max(meanW, 1e-30));
@@ -164,6 +183,22 @@ void AdsbDemod::makeBins() {
     const double base = (double)smpBase_;
     double x0 = (double)next * spb_ - base;
     double f0 = F(x0);
+    if (spb_ == 1.0) {
+        // one bin a sample (4 Msps): the bin is the mean of the straight line between two samples, the bins start on the samples
+        const int64_t j0 = next - (int64_t)smpBase_;
+        if (j0 >= 0 && j0 + 3 <= (int64_t)len) {
+            const size_t cnt = (size_t)((int64_t)len - 2 - j0);
+            const size_t o = bin_.size();
+            bin_.resize(o + cnt);
+            float* out = bin_.data() + o;
+            const float* p = pw + j0;
+            for (size_t q = 0; q < cnt; q++) out[q] = 0.5f * (p[q] + p[q + 1]);
+            updateNoiseRun(out, cnt);
+            next += (int64_t)cnt;
+        }
+        x0 = (double)next * spb_ - base;
+        f0 = F(x0);
+    }
     for (;;) {
         const double x1 = (double)(next + 1) * spb_ - base;
         if (x1 >= (double)len - 1.0) break;

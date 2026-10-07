@@ -1,9 +1,11 @@
 // Filters shared by the DMR receiver and the DMR test signal.
 #pragma once
+#include "dsp_compat.h"
 #include "ring.h"
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <type_traits>
 #include <vector>
 
 namespace dect2 {
@@ -78,32 +80,43 @@ public:
     void process(const T* in, size_t n, std::vector<T>& out) {
         const size_t nt = h_.size();
         if (!nt) return;
-        x_.assign(hist_.begin(), hist_.end());
-        x_.insert(x_.end(), in, in + n);
         const size_t base = nt - 1;
-        // output j (input index of the newest sample it uses) every d_ samples; phase_ counts the inputs since the last output
-        for (size_t j = (size_t)((d_ - 1 - phase_) % d_); j < n; j += (size_t)d_) {
-            // output j uses the nt samples ending at input index j: x_[j .. j + nt - 1] in the history-extended buffer. Four partial sums, because one
-            // chain of dependent additions would wait for every add (this loop is most of the cost at 10 or 20 Msps).
-            const T* p = x_.data() + j;
-            T a0 = T(), a1 = T(), a2 = T(), a3 = T();
-            size_t k = 0;
-            for (; k + 4 <= nt; k += 4) {
-                a0 += p[k] * h_[k];
-                a1 += p[k + 1] * h_[k + 1];
-                a2 += p[k + 2] * h_[k + 2];
-                a3 += p[k + 3] * h_[k + 3];
+        // output j (input index of the newest sample it uses) every d_ samples; phase_ counts the inputs since the last output. Output j uses the
+        // nt samples x_[j .. j + nt - 1] of the history-extended buffer: the decimating correlation of dsp_compat.
+        const size_t j0 = (size_t)((d_ - 1 - phase_) % d_);
+        const size_t nout = j0 < n ? (n - j0 + (size_t)d_ - 1) / (size_t)d_ : 0;
+        if constexpr (std::is_same_v<T, cf32>) {
+            // the real and the imaginary parts are two real streams
+            xr_.resize(base + n); xi_.resize(base + n);
+            for (size_t i = 0; i < base; i++) { xr_[i] = hist_[i].real(); xi_[i] = hist_[i].imag(); }
+            for (size_t i = 0; i < n; i++) { xr_[base + i] = in[i].real(); xi_[base + i] = in[i].imag(); }
+            if (nout) {
+                yr_.resize(nout); yi_.resize(nout);
+                desamp(xr_.data() + j0, d_, h_.data(), yr_.data(), (int)nout, (int)nt);
+                desamp(xi_.data() + j0, d_, h_.data(), yi_.data(), (int)nout, (int)nt);
+                const size_t o = out.size();
+                out.resize(o + nout);
+                for (size_t i = 0; i < nout; i++) out[o + i] = cf32(yr_[i], yi_[i]);
             }
-            for (; k < nt; k++) a0 += p[k] * h_[k];
-            out.push_back((a0 + a1) + (a2 + a3));
+            for (size_t i = 0; i < base; i++) hist_[i] = cf32(xr_[n + i], xi_[n + i]);
+        } else {
+            x_.resize(base + n);
+            std::copy(hist_.begin(), hist_.end(), x_.begin());
+            std::copy(in, in + n, x_.begin() + (ptrdiff_t)base);
+            if (nout) {
+                const size_t o = out.size();
+                out.resize(o + nout);
+                desamp(x_.data() + j0, d_, h_.data(), out.data() + o, (int)nout, (int)nt);
+            }
+            std::copy(x_.end() - (ptrdiff_t)base, x_.end(), hist_.begin());
         }
         phase_ = (int)((phase_ + n) % (size_t)d_);
-        hist_.assign(x_.end() - (ptrdiff_t)base, x_.end());
     }
 
 private:
     std::vector<float> h_;
     std::vector<T> hist_, x_;
+    std::vector<float> xr_, xi_, yr_, yi_;
     int d_ = 1;
     int phase_ = 0;
 };

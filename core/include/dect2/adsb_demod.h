@@ -46,6 +46,8 @@ private:
     bool tryFrame(int64_t bin);
     void compact();
     void updateNoise(float bin);
+    void endBlock();
+    void updateNoiseRun(const float* bins, size_t n);   // updateNoise for n bins in a row
     float pulseThreshold() const { return n0_ * std::max(kPulse_, 1.0f + 2.4f * cv_); }   // what a pulse window must exceed
 
     double inRate_ = 0;                             // the rate of the input

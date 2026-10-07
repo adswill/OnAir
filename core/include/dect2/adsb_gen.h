@@ -46,7 +46,7 @@ class AdsbMixer {
 public:
     AdsbMixer(double rate, double filterMHz = 0, double sroPpm = 0);
     void add(const AdsbTx& tx);                    // may start before the samples rendered so far only if it is still ahead of them
-    void render(cf32* out, size_t n);              // the next n samples: the sum of the bursts (no noise)
+    void render(cf32* out, size_t n, bool clear = true);   // the next n samples: the sum of the bursts (no noise); with clear = false they are added to out
     double time() const { return (double)pos_ / fs_; }      // stream time of the next sample
     double rate() const { return rate_; }
     size_t pending() const { return bursts_.size(); }
@@ -72,6 +72,7 @@ public:
     AdsbNoise(double rate, double filterMHz, double snrDb, double ampRef, uint64_t seed);
     void setSnr(double snrDb);
     void add(cf32* x, size_t n);       // adds noise to x
+    void fill(cf32* x, size_t n);      // x = noise (what add gives for x = 0, without reading x)
     double sigmaPerComponent() const { return sigma_; }
 private:
     double rate_, ampRef_, gain_ = 1;  // gain_: power of the filtered noise per unit of white variance
@@ -82,6 +83,7 @@ private:
     double s1_[2] = {}, s2_[2][2] = {};
     uint64_t rng_[2];
     uint64_t next();
+    template <bool kSet> void run(cf32* x, size_t n);
 };
 
 struct AdsbAirspaceConfig {
