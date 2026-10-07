@@ -55,6 +55,7 @@ struct AtvReceiver::Impl {
     // controls
     AtvVideoParams prm;
     std::atomic<int> detMode{0};
+    std::atomic<int> chanWidthMhz{8};
     std::atomic<bool> prmDirty{false};
     std::mutex prmMu;
     AtvVideoParams prmNew;
@@ -298,13 +299,18 @@ struct AtvReceiver::Impl {
             t.soundHz = carrier.spacingMhz > 0 ? t.visionHz + carrier.spacingMhz * 1e6 + sound.trimHz() : 0;
             t.carrierDbfs = vi.carrierLevel > 0 ? (float)(20 * std::log10(vi.carrierLevel)) : -120.f;
             t.carrierToNoiseDb = vi.carrierToNoiseDb;
-            // The offset from where the standard puts the carrier in the channel: the nearest of the 8, 7 and 6 MHz layouts (vision carrier
-            // 1.25, 1.25 and 1.25 MHz above the channel's lower edge, so at -2.75, -2.25 and -1.75 MHz from its centre). The sound spacing
-            // decides when it knows: 6.5 and 6.0 MHz only exist in 8 MHz channels, 4.5 MHz only in 6 MHz channels.
+            // The offset from where the standard puts the carrier in the channel (vision carrier 1.25 MHz above the channel's lower edge: -2.75,
+            // -2.25 and -1.75 MHz from the centre of an 8, 7 and 6 MHz channel). The signal cannot say which width the channel has when the
+            // sound is at +5.5 MHz (PAL B is 7 MHz, PAL G is 8 MHz, and an 8 MHz channel with the carrier 500 kHz high looks like a 7 MHz one),
+            // so that case follows setChannelWidth() and assumes 8 MHz (the tuning table's width) when it is not set. 6.0 and 6.5 MHz
+            // only exist in 8 MHz channels, 4.5 MHz and the 525-line systems only in 6 MHz channels.
             static const double kLay[3] = {-2.75e6, -2.25e6, -1.75e6};
             double best = kLay[0];
             if (vi.lines == 525 || carrier.spacingMhz == 4.5) best = kLay[2];
-            else if (carrier.spacingMhz == 5.5 || carrier.spacingMhz == 0) best = std::fabs(t.visionHz - kLay[1]) < std::fabs(t.visionHz - kLay[0]) ? kLay[1] : kLay[0];
+            else if (carrier.spacingMhz == 5.5 || carrier.spacingMhz == 0) {
+                const int w = chanWidthMhz.load();
+                best = w == 7 ? kLay[1] : w == 6 ? kLay[2] : kLay[0];
+            }
             t.cfoHz = t.visionHz - best;
             search.display(t.visionHz, t.specLoMhz, t.specHiMhz, 170, t.specDb);
         }
@@ -351,6 +357,7 @@ void AtvReceiver::setColour(bool on) { auto p = p_->curPrm(); p.colourOn = on; p
 void AtvReceiver::setSaturation(float s) { auto p = p_->curPrm(); p.saturation = s; p_->setPrm(p); }
 void AtvReceiver::setHue(float d) { auto p = p_->curPrm(); p.hueDeg = d; p_->setPrm(p); }
 void AtvReceiver::setDetector(int mode) { p_->detMode = mode; }
+void AtvReceiver::setChannelWidth(int mhz) { p_->chanWidthMhz = mhz; }
 
 ModeTuning atvTuning() {
     ModeTuning t;

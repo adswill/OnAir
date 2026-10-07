@@ -84,6 +84,7 @@ struct Options {
     bool keepFrames = false;
     Impair impair;                              // changes the samples (before quantisation)
     std::function<void(AtvReceiver&, double secs)> onTime;               // called after each chunk
+    int channelWidth = 0;                       // > 0: AtvReceiver::setChannelWidth
     double scale = 1.0;                         // signal level before quantisation (HackRF: 0.1 .. 0.5 of full scale)
 };
 
@@ -92,6 +93,7 @@ inline Run run(const AtvGenConfig& cfg, double secs, const Options& o = Options(
     AtvGenerator g(cfg);
     AtvReceiver rx;
     rx.setSilent(true);
+    if (o.channelWidth > 0) rx.setChannelWidth(o.channelWidth);
     rx.setAudioTap([&](const float* l, const float*, size_t n) { r.audio.insert(r.audio.end(), l, l + n); });
     rx.setLogCallback([&](const std::string& m) { r.log.push_back(m); });
     rx.configure(cfg.rate);
@@ -152,6 +154,28 @@ inline void barColours(const AtvFrame& f, const AtvCard& card, double out[8][3])
     }
 }
 
+
+// The size of the six multiburst packets in a received picture (luminance, peak amplitude of the sine, 0..1 of full scale), measured as the
+// spread of the grey levels along each packet over the multiburst rows. The picture must be at the size of `card`.
+inline void multiburstAmps(const AtvFrame& f, const AtvCard& card, const AtvFormat& fmt, double out[6]) {
+    const double pxUs = fmt.activeUs / f.width;
+    for (int k = 0; k < 6; k++) {
+        const AtvMbPacket& pk = card.multiburst()[(size_t)k];
+        const int x0 = (int)((pk.startUs - fmt.blankEndUs) / pxUs) + 2, x1 = (int)((pk.endUs - fmt.blankEndUs) / pxUs) - 2;
+        double s = 0, s2 = 0;
+        long n = 0;
+        for (int y = 8; y < f.height; y++) {
+            if (!card.inMultiburst(y)) continue;
+            for (int x = x0; x < x1; x++) {
+                const uint8_t* q = &f.rgba[((size_t)y * f.width + (size_t)x) * 4];
+                const double Y = (0.299 * q[0] + 0.587 * q[1] + 0.114 * q[2]) / 255.0;
+                s += Y; s2 += Y * Y; n++;
+            }
+        }
+        const double m = n ? s / (double)n : 0;
+        out[k] = n ? std::sqrt(std::max(0.0, s2 / (double)n - m * m)) * std::sqrt(2.0) : 0.0;
+    }
+}
 
 // Where the white bar of the card begins in the picture, in pixels: the first column that is brighter than half, along a row in the middle of
 // the bars, and the first row, along a column in the middle of the white bar. Compared with barsArea() they show a shift of the picture.

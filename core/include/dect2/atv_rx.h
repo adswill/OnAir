@@ -45,6 +45,7 @@ public:
     void setColour(bool on);
     void setSaturation(float s);                         // 1 = as sent
     void setHue(float degrees);                          // NTSC tint
+    void setChannelWidth(int mhz);                       // 6, 7 or 8 (default 8): the channel the user tuned; only matters for the carrier offset of 5.5 MHz sound (B/G)
     void setDetector(int mode);                          // 0 automatic (synchronous when the carrier is locked), 1 envelope detector only
 
 private:

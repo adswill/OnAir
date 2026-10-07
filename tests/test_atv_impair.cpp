@@ -62,6 +62,17 @@ int main() {
         const size_t n = r.audio.size();
         CHECK(n > 96000 && near(toneAmp(r.audio, 1000, n - 24000, n), 0.5, 0.05), "offset %+.0f kHz: sound", cfo / 1e3);
     }
+    // ---- the offset is against the channel layout; for 5.5 MHz sound the layout (7 or 8 MHz) comes from the user, because the signal cannot tell
+    // (an 8 MHz channel with the carrier 500 kHz high is a 7 MHz channel: same spectrum)
+    {
+        AtvGenConfig c = base(kAtvB); c.cfoHz = 100e3;           // PAL B: the carrier is where a 7 MHz channel puts it, plus 100 kHz
+        Options o; o.channelWidth = 7;
+        const Run r = run(c, 2.5, o);
+        line("B, 7 MHz channel, +100 kHz", r, barError(r, gp));
+        CHECK(r.tel.state == 2 && near(r.tel.cfoHz, 100e3, 400), "7 MHz channel: state %d offset %.0f Hz", r.tel.state, r.tel.cfoHz);
+        const Run u = run(c, 2.5);
+        CHECK(near(u.tel.cfoHz, 600e3, 400), "same signal read as an 8 MHz channel: %.0f Hz (the default)", u.tel.cfoHz);
+    }
     // ---- sample clock error: the line rate is measured against the standard's, the picture does not care
     for (double ppm : {-100.0, -40.0, 40.0, 100.0}) {
         AtvGenConfig c = base(); c.sroPpm = ppm;
@@ -80,7 +91,24 @@ int main() {
         const double w = barError(r, gp);
         char nm[48]; snprintf(nm, sizeof nm, "%.1f Msps", rate / 1e6);
         line(nm, r, w);
-        if (rate < 9e6) CHECK(r.tel.state == 2 && !r.tel.colour && r.tel.colourSystem == "mono", "%.1f Msps: state %d colour %d", rate / 1e6, r.tel.state, (int)r.tel.colour);
+        if (rate < 9e6) {
+            // the video band ends below the colour subcarrier: the picture is monochrome, it says so, and the grey levels are those of the bars' luminance
+            CHECK(r.tel.state == 2 && !r.tel.colour && r.tel.colourSystem == "mono", "%.1f Msps: state %d colour %d '%s'", rate / 1e6, r.tel.state, (int)r.tel.colour, r.tel.colourSystem.c_str());
+            double worstY = 9;
+            if (r.frame) {
+                AtvCard card(gp);
+                double col[8][3];
+                barColours(*r.frame, card, col);
+                worstY = 0;
+                for (int i = 0; i < 8; i++) {
+                    float rgb[3]; atvEbuBar(i, rgb);
+                    const double y = 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2];
+                    for (int k = 0; k < 3; k++) worstY = std::max(worstY, std::fabs(col[i][k] - y));
+                }
+            }
+            printf("   luma error of the bars (grey picture) %.3f\n", worstY);
+            CHECK(worstY < 0.08, "%.1f Msps: luma error %.3f", rate / 1e6, worstY);
+        }
         else CHECK(r.tel.state == 2 && r.tel.colour && w < 0.06, "%.1f Msps: state %d colour %d bars %.3f", rate / 1e6, r.tel.state, (int)r.tel.colour, w);
     }
     for (double rate : {2e6, 4e6, 6e6}) {

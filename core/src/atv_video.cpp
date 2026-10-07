@@ -96,6 +96,7 @@ struct AtvVideo::Impl {
     uint64_t frameSeq = 0;
     uint64_t fieldCount = 0, fieldsOk = 0, fieldsBad = 0, lineCount = 0;
     float whiteTrack = 0, whiteLast = 0;
+    double shiftEma = 0;                       // mean level of the burst against blanking, normalised video units, smoothed (burst of a compressed sync sits above blanking)
     double compEma = 1, compK = 1;             // burst size against the sync-referenced scale, smoothed; the luminance gain divisor when above the tolerance
     bool anyPicture = false;
     // ---- colour
@@ -168,6 +169,10 @@ struct AtvVideo::Impl {
     }
     void counters_reset() {}
 
+    // Below about 9.5 Msps the video band stops short of the colour subcarrier (4.4 MHz above the carrier): the picture is monochrome and says so
+    // at once instead of waiting for a colour search that cannot succeed.
+    int startColour() const { return colourCapable ? prm.forceColour : (int)kAtvMono; }
+
     // forget levels and the loop, keep counters and the picture
     void resetSync() {
         acq.clear(); acqStart = 0;
@@ -178,8 +183,8 @@ struct AtvVideo::Impl {
         bCount = 0; haveVsync = false; vsyncMiss = 0; vbiPending = false;
         gainValid = false; Bline = 0; noiseVar = 0;
         fmtKnown = false;
-        colourKind = prm.forceColour;
-        mainLock = Lock(); cands.clear(); candLines = 0; burstEma = 0; killCount = 0; killer = false; colourLocked = false; compEma = compK = 1;
+        colourKind = startColour();
+        mainLock = Lock(); cands.clear(); candLines = 0; burstEma = 0; killCount = 0; killer = false; colourLocked = false; compEma = compK = 1; shiftEma = 0;
         prevValid = false; curField = -1; fieldLines = 0;
         phErr2 = 1; phGood = 0; phaseLockedFlag = false;
         sLead = sPairs = sAlt = sBottle = 0; lastLeadKind = -1; lastLeadNo = 0; lastBottleKind = -1; rVote = 0; voteField = ~0ull; secRYNo = secBYNo = 0; secamLineOk = false; secAmpEma = 0; secKill = 0;
@@ -650,6 +655,35 @@ struct AtvVideo::Impl {
         return true;
     }
 
+    // How much the sync pulses are squeezed, from their height against blanking alone (no burst, no gain involved): the carrier at blanking and
+    // at the sync tip are fixed by the standard (tip 100 %, white whitePct %, so blanking sits at 1 - m * (-sL) / (1 - sL), m = 1 - whitePct / 100).
+    // 0 = as the standard has it, 0.4 = the pulse is 60 % of its height. Modulation depths differ a little between transmitters, so this is
+    // only good to about 10 %; it decides whether the burst may be used for the gain, it is not the gain itself.
+    double syncSqueeze() const {
+        if (Tr <= Br || Br <= 0) return 0;
+        const double sL = fmt.syncLevel, m = 1 - fmt.whitePct / 100;
+        const double br0 = 1 - m * (-sL) / (1 - sL), r0 = (1 - br0) / br0;
+        const double r = (Tr - Br) / Br;
+        return std::max(0.0, 1 - r / r0);
+    }
+
+    // The mean level of the burst window against blanking, in normalised video units (positive = brighter than blanking). A burst is symmetric about
+    // blanking; a compressor that squeezes what is below blanking (the sync pulses, and with them the lower half of every burst cycle) lifts it.
+    // Hann weights keep the 4.4 MHz of the burst itself out of the mean.
+    bool burstShift(double tL, double& dv) const {
+        const double bsUs = fmt.burstStartUs > 0 ? fmt.burstStartUs : 5.6;
+        const uint64_t na = (uint64_t)std::ceil(tL + (bsUs + 0.45) * spu), nb = (uint64_t)std::floor(tL + (bsUs + 1.95) * spu);
+        const double g = lineGain();
+        if (nb <= na + 6 || g <= 0) return false;
+        double s = 0, ws = 0;
+        for (uint64_t n = na; n <= nb; n++) {
+            const double w = 0.5 - 0.5 * std::cos(2 * kPi * (double)(n - na + 0.5) / (double)(nb - na + 1));
+            s += w * rvAt(n); ws += w;
+        }
+        dv = (Bline - s / ws) / g;
+        return true;
+    }
+
     // One line of a loop. Returns false when there was no burst to measure.
     bool stepLock(Lock& L, double tL, bool pal, double nominal, double alpha, double beta) {
         advance(L, tL);
@@ -713,7 +747,16 @@ struct AtvVideo::Impl {
         const bool fast = mainLock.lines < 40;
         if (!stepLock(mainLock, tL, F.pal, F.burstAmp, fast ? 0.5 : 0.1, fast ? 0.04 : 0.004)) return;
         burstEma = mainLock.amp;
-        if (colourLocked) { compEma += (burstEma - compEma) * 0.02; compK = compEma > 1.12 ? compEma : 1.0; }
+        if (colourLocked) {
+            // The picture gain follows the burst when the sync is compressed. The burst's fundamental is too small there, because the lower half of
+            // each cycle is squeezed like the sync is: with the level shift of the burst the amplitude of the half that is not squeezed is
+            // recovered (a cycle with the lower half scaled by k has fundamental (1 + k) / 2 and shift (1 - k) / pi, in units of its peak).
+            double dv = 0;
+            if (burstShift(tL, dv)) shiftEma += (dv - shiftEma) * 0.02;
+            compEma += (burstEma - compEma) * 0.02;
+            const double est = compEma + 0.5 * kPi * std::max(0.0, shiftEma) / F.burstAmp;
+            compK = est > 1.12 && syncSqueeze() > 0.12 ? est : 1.0;       // a burst that is off on its own (a ghost, a beat) is not a squeezed sync
+        }
         // The burst is judged by its phase scatter as well as its size: noise alone gives a burst of about the right size with a random phase.
         // The scatter of one line's burst against the loop is about 0.3 rad at a carrier-to-noise ratio of 20 dB.
         if (burstEma < 0.2 || mainLock.err2 > 1.0) { if (++killCount > 12) killer = true; }
@@ -1198,7 +1241,7 @@ void AtvVideo::setParams(const AtvVideoParams& p) {
     const bool re = p.forceSys != s.prm.forceSys || p.forceColour != s.prm.forceColour || p.setupMode != s.prm.setupMode || p.chromaDelayNs != s.prm.chromaDelayNs;
     s.prm = p;
     if (re && s.fmtKnown) {
-        if (p.forceColour >= 0) s.colourKind = p.forceColour;
+        if (p.forceColour >= 0 || !s.colourCapable) s.colourKind = s.startColour();
         s.makeFormat(s.fmt.lines);
     }
 }

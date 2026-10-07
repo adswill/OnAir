@@ -116,7 +116,8 @@ int main() {
         line(nm, r, barError(r, gp));
         CHECK(r.tel.state == 2 && r.tel.colour && barError(r, gp) < (h < 5 ? 0.06 : 0.09), "hum %.0f %%: state %d bars %.3f", h, r.tel.state, barError(r, gp));
     }
-    // ---- sync compression: the sync pulses are lower than they should be; the picture gain follows the colour burst, which is as high as the sync
+    // ---- sync compression: everything below blanking is squeezed (the sync pulses and the lower half of every burst cycle); the picture gain follows the
+    // burst (as high as the sync when nothing is squeezed), corrected for the lifted level of the burst, and only when the sync height says it is squeezed
     for (double comp : {0.2, 0.4, 0.6}) {
         AtvGenConfig c = base(); c.syncCompression = comp;
         const Run r = run(c, 3.0);
@@ -160,7 +161,18 @@ int main() {
         CHECK(barError(r, gp) < 0.22, "envelope detector: bars %.3f (a vestigial sideband signal is distorted by an envelope detector)", barError(r, gp));
         const Run s = run(c, 3.0);
         CHECK(s.tel.syncDetector, "the synchronous detector is not used by default");
-        CHECK(barError(s, gp) < barError(r, gp), "the synchronous detector is not better than the envelope detector (%.3f against %.3f)", barError(s, gp), barError(r, gp));
+        // Where the synchronous detector is better: the response of the video band. Everything above the vestigial region (about 1 MHz) is sent in one
+        // sideband, an envelope detector gives half of it (-6 dB at 2 MHz), a synchronous detector with the correction for the double-sideband part
+        // gives all of it. The colour bars (the middle of the bars is low frequency, where both agree) cannot show that: they are as good with the
+        // envelope detector, which also reads a better video S/N because it has less gain at the high end where most of the noise is.
+        double aS[6], aE[6];
+        AtvCard card(gp);
+        multiburstAmps(*s.frame, card, gp, aS);
+        multiburstAmps(*r.frame, card, gp, aE);
+        const double dbS = 20 * std::log10(aS[2] / aS[0]), dbE = 20 * std::log10(aE[2] / aE[0]);
+        printf("   multiburst 2 MHz against 0.5 MHz: synchronous %+.1f dB, envelope %+.1f dB\n", dbS, dbE);
+        CHECK(std::fabs(dbS) < 1.5, "synchronous detector: 2 MHz is %+.1f dB against 0.5 MHz", dbS);
+        CHECK(dbE < dbS - 3.0, "the synchronous detector is not flatter than the envelope detector (%+.1f dB against %+.1f dB at 2 MHz)", dbS, dbE);
         Options ob; ob.onTime = [](AtvReceiver& rx, double) { rx.setDeinterlace(1); };
         ob.keepFrames = true;
         const Run b = run(c, 2.0, ob);

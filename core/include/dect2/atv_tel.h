@@ -22,7 +22,7 @@ struct AtvTelemetry {
     // ---- the part every mode has: the engine copies it into RxTelemetry; keep these members and what they mean
     uint64_t seq = 0;            // grows with every report and never restarts (not even after reset())
     int state = 0;               // 0 searching, 1 partly locked (carrier and line sync), 2 locked and decoding (line and field sync)
-    double cfoHz = 0;            // vision carrier offset from the place the standard gives it in the channel (the nearest of the 6, 7, 8 MHz layouts)
+    double cfoHz = 0;            // vision carrier offset from the place the standard gives it in the channel (6, 7 or 8 MHz layout: by sound spacing and system; 5.5 MHz sound follows setChannelWidth, default 8)
     float snrDb = 0;             // video signal-to-noise ratio: 0.7 V of luminance against the rms noise on the porches, in the video band
     bool dataValid = false;      // a picture is coming out (line and field sync are locked)
     uint64_t blocksOk = 0, blocksBad = 0;   // fields decoded with all their lines and with missing or damaged lines since the start

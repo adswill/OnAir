@@ -23,7 +23,7 @@ struct Result {
 
 static Result run(const DrmTxConfig& cfg, int superFrames, double noiseDb = 200) {
     Result res;
-    DrmTransmitter tx(cfg, nullptr);
+    DrmTransmitter tx(cfg, std::make_unique<DrmPatternSource>(cfg.seed));   // a known pattern: the test compares frames bit for bit (nullptr would send the AAC test melody)
     CHECK(tx.ok(), "transmitter configuration rejected (mode %d occ %d qam %d)", cfg.mode, cfg.occupancy, cfg.mscQam);
     if (!tx.ok()) return res;
     std::vector<cf32> sig;
