@@ -23,7 +23,7 @@ void FecDecoder::reset() {
     llrQueue_.clear(); carry_.clear(); bits_.clear(); bytes_.clear(); after_.clear(); out_.clear();
     bitsDropped_ = 0; bitOffset_ = -1; syncBytePos_ = -1;
     deint_ = ConvInterleaver(true);
-    groupIdx_ = 0; haveGroup_ = false; warm_ = 0; blocksSinceSync_ = 0; syncMisses_ = 0;
+    groupIdx_ = 0; haveGroup_ = false; warm_ = 0; blocksSinceSync_ = 0; syncMisses_ = 0; syncSearches_ = 0;
 }
 
 void FecDecoder::pushSymbol(const cf32* cells, const float* n0, int symIdx) {
@@ -112,11 +112,19 @@ void FecDecoder::process(bool) {
                 const size_t dropBits = (size_t)bestOff + 8 * (size_t)bestPos;
                 bits_.erase(bits_.begin(), bits_.begin() + dropBits);
                 st_.syncLocked = true;
+                syncSearches_ = 0;
                 deint_ = ConvInterleaver(true);
                 warm_ = 12;
                 after_.clear();
             } else if (bits_.size() > 8 * 204 * 40) {
-                bits_.erase(bits_.begin(), bits_.begin() + 8 * 204 * 20); // nothing found: look further on
+                // Nothing found: look further on, keeping only the newest bits. One decoding block brings far more than 20 packets (267 at
+                // 64-QAM 3/4 in 8K), so dropping a fixed 20 let the backlog grow without end while the signal could not be decoded: every
+                // search scanned all of it (the receiver fell behind the radio within seconds), and the bad bits at the start held the
+                // 3-in-4 test back for seconds after the signal had become fine.
+                bits_.erase(bits_.begin(), bits_.end() - 8 * 204 * 20);
+                // the puncturing phase was picked on the first block, which may have been noise: pick it again about every half second
+                // (the pick decodes the block once per phase, so not much more often)
+                if (++syncSearches_ >= 32) { syncSearches_ = 0; st_.phaseLocked = false; carry_.clear(); }
             }
         }
         if (bitOffset_ < 0) return;

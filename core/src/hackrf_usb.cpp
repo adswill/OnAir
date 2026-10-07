@@ -49,12 +49,14 @@ constexpr int kTransferBytes = 262144;   // 8 x 256 KiB = 0.1 s of samples at 10
 const uint32_t kFilterHz[] = {1750000, 2500000, 3500000, 5000000, 5500000, 6000000, 7000000, 8000000,
                               9000000, 10000000, 12000000, 14000000, 15000000, 20000000, 24000000, 28000000};
 
-// the largest filter width below the wish (the radio's own library rounds the same way)
+// the largest filter width at or below the wish, as hackrf_compute_baseband_filter_bw() in the radio's own library rounds. Not strictly
+// below (its _round_down_lt variant): at 10 Msps the wish is exactly 5 MHz, and stepping down to 3.5 MHz cut the outer carriers of a
+// 7 or 8 MHz channel by 20 dB.
 uint32_t filterBelow(uint32_t wishHz) {
     size_t i = 0;
     while (i < sizeof kFilterHz / sizeof *kFilterHz && kFilterHz[i] < wishHz) i++;
     if (i == sizeof kFilterHz / sizeof *kFilterHz) i--;
-    else if (i > 0) i--;
+    else if (i > 0 && kFilterHz[i] > wishHz) i--;
     return kFilterHz[i];
 }
 
