@@ -66,10 +66,12 @@ jobs:
       - name: "App: starts and draws a frame"
         continue-on-error: true
         run: |
+          set +e
           cd "C:/Program Files/OnAir"
           timeout 90 ./OnAir.exe --hidden --mute --shot "$GITHUB_WORKSPACE/shot.png"; echo "exit $?"
           ls -la "$GITHUB_WORKSPACE/shot.png" || true
-          cat "$APPDATA/OnAir/onair.log" || true
+          cat "$APPDATA/OnAir/onair.log" || echo "no log at $APPDATA/OnAir/onair.log"
+          [ -f "$GITHUB_WORKSPACE/shot.png" ]
 
       - uses: actions/upload-artifact@v4
         if: always()
