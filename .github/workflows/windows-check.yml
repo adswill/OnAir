@@ -1,0 +1,76 @@
+# Checks a released Windows build on a real Windows machine (no radio attached): the zip and the installer, the radio
+# libraries load, the receiver decodes a test signal, the app starts. Run by hand: Actions tab > Windows check > Run workflow.
+name: Windows check
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to check"
+        default: "v0.2.0"
+        required: true
+
+jobs:
+  check:
+    name: Windows check (${{ inputs.tag }})
+    runs-on: windows-2022
+    defaults: { run: { shell: bash } }
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      - name: Download the release files
+        run: |
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" -p '*windows-x64.zip' -p '*windows-x64-setup.exe' -D dl
+          ls -la dl
+          unzip -q dl/*windows-x64.zip -d zip
+          echo "ZIPDIR=$(ls -d zip/*/)" >> "$GITHUB_ENV"
+
+      # the libraries OnAir ships must load; LimeSuite and UHD are not shipped on Windows ("not found" is expected for them)
+      - name: Write the library check
+        run: |
+          cat > check_radios.sh <<'SH'
+          dir=$1
+          "$dir/onair-scan.exe" > scan.txt 2>&1 || true
+          cat scan.txt
+          ok=1
+          for lib in librtlsdr.dll libairspy.dll libbladeRF.dll libiio.dll; do
+            if grep -qi "radio library: .*$lib" scan.txt; then echo "OK      $lib"; else echo "MISSING $lib"; ok=0; fi
+          done
+          if grep -qiE "does not load|loadModule.*fail|failed to load" scan.txt; then echo "a library or driver failed to load"; ok=0; fi
+          grep -q "SoapySDR .*radio(s)" scan.txt || { echo "SoapySDR did not start"; ok=0; }
+          [ $ok = 1 ]
+          SH
+
+      - name: "Zip: radio libraries load"
+        run: bash check_radios.sh "$ZIPDIR"
+
+      - name: "Zip: decodes a DVB-T test signal"
+        run: |
+          "$ZIPDIR/onair-cli.exe" --dvbt --secs 8 > cli.txt 2>&1 || true
+          tail -5 cli.txt
+          grep -q "DVB-T state 2" cli.txt && grep -qE "packets [1-9][0-9]* RS clean" cli.txt
+
+      - name: "Installer: silent install"
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem dl\*setup.exe | Select-Object -First 1
+          Start-Process -FilePath $setup.FullName -ArgumentList "/S" -Wait
+          Get-ChildItem "C:\Program Files\OnAir" | Select-Object Name, Length
+          if (-not (Test-Path "C:\Program Files\OnAir\OnAir.exe")) { throw "OnAir.exe was not installed" }
+
+      - name: "Installer: radio libraries load"
+        run: bash check_radios.sh "C:/Program Files/OnAir"
+
+      # no graphics card on the runner: the app may not get a window, so this step only reports
+      - name: "App: starts and draws a frame"
+        continue-on-error: true
+        run: |
+          cd "C:/Program Files/OnAir"
+          timeout 90 ./OnAir.exe --hidden --mute --shot "$GITHUB_WORKSPACE/shot.png"; echo "exit $?"
+          ls -la "$GITHUB_WORKSPACE/shot.png" || true
+          cat "$APPDATA/OnAir/onair.log" || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: windows-check, path: "shot.png\nscan.txt\ncli.txt", if-no-files-found: ignore }
