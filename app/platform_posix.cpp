@@ -23,6 +23,13 @@
 #endif
 
 namespace plat {
+
+// no picture decoder and no location service on these systems (yet): the map falls back to the plain radar and the position is typed in
+bool decodeImage(const std::string&, int&, int&, std::vector<uint32_t>&) { return false; }
+std::string cacheDir() { const char* h = getenv("HOME"); std::string d = std::string(h ? h : "/tmp") + "/.cache/onair"; std::string c = "mkdir -p '" + d + "'"; if (system(c.c_str()) != 0) return "/tmp"; return d; }
+void locateStart() {}
+int locateState(double&, double&, double&, std::string& msg) { msg = "this system has no location service in OnAir yet: enter the position by hand"; return 3; }
+
 namespace {
 
 #ifdef _WIN32

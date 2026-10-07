@@ -31,6 +31,16 @@ struct Prefs {
 };
 Prefs& prefs();
 
+// Pictures and position (the ADS-B map).
+// Decode a PNG or JPEG file into RGBA8 (0xAABBGGRR, row by row). False when the file cannot be read or the system has no decoder.
+bool decodeImage(const std::string& path, int& w, int& h, std::vector<uint32_t>& rgba);
+// A folder for downloaded files (map tiles), created on demand.
+std::string cacheDir();
+// The position from the system's location service (on macOS this is Wi-Fi positioning and needs the user's permission).
+// locateStart() begins a request; locateState() says how it went: 0 nothing asked, 1 working, 2 done (lat, lon, accuracy in metres), 3 failed (msg says why).
+void locateStart();
+int locateState(double& lat, double& lon, double& accuracyM, std::string& msg);
+
 // Paths of fonts to try, best first (proportional UI font, monospaced font)
 std::vector<std::string> uiFontCandidates();
 std::vector<std::string> monoFontCandidates();
