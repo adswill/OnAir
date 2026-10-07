@@ -71,6 +71,17 @@ struct AtvGenerator::Impl {
     std::vector<float> fy[2], fu[2], fv[2];
     int64_t fieldFrame[2] = {-1, -1};
     std::vector<float> padY, padU, padV, lineV, lineY, lineU, lineC;
+    // What the picture part of a line needs at each of its samples does not depend on the line, only on the offset of the first sample
+    // (1 class on 625 lines, 3 on 525): the position in the picture row, the interpolation weights, the blanking edges, the subcarrier turn.
+    struct PicTab {
+        bool built = false;
+        int j0 = 0, j1 = 0;                  // samples of the line the tables cover
+        std::vector<int> iy, ic;             // index into the padded luminance row (first of four) and into the chrominance rows (first of two)
+        std::vector<float> w4, tc, g;        // the four luminance weights per sample, the chrominance fraction, the gate
+        std::vector<float> cT, sT;           // cos and sin of j times the subcarrier step
+    };
+    std::vector<PicTab> picTab;
+    std::vector<float> pY, pU, pV;
 
     // carrier amplitude, then the filter, then the carrier
     std::vector<float> a;            // a[0] is sample aBase
@@ -112,6 +123,7 @@ struct AtvGenerator::Impl {
         // exact line length in internal samples: 64 us * 12 MHz = 768, 286 / 4.5 MHz * 12 MHz = 2288 / 3
         if (fmt.lines == 625) { hNum = 768; hDen = 1; } else { hNum = 2288; hDen = 3; }
         card = std::make_unique<AtvCard>(fmt, c.pattern);
+        picTab.assign((size_t)hDen, PicTab());
         for (int f = 0; f < 2; f++) {
             const size_t n = (size_t)fmt.fieldRows * fmt.picW;
             fy[f].assign(n, 0.f); fu[f].assign(n, 0.f); fv[f].assign(n, 0.f);
@@ -290,6 +302,38 @@ struct AtvGenerator::Impl {
         fieldFrame[fld] = (int64_t)frame;
     }
 
+    // the tables of the picture part for lines whose first sample is u0 microseconds after the line start (see PicTab)
+    void buildPicTab(PicTab& T, float u0, float dtUs, float aStart, float aEnd, float trB, float teB, float pxPerUs, float advPx, int W, int count) {
+        (void)count;
+        const AtvFormat& F = fmt;
+        T.j0 = std::max(0, (int)std::floor((aStart - teB - u0) / dtUs));
+        T.j1 = (int)std::ceil((aEnd + teB - u0) / dtUs) + 1;
+        const int n = std::max(0, T.j1 - T.j0);
+        T.iy.resize((size_t)n); T.ic.resize((size_t)n); T.w4.resize((size_t)n * 4); T.tc.resize((size_t)n); T.g.resize((size_t)n);
+        T.cT.resize((size_t)n); T.sT.resize((size_t)n);
+        const double dphi = (F.pal || F.ntsc) ? 2 * kPi * F.fscHz / kFi : 0.0;
+        for (int q = 0; q < n; q++) {
+            const int j = T.j0 + q;
+            const float u = u0 + j * dtUs;
+            const float p = (u - aStart) * pxPerUs - 0.5f;
+            const float pf = std::floor(p), t = p - pf;
+            const int i = (int)pf + 2;
+            T.iy[(size_t)q] = std::min(std::max(i - 1, 0), W);
+            const float t2 = t * t, t3 = t2 * t;
+            T.w4[(size_t)q * 4] = -0.5f * t3 + t2 - 0.5f * t;
+            T.w4[(size_t)q * 4 + 1] = 1.5f * t3 - 2.5f * t2 + 1.f;
+            T.w4[(size_t)q * 4 + 2] = -1.5f * t3 + 2.f * t2 + 0.5f * t;
+            T.w4[(size_t)q * 4 + 3] = 0.5f * t3 - 0.5f * t2;
+            const float pc = p + advPx, pcf = std::floor(pc);
+            T.tc[(size_t)q] = pc - pcf;
+            T.ic[(size_t)q] = std::min(std::max((int)pcf + 2, 0), W + 2);
+            T.g[(size_t)q] = (u > aStart + 0.5f * teB && u < aEnd - 0.5f * teB) ? 1.f : edge(u - aStart, trB) - edge(u - aEnd, trB);
+            T.cT[(size_t)q] = (float)std::cos(j * dphi);
+            T.sT[(size_t)q] = (float)std::sin(j * dphi);
+        }
+        T.built = true;
+    }
+
     // ---- one line of composite video, appended as carrier amplitude to a[]
     void renderLine() {
         const AtvFormat& F = fmt;
@@ -354,6 +398,46 @@ struct AtvGenerator::Impl {
             const float setup = (float)F.setup, sc = 1.f - setup;
             const int row = 2 * k + fld;
             const bool mb = card->inMultiburst(row);
+            if (!mb) {
+                PicTab& T = picTab[(size_t)rem];
+                if (!T.built) buildPicTab(T, u0, dtUs, aStart, aEnd, trB, teB, pxPerUs, advPx, W, count);
+                const int n = jb - ja;
+                if (n > 0) {
+                    pY.resize((size_t)n);
+                    const float* w4 = &T.w4[(size_t)(ja - T.j0) * 4];
+                    const int* iy = &T.iy[(size_t)(ja - T.j0)];
+                    for (int q = 0; q < n; q++) {
+                        const float* y4 = &padY[(size_t)iy[q]];
+                        pY[(size_t)q] = (y4[0] * w4[4 * q] + y4[1] * w4[4 * q + 1]) + (y4[2] * w4[4 * q + 2] + y4[3] * w4[4 * q + 3]);
+                    }
+                    if (amChroma) {
+                        pU.resize((size_t)n); pV.resize((size_t)n);
+                        const int* ic = &T.ic[(size_t)(ja - T.j0)];
+                        const float* tc = &T.tc[(size_t)(ja - T.j0)];
+                        const float* pu = padU.data(); const float* pv = padV.data();
+                        for (int q = 0; q < n; q++) {
+                            const int i = ic[q];
+                            pU[(size_t)q] = pu[i] + tc[q] * (pu[i + 1] - pu[i]);
+                            pV[(size_t)q] = pv[i] + tc[q] * (pv[i + 1] - pv[i]);
+                        }
+                    }
+                    const float* g = &T.g[(size_t)(ja - T.j0)];
+                    float* lv = &lineV[(size_t)ja];
+                    if (amChroma) {
+                        const float s0 = (float)std::sin(phase0), c0 = (float)std::cos(phase0);
+                        const float* cT = &T.cT[(size_t)(ja - T.j0)];
+                        const float* sT = &T.sT[(size_t)(ja - T.j0)];
+                        const float vs = vsign ? 1.f : -1.f;
+                        for (int q = 0; q < n; q++) {
+                            const float s = s0 * cT[q] + c0 * sT[q], c = c0 * cT[q] - s0 * sT[q];     // sin and cos of phase0 + j dphi
+                            const float C = pU[(size_t)q] * s + vs * pV[(size_t)q] * c;
+                            lv[q] += g[q] * (setup + sc * (pY[(size_t)q] + C));
+                        }
+                    } else {
+                        for (int q = 0; q < n; q++) lv[q] += g[q] * (setup + sc * pY[(size_t)q]);
+                    }
+                }
+            } else {
             // the sine of the colour subcarrier by rotation
             float s = (float)std::sin(phase0 + ja * dphi), c = (float)std::cos(phase0 + ja * dphi);
             const float sd = (float)std::sin(dphi), cd = (float)std::cos(dphi);
@@ -390,6 +474,7 @@ struct AtvGenerator::Impl {
                 c = c * cd - s * sd; s = s2;
             }
         }
+            }
         // the colour burst
         if (amChroma && type[0] == 1 && F.burstOnLine(line)) {
             const float bs = (float)F.burstStartUs, be = bs + (float)(F.burstCycles / F.fscHz * 1e6), trBu = 0.3f, teBu = trBu / 0.59f;
@@ -410,13 +495,25 @@ struct AtvGenerator::Impl {
         const float lvl = (float)cfg.level;
         const size_t base = a.size();
         a.resize(base + (size_t)count);
+        const float vLo = sL * 1.2f, kAmp = m / (1.f - sL), omc = 1.f - comp;
+        float* aOut = &a[base];
+        const float* lv = lineV.data();
         for (int j = 0; j < count; j++) {
-            float v = lineV[(size_t)j];
-            if (v < 0) v *= 1.f - comp;
-            v = std::min(std::max(v, sL * 1.2f), 1.3f);
-            float amp = 1.f - m * (v - sL) / (1.f - sL);
-            if (hum != 0) amp *= 1.f + hum * std::sin(humPh0 + wh * (float)j * (float)(1.0 / kFi));
-            a[base + (size_t)j] = lvl * amp;
+            float v = lv[j];
+            if (v < 0) v *= omc;
+            v = std::min(std::max(v, vLo), 1.3f);
+            aOut[j] = lvl * (1.f - kAmp * (v - sL));
+        }
+        if (hum != 0) {
+            // the mains hum: a sine of the line count, by rotation (one sine and cosine a line)
+            const double wd = (double)wh / kFi;
+            float hs = (float)std::sin(humPh0), hc = (float)std::cos(humPh0);
+            const float sd = (float)std::sin(wd), cd = (float)std::cos(wd);
+            for (int j = 0; j < count; j++) {
+                aOut[j] *= 1.f + hum * hs;
+                const float s2 = hs * cd + hc * sd;
+                hc = hc * cd - hs * sd; hs = s2;
+            }
         }
     }
 
@@ -482,22 +579,30 @@ struct AtvGenerator::Impl {
         const double fSnd = atvSoundOffsetHz(fmt) + cfg.cfoHz;
         const double dev = fmt.soundDevKhz * 1e3;
         const float amp = (float)(cfg.level * std::pow(10.0, fmt.soundRelDb / 20.0));
-        const double w0 = 2 * kPi * fSnd * dt, dk = 2 * kPi * dev * dt;
+        double w0 = 2 * kPi * fSnd * dt;
+        w0 -= 2 * kPi * std::nearbyint(w0 / (2 * kPi));                  // the carrier step modulo a turn, so that one correction a sample is enough
+        const double dk = 2 * kPi * dev * dt;
         constexpr uint64_t B = 32;
         sPh.resize(n);
         double ph = sndPh;
-        for (size_t i = 0; i < n; i++) {
+        size_t i = 0;
+        while (i < n) {
             const uint64_t k = k0 + i, kb = k / B;
             if (kb != audioBlock || audioDt != dt) {
                 if (kb == audioBlock + 1 && audioDt == dt) audioA0 = audioA1; else audioA0 = prog.at((double)(kb * B) * dt);
                 audioA1 = prog.at((double)((kb + 1) * B) * dt);
                 audioBlock = kb; audioDt = dt;
             }
-            const double au = audioA0 + (audioA1 - audioA0) * (double)(k % B) / (double)B;
-            ph += w0 + dk * au;                                         // the carrier and the deviation, as phase
-            while (ph > kPi) ph -= 2 * kPi;
-            while (ph < -kPi) ph += 2 * kPi;
-            sPh[i] = (float)ph;
+            // up to the end of this block of 32 samples the audio is a straight line: the phase advances by a constant plus a ramp
+            const size_t m0 = (size_t)(k % B), cnt = std::min<size_t>(n - i, (size_t)B - m0);
+            const double slope = (audioA1 - audioA0) / (double)B;
+            double au = audioA0 + slope * (double)m0;
+            for (size_t q = 0; q < cnt; q++, au += slope) {
+                ph += w0 + dk * au;                                     // the carrier and the deviation, as phase
+                ph = ph > kPi ? ph - 2 * kPi : ph < -kPi ? ph + 2 * kPi : ph;     // into [-pi, pi] (the step is below pi + 0.1)
+                sPh[i + q] = (float)ph;
+            }
+            i += cnt;
         }
         sndPh = ph;
         for (size_t i = 0; i < n; i++) {

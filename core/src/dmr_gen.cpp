@@ -30,6 +30,18 @@ struct Rng {
     }
 };
 
+// Gaussian noise from a table read at pseudo random places (one random number gives both axes): much cheaper than a Gaussian per sample
+struct NoiseTable {
+    static constexpr size_t kN = 1 << 18;
+    std::vector<float> t;
+    NoiseTable() {
+        Rng r(20240612);
+        t.resize(kN);
+        for (auto& v : t) v = r.gauss();
+    }
+    static const NoiseTable& get() { static const NoiseTable n; return n; }
+};
+
 const uint32_t kUsers[8] = {2145007, 2145016, 2623266, 2308155, 250997, 2504105, 3101234, 2621042};
 const uint32_t kGroups[8] = {9, 91, 2149, 3100, 262, 2621, 9990, 31337};
 const char* kAliases[8] = {"Test Station 1", "OnAir", "Dispatch", "Mobile 7", "Base North", "Truck 12", "Ops Desk", "Radio 2623266"};
@@ -362,6 +374,7 @@ private:
 struct DmrSignal::Impl {
     DmrGenConfig c;
     Rng rng;
+    Rng noiseRng;
     std::vector<DmrTruth> truth;
     SlotScript s1, s2;
     Shaper shaper;
@@ -384,7 +397,7 @@ struct DmrSignal::Impl {
     uint32_t count = 0;
 
     explicit Impl(const DmrGenConfig& cfg)
-        : c(cfg), rng(cfg.seed * 7919ULL + 17), s1(c, 1, 0, cfg.seed * 31ULL + 1, truth), s2(c, 2, 0, cfg.seed * 31ULL + 2, truth) {
+        : c(cfg), rng(cfg.seed * 7919ULL + 17), noiseRng(cfg.seed * 104729ULL + 5), s1(c, 1, 0, cfg.seed * 31ULL + 1, truth), s2(c, 2, 0, cfg.seed * 31ULL + 2, truth) {
         truth.reserve(1 << 16);
         if (c.direct) {
             if (c.mobile) { s1.setFamily(1); s2.setFamily(1); }
@@ -489,25 +502,46 @@ struct DmrSignal::Impl {
         const double dt = (1.0 + c.sroPpm * 1e-6) / c.rate;
         const double gdb = std::pow(10.0, c.iqImbalanceDb / 20.0), th = c.iqImbalanceDb * 3.0 * kPi / 180.0;
         const float cth = (float)std::cos(th), sth = (float)std::sin(th);
-        for (size_t i = 0; i < n; i++) {
-            const size_t ip = (size_t)pos48;
-            produce48(ip + 4);
-            const size_t k = ip - (size_t)base48;
-            const float frac = (float)(pos48 - (double)ip);
-            const float f = cubic(&f48[k], frac);
-            const float gt = f48.size() > k + 1 ? g48[k] + frac * (g48[k + 1] - g48[k]) : g48[k];
-            const float a = (float)amp * 0.5f * (1.f - std::cos((float)kPi * gt));
-            const double dphi = 2.0 * kPi * ((double)f * c.devScale + c.cfoHz) * dt;
-            // rotate by dphi with a short series (dphi stays below 0.1 rad for rates of 1 Msps and up)
-            const float d = (float)dphi, d2 = d * d;
-            z *= cf32(1.f - 0.5f * d2 + d2 * d2 * (1.f / 24.f), d * (1.f - d2 * (1.f / 6.f)));
-            if ((++count & 1023) == 0) z /= std::abs(z);
-            float re = a * z.real() + (float)sigma * rng.gauss() + (float)c.dcOffset;
-            float im = a * z.imag() + (float)sigma * rng.gauss();
-            if (c.iqImbalanceDb != 0) im = (float)gdb * (im * cth + re * sth);
-            out[i] = cf32(re, im + (float)c.dcOffset * 0.5f);
-            pos48 += step;
+        const float sig = (float)sigma, dco = (float)c.dcOffset;
+        const bool imb = c.iqImbalanceDb != 0;
+        float zr = z.real(), zi = z.imag();
+        const float* nz = NoiseTable::get().t.data();
+        const uint64_t nmask = NoiseTable::kN - 1;
+        constexpr size_t kBlk = 256;
+        float fA[kBlk], aA[kBlk];
+        const float ampF = (float)amp;
+        const double wScale = 2.0 * kPi * dt;
+        for (size_t i0 = 0; i0 < n; i0 += kBlk) {
+            const size_t nb = std::min(kBlk, n - i0);
+            // the shaped samples this block reads, made in one go
+            produce48((size_t)(pos48 + step * (double)(nb - 1)) + 4);
+            // the frequency and the gate at the output samples
+            for (size_t i = 0; i < nb; i++) {
+                const double pos = pos48 + step * (double)i;
+                const size_t ip = (size_t)pos;
+                const size_t k = ip - (size_t)base48;
+                const float frac = (float)(pos - (double)ip);
+                fA[i] = cubic(&f48[k], frac);
+                const float gt = g48[k] + frac * (g48[k + 1] - g48[k]);
+                // the carrier gate: a raised cosine on the power ramps, flat (exactly) before and after
+                aA[i] = gt >= 1.f ? ampF : gt <= 0.f ? 0.f : ampF * 0.5f * (1.f - std::cos((float)kPi * gt));
+            }
+            pos48 += step * (double)nb;
+            // the modulator: rotate by dphi with a short series (dphi stays below 0.1 rad for rates of 1 Msps and up), then the noise
+            for (size_t i = 0; i < nb; i++) {
+                const float d = (float)(((double)fA[i] * c.devScale + c.cfoHz) * wScale), d2 = d * d;
+                const float rc = 1.f - 0.5f * d2 + d2 * d2 * (1.f / 24.f), rs = d * (1.f - d2 * (1.f / 6.f));
+                const float zr2 = zr * rc - zi * rs;
+                zi = zr * rs + zi * rc; zr = zr2;
+                if ((++count & 1023) == 0) { const float m = 1.f / std::sqrt(zr * zr + zi * zi); zr *= m; zi *= m; }
+                const uint64_t r = noiseRng.next();
+                float re = aA[i] * zr + sig * nz[r & nmask] + dco;
+                float im = aA[i] * zi + sig * nz[(r >> 24) & nmask];
+                if (imb) im = (float)gdb * (im * cth + re * sth);
+                out[i0 + i] = cf32(re, im + dco * 0.5f);
+            }
         }
+        z = cf32(zr, zi);
         // drop what is behind us
         const size_t ip = (size_t)pos48;
         if (ip > base48 + 4096 + 4) {
