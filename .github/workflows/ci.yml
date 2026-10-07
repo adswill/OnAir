@@ -1,3 +1,5 @@
+# Quick check on every push: builds the app, tools and tests on Linux, macOS and Windows and runs
+# the fast tests in parallel. The slow tests and the other code paths run in ci-full.yml.
 name: CI
 
 on:
@@ -5,36 +7,46 @@ on:
     branches: [main]
   pull_request:
 
+# A newer push cancels the run still going for an older one.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CCACHE_DIR: ${{ github.workspace }}/.ccache
+  CCACHE_MAXSIZE: 500M
+
 jobs:
-  build-test:
+  unix:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { name: "Linux x86_64", os: ubuntu-24.04, extra: "" }
-          - { name: "Linux arm64", os: ubuntu-24.04-arm, extra: "" }
-          - { name: "Linux x86_64 (scalar code paths)", os: ubuntu-24.04, extra: "-DDECT2_NO_SIMD=ON" }
-          - { name: "macOS arm64", os: macos-15, extra: "" }
-          - { name: "macOS Intel (x86_64)", os: macos-15-intel, extra: "" }
-          - { name: "macOS arm64 (portable DSP, no SIMD)", os: macos-15, extra: "-DDECT2_PORTABLE=ON -DDECT2_NO_SIMD=ON" }
+          - { name: "Linux x86_64", os: ubuntu-24.04 }
+          - { name: "macOS arm64", os: macos-15 }
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake pkg-config libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev
+          sudo apt-get install -y build-essential cmake pkg-config ccache libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libglfw3-dev
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
-        run: brew install cmake pkg-config hackrf soapysdr libusb ffmpeg glfw
+        run: brew install cmake pkg-config ccache hackrf soapysdr libusb ffmpeg glfw
+      - uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.os }}-${{ github.sha }}
+          restore-keys: ccache-${{ matrix.os }}-
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=OFF ${{ matrix.extra }}
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
       - name: Build
         run: cmake --build build -j 4
-      - name: Test
-        run: ctest --test-dir build --output-on-failure --timeout 1500
+      - name: Test (fast tests)
+        run: ctest --test-dir build -j 4 -LE slow --output-on-failure --timeout 600
 
   windows:
     name: Windows x64 (MinGW-w64)
@@ -47,46 +59,16 @@ jobs:
           msystem: UCRT64   # the MINGW64 environment has no hackrf and soapysdr packages
           update: true
           install: >-
-            mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-pkgconf mingw-w64-ucrt-x86_64-ccache
             mingw-w64-ucrt-x86_64-ffmpeg mingw-w64-ucrt-x86_64-glfw mingw-w64-ucrt-x86_64-hackrf mingw-w64-ucrt-x86_64-soapysdr mingw-w64-ucrt-x86_64-libiconv
+      - uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-windows-${{ github.sha }}
+          restore-keys: ccache-windows-
       - name: Configure and build (app, tools, tests)
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build build -j 4
-      - name: Test
-        run: ctest --test-dir build --output-on-failure --timeout 1500
-
-  app:
-    name: GUI (${{ matrix.name }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { name: "Linux x86_64, OpenGL", os: ubuntu-24.04, extra: "" }
-          - { name: "Linux arm64, OpenGL", os: ubuntu-24.04-arm, extra: "" }
-          - { name: "macOS arm64, Metal", os: macos-15, extra: "" }
-          - { name: "macOS arm64, OpenGL", os: macos-15, extra: "-DDECT2_UI_BACKEND=OpenGL3" }
-          - { name: "macOS Intel, Metal", os: macos-15-intel, extra: "" }
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake pkg-config libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libglfw3-dev
-      - name: Install dependencies (macOS)
-        if: runner.os == 'macOS'
-        run: brew install cmake pkg-config hackrf soapysdr libusb ffmpeg glfw
-      - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=OFF ${{ matrix.extra }}
-      - name: Build the app
-        run: cmake --build build -j 4 --target dect2
-      - name: Test macOS packaging checks
-        if: runner.os == 'macOS'
-        run: python3 -m unittest discover -s tools/package -p 'test_*.py' -v
-      - name: Build and validate the macOS disk image
-        if: runner.os == 'macOS' && matrix.extra == ''
-        env:
-          MACOSX_DEPLOYMENT_TARGET: "15.0"
-        run: tools/package/make_dmg.sh
+      - name: Test (fast tests)
+        run: ctest --test-dir build -j 4 -LE slow --output-on-failure --timeout 600

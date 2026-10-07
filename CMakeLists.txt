@@ -486,6 +486,16 @@ if(DECT2_BUILD_TESTS)
     add_executable(${m}tool tools/${m}tool.cpp)
     target_link_libraries(${m}tool PRIVATE dect2core)
   endforeach()
+
+  # Long-running tests (30 s and more): the quick CI on every push skips them (ctest -LE slow),
+  # the full CI runs them nightly and on release tags.
+  foreach(t gain overload channel t2_payload dvbt_rx dab_rx atsc3_synth_options
+            atv_impair atv_interf atv_engine drm_impair drm_rx adsb_engine
+            gnss_loops gnss_rates gnss_sweep gnss_rate20 gnss_gap)
+    if(TEST ${t})
+      set_tests_properties(${t} PROPERTIES LABELS slow)
+    endif()
+  endforeach()
 endif()
 
 # ---------------------------------------------------------------- install and packages (cpack -G DEB / TGZ)

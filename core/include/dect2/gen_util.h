@@ -2,6 +2,7 @@
 // random positions (std::normal_distribution with a Mersenne twister costs more than all the rest of a cheap generator), and a
 // dot product written with independent partial sums so that every compiler vectorises it.
 #pragma once
+#include <cmath>
 #include <complex>
 #include <cstddef>
 #include <cstdint>
@@ -16,12 +17,35 @@
 namespace dect2 {
 namespace genutil {
 
+// Gaussian values that are the same with every standard library: std::normal_distribution is not (libc++ and libstdc++
+// give different sequences), so tests tuned on macOS met other noise on Linux. This is libc++'s algorithm (Marsaglia's
+// polar method) written out, with the fused multiply-add clang uses on arm64, so it gives macOS's values bit for bit.
+class PortableNormal {
+public:
+    explicit PortableNormal(float sigma = 1.f) : sigma_(sigma) {}
+    float operator()(std::mt19937& rng) {
+        if (have_) { have_ = false; return spare_ * sigma_; }
+        float u, v, s;
+        do {
+            u = 2.f * ((float)rng() / 4294967296.f) + -1.f;
+            v = 2.f * ((float)rng() / 4294967296.f) + -1.f;
+            s = std::fma(u, u, v * v);
+        } while (s > 1.f || s == 0.f);
+        const float f = std::sqrt(-2.f * std::log(s) / s);
+        spare_ = v * f; have_ = true;
+        return u * f * sigma_;
+    }
+private:
+    float sigma_, spare_ = 0.f;
+    bool have_ = false;
+};
+
 // white Gaussian noise, unit variance per real component, one table shared by every generator
 inline const std::vector<std::complex<float>>& noiseTable() {
     static const std::vector<std::complex<float>> t = [] {
         std::vector<std::complex<float>> v((size_t)1 << 19);
         std::mt19937 rng(20240611);
-        std::normal_distribution<float> nd(0.f, 1.f);
+        PortableNormal nd;
         for (auto& x : v) { const float re = nd(rng); x = std::complex<float>(re, nd(rng)); }
         return v;
     }();

@@ -8,6 +8,7 @@
 #include "dect2/gnss_sim.h"
 #include "dect2/gnss_track.h"
 #include "dect2/gnss_rx.h"
+#include "dect2/gen_util.h"
 #include <cmath>
 #include <cstdio>
 #include <random>
@@ -91,7 +92,7 @@ struct Lone {
     double codePhase(double t) const { return 1.023e6 * t + (dop * t + 0.5 * rate * t * t) / 1540.0; }
     double carrier(double t) const { return dop * t + 0.5 * rate * t * t; }
     void make(std::vector<cf32>& x, size_t n) {
-        std::normal_distribution<float> nd(0.f, (float)std::sqrt(0.5));
+        genutil::PortableNormal nd((float)std::sqrt(0.5));
         const double A = std::sqrt(std::pow(10.0, cn0 / 10.0) / fs);
         x.resize(n);
         for (size_t i = 0; i < n; i++) {
@@ -155,7 +156,7 @@ static void partC() {
     int found = 0, locked = 0, notConfirmed = 0;
     rx.setLogCallback([&](const std::string& s) { if (s.find("found") != std::string::npos) found++; if (s.find("locked") != std::string::npos) locked++; if (s.find("not confirmed") != std::string::npos) notConfirmed++; });
     std::mt19937 rng(77);
-    std::normal_distribution<float> nd(0.f, 0.14f);
+    genutil::PortableNormal nd(0.14f);
     std::vector<cf32> x(65536);
     const size_t blocks = (size_t)(40.0 * 4e6 / 65536);
     for (size_t b = 0; b < blocks; b++) {

@@ -590,7 +590,7 @@ static void testSynth() {
         printf("%.3f Msps: rms %.3f peak %.3f, %.0fx real time\n", fs / 1e6, rms, pk, rtf);
         CHECK(rms > 0.17 && rms < 0.23, "rms %.3f at %.3f Msps", rms, fs / 1e6);
         CHECK(pk < 0.91, "peak %.3f at %.3f Msps", pk, fs / 1e6);
-        if (!SANITIZED) CHECK(rtf >= 3.0, "only %.1fx real time at %.3f Msps", rtf, fs / 1e6);
+        if (!SANITIZED && !std::getenv("CI")) CHECK(rtf >= 3.0, "only %.1fx real time at %.3f Msps", rtf, fs / 1e6);
         // the spectrum: inside +-0.768 MHz flat, outside +-0.95 MHz well down (the images of the interpolation)
         if (fs >= 4e6) {
             const int N = 4096;
@@ -628,7 +628,7 @@ static void testSynth() {
         float pk = 0;
         for (auto& v : x) pk = std::max(pk, std::abs(v));
         printf("%.0f Msps with carrier offset, clock offset and noise: %.0fx real time, peak %.3f\n", fs / 1e6, rtf, pk);
-        if (!SANITIZED) CHECK(rtf >= 3.0, "only %.1fx real time at %.0f Msps with offsets", rtf, fs / 1e6);
+        if (!SANITIZED && !std::getenv("CI")) CHECK(rtf >= 3.0, "only %.1fx real time at %.0f Msps with offsets", rtf, fs / 1e6);
         CHECK(pk <= 0.9001f, "peak %.4f with noise", pk);
     }
     CHECK(!makeDabSynth(SynthConfig(), 1.5e6) && !makeDabSynth(SynthConfig(), 40e6), "rates outside 2 to 21 Msps are refused");

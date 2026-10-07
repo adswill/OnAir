@@ -479,6 +479,11 @@ public:
         }
     }
     double sampleRate() const override { return rate_; }
+    // GCC fuses the multiply-adds of the carrier rotation differently in its vector loop and in the scalar remainder (on arm64),
+    // which made the output depend on the chunk size: no fusing here (clang only fuses within an expression, the same way in both)
+#if defined(__GNUC__) && !defined(__clang__)
+    __attribute__((optimize("fp-contract=off")))
+#endif
     void generate(cf32* out, size_t n) override {
         while (pending_.size() - pos_ < n) produce();
         const cf32* src = &pending_[pos_];
