@@ -22,8 +22,8 @@ ASM=
   --disable-avdevice --disable-avfilter \
   --disable-everything \
   --enable-protocol=file \
-  --enable-demuxer=mpegts \
-  --enable-muxer=mpegts,hls \
+  --enable-demuxer=mpegts,mov \
+  --enable-muxer=mpegts,hls,mp4 \
   --enable-parser=h264,hevc,mpegvideo,mpegaudio,aac,aac_latm,ac3,dvbsub \
   --enable-decoder=h264,hevc,mpeg2video,mp2,mp2float,mp3,mp3float,ac3,eac3,aac,aac_latm,dvbsub \
   --enable-encoder=mpeg2video,mp2,aac \
