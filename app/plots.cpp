@@ -1,6 +1,31 @@
 // spectrum, waterfall, histogram and constellation plots
 #include "app.h"
 
+// Click on the spectrum or the waterfall to tune to that frequency (a drag still pans). The grid follows the mode: FM 0.1 MHz, DMR 12.5 kHz, else 1 kHz.
+static void clickToTune(App& a) {
+    if (!plt::IsPlotHovered() || a.fmScan.running) return;
+    double mhz = plt::GetPlotMousePos().x;
+    double lo = 0.1, hi = 6000;
+    double grid = 0.001;
+    if (a.fmMode) { lo = 87.5; hi = 108.0; grid = 0.1; }
+    else if (a.family == 9) grid = 0.0125;
+    if (a.family >= 6) if (const ModeTuning* mt = modeTuning(a.family + 2)) { lo = mt->minMhz; hi = mt->maxMhz; }
+    mhz = std::round(std::min(hi, std::max(lo, mhz)) / grid) * grid;
+    if (a.family == 4 || a.family == 1 || a.family == 3) return;   // ATSC and ISDB-T channels sit on a fixed raster: use the frequency field
+    const ImVec2 d = ImGui::GetMouseDragDelta(0, 0);
+    if (ImGui::IsMouseReleased(0) && std::fabs(d.x) < 4 && std::fabs(d.y) < 4 && std::fabs(mhz - a.freqMhz) > 1e-6) {
+        if (a.fmMode) fmTune(a, mhz); else tuneFreq(a, mhz);
+        return;
+    }
+    if (std::fabs(mhz - a.freqMhz) > 1e-6) {
+        const plt::Rect lim = plt::GetPlotLimits();   // a red line where a click would tune to
+        const double lx[2] = {mhz, mhz}, ly[2] = {lim.Y.Min, lim.Y.Max};
+        plt::Spec ls; ls.LineColor = ImVec4(0.95f, 0.25f, 0.25f, 0.9f); ls.LineWeight = 1.2f;
+        plt::PlotLine("##tunehere", lx, ly, 2, ls);
+        ImGui::SetTooltip("click to tune to %.4f MHz", mhz);
+    }
+}
+
 void spectrumPlot(App& a, ImVec2 size) {
     if (plt::BeginPlot("##spec", size, plt::Flags_NoLegend | plt::Flags_NoTitle)) {
         plt::SetupAxes("frequency (MHz)", "power (dBFS/bin)");
@@ -47,6 +72,7 @@ void spectrumPlot(App& a, ImVec2 size) {
                 }
             }
         }
+        clickToTune(a);
         plt::EndPlot();
     }
 }
@@ -97,6 +123,7 @@ void waterfallPlot(App& a, ImVec2 size) {
             plt::PlotImage("b", tex, plt::Point(x0, -H - frac), plt::Point(x1, -(H - w) - frac), ImVec2(0, 0), ImVec2(1, (float)w / H));
         const float vNew = (w + 0.5f) / H;   // the gap above: the newest row, stretched
         if (frac > 0) plt::PlotImage("top", tex, plt::Point(x0, -frac), plt::Point(x1, 0), ImVec2(0, vNew), ImVec2(1, vNew));
+        clickToTune(a);
         plt::EndPlot();
     }
 }
