@@ -5,7 +5,7 @@
 <p align="center"><b>Watch digital TV and listen to digital radio with a software-defined radio.</b><br>
 Free and open source. macOS, Windows and Linux.</p>
 
-<p align="center"><a href="https://github.com/adswill/OnAir/releases/download/v0.1.0/OnAir_promo_v0.1.0.mp4"><b>Watch the overview video</b></a> &nbsp;·&nbsp; <a href="https://discord.gg/Kky9c6atm"><b>Join the Discord</b></a> for support and feature requests</p>
+<p align="center"><a href="https://github.com/adswill/OnAir/releases/download/v0.2.0/OnAir_promo_v0.2.0.mp4"><b>Watch the overview video</b></a> &nbsp;·&nbsp; <a href="https://discord.gg/Kky9c6atm"><b>Join the Discord</b></a> for support and feature requests</p>
 
 ---
 
