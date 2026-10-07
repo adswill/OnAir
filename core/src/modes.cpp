@@ -46,27 +46,36 @@ private:
 
 class IsdbtSynth : public ModeSynth {
 public:
-    IsdbtSynth(const SynthConfig& c, double rate) : rate_(rate), cfo_(c.cfoHz), sigma_((float)std::sqrt(std::pow(10.0, -c.snrDb / 10.0) / 2.0)) {
+    IsdbtSynth(const SynthConfig& c, double rate) : rate_(rate), cfo_(c.cfoHz), sigma_((float)std::sqrt(std::pow(10.0, -c.snrDb / 10.0) / 2.0)), noise_(7) {
         isdbt::Params p;   // as isdbtgen: a one-segment layer A and a twelve-segment layer B that carries the programme
         p.mode = 3; p.guard = isdbt::kGi8; p.partial = true;
         p.layer[0].segments = 1; p.layer[0].mod = isdbt::kQpsk; p.layer[0].rate = isdbt::kR23; p.layer[0].ti = 2;
         p.layer[1].segments = 12; p.layer[1].mod = isdbt::k64Qam; p.layer[1].rate = isdbt::kR34; p.layer[1].ti = 1;
         gen_ = std::make_unique<isdbt::Generator>(p, isdbt::singleLayerSource(1, demoTsSource(isdbt::layerBitrate(p, 1) * 0.9)), 1);
-        rs_.configure(isdbt::kSampleRate, rate);
+        poly_ = poly_resampler_.configure(isdbt::kSampleRate, rate);   // 315/256 at 10 Msps: exact integer phases
+        if (!poly_) rs_.configure(isdbt::kSampleRate, rate);
     }
     double sampleRate() const override { return rate_; }
     void generate(cf32* out, size_t n) override {
         while (pending_.size() - pos_ < n) {
             gen_->nextFrame(frame_);
-            rs_.process(frame_.data(), frame_.size(), pending_);
+            if (poly_) poly_resampler_.process(frame_.data(), frame_.size(), pending_);
+            else rs_.process(frame_.data(), frame_.size(), pending_);
         }
-        for (size_t i = 0; i < n; i++, count_++) {
-            cf32 v = pending_[pos_ + i];
-            const double ph = 2 * M_PI * cfo_ * (double)(count_ % (uint64_t)rate_) / rate_;
-            v *= cf32((float)std::cos(ph), (float)std::sin(ph));
-            v += cf32(nd_(rng_), nd_(rng_)) * sigma_;
-            out[i] = v * 0.25f;
-        }
+        const cf32* src = &pending_[pos_];
+        if (cfo_ != 0) {   // carrier offset: an oscillator restarted from the exact phase every 128 samples
+            const double dph = 2 * M_PI * cfo_ / rate_;
+            const cf32 stp((float)std::cos(dph), (float)std::sin(dph));
+            for (size_t i0 = 0; i0 < n; i0 += 128) {
+                const double ph = std::remainder(dph * (double)(count_ + i0), 2 * M_PI);
+                cf32 r((float)std::cos(ph), (float)std::sin(ph));
+                const size_t i1 = std::min(n, i0 + 128);
+                for (size_t i = i0; i < i1; i++) { out[i] = src[i] * r; r *= stp; }
+            }
+        } else for (size_t i = 0; i < n; i++) out[i] = src[i];
+        count_ += n;
+        if (sigma_ > 0) noise_.add(out, n, sigma_);
+        for (size_t i = 0; i < n; i++) out[i] *= 0.25f;
         pos_ += n;
         if (pos_ > (1u << 20)) { pending_.erase(pending_.begin(), pending_.begin() + (long)pos_); pos_ = 0; }
     }
@@ -74,12 +83,13 @@ private:
     double rate_, cfo_;
     float sigma_;
     std::unique_ptr<isdbt::Generator> gen_;
+    isdbt::PolyResampler poly_resampler_;
+    bool poly_ = false;
     ExactResampler rs_;
     std::vector<cf32> frame_, pending_;
     size_t pos_ = 0;
     uint64_t count_ = 0;
-    std::mt19937 rng_{7};
-    std::normal_distribution<float> nd_{0.f, 1.f};
+    genutil::NoiseSource noise_;
 };
 }
 

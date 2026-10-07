@@ -5,6 +5,7 @@
 #pragma once
 #include "isdbt.h"
 #include "dvbt.h"
+#include "isdbt_resample.h"
 #include <deque>
 #include <functional>
 #include <memory>
