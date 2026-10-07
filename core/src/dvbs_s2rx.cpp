@@ -17,6 +17,14 @@
 namespace dect2 {
 namespace dvbs {
 
+#if defined(__GNUC__)
+#define DVBS_INLINE inline __attribute__((always_inline))
+#elif defined(_MSC_VER)
+#define DVBS_INLINE __forceinline
+#else
+#define DVBS_INLINE inline
+#endif
+
 namespace {
 constexpr double kPi = 3.14159265358979323846;
 const cf32 kPilot(0.70710678f, 0.70710678f);
@@ -206,7 +214,7 @@ struct S2Rx::Impl {
         const TanhTable::E e = kTanh.t[i];
         return e.v + (u - (float)i) * e.d;
     }
-    inline float ddError(const cf32& x) {
+    DVBS_INLINE float ddError(const cf32& x) {
         const float xr = x.real(), xi = x.imag();
         if (!soft) {
             switch (mod) {
@@ -683,9 +691,67 @@ struct S2Rx::Impl {
         return best;
     }
 
+    // The data and pilot symbols of a frame, the common case, taken in one run with the state of the carrier loop in registers (the same work as
+    // step() does for these symbols). Returns the number of symbols taken: it stops before the symbol that ends a pilot block, before the held back
+    // symbols at the end of the frame and before the end of the frame, which the general path handles.
+    size_t fastRun(const cf32* z, size_t n, bool inverted) {
+        if (tailing || dummy || !rn || pos < 90 || L <= 90) return 0;
+        const bool tailLogic = !dry && L > 400 && L < (1 << 20);
+        const int stop = tailLogic ? L - kTailBefore : L - 1;
+        if (pos >= stop) return 0;
+        const size_t cnt = std::min<size_t>(n, (size_t)(stop - pos));
+        const bool pilots = pil;
+        const uint8_t* rnv = rn->data();
+        const float ig = 1.f / gain;
+        int per = pilots ? (pos - 90) % 1476 : 0;
+        cf32 phl = ph, pacc = pilotAcc;
+        double th = theta, om = omega, dErr = daErr, pe2 = phErr2;
+        int dN = daN;
+        uint64_t pN = phN;
+        int pc = phCount, p = pos;
+        size_t k = 0;
+        for (; k < cnt; k++) {
+            if (pilots && per == 1475) break;
+            cf32 zin = z[k];
+            if (inverted) zin = cf32(zin.real(), -zin.imag());
+            const cf32 zs = s2RotateByR(cf32(zin.real() * ig, zin.imag() * ig), (4 - (int)rnv[p - 90]) & 3);
+            const cf32 P = cmul(phl, smallRot((float)om));
+            const cf32 x = cmul(zs, phl);
+            float err;
+            if (pilots && per >= 1440) {
+                err = x.imag() * kPilot.real() - x.real() * kPilot.imag();
+                const float dr = x.real() - kPilot.real(), di = x.imag() - kPilot.imag();
+                dErr += (double)(dr * dr + di * di); dN++;
+                pacc = cf32(pacc.real() + (x.real() * kPilot.real() + x.imag() * kPilot.imag()), pacc.imag() + (x.imag() * kPilot.real() - x.real() * kPilot.imag()));
+                pe2 += (double)err * err; pN++;
+            } else {
+                err = ddError(x);
+                frameSyms.push_back(x);
+                if ((frameSyms.size() & 7) == 0) { cellRing[cellPos] = x; cellPos = (cellPos + 1) & 2047; cellCount++; }
+            }
+            const float de = std::max(-0.5f, std::min(0.5f, err));
+            const float kap = kpiD * de, k2 = kap * kap;
+            phl = cmul(P, cf32(1.f - k2 * 0.5f, -(kap * (1.f - k2 * (1.f / 6.f)))));
+            th += (float)om + kap;
+            om += kiD * de;
+            if ((++pc & 31) == 0) phl /= std::abs(phl);
+            p++;
+            if (pilots) per++;
+        }
+        ph = phl; pilotAcc = pacc; theta = th; omega = om; daErr = dErr; phErr2 = pe2;
+        daN = dN; phN = pN; phCount = pc; pos = p;
+        return k;
+    }
+
     void feedBlock(const cf32* z, size_t n) {
-        if (o.inverted_.load()) { for (size_t i = 0; i < n && o.tracking_.load(); i++) feedSymbol(std::conj(z[i])); }
-        else for (size_t i = 0; i < n && o.tracking_.load(); i++) feedSymbol(z[i]);
+        const bool inv = o.inverted_.load();
+        size_t i = 0;
+        while (i < n && o.tracking_.load()) {
+            const size_t used = fastRun(z + i, n - i, inv);
+            if (used) { i += used; continue; }
+            feedSymbol(inv ? std::conj(z[i]) : z[i]);
+            i++;
+        }
     }
 
     // ------------------------------------------------------------------ decoder threads
