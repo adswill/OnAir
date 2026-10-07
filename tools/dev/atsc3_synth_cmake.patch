@@ -1,0 +1,28 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index a23e475..96b971d 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -66,6 +66,8 @@ foreach(m ${DECT2_MODES})
+   file(GLOB DECT2_MODE_SRC CONFIGURE_DEPENDS core/src/${m}_*.cpp)
+   target_sources(dect2core PRIVATE ${DECT2_MODE_SRC})
+ endforeach()
++file(GLOB DECT2_ATSC3_SYNTH_SRC CONFIGURE_DEPENDS core/src/atsc3_synth*.cpp)
++target_sources(dect2core PRIVATE ${DECT2_ATSC3_SYNTH_SRC})
+ target_include_directories(dect2core PUBLIC core/include)
+ if(SOAPY_FOUND)
+   message(STATUS "SoapySDR ${SOAPY_VERSION}: generic radios enabled")
+@@ -402,6 +404,14 @@ if(DECT2_BUILD_TESTS)
+   add_executable(test_atsc3_engine tests/test_atsc3_engine.cpp)
+   target_link_libraries(test_atsc3_engine PRIVATE dect2core)
+   add_test(NAME atsc3_engine COMMAND test_atsc3_engine ${CMAKE_SOURCE_DIR}/tests/data/route_video.mp4 ${CMAKE_SOURCE_DIR}/tests/data/route_audio.mp4)
++  file(GLOB DECT2_ATSC3_SYNTH_TESTS CONFIGURE_DEPENDS tests/test_atsc3_synth*.cpp)
++  foreach(src ${DECT2_ATSC3_SYNTH_TESTS})
++    get_filename_component(stem ${src} NAME_WE)
++    add_executable(${stem} ${src})
++    target_link_libraries(${stem} PRIVATE dect2core)
++    string(REGEX REPLACE "^test_" "" tname ${stem})
++    add_test(NAME ${tname} COMMAND ${stem})
++  endforeach()
+ 
+   add_executable(test_scan_radios tests/test_scan_radios.cpp)
+   target_link_libraries(test_scan_radios PRIVATE dect2core)
