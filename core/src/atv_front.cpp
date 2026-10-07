@@ -286,22 +286,29 @@ void AtvSound::process(const cf32* x, size_t n, std::vector<float>& out) {
     {
         // four phasors a sample apart, each stepped by four samples
         const std::complex<double> p0 = std::polar(1.0, s.ph), r1 = std::polar(1.0, w);
-        std::complex<float> p[4];
-        for (int q = 0; q < 4; q++) p[q] = std::complex<float>(p0 * std::pow(r1, q));
+        float pr[4], pm[4];
+        for (int q = 0; q < 4; q++) { const std::complex<float> v(p0 * std::pow(r1, q)); pr[q] = v.real(); pm[q] = v.imag(); }
         const std::complex<float> r4(std::pow(r1, 4));
+        const float r4r = r4.real(), r4i = r4.imag();
         size_t j = 0;
         for (; j + 4 <= n; j += 4) {
             for (int q = 0; q < 4; q++) {
                 const float xr = x[j + q].real(), xi = x[j + q].imag();
-                mi[j + q] = xr * p[q].real() - xi * p[q].imag();
-                mq[j + q] = xr * p[q].imag() + xi * p[q].real();
-                p[q] *= r4;
+                mi[j + q] = xr * pr[q] - xi * pm[q];
+                mq[j + q] = xr * pm[q] + xi * pr[q];
+                const float nr = pr[q] * r4r - pm[q] * r4i;
+                pm[q] = pr[q] * r4i + pm[q] * r4r;
+                pr[q] = nr;
             }
         }
-        for (; j < n; j++) {
-            const cf32 v = x[j] * p[0];
-            mi[j] = v.real(); mq[j] = v.imag();
-            p[0] *= r1;
+        {
+            const std::complex<float> r1f(r1);
+            std::complex<float> p(pr[0], pm[0]);
+            for (; j < n; j++) {
+                const cf32 v = x[j] * p;
+                mi[j] = v.real(); mq[j] = v.imag();
+                p *= r1f;
+            }
         }
         s.ph = std::fmod(s.ph + w * (double)n, 2 * kPi);
     }
@@ -436,22 +443,30 @@ size_t AtvFront::process(const cf32* x, size_t n) {
     {
         // four phasors a quarter of a turn apart in the block, each stepped by four samples: the multiplications do not wait for each other
         const std::complex<double> p0 = std::polar(1.0, -ph1_), r1 = std::polar(1.0, w);
-        std::complex<float> p[4];
-        for (int q = 0; q < 4; q++) p[q] = std::complex<float>(p0 * std::pow(r1, q));
+        float pr[4], pm[4];
+        for (int q = 0; q < 4; q++) { const std::complex<float> v(p0 * std::pow(r1, q)); pr[q] = v.real(); pm[q] = v.imag(); }
         const std::complex<float> r4(std::pow(r1, 4));
+        const float r4r = r4.real(), r4i = r4.imag();
+        float* mi = m1i_.data(); float* mq = m1q_.data();
         size_t j = 0;
         for (; j + 4 <= n; j += 4) {
             for (int q = 0; q < 4; q++) {
                 const float xr = x[j + q].real(), xi = x[j + q].imag();
-                m1i_[j + q] = xr * p[q].real() - xi * p[q].imag();
-                m1q_[j + q] = xr * p[q].imag() + xi * p[q].real();
-                p[q] *= r4;
+                mi[j + q] = xr * pr[q] - xi * pm[q];
+                mq[j + q] = xr * pm[q] + xi * pr[q];
+                const float nr = pr[q] * r4r - pm[q] * r4i;       // explicit arithmetic: the complex operators of the library are slower
+                pm[q] = pr[q] * r4i + pm[q] * r4r;
+                pr[q] = nr;
             }
         }
-        for (; j < n; j++) {
-            const std::complex<float> v = x[j] * p[0];
-            m1i_[j] = v.real(); m1q_[j] = v.imag();
-            p[0] *= r1;
+        {
+            const std::complex<float> r1f(r1);
+            std::complex<float> p(pr[0], pm[0]);
+            for (; j < n; j++) {
+                const std::complex<float> v = x[j] * p;
+                mi[j] = v.real(); mq[j] = v.imag();
+                p *= r1f;
+            }
         }
         ph1_ = std::fmod(ph1_ - w * (double)n, 2 * kPi);
     }
@@ -466,21 +481,28 @@ size_t AtvFront::process(const cf32* x, size_t n) {
         const double c = centreHz_ / fv_;
         const double p0 = 2 * kPi * std::fmod(c * nv_, 1.0);
         const std::complex<double> pd = std::polar(1.0, p0), rd = std::polar(1.0, 2 * kPi * c);
-        std::complex<float> p[4];
-        for (int q = 0; q < 4; q++) p[q] = std::complex<float>(pd * std::pow(rd, q));
+        float pr[4], pm[4];
+        for (int q = 0; q < 4; q++) { const std::complex<float> v(pd * std::pow(rd, q)); pr[q] = v.real(); pm[q] = v.imag(); }
         const std::complex<float> r4(std::pow(rd, 4));
+        const float r4r = r4.real(), r4i = r4.imag();
         size_t j = 0;
         for (; j + 4 <= m; j += 4) {
             for (int q = 0; q < 4; q++) {
-                y_i_[j + q] = d1i_[j + q] * p[q].real() - d1q_[j + q] * p[q].imag();
-                y_q_[j + q] = d1i_[j + q] * p[q].imag() + d1q_[j + q] * p[q].real();
-                p[q] *= r4;
+                y_i_[j + q] = d1i_[j + q] * pr[q] - d1q_[j + q] * pm[q];
+                y_q_[j + q] = d1i_[j + q] * pm[q] + d1q_[j + q] * pr[q];
+                const float nr = pr[q] * r4r - pm[q] * r4i;
+                pm[q] = pr[q] * r4i + pm[q] * r4r;
+                pr[q] = nr;
             }
         }
-        for (; j < m; j++) {
-            y_i_[j] = d1i_[j] * p[0].real() - d1q_[j] * p[0].imag();
-            y_q_[j] = d1i_[j] * p[0].imag() + d1q_[j] * p[0].real();
-            p[0] *= std::complex<float>(rd);
+        {
+            const std::complex<float> rdf(rd);
+            std::complex<float> p(pr[0], pm[0]);
+            for (; j < m; j++) {
+                y_i_[j] = d1i_[j] * p.real() - d1q_[j] * p.imag();
+                y_q_[j] = d1i_[j] * p.imag() + d1q_[j] * p.real();
+                p *= rdf;
+            }
         }
         nv_ += (double)m;
     }

@@ -230,30 +230,75 @@ struct AtvVideo::Impl {
 
     void process(const float* v, const float* i, const float* q, size_t n) {
         const double inv1 = 1.0 / L1, inv2 = 1.0 / L2;
-        for (size_t k = 0; k < n; k++) {
-            const size_t idx = (size_t)(nAbs & kMask);
-            const float vk = v[k];
-            rv[idx] = vk; ri[idx] = i[k]; rq[idx] = q[k];
-            // two running means; what leaves the sum is read back from the rings
-            sum1 += vk - rv[(size_t)((nAbs - (uint64_t)L1) & kMask)];
-            const float m1 = (float)(sum1 * inv1);
-            m1r[idx] = m1;
-            sum2 += m1 - m1r[(size_t)((nAbs - (uint64_t)L2) & kMask)];
-            const float vs = (float)(sum2 * inv2);
-            vsr[idx] = vs;
-            nAbs++;
-            smoothCount++;
-            if (smoothCount < (uint64_t)(L1 + L2 + 4)) { prevVs = vs; continue; }
-            if (!levelsValid) {
-                if (acq.empty()) acqStart = nAbs - 1;
-                acq.push_back(vs);
-                if (acq.size() >= acqNeed) { if (!acquire()) { acq.erase(acq.begin(), acq.begin() + (long)(acq.size() / 2)); acqStart += (uint64_t)acqNeed / 2; } }
-                prevVs = vs;
-                continue;
+        constexpr size_t kPiece = 1024;                        // samples a piece: the rings run at most this far ahead of the pulse search
+        for (size_t k0 = 0; k0 < n; k0 += kPiece) {
+            const size_t m = std::min(kPiece, n - k0);
+            const uint64_t n0 = nAbs;
+            // the rings
+            {
+                size_t done = 0;
+                while (done < m) {
+                    const size_t idx = (size_t)((n0 + done) & kMask), c = std::min(m - done, kRing - idx);
+                    std::memcpy(&rv[idx], v + k0 + done, c * sizeof(float));
+                    std::memcpy(&ri[idx], i + k0 + done, c * sizeof(float));
+                    std::memcpy(&rq[idx], q + k0 + done, c * sizeof(float));
+                    done += c;
+                }
             }
-            if (pState != 0 || vs >= (float)thr) detect(vs);          // between pulses the signal is below the threshold: nothing to do
-            prevVs = vs;
-            if (loopRunning) checkMiss();
+            // two running means; what leaves the sum is read back from the rings
+            {
+                double s1 = sum1, s2 = sum2;
+                const uint64_t o1 = (uint64_t)L1, o2 = (uint64_t)L2;
+                for (size_t j = 0; j < m; j++) {
+                    const size_t idx = (size_t)((n0 + j) & kMask);
+                    s1 += rv[idx] - rv[(size_t)((n0 + j - o1) & kMask)];
+                    const float m1 = (float)(s1 * inv1);
+                    m1r[idx] = m1;
+                    s2 += m1 - m1r[(size_t)((n0 + j - o2) & kMask)];
+                    vsr[idx] = (float)(s2 * inv2);
+                }
+                sum1 = s1; sum2 = s2;
+            }
+            // the pulse search. Between pulses the signal is below the threshold and nothing happens until the next line is overdue: such a
+            // stretch is skipped at once, with the line-overdue time kept as a limit on the sample count.
+            float thrF = (float)thr;
+            const uint64_t warm = (uint64_t)(L1 + L2 + 4);
+            for (size_t j = 0; j < m;) {
+                if (levelsValid && loopRunning && pState == 0 && smoothCount >= warm) {
+                    // checkMiss does nothing until (nAbs - 1 - dVs) passes tNext + gate + 0.3 spu
+                    const double lim = tNext + gate() + 0.3 * spu + dVs + 1.0;
+                    const uint64_t limN = lim < 0 ? 0 : lim >= 1.8e19 ? ~0ull : (uint64_t)std::floor(lim);       // nAbs > lim  <=>  nAbs > limN
+                    size_t jj = j;
+                    uint64_t na = nAbs;
+                    for (; jj < m; jj++) {
+                        if (vsr[(size_t)((n0 + jj) & kMask)] >= thrF || na + 1 > limN) break;
+                        na++;
+                    }
+                    if (jj > j) {
+                        prevVs = vsr[(size_t)((n0 + jj - 1) & kMask)];
+                        smoothCount += (uint64_t)(jj - j);
+                        nAbs = na;
+                        j = jj;
+                        if (j >= m) break;
+                    }
+                }
+                const float vs = vsr[(size_t)((n0 + j) & kMask)];
+                j++;
+                nAbs++;
+                smoothCount++;
+                if (smoothCount < warm) { prevVs = vs; continue; }
+                if (!levelsValid) {
+                    if (acq.empty()) acqStart = nAbs - 1;
+                    acq.push_back(vs);
+                    if (acq.size() >= acqNeed) { if (!acquire()) { acq.erase(acq.begin(), acq.begin() + (long)(acq.size() / 2)); acqStart += (uint64_t)acqNeed / 2; } }
+                    prevVs = vs;
+                    thrF = (float)thr;
+                    continue;
+                }
+                if (pState != 0 || vs >= thrF) detect(vs);          // between pulses the signal is below the threshold: nothing to do
+                prevVs = vs;
+                if (loopRunning) checkMiss();
+            }
         }
         processLines();
     }
@@ -972,6 +1017,7 @@ struct AtvVideo::Impl {
 
     void extractPicture(double tL, int row, int field) {
         (void)field;
+        const int W = this->W;                    // a copy: the byte stores below could change the member as far as the compiler knows, which keeps loops from vectorising
         const AtvFormat& F = fmt;
         const double g = lineGain();
         if (g <= 0) return;
@@ -1005,21 +1051,35 @@ struct AtvVideo::Impl {
             ti.resize(len); tq.resize(len);
             const double dph = 2 * kPi * mainLock.fsc / fv;
             const double ph0 = mainLock.ph + dph * ((double)sa - mainLock.tRef);
-            // four phasors a sample apart, each stepped by four samples, so that the multiplications do not wait for each other
+            // the I and Q rings of this line in order (the ring may wrap), then four phasors a sample apart, each stepped by four samples,
+            // so that the multiplications do not wait for each other (explicit float arithmetic: the complex operators of the library are slow)
+            yiL.resize(len); yqL.resize(len);
+            {
+                const size_t s0 = (size_t)((uint64_t)sa & kMask), first = std::min(len, kRing - s0);
+                std::memcpy(yiL.data(), &ri[s0], first * sizeof(float)); std::memcpy(yqL.data(), &rq[s0], first * sizeof(float));
+                if (first < len) { std::memcpy(yiL.data() + first, ri.data(), (len - first) * sizeof(float)); std::memcpy(yqL.data() + first, rq.data(), (len - first) * sizeof(float)); }
+            }
             const std::complex<double> pd0 = std::polar(1.0, -ph0), rd = std::polar(1.0, -dph);
-            std::complex<float> p[4];
-            for (int q = 0; q < 4; q++) p[q] = std::complex<float>(pd0 * std::pow(rd, q));
+            float pr[4], pim[4];
+            for (int q = 0; q < 4; q++) { const std::complex<float> v(pd0 * std::pow(rd, q)); pr[q] = v.real(); pim[q] = v.imag(); }
             const std::complex<float> r4(std::pow(rd, 4));
-            for (size_t k = 0; k < len; k += 4) {
-                const size_t nq = std::min<size_t>(4, len - k);
-                for (size_t q = 0; q < nq; q++) {
-                    const uint64_t n = (uint64_t)(sa + (long)(k + q)) & kMask;
-                    const float yi = ri[n], yq = rq[n];
-                    ti[k + q] = yi * p[q].real() - yq * p[q].imag();
-                    tq[k + q] = yi * p[q].imag() + yq * p[q].real();
-                    p[q] *= r4;
+            const float r4r = r4.real(), r4i = r4.imag();
+            size_t k = 0;
+            for (; k + 4 <= len; k += 4) {
+                for (int q = 0; q < 4; q++) {
+                    const float yi = yiL[k + (size_t)q], yq = yqL[k + (size_t)q];
+                    ti[k + (size_t)q] = yi * pr[q] - yq * pim[q];
+                    tq[k + (size_t)q] = yi * pim[q] + yq * pr[q];
+                    const float nr = pr[q] * r4r - pim[q] * r4i;
+                    pim[q] = pr[q] * r4i + pim[q] * r4r;
+                    pr[q] = nr;
                 }
-                if ((k & 127) == 124) for (int q = 0; q < 4; q++) p[q] /= std::abs(p[q]);
+                if ((k & 127) == 124) for (int q = 0; q < 4; q++) { const float m = 1.f / std::sqrt(pr[q] * pr[q] + pim[q] * pim[q]); pr[q] *= m; pim[q] *= m; }
+            }
+            for (int q = 0; k + (size_t)q < len; q++) {
+                const float yi = yiL[k + (size_t)q], yq = yqL[k + (size_t)q];
+                ti[k + (size_t)q] = yi * pr[q] - yq * pim[q];
+                tq[k + (size_t)q] = yi * pim[q] + yq * pr[q];
             }
             const int nt = (int)lpC.size(), m = nt / 2;
             // outputs for k = m, m + Dz, ...: z[j] belongs to sample m + j Dz
@@ -1058,28 +1118,45 @@ struct AtvVideo::Impl {
                 const int ph = (int)((pos - (float)i0) * (float)kInterpPhases + 0.5f);
                 const float* k = kt + (size_t)ph * kInterpTaps;
                 const float* q = lp + i0 - (kInterpTaps / 2 - 1);
-                float acc = 0;
-                for (int t = 0; t < kInterpTaps; t++) acc += k[t] * q[t];
-                out[x] = acc;
+                // four partial sums (the eight taps in two halves), so that the additions do not wait for each other
+                const float a0 = k[0] * q[0] + k[4] * q[4], a1 = k[1] * q[1] + k[5] * q[5], a2 = k[2] * q[2] + k[6] * q[6], a3 = k[3] * q[3] + k[7] * q[7];
+                out[x] = (a0 + a1) + (a2 + a3);
             }
         }
         // chrominance at every second pixel (cubic), linear in between
         if (colourNow) {
             cuRow.resize((size_t)W + 2); cvRow.resize((size_t)W + 2);
+            // every second pixel (and one more at each end): the position in the filtered chrominance and the four cubic weights first
+            // (plain arithmetic over arrays, which vectorises), then the sums
             const double advPos = advSamp, invDz = 1.0 / Dz;
-            for (int x = 0; x < W + 2; x += 2) {
-                const int xc = std::min(x, W - 1);
-                const double pz = ((double)pos0 + xc * (double)stepY + advPos - zoff) * invDz;
-                const long i0 = (long)pz;
-                const float fr = (float)(pz - (double)i0);
-                const long ia = std::min(std::max(i0 - 1, 0L), (long)nz - 4);
-                const float t2 = fr * fr, t3 = t2 * fr;
-                const float w0 = -0.5f * t3 + t2 - 0.5f * fr, w1 = 1.5f * t3 - 2.5f * t2 + 1.f, w2 = -1.5f * t3 + 2.f * t2 + 0.5f * fr, w3 = 0.5f * t3 - 0.5f * t2;
-                const float* a = &zr[(size_t)ia]; const float* b = &zq_[(size_t)ia];
+            const int nx = (W + 2 + 1) / 2;
+            czP.resize((size_t)nx); czW.resize((size_t)nx * 4); czIdx.resize((size_t)nx);
+            int* czI = czIdx.data();
+            float* czF = czP.data();
+            const float pzBase = (float)(((double)pos0 + advPos - zoff) * invDz), pzStep = (float)((double)stepY * invDz);
+            for (int j = 0; j < nx; j++) {
+                const int xc = std::min(2 * j, W - 1);
+                const float pz = pzBase + (float)xc * pzStep;
+                const int i0 = (int)pz;
+                czF[j] = pz - (float)i0;
+                czI[j] = std::min(std::max(i0 - 1, 0), (int)nz - 4);
+            }
+            float* cw = czW.data();
+            for (int j = 0; j < nx; j++) {
+                const float fr = czF[j], t2 = fr * fr, t3 = t2 * fr;
+                cw[4 * j] = -0.5f * t3 + t2 - 0.5f * fr; cw[4 * j + 1] = 1.5f * t3 - 2.5f * t2 + 1.f;
+                cw[4 * j + 2] = -1.5f * t3 + 2.f * t2 + 0.5f * fr; cw[4 * j + 3] = 0.5f * t3 - 0.5f * t2;
+            }
+            const float* zrp = zr.data(); const float* zqp = zq_.data();
+            const float gU = invG * accGain, gV = invG * accGain * (pal ? (float)vsign : 1.f);
+            for (int j = 0; j < nx; j++) {
+                const int x = 2 * j;
+                const float* a = zrp + czI[j]; const float* b = zqp + czI[j];
+                const float w0 = cw[4 * j], w1 = cw[4 * j + 1], w2 = cw[4 * j + 2], w3 = cw[4 * j + 3];
                 const float re = w0 * a[0] + w1 * a[1] + w2 * a[2] + w3 * a[3], im = w0 * b[0] + w1 * b[1] + w2 * b[2] + w3 * b[3];
                 // z in the raw domain, p = -z / G: z_p = sV - jU for a locked reference
-                cuRow[(size_t)x] = im * invG * accGain;
-                cvRow[(size_t)x] = -re * invG * accGain * (pal ? (float)vsign : 1.f);
+                cuRow[(size_t)x] = im * gU;
+                cvRow[(size_t)x] = -re * gV;
                 if (x + 1 < W + 2) { cuRow[(size_t)x + 1] = 0; cvRow[(size_t)x + 1] = 0; }
             }
             for (int x = 1; x < W; x += 2) { cuRow[(size_t)x] = 0.5f * (cuRow[(size_t)x - 1] + cuRow[(size_t)x + 1]); cvRow[(size_t)x] = 0.5f * (cvRow[(size_t)x - 1] + cvRow[(size_t)x + 1]); }
@@ -1088,39 +1165,45 @@ struct AtvVideo::Impl {
             cuRow.resize((size_t)W); cvRow.resize((size_t)W);
             for (int x = 0; x < W; x++) { cuRow[(size_t)x] = secU[(size_t)x]; cvRow[(size_t)x] = secV[(size_t)x]; }
         }
-        const float* yp = yRowP.data();
+        const float* __restrict yp = yRowP.data();
         if (colourNow || secamNow) {
-            // simple loops over rows, so that the compiler can use the vector unit
-            cvtY.resize((size_t)W); cvtU.resize((size_t)W); cvtV.resize((size_t)W); cvtR.resize((size_t)W * 3);
+            // one pass over the row: luminance, chrominance (with the previous line on PAL and the hue rotation), the BT.470 matrix (see atvYuvToRgb)
+            // and the bytes. Without the previous line the chrominance is averaged with itself, which leaves it as it is.
             const float cY = (float)clampB, ky = invGY * scl, ko = setup * scl;
-            for (int x = 0; x < W; x++) cvtY[(size_t)x] = (cY - yp[x]) * ky - ko;
-            if (avgPrev) for (int x = 0; x < W; x++) { cvtU[(size_t)x] = 0.5f * (cuRow[(size_t)x] + prevU[(size_t)x]) * gsat; cvtV[(size_t)x] = 0.5f * (cvRow[(size_t)x] + prevV[(size_t)x]) * gsat; }
-            else for (int x = 0; x < W; x++) { cvtU[(size_t)x] = cuRow[(size_t)x] * gsat; cvtV[(size_t)x] = cvRow[(size_t)x] * gsat; }
-            if (hue && !secamNow) for (int x = 0; x < W; x++) { const float u2 = cvtU[(size_t)x] * ch - cvtV[(size_t)x] * sh, v2 = cvtU[(size_t)x] * sh + cvtV[(size_t)x] * ch; cvtU[(size_t)x] = u2; cvtV[(size_t)x] = v2; }
-            for (int x = 0; x < W; x++) whitePk = std::max(whitePk, cvtY[(size_t)x]);
-            float* rr = cvtR.data();
-            for (int x = 0; x < W; x++) {            // BT.470 matrix, see atvYuvToRgb
-                const float Y = cvtY[(size_t)x], U = cvtU[(size_t)x], V = cvtV[(size_t)x];
-                rr[x] = (Y + 1.1403f * V) * 255.f + 0.5f;
-                rr[W + x] = (Y - 0.3939f * U - 0.5808f * V) * 255.f + 0.5f;
-                rr[2 * W + x] = (Y + 2.0284f * U) * 255.f + 0.5f;
-            }
+            const float* __restrict cu = cuRow.data(); const float* __restrict cv = cvRow.data();
+            const float* __restrict pu = avgPrev ? prevU.data() : cuRow.data(); const float* __restrict pv = avgPrev ? prevV.data() : cvRow.data();
+            const float hs = hue && !secamNow ? sh : 0.f, hc = hue && !secamNow ? ch : 1.f;
+            uint8_t* __restrict o = dst;
+            // the white peak apart from the pixels (a running maximum would keep the compiler from vectorising the loop), in four lanes
+            float m4[4] = {0, 0, 0, 0};
+            for (int x = 0; x + 4 <= W; x += 4) for (int l = 0; l < 4; l++) m4[l] = std::max(m4[l], (cY - yp[x + l]) * ky - ko);
+            float wp = std::max(std::max(m4[0], m4[1]), std::max(m4[2], m4[3]));
+            for (int x = W & ~3; x < W; x++) wp = std::max(wp, (cY - yp[x]) * ky - ko);
             for (int x = 0; x < W; x++) {
-                uint8_t* o = dst + (size_t)x * 4;
-                o[0] = (uint8_t)std::min(255.f, std::max(0.f, rr[x]));
-                o[1] = (uint8_t)std::min(255.f, std::max(0.f, rr[W + x]));
-                o[2] = (uint8_t)std::min(255.f, std::max(0.f, rr[2 * W + x]));
-                o[3] = 255;
+                const float Y = (cY - yp[x]) * ky - ko;
+                const float u0 = 0.5f * (cu[x] + pu[x]) * gsat, v0 = 0.5f * (cv[x] + pv[x]) * gsat;
+                const float U = u0 * hc - v0 * hs, V = u0 * hs + v0 * hc;
+                const float r = (Y + 1.1403f * V) * 255.f + 0.5f, g = (Y - 0.3939f * U - 0.5808f * V) * 255.f + 0.5f, b = (Y + 2.0284f * U) * 255.f + 0.5f;
+                o[4 * x] = (uint8_t)std::min(255.f, std::max(0.f, r));
+                o[4 * x + 1] = (uint8_t)std::min(255.f, std::max(0.f, g));
+                o[4 * x + 2] = (uint8_t)std::min(255.f, std::max(0.f, b));
+                o[4 * x + 3] = 255;
             }
+            whitePk = std::max(whitePk, wp);
         } else {
+            uint8_t* __restrict o = dst;
+            const float cB = (float)clampB;
+            float m4[4] = {whitePk, whitePk, whitePk, whitePk};
+            for (int x = 0; x + 4 <= W; x += 4) for (int l = 0; l < 4; l++) m4[l] = std::max(m4[l], ((cB - yp[x + l]) * invGY - setup) * scl);
+            float wp = std::max(std::max(m4[0], m4[1]), std::max(m4[2], m4[3]));
+            for (int x = W & ~3; x < W; x++) wp = std::max(wp, ((cB - yp[x]) * invGY - setup) * scl);
             for (int x = 0; x < W; x++) {
-                float Y = ((float)clampB - yp[x]) * invGY;
+                float Y = (cB - yp[x]) * invGY;
                 Y = (Y - setup) * scl;
-                if (Y > whitePk) whitePk = Y;
                 const uint8_t v8 = to8(Y);
-                uint8_t* o = dst + (size_t)x * 4;
-                o[0] = v8; o[1] = v8; o[2] = v8; o[3] = 255;
+                o[4 * x] = v8; o[4 * x + 1] = v8; o[4 * x + 2] = v8; o[4 * x + 3] = 255;
             }
+            whitePk = wp;
         }
         if (colourNow && pal) { prevU = uRow; prevV = vRow; prevValid = true; prevLineNo = curNo; }
         else prevValid = false;
@@ -1132,7 +1215,8 @@ struct AtvVideo::Impl {
     }
     static inline uint8_t to8(float v) { const int i = (int)(v * 255.f + 0.5f); return (uint8_t)(i < 0 ? 0 : i > 255 ? 255 : i); }
     bool lastColourNow = false;
-    std::vector<float> bpf, lumBuf, bp, ti, tq, yRowP, cuRow, cvRow, cvtY, cvtU, cvtV, cvtR;
+    std::vector<float> bpf, lumBuf, bp, ti, tq, yiL, yqL, yRowP, cuRow, cvRow, cvtY, cvtU, cvtV, cvtR, czP, czW;
+    std::vector<int> czIdx;
     int zdec = 2;
     double zoff = 0;
 
