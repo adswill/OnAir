@@ -915,12 +915,25 @@ struct RsMulTab {
 };
 const RsMulTab& rsMulTab() { static RsMulTab m; return m; }
 inline bool rsSyndromes(const uint8_t* r, uint8_t* S) {
+    // the remainder of r(x) modulo g(x) is zero exactly when every syndrome is, and S_i = rem(alpha^i)
+    const RsRows& R = rsRows();
     const RsMulTab& m = rsMulTab();
-    uint8_t s[16] = {};
-    for (int j = 0; j < 204; j++) { const uint8_t b = r[j]; for (int i = 0; i < 16; i++) s[i] = m.t[i][s[i]] ^ b; }
+    uint8_t b[204 + 16 + 8] = {};
+    memcpy(b, r, 204);
+    for (int i = 0; i < 188; i++) {
+        const uint8_t fb = b[i];
+        if (!fb) continue;
+        uint64_t x[2], y[2];
+        memcpy(x, b + i + 1, 16); memcpy(y, R.row[fb], 16);
+        x[0] ^= y[0]; x[1] ^= y[1];
+        memcpy(b + i + 1, x, 16);
+    }
+    const uint8_t* rem = b + 188;
     uint8_t any = 0;
-    for (int i = 0; i < 16; i++) { S[i] = s[i]; any |= s[i]; }
-    return any != 0;
+    for (int j = 0; j < 16; j++) any |= rem[j];
+    if (!any) { memset(S, 0, 16); return false; }
+    for (int i = 0; i < 16; i++) { uint8_t s = 0; for (int j = 0; j < 16; j++) s = m.t[i][s] ^ rem[j]; S[i] = s; }
+    return true;
 }
 }
 
@@ -974,23 +987,14 @@ int rsDecode(uint8_t* r) {
 }
 
 void descramble(uint8_t* packets, size_t count, int first) {
-    unsigned reg = 0;
-    auto clock8 = [&] {
-        unsigned res = 0;
-        for (int i = 0; i < 8; i++) {
-            const unsigned fb = ((reg >> 13) ^ (reg >> 14)) & 1;
-            reg = ((reg << 1) | fb) & 0x7FFF;
-            res = (res << 1) | fb;
-        }
-        return res;
-    };
+    const DispersalSeq& D = dispersalSeq();
+    bool synced = false;   // the generator register starts at zero, which gives a zero sequence until the first packet of a group of eight
     for (size_t p = 0; p < count; p++) {
         const int g = (int)((first + p) % 8);
-        if (g == 0) reg = 0xA9;
+        if (g == 0) synced = true;
         uint8_t* b = packets + p * 188;
         b[0] = 0x47;
-        for (int k = 1; k < 188; k++) b[k] ^= (uint8_t)clock8();
-        clock8();
+        if (synced) { const uint8_t* q = D.b[g]; for (int k = 1; k < 188; k++) b[k] ^= q[k]; }
     }
 }
 

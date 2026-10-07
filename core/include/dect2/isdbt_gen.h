@@ -50,6 +50,8 @@ private:
     std::vector<uint8_t> chain_;                // differential state of the TMCC and AC carriers
     ::dect2::Fft* fft_ = nullptr;
     long frames_ = 0;
+    struct Plan;                                 // everything about the carrier layout that does not change from symbol to symbol
+    std::unique_ptr<Plan> plan_;
 };
 
 } // namespace isdbt
