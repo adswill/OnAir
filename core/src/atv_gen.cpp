@@ -114,7 +114,7 @@ struct AtvGenerator::Impl {
 
     // sound, ghost, noise
     Programme prog;
-    double sndPh = 0;                                // the sound carrier phase, radians in [-pi, pi]
+    double sndPh = 0;                                // the sound carrier phase, radians (a running sum, reduced only where it is used)
     std::vector<float> sPh;
     std::vector<double> sPhD;
     uint64_t audioBlock = ~0ull;
@@ -605,14 +605,14 @@ struct AtvGenerator::Impl {
             // up to the end of this block of 32 samples the audio is a straight line: the phase advances by a constant plus a ramp
             const size_t m0 = (size_t)(k % B), cnt = std::min<size_t>(n - i, (size_t)B - m0);
             const double slope = (audioA1 - audioA0) / (double)B;
-            const double inc0 = w0 + dk * (audioA0 + slope * (double)m0), dinc = dk * slope;   // the carrier and the deviation, as phase
             double* pd = &sPhD[i];
-            for (size_t q = 0; q < cnt; q++) { ph += inc0 + dinc * (double)q; pd[q] = ph; }
+            // the carrier and the deviation, as phase; the sum is never reduced (the result must not depend on how the calls split the stream)
+            for (size_t q = 0; q < cnt; q++) { ph += w0 + dk * (audioA0 + slope * (double)(m0 + q)); pd[q] = ph; }
             i += cnt;
         }
         // the phase into [-pi, pi]
         for (size_t q = 0; q < n; q++) sPh[q] = (float)(sPhD[q] - 2 * kPi * std::nearbyint(sPhD[q] * (0.5 / kPi)));
-        sndPh = ph - 2 * kPi * std::nearbyint(ph * (0.5 / kPi));
+        sndPh = ph;
         for (size_t i = 0; i < n; i++) {
             const float x = sPh[i];
             float y = x + 1.5707963f;

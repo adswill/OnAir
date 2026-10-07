@@ -200,11 +200,16 @@ struct AtvReceiver::Impl {
         // turn at megahertz, so their mean over a block is nothing; the spike does not turn.
         xd.resize(m);
         {
-            float sr = 0, si = 0;
-            for (size_t k = 0; k < m; k++) { sr += x[k].real(); si += x[k].imag(); }
+            // the sums in four lanes: a single running sum would make every addition wait for the last
+            float sr4[4] = {0, 0, 0, 0}, si4[4] = {0, 0, 0, 0};
+            size_t k = 0;
+            for (; k + 4 <= m; k += 4) for (size_t l = 0; l < 4; l++) { sr4[l] += x[k + l].real(); si4[l] += x[k + l].imag(); }
+            for (; k < m; k++) { sr4[0] += x[k].real(); si4[0] += x[k].imag(); }
+            const float sr = (sr4[0] + sr4[1]) + (sr4[2] + sr4[3]), si = (si4[0] + si4[1]) + (si4[2] + si4[3]);
             const float w = std::min(1.f, dcA * (float)m);
             dc += (cf32(sr, si) / (float)m - dc) * w;
-            for (size_t k = 0; k < m; k++) xd[k] = x[k] - dc;
+            const float dr = dc.real(), di = dc.imag();
+            for (size_t q = 0; q < m; q++) xd[q] = cf32(x[q].real() - dr, x[q].imag() - di);
         }
         nIn += m;
         if (mode == kSearch) {
