@@ -125,7 +125,7 @@ int main() {
             }
         });
         std::vector<cf32> x(65536), y(65536);
-        for (int k = 0; k < 40; k++) {
+        for (int k = 0; k < 200; k++) {     // the carrier search and the hunt take about 35 blocks, then 11 or 12 packets a block
             sa.generate(x.data(), x.size()); sb.generate(y.data(), y.size());
             for (size_t i = 0; i < x.size(); i++) {
                 cf32 v = x[i] + y[i];
@@ -137,7 +137,7 @@ int main() {
         rx.flush();
         DvbsTelemetry t;
         rx.telemetry(t, 0);
-        CHECK(good > 3000 && bad == 0, "adjacent carrier: %llu good packets, %llu damaged; %s", (unsigned long long)good, (unsigned long long)bad, dvbsSummary(t).c_str());
+        CHECK(good > 1500 && bad == 0, "adjacent carrier: %llu good packets, %llu damaged; %s", (unsigned long long)good, (unsigned long long)bad, dvbsSummary(t).c_str());
         printf("adjacent carrier: %llu good packets, %llu damaged, %s\n", (unsigned long long)good, (unsigned long long)bad, dvbsSummary(t).c_str());
     }
 

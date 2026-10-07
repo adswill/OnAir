@@ -88,7 +88,9 @@ std::vector<double> median5(const std::vector<double>& x) {
 }
 
 namespace {
-SpectrumResult analyseOne(const std::vector<double>& psd, double fs, int segments) {
+// `region` (when given) receives the bins around the strongest peak, so that a caller can blank out a candidate that could not be measured (a carrier
+// cut by the edge of the band)
+SpectrumResult analyseOne(const std::vector<double>& psd, double fs, int segments, std::pair<int, int>* region = nullptr) {
     SpectrumResult r;
     const int n = (int)psd.size();
     if (n < 256) return r;
@@ -109,6 +111,13 @@ SpectrumResult analyseOne(const std::vector<double>& psd, double fs, int segment
     for (int k = 4; k < n - 4; k++) if (wide[k] > wide[kpk]) kpk = k;
     // the plateau level: the mean of the spectrum around the peak
     double lp = wide[kpk];
+    if (region) {
+        const double lvl = floorLin + 0.4 * (lp - floorLin);
+        int a = kpk, b = kpk;
+        while (a > 0 && wide[a - 1] > lvl) a--;
+        while (b < n - 1 && wide[b + 1] > lvl) b++;
+        *region = {a, b};
+    }
     double lo = -1, hi = -1;
     bool templ = false;
     if (lp < 4.0 * floorLin) {
@@ -283,8 +292,19 @@ SpectrumResult analysePsd(const std::vector<double>& psd, double fs, int segment
     std::vector<SpectrumResult> found;
     const int n = (int)p.size();
     for (int it = 0; it < 4; it++) {
-        const SpectrumResult r = analyseOne(p, fs, segments);
-        if (!r.valid || r.zscore < 8.f) break;
+        std::pair<int, int> reg{0, -1};
+        const SpectrumResult r = analyseOne(p, fs, segments, &reg);
+        if (!r.valid) {
+            // a candidate that cannot be measured (cut by the edge of the band, say): blank it out and look at the next one
+            if (reg.second < reg.first || r.zscore < 8.f || it == 3) break;
+            std::vector<double> s(p);
+            std::sort(s.begin(), s.end());
+            const double fl = s[(size_t)(n * 0.15)];
+            const int m = std::max(8, (reg.second - reg.first) / 3);
+            for (int k = std::max(0, reg.first - m); k <= std::min(n - 1, reg.second + m); k++) p[(size_t)k] = fl;
+            continue;
+        }
+        if (r.zscore < 8.f) break;
         found.push_back(r);
         const double bin = fs / n, w = r.edgeHiHz - r.edgeLoHz;
         const int a = std::max(0, (int)std::floor((r.edgeLoHz - 0.35 * w) / bin + n / 2.0)), b = std::min(n - 1, (int)std::ceil((r.edgeHiHz + 0.35 * w) / bin + n / 2.0));

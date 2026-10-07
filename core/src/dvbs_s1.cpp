@@ -110,7 +110,7 @@ S1Hypothesis s1Search(const cf32* y, size_t n, int rateHint) {
 // ============================================================================ streaming decoder
 void S1Decoder::reset() {
     started_ = false; syncLocked_ = false; inverted_ = false;
-    llr_.clear(); carry_.clear(); bits_.clear(); aligned_.clear(); after_.clear(); out_.clear();
+    llr_.clear(); carry_.clear(); bits_.clear(); aligned_.clear(); after_.clear(); out_.clear(); held_.clear();
     first_ = true; skip_ = 0; phase_ = 0;
     deint_ = dvbt::ConvInterleaver(true);
     warm_ = 0; groupIdx_ = 0; haveGroup_ = false; consecBad_ = 0; syncMisses_ = 0; score_ = 0; ber_ = 0; blocks_ = 0;
@@ -209,7 +209,7 @@ void S1Decoder::process() {
         blocksNow++;
         uint8_t pkt[188];
         memcpy(pkt, blk, 188);
-        if (r < 0) { rsFailed++; consecBad_++; pkt[1] |= 0x80; }
+        if (r < 0) { rsFailed++; consecBad_++; }
         else { consecBad_ = 0; if (r == 0) rsClean++; else { rsCorrected++; bytesCorrected += (uint64_t)r; fixedBytes += (uint64_t)r; } }
         if (r >= 0 && pkt[0] == 0xB8) { groupIdx_ = 0; haveGroup_ = true; }
         else if (haveGroup_) groupIdx_ = (groupIdx_ + 1) % 8;
@@ -217,7 +217,8 @@ void S1Decoder::process() {
             const uint8_t* key = &ks[(size_t)groupIdx_ * 188];
             pkt[0] = 0x47;
             for (int j = 1; j < 188; j++) pkt[j] ^= key[j];
-            out_.insert(out_.end(), pkt, pkt + 188);
+            if (r < 0) pkt[1] |= 0x80;       // after the descrambler: its key would clear the flag in half of the positions
+            deliver(pkt, r);
         }
         // sync is lost when the stream stays out of step: a misaligned stream shows a sync byte in about one block of 128
         if (r >= 0 || syncOk) syncMisses_ = 0;
@@ -228,12 +229,33 @@ void S1Decoder::process() {
             syncLocked_ = false; syncLosses++; started_ = false;
             bits_.clear(); after_.clear(); aligned_.clear(); haveGroup_ = false; syncMisses_ = 0; carry_.clear(); first_ = true;
             llr_.clear();
+            releaseHeld(0);
             return;
         }
         pos += 204;
     }
     after_.erase(after_.begin(), after_.begin() + (std::ptrdiff_t)pos);
     if (blocksNow) ber_ = 0.9 * ber_ + 0.1 * ((double)fixedBytes / (double)(blocksNow * 204));
+}
+
+// A block that Reed-Solomon "corrected" can be a false correction when it sits next to a loss of signal: the last bits before a gap are decoded from
+// nothing, and a word with many errors on one branch of the interleaver can land within reach of another codeword. Such a packet looks clean and is
+// not. A corrected block is therefore held back for three blocks; if three blocks in a row fail behind it, it goes out with the error flag set.
+void S1Decoder::deliver(uint8_t* pkt, int r) {
+    if (held_.empty() && r <= 0) { out_.insert(out_.end(), pkt, pkt + 188); return; }
+    Held h;
+    memcpy(h.d, pkt, 188);
+    h.r = r;
+    held_.push_back(h);
+    if (r < 0 && consecBad_ == 3) for (auto& e : held_) if (e.r > 0) e.d[1] |= 0x80;
+    releaseHeld(3);
+}
+
+void S1Decoder::releaseHeld(size_t keep) {
+    while (!held_.empty() && (held_.size() > keep || held_.front().r <= 0)) {
+        out_.insert(out_.end(), held_.front().d, held_.front().d + 188);
+        held_.pop_front();
+    }
 }
 
 void S1Decoder::findSync() {

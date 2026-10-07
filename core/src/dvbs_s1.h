@@ -4,6 +4,7 @@
 #include "dect2/dvbt.h"
 #include "dect2/ring.h"
 #include <cstdint>
+#include <deque>
 #include <vector>
 
 namespace dect2 {
@@ -75,6 +76,10 @@ private:
     std::vector<uint8_t> bits_;            // decoded information bits
     std::vector<uint8_t> aligned_;         // bytes from the sync position on, before the de-interleaver
     std::vector<uint8_t> after_;           // after the de-interleaver
+    struct Held { uint8_t d[188]; int r; };
+    std::deque<Held> held_;                   // delivered packets that wait for the verdict of the blocks behind them, see deliver()
+    void deliver(uint8_t* pkt, int r);
+    void releaseHeld(size_t keep);
     std::vector<uint8_t> out_;
     dvbt::ConvInterleaver deint_{true};
     int warm_ = 0, groupIdx_ = 0;
