@@ -4,7 +4,7 @@
 #include "atsc.h"
 #include "ring.h"
 #include <functional>
-#include <random>
+#include "gen_util.h"
 #include <vector>
 #include <cstdint>
 
@@ -39,13 +39,14 @@ private:
     PacketSource src_;
     ChannelConfig cfg_;
     double outRate_;
-    std::mt19937 rng_;
+    genutil::NoiseSource noise_;
     FieldEncoder enc_;
     std::vector<float> rrc_;      // transmit pulse at 2 samples per symbol
-    std::vector<cf32> acc_;       // overlap-add accumulator (pulse tails of the previous field)
-    std::vector<cf32> hi_;        // finished samples at 2 samples/symbol
+    std::vector<float> shapeTaps_, aE_, aO_, xs_, tmp_;   // polyphase pulse shaping: reversed taps, even and odd symbols (with history), output of one field
+    std::vector<cf32> yBuf_;
+    std::vector<float> hiRe_, hiIm_;   // finished samples at 2 samples/symbol, planar
     std::vector<cf32> echoHist_;
-    uint64_t hiBase_ = 0;         // absolute index of hi_[0]
+    int64_t hiBase_ = 0;          // absolute index of hiRe_[0]
     uint64_t symIndex_ = 0, fields_ = 0;
     double cfoPhase_ = 0;
     double outPos_ = 0;           // next output position in units of hi samples
