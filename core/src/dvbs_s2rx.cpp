@@ -21,6 +21,11 @@ namespace {
 constexpr double kPi = 3.14159265358979323846;
 const cf32 kPilot(0.70710678f, 0.70710678f);
 
+// complex product written out (the library one tests for NaN results on every call)
+inline cf32 cmul(cf32 a, cf32 b) {
+    return cf32(a.real() * b.real() - a.imag() * b.imag(), a.real() * b.imag() + a.imag() * b.real());
+}
+
 // e^{-j d} for small d: the loop never turns by more than a fraction of a radian per symbol
 inline cf32 smallRot(float d) {
     const float d2 = d * d;
@@ -44,6 +49,28 @@ inline float ftanh(float x) {
     const float e = fexp(-2.f * ax);
     const float t = (1.f - e) / (1.f + e);
     return x < 0 ? -t : t;
+}
+
+// tanh by linear interpolation in a table (2048 steps over 0 .. 12, error below 4e-6): a few cycles of latency where ftanh needs a polynomial and
+// a division, which matters in the carrier loop where every symbol waits for the one before
+struct TanhTable {
+    static constexpr int kN = 2048;
+    static constexpr float kMax = 12.f, kScale = (float)kN / kMax;
+    struct E { float v, d; };
+    E t[kN + 1];
+    TanhTable() {
+        for (int i = 0; i <= kN; i++) t[i].v = (float)std::tanh((double)i / kScale);
+        for (int i = 0; i < kN; i++) t[i].d = t[i + 1].v - t[i].v;
+        t[kN].d = 0.f;
+    }
+};
+const TanhTable kTanh;
+inline float ftanhTab(float x) {
+    const float u = std::min(std::fabs(x), TanhTable::kMax) * TanhTable::kScale;
+    const int i = (int)u;
+    const TanhTable::E e = kTanh.t[i];
+    const float t = e.v + (u - (float)i) * e.d;
+    return std::copysign(t, x);
 }
 
 struct Job {
@@ -78,11 +105,12 @@ struct S2Rx::Impl {
 
     // ------------------------------------------------------------------ carrier loop and frame walker (receiver thread)
     double theta = 0, omega = 0;
-    float kpD = 0, kiD = 0;                  // loop gains
+    float kpD = 0, kiD = 0, kpiD = 0;        // loop gains (kpiD: the phase step per unit of error, proportional and integral part together)
     bool dry = false;                        // trial run for the frequency search: nothing is submitted or counted
     double dryMetric = 0; int dryHeaders = 0; bool dryAbort = false;
     cf32 ph{1.f, 0.f};
     float gain = 1.f;
+    float tanhScale = 0.f;                   // 0.70710678 * invSg2 * the table scale: arguments of tanh in table steps
     float sg2 = 0.1f, invSg2 = 10.f;      // noise variance per real dimension and its inverse: what the soft decision detectors work with
     float kdEma = 1.f; int kdN = 0;       // mean of Re(x conj(soft decision)): the detector gain, for the loop gain correction
     float kdGain = 1.f;
@@ -129,6 +157,7 @@ struct S2Rx::Impl {
     void setNoise(double v) {
         sg2 = (float)std::max(1e-3, std::min(2.0, v));
         invSg2 = 1.f / sg2;
+        tanhScale = 0.70710678f * invSg2 * TanhTable::kScale;
     }
     static void gains(double bnT, double zeta, float& kp, float& ki) {
         const double th = bnT / (zeta + 1.0 / (4.0 * zeta));
@@ -139,6 +168,7 @@ struct S2Rx::Impl {
     void setLoops() {
         // overdamped: the frequency is found from the headers (see decodeHeader), the loop only has to follow the phase
         gains(dataBn(), 2.0, kpD, kiD);
+        kpiD = kpD + kiD;
     }
 
     void begin(const S2HuntResult& h) {
@@ -169,6 +199,13 @@ struct S2Rx::Impl {
     // The phase error of a data symbol: Im(x conj(E)), E the expected symbol given x (the mean of the constellation weighted by how likely each point
     // is, which is what an ideal detector at this noise level would use). At high signal to noise ratio E is the nearest point, at low ratio it
     // shrinks toward zero and the error stays small, which is what keeps the loop from chasing noise.
+    // tanh(a magnitude scaled by the detector gain) from the table; the argument scale is folded into one constant
+    inline float tanhMag(float ax) const {
+        const float u = std::min(ax * tanhScale, (float)TanhTable::kN);
+        const int i = (int)u;
+        const TanhTable::E e = kTanh.t[i];
+        return e.v + (u - (float)i) * e.d;
+    }
     inline float ddError(const cf32& x) {
         const float xr = x.real(), xi = x.imag();
         if (!soft) {
@@ -186,8 +223,17 @@ struct S2Rx::Impl {
         }
         float er, ei;
         if (mod == kQpsk) {
-            const float a = 0.70710678f, g = a * invSg2;
-            er = a * ftanh(g * xr); ei = a * ftanh(g * xi);
+            // The error is a * kdGain * (xi sgn(xr) t(xr) - xr sgn(xi) t(xi)), t = tanh of the scaled magnitude: the signs are put on the factors
+            // beside the table lookups and the constant factors outside, which keeps the chain from the symbol to the loop correction short.
+            const float a = 0.70710678f;
+            const float tr = tanhMag(std::fabs(xr)), ti = tanhMag(std::fabs(xi));
+            const float xis = std::bit_cast<float>(std::bit_cast<uint32_t>(xi) ^ (std::bit_cast<uint32_t>(xr) & 0x80000000u));
+            const float xrs = std::bit_cast<float>(std::bit_cast<uint32_t>(xr) ^ (std::bit_cast<uint32_t>(xi) & 0x80000000u));
+            const float err = (a * kdGain) * (xis * tr - xrs * ti);
+            er = std::copysign(a * tr, xr); ei = std::copysign(a * ti, xi);
+            kdEma += (xr * er + xi * ei - kdEma) * (1.f / 512.f);
+            if ((++kdN & 15) == 0) kdGain = 1.f / std::max(0.3f, std::min(1.f, kdEma));
+            return err;
         } else {
             // the two nearest points carry the expectation (the third is more than e^-9 weaker at the noise levels where this detector is used)
             int i1, i2;
@@ -222,17 +268,25 @@ struct S2Rx::Impl {
         { std::lock_guard<std::mutex> lk(statMu); st.phaseJumps++; }
     }
 
-    void loopUpdate(float e) {
+    // The new phase is the old one turned by omega + (kp + ki) * error. The turn by omega alone is known before the error is, it comes in as P (the
+    // old phase already turned): what is left to do after the error is a rotation by a small angle (below 0.02 rad: cos and sin to the fourth order
+    // are exact to a few 1e-10), so the carrier loop closes faster than with one rotation by the whole step.
+    void loopUpdate(float e, const cf32 P) {
         const float de = std::max(-0.5f, std::min(0.5f, e));
+        const float kap = kpiD * de, k2 = kap * kap;
+        ph = cmul(P, cf32(1.f - k2 * 0.5f, -(kap * (1.f - k2 * (1.f / 6.f)))));
+        theta += (float)omega + kap;
         omega += kiD * de;
-        const float step = (float)omega + kpD * de;
-        ph *= smallRot(step);
-        theta += step;
         if ((++phCount & 31) == 0) ph /= std::abs(ph);
     }
 
     void step(const cf32 z) {
-        const cf32 u = z * ph * (1.f / gain);
+        // the scaling and the descrambling turn do not depend on the carrier loop and are done on the symbol first
+        const float ig = 1.f / gain;
+        cf32 zs(z.real() * ig, z.imag() * ig);
+        if (pos >= 90) zs = s2RotateByR(zs, (4 - (int)(*rn)[pos - 90]) & 3);
+        const cf32 P = cmul(ph, smallRot((float)omega));
+        const cf32 u = cmul(zs, ph);
         float err = 0;
         bool known = false;
         cf32 ref(0, 0);
@@ -250,8 +304,7 @@ struct S2Rx::Impl {
             err = u.imag() * s.real() - u.real() * s.imag();
         } else {
             const int i = pos - 90;
-            const int r = (*rn)[i];
-            const cf32 x = s2RotateByR(u, (4 - r) & 3);      // remove the scrambling
+            const cf32 x = u;      // (the descrambling turn was applied to the symbol before the loop phase)
             bool isPilot = false;
             if (dummy) isPilot = true;
             else if (pil) { const int per = i % 1476; isPilot = per >= 1440; }
@@ -270,7 +323,7 @@ struct S2Rx::Impl {
             }
         }
         if (known) { phErr2 += (double)err * err; phN++; }
-        loopUpdate(err);
+        loopUpdate(err, P);
         pos++;
         if (pos == 90) decodeHeader();
         else if (pos == L && pos > 90) finishFrame();

@@ -5,6 +5,7 @@
 #include "ldpc.h"
 #include "ring.h"
 #include "t2fec.h"
+#include <bit>
 #include <complex>
 #include <cstdint>
 #include <vector>
@@ -106,8 +107,14 @@ inline cf32 s2Bpsk(int j, int y) {
 // Physical layer scrambling sequence (clause 5.5.4), Gold code number n: the symbol i is multiplied by exp(j R(i) pi/2).
 // Returns R(i) in 0..3 for i < count.
 const std::vector<uint8_t>& s2ScramblingRn(int n);
-inline cf32 s2RotateByR(cf32 s, int r) {   // s * exp(j r pi/2)
-    switch (r & 3) { case 0: return s; case 1: return cf32(-s.imag(), s.real()); case 2: return -s; default: return cf32(s.imag(), -s.real()); }
+inline cf32 s2RotateByR(cf32 s, int r) {   // s * exp(j r pi/2), without a branch: r is random, so a jump table here mispredicts most of the time
+    r &= 3;
+    const float re = s.real(), im = s.imag();
+    const bool odd = r & 1;
+    const float a = odd ? im : re, b = odd ? re : im;
+    // sign flips: real part for r = 1, 2; imaginary part for r = 2, 3
+    const uint32_t sr = (uint32_t)(((r + 1) >> 1) & 1) << 31, si = (uint32_t)((r >> 1) & 1) << 31;
+    return cf32(std::bit_cast<float>(std::bit_cast<uint32_t>(a) ^ sr), std::bit_cast<float>(std::bit_cast<uint32_t>(b) ^ si));
 }
 
 } // namespace dvbs
