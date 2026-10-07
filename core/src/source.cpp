@@ -279,7 +279,7 @@ public:
 
 protected:
     double pace() override { std::lock_guard<std::mutex> lk(mu_); return cfg_.pace > 0.01 ? cfg_.pace : 1.0; }
-    double effectiveRate(const TuneSettings& s) override { if (s.synth.mode >= 8) return s.sampleRate > 0 ? s.sampleRate : 2e6; return s.synth.atsc ? (s.sampleRate > 0 && s.sampleRate < 12e6 ? s.sampleRate : 8e6) : nativeRateHz(s.bandwidthMhz); }
+    double effectiveRate(const TuneSettings& s) override { if (s.synth.mode >= 6) return s.sampleRate > 0 ? s.sampleRate : 2e6; return s.synth.atsc ? (s.sampleRate > 0 && s.sampleRate < 12e6 ? s.sampleRate : 8e6) : nativeRateHz(s.bandwidthMhz); }
     bool prepare(const TuneSettings& s, std::string&) override {
         cfg_ = s.synth;
         gainDb_ = s.lnaDb + s.vgaDb + (s.ampOn ? 14 : 0);
@@ -305,7 +305,7 @@ protected:
 
     size_t produce(cf32* dst, size_t maxN) override {
         std::lock_guard<std::mutex> lk(mu_);
-        if (cfg_.mode >= 8) return produceMode(dst, maxN);
+        if (cfg_.mode >= 6) return produceMode(dst, maxN);
         if (cfg_.atsc) {
             if (regen_ || !agen_) {
                 atsc::ChannelConfig cc;

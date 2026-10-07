@@ -90,7 +90,7 @@ int main(int argc, char** argv) {
         else if (a == "--no-null") out.dropNull = true;
     }
     tune.centerHz = freq * 1e6;
-    tune.synth.mode = standard >= 8 ? standard : 0;   // the synthetic source plays that mode's test signal
+    tune.synth.mode = standard >= 6 ? standard : 0;   // the synthetic source plays that mode's test signal
     if (standard != 7 && standard < 8) tune.sampleRate = tune.bandwidthMhz >= 7 ? 10e6 : 8e6; // HackRF Pro: exact tuning only at <= 10 Msps
     if (useFile) { dev.kind = DeviceInfo::File; dev.name = file.path; file.loop = false; }
     else if (synthetic) { dev.kind = DeviceInfo::Synthetic; dev.name = "synthetic"; }

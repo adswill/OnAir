@@ -241,8 +241,17 @@ void sourceOptions(App& a) {
             if (c2 && running) a.engine.retune(a.tune);
             return;
         }
-        if (a.family == 3 || a.family == 4 || a.family == 5) {   // there is no built-in test signal for these
-            ImGui::TextDisabled("no built-in test signal for %s: choose a radio or a recording file as the source", a.family == 3 ? "ATSC 3.0" : a.family == 4 ? "ISDB-T" : "FM");
+        if (a.family == 3) {   // there is no built-in test signal for ATSC 3.0
+            ImGui::TextDisabled("no built-in test signal for ATSC 3.0: choose a radio or a recording file as the source");
+            return;
+        }
+        if (a.family == 4 || a.family == 5) {   // ISDB-T and FM: fixed signals, with noise and carrier offset to play with
+            ImGui::TextDisabled(a.family == 4 ? "ISDB-T mode 3, test programme" : "FM stereo with RDS, 1 kHz left and 3 kHz right");
+            ImGui::SameLine(0, 14 * gUi); ImGui::TextDisabled("SNR"); ImGui::SameLine(); ImGui::SetNextItemWidth(90 * gUi);
+            float snr = (float)sc.snrDb; if (ImGui::SliderFloat("##ssnr", &snr, 5, 45, "%.0f dB")) { sc.snrDb = snr; ch = true; }
+            ImGui::SameLine(); ImGui::TextDisabled("CFO"); ImGui::SameLine(); ImGui::SetNextItemWidth(110 * gUi);
+            float cfo = (float)(sc.cfoHz / 1e3); if (ImGui::SliderFloat("##scfo", &cfo, -20, 20, "%.2f kHz")) { sc.cfoHz = cfo * 1e3; ch = true; }
+            if (ch && running) a.engine.retune(a.tune);
             return;
         }
         if (a.family == 0 && ImGui::Checkbox("DVB-T", &sc.dvbt)) ch = true;

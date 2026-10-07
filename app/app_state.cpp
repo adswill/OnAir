@@ -7,7 +7,9 @@ static std::string synthLabel(const App& a) {
     case 0: return "Synthetic test signal (DVB-T2 8K, 8 MHz)";
     case 1: return "Synthetic test signal (ATSC 8-VSB)";
     case 2: return "Synthetic test signal (DAB ensemble)";
-    case 3: case 4: case 5: return "Synthetic test signal (none for this mode)";
+    case 3: return "Synthetic test signal (none for this mode)";
+    case 4: return "Synthetic test signal (ISDB-T)";
+    case 5: return "Synthetic test signal (FM stereo, RDS)";
     default: { const ModeTuning* mt = modeTuning(a.family + 2); return std::string("Synthetic test signal (") + (mt ? mt->name : "?") + ")"; }
     }
 }
@@ -73,7 +75,7 @@ void applyBandwidth(App& a) {
     a.tune.bandwidthMhz = kBw[a.bwIdx].mhz;
     a.tune.synth.atsc = a.family == 1;
     a.tune.synth.dab = a.dabMode;
-    a.tune.synth.mode = a.family >= 6 ? a.family + 2 : 0;   // the built-in test signal of a mode added after FM
+    a.tune.synth.mode = engineStd(a) >= 6 ? engineStd(a) : 0;   // the test signal of ISDB-T (6), FM (7) and the modes after them   // the built-in test signal of a mode added after FM
     if (const ModeTuning* mt = a.family >= 6 ? modeTuning(a.family + 2) : nullptr) {   // the mode says what the radio should do
         a.tune.bandwidthMhz = mt->bandwidthMhz; a.tune.sampleRate = mt->sampleRate; a.tune.basebandFilterHz = mt->basebandHz;
         const DeviceInfo& dv = a.devices[a.devIdx];
