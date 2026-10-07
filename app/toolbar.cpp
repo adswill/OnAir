@@ -88,7 +88,8 @@ void toolbarParts(App& a, int mask, bool vertical) {
     ImGui::BeginDisabled(!isHw);
     if (!vertical) { ImGui::TextDisabled("GAIN"); ImGui::SameLine(0, 5 * gUi); }
     if (generic) {
-        ImGui::SameLine();
+        if (vertical) { ImGui::TextDisabled("Gain"); ImGui::SameLine(54 * gUi); }
+        else ImGui::SameLine();
         ImGui::SetNextItemWidth(150 * gUi);
         float gdb = (float)a.tune.gainDb;
         ImGui::SliderFloat("##gain", &gdb, (float)curDev.gainMinDb, (float)std::max(curDev.gainMaxDb, curDev.gainMinDb + 1.0), "%.0f dB");
