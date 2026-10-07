@@ -1,5 +1,5 @@
 #include "dect2/isdbt_rx.h"
-#include "dect2/exact_resampler.h"
+#include "dect2/isdbt_resample.h"
 #include "dect2/fftutil.h"
 #include "dect2/isdbt.h"
 #include "dect2/isdbt_demod.h"
@@ -27,7 +27,7 @@ std::vector<int> tmccCarriers(int mode, int pos, bool diff) { return tmccCarrier
 struct IsdbtReceiver::Impl {
     // ---- input
     double inRate = 0;
-    ExactResampler resampler;
+    TrackingResampler resampler;
     bool decimate = false, rateOk = true;
     std::vector<cf32> rsOut, buf;
     int64_t base = 0;
