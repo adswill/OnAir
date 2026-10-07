@@ -27,7 +27,17 @@
 #include <map>
 #include <string>
 #include <vector>
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#else
 #include <sys/resource.h>
+#endif
 #include <time.h>
 
 using namespace dect2;
@@ -106,7 +116,16 @@ int parseGen(int argc, char** argv, int first, GenOptions& g, bool needOut) {
 }
 
 double threadCpu() { timespec t; clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t); return (double)t.tv_sec + 1e-9 * (double)t.tv_nsec; }
+#ifdef _WIN32
+double processCpu() {   // user plus kernel time of the whole process, in 100 ns units
+    FILETIME c, e, k, u;
+    if (!GetProcessTimes(GetCurrentProcess(), &c, &e, &k, &u)) return 0;
+    auto s = [](const FILETIME& f) { return (double)(((unsigned long long)f.dwHighDateTime << 32) | f.dwLowDateTime) * 1e-7; };
+    return s(k) + s(u);
+}
+#else
 double processCpu() { rusage r; getrusage(RUSAGE_SELF, &r); return (double)r.ru_utime.tv_sec + 1e-6 * (double)r.ru_utime.tv_usec + (double)r.ru_stime.tv_sec + 1e-6 * (double)r.ru_stime.tv_usec; }
+#endif
 
 int cmdBench(int argc, char** argv) {
     GenOptions g;

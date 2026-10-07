@@ -1,5 +1,6 @@
 // Operating-system services for the UI: file dialogs, saved settings, fonts.
 #pragma once
+#include <cstdint>
 #include <string>
 #include <vector>
 
