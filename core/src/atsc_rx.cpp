@@ -42,13 +42,20 @@ DECT2_MULTIVERSION void pfbBlock(const float* taps, int J, int NPH, const float*
         float sr = 0, si = 0;
         int j = 0;
 #if defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
-        float32x4_t ar = vdupq_n_f32(0), ai = vdupq_n_f32(0);
+        float32x4_t ar = vdupq_n_f32(0), ai = vdupq_n_f32(0), br = ar, bi = ai;   // two partial sums per array: the chain of dependent multiply-adds is the limit
+        for (; j + 8 <= T; j += 8) {
+            const float32x4_t t4 = vld1q_f32(tp + j), u4 = vld1q_f32(tp + j + 4);
+            ar = vfmaq_f32(ar, vld1q_f32(pr + j), t4);
+            ai = vfmaq_f32(ai, vld1q_f32(pi_ + j), t4);
+            br = vfmaq_f32(br, vld1q_f32(pr + j + 4), u4);
+            bi = vfmaq_f32(bi, vld1q_f32(pi_ + j + 4), u4);
+        }
         for (; j + 4 <= T; j += 4) {
             const float32x4_t t4 = vld1q_f32(tp + j);
             ar = vfmaq_f32(ar, vld1q_f32(pr + j), t4);
             ai = vfmaq_f32(ai, vld1q_f32(pi_ + j), t4);
         }
-        sr = vaddvq_f32(ar); si = vaddvq_f32(ai);
+        sr = vaddvq_f32(vaddq_f32(ar, br)); si = vaddvq_f32(vaddq_f32(ai, bi));
 #elif defined(__GNUC__) && !defined(DECT2_NO_SIMD)
         // arrays didn't vectorise, vector type does
         typedef float v8 __attribute__((vector_size(32)));
@@ -234,7 +241,6 @@ struct Core {
         const double tA = now();
         for (const cf32& v : in) { inRe.push_back(v.real()); inIm.push_back(v.imag()); }
         std::vector<float> dchunk;
-        dchunk.reserve(inRe.size() * 3);
         const double room = (double)(inBase + inRe.size()) - J - 2 - pos;
         const size_t nOut = room > 0 ? (size_t)std::ceil(room / step) : 0;
         pfRe.resize(nOut);
@@ -246,32 +252,68 @@ struct Core {
             helper.join();
         } else filter(0, nOut);
         pos += (double)nOut * step;
-        for (size_t k = 0; k < nOut; k++) {
-            // pilot loop
-            const cf32 z = cf32(pfRe[k], pfIm[k]) * ph;
-            ph *= rot;
-            pf += (float)(tracking ? pfAt : pfA) * (z - pf);
-            dchunk.push_back(z.real());
-            if (++pllCnt >= 4) {
-                pllCnt = 0;
-                float e = fastAtan2(pf.imag(), pf.real());
-                e = std::max(-1.2f, std::min(1.2f, e));
-                static const float kPa = getenv("ATSC_PA") ? (float)atof(getenv("ATSC_PA")) : 0.0035f;
-                const float alpha = tracking ? kPa : 0.035f, beta = alpha * alpha / 4.0f / (tracking ? 1.0f : 4.0f);
-                const float xa = alpha * e;                   // phase correction, at most about 0.04 rad: a small-angle rotation is exact enough
-                ph *= cf32(1.f - 0.5f * xa * xa, -xa);
-                omega += beta * e;
-                const float xb = beta * e;
-                rot *= cf32(1.f - 0.5f * xb * xb, -xb);
-                if (++renorm >= 64) {
-                    renorm = 0; ph /= std::abs(ph);
-                    const double lim = 2.0 * kPi * 60e3 / fs2;   // no real carrier offset is larger; keeps the loop from wandering off in noise
-                    omega = std::max(omega0 - lim, std::min(omega0 + lim, omega));
-                    rot = expj(-omega);
-                }
-                if (dbg && (++dbgCnt % 500000) == 0) fprintf(stderr, "[atsc] pll e=%.3f cfo=%.0f Hz |pf|=%.3f re=%.3f im=%.3f pw=%.3f dc=%.3f\n", e, (omega - omega0) * fs2 / (2 * kPi), std::abs(pf), pf.real(), pf.imag(), pw, dc);
+        dchunk.resize(nOut);
+        // The pilot loop works in blocks of kPllN samples: its bandwidth (a few kHz, up to 30 kHz while acquiring) is far below the
+        // block rate (1.3 MHz), so the phase detector runs once per block with its gains scaled by kPllN / 4 (the loop was written for a
+        // detector every four samples), and the phases of the samples in a block and the pilot filter over them are computed without a chain.
+        constexpr int kPllN = 16;
+        constexpr float kPllScale = kPllN / 4.f;
+        float pfw[kPllN];   // weights of the block's samples in the pilot filter after the block: pfa * pfb^(kPllN - 1 - i)
+        const float pfa = (float)(tracking ? pfAt : pfA), pfb = 1.f - pfa;
+        float pfbN = 1.f;
+        for (int i = kPllN - 1; i >= 0; i--) { pfw[i] = pfa * pfbN; pfbN *= pfb; }
+        auto pllUpdate = [&]() {
+            float e = fastAtan2(pf.imag(), pf.real());
+            e = std::max(-1.2f, std::min(1.2f, e));
+            static const float kPa = getenv("ATSC_PA") ? (float)atof(getenv("ATSC_PA")) : 0.0035f;
+            const float alpha = tracking ? kPa : 0.035f, beta = alpha * alpha / 4.0f / (tracking ? 1.0f : 4.0f);
+            const float xa = kPllScale * alpha * e;       // phase correction, at most about 0.17 rad: a small-angle rotation is exact enough (renormalised below)
+            ph *= cf32(1.f - 0.5f * xa * xa, -xa);
+            const float xb = kPllScale * beta * e;
+            omega += xb;
+            rot *= cf32(1.f - 0.5f * xb * xb, -xb);
+            if (++renorm >= 16) {
+                renorm = 0; ph /= std::abs(ph);
+                const double lim = 2.0 * kPi * 60e3 / fs2;   // no real carrier offset is larger; keeps the loop from wandering off in noise
+                omega = std::max(omega0 - lim, std::min(omega0 + lim, omega));
+                rot = expj(-omega);
             }
+            if (dbg && (++dbgCnt % 125000) == 0) fprintf(stderr, "[atsc] pll e=%.3f cfo=%.0f Hz |pf|=%.3f re=%.3f im=%.3f pw=%.3f dc=%.3f\n", e, (omega - omega0) * fs2 / (2 * kPi), std::abs(pf), pf.real(), pf.imag(), pw, dc);
+        };
+        // sample by sample until the phase detector is due (blocks are aligned to it), then a block at a time
+        auto step1 = [&](size_t k) {
+            const float r = pfRe[k], m = pfIm[k], pr = ph.real(), pi = ph.imag();
+            const cf32 z(r * pr - m * pi, r * pi + m * pr);
+            ph = cf32(pr * rot.real() - pi * rot.imag(), pr * rot.imag() + pi * rot.real());
+            pf += pfa * (z - pf);
+            dchunk[k] = z.real();
+            if (++pllCnt >= kPllN) { pllCnt = 0; pllUpdate(); }
+        };
+        size_t k = 0;
+        for (; k < nOut && pllCnt != 0; k++) step1(k);
+        for (; k + kPllN <= nOut; k += kPllN) {
+            float Rr[4], Ri[4], Pr[5], Pi[5];   // rot^b and ph * rot^(4a)
+            Rr[0] = 1; Ri[0] = 0; Rr[1] = rot.real(); Ri[1] = rot.imag();
+            for (int b = 2; b < 4; b++) { Rr[b] = Rr[b - 1] * Rr[1] - Ri[b - 1] * Ri[1]; Ri[b] = Rr[b - 1] * Ri[1] + Ri[b - 1] * Rr[1]; }
+            const float r4r = Rr[2] * Rr[2] - Ri[2] * Ri[2], r4i = 2 * Rr[2] * Ri[2];
+            Pr[0] = ph.real(); Pi[0] = ph.imag();
+            for (int a = 1; a < 5; a++) { Pr[a] = Pr[a - 1] * r4r - Pi[a - 1] * r4i; Pi[a] = Pr[a - 1] * r4i + Pi[a - 1] * r4r; }
+            const float* xr = &pfRe[k];
+            const float* xi = &pfIm[k];
+            float zr[kPllN], zi[kPllN];
+            for (int a = 0; a < 4; a++)
+                for (int b = 0; b < 4; b++) {
+                    const int i = 4 * a + b;
+                    const float pr = Pr[a] * Rr[b] - Pi[a] * Ri[b], pi = Pr[a] * Ri[b] + Pi[a] * Rr[b];
+                    zr[i] = xr[i] * pr - xi[i] * pi; zi[i] = xr[i] * pi + xi[i] * pr;
+                }
+            float sr = pfbN * pf.real(), si = pfbN * pf.imag();
+            for (int i = 0; i < kPllN; i++) { sr += pfw[i] * zr[i]; si += pfw[i] * zi[i]; dchunk[k + i] = zr[i]; }
+            pf = cf32(sr, si);
+            ph = cf32(Pr[4], Pi[4]);
+            pllUpdate();
         }
+        for (; k < nOut; k++) step1(k);
         const int64_t keepFrom = (int64_t)std::floor(pos) - J - 1;
         if (keepFrom > (int64_t)inBase) {
             const size_t drop = std::min((size_t)(keepFrom - (int64_t)inBase), inRe.size());
@@ -291,14 +333,15 @@ struct Core {
             dc = m; pw = p; dcInit = true;
         }
         const double a = 4e-7;
-        double g = 0;
-        for (size_t i = 0; i < dchunk.size(); i++) {
-            float& v = dchunk[i];
-            dc += a * (v - dc);
-            const double c = v - dc;
-            pw += a * (c * c - pw);
-            if ((i & 63) == 0) g = 4.58 / std::sqrt(std::max(pw, 1e-12));   // pw moves slowly
-            v = (float)(c * g);
+        // dc and power move by a few parts in 10^5 over 64 samples: they are updated once per block of 64 (the gain already was)
+        for (size_t i0 = 0; i0 < dchunk.size(); i0 += 64) {
+            const size_t n = std::min<size_t>(64, dchunk.size() - i0);
+            const float dcf = (float)dc, gf = (float)(4.58 / std::sqrt(std::max(pw, 1e-12)));
+            float* x = &dchunk[i0];
+            float sum = 0, sumsq = 0;
+            for (size_t i = 0; i < n; i++) { const float c = x[i] - dcf; sum += x[i]; sumsq += c * c; x[i] = c * gf; }
+            dc += a * (sum - (double)n * dc);
+            pw += a * (sumsq - (double)n * pw);
         }
         // pilot lock: the filtered carrier sits on the real axis and is strong enough; once it has for a while the loop is narrowed
         {
@@ -328,9 +371,17 @@ struct Core {
         const int ph = std::min(kInterpPh - 1, (int)((t - (double)i0) * kInterpPh));
         const float* tp = &interp[(size_t)ph * 2 * kInterpJ];
         const float* base = &d[(size_t)(i0 - (int64_t)dBase - kInterpJ + 1)];
-        float s = 0;
-        for (int j = 0; j < 2 * kInterpJ; j++) s += base[j] * tp[j];
-        return s;
+#if defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
+        static_assert(2 * kInterpJ == 16, "four vectors of four taps");
+        float32x4_t p = vmulq_f32(vld1q_f32(base), vld1q_f32(tp)), q = vmulq_f32(vld1q_f32(base + 4), vld1q_f32(tp + 4));
+        p = vfmaq_f32(p, vld1q_f32(base + 8), vld1q_f32(tp + 8));
+        q = vfmaq_f32(q, vld1q_f32(base + 12), vld1q_f32(tp + 12));
+        return vaddvq_f32(vaddq_f32(p, q));
+#else
+        float s[4] = {0, 0, 0, 0};   // four independent partial sums: no chain of sixteen dependent additions
+        for (int j = 0; j < 2 * kInterpJ; j += 4) for (int l = 0; l < 4; l++) s[l] += base[j + l] * tp[j + l];
+        return (s[0] + s[2]) + (s[1] + s[3]);
+#endif
     }
     uint64_t dEnd() const { return dBase + d.size(); }
 
@@ -713,12 +764,19 @@ struct Core {
         const int64_t first = v.f0 + kNFf - (L - 1);
         for (size_t k = 0; k < xr.size(); k++) xr[k] = v.at(first + (int64_t)k);
         convCorr(xr.data(), wr.data(), ffo.data(), 1, kFieldSyms, L);
-        std::vector<float> rfb(B);
-        for (int m = 0; m < B; m++) rfb[m] = tp.fb[B - 1 - m];
+        // The feedback part in transposed form: every decision is added, weighted by the feedback taps, to the accumulators of the next B
+        // outputs (independent vector updates), so that the chain from one decision to the next is short.
+        std::vector<float> fbAcc;
+        if (B) {
+            fbAcc.assign((size_t)kFieldSyms + B, 0.f);
+            if (hist) for (int j = 0; j < B; j++)   // decisions before the field start: decision j (oldest first) reaches output i = j + B - 1 - m ... via tap fb[m]
+                for (int m = 0; m < B; m++) { const int i = j + 1 + m - B; if (i >= 0 && i < B) fbAcc[(size_t)i] += tp.fb[m] * hist[j]; }
+        }
+        const float* fbt = tp.fb.data();
         double mse = 0; int nm = 0;
         for (int i = 0; i < kFieldSyms; i++) {
             float y = ffo[(size_t)i] + tp.bias;
-            if (B) y += dotf(rfb.data(), &hv[(size_t)i], B);
+            if (B) y += fbAcc[(size_t)i];
             float dec;
             if (i < 728) dec = fsLv[i];
             else if (i % kSegSyms < 4) dec = syncLv[i % kSegSyms];
@@ -726,6 +784,7 @@ struct Core {
             if (i >= std::max(B, 8) && i < 728) { const double e = y - fsLv[i]; mse += e * e; nm++; }
             lv[(size_t)i] = y;
             hv[(size_t)B + i] = dec;
+            if (B && dec != 0.f) { float* a = &fbAcc[(size_t)i + 1]; for (int m = 0; m < B; m++) a[m] += dec * fbt[m]; }
         }
         mse /= std::max(1, nm);
         return 10.0 * std::log10(25.0 / std::max(mse, 1e-6));

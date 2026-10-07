@@ -97,31 +97,61 @@ struct RsGen {
 };
 }
 
-void rsEncode(const uint8_t* in, uint8_t* out) {
-    static const RsGen gen;
-    const Gf& f = gf();
-    uint8_t par[kRoots] = {};
-    for (int i = 0; i < 187; i++) {
-        out[i] = in[i];
-        const uint8_t fb = in[i] ^ par[0];
-        memmove(par, par + 1, kRoots - 1);
-        par[kRoots - 1] = 0;
-        if (fb) for (int j = 0; j < kRoots; j++) par[j] ^= f.mul(fb, gen.g[j + 1]);
+namespace {
+// fb * g[j + 1] for every feedback byte fb: one row of 24 bytes (20 used, zero padded) per value, so that one division step is three
+// 64-bit exclusive ors
+struct RsRows {
+    alignas(8) uint8_t row[256][24];
+    RsRows() {
+        const Gf& f = gf();
+        const RsGen gen;
+        memset(row, 0, sizeof row);
+        for (int v = 0; v < 256; v++) for (int j = 0; j < kRoots; j++) row[v][j] = f.mul((uint8_t)v, gen.g[j + 1]);
     }
-    memcpy(out + 187, par, kRoots);
+};
+const RsRows& rsRows() { static const RsRows r; return r; }
+
+// remainder of the 207 bytes in `b` (highest degree first) divided by the generator polynomial, written to rem[20]; `b` must have 24 bytes of
+// room behind it (it is the working copy: its first 187 bytes are consumed)
+inline void rsRemainder(uint8_t* b, uint8_t* rem) {
+    const RsRows& R = rsRows();
+    for (int i = 0; i < 187; i++) {
+        const uint8_t fb = b[i];
+        if (!fb) continue;
+        uint64_t x[3], y[3];
+        memcpy(x, b + i + 1, 24); memcpy(y, R.row[fb], 24);
+        x[0] ^= y[0]; x[1] ^= y[1]; x[2] ^= y[2];
+        memcpy(b + i + 1, x, 24);
+    }
+    memcpy(rem, b + 187, kRoots);
+}
+}
+
+void rsEncode(const uint8_t* in, uint8_t* out) {
+    uint8_t b[187 + 24 + 8] = {};
+    memcpy(b, in, 187);
+    uint8_t rem[kRoots];
+    rsRemainder(b, rem);
+    memcpy(out, in, 187);
+    memcpy(out + 187, rem, kRoots);
 }
 
 int rsDecode(uint8_t* r) {
     const Gf& f = gf();
     uint8_t S[kRoots];
     bool any = false;
-    for (int i = 0; i < kRoots; i++) {
-        uint8_t s = 0;
-        for (int j = 0; j < kN; j++) s = f.mul(s, f.exp[i]) ^ r[j];
-        S[i] = s;
-        any |= s != 0;
+    {   // syndromes: the remainder of r(x) modulo g(x) is zero exactly when all of them are, and S_i = rem(alpha^i)
+        uint8_t w[kN + 24 + 8] = {}, rem[kRoots];
+        memcpy(w, r, kN);
+        rsRemainder(w, rem);
+        for (int j = 0; j < kRoots; j++) any |= rem[j] != 0;
+        if (!any) return 0;
+        for (int i = 0; i < kRoots; i++) {
+            uint8_t s = 0;
+            for (int j = 0; j < kRoots; j++) s = f.mul(s, f.exp[i]) ^ rem[j];
+            S[i] = s;
+        }
     }
-    if (!any) return 0;
     uint8_t C[kRoots + 1] = {1}, B[kRoots + 1] = {1};
     int L = 0, m = 1;
     uint8_t b = 1;
@@ -156,7 +186,12 @@ int rsDecode(uint8_t* r) {
         if (den == 0) return -1;
         r[kN - 1 - p] ^= f.mul(f.mul(num, X), f.inv(den));
     }
-    for (int i = 0; i < kRoots; i++) { uint8_t s = 0; for (int j = 0; j < kN; j++) s = f.mul(s, f.exp[i]) ^ r[j]; if (s) return -1; }
+    {
+        uint8_t w[kN + 24 + 8] = {}, rem[kRoots];
+        memcpy(w, r, kN);
+        rsRemainder(w, rem);
+        for (int j = 0; j < kRoots; j++) if (rem[j]) return -1;
+    }
     return cnt;
 }
 
@@ -269,54 +304,61 @@ void FieldDecoder::reset() {
 }
 
 namespace {
-// Viterbi over one encoder's symbol sequence (squared distance), returns the decoded dibits
-float viterbiRun(const float* x, int n, uint8_t* dibits, uint8_t* symbols = nullptr) {
-    // incoming transitions of every state: source state, input dibit and the symbol sent
-    struct Tab {
-        uint8_t from[8][4], in[8][4], sym[8][4];
-        Tab() {
-            const TrellisTables& t = trellis();
-            int cnt[8] = {};
-            for (int s = 0; s < 8; s++) for (int u = 0; u < 4; u++) {
-                const int ns = t.next[s * 4 + u];
-                from[ns][cnt[ns]] = (uint8_t)s; in[ns][cnt[ns]] = (uint8_t)u; sym[ns][cnt[ns]] = t.out[s * 4 + u];
-                cnt[ns]++;
+// The twelve trellis encoders of a field are decoded side by side: every step of the Viterbi algorithm is the same for all of them, so
+// the state metrics are kept as [state][encoder] and the loops over the encoders vectorise. Squared distance, incoming transitions of
+// every state: source state, input dibit and the symbol sent (every state has exactly four).
+struct VitTab {
+    uint8_t from[8][4], in[8][4], sym[8][4];
+    constexpr VitTab() : from(), in(), sym() {
+        constexpr uint8_t next[32] = {0, 1, 4, 5, 2, 3, 6, 7, 1, 0, 5, 4, 3, 2, 7, 6, 4, 5, 0, 1, 6, 7, 2, 3, 5, 4, 1, 0, 7, 6, 3, 2};
+        constexpr uint8_t out[32] = {0, 2, 4, 6, 1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7, 4, 6, 0, 2, 5, 7, 1, 3, 4, 6, 0, 2, 5, 7, 1, 3};
+        int cnt[8] = {};
+        for (int s = 0; s < 8; s++) for (int u = 0; u < 4; u++) {
+            const int ns = next[s * 4 + u];
+            from[ns][cnt[ns]] = (uint8_t)s; in[ns][cnt[ns]] = (uint8_t)u; sym[ns][cnt[ns]] = out[s * 4 + u];
+            cnt[ns]++;
+        }
+    }
+};
+constexpr VitTab kVit;
+
+constexpr int kLanes = kNumEnc;
+
+// xt[t * kLanes + l]: the level of encoder l at step t. dec[(t * 8 + ns) * kLanes + l]: the winning incoming transition. fin[l]: best end state.
+void viterbiLanes(const float* xt, int n, uint8_t* dec, int* fin) {
+    alignas(16) float pm[8][kLanes] = {}, nm[8][kLanes];
+    for (int t = 0; t < n; t++) {
+        const float* xv = xt + (size_t)t * kLanes;
+        alignas(16) float d[8][kLanes];
+        for (int s = 0; s < 8; s++) { const float lv = (float)(2 * s - 7); for (int l = 0; l < kLanes; l++) { const float v = xv[l] - lv; d[s][l] = v * v; } }
+        uint8_t* dp = dec + (size_t)t * 8 * kLanes;
+        alignas(16) float mn[kLanes];
+        for (int l = 0; l < kLanes; l++) mn[l] = 1e30f;
+#if defined(__clang__)
+#pragma clang loop unroll(full)
+#elif defined(__GNUC__)
+#pragma GCC unroll 8
+#endif
+        for (int ns = 0; ns < 8; ns++) {
+            const float* p0 = pm[kVit.from[ns][0]]; const float* p1 = pm[kVit.from[ns][1]]; const float* p2 = pm[kVit.from[ns][2]]; const float* p3 = pm[kVit.from[ns][3]];
+            const float* d0 = d[kVit.sym[ns][0]]; const float* d1 = d[kVit.sym[ns][1]]; const float* d2 = d[kVit.sym[ns][2]]; const float* d3 = d[kVit.sym[ns][3]];
+            for (int l = 0; l < kLanes; l++) {
+                const float m0 = p0[l] + d0[l], m1 = p1[l] + d1[l], m2 = p2[l] + d2[l], m3 = p3[l] + d3[l];
+                const bool b01 = m1 < m0, b23 = m3 < m2;
+                const float a = b01 ? m1 : m0, c = b23 ? m3 : m2;
+                const bool cw = c < a;
+                nm[ns][l] = cw ? c : a;
+                dp[ns * kLanes + l] = (uint8_t)(cw ? 2 + (int)b23 : (int)b01);
+                mn[l] = nm[ns][l] < mn[l] ? nm[ns][l] : mn[l];
             }
         }
-    };
-    static const Tab tab;   // every state has exactly four incoming transitions
-    std::vector<uint8_t> dec((size_t)n * 8);
-    float pm[8] = {}, nm[8];
-    for (int t = 0; t < n; t++) {
-        float d[8];
-        const float xv = x[t];
-        for (int s = 0; s < 8; s++) { const float v = xv - (float)(2 * s - 7); d[s] = v * v; }
-        uint8_t* dp = &dec[(size_t)t * 8];
-        float mn = 1e30f;
-        for (int ns = 0; ns < 8; ns++) {
-            float m0 = pm[tab.from[ns][0]] + d[tab.sym[ns][0]];
-            float m1 = pm[tab.from[ns][1]] + d[tab.sym[ns][1]];
-            float m2 = pm[tab.from[ns][2]] + d[tab.sym[ns][2]];
-            float m3 = pm[tab.from[ns][3]] + d[tab.sym[ns][3]];
-            uint8_t b01 = m1 < m0, b23 = m3 < m2;
-            const float a = b01 ? m1 : m0, c = b23 ? m3 : m2;
-            const uint8_t bi = c < a ? (uint8_t)(2 + b23) : b01;
-            const float best = c < a ? c : a;
-            nm[ns] = best;
-            dp[ns] = bi;
-            mn = best < mn ? best : mn;
-        }
-        for (int s = 0; s < 8; s++) pm[s] = nm[s] - mn;
+        for (int s = 0; s < 8; s++) for (int l = 0; l < kLanes; l++) pm[s][l] = nm[s][l] - mn[l];
     }
-    int state = 0;
-    for (int s = 1; s < 8; s++) if (pm[s] < pm[state]) state = s;
-    for (int t = n; t-- > 0;) {
-        const int k = dec[(size_t)t * 8 + state];
-        dibits[t] = tab.in[state][k];
-        if (symbols) symbols[t] = tab.sym[state][k];
-        state = tab.from[state][k];
+    for (int l = 0; l < kLanes; l++) {
+        int state = 0;
+        for (int s = 1; s < 8; s++) if (pm[s][l] < pm[state][l]) state = s;
+        fin[l] = state;
     }
-    return 0;
 }
 }
 
@@ -324,22 +366,32 @@ int FieldDecoder::decode(const float* levels, uint8_t* out, FieldStats* st, uint
     const TrellisMap& tm = trellisMap();
     std::vector<uint8_t> bytes((size_t)kDataSegs * kSegBytes, 0);
     const int per = 26 * 828;
-    std::vector<float> x(per);
-    std::vector<uint8_t> dib(per), psym(symbolsOut ? per : 0);
+    static thread_local std::vector<float> xt;
+    static thread_local std::vector<uint8_t> decb;
+    xt.resize((size_t)per * kLanes);
+    decb.resize((size_t)per * 8 * kLanes);
     double dist = 0; long cntSym = 0;
-    for (int e = 0; e < kNumEnc; e++) {
-        for (int blk = 0; blk < 26; blk++)
-            for (int k = 0; k < 828; k++)
-                x[blk * 828 + k] = levels[(size_t)(1 + blk * 12) * kSegSyms + tm.symPos[e][k]];
-        viterbiRun(x.data(), per, dib.data(), symbolsOut ? psym.data() : nullptr);
-        if (symbolsOut)
-            for (int blk = 0; blk < 26; blk++)
-                for (int k = 0; k < 828; k++) symbolsOut[(size_t)(1 + blk * 12) * kSegSyms + tm.symPos[e][k]] = psym[blk * 828 + k];
-        for (int blk = 0; blk < 26; blk++)
-            for (int k = 0; k < 828; k++) {
-                uint8_t& b = bytes[(size_t)blk * 12 * kSegBytes + tm.byteIdx[e][k]];
-                b = (uint8_t)((b & ~(3 << tm.shift[e][k])) | (dib[blk * 828 + k] << tm.shift[e][k]));
-            }
+    for (int blk = 0; blk < 26; blk++)
+        for (int e = 0; e < kNumEnc; e++) {
+            const float* src = levels + (size_t)(1 + blk * 12) * kSegSyms;
+            float* dst = xt.data() + (size_t)blk * 828 * kLanes + e;
+            const int* sp = tm.symPos[e];
+            for (int k = 0; k < 828; k++) dst[(size_t)k * kLanes] = src[sp[k]];
+        }
+    int state[kLanes];
+    viterbiLanes(xt.data(), per, decb.data(), state);
+    for (int t = per; t-- > 0;) {
+        const int blk = t / 828, k = t % 828;
+        const uint8_t* dp = decb.data() + (size_t)t * 8 * kLanes;
+        for (int e = 0; e < kNumEnc; e++) {
+            const int ns = state[e];
+            const int j = dp[ns * kLanes + e];
+            const uint8_t dibit = kVit.in[ns][j];
+            if (symbolsOut) symbolsOut[(size_t)(1 + blk * 12) * kSegSyms + tm.symPos[e][k]] = kVit.sym[ns][j];
+            uint8_t& b = bytes[(size_t)blk * 12 * kSegBytes + tm.byteIdx[e][k]];
+            b = (uint8_t)((b & ~(3 << tm.shift[e][k])) | (dibit << tm.shift[e][k]));
+            state[e] = kVit.from[ns][j];
+        }
     }
     (void)dist; (void)cntSym;
     dil_.syncCommutator();
