@@ -71,17 +71,21 @@ void antennaTab(App& a) {
 
     ImGui::BeginChild("antL", ImVec2(leftW, h));
     if (st == DirectionFinder::State::Idle || st == DirectionFinder::State::Done) {
-        ImGui::TextColored(ImVec4(0.7f, 0.76f, 0.84f, 1), "Which antenna do you use?");
+        { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.7f, 0.76f, 0.84f, 1), "Which antenna do you use?"); ImGui::PopTextWrapPos(); }
         ImGui::Spacing();
         const char* names[3] = {"Directional (Yagi, log-periodic, panel)", "Dipole / rabbit ears / loop (picks up two opposite directions)", "Omnidirectional (same in all directions)"};
-        for (int i = 0; i < 3; i++) if (ImGui::RadioButton(names[i], a.antKind == i)) a.antKind = i;
+        for (int i = 0; i < 3; i++) {   // a narrow pane: the part in brackets goes (shown on hover)
+            const std::string lab = fitCaption(names[i], ImGui::GetContentRegionAvail().x - ImGui::GetFrameHeight() - ImGui::GetStyle().ItemInnerSpacing.x);
+            if (ImGui::RadioButton((lab + "##ant" + std::to_string(i)).c_str(), a.antKind == i)) a.antKind = i;
+            if (lab != names[i] && ImGui::IsItemHovered()) ImGui::SetTooltip("%s", names[i]);
+        }
         ImGui::Spacing();
         ImGui::TextWrapped("%s", a.antKind == 0 ? "You will be asked to point the antenna north, east, south and west first, then the directions in between, then in smaller steps around the best one. Use your own north: a compass or phone app helps, but any fixed reference works."
                                   : a.antKind == 1 ? "The antenna hears two opposite ends equally, so the search finds the line to aim along. You will be asked to turn it to several headings."
                                   : "An omnidirectional antenna has no direction to find. Instead you will be asked to try different places (windowsill, higher up, another room), and the best one is picked.");
         ImGui::Spacing();
-        if (!running) ImGui::TextColored(ImVec4(0.95f, 0.7f, 0.3f, 1), "Start the receiver on the channel you want to improve first.");
-        else if (!inDevice) ImGui::TextColored(ImVec4(0.95f, 0.7f, 0.3f, 1), "This is a recording or the synthetic signal: turning an antenna will not change anything. Try it with a HackRF.");
+        if (!running) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.7f, 0.3f, 1), "Start the receiver on the channel you want to improve first."); ImGui::PopTextWrapPos(); }
+        else if (!inDevice) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.7f, 0.3f, 1), "This is a recording or the synthetic signal: turning an antenna will not change anything. Try it with a HackRF."); ImGui::PopTextWrapPos(); }
         ImGui::BeginDisabled(!running);
         if (ImGui::Button("  Start  ", ImVec2(130 * gUi, 0))) { d.start((AntennaKind)a.antKind); a.dirAgcWas = false; }
         ImGui::EndDisabled();
@@ -90,7 +94,7 @@ void antennaTab(App& a) {
             ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
             if (r.valid && !r.flat && a.antKind != 2) {
                 ImGui::PushFont(a.ui, 26);
-                ImGui::TextColored(ImVec4(0.3f, 0.9f, 0.5f, 1), "Point at %s  (%.0f\xC2\xB0)", r.label.c_str(), r.heading);
+                { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.3f, 0.9f, 0.5f, 1), "Point at %s  (%.0f\xC2\xB0)", r.label.c_str(), r.heading); ImGui::PopTextWrapPos(); }
                 ImGui::PopFont();
                 char cb[32]; snprintf(cb, sizeof cb, "confidence %.0f%%", r.confidence * 100);
                 gaugePill(220, (float)r.confidence, r.confidence > 0.66 ? IM_COL32(40, 160, 90, 255) : r.confidence > 0.33 ? IM_COL32(200, 160, 40, 255) : IM_COL32(190, 70, 50, 255), cb);
@@ -115,8 +119,8 @@ void antennaTab(App& a) {
             gaugePill(ImGui::GetContentRegionAvail().x - 8, (float)d.progress(ImGui::GetTime()), IM_COL32(52, 92, 108, 255), "measuring - do not touch the antenna");
             const QualityReport& q = a.quality.report();
             ImGui::Spacing();
-            ImGui::Text("now: quality %.0f%%   SNR %.1f dB   %s", q.valid ? q.percent : 0.0, a.rx.dataValid ? a.rx.dataSnrDb : 0.f, a.rx.dataValid ? "locked" : "no lock");
-            if (a.spec.stats.clipFraction > 0.005) ImGui::TextColored(ImVec4(0.95f, 0.4f, 0.3f, 1), "ADC overload: lower the gain (AGC is paused during a measurement)");
+            { ImGui::PushTextWrapPos(0); ImGui::Text("now: quality %.0f%%   SNR %.1f dB   %s", q.valid ? q.percent : 0.0, a.rx.dataValid ? a.rx.dataSnrDb : 0.f, a.rx.dataValid ? "locked" : "no lock"); ImGui::PopTextWrapPos(); }
+            if (a.spec.stats.clipFraction > 0.005) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.4f, 0.3f, 1), "ADC overload: lower the gain (AGC is paused during a measurement)"); ImGui::PopTextWrapPos(); }
         }
         ImGui::Spacing();
         if (ImGui::SmallButton("Stop and use what we have")) d.finishNow();
@@ -155,7 +159,7 @@ void antennaTab(App& a) {
                 char t[48]; snprintf(t, sizeof t, "%s  score %.0f", r.label.c_str(), r.score);
                 gaugePill(ImGui::GetContentRegionAvail().x - 10, (float)r.score / 100.f, scoreColour(r.score), t);
             }
-        } else ImGui::TextDisabled("Places you try will be compared here.");
+        } else { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Places you try will be compared here."); ImGui::PopTextWrapPos(); }
     } else {
         compassRose(a, ImGui::GetContentRegionAvail());
     }

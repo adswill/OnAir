@@ -2,6 +2,8 @@
 // (whose level follows the LNA/VGA/amp gains and clips like an 8-bit ADC).
 #include "dect2/engine.h"
 #include "dect2/gain.h"
+#include "jobs.h"
+#include <atomic>
 #include <chrono>
 #include <cstdio>
 #include <thread>
@@ -9,14 +11,15 @@
 #include <cstdint>
 #include <cstdlib>
 using namespace dect2;
-static int fails = 0;
-#define CHECK(c, ...) do { if (!(c)) { printf("FAIL: " __VA_ARGS__); printf("\n"); fails++; } } while (0)
+using testjobs::jprintf;
+static std::atomic<int> fails{0};
+#define CHECK(c, ...) do { if (!(c)) { jprintf("FAIL: " __VA_ARGS__); jprintf("\n"); fails++; } } while (0)
 
 static double now() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
 
 // The synthetic signal runs at half speed, so a slow machine does not change the outcome. The AGC and the sweep are given
 // signal time (wall time x pace), which is what they would see on real hardware.
-static const double kPace = 0.5;
+static const double kPace = 1.0;
 
 static TuneSettings synthTune(GainSetting g) {
     TuneSettings t;
@@ -36,7 +39,7 @@ static void runAgc(const char* name, GainSetting start, double secs) {
     TuneSettings t = synthTune(start);
     FileOptions fo;
     e.setStandard(1); // these tests are about DVB-T2 lock
-    if (!e.start(dev, t, fo)) { printf("FAIL: cannot start\n"); fails++; return; }
+    if (!e.start(dev, t, fo)) { jprintf("FAIL: cannot start\n"); fails++; return; }
     AutoGain agc;
     GainSetting g = start;
     SpectrumFrame sf;
@@ -57,7 +60,7 @@ static void runAgc(const char* name, GainSetting start, double secs) {
     }
     e.latestSpectrum(sf, 0);
     AdcStatus st = classifyAdc(sf.stats.rmsDbfs, sf.stats.peak, sf.stats.clipFraction);
-    printf("%s: start total %d dB -> LNA %d VGA %d amp %d (total %d dB), level %.1f dBFS, clip %.3f%%, status %s, %d changes\n", name, start.total(), g.lna, g.vga, g.amp, g.total(), sf.stats.rmsDbfs, sf.stats.clipFraction * 100, adcStatusName(st), changes);
+    jprintf("%s: start total %d dB -> LNA %d VGA %d amp %d (total %d dB), level %.1f dBFS, clip %.3f%%, status %s, %d changes\n", name, start.total(), g.lna, g.vga, g.amp, g.total(), sf.stats.rmsDbfs, sf.stats.clipFraction * 100, adcStatusName(st), changes);
     CHECK(st == AdcStatus::Good || st == AdcStatus::High, "%s: ADC not in a healthy range", name);
     CHECK(sf.stats.clipFraction < 0.002f, "%s: still clipping", name);
     CHECK(changes <= 14, "%s: AGC kept hunting (%d changes)", name, changes);
@@ -79,11 +82,14 @@ int main() {
     CHECK(classifyAdc(-60, 0.01, 0) == AdcStatus::NoSignal, "no signal");
     CHECK(classifyAdc(-8, 0.8, 0) == AdcStatus::High, "high");
 
-    runAgc("too hot ", {40, 50, true}, 14);
-    runAgc("too cold", {0, 4, false}, 14);
+    // The two AGC runs and the sweep are separate engines on the synthetic source and share nothing: they run side by side (the sweep is the
+    // longest, so the other two cost no extra time). Their signal time is the wall time x kPace, which is what each of them judges by.
+    testjobs::Jobs jobs;
+    jobs.add([] { runAgc("too hot ", {40, 50, true}, 14); });
+    jobs.add([] { runAgc("too cold", {0, 4, false}, 14); });
 
     // sweep: the winner must not clip and must have the best SNR among the non-clipping candidates
-    {
+    jobs.add([] {
         Engine e;
         DeviceInfo dev;
         TuneSettings t = synthTune({32, 20, true});
@@ -107,13 +113,14 @@ int main() {
             std::this_thread::sleep_for(std::chrono::milliseconds(15));
         }
         CHECK(!sw.active(), "sweep did not finish");
-        for (auto& x : sw.entries()) printf("  LNA %2d VGA %2d amp %d: SNR %6.1f dB (%d samples) level %6.1f dBFS clip %.3f%%\n", x.g.lna, x.g.vga, x.g.amp, x.snrDb, x.n, x.rms, x.clip * 100);
-        printf("sweep %s\n", sw.summary().c_str());
+        for (auto& x : sw.entries()) jprintf("  LNA %2d VGA %2d amp %d: SNR %6.1f dB (%d samples) level %6.1f dBFS clip %.3f%%\n", x.g.lna, x.g.vga, x.g.amp, x.snrDb, x.n, x.rms, x.clip * 100);
+        jprintf("sweep %s\n", sw.summary().c_str());
         double bs = -1e9;
         for (auto& x : sw.entries()) if (x.clip <= 0.001f) bs = std::max(bs, x.snrDb);
         for (auto& x : sw.entries()) if (x.g == sw.best()) { CHECK(x.clip <= 0.001f, "winner clips"); CHECK(x.snrDb >= bs - 0.01, "winner is not the best SNR"); }
         e.stop();
-    }
-    printf(fails ? "gain tests FAILED\n" : "gain tests passed\n");
+    });
+    jobs.run(3);
+    jprintf(fails ? "gain tests FAILED\n" : "gain tests passed\n");
     return fails ? 1 : 0;
 }

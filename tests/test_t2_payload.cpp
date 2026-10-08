@@ -2,6 +2,8 @@
 // (sync, L1, channel estimation, de-interleaving, LDPC, BCH), and every decoded baseband frame must equal what was sent.
 #include "dect2/t2gen.h"
 #include "dect2/t2rx.h"
+#include "jobs.h"
+#include <atomic>
 #include <chrono>
 #include <cstdio>
 #include <map>
@@ -9,8 +11,9 @@
 #include <random>
 #include <thread>
 using namespace dect2;
-static int fails = 0;
-#define CHECK(c, ...) do { if (!(c)) { printf("FAIL: " __VA_ARGS__); printf("\n"); fails++; } } while (0)
+using testjobs::jprintf;
+static std::atomic<int> fails{0};
+#define CHECK(c, ...) do { if (!(c)) { jprintf("FAIL: " __VA_ARGS__); jprintf("\n"); fails++; } } while (0)
 
 struct Case { const char* name; int s1; bool shortFrame; int mod, cod; bool rot; int ti; double snr; double bw = 8; };
 
@@ -43,10 +46,30 @@ static void runCase(const Case& c) {
         }
         for (auto& v : frame) v += cf32(nd(rng), nd(rng)) * (float)sigma;
         for (size_t o = 0; o < frame.size(); o += 1 << 16) rx.feed(frame.data() + o, std::min<size_t>(1 << 16, frame.size() - o));
+        // a radio delivers a frame every 100-250 ms; fed all at once, the data decoder (a thread that drops a frame it is still busy
+        // for) lost half of them on a loaded CI machine. Wait for it to come within a few frames of what was fed (at most 2 s a frame).
+        RxTelemetry tt; uint64_t sq = 0;
+        for (int w = 0; w < 200; w++) {
+            rx.telemetry(tt, sq);
+            size_t n;
+            { std::lock_guard<std::mutex> lk(mu); n = results.size(); }
+            if ((int)n + 4 >= i) break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
     }
-    // let the decoder finish: telemetry() collects the finished frames
+    // let the decoder finish: telemetry() collects the finished frames. Done when no frame has come out for 3 s (at most 15 s), not after
+    // a fixed 5 s: the decoder takes a few milliseconds per frame, the rest of the wait was idle. 3 s because on a busy CI machine (all
+    // cases at once, next to other tests) the decoder thread can stall for over a second.
     RxTelemetry t; uint64_t seq = 0;
-    for (int i = 0; i < 100; i++) { rx.telemetry(t, seq); std::this_thread::sleep_for(std::chrono::milliseconds(50)); }
+    size_t seen = 0;
+    for (int i = 0, still = 0; i < 1500 && still < 300; i++) {
+        rx.telemetry(t, seq);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        size_t n;
+        { std::lock_guard<std::mutex> lk(mu); n = results.size(); }
+        still = n == seen ? still + 1 : 0;
+        seen = n;
+    }
     int frames = 0, blocks = 0, ok = 0, same = 0;
     {
         std::lock_guard<std::mutex> lk(mu);
@@ -62,7 +85,7 @@ static void runCase(const Case& c) {
             }
         }
     }
-    printf("%-28s %s %-3s @ %4.1f dB: %2d frames, %4d blocks, %4d decoded, %4d identical, %d per frame\n", c.name, c.shortFrame ? "short " : "normal", rateName(c.cod), c.snr, frames, blocks, ok, same, gen.plpBlocks());
+    jprintf("%-28s %s %-3s @ %4.1f dB: %2d frames, %4d blocks, %4d decoded, %4d identical, %d per frame\n", c.name, c.shortFrame ? "short " : "normal", rateName(c.cod), c.snr, frames, blocks, ok, same, gen.plpBlocks());
     CHECK(frames >= nFrames / 2, "%s: only %d frames reached the data stage", c.name, frames);
     CHECK(same == ok, "%s: %d decoded blocks differ from what was sent", c.name, ok - same);
     CHECK(blocks > 0 && ok >= 0.98 * blocks, "%s: only %d of %d blocks decoded", c.name, ok, blocks);
@@ -83,7 +106,10 @@ int main() {
         {"T2-Lite 64QAM 1/2",       3, true,  2, 0, true,  3, 16},
         {"T2-Lite 1.7 MHz 16QAM 1/3", 3, true, 1, 6, true,  3, 9, 1.7},
     };
-    for (auto& c : cases) runCase(c);
-    printf(fails ? "T2 payload tests FAILED\n" : "T2 payload tests passed\n");
+    // the cases are independent: each one runs on its own thread, the output keeps the order of the cases
+    testjobs::Jobs jobs;
+    for (auto& c : cases) jobs.add([&c] { runCase(c); });
+    jobs.run();
+    jprintf(fails ? "T2 payload tests FAILED\n" : "T2 payload tests passed\n");
     return fails ? 1 : 0;
 }

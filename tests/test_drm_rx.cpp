@@ -1,15 +1,20 @@
 // DRM receiver: generator -> receiver on clean and noisy signals. Checks what the receiver reports (mode, occupancy, services, label, text, time) and that
 // the logical frames of the audio stream come out bit-exact, for every robustness mode, occupancy and constellation, at many input rates and chunk sizes.
 #include "data/drm/testkit.h"
+#include "jobs.h"
+#include <atomic>
 #include <cstdio>
 #include <string>
 using namespace drmtest;
-static int fails = 0;
-#define CHECK(c, ...) do { if (!(c)) { printf("FAIL: " __VA_ARGS__); printf("\n"); fails++; } } while (0)
+using testjobs::jprintf;
+static std::atomic<int> fails{0};
+// the cases are independent: each one runs on its own thread, the output keeps the order of the cases
+static testjobs::Jobs jobs;
+#define CHECK(c, ...) do { if (!(c)) { jprintf("FAIL: " __VA_ARGS__); jprintf("\n"); fails++; } } while (0)
 
 static void report(const char* what, const Result& r) {
     const DrmTelemetry& t = r.tel;
-    printf("%-34s lock %5.1f s  mode %c %4.1f kHz  FAC %llu/%llu SDC %llu/%llu  frames %llu exact %llu bad %llu gaps %llu  SNR %5.1f dB  CFO %+7.1f  SRO %+6.1f  %5.1fx\n", what, r.lockSecs, t.modeName,
+    jprintf("%-34s lock %5.1f s  mode %c %4.1f kHz  FAC %llu/%llu SDC %llu/%llu  frames %llu exact %llu bad %llu gaps %llu  SNR %5.1f dB  CFO %+7.1f  SRO %+6.1f  %5.1fx\n", what, r.lockSecs, t.modeName,
            t.bandwidthKhz, (unsigned long long)t.facOk, (unsigned long long)t.facBad, (unsigned long long)t.sdcOk, (unsigned long long)t.sdcBad, (unsigned long long)r.frames,
            (unsigned long long)r.exact, (unsigned long long)r.bad, (unsigned long long)r.gaps, t.snrDb, t.cfoHz, t.sroPpm, r.rt());
 }
@@ -40,6 +45,7 @@ static void checkDefault(const char* what, const Result& r, int mode, int occ, i
 
 // the default signal at the rate the app asks the radio for
 static void testRoundTrip() {
+    jobs.add([] {
     RunOpt o; o.secs = 16;
     const Result r = runRx(synthGen(Sig{.snrDb = 30}, 2e6), 2e6, o);
     report("B 10 kHz 64-QAM, 2 Msps, 30 dB", r);
@@ -53,6 +59,7 @@ static void testRoundTrip() {
           t.cirDb.size(), t.facConst.size(), t.sdcConst.size(), t.mscConst.size());
     CHECK(t.facConst.size() <= 1024 && t.sdcConst.size() <= 1024 && t.mscConst.size() <= 1024, "round trip: constellation lists are too long");
     CHECK(r.lockSecs > 0 && r.lockSecs < 12, "round trip: first audio after %.1f s", r.lockSecs);
+    });
 }
 
 // every mode, occupancy, constellation, interleaver and protection at 48 kHz: exact frames
@@ -67,7 +74,7 @@ static void testModes() {
         {"B 20 kHz 64-QAM PL3", mk(2, 6, 0, 0, 4), 1, 5, 64}, {"C 10 kHz 64-QAM", mk(3, 0, 0, 0, 0), 2, 3, 64}, {"C 20 kHz 16-QAM", mk(3, 6, 1, 0, 0), 2, 5, 16},
         {"D 10 kHz 64-QAM", mk(4, 0, 0, 0, 0), 3, 3, 64}, {"D 20 kHz 16-QAM short", mk(4, 6, 1, 1, 0), 3, 5, 16},
     };
-    for (const C& c : cs) {
+    for (const C& c : cs) jobs.add([=] {
         RunOpt o; o.secs = c.s.shortIl ? 12 : 16;
         const Result r = runRx(synthGen(c.s, 48000), 48000, o);
         report(c.name, r);
@@ -77,13 +84,13 @@ static void testModes() {
         CHECK(t.services.size() == 1 && t.services[0].label == "OnAir DRM", "%s: label", c.name);
         CHECK(r.exact >= 6 && r.bad == 0 && r.gaps == 0, "%s: %llu exact, %llu bad, %llu gaps", c.name, (unsigned long long)r.exact, (unsigned long long)r.bad, (unsigned long long)r.gaps);
         CHECK(t.textMessage == "OnAir DRM test signal" || r.exact < 12, "%s: text '%s'", c.name, t.textMessage.c_str());
-    }
+    });
 }
 
 // input rates from 48 kHz up to 20 Msps, integer and not
 static void testRates() {
     const double rates[] = {48000, 96000, 192000, 240000, 1000000, 2000000, 2400000, 3200000, 4000000, 6000000, 8000000, 10000000, 12500000, 16000000, 20000000};
-    for (double rate : rates) {
+    for (double rate : rates) jobs.add([=] {
         RunOpt o; o.secs = rate > 5e6 ? 12 : 14;
         Sig s; s.snrDb = 30;
         const Result r = runRx(synthGen(s, rate), rate, o);
@@ -91,13 +98,13 @@ static void testRates() {
         snprintf(what, sizeof what, "B 10 kHz at %.3f Msps", rate / 1e6);
         report(what, r);
         checkDefault(what, r, 1, 3, 64);
-    }
+    });
 }
 
 // chunks of every size: the receiver must give the same result
 static void testChunks() {
     const size_t chunks[] = {1, 7, 1000, 4096, 65536};
-    for (size_t chunk : chunks) {
+    for (size_t chunk : chunks) jobs.add([=] {
         RunOpt o; o.secs = chunk == 1 ? 10 : 12; o.chunk = chunk;
         Sig s; s.snrDb = 30;
         const Result r = runRx(synthGen(s, 48000), 48000, o);
@@ -106,9 +113,9 @@ static void testChunks() {
         report(what, r);
         CHECK(r.tel.state == 2 && r.tel.dataValid, "%s: not decoding", what);
         CHECK(r.exact >= 6 && r.bad == 0 && r.gaps == 0, "%s: %llu exact %llu bad %llu gaps", what, (unsigned long long)r.exact, (unsigned long long)r.bad, (unsigned long long)r.gaps);
-    }
+    });
     // the same at 2 Msps: odd sizes must not change what comes out
-    for (size_t chunk : {(size_t)7, (size_t)4099, (size_t)65536}) {
+    for (size_t chunk : {(size_t)7, (size_t)4099, (size_t)65536}) jobs.add([=] {
         RunOpt o; o.secs = 11; o.chunk = chunk;
         Sig s; s.snrDb = 30;
         const Result r = runRx(synthGen(s, 2e6), 2e6, o);
@@ -116,7 +123,7 @@ static void testChunks() {
         snprintf(what, sizeof what, "2 Msps, chunks of %zu", chunk);
         report(what, r);
         CHECK(r.tel.state == 2 && r.tel.dataValid && r.exact >= 6 && r.bad == 0 && r.gaps == 0, "%s: not clean", what);
-    }
+    });
 }
 
 int main() {
@@ -124,7 +131,8 @@ int main() {
     testModes();
     testRates();
     testChunks();
-    if (fails) { printf("%d check(s) failed\n", fails); return 1; }
-    printf("OK\n");
+    jobs.run();
+    if (fails) { jprintf("%d check(s) failed\n", fails.load()); return 1; }
+    jprintf("OK\n");
     return 0;
 }

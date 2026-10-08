@@ -2,8 +2,13 @@
 #include <algorithm>
 #include <cstring>
 #include <cstdint>
+#include <cstdlib>
 
 namespace dect2 {
+
+// DECT2_MUTE=1: everything plays silence (the device still runs, so the timing that tests and the player rely on is unchanged). The tests
+// set it (CMakeLists.txt): the engine tests of FM, DAB, DRM, ATSC and the others otherwise played their test signals out loud.
+static const bool kForceMute = [] { const char* e = getenv("DECT2_MUTE"); return e && *e && *e != '0'; }();
 
 void AudioOut::Impl::render(float* out, uint32_t nFrames) {
     if (flushReq.exchange(false)) { r.store(w.load()); playing = false; }
@@ -15,7 +20,7 @@ void AudioOut::Impl::render(float* out, uint32_t nFrames) {
     uint32_t n = 0;
     if (playing) {
         n = (uint32_t)std::min<uint64_t>(avail, nFrames);
-        const float vol = muted.load() ? 0.f : volume.load();
+        const float vol = muted.load() || kForceMute ? 0.f : volume.load();
         const size_t mask = frames - 1;
         for (uint32_t i = 0; i < n; i++) {
             const size_t k = (size_t)((rd + i) & mask) * 2;

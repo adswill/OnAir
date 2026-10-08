@@ -72,26 +72,22 @@ void status(App& a) {
     const DtmbTelemetry& t = a.rx.dtmb;
     const SignalStats& st = a.spec.stats;
     const AdcStatus adc = classifyAdc(st.rmsDbfs, st.peak, st.clipFraction);
-    {
-        const ImVec2 p = ImGui::GetCursorScreenPos();
-        const float h = ImGui::GetFrameHeight() * 2.f + ImGui::GetStyle().ItemSpacing.y * 2.f;
-        ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(p.x - 4, p.y - 2), ImVec2(p.x + ImGui::GetContentRegionAvail().x + 4, p.y + h), IM_COL32(22, 23, 25, 255), 3.f);
-    }
+    StatusPanel panel;   // a tinted panel behind the status lines (they wrap in a narrow window)
     const float loss = recentLoss();
     int ldpc = 0;
     if (on && t.siOk) ldpc = (loss >= 0 && loss > 20) ? 3 : t.dataValid ? 1 : t.blocksBad > 0 ? 3 : 2;
-    lamp("IQ", run ? (adc == AdcStatus::Overload ? 3 : (adc == AdcStatus::Good ? 1 : 2)) : 0, (int)Ic::Wave); ImGui::SameLine(0, 12 * gUi);
-    lamp("PN sync", !on ? 0 : t.state >= 2 ? 1 : t.state == 1 ? 2 : 0); ImGui::SameLine(0, 12 * gUi);
-    lamp("SI", !on ? 0 : t.siOk ? 1 : t.state >= 1 ? 2 : 0); ImGui::SameLine(0, 12 * gUi);
-    lamp("Carrier", !on ? 0 : t.carriers > 0 ? 1 : t.state >= 1 ? 2 : 0); ImGui::SameLine(0, 12 * gUi);
-    lamp("LDPC", ldpc); ImGui::SameLine(0, 12 * gUi);
-    lamp("TS lock", !on ? 0 : t.tsLock ? 1 : t.siOk ? 2 : 0, (int)Ic::Layers); ImGui::SameLine(0, 10 * gUi);
-    ImGui::TextDisabled("|"); ImGui::SameLine(0, 10 * gUi);
+    lamp("IQ", run ? (adc == AdcStatus::Overload ? 3 : (adc == AdcStatus::Good ? 1 : 2)) : 0, (int)Ic::Wave); flowNext(12 * gUi);
+    lamp("PN sync", !on ? 0 : t.state >= 2 ? 1 : t.state == 1 ? 2 : 0); flowNext(12 * gUi);
+    lamp("SI", !on ? 0 : t.siOk ? 1 : t.state >= 1 ? 2 : 0); flowNext(12 * gUi);
+    lamp("Carrier", !on ? 0 : t.carriers > 0 ? 1 : t.state >= 1 ? 2 : 0); flowNext(12 * gUi);
+    lamp("LDPC", ldpc); flowNext(12 * gUi);
+    lamp("TS lock", !on ? 0 : t.tsLock ? 1 : t.siOk ? 2 : 0, (int)Ic::Layers); flowNext(10 * gUi);
+    ImGui::TextDisabled("|"); flowNext(10 * gUi);
     auto ro = [&](const char* label, const std::string& val, ImVec4 col = kText) {
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled("%s", label); ImGui::SameLine(0, 5 * gUi);
         ImGui::PushFont(a.mono, 0); ImGui::TextColored(col, "%s", val.c_str()); ImGui::PopFont();
-        ImGui::SameLine(0, 15 * gUi);
+        flowNext(15 * gUi);
     };
     char b[96];
     if (!run) ro("State", "stopped", kDim);
@@ -108,7 +104,7 @@ void status(App& a) {
         ro("Interleaver", interleaverText(t.interleaver));
         if (t.carriers == 1) ro("Carrier", "single");
     }
-    ImGui::NewLine();
+    flowBreak();
     if (on && t.state >= 1) {
         snprintf(b, sizeof b, "%.1f dB", t.snrPnDb); ro("C/N", b);
         if (t.siOk && t.merDb > 0) { snprintf(b, sizeof b, "%.1f dB", t.merDb); ro("MER", b); }
@@ -127,7 +123,7 @@ void status(App& a) {
         gaugePill(130, run ? (st.rmsDbfs + 60.f) / 60.f : 0.f, col, b);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("ADC level of the whole captured band (rms). %s\npeak %.2f   clip %.3f%%   DC %+.3f / %+.3f", adcAdvice(adc).c_str(), st.peak, st.clipFraction * 100, st.dcI, st.dcQ);
     }
-    ImGui::SameLine(0, 15 * gUi);
+    flowNext(15 * gUi);
     if (run) { snprintf(b, sizeof b, "%llu", (unsigned long long)a.engine.droppedSamples()); ro("dropped", b, a.engine.droppedSamples() ? kBad : kText); }
     if (on && (t.cwDropped || t.cwSkipped)) {
         snprintf(b, sizeof b, "%llu / %llu", (unsigned long long)t.cwDropped, (unsigned long long)t.cwSkipped);
@@ -135,11 +131,11 @@ void status(App& a) {
     }
     if (run && a.devices[a.devIdx].kind != DeviceInfo::File) {
         ImGui::AlignTextToFramePadding();
-        if (adc == AdcStatus::Overload) ImGui::TextColored(ImVec4(0.95f, 0.35f, 0.25f, 1), "ADC OVERLOAD - %s", a.agcOn ? "AGC is lowering the gain" : "reduce the gain (or enable AGC)");
-        else if (adc == AdcStatus::Low) ImGui::TextColored(ImVec4(0.95f, 0.70f, 0.15f, 1), "ADC level low - raise the gain");
-        else if (adc == AdcStatus::NoSignal) ImGui::TextColored(ImVec4(0.95f, 0.70f, 0.15f, 1), "ADC sees almost nothing - antenna / gain?");
-        else ImGui::NewLine();
-    } else ImGui::NewLine();
+        if (adc == AdcStatus::Overload) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.35f, 0.25f, 1), "ADC OVERLOAD - %s", a.agcOn ? "AGC is lowering the gain" : "reduce the gain (or enable AGC)"); ImGui::PopTextWrapPos(); }
+        else if (adc == AdcStatus::Low) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.70f, 0.15f, 1), "ADC level low - raise the gain"); ImGui::PopTextWrapPos(); }
+        else if (adc == AdcStatus::NoSignal) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.70f, 0.15f, 1), "ADC sees almost nothing - antenna / gain?"); ImGui::PopTextWrapPos(); }
+        else flowBreak();
+    } else flowBreak();
 }
 
 void summary(const App& a, std::string& l1, std::string& l2) {
@@ -195,22 +191,22 @@ void panels(App& a) {
     const ImVec2 sz(colW, plotH), sq(sqW, sqW);
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("Constellation (%zu cells)", on && t.siOk ? t.cells.size() : (size_t)0);
+    captionFit(sqW, "Constellation (%zu cells)", on && t.siOk ? t.cells.size() : (size_t)0);   // the captions are never wider than their plots
     scatter("##dtmbcon", on && t.siOk ? t.cells : std::vector<cf32>(), sq, 1.7, pal::accent(0.40f));
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    if (on && t.cirDb.size() > 1) ImGui::TextDisabled("Impulse response (echo span %.2f us)", t.echoSpanUs); else ImGui::TextDisabled("Impulse response from the PN header");
+    if (on && t.cirDb.size() > 1) captionFit(colW, "Impulse response (echo span %.2f us)", t.echoSpanUs); else captionFit(colW, "Impulse response from the PN header");
     cirPlot(t, on, sz);
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("C/N and MER (dB)");
+    captionFit(colW, "C/N and MER (dB)");
     historyTwo("##dtmbcn", "dB", S.cn, S.mer, sz, false, 0, 0);
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("Codewords lost (%%)");
+    captionFit(colW, "Codewords lost (%%)");
     historyTwo("##dtmbloss", "%", S.loss, std::deque<float>(), sz, true, 0, 100);
     ImGui::EndGroup();
 }
@@ -224,8 +220,8 @@ void receiver(App& a) {
     ImGui::TextDisabled("Not supported: DTMB-A (APSK modulations and the extra LDPC rates), and channels other than 8 MHz at 7.56 Msymbol/s.");
     ImGui::PopTextWrapPos();
     ImGui::Spacing();
-    if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "Start the receiver with DTMB selected."); return; }
-    auto kv = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); ImGui::SameLine(190 * gUi); ImGui::PushFont(a.mono, 0); ImGui::Text(fmt, v...); ImGui::PopFont(); };
+    if (!live(a)) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "Start the receiver with DTMB selected."); ImGui::PopTextWrapPos(); } return; }
+    auto kv = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); kvColumn(190 * gUi); ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::Text(fmt, v...); ImGui::PopTextWrapPos(); ImGui::PopFont(); };
     kv("state", "%s", t.state == 2 ? "locked" : t.state == 1 ? "frames tracked" : "searching for PN headers");
     kv("frame header", "%s", t.header >= 0 ? kHeader[t.header] : "not known yet");
     if (t.header >= 0) {
@@ -267,7 +263,7 @@ void receiver(App& a) {
 void decoder(App& a, bool&) {
     loadState();
     ImGui::TextDisabled("LDPC threads"); ImGui::SameLine(0, 5 * gUi);
-    ImGui::SetNextItemWidth(80 * gUi);
+    ImGui::SetNextItemWidth(std::min(80 * gUi, ImGui::GetContentRegionAvail().x));   // no wider than the side panel
     char cur[16]; if (S.threads == 0) snprintf(cur, sizeof cur, "auto"); else snprintf(cur, sizeof cur, "%d", S.threads);
     if (ImGui::BeginCombo("##dtmbthr", cur)) {
         for (int i = 0; i <= 4; i++) {
@@ -301,27 +297,27 @@ void synth(App& a, bool& changed) {
         ImGui::BeginDisabled(single);
     if (combo("##tdh", 70, sc.modeOpt[0], hdr)) changed = true;
     ImGui::EndDisabled();
-    ImGui::SameLine(0, 6 * gUi);
+    flowNext(6 * gUi);
     if (combo("##tdm", 80, sc.modeOpt[1], mod)) changed = true;
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("32QAM and 4QAM-NR exist at code rate 0.8 only: that rate is used for them.");
-    ImGui::SameLine(0, 6 * gUi);
+    flowNext(6 * gUi);
     if (combo("##tdr", 56, sc.modeOpt[2], rate)) changed = true;
-    ImGui::SameLine(0, 6 * gUi);
+    flowNext(6 * gUi);
     if (combo("##tdi", 72, sc.modeOpt[3], il)) changed = true;
-    ImGui::SameLine(0, 8 * gUi);
+    flowNext(8 * gUi);
     if (combo("##tdc", 72, sc.modeOpt[4], car)) changed = true;
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("C=1: single carrier. It always uses PN595 with a fixed phase.");
-    ImGui::SameLine(0, 8 * gUi);
+    flowNext(8 * gUi);
     ImGui::BeginDisabled(single);
     if (combo("##tdp", 96, sc.modeOpt[5], phase)) changed = true;
     ImGui::EndDisabled();
-    ImGui::SameLine(0, 12 * gUi); ImGui::TextDisabled("SNR"); ImGui::SameLine(0, 4 * gUi); ImGui::SetNextItemWidth(90 * gUi);
+    flowNext(12 * gUi); ImGui::TextDisabled("SNR"); ImGui::SameLine(0, 4 * gUi); ImGui::SetNextItemWidth(90 * gUi);
     float snr = (float)sc.snrDb; if (ImGui::SliderFloat("##tdsnr", &snr, 0, 40, "%.0f dB")) { sc.snrDb = snr; changed = true; }
-    ImGui::SameLine(0, 8 * gUi); ImGui::TextDisabled("CFO"); ImGui::SameLine(0, 4 * gUi); ImGui::SetNextItemWidth(100 * gUi);
+    flowNext(8 * gUi); ImGui::TextDisabled("CFO"); ImGui::SameLine(0, 4 * gUi); ImGui::SetNextItemWidth(100 * gUi);
     float cfo = (float)(sc.cfoHz / 1e3); if (ImGui::SliderFloat("##tdcfo", &cfo, -40, 40, "%.2f kHz")) { sc.cfoHz = cfo * 1e3; changed = true; }
-    ImGui::SameLine(0, 8 * gUi); ImGui::TextDisabled("echo"); ImGui::SameLine(0, 4 * gUi); ImGui::SetNextItemWidth(90 * gUi);
+    flowNext(8 * gUi); ImGui::TextDisabled("echo"); ImGui::SameLine(0, 4 * gUi); ImGui::SetNextItemWidth(90 * gUi);
     float ec = (float)sc.echoDb; if (ImGui::SliderFloat("##tdec", &ec, 0, 30, ec == 0 ? "off" : "-%.0f dB")) { sc.echoDb = ec; changed = true; }
-    ImGui::SameLine(0, 8 * gUi); ImGui::TextDisabled("delay"); ImGui::SameLine(0, 4 * gUi); ImGui::SetNextItemWidth(90 * gUi);
+    flowNext(8 * gUi); ImGui::TextDisabled("delay"); ImGui::SameLine(0, 4 * gUi); ImGui::SetNextItemWidth(90 * gUi);
     int dl = sc.echoDelay; if (ImGui::SliderInt("##tded", &dl, 5, 600, "%d smp")) { sc.echoDelay = dl; changed = true; }
 }
 
@@ -339,6 +335,9 @@ void meters(const App& a, std::vector<ModeMeter>& out) {
 
 } // namespace
 
+void scanTabCommon(App& a);   // scan_outputs.cpp: the scan tab of the TV modes (it sets the DTMB flag from the family)
+namespace { void scan(App& a) { scanTabCommon(a); } }
+
 extern const ModeUi kDtmbUi;
 const ModeUi kDtmbUi = {
     .sideTitle = "SERVICES",
@@ -349,6 +348,7 @@ const ModeUi kDtmbUi = {
     .summary = summary,
     .decoder = decoder,
     .synth = synth,
+    .scan = scan,
     .tick = tick,
     .meters = meters,
 };

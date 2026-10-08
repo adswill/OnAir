@@ -11,7 +11,11 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <cerrno>
 #include <cstring>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <mutex>
 #include <random>
 #include <thread>
@@ -28,8 +32,46 @@ namespace dect2 {
 // hackrf_usb.cpp
 std::unique_ptr<IqSource> makeUsbHackrfSource(const std::string& serial);
 std::vector<DeviceInfo> listUsbHackrfDevices(std::string& err);
+uint32_t hackrfAutoFilterHz(double sampleRate, double channelMhz);
+void hackrfBoardRange(int id, double& lo, double& hi);
 
 using Clock = std::chrono::steady_clock;
+
+// ---------------------------------------------------------------- the radios' own settings (source.h)
+
+RadioSetting ppmSetting(double step) {
+    RadioSetting r;
+    r.type = RadioSetting::Number;
+    r.key = "ppm";
+    r.label = "Frequency correction";
+    r.help = "The radio's clock error in ppm (parts per million): positive when its clock runs fast, so that every signal shows up a little below\n"
+             "its real frequency. A dongle without a TCXO is often 20-100 ppm off, a HackRF One up to 20 ppm, a radio with a TCXO about 1 ppm.\n"
+             "Find it with a signal of known frequency (a broadcast carrier, a time signal, a GSM/LTE base station). 0 = no correction.";
+    r.minV = -200; r.maxV = 200; r.step = step > 0 ? step : 0.1; r.unit = "ppm";
+    r.def = "0";
+    return r;
+}
+
+RadioSetting boolSetting(const std::string& key, const std::string& label, const std::string& help, bool def, bool restart) {
+    RadioSetting r;
+    r.type = RadioSetting::Bool;
+    r.key = key; r.label = label; r.help = help;
+    r.def = def ? "1" : "0";
+    r.restart = restart;
+    return r;
+}
+
+RadioSetting choiceSetting(const std::string& key, const std::string& label, const std::string& help, std::vector<std::string> values,
+                           std::vector<std::string> names, const std::string& def, bool restart) {
+    RadioSetting r;
+    r.type = RadioSetting::Choice;
+    r.key = key; r.label = label; r.help = help;
+    r.values = std::move(values); r.names = std::move(names);
+    if (r.names.size() != r.values.size()) r.names = r.values;
+    r.def = def;
+    r.restart = restart;
+    return r;
+}
 
 // ---------------------------------------------------------------- HackRF
 
@@ -70,6 +112,11 @@ public:
             hackrfRelease();
             return false;
         }
+        bias_ = false;
+        {   // only the One (board id 2, or 4 from hardware r9 on) and the Pro (5) have antenna power
+            uint8_t id = 0xFF;
+            hasBias_ = hackrf_board_id_read(dev_, &id) == HACKRF_SUCCESS && (id == 2 || id == 4 || id == 5);
+        }
         if (!apply(s, err)) {
             hackrf_close(dev_);
             dev_ = nullptr;
@@ -80,6 +127,8 @@ public:
         r = hackrf_start_rx(dev_, &HackrfSource::rxCb, this);
         if (r != HACKRF_SUCCESS) {
             err = std::string("start_rx: ") + hackrf_error_name((hackrf_error)r);
+            if (bias_) hackrf_set_antenna_enable(dev_, 0);   // apply() may have switched the antenna power on
+            bias_ = false;
             hackrf_close(dev_);
             dev_ = nullptr;
             hackrfRelease();
@@ -91,6 +140,8 @@ public:
     void stop() override {
         if (!dev_) return;
         hackrf_stop_rx(dev_);
+        if (bias_) hackrf_set_antenna_enable(dev_, 0);   // antenna power never stays on
+        bias_ = false;
         hackrf_close(dev_);
         dev_ = nullptr;
         hackrfRelease();
@@ -111,13 +162,17 @@ private:
             if (!chk(hackrf_set_sample_rate(dev_, s.sampleRate), "set_sample_rate")) return false;
             rate_ = s.sampleRate;
         }
-        uint32_t bw = s.basebandFilterHz > 0 ? (uint32_t)s.basebandFilterHz
-                                              : hackrf_compute_baseband_filter_bw((uint32_t)(s.sampleRate * 0.5));
+        uint32_t bw = s.basebandFilterHz > 0 ? (uint32_t)s.basebandFilterHz : hackrfAutoFilterHz(s.sampleRate, s.bandwidthMhz);   // as hackrf_usb.cpp
         if (!chk(hackrf_set_baseband_filter_bandwidth(dev_, bw), "set_baseband_filter")) return false;
-        if (!chk(hackrf_set_freq(dev_, (uint64_t)s.centerHz), "set_freq")) return false;
+        // the HackRF's library has no frequency correction: the clock error is taken out of the frequency asked for
+        if (!chk(hackrf_set_freq(dev_, (uint64_t)ppmCorrectedHz(s.centerHz, radioPpm(s))), "set_freq")) return false;
         if (!chk(hackrf_set_lna_gain(dev_, (uint32_t)s.lnaDb), "set_lna_gain")) return false;
         if (!chk(hackrf_set_vga_gain(dev_, (uint32_t)s.vgaDb), "set_vga_gain")) return false;
         if (!chk(hackrf_set_amp_enable(dev_, s.ampOn ? 1 : 0), "set_amp_enable")) return false;
+        if (hasBias_ && (!live || s.biasTee != bias_)) {
+            if (!chk(hackrf_set_antenna_enable(dev_, s.biasTee ? 1 : 0), "set_antenna_enable")) return false;
+            bias_ = s.biasTee;
+        }
         return true;
     }
 
@@ -141,6 +196,7 @@ private:
     hackrf_device* dev_ = nullptr;
     IqRing* ring_ = nullptr;
     double rate_ = 0;
+    bool hasBias_ = false, bias_ = false;
 };
 
 // Our own USB driver first (hackrf_usb.cpp); libhackrf when it cannot open the radio (or always, with DECT2_LIBHACKRF=1 in the environment).
@@ -236,8 +292,17 @@ public:
 protected:
     double effectiveRate(const TuneSettings&) override { return fileRate_; }
     bool prepare(const TuneSettings&, std::string& err) override {
+#ifdef _WIN32
+        {   // the path is UTF-8 (file dialog): fopen would read it in the ANSI code page and fail on names outside it
+            const int n = MultiByteToWideChar(CP_UTF8, 0, path_.c_str(), -1, nullptr, 0);
+            std::wstring w(n > 0 ? (size_t)n : 1, L'\0');
+            if (n > 0) MultiByteToWideChar(CP_UTF8, 0, path_.c_str(), -1, &w[0], n);
+            f_ = n > 0 ? _wfopen(w.c_str(), L"rb") : nullptr;
+        }
+#else
         f_ = fopen(path_.c_str(), "rb");
-        if (!f_) { err = "cannot open " + path_; return false; }
+#endif
+        if (!f_) { err = "cannot open " + path_ + ": " + strerror(errno); return false; }
         return true;
     }
     size_t produce(cf32* dst, size_t maxN) override {
@@ -426,12 +491,16 @@ std::vector<DeviceInfo> listHackrfDevices(std::string& err) {
                 hackrf_device* dev = nullptr;
                 if (hackrf_open_by_serial(d.serial.c_str(), &dev) == HACKRF_SUCCESS) {
                     uint8_t id = 0xFF;   // undetected (older libhackrf headers have no name for it)
-                    if (hackrf_board_id_read(dev, &id) == HACKRF_SUCCESS) d.board = hackrf_board_id_name((hackrf_board_id)id);
+                    if (hackrf_board_id_read(dev, &id) == HACKRF_SUCCESS) {
+                        d.board = hackrf_board_id_name((hackrf_board_id)id); d.hasBiasTee = id == 2 || id == 4 || id == 5;
+                        hackrfBoardRange(id, d.minFreqHz, d.maxFreqHz);
+                    }
                     hackrf_close(dev);
                 }
             }
             std::string tail = d.serial.size() > 8 ? d.serial.substr(d.serial.size() - 8) : d.serial;
             d.name = d.board + " (" + tail + ")";
+            d.settings = {ppmSetting(0.1)};
             out.push_back(d);
         }
         hackrf_device_list_free(l);
@@ -453,7 +522,8 @@ std::vector<DeviceInfo> listRadios(std::string& err) {
     const std::vector<DeviceInfo> native = listNativeDevices(e2);
     for (auto& d : native) out.push_back(d);
     if (err.empty()) err = e2;
-    // the SoapySDR driver names of the radios that are also available natively
+    // the SoapySDR driver names of the radios that are also available natively (rtlsdr, airspy, bladerf and sdrplay keep their names;
+    // "sdrplay" is the SoapySDRPlay3 module that Linux systems may have next to the SDRplay API)
     auto soapyName = [](const std::string& b) { return b == "pluto" ? std::string("plutosdr") : b == "usrp" ? std::string("uhd") : b == "lime" ? std::string("lime") : b; };
     for (auto& d : listSoapyDevices(e2)) {
         bool dup = false;

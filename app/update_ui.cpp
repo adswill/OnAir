@@ -6,7 +6,13 @@
 #include <ctime>
 
 namespace {
-Updater& U(App& a) { if (!a.upd) a.upd.reset(new Updater(ONAIR_VERSION)); return *a.upd; }
+Updater& U(App& a) {
+    if (!a.upd) { a.upd.reset(new Updater(ONAIR_VERSION)); a.upd->loadResult(); }   // loadResult: what the installation of an earlier start left behind
+    return *a.upd;
+}
+bool resultDismissed = false;
+// the version whose installation failed at the last start: not tried again by itself (the button still does)
+bool failedBefore(const Updater::Status& st, const ReleaseInfo& r) { return st.lastResult.found && !st.lastResult.ok && compareVersions(r.version, st.lastResult.version) == 0; }
 double nowS() { return (double)time(nullptr); }
 bool skipped(const App& a, const ReleaseInfo& r) { return !a.updSkip.empty() && compareVersions(r.version, a.updSkip) <= 0; }
 }
@@ -16,6 +22,14 @@ void updateTick(App& a) {
     const Updater::Status st = u.status();
     static Updater::Phase lastPhase = Updater::Phase::Idle;
     static double startT = -1;
+    static bool resultLogged = false;
+    if (!resultLogged) {
+        resultLogged = true;
+        if (st.lastResult.found) {
+            if (st.lastResult.ok) a.engine.log("updated to v" + st.lastResult.version);
+            else a.engine.log("the update to v" + st.lastResult.version + " did not install (setup exit code " + std::to_string(st.lastResult.setupExit) + ")");
+        }
+    }
     if (startT < 0) startT = ImGui::GetTime();
     // a check a few seconds after the start, then once a day
     if (a.updCheck && st.phase == Updater::Phase::Idle && !a.updStarted && ImGui::GetTime() - startT > 6 && !getenv("ONAIR_NO_UPDATE_CHECK")) {
@@ -29,7 +43,7 @@ void updateTick(App& a) {
         case Updater::Phase::Available:
             a.updLast = nowS(); savePrefs(a);
             a.engine.log("update available: OnAir " + st.release.version + (st.release.prerelease ? " (pre-release)" : ""));
-            if (a.updAuto && st.autoInstallable && !skipped(a, st.release)) { U(a).download(); a.engine.log("downloading OnAir " + st.release.version + " in the background"); }
+            if (a.updAuto && st.autoInstallable && !skipped(a, st.release) && !failedBefore(st, st.release)) { U(a).download(); a.engine.log("downloading OnAir " + st.release.version + " in the background"); }
             break;
         case Updater::Phase::Ready: a.engine.log("OnAir " + st.release.version + " is ready: it is installed when you close the program"); break;
         case Updater::Phase::Failed: a.engine.log("update: " + st.error); break;
@@ -74,6 +88,15 @@ void updateButton(App& a) {
         ImGui::SameLine(0, 10 * gUi);
         ImGui::TextDisabled("(%s)", installKindName(st.kind));
         ImGui::Separator();
+        if (st.lastResult.found && !st.lastResult.ok && !resultDismissed) {
+            ImGui::PushTextWrapPos(0);
+            ImGui::TextColored(ImVec4(0.95f, 0.5f, 0.35f, 1), "The update to v%s did not install (setup exit code %d).", st.lastResult.version.c_str(), st.lastResult.setupExit);
+            ImGui::PopTextWrapPos();
+            if (ImGui::Button("Download page")) u.openReleasePage();
+            ImGui::SameLine();
+            if (ImGui::Button("Dismiss")) resultDismissed = true;
+            ImGui::Separator();
+        }
         switch (st.phase) {
         case Updater::Phase::Checking: ImGui::TextUnformatted("Asking GitHub for the newest version…"); break;
         case Updater::Phase::UpToDate: ImGui::TextColored(ImVec4(0.35f, 0.9f, 0.45f, 1), "You have the newest version."); break;
@@ -96,8 +119,10 @@ void updateButton(App& a) {
                 ImGui::TextColored(ImVec4(0.35f, 0.9f, 0.45f, 1), "Downloaded and checked. It is installed when you close OnAir.");
                 if (ImGui::Button("Restart now and update")) {
                     std::string err;
-                    if (u.apply(true, &err)) glfwSetWindowShouldClose(gWindow, 1); else a.engine.log("update: " + err);
+                    if (u.apply(true, &err)) glfwSetWindowShouldClose(gWindow, 1); else a.engine.log(err.compare(0, 6, "Update") == 0 ? err : "update: " + err);
                 }
+                if (!st.applyError.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.5f, 0.35f, 1), "%s", st.applyError.c_str()); ImGui::PopTextWrapPos(); }
+                if (st.kind == InstallKind::WindowsInstall) ImGui::TextDisabled("Windows asks for permission to run the installer.");
                 if (st.kind == InstallKind::LinuxDeb) ImGui::TextDisabled("The system asks for your password to install the package.");
             } else {
                 if (st.autoInstallable) { if (ImGui::Button("Download and install")) u.download(); }
@@ -119,7 +144,7 @@ void updateButton(App& a) {
         bool ch = false;
         ch |= ImGui::Checkbox("Check for updates automatically", &a.updCheck);
         ch |= ImGui::Checkbox("Download and install them by themselves", &a.updAuto);
-        ch |= ImGui::Checkbox("Include pre-releases (the project has only those so far)", &a.updPre);
+        ch |= ImGui::Checkbox("Include pre-releases", &a.updPre);
         if (ch) savePrefs(a);
         ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
         ImGui::TextWrapped("Only github.com is contacted. Downloads are checked against the SHA-256 GitHub lists for the file.");

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Copy every non-system dynamic library an executable needs into OnAir.app/Contents/Frameworks and rewrite the load paths,
 so the app runs on a Mac without Homebrew. Usage: bundle_macos.py OnAir.app"""
-import os, re, shutil, subprocess, sys
+import os, re, shutil, subprocess, sys, glob
 
 app = sys.argv[1]
 exe = os.path.join(app, "Contents/MacOS/OnAir")
@@ -51,13 +51,22 @@ bundled = []
 
 # The radio libraries that OnAir loads at run time when they are present (the native drivers): they go into the app too, so that nothing has
 # to be installed next to it. Every version name a driver may ask for is kept (the symlinks of the Homebrew copy become symlinks here).
-import glob
+# A missing one stops the build (a release without it would silently lose that radio), unless ONAIR_ALLOW_MISSING_RADIO_LIBS=1 (local test builds).
+# The value is how to get it. libiio has no Homebrew formula: Pluto users install ADI's libiio package, so it is optional here.
+REQUIRED = {"rtlsdr": "brew install librtlsdr", "airspy": "brew install airspy", "airspyhf": "brew install airspyhf",
+            "bladeRF": "brew install libbladerf", "LimeSuite": "brew install limesuite", "uhd": "brew install uhd"}
+OPTIONAL = {"iio": "ADI's libiio package (github.com/analogdevicesinc/libiio/releases)"}
+allow_missing = os.environ.get("ONAIR_ALLOW_MISSING_RADIO_LIBS") == "1"
 links = []
-for stem in ["rtlsdr", "airspy", "bladeRF", "iio", "LimeSuite", "uhd"]:
+missing = []
+for stem in list(REQUIRED) + list(OPTIONAL):
+    found = False
     for d in SEARCH[:2]:
         for src in sorted(glob.glob(os.path.join(d, "lib%s.*dylib" % stem)) + glob.glob(os.path.join(d, "lib%s*.dylib" % stem))):
             name = os.path.basename(src)
-            if name.endswith(".a") or os.path.exists(os.path.join(fw, name)): continue
+            if name.endswith(".a"): continue
+            found = True   # also when an earlier stem's glob already copied it (libairspy*.dylib takes libairspyhf too)
+            if os.path.exists(os.path.join(fw, name)): continue
             real = os.path.realpath(src)
             if os.path.islink(src):
                 links.append((name, os.path.basename(real)))
@@ -71,6 +80,11 @@ for stem in ["rtlsdr", "airspy", "bladeRF", "iio", "LimeSuite", "uhd"]:
                 shutil.copy2(real, dst); os.chmod(dst, 0o755)
                 done[real] = name
                 bundled.append(dst); queue.append(dst)
+    if not found:
+        if stem in OPTIONAL: print("note: lib%s is not bundled (users install %s)" % (stem, OPTIONAL[stem]), file=sys.stderr)
+        else: missing.append("missing radio library lib%s: %s" % (stem, REQUIRED[stem]))
+for m in missing: print("warning:" if allow_missing else "error:", m, file=sys.stderr)
+if missing and not allow_missing: sys.exit(1)
 for name, target in links:
     if name != target and not os.path.exists(os.path.join(fw, name)): os.symlink(target, os.path.join(fw, name))
 while queue:

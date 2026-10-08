@@ -26,15 +26,17 @@ static void clickToTune(App& a) {
     }
 }
 
-void spectrumPlot(App& a, ImVec2 size) {
+void spectrumPlot(App& a, ImVec2 size, bool noFreqAxis) {
     if (plt::BeginPlot("##spec", size, plt::Flags_NoLegend | plt::Flags_NoTitle)) {
-        plt::SetupAxes("frequency (MHz)", "power (dBFS/bin)");
+        if (noFreqAxis) plt::SetupAxes(nullptr, "power (dBFS/bin)", plt::AxisFlags_NoTickLabels, 0);   // the waterfall under it shows the frequencies
+        else plt::SetupAxes("frequency (MHz)", "power (dBFS/bin)");
         double fs = (a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate) / 1e6;
         // follow a retune: when the centre or the span changes, bring the view back to the new band (otherwise it keeps the user's own zoom)
         static double lastC = 0, lastFs = 0;
-        const bool moved = lastC != a.freqMhz || lastFs != fs;
-        lastC = a.freqMhz; lastFs = fs;
-        plt::SetupAxisLimits(plt::X1, a.freqMhz - fs / 2, a.freqMhz + fs / 2, moved ? plt::Cond_Always : plt::Cond_Once);
+        const double rc = radioCenterMhz(a);   // the axis shows the radio's real centre, so a signal sits at its true frequency
+        const bool moved = lastC != rc || lastFs != fs;
+        lastC = rc; lastFs = fs;
+        plt::SetupAxisLimits(plt::X1, rc - fs / 2, rc + fs / 2, moved ? plt::Cond_Always : plt::Cond_Once);
         plt::SetupAxisLimits(plt::Y1, a.yMin, a.yMax, plt::Cond_Once);
         plt::SetupAxisFormat(plt::X1, "%.2f");
         if (!a.smooth.empty()) {
@@ -86,7 +88,7 @@ void waterfallPlot(App& a, ImVec2 size) {
     const ImVec2 avail = ImGui::GetContentRegionAvail();
     const bool measured = a.wf.nStamps >= 128;
     if (avail.x != sc.avail.x || avail.y != sc.avail.y || measured != sc.measured) {
-        sc.avail = avail; sc.measured = measured; sc.dt = a.wf.rowDt;
+        sc.avail = avail; sc.measured = measured; sc.dt = a.wf.rowDt > 0 ? a.wf.rowDt : 1.0 / 30;   // a zero would make the label step zero: an endless loop
         // a 1-2-5 step that gives a label about every three text lines
         const double secs = H * sc.dt, want = std::max(2.0, (double)avail.y / (ImGui::GetTextLineHeight() * 3));
         const double raw = secs / want, mag = std::pow(10.0, std::floor(std::log10(raw))), n = raw / mag;
@@ -101,10 +103,11 @@ void waterfallPlot(App& a, ImVec2 size) {
     if (plt::BeginPlot("##wf", size, plt::Flags_NoLegend | plt::Flags_NoTitle)) {
         plt::SetupAxes("frequency (MHz)", "seconds ago");
         double fs = (a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate) / 1e6;
-        double x0 = a.freqMhz - fs / 2, x1 = a.freqMhz + fs / 2;
+        const double rc = radioCenterMhz(a);
+        double x0 = rc - fs / 2, x1 = rc + fs / 2;
         static double lastC = 0, lastFs = 0;
-        const bool moved = lastC != a.freqMhz || lastFs != fs;
-        lastC = a.freqMhz; lastFs = fs;
+        const bool moved = lastC != rc || lastFs != fs;
+        lastC = rc; lastFs = fs;
         plt::SetupAxisLimits(plt::X1, x0, x1, moved ? plt::Cond_Always : plt::Cond_Once);
         // y is in rows, so the picture keeps its size while the measured row time wanders; the labels are the fixed scale above
         plt::SetupAxisLimits(plt::Y1, -H, 0, plt::Cond_Always);

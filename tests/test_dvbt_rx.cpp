@@ -2,6 +2,8 @@
 #include "dect2/dvbt_gen.h"
 #include "dect2/dvbt_rx.h"
 #include "dect2/t2.h"
+#include "jobs.h"
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -12,8 +14,9 @@
 #include <cstdint>
 #include <vector>
 using namespace dect2;
-static int fails = 0;
-#define CHECK(c, ...) do { if (!(c)) { printf("FAIL: " __VA_ARGS__); printf("\n"); fails++; } } while (0)
+using testjobs::jprintf;
+static std::atomic<int> fails{0};
+#define CHECK(c, ...) do { if (!(c)) { jprintf("FAIL: " __VA_ARGS__); jprintf("\n"); fails++; } } while (0)
 
 
 // fractional-delay sample from a stream using a 32-tap Kaiser-windowed sinc (a clean resampler for the SRO simulation)
@@ -111,6 +114,7 @@ static Result run(const dvbt::Params& p, int frames, double snrDb, double cfoHz,
         }
         outv.push_back(v);
     }
+    std::vector<cf32>().swap(tx);   // the cases run side by side: do not hold on to memory that is not needed any more
     auto t0 = std::chrono::steady_clock::now();
     int chunkNo = 0;
     for (size_t i = 0; i < outv.size(); i += 1 << 14) {
@@ -156,24 +160,29 @@ int main() {
         {dvbt::k8K, dvbt::kGi16, dvbt::k64Qam, dvbt::kR34, 30, 800, 0, 0, 0, "8K 64-QAM 3/4, 120000 samples lost", 80, 0, 0, 1.2, 120000},
     };
     const char* only = getenv("DVBT_CASE");   // development: run only the cases whose name contains this text
+    // the cases are independent: each one runs on its own thread, the output keeps the order of the cases
+    testjobs::Jobs jobs;
     for (auto& c : cases) {
         if (only && !strstr(c.name, only)) continue;
+        jobs.add([&c] {
         dvbt::Params p; p.mode = c.mode; p.guard = c.gi; p.mod = c.mod; p.crHp = c.cr; p.crLp = c.cr;
         const Result r = run(p, c.frames ? c.frames : c.mode == dvbt::k8K ? 8 : 20, c.snr, c.cfo, c.echo, c.echoDelay, c.sro, 8, c.burstMs, c.burstSnr, c.burstAt, c.slip, c.dc);
         const bool ok = r.tps && r.good > 50 && r.bad * 20 <= r.good + r.bad;
-        printf("%-42s lock %d tps %d (mode %d gi %d mod %d cr %d)  packets %zu good %zu bad %zu  SNR %.1f dB  %.2fs  %s\n", c.name, r.locked, r.tps, r.tel.dvbt.mode, r.tel.dvbt.guard, r.tel.dvbt.mod, r.tel.dvbt.crHp, r.packets, r.good, r.bad, r.snr, r.secs, ok ? "OK" : "FAILED");
-        if (c.slip > 0) printf("    %d samples lost: %zu packets lost or damaged in all, worst carrier-offset error %.0f Hz\n", c.slip, r.lost + r.bad, r.maxCfoErr);
-        if (c.burstMs > 0) printf("    disturbance: worst carrier-offset error %.0f Hz (limit 60), bad packets long after the burst %zu\n", r.maxCfoErr, r.badLate);
+        jprintf("%-42s lock %d tps %d (mode %d gi %d mod %d cr %d)  packets %zu good %zu bad %zu  SNR %.1f dB  %.2fs  %s\n", c.name, r.locked, r.tps, r.tel.dvbt.mode, r.tel.dvbt.guard, r.tel.dvbt.mod, r.tel.dvbt.crHp, r.packets, r.good, r.bad, r.snr, r.secs, ok ? "OK" : "FAILED");
+        if (c.slip > 0) jprintf("    %d samples lost: %zu packets lost or damaged in all, worst carrier-offset error %.0f Hz\n", c.slip, r.lost + r.bad, r.maxCfoErr);
+        if (c.burstMs > 0) jprintf("    disturbance: worst carrier-offset error %.0f Hz (limit 60), bad packets long after the burst %zu\n", r.maxCfoErr, r.badLate);
         CHECK(ok, "%s", c.name);
         // Lost samples must cost about a block of symbols, not the quarter of a second it took when the receiver waited for three failed TPS frames
         if (c.slip > 0) CHECK(r.lost + r.bad <= (c.slip >= 100000 ? 3500 : 1500), "%s: %zu packets lost or damaged", c.name, r.lost + r.bad);
         if (c.burstMs > 0) CHECK(r.maxCfoErr < 60 && r.badLate == 0, "%s: carrier offset error %.0f Hz, %zu bad packets late", c.name, r.maxCfoErr, r.badLate);
         if (c.burstMs > 0 && c.burstAt == 0) {
             const double wait = r.firstGoodSec - c.burstMs / 1e3;
-            printf("    first good packet %.2f s after the signal became decodable\n", wait);
+            jprintf("    first good packet %.2f s after the signal became decodable\n", wait);
             CHECK(r.firstGoodSec > 0 && wait < 0.8, "%s: first good packet %.2f s after the signal became decodable", c.name, wait);
         }
+        });
     }
-    printf(fails ? "DVB-T receiver tests FAILED\n" : "DVB-T receiver tests passed\n");
+    jobs.run();
+    jprintf(fails ? "DVB-T receiver tests FAILED\n" : "DVB-T receiver tests passed\n");
     return fails ? 1 : 0;
 }

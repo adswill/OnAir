@@ -5,7 +5,7 @@ void teletextTab(App& a) {
     TeletextDecoder& tx = a.engine.teletext();
     const Player& pl = a.engine.player();
     if (tx.pid() < 0) {
-        ImGui::TextDisabled(pl.selected() < 0 ? "Play a service (Player tab) - teletext is read from the playing service." : "The playing service has no teletext stream.");
+        { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(pl.selected() < 0 ? "Play a service (Player tab) - teletext is read from the playing service." : "The playing service has no teletext stream."); ImGui::PopTextWrapPos(); }
         return;
     }
     ImGui::SetNextItemWidth(80 * gUi);
@@ -17,7 +17,7 @@ void teletextTab(App& a) {
     ImGui::SameLine();
     {
         auto pages = tx.pages();
-        ImGui::TextDisabled("%zu pages received, %llu packets", pages.size(), (unsigned long long)tx.packets());
+        { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%zu pages received, %llu packets", pages.size(), (unsigned long long)tx.packets()); ImGui::PopTextWrapPos(); }
         if (!pages.empty()) {
             ImGui::SameLine();
             std::string l = "available: ";
@@ -27,7 +27,7 @@ void teletextTab(App& a) {
         }
     }
     TtxPage pg;
-    if (!tx.page(a.ttxPage, pg)) { ImGui::TextDisabled("page %d has not been received yet (pages repeat every few seconds)", a.ttxPage); return; }
+    if (!tx.page(a.ttxPage, pg)) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("page %d has not been received yet (pages repeat every few seconds)", a.ttxPage); ImGui::PopTextWrapPos(); } return; }
     TtxGrid grid;
     ttxRender(pg, grid);
     ImVec2 avail = ImGui::GetContentRegionAvail();
@@ -84,13 +84,13 @@ const EpgEvent* epgCurrent(const App& a, int sid, const EpgEvent** next) {
 
 void guideTab(App& a) {
     const int64_t now = utcNowOf(a);
-    if (a.ts.services.empty()) { ImGui::TextDisabled("waiting for the service list..."); return; }
+    if (a.ts.services.empty()) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("waiting for the service list..."); ImGui::PopTextWrapPos(); } return; }
     size_t total = 0;
     for (auto& kv : a.epg) total += kv.second.size();
     if (total == 0) {
         ImGui::TextWrapped("No programme information received yet. Broadcasters send it in the EIT tables, which repeat every few seconds (now/next) to a few minutes (schedule). "
                            "Some multiplexes send none at all.");
-        ImGui::TextDisabled("clock: %s%s", fmtLocal(now, "%a %d %b %H:%M").c_str(), a.ts.utcNow ? " (from the broadcast time signal)" : " (this computer's clock)");
+        { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("clock: %s%s", fmtLocal(now, "%a %d %b %H:%M").c_str(), a.ts.utcNow ? " (from the broadcast time signal)" : " (this computer's clock)"); ImGui::PopTextWrapPos(); }
         return;
     }
     if (a.guideSid < 0 || !a.epg.count(a.guideSid)) { a.guideSid = a.engine.player().selected() >= 0 && a.epg.count(a.engine.player().selected()) ? a.engine.player().selected() : a.epg.begin()->first; }
@@ -109,7 +109,7 @@ void guideTab(App& a) {
     ImGui::SameLine();
     ImGui::BeginChild("gev", ImVec2(0, 0));
     const auto& evs = a.epg[a.guideSid];
-    ImGui::TextDisabled("%zu events   local time %s", evs.size(), fmtLocal(now, "%a %d %b %H:%M").c_str());
+    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%zu events   local time %s", evs.size(), fmtLocal(now, "%a %d %b %H:%M").c_str()); ImGui::PopTextWrapPos(); }
     const float detailH = 150;
     ImGui::BeginChild("evlist", ImVec2(0, -detailH), ImGuiChildFlags_Borders);
     if (ImGui::BeginTable("evt", 3, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY)) {
@@ -142,10 +142,10 @@ void guideTab(App& a) {
     if (!sel) sel = epgCurrent(a, a.guideSid);
     if (sel) {
         ImGui::TextColored(ImVec4(0.95f, 0.85f, 0.4f, 1), "%s", sel->title.c_str());
-        ImGui::TextDisabled("%s - %s  (%d min)%s%s", fmtLocal(sel->start, "%a %H:%M").c_str(), fmtLocal(sel->end(), "%H:%M").c_str(), (sel->duration + 30) / 60, genreName(sel->genre)[0] ? "   " : "", genreName(sel->genre));
+        { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s - %s  (%d min)%s%s", fmtLocal(sel->start, "%a %H:%M").c_str(), fmtLocal(sel->end(), "%H:%M").c_str(), (sel->duration + 30) / 60, genreName(sel->genre)[0] ? "   " : "", genreName(sel->genre)); ImGui::PopTextWrapPos(); }
         if (!sel->text.empty()) ImGui::TextWrapped("%s", sel->text.c_str());
         if (!sel->extended.empty()) ImGui::TextWrapped("%s", sel->extended.c_str());
-    } else ImGui::TextDisabled("select a programme");
+    } else { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("select a programme"); ImGui::PopTextWrapPos(); }
     ImGui::EndChild();
     ImGui::EndChild();
 }
@@ -161,7 +161,7 @@ void playerTab(App& a) {
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled("channel");
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(360 * gUi);
+        ImGui::SetNextItemWidth(std::min(360 * gUi, ImGui::GetContentRegionAvail().x - 60 * gUi));   // room for the + and x buttons
         if (ImGui::BeginCombo("##chan", ((cur && cur->favourite) ? "* " + curLab : curLab).c_str())) {
             if (a.channels.empty()) ImGui::TextDisabled("no channels yet - run a scan (Scan tab)");
             for (size_t i = 0; i < a.channels.size(); i++) {
@@ -196,8 +196,9 @@ void playerTab(App& a) {
             if (ImGui::SmallButton("x##del")) { const double f = cur->freqMhz; a.channels.erase(std::remove_if(a.channels.begin(), a.channels.end(), [&](const SavedChannel& c) { return std::fabs(c.freqMhz - f) < 0.01; }), a.channels.end()); savePrefs(a); }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("Forget this channel");
         }
-        ImGui::SameLine(0, 18 * gUi);
-        qualityBar(a, std::max(200.f, ImGui::GetContentRegionAvail().x - 8));
+        const float qMin = ImGui::CalcTextSize("signal quality 100%  excellent").x + 16 * gUi;
+        sameLineIf(qMin, 18 * gUi);   // on a line of its own when the tab is narrow
+        qualityBar(a, std::max(qMin, ImGui::GetContentRegionAvail().x - 8));
     }
     {   // PLP selector for multi-PLP multiplexes, and a notice for anything the receiver cannot decode
         const RxTelemetry& rx = a.rx;
@@ -224,27 +225,30 @@ void playerTab(App& a) {
         }
         for (auto& u : rx.unsupported) { ImGui::TextColored(ImVec4(0.95f, 0.6f, 0.2f, 1), "! %s", u.c_str()); }
     }
-    const bool haveNN = pl.selected() >= 0;
-    float h = ImGui::GetContentRegionAvail().y - 44 - (haveNN ? 46.f : 0.f);
+    // the controls below the picture take what they took in the last frame (they wrap onto more lines in a narrow tab)
+    ImGuiStorage* stor = ImGui::GetStateStorage();
+    const ImGuiID ctlKey = ImGui::GetID("##tvctlh");
+    const float h = std::max(60.f * gUi, ImGui::GetContentRegionAvail().y - stor->GetFloat(ctlKey, 44.f * gUi));
     ImGui::BeginChild("vbox", ImVec2(-1, h), ImGuiChildFlags_Borders);
-    if (pl.selected() < 0) ImGui::TextDisabled("Pick a service in the list on the right to start playback.");
+    if (pl.selected() < 0) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Pick a service in the list on the right to start playback."); ImGui::PopTextWrapPos(); }
     else if (!a.video.has()) ImGui::TextDisabled("%s", ps.hasAudio && !ps.hasVideo ? "audio only" : ps.status.c_str());
     else a.video.draw(ImGui::GetContentRegionAvail());
     ImGui::EndChild();
+    const float ctlY = ImGui::GetCursorPosY();
     if (ImGui::Button(pl.selected() >= 0 ? "Stop" : "Play")) { if (pl.selected() >= 0) pl.select(-1); else if (a.playReq < 0 && !a.ts.services.empty()) { int sid = a.ts.services[0].id; pl.select(sid); pl.setVolume(a.volume); } }
-    ImGui::SameLine();
+    flowNext();
     ImGui::SetNextItemWidth(160 * gUi);
     if (ImGui::SliderFloat("volume", &a.volume, 0, 1, "%.2f")) pl.setVolume(a.volume);
-    ImGui::SameLine();
+    flowNext();
     if (ImGui::Checkbox("mute", &a.muted)) pl.setMuted(a.muted);
-    ImGui::SameLine();
+    flowNext();
     ImGui::Checkbox("pop out", &a.popOut);
-    ImGui::SameLine();
+    flowNext();
     if (ImGui::Button("Fullscreen")) { a.videoOnly = true; if (!glfwGetWindowMonitor(gWindow)) toggleFullscreen(); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Video fills the screen (press F or Esc to leave)");
-    ImGui::SameLine();
+    flowNext();
     ImGui::Checkbox("deinterlace", &a.video.deint);
-    ImGui::SameLine();
+    flowNext();
     auto tracks = pl.audioTracks();
     if (!tracks.empty()) {
         static int cur = 0;
@@ -258,10 +262,10 @@ void playerTab(App& a) {
             }
             ImGui::EndCombo();
         }
-        ImGui::SameLine();
+        flowNext();
     }
     if (pl.subtitlesAvailable()) { if (ImGui::Checkbox("subtitles", &a.subsOn)) pl.setSubtitles(a.subsOn); }
-    ImGui::NewLine();
+    flowBreak();
     if (pl.selected() >= 0) {   // what is on now, and what comes next
         const EpgEvent* nx = nullptr;
         const EpgEvent* cur = epgCurrent(a, pl.selected(), &nx);
@@ -271,14 +275,15 @@ void playerTab(App& a) {
             ImGui::TextColored(ImVec4(0.95f, 0.85f, 0.4f, 1), "NOW");
             ImGui::SameLine();
             ImGui::Text("%s - %s  %s", fmtLocal(cur->start, "%H:%M").c_str(), fmtLocal(cur->end(), "%H:%M").c_str(), cur->title.c_str());
-            ImGui::SameLine();
             char left[32]; snprintf(left, sizeof left, "%d min left", (int)std::max<int64_t>(0, (cur->end() - now + 30) / 60));
+            sameLineIf(160 * gUi);
             ImGui::ProgressBar(f, ImVec2(160 * gUi, 12 * gUi), left);
             if (nx) { ImGui::TextDisabled("NEXT"); ImGui::SameLine(); ImGui::Text("%s  %s", fmtLocal(nx->start, "%H:%M").c_str(), nx->title.c_str()); }
         } else if (nx) {
             ImGui::TextDisabled("NEXT"); ImGui::SameLine(); ImGui::Text("%s  %s", fmtLocal(nx->start, "%H:%M").c_str(), nx->title.c_str());
-        } else ImGui::TextDisabled("no programme information is broadcast for this service");
+        } else { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("no programme information is broadcast for this service"); ImGui::PopTextWrapPos(); }
     }
+    stor->SetFloat(ctlKey, ImGui::GetCursorPosY() - ctlY);
 }
 
 void rightPanel(App& a) {
@@ -306,18 +311,23 @@ void rightPanel(App& a) {
         ImGui::EndGroup();
         }
         ImGui::TextDisabled("%s", date);
-        ImGui::SameLine(0, 10 * gUi);
-        ImGui::TextDisabled("local %s   (%s)", fmtLocal(now, "%H:%M").c_str(), a.ts.utcNow ? "broadcast time" : "computer clock");
+        {   // the parts that do not fit go on the next line (a narrow list)
+            const std::string loc = "local " + fmtLocal(now, "%H:%M"), src = a.ts.utcNow ? "(broadcast time)" : "(computer clock)";
+            sameLineIf(ImGui::CalcTextSize(loc.c_str()).x, 10 * gUi);
+            ImGui::TextDisabled("%s", loc.c_str());
+            sameLineIf(ImGui::CalcTextSize(src.c_str()).x, 12 * gUi);
+            ImGui::TextDisabled("%s", src.c_str());
+        }
     }
     ImGui::Spacing();
     if (a.dabMode) { dabStations(a); return; }
     if (a.fmMode) { fmRadioPanel(a); return; }
     sectionHeader(Ic::Tv, "Services");
     // ---- service cards
-    const float cardH = 68;
+    const float cardH = 68 * gUi;
     ImGui::BeginChild("svcs", ImVec2(0, std::max(140.f * gUi, ImGui::GetContentRegionAvail().y * 0.40f)));
     dl = ImGui::GetWindowDrawList(); // draw into the child so the cards are clipped and scroll with it
-    if (a.ts.services.empty()) ImGui::TextDisabled(run ? "waiting for PAT / SDT..." : "start the receiver to see services");
+    if (a.ts.services.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(run ? "waiting for PAT / SDT..." : "start the receiver to see services"); ImGui::PopTextWrapPos(); }
     for (auto& sv : a.ts.services) {
         std::string vc, ac;
         double kb = 0;
@@ -335,14 +345,14 @@ void rightPanel(App& a) {
         // name and bit rate
         const std::string name = sv.name.empty() ? "service " + std::to_string(sv.id) : sv.name;
         const bool isRadio = sv.type == 0x02 || sv.type == 0x0A || (!hasVideo && !ac.empty());
-        if (!pal::dev()) icons::draw(isRadio ? Ic::Radio : Ic::Tv, ImVec2(p.x + 20, p.y + 15), 17.f, sel ? pal::remap(IM_COL32(120, 200, 255, 255)) : IM_COL32(120, 136, 156, 255), dl);
-        dl->AddText(a.ui, 16.f, ImVec2(p.x + 34, p.y + 6), IM_COL32(245, 247, 250, 255), name.c_str());
+        if (!pal::dev()) icons::draw(isRadio ? Ic::Radio : Ic::Tv, ImVec2(p.x + 20 * gUi, p.y + 15 * gUi), 17.f * gUi, sel ? pal::remap(IM_COL32(120, 200, 255, 255)) : IM_COL32(120, 136, 156, 255), dl);
         char kbs[32]; fmtKbps(kbs, sizeof kbs, kb);
         const ImVec2 ks = ImGui::CalcTextSize(kbs);
-        dl->AddText(ImVec2(p.x + w - ks.x - 10, p.y + 8), IM_COL32(150, 158, 168, 255), kbs);
+        dl->AddText(a.ui, 16.f * gUi, ImVec2(p.x + 34 * gUi, p.y + 6 * gUi), IM_COL32(245, 247, 250, 255), ellipsize(name, w - 34 * gUi - ks.x - 18 * gUi, 16.f * gUi).c_str());
+        dl->AddText(ImVec2(p.x + w - ks.x - 10 * gUi, p.y + 8 * gUi), IM_COL32(150, 158, 168, 255), kbs);
         // tag pills
-        float x = p.x + 10;
-        const float ty = p.y + 27;
+        float x = p.x + 10 * gUi;
+        const float ty = p.y + 27 * gUi;
         const bool radio = sv.type == 0x02 || sv.type == 0x0A || (!hasVideo && !ac.empty());
         x += tagAt(dl, ImVec2(x, ty), radio ? "radio" : hasVideo ? "TV" : sv.typeName(), IM_COL32(34, 74, 108, 255)) + 4;
         if (!vc.empty()) x += tagAt(dl, ImVec2(x, ty), vc.c_str(), IM_COL32(38, 46, 58, 255), IM_COL32(190, 200, 214, 255)) + 4;
@@ -354,8 +364,8 @@ void rightPanel(App& a) {
         if (cur) line = fmtLocal(cur->start, "%H:%M") + "-" + fmtLocal(cur->end(), "%H:%M") + "  " + cur->title;
         else if (!sv.now.empty()) line = sv.now;
         else if (!sv.provider.empty()) line = sv.provider;
-        dl->PushClipRect(ImVec2(p.x + 8, p.y), ImVec2(p.x + w - 8, p.y + cardH), true);
-        dl->AddText(ImVec2(p.x + 10, p.y + 47), IM_COL32(128, 136, 146, 255), line.c_str());
+        dl->PushClipRect(ImVec2(p.x + 8 * gUi, p.y), ImVec2(p.x + w - 8 * gUi, p.y + cardH), true);
+        dl->AddText(ImVec2(p.x + 10 * gUi, p.y + 47 * gUi), IM_COL32(128, 136, 146, 255), ellipsize(line, w - 18 * gUi).c_str());
         dl->PopClipRect();
         ImGui::PopID();
     }
@@ -366,7 +376,7 @@ void rightPanel(App& a) {
         const Player& pl = a.engine.player();
         const PlayerStats ps = pl.stats();
         sectionHeader(Ic::Play, "Player");
-        if (pl.selected() < 0) ImGui::TextDisabled("click a service to play it");
+        if (pl.selected() < 0) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("click a service to play it"); ImGui::PopTextWrapPos(); }
         else if (ImGui::BeginTable("pkv", 2, ImGuiTableFlags_SizingFixedFit)) {
             ImGui::TableSetupColumn("k", ImGuiTableColumnFlags_WidthFixed, 88);
             auto row = [&](Ic ic, const char* k, const char* fmt, auto... args) {

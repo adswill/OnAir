@@ -15,6 +15,22 @@
 #include "dect2/dab_gen.h"
 #include "dect2/gnss_rx.h"
 #include "dect2/gnss_gen.h"
+#include "dect2/sonde_rx.h"
+#include "dect2/sonde_gen.h"
+#include "dect2/ais_rx.h"
+#include "dect2/ais_gen.h"
+#include "dect2/marine_rx.h"
+#include "dect2/marine_gen.h"
+#include "dect2/acars_rx.h"
+#include "dect2/acars_gen.h"
+#include "dect2/inmc_rx.h"
+#include "dect2/inmc_gen.h"
+#include "dect2/aero_rx.h"
+#include "dect2/aero_gen.h"
+#include "dect2/iridium_rx.h"
+#include "dect2/iridium_gen.h"
+#include "dect2/mesh_rx.h"
+#include "dect2/mesh_gen.h"
 #include "dect2/modes.h"
 #include "dect2/demo_ts.h"
 #include "dect2/exact_resampler.h"
@@ -95,7 +111,7 @@ private:
 }
 
 static const std::vector<ModeTuning>& table() {
-    static const std::vector<ModeTuning> t = {dvbsTuning(), dtmbTuning(), atvTuning(), dmrTuning(), drmTuning(), adsbTuning(), gnssTuning()};
+    static const std::vector<ModeTuning> t = {dvbsTuning(), dtmbTuning(), atvTuning(), dmrTuning(), drmTuning(), adsbTuning(), gnssTuning(), sondeTuning(), aisTuning(), marineTuning(), acarsTuning(), inmcTuning(), aeroTuning(), iridiumTuning(), meshTuning()};
     return t;
 }
 
@@ -107,6 +123,19 @@ const ModeTuning* modeTuning(int stdMode) {
 const ModeTuning* modeTuningById(const std::string& id) {
     for (const auto& m : table()) if (id == m.id) return &m;
     return nullptr;
+}
+
+double minSampleRateFor(int stdMode, double bandwidthMhz) {
+    if (const ModeTuning* m = modeTuning(stdMode)) return m->minSampleRate;
+    switch (stdMode) {
+    case 0: case 1: case 2: return 7.9e6 * bandwidthMhz / 8.0;   // T2Receiver / DvbtReceiver::configure(): rateOk
+    case 3: return 6.5e6;    // ATSC 8-VSB: AtscReceiver (ok = fin >= 6.5 MHz)
+    case 4: return 1.6e6;    // DAB: the ensemble is 1.536 MHz wide, the receiver resamples to 2.048 Msps
+    case 5: return 6.5e6;    // ATSC 3.0: about 6.5 Msps for the 6 MHz channel
+    case 6: return 6.0e6;    // ISDB-T: IsdbtReceiver (rateOk = rate >= 6 MHz)
+    case 7: return 500e3;    // FM: FmReceiver (ready from 500 ksps)
+    default: return 0;
+    }
 }
 
 std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, double sampleRate) {
@@ -122,6 +151,14 @@ std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, do
     case 12: return makeDrmSynth(cfg, sampleRate);
     case 13: return makeAdsbSynth(cfg, sampleRate);
     case 14: return makeGnssSynth(cfg, sampleRate);
+    case 15: return makeSondeSynth(cfg, sampleRate);
+    case 16: return makeAisSynth(cfg, sampleRate);
+    case 17: return makeMarineSynth(cfg, sampleRate);
+    case 18: return makeAcarsSynth(cfg, sampleRate);
+    case 19: return makeInmcSynth(cfg, sampleRate);
+    case 20: return makeAeroSynth(cfg, sampleRate);
+    case 21: return makeIridiumSynth(cfg, sampleRate);
+    case 22: return makeMeshSynth(cfg, sampleRate);
     default: return nullptr;
     }
 }
@@ -135,6 +172,14 @@ std::string modeSummary(const RxTelemetry& t) {
     case 11: return drmSummary(t.drm);
     case 12: return adsbSummary(t.adsb);
     case 13: return gnssSummary(t.gnss);
+    case 14: return sondeSummary(t.sonde);
+    case 15: return aisSummary(t.ais);
+    case 16: return marineSummary(t.marine);
+    case 17: return acarsSummary(t.acars);
+    case 18: return inmcSummary(t.inmc);
+    case 19: return aeroSummary(t.aero);
+    case 20: return iridiumSummary(t.iridium);
+    case 21: return meshSummary(t.mesh);
     default: return "";
     }
 }

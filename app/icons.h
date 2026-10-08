@@ -240,12 +240,13 @@ inline void sectionHeader(Ic id, const char* text) {
     ImGui::Dummy(ImVec2(w, lh));
 }
 
-// Thin vertical divider between groups of controls on one line
+bool flowNext(float spacing);   // widgets.cpp
+// Thin vertical divider between groups of controls on one line; a new line instead when the group after it does not fit (a narrow window)
 inline void vSeparator() {
-    ImGui::SameLine(0, 9 * gUi);
+    const bool same = flowNext(9 * gUi);
     const ImVec2 p = ImGui::GetCursorScreenPos();
     const float h = ImGui::GetFrameHeight();
-    ImGui::GetWindowDrawList()->AddLine(ImVec2(p.x, p.y + 3), ImVec2(p.x, p.y + h - 3), IM_COL32(52, 60, 72, 255));
-    ImGui::Dummy(ImVec2(1, h));
+    if (same) ImGui::GetWindowDrawList()->AddLine(ImVec2(p.x, p.y + 3), ImVec2(p.x, p.y + h - 3), IM_COL32(52, 60, 72, 255));
+    ImGui::Dummy(ImVec2(1, h));   // also at the start of a line: the group keeps its width from frame to frame
     ImGui::SameLine(0, 9 * gUi);
 }

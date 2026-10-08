@@ -13,7 +13,9 @@ bool RationalResampler::configure(double inRate, double outRate, double* relErro
     double target = outRate / inRate;
     int bestL = 0, bestM = 0;
     double bestErr = 1e9;
-    for (int L = 1; L <= 128; L++) {
+    // up to 1024 phases: the radios' own rates need it to be exact (2.5 -> 2.048 Msps for DAB on an Airspy R2 is 512/625; with at most 128
+    // the nearest fraction was 100 ppm off, which cost DAB 13 dB of SNR). One phase is 2*H taps, so 1024 phases are 64k floats.
+    for (int L = 1; L <= 1024; L++) {
         int M = (int)std::lround(L / target);
         if (M < 1) continue;
         double err = std::fabs((double)L / M - target) / target;

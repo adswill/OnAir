@@ -8,6 +8,7 @@
 // priority, use large transfers, and write converted samples straight into the receiver's ring buffer, with one conversion and no other copy.
 #include "dect2/source.h"
 #include "dect2/platform.h"
+#include "native_common.h"   // the plain-words USB error texts
 #include <libusb.h>
 #include <algorithm>
 #include <atomic>
@@ -60,6 +61,41 @@ uint32_t filterBelow(uint32_t wishHz) {
     return kFilterHz[i];
 }
 
+// the smallest filter width at or above the wish (the widest when none is)
+uint32_t filterAbove(double wishHz) {
+    for (uint32_t f : kFilterHz) if (f >= wishHz) return f;
+    return kFilterHz[sizeof kFilterHz / sizeof *kFilterHz - 1];
+}
+
+} // namespace
+
+// The automatic baseband filter: the largest width at or below half the sample rate (5 MHz at 10 Msps, which passes a real 8 MHz DVB-T2 mux
+// well), but never narrower than 0.6 x the channel width rounded up to a filter (at 8 Msps half the rate gives 3.5 MHz, which cut the edges of
+// a 6 MHz channel: the ATSC pilot, ISDB-T, ATSC 3.0, DVB-T2 6 MHz get 5 MHz), and never wider than 0.75 x the sample rate (libhackrf's own
+// limit for its default). Nothing changes where the channel is 7-8 MHz at 10 Msps or narrow (FM, DAB and the newer modes ask for a width).
+uint32_t hackrfAutoFilterHz(double sampleRate, double channelMhz) {
+    uint32_t bw = filterBelow((uint32_t)(sampleRate * 0.5));
+    if (channelMhz > 0) {
+        const uint32_t want = filterAbove(0.6 * channelMhz * 1e6);
+        if (want > bw && want <= 0.75 * sampleRate) bw = want;
+    }
+    return bw;
+}
+
+// The tuning range of each board (libhackrf's board list: Jawbreaker 10-6000 MHz, One 1-6000 MHz, rad1o 50-4000 MHz; the HackRF Pro
+// 100 kHz - 6 GHz, hackrf.readthedocs.io); 0 = not known
+void hackrfBoardRange(int id, double& lo, double& hi) {
+    switch (id) {
+    case 1: lo = 10e6; hi = 6e9; break;
+    case 2: case 4: lo = 1e6; hi = 6e9; break;
+    case 3: lo = 50e6; hi = 4e9; break;
+    case 5: lo = 0.1e6; hi = 6e9; break;
+    default: lo = hi = 0;
+    }
+}
+
+namespace {
+
 // one libusb context for the whole program, created at the first use
 std::mutex gCtxMu;
 libusb_context* gCtx = nullptr;
@@ -85,6 +121,7 @@ std::string boardName(int id) {
     case 1: return "HackRF Jawbreaker";
     case 2: return "HackRF One";
     case 3: return "rad1o";
+    case 4: return "HackRF One";   // BOARD_ID_HACKRF1_R9: the One from hardware revision r9 on (libhackrf hackrf.h)
     case 5: return "HackRF Pro";
     default: return "HackRF";
     }
@@ -101,12 +138,12 @@ struct Handle {
     bool claimed = false;
     bool open(libusb_device* dev, std::string& err) {
         int r = libusb_open(dev, &h);
-        if (r != 0) { err = std::string("open: ") + libusb_error_name(r); h = nullptr; return false; }
+        if (r != 0) { err = "open: " + native::usbErrorText(r); h = nullptr; return false; }
 #ifdef __linux__
         if (libusb_kernel_driver_active(h, 0) == 1) libusb_detach_kernel_driver(h, 0);
 #endif
         r = libusb_claim_interface(h, 0);
-        if (r != 0) { err = std::string("claim interface: ") + libusb_error_name(r); libusb_close(h); h = nullptr; return false; }
+        if (r != 0) { err = "claim interface: " + native::usbErrorText(r); libusb_close(h); h = nullptr; return false; }
         claimed = true;
         return true;
     }
@@ -125,6 +162,9 @@ struct Handle {
         return libusb_control_transfer(h, kIn, req, value, index, static_cast<unsigned char*>(data), len, kControlTimeoutMs);
     }
 };
+
+// The boards with the antenna-power circuit: HackRF One (2 before r9, 4 from r9 on) and HackRF Pro (5). The Jawbreaker, rad1o and Jellybean have none.
+bool boardHasBiasTee(int id) { return id == 2 || id == 4 || id == 5; }
 
 std::string serialOf(libusb_device_handle* h, const libusb_device_descriptor& d) {
     unsigned char buf[96] = {0};
@@ -145,13 +185,15 @@ public:
         if (!ctx_) return false;
         if (!openDevice(err)) { releaseContext(); ctx_ = nullptr; return false; }
         ring_ = &ring;
+        bias_ = false;
+        hasBiasTee_ = boardHasBiasTee(boardId());
         if (!apply(s, err, false)) { dev_.close(); releaseContext(); ctx_ = nullptr; return false; }
         rate_ = s.sampleRate;
 
         stopping_ = false; inflight_ = 0; lost_ = false;
         xfers_.assign(kTransferCount, nullptr);
         bufs_.assign(kTransferCount, std::vector<uint8_t>(kTransferBytes));
-        if (dev_.out(kSetTransceiverMode, 1, 0) < 0) { err = "cannot start receiving"; dev_.close(); releaseContext(); ctx_ = nullptr; return false; }
+        if (dev_.out(kSetTransceiverMode, 1, 0) < 0) { err = "cannot start receiving"; finish(); return false; }   // finish(): the antenna power goes off again
         for (int i = 0; i < kTransferCount; i++) {
             xfers_[i] = libusb_alloc_transfer(0);
             libusb_fill_bulk_transfer(xfers_[i], dev_.h, kRxEndpoint, bufs_[i].data(), kTransferBytes, &UsbHackrf::onTransfer, this, 0);
@@ -177,6 +219,10 @@ public:
     bool realtimeHardware() const override { return true; }
 
 private:
+    int boardId() {
+        uint8_t id = 0xff;
+        return dev_.in(kBoardIdRead, 0, 0, &id, 1) == 1 ? id : -1;
+    }
     bool openDevice(std::string& err) {
         libusb_device** list = nullptr;
         const ssize_t n = libusb_get_device_list(ctx_, &list);
@@ -188,7 +234,8 @@ private:
             if (libusb_get_device_descriptor(list[i], &d) != 0 || !isHackrf(d)) continue;
             if (!serial_.empty()) {   // match the whole serial number or its end, as the radio's own tools do
                 libusb_device_handle* probe = nullptr;
-                if (libusb_open(list[i], &probe) != 0) { lastErr = "open: the radio is in use or has no driver (on Windows: install WinUSB with Zadig)"; continue; }
+                const int r = libusb_open(list[i], &probe);
+                if (r != 0) { lastErr = "open: " + native::usbErrorText(r); continue; }
                 const std::string sn = serialOf(probe, d);
                 libusb_close(probe);
                 if (sn.size() < serial_.size() || sn.compare(sn.size() - serial_.size(), serial_.size(), serial_) != 0) continue;
@@ -216,14 +263,14 @@ private:
             if (r < 0) return fail("set sample rate", r);
             rate_ = s.sampleRate;
         }
-        const uint32_t bw = s.basebandFilterHz > 0 ? (uint32_t)s.basebandFilterHz : filterBelow((uint32_t)(s.sampleRate * 0.5));
+        const uint32_t bw = s.basebandFilterHz > 0 ? (uint32_t)s.basebandFilterHz : hackrfAutoFilterHz(s.sampleRate, s.bandwidthMhz);
         const uint32_t bwHz = bw;   // a width given in the settings is used as given
         {
             int r = dev_.out(kBasebandFilterSet, (uint16_t)(bwHz & 0xffff), (uint16_t)(bwHz >> 16));
             if (r < 0) return fail("set baseband filter", r);
         }
-        {
-            const uint64_t f = (uint64_t)s.centerHz;
+        {   // the HackRF has no frequency correction of its own: the clock error (TuneSettings "ppm") is taken out of the frequency asked for
+            const uint64_t f = (uint64_t)ppmCorrectedHz(s.centerHz, radioPpm(s));
             uint8_t d[8]; le32(d, (uint32_t)(f / 1000000)); le32(d + 4, (uint32_t)(f % 1000000));
             int r = dev_.out(kSetFreq, 0, 0, d, sizeof d);
             if (r < 0) return fail("set frequency", r);
@@ -243,6 +290,12 @@ private:
         {
             int r = dev_.out(kAmpEnable, s.ampOn ? 1 : 0, 0);
             if (r < 0) return fail("set amplifier", r);
+        }
+        // antenna power: the same request as hackrf_set_antenna_enable() sends (value 1 = on); only the One and Pro have the circuit
+        if (hasBiasTee_ && (!live || s.biasTee != bias_)) {
+            const int r = dev_.out(kAntennaEnable, s.biasTee ? 1 : 0, 0);
+            if (r < 0) return fail("set antenna power", r);
+            bias_ = s.biasTee;
         }
         return true;
     }
@@ -279,6 +332,8 @@ private:
     void finish() {
         stopping_ = true;
         if (dev_.h) dev_.out(kSetTransceiverMode, 0, 0);   // stop sending samples
+        if (dev_.h && bias_) dev_.out(kAntennaEnable, 0, 0);   // antenna power never stays on after OnAir stops using the radio
+        bias_ = false;
         for (auto* t : xfers_) if (t) libusb_cancel_transfer(t);   // fails harmlessly for transfers that already ended
         if (events_.joinable()) events_.join();
         // transfers that were cancelled still need their completion events
@@ -302,6 +357,7 @@ private:
     std::atomic<bool> lost_{false};
     std::atomic<int> inflight_{0};
     std::atomic<uint64_t> errors_{0};
+    bool hasBiasTee_ = false, bias_ = false;   // the board has antenna power; it is on
 };
 
 } // namespace
@@ -321,16 +377,25 @@ std::vector<DeviceInfo> listUsbHackrfDevices(std::string& err) {
         info.kind = DeviceInfo::HackRF;
         info.board = "HackRF";
         libusb_device_handle* h = nullptr;
-        if (libusb_open(list[i], &h) == 0) {
+        const int r = libusb_open(list[i], &h);
+        if (r == 0) {
             info.serial = serialOf(h, d);
             uint8_t id = 0xff;
-            if (libusb_control_transfer(h, kIn, kBoardIdRead, 0, 0, &id, 1, kControlTimeoutMs) == 1) info.board = boardName(id);
+            if (libusb_control_transfer(h, kIn, kBoardIdRead, 0, 0, &id, 1, kControlTimeoutMs) == 1) {
+                info.board = boardName(id); info.hasBiasTee = boardHasBiasTee(id);
+                hackrfBoardRange(id, info.minFreqHz, info.maxFreqHz);
+            }
             libusb_close(h);
-        } else {
-            info.board = "HackRF (busy or without driver)";
+        } else {   // listed all the same, named by the cause; the log and the scan error say what to do
+            info.board = std::string("HackRF (") + libusb_error_name(r) + ")";
+            const std::string why = "HackRF: cannot open it: " + native::usbErrorText(r);
+            fprintf(stderr, "%s\n", why.c_str());
+            fflush(stderr);
+            if (err.empty()) err = why;
         }
         const std::string tail = info.serial.size() > 8 ? info.serial.substr(info.serial.size() - 8) : info.serial;
         info.name = info.board + (tail.empty() ? std::string() : " (" + tail + ")");
+        info.settings = {ppmSetting(0.1)};   // amplifier and antenna power have their own controls
         out.push_back(info);
     }
     if (n >= 0) libusb_free_device_list(list, 1);

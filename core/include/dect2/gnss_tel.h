@@ -70,6 +70,8 @@ struct GnssNavInfo {
     int week = -1;               // week number the satellite sent (GPS: full week with the rollovers resolved)
     int towS = -1;               // time of week of the last subframe, seconds
     float svClockBiasUs = 0;     // af0 in microseconds (shows the satellite clock offset)
+    int ephParts = 0;            // GPS: subframes 1-3 of the ephemeris being collected that have arrived (0..3; 3 with hasEphemeris)
+    float ephEtaS = -1;          // seconds until the ephemeris should be complete (-1: not known yet, before the frame is found)
 };
 
 struct GnssFix {
@@ -136,6 +138,12 @@ struct GnssTelemetry {
     int searchSys = 0, searchPrn = 0;   // the satellite being searched now
     float searchProgress = 0;    // 0..1 through the list of satellites of this round
     uint32_t searchRounds = 0;   // complete rounds so far
+    float searchCenterHz = 0;    // the frequency window being searched: the radio's error plus the satellites' Doppler lie in it
+    float searchHalfHz = 0;
+    int searchMs = 0;            // milliseconds integrated per search (longer for weak signals)
+    int searchStage = 0;         // 0 the first window, 1 +-45 kHz, 2 +-170 kHz, 3..5 the same with a long integration (only while nothing is locked)
+    int nPullIn = 0;             // channels started on a find that have not locked yet
+    double firstLockSecs = -1;   // signal time of the first lock
     // The correlation power against code phase of the last search that found something or, before that, the one in progress.
     // Normalised: the largest value is 1; the sample for the best code phase is at `acqPeakIndex`. At most 256 points, one code period.
     int acqSys = 0, acqPrn = 0;

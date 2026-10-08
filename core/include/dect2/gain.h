@@ -20,6 +20,11 @@ GainSetting gainForTotal(int totalDb);
 GainSetting genericGain(int totalDb, int maxDb);
 
 enum class AdcStatus { NoSignal, Low, Good, High, Overload };
+// The bits of the radio's converter at its current rate (8 = HackRF, RTL-SDR; the default): sets what counts as "low" for classifyAdc()
+// and the level AutoGain aims for. The app sets it for the radio in use (adcBitsFor in app/toolbar.cpp).
+void setAdcBits(int bits);
+int adcBits();
+double adcLowDbfs();
 AdcStatus classifyAdc(double rmsDbfs, double peak, double clipFraction);
 const char* adcStatusName(AdcStatus s);
 // One-line explanation / advice for the status, e.g. "ADC clipping: reduce the gain".

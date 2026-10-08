@@ -3,11 +3,13 @@
 // offsets, clock offsets, the sample rates of the radios and chunk sizes from 1 to 65536 samples. The signal is rounded to 8 bits like the source does.
 #include "dect2/dab.h"
 #include "dect2/dab_gen.h"
+#include "jobs.h"
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/channel_layout.h>
 }
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -18,9 +20,10 @@ extern "C" {
 #include <string>
 #include <vector>
 using namespace dect2;
+using testjobs::jprintf;
 
-static int fails = 0;
-#define CHECK(c, ...) do { if (!(c)) { printf("FAIL line %d: ", __LINE__); printf(__VA_ARGS__); printf("\n"); fflush(stdout); fails++; } } while (0)
+static std::atomic<int> fails{0};
+#define CHECK(c, ...) do { if (!(c)) { jprintf("FAIL line %d: ", __LINE__); jprintf(__VA_ARGS__); jprintf("\n"); fails++; } } while (0)
 
 #if defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)
 #define SANITIZED 1
@@ -177,14 +180,17 @@ static double fibRatio(const Result& r) { const double n = (double)(r.tel.fibOk 
 // ---------------------------------------------------------------- tests
 static void testAudio() {
     const dabgen::TxConfig tc = baseConfig();
-    dabgen::Transmitter tx(tc);
+    dabgen::Transmitter tx0(tc);
     SynthConfig sc;
     sc.snrDb = 30;
-    for (size_t i = 0; i < tx.config().services.size(); i++) {
+    // the services are independent: each one runs on its own thread (with a transmitter of its own), the output keeps the order of the services
+    testjobs::Jobs jobs;
+    for (size_t i = 0; i < tx0.config().services.size(); i++) jobs.add([=] {
+        dabgen::Transmitter tx(tc);
         const dabgen::TxService& sv = tx.config().services[i];
         const Result r = run(tc, sc, 2.048e6, 8.0, 65536, sv.subId);
         checkEnsemble(r, tc, sv.label.c_str());
-        printf("%s (sub %d, %d kbit/s): %llu frames, FIB ok %.1f%%, codec %s %d Hz %d ch, superframes %llu ok %llu bad, AU %llu ok %llu bad, RS %llu, PCM %llu\n", sv.label.c_str(), sv.subId, sv.bitrate,
+        jprintf("%s (sub %d, %d kbit/s): %llu frames, FIB ok %.1f%%, codec %s %d Hz %d ch, superframes %llu ok %llu bad, AU %llu ok %llu bad, RS %llu, PCM %llu\n", sv.label.c_str(), sv.subId, sv.bitrate,
                (unsigned long long)r.tel.frames, 100 * fibRatio(r), r.st.codec.c_str(), r.st.sampleRate, r.st.channels, (unsigned long long)r.st.superframesOk,
                (unsigned long long)r.st.superframesBad, (unsigned long long)r.st.auOk, (unsigned long long)r.st.auBad, (unsigned long long)r.st.rsCorrected, (unsigned long long)r.st.pcmFrames);
         CHECK(fibRatio(r) > 0.99, "%s: FIB ok %.3f", sv.label.c_str(), fibRatio(r));
@@ -212,13 +218,13 @@ static void testAudio() {
         }
         const size_t from = (size_t)(0.5 * sv.sampleRate), n = (size_t)(2.0 * sv.sampleRate);
         CHECK(pcm.ch[0].size() > from + n && pcm.ch[1].size() > from + n, "%s: decoded %zu samples", sv.label.c_str(), pcm.ch[0].size());
-        if (pcm.ch[0].size() <= from + n) continue;
+        if (pcm.ch[0].size() <= from + n) return;
         if (!sv.melody) {
             double hl = 0, al = 0, hr = 0, ar = 0, x = 0, ax = 0;
             measureTone(pcm.ch[0], from, n, sv.sampleRate, sv.leftHz - 100, sv.leftHz + 100, hl, al);
             measureTone(pcm.ch[1], from, n, sv.sampleRate, sv.rightHz - 100, sv.rightHz + 100, hr, ar);
             measureTone(pcm.ch[1], from, n, sv.sampleRate, sv.leftHz - 20, sv.leftHz + 20, x, ax);      // left tone in the right channel
-            printf("   left %.2f Hz %.4f, right %.2f Hz %.4f (wanted %.0f / %.0f Hz at %.2f), left in right %.1f dB\n", hl, al, hr, ar, sv.leftHz, sv.rightHz, sv.amplitude, 20 * std::log10(ax / al + 1e-9));
+            jprintf("   left %.2f Hz %.4f, right %.2f Hz %.4f (wanted %.0f / %.0f Hz at %.2f), left in right %.1f dB\n", hl, al, hr, ar, sv.leftHz, sv.rightHz, sv.amplitude, 20 * std::log10(ax / al + 1e-9));
             CHECK(std::fabs(hl - sv.leftHz) < 1.0 && std::fabs(hr - sv.rightHz) < 1.0, "%s: tones at %.2f and %.2f Hz", sv.label.c_str(), hl, hr);
             const double tol = sv.dabPlus ? 0.3 : 1.0;     // the MP2 encoder's quantiser is coarser
             CHECK(std::fabs(20 * std::log10(al / sv.amplitude)) < tol && std::fabs(20 * std::log10(ar / sv.amplitude)) < tol, "%s: levels %.4f %.4f, expected %.2f", sv.label.c_str(), al, ar, sv.amplitude);
@@ -234,7 +240,7 @@ static void testAudio() {
                 for (double nn : notes) for (double oct : {1.0, 2.0}) isNote |= std::fabs(hz - nn * oct) < 4.0;
                 good += isNote;
             }
-            printf("   melody: %d of %d windows hold a note of the tune\n", good, wins);
+            jprintf("   melody: %d of %d windows hold a note of the tune\n", good, wins);
             CHECK(good >= wins * 0.8, "%s: only %d of %d windows hold a note of the tune", sv.label.c_str(), good, wins);
         }
         // the logical frames come out exactly as they went in, consecutive, none lost (the first frames wait for the time deinterleaver)
@@ -248,7 +254,8 @@ static void testAudio() {
             bestBad = std::min(bestBad, bad);
         }
         CHECK(r.frames.size() > 250 && bestBad == 0, "%s: %zu logical frames, %d of the first 400 differ from the transmitted ones", sv.label.c_str(), r.frames.size(), bestBad);
-    }
+    });
+    jobs.run();
 }
 
 // the full check of a run at the nominal signal: locked, ensemble exact, no bad FIBs, audio decoding without a bad access unit
@@ -263,30 +270,41 @@ static void testRates() {
     const dabgen::TxConfig tc = baseConfig();
     SynthConfig sc;
     sc.snrDb = 30;
-    for (double rate : {2.0e6, 2.048e6, 2.4e6, 4e6, 8e6, 10e6, 20e6}) {
+    testjobs::Jobs jobs;
+    for (double rate : {2.0e6, 2.048e6, 2.4e6, 4e6, 8e6, 10e6, 20e6}) jobs.add([=] {
         char what[64];
         snprintf(what, sizeof what, "%.3f Msps", rate / 1e6);
         const auto t0 = std::chrono::steady_clock::now();
         const Result r = run(tc, sc, rate, 4.0, 65536, 1, false);
         const double el = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
-        printf("%s: frames %llu, FIB ok %.2f%%, SNR %.1f dB, CFO %+.0f Hz, AU %llu/%llu, %.1f s for 4 s of signal\n", what, (unsigned long long)r.tel.frames, 100 * fibRatio(r), r.tel.snrDb, r.tel.cfoHz,
+        jprintf("%s: frames %llu, FIB ok %.2f%%, SNR %.1f dB, CFO %+.0f Hz, AU %llu/%llu, %.1f s for 4 s of signal\n", what, (unsigned long long)r.tel.frames, 100 * fibRatio(r), r.tel.snrDb, r.tel.cfoHz,
                (unsigned long long)r.st.auOk, (unsigned long long)r.st.auBad, el);
         checkClean(r, tc, what);
         CHECK(std::fabs(r.tel.cfoHz) < 50, "%s: carrier offset %.1f Hz", what, r.tel.cfoHz);
-    }
+    });
+    jobs.run();
 }
 
 static void testSnr() {
     const dabgen::TxConfig tc = baseConfig();
-    printf("C/N sweep at 2.048 Msps (C/N in the 2.048 MHz sample band; the 1.536 MHz ensemble sees 1.25 dB more):\n   C/N   locked  FIB ok   ensemble  labels  audio AU ok / bad\n");
+    jprintf("C/N sweep at 2.048 Msps (C/N in the 2.048 MHz sample band; the 1.536 MHz ensemble sees 1.25 dB more):\n   C/N   locked  FIB ok   ensemble  labels  audio AU ok / bad\n");
     double lastGoodFic = 99, lastGoodAudio = 99;
-    for (double snr : {25.0, 20.0, 15.0, 12.0, 10.0, 8.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0, -2.0}) {
+    const std::vector<double> snrs = {25.0, 20.0, 15.0, 12.0, 10.0, 8.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0, -2.0};
+    // the runs are independent: they go side by side, the table is written in order afterwards
+    std::vector<Result> runs(snrs.size());
+    testjobs::Jobs jobs;
+    for (size_t k = 0; k < snrs.size(); k++) jobs.add([&, k] {
         SynthConfig sc;
-        sc.snrDb = snr;
-        const Result r = run(tc, sc, 2.048e6, 10.0, 65536, 1, false);
+        sc.snrDb = snrs[k];
+        runs[k] = run(tc, sc, 2.048e6, 10.0, 65536, 1, false);
+    });
+    jobs.run();
+    for (size_t k = 0; k < snrs.size(); k++) {
+        const double snr = snrs[k];
+        const Result& r = runs[k];
         bool labels = r.ens.valid && r.ens.label == "OnAir DAB" && r.ens.services.size() == 4;
         for (const auto& kv : r.ens.services) labels &= !kv.second.label.empty();
-        printf("  %5.1f   %-6s %6.1f%%   %-8s  %-6s  %llu / %llu\n", snr, r.tel.state == 2 ? "yes" : "no", 100 * fibRatio(r), r.ens.valid ? "yes" : "no", labels ? "all" : "no", (unsigned long long)r.st.auOk,
+        jprintf("  %5.1f   %-6s %6.1f%%   %-8s  %-6s  %llu / %llu\n", snr, r.tel.state == 2 ? "yes" : "no", 100 * fibRatio(r), r.ens.valid ? "yes" : "no", labels ? "all" : "no", (unsigned long long)r.st.auOk,
                (unsigned long long)r.st.auBad);
         const bool ficOk = r.tel.state == 2 && fibRatio(r) > 0.95 && labels;
         const bool audioOk = r.st.auOk > 400 && r.st.auBad * 20 < r.st.auOk;
@@ -295,32 +313,34 @@ static void testSnr() {
         if (snr >= 6) CHECK(ficOk && audioOk, "C/N %.0f dB: FIC ok %d, audio ok %d (FIB ok %.3f, AU %llu / %llu)", snr, ficOk, audioOk, fibRatio(r), (unsigned long long)r.st.auOk, (unsigned long long)r.st.auBad);
         if (snr <= -2) CHECK(!ficOk, "noise has no effect at %.0f dB C/N (FIB ok %.3f)", snr, fibRatio(r));
     }
-    printf("lowest C/N of the sweep with a working FIC (FIB ok > 95%% and every label): %.0f dB; audio of 48 kbit/s EEP 3-A (AU error rate < 5%%): %.0f dB\n", lastGoodFic, lastGoodAudio);
+    jprintf("lowest C/N of the sweep with a working FIC (FIB ok > 95%% and every label): %.0f dB; audio of 48 kbit/s EEP 3-A (AU error rate < 5%%): %.0f dB\n", lastGoodFic, lastGoodAudio);
 }
 
 static void testOffsets() {
     const dabgen::TxConfig tc = baseConfig();
+    testjobs::Jobs jobs;
     for (double rate : {2.048e6, 10e6}) {
-        for (double cfo : {-5000.0, -4500.0, -3500.0, -2500.0, -2490.0, -1500.0, -1234.5, 0.0, 700.0, 1500.0, 2500.0, 2510.0, 3300.0, 3500.0, 4500.0, 5000.0}) {   // 1.5, 2.5, ... spacings: half a carrier spacing is where the integer search ties
+        for (double cfo : {-5000.0, -4500.0, -3500.0, -2500.0, -2490.0, -1500.0, -1234.5, 0.0, 700.0, 1500.0, 2500.0, 2510.0, 3300.0, 3500.0, 4500.0, 5000.0}) jobs.add([=] {   // 1.5, 2.5, ... spacings: half a carrier spacing is where the integer search ties
             SynthConfig sc;
             sc.snrDb = 25; sc.cfoHz = cfo;
             const Result r = run(tc, sc, rate, 5.0, 65536, 1, false);
             char what[96];
             snprintf(what, sizeof what, "%.3f Msps, carrier offset %+.1f Hz", rate / 1e6, cfo);
-            printf("%s: locked %d, estimated %+.1f Hz, FIB ok %.2f%%, AU bad %llu\n", what, r.tel.state == 2, r.tel.cfoHz, 100 * fibRatio(r), (unsigned long long)r.st.auBad);
+            jprintf("%s: locked %d, estimated %+.1f Hz, FIB ok %.2f%%, AU bad %llu\n", what, r.tel.state == 2, r.tel.cfoHz, 100 * fibRatio(r), (unsigned long long)r.st.auBad);
             checkClean(r, tc, what);
             CHECK(std::fabs(r.tel.cfoHz - cfo) < 25, "%s: the receiver reads %+.1f Hz", what, r.tel.cfoHz);
-        }
-        for (double ppm : {-20.0, -5.0, 5.0, 20.0}) {
+        });
+        for (double ppm : {-20.0, -5.0, 5.0, 20.0}) jobs.add([=] {
             SynthConfig sc;
             sc.snrDb = 25; sc.sroPpm = ppm; sc.cfoHz = 800;
             const Result r = run(tc, sc, rate, 12.0, 65536, 1, false);
             char what[96];
             snprintf(what, sizeof what, "%.3f Msps, clock offset %+.0f ppm", rate / 1e6, ppm);
-            printf("%s: locked %d, frames %llu, FIB ok %.2f%%, AU %llu ok %llu bad\n", what, r.tel.state == 2, (unsigned long long)r.tel.frames, 100 * fibRatio(r), (unsigned long long)r.st.auOk, (unsigned long long)r.st.auBad);
+            jprintf("%s: locked %d, frames %llu, FIB ok %.2f%%, AU %llu ok %llu bad\n", what, r.tel.state == 2, (unsigned long long)r.tel.frames, 100 * fibRatio(r), (unsigned long long)r.st.auOk, (unsigned long long)r.st.auBad);
             checkClean(r, tc, what);
-        }
+        });
     }
+    jobs.run();
 }
 
 static void testChunks() {
@@ -328,11 +348,22 @@ static void testChunks() {
     SynthConfig sc;
     sc.snrDb = 25; sc.cfoHz = 1234; sc.sroPpm = 8;
     uint64_t refFrames = 0, refFibOk = 0, refAu = 0;
-    for (size_t chunk : {(size_t)65536, (size_t)4096, (size_t)7, (size_t)1}) {
+    const std::vector<size_t> chunks = {65536, 4096, 7, 1};
+    // the runs are independent: they go side by side, the comparison with the first one is made in order afterwards
+    std::vector<Result> runs(chunks.size());
+    std::vector<double> secs(chunks.size());
+    testjobs::Jobs jobs;
+    for (size_t k = 0; k < chunks.size(); k++) jobs.add([&, k] {
         const auto t0 = std::chrono::steady_clock::now();
-        const Result r = run(tc, sc, 2.048e6, 1.2, chunk, 1, true);
-        const double el = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
-        printf("chunks of %zu samples: frames %llu, FIB ok %llu bad %llu, AU %llu ok (%.1f s)\n", chunk, (unsigned long long)r.tel.frames, (unsigned long long)r.tel.fibOk, (unsigned long long)r.tel.fibBad,
+        runs[k] = run(tc, sc, 2.048e6, 1.2, chunks[k], 1, true);
+        secs[k] = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+    });
+    jobs.run();
+    for (size_t k = 0; k < chunks.size(); k++) {
+        const size_t chunk = chunks[k];
+        const Result& r = runs[k];
+        const double el = secs[k];
+        jprintf("chunks of %zu samples: frames %llu, FIB ok %llu bad %llu, AU %llu ok (%.1f s)\n", chunk, (unsigned long long)r.tel.frames, (unsigned long long)r.tel.fibOk, (unsigned long long)r.tel.fibBad,
                (unsigned long long)r.st.auOk, el);
         CHECK(r.tel.state == 2 && r.tel.fibBad == 0 && r.ens.valid, "chunk %zu: state %d, bad FIBs %llu", chunk, r.tel.state, (unsigned long long)r.tel.fibBad);
         if (chunk == 65536) { refFrames = r.tel.frames; refFibOk = r.tel.fibOk; refAu = r.st.auOk; CHECK(refFrames >= 10 && refAu > 0, "reference run: %llu frames", (unsigned long long)refFrames); }
@@ -347,7 +378,7 @@ int main() {
     testSnr();
     testOffsets();
     testChunks();
-    if (fails) { printf("%d FAILED\n", fails); return 1; }
-    printf("test_dab_rx: all passed\n");
+    if (fails) { jprintf("%d FAILED\n", fails.load()); return 1; }
+    jprintf("test_dab_rx: all passed\n");
     return 0;
 }

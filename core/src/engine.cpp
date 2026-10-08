@@ -40,6 +40,37 @@ static void dropNonFinite(cf32* x, size_t n) {
 // The receiver that runs for an engine standard code (setStandard): 0 and 1 are DVB-T2, 2 DVB-T, ... so it is the code minus one
 static int activeStdFor(int stdMode) { return stdMode >= 2 ? stdMode - 1 : 0; }
 
+// "Remove DC spike" and "IQ correction" of the samples (iq_correct.h), with the part skipped that would harm the active mode (tests/test_iq_modes.cpp):
+// the DC removal where the wanted carrier can sit on the centre (FM, and the modes whose ModeTuning says carrierAtCentre), the IQ correction
+// where the signal is not circular around the centre (ModeTuning::notCircular)
+static void cleanSamples(IqCorrector& fix, OffsetMixer& mix, bool forceDc, cf32* x, size_t n, int activeStd) {
+    const ModeTuning* mt = modeTuning(activeStd + 1);
+    fix.process(x, n, activeStd == 6 || (mt && mt->carrierAtCentre), mt && mt->notCircular, forceDc);
+    mix.mix(x, n);   // offset tuning: the channel back to the centre, after the IQ correction (the imbalance mirrors around the radio's centre)
+}
+
+// Offset tuning only where one channel sits on the centre: the TV standards, DAB, FM, DVB-S, DTMB, DMR, DRM, ADS-B, GNSS and radiosondes.
+// Not analog TV (its own DC handling, carriers both sides), and not the modes that already tune off the channel or watch several channels.
+bool Engine::offsetAllowed() const {
+    const int m = stdMode_.load();
+    if (m == 10 || m == 16 || m == 18 || m == 21) return false;   // analog TV, AIS, ACARS, Iridium
+    if (const ModeTuning* mt = modeTuning(m)) if (mt->tuneOffsetHz != 0) return false;
+    return m >= 0 && m <= 15;
+}
+
+void Engine::ingest(cf32* x, size_t n) {
+    dropNonFinite(x, n);
+    cleanSamples(iqFix_, offMix_, offsetDc_.load(), x, n, activeStd_.load());
+    const auto a0 = std::chrono::steady_clock::now();
+    lastSamples_ = a0;   // the radio is alive, whether or not the resampler gives a sample out of this block
+    if (offResample_) { offBuf_.clear(); offRs_.process(x, n, offBuf_); x = offBuf_.data(); n = offBuf_.size(); }
+    if (!n) return;
+    feedSpectrum(x, n);
+    feedRx(x, n);
+    tRx_ += std::chrono::duration<double>(std::chrono::steady_clock::now() - a0).count();
+    nSamp_ += n;
+}
+
 Engine::Engine() : t0_(std::chrono::steady_clock::now()) {}
 Engine::~Engine() { stop(); }
 
@@ -78,16 +109,45 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     else
         src_ = makeSource(dev);
     if (!src_) { log("no source"); return false; }
-    if (!src_->start(tune, ring_, err)) {
+    offHz_ = 0; offRate_ = 0; offsetDc_ = false;
+    std::string offNote;
+    if (autoOffset_ && dev.isRadio() && offsetAllowed()) {
+        // a HackRF has no listed maximum (20 Msps); the HackRF Pro tunes exactly only at up to 10 Msps and at 20, so it gets 20 above 10
+        const double maxRate = dev.maxRateHz > 0 ? dev.maxRateHz : dev.kind == DeviceInfo::HackRF ? 20e6 : 0;
+        OffsetPlan p = planOffset(tune.bandwidthMhz * 1e6, tune.sampleRate, maxRate, dev.minRateHz);
+        if (p.ok && dev.kind == DeviceInfo::HackRF && p.rateHz > 10e6) p.rateHz = 20e6;
+        if (p.ok) { offHz_ = p.offsetHz; offRate_ = p.rateHz; }
+        else { offsetDc_ = true; offNote = "offset tuning not possible (" + p.why + "): removing the DC spike instead"; }
+    }
+    if (!src_->start(radioTune(tune), ring_, err)) {
         log("source start failed: " + err);
         src_.reset();
         return false;
     }
-    if (!err.empty()) log("note: " + err);
-    rate_ = src_->sampleRate();
+    if (offHz_ > 0 && src_->sampleRate() / 2 < offHz_ + tune.bandwidthMhz * 0.5e6) {
+        // the radio did not take the rate the offset needs: back on the channel, with the DC removal
+        offNote = "offset tuning not possible (the radio runs at " + std::to_string(src_->sampleRate() / 1e6).substr(0, 5) + " Msps): removing the DC spike instead";
+        offHz_ = 0; offRate_ = 0; offsetDc_ = true;
+        std::string e2;
+        if (!src_->retune(radioTune(tune), e2)) log("retune failed: " + e2);
+    }
+    { std::lock_guard<std::mutex> lk(noteMu_); note_.clear(); retuneNote_.clear(); }
+    setNote(offNote.empty() ? err : err.empty() ? offNote : err + "; " + offNote, false);
+    srcRate_ = src_->sampleRate();
+    rate_ = srcRate_;
+    offMix_.set(offHz_, srcRate_);
+    offResample_ = false;
+    if (offHz_ > 0) {
+        // back to the mode's rate after the shift (if the radio runs faster than the mode asked for)
+        if (tune.sampleRate > 0 && srcRate_ > tune.sampleRate * 1.001 && offRs_.configure(srcRate_, tune.sampleRate)) { offRs_.reset(); offResample_ = true; rate_ = tune.sampleRate; }
+        char b[200];
+        snprintf(b, sizeof b, "offset tuning: the radio sits %.3f MHz below the channel at %.2f Msps, its DC spike outside the channel; the receiver gets %.3f Msps",
+                 offHz_.load() / 1e6, srcRate_ / 1e6, rate_.load() / 1e6);
+        log(b);
+    }
     {
         std::lock_guard<std::mutex> lk(tuneMu_);
-        lastDev_ = dev; lastTune_ = tune;
+        lastDev_ = dev; lastTune_ = tune; lastFile_ = file;
     }
     radioLost_ = false; lastSamples_ = std::chrono::steady_clock::now(); reconnectErr_.clear();
     logP1Count_ = 0; logGi_ = -2; logState_ = -1; logFrameSyms_ = 0;
@@ -129,6 +189,35 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     rxAdsb_.setLogCallback([this](const std::string& s) { log(s); });
     rxGnss_.configure(rate_);
     rxGnss_.setLogCallback([this](const std::string& s) { log(s); });
+    {   // a narrow channel sits tuneOffsetHz away from the radio's centre (a file holds the channel as recorded: no offset)
+        const ModeTuning* mto = modeTuning(stdMode_.load());
+        const double o = mto && dev.kind != DeviceInfo::File ? -mto->tuneOffsetHz : 0.0;
+        rxSonde_.setSignalOffset(o);
+        rxAis_.setSignalOffset(o);
+        rxMarine_.setSignalOffset(o);
+        rxAcars_.setSignalOffset(o);
+        if (dev.kind != DeviceInfo::File) rxAcars_.setCenterHz(radioTune(tune).centerHz);   // channel frequencies and the 25 kHz grid come from it
+        rxInmc_.setSignalOffset(o);
+        rxAero_.setSignalOffset(o);
+        rxIridium_.setSignalOffset(o);
+        rxMesh_.setSignalOffset(o);
+    }
+    rxSonde_.configure(rate_);
+    rxSonde_.setLogCallback([this](const std::string& s) { log(s); });
+    rxAis_.configure(rate_);
+    rxAis_.setLogCallback([this](const std::string& s) { log(s); });
+    rxMarine_.configure(rate_);
+    rxMarine_.setLogCallback([this](const std::string& s) { log(s); });
+    rxAcars_.configure(rate_);
+    rxAcars_.setLogCallback([this](const std::string& s) { log(s); });
+    rxInmc_.configure(rate_);
+    rxInmc_.setLogCallback([this](const std::string& s) { log(s); });
+    rxAero_.configure(rate_);
+    rxAero_.setLogCallback([this](const std::string& s) { log(s); });
+    rxIridium_.configure(rate_);
+    rxIridium_.setLogCallback([this](const std::string& s) { log(s); });
+    rxMesh_.configure(rate_);
+    rxMesh_.setLogCallback([this](const std::string& s) { log(s); });
     if (const ModeTuning* mt = modeTuning(stdMode_.load()))
         if (rate_.load() < mt->minSampleRate - 1) {
             char m[200];
@@ -155,10 +244,19 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
         unpack_.setSink([this](const uint8_t* pkt) { demux_.feed(pkt); ttx_.feedTs(pkt); frameBuf_.insert(frameBuf_.end(), pkt, pkt + 188); });
     }
     rx_.setPlpCallback([this](const PlpResult& r) { if (plpDump_) plpDump_(r); onPlp(r); });
-    {
-        RxTelemetry t;
-        if (!rx_.telemetry(t, 0)) {}
-        if (t.seq && !t.rateOk) log("sample rate is not 1x or 2x the native rate for this bandwidth - only spectrum available");
+    {   // DVB-T2 / DVB-T, ATSC and DAB at a rate their receiver cannot use (the telemetry test that stood here never fired: the receiver
+        // publishes nothing before its first samples, so the user got no word at all, e.g. an RTL-SDR at 2.56 Msps on an 8 MHz channel)
+        const int sm = stdMode_.load();
+        const double need = sm <= 4 ? minSampleRateFor(sm, tune.bandwidthMhz) : 0;
+        if (need > 0 && rate_.load() < need - 1) {
+            char what[64], m[240];
+            if (sm == 3) snprintf(what, sizeof what, "an ATSC channel");
+            else if (sm == 4) snprintf(what, sizeof what, "a DAB ensemble");
+            else snprintf(what, sizeof what, "the %g MHz %s channel", tune.bandwidthMhz, sm == 1 ? "DVB-T2" : sm == 2 ? "DVB-T" : "DVB-T2 / DVB-T");
+            snprintf(m, sizeof m, "sample rate %.2f Msps is too low for %s (at least %.2f Msps is needed) - %s", rate_.load() / 1e6, what, need / 1e6,
+                     sm <= 2 ? "only the spectrum is shown" : "the receiver cannot lock with this radio");
+            log(m);
+        }
     }
     if (stdMode_ == 5 && rate_.load() < 6.5e6) {
         char m[200];
@@ -214,19 +312,58 @@ void Engine::stop() {
     running_ = false;
 }
 
+// The radio of a narrow-channel mode is tuned tuneOffsetHz above the user's frequency, so the channel stays off the DC spike.
+TuneSettings Engine::radioTune(const TuneSettings& t) const {
+    TuneSettings r = t;
+    if (const ModeTuning* mt = modeTuning(stdMode_.load())) r.centerHz += mt->tuneOffsetHz;
+    if (offHz_ > 0) { r.centerHz -= offHz_; r.sampleRate = offRate_; r.basebandFilterHz = 0; }   // offset tuning: the radio below the channel
+    return r;
+}
+
 bool Engine::retune(const TuneSettings& tune) {
     if (!src_) return false;
     std::string err;
-    if (!src_->retune(tune, err)) { log("retune failed: " + err); return false; }
+    if (!src_->retune(radioTune(tune), err)) { log("retune failed: " + err); return false; }
+    setNote(err, true);
+    if (restartIfRateChanged(tune)) return running_;
     { std::lock_guard<std::mutex> lk(tuneMu_); lastTune_ = tune; }
+    if (lastDev_.kind != DeviceInfo::File) rxAcars_.setCenterHz(radioTune(tune).centerHz);
+    return true;
+}
+
+// Every receiver was set up for the rate the radio had at start(); a retune that changes it (another rate asked for, or the radio
+// picking a different one) would leave them decoding at the wrong rate, so the engine starts again with the new settings
+// A driver note is logged when it is new (a retune that brings the same one again, as the AGC does, does not fill the log)
+void Engine::setNote(const std::string& n, bool retune) {
+    {
+        std::lock_guard<std::mutex> lk(noteMu_);
+        std::string& slot = retune ? retuneNote_ : note_;
+        if (n == slot) return;
+        slot = n;
+    }
+    if (!n.empty()) log("note: " + n);
+}
+
+bool Engine::restartIfRateChanged(const TuneSettings& tune) {
+    if (!src_ || std::fabs(src_->sampleRate() - srcRate_) < 0.5) return false;
+    char b[160];
+    snprintf(b, sizeof b, "the radio now runs at %.3f Msps (was %.3f): restarting the receivers", src_->sampleRate() / 1e6, srcRate_ / 1e6);
+    log(b);
+    const DeviceInfo dev = lastDev_;
+    const FileOptions file = lastFile_;
+    stop();
+    start(dev, tune, file);
     return true;
 }
 
 bool Engine::retuneReset(const TuneSettings& tune) {
     if (!src_) return false;
     std::string err;
-    if (!src_->retune(tune, err)) { log("retune failed: " + err); return false; }
+    if (!src_->retune(radioTune(tune), err)) { log("retune failed: " + err); return false; }
+    setNote(err, true);
+    if (restartIfRateChanged(tune)) return running_;
     { std::lock_guard<std::mutex> lk(tuneMu_); lastTune_ = tune; }
+    if (lastDev_.kind != DeviceInfo::File) rxAcars_.setCenterHz(radioTune(tune).centerHz);
     resetReq_ = true;
     return true;
 }
@@ -247,6 +384,14 @@ void Engine::applyReset() {
     rxDrm_.reset();
     rxAdsb_.reset();
     rxGnss_.reset();
+    rxSonde_.reset();
+    rxAis_.reset();
+    rxMarine_.reset();
+    rxAcars_.reset();
+    rxInmc_.reset();
+    rxAero_.reset();
+    rxIridium_.reset();
+    rxMesh_.reset();
     autoMark_ = nSamp_ / std::max(1.0, rate_.load()); lastLockSec_ = autoMark_;
     analyzer_.reset();
     {
@@ -289,7 +434,7 @@ void Engine::onTsPackets(const uint8_t* pk, size_t n, double secs) {
 // so idle searching costs one receiver, not two.
 void Engine::feedRx(const cf32* x, size_t n) {
     const int a = activeStd_.load();
-    if (a == 5) rxI_.feed(x, n); else if (a == 4) rxA3_.feed(x, n); else if (a == 3) rxD_.feed(x, n); else if (a == 2) rxA_.feed(x, n); else if (a == 1) rxT_.feed(x, n); else if (a == 6) rxFm_.feed(x, n); else if (a == 7) rxDvbs_.feed(x, n); else if (a == 8) rxDtmb_.feed(x, n); else if (a == 9) rxAtv_.feed(x, n); else if (a == 10) rxDmr_.feed(x, n); else if (a == 11) rxDrm_.feed(x, n); else if (a == 12) rxAdsb_.feed(x, n); else if (a == 13) rxGnss_.feed(x, n); else rx_.feed(x, n);
+    if (a == 5) rxI_.feed(x, n); else if (a == 4) rxA3_.feed(x, n); else if (a == 3) rxD_.feed(x, n); else if (a == 2) rxA_.feed(x, n); else if (a == 1) rxT_.feed(x, n); else if (a == 6) rxFm_.feed(x, n); else if (a == 7) rxDvbs_.feed(x, n); else if (a == 8) rxDtmb_.feed(x, n); else if (a == 9) rxAtv_.feed(x, n); else if (a == 10) rxDmr_.feed(x, n); else if (a == 11) rxDrm_.feed(x, n); else if (a == 12) rxAdsb_.feed(x, n); else if (a == 13) rxGnss_.feed(x, n); else if (a == 14) rxSonde_.feed(x, n); else if (a == 15) rxAis_.feed(x, n); else if (a == 16) rxMarine_.feed(x, n); else if (a == 17) rxAcars_.feed(x, n); else if (a == 18) rxInmc_.feed(x, n); else if (a == 19) rxAero_.feed(x, n); else if (a == 20) rxIridium_.feed(x, n); else if (a == 21) rxMesh_.feed(x, n); else rx_.feed(x, n);
 }
 
 void Engine::changeBandwidth(double mhz) {
@@ -346,6 +491,14 @@ void Engine::autoSelect(const RxTelemetry& t, bool tLocked) {
             case 11: rxDrm_.reset(); break;
             case 12: rxAdsb_.reset(); break;
             case 13: rxGnss_.reset(); break;
+            case 14: rxSonde_.reset(); break;
+            case 15: rxAis_.reset(); break;
+            case 16: rxMarine_.reset(); break;
+            case 17: rxAcars_.reset(); break;
+            case 18: rxInmc_.reset(); break;
+            case 19: rxAero_.reset(); break;
+            case 20: rxIridium_.reset(); break;
+            case 21: rxMesh_.reset(); break;
             default: break;
             }
         }
@@ -567,7 +720,7 @@ void Engine::watchRadio() {
     { std::lock_guard<std::mutex> lk(tuneMu_); tune = lastTune_; }
     src_->stop();
     std::string err;
-    if (src_->start(tune, ring_, err)) {
+    if (src_->start(radioTune(tune), ring_, err)) {
         radioLost_ = false;
         lastSamples_ = steady_clock::now();
         reconnectErr_.clear();
@@ -633,7 +786,7 @@ void Engine::analysisLoop() {
         if (resetReq_.exchange(false)) { applyReset(); rxSeq = 0; }
         size_t n;
         catchUp();
-        while ((n = ring_.read(buf.data(), buf.size())) > 0) { dropNonFinite(buf.data(), n); auto a0 = std::chrono::steady_clock::now(); lastSamples_ = a0; feedSpectrum(buf.data(), n); feedRx(buf.data(), n); auto a2 = std::chrono::steady_clock::now(); tRx_ += std::chrono::duration<double>(a2 - a0).count(); nSamp_ += n; if (std::chrono::steady_clock::now() > next + std::chrono::milliseconds(250)) break; } // keep publishing spectrum/telemetry even when the receiver is behind
+        while ((n = ring_.read(buf.data(), buf.size())) > 0) { ingest(buf.data(), n); if (std::chrono::steady_clock::now() > next + std::chrono::milliseconds(250)) break; } // keep publishing spectrum/telemetry even when the receiver is behind
         next += std::chrono::milliseconds(33);
         watchRadio();
         {
@@ -827,6 +980,134 @@ void Engine::analysisLoop() {
                     std::lock_guard<std::mutex> lk(rxMu_);
                     publishRx(std::move(t));
                 }
+            } else if (activeStd_.load() == 14) {
+                SondeTelemetry mt;
+                if (rxSonde_.telemetry(mt, modeSeq_[7])) {
+                    modeSeq_[7] = mt.seq;
+                    t.standard = 14;
+                    t.seq = mt.seq;
+                    t.state = mt.state;
+                    t.cfoHz = mt.cfoHz;
+                    t.dataValid = mt.dataValid;
+                    t.dataSnrDb = mt.snrDb;
+                    t.blocksOk = mt.blocksOk; t.blocksBad = mt.blocksBad;
+                    t.rateOk = rxSonde_.ready();
+                    t.sonde = std::move(mt);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    publishRx(std::move(t));
+                }
+            } else if (activeStd_.load() == 15) {
+                AisTelemetry mt;
+                if (rxAis_.telemetry(mt, modeSeq_[8])) {
+                    modeSeq_[8] = mt.seq;
+                    t.standard = 15;
+                    t.seq = mt.seq;
+                    t.state = mt.state;
+                    t.cfoHz = mt.cfoHz;
+                    t.dataValid = mt.dataValid;
+                    t.dataSnrDb = mt.snrDb;
+                    t.blocksOk = mt.blocksOk; t.blocksBad = mt.blocksBad;
+                    t.rateOk = rxAis_.ready();
+                    t.ais = std::move(mt);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    publishRx(std::move(t));
+                }
+            } else if (activeStd_.load() == 16) {
+                MarineTelemetry mt;
+                if (rxMarine_.telemetry(mt, modeSeq_[9])) {
+                    modeSeq_[9] = mt.seq;
+                    t.standard = 16;
+                    t.seq = mt.seq;
+                    t.state = mt.state;
+                    t.cfoHz = mt.cfoHz;
+                    t.dataValid = mt.dataValid;
+                    t.dataSnrDb = mt.snrDb;
+                    t.blocksOk = mt.blocksOk; t.blocksBad = mt.blocksBad;
+                    t.rateOk = rxMarine_.ready();
+                    t.marine = std::move(mt);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    publishRx(std::move(t));
+                }
+            } else if (activeStd_.load() == 17) {
+                AcarsTelemetry mt;
+                if (rxAcars_.telemetry(mt, modeSeq_[10])) {
+                    modeSeq_[10] = mt.seq;
+                    t.standard = 17;
+                    t.seq = mt.seq;
+                    t.state = mt.state;
+                    t.cfoHz = mt.cfoHz;
+                    t.dataValid = mt.dataValid;
+                    t.dataSnrDb = mt.snrDb;
+                    t.blocksOk = mt.blocksOk; t.blocksBad = mt.blocksBad;
+                    t.rateOk = rxAcars_.ready();
+                    t.acars = std::move(mt);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    publishRx(std::move(t));
+                }
+            } else if (activeStd_.load() == 18) {
+                InmcTelemetry mt;
+                if (rxInmc_.telemetry(mt, modeSeq_[11])) {
+                    modeSeq_[11] = mt.seq;
+                    t.standard = 18;
+                    t.seq = mt.seq;
+                    t.state = mt.state;
+                    t.cfoHz = mt.cfoHz;
+                    t.dataValid = mt.dataValid;
+                    t.dataSnrDb = mt.snrDb;
+                    t.blocksOk = mt.blocksOk; t.blocksBad = mt.blocksBad;
+                    t.rateOk = rxInmc_.ready();
+                    t.inmc = std::move(mt);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    publishRx(std::move(t));
+                }
+            } else if (activeStd_.load() == 19) {
+                AeroTelemetry mt;
+                if (rxAero_.telemetry(mt, modeSeq_[12])) {
+                    modeSeq_[12] = mt.seq;
+                    t.standard = 19;
+                    t.seq = mt.seq;
+                    t.state = mt.state;
+                    t.cfoHz = mt.cfoHz;
+                    t.dataValid = mt.dataValid;
+                    t.dataSnrDb = mt.snrDb;
+                    t.blocksOk = mt.blocksOk; t.blocksBad = mt.blocksBad;
+                    t.rateOk = rxAero_.ready();
+                    t.aero = std::move(mt);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    publishRx(std::move(t));
+                }
+            } else if (activeStd_.load() == 20) {
+                IridiumTelemetry mt;
+                if (rxIridium_.telemetry(mt, modeSeq_[13])) {
+                    modeSeq_[13] = mt.seq;
+                    t.standard = 20;
+                    t.seq = mt.seq;
+                    t.state = mt.state;
+                    t.cfoHz = mt.cfoHz;
+                    t.dataValid = mt.dataValid;
+                    t.dataSnrDb = mt.snrDb;
+                    t.blocksOk = mt.blocksOk; t.blocksBad = mt.blocksBad;
+                    t.rateOk = rxIridium_.ready();
+                    t.iridium = std::move(mt);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    publishRx(std::move(t));
+                }
+            } else if (activeStd_.load() == 21) {
+                MeshTelemetry mt;
+                if (rxMesh_.telemetry(mt, modeSeq_[14])) {
+                    modeSeq_[14] = mt.seq;
+                    t.standard = 21;
+                    t.seq = mt.seq;
+                    t.state = mt.state;
+                    t.cfoHz = mt.cfoHz;
+                    t.dataValid = mt.dataValid;
+                    t.dataSnrDb = mt.snrDb;
+                    t.blocksOk = mt.blocksOk; t.blocksBad = mt.blocksBad;
+                    t.rateOk = rxMesh_.ready();
+                    t.mesh = std::move(mt);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    publishRx(std::move(t));
+                }
             } else if (dvbt ? rxT_.telemetry(t, rxSeq) : rx_.telemetry(t, rxSeq)) {
                 rxSeq = t.seq;
                 if (dvbt) logDvbtEvents(t); else logRxEvents(t);
@@ -846,7 +1127,7 @@ void Engine::analysisLoop() {
         while (std::chrono::steady_clock::now() < next && !stopReq_) {
             catchUp();
             size_t m = ring_.read(buf.data(), buf.size());
-            if (m) { dropNonFinite(buf.data(), m); auto a0 = std::chrono::steady_clock::now(); lastSamples_ = a0; feedSpectrum(buf.data(), m); feedRx(buf.data(), m); auto a2 = std::chrono::steady_clock::now(); tRx_ += std::chrono::duration<double>(a2 - a0).count(); nSamp_ += m; }
+            if (m) ingest(buf.data(), m);
             else std::this_thread::sleep_for(std::chrono::milliseconds(2));
         }
     }

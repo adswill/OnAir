@@ -1,7 +1,9 @@
 // OnAir: window, main loop and the layout of the panels.
 #include "app.h"
+#include "dect2/crash_report.h"
 
 std::string gForceTab;
+static std::string gCrashNote;   // set when the last run crashed: shown once in a small window
 
 gfx::Backend* gGfx = nullptr;
 
@@ -30,7 +32,7 @@ void overviewTab(App& a) {
     const float h = ImGui::GetContentRegionAvail().y;
     if (pal::dev()) {   // a divider you can drag, as in SDR++
         static float frac = 0.5f;
-        spectrumPlot(a, ImVec2(-1, std::max(60.f, h * frac - 3)));
+        spectrumPlot(a, ImVec2(-1, std::max(60.f, h * frac - 3)), h < 300 * gUi);   // a short tab: the frequency axis only once, under the waterfall
         const ImVec2 p = ImGui::GetCursorScreenPos();
         const float w = ImGui::GetContentRegionAvail().x;
         ImGui::InvisibleButton("##split", ImVec2(w, 7 * gUi));
@@ -52,9 +54,12 @@ void receiverTab(App& a) {
     if (a.isdbtMode) { isdbtReceiverTab(a); return; }
     if (a.rx.standard == 2 || a.atscMode) {
         const AtscTelemetry& at = a.rx.atsc;
-        ImGui::TextDisabled("ATSC 8-VSB receiver: matched filter, pilot loop, symbol clock, field sync, per-field equaliser, trellis, Reed-Solomon");
+        { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("ATSC 8-VSB receiver: matched filter, pilot loop, symbol clock, field sync, per-field equaliser, trellis, Reed-Solomon"); ImGui::PopTextWrapPos(); }
         ImGui::Spacing();
-        auto row = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); ImGui::SameLine(190 * gUi); ImGui::PushFont(a.mono, 0); ImGui::Text(fmt, v...); ImGui::PopFont(); };
+        auto row = [&](const char* k, const char* fmt, auto... v) {   // a long value wraps under itself in a narrow tab
+        ImGui::TextDisabled("%s", k); ImGui::SameLine(std::min(190 * gUi, ImGui::GetContentRegionAvail().x * 0.45f));
+        ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::Text(fmt, v...); ImGui::PopTextWrapPos(); ImGui::PopFont();
+    };
         row("pilot carrier", "%s", at.pilot ? "locked" : "searching");
         row("carrier offset", "%+.1f Hz", at.cfoHz);
         row("symbol clock offset", "%+.2f ppm", at.sroPpm);
@@ -107,7 +112,13 @@ ImU32 scoreColour(double sc) {
 }
 
 void mainTabs(App& a) {
-    if (ImGui::BeginTabBar("tabs", pal::dev() ? ImGuiTabBarFlags_DrawSelectedOverline : 0)) {
+    // a narrow pane: the tabs get less padding (the bar takes it from the style when it begins, each tab when it is added), so that they keep
+    // their whole names instead of being cut short or scrolled out of view
+    gTightTabs = ImGui::GetContentRegionAvail().x < 760 * gUi;
+    if (gTightTabs) ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(3 * gUi, ImGui::GetStyle().FramePadding.y));
+    const bool bar = ImGui::BeginTabBar("tabs", pal::dev() ? ImGuiTabBarFlags_DrawSelectedOverline : 0);
+    if (gTightTabs) ImGui::PopStyleVar();
+    if (bar) {
         if (tabItem("Overview", Ic::Grid)) { overviewTab(a); ImGui::EndTabItem(); }
         if (const ModeUi* mu = modeUi(a.family)) {   // a mode added after FM: its own tabs
             if (mu->tab && tabItem(mu->tabName ? mu->tabName : "Mode", mu->tabIcon)) { mu->tab(a); ImGui::EndTabItem(); }
@@ -140,6 +151,7 @@ void drawUI(App& a, ImVec2 disp) {
     dabScanStep(a);
     fmScanStep(a);
     harvestScan(a);
+    scanDbTick(a);
     if (a.engine.running() && glfwGetTime() - a.epgT > 1.0) {
         a.epg = a.engine.epg();
         if (a.fakeEpg) {
@@ -178,7 +190,7 @@ void drawUI(App& a, ImVec2 disp) {
         ImGui::SetNextWindowSize(disp);
         ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 1));
         ImGui::Begin("##vonly", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings);
-        if (a.video.has()) a.video.draw(disp); else ImGui::TextDisabled("no picture - press Esc");
+        if (a.video.has()) a.video.draw(disp); else { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("no picture - press Esc"); ImGui::PopTextWrapPos(); }
         if (ImGui::IsWindowHovered() && ImGui::IsMouseDoubleClicked(0)) { a.videoOnly = false; if (glfwGetWindowMonitor(gWindow)) toggleFullscreen(); }
         ImGui::End();
         ImGui::PopStyleColor();
@@ -197,6 +209,7 @@ void drawUI(App& a, ImVec2 disp) {
     a.tgMin[TgToolbar] = ImVec2(tb0.x - 4, tb0.y - 3); a.tgMax[TgToolbar] = ImVec2(tb0.x + ImGui::GetContentRegionAvail().x + 4, ImGui::GetCursorScreenPos().y);
     const ImVec2 sw0 = ImGui::GetCursorScreenPos();
     standardSwitch(a);
+    if (a.devices[a.devIdx].isRadio() && !a.devices[a.devIdx].settings.empty()) { ImGui::SameLine(disp.x - 64 - 410 * gUi); radioSettingsUi(a, false); }   // the top bar is full
     ImGui::SameLine(disp.x - 64 - 290 * gUi);
     updateButton(a);
     ImGui::SameLine(disp.x - 64 - 100 * gUi);
@@ -232,6 +245,19 @@ void drawUI(App& a, ImVec2 disp) {
     ImGui::End();
     }
     wizard(a, disp);
+    if (!gCrashNote.empty()) {   // once per start; the same text is in the log panel
+        static bool opened = false;
+        if (!opened) { ImGui::OpenPopup("OnAir crashed"); opened = true; }
+        ImGui::SetNextWindowPos(ImVec2(disp.x * 0.5f, disp.y * 0.5f), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSizeConstraints(ImVec2(420 * gUi, 0), ImVec2(560 * gUi, 400 * gUi));
+        if (ImGui::BeginPopupModal("OnAir crashed", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::PushTextWrapPos(520 * gUi);
+            ImGui::TextUnformatted(gCrashNote.c_str());
+            ImGui::PopTextWrapPos();
+            if (ImGui::Button("OK")) { gCrashNote.clear(); ImGui::CloseCurrentPopup(); }
+            ImGui::EndPopup();
+        }
+    }
     if (a.popOut) {
         ImGui::SetNextWindowSize(ImVec2(640 * gUi, 380 * gUi), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowPos(ImVec2(200, 160), ImGuiCond_FirstUseEver);
@@ -245,17 +271,50 @@ void drawUI(App& a, ImVec2 disp) {
     }
 }
 
-int main(int argc, char** argv) {
-#ifdef _WIN32
-    {   // the program has no console window: keep its messages in a log file next to the settings
-        if (const char* ap = getenv("APPDATA")) {
-            const std::string dir = std::string(ap) + "\\OnAir";
-            _mkdir(dir.c_str());
-            FILE* unused = freopen((dir + "\\onair.log").c_str(), "w", stderr);
-            (void)unused;
+// View > Light: each colour the interface drew gets its lightness turned over (HSL: L -> 1 - L) with hue and saturation kept, so dark
+// panes turn white, light text dark, and red, amber and green stay themselves. Done on the finished draw lists, so every panel of every
+// mode follows without colours of its own. Only what is drawn from the font atlas (text, shapes, plots) is turned: pictures, map tiles
+// and other textures keep their colours. Per channel c' = c + (255 - max - min), which keeps max - min and the hue.
+static void lightenDrawData(ImDrawData* dd) {
+    if (!dd) return;
+    static std::vector<unsigned char> keep;
+    for (ImDrawList* dl : dd->CmdLists) {
+        const int nv = dl->VtxBuffer.Size;
+        keep.assign((size_t)nv, 0);
+        for (const ImDrawCmd& c : dl->CmdBuffer) {
+            if (c.UserCallback == nullptr && c.TexRef._TexData != nullptr) continue;   // the font atlas
+            for (unsigned i = 0; i < c.ElemCount; i++) {
+                const unsigned v = c.VtxOffset + dl->IdxBuffer[(int)(c.IdxOffset + i)];
+                if (v < (unsigned)nv) keep[v] = 1;
+            }
+        }
+        for (int i = 0; i < nv; i++) {
+            if (keep[(size_t)i]) continue;
+            ImU32& col = dl->VtxBuffer[i].col;
+            const int r = (int)(col >> IM_COL32_R_SHIFT) & 255, g = (int)(col >> IM_COL32_G_SHIFT) & 255, b = (int)(col >> IM_COL32_B_SHIFT) & 255;
+            const int d = 255 - std::max(r, std::max(g, b)) - std::min(r, std::min(g, b));
+            auto cl = [](int x) { return (ImU32)std::clamp(x, 0, 255); };
+            col = (col & IM_COL32_A_MASK) | (cl(r + d) << IM_COL32_R_SHIFT) | (cl(g + d) << IM_COL32_G_SHIFT) | (cl(b + d) << IM_COL32_B_SHIFT);
         }
     }
+}
+
+int main(int argc, char** argv) {
+    dect2::crash::install();   // first: a crash from here on leaves a report
+#ifdef _WIN32
+    dect2::crash::startLog();   // the program has no console window: keep its messages in a log file next to the settings (the old one is kept as onair-prev.log)
 #endif
+    {
+        std::string report;
+        if (dect2::crash::lastRunCrashed(report)) {
+#ifdef _WIN32
+            gCrashNote = "The last run of OnAir crashed; the report is in " + report + " - please send it with onair-prev.log";
+#else
+            gCrashNote = "The last run of OnAir crashed; the report is in " + report + " - please send it";
+#endif
+            fprintf(stderr, "%s\n", gCrashNote.c_str());
+        }
+    }
     if (!dect2::cpuSupportsBuild()) {
         plat::showFatalError("OnAir", "This version of OnAir needs a processor with AVX2 and FMA instructions (any Intel or AMD processor from about 2013 on).");
         return 1;
@@ -267,18 +326,37 @@ int main(int argc, char** argv) {
     if (!window) return 1;
 #ifndef __APPLE__
     {   // the default size is in pixels: make the window as large (in points) as on a 96 dpi display, but never larger than the screen
+        // (a 1366 x 768 laptop at 100 % is common: a 1500 x 900 window would hang off its bottom and right edges, hiding the status bar)
         float xs = 1, ys = 1;
         glfwGetWindowContentScale(window, &xs, &ys);
         const float s = std::max(1.f, std::max(xs, ys));
         int wx = 0, wy = 0, ww = 0, wh = 0;
         if (GLFWmonitor* mon = glfwGetPrimaryMonitor()) glfwGetMonitorWorkarea(mon, &wx, &wy, &ww, &wh);
-        if (s > 1.01f) glfwSetWindowSize(window, ww > 0 ? std::min((int)(1500 * s), ww) : (int)(1500 * s), wh > 0 ? std::min((int)(900 * s), wh) : (int)(900 * s));
+        int fl = 0, ft = 0, fr = 0, fb = 0;   // the frame and title bar around the window's content
+        glfwGetWindowFrameSize(window, &fl, &ft, &fr, &fb);
+        int w = (int)(1500 * s), h = (int)(900 * s);
+        if (ww > 0 && wh > 0) { w = std::max(640, std::min(w, ww - fl - fr)); h = std::max(480, std::min(h, wh - ft - fb)); }
+        if (w != 1500 || h != 900) {
+            glfwSetWindowSize(window, w, h);
+            if (ww > 0 && wh > 0) {   // and wholly on the screen
+                int x = 0, y = 0;
+                glfwGetWindowPos(window, &x, &y);
+                x = std::max(wx + fl, std::min(x, wx + ww - fr - w));
+                y = std::max(wy + ft, std::min(y, wy + wh - fb - h));
+                glfwSetWindowPos(window, x, y);
+            }
+        }
     }
 #endif
+    if (const char* e = getenv("DECT2_WINSIZE")) { int w = 0, h = 0; if (sscanf(e, "%dx%d", &w, &h) == 2 && w > 0 && h > 0) glfwSetWindowSize(window, w, h); }   // dev: try a small screen
     gWindow = window;
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+#ifdef DECT2_UI_LAYOUT_CHECK
+    void layoutCheckInstall();   // layout_check.cpp (developer build)
+    layoutCheckInstall();
+#endif
     gfx::Backend* gfxBackend = gfx::create(window);
     if (!gfxBackend) { fprintf(stderr, "could not start the graphics back end\n"); return 1; }
     gGfx = gfxBackend;
@@ -308,6 +386,7 @@ int main(int argc, char** argv) {
     app.tune.synth.demoTv = true;   // the synthetic DVB-T / ATSC signal carries a test-card programme
     if (const char* ws = getenv("DECT2_WIZSTEP")) wizEnter(app, atoi(ws));
     app.engine.log("OnAir started");
+    if (!gCrashNote.empty()) app.engine.log(gCrashNote);
     refreshDevices(app);
     for (int i = 0; i < (int)app.devices.size(); i++)
         if (app.devices[i].isRadio()) { app.devIdx = i; break; }
@@ -340,11 +419,12 @@ int main(int argc, char** argv) {
         if (std::string(argv[i]) == "--isdbt") setFamily(app, 4);
         if (std::string(argv[i]) == "--dab") setFamily(app, 2);
         if (std::string(argv[i]) == "--fm") setFamily(app, 5);
-        if (std::string(argv[i]) == "--mode" && i + 1 < argc) { if (const ModeTuning* mt = modeTuningById(argv[++i])) setFamily(app, mt->stdMode - 2); }   // dev: dvbs, dtmb, atv, dmr, drm or adsb
+        if (std::string(argv[i]) == "--mode" && i + 1 < argc) { if (const ModeTuning* mt = modeTuningById(argv[++i])) setFamily(app, mt->stdMode - 2); }   // dev: dvbs, dtmb, atv, dmr, drm, adsb, gnss, sonde, ais, marine, acars, inmc, aero, iridium or mesh
         if (std::string(argv[i]) == "--sopt" && i + 2 < argc) { const int k = atoi(argv[i + 1]); if (k >= 0 && k < 8) app.tune.synth.modeOpt[k] = atoi(argv[i + 2]); i += 2; }       // dev: option k of the mode's test signal
         if (std::string(argv[i]) == "--sval" && i + 2 < argc) { const int k = atoi(argv[i + 1]); if (k >= 0 && k < 4) app.tune.synth.modeVal[k] = atof(argv[i + 2]); i += 2; }   // dev: value k of the mode's test signal
         if (std::string(argv[i]) == "--ui2") app.newUi = true;
         if (std::string(argv[i]) == "--theme" && i + 1 < argc) app.uiTheme = atoi(argv[++i]);
+        if (std::string(argv[i]) == "--light") app.lightUi = true;   // dev: View > Light
         if (std::string(argv[i]) == "--variant" && i + 1 < argc) app.uiVariant = std::max(0, std::min(7, atoi(argv[++i])));
         if (std::string(argv[i]) == "--classic") app.newUi = false;
         if (std::string(argv[i]) == "--rate" && i + 1 < argc) app.file.sampleRate = atof(argv[++i]) * 1e6;
@@ -400,14 +480,17 @@ int main(int argc, char** argv) {
             int w, h;
             glfwGetFramebufferSize(window, &w, &h);
             if (w == 0 || h == 0) { glfwWaitEventsTimeout(0.1); continue; }
-            static const float kClear[4] = {0.04f, 0.045f, 0.05f, 1.f};
-            gfxBackend->newFrame(w, h, kClear);
+            static const float kClear[4] = {0.04f, 0.045f, 0.05f, 1.f}, kClearLight[4] = {0.955f, 0.95f, 0.96f, 1.f};
+            gfxBackend->newFrame(w, h, app.lightUi ? kClearLight : kClear);
             ImGui_ImplGlfw_NewFrame();
+            {   // display scaling (Windows / Linux): follow the scale factor of the monitor the window is on. macOS scales by itself;
+                // there DECT2_UISCALE (dev) still sets it, to see how a Windows laptop at 125 or 150 % lays out
+                float s = 1;
 #ifndef __APPLE__
-            {   // display scaling (Windows / Linux): follow the scale factor of the monitor the window is on
                 float xs = 1, ys = 1;
                 glfwGetWindowContentScale(window, &xs, &ys);
-                float s = std::max(1.f, std::max(xs, ys));
+                s = std::max(1.f, std::max(xs, ys));
+#endif
                 if (const char* e = getenv("DECT2_UISCALE")) s = std::max(0.5f, (float)atof(e));
                 if (s != gUi) {
                     gUi = s;
@@ -418,7 +501,6 @@ int main(int argc, char** argv) {
                     plt::GetStyle().Scale = s;
                 }
             }
-#endif
             ImGui::NewFrame();
             if (autostart) {
                 autostart = false;
@@ -447,6 +529,7 @@ int main(int argc, char** argv) {
             const double tUi0 = glfwGetTime();
             drawUI(app, io.DisplaySize);
             ImGui::Render();
+            if (app.lightUi) lightenDrawData(ImGui::GetDrawData());
             static const bool perf = getenv("DECT2_FPS") != nullptr;   // frame statistics on stderr: DECT2_FPS=1
             static double pAcc = 0, pMax = 0, pT0 = glfwGetTime(); static int pN = 0;
             if (perf) {

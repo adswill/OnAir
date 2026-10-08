@@ -370,6 +370,9 @@ ModeTuning atvTuning() {
     t.minMhz = 45; t.maxMhz = 870; t.defMhz = 600.0;
     t.sampleRate = 10000000.0; t.basebandHz = 9000000.0; t.bandwidthMhz = 8;
     t.minSampleRate = 8000000.0;
+    // in system B/G the sound carrier (+2.75 MHz) is the mirror image of the vision carrier (-2.75 MHz) around the channel centre: the pair is
+    // not circular, the blind IQ estimate reads it as an imbalance and its correction put the vision carrier's image on the sound (S/N 53 -> 40 dB)
+    t.notCircular = true;
     return t;
 }
 

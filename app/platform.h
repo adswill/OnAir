@@ -33,10 +33,13 @@ struct Prefs {
 Prefs& prefs();
 
 // Pictures and position (the ADS-B map).
-// Decode a PNG or JPEG file into RGBA8 (0xAABBGGRR, row by row). False when the file cannot be read or the system has no decoder.
+// Decode a picture file into RGBA8 (0xAABBGGRR, row by row): PNG everywhere, on macOS also what the system reads. False when it cannot be read.
 bool decodeImage(const std::string& path, int& w, int& h, std::vector<uint32_t>& rgba);
-// A folder for downloaded files (map tiles), created on demand.
+// A folder for downloaded files (map tiles), created on demand. UTF-8.
 std::string cacheDir();
+// Downloads url into file (UTF-8 path) with the curl program, which Windows 10 and later, macOS and nearly every Linux have (no TLS library
+// is linked). On Windows it runs without a console window. Gives up after about 15 s. False when the download did not work.
+bool fetchUrl(const std::string& url, const std::string& file, const std::string& userAgent);
 // The position from the system's location service (on macOS this is Wi-Fi positioning and needs the user's permission).
 // locateStart() begins a request; locateState() says how it went: 0 nothing asked, 1 working, 2 done (lat, lon, accuracy in metres), 3 failed (msg says why).
 void locateStart();

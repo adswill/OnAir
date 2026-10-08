@@ -1,7 +1,10 @@
 // Linux and Windows services. Linux: dialogs through zenity/kdialog, settings in ~/.config/onair/settings.conf.
 // Windows: the standard Open/Save dialogs, settings in %APPDATA%\\OnAir\\settings.conf.
 #include "platform.h"
+#include "dect2/png.h"
 #include <cstdio>
+#include <filesystem>
+#include <iterator>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
@@ -24,9 +27,61 @@
 
 namespace plat {
 
-// no picture decoder and no location service on these systems (yet): the map falls back to the plain radar and the position is typed in
-bool decodeImage(const std::string&, int&, int&, std::vector<uint32_t>&) { return false; }
-std::string cacheDir() { const char* h = getenv("HOME"); std::string d = std::string(h ? h : "/tmp") + "/.cache/onair"; std::string c = "mkdir -p '" + d + "'"; if (system(c.c_str()) != 0) return "/tmp"; return d; }
+#ifdef _WIN32
+namespace { std::string utf8(const std::wstring& w); std::wstring wide(const std::string& s); }
+#endif
+
+bool fetchUrl(const std::string& url, const std::string& file, const std::string& userAgent) {
+#ifdef _WIN32
+    // curl.exe from System32 (not one that happens to be first on the PATH), started directly: a console window would flash up for every tile
+    wchar_t sys[MAX_PATH + 1] = {0};
+    std::wstring exe = GetSystemDirectoryW(sys, MAX_PATH) ? std::wstring(sys) + L"\\curl.exe" : std::wstring(L"curl.exe");
+    if (GetFileAttributesW(exe.c_str()) == INVALID_FILE_ATTRIBUTES) exe = L"curl.exe";   // Windows before 10 1803: a curl the user installed
+    std::wstring cmd = L"\"" + exe + L"\" -fsSL --max-time 12 -A \"" + wide(userAgent) + L"\" -o \"" + wide(file) + L"\" \"" + wide(url) + L"\"";
+    STARTUPINFOW si{};
+    si.cb = sizeof si;
+    PROCESS_INFORMATION pi{};
+    if (!CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) return false;
+    if (WaitForSingleObject(pi.hProcess, 15000) != WAIT_OBJECT_0) TerminateProcess(pi.hProcess, 1);
+    DWORD rc = 1;
+    GetExitCodeProcess(pi.hProcess, &rc);
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    return rc == 0;
+#else
+    auto q = [](const std::string& s) { std::string o = "'"; for (char c : s) { if (c == '\'') o += "'\\''"; else o += c; } return o + "'"; };
+    const std::string cmd = "curl -fsSL --max-time 12 -A " + q(userAgent) + " -o " + q(file) + " " + q(url) + " 2>/dev/null";
+    return system(cmd.c_str()) == 0;
+#endif
+}
+
+// the map tiles are PNG: OnAir's own decoder (these systems have none it could call without an extra library)
+bool decodeImage(const std::string& path, int& w, int& h, std::vector<uint32_t>& rgba) {
+    std::ifstream f(std::filesystem::path(reinterpret_cast<const char8_t*>(path.c_str())), std::ios::binary);
+    if (!f) return false;
+    const std::vector<uint8_t> data((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    std::vector<uint8_t> px;
+    if (!dect2::decodePng(data.data(), data.size(), w, h, px) || w > 4096 || h > 4096) return false;
+    rgba.resize((size_t)w * h);
+    memcpy(rgba.data(), px.data(), px.size());   // bytes R, G, B, A in memory, as on macOS
+    return true;
+}
+
+// Windows: %LOCALAPPDATA%\OnAir\cache; Linux: $XDG_CACHE_HOME/onair or ~/.cache/onair. Paths are UTF-8.
+std::string cacheDir() {
+    std::string d;
+#ifdef _WIN32
+    if (const wchar_t* la = _wgetenv(L"LOCALAPPDATA")) d = utf8(la) + "\\OnAir\\cache";
+    else { wchar_t t[MAX_PATH + 1]; const DWORD n = GetTempPathW(MAX_PATH, t); d = utf8(std::wstring(t, n)) + "OnAir"; }
+#else
+    const char* x = getenv("XDG_CACHE_HOME");
+    const char* h = getenv("HOME");
+    d = x && *x ? std::string(x) + "/onair" : std::string(h ? h : "/tmp") + "/.cache/onair";
+#endif
+    std::error_code ec;
+    std::filesystem::create_directories(std::filesystem::path(reinterpret_cast<const char8_t*>(d.c_str())), ec);
+    return d;
+}
 void locateStart() {}
 int locateState(double&, double&, double&, std::string& msg) { msg = "this system has no location service in OnAir yet: enter the position by hand"; return 3; }
 
@@ -48,9 +103,9 @@ std::wstring wide(const std::string& s) {
     return r;
 }
 
-std::string configDir() {
-    const char* a = getenv("APPDATA");
-    return std::string(a ? a : ".") + "/OnAir";
+std::string configDir() {   // UTF-8, like every path here: getenv() would give the ANSI code page and lose a user name such as "Jūratė"
+    const wchar_t* a = _wgetenv(L"APPDATA");
+    return (a && *a ? utf8(a) : std::string(".")) + "/OnAir";
 }
 
 void makeDirs(const std::string& path) {
@@ -113,6 +168,8 @@ void makeDirs(const std::string& path) {
 bool replaceFile(const std::string& from, const std::string& to) { return rename(from.c_str(), to.c_str()) == 0; }
 #endif
 
+std::filesystem::path fsPath(const std::string& p) { return std::filesystem::path(reinterpret_cast<const char8_t*>(p.c_str())); }   // a UTF-8 path
+
 std::string clean(const std::string& s) { std::string r = s; for (char& c : r) if (c == '\n' || c == '\r' || c == '|') c = ' '; return r; }
 
 struct FilePrefs : Prefs {
@@ -122,7 +179,7 @@ struct FilePrefs : Prefs {
     bool dirty = false;
     FilePrefs() {
         path = configDir() + "/settings.conf";
-        std::ifstream f(path);
+        std::ifstream f(fsPath(path));
         std::string line;
         while (std::getline(f, line)) {
             const size_t eq = line.find('=');
@@ -159,7 +216,7 @@ struct FilePrefs : Prefs {
         makeDirs(configDir());
         const std::string tmp = path + ".tmp";
         {
-            std::ofstream f(tmp);
+            std::ofstream f(fsPath(tmp));
             if (!f) return;
             for (auto& e : kv) f << e.first << "=" << e.second << "\n";
             for (auto& c : channels) f << "channel=" << c.freqMhz << "|" << c.bwMhz << "|" << clean(c.name) << "|" << clean(c.mode) << "|" << c.snrDb << "|" << c.nServices << "|" << (c.favourite ? 1 : 0) << "\n";

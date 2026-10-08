@@ -1,0 +1,75 @@
+diff --git a/src/Logger.cpp b/src/Logger.cpp
+index 4fd22bc..ad0f0f0 100644
+--- a/src/Logger.cpp
++++ b/src/Logger.cpp
+@@ -28,6 +28,9 @@ static const char *errToStr(const int errnum)
+     #ifdef _MSC_VER
+     FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, errnum, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&buff, sizeof(buff), NULL);
+     return buff;
++    #elif defined(__MINGW32__)
++    strerror_s(buff, sizeof(buff), errnum);   // MinGW has no strerror_r
++    return buff;
+     #else
+     //http://linux.die.net/man/3/strerror_r
+     #if !(defined(__GLIBC__) && defined(__GNU_SOURCE))
+diff --git a/src/limeRFE/limeRFE_constants.h b/src/limeRFE/limeRFE_constants.h
+index c3be110..ab2b16b 100644
+--- a/src/limeRFE/limeRFE_constants.h
++++ b/src/limeRFE/limeRFE_constants.h
+@@ -9,7 +9,7 @@ using namespace std;
+ #include <string.h>
+ #include <math.h>
+ 
+-#ifdef _MSC_VER
++#if defined(_MSC_VER) || defined(__MINGW32__)
+ #include <tchar.h>
+ 
+ #define O_NOCTTY 0
+diff --git a/src/lms7002m/LMS7002M.cpp b/src/lms7002m/LMS7002M.cpp
+index 54cd1fa..7fb891b 100644
+--- a/src/lms7002m/LMS7002M.cpp
++++ b/src/lms7002m/LMS7002M.cpp
+@@ -73,14 +73,14 @@ void LMS7002M::Log(const char* text, LogType type)
+     }
+ }
+ 
+-//Compatibility for vasprintf under MSVC
+-#ifdef _MSC_VER
++//Compatibility for vasprintf under MSVC and MinGW
++#if defined(_MSC_VER) || defined(__MINGW32__)
+ int vasprintf(char **strp, const char *fmt, va_list ap)
+ {
+     int r = _vscprintf(fmt, ap);
+     if (r < 0) return r;
+     *strp = (char *)malloc(r+1);
+-    return vsprintf_s(*strp, r+1, fmt, ap);
++    return vsnprintf(*strp, r+1, fmt, ap);
+ }
+ #endif
+ 
+diff --git a/src/threadHelper/threadHelper.cpp b/src/threadHelper/threadHelper.cpp
+index 0c2adcf..b85ce81 100644
+--- a/src/threadHelper/threadHelper.cpp
++++ b/src/threadHelper/threadHelper.cpp
+@@ -4,6 +4,9 @@
+ #include <pthread.h>
+ #else
+ #include <windows.h>
++#ifdef __MINGW32__
++#include <pthread.h>   // std::thread's native handle is a pthread_t here, not a Windows HANDLE
++#endif
+ #endif
+ #include "Logger.h"
+ 
+@@ -133,7 +136,11 @@ int lime::SetOSThreadPriority(ThreadPriority priority, ThreadPolicy /*policy*/,
+         break;
+     }
+ 
++#ifdef __MINGW32__
++    if (!SetThreadPriority((HANDLE)pthread_gethandle(thread->native_handle()), win_priority))
++#else
+     if (!SetThreadPriority(thread->native_handle(), win_priority))
++#endif
+     {
+         lime::debug("SetThreadPriority: Failed to set priority(%d)", win_priority);
+         return -1;

@@ -3,6 +3,7 @@
 #include "netcompat.h"
 
 #include <chrono>
+#include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <algorithm>
@@ -17,6 +18,21 @@
 namespace dect2 {
 
 using Clock = std::chrono::steady_clock;
+
+namespace {
+// The recording file: the path is UTF-8 (from the file dialog); on Windows fopen() would read it in the ANSI code page.
+FILE* openForWriting(const std::string& path) {
+#ifdef _WIN32
+    const int n = MultiByteToWideChar(CP_UTF8, 0, path.c_str(), -1, nullptr, 0);
+    if (n <= 0) return nullptr;
+    std::wstring w((size_t)n, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, path.c_str(), -1, &w[0], n);
+    return _wfopen(w.c_str(), L"wb");
+#else
+    return fopen(path.c_str(), "wb");
+#endif
+}
+}
 
 struct OutputManager::Impl {
     mutable std::mutex mu;
@@ -87,9 +103,10 @@ void OutputManager::configure(const OutputConfig& c) {
     I.cfg = c;
     I.st.error.clear();
     if (I.file && (!c.file || c.path != old.path)) { fclose(I.file); I.file = nullptr; I.st.fileOpen = false; }
+    if (c.file && !I.file && c.path.empty()) I.st.error = "choose a file to record to first";
     if (c.file && !I.file && !c.path.empty()) {
-        I.file = fopen(c.path.c_str(), "wb");
-        if (!I.file) I.st.error = "cannot open " + c.path;
+        I.file = openForWriting(c.path);
+        if (!I.file) I.st.error = "cannot write " + c.path + ": " + strerror(errno);
         else { I.st.fileOpen = true; I.st.fileBytes = I.st.filePackets = 0; }
     }
     if (I.sock != kBadSock && (!c.udp || c.host != old.host || c.port != old.port)) { sockClose(I.sock); I.sock = kBadSock; I.st.udpOpen = false; I.queue.clear(); }

@@ -201,11 +201,13 @@ struct App {
     bool dabMode = false;     // DAB / DAB+ (family 2)
     bool fmMode = false;      // FM radio (family 5)
     bool newUi = true;        // the new interface (ui2.cpp) instead of the classic one (View > Classic interface)
-    struct FamGain { int lna = 32, vga = 20; bool amp = true, known = false; } famGain[16];   // the radio gains remembered for each mode
-    double famFreq[16] = {};  // the frequency each of the modes added after FM was last tuned to (0 = never)
+    struct FamGain { int lna = 32, vga = 20; bool amp = true, known = false; } famGain[24];   // the radio gains remembered for each mode
+    bool famBias[24] = {};    // antenna power per mode while the app runs (never saved: it starts off)
+    double famFreq[24] = {};  // the frequency each of the modes added after FM was last tuned to (0 = never)
     int uiVariant = 0;        // layout of the new interface: 0 sidebar (the default), 1 scope, 2 tiles, 3 faceplate, 4-6 scope children, 7 panel
     int uiTheme = 1;          // its palette: 0 terminal, 1 instrument, 2 mono
-    int family = 0;           // 0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T, 5 FM, 6 DVB-S/S2, 7 DTMB, 8 analog TV, 9 DMR, 10 DRM, 11 ADS-B, 12 GNSS (6 and up: see ModeUi; engine standard code = family + 2)
+    bool lightUi = false;     // View > Light: every colour drawn with its lightness turned over (dark on white), hues kept (main.cpp)
+    int family = 0;           // 0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T, 5 FM, 6 DVB-S/S2, 7 DTMB, 8 analog TV, 9 DMR, 10 DRM, 11 ADS-B, 12 GNSS, 13 radiosonde, 14 AIS, 15 marine, 16 ACARS, 17 Inmarsat-C, 18 Inmarsat Aero, 19 Iridium, 20 mesh (6 and up: see ModeUi; engine standard code = family + 2)
     std::deque<float> dabSnrH, dabFicH;
     std::deque<float> fmSnrH, fmPilotH, fmRdsH;
     int fmDeemph = 50;        // FM de-emphasis in microseconds: 50 (Europe, Middle East, most of the world) or 75 (Americas, South Korea)
@@ -233,6 +235,11 @@ struct App {
     ImFont* mono = nullptr;
     ImFont* ui = nullptr;
     std::string hackrfErr;
+    bool hackrfErrHidden = false;       // the user dismissed the listing error; a new listing shows it again
+    std::string startErr, startErrKey;  // last failed start/retune of the radio (from the engine log); key = the log line it came from, so a dismissed one stays away
+    std::vector<std::string> usbHints;  // why a plugged-in radio is not listed (Linux), refreshed with the radio list
+    double diagCopiedAt = -10, diagPollAt = -10;
+    bool diagWasRunning = false;
     RxTelemetry rx;
     uint64_t rxSeq = 0;
     TsSnapshot ts;
@@ -266,6 +273,8 @@ struct App {
     bool scanWas = false;
     double scanHarvestT = 0;
     bool agcOn = false;
+    std::string gainDev;   // the radio a.tune.gainDb was set for (board:serial); another radio starts at its own sensible gain
+    std::string radioKey;  // the radio a.tune.radio (its own settings, DeviceInfo::settings) was loaded for (radioKeyOf); "" = none
     AutoGain agc;
     GainSweep sweep;
     bool sweepRetune = false;
@@ -369,12 +378,24 @@ struct App {
 // ------------------------------------------------------------------ the panels and helpers (defined in the .cpp files)
 // widgets.cpp
 bool tabItem(const char* name, Ic icon);
+extern bool gTightTabs;   // the tabs of mainTabs() get less padding (a narrow pane)
 void toggleFullscreen();
 bool pillButton(const char* label, bool selected, float padX = 11);
 int subNav(const char* id, int& cur, std::initializer_list<const char*> names);
 float tagAt(ImDrawList* dl, ImVec2 pos, const char* text, ImU32 bg, ImU32 fg = IM_COL32(225, 232, 240, 255));
 void gaugePill(float width, float frac, ImU32 fill, const char* text);
 void lamp(const char* label, int state /*0 grey 1 green 2 amber 3 red*/, int icon = -1);
+// rows that wrap in a narrow window: flowNext() between the groups of a row (a label and its control, a lamp, a read-out) instead of
+// ImGui::SameLine(); the next group stays on the line if it fits (as wide as in the last frame). flowBreak() ends the line, like NewLine().
+bool flowNext(float spacing = -1);   // true: on the same line
+void flowBreak();
+void flowEnd();   // after the last group of a row that ends without flowNext(): its width is measured too
+bool sameLineIf(float w, float spacing = -1);   // SameLine() when something w wide still fits after the last item; true if it did
+std::string ellipsize(std::string s, float w, float size = 0);   // s cut short with "..." to fit w (at this font size, default the current one)
+std::string fitCaption(const std::string& s, float w);           // a caption that fits w: without its "(...)" part, else cut short
+void captionFit(float w, const char* fmt, ...);
+void kvColumn(float col);   // after a key: SameLine() at the value column col, further left in a narrow pane (never over the key); wrap the value                  // TextDisabled() of such a caption, the whole of it on hover (above a plot w wide)
+struct StatusPanel { ImVec2 p; ImGuiID id; StatusPanel(); ~StatusPanel(); };   // the tinted panel behind a status bar, as tall as its (wrapped) lines
 void scatter(const char* id, const std::vector<cf32>& pts, ImVec2 size, double lim, ImVec4 col);
 void historyPlot(const char* id, const char* ylabel, const std::deque<float>& h, ImVec2 size);
 std::string fmtLocal(int64_t utc, const char* f);
@@ -386,16 +407,24 @@ void setFamily(App& a, int f);
 int engineStd(const App& a);
 void refreshDevices(App& a);
 void applyBandwidth(App& a);
+// The radio's own settings (DeviceInfo::settings, TuneSettings::radio), saved per radio: the key a radio is saved under, loading the
+// selected radio's values into a.tune.radio when another radio was chosen, saving them after a change
+std::string radioKeyOf(const DeviceInfo& d);
+void syncRadioSettings(App& a);
+void saveRadioSettings(const App& a);
 std::string openFileDialog();
 std::string saveFileDialog(const char* name);
 void loadPrefs(App& a);
 void savePrefs(const App& a);
+int adcBitsFor(const DeviceInfo& d, double rateHz);
 void ingestSpectrum(App& a);
 void ingestRx(App& a);
 std::vector<double> xs(const App& a);
+double radioCenterMhz(const App& a);   // where the radio is tuned: the frequency plus the mode's tuneOffsetHz (a file source: the frequency as typed)
 void applyOutputs(App& a);
 std::string channelLabel(const SavedChannel& c);
 void harvestScan(App& a);
+void scanDbTick(App& a);   // scan_db_ui.cpp: asks to share a finished scan
 void tuneToChannel(App& a, const SavedChannel& c);
 void followBandwidth(App& a);
 // toolbar.cpp
@@ -409,7 +438,8 @@ extern float gSwitchWidth;
 struct ModeDef { int family; const char* name; int group; ImU32 col; const char* blurb; const char* tip; const char* sub; ImVec4 accent; };
 extern const ModeDef kModes[];
 extern const int kNumModes;
-extern const char* const kGroupNames[3];
+constexpr int kNumGroups = 6;   // TV, radio, aviation, maritime, satellite, utility
+extern const char* const kGroupNames[kNumGroups];
 // The screens of a mode added after FM (family 6 and up). Each mode has one in its app/<mode>_ui.cpp and modeui.cpp lists them; the shell calls whichever
 // entry is set where it would draw the DVB version. A null entry means: nothing of this kind for the mode (or the default noted).
 struct ModeMeter { const char* label; const char* fmt; double v, lo, hi; int level; };   // one bar of the meter bank; level 0 neutral, 1 good, 2 marginal, 3 bad
@@ -443,7 +473,7 @@ void mainTabs(App& a);          // the tab bar with the tabs that fit the curren
 void drawShell2(App& a, ImVec2 disp);   // ui2.cpp: the new interface
 void applyUiTheme(App& a);              // ui2.cpp: classic or new colours and shapes
 // plots.cpp
-void spectrumPlot(App& a, ImVec2 size);
+void spectrumPlot(App& a, ImVec2 size, bool noFreqAxis = false);
 void waterfallPlot(App& a, ImVec2 size);
 void histogramPlot(App& a, ImVec2 size);
 void constDensityPlot(App& a, ImVec2 sz);
@@ -470,6 +500,21 @@ void fecTab(App& a);
 void tsTab(App& a);
 void logPanel(App& a);
 void historyLogTab(App& a);
+// diag_ui.cpp: radio problems shown under the radio picker, and the diagnostics text
+struct RadioMsg { int kind; std::string text; };   // kind: 0 radio listing error, 1 failed start/retune, 2 frequency outside the radio's range, 3 USB hint
+std::string radioRangeWarning(const DeviceInfo& d, double freqMhz);   // empty when the frequency is fine or the range is unknown
+std::vector<RadioMsg> radioMessages(const App& a);                    // what is shown right now (dismissed ones left out)
+struct DiagInput {
+    std::string version, os, cpu, gpu;
+    std::vector<DeviceInfo> radios;
+    std::vector<std::string> messages, log;   // log: the whole engine log, filtered inside
+};
+std::string buildDiagnostics(const DiagInput& in);   // plain text, no ImGui
+std::string diagnosticsText(App& a);
+void radioMessagesUi(App& a, bool vertical);
+// radio_ui.cpp: the "Radio settings" of the selected radio (only the ones it has): a collapsible section in a side panel (vertical), a
+// button with a popup in a one-line bar. A change reaches a running radio at once (a retune, or a restart for one that takes effect at open)
+void radioSettingsUi(App& a, bool vertical);
 // tv.cpp
 void teletextTab(App& a);
 const EpgEvent* epgCurrent(const App& a, int sid, const EpgEvent** next = nullptr);

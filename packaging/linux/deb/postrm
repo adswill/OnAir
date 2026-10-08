@@ -1,0 +1,13 @@
+#!/bin/sh
+# dpkg removes the rules file with the package; a purge also removes the blacklist (a conffile, which dpkg keeps on a plain remove).
+case "$1" in
+    remove|purge)
+        if [ "$1" = purge ]; then
+            rm -f /etc/modprobe.d/onair-rtlsdr-blacklist.conf /lib/udev/rules.d/60-onair-sdr.rules /usr/lib/udev/rules.d/60-onair-sdr.rules
+        fi
+        if command -v udevadm >/dev/null 2>&1; then
+            udevadm control --reload-rules >/dev/null 2>&1 || true
+        fi
+        ;;
+esac
+exit 0

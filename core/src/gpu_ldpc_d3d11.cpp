@@ -19,6 +19,8 @@
 #include <d3dcompiler.h>
 #include <dxgi.h>
 #include <algorithm>
+#include <atomic>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <map>
@@ -208,6 +210,7 @@ template <class T> struct Com {
 
 constexpr int kChunkBlocks = 64;   // blocks per batch (keeps the message buffer at a size every GPU accepts)
 constexpr int kIterPerDispatch = 5;
+constexpr uint64_t kBudgetBytes = 640ull << 20;   // video memory that the batch buffers of all codes together may keep (a normal frame code needs ~125 MB)
 
 struct CBuf {
     uint32_t k, n, q, G;
@@ -229,8 +232,9 @@ struct GpuLdpc::Impl {
     Com<ID3D11Buffer> cbuf;
     std::string name = "none";
     size_t dedicatedMb = 0;   // of the chosen adapter
-    std::mutex mu;
-    bool ready = false;
+    std::mutex mu;                  // every use of the device context: the GPU is one resource, shared by every receiver of the program
+    std::atomic<bool> ready{false};   // cleared for good when the device is lost (read without the lock by available())
+    uint64_t tick = 0;                // for dropping the buffers of the code that was used longest ago
 
     struct Gpu {   // buffers for one code, sized for `cap` blocks
         bool ok = true;
@@ -240,6 +244,7 @@ struct GpuLdpc::Impl {
         Com<ID3D11Buffer> lStart, cGrp, cSh, mBase, cRank, lCount;
         Com<ID3D11ShaderResourceView> vLStart, vCGrp, vCSh, vMBase, vCRank, vLCount;
         int cap = 0;
+        uint64_t bytes = 0, used = 0;   // size of the buffers below (0: none), and when the code was last used
         Com<ID3D11Buffer> post, msg, llr, info, hard, active, infoStage, hardStage;
         Com<ID3D11UnorderedAccessView> uPost, uMsg, uInfo, uHard;
         Com<ID3D11ShaderResourceView> vLlr, vActive;
@@ -343,8 +348,38 @@ struct GpuLdpc::Impl {
         good = good && typedUav(s.info, s.uInfo, nb * 2, DXGI_FORMAT_R32_UINT) && staging(s.infoStage, nb * 8);
         good = good && typedUav(s.hard, s.uHard, nb * (UINT)n, DXGI_FORMAT_R32_UINT) && staging(s.hardStage, nb * (UINT)n * 4);
         good = good && typedSrv(s.active, s.vActive, nb, DXGI_FORMAT_R32_UINT);
-        if (good) s.cap = cnt; else s.cap = 0;
+        if (good) { s.cap = cnt; s.bytes = (uint64_t)nb * ((uint64_t)s.postPer + s.msgPer + 3 * (uint64_t)n + 4) * 4; }
+        else release(s);
         return good;
+    }
+
+    // The batch buffers of a code are large (about 125 MB for a normal frame). A scan meets every code rate of the band one after the other
+    // and the buffers of all of them used to stay: some GB of video memory, which a graphics card with little of it or shared memory
+    // cannot give, and a driver short of memory is no place to be. The small tables of a code stay.
+    void release(Gpu& s) {
+        s.uPost.reset(); s.uMsg.reset(); s.uInfo.reset(); s.uHard.reset(); s.vLlr.reset(); s.vActive.reset();
+        s.post.reset(); s.msg.reset(); s.llr.reset(); s.info.reset(); s.hard.reset(); s.active.reset(); s.infoStage.reset(); s.hardStage.reset();
+        s.cap = 0; s.bytes = 0;
+    }
+    // frees the buffers of the codes used longest ago (never `keep`) until what is left fits the budget
+    void trim(const Gpu* keep, uint64_t budget) {
+        for (;;) {
+            uint64_t total = 0;
+            Gpu* oldest = nullptr;
+            for (auto& kv : codes) {
+                Gpu& g = kv.second;
+                total += g.bytes;
+                if (&g != keep && g.bytes && (!oldest || g.used < oldest->used)) oldest = &g;
+            }
+            if (total <= budget || !oldest) return;
+            release(*oldest);
+        }
+    }
+    // After a failed call: a device that was removed or reset (driver update, timeout of a long dispatch, GPU switched off) never works again.
+    // Better the CPU decoder from then on than a decoder that fails on every frame.
+    void checkLost(const char* where) {
+        const HRESULT r = dev ? dev->GetDeviceRemovedReason() : S_OK;
+        if (r != S_OK && ready.exchange(false)) fprintf(stderr, "GpuLdpc: the device was lost (%s, 0x%08lx), using the CPU decoder from now on\n", where, (unsigned long)r);
     }
 
     void bind(Gpu& s, ID3D11ComputeShader* cs) {
@@ -483,7 +518,12 @@ bool GpuLdpc::decode(const LdpcCode& code, const float* llr, int nb, int maxIter
 
     for (int b0 = 0; b0 < nb; b0 += kChunkBlocks) {
         const int cnt = std::min(kChunkBlocks, nb - b0);
-        if (!d.ensure(s, kChunkBlocks, n)) return false;
+        if (!d.ensure(s, kChunkBlocks, n)) {
+            d.trim(&s, 0);   // out of video memory: give back what the other codes hold and try once more
+            if (!d.ensure(s, kChunkBlocks, n)) { d.checkLost("buffers"); return false; }
+        }
+        s.used = ++d.tick;
+        d.trim(&s, kBudgetBytes);
         d.write(s.llr.p, llr + (size_t)b0 * n, (UINT)((size_t)cnt * n * 4));
         std::vector<int> infoHost((size_t)cnt * 2, 0);
         for (int i = 0; i < cnt; i++) infoHost[(size_t)i * 2 + 1] = 0;
@@ -509,7 +549,7 @@ bool GpuLdpc::decode(const LdpcCode& code, const float* llr, int nb, int maxIter
             d.unbind();
             d.ctx->CopyResource(s.infoStage.p, s.info.p);
             D3D11_MAPPED_SUBRESOURCE mp{};
-            if (FAILED(d.ctx->Map(s.infoStage.p, 0, D3D11_MAP_READ, 0, &mp))) return false;
+            if (FAILED(d.ctx->Map(s.infoStage.p, 0, D3D11_MAP_READ, 0, &mp))) { d.checkLost("dispatch"); return false; }
             const int* inf = (const int*)mp.pData;
             std::vector<uint32_t> next;
             for (uint32_t blk : act) {
@@ -532,7 +572,7 @@ bool GpuLdpc::decode(const LdpcCode& code, const float* llr, int nb, int maxIter
         d.unbind();
         d.ctx->CopyResource(s.hardStage.p, s.hard.p);
         D3D11_MAPPED_SUBRESOURCE mp{};
-        if (FAILED(d.ctx->Map(s.hardStage.p, 0, D3D11_MAP_READ, 0, &mp))) return false;
+        if (FAILED(d.ctx->Map(s.hardStage.p, 0, D3D11_MAP_READ, 0, &mp))) { d.checkLost("result"); return false; }
         const uint32_t* w = (const uint32_t*)mp.pData;
         for (int i = 0; i < cnt; i++) {
             const uint32_t* bw = w + (size_t)i * n;

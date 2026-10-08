@@ -17,6 +17,7 @@ bool draw(View& v, ImVec2 size);
 ImVec2 project(double lat, double lon);        // screen position
 bool clickedAt(ImVec2& p);                     // the map was clicked (not dragged); where
 bool tilesAvailable();                         // at least one tile is on screen
+void legend(float mapWidth, const char* fmt, ...);   // TextDisabled() along the bottom left of the map (the cursor put there): cut short before the credit
 void shutdown();                               // stop the downloader
 
 } // namespace adsbmap

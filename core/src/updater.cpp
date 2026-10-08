@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cwchar>
 #include <fstream>
 #include <map>
 #include <sstream>
@@ -19,11 +20,17 @@
 #include <shellapi.h>
 #include <process.h>
 #else
+#include <cerrno>
+#include <csignal>
 #include <fcntl.h>
+#include <poll.h>
+#include <spawn.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+extern char** environ;
 #endif
+#include <functional>
 #if defined(__APPLE__)
 #include <mach-o/dyld.h>
 #endif
@@ -329,7 +336,7 @@ const char* installKindName(InstallKind k) {
     case InstallKind::WindowsInstall: return "Windows installation";
     case InstallKind::LinuxPortable: return "portable Linux package";
     case InstallKind::LinuxDeb: return "Debian package";
-    default: return "development build";
+    default: return "portable or development copy";   // the Windows zip lands here too
     }
 }
 
@@ -417,6 +424,125 @@ void spawnDetached(const std::string& script, const std::vector<std::string>& ar
 #endif
 }
 
+// Runs curl with these arguments, its output in *out when asked for. No shell and, on Windows, no console window (OnAir has none, so cmd.exe or
+// a console program started through it would open one). tick() is called about every 100 ms; curl is stopped as soon as cancel is set, so that
+// closing OnAir never waits for a download. The exit code of curl; kCurlMissing when it could not be started, kCurlCancelled when stopped.
+constexpr int kCurlMissing = -2, kCurlCancelled = -1;
+int runCurl(const std::vector<std::string>& args, std::string* out, const std::atomic<bool>& cancel, const std::function<void()>& tick = {}) {
+#if defined(_WIN32)
+    auto wide = [](const std::string& a) {   // the paths come from the system in the ANSI code page
+        const int w = MultiByteToWideChar(CP_ACP, 0, a.c_str(), -1, nullptr, 0);
+        std::wstring ws((size_t)(w > 0 ? w : 1), L'\0');
+        if (w > 0) MultiByteToWideChar(CP_ACP, 0, a.c_str(), -1, &ws[0], w);
+        ws.resize(wcslen(ws.c_str()));
+        return ws;
+    };
+    auto quote = [](const std::wstring& a) {   // one argument, as CommandLineToArgvW reads it back
+        std::wstring o = L"\"";
+        size_t bs = 0;
+        for (wchar_t c : a) {
+            if (c == L'\\') { bs++; continue; }
+            if (c == L'"') { o.append(bs * 2 + 1, L'\\'); o += c; }
+            else { o.append(bs, L'\\'); o += c; }
+            bs = 0;
+        }
+        o.append(bs * 2, L'\\');
+        return o + L"\"";
+    };
+    // curl.exe from System32 (Windows 10 1803 and later), else one on the PATH
+    wchar_t sys[MAX_PATH + 1] = {0};
+    std::wstring exe = GetSystemDirectoryW(sys, MAX_PATH) ? std::wstring(sys) + L"\\curl.exe" : std::wstring();
+    if (exe.empty() || GetFileAttributesW(exe.c_str()) == INVALID_FILE_ATTRIBUTES) exe = L"curl.exe";
+    std::wstring cmd = quote(exe);
+    for (auto& a : args) cmd += L" " + quote(wide(a));
+    SECURITY_ATTRIBUTES sa{};
+    sa.nLength = sizeof sa;
+    sa.bInheritHandle = TRUE;
+    HANDLE rd = nullptr, wr = nullptr;
+    if (out && !CreatePipe(&rd, &wr, &sa, 1 << 20)) return kCurlMissing;
+    if (rd) SetHandleInformation(rd, HANDLE_FLAG_INHERIT, 0);
+    HANDLE nul = CreateFileW(L"NUL", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, &sa, OPEN_EXISTING, 0, nullptr);
+    STARTUPINFOW si{};
+    si.cb = sizeof si;
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdInput = nul;
+    si.hStdOutput = wr ? wr : nul;
+    si.hStdError = nul;
+    PROCESS_INFORMATION pi{};
+    std::vector<wchar_t> line(cmd.begin(), cmd.end());
+    line.push_back(0);
+    const BOOL started = CreateProcessW(exe.find(L'\\') != std::wstring::npos ? exe.c_str() : nullptr, line.data(), nullptr, nullptr, TRUE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi);
+    if (wr) CloseHandle(wr);
+    if (nul != INVALID_HANDLE_VALUE) CloseHandle(nul);
+    if (!started) { if (rd) CloseHandle(rd); return kCurlMissing; }
+    char b[16384];
+    for (;;) {
+        if (rd) { DWORD avail = 0, n = 0; while (PeekNamedPipe(rd, nullptr, 0, nullptr, &avail, nullptr) && avail && ReadFile(rd, b, (DWORD)std::min<size_t>(avail, sizeof b), &n, nullptr) && n) out->append(b, n); }
+        if (cancel) TerminateProcess(pi.hProcess, 1);
+        if (WaitForSingleObject(pi.hProcess, 100) == WAIT_OBJECT_0) break;
+        if (tick) tick();
+    }
+    if (rd) { DWORD n = 0; while (ReadFile(rd, b, sizeof b, &n, nullptr) && n) out->append(b, n); CloseHandle(rd); }
+    DWORD code = 1;
+    GetExitCodeProcess(pi.hProcess, &code);
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    return cancel ? kCurlCancelled : (int)code;
+#else
+    int fd[2] = {-1, -1};
+    if (out && pipe(fd) != 0) return kCurlMissing;
+    std::vector<char*> av;
+    av.push_back((char*)"curl");
+    for (auto& a : args) av.push_back((char*)a.c_str());
+    av.push_back(nullptr);
+    posix_spawn_file_actions_t fa;
+    posix_spawn_file_actions_init(&fa);
+    posix_spawn_file_actions_addopen(&fa, 0, "/dev/null", O_RDONLY, 0);
+    if (out) { posix_spawn_file_actions_adddup2(&fa, fd[1], 1); posix_spawn_file_actions_addclose(&fa, fd[0]); posix_spawn_file_actions_addclose(&fa, fd[1]); }
+    else posix_spawn_file_actions_addopen(&fa, 1, "/dev/null", O_WRONLY, 0);
+    posix_spawn_file_actions_addopen(&fa, 2, "/dev/null", O_WRONLY, 0);
+    pid_t pid = -1;
+    const int e = posix_spawnp(&pid, "curl", &fa, nullptr, av.data(), environ);
+    posix_spawn_file_actions_destroy(&fa);
+    if (out) close(fd[1]);
+    if (e != 0) { if (out) close(fd[0]); return kCurlMissing; }
+    int status = 0;
+    bool eof = !out;
+    char b[16384];
+    for (;;) {
+        if (!eof) {
+            pollfd p{fd[0], POLLIN, 0};
+            if (poll(&p, 1, 100) > 0) {
+                const ssize_t n = read(fd[0], b, sizeof b);
+                if (n > 0) out->append(b, (size_t)n);
+                else if (n == 0 || errno != EINTR) eof = true;
+            }
+        } else std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        if (cancel) kill(pid, SIGTERM);
+        const pid_t w = waitpid(pid, &status, WNOHANG);
+        if (w == pid || (w < 0 && errno != EINTR)) break;
+        if (tick) tick();
+    }
+    if (out) { ssize_t n; while ((n = read(fd[0], b, sizeof b)) > 0) out->append(b, (size_t)n); close(fd[0]); }
+    if (cancel) return kCurlCancelled;
+    if (!WIFEXITED(status) || WEXITSTATUS(status) == 127) return kCurlMissing;   // 127: the child could not run curl
+    return WEXITSTATUS(status);
+#endif
+}
+
+// Why curl failed, in words.
+std::string curlError(int rc, const char* what) {
+    if (rc == kCurlMissing)
+#if defined(_WIN32)
+        return std::string("curl.exe was not found (Windows 10 version 1803 and later have it): ") + what + " needs it";
+#else
+        return std::string("the curl program was not found: ") + what + " needs it (install curl)";
+#endif
+    if (rc == 6 || rc == 7 || rc == 28 || rc == 35 || rc == 56) return std::string("could not reach GitHub (") + (rc == 28 ? "it timed out;" : "is the network up?") + " curl error " + std::to_string(rc) + ")";
+    if (rc == 22) return std::string(what) + ": GitHub answered with an error (it limits how often it may be asked: try again later)";
+    return std::string(what) + " failed (curl error " + std::to_string(rc) + ")";
+}
+
 std::string tempRoot() {
 #if defined(_WIN32)
     const char* t = getenv("TEMP");
@@ -437,6 +563,93 @@ int pidNow() {
 
 double nowSeconds() { return (double)std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count(); }
 }
+
+
+// ---------------------------------------------------------------- the Windows helper script and its result
+
+namespace {
+// A value for `set "NAME=value"` in a batch file: no quotes or line breaks, % doubled, slashes as Windows writes them.
+std::string batchValue(const std::string& v, bool path) {
+    std::string o;
+    for (char c : v) {
+        if (c == '"' || c == '\r' || c == '\n') continue;
+        if (c == '%') o += "%%";
+        else if (path && c == '/') o += '\\';
+        else o += c;
+    }
+    return o;
+}
+std::string trim(const std::string& s) {
+    size_t a = 0, b = s.size();
+    while (a < b && isspace((unsigned char)s[a])) a++;
+    while (b > a && isspace((unsigned char)s[b - 1])) b--;
+    return s.substr(a, b - a);
+}
+}
+
+std::string windowsApplyScript(int pid, const std::string& setupExe, const std::string& installedExe, const std::string& resultFile, const std::string& version, bool restart) {
+    std::ostringstream o;
+    o << "@echo off\r\n"
+      << "chcp 65001 >nul\r\n"          // the values below are UTF-8
+      << "setlocal\r\n"
+      << "set \"PID=" << pid << "\"\r\n"
+      << "set \"SETUP=" << batchValue(setupExe, true) << "\"\r\n"
+      << "set \"EXE=" << batchValue(installedExe, true) << "\"\r\n"
+      << "set \"RESULT=" << batchValue(resultFile, true) << "\"\r\n"
+      << "set \"VER=" << batchValue(version, false) << "\"\r\n"
+      << "set \"RESTART=" << (restart ? 1 : 0) << "\"\r\n"
+      // up to two minutes for OnAir to end: the setup program cannot replace files that are in use
+      << "set /a N=0\r\n"
+      << ":wait\r\n"
+      << "tasklist /FI \"PID eq %PID%\" 2>nul | find \"%PID%\" >nul\r\n"
+      << "if errorlevel 1 goto run\r\n"
+      << "set /a N+=1\r\n"
+      << "if %N% GEQ 120 goto run\r\n"
+      << "ping -n 2 127.0.0.1 >nul\r\n"
+      << "goto wait\r\n"
+      << ":run\r\n"
+      << "set \"CODE=-2\"\r\n"
+      << "if not exist \"%SETUP%\" goto record\r\n"
+      << "start \"\" /wait \"%SETUP%\" /S\r\n"   // start /wait: the setup program is a window program, cmd would not wait for it otherwise
+      << "set \"CODE=%ERRORLEVEL%\"\r\n"
+      << ":record\r\n"
+      << ">\"%RESULT%\" echo version=%VER%\r\n"
+      << ">>\"%RESULT%\" echo setup_exit=%CODE%\r\n"
+      << ">>\"%RESULT%\" echo time=%DATE% %TIME%\r\n"
+      // through explorer.exe the program starts with the rights of the user, not with the administrator's
+      << "if not \"%RESTART%\"==\"1\" goto done\r\n"
+      << "start \"\" explorer.exe \"%EXE%\"\r\n"
+      << ":done\r\n"
+      << "endlocal\r\n";
+    return o.str();
+}
+
+std::string windowsApplyParams(const std::string& scriptPath) {
+    std::string p;
+    for (char c : scriptPath) if (c != '"') p += c == '/' ? '\\' : c;
+    return "/C \"\"" + p + "\"\"";   // cmd removes the outer pair of quotes
+}
+
+UpdateResult parseUpdateResult(const std::string& text) {
+    UpdateResult r;
+    bool haveExit = false;
+    std::istringstream in(text);
+    std::string line;
+    while (std::getline(in, line)) {
+        if (!line.empty() && (unsigned char)line[0] == 0xEF && line.size() >= 3) line.erase(0, 3);   // a byte order mark
+        const size_t eq = line.find('=');
+        if (eq == std::string::npos) continue;
+        const std::string k = trim(line.substr(0, eq)), v = trim(line.substr(eq + 1));
+        if (k == "version") r.version = v;
+        else if (k == "setup_exit") { char* end = nullptr; const long x = strtol(v.c_str(), &end, 10); if (end != v.c_str()) { r.setupExit = (int)x; haveExit = true; } }
+        else if (k == "time") r.time = v;
+    }
+    r.found = !r.version.empty() && haveExit;
+    r.ok = r.found && r.setupExit == 0;
+    return r;
+}
+
+std::string updateResultPath() { const std::string t = tempRoot(); return t + (t.back() == '/' || t.back() == '\\' ? "" : "/") + "onair-update-result.txt"; }
 
 // ---------------------------------------------------------------- the updater
 
@@ -466,6 +679,20 @@ void Updater::setPhase(Phase p, const std::string& err) {
 
 void Updater::cancel() { cancel_ = true; }
 
+void Updater::loadResult() {
+    const std::string path = updateResultPath();
+    std::ifstream f(path, std::ios::binary);
+    if (!f) return;
+    const std::string text((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    f.close();
+    std::remove(path.c_str());   // shown once
+    const UpdateResult r = parseUpdateResult(text);
+    std::lock_guard<std::mutex> lk(mu_);
+    st_.lastResult = r;
+}
+
+void Updater::dismissResult() { std::lock_guard<std::mutex> lk(mu_); st_.lastResult = UpdateResult(); }
+
 void Updater::check(bool pre) {
     {
         std::lock_guard<std::mutex> lk(mu_);
@@ -478,11 +705,10 @@ void Updater::check(bool pre) {
 }
 
 void Updater::runCheck(bool pre) {
-    int rc = 0;
-    const std::string cmd = "curl -fsSL --max-time 20 -H " + shq("Accept: application/vnd.github+json") + " -H " + shq("User-Agent: OnAir/" + current_) + " " + shq(api_);
-    const std::string body = runCapture(cmd, &rc);
+    std::string body;
+    const int rc = runCurl({"-fsSL", "--max-time", "20", "-H", "Accept: application/vnd.github+json", "-H", "User-Agent: OnAir/" + current_, api_}, &body, cancel_);
     if (cancel_) return;
-    if (rc != 0 || body.empty()) { setPhase(Phase::Failed, rc == 0 ? "no answer from GitHub" : "could not reach GitHub (is curl installed and the network up?)"); return; }
+    if (rc != 0 || body.empty()) { setPhase(Phase::Failed, rc == 0 ? "no answer from GitHub" : curlError(rc, "the update check")); return; }
     std::string err;
     ReleaseInfo r = pickRelease(body, current_, pre, kind_, thisArch(), &err);
     std::lock_guard<std::mutex> lk(mu_);
@@ -513,24 +739,26 @@ void Updater::runDownload() {
     if (r.sha256.size() != 64 && api_.compare(0, 7, "file://") != 0) { setPhase(Phase::Failed, "GitHub lists no checksum for the package: not installing it"); return; }
     const std::string dir = workDir();
 #if defined(_WIN32)
-    runCommand("mkdir \"" + dir + "\" 2>nul");
+    CreateDirectoryA(dir.c_str(), nullptr);   // not through cmd: that would open a console window
 #else
     runCommand("mkdir -p " + shq(dir));
 #endif
     file_ = dir + "/" + r.assetName;
-    // curl runs in a helper thread while the size of the file is watched
-    std::atomic<bool> finished{false};
-    std::thread dl([&] { runCommand("curl -fsSL --retry 2 --max-time 1800 -o " + shq(file_) + " " + shq(r.assetUrl)); finished = true; });
-    while (!finished) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(150));
+    // the size of the file is watched while curl runs
+    const int rc = runCurl({"-fsSL", "--retry", "2", "--max-time", "1800", "-o", file_, r.assetUrl}, nullptr, cancel_, [&] {
         std::ifstream f(file_, std::ios::binary | std::ios::ate);
         const uint64_t sz = f ? (uint64_t)f.tellg() : 0;
         std::lock_guard<std::mutex> lk(mu_);
         st_.done = sz;
-    }
-    dl.join();
-    if (cancel_) { setPhase(Phase::Failed, "cancelled"); return; }
+    });
+    if (cancel_) { setPhase(Phase::Failed, "cancelled"); std::remove(file_.c_str()); return; }
+    if (rc != 0) { setPhase(Phase::Failed, curlError(rc, "the download")); std::remove(file_.c_str()); return; }
     std::string err;
+    {
+        std::ifstream f(file_, std::ios::binary | std::ios::ate);
+        const uint64_t sz = f ? (uint64_t)f.tellg() : 0;
+        if (r.size && sz != r.size) { setPhase(Phase::Failed, "the downloaded file has the wrong size (" + std::to_string(sz) + " of " + std::to_string(r.size) + " bytes): not installing it"); std::remove(file_.c_str()); return; }
+    }
     const std::string got = sha256File(file_, &err);
     if (got.empty()) { setPhase(Phase::Failed, err.empty() ? "the download is missing" : err); return; }
     if (r.sha256.size() == 64 && got != r.sha256) { setPhase(Phase::Failed, "the downloaded file does not match its checksum: not installing it"); std::remove(file_.c_str()); return; }
@@ -595,14 +823,57 @@ bool Updater::apply(bool restart, std::string* err) {
     const std::string pid = std::to_string(waitPid_ ? waitPid_ : pidNow());
 #if defined(_WIN32)
     if (kind_ == InstallKind::WindowsInstall) {
+        auto fail = [&](const std::string& why) { { std::lock_guard<std::mutex> lk(mu_); st_.applyError = why; } if (err) *err = why; return false; };
+        std::string version, sum;
+        { std::lock_guard<std::mutex> lk(mu_); version = st_.release.version; sum = st_.release.sha256; st_.applyError.clear(); }
+        // the file sits in a folder the user can write to and is about to run with administrator rights: look at it once more
+        if (sum.size() == 64 && sha256File(staged_) != sum) return fail("Update not installed: the downloaded file changed after it was checked");
+        const std::string result = updateResultPath();
+        std::remove(result.c_str());
         const std::string script = dir + "\\apply.cmd";
-        std::ofstream o(script);
-        o << "@echo off\r\n"
-          << ":wait\r\ntasklist /FI \"PID eq " << pid << "\" 2>nul | find \"" << pid << "\" >nul\r\nif not errorlevel 1 (timeout /t 1 /nobreak >nul & goto wait)\r\n"
-          << "powershell -NoProfile -Command \"Start-Process -FilePath '" << staged_ << "' -ArgumentList '/S' -Verb RunAs -Wait\"\r\n";
-        if (restart) o << "start \"\" \"" << exe_ << "\"\r\n";
-        o.close();
-        spawnDetached(script, {});
+        {
+            std::ofstream o(script, std::ios::binary);
+            // the paths come from the system in the ANSI code page; the script is UTF-8
+            auto utf8 = [](const std::string& a) {
+                if (a.empty()) return a;
+                const int w = MultiByteToWideChar(CP_ACP, 0, a.c_str(), (int)a.size(), nullptr, 0);
+                if (w <= 0) return a;
+                std::wstring ws((size_t)w, L'\0');
+                MultiByteToWideChar(CP_ACP, 0, a.c_str(), (int)a.size(), &ws[0], w);
+                const int n = WideCharToMultiByte(CP_UTF8, 0, ws.c_str(), w, nullptr, 0, nullptr, nullptr);
+                if (n <= 0) return a;
+                std::string u((size_t)n, '\0');
+                WideCharToMultiByte(CP_UTF8, 0, ws.c_str(), w, &u[0], n, nullptr, nullptr);
+                return u;
+            };
+            o << windowsApplyScript((int)std::stoi(pid), utf8(staged_), utf8(exe_), utf8(result), version, restart);
+            if (!o) return fail("Update not installed: the installer script could not be written to " + dir);
+        }
+        // Elevated from here, while the window of OnAir is still in front: the UAC question appears at once and in the foreground.
+        // The elevated script waits for this program to end, so it can be asked now.
+        auto wide = [](const std::string& a) {
+            const int w = MultiByteToWideChar(CP_ACP, 0, a.c_str(), -1, nullptr, 0);
+            std::wstring ws((size_t)(w > 0 ? w : 1), L'\0');
+            if (w > 0) MultiByteToWideChar(CP_ACP, 0, a.c_str(), -1, &ws[0], w);
+            ws.resize(wcslen(ws.c_str()));
+            return ws;
+        };
+        const std::wstring params = wide(windowsApplyParams(script)), folder = wide(dir);
+        SHELLEXECUTEINFOW sei{};
+        sei.cbSize = sizeof sei;
+        sei.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC;
+        sei.hwnd = GetActiveWindow();
+        sei.lpVerb = L"runas";
+        sei.lpFile = L"cmd.exe";
+        sei.lpParameters = params.c_str();
+        sei.lpDirectory = folder.c_str();
+        sei.nShow = SW_HIDE;
+        if (!ShellExecuteExW(&sei)) {
+            const DWORD e = GetLastError();
+            if (e == ERROR_CANCELLED) return fail("Update not installed: Windows did not allow the installer to run (administrator rights refused)");
+            return fail("Update not installed: Windows did not allow the installer to run (error " + std::to_string((unsigned long)e) + ")");
+        }
+        if (sei.hProcess) CloseHandle(sei.hProcess);
         return true;
     }
 #else
@@ -645,8 +916,17 @@ bool Updater::apply(bool restart, std::string* err) {
 
 void Updater::openReleasePage() const {
     std::string url;
-    { std::lock_guard<std::mutex> lk(mu_); url = st_.release.pageUrl; }
+    {
+        std::lock_guard<std::mutex> lk(mu_);
+        url = st_.release.pageUrl;
+        // after a failed installation the page of the version that did not install
+        if (url.empty() && st_.lastResult.found && !st_.lastResult.ok) url = "https://github.com/adswill/OnAir/releases/tag/v" + st_.lastResult.version;
+    }
     if (url.empty()) url = "https://github.com/adswill/OnAir/releases";
+    openUrl(url);
+}
+
+void openUrl(const std::string& url) {
 #if defined(_WIN32)
     ShellExecuteA(nullptr, "open", url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 #elif defined(__APPLE__)

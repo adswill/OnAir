@@ -3,6 +3,7 @@
 //   dect2cli --file path.cs8 --rate Msps [--format cs8|cu8|cf32] [--bw MHz] [--secs N]
 //   dect2cli --record out.cs8 --secs N   (HackRF only; raw IQ capture at the 2x native rate)
 #include "dect2/engine.h"
+#include "dect2/crash_report.h"
 #include "dect2/modes.h"
 #include "dect2/dvbt.h"
 #include "dect2/channel.h"
@@ -27,6 +28,7 @@ static const auto gT0 = std::chrono::steady_clock::now();
 static double secsSinceStart() { return std::chrono::duration<double>(std::chrono::steady_clock::now() - gT0).count(); }
 
 int main(int argc, char** argv) {
+    dect2::crash::install("crash-cli");   // a crash leaves crash-cli.txt next to the log
     if (!dect2::cpuSupportsBuild()) { fprintf(stderr, "this build needs a processor with AVX2 and FMA\n"); return 1; }
     Engine e;
     bool autoBw = false;

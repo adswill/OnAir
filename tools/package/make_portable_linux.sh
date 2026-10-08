@@ -26,9 +26,13 @@ for l in "$D"/lib/*.so*; do patchelf --set-rpath '$ORIGIN' "$l" 2>/dev/null || t
 mkdir -p "$D/share/applications" "$D/share/icons"
 cp $SRC/packaging/linux/onair.desktop "$D/share/applications/"; cp $SRC/packaging/icons/onair_1024.png "$D/share/icons/onair.png"
 cp $SRC/LICENSE "$D/LICENSE"
+# udev rules and the kernel-driver blacklist for the radios, with the script that installs them (the .deb installs them itself)
+mkdir -p "$D/udev"
+cp $SRC/packaging/linux/60-onair-sdr.rules $SRC/packaging/linux/onair-rtlsdr-blacklist.conf "$D/udev/"
+cp $SRC/packaging/linux/install-udev-rules.sh "$D/"; chmod 755 "$D/install-udev-rules.sh"
 cat > "$D/README.txt" <<'TXT'
 OnAir portable: run bin/onair. Nothing to install.
-For a HackRF without sudo, install the udev rules of your distribution's hackrf package (or run as root) and replug the radio.
+If a radio is not found, run sudo ./install-udev-rules.sh once (it lets a normal user open the radios and keeps the kernel's TV driver off RTL-SDR dongles), then replug the radio.
 Libraries OnAir needs from the system: the graphics driver (OpenGL), X11 or Wayland, and for sound ALSA, PulseAudio or PipeWire.
 TXT
 (cd "$(dirname "$D")" && tar czf "$OUT/$(basename "$D").tar.gz" "$(basename "$D")")

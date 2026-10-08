@@ -1,6 +1,7 @@
 // small reusable widgets: pill buttons, lamps, gauges, scatter and history plots, formatting helpers
 #include "app.h"
 
+bool gTightTabs = false;
 bool tabItem(const char* name, Ic icon) {
     ImGuiTabItemFlags fl = 0;
     if (!gForceTab.empty() && gForceTab == name) { fl = ImGuiTabItemFlags_SetSelected; gForceTab.clear(); }
@@ -8,7 +9,10 @@ bool tabItem(const char* name, Ic icon) {
     const float gap = pal::dev() ? 0.f : iconSize() + 5.f;
     const int nSp = (int)std::ceil(gap / ImGui::CalcTextSize(" ").x);
     const std::string label = std::string(nSp, ' ') + name + "###" + name;
+    // a narrow pane (gTightTabs, set by mainTabs() for its tab bar): less padding, so that every tab keeps its whole name in view
+    if (gTightTabs) ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(3 * gUi, ImGui::GetStyle().FramePadding.y));
     const bool open = ImGui::BeginTabItem(label.c_str(), nullptr, fl);
+    if (gTightTabs) ImGui::PopStyleVar();
     const ImVec2 r0 = ImGui::GetItemRectMin(), r1 = ImGui::GetItemRectMax();
     if (!pal::dev()) icons::draw(icon, ImVec2(r0.x + ImGui::GetStyle().FramePadding.x + iconSize() * 0.5f + 1.f, (r0.y + r1.y) * 0.5f), iconSize() * 0.92f,
                 open ? IM_COL32(255, 255, 255, 255) : IM_COL32(140, 154, 170, 255));
@@ -43,10 +47,116 @@ bool pillButton(const char* label, bool selected, float padX) {
 int subNav(const char* id, int& cur, std::initializer_list<const char*> names) {
     ImGui::PushID(id);
     int i = 0;
-    for (const char* n : names) { if (i) ImGui::SameLine(0, 6 * gUi); if (pillButton(n, cur == i)) cur = i; i++; }
+    for (const char* n : names) { if (i) sameLineIf(ImGui::CalcTextSize(n).x + 22, 6 * gUi); if (pillButton(n, cur == i)) cur = i; i++; }   // wraps in a narrow tab
     ImGui::PopID();
     ImGui::Spacing();
     return cur;
+}
+
+// Rows that wrap. The groups of a row are counted per window and frame; each one's width is kept in the window's storage for the next frame.
+namespace {
+struct FlowKeys { ImGuiID frame, n, x, y, same; };
+FlowKeys flowKeys() { return {ImGui::GetID("##flowF"), ImGui::GetID("##flowN"), ImGui::GetID("##flowX"), ImGui::GetID("##flowY"), ImGui::GetID("##flowS")}; }
+ImGuiID flowWidthKey(int k) { ImGui::PushID(k); const ImGuiID id = ImGui::GetID("##flowW"); ImGui::PopID(); return id; }
+// keeps the width of the group that has just ended; returns its number
+int flowMeasure(ImGuiStorage* st, const FlowKeys& k) {
+    const int frame = ImGui::GetFrameCount();
+    if (st->GetInt(k.frame, -1) != frame) { st->SetInt(k.frame, frame); st->SetInt(k.n, 0); st->SetFloat(k.y, -FLT_MAX); }
+    const ImVec2 i0 = ImGui::GetItemRectMin(), i1 = ImGui::GetItemRectMax();
+    const int n = st->GetInt(k.n, 0);
+    const float gy = st->GetFloat(k.y, -FLT_MAX);
+    const float gx = gy <= i0.y + 1 && gy >= i0.y - ImGui::GetFrameHeight() ? st->GetFloat(k.x, i0.x) : ImGui::GetCursorScreenPos().x;   // else a new row: from the line start
+    st->SetFloat(flowWidthKey(n), i1.x - gx);
+    return n;
+}
+bool flowFresh(ImGuiStorage* st, const FlowKeys& k) {   // nothing drawn since the last flowNext()
+    return st->GetInt(k.frame, -1) == ImGui::GetFrameCount() && st->GetFloat(k.x, 0) == ImGui::GetCursorScreenPos().x && st->GetFloat(k.y, 0) == ImGui::GetCursorScreenPos().y;
+}
+}
+
+bool flowNext(float spacing) {
+    const float sp = spacing < 0 ? ImGui::GetStyle().ItemSpacing.x : spacing;
+    ImGuiStorage* st = ImGui::GetStateStorage();
+    const FlowKeys k = flowKeys();
+    const int n = flowMeasure(st, k);
+    const float need = st->GetFloat(flowWidthKey(n + 1), 0.f);
+    const float right = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
+    // a few pixels to spare: the width is last frame's, and a live value can grow by a digit since (the FM status line ran 9 px over)
+    const float slack = 0.6f * ImGui::GetFontSize();
+    const bool same = ImGui::GetItemRectMax().x + sp + need + slack <= right + 0.5f || need <= 0.f;
+    if (same) ImGui::SameLine(0, sp);
+    st->SetInt(k.n, n + 1);
+    st->SetFloat(k.x, ImGui::GetCursorScreenPos().x);
+    st->SetFloat(k.y, ImGui::GetCursorScreenPos().y);
+    st->SetBool(k.same, same);
+    return same;
+}
+
+void flowEnd() {
+    ImGuiStorage* st = ImGui::GetStateStorage();
+    const FlowKeys k = flowKeys();
+    if (st->GetInt(k.frame, -1) != ImGui::GetFrameCount() || flowFresh(st, k)) return;
+    // the next row in this window numbers its groups on from here: else its first group took this one's number and width
+    // (the DVB-S lamps: "FEC" stood in for "Framing", which then did not wrap and ran past the edge)
+    st->SetInt(k.n, flowMeasure(st, k) + 1);
+}
+
+void flowBreak() {
+    ImGuiStorage* st = ImGui::GetStateStorage();
+    const FlowKeys k = flowKeys();
+    if (!flowFresh(st, k)) { flowEnd(); ImGui::NewLine(); }
+    else if (st->GetBool(k.same, false)) ImGui::NewLine();
+}
+
+bool sameLineIf(float w, float spacing) {
+    const float sp = spacing < 0 ? ImGui::GetStyle().ItemSpacing.x : spacing;
+    const float right = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
+    if (ImGui::GetItemRectMax().x + sp + w > right + 0.5f) return false;
+    ImGui::SameLine(0, sp);
+    return true;
+}
+
+StatusPanel::StatusPanel() {
+    p = ImGui::GetCursorScreenPos();
+    id = ImGui::GetID("##statuspanel");
+    const float h = std::max(ImGui::GetFrameHeight() * 2.f + ImGui::GetStyle().ItemSpacing.y * 2.f, ImGui::GetStateStorage()->GetFloat(id, 0.f));
+    ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(p.x - 4, p.y - 2), ImVec2(p.x + ImGui::GetContentRegionAvail().x + 4, p.y + h), IM_COL32(22, 23, 25, 255), 3.f);
+}
+StatusPanel::~StatusPanel() { ImGui::GetStateStorage()->SetFloat(id, ImGui::GetItemRectMax().y - p.y + ImGui::GetStyle().ItemSpacing.y); }
+
+std::string ellipsize(std::string s, float w, float size) {
+    ImFont* f = ImGui::GetFont();
+    if (size <= 0) size = ImGui::GetFontSize();
+    if (f->CalcTextSizeA(size, FLT_MAX, 0, s.c_str()).x <= w) return s;
+    while (!s.empty() && f->CalcTextSizeA(size, FLT_MAX, 0, (s + "...").c_str()).x > w) {
+        s.pop_back();
+        while (!s.empty() && ((unsigned char)s.back() & 0xC0) == 0x80) s.pop_back();   // not in the middle of a UTF-8 character
+        if (!s.empty() && (unsigned char)s.back() >= 0xC0) s.pop_back();
+    }
+    return s.empty() ? s : s + "...";
+}
+
+std::string fitCaption(const std::string& s, float w) {
+    if (ImGui::CalcTextSize(s.c_str()).x <= w) return s;
+    const size_t k = s.find(" (");
+    if (k != std::string::npos && ImGui::CalcTextSize(s.substr(0, k).c_str()).x <= w) return s.substr(0, k);
+    return ellipsize(s, w);
+}
+
+void captionFit(float w, const char* fmt, ...) {
+    char b[256];
+    va_list ap; va_start(ap, fmt); vsnprintf(b, sizeof b, fmt, ap); va_end(ap);
+    const std::string c = fitCaption(b, w);
+    ImGui::TextDisabled("%s", c.c_str());
+    if (c != b && ImGui::IsItemHovered()) ImGui::SetTooltip("%s", b);
+}
+
+void kvColumn(float col) {
+    // in screen space: after the key the cursor is at the start of the next line (the left of the window, the indent or the group)
+    const float lineStart = ImGui::GetCursorScreenPos().x, keyEnd = ImGui::GetItemRectMax().x;
+    const float want = lineStart + col - ImGui::GetCursorStartPos().x;   // where SameLine(col) put it
+    const float x = std::max(keyEnd + 8 * gUi, std::min(want, lineStart + ImGui::GetContentRegionAvail().x * 0.5f));
+    ImGui::SameLine(0, x - keyEnd);
 }
 
 // Small rounded label drawn at an absolute position; returns its width.
@@ -59,6 +169,7 @@ float tagAt(ImDrawList* dl, ImVec2 pos, const char* text, ImU32 bg, ImU32 fg) {
 }
 
 void gaugePill(float width, float frac, ImU32 fill, const char* text) {
+    width = std::max(width, ImGui::CalcTextSize(text).x + 10 * gUi);   // never narrower than its text (a large display scale)
     const float h = ImGui::GetFrameHeight() - 2;
     ImVec2 p = ImGui::GetCursorScreenPos();
     p.y += 1;

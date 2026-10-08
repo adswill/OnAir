@@ -2,7 +2,9 @@
 #include "dect2/exact_resampler.h"
 #include "dect2/isdbt_gen.h"
 #include "dect2/isdbt_rx.h"
+#include "jobs.h"
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -14,8 +16,9 @@
 
 using namespace dect2;
 using namespace dect2::isdbt;
-static int fails = 0;
-#define CHECK(c, ...) do { if (!(c)) { printf("FAIL: " __VA_ARGS__); printf("\n"); fails++; } } while (0)
+using testjobs::jprintf;
+static std::atomic<int> fails{0};
+#define CHECK(c, ...) do { if (!(c)) { jprintf("FAIL: " __VA_ARGS__); jprintf("\n"); fails++; } } while (0)
 
 struct Case {
     const char* name; Params p; int frames; double radioRate, cfoHz, snrDb, sroPpm, echoDb; int echoDelay;
@@ -72,7 +75,7 @@ static bool run(const Case& c) {
             const bool isOk = !(pk[1] & 0x80) && checkCountingPacket(pk, &layer, &counter);
             if (!isOk) { bad[0]++; continue; }
             if (seen[layer]++ < skip[layer]) { lastCounter[layer] = (long)counter; continue; }
-            if (lastCounter[layer] >= 0 && (long)counter != lastCounter[layer] + 1) { gaps[layer]++; if (getenv("ISDBT_GAPS")) printf("      gap at packet %ld of layer %c (counter %ld, expected %ld), after %ld packets in all\n", seen[layer], 'A' + layer, (long)counter, lastCounter[layer] + 1, total); }
+            if (lastCounter[layer] >= 0 && (long)counter != lastCounter[layer] + 1) { gaps[layer]++; if (getenv("ISDBT_GAPS")) jprintf("      gap at packet %ld of layer %c (counter %ld, expected %ld), after %ld packets in all\n", seen[layer], 'A' + layer, (long)counter, lastCounter[layer] + 1, total); }
             lastCounter[layer] = (long)counter;
             good[layer]++;
         }
@@ -86,7 +89,7 @@ static bool run(const Case& c) {
     const double secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
     RxTelemetry t;
     rx.telemetry(t, 0);
-    printf("  %s: %.1f s for %.2f s of signal; state %d, tmcc %d, mode %d, GI %d, CFO %.1f Hz (true %.1f), SNR %.1f dB\n", c.name, secs, c.frames * frameSeconds(c.p.mode, c.p.guard),
+    jprintf("  %s: %.1f s for %.2f s of signal; state %d, tmcc %d, mode %d, GI %d, CFO %.1f Hz (true %.1f), SNR %.1f dB\n", c.name, secs, c.frames * frameSeconds(c.p.mode, c.p.guard),
            t.state, (int)t.isdbt.tmccOk, t.isdbt.mode, t.giIdx, t.cfoHz, c.cfoHz, t.dataSnrDb);
     bool ok = true;
     CHECK(t.isdbt.tmccOk && t.isdbt.mode == c.p.mode, "%s: TMCC locked, mode %d", c.name, t.isdbt.mode);
@@ -95,12 +98,12 @@ static bool run(const Case& c) {
         if (!c.p.layer[li].used()) continue;
         const int per = packetsPerFrame(c.p.mode, c.p.layer[li]);
         const long expect = (long)per * std::max(1, c.frames - 3 * (95 * interleavingLength(c.p.mode, c.p.layer[li].ti) + timeInterleaveAdjust(c.p.mode, c.p.layer[li].ti)) / kSymbolsPerFrame - 12) - 16;
-        printf("    layer %c: %ld good, %ld gaps (expect at least %ld)\n", 'A' + li, good[li], gaps[li], expect);
+        jprintf("    layer %c: %ld good, %ld gaps (expect at least %ld)\n", 'A' + li, good[li], gaps[li], expect);
         CHECK(good[li] >= expect, "%s layer %c: %ld good packets (need %ld)", c.name, 'A' + li, good[li], expect);
         CHECK(gaps[li] <= std::max(2.0, c.lossAllowed * (double)good[li]), "%s layer %c: %ld gaps in the packet counters", c.name, 'A' + li, gaps[li]);
         if (good[li] < expect) ok = false;
     }
-    printf("    %ld bad packets in all (most of them in the first frames)\n", bad[0]);
+    jprintf("    %ld bad packets in all (most of them in the first frames)\n", bad[0]);
     (void)total;
     return ok;
 }
@@ -146,7 +149,10 @@ int main(int argc, char** argv) {
         }
     }
     const char* only = getenv("ISDBT_CASE");       // development: run the cases whose name contains this text
-    for (auto& c : cases) if (!only || strstr(c.name, only)) run(c);
-    printf(fails ? "isdbt rx: FAILED\n" : "isdbt rx: ok\n");
+    // the cases are independent: each one runs on its own thread, the output keeps the order of the cases
+    testjobs::Jobs jobs;
+    for (auto& c : cases) if (!only || strstr(c.name, only)) jobs.add([&c] { run(c); });
+    jobs.run();
+    jprintf(fails ? "isdbt rx: FAILED\n" : "isdbt rx: ok\n");
     return fails ? 1 : 0;
 }

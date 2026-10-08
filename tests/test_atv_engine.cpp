@@ -1,8 +1,10 @@
-// Analog TV through the engine: the synthetic source -> Engine -> telemetry, pictures and sound, in real time.
+// Analog TV through the engine: the synthetic source -> Engine -> telemetry, pictures and sound. The source plays faster than a radio (the decoder is
+// tested, not real time) and the run is counted in seconds of signal; the field rate is checked per second of signal.
 // First the card the app plays by default (PAL B/G, test card, 1 kHz tone with gaps, a carrier offset and noise) for about 15 seconds, then SECAM D/K
 // and NTSC M for about 8 seconds each, started from the same engine, and a retune in the middle.
 #include "dect2/atv_testkit.h"
 #include "dect2/engine.h"
+#include "dect2/engine_testkit.h"
 #include <cstdlib>
 #include <chrono>
 #include <cmath>
@@ -10,6 +12,7 @@
 #include <thread>
 
 using namespace dect2;
+using namespace dect2::enginetest;
 static int fails = 0;
 #define CHECK(c, ...) do { if (!(c)) { printf("FAIL: " __VA_ARGS__); printf("\n"); fails++; } } while (0)
 
@@ -31,9 +34,13 @@ static void scenario(Engine& e, const Expect& x, bool first) {
     const ModeTuning* mt = modeTuning(10);
     CHECK(mt != nullptr && mt->stdMode == 10, "analog TV in the tuning table");
     tune.bandwidthMhz = mt->bandwidthMhz; tune.sampleRate = mt->sampleRate; tune.basebandFilterHz = mt->basebandHz; tune.centerHz = mt->defMhz * 1e6;
-    tune.synth.mode = 10; tune.synth.snrDb = x.snr; tune.synth.cfoHz = x.cfo;
+    // reports come about every 1.5 s of signal at this speed; the lock is expected within 4 s
+    tune.synth.mode = 10; tune.synth.pace = 6.0; tune.synth.snrDb = x.snr; tune.synth.cfoHz = x.cfo;
     tune.synth.modeOpt[0] = x.sysOpt; tune.synth.modeOpt[1] = x.colourOpt;
     FileOptions fo;
+    AtvTelemetry before;            // the receiver's counters go on from the scenario before: this scenario's share is counted from here
+    e.atv().telemetry(before, 0);
+    const double nominal = x.sysCode == kAtvM ? 59.94 : 50.0;
     e.setStandard(10);
     CHECK(e.start(dev, tune, fo), "%s: engine started", x.label);
     CHECK(e.activeStandard() == 9, "%s: analog TV is the active standard (%d)", x.label, e.activeStandard());
@@ -41,25 +48,33 @@ static void scenario(Engine& e, const Expect& x, bool first) {
     uint64_t seq = 0, fseq = 0, pictures = 0;
     bool locked = false;
     int lockedAt = -1;
+    uint64_t fieldsAtLock = 0, linesAtLock = 0;
     std::shared_ptr<const AtvFrame> last;
-    const auto t0 = std::chrono::steady_clock::now();
-    uint64_t fieldsAtLock = 0, fieldsLater = 0;
-    double lockedSecs = 0;
-    for (int i = 0; i < 1000; i++) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    const auto w0 = std::chrono::steady_clock::now();     // wall clock: only a guard against a hang
+    const double s0 = signalSecs(e);
+    for (;;) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
         if (e.latestRx(t, seq)) {
             seq = t.seq;
-            if (t.standard == 9 && t.atv.state == 2 && !locked) { locked = true; lockedAt = i * 50; fieldsAtLock = t.atv.fieldCount; lockedSecs = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count(); }
-            if (locked) fieldsLater = t.atv.fieldCount;
+            // (a report left over from the scenario before has the old system's name)
+            if (t.standard == 9 && t.atv.state == 2 && t.atv.system == x.system && !locked) {
+                locked = true;
+                lockedAt = (int)((double)(t.atv.fieldCount - before.fieldCount) / nominal * 1000);    // signal time by the fields counted
+                fieldsAtLock = t.atv.fieldCount; linesAtLock = t.atv.lineCount;
+            }
         }
         while (auto f = e.atv().frame(fseq)) { last = f; pictures++; }
-        if (std::chrono::steady_clock::now() - t0 > std::chrono::duration<double>(x.seconds)) break;
+        if (signalSecs(e) - s0 > x.seconds) break;
+        if (std::chrono::steady_clock::now() - w0 > std::chrono::seconds(120)) break;
     }
-    const double elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
     e.latestRx(t, 0);
+    // the signal's own clock: the lines the receiver counted since the lock, at the line rate of the system (fields and lines of one report belong
+    // together, so how often this thread looks does not matter)
+    const uint64_t fields = t.atv.fieldCount - fieldsAtLock;
+    const double elapsed = (double)(t.atv.lineCount - linesAtLock) / (x.sysCode == kAtvM ? 15734.264 : 15625.0);
     printf("%s: %s\n", x.label, atvSummary(t.atv).c_str());
-    printf("   locked after %d ms, %llu fields in %.1f s since, %llu pictures, %zu audio samples, dropped %llu, sound %s (%.0f Hz from the vision carrier)\n", lockedAt,
-           (unsigned long long)(fieldsLater - fieldsAtLock), elapsed - lockedSecs, (unsigned long long)pictures, audio.size(), (unsigned long long)e.droppedSamples(),
+    printf("   locked after %d ms of signal, %llu fields in %.1f s of signal, %llu pictures seen of %llu made, %zu audio samples, dropped %llu, sound %s (%.0f Hz from the vision carrier)\n", lockedAt,
+           (unsigned long long)fields, elapsed, (unsigned long long)pictures, (unsigned long long)fseq, audio.size(), (unsigned long long)e.droppedSamples(),
            t.atv.soundPresent ? "yes" : "no", t.atv.soundHz - t.atv.visionHz);
     CHECK(t.standard == 9, "%s: standard %d", x.label, t.standard);
     CHECK(locked && lockedAt < 4000, "%s: locked after %d ms", x.label, lockedAt);
@@ -68,11 +83,10 @@ static void scenario(Engine& e, const Expect& x, bool first) {
     CHECK(std::fabs(t.cfoHz - x.cfo) < 400 && std::fabs(t.atv.cfoHz - x.cfo) < 400, "%s: carrier offset %.0f Hz (sent %.0f)", x.label, t.cfoHz, x.cfo);
     CHECK(t.dataSnrDb > 15 && t.dataSnrDb < 45, "%s: video SNR %.1f dB", x.label, t.dataSnrDb);
     CHECK(t.rateOk, "%s: the sample rate is accepted", x.label);
-    const double rate = (double)(fieldsLater - fieldsAtLock) / std::max(0.1, elapsed - lockedSecs);
-    const double nominal = x.sysCode == kAtvM ? 59.94 : 50.0;
-    CHECK(rate > nominal * 0.92 && rate < nominal * 1.08, "%s: field rate %.1f per second of wall time (%.2f expected): the engine does not keep up, or runs fast", x.label, rate, nominal);
-    // the picture count depends on how often this thread gets the CPU: not checked on the shared CI machines
-    if (!std::getenv("CI")) CHECK(pictures > nominal * 0.4 * (x.seconds - 2), "%s: %llu pictures", x.label, (unsigned long long)pictures);
+    const double rate = (double)fields / std::max(0.1, elapsed);
+    CHECK(rate > nominal * 0.92 && rate < nominal * 1.08, "%s: field rate %.1f per second of signal (%.2f expected): fields are lost or doubled", x.label, rate, nominal);
+    // the pictures the decoder made (the last one's number), not those this thread picked up: that depends on how often it gets the CPU
+    CHECK(fseq > nominal * 0.4 * (x.seconds - 2), "%s: %llu pictures made", x.label, (unsigned long long)fseq);
     CHECK(e.droppedSamples() == 0, "%s: %llu samples dropped", x.label, (unsigned long long)e.droppedSamples());
     CHECK(t.atv.blocksBad < 4 && t.atv.blocksOk > nominal * (x.seconds - 3), "%s: fields ok %llu bad %llu", x.label, (unsigned long long)t.atv.blocksOk, (unsigned long long)t.atv.blocksBad);
     CHECK(last && last->colour, "%s: picture", x.label);

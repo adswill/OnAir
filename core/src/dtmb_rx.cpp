@@ -686,6 +686,9 @@ ModeTuning dtmbTuning() {
     t.minMhz = 170; t.maxMhz = 870; t.defMhz = 530.0;
     t.sampleRate = 10000000.0; t.basebandHz = 8000000.0; t.bandwidthMhz = 8;
     t.minSampleRate = 8000000.0;
+    // the frame header carries the same PN bit on I and Q: with the carrier within a few hertz of the centre that is a fixed line in the IQ plane,
+    // 20 % of the time, which the blind IQ estimate reads as a 6 degree phase error (the MER fell from 31 to 19 dB with the correction on)
+    t.notCircular = true;
     return t;
 }
 

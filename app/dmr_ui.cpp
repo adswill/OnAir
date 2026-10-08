@@ -108,7 +108,7 @@ void slotCard(const App& a, int idx, float w, float h) {
     const DmrSlot& s = t.slot[idx];
     static const char* sn[5] = {"no signal", "voice", "data", "idle", "control"};
     char id[24]; snprintf(id, sizeof id, "##slot%d", idx + 1);
-    ImGui::BeginChild(id, ImVec2(w, h), ImGuiChildFlags_Borders, ImGuiWindowFlags_NoScrollbar);
+    ImGui::BeginChild(id, ImVec2(w, h), ImGuiChildFlags_Borders);   // the parts of a line that do not fit go on the next one; the card scrolls when it is short
     const bool act = on && s.active;
     const int st = act ? s.state % 5 : 0;
     ImGui::AlignTextToFramePadding();
@@ -119,7 +119,7 @@ void slotCard(const App& a, int idx, float w, float h) {
         const float tw = tagAt(ImGui::GetWindowDrawList(), ImVec2(p.x, p.y + 2), on ? sn[st] : "stopped", stateColour(st));
         ImGui::Dummy(ImVec2(tw, ImGui::GetTextLineHeight() + 4));
     }
-    if (act && !s.lastBurst.empty()) { ImGui::SameLine(0, 10 * gUi); ImGui::TextDisabled("%s", s.lastBurst.c_str()); }
+    if (act && !s.lastBurst.empty()) { sameLineIf(ImGui::CalcTextSize(s.lastBurst.c_str()).x, 10 * gUi); ImGui::TextDisabled("%s", s.lastBurst.c_str()); }
     if (act && s.inCall) {
         // the identities and the length come from the call being logged for this slot
         const DmrCall* cur = nullptr;
@@ -131,25 +131,26 @@ void slotCard(const App& a, int idx, float w, float h) {
         ImGui::SameLine(0, 6 * gUi); ImGui::TextDisabled("->"); ImGui::SameLine(0, 6 * gUi);
         ImGui::Text("%s", targetText(c).c_str());
         ImGui::PopFont();
-        ImGui::SameLine(0, 10 * gUi);
+        sameLineIf(ImGui::CalcTextSize(kindName(c.kind)).x, 10 * gUi);
         ImGui::TextColored(pal::okGreen(), "%s", kindName(c.kind));
         char b[96];
         if (c.kind <= 2) snprintf(b, sizeof b, "%.1f s   %d voice frames   %d FEC errors", duration(c), c.voiceFrames, c.fecErrors);
         else snprintf(b, sizeof b, "%.1f s   %d FEC errors", std::max(0.0, c.endSec - c.startSec), c.fecErrors);
-        ImGui::TextDisabled("%s", b);
+        ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", b); ImGui::PopTextWrapPos();
         std::string extra = flagsText(c);
         if (extra == "-") extra.clear();
         if (!c.alias.empty()) extra += (extra.empty() ? "" : "   ") + std::string("alias ") + c.alias;
-        if (!extra.empty()) ImGui::TextColored(c.emergency ? pal::badRed() : kDim, "%s", extra.c_str());
+        if (!extra.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextColored(c.emergency ? pal::badRed() : kDim, "%s", extra.c_str()); ImGui::PopTextWrapPos(); }
     } else {
-        ImGui::TextDisabled(!on ? "start the receiver" : act ? "no call" : "nothing received on this slot");
+        { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(!on ? "start the receiver" : act ? "no call" : "nothing received on this slot"); ImGui::PopTextWrapPos(); }
     }
     if (act && s.bursts) {
         const ImVec4 col = s.rmsErr < 0.15f ? pal::okGreen() : s.rmsErr < 0.22f ? pal::warnAmber() : pal::badRed();
         ImGui::TextDisabled("symbol error"); ImGui::SameLine(0, 5 * gUi);
         ImGui::TextColored(col, "%.2f", s.rmsErr);
-        ImGui::SameLine(0, 12 * gUi); ImGui::TextDisabled("BER"); ImGui::SameLine(0, 5 * gUi); ImGui::Text("%.2f %%", s.ber * 100.f);
-        ImGui::SameLine(0, 12 * gUi); ImGui::TextDisabled("bursts"); ImGui::SameLine(0, 5 * gUi); ImGui::Text("%llu", (unsigned long long)s.bursts);
+        flowNext(12 * gUi); ImGui::TextDisabled("BER"); ImGui::SameLine(0, 5 * gUi); ImGui::Text("%.2f %%", s.ber * 100.f);
+        flowNext(12 * gUi); ImGui::TextDisabled("bursts"); ImGui::SameLine(0, 5 * gUi); ImGui::Text("%llu", (unsigned long long)s.bursts);
+        flowEnd();
     }
     ImGui::EndChild();
 }
@@ -184,8 +185,8 @@ void callTable(App& a, float h) {
             ImGui::TableNextColumn(); if (c.kind <= 2 || c.endSec > c.startSec) ImGui::Text("%.1f", duration(c)); else ImGui::TextUnformatted("-");
             ImGui::TableNextColumn(); if (c.kind <= 2) ImGui::Text("%d", c.voiceFrames); else ImGui::TextUnformatted("-");
             ImGui::TableNextColumn(); ImGui::Text("%d", c.fecErrors);
-            ImGui::TableNextColumn(); ImGui::TextUnformatted(!c.alias.empty() ? c.alias.c_str() : !c.note.empty() ? c.note.c_str() : "-");
-            ImGui::TableNextColumn(); ImGui::TextUnformatted(flagsText(c).c_str());
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(ellipsize(!c.alias.empty() ? c.alias : !c.note.empty() ? c.note : "-", ImGui::GetContentRegionAvail().x).c_str());   // a narrow tab: cut short, whole in the slot card
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(ellipsize(flagsText(c), ImGui::GetContentRegionAvail().x).c_str());
             if (c.active || c.emergency) ImGui::PopStyleColor();
         }
     }
@@ -245,16 +246,16 @@ void tab(App& a) {
     const float msgH = std::max(70.f * gUi, std::min(rest * 0.34f, 150.f * gUi));
     ImGui::TextDisabled("Call log (%zu)", on ? t.callLog.size() : (size_t)0);
     callTable(a, std::max(60.f * gUi, rest - msgH - 2 * lh - 8 * gUi));
-    ImGui::TextDisabled("Text messages (%zu)", on ? t.messages.size() : (size_t)0);
+    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Text messages (%zu)", on ? t.messages.size() : (size_t)0); ImGui::PopTextWrapPos(); }
     messageTable(a, std::max(40.f * gUi, ImGui::GetContentRegionAvail().y));
 }
 
 // ---------------------------------------------------------------- the list on the right
 
 void list(App& a) {
-    if (!live(a)) { ImGui::TextDisabled(a.engine.running() ? "starting" : "start the receiver to see calls"); return; }
+    if (!live(a)) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(a.engine.running() ? "starting" : "start the receiver to see calls"); ImGui::PopTextWrapPos(); } return; }
     const DmrTelemetry& t = a.rx.dmr;
-    ImGui::TextDisabled("%llu calls and messages", (unsigned long long)t.calls);
+    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%llu calls and messages", (unsigned long long)t.calls); ImGui::PopTextWrapPos(); }
     if (!ImGui::BeginTable("##dmrlist", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("S", ImGuiTableColumnFlags_WidthFixed, 18 * gUi);
@@ -270,7 +271,7 @@ void list(App& a) {
         else if (c.kind >= 3) ImGui::PushStyleColor(ImGuiCol_Text, kDim);
         ImGui::TableNextColumn(); if (c.slot) ImGui::Text("%d", c.slot); else ImGui::TextUnformatted("-");
         ImGui::TableNextColumn(); ImGui::TextUnformatted(c.kind == 4 ? "control" : idText(c.src, c.idsKnown).c_str());
-        ImGui::TableNextColumn(); ImGui::TextUnformatted(c.kind == 4 ? (c.note.empty() ? "-" : c.note.c_str()) : targetText(c).c_str());
+        ImGui::TableNextColumn(); ImGui::PushTextWrapPos(0); ImGui::TextUnformatted(c.kind == 4 ? (c.note.empty() ? "-" : c.note.c_str()) : targetText(c).c_str()); ImGui::PopTextWrapPos();   // a stretched column: wraps
         ImGui::TableNextColumn(); if (c.kind <= 2) ImGui::Text("%.1f", duration(c)); else ImGui::TextUnformatted("-");
         if (c.active || c.emergency || c.kind >= 3) ImGui::PopStyleColor();
     }
@@ -313,7 +314,7 @@ void panels(App& a) {
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + gap);
 
     ImGui::BeginGroup();
-    ImGui::TextDisabled("4FSK symbols (last %zu)", on ? t.eye.size() : (size_t)0);
+    captionFit(colW, "4FSK symbols (last %zu)", on ? t.eye.size() : (size_t)0);   // the captions are never wider than their plots
     if (plt::BeginPlot("##dmrsym", sz, plt::Flags_NoLegend | plt::Flags_NoTitle)) {
         plt::SetupAxes(nullptr, nullptr, plt::AxisFlags_NoTickLabels, 0);
         plt::SetupAxisLimits(plt::X1, 0, 800, plt::Cond_Always);
@@ -334,7 +335,7 @@ void panels(App& a) {
 
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("Level histogram");
+    captionFit(colW, "Level histogram");
     if (plt::BeginPlot("##dmrhist", sz, plt::Flags_NoLegend | plt::Flags_NoTitle)) {
         plt::SetupAxes(nullptr, nullptr, 0, plt::AxisFlags_NoTickLabels | plt::AxisFlags_AutoFit);
         plt::SetupAxisLimits(plt::X1, -5, 5, plt::Cond_Always);
@@ -357,13 +358,13 @@ void panels(App& a) {
 
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("SNR of the symbols (dB)");
+    captionFit(colW, "SNR of the symbols (dB)");
     historyLine("##dmrsnr", "dB", S.snr, sz, 0, 40);
     ImGui::EndGroup();
 
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("Bit error rate (%%)");
+    captionFit(colW, "Bit error rate (%%)");
     double top = 1.0;
     for (float v : S.ber) top = std::max<double>(top, v);
     historyLine("##dmrber", "%", S.ber, sz, 0, top * 1.1);
@@ -393,10 +394,11 @@ void receiver(App& a) {
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     const float gap = 10 * gUi, cw = (W - 2 * gap) / 3.f;
+    const bool stack = cw < 260 * gUi;   // a narrow tab: the three blocks one under the other (the tab scrolls)
     auto u = [](uint64_t v) { return (unsigned long long)v; };
     // one block of key/value lines in its own column
     auto block = [&](const char* id, auto&& rows, auto&& after) {
-        ImGui::BeginChild(id, ImVec2(cw, H), ImGuiChildFlags_None);
+        ImGui::BeginChild(id, stack ? ImVec2(W, 0) : ImVec2(cw, H), stack ? ImGuiChildFlags_AutoResizeY : ImGuiChildFlags_None);
         if (ImGui::BeginTable("##kv", 2, ImGuiTableFlags_SizingFixedFit)) {
             ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 150 * gUi);
             ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch, 1.f);
@@ -432,7 +434,7 @@ void receiver(App& a) {
         kv("bit error rate", "%.3f %%", t.ber * 100.f);
         if (!t.cachInfo.empty() && t.cachInfo != "null") { head("CACH"); ImGui::TextDisabled("%s", t.cachInfo.c_str()); }
     }, none);
-    ImGui::SameLine(0, gap);
+    if (!stack) ImGui::SameLine(0, gap);
     block("##dmr_b", [&] {
         head("Frame syncs");
         for (int i = 0; i < 9; i++) if (t.syncCount[i] || i < 4) kv(dmr::syncName(i), "%llu", u(t.syncCount[i]));
@@ -447,7 +449,7 @@ void receiver(App& a) {
         kv("level -3", "%llu", u(t.levelCount[0])); kv("level -1", "%llu", u(t.levelCount[1]));
         kv("level +1", "%llu", u(t.levelCount[2])); kv("level +3", "%llu", u(t.levelCount[3]));
     }, none);
-    ImGui::SameLine(0, gap);
+    if (!stack) ImGui::SameLine(0, gap);
     block("##dmr_c", [&] {
         head("FEC");
         const uint64_t tot = t.blocksOk + t.blocksBad;
@@ -480,22 +482,18 @@ void status(App& a) {
     const DmrTelemetry& t = a.rx.dmr;
     const SignalStats& st = a.spec.stats;
     const AdcStatus adc = classifyAdc(st.rmsDbfs, st.peak, st.clipFraction);
-    {
-        const ImVec2 p = ImGui::GetCursorScreenPos();
-        const float h = ImGui::GetFrameHeight() * 2.f + ImGui::GetStyle().ItemSpacing.y * 2.f;
-        ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(p.x - 4, p.y - 2), ImVec2(p.x + ImGui::GetContentRegionAvail().x + 4, p.y + h), IM_COL32(22, 23, 25, 255), 3.f);
-    }
-    lamp("IQ", run ? (adc == AdcStatus::Overload ? 3 : (adc == AdcStatus::Good ? 1 : 2)) : 0, (int)Ic::Wave); ImGui::SameLine(0, 12 * gUi);
-    lamp("Sync", !on ? 0 : t.state == 2 ? 1 : t.state == 1 ? 2 : 0); ImGui::SameLine(0, 12 * gUi);
-    lamp("Colour code", !on ? 0 : t.cc >= 0 ? 1 : 0); ImGui::SameLine(0, 12 * gUi);
-    lamp("Slot 1", !on ? 0 : t.slot[0].active ? 1 : 0); ImGui::SameLine(0, 12 * gUi);
-    lamp("Slot 2", !on ? 0 : t.slot[1].active ? 1 : 0); ImGui::SameLine(0, 10 * gUi);
-    ImGui::TextDisabled("|"); ImGui::SameLine(0, 10 * gUi);
+    StatusPanel panel;   // a tinted panel behind the status lines (they wrap in a narrow window)
+    lamp("IQ", run ? (adc == AdcStatus::Overload ? 3 : (adc == AdcStatus::Good ? 1 : 2)) : 0, (int)Ic::Wave); flowNext(12 * gUi);
+    lamp("Sync", !on ? 0 : t.state == 2 ? 1 : t.state == 1 ? 2 : 0); flowNext(12 * gUi);
+    lamp("Colour code", !on ? 0 : t.cc >= 0 ? 1 : 0); flowNext(12 * gUi);
+    lamp("Slot 1", !on ? 0 : t.slot[0].active ? 1 : 0); flowNext(12 * gUi);
+    lamp("Slot 2", !on ? 0 : t.slot[1].active ? 1 : 0); flowNext(10 * gUi);
+    ImGui::TextDisabled("|"); flowNext(10 * gUi);
     auto ro = [&](const char* label, const std::string& val) {
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled("%s", label); ImGui::SameLine(0, 5 * gUi);
         ImGui::PushFont(a.mono, 0); ImGui::TextUnformatted(val.c_str()); ImGui::PopFont();
-        ImGui::SameLine(0, 15 * gUi);
+        flowNext(15 * gUi);
     };
     char b[64];
     if (!on) { ro("State", run ? "starting" : "stopped"); return; }
@@ -525,11 +523,11 @@ void synth(App& a, bool& changed) {
     ImGui::SameLine(0, 5 * gUi); ImGui::SetNextItemWidth(60 * gUi);
     int cc = sc.modeOpt[0] == 0 ? 1 : sc.modeOpt[0] < 0 ? 0 : sc.modeOpt[0];
     if (ImGui::SliderInt("##dcc", &cc, 0, 15)) { sc.modeOpt[0] = cc == 1 ? 0 : cc == 0 ? -1 : cc; changed = true; }
-    ImGui::SameLine(0, 10 * gUi); ImGui::TextDisabled("talkgroups");
+    flowNext(10 * gUi); ImGui::TextDisabled("talkgroups");
     ImGui::SameLine(0, 5 * gUi); ImGui::SetNextItemWidth(60 * gUi);
     int tg = sc.modeOpt[1] == 0 ? 3 : sc.modeOpt[1];
     if (ImGui::SliderInt("##dtg", &tg, 1, 8)) { sc.modeOpt[1] = tg == 3 ? 0 : tg; changed = true; }
-    ImGui::SameLine(0, 10 * gUi); ImGui::TextDisabled("link");
+    flowNext(10 * gUi); ImGui::TextDisabled("link");
     ImGui::SameLine(0, 5 * gUi); ImGui::SetNextItemWidth(130 * gUi);
     static const char* links[3] = {"base station", "direct mode", "mobile"};
     const int lk = std::max(0, std::min(2, (int)sc.modeOpt[2]));
@@ -538,7 +536,7 @@ void synth(App& a, bool& changed) {
         ImGui::EndCombo();
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Base station: both time slots, continuous.\nDirect mode: one handset, bursts of single calls.\nMobile: a handset talking to a repeater (the uplink).");
-    ImGui::SameLine(0, 10 * gUi); ImGui::TextDisabled("traffic");
+    flowNext(10 * gUi); ImGui::TextDisabled("traffic");
     ImGui::SameLine(0, 5 * gUi); ImGui::SetNextItemWidth(80 * gUi);
     static const char* traffic[3] = {"normal", "quiet", "busy"};
     const int tr = std::max(0, std::min(2, (int)sc.modeOpt[3]));
@@ -546,11 +544,11 @@ void synth(App& a, bool& changed) {
         for (int i = 0; i < 3; i++) if (ImGui::Selectable(traffic[i], tr == i)) { sc.modeOpt[3] = i; changed = true; }
         ImGui::EndCombo();
     }
-    ImGui::SameLine(0, 10 * gUi); ImGui::TextDisabled("SNR");
+    flowNext(10 * gUi); ImGui::TextDisabled("SNR");
     ImGui::SameLine(0, 5 * gUi); ImGui::SetNextItemWidth(80 * gUi);
     float snr = (float)sc.snrDb;
     if (ImGui::SliderFloat("##dsnr", &snr, 5, 45, "%.0f dB")) { sc.snrDb = snr; changed = true; }
-    ImGui::SameLine(0, 10 * gUi); ImGui::TextDisabled("CFO");
+    flowNext(10 * gUi); ImGui::TextDisabled("CFO");
     ImGui::SameLine(0, 5 * gUi); ImGui::SetNextItemWidth(100 * gUi);
     float cfo = (float)(sc.cfoHz / 1e3);
     if (ImGui::SliderFloat("##dcfo", &cfo, -5, 5, "%.2f kHz")) { sc.cfoHz = cfo * 1e3; changed = true; }

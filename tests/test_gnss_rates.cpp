@@ -2,17 +2,20 @@
 // time of every satellite, and measure pseudoranges that agree with the simulated truth. 20 s of signal each: the first subframe ends 14 s in.
 // (20 Msps and the position fix are in test_gnss_rate20.)
 #include "dect2/gnss_testkit.h"
+#include "dect2/test_parallel.h"
 #include <cstdlib>
 #include <cmath>
 #include <cstdio>
 using namespace dect2;
 using namespace dect2::gnsstest;
-static int fails = 0;
-#define CHECK(c, ...) do { if (!(c)) { printf("FAIL line %d: ", __LINE__); printf(__VA_ARGS__); printf("\n"); fails++; } } while (0)
+using dect2::testpar::CaseOut;
+// every case runs on its own thread and prints through `out`, so that the log keeps the order of the cases
+#define CHECK(c, ...) do { if (!(c)) out.fail(__LINE__, __VA_ARGS__); } while (0)
 
-int main() {
-    const double rates[] = {2.046e6, 3.2e6, 5e6, 10e6};
-    for (double rate : rates) {
+static const double rates[] = {2.046e6, 3.2e6, 5e6, 10e6};
+
+static void runCase(double rate, CaseOut& out) {
+    {
         GnssSimConfig cfg;
         GnssSim sim(cfg, rate);
         int nTx = 0;
@@ -30,7 +33,7 @@ int main() {
             const RangeStats st = rangeError(sim, r, c.prn, 14.5);
             if (st.n >= 3) { rmsSum += st.rms * st.rms; meanWorst = std::fmax(meanWorst, std::fabs(st.mean)); nr++; }
         }
-        printf("%5.3f Msps: %d of %d satellites locked, %d with the frame found, C/N0 error %+.2f dB, pseudorange rms %.2f m (worst mean %.2f m, %d satellites), %.1fx real time\n", rate / 1e6, locked, nTx, framed,
+        out.print("%5.3f Msps: %d of %d satellites locked, %d with the frame found, C/N0 error %+.2f dB, pseudorange rms %.2f m (worst mean %.2f m, %d satellites), %.1fx real time\n", rate / 1e6, locked, nTx, framed,
                cnN ? cnErr / cnN : 0.0, nr ? std::sqrt(rmsSum / nr) : 0.0, meanWorst, nr, o.secs / r.cpuSecs);
         CHECK(locked >= nTx - 1, "%.3f Msps: only %d of %d locked", rate / 1e6, locked, nTx);
         CHECK(framed >= nTx - 2, "%.3f Msps: only %d with the frame", rate / 1e6, framed);
@@ -40,6 +43,12 @@ int main() {
         CHECK(t.blocksBad == 0, "%.3f Msps: %llu bad subframes", rate / 1e6, (unsigned long long)t.blocksBad);
         if (!GNSS_SANITIZED && !std::getenv("CI")) CHECK(o.secs / r.cpuSecs > 2.5, "%.3f Msps: real-time factor %.1f", rate / 1e6, o.secs / r.cpuSecs);
     }
+}
+
+int main() {
+    // the rates share nothing: side by side (the 10 Msps one first), the log keeps the order of the list
+    int fails = dect2::testpar::runCases(4, [](size_t i, CaseOut& out) { runCase(rates[i], out); }, {3, 2, 1, 0});
+    CaseOut out;
     // a rate below the minimum: the receiver says so and does not crash
     {
         GnssReceiver rx;
@@ -51,6 +60,8 @@ int main() {
         rx.telemetry(t, 0);
         CHECK(t.channels.empty() && t.activeMask == 0, "no band should be active at 1.5 Msps");
     }
+    fails += out.fails;
+    fputs(out.text.c_str(), stdout);
     if (fails) { printf("%d failure(s)\n", fails); return 1; }
     printf("OK\n");
     return 0;

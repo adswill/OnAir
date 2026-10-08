@@ -54,6 +54,8 @@ constexpr double kP1MinConf = 0.40;   // decoded S1/S2 sequence correlation need
 constexpr int kPeakHalfWidth = 700;
 inline bool trackDisabled() { static const bool v = getenv("DECT2_NOTRACK") != nullptr; return v; }   // switch the windowed P1 search off
 constexpr int kTrackWindow = 1200;    // half width of the window around the expected P1 once locked (samples at the native rate)
+constexpr int kCoarseBlk = 32;        // grid of the cheap first stage of a full P1 search (start positions, and the block the products are summed over)
+constexpr double kP1PreThreshold = 0.20;   // cheap-stage metric that sends a stretch to the exact metric (a P1 at kP1Threshold reads about 0.28 there)
 
 struct Frame {
     int64_t anchor;      // absolute index of the first symbol after P1
@@ -138,6 +140,14 @@ struct T2Receiver::Impl {
     std::vector<double> pe;
     std::vector<float> m;
     std::array<cd, 1024> phiTab; // exp(-j 2 pi g / 1024)
+    // cheap first stage of a full search: its metric on the kCoarseBlk grid (from coarseFrom on, relative to the pass's lo), and scratch
+    std::vector<float> coarse;
+    int64_t coarseFrom = 0;
+    std::vector<cd> cbC, cbB;   // prefix sums over blocks of the turned C-A and A-B products
+    std::vector<double> cbE;    // and of the energy
+    std::array<cd, 1024> phiBlk; // exp(-j 2 pi (g + (kCoarseBlk - 1) / 2) / 1024): the phase at the centre of a block that starts at g
+    bool gateOff = false;       // DECT2_NOP1GATE: search everything with the exact metric (tests compare the two)
+    uint64_t p1Evaluated = 0, p1Rescans = 0;
     int64_t lastP1Abs = INT64_MIN / 2;
     double rejectedPos = 0;
     bool haveRejected = false;
@@ -238,6 +248,7 @@ struct T2Receiver::Impl {
 
     Impl() {
         for (int i = 0; i < 1024; i++) phiTab[i] = std::polar(1.0, -kTwoPi * i / 1024.0);
+        for (int i = 0; i < 1024; i++) phiBlk[i] = std::polar(1.0, -kTwoPi * (i + 0.5 * (kCoarseBlk - 1)) / 1024.0);
     }
 
     void resetAll();
@@ -249,6 +260,12 @@ struct T2Receiver::Impl {
 
     // Picks the P1 candidates among d in [dA, dB] (relative to lo) out of m[] and hands them on; true if one was accepted.
     bool p1Detect(int64_t lo, int64_t lastD, int64_t dA, int64_t dB);
+
+    // The cheap first stage: the metric on the grid dA + k kCoarseBlk (k up to the first point at or past dB), into coarse[].
+    void p1Coarse(int64_t lo, int64_t dA, int64_t dB);
+
+    // Searches every start position in [dA, dB]: the cheap stage first, the exact metric only where it fires.
+    void p1Search(int64_t lo, int64_t len, int64_t lastD, int64_t dA, int64_t dB);
 
     void scanP1();
 

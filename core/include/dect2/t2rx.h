@@ -13,6 +13,14 @@
 #include "drm_tel.h"
 #include "adsb_tel.h"
 #include "gnss_tel.h"
+#include "sonde_tel.h"
+#include "ais_tel.h"
+#include "marine_tel.h"
+#include "acars_tel.h"
+#include "inmc_tel.h"
+#include "aero_tel.h"
+#include "iridium_tel.h"
+#include "mesh_tel.h"
 #include "t2.h"
 #include "t2l1.h"
 #include "t2plp.h"
@@ -49,8 +57,16 @@ struct RxTelemetry {
     DrmTelemetry drm;     // valid when standard == 11
     AdsbTelemetry adsb;    // valid when standard == 12
     GnssTelemetry gnss;      // valid when standard == 13
+    SondeTelemetry sonde;      // valid when standard == 14
+    AisTelemetry ais;      // valid when standard == 15
+    MarineTelemetry marine;      // valid when standard == 16
+    AcarsTelemetry acars;      // valid when standard == 17
+    InmcTelemetry inmc;      // valid when standard == 18
+    AeroTelemetry aero;      // valid when standard == 19
+    IridiumTelemetry iridium;      // valid when standard == 20
+    MeshTelemetry mesh;      // valid when standard == 21
     uint64_t seq = 0;
-    int standard = 0;            // 0 DVB-T2, 1 DVB-T, 2 ATSC, 3 DAB, 4 ATSC 3.0 (details: Engine::atsc3Telemetry), 5 ISDB-T, 6 FM, 7 DVB-S/S2, 8 DTMB, 9 analog TV, 10 DMR, 11 DRM, 12 ADS-B
+    int standard = 0;            // 0 DVB-T2, 1 DVB-T, 2 ATSC, 3 DAB, 4 ATSC 3.0 (details: Engine::atsc3Telemetry), 5 ISDB-T, 6 FM, 7 DVB-S/S2, 8 DTMB, 9 analog TV, 10 DMR, 11 DRM, 12 ADS-B, 13 GNSS, 14 radiosonde, 15 AIS, 16 marine, 17 ACARS, 18 Inmarsat-C, 19 Inmarsat Aero, 20 Iridium, 21 mesh
     struct Dvbt {                // DVB-T only: TPS parameters and the channel decoder's statistics
         bool tpsOk = false, fecSync = false;
         int mode = 0, guard = 0, mod = 0, hier = 0, crHp = 0, crLp = 0, cellId = 0, frameIdx = 0, punctPhase = 0;
@@ -71,6 +87,8 @@ struct RxTelemetry {
     int state = 0; // 0 searching P1, 1 waiting for GI, 2 locked
     P1Info p1;
     uint64_t p1Count = 0;
+    uint64_t p1Evaluated = 0;     // start positions the exact P1 metric was computed for (the windowed search and the cheap first stage keep it a small part of the samples)
+    uint64_t p1Rescans = 0;       // times the windowed P1 search found nothing where the frame cadence put it and searched everything again
     double secSinceP1 = 0;
     double frameMs = 0;
     int symbolsPerFrame = 0;

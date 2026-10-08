@@ -1,6 +1,7 @@
 // Multipath detector: a clean synthetic channel must read "none"; a strong echo must be found, with the right delay.
 #include "dect2/channel.h"
 #include "dect2/engine.h"
+#include "jobs.h"
 #include <chrono>
 #include <cstdio>
 #include <thread>
@@ -11,7 +12,7 @@ static int fails = 0;
 #define CHECK(c, ...) do { if (!(c)) { printf("FAIL: " __VA_ARGS__); printf("\n"); fails++; } } while (0)
 
 // The signal runs at half speed, so a machine that decodes DVB-T2 at half of real time still passes: the result must not depend on CPU speed.
-static const double kPace = 0.5;
+static const double kPace = 1.0;
 
 static MultipathReport run(double echoDb, int echoDelay, double secs) {
     Engine e;
@@ -44,12 +45,16 @@ static void print(const char* name, const MultipathReport& r) {
 }
 
 int main() {
-    MultipathReport clean = run(0, 300, 12);
+    // the two engines are independent: run them side by side
+    MultipathReport clean, echo;
+    testjobs::Jobs jobs;
+    jobs.add([&] { clean = run(0, 300, 12); });
+    jobs.add([&] { echo = run(4, 100, 12); }); // echo 4 dB below the main path, 100 samples (~11 us) later, inside the 1/8 guard
+    jobs.run(2);
     print("clean", clean);
     CHECK(clean.level == MultipathLevel::None || clean.level == MultipathLevel::Mild, "clean channel flagged as %s", multipathName(clean.level));
     CHECK(clean.echoes.empty() || clean.echoes[0].levelDb < -15, "clean channel shows a strong echo");
 
-    MultipathReport echo = run(4, 100, 12); // echo 4 dB below the main path, 100 samples (~11 us) later, inside the 1/8 guard
     print("echo -4 dB @ 100 samples", echo);
     CHECK(echo.level >= MultipathLevel::Likely, "strong echo not detected (%s)", multipathName(echo.level));
     CHECK(!echo.echoes.empty(), "no echo reported");

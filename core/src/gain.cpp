@@ -1,5 +1,6 @@
 #include "dect2/gain.h"
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdio>
 #include <string>
@@ -25,10 +26,17 @@ GainSetting genericGain(int total, int maxDb) {
     return g;
 }
 
+// The "too low" level depends on the converter: -22 dBFS rms leaves an 8-bit ADC (HackRF, RTL-SDR) little room above its quantisation
+// noise, while a 12 or 14-bit one is fine 20 dB lower and only risks overloading its front end when pushed up to that level
+static std::atomic<int> gAdcBits{8};
+void setAdcBits(int bits) { gAdcBits = std::max(8, std::min(16, bits)); }
+int adcBits() { return gAdcBits.load(); }
+double adcLowDbfs() { return std::max(-46.0, -22.0 - 6.0 * (gAdcBits.load() - 8)); }
+
 AdcStatus classifyAdc(double rms, double peak, double clip) {
     if (clip > 0.002 || peak >= 0.99) return AdcStatus::Overload;
     if (rms < -50) return AdcStatus::NoSignal;
-    if (rms < -22) return AdcStatus::Low;
+    if (rms < adcLowDbfs()) return AdcStatus::Low;
     if (rms > -11) return AdcStatus::High;
     return AdcStatus::Good;
 }
@@ -50,7 +58,7 @@ std::string adcAdvice(AdcStatus s) {
     case AdcStatus::Low: return "ADC level is low (quantisation noise): raise the gain.";
     case AdcStatus::Good: return "ADC level is good.";
     case AdcStatus::High: return "ADC level is high: close to clipping, consider lowering the gain.";
-    case AdcStatus::Overload: return "ADC is clipping (8-bit overload): reduce the gain, the decoder sees distorted samples.";
+    case AdcStatus::Overload: return "ADC is clipping (overload): reduce the gain, the decoder sees distorted samples.";
     }
     return "";
 }
@@ -58,6 +66,9 @@ std::string adcAdvice(AdcStatus s) {
 void AutoGain::reset() { init_ = false; changedAt_ = -1e9; last_ = -1; }
 
 bool AutoGain::update(double now, const SignalStats& st, GainSetting& g) {
+    // a converter with more than 8 bits is kept lower (more headroom for strong signals outside the channel): the window follows adcBits()
+    const bool deep = adcBits() > 8;
+    const double low = deep ? adcLowDbfs() : cfg_.lowDbfs, target = deep ? std::max(low + 6, -28.0) : cfg_.targetDbfs;
     if (!init_) { rms_ = st.rmsDbfs; peak_ = st.peak; clip_ = st.clipFraction; init_ = true; last_ = now; }
     const double dt = std::max(0.0, now - last_);
     last_ = now;
@@ -70,9 +81,9 @@ bool AutoGain::update(double now, const SignalStats& st, GainSetting& g) {
 
     double delta = 0;
     if (clip_ > 0.002 || peak_ >= 0.99) delta = -6;
-    else if (rms_ > cfg_.highDbfs) delta = std::max(-cfg_.maxStepDb, cfg_.targetDbfs - rms_);
-    else if (rms_ < cfg_.lowDbfs && peak_ < 0.85 && (rms_ > -70 || g.total() < (cfg_.genericMaxDb > 0 ? cfg_.genericMaxDb * 6 / 10 : 62))) // an empty ADC at low gain: climb, but not blindly to the maximum
-        delta = std::min(cfg_.maxStepDb, std::max(4.0, cfg_.targetDbfs - rms_));
+    else if (rms_ > cfg_.highDbfs) delta = std::max(-cfg_.maxStepDb, target - rms_);
+    else if (rms_ < low && peak_ < 0.85 && (rms_ > -70 || g.total() < (cfg_.genericMaxDb > 0 ? cfg_.genericMaxDb * 6 / 10 : 62))) // an empty ADC at low gain: climb, but not blindly to the maximum
+        delta = std::min(cfg_.maxStepDb, std::max(4.0, target - rms_));
     if (std::fabs(delta) < 1.0) return false;
 
     const int tot = g.total();

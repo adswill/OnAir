@@ -118,6 +118,88 @@ static bool runNegative(bool blankP1, bool verbose) {
     return ok;
 }
 
+// The P1 search on its own: a signal with short frames (many P1s), a clock error, a frequency error and noise, fed in 64K chunks; every
+// P1 the receiver accepts is recorded (count and position).
+struct P1Run {
+    std::vector<std::pair<uint64_t, uint64_t>> seen;
+    uint64_t evaluated = 0, rescans = 0, samples = 0;
+    uint64_t evaluatedLocked = 0, samplesLocked = 0;   // from the third P1 on (the frame length is known by then)
+    int state = 0;
+    double frameMs = 0;
+    float minMetric = 99;
+};
+
+// DECT2_NOP1GATE: the receiver searches everything with the exact P1 metric
+static void setGateOff(bool on) {
+#ifdef _WIN32
+    _putenv_s("DECT2_NOP1GATE", on ? "1" : "");   // an empty value removes it
+#else
+    if (on) setenv("DECT2_NOP1GATE", "1", 1); else unsetenv("DECT2_NOP1GATE");
+#endif
+}
+
+static P1Run runP1(int s2, int dataSyms, double snr, double cfo, double sroPpm, int frames, bool gateOff) {
+    TxParams tp; tp.s2field1 = s2; tp.giIdx = 2; tp.dataSymbols = dataSyms;
+    T2Generator gen(tp);
+    const double fn = nativeRateHz(8);
+    std::vector<cf32> frame, stream;
+    for (int f = 0; f < frames; f++) { gen.nextFrame(frame); stream.insert(stream.end(), frame.begin(), frame.end()); }
+    std::vector<cf32> z;
+    for (double step = 1.0 + sroPpm * 1e-6, pos = 0; pos + 1 < (double)stream.size(); pos += step) {
+        size_t i0 = (size_t)pos; double fr = pos - i0;
+        z.push_back(stream[i0] * (float)(1 - fr) + stream[i0 + 1] * (float)fr);
+    }
+    std::mt19937 rng(23);
+    std::normal_distribution<float> nd(0.f, 1.f);
+    const double nsig = std::pow(10.0, -snr / 20.0) / std::sqrt(2.0), dph = 2 * M_PI * cfo / fn;
+    double ph = 0;
+    for (auto& v : z) { v = v * cf32((float)std::cos(ph), (float)std::sin(ph)) + cf32(nd(rng), nd(rng)) * (float)nsig; ph += dph; }
+    setGateOff(gateOff);   // the receiver reads it when it is configured
+    T2Receiver rx;
+    rx.configure(fn, 8);
+    setGateOff(false);
+    P1Run r;
+    RxTelemetry t;
+    uint64_t last = 0;
+    for (size_t i = 0; i < z.size(); i += 65536) {
+        rx.feed(z.data() + i, std::min<size_t>(65536, z.size() - i));
+        rx.telemetry(t, 0);
+        if (t.p1Count != last) {
+            last = t.p1Count; r.seen.emplace_back(t.p1Count, t.p1.pos); r.minMetric = std::min(r.minMetric, t.p1.metric);
+            if (t.p1Count == 3) { r.evaluatedLocked = t.p1Evaluated; r.samplesLocked = i; }
+        }
+    }
+    r.evaluated = t.p1Evaluated; r.rescans = t.p1Rescans; r.samples = z.size(); r.state = t.state; r.frameMs = t.frameMs;
+    r.evaluatedLocked = r.evaluated - r.evaluatedLocked; r.samplesLocked = r.samples - r.samplesLocked;
+    return r;
+}
+
+// The cheap first stage of the search must not lose a P1 the exact metric finds: the same P1s at the same positions with and without it,
+// from a clean signal down to where P1s get too weak to pass the metric threshold.
+static bool runP1Gate(int s2, int dataSyms, double snr, double cfo, double sroPpm, bool verbose) {
+    P1Run a = runP1(s2, dataSyms, snr, cfo, sroPpm, 30, false), b = runP1(s2, dataSyms, snr, cfo, sroPpm, 30, true);
+    bool ok = a.seen == b.seen;
+    if (verbose || !ok)
+        printf("%s P1 gate %s snr %4.1f cfo %+6.0f sro %+4.0f: P1s %zu/%zu (exact search %zu), weakest metric %.2f, exact metric at %.1f%%/%.1f%% of positions\n",
+               ok ? "PASS" : "FAIL", fftModeFromS2(s2)->name, snr, cfo, sroPpm, a.seen.size(), (size_t)30, b.seen.size(), b.minMetric,
+               100.0 * a.evaluated / a.samples, 100.0 * b.evaluated / b.samples);
+    return ok;
+}
+
+// Once locked, P1 is searched for only around where the frame cadence puts it: no expected P1 may be missed (each miss would mean a search of
+// everything since the last P1). With the cheap first stage the exact metric runs over a small part of the samples from the start; without
+// it, once the frame length is known (the clock error is within the 80 ppm the frame length check allows).
+static bool runP1Track(double sroPpm, bool gateOff, bool verbose) {
+    const int frames = 24;
+    P1Run r = runP1(1, 0, 20, -5000, sroPpm, frames, gateOff);
+    const double frac = (double)r.evaluated / r.samples, fracLocked = r.samplesLocked ? (double)r.evaluatedLocked / r.samplesLocked : 1;
+    bool ok = r.state == 2 && r.frameMs > 0 && r.seen.size() + 1 >= (size_t)frames && r.rescans == 0 && (gateOff ? fracLocked < 0.10 : frac < 0.02);
+    if (verbose || !ok)
+        printf("%s P1 tracking sro %+4.0f%s: state %d, frame %.2f ms, P1s %zu/%d, searched again %llu times, exact metric at %.2f%% of positions (%.2f%% once locked)\n",
+               ok ? "PASS" : "FAIL", sroPpm, gateOff ? " (exact search only)" : "", r.state, r.frameMs, r.seen.size(), frames, (unsigned long long)r.rescans, 100 * frac, 100 * fracLocked);
+    return ok;
+}
+
 int main(int argc, char** argv) {
     bool verbose = argc > 1;
     int fail = 0, total = 0;
@@ -135,6 +217,11 @@ int main(int argc, char** argv) {
     go({1, 2, false, 25, 3000, 0, 0, 20, 5});
     go({1, 2, true, 25, 3000, 0, 0, 0, 4});
     total += 2; fail += !runNegative(false, verbose); fail += !runNegative(true, verbose);
+    // the P1 search: the cheap first stage against the exact metric everywhere, and the windowed search once locked
+    for (double snr : {10., 0., -2., -3., -4.}) { total++; fail += !runP1Gate(1, 6, snr, 7000, 60, verbose); }
+    total++; fail += !runP1Gate(3, 20, -3, -12000, -80, verbose);
+    total++; fail += !runP1Gate(5, 3, -2, 2500, 30, verbose);
+    for (double sro : {75., -75.}) for (bool gateOff : {false, true}) { total++; fail += !runP1Track(sro, gateOff, verbose); }
     printf("%d/%d passed\n", total - fail, total);
     return fail ? 1 : 0;
 }

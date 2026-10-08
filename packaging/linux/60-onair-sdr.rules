@@ -1,0 +1,130 @@
+# Lets a normal user open the USB radios OnAir drives, as soon as they are plugged in (no sudo, no replugging after a reboot).
+# MODE/GROUP is for a plugdev member and for a login that does not know uaccess; TAG+="uaccess" gives the user at the desk access
+# on any systemd desktop, so a missing plugdev group does no harm.
+# Every id below comes from the rules file of the radio's own project (hackrf, rtl-sdr-blog, airspyone_host, airspyhf, bladeRF,
+# LimeSuite, uhd, plutosdr-fw, SDRplay), so a radio that works with its own driver works with OnAir.
+
+# HackRF: One and Pro (same id), Jawbreaker, rad1o, and the NXP boot loader (the radio before a firmware update)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d50", ATTR{idProduct}=="6089", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d50", ATTR{idProduct}=="604b", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d50", ATTR{idProduct}=="cc15", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1fc9", ATTR{idProduct}=="000c", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+
+# Airspy R2 and Mini, Airspy HF+
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d50", ATTR{idProduct}=="60a1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="03eb", ATTR{idProduct}=="800c", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+
+# bladeRF 1 (and its older id), bladeRF 2.0 micro, and the Cypress FX3 boot loader both use before their firmware is loaded
+SUBSYSTEM=="usb", ATTR{idVendor}=="2cf0", ATTR{idProduct}=="5246", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d50", ATTR{idProduct}=="6066", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="2cf0", ATTR{idProduct}=="5250", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="04b4", ATTR{idProduct}=="00f3", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+
+# LimeSDR USB, LimeSDR Mini (FTDI; LimeSuite lists no other id), and the Cypress FX3 ids a LimeSDR USB shows before its firmware is loaded
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d50", ATTR{idProduct}=="6108", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="601f", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="04b4", ATTR{idProduct}=="8613", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="04b4", ATTR{idProduct}=="00f1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+
+# PlutoSDR (ADALM-Pluto), also in its firmware update mode and the newer 2fa2 ids; ModemManager must not probe it as a modem
+SUBSYSTEM=="usb", ATTR{idVendor}=="0456", ATTR{idProduct}=="b673", ENV{ID_MM_DEVICE_IGNORE}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="2fa2", ATTR{idProduct}=="5a02", ENV{ID_MM_DEVICE_IGNORE}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="0456", ATTR{idProduct}=="b674", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="2fa2", ATTR{idProduct}=="5a32", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+
+# USRP B200, B210, B200mini, B205mini (Ettus 2500, and the National Instruments ids of the same boards)
+SUBSYSTEM=="usb", ATTR{idVendor}=="2500", ATTR{idProduct}=="0020", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="2500", ATTR{idProduct}=="0021", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="2500", ATTR{idProduct}=="0022", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="2500", ATTR{idProduct}=="0023", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="3923", ATTR{idProduct}=="7813", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="3923", ATTR{idProduct}=="7814", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+
+# SDRplay RSP1, RSP1A, RSP1B, RSP2, RSPduo, RSPdx, RSPdxR2 (every product of the SDRplay vendor id)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1df7", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+
+# RTL-SDR: the RTL2832U ids of the osmocom rtl-sdr rules file (the RTL-SDR Blog and Nooelec dongles are 0bda:2838)
+# original RTL2832U vid/pid (hama nano, for example)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0bda", ATTR{idProduct}=="2832", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# RTL2832U OEM vid/pid, e.g. ezcap EzTV668 (E4000), Newsky TV28T (E4000/R820T) etc.
+SUBSYSTEM=="usb", ATTR{idVendor}=="0bda", ATTR{idProduct}=="2838", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# DigitalNow Quad DVB-T PCI-E card (4x FC0012?)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0413", ATTR{idProduct}=="6680", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Leadtek WinFast DTV Dongle mini D (FC0012)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0413", ATTR{idProduct}=="6f0f", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Genius TVGo DVB-T03 USB dongle (Ver. B)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0458", ATTR{idProduct}=="707f", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Terratec Cinergy T Stick Black (rev 1) (FC0012)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0ccd", ATTR{idProduct}=="00a9", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Terratec NOXON rev 1 (FC0013)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0ccd", ATTR{idProduct}=="00b3", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Terratec Deutschlandradio DAB Stick (FC0013)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0ccd", ATTR{idProduct}=="00b4", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Terratec NOXON DAB Stick - Radio Energy (FC0013)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0ccd", ATTR{idProduct}=="00b5", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Terratec Media Broadcast DAB Stick (FC0013)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0ccd", ATTR{idProduct}=="00b7", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Terratec BR DAB Stick (FC0013)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0ccd", ATTR{idProduct}=="00b8", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Terratec WDR DAB Stick (FC0013)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0ccd", ATTR{idProduct}=="00b9", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Terratec MuellerVerlag DAB Stick (FC0013)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0ccd", ATTR{idProduct}=="00c0", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Terratec Fraunhofer DAB Stick (FC0013)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0ccd", ATTR{idProduct}=="00c6", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Terratec Cinergy T Stick RC (Rev.3) (E4000)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0ccd", ATTR{idProduct}=="00d3", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Terratec T Stick PLUS (E4000)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0ccd", ATTR{idProduct}=="00d7", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Terratec NOXON rev 2 (E4000)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0ccd", ATTR{idProduct}=="00e0", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# PixelView PV-DT235U(RN) (FC0012)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1554", ATTR{idProduct}=="5020", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Astrometa DVB-T/DVB-T2 (R828D)
+SUBSYSTEM=="usb", ATTR{idVendor}=="15f4", ATTR{idProduct}=="0131", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# HanfTek DAB+FM+DVB-T
+SUBSYSTEM=="usb", ATTR{idVendor}=="15f4", ATTR{idProduct}=="0133", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Compro Videomate U620F (E4000)
+SUBSYSTEM=="usb", ATTR{idVendor}=="185b", ATTR{idProduct}=="0620", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Compro Videomate U650F (E4000)
+SUBSYSTEM=="usb", ATTR{idVendor}=="185b", ATTR{idProduct}=="0650", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Compro Videomate U680F (E4000)
+SUBSYSTEM=="usb", ATTR{idVendor}=="185b", ATTR{idProduct}=="0680", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# GIGABYTE GT-U7300 (FC0012)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1b80", ATTR{idProduct}=="d393", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# DIKOM USB-DVBT HD
+SUBSYSTEM=="usb", ATTR{idVendor}=="1b80", ATTR{idProduct}=="d394", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Peak 102569AGPK (FC0012)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1b80", ATTR{idProduct}=="d395", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# KWorld KW-UB450-T USB DVB-T Pico TV (TUA9001)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1b80", ATTR{idProduct}=="d397", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Zaapa ZT-MINDVBZP (FC0012)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1b80", ATTR{idProduct}=="d398", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# SVEON STV20 DVB-T USB & FM (FC0012)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1b80", ATTR{idProduct}=="d39d", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Twintech UT-40 (FC0013)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1b80", ATTR{idProduct}=="d3a4", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# ASUS U3100MINI_PLUS_V2 (FC0013)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1b80", ATTR{idProduct}=="d3a8", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# SVEON STV27 DVB-T USB & FM (FC0013)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1b80", ATTR{idProduct}=="d3af", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# SVEON STV21 DVB-T USB & FM
+SUBSYSTEM=="usb", ATTR{idVendor}=="1b80", ATTR{idProduct}=="d3b0", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Dexatek DK DVB-T Dongle (Logilink VG0002A) (FC2580)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d19", ATTR{idProduct}=="1101", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Dexatek DK DVB-T Dongle (MSI DigiVox mini II V3.0)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d19", ATTR{idProduct}=="1102", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Dexatek DK 5217 DVB-T Dongle (FC2580)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d19", ATTR{idProduct}=="1103", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# MSI DigiVox Micro HD (FC2580)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d19", ATTR{idProduct}=="1104", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Sweex DVB-T USB (FC0012)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1f4d", ATTR{idProduct}=="a803", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# GTek T803 (FC0012)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1f4d", ATTR{idProduct}=="b803", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# Lifeview LV5TDeluxe (FC0012)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1f4d", ATTR{idProduct}=="c803", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# MyGica TD312 (FC0012)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1f4d", ATTR{idProduct}=="d286", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# PROlectrix DV107669 (FC0012)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1f4d", ATTR{idProduct}=="d803", ENV{ID_SOFTWARE_RADIO}="1", MODE="0660", GROUP="plugdev", TAG+="uaccess"

@@ -79,6 +79,12 @@ bool decodeImage(const std::string& path, int& w, int& h, std::vector<uint32_t>&
     }
 }
 
+bool fetchUrl(const std::string& url, const std::string& file, const std::string& userAgent) {
+    auto q = [](const std::string& s) { std::string o = "'"; for (char c : s) { if (c == '\'') o += "'\\''"; else o += c; } return o + "'"; };
+    const std::string cmd = "curl -fsSL --max-time 12 -A " + q(userAgent) + " -o " + q(file) + " " + q(url) + " 2>/dev/null";
+    return system(cmd.c_str()) == 0;
+}
+
 std::string openFileDialog() {
     NSOpenPanel* p = [NSOpenPanel openPanel];
     p.canChooseFiles = YES; p.canChooseDirectories = NO; p.allowsMultipleSelection = NO;
@@ -94,6 +100,13 @@ std::string saveFileDialog(const char* name) {
 }
 
 namespace {
+// Never nil: stringWithUTF8String gives nil for bytes that are not UTF-8 (a service name damaged by bit errors), and nil in the dictionary
+// literal of setChannels() throws. Such bytes are kept as Latin-1.
+NSString* nsText(const std::string& s) {
+    if (NSString* u = [NSString stringWithUTF8String:s.c_str()]) return u;
+    return [[NSString alloc] initWithBytes:s.data() length:s.size() encoding:NSISOLatin1StringEncoding] ?: @"";
+}
+
 struct DefaultsPrefs : Prefs {
     NSUserDefaults* d = NSUserDefaults.standardUserDefaults;
     NSString* k(const char* key) { return [NSString stringWithUTF8String:key]; }
@@ -105,7 +118,7 @@ struct DefaultsPrefs : Prefs {
     void setD(const char* key, double v) override { [d setDouble:v forKey:k(key)]; }
     void setI(const char* key, long v) override { [d setInteger:v forKey:k(key)]; }
     void setB(const char* key, bool v) override { [d setBool:v forKey:k(key)]; }
-    void setS(const char* key, const std::string& v) override { [d setObject:[NSString stringWithUTF8String:v.c_str()] forKey:k(key)]; }
+    void setS(const char* key, const std::string& v) override { [d setObject:nsText(v) forKey:k(key)]; }
     std::vector<Channel> getChannels() override {
         std::vector<Channel> out;
         for (NSDictionary* c in [d arrayForKey:@"channels"]) {
@@ -120,7 +133,7 @@ struct DefaultsPrefs : Prefs {
     void setChannels(const std::vector<Channel>& ch) override {
         NSMutableArray* arr = [NSMutableArray array];
         for (auto& c : ch)
-            [arr addObject:@{@"f": @(c.freqMhz), @"bw": @(c.bwMhz), @"name": [NSString stringWithUTF8String:c.name.c_str()], @"mode": [NSString stringWithUTF8String:c.mode.c_str()], @"snr": @(c.snrDb), @"n": @(c.nServices), @"fav": @(c.favourite)}];
+            [arr addObject:@{@"f": @(c.freqMhz), @"bw": @(c.bwMhz), @"name": nsText(c.name), @"mode": nsText(c.mode), @"snr": @(c.snrDb), @"n": @(c.nServices), @"fav": @(c.favourite)}];
         [d setObject:arr forKey:@"channels"];
     }
 };

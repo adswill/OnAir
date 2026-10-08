@@ -61,6 +61,7 @@ void wizAction(App& a, int step) {
     } else if (step == 6) {   // back to real hardware
         if (a.engine.running()) a.engine.stop();
         refreshDevices(a);
+        a.devIdx = std::max(0, std::min(a.devIdx, (int)a.devices.size() - 1));   // a radio unplugged since: the list is shorter now
         for (int i = 0; i < (int)a.devices.size(); i++) if (a.devices[i].isRadio()) { a.devIdx = i; break; }
     }
 }

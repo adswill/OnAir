@@ -25,7 +25,29 @@ It is built for people who want a receiver that is both easy to use and honest a
 | **DAB / DAB+** | Europe, Australia and more | Digital radio |
 | **FM radio** (87.5 - 108 MHz) | Worldwide | Analogue radio: stereo, and RDS (station name, radio text, programme type, traffic flags) |
 
-The DVB standard is detected automatically, and one switch at the top of the window selects the family you want (DVB, ATSC, ATSC 3.0, ISDB-T, DAB or FM).
+The DVB standard is detected automatically, and the mode list on the left selects what you want to receive.
+
+**Also receives, experimental.** These receivers are built from the published specifications and checked end to end on simulated signals, but have had little or no testing on real transmissions yet. Reports and recordings on Discord help a lot.
+
+| Mode | What it is | What you see |
+|---|---|---|
+| **DVB-S / DVB-S2** | Satellite TV (through an LNB) | Channels and playback, all DVB-S2 MODCODs |
+| **DTMB** | Digital TV in China, Hong Kong, Macau, Cuba | Channels and playback |
+| **Analog TV** | PAL, SECAM, NTSC | Picture and sound |
+| **DRM** | Digital radio on long, medium and short wave | Audio and station information |
+| **DMR** | Digital two-way radio | Talkgroups, IDs and data (no voice) |
+| **ADS-B** | Aircraft transponders, 1090 MHz | Aircraft on a map, with altitude, speed and callsign |
+| **ACARS** | Aircraft data link, VHF | Messages, and positions on a map |
+| **Inmarsat Aero** | Aircraft satellite data link, L band | Messages, and positions on a map |
+| **Inmarsat-C** | Maritime satellite broadcasts | Safety messages (SafetyNET) and system information |
+| **Iridium** | Satellite phone network | Satellites on a map, pager messages, ring alerts |
+| **AIS** | Ship transponders | Ships on a map |
+| **Maritime** | NAVTEX, DSC, weather fax | Safety messages, distress and calling, fax pictures |
+| **Radiosondes** | Weather balloons, 400 - 406 MHz | Balloon tracks, altitude and weather data |
+| **GNSS** | GPS L1 | Satellites, position and time |
+| **Mesh** | Meshtastic and MeshCore (LoRa) | Nodes, map and chat |
+
+The TV channel scanner covers DVB, ATSC, ATSC 3.0, ISDB-T and DTMB, and scan results can be shared with other users through a public channel list, picked by country and city.
 
 **T2-Lite** (the 1/3 and 2/5 code rates, short FEC frames, 1.7 MHz channels) is decoded like any other DVB-T2 signal. It is checked end to end on simulated signals from QPSK to 256-QAM, and the error correction sits where theory says it should; it has not been tried on a real T2-Lite broadcast. A T2-Lite signal that shares a channel with a normal T2 one (in its future-extension frames) is not decoded: the normal T2 part keeps working.
 
@@ -35,7 +57,7 @@ The DVB standard is detected automatically, and one switch at the top of the win
 
 ## Updates
 
-OnAir checks GitHub for a newer version a few seconds after it starts (and then at most once a day), downloads the package for your system in the background, checks it against the SHA-256 that GitHub lists for the file, and puts it in place when you close the program. The button at the top right (`v0.2.0`) shows the state and has the settings: turn the check off, turn the automatic install off (you then get a button instead), or leave out pre-releases. On macOS it replaces `OnAir.app`, on Windows it runs the installer quietly (Windows asks for permission), on Linux it replaces the portable folder; a `.deb` install asks for your password through the system's installer. Only github.com is contacted, and nothing is sent but the usual request.
+OnAir checks GitHub for a newer version a few seconds after it starts (and then at most once a day), downloads the package for your system in the background, checks it against the SHA-256 that GitHub lists for the file, and puts it in place when you close the program. The button at the top right (`v0.2.1`) shows the state and has the settings: turn the check off, turn the automatic install off (you then get a button instead), or leave out pre-releases. On macOS it replaces `OnAir.app`, on Windows it runs the installer quietly (Windows asks for permission), on Linux it replaces the portable folder; a `.deb` install asks for your password through the system's installer. Only github.com is contacted, and nothing is sent but the usual request.
 
 ## Highlights
 
@@ -45,6 +67,7 @@ OnAir checks GitHub for a newer version a few seconds after it starts (and then 
 - **Share it.** A built-in network tuner streams your channels to VLC, phones, Plex or Jellyfin over your home network, as a plain stream or as HLS for browsers and phones. On a Mac you can cast the playing service to an Apple TV or AirPlay TV. You can also record to a file or send the stream out over UDP.
 - **Try it without hardware.** The first-start tour and the **Tour** button play a built-in demo signal, so you can explore everything before buying a radio.
 - **Fast.** Error correction runs on the GPU where available, and with optimised vector code on the CPU everywhere else.
+- **Your radio, set up properly.** Every antenna input of a radio is its own entry in the source list, and a **Radio settings** section offers what the radio has: frequency correction (ppm), notch filters, gain modes, direct sampling for HF and more. The radio's DC spike can be left alone, removed, or kept off the channel by tuning just beside it.
 
 ## Install
 
@@ -52,7 +75,7 @@ Download the installer for your system from the **[Releases](../../releases)** p
 
 **macOS** (macOS 15 or later, Apple silicon and Intel): open the `.dmg` for your Mac (`arm64` for Apple silicon, `x86_64` for Intel) and drag OnAir to Applications. The app is not yet signed with a developer certificate, so on the first launch right-click it and choose *Open*.
 
-**Windows** (64-bit): run the `OnAir-…-setup.exe` installer (or unpack the `.zip` and start `OnAir.exe`). For a HackRF, RTL-SDR or Airspy, install the WinUSB driver once with [Zadig](https://zadig.akeo.ie). Windows may warn about an unknown publisher because the installer is not code-signed.
+**Windows** (64-bit): run the `OnAir-…-setup.exe` installer (or unpack the `.zip` and start `OnAir.exe`). For a HackRF, RTL-SDR, Airspy or Airspy HF+, install the WinUSB driver once with [Zadig](https://zadig.akeo.ie); a LimeSDR Mini needs FTDI's FT60x driver (see the README inside the download). Windows may warn about an unknown publisher because the installer is not code-signed.
 
 **Linux:** the `.deb` installs on any current Debian or Ubuntu (it carries its own video decoder, so it does not depend on the version of FFmpeg your system has): `sudo apt install ./onair_<version>_<arch>.deb`, then start OnAir from the menu or with `onair`. For other distributions there is a `-portable.tar.gz` with everything inside: unpack it and run `bin/onair`. x86-64 and arm64 packages are provided.
 
@@ -67,7 +90,7 @@ New to all this? Press **Tour** and a friendly little TV will walk you through i
 
 ## Supported radios
 
-OnAir supports the **HackRF One and HackRF Pro** natively, and drives **RTL-SDR, Airspy, BladeRF, LimeSDR, PlutoSDR and USRP** radios directly too (marked "experimental" in the radio list). The libraries those radios need are included in the downloads, so there is nothing else to install, with these exceptions: on macOS the PlutoSDR library is not included yet, and on Windows the LimeSDR and USRP libraries are not (install the manufacturer's software for those). On Windows a radio also needs its USB driver once, see the install notes above. Every other radio, such as the SDRplay RSP, works through [SoapySDR](https://github.com/pothosware/SoapySDR) once its SoapySDR module is installed. Radios that are found appear in the source list next to the HackRF, and the gain control becomes one overall gain slider.
+OnAir supports the **HackRF One and HackRF Pro** natively, and drives **RTL-SDR, Airspy, Airspy HF+, BladeRF, LimeSDR, PlutoSDR, USRP and SDRplay RSP** radios directly too (marked "experimental" in the radio list). The libraries those radios need are included in the downloads, so there is nothing else to install, with this exception: on macOS the PlutoSDR library is not included yet. SDRplay RSPs (RSP1, RSP1A, RSP1B, RSP2, RSPduo, RSPdx, RSPdx-R2): install the SDRplay API from sdrplay.com first (Windows, macOS and Linux; it brings its own USB driver). On Windows a radio also needs its USB driver once, see the install notes above. Every other radio works through [SoapySDR](https://github.com/pothosware/SoapySDR) once its SoapySDR module is installed. Radios that are found appear in the source list next to the HackRF, and the gain control becomes one overall gain slider.
 
 A TV channel needs a radio that can sample fast enough, roughly 1 million samples per second per MHz of channel width:
 
@@ -76,8 +99,9 @@ A TV channel needs a radio that can sample fast enough, roughly 1 million sample
 | HackRF, PlutoSDR, BladeRF, LimeSDR, USRP | Yes | Yes |
 | Airspy R2, SDRplay | Should work | Yes |
 | RTL-SDR | No | Yes |
+| Airspy HF+ | No | Narrow channels only (HF and 60 - 260 MHz) |
 
-The HackRF is the radio the project is developed and tested with; the others have had less real-world testing. On Windows, RTL-SDR and Airspy radios are included in the installer.
+If a radio cannot reach the rate or frequency a mode needs, OnAir says so next to the source. The HackRF is the radio the project is developed and tested with; the others have had less real-world testing.
 
 Notes for specific radios are in [DEVICES.md](DEVICES.md).
 

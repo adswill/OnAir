@@ -56,6 +56,8 @@ struct Ctx {
     int autoColor = 0;
     ImVec2 afterCursor;
     bool inSubplot = false;
+    bool noXLabel = false;   // too short for the x axis label: it is left out
+    bool noYTicks = false;   // too narrow for the y tick labels: left out
 };
 Ctx C;
 Subplots S;
@@ -165,6 +167,7 @@ void finishSetup() {
     float bottom = pad, left = pad, right = pad, top = pad;
     if (xLab) bottom += th + tickLen * 0.5f;
     if (!C.ax[0].label.empty()) bottom += th + pad * 0.5f;
+    if (!C.ax[0].label.empty() && (C.frame.GetHeight() - bottom - top < 3.5f * th || ImGui::CalcTextSize(C.ax[0].label.c_str()).x > C.frame.GetWidth())) { bottom -= th + pad * 0.5f; C.noXLabel = true; }   // a short (or narrow) plot keeps its room for the trace
     if (yLab) {
         // width of the y labels: measured on the ticks of a provisional plot height
         const auto ticks = makeTicks(1, std::max(10.0f, C.frame.GetHeight() - bottom - top), th * 3.0);
@@ -172,6 +175,7 @@ void finishSetup() {
         for (const auto& t : ticks) w = std::max(w, ImGui::CalcTextSize(t.label.c_str()).x);
         left += w + tickLen * 0.5f + pad;
     }
+    if (yLab && C.frame.GetWidth() - left - right - (xLab ? 12 * sc : 0) < 4.f * th) { left = pad; C.noYTicks = true; }   // a narrow plot keeps its room for the trace
     if (xLab) right += 12 * sc;   // the last x label sticks out to the right
     C.plot = ImRect(ImVec2(C.frame.Min.x + left, C.frame.Min.y + top), ImVec2(C.frame.Max.x - right, C.frame.Max.y - bottom));
     if (C.plot.GetWidth() < 20) C.plot.Max.x = C.plot.Min.x + 20;
@@ -463,14 +467,17 @@ void EndPlot() {
     const ImU32 txt = ImGui::ColorConvertFloat4ToU32(gStyle.Text);
     // tick marks and labels outside the plot area
     for (int a = 0; a < 2; a++) {
-        if (C.ax[a].flags & AxisFlags_NoTickLabels) continue;
+        if ((C.ax[a].flags & AxisFlags_NoTickLabels) || (a == 1 && C.noYTicks)) continue;
         const auto ticks = a == 0 ? makeTicks(0, C.plot.GetWidth(), 70 * sc) : makeTicks(1, C.plot.GetHeight(), th * 3.0);
+        float lastEnd = -FLT_MAX;   // a narrow plot: an x label that would touch the one before it is left out (the tick stays)
         for (const auto& t : ticks) {
             if (a == 0) {
                 const float x = px(t.v);
                 if (x < C.plot.Min.x - 1 || x > C.plot.Max.x + 1) continue;
                 C.dl->AddLine(ImVec2(std::floor(x) + 0.5f, C.plot.Max.y), ImVec2(std::floor(x) + 0.5f, C.plot.Max.y + tickLen * 0.5f), txt);
                 const ImVec2 s = ImGui::CalcTextSize(t.label.c_str());
+                if (x - s.x * 0.5f < lastEnd + 4 * sc) continue;
+                lastEnd = x + s.x * 0.5f;
                 C.dl->AddText(ImVec2(x - s.x * 0.5f, C.plot.Max.y + tickLen * 0.5f), txt, t.label.c_str());
             } else {
                 const float y = py(t.v);
@@ -481,12 +488,12 @@ void EndPlot() {
             }
         }
     }
-    if (!C.ax[0].label.empty()) {
+    if (!C.ax[0].label.empty() && !C.noXLabel) {
         const ImVec2 s = ImGui::CalcTextSize(C.ax[0].label.c_str());
         C.dl->AddText(ImVec2(C.plot.Min.x + (C.plot.GetWidth() - s.x) * 0.5f, C.frame.Max.y - th - pad * 0.5f), txt, C.ax[0].label.c_str());
     }
     // the y label sits inside the plot, in the top left corner: no rotated text needed
-    if (!C.ax[1].label.empty()) C.dl->AddText(ImVec2(C.plot.Min.x + 6 * sc, C.plot.Min.y + 3 * sc), ImGui::ColorConvertFloat4ToU32(ImVec4(gStyle.Text.x, gStyle.Text.y, gStyle.Text.z, 0.8f)), C.ax[1].label.c_str());
+    if (!C.ax[1].label.empty() && C.plot.GetHeight() >= 2.5f * th && C.plot.GetWidth() >= ImGui::CalcTextSize(C.ax[1].label.c_str()).x + 12 * sc) C.dl->AddText(ImVec2(C.plot.Min.x + 6 * sc, C.plot.Min.y + 3 * sc), ImGui::ColorConvertFloat4ToU32(ImVec4(gStyle.Text.x, gStyle.Text.y, gStyle.Text.z, 0.8f)), C.ax[1].label.c_str());
     C.dl->AddRect(C.plot.Min, C.plot.Max, ImGui::ColorConvertFloat4ToU32(gStyle.Border));
     // the position of the mouse
     if (C.hovered && !(C.flags & Flags_NoMouseText)) {

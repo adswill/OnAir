@@ -65,7 +65,8 @@ void T2Receiver::Impl::resetAll() {
     scanFirst = true;
     lastP1Abs = INT64_MIN / 2;
     trackMiss = trackFrames = 0; trackExpect = 0; trackFullUntil = 0; trackKeep = -1;
-    trace.clear();
+    p1Evaluated = p1Rescans = 0;
+    trace.clear(); coarse.clear();
     state = 0;
     p1 = P1Info();
     p1Count = 0;
@@ -123,6 +124,7 @@ void T2Receiver::Impl::publish() {
     t.state = state;
     t.p1 = p1;
     t.p1Count = p1Count;
+    t.p1Evaluated = p1Evaluated; t.p1Rescans = p1Rescans;
     t.secSinceP1 = lastP1Seen ? (double)(end() - lastP1Seen) / fn : 1e9;
     t.frameMs = frameMsv;
     t.symbolsPerFrame = frameSyms;
@@ -210,6 +212,7 @@ void T2Receiver::configure(double inputRateHz, double bandwidthMhz) {
         I.rateOk = I.resampler.configure(inputRateHz, I.fn) && inputRateHz >= 7.9e6 * (bandwidthMhz / 8.0);
     }
     I.decimate = I.rateOk && !I.resampler.passthrough();
+    I.gateOff = getenv("DECT2_NOP1GATE") != nullptr;
     I.resetAll();
 }
 

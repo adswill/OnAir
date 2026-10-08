@@ -19,29 +19,25 @@ void isdbtStatus(App& a) {
     const bool live = telemI(a);
     const RxTelemetry& t = a.rx;
     const AdcStatus adc = classifyAdc(st.rmsDbfs, st.peak, st.clipFraction);
-    {
-        const ImVec2 p = ImGui::GetCursorScreenPos();
-        const float h = ImGui::GetFrameHeight() * 2.f + ImGui::GetStyle().ItemSpacing.y * 2.f;
-        ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(p.x - 4, p.y - 2), ImVec2(p.x + ImGui::GetContentRegionAvail().x + 4, p.y + h), IM_COL32(22, 23, 25, 255), 3.f);
-    }
+    StatusPanel panel;   // a tinted panel behind the status lines (they wrap in a narrow window)
     bool sync = false;
     uint64_t okAll = 0, badAll = 0;
     for (int i = 0; i < 3; i++) { sync |= t.isdbt.layer[i].synced; okAll += t.isdbt.layer[i].rsClean + t.isdbt.layer[i].rsCorrected; badAll += t.isdbt.layer[i].rsFailed; }
-    lamp("IQ", run ? (adc == AdcStatus::Overload ? 3 : (adc == AdcStatus::Good ? 1 : 2)) : 0, (int)Ic::Wave); ImGui::SameLine(0, 12 * gUi);
-    lamp("Mode", !live ? 0 : t.fftN ? 1 : 0); ImGui::SameLine(0, 12 * gUi);
-    lamp("TMCC", !live ? 0 : t.isdbt.tmccOk ? 1 : t.fftN ? 2 : 0); ImGui::SameLine(0, 12 * gUi);
-    lamp("Layers", !live || !t.isdbt.tmccOk ? 0 : sync ? 1 : 2); ImGui::SameLine(0, 12 * gUi);
-    lamp("TS", !run ? 0 : a.ts.services.empty() ? 0 : 1, (int)Ic::Layers); ImGui::SameLine(0, 12 * gUi);
+    lamp("IQ", run ? (adc == AdcStatus::Overload ? 3 : (adc == AdcStatus::Good ? 1 : 2)) : 0, (int)Ic::Wave); flowNext(12 * gUi);
+    lamp("Mode", !live ? 0 : t.fftN ? 1 : 0); flowNext(12 * gUi);
+    lamp("TMCC", !live ? 0 : t.isdbt.tmccOk ? 1 : t.fftN ? 2 : 0); flowNext(12 * gUi);
+    lamp("Layers", !live || !t.isdbt.tmccOk ? 0 : sync ? 1 : 2); flowNext(12 * gUi);
+    lamp("TS", !run ? 0 : a.ts.services.empty() ? 0 : 1, (int)Ic::Layers); flowNext(12 * gUi);
     const PlayerStats ps = a.engine.player().stats();
     const bool pl = run && ps.active;
-    lamp("Video", !pl || !ps.hasVideo ? 0 : (ps.shown > 0 && ps.videoQueue > 2) ? 1 : 2, (int)Ic::Tv); ImGui::SameLine(0, 12 * gUi);
-    lamp("Audio", !pl || !ps.hasAudio ? 0 : (ps.audioBufferMs > 150) ? 1 : 2, (int)Ic::Speaker); ImGui::SameLine(0, 10 * gUi);
-    ImGui::TextDisabled("|"); ImGui::SameLine(0, 10 * gUi);
+    lamp("Video", !pl || !ps.hasVideo ? 0 : (ps.shown > 0 && ps.videoQueue > 2) ? 1 : 2, (int)Ic::Tv); flowNext(12 * gUi);
+    lamp("Audio", !pl || !ps.hasAudio ? 0 : (ps.audioBufferMs > 150) ? 1 : 2, (int)Ic::Speaker); flowNext(10 * gUi);
+    ImGui::TextDisabled("|"); flowNext(10 * gUi);
     auto ro = [&](const char* label, const std::string& val, ImVec4 col = ImVec4(0.93f, 0.95f, 0.97f, 1)) {
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled("%s", label); ImGui::SameLine(0, 5 * gUi);
         ImGui::PushFont(a.mono, 0); ImGui::TextColored(col, "%s", val.c_str()); ImGui::PopFont();
-        ImGui::SameLine(0, 15 * gUi);
+        flowNext(15 * gUi);
     };
     char b[96];
     if (!run) ro("State", "stopped", ImVec4(0.6f, 0.64f, 0.68f, 1));
@@ -55,7 +51,7 @@ void isdbtStatus(App& a) {
         snprintf(b, sizeof b, "%d", t.isdbt.mode ? t.isdbt.mode : (t.fftN == 2048 ? 1 : t.fftN == 4096 ? 2 : 3)); ro("Mode", b);
         ro("GI", isdbt::guardName(t.giIdx));
     }
-    ImGui::NewLine();
+    flowBreak();
     if (live && t.fftN) {
         snprintf(b, sizeof b, "%+.1f Hz", t.cfoHz); ro("CFO", b);
         if (t.isdbt.tmccOk) { snprintf(b, sizeof b, "%.1f dB", t.dataSnrDb); ro("SNR", b); }
@@ -70,23 +66,26 @@ void isdbtStatus(App& a) {
         gaugePill(130, run ? (st.rmsDbfs + 60.f) / 60.f : 0.f, col, b);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("ADC level (rms). %s\npeak %.2f   clip %.3f%%   DC %+.3f / %+.3f", adcAdvice(adc).c_str(), st.peak, st.clipFraction * 100, st.dcI, st.dcQ);
     }
-    ImGui::SameLine(0, 15 * gUi);
+    flowNext(15 * gUi);
     if (run) { snprintf(b, sizeof b, "%llu", (unsigned long long)a.engine.droppedSamples()); ro("dropped", b, a.engine.droppedSamples() ? ImVec4(0.95f, 0.45f, 0.3f, 1) : ImVec4(0.93f, 0.95f, 0.97f, 1)); }
     if (run && a.devices[a.devIdx].kind != DeviceInfo::File) {
         ImGui::AlignTextToFramePadding();
-        if (adc == AdcStatus::Overload) ImGui::TextColored(ImVec4(0.95f, 0.35f, 0.25f, 1), "ADC OVERLOAD - %s", a.agcOn ? "AGC is lowering the gain" : "reduce the gain (or enable AGC)");
-        else if (adc == AdcStatus::Low) ImGui::TextColored(ImVec4(0.95f, 0.70f, 0.15f, 1), "ADC level low - raise the gain");
-        else if (adc == AdcStatus::NoSignal) ImGui::TextColored(ImVec4(0.95f, 0.70f, 0.15f, 1), "ADC sees almost nothing - antenna / gain?");
-        else ImGui::NewLine();
-    } else ImGui::NewLine();
+        if (adc == AdcStatus::Overload) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.35f, 0.25f, 1), "ADC OVERLOAD - %s", a.agcOn ? "AGC is lowering the gain" : "reduce the gain (or enable AGC)"); ImGui::PopTextWrapPos(); }
+        else if (adc == AdcStatus::Low) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.70f, 0.15f, 1), "ADC level low - raise the gain"); ImGui::PopTextWrapPos(); }
+        else if (adc == AdcStatus::NoSignal) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.70f, 0.15f, 1), "ADC sees almost nothing - antenna / gain?"); ImGui::PopTextWrapPos(); }
+        else flowBreak();
+    } else flowBreak();
 }
 
 void isdbtReceiverTab(App& a) {
-    ImGui::TextDisabled("ISDB-T receiver: mode and guard interval from the cyclic prefix, carrier and clock tracking, TMCC, equalisation, de-interleaving, Viterbi, Reed-Solomon");
+    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("ISDB-T receiver: mode and guard interval from the cyclic prefix, carrier and clock tracking, TMCC, equalisation, de-interleaving, Viterbi, Reed-Solomon"); ImGui::PopTextWrapPos(); }
     ImGui::Spacing();
-    if (!telemI(a)) { ImGui::TextDisabled("Start the receiver with the ISDB-T switch selected."); return; }
+    if (!telemI(a)) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Start the receiver with the ISDB-T switch selected."); ImGui::PopTextWrapPos(); } return; }
     const RxTelemetry& t = a.rx;
-    auto row = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); ImGui::SameLine(190 * gUi); ImGui::PushFont(a.mono, 0); ImGui::Text(fmt, v...); ImGui::PopFont(); };
+    auto row = [&](const char* k, const char* fmt, auto... v) {   // a long value wraps under itself in a narrow tab
+        ImGui::TextDisabled("%s", k); ImGui::SameLine(std::min(190 * gUi, ImGui::GetContentRegionAvail().x * 0.45f));
+        ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::Text(fmt, v...); ImGui::PopTextWrapPos(); ImGui::PopFont();
+    };
     row("synchronisation", "%s", t.isdbt.tmccOk ? "TMCC decoded" : t.fftN ? "signal found, waiting for the TMCC" : "searching for an ISDB-T signal");
     if (t.fftN) {
         const int mode = t.isdbt.mode ? t.isdbt.mode : (t.fftN == 2048 ? 1 : t.fftN == 4096 ? 2 : 3);
@@ -118,7 +117,7 @@ void isdbtReceiverTab(App& a) {
                 ImGui::TableNextColumn(); ImGui::Text("%llu", (unsigned long long)L.packets);
                 ImGui::TableNextColumn();
                 const double tot = (double)(L.rsClean + L.rsCorrected + L.rsFailed);
-                ImGui::Text("%s  %llu fixed, %llu failed (%.1f%%)", L.synced ? "locked" : "searching", (unsigned long long)L.rsCorrected, (unsigned long long)L.rsFailed, tot > 0 ? 100.0 * (double)L.rsFailed / tot : 0.0);
+                { ImGui::PushTextWrapPos(0); ImGui::Text("%s  %llu fixed, %llu failed (%.1f%%)", L.synced ? "locked" : "searching", (unsigned long long)L.rsCorrected, (unsigned long long)L.rsFailed, tot > 0 ? 100.0 * (double)L.rsFailed / tot : 0.0); ImGui::PopTextWrapPos(); }
             }
             ImGui::EndTable();
         }
@@ -126,5 +125,5 @@ void isdbtReceiverTab(App& a) {
         row("total net rate", "%.2f Mbit/s", isdbt::totalBitrate(p) / 1e6);
     }
     ImGui::Spacing();
-    ImGui::TextDisabled("Picture and sound appear in the TV tab. Names written in the Japanese character set may show up with placeholder characters.");
+    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Picture and sound appear in the TV tab. Names written in the Japanese character set may show up with placeholder characters."); ImGui::PopTextWrapPos(); }
 }

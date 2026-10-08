@@ -1,5 +1,6 @@
 // application state: preferences, device list, bandwidth, ingesting spectrum and receiver telemetry, channel list
 #include "app.h"
+#include "dect2/usb_diag.h"
 
 // the name of the built-in test signal in the source list: it follows the mode
 static std::string synthLabel(const App& a) {
@@ -10,10 +11,31 @@ static std::string synthLabel(const App& a) {
     case 3: return "Synthetic test signal (ATSC 3.0, test card)";
     case 4: return "Synthetic test signal (ISDB-T)";
     case 5: return "Synthetic test signal (FM stereo, RDS)";
+    case 13: return "Synthetic test signal (Radiosonde)";
+    case 14: return "Synthetic test signal (AIS)";
+    case 15: return "Synthetic test signal (Marine)";
+    case 16: return "Synthetic test signal (ACARS)";
+    case 17: return "Synthetic test signal (Inmarsat-C)";
+    case 18: return "Synthetic test signal (Inmarsat Aero)";
+    case 19: return "Synthetic test signal (Iridium)";
+    case 20: return "Synthetic test signal (Mesh (LoRa))";
     default: { const ModeTuning* mt = modeTuning(a.family + 2); return std::string("Synthetic test signal (") + (mt ? mt->name : "?") + ")"; }
     }
 }
 static void nameSynth(App& a) { if (!a.devices.empty() && a.devices[0].kind == DeviceInfo::Synthetic) a.devices[0].name = synthLabel(a); }
+
+// The scan tab starts on the channel raster of the TV mode (its first preset): an ATSC or ISDB-T scan on the 8 MHz DVB centres
+// misses every channel, and the 6 MHz modes would be measured with the 8 MHz width
+static void scanRaster(App& a, int f) {
+    static int raster = 0;   // what scanCfg holds now: 0 DVB (the ScanConfig defaults), 1 the 6 MHz US raster, 2 ISDB-T, 3 DTMB
+    const int r = f == 0 ? 0 : f == 1 || f == 3 ? 1 : f == 4 ? 2 : f == 7 ? 3 : -1;
+    if (r < 0 || r == raster) return;
+    raster = r; a.scanPreset = 0;
+    ScanConfig& c = a.scanCfg;
+    if (r == 0 || r == 3) { c.startMHz = 474; c.stopMHz = 858; c.stepMHz = 8; c.bwMhz = 8; }
+    if (r == 1) { c.startMHz = 473; c.stopMHz = 605; c.stepMHz = 6; c.bwMhz = 6; }
+    if (r == 2) { c.startMHz = 473.143; c.stopMHz = 767.143; c.stepMHz = 6; c.bwMhz = 6; }
+}
 
 // the per-family flags and a frequency that suits the mode (the settings and setFamily both use it)
 static void setFamilyFlags(App& a, int f) {
@@ -22,13 +44,16 @@ static void setFamilyFlags(App& a, int f) {
         const ModeTuning* mt = modeTuning(f + 2);
         if (mt && !(a.freqMhz >= mt->minMhz && a.freqMhz <= mt->maxMhz)) a.freqMhz = mt->defMhz;
     }
+    scanRaster(a, f);
     nameSynth(a);
 }
 
 void setFamily(App& a, int f) {
-    if (a.family >= 6 && a.family < 16 && f != a.family) a.famFreq[a.family] = a.freqMhz;   // each of the newer modes comes back on the frequency it was left on
-    if (a.family >= 0 && a.family < 16 && f != a.family) {   // the gains that suit FM are not the ones for a TV channel: remember them per mode
+    if (a.family >= 6 && a.family < 24 && f != a.family) a.famFreq[a.family] = a.freqMhz;   // each of the newer modes comes back on the frequency it was left on
+    if (a.family >= 0 && a.family < 24 && f != a.family) {   // the gains that suit FM are not the ones for a TV channel: remember them per mode
         a.famGain[a.family] = {a.tune.lnaDb, a.tune.vgaDb, a.tune.ampOn, true};
+        a.famBias[a.family] = a.tune.biasTee;
+        a.tune.biasTee = a.famBias[f];
         const App::FamGain& g = a.famGain[f];
         if (g.known) { a.tune.lnaDb = g.lna; a.tune.vgaDb = g.vga; a.tune.ampOn = g.amp; }
         else if (f == 5) { a.tune.lnaDb = 24; a.tune.vgaDb = 20; a.tune.ampOn = false; }   // FM stations are strong
@@ -47,10 +72,13 @@ void setFamily(App& a, int f) {
     if (f == 5 && !(a.freqMhz >= 87.5 && a.freqMhz <= 108)) a.freqMhz = 100.0;     // FM band, default to 100 MHz
 }
 
-// what to tell the engine: 0 auto, 1 DVB-T2, 2 DVB-T, 3 ATSC, 4 DAB, 5 ATSC 3.0, 6 ISDB-T, 7 FM, 8 DVB-S/S2, 9 DTMB, 10 analog TV, 11 DMR, 12 DRM, 13 ADS-B, 14 GNSS (Engine::start maps these to activeStandard())
+// what to tell the engine: 0 auto, 1 DVB-T2, 2 DVB-T, 3 ATSC, 4 DAB, 5 ATSC 3.0, 6 ISDB-T, 7 FM, 8 DVB-S/S2, 9 DTMB, 10 analog TV, 11 DMR, 12 DRM, 13 ADS-B, 14 GNSS, 15 radiosonde, 16 AIS, 17 marine, 18 ACARS, 19 Inmarsat-C, 20 Inmarsat Aero, 21 Iridium, 22 mesh (Engine::start maps these to activeStandard())
 int engineStd(const App& a) { return a.family >= 6 ? a.family + 2 : a.family == 1 ? 3 : a.family == 2 ? 4 : a.family == 3 ? 5 : a.family == 4 ? 6 : a.family == 5 ? 7 : a.stdMode; }
 
 void refreshDevices(App& a) {
+    // the radio chosen before stays chosen when it is found again (a radio unplugged or added moves the others in the list)
+    const bool hadRadio = a.devIdx >= 2 && a.devIdx < (int)a.devices.size();
+    const std::string keep = hadRadio ? a.devices[a.devIdx].name : "";
     a.devices.clear();
     DeviceInfo s; s.kind = DeviceInfo::Synthetic; s.name = synthLabel(a); a.devices.push_back(s);
     DeviceInfo f; f.kind = DeviceInfo::File; f.name = "IQ recording file…"; a.devices.push_back(f);
@@ -58,6 +86,17 @@ void refreshDevices(App& a) {
     // HackRF, the radios with a native driver (RTL-SDR, Airspy, BladeRF, LimeSDR, PlutoSDR, USRP) and the rest through SoapySDR
     for (auto& d : listRadios(err)) a.devices.push_back(d);
     a.hackrfErr = err;
+    a.hackrfErrHidden = false;
+    a.usbHints = a.devices.size() == 2 ? usbRadioHints() : std::vector<std::string>();   // reads sysfs: only here, not every frame
+    if (hadRadio) {
+        int idx = -1;
+        for (int i = 2; i < (int)a.devices.size(); i++) if (a.devices[i].name == keep) { idx = i; break; }
+        if (idx < 0) {   // it is gone: another radio must not inherit its antenna power
+            a.tune.biasTee = false;
+            for (bool& b : a.famBias) b = false;
+        }
+        a.devIdx = idx >= 0 ? idx : std::min(a.devIdx, (int)a.devices.size() - 1);
+    }
     size_t nHack = 0;
     for (const auto& d : a.devices) if (d.kind == DeviceInfo::HackRF) nHack++;
     const std::string line = "device scan: " + std::to_string(nHack) + " HackRF, " + std::to_string(a.devices.size() - 2 - nHack) + " other radio(s)" + (soapySupported() ? "" : " (built without SoapySDR)");
@@ -69,13 +108,71 @@ void refreshDevices(App& a) {
     fflush(stderr);
 }
 
+// ---- the radio's own settings, saved per radio: prefs key "radio.<board>.<serial or name>", value "key=value;key=value" with ';', '=', '%'
+// (and what the settings file cannot hold: '|', line breaks) written as %XX
+std::string radioKeyOf(const DeviceInfo& d) {
+    if (!d.isRadio()) return "";
+    std::string k = "radio." + d.board + "." + (d.serial.empty() ? d.name : d.serial);
+    for (auto& c : k) if (c == '=' || c == '|' || c == '\n' || c == '\r' || c == ' ') c = '_';
+    return k;
+}
+static std::string radioEscape(const std::string& s) {
+    std::string r;
+    for (unsigned char c : s) {
+        if (c == ';' || c == '=' || c == '%' || c == '|' || c < 32) { char b[4]; snprintf(b, sizeof b, "%%%02X", c); r += b; }
+        else r += (char)c;
+    }
+    return r;
+}
+static std::string radioUnescape(const std::string& s) {
+    std::string r;
+    for (size_t i = 0; i < s.size(); i++) {
+        if (s[i] == '%' && i + 2 < s.size()) { r += (char)strtol(s.substr(i + 1, 2).c_str(), nullptr, 16); i += 2; }
+        else r += s[i];
+    }
+    return r;
+}
+void syncRadioSettings(App& a) {
+    const std::string key = a.devIdx >= 0 && a.devIdx < (int)a.devices.size() ? radioKeyOf(a.devices[a.devIdx]) : std::string();
+    if (key == a.radioKey) return;
+    a.radioKey = key;
+    a.tune.radio.clear();   // another radio never inherits these (a correction, a notch filter, a gain mode of the one before)
+    if (key.empty()) return;
+    const std::string v = plat::prefs().getS(key.c_str(), "");
+    size_t pos = 0;
+    while (pos < v.size()) {
+        size_t e = v.find(';', pos);
+        if (e == std::string::npos) e = v.size();
+        const std::string item = v.substr(pos, e - pos);
+        pos = e + 1;
+        const size_t eq = item.find('=');
+        if (eq != std::string::npos && eq > 0) a.tune.radio[radioUnescape(item.substr(0, eq))] = radioUnescape(item.substr(eq + 1));
+    }
+}
+void saveRadioSettings(const App& a) {
+    if (a.radioKey.empty()) return;
+    std::string v;
+    for (const auto& kv : a.tune.radio) v += (v.empty() ? "" : ";") + radioEscape(kv.first) + "=" + radioEscape(kv.second);
+    plat::prefs().setS(a.radioKey.c_str(), v);
+    plat::prefs().flush();
+}
+
 void applyBandwidth(App& a) {
+    syncRadioSettings(a);   // the selected radio's own settings go with every start
     // HackRF Pro: the tuned centre is only exact at <= 10 Msps and at 20 Msps, so use 10 Msps (8 for narrow channels)
     a.tune.sampleRate = kBw[a.bwIdx].mhz >= 7 ? 10e6 : 8e6;
     {   // a radio that cannot reach that rate runs as fast as it can (the source picks the nearest rate it offers)
         const DeviceInfo& dv = a.devices[a.devIdx];
         if (dv.isGeneric() && dv.maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, dv.maxRateHz);
+        // "30 dB" is nearly deaf on an SDRplay (0..103), full gain on an Airspy (0..21), attenuation on an HF+: a radio that the gain was not
+        // set for starts at 60 % of its own range (settings from before this rule keep their gain)
+        if (dv.isGeneric() && dv.gainMaxDb > dv.gainMinDb) {
+            const std::string key = dv.board + ":" + (dv.serial.empty() ? dv.name : dv.serial);
+            if (a.gainDev.empty()) a.gainDev = key;
+            else if (a.gainDev != key) { a.tune.gainDb = std::round(dv.gainMinDb + 0.6 * (dv.gainMaxDb - dv.gainMinDb)); a.gainDev = key; }
+        }
         if (dv.isGeneric() && a.tune.gainDb > dv.gainMaxDb && dv.gainMaxDb > 0) a.tune.gainDb = dv.gainMaxDb;
+        if (dv.isGeneric() && a.tune.gainDb < dv.gainMinDb && dv.gainMaxDb > dv.gainMinDb) a.tune.gainDb = dv.gainMinDb;   // a gain left by another radio
     }
     a.tune.basebandFilterHz = 0;
     a.tune.bandwidthMhz = kBw[a.bwIdx].mhz;
@@ -95,6 +192,9 @@ void applyBandwidth(App& a) {
         const DeviceInfo& dv = a.devices[a.devIdx];
         if (dv.isGeneric() && dv.maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, dv.maxRateHz);
     } else if (a.atscMode) { a.tune.bandwidthMhz = 6; a.tune.sampleRate = 8e6; if (a.devices[a.devIdx].isGeneric() && a.devices[a.devIdx].maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, a.devices[a.devIdx].maxRateHz); }   // an ATSC channel is always 6 MHz wide
+    // the rate was lowered to the radio's top: a filter meant for the faster rate lets everything up to its edge fold into the band (the
+    // 8-9 MHz filters of DTMB, analog TV, DVB-S and Iridium on a PlutoSDR's 4 Msps over USB); the radio's own choice for its rate (0) fits
+    if (a.tune.basebandFilterHz > a.tune.sampleRate) a.tune.basebandFilterHz = 0;
 }
 
 std::string openFileDialog() { return plat::openFileDialog(); }
@@ -107,16 +207,18 @@ void loadPrefs(App& a) {
     if (d.has("lna")) a.tune.lnaDb = (int)d.getI("lna", a.tune.lnaDb);
     if (d.has("vga")) a.tune.vgaDb = (int)d.getI("vga", a.tune.vgaDb);
     if (d.has("gain")) a.tune.gainDb = d.getD("gain", a.tune.gainDb);
+    a.gainDev = d.getS("gainDev", "");
     a.tune.ampOn = d.getB("amp", false);
-    if (d.has("family")) { const int f = std::max(0, std::min(12, (int)d.getI("family", 0))); setFamilyFlags(a, f); if (a.fmMode && !(a.freqMhz >= 87.5 && a.freqMhz <= 108)) a.freqMhz = 100.0; }
-    for (int f = 0; f < 16; f++) {
+    if (d.has("family")) { const int f = std::max(0, std::min(20, (int)d.getI("family", 0))); setFamilyFlags(a, f); if (a.fmMode && !(a.freqMhz >= 87.5 && a.freqMhz <= 108)) a.freqMhz = 100.0; }
+    for (int f = 0; f < 24; f++) {   // as many as savePrefs writes
         if (!d.has(("gLna" + std::to_string(f)).c_str())) continue;
         a.famGain[f] = {(int)d.getI(("gLna" + std::to_string(f)).c_str(), 32), (int)d.getI(("gVga" + std::to_string(f)).c_str(), 20), d.getB(("gAmp" + std::to_string(f)).c_str(), true), true};
     }
-    if (a.family >= 0 && a.family < 16 && a.famGain[a.family].known) { a.tune.lnaDb = a.famGain[a.family].lna; a.tune.vgaDb = a.famGain[a.family].vga; a.tune.ampOn = a.famGain[a.family].amp; }
-    for (int f = 6; f < 16; f++) a.famFreq[f] = d.getD(("fFreq" + std::to_string(f)).c_str(), 0.0);
+    if (a.family >= 0 && a.family < 24 && a.famGain[a.family].known) { a.tune.lnaDb = a.famGain[a.family].lna; a.tune.vgaDb = a.famGain[a.family].vga; a.tune.ampOn = a.famGain[a.family].amp; }
+    for (int f = 6; f < 24; f++) a.famFreq[f] = d.getD(("fFreq" + std::to_string(f)).c_str(), 0.0);
     if (d.has("newUi")) a.newUi = d.getB("newUi", true);
     if (d.has("uiVariant")) a.uiVariant = std::max(0, std::min(7, (int)d.getI("uiVariant", 0)));
+    if (d.has("lightUi")) a.lightUi = d.getI("lightUi", 0) != 0;
     if (d.has("uiTheme")) a.uiTheme = std::max(0, std::min(2, (int)d.getI("uiTheme", 1)));
     if (d.has("fmStations")) {
         std::string st = d.getS("fmStations", ""), line;
@@ -134,10 +236,14 @@ void loadPrefs(App& a) {
         }
     }
     if (d.has("fmDeemph")) a.fmDeemph = d.getI("fmDeemph", 50) == 75 ? 75 : 50;
-    if (d.has("compute")) a.computeMode = (int)d.getI("compute", a.computeMode);
-    if (d.has("standard")) a.stdMode = (int)d.getI("standard", a.stdMode);
+    if (d.has("compute")) a.computeMode = std::max(0, std::min(2, (int)d.getI("compute", a.computeMode)));   // indexes the CPU / GPU / Auto names
+    if (d.has("standard")) a.stdMode = std::max(0, std::min(2, (int)d.getI("standard", a.stdMode)));   // 0 auto, 1 DVB-T2, 2 DVB-T: engineStd() hands it on
     a.bwIdx = std::max(0, std::min((int)(sizeof kBw / sizeof *kBw) - 1, (int)d.getI("bw", 0)));
     if (d.has("bwAuto")) a.bwAuto = d.getB("bwAuto", a.bwAuto);
+    a.engine.player().setConceal(d.getB("smoothGaps", false));
+    a.engine.iqFix().dc = d.getB("dcRemove", false);
+    a.engine.setAutoOffset(d.getB("offsetTune", false));
+    a.engine.iqFix().iq = d.getB("iqCorrect", false);
     if (d.has("filePath")) a.file.path = d.getS("filePath", "");
     if (d.has("outPath")) snprintf(a.filePath, sizeof a.filePath, "%s", d.getS("outPath", "").c_str());
     if (d.has("udpHost")) snprintf(a.udpHost, sizeof a.udpHost, "%s", d.getS("udpHost", "").c_str());
@@ -155,19 +261,21 @@ void savePrefs(const App& a) {
     d.setI("lna", a.tune.lnaDb);
     d.setI("vga", a.tune.vgaDb);
     d.setD("gain", a.tune.gainDb);
+    d.setS("gainDev", a.gainDev);
     d.setB("amp", a.tune.ampOn);
     d.setI("family", a.family);
     d.setI("fmDeemph", a.fmDeemph);
     d.setB("newUi", a.newUi);
-    for (int f = 0; f < 16; f++) {   // gains per mode (the current mode from the live settings)
+    for (int f = 0; f < 24; f++) {   // gains per mode (the current mode from the live settings)
         const bool cur = f == a.family;
         if (!cur && !a.famGain[f].known) continue;
         d.setI(("gLna" + std::to_string(f)).c_str(), cur ? a.tune.lnaDb : a.famGain[f].lna);
         d.setI(("gVga" + std::to_string(f)).c_str(), cur ? a.tune.vgaDb : a.famGain[f].vga);
         d.setB(("gAmp" + std::to_string(f)).c_str(), cur ? a.tune.ampOn : a.famGain[f].amp);
     }
-    for (int f = 6; f < 16; f++) if (a.famFreq[f] > 0 || f == a.family) d.setD(("fFreq" + std::to_string(f)).c_str(), f == a.family ? a.freqMhz : a.famFreq[f]);
+    for (int f = 6; f < 24; f++) if (a.famFreq[f] > 0 || f == a.family) d.setD(("fFreq" + std::to_string(f)).c_str(), f == a.family ? a.freqMhz : a.famFreq[f]);
     d.setI("uiTheme", a.uiTheme);
+    d.setI("lightUi", a.lightUi ? 1 : 0);
     d.setI("uiVariant", a.uiVariant);
     {   // the stations the FM scan found: mhz|name|type|snr|stereo|rds, one per line
         std::string st;
@@ -184,6 +292,10 @@ void savePrefs(const App& a) {
     d.setI("standard", a.stdMode);
     d.setI("bw", a.bwIdx);
     d.setB("bwAuto", a.bwAuto);
+    d.setB("smoothGaps", a.engine.player().conceal());
+    d.setB("dcRemove", a.engine.iqFix().dc.load());
+    d.setB("offsetTune", a.engine.autoOffset());
+    d.setB("iqCorrect", a.engine.iqFix().iq.load());
     d.setS("filePath", a.file.path);
     d.setS("outPath", a.filePath);
     d.setS("udpHost", a.udpHost);
@@ -285,11 +397,17 @@ void ingestRx(App& a) {
     }
 }
 
+double radioCenterMhz(const App& a) {
+    const ModeTuning* mt = a.family >= 6 ? modeTuning(a.family + 2) : nullptr;
+    const bool file = !a.devices.empty() && a.devIdx >= 0 && a.devIdx < (int)a.devices.size() && a.devices[a.devIdx].kind == DeviceInfo::File;
+    return a.freqMhz + (mt && !file ? mt->tuneOffsetHz / 1e6 : 0.0);
+}
+
 std::vector<double> xs(const App& a) {
     size_t n = a.smooth.size();
     std::vector<double> x(n);
     double fs = a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate;
-    double c = a.freqMhz;
+    double c = radioCenterMhz(a);
     for (size_t i = 0; i < n; i++) x[i] = c + ((double)i / n - 0.5) * fs / 1e6;
     return x;
 }
@@ -311,6 +429,10 @@ std::string channelLabel(const SavedChannel& c) {
 // Merge DVB-T2 muxes found by the scanner into the remembered channel list.
 void harvestScan(App& a) {
     ScanProgress pr = a.scanner.progress();
+    if (!pr.running && a.scanWasRunning) {   // the scan stopped the receiver: it carries on once the scan has let go of the radio
+        a.scanWasRunning = false;
+        if (!a.engine.running()) startReceiver(a);
+    }
     const double now = glfwGetTime();
     const bool due = pr.running ? now - a.scanHarvestT > 0.5 : a.scanWas;
     if (!due) return;
@@ -340,18 +462,22 @@ void harvestScan(App& a) {
 
 // Select a remembered channel: stop what is playing and tune the HackRF to it.
 void tuneToChannel(App& a, const SavedChannel& c) {
-    int hw = -1;
-    for (int i = 0; i < (int)a.devices.size(); i++) if (a.devices[i].isRadio()) hw = i;
+    int hw = -1;   // the radio chosen in the toolbar, else the last one in the list (as the scan tab picks it)
+    if (a.devIdx >= 0 && a.devIdx < (int)a.devices.size() && a.devices[a.devIdx].isRadio()) hw = a.devIdx;
+    else for (int i = 0; i < (int)a.devices.size(); i++) if (a.devices[i].isRadio()) hw = i;
     if (hw < 0) { a.engine.log("channel selector needs a radio"); return; }
     if (a.scanner.progress().running) a.scanner.stop();
-    const double oldBw = a.tune.bandwidthMhz;
+    a.scanWasRunning = false;   // the channel is started here, not the receiver the scan stopped
+    const double oldBw = a.tune.bandwidthMhz, oldRate = a.tune.sampleRate;
+    const bool sameDev = a.devIdx == hw;
+    a.devIdx = hw;   // before applyBandwidth: the rate and gain limits are those of this radio
     a.freqMhz = c.freqMhz;
     for (int k = 0; k < (int)(sizeof(kBw) / sizeof(kBw[0])); k++) if (kBw[k].mhz == c.bwMhz) a.bwIdx = k;
     a.tune.centerHz = a.freqMhz * 1e6;
     applyBandwidth(a);
     a.engine.player().select(-1);
     a.selService = -1;
-    if (a.engine.running() && a.devIdx == hw && oldBw == a.tune.bandwidthMhz) {
+    if (a.engine.running() && sameDev && oldBw == a.tune.bandwidthMhz && oldRate == a.tune.sampleRate) {
         a.engine.log("channel: " + channelLabel(c));
         a.engine.retuneReset(a.tune);
     } else {

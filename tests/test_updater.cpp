@@ -1,5 +1,6 @@
 // The updater: versions, SHA-256, choosing a release and its package from GitHub's answer, and the whole path (check, download, check the
-// checksum, prepare, swap) against a fake release made of local files, with a fake portable Linux installation.
+// checksum, prepare, swap) against a fake release made of local files, with a fake portable Linux installation (not on Windows), and the
+// script and result file of the Windows installation step (on every system).
 #include "dect2/updater.h"
 #include <chrono>
 #include <cstdio>
@@ -7,14 +8,17 @@
 #include <filesystem>
 #include <fstream>
 #include <thread>
+#ifndef _WIN32
 #include <sys/wait.h>
 #include <unistd.h>
+#endif
 
 using namespace dect2;
 namespace fs = std::filesystem;
 static int fails = 0;
 #define CHECK(c, ...) do { if (!(c)) { printf("FAIL: " __VA_ARGS__); printf("\n"); fails++; } } while (0)
 
+static bool has(const std::string& s, const std::string& part) { return s.find(part) != std::string::npos; }
 static std::string slurp(const std::string& p) { std::ifstream f(p, std::ios::binary); return std::string((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>()); }
 static void put(const std::string& p, const std::string& s) { fs::create_directories(fs::path(p).parent_path()); std::ofstream(p, std::ios::binary) << s; }
 
@@ -57,6 +61,38 @@ int main() {
         CHECK(!r.valid && !err.empty(), "bad answer reported");
     }
 
+    // ---- the Windows helper script: paths with spaces, apostrophes, ampersands and percent signs go in as values, never in a command line
+    {
+        const std::string setup = "C:\\Users\\O'Brien & Sons\\AppData\\Local\\Temp\\onair-update-42\\OnAir-0.2.0-windows-x64-setup.exe";
+        const std::string exe = "C:\\Program Files\\On'Air 100%\\OnAir.exe";
+        const std::string res = "C:\\Users\\O'Brien & Sons\\AppData\\Local\\Temp\\onair-update-result.txt";
+        const std::string sc = windowsApplyScript(4242, setup, exe, res, "0.2.0", true);
+        CHECK(has(sc, "set \"SETUP=" + setup + "\"\r\n"), "script: the setup path is a quoted value");
+        CHECK(has(sc, "set \"EXE=C:\\Program Files\\On'Air 100%%\\OnAir.exe\"\r\n"), "script: a percent sign is doubled");
+        CHECK(has(sc, "set \"RESULT=" + res + "\"\r\n") && has(sc, "set \"PID=4242\"") && has(sc, "set \"VER=0.2.0\""), "script: result file, pid and version");
+        CHECK(!has(sc, "powershell") && !has(sc, "Start-Process") && !has(sc, "-Verb"), "script: no PowerShell string holds a path");
+        CHECK(has(sc, "start \"\" /wait \"%SETUP%\" /S") && has(sc, "set \"CODE=%ERRORLEVEL%\""), "script: runs the setup silently, waits and keeps its exit code");
+        CHECK(has(sc, "echo version=%VER%") && has(sc, "echo setup_exit=%CODE%") && has(sc, "echo time="), "script: writes the result file");
+        CHECK(has(sc, "start \"\" explorer.exe \"%EXE%\""), "script: the program is started again through explorer, without administrator rights");
+        CHECK(sc.find("start \"\" explorer.exe") > sc.find("setup_exit=") && sc.find("/wait") < sc.find("setup_exit="), "script: order is setup, result, restart");
+        CHECK(has(sc, "tasklist /FI \"PID eq %PID%\"") && has(sc, "set \"RESTART=1\""), "script: waits for OnAir to end");
+        CHECK(has(windowsApplyScript(1, setup, exe, res, "0.2.0", false), "set \"RESTART=0\""), "script: no restart on request");
+        CHECK(has(windowsApplyScript(1, "C:/a b/it's/setup.exe", exe, res, "0.2.0", true), "set \"SETUP=C:\\a b\\it's\\setup.exe\""), "script: slashes become backslashes");
+        CHECK(!has(windowsApplyScript(1, "C:\\a\"b\r\n.exe", exe, res, "0.2.0", true), "a\"b"), "script: a quote in a path cannot end the value");
+        CHECK(windowsApplyParams("C:\\Temp\\a b's & c\\apply.cmd") == "/C \"\"C:\\Temp\\a b's & c\\apply.cmd\"\"", "cmd arguments: the whole command in an outer pair of quotes");
+    }
+    // ---- the result file
+    {
+        UpdateResult r = parseUpdateResult("version=0.2.0\r\nsetup_exit=0\r\ntime=Wed 10/07/2026 12:00:00.00\r\n");
+        CHECK(r.found && r.ok && r.version == "0.2.0" && r.setupExit == 0 && r.time == "Wed 10/07/2026 12:00:00.00", "result: success");
+        r = parseUpdateResult("version=0.2.0\r\nsetup_exit=2\r\n");
+        CHECK(r.found && !r.ok && r.setupExit == 2, "result: failure");
+        r = parseUpdateResult("\xEF\xBB\xBFversion=0.2.0\nsetup_exit=-2 \n");
+        CHECK(r.found && !r.ok && r.setupExit == -2 && r.version == "0.2.0", "result: byte order mark, negative code, trailing blank");
+        CHECK(!parseUpdateResult("").found && !parseUpdateResult("version=0.2.0\n").found && !parseUpdateResult("setup_exit=0\n").found && !parseUpdateResult("garbage").found, "result: incomplete files are ignored");
+    }
+
+#ifndef _WIN32
     // ---- the whole path against files
     const fs::path base = fs::temp_directory_path() / ("onair-updater-test-" + std::to_string(getpid()));
     fs::remove_all(base);
@@ -72,8 +108,8 @@ int main() {
     const std::string tgz = (base / "onair-9.9.9-linux-x86_64-portable.tar.gz").string();
     CHECK(system(("cd " + (base / "pkg").string() + " && tar czf " + tgz + " onair-9.9.9-linux-x86_64-portable").c_str()) == 0, "made the package");
     std::string sum = sha256File(tgz);
-    auto writeApi = [&](const std::string& digest) {
-        std::string d = "{\"name\":\"onair-9.9.9-linux-x86_64-portable.tar.gz\",\"size\":" + std::to_string(fs::file_size(tgz)) + ",\"browser_download_url\":\"file://" + tgz + "\",\"digest\":\"sha256:" + digest + "\"}";
+    auto writeApi = [&](const std::string& digest, uint64_t sizeOverride = 0) {
+        std::string d = "{\"name\":\"onair-9.9.9-linux-x86_64-portable.tar.gz\",\"size\":" + std::to_string(sizeOverride ? sizeOverride : fs::file_size(tgz)) + ",\"browser_download_url\":\"file://" + tgz + "\",\"digest\":\"sha256:" + digest + "\"}";
         std::string d2 = d;
         const size_t k = d2.find("x86_64"); d2.replace(k, 6, "aarch64");
         const size_t k2 = d2.find("x86_64"); (void)k2;
@@ -84,6 +120,18 @@ int main() {
         return u.status().phase;
     };
 
+    // a size that is not the listed one is refused
+    {
+        writeApi(sum, fs::file_size(tgz) + 1);
+        Updater u("0.0.1");
+        u.setApiUrl("file://" + (base / "api.json").string());
+        u.setExecutable(inst + "/bin/onair", (int)InstallKind::LinuxPortable);
+        u.check(true);
+        CHECK(waitFor(u, Updater::Phase::Available, 10) == Updater::Phase::Available, "found the update (size)");
+        u.download();
+        const auto p = waitFor(u, Updater::Phase::Ready, 20);
+        CHECK(p == Updater::Phase::Failed && u.status().error.find("size") != std::string::npos, "a wrong size is refused: %s", u.status().error.c_str());
+    }
     // a wrong checksum is refused
     {
         writeApi(std::string(64, '0'));
@@ -161,6 +209,7 @@ int main() {
     }
 #endif
     fs::remove_all(base);
+#endif
     printf(fails ? "updater: FAILED\n" : "updater: ok\n");
     return fails ? 1 : 0;
 }

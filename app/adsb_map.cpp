@@ -6,7 +6,8 @@
 #include <deque>
 #include <map>
 #include <mutex>
-#include <sys/stat.h>
+#include <filesystem>
+#include <string>
 #include <thread>
 
 namespace adsbmap {
@@ -29,7 +30,8 @@ std::string cache;
 
 uint64_t key(int z, int x, int y) { return ((uint64_t)z << 56) | ((uint64_t)x << 28) | (uint64_t)y; }
 
-bool exists(const std::string& p) { struct stat st; return stat(p.c_str(), &st) == 0 && st.st_size > 100; }
+std::filesystem::path fsPath(const std::string& p) { return std::filesystem::path(reinterpret_cast<const char8_t*>(p.c_str())); }   // UTF-8 (Windows user names)
+bool exists(const std::string& p) { std::error_code ec; const auto n = std::filesystem::file_size(fsPath(p), ec); return !ec && n > 100; }
 
 std::string pathOf(int z, int x, int y) { char b[64]; snprintf(b, sizeof b, "/osm/%d/%d/%d.png", z, x, y); return cache + b; }
 
@@ -47,13 +49,17 @@ void run() {
         const std::string path = pathOf(z, x, y);
         bool ok = exists(path);
         if (!ok) {
-            char dir[512]; snprintf(dir, sizeof dir, "mkdir -p '%s/osm/%d/%d'", cache.c_str(), z, x);
-            if (system(dir) == 0) {
-                char cmd[1024];
-                snprintf(cmd, sizeof cmd, "curl -fsSL --max-time 12 -A 'OnAir/%s (ADS-B map)' -o '%s.part' 'https://tile.openstreetmap.org/%d/%d/%d.png' && mv '%s.part' '%s'",
-                         ONAIR_VERSION, path.c_str(), z, x, y, path.c_str(), path.c_str());
-                ok = system(cmd) == 0 && exists(path);
+            // no shell commands here: the same code has to work on Windows
+            std::error_code ec;
+            std::filesystem::create_directories(fsPath(path).parent_path(), ec);
+            char url[128];
+            snprintf(url, sizeof url, "https://tile.openstreetmap.org/%d/%d/%d.png", z, x, y);
+            const std::string part = path + ".part";
+            if (!ec && plat::fetchUrl(url, part, std::string("OnAir/") + ONAIR_VERSION + " (ADS-B map)")) {
+                std::filesystem::rename(fsPath(part), fsPath(path), ec);
+                ok = !ec && exists(path);
             }
+            if (!ok) std::filesystem::remove(fsPath(part), ec);
         }
         std::lock_guard<std::mutex> lk(mu);
         tiles[k].state = ok ? 2 : 4;
@@ -129,6 +135,8 @@ ImVec2 project(double lat, double lon) {
 bool clickedAt(ImVec2& p) { if (gClicked) p = gClickPos; return gClicked; }
 bool tilesAvailable() { return gAny; }
 
+const char* const kCredit = "map: OpenStreetMap contributors";
+
 bool draw(View& v, ImVec2 size) {
     if (v.online) start();
     decodedThisFrame = 0;
@@ -179,13 +187,19 @@ bool draw(View& v, ImVec2 size) {
             else if (!failed) missing++;
         }
     dl->PopClipRect();
-    const char* credit = "map: OpenStreetMap contributors";
-    if (gAny) { const ImVec2 ts = ImGui::CalcTextSize(credit); dl->AddText(ImVec2(p0.x + size.x - ts.x - 6, p0.y + size.y - ts.y - 3), IM_COL32(140, 144, 148, 220), credit); }
-    else {
+    if (gAny) { const ImVec2 ts = ImGui::CalcTextSize(kCredit); dl->AddText(ImVec2(p0.x + size.x - ts.x - 6, p0.y + size.y - ts.y - 3), IM_COL32(140, 144, 148, 220), kCredit); }
+    else {   // a line above the caption the screens put along the bottom (legend()), cut short in a narrow map
         const char* m = !v.online ? "map switched off: showing positions only" : missing ? "loading the map..." : "no map tiles (no network, or no picture decoder on this system): showing positions only";
-        dl->AddText(ImVec2(p0.x + 8, p0.y + size.y - ImGui::GetTextLineHeight() - 6), IM_COL32(150, 154, 158, 255), m);
+        dl->AddText(ImVec2(p0.x + 8, p0.y + size.y - 2 * ImGui::GetTextLineHeightWithSpacing() - 6), IM_COL32(150, 154, 158, 255), ellipsize(m, size.x - 16).c_str());
     }
     return hov;
+}
+
+void legend(float mapWidth, const char* fmt, ...) {
+    char b[256];
+    va_list ap; va_start(ap, fmt); vsnprintf(b, sizeof b, fmt, ap); va_end(ap);
+    const float room = mapWidth - 16 * gUi - (gAny ? ImGui::CalcTextSize(kCredit).x + 12 * gUi : 0.f);
+    ImGui::TextDisabled("%s", ellipsize(b, std::max(0.f, room)).c_str());
 }
 
 void shutdown() {

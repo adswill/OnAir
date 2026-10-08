@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: brew install cmake pkg-config hackrf soapysdr libusb ffmpeg glfw librtlsdr airspy libbladerf limesuite uhd   # the radio libraries go into the app (tools/package/bundle_macos.py)
+        run: brew install cmake pkg-config hackrf soapysdr libusb ffmpeg glfw librtlsdr airspy airspyhf libbladerf limesuite uhd   # the radio libraries go into the app (tools/package/bundle_macos.py)
       - name: Build the app and the .dmg
         run: tools/package/make_dmg.sh
       - uses: actions/upload-artifact@v4
@@ -43,7 +43,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential file cmake pkg-config nasm patchelf curl xz-utils libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libglfw3-dev librtlsdr0 libairspy0 libbladerf2 libiio0 liblimesuite20.10-1 libuhd4.1.0
+          sudo apt-get install -y build-essential file cmake pkg-config nasm patchelf curl xz-utils libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libglfw3-dev libairspy0 libbladerf2 libiio0 liblimesuite20.10-1 libuhd4.1.0
       - name: Cache the static FFmpeg
         id: ffmpeg
         uses: actions/cache@v4
@@ -51,7 +51,7 @@ jobs:
       - name: "Build FFmpeg (static, only what OnAir uses, so that the packages do not depend on the FFmpeg of the system they are installed on)"
         if: steps.ffmpeg.outputs.cache-hit != 'true'
         run: tools/package/build_ffmpeg_static.sh "$HOME/ffmpeg"
-      - name: Gather the radio libraries
+      - name: Gather the radio libraries (RTL-SDR is built here from the RTL-SDR Blog source: the distribution's librtlsdr0 cannot drive the V4)
         run: tools/package/collect_radio_libs_linux.sh "$GITHUB_WORKSPACE/build/radiolibs"
       - name: Build
         run: |

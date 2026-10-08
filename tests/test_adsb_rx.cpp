@@ -3,6 +3,7 @@
 // SNR figures are pulse power over noise power in 2 MHz, which is what the generator's snr setting means; the receiver's own SNR (telemetry) is the pulse
 // power over the noise power per sample and so depends on the sample rate.
 #include "dect2/adsb_sim.h"
+#include "jobs.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -14,8 +15,10 @@
 #include <string>
 #include <thread>
 using namespace dect2;
-static int fails = 0;
-#define CHECK(c, ...) do { if (!(c)) { printf("FAIL line %d: ", __LINE__); printf(__VA_ARGS__); printf("\n"); fails++; } } while (0)
+using testjobs::jprintf;
+static std::atomic<int> fails{0};
+// Most parts run their independent cases on several threads (testjobs::Jobs): the output keeps the order of the cases.
+#define CHECK(c, ...) do { if (!(c)) { jprintf("FAIL line %d: ", __LINE__); jprintf(__VA_ARGS__); jprintf("\n"); fails++; } } while (0)
 
 #if defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)
 #define SANITIZED 1
@@ -92,7 +95,7 @@ static void testRoundTrip() {
     // every kind of message, exactly: the bytes that come out are the bytes that went in, at the time they were sent, at about the level they were sent
     AdsbSimConfig c; c.rate = 4e6;
     AdsbSimResult r = run(c, 400, 30);
-    printf("round trip 4 Msps, 30 dB: %zu of %zu decoded, %zu phantoms\n", r.decoded, r.sent.size(), r.phantom);
+    jprintf("round trip 4 Msps, 30 dB: %zu of %zu decoded, %zu phantoms\n", r.decoded, r.sent.size(), r.phantom);
     CHECK(r.decoded == r.sent.size() && r.phantom == 0, "decoded %zu of %zu, phantoms %zu", r.decoded, r.sent.size(), r.phantom);
     double dl = 0; int n = 0;
     for (auto& f : r.sent) { if (!f.decoded) continue; dl += f.levelDbfs - 20 * std::log10(f.amp); n++; }
@@ -110,16 +113,18 @@ static void testRoundTrip() {
 static void testRates() {
     // the same signal at every rate the radios use, 8 bit like a HackRF
     const double rates[] = {2.0e6, 2.4e6, 3.2e6, 4e6, 5e6, 6e6, 8e6, 10e6, 12.5e6, 16e6, 20e6};
-    for (double rate : rates) {
+    testjobs::Jobs jobs;
+    for (double rate : rates) jobs.add([=] {
         AdsbSimConfig c; c.rate = rate;
         AdsbSimResult r = run(c, 300, 28);
         const double pct = 100.0 * r.decoded / r.sent.size();
-        printf("  %5.1f Msps: %5.1f %% of %zu decoded, phantoms %zu, noise %.1f dBFS\n", rate / 1e6, pct, r.sent.size(), r.phantom, r.tel.noiseDbfs);
+        jprintf("  %5.1f Msps: %5.1f %% of %zu decoded, phantoms %zu, noise %.1f dBFS\n", rate / 1e6, pct, r.sent.size(), r.phantom, r.tel.noiseDbfs);
         // at exactly 2 Msps a run of equal bits is a 1 MHz tone sampled at its zero crossings at one sampling phase in four: the demodulator then
         // takes the bits it cannot tell apart to be the same as the bit before them (measured 84 % without that, 100 % with it)
         CHECK(pct >= 99.0, "%.1f Msps: only %.1f %% decoded", rate / 1e6, pct);
         CHECK(r.phantom == 0, "%.1f Msps: %zu phantom messages", rate / 1e6, r.phantom);
-    }
+    });
+    jobs.run();
 }
 
 static void testPhase2Msps() {
@@ -127,9 +132,9 @@ static void testPhase2Msps() {
     // run of equal bits shows no contrast. Every phase, float samples, strong signal: every frame must decode
     const int nph = 16, per = 40;
     Lcg r(21);
-    int worst = per;
+    std::vector<std::vector<AdsbTx>> sets(nph);   // made one after the other: the phases share one random sequence
     for (int ph = 0; ph < nph; ph++) {
-        std::vector<AdsbTx> v;
+        std::vector<AdsbTx>& v = sets[ph];
         for (int k = 0; k < per; k++) {
             AdsbTx t;
             t.t = 0.001 * (k + 1) + (ph + 0.5) / nph * 0.5e-6;                 // phases over one sample interval (0.5 us)
@@ -137,14 +142,23 @@ static void testPhase2Msps() {
             t.amp = 0.3f; t.cfoHz = ((int)(r.next() % 400) - 200) * 1e3; t.phase = (float)(r.uni() * 6.2832);
             v.push_back(t);
         }
-        AdsbSimConfig c; c.rate = 2e6; c.custom = v; c.snrDb = 30; c.seconds = per * 1e-3 + 0.01; c.quantise = false;
+    }
+    int worst = per;
+    std::vector<AdsbSimResult> results(nph);
+    testjobs::Jobs jobs;
+    for (int ph = 0; ph < nph; ph++) jobs.add([&, ph] {
+        AdsbSimConfig c; c.rate = 2e6; c.custom = sets[ph]; c.snrDb = 30; c.seconds = per * 1e-3 + 0.01; c.quantise = false;
         AdsbReceiver rx;
         rx.setLogCallback([](const std::string&) {});
-        AdsbSimResult res = adsbSimulate(c, rx);
+        results[ph] = adsbSimulate(c, rx);
+    });
+    jobs.run();
+    for (int ph = 0; ph < nph; ph++) {
+        const AdsbSimResult& res = results[ph];
         worst = std::min(worst, (int)res.decoded);
         CHECK(res.decoded >= (size_t)per - 1 && res.phantom == 0, "2 Msps, phase %.3f of a sample: %zu of %d decoded, %zu phantoms", (ph + 0.5) / nph, res.decoded, per, res.phantom);
     }
-    printf("  2 Msps, 16 sampling phases, 30 dB: worst phase %d of %d\n", worst, per);
+    jprintf("  2 Msps, 16 sampling phases, 30 dB: worst phase %d of %d\n", worst, per);
 }
 
 static void testChunks() {
@@ -153,14 +167,22 @@ static void testChunks() {
     const int n = 150;
     std::vector<bool> ref;
     const std::vector<std::vector<size_t>> patterns = {{65536}, {1}, {7}, {4096}, {1, 7, 4096, 65536, 333, 20000}, {3, 1000}};
+    // the runs go side by side; they are compared with the first one in order afterwards
+    std::vector<AdsbSimResult> runs(patterns.size());
+    testjobs::Jobs jobs;
+    for (size_t p = 0; p < patterns.size(); p++) jobs.add([&, p] {
+        AdsbSimConfig cp = c;
+        cp.chunks = patterns[p];
+        runs[p] = run(cp, n, 25);
+    });
+    jobs.run();
     for (size_t p = 0; p < patterns.size(); p++) {
-        c.chunks = patterns[p];
-        AdsbSimResult r = run(c, n, 25);
+        const AdsbSimResult& r = runs[p];
         std::vector<bool> got;
         for (auto& f : r.sent) got.push_back(f.decoded);
         if (p == 0) { ref = got; CHECK(r.decoded >= (size_t)n - 1, "reference run: %zu of %d", r.decoded, n); }
         CHECK(got == ref, "chunk pattern %zu (first %zu): a different set of frames was decoded (%zu against %zu)", p, patterns[p][0], r.decoded, (size_t)std::count(ref.begin(), ref.end(), true));
-        printf("  chunks starting with %zu: %zu of %d\n", patterns[p][0], r.decoded, n);
+        jprintf("  chunks starting with %zu: %zu of %d\n", patterns[p][0], r.decoded, n);
     }
 }
 
@@ -182,18 +204,21 @@ static void testImpairments() {
     { Case k{"CW 14 dB below the pulses, 700 kHz off", base(), 99.0}; k.c.cwDb = -20; k.c.cwHz = 700e3; cases.push_back(k); }
     { Case k{"CW 14 dB below the pulses, 50 kHz off", base(), 99.0}; k.c.cwDb = -20; k.c.cwHz = 50e3; cases.push_back(k); }
     { Case k{"filter 1.75 MHz at 4 Msps", base(), 97.0}; k.c.filterMHz = 1.75; cases.push_back(k); }
-    for (auto& k : cases) {
+    testjobs::Jobs jobs;
+    for (auto& k : cases) jobs.add([&k] {
         AdsbSimResult r = run(k.c, 300, 24);
         const double pct = 100.0 * r.decoded / r.sent.size();
-        printf("  %-40s %5.1f %%  phantoms %zu\n", k.name, pct, r.phantom);
+        jprintf("  %-40s %5.1f %%  phantoms %zu\n", k.name, pct, r.phantom);
         CHECK(pct >= k.minPct, "%s: %.1f %% decoded (needs %.1f)", k.name, pct, k.minPct);
         CHECK(r.phantom == 0, "%s: %zu phantom messages", k.name, r.phantom);
-    }
+    });
+    jobs.run();
 }
 
 static void testLevels() {
     // a gain step in the middle (an AGC or the user turning the gain): the noise floor and the thresholds follow within about a millisecond
-    for (double step : {20.0, -20.0}) {
+    testjobs::Jobs jobs;
+    for (double step : {20.0, -20.0}) jobs.add([=] {
         AdsbSimConfig c; c.rate = 4e6;
         c.custom = spaced(300, 34, 11);
         c.snrDb = 30; c.seconds = 0.31;
@@ -207,19 +232,20 @@ static void testLevels() {
             else if (f.t < 0.1535) { ns++; soon += f.decoded; }
             else { nl++; later += f.decoded; }
         }
-        printf("  gain step %+.0f dB at 150 ms: before %d/%d, in the next 4 ms %d/%d, later %d/%d, phantoms %zu\n", step, before, nb, soon, ns, later, nl, r.phantom);
+        jprintf("  gain step %+.0f dB at 150 ms: before %d/%d, in the next 4 ms %d/%d, later %d/%d, phantoms %zu\n", step, before, nb, soon, ns, later, nl, r.phantom);
         CHECK(before == nb && later >= nl - 1, "around a %+.0f dB step: %d/%d before, %d/%d after", step, before, nb, later, nl);
         CHECK(soon >= ns - (step > 0 ? 1 : 3), "%+.0f dB step: %d of %d frames in the 4 ms after it", step, soon, ns);
         CHECK(r.phantom == 0, "phantoms");
-    }
+    });
     // signals that clip the converter: the pulses are flat topped and the noise around them too, but the bits are still there
-    for (double k : {5.0, 40.0}) {
+    for (double k : {5.0, 40.0}) jobs.add([=] {
         AdsbSimConfig c; c.rate = 4e6; c.clipFactor = k;
         AdsbSimResult r = run(c, 200, 40);
         const double pct = 100.0 * r.decoded / r.sent.size();
-        printf("  input %.0fx too strong (clipped at full scale): %.1f %% decoded, phantoms %zu\n", k, pct, r.phantom);
+        jprintf("  input %.0fx too strong (clipped at full scale): %.1f %% decoded, phantoms %zu\n", k, pct, r.phantom);
         CHECK(pct >= 98.0 && r.phantom == 0, "clipped input x%.0f: %.1f %%, %zu phantoms", k, pct, r.phantom);
-    }
+    });
+    jobs.run();
     // calls with no samples, and the rate set twice
     AdsbReceiver rx;
     rx.configure(4e6);
@@ -237,7 +263,7 @@ static void testStrongCw() {
     // a carrier 10 dB above the pulses: nothing can be decoded, and nothing false may come out, and the receiver must come back when it goes away
     AdsbSimConfig c; c.rate = 4e6; c.cwDb = 6; c.cwHz = 300e3;
     AdsbSimResult r = run(c, 100, 24);
-    printf("  CW 12 dB over the pulses: %zu of %zu decoded, %zu phantoms, %llu failed\n", r.decoded, r.sent.size(), r.phantom, (unsigned long long)r.tel.blocksBad);
+    jprintf("  CW 12 dB over the pulses: %zu of %zu decoded, %zu phantoms, %llu failed\n", r.decoded, r.sent.size(), r.phantom, (unsigned long long)r.tel.blocksBad);
     CHECK(r.phantom == 0 && r.tel.aircraftCount <= 24, "false messages with a strong carrier on the channel");
 }
 
@@ -246,36 +272,41 @@ static void testSensitivity() {
     struct P { double rate; double snr; double minPct; };
     const P pts[] = {{4e6, 10, 10}, {4e6, 12, 80}, {4e6, 14, 99}, {4e6, 16, 99.5}, {10e6, 12, 65}, {10e6, 14, 95}, {10e6, 16, 99.5}, {2.4e6, 14, 93}, {2.4e6, 16, 99}, {20e6, 14, 95}, {20e6, 16, 99},
                          {2e6, 20, 93}, {2e6, 24, 98}, {2e6, 28, 99.5}};   // 2 Msps needs about 5 dB more than 4 Msps
-    for (const P& p : pts) {
+    testjobs::Jobs jobs;
+    for (const P& p : pts) jobs.add([&p] {
         AdsbSimConfig c; c.rate = p.rate; c.quantise = false;
         AdsbSimResult r = run(c, 500, p.snr, 2);
         const double pct = 100.0 * r.decoded / r.sent.size();
-        printf("  %5.1f Msps, %4.1f dB: %5.1f %%\n", p.rate / 1e6, p.snr, pct);
+        jprintf("  %5.1f Msps, %4.1f dB: %5.1f %%\n", p.rate / 1e6, p.snr, pct);
         CHECK(pct >= p.minPct, "%.1f Msps %.1f dB: %.1f %% (needs %.1f)", p.rate / 1e6, p.snr, pct, p.minPct);
         CHECK(r.phantom == 0, "%.1f Msps %.1f dB: %zu phantoms, e.g. %s", p.rate / 1e6, p.snr, r.phantom, r.phantoms.empty() ? "" : r.phantoms[0].c_str());
-    }
+    });
+    jobs.run();
 }
 
 static void testNoiseOnly() {
     // a band without aircraft: nothing is decoded, and the search does not keep finding preambles. 8 bit rounding of noise that is smaller than one
     // step (the 30 dB setting is) makes the noise a handful of single steps, which the receiver has to cope with as well
     const double rates[] = {2e6, 2.4e6, 4e6, 10e6, 20e6};
-    for (double rate : rates) for (int q = 0; q < 2; q++) {
+    testjobs::Jobs jobs;
+    for (double rate : rates) for (int q = 0; q < 2; q++) jobs.add([=] {
         AdsbSimConfig c; c.rate = rate; c.seconds = 10; c.aircraft = 0; c.snrDb = 30; c.quantise = q == 1;
         AdsbReceiver rx;
         rx.setLogCallback([](const std::string&) {});
         AdsbSimResult r = adsbSimulate(c, rx);
         const double perSec = (double)r.tel.preambles / 10.0;
-        printf("  %5.1f Msps %s: %llu good, %.1f preamble candidates per second, state %d\n", rate / 1e6, q ? "8 bit" : "float", (unsigned long long)r.tel.blocksOk, perSec, r.tel.state);
+        jprintf("  %5.1f Msps %s: %llu good, %.1f preamble candidates per second, state %d\n", rate / 1e6, q ? "8 bit" : "float", (unsigned long long)r.tel.blocksOk, perSec, r.tel.state);
         CHECK(r.tel.blocksOk == 0 && r.phantom == 0, "%.1f Msps: %llu messages decoded from noise", rate / 1e6, (unsigned long long)r.tel.blocksOk);
         CHECK(perSec < (q && rate < 3e6 ? 80.0 : 5.0), "%.1f Msps %s: %.1f candidates per second", rate / 1e6, q ? "8 bit" : "float", perSec);
         CHECK(r.tel.aircraftCount == 0, "aircraft in the table");
-    }
+    });
+    jobs.run();
 }
 
 static void testGarble() {
     // two bursts on top of each other: the stronger one is decoded when the weaker is far enough down, and nothing false comes out
-    for (double rate : {4e6, 10e6}) {
+    testjobs::Jobs jobs;
+    for (double rate : {4e6, 10e6}) jobs.add([=] {
         int strongOk = 0, total = 0, phantoms = 0;
         for (int k = 0; k < 40; k++) {
             AdsbSimConfig c; c.rate = rate;
@@ -297,11 +328,12 @@ static void testGarble() {
             AdsbSimResult res = adsbSimulate(c, rx);
             total++; strongOk += res.sent[0].decoded; phantoms += (int)res.phantom;
         }
-        printf("  %4.1f Msps: the strong burst decoded %d of %d times with a burst 20 dB down on top of it, phantoms %d\n", rate / 1e6, strongOk, total, phantoms);
+        jprintf("  %4.1f Msps: the strong burst decoded %d of %d times with a burst 20 dB down on top of it, phantoms %d\n", rate / 1e6, strongOk, total, phantoms);
         CHECK(strongOk >= total - 2, "%.1f Msps: the strong burst was decoded %d of %d times", rate / 1e6, strongOk, total);
         CHECK(phantoms == 0, "%d phantom messages", phantoms);
-    }
+    });
     // a weak burst starting before the strong one: the receiver must not lock on to the weak preamble and lose the strong frame
+    jobs.add([] {
     int ok = 0, total = 0;
     for (int k = 0; k < 40; k++) {
         AdsbSimConfig c; c.rate = 4e6;
@@ -320,8 +352,10 @@ static void testGarble() {
         AdsbSimResult res = adsbSimulate(c, rx);
         total++; ok += res.sent[1].decoded;
     }
-    printf("  the strong burst that starts inside a weak one: decoded %d of %d\n", ok, total);
+    jprintf("  the strong burst that starts inside a weak one: decoded %d of %d\n", ok, total);
     CHECK(ok >= total - 6, "strong burst after a weak one: %d of %d", ok, total);
+    });
+    jobs.run();
 }
 
 // Mode A / C replies (ICAO Annex 10 Vol. IV, secondary radar): a frame of two bracket pulses 20.3 us apart with up to 13 code pulses between them on a 1.45 us
@@ -366,7 +400,8 @@ static std::vector<AdsbTx> impulses(double t0, double seconds, double perSec, do
 
 static void testInterference() {
     // impulse noise, 3000 a second, from the level of the signals to 20 dB above them
-    for (double rate : {2.4e6, 4e6, 10e6}) {
+    testjobs::Jobs jobs;
+    for (double rate : {2.4e6, 4e6, 10e6}) jobs.add([=] {
         AdsbSimConfig c; c.rate = rate;
         const int n = 400;
         c.custom = spaced(n, 24, 9);
@@ -378,13 +413,13 @@ static void testInterference() {
         AdsbSimResult r = adsbSimulate(c, rx);
         size_t alone = 0, aloneOk = 0, hit = 0, hitOk = 0;
         for (auto& f : r.sent) { if (f.overlapped) { hit++; hitOk += f.decoded; } else { alone++; aloneOk += f.decoded; } }
-        printf("  %4.1f Msps, 3000 impulses a second: %zu of %zu clean frames decoded, %zu of %zu touched, phantoms %zu, noise floor %.1f dBFS\n", rate / 1e6, aloneOk, alone, hitOk, hit, r.phantom, r.tel.noiseDbfs);
+        jprintf("  %4.1f Msps, 3000 impulses a second: %zu of %zu clean frames decoded, %zu of %zu touched, phantoms %zu, noise floor %.1f dBFS\n", rate / 1e6, aloneOk, alone, hitOk, hit, r.phantom, r.tel.noiseDbfs);
         CHECK(aloneOk >= alone - (alone + 99) / 100, "%.1f Msps with impulse noise: %zu of %zu untouched frames", rate / 1e6, aloneOk, alone);
         CHECK(r.phantom == 0, "%zu false messages with impulse noise", r.phantom);
-    }
+    });
 
     // secondary radar replies on the channel: no false messages, and the ADS-B frames that none of them touches are decoded as before
-    for (double rate : {2.4e6, 4e6, 10e6}) for (double perSec : {500.0, 2000.0}) {
+    for (double rate : {2.4e6, 4e6, 10e6}) for (double perSec : {500.0, 2000.0}) jobs.add([=] {
         AdsbSimConfig c; c.rate = rate;
         const int n = 400;
         c.custom = spaced(n, 24, 8);
@@ -396,10 +431,11 @@ static void testInterference() {
         AdsbSimResult r = adsbSimulate(c, rx);
         size_t alone = 0, aloneOk = 0, hit = 0, hitOk = 0;
         for (auto& f : r.sent) { if (f.overlapped) { hit++; hitOk += f.decoded; } else { alone++; aloneOk += f.decoded; } }
-        printf("  %4.1f Msps, %4.0f Mode A/C replies a second: %zu of %zu clean frames decoded, %zu of %zu touched, phantoms %zu\n", rate / 1e6, perSec, aloneOk, alone, hitOk, hit, r.phantom);
+        jprintf("  %4.1f Msps, %4.0f Mode A/C replies a second: %zu of %zu clean frames decoded, %zu of %zu touched, phantoms %zu\n", rate / 1e6, perSec, aloneOk, alone, hitOk, hit, r.phantom);
         CHECK(aloneOk >= alone - (alone + 99) / 100, "%.1f Msps with %.0f replies a second: %zu of %zu untouched frames", rate / 1e6, perSec, aloneOk, alone);
         CHECK(r.phantom == 0, "%zu false messages with Mode A/C replies on the channel", r.phantom);
-    }
+    });
+    jobs.run();
 }
 
 static void testDropoutAndReset() {
@@ -418,7 +454,7 @@ static void testDropoutAndReset() {
         else if (f.t < 0.1075) { nSoon++; soon += f.decoded; }
         else { nAfter++; after += f.decoded; }
     }
-    printf("  5 ms dropout: before %d/%d, in the gap %d/%d, in the first 2 ms after %d/%d, later %d/%d, phantoms %zu, bad %llu\n", before, nBefore, inside, nInside, soon, nSoon, after, nAfter, r.phantom, (unsigned long long)r.tel.blocksBad);
+    jprintf("  5 ms dropout: before %d/%d, in the gap %d/%d, in the first 2 ms after %d/%d, later %d/%d, phantoms %zu, bad %llu\n", before, nBefore, inside, nInside, soon, nSoon, after, nAfter, r.phantom, (unsigned long long)r.tel.blocksBad);
     CHECK(before >= nBefore - 1 && after >= nAfter - 2, "frames away from the gap: %d/%d and %d/%d", before, nBefore, after, nAfter);
     CHECK(inside == 0, "frames inside the gap decoded");
     CHECK(soon >= nSoon - 1, "the receiver was slow to recover: %d of %d in the 2 ms after the gap", soon, nSoon);
@@ -437,7 +473,7 @@ static void testDropoutAndReset() {
         if (f.df != 11 && f.df != 17) continue;
         if (f.t < 0.2) { na2++; a2 += f.decoded; } else if (f.t > 0.2008) { nb2++; b2 += f.decoded; }
     }
-    printf("  reset at 200.5 ms: before %d/%d, after %d/%d\n", a2, na2, b2, nb2);
+    jprintf("  reset at 200.5 ms: before %d/%d, after %d/%d\n", a2, na2, b2, nb2);
     CHECK(a2 >= na2 - 1 && b2 >= nb2 - 1, "frames around the reset: %d/%d and %d/%d", a2, na2, b2, nb2);
     CHECK(r2.tel.aircraftCount <= 24 && r2.tel.blocksOk < r2.decoded, "the tables were not emptied by reset(): ok %llu of %zu", (unsigned long long)r2.tel.blocksOk, r2.decoded);
     // a reset in the middle of a frame loses that frame and nothing else
@@ -478,14 +514,15 @@ static void testDropoutAndReset() {
 
 static void testAirspace() {
     // twelve aircraft, 20 s, with the traffic as the generator makes it: overlapping bursts, replies, the lot
-    for (double rate : {4e6, 2.4e6, 10e6}) {
+    testjobs::Jobs jobs;
+    for (double rate : {4e6, 2.4e6, 10e6}) jobs.add([=] {
         AdsbSimConfig c; c.rate = rate; c.seconds = 20; c.snrDb = 30; c.aircraft = 12; c.seed = 3; c.setRef = true;
         AdsbReceiver rx;
         rx.setLogCallback([](const std::string&) {});
         AdsbSimResult r = adsbSimulate(c, rx);
         size_t alone = 0, aloneOk = 0, ovl = 0, ovlOk = 0;
         for (auto& f : r.sent) { if (f.overlapped) { ovl++; ovlOk += f.decoded; } else { alone++; aloneOk += f.decoded; } }
-        printf("  airspace at %.1f Msps: %zu sent, %zu alone: %.2f %% decoded, %zu overlapped: %.1f %%, phantoms %zu, %.1f msg/s, %u aircraft (%u with a position)\n", rate / 1e6, r.sent.size(), alone,
+        jprintf("  airspace at %.1f Msps: %zu sent, %zu alone: %.2f %% decoded, %zu overlapped: %.1f %%, phantoms %zu, %.1f msg/s, %u aircraft (%u with a position)\n", rate / 1e6, r.sent.size(), alone,
                100.0 * aloneOk / std::max<size_t>(alone, 1), ovl, 100.0 * ovlOk / std::max<size_t>(ovl, 1), r.phantom, r.tel.msgsPerSec, r.tel.aircraftCount, r.tel.withPosition);
         CHECK(aloneOk >= alone * 995 / 1000, "%.1f Msps: only %zu of %zu clean frames decoded", rate / 1e6, aloneOk, alone);
         CHECK(r.phantom == 0, "phantoms");
@@ -513,7 +550,8 @@ static void testAirspace() {
             }
         }
         CHECK(matched == 12, "only %d of 12 aircraft matched by address", matched);
-    }
+    });
+    jobs.run();
 }
 
 static void testSpeed() {
@@ -524,7 +562,7 @@ static void testSpeed() {
         rx.setLogCallback([](const std::string&) {});
         AdsbSimResult r = adsbSimulate(c, rx);
         const double rtf = r.signalSec / std::max(r.cpuSec, 1e-9);
-        printf("  %5.1f Msps, 40 aircraft (%.0f msg/s sent): feed() runs %.1fx real time\n", rate / 1e6, r.sent.size() / r.signalSec, rtf);
+        jprintf("  %5.1f Msps, 40 aircraft (%.0f msg/s sent): feed() runs %.1fx real time\n", rate / 1e6, r.sent.size() / r.signalSec, rtf);
         if (!SANITIZED) CHECK(rtf >= 3.0, "%.1f Msps: only %.1fx real time", rate / 1e6, rtf);
     }
 }
@@ -567,7 +605,7 @@ static void testBadSamples() {
     }
     AdsbTelemetry t;
     rx.telemetry(t, 0);
-    printf("  NaN, infinity and 1e30 in the stream: %zu of %d decoded, %zu of %zu after the last bad stretch, noise floor %.1f dBFS\n", ok, n, laterOk, later, t.noiseDbfs);
+    jprintf("  NaN, infinity and 1e30 in the stream: %zu of %d decoded, %zu of %zu after the last bad stretch, noise floor %.1f dBFS\n", ok, n, laterOk, later, t.noiseDbfs);
     CHECK(ok >= (size_t)n * 90 / 100 && laterOk >= later - later / 50, "bad sample values: %zu of %d, %zu of %zu later", ok, n, laterOk, later);
     CHECK(std::isfinite(t.noiseDbfs) && t.noiseDbfs < -35, "noise floor %.1f after bad samples", t.noiseDbfs);
 }
@@ -596,7 +634,7 @@ static void testThreads() {
     AdsbSimResult r = adsbSimulate(c, rx);
     stop = true;
     ui.join();
-    printf("  %d reports read while %zu frames went by\n", reports.load(), r.sent.size());
+    jprintf("  %d reports read while %zu frames went by\n", reports.load(), r.sent.size());
     CHECK(reports.load() > 10, "reports %d", reports.load());
 }
 
@@ -606,26 +644,26 @@ int main(int argc, char** argv) {
         if (a == "threads") testThreads();
         else if (a == "chunks") testChunks();
         else if (a == "airspace") testAirspace();
-        else { printf("unknown part '%s'\n", a.c_str()); return 2; }
-        printf(fails ? "adsb_rx %s: %d FAILED\n" : "adsb_rx %s: passed\n", a.c_str(), fails);
+        else { jprintf("unknown part '%s'\n", a.c_str()); return 2; }
+        jprintf(fails ? "adsb_rx %s: %d FAILED\n" : "adsb_rx %s: passed\n", a.c_str(), fails.load());
         return fails ? 1 : 0;
     }
     testRoundTrip();
-    printf("rates\n"); testRates();
-    printf("2 Msps phases\n"); testPhase2Msps();
-    printf("chunks\n"); testChunks();
-    printf("impairments\n"); testImpairments();
-    printf("levels\n"); testLevels();
-    printf("strong carrier\n"); testStrongCw();
-    printf("sensitivity\n"); testSensitivity();
-    printf("noise only\n"); testNoiseOnly();
-    printf("garble\n"); testGarble();
-    printf("Mode A/C interference\n"); testInterference();
-    printf("dropout, reset\n"); testDropoutAndReset();
-    printf("airspace\n"); testAirspace();
-    printf("speed\n"); testSpeed();
-    printf("bad samples\n"); testBadSamples();
-    printf("threads\n"); testThreads();
-    printf(fails ? "adsb_rx: %d FAILED\n" : "adsb_rx: all passed\n", fails);
+    jprintf("rates\n"); testRates();
+    jprintf("2 Msps phases\n"); testPhase2Msps();
+    jprintf("chunks\n"); testChunks();
+    jprintf("impairments\n"); testImpairments();
+    jprintf("levels\n"); testLevels();
+    jprintf("strong carrier\n"); testStrongCw();
+    jprintf("sensitivity\n"); testSensitivity();
+    jprintf("noise only\n"); testNoiseOnly();
+    jprintf("garble\n"); testGarble();
+    jprintf("Mode A/C interference\n"); testInterference();
+    jprintf("dropout, reset\n"); testDropoutAndReset();
+    jprintf("airspace\n"); testAirspace();
+    jprintf("speed\n"); testSpeed();
+    jprintf("bad samples\n"); testBadSamples();
+    jprintf("threads\n"); testThreads();
+    jprintf(fails ? "adsb_rx: %d FAILED\n" : "adsb_rx: all passed\n", fails.load());
     return fails ? 1 : 0;
 }

@@ -3,6 +3,7 @@
   !define SEP "/"
 !endif
 !include "MUI2.nsh"
+!include "x64.nsh"
 Name "OnAir"
 OutFile "${OUTFILE}"
 InstallDir "$PROGRAMFILES64\OnAir"
@@ -13,14 +14,41 @@ RequestExecutionLevel admin
 !define MUI_UNICON "${ICON}"
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "${SRC}${SEP}LICENSE.txt"
+!define MUI_PAGE_CUSTOMFUNCTION_LEAVE DirLeave
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
-!define MUI_FINISHPAGE_RUN "$INSTDIR\OnAir.exe"
+!define MUI_FINISHPAGE_RUN
+!define MUI_FINISHPAGE_RUN_FUNCTION StartOnAir
 !define MUI_FINISHPAGE_RUN_TEXT "Start OnAir"
 !insertmacro MUI_PAGE_FINISH
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "English"
+
+Function .onInit
+  ${IfNot} ${RunningX64}
+    MessageBox MB_OK|MB_ICONSTOP "OnAir needs 64-bit Windows 10 or 11."
+    Abort
+  ${EndIf}
+FunctionEnd
+
+; The uninstaller removes the whole install folder: a folder that is not OnAir's own (C:\Program Files, C:\Tools ...) would lose everything in it.
+Function DirLeave
+  StrLen $0 "$INSTDIR"
+  IntOp $0 $0 - 5
+  ${If} $0 < 0
+    StrCpy $INSTDIR "$INSTDIR\OnAir"
+  ${Else}
+    StrCpy $1 "$INSTDIR" 5 $0
+    StrCmp $1 "OnAir" +2 0   ; (not case sensitive)
+    StrCpy $INSTDIR "$INSTDIR\OnAir"
+  ${EndIf}
+FunctionEnd
+
+; Started through explorer.exe: the program then runs with the rights of the user, not as the administrator that the installer is (the same way the updater starts it)
+Function StartOnAir
+  Exec '"$WINDIR\explorer.exe" "$INSTDIR\OnAir.exe"'
+FunctionEnd
 
 Section "OnAir"
   SetShellVarContext current   ; remove the per-user shortcuts that version 0.1.0's first installer created
@@ -30,6 +58,11 @@ Section "OnAir"
   Delete "$DESKTOP\OnAir.lnk"
   SetShellVarContext all   ; the program is installed for all users: so are its shortcuts
   SetOutPath "$INSTDIR"
+  ; an update over an older OnAir: its libraries go first, so that none of a former version stays (an old SoapySDR module next to new libraries, ...)
+  IfFileExists "$INSTDIR\OnAir.exe" 0 +4
+    Delete "$INSTDIR\*.dll"
+    RMDir /r "$INSTDIR\lib"
+    RMDir /r "$INSTDIR\licenses"
   File /r "${SRC}${SEP}*.*"
   WriteRegStr HKLM "Software\OnAir" "Install_Dir" "$INSTDIR"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OnAir" "DisplayName" "OnAir"

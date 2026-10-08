@@ -1,0 +1,17 @@
+#!/bin/sh
+# Makes the radios usable at once: the new udev rules apply to radios that are already plugged in, and the kernel's DVB driver
+# lets go of an RTL-SDR dongle. Nothing here may fail the installation (a container has no udev and no kernel modules).
+if [ "$1" = configure ]; then
+    if command -v udevadm >/dev/null 2>&1; then
+        udevadm control --reload-rules >/dev/null 2>&1 || true
+        udevadm trigger --subsystem-match=usb >/dev/null 2>&1 || true
+    fi
+    # the blacklist only works for the next plug-in; unload the modules now unless a dongle is being used as a TV stick
+    if [ -r /proc/modules ] && command -v modprobe >/dev/null 2>&1 && grep -q '^dvb_usb_rtl28xxu ' /proc/modules 2>/dev/null; then
+        # modprobe -r refuses a module that is in use, so a dongle that is playing TV is left alone
+        for m in dvb_usb_rtl28xxu rtl2832_sdr rtl2832 rtl2830; do
+            modprobe -r "$m" >/dev/null 2>&1 || true
+        done
+    fi
+fi
+exit 0

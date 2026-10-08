@@ -1,8 +1,10 @@
 // ADS-B screens: the aircraft table, a radar plot around the receiver, the message monitor, statistics and the options of the test signal.
 #include "app.h"
 #include "adsb_map.h"
+#include <algorithm>
 #include <cmath>
 #include <deque>
+#include <vector>
 
 namespace {
 
@@ -77,7 +79,7 @@ void aircraftTable(App& a, bool compact) {
     const AdsbTelemetry& t = a.rx.adsb;
     const bool on = live(a);
     const int cols = compact ? 5 : 11;
-    if (!ImGui::BeginTable(compact ? "##acs" : "##acf", cols, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    if (!ImGui::BeginTable(compact ? "##acs" : "##acf", cols, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("ICAO", ImGuiTableColumnFlags_WidthFixed, 62 * gUi); ImGui::TableSetupColumn("Callsign", ImGuiTableColumnFlags_WidthFixed, 72 * gUi);
     ImGui::TableSetupColumn("Alt ft"); if (!compact) { ImGui::TableSetupColumn("Spd kt"); ImGui::TableSetupColumn("Hdg"); ImGui::TableSetupColumn("V/S"); }
@@ -183,13 +185,36 @@ void drawPlane(ImDrawList* dl, ImVec2 c, float headingDeg, float r, ImU32 fill, 
     dl->AddPolyline(q, n, outline ? IM_COL32(255, 255, 255, 255) : IM_COL32(0, 0, 0, 150), ImDrawFlags_Closed, outline ? 1.6f : 1.f);
 }
 
+// The antenna position is not where the receiver is (still the placeholder, or typed wrong): every aircraft with a position is further
+// away than any 1090 MHz signal carries (500 nm; real ranges end near 250). Then lat/lon get the middle of the aircraft (median, so one
+// bad fix does not pull it), which is within about 100 nm of the receiver: good enough for the map, not for exact ranges.
+bool positionLooksWrong(const AdsbTelemetry& t, double& lat, double& lon, double& nearestNm) {
+    std::vector<double> las, los;
+    nearestNm = 1e9;
+    for (const auto& ac : t.aircraft) {
+        if (!ac.hasPos) continue;
+        las.push_back(ac.lat); los.push_back(ac.lon);
+        const double p1 = S.refLat * M_PI / 180, p2 = ac.lat * M_PI / 180, dl = (ac.lon - S.refLon) * M_PI / 180;
+        const double c = std::sin(p1) * std::sin(p2) + std::cos(p1) * std::cos(p2) * std::cos(dl);
+        nearestNm = std::min(nearestNm, std::acos(std::max(-1.0, std::min(1.0, c))) * 3440.065);   // great circle, Earth radius in nm
+    }
+    if (las.size() < 3 || nearestNm < 500) return false;
+    std::nth_element(las.begin(), las.begin() + las.size() / 2, las.end());
+    std::nth_element(los.begin(), los.begin() + los.size() / 2, los.end());
+    lat = las[las.size() / 2]; lon = los[los.size() / 2];
+    return true;
+}
+
 void mapView(App& a, ImVec2 size) {
     const AdsbTelemetry& t = a.rx.adsb;
     const bool on = live(a);
     const ImVec2 p0 = ImGui::GetCursorScreenPos();
-    const double lat0 = S.map.lat, lon0 = S.map.lon;
+    double areaLat = 0, areaLon = 0, nearest = 0;
+    const bool wrongRef = on && positionLooksWrong(t, areaLat, areaLon, nearest);
+    if (wrongRef && S.mapHome) { S.map.lat = areaLat; S.map.lon = areaLon; }   // show the aircraft, not an empty map around the wrong antenna
+    const double homeLat = S.map.lat, homeLon = S.map.lon;
     adsbmap::draw(S.map, size);
-    if (S.map.lat != lat0 || S.map.lon != lon0) S.mapHome = false;
+    if (S.map.lat != homeLat || S.map.lon != homeLon) S.mapHome = false;
     ImDrawList* dl = ImGui::GetWindowDrawList();
     dl->PushClipRect(p0, ImVec2(p0.x + size.x, p0.y + size.y), true);
     // the antenna
@@ -247,6 +272,18 @@ void mapView(App& a, ImVec2 size) {
     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.82f, 0.84f, 1));
     if (ImGui::Checkbox("online map", &S.map.online)) { plat::prefs().setB("adsbMap", S.map.online); savePrefs(a); }
     ImGui::PopStyleColor();
+    if (wrongRef) {
+        ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 38 * gUi));
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.18f, 0.14f, 0.04f, 0.92f));
+        ImGui::BeginChild("##wrongref", ImVec2(std::min(size.x - 16 * gUi, 520 * gUi), 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.4f, 1), "The antenna position (%.2f, %.2f) is %.0f nm from the nearest aircraft: it is probably not set, so ranges are wrong.", S.refLat, S.refLon, nearest);
+        ImGui::PopTextWrapPos();
+        if (ImGui::Button("Use the aircraft's area")) setReference(a, areaLat, areaLon);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Puts the antenna in the middle of the aircraft received (within about 100 nm). For exact ranges type your position in the Tuner section.");
+        ImGui::EndChild();
+        ImGui::PopStyleColor();
+    }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Fetch map tiles from the OpenStreetMap tile server (tile.openstreetmap.org) and keep them in the cache folder.\nOnly tile numbers are sent. Switch off to work offline: positions are then drawn on a plain grid.");
     plat::prefs().setI("adsbZoom", S.map.zoom);
     ImGui::SetCursorScreenPos(ImVec2(p0.x, p0.y + size.y));
@@ -258,11 +295,11 @@ void detail(const App& a) {
     const AdsbTelemetry& t = a.rx.adsb;
     const AdsbAircraft* cur = nullptr;
     if (live(a)) for (const auto& x : t.aircraft) if (x.icao == S.sel) cur = &x;
-    if (!cur) { have = false; ImGui::TextDisabled("click an aircraft"); return; }
+    if (!cur) { have = false; ImGui::PushTextWrapPos(0); ImGui::TextDisabled("click an aircraft"); ImGui::PopTextWrapPos(); return; }
     const double now = ImGui::GetTime();
     if (!have || of != cur->icao || now - at > 1.0) { shown = *cur; have = true; of = cur->icao; at = now; }
     const AdsbAircraft* ac = &shown;
-    auto kv = [&](const char* k, const std::string& v) { ImGui::TextDisabled("%s", k); ImGui::SameLine(96 * gUi); ImGui::PushFont(a.mono, 0); ImGui::TextUnformatted(v.c_str()); ImGui::PopFont(); };
+    auto kv = [&](const char* k, const std::string& v) { ImGui::TextDisabled("%s", k); kvColumn(96 * gUi); ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::TextUnformatted(v.c_str()); ImGui::PopTextWrapPos(); ImGui::PopFont(); };
     char b[96];
     kv("ICAO", icaoText(ac->icao) + (ac->icao >> 24 ? " (not ICAO)" : ""));
     kv("callsign", ac->callsign.empty() ? "-" : ac->callsign + (ac->category.empty() ? "" : "  (" + ac->category + ")"));
@@ -306,15 +343,15 @@ void tab(App& a) {
 }
 
 void list(App& a) {
-    if (!live(a)) { ImGui::TextDisabled(a.engine.running() ? "starting" : "start the receiver to see aircraft"); return; }
-    ImGui::TextDisabled("%u aircraft, %u with position", a.rx.adsb.aircraftCount, a.rx.adsb.withPosition);
+    if (!live(a)) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(a.engine.running() ? "starting" : "start the receiver to see aircraft"); ImGui::PopTextWrapPos(); } return; }
+    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%u aircraft, %u with position", a.rx.adsb.aircraftCount, a.rx.adsb.withPosition); ImGui::PopTextWrapPos(); }
     aircraftTable(a, true);
 }
 
 void receiver(App& a) {
     const AdsbTelemetry& t = a.rx.adsb;
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
-    auto kv = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); ImGui::SameLine(120 * gUi); ImGui::PushFont(a.mono, 0); ImGui::Text(fmt, v...); ImGui::PopFont(); };
+    auto kv = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); kvColumn(120 * gUi); ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::Text(fmt, v...); ImGui::PopTextWrapPos(); ImGui::PopFont(); };
     kv("state", "%s", t.state == 2 ? "receiving" : t.state == 1 ? "pulses, no good message" : "searching");
     kv("messages", "%.0f / s, %llu good, %llu failed the CRC", t.msgsPerSec, (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
     kv("repaired", "%llu", (unsigned long long)t.corrected);
@@ -323,7 +360,7 @@ void receiver(App& a) {
     if (t.refValid) kv("farthest", "%.0f nm", t.maxRangeNm);
     ImGui::Spacing();
     ImGui::TextDisabled("Last messages");
-    if (ImGui::BeginTable("##mon", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) {
+    if (ImGui::BeginTable("##mon", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) {
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableSetupColumn("DF"); ImGui::TableSetupColumn("ICAO"); ImGui::TableSetupColumn("dBFS"); ImGui::TableSetupColumn("fix"); ImGui::TableSetupColumn("message"); ImGui::TableSetupColumn("what");
         ImGui::TableHeadersRow();
@@ -348,14 +385,14 @@ void panels(App& a) {
     const float gap = 12 * gUi, colW = std::max(120.f, (W - 3 * gap) / 3.f), plotH = std::max(60.f, H - ImGui::GetTextLineHeightWithSpacing() - 6);
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + gap * 0.5f);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("Messages per second");
+    captionFit(colW, "Messages per second");   // the captions are never wider than their plots
     std::vector<float> v(S.rate.begin(), S.rate.end());
     if (v.empty()) v.push_back(0);
     ImGui::PlotLines("##rate", v.data(), (int)v.size(), 0, nullptr, 0.f, FLT_MAX, ImVec2(colW, plotH));
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("Good messages by downlink format");
+    captionFit(colW, "Good messages by downlink format");
     {
         const ImVec2 p = ImGui::GetCursorScreenPos();
         ImGui::InvisibleButton("##df", ImVec2(colW, plotH));
@@ -369,13 +406,14 @@ void panels(App& a) {
             const float h = (plotH - 16 * gUi) * (float)n / (float)mx;
             dl->AddRectFilled(ImVec2(p.x + i * bw + 3, p.y + plotH - 14 * gUi - h), ImVec2(p.x + (i + 1) * bw - 3, p.y + plotH - 14 * gUi), ImGui::ColorConvertFloat4ToU32(pal::accent(0.8f)));
             char b[8]; snprintf(b, sizeof b, "%d", dfs[i]);
-            dl->AddText(ImVec2(p.x + i * bw + bw * 0.5f - 4 * gUi, p.y + plotH - 13 * gUi), IM_COL32(150, 154, 158, 255), b);
+            const ImVec2 ts = ImGui::CalcTextSize(b);
+            if (ts.x <= bw - 2) dl->AddText(ImVec2(p.x + i * bw + (bw - ts.x) * 0.5f, p.y + plotH - 13 * gUi), IM_COL32(150, 154, 158, 255), b);   // only where it fits under its bar
         }
     }
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("SNR of good messages (dB)");
+    captionFit(colW, "SNR of good messages (dB)");
     std::vector<float> s(S.snr.begin(), S.snr.end());
     if (s.empty()) s.push_back(0);
     ImGui::PlotLines("##snr", s.data(), (int)s.size(), 0, nullptr, 0.f, FLT_MAX, ImVec2(colW, plotH));
@@ -387,20 +425,16 @@ void status(App& a) {
     const AdsbTelemetry& t = a.rx.adsb;
     const SignalStats& st = a.spec.stats;
     const AdcStatus adc = classifyAdc(st.rmsDbfs, st.peak, st.clipFraction);
-    {
-        const ImVec2 p = ImGui::GetCursorScreenPos();
-        const float h = ImGui::GetFrameHeight() * 2.f + ImGui::GetStyle().ItemSpacing.y * 2.f;
-        ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(p.x - 4, p.y - 2), ImVec2(p.x + ImGui::GetContentRegionAvail().x + 4, p.y + h), IM_COL32(22, 23, 25, 255), 3.f);
-    }
-    lamp("IQ", run ? (adc == AdcStatus::Overload ? 3 : (adc == AdcStatus::Good ? 1 : 2)) : 0, (int)Ic::Wave); ImGui::SameLine(0, 12 * gUi);
-    lamp("Messages", !on ? 0 : t.state == 2 ? 1 : t.state == 1 ? 2 : 0); ImGui::SameLine(0, 12 * gUi);
-    lamp("Positions", !on ? 0 : t.withPosition > 0 ? 1 : t.aircraftCount > 0 ? 2 : 0); ImGui::SameLine(0, 10 * gUi);
-    ImGui::TextDisabled("|"); ImGui::SameLine(0, 10 * gUi);
+    StatusPanel panel;   // a tinted panel behind the status lines (they wrap in a narrow window)
+    lamp("IQ", run ? (adc == AdcStatus::Overload ? 3 : (adc == AdcStatus::Good ? 1 : 2)) : 0, (int)Ic::Wave); flowNext(12 * gUi);
+    lamp("Messages", !on ? 0 : t.state == 2 ? 1 : t.state == 1 ? 2 : 0); flowNext(12 * gUi);
+    lamp("Positions", !on ? 0 : t.withPosition > 0 ? 1 : t.aircraftCount > 0 ? 2 : 0); flowNext(10 * gUi);
+    ImGui::TextDisabled("|"); flowNext(10 * gUi);
     auto ro = [&](const char* label, const std::string& val) {
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled("%s", label); ImGui::SameLine(0, 5 * gUi);
         ImGui::PushFont(a.mono, 0); ImGui::TextUnformatted(val.c_str()); ImGui::PopFont();
-        ImGui::SameLine(0, 15 * gUi);
+        flowNext(15 * gUi);
     };
     char b[64];
     if (!on) { ro("State", run ? "starting" : "stopped"); return; }
@@ -424,7 +458,7 @@ void summary(const App& a, std::string& l1, std::string& l2) {
 void tuner(App& a, bool& retune) {
     loadState();
     ImGui::TextDisabled("Band");
-    ImGui::SetNextItemWidth(220 * gUi);
+    ImGui::SetNextItemWidth(std::min(220 * gUi, ImGui::GetContentRegionAvail().x));   // no wider than the side panel
     const bool std1090 = std::fabs(a.freqMhz - 1090.0) < 0.001;
     if (ImGui::BeginCombo("##band", std1090 ? "1090 MHz  ADS-B / Mode S" : "custom frequency")) {
         if (ImGui::Selectable("1090 MHz  ADS-B / Mode S", std1090)) { a.freqMhz = 1090.0; retune = true; }
@@ -435,23 +469,30 @@ void tuner(App& a, bool& retune) {
         ImGui::EndCombo();
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Europe, the US and the rest of the world all send ADS-B on 1090 MHz (1090ES). The US has a second system, UAT on 978 MHz, which is not decoded yet.");
-    ImGui::TextDisabled("Antenna position (for ranges and the map)");
-    ImGui::SetNextItemWidth(110 * gUi);
+    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Antenna position (for ranges and the map)"); ImGui::PopTextWrapPos(); }
+    ImGui::SetNextItemWidth(std::min(110 * gUi, ImGui::GetContentRegionAvail().x));   // no wider than the side panel
     double la = S.refLat, lo = S.refLon;
     bool ch = ImGui::InputDouble("##alat", &la, 0, 0, "%.4f N");
     ImGui::SameLine(0, 4 * gUi);
-    ImGui::SetNextItemWidth(110 * gUi);
+    ImGui::SetNextItemWidth(std::min(110 * gUi, ImGui::GetContentRegionAvail().x));   // no wider than the side panel
     ch |= ImGui::InputDouble("##alon", &lo, 0, 0, "%.4f E");
     if (ch) setReference(a, la, lo);
     if (ImGui::Button(S.locBusy ? "Locating..." : "Locate (Wi-Fi)") && !S.locBusy) { plat::locateStart(); S.locBusy = 1; S.locMsg = "asking the location service..."; }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Ask the system for this computer's position (Wi-Fi positioning). macOS asks for permission the first time.");
     if (!S.locMsg.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", S.locMsg.c_str()); ImGui::PopTextWrapPos(); }
+    double areaLat, areaLon, nearest;
+    if (live(a) && positionLooksWrong(a.rx.adsb, areaLat, areaLon, nearest)) {
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.4f, 1), "Every aircraft is over %.0f nm away: this position is probably not yours.", nearest);
+        ImGui::PopTextWrapPos();
+        if (ImGui::Button("Use the aircraft's area##ref")) setReference(a, areaLat, areaLon);
+    }
 }
 
 void decoder(App& a, bool&) {
     static const char* names[] = {"off", "1 bit", "2 bits"};
     ImGui::TextDisabled("FIX"); ImGui::SameLine(0, 5 * gUi);
-    ImGui::SetNextItemWidth(90 * gUi);
+    ImGui::SetNextItemWidth(std::min(90 * gUi, ImGui::GetContentRegionAvail().x));   // no wider than the side panel
     if (ImGui::BeginCombo("##fix", names[S.correction])) {
         for (int i = 0; i < 3; i++) if (ImGui::Selectable(names[i], S.correction == i)) { S.correction = i; if (a.engine.running()) a.engine.adsb().setCorrection(i); }
         ImGui::EndCombo();
@@ -461,17 +502,17 @@ void decoder(App& a, bool&) {
 
 void synth(App& a, bool& changed) {
     SynthConfig& sc = a.tune.synth;
-    ImGui::TextDisabled("simulated airspace");
-    ImGui::SameLine(); ImGui::SetNextItemWidth(90 * gUi);
+    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("simulated airspace"); ImGui::PopTextWrapPos(); }
+    flowNext(); ImGui::SetNextItemWidth(90 * gUi);
     int n = sc.modeOpt[0] == 0 ? 12 : sc.modeOpt[0];
     if (ImGui::SliderInt("##sn", &n, 1, 100, "%d aircraft")) { sc.modeOpt[0] = n; changed = true; }
-    ImGui::SameLine(); ImGui::SetNextItemWidth(90 * gUi);
+    flowNext(); ImGui::SetNextItemWidth(90 * gUi);
     float mul = sc.modeVal[0] > 0 ? (float)sc.modeVal[0] : 1.f;
     if (ImGui::SliderFloat("##sm", &mul, 0.2f, 10.f, "x%.1f rate", ImGuiSliderFlags_Logarithmic)) { sc.modeVal[0] = mul; changed = true; }
-    ImGui::SameLine();
+    flowNext();
     bool replies = sc.modeOpt[1] == 0;
     if (ImGui::Checkbox("radar replies", &replies)) { sc.modeOpt[1] = replies ? 0 : 1; changed = true; }
-    ImGui::SameLine();
+    flowNext();
     bool emg = sc.modeOpt[3] == 1;
     if (ImGui::Checkbox("emergency", &emg)) { sc.modeOpt[3] = emg ? 1 : 0; changed = true; }
 }

@@ -3,15 +3,18 @@
 #include "atsc3_sim.h"
 #include "dect2/atsc3_rx.h"
 #include "dect2/atsc3_synth.h"
+#include "jobs.h"
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <thread>
 
 using namespace dect2;
+using testjobs::jprintf;
 
-static int fails = 0;
-#define CHECK(c, m) do { if (!(c)) { printf("FAIL: %s\n", m); fails++; } } while (0)
+static std::atomic<int> fails{0};
+#define CHECK(c, m) do { if (!(c)) { jprintf("FAIL: %s\n", m); fails++; } } while (0)
 
 // the 8-bit samples of the synthetic source: the receiver gets what a HackRF would send
 static void quantize(cf32* v, size_t n) {
@@ -32,7 +35,7 @@ static void run(const Opt& o) {
     cfg.snrDb = o.snr;
     for (int i = 0; i < 6; i++) cfg.modeOpt[i] = o.opt[i];
     auto synth = makeAtsc3Synth(cfg, rate);
-    if (!synth) { printf("  %-28s FAIL: no generator\n", o.name); fails++; return; }
+    if (!synth) { jprintf("  %-28s FAIL: no generator\n", o.name); fails++; return; }
     Atsc3Rx rx;
     std::vector<uint8_t> ts;
     rx.setPacketCallback([&](const uint8_t* p, size_t n, double) { ts.insert(ts.end(), p, p + n * 188); });
@@ -43,10 +46,12 @@ static void run(const Opt& o) {
     Atsc3Telemetry t;
     uint64_t seq = 0;
     long last = -1;
-    for (int i = 0; i < 100; i++) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    // wait until the decoder has stopped producing frames: no new frame for 200 ms. Polled every 20 ms (not 200 ms with a fixed minimum of 1 s).
+    int still = 0;
+    for (int i = 0; i < 1000 && still < 10; i++) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
         if (rx.telemetry(t, seq)) seq = t.seq;
-        if (i > 3 && t.frames == last) break;
+        still = (i > 0 && t.frames == last) ? still + 1 : 0;
         last = t.frames;
     }
     rx.telemetry(t, 0);
@@ -55,7 +60,7 @@ static void run(const Opt& o) {
     bool hevc = false, aac = false;
     const bool opened = sim::countTs(ts, v, a, hevc, aac);
     const bool serviceOk = t.services.size() == 1 && t.services[0].serviceId == 1001 && t.selected == 1001;
-    printf("  %-28s frames %ld (%ld failed), bb %ld (%ld bad), service %s, TS %zu B: %ld video %s + %ld audio %s, PLP %d bits/cell rate %d/15 %d\n", o.name, t.frames, t.framesFailed, t.bbPackets, t.bbBad,
+    jprintf("  %-28s frames %ld (%ld failed), bb %ld (%ld bad), service %s, TS %zu B: %ld video %s + %ld audio %s, PLP %d bits/cell rate %d/15 %d\n", o.name, t.frames, t.framesFailed, t.bbPackets, t.bbBad,
            serviceOk ? "ok" : "MISSING", ts.size(), v, hevc ? "hevc" : "other", a, aac ? "aac" : "other",
            t.frame.plps.empty() ? 0 : t.frame.plps[0].bitsPerCell, t.frame.plps.empty() ? 0 : t.frame.plps[0].rate15, t.frame.plps.empty() ? 0 : t.frame.plps[0].nInner);
     CHECK(t.frames >= (long)(secs / 0.15), "frames decoded");
@@ -85,7 +90,10 @@ int main() {
         {"MPEG-2 video", {0, 0, 0, 0, 3, 0}, 25, 2},
         {"256QAM 13/15 16K", {3, 12, 1, 0, 0, 0}, 40, 0},
     };
-    for (const auto& o : all) run(o);
-    printf(fails ? "atsc3 synth options: FAILED\n" : "atsc3 synth options: ok\n");
+    // the cases are independent: each one runs on its own thread, the output keeps the order of the cases
+    testjobs::Jobs jobs;
+    for (const auto& o : all) jobs.add([&o] { run(o); });
+    jobs.run();
+    jprintf(fails ? "atsc3 synth options: FAILED\n" : "atsc3 synth options: ok\n");
     return fails ? 1 : 0;
 }

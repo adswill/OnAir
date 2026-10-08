@@ -40,6 +40,24 @@ const char* installKindName(InstallKind k);
 ReleaseInfo pickRelease(const std::string& json, const std::string& current, bool includePrerelease, InstallKind kind, const std::string& arch, std::string* err = nullptr);
 std::string thisArch();
 
+// What the Windows helper leaves behind when the setup program has run (or could not): read once by the next start of the program.
+struct UpdateResult {
+    bool found = false;        // a readable result file existed
+    bool ok = false;           // the setup program ended with exit code 0
+    std::string version;       // the version it was asked to install
+    int setupExit = 0;
+    std::string time;
+};
+UpdateResult parseUpdateResult(const std::string& text);
+// Where the helper writes it. A fixed place: the program that reads it is a new process (another PID than the one that started the update).
+std::string updateResultPath();
+// The text of the script that runs, elevated, once the program has ended (Windows): waits for `pid`, runs the setup program silently, records
+// its exit code in `resultFile`, then starts the program again without administrator rights. The paths are put in the script as values
+// (not on a command line), so spaces, apostrophes, ampersands and percent signs in them are safe. Callable on every system, for tests.
+std::string windowsApplyScript(int pid, const std::string& setupExe, const std::string& installedExe, const std::string& resultFile, const std::string& version, bool restart);
+// The arguments for cmd.exe that run the script (what ShellExecute is given with the "runas" verb).
+std::string windowsApplyParams(const std::string& scriptPath);
+
 class Updater {
 public:
     enum class Phase { Idle, Checking, UpToDate, Available, Downloading, Preparing, Ready, Failed };
@@ -51,6 +69,8 @@ public:
         InstallKind kind = InstallKind::Unknown;
         bool autoInstallable = false;      // the program can replace itself (not for a development build or a .deb)
         double checkedAt = 0;              // seconds since 1970 of the last successful check
+        std::string applyError;            // why the last apply() did not start the installation (the update stays Ready)
+        UpdateResult lastResult;           // what the helper of an earlier start recorded (see loadResult)
     };
     explicit Updater(const std::string& currentVersion);
     ~Updater();
@@ -66,6 +86,8 @@ public:
     // With restart the new version is started afterwards. For a .deb the package is handed to the system's installer (asks for a password).
     bool apply(bool restart, std::string* err = nullptr);
     void openReleasePage() const;
+    void loadResult();                               // reads and removes the result file of an update that ran before this start
+    void dismissResult();
     void cancel();
 
 private:
@@ -83,5 +105,8 @@ private:
     std::string file_, staged_;
     int waitPid_ = 0;
 };
+
+// Opens a web address in the user's browser (the shared channel database uses it for its pre-filled issue).
+void openUrl(const std::string& url);
 
 } // namespace dect2

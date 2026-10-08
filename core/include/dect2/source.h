@@ -2,6 +2,8 @@
 #pragma once
 #include "ring.h"
 #include "t2gen.h"
+#include <cstdlib>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -38,7 +40,55 @@ struct TuneSettings {
     int lnaDb = 16;                    // 0..40 step 8
     int vgaDb = 20;                    // 0..62 step 2
     bool ampOn = false;
+    bool biasTee = false;              // DC power up the antenna input (active antennas, LNAs); only radios with DeviceInfo::hasBiasTee act on it
+    // The radio's own settings the user changed (DeviceInfo::settings): key -> value. A key that is not here means the setting's default,
+    // which is what the driver did before the setting existed.
+    std::map<std::string, std::string> radio;
 };
+
+// A hardware setting of a radio beyond its gain and antenna power: frequency correction, direct sampling, notch filters, gain modes, ...
+// The radio's entry lists the ones it has (DeviceInfo::settings); the app shows them, keeps the user's choices per radio and hands them to
+// the driver in TuneSettings::radio, which applies them on start and on every retune.
+struct RadioSetting {
+    enum Type { Bool, Choice, Number } type = Bool;
+    std::string key;                       // the key in TuneSettings::radio
+    std::string label, help;               // what the app shows, and its tooltip
+    std::vector<std::string> values;       // Choice: the values the driver understands ...
+    std::vector<std::string> names;        // ... and what the app shows for each
+    double minV = 0, maxV = 0, step = 0;   // Number
+    std::string unit;                      // Number: "ppm", "dB", ...
+    std::string def;                       // the default: "1"/"0" for Bool, one of values for Choice, a number
+    bool restart = false;                  // takes effect when the radio is opened (the app restarts a running receiver)
+};
+
+// The values in TuneSettings::radio as the drivers read them (def when the user did not set the key)
+inline std::string radioOption(const TuneSettings& s, const std::string& key, const std::string& def = std::string()) {
+    const auto it = s.radio.find(key);
+    return it == s.radio.end() ? def : it->second;
+}
+inline bool radioFlag(const TuneSettings& s, const std::string& key, bool def = false) {
+    const auto it = s.radio.find(key);
+    return it == s.radio.end() ? def : (it->second == "1" || it->second == "true");
+}
+inline double radioNumber(const TuneSettings& s, const std::string& key, double def = 0) {
+    const auto it = s.radio.find(key);
+    if (it == s.radio.end() || it->second.empty()) return def;
+    char* end = nullptr;
+    const double v = strtod(it->second.c_str(), &end);
+    return end && end != it->second.c_str() ? v : def;
+}
+// The frequency correction every radio offers (key "ppm"): the radio's clock error in parts per million, positive when its clock runs fast
+// (a signal then shows up below its real frequency)
+inline double radioPpm(const TuneSettings& s) { const double p = radioNumber(s, "ppm", 0); return p > -1000 && p < 1000 ? p : 0; }
+// The frequency to ask a radio for so that it really receives hz, for radios whose library has no correction of its own: a clock that runs
+// fast by ppm tunes every frequency that much too high
+inline double ppmCorrectedHz(double hz, double ppm) { return ppm == 0 ? hz : hz / (1.0 + ppm * 1e-6); }
+// The descriptor of that setting (step: the finest the radio's library takes, e.g. whole ppm for the RTL-SDR)
+RadioSetting ppmSetting(double step = 0.1);
+// Descriptors for the drivers' listings
+RadioSetting boolSetting(const std::string& key, const std::string& label, const std::string& help, bool def = false, bool restart = false);
+RadioSetting choiceSetting(const std::string& key, const std::string& label, const std::string& help, std::vector<std::string> values,
+                           std::vector<std::string> names, const std::string& def, bool restart = false);
 
 struct DeviceInfo {
     enum Kind { Synthetic, File, HackRF, Soapy, Native } kind = Synthetic;   // Native: a radio driven by its own library (experimental), see source_native.cpp
@@ -51,6 +101,9 @@ struct DeviceInfo {
     double maxRateHz = 0;      // fastest complex sample rate the radio offers (0 = unknown)
     double minRateHz = 0;
     double gainMinDb = 0, gainMaxDb = 0;
+    double minFreqHz = 0, maxFreqHz = 0;   // tuning range of the radio (0 = unknown)
+    bool hasBiasTee = false;               // the radio and its library can power the antenna input (TuneSettings::biasTee)
+    std::vector<RadioSetting> settings;    // the radio's own settings the app offers (TuneSettings::radio); empty for files and the test signal
     bool isRadio() const { return kind == HackRF || kind == Soapy || kind == Native; }
     bool isGeneric() const { return kind == Soapy || kind == Native; }   // one overall gain, a sample-rate range reported by the radio
 };
@@ -69,7 +122,7 @@ std::vector<DeviceInfo> listHackrfDevices(std::string& err);
 // Every other radio that SoapySDR knows (Airspy, SDRplay, RTL-SDR, PlutoSDR, LimeSDR, BladeRF, USRP, ...). Empty when built without SoapySDR.
 std::vector<DeviceInfo> listSoapyDevices(std::string& err);
 bool soapySupported();
-// Radios driven by their own libraries when those are installed: RTL-SDR, Airspy, BladeRF, LimeSDR, PlutoSDR, USRP (experimental).
+// Radios driven by their own libraries when those are installed: RTL-SDR, Airspy, BladeRF, LimeSDR, PlutoSDR, USRP, SDRplay (experimental).
 std::vector<DeviceInfo> listNativeDevices(std::string& err);
 std::unique_ptr<IqSource> makeNativeSource(const DeviceInfo& d);
 // Every radio found: HackRF first, then the native ones, then the SoapySDR ones (a radio found natively is not listed again through SoapySDR).

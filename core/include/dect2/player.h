@@ -80,7 +80,7 @@ private:
     std::thread th_;
     std::atomic<bool> stop_{false}, restart_{false};
     std::atomic<bool> subsOn_{true}, subsAvail_{false};
-    std::atomic<bool> conceal_{true};
+    std::atomic<bool> conceal_{false};   // off by default: interpolating pictures costs CPU that slower computers need for decoding
     std::atomic<bool> hwAllowed_{true};
     ServiceFilter filter_;
     std::mutex mu_;

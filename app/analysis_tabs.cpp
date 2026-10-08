@@ -4,8 +4,8 @@
 void syncTab(App& a) {
     if (a.rx.standard == 1) {
         const RxTelemetry& rx = a.rx;
-        ImGui::TextColored(pal::heading(), "DVB-T synchronisation");
-        if (rx.state == 0) { ImGui::TextDisabled("looking for a cyclic prefix: the FFT size (2K/8K) and guard interval are found from the correlation of each symbol's guard with its end"); return; }
+        { ImGui::PushTextWrapPos(0); ImGui::TextColored(pal::heading(), "DVB-T synchronisation"); ImGui::PopTextWrapPos(); }
+        if (rx.state == 0) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("looking for a cyclic prefix: the FFT size (2K/8K) and guard interval are found from the correlation of each symbol's guard with its end"); ImGui::PopTextWrapPos(); } return; }
         if (ImGui::BeginTable("synct", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg)) {
             ImGui::TableSetupColumn("k", ImGuiTableColumnFlags_WidthFixed, 220);
             auto row = [&](const char* k, const char* fmt, auto... args) { ImGui::TableNextRow(); ImGui::TableNextColumn(); ImGui::TextDisabled("%s", k); ImGui::TableNextColumn(); char b[160]; snprintf(b, sizeof b, fmt, args...); ImGui::TextUnformatted(b); };
@@ -21,8 +21,9 @@ void syncTab(App& a) {
     }
     const RxTelemetry& rx = a.rx;
     float h = ImGui::GetContentRegionAvail().y;
-    ImGui::TextDisabled("P1 detector - C-A-B correlation (peak > 0.30 triggers an S1/S2 decode)");
-    if (plt::BeginPlot("##p1", ImVec2(-1, h * 0.33f), plt::Flags_NoLegend | plt::Flags_NoTitle)) {
+    captionFit(ImGui::GetContentRegionAvail().x, "P1 detector - C-A-B correlation (peak > 0.30 triggers an S1/S2 decode)");
+    // never shorter than 5 lines: in a short tab the view scrolls instead (the trace was 22 px tall at 1024 x 600)
+    if (plt::BeginPlot("##p1", ImVec2(-1, std::max(h * 0.33f, 5.f * ImGui::GetTextLineHeight())), plt::Flags_NoLegend | plt::Flags_NoTitle)) {
         plt::SetupAxes("time (ms)", "correlation");
         plt::SetupAxisLimits(plt::Y1, 0, 1.05, plt::Cond_Always);
         if (!rx.p1Trace.empty() && rx.nativeRate > 0) {
@@ -38,8 +39,10 @@ void syncTab(App& a) {
         plt::EndPlot();
     }
     float w = ImGui::GetContentRegionAvail().x;
-    ImGui::TextDisabled("guard-interval score (mean cyclic-prefix correlation over 3 symbols)");
-    if (plt::BeginPlot("##gi", ImVec2(w * 0.38f, -1), plt::Flags_NoLegend | plt::Flags_NoTitle)) {
+    captionFit(ImGui::GetContentRegionAvail().x, "guard-interval score (mean cyclic-prefix correlation over 3 symbols)");
+    // the rest of the tab, never less than 7 lines: in a short tab the view scrolls (the bars were 37 px tall at 1024 x 600)
+    const float rowH = std::max(ImGui::GetContentRegionAvail().y, 7.f * ImGui::GetTextLineHeight());
+    if (plt::BeginPlot("##gi", ImVec2(w * 0.38f, rowH), plt::Flags_NoLegend | plt::Flags_NoTitle)) {
         plt::SetupAxes(nullptr, "score", plt::AxisFlags_NoGridLines, 0);
         plt::SetupAxisLimits(plt::Y1, 0, 1.05, plt::Cond_Always);
         plt::SetupAxisLimits(plt::X1, -0.6, kNumGi - 0.4, plt::Cond_Always);
@@ -53,8 +56,8 @@ void syncTab(App& a) {
         plt::EndPlot();
     }
     ImGui::SameLine();
-    ImGui::BeginChild("hist", ImVec2(0, -1));
-    float hh = ImGui::GetContentRegionAvail().y / 3 - 4;
+    ImGui::BeginChild("hist", ImVec2(0, rowH));
+    float hh = std::max(ImGui::GetContentRegionAvail().y / 3 - 4, 5.f * ImGui::GetTextLineHeight());   // a short tab: the three scroll instead of shrinking
     historyPlot("##hc", "CFO (Hz)", a.hCfo, ImVec2(-1, hh));
     historyPlot("##hs", "CP-SNR (dB)", a.hSnr, ImVec2(-1, hh));
     historyPlot("##ht", "timing (samples)", a.hTiming, ImVec2(-1, hh));
@@ -62,7 +65,7 @@ void syncTab(App& a) {
 }
 
 void historyTab(App& a) {
-    if (a.hist.empty()) { ImGui::TextDisabled("history fills while the receiver runs (4 samples per second, last 15 minutes)"); return; }
+    if (a.hist.empty()) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("history fills while the receiver runs (4 samples per second, last 15 minutes)"); ImGui::PopTextWrapPos(); } return; }
     const double nowT = glfwGetTime();
     {
         static const int wins[] = {30, 60, 300, 900};
@@ -70,10 +73,10 @@ void historyTab(App& a) {
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled("window");
         for (int i = 0; i < 4; i++) { ImGui::SameLine(0, 6 * gUi); if (pillButton(names[i], a.histWindow == wins[i])) a.histWindow = wins[i]; }
-        ImGui::SameLine(0, 14 * gUi);
-        if (a.fmMode) ImGui::TextDisabled("gaps in a line mean there was no station on the frequency");
-        else if (a.dabMode) ImGui::TextDisabled("gaps in a line mean the receiver was not locked");
-        else ImGui::TextDisabled("gaps in a line mean the receiver was not locked; CFO and SRO are on Receiver > Sync");
+        const char* hint = a.fmMode ? "gaps in a line mean there was no station on the frequency" : a.dabMode ? "gaps in a line mean the receiver was not locked"
+                                    : "gaps in a line mean the receiver was not locked; CFO and SRO are on Receiver > Sync";
+        sameLineIf(ImGui::CalcTextSize(hint).x, 14 * gUi);   // on a line of its own (wrapped) when the tab is narrow
+        ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", hint); ImGui::PopTextWrapPos();
     }
     std::vector<float> xs(a.hist.size());
     for (size_t i = 0; i < xs.size(); i++) xs[i] = (float)(a.hist[i].t - nowT);
@@ -97,7 +100,9 @@ void historyTab(App& a) {
         }
         plt::EndPlot();
     };
-    if (plt::BeginSubplots("##hist", 4, 1, ImVec2(-1, -1), plt::Subplot_LinkAllX | plt::Subplot_NoTitle | plt::Subplot_NoLegend | plt::Subplot_NoMenus)) {
+    // never squashed below about four lines each: in a short tab the plots scroll instead
+    const float plotsH = std::max(ImGui::GetContentRegionAvail().y, 4 * 4.5f * ImGui::GetTextLineHeight() + 2.5f * ImGui::GetTextLineHeight());
+    if (plt::BeginSubplots("##hist", 4, 1, ImVec2(-1, plotsH), plt::Subplot_LinkAllX | plt::Subplot_NoTitle | plt::Subplot_NoLegend | plt::Subplot_NoMenus)) {
         series("quality (%)##h1", "quality %", {{"quality", &App::HistSample::quality}}, 0, 100, true, false);
         if (a.fmMode) {
             series("audio SNR (dB)##h2", "audio SNR dB", {{"audio SNR", &App::HistSample::snr}}, 0, 0, false, false);
@@ -114,7 +119,7 @@ void historyTab(App& a) {
 void frameMapTab(App& a) {
     if (a.rx.standard == 1) {
         const RxTelemetry& rx = a.rx;
-        ImGui::TextDisabled("A DVB-T frame has 68 OFDM symbols; four frames form a superframe. Forward error correction here is a continuous stream (Viterbi + Reed-Solomon), so there is no block map as in DVB-T2.");
+        { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("A DVB-T frame has 68 OFDM symbols; four frames form a superframe. Forward error correction here is a continuous stream (Viterbi + Reed-Solomon), so there is no block map as in DVB-T2."); ImGui::PopTextWrapPos(); }
         if (rx.dvbt.tpsOk) {
             ImDrawList* dl = ImGui::GetWindowDrawList();
             ImVec2 o = ImGui::GetCursorScreenPos();
@@ -131,14 +136,14 @@ void frameMapTab(App& a) {
         return;
     }
     const RxTelemetry& rx = a.rx;
-    if (!rx.l1preOk) { ImGui::TextDisabled("the frame structure appears once L1-pre has been decoded"); return; }
+    if (!rx.l1preOk) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("the frame structure appears once L1-pre has been decoded"); ImGui::PopTextWrapPos(); } return; }
     ImDrawList* dl = ImGui::GetWindowDrawList();
     const L1Pre& p = rx.l1pre;
     static const int nP2tab[6] = {8, 2, 4, 16, 1, 1};
     const int fftCode = p.s2 >> 1;
     const int nP2 = fftCode >= 0 && fftCode < 6 ? nP2tab[fftCode] : 1;
     const int nData = p.numDataSyms;
-    ImGui::TextDisabled("T2 frame: P1 + %d P2 symbol%s + %d data symbols (%s, GI %s)  -  %.1f ms", nP2, nP2 == 1 ? "" : "s", nData, fftModeFromSize(rx.fftN) ? fftModeFromSize(rx.fftN)->name : "?", guardName(rx.giIdx), rx.frameMs);
+    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("T2 frame: P1 + %d P2 symbol%s + %d data symbols (%s, GI %s)  -  %.1f ms", nP2, nP2 == 1 ? "" : "s", nData, fftModeFromSize(rx.fftN) ? fftModeFromSize(rx.fftN)->name : "?", guardName(rx.giIdx), rx.frameMs); ImGui::PopTextWrapPos(); }
     ImVec2 o = ImGui::GetCursorScreenPos();
     const float W = ImGui::GetContentRegionAvail().x - 10, H = 34;
     const double symUnits = 1.0;             // widths in OFDM symbols; P1 is about half a long symbol
@@ -155,11 +160,11 @@ void frameMapTab(App& a) {
     seg(nP2, IM_COL32(230, 120, 190, 255), "P2");
     seg(nData, IM_COL32(90, 200, 120, 255), "data symbols (PLP cells, pilots, edge pilots)");
     ImGui::Dummy(ImVec2(W, H + 6));
-    if (rx.plpValid) ImGui::TextDisabled("PLP %d: %d FEC blocks per frame (%s, rate index %d%s), time interleaver %d", rx.plpId, rx.plpBlocks, rx.plpFec.mod == 0 ? "QPSK" : rx.plpFec.mod == 1 ? "16-QAM" : rx.plpFec.mod == 2 ? "64-QAM" : "256-QAM", rx.plpFec.rate, rx.plpFec.rotation ? ", rotated" : "", p.numDataSyms > 0 ? 0 : 0);
+    if (rx.plpValid) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("PLP %d: %d FEC blocks per frame (%s, rate index %d%s), time interleaver %d", rx.plpId, rx.plpBlocks, rx.plpFec.mod == 0 ? "QPSK" : rx.plpFec.mod == 1 ? "16-QAM" : rx.plpFec.mod == 2 ? "64-QAM" : "256-QAM", rx.plpFec.rate, rx.plpFec.rotation ? ", rotated" : "", p.numDataSyms > 0 ? 0 : 0); ImGui::PopTextWrapPos(); }
     ImGui::Separator();
-    ImGui::TextDisabled("FEC block map: one row per decoded frame (newest at the bottom), one cell per FEC block. Green = decoded, red = failed.");
+    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("FEC block map: one row per decoded frame (newest at the bottom), one cell per FEC block. Green = decoded, red = failed."); ImGui::PopTextWrapPos(); }
     const auto& bm = rx.blockMap;
-    if (bm.empty()) { ImGui::TextDisabled("no decoded frames yet"); return; }
+    if (bm.empty()) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("no decoded frames yet"); ImGui::PopTextWrapPos(); } return; }
     size_t nb = 0;
     for (auto& f : bm) nb = std::max(nb, f.size());
     ImVec2 g = ImGui::GetCursorScreenPos();
@@ -183,10 +188,10 @@ void frameMapTab(App& a) {
 void signallingTab(App& a) {
     if (a.rx.standard == 1) {
         const RxTelemetry& rx = a.rx;
-        if (!rx.dvbt.tpsOk) { ImGui::TextDisabled("TPS (transmission parameter signalling) has not been decoded yet"); return; }
+        if (!rx.dvbt.tpsOk) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("TPS (transmission parameter signalling) has not been decoded yet"); ImGui::PopTextWrapPos(); } return; }
         static const char* modes[] = {"2K", "8K"}; static const char* hier[] = {"non-hierarchical", "hierarchical, alpha = 1", "hierarchical, alpha = 2", "hierarchical, alpha = 4"};
         dvbt::Params q; q.mode = rx.dvbt.mode; q.guard = rx.dvbt.guard; q.mod = rx.dvbt.mod; q.hier = rx.dvbt.hier; q.crHp = rx.dvbt.crHp; q.crLp = rx.dvbt.crLp;
-        ImGui::TextColored(pal::heading(), "DVB-T transmission parameters (TPS, EN 300 744)");
+        { ImGui::PushTextWrapPos(0); ImGui::TextColored(pal::heading(), "DVB-T transmission parameters (TPS, EN 300 744)"); ImGui::PopTextWrapPos(); }
         if (ImGui::BeginTable("tps", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg)) {
             ImGui::TableSetupColumn("k", ImGuiTableColumnFlags_WidthFixed, 200);
             auto row = [&](const char* k, const char* fmt, auto... args) { ImGui::TableNextRow(); ImGui::TableNextColumn(); ImGui::TextDisabled("%s", k); ImGui::TableNextColumn(); char b[160]; snprintf(b, sizeof b, fmt, args...); ImGui::TextUnformatted(b); };
@@ -202,7 +207,7 @@ void signallingTab(App& a) {
             row("TPS block age", "%.2f s", rx.dvbt.secSinceTps);
             ImGui::EndTable();
         }
-        if (rx.dvbt.hier) ImGui::TextColored(ImVec4(0.95f, 0.6f, 0.2f, 1), "! hierarchical modulation is announced: only the high-priority stream is decoded correctly by this receiver");
+        if (rx.dvbt.hier) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.6f, 0.2f, 1), "! hierarchical modulation is announced: only the high-priority stream is decoded correctly by this receiver"); ImGui::PopTextWrapPos(); }
         return;
     }
     const RxTelemetry& rx = a.rx;
@@ -210,7 +215,7 @@ void signallingTab(App& a) {
     auto row = [](const char* k, const char* fmt, ...) {
         char b[160];
         va_list ap; va_start(ap, fmt); vsnprintf(b, sizeof b, fmt, ap); va_end(ap);
-        ImGui::TextDisabled("%-22s", k); ImGui::SameLine(); ImGui::TextUnformatted(b);
+        ImGui::TextDisabled("%-22s", k); ImGui::SameLine(); ImGui::PushTextWrapPos(0); ImGui::TextUnformatted(b); ImGui::PopTextWrapPos();   // a long value wraps under itself
     };
     ImGui::TextColored(pal::heading(), "P1 preamble");
     if (rx.p1.valid) {
@@ -225,7 +230,7 @@ void signallingTab(App& a) {
         row("last P1", "%.2f s ago", rx.secSinceP1);
     } else ImGui::TextDisabled("no P1 decoded yet");
     ImGui::Spacing();
-    ImGui::TextColored(pal::heading(), "OFDM / frame (blind, before L1-pre)");
+    { ImGui::PushTextWrapPos(0); ImGui::TextColored(pal::heading(), "OFDM / frame (blind, before L1-pre)"); ImGui::PopTextWrapPos(); }
     if (rx.state >= 1) {
         row("FFT size", "%d", rx.fftN);
         row("carriers (normal)", "%d", rx.carriers);
@@ -242,7 +247,7 @@ void signallingTab(App& a) {
         row("symbols processed", "%llu", (unsigned long long)rx.symbols);
     }
     ImGui::Spacing();
-    ImGui::TextColored(pal::heading(), "L1-pre   (decoded %llu, failed %llu, LDPC iterations %d)", (unsigned long long)rx.l1preGood, (unsigned long long)rx.l1preBad, rx.l1Iters);
+    { ImGui::PushTextWrapPos(0); ImGui::TextColored(pal::heading(), "L1-pre   (decoded %llu, failed %llu, LDPC iterations %d)", (unsigned long long)rx.l1preGood, (unsigned long long)rx.l1preBad, rx.l1Iters); ImGui::PopTextWrapPos(); }
     if (rx.l1preGood > 0) {
         const L1Pre& p = rx.l1pre;
         static const char* paprN[] = {"off", "ACE", "TR", "ACE + TR"};
@@ -262,7 +267,7 @@ void signallingTab(App& a) {
         row("RF channels", "%d (current %d)  regen %d  tx-id %d", p.numRf, p.curRf, p.regen, p.txIdAvail);
     } else ImGui::TextDisabled("not decoded yet");
     ImGui::Spacing();
-    ImGui::TextColored(pal::heading(), "L1-post   (decoded %llu, failed %llu)", (unsigned long long)rx.l1postGood, (unsigned long long)rx.l1postBad);
+    { ImGui::PushTextWrapPos(0); ImGui::TextColored(pal::heading(), "L1-post   (decoded %llu, failed %llu)", (unsigned long long)rx.l1postGood, (unsigned long long)rx.l1postBad); ImGui::PopTextWrapPos(); }
     if (rx.l1postGood > 0) {
         const L1Post& q = rx.l1post;
         static const char* cod[] = {"1/2", "3/5", "2/3", "3/4", "4/5", "5/6", "1/3", "2/5"};
@@ -279,7 +284,7 @@ void signallingTab(App& a) {
             row("", "max %d FEC blocks, TI %d (%s), group %d, interval %d, mode %d", c.numBlocksMax, c.timeIlLength, c.timeIlType ? "multi-frame" : "one frame", c.groupId, c.frameInterval, c.plpMode);
             if (i < q.dyn.size()) row("", "start %d, %d blocks in this frame", q.dyn[i].start, q.dyn[i].numBlocks);
         }
-    } else ImGui::TextDisabled("%s", rx.l1preGood ? "not decoded (L1-pre must be valid first)" : "not decoded yet");
+    } else { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", rx.l1preGood ? "not decoded (L1-pre must be valid first)" : "not decoded yet"); ImGui::PopTextWrapPos(); }
     ImGui::PopFont();
 }
 
@@ -292,7 +297,7 @@ void atscPanels(App& a) {
     const ImVec2 sz(side, side);
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("Equalised levels (%zu symbols)", at.levels.size());
+    captionFit(side, "Equalised levels (%zu symbols)", at.levels.size());
     if (plt::BeginPlot("##ah", sz, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_NoMouseText)) {
         plt::SetupAxes(nullptr, nullptr, plt::AxisFlags_NoTickLabels, plt::AxisFlags_NoTickLabels);
         plt::SetupAxisLimits(plt::X1, -9, 9, plt::Cond_Always);
@@ -312,7 +317,7 @@ void atscPanels(App& a) {
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("Equaliser response (%zu taps)", at.eqTaps.size());
+    captionFit(side, "Equaliser response (%zu taps)", at.eqTaps.size());
     if (plt::BeginPlot("##ae", sz, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_NoMouseText)) {
         plt::SetupAxes("symbols", nullptr, 0, plt::AxisFlags_AutoFit);
         if (!at.eqTaps.empty()) {
@@ -327,7 +332,7 @@ void atscPanels(App& a) {
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("Symbol levels in sequence");
+    captionFit(side, "Symbol levels in sequence");
     if (plt::BeginPlot("##as", sz, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_NoMouseText)) {
         plt::SetupAxes(nullptr, nullptr, plt::AxisFlags_NoTickLabels, plt::AxisFlags_NoTickLabels);
         plt::SetupAxisLimits(plt::Y1, -9, 9, plt::Cond_Always);
@@ -345,18 +350,20 @@ void atscPanels(App& a) {
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("ATSC receiver");
+    captionFit(side, "ATSC receiver");
     ImGui::BeginChild("atxt", sz);
     ImGui::PushFont(a.mono, 0);
+    ImGui::PushTextWrapPos(0);   // the lines wrap in a narrow row
     ImGui::Text("pilot       %s", at.pilot ? "locked" : "searching");
-    ImGui::Text("segment     %s  sync %.2f", at.segSync ? "locked" : "searching", at.syncQuality);
-    ImGui::Text("field       %s  (%d)", at.fieldSync ? "locked" : "searching", at.fieldParity);
-    ImGui::Text("CFO %+.0f Hz  SRO %+.1f ppm", at.cfoHz, at.sroPpm);
-    ImGui::Text("SNR %.1f dB  data %.1f dB", at.snrDb, at.dataSnrDb);
+    { ImGui::PushTextWrapPos(0); ImGui::Text("segment     %s  sync %.2f", at.segSync ? "locked" : "searching", at.syncQuality); ImGui::PopTextWrapPos(); }
+    { ImGui::PushTextWrapPos(0); ImGui::Text("field       %s  (%d)", at.fieldSync ? "locked" : "searching", at.fieldParity); ImGui::PopTextWrapPos(); }
+    { ImGui::PushTextWrapPos(0); ImGui::Text("CFO %+.0f Hz  SRO %+.1f ppm", at.cfoHz, at.sroPpm); ImGui::PopTextWrapPos(); }
+    { ImGui::PushTextWrapPos(0); ImGui::Text("SNR %.1f dB  data %.1f dB", at.snrDb, at.dataSnrDb); ImGui::PopTextWrapPos(); }
     ImGui::Text("fields %llu", (unsigned long long)at.fields);
-    ImGui::Text("RS ok %llu fixed %llu", (unsigned long long)at.rsClean, (unsigned long long)at.rsCorrected);
-    ImGui::Text("RS failed %llu (%.1f%%)", (unsigned long long)at.rsFailed, at.segErrorRate * 100);
+    { ImGui::PushTextWrapPos(0); ImGui::Text("RS ok %llu fixed %llu", (unsigned long long)at.rsClean, (unsigned long long)at.rsCorrected); ImGui::PopTextWrapPos(); }
+    { ImGui::PushTextWrapPos(0); ImGui::Text("RS failed %llu (%.1f%%)", (unsigned long long)at.rsFailed, at.segErrorRate * 100); ImGui::PopTextWrapPos(); }
     ImGui::Text("lock losses %llu", (unsigned long long)at.lockLosses);
+    ImGui::PopTextWrapPos();
     ImGui::PopFont();
     ImGui::EndChild();
     ImGui::EndGroup();
@@ -367,10 +374,10 @@ void receiverGlance(App& a, float w, float h) {
     const RxTelemetry& rx = a.rx;
     if (const ModeUi* mu = modeUi(a.family)) if (mu->receiver) { mu->receiver(a); return; }
     ImGui::TextDisabled("Receiver");
-    ImGui::BeginChild("##glance", ImVec2(w, std::max(40.f, h - ImGui::GetTextLineHeightWithSpacing())), 0, ImGuiWindowFlags_NoScrollbar);
+    ImGui::BeginChild("##glance", ImVec2(w, std::max(40.f, h - ImGui::GetTextLineHeightWithSpacing())));   // scrolls when the row is short
     auto kv = [&](const char* k, const char* fmt, auto... v) {
-        ImGui::TextDisabled("%s", k); ImGui::SameLine(112 * gUi);
-        ImGui::PushFont(a.mono, 0); ImGui::Text(fmt, v...); ImGui::PopFont();
+        ImGui::TextDisabled("%s", k); kvColumn(112 * gUi);
+        ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::Text(fmt, v...); ImGui::PopTextWrapPos(); ImGui::PopFont();
     };
     const bool run = a.engine.running();
     kv("state", "%s", !run ? "stopped" : rx.state == 2 ? "locked" : "searching");
@@ -407,14 +414,22 @@ void constellationsTab(App& a) {
     if (a.rx.standard == 2) { atscPanels(a); return; }
     const RxTelemetry& rx = a.rx;
     const float availW = ImGui::GetContentRegionAvail().x, availH = ImGui::GetContentRegionAvail().y;
-    const bool glance = pal::dev();   // the new interface packs the plots to the left and uses the rest for numbers
-    const float side = glance ? std::max(90.f, std::min(availH - 26.f - ImGui::GetFrameHeight(), availW * 0.62f / 4.f - 12.f))
-                              : std::max(90.f, std::min(availH - 26.f - ImGui::GetFrameHeight(), availW / 4.f - 16.f));
-    const float gap = glance ? 12 * gUi : std::max(6.f, (availW - 4 * side) / 5.f);
+    // the new interface packs the plots to the left and uses the rest for numbers, when there is room for them (else they are on the Receiver tab)
+    const float glanceW = pal::dev() && availW * 0.36f >= 230 * gUi ? std::min(260.f * gUi, availW * 0.36f) : 0.f;
+    const bool glance = glanceW > 0;
+    const float roomH = availH - ImGui::GetTextLineHeightWithSpacing() - ImGui::GetFrameHeightWithSpacing();   // a caption above, the view buttons below
+    const float side = pal::dev() ? std::max(48.f * gUi, std::min(roomH, (availW - glanceW - (glance ? 6 : 5) * 12 * gUi) / 4.f))
+                                  : std::max(48.f * gUi, std::min(roomH, availW / 4.f - 16.f));
+    const float gap = pal::dev() ? 12 * gUi : std::max(6.f, (availW - 4 * side) / 5.f);
     const ImVec2 sz(side, side);
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + gap);
     char cap[96];
-    auto caption = [&](const char* fmt, auto... args) { snprintf(cap, sizeof cap, fmt, args...); ImGui::TextDisabled("%s", cap); };
+    auto caption = [&](const char* fmt, auto... args) {   // as wide as the plot below it at most: the whole caption on hover
+        snprintf(cap, sizeof cap, fmt, args...);
+        const std::string c = fitCaption(cap, side);
+        ImGui::TextDisabled("%s", c.c_str());
+        if (c != cap && ImGui::IsItemHovered()) ImGui::SetTooltip("%s", cap);
+    };
     ImGui::BeginGroup();
     if (rx.standard == 5) caption("TMCC carriers, DBPSK (%zu cells)", rx.p1Const.size()); else if (rx.standard == 1) caption("TPS carriers, DBPSK (%zu cells)", rx.p1Const.size()); else caption("P1 carriers (%zu cells)", rx.p1Const.size());
     scatter("##c1", rx.p1Const, sz, 2.5, pal::accent(0.9f));
@@ -461,11 +476,16 @@ void constellationsTab(App& a) {
             plt::EndPlot();
         }
         ImGui::PushID("cview");
-        if (pillButton("cells", a.constView == 0, 8)) a.constView = 0;
-        ImGui::SameLine(0, 4 * gUi);
-        if (pillButton("density", a.constView == 1, 8)) a.constView = 1;
-        ImGui::SameLine(0, 4 * gUi);
-        if (pillButton("clusters", a.constView == 2, 8)) a.constView = 2;
+        if (ImGui::CalcTextSize("cellsdensityclusters").x + 6 * 8 + 8 * gUi <= side) {
+            if (pillButton("cells", a.constView == 0, 8)) a.constView = 0;
+            ImGui::SameLine(0, 4 * gUi);
+            if (pillButton("density", a.constView == 1, 8)) a.constView = 1;
+            ImGui::SameLine(0, 4 * gUi);
+            if (pillButton("clusters", a.constView == 2, 8)) a.constView = 2;
+        } else {   // narrower than the three buttons: the same choice as a drop-down under the plot
+            ImGui::SetNextItemWidth(side);
+            ImGui::Combo("##cview", &a.constView, "cells\0density\0clusters\0");
+        }
         ImGui::PopID();
         if (a.constView == 2 && ImGui::IsItemHovered()) ImGui::SetTooltip("One ring per transmitted point: centre = average received position, radius = 1 sigma of the error.\nColour is relative to the average ring: green = tighter, red = looser.\nAt this MER the rings overlap their neighbours; the LDPC code corrects the resulting errors.");
     } else if (rx.standard == 1 && rx.dvbt.tpsOk) {
@@ -499,18 +519,18 @@ void constellationsTab(App& a) {
     if (glance) {
         ImGui::SameLine(0, 2 * gap);
         ImGui::BeginGroup();
-        receiverGlance(a, std::max(150.f, ImGui::GetContentRegionAvail().x - gap), side + ImGui::GetTextLineHeightWithSpacing());
+        receiverGlance(a, ImGui::GetContentRegionAvail().x - gap, side + ImGui::GetTextLineHeightWithSpacing());
         ImGui::EndGroup();
     }
 }
 
 void channelTab(App& a) {
     const RxTelemetry& rx = a.rx;
-    if (!rx.chValid) { ImGui::TextDisabled("no channel estimate yet (needs a decoded P1 and a P2 symbol)"); return; }
+    if (!rx.chValid) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("no channel estimate yet (needs a decoded P1 and a P2 symbol)"); ImGui::PopTextWrapPos(); } return; }
     {
         const MultipathReport& mr = a.mpd.report();
-        ImGui::TextColored(mr.level == MultipathLevel::None ? ImVec4(0.4f, 0.85f, 0.5f, 1) : mr.level == MultipathLevel::Mild ? ImVec4(0.95f, 0.8f, 0.3f, 1) : ImVec4(0.95f, 0.5f, 0.25f, 1),
-                           "Multipath analysis: %s", mr.headline.c_str());
+        { ImGui::PushTextWrapPos(0); ImGui::TextColored(mr.level == MultipathLevel::None ? ImVec4(0.4f, 0.85f, 0.5f, 1) : mr.level == MultipathLevel::Mild ? ImVec4(0.95f, 0.8f, 0.3f, 1) : ImVec4(0.95f, 0.5f, 0.25f, 1),
+                           "Multipath analysis: %s", mr.headline.c_str()); ImGui::PopTextWrapPos(); }
         for (auto& r : mr.reasons) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("- %s", r.c_str()); ImGui::PopTextWrapPos(); }
         ImGui::Separator();
     }
@@ -518,8 +538,9 @@ void channelTab(App& a) {
     double fnMhz = rx.nativeRate / 1e6, binMhz = fnMhz / rx.fftN;
     std::vector<float> xs(rx.chMagDb.size());
     for (size_t i = 0; i < xs.size(); i++) xs[i] = (float)(a.freqMhz + ((double)(i * rx.chDecim) - (rx.chCarriers - 1) / 2.0) * binMhz);
-    ImGui::TextDisabled("|H(f)| from P2 pilots, dB (%d carriers%s)", rx.chCarriers, rx.extCarriers ? ", extended" : "");
-    if (plt::BeginPlot("##chm", ImVec2(-1, std::max(60.f, h * 0.5f)), plt::Flags_NoLegend | plt::Flags_NoTitle)) {
+    captionFit(ImGui::GetContentRegionAvail().x, "|H(f)| from P2 pilots, dB (%d carriers%s)", rx.chCarriers, rx.extCarriers ? ", extended" : "");
+    const float minH = 6.5f * ImGui::GetTextLineHeight();   // a short tab: the plots keep this much and the pane scrolls
+    if (plt::BeginPlot("##chm", ImVec2(-1, std::max(minH, h * 0.5f)), plt::Flags_NoLegend | plt::Flags_NoTitle)) {
         plt::SetupAxes("frequency (MHz)", "dB", 0, plt::AxisFlags_AutoFit);
         plt::SetupAxisFormat(plt::X1, "%.2f");
         plt::SetupAxisLimits(plt::X1, xs.front(), xs.back(), plt::Cond_Always);
@@ -527,8 +548,8 @@ void channelTab(App& a) {
         plt::PlotLine("mag", xs.data(), rx.chMagDb.data(), (int)xs.size(), sp);
         plt::EndPlot();
     }
-    ImGui::TextDisabled("phase of H(f), rad (slope = timing, curvature = echoes)");
-    if (plt::BeginPlot("##chp", ImVec2(-1, -1), plt::Flags_NoLegend | plt::Flags_NoTitle)) {
+    captionFit(ImGui::GetContentRegionAvail().x, "phase of H(f), rad (slope = timing, curvature = echoes)");
+    if (plt::BeginPlot("##chp", ImVec2(-1, std::max(minH, ImGui::GetContentRegionAvail().y)), plt::Flags_NoLegend | plt::Flags_NoTitle)) {
         plt::SetupAxes("frequency (MHz)", "rad");
         plt::SetupAxisFormat(plt::X1, "%.2f");
         plt::SetupAxisLimits(plt::X1, xs.front(), xs.back(), plt::Cond_Always);
@@ -542,12 +563,12 @@ void channelTab(App& a) {
 
 void impulseTab(App& a) {
     const RxTelemetry& rx = a.rx;
-    if (!rx.chValid || rx.irDb.empty()) { ImGui::TextDisabled("no channel estimate yet"); return; }
+    if (!rx.chValid || rx.irDb.empty()) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("no channel estimate yet"); ImGui::PopTextWrapPos(); } return; }
     std::vector<float> xs(rx.irDb.size());
     double usPerSample = 1e6 / rx.nativeRate;
     for (size_t i = 0; i < xs.size(); i++) xs[i] = (float)((rx.irTauMin + (double)i) * usPerSample);
-    ImGui::TextDisabled("power-delay profile (dB rel. strongest path). Shaded: guard interval (%.1f us)", rx.guard * usPerSample);
-    if (plt::BeginPlot("##ir", ImVec2(-1, -1), plt::Flags_NoLegend | plt::Flags_NoTitle)) {
+    captionFit(ImGui::GetContentRegionAvail().x, "power-delay profile (dB rel. strongest path). Shaded: guard interval (%.1f us)", rx.guard * usPerSample);
+    if (plt::BeginPlot("##ir", ImVec2(-1, std::max(6.5f * ImGui::GetTextLineHeight(), ImGui::GetContentRegionAvail().y)), plt::Flags_NoLegend | plt::Flags_NoTitle)) {
         plt::SetupAxes("delay (us)", "dB");
         plt::SetupAxisLimits(plt::Y1, -80, 5, plt::Cond_Once);
         plt::SetupAxisLimits(plt::X1, xs.front(), xs.back(), plt::Cond_Once);
@@ -562,12 +583,12 @@ void impulseTab(App& a) {
 
 void snrTab(App& a) {
     const RxTelemetry& rx = a.rx;
-    if (rx.snrDb.empty()) { ImGui::TextDisabled("per-carrier SNR appears once a full frame has been received"); if (rx.chValid) ImGui::Text("SNR estimate: %.1f dB", rx.p2SnrDb); return; }
+    if (rx.snrDb.empty()) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("per-carrier SNR appears once a full frame has been received"); ImGui::PopTextWrapPos(); } if (rx.chValid) { ImGui::PushTextWrapPos(0); ImGui::Text("SNR estimate: %.1f dB", rx.p2SnrDb); ImGui::PopTextWrapPos(); } return; }
     double binMhz = rx.nativeRate / 1e6 / rx.fftN;
     std::vector<float> xs(rx.snrDb.size());
     for (size_t i = 0; i < xs.size(); i++) xs[i] = (float)(a.freqMhz + ((double)(i * rx.snrStep) - (rx.chCarriers - 1) / 2.0) * binMhz);
-    ImGui::Text("pilot-derived SNR across the channel (scattered pilots, smoothed over %d points); mean %.1f dB", 21, rx.p2SnrDb);
-    if (plt::BeginPlot("##snrc", ImVec2(-1, -1), plt::Flags_NoLegend | plt::Flags_NoTitle)) {
+    captionFit(ImGui::GetContentRegionAvail().x, "pilot-derived SNR across the channel (scattered pilots, smoothed over %d points); mean %.1f dB", 21, rx.p2SnrDb);
+    if (plt::BeginPlot("##snrc", ImVec2(-1, std::max(6.5f * ImGui::GetTextLineHeight(), ImGui::GetContentRegionAvail().y)), plt::Flags_NoLegend | plt::Flags_NoTitle)) {
         plt::SetupAxes("frequency (MHz)", "SNR (dB)", 0, plt::AxisFlags_AutoFit);
         plt::SetupAxisFormat(plt::X1, "%.2f");
         plt::SetupAxisLimits(plt::X1, xs.front(), xs.back(), plt::Cond_Always);
@@ -580,7 +601,7 @@ void snrTab(App& a) {
 void fecTab(App& a) {
     if (a.rx.standard == 1) {
         const RxTelemetry& rx = a.rx;
-        ImGui::TextColored(pal::heading(), "DVB-T channel decoder: de-interleaving, Viterbi (inner code), outer de-interleaver, Reed-Solomon (204,188)");
+        { ImGui::PushTextWrapPos(0); ImGui::TextColored(pal::heading(), "DVB-T channel decoder: de-interleaving, Viterbi (inner code), outer de-interleaver, Reed-Solomon (204,188)"); ImGui::PopTextWrapPos(); }
         if (!rx.dvbt.tpsOk) { ImGui::TextDisabled("waiting for TPS"); return; }
         const double tot = (double)(rx.dvbt.rsClean + rx.dvbt.rsCorrected + rx.dvbt.rsFailed);
         if (ImGui::BeginTable("fect", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg)) {
@@ -595,7 +616,7 @@ void fecTab(App& a) {
             row("   uncorrectable", "%llu  (%.2f%%)", (unsigned long long)rx.dvbt.rsFailed, tot ? 100.0 * rx.dvbt.rsFailed / tot : 0.0);
             ImGui::EndTable();
         }
-        ImGui::TextDisabled("Uncorrectable packets are passed on with the transport_error_indicator set, so the player skips them.");
+        { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Uncorrectable packets are passed on with the transport_error_indicator set, so the player skips them."); ImGui::PopTextWrapPos(); }
         return;
     }
     const RxTelemetry& rx = a.rx;
@@ -606,8 +627,8 @@ void fecTab(App& a) {
         ImGui::TextDisabled("%-26s", k); ImGui::SameLine(); ImGui::TextUnformatted(b);
     };
     if (!rx.plpValid) {
-        ImGui::TextDisabled("waiting for L1-post (PLP configuration)...");
-        if (rx.plpSkipped) ImGui::TextColored(ImVec4(0.95f, 0.7f, 0.2f, 1), "%d frame(s) skipped: PLP uses inter-frame time interleaving or lies outside the received cells", rx.plpSkipped);
+        { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("waiting for L1-post (PLP configuration)..."); ImGui::PopTextWrapPos(); }
+        if (rx.plpSkipped) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.7f, 0.2f, 1), "%d frame(s) skipped: PLP uses inter-frame time interleaving or lies outside the received cells", rx.plpSkipped); ImGui::PopTextWrapPos(); }
         ImGui::PopFont();
         return;
     }
@@ -617,7 +638,7 @@ void fecTab(App& a) {
     row("constellation", "%s%s", modN[rx.plpFec.mod & 3], rx.plpFec.rotation ? ", rotated + cyclic Q delay" : "");
     row("FEC blocks per frame", "%d", rx.plpBlocks);
     ImGui::Spacing();
-    ImGui::TextColored(pal::heading(), "decoder (all frames since start)");
+    { ImGui::PushTextWrapPos(0); ImGui::TextColored(pal::heading(), "decoder (all frames since start)"); ImGui::PopTextWrapPos(); }
     double tot = (double)(rx.blocksOk + rx.blocksBad);
     row("frames decoded", "%llu  (dropped, decoder busy: %llu)", (unsigned long long)rx.plpFrames, (unsigned long long)rx.plpFramesDropped);
     row("FEC blocks OK / failed", "%llu / %llu  (%.2f%% good)", (unsigned long long)rx.blocksOk, (unsigned long long)rx.blocksBad, tot ? 100.0 * rx.blocksOk / tot : 0.0);
@@ -637,26 +658,26 @@ void tsTab(App& a) {
     const TsSnapshot& ts = a.ts;
     ImGui::PushFont(a.mono, 0);
     char b[64], b2[64];
-    ImGui::Text("network \"%s\"  onid 0x%04X  tsid 0x%04X   %s", ts.networkName.c_str(), ts.onid, ts.tsid, ts.utc.c_str());
-    ImGui::Text("multiplex %s (null packets %s)   packets %llu   continuity errors %llu   TEI %llu",
-                fmtKbps(b, sizeof b, ts.muxKbps), fmtKbps(b2, sizeof b2, ts.nullKbps), (unsigned long long)ts.totalPackets, (unsigned long long)ts.ccErrors, (unsigned long long)ts.teiPackets);
-    ImGui::Text("BB frames %llu (lost %llu)  mode %s  ISSYI %d NPD %d  resyncs %llu  CRC-8 errors %llu", (unsigned long long)a.bb.frames, (unsigned long long)a.bb.framesLost,
-                a.bb.hem ? "high-efficiency" : "normal", a.bb.issyi, a.bb.npd, (unsigned long long)a.bb.resyncs, (unsigned long long)a.bb.crcErrors);
+    { ImGui::PushTextWrapPos(0); ImGui::Text("network \"%s\"  onid 0x%04X  tsid 0x%04X   %s", ts.networkName.c_str(), ts.onid, ts.tsid, ts.utc.c_str()); ImGui::PopTextWrapPos(); }
+    { ImGui::PushTextWrapPos(0); ImGui::Text("multiplex %s (null packets %s)   packets %llu   continuity errors %llu   TEI %llu",
+                fmtKbps(b, sizeof b, ts.muxKbps), fmtKbps(b2, sizeof b2, ts.nullKbps), (unsigned long long)ts.totalPackets, (unsigned long long)ts.ccErrors, (unsigned long long)ts.teiPackets); ImGui::PopTextWrapPos(); }
+    { ImGui::PushTextWrapPos(0); ImGui::Text("BB frames %llu (lost %llu)  mode %s  ISSYI %d NPD %d  resyncs %llu  CRC-8 errors %llu", (unsigned long long)a.bb.frames, (unsigned long long)a.bb.framesLost,
+                a.bb.hem ? "high-efficiency" : "normal", a.bb.issyi, a.bb.npd, (unsigned long long)a.bb.resyncs, (unsigned long long)a.bb.crcErrors); ImGui::PopTextWrapPos(); }
     ImGui::PopFont();
     ImGui::Spacing();
     if (ImGui::BeginTable("pids", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingStretchProp, ImVec2(0, -1))) {
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableSetupColumn("PID", ImGuiTableColumnFlags_WidthFixed, 70);
         ImGui::TableSetupColumn("content");
-        ImGui::TableSetupColumn("packets", ImGuiTableColumnFlags_WidthFixed, 90);
-        ImGui::TableSetupColumn("rate", ImGuiTableColumnFlags_WidthFixed, 100);
-        ImGui::TableSetupColumn("CC err", ImGuiTableColumnFlags_WidthFixed, 70);
-        ImGui::TableSetupColumn("scr", ImGuiTableColumnFlags_WidthFixed, 40);
+        ImGui::TableSetupColumn("packets", ImGuiTableColumnFlags_WidthFixed, 90 * gUi);
+        ImGui::TableSetupColumn("rate", ImGuiTableColumnFlags_WidthFixed, 100 * gUi);
+        ImGui::TableSetupColumn("CC err", ImGuiTableColumnFlags_WidthFixed, 70 * gUi);
+        ImGui::TableSetupColumn("scr", ImGuiTableColumnFlags_WidthFixed, 40 * gUi);
         ImGui::TableHeadersRow();
         for (auto& p : ts.pids) {
             ImGui::TableNextRow();
             ImGui::TableNextColumn(); ImGui::Text("0x%04X", p.pid);
-            ImGui::TableNextColumn(); ImGui::TextUnformatted(p.label.c_str());
+            ImGui::TableNextColumn(); ImGui::PushTextWrapPos(0); ImGui::TextUnformatted(p.label.c_str()); ImGui::PopTextWrapPos();   // wraps in a narrow tab
             ImGui::TableNextColumn(); ImGui::Text("%llu", (unsigned long long)p.packets);
             ImGui::TableNextColumn(); { char r[32]; ImGui::TextUnformatted(fmtKbps(r, sizeof r, p.kbps)); }
             ImGui::TableNextColumn(); if (p.ccErrors) ImGui::TextColored(ImVec4(0.95f, 0.5f, 0.3f, 1), "%llu", (unsigned long long)p.ccErrors); else ImGui::TextDisabled("0");
@@ -690,7 +711,7 @@ void logPanel(App& a) {
 
 void historyLogTab(App& a) {
     const float h = ImGui::GetContentRegionAvail().y;
-    ImGui::BeginChild("hplots", ImVec2(0, h * 0.70f));
+    ImGui::BeginChild("hplots", ImVec2(0, std::max(h * 0.70f, h - 110 * gUi)));   // a short tab: the log keeps a few lines, the plots scroll
     historyTab(a);
     ImGui::EndChild();
     ImGui::BeginChild("hlog", ImVec2(0, 0), ImGuiChildFlags_Borders);

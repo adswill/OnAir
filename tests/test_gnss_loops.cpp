@@ -9,12 +9,16 @@
 #include "dect2/gnss_track.h"
 #include "dect2/gnss_rx.h"
 #include "dect2/gen_util.h"
+#include "dect2/test_parallel.h"
 #include <cmath>
 #include <cstdio>
+#include <iterator>
 #include <random>
+#include <vector>
 using namespace dect2;
-static int fails = 0;
-#define CHECK(c, ...) do { if (!(c)) { printf("FAIL line %d: ", __LINE__); printf(__VA_ARGS__); printf("\n"); fails++; } } while (0)
+using dect2::testpar::CaseOut;
+// every case runs on its own thread and prints through `out`, so that the log keeps the order of the cases
+#define CHECK(c, ...) do { if (!(c)) out.fail(__LINE__, __VA_ARGS__); } while (0)
 
 static GnssAcqConfig acqConfig(const std::vector<int>& prns) {
     GnssAcqConfig ac;
@@ -28,11 +32,13 @@ static GnssAcqConfig acqConfig(const std::vector<int>& prns) {
     return ac;
 }
 
-static void partA() {
-    const double levels[] = {40, 36, 34, 32, 30};
+static const double levelsA[] = {40, 36, 34, 32, 30};
+static const double levelsB[] = {44, 38, 32};
+
+static void partA(double lvl, bool first, CaseOut& out) {
     const int trials = 20;
-    printf("A. acquisition of one satellite, %d noise seeds per level, 16 ms of signal\n", trials);
-    for (double lvl : levels) {
+    if (first) out.print("A. acquisition of one satellite, %d noise seeds per level, 16 ms of signal\n", trials);
+    {
         int found = 0, dopOk = 0, phaseOk = 0, falseHits = 0, falseSearches = 0;
         double dopSum2 = 0, phSum2 = 0;
         double cnTrue = 0;
@@ -59,7 +65,7 @@ static void partA() {
             acq.work(band, 100000, [](int) { return false; }, hits);
             falseSearches += 4;
             for (auto& h : hits) {
-                if (h.prn != sat.prn) { falseHits++; if (lvl == 40) printf("      false hit: PRN %d (signal PRN %d) seed %d: Doppler %.0f, ratio %.1f (threshold %.2f)\n", h.prn, sat.prn, k, h.dopplerHz, h.ratio, acq.threshold()); continue; }
+                if (h.prn != sat.prn) { falseHits++; if (lvl == 40) out.print("      false hit: PRN %d (signal PRN %d) seed %d: Doppler %.0f, ratio %.1f (threshold %.2f)\n", h.prn, sat.prn, k, h.dopplerHz, h.ratio, acq.threshold()); continue; }
                 found++;
                 // truth: the Doppler from the delay's rate, and the code epoch position inside the segment
                 const double t = sim.startTow() + 0.0 + (double)h.segStart / 4.096e6;
@@ -75,7 +81,7 @@ static void partA() {
                 dopSum2 += dd * dd; phSum2 += dph * dph;
             }
         }
-        printf("   C/N0 %.1f dB-Hz: found %2d of %d (%3.0f%%), Doppler within 150 Hz %d, code phase within 1.5 samples %d, rms errors %.0f Hz and %.2f samples; %d false hits in %d searches of absent satellites\n", cnTrue, found, trials,
+        out.print("   C/N0 %.1f dB-Hz: found %2d of %d (%3.0f%%), Doppler within 150 Hz %d, code phase within 1.5 samples %d, rms errors %.0f Hz and %.2f samples; %d false hits in %d searches of absent satellites\n", cnTrue, found, trials,
                100.0 * found / trials, dopOk, phaseOk, found ? std::sqrt(dopSum2 / found) : 0.0, found ? std::sqrt(phSum2 / found) : 0.0, falseHits, falseSearches);
         if (lvl >= 40) CHECK(found >= trials * 0.9, "only %d of %d found at %.1f dB-Hz", found, trials, cnTrue);
         if (lvl >= 36) CHECK(found >= trials * 0.6, "only %d of %d found at %.1f dB-Hz", found, trials, cnTrue);
@@ -108,10 +114,9 @@ struct Lone {
     }
 };
 
-static void partB() {
-    printf("B. one tracking channel on a lone signal (Doppler +2500 Hz, rate +0.8 Hz/s, started 90 Hz and 0.2 chip off)\n");
-    const double levels[] = {44, 38, 32};
-    for (double cn0 : levels) {
+static void partB(double cn0, bool first, CaseOut& out) {
+    if (first) out.print("B. one tracking channel on a lone signal (Doppler +2500 Hz, rate +0.8 Hz/s, started 90 Hz and 0.2 chip off)\n");
+    {
         Lone sig(7, cn0, 2500.0, 0.8, 5);
         const double secs = 6.0;
         std::vector<cf32> x;
@@ -139,7 +144,7 @@ static void partB() {
             if (tr.lost()) break;
         }
         const double dRms = n ? std::sqrt(dSum2 / n) : 99, pRms = n ? std::sqrt(pSum2 / n) : 99, cnMean = nc ? cnSum / nc : 0;
-        printf("   C/N0 %.0f: locked after %.2f s, Doppler error rms %.2f Hz, code phase error rms %.4f chip (%.1f m), C/N0 estimate %.1f (%+.1f dB)\n", cn0, lockAt, dRms, pRms, pRms * 293.05, cnMean, cnMean - cn0);
+        out.print("   C/N0 %.0f: locked after %.2f s, Doppler error rms %.2f Hz, code phase error rms %.4f chip (%.1f m), C/N0 estimate %.1f (%+.1f dB)\n", cn0, lockAt, dRms, pRms, pRms * 293.05, cnMean, cnMean - cn0);
         CHECK(lockAt > 0 && lockAt < 2.0, "C/N0 %.0f: lock after %.2f s", cn0, lockAt);
         CHECK(!tr.lost() && n > 1000, "C/N0 %.0f: channel lost or no samples (%d)", cn0, n);
         CHECK(dRms < (cn0 >= 40 ? 2.5 : 6.0), "C/N0 %.0f: Doppler error rms %.2f Hz", cn0, dRms);
@@ -149,8 +154,8 @@ static void partB() {
     }
 }
 
-static void partC() {
-    printf("C. noise only (no satellites), 40 s through the receiver\n");
+static void partC(CaseOut& out) {
+    out.print("C. noise only (no satellites), 40 s through the receiver\n");
     GnssReceiver rx;
     rx.configure(4e6);
     int found = 0, locked = 0, notConfirmed = 0;
@@ -165,16 +170,24 @@ static void partC() {
     }
     GnssTelemetry t;
     rx.telemetry(t, 0);
-    printf("   %d detections, %d confirmed on a second look, %d locked, %u search rounds; %s\n", found, found - notConfirmed, locked, t.searchRounds, gnssSummary(t).c_str());
+    out.print("   %d detections, %d confirmed on a second look, %d locked, %u search rounds; %s\n", found, found - notConfirmed, locked, t.searchRounds, gnssSummary(t).c_str());
     CHECK(locked == 0 && t.nTracked == 0 && t.channels.empty(), "locked %d on noise", locked);
     CHECK(found <= 3, "%d false detections in 40 s", found);
-    CHECK(t.searchRounds >= 5, "only %u search rounds", t.searchRounds);
+    // the search keeps going and widens round by round (+-10, +-45, +-170 kHz): the +-170 kHz round alone takes about 35 s of signal
+    CHECK(t.searchRounds >= 2 && t.searchStage >= 2, "only %u search rounds, stage %d", t.searchRounds, t.searchStage);
 }
 
 int main() {
-    partA();
-    partB();
-    partC();
+    // A (five levels), B (three levels) and C share nothing: nine jobs on four threads, the 40 s noise run first; the log keeps the order A, B, C
+    const size_t nA = std::size(levelsA), nB = std::size(levelsB);
+    std::vector<size_t> order = {nA + nB};
+    for (size_t i = nA; i < nA + nB; i++) order.push_back(i);
+    for (size_t i = 0; i < nA; i++) order.push_back(i);
+    const int fails = dect2::testpar::runCases(nA + nB + 1, [&](size_t i, CaseOut& out) {
+        if (i < nA) partA(levelsA[i], i == 0, out);
+        else if (i < nA + nB) partB(levelsB[i - nA], i == nA, out);
+        else partC(out);
+    }, order);
     if (fails) { printf("%d failure(s)\n", fails); return 1; }
     printf("OK\n");
     return 0;

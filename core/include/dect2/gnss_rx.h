@@ -41,7 +41,9 @@ public:
     void setCenterMhz(double mhz);                       // the tuned centre frequency (default 1575.42): decides which systems fit in the band
     void setSystems(unsigned mask);                      // gnssSystemBit() of the wanted systems (default: all that the build supports)
     void setWeekReference(int gpsWeek);                  // a week near today, for the 10 bit week numbers (default: from the computer's clock)
-    void setSearchRange(double dopplerHalfWidthHz);      // the acquisition's Doppler range around zero (default +-8000 Hz)
+    void setSearchRange(double dopplerHalfWidthHz);      // half width of the first search window (default 10 kHz); wider ones follow while nothing is found
+    // The radio's frequency error found in an earlier run (GnssTelemetry::cfoHz): the first search looks there before it widens
+    void setFrequencyHint(double hz, bool valid);
     void setAcquisitionRate(int fftsPerMs);              // work given to the search per millisecond of signal (default 10)
     void setApproxPosition(double latDeg, double lonDeg, bool valid);   // a position hint: only used to choose which satellites to search first
     void setElevationMask(double deg);                   // satellites below this elevation are not used in the fix (default 5)

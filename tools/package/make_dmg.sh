@@ -33,7 +33,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
 </dict></plist>
 PLIST
-python3 tools/package/bundle_macos.py "$APP"
+python3 tools/package/bundle_macos.py "$APP" || { echo "Failed to bundle radio libraries"; exit 1; }
 python3 tools/package/check_macos_target.py "$APP"
 # the app is signed ad hoc (no developer certificate): macOS shows a one-time "unidentified developer" prompt on first launch
 python3 tools/package/scrub_paths.py "$APP"   # no build-machine paths in the shipped files (before signing)

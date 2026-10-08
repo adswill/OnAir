@@ -1,10 +1,18 @@
 // P1 preamble detection and guard-interval detection of the DVB-T2 receiver.
 #include "t2rx_impl.h"
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(DECT2_NO_SIMD)
+#include <arm_neon.h>
+#define T2P1_NEON 1
+#elif defined(__SSE2__) && !defined(DECT2_NO_SIMD)
+#include <emmintrin.h>
+#define T2P1_SSE2 1
+#endif
 
 namespace dect2 {
 
 void T2Receiver::Impl::p1Metric(int64_t lo, int64_t len, int64_t d0, int64_t d1) {
     const int64_t n = d1 + kP1Len - d0;   // samples covered: relative indices [d0, d1 + kP1Len)
+    p1Evaluated += (uint64_t)(d1 - d0 + 1);
     pq1.resize(n + 1); pq2.resize(n + 1); pe.resize(n + 1);
     pq1[0] = 0; pq2[0] = 0; pe[0] = 0;
     // every index read is inside the buffer: lo >= base, lo + len == end(), and the offsets are guarded by the conditions below
@@ -56,6 +64,126 @@ bool T2Receiver::Impl::p1Detect(int64_t lo, int64_t lastD, int64_t dA, int64_t d
     return prevPos != before;
 }
 
+// Sums over one block of kCoarseBlk samples from x on: the energy, and x * conj(y) with y 542 samples later (c, when wanted) and 482 earlier
+// (b). NEON or SSE2 where available (two partial sums per term, so the additions do not wait on each other), plain loops elsewhere.
+static void blockSums(const cf32* x, bool wantC, bool wantB, float& e, cd& c, cd& b) {
+    const float* xf = reinterpret_cast<const float*>(x);
+    const float* yc = xf + 2 * kP1CLen;
+    const float* yb = xf - 2 * kP1BLen;
+#if defined(T2P1_NEON)
+    const float32x4_t z = vdupq_n_f32(0);
+    float32x4_t e0 = z, e1 = z, c0 = z, c1 = z, c2 = z, c3 = z, b0 = z, b1 = z, b2 = z, b3 = z;
+    for (int n = 0; n < kCoarseBlk; n += 4) {
+        const float32x4x2_t v = vld2q_f32(xf + 2 * n);   // re, im of four samples
+        e0 = vfmaq_f32(e0, v.val[0], v.val[0]); e1 = vfmaq_f32(e1, v.val[1], v.val[1]);
+        if (wantC) {
+            const float32x4x2_t y = vld2q_f32(yc + 2 * n);
+            c0 = vfmaq_f32(c0, v.val[0], y.val[0]); c1 = vfmaq_f32(c1, v.val[1], y.val[1]);
+            c2 = vfmaq_f32(c2, v.val[1], y.val[0]); c3 = vfmaq_f32(c3, v.val[0], y.val[1]);
+        }
+        if (wantB) {
+            const float32x4x2_t y = vld2q_f32(yb + 2 * n);
+            b0 = vfmaq_f32(b0, v.val[0], y.val[0]); b1 = vfmaq_f32(b1, v.val[1], y.val[1]);
+            b2 = vfmaq_f32(b2, v.val[1], y.val[0]); b3 = vfmaq_f32(b3, v.val[0], y.val[1]);
+        }
+    }
+    e = vaddvq_f32(vaddq_f32(e0, e1));
+    c = cd(vaddvq_f32(vaddq_f32(c0, c1)), vaddvq_f32(vsubq_f32(c2, c3)));
+    b = cd(vaddvq_f32(vaddq_f32(b0, b1)), vaddvq_f32(vsubq_f32(b2, b3)));
+#elif defined(T2P1_SSE2)
+    auto load = [](const float* p, __m128& re, __m128& im) {   // four samples, split into re and im
+        const __m128 lo = _mm_loadu_ps(p), hi = _mm_loadu_ps(p + 4);
+        re = _mm_shuffle_ps(lo, hi, _MM_SHUFFLE(2, 0, 2, 0)); im = _mm_shuffle_ps(lo, hi, _MM_SHUFFLE(3, 1, 3, 1));
+    };
+    auto hsum = [](__m128 v) { float f[4]; _mm_storeu_ps(f, v); return (f[0] + f[2]) + (f[1] + f[3]); };
+    const __m128 z = _mm_setzero_ps();
+    __m128 e0 = z, e1 = z, cr = z, ci = z, br = z, bi = z;
+    for (int n = 0; n < kCoarseBlk; n += 4) {
+        __m128 xr, xi, yr, yi;
+        load(xf + 2 * n, xr, xi);
+        e0 = _mm_add_ps(e0, _mm_mul_ps(xr, xr)); e1 = _mm_add_ps(e1, _mm_mul_ps(xi, xi));
+        if (wantC) {
+            load(yc + 2 * n, yr, yi);
+            cr = _mm_add_ps(cr, _mm_add_ps(_mm_mul_ps(xr, yr), _mm_mul_ps(xi, yi)));
+            ci = _mm_add_ps(ci, _mm_sub_ps(_mm_mul_ps(xi, yr), _mm_mul_ps(xr, yi)));
+        }
+        if (wantB) {
+            load(yb + 2 * n, yr, yi);
+            br = _mm_add_ps(br, _mm_add_ps(_mm_mul_ps(xr, yr), _mm_mul_ps(xi, yi)));
+            bi = _mm_add_ps(bi, _mm_sub_ps(_mm_mul_ps(xi, yr), _mm_mul_ps(xr, yi)));
+        }
+    }
+    e = hsum(_mm_add_ps(e0, e1));
+    c = cd(hsum(cr), hsum(ci));
+    b = cd(hsum(br), hsum(bi));
+#else
+    float se = 0, cr = 0, ci = 0, br = 0, bi = 0;
+    for (int n = 0; n < 2 * kCoarseBlk; n += 2) {
+        se += xf[n] * xf[n] + xf[n + 1] * xf[n + 1];
+        if (wantC) { cr += xf[n] * yc[n] + xf[n + 1] * yc[n + 1]; ci += xf[n + 1] * yc[n] - xf[n] * yc[n + 1]; }
+        if (wantB) { br += xf[n] * yb[n] + xf[n + 1] * yb[n + 1]; bi += xf[n + 1] * yb[n] - xf[n] * yb[n + 1]; }
+    }
+    e = se; c = cd(cr, ci); b = cd(br, bi);
+#endif
+}
+
+// Every start position costs the exact metric two turned double-precision products, three prefix sums and two magnitudes, which is most of
+// the receiver's work while it searches. This stage sums the products over blocks of kCoarseBlk samples in single precision without turning
+// them (the frequency shift moves the phase by 1/32 of a turn over a block), turns each block's sum by the phase at its centre, and evaluates
+// the metric once per block, with the C window rounded to 17 blocks (544 samples) and the B window to 15 (480). It reads within a few per
+// cent of the exact metric at the same position, and the exact metric changes by about 0.03 at most over the 16 samples to the nearest grid
+// point, so a P1 that reaches kP1Threshold in the exact metric shows at least about 0.28 here.
+void T2Receiver::Impl::p1Coarse(int64_t lo, int64_t dA, int64_t dB) {
+    constexpr int B = kCoarseBlk;
+    constexpr int nC = (kP1CLen + B - 1) / B;             // blocks of the C window
+    constexpr int b0 = (kP1CLen + kP1ALen + B - 1) / B;   // first block of the B window
+    constexpr int nT = kP1Len / B;                        // blocks of the whole P1
+    const int64_t K = (dB - dA) / B + 2;                  // grid points: the last one is at or past dB (and its P1 still ends inside the buffer)
+    const int64_t nb = K + nT - 1;
+    cbC.resize(nb + 1); cbB.resize(nb + 1); cbE.resize(nb + 1);
+    cbC[0] = 0; cbB[0] = 0; cbE[0] = 0;
+    const cf32* xs = buf.data() + (lo - base);
+    for (int64_t j = 0; j < nb; j++) {
+        const int64_t i0 = dA + j * B;
+        float e; cd c, b;
+        blockSums(xs + i0, j < K - 1 + nC, j >= b0, e, c, b);   // the C products for the C windows' blocks, the B products for the B windows'
+        const cd ph = phiBlk[(lo + i0) & 1023];
+        cbC[j + 1] = cbC[j] + c * ph; cbB[j + 1] = cbB[j] + b * ph; cbE[j + 1] = cbE[j] + e;
+    }
+    coarse.resize(K);
+    coarseFrom = dA;
+    for (int64_t k = 0; k < K; k++) {
+        const cd sc = cbC[k + nC] - cbC[k], sb = cbB[k + nT] - cbB[k + b0];
+        const double en = 0.5 * (cbE[k + nT] - cbE[k]);
+        coarse[k] = en > 1e-12 ? (float)((std::abs(sc) + std::abs(sb)) / en) : 0.f;
+    }
+}
+
+void T2Receiver::Impl::p1Search(int64_t lo, int64_t len, int64_t lastD, int64_t dA, int64_t dB) {
+    const int64_t W = kPeakHalfWidth;
+    auto exact = [&](int64_t a, int64_t b) {
+        p1Metric(lo, len, std::max<int64_t>(0, a - W), std::min(lastD, b + W));
+        done.emplace_back(a, b);
+        p1Detect(lo, lastD, a, b);
+    };
+    if (gateOff) { exact(dA, dB); return; }
+    // Every position within half a grid step of a grid point that fires is searched exactly (a whole step either side, for margin), together
+    // with the metric over the peak test's reach around it, so the candidates, their order and their peak tests are the ones a search of
+    // the whole stretch would have had. Stretches closer than the peak test's reach are joined (their metric spans would overlap anyway).
+    p1Coarse(lo, dA, dB);
+    int64_t sA = -1, sB = -1;
+    for (size_t k = 0; k < coarse.size(); k++) {
+        if (coarse[k] < kP1PreThreshold) continue;
+        const int64_t g = dA + (int64_t)k * kCoarseBlk;
+        const int64_t a = std::max(dA, g - kCoarseBlk), b = std::min(dB, g + kCoarseBlk);
+        if (a > b) continue;
+        if (sA >= 0 && a <= sB + 2 * W) { sB = std::max(sB, b); continue; }
+        if (sA >= 0) exact(sA, sB);
+        sA = a; sB = b;
+    }
+    if (sA >= 0) exact(sA, sB);
+}
+
 void T2Receiver::Impl::scanP1() {
     const int64_t W = kPeakHalfWidth;
     int64_t e = end();
@@ -66,7 +194,7 @@ void T2Receiver::Impl::scanP1() {
     int64_t cLo = scanFirst ? 0 : W;
     int64_t cHi = lastD - W;
     if ((int64_t)m.size() != lastD + 1) m.resize(lastD + 1);   // only the searched stretches are written (and recorded in `done`); the rest is never read
-    done.clear();
+    done.clear(); coarse.clear();
     // Once locked, the next P1 is expected one frame after the last one, so only a window around that position is searched (a P1 is
     // 2048 samples in a frame of two million). A window that comes up empty is widened, after three misses the whole range is searched
     // again until a P1 is accepted, and every 20 frames one frame's worth is searched in full to catch a change at the transmitter.
@@ -79,7 +207,7 @@ void T2Receiver::Impl::scanP1() {
         // A window that comes up empty means a P1 was lost or the stream jumped (samples dropped): go back to just after the last
         // accepted P1 - those samples are still buffered - and search everything from there, as the plain scanner would have.
         auto rewind = [&]() {
-            trackMiss = 3;
+            trackMiss = 3; p1Rescans++;
             scanPos = std::max<int64_t>(trackKeep, base);
             scanFirst = true;
         };
@@ -106,17 +234,16 @@ void T2Receiver::Impl::scanP1() {
             break;   // the window goes on in the next chunk
         }
     }
-    if (!tracked && fullFrom <= cHi) {
-        p1Metric(lo, len, std::max<int64_t>(0, fullFrom - W), std::min(lastD, cHi + W));
-        done.emplace_back(fullFrom, cHi);
-        p1Detect(lo, lastD, fullFrom, cHi);
-    }
-    // decimated trace of the region that becomes final in this pass (zero where the search skipped it)
+    if (!tracked && fullFrom <= cHi) p1Search(lo, len, lastD, fullFrom, cHi);
+    // decimated trace of the region that becomes final in this pass (the cheap stage's metric where only that ran, zero where the search skipped it)
     for (int64_t d = cLo; d + kTraceDecim <= cHi + 1; d += kTraceDecim) {
         float mx = 0;
         for (const auto& r : done)
             if (r.first <= d + kTraceDecim - 1 && r.second >= d)
                 for (int k = 0; k < kTraceDecim; k++) if (d + k >= r.first && d + k <= r.second) mx = std::max(mx, m[d + k]);
+        if (!coarse.empty() && d + kTraceDecim > coarseFrom)
+            for (int64_t k = std::max<int64_t>(0, (d - coarseFrom + kCoarseBlk - 1) / kCoarseBlk); k < (int64_t)coarse.size() && coarseFrom + k * kCoarseBlk < d + kTraceDecim; k++)
+                mx = std::max(mx, coarse[(size_t)k]);
         trace.push_back(mx);
     }
     if (trace.size() > 2048) trace.erase(trace.begin(), trace.begin() + (trace.size() - 2048));

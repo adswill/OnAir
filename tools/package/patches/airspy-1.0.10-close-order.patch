@@ -1,0 +1,18 @@
+libairspy 1.0.10: airspy_close() ends its libusb context (airspy_open_exit) before it frees its USB transfers (free_transfers). Each submitted
+transfer holds a reference to the USB device; releasing the last one after libusb_exit() calls usbi_disconnect_device() with a null context on
+libusb 1.0.27 for Windows (no hotplug support there) and crashes. This swaps the two calls. Apply with: patch -p1 < airspy-1.0.10-close-order.patch
+(inside airspyone_host-1.0.10) before building the Windows airspy.dll in tools/package/cross_deps_windows.sh. OnAir keeps Airspy handles open on
+Windows instead of closing them (core/src/source_airspy.cpp), which also works with the unpatched library; DECT2_AIRSPY_KEEP=0 closes them.
+
+--- a/libairspy/src/airspy.c	2026-10-07 20:31:55
++++ b/libairspy/src/airspy.c	2026-10-07 20:31:55
+@@ -1000,8 +1000,8 @@
+ 			pthread_cond_destroy(&device->consumer_cv);
+ 			pthread_mutex_destroy(&device->consumer_mp);
+ 
+-			airspy_open_exit(device);
+ 			free_transfers(device);
++			airspy_open_exit(device);
+ 			free(device->supported_samplerates);
+ 			free(device);
+ 		}

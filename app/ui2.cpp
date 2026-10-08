@@ -67,15 +67,39 @@ void loadTheme(int n) {
 ImU32 u32(ImVec4 c) { return ImGui::ColorConvertFloat4ToU32(c); }
 
 // A bordered pane with square corners. autoH: grow with the contents.
+// A pane with autoH is as tall as its contents. ImGui sizes it from the last frame, so a status line whose values change width (and so
+// wrap onto one line more or less) made it flick between heights, a line cut off every other frame: the height it needs is kept here
+// and it shrinks only after a second without the extra line.
+struct PaneH { ImGuiID key; bool autoH; };
+std::vector<PaneH> gPanes;
+constexpr int kPaneHold = 60;   // frames
 void beginPane(const char* id, ImVec2 size, bool autoH = false) {
     ImGui::PushStyleColor(ImGuiCol_Border, kEdge);
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0);
     ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(7 * gUi, 4 * gUi));
-    ImGui::BeginChild(id, size, ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding | (autoH ? ImGuiChildFlags_AutoResizeY : 0));
+    const ImGuiID key = ImGui::GetID(id);
+    const float held = autoH ? ImGui::GetStateStorage()->GetFloat(key, 0.f) : 0.f;
+    if (held > 0) size.y = held;
+    gPanes.push_back({key, autoH});
+    ImGui::BeginChild(id, size, ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding | (autoH && held <= 0 ? ImGuiChildFlags_AutoResizeY : 0));
 }
 void endPane() {
+    const PaneH p = gPanes.back();
+    gPanes.pop_back();
+    // the height of what was drawn: down to the last line, and the padding below it
+    const float need = p.autoH ? ImGui::GetCursorPosY() - ImGui::GetStyle().ItemSpacing.y + ImGui::GetStyle().WindowPadding.y : 0.f;
     ImGui::EndChild();
+    if (p.autoH) {
+        ImGuiStorage* st = ImGui::GetStateStorage();
+        const ImGuiID ageKey = p.key + 1;
+        const float held = st->GetFloat(p.key, 0.f);
+        const int age = st->GetInt(ageKey, 0);
+        if (need > held + 0.5f || held <= 0) { st->SetFloat(p.key, need); st->SetInt(ageKey, 0); }   // grows at once
+        else if (need < held - 0.5f) {                                                             // shrinks after a while
+            if (age >= kPaneHold) { st->SetFloat(p.key, need); st->SetInt(ageKey, 0); } else st->SetInt(ageKey, age + 1);
+        } else st->SetInt(ageKey, 0);
+    }
     ImGui::PopStyleVar(3);
     ImGui::PopStyleColor();
 }
@@ -106,8 +130,15 @@ bool textLink(const char* label) {
     return clicked;
 }
 
-// ---- the SDR++ style frequency readout: digits you can click (upper half up, lower half down) or scroll
+// ---- the SDR++ style frequency readout: digits you can click (upper half up, lower half down) or scroll. With the mouse over it, typing a
+// number sets the digit under the mouse and moves on to the next one, the arrow keys step the digit (up/down) or pick another (left/right),
+// and a double click opens a box to type the whole frequency.
+bool gFreqHovered = false;   // last frame: the mouse was over the digits (the 1-9 mode keys stay off then)
 float freqDigits(App& a, float fontSize = 30.f) {
+    static int kbIdx = -1;               // the digit the keyboard works on after typing or left/right (-1: the one under the mouse)
+    static ImVec2 kbMouse;               // where the mouse was then: moving it gives the digit back to the mouse
+    static double preClickMhz = 0;       // the frequency before the first click of a double click, which the double click undoes
+    static char typed[32] = "";
     const bool fm = a.fmMode, dab = a.dabMode;
     const ModeTuning* mt = a.family >= 6 ? modeTuning(a.family + 2) : nullptr;
     const double lo = mt ? mt->minMhz : fm ? 87.5 : dab ? 174.0 : 1.0, hi = mt ? mt->maxMhz : fm ? 108.0 : dab ? 240.0 : 2000.0;
@@ -121,8 +152,11 @@ float freqDigits(App& a, float fontSize = 30.f) {
     const ImVec2 o = ImGui::GetCursorScreenPos();
     float x = o.x;
     long long delta = 0;
-    bool leading = true;
+    bool leading = true, dbl = false;
+    int hovIdx = -1;
+    float digitX[10];
     for (int i = 0; i < 10; i++) {
+        digitX[i] = x;
         const long long place = (long long)std::llround(std::pow(10.0, 9 - i));
         ImGui::SetCursorScreenPos(ImVec2(x, o.y));
         ImGui::PushID(i);
@@ -131,7 +165,9 @@ float freqDigits(App& a, float fontSize = 30.f) {
         const bool hov = ImGui::IsItemHovered();
         const ImVec2 p0 = ImGui::GetItemRectMin();
         const bool upper = ImGui::GetIO().MousePos.y < p0.y + ch * 0.5f;
-        if (ImGui::IsItemClicked(0)) delta = upper ? place : -place;
+        if (hov) hovIdx = i;
+        if (hov && ImGui::IsMouseDoubleClicked(0)) dbl = true;
+        else if (ImGui::IsItemClicked(0)) { preClickMhz = a.freqMhz; delta = upper ? place : -place; }
         if (hov && ImGui::GetIO().MouseWheel != 0) { delta = ImGui::GetIO().MouseWheel > 0 ? place : -place; ImGui::GetIO().MouseWheel = 0; }
         if (hov) {
             dl->AddRectFilled(p0, ImVec2(p0.x + cw, p0.y + ch), IM_COL32(255, 255, 255, 18));
@@ -143,13 +179,54 @@ float freqDigits(App& a, float fontSize = 30.f) {
         char c[2] = {buf[i], 0};
         dl->AddText(ImVec2(x + (cw - cs.x) * 0.5f, o.y), u32(dim ? ImVec4(T.dim.x * 0.8f, T.dim.y * 0.8f, T.dim.z * 0.8f, 1) : T.bright), c);
         x += cw;
-        if (i == 0 || i == 3 || i == 6) { dl->AddText(ImVec2(x, o.y), u32(T.dim), "."); x += cs.x * 0.45f; }
+        if (i == 0 || i == 3 || i == 6) { dl->AddText(ImVec2(x - cs.x * 0.275f, o.y), u32(T.dim), "."); x += cs.x * 0.45f; }   // the dot centred in the gap
     }
     ImGui::SetCursorScreenPos(ImVec2(x + 8 * gUi, o.y + ch * 0.5f - ImGui::GetTextLineHeight() * 0.35f));
     ImGui::PopFont();
     ImGui::AlignTextToFramePadding();
     ImGui::TextDisabled("Hz");
     const float endX = ImGui::GetItemRectMax().x;
+    ImGuiIO& io = ImGui::GetIO();
+    gFreqHovered = hovIdx >= 0 || (kbIdx >= 0 && io.MousePos.x == kbMouse.x && io.MousePos.y == kbMouse.y);
+    if (kbIdx >= 0 && (io.MousePos.x != kbMouse.x || io.MousePos.y != kbMouse.y)) kbIdx = -1;
+    const int cur = kbIdx >= 0 ? kbIdx : hovIdx;
+    if (cur >= 0 && !io.WantTextInput && !io.KeyCtrl && !io.KeyAlt && !io.KeySuper) {
+        const long long place = (long long)std::llround(std::pow(10.0, 9 - cur));
+        for (int k = 0; k < 10; k++)
+            if (ImGui::IsKeyPressed((ImGuiKey)(ImGuiKey_0 + k), false) || ImGui::IsKeyPressed((ImGuiKey)(ImGuiKey_Keypad0 + k), false)) {
+                const int old = (int)((hz / place) % 10);
+                delta = (long long)(k - old) * place;
+                kbIdx = std::min(9, cur + 1); kbMouse = io.MousePos;
+            }
+        if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)) delta = place;
+        if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)) delta = -place;
+        if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow)) { kbIdx = std::max(0, cur - 1); kbMouse = io.MousePos; }
+        if (ImGui::IsKeyPressed(ImGuiKey_RightArrow)) { kbIdx = std::min(9, cur + 1); kbMouse = io.MousePos; }
+        if (kbIdx >= 0 && kbIdx != hovIdx) {   // show where the keyboard is when it is not under the mouse
+            const float kx = digitX[kbIdx];
+            dl->AddRect(ImVec2(kx, o.y), ImVec2(kx + cw, o.y + ch), u32(T.dim), 2.f);
+        }
+    }
+    if (dbl) {
+        if (std::fabs(preClickMhz - a.freqMhz) > 1e-9 && preClickMhz > 0) tuneFreq(a, preClickMhz);   // undo the first click's step
+        snprintf(typed, sizeof typed, "%.6f", preClickMhz > 0 ? preClickMhz : a.freqMhz);
+        ImGui::OpenPopup("##freqtype");
+    }
+    if (ImGui::BeginPopup("##freqtype")) {
+        ImGui::TextDisabled("Frequency in MHz (%.3f to %.3f)", lo, hi);
+        if (ImGui::IsWindowAppearing()) ImGui::SetKeyboardFocusHere();
+        ImGui::SetNextItemWidth(170 * gUi);
+        const bool enter = ImGui::InputText("##ftext", typed, sizeof typed, ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll);
+        ImGui::SameLine();
+        if (enter || ImGui::Button("Tune")) {
+            char* e = nullptr;
+            const double v = strtod(typed, &e);
+            if (e != typed && v > 0) tuneFreq(a, std::min(hi, std::max(lo, v)));
+            ImGui::CloseCurrentPopup();
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape)) ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
     if (delta) {
         const double mhz = std::min(hi, std::max(lo, (double)(hz + delta) / 1e6));
         if (std::fabs(mhz - a.freqMhz) > 1e-9) tuneFreq(a, mhz);
@@ -158,12 +235,11 @@ float freqDigits(App& a, float fontSize = 30.f) {
 }
 
 // two lines about what is being received, in the top bar: the station or ensemble, the state and the main numbers
-void summary(App& a, float x, float y, float scale = 1.f) {
-    ImDrawList* dl = ImGui::GetWindowDrawList();
+void summaryText(App& a, std::string& l1, std::string& l2) {
     const bool run = a.engine.running();
     const ModeDef* cur = &kModes[0];
     for (int i = 0; i < kNumModes; i++) if (kModes[i].family == a.family) cur = &kModes[i];
-    std::string l1 = cur->name, l2 = run ? "starting" : "stopped";
+    l1 = cur->name; l2 = run ? "starting" : "stopped";
     char b[96];
     if (run) {
         const RxTelemetry& rx = a.rx;
@@ -187,8 +263,21 @@ void summary(App& a, float x, float y, float scale = 1.f) {
             l2 = b;
         }
     }
-    dl->AddText(ImGui::GetFont(), ImGui::GetFontSize() * scale, ImVec2(x, y), u32(T.bright), l1.c_str());
-    dl->AddText(ImGui::GetFont(), ImGui::GetFontSize() * (scale > 1 ? 1.15f : 1.f), ImVec2(x, y + ImGui::GetFontSize() * scale + 3 * gUi), u32(T.dim), l2.c_str());
+}
+float summaryWidth(App& a, float scale = 1.f) {
+    std::string l1, l2;
+    summaryText(a, l1, l2);
+    return std::max(ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize() * scale, FLT_MAX, 0, l1.c_str()).x,
+                    ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize() * (scale > 1 ? 1.15f : 1.f), FLT_MAX, 0, l2.c_str()).x);
+}
+// maxW: the lines are cut short with "..." rather than run into what is to their right
+void summary(App& a, float x, float y, float scale = 1.f, float maxW = FLT_MAX) {
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    std::string l1, l2;
+    summaryText(a, l1, l2);
+    const float s1 = ImGui::GetFontSize() * scale, s2 = ImGui::GetFontSize() * (scale > 1 ? 1.15f : 1.f);
+    dl->AddText(ImGui::GetFont(), s1, ImVec2(x, y), u32(T.bright), ellipsize(l1, maxW, s1).c_str());
+    dl->AddText(ImGui::GetFont(), s2, ImVec2(x, y + s1 + 3 * gUi), u32(T.dim), ellipsize(l2, maxW, s2).c_str());
 }
 
 // a start / stop button drawn as a play triangle or a stop square
@@ -219,7 +308,7 @@ void modeList(App& a) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
     const bool running = a.engine.running();
     const ImVec2 first = ImGui::GetCursorScreenPos();
-    for (int g = 0; g < 3; g++) {
+    for (int g = 0; g < kNumGroups; g++) {
         ImGui::TextDisabled("%s", kGroupNames[g]);
         for (int i = 0; i < kNumModes; i++) {
             const ModeDef& m = kModes[i];
@@ -237,7 +326,8 @@ void modeList(App& a) {
             if (sel) dl->AddCircleFilled(c, 2.6f * gUi, u32(T.accent));
             dl->AddText(ImVec2(p0.x + 24 * gUi, p0.y + (h - ImGui::GetTextLineHeight()) * 0.5f), u32(sel ? T.bright : (running ? T.dim : T.text)), m.name);
             const ImVec2 ss = ImGui::CalcTextSize(m.sub);
-            dl->AddText(ImVec2(p0.x + w - ss.x - 6 * gUi, p0.y + (h - ss.y) * 0.5f), u32(T.dim), m.sub);
+            if (p0.x + 24 * gUi + ImGui::CalcTextSize(m.name).x + 10 * gUi < p0.x + w - ss.x - 6 * gUi)   // no room: the name alone, not both on top of each other
+                dl->AddText(ImVec2(p0.x + w - ss.x - 6 * gUi, p0.y + (h - ss.y) * 0.5f), u32(T.dim), m.sub);
             if (clicked) selectMode(a, m.family);
             if (hov && running && !sel) ImGui::SetTooltip("Stop the receiver to switch mode");
         }
@@ -269,10 +359,12 @@ void sidebar(App& a) {
     if (section("Display")) {
         ImGui::Indent(6 * gUi);
         ImGui::Checkbox("Peak hold", &a.peakHold);
-        ImGui::TextDisabled("Spectrum"); ImGui::SameLine(72 * gUi); ImGui::SetNextItemWidth(150 * gUi);
+        const float col = ImGui::GetCursorPosX() + ImGui::CalcTextSize("Waterfall").x + 8 * gUi;   // the controls line up after the longer label
+        const float autoW = ImGui::CalcTextSize("Auto").x + ImGui::GetStyle().FramePadding.x * 2 + 4 * gUi;
+        ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("Spectrum"); ImGui::SameLine(col); ImGui::SetNextItemWidth(std::min(150.f * gUi, ImGui::GetContentRegionAvail().x));
         ImGui::DragFloatRange2("##specdb", &a.yMin, &a.yMax, 1, -160, 20, "%.0f", "%.0f");
-        ImGui::TextDisabled("Waterfall"); ImGui::SameLine(72 * gUi);
-        ImGui::SetNextItemWidth(104 * gUi);
+        ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("Waterfall"); ImGui::SameLine(col);
+        ImGui::SetNextItemWidth(std::min(104.f * gUi, ImGui::GetContentRegionAvail().x - autoW));
         ImGui::DragFloatRange2("##wfdb", &a.wf.minDb, &a.wf.maxDb, 1, -160, 20, "%.0f", "%.0f");
         ImGui::SameLine(0, 4 * gUi);
         if (ImGui::SmallButton("Auto")) autoRange(a);
@@ -303,14 +395,15 @@ void statusLine(App& a) {
     const ModeDef* cur = &kModes[0];
     for (int i = 0; i < kNumModes; i++) if (kModes[i].family == a.family) cur = &kModes[i];
     const float lh = ImGui::GetTextLineHeight();
-    auto field = [&](const char* text, bool first = false, ImVec4 col = ImVec4(-1, 0, 0, 0)) {
+    auto field = [&](const char* text, bool first = false, ImVec4 col = ImVec4(-1, 0, 0, 0), bool fit = false) {
         if (!first) {
-            ImGui::SameLine(0, 8 * gUi);
+            if (!sameLineIf(16 * gUi + (fit ? 40 * gUi : ImGui::CalcTextSize(text).x), 8 * gUi)) return;   // no room left on the bar
             const ImVec2 p = ImGui::GetCursorScreenPos();
             dl->AddLine(ImVec2(p.x, p.y + 1), ImVec2(p.x, p.y + lh - 1), u32(T.dim));
             ImGui::SameLine(0, 8 * gUi);
         }
-        if (col.x < 0) ImGui::TextUnformatted(text); else ImGui::TextColored(col, "%s", text);
+        const std::string t = fit ? ellipsize(text, ImGui::GetContentRegionAvail().x, ImGui::GetFontSize()) : text;   // the log line: as much as fits
+        if (col.x < 0) ImGui::TextUnformatted(t.c_str()); else ImGui::TextColored(col, "%s", t.c_str());
     };
     char b[96];
     ImGui::AlignTextToFramePadding();
@@ -323,7 +416,7 @@ void statusLine(App& a) {
     {
         size_t n = 0;
         const std::vector<std::string> lines = a.engine.logSnapshot(n);
-        if (!lines.empty()) field(lines.back().c_str());
+        if (!lines.empty()) field(lines.back().c_str(), false, ImVec4(-1, 0, 0, 0), true);
     }
 }
 } // namespace
@@ -336,7 +429,11 @@ void applyUiTheme(App& a) {
     static ImVec4 classicAccent;
     static bool have = false;
     static int key = -1;
-    if (!have) { classic = ImGui::GetStyle(); classicPlot = plt::GetStyle(); classicAccent = pal::accentRef(); have = true; }
+    static float scale = 0;
+    if (!have) { classic = ImGui::GetStyle(); classicPlot = plt::GetStyle(); classicAccent = pal::accentRef(); have = true; scale = gUi; }
+    // the window went to a monitor with another display scale: main.cpp has just reset the style to the classic one at that scale
+    // (taken again as the classic style), and the chosen theme is applied again with its sizes at the new scale
+    if (gUi != scale) { classic = ImGui::GetStyle(); classicPlot.Scale = gUi; scale = gUi; key = -1; }
     const int want = a.newUi ? 1 + a.uiTheme : 0;
     if (want == key) return;
     key = want;
@@ -388,11 +485,11 @@ float menuBar(App& a) {
         }
         if (ImGui::BeginMenu("Mode")) {
             int key = 0;
-            for (int g = 0; g < 3; g++) {
+            for (int g = 0; g < kNumGroups; g++) {
                 if (g) ImGui::Separator();
                 for (int i = 0; i < kNumModes; i++) if (kModes[i].group == g) {
                     char k[4]; snprintf(k, sizeof k, "%d", ++key);
-                    if (ImGui::MenuItem(kModes[i].name, k, kModes[i].family == a.family)) selectMode(a, kModes[i].family);
+                    if (ImGui::MenuItem(kModes[i].name, key <= 9 ? k : nullptr, kModes[i].family == a.family)) selectMode(a, kModes[i].family);   // only 1-9 are keys
                 }
             }
             ImGui::EndMenu();
@@ -402,6 +499,7 @@ float menuBar(App& a) {
             ImGui::Separator();
             static const char* names[3] = {"Terminal palette", "Instrument palette", "Mono palette"};
             for (int t = 0; t < 3; t++) if (ImGui::MenuItem(names[t], nullptr, a.uiTheme == t)) { a.uiTheme = t; savePrefs(a); }
+            if (ImGui::MenuItem("Light (dark on white)", nullptr, &a.lightUi)) savePrefs(a);
             ImGui::Separator();
             if (ImGui::MenuItem("Classic interface")) { a.newUi = false; savePrefs(a); }
             ImGui::EndMenu();
@@ -424,9 +522,11 @@ void levelMeter(App& a, float x, float y, float w) {
     const float db = running ? a.spec.stats.rmsDbfs : -120.f;
     const int n = 26, lit = (int)std::lround(std::min(1.f, std::max(0.f, (db + 60.f) / 60.f)) * n);
     const float sw = (w - (n - 1) * 2 * gUi) / n, sy = y + 20 * gUi, sh = 12 * gUi;
-    dl->AddText(ImVec2(x, y), u32(T.dim), "ADC level");
     char lv[32]; snprintf(lv, sizeof lv, running ? "%.1f dBFS" : "-", db);
-    dl->AddText(ImVec2(x + w - ImGui::CalcTextSize(lv).x, y), u32(T.text), lv);
+    const float lw = ImGui::CalcTextSize(lv).x, room = w - lw - 8 * gUi;   // a narrow meter: a shorter caption, or none
+    const char* cap = ImGui::CalcTextSize("ADC level").x <= room ? "ADC level" : ImGui::CalcTextSize("ADC").x <= room ? "ADC" : "";
+    dl->AddText(ImVec2(x, y), u32(T.dim), cap);
+    dl->AddText(ImVec2(x + w - lw, y), u32(T.text), lv);
     for (int k = 0; k < n; k++) {
         const bool on = k < lit, hot = k >= n - 2;
         const ImU32 col = on ? (hot ? u32(pal::badRed()) : k >= n - 5 ? u32(pal::warnAmber()) : u32(ImVec4(0.62f, 0.70f, 0.64f, 1))) : u32(ImVec4(0.25f, 0.26f, 0.27f, 1));
@@ -456,12 +556,22 @@ void topBar(App& a, ImVec2 disp) {
         const bool running = a.engine.running();
         const ImVec2 o = ImGui::GetCursorScreenPos();
         if (runButton(running, 40 * gUi) || (!running && a.wizStart)) { if (running) a.engine.stop(); else startReceiver(a); a.wizStart = false; }
+        const float W = ImGui::GetContentRegionAvail().x;
         ImGui::SetCursorScreenPos(ImVec2(o.x + 58 * gUi, o.y));
         const float digitsEnd = freqDigits(a);
-        summary(a, digitsEnd + 34 * gUi, o.y + 6 * gUi);
-        const float vw = 230 * gUi, mw = 260 * gUi;
-        levelMeter(a, o.x + ImGui::GetContentRegionAvail().x - vw - mw - 20 * gUi, o.y, mw);
-        ImGui::SetCursorScreenPos(ImVec2(o.x + ImGui::GetContentRegionAvail().x - vw + 4 * gUi, o.y + 8 * gUi));
+        // a narrow window: the level meter and the volume give up width (the meter goes last), then the summary is cut short
+        const float sumX = digitsEnd + 34 * gUi;
+        float vw = 230 * gUi, mw = 260 * gUi;
+        const float spare = o.x + W - sumX - summaryWidth(a) - 40 * gUi;
+        if (spare < vw + mw) {
+            const float k = std::max(0.f, spare) / (vw + mw);
+            vw = std::max(150.f * gUi, vw * k); mw = std::max(130.f * gUi, mw * k);
+            if (o.x + W - vw - mw - 20 * gUi < sumX + 120 * gUi) mw = 0;
+        }
+        const float meterX = o.x + W - vw - mw - 20 * gUi;
+        summary(a, sumX, o.y + 6 * gUi, 1.f, (mw > 0 ? meterX : o.x + W - vw) - 16 * gUi - sumX);
+        if (mw > 0) levelMeter(a, meterX, o.y, mw);
+        ImGui::SetCursorScreenPos(ImVec2(o.x + W - vw + 4 * gUi, o.y + 8 * gUi));
         volumeControl(a, vw);
     }
     ImGui::EndChild();
@@ -496,7 +606,7 @@ void modeCombo(App& a, float w) {
     for (int i = 0; i < kNumModes; i++) if (kModes[i].family == a.family) cur = &kModes[i];
     ImGui::SetNextItemWidth(w);
     if (ImGui::BeginCombo("##modec", cur->name)) {
-        for (int g = 0; g < 3; g++) {
+        for (int g = 0; g < kNumGroups; g++) {
             if (g) ImGui::Separator();
             ImGui::TextDisabled("%s", kGroupNames[g]);
             for (int i = 0; i < kNumModes; i++) if (kModes[i].group == g && ImGui::Selectable(kModes[i].name, kModes[i].family == a.family)) selectMode(a, kModes[i].family);
@@ -517,10 +627,11 @@ void displayControls(App& a, bool wide) {
 
 // ---------------------------------------------------------------- variant 0: sidebar (the parent)
 void bodyParent(App& a, float bodyH, ImVec2 disp) {
-    (void)disp;
+    // a narrow window (a laptop at 125 or 150 %): the side panel and the list on the right give up width before the spectrum does
+    const float sideW = std::floor(std::max(244.f * gUi, std::min(296.f * gUi, disp.x * 0.24f)));
     ImGui::PushStyleColor(ImGuiCol_ChildBg, kRail);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8 * gUi, 6 * gUi));
-    ImGui::BeginChild("##side", ImVec2(296 * gUi, bodyH), ImGuiChildFlags_AlwaysUseWindowPadding);
+    ImGui::BeginChild("##side", ImVec2(sideW, bodyH), ImGuiChildFlags_AlwaysUseWindowPadding);
     ImGui::PopStyleVar();
     sidebar(a);
     ImGui::EndChild();
@@ -531,7 +642,8 @@ void bodyParent(App& a, float bodyH, ImVec2 disp) {
     }
     ImGui::SameLine(0, 0);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4 * gUi, 4 * gUi));
-    ImGui::BeginChild("##content", ImVec2(0, bodyH), ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+    // scrolls only when even the smallest panes do not fit (a 1366 x 768 screen at 150 %)
+    ImGui::BeginChild("##content", ImVec2(0, bodyH), ImGuiChildFlags_AlwaysUseWindowPadding);
     ImGui::PopStyleVar();
     const float gap = 4 * gUi;
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(gap, gap));
@@ -543,8 +655,11 @@ void bodyParent(App& a, float bodyH, ImVec2 disp) {
     beginPane("##status", ImVec2(0, 0), true);
     statusBar(a);
     endPane();
-    const float logH = (a.atsc3Mode ? 0 : 215) * gUi, rightW = 330 * gUi;
-    const float mainH = ImGui::GetContentRegionAvail().y - (logH > 0 ? logH + gap : 0);
+    // the analysis row gives up height (down to 150) before the tabs above it go below 240; the list on the right narrows with the window
+    const float availH = ImGui::GetContentRegionAvail().y;
+    const float logH = a.atsc3Mode ? 0 : std::max(144.f * gUi, std::min(215.f * gUi, availH - gap - 240.f * gUi));
+    const float rightW = std::floor(std::max(236.f * gUi, std::min(330.f * gUi, ImGui::GetContentRegionAvail().x * 0.30f)));
+    const float mainH = std::max(186.f * gUi, availH - (logH > 0 ? logH + gap : 0));
     const float mainW = ImGui::GetContentRegionAvail().x - rightW - gap;
     beginPane("##main2", ImVec2(mainW, mainH));
     tgRect(a, TgMain);
@@ -556,7 +671,7 @@ void bodyParent(App& a, float bodyH, ImVec2 disp) {
     rightPanel(a);
     endPane();
     if (!a.atsc3Mode) {
-        beginPane("##const2", ImVec2(0, 0));
+        beginPane("##const2", ImVec2(0, std::max(logH, ImGui::GetContentRegionAvail().y)));
         tgRect(a, TgConst);
         constellationsTab(a);
         endPane();
@@ -573,6 +688,7 @@ void ribbonPane(App& a) {
     ImGui::SameLine(0, 18 * gUi);
     displayControls(a, false);
     toolbarParts(a, TbSource | TbTuner | TbGain | TbDecoder, false);
+    if (a.devices[a.devIdx].isRadio() && !a.devices[a.devIdx].settings.empty()) { ImGui::SameLine(0, 14 * gUi); radioSettingsUi(a, false); }
     if (a.devices[a.devIdx].kind == DeviceInfo::Synthetic || (a.devices[a.devIdx].kind == DeviceInfo::File && !a.engine.running())) sourceOptions(a);
     endPane();
 }
@@ -721,7 +837,7 @@ void bodyFace(App& a, float bodyH, ImVec2 disp) {
         ImGui::SetCursorScreenPos(ImVec2(o.x + 72 * gUi, o.y - 2 * gUi));
         const float end = freqDigits(a, 52.f);
         (void)end;
-        summary(a, o.x + 74 * gUi, o.y + 66 * gUi, 1.5f);
+        summary(a, o.x + 74 * gUi, o.y + 66 * gUi, 1.5f, ImGui::GetContentRegionAvail().x - 74 * gUi);
         const float mw = 250 * gUi;
         levelMeter(a, o.x + ImGui::GetContentRegionAvail().x - mw, o.y, mw);
         ImGui::SetCursorScreenPos(ImVec2(o.x + ImGui::GetContentRegionAvail().x - mw, o.y + 44 * gUi));
@@ -962,7 +1078,7 @@ void modeKeys(App& a) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
     const bool running = a.engine.running();
     const ImVec2 first = ImGui::GetCursorScreenPos();
-    for (int g = 0; g < 3; g++) {
+    for (int g = 0; g < kNumGroups; g++) {
         ImGui::TextDisabled("%s", kGroupNames[g]);
         for (int i = 0; i < kNumModes; i++) {
             const ModeDef& m = kModes[i];
@@ -1025,13 +1141,14 @@ void bodyPanel(App& a, float bodyH, ImVec2 disp) {
         if (runButton(running, 44 * gUi) || (!running && a.wizStart)) { if (running) a.engine.stop(); else startReceiver(a); a.wizStart = false; }
         ImGui::SetCursorScreenPos(ImVec2(o.x + 62 * gUi, o.y - 1 * gUi));
         const float digitsEnd = freqDigits(a, 38.f);
-        summary(a, digitsEnd + 30 * gUi, o.y + 5 * gUi);
         const float vw = 210 * gUi, mw = 250 * gUi;
+        summary(a, digitsEnd + 30 * gUi, o.y + 5 * gUi, 1.f, o.x + ImGui::GetContentRegionAvail().x - vw - mw - 36 * gUi - (digitsEnd + 30 * gUi));
         levelMeter(a, o.x + ImGui::GetContentRegionAvail().x - vw - mw - 20 * gUi, o.y, mw);
         ImGui::SetCursorScreenPos(ImVec2(o.x + ImGui::GetContentRegionAvail().x - vw + 4 * gUi, o.y + 8 * gUi));
         volumeControl(a, vw);
         ImGui::SetCursorScreenPos(ImVec2(o.x, o.y + 52 * gUi));
         toolbarParts(a, TbSource | TbTuner | TbGain | TbDecoder, false);
+        if (a.devices[a.devIdx].isRadio() && !a.devices[a.devIdx].settings.empty()) { ImGui::SameLine(0, 14 * gUi); radioSettingsUi(a, false); }
         if (synth) sourceOptions(a);
         endModule();
     }
@@ -1075,9 +1192,9 @@ void drawShell2(App& a, ImVec2 disp) {
     {   // keyboard: 1-9 pick a mode, space starts and stops (not while typing)
         ImGuiIO& io = ImGui::GetIO();
         if (!io.WantTextInput && !ImGui::IsAnyItemActive() && !io.KeyCtrl && !io.KeyAlt && !io.KeySuper) {
-            for (int k = 0; k < 9; k++) if (ImGui::IsKeyPressed((ImGuiKey)(ImGuiKey_1 + k), false)) {
+            if (!gFreqHovered) for (int k = 0; k < 9; k++) if (ImGui::IsKeyPressed((ImGuiKey)(ImGuiKey_1 + k), false)) {
                 int n = 0;
-                for (int g = 0; g < 3; g++) for (int i = 0; i < kNumModes; i++) if (kModes[i].group == g && n++ == k) selectMode(a, kModes[i].family);
+                for (int g = 0; g < kNumGroups; g++) for (int i = 0; i < kNumModes; i++) if (kModes[i].group == g && n++ == k) selectMode(a, kModes[i].family);
             }
             if (ImGui::IsKeyPressed(ImGuiKey_Space, false)) { if (a.engine.running()) a.engine.stop(); else startReceiver(a); }
         }

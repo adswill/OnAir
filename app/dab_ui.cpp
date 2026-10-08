@@ -25,7 +25,7 @@ bool dabChannelCombo(App& a) {
     char lbl[48];
     snprintf(lbl, sizeof lbl, cur ? "%s  %.3f MHz" : "Channel", cur ? cur : "", a.freqMhz);
     bool changed = false;
-    ImGui::SetNextItemWidth(150 * gUi);
+    ImGui::SetNextItemWidth(std::min(150 * gUi, ImGui::GetContentRegionAvail().x));   // no wider than the side panel
     if (ImGui::BeginCombo("##dabch", lbl)) {
         for (const auto& c : kDabCh) {
             char l[48];
@@ -45,24 +45,20 @@ void dabStatus(App& a) {
     const DabTelemetry& d = a.rx.dab;
     const bool live = run && a.rx.standard == 3;
     const AdcStatus adc = classifyAdc(st.rmsDbfs, st.peak, st.clipFraction);
-    {
-        const ImVec2 p = ImGui::GetCursorScreenPos();
-        const float h = ImGui::GetFrameHeight() * 2.f + ImGui::GetStyle().ItemSpacing.y * 2.f;
-        ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(p.x - 4, p.y - 2), ImVec2(p.x + ImGui::GetContentRegionAvail().x + 4, p.y + h), IM_COL32(22, 23, 25, 255), 3.f);
-    }
-    lamp("IQ", run ? (adc == AdcStatus::Overload ? 3 : (adc == AdcStatus::Good ? 1 : 2)) : 0, (int)Ic::Wave); ImGui::SameLine(0, 12 * gUi);
-    lamp("Sync", !live ? 0 : d.state == 2 ? 1 : 0); ImGui::SameLine(0, 12 * gUi);
-    lamp("PRS", !live ? 0 : d.cirPeak > 40 ? 1 : d.cirPeak > 15 ? 2 : 0); ImGui::SameLine(0, 12 * gUi);
-    lamp("FIC", !live ? 0 : d.ficRecentOk >= 11 ? 1 : d.ficRecentOk > 0 ? 2 : d.state == 2 ? 3 : 0); ImGui::SameLine(0, 12 * gUi);
-    lamp("Ensemble", !live ? 0 : d.ensemble ? 1 : d.fibOk ? 2 : 0); ImGui::SameLine(0, 12 * gUi);
-    lamp("MSC", !live || d.audio.sub < 0 ? 0 : d.audio.superframesOk > 0 && d.audio.superframesBad * 4 <= d.audio.superframesOk ? 1 : d.audio.frames > 0 ? 2 : 0); ImGui::SameLine(0, 12 * gUi);
-    lamp("Audio", !live || d.audio.sub < 0 ? 0 : d.audio.decoding ? 1 : 2, (int)Ic::Speaker); ImGui::SameLine(0, 10 * gUi);
-    ImGui::TextDisabled("|"); ImGui::SameLine(0, 10 * gUi);
+    StatusPanel panel;   // a tinted panel behind the status lines (they wrap in a narrow window)
+    lamp("IQ", run ? (adc == AdcStatus::Overload ? 3 : (adc == AdcStatus::Good ? 1 : 2)) : 0, (int)Ic::Wave); flowNext(12 * gUi);
+    lamp("Sync", !live ? 0 : d.state == 2 ? 1 : 0); flowNext(12 * gUi);
+    lamp("PRS", !live ? 0 : d.cirPeak > 40 ? 1 : d.cirPeak > 15 ? 2 : 0); flowNext(12 * gUi);
+    lamp("FIC", !live ? 0 : d.ficRecentOk >= 11 ? 1 : d.ficRecentOk > 0 ? 2 : d.state == 2 ? 3 : 0); flowNext(12 * gUi);
+    lamp("Ensemble", !live ? 0 : d.ensemble ? 1 : d.fibOk ? 2 : 0); flowNext(12 * gUi);
+    lamp("MSC", !live || d.audio.sub < 0 ? 0 : d.audio.superframesOk > 0 && d.audio.superframesBad * 4 <= d.audio.superframesOk ? 1 : d.audio.frames > 0 ? 2 : 0); flowNext(12 * gUi);
+    lamp("Audio", !live || d.audio.sub < 0 ? 0 : d.audio.decoding ? 1 : 2, (int)Ic::Speaker); flowNext(10 * gUi);
+    ImGui::TextDisabled("|"); flowNext(10 * gUi);
     auto ro = [&](const char* label, const std::string& val, ImVec4 col = ImVec4(0.93f, 0.95f, 0.97f, 1)) {
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled("%s", label); ImGui::SameLine(0, 5 * gUi);
         ImGui::PushFont(a.mono, 0); ImGui::TextColored(col, "%s", val.c_str()); ImGui::PopFont();
-        ImGui::SameLine(0, 15 * gUi);
+        flowNext(15 * gUi);
     };
     char b[96];
     if (!run) ro("State", "stopped", ImVec4(0.6f, 0.64f, 0.68f, 1));
@@ -76,7 +72,7 @@ void dabStatus(App& a) {
             snprintf(b, sizeof b, "%d", d.services); ro("Stations", b);
         } else ro("Ensemble", "reading...", ImVec4(0.6f, 0.64f, 0.68f, 1));
     }
-    ImGui::NewLine();
+    flowBreak();
     if (live && d.state == 2) {
         snprintf(b, sizeof b, "%+.1f Hz", d.cfoHz); ro("CFO", b);
         snprintf(b, sizeof b, "%.1f dB", d.snrDb); ro("SNR", b);
@@ -92,7 +88,7 @@ void dabStatus(App& a) {
         gaugePill(130, run ? (st.rmsDbfs + 60.f) / 60.f : 0.f, col, b);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("ADC level (rms). %s\npeak %.2f   clip %.3f%%   DC %+.3f / %+.3f", adcAdvice(adc).c_str(), st.peak, st.clipFraction * 100, st.dcI, st.dcQ);
     }
-    ImGui::SameLine(0, 15 * gUi);
+    flowNext(15 * gUi);
     ImGui::AlignTextToFramePadding();
     iconInline(Ic::Signal, iconDim(), 0.9f); ImGui::SameLine(0, 4 * gUi); ImGui::TextDisabled("Signal"); ImGui::SameLine(0, 5 * gUi);
     {
@@ -102,15 +98,15 @@ void dabStatus(App& a) {
         gaugePill(130, t, col, b);
         if (ImGui::IsItemHovered() && live) ImGui::SetTooltip("DAB needs roughly 10 dB SNR for error-free audio.\nSNR %.1f dB, FIC blocks ok %d of 12 in the last frame.", d.snrDb, d.ficRecentOk);
     }
-    ImGui::SameLine(0, 15 * gUi);
+    flowNext(15 * gUi);
     if (run) { snprintf(b, sizeof b, "%llu", (unsigned long long)a.engine.droppedSamples()); ro("dropped", b, a.engine.droppedSamples() ? ImVec4(0.95f, 0.45f, 0.3f, 1) : ImVec4(0.93f, 0.95f, 0.97f, 1)); }
     if (run && a.devices[a.devIdx].kind != DeviceInfo::File) {
         ImGui::AlignTextToFramePadding();
-        if (adc == AdcStatus::Overload) ImGui::TextColored(ImVec4(0.95f, 0.35f, 0.25f, 1), "ADC OVERLOAD - %s", a.agcOn ? "AGC is lowering the gain" : "reduce the gain (or enable AGC)");
-        else if (adc == AdcStatus::Low) ImGui::TextColored(ImVec4(0.95f, 0.70f, 0.15f, 1), "ADC level low - raise the gain");
-        else if (adc == AdcStatus::NoSignal) ImGui::TextColored(ImVec4(0.95f, 0.70f, 0.15f, 1), "ADC sees almost nothing - antenna / gain?");
-        else ImGui::NewLine();
-    } else ImGui::NewLine();
+        if (adc == AdcStatus::Overload) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.35f, 0.25f, 1), "ADC OVERLOAD - %s", a.agcOn ? "AGC is lowering the gain" : "reduce the gain (or enable AGC)"); ImGui::PopTextWrapPos(); }
+        else if (adc == AdcStatus::Low) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.70f, 0.15f, 1), "ADC level low - raise the gain"); ImGui::PopTextWrapPos(); }
+        else if (adc == AdcStatus::NoSignal) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.70f, 0.15f, 1), "ADC sees almost nothing - antenna / gain?"); ImGui::PopTextWrapPos(); }
+        else flowBreak();
+    } else flowBreak();
 }
 
 // ------------------------------------------------------------------ constellation row
@@ -134,12 +130,12 @@ void dabPanels(App& a) {
     const ImVec2 sq(sqW, sqW);        // the cell plot stays square
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("DQPSK cells (%zu)", d.constellation.size());
+    captionFit(sqW, "DQPSK cells (%zu)", d.constellation.size());
     scatter("##d1", d.constellation, sq, 1.8, pal::accent(0.40f));
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("Impulse response (echoes)");
+    captionFit(colW, "Impulse response (echoes)");
     if (plt::BeginPlot("##dcir", sz, plt::Flags_NoLegend | plt::Flags_NoTitle)) {
         plt::SetupAxes("us", nullptr, 0, plt::AxisFlags_NoTickLabels);
         if (!d.cir.empty()) {
@@ -169,12 +165,12 @@ void dabPanels(App& a) {
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("SNR (dB)");
+    captionFit(colW, "SNR (dB)");
     historyPlot("##dsnr", "dB", a.dabSnrH, sz);
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("FIC blocks ok per frame (12 = all)");
+    captionFit(colW, "FIC blocks ok per frame (12 = all)");
     historyPlot("##dfic", "blocks", a.dabFicH, sz);
     ImGui::EndGroup();
 }
@@ -206,7 +202,7 @@ void dabStations(App& a) {
     const float cardH = 54;
     ImGui::BeginChild("dabsvcs", ImVec2(0, std::max(140.f * gUi, ImGui::GetContentRegionAvail().y * 0.46f)));
     ImDrawList* dl = ImGui::GetWindowDrawList();
-    if (ens.services.empty()) ImGui::TextDisabled(run ? "reading the ensemble information..." : "start the receiver to see the stations");
+    if (ens.services.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(run ? "reading the ensemble information..." : "start the receiver to see the stations"); ImGui::PopTextWrapPos(); }
     std::vector<const DabService*> list;
     for (const auto& kv : ens.services) list.push_back(&kv.second);
     for (const DabService* sv : list) {
@@ -237,12 +233,12 @@ void dabStations(App& a) {
     ImGui::Spacing();
     const DabAudioStats au = a.rx.dab.audio;
     sectionHeader(Ic::Play, "Player");
-    if (cur < 0) ImGui::TextDisabled("click a station to play it");
+    if (cur < 0) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("click a station to play it"); ImGui::PopTextWrapPos(); }
     else if (ImGui::BeginTable("dkv", 2, ImGuiTableFlags_SizingFixedFit)) {
-        ImGui::TableSetupColumn("k", ImGuiTableColumnFlags_WidthFixed, 88);
+        ImGui::TableSetupColumn("k", ImGuiTableColumnFlags_WidthFixed, 88 * gUi);
         auto row = [&](Ic ic, const char* k, const char* fmt, auto... args) {
             ImGui::TableNextRow(); ImGui::TableNextColumn(); iconInline(ic, iconDim(), 0.9f); ImGui::SameLine(0, 5 * gUi); ImGui::TextDisabled("%s", k); ImGui::TableNextColumn();
-            char b[120]; snprintf(b, sizeof b, fmt, args...); ImGui::TextUnformatted(b);
+            char b[120]; snprintf(b, sizeof b, fmt, args...); ImGui::PushTextWrapPos(0); ImGui::TextUnformatted(b); ImGui::PopTextWrapPos();   // wraps in a narrow column
         };
         row(Ic::Speaker, "Audio", "%s  %dk  %.0f kHz %s", au.codec.empty() ? "-" : au.codec.c_str(), au.bitrate, au.sampleRate / 1000.0, au.channels == 1 ? "mono" : "stereo");
         row(Ic::Clock, "Buffer", "%d ms", au.bufferedMs);
@@ -277,17 +273,23 @@ void dabStations(App& a) {
 void dabRadioTab(App& a) {
     const DabEnsemble ens = a.engine.dabEnsemble();
     const int cur = a.engine.dabSelected();
-    if (ens.services.empty()) { ImGui::TextDisabled(a.engine.running() ? "waiting for the ensemble information (a second or two)..." : "start the receiver on a DAB channel (5A to 13F)"); return; }
+    if (ens.services.empty()) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(a.engine.running() ? "waiting for the ensemble information (a second or two)..." : "start the receiver on a DAB channel (5A to 13F)"); ImGui::PopTextWrapPos(); } return; }
     ImGui::AlignTextToFramePadding();
     ImGui::PushFont(a.ui, 20.f);
     ImGui::TextColored(pal::dev() ? pal::accent() : ImVec4(0.55f, 0.80f, 1.f, 1), "%s", ens.label.empty() ? "DAB ensemble" : ens.label.c_str());
     ImGui::PopFont();
-    ImGui::SameLine(0, 12 * gUi);
-    ImGui::TextDisabled("%zu stations   ensemble id %04X", ens.services.size(), ens.eid);
-    if (ens.utc) { time_t t = (time_t)ens.utc; struct tm m; dect2::gmTime(t, &m); char tb[48]; strftime(tb, sizeof tb, "%a %d %b %Y %H:%M UTC", &m); ImGui::SameLine(0, 12 * gUi); ImGui::TextDisabled("broadcast time %s", tb); }
+    {   // what does not fit goes on the next line (a narrow tab)
+        char info[64]; snprintf(info, sizeof info, "%zu stations   ensemble id %04X", ens.services.size(), ens.eid);
+        sameLineIf(ImGui::CalcTextSize(info).x, 12 * gUi);
+        ImGui::TextDisabled("%s", info);
+    }
+    if (ens.utc) {
+        time_t t = (time_t)ens.utc; struct tm m; dect2::gmTime(t, &m); char tb[64]; strftime(tb, sizeof tb, "broadcast time %a %d %b %Y %H:%M UTC", &m);
+        sameLineIf(ImGui::CalcTextSize(tb).x, 12 * gUi); ImGui::TextDisabled("%s", tb);
+    }
     ImGui::Spacing();
     if (ImGui::BeginTable("dabtbl", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp)) {
-        ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 34);
+        ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 34 * gUi);
         ImGui::TableSetupColumn("Station");
         ImGui::TableSetupColumn("Type");
         ImGui::TableSetupColumn("Stream");
@@ -297,7 +299,7 @@ void dabRadioTab(App& a) {
         for (const auto& kv : ens.services) {
             const DabService& sv = kv.second;
             const DabComponent* ac = sv.audio();
-            ImGui::TableNextRow(ImGuiTableRowFlags_None, 26);
+            ImGui::TableNextRow(ImGuiTableRowFlags_None, 26 * gUi);
             ImGui::TableNextColumn();
             ImGui::PushID((int)sv.sid);
             if (ac) {
@@ -305,11 +307,13 @@ void dabRadioTab(App& a) {
                 if (iconFlat(sel ? Ic::Stop : Ic::Play, sel ? "Stop" : "Play this station", sel)) dabSelectStation(a, ac->subId, !sel);
             }
             ImGui::PopID();
+            ImGui::PushTextWrapPos(0);   // the cells wrap in a narrow tab
             ImGui::TableNextColumn(); ImGui::AlignTextToFramePadding(); ImGui::TextUnformatted(sv.label.empty() ? "-" : sv.label.c_str());
             ImGui::TableNextColumn(); ImGui::TextDisabled("%s", ac ? (sv.dabPlus() ? "DAB+ (HE-AAC)" : "DAB (MP2)") : "data");
             ImGui::TableNextColumn(); ImGui::TextDisabled("%s", ac ? dabSubText(ens, ac->subId).c_str() : "");
             ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0); ImGui::TextDisabled("%04X", sv.sid); ImGui::PopFont();
             ImGui::TableNextColumn(); ImGui::TextDisabled("%s", sv.dls.c_str());
+            ImGui::PopTextWrapPos();
         }
         ImGui::EndTable();
     }
@@ -318,9 +322,12 @@ void dabRadioTab(App& a) {
 void dabEnsembleTab(App& a) {
     const DabTelemetry& d = a.rx.dab;
     const DabEnsemble ens = a.engine.dabEnsemble();
-    ImGui::TextDisabled("DAB receiver, transmission mode I: null symbol and phase reference sync, DQPSK, fast information channel, EEP sub-channels, DAB+ superframes");
+    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("DAB receiver, transmission mode I: null symbol and phase reference sync, DQPSK, fast information channel, EEP sub-channels, DAB+ superframes"); ImGui::PopTextWrapPos(); }
     ImGui::Spacing();
-    auto row = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); ImGui::SameLine(190 * gUi); ImGui::PushFont(a.mono, 0); ImGui::Text(fmt, v...); ImGui::PopFont(); };
+    auto row = [&](const char* k, const char* fmt, auto... v) {   // a long value wraps under itself in a narrow tab
+        ImGui::TextDisabled("%s", k); ImGui::SameLine(std::min(190 * gUi, ImGui::GetContentRegionAvail().x * 0.45f));
+        ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::Text(fmt, v...); ImGui::PopTextWrapPos(); ImGui::PopFont();
+    };
     row("frame sync", "%s", d.state == 2 ? "locked" : "searching");
     row("phase reference", "correlation peak %.0f times the noise floor", d.cirPeak);
     row("carrier offset", "%+.1f Hz", d.cfoHz);
@@ -353,7 +360,7 @@ void dabEnsembleTab(App& a) {
 void dabScanTab(App& a) {
     App::DabScan& s = a.dabScan;
     const bool run = a.engine.running();
-    ImGui::TextDisabled("Tunes through the 38 Band III channels (5A to 13F) and lists the ensembles with their stations. About a minute.");
+    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Tunes through the 38 Band III channels (5A to 13F) and lists the ensembles with their stations. About a minute."); ImGui::PopTextWrapPos(); }
     ImGui::Spacing();
     if (!s.running) {
         ImGui::BeginDisabled(!run);
@@ -377,7 +384,7 @@ void dabScanTab(App& a) {
         for (size_t i = 0; i < s.results.size(); i++) {
             const auto& r = s.results[i];
             if (!r.found) continue;
-            ImGui::TableNextRow(ImGuiTableRowFlags_None, 26);
+            ImGui::TableNextRow(ImGuiTableRowFlags_None, 26 * gUi);
             ImGui::TableNextColumn();
             ImGui::PushID((int)i);
             if (ImGui::Selectable(r.name.c_str(), false, ImGuiSelectableFlags_SpanAllColumns)) {

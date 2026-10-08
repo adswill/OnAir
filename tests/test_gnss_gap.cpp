@@ -2,14 +2,17 @@
 // phase of every channel jump, the channels are lost and found again, and the fix comes back. (2) Later 5 ms of zeros (a glitch that keeps the timeline):
 // the loops ride through. (3) reset() in the middle of a run: everything is forgotten, the report numbers keep growing, the fix is made again.
 #include "dect2/gnss_testkit.h"
+#include "dect2/test_parallel.h"
 #include <cmath>
 #include <cstdio>
 using namespace dect2;
 using namespace dect2::gnsstest;
-static int fails = 0;
-#define CHECK(c, ...) do { if (!(c)) { printf("FAIL line %d: ", __LINE__); printf(__VA_ARGS__); printf("\n"); fails++; } } while (0)
+using dect2::testpar::CaseOut;
+// every case runs on its own thread and prints through `out`, so that the log keeps the order of the cases
+#define CHECK(c, ...) do { if (!(c)) out.fail(__LINE__, __VA_ARGS__); } while (0)
 
-int main() {
+// (1) the two dropouts
+static void dropouts(CaseOut& out) {
     {
         GnssSimConfig cfg;
         GnssSim sim(cfg, 4e6);
@@ -44,7 +47,7 @@ int main() {
         }
         double hz = 0, vt = 0;
         if (t.fix.valid) fixError(sim, t.fix, &hz, &vt);
-        printf("gap of 3.3 ms at 30 s: %d satellite events in the log; frame sync on 5 satellites again at %.0f s; at 52 s: %s, error %.2f / %.2f m, %u fixes, %d satellites tracked of %d\n", lostAtGap, fixBack,
+        out.print("gap of 3.3 ms at 30 s: %d satellite events in the log; frame sync on 5 satellites again at %.0f s; at 52 s: %s, error %.2f / %.2f m, %u fixes, %d satellites tracked of %d\n", lostAtGap, fixBack,
                gnssSummary(t).c_str(), hz, vt, t.fix.fixCount, t.nTracked, nTx);
         CHECK(fixBefore > 0, "no fix before the gap");
         CHECK(t.fix.valid && t.fix.nSats >= nTx - 2, "no fix at the end (%d satellites)", t.fix.nSats);
@@ -53,6 +56,10 @@ int main() {
         CHECK(fixBack > 0 && fixBack < 50.0, "the satellites were not framed again in time (%.0f s): the receiver needs about 16 s after a gap (acquisition, bit sync, the next whole subframe)", fixBack);
         CHECK(t.nTracked >= nTx - 1, "%d of %d tracked at the end", t.nTracked, nTx);
     }
+}
+
+// (3) reset in the middle
+static void resetMiddle(CaseOut& out) {
     {
         // reset in the middle
         GnssSimConfig cfg;
@@ -78,13 +85,18 @@ int main() {
         const GnssTelemetry& t = r.tel;
         double hz = 0, vt = 0;
         if (t.fix.valid) fixError(sim, t.fix, &hz, &vt);
-        printf("reset at 3 s: report number %llu before, %llu at 4 s, %llu at the end; %s, error %.2f / %.2f m\n", (unsigned long long)seqBefore, (unsigned long long)seqAfter, (unsigned long long)t.seq, gnssSummary(t).c_str(), hz, vt);
+        out.print("reset at 3 s: report number %llu before, %llu at 4 s, %llu at the end; %s, error %.2f / %.2f m\n", (unsigned long long)seqBefore, (unsigned long long)seqAfter, (unsigned long long)t.seq, gnssSummary(t).c_str(), hz, vt);
         CHECK(seqAfter > seqBefore, "the report numbers must keep growing through a reset (%llu then %llu)", (unsigned long long)seqBefore, (unsigned long long)seqAfter);
         CHECK(t.fix.valid && t.fix.nSats >= nTx - 2, "no fix after the reset (%d satellites)", t.fix.nSats);
         CHECK(hz < 15.0 && std::fabs(vt) < 25.0, "position error %.1f / %.1f m after the reset", hz, vt);
         // the clock of the receiver started again: the first fix comes about 26 s after the reset's signal start... the stream time restarts at the reset
         CHECK(t.fix.firstFixSecs > 20.0 && t.fix.firstFixSecs < 30.0, "first fix %.1f s after the reset", t.fix.firstFixSecs);
     }
+}
+
+int main() {
+    // the two runs share nothing: side by side, the log keeps the order
+    const int fails = dect2::testpar::runCases(2, [](size_t i, CaseOut& out) { if (i == 0) dropouts(out); else resetMiddle(out); });
     if (fails) { printf("%d failure(s)\n", fails); return 1; }
     printf("OK\n");
     return 0;

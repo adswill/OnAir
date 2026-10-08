@@ -41,7 +41,7 @@ bool fmFrequencyCombo(App& a) {
     int cur = -1;
     for (size_t i = 0; i < a.fmScan.results.size(); i++) if (a.fmScan.results[i].found && std::fabs(a.fmScan.results[i].mhz - a.freqMhz) < 0.05) cur = (int)i;
     snprintf(lbl, sizeof lbl, cur >= 0 ? "%s" : "Stations", cur >= 0 ? fmStationLabel(a.fmScan.results[(size_t)cur]).c_str() : "");
-    ImGui::SetNextItemWidth(190 * gUi);
+    ImGui::SetNextItemWidth(std::min(190 * gUi, ImGui::GetContentRegionAvail().x));   // no wider than the side panel
     if (ImGui::BeginCombo("##fmsta", lbl)) {
         bool any = false;
         for (size_t i = 0; i < a.fmScan.results.size(); i++) {
@@ -65,21 +65,17 @@ void fmStatus(App& a) {
     const FmTelemetry& fm = a.rx.fm;
     const bool live = run && a.rx.standard == 6;
     const AdcStatus adc = classifyAdc(st.rmsDbfs, st.peak, st.clipFraction);
-    {
-        const ImVec2 p = ImGui::GetCursorScreenPos();
-        const float h = ImGui::GetFrameHeight() * 2.f + ImGui::GetStyle().ItemSpacing.y * 2.f;
-        ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(p.x - 4, p.y - 2), ImVec2(p.x + ImGui::GetContentRegionAvail().x + 4, p.y + h), IM_COL32(22, 23, 25, 255), 3.f);
-    }
-    lamp("IQ", run ? (adc == AdcStatus::Overload ? 3 : (adc == AdcStatus::Good ? 1 : 2)) : 0, (int)Ic::Wave); ImGui::SameLine(0, 12 * gUi);
-    lamp("Carrier", !live ? 0 : fm.state == 2 ? 1 : fm.state == 1 ? 2 : 0); ImGui::SameLine(0, 12 * gUi);
-    lamp("Stereo", !live ? 0 : fm.stereo ? 1 : fm.carrier ? 2 : 0, (int)Ic::Speaker); ImGui::SameLine(0, 12 * gUi);
-    lamp("RDS", !live ? 0 : fm.rdsSync && fm.rdsBlockOkPct >= 60 ? 1 : fm.rdsSync ? 2 : 0); ImGui::SameLine(0, 10 * gUi);
-    ImGui::TextDisabled("|"); ImGui::SameLine(0, 10 * gUi);
+    StatusPanel panel;   // a tinted panel behind the status lines (they wrap in a narrow window)
+    lamp("IQ", run ? (adc == AdcStatus::Overload ? 3 : (adc == AdcStatus::Good ? 1 : 2)) : 0, (int)Ic::Wave); flowNext(12 * gUi);
+    lamp("Carrier", !live ? 0 : fm.state == 2 ? 1 : fm.state == 1 ? 2 : 0); flowNext(12 * gUi);
+    lamp("Stereo", !live ? 0 : fm.stereo ? 1 : fm.carrier ? 2 : 0, (int)Ic::Speaker); flowNext(12 * gUi);
+    lamp("RDS", !live ? 0 : fm.rdsSync && fm.rdsBlockOkPct >= 60 ? 1 : fm.rdsSync ? 2 : 0); flowNext(10 * gUi);
+    ImGui::TextDisabled("|"); flowNext(10 * gUi);
     auto ro = [&](const char* label, const std::string& val, ImVec4 col = ImVec4(0.93f, 0.95f, 0.97f, 1)) {
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled("%s", label); ImGui::SameLine(0, 5 * gUi);
         ImGui::PushFont(a.mono, 0); ImGui::TextColored(col, "%s", val.c_str()); ImGui::PopFont();
-        ImGui::SameLine(0, 15 * gUi);
+        flowNext(15 * gUi);
     };
     char b[96];
     if (!run) ro("State", "stopped", ImVec4(0.6f, 0.64f, 0.68f, 1));
@@ -92,7 +88,7 @@ void fmStatus(App& a) {
         const std::string ps = fmTrim(fm.psName);
         if (!ps.empty()) ro("Station", ps);
     }
-    ImGui::NewLine();
+    flowBreak();
     if (live && fm.state >= 1) {
         snprintf(b, sizeof b, "%.1f dB", fm.snrDb); ro("SNR", b);
         snprintf(b, sizeof b, "%.0f kHz", fm.devKhz); ro("Deviation", b, fm.devKhz > 80 ? ImVec4(0.95f, 0.70f, 0.15f, 1) : ImVec4(0.93f, 0.95f, 0.97f, 1));
@@ -108,7 +104,7 @@ void fmStatus(App& a) {
         gaugePill(130, run ? (st.rmsDbfs + 60.f) / 60.f : 0.f, col, b);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("ADC level of the whole captured band (rms). %s\npeak %.2f   clip %.3f%%   DC %+.3f / %+.3f", adcAdvice(adc).c_str(), st.peak, st.clipFraction * 100, st.dcI, st.dcQ);
     }
-    ImGui::SameLine(0, 15 * gUi);
+    flowNext(15 * gUi);
     ImGui::AlignTextToFramePadding();
     iconInline(Ic::Signal, iconDim(), 0.9f); ImGui::SameLine(0, 4 * gUi); ImGui::TextDisabled("Signal"); ImGui::SameLine(0, 5 * gUi);
     {
@@ -119,15 +115,15 @@ void fmStatus(App& a) {
         gaugePill(130, t, col, b);
         if (ImGui::IsItemHovered() && live) ImGui::SetTooltip("Audio signal-to-noise ratio %.1f dB (45 dB and up is studio-clean).\nChannel power %.1f dBFS.", fm.snrDb, fm.levelDbfs);
     }
-    ImGui::SameLine(0, 15 * gUi);
+    flowNext(15 * gUi);
     if (run) { snprintf(b, sizeof b, "%llu", (unsigned long long)a.engine.droppedSamples()); ro("dropped", b, a.engine.droppedSamples() ? ImVec4(0.95f, 0.45f, 0.3f, 1) : ImVec4(0.93f, 0.95f, 0.97f, 1)); }
     if (run && a.devices[a.devIdx].kind != DeviceInfo::File) {
         ImGui::AlignTextToFramePadding();
-        if (adc == AdcStatus::Overload) ImGui::TextColored(ImVec4(0.95f, 0.35f, 0.25f, 1), "ADC OVERLOAD - %s", a.agcOn ? "AGC is lowering the gain" : "reduce the gain (strong FM stations nearby)");
-        else if (adc == AdcStatus::Low) ImGui::TextColored(ImVec4(0.95f, 0.70f, 0.15f, 1), "ADC level low - raise the gain");
-        else if (adc == AdcStatus::NoSignal) ImGui::TextColored(ImVec4(0.95f, 0.70f, 0.15f, 1), "ADC sees almost nothing - antenna / gain?");
-        else ImGui::NewLine();
-    } else ImGui::NewLine();
+        if (adc == AdcStatus::Overload) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.35f, 0.25f, 1), "ADC OVERLOAD - %s", a.agcOn ? "AGC is lowering the gain" : "reduce the gain (strong FM stations nearby)"); ImGui::PopTextWrapPos(); }
+        else if (adc == AdcStatus::Low) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.70f, 0.15f, 1), "ADC level low - raise the gain"); ImGui::PopTextWrapPos(); }
+        else if (adc == AdcStatus::NoSignal) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.70f, 0.15f, 1), "ADC sees almost nothing - antenna / gain?"); ImGui::PopTextWrapPos(); }
+        else flowBreak();
+    } else flowBreak();
 }
 
 // ------------------------------------------------------------------ history, volume
@@ -167,7 +163,7 @@ void fmPanels(App& a) {
     const ImVec2 sq(sqW, sqW);        // the symbol plot stays square
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("Multiplex spectrum (kHz)");
+    captionFit(colW, "Multiplex spectrum (kHz)");
     if (plt::BeginPlot("##fmmpx", sz, plt::Flags_NoLegend | plt::Flags_NoTitle)) {
         plt::SetupAxes(nullptr, nullptr, 0, plt::AxisFlags_NoTickLabels);
         plt::SetupAxisLimits(plt::X1, 0, 80, plt::Cond_Always);
@@ -190,17 +186,17 @@ void fmPanels(App& a) {
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("RDS symbols (%zu)", fm.rdsConst.size());
+    captionFit(sqW, "RDS symbols (%zu)", fm.rdsConst.size());
     scatter("##fmrds", live ? fm.rdsConst : std::vector<cf32>(), sq, 2.6, pal::accent(0.40f));
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("Audio SNR (dB)");
+    captionFit(colW, "Audio SNR (dB)");
     historyPlot("##fmsnr", "dB", a.fmSnrH, sz);
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("RDS blocks ok (%%)");
+    captionFit(colW, "RDS blocks ok (%%)");
     historyPlot("##fmrdsh", "%", a.fmRdsH, sz);
     ImGui::EndGroup();
 }
@@ -216,7 +212,7 @@ void fmRadioPanel(App& a) {
         ImGui::TableSetupColumn("");
         auto row = [&](Ic ic, const char* k, const char* fmt, auto... v) {
             ImGui::TableNextRow(); ImGui::TableNextColumn(); iconInline(ic, iconDim(), 0.9f); ImGui::SameLine(0, 5 * gUi); ImGui::TextDisabled("%s", k);
-            ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0); ImGui::Text(fmt, v...); ImGui::PopFont();
+            ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::Text(fmt, v...); ImGui::PopTextWrapPos(); ImGui::PopFont();   // wraps in a narrow column
         };
         row(Ic::Antenna, "Frequency", "%.1f MHz", a.freqMhz);
         row(Ic::Radio, "Station", "%s", live && !fmTrim(fm.psName).empty() ? fmTrim(fm.psName).c_str() : "-");
@@ -228,7 +224,9 @@ void fmRadioPanel(App& a) {
         row(Ic::Warning, "Traffic", "%s", !live ? "-" : fm.trafficAlert ? "ANNOUNCEMENT" : fm.trafficProgram ? "station (TP)" : "no");
         ImGui::TableNextRow(); ImGui::TableNextColumn(); iconInline(Ic::Sliders, iconDim(), 0.9f); ImGui::SameLine(0, 5 * gUi); ImGui::TextDisabled("De-emphasis"); ImGui::TableNextColumn();
         ImGui::SetNextItemWidth(-1);
-        if (ImGui::BeginCombo("##fmde", a.fmDeemph == 75 ? "75 us (Americas)" : "50 us (Europe, Middle East)")) {
+        // a narrow list: the region in brackets goes first ("50 us"), the box keeps the value
+        const std::string de = fitCaption(a.fmDeemph == 75 ? "75 us (Americas)" : "50 us (Europe, Middle East)", ImGui::GetContentRegionAvail().x - ImGui::GetFrameHeight() - 2 * ImGui::GetStyle().FramePadding.x);
+        if (ImGui::BeginCombo("##fmde", de.c_str())) {
             if (ImGui::Selectable("50 us (Europe, Middle East)", a.fmDeemph == 50)) { a.fmDeemph = 50; savePrefs(a); }
             if (ImGui::Selectable("75 us (Americas, South Korea)", a.fmDeemph == 75)) { a.fmDeemph = 75; savePrefs(a); }
             ImGui::EndCombo();
@@ -261,7 +259,7 @@ void fmRadioPanel(App& a) {
         ImGui::BeginChild("##fmstations", ImVec2(0, 0));
         size_t found = 0;
         for (const auto& r : a.fmScan.results) if (r.found) found++;
-        if (!found) ImGui::TextDisabled("Run the band scan (Scan tab) to list stations.");
+        if (!found) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Run the band scan (Scan tab) to list stations."); ImGui::PopTextWrapPos(); }
         else if (ImGui::BeginTable("fmst", 3, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
             ImGui::TableSetupColumn("MHz", ImGuiTableColumnFlags_WidthFixed, 52 * gUi); ImGui::TableSetupColumn("Station"); ImGui::TableSetupColumn("SNR", ImGuiTableColumnFlags_WidthFixed, 44 * gUi);
             for (size_t i = 0; i < a.fmScan.results.size(); i++) {
@@ -330,7 +328,7 @@ void fmRadioTab(App& a) {
     sectionHeader(Ic::Radio, "Stations");
     size_t found = 0;
     for (const auto& r : a.fmScan.results) if (r.found) found++;
-    if (!found) { ImGui::TextDisabled("No stations listed yet. Start the receiver and run the band scan in the Scan tab."); return; }
+    if (!found) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("No stations listed yet. Start the receiver and run the band scan in the Scan tab."); ImGui::PopTextWrapPos(); } return; }
     if (ImGui::BeginTable("fmsta", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp)) {
         ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 34); ImGui::TableSetupColumn("MHz", ImGuiTableColumnFlags_WidthFixed, 80);
         ImGui::TableSetupColumn("Station"); ImGui::TableSetupColumn("Type"); ImGui::TableSetupColumn("SNR", ImGuiTableColumnFlags_WidthFixed, 70);
@@ -381,7 +379,7 @@ static double fmChannelDb(const SpectrumFrame& f, double fs, double offHz) {
 void fmScanTab(App& a) {
     App::FmScan& s = a.fmScan;
     const bool run = a.engine.running();
-    ImGui::TextDisabled("Surveys the FM band (87.5 - 108 MHz) for carriers, then listens to each one and reads its name. About two minutes.");
+    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Surveys the FM band (87.5 - 108 MHz) for carriers, then listens to each one and reads its name. About two minutes."); ImGui::PopTextWrapPos(); }
     ImGui::Spacing();
     if (!s.running) {
         ImGui::BeginDisabled(!run);
@@ -395,10 +393,10 @@ void fmScanTab(App& a) {
         ImGui::SameLine(0, 12 * gUi);
         float frac;
         if (s.phase == 0) {
-            ImGui::TextDisabled("surveying the band, step %d of %d", std::max(0, s.idx) + 1, kSurveyHops);
+            { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("surveying the band, step %d of %d", std::max(0, s.idx) + 1, kSurveyHops); ImGui::PopTextWrapPos(); }
             frac = 0.2f * (float)std::max(0, s.idx) / kSurveyHops;
         } else {
-            ImGui::TextDisabled("checking %.1f MHz (%d of %d)", s.idx >= 0 && s.idx < (int)s.cand.size() ? s.cand[(size_t)s.idx] : 0.0, s.idx + 1, (int)s.cand.size());
+            { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("checking %.1f MHz (%d of %d)", s.idx >= 0 && s.idx < (int)s.cand.size() ? s.cand[(size_t)s.idx] : 0.0, s.idx + 1, (int)s.cand.size()); ImGui::PopTextWrapPos(); }
             frac = 0.2f + 0.8f * (float)std::max(0, s.idx) / std::max<size_t>(1, s.cand.size());
         }
         ImGui::ProgressBar(frac, ImVec2(220, ImGui::GetFrameHeight() - 6));

@@ -22,6 +22,11 @@ constexpr double kGpsFsOut = 4.096e6;
 constexpr int kGpsN = 4096;
 constexpr int kMaxChannels = 24;
 constexpr size_t kBlock = 16384;
+// The search: a static receiver sees the satellites within +-5 kHz of the radio's own frequency error; that error is up to 2 kHz with a TCXO,
+// 31 kHz on a HackRF (20 ppm) and 160 kHz on a dongle without one (100 ppm). The windows widen in that order while nothing is found.
+constexpr double kSatDopplerHz = 5500.0;
+constexpr double kMidHz = 45000.0, kWideHz = 170000.0;
+constexpr int kShortMs = 16, kLongMs = 64;
 
 struct SatNav {
     GpsEphemeris eph;            // the complete, consistent ephemeris
@@ -32,6 +37,8 @@ struct SatNav {
     GpsAlmanac alm;
     double ephSignalTime = 0;    // signal time when it was received
     int towLast = -1;
+    int lastSfId = 0;            // the last subframe received and when (for the time left until the ephemeris is complete)
+    double lastSfTime = -1;
 };
 
 double cpuNow() {
@@ -53,7 +60,9 @@ struct GnssReceiver::Impl {
     std::atomic<double> centerMhz{1575.42};
     std::atomic<unsigned> sysMask{0xFFFFFFFFu};
     std::atomic<int> weekRef{0};
-    std::atomic<double> dopHalf{8000.0};
+    std::atomic<double> dopHalf{10000.0};
+    std::atomic<double> cfoHintHz{0};
+    std::atomic<bool> cfoHintValid{false};
     std::atomic<int> acqRate{10};
     std::atomic<double> elMask{5.0};
     std::atomic<double> hintLat{0}, hintLon{0};
@@ -101,6 +110,15 @@ struct GnssReceiver::Impl {
     bool clockSet = false;
     double clockOffset = 0;
     double cfoEst = 0, driftEst = 0;
+    bool cfoValid = false;
+    // the search plan: the stage of widening while nothing is found, and the last frequency error that worked
+    int stage = 0;
+    uint32_t stageRounds = 0;
+    int roundHits = 0, lastRoundHits = 0;   // finds in the round in progress and in the last one
+    bool longRound = false;
+    double lastCfo = 0;
+    bool lastCfoValid = false;
+    double firstLock = -1;
     std::vector<GnssMeasurement> lastMeas;
     std::vector<int> predictedVisible;
     bool havePredicted = false;
@@ -138,7 +156,9 @@ struct GnssReceiver::Impl {
             if (!gpsActive || std::fabs(gpsBand.offsetHz() - off) > 1.0 || lastRate != rate) {
                 gpsBand.init(rate, off, kGpsFsOut, (size_t)1 << 19);
                 GnssAcqConfig ac;
-                ac.sys = GnssGps; ac.fftLog2 = 12; ac.fsOut = kGpsFsOut; ac.blocks = 16;
+                ac.sys = GnssGps; ac.fftLog2 = 12; ac.fsOut = kGpsFsOut; ac.blocks = kShortMs; ac.rfHz = kGpsL1Hz;
+                // a false alarm costs little: the hit is looked for again (confirm) and a channel that does not lock gives up
+                ac.pfa = 1e-3;
                 const int q = (int)std::ceil(dopHalf.load() / 1000.0);
                 ac.qMin = -q; ac.qMax = q - 1;
                 for (int p = 1; p <= 32; p++) ac.prns.push_back(p);
@@ -153,6 +173,7 @@ struct GnssReceiver::Impl {
                     return true;
                 };
                 gpsAcq.init(ac);
+                stage = 0; stageRounds = 0;
                 for (int p = 1; p <= 32; p++) gpsCaChips(p, gpsChips[p]);
                 gpsSpec.sys = GnssGps; gpsSpec.chipRate = kGpsCaChipRate; gpsSpec.codeLen = kGpsCaLen; gpsSpec.rfHz = kGpsL1Hz; gpsSpec.fsOut = kGpsFsOut; gpsSpec.halfSpacing = 2;
                 trackers.clear();
@@ -177,7 +198,8 @@ struct GnssReceiver::Impl {
         for (auto& s : sat) s = SatNav();
         iono = GpsIono(); utc = GpsUtc(); almToa = -1; almWna = -1; almGot = false;
         fix = GnssFix(); clockSet = false; hasPrior = false; nextMeas = 1.0; fixCount = 0; firstFix = -1; lastFixSignal = -1;
-        okRetired = badRetired = 0; cfoEst = driftEst = 0;
+        okRetired = badRetired = 0; cfoEst = driftEst = 0; cfoValid = false;
+        stage = 0; stageRounds = 0; firstLock = -1; roundHits = lastRoundHits = 0; longRound = false;
         for (auto& s : sol) s = SolInfo();
         nextReport = 0.25; acqCredit = 0; havePredicted = false;
         tel = GnssTelemetry(); telReady = false;
@@ -193,8 +215,8 @@ struct GnssReceiver::Impl {
         if (trackers.size() >= (size_t)kMaxChannels || tracked(found.prn)) return;
         // the hit is old: look again in the newest samples
         GnssAcqHit h;
-        units += 48;
-        if (!gpsAcq.confirm(gpsBand, found.prn, found.dopplerHz, &h)) return;
+        units += (uint64_t)(6 * std::max(8, found.blocks));
+        if (!gpsAcq.confirm(gpsBand, found.prn, found.dopplerHz, found.blocks, &h)) return;
         auto t = std::make_unique<GnssTracker>();
         const double rc = (kGpsCaChipRate + h.dopplerHz * kGpsCaChipRate / kGpsL1Hz) / kGpsFsOut;
         int64_t idx = gpsBand.end() - 3 * kGpsN;
@@ -212,6 +234,7 @@ struct GnssReceiver::Impl {
         SatNav& s = sat[t.prn];
         const unsigned id = lnavSubframeId(ev.sf);
         s.towLast = (int)ev.towStart;
+        s.lastSfId = (int)id; s.lastSfTime = signalNow;
         if (id == 1 || id == 2 || id == 3) {
             if (s.pend.prn != t.prn) { s.pend = GpsEphemeris(); s.pend.prn = t.prn; }
             if (id == 1) { lnavParseSf1(ev.sf, s.pend); s.pendWeek = gpsResolveWeek(s.pend.wn, referenceWeek()); }
@@ -241,7 +264,10 @@ struct GnssReceiver::Impl {
             const bool wasLocked = t->carrierLocked(), wasBit = t->bitSynced(), wasFrame = t->frameSynced();
             const uint64_t okBefore = t->framesOk();
             while (t->step(gpsBand)) {}
-            if (t->carrierLocked() && !wasLocked) { char b[100]; snprintf(b, sizeof b, "%s locked, %.0f dB-Hz", satName(t->sys, t->prn).c_str(), t->cn0()); logf(b); }
+            if (t->carrierLocked() && !wasLocked) {
+                char b[100]; snprintf(b, sizeof b, "%s locked, %.0f dB-Hz", satName(t->sys, t->prn).c_str(), t->cn0()); logf(b);
+                if (firstLock < 0) firstLock = signalNow;
+            }
             if (t->bitSynced() && !wasBit) logf(satName(t->sys, t->prn) + " bit sync");
             if (t->frameSynced() && !wasFrame) logf(satName(t->sys, t->prn) + " frame sync");
             (void)okBefore;
@@ -251,6 +277,8 @@ struct GnssReceiver::Impl {
         for (size_t i = 0; i < trackers.size();) {
             if (trackers[i]->lost()) {
                 okRetired += trackers[i]->framesOk(); badRetired += trackers[i]->framesBad();
+                // a lost satellite is found again sooner by a short round than at the end of a long one
+                if (longRound && trackers[i]->lockSeconds() > 0.5) { gpsAcq.endRound(); longRound = false; }
                 logf(satName(trackers[i]->sys, trackers[i]->prn) + (trackers[i]->wasPullInTimeout() ? " not confirmed" : " lost"));
                 trackers.erase(trackers.begin() + (long)i);
             } else i++;
@@ -264,15 +292,64 @@ struct GnssReceiver::Impl {
         return false;
     }
 
+    // Where and how long to search next. With satellites locked the radio's error lies within 5.5 kHz of each of their Dopplers, so the others are within
+    // 11 kHz of all of them; with a fix it is measured. With nothing locked the window widens round by round (TCXO, HackRF, cheap dongle), then the
+    // same with a four times longer integration for weak signals, and starts over.
+    void planSearch() {
+        double lo = 1e18, hi = -1e18;
+        int nLocked = 0, nPull = 0;
+        for (auto& t : trackers) {
+            if (t->carrierLocked()) { lo = std::min(lo, t->dopplerHz()); hi = std::max(hi, t->dopplerHz()); nLocked++; }
+            else nPull++;
+        }
+        const uint32_t r = gpsAcq.rounds();
+        double c = 0, h = dopHalf.load();
+        int ms = kShortMs;
+        const bool newRound = r != stageRounds;
+        if (newRound) { lastRoundHits = roundHits; roundHits = 0; }
+        if (nLocked > 0) {
+            if (fix.valid && cfoValid) { c = cfoEst; h = kSatDopplerHz + 1000.0; }
+            else { c = 0.5 * (lo + hi); h = std::max(kSatDopplerHz, 2 * kSatDopplerHz - 0.5 * (hi - lo)) + 500.0; }
+            lastCfo = c; lastCfoValid = true;
+            stage = 0; stageRounds = r;
+            // a long round for the weak satellites once a short one finds nothing new (a short round finds the strong ones, and the lost ones again, sooner)
+            if (newRound) longRound = !longRound && lastRoundHits == 0;
+            if (longRound) ms = kLongMs;
+        } else {
+            longRound = false;
+            if (newRound) {
+                stageRounds = r;
+                if (nPull == 0) {
+                    stage = (stage + 1) % 6;
+                    static const char* what[6] = {"", "+-45 kHz (a radio without a TCXO, such as a HackRF)", "+-170 kHz (a dongle without a TCXO)",
+                                                   "with a 64 ms integration for weak signals", "+-45 kHz with a 64 ms integration", "+-170 kHz with a 64 ms integration"};
+                    if (stage > 0) logf(std::string("nothing found yet: searching ") + what[stage]);
+                }
+            }
+            const int st = stage % 3;
+            if (st == 0) {
+                // the frequency error that worked before (this run, or the one remembered for this radio)
+                if (lastCfoValid) c = lastCfo; else if (cfoHintValid.load()) c = cfoHintHz.load();
+            } else h = st == 1 ? kMidHz : kWideHz;
+            if (stage >= 3) ms = kLongMs;
+        }
+        gpsAcq.setPlan(c, h, ms);
+    }
+
     void runAcq(double seconds) {
         if (!gpsActive) return;
-        // search less when the satellites expected in view are all tracked
-        acqCredit = std::min(acqCredit + seconds * 1000.0 * (double)acqRate.load(), 600.0);
+        planSearch();
+        int nLocked = 0;
+        for (auto& t : trackers) nLocked += t->carrierLocked();
+        // search less when the satellites expected in view are all tracked; harder while nothing is tracked (the channels cost nothing then)
+        const double rateNow = (double)acqRate.load() * (nLocked == 0 ? 2.0 : 1.0);
+        acqCredit = std::min(acqCredit + seconds * 1000.0 * rateNow, 600.0);
         if (acqCredit < 8) return;
         std::vector<GnssAcqHit> hits;
         const int used = gpsAcq.work(gpsBand, (int)acqCredit, [this](int p) { return skipPrn(p); }, hits);
         acqCredit -= used;
         units += (uint64_t)used;
+        roundHits += (int)hits.size();
         for (auto& h : hits) startFromHit(h);
     }
 
@@ -420,6 +497,7 @@ struct GnssReceiver::Impl {
             std::sort(res.begin(), res.end());
             const double med = res[res.size() / 2];
             cfoEst = med;
+            cfoValid = true;
             driftEst = -med / kGpsL1Hz * kC;
         }
     }
@@ -494,6 +572,17 @@ struct GnssReceiver::Impl {
             }
             ni.hasAlmanac = s.alm.valid;
             ni.towS = s.towLast;
+            // subframes 1, 2, 3 come every 30 s, 6 s apart: the time left is until the last missing one has arrived
+            if (s.hasEph) { ni.ephParts = 3; ni.ephEtaS = 0; }
+            else {
+                const bool has[4] = {false, s.pend.prn == tr->prn && s.pend.has1, s.pend.prn == tr->prn && s.pend.has2, s.pend.prn == tr->prn && s.pend.has3};
+                ni.ephParts = (int)has[1] + (int)has[2] + (int)has[3];
+                if (s.lastSfTime >= 0 && s.lastSfId >= 1 && tr->frameSynced()) {
+                    double wait = 0;
+                    for (int j = 1; j <= 3; j++) if (!has[j]) { int k = (j - s.lastSfId + 5) % 5; if (k == 0) k = 5; wait = std::max(wait, 6.0 * k); }
+                    ni.ephEtaS = (float)std::max(0.0, wait - (signalNow - s.lastSfTime));
+                }
+            }
             t.nav.push_back(ni);
         }
         t.blocksOk = ok; t.blocksBad = bad;
@@ -533,6 +622,10 @@ struct GnssReceiver::Impl {
         t.searchProgress = gpsAcq.progress(); t.searchRounds = gpsAcq.rounds();
         t.acqSys = GnssGps; t.acqPrn = gpsAcq.lastPrn(); t.acqDopplerHz = (float)gpsAcq.lastDoppler(); t.acqPeakToNoise = gpsAcq.lastRatio();
         t.acqCorr = gpsAcq.lastCorr(); t.acqPeakIndex = gpsAcq.lastPeakIndex();
+        t.searchCenterHz = (float)gpsAcq.windowCenterHz(); t.searchHalfHz = (float)gpsAcq.windowHalfHz(); t.searchMs = gpsAcq.blocksNow();
+        t.searchStage = t.nTracked > 0 ? 0 : stage;
+        for (auto& tr : trackers) t.nPullIn += !tr->carrierLocked();
+        t.firstLockSecs = firstLock;
         // scatter of the strongest locked channel
         for (auto* tr : order) {
             if (!tr->carrierLocked() || tr->scatter().size() < 20) continue;
@@ -666,6 +759,7 @@ void GnssReceiver::setCenterMhz(double mhz) { p_->centerMhz = mhz; p_->settingsG
 void GnssReceiver::setSystems(unsigned mask) { p_->sysMask = mask; p_->settingsGen++; }
 void GnssReceiver::setWeekReference(int w) { p_->weekRef = w; }
 void GnssReceiver::setSearchRange(double hz) { p_->dopHalf = hz; p_->settingsGen++; p_->lastRate = 0; }
+void GnssReceiver::setFrequencyHint(double hz, bool valid) { p_->cfoHintHz = hz; p_->cfoHintValid = valid; }
 void GnssReceiver::setAcquisitionRate(int u) { p_->acqRate = std::max(1, u); }
 void GnssReceiver::setApproxPosition(double lat, double lon, bool valid) { p_->hintLat = lat; p_->hintLon = lon; p_->hintValid = valid; }
 void GnssReceiver::setElevationMask(double deg) { p_->elMask = deg; }

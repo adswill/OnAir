@@ -2,6 +2,7 @@
 // the correlator plots and the options of the test signal.
 #include "app.h"
 #include "adsb_map.h"
+#include <cctype>
 #include <cmath>
 #include <deque>
 
@@ -20,6 +21,8 @@ struct State {
     double pushedCenter = 0, pushedMask = -1;
     double elMask = 5;
     std::deque<float> tracked, used;             // satellites per report, for the history plot
+    bool pushedHint = false;                     // the remembered frequency error of this radio has been given to the receiver
+    double savedCfo = 0, savedAt = -1e9;         // the last value written to the settings, and the signal time of that
 };
 State S;
 
@@ -32,6 +35,16 @@ void loadState() {
     S.map.zoom = (int)d.getI("gnssZoom", 10);
     S.map.online = d.getB("adsbMap", true);     // the same switch as the ADS-B map: one choice about fetching tiles
     S.elMask = d.getD("gnssElMask", 5.0);
+}
+
+// The settings key of the frequency error remembered for the radio in use ("" for the test signal and files: nothing to remember)
+std::string cfoKey(const App& a) {
+    if (a.devIdx < 0 || a.devIdx >= (int)a.devices.size()) return "";
+    const DeviceInfo& d = a.devices[(size_t)a.devIdx];
+    if (!d.isRadio()) return "";
+    std::string k = "gnssCfo_";
+    for (char c : d.board + "_" + d.serial + "_" + d.name) k += std::isalnum((unsigned char)c) ? c : '_';
+    return k.substr(0, 96);
 }
 
 // colours of the systems, used for the dots, bars and names
@@ -60,14 +73,27 @@ void tick(App& a) {
         GnssReceiver& r = a.engine.gnss();
         if (S.pushedCenter != a.freqMhz) { r.setCenterMhz(a.freqMhz); S.pushedCenter = a.freqMhz; }
         if (S.pushedMask != S.elMask) { r.setElevationMask(S.elMask); S.pushedMask = S.elMask; }
+        if (!S.pushedHint) {
+            // a radio's frequency error changes little from one run to the next: the search starts where it was
+            S.pushedHint = true;
+            const std::string k = cfoKey(a);
+            if (!k.empty() && plat::prefs().has(k.c_str())) r.setFrequencyHint(plat::prefs().getD(k.c_str(), 0.0), true);
+            else r.setFrequencyHint(0, false);
+        }
     } else {
-        S.pushedCenter = 0; S.pushedMask = -1;
+        S.pushedCenter = 0; S.pushedMask = -1; S.pushedHint = false; S.savedAt = -1e9;
     }
     if (live(a) && a.rx.seq != S.lastSeq) {
         S.lastSeq = a.rx.seq;
         const GnssTelemetry& t = a.rx.gnss;
         S.tracked.push_back((float)t.nTracked); if (S.tracked.size() > 240) S.tracked.pop_front();
         S.used.push_back((float)(t.fix.valid ? t.fix.nSats : 0)); if (S.used.size() > 240) S.used.pop_front();
+        // remember the frequency error measured with a fix, now and then (it drifts while the radio warms up)
+        if (t.fix.valid && t.fix.nSats >= 4 && (t.signalSecs - S.savedAt > 60 || std::fabs(t.cfoHz - S.savedCfo) > 500)) {
+            const std::string k = cfoKey(a);
+            if (!k.empty()) { plat::prefs().setD(k.c_str(), t.cfoHz); savePrefs(a); }
+            S.savedCfo = t.cfoHz; S.savedAt = t.signalSecs;
+        }
         if (t.fix.valid && t.fix.fixCount != S.lastFixCount) {
             S.lastFixCount = t.fix.fixCount;
             S.fixes.push_back({t.fix.latDeg, t.fix.lonDeg, t.fix.heightM});
@@ -79,6 +105,8 @@ void tick(App& a) {
 }
 
 // ---------------------------------------------------------------- drawing pieces
+
+std::vector<std::string> progressLines(const GnssTelemetry& t);
 
 // The sky seen from the antenna: the zenith in the middle, the horizon at the edge, north up, a ring every 30 degrees of elevation.
 void skyPlot(const GnssTelemetry& t, bool on, ImVec2 size) {
@@ -147,7 +175,8 @@ void signalBars(const GnssTelemetry& t, bool on, ImVec2 size) {
         dl->AddText(ImVec2(p0.x + 2 * gUi, y - ImGui::GetTextLineHeight() * 0.5f), IM_COL32(90, 94, 98, 255), b);
     }
     if (!on || t.channels.empty()) {
-        dl->AddText(ImVec2(p0.x + 30 * gUi, p0.y + top), IM_COL32(150, 154, 158, 255), on ? "searching for satellites" : "C/N0 in dB-Hz of every tracked satellite");
+        const std::vector<std::string> pl = on ? progressLines(t) : std::vector<std::string>();
+        dl->AddText(ImVec2(p0.x + 30 * gUi, p0.y + top), IM_COL32(150, 154, 158, 255), on ? (pl.empty() ? "searching for satellites" : pl[0].c_str()) : "C/N0 in dB-Hz of every tracked satellite");
         return;
     }
     std::vector<const GnssChannel*> ch;
@@ -170,6 +199,46 @@ void signalBars(const GnssTelemetry& t, bool on, ImVec2 size) {
     }
 }
 
+// What the receiver is doing now and what comes next, in a few plain lines: a cold start takes a while (finding the satellites, then about 30 s of
+// navigation data from each of four), and without this the screen looks stuck.
+std::vector<std::string> progressLines(const GnssTelemetry& t) {
+    std::vector<std::string> out;
+    char b[200];
+    if (t.activeMask == 0) {
+        snprintf(b, sizeof b, "GPS L1 does not fit at %.3f MHz and %.2f Msps: tune to 1575.42 MHz with at least 2.05 Msps", t.centerMhz, t.inputRate / 1e6);
+        out.push_back(b);
+        return out;
+    }
+    if (t.nTracked == 0) {
+        snprintf(b, sizeof b, "Searching %s %02d (%d %% of round %u): %+.0f to %+.0f kHz, %d ms", gnssSystemName(t.searchSys), t.searchPrn, (int)(t.searchProgress * 100), t.searchRounds + 1,
+                 (t.searchCenterHz - t.searchHalfHz) / 1e3, (t.searchCenterHz + t.searchHalfHz) / 1e3, t.searchMs);
+        out.push_back(b);
+        if (t.nPullIn > 0) { snprintf(b, sizeof b, "%d satellite%s found, locking on", t.nPullIn, t.nPullIn == 1 ? "" : "s"); out.push_back(b); }
+        else if (t.searchStage == 1 || t.searchStage == 2) out.push_back("Nothing in the first window: searching wider for the radio's frequency error (a HackRF or a dongle without a TCXO)");
+        else if (t.searchStage >= 3) out.push_back("Searching longer for weak signals");
+        if (t.signalSecs > 60 && t.nPullIn == 0)
+            out.push_back("Nothing after a minute: the antenna needs power (bias-tee or a powered LNA) and a clear view of the sky");
+    } else {
+        int withEph = 0, framed = 0;
+        float soonest = -1;
+        int soonPrn = 0, soonParts = 0;
+        for (const auto& n : t.nav) {
+            if (n.hasEphemeris) { withEph++; continue; }
+            if (n.ephEtaS >= 0) { framed++; if (soonest < 0 || n.ephEtaS < soonest) { soonest = n.ephEtaS; soonPrn = n.prn; soonParts = n.ephParts; } }
+        }
+        snprintf(b, sizeof b, "%d locked%s, %d with ephemeris (4 needed for a fix)", t.nTracked, t.nPullIn > 0 ? (", " + std::to_string(t.nPullIn) + " locking on").c_str() : "", withEph);
+        out.push_back(b);
+        if (!t.fix.valid) {
+            if (soonest >= 0) { snprintf(b, sizeof b, "Collecting ephemeris: G%02d %d/3 subframes, about %.0f s left (each satellite sends it every 30 s)", soonPrn, soonParts, soonest); out.push_back(b); }
+            else if (framed == 0 && withEph < 4) out.push_back("Waiting for the start of the navigation message (up to 6 s after the bit sync)");
+            if (withEph >= 4) out.push_back("Ephemeris complete: the fix comes with the next measurement");
+        }
+    }
+    if (t.levelDbfs < -45 && t.levelDbfs > -98) out.push_back("Very low input level: raise the gain (the noise should fill a few steps of the converter)");
+    else if (t.clipPercent > 1.0) out.push_back("The input clips: lower the gain");
+    return out;
+}
+
 std::string latText(double v) { char b[32]; snprintf(b, sizeof b, "%.6f %c", std::fabs(v), v >= 0 ? 'N' : 'S'); return b; }
 std::string lonText(double v) { char b[32]; snprintf(b, sizeof b, "%.6f %c", std::fabs(v), v >= 0 ? 'E' : 'W'); return b; }
 
@@ -178,11 +247,17 @@ void fixCard(const App& a) {
     const GnssTelemetry& t = a.rx.gnss;
     const bool on = live(a);
     const GnssFix& f = t.fix;
-    auto kv = [&](const char* k, const std::string& v) { ImGui::TextDisabled("%s", k); ImGui::SameLine(92 * gUi); ImGui::PushFont(a.mono, 0); ImGui::TextUnformatted(v.c_str()); ImGui::PopFont(); };
+    auto kv = [&](const char* k, const std::string& v) { ImGui::TextDisabled("%s", k); kvColumn(92 * gUi); ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::TextUnformatted(v.c_str()); ImGui::PopTextWrapPos(); ImGui::PopFont(); };
     char b[96];
     ImGui::PushStyleColor(ImGuiCol_Text, pal::heading());
-    ImGui::TextUnformatted(on && f.valid ? f.type.c_str() : on ? (t.nTracked > 0 ? "tracking, no fix yet" : "searching") : "stopped");
+    { ImGui::PushTextWrapPos(0); ImGui::TextUnformatted(on && f.valid ? f.type.c_str() : on ? (t.nTracked > 0 ? "tracking, no fix yet" : "searching") : "stopped"); ImGui::PopTextWrapPos(); }
     ImGui::PopStyleColor();
+    if (on && !f.valid) {
+        ImGui::PushTextWrapPos(0.f);
+        for (const auto& l : progressLines(t)) ImGui::TextDisabled("%s", l.c_str());
+        ImGui::PopTextWrapPos();
+        ImGui::Spacing();
+    }
     const bool v = on && f.valid;
     kv("latitude", v ? latText(f.latDeg) : "-");
     kv("longitude", v ? lonText(f.lonDeg) : "-");
@@ -241,7 +316,7 @@ void mapView(App& a, ImVec2 size) {
     plat::prefs().setI("gnssZoom", S.map.zoom);
     if (!on || !t.fix.valid) {
         ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + size.y - ImGui::GetTextLineHeight() - 6 * gUi));
-        ImGui::TextDisabled("%s", on ? "no fix yet" : "start the receiver");
+        adsbmap::legend(size.x, "%s", on ? "no fix yet" : "start the receiver");
     }
     ImGui::SetCursorScreenPos(ImVec2(p0.x, p0.y + size.y));
 }
@@ -250,7 +325,7 @@ void channelTable(const App& a, bool compact) {
     const GnssTelemetry& t = a.rx.gnss;
     const bool on = live(a);
     const int cols = compact ? 4 : 12;
-    if (!ImGui::BeginTable(compact ? "##gch_s" : "##gch_f", cols, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    if (!ImGui::BeginTable(compact ? "##gch_s" : "##gch_f", cols, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("Sat"); ImGui::TableSetupColumn("C/N0");
     if (!compact) { ImGui::TableSetupColumn("Doppler Hz"); ImGui::TableSetupColumn("Code chips"); ImGui::TableSetupColumn("Az"); ImGui::TableSetupColumn("El"); }
@@ -299,7 +374,7 @@ void acqPlot(const GnssTelemetry& t, bool on, ImVec2 size) {
     dl->AddPolyline(pts.data(), (int)n, ImGui::ColorConvertFloat4ToU32(pal::accent()), 0, 1.2f);
     char b[96];
     snprintf(b, sizeof b, "%s  %+.0f Hz  peak %.1f x noise", satName(t.acqSys, t.acqPrn).c_str(), t.acqDopplerHz, t.acqPeakToNoise);
-    dl->AddText(ImVec2(p0.x + 4 * gUi, p0.y + 2 * gUi), IM_COL32(170, 174, 178, 255), b);
+    dl->AddText(ImVec2(p0.x + 4 * gUi, p0.y + 2 * gUi), IM_COL32(170, 174, 178, 255), ellipsize(b, size.x - 8 * gUi).c_str());   // inside the plot
 }
 
 void promptScatter(const GnssTelemetry& t, bool on, ImVec2 size) {
@@ -359,20 +434,24 @@ void tab(App& a) {
 }
 
 void list(App& a) {
-    if (!live(a)) { ImGui::TextDisabled(a.engine.running() ? "starting" : "start the receiver to see satellites"); return; }
+    if (!live(a)) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(a.engine.running() ? "starting" : "start the receiver to see satellites"); ImGui::PopTextWrapPos(); } return; }
     const GnssTelemetry& t = a.rx.gnss;
-    ImGui::TextDisabled("%d tracked, %d in the fix", t.nTracked, t.fix.valid ? t.fix.nSats : 0);
+    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%d tracked, %d in the fix", t.nTracked, t.fix.valid ? t.fix.nSats : 0); ImGui::PopTextWrapPos(); }
     channelTable(a, true);
 }
 
 void receiver(App& a) {
     const GnssTelemetry& t = a.rx.gnss;
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
-    auto kv = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); ImGui::SameLine(130 * gUi); ImGui::PushFont(a.mono, 0); ImGui::Text(fmt, v...); ImGui::PopFont(); };
+    auto kv = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); kvColumn(130 * gUi); ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::Text(fmt, v...); ImGui::PopTextWrapPos(); ImGui::PopFont(); };
     std::string sys;
     for (int s = 0; s < GnssSystems; s++) if (t.activeMask & gnssSystemBit(s)) sys += std::string(sys.empty() ? "" : ", ") + gnssSystemName(s);
     kv("signals", "%s at %.3f MHz, %.3f Msps", sys.empty() ? "none in this band" : sys.c_str(), t.centerMhz, t.inputRate / 1e6);
     kv("search", "%s", t.searching ? (satName(t.searchSys, t.searchPrn) + ", " + std::to_string((int)(t.searchProgress * 100)) + " % of round " + std::to_string(t.searchRounds + 1)).c_str() : "idle");
+    kv("search window", "%+.1f kHz +- %.1f kHz, %d ms", t.searchCenterHz / 1e3, t.searchHalfHz / 1e3, t.searchMs);
+    if (t.fix.valid) kv("frequency error", "%+.0f Hz (%+.2f ppm), measured; remembered for this radio", t.cfoHz, t.cfoHz / 1575.42);
+    else kv("frequency error", "%s", t.nTracked > 0 ? "about the search centre until the fix" : "not known yet");
+    if (t.firstLockSecs >= 0) kv("first lock", "%.1f s", t.firstLockSecs);
     kv("navigation", "%llu frames good, %llu failed the parity", (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
     kv("almanac", "%d GPS satellites", t.almanacGps);
     kv("ionosphere", "%s", t.ionoValid ? "model from the satellites" : "not yet");
@@ -381,7 +460,7 @@ void receiver(App& a) {
     kv("signal time", "%.1f s", t.signalSecs);
     ImGui::Spacing();
     ImGui::TextDisabled("Navigation data");
-    if (ImGui::BeginTable("##gnav", 7, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) {
+    if (ImGui::BeginTable("##gnav", 7, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) {
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableSetupColumn("Sat"); ImGui::TableSetupColumn("Ephemeris"); ImGui::TableSetupColumn("IODE"); ImGui::TableSetupColumn("Age s");
         ImGui::TableSetupColumn("Week"); ImGui::TableSetupColumn("TOW s"); ImGui::TableSetupColumn("Clock us");
@@ -389,7 +468,10 @@ void receiver(App& a) {
         for (const auto& n : t.nav) {
             ImGui::TableNextRow();
             ImGui::TableNextColumn(); ImGui::TextUnformatted(satName(n.sys, n.prn).c_str());
-            ImGui::TableNextColumn(); ImGui::TextUnformatted(n.hasEphemeris ? "yes" : "collecting");
+            ImGui::TableNextColumn();
+            if (n.hasEphemeris) ImGui::TextUnformatted("yes");
+            else if (n.ephEtaS >= 0) ImGui::Text("%d/3, ~%.0f s", n.ephParts, n.ephEtaS);
+            else { ImGui::PushTextWrapPos(0); ImGui::TextUnformatted("waiting for the frame"); ImGui::PopTextWrapPos(); }
             ImGui::TableNextColumn(); if (n.iode >= 0) ImGui::Text("%d", n.iode); else ImGui::TextUnformatted("-");
             ImGui::TableNextColumn(); if (n.hasEphemeris) ImGui::Text("%.0f", n.ephAgeS); else ImGui::TextUnformatted("-");
             ImGui::TableNextColumn(); if (n.week >= 0) ImGui::Text("%d", n.week); else ImGui::TextUnformatted("-");
@@ -408,17 +490,17 @@ void panels(App& a) {
     const float sq = std::min(plotH, 170.f * gUi), rest = std::max(120.f, (W - 2 * sq - 4 * gap) / 2.f);
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + gap * 0.5f);
     ImGui::BeginGroup();
-    if (on && !t.scatterI.empty()) ImGui::TextDisabled("Prompt I/Q (%s)", satName(t.scatterSys, t.scatterPrn).c_str()); else ImGui::TextDisabled("Prompt I/Q");
+    if (on && !t.scatterI.empty()) captionFit(sq, "Prompt I/Q (%s)", satName(t.scatterSys, t.scatterPrn).c_str()); else captionFit(sq, "Prompt I/Q");   // never wider than the plot
     promptScatter(t, on, ImVec2(sq, plotH));
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("Search: correlation over one code period");
+    captionFit(rest, "Search: correlation over one code period");
     acqPlot(t, on, ImVec2(rest, plotH));
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("Satellites tracked (and in the fix)");
+    captionFit(rest, "Satellites tracked (and in the fix)");
     {
         std::vector<float> v(S.tracked.begin(), S.tracked.end()), u(S.used.begin(), S.used.end());
         if (v.empty()) { v.push_back(0); u.push_back(0); }
@@ -433,7 +515,7 @@ void panels(App& a) {
     ImGui::EndGroup();
     ImGui::SameLine(0, gap);
     ImGui::BeginGroup();
-    ImGui::TextDisabled("Position scatter");
+    captionFit(sq, "Position scatter");
     fixScatter(ImVec2(sq, plotH));
     ImGui::EndGroup();
 }
@@ -443,23 +525,19 @@ void status(App& a) {
     const GnssTelemetry& t = a.rx.gnss;
     const SignalStats& st = a.spec.stats;
     const AdcStatus adc = classifyAdc(st.rmsDbfs, st.peak, st.clipFraction);
-    {
-        const ImVec2 p = ImGui::GetCursorScreenPos();
-        const float h = ImGui::GetFrameHeight() * 2.f + ImGui::GetStyle().ItemSpacing.y * 2.f;
-        ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(p.x - 4, p.y - 2), ImVec2(p.x + ImGui::GetContentRegionAvail().x + 4, p.y + h), IM_COL32(22, 23, 25, 255), 3.f);
-    }
+    StatusPanel panel;   // a tinted panel behind the status lines (they wrap in a narrow window)
     int withEph = 0;
     if (on) for (const auto& n : t.nav) withEph += n.hasEphemeris;
-    lamp("IQ", run ? (adc == AdcStatus::Overload ? 3 : (adc == AdcStatus::Good ? 1 : 2)) : 0, (int)Ic::Wave); ImGui::SameLine(0, 12 * gUi);
-    lamp("Tracking", !on ? 0 : t.nTracked >= 4 ? 1 : t.nTracked > 0 ? 2 : 0); ImGui::SameLine(0, 12 * gUi);
-    lamp("Ephemeris", !on ? 0 : withEph >= 4 ? 1 : withEph > 0 ? 2 : 0); ImGui::SameLine(0, 12 * gUi);
-    lamp("Fix", !on ? 0 : t.fix.valid ? 1 : 0); ImGui::SameLine(0, 10 * gUi);
-    ImGui::TextDisabled("|"); ImGui::SameLine(0, 10 * gUi);
+    lamp("IQ", run ? (adc == AdcStatus::Overload ? 3 : (adc == AdcStatus::Good ? 1 : 2)) : 0, (int)Ic::Wave); flowNext(12 * gUi);
+    lamp("Tracking", !on ? 0 : t.nTracked >= 4 ? 1 : t.nTracked > 0 ? 2 : 0); flowNext(12 * gUi);
+    lamp("Ephemeris", !on ? 0 : withEph >= 4 ? 1 : withEph > 0 ? 2 : 0); flowNext(12 * gUi);
+    lamp("Fix", !on ? 0 : t.fix.valid ? 1 : 0); flowNext(10 * gUi);
+    ImGui::TextDisabled("|"); flowNext(10 * gUi);
     auto ro = [&](const char* label, const std::string& val) {
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled("%s", label); ImGui::SameLine(0, 5 * gUi);
         ImGui::PushFont(a.mono, 0); ImGui::TextUnformatted(val.c_str()); ImGui::PopFont();
-        ImGui::SameLine(0, 15 * gUi);
+        flowNext(15 * gUi);
     };
     char b[64];
     if (!on) { ro("State", run ? "starting" : "stopped"); return; }
@@ -485,7 +563,7 @@ void summary(const App& a, std::string& l1, std::string& l2) {
 void tuner(App& a, bool& retune) {
     loadState();
     ImGui::TextDisabled("Signal");
-    ImGui::SetNextItemWidth(230 * gUi);
+    ImGui::SetNextItemWidth(std::min(230 * gUi, ImGui::GetContentRegionAvail().x));   // no wider than the side panel
     const bool l1 = std::fabs(a.freqMhz - 1575.42) < 0.001;
     if (ImGui::BeginCombo("##gband", l1 ? "GPS L1 C/A  1575.42 MHz" : "custom frequency")) {
         if (ImGui::Selectable("GPS L1 C/A  1575.42 MHz", l1)) { a.freqMhz = 1575.42; retune = true; }
@@ -503,7 +581,7 @@ void tuner(App& a, bool& retune) {
 void decoder(App& a, bool&) {
     loadState();
     ImGui::TextDisabled("MASK"); ImGui::SameLine(0, 5 * gUi);
-    ImGui::SetNextItemWidth(90 * gUi);
+    ImGui::SetNextItemWidth(std::min(90 * gUi, ImGui::GetContentRegionAvail().x));   // no wider than the side panel
     float m = (float)S.elMask;
     if (ImGui::SliderFloat("##gmask", &m, 0.f, 30.f, "%.0f deg")) { S.elMask = m; plat::prefs().setD("gnssElMask", S.elMask); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Satellites lower than this are tracked but left out of the position: low signals cross more air and reflect more.");
@@ -512,26 +590,26 @@ void decoder(App& a, bool&) {
 
 void synth(App& a, bool& changed) {
     SynthConfig& sc = a.tune.synth;
-    ImGui::TextDisabled("simulated sky (GPS)");
-    ImGui::SameLine(); ImGui::SetNextItemWidth(100 * gUi);
+    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("simulated sky (GPS)"); ImGui::PopTextWrapPos(); }
+    flowNext(); ImGui::SetNextItemWidth(100 * gUi);
     float cn0 = sc.modeVal[3] > 0 ? (float)sc.modeVal[3] : 44.f;
     if (ImGui::SliderFloat("##gcn0", &cn0, 30.f, 50.f, "%.0f dB-Hz")) { sc.modeVal[3] = cn0; changed = true; }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("C/N0 of a satellite overhead. Lower satellites are weaker (about 9 dB less near the horizon).\nAbout 44 dB-Hz is a good outdoor antenna, below about 30 the navigation data no longer decodes.");
-    ImGui::SameLine(); ImGui::SetNextItemWidth(90 * gUi);
+    flowNext(); ImGui::SetNextItemWidth(90 * gUi);
     int n = sc.modeOpt[1] > 0 ? sc.modeOpt[1] : 0;
     if (ImGui::SliderInt("##gns", &n, 0, 12, n == 0 ? "all in view" : "%d satellites")) { sc.modeOpt[1] = n; changed = true; }
-    ImGui::SameLine();
+    flowNext();
     bool cold = sc.modeOpt[2] == 1;
     if (ImGui::Checkbox("cold start", &cold)) { sc.modeOpt[2] = cold ? 1 : 0; changed = true; }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Warm: the signal starts at a convenient place in the navigation message and the first fix comes after about 26 s.\nCold: like switching on at a random moment, about 35 s.");
-    ImGui::SameLine();
+    flowNext();
     bool jam = (sc.modeOpt[3] & 1) != 0;
     if (ImGui::Checkbox("jammer", &jam)) { sc.modeOpt[3] = (sc.modeOpt[3] & ~1) | (jam ? 1 : 0); changed = true; }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("A continuous tone 400 kHz from the centre, much stronger than the satellites. The receiver notches it out.");
-    ImGui::SameLine(); ImGui::TextDisabled("CFO"); ImGui::SameLine(); ImGui::SetNextItemWidth(100 * gUi);
+    flowNext(); ImGui::TextDisabled("CFO"); ImGui::SameLine(); ImGui::SetNextItemWidth(100 * gUi);
     float cfo = (float)(sc.cfoHz / 1e3);
-    if (ImGui::SliderFloat("##gcfo", &cfo, -5, 5, "%.2f kHz")) { sc.cfoHz = cfo * 1e3; changed = true; }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("The radio's frequency error at 1575 MHz (a 1 ppm TCXO is off by about 1.6 kHz).");
+    if (ImGui::SliderFloat("##gcfo", &cfo, -160, 160, "%.1f kHz")) { sc.cfoHz = cfo * 1e3; changed = true; }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("The radio's frequency error at 1575 MHz: a 1 ppm TCXO is off by about 1.6 kHz, a HackRF up to 31 kHz (20 ppm),\na dongle without a TCXO up to 160 kHz (100 ppm). Ctrl+click to type a value.");
 }
 
 void meters(const App& a, std::vector<ModeMeter>& out) {
