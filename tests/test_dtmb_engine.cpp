@@ -115,9 +115,11 @@ int main() {
         uint64_t l6 = 0;
         while (since() - t2 < 25 && !(lock6 && video6)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
-            if (e.latestRx(t, l6)) { l6 = t.seq; if (t.standard == 8 && t.dtmb.state == 2 && t.dtmb.tsLock) lock6 = true; }
-            video6 = haveVideoAndAudio(e);
+            // (the engine still holds the report of the run before: the 6 MHz signal is known by its bit rate and offset)
+            if (e.latestRx(t, l6)) { l6 = t.seq; if (t.standard == 8 && t.dtmb.state == 2 && t.dtmb.tsLock && std::fabs(t.dtmb.netMbps - 16.24f) < 0.05f && std::fabs(t.dtmb.cfoHz - 1500.0) < 300.0) lock6 = true; }
+            video6 = lock6 && haveVideoAndAudio(e);
         }
+        std::this_thread::sleep_for(std::chrono::seconds(2));
         e.latestRx(t, 0);
         printf("  6 MHz: locked %d, video and audio %d, %s\n", (int)lock6, (int)video6, dtmbSummary(t.dtmb).c_str());
         CHECK(lock6 && video6, "a 6 MHz channel: no lock or no programme");
