@@ -38,11 +38,13 @@ struct Result {
     double maxCfoErr = 0;   // worst distance of the reported carrier offset from the true one, in Hz, once locked
     size_t badLate = 0;     // bad packets that came out more than 100 ms after a disturbance had ended
     size_t lost = 0;        // packets missing or damaged after the first good one (counter gaps plus bad packets)
+    double firstGoodSec = -1;   // seconds of signal fed when the first good packet came out
 };
 
 // burstMs > 0: a burst of noise at burstSnrDb (against the signal) starting burstAtSec into the signal, to see how the receiver rides out a disturbance
+// dcDbc < 0: a constant offset at that level against the signal, as the DC spike of a HackRF
 static Result run(const dvbt::Params& p, int frames, double snrDb, double cfoHz, double echoDb, int echoDelay, double sroPpm, double bwMhz = 8,
-                  double burstMs = 0, double burstSnrDb = 0, double burstAtSec = 0, int slipSamples = 0) {
+                  double burstMs = 0, double burstSnrDb = 0, double burstAtSec = 0, int slipSamples = 0, double dcDbc = 0) {
     const double fn = nativeRateHz(bwMhz);
     // transmit: packets carry a counter so the receiver output can be checked
     uint32_t counter = 0;
@@ -71,6 +73,7 @@ static Result run(const dvbt::Params& p, int frames, double snrDb, double cfoHz,
             for (int j = 8; j < 188 && ok; j++) ok = q[j] == (uint8_t)(c * 31 + j * 7);
             if (ok) {
                 if (r.good && c > lastCounter + 1) r.lost += c - lastCounter - 1;
+                if (!r.good) r.firstGoodSec = (double)fed / fn;
                 lastCounter = c; r.good++;
             } else if (r.good) { r.bad++; if (late) r.badLate++; }
             (void)expectNext; (void)started;
@@ -93,13 +96,14 @@ static Result run(const dvbt::Params& p, int frames, double snrDb, double cfoHz,
     double pos = 1;
     bool slipped = false;
     const double step = 1.0 + sroPpm * 1e-6;
+    const cf32 dc = dcDbc < 0 ? std::polar((float)std::pow(10.0, dcDbc / 20.0), 0.7f) : cf32(0, 0);
     while ((size_t)pos + 20 < tx.size()) {
         cf32 v = sroPpm == 0 ? tx[(size_t)pos] : sincSample(tx, pos);
         pos += step;
         if (echoDb > 0) { const cf32 e = delay[dpos % delay.size()]; delay[dpos % delay.size()] = v; v += e * (float)std::pow(10.0, -echoDb / 20.0); dpos++; }
         phase += dph;
         v *= cf32((float)std::cos(phase), (float)std::sin(phase));
-        v += cf32(nd(rng), nd(rng)) * (float)sigma;
+        v += cf32(nd(rng), nd(rng)) * (float)sigma + dc;
         if (slipSamples > 0 && !slipped && (double)(outv.size() - 40000) / fn >= burstAtSec) { slipped = true; pos += slipSamples; continue; }
         if (burstMs > 0) {
             const double tNow = (double)(outv.size() - 40000) / fn;
@@ -122,7 +126,7 @@ static Result run(const dvbt::Params& p, int frames, double snrDb, double cfoHz,
 }
 
 int main() {
-    struct C { int mode, gi, mod, cr; double snr, cfo, echo; int echoDelay; double sro; const char* name; int frames = 0; double burstMs = 0, burstSnr = 0, burstAt = 0; int slip = 0; } cases[] = {
+    struct C { int mode, gi, mod, cr; double snr, cfo, echo; int echoDelay; double sro; const char* name; int frames = 0; double burstMs = 0, burstSnr = 0, burstAt = 0; int slip = 0; double dc = 0; } cases[] = {
         {dvbt::k2K, dvbt::kGi8, dvbt::kQpsk, dvbt::kR12, 30, 0, 0, 0, 0, "2K QPSK 1/2 clean"},
         {dvbt::k2K, dvbt::kGi32, dvbt::k64Qam, dvbt::kR34, 35, 0, 0, 0, 0, "2K 64-QAM 3/4 GI 1/32 clean"},
         {dvbt::k8K, dvbt::kGi8, dvbt::k16Qam, dvbt::kR23, 30, 0, 0, 0, 0, "8K 16-QAM 2/3 GI 1/8 clean"},
@@ -143,6 +147,11 @@ int main() {
         {dvbt::k8K, dvbt::kGi16, dvbt::k64Qam, dvbt::kR34, 30, 800, 0, 0, 0, "8K 64-QAM 3/4, 5000 samples lost", 50, 0, 0, 1.2, 5000},
         {dvbt::k8K, dvbt::kGi16, dvbt::k64Qam, dvbt::kR34, 30, 800, 0, 0, 0, "8K 64-QAM 3/4, 9400 samples lost", 50, 0, 0, 1.2, 9400},
         {dvbt::k8K, dvbt::kGi16, dvbt::k64Qam, dvbt::kR34, 30, 800, 0, 0, 0, "8K 64-QAM 3/4, 20000 samples lost", 50, 0, 0, 1.2, 20000},
+        // the DC spike of a HackRF (measured at -23 dBc on a real channel, with the radio 155 Hz off): it lands on the centre carrier, a continual pilot
+        {dvbt::k8K, dvbt::kGi16, dvbt::k64Qam, dvbt::kR34, 30, -155, 0, 0, 0, "8K 64-QAM 3/4 + HackRF DC offset -23 dBc", 0, 0, 0, 0, 0, -23},
+        // the first two seconds lock TPS but are too noisy to decode: once the signal is good the stream must follow at once, not after the
+        // error correction has worked through everything it buffered meanwhile
+        {dvbt::k8K, dvbt::kGi16, dvbt::k64Qam, dvbt::kR34, 30, 800, 0, 0, 0, "8K 64-QAM 3/4, undecodable for the first 2 s", 45, 2000, 8, 0},
         // a whole radio buffer (13 symbols here): more than the pilot check can resolve, the frame position has to be found again from the TPS bits
         {dvbt::k8K, dvbt::kGi16, dvbt::k64Qam, dvbt::kR34, 30, 800, 0, 0, 0, "8K 64-QAM 3/4, 120000 samples lost", 80, 0, 0, 1.2, 120000},
     };
@@ -150,7 +159,7 @@ int main() {
     for (auto& c : cases) {
         if (only && !strstr(c.name, only)) continue;
         dvbt::Params p; p.mode = c.mode; p.guard = c.gi; p.mod = c.mod; p.crHp = c.cr; p.crLp = c.cr;
-        const Result r = run(p, c.frames ? c.frames : c.mode == dvbt::k8K ? 8 : 20, c.snr, c.cfo, c.echo, c.echoDelay, c.sro, 8, c.burstMs, c.burstSnr, c.burstAt, c.slip);
+        const Result r = run(p, c.frames ? c.frames : c.mode == dvbt::k8K ? 8 : 20, c.snr, c.cfo, c.echo, c.echoDelay, c.sro, 8, c.burstMs, c.burstSnr, c.burstAt, c.slip, c.dc);
         const bool ok = r.tps && r.good > 50 && r.bad * 20 <= r.good + r.bad;
         printf("%-42s lock %d tps %d (mode %d gi %d mod %d cr %d)  packets %zu good %zu bad %zu  SNR %.1f dB  %.2fs  %s\n", c.name, r.locked, r.tps, r.tel.dvbt.mode, r.tel.dvbt.guard, r.tel.dvbt.mod, r.tel.dvbt.crHp, r.packets, r.good, r.bad, r.snr, r.secs, ok ? "OK" : "FAILED");
         if (c.slip > 0) printf("    %d samples lost: %zu packets lost or damaged in all, worst carrier-offset error %.0f Hz\n", c.slip, r.lost + r.bad, r.maxCfoErr);
@@ -159,6 +168,11 @@ int main() {
         // Lost samples must cost about a block of symbols, not the quarter of a second it took when the receiver waited for three failed TPS frames
         if (c.slip > 0) CHECK(r.lost + r.bad <= (c.slip >= 100000 ? 3500 : 1500), "%s: %zu packets lost or damaged", c.name, r.lost + r.bad);
         if (c.burstMs > 0) CHECK(r.maxCfoErr < 60 && r.badLate == 0, "%s: carrier offset error %.0f Hz, %zu bad packets late", c.name, r.maxCfoErr, r.badLate);
+        if (c.burstMs > 0 && c.burstAt == 0) {
+            const double wait = r.firstGoodSec - c.burstMs / 1e3;
+            printf("    first good packet %.2f s after the signal became decodable\n", wait);
+            CHECK(r.firstGoodSec > 0 && wait < 0.8, "%s: first good packet %.2f s after the signal became decodable", c.name, wait);
+        }
     }
     printf(fails ? "DVB-T receiver tests FAILED\n" : "DVB-T receiver tests passed\n");
     return fails ? 1 : 0;

@@ -30,6 +30,8 @@ struct DvbtReceiver::Impl {
     RationalResampler resampler;
     bool decimate = false, rateOk = true;
     std::vector<cf32> rsOut;
+    std::vector<cf32> dcOut;      // the input with the radio's DC offset taken out
+    cf32 dc = cf32(0, 0);         // slow estimate of that offset
     std::vector<cf32> buf;
     int64_t base = 0;
     int64_t end() const { return base + (int64_t)buf.size(); }
@@ -115,7 +117,7 @@ struct DvbtReceiver::Impl {
         for (int i = 0; i < 4; i++) { hypVotes[i] = 0; hypScore[i] = 0; }
         grid.clear(); gridAge.clear(); cpRef.clear(); cpRefValid = false; gridFilled = 0;
         fec.reset(); streamSecs = 0; symbols = 0; packetsOut = 0; detect = 0;
-        buf.clear(); base = 0; resampler.reset();
+        buf.clear(); base = 0; resampler.reset(); dc = cf32(0, 0);
         eqShow.clear(); rawShow.clear(); chMag.clear(); chPh.clear(); irDb.clear();
     }
 
@@ -751,6 +753,23 @@ int DvbtReceiver::detectLevel() const { return p_->detect.load(); }
 void DvbtReceiver::feed(const cf32* x, size_t n) {
     Impl& I = *p_;
     if (!I.rateOk || !n) return;
+    // DC removal (the radio's centre spike, a HackRF's is several times a carrier): the mean of the block moves a slow estimate. Left in,
+    // it lands on the centre carrier, which is a continual pilot: that pilot's error then poisons the common phase, the noise estimate
+    // and, through the pilot grid, the channel estimate of every carrier, and nothing decodes. The time constant is long (50 ms) so that
+    // the centre pilot itself, which turns at the carrier offset, is not taken out with it unless that offset is within a few hertz.
+    {
+        float sr4[4] = {0, 0, 0, 0}, si4[4] = {0, 0, 0, 0};
+        size_t k = 0;
+        for (; k + 4 <= n; k += 4) for (size_t l = 0; l < 4; l++) { sr4[l] += x[k + l].real(); si4[l] += x[k + l].imag(); }
+        for (; k < n; k++) { sr4[0] += x[k].real(); si4[0] += x[k].imag(); }
+        const float sr = (sr4[0] + sr4[1]) + (sr4[2] + sr4[3]), si = (si4[0] + si4[1]) + (si4[2] + si4[3]);
+        const float w = (float)std::min(1.0, (double)n / (0.05 * I.inRate));
+        I.dc += (cf32(sr, si) / (float)n - I.dc) * w;
+        I.dcOut.resize(n);
+        const float dr = I.dc.real(), di = I.dc.imag();
+        for (size_t q = 0; q < n; q++) I.dcOut[q] = cf32(x[q].real() - dr, x[q].imag() - di);
+        x = I.dcOut.data();
+    }
     if (I.decimate) { I.rsOut.clear(); I.resampler.process(x, n, I.rsOut); I.buf.insert(I.buf.end(), I.rsOut.begin(), I.rsOut.end()); }
     else I.buf.insert(I.buf.end(), x, x + n);
     // work through the buffer
