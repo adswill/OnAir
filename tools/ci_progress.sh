@@ -64,6 +64,7 @@ draw() {
     build "Linux build" linux-build.log
     stage "Linux tests" linux-test.log linux-build.log
     build "Windows build" windows-build.log
+    stage "Windows tests" windows-test.log windows-build.log
 }
 
 if [ $once = 1 ]; then draw; exit 0; fi
@@ -72,5 +73,6 @@ while true; do
     printf '\033[H'
     echo "OnAir local CI ($(date +%H:%M:%S))"
     draw
+    printf '\033[J'   # clear what an earlier, longer screen left below
     sleep 2
 done

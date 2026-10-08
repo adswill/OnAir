@@ -20,6 +20,7 @@ static void want(const char* what, Scenario s, double minCorr, double maxDrift =
     CHECK(q.ok && q.meanCorr > minCorr, "%s: row correlation %.3f below %.2f", what, q.meanCorr, minCorr);
     CHECK(std::fabs(q.drift) < maxDrift, "%s: drift %.2f px", what, q.drift);
     CHECK(o.tel.serviceActive == 3 && o.tel.state >= 1, "%s: service %d state %d", what, o.tel.serviceActive, o.tel.state);
+    if (o.tel.serviceActive != 3) for (const auto& c : o.tel.dsc) printf("  DSC call heard: %s, ECC %s, %s\n", c.vhf ? "VHF" : "MF/HF", c.eccOk ? "ok" : "bad", c.text.c_str());
     CHECK(o.seqOk && o.tel.dataValid, "%s: reports", what);
 }
 

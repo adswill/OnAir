@@ -112,6 +112,9 @@ struct MarineReceiver::Impl {
     }
 
     void onDsc(const DscCall& c0, bool vhfPath) {
+        // a call that failed its check and names no sender says nothing: noise that happened to pass for a call (a fading fax signal
+        // gave one on the VHF path, "Unknown format from ? to ?", and switched the active service away from the fax)
+        if (!c0.eccOk && c0.fromMmsi.empty()) return;
         DscCall c = c0;
         c.vhf = vhfPath;
         c.rxSec = secs(); c.rxTime = wallNow();
@@ -121,8 +124,7 @@ struct MarineReceiver::Impl {
         tel.dscCount++;
         if (c.eccOk) tel.blocksOk++; else tel.blocksBad++;
         tel.dataValid = true;
-        lastDscSec = c.rxSec;
-        dscVhfSeen = vhfPath;
+        if (c.eccOk) { lastDscSec = c.rxSec; dscVhfSeen = vhfPath; }   // only a checked call says which service is on the air
         say("DSC " + c.text);
     }
 

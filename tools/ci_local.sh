@@ -2,7 +2,7 @@
 # The CI checks, run on this Mac instead of GitHub:
 #   macOS    build (app, tools, tests) and run the tests
 #   Linux    the same in the onair-linux-dev Docker image (arm64, Colima)
-#   Windows  cross-build of the app, tools and tests with MinGW (no Wine here, so the Windows tests do not run)
+#   Windows  cross-build of the app, tools and tests with MinGW, and the tests run through Wine when it is installed (tools/wine_test.sh)
 # The three run at the same time (the Colima VM has 6 of the 10 cores, so one after the other left the Mac half idle), with progress
 # bars while they run (tools/ci_progress.sh draws them; it also works on its own in another window).
 #
@@ -61,8 +61,14 @@ linux() {
         ctest --test-dir /b -j $LINUX_JOBS ${LABEL[@]+"${LABEL[@]}"} -E '^updater$' --output-on-failure --timeout 1500
 }
 windows() {
+    # the tests run through Wine when it is there (tools/wine_test.sh): ctest starts each test program with it
+    local emu="-DCMAKE_CROSSCOMPILING_EMULATOR=" wine=0   # (the path has a space: quoted inside the bash -c below)
+    if "$ROOT/tools/wine_test.sh" --version > /dev/null 2>&1; then wine=1; emu="-DCMAKE_CROSSCOMPILING_EMULATOR='$ROOT/tools/wine_test.sh'"; fi
     step "Windows build (MinGW)" "$LOGS/windows-build.log" \
-        bash -c "cmake -S '$ROOT' -B '$ROOT/build-windows' -DCMAKE_TOOLCHAIN_FILE='$ROOT/packaging/windows/mingw-toolchain.cmake' -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON && cmake --build '$ROOT/build-windows' -j $WIN_JOBS"
+        bash -c "cmake -S '$ROOT' -B '$ROOT/build-windows' -DCMAKE_TOOLCHAIN_FILE='$ROOT/packaging/windows/mingw-toolchain.cmake' -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON $emu && cmake --build '$ROOT/build-windows' -j $WIN_JOBS" || return
+    # updater is left out as on Linux (it fetches from GitHub); the GPU decoder needs Direct3D 11, which Wine on a Mac does not give
+    [ $wine = 1 ] && step "Windows tests (Wine)" "$LOGS/windows-test.log" \
+        env CI=true ctest --test-dir "$ROOT/build-windows" -j $WIN_JOBS ${LABEL[@]+"${LABEL[@]}"} -E '^updater$' --output-on-failure --timeout 1500
 }
 
 T0=$SECONDS

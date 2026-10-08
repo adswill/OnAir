@@ -98,7 +98,8 @@ static void testThreads() {
         rx.telemetry(t, 0);
         printf("%-36s %llu polls, %llu new reports, %llu voice bursts handed on, %llu log lines, state %d\n", "controls from another thread", (unsigned long long)polls.load(), (unsigned long long)newer.load(),
                (unsigned long long)voiceCalls.load(), (unsigned long long)logLines.load(), t.state);
-        CHECK(t.state == 2 && newer > 3 && voiceCalls > 10 && logLines > 0, "state %d, %llu reports, %llu voice bursts, %llu log lines", t.state, (unsigned long long)newer.load(), (unsigned long long)voiceCalls.load(), (unsigned long long)logLines.load());
+        // (reports come at intervals of real time: a fast machine feeds the 3 s of signal in a few of them, a Windows runner gave exactly 3)
+        CHECK(t.state == 2 && newer >= 2 && voiceCalls > 10 && logLines > 0, "state %d, %llu reports, %llu voice bursts, %llu log lines", t.state, (unsigned long long)newer.load(), (unsigned long long)voiceCalls.load(), (unsigned long long)logLines.load());
     }
 }
 

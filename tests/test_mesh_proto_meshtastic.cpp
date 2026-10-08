@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstring>
 #include <random>
+#include <chrono>
 #include <thread>
 using namespace dect2;
 
@@ -230,6 +231,8 @@ int main() {
         std::atomic<int> good{0};
         std::thread t([&] { while (!stop) { if (mp.decodeMeshtastic(p.data(), p.size(), kRadio).packet.decrypted) good++; } });
         for (int i = 0; i < 200; i++) { mp.addMeshtasticChannel("Ch" + std::to_string(i), "AQ=="); mp.addMeshCoreChannel("Mc" + std::to_string(i), "8b3387e9c5cdea6ac9e5edbaa115cd72"); }
+        // the adds can be over before the thread has even started (Windows): it has to decode once with the grown lists, up to 5 s
+        for (int w = 0; w < 500 && good == 0; w++) std::this_thread::sleep_for(std::chrono::milliseconds(10));
         stop = true;
         t.join();
         CHECK(good > 0, "decoding during add");
