@@ -1,6 +1,7 @@
 #include "dect2/ais_proto.h"
 #include "dect2/ais_tel.h"
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 
@@ -138,7 +139,7 @@ HdlcResult hdlcFrames(const Bits& d) {
     for (size_t f = 0; f + 1 < flags.size(); f++) {
         const size_t a = flags[f] + 8, e = flags[f + 1];
         if (e < a + 56 || e - a > 1100) continue;
-        Bits raw(d.begin() + (ptrdiff_t)a, d.begin() + (ptrdiff_t)e), fr;
+        Bits raw(d.begin() + (std::ptrdiff_t)a, d.begin() + (std::ptrdiff_t)e), fr;
         // the flag is preceded by the training sequence: count it as a burst that failed only when that is there. On the line it alternates, which
         // NRZI decoding turns into zeros; an alternation in the decoded bits (a transmitter that codes the training sequence first) counts too.
         int alt = 0, zeros = 0;
