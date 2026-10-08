@@ -17,7 +17,7 @@ public:
     DtmbReceiver();
     ~DtmbReceiver();
 
-    void configure(double inputRateHz);
+    void configure(double inputRateHz, double bwMhz = 8);   // bwMhz: the channel, 8 MHz (China) or 6 MHz (Cuba)
     bool ready() const;                                  // false when the input rate is too low for this mode
     void reset();                                        // after a retune: forget the signal, drop queued output
     void feed(const cf32* x, size_t n);

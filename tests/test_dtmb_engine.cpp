@@ -100,6 +100,31 @@ int main() {
     CHECK(d2.cwDropped == 0, "codewords dropped on the second signal");
     CHECK(seqBack == 0, "telemetry sequence went back after the retune");
     e.stop();
+
+    // ---- a 6 MHz channel (Cuba), started the way the app does it: TuneSettings::bandwidthMhz = 6, the test signal's modeOpt[7] = 1
+    {
+        TuneSettings t6 = tune;
+        for (int& o : t6.synth.modeOpt) o = 0;
+        t6.synth.modeOpt[7] = 1;
+        t6.synth.echoDb = 0; t6.synth.cfoHz = 1500; t6.synth.snrDb = 32;
+        t6.bandwidthMhz = 6;
+        e.setStandard(9);
+        CHECK(e.start(dev, t6, fo), "engine started at 6 MHz");
+        bool lock6 = false, video6 = false;
+        const double t2 = since();
+        uint64_t l6 = 0;
+        while (since() - t2 < 25 && !(lock6 && video6)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            if (e.latestRx(t, l6)) { l6 = t.seq; if (t.standard == 8 && t.dtmb.state == 2 && t.dtmb.tsLock) lock6 = true; }
+            video6 = haveVideoAndAudio(e);
+        }
+        e.latestRx(t, 0);
+        printf("  6 MHz: locked %d, video and audio %d, %s\n", (int)lock6, (int)video6, dtmbSummary(t.dtmb).c_str());
+        CHECK(lock6 && video6, "a 6 MHz channel: no lock or no programme");
+        CHECK(std::fabs(t.dtmb.netMbps - 21.658f * 0.75f) < 0.02f, "6 MHz net bit rate %.3f (16.24 expected)", t.dtmb.netMbps);
+        CHECK(std::fabs(t.dtmb.cfoHz - 1500.0) < 60.0, "6 MHz carrier offset %.1f Hz", t.dtmb.cfoHz);
+        e.stop();
+    }
     printf(fails ? "dtmb engine: FAILED\n" : "dtmb engine: ok\n");
     return fails ? 1 : 0;
 }

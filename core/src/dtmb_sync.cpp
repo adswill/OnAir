@@ -73,7 +73,7 @@ double Acquirer::refineCfo(const cf32* r, const AcqResult& res, float& coherence
     const int K = (int)(2 * kRange / kStep) + 1;
     std::vector<double> m((size_t)K, 0.0);
     for (int g = 0; g < K; g++) {
-        const double f = -kRange + g * kStep, w = -2.0 * kPi * f / kSymbolRate;
+        const double f = -kRange + g * kStep, w = -2.0 * kPi * f / symRate;
         const cf32 step((float)std::cos(w), (float)std::sin(w));
         double acc = 0;
         for (const auto& v : x) {

@@ -52,7 +52,10 @@ struct UhdApi {
     bool ok = false;
     DynLib lib;
     UhdApi() {
-        if (nativeDisabled() || !lib.open(libNames("uhd", {".4.8.0", ".4.7.0", ".4.6.0", ".4.5.0", ".4.4.0", ".4.3.0", ".4.2.0", ".4.1.0", ".4.0.0", ".3.15.0", ""}, {"libuhd.dll", "uhd.dll"}))) return;
+        // Windows: the UHD the user installed from Ettus (uhd.dll, on the PATH) first, the one OnAir ships (libuhd.dll) only without it. A B210
+        // shows up only after UHD has loaded its firmware, from the images of its own version (UHD_IMAGES_DIR of the Ettus install): our libuhd
+        // first made a B210 that the Ettus UHD (and OnAir 0.2.0) saw disappear on a Windows 10 PC with UHD installed.
+        if (nativeDisabled() || !lib.open(libNames("uhd", {".4.8.0", ".4.7.0", ".4.6.0", ".4.5.0", ".4.4.0", ".4.3.0", ".4.2.0", ".4.1.0", ".4.0.0", ".3.15.0", ""}, {"uhd.dll", "libuhd.dll"}))) return;
         ok = lib.get(find, "uhd_usrp_find") && lib.get(strvec_make, "uhd_string_vector_make") && lib.get(strvec_free, "uhd_string_vector_free") &&
              lib.get(strvec_size, "uhd_string_vector_size") && lib.get(strvec_at, "uhd_string_vector_at") && lib.get(make, "uhd_usrp_make") &&
              lib.get(free_, "uhd_usrp_free") && lib.get(set_rx_rate, "uhd_usrp_set_rx_rate") && lib.get(get_rx_rate, "uhd_usrp_get_rx_rate") &&

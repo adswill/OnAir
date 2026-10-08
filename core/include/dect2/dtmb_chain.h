@@ -26,7 +26,7 @@ struct ChainStats {
 class FecChain {
 public:
     // workers: threads for the LDPC decoder; 0 decodes inside pushFrame (tests)
-    FecChain(const Profile& p, Header h, int workers);
+    FecChain(const Profile& p, Header h, int workers, double symRate = kSymbolRate);
     ~FecChain();
     FecChain(const FecChain&) = delete;
     FecChain& operator=(const FecChain&) = delete;

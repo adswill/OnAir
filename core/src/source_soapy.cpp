@@ -367,6 +367,10 @@ std::vector<DeviceInfo> listSoapyDevices(std::string& err) {
             auto get = [&](const char* k) { auto it = kw.find(k); return it == kw.end() ? std::string() : it->second; };
             const std::string driver = get("driver");
             if (driver == "hackrf") continue;   // native source
+            // "miri" (libmirisdr) lists an SDRplay RSP a second time as a bare Mirics chip: opening it detaches the kernel driver and streams
+            // garbage or hangs, and the SDRplay API loses the radio meanwhile (issue #17). "audio" lists the sound cards, which are no radios,
+            // and its probing alone printed a screen of RtAudio errors.
+            if (driver == "miri" || driver == "audio") continue;
             DeviceInfo d;
             d.kind = DeviceInfo::Soapy;
             d.board = driver;

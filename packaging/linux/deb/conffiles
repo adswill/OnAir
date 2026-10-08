@@ -1,1 +1,2 @@
 /etc/modprobe.d/onair-rtlsdr-blacklist.conf
+/etc/modprobe.d/onair-sdrplay-blacklist.conf

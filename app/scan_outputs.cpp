@@ -32,12 +32,15 @@ void scanTabCommon(App& a) {
     const char* presetsDvb[] = {"UHF 474-858 MHz (8 MHz)", "VHF III 174-230 MHz (7 MHz)", "Custom"};
     const char* presetsAtsc[] = {"US UHF ch 14-36 (470-608 MHz)", "US VHF high ch 7-13 (174-216 MHz)", "Custom"};
     const char* presetsIsdbt[] = {"UHF ch 13-62 (473-767 MHz)", "VHF high ch 7-13 (177-213 MHz)", "Custom"};
-    const char* presetsDtmb[] = {"China UHF 474-858 MHz (8 MHz)", "China VHF high ch 6-12 (171-219 MHz)", "Custom"};   // Hong Kong and Macau use channels of the same 8 MHz raster
+    const char* presetsDtmb[] = {"China UHF 474-858 MHz (8 MHz)", "China VHF high ch 6-12 (171-219 MHz)", "Cuba UHF ch 14-51 (473-695 MHz, 6 MHz)", "Custom"};   // Hong Kong and Macau use channels of the same 8 MHz raster
     ImGui::SetNextItemWidth(std::min(260 * gUi, ImGui::GetContentRegionAvail().x));
-    if (ImGui::Combo("##range", &a.scanPreset, dtmb ? presetsDtmb : a.isdbtMode ? presetsIsdbt : a.atscMode ? presetsAtsc : presetsDvb, 3)) {
+    if (ImGui::Combo("##range", &a.scanPreset, dtmb ? presetsDtmb : a.isdbtMode ? presetsIsdbt : a.atscMode ? presetsAtsc : presetsDvb, dtmb ? 4 : 3)) {
         if (dtmb) {   // the centres of the 8 MHz channels
             if (a.scanPreset == 0) { a.scanCfg.startMHz = 474; a.scanCfg.stopMHz = 858; a.scanCfg.stepMHz = 8; a.scanCfg.bwMhz = 8; }
             if (a.scanPreset == 1) { a.scanCfg.startMHz = 171; a.scanCfg.stopMHz = 219; a.scanCfg.stepMHz = 8; a.scanCfg.bwMhz = 8; }
+            // Cuba: DTMB in the American 6 MHz raster (the DTMB channel width follows: the receiver is set to 6 MHz)
+            if (a.scanPreset == 2) { a.scanCfg.startMHz = 473; a.scanCfg.stopMHz = 695; a.scanCfg.stepMHz = 6; a.scanCfg.bwMhz = 6; }
+            if (a.scanPreset <= 2) { a.dtmbBwMhz = a.scanPreset == 2 ? 6 : 8; applyBandwidth(a); savePrefs(a); }
         } else if (a.isdbtMode) {   // the centres of the 6 MHz channels are 1/7 MHz above a whole number
             if (a.scanPreset == 0) { a.scanCfg.startMHz = 473.143; a.scanCfg.stopMHz = 767.143; a.scanCfg.stepMHz = 6; a.scanCfg.bwMhz = 6; }
             if (a.scanPreset == 1) { a.scanCfg.startMHz = 177.143; a.scanCfg.stopMHz = 213.143; a.scanCfg.stepMHz = 6; a.scanCfg.bwMhz = 6; }
@@ -77,6 +80,7 @@ void scanTabCommon(App& a) {
             a.scanCfg.atsc3 = a.atsc3Mode;
             a.scanCfg.isdbt = a.isdbtMode;
             a.scanCfg.dtmb = dtmb;
+            if (dtmb) a.scanCfg.bwMhz = a.dtmbBwMhz;   // DTMB is scanned with the channel width set in its tuner (8 or 6 MHz)
             std::string err;
             if (!Scanner::check(a.devices[hw], a.scanCfg, err)) { a.engine.log("scan: " + err); scanErr = err; }   // before the receiver is stopped
             else {

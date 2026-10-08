@@ -47,7 +47,7 @@ Signal::Signal(const SignalConfig& cfg, FrameTx::TsSource ts) : cfg_(cfg), tx_(c
         const double f = (double)p / phases_;
         for (int k = 0; k < taps_; k++) table_[(size_t)p * (size_t)taps_ + (size_t)k] = (float)srrcPulse((kHalf - 1 - k) + f);
     }
-    step_ = kSymbolRate / cfg.rate * (1.0 + cfg.sroPpm * 1e-6);
+    step_ = cfg.symbolRate / cfg.rate * (1.0 + cfg.sroPpm * 1e-6);
     dph_ = 2.0 * 3.14159265358979323846 * cfg.cfoHz / cfg.rate;
     rot_ = cf32((float)std::cos(dph_), (float)std::sin(dph_));
     // echoes: delays relative to the earliest path
@@ -62,7 +62,7 @@ Signal::Signal(const SignalConfig& cfg, FrameTx::TsSource ts) : cfg_(cfg), tx_(c
     }
     if (paths_.size() > 1) hist_.assign(kHist, cf32(0, 0));
     // noise: C/N in the symbol rate bandwidth; the noise is white over the whole output band
-    const double nPow = cfg.snrDb > 150 ? 0.0 : power * std::pow(10.0, -cfg.snrDb / 10.0) * (cfg.rate / kSymbolRate);
+    const double nPow = cfg.snrDb > 150 ? 0.0 : power * std::pow(10.0, -cfg.snrDb / 10.0) * (cfg.rate / cfg.symbolRate);
     noiseSigma_ = (float)std::sqrt(nPow / 2.0);   // per component
     gain_ = (float)(cfg.rms / std::sqrt(power + nPow));
     if (nPow > 0) {
@@ -163,9 +163,10 @@ private:
 }
 
 std::unique_ptr<ModeSynth> makeDtmbSynth(const SynthConfig& cfg, double sampleRate) {
-    if (sampleRate < 8e6 - 1) return nullptr;
     using namespace dtmb;
     SignalConfig sc;
+    sc.symbolRate = symbolRateFor(cfg.modeOpt[7] == 1 ? 6 : 8);   // modeOpt[7]: 1 = a 6 MHz channel
+    if (sampleRate < sc.symbolRate * 1.0516 - 1) return nullptr;
     sc.rate = sampleRate;
     sc.snrDb = cfg.snrDb;
     sc.cfoHz = cfg.cfoHz;
@@ -181,7 +182,7 @@ std::unique_ptr<ModeSynth> makeDtmbSynth(const SynthConfig& cfg, double sampleRa
     if (cfg.modeOpt[4] == 1) { sc.tx.carriers = 1; sc.tx.header = Header::Pn595; sc.tx.phaseRotate = false; }   // single carrier is defined with PN595 only
     if (cfg.echoDb > 0) sc.echoes.push_back({cfg.echoDb, (double)cfg.echoDelay});
     if (cfg.modeVal[0] > 0) sc.echoes.push_back({cfg.modeVal[0], cfg.modeVal[1]});
-    FrameTx::TsSource ts = cfg.modeOpt[6] == 1 ? testPacketSource(1) : demoTsSource(netBitrate(sc.tx.header, sc.tx.profile));
+    FrameTx::TsSource ts = cfg.modeOpt[6] == 1 ? testPacketSource(1) : demoTsSource(netBitrate(sc.tx.header, sc.tx.profile, sc.symbolRate));
     return std::make_unique<DtmbSynth>(sc, std::move(ts), sampleRate);
 }
 

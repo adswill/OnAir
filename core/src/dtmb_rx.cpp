@@ -90,6 +90,7 @@ struct DtmbReceiver::Impl {
 
     // ---- search
     Acquirer acq;
+    double symRate = kSymbolRate;   // 7.56 Msym/s, or 5.67 in a 6 MHz channel
     int hyp = 0;
     long sinceAttempt = 1 << 30;
     std::vector<cf32> block;
@@ -157,7 +158,7 @@ struct DtmbReceiver::Impl {
         tmp.clear();
         const size_t n = front.pull(tmp, want);
         if (!n) return 0;
-        const double dph = -2.0 * kPi * cfoHz / kSymbolRate;
+        const double dph = -2.0 * kPi * cfoHz / symRate;
         cf32 step((float)std::cos(dph), (float)std::sin(dph));
         cf32 rot((float)std::cos(derotPhase), (float)std::sin(derotPhase));
         const size_t at = buf.size();
@@ -193,7 +194,7 @@ struct DtmbReceiver::Impl {
         front.reset();
         buf.clear(); base = 0;
         cfoHz = 0; derotPhase = 0;
-        reportAt = (long)(kSymbolRate * 0.25);
+        reportAt = (long)(symRate * 0.25);
         hyp = 0; sinceAttempt = 1 << 30;
         state = 0; haveA = false; haveWide = false; frames = 0; lostRun = 0; lossAvg = 0;
         snrInit = false; timeInt = 0; timeJumpRun = 0;
@@ -230,7 +231,7 @@ struct DtmbReceiver::Impl {
         hyp++;
         const long first = produced() - Acquirer::kBlock;
         block.resize((size_t)Acquirer::kBlock);
-        const double dph = -2.0 * kPi * h / kSymbolRate;
+        const double dph = -2.0 * kPi * h / symRate;
         cf32 rot(1, 0), step((float)std::cos(dph), (float)std::sin(dph));
         for (int i = 0; i < Acquirer::kBlock; i++) {
             block[(size_t)i] = *at(first + i) * rot;
@@ -243,7 +244,7 @@ struct DtmbReceiver::Impl {
         // the block is derotated by the offset the headers gave and searched again: the second result is the one that counts.
         double extra = r.cfoHz;
         if (std::fabs(extra) > 1000.0) {
-            const double dph2 = -2.0 * kPi * extra / kSymbolRate;
+            const double dph2 = -2.0 * kPi * extra / symRate;
             cf32 rot2(1, 0), step2((float)std::cos(dph2), (float)std::sin(dph2));
             for (int i = 0; i < Acquirer::kBlock; i++) {
                 block[(size_t)i] *= rot2;
@@ -266,7 +267,7 @@ struct DtmbReceiver::Impl {
         // re-derotate what is already in the buffer: the stream carried a derotation of cfoHz, it should carry newCfo
         {
             const long n0 = std::max(base, S - 256);
-            const double dph = -2.0 * kPi * (newCfo - cfoHz) / kSymbolRate;
+            const double dph = -2.0 * kPi * (newCfo - cfoHz) / symRate;
             cf32 step((float)std::cos(dph), (float)std::sin(dph)), rot(1, 0);
             for (long i = n0; i < produced(); i++) {
                 buf[(size_t)(i - base)] *= rot;
@@ -399,7 +400,7 @@ struct DtmbReceiver::Impl {
             front.setSpacing(std::max(-3e-4, std::min(3e-4, sp)));
             timeInt = j;
             pendingJump = j;
-            peakOffUs = (float)(e / (kSymbolRate / 1e6));
+            peakOffUs = (float)(e / (symRate / 1e6));
         }
         // ---- the body. The header says which carrier mode can be there: PN420 and PN945 go with multi-carrier, PN595 with either (single carrier is
         // defined with PN595 only); until the system information tells, both are tried
@@ -452,7 +453,7 @@ struct DtmbReceiver::Impl {
         // a lock that never produces system information: too weak to use, or the header fit is wrong (a bad carrier offset); look again
         if (!siOk && frames >= 200 && snrPn < -15.0) { loseLock("signal too weak"); return true; }
         // (a lock with a good header fit stays, whatever the body is: a signal this receiver does not know shows its constellation and C/N)
-        if (!siOk && snrPn < 6.0 && frames > (uint64_t)(1.5 * kSymbolRate / (double)Lf)) { loseLock("no system information"); return true; }
+        if (!siOk && snrPn < 6.0 && frames > (uint64_t)(1.5 * symRate / (double)Lf)) { loseLock("no system information"); return true; }
         if (siOk) {
             merAvg += 0.3 * (10.0 * std::log10(1.0 / std::max(frameErr, 1e-9)) - merAvg);
             if (!chain) makeChain();
@@ -470,7 +471,7 @@ struct DtmbReceiver::Impl {
                 ea += std::norm(cleanA.v[i]); eb += std::norm(cleanB.v[i]);
             }
             if (std::abs(z) > 0 && cleanA.pre == cleanB.pre && std::abs(z) > 0.7 * std::sqrt(ea * eb)) {
-                const double df = std::arg(z) * kSymbolRate / (2.0 * kPi * Lf);
+                const double df = std::arg(z) * symRate / (2.0 * kPi * Lf);
                 cfoHz += 0.25 * df;   // the stream is derotated by cfoHz: a channel that still turns forward needs a larger correction
                 cfoHz = std::max(-30000.0, std::min(30000.0, cfoHz));
             }
@@ -530,7 +531,7 @@ struct DtmbReceiver::Impl {
     }
 
     void makeChain() {
-        chain = std::make_unique<FecChain>(profile, hdr, decThreads.load());
+        chain = std::make_unique<FecChain>(profile, hdr, decThreads.load(), symRate);
         lastStats = ChainStats();
     }
 
@@ -558,7 +559,7 @@ struct DtmbReceiver::Impl {
         // span of the paths within 30 dB of the strongest
         int lo = L, hi = -1;
         for (int i = 0; i < L; i++) if (std::norm(t.v[(size_t)i]) > pk * 1e-3f) { lo = std::min(lo, i); hi = std::max(hi, i); }
-        echoSpanUs = hi >= lo ? (float)(hi - lo) / (float)(kSymbolRate / 1e6) : 0.f;
+        echoSpanUs = hi >= lo ? (float)(hi - lo) / (float)(symRate / 1e6) : 0.f;
     }
 
     // ------------------------------------------------------------------ the loop
@@ -584,16 +585,16 @@ struct DtmbReceiver::Impl {
 
     bool report() {
         if (produced() < reportAt) return false;
-        reportAt = produced() + (long)(kSymbolRate * 0.25);
+        reportAt = produced() + (long)(symRate * 0.25);
         DtmbTelemetry t;
-        t.state = state == 0 ? 0 : ((chain && produced() - lastGoodAt < (long)(kSymbolRate * 0.7)) ? 2 : 1);
+        t.state = state == 0 ? 0 : ((chain && produced() - lastGoodAt < (long)(symRate * 0.7)) ? 2 : 1);
         t.cfoHz = cfoHz;
         t.header = state == 0 ? -1 : (int)hdr;
         t.phaseRotates = rotates;
         t.siOk = siOk; t.siIndex = siOk ? siIndex : 0;
         t.siScore = siOk ? body[carriers == 1 ? 1 : 0].tracker.score : std::max(body[0].tracker.score, body[1].tracker.score);
         t.carriers = state == 0 ? 0 : siOk ? carriers : (hdr == Header::Pn595 ? 0 : 3780);
-        if (siOk) { t.mapping = (int)profile.map; t.rate = (int)profile.rate; t.interleaver = profile.mode2 ? 2 : 1; t.netMbps = (float)(netBitrate(hdr, profile) / 1e6); }
+        if (siOk) { t.mapping = (int)profile.map; t.rate = (int)profile.rate; t.interleaver = profile.mode2 ? 2 : 1; t.netMbps = (float)(netBitrate(hdr, profile, symRate) / 1e6); }
         t.snrPnDb = state == 0 ? 0.f : (float)snrPn;
         t.snrDb = siOk && merAvg > 8.0 && merAvg < snrPn ? (float)merAvg : t.snrPnDb;
         t.merDb = siOk ? (float)merAvg : 0.f;
@@ -609,7 +610,7 @@ struct DtmbReceiver::Impl {
             t.ldpcIter = (float)st.lastIterAvg;
             t.packets = st.packets;
             t.cwDropped = st.cwDropped; t.cwSkipped = st.cwSkipped; t.bchCorrected = st.bchCorrected;
-            t.tsLock = produced() - lastGoodAt < (long)(kSymbolRate * 0.7);
+            t.tsLock = produced() - lastGoodAt < (long)(symRate * 0.7);
             t.dataValid = t.tsLock;
             statsKeep = st;
         } else {
@@ -632,10 +633,12 @@ DtmbReceiver::DtmbReceiver() : p_(std::make_unique<Impl>()) {
 }
 DtmbReceiver::~DtmbReceiver() = default;
 
-void DtmbReceiver::configure(double inputRateHz) {
+void DtmbReceiver::configure(double inputRateHz, double bwMhz) {
     Impl& s = *p_;
     s.inRate = inputRateHz;
-    s.rateOk = s.front.configure(inputRateHz);
+    s.symRate = symbolRateFor(bwMhz);
+    s.acq.symRate = s.symRate;
+    s.rateOk = s.front.configure(inputRateHz, s.symRate);
     s.doReset();
 }
 

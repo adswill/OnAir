@@ -582,7 +582,7 @@ if(DECT2_BUILD_APP AND NOT APPLE)
   install(FILES README.md LICENSE DESTINATION ${CMAKE_INSTALL_DOCDIR} OPTIONAL)
   # a normal user can open every USB radio (udev rules) and the kernel's TV driver stays off RTL-SDR dongles (modprobe blacklist)
   install(FILES packaging/linux/60-onair-sdr.rules DESTINATION lib/udev/rules.d)
-  install(FILES packaging/linux/onair-rtlsdr-blacklist.conf DESTINATION /etc/modprobe.d)
+  install(FILES packaging/linux/onair-rtlsdr-blacklist.conf packaging/linux/onair-sdrplay-blacklist.conf DESTINATION /etc/modprobe.d)
   # the .deb reloads udev and frees a dongle the kernel holds; the blacklist is a conffile, so a change of the user survives an upgrade
   set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
       ${CMAKE_CURRENT_SOURCE_DIR}/packaging/linux/deb/postinst

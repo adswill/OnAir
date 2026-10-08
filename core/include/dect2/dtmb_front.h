@@ -1,6 +1,7 @@
 // DTMB receiver front end: the square-root raised cosine matched filter and the conversion from the radio's sample rate to the symbol rate of
 // 7.56 Msym/s, in one polyphase filter whose sampling instants can be moved and whose spacing can be trimmed (timing recovery).
 #pragma once
+#include "dtmb_defs.h"
 #include "ring.h"
 #include <cmath>
 #include <cstdint>
@@ -11,7 +12,7 @@ namespace dect2::dtmb {
 class SrrcResampler {
 public:
     // False when the input rate is too low (the signal is 7.94 MHz wide: 8 Msps and up)
-    bool configure(double inRate);
+    bool configure(double inRate, double symRate = kSymbolRate);   // symRate: symbolRateFor() of the channel width
     void reset();
     // Input and output are decoupled so that timing corrections act on the very next sample: push() stores radio samples (with the DC
     // offset removed), pull() computes up to maxOut symbol-rate samples from what is stored and appends them to out.

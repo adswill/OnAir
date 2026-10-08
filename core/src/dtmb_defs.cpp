@@ -194,7 +194,7 @@ int codewordsPerGroup(Mapping m) {
 int packetsPerFrame(const Profile& p) {
     return codewordsPerGroup(p.map) * payloadBits(p.rate) / kTsBits / framesPerGroup(p.map);
 }
-double netBitrate(Header h, const Profile& p) { return packetsPerFrame(p) * (double)kTsBits * kSymbolRate / frameLength(h); }
+double netBitrate(Header h, const Profile& p, double symRate) { return packetsPerFrame(p) * (double)kTsBits * symRate / frameLength(h); }
 
 int qamCount(Mapping m) { return 1 << bitsPerSymbol(m == Mapping::Qam4Nr ? Mapping::Qam4 : m); }
 

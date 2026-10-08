@@ -254,7 +254,8 @@ static void nativeRobustChecks(const std::string& dir, const char* ext, const st
     {
         const std::string root = dir + "/root";
         for (const char* d : {"", "/sys", "/sys/bus", "/sys/bus/usb", "/sys/bus/usb/devices", "/sys/module", "/sys/module/dvb_usb_rtl28xxu", "/dev", "/dev/bus", "/dev/bus/usb", "/dev/bus/usb/001",
-                              "/sys/bus/usb/devices/1-1", "/sys/bus/usb/devices/1-2", "/sys/bus/usb/devices/1-2:1.0", "/sys/bus/usb/devices/1-3", "/sys/bus/usb/devices/usb1"})
+                              "/sys/bus/usb/devices/1-1", "/sys/bus/usb/devices/1-2", "/sys/bus/usb/devices/1-2:1.0", "/sys/bus/usb/devices/1-3", "/sys/bus/usb/devices/usb1",
+                              "/sys/bus/usb/devices/1-4", "/sys/bus/usb/devices/1-4:1.0"})
             mkdir((root + d).c_str(), 0755);
         auto dev = [&](const char* name, const char* vid, const char* pid, int devnum, int mode) {
             const std::string p = root + "/sys/bus/usb/devices/" + name;
@@ -268,19 +269,22 @@ static void nativeRobustChecks(const std::string& dir, const char* ext, const st
         dev("1-2", "0bda", "2838", 6, 0666);    // an RTL-SDR held by the TV driver
         dev("1-3", "046d", "c52b", 7, 0);       // a mouse
         dev("usb1", "1d6b", "0002", 1, 0);      // the root hub
+        dev("1-4", "1df7", "2500", 8, 0666);    // an RSP1 held by the kernel's Mirics driver (#17)
         symlink("../../../../bus/usb/drivers/dvb_usb_rtl28xxu", (root + "/sys/bus/usb/devices/1-2:1.0/driver").c_str());
+        symlink("../../../../bus/usb/drivers/msi2500", (root + "/sys/bus/usb/devices/1-4:1.0/driver").c_str());
         setenv("DECT2_SYSFS_ROOT", root.c_str(), 1);
         const auto hints = usbRadioHints();
         unsetenv("DECT2_SYSFS_ROOT");
         for (const auto& s : hints) printf("  hint: %s\n", s.c_str());
         const bool root0 = geteuid() == 0;   // root may open anything
-        CHECK(hints.size() == (root0 ? 1u : 2u), "%zu hints", hints.size());
-        bool hack = false, tv = false;
+        CHECK(hints.size() == (root0 ? 2u : 3u), "%zu hints", hints.size());
+        bool hack = false, tv = false, miri = false;
         for (const auto& s : hints) {
             if (s.find("HackRF is plugged in but this user may not open it: install OnAir's udev rules") == 0) hack = true;
             if (s.find("The Linux TV driver dvb_usb_rtl28xxu holds the RTL-SDR: run sudo modprobe -r dvb_usb_rtl28xxu") == 0) tv = true;
+            if (s.find("The Linux driver msi2500 holds the SDRplay RSP") == 0) miri = true;
         }
-        CHECK((hack || root0) && tv, "hints: HackRF permission %d, RTL TV driver %d", hack, tv);
+        CHECK((hack || root0) && tv && miri, "hints: HackRF permission %d, RTL TV driver %d, SDRplay held by msi2500 %d", hack, tv, miri);
     }
 }
 // ---- end native-robust

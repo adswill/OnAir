@@ -16,10 +16,10 @@ constexpr int kThrottleAfter = 24;   // failed codewords in a row before the dec
 constexpr int kProbeEvery = 8;
 }
 
-FecChain::FecChain(const Profile& p, Header h, int workers)
+FecChain::FecChain(const Profile& p, Header h, int workers, double symRate)
     : prof_(p), code_(ldpcCode(p.rate)), perFrame_(packetsPerFrame(p)), pkCw_(payloadBits(p.rate) / kTsBits), cwPerGroup_(codewordsPerGroup(p.map)),
       bitDe_(interleaverDelay(p), true), symDe_(interleaverDelay(p), true), syncDec_(code_), nWorkers_(workers) {
-    secsPerCw_ = frameSeconds(h) * framesPerGroup(p.map) / cwPerGroup_;
+    secsPerCw_ = frameSeconds(h, symRate) * framesPerGroup(p.map) / cwPerGroup_;
     // descrambler bits of the payload of one signal frame (the generator restarts with every frame)
     Scrambler s;
     descr_.resize((size_t)perFrame_ * kTsBits);

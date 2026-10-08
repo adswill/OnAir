@@ -13,5 +13,11 @@ if [ "$1" = configure ]; then
             modprobe -r "$m" >/dev/null 2>&1 || true
         done
     fi
+    # the same for the Mirics drivers that keep an SDRplay RSP from the SDRplay API (an RSP plugged in now is free after a replug)
+    if [ -r /proc/modules ] && command -v modprobe >/dev/null 2>&1 && grep -q '^msi2500 ' /proc/modules 2>/dev/null; then
+        for m in msi2500 msi001 sdr_msi3101; do
+            modprobe -r "$m" >/dev/null 2>&1 || true
+        done
+    fi
 fi
 exit 0

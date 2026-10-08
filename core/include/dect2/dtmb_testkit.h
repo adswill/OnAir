@@ -30,6 +30,7 @@ struct Scenario {
     int threads = 2;             // decoder threads, 0 = decode inside feed() (no drops, deterministic)
     uint32_t seed = 1;           // seed of the numbered packets
     uint64_t rngSeed = 12;
+    double rxBwMhz = 0;          // the channel width the receiver is set to; 0 = the signal's (sc.symbolRate)
 };
 
 struct Result {
@@ -62,7 +63,7 @@ inline Result run(const Scenario& o, bool verbose = false) {
     Result r;
     Signal sig(o.sc, testPacketSource(o.seed));
     DtmbReceiver rx;
-    rx.configure(o.sc.rate);
+    rx.configure(o.sc.rate, o.rxBwMhz > 0 ? o.rxBwMhz : (o.sc.symbolRate < 7e6 ? 6.0 : 8.0));
     rx.setDecoderThreads(o.threads);
     uint32_t expect = 0xFFFFFFFFu;
     double now = 0;
@@ -100,7 +101,7 @@ inline Result run(const Scenario& o, bool verbose = false) {
     double cpu = 0, tonePhase = 0;
     std::uniform_real_distribution<double> ur(0.0, 1.0);
     const float lvl = (float)std::pow(10.0, o.levelDb / 20.0), stepGain = (float)std::pow(10.0, o.stepDb / 20.0);
-    r.lastRate = netBitrate(o.sc.tx.header, o.sc.tx.profile);
+    r.lastRate = netBitrate(o.sc.tx.header, o.sc.tx.profile, o.sc.symbolRate);
     while (produced < total) {
         size_t n = o.chunkMode == 0 ? 16384 : (produced < 3000 ? 1 : produced < 6000 ? 7 : odd[oddIdx++ % 10]);
         n = std::min(n, total - (size_t)produced);

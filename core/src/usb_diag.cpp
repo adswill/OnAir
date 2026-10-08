@@ -97,6 +97,14 @@ std::vector<std::string> hintsUnder(const std::string& root) {
         if (!radio) continue;
         if (rtlTvDriver && std::string(radio) == "RTL-SDR" && boundTo(devices, dev, "dvb_usb_rtl28xxu"))
             out.push_back("The Linux TV driver dvb_usb_rtl28xxu holds the RTL-SDR: run sudo modprobe -r dvb_usb_rtl28xxu, or install OnAir's blacklist file (the .deb does it)");
+        // an RSP is a Mirics MSi2500/MSi001 underneath: the kernel's Mirics driver (or its USB audio driver) takes it at boot and the SDRplay API
+        // lists nothing (issue #17: the RSP showed up only after another program had pulled the kernel driver off it)
+        if (std::string(radio) == "SDRplay RSP") {
+            if (boundTo(devices, dev, "msi2500"))
+                out.push_back("The Linux driver msi2500 holds the SDRplay RSP, so the SDRplay API cannot see it: run sudo modprobe -r msi2500 msi001, or install OnAir's blacklist file (the .deb does it), then unplug and replug it");
+            else if (boundTo(devices, dev, "snd-usb-audio"))
+                out.push_back("The Linux sound driver snd-usb-audio holds the SDRplay RSP, so the SDRplay API cannot see it: unplug and replug it after installing OnAir's blacklist file (the .deb does it), or restart the SDRplay API service (sudo systemctl restart sdrplay)");
+        }
         int bus = 0, num = 0;
         if (!readInt(e.path() / "busnum", bus) || !readInt(e.path() / "devnum", num)) continue;
         char node[64];

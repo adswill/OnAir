@@ -19,10 +19,10 @@ double besselI0(double x) {
 
 }
 
-bool SrrcResampler::configure(double inRate) {
-    if (inRate < 7.95e6) return false;
+bool SrrcResampler::configure(double inRate, double symRate) {
+    if (inRate < symRate * 1.0516) return false;   // 7.95 Msps for the 8 MHz channel: the roll-off of 0.05 has to fit
     inRate_ = inRate;
-    ratio_ = inRate / kSymbolRate;
+    ratio_ = inRate / symRate;
     half_ = (int)std::ceil(kSpan * ratio_);
     taps_ = 2 * half_;
     stride_ = (taps_ + 7) & ~7;

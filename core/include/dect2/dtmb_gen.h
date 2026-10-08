@@ -11,6 +11,7 @@
 //   [4] carriers       0 = C=3780 (multi-carrier); 1 = C=1 (single carrier: always PN595 with a fixed phase, whatever [0] and [5] say)
 //   [5] PN phase       0 rotating inside the super-frame, 1 fixed (PN420 and PN945)
 //   [6] payload        0 looping test-card programme, 1 numbered test packets (dtmbTestPacket)
+//   [7] channel        0 8 MHz (7.56 Msym/s), 1 6 MHz (5.67 Msym/s, Cuba); the app sets it from the receiver's channel width
 // SynthConfig::modeVal: [0] second echo, attenuation in dB (0 = off); [1] its delay in samples, negative = arrives before the main path.
 #pragma once
 #include "dtmb_tx.h"
@@ -25,6 +26,7 @@ namespace dtmb {
 struct SignalConfig {
     TxConfig tx;
     double rate = 10e6;            // output sample rate, Hz (8 MHz and up)
+    double symbolRate = kSymbolRate;   // symbolRateFor() of the channel: 5.67 Msym/s for a 6 MHz channel
     double snrDb = 40;             // carrier to noise power in 7.56 MHz; above 150 no noise
     double cfoHz = 0;
     double sroPpm = 0;             // the receiver's clock runs this many ppm slow: the signal is read this much faster

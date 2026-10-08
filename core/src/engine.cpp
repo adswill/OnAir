@@ -176,7 +176,7 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     rxDvbs_.configure(rate_);
     rxDvbs_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the receiver thread
     rxDvbs_.setLogCallback([this](const std::string& s) { log(s); });
-    rxDtmb_.configure(rate_);
+    rxDtmb_.configure(rate_, tune.bandwidthMhz);
     rxDtmb_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the receiver thread
     rxDtmb_.setLogCallback([this](const std::string& s) { log(s); });
     rxAtv_.configure(rate_);

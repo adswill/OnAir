@@ -8,6 +8,8 @@
 namespace dect2::dtmb {
 
 constexpr double kSymbolRate = 7560000.0;          // symbols per second, 8 MHz channel
+// The same signal scaled to a 6 MHz channel (Cuba, in the IARU region 2 / American 6 MHz raster): 5.67 Msym/s, everything else the same.
+inline double symbolRateFor(double bwMhz) { return bwMhz > 0 && bwMhz < 7.0 ? kSymbolRate * 6.0 / 8.0 : kSymbolRate; }
 constexpr double kRollOff = 0.05;                  // square-root raised cosine
 constexpr int kBody = 3780;                        // symbols (C=1) or carriers (C=3780) of a frame body
 constexpr int kSiSymbols = 36;                     // system information symbols in a body
@@ -69,8 +71,8 @@ inline int ldpcInfoBits(Rate r) { return bchBlocks(r) * kBchN; }  // 3048, 4572,
 int framesPerGroup(Mapping m);                 // signal frames that hold a whole number of codewords: 2 for 4QAM-NR and 32QAM, else 1
 int codewordsPerGroup(Mapping m);              // 1, 1, 2, 5, 3
 int packetsPerFrame(const Profile& p);         // transport stream packets in one signal frame
-double netBitrate(Header h, const Profile& p); // transport stream bits per second
-inline double frameSeconds(Header h) { return frameLength(h) / kSymbolRate; }
+double netBitrate(Header h, const Profile& p, double symRate = kSymbolRate); // transport stream bits per second
+inline double frameSeconds(Header h, double symRate = kSymbolRate) { return frameLength(h) / symRate; }
 
 // Constellation points of a mapping with unit mean power, indexed by the label whose bit 0 is the first transmitted bit.
 // 4QAM and 4QAM-NR: bit 0 -> I, bit 1 -> Q. 16QAM / 64QAM: the I label bits first (least significant first), then the Q label bits; each

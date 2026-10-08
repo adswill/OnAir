@@ -181,6 +181,10 @@ void applyBandwidth(App& a) {
     a.tune.synth.mode = engineStd(a) >= 4 ? engineStd(a) : 0;   // the test signal of DAB (4), ATSC 3.0 (5), ISDB-T (6), FM (7) and the modes after them
     if (const ModeTuning* mt = a.family >= 6 ? modeTuning(a.family + 2) : nullptr) {   // the mode says what the radio should do
         a.tune.bandwidthMhz = mt->bandwidthMhz; a.tune.sampleRate = mt->sampleRate; a.tune.basebandFilterHz = mt->basebandHz;
+        if (mt->stdMode == 9) {   // DTMB: the channel width the user picked (6 MHz in Cuba); the test signal follows it
+            a.tune.bandwidthMhz = a.dtmbBwMhz; a.tune.basebandFilterHz = a.dtmbBwMhz * 1e6;
+            a.tune.synth.modeOpt[7] = a.dtmbBwMhz == 6 ? 1 : 0;
+        }
         const DeviceInfo& dv = a.devices[a.devIdx];
         if (dv.isGeneric() && dv.maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, dv.maxRateHz);
     } else if (a.dabMode) {   // a DAB ensemble is 1.536 MHz wide: 2.048 Msps is the natural rate (RTL-SDR dongles do it too)
@@ -218,6 +222,7 @@ void loadPrefs(App& a) {
     for (int f = 6; f < 24; f++) a.famFreq[f] = d.getD(("fFreq" + std::to_string(f)).c_str(), 0.0);
     if (d.has("newUi")) a.newUi = d.getB("newUi", true);
     if (d.has("uiVariant")) a.uiVariant = std::max(0, std::min(7, (int)d.getI("uiVariant", 0)));
+    if (d.has("dtmbBw")) a.dtmbBwMhz = d.getI("dtmbBw", 8) == 6 ? 6 : 8;
     if (d.has("lightUi")) a.lightUi = d.getI("lightUi", 0) != 0;
     if (d.has("uiTheme")) a.uiTheme = std::max(0, std::min(2, (int)d.getI("uiTheme", 1)));
     if (d.has("fmStations")) {
@@ -276,6 +281,7 @@ void savePrefs(const App& a) {
     for (int f = 6; f < 24; f++) if (a.famFreq[f] > 0 || f == a.family) d.setD(("fFreq" + std::to_string(f)).c_str(), f == a.family ? a.freqMhz : a.famFreq[f]);
     d.setI("uiTheme", a.uiTheme);
     d.setI("lightUi", a.lightUi ? 1 : 0);
+    d.setI("dtmbBw", a.dtmbBwMhz);
     d.setI("uiVariant", a.uiVariant);
     {   // the stations the FM scan found: mhz|name|type|snr|stereo|rds, one per line
         std::string st;

@@ -38,7 +38,7 @@ bool Scanner::check(const DeviceInfo& dev, const ScanConfig& cfg, std::string& e
     if (!(cfg.stepMHz >= 0.1) || !(cfg.bwMhz >= 1.0 && cfg.bwMhz <= 10.0)) { err = "the step must be at least 0.1 MHz and the channel bandwidth between 1 and 10 MHz"; return false; }
     if ((cfg.stopMHz - cfg.startMHz) / cfg.stepMHz > 2000) { err = "the scan range has more than 2000 channels: use a larger step"; return false; }
     // a radio that cannot reach the sample rate a channel needs would only see part of it
-    const double needMhz = cfg.atsc || cfg.isdbt || cfg.atsc3 ? 6.0 : cfg.dtmb ? 8.0 : cfg.bwMhz;
+    const double needMhz = cfg.atsc || cfg.isdbt || cfg.atsc3 ? 6.0 : cfg.dtmb ? (cfg.bwMhz < 7 ? 6.0 : 8.0) : cfg.bwMhz;
     if (dev.isGeneric() && dev.maxRateHz > 0 && dev.maxRateHz < needMhz * 1e6 * 1.15) {
         char b[200];
         snprintf(b, sizeof b, "%s reaches at most %.1f Msps, too low for a %.0f MHz channel (it needs about %.1f)", dev.name.c_str(), dev.maxRateHz / 1e6, needMhz, needMhz * 1.15);
@@ -119,9 +119,9 @@ void Scanner::run() {
     if (cfg_.atsc) { tune.bandwidthMhz = 6; tune.sampleRate = 8e6; e.setStandard(3); }   // ATSC: always 6 MHz, no bandwidth detection
     if (cfg_.isdbt) { tune.bandwidthMhz = 6; tune.sampleRate = 8e6; e.setStandard(6); }   // ISDB-T: 6 MHz channels as well
     if (cfg_.atsc3) { tune.bandwidthMhz = 6; tune.sampleRate = 8e6; e.setStandard(5); }   // ATSC 3.0 needs at least 6.144 Msps; 8 leaves room for the channel edges
-    if (cfg_.dtmb) { tune.bandwidthMhz = 8; tune.sampleRate = 10e6; e.setStandard(9); }   // DTMB: 8 MHz channels, no bandwidth detection
+    if (cfg_.dtmb) { tune.bandwidthMhz = cfg_.bwMhz < 7 ? 6 : 8; tune.sampleRate = 10e6; e.setStandard(9); }   // DTMB: 8 MHz channels (6 MHz in Cuba), no bandwidth detection
     // the width of the channels: the 6 MHz modes and DTMB have their own, whatever bwMhz the scan tab was left on
-    const double chBw = cfg_.atsc || cfg_.isdbt || cfg_.atsc3 ? 6.0 : cfg_.dtmb ? 8.0 : cfg_.bwMhz;
+    const double chBw = cfg_.atsc || cfg_.isdbt || cfg_.atsc3 ? 6.0 : cfg_.dtmb ? (cfg_.bwMhz < 7 ? 6.0 : 8.0) : cfg_.bwMhz;
     if (cfg_.testTune) cfg_.testTune(tune.centerHz / 1e6, tune);
     // other radios than the HackRF report the rates and gains they can do
     if (dev_.isGeneric()) {

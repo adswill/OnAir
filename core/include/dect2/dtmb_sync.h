@@ -26,6 +26,7 @@ class Acquirer {
 public:
     static constexpr int kBlock = 65536;
     static constexpr float kMinCoherence = 0.04f;
+    double symRate = kSymbolRate;   // of the channel width (symbolRateFor)
     Acquirer();
     // r: kBlock symbol-rate samples. `threshold`: normalised correlation a header peak must reach (a carrier wave 10 dB above the signal cuts it to 0.3; noise alone reaches 0.2
     // somewhere in a block for the 255 chip core, which is why a hypothesis needs its peak in at least five frames in a row).
