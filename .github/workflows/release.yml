@@ -59,7 +59,7 @@ jobs:
           cmake --build build -j 4 --target dect2 dect2cli dect2scan
       - name: Package
         run: |
-          cd build && cpack -G "DEB;TGZ"
+          cd build && cpack -G DEB
           SRC="$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/tools/package/make_portable_linux.sh" "$PWD" "$PWD"
       - uses: actions/upload-artifact@v4
         with: { name: "linux-${{ matrix.arch }}", path: "build/onair_*.deb\nbuild/onair-*-portable.tar.gz" }

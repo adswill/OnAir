@@ -28,7 +28,7 @@ cp $SRC/packaging/linux/onair.desktop "$D/share/applications/"; cp $SRC/packagin
 cp $SRC/LICENSE "$D/LICENSE"
 # udev rules and the kernel-driver blacklist for the radios, with the script that installs them (the .deb installs them itself)
 mkdir -p "$D/udev"
-cp $SRC/packaging/linux/60-onair-sdr.rules $SRC/packaging/linux/onair-rtlsdr-blacklist.conf "$D/udev/"
+cp $SRC/packaging/linux/60-onair-sdr.rules $SRC/packaging/linux/onair-rtlsdr-blacklist.conf $SRC/packaging/linux/onair-sdrplay-blacklist.conf "$D/udev/"
 cp $SRC/packaging/linux/install-udev-rules.sh "$D/"; chmod 755 "$D/install-udev-rules.sh"
 cat > "$D/README.txt" <<'TXT'
 OnAir portable: run bin/onair. Nothing to install.
