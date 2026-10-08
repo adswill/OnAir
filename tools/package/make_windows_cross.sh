@@ -16,7 +16,7 @@ P=$ONAIR_WIN_PREFIX
 if [ -z "$ONAIR_WIN_PARTIAL" ]; then
   missing=""
   for f in libSoapySDR librtlsdr libairspy libairspyhf libbladeRF libLimeSuite libiio FTD3XX; do [ -f "$P/bin/$f.dll" ] || missing="$missing bin/$f.dll"; done
-  for f in libuhd libusb-1.0 libstdc++-6 libgcc_s_seh-1 libwinpthread-1; do [ -f "$P/redist/$f.dll" ] || missing="$missing redist/$f.dll"; done
+  for f in libusb-1.0 libstdc++-6 libgcc_s_seh-1 libwinpthread-1; do [ -f "$P/redist/$f.dll" ] || missing="$missing redist/$f.dll"; done
   [ -z "$missing" ] || { echo "error: not in $P:$missing"; echo "run tools/package/cross_deps_windows.sh first (or set ONAIR_WIN_PARTIAL=1 to package without them)"; exit 1; }
 fi
 cmake --fresh -S . -B $BUILD "-DCMAKE_TOOLCHAIN_FILE=$PWD/packaging/windows/mingw-toolchain.cmake" -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=ON -DDECT2_WITH_SOAPY=ON -DONAIR_WIN_SOAPY=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 >/dev/null
@@ -34,8 +34,13 @@ cp "$P/bin/libSoapySDR.dll" "$OUT/"
 # the radios OnAir drives by itself: their libraries next to the program (nothing to install). FTD3XX.dll is FTDI's USB 3 driver library that the
 # LimeSDR Mini needs; it is signed by FTDI, so it is copied as it is (not stripped).
 for d in librtlsdr libairspy libairspyhf libbladeRF libLimeSuite libiio FTD3XX; do if [ -f "$P/bin/$d.dll" ]; then cp "$P/bin/$d.dll" "$OUT/"; else echo "warning: $d.dll is missing in $P/bin (run cross_deps_windows.sh)"; fi; done
-# UHD (USRP) with the Boost, Python and libusb DLLs it needs, and the GCC 16 C++ runtime (libstdc++, libgcc_s, libwinpthread) that all the DLLs share
-for f in "$P"/redist/*.dll; do [ -f "$f" ] && cp "$f" "$OUT/"; done
+# libusb and the GCC 16 C++ runtime (libstdc++, libgcc_s, libwinpthread) that the DLLs share. UHD (USRP) is NOT shipped, nor the Boost and
+# Python DLLs only it needs: our MinGW build of it hung or crashed in its device search on a PC without a USRP (the GitHub Windows check of
+# 0.2.1), and a USRP needs the Ettus installer's firmware images anyway. OnAir uses the UHD installed from Ettus (uhd.dll), as 0.2.0 did.
+for f in "$P"/redist/*.dll; do
+  case "$(basename "$f")" in libuhd*|libboost*|libpython*) continue;; esac
+  [ -f "$f" ] && cp "$f" "$OUT/"
+done
 # the C++ runtime of the compiler that built OnAir goes over the MSYS2 copy: the programs import functions (__cxa_thread_atexit) that the
 # MSYS2 libstdc++ does not export, and the check below makes sure the MSYS2-built DLLs (UHD, Boost) still find all they need in it
 LIBDIR=$(dirname "$(x86_64-w64-mingw32-g++ -print-file-name=libstdc++-6.dll)")
@@ -45,7 +50,7 @@ for m in "$P"/lib/SoapySDR/modules0.8/*.dll; do
   case "$m" in *rtlsdrSupport.dll|*airspySupport.dll) continue;; esac   # (an older prefix may still hold them)
   [ -f "$m" ] && cp "$m" "$OUT/lib/SoapySDR/modules0.8/"
 done
-[ -d "$P/licenses" ] && { mkdir -p "$OUT/licenses"; cp -R "$P/licenses/." "$OUT/licenses/"; }
+[ -d "$P/licenses" ] && { mkdir -p "$OUT/licenses"; cp -R "$P/licenses/." "$OUT/licenses/"; rm -rf "$OUT/licenses/boost-libs" "$OUT/licenses/python3.14"; }   # (Boost and Python came with UHD only)
 for f in "$OUT"/*.dll "$OUT"/lib/SoapySDR/modules0.8/*.dll; do
   [ -f "$f" ] || continue
   [ "$(basename "$f")" = FTD3XX.dll ] || $S --strip-unneeded "$f" 2>/dev/null   # debugging information makes libstdc++ alone 29 MB
@@ -61,7 +66,7 @@ HackRF, RTL-SDR and Airspy radios: install the WinUSB driver once with Zadig (ht
 Airspy HF+ radios: the same, WinUSB with Zadig.
 SDRplay RSP radios: install the SDRplay API from sdrplay.com first (it brings the driver; no Zadig).
 BladeRF radios: the library is included; the radio needs a WinUSB (or libusbK) driver: the installer from nuand.com brings one, or use Zadig.
-USRP radios (Ettus): UHD is included; install its firmware and FPGA images once (uhd_images_downloader from the UHD package, files.ettus.com). USB models (B200/B210) also need a WinUSB driver (Zadig); network models (N2xx, X3xx) need nothing more.
+USRP radios (Ettus): install UHD from Ettus (files.ettus.com) with its firmware and FPGA images (uhd_images_downloader); OnAir uses that UHD. USB models (B200/B210) also need the driver from the UHD installer.
 LimeSDR Mini / Mini 2: the library is included; the radio needs FTDI's FT60x USB driver (Windows Update or ftdichip.com). LimeSDR-USB: install LimeSuite (limemicro.com or PothosSDR) first.
 PlutoSDR: install the PlutoSDR Windows drivers from Analog Devices (wiki.analog.com), or connect to it over the network.
 Video is decoded on the graphics chip and the error correction runs on the GPU when the computer has a suitable one (switchable in the player panel).
