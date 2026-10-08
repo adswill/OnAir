@@ -82,6 +82,21 @@ std::string cacheDir() {
     std::filesystem::create_directories(std::filesystem::path(reinterpret_cast<const char8_t*>(d.c_str())), ec);
     return d;
 }
+// Windows: %LOCALAPPDATA%\OnAir; Linux: $XDG_DATA_HOME/onair or ~/.local/share/onair. Paths are UTF-8.
+std::string dataDir() {
+    std::string d;
+#ifdef _WIN32
+    if (const wchar_t* la = _wgetenv(L"LOCALAPPDATA")) d = utf8(la) + "\\OnAir";
+    else return cacheDir();
+#else
+    const char* x = getenv("XDG_DATA_HOME");
+    const char* h = getenv("HOME");
+    d = x && *x ? std::string(x) + "/onair" : std::string(h ? h : "/tmp") + "/.local/share/onair";
+#endif
+    std::error_code ec;
+    std::filesystem::create_directories(std::filesystem::path(reinterpret_cast<const char8_t*>(d.c_str())), ec);
+    return d;
+}
 void locateStart() {}
 int locateState(double&, double&, double&, std::string& msg) { msg = "this system has no location service in OnAir yet: enter the position by hand"; return 3; }
 

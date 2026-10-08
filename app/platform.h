@@ -35,8 +35,10 @@ Prefs& prefs();
 // Pictures and position (the ADS-B map).
 // Decode a picture file into RGBA8 (0xAABBGGRR, row by row): PNG everywhere, on macOS also what the system reads. False when it cannot be read.
 bool decodeImage(const std::string& path, int& w, int& h, std::vector<uint32_t>& rgba);
-// A folder for downloaded files (map tiles), created on demand. UTF-8.
+// A folder for downloaded files that may be thrown away (map tiles of this session only), created on demand. UTF-8.
 std::string cacheDir();
+// A folder for downloaded files the user keeps (map tiles kept until deleted): system cleaners leave it alone. Created on demand. UTF-8.
+std::string dataDir();
 // Downloads url into file (UTF-8 path) with the curl program, which Windows 10 and later, macOS and nearly every Linux have (no TLS library
 // is linked). On Windows it runs without a console window. Gives up after about 15 s. False when the download did not work.
 bool fetchUrl(const std::string& url, const std::string& file, const std::string& userAgent);
