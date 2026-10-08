@@ -51,7 +51,7 @@ jobs:
       - name: "Build FFmpeg (static, only what OnAir uses, so that the packages do not depend on the FFmpeg of the system they are installed on)"
         if: steps.ffmpeg.outputs.cache-hit != 'true'
         run: tools/package/build_ffmpeg_static.sh "$HOME/ffmpeg"
-      - name: Gather the radio libraries (RTL-SDR is built here from the RTL-SDR Blog source: the distribution's librtlsdr0 cannot drive the V4)
+      - name: "Gather the radio libraries (RTL-SDR is built here from the RTL-SDR Blog source: the distribution's librtlsdr0 cannot drive the V4)"
         run: tools/package/collect_radio_libs_linux.sh "$GITHUB_WORKSPACE/build/radiolibs"
       - name: Build
         run: |
