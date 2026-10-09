@@ -25,6 +25,10 @@ constexpr double kPi = 3.14159265358979323846;
 constexpr int FREEDV_MODE_1600 = 0, FREEDV_MODE_700D = 7, FREEDV_MODE_700E = 13;
 constexpr int kModeCode[kFreedvModes] = {FREEDV_MODE_700D, FREEDV_MODE_700E, FREEDV_MODE_1600};
 const char* const kModeName[kFreedvModes] = {"700D", "700E", "1600"};
+// The library's sync flag also fires on RTTY tones, SSTV and noise (FreeDV 1600 above all) and its text channel then gives garbage. A mode
+// counts as synced only after the flag held for 1.5 s with an SNR estimate of at least kMinSnrDb; either failing drops it at once.
+constexpr uint64_t kConfirmSamples = 12000;
+constexpr float kMinSnrDb = 3.f;
 
 struct freedv;   // opaque
 using RxTxtCb = void (*)(void*, char);
@@ -123,8 +127,9 @@ struct Rx {
     std::vector<short> modemIn, speech;
     std::string line;            // text being received
     std::string lastLine;
-    bool sync = false;
+    bool sync = false;           // confirmed: the library's sync has held with a sane SNR for kConfirmSamples
     float snr = 0;
+    uint64_t syncRun = 0;        // samples the library's sync has held with the SNR above the floor
     uint64_t lostSamples = 0;
     int nSpeechMax = 0;
 };
@@ -201,12 +206,12 @@ void HfdigFreedv::feedAudio(const float* x, size_t n) {
     if (choice != s.lastChoice) {   // the user picked another mode: start clean
         s.lastChoice = choice;
         s.active = -1;
-        for (Rx& r : s.rx) { r.acc.clear(); r.head = 0; r.sync = false; r.lostSamples = 0; }
+        for (Rx& r : s.rx) { r.acc.clear(); r.head = 0; r.sync = false; r.syncRun = 0; r.lostSamples = 0; r.line.clear(); r.lastLine.clear(); }
     }
     s.tel.modeChoice = choice;
     for (int m = 0; m < kFreedvModes; m++) {
         Rx& r = s.rx[m];
-        if (!r.f || (choice > 0 && choice - 1 != m)) { r.sync = false; continue; }
+        if (!r.f || (choice > 0 && choice - 1 != m)) { r.sync = false; r.syncRun = 0; continue; }
         for (size_t i = 0; i < n; i++) {
             const float v = std::min(std::max(x[i], -1.f), 1.f);
             r.acc.push_back((short)lrintf(v * 12000.f));
@@ -220,8 +225,15 @@ void HfdigFreedv::feedAudio(const float* x, size_t n) {
             int sync = 0;
             float snr = 0;
             a.stats(r.f, &sync, &snr);
-            r.sync = sync != 0;
             r.snr = std::isfinite(snr) ? snr : 0.f;
+            if (sync != 0 && r.snr >= kMinSnrDb) {
+                r.syncRun += (uint64_t)nin;
+                if (!r.sync && r.syncRun >= kConfirmSamples) { r.sync = true; r.line.clear(); r.lastLine.clear(); }   // the text so far was noise
+            } else {
+                r.syncRun = 0;
+                r.sync = false;
+                r.line.clear(); r.lastLine.clear();
+            }
             if (!r.sync) r.lostSamples += (uint64_t)nin; else r.lostSamples = 0;
             if (s.active < 0 && r.sync) s.active = m;
             if (m == s.active && r.sync && nout > 0 && nout <= r.nSpeechMax) {
@@ -249,6 +261,7 @@ void HfdigFreedv::feedAudio(const float* x, size_t n) {
         if (a.bitErrors && a.totalBits) { t.bitErrors = (uint64_t)std::max(a.bitErrors(r.f), 0); t.bits = (uint64_t)std::max(a.totalBits(r.f), 0); }
     } else {
         t.snr = 0;
+        t.text.clear();
     }
 }
 
