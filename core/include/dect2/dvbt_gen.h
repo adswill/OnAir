@@ -27,6 +27,8 @@ public:
     void nextSymbol(std::vector<cf32>& out);
     // Frequency-domain carriers of the last symbol (for tests)
     const std::vector<cf32>& lastCarriers() const { return carriers_; }
+    // Hierarchical modes: the low-priority transport stream (default: null packets)
+    void setLpSource(PacketSource src) { srcLp_ = std::move(src); }
 
 private:
     void refill();
@@ -37,6 +39,11 @@ private:
     ConvInterleaver ci_{false};
     InnerEncoder enc_;
     std::vector<uint8_t> codedQ_;
+    PacketSource srcLp_;
+    ConvInterleaver ciLp_{false};
+    InnerEncoder encLp_{0};
+    std::vector<uint8_t> codedLpQ_;
+    void codeGroup(PacketSource& src, ConvInterleaver& ci, InnerEncoder& enc, std::vector<uint8_t>& q);
     std::deque<uint8_t> wordsQ_;
     std::vector<float> tpsVal_;
     std::vector<cf32> carriers_;

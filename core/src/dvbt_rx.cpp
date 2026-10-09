@@ -84,6 +84,7 @@ struct DvbtReceiver::Impl {
     std::unique_ptr<Fft> fft;
     std::vector<cf32> fbuf;
     std::atomic<int> detect{0};
+    std::atomic<bool> lpReq{false};
     int agreeCount = 0, agreeMode = -1, agreeGi = -1;
     int64_t acqLastEnd = 0;
 
@@ -808,6 +809,8 @@ void DvbtReceiver::configure(double inputRateHz, double bandwidthMhz) {
     I.decimate = I.rateOk && !I.resampler.passthrough();
 }
 
+void DvbtReceiver::setLowPriority(bool lp) { p_->lpReq = lp; }   // applied by feed(), on the thread that decodes
+
 void DvbtReceiver::reset() { Impl& I = *p_; const double r = I.inRate, b = I.bwMhz; configure(r, b); }
 
 void DvbtReceiver::setPacketCallback(std::function<void(const uint8_t*, size_t, double)> cb) { p_->cb = std::move(cb); }
@@ -816,6 +819,7 @@ int DvbtReceiver::detectLevel() const { return p_->detect.load(); }
 void DvbtReceiver::feed(const cf32* x, size_t n) {
     Impl& I = *p_;
     if (!I.rateOk || !n) return;
+    if (I.lpReq.load() != I.fec.lowPriority()) I.fec.setLowPriority(I.lpReq.load());
     // DC removal (the radio's centre spike, a HackRF's is several times a carrier): the mean of the block moves a slow estimate. Left in,
     // it lands on the centre carrier, which is a continual pilot: that pilot's error then poisons the common phase, the noise estimate
     // and, through the pilot grid, the channel estimate of every carrier, and nothing decodes. The time constant is long (50 ms) so that

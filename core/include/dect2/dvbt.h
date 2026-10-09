@@ -103,6 +103,11 @@ void demap(const cf32* cells, const float* n0, int count, int mod, int hier, flo
 void symbolDeinterleave(int mode, int symIdx, const cf32* in, const float* n0in, cf32* out, float* n0out);
 // Undo the bit interleaver on LLRs of one symbol (1512 / 6048 words of v LLRs each): llr in = demapper order
 void bitDeinterleave(const float* llrIn, int mod, int words, float* llrOut);
+// Hierarchical modes (4.3.4.1): the HP stream (2 bits a word) goes through branches I0, I1, the LP stream (v - 2 bits a word) through I2..Iv-1
+// (16-QAM: x''0 -> I2, x''1 -> I3; 64-QAM: x''0 -> I2, x''1 -> I4, x''2 -> I3, x''3 -> I5)
+void bitInterleaveHier(const std::vector<uint8_t>& hpCoded, const std::vector<uint8_t>& lpCoded, int mod, std::vector<uint8_t>& words);
+// The LP stream back out of one symbol's demapper LLRs (v per cell): (v - 2) LLRs per word, in coded order
+void bitDeinterleaveLp(const float* llrIn, int mod, int words, float* llrOut);
 
 class Viterbi {
 public:

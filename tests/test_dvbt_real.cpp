@@ -24,7 +24,7 @@ struct Case {
     const char* name;
     int mode, gi, mod, cr, hier = 0, crLp = -1;
     double bw = 8, offHz = 0, ppm = 0, inRate = 0;
-    bool echo = false, clip = false, swap = false, nan = false;
+    bool echo = false, clip = false, swap = false, nan = false, lp = false;
     int frames = 0;
 };
 
@@ -40,6 +40,13 @@ static Result run(const Case& c) {
         memcpy(pkt + 4, &counter, 4);
         for (int i = 8; i < 188; i++) pkt[i] = (uint8_t)(counter * 31 + i * 7);
         counter++;
+    });
+    uint32_t lpCounter = 0;
+    if (c.lp) gen.setLpSource([&](uint8_t* pkt) {
+        pkt[0] = 0x47; pkt[1] = 0x02; pkt[2] = 0x00; pkt[3] = 0x10;
+        memcpy(pkt + 4, &lpCounter, 4);
+        for (int i = 8; i < 188; i++) pkt[i] = (uint8_t)(lpCounter * 31 + i * 7);
+        lpCounter++;
     });
     const int frames = c.frames ? c.frames : (c.mode == dvbt::k8K ? 6 : 20);
     std::vector<cf32> sig(30000, cf32(0, 0)), sym;
@@ -57,12 +64,14 @@ static Result run(const Case& c) {
     else in.swap(sig);
     DvbtReceiver rx;
     rx.configure(rate, c.bw);
+    rx.setLowPriority(c.lp);
+    const uint8_t pid = c.lp ? 0x02 : 0x01;
     Result r;
     rx.setPacketCallback([&](const uint8_t* pk, size_t n, double) {
         for (size_t i = 0; i < n; i++) {
             const uint8_t* q = pk + i * 188;
             uint32_t v; memcpy(&v, q + 4, 4);
-            bool ok = !(q[1] & 0x80) && q[0] == 0x47 && q[1] == 0x01 && q[2] == 0x00;
+            bool ok = !(q[1] & 0x80) && q[0] == 0x47 && q[1] == pid && q[2] == 0x00;
             for (int j = 8; j < 188 && ok; j++) ok = q[j] == (uint8_t)(v * 31 + j * 7);
             if (ok) r.good++; else if (r.good) r.bad++;
         }
@@ -90,6 +99,10 @@ int main() {
     { Case c{"8K GI 1/4 16-QAM alpha 1, HP 1/2", k8K, kGi4, k16Qam, kR12}; c.hier = 1; c.crLp = kR34; add(c); }
     { Case c{"2K GI 1/8 64-QAM alpha 2, HP 2/3", k2K, kGi8, k64Qam, kR23}; c.hier = 2; c.crLp = kR56; add(c); }
     { Case c{"8K GI 1/32 64-QAM alpha 4, HP 3/4", k8K, kGi32, k64Qam, kR34}; c.hier = 3; c.crLp = kR78; add(c); }
+    // hierarchical: the low-priority stream
+    { Case c{"8K GI 1/4 16-QAM alpha 2, LP 1/2", k8K, kGi4, k16Qam, kR23}; c.hier = 2; c.crLp = kR12; c.lp = true; add(c); }
+    { Case c{"2K GI 1/8 64-QAM alpha 1, LP 2/3", k2K, kGi8, k64Qam, kR12}; c.hier = 1; c.crLp = kR23; c.lp = true; add(c); }
+    { Case c{"8K GI 1/32 64-QAM alpha 4, LP 1/2", k8K, kGi32, k64Qam, kR34}; c.hier = 3; c.crLp = kR12; c.lp = true; add(c); }
     // non-hierarchical with a reserved value in the (unused) LP code rate field
     { Case c{"2K GI 1/4 16-QAM 2/3, LP rate field 7", k2K, kGi4, k16Qam, kR23}; c.crLp = 7; add(c); }
     // I and Q swapped (a mirrored spectrum), and a block of NaN / infinite samples from a broken driver

@@ -14,6 +14,8 @@ public:
     ~DvbtReceiver();
     void configure(double inputRateHz, double bandwidthMhz);
     void reset();
+    // Hierarchical multiplexes: deliver the low-priority stream instead of the high-priority one (no effect otherwise)
+    void setLowPriority(bool lp);
     void feed(const cf32* x, size_t n);
     bool telemetry(RxTelemetry& out, uint64_t lastSeq);
     // Called with decoded 188-byte transport packets (transport_error_indicator set on packets that could not be repaired) and the

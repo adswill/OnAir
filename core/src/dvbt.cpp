@@ -615,6 +615,39 @@ void bitDeinterleave(const float* in, int mod, int words, float* out) {
     }
 }
 
+namespace {
+const int kBranchOff[6] = {0, 63, 105, 42, 21, 84};   // H_e(w) = (w + off_e) mod 126
+int lpBranch(int j, int v) { const int u = v - 2; return (j % u) / (u / 2) + 2 * (j % (u / 2)) + 2; }
+}
+
+void bitInterleaveHier(const std::vector<uint8_t>& hp, const std::vector<uint8_t>& lp, int mod, std::vector<uint8_t>& words) {
+    const int v = bitsPerCell(mod), u = v - 2;
+    const size_t blocks = std::min(hp.size() / 252, lp.size() / ((size_t)126 * u));
+    words.assign(blocks * 126, 0);
+    uint8_t br[6][126];
+    for (size_t b = 0; b < blocks; b++) {
+        for (int i = 0; i < 126; i++) {
+            for (int k = 0; k < 2; k++) br[k][i] = hp[(b * 126 + i) * 2 + k];
+            for (int j = 0; j < u; j++) br[lpBranch(j, v)][i] = lp[(b * 126 + i) * u + j];
+        }
+        for (int w = 0; w < 126; w++) {
+            unsigned val = 0;
+            for (int e = 0; e < v; e++) val = (val << 1) | br[e][(w + kBranchOff[e]) % 126];
+            words[b * 126 + w] = (uint8_t)val;
+        }
+    }
+}
+
+void bitDeinterleaveLp(const float* in, int mod, int words, float* out) {
+    const int v = bitsPerCell(mod), u = v - 2;
+    for (int b = 0; b + 126 <= words; b += 126)
+        for (int i = 0; i < 126; i++)
+            for (int j = 0; j < u; j++) {
+                const int e = lpBranch(j, v);
+                out[(size_t)(b + i) * u + j] = in[(size_t)(b + (i - kBranchOff[e] + 126) % 126) * v + e];
+            }
+}
+
 // llr * scale, rounded to nearest and limited to +-127
 static void quantise(const float* llr, size_t n, float scale, int8_t* q) {
     size_t j = 0;

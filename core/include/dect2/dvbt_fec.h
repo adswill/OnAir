@@ -20,6 +20,9 @@ class FecDecoder {
 public:
     void configure(const Params& p);
     void reset();
+    // Hierarchical modes: decode the low-priority stream instead of the high-priority one (resets the decoder when it changes)
+    void setLowPriority(bool lp) { if (lp != lp_) { lp_ = lp; reset(); } }
+    bool lowPriority() const { return lp_; }
     // One OFDM symbol's data carriers in carrier order (1512 / 6048), with the noise variance of each; symIdx 0..67
     void pushSymbol(const cf32* cells, const float* n0, int symIdx);
     // Appends the 188-byte packets decoded so far (transport_error_indicator set on packets RS could not repair)
@@ -30,6 +33,7 @@ public:
 private:
     void process(bool flush);
     Params p_;
+    bool lp_ = false;
     FecStats st_;
     std::vector<float> llrQueue_;          // coded-bit LLRs not yet decoded
     std::vector<int8_t> carry_;            // soft values of the last steps (history for the next window)

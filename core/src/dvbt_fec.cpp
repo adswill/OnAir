@@ -29,8 +29,8 @@ void FecDecoder::reset() {
 void FecDecoder::pushSymbol(const cf32* cells, const float* n0, int symIdx) {
     const int N = dataCarriers(p_.mode), v = bitsPerCell(p_.mod);
     // Hierarchical modulation: the high-priority stream is the first two bits of every cell (y0, y1: the quadrant), bit-interleaved by
-    // branches I0 and I1 exactly like QPSK, and coded at the HP rate. That is the stream decoded here; the LP bits are not used.
-    const int m = p_.hier ? 2 : v;
+    // branches I0 and I1 exactly like QPSK, and coded at the HP rate. The LP stream is the other v - 2 bits (branches I2..), at the LP rate.
+    const int m = p_.hier ? (lp_ ? v - 2 : 2) : v;
     static thread_local std::vector<cf32> c2;
     static thread_local std::vector<float> n2, llr, llr2;
     c2.resize(N); n2.resize(N); llr.resize((size_t)N * m); llr2.resize((size_t)N * m);
@@ -39,8 +39,11 @@ void FecDecoder::pushSymbol(const cf32* cells, const float* n0, int symIdx) {
         static thread_local std::vector<float> full;
         full.resize((size_t)N * v);
         demap(c2.data(), n2.data(), N, p_.mod, p_.hier, full.data());
-        for (int i = 0; i < N; i++) { llr[(size_t)i * 2] = full[(size_t)i * v]; llr[(size_t)i * 2 + 1] = full[(size_t)i * v + 1]; }
-        bitDeinterleave(llr.data(), kQpsk, N, llr2.data());
+        if (lp_) bitDeinterleaveLp(full.data(), p_.mod, N, llr2.data());
+        else {
+            for (int i = 0; i < N; i++) { llr[(size_t)i * 2] = full[(size_t)i * v]; llr[(size_t)i * 2 + 1] = full[(size_t)i * v + 1]; }
+            bitDeinterleave(llr.data(), kQpsk, N, llr2.data());
+        }
     } else {
         demap(c2.data(), n2.data(), N, p_.mod, p_.hier, llr.data());
         bitDeinterleave(llr.data(), p_.mod, N, llr2.data());
@@ -52,7 +55,7 @@ void FecDecoder::pushSymbol(const cf32* cells, const float* n0, int symIdx) {
 }
 
 void FecDecoder::process(bool) {
-    const int rate = p_.crHp;
+    const int rate = p_.hier && lp_ ? p_.crLp : p_.crHp;
     const int k = kRateK[rate];
     if (llrQueue_.empty()) return;
     // normalise the soft values: the demapper's LLRs scale with 1/noise, the Viterbi works on small integers
