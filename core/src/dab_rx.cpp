@@ -2,6 +2,7 @@
 // demodulation, fast information channel (ensemble, services, labels) and the main service channel of the selected sub-channel.
 #include "dect2/dab.h"
 #include "dect2/fftutil.h"
+#include "dect2/dab_tii.h"
 #include "dect2/resampler.h"
 #include <algorithm>
 #include <cmath>
@@ -58,6 +59,7 @@ struct DabReceiver::Impl {
     uint64_t syncSample = 0, endSample = 0;
     float cirPeak = 0;
     std::vector<float> cirKeep;
+    dabtii::Detector tii;     // transmitter identification from the null symbols
 
     // ---- decoding state
     mutable std::mutex mu;
@@ -173,6 +175,7 @@ struct DabReceiver::Impl {
         fresh = true;
         missed = 0;
         state = 2;
+        tii.reset();   // a new lock: which frames carry TII may have changed sides
         cirPeak = bestPk;
         syncSample = U;
         trim(U > 2 * kTs ? U - 2 * kTs : 0);
@@ -230,6 +233,13 @@ struct DabReceiver::Impl {
                 nc = bestC;
             }
             cfo = nc;
+        }
+        // TII: the spectrum of the null symbol of this frame. A window of T_u in its middle stays clear of the end of the frame before and
+        // of the echoes that run into the phase reference's guard interval (the null symbol is 608 samples longer than T_u)
+        {
+            std::vector<cf32> N;
+            windowFft(U - (uint64_t)kTg - (uint64_t)kTnull + (uint64_t)(kTnull - kTu) / 2, cfo, N);
+            tii.addNull(N, framesDone);
         }
         // demodulate all symbols
         std::vector<cf32> prev, cur;
@@ -457,12 +467,14 @@ struct DabReceiver::Impl {
         t.constellation = constel;
         t.cir = cirKeep;
         t.audio = audio.stats();
+        for (const auto& f : tii.found()) t.tii.push_back({f.mainId, f.subId, f.levelDb, f.marginDb});
+        t.tiiFrames = tii.framesSeen();
         t.seq = ++telSeq;
         tel = std::move(t);
     }
 
     void reset() {
-        buf.clear(); base = 0; state = 0; cfo = 0; missed = 0; framesDone = 0; rs.reset();
+        buf.clear(); base = 0; state = 0; cfo = 0; missed = 0; framesDone = 0; rs.reset(); tii.reset();
         std::lock_guard<std::mutex> lk(mu);
         telSeq++;
         tel = DabTelemetry(); tel.seq = telSeq;

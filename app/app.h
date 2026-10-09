@@ -551,6 +551,7 @@ void dabSelectStation(App& a, int sub, bool play);
 void dabStations(App& a);
 void dabRadioTab(App& a);
 void dabEnsembleTab(App& a);
+void dabTransmittersTab(App& a);   // dab_tii_ui.cpp: the TII transmitters, on a map with a transmitter list
 void dabScanTab(App& a);
 void dabScanStep(App& a);
 void fmScanTab(App& a);

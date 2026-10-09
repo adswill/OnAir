@@ -38,7 +38,7 @@ MODELIST="dvb	--dvb	Overview|TV|Guide|Teletext|Receiver|Signalling|FEC|Frame map
 atsc	--atsc	Overview|TV|Receiver|Stream|TS|Scan|Antenna|History
 atsc3	--atsc3	Overview|TV|Receiver|Stream|TS|Scan|Antenna|History
 isdbt	--isdbt	Overview|TV|Receiver|Stream|TS|Scan|Antenna|History
-dab	--dab	Overview|Radio|Ensemble|Scan|Antenna|History
+dab	--dab	Overview|Radio|Ensemble|Map|Scan|Antenna|History
 fm	--fm	Overview|Radio|Scan|History
 dvbs	--mode dvbs	Overview|TV|Receiver|Stream|TS|History
 dtmb	--mode dtmb	Overview|TV|Receiver|Stream|TS|Scan|History

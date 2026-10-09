@@ -86,6 +86,11 @@ struct TxConfig {
     double snrDb = 200, cfoHz = 0, sroPpm = 0;
     unsigned seed = 1;
     int64_t utcSeconds = -1;            // time of frame 0 for FIG 0/10; negative: the clock
+    // TII (EN 300 401 clause 14.8): transmitters whose identification is added to the null symbol of the even frames (CIF count 0 - 3 modulo
+    // 8). Several stand for the transmitters of a single-frequency network as one receiver hears them; levelDb is each one's carrier level
+    // against the main signal (0 = as strong as a data carrier). Empty: no TII.
+    struct Tii { int mainId = 0, subId = 0; double levelDb = 0; };
+    std::vector<Tii> tii;
 };
 // 1 "OnAir Tones 1" DAB+ 48 kHz 1 kHz / 3 kHz, 48 kbit/s; 2 "OnAir Tones 2" DAB+ 32 kHz 2 kHz / 500 Hz, 32 kbit/s; 3 "OnAir Melody" DAB+ 48 kHz, 64 kbit/s;
 // 4 "OnAir MP2" DAB 48 kHz 1.5 kHz / 750 Hz, 128 kbit/s (left out when libavcodec has no MP2 encoder)

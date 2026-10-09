@@ -134,6 +134,7 @@ void mainTabs(App& a) {
         else if (a.fmMode) { if (tabItem("Radio", Ic::Radio)) { fmRadioTab(a); ImGui::EndTabItem(); } }
         else if (tabItem("TV", Ic::Tv)) { tvTab(a); ImGui::EndTabItem(); }
         if (!a.fmMode && tabItem(a.dabMode ? "Ensemble" : "Receiver", Ic::Antenna)) { receiverTab(a); ImGui::EndTabItem(); }
+        if (a.dabMode && tabItem("Map", Ic::Compass)) { dabTransmittersTab(a); ImGui::EndTabItem(); }
         if (!a.dabMode && !a.fmMode && tabItem("Stream", Ic::Layers)) { streamTab(a); ImGui::EndTabItem(); }
         if (tabItem("Scan", Ic::Scan)) { scanTab(a); ImGui::EndTabItem(); }
         if (!a.fmMode && tabItem("Antenna", Ic::Compass)) { antennaTab(a); ImGui::EndTabItem(); }

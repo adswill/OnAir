@@ -82,6 +82,10 @@ struct DabTelemetry {
     std::vector<cf32> constellation;    // differential cells of one data symbol (clusters at the 4 diagonals)
     std::vector<float> cir;             // channel impulse response magnitude (phase reference correlation), 2048 points
     DabAudioStats audio;
+    // TII (EN 300 401 clause 14.8): the transmitters of the network heard in the null symbols, strongest first
+    struct Tii { int mainId = 0, subId = 0; float levelDb = 0, marginDb = 0; };
+    std::vector<Tii> tii;
+    int tiiFrames = 0;                  // null symbols analysed since the lock
 };
 
 } // namespace dect2

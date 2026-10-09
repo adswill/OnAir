@@ -2,6 +2,7 @@
 #include "dect2/dab_gen.h"
 #include "dect2/fftutil.h"
 #include "dect2/gen_util.h"
+#include "dect2/dab_tii.h"
 #include "dect2/isdbt_resample.h"
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -405,6 +406,21 @@ struct Transmitter::Impl {
         makeSymbols(frame, z);
         out.assign((size_t)kFrame, cf32(0, 0));
         std::vector<cf32> t((size_t)kTu);
+        // TII in the null symbol of the frames whose CIFs count 0 - 3 modulo 8 (frame m holds CIFs 4m .. 4m+3: the even frames). Every
+        // active carrier takes the phase of the phase reference at that carrier, as strong as a data carrier times the transmitter's level;
+        // over the null symbol the carrier runs as exp(j 2 pi k (t - T_null) / T_u), so its last T_u samples are one period like a symbol
+        if (!cfg.tii.empty() && frame % 2 == 0) {
+            std::fill(t.begin(), t.end(), cf32(0, 0));
+            std::vector<int> ks;
+            for (const auto& x : cfg.tii) {
+                const float g = (float)std::pow(10.0, x.levelDb / 20.0);
+                dabtii::pairCarriers(x.mainId, x.subId, ks);
+                for (int k0 : ks)
+                    for (int k = k0; k <= k0 + 1; k++) { const size_t b = (size_t)((k + kTu) % kTu); t[b] += z[b] * g; }   // z[0 .. kTu): the phase reference
+            }
+            fft.inverse(t.data());
+            for (int n = 0; n < kTnull; n++) out[(size_t)n] = t[(size_t)(((n - kTnull) % kTu + kTu) % kTu)] * scale;
+        }
         for (int l = 0; l < kSymbols; l++) {
             std::copy(z.begin() + (long)l * kTu, z.begin() + (long)(l + 1) * kTu, t.begin());
             fft.inverse(t.data());
@@ -545,6 +561,12 @@ std::unique_ptr<ModeSynth> makeDabSynth(const dabgen::TxConfig& tx, const SynthC
     return std::make_unique<DabSynth>(tx, cfg, sampleRate);
 }
 
-std::unique_ptr<ModeSynth> makeDabSynth(const SynthConfig& cfg, double sampleRate) { return makeDabSynth(dabgen::TxConfig(), cfg, sampleRate); }
+// the built-in test signal of the app: the ensemble as three transmitters of one network would be heard (TII 1/1, 1/3 and 1/7, 0, -5 and
+// -11 dB), so the Transmitters tab has something to show without a radio
+std::unique_ptr<ModeSynth> makeDabSynth(const SynthConfig& cfg, double sampleRate) {
+    dabgen::TxConfig tc;
+    tc.tii = {{1, 1, 0.0}, {1, 3, -5.0}, {1, 7, -11.0}};
+    return makeDabSynth(tc, cfg, sampleRate);
+}
 
 } // namespace dect2

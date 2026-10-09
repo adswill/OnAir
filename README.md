@@ -139,6 +139,7 @@ To try it without a signal, `isdbtgen --out sample.cs8` (built with the tools) m
 **See your signal**
 - Spectrum and waterfall, every constellation, signal-to-noise and error figures.
 - A single **quality score**, and an **echo (multipath) detector**.
+- **DAB transmitter map:** OnAir reads the transmitter identification (TII) that DAB networks send and lists the transmitters you receive with their relative strength. With a transmitter list (`dab-transmitters.csv` in OnAir's data folder: `eid,main,sub,lat,lon,name,country,power_kw`) they appear on a map with distance and bearing.
 
 **Get the best reception**
 - A **channel scanner**, **automatic gain tuning**, and a **direction finder** that helps you aim the antenna.
