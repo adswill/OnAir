@@ -32,6 +32,11 @@ static void kats() {
         lora::hammingDecode((uint8_t)(lora::hammingEncode((uint8_t)nib, 8) ^ 0x81), 8, &e);
         CHECK(e == 2, "4/8 double error of %x: %d", nib, e);
     }
+    // sync word symbols: nibble << 3 as a signed 7-bit value (an SX1262 sending 0x2B at SF11 puts the second one at -40, not 88)
+    CHECK(lora::syncSymbol(0x2B, 0, 11) == 16 && lora::syncSymbol(0x2B, 1, 11) == 2048 - 40, "0x2B SF11: %d %d", lora::syncSymbol(0x2B, 0, 11), lora::syncSymbol(0x2B, 1, 11));
+    CHECK(lora::syncSymbol(0x2B, 1, 7) == 88, "0x2B SF7: %d", lora::syncSymbol(0x2B, 1, 7));
+    CHECK(lora::syncSymbol(0x12, 0, 8) == 8 && lora::syncSymbol(0x12, 1, 8) == 16, "0x12 SF8");
+    CHECK(lora::syncSymbol(0x34, 0, 12) == 24 && lora::syncSymbol(0x34, 1, 12) == 32, "0x34 SF12");
     // header checksum (gr-lora_sdr header_impl.cc): a header with all-zero nibbles has checksum 0; each nibble bit feeds the bits
     // the equations of header_impl.cc list
     CHECK(lora::headerChecksum(0, 0, 0) == 0, "checksum 0");
