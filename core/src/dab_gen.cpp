@@ -1,5 +1,6 @@
 // DAB test transmitter (see dab_gen.h): the ensemble, the FIC, the CIF multiplex, the OFDM frame and the synthetic source around it.
 #include "dect2/dab_gen.h"
+#include "dect2/dab.h"
 #include "dect2/fftutil.h"
 #include "dect2/gen_util.h"
 #include "dect2/dab_tii.h"
@@ -140,19 +141,27 @@ struct Transmitter::Impl {
     // ---- audio -> logical frames
     static void bytesToBits(const uint8_t* b, int n, uint8_t* bits) { for (int i = 0; i < n; i++) for (int k = 0; k < 8; k++) bits[i * 8 + k] = (b[i] >> (7 - k)) & 1; }
 
+    // CUs of a sub-channel: EEP from the bitrate and profile, UEP from table 6 (0 when the bitrate is not the table's)
+    static int subSize(const TxService& sv) {
+        if (sv.uepIndex < 0) return eepSize(sv.bitrate, sv.option, sv.level);
+        int size, br, lv, info;
+        return dab::uepGeometry(sv.uepIndex, size, br, lv, info) && br == sv.bitrate ? size : 0;
+    }
+
     static void codeFrame(const Sub& s, const uint8_t* bytes, uint8_t* out) {
         const int info = s.frameBytes * 8;
         std::vector<uint8_t> bits((size_t)info), mother((size_t)(4 * (info + 6)));
         bytesToBits(bytes, s.frameBytes, bits.data());
         scramble(bits.data(), info);
         convEncode(bits.data(), info, mother.data());
-        punctureEep(mother.data(), s.svc.bitrate, s.svc.option, s.svc.level, out);
+        if (s.svc.uepIndex >= 0) dab::uepPuncture(mother.data(), s.svc.uepIndex, out);
+        else punctureEep(mother.data(), s.svc.bitrate, s.svc.option, s.svc.level, out);
     }
 
     void codeFrames(Sub& s) {
         s.loopLen = s.dmb ? kLoopSeconds * 1000 / 24 : (int)s.frames.size();
         s.frameBytes = s.svc.bitrate * 3;
-        const int size = eepSize(s.svc.bitrate, s.svc.option, s.svc.level);
+        const int size = subSize(s.svc);
         s.bitsPerFrame = size * 64;
         if (s.dmb) { s.dmbCoded = std::make_shared<std::map<int64_t, std::vector<uint8_t>>>(); return; }
         s.coded.assign((size_t)s.loopLen * (size_t)s.bitsPerFrame, 0);
@@ -275,13 +284,13 @@ struct Transmitter::Impl {
         for (const TxService& sv : cfg.services) {
             Sub s;
             s.svc = sv;
-            const int size = eepSize(sv.bitrate, sv.option, sv.level);
+            const int size = subSize(sv);
             if (!size || start + size > kCifCu) continue;
             if (sv.dmb) { s.dmb = std::make_shared<dmb::Source>(sv.bitrate); if (!s.dmb->ok()) continue; }
             else if (sv.dabPlus) { if (sv.sampleRate != 48000 && sv.sampleRate != 32000) continue; buildAac(s); }
             else if (!buildMp2(s)) continue;
             codeFrames(s);
-            lay.push_back({sv.subId, start, size, sv.bitrate, sv.option, sv.level});
+            lay.push_back({sv.subId, start, size, sv.bitrate, sv.option, sv.level, sv.uepIndex});
             start += size;
             kept.push_back(sv);
             subs.push_back(std::move(s));
@@ -332,7 +341,8 @@ struct Transmitter::Impl {
             for (size_t k = i; k < std::min(lay.size(), i + 7); k++) {
                 const SubLayout& l = lay[k];
                 b.push_back((uint8_t)((l.subId << 2) | (l.start >> 8))); b.push_back((uint8_t)l.start);
-                b.push_back((uint8_t)(0x80 | (l.option << 4) | (l.level << 2) | (l.size >> 8))); b.push_back((uint8_t)l.size);
+                if (l.uep >= 0) b.push_back((uint8_t)l.uep);   // short form, table switch 0
+                else { b.push_back((uint8_t)(0x80 | (l.option << 4) | (l.level << 2) | (l.size >> 8))); b.push_back((uint8_t)l.size); }
             }
             out.push_back(fig(0, b));
         }

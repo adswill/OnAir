@@ -18,9 +18,13 @@ static std::atomic<int> fails{0};
 
 static const double kRate = 2.048e6;
 
-static std::vector<cf32> clean(double seconds) {
+static std::vector<cf32> clean(double seconds, int uepIndex = -1) {
     dabgen::TxConfig tc;
     tc.utcSeconds = 1700000000;
+    if (uepIndex >= 0) {   // the first service (DAB+ 48 kbit/s, sub-channel 1) with unequal error protection
+        tc.services = dabgen::defaultServices();
+        tc.services[0].uepIndex = uepIndex;
+    }
     SynthConfig sc;
     sc.snrDb = 40;
     auto syn = makeDabSynth(tc, sc, kRate);
@@ -55,7 +59,29 @@ static void expect(const char* what, const Res& r, double minFib, double cfo = s
     if (!std::isnan(cfo)) CHECK(std::fabs(r.cfo - cfo) < 50, "%s: CFO read %.0f, sent %.0f", what, r.cfo, cfo);
 }
 
+// every UEP profile: encode, puncture, depuncture and decode random bits; the punctured length must fill the sub-channel up to padding
+static void uepTable() {
+    int bad = 0;
+    for (int idx = 0; idx < 64; idx++) {
+        int size, br, lv, info;
+        if (!dab::uepGeometry(idx, size, br, lv, info)) { bad++; continue; }
+        std::vector<uint8_t> bits((size_t)info), mother((size_t)(4 * (info + 6))), punct((size_t)size * 64), dec((size_t)info);
+        uint32_t r = 12345u + (uint32_t)idx;
+        for (auto& b : bits) { r = r * 1103515245u + 12345u; b = (uint8_t)((r >> 16) & 1); }
+        dab::convEncode(bits.data(), info, mother.data());
+        std::vector<int8_t> soft(punct.size()), m2(mother.size());
+        const bool ok1 = dab::uepPuncture(mother.data(), idx, punct.data());
+        for (size_t i = 0; i < punct.size(); i++) soft[i] = punct[i] ? 100 : -100;
+        const bool ok2 = dab::uepDepuncture(soft.data(), idx, m2.data());
+        dab::viterbiDecode(m2.data(), info, dec.data());
+        if (!ok1 || !ok2 || dec != bits || 32 * info % 24) { jprintf("UEP index %d (%d kbit/s, level %d, %d CU) does not round-trip\n", idx, br, lv, size); bad++; }
+    }
+    jprintf("UEP table: %d of 64 profiles round-trip\n", 64 - bad);
+    CHECK(bad == 0, "UEP table");
+}
+
 int main() {
+    uepTable();
     const std::vector<cf32> base = clean(8.0);
     testjobs::Jobs jobs;
     for (double hz : {12000.0, -12000.0, 40500.0, 75000.0, -75000.0}) jobs.add([&, hz] {
@@ -69,6 +95,11 @@ int main() {
         expect(b, run(x), 0.99);
     });
     jobs.add([&] { auto x = base; impair::shift(x, 2300, kRate); impair::swapIq(x); expect("swapped I/Q", run(x), 0.99); });
+    for (int idx : {5, 7, 9}) jobs.add([=] {   // 48 kbit/s at UEP protection levels 5, 3 and 1, with a tuning error
+        auto x = clean(8.0, idx); impair::shift(x, -7300, kRate);
+        char b[64]; snprintf(b, sizeof b, "UEP index %d, -7.3 kHz", idx);
+        expect(b, run(x), 0.99);
+    });
     jobs.add([&] { auto x = base; impair::dc(x, 0); expect("DC spike at the signal's level", run(x), 0.99); });
     jobs.add([&] {
         auto x = base;

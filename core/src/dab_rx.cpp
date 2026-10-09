@@ -369,6 +369,9 @@ struct DabReceiver::Impl {
                 } else {
                     s.eep = false;
                     s.uepIndex = b[p + 2] & 0x3F;
+                    int lv, info;
+                    if (!(b[p + 2] & 0x40) && uepGeometry(s.uepIndex, s.size, s.bitrate, lv, info)) s.level = lv - 1;
+                    else { s.size = 0; s.bitrate = 0; }   // table switch 1 is not defined
                     p += 3;
                 }
                 ens.subs[s.id] = s;
@@ -471,9 +474,9 @@ struct DabReceiver::Impl {
             applySelection();
         }
         if (sel < 0) return;
-        if (!selSub.eep || selSub.size <= 0 || selSub.start + selSub.size > kCifCu) return;   // UEP is not supported yet
-        int n, br, info;
-        if (!eepGeometry(selSub.size, selSub.option, selSub.level, n, br, info)) return;
+        if (selSub.size <= 0 || selSub.start + selSub.size > kCifCu) return;
+        int n, br, info, sz, lv;
+        if (selSub.eep ? !eepGeometry(selSub.size, selSub.option, selSub.level, n, br, info) : !uepGeometry(selSub.uepIndex, sz, br, lv, info)) return;
         const int bits = selSub.size * kCuBits;
         std::vector<int8_t> mother((size_t)(4 * (info + 6))), one((size_t)bits);
         std::vector<uint8_t> dec((size_t)info), bytes((size_t)info / 8);
@@ -487,7 +490,7 @@ struct DabReceiver::Impl {
                 const uint64_t t = cifCount - 1 - (uint64_t)(15 - kMap[i & 15]);
                 one[(size_t)i] = hist[t % 16][(size_t)i];
             }
-            if (!eepDepuncture(one.data(), selSub.size, selSub.option, selSub.level, mother.data())) return;
+            if (selSub.eep ? !eepDepuncture(one.data(), selSub.size, selSub.option, selSub.level, mother.data()) : !uepDepuncture(one.data(), selSub.uepIndex, mother.data())) return;
             viterbiDecode(mother.data(), info, dec.data());
             descramble(dec.data(), info);
             for (int i = 0; i < info / 8; i++) { uint8_t v = 0; for (int b = 0; b < 8; b++) v = (uint8_t)((v << 1) | dec[(size_t)i * 8 + (size_t)b]); bytes[(size_t)i] = v; }

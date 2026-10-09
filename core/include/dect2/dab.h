@@ -36,6 +36,10 @@ void ficPuncture(const uint8_t* mother, uint8_t* out);                   // 3096
 bool eepGeometry(int size, int option, int level, int& n, int& bitrate, int& infoBits);
 bool eepDepuncture(const int8_t* rx, int size, int option, int level, int8_t* mother);
 bool eepPuncture(const uint8_t* mother, int size, int option, int level, uint8_t* out);
+// UEP sub-channel protection (short form, table 6 index 0..63): size in CUs, bitrate, protection level 1..5
+bool uepGeometry(int index, int& size, int& bitrate, int& level, int& infoBits);
+bool uepDepuncture(const int8_t* rx, int index, int8_t* mother);
+bool uepPuncture(const uint8_t* mother, int index, uint8_t* out);   // padding bits at the end are 0
 
 // Reed-Solomon (120,110) of DAB+, fcr 0, polynomial 0x11d. Returns number of corrected bytes or -1.
 int rsDecode120(uint8_t* cw);

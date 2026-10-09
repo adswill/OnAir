@@ -79,6 +79,7 @@ struct TxService {
     bool melody = false;                // a tune instead of the tones (12 s, left: the tune, right: the same an octave higher)
     double amplitude = 0.5;             // peak of every channel, 1.0 = full scale
     int option = 0, level = 2;          // EEP-3A
+    int uepIndex = -1;                  // 0..63: UEP (short form, table 6 of EN 300 401) instead of EEP; bitrate must be the table's
 };
 struct TxConfig {
     std::string ensembleLabel = "OnAir DAB";
@@ -101,7 +102,7 @@ std::vector<TxService> defaultServices();
 // after the defaultServices().
 TxService dmbService();
 
-struct SubLayout { int subId, start, size, bitrate, option, level; };
+struct SubLayout { int subId, start, size, bitrate, option, level, uep = -1; };
 
 class Transmitter {
 public:
