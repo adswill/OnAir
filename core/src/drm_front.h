@@ -51,7 +51,7 @@ private:
     std::vector<DecimFir> stages_;
     ExactResampler rs_;
     bool useRs_ = false;
-    std::vector<cf32> a_, b_, c_;
+    std::vector<cf32> a_, b_, c_, clean_;
     cf32 dc_ = cf32(0, 0);
     float dcA_ = 0;
     double pw_ = 0; uint64_t pn_ = 0;

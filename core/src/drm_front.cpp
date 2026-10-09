@@ -151,6 +151,14 @@ void DrmFront::reset() {
 
 void DrmFront::process(const cf32* in, size_t n, std::vector<cf32>& out) {
     if (!ready_ || n == 0) return;
+    // NaN or infinite samples (a broken file or driver) would stay in the filters and the DC estimate for good: they become zeros
+    for (size_t i = 0; i < n; i++)
+        if (!std::isfinite(in[i].real()) || !std::isfinite(in[i].imag())) {
+            clean_.assign(in, in + n);
+            for (auto& v : clean_) if (!std::isfinite(v.real()) || !std::isfinite(v.imag())) v = cf32(0, 0);
+            in = clean_.data();
+            break;
+        }
     const size_t start = out.size();
     if (pass_) {
         out.insert(out.end(), in, in + n);
