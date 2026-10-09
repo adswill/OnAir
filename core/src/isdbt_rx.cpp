@@ -84,7 +84,7 @@ struct IsdbtReceiver::Impl {
         state = 0; modeIdx = -1; gi = -1; N = G = K = kc = mode = 0; symStart = 0; timingAcc = 0; epsFrac = 0; intShift = 0;
         fft.reset(); agreeCount = 0; agreeMode = agreeGi = -1; absSym = 0; symbols = 0;
         spec.clear(); specBase = 0; huntFails = 0; sinceHunt = 0; tmccOk = false; tmccSeg = -1; prevTmcc.clear(); tmccSoft.clear(); tmccFailures = 0; secSinceTmcc = 0;
-        streamSecs = 0; packetsOut = 0; detect = 0;
+        streamSecs = 0; packetsOut = 0; detect = 0; sroPpm = 0;
         buf.clear(); base = 0; resampler.reset();
     }
 
@@ -511,7 +511,8 @@ void IsdbtReceiver::configure(double inputRateHz) {
     Impl& I = *p_;
     I.reset();
     I.inRate = inputRateHz;
-    I.rateOk = inputRateHz >= 6.0e6 && I.resampler.configure(inputRateHz, kSampleRate);
+    // never a plain pass-through, not even at the native rate: the clock tracking works through the resampler's step
+    I.rateOk = inputRateHz >= 6.0e6 && I.resampler.configure(inputRateHz, kSampleRate, false);
     I.decimate = I.rateOk && !I.resampler.passthrough();
 }
 

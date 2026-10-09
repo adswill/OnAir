@@ -87,6 +87,15 @@ int main() {
         expectLayers("native rate, +80 ppm clock", p, 14, 6, r);
         check(std::fabs(r.t.sroPpm - 80) < 15, "native rate, +80 ppm clock", "clock estimate");
     });
+    // a slow clock (-100 ppm) with the shortest guard interval of mode 3: the symbols drift late by 0.84 samples per symbol, into the next one
+    add([] {
+        Params p; p.mode = 3; p.guard = kGi32; p.layer[0] = L(13, k64Qam, kR23);
+        auto x = impair::clock(toRate(frames(p, 14), 10e6), -100);
+        impair::noise(x, 30);
+        Result r = receive(x, 10e6);
+        expectLayers("mode 3 GI 1/32, -100 ppm clock", p, 14, 6, r);
+        check(std::fabs(r.t.sroPpm + 100) < 15, "mode 3 GI 1/32, -100 ppm clock", "clock estimate");
+    });
     // the largest UHF tuning error (50 ppm of 860 MHz)
     add([] {
         Params p; p.mode = 1; p.guard = kGi16; p.layer[0] = L(13, k16Qam, kR23);

@@ -94,11 +94,13 @@ private:
 // (clock tracking), which the rational one above cannot.
 class TrackingResampler {
 public:
-    bool configure(double inRate, double outRate) {
+    // allowPass: at equal rates the samples go straight through, and the step can then not be scaled; false keeps the filter, so that a
+    // clock error can be followed at the native rate as well
+    bool configure(double inRate, double outRate, bool allowPass = true) {
         if (inRate <= 0 || outRate <= 0 || outRate > 4 * inRate) return false;
         const double ratio = outRate / inRate;
         step_ = inRate / outRate;
-        pass_ = std::fabs(ratio - 1.0) < 1e-12;
+        pass_ = allowPass && std::fabs(ratio - 1.0) < 1e-12;
         if (pass_) { reset(); return true; }
         const double down = std::min(1.0, ratio);
         const double fc = 0.5 * down * 0.97;
