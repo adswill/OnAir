@@ -361,9 +361,13 @@ void Player::threadMain() {
         bool vSusValid = false; double vSusNext = 0;   // the same for picture timestamps
         bool susValid = false; double susD = 0, susNext = 0;   // an audio timestamp jump waiting for the next frame to confirm it
         bool firstVideo = true;
+        bool sawClean = false;   // a picture without missing references has come out of the video decoder since it was opened
 
         auto convertVideo = [&](AVFrame* f) {
             AVFrame* src = f;
+            // a stream joined between keyframes: until the first clean picture the decoder (software; hardware drops them itself) outputs
+            // pictures whose reference was never received, a grey field with moving blocks. Nothing has been shown yet, so they are skipped
+            if (!sawClean) { if (f->flags & AV_FRAME_FLAG_CORRUPT) return; sawClean = true; }
 #ifdef __APPLE__
             if (f->format == AV_PIX_FMT_VIDEOTOOLBOX) {
                 av_frame_unref(sw);
