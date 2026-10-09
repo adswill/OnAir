@@ -402,7 +402,7 @@ void receiverGlance(App& a, float w, float h) {
             kv("SNR", "%.1f dB", rx.dataSnrDb);
             kv("carrier offset", "%+.0f Hz", rx.cfoHz);
         }
-        kv("dropped", "%llu", (unsigned long long)a.engine.droppedSamples());
+        { const SampleLoss l = a.engine.sampleLoss(); kv("dropped", "%s", lossText(l).c_str()); lossTooltip(l); kv("receiver load", "%.0f%%", l.loadPct); }
     }
     ImGui::EndChild();
 }

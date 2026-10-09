@@ -124,7 +124,7 @@ void status(App& a) {
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("ADC level of the whole captured band (rms). %s\npeak %.2f   clip %.3f%%   DC %+.3f / %+.3f", adcAdvice(adc).c_str(), st.peak, st.clipFraction * 100, st.dcI, st.dcQ);
     }
     flowNext(15 * gUi);
-    if (run) { snprintf(b, sizeof b, "%llu", (unsigned long long)a.engine.droppedSamples()); ro("dropped", b, a.engine.droppedSamples() ? kBad : kText); }
+    if (run) { const SampleLoss l = a.engine.sampleLoss(); ro("dropped", lossText(l), lossColour(l)); lossTooltip(l); }
     if (on && (t.cwDropped || t.cwSkipped)) {
         snprintf(b, sizeof b, "%llu / %llu", (unsigned long long)t.cwDropped, (unsigned long long)t.cwSkipped);
         ro("cw dropped/skipped", b, t.cwDropped ? kWarn : kText);

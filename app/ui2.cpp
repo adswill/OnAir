@@ -412,7 +412,11 @@ void statusLine(App& a) {
     snprintf(b, sizeof b, "%.3f MHz", a.freqMhz); field(b);
     if (run) { snprintf(b, sizeof b, "%.3f Msps", a.engine.sampleRate() / 1e6); field(b); }
     if (run) { snprintf(b, sizeof b, "level %.1f dBFS", a.spec.stats.rmsDbfs); field(b); }
-    if (run && a.engine.droppedSamples()) { snprintf(b, sizeof b, "dropped %llu", (unsigned long long)a.engine.droppedSamples()); field(b, false, pal::warnAmber()); }
+    if (run) {
+        const SampleLoss l = a.engine.sampleLoss();
+        if (l.live) { snprintf(b, sizeof b, "load %.0f%%", l.loadPct); field(b, false, l.loadPct > 90 ? pal::warnAmber() : ImVec4(-1, 0, 0, 0)); lossTooltip(l); }
+        if (l.radioEvents || l.cpuEvents) { field(("dropped " + lossText(l)).c_str(), false, lossColour(l)); lossTooltip(l); }
+    }
     {
         size_t n = 0;
         const std::vector<std::string> lines = a.engine.logSnapshot(n);

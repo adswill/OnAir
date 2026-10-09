@@ -386,6 +386,11 @@ int subNav(const char* id, int& cur, std::initializer_list<const char*> names);
 float tagAt(ImDrawList* dl, ImVec2 pos, const char* text, ImU32 bg, ImU32 fg = IM_COL32(225, 232, 240, 255));
 void gaugePill(float width, float frac, ImU32 fill, const char* text);
 void lamp(const char* label, int state /*0 grey 1 green 2 amber 3 red*/, int icon = -1);
+// Lost samples (Engine::sampleLoss()) for the "dropped" read-outs: "0", or the seconds lost on the radio side and on the OnAir (CPU) side;
+// red while a loss is recent, amber after it; the tooltip on the item before says what each side means and what helps
+std::string lossText(const SampleLoss& l);
+ImVec4 lossColour(const SampleLoss& l, ImVec4 normal = ImVec4(0.93f, 0.95f, 0.97f, 1));
+void lossTooltip(const SampleLoss& l);
 // rows that wrap in a narrow window: flowNext() between the groups of a row (a label and its control, a lamp, a read-out) instead of
 // ImGui::SameLine(); the next group stays on the line if it fits (as wide as in the last frame). flowBreak() ends the line, like NewLine().
 bool flowNext(float spacing = -1);   // true: on the same line

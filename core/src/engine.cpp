@@ -103,6 +103,10 @@ void Engine::clearLog() {
 bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOptions& file) {
     stop();
     ring_.clear();
+    ring_.resetDropped();
+    radioMissing_ = 0; radioMissEvents_ = 0; cpuDropEvents_ = 0; ringDroppedSeen_ = 0;
+    lastRadioMissNs_ = 0; lastCpuDropNs_ = 0; loadPct_ = 0; loadT_ = 0;
+    holdDelivery(1000);   // a radio often stutters while its stream starts
     std::string err;
     if (dev.kind == DeviceInfo::File)
         src_ = makeFileSource(file.path, file.format, file.sampleRate, file.loop);
@@ -135,6 +139,7 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     setNote(offNote.empty() ? err : err.empty() ? offNote : err + "; " + offNote, false);
     srcRate_ = src_->sampleRate();
     rate_ = srcRate_;
+    live_ = src_->realtimeHardware();
     offMix_.set(offHz_, srcRate_);
     offResample_ = false;
     if (offHz_ > 0) {
@@ -300,6 +305,7 @@ void Engine::stop() {
     }
     specQCv_.notify_all();
     if (specTh_.joinable()) specTh_.join();
+    live_ = false;
     if (src_) {
         src_->stop(); src_.reset();
         char b[160];
@@ -323,6 +329,7 @@ TuneSettings Engine::radioTune(const TuneSettings& t) const {
 bool Engine::retune(const TuneSettings& tune) {
     if (!src_) return false;
     std::string err;
+    holdDelivery(300);
     if (!src_->retune(radioTune(tune), err)) { log("retune failed: " + err); return false; }
     setNote(err, true);
     if (restartIfRateChanged(tune)) return running_;
@@ -359,6 +366,7 @@ bool Engine::restartIfRateChanged(const TuneSettings& tune) {
 bool Engine::retuneReset(const TuneSettings& tune) {
     if (!src_) return false;
     std::string err;
+    holdDelivery(300);
     if (!src_->retune(radioTune(tune), err)) { log("retune failed: " + err); return false; }
     setNote(err, true);
     if (restartIfRateChanged(tune)) return running_;
@@ -370,6 +378,7 @@ bool Engine::retuneReset(const TuneSettings& tune) {
 
 void Engine::applyReset() {
     ring_.clear();
+    holdDelivery(300);
     rx_.reset();
     rxT_.reset();
     rxA_.reset();
@@ -746,9 +755,54 @@ void Engine::catchUp() {
     if (now - lastSkipLog_ > std::chrono::seconds(10)) {
         lastSkipLog_ = now;
         char b[200];
-        snprintf(b, sizeof b, "the receiver cannot keep up with the sample rate: skipped %.2f s of signal (%llu skips so far). Close other programs, use a narrower channel or a lower sample rate", skipped / std::max(1.0, rate_.load()), (unsigned long long)skipEvents_);
+        snprintf(b, sizeof b, "the receiver cannot keep up with the sample rate: skipped %.2f s of signal (%llu skips so far). Close other programs, use a narrower channel or a lower sample rate", skipped / std::max(1.0, srcRate_), (unsigned long long)skipEvents_);
         log(b);
     }
+}
+
+static int64_t steadyNs() { return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+
+void Engine::holdDelivery(int ms) {
+    delivHoldNs_ = steadyNs() + (int64_t)ms * 1000000;
+    delivReanchor_ = true;
+}
+
+// Samples that never came out of the radio (delivery_check.h)
+void Engine::checkDelivery() {
+    if (!src_ || !src_->realtimeHardware() || srcRate_ <= 0) return;
+    if (radioLost_) { holdDelivery(500); return; }   // unplugged: that is reported as such, and the gap is not a loss of the USB link
+    uint64_t off; int64_t ns; size_t block;
+    if (!ring_.lastWrite(off, ns, block)) return;
+    if (delivReanchor_.exchange(false)) deliv_.restart(delivHoldNs_.load());
+    const double step = deliv_.observe(off, ns, srcRate_, (double)block);
+    if (step > 0) {
+        radioMissing_ = radioMissing_.load() + step;
+        radioMissEvents_++;
+        const int64_t now = steadyNs();
+        lastRadioMissNs_ = now;
+        if (now - lastRadioLogNs_.load() > 10000000000LL) {
+            lastRadioLogNs_ = now;
+            char b[240];
+            snprintf(b, sizeof b, "the radio did not deliver %.0f ms of signal (%.2f s in all): its USB connection or driver could not keep up. Try another USB port (not a hub), a shorter cable or a lower sample rate",
+                     1000 * step / srcRate_, radioMissing_.load() / srcRate_);
+            log(b);
+        }
+    }
+}
+
+SampleLoss Engine::sampleLoss() const {
+    SampleLoss l;
+    l.live = live_.load();
+    const double r = std::max(1.0, srcRate_);   // the ring holds the radio's samples (before any resampling)
+    l.radioSec = radioMissing_.load() / r;
+    l.cpuSec = (double)ring_.dropped() / r;
+    l.radioEvents = radioMissEvents_.load();
+    l.cpuEvents = cpuDropEvents_.load();
+    const int64_t now = steadyNs();
+    if (lastRadioMissNs_.load()) l.sinceRadioSec = (double)(now - lastRadioMissNs_.load()) * 1e-9;
+    if (lastCpuDropNs_.load()) l.sinceCpuSec = (double)(now - lastCpuDropNs_.load()) * 1e-9;
+    l.loadPct = loadPct_.load();
+    return l;
 }
 
 void Engine::feedSpectrum(const cf32* x, size_t n) {
@@ -789,6 +843,17 @@ void Engine::analysisLoop() {
         while ((n = ring_.read(buf.data(), buf.size())) > 0) { ingest(buf.data(), n); if (std::chrono::steady_clock::now() > next + std::chrono::milliseconds(250)) break; } // keep publishing spectrum/telemetry even when the receiver is behind
         next += std::chrono::milliseconds(33);
         watchRadio();
+        checkDelivery();
+        if (const uint64_t d = ring_.dropped(); d != ringDroppedSeen_.load()) { ringDroppedSeen_ = d; cpuDropEvents_++; lastCpuDropNs_ = steadyNs(); }
+        {   // the receiver's load: its time on this thread against the signal time it handled, over about two seconds
+            const double now = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+            if (loadT_ == 0 || nSamp_ < loadSamp_) { loadT_ = now; loadRx_ = tRx_; loadSamp_ = nSamp_; }
+            else if (now - loadT_ >= 2.0) {
+                const double sig = (nSamp_ - loadSamp_) / std::max(1.0, rate_.load());
+                if (sig > 0.05) loadPct_ = (float)(100.0 * (tRx_ - loadRx_) / sig);
+                loadT_ = now; loadRx_ = tRx_; loadSamp_ = nSamp_;
+            }
+        }
         {
             RxTelemetry t;
             const bool dvbt = activeStd_.load() == 1;

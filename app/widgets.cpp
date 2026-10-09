@@ -316,3 +316,39 @@ void qualityBar(App& a, float width) {
     }
 }
 
+
+std::string lossText(const SampleLoss& l) {
+    if (l.radioEvents == 0 && l.cpuEvents == 0) return "0";
+    auto dur = [](double s) { char b[32]; if (s < 1) snprintf(b, sizeof b, "%.0f ms", s * 1000); else snprintf(b, sizeof b, "%.1f s", s); return std::string(b); };
+    std::string t;
+    if (l.radioEvents) t = dur(l.radioSec) + " radio";
+    if (l.cpuEvents) t += (t.empty() ? "" : ", ") + dur(l.cpuSec) + " CPU";
+    return t;
+}
+
+ImVec4 lossColour(const SampleLoss& l, ImVec4 normal) {
+    double since = -1;
+    for (double s : {l.sinceRadioSec, l.sinceCpuSec}) if (s >= 0 && (since < 0 || s < since)) since = s;
+    if (since < 0) return normal;
+    return since < 30 ? pal::badRed() : pal::warnAmber();
+}
+
+void lossTooltip(const SampleLoss& l) {
+    if (!ImGui::IsItemHovered()) return;
+    ImGui::BeginTooltip();
+    ImGui::PushTextWrapPos(ImGui::GetFontSize() * 28);
+    auto ago = [](double s) { char b[48]; if (s < 0) return std::string("never"); if (s < 120) snprintf(b, sizeof b, "%.0f s ago", s); else snprintf(b, sizeof b, "%.0f min ago", s / 60); return std::string(b); };
+    if (!l.live) ImGui::TextUnformatted("Files and the test signal never lose samples: they wait for the receiver.");
+    else {
+        ImGui::Text("Radio side: %.2f s lost in %llu gaps, last %s", l.radioSec, (unsigned long long)l.radioEvents, ago(l.sinceRadioSec).c_str());
+        ImGui::TextDisabled("Samples that never arrived from the radio: its USB connection or driver could not keep up. Try a USB port directly on the computer (no hub), a shorter cable, or a lower sample rate.");
+        ImGui::Spacing();
+        ImGui::Text("CPU side: %.2f s skipped %llu times, last %s", l.cpuSec, (unsigned long long)l.cpuEvents, ago(l.sinceCpuSec).c_str());
+        ImGui::TextDisabled("Signal OnAir had to skip because the receiver could not keep up with the sample rate. Close other programs, or pick a lower sample rate or a narrower channel.");
+        ImGui::Spacing();
+        ImGui::Text("Receiver load: %.0f%% of real time", l.loadPct);
+        ImGui::TextDisabled("The receiver's time on the sample thread per second of signal. Near or above 100%, signal is skipped.");
+    }
+    ImGui::PopTextWrapPos();
+    ImGui::EndTooltip();
+}

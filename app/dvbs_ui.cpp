@@ -156,7 +156,7 @@ void status(App& a) {
     }
     if (t.packets) ro("Packets", cnt(t.packets));
     if (t.netBitrate > 0) ro("TS", fmt("%.2f Mbit/s", t.netBitrate / 1e6));
-    if (run) ro("dropped", cnt(a.engine.droppedSamples()), a.engine.droppedSamples() ? ImVec4(0.95f, 0.45f, 0.3f, 1) : ImVec4(0.93f, 0.95f, 0.97f, 1));
+    if (run) { const SampleLoss l = a.engine.sampleLoss(); ro("dropped", lossText(l), lossColour(l)); lossTooltip(l); }
 }
 
 void summary(const App& a, std::string& l1, std::string& l2) {

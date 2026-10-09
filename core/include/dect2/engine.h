@@ -3,6 +3,7 @@
 #include "dect2/iq_correct.h"
 #include "dect2/offset_tune.h"
 #include "dect2/exact_resampler.h"
+#include "dect2/delivery_check.h"
 #include "source.h"
 #include "spectrum.h"
 #include "t2rx.h"
@@ -59,6 +60,17 @@ struct FileOptions {
     bool loop = true;
 };
 
+// Where samples were lost since the radio was started. The radio side: samples that never came out of the radio (its USB link or driver
+// could not keep up, or the computer slept), found by comparing what arrived with the radio's sample rate. The OnAir side: samples the
+// receiver had to skip because it could not keep up with the rate (a slow or busy processor). The two need opposite remedies.
+struct SampleLoss {
+    bool live = false;                 // a live radio (files and the test signal never lose samples: they wait for the receiver)
+    double radioSec = 0, cpuSec = 0;   // seconds of signal lost on each side
+    uint64_t radioEvents = 0, cpuEvents = 0;
+    double sinceRadioSec = -1, sinceCpuSec = -1;   // seconds since the last loss of each kind, -1 = none yet
+    float loadPct = 0;                 // the receiver's share of real time on the sample thread over the last seconds (100 = just keeping up)
+};
+
 class Engine {
 public:
     Engine();
@@ -91,7 +103,8 @@ public:
     void setBandwidth(double mhz) { bwReqVal_ = mhz; bwReq_ = true; }
     double activeBandwidth() const { return bwActive_.load(); }
     double detectedBandwidth() const { return bwDetected_.load(); }   // last bandwidth the detector settled on (0 = none yet)
-    uint64_t droppedSamples() const { return ring_.dropped(); }
+    uint64_t droppedSamples() const { return ring_.dropped(); }   // the OnAir side only, in samples (see sampleLoss())
+    SampleLoss sampleLoss() const;
     std::string loadProfile() const;   // seconds the analysis thread spent on the spectrum and on the receiver, and the signal it has processed (diagnostics)
 
     // Latest spectrum snapshot; returns true if newer than `lastSeq`.
@@ -275,6 +288,18 @@ private:
     TuneSettings lastTune_;
     std::chrono::steady_clock::time_point lastSamples_{}, nextReconnect_{}, lastSkipLog_{};
     uint64_t skippedSamples_ = 0, skipEvents_ = 0;   // analysis thread only
+    // sampleLoss(): the radio's deliveries checked against its rate (checkDelivery(), analysis thread), the OnAir side from the ring
+    void checkDelivery();
+    void holdDelivery(int ms);   // start the check again after a start, retune or reset (the radio may pause around them)
+    std::atomic<int64_t> delivHoldNs_{0};
+    std::atomic<bool> delivReanchor_{true};
+    DeliveryCheck deliv_;   // analysis thread
+    std::atomic<double> radioMissing_{0};
+    std::atomic<uint64_t> radioMissEvents_{0}, cpuDropEvents_{0}, ringDroppedSeen_{0};
+    std::atomic<int64_t> lastRadioMissNs_{0}, lastCpuDropNs_{0}, lastRadioLogNs_{0};
+    std::atomic<float> loadPct_{0};
+    std::atomic<bool> live_{false};   // the source is a live radio (sampleLoss() is read by the interface without touching src_)
+    double loadT_ = 0, loadRx_ = 0, loadSamp_ = 0;   // analysis thread: where the last load measurement started
     std::string reconnectErr_;
     mutable std::mutex noteMu_;
     std::string note_, retuneNote_;     // sourceNote(): the driver's note at the start, at the last retune

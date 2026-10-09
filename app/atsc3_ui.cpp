@@ -80,8 +80,8 @@ void atsc3Status(App& a) {
         snprintf(b, sizeof b, "%.0f%%", 100 * t.load);
         ro("CPU", b, t.load > 0.95 ? ImVec4(0.95f, 0.45f, 0.3f, 1) : ImVec4(0.93f, 0.95f, 0.97f, 1));
     }
-    if (run) { snprintf(b, sizeof b, "%llu", (unsigned long long)(a.engine.droppedSamples() + (live ? (unsigned long long)t.droppedBlocks : 0)));
-               ro("dropped", b, a.engine.droppedSamples() ? ImVec4(0.95f, 0.45f, 0.3f, 1) : ImVec4(0.93f, 0.95f, 0.97f, 1)); }
+    if (run) { const SampleLoss l = a.engine.sampleLoss(); ro("dropped", lossText(l), lossColour(l)); lossTooltip(l); }
+    if (run && live && t.droppedBlocks) ro("blocks lost", std::to_string(t.droppedBlocks), ImVec4(0.95f, 0.45f, 0.3f, 1));
     if (run && a.devices[a.devIdx].kind != DeviceInfo::File) {
         ImGui::AlignTextToFramePadding();
         if (adc == AdcStatus::Overload) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.35f, 0.25f, 1), "ADC OVERLOAD - %s", a.agcOn ? "AGC is lowering the gain" : "reduce the gain (or enable AGC)"); ImGui::PopTextWrapPos(); }
