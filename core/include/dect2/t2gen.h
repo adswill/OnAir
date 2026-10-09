@@ -66,6 +66,7 @@ private:
     int plpBlocks_ = 0;
     std::vector<std::vector<uint8_t>> lastBb_;
     int n_, g_, k_, symbols_, nP2_;
+    int s2sig_ = 0;   // the S2 field 1 that P1 and L1-pre signal (6 or 7 for 8K or 32K with GI 1/128, 19/256, 19/128)
 };
 
 } // namespace dect2

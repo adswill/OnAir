@@ -59,6 +59,8 @@ static bool run(const Case& c, bool verbose) {
     }
     rx.telemetry(t, 0);
     const FftMode* fm = fftModeFromS2(c.s2);
+    // what P1 must signal: 8K and 32K with GI 1/128, 19/128 or 19/256 have their own codes, 6 and 7 (EN 302 755 table 18)
+    const int sig = c.gi >= 4 && c.s2 == 5 ? 7 : c.gi >= 4 && c.s2 == 1 ? 6 : c.s2;
     // phase 2: channel estimate from the P2 pilots
     bool chOk = t.chValid && t.extCarriers == c.ext;
     if (chOk && fm->nP2 >= 2 && c.snr < 100 && c.sroPpm == 0) chOk = std::fabs(t.p2SnrDb - c.snr) < 3.5 || c.echoDb > 0;
@@ -83,7 +85,7 @@ static bool run(const Case& c, bool verbose) {
     if (dataOk && c.sroPpm == 0 && c.snr < 100) dataOk = std::fabs(t.dataSnrDb - c.snr) < (c.s2 == 3 ? 6.0 : 3.5);
     if (!dataOk && verbose) printf("  data stage: valid=%d snr %.1f (want %.1f) pp %d\n", t.dataValid, t.dataSnrDb, c.snr, t.dataPp);
     chOk = chOk && l1Ok && postOk && dataOk;
-    bool ok = chOk && t.p1.valid && t.p1.s1 == 0 && t.p1.s2field1 == c.s2 && t.state == 2 && t.giIdx == c.gi &&
+    bool ok = chOk && t.p1.valid && t.p1.s1 == 0 && t.p1.s2field1 == sig && t.state == 2 && t.giIdx == c.gi &&
               std::fabs(t.cfoHz - c.cfo) < 0.05 * fn / fm->n && t.fftN == fm->n;
     if (verbose || !ok)
         printf("%s %-3s gi %-6s snr %4.1f cfo %+8.1f echo %.0fdB/%d sro %+.0f | p1=%d s1=%d s2=%d conf %.2f  state %d gi=%s margin %.2f  cfo %+8.1f  cp %.2f(%.1f dB) frame %.1f ms syms %d sro %.0f  nsym %llu | ch=%d ext=%d p2snr %.1f data %.1f\n",

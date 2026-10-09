@@ -15,12 +15,12 @@ using testjobs::jprintf;
 static std::atomic<int> fails{0};
 #define CHECK(c, ...) do { if (!(c)) { jprintf("FAIL: " __VA_ARGS__); jprintf("\n"); fails++; } } while (0)
 
-struct Case { const char* name; int s1; bool shortFrame; int mod, cod; bool rot; int ti; double snr; double bw = 8; };
+struct Case { const char* name; int s1; bool shortFrame; int mod, cod; bool rot; int ti; double snr; double bw = 8; int fft = 1, gi = 2, pp = 0; bool ext = false; };
 
 static void runCase(const Case& c) {
     const double fn = nativeRateHz(c.bw);
     TxParams tp;
-    tp.s1 = c.s1; tp.s2field1 = 1; tp.giIdx = 2; tp.ext = false; tp.pp = 0;
+    tp.s1 = c.s1; tp.s2field1 = c.fft; tp.giIdx = c.gi; tp.ext = c.ext; tp.pp = c.pp;
     tp.payload = true; tp.plpShort = c.shortFrame; tp.plpMod = c.mod; tp.plpCod = c.cod; tp.plpRot = c.rot; tp.plpTi = c.ti;
     T2Generator gen(tp);
     T2Receiver rx;
@@ -88,7 +88,27 @@ static void runCase(const Case& c) {
     jprintf("%-28s %s %-3s @ %4.1f dB: %2d frames, %4d blocks, %4d decoded, %4d identical, %d per frame\n", c.name, c.shortFrame ? "short " : "normal", rateName(c.cod), c.snr, frames, blocks, ok, same, gen.plpBlocks());
     CHECK(frames >= nFrames / 2, "%s: only %d frames reached the data stage", c.name, frames);
     CHECK(same == ok, "%s: %d decoded blocks differ from what was sent", c.name, ok - same);
-    CHECK(blocks > 0 && ok >= 0.98 * blocks, "%s: only %d of %d blocks decoded", c.name, ok, blocks);
+    // the steady state: from the third frame on (the first one or two can come out partly while the receiver locks: with the long 19/128
+    // and 19/256 guard intervals it finds the frame a little later)
+    int blocks2 = 0, ok2 = 0;
+    {
+        std::lock_guard<std::mutex> lk(mu);
+        for (auto& r : results) {
+            if (r.t2Frame < 2 || sent.find(r.t2Frame) == sent.end() || r.blocks == 0) continue;
+            for (size_t b = 0; b < r.frames.size() && b < sent[r.t2Frame].size(); b++) { blocks2++; if (!r.frames[b].bits.empty()) ok2++; }
+        }
+    }
+    CHECK(blocks2 > 0 && ok2 >= 0.98 * blocks2, "%s: only %d of %d blocks decoded after the first two frames", c.name, ok2, blocks2);
+    if (blocks > 0 && ok < blocks) {   // which frames lost blocks, for the log
+        std::lock_guard<std::mutex> lk(mu);
+        std::string m;
+        for (auto& r : results) {
+            int bad = 0;
+            for (auto& f : r.frames) if (f.bits.empty()) bad++;
+            if (bad) m += " frame " + std::to_string(r.t2Frame) + ": " + std::to_string(bad) + " of " + std::to_string(r.frames.size()) + ";";
+        }
+        jprintf("  %s: lost blocks in%s\n", c.name, m.c_str());
+    }
 }
 
 int main() {
@@ -105,6 +125,12 @@ int main() {
         {"T2-Lite 256QAM 2/5",      3, true,  3, 7, false, 3, 19},
         {"T2-Lite 64QAM 1/2",       3, true,  2, 0, true,  3, 16},
         {"T2-Lite 1.7 MHz 16QAM 1/3", 3, true, 1, 6, true,  3, 9, 1.7},
+        // the guard intervals 1/128, 19/256 and 19/128 make P1 signal its own FFT codes (7 for 32K, 6 for 8K): a real 32K 19/128 mux (Hungary)
+        // never got to L1-pre, because the receiver read its tables with the raw code
+        {"32K GI 1/8 (P1 code 5)",      0, false, 2, 2, true,  3, 22, 8, 5, 2, 7},
+        {"32K GI 19/128 (P1 code 7)",   0, false, 2, 2, true,  3, 22, 8, 5, 5, 1},
+        {"32K GI 19/256 ext (code 7)",  0, false, 2, 2, true,  3, 22, 8, 5, 6, 3, true},
+        {"8K GI 1/128 (P1 code 6)",     0, false, 2, 2, true,  3, 22, 8, 1, 4, 6},
     };
     // the cases are independent: each one runs on its own thread, the output keeps the order of the cases
     testjobs::Jobs jobs;

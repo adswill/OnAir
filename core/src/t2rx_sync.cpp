@@ -409,10 +409,14 @@ void T2Receiver::Impl::handleP1Candidate(int64_t d, float metric) {
     if (!fm || info.s1 >= 5 || info.s1 == 2) { // non-T2 or reserved: nothing to demodulate
         return;
     }
-    bool changed = fm->n != fftN || info.s1 != curS1 || info.s2field1 != fftCode;
+    // S2 field 1 has two codes for 8K and for 32K: 1 and 5 with the guard intervals 1/32 - 1/4, 6 and 7 with 1/128, 19/256 and 19/128
+    // (EN 302 755 table 18). The pilots, interleaver and tables depend only on the FFT size, so 6 and 7 are taken as 1 and 5: with the raw 7
+    // the 6-entry tables were read past their end and a 32K 19/128 or 19/256 mux (UK, Hungary) never got to L1-pre.
+    const int code = info.s2field1 == 7 ? 5 : info.s2field1 == 6 ? 1 : info.s2field1;
+    bool changed = fm->n != fftN || info.s1 != curS1 || code != fftCode;
     if (changed) {
         fftN = fm->n;
-        fftCode = info.s2field1;
+        fftCode = code;
         curS1 = info.s1;
         nP2 = fm->nP2;
         giIdx = -1;

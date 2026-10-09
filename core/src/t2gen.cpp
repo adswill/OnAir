@@ -80,13 +80,16 @@ T2Generator::T2Generator(const TxParams& p) : i_(new Impl), p_(p) {
         symbols_ = std::max(m->nP2 + 2, (int)std::lround(0.060 / tsym));
         symbols_ = std::min(symbols_, 400);
     }
-    buildP1(*i_, p.s1, (p.s2field1 << 1) | (p.mixed ? 1 : 0));
+    // what P1 and L1-pre signal: 8K and 32K with the guard intervals 1/128, 19/128 and 19/256 have codes of their own (6 and 7, EN 302 755
+    // table 18); the tables above take the FFT size only (1 and 5)
+    s2sig_ = (p.giIdx >= 4 && m->code == 5) ? 7 : (p.giIdx >= 4 && m->code == 1) ? 6 : m->code;
+    buildP1(*i_, p.s1, (s2sig_ << 1) | (p.mixed ? 1 : 0));
 
     // L1 signalling for this configuration
     pre_.type = 0;
     pre_.bwtExt = pc.ext ? 1 : 0;
     pre_.s1 = p.s1;
-    pre_.s2 = (p.s2field1 << 1) | (p.mixed ? 1 : 0);
+    pre_.s2 = (s2sig_ << 1) | (p.mixed ? 1 : 0);
     pre_.guardInterval = p.giIdx;
     pre_.papr = p.tr ? 2 : 0;
     pre_.l1Mod = p.l1Mod;
