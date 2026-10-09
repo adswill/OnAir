@@ -31,7 +31,7 @@ void parallelFor(int n, int threads, F fn) {
 PlpResult PlpDecoder::decodeNow(const PlpJob& job, int threads, bool useGpu, const std::atomic<int>* backlog) {
     auto t0 = std::chrono::steady_clock::now();
     PlpResult res;
-    res.frameNo = job.frameNo; res.t2Frame = job.t2Frame; res.frameSec = job.frameSec; res.plpId = job.plpId; res.fec = job.fec;
+    res.frameNo = job.frameNo; res.t2Frame = job.t2Frame; res.numT2Frames = job.numT2Frames; res.frameInterval = job.frameInterval; res.frameSec = job.frameSec; res.plpId = job.plpId; res.fec = job.fec;
     FecDims d = fecDims(job.fec);
     if (!d.ok || job.numBlocks <= 0 || (int)job.cells.size() < job.numBlocks * d.cellsPerBlock) return res;
     const int nb = job.numBlocks, cells = d.cellsPerBlock, bps = d.bitsPerCell;

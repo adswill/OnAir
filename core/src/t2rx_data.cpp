@@ -20,6 +20,8 @@ void T2Receiver::Impl::submitPlp(const std::vector<cf32>& dstream, const std::ve
     PlpJob job;
     job.frameNo = ++frameCounter;
     job.t2Frame = l1post.frameIdx;
+    job.numT2Frames = l1pre.numFrames;
+    job.frameInterval = std::max(1, pc.frameInterval);
     job.frameSec = frameMsv / 1e3;
     job.plpId = pc.id;
     job.fec.shortFrame = pc.fecType == 0;

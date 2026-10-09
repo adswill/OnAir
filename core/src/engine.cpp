@@ -679,7 +679,13 @@ void Engine::onPlp(const PlpResult& r) {
     gPlpWaitUs += usSince(tWait0);
     struct HoldTimer { std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now(); ~HoldTimer() { gPlpHoldUs += usSince(t0); gPlpFrames++; } } holdTimer;
     frameBuf_.clear();
-    if (lastT2Frame_ >= 0 && ((r.t2Frame - lastT2Frame_) & 0xFF) != 1) { unpack_.lost(); demux_.markLoss(); }
+    // FRAME_IDX restarts at 0 every super-frame (NUM_T2_FRAMES frames), and a PLP with FRAME_INTERVAL > 1 skips frames: compare the
+    // index with the one expected, not with last + 1, or every super-frame boundary (every second frame on a 2-frame super-frame) looks
+    // like lost data and drops the half-assembled SDT/NIT/EIT sections.
+    if (lastT2Frame_ >= 0) {
+        const int mod = r.numT2Frames > 0 ? r.numT2Frames : 256;
+        if (r.t2Frame != (lastT2Frame_ + std::max(1, r.frameInterval)) % mod) { unpack_.lost(); demux_.markLoss(); }
+    }
     lastT2Frame_ = r.t2Frame;
     for (const auto& f : r.frames) {
         if (f.bits.empty()) { unpack_.lost(); demux_.markLoss(); continue; }

@@ -16,6 +16,8 @@ namespace dect2 {
 struct PlpJob {
     uint64_t frameNo = 0;
     int t2Frame = 0;        // L1-post FRAME_IDX
+    int numT2Frames = 0;    // L1-pre NUM_T2_FRAMES: FRAME_IDX counts 0..numT2Frames-1 inside the super-frame
+    int frameInterval = 1;  // FRAME_INTERVAL: the PLP is in every frameInterval-th T2 frame
     double frameSec = 0;    // duration of the T2 frame
     int plpId = 0;
     PlpFec fec;
@@ -33,7 +35,7 @@ struct BbFrame {
 
 struct PlpResult {
     uint64_t frameNo = 0;
-    int t2Frame = 0;
+    int t2Frame = 0, numT2Frames = 0, frameInterval = 1;
     double frameSec = 0;
     int plpId = 0;
     PlpFec fec;
