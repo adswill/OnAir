@@ -1,4 +1,5 @@
 #include "dect2/atsc3_sync.h"
+#include "dect2/dsp_compat.h"
 #include <algorithm>
 #include <cmath>
 #include <chrono>
@@ -324,25 +325,46 @@ bool Atsc3Sync::search() {
     // look at everything available beyond the search start (a few frames long at most), converted to the bootstrap rate
     const long from = std::max(searchFrom_, rawStart_);
     const long avail = rawStart_ + (long)raw_.size() - from;
-    const long need = (long)(rate_ * (8.0 * 3072 / kBootstrapRate + 0.003));
+    const double rate = rateEff();
+    const long need = (long)(rate * (8.0 * 3072 / kBootstrapRate + 0.003));
     if (avail < need * 2) return false;
     // with a hint (the previous frame) a short window is enough; without one, look at a quarter of a second
-    const long take = std::min<long>(avail, (long)(rate_ * (haveHint_ ? 0.01 : 0.25)));
+    const long take = std::min<long>(avail, (long)(rate * (haveHint_ ? 0.01 : 0.25)));
+    // the expected offset is removed at the radio's rate, before the band is cut to the bootstrap's: a channel recorded off centre would
+    // otherwise lose an edge in the resampler. Without a hint the centre comes from the spectrum.
+    std::vector<cf32> seg(raw_.begin() + (from - rawStart_), raw_.begin() + (from - rawStart_) + take);
+    if (!haveHint_) coarse_ = centreOfChannel(seg.data(), seg.size());
+    const double pre = haveHint_ ? cfo_ : coarse_;
+    derotate(seg.data(), seg.size(), pre, rate, (double)from);
     std::vector<cf32> y;
-    resampleExact(raw_.data() + (from - rawStart_), (size_t)take, rate_, kBootstrapRate, y);
+    resampleExact(seg.data(), seg.size(), rate, kBootstrapRate, y);
     st_.searches++;
-    auto bf = haveHint_ ? findBootstrap(y.data(), y.size(), 2500.0, cfo_, bs_.minorVersion) : findBootstrap(y.data(), y.size(), 20000.0);
-    if (haveHint_ && !bf.found && ++hintMisses_ > 100) { haveHint_ = false; hintMisses_ = 0; }   // lost: search widely again
+    auto bf = haveHint_ ? findBootstrap(y.data(), y.size(), 2500.0, 0.0, bs_.minorVersion) : findBootstrap(y.data(), y.size(), 20000.0);
+    bf.cfoHz += pre;
+    if (haveHint_ && !bf.found && ++hintMisses_ > 100) { haveHint_ = false; hintMisses_ = 0; sroPpm_ = 0; sroCount_ = 0; predNext_ = -1; }   // lost: search widely again
     if (!bf.found || !bf.det.valid) {
         // the bootstrap may straddle the end: keep an overlap of five symbols (a detection needs four after its start)
-        searchFrom_ = from + take - (long)(rate_ * 5.0 * 3072 / kBootstrapRate);
+        searchFrom_ = from + take - (long)(rate * 5.0 * 3072 / kBootstrapRate);
         return take == avail ? false : true;
     }
     bs_ = bf.det.info;
     cfo_ = bf.cfoHz;
-    bsStart_ = from + (long)std::llround(bf.start * rate_ / kBootstrapRate);
+    const double bsExact = (double)from + bf.start * rate / kBootstrapRate;
+    bsStart_ = (long)std::llround(bsExact);
+    // the clock: the previous frame said where this bootstrap starts; the difference over the frame's length is the clock error left
+    if (predNext_ > 0 && predFrom_ >= 0 && predNext_ > predFrom_) {
+        const double ppm = (bsExact - predNext_) / (predNext_ - predFrom_) * 1e6;
+        if (std::fabs(ppm) < 400.0) {   // more: not the frame that was predicted (a gap, lost samples, a frame not read)
+            sroCount_++;
+            sroPpm_ += (sroCount_ < 4 ? 0.9 : 0.3) * ppm;
+            sroPpm_ = std::max(-300.0, std::min(300.0, sroPpm_));
+        }
+    }
+    predNext_ = -1;
+    predFrom_ = bsExact;
+    bsExact_ = bsExact;
     const double bsLen = bs_.numSymbols * 3072 / kBootstrapRate;
-    frameStart_ = bsStart_ + (long)std::llround(bsLen * rate_);
+    frameStart_ = bsStart_ + (long)std::llround(bsLen * rateEff());
     minToNextSec_ = secondsToNext(bs_);
     locked_ = true;
     haveHint_ = true;
@@ -350,23 +372,68 @@ bool Atsc3Sync::search() {
     st_.bootstraps++;
     st_.locked = true;
     st_.cfoHz = cfo_;
+    st_.sroPpm = sroPpm_;
     return true;
+}
+
+// The centre of the strongest 5.83 MHz wide block of the spectrum (an ATSC 3.0 channel of 6 MHz, the bootstrap's band and more), in Hz
+// from the middle of the sample band; 0 when nothing stands out.
+double Atsc3Sync::centreOfChannel(const cf32* x, size_t n) const {
+    const int lg = 10, N = 1 << lg;
+    if (n < (size_t)N * 8) return 0.0;
+    std::vector<double> P((size_t)N, 0.0);
+    std::vector<float> re((size_t)N), im((size_t)N);
+    const size_t blocks = std::min<size_t>(n / N, 256), stride = n / blocks;
+    for (size_t b = 0; b < blocks; b++) {
+        const cf32* p = x + b * stride;
+        bool finite = true;
+        for (int i = 0; i < N; i++) {
+            const float w = 0.5f - 0.5f * std::cos(2.0f * (float)M_PI * (i + 0.5f) / N);
+            re[(size_t)i] = p[i].real() * w; im[(size_t)i] = p[i].imag() * w;
+            if (!std::isfinite(re[(size_t)i]) || !std::isfinite(im[(size_t)i])) finite = false;
+        }
+        if (!finite) continue;
+        fftSplit(re.data(), im.data(), lg, false);
+        for (int k = 0; k < N; k++) P[(size_t)((k + N / 2) % N)] += (double)re[(size_t)k] * re[(size_t)k] + (double)im[(size_t)k] * im[(size_t)k];
+    }
+    std::vector<double> cum((size_t)N + 1, 0.0);
+    for (int i = 0; i < N; i++) cum[(size_t)i + 1] = cum[(size_t)i] + P[(size_t)i];
+    const double bin = rate_ / N;
+    // the two edges of the occupied band (4.5 MHz for the bootstrap, 5.83 MHz for a frame in a 6 MHz channel, up to about 7.8 MHz in an 8 MHz one, depending on the bootstrap's
+    // sample rate coefficient and the carriers), in decibels so that the ripple of an echo does not move them: the left edge where the
+    // power rises most, the right one where it falls most
+    const int S = std::max(2, (int)std::lround(0.06e6 / bin)), W0 = (int)std::lround(4.4e6 / bin), W1 = (int)std::lround(8.0e6 / bin);
+    if (W0 + 2 * S + 2 >= N) return 0.0;
+    const double floorP = std::max(1e-3 * cum[(size_t)N] / N, 1e-30);   // no edge counts for more than 30 dB (an empty, noise-free stopband)
+    auto dB = [&](int a, int b) { return std::log(std::max((cum[(size_t)b] - cum[(size_t)a]) / (b - a), floorP)); };
+    std::vector<double> rise((size_t)N, -1e30), fall((size_t)N, -1e30);
+    for (int i = S; i + S <= N; i++) { rise[(size_t)i] = dB(i, i + S) - dB(i - S, i); fall[(size_t)i] = -rise[(size_t)i]; }
+    double best = -1e30;
+    int bi = -1;
+    for (int a = S; a + W0 + S <= N; a++)
+        for (int b = a + W0; b <= std::min(N - S, a + W1); b++) {
+            const double score = rise[(size_t)a] + fall[(size_t)b];
+            if (score > best) { best = score; bi = a + b; }   // twice the centre, in bins
+        }
+    if (bi < 0 || best < std::log(10.0)) return 0.0;   // edges of less than 5 dB each: no channel shape, leave the search at the centre
+    return (0.5 * bi - N / 2) * bin;
 }
 
 bool Atsc3Sync::cutFrame() {
     struct Timer { double& d; std::chrono::steady_clock::time_point t; ~Timer() { d += std::chrono::duration<double>(std::chrono::steady_clock::now() - t).count(); } } tm{st_.secCut, std::chrono::steady_clock::now()};
     const double frameRate = postBootstrapRate(bs_);
+    const double rate = rateEff();
     PreambleParams pp;
-    if (!preambleParams(bs_.preambleStructure, pp)) { locked_ = false; searchFrom_ = bsStart_ + (long)(rate_ * 0.01); return true; }
+    if (!preambleParams(bs_.preambleStructure, pp)) { locked_ = false; searchFrom_ = bsStart_ + (long)(rate * 0.01); return true; }
     const long availEnd = rawStart_ + (long)raw_.size();
     // 1. the Preamble tells the length of the frame (it can be longer than the signalled minimum time to the next frame)
     if (frameSamples_ == 0) {
-        const long headSamples = (long)std::ceil((double)(pp.fftSize + pp.guard) * 6 * rate_ / frameRate) + 64;   // up to six Preamble symbols
+        const long headSamples = (long)std::ceil((double)(pp.fftSize + pp.guard) * 6 * rate / frameRate) + 64;   // up to six Preamble symbols
         if (availEnd < frameStart_ + headSamples) return false;
         std::vector<cf32> head(raw_.begin() + (frameStart_ - rawStart_), raw_.begin() + (frameStart_ - rawStart_) + headSamples);
-        derotate(head.data(), head.size(), cfo_, rate_, (double)frameStart_);
+        derotate(head.data(), head.size(), cfo_, rate, (double)frameStart_);
         std::vector<cf32> y;
-        resampleExact(head.data(), head.size(), rate_, frameRate, y);
+        resampleExact(head.data(), head.size(), rate, frameRate, y);
         if (y.size() > (size_t)(pp.fftSize + pp.guard)) {
             double res = estimateCfoGuard(y.data(), y.size(), pp.fftSize, pp.guard, 1, frameRate);
             if (std::fabs(res) < 0.4 * frameRate / pp.fftSize) { cfo_ += res; st_.cfoHz = cfo_; }
@@ -376,11 +443,12 @@ bool Atsc3Sync::cutFrame() {
         if (pre.basicOk) {
             size_t len = pre.detailOk ? frameLengthSamples(bs_, pre.basic, pre.detail) : 0;
             if (len == 0) len = (size_t)(minToNextSec_ * frameRate);   // L1-Detail not readable: take the signalled minimum
-            frameSamples_ = (long)std::ceil((double)len * rate_ / frameRate);
+            frameExact_ = (double)len * rate / frameRate;
+            frameSamples_ = (long)std::ceil(frameExact_);
         } else {
             // not a frame we can read: look for the next bootstrap
             missed_++;
-            searchFrom_ = bsStart_ + (long)std::llround((minToNextSec_ - 0.002) * rate_);
+            searchFrom_ = bsStart_ + (long)std::llround((minToNextSec_ - 0.002) * rate);
             locked_ = false;
             return true;
         }
@@ -388,9 +456,9 @@ bool Atsc3Sync::cutFrame() {
     if (availEnd < frameStart_ + frameSamples_ + 16) return false;
     // 2. the whole frame: carrier offset removed at the radio's rate, then the rate converted to the frame's
     std::vector<cf32> seg(raw_.begin() + (frameStart_ - rawStart_), raw_.begin() + (frameStart_ - rawStart_) + frameSamples_ + 16);
-    derotate(seg.data(), seg.size(), cfo_, rate_, (double)frameStart_);
+    derotate(seg.data(), seg.size(), cfo_, rate, (double)frameStart_);
     std::vector<cf32> y;
-    resampleExact(seg.data(), seg.size(), rate_, frameRate, y);
+    resampleExact(seg.data(), seg.size(), rate, frameRate, y);
     if (pool_) {
         pool_->submit(std::move(y), bs_);
         st_.frames++;
@@ -401,8 +469,9 @@ bool Atsc3Sync::cutFrame() {
         if (ok) { st_.frames++; missed_ = 0; } else missed_++;
     }
     // the next bootstrap comes no earlier than the signalled time, and not before this frame is over
-    long next = std::max<long>(bsStart_ + (long)std::llround((minToNextSec_ - 0.002) * rate_), frameStart_ + frameSamples_ - (long)(rate_ * 0.0005));
+    long next = std::max<long>(bsStart_ + (long)std::llround((minToNextSec_ - 0.002) * rate), frameStart_ + frameSamples_ - (long)(rate * 0.0005));
     searchFrom_ = next;
+    predNext_ = bsExact_ + bs_.numSymbols * 3072 / kBootstrapRate * rate + frameExact_;   // frames follow each other without a gap: the next bootstrap starts here
     locked_ = false;
     frameSamples_ = 0;
     return true;

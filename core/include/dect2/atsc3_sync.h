@@ -38,6 +38,7 @@ struct SyncStats {
     long bootstraps = 0, searches = 0, frames = 0;
     double secSearch = 0, secCut = 0, secDecode = 0;   // CPU time spent (diagnostics)
     double cfoHz = 0;
+    double sroPpm = 0;          // sample clock offset of the radio, measured from the bootstrap spacing (positive: its clock is fast)
     bool locked = false;
 };
 
@@ -79,6 +80,15 @@ private:
     int missed_ = 0;
     int hintMisses_ = 0;
     bool haveHint_ = false;              // a previous lock gives the expected place and offset of the next bootstrap
+    // the radio's sample clock: measured from where each bootstrap is found against where the previous frame said it would be, and
+    // corrected in the resampling to the frame's rate (a long FFT symbol cannot take a clock error of tens of ppm)
+    double sroPpm_ = 0;
+    double predNext_ = -1, predFrom_ = -1;  // where the next bootstrap should start (stream index), and the bootstrap that predicted it
+    double bsExact_ = 0, frameExact_ = 0;   // the bootstrap's start and the frame's length (after the bootstrap), not rounded
+    int sroCount_ = 0;
+    double coarse_ = 0;                  // the channel's centre from the spectrum, before the first bootstrap
+    double rateEff() const { return rate_ * (1.0 + sroPpm_ * 1e-6); }
+    double centreOfChannel(const cf32* x, size_t n) const;
 };
 
 } // namespace atsc3
