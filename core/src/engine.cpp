@@ -59,6 +59,7 @@ bool Engine::offsetAllowed() const {
 }
 
 void Engine::ingest(cf32* x, size_t n) {
+    rec_.push(x, n);   // the raw samples, before anything touches them
     dropNonFinite(x, n);
     cleanSamples(iqFix_, offMix_, offsetDc_.load(), x, n, activeStd_.load());
     const auto a0 = std::chrono::steady_clock::now();
@@ -313,6 +314,7 @@ void Engine::stop() {
     if (!running_ && !src_) return;
     stopReq_ = true;
     if (th_.joinable()) th_.join();
+    rec_.stop();   // a recording ends with the radio (the analysis thread is gone, nothing pushes any more)
     {
         std::lock_guard<std::mutex> lk(specQMu_);
         specStop_ = true;
@@ -330,6 +332,20 @@ void Engine::stop() {
     }
     rxA3_.stop();
     running_ = false;
+}
+
+bool Engine::startRecording(const std::string& path, FileFormat fmt, std::string& err) {
+    DeviceInfo::Kind kind;
+    { std::lock_guard<std::mutex> lk(tuneMu_); kind = lastDev_.kind; }
+    if (!running_ || !src_) { err = "start the radio first"; return false; }
+    if (kind == DeviceInfo::File) { err = "recording a file playback is not needed: the file is already there"; return false; }
+    return rec_.start(path, fmt, srcRate_, err);
+}
+
+std::string Engine::recordingName(FileFormat fmt) const {
+    TuneSettings t;
+    { std::lock_guard<std::mutex> lk(tuneMu_); t = lastTune_; }
+    return recordingFileName(recordingModeId(stdMode_.load()), radioTune(t).centerHz, srcRate_, fmt);
 }
 
 // The radio of a narrow-channel mode is tuned tuneOffsetHz above the user's frequency, so the channel stays off the DC spike.

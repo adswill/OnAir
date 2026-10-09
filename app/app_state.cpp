@@ -213,6 +213,7 @@ void loadPrefs(App& a) {
     if (d.has("gain")) a.tune.gainDb = d.getD("gain", a.tune.gainDb);
     a.gainDev = d.getS("gainDev", "");
     a.tune.ampOn = d.getB("amp", false);
+    a.recFormat = d.getI("recFormat", 0) == 1 ? 1 : 0;
     if (d.has("family")) { const int f = std::max(0, std::min(kNumFamilies - 1, (int)d.getI("family", 0))); setFamilyFlags(a, f); if (a.fmMode && !(a.freqMhz >= 87.5 && a.freqMhz <= 108)) a.freqMhz = 100.0; }
     for (int f = 0; f < kNumFamilies; f++) {   // as many as savePrefs writes
         if (!d.has(("gLna" + std::to_string(f)).c_str())) continue;

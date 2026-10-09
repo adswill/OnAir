@@ -1,6 +1,7 @@
 // Radio problems where the user looks: the listing error, a failed start, a frequency the radio cannot tune and the USB hints, all under the
 // radio picker, plus a "Copy diagnostics" button that puts what a bug report needs on the clipboard.
 #include "app.h"
+#include "dect2/updater.h"
 #include <cctype>
 #include <thread>
 #ifdef __APPLE__
@@ -115,6 +116,75 @@ std::string gpuName() {
 #else
     return "unknown";
 #endif
+}
+
+// "Record IQ": saves the radio's raw samples for a bug report. Idle: a button (and the format); recording: a red "Stop 12.3 s 98 MB";
+// after it: "Show recording" opens the folder.
+std::string sizeText(uint64_t bytes) {
+    char b[32];
+    if (bytes >= 1000000000ull) snprintf(b, sizeof b, "%.2f GB", bytes / 1e9);
+    else snprintf(b, sizeof b, "%.0f MB", bytes / 1e6);
+    return b;
+}
+
+void recordUi(App& a) {
+    const RecordingStats rs = a.engine.recordingStats();
+    if (rs.active) a.recWasActive = true;
+    else if (a.recWasActive) {   // it ended: stopped here, with the radio, at the size limit or on a disk error
+        a.recWasActive = false;
+        a.recDonePath = rs.path;
+        char b[64];
+        snprintf(b, sizeof b, "recorded %.1f s (%s) to ", rs.seconds, sizeText(rs.bytes).c_str());
+        a.engine.log(std::string(b) + rs.path);
+        if (!rs.error.empty()) a.engine.log("recording stopped: " + rs.error);
+        if (rs.droppedSamples) a.engine.log("the disk was too slow: some samples are missing from the recording");
+    }
+    const bool isFile = a.devices[a.devIdx].kind == DeviceInfo::File;
+    if (rs.active) {
+        char b[96];
+        snprintf(b, sizeof b, "Stop  %.1f s  %s", rs.seconds, sizeText(rs.bytes).c_str());
+        ImGui::PushStyleColor(ImGuiCol_Text, pal::badRed());
+        if (ImGui::SmallButton(b)) a.engine.stopRecording();
+        ImGui::PopStyleColor();
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Stops the recording");
+        if (rs.droppedSamples) {
+            flowNext(4 * gUi);
+            ImGui::TextColored(pal::warnAmber(), "Â· dropped");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("The disk was too slow: some samples are missing from the recording. Record to a faster drive or use the 8-bit format.");
+        }
+    } else {
+        const bool can = a.engine.running() && !isFile;
+        ImGui::BeginDisabled(!can);
+        const ImVec2 p0 = ImGui::GetCursorScreenPos();
+        const float sp = ImGui::CalcTextSize(" ").x;
+        if (ImGui::SmallButton("    Record IQ")) {
+            const FileFormat f = a.recFormat == 1 ? FileFormat::CF32 : FileFormat::CS8;
+            const std::string path = plat::dataDir() + "/recordings/" + a.engine.recordingName(f);
+            std::string err;
+            if (a.engine.startRecording(path, f, err)) a.recDonePath.clear();
+            else a.engine.log("recording failed: " + err);
+        }
+        ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(p0.x + ImGui::GetStyle().FramePadding.x + 2.2f * sp, p0.y + ImGui::GetItemRectSize().y * 0.5f), 3.2f * gUi, can ? ImGui::GetColorU32(pal::badRed()) : IM_COL32(120, 80, 78, 255));
+        ImGui::EndDisabled();
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+            ImGui::SetTooltip("%s", isFile ? "Recordings of a file are not needed" : !can ? "Start the radio first" : "Saves the radio's raw samples to a file, for a bug report");
+    }
+    flowNext(6 * gUi);
+    ImGui::BeginDisabled(rs.active);
+    ImGui::SetNextItemWidth(ImGui::CalcTextSize("8-bit").x + ImGui::GetFrameHeight() + 2 * ImGui::GetStyle().FramePadding.x + 4 * gUi);
+    if (ImGui::BeginCombo("##recfmt", a.recFormat == 1 ? "float" : "8-bit")) {
+        if (ImGui::Selectable("8-bit", a.recFormat == 0)) { a.recFormat = 0; plat::prefs().setI("recFormat", 0); }
+        if (ImGui::Selectable("float", a.recFormat == 1)) { a.recFormat = 1; plat::prefs().setI("recFormat", 1); }
+        ImGui::EndCombo();
+    }
+    ImGui::EndDisabled();
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("8-bit: 2 bytes per sample, small. Float: 8 bytes per sample, exact.");
+    if (!a.recDonePath.empty() && !rs.active) {
+        flowNext(6 * gUi);
+        if (ImGui::SmallButton("Show recording")) dect2::openUrl(a.recDonePath.substr(0, a.recDonePath.find_last_of("/\\")));
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", a.recDonePath.c_str());
+    }
+    flowEnd();
 }
 
 } // namespace
@@ -237,4 +307,6 @@ void radioMessagesUi(App& a, bool vertical) {
         a.diagCopiedAt = ImGui::GetTime();
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Copies the version, system, radios, messages and radio log lines, for a bug report");
+    flowNext(6 * gUi);
+    recordUi(a);
 }

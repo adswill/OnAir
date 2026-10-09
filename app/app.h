@@ -243,6 +243,9 @@ struct App {
     std::vector<std::string> usbHints;  // why a plugged-in radio is not listed (Linux), refreshed with the radio list
     double diagCopiedAt = -10, diagPollAt = -10;
     bool diagWasRunning = false;
+    int recFormat = 0;                  // IQ recording format: 0 = 8-bit, 1 = float (pref "recFormat")
+    bool recWasActive = false;          // a recording was running at the last frame (to log it once when it ends)
+    std::string recDonePath;            // the last finished recording, for "Show recording"
     RxTelemetry rx;
     uint64_t rxSeq = 0;
     TsSnapshot ts;

@@ -1,7 +1,9 @@
 // Headless receiver: prints sync / L1 telemetry once per second. Useful for bring-up and logs.
 //   dect2cli --hackrf [--freq MHz] [--lna dB] [--vga dB] [--amp] [--bw MHz] [--secs N]
 //   dect2cli --file path.cs8 --rate Msps [--format cs8|cu8|cf32] [--bw MHz] [--secs N]
-//   dect2cli --record out.cs8 --secs N   (HackRF only; raw IQ capture at the 2x native rate)
+//   dect2cli ... --record out.cs8|out.cf32|folder|auto --secs N   (any radio or --synthetic, not --file: saves the radio's raw samples at its own
+//     rate while receiving, for N seconds, and prints the size; a folder or "auto" (the current folder) gets a name like
+//     onair_dvb_554.000MHz_10Msps_20261009-071530.cs8, which reopens with the right rate and format)
 #include "dect2/engine.h"
 #include "dect2/crash_report.h"
 #include "dect2/modes.h"
@@ -17,6 +19,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <thread>
 #include <cstdint>
@@ -94,6 +97,7 @@ int main(int argc, char** argv) {
     tune.centerHz = freq * 1e6;
     tune.synth.mode = standard >= 4 ? standard : 0;   // the synthetic source plays that mode's test signal
     if (standard != 7 && standard < 8) tune.sampleRate = tune.bandwidthMhz >= 7 ? 10e6 : 8e6; // HackRF Pro: exact tuning only at <= 10 Msps
+    if (useFile && !record.empty()) { fprintf(stderr, "--record does not work with --file: the samples are already in that file\n"); return 1; }
     if (useFile) { dev.kind = DeviceInfo::File; dev.name = file.path; file.loop = false; }
     else if (synthetic) { dev.kind = DeviceInfo::Synthetic; dev.name = "synthetic"; }
     else {
@@ -136,6 +140,14 @@ int main(int argc, char** argv) {
     if (!e.start(dev, tune, file)) {
         size_t n; for (auto& l : e.logSnapshot(n)) fprintf(stderr, "%s\n", l.c_str());
         return 1;
+    }
+    if (!record.empty()) {
+        std::string rpath = record, rerr;
+        FileFormat rfmt = guessFormat(record);
+        const bool folder = record == "auto" || record.back() == '/' || record.back() == '\\' || std::filesystem::is_directory(std::filesystem::u8path(record));
+        if (folder) { rfmt = FileFormat::CS8; rpath = (record == "auto" ? std::string(".") : record) + "/" + e.recordingName(rfmt); }
+        if (!e.startRecording(rpath, rfmt, rerr)) { fprintf(stderr, "recording: %s\n", rerr.c_str()); e.stop(); return 1; }
+        printf("recording the radio's samples to %s\n", rpath.c_str());
     }
     size_t shown = 0;
     double lastPic = 0, freezeSecs = 0; int freezes = 0, pics = 0;
@@ -206,6 +218,12 @@ int main(int argc, char** argv) {
                sf.stats.rmsDbfs, sf.stats.clipFraction * 100, t.state, (unsigned long long)t.p1Count, t.p1.s1, t.fftN,
                t.giIdx >= 0 ? guardName(t.giIdx) : "-", t.cfoHz, t.cpCorr, (unsigned long long)t.l1preGood, (unsigned long long)(t.l1preGood + t.l1preBad),
                (unsigned long long)t.l1postGood, (unsigned long long)(t.l1postGood + t.l1postBad), t.dataValid, t.dataSnrDb, (unsigned long long)t.symbols, t.secSinceP1, (unsigned long long)t.plpFrames, (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad, t.plpMerDb, t.plpPreBer, t.plpIters, t.plpDecodeMs, t.plpOnGpu ? "GPU" : "CPU", (unsigned long long)t.plpFramesDropped, (unsigned long long)e.droppedSamples());
+    }
+    if (!record.empty()) {
+        const RecordingStats rs = e.recordingStats();
+        e.stopRecording();
+        printf("recorded %.1f s (%.1f MB) to %s%s\n", rs.seconds, rs.bytes / 1e6, rs.path.c_str(), rs.droppedSamples ? ": SOME SAMPLES WERE DROPPED, the disk was too slow" : "");
+        if (!rs.error.empty()) printf("recording stopped early: %s\n", rs.error.c_str());
     }
     { const QualityReport& q = qm.report(); printf("quality: %.0f%% %s (SNR %.1f dB, needs %.1f, margin %+.1f dB, FEC %.1f%%)\n", q.percent, q.label.c_str(), q.snrDb, q.requiredDb, q.marginDb, q.fecOk * 100); }
     {

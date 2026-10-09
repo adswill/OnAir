@@ -262,6 +262,7 @@ Useful options: `DECT2_UI_BACKEND` (Metal or OpenGL3), `DECT2_WITH_SOAPY`, and `
 
 - **[Discord](https://discord.gg/Kky9c6atm)**: support, feature requests, questions, and sharing what you receive.
 - **[GitHub Issues](https://github.com/adswill/OnAir/issues)**: bug reports.
+  Attach an IQ recording of the problem: press **Record IQ** in the Source panel (or run `onair-cli --record auto --secs 10`); files go to the `recordings` folder of the app data folder, and **Show recording** opens it.
 - **[Pull requests](https://github.com/adswill/OnAir/pulls)** are welcome.
 
 ## License

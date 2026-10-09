@@ -5,6 +5,7 @@
 #include "dect2/exact_resampler.h"
 #include "dect2/delivery_check.h"
 #include "source.h"
+#include "iq_record.h"
 #include "spectrum.h"
 #include "t2rx.h"
 #include "dvbt_rx.h"
@@ -109,6 +110,12 @@ public:
     void setBandwidth(double mhz) { bwReqVal_ = mhz; bwReq_ = true; }
     double activeBandwidth() const { return bwActive_.load(); }
     double detectedBandwidth() const { return bwDetected_.load(); }   // last bandwidth the detector settled on (0 = none yet)
+    // Record the radio's raw samples (as they leave the ring, before any clean-up) at the radio's own rate. Not for a file source.
+    bool startRecording(const std::string& path, FileFormat fmt, std::string& err);
+    void stopRecording() { rec_.stop(); }
+    RecordingStats recordingStats() const { return rec_.stats(); }
+    // A file name for a recording of what the radio is tuned to right now (see recordingFileName())
+    std::string recordingName(FileFormat fmt) const;
     uint64_t droppedSamples() const { return ring_.dropped(); }   // the OnAir side only, in samples (see sampleLoss())
     SampleLoss sampleLoss() const;
     std::string loadProfile() const;   // seconds the analysis thread spent on the spectrum and on the receiver, and the signal it has processed (diagnostics)
@@ -224,6 +231,7 @@ private:
     int logS1_ = -1, logS2_ = -1, logGi_ = -2, logState_ = -1, logFrameSyms_ = 0;
 
     IqRing ring_;
+    IqRecorder rec_;
     std::unique_ptr<IqSource> src_;
     SpectrumAnalyzer analyzer_{4096};
     T2Receiver rx_;
@@ -300,7 +308,7 @@ private:
     void watchRadio();
     std::atomic<bool> radioLost_{false};
     TuneSettings radioTune(const TuneSettings& t) const;   // what the radio is tuned to: the user's frequency plus the mode's tuneOffsetHz
-    std::mutex tuneMu_;                 // lastDev_ / lastTune_: what to reopen the radio with
+    mutable std::mutex tuneMu_;                 // lastDev_ / lastTune_: what to reopen the radio with
     DeviceInfo lastDev_;
     TuneSettings lastTune_;
     std::chrono::steady_clock::time_point lastSamples_{}, nextReconnect_{}, lastSkipLog_{};
