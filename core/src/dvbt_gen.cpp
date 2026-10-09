@@ -81,7 +81,9 @@ std::function<void(uint8_t*)> testTsSource(unsigned seed) {
 }
 
 void Generator::refill() {
-    const int m = bitsPerCell(p_.mod);
+    // hierarchical: this coded stream is the high-priority one, two bits per cell through branches I0 and I1 (as QPSK); the low-priority
+    // bits are filled with noise below
+    const int m = p_.hier ? 2 : bitsPerCell(p_.mod);
     uint8_t ts[8 * 188], sc[8 * 188], rs[8 * 204], il[8 * 204];
     for (int i = 0; i < 8; i++) { src_(ts + i * 188); ts[i * 188] = 0x47; }
     scramble(ts, 8, sc);
@@ -95,7 +97,7 @@ void Generator::refill() {
     const size_t use = codedQ_.size() / blk * blk;
     if (use) {
         std::vector<uint8_t> in(codedQ_.begin(), codedQ_.begin() + use), words;
-        bitInterleave(in, p_.mod, words);
+        bitInterleave(in, p_.hier ? kQpsk : p_.mod, words);
         wordsQ_.insert(wordsQ_.end(), words.begin(), words.end());
         codedQ_.erase(codedQ_.begin(), codedQ_.begin() + use);
     }
@@ -106,6 +108,10 @@ void Generator::nextSymbol(std::vector<cf32>& out) {
     while ((int)wordsQ_.size() < Nd) refill();
     std::vector<uint8_t> words(wordsQ_.begin(), wordsQ_.begin() + Nd);
     wordsQ_.erase(wordsQ_.begin(), wordsQ_.begin() + Nd);
+    if (p_.hier) {
+        const int lp = bitsPerCell(p_.mod) - 2;   // the HP pair picks the quadrant (y0, y1), the LP bits the point inside it
+        for (auto& w : words) w = (uint8_t)((w << lp) | (rng_() & ((1u << lp) - 1)));
+    }
     std::vector<cf32> cells, inter(Nd);
     mapSymbol(words, p_.mod, p_.hier, cells);
     const auto& H = symbolPermutation(p_.mode);

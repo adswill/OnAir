@@ -27,13 +27,24 @@ void FecDecoder::reset() {
 }
 
 void FecDecoder::pushSymbol(const cf32* cells, const float* n0, int symIdx) {
-    const int N = dataCarriers(p_.mode), m = bitsPerCell(p_.mod);
+    const int N = dataCarriers(p_.mode), v = bitsPerCell(p_.mod);
+    // Hierarchical modulation: the high-priority stream is the first two bits of every cell (y0, y1: the quadrant), bit-interleaved by
+    // branches I0 and I1 exactly like QPSK, and coded at the HP rate. That is the stream decoded here; the LP bits are not used.
+    const int m = p_.hier ? 2 : v;
     static thread_local std::vector<cf32> c2;
     static thread_local std::vector<float> n2, llr, llr2;
     c2.resize(N); n2.resize(N); llr.resize((size_t)N * m); llr2.resize((size_t)N * m);
     symbolDeinterleave(p_.mode, symIdx, cells, n0, c2.data(), n2.data());
-    demap(c2.data(), n2.data(), N, p_.mod, p_.hier, llr.data());
-    bitDeinterleave(llr.data(), p_.mod, N, llr2.data());
+    if (p_.hier) {
+        static thread_local std::vector<float> full;
+        full.resize((size_t)N * v);
+        demap(c2.data(), n2.data(), N, p_.mod, p_.hier, full.data());
+        for (int i = 0; i < N; i++) { llr[(size_t)i * 2] = full[(size_t)i * v]; llr[(size_t)i * 2 + 1] = full[(size_t)i * v + 1]; }
+        bitDeinterleave(llr.data(), kQpsk, N, llr2.data());
+    } else {
+        demap(c2.data(), n2.data(), N, p_.mod, p_.hier, llr.data());
+        bitDeinterleave(llr.data(), p_.mod, N, llr2.data());
+    }
     llrQueue_.insert(llrQueue_.end(), llr2.begin(), llr2.end());
     st_.symbols++;
     // decode in blocks of 16 symbols (the carry gives the trellis its history)
