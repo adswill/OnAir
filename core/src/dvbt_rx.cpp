@@ -1,5 +1,6 @@
 #include "dect2/dvbt_rx.h"
 #include "dect2/dvbt_fec.h"
+#include "dect2/exact_resampler.h"
 #include "dect2/fftutil.h"
 #include "dect2/resampler.h"
 #include "dect2/t2.h"
@@ -29,9 +30,26 @@ struct DvbtReceiver::Impl {
     double inRate = 0, fn = 0, bwMhz = 8;
     RationalResampler resampler;
     bool decimate = false, rateOk = true;
-    std::vector<cf32> rsOut;
     std::vector<cf32> dcOut;      // the input with the radio's DC offset taken out
     cf32 dc = cf32(0, 0);         // slow estimate of that offset
+    // Sample clock correction. An 8K symbol is 10240 samples: a clock 80 ppm off moves the window by 0.8 samples per symbol, and inside one
+    // symbol it spreads carrier k by k * 80e-6 of a carrier (a third of a carrier at the band edges), which the timing loop, moving only the
+    // FFT window, cannot undo. Once the loop has learnt the drift it is handed to this resampler, which corrects the samples themselves.
+    // Off (no cost) until the clock is measurably off. Local to this receiver; a shared clock_correct.h can replace it.
+    struct ClockCorrector {
+        ExactResampler rs;
+        bool on = false;
+        std::vector<cf32> out;
+        double ppm() const { return on ? (rs.step() - 1.0) * 1e6 : 0.0; }
+        void reset() { on = false; out.clear(); }
+        // the samples run fast by rel (positive: more samples than nominal): take that much more input per output sample
+        void adjust(double rel, double rate) {
+            if (!on) { rs.configure(rate, rate * (1.0 + 1e-9)); rs.scaleStep(1.0 + 1e-9); on = true; }
+            rs.scaleStep(1.0 + rel);
+        }
+        void process(std::vector<cf32>& io) { if (!on) return; out.clear(); rs.process(io.data(), io.size(), out); io.swap(out); }
+    } clk;
+    std::vector<cf32> stage;      // the input at the native rate, before the clock correction
     std::vector<cf32> buf;
     int64_t base = 0;
     int64_t end() const { return base + (int64_t)buf.size(); }
@@ -119,7 +137,7 @@ struct DvbtReceiver::Impl {
         for (int i = 0; i < 4; i++) { hypVotes[i] = 0; hypScore[i] = 0; }
         grid.clear(); gridAge.clear(); cpRef.clear(); cpRefValid = false; gridFilled = 0;
         fec.reset(); streamSecs = 0; symbols = 0; packetsOut = 0; detect = 0;
-        buf.clear(); base = 0; resampler.reset(); dc = cf32(0, 0);
+        buf.clear(); base = 0; resampler.reset(); dc = cf32(0, 0); clk.reset();
         eqShow.clear(); rawShow.clear(); chMag.clear(); chPh.clear(); irDb.clear();
     }
 
@@ -389,6 +407,11 @@ struct DvbtReceiver::Impl {
             timingAcc += (pullIn ? 0.08 : 0.01) * terr + timingDrift;
         } else timingAcc += timingDrift;
         if (std::fabs(timingAcc) >= 1.0) { const double stp = std::round(timingAcc); symStart += stp; timingAcc -= stp; }
+        // hand the learnt drift to the clock correction (every 16 symbols, once it says more than a couple of ppm); the loop then measures what is left
+        if (!collapsed && absSym >= 60 && absSym % 16 == 0 && std::fabs(timingDrift) > 2e-6 * P) {
+            clk.adjust(timingDrift / P, fn);
+            timingDrift = 0;
+        }
         // fractional CFO loop
         const double d = wrap(eraw - wrapFrac(epsFrac));
         if (!collapsed) epsFrac += 0.15 * d;
@@ -790,8 +813,11 @@ void DvbtReceiver::feed(const cf32* x, size_t n) {
         for (size_t q = 0; q < n; q++) I.dcOut[q] = cf32(x[q].real() - dr, x[q].imag() - di);
         x = I.dcOut.data();
     }
-    if (I.decimate) { I.rsOut.clear(); I.resampler.process(x, n, I.rsOut); I.buf.insert(I.buf.end(), I.rsOut.begin(), I.rsOut.end()); }
-    else I.buf.insert(I.buf.end(), x, x + n);
+    I.stage.clear();
+    if (I.decimate) I.resampler.process(x, n, I.stage);
+    else I.stage.assign(x, x + n);
+    I.clk.process(I.stage);
+    I.buf.insert(I.buf.end(), I.stage.begin(), I.stage.end());
     // work through the buffer
     for (int guard = 0; guard < 100000; guard++) {
         if (I.state == 0) {
