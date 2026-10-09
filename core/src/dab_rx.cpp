@@ -52,6 +52,7 @@ struct DabReceiver::Impl {
 
     // ---- synchronisation
     int state = 0;            // 0 search, 2 locked
+    bool mirror = false;      // the input is conjugated (a mirrored spectrum)
     uint64_t nextU = 0;       // predicted useful start of the next phase reference symbol (absolute)
     double cfo = 0;           // carrier offset in bins (1 kHz each)
     bool fresh = false;       // just found: no refinement needed for the first frame
@@ -174,7 +175,13 @@ struct DabReceiver::Impl {
                 if (pk > bestPk) { bestPk = pk; bestP = p; bestShift = sh; bestIdx = idx; }
             }
         }
-        if (bestPk < 25.f) { trim(base + buf.size() - (size_t)kFrame); return false; }
+        if (bestPk < 25.f) {
+            // no phase reference: the next attempt looks at the mirrored spectrum (I and Q swapped by the radio or the file format)
+            mirror = !mirror;
+            for (auto& v : buf) v = std::conj(v);
+            trim(base + buf.size() - (size_t)kFrame);
+            return false;
+        }
         const uint64_t U = base + (uint64_t)(bestP + bestIdx);
         cfo = bestShift;
         nextU = U;
@@ -517,7 +524,7 @@ struct DabReceiver::Impl {
     }
 
     void reset() {
-        buf.clear(); base = 0; state = 0; cfo = 0; missed = 0; framesDone = 0; rs.reset(); tii.reset();
+        buf.clear(); base = 0; state = 0; mirror = false; cfo = 0; missed = 0; framesDone = 0; rs.reset(); tii.reset();
         std::lock_guard<std::mutex> lk(mu);
         telSeq++;
         tel = DabTelemetry(); tel.seq = telSeq;
@@ -549,8 +556,10 @@ void DabReceiver::reset() { p_->reset(); }
 
 void DabReceiver::feed(const cf32* x, size_t n) {
     Impl& I = *p_;
+    const size_t from = I.buf.size();
     if (I.resample) { I.rsOut.clear(); I.rs.process(x, n, I.rsOut); I.buf.insert(I.buf.end(), I.rsOut.begin(), I.rsOut.end()); }
     else I.buf.insert(I.buf.end(), x, x + n);
+    if (I.mirror) for (size_t i = from; i < I.buf.size(); i++) I.buf[i] = std::conj(I.buf[i]);
     I.run();
 }
 
