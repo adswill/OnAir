@@ -14,11 +14,12 @@ void NearestPoint::build(const cf32* p, int count) {
     float mx = 0.f;
     for (int i = 0; i < count; i++) mx = std::max(mx, std::abs(p[i]));
     lim_ = std::max(1.5f, mx * 1.35f);
-    scale_ = (float)kGrid / (2.f * lim_);
-    idx_.assign((size_t)kGrid * kGrid, 0);
-    idx2_.assign((size_t)kGrid * kGrid, 0);
-    for (int iy = 0; iy < kGrid; iy++)
-        for (int ix = 0; ix < kGrid; ix++) {
+    grid_ = count <= 32 ? 128 : count <= 64 ? 256 : 512;
+    scale_ = (float)grid_ / (2.f * lim_);
+    idx_.assign((size_t)grid_ * grid_, 0);
+    idx2_.assign((size_t)grid_ * grid_, 0);
+    for (int iy = 0; iy < grid_; iy++)
+        for (int ix = 0; ix < grid_; ix++) {
             const float re = ((float)ix + 0.5f) / scale_ - lim_, im = ((float)iy + 0.5f) / scale_ - lim_;
             float bd = 1e30f, bd2 = 1e30f; int bi = 0, bi2 = 0;
             for (int i = 0; i < count; i++) {
@@ -26,8 +27,8 @@ void NearestPoint::build(const cf32* p, int count) {
                 if (d < bd) { bd2 = bd; bi2 = bi; bd = d; bi = i; }
                 else if (d < bd2) { bd2 = d; bi2 = i; }
             }
-            idx_[(size_t)iy * kGrid + (size_t)ix] = (uint8_t)bi;
-            idx2_[(size_t)iy * kGrid + (size_t)ix] = (uint8_t)bi2;
+            idx_[(size_t)iy * grid_ + (size_t)ix] = (uint8_t)bi;
+            idx2_[(size_t)iy * grid_ + (size_t)ix] = (uint8_t)bi2;
         }
 }
 
@@ -35,7 +36,7 @@ const NearestPoint& nearestPoint(int mod, int rate) {
     static std::mutex mu;
     static std::map<int, NearestPoint*> cache;
     std::lock_guard<std::mutex> lk(mu);
-    const int key = mod < 2 ? mod * 100 : mod * 100 + rate;
+    const int key = mod < 2 && !s2IsS2x(rate) ? mod * 1000 : mod * 1000 + rate;
     auto it = cache.find(key);
     if (it != cache.end()) return *it->second;
     auto* np = new NearestPoint();          // kept for the life of the program: callers keep references
@@ -85,7 +86,15 @@ float s2RefinePhase(cf32* x, int n, int mod, int rate, float sigma2, int W, cons
                 float er, ei;
                 if (!soft) { const cf32 e = c[np.index(xr, xi)]; er = e.real(); ei = e.imag(); }
                 else if (mod == kQpsk) { er = 0.70710678f * ftanhf(0.70710678f * invS * xr); ei = 0.70710678f * ftanhf(0.70710678f * invS * xi); }
-                else {
+                else if (P > 32) {
+                    // the dense S2X constellations: the two nearest points carry the expectation
+                    int i1, i2;
+                    np.index2(xr, xi, i1, i2);
+                    const float d1 = (xr - c[i1].real()) * (xr - c[i1].real()) + (xi - c[i1].imag()) * (xi - c[i1].imag());
+                    const float d2 = (xr - c[i2].real()) * (xr - c[i2].real()) + (xi - c[i2].imag()) * (xi - c[i2].imag());
+                    const float e = fexpNeg(-(d2 - d1) * 0.5f * invS), iw = 1.f / (1.f + e);
+                    er = (c[i1].real() + e * c[i2].real()) * iw; ei = (c[i1].imag() + e * c[i2].imag()) * iw;
+                } else {
                     float w[32], mx = -1e30f;
                     const float h = 0.5f * invS;
                     for (int i = 0; i < P; i++) { const float a = xr - c[i].real(), bb = xi - c[i].imag(); w[i] = -(a * a + bb * bb) * h; mx = std::max(mx, w[i]); }

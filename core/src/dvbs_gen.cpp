@@ -184,16 +184,22 @@ void DvbsSignal::generate(cf32* out, size_t n) {
 DvbsSignalConfig dvbsConfigFromSynth(const SynthConfig& sc, double fs) {
     DvbsSignalConfig c;
     DvbsTxConfig& t = c.tx;
-    t.standard = sc.modeOpt[0] == 1 ? 1 : 2;
-    t.mod = t.standard == 1 ? kQpsk : std::max(0, std::min(3, sc.modeOpt[1]));
-    // modeOpt[2]: 0 is the default code rate (2/3), otherwise the rate index plus one
+    t.standard = sc.modeOpt[0] == 1 ? 1 : sc.modeOpt[0] == 2 ? 3 : 2;
+    t.mod = t.standard == 1 ? kQpsk : std::max(0, std::min(t.standard == 3 ? kS2Mods - 1 : 3, sc.modeOpt[1]));
+    t.shortFrame = sc.modeOpt[4] != 0;
+    // modeOpt[2]: 0 is the default code rate (2/3; S2X: the first MODCOD of the modulation), otherwise the rate index plus one (S2X: the position
+    // in table 17a plus one)
     if (t.standard == 1) t.rate = sc.modeOpt[2] ? std::max(0, std::min(4, sc.modeOpt[2] - 1)) : 1;
-    else t.rate = sc.modeOpt[2] ? std::max(0, std::min(10, sc.modeOpt[2] - 1)) : 5;
+    else if (t.standard == 2) t.rate = sc.modeOpt[2] ? std::max(0, std::min(10, sc.modeOpt[2] - 1)) : 5;
+    else {
+        if (s2xRateCount(t.mod, t.shortFrame) == 0) t.shortFrame = false;    // 64APSK and up have normal frames only
+        const int n = s2xRateCount(t.mod, t.shortFrame);
+        t.rate = s2xRate(t.mod, t.shortFrame, std::max(0, std::min(n - 1, sc.modeOpt[2] - 1)));
+    }
     static const double ro[6] = {0.35, 0.25, 0.20, 0.15, 0.10, 0.05};
     t.rollOff = ro[std::max(0, std::min(5, sc.modeOpt[3]))];
-    t.shortFrame = sc.modeOpt[4] != 0;
     t.pilots = sc.modeOpt[5] != 0;
-    t.vcm = sc.modeOpt[7] == 1;
+    t.vcm = sc.modeOpt[7] == 1 && t.standard == 2;
     c.phaseNoise = sc.modeOpt[7] == 2 ? 1 : sc.modeOpt[7] == 3 ? 2 : 0;
     c.inverted = sc.modeOpt[6] != 0;
     // symbol rate: what was asked for, or 5 Msym/s, limited by what the sample rate can carry (1.3 samples per symbol and the roll-off)
@@ -222,7 +228,7 @@ private:
 std::unique_ptr<ModeSynth> makeDvbsSynth(const SynthConfig& cfg, double sampleRate) {
     if (sampleRate < 2e6 || sampleRate > 40e6) return nullptr;
     dvbs::DvbsSignalConfig c = dvbs::dvbsConfigFromSynth(cfg, sampleRate);
-    if (c.tx.standard == 2 && !dvbs::s2Dims(c.tx.mod, c.tx.rate, c.tx.shortFrame).ok) return nullptr;
+    if (c.tx.standard >= 2 && !dvbs::s2Dims(c.tx.mod, c.tx.rate, c.tx.shortFrame).ok) return nullptr;
     return std::make_unique<DvbsSynth>(c);
 }
 

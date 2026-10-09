@@ -126,7 +126,7 @@ private:
         s2EncodeFec(bb, rate, sh, fec);
         s2BitInterleave(fec, mod, rate, il);
         std::vector<cf32> sym(d.xfecSymbols);
-        s2MapBits(il.data(), d.nldpc, mod, rate, sym.data());
+        s2MapBits(il.data(), (int)il.size(), mod, rate, sym.data());
         // PLFRAME: header, then the slots with a pilot block after every 16 slots (but not at the end), all scrambled except the header
         const int total = s2FrameSymbols(d, pil);
         frame_.resize(total);

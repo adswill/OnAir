@@ -16,6 +16,8 @@ namespace dvbs {
 
 struct S2Stats {
     uint64_t framesSeen = 0, framesDummy = 0;
+    uint64_t framesUnsupported = 0;            // S2X frames followed but not decoded (VL-SNR, reserved PLS codes)
+    int unsupportedCode = -1;                  // PLS code value of the last of them
     uint64_t fecOk = 0, fecBad = 0;            // frames that LDPC and BCH decoded / did not decode (including frames dropped because the decoders were behind)
     uint64_t bchBad = 0;
     uint64_t headerBad = 0;                    // PLHEADERs that could not be decoded

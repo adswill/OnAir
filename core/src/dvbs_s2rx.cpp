@@ -125,6 +125,8 @@ struct S2Rx::Impl {
     int phCount = 0;
     int pos = 0, L = 0;
     bool haveParams = false, dummy = false, soft = true;
+    bool skip = false;                       // a frame of known length that is not decoded here (S2X VL-SNR, reserved PLS codes): the loop runs free
+    bool hdrS2x = false;                     // the last header was an S2X one (b0 = 1): the next is expected to be one too
     float dmin = 1.f;
     int modcod = -1, mod = 0, rate = 0;
     bool sh = false, pil = false;
@@ -187,7 +189,8 @@ struct S2Rx::Impl {
         kdGain = 1.f; kdEma = 1.f; kdN = 0;
         // the modulation is not known before the first header is read: the loops are set again then
         setLoops();
-        pos = 0; haveParams = false; dummy = false;
+        pos = 0; haveParams = false; dummy = false; skip = false;
+        hdrS2x = s2ModcodIsS2x(h.modcod);
         frameSyms.clear();
         daErr = 0; daN = 0; hdrFail = 0; lastModcod = -1; vcm = false;
         phErr2 = 0; phN = 0; merEma = 0;
@@ -305,18 +308,23 @@ struct S2Rx::Impl {
         } else if (pos < 90) {
             hdr[pos] = u;
             // pi/2 BPSK: the point lies on the diagonal (even index) or the anti-diagonal (odd index), a bit is its sign. Soft decision: the mean of the
-            // two points weighted by how likely each is at this noise level
-            const float v = 0.70710678f * ((pos & 1) ? (u.imag() - u.real()) : (u.real() + u.imag()));
+            // two points weighted by how likely each is at this noise level. An S2X header is turned by 90 degrees after the SOF: the detector for the
+            // other orientation would push the loop away from the right phase, so it works on the symbol turned back, the orientation of the header
+            // before (the next one is the same in all but a mixed stream)
+            const cf32 w = hdrS2x ? cf32(u.imag(), -u.real()) : u;
+            const float v = 0.70710678f * ((pos & 1) ? (w.imag() - w.real()) : (w.real() + w.imag()));
             const float t = ftanh(v * invSg2);
             const cf32 s = t * ((pos & 1) ? cf32(-0.70710678f, 0.70710678f) : cf32(0.70710678f, 0.70710678f));
-            err = u.imag() * s.real() - u.real() * s.imag();
+            err = w.imag() * s.real() - w.real() * s.imag();
         } else {
             const int i = pos - 90;
             const cf32 x = u;      // (the descrambling turn was applied to the symbol before the loop phase)
             bool isPilot = false;
             if (dummy) isPilot = true;
             else if (pil) { const int per = i % 1476; isPilot = per >= 1440; }
-            if (isPilot) {
+            if (skip) {
+                // nothing is known of these symbols: no error for the loop
+            } else if (isPilot) {
                 known = true; ref = kPilot;
                 err = x.imag() * ref.real() - x.real() * ref.imag();
                 daErr += std::norm(x - ref); daN++;
@@ -408,18 +416,21 @@ struct S2Rx::Impl {
         const float sofScore = std::abs(acc) / 26.f;
         if (dry && dryHeaders++ >= 1) dryMetric += (double)(acc.real() / 26.f);    // how well the loop kept the phase since the last header
         const PlsResult pr = s2PlsDecode(&hdr[26]);
-        bool good = sofScore > 0.25f && pr.score > 0.30f && pr.score - pr.second > 0.12f && pr.modcod <= 28;
+        bool good = sofScore > 0.25f && pr.score > 0.30f && pr.score - pr.second > 0.12f && s2PlsKind(pr.code) >= 0;
         PlsResult use = pr;
         if (!good && haveParams && sofScore > 0.25f) {
             // a noisy header: the code word of the frame before is by far the most likely one (constant coding and modulation is the usual case)
             const float sp = s2PlsScore(&hdr[26], modcod, sh, pil);
-            if (sp > 0.30f && sp >= pr.score - 0.10f) { use.modcod = modcod; use.shortFrame = sh; use.pilots = pil; use.score = sp; good = true; }
+            if (sp > 0.30f && sp >= pr.score - 0.10f) {
+                use.modcod = modcod; use.shortFrame = sh; use.pilots = pil; use.score = sp; use.code = s2PlsValue(modcod, sh, pil); good = true;
+            }
         }
         int mc = use.modcod, md = 0, rt = 0;
         bool bs = use.shortFrame, bp = use.pilots;
-        bool useful = good;
-        if (good && mc != 0 && !s2ModcodSplit(mc, md, rt)) useful = false;
-        if (good && mc != 0 && useful && !s2Dims(md, rt, bs).ok) useful = false;
+        // data frames need a MODCOD this receiver has; dummy frames and the S2X frames it does not decode only need their length
+        const int kind = good ? s2PlsKind(use.code) : -1;
+        bool useful = kind >= 0;
+        if (kind == 0 && (!s2ModcodSplit(mc, md, rt) || !s2Dims(md, rt, bs).ok)) useful = false;
         if (!useful) {
             if (dry) { dryAbort = true; return; }
             hdrFail++;
@@ -468,27 +479,36 @@ struct S2Rx::Impl {
         haveParams = true;
     }
 
+    // The soft detector where the noise is large against the spacing of the points. The DVB-S2 APSK constellations do without it (their MODCODs
+    // run at a high Es/N0, where it costs time and gains nothing); the S2X ones run down to a few dB above the Es/N0 of QPSK 3/4, where hard
+    // decisions slip the loop (16APSK 7/15 short at 9 dB lost a frame in a thousand without it)
+    bool softWanted() const { return (mod <= k8psk || s2IsS2x(rate)) && sg2 > (dmin * 0.125f) * (dmin * 0.125f); }
+
     int frameLen(int mc, int md, int rt, bool bs, bool bp) {
-        if (mc == 0) return 90 + 36 * 90;
-        return s2FrameSymbols(s2Dims(md, rt, bs), bp);
+        (void)md; (void)rt;
+        return s2PlsFrameSymbols(s2PlsValue(mc, bs, bp));
     }
 
     void setupFrame(int mc, int md, int rt, bool bs, bool bp, bool flywheel) {
-        modcod = mc; mod = md; rate = rt; sh = bs; pil = bp;
+        skip = s2PlsKind(s2PlsValue(mc, bs, bp)) == 2;
+        hdrS2x = s2PlsValue(mc, bs, bp) >= 128;
+        modcod = mc; sh = bs; pil = bp;
+        if (!skip) { mod = md; rate = rt; }      // a frame that is not decoded keeps the loop settings of the one before
         dummy = mc == 0;
-        if (!dummy) setLoops();
-        if (!dummy) {
+        if (!dummy && !skip) setLoops();
+        if (!dummy && !skip) {
             dims = s2Dims(md, rt, bs); constel = s2Constellation(md, rt); nearest = &nearestPoint(md, rt);
             const int P = s2ConstellationSize(md);
             dmin = 1e9f;
             for (int i = 0; i < P; i++) for (int j = i + 1; j < P; j++) dmin = std::min(dmin, std::abs(constel[i] - constel[j]));
-            soft = mod <= k8psk && sg2 > (dmin * 0.125f) * (dmin * 0.125f);      // the APSK constellations are too dense for the soft detector to pay (32 exponentials a symbol)
+            soft = softWanted();
         }
         frameSyms.clear();
-        if (!dummy) frameSyms.reserve(dims.xfecSymbols);
+        if (!dummy && !skip) frameSyms.reserve(dims.xfecSymbols);
         if (!flywheel) { /* the DA statistics of the header were set by the caller */ }
         else { daErr = 0; daN = 0; }
         std::lock_guard<std::mutex> lk(statMu);
+        if (skip) { st.unsupportedCode = s2PlsValue(mc, bs, bp); return; }    // the reported MODCOD stays the one decoded
         st.modcod = mc; st.mod = dummy ? st.mod : md; st.rate = dummy ? st.rate : rt; st.shortFrame = bs; st.pilots = bp; st.vcm = vcm;
     }
 
@@ -500,7 +520,7 @@ struct S2Rx::Impl {
             const double mer = 10 * std::log10(std::max(1e-9, (double)daN / std::max(daErr, 1e-9)));
             merEma = merEma == 0 ? mer : 0.7 * merEma + 0.3 * mer;
         }
-        if (daN >= 90) { setNoise(0.5 * sg2 + 0.5 * sigma2); if (!dummy) soft = mod <= k8psk && sg2 > (dmin * 0.125f) * (dmin * 0.125f); }
+        if (daN >= 90) { setNoise(0.5 * sg2 + 0.5 * sigma2); if (!dummy && !skip) soft = softWanted(); }
         {
             std::lock_guard<std::mutex> lk(statMu);
             st.framesSeen++;
@@ -512,8 +532,8 @@ struct S2Rx::Impl {
             phaseSnap = phN ? std::sqrt(phErr2 / (double)phN) : 0.0;
             lockSnap = phN > 200 && phaseSnap < 0.6;
         }
-        if (dummy) {
-            { std::lock_guard<std::mutex> lk(statMu); st.framesDummy++; }
+        if (dummy || skip) {
+            { std::lock_guard<std::mutex> lk(statMu); if (dummy) st.framesDummy++; else st.framesUnsupported++; }
             Result r; r.seq = seqNext++; r.frameSyms = fs; r.dummy = true;
             deposit(std::move(r));
         } else {
@@ -542,7 +562,7 @@ struct S2Rx::Impl {
         const NearestPoint& np = nearestPoint(md, rt);
         const int m = md + 2;
         const std::vector<uint8_t>& R = s2ScramblingRn(plN);
-        std::vector<float> sgn((size_t)dm.nldpc), de((size_t)dm.nldpc);
+        std::vector<float> sgn((size_t)dm.xfecSymbols * (size_t)m), de((size_t)dm.nldpc);
         const cf32 stp = std::polar(1.0f, (float)(-omega));
         cf32 rot = std::polar(1.0f, (float)(-theta0 - omega * 90.0));
         const float ig = 1.f / gain;
@@ -658,8 +678,8 @@ struct S2Rx::Impl {
         // points: 90 degrees for QPSK, 45 for 8PSK, 15 to 30 for APSK), so the trial frequencies are that close together
         int mod0 = 0, rate0 = 0;
         if (!s2ModcodSplit(h.modcod, mod0, rate0)) mod0 = 0;
-        static const double kStep[4] = {0.0010, 0.0005, 0.0004, 0.0003};
-        const double dw = kStep[mod0 & 3];
+        static const double kStep[kS2Mods] = {0.0010, 0.0005, 0.0004, 0.0003, 0.0002, 0.0002, 0.0002};
+        const double dw = kStep[mod0 >= 0 && mod0 < kS2Mods ? mod0 : 0];
         const double spanW = h.snrDb < 4.f ? 0.006 : 0.004;
         const int K = (int)std::ceil(spanW / dw);
         S2HuntResult best = h;
@@ -695,7 +715,7 @@ struct S2Rx::Impl {
     // step() does for these symbols). Returns the number of symbols taken: it stops before the symbol that ends a pilot block, before the held back
     // symbols at the end of the frame and before the end of the frame, which the general path handles.
     size_t fastRun(const cf32* z, size_t n, bool inverted) {
-        if (tailing || dummy || !rn || pos < 90 || L <= 90) return 0;
+        if (tailing || dummy || skip || !rn || pos < 90 || L <= 90) return 0;
         const bool tailLogic = !dry && L > 400 && L < (1 << 20);
         const int stop = tailLogic ? L - kTailBefore : L - 1;
         if (pos >= stop) return 0;
@@ -814,7 +834,7 @@ struct S2Rx::Impl {
             r.seq = j.seq; r.frameSyms = j.frameSyms; r.mod = j.mod; r.rate = j.rate; r.sh = j.sh;
             const S2Dims d = s2Dims(j.mod, j.rate, j.sh);
             if ((int)j.syms.size() == d.xfecSymbols) {
-                llr.resize((size_t)d.nldpc); dl.resize((size_t)d.nldpc);
+                llr.resize((size_t)d.xfecSymbols * (size_t)d.bitsPerSym); dl.resize((size_t)d.nldpc);
                 {
                     // the phase error the carrier loop left, measured in blocks against decisions (block length from the noise level)
                     const float es = 1.f / (2.f * std::max(j.sigma2, 1e-3f));

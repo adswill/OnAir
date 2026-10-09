@@ -42,16 +42,11 @@ const char* stdName(int s) { return s == 1 ? "DVB-S" : s == 2 ? "DVB-S2" : s == 
 std::string fmt(const char* f, double v) { char b[48]; snprintf(b, sizeof b, f, v); return b; }
 std::string cnt(uint64_t v) { return std::to_string((unsigned long long)v); }
 
-// The index of a code rate text in the DVB-S2 table (the order of s2RateName), -1 when it is not one of those
-int s2RateIndex(const std::string& s) {
-    for (int i = 0; i < dvbs::kS2Rates; i++) if (s == dvbs::s2RateName(i)) return i;
-    return -1;
-}
-
-// How far the Es/N0 is above the quasi error free point of table 13 of EN 302 307-1 (DVB-S2 only). False when it cannot be said.
+// How far the Es/N0 is above the quasi error free point of table 13 of EN 302 307-1 (DVB-S2) or tables 20a and 20c of EN 302 307-2 (DVB-S2X).
+// False when it cannot be said.
 bool margin(const DvbsTelemetry& t, double& m) {
     if (t.standard < 2 || t.modulation < 0 || !t.lockCarrier) return false;
-    const int r = s2RateIndex(t.codeRate);
+    const int r = dvbs::s2RateFromName(t.modulation, t.codeRate.c_str(), t.frameSize == 2);
     if (r < 0) return false;
     const double q = dvbs::s2QefEsN0(t.modulation, r, t.frameSize == 2);
     if (q >= 90) return false;
@@ -364,9 +359,9 @@ void receiver(App& a) {
     ImGui::TextColored(pal::accent(), "NOTES");
     ImGui::PushTextWrapPos(0);
     if (!t.signalNote.empty()) ImGui::TextUnformatted(t.signalNote.c_str());
-    ImGui::TextDisabled("DVB-S2X: its signalling is reported when it is seen; S2X-only modes (more MODCODs, wide carriers, bundled channels) are not decoded yet.");
-    if (t.standard == 3) ImGui::TextUnformatted("An S2X signal was recognised. Only the DVB-S2 compatible part can be decoded.");
-    ImGui::TextDisabled("Margin is measured against the ideal-demodulator Es/N0 of EN 302 307-1 table 13 (50 LDPC iterations): a real receiver needs a little more.");
+    ImGui::TextDisabled("DVB-S2X: the MODCODs of EN 302 307-2 table 17a are decoded; VL-SNR frames, superframes and bundled channels are only followed, not decoded.");
+    if (t.standard == 3) ImGui::TextUnformatted("A DVB-S2X signal was recognised.");
+    ImGui::TextDisabled("Margin is measured against the ideal-demodulator Es/N0 of EN 302 307-1 table 13 (DVB-S2X: EN 302 307-2 tables 20a and 20c, 50 LDPC iterations): a real receiver needs a little more.");
     ImGui::PopTextWrapPos();
     ImGui::EndChild();
 }
@@ -417,21 +412,36 @@ void tuner(App& a, bool& retune) {
 
 // ---------------------------------------------------------------------------------------------- test signal
 
-// Rates the combination offers, in the generator's numbering (S2: index into s2RateName; S: 0..4 = 1/2 2/3 3/4 5/6 7/8)
+// Rates the combination offers, in the generator's numbering (S2: index into s2RateName; S: 0..4 = 1/2 2/3 3/4 5/6 7/8; S2X: the position among
+// the MODCODs of the modulation and frame size, dvbs_gen.h)
 const char* kS1Rates[] = {"1/2", "2/3", "3/4", "5/6", "7/8"};
 const char* kRoll[] = {"0.35", "0.25", "0.20", "0.15", "0.10", "0.05"};
 
+bool isS2x(const SynthConfig& sc) { return sc.modeOpt[0] == 2; }
+int s2xMod(const SynthConfig& sc) { return std::max(0, std::min(dvbs::kS2Mods - 1, sc.modeOpt[1])); }
+// the frame size the generator sends for S2X: 64APSK and up have normal frames only
+bool s2xShort(const SynthConfig& sc) { return sc.modeOpt[4] != 0 && dvbs::s2xRateCount(s2xMod(sc), true) > 0; }
+// S2X: the rate combo item of a MODCOD, its code rate and "8APSK" where the modulation is not the one of the combo
+std::string s2xRateLabel(int rate) {
+    std::string l = dvbs::s2RateName(rate);
+    for (int m = 0; m < dvbs::kS2Mods; m++)
+        if (dvbs::s2Modcod(m, rate) >= 0 && std::string(dvbs::s2ModNameFor(m, rate)) != dvbs::s2ModName(m)) l += std::string(" ") + dvbs::s2ModNameFor(m, rate);
+    return l;
+}
+
 bool rateOk(const SynthConfig& sc, int rate) {
     if (sc.modeOpt[0] == 1) return rate >= 0 && rate <= 4;
+    if (isS2x(sc)) return rate >= 0 && rate < dvbs::s2xRateCount(s2xMod(sc), s2xShort(sc));
     return dvbs::s2Dims(std::max(0, std::min(3, sc.modeOpt[1])), rate, sc.modeOpt[4] != 0).ok;
 }
-int curRate(const SynthConfig& sc) { return sc.modeOpt[2] ? sc.modeOpt[2] - 1 : (sc.modeOpt[0] == 1 ? 1 : 5); }
+int curRate(const SynthConfig& sc) { return sc.modeOpt[2] ? sc.modeOpt[2] - 1 : (sc.modeOpt[0] == 1 ? 1 : isS2x(sc) ? 0 : 5); }
 
 // Some combinations do not exist (32APSK 1/2, short 9/10 ...): move to the nearest rate that does, so the generator never gets one
 void fixRate(SynthConfig& sc) {
+    if (!isS2x(sc)) sc.modeOpt[1] = std::max(0, std::min(3, sc.modeOpt[1]));     // 64APSK and up are S2X only
     int r = curRate(sc);
     if (rateOk(sc, r)) return;
-    const int n = sc.modeOpt[0] == 1 ? 5 : dvbs::kS2Rates;
+    const int n = sc.modeOpt[0] == 1 ? 5 : isS2x(sc) ? dvbs::s2xRateCount(s2xMod(sc), s2xShort(sc)) : dvbs::kS2Rates;
     for (int d = 1; d < n; d++) {
         if (r + d < n && rateOk(sc, r + d)) { r += d; break; }
         if (r - d >= 0 && rateOk(sc, r - d)) { r -= d; break; }
@@ -445,9 +455,10 @@ void synth(App& a, bool& changed) {
     const bool s1 = sc.modeOpt[0] == 1;
     ImGui::SetNextItemWidth(78 * gUi);
     {
-        static const char* nm[] = {"DVB-S2", "DVB-S"};
-        if (ImGui::BeginCombo("##dvstd", nm[s1 ? 1 : 0])) {
-            for (int i = 0; i < 2; i++) if (ImGui::Selectable(nm[i], (i == 1) == s1)) { sc.modeOpt[0] = i; fixRate(sc); changed = true; }
+        static const char* nm[] = {"DVB-S2", "DVB-S", "DVB-S2X"};
+        const int sd = std::max(0, std::min(2, sc.modeOpt[0]));
+        if (ImGui::BeginCombo("##dvstd", nm[sd])) {
+            for (int i = 0; i < 3; i++) if (ImGui::Selectable(nm[i], i == sd)) { sc.modeOpt[0] = i; fixRate(sc); changed = true; }
             ImGui::EndCombo();
         }
     }
@@ -455,9 +466,10 @@ void synth(App& a, bool& changed) {
     ImGui::BeginDisabled(s1);
     ImGui::SetNextItemWidth(74 * gUi);
     {
-        const int m = s1 ? 0 : std::max(0, std::min(3, sc.modeOpt[1]));
+        const int nMod = isS2x(sc) ? dvbs::kS2Mods : 4;
+        const int m = s1 ? 0 : std::max(0, std::min(nMod - 1, sc.modeOpt[1]));
         if (ImGui::BeginCombo("##dvmod", dvbs::s2ModName(m))) {
-            for (int i = 0; i < 4; i++) if (ImGui::Selectable(dvbs::s2ModName(i), i == m)) { sc.modeOpt[1] = i; fixRate(sc); changed = true; }
+            for (int i = 0; i < nMod; i++) if (ImGui::Selectable(dvbs::s2ModName(i), i == m)) { sc.modeOpt[1] = i; fixRate(sc); changed = true; }
             ImGui::EndCombo();
         }
     }
@@ -466,11 +478,17 @@ void synth(App& a, bool& changed) {
     ImGui::SetNextItemWidth(62 * gUi);
     {
         const int r = curRate(sc);
-        if (ImGui::BeginCombo("##dvrate", s1 ? kS1Rates[std::max(0, std::min(4, r))] : dvbs::s2RateName(std::max(0, std::min(10, r))))) {
-            const int n = s1 ? 5 : dvbs::kS2Rates;
+        const bool x = isS2x(sc);
+        auto label = [&](int i) -> std::string {
+            if (s1) return kS1Rates[std::max(0, std::min(4, i))];
+            if (x) return s2xRateLabel(dvbs::s2xRate(s2xMod(sc), s2xShort(sc), i));
+            return dvbs::s2RateName(std::max(0, std::min(10, i)));
+        };
+        if (ImGui::BeginCombo("##dvrate", label(r).c_str())) {
+            const int n = s1 ? 5 : x ? dvbs::s2xRateCount(s2xMod(sc), s2xShort(sc)) : dvbs::kS2Rates;
             for (int i = 0; i < n; i++) {
                 if (!rateOk(sc, i)) continue;
-                if (ImGui::Selectable(s1 ? kS1Rates[i] : dvbs::s2RateName(i), i == r)) { sc.modeOpt[2] = i + 1; changed = true; }
+                if (ImGui::Selectable(label(i).c_str(), i == r)) { sc.modeOpt[2] = i + 1; changed = true; }
             }
             ImGui::EndCombo();
         }

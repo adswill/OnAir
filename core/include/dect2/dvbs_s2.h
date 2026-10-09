@@ -1,6 +1,6 @@
-// DVB-S2 (EN 302 307-1) building blocks shared by the transmitter (test signal), the receiver and the tests: code parameters, MODCOD table,
-// BBHEADER, BB scrambler, bit interleaver, constellations, soft demapper, PLHEADER and PL scrambling.
-// Clause numbers refer to ETSI EN 302 307 V1.3.1.
+// DVB-S2 (EN 302 307-1) and DVB-S2X (EN 302 307-2) building blocks shared by the transmitter (test signal), the receiver and the tests: code
+// parameters, MODCOD table, BBHEADER, BB scrambler, bit interleaver, constellations, soft demapper, PLHEADER and PL scrambling.
+// Clause numbers refer to ETSI EN 302 307 V1.3.1 unless they name EN 302 307-2 (V1.2.1).
 #pragma once
 #include "ldpc.h"
 #include "ring.h"
@@ -15,11 +15,24 @@ namespace dvbs {
 
 // ---- code rates, in the order of the LDPC tables
 constexpr int kS2Rates = 11;                       // 1/4 1/3 2/5 1/2 3/5 2/3 3/4 4/5 5/6 8/9 9/10
-const char* s2RateName(int rate);
+// DVB-S2X: every MODCOD of EN 302 307-2 table 17a has a rate index of its own, kS2Rates + its row in that table (QPSK 13/45 normal first, 32APSK
+// 32/45 short last). That one index fixes the LDPC code, the frame size, the constellation and the bit interleaver, so the functions below take it
+// like a DVB-S2 rate. An S2X rate goes with its own frame size only (s2Dims is not ok with the other one).
+constexpr int kS2xModcods = 55;
+inline bool s2IsS2x(int rate) { return rate >= kS2Rates && rate < kS2Rates + kS2xModcods; }
+const char* s2RateName(int rate);                  // S2X: the canonical code rate of table 17a ("5/9-L", "77/90", ...)
 double s2RateValue(int rate);                      // k/n as a number (1/4 ... 9/10)
-enum S2Mod { kQpsk = 0, k8psk = 1, k16apsk = 2, k32apsk = 3 };
+enum S2Mod { kQpsk = 0, k8psk = 1, k16apsk = 2, k32apsk = 3, k64apsk = 4, k128apsk = 5, k256apsk = 6 };   // 64APSK and up: DVB-S2X only
+constexpr int kS2Mods = 7;
 const char* s2ModName(int mod);
+const char* s2ModNameFor(int mod, int rate);       // the canonical name: "8APSK" for the S2X 8-point MODCODs that are not 8PSK, else s2ModName
 inline int s2BitsPerSymbol(int mod) { return mod + 2; }
+// S2X MODCODs of one modulation and frame size, in the order of table 17a: how many, and the rate index of the nth (0-based; -1 when there is none)
+int s2xRateCount(int mod, bool shortFrame);
+int s2xRate(int mod, bool shortFrame, int nth);
+const char* s2xCodeName(int rate);                 // the LDPC code identifier of an S2X rate ("100/180", "2/3", ...), "" for an S2 rate
+// The rate index that a modulation, a code rate name (s2RateName) and a frame size stand for, S2 first; -1 when there is none
+int s2RateFromName(int mod, const char* name, bool shortFrame);
 
 // ---- code dimensions (tables 5a, 5b, 7a, 7b)
 struct S2Dims {
@@ -28,8 +41,8 @@ struct S2Dims {
     int kbch = 0, t = 0;       // BCH uncoded block and its error correction
     int q = 0;
     int bitsPerSym = 0;
-    int xfecSymbols = 0;       // symbols of the XFECFRAME
-    int slots = 0;             // S, table 11
+    int xfecSymbols = 0;       // symbols of the XFECFRAME (128APSK: 6 bits of padding after the code word and 84 after the interleaver, EN 302 307-2 5.3.3)
+    int slots = 0;             // S, table 11 (EN 302 307-2 table 16)
 };
 S2Dims s2Dims(int mod, int rate, bool shortFrame);
 // PLFRAME length in symbols: PLHEADER, slots and pilot blocks (clause 5.5)
@@ -37,12 +50,14 @@ int s2FrameSymbols(int mod, bool shortFrame, bool pilots);
 inline int s2FrameSymbols(const S2Dims& d, bool pilots) { return 90 * (d.slots + 1) + (pilots ? 36 * ((d.slots - 1) / 16) : 0); }
 
 // Es/N0 in dB for quasi error free reception over AWGN (table 13, ideal demodulator, 50 LDPC iterations); short frames: 0.25 dB more (the standard
-// says "an additional degradation of 0,2 dB to 0,3 dB"). 99 when the combination does not exist.
+// says "an additional degradation of 0,2 dB to 0,3 dB"). S2X: EN 302 307-2 tables 20a and 20c. 99 when the combination does not exist.
 double s2QefEsN0(int mod, int rate, bool shortFrame);
 
-// ---- MODCOD (table 12): 1..28 are the modulation and code rate pairs, 0 is a dummy PLFRAME
+// ---- MODCOD (table 12): 1..28 are the modulation and code rate pairs, 0 is a dummy PLFRAME. DVB-S2X (EN 302 307-2 table 17a): 64..127, the PLS
+// code value divided by two (66 = PLS code 132 = QPSK 13/45, ..., 124 = PLS code 248 = 32APSK 32/45 short); the frame size is part of the MODCOD.
 int s2Modcod(int mod, int rate);                   // -1 when there is no such MODCOD
 bool s2ModcodSplit(int modcod, int& mod, int& rate);
+inline bool s2ModcodIsS2x(int modcod) { return modcod >= 64 && modcod < 128; }
 
 // ---- codes. The LDPC tables are the DVB-S2 ones (they differ from DVB-T2 for normal 2/3 and short 3/5). The BCH code is shared with DVB-T2.
 const LdpcCode& s2Ldpc(int rate, bool shortFrame);
@@ -55,16 +70,18 @@ void s2EncodeFec(const std::vector<uint8_t>& bb, int rate, bool shortFrame, std:
 // Hard bits of an LDPC codeword (nldpc) -> BCH decoded BBFRAME (kbch bits). Returns the number of corrected bits, or -1.
 int s2BchDecode(const uint8_t* hard, int rate, bool shortFrame, std::vector<uint8_t>& bb);
 
-// ---- bit interleaver (clause 5.3.3), 8PSK, 16APSK and 32APSK only: written by columns, read by rows
-// perm[j] = column that carries label bit j (0 = MSB of the label)
-void s2InterleavePattern(int mod, int rate, int cols[5]);
+// ---- bit interleaver (clause 5.3.3), all but QPSK: written by columns, read by rows
+// cols[j] = column that carries label bit j (0 = MSB of the label); S2X: the bit interleaver pattern of EN 302 307-2 tables 9a and 9b
+void s2InterleavePattern(int mod, int rate, int cols[8]);
+// FECFRAME (nldpc bits) -> the bits of the XFECFRAME in symbol order (xfecSymbols * bits per symbol: 128APSK carries its padding)
 void s2BitInterleave(const std::vector<uint8_t>& in, int mod, int rate, std::vector<uint8_t>& out);
-void s2BitDeinterleaveLlr(const float* in, int n, int mod, int rate, float* out);   // LLRs of label bits in symbol order -> LLRs in codeword order
+// LLRs of label bits in symbol order (the whole XFECFRAME) -> LLRs of the n = nldpc code word bits in codeword order
+void s2BitDeinterleaveLlr(const float* in, int n, int mod, int rate, float* out);
 
-// ---- constellations (clause 5.4). Index = label, bit 0 (MSB) first. Unit average symbol energy.
+// ---- constellations (clause 5.4; S2X: EN 302 307-2 clause 5.4). Index = label, bit 0 (MSB) first. Unit average symbol energy.
 const cf32* s2Constellation(int mod, int rate);
 int s2ConstellationSize(int mod);
-// Maps a FECFRAME (after the bit interleaver) to symbols
+// Maps a FECFRAME (after the bit interleaver) to symbols, nbits / bits per symbol of them
 void s2MapBits(const uint8_t* bits, int nbits, int mod, int rate, cf32* out);
 // Max-log demapper. sigma2 is the noise variance per real dimension. llr[i * m + b] > 0 means bit 0.
 void s2Demap(const cf32* sym, int n, int mod, int rate, float sigma2, float* llr);
@@ -88,14 +105,26 @@ void s2BbScramble(uint8_t* bits, int n);
 
 // ---- physical layer framing (clause 5.5)
 constexpr uint32_t kSof = 0x18D2E82;               // 26 bits
-// 64 coded and scrambled PLS bits for MODCOD (5 bits), short frame, pilots. The PLS code is a (64,7) code.
+// The PLS code value: the 8 signalling bits b0..b7 of EN 302 307-2 clause 5.5.2 as a number, b0 the MSB. DVB-S2 (b0 = 0): MODCOD << 2 | short << 1 |
+// pilots. DVB-S2X (b0 = 1): MODCOD (64..127) << 1 | pilots, the frame size follows from the MODCOD. Split is the reverse (S2X: modcod = code >> 1,
+// pilots = the LSB, short from table 17a).
+int s2PlsValue(int modcod, bool shortFrame, bool pilots);
+void s2PlsSplit(int code, int& modcod, bool& shortFrame, bool& pilots);
+// What a PLS code value announces: 0 a data frame this receiver decodes, 1 a dummy frame, 2 a frame of known length that is not decoded here (S2X
+// VL-SNR frames, the reserved values of table 17b, whose LSB is not a pilot flag), -1 nothing (the reserved S2 MODCODs 29..31, short 9/10)
+int s2PlsKind(int code);
+// PLFRAME length in symbols that a PLS code value announces (header included), 0 when it announces nothing
+int s2PlsFrameSymbols(int code);
+// 64 coded and scrambled PLS bits for MODCOD, short frame, pilots. The PLS code is a (64,8) code (EN 302 307-2 clause 5.5.2.4; its b0 = 0 half is
+// the (64,7) code of DVB-S2).
 uint64_t s2PlsCode(int modcod, bool shortFrame, bool pilots);      // bit 63 is the first transmitted bit
-// The 90 PLHEADER symbols. Symbol j uses the pi/2 BPSK rule of clause 5.5.2
+// The 90 PLHEADER symbols. Symbol j uses the pi/2 BPSK rule of clause 5.5.2; after the SOF an S2X header (b0 = 1) is turned by 90 degrees
+// (EN 302 307-2 clause 5.5.2)
 void s2PlHeader(int modcod, bool shortFrame, bool pilots, cf32* out90);
 const cf32* s2SofSymbols();                        // the 26 symbols of the SOF
 // Decodes the PLS from 64 symbols that are close to the transmitted ones (carrier phase and frequency already corrected).
-// Correlates against all 128 codewords. Returns the best score (1 = perfect) and the runner-up in `second`.
-struct PlsResult { int modcod = 0; bool shortFrame = false, pilots = false; float score = 0, second = 0; };
+// Correlates against all 256 codewords. Returns the best score (1 = perfect) and the runner-up in `second`; `code` is the PLS code value.
+struct PlsResult { int modcod = 0; bool shortFrame = false, pilots = false; float score = 0, second = 0; int code = 0; };
 PlsResult s2PlsDecode(const cf32* sym64);
 // The same correlation for one given code word (modcod, short, pilots), 1 = perfect
 float s2PlsScore(const cf32* sym64, int modcod, bool shortFrame, bool pilots);

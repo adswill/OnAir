@@ -1,16 +1,28 @@
 // DVB-S/S2 test signal: the generator the synthetic source plays and dvbstool writes to a file.
-// The L-band IF of a satellite transponder as complex baseband at any sample rate: a DVB-S or DVB-S2 transmitter chain (dvbs_tx.h), root raised
+// The L-band IF of a satellite transponder as complex baseband at any sample rate: a DVB-S, DVB-S2 or DVB-S2X transmitter chain (dvbs_tx.h), root raised
 // cosine pulse shaping, noise, carrier offset, symbol clock offset, spectral inversion. Nothing is transmitted.
 //
 // SynthConfig::modeOpt / modeVal (the synthetic source hands them to makeDvbsSynth):
-//   modeOpt[0]  standard: 0 DVB-S2 (default), 1 DVB-S, 2 DVB-S2X (not generated yet: sends DVB-S2)
-//   modeOpt[1]  modulation (S2): 0 QPSK (default), 1 8PSK, 2 16APSK, 3 32APSK. DVB-S is always QPSK
+//   modeOpt[0]  standard: 0 DVB-S2 (default), 1 DVB-S, 2 DVB-S2X (the MODCODs of EN 302 307-2 table 17a; VL-SNR and superframes are not sent)
+//   modeOpt[1]  modulation (S2): 0 QPSK (default), 1 8PSK, 2 16APSK, 3 32APSK; S2X also 4 64APSK, 5 128APSK, 6 256APSK. DVB-S is always QPSK
 //   modeOpt[2]  code rate, 0 = default (2/3). S2: 1 1/4, 2 1/3, 3 2/5, 4 1/2, 5 3/5, 6 2/3, 7 3/4, 8 4/5, 9 5/6, 10 8/9, 11 9/10. S: 1 1/2, 2 2/3, 3 3/4, 4 5/6, 5 7/8
+//               S2X, the MODCODs of the modulation and frame size in the order of table 17a (0 = the first):
+//                 normal  QPSK: 1 13/45, 2 9/20, 3 11/20
+//                         8PSK: 1 8APSK 5/9-L, 2 8APSK 26/45-L, 3 23/36, 4 25/36, 5 13/18
+//                         16APSK: 1 1/2-L, 2 8/15-L, 3 5/9-L, 4 26/45, 5 3/5, 6 3/5-L, 7 28/45, 8 23/36, 9 2/3-L, 10 25/36, 11 13/18, 12 7/9, 13 77/90
+//                         32APSK: 1 2/3-L, 2 32/45, 3 11/15, 4 7/9
+//                         64APSK: 1 32/45-L, 2 11/15, 3 7/9, 4 4/5, 5 5/6
+//                         128APSK: 1 3/4, 2 7/9
+//                         256APSK: 1 29/45-L, 2 2/3-L, 3 31/45-L, 4 32/45, 5 11/15-L, 6 3/4
+//                 short   QPSK: 1 11/45, 2 4/15, 3 14/45, 4 7/15, 5 8/15, 6 32/45
+//                         8PSK: 1 7/15, 2 8/15, 3 26/45, 4 32/45
+//                         16APSK: 1 7/15, 2 8/15, 3 26/45, 4 3/5, 5 32/45
+//                         32APSK: 1 2/3, 2 32/45   (64APSK and up have no short frames: normal is sent)
 //   modeOpt[3]  roll-off: 0 0.35 (default), 1 0.25, 2 0.20, 3 0.15, 4 0.10, 5 0.05
 //   modeOpt[4]  frame size (S2): 0 normal (default), 1 short
 //   modeOpt[5]  pilots (S2): 0 off (default), 1 on
 //   modeOpt[6]  spectral inversion: 0 off (default), 1 on (an LNB with a high-side oscillator turns the spectrum around)
-//   modeOpt[7]  S2: 1 = VCM demo, the MODCOD changes from frame to frame (2: also the LNB phase noise of EN 302 307-1 H.8 "typical", 3: "critical")
+//   modeOpt[7]  S2: 1 = VCM demo, the MODCOD changes from frame to frame (S2 only) (2: also the LNB phase noise of EN 302 307-1 H.8 "typical", 3: "critical")
 //   modeVal[0]  symbol rate in Hz (0: 5 Msym/s, or less when the sample rate is too low)
 //   modeVal[1]  transmitter clock offset in ppm (the symbol rate is higher by this much)
 //   SynthConfig::snrDb is Es/N0 in dB (symbol energy over noise density); cfoHz is the carrier offset; sroPpm adds to modeVal[1].

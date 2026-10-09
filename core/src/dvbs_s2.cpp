@@ -1,6 +1,8 @@
-// DVB-S2 building blocks, see dvbs_s2.h. Clause numbers refer to ETSI EN 302 307 V1.3.1.
+// DVB-S2 and DVB-S2X building blocks, see dvbs_s2.h. Clause numbers refer to ETSI EN 302 307 V1.3.1 unless they name EN 302 307-2 (V1.2.1).
 #include "dect2/dvbs_s2.h"
 #include "dvbs_ldpc_tables.h"
+#include "dvbs_s2x.h"
+#include "dvbs_s2x_tables.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -33,13 +35,78 @@ const McEntry kModcod[29] = {
     {2, 5}, {2, 6}, {2, 7}, {2, 8}, {2, 9}, {2, 10},                                                                           // 16APSK 2/3 ... 9/10
     {3, 6}, {3, 7}, {3, 8}, {3, 9}, {3, 10},                                                                                   // 32APSK 3/4 ... 9/10
 };
+
+// The LDPC code of an S2X MODCOD: its annex B / C table (nullptr: a DVB-S2 code)
+const S2xLdpcTable* s2xLdpcTable(const S2xModcod& m) {
+    if (!m.table) return nullptr;
+    for (int i = 0; i < kS2xLdpcTableCount; i++) if (strcmp(kS2xLdpcTables[i].id, m.table) == 0) return &kS2xLdpcTables[i];
+    return nullptr;
+}
+
+// Code dimensions of a rate index and frame size (S2: tables 5a and 5b; S2X: EN 302 307-2 tables 4 and 6, or the S2 code it names). False when
+// there is no such code.
+bool codeDims(int rate, bool shortFrame, int& n, int& k, int& kbch, int& t) {
+    if (const S2xModcod* m = s2xModcod(rate)) {
+        if (m->shortFrame != shortFrame) return false;
+        if (!m->table) return codeDims(m->s2rate, shortFrame, n, k, kbch, t);
+        const S2xLdpcTable* lt = s2xLdpcTable(*m);
+        if (!lt) return false;
+        n = lt->nldpc; k = lt->kldpc; t = 12;
+        kbch = k - (shortFrame ? 168 : 192);            // BCH with t = 12: 192 parity bits (normal), 168 (short), tables 4 and 6
+        return true;
+    }
+    if (rate < 0 || rate >= kS2Rates) return false;
+    if (shortFrame) {
+        if (kSK[rate] == 0) return false;
+        n = 16200; k = kSK[rate]; kbch = kSKbch[rate]; t = 12;
+    } else {
+        n = 64800; k = kNK[rate]; kbch = kNKbch[rate]; t = kNT[rate];
+    }
+    return true;
+}
+
+// bits of the XFECFRAME: 128APSK pads the code word with 6 bits and the interleaver output with 84 (EN 302 307-2 clauses 5.3.2.2 and 5.3.3), which
+// makes 9 270 symbols, 103 slots (table 16)
+int xfecBits(int mod, int nldpc) { return mod == k128apsk ? nldpc + 6 + 84 : nldpc; }
 } // namespace
 
-const char* s2RateName(int rate) { return rate >= 0 && rate < kS2Rates ? kRateNames[rate] : "?"; }
-double s2RateValue(int rate) { return rate >= 0 && rate < kS2Rates ? kRateValues[rate] : 0; }
+const char* s2RateName(int rate) {
+    if (const S2xModcod* m = s2xModcod(rate)) return m->rate;
+    return rate >= 0 && rate < kS2Rates ? kRateNames[rate] : "?";
+}
+double s2RateValue(int rate) {
+    if (const S2xModcod* m = s2xModcod(rate)) {
+        int n, k, kb, t;
+        return codeDims(rate, m->shortFrame, n, k, kb, t) ? (double)k / n : 0;
+    }
+    return rate >= 0 && rate < kS2Rates ? kRateValues[rate] : 0;
+}
 const char* s2ModName(int mod) {
-    static const char* n[4] = {"QPSK", "8PSK", "16APSK", "32APSK"};
-    return mod >= 0 && mod < 4 ? n[mod] : "?";
+    static const char* n[kS2Mods] = {"QPSK", "8PSK", "16APSK", "32APSK", "64APSK", "128APSK", "256APSK"};
+    return mod >= 0 && mod < kS2Mods ? n[mod] : "?";
+}
+const char* s2ModNameFor(int mod, int rate) {
+    const S2xModcod* m = s2xModcod(rate);
+    return m && m->mod == mod ? m->modName : s2ModName(mod);
+}
+int s2xRateCount(int mod, bool shortFrame) {
+    int c = 0;
+    for (int i = 0; i < kS2xModcods; i++) { const S2xModcod* m = s2xModcod(kS2Rates + i); if (m->mod == mod && m->shortFrame == shortFrame) c++; }
+    return c;
+}
+int s2xRate(int mod, bool shortFrame, int nth) {
+    for (int i = 0; i < kS2xModcods; i++) {
+        const S2xModcod* m = s2xModcod(kS2Rates + i);
+        if (m->mod == mod && m->shortFrame == shortFrame && nth-- == 0) return kS2Rates + i;
+    }
+    return -1;
+}
+const char* s2xCodeName(int rate) { const S2xModcod* m = s2xModcod(rate); return m ? m->code : ""; }
+int s2RateFromName(int mod, const char* name, bool shortFrame) {
+    if (!name) return -1;
+    for (int r = 0; r < kS2Rates + kS2xModcods; r++)
+        if (strcmp(s2RateName(r), name) == 0 && s2Dims(mod, r, shortFrame).ok) return r;
+    return -1;
 }
 
 double s2QefEsN0(int mod, int rate, bool shortFrame) {
@@ -49,16 +116,24 @@ double s2QefEsN0(int mod, int rate, bool shortFrame) {
         {0, 0, 0, 0, 5.50, 6.62, 7.91, 0, 9.35, 10.69, 10.98},
         {0, 0, 0, 0, 0, 8.97, 10.21, 11.03, 11.61, 12.89, 13.13},
         {0, 0, 0, 0, 0, 0, 12.73, 13.64, 14.28, 15.69, 16.05}};
+    if (const S2xModcod* m = s2xModcod(rate)) return m->mod == mod && m->shortFrame == shortFrame ? m->esn0 : 99;
     if (mod < 0 || mod > 3 || rate < 0 || rate >= kS2Rates || s2Modcod(mod, rate) < 0) return 99;
     if (shortFrame && rate == 10) return 99;
     return q[mod][rate] + (shortFrame ? 0.25 : 0.0);
 }
 
 int s2Modcod(int mod, int rate) {
+    if (const S2xModcod* m = s2xModcod(rate)) return m->mod == mod ? m->pls >> 1 : -1;
     for (int i = 1; i < 29; i++) if (kModcod[i].mod == mod && kModcod[i].rate == rate) return i;
     return -1;
 }
 bool s2ModcodSplit(int modcod, int& mod, int& rate) {
+    if (s2ModcodIsS2x(modcod)) {
+        const S2xModcod* m = s2xModcodByPls(modcod << 1);
+        if (!m) return false;
+        mod = m->mod; rate = kS2Rates + (int)(m - s2xModcod(kS2Rates));
+        return true;
+    }
     if (modcod < 1 || modcod > 28) return false;
     mod = kModcod[modcod].mod; rate = kModcod[modcod].rate;
     return true;
@@ -66,15 +141,11 @@ bool s2ModcodSplit(int modcod, int& mod, int& rate) {
 
 S2Dims s2Dims(int mod, int rate, bool shortFrame) {
     S2Dims d;
-    if (mod < 0 || mod > 3 || rate < 0 || rate >= kS2Rates || s2Modcod(mod, rate) < 0) return d;
-    if (shortFrame) {
-        if (kSK[rate] == 0) return d;
-        d.nldpc = 16200; d.kldpc = kSK[rate]; d.kbch = kSKbch[rate]; d.t = 12; d.q = kSQ[rate];
-    } else {
-        d.nldpc = 64800; d.kldpc = kNK[rate]; d.kbch = kNKbch[rate]; d.t = kNT[rate]; d.q = kNQ[rate];
-    }
+    if (mod < 0 || mod >= kS2Mods || s2Modcod(mod, rate) < 0) return d;
+    if (!codeDims(rate, shortFrame, d.nldpc, d.kldpc, d.kbch, d.t)) return d;
+    d.q = (d.nldpc - d.kldpc) / 360;
     d.bitsPerSym = mod + 2;
-    d.xfecSymbols = d.nldpc / d.bitsPerSym;
+    d.xfecSymbols = xfecBits(mod, d.nldpc) / d.bitsPerSym;
     d.slots = d.xfecSymbols / 90;
     d.ok = true;
     return d;
@@ -82,7 +153,7 @@ S2Dims s2Dims(int mod, int rate, bool shortFrame) {
 
 int s2FrameSymbols(int mod, bool shortFrame, bool pilots) {
     const int bps = mod + 2;
-    const int xs = (shortFrame ? 16200 : 64800) / bps;
+    const int xs = xfecBits(mod, shortFrame ? 16200 : 64800) / bps;
     const int slots = xs / 90;
     return 90 * (slots + 1) + (pilots ? 36 * ((slots - 1) / 16) : 0);
 }
@@ -92,19 +163,23 @@ const LdpcCode& s2Ldpc(int rate, bool shortFrame) {
     static std::mutex mu;
     static std::map<int, LdpcCode*> cache;
     std::lock_guard<std::mutex> lk(mu);
-    const int key = (shortFrame ? 100 : 0) + rate;
+    // S2X MODCODs that use a DVB-S2 code share it; the others are keyed by their annex table
+    const S2xModcod* m = s2xModcod(rate);
+    if (m && !m->table) { rate = m->s2rate; m = nullptr; }
+    const S2xLdpcTable* xt = m ? s2xLdpcTable(*m) : nullptr;
+    const int key = xt ? 1000 + (int)(xt - kS2xLdpcTables) : (shortFrame ? 100 : 0) + rate;
     auto it = cache.find(key);
     if (it != cache.end()) return *it->second;
-    const S2LdpcTable& t = kS2LdpcTables[shortFrame ? 1 : 0][rate];
+    const uint16_t* p = xt ? xt->data : kS2LdpcTables[shortFrame ? 1 : 0][rate].data;
+    const int nrows = xt ? xt->rows : kS2LdpcTables[shortFrame ? 1 : 0][rate].rows;
     std::vector<std::vector<int>> rows;
-    const uint16_t* p = t.data;
-    for (int r = 0; r < t.rows; r++) {
+    for (int r = 0; r < nrows; r++) {
         const int n = *p++;
         rows.emplace_back(p, p + n);
         p += n;
     }
-    const int k = shortFrame ? kSK[rate] : kNK[rate];
-    auto* c = new LdpcCode(k, shortFrame ? 16200 : 64800, rows);
+    const int k = xt ? xt->kldpc : shortFrame ? kSK[rate] : kNK[rate];
+    auto* c = new LdpcCode(k, xt ? xt->nldpc : shortFrame ? 16200 : 64800, rows);
     cache[key] = c;
     return *c;
 }
@@ -113,6 +188,12 @@ float s2LdpcAlpha(int rate) {
     // measured with tools of the kind of tests/test_dvbs_s2fec.cpp: for every MODCOD the factor with the fewest failed frames and iterations at
     // 0.5 dB above the Es/N0 of table 13 (the low rates want a weak correction, 3/5 is the touchy one)
     static const float a[kS2Rates] = {0.92f, 0.90f, 0.90f, 0.88f, 0.88f, 0.85f, 0.85f, 0.85f, 0.85f, 0.85f, 0.85f};
+    if (const S2xModcod* m = s2xModcod(rate)) {
+        if (!m->table) return a[m->s2rate];
+        // S2X codes: the steps of the S2 ones by code rate
+        const double r = s2RateValue(rate);
+        return r < 0.30 ? 0.92f : r < 0.45 ? 0.90f : r < 0.62 ? 0.88f : 0.85f;
+    }
     return rate >= 0 && rate < kS2Rates ? a[rate] : 0.85f;
 }
 
@@ -120,7 +201,8 @@ const BchCode& s2Bch(int rate, bool shortFrame) {
     static std::mutex mu;
     static std::map<int, BchCode*> cache;
     std::lock_guard<std::mutex> lk(mu);
-    const int t = shortFrame ? 12 : kNT[rate];
+    int n = 0, k = 0, kb = 0, t = 12;
+    codeDims(rate, shortFrame, n, k, kb, t);
     const int key = (shortFrame ? 100 : 0) + t;
     auto it = cache.find(key);
     if (it != cache.end()) return *it->second;
@@ -130,15 +212,16 @@ const BchCode& s2Bch(int rate, bool shortFrame) {
 }
 
 void s2EncodeFec(const std::vector<uint8_t>& bb, int rate, bool shortFrame, std::vector<uint8_t>& fec) {
-    const int kbch = shortFrame ? kSKbch[rate] : kNKbch[rate];
+    int n = 0, k = 0, kbch = 0, t = 0;
+    codeDims(rate, shortFrame, n, k, kbch, t);
     fec.assign(bb.begin(), bb.begin() + kbch);
     s2Bch(rate, shortFrame).encode(fec, kbch);
     s2Ldpc(rate, shortFrame).encode(fec);
 }
 
 int s2BchDecode(const uint8_t* hard, int rate, bool shortFrame, std::vector<uint8_t>& bb) {
-    const int kldpc = shortFrame ? kSK[rate] : kNK[rate];
-    const int kbch = shortFrame ? kSKbch[rate] : kNKbch[rate];
+    int n = 0, kldpc = 0, kbch = 0, t = 0;
+    codeDims(rate, shortFrame, n, kldpc, kbch, t);
     std::vector<uint8_t> w(hard, hard + kldpc);
     const int r = s2Bch(rate, shortFrame).decode(w);
     bb.assign(w.begin(), w.begin() + kbch);
@@ -146,32 +229,46 @@ int s2BchDecode(const uint8_t* hard, int rate, bool shortFrame, std::vector<uint
 }
 
 // ============================================================================ bit interleaver
-void s2InterleavePattern(int mod, int rate, int cols[5]) {
+void s2InterleavePattern(int mod, int rate, int cols[8]) {
     const int m = mod + 2;
     for (int j = 0; j < m; j++) cols[j] = j;
+    if (const S2xModcod* x = s2xModcod(rate)) {
+        // EN 302 307-2 tables 9a and 9b: digit j of the pattern is the column read out j-th
+        if ((int)strlen(x->il) == m) for (int j = 0; j < m; j++) cols[j] = x->il[j] - '0';
+        return;
+    }
     // 8PSK with rate 3/5: the MSB of the BBHEADER is read out third (figure 8): columns are read in the order 3, 2, 1
     if (mod == k8psk && rate == 4) { cols[0] = 2; cols[1] = 1; cols[2] = 0; }
 }
 
 void s2BitInterleave(const std::vector<uint8_t>& in, int mod, int rate, std::vector<uint8_t>& out) {
     const int m = mod + 2, n = (int)in.size();
-    out.resize(n);
     if (mod == kQpsk) { out = in; return; }
-    int cols[5];
+    // 128APSK: 6 zeros after the code word go through the interleaver, 84 ones follow it (EN 302 307-2 clauses 5.3.2.2 and 5.3.3)
+    const int nw = mod == k128apsk ? n + 6 : n;
+    out.assign((size_t)xfecBits(mod, n), 1);
+    int cols[8];
     s2InterleavePattern(mod, rate, cols);
-    const int R = n / m;
+    const int R = nw / m;
     for (int row = 0; row < R; row++)
-        for (int j = 0; j < m; j++) out[(size_t)row * m + j] = in[(size_t)cols[j] * R + row];
+        for (int j = 0; j < m; j++) {
+            const int s = cols[j] * R + row;
+            out[(size_t)row * m + j] = s < n ? in[(size_t)s] : 0;
+        }
 }
 
 void s2BitDeinterleaveLlr(const float* in, int n, int mod, int rate, float* out) {
     const int m = mod + 2;
     if (mod == kQpsk) { memcpy(out, in, sizeof(float) * n); return; }
-    int cols[5];
+    const int nw = mod == k128apsk ? n + 6 : n;
+    int cols[8];
     s2InterleavePattern(mod, rate, cols);
-    const int R = n / m;
+    const int R = nw / m;
     for (int row = 0; row < R; row++)
-        for (int j = 0; j < m; j++) out[(size_t)cols[j] * R + row] = in[(size_t)row * m + j];
+        for (int j = 0; j < m; j++) {
+            const int d = cols[j] * R + row;
+            if (d < n) out[(size_t)d] = in[(size_t)row * m + j];
+        }
 }
 
 // ============================================================================ constellations
@@ -209,6 +306,16 @@ const ApskPoint k32Points[32] = {
 };
 
 void buildConstellation(int mod, int rate, std::vector<cf32>& pts) {
+    if (const S2xModcod* x = s2xModcod(rate)) {
+        if (x->shape == kSh412) {
+            // 4+12APSK: the DVB-S2 16APSK labels with the ring ratio of EN 302 307-2 tables 11a and 11b
+            const double g = x->g[0], r1 = 2.0 / std::sqrt(1 + 3 * g * g), rr[2] = {r1, g * r1};
+            pts.assign(16, cf32());
+            for (const ApskPoint& p : k16Points) pts[strtol(p.label, nullptr, 2)] = polar(rr[p.ring], p.deg);
+            return;
+        }
+        if (x->shape != kShS2) { s2xBuildConstellation(*x, pts); return; }
+    }
     if (mod == kQpsk) {
         pts.assign(4, cf32());
         for (int l = 0; l < 4; l++) pts[l] = cf32((1 - 2 * (l >> 1)) * 0.70710678f, (1 - 2 * (l & 1)) * 0.70710678f);   // figure 9: I = MSB, 0 -> positive
@@ -238,7 +345,7 @@ const cf32* s2Constellation(int mod, int rate) {
     static std::mutex mu;
     static std::map<int, std::vector<cf32>*> cache;
     std::lock_guard<std::mutex> lk(mu);
-    const int key = mod < 2 ? mod * 100 : mod * 100 + rate;
+    const int key = mod < 2 && !s2IsS2x(rate) ? mod * 1000 : mod * 1000 + rate;
     auto it = cache.find(key);
     if (it != cache.end()) return it->second->data();
     auto* v = new std::vector<cf32>();
@@ -267,14 +374,20 @@ void s2Demap(const cf32* sym, int n, int mod, int rate, float sigma2, float* llr
     }
     const cf32* c = s2Constellation(mod, rate);
     const int P = 1 << m;
+    float cr[256], ci[256];
+    for (int p = 0; p < P; p++) { cr[p] = c[p].real(); ci[p] = c[p].imag(); }
     for (int i = 0; i < n; i++) {
-        float d[32];
+        float d[256];
         const float yr = sym[i].real(), yi = sym[i].imag();
-        for (int p = 0; p < P; p++) { const float a = yr - c[p].real(), b = yi - c[p].imag(); d[p] = a * a + b * b; }
+        for (int p = 0; p < P; p++) { const float a = yr - cr[p], b = yi - ci[p]; d[p] = a * a + b * b; }
         for (int b = 0; b < m; b++) {
-            const int sh = m - 1 - b;
+            // the points whose bit b is 0 or 1 come in runs of 2^sh labels
+            const int sh = m - 1 - b, run = 1 << sh;
             float m0 = 1e30f, m1 = 1e30f;
-            for (int p = 0; p < P; p++) { if ((p >> sh) & 1) m1 = std::min(m1, d[p]); else m0 = std::min(m0, d[p]); }
+            for (int base = 0; base < P; base += 2 * run) {
+                for (int p = base; p < base + run; p++) m0 = std::min(m0, d[p]);
+                for (int p = base + run; p < base + 2 * run; p++) m1 = std::min(m1, d[p]);
+            }
             llr[(size_t)i * m + b] = (m1 - m0) * w;
         }
     }
@@ -337,33 +450,80 @@ namespace {
 // in natural order (Walsh functions), as printed in TR 102 376-1 annex B.1 and used by the open source transmitters and receivers that work with
 // real satellites (gr-dtv, gr-dvbs2rx). The text layer of figure 13b in the EN pdf gives other rows (a column permuted code): not used, it would
 // not decode real signals. The S2X code adds the row 0x90AC2DDD for b0 (EN 302 307-2 figure 20, from gr-dtv; its distance of 12 to the code
-// is the best possible for a row on 32 bits, which tests/test_dvbs_s2fec.cpp checks).
-const uint32_t kPlsG[6] = {0x55555555u, 0x33333333u, 0x0F0F0F0Fu, 0x00FF00FFu, 0x0000FFFFu, 0xFFFFFFFFu};
+// is the best possible for a row on 32 bits, which tests/test_dvbs_s2fec.cpp checks). Rows for b0, b1, ..., b6.
+const uint32_t kPlsG[7] = {0x90AC2DDDu, 0x55555555u, 0x33333333u, 0x0F0F0F0Fu, 0x00FF00FFu, 0x0000FFFFu, 0xFFFFFFFFu};
 const uint64_t kPlsScramble = 0x719D83C953422DFAull;     // clause 5.5.2.4: 0111000110011101100000111100100101010011010000100010110111111010
 
+// pi/2 BPSK symbol of PLS bit k (header position 26 + k) of a code value: after the SOF an S2X header (b0 = 1) is turned by 90 degrees
+// (EN 302 307-2 clause 5.5.2: I = -Q on the odd positions, I = Q on the even ones, both with the sign of S2 turned)
+cf32 plsSymbol(int code, int k, int bit) {
+    const cf32 s = s2Bpsk(26 + k, bit);
+    return code >= 128 ? cf32(-s.imag(), s.real()) : s;
+}
+
 struct PlsTables {
-    uint64_t code[128];
-    cf32 sym[128][64];
+    cf32 sym[256][64];
     PlsTables() {
-        for (int p = 0; p < 128; p++) {
-            code[p] = s2PlsCode(p >> 2, (p >> 1) & 1, p & 1);
-            for (int k = 0; k < 64; k++) sym[p][k] = s2Bpsk(26 + k, (int)((code[p] >> (63 - k)) & 1));
+        for (int p = 0; p < 256; p++) {
+            int mc; bool sh, pil;
+            s2PlsSplit(p, mc, sh, pil);
+            const uint64_t code = s2PlsCode(mc, sh, pil);
+            for (int k = 0; k < 64; k++) sym[p][k] = plsSymbol(p, k, (int)((code >> (63 - k)) & 1));
         }
     }
 };
 const PlsTables& plsTables() { static PlsTables t; return t; }
 } // namespace
 
+int s2PlsValue(int modcod, bool shortFrame, bool pilots) {
+    if (s2ModcodIsS2x(modcod)) return modcod << 1 | (pilots ? 1 : 0);
+    return (modcod & 31) << 2 | (shortFrame ? 2 : 0) | (pilots ? 1 : 0);
+}
+
+void s2PlsSplit(int code, int& modcod, bool& shortFrame, bool& pilots) {
+    code &= 255;
+    pilots = code & 1;
+    if (code >= 128) {
+        modcod = code >> 1;
+        const S2xModcod* m = s2xModcodByPls(code);
+        shortFrame = m && m->shortFrame;
+    } else {
+        modcod = code >> 2;
+        shortFrame = (code >> 1) & 1;
+    }
+}
+
+int s2PlsKind(int code) {
+    if (code < 0 || code > 255) return -1;
+    if (code >= 128) return s2xModcodByPls(code) ? 0 : s2xSpecialFrameSymbols(code) > 0 ? 2 : -1;
+    int mc, mod, rate; bool sh, pil;
+    s2PlsSplit(code, mc, sh, pil);
+    if (mc == 0) return 1;
+    return s2ModcodSplit(mc, mod, rate) && s2Dims(mod, rate, sh).ok ? 0 : -1;
+}
+
+int s2PlsFrameSymbols(int code) {
+    const int kind = s2PlsKind(code);
+    if (kind < 0) return 0;
+    if (kind == 1) return 90 + 36 * 90;
+    if (kind == 2) return s2xSpecialFrameSymbols(code);
+    int mc, mod, rate; bool sh, pil;
+    s2PlsSplit(code, mc, sh, pil);
+    s2ModcodSplit(mc, mod, rate);
+    return s2FrameSymbols(s2Dims(mod, rate, sh), pil);
+}
+
 uint64_t s2PlsCode(int modcod, bool shortFrame, bool pilots) {
-    // b1..b5 = MODCOD (MSB first), b6 = TYPE MSB (short FECFRAME), b7 = TYPE LSB (pilots)
+    // EN 302 307-2 clause 5.5.2.4: b0 .. b6 through the (32,7) code (S2: b0 = 0, b1..b5 = MODCOD, b6 = short FECFRAME), b7 (pilots) is the XOR of
+    // every second bit
+    const int v = s2PlsValue(modcod, shortFrame, pilots);
     uint32_t c = 0;
-    const int b[6] = {(modcod >> 4) & 1, (modcod >> 3) & 1, (modcod >> 2) & 1, (modcod >> 1) & 1, modcod & 1, shortFrame ? 1 : 0};
-    for (int i = 0; i < 6; i++) if (b[i]) c ^= kPlsG[i];
+    for (int i = 0; i < 7; i++) if ((v >> (7 - i)) & 1) c ^= kPlsG[i];
     uint64_t w = 0;
     for (int k = 0; k < 32; k++) {
         const uint64_t y = (c >> (31 - k)) & 1;
         w = (w << 1) | y;
-        w = (w << 1) | (y ^ (pilots ? 1 : 0));
+        w = (w << 1) | (y ^ (uint64_t)(v & 1));
     }
     return w ^ kPlsScramble;
 }
@@ -381,14 +541,15 @@ void s2PlHeader(int modcod, bool shortFrame, bool pilots, cf32* out) {
     const cf32* sof = s2SofSymbols();
     for (int j = 0; j < 26; j++) out[j] = sof[j];
     const uint64_t w = s2PlsCode(modcod, shortFrame, pilots);
-    for (int k = 0; k < 64; k++) out[26 + k] = s2Bpsk(26 + k, (int)((w >> (63 - k)) & 1));
+    const int v = s2PlsValue(modcod, shortFrame, pilots);
+    for (int k = 0; k < 64; k++) out[26 + k] = plsSymbol(v, k, (int)((w >> (63 - k)) & 1));
 }
 
 PlsResult s2PlsDecode(const cf32* sym) {
     const PlsTables& T = plsTables();
     float best = -1e30f, second = -1e30f;
     int bi = 0;
-    for (int p = 0; p < 128; p++) {
+    for (int p = 0; p < 256; p++) {
         float s = 0;
         for (int k = 0; k < 64; k++) s += sym[k].real() * T.sym[p][k].real() + sym[k].imag() * T.sym[p][k].imag();
         s /= 64.f;
@@ -396,13 +557,14 @@ PlsResult s2PlsDecode(const cf32* sym) {
         else if (s > second) second = s;
     }
     PlsResult r;
-    r.modcod = bi >> 2; r.shortFrame = (bi >> 1) & 1; r.pilots = bi & 1; r.score = best; r.second = second;
+    s2PlsSplit(bi, r.modcod, r.shortFrame, r.pilots);
+    r.code = bi; r.score = best; r.second = second;
     return r;
 }
 
 float s2PlsScore(const cf32* sym, int modcod, bool shortFrame, bool pilots) {
     const PlsTables& T = plsTables();
-    const int p = (modcod << 2) | ((shortFrame ? 1 : 0) << 1) | (pilots ? 1 : 0);
+    const int p = s2PlsValue(modcod, shortFrame, pilots);
     float s = 0;
     for (int k = 0; k < 64; k++) s += sym[k].real() * T.sym[p][k].real() + sym[k].imag() * T.sym[p][k].imag();
     return s / 64.f;

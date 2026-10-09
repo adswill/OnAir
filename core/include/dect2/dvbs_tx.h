@@ -12,10 +12,11 @@ namespace dect2 {
 namespace dvbs {
 
 struct DvbsTxConfig {
-    int standard = 2;               // 1 DVB-S (EN 300 421), 2 DVB-S2 (EN 302 307-1)
+    int standard = 2;               // 1 DVB-S (EN 300 421), 2 DVB-S2 (EN 302 307-1); 3 DVB-S2X (EN 302 307-2) is the same chain with an S2X rate
     int mod = kQpsk;                // S2: S2Mod. DVB-S is always QPSK
-    int rate = 5;                   // DVB-S: 0..4 = 1/2 2/3 3/4 5/6 7/8. DVB-S2: index of s2RateName (0 = 1/4 ... 10 = 9/10); default 2/3
-    bool shortFrame = false;        // S2 only
+    int rate = 5;                   // DVB-S: 0..4 = 1/2 2/3 3/4 5/6 7/8. DVB-S2: index of s2RateName (0 = 1/4 ... 10 = 9/10, S2X MODCODs from
+                                    // kS2Rates on: s2xRate()); default 2/3
+    bool shortFrame = false;        // S2 only (an S2X rate has its own frame size: this must match it)
     bool pilots = false;            // S2 only
     double rollOff = 0.35;          // used by the shaper and for the RO field of the BBHEADER
     double symbolRate = 5e6;        // only needed for netBitrate() and the shaper

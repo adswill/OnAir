@@ -16,22 +16,22 @@ public:
     // index of the nearest point
     int index(float re, float im) const {
         int ix = (int)((re + lim_) * scale_), iy = (int)((im + lim_) * scale_);
-        ix = ix < 0 ? 0 : ix >= kGrid ? kGrid - 1 : ix;
-        iy = iy < 0 ? 0 : iy >= kGrid ? kGrid - 1 : iy;
-        return idx_[(size_t)iy * kGrid + (size_t)ix];
+        ix = ix < 0 ? 0 : ix >= grid_ ? grid_ - 1 : ix;
+        iy = iy < 0 ? 0 : iy >= grid_ ? grid_ - 1 : iy;
+        return idx_[(size_t)iy * (size_t)grid_ + (size_t)ix];
     }
     // indices of the nearest and of the second nearest point (the soft detector of a dense constellation only needs those two)
     void index2(float re, float im, int& i1, int& i2) const {
         int ix = (int)((re + lim_) * scale_), iy = (int)((im + lim_) * scale_);
-        ix = ix < 0 ? 0 : ix >= kGrid ? kGrid - 1 : ix;
-        iy = iy < 0 ? 0 : iy >= kGrid ? kGrid - 1 : iy;
-        i1 = idx_[(size_t)iy * kGrid + (size_t)ix];
-        i2 = idx2_[(size_t)iy * kGrid + (size_t)ix];
+        ix = ix < 0 ? 0 : ix >= grid_ ? grid_ - 1 : ix;
+        iy = iy < 0 ? 0 : iy >= grid_ ? grid_ - 1 : iy;
+        i1 = idx_[(size_t)iy * (size_t)grid_ + (size_t)ix];
+        i2 = idx2_[(size_t)iy * (size_t)grid_ + (size_t)ix];
     }
     const cf32* points() const { return pts_; }
     int count() const { return n_; }
 private:
-    static constexpr int kGrid = 128;
+    int grid_ = 128;                 // cells a side: finer for the dense S2X constellations
     float lim_ = 2.f, scale_ = 1.f;
     const cf32* pts_ = nullptr;
     int n_ = 0;

@@ -29,11 +29,11 @@ struct DvbsTelemetry {
     float spectrumFitRms = 0;        // how well the spectrum looks like a raised cosine carrier (about 0.1 is good, 1 or more is not)
     float rollOff = 0;               // the roll-off the matched filter uses
     int rollOffSource = 0;           // 0 assumed, 1 measured from the spectrum, 2 signalled in the stream
-    int modulation = -1;             // 0 QPSK, 1 8PSK, 2 16APSK, 3 32APSK, -1 not known
-    std::string modulationName;      // "QPSK" ...
-    std::string codeRate;            // "2/3" ...
+    int modulation = -1;             // 0 QPSK, 1 8PSK (or 8APSK), 2 16APSK, 3 32APSK, 4 64APSK, 5 128APSK, 6 256APSK, -1 not known
+    std::string modulationName;      // "QPSK" ... (S2X: the canonical name of EN 302 307-2 table 17a, "8APSK" ...)
+    std::string codeRate;            // "2/3" ... (S2X: the canonical code rate, "5/9-L" ...)
     int frameSize = 0;               // DVB-S2: 0 not known, 1 normal (64800), 2 short (16200)
-    int modcod = -1;                 // DVB-S2 MODCOD number (1..28), 0 dummy frame, -1 not known
+    int modcod = -1;                 // DVB-S2 MODCOD number (1..28), 0 dummy frame, -1 not known; DVB-S2X: the PLS code value of table 17a (132..248)
     bool pilots = false;
     bool inverted = false;           // the spectrum is turned around (an LNB with a high-side oscillator)
     bool vcm = false;                // the MODCOD changes from frame to frame (VCM or ACM)
@@ -51,6 +51,7 @@ struct DvbsTelemetry {
     uint64_t packetsBad = 0;         // ... of which carry the transport error indicator
     uint64_t framesSeen = 0;         // DVB-S2 PLFRAMEs seen
     uint64_t framesDummy = 0;        // dummy PLFRAMEs among them
+    uint64_t framesUnsupported = 0;  // DVB-S2X frames among them that are followed but not decoded (VL-SNR, reserved PLS codes)
     uint64_t crcErrors = 0;          // DVB-S2 user packet CRC-8 mismatches
     uint64_t gseFrames = 0;          // DVB-S2 frames that carry a generic stream (reported, not converted)
 

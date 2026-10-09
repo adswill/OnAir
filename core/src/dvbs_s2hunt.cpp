@@ -12,18 +12,20 @@ namespace dvbs {
 
 namespace {
 
-// What the receiver knows of every PLHEADER: the 90 symbols of each of the 128 code words, and the products of neighbouring symbols that do not depend on
-// the carrier phase (the SOF, and the pairs of the PLS code: the second bit of a pair is the first one or its opposite, whatever the MODCOD)
+// What the receiver knows of every PLHEADER: the 90 symbols of each of the 256 code words (DVB-S2 and S2X, indexed by the PLS code value), and the
+// products of neighbouring symbols that do not depend on the carrier phase (the SOF, and the pairs of the PLS code: the second bit of a pair is the
+// first one or its opposite, whatever the MODCOD; the 90 degree turn of an S2X header leaves them as they are)
 struct Ref {
-    cf32 hdr[128][90];
-    bool valid[128];
+    cf32 hdr[256][90];
+    bool valid[256];
     cf32 rs[25];          // s[k+1] conj(s[k]) of the SOF, +-j
     cf32 rp[32];          // the same for the pairs of the PLS code (pilot flag 0; the flag turns the sign)
     Ref() {
-        for (int c = 0; c < 128; c++) {
-            const int mc = c >> 2;
-            valid[c] = mc <= 28;
-            s2PlHeader(mc, (c >> 1) & 1, c & 1, hdr[c]);
+        for (int c = 0; c < 256; c++) {
+            int mc; bool sh, pil;
+            s2PlsSplit(c, mc, sh, pil);
+            valid[c] = s2PlsKind(c) >= 0;
+            s2PlHeader(mc, sh, pil, hdr[c]);
         }
         const cf32* h0 = hdr[0];
         for (int k = 0; k < 25; k++) rs[k] = h0[k + 1] * std::conj(h0[k]);
@@ -32,15 +34,7 @@ struct Ref {
 };
 const Ref& ref() { static Ref r; return r; }
 
-int codeLength(int code) {
-    const int mc = code >> 2;
-    const bool sh = (code >> 1) & 1, pil = code & 1;
-    if (mc == 0) return 90 + 36 * 90;
-    int mod, rate;
-    if (!s2ModcodSplit(mc, mod, rate)) return 0;
-    const S2Dims dm = s2Dims(mod, rate, sh);
-    return dm.ok ? s2FrameSymbols(dm, pil) : 0;
-}
+int codeLength(int code) { return s2PlsFrameSymbols(code); }
 
 struct HdrFit {
     int code = -1, code2 = -1;
@@ -55,11 +49,11 @@ struct HdrFit {
 HdrFit fitHeader(const cf32* v, double gCenter, double gSpan, double gStep, bool tryInv, int only = -1) {
     const Ref& R = ref();
     HdrFit f;
-    float bestS[128];
-    for (int c = 0; c < 128; c++) bestS[c] = -1.f;
-    cf32 bestC[128];
-    double bestG[128];
-    bool bestI[128];
+    float bestS[256];
+    for (int c = 0; c < 256; c++) bestS[c] = -1.f;
+    cf32 bestC[256];
+    double bestG[256];
+    bool bestI[256];
     cf32 w[90];
     for (int inv = 0; inv < (tryInv ? 2 : 1); inv++) {
         cf32 u[90];
@@ -75,7 +69,7 @@ HdrFit fitHeader(const cf32* v, double gCenter, double gSpan, double gStep, bool
             for (int k = 0; k < 90; k++) { w[k] = u[k] * r; r *= st; }
             cf32 sSof(0, 0);
             for (int k = 0; k < 26; k++) sSof += w[k] * std::conj(R.hdr[0][k]);
-            for (int c = 0; c < 128; c++) {
+            for (int c = 0; c < 256; c++) {
                 if (!R.valid[c] || (only >= 0 && c != only)) continue;
                 cf32 s = sSof;
                 const cf32* h = R.hdr[c];
@@ -86,10 +80,10 @@ HdrFit fitHeader(const cf32* v, double gCenter, double gSpan, double gStep, bool
         }
     }
     int b1 = -1;
-    for (int c = 0; c < 128; c++) if (bestS[c] >= 0 && (b1 < 0 || bestS[c] > bestS[b1])) b1 = c;
+    for (int c = 0; c < 256; c++) if (bestS[c] >= 0 && (b1 < 0 || bestS[c] > bestS[b1])) b1 = c;
     if (b1 < 0) return f;
     int b2 = -1;
-    for (int c = 0; c < 128; c++) if (c != b1 && bestS[c] >= 0 && (b2 < 0 || bestS[c] > bestS[b2])) b2 = c;
+    for (int c = 0; c < 256; c++) if (c != b1 && bestS[c] >= 0 && (b2 < 0 || bestS[c] > bestS[b2])) b2 = c;
     f.code = b1; f.rho = bestS[b1]; f.g = bestG[b1]; f.inv = bestI[b1];
     f.theta = std::arg(bestC[b1]);
     f.amp = std::abs(bestC[b1]) / 90.f;
@@ -192,14 +186,7 @@ S2HuntResult s2Hunt(const cf32* z, size_t n) {
     {
         static const std::vector<int> lens = [] {
             std::vector<int> v;
-            v.push_back(90 + 36 * 90);
-            for (int mod = 0; mod < 4; mod++)
-                for (int r = 0; r < kS2Rates; r++)
-                    for (int sh = 0; sh < 2; sh++) {
-                        const S2Dims dm = s2Dims(mod, r, sh != 0);
-                        if (!dm.ok) continue;
-                        for (int pil = 0; pil < 2; pil++) v.push_back(s2FrameSymbols(dm, pil != 0));
-                    }
+            for (int c = 0; c < 256; c++) if (s2PlsFrameSymbols(c) > 0) v.push_back(s2PlsFrameSymbols(c));
             std::sort(v.begin(), v.end());
             v.erase(std::unique(v.begin(), v.end()), v.end());
             return v;
@@ -286,14 +273,14 @@ S2HuntResult s2Hunt(const cf32* z, size_t n) {
     const Chain& c = chains[(size_t)bi];
     // the start: the first header that is a data frame (not a dummy), with another header exactly one frame later
     size_t si = 0;
-    for (size_t i = 0; i < c.pos.size(); i++) if ((c.code[i] >> 2) != 0) { si = i; break; }
+    for (size_t i = 0; i < c.pos.size(); i++) if (s2PlsKind(c.code[i]) == 0) { si = i; break; }
     best.ok = true;
     best.firstPos = c.pos[si];
     best.pos = c.pos[si];
     best.lastPos = c.pos.back();
     best.headers = (int)(c.pos.size() - si);
     const int code = c.code[si];
-    best.modcod = code >> 2; best.shortFrame = (code >> 1) & 1; best.pilots = code & 1;
+    s2PlsSplit(code, best.modcod, best.shortFrame, best.pilots);
     best.frameLen = codeLength(code);
     best.inverted = c.first.inv;
     best.phi = c.g; best.theta = c.first.theta;

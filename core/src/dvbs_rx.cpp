@@ -254,7 +254,8 @@ struct DvbsReceiver::Impl {
         mode = kS2;
         int mod, rate;
         if (h.modcod != 0 && s2ModcodSplit(h.modcod, mod, rate))
-            log(std::string("DVB-S2, ") + s2ModName(mod) + " " + s2RateName(rate) + (h.shortFrame ? " short" : "") + (h.pilots ? " pilots" : "") + (h.inverted ? ", spectrum inverted" : ""));
+            log(std::string(s2ModcodIsS2x(h.modcod) ? "DVB-S2X, " : "DVB-S2, ") + s2ModNameFor(mod, rate) + " " + s2RateName(rate) + (h.shortFrame ? " short" : "") +
+                (h.pilots ? " pilots" : "") + (h.inverted ? ", spectrum inverted" : ""));
         else log("DVB-S2, dummy frames");
         return true;
     }
@@ -387,8 +388,11 @@ struct DvbsReceiver::Impl {
             t.preFecBer = q.rsClean + q.rsCorrected > 100 ? (float)std::min(0.5, q.byteErrors * 1.5 / 8.0) : -1.f;
         } else if (mode == kS2) {
             const S2Stats s = s2.stats();
-            if (s.mod >= 0) { t.modulation = s.mod; t.modulationName = s2ModName(s.mod); t.codeRate = s2RateName(s.rate); }
-            t.modcod = s.modcod; t.frameSize = s.shortFrame ? 2 : 1; t.pilots = s.pilots; t.vcm = s.vcm; t.isi = s.isi;
+            if (s.mod >= 0) { t.modulation = s.mod; t.modulationName = s2ModNameFor(s.mod, s.rate); t.codeRate = s2RateName(s.rate); }
+            // an S2X MODCOD makes it DVB-S2X; its number is shown as the PLS code value of EN 302 307-2 table 17a
+            if (s2IsS2x(s.rate) || s2ModcodIsS2x(s.modcod) || s.framesUnsupported > 0) t.standard = 3;
+            t.modcod = s2ModcodIsS2x(s.modcod) ? s.modcod << 1 : s.modcod;
+            t.frameSize = s.shortFrame ? 2 : 1; t.pilots = s.pilots; t.vcm = s.vcm; t.isi = s.isi;
             t.plScramblingCode = plCode.load() < 0 ? 0 : plCode.load();
             t.inverted = s2.inverted();
             t.merDb = (float)s.merDb; t.snrDb = (float)s.merDb;
@@ -401,8 +405,14 @@ struct DvbsReceiver::Impl {
             t.ldpcIterAvg = (float)s.ldpcIterAvg;
             t.preFecBer = (float)s.berPre;
             t.framesSeen = s.framesSeen; t.framesDummy = s.framesDummy; t.crcErrors = s.crcErrors; t.gseFrames = s.gseFrames;
+            t.framesUnsupported = s.framesUnsupported;
             if (s.roSignalled >= 0 && s.roSignalled < 3) { t.rollOff = s.roSignalled == 0 ? 0.35f : s.roSignalled == 1 ? 0.25f : 0.20f; t.rollOffSource = 2; }
             if (s.gseFrames > 0 && s.tsGs != 3) t.signalNote = "generic stream (GSE) seen: not converted to a transport stream";
+            if (s.framesUnsupported > 0) {
+                const int c = s.unsupportedCode;
+                t.signalNote = c == 129 || c == 131 ? std::string("S2X VL-SNR frames seen (set ") + (c == 129 ? "1" : "2") + "): not decoded"
+                                                     : "S2X frames with the reserved PLS code " + std::to_string(c) + " seen: not decoded";
+            }
             { std::lock_guard<std::mutex> lk(cellMu); s2.cells(cells); }
         } else if (mode == kHunt) {
             t.snrDb = specRes.valid ? specRes.snrDb : 0;
