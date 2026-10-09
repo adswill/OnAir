@@ -70,6 +70,7 @@ struct DvbtReceiver::Impl {
     std::vector<int8_t> tpsBitsSeen;  // per processed symbol (index = absSym - tpsBase)
     uint64_t tpsBase = 0;
     std::vector<cf32> prevTps;        // previous symbol's TPS carriers
+    std::vector<cf32> prevCp;         // and its continual pilots (for the common phase turn between the two)
     bool prevValid = false;
     bool tpsOk = false;
     Params prm;
@@ -113,7 +114,7 @@ struct DvbtReceiver::Impl {
     void reset() {
         state = 0; mode = gi = -1; N = G = K = 0; symStart = 0; epsFrac = 0; intShift = 0; intLocked = false; rhoAvg = 0; lowRun = 0; streaming = false; phaseCheck = false; postResync = 0;
         intScore.clear(); intSymbols = 0; absSym = 0; fft.reset(); agreeCount = 0; agreeMode = agreeGi = -1; acqLastEnd = 0;
-        tpsBitsSeen.clear(); tpsBase = 0; prevTps.clear(); prevValid = false; prevWin = INT64_MIN; tpsOk = false; tpsFailures = 0; secSinceTps = 0;
+        tpsBitsSeen.clear(); tpsBase = 0; prevTps.clear(); prevCp.clear(); prevValid = false; prevWin = INT64_MIN; tpsOk = false; tpsFailures = 0; secSinceTps = 0;
         for (int i = 0; i < 4; i++) { hypVotes[i] = 0; hypScore[i] = 0; }
         grid.clear(); gridAge.clear(); cpRef.clear(); cpRefValid = false; gridFilled = 0;
         fec.reset(); streamSecs = 0; symbols = 0; packetsOut = 0; detect = 0;
@@ -417,26 +418,41 @@ struct DvbtReceiver::Impl {
     // ------------------------------------------------------------------ carriers: TPS, frame sync, channel estimation, equalisation
     void processCarriers() {
         const auto& tpsK = tpsCarriers(mode);
+        const auto& cpK = continualPilots(mode);
         // ---- TPS bit for this symbol: differential BPSK against the previous symbol
-        if (prevValid && prevTps.size() == tpsK.size()) {
-            double acc = 0;
+        if (prevValid && prevTps.size() == tpsK.size() && prevCp.size() == cpK.size()) {
             // When the timing loop moved the FFT window by d samples since the previous symbol, carrier f turned by 2 pi f d / N:
-            // turn the previous symbol's TPS cells the same way, or the differential products partly cancel and the bit can flip.
-            if (winShift != 0) {
-                for (size_t i = 0; i < tpsK.size(); i++) {
-                    const double a = 2 * M_PI * (double)(tpsK[i] + intShift - kc) * winShift / N;
-                    acc += (Y[tpsK[i]] * std::conj(prevTps[i] * cf32((float)std::cos(a), (float)std::sin(a)))).real();
-                }
-            } else
-                for (size_t i = 0; i < tpsK.size(); i++) acc += (Y[tpsK[i]] * std::conj(prevTps[i])).real();
+            // turn the previous symbol's cells the same way, or the differential products partly cancel and the bit can flip.
+            auto prevTurned = [&](const cf32& v, int k) {
+                if (winShift == 0) return v;
+                const double a = 2 * M_PI * (double)(k + intShift - kc) * winShift / N;
+                return v * cf32((float)std::cos(a), (float)std::sin(a));
+            };
+            // All carriers also turn by one common phase from one symbol to the next. Most of it is the whole-carrier part of the carrier
+            // offset: it is taken out by moving the carrier index, not by turning the samples, so its phase still advances by
+            // 2 pi intShift (N + G) / N per symbol. With guard 1/4 that is a quarter turn for every carrier of offset: at 7 carriers (8 kHz
+            // in 8K, a real capture) the real part of the differential is only noise, at 2 carriers every bit comes out inverted, and the
+            // TPS never decodes. The rest is what the fractional loop has not taken out yet. The continual pilots carry the same value in
+            // every symbol, so their differential measures that common turn directly: take it out of the TPS differential.
+            cd turn = 0;
+            for (size_t i = 0; i < cpK.size(); i++) {
+                const cf32 z = Y[cpK[i]] * std::conj(prevTurned(prevCp[i], cpK[i]));
+                turn += cd(z.real(), z.imag());
+            }
+            const double tm = std::abs(turn);
+            const cf32 unturn = tm > 1e-12 ? cf32((float)(turn.real() / tm), (float)(-turn.imag() / tm)) : cf32(1, 0);
+            double acc = 0;
+            for (size_t i = 0; i < tpsK.size(); i++) acc += (Y[tpsK[i]] * std::conj(prevTurned(prevTps[i], tpsK[i])) * unturn).real();
             tpsBitsSeen.push_back(acc < 0 ? 1 : 0);
+            if (symbols % 3 == 0) {
+                tpsShow.clear();
+                for (size_t i = 0; i < tpsK.size(); i++) { const cf32 z = Y[tpsK[i]] * std::conj(prevTurned(prevTps[i], tpsK[i])) * unturn; const float m = std::abs(z); if (m > 1e-9f) tpsShow.push_back(z / m); }
+            }
         } else tpsBitsSeen.push_back(-1);
-        if (prevValid && prevTps.size() == tpsK.size() && symbols % 3 == 0) {
-            tpsShow.clear();
-            for (size_t i = 0; i < tpsK.size(); i++) { const cf32 z = Y[tpsK[i]] * std::conj(prevTps[i]); const float m = std::abs(z); if (m > 1e-9f) tpsShow.push_back(z / m); }
-        }
         prevTps.resize(tpsK.size());
         for (size_t i = 0; i < tpsK.size(); i++) prevTps[i] = Y[tpsK[i]];
+        prevCp.resize(cpK.size());
+        for (size_t i = 0; i < cpK.size(); i++) prevCp[i] = Y[cpK[i]];
         prevValid = true;
         if (tpsBitsSeen.size() > 4000) { tpsBitsSeen.erase(tpsBitsSeen.begin(), tpsBitsSeen.begin() + 2000); tpsBase += 2000; }
 
