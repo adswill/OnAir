@@ -53,5 +53,22 @@ int main() {
         FmTelemetry t = run(w, base, 16, [ppm](std::vector<cf32>& x) { x = impair::clock(x, ppm); });
         rdsGood(t, w, 90, 8);
     }
+    {   // a mono station with RDS (no pilot): RDS runs on its own 57 kHz carrier recovery
+        FmGenConfig c = base; c.stereo = false;
+        FmTelemetry t = run("mono with RDS", c, 8, nullptr);
+        CHECK(!t.stereo, "mono with RDS: stereo reported");
+        rdsGood(t, "mono with RDS", 90, 8);
+    }
+    // combined: the worst tuning error of the band (50 ppm of 108 MHz), the sample clock +80 ppm, an echo of 3 us at -8 dB and 8-bit clipping;
+    // stereo and mono (whose RDS carrier is then 4.6 Hz off the receiver's 57 kHz)
+    for (bool stereo : {true, false}) {
+        FmGenConfig c = base; c.stereo = stereo;
+        const char* w = stereo ? "combined, stereo" : "combined, mono";
+        FmTelemetry t = run(w, c, 10, [](std::vector<cf32>& x) {
+            impair::shift(x, 5400, 2e6); x = impair::clock(x, 80); impair::echo(x, 6, -8, 2.0); impair::clip8(x, 3); });
+        CHECK(t.state == 2 && std::fabs(t.cfoHz - 5400) < 300, "%s: state %d, offset %+.0f Hz", w, t.state, t.cfoHz);
+        CHECK(t.stereo == stereo, "%s: stereo %d", w, t.stereo);
+        rdsGood(t, w, 90, 10);
+    }
     return fails ? 1 : 0;
 }

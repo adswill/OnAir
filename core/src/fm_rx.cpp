@@ -284,6 +284,9 @@ struct FmReceiver::Impl {
     bool rdsRsOk = false;
     std::vector<cf32> rIn, r1, r19;
     cf32 sq = cf32(0, 0);
+    bool rdsOwn = true;                          // no pilot: RDS on its own 57 kHz oscillator and Costas loop
+    double nco57 = 0, costasPh = 0, costasFr = 0;
+    float costasPow = 1e-6f;
     cf32 mfBuf[16] = {};
     int mfPos = 0, sampleIdx = 0, bestPhase = 0, sinceSym = 0;
     float phaseEnergy[16] = {};
@@ -371,7 +374,7 @@ struct FmReceiver::Impl {
         phi = pllFreq = pLpf = pI = pQ = pAmp2 = dc = 0;
         pilotLock = false; lockT = unlockT = 0; stereoBlend = 0;
         deL.reset(); deR.reset();
-        sq = cf32(0, 0); std::memset(mfBuf, 0, sizeof mfBuf); mfPos = sampleIdx = bestPhase = sinceSym = 0;
+        sq = cf32(0, 0); rdsOwn = true; nco57 = costasPh = costasFr = 0; costasPow = 1e-6f; std::memset(mfBuf, 0, sizeof mfBuf); mfPos = sampleIdx = bestPhase = sinceSym = 0;
         std::memset(phaseEnergy, 0, sizeof phaseEnergy);
         prevSym = 0; symAvg = 0.01f; constHist.clear();
         rds.reset();
@@ -422,6 +425,7 @@ struct FmReceiver::Impl {
         const double lockA = 1.0 / (0.02 * fm);
         const double ampA = 1.0 / (0.05 * fm);
         const double wn = 2 * kPi * (pilotLock ? 20.0 : 80.0), zeta = 0.707;
+        if (rdsOwn == pilotLock) { rdsOwn = !pilotLock; costasPh = costasFr = 0; }
         for (size_t i = 0; i < n; i++) {
             dc += (mpx[i] - dc) * dcA;
             const float m = mpx[i] - (float)dc;
@@ -443,7 +447,11 @@ struct FmReceiver::Impl {
             // stereo and RDS inputs
             sIn[i] = m;
             dIn[i] = (float)(2.0 * m * 2 * sn * cs);
-            rIn[i] = cf32((float)(m * std::cos(3 * ph0)), (float)(-m * std::sin(3 * ph0)));
+            // RDS carrier: three times the pilot phase, or without a pilot (a mono station) a 57 kHz oscillator of its own
+            const double ph57 = rdsOwn ? nco57 : 3 * ph0;
+            rIn[i] = cf32((float)(m * std::cos(ph57)), (float)(-m * std::sin(ph57)));
+            nco57 += 2 * kPi * 57000.0 / fm;
+            if (nco57 > 2 * kPi) nco57 -= 2 * kPi;
             mpxRing[ringPos] = m; ringPos = (ringPos + 1) % kMpxFft;
         }
         // lock state of the pilot, judged in seconds because the block length varies
@@ -485,20 +493,34 @@ struct FmReceiver::Impl {
             }
             if (tap && !lr48.empty()) tap(outL.data(), outR.data(), lr48.size());
         }
-        // RDS (only with a locked pilot: its carrier is tied to the pilot)
+        // RDS (with a locked pilot its carrier is tied to the pilot; without one it is followed by a Costas loop)
         if (rdsRsOk) {
             r1.clear();
             rdsLp.process(rIn.data(), n, r1);
             r19.clear();
             rdsRs.process(r1.data(), r1.size(), r19);
-            if (pilotLock) for (const cf32& z : r19) rdsSample(z);
+            for (const cf32& z : r19) rdsSample(z);
         }
     }
 
     void rdsSample(cf32 z) {
-        sq += (z * z - sq) * (1.f / 4000.f);
-        const float th = 0.5f * std::atan2(sq.imag(), sq.real());
-        const cf32 r = z * cf32(std::cos(-th), std::sin(-th));
+        cf32 r;
+        if (!rdsOwn) {
+            sq += (z * z - sq) * (1.f / 4000.f);
+            const float th = 0.5f * std::atan2(sq.imag(), sq.real());
+            r = z * cf32(std::cos(-th), std::sin(-th));
+        } else {
+            // no pilot: the transmitter's 57 kHz (+-6 Hz) and the radio's clock leave a residual of up to about 15 Hz. Second-order Costas loop
+            // on the BPSK, wide (40 Hz) until blocks decode, then 8 Hz.
+            r = z * cf32((float)std::cos(-costasPh), (float)std::sin(-costasPh));
+            costasPow += (std::norm(z) - costasPow) * (1.f / 2000.f);
+            const double e = std::max(-1.0, std::min(1.0, (double)(r.real() * r.imag()) / std::max(costasPow, 1e-12f)));
+            const double bn = (rds.synced ? 8.0 : 40.0) / 19000.0, wnT = 2 * bn / (0.707 + 1 / (4 * 0.707));
+            costasFr += wnT * wnT * e;
+            costasFr = std::max(-2 * kPi * 25 / 19000.0, std::min(2 * kPi * 25 / 19000.0, costasFr));
+            costasPh += costasFr + 2 * 0.707 * wnT * e;
+            if (costasPh > kPi) costasPh -= 2 * kPi; else if (costasPh < -kPi) costasPh += 2 * kPi;
+        }
         mfBuf[mfPos] = r; mfPos = (mfPos + 1) & 15;
         static float tpl[16]; static bool tplInit = false;
         if (!tplInit) { for (int k = 0; k < 16; k++) tpl[k] = (float)std::sin(2 * kPi * (k + 0.5) / 16); tplInit = true; }
