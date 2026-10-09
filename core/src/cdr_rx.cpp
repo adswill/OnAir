@@ -213,6 +213,7 @@ struct CdrReceiver::Impl {
     std::shared_ptr<const Layout> lay;
     double bs = 0;                          // start of the next beacon (absolute index, fractional)
     double cfo = 0;
+    bool mirror = false;                    // the input is read conjugated (a mirrored spectrum)
     int badBeacons = 0, badSi = 0;
     bool siSeen = false;                    // the system information has decoded since the lock
     int64_t nSub = 0;                       // sub-frames processed since the lock
@@ -248,7 +249,7 @@ struct CdrReceiver::Impl {
         nIn = 0; nextReport = 0; power = 0; nPower = 0;
         rs = ExactResampler();
         if (curRate > 0) rs.configure(curRate, kFs);
-        buf.clear(); buf0 = 0; searchFloor = 0;
+        buf.clear(); buf0 = 0; searchFloor = 0; mirror = false;
         startSearch(0);
         locked = false; lay.reset(); tm = sm = 0;
         for (auto& r : store) for (auto& s2 : r) s2 = SubData();
@@ -266,7 +267,8 @@ struct CdrReceiver::Impl {
 
     cf32 sample(int64_t idx) const {
         const int64_t i = idx - buf0;
-        return i >= 0 && i < (int64_t)buf.size() ? buf[(size_t)i] : cf32(0, 0);
+        if (i < 0 || i >= (int64_t)buf.size()) return cf32(0, 0);
+        return mirror ? std::conj(buf[(size_t)i]) : buf[(size_t)i];
     }
     int64_t bufEnd() const { return buf0 + (int64_t)buf.size(); }
 
@@ -316,6 +318,15 @@ struct CdrReceiver::Impl {
             for (const auto& c : group) {
                 const Acq a = evaluate(c);
                 if (a.ok && a.metric > best.metric) best = a;
+            }
+            if (!best.ok) {
+                // a beacon that fits nothing: perhaps the spectrum is mirrored (I and Q swapped by the radio or the file format)
+                mirror = !mirror;
+                for (const auto& c : group) {
+                    const Acq a = evaluate(c);
+                    if (a.ok && a.metric > best.metric) best = a;
+                }
+                if (!best.ok) mirror = !mirror;
             }
             if (best.ok) { lockOn(best); pending.clear(); return; }
         }
