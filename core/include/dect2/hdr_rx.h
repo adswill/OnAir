@@ -1,7 +1,9 @@
-// HD Radio (NRSC-5, USA): the digital sidebands of hybrid FM and AM stations.
-// Skeleton: counts the samples, measures the input level and reports four times a second of signal (state 0: no decoder yet); the
-// mode's worker replaces the body. Written to the engine's contract: configure() once the sample rate is known, feed() from the analysis
-// thread (never blocks), telemetry() and the setters from the interface thread.
+// HD Radio (NRSC-5, USA): the digital sidebands of hybrid FM (MP1) and AM (MA1) stations. Decodes everything but the sound: station
+// information (SIS), the program list, program service data (ID3), the station information guide and the large objects (pictures).
+// The audio is HDC, a patented codec that OnAir does not decode: its packets are counted only.
+// FM or AM is found by itself: both receivers search until one of them has block sync.
+// Written to the engine's contract: configure() once the sample rate is known, feed() from the analysis thread (never blocks),
+// telemetry() and the other getters from the interface thread.
 #pragma once
 #include "mode_tuning.h"
 #include "hdr_tel.h"
@@ -11,6 +13,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace dect2 {
 
@@ -25,6 +28,8 @@ public:
     void feed(const cf32* x, size_t n);
     bool telemetry(HdrTelemetry& out, uint64_t lastSeq);
     void setLogCallback(std::function<void(const std::string&)> cb);   // events for the log pane; may be called from the receiver thread
+    // The bytes of a complete large object (LOT), e.g. a picture listed in HdrTelemetry::lots; false when not (yet) complete.
+    bool lotBytes(int port, int lot, std::vector<uint8_t>& out) const;
 
 private:
     struct Impl;
