@@ -80,6 +80,8 @@ constexpr int kSegSamples = 2 * kSegSyms;               // 1664 samples at 2 per
 constexpr int kNF = 24;                                 // equaliser taps after the cursor (future samples)
 constexpr int kNP = 103;                                // taps before the cursor
 constexpr int kL = kNF + kNP + 1;                       // 128
+constexpr int kMaxPre = 100;                            // the earliest path (symbols before the strongest) the pre-echo canceller handles
+constexpr int kPreTail = 640;                           // symbols kept after a field (the next field sync segment has completed)
 constexpr int kInterpJ = 8;                             // symbol interpolator half length
 constexpr int kInterpPh = 64;
 
@@ -699,7 +701,7 @@ struct Core {
             jspace.notify_all();
             if (doReset) {
                 dec.reset();
-                eqLast = Taps(); snrAvg = 0; dataSnrAvg = 0; segErr = 0; cleanFields = 0; havePrev = false;
+                eqLast = Taps(); preD = 0; snrAvg = 0; dataSnrAvg = 0; segErr = 0; cleanFields = 0; havePrev = false;
                 tsFlow = 0;
             }
             if (!j.s.empty()) runJob(j);
@@ -712,7 +714,7 @@ struct Core {
         j.f0 = startSeg * kSegSyms;
         j.parity = fieldParity;
         j.base = j.f0 - kNP - 4;
-        const int64_t end = j.f0 + kFieldSyms + kNF + 4;
+        const int64_t end = j.f0 + kFieldSyms + kPreTail;   // the symbols after the field: the pre-echo canceller runs backwards from there
         j.s.resize((size_t)(end - j.base));
         for (size_t k = 0; k < j.s.size(); k++) j.s[k] = rawAt(j.base + (int64_t)k);
         {
@@ -746,6 +748,7 @@ struct Core {
     int64_t prevBase = 0, prevF0 = 0;
     bool havePrev = false;
     double eqSnrNow = 0;
+    int preD = 0;   // a pre-echo canceller for an earlier path this many symbols before the strongest is in use
 
     static float dotf(const float* a, const float* b, int n) {
 #if defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
@@ -795,6 +798,71 @@ struct Core {
         const std::vector<float>* s; int64_t base, f0;
         float at(int64_t idx) const { const int64_t k = idx - base; return (k < 0 || k >= (int64_t)s->size()) ? 0.f : (*s)[(size_t)k]; }
     };
+
+    // The earliest path at least 0.4 times as strong as the one the symbol clock follows (the strongest), from the field sync's PN511,
+    // in symbols before it; 0: none further than 6 symbols.
+    static int earliestPath(const View& v, const float* fsLv) {
+        auto corr = [&](int l) { double c = 0; for (int i = 4; i < 515; i++) c += (double)v.at(v.f0 + i + l) * fsLv[i]; return std::fabs(c); };
+        const double c0 = std::max({corr(-1), corr(0), corr(1)});
+        if (c0 <= 0) return 0;
+        for (int l = -kMaxPre; l <= -6; l++) {
+            const double c = corr(l);
+            if (c > 0.4 * c0 && c >= corr(l - 1) && c >= corr(l + 1)) return -l;
+        }
+        return 0;
+    }
+
+    // A ghost stronger than the direct path: the symbol clock follows the ghost, so the direct path is a long pre-echo D symbols early
+    // that a linear equaliser with a few future taps cannot undo (and a decision feedback equaliser on the direct path is unstable, the
+    // later path being the stronger). With r = u + sum_j k_j u[n + D + j] (u: the signal of the strongest path and what is after it),
+    // u is recovered running backwards in time, stable because the earlier path is the weaker. k comes from a least squares fit of the
+    // field sync. The result goes to the usual equalisers.
+    static bool cancelPre(const View& v, const float* fsLv, int D, std::vector<float>& u) {
+        constexpr int H = 12, M = 6;   // half lengths of the earlier path's kernel and of the strongest path's
+        // 1. both paths from the field sync: r[i] = sum m_j s[i + j] + sum c_j s[i + D + j] + bias
+        const int i0 = 4 + M, i1 = 728 - D - H - M;   // every symbol used below is a known field sync symbol
+        if (i1 - i0 < 200) return false;
+        const int n1 = 2 * M + 2 * H + 3;
+        std::vector<float> X, tgt;
+        for (int i = i0; i < 728 - D - H; i++) {
+            const size_t o = X.size(); X.resize(o + n1);
+            float* x = &X[o];
+            for (int j = -M; j <= M; j++) x[j + M] = fsLv[i + j];
+            for (int j = -H; j <= H; j++) x[2 * M + 1 + j + H] = fsLv[i + D + j];
+            x[n1 - 1] = 1.f;
+            tgt.push_back(v.at(v.f0 + i));
+        }
+        std::vector<double> sol;
+        if (!solveLs(X, tgt, n1, 1e-6, sol)) return false;
+        // 2. the strongest path alone (u) where it is known, and the earlier path as a filter of u: r[i] - u[i] = sum k_j u[i + D + j]
+        auto uh = [&](int i) { double y = 0; for (int j = -M; j <= M; j++) y += sol[(size_t)(j + M)] * fsLv[i + j]; return (float)y; };
+        const int n2 = 2 * H + 1;
+        X.clear(); tgt.clear();
+        for (int i = i0; i < i1; i++) {
+            const size_t o = X.size(); X.resize(o + n2);
+            for (int j = -H; j <= H; j++) X[o + (size_t)(j + H)] = uh(i + D + j);
+            tgt.push_back(v.at(v.f0 + i) - uh(i) - (float)sol[(size_t)n1 - 1]);
+        }
+        std::vector<double> kk;
+        if (!solveLs(X, tgt, n2, 1e-4, kk)) return false;
+        float k[2 * H + 1];
+        double e = 0;
+        for (int j = 0; j < n2; j++) { k[j] = (float)kk[(size_t)j]; e += (double)k[j] * k[j]; }
+        if (!(e < 0.81)) return false;   // the backward recursion needs the earlier path to be the weaker one
+        const std::vector<float>& r = *v.s;
+        u = r;
+        for (int64_t m = (int64_t)u.size() - 1; m >= 0; m--) {
+            float acc = 0;
+            for (int j = 0; j < n2; j++) {
+                const int64_t q = m + D + (j - H);
+                if (q < (int64_t)u.size()) acc += k[j] * u[(size_t)q];
+            }
+            u[(size_t)m] = r[(size_t)m] - acc;
+        }
+        float pr = 0, pu = 0;   // a kernel that is not minimum phase makes the recursion grow: refuse it
+        for (size_t m = 0; m < u.size(); m++) { pr = std::max(pr, std::fabs(r[m])); pu = std::max(pu, std::fabs(u[m])); }
+        return std::isfinite(pu) && pu < 4.f * pr;
+    }
 
     // Plain feed-forward taps from the field sync and the segment syncs
     bool trainFF(const View& v, const float* fsLv, Taps& tp) {
@@ -901,12 +969,14 @@ struct Core {
         const double tD0 = now();
         struct Timer { double& acc; double t0; ~Timer() { acc += now() - t0; } } timer{tDec, tD0};
         const int64_t f0 = job.f0;
-        const View view{&job.s, job.base, f0};
+        View view{&job.s, job.base, f0};
+        std::vector<float> uPre;   // the field with the pre-echo removed
         uint8_t prev12[12] = {};
         uint8_t fsSym[kSegSyms];
         fieldSyncSymbols(job.parity == 2, prev12, fsSym);
         float fsLv[kSegSyms];
         for (int i = 0; i < kSegSyms; i++) fsLv[i] = levelOf(fsSym[i]);
+        if (preD > 0 && cancelPre(view, fsLv, preD, uPre)) view.s = &uPre;
         const double tM0 = now();
         static const bool noDfe = getenv("ATSC_NODFE") != nullptr;   // test: the plain equaliser only
         const bool usePrev = havePrev && cleanFields >= 2 && !noDfe;
@@ -931,6 +1001,25 @@ struct Core {
                 if (!trained || s2 > snr) { tp = tf; lv = std::move(lv2); hv = std::move(hv2); snr = s2; trained = true; }
             }
         }
+        if (!trained || snr < 9.0) {   // still nothing: is the strongest path not the first one?
+            const View orig{&job.s, job.base, f0};
+            const int pre = earliestPath(orig, fsLv);
+            std::vector<float> u2;
+            if (pre > 0 && cancelPre(orig, fsLv, pre, u2)) {
+                const View v2{&u2, job.base, f0};
+                Taps t2;
+                std::vector<float> lv2, hv2;
+                if (trainFF(v2, fsLv, t2)) {
+                    const double s2 = equalize(v2, fsLv, t2, nullptr, lv2, hv2);
+                    if (dbg) fprintf(stderr, "[atsc] earlier path %d symbols before the strongest: equaliser SNR %.1f dB after the pre-echo canceller\n", pre, s2);
+                    if (!trained || s2 > snr) {
+                        tp = t2; lv = std::move(lv2); hv = std::move(hv2); snr = s2; trained = true;
+                        preD = pre; uPre = std::move(u2); view.s = &uPre; havePrev = false; cleanFields = 0;
+                    }
+                }
+            }
+        }
+        if (view.s == &job.s && trained && snr >= 9.0) preD = 0;
         eqSnrNow = snr;
         snrAvg = snrAvg == 0 ? snr : snrAvg + 0.3 * (snr - snrAvg);
         std::vector<float> levelsOut;
@@ -959,7 +1048,7 @@ struct Core {
             decOut.levels = levelsOut;
             decOut.seq++;
         };
-        if (!trained || snr < 9.0) {   // no usable channel estimate: do not feed the decoder garbage
+        if (!trained || !(snr >= 9.0)) {   // no usable channel estimate: do not feed the decoder garbage
             if (dbg) fprintf(stderr, "[atsc] field start %lld: equaliser SNR %.1f dB (solved %d), not decoded\n", (long long)(f0 / kSegSyms), snr, (int)trained);
             dec.reset();
             tsFlow = 0;
@@ -1043,7 +1132,7 @@ struct Core {
         // a field whose decisions are good enough (not necessarily perfect: the trellis path is right far more often than Reed-Solomon) trains the next one
         if (st.segments == kDataSegs && pathMse < 1.6) cleanFields++; else cleanFields = 0;
         {   // this field's decisions train the next field
-            prevS = job.s; prevBase = job.base; prevF0 = f0; prevY = lv;
+            prevS = *view.s; prevBase = job.base; prevF0 = f0; prevY = lv;
             levelsFromPath(fsLv, psym, hv, tp.B, prevLv);
             havePrev = true;
         }
