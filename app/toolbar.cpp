@@ -634,7 +634,8 @@ void gainControl(App& a) {
 }
 
 // The receiver modes. Adding a mode is one row here (and its family number in app.h / setFamily).
-// The families are also stored in the settings: 0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T, 5 FM, 6 DVB-S/S2, 7 DTMB, 8 analog TV, 9 DMR, 10 DRM, 11 ADS-B, 12 GNSS, 13 radiosonde, 14 AIS, 15 marine, 16 ACARS, 17 Inmarsat-C, 18 Inmarsat Aero, 19 Iridium, 20 mesh.
+// The families are also stored in the settings: 0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T, 5 FM, 6 DVB-S/S2, 7 DTMB, 8 analog TV, 9 DMR, 10 DRM, 11 ADS-B, 12 GNSS, 13 radiosonde, 14 AIS, 15 marine, 16 ACARS, 17 Inmarsat-C, 18 Inmarsat Aero, 19 Iridium, 20 mesh,
+// 21 HD Radio, 22 CDR, 23 pagers, 24 APRS / packet, 25 HF digital.
 // Within a group the rows are shown in this order; the keys 1-9 pick the modes in the same order.
 const ModeDef kModes[] = {
     {0, "DVB",        0, IM_COL32(52, 92, 108, 255),  "DVB-T2 / DVB-T, detected automatically",                                    "DVB-T2 and DVB-T, automatic (Europe, Middle East, Africa, Asia, Australia)", "T2 and T, automatic",   ImVec4(0.36f, 0.74f, 0.86f, 1)},
@@ -647,6 +648,8 @@ const ModeDef kModes[] = {
     {2, "DAB / DAB+", 1, IM_COL32(40, 130, 96, 255),  "DAB / DAB+ digital radio, Band III channels 5A to 13F",                     "DAB and DAB+ digital radio",                                                  "Digital radio",         ImVec4(0.36f, 0.82f, 0.58f, 1)},
     {5, "FM",         1, IM_COL32(140, 90, 100, 255), "FM broadcast radio (87.5 - 108 MHz), stereo and RDS",                       "FM broadcast radio with stereo and RDS",                                      "Stereo and RDS",        ImVec4(0.95f, 0.52f, 0.62f, 1)},
     {10, "DRM", 1, IM_COL32(48, 112, 128, 255), "DRM30 and DRM+ digital radio (shortwave, medium wave, VHF)", "DRM digital radio: DRM30 below 30 MHz, DRM+ in the VHF bands", "SW, MW, VHF", ImVec4(0.46f, 0.82f, 0.82f, 1)},
+    {21, "HD Radio", 1, IM_COL32(130, 96, 50, 255), "HD Radio (NRSC-5) digital sidebands of FM and AM stations (USA)", "HD Radio: the digital part of hybrid FM and AM stations", "USA, FM and AM", ImVec4(0.92f, 0.72f, 0.40f, 1)},
+    {22, "CDR", 1, IM_COL32(140, 60, 60, 255), "CDR (China Digital Radio) OFDM digital radio in the FM band", "CDR: China's digital radio in the FM band", "China digital radio", ImVec4(0.94f, 0.48f, 0.44f, 1)},
     {11, "ADS-B", 2, IM_COL32(58, 98, 160, 255), "ADS-B / Mode S: aircraft on 1090 MHz", "ADS-B aircraft position and identity reports", "Aircraft, 1090 MHz", ImVec4(0.52f, 0.74f, 0.98f, 1)},
     {16, "ACARS", 2, IM_COL32(110, 100, 60, 255), "ACARS aircraft data link messages around 131 MHz", "ACARS: short messages between aircraft and the ground", "Aircraft messages, VHF", ImVec4(0.88f, 0.80f, 0.50f, 1)},
     {14, "AIS", 3, IM_COL32(40, 110, 140, 255), "AIS ship transponders on 161.975 and 162.025 MHz", "AIS: ship positions and identities", "Ships, 162 MHz", ImVec4(0.40f, 0.76f, 0.90f, 1)},
@@ -658,9 +661,12 @@ const ModeDef kModes[] = {
     {13, "Radiosonde", 5, IM_COL32(60, 112, 150, 255), "Weather balloon radiosondes, 400 to 406 MHz (RS41, DFM, M10 and others)", "Radiosonde weather balloons: position, altitude and weather data", "Balloons, 403 MHz", ImVec4(0.46f, 0.74f, 0.94f, 1)},
     {9, "DMR", 5, IM_COL32(70, 120, 70, 255), "DMR two-slot digital voice and data, 12.5 kHz channel", "DMR (Digital Mobile Radio), two-slot TDMA", "Digital voice", ImVec4(0.62f, 0.84f, 0.46f, 1)},
     {20, "Mesh", 5, IM_COL32(50, 120, 100, 255), "Meshtastic and MeshCore LoRa mesh messages (433, 868 and 915 MHz bands)", "LoRa mesh networks: Meshtastic and MeshCore", "Meshtastic, MeshCore", ImVec4(0.46f, 0.84f, 0.70f, 1)},
+    {23, "Pagers", 5, IM_COL32(110, 110, 50, 255), "POCSAG and FLEX paging messages on one 25 kHz channel", "Pagers: POCSAG and FLEX paging messages", "POCSAG, FLEX", ImVec4(0.84f, 0.84f, 0.44f, 1)},
+    {24, "APRS / Packet", 6, IM_COL32(90, 110, 60, 255), "APRS and AX.25 packet radio (1200 bd AFSK), 144.800 MHz in Europe", "APRS and AX.25 packet radio", "AX.25, 144.8 MHz", ImVec4(0.70f, 0.86f, 0.46f, 1)},
+    {25, "HF digital", 6, IM_COL32(100, 80, 130, 255), "RTTY, SSTV and FreeDV on one upper sideband channel, 1 to 30 MHz", "HF digital modes: RTTY, SSTV and FreeDV, all at once", "RTTY, SSTV, FreeDV", ImVec4(0.72f, 0.62f, 0.94f, 1)},
 };
 const int kNumModes = (int)(sizeof kModes / sizeof *kModes);
-const char* const kGroupNames[kNumGroups] = {"TV", "RADIO", "AVIATION", "MARITIME", "SATELLITE", "UTILITY"};
+const char* const kGroupNames[kNumGroups] = {"TV", "RADIO", "AVIATION", "MARITIME", "SATELLITE", "UTILITY", "AMATEUR"};
 float gSwitchWidth = 420;   // width of the mode selector as drawn (the guided tour points at it)
 
 void selectMode(App& a, int fam) {

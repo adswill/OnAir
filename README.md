@@ -104,6 +104,8 @@ These receivers are built from the published specifications and checked end to e
 | **GNSS** | GPS L1 | Satellites, position and time |
 | **Mesh** | Meshtastic and MeshCore (LoRa) | Nodes, map and chat |
 
+In development (the mode is in the app, but nothing is decoded yet): **HD Radio**, **CDR** (China Digital Radio), **Pagers** (POCSAG, FLEX), **APRS / Packet** (AX.25) and **HF digital** (RTTY, SSTV, FreeDV).
+
 ### Channel scanner and shared channel list
 
 The TV channel scanner covers DVB, ATSC, ATSC 3.0, ISDB-T and DTMB. Scan results can be shared with other users through a public, crowd-sourced channel list, picked by country and city. You can also browse it on GitHub: **[adswill/OnAir-channels](https://github.com/adswill/OnAir-channels)**.

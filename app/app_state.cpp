@@ -49,8 +49,8 @@ static void setFamilyFlags(App& a, int f) {
 }
 
 void setFamily(App& a, int f) {
-    if (a.family >= 6 && a.family < 24 && f != a.family) a.famFreq[a.family] = a.freqMhz;   // each of the newer modes comes back on the frequency it was left on
-    if (a.family >= 0 && a.family < 24 && f != a.family) {   // the gains that suit FM are not the ones for a TV channel: remember them per mode
+    if (a.family >= 6 && a.family < kNumFamilies && f != a.family) a.famFreq[a.family] = a.freqMhz;   // each of the newer modes comes back on the frequency it was left on
+    if (a.family >= 0 && a.family < kNumFamilies && f != a.family) {   // the gains that suit FM are not the ones for a TV channel: remember them per mode
         a.famGain[a.family] = {a.tune.lnaDb, a.tune.vgaDb, a.tune.ampOn, true};
         a.famBias[a.family] = a.tune.biasTee;
         a.tune.biasTee = a.famBias[f];
@@ -72,7 +72,7 @@ void setFamily(App& a, int f) {
     if (f == 5 && !(a.freqMhz >= 87.5 && a.freqMhz <= 108)) a.freqMhz = 100.0;     // FM band, default to 100 MHz
 }
 
-// what to tell the engine: 0 auto, 1 DVB-T2, 2 DVB-T, 3 ATSC, 4 DAB, 5 ATSC 3.0, 6 ISDB-T, 7 FM, 8 DVB-S/S2, 9 DTMB, 10 analog TV, 11 DMR, 12 DRM, 13 ADS-B, 14 GNSS, 15 radiosonde, 16 AIS, 17 marine, 18 ACARS, 19 Inmarsat-C, 20 Inmarsat Aero, 21 Iridium, 22 mesh (Engine::start maps these to activeStandard())
+// what to tell the engine: 0 auto, 1 DVB-T2, 2 DVB-T, 3 ATSC, 4 DAB, 5 ATSC 3.0, 6 ISDB-T, 7 FM, 8 DVB-S/S2, 9 DTMB, 10 analog TV, 11 DMR, 12 DRM, 13 ADS-B, 14 GNSS, 15 radiosonde, 16 AIS, 17 marine, 18 ACARS, 19 Inmarsat-C, 20 Inmarsat Aero, 21 Iridium, 22 mesh, 23 HD Radio, 24 CDR, 25 pagers, 26 APRS / packet, 27 HF digital (Engine::start maps these to activeStandard())
 int engineStd(const App& a) { return a.family >= 6 ? a.family + 2 : a.family == 1 ? 3 : a.family == 2 ? 4 : a.family == 3 ? 5 : a.family == 4 ? 6 : a.family == 5 ? 7 : a.stdMode; }
 
 void refreshDevices(App& a) {
@@ -213,13 +213,13 @@ void loadPrefs(App& a) {
     if (d.has("gain")) a.tune.gainDb = d.getD("gain", a.tune.gainDb);
     a.gainDev = d.getS("gainDev", "");
     a.tune.ampOn = d.getB("amp", false);
-    if (d.has("family")) { const int f = std::max(0, std::min(20, (int)d.getI("family", 0))); setFamilyFlags(a, f); if (a.fmMode && !(a.freqMhz >= 87.5 && a.freqMhz <= 108)) a.freqMhz = 100.0; }
-    for (int f = 0; f < 24; f++) {   // as many as savePrefs writes
+    if (d.has("family")) { const int f = std::max(0, std::min(kNumFamilies - 1, (int)d.getI("family", 0))); setFamilyFlags(a, f); if (a.fmMode && !(a.freqMhz >= 87.5 && a.freqMhz <= 108)) a.freqMhz = 100.0; }
+    for (int f = 0; f < kNumFamilies; f++) {   // as many as savePrefs writes
         if (!d.has(("gLna" + std::to_string(f)).c_str())) continue;
         a.famGain[f] = {(int)d.getI(("gLna" + std::to_string(f)).c_str(), 32), (int)d.getI(("gVga" + std::to_string(f)).c_str(), 20), d.getB(("gAmp" + std::to_string(f)).c_str(), true), true};
     }
-    if (a.family >= 0 && a.family < 24 && a.famGain[a.family].known) { a.tune.lnaDb = a.famGain[a.family].lna; a.tune.vgaDb = a.famGain[a.family].vga; a.tune.ampOn = a.famGain[a.family].amp; }
-    for (int f = 6; f < 24; f++) a.famFreq[f] = d.getD(("fFreq" + std::to_string(f)).c_str(), 0.0);
+    if (a.family >= 0 && a.family < kNumFamilies && a.famGain[a.family].known) { a.tune.lnaDb = a.famGain[a.family].lna; a.tune.vgaDb = a.famGain[a.family].vga; a.tune.ampOn = a.famGain[a.family].amp; }
+    for (int f = 6; f < kNumFamilies; f++) a.famFreq[f] = d.getD(("fFreq" + std::to_string(f)).c_str(), 0.0);
     if (d.has("newUi")) a.newUi = d.getB("newUi", true);
     if (d.has("uiVariant")) a.uiVariant = std::max(0, std::min(7, (int)d.getI("uiVariant", 0)));
     if (d.has("dtmbBw")) a.dtmbBwMhz = d.getI("dtmbBw", 8) == 6 ? 6 : 8;
@@ -271,14 +271,14 @@ void savePrefs(const App& a) {
     d.setI("family", a.family);
     d.setI("fmDeemph", a.fmDeemph);
     d.setB("newUi", a.newUi);
-    for (int f = 0; f < 24; f++) {   // gains per mode (the current mode from the live settings)
+    for (int f = 0; f < kNumFamilies; f++) {   // gains per mode (the current mode from the live settings)
         const bool cur = f == a.family;
         if (!cur && !a.famGain[f].known) continue;
         d.setI(("gLna" + std::to_string(f)).c_str(), cur ? a.tune.lnaDb : a.famGain[f].lna);
         d.setI(("gVga" + std::to_string(f)).c_str(), cur ? a.tune.vgaDb : a.famGain[f].vga);
         d.setB(("gAmp" + std::to_string(f)).c_str(), cur ? a.tune.ampOn : a.famGain[f].amp);
     }
-    for (int f = 6; f < 24; f++) if (a.famFreq[f] > 0 || f == a.family) d.setD(("fFreq" + std::to_string(f)).c_str(), f == a.family ? a.freqMhz : a.famFreq[f]);
+    for (int f = 6; f < kNumFamilies; f++) if (a.famFreq[f] > 0 || f == a.family) d.setD(("fFreq" + std::to_string(f)).c_str(), f == a.family ? a.freqMhz : a.famFreq[f]);
     d.setI("uiTheme", a.uiTheme);
     d.setI("lightUi", a.lightUi ? 1 : 0);
     d.setI("dtmbBw", a.dtmbBwMhz);

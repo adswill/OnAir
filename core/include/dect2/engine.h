@@ -28,6 +28,11 @@
 #include "aero_rx.h"
 #include "iridium_rx.h"
 #include "mesh_rx.h"
+#include "hdr_rx.h"
+#include "cdr_rx.h"
+#include "pager_rx.h"
+#include "packet_rx.h"
+#include "hfdig_rx.h"
 #include "bbunpack.h"
 #include "ts.h"
 #include "tsout.h"
@@ -92,10 +97,11 @@ public:
     void selectPlp(int id) { rx_.selectPlp(id); }
     // Which standard to decode: 0 = automatic (alternates between DVB-T2 and DVB-T until one locks), 1 = DVB-T2, 2 = DVB-T, 3 = ATSC, 4 = DAB, 5 = ATSC 3.0, 6 = ISDB-T, 7 = FM,
     // 8 = DVB-S/S2, 9 = DTMB, 10 = analog TV, 11 = DMR, 12 = DRM, 13 = ADS-B, 14 = GNSS,
-    // 15 = radiosonde, 16 = AIS, 17 = marine, 18 = ACARS, 19 = Inmarsat-C, 20 = Inmarsat Aero, 21 = Iridium, 22 = mesh
+    // 15 = radiosonde, 16 = AIS, 17 = marine, 18 = ACARS, 19 = Inmarsat-C, 20 = Inmarsat Aero, 21 = Iridium, 22 = mesh,
+    // 23 = HD Radio, 24 = CDR, 25 = pagers, 26 = APRS / packet, 27 = HF digital
     void setStandard(int m) { stdMode_ = m; stdReq_ = true; }
     int standardMode() const { return stdMode_.load(); }
-    int activeStandard() const { return activeStd_.load(); }  // 0 = DVB-T2, 1 = DVB-T, 2 = ATSC, 3 = DAB, 4 = ATSC 3.0, 5 = ISDB-T, 6 = FM, 7 = DVB-S/S2, 8 = DTMB, 9 = analog TV, 10 = DMR, 11 = DRM, 12 = ADS-B, 13 = GNSS, 14 to 21 = radiosonde, AIS, marine, ACARS, Inmarsat-C, Inmarsat Aero, Iridium, mesh (always the standard code minus one)
+    int activeStandard() const { return activeStd_.load(); }  // 0 = DVB-T2, 1 = DVB-T, 2 = ATSC, 3 = DAB, 4 = ATSC 3.0, 5 = ISDB-T, 6 = FM, 7 = DVB-S/S2, 8 = DTMB, 9 = analog TV, 10 = DMR, 11 = DRM, 12 = ADS-B, 13 = GNSS, 14 to 26 = radiosonde, AIS, marine, ACARS, Inmarsat-C, Inmarsat Aero, Iridium, mesh, HD Radio, CDR, pagers, APRS / packet, HF digital (always the standard code minus one)
     double sampleRate() const { return rate_; }
     // Channel bandwidth: with automatic detection on, the engine measures the width of the signal in the spectrum while nothing is
     // locked and reconfigures the receivers by itself. setBandwidth() forces a value (used by the scanner).
@@ -155,6 +161,11 @@ public:
     AeroReceiver& aero() { return rxAero_; }   // Inmarsat Aero: the receiver's own controls and results (the interface reads telemetry through latestRx)
     IridiumReceiver& iridium() { return rxIridium_; }   // Iridium: the receiver's own controls and results (the interface reads telemetry through latestRx)
     MeshReceiver& mesh() { return rxMesh_; }   // Mesh (LoRa): the receiver's own controls and results (the interface reads telemetry through latestRx)
+    HdrReceiver& hdr() { return rxHdr_; }   // HD Radio: the receiver's own controls and results (the interface reads telemetry through latestRx)
+    CdrReceiver& cdr() { return rxCdr_; }   // CDR: the receiver's own controls and results (the interface reads telemetry through latestRx)
+    PagerReceiver& pager() { return rxPager_; }   // Pagers: the receiver's own controls and results (the interface reads telemetry through latestRx)
+    PacketReceiver& packet() { return rxPacket_; }   // APRS / packet: the receiver's own controls and results (the interface reads telemetry through latestRx)
+    HfdigReceiver& hfdig() { return rxHfdig_; }   // HF digital: the receiver's own controls and results (the interface reads telemetry through latestRx)
     TeletextDecoder& teletext() { return ttx_; }
     // ATSC 3.0: the service list and statistics, and which service to receive (-1 = the first video service)
     bool atsc3Telemetry(Atsc3Telemetry& t) const { std::lock_guard<std::mutex> lk(atsc3Mu_); t = atsc3Tel_; return atsc3Tel_.seq != 0; }
@@ -237,7 +248,12 @@ private:
     AeroReceiver rxAero_;
     IridiumReceiver rxIridium_;
     MeshReceiver rxMesh_;
-    uint64_t modeSeq_[15] = {};      // the last report taken from each of the modes added after FM (same order as above)
+    HdrReceiver rxHdr_;
+    CdrReceiver rxCdr_;
+    PagerReceiver rxPager_;
+    PacketReceiver rxPacket_;
+    HfdigReceiver rxHfdig_;
+    uint64_t modeSeq_[20] = {};      // the last report taken from each of the modes added after FM (same order as above)
     mutable std::mutex atsc3Mu_;
     Atsc3Telemetry atsc3Tel_;
     uint64_t atsc3Seq_ = 0;

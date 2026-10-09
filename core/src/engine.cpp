@@ -206,6 +206,9 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
         rxAero_.setSignalOffset(o);
         rxIridium_.setSignalOffset(o);
         rxMesh_.setSignalOffset(o);
+        rxPager_.setSignalOffset(o);
+        rxPacket_.setSignalOffset(o);
+        rxHfdig_.setSignalOffset(o);
     }
     rxSonde_.configure(rate_);
     rxSonde_.setLogCallback([this](const std::string& s) { log(s); });
@@ -223,6 +226,16 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     rxIridium_.setLogCallback([this](const std::string& s) { log(s); });
     rxMesh_.configure(rate_);
     rxMesh_.setLogCallback([this](const std::string& s) { log(s); });
+    rxHdr_.configure(rate_);
+    rxHdr_.setLogCallback([this](const std::string& s) { log(s); });
+    rxCdr_.configure(rate_);
+    rxCdr_.setLogCallback([this](const std::string& s) { log(s); });
+    rxPager_.configure(rate_);
+    rxPager_.setLogCallback([this](const std::string& s) { log(s); });
+    rxPacket_.configure(rate_);
+    rxPacket_.setLogCallback([this](const std::string& s) { log(s); });
+    rxHfdig_.configure(rate_);
+    rxHfdig_.setLogCallback([this](const std::string& s) { log(s); });
     if (const ModeTuning* mt = modeTuning(stdMode_.load()))
         if (rate_.load() < mt->minSampleRate - 1) {
             char m[200];
@@ -401,6 +414,11 @@ void Engine::applyReset() {
     rxAero_.reset();
     rxIridium_.reset();
     rxMesh_.reset();
+    rxHdr_.reset();
+    rxCdr_.reset();
+    rxPager_.reset();
+    rxPacket_.reset();
+    rxHfdig_.reset();
     autoMark_ = nSamp_ / std::max(1.0, rate_.load()); lastLockSec_ = autoMark_;
     analyzer_.reset();
     {
@@ -443,7 +461,7 @@ void Engine::onTsPackets(const uint8_t* pk, size_t n, double secs) {
 // so idle searching costs one receiver, not two.
 void Engine::feedRx(const cf32* x, size_t n) {
     const int a = activeStd_.load();
-    if (a == 5) rxI_.feed(x, n); else if (a == 4) rxA3_.feed(x, n); else if (a == 3) rxD_.feed(x, n); else if (a == 2) rxA_.feed(x, n); else if (a == 1) rxT_.feed(x, n); else if (a == 6) rxFm_.feed(x, n); else if (a == 7) rxDvbs_.feed(x, n); else if (a == 8) rxDtmb_.feed(x, n); else if (a == 9) rxAtv_.feed(x, n); else if (a == 10) rxDmr_.feed(x, n); else if (a == 11) rxDrm_.feed(x, n); else if (a == 12) rxAdsb_.feed(x, n); else if (a == 13) rxGnss_.feed(x, n); else if (a == 14) rxSonde_.feed(x, n); else if (a == 15) rxAis_.feed(x, n); else if (a == 16) rxMarine_.feed(x, n); else if (a == 17) rxAcars_.feed(x, n); else if (a == 18) rxInmc_.feed(x, n); else if (a == 19) rxAero_.feed(x, n); else if (a == 20) rxIridium_.feed(x, n); else if (a == 21) rxMesh_.feed(x, n); else rx_.feed(x, n);
+    if (a == 5) rxI_.feed(x, n); else if (a == 4) rxA3_.feed(x, n); else if (a == 3) rxD_.feed(x, n); else if (a == 2) rxA_.feed(x, n); else if (a == 1) rxT_.feed(x, n); else if (a == 6) rxFm_.feed(x, n); else if (a == 7) rxDvbs_.feed(x, n); else if (a == 8) rxDtmb_.feed(x, n); else if (a == 9) rxAtv_.feed(x, n); else if (a == 10) rxDmr_.feed(x, n); else if (a == 11) rxDrm_.feed(x, n); else if (a == 12) rxAdsb_.feed(x, n); else if (a == 13) rxGnss_.feed(x, n); else if (a == 14) rxSonde_.feed(x, n); else if (a == 15) rxAis_.feed(x, n); else if (a == 16) rxMarine_.feed(x, n); else if (a == 17) rxAcars_.feed(x, n); else if (a == 18) rxInmc_.feed(x, n); else if (a == 19) rxAero_.feed(x, n); else if (a == 20) rxIridium_.feed(x, n); else if (a == 21) rxMesh_.feed(x, n); else if (a == 22) rxHdr_.feed(x, n); else if (a == 23) rxCdr_.feed(x, n); else if (a == 24) rxPager_.feed(x, n); else if (a == 25) rxPacket_.feed(x, n); else if (a == 26) rxHfdig_.feed(x, n); else rx_.feed(x, n);
 }
 
 void Engine::changeBandwidth(double mhz) {
@@ -508,6 +526,11 @@ void Engine::autoSelect(const RxTelemetry& t, bool tLocked) {
             case 19: rxAero_.reset(); break;
             case 20: rxIridium_.reset(); break;
             case 21: rxMesh_.reset(); break;
+            case 22: rxHdr_.reset(); break;
+            case 23: rxCdr_.reset(); break;
+            case 24: rxPager_.reset(); break;
+            case 25: rxPacket_.reset(); break;
+            case 26: rxHfdig_.reset(); break;
             default: break;
             }
         }
@@ -1170,6 +1193,86 @@ void Engine::analysisLoop() {
                     t.blocksOk = mt.blocksOk; t.blocksBad = mt.blocksBad;
                     t.rateOk = rxMesh_.ready();
                     t.mesh = std::move(mt);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    publishRx(std::move(t));
+                }
+            } else if (activeStd_.load() == 22) {
+                HdrTelemetry mt;
+                if (rxHdr_.telemetry(mt, modeSeq_[15])) {
+                    modeSeq_[15] = mt.seq;
+                    t.standard = 22;
+                    t.seq = mt.seq;
+                    t.state = mt.state;
+                    t.cfoHz = mt.cfoHz;
+                    t.dataValid = mt.dataValid;
+                    t.dataSnrDb = mt.snrDb;
+                    t.blocksOk = mt.blocksOk; t.blocksBad = mt.blocksBad;
+                    t.rateOk = rxHdr_.ready();
+                    t.hdr = std::move(mt);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    publishRx(std::move(t));
+                }
+            } else if (activeStd_.load() == 23) {
+                CdrTelemetry mt;
+                if (rxCdr_.telemetry(mt, modeSeq_[16])) {
+                    modeSeq_[16] = mt.seq;
+                    t.standard = 23;
+                    t.seq = mt.seq;
+                    t.state = mt.state;
+                    t.cfoHz = mt.cfoHz;
+                    t.dataValid = mt.dataValid;
+                    t.dataSnrDb = mt.snrDb;
+                    t.blocksOk = mt.blocksOk; t.blocksBad = mt.blocksBad;
+                    t.rateOk = rxCdr_.ready();
+                    t.cdr = std::move(mt);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    publishRx(std::move(t));
+                }
+            } else if (activeStd_.load() == 24) {
+                PagerTelemetry mt;
+                if (rxPager_.telemetry(mt, modeSeq_[17])) {
+                    modeSeq_[17] = mt.seq;
+                    t.standard = 24;
+                    t.seq = mt.seq;
+                    t.state = mt.state;
+                    t.cfoHz = mt.cfoHz;
+                    t.dataValid = mt.dataValid;
+                    t.dataSnrDb = mt.snrDb;
+                    t.blocksOk = mt.blocksOk; t.blocksBad = mt.blocksBad;
+                    t.rateOk = rxPager_.ready();
+                    t.pager = std::move(mt);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    publishRx(std::move(t));
+                }
+            } else if (activeStd_.load() == 25) {
+                PacketTelemetry mt;
+                if (rxPacket_.telemetry(mt, modeSeq_[18])) {
+                    modeSeq_[18] = mt.seq;
+                    t.standard = 25;
+                    t.seq = mt.seq;
+                    t.state = mt.state;
+                    t.cfoHz = mt.cfoHz;
+                    t.dataValid = mt.dataValid;
+                    t.dataSnrDb = mt.snrDb;
+                    t.blocksOk = mt.blocksOk; t.blocksBad = mt.blocksBad;
+                    t.rateOk = rxPacket_.ready();
+                    t.packet = std::move(mt);
+                    std::lock_guard<std::mutex> lk(rxMu_);
+                    publishRx(std::move(t));
+                }
+            } else if (activeStd_.load() == 26) {
+                HfdigTelemetry mt;
+                if (rxHfdig_.telemetry(mt, modeSeq_[19])) {
+                    modeSeq_[19] = mt.seq;
+                    t.standard = 26;
+                    t.seq = mt.seq;
+                    t.state = mt.state;
+                    t.cfoHz = mt.cfoHz;
+                    t.dataValid = mt.dataValid;
+                    t.dataSnrDb = mt.snrDb;
+                    t.blocksOk = mt.blocksOk; t.blocksBad = mt.blocksBad;
+                    t.rateOk = rxHfdig_.ready();
+                    t.hfdig = std::move(mt);
                     std::lock_guard<std::mutex> lk(rxMu_);
                     publishRx(std::move(t));
                 }

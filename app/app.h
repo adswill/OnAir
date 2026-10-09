@@ -165,6 +165,8 @@ using SavedChannel = plat::Channel;
 // parts of the window the tour points at
 enum WizTarget { TgNone = 0, TgSwitch, TgToolbar, TgMain, TgRight, TgConst, TgCount };
 
+constexpr int kNumFamilies = 26;   // App::family runs from 0 to kNumFamilies - 1
+
 struct App {
     Engine engine;
     NetTuner net{engine};      // network tuner (declared after the engine so that it stops first)
@@ -201,14 +203,14 @@ struct App {
     bool dabMode = false;     // DAB / DAB+ (family 2)
     bool fmMode = false;      // FM radio (family 5)
     bool newUi = true;        // the new interface (ui2.cpp) instead of the classic one (View > Classic interface)
-    struct FamGain { int lna = 32, vga = 20; bool amp = true, known = false; } famGain[24];   // the radio gains remembered for each mode
-    bool famBias[24] = {};    // antenna power per mode while the app runs (never saved: it starts off)
-    double famFreq[24] = {};  // the frequency each of the modes added after FM was last tuned to (0 = never)
+    struct FamGain { int lna = 32, vga = 20; bool amp = true, known = false; } famGain[kNumFamilies];   // the radio gains remembered for each mode
+    bool famBias[kNumFamilies] = {};    // antenna power per mode while the app runs (never saved: it starts off)
+    double famFreq[kNumFamilies] = {};  // the frequency each of the modes added after FM was last tuned to (0 = never)
     int uiVariant = 0;        // layout of the new interface: 0 sidebar (the default), 1 scope, 2 tiles, 3 faceplate, 4-6 scope children, 7 panel
     int uiTheme = 1;          // its palette: 0 terminal, 1 instrument, 2 mono
     int dtmbBwMhz = 8;        // DTMB channel width: 8 MHz (China, Hong Kong), 6 MHz (Cuba)
     bool lightUi = false;     // View > Light: every colour drawn with its lightness turned over (dark on white), hues kept (main.cpp)
-    int family = 0;           // 0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T, 5 FM, 6 DVB-S/S2, 7 DTMB, 8 analog TV, 9 DMR, 10 DRM, 11 ADS-B, 12 GNSS, 13 radiosonde, 14 AIS, 15 marine, 16 ACARS, 17 Inmarsat-C, 18 Inmarsat Aero, 19 Iridium, 20 mesh (6 and up: see ModeUi; engine standard code = family + 2)
+    int family = 0;           // 0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T, 5 FM, 6 DVB-S/S2, 7 DTMB, 8 analog TV, 9 DMR, 10 DRM, 11 ADS-B, 12 GNSS, 13 radiosonde, 14 AIS, 15 marine, 16 ACARS, 17 Inmarsat-C, 18 Inmarsat Aero, 19 Iridium, 20 mesh, 21 HD Radio, 22 CDR, 23 pagers, 24 APRS / packet, 25 HF digital (6 and up: see ModeUi; engine standard code = family + 2)
     std::deque<float> dabSnrH, dabFicH;
     std::deque<float> fmSnrH, fmPilotH, fmRdsH;
     int fmDeemph = 50;        // FM de-emphasis in microseconds: 50 (Europe, Middle East, most of the world) or 75 (Americas, South Korea)
@@ -444,7 +446,7 @@ extern float gSwitchWidth;
 struct ModeDef { int family; const char* name; int group; ImU32 col; const char* blurb; const char* tip; const char* sub; ImVec4 accent; };
 extern const ModeDef kModes[];
 extern const int kNumModes;
-constexpr int kNumGroups = 6;   // TV, radio, aviation, maritime, satellite, utility
+constexpr int kNumGroups = 7;   // TV, radio, aviation, maritime, satellite, utility, amateur
 extern const char* const kGroupNames[kNumGroups];
 // The screens of a mode added after FM (family 6 and up). Each mode has one in its app/<mode>_ui.cpp and modeui.cpp lists them; the shell calls whichever
 // entry is set where it would draw the DVB version. A null entry means: nothing of this kind for the mode (or the default noted).

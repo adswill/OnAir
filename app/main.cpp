@@ -439,7 +439,7 @@ int main(int argc, char** argv) {
         if (std::string(argv[i]) == "--isdbt") setFamily(app, 4);
         if (std::string(argv[i]) == "--dab") setFamily(app, 2);
         if (std::string(argv[i]) == "--fm") setFamily(app, 5);
-        if (std::string(argv[i]) == "--mode" && i + 1 < argc) { if (const ModeTuning* mt = modeTuningById(argv[++i])) setFamily(app, mt->stdMode - 2); }   // dev: dvbs, dtmb, atv, dmr, drm, adsb, gnss, sonde, ais, marine, acars, inmc, aero, iridium or mesh
+        if (std::string(argv[i]) == "--mode" && i + 1 < argc) { if (const ModeTuning* mt = modeTuningById(argv[++i])) setFamily(app, mt->stdMode - 2); }   // dev: dvbs, dtmb, atv, dmr, drm, adsb, gnss, sonde, ais, marine, acars, inmc, aero, iridium, mesh, hdr, cdr, pager, packet or hfdig
         if (std::string(argv[i]) == "--sopt" && i + 2 < argc) { const int k = atoi(argv[i + 1]); if (k >= 0 && k < 8) app.tune.synth.modeOpt[k] = atoi(argv[i + 2]); i += 2; }       // dev: option k of the mode's test signal
         if (std::string(argv[i]) == "--sval" && i + 2 < argc) { const int k = atoi(argv[i + 1]); if (k >= 0 && k < 4) app.tune.synth.modeVal[k] = atof(argv[i + 2]); i += 2; }   // dev: value k of the mode's test signal
         if (std::string(argv[i]) == "--ui2") app.newUi = true;

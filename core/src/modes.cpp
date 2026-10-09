@@ -31,6 +31,16 @@
 #include "dect2/iridium_gen.h"
 #include "dect2/mesh_rx.h"
 #include "dect2/mesh_gen.h"
+#include "dect2/hdr_rx.h"
+#include "dect2/hdr_gen.h"
+#include "dect2/cdr_rx.h"
+#include "dect2/cdr_gen.h"
+#include "dect2/pager_rx.h"
+#include "dect2/pager_gen.h"
+#include "dect2/packet_rx.h"
+#include "dect2/packet_gen.h"
+#include "dect2/hfdig_rx.h"
+#include "dect2/hfdig_gen.h"
 #include "dect2/modes.h"
 #include "dect2/demo_ts.h"
 #include "dect2/exact_resampler.h"
@@ -111,7 +121,8 @@ private:
 }
 
 static const std::vector<ModeTuning>& table() {
-    static const std::vector<ModeTuning> t = {dvbsTuning(), dtmbTuning(), atvTuning(), dmrTuning(), drmTuning(), adsbTuning(), gnssTuning(), sondeTuning(), aisTuning(), marineTuning(), acarsTuning(), inmcTuning(), aeroTuning(), iridiumTuning(), meshTuning()};
+    static const std::vector<ModeTuning> t = {dvbsTuning(), dtmbTuning(), atvTuning(), dmrTuning(), drmTuning(), adsbTuning(), gnssTuning(), sondeTuning(), aisTuning(), marineTuning(), acarsTuning(), inmcTuning(), aeroTuning(), iridiumTuning(), meshTuning(),
+                                               hdrTuning(), cdrTuning(), pagerTuning(), packetTuning(), hfdigTuning()};
     return t;
 }
 
@@ -159,6 +170,11 @@ std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, do
     case 20: return makeAeroSynth(cfg, sampleRate);
     case 21: return makeIridiumSynth(cfg, sampleRate);
     case 22: return makeMeshSynth(cfg, sampleRate);
+    case 23: return makeHdrSynth(cfg, sampleRate);
+    case 24: return makeCdrSynth(cfg, sampleRate);
+    case 25: return makePagerSynth(cfg, sampleRate);
+    case 26: return makePacketSynth(cfg, sampleRate);
+    case 27: return makeHfdigSynth(cfg, sampleRate);
     default: return nullptr;
     }
 }
@@ -180,6 +196,11 @@ std::string modeSummary(const RxTelemetry& t) {
     case 19: return aeroSummary(t.aero);
     case 20: return iridiumSummary(t.iridium);
     case 21: return meshSummary(t.mesh);
+    case 22: return hdrSummary(t.hdr);
+    case 23: return cdrSummary(t.cdr);
+    case 24: return pagerSummary(t.pager);
+    case 25: return packetSummary(t.packet);
+    case 26: return hfdigSummary(t.hfdig);
     default: return "";
     }
 }

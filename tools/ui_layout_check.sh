@@ -54,7 +54,12 @@ acars	--mode acars	Overview|Messages|Receiver|History
 inmc	--mode inmc	Overview|Messages|Receiver|History
 aero	--mode aero	Overview|Messages|Receiver|History
 iridium	--mode iridium	Overview|Iridium|Receiver|History
-mesh	--mode mesh	Overview|Mesh|Receiver|History"
+mesh	--mode mesh	Overview|Mesh|Receiver|History
+hdr	--mode hdr	Overview|Radio|Receiver|History
+cdr	--mode cdr	Overview|Radio|Receiver|History
+pager	--mode pager	Overview|Messages|Receiver|History
+packet	--mode packet	Overview|Packets|Receiver|History
+hfdig	--mode hfdig	Overview|Decoders|Receiver|History"
 
 JOBLIST="$OUT/jobs.txt"
 : > "$JOBLIST"
