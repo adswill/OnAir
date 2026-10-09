@@ -993,7 +993,9 @@ void S2Rx::start(const S2HuntResult& h, const cf32* win, size_t n) {
     lost_ = false;
     tracking_ = true;
     // up to four seconds of symbols may wait for the thread at 1 Msym/s, a few frames at the highest rates; a recording waits instead of dropping
-    I.th.start([&I](const cf32* z, size_t m) { I.feedBlock(z, m); }, 1u << 22, blocking_.load());
+    // blocking (a file): a short queue, so the front end cannot run seconds ahead; the symbols queued when sync is lost are thrown away,
+    // and how many that were depended on the thread scheduling
+    I.th.start([&I](const cf32* z, size_t m) { I.feedBlock(z, m); }, blocking_.load() ? 1u << 16 : 1u << 22, blocking_.load());
     std::vector<cf32> copy(win, win + n);
     I.th.post([this, &I, h, copy = std::move(copy)]() {
         const size_t m = copy.size();

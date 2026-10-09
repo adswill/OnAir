@@ -47,7 +47,8 @@ double snapRollOff(double a) {
 }
 // The symbol rate from the spectral line that the squared envelope of a linearly modulated carrier has at the symbol rate (its cyclostationarity).
 // The spectrum's -3 dB width (the first estimate, rs0) is bent by an echo or a tilted cable response, which ripples the spectrum: the line is not.
-// x: kCyclicN samples at fs; centre: where the carrier is. Looks between 0.8 and 1.25 times rs0; returns 0 when no clear line stands out (small
+// x: kCyclicN samples at fs; centre: where the carrier is. Looks between 0.6 and 1.25 times rs0 (clipping and
+// spectral regrowth widen the -3 dB width far more than they narrow it); returns 0 when no clear line stands out (small
 // roll-offs give a weak one).
 constexpr int kCyclicN = 1 << 18;
 double cyclicRate(const std::vector<cf32>& x, double fs, double centre, double rs0) {
@@ -58,8 +59,10 @@ double cyclicRate(const std::vector<cf32>& x, double fs, double centre, double r
     // keep the carrier only (up to 1.25 rs0 with a 0.35 roll-off), so that the noise beside it does not bury the line
     const double half = 0.5 * 1.25 * rs0 * 1.35;
     for (int k = 0; k < kCyclicN; k++) {
-        const double f = (k < kCyclicN / 2 ? k : k - kCyclicN) * fs / kCyclicN;
-        if (std::fabs(f - centre) > half) v[(size_t)k] = cf32(0, 0);
+        // distance to the centre around the circle: a carrier near the band edge continues on the other side
+        double df = std::fmod(std::fabs(k * fs / kCyclicN - centre), fs);
+        df = std::min(df, fs - df);
+        if (df > half) v[(size_t)k] = cf32(0, 0);
     }
     fft.inverse(v.data());
     double mean = 0;
@@ -69,7 +72,7 @@ double cyclicRate(const std::vector<cf32>& x, double fs, double centre, double r
     fft.forward(v.data());
     // A rate above fs / 2 shows as its alias fs - rate: the squared envelope is real, so bin N - k holds the same as bin k, and the bins up to N
     // stand for the rates up to fs. A rate and its alias look the same; of the two the one nearer rs0 is taken.
-    const int k0 = std::max(2, (int)std::floor(0.8 * rs0 * kCyclicN / fs)), k1 = std::min(kCyclicN - 2, (int)std::ceil(1.25 * rs0 * kCyclicN / fs));
+    const int k0 = std::max(2, (int)std::floor(0.6 * rs0 * kCyclicN / fs)), k1 = std::min(kCyclicN - 2, (int)std::ceil(1.25 * rs0 * kCyclicN / fs));
     if (k1 <= k0 + 8) return 0;
     const double kr = rs0 * kCyclicN / fs;
     std::vector<float> mag((size_t)(k1 - k0 + 1));
@@ -341,7 +344,9 @@ struct DvbsReceiver::Impl {
         s1.start(h, kHuntWindow - 16384);
         s1Symbols = 0; s1Mark = 0; s1Lost = false;
         snapS1();
-        s1th.start([this](const cf32* z, size_t m) { s1Work(z, m); }, 1u << 22, blocking.load());
+        // blocking (a file): a short queue, so the front end cannot run seconds ahead of the decoder; the symbols queued when the decoder
+        // loses sync are thrown away, and how many that were depended on the thread scheduling
+        s1th.start([this](const cf32* z, size_t m) { s1Work(z, m); }, blocking.load() ? 1u << 16 : 1u << 22, blocking.load());
         mode = kS1;
         static const char* rn[5] = {"1/2", "2/3", "3/4", "5/6", "7/8"};
         log(std::string("DVB-S, QPSK ") + rn[h.rate] + ((h.variant & 2) ? ", spectrum inverted" : ""));
@@ -350,6 +355,7 @@ struct DvbsReceiver::Impl {
 
     // runs on the DVB-S thread
     void s1Work(const cf32* z, size_t n) {
+        if (s1Lost.load()) return;           // sync lost: the receiver thread stops this one and hunts again
         s1y.resize(n);
         pll.process(z, n, s1y.data());
         addCells(s1y.data(), n);
