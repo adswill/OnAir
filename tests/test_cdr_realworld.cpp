@@ -49,11 +49,15 @@ int main() {
         check(b, x, hz);
     });
     jobs.add([=] { auto x = clean(hyb, 6.5); impair::shift(x, -5400, kRate); check("hybrid with FM, tuning error -5400 Hz", x, -5400); });
+    jobs.add([=] { auto x = clean(hyb, 6.5); impair::shift(x, -12000, kRate); check("hybrid with FM, tuning error -12 kHz", x, -12000); });
     for (double ppm : {-100.0, 100.0}) jobs.add([=] {
         auto x = impair::clock(clean(dig, 4), ppm); impair::shift(x, 1000, kRate);
         char b[64]; snprintf(b, sizeof b, "sample clock %+.0f ppm", ppm);
         check(b, x);
     });
+    // the signal away from the middle of the sample band (a recording made at an offset)
+    jobs.add([=] { auto x = clean(dig, 10); impair::shift(x, 520000, kRate); check("off centre +520 kHz", x, 520000); });
+    jobs.add([=] { auto x = clean(hyb, 14); impair::shift(x, -380000, kRate); check("hybrid with FM, off centre -380 kHz", x, -380000); });
     jobs.add([=] { auto x = clean(dig, 4); impair::shift(x, 1700, kRate); impair::swapIq(x); check("swapped I/Q", x); });
     jobs.add([=] {
         auto x = clean(dig, 5);

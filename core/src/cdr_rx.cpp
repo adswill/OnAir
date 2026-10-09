@@ -12,6 +12,7 @@
 #include "dect2/cdr_ldpc.h"
 #include "dect2/cdr_mux.h"
 #include "dect2/exact_resampler.h"
+#include "dect2/channel_find.h"
 #include "dect2/fftutil.h"
 #include <algorithm>
 #include <array>
@@ -33,6 +34,9 @@ namespace dect2 {
 using namespace cdr;
 
 namespace {
+// whole carriers of offset tried at the beacon (about +-19 kHz): 50 ppm in band II, plus the error of a channel found off centre from its
+// spectrum (the analogue FM programme of the hybrid modes shows its middle only to a few kHz)
+constexpr int kMaxShift = 24;
 
 using cd = std::complex<double>;
 constexpr int kSearchFft = 2048, kSearchHop = 1024, kSearchDelay = 512;
@@ -214,6 +218,8 @@ struct CdrReceiver::Impl {
     double bs = 0;                          // start of the next beacon (absolute index, fractional)
     double cfo = 0;
     bool mirror = false;                    // the input is read conjugated (a mirrored spectrum)
+    ChannelCentre cc;                       // moves a signal far from the middle of the sample band there
+    std::vector<cf32> cin;
     int badBeacons = 0, badSi = 0;
     bool siSeen = false;                    // the system information has decoded since the lock
     int64_t nSub = 0;                       // sub-frames processed since the lock
@@ -249,6 +255,7 @@ struct CdrReceiver::Impl {
         nIn = 0; nextReport = 0; power = 0; nPower = 0;
         rs = ExactResampler();
         if (curRate > 0) rs.configure(curRate, kFs);
+        cc.configure(curRate, 100e3, 70e3, 6.0);
         buf.clear(); buf0 = 0; searchFloor = 0; mirror = false;
         startSearch(0);
         locked = false; lay.reset(); tm = sm = 0;
@@ -378,7 +385,7 @@ struct CdrReceiver::Impl {
         static const std::vector<int> innerModes = {1, 2}, outerModes = {2, 9, 10, 22, 23};
         for (int sm2 : c.band == 0 ? innerModes : outerModes) {
             const auto L = layoutFor(tmProbe, sm2);
-            for (int q = -12; q <= 12; q++) {
+            for (int q = -kMaxShift; q <= kMaxShift; q++) {
                 const SyncFit f = syncCorrelate(Y, &Y2, nb, *L, q);
                 // an analogue FM programme puts strong lines on the carriers of the all-digital modes, but they do not follow Pb:
                 // only fits that are coherent compete on energy
@@ -744,7 +751,7 @@ struct CdrReceiver::Impl {
         tel.seq++;
         tel.timeSec = curRate > 0 ? (double)nIn / curRate : 0;
         tel.levelDb = nPower ? (float)(10 * std::log10(power / (double)nPower + 1e-20)) : -200.f;
-        tel.cfoHz = cfo;
+        tel.cfoHz = cfo + (mirror ? -1 : 1) * cc.offsetHz();
         if (!locked) tel.state = 0;
         if (tel.status.empty() || tel.state != 0) tel.status = locked ? cdrStateText(tel.state) : "searching for a CDR beacon";
         power = 0; nPower = 0;
@@ -764,7 +771,7 @@ struct CdrReceiver::Impl {
         // keep what the next step still needs
         int64_t keep = locked ? (int64_t)std::llround(bs) - 4096 : std::min(searchNext - kSearchHop, pending.empty() ? searchNext : pending.front().dStart) - 4096;
         for (const auto& c : pending) keep = std::min(keep, c.dStart - 4096);
-        const int64_t drop = keep - buf0;
+        const int64_t drop = std::min<int64_t>(keep - buf0, (int64_t)buf.size());
         if (drop > 65536) { buf.erase(buf.begin(), buf.begin() + (long)drop); buf0 += drop; }
     }
 };
@@ -798,7 +805,15 @@ void CdrReceiver::feed(const cf32* x, size_t n) {
     while (done < n) {
         // in pieces, so that a report falls every quarter second of signal
         const size_t chunk = std::min(n - done, (size_t)std::max<int64_t>(1, (int64_t)(m.nextReport - (double)m.nIn) + 1));
-        const cf32* xs = x + done;
+        // a signal away from the middle of the sample band (beyond the +-100 kHz of the beacon search) is moved there first
+        m.cin.assign(x + done, x + done + chunk);
+        m.cc.process(m.cin.data(), chunk, m.locked && m.tel.siValid);
+        if (m.cc.takeChanged()) {
+            m.buf0 = m.bufEnd(); m.buf.clear(); m.searchFloor = m.buf0;
+            m.locked = false; m.lay.reset(); m.tel.state = 0;
+            m.startSearch(m.buf0);
+        }
+        const cf32* xs = m.cin.data();
         for (size_t i = 0; i < chunk; i++) m.power += (double)std::norm(xs[i]);
         m.nPower += (int64_t)chunk;
         m.nIn += (int64_t)chunk;
