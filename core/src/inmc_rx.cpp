@@ -614,7 +614,7 @@ struct InmcReceiver::Impl {
         ws.config(rate);
         ch.push_back(makeChan(offsetHz, 0));
         ids.push_back(0);
-        now = 0; sinceReport = 0;
+        now = 0; sinceReport = 0; ch0MovedAt = -1e9;
         tel = InmcTelemetry();
     }
 
@@ -672,8 +672,33 @@ struct InmcReceiver::Impl {
         black.erase(std::remove_if(black.begin(), black.end(), [this](const Black& b) { return b.until < now; }), black.end());
     }
 
+    // A radio 50 ppm off at 1.54 GHz puts the channel 77 kHz away, beyond the carrier search of one channel (kMaxCfoHz). While the channel tuned
+    // to has found no carrier, it is moved to the steady signal of the band search nearest to where it should be, within kRadioErrHz.
+    static constexpr double kRadioErrHz = 85000;
+    double ch0MovedAt = -1e9;
+    void moveTuned(const std::vector<double>& cands) {
+        Chan& c0 = *ch[0];
+        if (c0.acquired || c0.tel.blocksOk > 0 || c0.tel.state == 2 || now - ch0MovedAt < 30.0) return;
+        double best = 0, bestD = 1e18;
+        for (double f : cands) {
+            bool persistent = false;
+            for (double p : ws.prev) if (std::fabs(p - f) < 3000) persistent = true;
+            const double d = std::fabs(f - offsetHz);
+            if (persistent && d > kMaxCfoHz + 1000 && d < kRadioErrHz && d < bestD) { bestD = d; best = f; }
+        }
+        if (bestD > 1e17 || std::fabs(best - c0.offsetHz) < 3000) return;
+        c0.offsetHz = best;
+        c0.setOffset();
+        c0.clearState();
+        ch0MovedAt = now;
+        char b[128];
+        snprintf(b, sizeof b, "Inmarsat-C: nothing decodes where tuned; a signal %+.1f kHz away is taken as the channel (radio error)", (best - offsetHz) / 1000.0);
+        if (log) log(b);
+    }
+
     void search() {
         const std::vector<double> cands = ws.candidates();
+        moveTuned(cands);
         std::vector<double> keep;
         for (double f : cands) {
             keep.push_back(f);
@@ -698,6 +723,7 @@ struct InmcReceiver::Impl {
     void compose() {
         tel = ch[0]->tel;
         tel.seq = ++seq;
+        if (ch[0]->acquired) tel.cfoHz += ch[0]->offsetHz - offsetHz;    // relative to where the user tuned
         tel.channels.clear();
         std::vector<InmcMessage> all = tel.messages;
         uint32_t count = tel.messageCount;

@@ -1,6 +1,7 @@
 // Inmarsat-C receiver against the impairments of real radios: carrier offset over +-10 ppm of 1.5 GHz and beyond, carrier drift, clock error,
 // every chunk size, 8-bit samples, DC offset, a gap, a reset in the middle of the stream. Eb/N0 8 dB unless a case says otherwise.
 #include "dect2/inmc_testutil.h"
+#include "impair.h"
 #include "dect2/test_parallel.h"
 #include <algorithm>
 #include <functional>
@@ -32,15 +33,23 @@ int main() {
     std::vector<double> cost;       // signal seconds times sample rate, to start the biggest first
     auto add = [&](double secs, double rate, std::function<void(CaseOut&)> f) { cost.push_back(secs * rate); jobs.push_back(std::move(f)); };
     // carrier offset: +-10 ppm of 1537 MHz is 15.4 kHz; the search covers +-20 kHz
-    for (double cfo : {0.0, 15400.0, -15400.0, 19000.0, -19000.0})
+    for (double cfo : {0.0, 15400.0, -15400.0, 19000.0, -19000.0, 30000.0, 77000.0, -77000.0})   // 50 ppm of 1537 MHz is 77 kHz
         add(40, 2e6, [cfo](CaseOut& out) {
-            InmcRunOpts o = base();
+            InmcRunOpts o = base(std::fabs(cfo) > 20000 ? 50 : 40);   // beyond the channel's own search the band search moves it there first
             o.gen.cfoHz = cfo;
             char n[64];
             snprintf(n, sizeof n, "carrier offset %+.0f Hz", cfo);
             const InmcRunResult r = run(out, n, o, 3);
             CHECK(std::fabs(r.t.cfoHz - cfo) < 3, "%s: read %+.1f Hz", n, r.t.cfoHz);
         });
+    // combined (REAL_WORLD_CHECKLIST.md): 50 ppm, a sample clock 80 ppm fast, an echo, 8-bit clipping
+    add(50, 2e6, [](CaseOut& out) {
+        InmcRunOpts o = base(50);
+        o.gen.cfoHz = -77000; o.gen.sroPpm = 80; o.quantize8 = true;
+        o.mod = [](cf32* x, size_t n) { std::vector<cf32> v(x, x + n); impair::echo(v, 4, -8, 2.0); impair::clip8(v, 2.0); std::copy(v.begin(), v.end(), x); };
+        const InmcRunResult r = run(out, "combined -77 kHz +80 ppm echo 8 bit", o, 3);
+        CHECK(std::fabs(r.t.cfoHz + 77000) < 20, "combined: read %+.1f Hz", r.t.cfoHz);
+    });
     // drift: 20 Hz/s over 55 s moves the carrier by 1.1 kHz
     add(55, 2e6, [](CaseOut& out) {
         InmcRunOpts o = base(55);
