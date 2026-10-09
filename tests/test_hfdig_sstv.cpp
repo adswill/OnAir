@@ -1,4 +1,4 @@
-// HF digital SSTV: test audio -> decoder, every mode, at 20 dB (signal to noise in 3 kHz) with a +30 Hz tuning error and 50 ppm of sample
+// HF digital SSTV: test audio -> decoder, every mode, at 20 dB (signal to noise in 3 kHz) with a +-100 Hz tuning error and +-100 ppm of sample
 // clock error; the mode picked from the line period when the VIS header is left out; and a Robot 36 picture through the engine.
 // The long modes are fed straight from the generator, faster than real time.
 #include "dect2/engine.h"
@@ -53,8 +53,8 @@ int main() {
         const SstvModeInfo& mi = sstvModeInfo(m);
         SynthConfig cfg;
         cfg.modeOpt[1] = m;
-        cfg.modeVal[0] = 30;
-        cfg.sroPpm = 50;
+        cfg.modeVal[0] = (m & 1) ? -100 : 100;    // a dial error of +-100 Hz and a sound card clock +-100 ppm off, alternating
+        cfg.sroPpm = (m & 1) ? -100 : 100;
         const double sec = 0.4 + 0.91 + mi.lineMs * (mi.width > 320 && mi.height > 300 ? mi.height / 2 : mi.height) / 1000.0 + 3;
         const HfdigSstvTelemetry t = run(cfg, 20, sec + 2);
         std::vector<uint8_t> ref;

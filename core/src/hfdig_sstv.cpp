@@ -37,7 +37,7 @@ constexpr double kFs = 8000.0;
 constexpr double kPi = 3.14159265358979323846;
 constexpr double kCenter = 1900.0;           // the mixer frequency
 constexpr int kTaps = 63;
-constexpr double kLowpassHz = 700.0;         // of the complex baseband around 1900 Hz: passes 1200 .. 2600 Hz
+constexpr double kLowpassHz = 950.0;         // of the complex baseband around 1900 Hz: passes 950 .. 2850 Hz, so a VIS bit (1100 Hz) with a dial error of -100 Hz still gets through
 constexpr size_t kRing = 1 << 17;            // samples of phase kept (16 s)
 constexpr int kBox = 32;                     // the mean frequency used by the VIS and pulse search: 4 ms
 
