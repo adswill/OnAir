@@ -46,7 +46,15 @@ bool T2Receiver::Impl::p2Hypothesis(bool ext, bool final) {
         // second pass: narrow the delay passband to where the channel actually has energy
         int tMin, tMax;
         int lim = std::min(N / 2 - 1, G * 3 / 2);
-        bool spanOk = !getenv("DECT2_NONARROW") && delaySpan(H, N, -std::min(lim, std::max(G / 2, 64)), lim, back, tMin, tMax);
+        int lo = -std::min(lim, std::max(G / 2, 64)), hi = lim;
+        // The pilots sit S carriers apart, so delays repeat every N/S samples, and the first pass keeps the window G/2 +- N/(2S)
+        // around the main path. Outside that window its impulse response holds only leaked images of the paths inside: a lone path
+        // shows up again N/S later at about -20 dB. When the guard nearly fills the window (32K 19/128 with PP2: 4864 of 5461
+        // samples) the search used to reach that image, took it for an echo outside the guard and kept the wide window, whose edge
+        // sits under the main path: the estimate was 14 dB above noise at best, too poor for 64-QAM 3/4 (a real Hungarian mux).
+        lo = std::max(lo, G / 2 - N / (2 * S));
+        hi = std::min(hi, G / 2 + N / (2 * S));
+        bool spanOk = !getenv("DECT2_NONARROW") && delaySpan(H, N, lo, hi, back, tMin, tMax);
         if (getenv("DECT2_DEBUG") && spanOk) fprintf(stderr, "  [dbg] delay span %d .. %d samples (G=%d)\n", tMin, tMax, G);
         if (spanOk) {
             double centre = 0.5 * (tMin + tMax), half = 0.5 * (tMax - tMin) + 48;
@@ -111,7 +119,9 @@ bool T2Receiver::Impl::p2Hypothesis(bool ext, bool final) {
         std::vector<cf32> st2;
         p2Gather(sym, nP2, cP2, 1840, pp.postSize, st2);
         std::vector<cf32> postCells(st2.begin() + 1840, st2.begin() + 1840 + std::min<size_t>(pp.postSize, st2.size() - 1840));
-        return decodeL1Post(postCells, n0, pp, nP2, (pp.s2 & 1) != 0, out).ok;
+        L1Result pr = decodeL1Post(postCells, n0, pp, nP2, (pp.s2 & 1) != 0, out);
+        if (getenv("DECT2_DEBUG")) fprintf(stderr, "  [dbg] L1-post: rep %d iters %d bch %d crc %d cells %zu\n", pp.repetition, pr.ldpcIters, (int)pr.bchOk, (int)pr.crcOk, postCells.size());
+        return pr.ok;
     };
     if (preOk) postOk = tryPost(pre, post);
     if (!preOk && !final) return false;
@@ -133,7 +143,7 @@ bool T2Receiver::Impl::p2Hypothesis(bool ext, bool final) {
             if (preOk && !postOk && sameLayout(pre, goodPre)) {
                 post = goodPost;
                 const double fl = frameLen > 0 ? frameLen : 1.0;
-                post.frameIdx = (goodPost.frameIdx + (int)std::llround((double)(anchorNow - goodAnchor) / fl)) & 0xFF;
+                post.frameIdx = (int)(((goodPost.frameIdx + std::llround((double)(anchorNow - goodAnchor) / fl)) % std::max(1, pre.numFrames) + std::max(1, pre.numFrames)) % std::max(1, pre.numFrames));
                 post.crcOk = true; postOk = true; reusedPost = true;
             }
         }
