@@ -19,7 +19,7 @@ static std::atomic<int> fails{0};
 
 static const double kRate = 2.048e6;
 
-static std::vector<cf32> clean(double seconds, int uepIndex = -1, bool moved = false) {
+static std::vector<cf32> clean(double seconds, int uepIndex = -1, bool moved = false, double rate = kRate) {
     dabgen::TxConfig tc;
     tc.utcSeconds = 1700000000;
     if (moved) {   // a reconfiguration: the first service goes to the end of the multiplex, so its sub-channel starts elsewhere
@@ -32,17 +32,17 @@ static std::vector<cf32> clean(double seconds, int uepIndex = -1, bool moved = f
     }
     SynthConfig sc;
     sc.snrDb = 40;
-    auto syn = makeDabSynth(tc, sc, kRate);
-    std::vector<cf32> x((size_t)(seconds * kRate));
+    auto syn = makeDabSynth(tc, sc, rate);
+    std::vector<cf32> x((size_t)(seconds * rate));
     syn->generate(x.data(), x.size());
     return x;
 }
 
 struct Res { uint64_t fibOk = 0, fibBad = 0, auOk = 0, auBad = 0, frames = 0; double cfo = 0; int state = 0; size_t services = 0; };
 
-static Res run(const std::vector<cf32>& x) {
+static Res run(const std::vector<cf32>& x, double rate = kRate) {
     DabReceiver rx;
-    rx.configure(kRate);
+    rx.configure(rate);
     rx.audio().setSilent(true);
     rx.select(1);
     for (size_t i = 0; i < x.size(); i += 32768) rx.feed(x.data() + i, std::min<size_t>(32768, x.size() - i));
@@ -113,6 +113,9 @@ int main() {
         expect("reconfiguration: sub-channel moves", r, 0.97);
         CHECK(r.auOk > 600, "reconfiguration: only %llu good AUs in 16 s", (unsigned long long)r.auOk);
     });
+    // the ensemble away from the middle of the sample band (a recording made at an offset)
+    jobs.add([&] { auto x = base; impair::shift(x, 190000, kRate); impair::dc(x, -3); expect("off centre +190 kHz at 2.048 Msps, DC spike", run(x), 0.95, 190000); });
+    jobs.add([] { auto x = clean(8.0, -1, false, 8e6); impair::shift(x, -1.7e6, 8e6); expect("off centre -1.7 MHz at 8 Msps", run(x, 8e6), 0.95); });
     jobs.add([&] { auto x = base; impair::dc(x, 0); expect("DC spike at the signal's level", run(x), 0.99); });
     jobs.add([&] {
         auto x = base;

@@ -4,6 +4,7 @@
 #include "dect2/fftutil.h"
 #include "dect2/dab_tii.h"
 #include "dect2/resampler.h"
+#include "dect2/channel_find.h"
 #include <algorithm>
 #include <cmath>
 #include <complex>
@@ -44,6 +45,8 @@ struct DabReceiver::Impl {
     double inRate = kRate;
     RationalResampler rs;
     bool resample = false;
+    ChannelCentre cc;           // moves an ensemble that is far from the middle of the sample band there
+    std::vector<cf32> cin;
     std::vector<cf32> buf, rsOut;
     uint64_t base = 0;        // absolute index of buf[0]
     Fft fft{kTu};
@@ -522,7 +525,7 @@ struct DabReceiver::Impl {
         t.state = state;
         t.sync = state == 2 && missed == 0;
         t.cirPeak = cirPeak;
-        t.cfoHz = cfo * 1000.0;
+        t.cfoHz = cfo * 1000.0 + (mirror ? -1 : 1) * cc.offsetHz();
         t.snrDb = snrDb;
         t.frames = framesDone;
         t.fibOk = fibOk; t.fibBad = fibBad; t.ficRecentOk = ficRecent;
@@ -542,7 +545,7 @@ struct DabReceiver::Impl {
     }
 
     void reset() {
-        buf.clear(); base = 0; state = 0; mirror = false; cfo = 0; missed = 0; framesDone = 0; rs.reset(); tii.reset();
+        buf.clear(); base = 0; state = 0; mirror = false; cfo = 0; cc.reset(); missed = 0; framesDone = 0; rs.reset(); tii.reset();
         std::lock_guard<std::mutex> lk(mu);
         telSeq++;
         tel = DabTelemetry(); tel.seq = telSeq;
@@ -567,6 +570,7 @@ void DabReceiver::configure(double inputRateHz) {
     I.inRate = inputRateHz;
     I.resample = std::fabs(inputRateHz - kRate) > 1.0;
     if (I.resample) I.rs.configure(inputRateHz, kRate);
+    I.cc.configure(inputRateHz, 1.536e6, 60e3, 1.5);
     I.reset();
 }
 
@@ -574,6 +578,11 @@ void DabReceiver::reset() { p_->reset(); }
 
 void DabReceiver::feed(const cf32* x, size_t n) {
     Impl& I = *p_;
+    // a channel away from the middle of the sample band (beyond the +-80 kHz of the search) is moved there first
+    I.cin.assign(x, x + n);
+    I.cc.process(I.cin.data(), n, I.state == 2 && I.fibOk > 0);
+    if (I.cc.takeChanged()) { I.buf.clear(); I.base = 0; I.state = 0; I.rs.reset(); }
+    x = I.cin.data();
     const size_t from = I.buf.size();
     if (I.resample) { I.rsOut.clear(); I.rs.process(x, n, I.rsOut); I.buf.insert(I.buf.end(), I.rsOut.begin(), I.rsOut.end()); }
     else I.buf.insert(I.buf.end(), x, x + n);
