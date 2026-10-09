@@ -212,8 +212,97 @@ struct Core {
             }
             for (int j = 0; j < 2 * kInterpJ; j++) interp[(size_t)p * 2 * kInterpJ + j] /= (float)sum;
         }
+        resetAcq();
         reset();
         startWorker();
+    }
+
+    // ---------------------------------------------------------------- stage 0: where is the pilot?
+    // The pilot loop only pulls in a few tens of kHz and needs a pilot strong enough for its wide acquisition filter. Before it starts,
+    // the pilot line is looked for in an averaged spectrum of the whole sample band: a channel that is not centred (a recording made
+    // beside the channel) is then mixed to the centre, and a weak pilot (an echo that notches the band edge) is found to a fraction of a
+    // kHz, so the loop can start narrow. Repeated while nothing locks (a retune, a signal that appears later).
+    bool acqDone = false, acqPilot = false;
+    std::vector<cf32> acqBuf;
+    double shiftHz = 0, acqLevel = 0;   // mixer frequency (the channel's offset from the centre), pilot amplitude relative to the signal
+    uint64_t mixN = 0, noLockSamples = 0;
+    float weakScale = 1.f;
+    void resetAcq() { weakScale = 1.f; acqDone = false; acqPilot = false; acqBuf.clear(); shiftHz = 0; acqLevel = 0; mixN = 0; noLockSamples = 0; }
+    int acqLog2() const { int lg = 8; while ((double)(1 << lg) < fin / 1000.0) lg++; return lg; }
+    size_t acqNeed() const { return ((size_t)1 << acqLog2()) * 48; }
+    void acquirePilot() {
+        const int lg = acqLog2(), N = 1 << lg, M = (int)(acqBuf.size() / (size_t)N);
+        std::vector<double> P((size_t)N, 0.0);
+        std::vector<float> re((size_t)N), im((size_t)N), win((size_t)N);
+        for (int i = 0; i < N; i++) win[(size_t)i] = (float)(0.5 - 0.5 * std::cos(2 * kPi * (i + 0.5) / N));
+        for (int m = 0; m < M; m++) {
+            bool finite = true;
+            for (int i = 0; i < N; i++) {
+                const cf32 v = acqBuf[(size_t)m * N + i];
+                re[(size_t)i] = v.real() * win[(size_t)i]; im[(size_t)i] = v.imag() * win[(size_t)i];
+                if (!std::isfinite(re[(size_t)i]) || !std::isfinite(im[(size_t)i])) finite = false;
+            }
+            if (!finite) continue;
+            fftSplit(re.data(), im.data(), lg, false);
+            for (int k = 0; k < N; k++) P[(size_t)((k + N / 2) % N)] += (double)re[(size_t)k] * re[(size_t)k] + (double)im[(size_t)k] * im[(size_t)k];
+        }
+        std::vector<double> cum((size_t)N + 1, 0.0);
+        for (int i = 0; i < N; i++) cum[(size_t)i + 1] = cum[(size_t)i] + P[(size_t)i];
+        const double bin = fin / N;
+        auto idx = [&](double f) { return (int)std::lround(f / bin) + N / 2; };
+        auto meanP = [&](int a, int b) { a = std::max(a, 0); b = std::min(b, N); return b > a ? (cum[(size_t)b] - cum[(size_t)a]) / (b - a) : -1.0; };
+        // the whole channel (pilot - 0.1 MHz to pilot + 5.45 MHz) must be inside the band
+        const int lo = std::max(idx(-fin / 2 + 0.1e6), 3), hi = std::min(idx(fin / 2 - 5.45e6), N - 45);
+        double bestScore = 0;
+        int best = -1;
+        std::vector<double> nb;
+        for (int i = lo; i <= hi; i++) {
+            if (std::abs(i - N / 2) <= 3) continue;   // a DC spike is a line too
+            if (P[(size_t)i] < P[(size_t)i - 1] || P[(size_t)i] < P[(size_t)i + 1]) continue;
+            nb.assign(P.begin() + i + 6, P.begin() + i + 41);   // the data just above the pilot
+            std::nth_element(nb.begin(), nb.begin() + nb.size() / 2, nb.end());
+            const double med = nb[nb.size() / 2];
+            if (med <= 0) continue;
+            const double score = P[(size_t)i] / med;
+            if (score < 4.0 || score <= bestScore) continue;
+            // the shape of a VSB channel: data above the pilot, (nearly) nothing just below it
+            const double inside = meanP(idx((i - N / 2) * bin + 0.5e6), idx((i - N / 2) * bin + 5.0e6));
+            const double below = meanP(idx((i - N / 2) * bin - 0.6e6), idx((i - N / 2) * bin - 0.35e6));
+            if (inside <= 0 || (below >= 0 && inside < 2.0 * below)) continue;
+            bestScore = score; best = i;
+        }
+        acqDone = true;
+        if (best < 0) { if (dbg) fprintf(stderr, "[atsc] pilot search: no pilot line in the band\n"); return; }
+        const double a = std::log(P[(size_t)best - 1]), b = std::log(P[(size_t)best]), c = std::log(P[(size_t)best + 1]);
+        const double den = a - 2 * b + c, delta = den < 0 ? std::max(-0.5, std::min(0.5, 0.5 * (a - c) / den)) : 0.0;
+        const double fp = ((double)(best - N / 2) + delta) * bin;
+        double line = 0;
+        for (int k = -2; k <= 2; k++) line += P[(size_t)(best + k)];
+        nb.assign(P.begin() + best + 6, P.begin() + best + 41);
+        std::nth_element(nb.begin(), nb.begin() + nb.size() / 2, nb.end());
+        line -= 5 * nb[nb.size() / 2];
+        acqLevel = std::sqrt(std::max(0.0, line) / std::max(cum[(size_t)N], 1e-30));
+        const double newShift = fp - kPilotHz;
+        if (dbg) fprintf(stderr, "[atsc] pilot search: line at %.0f Hz (score %.1f, level %.3f), channel offset %.0f Hz\n", fp, bestScore, acqLevel, newShift);
+        // a weak pilot has less signal to noise ratio in the loop: the narrow loop is narrowed further, by its power below normal (0.25)
+        weakScale = (float)std::max(0.08, std::min(1.0, std::pow(acqLevel / 0.25, 2)));
+        const bool restart = !acqPilot || std::fabs(newShift - shiftHz) > 1000.0;
+        acqPilot = true;
+        if (restart) {
+            shiftHz = newShift; mixN = 0;
+            reset();
+            tracking = true;   // the frequency is known to a fraction of a kHz: start with the narrow loop
+        }
+    }
+    void mixIn(std::vector<cf32>& in) {
+        const double w = -2.0 * kPi * shiftHz / fin;
+        for (size_t i0 = 0; i0 < in.size(); i0 += 1024) {
+            const size_t e = std::min(in.size(), i0 + 1024);
+            cf32 c = expj(std::fmod(w * (double)mixN, 2.0 * kPi));
+            const cf32 r = expj(w);
+            for (size_t i = i0; i < e; i++) { in[i] *= c; c *= r; }
+            mixN += e - i0;
+        }
     }
 
     void reset() {
@@ -238,6 +327,16 @@ struct Core {
     static double now() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
     void processInput(std::vector<cf32>& in, size_t n_) {
         (void)n_;
+        if (!acqDone) {
+            acqBuf.insert(acqBuf.end(), in.begin(), in.end());
+            if (acqBuf.size() < acqNeed()) return;
+            acquirePilot();
+            in.swap(acqBuf);
+            std::vector<cf32>().swap(acqBuf);
+        }
+        if (fieldLock || pilotLock) noLockSamples = 0;
+        else if ((noLockSamples += in.size()) > (uint64_t)(0.5 * fin)) { noLockSamples = 0; acqDone = false; }   // look again on the next block
+        if (shiftHz != 0) mixIn(in);
         const double tA = now();
         for (const cf32& v : in) { inRe.push_back(v.real()); inIm.push_back(v.imag()); }
         std::vector<float> dchunk;
@@ -266,7 +365,7 @@ struct Core {
             float e = fastAtan2(pf.imag(), pf.real());
             e = std::max(-1.2f, std::min(1.2f, e));
             static const float kPa = getenv("ATSC_PA") ? (float)atof(getenv("ATSC_PA")) : 0.0035f;
-            const float alpha = tracking ? kPa : 0.035f, beta = alpha * alpha / 4.0f / (tracking ? 1.0f : 4.0f);
+            const float alpha = tracking ? kPa * weakScale : 0.035f, beta = alpha * alpha / 4.0f / (tracking ? 1.0f : 4.0f);
             const float xa = kPllScale * alpha * e;       // phase correction, at most about 0.17 rad: a small-angle rotation is exact enough (renormalised below)
             ph *= cf32(1.f - 0.5f * xa * xa, -xa);
             const float xb = kPllScale * beta * e;
@@ -347,11 +446,11 @@ struct Core {
         {
             const double lvl = std::sqrt(std::max(pw, 1e-12));
             pilotRel = (float)(pf.real() / lvl);
-            const bool good = std::fabs(pf.imag()) < (tracking ? 0.35 : 0.5) * std::fabs(pf.real()) && pf.real() > 0.06 * lvl;
+            const bool good = std::fabs(pf.imag()) < (tracking ? 0.35 : 0.5) * std::fabs(pf.real()) && pf.real() > 0.06 * std::sqrt(weakScale) * lvl;
             const int nUpd = (int)(dchunk.size() / 4);
             if (good) { goodRun += nUpd; badRun = 0; } else { badRun += nUpd; goodRun = 0; }
             if (!tracking && goodRun > 60000) { tracking = true; }          // ~11 ms of a steady pilot
-            if (tracking && badRun > 120000) { tracking = false; }
+            if (tracking && badRun > 120000 && !acqPilot) { tracking = false; }   // a weak pilot found by the search never locks the wide loop
             pilotLock = tracking && goodRun > 20000;
         }
         d.insert(d.end(), dchunk.begin(), dchunk.end());
@@ -969,7 +1068,7 @@ struct Core {
         nt.fieldSync = fieldLock;
         nt.tsOk = tsFlow > 0;
         nt.fieldParity = parity;
-        nt.cfoHz = (omega - omega0) * fs2 / (2.0 * kPi);
+        nt.cfoHz = (omega - omega0) * fs2 / (2.0 * kPi) + shiftHz;
         nt.sroPpm = rr / 2.0 * 1e6;
         nt.pilotDb = pilotRel > 0 ? 20.0 * std::log10(pilotRel) : -99;
         nt.syncQuality = syncQ;
@@ -991,7 +1090,7 @@ struct AtscReceiver::Impl {
 AtscReceiver::AtscReceiver() : p_(new Impl) {}
 AtscReceiver::~AtscReceiver() = default;
 void AtscReceiver::configure(double inputRateHz) { p_->c.configure(inputRateHz); }
-void AtscReceiver::reset() { if (p_->c.ok) p_->c.reset(); }
+void AtscReceiver::reset() { if (p_->c.ok) { p_->c.resetAcq(); p_->c.reset(); } }
 void AtscReceiver::flush() { p_->c.flush(); }
 void AtscReceiver::setBlocking(bool b) { p_->c.blocking = b; }
 bool AtscReceiver::rateOk() const { return p_->c.ok; }
