@@ -95,10 +95,10 @@ T2Generator::T2Generator(const TxParams& p) : i_(new Impl), p_(p) {
     pre_.l1Mod = p.l1Mod;
     pre_.pilotPattern = p_.pp;
     pre_.cellId = p.cellId; pre_.networkId = p.networkId; pre_.systemId = p.systemId;
-    pre_.numFrames = 2;
+    pre_.numFrames = 255;   // NUM_T2_FRAMES: FRAME_IDX counts 0..254, so tests can key frames by FRAME_IDX
     pre_.numDataSyms = symbols_ - nP2_;
     pre_.numRf = 1;
-    pre_.version = 2;
+    pre_.version = p.t2Version;
     pre_.postScrambled = p.l1Scrambled ? 1 : 0;
     post_.rf.resize(1);
     post_.rf[0].freq = 522000000;
@@ -147,7 +147,7 @@ void T2Generator::nextFrame(std::vector<cf32>& out) {
     const float norm = 5.0f / std::sqrt(27.0f * (float)k_);
     std::vector<uint8_t> types;
     // ---- P2 payload: L1-pre, L1-post, then filler, distributed over the P2 symbols and frequency interleaved
-    post_.frameIdx = frameNo_ & 0xff;
+    post_.frameIdx = (int)(frameNo_ % (uint64_t)pre_.numFrames);   // clause 7.2.3.1: FRAME_IDX < NUM_T2_FRAMES
     L1Pre pre = pre_;
     auto postCells = encodeL1Post(pre, post_, nP2_, false);
     auto preCells = encodeL1Pre(pre);

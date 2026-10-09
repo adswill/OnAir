@@ -15,12 +15,12 @@ using testjobs::jprintf;
 static std::atomic<int> fails{0};
 #define CHECK(c, ...) do { if (!(c)) { jprintf("FAIL: " __VA_ARGS__); jprintf("\n"); fails++; } } while (0)
 
-struct Case { const char* name; int s1; bool shortFrame; int mod, cod; bool rot; int ti; double snr; double bw = 8; int fft = 1, gi = 2, pp = 0; bool ext = false; };
+struct Case { const char* name; int s1; bool shortFrame; int mod, cod; bool rot; int ti; double snr; double bw = 8; int fft = 1, gi = 2, pp = 0; bool ext = false; int t2Version = 2; double cfoHz = 0; };
 
 static void runCase(const Case& c) {
     const double fn = nativeRateHz(c.bw);
     TxParams tp;
-    tp.s1 = c.s1; tp.s2field1 = c.fft; tp.giIdx = c.gi; tp.ext = c.ext; tp.pp = c.pp;
+    tp.s1 = c.s1; tp.s2field1 = c.fft; tp.giIdx = c.gi; tp.ext = c.ext; tp.pp = c.pp; tp.t2Version = c.t2Version; tp.l1Scrambled = true;
     tp.payload = true; tp.plpShort = c.shortFrame; tp.plpMod = c.mod; tp.plpCod = c.cod; tp.plpRot = c.rot; tp.plpTi = c.ti;
     T2Generator gen(tp);
     T2Receiver rx;
@@ -34,7 +34,7 @@ static void runCase(const Case& c) {
     std::vector<cf32> frame;
     std::mt19937 rng(7);
     std::normal_distribution<float> nd(0.f, 1.f);
-    double sigma = 0;
+    double sigma = 0, ph = 0;
     for (int i = 0; i < nFrames; i++) {
         gen.nextFrame(frame);
         sent[i & 0xff] = gen.lastBbFrames();
@@ -44,7 +44,10 @@ static void runCase(const Case& c) {
             pw /= frame.size();
             sigma = std::sqrt(pw / std::pow(10.0, c.snr / 10.0) / 2.0);
         }
-        for (auto& v : frame) v += cf32(nd(rng), nd(rng)) * (float)sigma;
+        for (auto& v : frame) {
+            if (c.cfoHz != 0) { v *= cf32((float)std::cos(ph), (float)std::sin(ph)); ph = std::fmod(ph + 2 * M_PI * c.cfoHz / fn, 2 * M_PI); }
+            v += cf32(nd(rng), nd(rng)) * (float)sigma;
+        }
         for (size_t o = 0; o < frame.size(); o += 1 << 16) rx.feed(frame.data() + o, std::min<size_t>(1 << 16, frame.size() - o));
         // a radio delivers a frame every 100-250 ms; fed all at once, the data decoder (a thread that drops a frame it is still busy
         // for) lost half of them on a loaded CI machine. Wait for it to come within a few frames of what was fed (at most 2 s a frame).
@@ -131,6 +134,12 @@ int main() {
         {"32K GI 19/128 (P1 code 7)",   0, false, 2, 2, true,  3, 22, 8, 5, 5, 1},
         {"32K GI 19/256 ext (code 7)",  0, false, 2, 2, true,  3, 22, 8, 5, 6, 3, true},
         {"8K GI 1/128 (P1 code 6)",     0, false, 2, 2, true,  3, 22, 8, 1, 4, 6},
+        // the Hungarian mux: 32K ext PP2 19/128 64-QAM 3/4 (the guard nearly fills the pilot delay window), V1.2.1 with the reserved bit
+        // that is L1_POST_SCRAMBLED from V1.3.1 on set but a plain L1-post, recorded 280 kHz off centre
+        {"32K ext PP2 19/128 64QAM 3/4", 0, false, 2, 3, true, 3, 24, 8, 5, 5, 1, true},
+        {"T2 V1.2.1, scrambled bit set", 0, false, 2, 2, true, 3, 22, 8, 1, 2, 0, false, 1},
+        {"P1 280 kHz off centre",       0, false, 2, 2, true,  3, 22, 8, 1, 2, 0, false, 2, 280000},
+        {"32K ext PP2 19/128 V1.2.1 +280k", 0, false, 2, 3, true, 3, 24, 8, 5, 5, 1, true, 1, 280000},
     };
     // the cases are independent: each one runs on its own thread, the output keeps the order of the cases
     testjobs::Jobs jobs;
