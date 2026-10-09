@@ -11,14 +11,16 @@ using dect2::testpar::CaseOut;
 #define CHECK(c, ...) do { if (!(c)) out.fail(__LINE__, __VA_ARGS__); } while (0)
 
 static void runCase(int k, CaseOut& out) {
-    const double cfos[2] = {3000.0, -3000.0}, sros[2] = {20.0, -20.0};
+    // and a radio without a TCXO whose one crystal is 50 ppm off: the oscillator 79 kHz off, and the sample clock with it (GnssSim derives that
+    // part of the sample clock error from cfoHz; sroPpm is what comes on top). The +-170 kHz search stage finds it, so the first fix comes later.
+    const double cfos[4] = {3000.0, -3000.0, 79000.0, -79000.0}, sros[4] = {20.0, -20.0, 0.0, 0.0};
     GnssSimConfig cfg;
     cfg.cfoHz = cfos[k]; cfg.sroPpm = sros[k];
     GnssSim sim(cfg, 4e6);
     int nTx = 0;
     for (auto& s : sim.sats()) nTx += s.transmitted;
     Options o;
-    o.rate = 4e6; o.secs = 32;
+    o.rate = 4e6; o.secs = k < 2 ? 32 : 70;
     Run r = run(sim, o);
     const GnssTelemetry& t = r.tel;
     double hz = 0, vt = 0;
@@ -27,14 +29,14 @@ static void runCase(int k, CaseOut& out) {
               gnssSummary(t).c_str(), hz, vt, t.cfoHz, t.fix.firstFixSecs, t.fix.nSats, nTx);
     CHECK(t.fix.valid, "no fix with an oscillator error of %.0f Hz", cfos[k]);
     CHECK(t.fix.nSats >= nTx - 2, "only %d satellites in the fix of %d", t.fix.nSats, nTx);
-    CHECK(hz < 12.0 && std::fabs(vt) < 20.0, "position error %.1f m / %.1f m", hz, vt);
+    CHECK(hz < (k < 2 ? 12.0 : 20.0) && std::fabs(vt) < (k < 2 ? 20.0 : 30.0), "position error %.1f m / %.1f m", hz, vt);
     CHECK(std::fabs(t.cfoHz - cfos[k]) < 8.0, "carrier error estimate %.1f Hz, true %.0f", t.cfoHz, cfos[k]);
-    CHECK(t.fix.firstFixSecs > 22 && t.fix.firstFixSecs < 31, "first fix %.1f s", t.fix.firstFixSecs);
+    CHECK(t.fix.firstFixSecs > 22 && t.fix.firstFixSecs < (k < 2 ? 31 : 69), "first fix %.1f s", t.fix.firstFixSecs);
 }
 
 int main() {
-    // the two cases share nothing: side by side, the log keeps the order
-    const int fails = dect2::testpar::runCases(2, [](size_t i, CaseOut& out) { runCase((int)i, out); });
+    // the cases share nothing: side by side, the log keeps the order
+    const int fails = dect2::testpar::runCases(4, [](size_t i, CaseOut& out) { runCase((int)i, out); });
     if (fails) { printf("%d failure(s)\n", fails); return 1; }
     printf("OK\n");
     return 0;
