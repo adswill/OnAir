@@ -242,6 +242,7 @@ public:
             sigma2_ = psc * rate / ((kRateFm / 4096.0) * std::pow(10.0, cfg.snrDb / 10));
         }
         sigma_ = (float)std::sqrt(sigma2_ / 2);
+        ampA_ *= (float)std::pow(10.0, cfg.modeVal[0] / 20);   // the analog host louder or quieter than nominal (the digital part stays)
     }
     double sampleRate() const override { return rate_; }
     void generate(cf32* out, size_t n) override {

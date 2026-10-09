@@ -12,6 +12,7 @@
 //   snrDb       FM: the SNR of each digital subcarrier (the digital sidebands' power against the noise in their bandwidth);
 //               AM: the same for the primary subcarriers (the secondary, tertiary and PIDS subcarriers are 7 to 14 dB weaker, as on the air)
 //   cfoHz       carrier offset
+//   modeVal[0]  the analog host's level in dB against nominal (0: digital sidebands 20 dB below FM, AM as above)
 #pragma once
 #include "mode_synth.h"
 #include <cstdint>

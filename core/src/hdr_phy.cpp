@@ -81,15 +81,17 @@ struct CpSearch {
     std::vector<cf32> y;
     std::vector<cf32> sums;
     // returns the sample offset of the symbol start and the correlation value there
-    int run(const cf32* in, int fft, int cp, int nsym, const float* taps, const std::vector<float>& shape, cf32& best) {
+    template <class T> int run(const cf32* in, int fft, int cp, int nsym, const T* taps, const std::vector<float>& shape, cf32& best, float* quality = nullptr) {
         const int fftcp = fft + cp;
         const int total = fftcp * (nsym + 1);
         y.assign((size_t)total, cf32(0, 0));
+        double energy = 0;
         for (int i = 0; i < total; i++) {
             cf32 acc(0, 0);
             const int k0 = std::max(0, i - 31);
             for (int k = k0; k <= i; k++) acc += taps[i - k] * in[k];
             y[(size_t)i] = acc;
+            energy += (double)norm2(acc);
         }
         sums.assign((size_t)fftcp, cf32(0, 0));
         for (int i = 0; i < fftcp; i++) {
@@ -106,6 +108,8 @@ struct CpSearch {
             const float m = norm2(v);
             if (m > maxMag) { maxMag = m; best = v; at = (i + fftcp - kFilterDelay) % fftcp; }
         }
+        // how much of the filtered signal repeats in its prefixes (0 .. about 1): compares the two sidebands
+        if (quality) *quality = (float)(std::sqrt((double)maxMag) / (energy / (double)total * (double)nsym * (double)cp + 1e-30));
         return at;
     }
 };
@@ -117,6 +121,7 @@ struct FmRx::Impl {
     L1Sink* sink;
     // acquisition
     std::vector<cf32> in;            // 33 symbols
+    std::vector<cf32> sideTaps[2];   // prefix correlation filters of the lower and the upper digital sideband
     int idx = 0;
     std::vector<float> shape;
     CpSearch cps;
@@ -156,6 +161,20 @@ struct FmRx::Impl {
     explicit Impl(L1Sink* s) : sink(s) {
         in.assign((size_t)kSymFm * (kBlk + 1), cf32(0, 0));
         shape = windowShape(kFftFm, kCpFm);
+        // one complex band-pass per digital sideband (subcarriers 356 .. 546: 129 .. 199 kHz), 32 taps with the delay of kTapsFm
+        for (int side = 0; side < 2; side++) {
+            sideTaps[side].assign(32, cf32(0, 0));
+            const double f0 = (side ? 1 : -1) * 451.0 / kFftFm, fc = 110.0 / kFftFm;
+            double sum = 0;
+            for (int k = 0; k < 31; k++) {
+                const double x = k - kFilterDelay;
+                const double lp = x == 0 ? 2 * fc : std::sin(2 * kPi * fc * x) / (kPi * x);
+                const double w = 0.54 + 0.46 * std::cos(kPi * x / 16);
+                sideTaps[side][(size_t)k] = (float)(lp * w) * std::polar(1.f, (float)(2 * kPi * f0 * x));
+                sum += lp * w;
+            }
+            for (auto& t : sideTaps[side]) t /= (float)sum;
+        }
         fftBuf.assign(kFftFm, cf32(0, 0));
         sb.assign((size_t)kFftFm * kBlk, cf32(0, 0));
         ph.assign((size_t)kFftFm * kBlk, 0.f);
@@ -205,7 +224,14 @@ struct FmRx::Impl {
             prevAngle = ang;
         } else {
             cf32 best;
-            se = cps.run(in.data(), kFftFm, kCpFm, kBlk, kTapsFm, shape, best);
+            // Each digital sideband on its own: a strong neighbour on top of one of them (first-adjacent FM) would otherwise drown the
+            // prefix correlation of both; the cleaner sideband gives the timing and the frequency
+            cf32 bl, bu;
+            float ql = 0, qu = 0;
+            const int sl = cps.run(in.data(), kFftFm, kCpFm, kBlk, sideTaps[0].data(), shape, bl, &ql);
+            const int su = cps.run(in.data(), kFftFm, kCpFm, kBlk, sideTaps[1].data(), shape, bu, &qu);
+            se = ql >= qu ? sl : su;
+            best = ql >= qu ? bl : bu;
             const float diff = std::arg(best * std::polar(1.f, -prevAngle));
             const float factor = prevAngle != 0 ? 0.25f : 1.f;
             ang = prevAngle + diff * factor;
