@@ -51,8 +51,13 @@ void dabStatus(App& a) {
     lamp("PRS", !live ? 0 : d.cirPeak > 40 ? 1 : d.cirPeak > 15 ? 2 : 0); flowNext(12 * gUi);
     lamp("FIC", !live ? 0 : d.ficRecentOk >= 11 ? 1 : d.ficRecentOk > 0 ? 2 : d.state == 2 ? 3 : 0); flowNext(12 * gUi);
     lamp("Ensemble", !live ? 0 : d.ensemble ? 1 : d.fibOk ? 2 : 0); flowNext(12 * gUi);
-    lamp("MSC", !live || d.audio.sub < 0 ? 0 : d.audio.superframesOk > 0 && d.audio.superframesBad * 4 <= d.audio.superframesOk ? 1 : d.audio.frames > 0 ? 2 : 0); flowNext(12 * gUi);
-    lamp("Audio", !live || d.audio.sub < 0 ? 0 : d.audio.decoding ? 1 : 2, (int)Ic::Speaker); flowNext(10 * gUi);
+    if (live && d.dmb.active) {   // a DMB video service: the outer code's blocks, and the sound of the player
+        lamp("MSC", d.dmb.rsOk > 0 && d.dmb.rsFailed * 4 <= d.dmb.rsOk ? 1 : d.dmb.sync ? 2 : 0); flowNext(12 * gUi);
+        lamp("Audio", a.engine.player().stats().hasAudio ? 1 : 2, (int)Ic::Speaker); flowNext(10 * gUi);
+    } else {
+        lamp("MSC", !live || d.audio.sub < 0 ? 0 : d.audio.superframesOk > 0 && d.audio.superframesBad * 4 <= d.audio.superframesOk ? 1 : d.audio.frames > 0 ? 2 : 0); flowNext(12 * gUi);
+        lamp("Audio", !live || d.audio.sub < 0 ? 0 : d.audio.decoding ? 1 : 2, (int)Ic::Speaker); flowNext(10 * gUi);
+    }
     ImGui::TextDisabled("|"); flowNext(10 * gUi);
     auto ro = [&](const char* label, const std::string& val, ImVec4 col = ImVec4(0.93f, 0.95f, 0.97f, 1)) {
         ImGui::AlignTextToFramePadding();
@@ -111,7 +116,11 @@ void dabStatus(App& a) {
 
 // ------------------------------------------------------------------ constellation row
 void dabHistory(App& a) {
-    if (a.dabStation >= 0 && a.dabMode && a.engine.running()) { a.engine.dabSelect(a.dabStation); a.engine.dabAudio().setVolume(a.volume); a.dabStation = -1; }
+    if (a.dabStation >= 0 && a.dabMode && a.engine.running()) {
+        a.engine.dabSelect(a.dabStation); a.engine.dabAudio().setVolume(a.volume);
+        a.engine.player().setVolume(a.volume); a.engine.player().setMuted(a.muted);   // a DMB video service plays through the player
+        a.dabStation = -1;
+    }
     static uint64_t lastSeq = 0;
     if (a.rx.standard != 3 || a.rx.seq == lastSeq) return;
     lastSeq = a.rx.seq;
@@ -191,6 +200,8 @@ void dabSelectStation(App& a, int sub, bool play) {
         a.engine.dabSelect(sub);
         a.engine.dabAudio().setVolume(a.volume);
         a.engine.dabAudio().setMuted(a.muted);
+        a.engine.player().setVolume(a.volume);   // DMB video services play through the player
+        a.engine.player().setMuted(a.muted);
     } else a.engine.dabSelect(-1);
 }
 
@@ -206,7 +217,7 @@ void dabStations(App& a) {
     std::vector<const DabService*> list;
     for (const auto& kv : ens.services) list.push_back(&kv.second);
     for (const DabService* sv : list) {
-        const DabComponent* ac = sv->audio();
+        const DabComponent* ac = sv->playable();   // the audio, or the DMB video
         const bool sel = ac && ac->subId == cur;
         ImGui::PushID((int)sv->sid);
         const float w = ImGui::GetContentRegionAvail().x;
@@ -222,7 +233,7 @@ void dabStations(App& a) {
         float x = p.x + 10;
         const float ty = p.y + 30;
         if (ac) {
-            x += tagAt(dl, ImVec2(x, ty), sv->dabPlus() ? "DAB+" : "DAB", IM_COL32(34, 74, 108, 255)) + 4;
+            x += tagAt(dl, ImVec2(x, ty), ac->dmb() ? "DMB" : sv->dabPlus() ? "DAB+" : "DAB", IM_COL32(34, 74, 108, 255)) + 4;
             auto it = ens.subs.find(ac->subId);
             if (it != ens.subs.end() && it->second.bitrate > 0) { char k[24]; snprintf(k, sizeof k, "%d kbit/s", it->second.bitrate); x += tagAt(dl, ImVec2(x, ty), k, IM_COL32(38, 46, 58, 255), IM_COL32(190, 200, 214, 255)) + 4; }
             if (it != ens.subs.end() && !it->second.eep) tagAt(dl, ImVec2(x, ty), "UEP: not supported yet", IM_COL32(112, 52, 50, 255));
@@ -232,9 +243,32 @@ void dabStations(App& a) {
     ImGui::EndChild();
     ImGui::Spacing();
     const DabAudioStats au = a.rx.dab.audio;
+    const DmbStats& dmb = a.rx.dab.dmb;
+    const bool video = cur >= 0 && dmb.active && dmb.sub == cur;   // a DMB video service: the player shows it
     sectionHeader(Ic::Play, "Player");
     if (cur < 0) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("click a station to play it"); ImGui::PopTextWrapPos(); }
-    else if (ImGui::BeginTable("dkv", 2, ImGuiTableFlags_SizingFixedFit)) {
+    else if (video && ImGui::BeginTable("dmbkv", 2, ImGuiTableFlags_SizingFixedFit)) {
+        ImGui::TableSetupColumn("k", ImGuiTableColumnFlags_WidthFixed, 88 * gUi);
+        ImGui::TableSetupColumn("v", ImGuiTableColumnFlags_WidthStretch);   // the values wrap in the rest of the panel
+        auto row = [&](Ic ic, const char* k, const char* fmt, auto... args) {
+            ImGui::TableNextRow(); ImGui::TableNextColumn(); iconInline(ic, iconDim(), 0.9f); ImGui::SameLine(0, 5 * gUi); ImGui::TextDisabled("%s", k); ImGui::TableNextColumn();
+            char b[120]; snprintf(b, sizeof b, fmt, args...); ImGui::PushTextWrapPos(0); ImGui::TextUnformatted(b); ImGui::PopTextWrapPos();
+        };
+        const PlayerStats ps = a.engine.player().stats();
+        if (ps.hasVideo) row(Ic::Tv, "Video", "%s  %dx%d  %.1f fps", dmb.video.empty() ? ps.videoCodec.c_str() : dmb.video.c_str(), ps.width, ps.height, ps.fps);
+        else row(Ic::Tv, "Video", "%s", dmb.video.empty() ? (dmb.sync ? "reading the stream..." : "searching the packet sync...") : ps.status.c_str());
+        if (!dmb.note.empty()) row(Ic::Speaker, "Audio", "%s", dmb.note.c_str());
+        else row(Ic::Speaker, "Audio", "%s  %.0f kHz %s", dmb.audio.empty() ? "-" : dmb.audio.c_str(), dmb.sampleRate / 1000.0, dmb.channels == 1 ? "mono" : "stereo");
+        row(Ic::Clock, "Buffer", "%.0f ms     A/V %+.0f ms", ps.audioBufferMs, ps.avOffsetMs);
+        row(Ic::Layers, "Blocks", "%llu Reed-Solomon ok / %llu lost", (unsigned long long)dmb.rsOk, (unsigned long long)dmb.rsFailed);
+        row(Ic::Warning, "Errors", "%llu bytes fixed, %llu pictures late", (unsigned long long)dmb.rsCorrected, (unsigned long long)ps.late);
+        ImGui::TableNextRow(); ImGui::TableNextColumn(); iconInline(a.muted ? Ic::Mute : Ic::Speaker, iconDim(), 0.9f); ImGui::SameLine(0, 5 * gUi); ImGui::TextDisabled("Volume"); ImGui::TableNextColumn();
+        ImGui::SetNextItemWidth(-1);
+        float vol = a.volume * 100.f;
+        if (ImGui::SliderFloat("##dvol", &vol, 0, 100, "%.0f %%")) { a.volume = vol / 100.f; a.engine.player().setVolume(a.volume); }
+        ImGui::EndTable();
+    }
+    else if (!video && ImGui::BeginTable("dkv", 2, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableSetupColumn("k", ImGuiTableColumnFlags_WidthFixed, 88 * gUi);
         auto row = [&](Ic ic, const char* k, const char* fmt, auto... args) {
             ImGui::TableNextRow(); ImGui::TableNextColumn(); iconInline(ic, iconDim(), 0.9f); ImGui::SameLine(0, 5 * gUi); ImGui::TextDisabled("%s", k); ImGui::TableNextColumn();
@@ -256,7 +290,8 @@ void dabStations(App& a) {
         ImGui::BeginChild("dabnow", ImVec2(0, vh), ImGuiChildFlags_Borders);
         std::string name = "no station";
         std::string dls;
-        for (const auto& kv : ens.services) { const DabComponent* ac = kv.second.audio(); if (ac && ac->subId == cur) { name = kv.second.label; dls = kv.second.dls; } }
+        for (const auto& kv : ens.services) { const DabComponent* ac = kv.second.playable(); if (ac && ac->subId == cur) { name = kv.second.label; dls = kv.second.dls; } }
+        if (video && a.video.has()) { a.video.draw(ImGui::GetContentRegionAvail()); ImGui::EndChild(); return; }   // the DMB picture, drawn as the TV modes draw theirs
         const ImVec2 p = ImGui::GetCursorScreenPos();
         const float cw = ImGui::GetContentRegionAvail().x;
         if (!pal::dev()) icons::draw(Ic::Radio, ImVec2(p.x + cw * 0.5f, p.y + 28), 36.f, cur >= 0 ? pal::remap(IM_COL32(120, 200, 255, 255)) : IM_COL32(70, 80, 92, 255));
@@ -298,7 +333,7 @@ void dabRadioTab(App& a) {
         ImGui::TableHeadersRow();
         for (const auto& kv : ens.services) {
             const DabService& sv = kv.second;
-            const DabComponent* ac = sv.audio();
+            const DabComponent* ac = sv.playable();
             ImGui::TableNextRow(ImGuiTableRowFlags_None, 26 * gUi);
             ImGui::TableNextColumn();
             ImGui::PushID((int)sv.sid);
@@ -309,7 +344,7 @@ void dabRadioTab(App& a) {
             ImGui::PopID();
             ImGui::PushTextWrapPos(0);   // the cells wrap in a narrow tab
             ImGui::TableNextColumn(); ImGui::AlignTextToFramePadding(); ImGui::TextUnformatted(sv.label.empty() ? "-" : sv.label.c_str());
-            ImGui::TableNextColumn(); ImGui::TextDisabled("%s", ac ? (sv.dabPlus() ? "DAB+ (HE-AAC)" : "DAB (MP2)") : "data");
+            ImGui::TableNextColumn(); ImGui::TextDisabled("%s", ac ? (ac->dmb() ? "DMB (video)" : sv.dabPlus() ? "DAB+ (HE-AAC)" : "DAB (MP2)") : "data");
             ImGui::TableNextColumn(); ImGui::TextDisabled("%s", ac ? dabSubText(ens, ac->subId).c_str() : "");
             ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0); ImGui::TextDisabled("%04X", sv.sid); ImGui::PopFont();
             ImGui::TableNextColumn(); ImGui::TextDisabled("%s", sv.dls.c_str());

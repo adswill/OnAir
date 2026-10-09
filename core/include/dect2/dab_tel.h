@@ -22,9 +22,10 @@ struct DabSubchannel {
 struct DabComponent {
     int tmid = 0;         // transport mechanism: 0 MSC stream audio, 1 MSC stream data, 3 MSC packet data
     int ascty = -1;       // audio service component type: 0 = MPEG-1/2 Layer II (DAB), 63 = HE-AAC (DAB+)
-    int dscty = -1;
+    int dscty = -1;       // data service component type: 24 = MPEG-2 transport stream (TS 102 427), the carrier of DMB video
     int subId = -1;
     bool primary = true;
+    bool dmb() const { return tmid == 1 && dscty == 24; }
 };
 
 struct DabService {
@@ -32,12 +33,23 @@ struct DabService {
     std::string label;
     std::vector<DabComponent> comps;
     std::string dls;      // dynamic label ("now playing"), when the station sends one
+    // FIG 0/13 user applications of the primary component (TS 101 756 table 16: 0x009 = DMB), -1 = none signalled
+    int userApp = -1;
+    int dmbProfile = 0;   // DMB: the VideoServiceObjectProfileId (TS 102 428 table 8: 1 = BSAC audio, 2 = HE-AAC v2 audio)
     // The first audio stream component, or null
     const DabComponent* audio() const {
         for (const auto& c : comps) if (c.tmid == 0) return &c;
         return nullptr;
     }
     bool dabPlus() const { const DabComponent* a = audio(); return a && a->ascty == 63; }
+    // The DMB video stream component (stream data carrying a transport stream, not signalled as another user application), or null
+    const DabComponent* dmb() const {
+        if (userApp >= 0 && userApp != 0x009) return nullptr;
+        for (const auto& c : comps) if (c.dmb()) return &c;
+        return nullptr;
+    }
+    // What a click plays: the audio, else the DMB video
+    const DabComponent* playable() const { const DabComponent* a = audio(); return a ? a : dmb(); }
 };
 
 struct DabEnsemble {
@@ -65,6 +77,19 @@ struct DabAudioStats {
     int underruns = 0;
 };
 
+// The DMB video service being decoded (ETSI TS 102 427 outer code, TS 102 428 MPEG-4 Systems in the transport stream)
+struct DmbStats {
+    bool active = false;          // a DMB sub-channel is selected
+    int sub = -1;                 // which
+    bool sync = false;            // the packet sync of the outer interleaver was found
+    uint64_t rsOk = 0, rsFailed = 0;    // Reed-Solomon (204,188) blocks decoded / beyond repair
+    uint64_t rsCorrected = 0;     // bytes fixed by Reed-Solomon
+    uint64_t tsOut = 0;           // transport stream packets handed to the player
+    std::string video, audio;     // "H.264", "HE-AAC", "AAC-LC", "BSAC" ...
+    int sampleRate = 0, channels = 0;
+    std::string note;             // what cannot be played yet, for the service info
+};
+
 struct DabTelemetry {
     uint64_t seq = 0;
     bool sync = false;            // frame sync
@@ -82,6 +107,7 @@ struct DabTelemetry {
     std::vector<cf32> constellation;    // differential cells of one data symbol (clusters at the 4 diagonals)
     std::vector<float> cir;             // channel impulse response magnitude (phase reference correlation), 2048 points
     DabAudioStats audio;
+    DmbStats dmb;
     // TII (EN 300 401 clause 14.8): the transmitters of the network heard in the null symbols, strongest first
     struct Tii { int mainId = 0, subId = 0; float levelDb = 0, marginDb = 0; };
     std::vector<Tii> tii;

@@ -68,11 +68,12 @@ inline int accessUnitsPerSuperframe(int rateHz) { return rateHz == 48000 ? 6 : 4
 
 // ---- the ensemble
 struct TxService {
-    uint16_t sid = 0xCE01;
+    uint32_t sid = 0xCE01;              // 16 bits for a programme service; 32 bits (ECC, country, number) for a data service such as DMB television
     std::string label;                  // up to 16 characters
     int subId = 1;
-    int bitrate = 48;                   // kbit/s of the sub-channel (a multiple of 8)
+    int bitrate = 48;                   // kbit/s of the sub-channel (a multiple of 8; DMB: a multiple of 136, see dmbService)
     bool dabPlus = true;                // DAB+ (AAC-LC) or DAB (MPEG-1 Layer II)
+    bool dmb = false;                   // a DMB video service instead of audio (TS 102 428 profile 2: H.264 and AAC; dab_gen_dmb.cpp)
     int sampleRate = 48000;             // DAB+: 48000 or 32000; DAB: 48000
     double leftHz = 1000, rightHz = 3000;   // the tones (periods that divide the frame length)
     bool melody = false;                // a tune instead of the tones (12 s, left: the tune, right: the same an octave higher)
@@ -95,6 +96,10 @@ struct TxConfig {
 // 1 "OnAir Tones 1" DAB+ 48 kHz 1 kHz / 3 kHz, 48 kbit/s; 2 "OnAir Tones 2" DAB+ 32 kHz 2 kHz / 500 Hz, 32 kbit/s; 3 "OnAir Melody" DAB+ 48 kHz, 64 kbit/s;
 // 4 "OnAir MP2" DAB 48 kHz 1.5 kHz / 750 Hz, 128 kbit/s (left out when libavcodec has no MP2 encoder)
 std::vector<TxService> defaultServices();
+// 5 "OnAir TV": a DMB television service (data service, 32-bit SId) of 408 kbit/s, EEP 3-A: colour bars with a square moving across, 176 x 144
+// (QCIF) at 12.5 pictures per second in H.264, and AAC-LC 32 kHz stereo tones (1 kHz left, 500 Hz right). The app's test signal carries it
+// after the defaultServices().
+TxService dmbService();
 
 struct SubLayout { int subId, start, size, bitrate, option, level; };
 
@@ -124,6 +129,48 @@ private:
     std::unique_ptr<Impl> p_;
 };
 
+// ---- DMB video service (TS 102 427, TS 102 428), dab_gen_dmb.cpp
+//
+// The picture: H.264 Baseline (level 1.3, pic_order_cnt_type 2, one reference frame, no deblocking), written here and not with an encoder
+// library, so that every build has it and the decoded pictures are known exactly. An IDR picture every 15 pictures (1.2 s): the top row of
+// macroblocks as I_PCM (the samples themselves), the rows below as Intra 16x16 vertical prediction without residual (the bars run from top to
+// bottom), I_PCM where the square is. The pictures in between are P pictures of skipped macroblocks plus I_PCM ones where the square moved.
+// The sound: AAC-LC from libavcodec ("aac", every build of the project has it). Both are packed as TS 102 428 says: one SL packet per access
+// unit in a PES packet (stream id 0xFA, stream type 0x12) with the composition time stamp, the object descriptors and the scene (BIFS of
+// annex A) in ISO/IEC 14496 sections, the initial object descriptor in the PMT, a PCR every 80 ms, PAT, PMT, OD and BIFS every 400 ms.
+// The multiplex is constant rate (null packets fill it), then RS(204,188) and the outer interleaver. The 12 s loop repeats with time stamps
+// and continuity counters that run on, so a receiver sees one endless stream.
+namespace dmb {
+constexpr int kWidth = 176, kHeight = 144, kFrames = 150, kGop = 15;       // QCIF, 12.5 pictures per second for the 12 s loop
+constexpr int kAudioRate = 32000, kAudioFrames = 375;                       // 375 AAC frames of 1024 samples in 12 s
+constexpr int kPidPmt = 0x100, kPidBifs = 0x111, kPidOd = 0x112, kPidVideo = 0x113, kPidAudio = 0x114;
+constexpr int kEsOd = 1, kEsBifs = 2, kEsAudio = 101, kEsVideo = 201;      // ES_IDs and OD_IDs as in TS 102 428 annex A
+constexpr int kOdAudio = 10, kOdVideo = 20;
+// Picture n of the loop (n modulo kFrames): Y (kWidth x kHeight) and the half size Cb and Cr planes
+void testPicture(int64_t n, std::vector<uint8_t>& y, std::vector<uint8_t>& cb, std::vector<uint8_t>& cr);
+// The H.264 access units of the loop (Annex B; every IDR picture starts with the SPS and PPS)
+std::vector<std::vector<uint8_t>> encodeTestVideo();
+
+// The transmitted bytes of a DMB service of `bitrateKbps` (a multiple of 136, so that the 12 s loop holds whole packets): a pure function of the
+// logical frame number, also before 0 (the stream has always been on).
+class Source {
+public:
+    explicit Source(int bitrateKbps);
+    ~Source();
+    bool ok() const;                                        // false when the loop does not fit the bit rate
+    void logicalFrame(int64_t f, std::vector<uint8_t>& out);   // bitrate * 3 bytes
+    void tsPacket(int64_t k, uint8_t out[188]);             // packet k of the transport stream before the outer code
+    int packetsPerLoop() const;
+    bool hasAudio() const;
+    const std::vector<std::vector<uint8_t>>& videoAccessUnits() const;
+    const std::vector<std::vector<uint8_t>>& audioAccessUnits() const;   // raw AAC
+    const std::vector<uint8_t>& audioSpecificConfig() const;
+    struct Impl;
+private:
+    std::unique_ptr<Impl> p_;
+};
+} // namespace dmb
+
 // The frequency domain phase reference symbol (EN 300 401 clause 14.3.2), 2048 bins (bin = k mod 2048)
 const std::vector<cf32>& phaseReferenceSymbol();
 // carrier number k (-768..768) of the n-th QPSK symbol of an OFDM symbol (clause 14.6.1)
@@ -135,5 +182,7 @@ float testSound(const TxService& s, int ch, int64_t i);
 
 // The same with a given ensemble (and, for tests, a fixed time of day); cfg.snrDb, cfoHz and sroPpm replace those of `tx`.
 std::unique_ptr<ModeSynth> makeDabSynth(const dabgen::TxConfig& tx, const SynthConfig& cfg, double sampleRate);
+// The ensemble of the app's test signal: defaultServices() and dmbService(), heard from three transmitters (TII)
+dabgen::TxConfig dabDemoConfig();
 
 } // namespace dect2

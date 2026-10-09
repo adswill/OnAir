@@ -79,6 +79,10 @@ struct DabReceiver::Impl {
     uint64_t cifCount = 0;
     DabAudio audio;
     std::function<void(int, const uint8_t*, int)> tap;
+    // a DMB video sub-channel (TS 102 427 / 102 428): its transport stream for the player
+    bool selDmb = false;
+    DmbDecoder dmb;
+    std::function<void(const uint8_t*, size_t, double)> pktCb;
 
     Impl() : bin(kCarriers), prsConj(kTu) {
         const auto& tab = freqInterleaver();
@@ -89,6 +93,7 @@ struct DabReceiver::Impl {
         mscSoft.resize((size_t)(kSymbols - 1 - kFicSymbols) * 2 * kCarriers);
         hist.assign(16, {});
         audio.select(-1, false, 0);
+        dmb.setPacketSink([this](const uint8_t* pk, size_t n) { if (pktCb) pktCb(pk, n, 0.024); });
     }
 
     // ------------------------------------------------------------ helpers
@@ -380,6 +385,27 @@ struct DabReceiver::Impl {
                 }
                 sv.comps = comps;
             }
+        } else if (ext == 13) {   // user applications (TS 101 756 table 16): which sub-channel carries DMB video
+            int p = 0;
+            while (p + (pd ? 5 : 3) <= n) {
+                uint32_t sid;
+                if (pd == 0) { sid = (uint32_t)((b[p] << 8) | b[p + 1]); p += 2; }
+                else { sid = ((uint32_t)b[p] << 24) | ((uint32_t)b[p + 1] << 16) | ((uint32_t)b[p + 2] << 8) | b[p + 3]; p += 4; }
+                const int scids = b[p] >> 4, nua = b[p] & 15;
+                p++;
+                for (int u = 0; u < nua && p + 2 <= n; u++) {
+                    const int type = (b[p] << 3) | (b[p + 1] >> 5), len = b[p + 1] & 31;
+                    p += 2;
+                    if (p + len > n) break;
+                    if (scids == 0 && u == 0) {   // the primary component's first application (PAD applications of a DMB radio service follow it)
+                        DabService& sv = ens.services[sid];
+                        sv.sid = sid;
+                        sv.userApp = type;
+                        if (type == 0x009 && len >= 1) sv.dmbProfile = b[p];
+                    }
+                    p += len;
+                }
+            }
         } else if (ext == 10 && n >= 4) {
             const uint32_t mjd = getBits(b, 1, 17);
             const int flag = (int)getBits(b, 20, 1);
@@ -400,6 +426,11 @@ struct DabReceiver::Impl {
             DabService& sv = ens.services[sid];
             sv.sid = sid;
             sv.label = labelText(b + 2, 16);
+        } else if (ext == 5 && n >= 20) {   // data service label (32-bit SId), e.g. DMB television
+            const uint32_t sid = ((uint32_t)b[0] << 24) | ((uint32_t)b[1] << 16) | ((uint32_t)b[2] << 8) | b[3];
+            DabService& sv = ens.services[sid];
+            sv.sid = sid;
+            sv.label = labelText(b + 4, 16);
         }
     }
 
@@ -407,16 +438,23 @@ struct DabReceiver::Impl {
     void applySelection() {
         // (ens is locked by the caller)
         if (selReq == sel) return;
-        if (selReq < 0) { sel = -1; audio.select(-1, false, 0); hist.assign(16, {}); cifCount = 0; return; }
+        if (selReq < 0) { sel = -1; selDmb = false; audio.select(-1, false, 0); dmb.reset(); hist.assign(16, {}); cifCount = 0; return; }
         auto it = ens.subs.find(selReq);
         if (it == ens.subs.end()) return;   // wait until the ensemble tells us about it
         selSub = it->second;
-        bool plus = true;
-        for (const auto& kv : ens.services) for (const auto& c : kv.second.comps) if (c.tmid == 0 && c.subId == selReq) plus = c.ascty == 63;
+        bool plus = true, isDmb = false;
+        for (const auto& kv : ens.services) {
+            for (const auto& c : kv.second.comps) if (c.tmid == 0 && c.subId == selReq) plus = c.ascty == 63;
+            const DabComponent* d = kv.second.dmb();
+            if (d && d->subId == selReq) isDmb = true;
+        }
         sel = selReq;
+        selDmb = isDmb;
         hist.assign(16, {});
         cifCount = 0;
-        audio.select(sel, plus, selSub.bitrate);
+        dmb.reset();
+        if (isDmb) audio.select(-1, false, 0);
+        else audio.select(sel, plus, selSub.bitrate);
     }
 
     void decodeMsc() {
@@ -446,7 +484,8 @@ struct DabReceiver::Impl {
             descramble(dec.data(), info);
             for (int i = 0; i < info / 8; i++) { uint8_t v = 0; for (int b = 0; b < 8; b++) v = (uint8_t)((v << 1) | dec[(size_t)i * 8 + (size_t)b]); bytes[(size_t)i] = v; }
             if (tap) tap(sel, bytes.data(), (int)bytes.size());
-            audio.push(bytes.data(), (int)bytes.size());
+            if (selDmb) dmb.push(bytes.data(), (int)bytes.size());
+            else audio.push(bytes.data(), (int)bytes.size());
         }
     }
 
@@ -467,6 +506,9 @@ struct DabReceiver::Impl {
         t.constellation = constel;
         t.cir = cirKeep;
         t.audio = audio.stats();
+        t.dmb = dmb.stats();
+        t.dmb.active = selDmb;
+        t.dmb.sub = selDmb ? sel : -1;
         for (const auto& f : tii.found()) t.tii.push_back({f.mainId, f.subId, f.levelDb, f.marginDb});
         t.tiiFrames = tii.framesSeen();
         t.seq = ++telSeq;
@@ -480,6 +522,7 @@ struct DabReceiver::Impl {
         tel = DabTelemetry(); tel.seq = telSeq;
         hist.assign(16, {}); cifCount = 0;
         audio.flushSync();
+        dmb.reset();
     }
 
     void run() {
@@ -530,6 +573,8 @@ void DabReceiver::select(int subId) {
 }
 int DabReceiver::selected() const { return p_->selReq; }
 DabAudio& DabReceiver::audio() { return p_->audio; }
+DmbDecoder& DabReceiver::dmb() { return p_->dmb; }
+void DabReceiver::setPacketCallback(std::function<void(const uint8_t*, size_t, double)> cb) { p_->pktCb = std::move(cb); }
 void DabReceiver::setFrameTap(std::function<void(int, const uint8_t*, int)> cb) { p_->tap = std::move(cb); }
 
 } // namespace dect2

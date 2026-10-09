@@ -174,6 +174,7 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     rxA_.setBlocking(!src_->realtimeHardware());
     rxA_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the ATSC worker thread
     rxD_.configure(rate_);
+    rxD_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // DMB video, on the receiver thread
     rxI_.configure(rate_);
     rxI_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });
     rxFm_.configure(rate_);
@@ -248,7 +249,7 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     rxA3_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the ATSC 3.0 worker thread
     atsc3Seq_ = 0; logA3State_ = -1; logA3Svc_ = false;
     { std::lock_guard<std::mutex> lk(atsc3Mu_); atsc3Tel_ = Atsc3Telemetry(); }
-    dabSeq_ = 0; logDState_ = -1; logDEns_ = false;
+    dabSeq_ = 0; logDState_ = -1; logDEns_ = false; dmbSub_ = -1;
     for (auto& s : modeSeq_) s = 0;
     atscSeq_ = 0; logAState_ = -1;
     activeStd_ = activeStdFor(stdMode_.load());
@@ -502,6 +503,7 @@ void Engine::autoSelect(const RxTelemetry& t, bool tLocked) {
     if (stdReq_.exchange(false)) {
         const int m = stdMode_.load();
         if (m >= 1 && activeStd_ != activeStdFor(m)) {
+            if (dmbSub_ >= 0) { player_.select(-1); dmbSub_ = -1; }   // leaving DAB: the DMB picture stops with it
             activeStd_ = activeStdFor(m);
             switch (activeStd_.load()) {
             case 0: rx_.reset(); break;
@@ -928,6 +930,15 @@ void Engine::analysisLoop() {
                 DabTelemetry dt;
                 if (rxD_.telemetry(dt, dabSeq_)) {
                     dabSeq_ = dt.seq;
+                    // a DMB video service plays like a TV service: the player follows the selected DMB sub-channel (a new one starts afresh)
+                    if (dt.dmb.sub != dmbSub_) {
+                        if (dmbSub_ >= 0) player_.select(-1);
+                        dmbSub_ = dt.dmb.sub;
+                        if (dmbSub_ >= 0) {
+                            { std::lock_guard<std::mutex> lk(tsMu_); demux_.reset(); tsSnap_ = TsSnapshot(); }
+                            player_.select(DmbRemux::kProgram);
+                        }
+                    }
                     t.standard = 3;
                     t.seq = dt.seq;
                     t.state = dt.state;

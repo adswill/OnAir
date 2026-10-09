@@ -260,6 +260,7 @@ private:
     int logA3State_ = -1;
     bool logA3Svc_ = false;
     uint64_t dabSeq_ = 0;
+    int dmbSub_ = -1;                // the DMB video sub-channel the player is showing (-1 = none)
     uint64_t fmSeq_ = 0;
     int logDState_ = -1;
     bool logDEns_ = false;

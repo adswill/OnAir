@@ -1,5 +1,6 @@
 // DAB / DAB+ receiver (ETSI EN 300 401, TS 102 563), transmission mode I (Band III, 1.536 MHz, 1536 carriers).
 #pragma once
+#include "dab_dmb.h"
 #include "dab_tel.h"
 #include "ring.h"
 #include <cstdint>
@@ -53,10 +54,13 @@ public:
     void feed(const cf32* x, size_t n);
     bool telemetry(DabTelemetry& out, uint64_t lastSeq);
     DabEnsemble ensemble() const;
-    // Decode and play this sub-channel (-1 = none)
+    // Decode and play this sub-channel (-1 = none). A DMB video sub-channel goes to the DMB decoder, whose transport stream comes out of
+    // the packet callback (24 ms of stream per call); the others go to DabAudio.
     void select(int subId);
     int selected() const;
     DabAudio& audio();
+    DmbDecoder& dmb();
+    void setPacketCallback(std::function<void(const uint8_t* pk, size_t n, double secs)> cb);
     // Called with every logical frame of the selected sub-channel (after Viterbi and descrambling), for tests
     void setFrameTap(std::function<void(int sub, const uint8_t* bytes, int n)> cb);
 
