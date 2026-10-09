@@ -38,6 +38,20 @@ struct IsdbtReceiver::Impl {
         return (k >= 0 && k < (int64_t)buf.size()) ? buf[(size_t)k] : kZero;
     }
 
+    // ---- where the channel sits in the input band. The receiver first assumes the centre; the power spectrum of the first samples gives a
+    // second guess (a recording made beside the channel), and the receiver goes through the guesses whenever the TMCC cannot be found.
+    std::vector<double> mixCand{0.0};
+    size_t candIdx = 0;
+    double mixHz = 0;
+    cd mixRot{1, 0}, mixStep{1, 0};
+    uint64_t mixN = 0;
+    bool estDone = false;
+    std::vector<cf32> estBuf;
+    std::vector<double> estPow;
+    int estBlocks = 0, estTries = 0;
+    int64_t searchedSince = 0;                 // input samples since the current guess was taken (without a lock)
+    std::vector<cf32> pre;
+
     // ---- state
     int state = 0;                 // 0 searching, 1 tracking and looking for the TMCC, 2 locked
     int modeIdx = -1, gi = -1, mode = 0, N = 0, G = 0, K = 0, kc = 0;   // mode: 1, 2, 3
@@ -86,6 +100,86 @@ struct IsdbtReceiver::Impl {
         spec.clear(); specBase = 0; huntFails = 0; sinceHunt = 0; tmccOk = false; tmccSeg = -1; prevTmcc.clear(); tmccSoft.clear(); tmccFailures = 0; secSinceTmcc = 0;
         streamSecs = 0; packetsOut = 0; detect = 0; sroPpm = 0;
         buf.clear(); base = 0; resampler.reset();
+        mixCand = {0.0}; candIdx = 0; setMix(0); estDone = false; estBuf.clear(); estPow.clear(); estBlocks = 0; estTries = 0; searchedSince = 0;
+    }
+
+    // ------------------------------------------------------------------ the channel's place in the input band
+    void setMix(double hz) {
+        mixHz = hz; mixN = 0; mixRot = cd(1, 0);
+        const double w = -2.0 * M_PI * hz / std::max(1.0, inRate);
+        mixStep = cd(std::cos(w), std::sin(w));
+    }
+    // a new guess: everything received so far was mixed with the old one
+    void takeCandidate(size_t i) {
+        candIdx = i % mixCand.size();
+        setMix(mixCand[candIdx]);
+        state = 0; agreeCount = 0; detect = 0; tmccOk = false;
+        buf.clear(); base = 0; resampler.reset(); spec.clear(); searchedSince = 0;
+        if (getenv("ISDBT_DEBUG")) fprintf(stderr, "[isdbt] channel guess %zu: %.1f kHz\n", candIdx, mixHz / 1e3);
+    }
+    void nextCandidate() { if (mixCand.size() > 1) takeCandidate(candIdx + 1); else searchedSince = 0; }
+
+    // The ISDB-T signal is a flat block of 13 segments (5.57 MHz): the box of that width with the most power in the averaged spectrum, if
+    // its edges stand clearly above what lies outside.
+    void estimateCentre(const cf32* x, size_t n) {
+        constexpr int F = 1024, kBlocks = 48;
+        estBuf.insert(estBuf.end(), x, x + std::min(n, (size_t)F * kBlocks));
+        if (estPow.empty()) estPow.assign(F, 0.0);
+        Fft f(F);
+        size_t used = 0;
+        while (estBuf.size() - used >= (size_t)F && estBlocks < kBlocks) {
+            std::vector<cf32> b(estBuf.begin() + (long)used, estBuf.begin() + (long)used + F);
+            for (int i = 0; i < F; i++) {
+                if (!std::isfinite(b[(size_t)i].real()) || !std::isfinite(b[(size_t)i].imag())) b[(size_t)i] = cf32(0, 0);
+                b[(size_t)i] *= (float)(0.5 - 0.5 * std::cos(2 * M_PI * i / F));
+            }
+            f.forward(b.data());
+            for (int i = 0; i < F; i++) estPow[(size_t)((i + F / 2) % F)] += std::norm(b[(size_t)i]);   // centred: bin F / 2 is 0 Hz
+            used += F; estBlocks++;
+        }
+        estBuf.erase(estBuf.begin(), estBuf.begin() + (long)used);
+        if (estBlocks < kBlocks) return;
+        estDone = true; estBuf.clear(); estBuf.shrink_to_fit();
+        const int W = (int)std::lround(5.572e6 / inRate * F);
+        if (W < 16 || W > F - 2) return;
+        std::vector<double> cum(F + 1, 0.0);
+        for (int i = 0; i < F; i++) cum[(size_t)i + 1] = cum[(size_t)i] + estPow[(size_t)i];
+        int best = -1; double bs = -1;
+        for (int a = 0; a + W <= F; a++) { const double v = cum[(size_t)(a + W)] - cum[(size_t)a]; if (v > bs) { bs = v; best = a; } }
+        if (best < 0 || bs <= 0) return;
+        const double inside = bs / W;
+        const int e = std::max(2, W / 25);
+        auto edgeOk = [&](int a0, int a1) {          // the band beside an edge: much weaker, or outside the input band
+            a0 = std::max(0, a0); a1 = std::min(F, a1);
+            if (a1 - a0 < 2) return true;
+            return (cum[(size_t)a1] - cum[(size_t)a0]) / (a1 - a0) < 0.25 * inside;
+        };
+        if (!edgeOk(best - e - 2, best - 2) || !edgeOk(best + W + 2, best + W + e + 2)) {
+            // no clear channel yet (silence or noise at the start of a recording): look again at later samples, a few times
+            if (++estTries < 16) { estDone = false; estPow.assign(F, 0.0); estBlocks = 0; }
+            return;
+        }
+        const double hz = ((double)best + W / 2.0 - F / 2.0) * inRate / F;
+        if (getenv("ISDBT_DEBUG")) fprintf(stderr, "[isdbt] spectrum: channel centre %.1f kHz\n", hz / 1e3);
+        if (std::fabs(hz) < 40e3) return;            // within the receiver's own frequency search
+        mixCand = {hz, 0.0};
+        if (!tmccOk) takeCandidate(0); else candIdx = 1;   // still searching: the spectrum's guess first
+    }
+
+    // input conditioning: the guess of the channel's place, then the resampler
+    void condition(const cf32* x, size_t n) {
+        const cf32* src = x;
+        if (mixHz != 0) {
+            pre.resize(n);
+            for (size_t i = 0; i < n; i++) {
+                const cd v = cd(x[i].real(), x[i].imag()) * mixRot;
+                pre[i] = cf32((float)v.real(), (float)v.imag());
+                mixRot *= mixStep;
+                if ((++mixN & 1023) == 0) mixRot /= std::abs(mixRot);
+            }
+            src = pre.data();
+        }
+        rsOut.clear(); resampler.process(src, n, rsOut); buf.insert(buf.end(), rsOut.begin(), rsOut.end());
     }
 
     // ------------------------------------------------------------------ acquisition: mode and guard interval from the cyclic prefix
@@ -270,7 +364,7 @@ struct IsdbtReceiver::Impl {
             sinceHunt = 0;
             if (hunt()) { state = 2; spec.clear(); spec.shrink_to_fit(); }
             else {
-                if (++huntFails >= 8) { state = 0; detect = 1; agreeCount = 0; spec.clear(); return; }
+                if (++huntFails >= 8) { state = 0; detect = 1; agreeCount = 0; spec.clear(); nextCandidate(); return; }
                 const size_t drop = 100;
                 spec.erase(spec.begin(), spec.begin() + (long)drop);
                 specBase += drop;
@@ -452,7 +546,7 @@ struct IsdbtReceiver::Impl {
         t.inputRate = inRate; t.nativeRate = kSampleRate;
         t.state = state == 0 ? 0 : tmccOk ? 2 : 1;
         t.fftN = N; t.guard = G; t.giIdx = gi; t.carriers = K;
-        t.cfoHz = (epsFrac + intShift) * kSampleRate / std::max(1, N);
+        t.cfoHz = (epsFrac + intShift) * kSampleRate / std::max(1, N) + mixHz;
         t.sroPpm = sroPpm;
         t.symbolsPerFrame = kSymbolsPerFrame;
         t.frameMs = N ? (double)kSymbolsPerFrame * (N + G) / kSampleRate * 1e3 : 0;
@@ -523,8 +617,10 @@ int IsdbtReceiver::detectLevel() const { return p_->detect.load(); }
 void IsdbtReceiver::feed(const cf32* x, size_t n) {
     Impl& I = *p_;
     if (!I.rateOk || !n) return;
-    if (I.decimate) { I.rsOut.clear(); I.resampler.process(x, n, I.rsOut); I.buf.insert(I.buf.end(), I.rsOut.begin(), I.rsOut.end()); }
-    else I.buf.insert(I.buf.end(), x, x + n);
+    if (!I.estDone) I.estimateCentre(x, n);
+    I.condition(x, n);
+    // no lock for a long time with this guess of the channel's place (no cyclic prefix found, or the TMCC search keeps failing): the next one
+    if (!I.tmccOk) { I.searchedSince += (int64_t)n; if (I.searchedSince > (int64_t)(3.0 * I.inRate)) I.nextCandidate(); }
     for (int guard = 0; guard < 100000; guard++) {
         if (I.state == 0) {
             const size_t need = (size_t)(6.0 * (8192 + 2048) + 8192 + 2048);
