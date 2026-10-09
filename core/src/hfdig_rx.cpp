@@ -235,6 +235,8 @@ void HfdigReceiver::setSilent(bool s) { p_->silent = s; }
 void HfdigReceiver::setAudioTap(std::function<void(const float* x, size_t n)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->audioTapSet = std::move(cb); p_->tapsReq = true; }
 void HfdigReceiver::setSpeechTap(std::function<void(const float* x, size_t n)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->speechTapSet = std::move(cb); p_->tapsReq = true; }
 
+HfdigRtty& HfdigReceiver::rtty() { return *p_->rtty; }
+
 ModeTuning hfdigTuning() {
     ModeTuning t;
     t.stdMode = 27; t.id = "hfdig"; t.name = "HF digital";

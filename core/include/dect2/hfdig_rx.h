@@ -19,6 +19,7 @@
 namespace dect2 {
 
 struct HfdigTelemetry;   // hfdig_tel.h
+class HfdigRtty;         // hfdig_rtty.h
 
 constexpr double kHfdigAudioRate = 8000.0;   // the audio every decoder gets, and the rate of FreeDV's speech
 
@@ -50,6 +51,7 @@ public:
     void setSilent(bool s);                              // decode but do not open the sound device (tests, command line)
     void setAudioTap(std::function<void(const float* x, size_t n)> cb);    // tests: the demodulated 8 kHz audio, called from feed()
     void setSpeechTap(std::function<void(const float* x, size_t n)> cb);   // tests: FreeDV's 8 kHz speech, called from feed()
+    HfdigRtty& rtty();                                   // the RTTY decoder's settings (thread safe, see hfdig_rtty.h)
 
 private:
     struct Impl;
