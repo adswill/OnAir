@@ -59,17 +59,17 @@ int main() {
             if (snr == 12) CHECK(t.blocksOk >= 0.4 * ref, "Es/N0 %.0f: %llu of %.0f frames", snr, (unsigned long long)t.blocksOk, ref);
         }
     }
-    // carrier offset: +-16 kHz (10 ppm of 1.6 GHz) on top of the satellite Doppler (+-37.5 kHz, 350 Hz/s)
-    for (double cfo : {-16e3, 16e3}) {
-        SceneOpts so; so.rate = 10e6; so.secs = 1.2; so.cfoHz = cfo; so.dopplerMax = 37.5e3; so.dopplerRate = 350; so.seed = 600 + (cfo > 0);
+    // carrier offset: +-16 kHz (10 ppm of 1.6 GHz) and +-81 kHz (50 ppm) on top of the satellite Doppler (+-37.5 kHz, 350 Hz/s)
+    for (double cfo : {-81e3, -16e3, 16e3, 81e3}) {
+        SceneOpts so; so.rate = 10e6; so.secs = 1.2; so.cfoHz = cfo; so.dopplerMax = 37.5e3; so.dopplerRate = 350; so.seed = 600 + (cfo > 0) + 2 * (std::fabs(cfo) > 20e3);
         RunOpts ro;
         char nm[64]; snprintf(nm, sizeof nm, "offset %+.0f kHz, Doppler 37.5 kHz", cfo / 1e3);
         const Match m = go(nm, so, ro);
         CHECK(m.sent > 80 && m.exact == m.sent, "%s: %d of %d exact", nm, m.exact, m.sent);
     }
-    // sample clock +-50 ppm
-    for (double ppm : {-50.0, 50.0}) {
-        SceneOpts so; so.rate = 10e6; so.secs = 1.2; so.seed = 610 + (ppm > 0);
+    // sample clock +-50 and +-100 ppm
+    for (double ppm : {-100.0, -50.0, 50.0, 100.0}) {
+        SceneOpts so; so.rate = 10e6; so.secs = 1.2; so.seed = 610 + (ppm > 0) + 2 * (std::fabs(ppm) > 60);
         RunOpts ro; ro.sroPpm = ppm;
         char nm[64]; snprintf(nm, sizeof nm, "sample clock %+.0f ppm", ppm);
         const Match m = go(nm, so, ro);
