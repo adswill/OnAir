@@ -364,7 +364,7 @@ bool Demod::Impl::sfd(const ChanBuf& b) {
     const int diff = wrap(kDn - kUp);
     int taus[10]; int nt = 0;
     for (int d = -2; d <= 2; d++) { taus[nt++] = wrap(diff / 2 + d); taus[nt++] = wrap(diff / 2 + d + N / 2); }
-    const int sw1 = ((p.syncWord >> 4) & 0xF) << 3, sw2 = (p.syncWord & 0xF) << 3;
+    const int sw1 = syncSymbol(p.syncWord, 0, sf), sw2 = syncSymbol(p.syncWord, 1, sf);
     // Every candidate (tau, m) is scored first on the cheap windows (cached per tau: 9 up and 6 down windows serve all m),
     // the three best again on windows resampled with their carrier offset mixed out (full sensitivity).
     struct Cand { double score; int tau, m, cfoC; };

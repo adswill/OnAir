@@ -27,6 +27,9 @@ struct Params {
 // RadioLib turns the low data rate optimisation on when a symbol lasts 16 ms or more (SX126x::setSpreadingFactor, autoLDRO)
 bool autoLdro(int sf, double bwHz);
 double symbolSeconds(int sf, double bwHz);
+// FFT bin (0 .. 2^sf - 1) of sync word symbol 0 (high nibble) or 1 (low nibble). The radios send nibble << 3 as a signed 7-bit value:
+// Meshtastic's 0x2B is 16 and -40 (2^sf - 40), which equals 88 only at SF7 (measured on an SX1262 at SF11, 2026-10-09).
+int syncSymbol(uint8_t syncWord, int index, int sf);
 
 // coding pieces (exposed for the known-answer tests)
 uint8_t whitening(size_t i);                                   // byte i of the whitening sequence (0xFF, 0xFE, 0xFC, ...)

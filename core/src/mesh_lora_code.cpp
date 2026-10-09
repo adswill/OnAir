@@ -7,6 +7,11 @@ namespace lora {
 
 bool autoLdro(int sf, double bwHz) { return symbolSeconds(sf, bwHz) >= 0.016 - 1e-9; }
 double symbolSeconds(int sf, double bwHz) { return (double)(1 << sf) / bwHz; }
+int syncSymbol(uint8_t syncWord, int index, int sf) {
+    int v = ((index == 0 ? syncWord >> 4 : syncWord) & 0xF) << 3;
+    if (v >= 64) v -= 128;
+    return v & ((1 << sf) - 1);
+}
 
 uint8_t whitening(size_t i) {
     // gr-lora_sdr tables.h lists 255 bytes; they are the 8-bit LFSR x^8 + x^6 + x^5 + x^4 + 1 started at 0xFF
@@ -229,7 +234,7 @@ void TxFrame::render(cf32* out, size_t n, double t0, double rate) const {
     const double P = p.preamble;
     const double dataStart = (P + 4.25) * N;
     const double total = dataStart + (double)data.size() * N;
-    const int sw1 = ((p.syncWord >> 4) & 0xF) << 3, sw2 = (p.syncWord & 0xF) << 3;
+    const int sw1 = syncSymbol(p.syncWord, 0, p.sf), sw2 = syncSymbol(p.syncWord, 1, p.sf);
     // the first sample inside the frame
     size_t k0 = 0;
     if (t0 < startSec) {
