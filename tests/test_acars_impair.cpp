@@ -1,5 +1,6 @@
 // ACARS with the faults of real radios: carrier offset, clock offset, 8-bit samples, DC offset, a gap, a reset, a weak channel next to a strong one.
 #include "dect2/acars_sim.h"
+#include "impair.h"
 #include <cstdio>
 using namespace dect2;
 static int fails = 0;
@@ -23,11 +24,17 @@ static AcarsSimResult scene(AcarsSimCfg c, const char* what, double minFrac) {
 }
 
 int main() {
-    printf("carrier offset (every channel shifted; 10 ppm of 131.5 MHz is 1.3 kHz)\n");
-    for (double cfo : {-3000.0, -1300.0, 1300.0, 3000.0}) {
+    printf("carrier offset (every channel shifted; 10 ppm of 131.5 MHz is 1.3 kHz, 50 ppm 6.6 kHz)\n");
+    for (double cfo : {-6600.0, -3000.0, -1300.0, 1300.0, 3000.0, 6600.0}) {
         auto c = base(30); c.syn.cfoHz = cfo;
         char w[48]; snprintf(w, sizeof w, "carrier offset %+.0f Hz", cfo);
         scene(c, w, 0.98);
+    }
+    printf("combined: -6.6 kHz, +80 ppm clock, an echo, 8-bit clipping\n");
+    {
+        auto c = base(30); c.syn.cfoHz = -6600; c.syn.sroPpm = 80; c.quant8 = true;
+        c.mod = [](cf32* x, size_t n) { std::vector<cf32> v(x, x + n); impair::echo(v, 3, -8, 2.0); impair::clip8(v, 2.0); std::copy(v.begin(), v.end(), x); };
+        scene(c, "combined", 0.98);
     }
     printf("sample clock offset\n");
     for (double ppm : {-200.0, -50.0, 50.0, 200.0}) {

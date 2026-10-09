@@ -1,6 +1,7 @@
 // The ACARS generator straight into the receiver, with the list of what was sent checked off against what came out. Used by the
 // tests and by acarstool sim.
 #pragma once
+#include <functional>
 #include "acars_gen.h"
 #include "acars_rx.h"
 #include <chrono>
@@ -25,6 +26,7 @@ struct AcarsSimCfg {
     double thrDb = 8;
     bool centerSet = true;                // call setCenterHz(gen.centerHz)
     double offsetHz = 0;                  // setSignalOffset
+    std::function<void(cf32* x, size_t n)> mod;   // after generation, before the 8 bit rounding (tests/impair.h faults)
 };
 
 struct AcarsSimResult {
@@ -91,6 +93,7 @@ inline AcarsSimResult runAcarsSim(AcarsSimCfg c) {
             n = std::min(n, pre);
         }
         g->generate(buf.data(), n);
+        if (c.mod) c.mod(buf.data(), n);
         if (c.quant8)
             for (size_t i = 0; i < n; i++) {
                 const float re = std::max(-1.f, std::min(1.f, buf[i].real() + c.dc.real())), im = std::max(-1.f, std::min(1.f, buf[i].imag() + c.dc.imag()));
