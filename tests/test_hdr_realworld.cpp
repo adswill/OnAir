@@ -79,9 +79,9 @@ int main() {
         char b[64]; snprintf(b, sizeof b, "%s, sample clock %+.0f ppm", m ? "AM" : "FM", ppm);
         check(b, m, x);
     });
-    for (int m : {0, 1}) jobs.add([=] {
-        auto x = clean(m, 30); impair::shift(x, 230, kRate); impair::swapIq(x);   // the other side is tried after 12 s without a P1 frame
-        check(m ? "AM, swapped I/Q" : "FM, swapped I/Q", m, x, std::numeric_limits<double>::quiet_NaN(), 12);   // frames before the switch fail
+    for (int m : {0, 1}) jobs.add([=] {   // decided well before the 12 s of the last resort: AM at once, FM after three failed P1 frames
+        auto x = clean(m, 16); impair::shift(x, 230, kRate); impair::swapIq(x);
+        check(m ? "AM, swapped I/Q" : "FM, swapped I/Q", m, x, std::numeric_limits<double>::quiet_NaN(), m ? 3 : 4);
     });
     // analog host louder or quieter than nominal (digital sidebands at -30 and -10 dBc), AM host +6 dB
     for (double db : {10.0, -10.0}) jobs.add([=] {

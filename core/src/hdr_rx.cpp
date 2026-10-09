@@ -23,12 +23,14 @@ struct Sink : hdr::L1Sink {
     hdr::L2Decoder* l2 = nullptr;
     double* now = nullptr;
     double lastP1 = -1e9;
+    int badP1 = 0;                         // P1 frames with a bad header (cleared by the receiver)
     void pids(const uint8_t* b) override { l2->pushPids(b); }
     bool transfer(const uint8_t* b, int len, int ch) override {
         const uint64_t before = l2->pciOk(ch);
         l2->pushTransfer(b, len, ch);
         const bool ok = l2->pciOk(ch) > before;
         if (ok && ch == 0) lastP1 = *now;
+        if (!ok && ch == 0) badP1++;
         return ok;
     }
     void blockSync() override { l2->resetTransport(); }
@@ -53,6 +55,13 @@ struct HdrReceiver::Impl {
     hdr::AmRx am{&amSink};
     int band = 0;                          // 0 both receivers search, 1 FM, 2 AM
     bool mirror = false;                   // the input is conjugated (I and Q swapped)
+    // While no band has been found, a second AM receiver looks at the conjugated input (AM runs at 46.5 kHz: cheap): a mirrored AM station
+    // never reaches block sync in the first one. FM reaches block sync either way (its reference subcarriers are symmetric), so a mirrored
+    // FM station shows as P1 frames that all fail.
+    hdr::L2Decoder l2m;
+    Sink amSinkM;
+    hdr::AmRx amM{&amSinkM};
+    std::vector<cf32> bbm;
     double mirrorSince = 0;                // signal time of the last change of `mirror`
     static constexpr double kMirrorWait = 12;   // seconds without any P1 frame before the other side is tried
     std::vector<cf32> clean;
@@ -70,6 +79,7 @@ struct HdrReceiver::Impl {
     Impl() {
         fmSink.l2 = &l2; fmSink.now = &now;
         amSink.l2 = &l2; amSink.now = &now;
+        amSinkM.l2 = &l2m; amSinkM.now = &now;
     }
 
     void resetState() {
@@ -85,7 +95,10 @@ struct HdrReceiver::Impl {
         l2.setLog(cb);
         fm.reset();
         am.reset();
+        amM.reset();
+        l2m.reset();
         fmSink.lastP1 = amSink.lastP1 = -1e9;
+        fmSink.badP1 = amSink.badP1 = 0;
         band = 0; lostFor = 0;
         mirror = false; mirrorSince = 0;
         nIn = 0; now = 0; nextReport = 0; power = 0; nPower = 0; busy = 0;
@@ -159,7 +172,7 @@ struct HdrReceiver::Impl {
         if (band != 1) am.feed(bb.data(), bb.size());
         const double dt = (double)n / curRate;
         if (band == 0) {
-            if (fm.state() == 2) { band = 1; am.reset(); say("HD Radio: FM hybrid signal found"); }
+            if (fm.state() == 2) { band = 1; am.reset(); fmSink.badP1 = 0; say("HD Radio: FM hybrid signal found"); }
             else if (am.state() == 2) { band = 2; fm.reset(); say("HD Radio: AM hybrid signal found"); }
         } else {
             const int st = band == 1 ? fm.state() : am.state();
@@ -169,11 +182,20 @@ struct HdrReceiver::Impl {
         // the sample clock error the AM receiver measures is taken out in the resampler (FM copes with its pilots)
         double ppm;
         if (band == 2 && am.clockPpm(ppm) && std::fabs(ppm) > 0.5) rs.scaleStep(1 + ppm * 1e-6);
-        // no P1 frame at all for a long time with or without a signal: try the mirrored spectrum
-        if (std::max(fmSink.lastP1, amSink.lastP1) < mirrorSince && now - mirrorSince > kMirrorWait) {
+        // the mirrored spectrum: AM block sync only on the conjugated input, three failed FM P1 frames and not one good one, or (the last
+        // resort) no P1 frame at all for a long time
+        const bool noneGood = std::max(fmSink.lastP1, amSink.lastP1) < mirrorSince;
+        if (band == 0 && noneGood) {
+            bbm.resize(bb.size());
+            for (size_t i = 0; i < bb.size(); i++) bbm[i] = std::conj(bb[i]);
+            amM.feed(bbm.data(), bbm.size());
+        }
+        if (noneGood && ((band == 0 && amM.state() == 2 && am.state() != 2) || (band == 1 && fmSink.badP1 >= 3) || now - mirrorSince > kMirrorWait)) {
             mirror = !mirror;
             mirrorSince = now;
-            band = 0; lostFor = 0; fm.reset(); am.reset();
+            band = 0; lostFor = 0; fm.reset(); am.reset(); amM.reset();
+            fmSink.badP1 = amSink.badP1 = 0;
+            say(mirror ? "HD Radio: the spectrum is mirrored (I and Q swapped), turning it round" : "HD Radio: trying the spectrum the right way round");
         }
         nIn += (int64_t)n;
         now = (double)nIn / curRate;
