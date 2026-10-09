@@ -3,9 +3,12 @@
 #include "app.h"
 #include "adsb_map.h"
 #include "dect2/marine_tel.h"
+#include "dect2/marine_navtex_save.h"
+#include "dect2/updater.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <filesystem>
 #include <ctime>
 
 namespace {
@@ -38,6 +41,9 @@ struct State {
     float zoom = 0;                  // 0 = fit the width
     ImVec2 pan{0, 0};
     std::string saveMsg;
+    bool saveNav = true;             // write each NAVTEX message to a text file when it has been received
+    dect2::NavtexSaver saver;
+    std::string saveErr;             // the first write error, shown once until the user changes the setting
 };
 State S;
 
@@ -55,6 +61,7 @@ void loadState() {
     S.iocIdx = std::max(0, std::min(2, (int)d.getI("marineIoc", 0)));
     S.autoSlant = d.getB("marineAutoSlant", true);
     S.slant = (float)d.getD("marineSlant", 0.0);
+    S.saveNav = d.getB("marineSaveNavtex", true);
     S.map.zoom = 5;
 }
 
@@ -486,6 +493,11 @@ void tick(App& a) {
     loadState();
     if (!a.engine.running()) { S.pushedService = S.pushedLpm = S.pushedIoc = S.pushedAuto = -1; S.pushedFreq = -1; S.pushedSlant = 1e9f; return; }
     dect2::MarineReceiver& r = a.engine.marine();
+    if (S.saveNav && live(a)) {
+        const DeviceInfo::Kind dk = a.devices.empty() ? DeviceInfo::Synthetic : a.devices[(size_t)std::max(0, std::min((int)a.devices.size() - 1, a.devIdx))].kind;
+        S.saver.update(a.rx.marine.navtex, plat::dataDir() + "/navtex", dk == DeviceInfo::Synthetic || dk == DeviceInfo::File ? 0.0 : a.freqMhz * 1e6);
+        if (S.saver.failed() && S.saveErr.empty()) S.saveErr = S.saver.error();
+    }
     if (S.pushedService != S.service) { r.setService(S.service); S.pushedService = S.service; }
     // a test signal or a recording has no dial frequency: auto then runs every decoder
     const DeviceInfo::Kind k = a.devices.empty() ? DeviceInfo::Synthetic : a.devices[(size_t)std::max(0, std::min((int)a.devices.size() - 1, a.devIdx))].kind;
@@ -514,6 +526,17 @@ void tab(App& a) {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("auto: by the frequency (490, 518, 4209.5 kHz NAVTEX; the DSC frequencies; otherwise fax).\nWith the test signal or a recording every decoder runs.");
     ImGui::SameLine();
     if (ImGui::SmallButton("clear")) a.engine.marine().clearMessages();
+    sameLineIf(ImGui::GetFrameHeight() + ImGui::CalcTextSize("Save messages").x + 100 * gUi, 20 * gUi);
+    if (ImGui::Checkbox("Save messages", &S.saveNav)) { plat::prefs().setB("marineSaveNavtex", S.saveNav); S.saver.clearError(); S.saveErr.clear(); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Write each NAVTEX message to a text file as soon as it has been received (also one cut short, marked as such).\nOne file per message, in a folder per day.");
+    sameLineIf(ImGui::CalcTextSize("Show folder").x + 16 * gUi);
+    if (ImGui::SmallButton("Show folder")) {
+        const std::string d = plat::dataDir() + "/navtex";
+        std::error_code ec;
+        std::filesystem::create_directories(std::filesystem::path(reinterpret_cast<const char8_t*>(d.c_str())), ec);
+        dect2::openUrl(d);
+    }
+    if (!S.saveErr.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextColored(pal::badRed(), "%s", S.saveErr.c_str()); ImGui::PopTextWrapPos(); }
     switch (S.view) {
     case 0: navtexView(a); break;
     case 1: dscView(a); break;
