@@ -1,5 +1,6 @@
 #include "dect2/dvbt_rx.h"
 #include "dect2/dvbt_fec.h"
+#include "dect2/chan_locate.h"
 #include "dect2/exact_resampler.h"
 #include "dect2/fftutil.h"
 #include "dect2/resampler.h"
@@ -132,6 +133,15 @@ struct DvbtReceiver::Impl {
     int irTauMin = 0;
     double cfoHz = 0;
     int64_t lastPublishSym = -100;
+
+    ChannelLocator locator;       // where the channel sits in the input band (not reset with the acquisition)
+    ChannelMixer mixer;
+    void restartAt(double hz) {
+        const cf32 d = dc;
+        reset();
+        dc = d;
+        mixer.set(hz, inRate);
+    }
 
     void reset() {
         state = 0; mode = gi = -1; N = G = K = 0; symStart = 0; epsFrac = 0; intShift = 0; intLocked = false; rhoAvg = 0; lowRun = 0; streaming = false; phaseCheck = false; postResync = 0;
@@ -766,7 +776,7 @@ struct DvbtReceiver::Impl {
         t.inputRate = inRate; t.nativeRate = fn;
         t.state = state == 0 ? 0 : tpsOk ? 2 : 1;
         t.fftN = N; t.guard = G; t.giIdx = gi; t.carriers = K;
-        t.cfoHz = (epsFrac + intShift) * fn / std::max(1, N);
+        t.cfoHz = (epsFrac + intShift) * fn / std::max(1, N) + mixer.hz;
         t.symbolsPerFrame = 68;
         t.frameMs = N ? 68.0 * (N + G) / fn * 1e3 : 0;
         t.symbols = symbols;
@@ -805,6 +815,8 @@ void DvbtReceiver::configure(double inputRateHz, double bandwidthMhz) {
     I.reset();
     I.inRate = inputRateHz; I.bwMhz = bandwidthMhz;
     I.fn = nativeRateHz(bandwidthMhz);
+    I.mixer.set(0, inputRateHz);
+    I.locator.configure(inputRateHz, carriersK(dvbt::k8K) * I.fn / 8192.0);
     I.rateOk = I.resampler.configure(inputRateHz, I.fn) && inputRateHz >= 7.9e6 * (bandwidthMhz / 8.0);
     I.decimate = I.rateOk && !I.resampler.passthrough();
 }
@@ -841,10 +853,20 @@ void DvbtReceiver::feed(const cf32* x, size_t n) {
         I.dc += (cf32(sr, si) / (float)n - I.dc) * w;
         I.dcOut.resize(n);
         const float dr = I.dc.real(), di = I.dc.imag();
-        if (I.mirror) for (size_t q = 0; q < n; q++) I.dcOut[q] = cf32(x[q].real() - dr, -(x[q].imag() - di));
-        else for (size_t q = 0; q < n; q++) I.dcOut[q] = cf32(x[q].real() - dr, x[q].imag() - di);
+        for (size_t q = 0; q < n; q++) I.dcOut[q] = cf32(x[q].real() - dr, x[q].imag() - di);
         x = I.dcOut.data();
     }
+    // A channel recorded beside the centre (gqrx, SDR#) or a radio tuned far off: until the TPS is found, the spectrum says where the channel
+    // is; when that is further from the current guess than the carrier search covers, mix it to the centre and start the acquisition again.
+    if (!I.tpsOk) {
+        double hz; bool found;
+        if (I.locator.feed(I.dcOut.data(), n, hz, found) && found && std::fabs(hz - I.mixer.hz) > 40e3) {
+            if (getenv("DECT2_DEBUG")) fprintf(stderr, "  [dbg] channel found %.1f kHz from the centre\n", hz / 1e3);
+            I.restartAt(hz);
+        }
+    }
+    I.mixer.apply(I.dcOut.data(), n);
+    if (I.mirror) for (size_t q = 0; q < n; q++) I.dcOut[q] = std::conj(I.dcOut[q]);
     I.stage.clear();
     if (I.decimate) I.resampler.process(x, n, I.stage);
     else I.stage.assign(x, x + n);

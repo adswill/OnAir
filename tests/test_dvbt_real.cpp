@@ -24,6 +24,7 @@ struct Case {
     const char* name;
     int mode, gi, mod, cr, hier = 0, crLp = -1;
     double bw = 8, offHz = 0, ppm = 0, inRate = 0;
+    double iqDb = 0, iqDeg = 0, longEchoDb = 0;
     bool echo = false, clip = false, swap = false, nan = false, lp = false;
     int frames = 0;
 };
@@ -52,16 +53,18 @@ static Result run(const Case& c) {
     std::vector<cf32> sig(30000, cf32(0, 0)), sym;
     for (int s = 0; s < frames * 68; s++) { gen.nextSymbol(sym); sig.insert(sig.end(), sym.begin(), sym.end()); }
     if (c.echo) impair::echo(sig, dvbt::guardSamples(c.mode, c.gi) / 3, -6.0, 2.0);
+    if (c.longEchoDb != 0) impair::echo(sig, dvbt::guardSamples(c.mode, c.gi) * 3 / 2, c.longEchoDb, 1.0);   // 1.5 guard intervals late
     if (c.ppm != 0) sig = impair::clock(sig, c.ppm);
-    impair::shift(sig, c.offHz, fn);
-    impair::noise(sig, 32.0, 3);
-    if (c.clip) impair::clip8(sig, 0.6);   // rms 0.6 of full scale: the peaks clip
-    if (c.swap) impair::swapIq(sig);
-    if (c.nan) for (size_t i = sig.size() / 3; i < sig.size() / 3 + 64; i++) sig[i] = cf32(NAN, i % 2 ? INFINITY : 0.f);
     std::vector<cf32> in;
     const double rate = c.inRate > 0 ? c.inRate : fn;
     if (rate != fn) { RationalResampler up; up.configure(fn, rate); up.process(sig.data(), sig.size(), in); }
     else in.swap(sig);
+    impair::shift(in, c.offHz, rate);
+    if (c.iqDb != 0 || c.iqDeg != 0) impair::iqImbalance(in, c.iqDb, c.iqDeg);
+    impair::noise(in, 32.0, 3);
+    if (c.clip) impair::clip8(in, 0.6);   // rms 0.6 of full scale: the peaks clip
+    if (c.swap) impair::swapIq(in);
+    if (c.nan) for (size_t i = in.size() / 3; i < in.size() / 3 + 64; i++) in[i] = cf32(NAN, i % 2 ? INFINITY : 0.f);
     DvbtReceiver rx;
     rx.configure(rate, c.bw);
     rx.setLowPriority(c.lp);
@@ -105,6 +108,15 @@ int main() {
     { Case c{"8K GI 1/32 64-QAM alpha 4, LP 1/2", k8K, kGi32, k64Qam, kR34}; c.hier = 3; c.crLp = kR12; c.lp = true; add(c); }
     // non-hierarchical with a reserved value in the (unused) LP code rate field
     { Case c{"2K GI 1/4 16-QAM 2/3, LP rate field 7", k2K, kGi4, k16Qam, kR23}; c.crLp = 7; add(c); }
+    // a channel far from the centre of the recording (gqrx / SDR# with an offset): anywhere it fits in the 10 Msps band
+    { Case c{"8K GI 1/4 64-QAM 3/4, 280 kHz off, 10 Msps", k8K, kGi4, k64Qam, kR34}; c.offHz = 280e3; c.inRate = 10e6; add(c); }
+    { Case c{"8K GI 1/8 16-QAM 2/3, -950 kHz off, 10 Msps", k8K, kGi8, k16Qam, kR23}; c.offHz = -950e3; c.inRate = 10e6; add(c); }
+    { Case c{"2K GI 1/4 QPSK 1/2, 7 MHz, +1.3 MHz off, 10 Msps", k2K, kGi4, kQpsk, kR12}; c.bw = 7; c.offHz = 1.3e6; c.inRate = 10e6; add(c); }
+    // IQ imbalance of a direct-conversion radio: 1 dB and 5 degrees
+    { Case c{"8K GI 1/4 64-QAM 2/3, IQ imbalance 1 dB 5 deg", k8K, kGi4, k64Qam, kR23}; c.iqDb = 1; c.iqDeg = 5; add(c); }
+    { Case c{"2K GI 1/8 16-QAM 3/4, IQ 1 dB 5 deg, +200 kHz", k2K, kGi8, k16Qam, kR34}; c.iqDb = 1; c.iqDeg = 5; c.offHz = 200e3; c.inRate = 10e6; add(c); }
+    // an echo 1.5 guard intervals late, 12 dB down: the signal degrades, the receiver must not fall into a loss-of-lock loop
+    { Case c{"8K GI 1/32 QPSK 1/2, echo beyond the guard -12 dB", k8K, kGi32, kQpsk, kR12}; c.longEchoDb = -12; c.frames = 10; add(c); }
     // I and Q swapped (a mirrored spectrum), and a block of NaN / infinite samples from a broken driver
     { Case c{"8K GI 1/8 16-QAM 2/3, I/Q swapped, +12 kHz", k8K, kGi8, k16Qam, kR23}; c.swap = true; c.offHz = 12e3; add(c); }
     { Case c{"2K GI 1/4 QPSK 1/2, I/Q swapped", k2K, kGi4, kQpsk, kR12}; c.swap = true; add(c); }

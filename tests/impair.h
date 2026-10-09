@@ -45,6 +45,12 @@ inline std::vector<cf32> clock(const std::vector<cf32>& x, double ppm) {
 // I and Q swapped (the spectrum mirrored), as some radios and file formats deliver it.
 inline void swapIq(std::vector<cf32>& x) { for (auto& v : x) v = cf32(v.imag(), v.real()); }
 
+// IQ imbalance: the Q branch gainDb stronger than I and phaseDeg off quadrature (a direct-conversion radio's mixer)
+inline void iqImbalance(std::vector<cf32>& x, double gainDb, double phaseDeg) {
+    const float g = (float)std::pow(10.0, gainDb / 20), sp = (float)std::sin(phaseDeg * M_PI / 180), cp = (float)std::cos(phaseDeg * M_PI / 180);
+    for (auto& v : x) v = cf32(v.real(), g * (v.imag() * cp + v.real() * sp));
+}
+
 // A DC spike of the given level relative to the signal's RMS.
 inline void dc(std::vector<cf32>& x, double relDb) {
     double p = 0;
