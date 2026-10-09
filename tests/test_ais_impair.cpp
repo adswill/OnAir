@@ -2,6 +2,7 @@
 // a reset in the middle, bursts at the same time on both channels, a strong station next to a weak one, noise only.
 #include "dect2/ais_testutil.h"
 #include "dect2/gen_util.h"
+#include "impair.h"
 #include <cmath>
 #include <cstdio>
 using namespace dect2;
@@ -71,13 +72,13 @@ static AisRenderConfig cfgAt(double rate, double snr, double dur) {
 
 int main() {
     // ---- carrier offset: +-10 ppm of 162 MHz is +-1.6 kHz, the brief asks for +-2 kHz; the limit is found here as well
-    for (double cfo : {-3500.0, -3000.0, -2000.0, -1600.0, -800.0, 0.0, 800.0, 1600.0, 2000.0, 3000.0, 3500.0}) {
+    for (double cfo : {-8500.0, -6000.0, -3500.0, -2000.0, -800.0, 0.0, 800.0, 2000.0, 3500.0, 6000.0, 8500.0}) {
         auto specs = train(40, 11);
         AisRenderConfig rc = cfgAt(2e6, 18, 3.8);
         rc.cfoHz = cfo;
         const Out o = decode(specs, rc);
         printf("carrier offset %6.0f Hz at 18 dB: %d of %d\n", cfo, o.got, o.sent);
-        if (std::fabs(cfo) <= 3000) CHECK(o.got == o.sent && o.extra == 0, "offset %.0f Hz: %d of %d", cfo, o.got, o.sent);
+        if (std::fabs(cfo) <= 8500) CHECK(o.got == o.sent && o.extra == 0, "offset %.0f Hz: %d of %d", cfo, o.got, o.sent);
         else CHECK(o.got >= o.sent * 8 / 10, "offset %.0f Hz: %d of %d", cfo, o.got, o.sent);
     }
     // ---- the same near the sensitivity limit (5 dB; 90 % decode at 2.8 dB): an offset or a clock error must not cost much
@@ -284,6 +285,24 @@ int main() {
         AisReceiver rx2; rx2.configure(2e6);
         runReceiver(rx2, x);
         CHECK(true, "nan input survived");
+    }
+    // ---- combined, through tests/impair.h: 50 ppm of 162 MHz (8.1 kHz), +80 ppm clock, an echo and 8-bit clipping
+    {
+        auto specs = train(40, 21);
+        const AisRenderConfig rc = cfgAt(2e6, 25, 3.8);
+        std::vector<cf32> x = renderAisBursts(specs, rc);
+        impair::shift(x, -8100, rc.rate);
+        x = impair::clock(x, 80);
+        impair::echo(x, 9, -8, 2.0);
+        impair::clip8(x, 3);
+        AisReceiver rx; rx.configure(rc.rate);
+        Collector col;
+        runReceiver(rx, x, 16384, &col);
+        std::set<std::vector<uint8_t>> sent, seen;
+        for (const auto& s : specs) sent.insert(s.payload);
+        for (const auto& g : col.got) if (sent.count(g.bits)) seen.insert(g.bits);
+        printf("combined -8.1 kHz, +80 ppm, echo, 8 bit clipped: %zu of %zu\n", seen.size(), specs.size());
+        CHECK(seen.size() == specs.size(), "combined: %zu of %zu", seen.size(), specs.size());
     }
     if (fails) { printf("%d checks failed\n", fails); return 1; }
     printf("ais_impair: ok\n");
