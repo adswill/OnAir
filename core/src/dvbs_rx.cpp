@@ -8,6 +8,7 @@
 #include "dvbs_s2rx.h"
 #include "dvbs_spec.h"
 #include "dvbs_symthread.h"
+#include "dect2/fftutil.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -44,6 +45,50 @@ double snapRollOff(double a) {
     for (double x : v) if (std::fabs(x - a) < std::fabs(best - a)) best = x;
     return best;
 }
+// The symbol rate from the spectral line that the squared envelope of a linearly modulated carrier has at the symbol rate (its cyclostationarity).
+// The spectrum's -3 dB width (the first estimate, rs0) is bent by an echo or a tilted cable response, which ripples the spectrum: the line is not.
+// x: kCyclicN samples at fs; centre: where the carrier is. Looks between 0.8 and 1.25 times rs0; returns 0 when no clear line stands out (small
+// roll-offs give a weak one).
+constexpr int kCyclicN = 1 << 18;
+double cyclicRate(const std::vector<cf32>& x, double fs, double centre, double rs0) {
+    if (x.size() < (size_t)kCyclicN) return 0;
+    std::vector<cf32> v(x.end() - kCyclicN, x.end());
+    Fft fft(kCyclicN);
+    fft.forward(v.data());
+    // keep the carrier only (up to 1.25 rs0 with a 0.35 roll-off), so that the noise beside it does not bury the line
+    const double half = 0.5 * 1.25 * rs0 * 1.35;
+    for (int k = 0; k < kCyclicN; k++) {
+        const double f = (k < kCyclicN / 2 ? k : k - kCyclicN) * fs / kCyclicN;
+        if (std::fabs(f - centre) > half) v[(size_t)k] = cf32(0, 0);
+    }
+    fft.inverse(v.data());
+    double mean = 0;
+    for (const cf32& z : v) mean += std::norm(z);
+    mean /= kCyclicN;
+    for (cf32& z : v) z = cf32((float)(std::norm(z) - mean), 0.f);
+    fft.forward(v.data());
+    // A rate above fs / 2 shows as its alias fs - rate: the squared envelope is real, so bin N - k holds the same as bin k, and the bins up to N
+    // stand for the rates up to fs. A rate and its alias look the same; of the two the one nearer rs0 is taken.
+    const int k0 = std::max(2, (int)std::floor(0.8 * rs0 * kCyclicN / fs)), k1 = std::min(kCyclicN - 2, (int)std::ceil(1.25 * rs0 * kCyclicN / fs));
+    if (k1 <= k0 + 8) return 0;
+    const double kr = rs0 * kCyclicN / fs;
+    std::vector<float> mag((size_t)(k1 - k0 + 1));
+    int best = k0;
+    for (int k = k0; k <= k1; k++) {
+        mag[(size_t)(k - k0)] = std::abs(v[(size_t)k]);
+        const float m = mag[(size_t)(k - k0)], mb = mag[(size_t)(best - k0)];
+        if (m > mb * 1.0001f || (m >= mb * 0.9999f && std::fabs(k - kr) < std::fabs(best - kr))) best = k;
+    }
+    std::vector<float> sorted = mag;
+    std::nth_element(sorted.begin(), sorted.begin() + (std::ptrdiff_t)(sorted.size() / 2), sorted.end());
+    const float median = sorted[sorted.size() / 2];
+    if (!(mag[(size_t)(best - k0)] > 12.f * median) || best <= k0 || best >= k1) return 0;
+    // parabolic interpolation of the peak
+    const double a = mag[(size_t)(best - k0 - 1)], b = mag[(size_t)(best - k0)], c = mag[(size_t)(best - k0 + 1)];
+    const double d = 0.5 * (a - c) / std::min(-1e-30, a - 2 * b + c);
+    return (best + std::max(-0.5, std::min(0.5, d))) * fs / kCyclicN;
+}
+
 } // namespace
 
 struct DvbsReceiver::Impl {
@@ -67,6 +112,7 @@ struct DvbsReceiver::Impl {
     SpectrumResult specRes;
     std::vector<float> psdDb;
     int searchTries = 0;
+    std::vector<cf32> raw;                      // the latest input while searching, for cyclicRate()
     std::vector<cf32> clean;                    // the input with non-finite samples replaced
     DvbsFront front;
     std::vector<cf32> sym, y;
@@ -154,7 +200,14 @@ struct DvbsReceiver::Impl {
         spec.display(psdDb, 512);
         const double manual = manualRs.load();
         const bool carrier = specRes.valid && specRes.zscore >= 8.f && specRes.fitRms < 2.5f;
-        const double rs = manual > 0 ? manual : specRes.rateHz;
+        double rs = manual > 0 ? manual : specRes.rateHz;
+        if (manual <= 0 && carrier) {
+            const double rc = cyclicRate(raw, fs, specRes.centerHz, rs);
+            if (rc > 0) {
+                if (std::fabs(rc / rs - 1) > 0.01) logf("symbol rate %.3f Msym/s from the spectrum's width, %.4f from its cyclic line", rs / 1e6, rc / 1e6);
+                rs = rc;
+            }
+        }
         if (!carrier || rs < dvbsMinAutoSymbolRate(fs) * (manual > 0 ? 0.0 : 1.0) || rs > dvbsMaxSymbolRate(fs, 0.35) * 1.02) {
             spec.reset();
             searchTries++;
@@ -510,7 +563,12 @@ void DvbsReceiver::feed(const cf32* x, size_t n) {
     }
     I.inputCount += n;
     I.spec.push(x, n);
-    if (I.mode == Impl::kSearch) I.doSearch();
+    if (I.mode == Impl::kSearch) {
+        I.raw.insert(I.raw.end(), x, x + n);
+        if (I.raw.size() > (size_t)kCyclicN) I.raw.erase(I.raw.begin(), I.raw.end() - kCyclicN);
+        I.doSearch();
+        if (I.mode != Impl::kSearch) std::vector<cf32>().swap(I.raw);
+    }
     else I.runFront(x, n);
     if (I.inputCount >= I.reportAt) {
         I.reportAt = I.inputCount + (uint64_t)(0.25 * I.fs);
