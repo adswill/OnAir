@@ -92,9 +92,13 @@ static void run(const Case& k) {
 }
 
 int main() {
-    Case cs[8];
+    Case cs[12];
     cs[0].name = "carrier +10 kHz"; cs[0].cfo = 10000;
     cs[1].name = "carrier -10 kHz"; cs[1].cfo = -10000;
+    cs[8].name = "carrier +80 kHz"; cs[8].cfo = 80000;     // 50 ppm of 1.55 GHz
+    cs[9].name = "carrier -80 kHz"; cs[9].cfo = -80000;
+    cs[10].name = "clock +100 ppm"; cs[10].ppm = 100;
+    cs[11].name = "clock -100 ppm"; cs[11].ppm = -100;
     cs[2].name = "drift 5 Hz/s"; cs[2].drift = 5;
     cs[3].name = "clock +50 ppm"; cs[3].ppm = 50;
     cs[4].name = "clock -50 ppm"; cs[4].ppm = -50;
