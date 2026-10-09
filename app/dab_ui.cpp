@@ -270,6 +270,7 @@ void dabStations(App& a) {
     }
     else if (!video && ImGui::BeginTable("dkv", 2, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableSetupColumn("k", ImGuiTableColumnFlags_WidthFixed, 88 * gUi);
+        ImGui::TableSetupColumn("v", ImGuiTableColumnFlags_WidthStretch);   // the values wrap in the rest of the panel
         auto row = [&](Ic ic, const char* k, const char* fmt, auto... args) {
             ImGui::TableNextRow(); ImGui::TableNextColumn(); iconInline(ic, iconDim(), 0.9f); ImGui::SameLine(0, 5 * gUi); ImGui::TextDisabled("%s", k); ImGui::TableNextColumn();
             char b[120]; snprintf(b, sizeof b, fmt, args...); ImGui::PushTextWrapPos(0); ImGui::TextUnformatted(b); ImGui::PopTextWrapPos();   // wraps in a narrow column

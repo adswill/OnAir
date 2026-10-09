@@ -142,7 +142,7 @@ struct HfdigReceiver::Impl {
         base.clear(); audio.clear(); pcm.clear();
         for (HfdigDecoder* d : decoders) d->reset();
         if (audioOut) audioOut->flush();
-        if (cb && curRate > 0) cb("HF digital: the decoders are not built yet, only the sideband audio is made");
+        if (cb && curRate > 0) cb("HF digital: listening to the sideband audio for RTTY, SSTV and FreeDV");
     }
 
     void playSpeech(const float* x, size_t n) {
