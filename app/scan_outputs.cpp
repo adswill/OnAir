@@ -195,7 +195,7 @@ void outputsTab(App& a) {
     ImGui::PushFont(a.mono, 0);
     if (os.fileOpen) { ImGui::PushTextWrapPos(0); ImGui::Text("recording: %llu packets, %.1f MB", (unsigned long long)os.filePackets, os.fileBytes / 1e6); ImGui::PopTextWrapPos(); }
     else ImGui::TextDisabled("recording: off");
-    if (os.udpOpen) { ImGui::PushTextWrapPos(0); ImGui::Text("streaming: %llu datagrams, queue %.0f ms, dropped %llu", (unsigned long long)os.udpDatagrams, os.udpQueueMs, (unsigned long long)os.udpDropped); ImGui::PopTextWrapPos(); }
+    if (os.udpOpen) { ImGui::PushTextWrapPos(0); ImGui::Text("streaming: %llu datagrams, queue %.0f ms, dropped %llu, send errors %llu, catch-ups %llu", (unsigned long long)os.udpDatagrams, os.udpQueueMs, (unsigned long long)os.udpDropped, (unsigned long long)os.udpSendErrors, (unsigned long long)os.udpCatchUps); ImGui::PopTextWrapPos(); }
     else ImGui::TextDisabled("streaming: off");
     ImGui::PopFont();
     if (!os.error.empty()) ImGui::TextColored(ImVec4(0.95f, 0.4f, 0.3f, 1), "%s", os.error.c_str());

@@ -29,6 +29,8 @@ struct OutputStats {
     bool fileOpen = false, udpOpen = false;
     uint64_t fileBytes = 0, filePackets = 0;
     uint64_t udpDatagrams = 0, udpBytes = 0, udpDropped = 0;
+    uint64_t udpSendErrors = 0;   // datagrams the system refused to send
+    uint64_t udpCatchUps = 0;     // times a backlog was sent sooner instead of being dropped
     double udpQueueMs = 0;
     std::string error;
 };

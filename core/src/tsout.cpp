@@ -48,6 +48,7 @@ struct OutputManager::Impl {
     std::deque<Dgram> queue;
     std::vector<uint8_t> building;   // datagram under construction (payload packets)
     std::vector<std::vector<uint8_t>> burst; // datagrams of the current frame
+    double pendingSecs = 0;                  // signal time handed over since the last scheduled burst
     std::condition_variable cv;
     std::thread sender;
     bool running = false;
@@ -68,6 +69,7 @@ struct OutputManager::Impl {
                 if (sock != kBadSock) {
                     long long n = sockSendTo(sock, d.data.data(), d.data.size(), dst);
                     if (n > 0) { st.udpDatagrams++; st.udpBytes += (uint64_t)n; }
+                    else st.udpSendErrors++;   // the system refused it (a full send buffer): it never reached the network
                 }
                 if (!queue.empty()) st.udpQueueMs = std::chrono::duration<double, std::milli>(queue.back().due - Clock::now()).count();
                 else st.udpQueueMs = 0;
@@ -122,8 +124,11 @@ void OutputManager::configure(const OutputConfig& c) {
             else {
                 int ttl = c.ttl;
                 setsockopt(I.sock, IPPROTO_IP, IP_MULTICAST_TTL, (const char*)&ttl, sizeof ttl);
+                // the default send buffer (64 KB on Windows) holds only a few milliseconds of a 30 Mbit/s multiplex
+                int sndbuf = 4 << 20;
+                setsockopt(I.sock, SOL_SOCKET, SO_SNDBUF, (const char*)&sndbuf, sizeof sndbuf);
                 I.st.udpOpen = true;
-                I.st.udpDatagrams = I.st.udpBytes = I.st.udpDropped = 0;
+                I.st.udpDatagrams = I.st.udpBytes = I.st.udpDropped = I.st.udpSendErrors = I.st.udpCatchUps = 0;
             }
         }
     }
@@ -162,21 +167,42 @@ void OutputManager::burstDone(double frameSeconds) {
     std::lock_guard<std::mutex> lk(p_->mu);
     Impl& I = *p_;
     if (I.file) fflush(I.file);
-    if (I.sock == kBadSock) { I.burst.clear(); I.building.clear(); return; }
+    if (I.sock == kBadSock) { I.burst.clear(); I.building.clear(); I.pendingSecs = 0; return; }
+    // DVB-T, ISDB-T, DTMB and ATSC hand over their packets after every symbol or segment (about a millisecond of signal), DVB-T2 once a
+    // frame. Collect at least kMinSpan of signal before scheduling: each call used to count as 20 ms or more and was padded with null
+    // packets, so the schedule ran ahead of the clock many times over and the queue was thrown away every few seconds (VLC stuttered
+    // on DVB-T while the app played cleanly).
+    constexpr double kMinSpan = 0.05;
+    I.pendingSecs += std::max(0.0, frameSeconds);
+    if (I.pendingSecs < kMinSpan) return;
+    frameSeconds = I.pendingSecs;
+    I.pendingSecs = 0;
     if (!I.building.empty()) { // pad the tail datagram with nulls so nothing waits for the next frame
         while (I.building.size() < 7 * 188) { uint8_t nul[188]; memset(nul, 0xFF, 188); nul[0] = 0x47; nul[1] = 0x1F; nul[2] = 0xFF; nul[3] = 0x10; I.building.insert(I.building.end(), nul, nul + 188); }
         I.burst.push_back(std::move(I.building));
         I.building.clear();
     }
     if (I.burst.empty()) return;
-    const double span = std::max(0.02, frameSeconds);
+    const double span = frameSeconds;
     const auto now = Clock::now();
     auto base = std::max(now, I.lastDue);
-    // keep the queue bounded: if more than ~3 frames are waiting, drop what is oldest
-    if (!I.queue.empty() && std::chrono::duration<double>(I.queue.back().due - now).count() > 3.0 * span + 0.2) {
+    // Frames do not come out of the receiver evenly: the error correction finishes several at once now and then (a busy CPU, the GPU
+    // working in batches), and each one is spread over a frame's time, so the queue runs ahead of the clock for a moment. Throwing the
+    // queue away then lost whole frames every few seconds (a viewer saw VLC stutter while the app played cleanly). Send the waiting
+    // datagrams sooner instead: the player's own buffer (VLC keeps a second) takes the burst. Only a queue that is truly stuck (more than
+    // kMaxBacklog seconds, say a dead network) is dropped.
+    constexpr double kMaxBacklog = 5.0;
+    const double ahead = I.queue.empty() ? 0 : std::chrono::duration<double>(I.queue.back().due - now).count();
+    if (ahead > kMaxBacklog) {
         I.st.udpDropped += I.queue.size();
         I.queue.clear();
         base = now;
+    } else if (ahead > 3.0 * span + 0.2) {
+        const double over = std::min(span, 0.25);   // what is waiting goes out over this time
+        const double gap = over / (double)I.queue.size();
+        for (size_t i = 0; i < I.queue.size(); i++) I.queue[i].due = now + std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(gap * (double)i));
+        base = now + std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(over));
+        I.st.udpCatchUps++;
     }
     // if a backlog has built up, drain it a little faster instead of letting the latency grow
     const double backlog = std::chrono::duration<double>(base - now).count();

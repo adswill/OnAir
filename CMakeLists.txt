@@ -506,6 +506,10 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_iq_record PRIVATE dect2core)
   add_test(NAME iq_record COMMAND test_iq_record)
 
+  add_executable(test_tsout_udp tests/test_tsout_udp.cpp)
+  target_link_libraries(test_tsout_udp PRIVATE dect2core)
+  add_test(NAME tsout_udp COMMAND test_tsout_udp)
+
   add_executable(fuzz_rx tests/fuzz_rx.cpp)
   target_link_libraries(fuzz_rx PRIVATE dect2core)
   add_test(NAME fuzz_rx COMMAND fuzz_rx)
