@@ -921,7 +921,7 @@ void FmTx::block(const uint8_t* pm, const uint8_t* px, int bc, int psmi, float a
     const int cm = kCompat[psmi & 63];
     const int ppb = cm == 2 ? 11 : cm == 3 ? 12 : (cm == 5 || cm == 6 || cm == 11) ? 14 : 10;   // partitions per sideband
     const int np = cm == 2 ? 1 : cm == 3 ? 2 : 0;                                                   // extended partitions per sideband
-    static Fft fft(kFftFm);
+    thread_local Fft fft(kFftFm);   // its work buffers are not shared between generators on other threads
     static const int rsidOf[4] = {2, 1, 0, 3};   // table 11-3, columns 0..30 (the upper columns mirror it)
     uint8_t R[61][32];
     for (int col = 0; col < 61; col++) {
@@ -985,7 +985,7 @@ AmTx::AmTx() : X_(4096), shape_(windowShape(4096, 16 * kCpAm)) {}
 
 // 1012s sections 11 and 12, MA1: the upper sidebands as they are, the lower ones negated and conjugated; the analog carrier is not part of it
 void AmTx::block(const uint8_t* pl, const uint8_t* pu, const uint8_t* s, const uint8_t* t, const uint8_t* pids, int bc, const AmLevels& lv, std::vector<cf32>& out) {
-    static Fft fft(4096);
+    thread_local Fft fft(4096);
     constexpr int N = 4096, CP = 16 * kCpAm, off = 16 * ((kFftAm - kCpAm) / 2);
     // system control data sequence (table 11-1), MA1, no reduced bandwidth
     uint8_t r[32];
