@@ -213,6 +213,34 @@ The app is `build/dect2`. You can also work without a radio: record an IQ file w
 build/dect2cli --file capture.cs8 --rate 10 --format cs8 --play <service id>
 ```
 
+**Windows** (10 or 11, 64-bit), step by step:
+
+1. Install [MSYS2](https://www.msys2.org) with its default settings.
+2. Open **MSYS2 UCRT64** from the Start menu. Use the UCRT64 shell, not MINGW64: MINGW64 has no HackRF and SoapySDR packages.
+3. Update MSYS2. If the window closes, open UCRT64 again and run the command a second time:
+   ```sh
+   pacman -Syu
+   ```
+4. Install the compiler, the build tools and the libraries:
+   ```sh
+   pacman -S --needed git zip mingw-w64-ucrt-x86_64-{gcc,cmake,ninja,pkgconf,ffmpeg,glfw,hackrf,soapysdr,libiconv}
+   ```
+   Optional: `mingw-w64-ucrt-x86_64-codec2` for FreeDV sound, and `mingw-w64-ucrt-x86_64-nsis` for the setup .exe.
+5. Get the source:
+   ```sh
+   git clone https://github.com/adswill/OnAir.git
+   cd OnAir
+   ```
+6. Build:
+   ```sh
+   cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON
+   cmake --build build
+   ```
+7. Run it from the same shell, so Windows finds the DLLs: `./build/dect2.exe`. Run the tests with `ctest --test-dir build`.
+8. To get a folder that runs on any PC, with all DLLs next to `OnAir.exe`, run `tools/package/make_windows.sh`. The result is a portable zip in `build-windows/`. If NSIS is installed, you also get a setup .exe.
+
+The build needs a CPU with AVX2. To use a HackRF, RTL-SDR or Airspy, install the WinUSB driver once with [Zadig](https://zadig.akeo.ie). From macOS or Linux, `tools/package/make_windows_cross.sh` builds the same Windows package with a cross-compiler.
+
 Useful options: `DECT2_UI_BACKEND` (Metal or OpenGL3), `DECT2_WITH_SOAPY`, and `DECT2_PORTABLE` / `DECT2_NO_SIMD` for plain C++ code paths on unusual CPUs.
 
 **macOS app and disk image:** run `tools/package/make_dmg.sh`. It targets macOS 15.0 by default and uses the same minimum version in the executable and the app metadata; override it with `MACOSX_DEPLOYMENT_TARGET` if needed. Every bundled library must also support that version: setting a lower deployment target does not rebuild Homebrew libraries, and packaging stops if any executable or library requires a newer macOS. Build releases on macOS 15 with compatible Homebrew dependencies, as in the release workflow, or rebuild the dependencies for the intended target.
