@@ -89,6 +89,7 @@ int main(int argc, char** argv) {
         {"pilot 12 dB weak", 1.2, [](auto& x) { scalePilot(x, 0.25); }, 9000},
         {"pilot 18 dB weak (an echo notch)", 1.6, [](auto& x) { scalePilot(x, 0.125); }, 12000},
         {"ghost 3 dB stronger, 6 us later", 1.6, [](auto& x) { impair::echo(x, 48, 3.0, 0.7); impair::noise(x, 32); }, 9000},
+        {"I and Q swapped, +20 kHz", 1.2, [](auto& x) { impair::shift(x, 20000, kRate); impair::swapIq(x); }, 9000},
         {"DC spike, 8-bit clipped", 1.2, [](auto& x) { impair::dc(x, -15); clipTo(x, 0.45); }, 9000},
         {"start mid-field, USB drop", 1.6, [](auto& x) { impair::skip(x, 123457); impair::drop(x, 5000000, 7777); }, 10000},
         {"combined: +43 kHz, +80 ppm, echo, 8-bit", 1.8, [](auto& x) {

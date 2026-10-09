@@ -224,12 +224,12 @@ struct Core {
     // the pilot line is looked for in an averaged spectrum of the whole sample band: a channel that is not centred (a recording made
     // beside the channel) is then mixed to the centre, and a weak pilot (an echo that notches the band edge) is found to a fraction of a
     // kHz, so the loop can start narrow. Repeated while nothing locks (a retune, a signal that appears later).
-    bool acqDone = false, acqPilot = false;
+    bool acqDone = false, acqPilot = false, mirrorIq = false;
     std::vector<cf32> acqBuf;
     double shiftHz = 0, acqLevel = 0;   // mixer frequency (the channel's offset from the centre), pilot amplitude relative to the signal
     uint64_t mixN = 0, noLockSamples = 0;
     float weakScale = 1.f;
-    void resetAcq() { weakScale = 1.f; acqDone = false; acqPilot = false; acqBuf.clear(); shiftHz = 0; acqLevel = 0; mixN = 0; noLockSamples = 0; }
+    void resetAcq() { weakScale = 1.f; acqDone = false; acqPilot = false; mirrorIq = false; acqBuf.clear(); shiftHz = 0; acqLevel = 0; mixN = 0; noLockSamples = 0; }
     int acqLog2() const { int lg = 8; while ((double)(1 << lg) < fin / 1000.0) lg++; return lg; }
     size_t acqNeed() const { return ((size_t)1 << acqLog2()) * 48; }
     void acquirePilot() {
@@ -248,31 +248,40 @@ struct Core {
             fftSplit(re.data(), im.data(), lg, false);
             for (int k = 0; k < N; k++) P[(size_t)((k + N / 2) % N)] += (double)re[(size_t)k] * re[(size_t)k] + (double)im[(size_t)k] * im[(size_t)k];
         }
-        std::vector<double> cum((size_t)N + 1, 0.0);
-        for (int i = 0; i < N; i++) cum[(size_t)i + 1] = cum[(size_t)i] + P[(size_t)i];
+        // the spectrum as it is, and mirrored (I and Q swapped by the radio or the file format: the pilot is then at the upper edge)
+        std::vector<double> Pm((size_t)N);
+        for (int i = 0; i < N; i++) Pm[(size_t)i] = P[(size_t)((N - i) % N)];
         const double bin = fin / N;
+        std::vector<double> cum((size_t)N + 1, 0.0);
+        double bestScore = 0;
+        int best = -1;
+        bool bestMirror = false;
+        std::vector<double> nb;
+        for (int mirror = 0; mirror < 2; mirror++) {
+        const std::vector<double>& Q = mirror ? Pm : P;
+        for (int i = 0; i < N; i++) cum[(size_t)i + 1] = cum[(size_t)i] + Q[(size_t)i];
         auto idx = [&](double f) { return (int)std::lround(f / bin) + N / 2; };
         auto meanP = [&](int a, int b) { a = std::max(a, 0); b = std::min(b, N); return b > a ? (cum[(size_t)b] - cum[(size_t)a]) / (b - a) : -1.0; };
         // the whole channel (pilot - 0.1 MHz to pilot + 5.45 MHz) must be inside the band
         const int lo = std::max(idx(-fin / 2 + 0.1e6), 3), hi = std::min(idx(fin / 2 - 5.45e6), N - 45);
-        double bestScore = 0;
-        int best = -1;
-        std::vector<double> nb;
         for (int i = lo; i <= hi; i++) {
             if (std::abs(i - N / 2) <= 3) continue;   // a DC spike is a line too
-            if (P[(size_t)i] < P[(size_t)i - 1] || P[(size_t)i] < P[(size_t)i + 1]) continue;
-            nb.assign(P.begin() + i + 6, P.begin() + i + 41);   // the data just above the pilot
+            if (Q[(size_t)i] < Q[(size_t)i - 1] || Q[(size_t)i] < Q[(size_t)i + 1]) continue;
+            nb.assign(Q.begin() + i + 6, Q.begin() + i + 41);   // the data just above the pilot
             std::nth_element(nb.begin(), nb.begin() + nb.size() / 2, nb.end());
             const double med = nb[nb.size() / 2];
             if (med <= 0) continue;
-            const double score = P[(size_t)i] / med;
+            const double score = Q[(size_t)i] / med;
             if (score < 4.0 || score <= bestScore) continue;
             // the shape of a VSB channel: data above the pilot, (nearly) nothing just below it
             const double inside = meanP(idx((i - N / 2) * bin + 0.5e6), idx((i - N / 2) * bin + 5.0e6));
             const double below = meanP(idx((i - N / 2) * bin - 0.6e6), idx((i - N / 2) * bin - 0.35e6));
-            if (inside <= 0 || (below >= 0 && inside < 2.0 * below)) continue;
-            bestScore = score; best = i;
+            if (inside <= 0 || (below >= 0 && inside < 2.0 * below) || Q[(size_t)i] < 3.0 * inside) continue;   // and a line well above the data
+            bestScore = score; best = i; bestMirror = mirror != 0;
         }
+        }
+        if (bestMirror) P.swap(Pm);
+        for (int i = 0; i < N; i++) cum[(size_t)i + 1] = cum[(size_t)i] + P[(size_t)i];
         acqDone = true;
         if (best < 0) { if (dbg) fprintf(stderr, "[atsc] pilot search: no pilot line in the band\n"); return; }
         const double a = std::log(P[(size_t)best - 1]), b = std::log(P[(size_t)best]), c = std::log(P[(size_t)best + 1]);
@@ -288,10 +297,11 @@ struct Core {
         if (dbg) fprintf(stderr, "[atsc] pilot search: line at %.0f Hz (score %.1f, level %.3f), channel offset %.0f Hz\n", fp, bestScore, acqLevel, newShift);
         // a weak pilot has less signal to noise ratio in the loop: the narrow loop is narrowed further, by its power below normal (0.25)
         weakScale = (float)std::max(0.08, std::min(1.0, std::pow(acqLevel / 0.25, 2)));
-        const bool restart = !acqPilot || std::fabs(newShift - shiftHz) > 1000.0;
+        const bool restart = !acqPilot || std::fabs(newShift - shiftHz) > 1000.0 || bestMirror != mirrorIq;
+        if (bestMirror && dbg) fprintf(stderr, "[atsc] pilot search: the spectrum is mirrored (I and Q swapped)\n");
         acqPilot = true;
         if (restart) {
-            shiftHz = newShift; mixN = 0;
+            shiftHz = newShift; mixN = 0; mirrorIq = bestMirror;
             reset();
             tracking = true;   // the frequency is known to a fraction of a kHz: start with the narrow loop
         }
@@ -338,6 +348,7 @@ struct Core {
         }
         if (fieldLock || pilotLock) noLockSamples = 0;
         else if ((noLockSamples += in.size()) > (uint64_t)(0.5 * fin)) { noLockSamples = 0; acqDone = false; }   // look again on the next block
+        if (mirrorIq) for (auto& v : in) v = std::conj(v);
         if (shiftHz != 0) mixIn(in);
         const double tA = now();
         for (const cf32& v : in) { inRe.push_back(v.real()); inIm.push_back(v.imag()); }
