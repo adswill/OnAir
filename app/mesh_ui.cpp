@@ -81,7 +81,6 @@ void loadState() {
     S.loaded = true;
     plat::Prefs& d = plat::prefs();
     S.map.zoom = (int)d.getI("meshZoom", 10);
-    S.map.online = d.getB("adsbMap", true);     // one choice about fetching map tiles for every map
     S.view = (int)d.getI("meshView", 0);
     S.region = (int)d.getI("meshRegion", 0);
     S.protocols = (int)d.getI("meshProtocols", 3);
@@ -260,17 +259,14 @@ void mapView(App& a, ImVec2 size) {
     }
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 8 * gUi));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.06f, 0.07f, 0.08f, 0.85f));
-    if (ImGui::Button("+", ImVec2(26 * gUi, 0))) S.map.zoom = std::min(12, S.map.zoom + 1);
+    if (ImGui::Button("+", ImVec2(26 * gUi, 0))) S.map.zoom = std::min(adsbmap::kMaxZoom, S.map.zoom + 1);
     ImGui::SameLine(0, 2 * gUi);
-    if (ImGui::Button("-", ImVec2(26 * gUi, 0))) S.map.zoom = std::max(2, S.map.zoom - 1);
+    if (ImGui::Button("-", ImVec2(26 * gUi, 0))) S.map.zoom = std::max(adsbmap::kMinZoom, S.map.zoom - 1);
     ImGui::SameLine(0, 6 * gUi);
     if (ImGui::Button("fit nodes")) S.mapFit = true;
     ImGui::PopStyleColor();
-    ImGui::SameLine(0, 10 * gUi);
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.82f, 0.84f, 1));
-    if (ImGui::Checkbox("online map", &S.map.online)) { plat::prefs().setB("adsbMap", S.map.online); savePrefs(a); }
-    ImGui::PopStyleColor();
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Fetch map tiles from the OpenStreetMap tile server (tile.openstreetmap.org) and keep them in the cache folder.\nOnly tile numbers are sent, never a node's position. Switch off to work offline.");
+    ImGui::SameLine(0, 6 * gUi);
+    adsbmap::tileControls("never a node's position");
     plat::prefs().setI("meshZoom", S.map.zoom);
     if (!on || shown == 0) {
         ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + size.y - ImGui::GetTextLineHeight() - 6 * gUi));

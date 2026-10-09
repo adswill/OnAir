@@ -57,6 +57,14 @@ std::string cacheDir() {
     return d.UTF8String;
 }
 
+std::string dataDir() {
+    NSArray* a = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
+    if (!a.count) return cacheDir();
+    NSString* d = [a[0] stringByAppendingPathComponent:@"OnAir"];
+    [[NSFileManager defaultManager] createDirectoryAtPath:d withIntermediateDirectories:YES attributes:nil error:nil];
+    return d.UTF8String;
+}
+
 bool decodeImage(const std::string& path, int& w, int& h, std::vector<uint32_t>& rgba) {
     @autoreleasepool {
         NSURL* u = [NSURL fileURLWithPath:[NSString stringWithUTF8String:path.c_str()]];

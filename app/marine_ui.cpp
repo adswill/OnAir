@@ -56,7 +56,6 @@ void loadState() {
     S.autoSlant = d.getB("marineAutoSlant", true);
     S.slant = (float)d.getD("marineSlant", 0.0);
     S.map.zoom = 5;
-    S.map.online = d.getB("adsbMap", true);     // the same switch as the ADS-B map
 }
 
 std::string utcText(int64_t t) {
@@ -212,10 +211,12 @@ void dscDetail(App& a, const DscCall* c, ImVec2 size) {
     dl->PopClipRect();
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 6 * gUi, p0.y + 6 * gUi));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.06f, 0.07f, 0.08f, 0.85f));
-    if (ImGui::Button("+", ImVec2(24 * gUi, 0))) S.map.zoom = std::min(12, S.map.zoom + 1);
+    if (ImGui::Button("+", ImVec2(24 * gUi, 0))) S.map.zoom = std::min(adsbmap::kMaxZoom, S.map.zoom + 1);
     ImGui::SameLine(0, 2 * gUi);
-    if (ImGui::Button("-", ImVec2(24 * gUi, 0))) S.map.zoom = std::max(2, S.map.zoom - 1);
+    if (ImGui::Button("-", ImVec2(24 * gUi, 0))) S.map.zoom = std::max(adsbmap::kMinZoom, S.map.zoom - 1);
     ImGui::PopStyleColor();
+    ImGui::SameLine(0, 6 * gUi);
+    adsbmap::tileControls("never the position itself");
     ImGui::SetCursorScreenPos(ImVec2(p0.x, p0.y + mh));
 }
 

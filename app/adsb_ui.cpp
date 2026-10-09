@@ -33,7 +33,6 @@ void loadState() {
     if (d.has("adsbLat")) S.refLat = d.getD("adsbLat", S.refLat);
     if (d.has("adsbLon")) S.refLon = d.getD("adsbLon", S.refLon);
     S.map.zoom = (int)d.getI("adsbZoom", 7);
-    S.map.online = d.getB("adsbMap", true);
     S.map.lat = S.refLat; S.map.lon = S.refLon;
 }
 
@@ -262,16 +261,14 @@ void mapView(App& a, ImVec2 size) {
     // controls in the corner
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 8 * gUi));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.06f, 0.07f, 0.08f, 0.85f));
-    if (ImGui::Button("+", ImVec2(26 * gUi, 0))) S.map.zoom = std::min(12, S.map.zoom + 1);
+    if (ImGui::Button("+", ImVec2(26 * gUi, 0))) S.map.zoom = std::min(adsbmap::kMaxZoom, S.map.zoom + 1);
     ImGui::SameLine(0, 2 * gUi);
-    if (ImGui::Button("-", ImVec2(26 * gUi, 0))) S.map.zoom = std::max(2, S.map.zoom - 1);
+    if (ImGui::Button("-", ImVec2(26 * gUi, 0))) S.map.zoom = std::max(adsbmap::kMinZoom, S.map.zoom - 1);
     ImGui::SameLine(0, 6 * gUi);
     if (ImGui::Button("antenna")) { S.map.lat = S.refLat; S.map.lon = S.refLon; S.mapHome = true; }
     ImGui::PopStyleColor();
-    ImGui::SameLine(0, 10 * gUi);
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.82f, 0.84f, 1));
-    if (ImGui::Checkbox("online map", &S.map.online)) { plat::prefs().setB("adsbMap", S.map.online); savePrefs(a); }
-    ImGui::PopStyleColor();
+    ImGui::SameLine(0, 6 * gUi);
+    adsbmap::tileControls(nullptr);
     if (wrongRef) {
         ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 38 * gUi));
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.18f, 0.14f, 0.04f, 0.92f));
@@ -284,7 +281,6 @@ void mapView(App& a, ImVec2 size) {
         ImGui::EndChild();
         ImGui::PopStyleColor();
     }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Fetch map tiles from the OpenStreetMap tile server (tile.openstreetmap.org) and keep them in the cache folder.\nOnly tile numbers are sent. Switch off to work offline: positions are then drawn on a plain grid.");
     plat::prefs().setI("adsbZoom", S.map.zoom);
     ImGui::SetCursorScreenPos(ImVec2(p0.x, p0.y + size.y));
 }
