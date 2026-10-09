@@ -100,6 +100,13 @@ struct PagerReceiver::Impl {
     dmr::Fir<cf32> fin;
     double offPhase = 0;
     std::vector<cf32> bufA, bufB, mixBuf, rsOut, finOut, clean;
+    // coarse AFC at 96 kHz, ahead of the +-10 kHz channel filter: a radio 50 ppm off at 450 MHz puts the carrier 22 kHz out. The mean
+    // frequency of 10 ms blocks with a carrier gives the error; it is only followed while no transmission is being read
+    double afcHz = 0, afcEst = 0, afcPhase = 0, afcLast = 0;
+    cf32 afcPrev = cf32(0, 0);
+    double afcPow = 0, afcPow2 = 0, afcDisc = 0; int afcN = 0;
+    std::deque<double> afcBlocks;
+    std::vector<cf32> afcBuf;
 
     // discriminator
     cf32 prev = cf32(0, 0);
@@ -171,6 +178,7 @@ struct PagerReceiver::Impl {
         built = false;
         stages.clear();
         offPhase = 0;
+        afcHz = afcEst = afcPhase = afcLast = 0; afcPrev = cf32(0, 0); afcPow = afcPow2 = afcDisc = 0; afcN = 0; afcBlocks.clear();
         if (r >= pagerTuning().minSampleRate - 1) {
             const int d = pickDecimation(r);
             double rr = r;
@@ -357,11 +365,50 @@ struct PagerReceiver::Impl {
         }
     }
 
+    // ---- coarse AFC (see afcHz)
+    const cf32* afc(const cf32* c, size_t n) {
+        afcBuf.resize(n);
+        double w = -2 * kPi * afcHz / kMidRate;
+        for (size_t i = 0; i < n; i++) {
+            const cf32 y = c[i] * cf32((float)std::cos(afcPhase), (float)std::sin(afcPhase));
+            afcPhase += w;
+            if (afcPhase > kPi) afcPhase -= 2 * kPi; else if (afcPhase < -kPi) afcPhase += 2 * kPi;
+            afcBuf[i] = y;
+            const cf32 z = y * std::conj(afcPrev);
+            afcPrev = y;
+            afcPow += (double)std::norm(y);
+            afcPow2 += (double)std::norm(y) * (double)std::norm(y);
+            if (z != cf32(0, 0)) afcDisc += std::atan2(z.imag(), z.real());
+            if (++afcN < 960) continue;
+            const double p = afcPow / afcN, f = afcDisc / afcN * kMidRate / (2 * kPi);
+            // a carrier: well above the noise floor, or (before a floor is known: a recording that starts in a transmission) an almost
+            // constant envelope, which FM has and noise has not (power spread 1 for noise, near 0 for a strong carrier)
+            const double spread = p > 0 ? afcPow2 / afcN / (p * p) - 1 : 1;
+            afcPow = afcPow2 = afcDisc = 0; afcN = 0;
+            afcBlocks.push_back(p);
+            if (afcBlocks.size() > 300) afcBlocks.pop_front();
+            bool carrier = spread < 0.15;
+            if (afcBlocks.size() >= 20) {
+                std::vector<double> v(afcBlocks.begin(), afcBlocks.end());
+                std::nth_element(v.begin(), v.begin() + (ptrdiff_t)(v.size() / 10), v.end());
+                carrier = carrier || p > 6 * v[v.size() / 10];
+            }
+            if (locked || !carrier) { afcLast = 0; continue; }
+            // fast while far off (two blocks in a row agree), slowly once close; an error below 2 kHz is left to the searchers
+            const bool far = std::fabs(f) > 2000 && std::fabs(afcLast) > 2000 && f * afcLast > 0;
+            afcEst = std::max(-30000.0, std::min(30000.0, afcEst + (far ? 0.7 : 0.05) * (afcHz + f - afcEst)));
+            afcLast = f;
+            if (std::fabs(afcEst) > 3000) afcHz = afcEst; else if (std::fabs(afcEst) < 1500) afcHz = 0;
+            w = -2 * kPi * afcHz / kMidRate;
+        }
+        return afcBuf.data();
+    }
+
     // ---- reading a transmission
     void startLock(int h, const Hit& hit) {
         locked = true; lockH = h; pol = hit.pol;
         m = hit.mean; amp = std::max(hit.score, 0.1);
-        tel.cfoHz = m * kWork / (2 * kPi);
+        tel.cfoHz = m * kWork / (2 * kPi) + afcHz;
         parser.reset();
         wi = bi = 0; curWord = 0; inSync = false;
         stage = 0; cnt = 0; acc = 0;
@@ -551,6 +598,7 @@ struct PagerReceiver::Impl {
             rs.process(c, cn, rsOut);
             c = rsOut.data(); cn = rsOut.size();
         }
+        c = afc(c, cn);
         finOut.clear();
         fin.process(c, cn, finOut);
         // the report instants are in input samples; the decoding runs a little ahead of them
