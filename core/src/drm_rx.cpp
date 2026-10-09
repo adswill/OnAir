@@ -76,6 +76,7 @@ struct DrmReceiver::Impl {
     uint64_t lastSearch = 0;
     uint64_t blockedUntil = 0;       // after a false alarm: no new lock on the same (mode, shift) before this sample
     int blockedMode = -1, blockedShift = 0, trackShift = 0;
+    bool mirror = false;                      // the input is conjugated (a mirrored spectrum)
     double lastRho[4] = {};
 
     // ---------------------------------------------------------------- tracker
@@ -180,6 +181,7 @@ struct DrmReceiver::Impl {
         front.reset();
         buf.clear(); base = 0; total = 0; lastSearch = 0;
         phase = kSearch;
+        mirror = false;
         blockedMode = -1; blockedUntil = 0;
         be.reset();
         be.log = [this](const std::string& s) { log(s); };
@@ -338,7 +340,7 @@ struct DrmReceiver::Impl {
         // (a carrier d bins from the centre advances by 2 pi d Tsym / Tu from symbol to symbol on top of that)
         const double dPh = 2 * kPi * std::fmod((double)bestShift * (double)Tsym / (double)Tu, 1.0);
         const double fErr = std::arg(bestC * std::polar(1.0, -dPh)) / (2 * kPi * (double)Tsym / kFs);
-        if (bestScore < 0.5) return res;
+        if (bestScore < 0.5) { toggleMirror(); return res; }
         res.ok = true;
         res.mode = mB; res.rho = rhoB; res.score = bestScore;
         res.symStart = absStart + tauB;
@@ -735,11 +737,18 @@ struct DrmReceiver::Impl {
         else if (facBadRun >= 12) restartSearch("the FAC is lost");
     }
 
+    // No frequency pilots, or a lock whose FAC never decodes: the next search looks at the mirrored spectrum (I and Q swapped by the radio or
+    // the file format). The stream is conjugated from here on until the next toggle.
+    void toggleMirror() {
+        mirror = !mirror;
+        for (auto& v : buf) v = std::conj(v);
+    }
+
     void restartSearch(const char* why) {
         char b[200];
         snprintf(b, sizeof b, "DRM: signal lost (%s)", why);
         log(b);
-        if (facOkSince == 0) { blockedMode = mode; blockedShift = trackShift; blockedUntil = total + (uint64_t)(kFs * 6); }
+        if (facOkSince == 0) { blockedMode = mode; blockedShift = trackShift; blockedUntil = total + (uint64_t)(kFs * 6); toggleMirror(); }
         phase = kSearch;
         frameSync = false;
         be.frameLost();
@@ -866,6 +875,7 @@ struct DrmReceiver::Impl {
         front.process(x, n, tmp);
         tmp2.clear();
         corr.process(tmp.data(), tmp.size(), tmp2);
+        if (mirror) for (auto& v : tmp2) v = std::conj(v);
         buf.insert(buf.end(), tmp2.begin(), tmp2.end());
         total += tmp2.size();
         inSamples += n; sincePub += n;
