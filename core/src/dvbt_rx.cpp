@@ -55,6 +55,7 @@ struct DvbtReceiver::Impl {
     double rhoAvg = 0;            // usual strength of the cyclic-prefix correlation (|sum| / energy), from the symbols that were fine
     int lowRun = 0;               // symbols in a row whose correlation has collapsed: the receiver has lost the symbol timing
     int intShift = 0;
+    int intRange = 20;            // whole carriers the integer search covers each way: 50 ppm at the top of UHF (43 kHz), with margin
     bool intLocked = false;
     std::vector<double> intScore; // accumulated pilot-coherence metric per candidate shift
     int intSymbols = 0;
@@ -197,7 +198,9 @@ struct DvbtReceiver::Impl {
         back = std::min(G / 4, 24);
         fft = std::make_unique<Fft>(N);
         fbuf.assign(N, cf32(0, 0));
-        intScore.assign(41, 0.0); intSymbols = 0; intLocked = false; intShift = 0;
+        // a radio 50 ppm off at 860 MHz is 43 kHz away: 38 carriers in 8K at 8 MHz, 62 at 5 MHz. Search +-55 kHz.
+        intRange = std::max(20, (int)std::ceil(55e3 / (fn / N)));
+        intScore.assign((size_t)(2 * intRange + 1), 0.0); intSymbols = 0; intLocked = false; intShift = 0;
         tpsBitsSeen.clear(); tpsBase = 0; prevValid = false; prevWin = INT64_MIN; tpsOk = false; absSym = 0;
         grid.assign((size_t)(K + 2) / 3 + 1, cf32(0, 0)); gridAge.assign(grid.size(), 255);
         cpRef.assign(continualPilots(mode).size(), cf32(1, 0)); cpRefValid = false; gridFilled = 0;
@@ -336,23 +339,24 @@ struct DvbtReceiver::Impl {
         (void)s;
         if (intSymbols > 0) {
             const auto& cp = continualPilots(mode);
-            for (int sh = -20; sh <= 20; sh++) {
+            for (int sh = -intRange; sh <= intRange; sh++) {
                 cd acc = 0; double mag = 0;
                 for (int k : cp) {
                     const int idx = (((k + sh - kc) % N) + N) % N;
                     const cd z = cd(cur[idx].real(), cur[idx].imag()) * std::conj(cd(prevRawFull[idx].real(), prevRawFull[idx].imag()));
                     acc += z; mag += std::abs(z);
                 }
-                intScore[sh + 20] += mag > 0 ? std::abs(acc) / mag : 0;
+                intScore[sh + intRange] += mag > 0 ? std::abs(acc) / mag : 0;
             }
         }
         prevRawFull = cur;
         intSymbols++;
         if (intSymbols >= 12) {
             int best = 0; double bm = -1, second = -1;
-            for (int i = 0; i < 41; i++) if (intScore[i] > bm) { bm = intScore[i]; best = i; }
-            for (int i = 0; i < 41; i++) if (i != best && intScore[i] > second) second = intScore[i];
-            if (bm > 0 && bm > 1.5 * second) { intShift = best - 20; intLocked = true; }
+            const int nS = 2 * intRange + 1;
+            for (int i = 0; i < nS; i++) if (intScore[i] > bm) { bm = intScore[i]; best = i; }
+            for (int i = 0; i < nS; i++) if (i != best && intScore[i] > second) second = intScore[i];
+            if (bm > 0 && bm > 1.5 * second) { intShift = best - intRange; intLocked = true; }
             else { std::fill(intScore.begin(), intScore.end(), 0.0); intSymbols = 0; }
         }
     }
