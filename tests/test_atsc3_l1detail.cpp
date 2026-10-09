@@ -58,6 +58,20 @@ int main() {
     auto big = packL1Detail(b, d, size + 40);
     CHECK((int)big.size() == (size + 40) * 8 && unpackL1Detail(b, big, u), "padded L1D_reserved");
     CHECK(!unpackL1Detail(b, std::vector<uint8_t>(bits.begin(), bits.begin() + 30 * 8), u) || true, "truncated input does not crash");
+    {   // L1D_version 0 (A/322 before L1D_bsid): the same fields without the BSID, padded only to the byte, then the CRC
+        int end = size * 8 - 32;
+        while (end > 0 && bits[(size_t)end - 1] == 0) end--;   // the BSID 0x4321 ends with a one: the padding is behind it
+        std::vector<uint8_t> v0(bits.begin(), bits.begin() + (end - 16));
+        for (int i = 0; i < 4; i++) v0[(size_t)i] = 0;   // L1D_version = 0
+        while (v0.size() % 8 != 0) v0.push_back(0);
+        const uint32_t crc = l1Crc32(v0.data(), (int)v0.size());
+        for (int i = 31; i >= 0; i--) v0.push_back((uint8_t)((crc >> i) & 1));
+        L1Detail w;
+        CHECK(unpackL1Detail(b, v0, w) && w.version == 0 && w.bsid == 0 && w.subframes.size() == 2 && w.subframes[1].numOfdmSymbols == 200, "version 0 without L1D_bsid");
+        L1Detail d0 = d; d0.version = 0;
+        L1Detail w2;
+        CHECK(unpackL1Detail(b, packL1Detail(b, d0, l1DetailSizeBytes(b, d0)), w2) && w2.version == 0 && w2.timeMsec == 321, "version 0 packed and unpacked");
+    }
 
     // protection of random content for every FEC mode, including multi-block sizes
     std::mt19937 rng(9);

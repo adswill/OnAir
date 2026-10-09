@@ -392,7 +392,7 @@ std::vector<uint8_t> packL1Detail(const L1Basic& b, const L1Detail& d, int sizeB
             }
         }
     }
-    w.put(d.bsid, 16);
+    if (d.version >= 1) w.put(d.bsid, 16);
     int minBytes = ((int)w.b.size() + 32 + 7) / 8;
     int bytes = sizeBytes > minBytes ? sizeBytes : minBytes;
     if (bytes < 25) bytes = 25;
@@ -481,8 +481,10 @@ bool unpackL1Detail(const L1Basic& b, const std::vector<uint8_t>& bits, L1Detail
         }
         d.subframes.push_back(sf);
     }
-    if (!need(16)) return false;
-    d.bsid = r.get(16);
+    if (d.version >= 1) {   // L1D_bsid exists from L1D_version 1 (A/322): a version 0 structure may end right here
+        if (!need(16)) return false;
+        d.bsid = r.get(16);
+    }
     uint32_t want = l1Crc32(bits.data(), (int)limit), got = 0;
     for (size_t i = limit; i < bits.size(); i++) got = (got << 1) | bits[i];
     d.crcOk = want == got;
