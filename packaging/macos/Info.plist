@@ -6,7 +6,7 @@
     <key>CFBundleName</key><string>OnAir</string>
     <key>CFBundleExecutable</key><string>dect2</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleVersion</key><string>0.2.1</string>
+    <key>CFBundleVersion</key><string>0.2.2</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSLocationUsageDescription</key><string>OnAir uses the position of this computer as the antenna position on the ADS-B map.</string>
     <key>NSLocationWhenInUseUsageDescription</key><string>OnAir uses the position of this computer as the antenna position on the ADS-B map.</string>
