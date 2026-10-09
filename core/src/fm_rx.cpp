@@ -262,6 +262,17 @@ struct FmReceiver::Impl {
     // The radio's DC spike sits on the carrier when the radio is tuned exactly to the station. Its mean over half a second is taken out of the
     // channel: the carrier itself turns by the tuning error (100 Hz per ppm of the radio at 100 MHz) and averages away, the spike does not.
     cf32 dcCh = cf32(0, 0);
+    // Station finder: a recording made beside the station (gqrx, SDR#) or a radio tuned off it. Averaged spectra of the input; the station is
+    // mixed to the centre. Only when the centre holds no station: one there, however weak beside a strong neighbour, is the one tuned to.
+    static constexpr int kFindN = 4096, kFindFrames = 16;
+    Fft findFft{kFindN};
+    std::vector<float> findPow;
+    std::vector<cf32> findBuf, mixBuf;
+    int findFrames = 0;
+    bool finding = true;
+    double unlockedSecs = 0;
+    double tuneHz = 0;                           // the station's frequency in the input; mixed to the centre
+    cf32 mixRot = cf32(1, 0), mixStep = cf32(1, 0);
     float dcChA = 0;
     std::vector<cf32> a, b;                      // scratch between the channel stages
     std::vector<float> freq, mpx;
@@ -335,6 +346,7 @@ struct FmReceiver::Impl {
         const int dTotal = std::max(1, (int)std::lround(fs / 500e3));
         fo = fs / dTotal; fm = fo / 2; fa = fm / 5;
         dcChA = (float)(1.0 / (0.5 * fo));
+        restartFinder(); setTune(0);
         std::vector<int> stages;
         int rest = dTotal;
         for (int p = 2; rest > 1;) {
@@ -392,8 +404,75 @@ struct FmReceiver::Impl {
         tel.seq = ++telSeq;
     }
 
+    void restartFinder() { finding = true; findFrames = 0; findPow.assign(kFindN, 0.f); unlockedSecs = 0; }
+    void setTune(double hz) {
+        tuneHz = hz; mixRot = cf32(1, 0);
+        const double w = -2 * kPi * hz / inRate;
+        mixStep = cf32((float)std::cos(w), (float)std::sin(w));
+    }
+
+    void findFeed(const cf32* x, size_t n) {
+        if (n < (size_t)kFindN) return;
+        findBuf.resize(kFindN);
+        for (int k = 0; k < kFindN; k++) {
+            const cf32 v = x[k];
+            const float w = 0.5f - 0.5f * (float)std::cos(2 * kPi * k / kFindN);
+            findBuf[(size_t)k] = std::isfinite(v.real() + v.imag()) ? v * w : cf32(0, 0);
+        }
+        findFft.forward(findBuf.data());
+        for (int k = 0; k < kFindN; k++) findPow[(size_t)((k + kFindN / 2) % kFindN)] += std::norm(findBuf[(size_t)k]);   // bin kFindN/2 = DC
+        if (++findFrames < kFindFrames) return;
+        finding = false;
+        // the score of a frequency: the median power over +-75 kHz around it (an FM channel is flat there; a DC spike or a narrow carrier is not)
+        const double binHz = inRate / kFindN;
+        const int half = std::max(2, (int)(75e3 / binHz));
+        const int lim = (int)((inRate / 2 - 110e3) / binHz);
+        if (lim < 0) return;
+        std::vector<float> win;
+        auto score = [&](int k) {   // k relative to DC
+            win.clear();
+            for (int j = k - half; j <= k + half; j++) { const int b = j + kFindN / 2; if (b >= 0 && b < kFindN) win.push_back(findPow[(size_t)b]); }
+            std::nth_element(win.begin(), win.begin() + (std::ptrdiff_t)(win.size() / 2), win.end());
+            return win[win.size() / 2];
+        };
+        const int step = std::max(1, half / 8);
+        float best = -1; int bk = 0;
+        for (int k = -lim; k <= lim; k += step) { const float v = score(k); if (v > best) { best = v; bk = k; } }
+        std::vector<float> all(findPow);
+        std::nth_element(all.begin(), all.begin() + (std::ptrdiff_t)(all.size() / 2), all.end());
+        const float floorP = all[all.size() / 2];
+        const float centre = score(0);
+        double hz = 0;
+        if (best > 10 * floorP && centre < 10 * floorP) {
+            // the centre of the station: the power centroid over +-100 kHz around the best window
+            double sp = 0, sf = 0;
+            const int w = (int)(100e3 / binHz);
+            for (int j = bk - w; j <= bk + w; j++) {
+                const int b = j + kFindN / 2;
+                if (b < 0 || b >= kFindN) continue;
+                const double p = std::max(0.0, (double)findPow[(size_t)b] - floorP);
+                sp += p; sf += p * j;
+            }
+            hz = sp > 0 ? sf / sp * binHz : bk * binHz;
+        }
+        if (std::fabs(hz - tuneHz) > 20e3) {
+            setTune(hz);
+            reset();
+        }
+    }
+
     void feed(const cf32* x, size_t n) {
         if (!ready || n == 0) return;
+        if (finding) findFeed(x, n);
+        if (tuneHz != 0) {
+            mixBuf.resize(n);
+            for (size_t i = 0; i < n; i++) {
+                mixBuf[i] = x[i] * mixRot;
+                mixRot *= mixStep;
+                if ((i & 1023) == 0) mixRot /= std::abs(mixRot);
+            }
+            x = mixBuf.data();
+        }
         // channel filter
         const cf32* cur = x; size_t cn = n;
         for (size_t s = 0; s < chan.size(); s++) {
@@ -556,6 +635,7 @@ struct FmReceiver::Impl {
     }
 
     void publish() {
+        const uint64_t sincePubN = sincePub;
         sincePub = 0;
         // multiplex spectrum
         std::vector<cf32> buf(kMpxFft);
@@ -577,6 +657,7 @@ struct FmReceiver::Impl {
         t.snrDb = snr;
         t.cfoHz = 0;
         if (freqN) { cfoEma += (freqSum / freqN * kDevHz - cfoEma) * 0.3; t.cfoHz = cfoEma; }
+        t.cfoHz += tuneHz;
         t.devKhz = (float)(peakMpx * 75.0);
         t.levelDbfs = pwN ? (float)(10 * std::log10(std::max(pwSum / pwN, 1e-12))) : -120.f;
         t.stereo = pilotLock && stereoBlend > 0.5f;
@@ -592,6 +673,9 @@ struct FmReceiver::Impl {
         t.carrier = cv < 0.4;
         if (!t.carrier) { t.snrDb = 0; snr = 0; }
         t.state = !t.carrier ? 0 : snr >= 20 ? 2 : snr >= 10 ? 1 : 0;
+        // nothing receivable for two seconds: look for the station again (a new recording, a retune that did not reset)
+        unlockedSecs = t.state == 0 ? unlockedSecs + (double)sincePubN / inRate : 0;
+        if (unlockedSecs > 2 && !finding) { restartFinder(); }
         if (!t.carrier) { t.stereo = false; t.pilotPct = 0; }
         t.mpxMaxHz = 80000.f;
         const int nb = (int)(80e3 / binHz);
@@ -609,7 +693,7 @@ FmReceiver::FmReceiver() : p_(std::make_unique<Impl>()) {}
 FmReceiver::~FmReceiver() {}
 void FmReceiver::configure(double inputRateHz) { p_->configure(inputRateHz); }
 bool FmReceiver::ready() const { return p_->ready; }
-void FmReceiver::reset() { if (p_->ready) p_->reset(); }
+void FmReceiver::reset() { if (p_->ready) { p_->reset(); p_->restartFinder(); p_->setTune(0); } }
 void FmReceiver::feed(const cf32* x, size_t n) { p_->feed(x, n); }
 bool FmReceiver::telemetry(FmTelemetry& out, uint64_t lastSeq) {
     std::lock_guard<std::mutex> lk(p_->mu);
