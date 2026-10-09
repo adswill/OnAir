@@ -1199,6 +1199,7 @@ void AtscReceiver::setPacketCallback(std::function<void(const uint8_t*, size_t, 
 void AtscReceiver::feed(const cf32* x, size_t n) {
     if (!p_->c.ok || !n) return;
     std::vector<cf32> v(x, x + n);
+    for (auto& s : v) if (!std::isfinite(s.real()) || !std::isfinite(s.imag())) s = cf32(0, 0);   // one bad sample would poison every loop for good
     p_->c.processInput(v, n);
     static long cnt = 0;
     if (getenv("ATSC_PROF") && ++cnt % 195 == 0) fprintf(stderr, "[atsc] time: pfb+pll %.2f s, symbol clock+fields %.2f s, field decode %.2f s (LS fit %.2f, equalise %.2f, trellis+RS %.2f)\n", p_->c.tPfb, p_->c.tCd, p_->c.tDec, p_->c.tLs, p_->c.tEq, p_->c.tVit);

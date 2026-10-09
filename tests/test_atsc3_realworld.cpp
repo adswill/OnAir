@@ -69,6 +69,7 @@ int main(int argc, char** argv) {
         {"sample clock +100 ppm", 3.0, [](auto& x) { x = impair::clock(x, 100); }},
         {"sample clock -100 ppm", 3.0, [](auto& x) { x = impair::clock(x, -100); }},
         {"start mid-frame, USB drop", 3.0, [](auto& x) { impair::skip(x, 300001); impair::drop(x, 9000000, 5555); }},
+        {"NaN and infinite samples", 3.0, [](auto& x) { for (size_t i = 6000000; i < 6000100; i++) x[i] = cf32(NAN, INFINITY); }},
         {"combined: +43 kHz, +80 ppm, echo, 8-bit", 3.0, [](auto& x) {
              impair::echo(x, 40, -8.0, 1.0); x = impair::clock(x, 80); impair::shift(x, 43000, kRate); clipTo(x, 0.3); }},
     };

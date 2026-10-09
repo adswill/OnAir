@@ -92,6 +92,7 @@ int main(int argc, char** argv) {
         {"I and Q swapped, +20 kHz", 1.2, [](auto& x) { impair::shift(x, 20000, kRate); impair::swapIq(x); }, 9000},
         {"DC spike, 8-bit clipped", 1.2, [](auto& x) { impair::dc(x, -15); clipTo(x, 0.45); }, 9000},
         {"start mid-field, USB drop", 1.6, [](auto& x) { impair::skip(x, 123457); impair::drop(x, 5000000, 7777); }, 10000},
+        {"NaN and infinite samples", 1.6, [](auto& x) { for (size_t i = 3000000; i < 3000100; i++) x[i] = cf32(NAN, INFINITY); }, 12000},
         {"combined: +43 kHz, +80 ppm, echo, 8-bit", 1.8, [](auto& x) {
              impair::echo(x, 16, -6.0, 2.0); x = impair::clock(x, 80); impair::shift(x, 43000, kRate); clipTo(x, 0.45); }, 11000},
     };
