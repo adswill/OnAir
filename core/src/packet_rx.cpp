@@ -27,6 +27,7 @@ constexpr size_t kBlock = 1920;                // power blocks of 20 ms at 96 kH
 constexpr size_t kNoiseBlocks = 250;           // the noise floor is a low percentile of the last 5 s
 constexpr size_t kMaxFrames = 200, kMaxStations = 300;
 constexpr int64_t kDupWindow = (int64_t)(0.03 * kMidRate);   // the same bytes this close together are one transmission
+constexpr double kAfcMaxHz = 12000.0;         // how far the AFC follows a carrier (50 ppm at 222 MHz)
 constexpr float kClipHz = 8000.f;              // FM clicks of a weak signal are cut to this many Hz of deviation
 
 int pickDecimation(double fs) {
@@ -186,6 +187,10 @@ struct PacketReceiver::Impl {
     bool carrier = false;
     int64_t lastCarrier = -(int64_t)1e12, carrierSince = 0;     // the last block with a carrier; where the present carrier began
     double snrEma = 0, cfoEma = 0; bool haveSnr = false;
+    // AFC: the carrier error measured on the discriminator (mean over 20 ms blocks with a carrier) is mixed out before the channel filter, so
+    // a radio 50 ppm off at 144 MHz (7 kHz) keeps the signal inside the filter and the clipper; cfoEma is then the error left over
+    double afcHz = 0, afcEst = 0, afcPhase = 0, lastBlkCfo = 0;   // afcHz: mixed out, afcEst: the carrier error
+    std::vector<cf32> afcBuf;
     double inPower = 0; int64_t inN = 0;       // whole-input level over a report
 
     int64_t n96 = 0, nextReport = 0;
@@ -245,7 +250,7 @@ struct PacketReceiver::Impl {
         for (auto& a : fsk) a.reset();
         offPhase = 0; prevY = cf32(1.f, 0.f);
         blkSum = blkDisc = 0; blkN = 0; blocks.clear(); nf = 0; nfKnown = false; carrier = false;
-        lastCarrier = -(int64_t)1e12; snrEma = cfoEma = 0; haveSnr = false;
+        lastCarrier = -(int64_t)1e12; snrEma = cfoEma = 0; haveSnr = false; afcHz = afcEst = afcPhase = lastBlkCfo = 0;
         inPower = 0; inN = 0;
         n96 = 0; nextReport = 0;
         recent.clear(); fails.clear(); frames.clear(); stations.clear();
@@ -365,6 +370,12 @@ struct PacketReceiver::Impl {
             snrEma = haveSnr ? 0.9 * snrEma + 0.1 * snr : snr;
             const double cfo = blkDisc / (double)blkN;
             cfoEma = haveSnr ? 0.9 * cfoEma + 0.1 * cfo : cfo;
+            // fast while far off (two blocks in a row agree), slowly once close, so FM clicks of a weak signal do not move it. Only an error
+            // of more than 1.5 kHz is mixed out (released below 1 kHz): a small one does no harm to the demodulators
+            const bool far = std::fabs(cfo) > 1500 && std::fabs(lastBlkCfo) > 1500 && cfo * lastBlkCfo > 0;
+            afcEst = std::max(-kAfcMaxHz, std::min(kAfcMaxHz, afcEst + (far ? 0.6 : 0.03) * (afcHz + cfo - afcEst)));
+            if (std::fabs(afcEst) > 1500) afcHz = afcEst; else if (std::fabs(afcEst) < 1000) afcHz = 0;
+            lastBlkCfo = cfo;
             haveSnr = true;
         }
         blkSum = blkDisc = 0; blkN = 0;
@@ -377,7 +388,7 @@ struct PacketReceiver::Impl {
         t.carrier = carrier || (n96 - lastCarrier) < (int64_t)(0.2 * kMidRate);
         t.dataValid = tnow - std::max(t.last1200Sec, t.last9600Sec) < 15.0;
         t.state = t.dataValid ? 2 : (t.carrier || (n96 - lastCarrier) < (int64_t)(5 * kMidRate) ? 1 : 0);
-        t.cfoHz = cfoEma;
+        t.cfoHz = afcHz + cfoEma;
         t.snrDb = (float)snrEma;
         t.levelDb = inN ? (float)(10 * std::log10(inPower / (double)inN + 1e-20)) : -200.f;
         inPower = 0; inN = 0;
@@ -436,6 +447,16 @@ struct PacketReceiver::Impl {
             rs.process(cur, cn, o2);
             cur = o2.data(); cn = o2.size();
         }
+        if (afcHz != 0) {
+            afcBuf.resize(cn);
+            const double w = -2 * kPi * afcHz / kMidRate;
+            for (size_t i = 0; i < cn; i++) {
+                afcBuf[i] = cur[i] * cf32((float)std::cos(afcPhase), (float)std::sin(afcPhase));
+                afcPhase += w;
+                if (afcPhase > kPi) afcPhase -= 2 * kPi; else if (afcPhase < -kPi) afcPhase += 2 * kPi;
+            }
+            cur = afcBuf.data();
+        }
         ch.clear();
         chan.process(cur, cn, ch);
         // discriminator, in Hz, and the IF level blocks
@@ -445,11 +466,11 @@ struct PacketReceiver::Impl {
             const cf32 y = ch[i];
             const cf32 z = y * std::conj(prevY);
             float d = (z.real() == 0.f && z.imag() == 0.f) ? 0.f : std::atan2(z.imag(), z.real()) * k;
+            blkDisc += std::max(-14000.f, std::min(14000.f, d));   // the carrier error from a wider clip: kClipHz would hide most of a large one
             d = std::max(-kClipHz, std::min(kClipHz, d));
             prevY = y;
             disc[i] = d;
             blkSum += (double)std::norm(y);
-            blkDisc += d;
             if (++blkN == kBlock) blockEnd();
         }
         a48.clear();
