@@ -24,6 +24,7 @@ struct AtvReceiver::Impl {
     std::function<void(const std::string&)> logCb;
 
     AtvCarrierSearch search;
+    std::vector<cf32> clean;            // the input with non-finite samples replaced
     AtvFront front;
     AtvVideo video;
     AtvSound sound;
@@ -169,6 +170,14 @@ struct AtvReceiver::Impl {
         {
             std::lock_guard<std::mutex> lk(prmMu);
             if (prmDirty.exchange(false)) { prm = prmNew; video.setParams(prm); }
+        }
+        // a NaN or infinite sample (a broken file) would stay for good in the DC estimate and the loops: such samples count as silence
+        for (size_t k = 0; k < n; k++) {
+            if (std::isfinite(x[k].real() + x[k].imag())) continue;
+            clean.assign(x, x + n);
+            for (cf32& v : clean) if (!std::isfinite(v.real() + v.imag())) v = cf32(0, 0);
+            x = clean.data();
+            break;
         }
         size_t i = 0;
         while (i < n) {
