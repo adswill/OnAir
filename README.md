@@ -3,15 +3,63 @@
 <h1 align="center">OnAir</h1>
 
 <p align="center"><b>Watch digital TV and listen to digital radio with a software-defined radio.</b><br>
-Free and open source. macOS, Windows and Linux.</p>
+Free and open source, for macOS, Windows and Linux.</p>
 
-<p align="center"><a href="https://github.com/adswill/OnAir/releases/download/v0.2.0/OnAir_promo_v0.2.0.mp4"><b>Watch the overview video</b></a> &nbsp;·&nbsp; <a href="https://discord.gg/Kky9c6atm"><b>Join the Discord</b></a> for support and feature requests</p>
+<p align="center">
+  <a href="https://github.com/adswill/OnAir/releases/latest"><img src="https://img.shields.io/github/v/release/adswill/OnAir?label=download&color=2ea44f" alt="Latest release"></a>
+  <a href="https://github.com/adswill/OnAir/releases"><img src="https://img.shields.io/github/downloads/adswill/OnAir/total?color=blue" alt="Downloads"></a>
+  <img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey" alt="Platforms">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-orange" alt="License: GPL-3.0"></a>
+  <a href="https://discord.gg/Kky9c6atm"><img src="https://img.shields.io/badge/chat-Discord-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/adswill/OnAir/releases/latest"><b>Download</b></a> &nbsp;·&nbsp;
+  <a href="https://github.com/adswill/OnAir/releases/download/v0.2.0/OnAir_promo_v0.2.0.mp4"><b>Overview video</b></a> &nbsp;·&nbsp;
+  <a href="https://discord.gg/Kky9c6atm"><b>Discord</b></a> &nbsp;·&nbsp;
+  <a href="https://github.com/adswill/OnAir-channels"><b>Channel list</b></a>
+</p>
 
 ---
 
-OnAir turns a low-cost SDR (a HackRF, and many other radios) into a complete digital broadcast receiver. Plug in an antenna, pick a channel, and watch live TV or listen to digital radio, while seeing exactly what the receiver is doing: the spectrum, the signal quality, the constellations, the echoes in your reception.
+OnAir turns a low-cost SDR (a HackRF, and many other radios) into a complete digital broadcast receiver. Plug in an antenna, pick a channel, and watch live TV or listen to digital radio, while seeing exactly what the receiver is doing: the spectrum, the signal quality, the constellations and the echoes in your reception.
 
 It is built for people who want a receiver that is both easy to use and honest about what is happening inside it.
+
+## Contents
+
+- [Install](#install)
+- [Quick start](#quick-start)
+- [What it receives](#what-it-receives)
+- [Features](#features)
+- [Supported radios](#supported-radios)
+- [Updates](#updates)
+- [Good to know](#good-to-know)
+- [Build from source](#build-from-source)
+- [Support and community](#support-and-community)
+- [License](#license)
+
+## Install
+
+Download the file for your system from the **[latest release](https://github.com/adswill/OnAir/releases/latest)**. There is nothing to compile.
+
+| System | Download | How to install |
+|---|---|---|
+| **macOS** 15 or later | `OnAir-…-macos-arm64.dmg` (Apple silicon)<br>`OnAir-…-macos-x86_64.dmg` (Intel) | Open the `.dmg` and drag OnAir to Applications. The app is not signed with a developer certificate yet, so on the first launch right-click it and choose *Open*. |
+| **Windows** 10 / 11, 64-bit | `OnAir-…-windows-x64-setup.exe`<br>or `OnAir-…-windows-x64.zip` | Run the installer, or unpack the zip and start `OnAir.exe`. Windows may warn about an unknown publisher because the installer is not code-signed. Needs a CPU with AVX2 (Intel or AMD from about 2013 on). |
+| **Linux** x86-64 and arm64 | `onair_…_amd64.deb` / `onair_…_arm64.deb`<br>or `onair-…-portable.tar.gz` | Debian / Ubuntu: `sudo apt install ./onair_<version>_<arch>.deb`, then start OnAir from the menu or with `onair`. The `.deb` carries its own video decoder, so it does not depend on your system's FFmpeg. Other distributions: unpack the portable archive and run `bin/onair`. |
+
+**Windows USB drivers:** for a HackRF, RTL-SDR, Airspy or Airspy HF+, install the WinUSB driver once with [Zadig](https://zadig.akeo.ie). A LimeSDR Mini needs FTDI's FT60x driver (see the README inside the download).
+
+## Quick start
+
+1. Connect your radio and antenna, then start OnAir. Connected radios appear in the source menu.
+2. Pick what you want to receive in the mode list on the left.
+3. Enter a frequency, or open the **Scan** tab to find channels automatically.
+4. Press **Start**. When the receiver locks, the channels appear on the right: click one to watch or listen.
+5. If the picture breaks up, use **Auto-tune** for the gain and watch the quality score while you move the antenna. Height and a clear view toward the transmitter matter more than anything else.
+
+> **No radio yet?** Press **Tour**: a friendly little TV walks you through OnAir using a built-in demo signal, so you can explore everything before buying a radio.
 
 ## What it receives
 
@@ -23,16 +71,18 @@ It is built for people who want a receiver that is both easy to use and honest a
 | **ATSC 3.0** (NextGen TV), *experimental* | North America, South Korea | Digital TV |
 | **ISDB-T**, *experimental* | Japan, Brazil and most of South America, Philippines | Digital TV and one-segment mobile TV |
 | **DAB / DAB+** | Europe, Australia and more | Digital radio |
-| **FM radio** (87.5 - 108 MHz) | Worldwide | Analogue radio: stereo, and RDS (station name, radio text, programme type, traffic flags) |
+| **FM radio** (87.5 – 108 MHz) | Worldwide | Analogue radio: stereo and RDS (station name, radio text, programme type, traffic flags) |
 
-The DVB standard is detected automatically, and the mode list on the left selects what you want to receive.
+The DVB standard is detected automatically.
 
-**Also receives, experimental.** These receivers are built from the published specifications and checked end to end on simulated signals, but have had little or no testing on real transmissions yet. Reports and recordings on Discord help a lot.
+### Also receives (experimental)
+
+These receivers are built from the published specifications and checked end to end on simulated signals, but have had little or no testing on real transmissions yet. Reports and recordings on [Discord](https://discord.gg/Kky9c6atm) help a lot.
 
 | Mode | What it is | What you see |
 |---|---|---|
 | **DVB-S / DVB-S2** | Satellite TV (through an LNB) | Channels and playback, all DVB-S2 MODCODs |
-| **DTMB** | Digital TV in China, Hong Kong, Macau, Cuba | Channels and playback |
+| **DTMB** | Digital TV in China, Hong Kong, Macau (8 MHz) and Cuba (6 MHz) | Channels and playback |
 | **Analog TV** | PAL, SECAM, NTSC | Picture and sound |
 | **DRM** | Digital radio on long, medium and short wave | Audio and station information |
 | **DMR** | Digital two-way radio | Talkgroups, IDs and data (no voice) |
@@ -43,75 +93,97 @@ The DVB standard is detected automatically, and the mode list on the left select
 | **Iridium** | Satellite phone network | Satellites on a map, pager messages, ring alerts |
 | **AIS** | Ship transponders | Ships on a map |
 | **Maritime** | NAVTEX, DSC, weather fax | Safety messages, distress and calling, fax pictures |
-| **Radiosondes** | Weather balloons, 400 - 406 MHz | Balloon tracks, altitude and weather data |
+| **Radiosondes** | Weather balloons, 400 – 406 MHz | Balloon tracks, altitude and weather data |
 | **GNSS** | GPS L1 | Satellites, position and time |
 | **Mesh** | Meshtastic and MeshCore (LoRa) | Nodes, map and chat |
 
-The TV channel scanner covers DVB, ATSC, ATSC 3.0, ISDB-T and DTMB, and scan results can be shared with other users through a public channel list, picked by country and city. The list is crowd-sourced from OnAir users' scans and can be browsed on GitHub: [adswill/OnAir-channels](https://github.com/adswill/OnAir-channels).
+### Channel scanner and shared channel list
 
-**T2-Lite** (the 1/3 and 2/5 code rates, short FEC frames, 1.7 MHz channels) is decoded like any other DVB-T2 signal. It is checked end to end on simulated signals from QPSK to 256-QAM, and the error correction sits where theory says it should; it has not been tried on a real T2-Lite broadcast. A T2-Lite signal that shares a channel with a normal T2 one (in its future-extension frames) is not decoded: the normal T2 part keeps working.
+The TV channel scanner covers DVB, ATSC, ATSC 3.0, ISDB-T and DTMB. Scan results can be shared with other users through a public, crowd-sourced channel list, picked by country and city. You can also browse it on GitHub: **[adswill/OnAir-channels](https://github.com/adswill/OnAir-channels)**.
 
-**ATSC 3.0 is experimental.** The whole receiver chain is built from the published specifications and works on simulated signals (carrier offset, noise and echoes included): synchronisation, error correction, link layer, ROUTE and playback of HEVC video with AAC audio. It has not yet been checked against a real broadcast, so details such as the scrambler or interleaver may need fixing once a real recording is available. Services that use MMTP or AC-4 audio are not supported yet, and it needs a radio that can sample at 6.5 Msps or faster. If you have an ATSC 3.0 recording or can try it on air, please tell us on Discord.
+### Notes on the newer TV standards
 
-**ISDB-T is experimental too.** It follows the ARIB STD-B31 specification (all three modes, all guard intervals, DQPSK, QPSK, 16QAM and 64QAM, the 13 segments in up to three layers including the one-segment layer, TMCC, the time and frequency interleavers, Viterbi and Reed-Solomon) and decodes simulated signals exactly, with carrier offset, clock error, noise and echoes, at 6 to 20 Msps. It has not been checked against a real broadcast yet, so details may need adjusting once a real recording is available. Channel names written in the Japanese character set are not converted yet. The channel scanner covers the 6 MHz raster of Japan and Brazil. To try it without a signal, `isdbtgen --out sample.cs8` (built with the tools) makes a recording that carries the built-in test programme: open it as an IQ recording, 10 Msps, CS8, with ISDB-T selected. A recording from a real transmitter would help a lot; please share one on Discord.
+<details>
+<summary><b>T2-Lite</b></summary>
 
-## Updates
+T2-Lite (the 1/3 and 2/5 code rates, short FEC frames, 1.7 MHz channels) is decoded like any other DVB-T2 signal. It is checked end to end on simulated signals from QPSK to 256-QAM, and the error correction sits where theory says it should; it has not been tried on a real T2-Lite broadcast. A T2-Lite signal that shares a channel with a normal T2 one (in its future-extension frames) is not decoded: the normal T2 part keeps working.
+</details>
 
-OnAir checks GitHub for a newer version a few seconds after it starts (and then at most once a day), downloads the package for your system in the background, checks it against the SHA-256 that GitHub lists for the file, and puts it in place when you close the program. The button at the top right (`v0.2.1`) shows the state and has the settings: turn the check off, turn the automatic install off (you then get a button instead), or leave out pre-releases. On macOS it replaces `OnAir.app`, on Windows it runs the installer quietly (Windows asks for permission), on Linux it replaces the portable folder; a `.deb` install asks for your password through the system's installer. Only github.com is contacted, and nothing is sent but the usual request.
+<details>
+<summary><b>ATSC 3.0</b> (experimental)</summary>
 
-## Highlights
+The whole receiver chain is built from the published specifications and works on simulated signals (carrier offset, noise and echoes included): synchronisation, error correction, link layer, ROUTE and playback of HEVC video with AAC audio. It has not yet been checked against a real broadcast, so details such as the scrambler or interleaver may need fixing once a real recording is available. Services that use MMTP or AC-4 audio are not supported yet, and it needs a radio that can sample at 6.5 Msps or faster. If you have an ATSC 3.0 recording or can try it on air, please tell us on Discord.
+</details>
 
-- **Live player.** Picture, sound, subtitles, teletext, programme guide and multiple audio tracks, with automatic repair of short signal dropouts so weak reception stays watchable.
-- **See your signal.** Spectrum and waterfall, every constellation, signal-to-noise and error figures, a single quality score, and an echo (multipath) detector.
-- **Find the best reception.** A channel scanner, automatic gain tuning, and a direction finder that helps you aim the antenna.
-- **Share it.** A built-in network tuner streams your channels to VLC, phones, Plex or Jellyfin over your home network, as a plain stream or as HLS for browsers and phones. On a Mac you can cast the playing service to an Apple TV or AirPlay TV. You can also record to a file or send the stream out over UDP.
-- **Try it without hardware.** The first-start tour and the **Tour** button play a built-in demo signal, so you can explore everything before buying a radio.
-- **Fast.** Error correction runs on the GPU where available, and with optimised vector code on the CPU everywhere else.
-- **Your radio, set up properly.** Every antenna input of a radio is its own entry in the source list, and a **Radio settings** section offers what the radio has: frequency correction (ppm), notch filters, gain modes, direct sampling for HF and more. The radio's DC spike can be left alone, removed, or kept off the channel by tuning just beside it.
+<details>
+<summary><b>ISDB-T</b> (experimental)</summary>
 
-## Install
+ISDB-T follows the ARIB STD-B31 specification (all three modes, all guard intervals, DQPSK, QPSK, 16QAM and 64QAM, the 13 segments in up to three layers including the one-segment layer, TMCC, the time and frequency interleavers, Viterbi and Reed-Solomon) and decodes simulated signals exactly, with carrier offset, clock error, noise and echoes, at 6 to 20 Msps. It has not been checked against a real broadcast yet, so details may need adjusting once a real recording is available. Channel names written in the Japanese character set are not converted yet. The channel scanner covers the 6 MHz raster of Japan and Brazil.
 
-Download the installer for your system from the **[Releases](../../releases)** page. There is nothing to compile.
+To try it without a signal, `isdbtgen --out sample.cs8` (built with the tools) makes a recording that carries the built-in test programme: open it as an IQ recording, 10 Msps, CS8, with ISDB-T selected. A recording from a real transmitter would help a lot; please share one on Discord.
+</details>
 
-**macOS** (macOS 15 or later, Apple silicon and Intel): open the `.dmg` for your Mac (`arm64` for Apple silicon, `x86_64` for Intel) and drag OnAir to Applications. The app is not yet signed with a developer certificate, so on the first launch right-click it and choose *Open*.
+## Features
 
-**Windows** (64-bit): run the `OnAir-…-setup.exe` installer (or unpack the `.zip` and start `OnAir.exe`). For a HackRF, RTL-SDR, Airspy or Airspy HF+, install the WinUSB driver once with [Zadig](https://zadig.akeo.ie); a LimeSDR Mini needs FTDI's FT60x driver (see the README inside the download). Windows may warn about an unknown publisher because the installer is not code-signed.
+**Watch and listen**
+- **Live player** with picture, sound, subtitles, teletext, programme guide and multiple audio tracks.
+- **Automatic repair** of short signal dropouts, so weak reception stays watchable.
 
-**Linux:** the `.deb` installs on any current Debian or Ubuntu (it carries its own video decoder, so it does not depend on the version of FFmpeg your system has): `sudo apt install ./onair_<version>_<arch>.deb`, then start OnAir from the menu or with `onair`. For other distributions there is a `-portable.tar.gz` with everything inside: unpack it and run `bin/onair`. x86-64 and arm64 packages are provided.
+**See your signal**
+- Spectrum and waterfall, every constellation, signal-to-noise and error figures.
+- A single **quality score**, and an **echo (multipath) detector**.
 
-## Getting started
+**Get the best reception**
+- A **channel scanner**, **automatic gain tuning**, and a **direction finder** that helps you aim the antenna.
+- **Your radio, set up properly:** every antenna input is its own entry in the source list, and **Radio settings** offers what the radio has: frequency correction (ppm), notch filters, gain modes, direct sampling for HF and more.
+- **DC spike handling:** leave the radio's centre spike alone, remove it, or keep it off the channel by tuning just beside it. Optional **IQ imbalance correction**.
 
-1. Connect your radio and antenna, then start OnAir. It lists connected radios in the source menu.
-2. Enter a frequency, or open the **Scan** tab to find channels automatically.
-3. Press **Start**. When the receiver locks, the channels appear on the right. Click one to watch.
-4. If the picture breaks up, use **Auto-tune** for the gain and watch the quality score while you move the antenna. Height and a clear view toward the transmitter matter more than anything else.
+**Share it**
+- A built-in **network tuner** streams your channels to VLC, phones, Plex or Jellyfin over your home network, as a plain stream or as HLS for browsers and phones.
+- On a Mac, **cast** the playing service to an Apple TV or AirPlay TV.
+- **Record** to a file, or send the stream out over UDP.
 
-New to all this? Press **Tour** and a friendly little TV will walk you through it.
+**Comfortable to use**
+- **Light mode** (View → Light) next to the dark palettes; the layout adapts to small windows and 125 % / 150 % display scaling.
+- **Fast:** error correction runs on the GPU where available, and with optimised vector code on the CPU everywhere else.
 
 ## Supported radios
 
-OnAir supports the **HackRF One and HackRF Pro** natively, and drives **RTL-SDR, Airspy, Airspy HF+, BladeRF, LimeSDR, PlutoSDR, USRP and SDRplay RSP** radios directly too (marked "experimental" in the radio list). The libraries those radios need are included in the downloads, so there is nothing else to install, with these exceptions: on macOS the PlutoSDR library is not included yet, and on Windows a USRP needs UHD installed from Ettus (files.ettus.com, with its firmware images). SDRplay RSPs (RSP1, RSP1A, RSP1B, RSP2, RSPduo, RSPdx, RSPdx-R2): install the SDRplay API from sdrplay.com first (Windows, macOS and Linux; it brings its own USB driver). On Windows a radio also needs its USB driver once, see the install notes above. Every other radio works through [SoapySDR](https://github.com/pothosware/SoapySDR) once its SoapySDR module is installed. Radios that are found appear in the source list next to the HackRF, and the gain control becomes one overall gain slider.
+OnAir supports the **HackRF One and HackRF Pro** natively, and drives these radios directly too (marked "experimental" in the radio list):
 
-A TV channel needs a radio that can sample fast enough, roughly 1 million samples per second per MHz of channel width:
+| Radio | Wide TV channels (6 – 8 MHz) | DAB, FM and narrow channels | Notes |
+|---|:---:|:---:|---|
+| **HackRF One / Pro** | ✅ | ✅ | The radio OnAir is developed and tested with |
+| **BladeRF**, **LimeSDR** | ✅ | ✅ | |
+| **USRP** | ✅ | ✅ | On Windows, install UHD from [Ettus](https://files.ettus.com) (with its firmware images) |
+| **PlutoSDR** | ⚠️ | ✅ | Over its USB cable it streams about 4 Msps, too little for a 6 – 8 MHz channel. Library not included on macOS yet |
+| **Airspy R2**, **SDRplay RSP** | Should work | ✅ | SDRplay: install the SDRplay API from [sdrplay.com](https://www.sdrplay.com) first (RSP1, RSP1A, RSP1B, RSP2, RSPduo, RSPdx, RSPdx-R2) |
+| **RTL-SDR** | ❌ | ✅ | |
+| **Airspy HF+** | ❌ | Narrow channels only | HF and 60 – 260 MHz |
+| **Anything else** | depends | depends | Through [SoapySDR](https://github.com/pothosware/SoapySDR), once its SoapySDR module is installed |
 
-| Radio class | Wide TV channels (6-8 MHz) | DAB and FM radio, narrow channels |
-|---|---|---|
-| HackRF, PlutoSDR, BladeRF, LimeSDR, USRP | Yes | Yes |
-| Airspy R2, SDRplay | Should work | Yes |
-| RTL-SDR | No | Yes |
-| Airspy HF+ | No | Narrow channels only (HF and 60 - 260 MHz) |
+- The libraries these radios need are included in the downloads, except as noted above.
+- A TV channel needs a radio that samples fast enough: roughly 1 million samples per second per MHz of channel width. If a radio cannot reach the rate or frequency a mode needs, OnAir says so next to the source.
+- The radios other than the HackRF have had less real-world testing. Notes for specific radios are in **[DEVICES.md](DEVICES.md)**.
 
-If a radio cannot reach the rate or frequency a mode needs, OnAir says so next to the source. The HackRF is the radio the project is developed and tested with; the others have had less real-world testing.
+## Updates
 
-Notes for specific radios are in [DEVICES.md](DEVICES.md).
+OnAir checks GitHub for a newer version a few seconds after it starts (then at most once a day), downloads the package for your system in the background, verifies it against the SHA-256 that GitHub lists, and installs it when you close the program.
+
+- The version button at the top right shows the state and has the settings: turn the check off, turn automatic install off (you then get a button instead), or leave out pre-releases.
+- macOS replaces `OnAir.app`; Windows runs the installer quietly (Windows asks for permission); Linux replaces the portable folder, and a `.deb` install asks for your password through the system's installer.
+- Only github.com is contacted, and nothing is sent but the usual request.
 
 ## Good to know
 
 - Encrypted (scrambled) services cannot be decoded.
-- Reception depends heavily on your antenna and location. A weak or echo-filled signal is the usual cause of a broken picture, and OnAir's quality score and echo detector are there to help you improve it.
+- Reception depends heavily on your antenna and location. A weak or echo-filled signal is the usual cause of a broken picture; the quality score and echo detector are there to help you improve it.
 - Receiving broadcasts is legal in most places, but laws differ. Check the rules where you live.
 
 ## Build from source
+
+<details>
+<summary>Build instructions</summary>
 
 You need a C++20 compiler, CMake 3.20 or newer, pkg-config, FFmpeg, libhackrf, and GLFW for the app. SoapySDR is optional.
 
@@ -135,20 +207,9 @@ build/dect2cli --file capture.cs8 --rate 10 --format cs8 --play <service id>
 
 Useful options: `DECT2_UI_BACKEND` (Metal or OpenGL3), `DECT2_WITH_SOAPY`, and `DECT2_PORTABLE` / `DECT2_NO_SIMD` for plain C++ code paths on unusual CPUs.
 
-To build a self-contained macOS app and disk image, run `tools/package/make_dmg.sh`.
-It targets macOS 15.0 by default and uses the same minimum version in the executable
-and the app metadata. Override it with `MACOSX_DEPLOYMENT_TARGET` if needed.
-Every bundled library must also support that version: setting a lower deployment
-target does not rebuild Homebrew libraries. Packaging stops if any executable or
-library requires a newer macOS. Build releases on macOS 15 with compatible
-Homebrew dependencies, as in the release workflow, or rebuild the dependencies
-for the intended target.
+**macOS app and disk image:** run `tools/package/make_dmg.sh`. It targets macOS 15.0 by default and uses the same minimum version in the executable and the app metadata; override it with `MACOSX_DEPLOYMENT_TARGET` if needed. Every bundled library must also support that version: setting a lower deployment target does not rebuild Homebrew libraries, and packaging stops if any executable or library requires a newer macOS. Build releases on macOS 15 with compatible Homebrew dependencies, as in the release workflow, or rebuild the dependencies for the intended target.
 
-## Support and community
-
-The [OnAir Discord server](https://discord.gg/Kky9c6atm) is the place for **support**, **feature requests**, questions, and sharing what you receive. Bugs can also go in [GitHub Issues](https://github.com/adswill/OnAir/issues).
-
-## Project layout
+**Project layout**
 
 | Folder | Contents |
 |---|---|
@@ -157,6 +218,13 @@ The [OnAir Discord server](https://discord.gg/Kky9c6atm) is the place for **supp
 | `tools/` | Command-line receiver and scanner, plus the packaging scripts |
 | `tests/` | Unit tests and benchmarks |
 | `packaging/` | Linux and Windows installer resources |
+</details>
+
+## Support and community
+
+- **[Discord](https://discord.gg/Kky9c6atm)**: support, feature requests, questions, and sharing what you receive.
+- **[GitHub Issues](https://github.com/adswill/OnAir/issues)**: bug reports.
+- **[Pull requests](https://github.com/adswill/OnAir/pulls)** are welcome.
 
 ## License
 
