@@ -218,6 +218,27 @@ S2HuntResult s2Hunt(const cf32* z, size_t n) {
         for (const Chain& ch : chains) for (size_t q : ch.pos) if ((q > cd.p ? q - cd.p : cd.p - q) < 12) seen = true;
         if (seen) continue;
         HdrFit f = fitHeader(z + cd.p, 0.0, 0.14, 0.012, true);
+        // The grid covers +-0.14 radians per symbol (2 % of the symbol rate) around the carrier the spectrum gave. An echo or the tilt of a long cable
+        // bends the spectrum and moves that further off: the products of neighbouring SOF symbols give the frequency without that limit (in either
+        // sense of the spectrum), and when the grid around zero finds no header the grid is searched around that frequency (only then: a second
+        // search would also find more false headers in noise)
+        if (f.code < 0 || f.rho < 0.36f || f.rho2 > 0.88f * f.rho) {
+            cf32 a(0, 0), b(0, 0);
+            for (int k = 0; k < 25; k++) {
+                const cf32 d = z[cd.p + (size_t)k + 1] * std::conj(z[cd.p + (size_t)k]);
+                a += d * std::conj(R.rs[k]);
+                b += std::conj(d) * std::conj(R.rs[k]);
+            }
+            for (int inv = 0; inv < 2; inv++) {
+                const double g0 = std::arg(inv ? b : a);
+                if (std::fabs(g0) < 0.12) continue;
+                cf32 u[90];
+                for (int k = 0; k < 90; k++) u[k] = inv ? std::conj(z[cd.p + (size_t)k]) : z[cd.p + (size_t)k];
+                HdrFit t = fitHeader(u, g0, 0.14, 0.012, false);
+                t.inv = inv != 0;
+                if (t.code >= 0 && t.rho > f.rho) f = t;
+            }
+        }
             if (f.code < 0 || f.rho < 0.36f || f.rho2 > 0.88f * f.rho) continue;
         // fine frequency: the symbols as the fit saw them (conjugated when the spectrum is inverted)
         std::vector<cf32> v(90);
