@@ -28,7 +28,7 @@ It is built for people who want a receiver that is both easy to use and honest a
 
 ## Contents
 
-- [Install](#install)
+- [Install](#install) (and the [development version](#development-version-nightly))
 - [Quick start](#quick-start)
 - [What it receives](#what-it-receives)
 - [Features](#features)
@@ -50,6 +50,13 @@ Download the file for your system from the **[latest release](https://github.com
 | **Linux** x86-64 and arm64 | `onair_…_amd64.deb` / `onair_…_arm64.deb`<br>or `onair-…-portable.tar.gz` | Debian / Ubuntu: `sudo apt install ./onair_<version>_<arch>.deb`, then start OnAir from the menu or with `onair`. The `.deb` carries its own video decoder, so it does not depend on your system's FFmpeg. Other distributions: unpack the portable archive and run `bin/onair`. |
 
 **Windows USB drivers:** for a HackRF, RTL-SDR, Airspy or Airspy HF+, install the WinUSB driver once with [Zadig](https://zadig.akeo.ie). A LimeSDR Mini needs FTDI's FT60x driver (see the README inside the download).
+
+### Development version ("nightly")
+
+Fixes and new features land on the `main` branch first, before they go into a release. To try them early, [build OnAir from source](#build-from-source) from the latest `main`.
+
+> [!WARNING]
+> The development version is **not tested like a release**. It can contain bugs, unfinished features or changes that stop parts of the app (or the whole app) from working. Use the [latest release](https://github.com/adswill/OnAir/releases/latest) for everyday use, and if something breaks in a development build, please say so on [Discord](https://discord.gg/Kky9c6atm) or in [GitHub Issues](https://github.com/adswill/OnAir/issues), mentioning the commit you built.
 
 ## Quick start
 
