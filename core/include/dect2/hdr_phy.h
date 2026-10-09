@@ -58,6 +58,7 @@ public:
     void feed(const cf32* x, size_t n);      // 744187.5 Hz; decimated by 16 inside
     int state() const;
     L1Stats stats() const;
+    bool clockPpm(double& ppm);               // a new measurement of the sample clock error left in the input (positive: too many samples)
 private:
     struct Impl;
     std::unique_ptr<Impl> p_;

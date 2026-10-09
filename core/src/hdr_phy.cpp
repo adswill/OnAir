@@ -558,6 +558,9 @@ struct AmRx::Impl {
     int psmi = 1, bc = 0, rdbi = 0;
     int cfoWait = 0;
     unsigned history = 0;
+    double drCum = 0, drE0 = 0, ppmOut = 0;    // sample clock measurement (see syncProcess)
+    int drBlocks = 0;
+    bool drHave = false, ppmNew = false;
     int samperr = 0;
     float slope = 0;                 // the carrier's frequency from the last block, radians per sample
     std::vector<cf32> constel;
@@ -593,6 +596,7 @@ struct AmRx::Impl {
     void reset() {
         idx = 0; prevAngle = 0; phase = cd(1, 0); keepExtra = 0; cfo = 0; state = 0; slope = 0;
         sidx = 0; psmi = 1; bc = 0; rdbi = 0; cfoWait = 0; history = 0; samperr = 0;
+        drCum = 0; drE0 = 0; drBlocks = 0; drHave = false; ppmNew = false;
         mlHist.clear(); muHist.clear(); frames = 0; ber = 0; mer = 0; merAcc = 0; merN = 0; badRun = 0; lastBc = -1;
         std::fill(ring.begin(), ring.end(), cf32(0, 0));
         rpos = 0; dphase = 0;
@@ -761,6 +765,19 @@ struct AmRx::Impl {
         }
         se = se / (2 * (kAmCols - 1)) * kFftAm / (2 * kPi);
         samperr = (int)std::lround(se);
+        // The sample clock: the timing error of the blocks grows by the clock error. The window only moves in whole samples once a block, and
+        // at 100 ppm a block drifts by most of a sample from its first to its last symbol, which turns the outer carriers. Measured here over
+        // 8 blocks, corrected by the receiver in its resampler (HdrReceiver).
+        {
+            const double e = drCum + (double)se;
+            if (!drHave) { drE0 = e; drBlocks = 0; drHave = true; }
+            else if (++drBlocks >= 8) {
+                const double ppm = (e - drE0) / ((double)drBlocks * kBlk * kSymAm) * 1e6;
+                if (std::fabs(ppm) < 400) { ppmOut = ppm; ppmNew = true; }
+                drHave = false; drCum = 0;
+            }
+            if (drHave) drCum += samperr;
+        }
         // soft bits, weighted by the noise of each sideband
         float e = 0;
         int ne = 0;
@@ -874,6 +891,12 @@ AmRx::~AmRx() = default;
 void AmRx::reset() { p_->reset(); }
 void AmRx::feed(const cf32* x, size_t n) { p_->feed(x, n); }
 int AmRx::state() const { return p_->state; }
+bool AmRx::clockPpm(double& ppm) {
+    if (!p_->ppmNew || p_->state != 2) return false;
+    p_->ppmNew = false;
+    ppm = p_->ppmOut;
+    return true;
+}
 L1Stats AmRx::stats() const {
     L1Stats s;
     const Impl& m = *p_;

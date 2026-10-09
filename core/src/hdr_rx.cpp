@@ -153,6 +153,9 @@ struct HdrReceiver::Impl {
             lostFor = st == 2 ? 0 : lostFor + dt;
             if (lostFor > 8) { band = 0; lostFor = 0; fm.reset(); am.reset(); }
         }
+        // the sample clock error the AM receiver measures is taken out in the resampler (FM copes with its pilots)
+        double ppm;
+        if (band == 2 && am.clockPpm(ppm) && std::fabs(ppm) > 0.5) rs.scaleStep(1 + ppm * 1e-6);
         nIn += (int64_t)n;
         now = (double)nIn / curRate;
         busy += std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
