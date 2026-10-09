@@ -429,6 +429,7 @@ void T2Receiver::Impl::handleP1Candidate(int64_t d, float metric) {
         giIdx = -1;
         guard = 0;
         frameLen = 0; frameSyms = 0; sro = 0;
+        sroReset();
         frames.clear();
         prevPos = -1;
         cfoEst = info.cfoHz;
@@ -439,7 +440,7 @@ void T2Receiver::Impl::handleP1Candidate(int64_t d, float metric) {
         giAnchor = (int64_t)std::llround(pos) + kP1Len;
         carriers = fm->kNormal;
     }
-    if (getenv("DECT2_DEBUG") && prevPos >= 0 && frameLen > 0) fprintf(stderr, "  [dbg] P1 spacing error %+.1f samples (metric %.2f conf %.2f cfo %+.0f)\n", (pos - prevPos) - frameLen, info.metric, info.conf, info.cfoHz);
+    if (getenv("DECT2_DEBUG") && prevPos >= 0 && frameLen > 0) fprintf(stderr, "  [dbg] P1 spacing error %+.1f samples (metric %.2f conf %.2f cfo %+.0f) clock correction %+.2f ppm\n", (pos - prevPos) - frameLen, info.metric, info.conf, info.cfoHz, sroCorr * 1e6);
     if (state == 0 && !changed && giIdx >= 0 && guard > 0) {
         // lost lock earlier but the parameters are unchanged: resume without re-detecting the guard interval
         state = 2;
@@ -454,11 +455,13 @@ void T2Receiver::Impl::handleP1Candidate(int64_t d, float metric) {
         Frame f;
         f.anchor = (int64_t)std::llround(pos) + kP1Len;
         f.maxSyms = frameSyms;
+        f.sro = sro;
         frames.push_back(f);
     } else if (state == 2) {
         Frame f;
         f.anchor = (int64_t)std::llround(pos) + kP1Len;
         f.maxSyms = std::max(6, nP2);
+        f.sro = sro;
         frames.push_back(f);
     }
     if (cfoEst == 0) cfoEst = info.cfoHz;
@@ -471,38 +474,81 @@ void T2Receiver::Impl::onFrameSpacing(double L) {
     int sym = fftN + guard;
     double nSyms = (L - kP1Len) / sym;
     double r = std::round(nSyms);
-    double tol = std::max(40.0, L * 80e-6) / sym; // allow +-80 ppm of sample-clock error
+    double tol = std::max(40.0, L * 150e-6) / sym;   // allow +-150 ppm of sample-clock error (what is left after the correction below)
     if (r >= 1 && std::fabs(nSyms - r) <= tol) {
         frameSyms = (int)r;
         double nominal = kP1Len + r * sym;
-        double meas = (L - nominal) / nominal;
-        sro = sro == 0 ? meas : sro + 0.3 * (meas - sro);
+        double meas = (L - nominal) / nominal;   // the clock error still in the samples (after sroRs)
+        // Remove it by resampling: placing the symbols on a stretched grid alone leaves carrier k off by k * sro carriers inside the symbol
+        // (0.8 of a carrier spacing at the edge of a 32K symbol at 58 ppm), and the cells drown in their neighbours. The step only changes
+        // slope, never position, so nothing jumps. One spacing is good to about a sample (2 ppm in 32K), and a rest that moves from frame to
+        // frame tilts the phase across the band as the symbols drift, so the loop averages: gain 1/n down to 1/16 (a fraction of a ppm).
+        // Once it runs the symbols sit on the plain grid (no double correction); the P1 positions take up what drift is left.
+        constexpr double kMax = 200e-6;   // (steerSro clamps to the same)
+        static const bool noFix = getenv("DECT2_NOSRO") != nullptr;   // tests and comparisons: placement only, as before
+        const double gain = sroN == 0 ? 0.8 : std::max(1.0 / 16, 1.0 / (sroN + 1));
+        const double corr = std::max(-kMax, std::min(kMax, sroCorr + gain * meas));
+        if (!noFix && (sroOn || std::fabs(meas) > 3e-6)) {
+            sroN++;
+            sro = 0;
+            steerSro(corr);
+        } else {
+            sro = sro == 0 ? meas : sro + 0.3 * (meas - sro);
+        }
         frameLen = nominal;
         frameMsv = nominal / fn * 1e3;
     }
+}
+
+void T2Receiver::Impl::steerSro(double corr, int64_t from) {
+    constexpr double kMax = 200e-6;
+    corr = std::max(-kMax, std::min(kMax, corr));
+    sroCorr = corr;
+    sroRs.setStep(1.0 + corr);
+    if (sroOn) return;
+    sroOn = true;
+    // switched in with the samples before it as history, so the first corrected sample lands where it would have without it
+    const size_t i0 = from >= base && from < end() ? (size_t)(from - base) : buf.size();
+    const size_t h = std::min<size_t>(i0, 64);
+    sroRs.prime(buf.data() + i0 - h, h);
+    if (i0 == buf.size()) return;
+    std::vector<cf32> tail(buf.begin() + (ptrdiff_t)i0, buf.end());
+    buf.resize(i0);
+    append(tail.data(), tail.size());
 }
 
 bool T2Receiver::Impl::evaluateGi() {
     const int N = fftN;
     const int K = 3;
     int maxG = guardSamples(N, 3);
-    if (end() < giAnchor + (int64_t)K * (N + maxG) + N + 16) return false;
+    // The guard copies its symbol's end N samples earlier, but a sample clock that is x ppm off makes that N (1 + x): 1.9 samples at 58 ppm
+    // in 32K, which turns the phase of the product across the band and took the correlation of a real mux from 0.85 to 0.2 (no lock for
+    // seconds). So the lag is searched over +-150 ppm too, and the best one also gives a first estimate of the clock error.
+    const int dMax = (int)std::lround(N * 150e-6);
+    if (end() < giAnchor + (int64_t)K * (N + maxG) + N + dMax + 16) return false;
     float score[kNumGi];
+    int bestLag[kNumGi] = {};
+    std::vector<double> lagOf[kNumGi];
     for (int g = 0; g < kNumGi; g++) {
         int G = guardSamples(N, g);
-        double acc = 0;
-        for (int k = 0; k < K; k++) {
-            int64_t s = giAnchor + (int64_t)k * (N + G);
-            cd c = 0;
-            double e = 0;
-            for (int n = 0; n < G; n++) {
-                cf32 a = at(s + n), b = at(s + n + N);
-                c += cd(a.real(), a.imag()) * std::conj(cd(b.real(), b.imag()));
-                e += 0.5 * (std::norm(cd(a.real(), a.imag())) + std::norm(cd(b.real(), b.imag())));
+        lagOf[g].assign(2 * dMax + 1, 0.0);
+        for (int d = -dMax; d <= dMax; d++) {
+            double acc = 0;
+            for (int k = 0; k < K; k++) {
+                int64_t s = giAnchor + (int64_t)k * (N + G);
+                cd c = 0;
+                double e = 0;
+                for (int n = 0; n < G; n++) {
+                    cf32 a = at(s + n), b = at(s + n + N + d);
+                    c += cd(a.real(), a.imag()) * std::conj(cd(b.real(), b.imag()));
+                    e += 0.5 * (std::norm(cd(a.real(), a.imag())) + std::norm(cd(b.real(), b.imag())));
+                }
+                acc += e > 0 ? std::abs(c) / e : 0;
             }
-            acc += e > 0 ? std::abs(c) / e : 0;
+            lagOf[g][d + dMax] = acc / K;
+            if (lagOf[g][d + dMax] > lagOf[g][bestLag[g] + dMax]) bestLag[g] = d;
         }
-        score[g] = (float)(acc / K);
+        score[g] = (float)lagOf[g][bestLag[g] + dMax];
     }
     int best = 0;
     for (int g = 1; g < kNumGi; g++) if (score[g] > score[best]) best = g;
@@ -518,10 +564,28 @@ bool T2Receiver::Impl::evaluateGi() {
     giIdx = best;
     guard = guardSamples(N, giIdx);
     state = 2;
+    // a first clock-error estimate from the lag (with a parabola through the neighbours), for the long symbols where it is fine enough:
+    // the frame spacing (onFrameSpacing) takes over from the second P1 on
+    if (N >= 16384 && dMax > 0) {
+        const std::vector<double>& v = lagOf[best];
+        const int i = bestLag[best] + dMax;
+        double frac = 0;
+        if (i > 0 && i < 2 * dMax) {
+            const double den = v[i - 1] - 2 * v[i] + v[i + 1];
+            if (den < 0) frac = std::max(-0.5, std::min(0.5, 0.5 * (v[i - 1] - v[i + 1]) / den));
+        }
+        const double est = (bestLag[best] + frac) / N;
+        static const bool noFix = getenv("DECT2_NOSRO") != nullptr;
+        if (getenv("DECT2_DEBUG")) fprintf(stderr, "  [dbg] guard lag %+d%+.2f samples: clock error %+.1f ppm\n", bestLag[best], frac, est * 1e6);
+        if (!noFix && std::fabs(est) > 10e-6) {
+            steerSro(sroCorr + est, giAnchor);   // the whole first frame, from its first symbol on
+        }
+    }
     // process the symbols that follow this first P1 so something is displayed immediately
     Frame f;
     f.anchor = giAnchor;
     f.maxSyms = std::max(6, nP2);
+    f.sro = sro;
     frames.push_back(f);
     return true;
 }

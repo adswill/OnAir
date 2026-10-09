@@ -2,10 +2,13 @@
 // (sync, L1, channel estimation, de-interleaving, LDPC, BCH), and every decoded baseband frame must equal what was sent.
 #include "dect2/t2gen.h"
 #include "dect2/t2rx.h"
+#include "impair.h"
 #include "jobs.h"
 #include <atomic>
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <map>
 #include <mutex>
 #include <random>
@@ -15,7 +18,7 @@ using testjobs::jprintf;
 static std::atomic<int> fails{0};
 #define CHECK(c, ...) do { if (!(c)) { jprintf("FAIL: " __VA_ARGS__); jprintf("\n"); fails++; } } while (0)
 
-struct Case { const char* name; int s1; bool shortFrame; int mod, cod; bool rot; int ti; double snr; double bw = 8; int fft = 1, gi = 2, pp = 0; bool ext = false; int t2Version = 2; double cfoHz = 0; };
+struct Case { const char* name; int s1; bool shortFrame; int mod, cod; bool rot; int ti; double snr; double bw = 8; int fft = 1, gi = 2, pp = 0; bool ext = false; int t2Version = 2; double cfoHz = 0; double sroPpm = 0; };
 
 static void runCase(const Case& c) {
     const double fn = nativeRateHz(c.bw);
@@ -34,10 +37,30 @@ static void runCase(const Case& c) {
     std::vector<cf32> frame;
     std::mt19937 rng(7);
     std::normal_distribution<float> nd(0.f, 1.f);
-    double sigma = 0, ph = 0;
+    // the whole transmission first: a sample-clock error (the receiver's clock c.sroPpm fast) resamples it as one stream (tests/impair.h)
+    std::vector<cf32> tx;
+    std::vector<size_t> txEnd;
     for (int i = 0; i < nFrames; i++) {
         gen.nextFrame(frame);
         sent[i & 0xff] = gen.lastBbFrames();
+        tx.insert(tx.end(), frame.begin(), frame.end());
+        txEnd.push_back(tx.size());
+    }
+    std::vector<cf32> rxs;
+    if (c.sroPpm != 0) {   // (16 samples of silence each side: the interpolator starts 16 samples in)
+        std::vector<cf32> pad(16, cf32(0, 0));
+        tx.insert(tx.begin(), pad.begin(), pad.end());
+        tx.insert(tx.end(), pad.begin(), pad.end());
+        rxs = impair::clock(tx, c.sroPpm);
+    }
+    const double stretch = 1.0 + c.sroPpm * 1e-6;
+    double sigma = 0, ph = 0;
+    size_t from = 0;
+    for (int i = 0; i < nFrames; i++) {
+        const size_t to = c.sroPpm != 0 ? std::min(rxs.size(), (size_t)std::llround(txEnd[i] * stretch)) : txEnd[i];
+        const std::vector<cf32>& src = c.sroPpm != 0 ? rxs : tx;
+        frame.assign(src.begin() + from, src.begin() + to);
+        from = to;
         if (i == 0) {
             double pw = 0;
             for (auto& v : frame) pw += std::norm(v);
@@ -102,6 +125,13 @@ static void runCase(const Case& c) {
         }
     }
     CHECK(blocks2 > 0 && ok2 >= 0.98 * blocks2, "%s: only %d of %d blocks decoded after the first two frames", c.name, ok2, blocks2);
+    if (c.sroPpm != 0) {   // a clock error is no excuse: once locked, every block and every L1 must decode
+        CHECK(ok2 == blocks2, "%s: %d of %d blocks lost after the first two frames", c.name, blocks2 - ok2, blocks2);
+        CHECK(t.l1preGood >= (uint64_t)nFrames - 3 && t.l1postGood >= (uint64_t)nFrames - 3, "%s: L1-pre %llu ok / %llu bad, L1-post %llu ok / %llu bad", c.name,
+              (unsigned long long)t.l1preGood, (unsigned long long)t.l1preBad, (unsigned long long)t.l1postGood, (unsigned long long)t.l1postBad);
+        jprintf("  %s: clock error measured %+.1f ppm, L1-pre %llu/%llu, L1-post %llu/%llu\n", c.name, t.sroPpm, (unsigned long long)t.l1preGood,
+                (unsigned long long)(t.l1preGood + t.l1preBad), (unsigned long long)t.l1postGood, (unsigned long long)(t.l1postGood + t.l1postBad));
+    }
     if (blocks > 0 && ok < blocks) {   // which frames lost blocks, for the log
         std::lock_guard<std::mutex> lk(mu);
         std::string m;
@@ -140,10 +170,17 @@ int main() {
         {"T2 V1.2.1, scrambled bit set", 0, false, 2, 2, true, 3, 22, 8, 1, 2, 0, false, 1},
         {"P1 280 kHz off centre",       0, false, 2, 2, true,  3, 22, 8, 1, 2, 0, false, 2, 280000},
         {"32K ext PP2 19/128 V1.2.1 +280k", 0, false, 2, 3, true, 3, 24, 8, 5, 5, 1, true, 1, 280000},
+        // a sample clock 58 ppm off (a real 32K 1/16 PP4 recording): placing the symbols on a stretched grid is not enough, inside a 32K
+        // symbol carrier k is off by k * 58e-6 carriers (0.8 at the edge), and L1-pre never decoded. Both signs, with a -12 kHz carrier offset.
+        {"32K GI 1/16 PP4 +58 ppm -12k", 0, false, 2, 2, true, 3, 22, 8, 5, 1, 3, false, 2, -12000, 58},
+        {"32K GI 1/16 PP4 -58 ppm -12k", 0, false, 2, 2, true, 3, 22, 8, 5, 1, 3, false, 2, -12000, -58},
+        {"32K GI 1/16 PP4 +100 ppm",     0, false, 2, 2, true, 3, 22, 8, 5, 1, 3, false, 2, 0, 100},
+        {"8K GI 1/8 PP2 -100 ppm",       0, false, 2, 2, true, 3, 22, 8, 1, 2, 1, false, 2, 0, -100},
     };
     // the cases are independent: each one runs on its own thread, the output keeps the order of the cases
     testjobs::Jobs jobs;
-    for (auto& c : cases) jobs.add([&c] { runCase(c); });
+    const char* only = getenv("T2_CASE");   // runs only the cases whose name contains this (for debugging one)
+    for (auto& c : cases) if (!only || strstr(c.name, only)) jobs.add([&c] { runCase(c); });
     jobs.run();
     jprintf(fails ? "T2 payload tests FAILED\n" : "T2 payload tests passed\n");
     return fails ? 1 : 0;

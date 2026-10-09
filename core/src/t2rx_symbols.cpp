@@ -10,7 +10,7 @@ void T2Receiver::Impl::processFrames() {
         while (!frames.empty() && frames.front().next < frames.front().maxSyms) {
             Frame& f = frames.front();
             if (f.next == 0) { gridOff += pendingGridOff; pendingGridOff = 0; }
-            int64_t s = f.anchor + gridOff + (int64_t)std::llround((double)f.next * (N + G) * (1.0 + sro));
+            int64_t s = f.anchor + gridOff + (int64_t)std::llround((double)f.next * (N + G) * (1.0 + f.sro));
             if (s + N + G + 40 > end()) { stalled = true; break; }
             int idx = f.next++;
             { StageClock sc(3); processSymbol(s, idx); } // may clear `frames` (loss of lock / guard-interval correction)

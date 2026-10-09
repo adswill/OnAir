@@ -33,6 +33,19 @@ void T2Receiver::Impl::stageLoop() {
     }
 }
 
+void T2Receiver::Impl::append(const cf32* x, size_t n) {
+    if (!sroOn) { buf.insert(buf.end(), x, x + n); return; }
+    sroOut.clear();   // (its time counts as "resampler": the callers hold that stage clock)
+    sroRs.process(x, n, sroOut);
+    buf.insert(buf.end(), sroOut.begin(), sroOut.end());
+}
+
+void T2Receiver::Impl::sroReset() {
+    sroOn = false;
+    sroCorr = 0;
+    sroN = 0;
+}
+
 void T2Receiver::Impl::gapReset(size_t skippedIn) {
     frames.clear(); frameCells.clear(); p2cells.clear(); prevCells.clear();
     chValid = false;
@@ -41,7 +54,8 @@ void T2Receiver::Impl::gapReset(size_t skippedIn) {
     // The skipped samples still happened on the transmitter's timeline: move the sample index on by their length (at the native rate) so that
     // the P1 cadence carries on, and look for the next P1 where the frame length puts it. Lost for good only if that guess is off by more
     // than the search window, in which case the windowed search falls back to searching everything.
-    const double skippedNative = inRate > 0 ? (double)skippedIn * fn / inRate : 0.0;
+    const double skippedNative = inRate > 0 ? (double)skippedIn * fn / inRate / (1.0 + sroCorr) : 0.0;
+    if (sroOn) sroRs.prime(nullptr, 0);   // the history from before the gap is of no use
     base += (int64_t)buf.size() + (int64_t)std::llround(skippedNative);
     buf.clear();
     scanPos = base; scanFirst = true;
@@ -78,6 +92,7 @@ void T2Receiver::Impl::resetAll() {
     fftCode = curS1 = -1;
     frameSyms = 0;
     frameLen = sro = frameMsv = 0;
+    sroReset();
     frames.clear();
     cfoEst = cpCorrAvg = timingAvg = 0;
     lowCount = 0;
@@ -128,7 +143,7 @@ void T2Receiver::Impl::publish() {
     t.secSinceP1 = lastP1Seen ? (double)(end() - lastP1Seen) / fn : 1e9;
     t.frameMs = frameMsv;
     t.symbolsPerFrame = frameSyms;
-    t.sroPpm = sro * 1e6;
+    t.sroPpm = (sroCorr + sro) * 1e6;   // the whole clock error: what the fine resampler removes plus what is left
     std::copy(giScore, giScore + kNumGi, t.giScore);
     t.giIdx = giIdx;
     t.giMargin = giMargin;
@@ -245,13 +260,13 @@ void T2Receiver::feed(const cf32* x, size_t n) {
                 I.gapReset(skipped);
                 continue;
             }
-            I.buf.insert(I.buf.end(), res.begin(), res.end());
+            { StageClock sc(0); I.append(res.data(), res.size()); }
             I.run();
         }
         return;
     }
-    if (I.decimate) { StageClock sc(0); I.rsOut.clear(); I.resampler.process(x, n, I.rsOut); I.buf.insert(I.buf.end(), I.rsOut.begin(), I.rsOut.end()); }
-    else I.buf.insert(I.buf.end(), x, x + n);
+    if (I.decimate) { StageClock sc(0); I.rsOut.clear(); I.resampler.process(x, n, I.rsOut); I.append(I.rsOut.data(), I.rsOut.size()); }
+    else { StageClock sc(0); I.append(x, n); }
     I.run();
 }
 

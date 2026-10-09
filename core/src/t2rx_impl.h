@@ -1,6 +1,7 @@
 #include "dect2/t2rx.h"
 #include "dect2/t2ofdm.h"
 #include "dect2/resampler.h"
+#include "dect2/clock_correct.h"
 #include "dect2/platform.h"
 #include "dect2/t2pilots.h"
 #include "dect2/t2l1.h"
@@ -62,6 +63,7 @@ struct Frame {
     int64_t anchor;      // absolute index of the first symbol after P1
     int next = 0;        // next symbol index to process
     int maxSyms = 0;
+    double sro = 0;      // clock error left in its samples when it started: the placement of its symbols must not change half-way through
 };
 
 } // namespace t2rxi
@@ -74,6 +76,18 @@ struct T2Receiver::Impl {
     bool decimate = false, rateOk = true;
     RationalResampler resampler;
     std::vector<cf32> rsOut;
+    // ---- sample-clock correction: a fine resampler at the native rate, steered by the P1 spacing (onFrameSpacing). Off (samples copied
+    // straight through) until a clock error is measured; then every sample goes through it, so that the 32K carriers stay orthogonal.
+    ClockCorrector sroRs;
+    bool sroOn = false;
+    double sroCorr = 0;          // relative clock error removed by sroRs (its step is 1 + sroCorr)
+    int sroN = 0;                // frame spacings the loop has taken in (its gain falls with them)
+    std::vector<cf32> sroOut;
+    void append(const cf32* x, size_t n);
+    void sroReset();
+    // sets the correction (clamped to +-200 ppm), switching sroRs in if it is off; then the buffered samples from absolute index `from` on
+    // (if they are still there) go through it too, so that a whole frame is corrected from its first symbol
+    void steerSro(double corr, int64_t from = -1);
 
     // ---- optional resampler stage on its own thread (live radios): input chunks go in, resampled chunks come back in the same order
     struct Stage {
