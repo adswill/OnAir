@@ -4,13 +4,15 @@
 #include "dect2/dtmb_rx.h"
 #include "impair.h"
 #include <cmath>
+#include <cstdlib>
+#include <string>
 #include <cstdio>
 #include <vector>
 using namespace dect2;
 using namespace dect2::dtmb;
 static int fails = 0;
 
-struct Case { const char* name; Header h; Mapping m; bool c1; double offHz, ppm; bool echo, clip, nan; };
+struct Case { const char* name; Header h; Mapping m; bool c1; double offHz, ppm; bool echo, clip, nan; bool swap = false; double iqDb = 0, iqDeg = 0; int longEcho = 0; };
 
 static uint64_t run(const Case& c) {
     SignalConfig sc;
@@ -23,12 +25,16 @@ static uint64_t run(const Case& c) {
     if (c.echo) impair::echo(x, 60, -6.0, 2.0);
     if (c.ppm != 0) x = impair::clock(x, c.ppm);
     impair::shift(x, c.offHz, sc.rate);
+    if (c.iqDb != 0 || c.iqDeg != 0) impair::iqImbalance(x, c.iqDb, c.iqDeg);
+    if (c.longEcho) impair::echo(x, c.longEcho, -12.0, 1.0);
     impair::noise(x, 28.0, 5);
+    if (c.swap) impair::swapIq(x);
     if (c.clip) impair::clip8(x, 3.0);
     if (c.nan) for (size_t i = x.size() / 3; i < x.size() / 3 + 64; i++) x[i] = cf32(NAN, INFINITY);
     DtmbReceiver rx;
     rx.configure(sc.rate, 8);
     rx.setDecoderThreads(0);
+    if (getenv("DTMB_LOG")) rx.setLogCallback([&](const std::string& m) { printf("    [%s] %s\n", c.name, m.c_str()); });
     uint64_t good = 0, wrong = 0;
     rx.setPacketCallback([&](const uint8_t* p, size_t n, double) { for (size_t i = 0; i < n; i++) { uint32_t k = 0xFFFFFFFFu; if (checkTestPacket(p + i * 188, 1, &k)) good++; else wrong++; } });
     for (size_t i = 0; i < x.size(); i += 16384) rx.feed(x.data() + i, std::min<size_t>(16384, x.size() - i));
@@ -47,6 +53,13 @@ int main() {
         {"PN595 16QAM, +38 kHz", Header::Pn595, Mapping::Qam16, false, 38e3, 0, false, false, false},
         {"PN945 16QAM, clock +80 ppm", Header::Pn945, Mapping::Qam16, false, 0, 80, false, false, false},
         {"PN420 16QAM, NaN samples", Header::Pn420, Mapping::Qam16, false, 0, 0, false, false, true},
+        {"PN945 16QAM, 280 kHz off", Header::Pn945, Mapping::Qam16, false, 280e3, 0, false, false, false},
+        {"PN420 16QAM, -900 kHz off", Header::Pn420, Mapping::Qam16, false, -900e3, 0, false, false, false},
+        {"PN945 16QAM, I/Q swapped", Header::Pn945, Mapping::Qam16, false, 5e3, 0, false, false, false, true},
+        {"PN595 C=1 16QAM", Header::Pn595, Mapping::Qam16, true, 0, 0, false, false, false},
+        {"PN595 C=1 16QAM, I/Q swapped", Header::Pn595, Mapping::Qam16, true, 0, 0, false, false, false, true},
+        {"PN945 64QAM, IQ imbalance 1 dB 5 deg", Header::Pn945, Mapping::Qam64, false, 0, 0, false, false, false, false, 1, 5},
+        {"PN420 16QAM, echo beyond the header -12 dB", Header::Pn420, Mapping::Qam16, false, 0, 0, false, false, false, false, 0, 0, 900},
         {"PN945 16QAM, +43 kHz +80 ppm echo clip8", Header::Pn945, Mapping::Qam16, false, 43e3, 80, true, true, false},
     };
     for (const Case& c : cases) run(c);

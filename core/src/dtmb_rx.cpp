@@ -2,6 +2,7 @@
 // tracking (timing, carrier offset, channel from the headers), header leakage removal and equalisation of the OFDM body, system information,
 // then the channel decoder. See docs/modes/dtmb.md.
 #include "dect2/dtmb_rx.h"
+#include "dect2/chan_locate.h"
 #include "dect2/dtmb_chain.h"
 #include "dect2/dtmb_demod.h"
 #include "dect2/dtmb_front.h"
@@ -139,6 +140,11 @@ struct DtmbReceiver::Impl {
 
     // ---- telemetry
     std::vector<cf32> scrub;   // the input with non-finite samples replaced
+    // not cleared by doReset(): where the channel sits in the input band, and whether the spectrum is mirrored
+    ChannelLocator locator;
+    ChannelMixer mixer;
+    bool mirror = false, flipReq = false;
+    int flips = 0;
     std::mutex mu;
     DtmbTelemetry tel;
     uint64_t seq = 0;
@@ -457,6 +463,9 @@ struct DtmbReceiver::Impl {
         if (!siOk && frames >= 200 && snrPn < -15.0) { loseLock("signal too weak"); return true; }
         // (a lock with a good header fit stays, whatever the body is: a signal this receiver does not know shows its constellation and C/N)
         if (!siOk && snrPn < 6.0 && frames > (uint64_t)(1.5 * symRate / (double)Lf)) { loseLock("no system information"); return true; }
+        // A clean header fit but no system information after 0.4 s: I and Q may be swapped (the PN header survives a mirrored spectrum, the
+        // body does not). Try the other orientation, a few times at most.
+        if (!siOk && snrPn >= 6.0 && flips < 4 && frames > (uint64_t)(0.4 * symRate / (double)Lf)) { flipReq = true; return false; }
         if (siOk) {
             merAvg += 0.3 * (10.0 * std::log10(1.0 / std::max(frameErr, 1e-9)) - merAvg);
             if (!chain) makeChain();
@@ -591,7 +600,7 @@ struct DtmbReceiver::Impl {
         reportAt = produced() + (long)(symRate * 0.25);
         DtmbTelemetry t;
         t.state = state == 0 ? 0 : ((chain && produced() - lastGoodAt < (long)(symRate * 0.7)) ? 2 : 1);
-        t.cfoHz = cfoHz;
+        t.cfoHz = cfoHz + mixer.hz;
         t.header = state == 0 ? -1 : (int)hdr;
         t.phaseRotates = rotates;
         t.siOk = siOk; t.siIndex = siOk ? siIndex : 0;
@@ -642,6 +651,8 @@ void DtmbReceiver::configure(double inputRateHz, double bwMhz) {
     s.symRate = symbolRateFor(bwMhz);
     s.acq.symRate = s.symRate;
     s.rateOk = s.front.configure(inputRateHz, s.symRate);
+    s.mixer.set(0, inputRateHz); s.mirror = false; s.flips = 0; s.flipReq = false;
+    s.locator.configure(inputRateHz, s.symRate);
     s.doReset();
 }
 
@@ -664,12 +675,35 @@ void DtmbReceiver::feed(const cf32* x, size_t n) {
             for (auto& v : s.scrub) { if (!std::isfinite(v.real()) || !std::isfinite(v.imag())) v = cf32(0, 0); a += std::norm(v); }
             x = s.scrub.data();
         }
+        // a channel recorded beside the centre: until the system information is found, the spectrum says where it is
+        if (!s.siOk) {
+            double hz; bool found;
+            if (s.locator.feed(x, n, hz, found) && found && std::fabs(hz - s.mixer.hz) > 30e3) {
+                s.log("channel found " + std::to_string((int)std::lround(hz / 1e3)) + " kHz from the centre");
+                s.mixer.set(hz, s.inRate); s.doReset();
+            }
+        }
+        if (s.mixer.hz != 0 || s.mirror) {
+            if (x != s.scrub.data()) s.scrub.assign(x, x + n);
+            s.mixer.apply(s.scrub.data(), n);
+            if (s.mirror) for (auto& v : s.scrub) v = std::conj(v);
+            x = s.scrub.data();
+        }
         s.levelAcc += a; s.levelN += n;
         if (s.levelN >= (uint64_t)(s.inRate * 0.25)) { s.levelDb = (float)(10.0 * std::log10(std::max(1e-12, s.levelAcc / (double)s.levelN))); s.levelAcc = 0; s.levelN = 0; }
     }
     s.front.push(x, n);
     s.run();
+    if (s.flipReq) { s.flipReq = false; s.mirror = !s.mirror; s.flips++; s.log(s.mirror ? "trying I and Q swapped" : "trying I and Q as they come"); s.doReset(); }
     s.pollChain();
+    // The system information survives a mirrored spectrum (its words are the same conjugated), the data does not: decoded but nothing comes
+    // out of the LDPC after a good many codewords, try the other orientation
+    if (s.chain && s.siOk) {
+        const ChainStats st = s.chain->stats();
+        if (st.cwOk > 0) s.flips = 0;
+        else if (st.cwBad + st.cwSkipped >= 60 && s.flips < 4 && s.snrPn >= 10.0) s.flipReq = true;
+    }
+    if (s.flipReq) { s.flipReq = false; s.mirror = !s.mirror; s.flips++; s.log(s.mirror ? "trying I and Q swapped" : "trying I and Q as they come"); s.doReset(); }
 }
 
 bool DtmbReceiver::telemetry(DtmbTelemetry& out, uint64_t lastSeq) {
