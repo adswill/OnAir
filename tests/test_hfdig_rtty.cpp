@@ -59,9 +59,9 @@ static bool textOk(const std::string& text, int minCopies) {
 int main() {
     struct Case { int baud, shift; double off; bool rev; double lo; const char* name; };
     const Case cases[] = {
-        {0, 0, 0, false, 0, "45.45/170"}, {0, 0, 50, false, 0, "45.45/170 +50 Hz"}, {0, 0, -50, false, 0, "45.45/170 -50 Hz"},
-        {1, 3, 0, false, 0, "50/450"}, {1, 3, 50, false, 0, "50/450 +50 Hz"}, {1, 3, -50, false, 0, "50/450 -50 Hz"},
-        {2, 4, 0, false, 0, "75/850"}, {2, 4, 50, false, 0, "75/850 +50 Hz"}, {2, 4, -50, false, 0, "75/850 -50 Hz"},
+        {0, 0, 0, false, 0, "45.45/170"}, {0, 0, 100, false, 0, "45.45/170 +100 Hz"}, {0, 0, -100, false, 0, "45.45/170 -100 Hz"},
+        {1, 3, 0, false, 0, "50/450"}, {1, 3, 100, false, 0, "50/450 +100 Hz"}, {1, 3, -100, false, 0, "50/450 -100 Hz"},
+        {2, 4, 0, false, 0, "75/850"}, {2, 4, 100, false, 0, "75/850 +100 Hz"}, {2, 4, -100, false, 0, "75/850 -100 Hz"},
         {0, 0, 0, true, 0, "45.45/170 reversed"}, {3, 1, 0, false, 1500, "100/200 at 1500 Hz"}, {0, 2, 0, false, 700, "45.45/425 at 700 Hz"},
     };
     for (const Case& c : cases) {
