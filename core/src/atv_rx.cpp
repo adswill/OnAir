@@ -24,6 +24,9 @@ struct AtvReceiver::Impl {
     std::function<void(const std::string&)> logCb;
 
     AtvCarrierSearch search;
+    AtvCarrierSearch searchInv;         // the same on the mirrored spectrum (I and Q swapped by the radio or the file format)
+    bool inverted = false;              // the carrier in use was found in the mirrored spectrum: the input is conjugated
+    std::vector<cf32> xc;
     std::vector<cf32> clean;            // the input with non-finite samples replaced
     AtvFront front;
     AtvVideo video;
@@ -70,6 +73,7 @@ struct AtvReceiver::Impl {
         if (rate < 7.9e6) return;
         dcA = (float)(1.0 / (0.0005 * rate));
         search.configure(rate);
+        searchInv.configure(rate);
         front.configure(rate);
         sound.configure(rate);
         video.configure(front.videoRate(), front.colourCapable());
@@ -85,6 +89,7 @@ struct AtvReceiver::Impl {
     void resetAll() {
         if (!ready) return;
         search.setMonitor(false);
+        searchInv.reset(); inverted = false;
         front.reset();
         front.setPlan(5.5);
         video.setNoiseScale(front.noiseGain() * fs / 5e6);
@@ -223,11 +228,23 @@ struct AtvReceiver::Impl {
         nIn += m;
         if (mode == kSearch) {
             search.feed(xd.data(), m);
+            xc.resize(m);
+            for (size_t q = 0; q < m; q++) xc[q] = std::conj(xd[q]);
+            searchInv.feed(xc.data(), m);
             if (search.spectra() >= 24) {
-                pending = search.candidates();
+                // the mirrored spectrum wins only clearly (its sound carrier sits on the right side of the vision carrier, its vestigial sideband
+                // has the right shape), so a normal signal never turns
+                std::vector<AtvCarrier> a = search.candidates(), b = searchInv.candidates();
+                const double sa = a.empty() ? -1e9 : a[0].score, sb = b.empty() ? -1e9 : b[0].score;
+                const bool inv = sb > sa + 5;
+                if (inv != inverted) log(inv ? "analog TV: the spectrum is mirrored (I and Q swapped)" : "analog TV: the spectrum is the right way round");
+                inverted = inv;
+                pending = inv ? b : a;
+                searchInv.reset();
                 if (!nextCandidate()) search.reset();
             }
         } else {
+            if (inverted) for (size_t q = 0; q < m; q++) xd[q] = std::conj(xd[q]);
             search.feed(xd.data(), m);          // the spectrum for the display, a few FFTs a second
             runBlock(m);
         }
