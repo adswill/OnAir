@@ -262,6 +262,30 @@ struct FmReceiver::Impl {
     // The radio's DC spike sits on the carrier when the radio is tuned exactly to the station. Its mean over half a second is taken out of the
     // channel: the carrier itself turns by the tuning error (100 Hz per ppm of the radio at 100 MHz) and averages away, the spike does not.
     cf32 dcCh = cf32(0, 0);
+    // Constant-modulus equaliser on the channel (multipath: an echo makes the envelope of the FM signal ripple and its phase wrong; the
+    // equaliser finds the filter that makes the envelope constant again). kCmaTaps taps at the channel rate (about 2 us each), the main one
+    // kCmaMain: echoes up to 24 us late and 6 us early.
+    static constexpr int kCmaTaps = 16, kCmaMain = 3;
+    cf32 cmaW[kCmaTaps] = {}, cmaX[2 * kCmaTaps] = {};
+    int cmaPos = 0;
+    float cmaP = 0;
+    void cmaReset() { for (auto& w : cmaW) w = cf32(0, 0); cmaW[kCmaMain] = cf32(1, 0); for (auto& v : cmaX) v = cf32(0, 0); cmaPos = 0; cmaP = 0; }
+    cf32 cma(cf32 x) {
+        cmaP = cmaP > 0 ? cmaP + (std::norm(x) - cmaP) * 0.002f : std::norm(x);
+        if (cmaP <= 1e-20f) return x;
+        const float g = 1.f / std::sqrt(cmaP);
+        // the input history twice over, so that the taps read a straight run of samples
+        cmaPos = (cmaPos + kCmaTaps - 1) % kCmaTaps;
+        cmaX[cmaPos] = cmaX[cmaPos + kCmaTaps] = x * g;
+        const cf32* h = &cmaX[cmaPos];            // h[k]: the sample k steps back
+        cf32 y(0, 0);
+        for (int k = 0; k < kCmaTaps; k++) y += cmaW[k] * h[k];
+        const float e = std::norm(y) - 1.f;
+        const cf32 ey = y * (2e-4f * e);
+        for (int k = 0; k < kCmaTaps; k++) cmaW[k] -= ey * std::conj(h[k]);
+        if (!(std::norm(y) < 16.f)) { const float p = cmaP; cmaReset(); cmaP = p; }   // diverged (or NaN): start again
+        return y;
+    }
     // Station finder: a recording made beside the station (gqrx, SDR#) or a radio tuned off it. Averaged spectra of the input; the station is
     // mixed to the centre. Only when the centre holds no station: one there, however weak beside a strong neighbour, is the one tuned to.
     static constexpr int kFindN = 4096, kFindFrames = 16;
@@ -386,7 +410,7 @@ struct FmReceiver::Impl {
         mpxDecim.reset(); lpM.reset(); lpD.reset(); rdsLp.reset();
         if (audioRsOk) audioRs.reset();
         if (rdsRsOk) rdsRs.reset();
-        prev = cf32(1, 0); dcCh = cf32(0, 0);
+        prev = cf32(1, 0); dcCh = cf32(0, 0); cmaReset();
         bp1.reset(); bp2.reset(); nb1a.reset(); nb1b.reset(); nb2a.reset(); nb2b.reset(); nPow1 = nPow2 = pilotSnrDb = 0;
         phi = pllFreq = pLpf = pI = pQ = pAmp2 = dc = 0;
         pilotLock = false; lockT = unlockT = 0; stereoBlend = 0;
@@ -491,6 +515,7 @@ struct FmReceiver::Impl {
             cf32 c = std::isfinite(cur[i].real()) && std::isfinite(cur[i].imag()) ? cur[i] : cf32(0, 0);
             dcCh += (c - dcCh) * dcChA;
             if (dcOn) c -= dcCh;
+            c = cma(c);
             const cf32 p = std::conj(prev) * c;
             freq[i] = (float)(std::atan2(p.imag(), p.real()) * fo / (2 * kPi) / kDevHz);
             prev = c;

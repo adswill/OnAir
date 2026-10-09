@@ -59,6 +59,47 @@ int main() {
         CHECK(!t.stereo, "mono with RDS: stereo reported");
         rdsGood(t, "mono with RDS", 90, 8);
     }
+    // the radio's DC spike on a station tuned exactly (1.2 kHz of tuning error), 6 dB below the station
+    {
+        FmTelemetry t = run("DC spike -6 dB on the carrier", base, 8, [](std::vector<cf32>& x) { impair::shift(x, 1200, 2e6); impair::dc(x, -6); });
+        CHECK(t.state == 2 && t.stereo, "DC spike: state %d stereo %d", t.state, t.stereo);
+        rdsGood(t, "DC spike", 90, 8);
+    }
+    // a recording made beside the station (gqrx, SDR#): the station 420 kHz above the centre, a weaker one (-15 dB) 650 kHz below it
+    for (double at : {420e3, -560e3}) {
+        char w[64]; snprintf(w, sizeof w, "station %+.0f kHz off the centre", at / 1e3);
+        FmTelemetry t = run(w, base, 8, [at](std::vector<cf32>& x) {
+            FmGenConfig o; o.rate = 2e6; o.ps = "OTHER   "; o.pi = 0x1234; o.rt = "other"; o.seed = 7;
+            FmGenerator g(o);
+            std::vector<cf32> y;
+            g.generate(x.size(), y);
+            impair::shift(x, at, 2e6);
+            impair::shift(y, at > 0 ? -650e3 : 650e3, 2e6);
+            for (size_t i = 0; i < x.size(); i++) x[i] += y[i] * 0.178f;
+        });
+        CHECK(t.state == 2 && t.stereo, "%s: state %d stereo %d", w, t.state, t.stereo);
+        CHECK(std::fabs(t.cfoHz - at) < 2000, "%s: offset read as %+.0f Hz", w, t.cfoHz);
+        rdsGood(t, w, 90, 8);
+    }
+    // the station tuned to stays chosen beside a neighbour 20 dB stronger, 400 kHz away
+    {
+        FmTelemetry t = run("weak station, strong neighbour", base, 8, [](std::vector<cf32>& x) {
+            FmGenConfig o; o.rate = 2e6; o.ps = "OTHER   "; o.pi = 0x1234; o.rt = "other"; o.seed = 7;
+            FmGenerator g(o);
+            std::vector<cf32> y;
+            g.generate(x.size(), y);
+            impair::shift(y, 400e3, 2e6);
+            for (size_t i = 0; i < x.size(); i++) x[i] = x[i] * 0.1f + y[i];
+        });
+        CHECK(std::fabs(t.cfoHz) < 2000, "strong neighbour: moved to %+.0f Hz", t.cfoHz);
+        rdsGood(t, "weak station, strong neighbour", 90, 8);
+    }
+    // multipath: an echo 10 us late, 6 dB down (a reflection off hills): the constant-modulus equaliser takes it out
+    {
+        FmTelemetry t = run("echo 10 us -6 dB", base, 8, [](std::vector<cf32>& x) { impair::echo(x, 20, -6, 1.0); });
+        CHECK(t.state == 2 && t.stereo, "echo: state %d stereo %d", t.state, t.stereo);
+        rdsGood(t, "echo 10 us -6 dB", 90, 8);
+    }
     // combined: the worst tuning error of the band (50 ppm of 108 MHz), the sample clock +80 ppm, an echo of 3 us at -8 dB and 8-bit clipping;
     // stereo and mono (whose RDS carrier is then 4.6 Hz off the receiver's 57 kHz)
     for (bool stereo : {true, false}) {
