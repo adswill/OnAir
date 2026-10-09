@@ -398,11 +398,13 @@ struct FmReceiver::Impl {
         // discriminator: the frequency in units of 75 kHz
         freq.resize(cn);
         for (size_t i = 0; i < cn; i++) {
-            const cf32 p = std::conj(prev) * cur[i];
+            // a NaN or infinite sample (a broken file) would stay for good in the pilot loop, the DC average and the measurements: count it as silence
+            const cf32 c = std::isfinite(cur[i].real()) && std::isfinite(cur[i].imag()) ? cur[i] : cf32(0, 0);
+            const cf32 p = std::conj(prev) * c;
             freq[i] = (float)(std::atan2(p.imag(), p.real()) * fo / (2 * kPi) / kDevHz);
-            prev = cur[i];
-            pwSum += std::norm(cur[i]);
-            envSum += std::abs(cur[i]);
+            prev = c;
+            pwSum += std::norm(c);
+            envSum += std::abs(c);
         }
         pwN += cn;
         for (size_t i = 0; i < cn; i++) freqSum += freq[i];
