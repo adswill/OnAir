@@ -153,6 +153,19 @@ void evict(int frame) {   // with mu held
     }
 }
 
+// Tiles queued for a view the user has since zoomed or panned away from are not fetched: at zoom 19 a quick turn of the wheel would
+// otherwise queue hundreds, all downloaded from the tile server for nothing. A queued tile drawn neither in this frame nor the one before
+// (two maps may share a frame) leaves the queue, and is queued again if it comes back on the screen.
+void dropStale(int frame) {   // with mu held
+    std::deque<uint64_t> keep;
+    for (uint64_t k : queue) {
+        auto it = tiles.find(k);
+        if (it != tiles.end() && it->second.state == 0 && it->second.lastUsed < frame - 1) tiles.erase(it);
+        else keep.push_back(k);
+    }
+    queue.swap(keep);
+}
+
 // the picture of a tile if it is ready (decoding at most a few per frame); queue it otherwise
 int decodedThisFrame = 0;
 ImTextureID tileTexture(int z, int x, int y, bool online, bool& failed) {
@@ -167,6 +180,7 @@ ImTextureID tileTexture(int z, int x, int y, bool online, bool& failed) {
             return 0;
         }
         tiles[k] = Tile();
+        tiles[k].lastUsed = ImGui::GetFrameCount();
         queue.push_back(k);
         cv.notify_one();
         return 0;
@@ -330,7 +344,7 @@ bool draw(View& v, ImVec2 size) {
             }
         }
     dl->PopClipRect();
-    { std::lock_guard<std::mutex> lk(mu); evict(ImGui::GetFrameCount()); }
+    { std::lock_guard<std::mutex> lk(mu); dropStale(ImGui::GetFrameCount()); evict(ImGui::GetFrameCount()); }
     if (gAny) { const ImVec2 ts = ImGui::CalcTextSize(kCredit); dl->AddText(ImVec2(p0.x + size.x - ts.x - 6, p0.y + size.y - ts.y - 3), IM_COL32(140, 144, 148, 220), kCredit); }
     else {   // a line above the caption the screens put along the bottom (legend()), cut short in a narrow map
         const char* m = !onlineMap ? "map switched off: showing positions only" : missing ? "loading the map..." : "no map tiles (no network, or no picture decoder on this system): showing positions only";
