@@ -390,6 +390,11 @@ void Player::threadMain() {
             const bool b709 = src->colorspace == AVCOL_SPC_BT709 || (src->colorspace == AVCOL_SPC_UNSPECIFIED && h >= 720);
             auto vf = std::make_shared<VideoFrame>();
             vf->w = w; vf->h = h;
+            {   // the frame's own SAR, else the stream's / codec's (HW frames carry it too, but the stream value is a safe fallback)
+                AVRational sar = av_guess_sample_aspect_ratio(fmt, fmt->streams[vIdx], f);
+                if (sar.num <= 0 || sar.den <= 0) sar = src->sample_aspect_ratio;
+                vf->dar = displayAspect(w, h, sar.num, sar.den);
+            }
             vf->bt709 = b709; vf->fullRange = src->color_range == AVCOL_RANGE_JPEG;
             vf->interlaced = (src->flags & AV_FRAME_FLAG_INTERLACED) != 0;
             int64_t ts = f->best_effort_timestamp != AV_NOPTS_VALUE ? f->best_effort_timestamp : f->pts;

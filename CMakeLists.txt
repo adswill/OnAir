@@ -485,6 +485,10 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_conceal PRIVATE dect2core)
   add_test(NAME conceal COMMAND test_conceal)
 
+  add_executable(test_aspect tests/test_aspect.cpp)
+  target_link_libraries(test_aspect PRIVATE dect2core)
+  add_test(NAME aspect COMMAND test_aspect)
+
   add_executable(test_teletext tests/test_teletext.cpp)
   target_link_libraries(test_teletext PRIVATE dect2core)
   add_test(NAME teletext COMMAND test_teletext)

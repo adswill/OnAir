@@ -15,9 +15,19 @@
 
 namespace dect2 {
 
+// Display aspect ratio (width / height) of a picture of w x h stored pixels whose pixels have the sample aspect ratio sarN:sarD.
+// An unknown or invalid SAR (0/0, a zero or negative part) means square pixels. Never returns less than a tiny positive value.
+inline double displayAspect(int w, int h, int sarN, int sarD) {
+    if (w <= 0 || h <= 0) return 1.0;
+    double sar = (sarN > 0 && sarD > 0) ? (double)sarN / sarD : 1.0;
+    if (sar < 0.05 || sar > 20.0) sar = 1.0;     // nonsense in the stream: treat as square
+    return (double)w * sar / h;
+}
+
 struct VideoFrame {
     double pts = 0;
     int w = 0, h = 0;
+    double dar = 0;                      // display aspect ratio (width / height) of the picture; 0 = unknown, draw w / h
     std::vector<uint8_t> rgba;           // RGBA8, only when a subtitle was burnt in; otherwise empty
     std::vector<uint8_t> y, uv;          // NV12 planes (w*h and w*(h/2) bytes, tightly packed); converted to RGB on the GPU
     bool bt709 = true, fullRange = false, interlaced = false;

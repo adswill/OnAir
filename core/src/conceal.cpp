@@ -197,7 +197,7 @@ static void synthesizeCpu(const VideoFrame& A, const VideoFrame& B, int count, c
         std::vector<uint8_t> cset((size_t)gw * gh);
         const float t = (float)(k + 1) / (float)(count + 1);
         auto f = std::make_shared<VideoFrame>();
-        f->w = w; f->h = h; f->bt709 = A.bt709; f->fullRange = A.fullRange; f->interlaced = false;
+        f->w = w; f->h = h; f->dar = A.dar; f->bt709 = A.bt709; f->fullRange = A.fullRange; f->interlaced = false;
         f->y.resize((size_t)w * h); f->uv.resize(A.uv.size(), 128);
         std::fill(cset.begin(), cset.end(), 0);
         for (int by = 0; by < bh; by++)

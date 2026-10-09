@@ -363,7 +363,7 @@ bool d3d11Synthesize(const VideoFrame& A, const VideoFrame& B, int count, const 
     const uint8_t* src = static_cast<const uint8_t*>(mp.pData);
     for (int k = 0; k < count; k++) {
         auto f = std::make_shared<VideoFrame>();
-        f->w = w; f->h = h; f->bt709 = A.bt709; f->fullRange = A.fullRange; f->interlaced = false;
+        f->w = w; f->h = h; f->dar = A.dar; f->bt709 = A.bt709; f->fullRange = A.fullRange; f->interlaced = false;
         f->y.resize(planeY);
         f->uv.resize(A.uv.size(), 128);
         memcpy(f->y.data(), src + (size_t)k * frameBytes, planeY);

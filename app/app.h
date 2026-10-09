@@ -132,12 +132,14 @@ extern int gWinX, gWinY, gWinW, gWinH;
 struct VideoTex {
     gfx::Video* tex = nullptr;
     int w = 0, h = 0;
+    double dar = 0;          // display aspect of the newest picture (0 = use w / h); it can change between programmes
     uint64_t seq = 0;
     bool deint = true;
     bool has() const { return tex != nullptr; }
     void update(Player& pl) {
         auto f = pl.videoFrame(seq);
         if (!f || f->w <= 0) return;
+        dar = f->dar;
         const bool yuv = f->rgba.empty();
         if (!tex || w != f->w || h != f->h) {
             delete tex;
@@ -149,7 +151,8 @@ struct VideoTex {
     }
     void draw(ImVec2 box) {
         if (!tex) return;
-        float ar = (float)w / h;
+        if (box.x < 1 || box.y < 1 || h <= 0) return;
+        float ar = dar > 0.05 ? (float)dar : (float)w / h;
         ImVec2 sz = box;
         if (box.x / box.y > ar) sz.x = box.y * ar; else sz.y = box.x / ar;
         ImVec2 p = ImGui::GetCursorPos();
