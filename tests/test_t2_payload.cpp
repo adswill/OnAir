@@ -18,7 +18,7 @@ using testjobs::jprintf;
 static std::atomic<int> fails{0};
 #define CHECK(c, ...) do { if (!(c)) { jprintf("FAIL: " __VA_ARGS__); jprintf("\n"); fails++; } } while (0)
 
-struct Case { const char* name; int s1; bool shortFrame; int mod, cod; bool rot; int ti; double snr; double bw = 8; int fft = 1, gi = 2, pp = 0; bool ext = false; int t2Version = 2; double cfoHz = 0; double sroPpm = 0; };
+struct Case { const char* name; int s1; bool shortFrame; int mod, cod; bool rot; int ti; double snr; double bw = 8; int fft = 1, gi = 2, pp = 0; bool ext = false; int t2Version = 2; double cfoHz = 0; double sroPpm = 0; double dcDb = -999; };
 
 static void runCase(const Case& c) {
     const double fn = nativeRateHz(c.bw);
@@ -71,6 +71,7 @@ static void runCase(const Case& c) {
             if (c.cfoHz != 0) { v *= cf32((float)std::cos(ph), (float)std::sin(ph)); ph = std::fmod(ph + 2 * M_PI * c.cfoHz / fn, 2 * M_PI); }
             v += cf32(nd(rng), nd(rng)) * (float)sigma;
         }
+        if (c.dcDb > -100) impair::dc(frame, c.dcDb);   // the radio's DC offset, after the frequency offset (it is the radio's)
         for (size_t o = 0; o < frame.size(); o += 1 << 16) rx.feed(frame.data() + o, std::min<size_t>(1 << 16, frame.size() - o));
         // a radio delivers a frame every 100-250 ms; fed all at once, the data decoder (a thread that drops a frame it is still busy
         // for) lost half of them on a loaded CI machine. Wait for it to come within a few frames of what was fed (at most 2 s a frame).
@@ -175,6 +176,9 @@ int main() {
         {"32K GI 1/16 PP4 +58 ppm -12k", 0, false, 2, 2, true, 3, 22, 8, 5, 1, 3, false, 2, -12000, 58},
         {"32K GI 1/16 PP4 -58 ppm -12k", 0, false, 2, 2, true, 3, 22, 8, 5, 1, 3, false, 2, -12000, -58},
         {"32K GI 1/16 PP4 +100 ppm",     0, false, 2, 2, true, 3, 22, 8, 5, 1, 3, false, 2, 0, 100},
+        // the same with the DC offset of that recording (-10 dB): the DC leaks across the FFT and biases the frequency estimate by a few
+        // Hz, which left the frame-closing symbol (no continual pilots, so no phase tracking) several radians off. 256QAM 2/3 as on air.
+        {"32K GI 1/16 PP4 256QAM DC -10 dB", 0, false, 3, 2, true, 3, 24, 8, 5, 1, 3, false, 2, -12000, 58, -10},
         {"8K GI 1/8 PP2 -100 ppm",       0, false, 2, 2, true, 3, 22, 8, 1, 2, 1, false, 2, 0, -100},
     };
     // the cases are independent: each one runs on its own thread, the output keeps the order of the cases

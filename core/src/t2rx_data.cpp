@@ -146,20 +146,28 @@ void T2Receiver::Impl::runDataStage() {
         double cumA = 0, cumB = 0;
         std::vector<int> cont;
         std::vector<cd> prod;
-        // raw (uncorrected) cells of the previous symbol, kept at its continual-pilot carriers only (the only ones that are compared)
+        // raw (uncorrected) cells of the previous symbol, kept at its pilot carriers only (the only ones that are compared)
         std::vector<cf32> prevRaw(K), curRaw(K);
-        for (int kk = 0; kk < K; kk++) if (types[nP2][kk] == kCellContinual) prevRaw[kk] = frameCells[nP2][off + kk];
+        auto isPilot = [](uint8_t t) { return t == kCellContinual || t == kCellScattered; };
+        for (int kk = 0; kk < K; kk++) if (isPilot(types[nP2][kk])) prevRaw[kk] = frameCells[nP2][off + kk];
         for (int l = nP2 + 1; l < L; l++) {
             cont.clear(); prod.clear();
-            for (int kk = 0; kk < K; kk++) {
-                if (types[l][kk] != kCellContinual) continue;
-                curRaw[kk] = frameCells[l][off + kk];
-                if (types[l - 1][kk] != kCellContinual) continue;
-                cf32 za = frameCells[l][off + kk] / pm.pilot(l, kk, kCellContinual).real();
-                cf32 zb = prevRaw[kk] / pm.pilot(l - 1, kk, kCellContinual).real();
-                cd pr = cd(za.real(), za.imag()) * std::conj(cd(zb.real(), zb.imag()));
-                cont.push_back(kk);
-                prod.push_back(pr);
+            for (int kk = 0; kk < K; kk++) if (isPilot(types[l][kk])) curRaw[kk] = frameCells[l][off + kk];
+            // Continual pilots on both symbols as a rule. The frame-closing symbol has none: there the carriers where both symbols have a
+            // pilot of any kind are used (every dx * dy-th). Skipping it left the closing symbol without the phase and timing that the
+            // symbols before it had accumulated (several radians with a few tens of Hz of residual frequency offset): its pilots then
+            // spoiled the frame-wide channel fit, and every cell of the frame with it (a real 32K PP4 multiplex: MER 10-15 dB, no PLP).
+            for (int pass = 0; pass < 2 && cont.size() < 4; pass++) {
+                cont.clear(); prod.clear();
+                for (int kk = 0; kk < K; kk++) {
+                    const uint8_t ta = types[l][kk], tb = types[l - 1][kk];
+                    if (pass == 0 ? (ta != kCellContinual || tb != kCellContinual) : (!isPilot(ta) || !isPilot(tb))) continue;
+                    cf32 za = frameCells[l][off + kk] / pm.pilot(l, kk, ta).real();
+                    cf32 zb = prevRaw[kk] / pm.pilot(l - 1, kk, tb).real();
+                    cd pr = cd(za.real(), za.imag()) * std::conj(cd(zb.real(), zb.imag()));
+                    cont.push_back(kk);
+                    prod.push_back(pr);
+                }
             }
             std::swap(prevRaw, curRaw);
             if (cont.size() < 4) continue;
@@ -247,10 +255,15 @@ void T2Receiver::Impl::runDataStage() {
     const float cpAmp2 = [&] { for (int kk = 0; kk < K; kk++) if (types[nP2][kk] == kCellContinual) { cf32 pv = pm.pilot(nP2, kk, kCellContinual); return pv.real() * pv.real(); } return amp2; }();
     dataSnrCar.clear();
     const int Wd = 10;
+    // noise power of the cells per grid point (over 2 Wd + 1 neighbours), for the LDPC input: the noise is not flat across the band on
+    // real signals (a spur, an adjacent channel folded in, a filter edge), and a band-average would make the cells in the worst part
+    // over-confident and those in the best part timid
+    std::vector<float> nGrid(M);
     for (int n = 0; n < M; n++) {
-        double sa = 0, na = 0;
-        for (int j = std::max(0, n - Wd); j <= std::min(M - 1, n + Wd); j++) { sa += pw[j]; na += varN[j]; }
+        double sa = 0, na = 0; int c = 0;
+        for (int j = std::max(0, n - Wd); j <= std::min(M - 1, n + Wd); j++) { sa += pw[j]; na += varN[j]; c += varN[j] > 0; }
         dataSnrCar.push_back((float)(10 * std::log10(std::max(1e-9, sa) / std::max(1e-12, na * amp2))));
+        nGrid[n] = c ? (float)(na / c * amp2) : 0.f;
     }
     dataSnr = (float)(10 * std::log10(std::max(1e-9, sumSig) / std::max(1e-12, sumNoise * amp2)));
     if (getenv("DECT2_DEBUG")) {
@@ -274,6 +287,13 @@ void T2Receiver::Impl::runDataStage() {
         sigma2 = cn ? sn / cn * amp2 : 0;
     }
     std::vector<cf32> dstream; std::vector<float> dn0;
+    // per carrier, linear between the grid points (never below a tenth of the average: a lucky quiet stretch is no reason for certainty)
+    std::vector<float> noiseCar(K, 0.f);
+    for (int kk = 0; kk < K; kk++) {
+        const int n0i = std::min(M - 1, kk / dx), n1i = std::min(M - 1, n0i + 1);
+        const float w = (float)(kk - n0i * dx) / (float)dx;
+        noiseCar[kk] = std::max((float)(0.1 * sigma2), nGrid[n0i] + w * (nGrid[n1i] - nGrid[n0i]));
+    }
     const bool wantPlp = l1postOk && !l1post.plps.empty() && !p2Sym.empty() && sigma2 > 0;
     // Per grid carrier: weighted least-squares fit of H(l) = a + b (l - lbar) over every pilot observation in the frame
     // (P2 symbols excluded: they carry a different phase/timing reference). The slope is shrunk towards zero when it is
@@ -335,9 +355,9 @@ void T2Receiver::Impl::runDataStage() {
                 symScale[(size_t)l] = std::min(8.0, std::max(0.25, 0.25 * a0 + 0.5 * a1 + 0.25 * a2));
             }
         }
-        if (getenv("DECT2_SYMNOISE")) {
+        if (getenv("DECT2_SYMNOISE")) {   // pilot residual against the frame's channel fit per data symbol, dB below the pilot power
             fprintf(stderr, "SYMNOISE frame %llu:", (unsigned long long)(frameCounter + 1));
-            for (int l = firstData; l < L; l++) fprintf(stderr, " %.2f", 10 * std::log10(symScale[(size_t)l]));
+            for (int l = firstData; l < L; l++) fprintf(stderr, " %.1f", rc[(size_t)l] ? 10 * std::log10(rp[(size_t)l] / rc[(size_t)l] / (amp2 * std::max(1e-12, (double)sumSig / M))) : 99.0);
             fprintf(stderr, "\n");
         }
     }
@@ -376,7 +396,8 @@ void T2Receiver::Impl::runDataStage() {
                     cf32 hh = H[kk];
                     float g2 = std::max(1e-12f, std::norm(hh));
                     orig[Hi[jj]] = frameCells[l][off + kk] * std::conj(hh) / g2;
-                    on0[Hi[jj]] = (float)(sigma2 * symScale[(size_t)l] / (2.0 * g2));
+                    const float nk = noiseCar[kk] > 0 ? noiseCar[kk] : (float)sigma2;
+                    on0[Hi[jj]] = (float)(nk * symScale[(size_t)l] / (2.0 * g2));
                     jj++;
                 }
             dstream.insert(dstream.end(), orig.begin(), orig.end());

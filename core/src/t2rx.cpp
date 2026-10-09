@@ -34,6 +34,19 @@ void T2Receiver::Impl::stageLoop() {
 }
 
 void T2Receiver::Impl::append(const cf32* x, size_t n) {
+    // The radio's DC offset out first (a one-pole high-pass, 7 ms). A real recording had a DC tone of a third of the signal amplitude:
+    // after the frequency offset is taken out it sits between two carriers, and its leakage across the FFT cost 3 dB of SNR over the
+    // band (more near the centre) and pulled the guard-interval frequency estimate a few Hz off. The notch is ~20 Hz wide, a tenth of
+    // the 32K carrier spacing.
+    if (dcIn.size() < n) dcIn.resize(n);
+    constexpr double kA = 1.0 / 65536;
+    double mr = dcRe, mi = dcIm;
+    for (size_t i = 0; i < n; i++) {
+        mr += kA * (x[i].real() - mr); mi += kA * (x[i].imag() - mi);
+        dcIn[i] = cf32((float)(x[i].real() - mr), (float)(x[i].imag() - mi));
+    }
+    dcRe = mr; dcIm = mi;
+    x = dcIn.data();
     if (!sroOn) { buf.insert(buf.end(), x, x + n); return; }
     sroOut.clear();   // (its time counts as "resampler": the callers hold that stage clock)
     sroRs.process(x, n, sroOut);

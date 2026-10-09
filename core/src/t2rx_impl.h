@@ -83,6 +83,8 @@ struct T2Receiver::Impl {
     double sroCorr = 0;          // relative clock error removed by sroRs (its step is 1 + sroCorr)
     int sroN = 0;                // frame spacings the loop has taken in (its gain falls with them)
     std::vector<cf32> sroOut;
+    std::vector<cf32> dcIn;       // input with the DC offset removed (append)
+    double dcRe = 0, dcIm = 0;    // the DC offset followed so far
     void append(const cf32* x, size_t n);
     void sroReset();
     // sets the correction (clamped to +-200 ppm), switching sroRs in if it is off; then the buffered samples from absolute index `from` on
