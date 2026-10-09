@@ -52,6 +52,10 @@ struct HdrReceiver::Impl {
     hdr::FmRx fm{&fmSink};
     hdr::AmRx am{&amSink};
     int band = 0;                          // 0 both receivers search, 1 FM, 2 AM
+    bool mirror = false;                   // the input is conjugated (I and Q swapped)
+    double mirrorSince = 0;                // signal time of the last change of `mirror`
+    static constexpr double kMirrorWait = 12;   // seconds without any P1 frame before the other side is tried
+    std::vector<cf32> clean;
     double lostFor = 0;
     int64_t nIn = 0;
     double now = 0;                        // signal seconds
@@ -83,6 +87,7 @@ struct HdrReceiver::Impl {
         am.reset();
         fmSink.lastP1 = amSink.lastP1 = -1e9;
         band = 0; lostFor = 0;
+        mirror = false; mirrorSince = 0;
         nIn = 0; now = 0; nextReport = 0; power = 0; nPower = 0; busy = 0;
         lastPids = 0; lastPidsAt = -1e9; lotVersion = 0;
     }
@@ -137,6 +142,14 @@ struct HdrReceiver::Impl {
 
     void feed(const cf32* x, size_t n) {
         const auto t0 = std::chrono::steady_clock::now();
+        // NaN or infinite samples (a broken file or driver) would stay in the resampler and the filters: they become zeros. A mirrored
+        // spectrum (I and Q swapped) is conjugated back.
+        clean.assign(x, x + n);
+        for (auto& v : clean) {
+            if (!std::isfinite(v.real()) || !std::isfinite(v.imag())) v = cf32(0, 0);
+            else if (mirror) v = std::conj(v);
+        }
+        x = clean.data();
         for (size_t i = 0; i < n; i++) power += (double)std::norm(x[i]);
         nPower += (int64_t)n;
         bb.clear();
@@ -156,6 +169,12 @@ struct HdrReceiver::Impl {
         // the sample clock error the AM receiver measures is taken out in the resampler (FM copes with its pilots)
         double ppm;
         if (band == 2 && am.clockPpm(ppm) && std::fabs(ppm) > 0.5) rs.scaleStep(1 + ppm * 1e-6);
+        // no P1 frame at all for a long time with or without a signal: try the mirrored spectrum
+        if (std::max(fmSink.lastP1, amSink.lastP1) < mirrorSince && now - mirrorSince > kMirrorWait) {
+            mirror = !mirror;
+            mirrorSince = now;
+            band = 0; lostFor = 0; fm.reset(); am.reset();
+        }
         nIn += (int64_t)n;
         now = (double)nIn / curRate;
         busy += std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
