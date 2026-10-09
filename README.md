@@ -47,7 +47,7 @@ The DVB standard is detected automatically, and the mode list on the left select
 | **GNSS** | GPS L1 | Satellites, position and time |
 | **Mesh** | Meshtastic and MeshCore (LoRa) | Nodes, map and chat |
 
-The TV channel scanner covers DVB, ATSC, ATSC 3.0, ISDB-T and DTMB, and scan results can be shared with other users through a public channel list, picked by country and city.
+The TV channel scanner covers DVB, ATSC, ATSC 3.0, ISDB-T and DTMB, and scan results can be shared with other users through a public channel list, picked by country and city. The list is crowd-sourced from OnAir users' scans and can be browsed on GitHub: [adswill/OnAir-channels](https://github.com/adswill/OnAir-channels).
 
 **T2-Lite** (the 1/3 and 2/5 code rates, short FEC frames, 1.7 MHz channels) is decoded like any other DVB-T2 signal. It is checked end to end on simulated signals from QPSK to 256-QAM, and the error correction sits where theory says it should; it has not been tried on a real T2-Lite broadcast. A T2-Lite signal that shares a channel with a normal T2 one (in its future-extension frames) is not decoded: the normal T2 part keeps working.
 
