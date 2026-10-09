@@ -5,6 +5,7 @@
 #include "dect2/dab_gen.h"
 #include "impair.h"
 #include "jobs.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <limits>
@@ -18,9 +19,13 @@ static std::atomic<int> fails{0};
 
 static const double kRate = 2.048e6;
 
-static std::vector<cf32> clean(double seconds, int uepIndex = -1) {
+static std::vector<cf32> clean(double seconds, int uepIndex = -1, bool moved = false) {
     dabgen::TxConfig tc;
     tc.utcSeconds = 1700000000;
+    if (moved) {   // a reconfiguration: the first service goes to the end of the multiplex, so its sub-channel starts elsewhere
+        tc.services = dabgen::defaultServices();
+        std::rotate(tc.services.begin(), tc.services.begin() + 1, tc.services.end());
+    }
     if (uepIndex >= 0) {   // the first service (DAB+ 48 kbit/s, sub-channel 1) with unequal error protection
         tc.services = dabgen::defaultServices();
         tc.services[0].uepIndex = uepIndex;
@@ -99,6 +104,14 @@ int main() {
         auto x = clean(8.0, idx); impair::shift(x, -7300, kRate);
         char b[64]; snprintf(b, sizeof b, "UEP index %d, -7.3 kHz", idx);
         expect(b, run(x), 0.99);
+    });
+    jobs.add([&] {   // the multiplex is reorganised while receiving: 6 s of the old layout, then 10 s of the new
+        auto x = clean(6.0);
+        const auto y = clean(10.0, -1, true);
+        x.insert(x.end(), y.begin(), y.end());
+        const Res r = run(x);
+        expect("reconfiguration: sub-channel moves", r, 0.97);
+        CHECK(r.auOk > 600, "reconfiguration: only %llu good AUs in 16 s", (unsigned long long)r.auOk);
     });
     jobs.add([&] { auto x = base; impair::dc(x, 0); expect("DC spike at the signal's level", run(x), 0.99); });
     jobs.add([&] {

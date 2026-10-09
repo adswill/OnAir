@@ -350,6 +350,9 @@ struct DabReceiver::Impl {
         const int ext = d[0] & 31, pd = (d[0] >> 5) & 1;
         const uint8_t* b = d + 1;
         const int n = len - 1;
+        // C/N = 1 in the sub-channel and service organisation: the configuration after an announced reconfiguration. Only the current one is
+        // followed (the new one arrives with C/N = 0 once it is in force).
+        if ((d[0] & 0x80) && (ext == 1 || ext == 2)) return;
         if (ext == 0 && n >= 2) ens.eid = (uint16_t)((b[0] << 8) | b[1]);
         else if (ext == 1) {
             int p = 0;
@@ -472,6 +475,18 @@ struct DabReceiver::Impl {
         {
             std::lock_guard<std::mutex> lk(mu);
             applySelection();
+            // a reconfiguration may move or resize the selected sub-channel: follow it (the 16 CIFs of interleaving restart)
+            if (sel >= 0) {
+                auto it = ens.subs.find(sel);
+                if (it != ens.subs.end()) {
+                    const DabSubchannel& n = it->second;
+                    if (n.start != selSub.start || n.size != selSub.size || n.eep != selSub.eep || n.option != selSub.option || n.level != selSub.level || n.uepIndex != selSub.uepIndex) {
+                        selSub = n;
+                        hist.assign(16, {});
+                        cifCount = 0;
+                    }
+                }
+            }
         }
         if (sel < 0) return;
         if (selSub.size <= 0 || selSub.start + selSub.size > kCifCu) return;
