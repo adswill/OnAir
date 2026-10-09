@@ -1,6 +1,25 @@
 // OnAir: window, main loop and the layout of the panels.
 #include "app.h"
 #include "dect2/crash_report.h"
+#include <cstdlib>
+
+// The processor check, before anything else runs. The receiver library is built for AVX2 and FMA on Windows and Intel Macs (no runtime
+// dispatch there), and the start-up code of its files (global objects) already uses AVX: a check in main() came too late, and a Mac Pro 5,1
+// (Xeon without AVX) crashed with an illegal instruction before any message (issue #14). This file is built without AVX and its start-up
+// code runs before the library's (the linker places the program's own objects first), so the check here comes in time.
+#if defined(DECT2_REQUIRES_AVX2) && (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
+namespace {
+struct CpuGate {
+    CpuGate() {
+        __builtin_cpu_init();
+        if (__builtin_cpu_supports("avx2") && __builtin_cpu_supports("fma")) return;
+        plat::showFatalError("OnAir", "This version of OnAir needs a processor with AVX2 and FMA instructions (Intel from the 2013 \"Haswell\" "
+                                      "generation on, AMD from about 2015). This computer's processor does not have them.");
+        std::_Exit(1);
+    }
+} gCpuGate;
+}
+#endif
 
 std::string gForceTab;
 static std::string gCrashNote;   // set when the last run crashed: shown once in a small window

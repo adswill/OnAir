@@ -147,7 +147,21 @@ struct DefaultsPrefs : Prefs {
 };
 }
 
-void showFatalError(const char* title, const char* text) { fprintf(stderr, "%s: %s\n", title, text); }
+// also as an alert: started from the Finder, a message on stderr is never seen and the app just disappears. May run before main()
+// (the processor check in main.cpp), so it makes the application object itself.
+void showFatalError(const char* title, const char* text) {
+    fprintf(stderr, "%s: %s\n", title, text);
+    @autoreleasepool {
+        [NSApplication sharedApplication];
+        [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+        [NSApp activateIgnoringOtherApps:YES];
+        NSAlert* a = [[NSAlert alloc] init];
+        a.alertStyle = NSAlertStyleCritical;
+        a.messageText = [NSString stringWithUTF8String:title];
+        a.informativeText = [NSString stringWithUTF8String:text];
+        [a runModal];
+    }
+}
 
 Prefs& prefs() { static DefaultsPrefs p; return p; }
 
