@@ -49,7 +49,7 @@ void startReceiver(App& a) {
     }
 }
 
-// A channel width picked while the receiver runs (only possible from Automatic): the receiver follows it, as followBandwidth() does,
+// A channel width picked while the receiver runs: the receiver follows it, as followBandwidth() does,
 // instead of the engine staying on the width it had found while the toolbar shows the new one
 static void bandwidthNow(App& a) {
     const double oldRate = a.tune.sampleRate;
@@ -58,6 +58,12 @@ static void bandwidthNow(App& a) {
     a.engine.setBandwidthAuto(false);
     if (a.devices[a.devIdx].isRadio() && a.tune.sampleRate != oldRate) startReceiver(a);   // 8 vs 10 Msps: the radio is opened again
     else a.engine.setBandwidth(a.tune.bandwidthMhz);
+}
+
+void setDvbBandwidth(App& a, int idx) {
+    if (idx < 0) a.bwAuto = true;   // followBandwidth() hands the detection back to the engine
+    else { a.bwIdx = idx; a.bwAuto = false; if (a.engine.running()) bandwidthNow(a); }
+    savePrefs(a);
 }
 
 void toolbarParts(App& a, int mask, bool vertical) {
@@ -130,12 +136,12 @@ void toolbarParts(App& a, int mask, bool vertical) {
         char bl[32];
         snprintf(bl, sizeof bl, a.bwAuto ? "%s (auto)" : "%s", kBw[a.bwIdx].label);
         if (a.atscMode) snprintf(bl, sizeof bl, "6 MHz");
-        ImGui::BeginDisabled(a.atscMode || (running && !a.bwAuto));
+        ImGui::BeginDisabled(a.atscMode);
         if (ImGui::BeginCombo("##bw", bl)) {
             for (int i = 0; i < (int)(sizeof kBw / sizeof *kBw); i++)
-                if (ImGui::Selectable(kBw[i].label, i == a.bwIdx && !a.bwAuto)) { a.bwIdx = i; a.bwAuto = false; if (running) bandwidthNow(a); savePrefs(a); }
+                if (ImGui::Selectable(kBw[i].label, i == a.bwIdx && !a.bwAuto)) setDvbBandwidth(a, i);
             ImGui::Separator();
-            if (ImGui::Selectable("Automatic", a.bwAuto)) { a.bwAuto = true; savePrefs(a); }
+            if (ImGui::Selectable("Automatic", a.bwAuto)) setDvbBandwidth(a, -1);
             ImGui::EndCombo();
         }
         ImGui::EndDisabled();

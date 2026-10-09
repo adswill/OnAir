@@ -132,6 +132,14 @@ int main(int argc, char** argv) {
         CHECK(std::fabs(t.symbolPpm) < 20, "symbol clock %.1f ppm", t.symbolPpm);
         CHECK(t.snrDb > 25 && t.ber < 1e-4, "SNR %.1f BER %.5f", t.snrDb, t.ber);
         CHECK(t.eye.size() == 800 && t.spectrumDb.size() == 128, "eye %zu spectrum %zu", t.eye.size(), t.spectrumDb.size());
+        if (t.spectrumDb.size() == 128) {   // bin b covers -12 + 0.1875 b kHz: the signal's power sits in the middle, inside the 12.5 kHz channel
+            double sp = 0, sf = 0, in = 0;
+            for (int b = 0; b < 128; b++) {
+                const double f = -12.0 + 0.1875 * (b + 0.5), p = std::pow(10.0, t.spectrumDb[(size_t)b] / 10);
+                sp += p; sf += p * f; if (std::fabs(f) < 6.25) in += p;
+            }
+            CHECK(std::fabs(sf / sp) < 0.5 && in > 0.95 * sp, "channel spectrum centred at %+.2f kHz, %.0f%% inside the channel", sf / sp, 100 * in / sp);
+        }
         CHECK(t.levelDbfs > -30 && t.levelDbfs < -5, "level %.1f dBFS", t.levelDbfs);
         CHECK(t.cnrDb > 25, "CNR %.1f dB (30 dB sent)", t.cnrDb);
         CHECK(!t.cachInfo.empty(), "no CACH short LC");

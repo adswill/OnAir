@@ -408,11 +408,11 @@ struct DmrReceiver::Impl {
             double mx = 1e-20;
             std::vector<double> sp(128, 0.0);
             for (int b = 0; b < 128; b++) {
-                const double f0 = -12000.0 + b * 187.5 * 2;
+                const double f0 = -12000.0 + b * 187.5;
                 double s = 0; int c = 0;
                 for (int k = 0; k < kSpecN; k++) {
                     const double f = (k < kSpecN / 2 ? k : k - kSpecN) * binHz;
-                    if (f >= f0 && f < f0 + 375.0) { s += specPow[k]; c++; }
+                    if (f >= f0 && f < f0 + 187.5) { s += specPow[k]; c++; }
                 }
                 sp[b] = c ? s / c : 0.0;
                 mx = std::max(mx, sp[b]);

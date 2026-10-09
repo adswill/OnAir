@@ -378,6 +378,13 @@ void spectrumPlotDmr(const DmrTelemetry& t, bool on, ImVec2 sz) {
         plt::SetupAxes("kHz", "dB", 0, 0);
         plt::SetupAxisLimits(plt::X1, -12, 12, plt::Cond_Always);
         plt::SetupAxisLimits(plt::Y1, -70, 3, plt::Cond_Always);
+        if (const ModeTuning* mt = modeTuning(11)) {   // the 12.5 kHz channel, as on the main spectrum
+            const double h = mt->bandwidthMhz * 1e3 / 2, edges[2] = {-h, h};
+            plt::Spec band; band.FillColor = pal::accent(pal::dev() ? 0.14f : 0.16f);
+            plt::PlotVBand("band", -h, h, band);
+            plt::Spec es; es.LineColor = pal::accent(0.40f); es.LineWeight = 1.f;
+            plt::PlotInfLines("bandedges", edges, 2, es);
+        }
         if (on && !t.spectrumDb.empty()) {
             const int n = (int)t.spectrumDb.size();
             std::vector<double> x((size_t)n), y((size_t)n);
