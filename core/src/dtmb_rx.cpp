@@ -12,6 +12,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstdio>
+#include <limits>
 #include <mutex>
 #include <thread>
 
@@ -132,11 +133,12 @@ struct DtmbReceiver::Impl {
     std::atomic<int> decThreads{std::max(1, std::min(4, (int)std::thread::hardware_concurrency() / 2))};   // set from the interface thread
     uint64_t pktTotal = 0;
     ChainStats lastStats;
-    long lastGoodAt = -(1L << 40);
+    long lastGoodAt = (std::numeric_limits<long>::min() / 2);
     std::function<void(const uint8_t*, size_t, double)> pktCb;
     std::function<void(const std::string&)> logCb;
 
     // ---- telemetry
+    std::vector<cf32> scrub;   // the input with non-finite samples replaced
     std::mutex mu;
     DtmbTelemetry tel;
     uint64_t seq = 0;
@@ -203,7 +205,7 @@ struct DtmbReceiver::Impl {
         chain.reset();
         lastStats = ChainStats();
         pktTotal = 0;
-        lastGoodAt = -(1L << 40);
+        lastGoodAt = (std::numeric_limits<long>::min() / 2);
         cells.clear(); cir.clear();
     }
 
@@ -226,8 +228,9 @@ struct DtmbReceiver::Impl {
     bool attempt() {
         // the correlation with the 255 / 511 chip core tolerates about +-5 kHz, so the offsets are tried 8 kHz apart; the header fit then finds the
         // offset itself within +-14 kHz of the one tried
-        static const double hyps[7] = {0, 8000, -8000, 16000, -16000, 24000, -24000};
-        const double h = hyps[hyp % 7];
+        // A UHF radio 50 ppm off is up to 43 kHz away: hypotheses out to +-40 kHz, the fit covering the rest
+        static const double hyps[11] = {0, 8000, -8000, 16000, -16000, 24000, -24000, 32000, -32000, 40000, -40000};
+        const double h = hyps[hyp % 11];
         hyp++;
         const long first = produced() - Acquirer::kBlock;
         block.resize((size_t)Acquirer::kBlock);
@@ -473,7 +476,7 @@ struct DtmbReceiver::Impl {
             if (std::abs(z) > 0 && cleanA.pre == cleanB.pre && std::abs(z) > 0.7 * std::sqrt(ea * eb)) {
                 const double df = std::arg(z) * symRate / (2.0 * kPi * Lf);
                 cfoHz += 0.25 * df;   // the stream is derotated by cfoHz: a channel that still turns forward needs a larger correction
-                cfoHz = std::max(-30000.0, std::min(30000.0, cfoHz));
+                cfoHz = std::max(-55000.0, std::min(55000.0, cfoHz));
             }
         }
         // ---- advance
@@ -654,6 +657,13 @@ void DtmbReceiver::feed(const cf32* x, size_t n) {
     {
         double a = 0;
         for (size_t i = 0; i < n; i++) a += std::norm(x[i]);
+        if (!std::isfinite(a)) {
+            // NaN or infinite samples (a broken file or driver) would stay in the filters and the loops for good: replace them by silence
+            s.scrub.assign(x, x + n);
+            a = 0;
+            for (auto& v : s.scrub) { if (!std::isfinite(v.real()) || !std::isfinite(v.imag())) v = cf32(0, 0); a += std::norm(v); }
+            x = s.scrub.data();
+        }
         s.levelAcc += a; s.levelN += n;
         if (s.levelN >= (uint64_t)(s.inRate * 0.25)) { s.levelDb = (float)(10.0 * std::log10(std::max(1e-12, s.levelAcc / (double)s.levelN))); s.levelAcc = 0; s.levelN = 0; }
     }
