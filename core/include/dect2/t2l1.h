@@ -32,9 +32,9 @@ struct L1Pre {
     int postExtension = 0;
     int numRf = 1;           // 3
     int curRf = 0;           // 3
-    int version = 0;         // 4
-    int postScrambled = 0;
-    int lite = 0;            // T2_BASE_LITE
+    int version = 0;         // 4: T2_VERSION, 0 = V1.1.1, 1 = V1.2.1, 2 = V1.3.1
+    int postScrambled = 0;   // L1_POST_SCRAMBLED: only meaningful from T2_VERSION 2 on, see l1PostScrambled()
+    int lite = 0;            // T2_BASE_LITE (same caveat)
     int reserved = 0;        // 4
 };
 
@@ -65,6 +65,11 @@ struct L1Post {
 };
 
 // ---- bit helpers
+// Whether the L1-post is scrambled. EN 302 755 V1.4.1 clause 7.2.2: before V1.3.1 (T2_VERSION '0010') the bits now called
+// L1_POST_SCRAMBLED and T2_BASE_LITE were reserved and "may have been set by the bias balancing algorithm", so they "can only be
+// assumed to have the correct meaning if the T2_VERSION field is set to '0010' or greater". A V1.2.1 transmitter can send a 1 there
+// while its L1-post is plain.
+bool l1PostScrambled(const L1Pre& p);
 uint32_t crc32Bits(const std::vector<uint8_t>& bits, size_t n); // CRC-32 (poly 0x04C11DB7, init 0xFFFFFFFF), MSB first
 void packL1Pre(const L1Pre& p, std::vector<uint8_t>& bits);     // 168 bits (no CRC)
 bool unpackL1Pre(const std::vector<uint8_t>& bits, L1Pre& p);   // needs 168 bits

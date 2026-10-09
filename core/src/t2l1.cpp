@@ -235,6 +235,8 @@ std::vector<uint8_t> postRandomizer() {
 } // namespace
 
 // ------------------------------------------------------------------ public: bits
+bool l1PostScrambled(const L1Pre& p) { return p.version >= 2 && p.postScrambled != 0; }
+
 uint32_t crc32Bits(const std::vector<uint8_t>& bits, size_t n) {
     uint32_t crc = 0xffffffffu;
     for (size_t i = 0; i < n; i++) {
@@ -378,7 +380,9 @@ std::vector<cf32> encodeL1Post(L1Pre& pre, const L1Post& post, int nP2, bool fef
     for (int n = 31; n >= 0; n--) bits.push_back((crc >> n) & 1);
     const int ksig = (int)bits.size();
     const int mod = pre.l1Mod;
-    if (pre.postScrambled) {
+    // clause 7.3.2.1: all Ksig bits (information and CRC) are scrambled with the BBFRAME sequence, but only when a V1.3.1 or later
+    // L1-pre says so; the same bit of a V1.2.1 L1-pre is a reserved (bias balancing) bit
+    if (l1PostScrambled(pre)) {
         auto rnd = postRandomizer();
         for (int n = 0; n < ksig; n++) bits[n] ^= rnd[n];
     }
@@ -480,7 +484,7 @@ L1Result decodeL1Post(const std::vector<cf32>& y, float n0, const L1Pre& pre, in
     std::vector<uint8_t> bits;
     for (int n = 0; n < KBCH12; n++) if (!pad[n]) bits.push_back(hard[n]);
     if ((int)bits.size() != ksig) return r;
-    if (pre.postScrambled) {
+    if (l1PostScrambled(pre)) {
         auto rnd = postRandomizer();
         for (int n = 0; n < ksig; n++) bits[n] ^= rnd[n];
     }
