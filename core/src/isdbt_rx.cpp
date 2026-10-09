@@ -53,7 +53,7 @@ struct IsdbtReceiver::Impl {
     std::vector<double> estPow;
     int estBlocks = 0, estTries = 0;
     int64_t searchedSince = 0;                 // input samples since the current guess was taken (without a lock)
-    std::vector<cf32> pre;
+    std::vector<cf32> pre, clean;
 
     // ---- state
     int state = 0;                 // 0 searching, 1 tracking and looking for the TMCC, 2 locked
@@ -173,6 +173,14 @@ struct IsdbtReceiver::Impl {
     // input conditioning: the guess of the channel's place, then the resampler
     void condition(const cf32* x, size_t n) {
         const cf32* src = x;
+        // NaN or infinite samples (a broken file or driver) would poison the filters and the loops for good: they become silence
+        bool bad = false;
+        for (size_t i = 0; i < n && !bad; i++) bad = !std::isfinite(x[i].real()) || !std::isfinite(x[i].imag());
+        if (bad) {
+            clean.assign(x, x + n);
+            for (auto& v : clean) if (!std::isfinite(v.real()) || !std::isfinite(v.imag())) v = cf32(0, 0);
+            x = src = clean.data();
+        }
         if (mirror) {
             pre.resize(n);
             for (size_t i = 0; i < n; i++) pre[i] = cf32(x[i].imag(), x[i].real());

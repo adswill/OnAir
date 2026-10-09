@@ -134,7 +134,7 @@ int main() {
         Result r = receive(x, 10e6, at + 300000);
         const long per = packetsPerFrame(p.mode, p.layer[0]);
         jprintf("  NaN samples: %ld good, %ld after them\n", r.good[0], r.goodAfter);
-        check(r.goodAfter > 10 * per, "NaN samples", "reception after the bad samples");
+        check(r.goodAfter > 22 * per, "NaN samples", "reception right after the bad samples");
     });
     // a USB drop and a file that starts in the middle of a frame
     add([] {
