@@ -78,4 +78,4 @@ jobs:
         with: { path: dist, merge-multiple: true }
       - name: Create the release
         env: { GH_TOKEN: "${{ github.token }}" }
-        run: gh release create "${GITHUB_REF_NAME}" dist/* --repo "${GITHUB_REPOSITORY}" --title "OnAir ${GITHUB_REF_NAME}" --generate-notes --prerelease
+        run: gh release upload "${GITHUB_REF_NAME}" dist/* --repo "${GITHUB_REPOSITORY}" --clobber || gh release create "${GITHUB_REF_NAME}" dist/* --repo "${GITHUB_REPOSITORY}" --title "OnAir ${GITHUB_REF_NAME}" --generate-notes --prerelease   # a release written by hand first only gets the files
