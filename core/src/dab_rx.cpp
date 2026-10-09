@@ -16,6 +16,7 @@ namespace {
 using namespace dab;
 using cd = std::complex<double>;
 constexpr double kPi = 3.14159265358979323846;
+constexpr int kMaxShift = 80;      // integer carrier offset searched at the start: +-80 kHz covers 50 ppm at L band (1.49 GHz, 75 kHz)
 constexpr int kBackoff = 16;        // demodulation windows start this many samples before the useful part (inside the guard interval)
 
 // EBU Latin-based charset (the part that matters for labels) to UTF-8
@@ -167,7 +168,7 @@ struct DabReceiver::Impl {
         for (long p = nominal - 1400; p <= nominal + 1000; p += 128) {
             if (p < 0 || p + kTu > (long)buf.size()) continue;
             windowFft(base + (uint64_t)p, 0.0, R);
-            for (int sh = -12; sh <= 12; sh++) {
+            for (int sh = -kMaxShift; sh <= kMaxShift; sh++) {
                 int idx;
                 const float pk = cirOf(R, sh, idx, tmp);
                 if (pk > bestPk) { bestPk = pk; bestP = p; bestShift = sh; bestIdx = idx; }
