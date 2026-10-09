@@ -94,10 +94,49 @@ static void flexTests() {
     printf("  FLEX: %zu pages, %d code words ok, %d repaired\n", out.size(), st.ok, st.fixed);
 }
 
+// A frame built by hand from multimon-ng's documented layout, not with flexPhaseBits: a long address (capcode 4096 + ((0x1FFFFE ^ 0x1FFFFF) << 15) + 0x1F9000
+// = 2105344) with an alphanumeric "TEST" page, a short address 0x8000 + 1234567 with a numeric page "123" and a short one with a tone.
+static void handBuiltTest() {
+    uint32_t f[kFlexPhaseWords] = {};
+    f[0] = 5u << 10;                                     // BIW: address words from index 1 (bits 8-9 = 0), vector words from index 5 (bits 10-15)
+    f[1] = 0x1000; f[2] = 0x1FFFFE;                      // long address (two words)
+    f[3] = 0x8000 + 1234567;                             // short
+    f[4] = 0x8000 + 77;                                  // short
+    // vector words: types in bits 4-6, start word in bits 7-13, length in bits 14-20; the long address has two (5 and 6)
+    f[5] = (5u << 4) | (9u << 7) | (3u << 14);           // alphanumeric from word 9, 3 words (header + 2)
+    f[6] = 0;
+    f[7] = (3u << 4) | (12u << 7);                       // standard numeric from word 12, 1 word
+    f[8] = (2u << 4) | (1u << 7);                        // tone only
+    f[9] = 3u << 11;                                     // header: continuation 0, fragment 3 (complete)
+    f[10] = ((uint32_t)'T' << 7) | ((uint32_t)'E' << 14);        // bits 0-6 are not text in the first word of a complete message
+    f[11] = (uint32_t)'S' | ((uint32_t)'T' << 7) | (3u << 14);   // 3 is a filler
+    // numeric: 2 header bits, then 4-bit digits from bit 0 upwards: 1, 2, 3, then filler 12
+    f[12] = (1u << 2) | (2u << 6) | (3u << 10) | (12u << 14) | (12u << 18);
+    std::vector<uint8_t> bits(2816);
+    for (int blk = 0; blk < 11; blk++)
+        for (int w = 0; w < 8; w++) {
+            const uint32_t W = encodeWord(rev21(f[blk * 8 + w]));
+            for (int j = 0; j < 32; j++) bits[(size_t)(blk * 256 + j * 8 + w)] = (uint8_t)((W >> (31 - j)) & 1);
+        }
+    std::vector<PagerMessage> out;
+    FlexPhaseStat st;
+    flexDecodePhase(bits.data(), out, st);
+    bool alpha = false, num = false, tone = false;
+    for (const PagerMessage& m : out) {
+        if (m.address == 2105344) { alpha = m.type == kPagerAlpha && m.text == "TEST"; CHECK(alpha, "long address page '%s' type %d", m.text.c_str(), m.type); }
+        else if (m.address == 1234567) { num = m.type == kPagerNumeric && m.text == "123"; CHECK(num, "numeric page '%s'", m.text.c_str()); }
+        else if (m.address == 77) { tone = m.type == kPagerTone; CHECK(tone, "tone page type %d", m.type); }
+        else CHECK(false, "unexpected capcode %u", m.address);
+    }
+    CHECK(alpha && num && tone, "hand-built frame: %zu pages", out.size());
+    printf("  hand-built FLEX frame: %zu pages\n", out.size());
+}
+
 int main() {
     bchTests();
     pocsagTests();
     flexTests();
+    handBuiltTest();
     printf("%s\n", fails ? "FAILED" : "ok");
     return fails ? 1 : 0;
 }

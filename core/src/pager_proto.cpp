@@ -276,18 +276,20 @@ std::vector<uint8_t> flexPhaseBits(const std::vector<FlexPage>& pages) {
                 std::vector<int> ch;
                 for (char c : pg.text) ch.push_back((unsigned char)c & 0x7F);
                 const int nc = (int)ch.size();
-                const int len = 1 + (std::max(nc, 1) - 1 + 2) / 3;
+                const int words = 1 + (std::max(nc - 2, 0) + 2) / 3;          // the first message word holds two characters, the others three
+                const int len = 1 + words;                                    // and the header word counts in the length
                 if (next + len > kFlexPhaseWords) continue;
                 auto at = [&](int i) { return i < nc ? ch[(size_t)i] : 3; };       // 3 pads
-                f[next] = (3u << 11) | ((uint32_t)at(0) << 14);                  // complete message (K), first character
-                for (int w = 1; w < len; w++) {
-                    const int c0 = 1 + 3 * (w - 1);
-                    f[next + w] = (uint32_t)at(c0) | ((uint32_t)at(c0 + 1) << 7) | ((uint32_t)at(c0 + 2) << 14);
+                f[next] = 3u << 11;                                           // header: complete message (continuation 0, fragment 3)
+                f[next + 1] = ((uint32_t)at(0) << 7) | ((uint32_t)at(1) << 14);   // bits 0 to 6 of this word are not text
+                for (int w = 1; w < words; w++) {
+                    const int c0 = 2 + 3 * (w - 1);
+                    f[next + 1 + w] = (uint32_t)at(c0) | ((uint32_t)at(c0 + 1) << 7) | ((uint32_t)at(c0 + 2) << 14);
                 }
                 vec = (5u << 4) | ((uint32_t)next << 7) | ((uint32_t)len << 14);
                 next += len;
             } else {
-                vec = 2u << 4;                     // tone only
+                vec = (2u << 4) | (1u << 7);       // tone only (bits 7 and 8 = 1; 0 would be a short numeric page)
             }
             f[voff + k] = vec;
         }
@@ -323,55 +325,87 @@ void flexDecodePhase(const uint8_t* bits, std::vector<PagerMessage>& out, FlexPh
         if (fx[i] < 0 || a == 0 || a == 0x1FFFFF) { i++; j++; continue; }
         const bool longAddr = a < 0x8001 || a > 0x1E0000;
         int used = 1;
-        uint32_t cap = a - 0x8000;
+        uint32_t cap = a - 0x8000;                 // short address: the word minus 32768 (multimon-ng parse_capcode)
         int fixedBits = fx[i];
         if (longAddr) {
-            // a long address takes two words (and two vector words); the capcode formula is an approximation
+            // a long address takes two words and two vector words. multimon-ng's parse_capcode keeps the formula below only as commented-out
+            // code (its live code is aw1 - 0x8000 and one word); the formula is what PDW-style decoders use, so it is used here
             if (i + 1 >= voff || fx[i + 1] < 0) { i += 2; j += 2; continue; }
             used = 2;
-            cap = a + ((f[i + 1] ^ 0x1FFFFFu) << 15);
+            cap = (uint32_t)((uint64_t)a + ((uint64_t)(f[i + 1] ^ 0x1FFFFFu) << 15) + 0x1F9000ull);
             fixedBits += fx[i + 1];
         }
         if (j >= kFlexPhaseWords || fx[j] < 0) { i += used; j += used; continue; }
         const uint32_t viw = f[j];
+        const bool hasViw2 = longAddr && j + 1 < kFlexPhaseWords && fx[j + 1] >= 0;
+        const uint32_t viw2 = hasViw2 ? f[j + 1] : 0;
+        const int j1 = j;
         fixedBits += fx[j];
         i += used; j += used;
+        // vector word, as multimon-ng decode_phase: type bits 4-6, start word bits 7-13, length (words, the header included) bits 14-20
         const int vtype = (int)((viw >> 4) & 7), mw1 = (int)((viw >> 7) & 0x7F);
         PagerMessage m = newMessage();
         m.flex = true;
         m.address = cap;
         m.function = -1;
         if (vtype == 2) {
-            m.type = kPagerTone;
+            // tone only; bits 7-8 say 1 = tone, 0 = a short numeric page (3 digits in the vector word, 5 more in the second one of a long address)
+            if (((viw >> 7) & 3) == 0) {
+                std::vector<uint8_t> nb;
+                auto nib = [&](uint32_t w, int sh) { for (int k = 0; k < 4; k++) nb.push_back((uint8_t)((w >> (sh + k)) & 1)); };
+                nib(viw, 9); nib(viw, 13); nib(viw, 17);
+                if (hasViw2) for (int sh = 0; sh <= 16; sh += 4) nib(viw2, sh);
+                m.type = kPagerNumeric;
+                m.text = numericFromBits(nb, kNumFlex, true);
+            } else {
+                m.type = kPagerTone;
+            }
         } else if (vtype == 5 || vtype == 0) {
+            // multimon-ng parse_alphanumeric: the word at the start index is a header (continuation bit 10, fragment bits 11-12), not text;
+            // the text is in the words after it up to start + length - 1, three 7-bit characters per word (bits 0-6, 7-13, 14-20, in that
+            // order); in the first of them bits 0-6 are not text when the fragment field is 3 (a complete message); a character 3 is a filler.
+            // Fragments are not joined (multimon-ng does not either).
             const int len = (int)((viw >> 14) & 0x7F);
             if (len < 1 || mw1 >= kFlexPhaseWords) continue;
             const int mw2 = std::min(mw1 + len - 1, kFlexPhaseWords - 1);
             if (vtype == 0) { m.type = kPagerSecure; m.text = "secure, not shown"; }
             else {
                 m.type = kPagerAlpha;
+                if (fx[mw1] < 0) m.damaged = true; else fixedBits += fx[mw1];
+                const int frag = fx[mw1] < 0 ? 3 : (int)((f[mw1] >> 11) & 3);
                 std::vector<uint8_t> bits7;
                 auto put = [&](uint32_t c) { for (int k = 0; k < 7; k++) bits7.push_back((uint8_t)((c >> k) & 1)); };
-                if (fx[mw1] < 0) m.damaged = true; else { put((f[mw1] >> 14) & 0x7F); fixedBits += fx[mw1]; }
                 for (int w = mw1 + 1; w <= mw2; w++) {
                     if (fx[w] < 0) { m.damaged = true; continue; }
                     fixedBits += fx[w];
-                    put(f[w] & 0x7F); put((f[w] >> 7) & 0x7F); put((f[w] >> 14) & 0x7F);
+                    if (w > mw1 + 1 || frag != 3) put(f[w] & 0x7F);
+                    put((f[w] >> 7) & 0x7F); put((f[w] >> 14) & 0x7F);
                 }
                 m.text = alphaFromBits(bits7);
             }
         } else if (vtype == 3 || vtype == 4 || vtype == 7) {
+            // multimon-ng parse_numeric: start word bits 7-13, 3 bits (14-16) = further words, so e + 1 words; digits are read from bit 0 of each
+            // word upwards in 4-bit groups running across word boundaries, after skipping 2 bits (10 for numbered numeric); 12 is filler.
+            // A long address starts with the second vector word and then takes e words from the start word.
             const int cnt = (int)((viw >> 14) & 7) + 1;
-            if (mw1 >= kFlexPhaseWords) continue;
             std::vector<uint8_t> nb;
             int skip = vtype == 7 ? 10 : 2;
-            for (int w = mw1; w < mw1 + cnt && w < kFlexPhaseWords; w++) {
-                if (fx[w] < 0) { m.damaged = true; continue; }
-                fixedBits += fx[w];
+            auto feedWord = [&](uint32_t w) {
                 for (int k = 0; k < 21; k++) {
                     if (skip > 0) { skip--; continue; }
-                    nb.push_back((uint8_t)((f[w] >> k) & 1));
+                    nb.push_back((uint8_t)((w >> k) & 1));
                 }
+            };
+            auto take = [&](int w) {
+                if (w < 0 || w >= kFlexPhaseWords || fx[w] < 0) { m.damaged = true; return; }
+                fixedBits += fx[w];
+                feedWord(f[w]);
+            };
+            if (longAddr) {
+                if (hasViw2) { fixedBits += fx[j1 + 1]; feedWord(viw2); } else m.damaged = true;
+                for (int w = mw1; w < mw1 + cnt - 1; w++) take(w);
+            } else {
+                for (int w = mw1; w < mw1 + cnt; w++) take(w);
             }
             m.type = kPagerNumeric;
             m.text = numericFromBits(nb, kNumFlex, true);
