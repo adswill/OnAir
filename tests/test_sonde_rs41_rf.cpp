@@ -1,6 +1,7 @@
 // RS41 through the whole receiver: generator -> IQ at several rates -> carrier search, channel, decoder. Rates, carrier offsets,
 // clock offsets, chunk sizes, 8-bit samples, DC offset, a gap, reset(), and the SNR at which frames start to fail.
 #include "dect2/sonde_testkit.h"
+#include "impair.h"
 using namespace dect2;
 using namespace dect2::sondetest;
 
@@ -41,7 +42,7 @@ int main() {
         if (s) CHECK(std::fabs(s->offsetHz) < 600.0, "%s: carrier at %.0f Hz", w, s->offsetHz);
     }
     // carrier offset (sonde TCXO and radio error), and clock offset
-    for (double cfo : {-10000.0, -4000.0, 4000.0, 10000.0}) {
+    for (double cfo : {-20000.0, -10000.0, -4000.0, 4000.0, 10000.0, 20000.0}) {   // 50 ppm of 403 MHz is 20 kHz
         SynthConfig c = cfg1(); c.cfoHz = cfo;
         Result r = run(c, 8e6, 8);
         char w[64]; snprintf(w, sizeof w, "cfo %+.0f Hz", cfo);
@@ -49,11 +50,17 @@ int main() {
         const SondeInfo* s = find(r.tel, "N4750123");
         if (s) CHECK(std::fabs(s->offsetHz - cfo) < 500.0, "%s: measured %.0f", w, s->offsetHz);
     }
-    for (double sro : {-50.0, 50.0}) {
+    for (double sro : {-100.0, -50.0, 50.0, 100.0}) {
         SynthConfig c = cfg1(); c.sroPpm = sro; c.cfoHz = 3000;
         Result r = run(c, 8e6, 12);
         char w[64]; snprintf(w, sizeof w, "sro %+.0f ppm", sro);
         checkRs41(r, 12, 0.95, w);
+    }
+    {   // combined (REAL_WORLD_CHECKLIST.md): 50 ppm low, a sample clock 80 ppm fast, an echo, 8-bit clipping
+        SynthConfig c = cfg1(); c.sroPpm = 80; c.cfoHz = -20000;
+        Impair im; im.quant8 = true;
+        im.inject = [](cf32* x, size_t n, uint64_t) { std::vector<cf32> v(x, x + n); impair::echo(v, 5, -8, 2.0); impair::clip8(v, 3.0); std::copy(v.begin(), v.end(), x); };
+        checkRs41(run(c, 8e6, 12, im), 12, 0.95, "combined -20 kHz +80 ppm echo 8 bit");
     }
     // chunk sizes
     for (size_t chunk : {(size_t)7, (size_t)4096, (size_t)65536}) {

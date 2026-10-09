@@ -53,12 +53,12 @@ inline int runTypeRf(int idx) {
             Result r = run(cfgOf(t), 2e6, 10);
             check(t, r, 10, 6, "2 Msps");
         }
-        for (double cfo : {-10000.0, 10000.0}) {
+        for (double cfo : {-20000.0, -10000.0, 10000.0, 20000.0}) {   // 50 ppm of 403 MHz is 20 kHz
             SynthConfig c = cfgOf(t); c.cfoHz = cfo;
             char w[48]; snprintf(w, sizeof w, "cfo %+.0f Hz", cfo);
             check(t, run(c, 8e6, 10), 10, 6, w);
         }
-        for (double sro : {-50.0, 50.0}) {
+        for (double sro : {-100.0, -50.0, 50.0, 100.0}) {
             SynthConfig c = cfgOf(t); c.sroPpm = sro;
             char w[48]; snprintf(w, sizeof w, "sro %+.0f ppm", sro);
             check(t, run(c, 8e6, 12), 12, 7, w);

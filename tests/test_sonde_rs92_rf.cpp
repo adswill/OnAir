@@ -12,7 +12,7 @@ static SynthConfig cfg(double snr = 30) {
 
 int main() {
     for (double rate : {8e6, 10e6, 20e6}) {
-        for (double cfo : {0.0, -9000.0, 9000.0}) {
+        for (double cfo : {0.0, -20000.0, 20000.0}) {   // 50 ppm of 405 MHz is 20 kHz
             SynthConfig c = cfg(); c.cfoHz = cfo;
             Result r = run(c, rate, 9);
             const SondeInfo* s = find(r.tel, "P4953934");
@@ -25,8 +25,7 @@ int main() {
             CHECK(std::fabs(s->freqHz - 405.3e6 - cfo) < 700.0, "frequency %.0f", s->freqHz);
         }
     }
-    { SynthConfig c = cfg(); c.sroPpm = 50; Result r = run(c, 8e6, 9); const SondeInfo* s = find(r.tel, "P4953934"); CHECK(s && s->framesOk >= 6, "sro +50"); }
-    { SynthConfig c = cfg(); c.sroPpm = -50; Result r = run(c, 8e6, 9); const SondeInfo* s = find(r.tel, "P4953934"); CHECK(s && s->framesOk >= 6, "sro -50"); }
+    for (double sro : {-100.0, 100.0}) { SynthConfig c = cfg(); c.sroPpm = sro; Result r = run(c, 8e6, 9); const SondeInfo* s = find(r.tel, "P4953934"); CHECK(s && s->framesOk >= 6, "sro %+.0f", sro); }
     printf("snr sweep, frames ok over 15 s:\n");
     for (double snr : {14.0, 10.0, 9.0, 8.0}) {
         Result r = run(cfg(snr), 8e6, 15);
