@@ -21,9 +21,12 @@ namespace {
 constexpr double kChanPass = 5400.0, kChanStop = 9500.0;   // channel filter after the carrier offset correction
 constexpr int kSpecN = 1024;
 // Coarse carrier search while nothing decodes: the power spectrum before the oscillator, 8 frames (0.17 s) summed, a window of +-2.5 kHz slid over
-// +-8 kHz. A radio that is 20 ppm off at 446 MHz is 9 kHz away; the sync tracking alone follows about 6 kHz.
+// +-18 kHz. A radio that is 50 ppm off at 446 MHz is 22 kHz away; the sync tracking alone follows about 6 kHz. An error beyond kCoarseHz is mixed out
+// at the input rate, ahead of the decimation (which passes +-22 kHz), so that a carrier near the edge is brought into the middle; a smaller one by
+// the oscillator at 48 kHz, after the DC removal, so that the radio's DC spike is not moved into the channel.
 constexpr int kAfcFrames = 8;
-constexpr double kAfcRange = 8000.0, kAfcHalfWidth = 2500.0, kAfcMinStep = 1500.0, kAfcMinRatio = 4.0;
+constexpr double kCoarseHz = 7000.0;
+constexpr double kAfcRange = 18000.0, kAfcHalfWidth = 2500.0, kAfcMinStep = 1500.0, kAfcMinRatio = 4.0;
 constexpr int kPublishSamples = 12000;                      // 0.25 s at 48 kHz
 
 // Pick the integer decimation to a rate just above 48 kHz: a factor with small prime factors keeps the filters short, and the exact
@@ -101,6 +104,14 @@ struct DmrReceiver::Impl {
     cf32 dc = cf32(0, 0);
     uint64_t dcCount = 0;
     double ncoPhase = 0, ncoHz = 0;
+    // Polarity: a mirrored spectrum (I and Q swapped by the radio or the file format) inverts every symbol, and in DMR the inverted voice sync is
+    // the data sync, so the bursts are found but nothing decodes. While a carrier is there and no FEC block has decoded for 1 s, the discriminator
+    // is turned over.
+    bool invert = false, carrierSeen = false;
+    int quietReports = 0;
+    uint64_t lastOk = 0;
+    double coarseHz = 0, coarsePhase = 0;   // mixed out at the input rate (see kCoarseHz)
+    std::vector<cf32> coarseBuf;
     StreamFir<cf32> chan;
     StreamFir<float> mf;
     cf32 prevB = cf32(1, 0);
@@ -187,7 +198,8 @@ struct DmrReceiver::Impl {
         for (auto& s : stages) s.reset();
         if (!rsPass) rs.reset();
         dc = cf32(0, 0); dcCount = 0;
-        ncoPhase = 0; ncoHz = 0;
+        ncoPhase = 0; ncoHz = 0; coarseHz = 0; coarsePhase = 0;
+        invert = carrierSeen = false; quietReports = 0; lastOk = 0;
         chan.reset(); mf.reset();
         prevB = cf32(1, 0);
         link.reset();
@@ -220,6 +232,19 @@ struct DmrReceiver::Impl {
         }
         const cf32* cur = x;
         size_t cn = n;
+        if (coarseHz != 0) {
+            coarseBuf.resize(n);
+            const double w = -2 * kPi * coarseHz / inRate;
+            const cf32 stp((float)std::cos(w), (float)std::sin(w));
+            cf32 ph((float)std::cos(coarsePhase), (float)std::sin(coarsePhase));
+            for (size_t i = 0; i < n; i++) {
+                coarseBuf[i] = x[i] * ph;
+                ph *= stp;
+                if ((i & 1023) == 1023) ph /= std::abs(ph);
+            }
+            coarsePhase = std::fmod(coarsePhase + w * (double)n, 2 * kPi);
+            cur = coarseBuf.data();
+        }
         for (size_t s = 0; s < stages.size(); s++) {
             std::vector<cf32>& dst = (s & 1) ? bufB : bufA;
             dst.clear();
@@ -252,7 +277,7 @@ struct DmrReceiver::Impl {
         const cf32 p = yb * std::conj(prevB);
         prevB = yb;
         const float d = (float)(std::atan2(p.imag(), p.real()) * (kWorkRate / (2 * kPi)));
-        const float y = mf.push(d);
+        const float y = mf.push(invert ? -d : d);
         link.push(y);
         const double nd = link.takeNcoDelta();
         if (nd != 0) ncoHz += nd;
@@ -280,9 +305,9 @@ struct DmrReceiver::Impl {
     }
 
     // Where is the carrier? Only while no slot is followed. The estimate is the centre of the strongest +-2.5 kHz window, refined by the centroid of the
-    // power above the noise floor (taken from 17 to 21 kHz, which the decimation filters still pass and no channel of the wanted signal reaches).
+    // power above the noise floor (the lowest quarter of the bins within +-21 kHz, which the decimation filters pass: the channel covers less than a
+    // quarter of them, wherever it is).
     void coarseCarrier() {
-        if (link.locked()) { afcPrev = 1e9; return; }
         const double binHz = kWorkRate / kSpecN;
         // the summed spectrum in order of frequency, bin j at (j - N/2) * binHz, and its running sum
         std::vector<double>& ps = afcPrefix;
@@ -291,15 +316,23 @@ struct DmrReceiver::Impl {
         auto jOf = [&](double f) { return std::max(0, std::min(kSpecN, (int)std::ceil(f / binHz) + kSpecN / 2)); };    // first bin at or above f
         auto sumRange = [&](double lo, double hi) { const int a = jOf(lo), b = jOf(hi + 1e-9); return b > a ? ps[(size_t)b] - ps[(size_t)a] : 0.0; };
         auto binsIn = [&](double lo, double hi) { return std::max(0, jOf(hi + 1e-9) - jOf(lo)); };
-        const double n0sum = sumRange(17000.0, 21000.0) + sumRange(-21000.0, -17000.0);
-        const int n0bins = binsIn(17000.0, 21000.0) + binsIn(-21000.0, -17000.0);
-        if (n0bins == 0 || n0sum <= 0) return;
-        const double n0 = n0sum / n0bins;
+        std::vector<double> fl;
+        for (int j = jOf(-21000.0); j < jOf(21000.0); j++) fl.push_back(afcSum[(size_t)((j + kSpecN / 2) % kSpecN)]);
+        if (fl.size() < 16) return;
+        std::nth_element(fl.begin(), fl.begin() + (ptrdiff_t)(fl.size() / 4), fl.end());
+        const double n0 = fl[fl.size() / 4] * 1.3;     // a quartile of the noise lies a little below its mean
+        if (n0 <= 0) return;
+        // near the present centre first (+-8 kHz: a stronger channel 12.5 kHz away must not pull the search off a weaker wanted one), then the
+        // whole range for a radio that is far off
         double best = 0, bestC = 0;
         int bestBins = 1;
-        for (double c = -kAfcRange; c <= kAfcRange; c += binHz) {
-            const double sum = sumRange(c - kAfcHalfWidth, c + kAfcHalfWidth);
-            if (sum > best) { best = sum; bestC = c; bestBins = std::max(1, binsIn(c - kAfcHalfWidth, c + kAfcHalfWidth)); }
+        for (const double range : {8000.0, kAfcRange}) {
+            best = 0;
+            for (double c = -range; c <= range; c += binHz) {
+                const double sum = sumRange(c - kAfcHalfWidth, c + kAfcHalfWidth);
+                if (sum > best) { best = sum; bestC = c; bestBins = std::max(1, binsIn(c - kAfcHalfWidth, c + kAfcHalfWidth)); }
+            }
+            if (best >= kAfcMinRatio * n0 * bestBins) break;
         }
         if (best < kAfcMinRatio * n0 * bestBins) { afcPrev = 1e9; return; }
         double num = 0, den = 0;
@@ -310,11 +343,21 @@ struct DmrReceiver::Impl {
         }
         if (den <= 0) return;
         const double est = num / den;
+        // a lone carrier on the 12.5 kHz channel raster of the tuned frequency is the neighbouring channel, not ours with a radio error that
+        // happens to be one channel: the user is told nothing decodes rather than shown another channel's calls
+        if (std::fabs(std::fabs(coarseHz + est) - 12500.0) < 1500.0) { afcPrev = 1e9; return; }
+        carrierSeen = true;
+        if (link.locked()) { afcPrev = 1e9; return; }
         const bool agree = std::fabs(est - afcPrev) < 400.0;
         afcPrev = est;
         if (!agree || std::fabs(est - ncoHz) < kAfcMinStep) return;
         link.shiftOffset(est - ncoHz);
-        ncoHz = est;
+        // syncs found far off the centre were measured through the edge of the channel filter: their levels are wrong
+        if (std::fabs(est - ncoHz) > 3000) link.forgetCalibration();
+        const double total = coarseHz + est;
+        if (std::fabs(total) > kCoarseHz) { coarseHz = total; ncoHz = 0; }
+        else { coarseHz = 0; ncoHz = total; }
+        link.setCentre(total);
         afcPrev = 1e9;
         afcFilled = 0;      // the spectrum is taken before the oscillator, but let the filters and the sync search settle for a moment
     }
@@ -323,6 +366,16 @@ struct DmrReceiver::Impl {
         samplesSincePublish = 0;
         DmrTelemetry t;
         link.snapshot(t);
+        if (t.blocksOk != lastOk) { lastOk = t.blocksOk; quietReports = 0; }
+        else if (carrierSeen && ++quietReports >= 4) {
+            quietReports = 0;
+            invert = !invert;
+            link.dropTracks();
+            std::function<void(const std::string&)> cb;
+            { std::lock_guard<std::mutex> lk(cbMu); cb = logCb; }
+            if (cb) cb(invert ? "DMR: nothing decodes on a carrier: trying the inverted spectrum (I and Q swapped)" : "DMR: back to the normal spectrum");
+        }
+        carrierSeen = false;
         // level in the channel
         if (powN) levelDb = (float)(10 * std::log10(std::max(powAcc / (double)powN, 1e-12)));
         powAcc = 0; powN = 0;
@@ -366,7 +419,7 @@ struct DmrReceiver::Impl {
             }
             for (int b = 0; b < 128; b++) t.spectrumDb[b] = (float)(10 * std::log10(std::max(sp[b] / mx, 1e-10)));
         }
-        t.cfoHz = ncoHz + link.cfoResidualHz();
+        t.cfoHz = coarseHz + ncoHz + link.cfoResidualHz();
         std::lock_guard<std::mutex> lk(mu);
         t.seq = ++telSeq;
         tel = std::move(t);
