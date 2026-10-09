@@ -13,6 +13,7 @@
 #include "dect2/drm_dec.h"
 #include "dect2/drm_fft.h"
 #include "drm_front.h"
+#include "dect2/channel_find.h"
 #include "drm_internal.h"
 #include <algorithm>
 #include <atomic>
@@ -77,6 +78,8 @@ struct DrmReceiver::Impl {
     uint64_t blockedUntil = 0;       // after a false alarm: no new lock on the same (mode, shift) before this sample
     int blockedMode = -1, blockedShift = 0, trackShift = 0;
     bool mirror = false;                      // the input is conjugated (a mirrored spectrum)
+    ChannelCentre cc;                         // moves a channel far from the middle of the sample band there
+    std::vector<cf32> cin;
     double lastRho[4] = {};
 
     // ---------------------------------------------------------------- tracker
@@ -173,6 +176,7 @@ struct DrmReceiver::Impl {
     void configure(double rate) {
         inRate = rate;
         ready = front.configure(rate);
+        cc.configure(rate, 10000, 12000, 4.0);
         corr.reset(); corrPpm = 0; corr.setPpm(0);
         resetAll(false);
     }
@@ -871,6 +875,11 @@ struct DrmReceiver::Impl {
     // ---------------------------------------------------------------- feed and telemetry
     void feed(const cf32* x, size_t n) {
         if (!ready || n == 0) return;
+        // a channel away from the middle of the sample band (beyond the +-24 kHz the front end keeps) is moved there first
+        cin.assign(x, x + n);
+        cc.process(cin.data(), n, phase == kTrack && be.sdcOk > 0 && be.mscOk > 0);   // FAC alone also comes through an alias of a strong channel far out
+        if (cc.takeChanged()) resetAll(false);
+        x = cin.data();
         tmp.clear();
         front.process(x, n, tmp);
         tmp2.clear();
@@ -915,7 +924,7 @@ struct DrmReceiver::Impl {
         t.mode = phase == kTrack ? mode : (be.facValid() ? be.mode() : -1);
         if (t.mode >= 0) { t.modeName = modeParams(t.mode).name; }
         const bool tracking = phase == kTrack && frameSync;
-        t.cfoHz = fHz;
+        t.cfoHz = fHz + cc.offsetHz();
         t.snrDb = tracking && sigma2 > 0 ? (float)std::max(0.0, std::min(60.0, snrSm)) : 0.f;
         t.correlation = (float)cpRho;
         t.sroPpm = (float)sroPpm;
@@ -1018,7 +1027,7 @@ DrmReceiver::~DrmReceiver() = default;
 
 void DrmReceiver::configure(double inputRateHz) { p_->configure(inputRateHz); }
 bool DrmReceiver::ready() const { return p_->ready; }
-void DrmReceiver::reset() { if (p_->ready) p_->resetAll(true); }
+void DrmReceiver::reset() { if (p_->ready) { p_->cc.reset(); p_->resetAll(true); } }
 void DrmReceiver::feed(const cf32* x, size_t n) { p_->feed(x, n); }
 bool DrmReceiver::telemetry(DrmTelemetry& out, uint64_t lastSeq) {
     std::lock_guard<std::mutex> lk(p_->mu);

@@ -89,7 +89,7 @@ void ChannelCentre::measure() {
     while (a > 2 && a > best - w && sm(a - 1) > half) a--;
     while (b < N - 3 && b < best + 2 * w && sm(b + 1) > half) b++;
     cand_ = ((a + b) / 2.0 - c) * hz;
-    haveCand_ = std::fabs(cand_) > keep_;
+    haveCand_ = std::fabs(cand_) > keep_ && b - a >= w / 3;   // a carrier or a narrow interferer is not a channel
 }
 
 } // namespace dect2
