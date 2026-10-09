@@ -259,6 +259,10 @@ struct FmReceiver::Impl {
     std::vector<DecimFir<cf32>> chan;
     DecimFir<float> mpxDecim;
     cf32 prev = cf32(1, 0);
+    // The radio's DC spike sits on the carrier when the radio is tuned exactly to the station. Its mean over half a second is taken out of the
+    // channel: the carrier itself turns by the tuning error (100 Hz per ppm of the radio at 100 MHz) and averages away, the spike does not.
+    cf32 dcCh = cf32(0, 0);
+    float dcChA = 0;
     std::vector<cf32> a, b;                      // scratch between the channel stages
     std::vector<float> freq, mpx;
 
@@ -330,6 +334,7 @@ struct FmReceiver::Impl {
         // channel filter: decimate to about 500 kHz in stages of at most 10
         const int dTotal = std::max(1, (int)std::lround(fs / 500e3));
         fo = fs / dTotal; fm = fo / 2; fa = fm / 5;
+        dcChA = (float)(1.0 / (0.5 * fo));
         std::vector<int> stages;
         int rest = dTotal;
         for (int p = 2; rest > 1;) {
@@ -369,7 +374,7 @@ struct FmReceiver::Impl {
         mpxDecim.reset(); lpM.reset(); lpD.reset(); rdsLp.reset();
         if (audioRsOk) audioRs.reset();
         if (rdsRsOk) rdsRs.reset();
-        prev = cf32(1, 0);
+        prev = cf32(1, 0); dcCh = cf32(0, 0);
         bp1.reset(); bp2.reset(); nb1a.reset(); nb1b.reset(); nb2a.reset(); nb2b.reset(); nPow1 = nPow2 = pilotSnrDb = 0;
         phi = pllFreq = pLpf = pI = pQ = pAmp2 = dc = 0;
         pilotLock = false; lockT = unlockT = 0; stereoBlend = 0;
@@ -399,10 +404,14 @@ struct FmReceiver::Impl {
         }
         samplesIn += n; sincePub += n;
         // discriminator: the frequency in units of 75 kHz
+        // only when the carrier is clearly off the centre: on the centre (within 50 Hz) the mean is the carrier itself in quiet passages
+        const bool dcOn = std::fabs(cfoEma) > 50;
         freq.resize(cn);
         for (size_t i = 0; i < cn; i++) {
             // a NaN or infinite sample (a broken file) would stay for good in the pilot loop, the DC average and the measurements: count it as silence
-            const cf32 c = std::isfinite(cur[i].real()) && std::isfinite(cur[i].imag()) ? cur[i] : cf32(0, 0);
+            cf32 c = std::isfinite(cur[i].real()) && std::isfinite(cur[i].imag()) ? cur[i] : cf32(0, 0);
+            dcCh += (c - dcCh) * dcChA;
+            if (dcOn) c -= dcCh;
             const cf32 p = std::conj(prev) * c;
             freq[i] = (float)(std::atan2(p.imag(), p.real()) * fo / (2 * kPi) / kDevHz);
             prev = c;
