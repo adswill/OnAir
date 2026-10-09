@@ -29,8 +29,11 @@ static FmTelemetry run(const char* what, const FmGenConfig& c, double secs, cons
     return t;
 }
 
-static void rdsGood(const FmTelemetry& t, const char* what, float minOk) {
+// RDS sends 11.4 groups a second; secs: the length of the run (the first 1.5 s are allowed for locking)
+static void rdsGood(const FmTelemetry& t, const char* what, float minOk, double secs) {
     CHECK(t.rdsSync && t.rdsBlockOkPct >= minOk, "%s: RDS blocks %.0f%% good (wanted %.0f%%)", what, t.rdsBlockOkPct, minOk);
+    const double want = (secs - 1.5) * 1187.5 / 104 * 0.9;
+    CHECK((double)t.rdsGroups >= want, "%s: %llu RDS groups (wanted %.0f)", what, (unsigned long long)t.rdsGroups, want);
     CHECK(t.psName == "TESTFM  " && t.radioText == "OnAir FM test signal" && t.piCode == 0x4A21, "%s: RDS contents", what);
 }
 
@@ -42,7 +45,13 @@ int main() {
         FmTelemetry t = run("NaN sample", base, 6, [](std::vector<cf32>& x) { x[1000000] = cf32(NAN, NAN); x[1000001] = cf32(INFINITY, 0); });
         CHECK(std::isfinite(t.cfoHz) && std::fabs(t.cfoHz) < 200, "NaN sample: carrier offset %f", t.cfoHz);
         CHECK(t.stereo && t.pilotPct > 7, "NaN sample: stereo lost");
-        rdsGood(t, "NaN sample", 90);
+        rdsGood(t, "NaN sample", 90, 6);
+    }
+    // the radio's sample clock off by +-100 ppm: the RDS bit clock (pilot / 16) then drifts against the receiver's 16 samples per bit
+    for (double ppm : {-100.0, 100.0}) {
+        char w[64]; snprintf(w, sizeof w, "sample clock %+.0f ppm", ppm);
+        FmTelemetry t = run(w, base, 16, [ppm](std::vector<cf32>& x) { x = impair::clock(x, ppm); });
+        rdsGood(t, w, 90, 8);
     }
     return fails ? 1 : 0;
 }

@@ -285,7 +285,7 @@ struct FmReceiver::Impl {
     std::vector<cf32> rIn, r1, r19;
     cf32 sq = cf32(0, 0);
     cf32 mfBuf[16] = {};
-    int mfPos = 0, sampleIdx = 0, bestPhase = 0;
+    int mfPos = 0, sampleIdx = 0, bestPhase = 0, sinceSym = 0;
     float phaseEnergy[16] = {};
     int prevSym = 0;
     float symAvg = 0.01f;
@@ -371,7 +371,7 @@ struct FmReceiver::Impl {
         phi = pllFreq = pLpf = pI = pQ = pAmp2 = dc = 0;
         pilotLock = false; lockT = unlockT = 0; stereoBlend = 0;
         deL.reset(); deR.reset();
-        sq = cf32(0, 0); std::memset(mfBuf, 0, sizeof mfBuf); mfPos = sampleIdx = bestPhase = 0;
+        sq = cf32(0, 0); std::memset(mfBuf, 0, sizeof mfBuf); mfPos = sampleIdx = bestPhase = sinceSym = 0;
         std::memset(phaseEnergy, 0, sizeof phaseEnergy);
         prevSym = 0; symAvg = 0.01f; constHist.clear();
         rds.reset();
@@ -506,11 +506,16 @@ struct FmReceiver::Impl {
         for (int k = 0; k < 16; k++) y += mfBuf[(mfPos + k) & 15] * tpl[k];
         const int ph = sampleIdx & 15;
         phaseEnergy[ph] += (std::norm(y) - phaseEnergy[ph]) * 0.01f;
+        // the bit timing: the sampling phase (of 16) with the most energy after the matched filter. It moves when the radio's clock drifts against the
+        // bit clock. A symbol is taken when the phase reaches the best one or has passed it by at most two samples, at most once per 8 samples: a move of the best phase
+        // can then neither take a bit twice (across the wrap from 15 to 0) nor skip one (the best phase moving back past the current sample).
         int best = 0;
         for (int k = 1; k < 16; k++) if (phaseEnergy[k] > phaseEnergy[best]) best = k;
         if (phaseEnergy[best] > 1.15f * phaseEnergy[bestPhase]) bestPhase = best;
         sampleIdx++;
-        if (ph != bestPhase) return;
+        sinceSym++;
+        if (sinceSym < 8 || ((ph - bestPhase + 16) & 15) >= 3) return;
+        sinceSym = 0;
         symAvg += (std::fabs(y.real()) - symAvg) * 0.02f;
         const int sym = y.real() >= 0 ? 1 : 0;
         rds.pushBit(sym ^ prevSym);
