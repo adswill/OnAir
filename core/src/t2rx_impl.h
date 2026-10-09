@@ -51,6 +51,7 @@ namespace t2rxi {
 
 constexpr double kP1Threshold = 0.30; // C-A-B correlation needed to try decoding
 constexpr double kP1MinConf = 0.40;   // decoded S1/S2 sequence correlation needed to accept
+constexpr int kP1CfoBins = 64;        // frequency offset P1 is searched over: +-64 P1 carriers (+-571 kHz at 8 MHz, +-115 kHz at 1.7 MHz)
 constexpr int kPeakHalfWidth = 700;
 inline bool trackDisabled() { static const bool v = getenv("DECT2_NOTRACK") != nullptr; return v; }   // switch the windowed P1 search off
 constexpr int kTrackWindow = 1200;    // half width of the window around the expected P1 once locked (samples at the native rate)

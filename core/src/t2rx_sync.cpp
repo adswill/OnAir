@@ -255,15 +255,22 @@ T2Receiver::Impl::P1Decode T2Receiver::Impl::decodeP1(int64_t d, double cfoC) {
     P1Decode best;
     const double binHz = fn / 1024.0;
     double hypStep = fn / kP1CLen; // 1/(542 T)
-    for (int k = -1; k <= 1; k++) {
+    // The C-A-B correlation gives the offset only modulo 1/(542 T) (16.9 kHz at 8 MHz), so the offsets cfoC + k/(542 T) are tried and the
+    // one whose carriers carry the S1/S2 sequences wins. Three of them (+-25 kHz) were enough for a radio tuned to the channel, but not for
+    // a recording made with the channel off centre (a Hungarian mux recorded 280 kHz off never showed a P1): the search now covers
+    // kP1CfoBins P1 carriers either side, which keeps the 6.9 MHz wide P1 inside the band.
+    const int kHyp = (int)std::ceil(kP1CfoBins * (double)kP1CLen / 1024.0);
+    for (int k = -kHyp; k <= kHyp; k++) {
         double cfo = cfoC + k * hypStep;
         fr.assign(1024, 0.f); fi.assign(1024, 0.f);
+        const cd step = std::polar(1.0, -kTwoPi * cfo / fn);
+        cd w(1, 0);
         for (int t = 0; t < 1024; t++) {
             cf32 x = at(d + kP1CLen + t);
-            double a = -kTwoPi * cfo * t / fn;
-            float c = (float)std::cos(a), s = (float)std::sin(a);
+            const float c = (float)w.real(), s = (float)w.imag();
             fr[t] = x.real() * c - x.imag() * s;
             fi[t] = x.real() * s + x.imag() * c;
+            w *= step;
         }
         doFft(10);
         // differential decode across the active carriers
