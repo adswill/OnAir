@@ -67,6 +67,7 @@ struct DvbsReceiver::Impl {
     SpectrumResult specRes;
     std::vector<float> psdDb;
     int searchTries = 0;
+    std::vector<cf32> clean;                    // the input with non-finite samples replaced
     DvbsFront front;
     std::vector<cf32> sym, y;
     uint64_t symTotal = 0;
@@ -497,6 +498,15 @@ void DvbsReceiver::feed(const cf32* x, size_t n) {
         const uint64_t keep = I.seq;
         I.resetState();
         I.seq = keep;
+    }
+    // a NaN or infinite sample (a broken file) would stay in the AGC power of the symbol timer, whose loop then runs away and reads outside its
+    // buffer: such samples count as silence
+    for (size_t i = 0; i < n; i++) {
+        if (std::isfinite(x[i].real() + x[i].imag())) continue;
+        I.clean.assign(x, x + n);
+        for (cf32& v : I.clean) if (!std::isfinite(v.real() + v.imag())) v = cf32(0, 0);
+        x = I.clean.data();
+        break;
     }
     I.inputCount += n;
     I.spec.push(x, n);
