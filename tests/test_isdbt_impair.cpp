@@ -163,13 +163,14 @@ int main() {
         check(r.t.isdbt.tmccOk && r.t.isdbt.partial && r.t.isdbt.layer[1].segments == 12, "reconfiguration", "new parameters");
         check(r.good[1] > 6L * packetsPerFrame(p2.mode, p2.layer[1]), "reconfiguration", "layer B after the change");
     });
-    // everything at once: the worst UHF offset, a +80 ppm clock, an echo inside the guard interval and an overdriven 8-bit radio
+    // everything at once: the worst UHF offset, a +80 ppm clock, an echo inside the guard interval, a DC spike and an overdriven 8-bit radio
     add([] {
         Params p; p.mode = 3; p.guard = kGi8; p.layer[0] = L(13, k16Qam, kR23, 1);
         auto x = impair::clock(toRate(frames(p, 16), 10e6), 80);
         impair::shift(x, 43000, 10e6);
         impair::echo(x, 300, -6, 2.0);
         impair::noise(x, 30);
+        impair::dc(x, -10);
         impair::clip8(x, 0.35);
         Result r = receive(x, 10e6);
         expectLayers("combined: +43 kHz, +80 ppm, echo, 8-bit clip", p, 16, 8, r);
