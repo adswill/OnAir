@@ -1,7 +1,6 @@
-// APRS and AX.25 packet radio (1200 bd AFSK) on one channel, 144.800 MHz in Europe.
-// Skeleton: counts the samples, measures the input level and reports four times a second of signal (state 0: no decoder yet); the
-// mode's worker replaces the body. Written to the engine's contract: configure() once the sample rate is known, feed() from the analysis
-// thread (never blocks), telemetry() and the setters from the interface thread.
+// APRS and AX.25 packet radio on one 25 kHz FM channel (144.800 MHz in Europe): 1200 baud AFSK and 9600 baud G3RUH at the same time.
+// Written to the engine's contract: configure() once the sample rate is known, feed() from the analysis thread (never blocks),
+// telemetry() and the setters from the interface thread.
 #pragma once
 #include "mode_tuning.h"
 #include "packet_tel.h"
