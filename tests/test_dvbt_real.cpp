@@ -24,7 +24,7 @@ struct Case {
     const char* name;
     int mode, gi, mod, cr, hier = 0, crLp = -1;
     double bw = 8, offHz = 0, ppm = 0, inRate = 0;
-    bool echo = false, clip = false;
+    bool echo = false, clip = false, swap = false, nan = false;
     int frames = 0;
 };
 
@@ -49,6 +49,8 @@ static Result run(const Case& c) {
     impair::shift(sig, c.offHz, fn);
     impair::noise(sig, 32.0, 3);
     if (c.clip) impair::clip8(sig, 0.6);   // rms 0.6 of full scale: the peaks clip
+    if (c.swap) impair::swapIq(sig);
+    if (c.nan) for (size_t i = sig.size() / 3; i < sig.size() / 3 + 64; i++) sig[i] = cf32(NAN, i % 2 ? INFINITY : 0.f);
     std::vector<cf32> in;
     const double rate = c.inRate > 0 ? c.inRate : fn;
     if (rate != fn) { RationalResampler up; up.configure(fn, rate); up.process(sig.data(), sig.size(), in); }
@@ -90,6 +92,10 @@ int main() {
     { Case c{"8K GI 1/32 64-QAM alpha 4, HP 3/4", k8K, kGi32, k64Qam, kR34}; c.hier = 3; c.crLp = kR78; add(c); }
     // non-hierarchical with a reserved value in the (unused) LP code rate field
     { Case c{"2K GI 1/4 16-QAM 2/3, LP rate field 7", k2K, kGi4, k16Qam, kR23}; c.crLp = 7; add(c); }
+    // I and Q swapped (a mirrored spectrum), and a block of NaN / infinite samples from a broken driver
+    { Case c{"8K GI 1/8 16-QAM 2/3, I/Q swapped, +12 kHz", k8K, kGi8, k16Qam, kR23}; c.swap = true; c.offHz = 12e3; add(c); }
+    { Case c{"2K GI 1/4 QPSK 1/2, I/Q swapped", k2K, kGi4, kQpsk, kR12}; c.swap = true; add(c); }
+    { Case c{"8K GI 1/4 16-QAM 2/3, NaN samples", k8K, kGi4, k16Qam, kR23}; c.nan = true; c.frames = 10; add(c); }
     // everything at once: the worst UHF offset, a fast clock, an echo inside the guard and an overdriven 8-bit radio, at 10 Msps
     { Case c{"8K GI 1/4 64-QAM 2/3, +43 kHz +80 ppm echo clip8", k8K, kGi4, k64Qam, kR23}; c.offHz = 43e3; c.ppm = 80; c.echo = true; c.clip = true;
       c.inRate = 10e6; c.frames = 10; add(c); }

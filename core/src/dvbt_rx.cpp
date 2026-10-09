@@ -76,6 +76,8 @@ struct DvbtReceiver::Impl {
     int intRange = 20;            // whole carriers the integer search covers each way: 50 ppm at the top of UHF (43 kHz), with margin
     bool intLocked = false;
     std::vector<double> intScore; // accumulated pilot-coherence metric per candidate shift
+    std::vector<double> intScoreM;// the same for a mirrored spectrum (I and Q swapped by the radio or the file format)
+    bool mirror = false;          // the input is conjugated on the way in (set when the mirrored pilot pattern wins)
     int intSymbols = 0;
     uint64_t absSym = 0;          // symbols processed since lock
     int back = 0;
@@ -137,7 +139,7 @@ struct DvbtReceiver::Impl {
         for (int i = 0; i < 4; i++) { hypVotes[i] = 0; hypScore[i] = 0; }
         grid.clear(); gridAge.clear(); cpRef.clear(); cpRefValid = false; gridFilled = 0;
         fec.reset(); streamSecs = 0; symbols = 0; packetsOut = 0; detect = 0;
-        buf.clear(); base = 0; resampler.reset(); dc = cf32(0, 0); clk.reset();
+        buf.clear(); base = 0; resampler.reset(); dc = cf32(0, 0); clk.reset(); mirror = false;
         eqShow.clear(); rawShow.clear(); chMag.clear(); chPh.clear(); irDb.clear();
     }
 
@@ -218,7 +220,7 @@ struct DvbtReceiver::Impl {
         fbuf.assign(N, cf32(0, 0));
         // a radio 50 ppm off at 860 MHz is 43 kHz away: 38 carriers in 8K at 8 MHz, 62 at 5 MHz. Search +-55 kHz.
         intRange = std::max(20, (int)std::ceil(55e3 / (fn / N)));
-        intScore.assign((size_t)(2 * intRange + 1), 0.0); intSymbols = 0; intLocked = false; intShift = 0;
+        intScore.assign((size_t)(2 * intRange + 1), 0.0); intScoreM.assign(intScore.size(), 0.0); intSymbols = 0; intLocked = false; intShift = 0;
         tpsBitsSeen.clear(); tpsBase = 0; prevValid = false; prevWin = INT64_MIN; tpsOk = false; absSym = 0;
         grid.assign((size_t)(K + 2) / 3 + 1, cf32(0, 0)); gridAge.assign(grid.size(), 255);
         cpRef.assign(continualPilots(mode).size(), cf32(1, 0)); cpRefValid = false; gridFilled = 0;
@@ -365,6 +367,14 @@ struct DvbtReceiver::Impl {
                     acc += z; mag += std::abs(z);
                 }
                 intScore[sh + intRange] += mag > 0 ? std::abs(acc) / mag : 0;
+                // mirrored: carrier k sits at bin -(k - kc) + sh
+                acc = 0; mag = 0;
+                for (int k : cp) {
+                    const int idx = (((sh - (k - kc)) % N) + N) % N;
+                    const cd z = cd(cur[idx].real(), cur[idx].imag()) * std::conj(cd(prevRawFull[idx].real(), prevRawFull[idx].imag()));
+                    acc += z; mag += std::abs(z);
+                }
+                intScoreM[sh + intRange] += mag > 0 ? std::abs(acc) / mag : 0;
             }
         }
         prevRawFull = cur;
@@ -374,8 +384,17 @@ struct DvbtReceiver::Impl {
             const int nS = 2 * intRange + 1;
             for (int i = 0; i < nS; i++) if (intScore[i] > bm) { bm = intScore[i]; best = i; }
             for (int i = 0; i < nS; i++) if (i != best && intScore[i] > second) second = intScore[i];
+            const double bmM = *std::max_element(intScoreM.begin(), intScoreM.end());
+            if (bmM > 1.5 * bm) {
+                // the continual pilots line up only with the spectrum turned round: conjugate the input from here on (and what is buffered)
+                // and start the acquisition again, since the carrier offset and the timing were measured on the mirror image
+                mirror = !mirror;
+                for (auto& v : buf) v = std::conj(v);
+                tpsOk = false; state = 0; detect = 1; agreeCount = 0;
+                return;
+            }
             if (bm > 0 && bm > 1.5 * second) { intShift = best - intRange; intLocked = true; }
-            else { std::fill(intScore.begin(), intScore.end(), 0.0); intSymbols = 0; }
+            else { std::fill(intScore.begin(), intScore.end(), 0.0); std::fill(intScoreM.begin(), intScoreM.end(), 0.0); intSymbols = 0; }
         }
     }
 
@@ -429,6 +448,7 @@ struct DvbtReceiver::Impl {
         if (!intLocked) {
             // search needs the unshifted transform: the shifted Y is only a re-indexing of fbuf, which is intact after transform()
             integerSearch(s);
+            if (state == 0) return true;
             symStart += P;
             absSym++;
             if (intLocked) { prevValid = false; tpsBitsSeen.clear(); tpsBase = absSym; }
@@ -805,12 +825,20 @@ void DvbtReceiver::feed(const cf32* x, size_t n) {
         size_t k = 0;
         for (; k + 4 <= n; k += 4) for (size_t l = 0; l < 4; l++) { sr4[l] += x[k + l].real(); si4[l] += x[k + l].imag(); }
         for (; k < n; k++) { sr4[0] += x[k].real(); si4[0] += x[k].imag(); }
-        const float sr = (sr4[0] + sr4[1]) + (sr4[2] + sr4[3]), si = (si4[0] + si4[1]) + (si4[2] + si4[3]);
+        float sr = (sr4[0] + sr4[1]) + (sr4[2] + sr4[3]), si = (si4[0] + si4[1]) + (si4[2] + si4[3]);
+        if (!std::isfinite(sr) || !std::isfinite(si)) {
+            // NaN or infinite samples (a broken file or driver): one of them would stick in the DC estimate and the filters for good
+            I.dcOut.assign(x, x + n);
+            sr = si = 0;
+            for (auto& v : I.dcOut) { if (!std::isfinite(v.real()) || !std::isfinite(v.imag())) v = cf32(0, 0); sr += v.real(); si += v.imag(); }
+            x = I.dcOut.data();
+        }
         const float w = (float)std::min(1.0, (double)n / (0.05 * I.inRate));
         I.dc += (cf32(sr, si) / (float)n - I.dc) * w;
         I.dcOut.resize(n);
         const float dr = I.dc.real(), di = I.dc.imag();
-        for (size_t q = 0; q < n; q++) I.dcOut[q] = cf32(x[q].real() - dr, x[q].imag() - di);
+        if (I.mirror) for (size_t q = 0; q < n; q++) I.dcOut[q] = cf32(x[q].real() - dr, -(x[q].imag() - di));
+        else for (size_t q = 0; q < n; q++) I.dcOut[q] = cf32(x[q].real() - dr, x[q].imag() - di);
         x = I.dcOut.data();
     }
     I.stage.clear();
