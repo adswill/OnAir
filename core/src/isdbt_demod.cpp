@@ -257,14 +257,14 @@ struct Demod::Impl {
         };
         (void)addPoint; (void)sp; (void)tot; (void)acc; (void)sw;
         // two passes: a common phase first, then a ramp from the residual
-        struct P { int k; double ph; double w; };
+        struct P { int k; double ph; double w; bool decided; };
         std::vector<P> pts;
-        auto collect = [&](int k, cf32 z, cf32 ref) {
+        auto collect = [&](int k, cf32 z, cf32 ref, bool decided = false) {
             const double a = accPhi + accSlope * (double)(k - kc);
             const std::complex<double> r = std::complex<double>(z.real(), z.imag()) * std::polar(1.0, -a) * std::conj(std::complex<double>(ref.real(), ref.imag()));
             const double w = std::abs(r);
             if (w < 1e-12) return;
-            pts.push_back({k, std::arg(r), w});
+            pts.push_back({k, std::arg(r), w, decided});
         };
         for (auto& r : runs) {
             if (r.filled < 4 || r.H.empty()) continue;
@@ -279,7 +279,7 @@ struct Demod::Impl {
         }
         // the TMCC carriers: their sign flips are known once the TMCC is decoded, so against the preceding symbol they are pilots at fixed places
         if (haveTmcc && prevValid && symIdx >= 17)
-            for (const auto& tc : tmccCar) collect(tc.first, Yraw[tc.first], prevY[(size_t)tc.first] * (tmccBits[tc.second][symIdx] ? -1.f : 1.f));
+            for (const auto& tc : tmccCar) collect(tc.first, Yraw[tc.first], prevY[(size_t)tc.first] * (tmccBits[tc.second][symIdx] ? -1.f : 1.f), true);
         if (cpRefValid && runs.empty()) for (size_t j = 0; j < cpK.size(); j++) {
             // a continual pilot that belongs to a differential segment (or the last carrier)
             const int k = cpK[j];
@@ -287,6 +287,17 @@ struct Demod::Impl {
         }
         if (!pts.empty()) {
             std::complex<double> sum(0, 0);
+            // the TMCC carriers' expected flips come from the last decoded TMCC word, which a change of the signalling (a parameter switch, its
+            // countdown) makes wrong: a point that lies the wrong way round is such a bit and is left out, so that it cannot pull the
+            // tracking away and with it the TMCC that would bring the new word
+            {
+                std::complex<double> ps(0, 0);
+                for (auto& q : pts) if (!q.decided) ps += std::polar(q.w, q.ph);
+                if (std::abs(ps) > 0) {
+                    const double ref = std::arg(ps);
+                    pts.erase(std::remove_if(pts.begin(), pts.end(), [&](const P& q) { return q.decided && std::cos(q.ph - ref) < 0; }), pts.end());
+                }
+            }
             for (auto& q : pts) sum += std::polar(q.w, q.ph);
             const double phi0 = std::arg(sum);
             double Sw = 0, Sx = 0, Sy = 0, Sxx = 0, Sxy = 0;

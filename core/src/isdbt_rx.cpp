@@ -431,7 +431,10 @@ struct IsdbtReceiver::Impl {
                 if (paramsFromTmcc(t, q)) {
                     ok = true;
                     tmcc = t;
-                    if (!(q == prm)) { prm = q; demod.configure(prm); demod.setDelayCentre((double)back + G / 2.0); uint8_t inf2[kTmccInfoBits]; std::memcpy(inf2, w, kTmccInfoBits); demod.setTmccInfo(inf2); }
+                    if (!(q == prm)) { prm = q; demod.configure(prm); demod.setDelayCentre((double)back + G / 2.0); }
+                    // the word can change without a change of the parameters (the switching countdown, the next parameters): the demodulator
+                    // uses its TMCC bits as pilots
+                    uint8_t inf2[kTmccInfoBits]; std::memcpy(inf2, w, kTmccInfoBits); demod.setTmccInfo(inf2);
                 }
             }
         }
