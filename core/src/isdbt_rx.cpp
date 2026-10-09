@@ -39,8 +39,11 @@ struct IsdbtReceiver::Impl {
     }
 
     // ---- where the channel sits in the input band. The receiver first assumes the centre; the power spectrum of the first samples gives a
-    // second guess (a recording made beside the channel), and the receiver goes through the guesses whenever the TMCC cannot be found.
-    std::vector<double> mixCand{0.0};
+    // second guess (a recording made beside the channel), and the receiver goes through the guesses whenever the TMCC cannot be found. Each
+    // guess is also tried with I and Q swapped (a mirrored spectrum, from some radios and file formats).
+    struct Guess { double hz; bool mirror; };
+    std::vector<Guess> mixCand{{0.0, false}, {0.0, true}};
+    bool mirror = false;
     size_t candIdx = 0;
     double mixHz = 0;
     cd mixRot{1, 0}, mixStep{1, 0};
@@ -100,7 +103,7 @@ struct IsdbtReceiver::Impl {
         spec.clear(); specBase = 0; huntFails = 0; sinceHunt = 0; tmccOk = false; tmccSeg = -1; prevTmcc.clear(); tmccSoft.clear(); tmccFailures = 0; secSinceTmcc = 0;
         streamSecs = 0; packetsOut = 0; detect = 0; sroPpm = 0;
         buf.clear(); base = 0; resampler.reset();
-        mixCand = {0.0}; candIdx = 0; setMix(0); estDone = false; estBuf.clear(); estPow.clear(); estBlocks = 0; estTries = 0; searchedSince = 0;
+        mixCand = {{0.0, false}, {0.0, true}}; candIdx = 0; mirror = false; setMix(0); estDone = false; estBuf.clear(); estPow.clear(); estBlocks = 0; estTries = 0; searchedSince = 0;
     }
 
     // ------------------------------------------------------------------ the channel's place in the input band
@@ -112,10 +115,10 @@ struct IsdbtReceiver::Impl {
     // a new guess: everything received so far was mixed with the old one
     void takeCandidate(size_t i) {
         candIdx = i % mixCand.size();
-        setMix(mixCand[candIdx]);
-        state = 0; agreeCount = 0; detect = 0; tmccOk = false;
+        setMix(mixCand[candIdx].hz); mirror = mixCand[candIdx].mirror;
+        state = 0; agreeCount = 0; detect = 0; tmccOk = false; symStart = 0;
         buf.clear(); base = 0; resampler.reset(); spec.clear(); searchedSince = 0;
-        if (getenv("ISDBT_DEBUG")) fprintf(stderr, "[isdbt] channel guess %zu: %.1f kHz\n", candIdx, mixHz / 1e3);
+        if (getenv("ISDBT_DEBUG")) fprintf(stderr, "[isdbt] channel guess %zu: %.1f kHz%s\n", candIdx, mixHz / 1e3, mirror ? ", mirrored" : "");
     }
     void nextCandidate() { if (mixCand.size() > 1) takeCandidate(candIdx + 1); else searchedSince = 0; }
 
@@ -162,13 +165,19 @@ struct IsdbtReceiver::Impl {
         const double hz = ((double)best + W / 2.0 - F / 2.0) * inRate / F;
         if (getenv("ISDBT_DEBUG")) fprintf(stderr, "[isdbt] spectrum: channel centre %.1f kHz\n", hz / 1e3);
         if (std::fabs(hz) < 40e3) return;            // within the receiver's own frequency search
-        mixCand = {hz, 0.0};
-        if (!tmccOk) takeCandidate(0); else candIdx = 1;   // still searching: the spectrum's guess first
+        // with I and Q swapped the channel lies on the other side
+        mixCand = {{hz, false}, {0.0, false}, {-hz, true}, {0.0, true}};
+        if (!tmccOk) takeCandidate(0); else candIdx = mirror ? 3 : 1;   // still searching: the spectrum's guess first
     }
 
     // input conditioning: the guess of the channel's place, then the resampler
     void condition(const cf32* x, size_t n) {
         const cf32* src = x;
+        if (mirror) {
+            pre.resize(n);
+            for (size_t i = 0; i < n; i++) pre[i] = cf32(x[i].imag(), x[i].real());
+            x = src = pre.data();
+        }
         if (mixHz != 0) {
             pre.resize(n);
             for (size_t i = 0; i < n; i++) {
@@ -633,6 +642,7 @@ void IsdbtReceiver::feed(const cf32* x, size_t n) {
             }
         } else {
             if (!I.step()) break;
+            if (I.state == 0) continue;          // the search started again (another guess of the channel's place)
             const int64_t keep = (int64_t)std::llround(I.symStart) - 2 * (I.N + I.G) - 64;
             if (keep - I.base > (int64_t)(1 << 20)) {
                 const size_t drop = (size_t)(keep - I.base);
