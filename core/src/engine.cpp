@@ -1,4 +1,5 @@
 #include "dect2/engine.h"
+#include "dect2/rate_choice.h"
 #include "dect2/dvbt.h"
 #include "dect2/isdbt.h"
 #include "dect2/modes.h"
@@ -118,7 +119,9 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     std::string offNote;
     if (autoOffset_ && dev.isRadio() && offsetAllowed()) {
         // a HackRF has no listed maximum (20 Msps); the HackRF Pro tunes exactly only at up to 10 Msps and at 20, so it gets 20 above 10
-        const double maxRate = dev.maxRateHz > 0 ? dev.maxRateHz : dev.kind == DeviceInfo::HackRF ? 20e6 : 0;
+        double maxRate = dev.maxRateHz > 0 ? dev.maxRateHz : dev.kind == DeviceInfo::HackRF ? 20e6 : 0;
+        // a link slower than the converter (a PlutoSDR on its USB cable): no faster than it carries, or than the mode already runs above it
+        if (dev.steadyRateHz > 0) maxRate = std::max(tune.sampleRate, linkCapHz(dev, tune));
         OffsetPlan p = planOffset(tune.bandwidthMhz * 1e6, tune.sampleRate, maxRate, dev.minRateHz);
         if (p.ok && dev.kind == DeviceInfo::HackRF && p.rateHz > 10e6) p.rateHz = 20e6;
         if (p.ok) { offHz_ = p.offsetHz; offRate_ = p.rateHz; }

@@ -491,9 +491,9 @@ static void radiosChecks(const char* dir, const char* ext) {
         }
     }
 
-    if (use("iio")) {   // over USB a Pluto is offered at 4 Msps at most; a stock one tunes 325-3800 MHz
+    if (use("iio")) {   // over USB a Pluto carries 4 Msps without loss (steadyRateHz), the converter goes to 61.44; a stock one tunes 325-3800 MHz
         const DeviceInfo d = find("pluto");
-        CHECK(d.maxRateHz == 4e6, "Pluto over USB: max rate %.0f", d.maxRateHz);
+        CHECK(d.maxRateHz == 61.44e6 && d.steadyRateHz == 4e6, "Pluto over USB: max rate %.0f, steady %.0f", d.maxRateHz, d.steadyRateHz);
         IqRing ring(1 << 22);
         auto src = makeSource(d);
         TuneSettings t;

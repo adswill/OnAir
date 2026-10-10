@@ -1,4 +1,5 @@
 // Native driver for the PlutoSDR: the radio's own library is loaded at run time when it is installed. See native_common.h.
+#include "dect2/rate_choice.h"
 #include "native_common.h"
 #include <cerrno>
 #include <map>
@@ -230,10 +231,11 @@ protected:
             // the converter runs 0.52 - 61.44 Msps; below 2.083 Msps it needs a decimation filter: stay at or above that
             const double want = std::min(std::max(s.sampleRate > 0 ? s.sampleRate : 10e6, 2.1e6), 61.44e6);
             if (const int r = iio().channel_attr_write_longlong(rxCh_, "sampling_frequency", (long long)std::llround(want)); r != 0) { err = "PlutoSDR: the sample rate was refused: " + iio().text(r); return false; }
-            if (overUsbCable(uri_) && want > kUsbMaxRate * 1.01) {
-                fprintf(stderr, "PlutoSDR over USB 2 keeps up with about %.0f Msps; %s Msps will lose samples\n", kUsbMaxRate / 1e6, mhz(want).c_str());
-                fflush(stderr);
-                if (err.empty()) err = "PlutoSDR over its USB cable keeps up with about 4 Msps; " + mhz(want) + " Msps will lose samples";
+            // Tezuka: with only the first channel enabled the FPGA sends 8-bit I/Q pairs (half the bytes on the cable, twice the rate); both: 16-bit
+            cs8_ = tezuka_ && radioOption(s, "iqformat", "cs16") == "cs8";
+            if (overUsbCable(uri_)) {
+                const std::string n = usbLinkNote(want, kUsbMaxRate * (cs8_ ? 2 : 1), tezuka_, cs8_);
+                if (!n.empty()) { fprintf(stderr, "%s\n", n.c_str()); fflush(stderr); if (err.empty()) err = n; }
             }
             iio().channel_attr_write_longlong(rxCh_, "rf_bandwidth", (long long)std::llround(std::min(56e6, std::max(0.2e6, s.basebandFilterHz > 0 ? s.basebandFilterHz : want * 0.95))));
             rate_ = want;
@@ -244,12 +246,10 @@ protected:
             }
             requested_ = s.sampleRate;
             checkRate(s.sampleRate, err);
-            // Tezuka: with only the first channel enabled the FPGA sends 8-bit I/Q pairs (half the bytes on the cable); both enabled: 16-bit
-            cs8_ = tezuka_ && radioOption(s, "iqformat", "cs16") == "cs8";
             iio().channel_enable(i_);
             if (cs8_) iio().channel_disable(q_); else iio().channel_enable(q_);
-            // Tezuka: 8 kernel buffers (as SDR++ does) to ride out a late reader, up to ~32 MB of samples in flight at most
-            if (tezuka_ && iio().device_set_kernel_buffers_count) iio().device_set_kernel_buffers_count(rx_, kKernelBuffers);
+            // 8 kernel buffers (as SDR++ does) to ride out a late reader, on every firmware (libiio 0.x has the call, 1.x does not)
+            if (iio().device_set_kernel_buffers_count) iio().device_set_kernel_buffers_count(rx_, kKernelBuffers);
             buf_ = iio().device_create_buffer(rx_, kBlock, false);
             if (!buf_) { err = "PlutoSDR: cannot allocate the sample buffer"; return false; }
         }
@@ -355,7 +355,9 @@ void listPluto(std::vector<DeviceInfo>& out) {
         d.nativeArgs = uri;
         d.name = "PlutoSDR " + (desc.empty() ? uri : "(" + uri + ")") + " (native, experimental)";
         // over USB 2 (and its USB-gadget network address) a Pluto keeps up with about 4 Msps; over a real network the converter's full rate is offered
-        d.maxRateHz = overUsbCable(uri) ? kUsbMaxRate : 61.44e6; d.minRateHz = 2.1e6;
+        // a mode that needs more still gets it (linkRateFor: some lost samples beat no decode, e.g. DVB-T/T2 at 64/7 Msps)
+        d.maxRateHz = 61.44e6; d.minRateHz = 2.1e6;
+        d.steadyRateHz = overUsbCable(uri) ? kUsbMaxRate : 0;
         d.gainMinDb = 0; d.gainMaxDb = 73;
         d.minFreqHz = 70e6; d.maxFreqHz = 6e9;
         d.settings = {ppmSetting(0.01),

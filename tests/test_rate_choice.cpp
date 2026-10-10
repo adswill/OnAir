@@ -64,6 +64,35 @@ int main() {
         const RateLimits L = rateLimitsOf(d);
         CHECK(L.minHz == 0 && L.maxHz == 0);
     }
+    {   // a PlutoSDR on its USB cable: the cable carries 4 Msps (8 with Tezuka CS8); a mode that needs more runs at its own rate anyway
+        DeviceInfo d; d.kind = DeviceInfo::Native; d.board = "pluto"; d.maxRateHz = 61.44e6; d.minRateHz = 2.1e6; d.steadyRateHz = 4e6;
+        TuneSettings t;
+        CHECK(std::fabs(dvbNativeRate(8) - 64e6 / 7) < 1 && std::fabs(dvbNativeRate(7) - 8e6) < 1 && std::fabs(dvbNativeRate(6) - 48e6 / 7) < 1);
+        for (double bw : {6.0, 7.0, 8.0}) CHECK(std::fabs(linkRateFor(d, t, dvbNativeRate(bw), minSampleRateFor(0, bw)) - dvbNativeRate(bw)) < 1);
+        CHECK(!linkNote(d, t, 64e6 / 7).empty() && linkNote(d, t, 4e6).empty());
+        CHECK(linkNote(d, t, 64e6 / 7).find("install the Tezuka firmware") != std::string::npos);   // stock firmware: no CS8 to offer here
+        CHECK(linkRateFor(d, t, 2.048e6, minSampleRateFor(4, 1.7)) == 2.048e6);   // DAB fits
+        CHECK(linkRateFor(d, t, 4e6, minSampleRateFor(7, 0.25)) == 4e6);          // FM at 4 Msps fits exactly
+        CHECK(linkRateFor(d, t, 10e6, 1.6e6) == 4e6);                              // a mode that fits is held to the cable
+        CHECK(linkRateFor(d, t, 8e6, minSampleRateFor(3, 6)) == 8e6);             // ATSC needs 6.5: its 8 Msps
+        for (int sm = 8; sm < 40; sm++)   // every mode with its own tuning: its rate when it needs more than the cable, else at most 4 Msps
+            if (const ModeTuning* m = modeTuning(sm)) {
+                const double got = linkRateFor(d, t, m->sampleRate, m->minSampleRate);
+                CHECK(got == (m->minSampleRate > 4e6 ? m->sampleRate : std::min(m->sampleRate, 4e6)));
+                printf("  pluto usb: %-10s %6.3f Msps (asks %6.3f, needs %6.3f)\n", m->id, got / 1e6, m->sampleRate / 1e6, m->minSampleRate / 1e6);
+            }
+        // Tezuka firmware: CS16 suggests CS8; with CS8 the cable carries 8 Msps
+        d.settings.push_back(RadioSetting{}); d.settings.back().key = "iqformat";
+        CHECK(linkNote(d, t, 64e6 / 7).find("Set the radio's IQ format to CS8") != std::string::npos);
+        t.radio["iqformat"] = "cs8";
+        CHECK(linkCapHz(d, t) == 8e6);
+        CHECK(linkRateFor(d, t, dvbNativeRate(8), minSampleRateFor(0, 8)) == 8e6);       // 8 MHz DVB fits 8 Msps (needs 7.9)
+        CHECK(std::fabs(linkRateFor(d, t, dvbNativeRate(7), minSampleRateFor(0, 7)) - 8e6) < 1);
+        CHECK(linkNote(d, t, 8e6).empty() && linkNote(d, t, 10e6).find("Ethernet") != std::string::npos);
+        // on the network: no cap at all
+        d.steadyRateHz = 0; t.radio.clear();
+        CHECK(linkRateFor(d, t, 10e6, 7.9e6) == 10e6 && linkNote(d, t, 20e6).empty());
+    }
     if (fails) { printf("%d failures\n", fails); return 1; }
     printf("rate choice ok\n");
     return 0;

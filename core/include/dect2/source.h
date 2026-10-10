@@ -100,6 +100,9 @@ struct DeviceInfo {
     std::string nativeArgs;    // what the radio's own library wants to open it (index, serial, URI, ...)
     double maxRateHz = 0;      // fastest complex sample rate the radio offers (0 = unknown)
     double minRateHz = 0;
+    // The rate its link carries without losing samples when that is below maxRateHz (a PlutoSDR on its USB 2 cable: about 4 Msps of 16-bit
+    // samples), 0 = whatever the radio offers. linkRateFor() (rate_choice.h) keeps a mode within it when the mode fits, else goes above it.
+    double steadyRateHz = 0;
     // The rates the radio offers when its driver lists them: each pair a range (lo == hi: one rate), between them rates it cannot run at (the
     // RTL-SDR's 0.3 to 0.9 Msps). Empty = any rate between minRateHz and maxRateHz (or not known). The driver takes the smallest one at or
     // above what is asked for (rate_choice.h).

@@ -1,5 +1,6 @@
 // Generic radios through SoapySDR: Airspy, SDRplay, RTL-SDR, PlutoSDR, LimeSDR, BladeRF, USRP, ... (whatever drivers are installed).
 // The HackRF keeps its own native source (source.cpp); a "hackrf" Soapy entry is hidden so a radio is listed once.
+#include "dect2/rate_choice.h"
 #include "dect2/source.h"
 #include "dect2/ring.h"
 #include <SoapySDR/Device.hpp>
@@ -392,6 +393,10 @@ std::vector<DeviceInfo> listSoapyDevices(std::string& err) {
                 }
             }
             d.settings.insert(d.settings.begin(), ppmSetting(0.01));   // the driver's own correction, or OnAir's
+            if (driver == "plutosdr") {   // SoapyPlutoSDR on the USB cable (or its USB-gadget address): the same ~4 Msps of 16-bit samples
+                const std::string uri = get("uri");
+                if (uri.empty() || uri.rfind("usb:", 0) == 0 || uri == "ip:192.168.2.1" || uri == "ip:pluto.local") d.steadyRateHz = 4e6;
+            }
             out.push_back(d);
             fprintf(stderr, "SoapySDR: found %s (driver %s)\n", d.name.c_str(), driver.c_str());
             // A radio with several antenna inputs: one more entry per input, after the one that leaves the driver's default (what OnAir used

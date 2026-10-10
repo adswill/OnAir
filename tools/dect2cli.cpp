@@ -4,6 +4,7 @@
 //   dect2cli ... --record out.cs8|out.cf32|folder|auto --secs N   (any radio or --synthetic, not --file: saves the radio's raw samples at its own
 //     rate while receiving, for N seconds, and prints the size; a folder or "auto" (the current folder) gets a name like
 //     onair_dvb_554.000MHz_10Msps_20261009-071530.cs8, which reopens with the right rate and format)
+#include "dect2/rate_choice.h"
 #include "dect2/engine.h"
 #include "dect2/crash_report.h"
 #include "dect2/modes.h"
@@ -107,9 +108,11 @@ int main(int argc, char** argv) {
         dev = list[0];
         printf("device: %s\n", dev.name.c_str());
         if (dev.isGeneric()) {
-            if (dev.maxRateHz > 0) tune.sampleRate = std::min(tune.sampleRate, dev.maxRateHz);
-            // DVB-T/T2 at 8 MHz is natively 64/7 Msps: a PlutoSDR can run exactly that, which saves the receiver its resampler
-            if (dev.kind == DeviceInfo::Native && dev.board == "pluto" && standard <= 2 && tune.bandwidthMhz == 8) tune.sampleRate = std::min(64e6 / 7, dev.maxRateHz > 0 ? dev.maxRateHz : 64e6 / 7);
+            // DVB-T/T2 is natively 64/7 Msps per 8 MHz: a PlutoSDR can run exactly that, which saves the receiver its resampler; on its USB
+            // cable above the 4 Msps the cable carries when the channel needs it (linkRateFor), with the note why
+            if (dev.kind == DeviceInfo::Native && dev.board == "pluto" && standard <= 2 && tune.bandwidthMhz >= 5) tune.sampleRate = dvbNativeRate(tune.bandwidthMhz);
+            tune.sampleRate = linkRateFor(dev, tune, tune.sampleRate, minSampleRateFor(standard, tune.bandwidthMhz));
+            if (const std::string n = linkNote(dev, tune, tune.sampleRate); !n.empty()) printf("note: %s\n", n.c_str());
             if (tune.gainDb == 30) tune.gainDb = std::max(dev.gainMinDb, dev.gainMaxDb * 0.6);   // a sensible start; --gain overrides
             printf("radio: up to %.2f Msps, gain %.0f..%.0f dB, using %.2f Msps / %.0f dB\n", dev.maxRateHz / 1e6, dev.gainMinDb, dev.gainMaxDb, tune.sampleRate / 1e6, tune.gainDb);
         }

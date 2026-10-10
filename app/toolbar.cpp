@@ -23,6 +23,8 @@ static std::string rateWarning(const App& a) {
     const double rate = run ? a.engine.sampleRate() : d.isGeneric() ? d.maxRateHz : 0;
     const double bw = run && a.family == 0 && a.engine.activeBandwidth() > 0 ? a.engine.activeBandwidth() : kBw[a.bwIdx].mhz;
     const double need = minSampleRateFor(engineStd(a), bw);
+    // a PlutoSDR on its USB cable run above what the cable carries (linkRateFor): why it may break up, and the fix
+    if (run && d.steadyRateHz > 0 && rate >= need - 1) return linkNote(d, a.tune, rate);
     if (rate <= 0 || need <= 0 || rate >= need - 1) return "";
     char what[64];
     if (a.family == 0) snprintf(what, sizeof what, "the %g MHz DVB-T2 / DVB-T channel", bw);

@@ -188,9 +188,11 @@ void applyBandwidth(App& a) {
     a.tune.sampleRate = kBw[a.bwIdx].mhz >= 7 ? 10e6 : 8e6;
     {   // a radio that cannot reach that rate runs as fast as it can (the source picks the nearest rate it offers)
         const DeviceInfo& dv = a.devices[a.devIdx];
-        if (dv.isGeneric() && dv.maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, dv.maxRateHz);
-        // the DVB-T/T2 8 MHz channel is natively 64/7 Msps: a PlutoSDR can run exactly that, which saves the receiver its resampler (a sixth of its work)
-        if (dv.kind == DeviceInfo::Native && dv.board == "pluto" && a.family == 0 && kBw[a.bwIdx].mhz == 8) a.tune.sampleRate = std::min(64e6 / 7, dv.maxRateHz > 0 ? dv.maxRateHz : 64e6 / 7);
+        // the DVB-T/T2 channel is natively 64/7 Msps per 8 MHz: a PlutoSDR can run exactly that, which saves the receiver its resampler (a sixth
+        // of its work); on its USB cable it goes above the 4 Msps the cable carries (linkRateFor), with a note on screen (linkNote)
+        const bool plutoDvb = dv.kind == DeviceInfo::Native && dv.board == "pluto" && a.family == 0 && kBw[a.bwIdx].mhz >= 5;
+        if (plutoDvb) a.tune.sampleRate = dvbNativeRate(kBw[a.bwIdx].mhz);
+        if (dv.isGeneric()) a.tune.sampleRate = linkRateFor(dv, a.tune, a.tune.sampleRate, minSampleRateFor(engineStd(a), kBw[a.bwIdx].mhz));
         // "30 dB" is nearly deaf on an SDRplay (0..103), full gain on an Airspy (0..21), attenuation on an HF+: a radio that the gain was not
         // set for starts at 60 % of its own range (settings from before this rule keep their gain)
         if (dv.isGeneric() && dv.gainMaxDb > dv.gainMinDb) {
@@ -213,16 +215,16 @@ void applyBandwidth(App& a) {
             a.tune.synth.modeOpt[7] = a.dtmbBwMhz == 6 ? 1 : 0;
         }
         const DeviceInfo& dv = a.devices[a.devIdx];
-        if (dv.isGeneric() && dv.maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, dv.maxRateHz);
+        if (dv.isGeneric()) a.tune.sampleRate = linkRateFor(dv, a.tune, a.tune.sampleRate, mt->minSampleRate);
     } else if (a.dabMode) {   // a DAB ensemble is 1.536 MHz wide: 2.048 Msps is the natural rate (RTL-SDR dongles do it too)
         a.tune.bandwidthMhz = 1.7; a.tune.sampleRate = 2.048e6; a.tune.basebandFilterHz = 1.75e6;
         const DeviceInfo& dv = a.devices[a.devIdx];
-        if (dv.isGeneric() && dv.maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, dv.maxRateHz);
+        if (dv.isGeneric()) a.tune.sampleRate = linkRateFor(dv, a.tune, a.tune.sampleRate, minSampleRateFor(4, 1.7));
     } else if (a.fmMode) {   // one 200 kHz station; 4 Msps keeps the neighbours that fold in from the sides well down
         a.tune.bandwidthMhz = 0.25; a.tune.sampleRate = 4e6; a.tune.basebandFilterHz = 2.5e6;
         const DeviceInfo& dv = a.devices[a.devIdx];
-        if (dv.isGeneric() && dv.maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, dv.maxRateHz);
-    } else if (a.atscMode) { a.tune.bandwidthMhz = 6; a.tune.sampleRate = 8e6; if (a.devices[a.devIdx].isGeneric() && a.devices[a.devIdx].maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, a.devices[a.devIdx].maxRateHz); }   // an ATSC channel is always 6 MHz wide
+        if (dv.isGeneric()) a.tune.sampleRate = linkRateFor(dv, a.tune, a.tune.sampleRate, minSampleRateFor(7, 0.25));
+    } else if (a.atscMode) { a.tune.bandwidthMhz = 6; a.tune.sampleRate = 8e6; if (a.devices[a.devIdx].isGeneric()) a.tune.sampleRate = linkRateFor(a.devices[a.devIdx], a.tune, a.tune.sampleRate, minSampleRateFor(3, 6)); }   // an ATSC channel is always 6 MHz wide
     // the rate chosen for this mode on this radio replaces the mode's own (Auto: nothing changes); one outside this radio's limits or below
     // what the mode needs now (a wider DVB channel) is not used, the control shows Auto
     a.autoRateHz = a.tune.sampleRate;

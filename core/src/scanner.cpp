@@ -1,3 +1,4 @@
+#include "dect2/rate_choice.h"
 #include "dect2/scanner.h"
 #include "dect2/isdbt.h"
 #include "dect2/bandwidth.h"
@@ -125,7 +126,10 @@ void Scanner::run() {
     if (cfg_.testTune) cfg_.testTune(tune.centerHz / 1e6, tune);
     // other radios than the HackRF report the rates and gains they can do
     if (dev_.isGeneric()) {
-        if (dev_.maxRateHz > 0) tune.sampleRate = std::min(tune.sampleRate, dev_.maxRateHz);
+        // DVB-T/T2 on a PlutoSDR: its native rate; on its USB cable above what the cable carries when the channel needs it (linkRateFor)
+        const int sm0 = cfg_.atsc ? 3 : cfg_.isdbt ? 6 : cfg_.atsc3 ? 5 : cfg_.dtmb ? 9 : 0;
+        if (dev_.kind == DeviceInfo::Native && dev_.board == "pluto" && sm0 == 0 && !cfg_.autoBandwidth && chBw >= 5) tune.sampleRate = dvbNativeRate(chBw);
+        tune.sampleRate = linkRateFor(dev_, tune, tune.sampleRate, minSampleRateFor(sm0, cfg_.autoBandwidth && sm0 == 0 ? 8.0 : chBw));
         if (dev_.gainMaxDb > 0 && tune.gainDb > dev_.gainMaxDb) tune.gainDb = dev_.gainMaxDb;
         if (dev_.gainMaxDb > dev_.gainMinDb && tune.gainDb < dev_.gainMinDb) tune.gainDb = dev_.gainMinDb;
     }

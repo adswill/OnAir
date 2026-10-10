@@ -30,4 +30,17 @@ struct RateCheck { bool ok = false; double hz = 0; std::string why; };   // hz: 
 // A typed rate: within the radio's limits, not in a gap between its ranges, and the rate delivered at least the mode's minimum.
 RateCheck checkManualRate(const RateLimits& L, double modeMinHz, double hz);
 
+// The rate a radio whose link is slower than its converter (DeviceInfo::steadyRateHz) runs a mode at. wantHz: the mode's rate; needHz:
+// the least its receiver works with (minSampleRateFor). The mode fits the link: at most the link's rate, no samples lost. It does not:
+// wantHz anyway (within maxRateHz), since a decode with some lost samples beats none. A Tezuka PlutoSDR with the IQ format CS8 ("iqformat",
+// half the bytes per sample) carries twice the rate.
+double linkCapHz(const DeviceInfo& d, const TuneSettings& t);
+double linkRateFor(const DeviceInfo& d, const TuneSettings& t, double wantHz, double needHz);
+// The rate a PlutoSDR runs a DVB-T/T2 channel at: its native rate, 64/7 Msps per 8 MHz (9.14, 8, 6.86 Msps for 8, 7, 6 MHz)
+double dvbNativeRate(double bandwidthMhz);
+// The note for a link that cannot carry rateHz (empty when it can): why the picture may break up, and what fixes it (Ethernet, CS8)
+std::string linkNote(const DeviceInfo& d, const TuneSettings& t, double rateHz);
+// The same from what a driver knows: the link's rate, whether the firmware can stream CS8 (Tezuka) and whether it does
+std::string usbLinkNote(double rateHz, double linkHz, bool tezuka, bool cs8);
+
 } // namespace dect2

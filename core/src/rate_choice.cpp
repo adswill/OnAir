@@ -97,4 +97,42 @@ RateCheck checkManualRate(const RateLimits& L, double modeMinHz, double hz) {
     return c;
 }
 
+static bool streamsCs8(const DeviceInfo& d, const TuneSettings& t) {
+    for (const auto& r : d.settings) if (r.key == "iqformat") return radioOption(t, "iqformat", "cs16") == "cs8";
+    return false;
+}
+static bool canCs8(const DeviceInfo& d) {
+    for (const auto& r : d.settings) if (r.key == "iqformat") return true;
+    return false;
+}
+
+double linkCapHz(const DeviceInfo& d, const TuneSettings& t) {
+    if (d.steadyRateHz <= 0) return 0;
+    return d.steadyRateHz * (streamsCs8(d, t) ? 2 : 1);
+}
+
+double linkRateFor(const DeviceInfo& d, const TuneSettings& t, double wantHz, double needHz) {
+    const double hard = d.maxRateHz > 0 ? std::min(wantHz, d.maxRateHz) : wantHz;
+    const double link = linkCapHz(d, t);
+    if (link <= 0) return hard;
+    if (needHz <= link) return std::min(hard, link);   // the mode fits the link: nothing lost
+    return hard;                                       // it does not: the mode's own rate, some samples lost (linkNote says so)
+}
+
+double dvbNativeRate(double bandwidthMhz) { return 64e6 / 7 * bandwidthMhz / 8; }
+
+std::string usbLinkNote(double rateHz, double linkHz, bool tezuka, bool cs8) {
+    if (linkHz <= 0 || rateHz <= linkHz * 1.01) return "";
+    std::string fix;
+    if (cs8) fix = "Connect the Pluto over Ethernet (a USB Ethernet adapter on the Pluto) to stop it.";
+    else if (tezuka) fix = "Set the radio's IQ format to CS8 (half the data, up to 8 Msps over USB), or connect the Pluto over Ethernet.";
+    else fix = "Connect the Pluto over Ethernet, or install the Tezuka firmware and set the IQ format to CS8 (up to 8 Msps over USB).";
+    return "PlutoSDR over its USB cable carries about " + msps(linkHz) + " Msps without loss; this mode runs it at " + msps(rateHz) +
+           " Msps, so samples are lost and the picture or sound may break up. " + fix;
+}
+
+std::string linkNote(const DeviceInfo& d, const TuneSettings& t, double rateHz) {
+    return usbLinkNote(rateHz, linkCapHz(d, t), canCs8(d), streamsCs8(d, t));
+}
+
 } // namespace dect2
