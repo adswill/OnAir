@@ -315,8 +315,16 @@ protected:
         if (dev_.tuner != sp::Tuner_A && dev_.tuner != sp::Tuner_B) dev_.tuner = sp::Tuner_A;
         params_ = nullptr;
         e = api.GetDeviceParams(dev_.dev, &params_);
-        if (e != sp::Success || !params_ || !params_->rxChannelA) { err = "SDRplay: cannot read the radio's settings: " + api.err(e); params_ = nullptr; return false; }
-        ch_ = dev_.tuner == sp::Tuner_B && params_->rxChannelB ? params_->rxChannelB : params_->rxChannelA;
+        // The settings of the tuner in use: an RSPduo opened on tuner 2 gets only rxChannelB (rxChannelA is null), so requiring
+        // rxChannelA refused tuner 2 with "cannot read the radio's settings: sdrplay_api_Success" (issue #31)
+        sp::RxChannelParamsT* chan = nullptr;
+        if (e == sp::Success && params_) chan = dev_.tuner == sp::Tuner_B ? (params_->rxChannelB ? params_->rxChannelB : params_->rxChannelA) : params_->rxChannelA;
+        if (e != sp::Success || !chan) {
+            err = "SDRplay: cannot read the radio's settings" + (e != sp::Success ? ": " + api.err(e) : std::string(dev_.tuner == sp::Tuner_B ? " (no settings for tuner 2)" : ""));
+            params_ = nullptr;
+            return false;
+        }
+        ch_ = chan;
         conv_.assign(8192, cf32(0, 0));   // the stream callback converts into this; no allocation there
         overloads_ = 0;
         removed_ = false;
