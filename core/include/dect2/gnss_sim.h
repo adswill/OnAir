@@ -14,7 +14,7 @@
 namespace dect2 {
 
 struct GnssSimConfig {
-    unsigned systems = 1;            // bit mask of the systems (GnssSystem bits); only GPS (bit 0) for now
+    unsigned systems = 1;            // bit mask of the systems (gnssSystemBit): GPS, QZSS (3 satellites), SBAS (3 geostationary), Galileo E1-B (24)
     double latDeg = 25.2, lonDeg = 55.36, heightM = 10;   // the receiver (Dubai)
     double cn0Top = 44;              // C/N0 of a satellite at the zenith, dB-Hz; lower satellites are weaker (range and antenna pattern)
     int maxSats = 0;                 // 0 = every satellite above the mask (8 to 11); otherwise the highest ones
@@ -46,7 +46,7 @@ public:
     ~GnssSim();
     double sampleRate() const;
     void generate(cf32* out, size_t n);          // the next n samples
-    const std::vector<GnssSimSat>& sats() const; // the whole constellation (30 GPS satellites); `transmitted` marks the visible ones
+    const std::vector<GnssSimSat>& sats() const; // the whole constellation (30 GPS satellites first, then the other systems asked for); `transmitted` marks the visible ones
     const double* receiverEcef() const;         // the true position
     int week() const;                            // the GPS week of the start (full week number)
     double startTow() const;                     // GPS time of week of the first sample, true time

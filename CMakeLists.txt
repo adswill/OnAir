@@ -591,7 +591,7 @@ if(DECT2_BUILD_TESTS)
   # the full CI runs them nightly and on release tags.
   foreach(t gain overload channel t2_payload dvbt_rx dab_rx atsc3_synth_options
             atv_impair atv_interf atv_engine drm_impair drm_rx adsb_engine
-            gnss_loops gnss_rates gnss_sweep gnss_rate20 gnss_gap iq_modes)
+            gnss_loops gnss_rates gnss_sweep gnss_rate20 gnss_gap gnss_qzss_sbas gnss_galileo iq_modes)
     if(TEST ${t})
       set_tests_properties(${t} PROPERTIES LABELS slow)
     endif()

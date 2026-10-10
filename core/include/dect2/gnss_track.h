@@ -1,5 +1,7 @@
 // One tracking channel: carrier and code loops, C/N0, bit synchronisation and the framing of the navigation message.
-// A channel reads whole code periods from its band's buffer; every epoch it updates the loops. The message layer is the LNAV of GPS for now.
+// A channel reads whole code periods from its band's buffer; every epoch it updates the loops. The message layer is the LNAV of GPS and QZSS (50 bps,
+// 20 code periods a bit), the SBAS messages (500 symbols a second, two code periods a symbol, Viterbi decoding) or the Galileo I/NAV of E1-B
+// (one symbol per 4 ms code period, page parts found by their sync pattern).
 #pragma once
 #include "gnss_front.h"
 #include "gnss_nav.h"
@@ -18,11 +20,17 @@ struct GnssSignalSpec {
     double rfHz = 1575.42e6;      // carrier of this signal (for the code-carrier aiding ratio)
     double fsOut = 4.096e6;       // the band's rate
     int halfSpacing = 2;          // samples between prompt and early (and late)
+    int msg = 0;                  // the message layer: GnssMsgLnav, GnssMsgSbas or GnssMsgInav
+    double epochS = 1e-3;         // one code period, seconds (codeLen / chipRate)
 };
+enum { GnssMsgLnav = 0, GnssMsgSbas = 1, GnssMsgInav = 2 };
 
 struct GnssSubframeEvent {
+    int kind = GnssMsgLnav;       // what this is: an LNAV subframe, an SBAS message or an I/NAV word
+    int sbasType = -1;            // SBAS: the message type
+    uint8_t word[128] = {};       // I/NAV: the 128 bit word of a page with a good CRC
     LnavSubframe sf;
-    double towStart = 0;          // time of week of the first bit of the subframe, from its handover word
+    double towStart = 0;          // time of week of the first bit of the subframe, from its handover word (I/NAV: of the page, -1 when the word has none)
     int64_t startEpoch = 0;
 };
 
@@ -44,7 +52,7 @@ public:
     float cn0() const { return (float)cn0Db_; }
     double dopplerHz() const { return fcar_; }
     double codePhase() const { return phi_; }
-    double lockSeconds() const { return (double)locked_epochs_ * 1e-3; }
+    double lockSeconds() const { return (double)locked_epochs_ * spec.epochS; }
     uint32_t framesOk() const { return framesOk_; }
     uint32_t framesBad() const { return framesBad_; }
     uint64_t epochs() const { return ecount_; }
@@ -62,6 +70,7 @@ public:
     double carrierRate() const { return 0; }
     bool wasPullInTimeout() const { return pullInTimeout_; }
     int framesSinceSync() const { return framesSinceSync_; }
+    int falseLocks() const { return falseLocks_; }
     double codeFrequencyHz() const { return codeHz_; }
     GnssSignalSpec spec;
 private:
@@ -69,6 +78,29 @@ private:
     void bitLayer(float I);
     void pushBit(int bit);
     void trySubframe();
+    void sbasLayer(float I);
+    void inavLayer(float I);
+    void inavPart(int64_t p);
+    // SBAS symbols
+    std::vector<float> sym_;          // soft symbols (two epochs each)
+    int64_t symBase_ = 0;             // absolute symbol number of sym_[0]
+    int64_t symCount_ = 0;
+    int64_t lastWindowAt_ = 0;
+    int pairOffset_ = -1;             // which symbol starts a bit pair (0/1 of the absolute numbering), -1 not known
+    int64_t lastMsgSym_ = -1;         // absolute symbol of the start of the last message decoded
+    double symAcc_ = 0;
+    double pairAmp_[2] = {0, 0};
+    float prevIsym_ = 0;
+    bool havePrevI_ = false;
+    int symHalf_ = 0;
+    // I/NAV symbols: one per epoch, absolute number = epoch count
+    std::deque<float> isym_;
+    int64_t isymBase_ = 0;
+    int64_t nextPart_ = -1;           // epoch of the next page part when synchronised
+    int inavPol_ = 1;
+    int syncMiss_ = 0;
+    uint8_t evenBits_[120] = {};
+    int64_t evenAt_ = -1;
     // code and carrier
     std::vector<float> chips_;
     double phi_ = 0;              // code phase in chips at the leading edge of sample pos_
@@ -81,6 +113,8 @@ private:
     bool lost_ = false;
     bool pullInTimeout_ = false;
     double pllInt_ = 0, pllF0_ = 0;
+    double flSum_ = 0, flDiff_ = 0;   // the false lock check
+    int falseLocks_ = 0;
     double dllInt_ = 0, dllRate_ = 0;   // code loop: integrator and the rate correction on top of the carrier aiding, chips/s
     double prevI_ = 0, prevQ_ = 0;
     bool havePrev_ = false;

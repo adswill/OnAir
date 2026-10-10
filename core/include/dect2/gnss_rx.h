@@ -48,7 +48,8 @@ public:
     void setApproxPosition(double latDeg, double lonDeg, bool valid);   // a position hint: only used to choose which satellites to search first
     void setElevationMask(double deg);                   // satellites below this elevation are not used in the fix (default 5)
     // The navigation data base, for tests and tools (copies; false when the data is not complete yet)
-    bool getEphemeris(int prn, GpsEphemeris& e, int* week = nullptr) const;
+    bool getEphemeris(int prn, GpsEphemeris& e, int* week = nullptr) const;               // GPS
+    bool getEphemerisOf(int sys, int prn, GpsEphemeris& e, int* week = nullptr) const;   // any system with one (GPS, QZSS, Galileo)
     bool getAlmanac(int prn, GpsAlmanac& a) const;
     bool getIonoUtc(GpsIono& i, GpsUtc& u) const;
     // Tests and tools

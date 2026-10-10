@@ -10,14 +10,22 @@
 
 namespace dect2 {
 
-enum GnssSystem { GnssGps = 0, GnssGlonass = 1, GnssBeidou = 2, GnssGalileo = 3, GnssSystems = 4 };
+// QZSS and SBAS send on the GPS L1 C/A band with their own codes; their PRN numbers are the L1 C/A ones (QZSS 193..202, SBAS 120..158).
+enum GnssSystem { GnssGps = 0, GnssGlonass = 1, GnssBeidou = 2, GnssGalileo = 3, GnssQzss = 4, GnssSbas = 5, GnssSystems = 6 };
 inline const char* gnssSystemName(int s) {
-    static const char* n[] = {"GPS", "GLONASS", "BeiDou", "Galileo"};
+    static const char* n[] = {"GPS", "GLONASS", "BeiDou", "Galileo", "QZSS", "SBAS"};
     return s >= 0 && s < GnssSystems ? n[s] : "?";
 }
-inline char gnssSystemLetter(int s) {      // RINEX style satellite names: G05, R12, C19, E07
-    static const char l[] = {'G', 'R', 'C', 'E'};
+inline char gnssSystemLetter(int s) {      // RINEX style satellite names: G05, R12, C19, E07, J01, S27
+    static const char l[] = {'G', 'R', 'C', 'E', 'J', 'S'};
     return s >= 0 && s < GnssSystems ? l[s] : '?';
+}
+// the RINEX number of a satellite: QZSS PRN 193 is J01, SBAS PRN 127 is S27; the others are their PRN
+inline int gnssRinexNumber(int sys, int prn) { return sys == GnssQzss ? prn - 192 : sys == GnssSbas ? prn - 100 : prn; }
+inline std::string gnssSatName(int sys, int prn) {
+    char b[16];
+    snprintf(b, sizeof b, "%c%02d", gnssSystemLetter(sys), gnssRinexNumber(sys, prn));
+    return b;
 }
 // bits of the systems mask (GnssReceiver::setSystems)
 constexpr unsigned gnssSystemBit(int s) { return 1u << s; }
@@ -31,7 +39,7 @@ inline const char* gnssChStateName(int s) {
 
 struct GnssChannel {
     int sys = 0;                 // GnssSystem
-    int prn = 0;                 // GPS 1..32, BeiDou 1..63, Galileo 1..36, GLONASS: the orbital slot 1..24 when known, else 0
+    int prn = 0;                 // GPS 1..32, BeiDou 1..63, Galileo 1..36, QZSS 193..202, SBAS 120..158, GLONASS: the orbital slot 1..24 when known, else 0
     int fcn = 0;                 // GLONASS frequency channel number -7..6 (0 for the other systems)
     int state = 0;               // GnssChState
     float cn0 = 0;               // C/N0 in dB-Hz
@@ -72,6 +80,13 @@ struct GnssNavInfo {
     float svClockBiasUs = 0;     // af0 in microseconds (shows the satellite clock offset)
     int ephParts = 0;            // GPS: subframes 1-3 of the ephemeris being collected that have arrived (0..3; 3 with hasEphemeris)
     float ephEtaS = -1;          // seconds until the ephemeris should be complete (-1: not known yet, before the frame is found)
+    // SBAS: the messages with a good CRC (the corrections are not applied)
+    int sbasLastType = -1;       // message type of the last one (0..63)
+    uint32_t sbasMessages = 0;
+    uint32_t sbasTypesSeen = 0;  // bit t: type t (0..31) has been received
+    // Galileo: the GST-GPS time offset (word type 10) when this satellite sent it, ns
+    bool ggtoValid = false;
+    float ggtoNs = 0;
 };
 
 struct GnssFix {
@@ -88,7 +103,7 @@ struct GnssFix {
     double gpsTow = 0;                               // GPS time of week of the fix, seconds
     int leapSeconds = -1;                            // GPS minus UTC, -1 until the message has said
     int nSats = 0;                                   // satellites in the solution
-    int nSatsPerSystem[GnssSystems] = {0, 0, 0, 0};
+    int nSatsPerSystem[GnssSystems] = {};
     float hdop = 0, vdop = 0, pdop = 0, tdop = 0;
     float hErrM = 0;                                 // estimated horizontal error (1 sigma), metres: DOP times the measured pseudorange scatter
     float vErrM = 0;
@@ -114,7 +129,8 @@ struct GnssTelemetry {
     double inputRate = 0;        // Hz, the radio's sample rate
     double centerMhz = 0;        // the tuned centre frequency the receiver assumes (setCenterMhz)
     unsigned systemsMask = 0;    // the systems the user asked for (gnssSystemBit)
-    unsigned activeMask = 0;     // the systems the tuning and the sample rate can hold at the moment
+    unsigned activeMask = 0;     // the bands the tuning and the sample rate can hold at the moment, by the system that owns the band (the L1 band is GPS)
+    unsigned decodeMask = 0;     // every system being searched or tracked in those bands (GPS, QZSS and SBAS on L1 C/A, Galileo E1 at 4 Msps and more)
     double signalSecs = 0;       // signal time since the start or the last reset
 
     // The channel table, strongest first, at most 24
@@ -131,6 +147,7 @@ struct GnssTelemetry {
     bool utcValid = false;       // UTC parameters (leap seconds) are known
     int leapSeconds = -1;
     int almanacGps = 0;          // GPS satellites with an almanac entry (of 32)
+    uint64_t sbasMessages = 0;   // SBAS messages with a good CRC, all satellites
     float ionoAlpha[4] = {0, 0, 0, 0}, ionoBeta[4] = {0, 0, 0, 0};
 
     // Search

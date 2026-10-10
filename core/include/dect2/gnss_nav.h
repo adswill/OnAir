@@ -12,6 +12,8 @@ constexpr double kEarthRate = 7.2921151467e-5;   // rad/s
 constexpr double kRelF = -4.442807633e-10;       // relativistic clock constant, s/sqrt(m)
 constexpr double kWgsA = 6378137.0, kWgsF = 1.0 / 298.257223563;
 constexpr double kPi = 3.1415926535897932;       // the GPS value of pi (IS-GPS-200 20.3.3.3.3.1)
+constexpr double kGalMu = 3.986004418e14;        // Galileo OS SIS ICD Table 66
+constexpr double kGalRelF = -4.442807309e-10;    // Galileo OS SIS ICD 5.1.4
 
 // ------------------------------------------------------------------ the data bit layer
 // 30 bit words: 24 source bits d1..d24 then 6 parity bits D25..D30. The words are kept as the 24 source bits (d1 in bit 23).
@@ -51,6 +53,7 @@ struct GpsEphemeris {
     double toe = 0, sqrtA = 0, e = 0, m0 = 0, dn = 0, omega0 = 0, i0 = 0, omega = 0, omegaDot = 0, idot = 0;
     double cuc = 0, cus = 0, crc = 0, crs = 0, cic = 0, cis = 0;   // radians, metres
     int fitFlag = 0;
+    bool galileo = false;       // a Galileo ephemeris (I/NAV words 1-4): its gravitational constant and relativity factor; tgd holds BGD(E1,E5b)
     bool complete() const { return has1 && has2 && has3 && iode2 == iode3 && (iodc & 0xFF) == iode2; }
     int iode() const { return iode2; }
 };

@@ -9,7 +9,7 @@ namespace {
 
 // solves A x = b for a symmetric positive definite n x n matrix (Cholesky); returns false when singular. A is replaced by its inverse when `inverse` is set.
 bool cholSolve(double* A, double* b, int n, double* inv) {
-    double L[49] = {};
+    double L[81] = {};
     for (int i = 0; i < n; i++)
         for (int j = 0; j <= i; j++) {
             double s = A[i * n + j];
@@ -18,13 +18,13 @@ bool cholSolve(double* A, double* b, int n, double* inv) {
             else L[i * n + j] = s / L[j * n + j];
         }
     if (b) {
-        double y[7];
+        double y[9];
         for (int i = 0; i < n; i++) { double s = b[i]; for (int k = 0; k < i; k++) s -= L[i * n + k] * y[k]; y[i] = s / L[i * n + i]; }
         for (int i = n - 1; i >= 0; i--) { double s = y[i]; for (int k = i + 1; k < n; k++) s -= L[k * n + i] * b[k]; b[i] = s / L[i * n + i]; }
     }
     if (inv) {
         for (int c = 0; c < n; c++) {
-            double y[7], x[7];
+            double y[9], x[9];
             for (int i = 0; i < n; i++) { double s = (i == c) ? 1.0 : 0.0; for (int k = 0; k < i; k++) s -= L[i * n + k] * y[k]; y[i] = s / L[i * n + i]; }
             for (int i = n - 1; i >= 0; i--) { double s = y[i]; for (int k = i + 1; k < n; k++) s -= L[k * n + i] * x[k]; x[i] = s / L[i * n + i]; }
             for (int i = 0; i < n; i++) inv[i * n + c] = x[i];
@@ -48,7 +48,7 @@ struct Core {
     bool ok = false;
     double x[3] = {0, 0, 0};
     double bias[GnssSystems] = {0, 0, 0, 0};
-    int col[GnssSystems] = {-1, -1, -1, -1};
+    int col[GnssSystems] = {-1, -1, -1, -1, -1, -1};
     int nUse = 0, nUnk = 0, iterations = 0;
     double sw = 0, sw2 = 0;               // weighted and plain sum of squared residuals
     std::vector<double> res, w, el, az, iono, tropo;
@@ -74,7 +74,7 @@ Core solveSet(const std::vector<GnssObs>& obs, const GnssSolveOptions& opt, std:
     int it = 0;
     const int nUnk = c.nUnk;
     for (; it < 20; it++) {
-        double A[49] = {}, b[7] = {};
+        double A[81] = {}, b[9] = {};
         const bool haveRx = std::sqrt(x[0] * x[0] + x[1] * x[1] + x[2] * x[2]) > 6.0e6;
         double lat = 0, lon = 0, hgt = 0;
         if (haveRx) ecefToLla(x, &lat, &lon, &hgt);
@@ -100,7 +100,7 @@ Core solveSet(const std::vector<GnssObs>& obs, const GnssSolveOptions& opt, std:
             c.res[i] = y;
             const double se = std::sin(std::max(c.el[i], 3.0) * kPi / 180.0);
             c.w[i] = se * se * obs[i].weight;
-            double h[7] = {};
+            double h[9] = {};
             h[0] = -dx / rng; h[1] = -dy / rng; h[2] = -dz / rng;
             h[3 + c.col[obs[i].sys]] = 1.0;
             for (int r = 0; r < nUnk; r++) {
@@ -108,7 +108,7 @@ Core solveSet(const std::vector<GnssObs>& obs, const GnssSolveOptions& opt, std:
                 for (int cc = 0; cc < nUnk; cc++) A[r * nUnk + cc] += c.w[i] * h[r] * h[cc];
             }
         }
-        double d[7];
+        double d[9];
         for (int r = 0; r < nUnk; r++) d[r] = b[r];
         if (!cholSolve(A, d, nUnk, nullptr)) return c;
         for (int k = 0; k < 3; k++) x[k] += d[k];
@@ -215,14 +215,14 @@ bool gnssSolve(std::vector<GnssObs>& obs, const GnssSolveOptions& opt, GnssSolut
     out.sigmaUere = dof >= 1 ? std::max(1.5, std::sqrt(c.sw / dof)) : opt.sigmaNominal;
     // DOP from the unweighted geometry
     const int nUnk = c.nUnk;
-    double G[49] = {}, Gw[49] = {}, cov[49], covW[49];
+    double G[81] = {}, Gw[81] = {}, cov[81], covW[81];
     for (size_t i = 0; i < N; i++) {
         if (!use[i]) continue;
         const double a = kEarthRate * 0.075, ca = std::cos(a), sa = std::sin(a);
         const double sx = obs[i].sat[0] * ca + obs[i].sat[1] * sa, sy = -obs[i].sat[0] * sa + obs[i].sat[1] * ca, sz = obs[i].sat[2];
         const double dx = sx - c.x[0], dy = sy - c.x[1], dz = sz - c.x[2];
         const double r = std::sqrt(dx * dx + dy * dy + dz * dz);
-        double h[7] = {};
+        double h[9] = {};
         h[0] = -dx / r; h[1] = -dy / r; h[2] = -dz / r; h[3 + c.col[obs[i].sys]] = 1.0;
         for (int rr = 0; rr < nUnk; rr++) for (int cc = 0; cc < nUnk; cc++) { G[rr * nUnk + cc] += h[rr] * h[cc]; Gw[rr * nUnk + cc] += c.w[i] * h[rr] * h[cc]; }
     }

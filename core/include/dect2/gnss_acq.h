@@ -26,9 +26,11 @@ struct GnssAcqConfig {
     int fftLog2 = 12;            // samples per code period = 1 << fftLog2
     double fsOut = 4.096e6;
     int blocks = 16;             // milliseconds integrated (even), until setPlan() says otherwise
-    int qMin = -8, qMax = 7;     // Doppler grid: 1 kHz steps times four offsets of 250 Hz, from qMin * 1000 Hz (the first window; setPlan() moves it)
+    int qMin = -8, qMax = 7;     // Doppler grid: steps of one FFT bin (fsOut / N: 1 kHz for a 1 ms code, 250 Hz for 4 ms) times four offsets, from qMin bins
+                                 // (the first window; setPlan() moves it)
     double pfa = 1e-4;           // false alarm probability of one search of a satellite
     double rfHz = 1575.42e6;     // the carrier: the code drifts by frequency / rfHz against the samples
+    bool coherentPairs = true;   // add two code periods coherently (GPS: 20 periods a bit); false for a signal with a data symbol every period (Galileo E1-B)
     std::vector<int> prns;       // the satellites to search, in the order of the first round
     // the replica of the code of one satellite, `n` samples of one code period, as complex (real) samples; false when the satellite has none
     std::function<bool(int prn, cf32* out, int n)> replica;
@@ -57,11 +59,11 @@ public:
     // Search these first (the satellites expected to be in view); the others follow
     void setPriority(const std::vector<int>& prns) { priority_ = prns; }
     float threshold() const { return threshold_; }
-    // The window of the next searches: centre and half width in Hz (whole kilohertz steps), and the milliseconds to integrate (even, 2..64).
+    // The window of the next searches: centre and half width in Hz (whole bins), and the milliseconds to integrate (even, 2..64).
     // The window applies from the next satellite on, the integration from the next segment.
     void setPlan(double centerHz, double halfWidthHz, int blocks);
-    double windowCenterHz() const { return 500.0 * (qLo_ + qHi_ + 1); }
-    double windowHalfHz() const { return 500.0 * (qHi_ - qLo_ + 1); }
+    double windowCenterHz() const { return 0.5 * binHz_ * (qLo_ + qHi_ + 1); }
+    double windowHalfHz() const { return 0.5 * binHz_ * (qHi_ - qLo_ + 1); }
     int blocksNow() const { return blocks_; }
     void endRound() { if (state_ == 1) qPos_ = queue_.size(); }   // give up the round in progress: the next call takes a new segment
     static constexpr int kMaxBlocks = 64;
@@ -73,6 +75,7 @@ private:
     bool codeFft(size_t pi);
     GnssAcqConfig cfg_;
     int N_ = 0, nBins_ = 0;
+    double binHz_ = 1000.0;
     float threshold_ = 5.0f;
     // the plan: wanted, and in use (the window for the satellite being searched, the integration for the segment held)
     int wantLo_ = -8, wantHi_ = 7, wantBlocks_ = 16;

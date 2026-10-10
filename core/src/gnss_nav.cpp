@@ -213,7 +213,7 @@ static double solveKepler(double M, double e) {
 
 void gpsEphemerisState(const GpsEphemeris& e, double t, double pos[3], double* clockS, double* eccAnom) {
     const double A = e.sqrtA * e.sqrtA;
-    const double n0 = std::sqrt(kGpsMu / (A * A * A));
+    const double n0 = std::sqrt((e.galileo ? kGalMu : kGpsMu) / (A * A * A));
     const double tk = gpsWrap(t - e.toe);
     const double n = n0 + e.dn;
     const double Mk = e.m0 + n * tk;
@@ -236,7 +236,7 @@ void gpsEphemerisState(const GpsEphemeris& e, double t, double pos[3], double* c
     pos[2] = yp * si;
     if (clockS) {
         const double dtc = gpsWrap(t - e.toc);
-        *clockS = e.af0 + e.af1 * dtc + e.af2 * dtc * dtc + kRelF * e.e * e.sqrtA * sE;
+        *clockS = e.af0 + e.af1 * dtc + e.af2 * dtc * dtc + (e.galileo ? kGalRelF : kRelF) * e.e * e.sqrtA * sE;
     }
     if (eccAnom) *eccAnom = Ek;
 }

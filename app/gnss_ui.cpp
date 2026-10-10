@@ -48,8 +48,9 @@ std::string cfoKey(const App& a) {
 
 // colours of the systems, used for the dots, bars and names
 ImU32 sysColour(int sys, float alpha = 1.f) {
-    static const float c[4][3] = {{0.40f, 0.70f, 0.95f}, {0.92f, 0.45f, 0.40f}, {0.95f, 0.75f, 0.30f}, {0.55f, 0.85f, 0.50f}};
-    const int s = sys >= 0 && sys < 4 ? sys : 0;
+    // GPS blue, GLONASS red, BeiDou amber, Galileo green, QZSS violet, SBAS grey
+    static const float c[GnssSystems][3] = {{0.40f, 0.70f, 0.95f}, {0.92f, 0.45f, 0.40f}, {0.95f, 0.75f, 0.30f}, {0.55f, 0.85f, 0.50f}, {0.78f, 0.55f, 0.95f}, {0.70f, 0.72f, 0.74f}};
+    const int s = sys >= 0 && sys < GnssSystems ? sys : 0;
     return IM_COL32((int)(255 * c[s][0]), (int)(255 * c[s][1]), (int)(255 * c[s][2]), (int)(255 * alpha));
 }
 
@@ -62,7 +63,7 @@ ImU32 cn0Colour(float cn0, float alpha = 1.f) {
 std::string satName(int sys, int prn, int fcn = 0) {
     char b[16];
     if (sys == GnssGlonass && prn == 0) snprintf(b, sizeof b, "R k%+d", fcn);
-    else snprintf(b, sizeof b, "%c%02d", gnssSystemLetter(sys), prn);
+    else return gnssSatName(sys, prn);     // G05, E11, J01 (QZSS PRN 193), S27 (SBAS PRN 127)
     return b;
 }
 
@@ -146,14 +147,29 @@ void skyPlot(const GnssTelemetry& t, bool on, ImVec2 size) {
         const float rad = (s.tracked ? 9.f : 7.f) * gUi;
         if (s.tracked) dl->AddCircleFilled(q, rad, s.used ? sysColour(s.sys, 0.95f) : sysColour(s.sys, 0.45f), 24);
         dl->AddCircle(q, rad, s.used ? IM_COL32(255, 255, 255, 220) : sysColour(s.sys, s.tracked ? 0.9f : 0.5f), 24, s.used ? 1.6f : 1.f);
-        const std::string n = std::to_string(s.prn);
+        const std::string n = satName(s.sys, s.prn, s.fcn);      // the letter says the constellation, the colour too
         const ImVec2 ts = ImGui::CalcTextSize(n.c_str());
         dl->AddText(ImVec2(q.x - ts.x * 0.5f, q.y - ts.y * 0.5f), s.tracked ? IM_COL32(10, 12, 14, 255) : IM_COL32(170, 174, 178, 255), n.c_str());
         const float d = std::hypot(q.x - mouse.x, q.y - mouse.y);
         if (hov && d < tipD) { tipD = d; tip = &s; }
     }
+    {
+        // a legend of the systems in the plot, top right
+        unsigned seen = 0;
+        for (const auto& s : t.sky) seen |= gnssSystemBit(s.sys);
+        float ly = p0.y + 4 * gUi;
+        for (int sy = 0; sy < GnssSystems; sy++) {
+            if (!(seen & gnssSystemBit(sy))) continue;
+            const char* nm = gnssSystemName(sy);
+            const ImVec2 ts = ImGui::CalcTextSize(nm);
+            const float lx = p0.x + size.x - ts.x - 16 * gUi;
+            dl->AddCircleFilled(ImVec2(lx - 2 * gUi, ly + ts.y * 0.5f), 4 * gUi, sysColour(sy, 0.95f), 12);
+            dl->AddText(ImVec2(lx + 6 * gUi, ly), IM_COL32(170, 174, 178, 255), nm);
+            ly += ts.y + 2 * gUi;
+        }
+    }
     if (tip) {
-        ImGui::SetTooltip("%s  azimuth %.0f, elevation %.0f deg\n%s%s%s", satName(tip->sys, tip->prn, tip->fcn).c_str(), tip->azDeg, tip->elDeg,
+        ImGui::SetTooltip("%s (%s)  azimuth %.0f, elevation %.0f deg\n%s%s%s", satName(tip->sys, tip->prn, tip->fcn).c_str(), gnssSystemName(tip->sys), tip->azDeg, tip->elDeg,
                           tip->tracked ? "tracked" : "not tracked", tip->used ? ", in the fix" : "", tip->fromEphemeris ? "" : "  (position from the almanac)");
     }
     if (t.sky.empty()) dl->AddText(ImVec2(p0.x + 8 * gUi, p0.y + 6 * gUi), IM_COL32(150, 154, 158, 255), "no satellite positions yet: they come with the first ephemeris");
@@ -320,10 +336,12 @@ void mapView(App& a, ImVec2 size) {
 void channelTable(const App& a, bool compact) {
     const GnssTelemetry& t = a.rx.gnss;
     const bool on = live(a);
-    const int cols = compact ? 4 : 12;
+    const int cols = compact ? 4 : 13;
     if (!ImGui::BeginTable(compact ? "##gch_s" : "##gch_f", cols, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
-    ImGui::TableSetupColumn("Sat"); ImGui::TableSetupColumn("C/N0");
+    ImGui::TableSetupColumn("Sat");
+    if (!compact) ImGui::TableSetupColumn("System");
+    ImGui::TableSetupColumn("C/N0");
     if (!compact) { ImGui::TableSetupColumn("Doppler Hz"); ImGui::TableSetupColumn("Code chips"); ImGui::TableSetupColumn("Az"); ImGui::TableSetupColumn("El"); }
     ImGui::TableSetupColumn("State");
     if (!compact) { ImGui::TableSetupColumn("Lock s"); ImGui::TableSetupColumn("Frames"); ImGui::TableSetupColumn("Resid m"); ImGui::TableSetupColumn("Health"); }
@@ -337,6 +355,8 @@ void channelTable(const App& a, bool compact) {
             const GnssChannel& c = *pc;
             ImGui::TableNextRow();
             ImGui::TableNextColumn(); ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(sysColour(c.sys))); ImGui::TextUnformatted(satName(c.sys, c.prn, c.fcn).c_str()); ImGui::PopStyleColor();
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s PRN %d", gnssSystemName(c.sys), c.prn);
+            if (!compact) { ImGui::TableNextColumn(); ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(sysColour(c.sys))); ImGui::TextUnformatted(gnssSystemName(c.sys)); ImGui::PopStyleColor(); }
             ImGui::TableNextColumn(); ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(cn0Colour(c.cn0))); ImGui::Text("%.1f", c.cn0); ImGui::PopStyleColor();
             if (!compact) {
                 ImGui::TableNextColumn(); ImGui::Text("%+.0f", c.dopplerHz);
@@ -441,7 +461,8 @@ void receiver(App& a) {
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     auto kv = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); kvColumn(130 * gUi); ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::Text(fmt, v...); ImGui::PopTextWrapPos(); ImGui::PopFont(); };
     std::string sys;
-    for (int s = 0; s < GnssSystems; s++) if (t.activeMask & gnssSystemBit(s)) sys += std::string(sys.empty() ? "" : ", ") + gnssSystemName(s);
+    const unsigned dm = t.decodeMask ? t.decodeMask : t.activeMask;
+    for (int s = 0; s < GnssSystems; s++) if (dm & gnssSystemBit(s)) sys += std::string(sys.empty() ? "" : ", ") + gnssSystemName(s);
     kv("signals", "%s at %.3f MHz, %.3f Msps", sys.empty() ? "none in this band" : sys.c_str(), t.centerMhz, t.inputRate / 1e6);
     kv("search", "%s", t.searching ? (satName(t.searchSys, t.searchPrn) + ", " + std::to_string((int)(t.searchProgress * 100)) + " % of round " + std::to_string(t.searchRounds + 1)).c_str() : "idle");
     kv("search window", "%+.1f kHz +- %.1f kHz, %d ms", t.searchCenterHz / 1e3, t.searchHalfHz / 1e3, t.searchMs);
@@ -449,6 +470,7 @@ void receiver(App& a) {
     else kv("frequency error", "%s", t.nTracked > 0 ? "about the search centre until the fix" : "not known yet");
     if (t.firstLockSecs >= 0) kv("first lock", "%.1f s", t.firstLockSecs);
     kv("navigation", "%llu frames good, %llu failed the parity", (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
+    if (t.sbasMessages > 0) kv("SBAS", "%llu messages (types shown, corrections not applied)", (unsigned long long)t.sbasMessages);
     kv("almanac", "%d GPS satellites", t.almanacGps);
     kv("ionosphere", "%s", t.ionoValid ? "model from the satellites" : "not yet");
     if (t.utcValid) kv("leap seconds", "%d", t.leapSeconds); else kv("leap seconds", "not yet");
@@ -466,6 +488,7 @@ void receiver(App& a) {
             ImGui::TableNextColumn(); ImGui::TextUnformatted(satName(n.sys, n.prn).c_str());
             ImGui::TableNextColumn();
             if (n.hasEphemeris) ImGui::TextUnformatted("yes");
+            else if (n.sys == GnssSbas) { if (n.sbasMessages > 0) ImGui::Text("%u msgs, type %d", n.sbasMessages, n.sbasLastType); else ImGui::TextUnformatted("no message yet"); }
             else if (n.ephEtaS >= 0) ImGui::Text("%d/3, ~%.0f s", n.ephParts, n.ephEtaS);
             else { ImGui::PushTextWrapPos(0); ImGui::TextUnformatted("waiting for the frame"); ImGui::PopTextWrapPos(); }
             ImGui::TableNextColumn(); if (n.iode >= 0) ImGui::Text("%d", n.iode); else ImGui::TextUnformatted("-");
@@ -586,7 +609,22 @@ void decoder(App& a, bool&) {
 
 void synth(App& a, bool& changed) {
     SynthConfig& sc = a.tune.synth;
-    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("simulated sky (GPS)"); ImGui::PopTextWrapPos(); }
+    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("simulated sky"); ImGui::PopTextWrapPos(); }
+    {
+        // the systems in the simulated sky (modeOpt[0], gnssSystemBit; 0 = GPS alone)
+        unsigned m = sc.modeOpt[0] > 0 ? (unsigned)sc.modeOpt[0] : gnssSystemBit(GnssGps);
+        const int sysList[4] = {GnssGps, GnssGalileo, GnssQzss, GnssSbas};
+        for (int k = 0; k < 4; k++) {
+            flowNext();
+            bool on = (m & gnssSystemBit(sysList[k])) != 0;
+            if (ImGui::Checkbox(gnssSystemName(sysList[k]), &on)) {
+                m = on ? (m | gnssSystemBit(sysList[k])) : (m & ~gnssSystemBit(sysList[k]));
+                if (m == 0) m = gnssSystemBit(GnssGps);
+                sc.modeOpt[0] = (int)m; changed = true;
+            }
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("QZSS and SBAS send on the GPS band with their own codes; Galileo E1-B needs 4 Msps or more.");
+    }
     flowNext(); ImGui::SetNextItemWidth(100 * gUi);
     float cn0 = sc.modeVal[3] > 0 ? (float)sc.modeVal[3] : 44.f;
     if (ImGui::SliderFloat("##gcn0", &cn0, 30.f, 50.f, "%.0f dB-Hz")) { sc.modeVal[3] = cn0; changed = true; }

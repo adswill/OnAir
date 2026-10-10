@@ -1,5 +1,6 @@
 // One tracking channel (see gnss_track.h).
 #include "dect2/gnss_track.h"
+#include "dect2/gnss_msg.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -67,6 +68,7 @@ void GnssTracker::start(const GnssSignalSpec& sp, const uint8_t* chips, int prn_
     pos_ = idx; phi_ = phase; fcar_ = dopplerHz; fcar0_ = dopplerHz; theta_ = 0;
     locked_ = lost_ = pullInTimeout_ = false;
     pllInt_ = pllF0_ = 0;
+    flSum_ = flDiff_ = 0; falseLocks_ = 0;
     havePrev_ = false;
     fllErr_ = 1e3;
     ecount_ = locked_epochs_ = pullEpochs_ = 0;
@@ -78,6 +80,9 @@ void GnssTracker::start(const GnssSignalSpec& sp, const uint8_t* chips, int prn_
     bitHistTotal_ = 0; bitAcc_ = 0; bitCount_ = 0; bitsPushed_ = 0; bitsBase_ = 0;
     bits_.clear();
     framesOk_ = framesBad_ = 0; badInRow_ = 0; framesSinceSync_ = 0;
+    sym_.clear(); symBase_ = symCount_ = lastWindowAt_ = 0; pairOffset_ = -1; lastMsgSym_ = -1; symAcc_ = 0; symHalf_ = 0;
+    pairAmp_[0] = pairAmp_[1] = 0; havePrevI_ = false; prevIsym_ = 0;
+    isym_.clear(); isymBase_ = 0; nextPart_ = -1; inavPol_ = 1; syncMiss_ = 0; evenAt_ = -1;
     events_.clear();
     epochT_.clear(); epochTFirst_ = 0;
     scatter_.clear(); cn0Hist_.clear(); lastHistEpoch_ = 0;
@@ -178,6 +183,22 @@ void GnssTracker::epoch(const GnssBand& band, int N, double startIdx) {
         pllInt_ += wn * wn * Tn * err;
         fcar_ = pllF0_ + (pllInt_ + 2 * zeta * wn * err) / (2 * M_PI);
         locked_epochs_++;
+        // A false lock half the epoch rate away (500 Hz with 1 ms epochs): the carrier turns half a cycle per epoch, which the Costas loop takes for
+        // data changes. Where a data symbol lasts two epochs or more (LNAV, SBAS), consecutive prompts then cancel instead of adding up: compare the
+        // power of their sum and of their difference over the first 500 epochs of the lock, and move the carrier by half the epoch rate if it is false.
+        if (spec.msg != GnssMsgInav && havePrev_ && locked_epochs_ > 100 && locked_epochs_ <= 600) {
+            const double si = I + prevI_, sq = Q + prevQ_, di = I - prevI_, dq = Q - prevQ_;
+            flSum_ += si * si + sq * sq; flDiff_ += di * di + dq * dq;
+            if (locked_epochs_ == 600) {
+                if (flDiff_ > flSum_) {
+                    const double half = 0.5 / Tn;
+                    pllF0_ = fcar_ + (fcar0_ > fcar_ ? half : -half);
+                    fcar_ = pllF0_; pllInt_ = 0; locked_epochs_ = 0; lockIdx_ = 0;
+                    falseLocks_++;
+                }
+                flSum_ = flDiff_ = 0;
+            }
+        }
         // lock indicator: (I^2 - Q^2) / (I^2 + Q^2), averaged
         const double li = (I * I - Q * Q) / (I * I + Q * Q + 1e-12);
         lockIdx_ += (li - lockIdx_) * 0.01;
@@ -211,13 +232,17 @@ void GnssTracker::epoch(const GnssBand& band, int N, double startIdx) {
         scatter_.push_back({(float)I, (float)Q});
         if (scatter_.size() > 400) scatter_.pop_front();
     }
-    if (ecount_ - lastHistEpoch_ >= 1000) {
+    if (ecount_ - lastHistEpoch_ >= (uint64_t)std::lround(1.0 / spec.epochS)) {
         lastHistEpoch_ = ecount_;
         cn0Hist_.push_back((float)cn0Db_);
         if (cn0Hist_.size() > 60) cn0Hist_.erase(cn0Hist_.begin());
     }
     // ---- data bits (only with a phase lock: the data sits in I)
-    if (locked_ && locked_epochs_ > 100) bitLayer((float)I);
+    if (locked_ && locked_epochs_ > 100) {
+        if (spec.msg == GnssMsgSbas) sbasLayer((float)I);
+        else if (spec.msg == GnssMsgInav) inavLayer((float)I);
+        else bitLayer((float)I);
+    }
     ecount_++;
     // advance with the frequency that was used during this epoch
     theta_ = std::fmod(theta_ + fUsed / fs * (double)N, 1.0);
@@ -308,6 +333,154 @@ void GnssTracker::trySubframe() {
     events_.push_back(ev);
 }
 
+// SBAS: 500 symbols a second, a symbol is two code periods. The symbol edges are found like the GPS bit edges (sign changes, here by the epoch
+// number modulo 2); the symbols are decoded a second at a time over the last 1200 (the bit pairs tried both ways until messages are found).
+void GnssTracker::sbasLayer(float I) {
+    const int sign = I >= 0 ? 1 : -1;
+    if (!bitSync_) {
+        // the symbol edges: the sum of two epochs has the most power when both lie in one symbol, so the power of the sums of the pairs that
+        // start at even and at odd epochs is compared (a count of sign changes would drown in noise flips at a low C/N0)
+        (void)sign;
+        if (havePrevI_) { pairAmp_[ecount_ % 2] += (prevIsym_ + I) * (prevIsym_ + I); bitHistTotal_++; }
+        prevIsym_ = I; havePrevI_ = true;
+        if (bitHistTotal_ >= 1000) {
+            const double a = pairAmp_[1], b = pairAmp_[0];       // a pair that ends at an odd epoch began at an even one
+            if (std::fabs(a - b) > 0.12 * std::max(a, b)) {
+                bitSync_ = true; syncPhase_ = a > b ? 0 : 1; syncEpoch_ = ecount_;
+                sym_.clear(); symBase_ = 0; symCount_ = 0; lastWindowAt_ = 0; pairOffset_ = -1; lastMsgSym_ = -1; symAcc_ = 0; symHalf_ = -1;
+            }
+            pairAmp_[0] = pairAmp_[1] = 0; bitHistTotal_ = 0;
+        }
+        return;
+    }
+    // a symbol starts at an epoch with the sync phase (the sign change lands at its start)
+    if ((int)(ecount_ % 2) == syncPhase_) {
+        if (symHalf_ == 2) {
+            sym_.push_back((float)symAcc_);
+            symCount_++;
+            if (sym_.size() > 4000) { sym_.erase(sym_.begin(), sym_.begin() + 2000); symBase_ += 2000; }
+        }
+        symAcc_ = 0; symHalf_ = 0;
+    }
+    if (symHalf_ >= 0) { symAcc_ += I; symHalf_++; }
+    if (!frameSync_ && ecount_ - syncEpoch_ > 20000) { bitSync_ = false; pairAmp_[0] = pairAmp_[1] = 0; bitHistTotal_ = 0; havePrevI_ = false; return; }
+    const int W = 1200;
+    if (symCount_ - lastWindowAt_ < 500 || (int64_t)sym_.size() < W + 2) return;
+    lastWindowAt_ = symCount_;
+    // normalise the soft values: the decoder only needs their ratios, but keep them near 1
+    double m = 0;
+    for (size_t k = sym_.size() - W - 1; k < sym_.size(); k++) m += std::fabs(sym_[k]);
+    m = m / (W + 1) + 1e-9;
+    std::vector<float> win((size_t)W);
+    bool any = false;
+    for (int o = 0; o < 2 && !any; o++) {
+        int off = pairOffset_ >= 0 ? pairOffset_ : o;
+        // the window starts at an absolute symbol with that parity
+        int64_t a0 = symBase_ + (int64_t)sym_.size() - W - 1;
+        if (((a0 % 2) + 2) % 2 != off) a0++;
+        for (int k = 0; k < W; k++) win[(size_t)k] = (float)(sym_[(size_t)(a0 - symBase_ + k)] / m);
+        auto msgs = sbasFindMessages(win.data(), W / 2);
+        for (auto& msg : msgs) {
+            const int64_t at = a0 + 2 * msg.bitPos;
+            any = true;
+            if (at <= lastMsgSym_) continue;
+            if (lastMsgSym_ >= 0 && frameSync_) {
+                const int64_t missed = (at - lastMsgSym_) / 500 - 1;
+                if (missed > 0) framesBad_ += (uint32_t)missed;
+            }
+            lastMsgSym_ = at;
+            framesOk_++;
+            frameSync_ = true;
+            framesSinceSync_++;
+            GnssSubframeEvent ev;
+            ev.kind = GnssMsgSbas;
+            ev.sbasType = msg.type;
+            for (int i = 0; i < 128 && i < kSbasMsgBits; i++) ev.word[i] = msg.bits[i];
+            ev.startEpoch = (int64_t)syncPhase_ + 2 * at;
+            ev.towStart = -1;
+            events_.push_back(ev);
+        }
+        if (any) pairOffset_ = off;
+        if (pairOffset_ >= 0) break;
+    }
+    if (!any && frameSync_ && lastMsgSym_ >= 0 && symBase_ + (int64_t)sym_.size() - lastMsgSym_ > 2000) {
+        // nothing for four seconds: the bit pairs or the symbols are wrong
+        framesBad_++;
+        if (++badInRow_ >= 3) { frameSync_ = false; pairOffset_ = -1; badInRow_ = 0; }
+    } else if (any) badInRow_ = 0;
+}
+
+// Galileo I/NAV on E1-B: one symbol per code period. A page part is 250 symbols that begin with the sync pattern 0101100000; found once twice
+// 250 symbols apart, the parts are decoded one by one (deinterleaving, Viterbi) and an even part and the odd part after it make a page with a CRC.
+void GnssTracker::inavLayer(float I) {
+    isym_.push_back(I);
+    if (isym_.size() > 1000) { isym_.pop_front(); isymBase_++; }
+    const int64_t last = isymBase_ + (int64_t)isym_.size() - 1;        // absolute number (= epoch count) of the newest symbol
+    if (nextPart_ < 0) {
+        // two sync patterns 250 symbols apart, in the same polarity
+        const int64_t s0 = last - 259;
+        if (s0 < isymBase_) return;
+        auto match = [&](int64_t at) {
+            int pos = 0, neg = 0;
+            for (int k = 0; k < 10; k++) {
+                const int b = isym_[(size_t)(at - isymBase_ + k)] < 0 ? 1 : 0;
+                pos += b == kInavSync[k]; neg += b != kInavSync[k];
+            }
+            return pos == 10 ? 1 : (neg == 10 ? -1 : 0);
+        };
+        const int a = match(s0), b = match(s0 + 250);
+        if (a == 0 || a != b) return;
+        inavPol_ = a; nextPart_ = s0; syncMiss_ = 0; evenAt_ = -1;
+        bitSync_ = true;
+    }
+    while (nextPart_ >= 0 && last >= nextPart_ + 249) {
+        if (nextPart_ < isymBase_) { nextPart_ = -1; bitSync_ = false; break; }
+        inavPart(nextPart_);
+        if (nextPart_ >= 0) nextPart_ += 250;
+    }
+}
+
+void GnssTracker::inavPart(int64_t p) {
+    const size_t o = (size_t)(p - isymBase_);
+    int ok = 0;
+    for (int k = 0; k < 10; k++) ok += ((isym_[o + k] * inavPol_ < 0) ? 1 : 0) == kInavSync[k];
+    if (ok < 8) {
+        if (++syncMiss_ >= 3) { nextPart_ = -1; bitSync_ = false; frameSync_ = false; return; }
+    } else syncMiss_ = 0;
+    float soft[240];
+    double m = 0;
+    for (int k = 0; k < 240; k++) { soft[k] = isym_[o + 10 + k] * (float)inavPol_; m += std::fabs(soft[k]); }
+    m = m / 240 + 1e-9;
+    for (auto& v : soft) v = (float)(v / m);
+    uint8_t bits[120];
+    inavDecodePart(soft, bits);
+    if (bits[0] == 0) { std::memcpy(evenBits_, bits, 120); evenAt_ = p; return; }
+    if (evenAt_ != p - 250) return;                  // an odd part without its even part
+    GnssSubframeEvent ev;
+    ev.kind = GnssMsgInav;
+    if (!inavCheckPage(evenBits_, bits, ev.word)) {
+        framesBad_++;
+        if (++badInRow_ >= 6) { frameSync_ = false; }
+        return;
+    }
+    badInRow_ = 0;
+    framesOk_++;
+    frameSync_ = true;
+    framesSinceSync_++;
+    ev.startEpoch = evenAt_;
+    ev.towStart = -1;
+    GalNav scratch;
+    int tow = -1;
+    inavParseWord(ev.word, scratch, &tow);
+    if (tow >= 0 && tow < 604800) {
+        ev.towStart = tow;
+        const double t0 = (double)tow - (double)evenAt_ * spec.epochS;
+        if (timeValid_ && std::fabs(gpsWrap(t0 - towAtEpoch0_)) > 2e-4) { timeValid_ = false; }
+        else { towAtEpoch0_ = t0; timeValid_ = true; }
+    }
+    events_.push_back(ev);
+}
+
 bool GnssTracker::transmitTime(double tRx, double* tow) const {
     if (!timeValid_ || epochT_.size() < 3) return false;
     // find the epoch whose start is the last one not after tRx
@@ -317,7 +490,7 @@ bool GnssTracker::transmitTime(double tRx, double* tow) const {
     while (hi - lo > 1) { const size_t mid = (lo + hi) / 2; if (epochT_[mid] <= tRx) lo = mid; else hi = mid; }
     const double t0 = epochT_[lo], t1 = epochT_[lo + 1];
     const uint64_t k = epochTFirst_ + lo;
-    *tow = towAtEpoch0_ + (double)k * 1e-3 + (tRx - t0) / (t1 - t0) * 1e-3;
+    *tow = towAtEpoch0_ + ((double)k + (tRx - t0) / (t1 - t0)) * spec.epochS;
     return true;
 }
 

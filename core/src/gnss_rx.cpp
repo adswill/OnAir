@@ -39,7 +39,12 @@ struct SatNav {
     int towLast = -1;
     int lastSfId = 0;            // the last subframe received and when (for the time left until the ephemeris is complete)
     double lastSfTime = -1;
+    // SBAS
+    int sbasLast = -1;
+    uint32_t sbasCount = 0, sbasTypes = 0;
 };
+// the L1 C/A PRNs share one numbering: GPS 1..32, SBAS 120..158, QZSS 193..202
+constexpr int kCaPrns = 203;
 
 double cpuNow() {
     timespec ts;
@@ -47,11 +52,7 @@ double cpuNow() {
     return (double)ts.tv_sec + 1e-9 * (double)ts.tv_nsec;
 }
 
-std::string satName(int sys, int prn) {
-    char b[16];
-    snprintf(b, sizeof b, "%c%02d", gnssSystemLetter(sys), prn);
-    return b;
-}
+std::string satName(int sys, int prn) { return gnssSatName(sys, prn); }
 
 } // namespace
 
@@ -87,12 +88,12 @@ struct GnssReceiver::Impl {
     bool gpsActive = false;
     GnssBand gpsBand;
     GnssAcq gpsAcq;
-    uint8_t gpsChips[33][kGpsCaLen];
-    GnssSignalSpec gpsSpec;
+    uint8_t gpsChips[kCaPrns][kGpsCaLen];
+    GnssSignalSpec gpsSpec, qzssSpec, sbasSpec;
     double acqCredit = 0;
     std::vector<std::unique_ptr<GnssTracker>> trackers;
     // navigation data
-    SatNav sat[33];
+    SatNav sat[kCaPrns];
     GpsIono iono;
     GpsUtc utc;
     double almToa = -1;
@@ -109,6 +110,7 @@ struct GnssReceiver::Impl {
     double lastFixSignal = -1;
     bool clockSet = false;
     double clockOffset = 0;
+    uint64_t sbasTotal = 0;
     double cfoEst = 0, driftEst = 0;
     bool cfoValid = false;
     // the search plan: the stage of widening while nothing is found, and the last frequency error that worked
@@ -124,7 +126,7 @@ struct GnssReceiver::Impl {
     bool havePredicted = false;
     // per-satellite last report of the fix
     struct SolInfo { bool used = false; float resid = 0; float az = 0, el = 0; bool has = false; };
-    SolInfo sol[33];
+    SolInfo sol[kCaPrns];
     // telemetry
     uint64_t seq = 0;
     double nextReport = 0.25;
@@ -153,7 +155,7 @@ struct GnssReceiver::Impl {
         const bool fits = rate >= 2.0e6 && std::fabs(off) + 1.0e6 <= 0.5 * rate;
         wantGps = wantGps && fits;
         if (wantGps) {
-            if (!gpsActive || std::fabs(gpsBand.offsetHz() - off) > 1.0 || lastRate != rate) {
+            if (!gpsActive || std::fabs(gpsBand.offsetHz() - off) > 1.0 || lastRate != rate || mask != gpsMaskNow) {
                 gpsBand.init(rate, off, kGpsFsOut, (size_t)1 << 19);
                 GnssAcqConfig ac;
                 ac.sys = GnssGps; ac.fftLog2 = 12; ac.fsOut = kGpsFsOut; ac.blocks = kShortMs; ac.rfHz = kGpsL1Hz;
@@ -161,10 +163,13 @@ struct GnssReceiver::Impl {
                 ac.pfa = 1e-3;
                 const int q = (int)std::ceil(dopHalf.load() / 1000.0);
                 ac.qMin = -q; ac.qMax = q - 1;
+                // GPS first; QZSS and SBAS after it (they are searched once a GPS satellite is locked: see skipPrn)
                 for (int p = 1; p <= 32; p++) ac.prns.push_back(p);
+                if (mask & gnssSystemBit(GnssQzss)) for (int p = 193; p <= 202; p++) ac.prns.push_back(p);
+                if (mask & gnssSystemBit(GnssSbas)) for (int p = 120; p <= 158; p++) ac.prns.push_back(p);
                 ac.replica = [](int prn, cf32* out, int n) {
                     uint8_t c[kGpsCaLen];
-                    if (!gpsCaChips(prn, c)) return false;
+                    if (!l1caChips(prn, c)) return false;
                     // sampled the way a receiver at 4.096 Msps sees the chips: the chip under the centre of each sample
                     for (int i = 0; i < n; i++) {
                         const int idx = (int)(((int64_t)i * 2 + 1) * kGpsCaLen / (2 * (int64_t)n));
@@ -174,12 +179,15 @@ struct GnssReceiver::Impl {
                 };
                 gpsAcq.init(ac);
                 stage = 0; stageRounds = 0;
-                for (int p = 1; p <= 32; p++) gpsCaChips(p, gpsChips[p]);
+                for (int p = 1; p < kCaPrns; p++) l1caChips(p, gpsChips[p]);
                 gpsSpec.sys = GnssGps; gpsSpec.chipRate = kGpsCaChipRate; gpsSpec.codeLen = kGpsCaLen; gpsSpec.rfHz = kGpsL1Hz; gpsSpec.fsOut = kGpsFsOut; gpsSpec.halfSpacing = 2;
+                qzssSpec = gpsSpec; qzssSpec.sys = GnssQzss;
+                sbasSpec = gpsSpec; sbasSpec.sys = GnssSbas; sbasSpec.msg = GnssMsgSbas;
                 trackers.clear();
                 acqCredit = 0;
             }
             gpsActive = true;
+            gpsMaskNow = mask;
         } else {
             gpsActive = false;
             trackers.clear();
@@ -188,6 +196,12 @@ struct GnssReceiver::Impl {
         tel.activeMask = gpsActive ? gnssSystemBit(GnssGps) : 0;
     }
     double lastRate = 0;
+    unsigned gpsMaskNow = 0;
+    // the systems searched or tracked now (GnssTelemetry::decodeMask)
+    unsigned decodeMask() const {
+        if (!gpsActive) return 0;
+        return gpsMaskNow & (gnssSystemBit(GnssGps) | gnssSystemBit(GnssQzss) | gnssSystemBit(GnssSbas));
+    }
 
     void resetState() {
         pend.clear();
@@ -198,7 +212,7 @@ struct GnssReceiver::Impl {
         for (auto& s : sat) s = SatNav();
         iono = GpsIono(); utc = GpsUtc(); almToa = -1; almWna = -1; almGot = false;
         fix = GnssFix(); clockSet = false; hasPrior = false; nextMeas = 1.0; fixCount = 0; firstFix = -1; lastFixSignal = -1;
-        okRetired = badRetired = 0; cfoEst = driftEst = 0; cfoValid = false;
+        okRetired = badRetired = 0; cfoEst = driftEst = 0; cfoValid = false; sbasTotal = 0;
         stage = 0; stageRounds = 0; firstLock = -1; roundHits = lastRoundHits = 0; longRound = false;
         for (auto& s : sol) s = SolInfo();
         nextReport = 0.25; acqCredit = 0; havePredicted = false;
@@ -207,7 +221,12 @@ struct GnssReceiver::Impl {
 
     // ------------------------------------------------------------------ processing
     bool tracked(int prn) const {
-        for (auto& t : trackers) if (t->sys == GnssGps && t->prn == prn) return true;
+        const int sys = l1caSystem(prn);
+        for (auto& t : trackers) if (t->sys == sys && t->prn == prn) return true;
+        return false;
+    }
+    bool gpsLocked() const {
+        for (auto& t : trackers) if (t->sys == GnssGps && t->carrierLocked()) return true;
         return false;
     }
 
@@ -223,15 +242,29 @@ struct GnssReceiver::Impl {
         if (idx < gpsBand.base()) idx = gpsBand.base();
         double ph = std::fmod(((double)idx - ((double)h.segStart + h.codePhase)) * rc, (double)kGpsCaLen);
         if (ph < 0) ph += kGpsCaLen;
-        t->start(gpsSpec, gpsChips[h.prn], h.prn, h.dopplerHz, idx, ph);
+        const int sys = l1caSystem(h.prn);
+        t->start(sys == GnssSbas ? sbasSpec : sys == GnssQzss ? qzssSpec : gpsSpec, gpsChips[h.prn], h.prn, h.dopplerHz, idx, ph);
         char b[120];
-        snprintf(b, sizeof b, "%s found: Doppler %+.0f Hz, peak %.1f times the noise", satName(GnssGps, h.prn).c_str(), h.dopplerHz, h.ratio);
+        snprintf(b, sizeof b, "%s found: Doppler %+.0f Hz, peak %.1f times the noise", satName(sys, h.prn).c_str(), h.dopplerHz, h.ratio);
         logf(b);
         trackers.push_back(std::move(t));
     }
 
     void handleSubframe(GnssTracker& t, const GnssSubframeEvent& ev, double signalNow) {
         SatNav& s = sat[t.prn];
+        if (ev.kind == GnssMsgSbas) {
+            // SBAS: the message type is reported; the corrections are not applied
+            const bool fresh = ev.sbasType < 32 ? !(s.sbasTypes & (1u << ev.sbasType)) : false;
+            s.sbasLast = ev.sbasType; s.sbasCount++;
+            if (ev.sbasType < 32) s.sbasTypes |= 1u << ev.sbasType;
+            sbasTotal++;
+            if (fresh) {
+                char b[100];
+                snprintf(b, sizeof b, "%s SBAS message type %d", satName(t.sys, t.prn).c_str(), ev.sbasType);
+                logf(b);
+            }
+            return;
+        }
         const unsigned id = lnavSubframeId(ev.sf);
         s.towLast = (int)ev.towStart;
         s.lastSfId = (int)id; s.lastSfTime = signalNow;
@@ -243,10 +276,10 @@ struct GnssReceiver::Impl {
             if (s.pend.complete() && s.pendWeek > 0 && (!s.hasEph || s.eph.iodc != s.pend.iodc || s.eph.toe != s.pend.toe)) {
                 s.eph = s.pend; s.hasEph = true; s.week = s.pendWeek; s.ephSignalTime = signalNow;
                 char b[120];
-                snprintf(b, sizeof b, "%s ephemeris IODE %d, week %d, health %s", satName(GnssGps, t.prn).c_str(), s.eph.iode(), s.week, s.eph.health ? "bad" : "ok");
+                snprintf(b, sizeof b, "%s ephemeris IODE %d, week %d, health %s", satName(t.sys, t.prn).c_str(), s.eph.iode(), s.week, s.eph.health ? "bad" : "ok");
                 logf(b);
             }
-        } else if (id == 4 || id == 5) {
+        } else if ((id == 4 || id == 5) && t.sys == GnssGps) {     // the QZSS pages of subframes 4 and 5 have their own layout (not decoded)
             GpsAlmanac a; int sv = 0; double toa = 0; int wna = 0;
             GpsIono io; GpsUtc ut;
             const int r = lnavParseAlmanacPage(ev.sf, (int)id, &sv, a, io, ut, &toa, &wna);
@@ -287,6 +320,9 @@ struct GnssReceiver::Impl {
 
     bool skipPrn(int prn) const {
         if (tracked(prn)) return true;
+        // QZSS and SBAS once a GPS satellite gives the frequency window; the 39 SBAS codes every other round only
+        if (prn >= 193) return !gpsLocked();
+        if (prn > 32) return !gpsLocked() || gpsAcq.rounds() % 2 == 0;
         // with a fix and the sky predicted from the almanac, look for the satellites that should be in view; the others now and then
         if (havePredicted && gpsAcq.rounds() % 6 != 5 && std::find(predictedVisible.begin(), predictedVisible.end(), prn) == predictedVisible.end()) return true;
         return false;
@@ -367,11 +403,12 @@ struct GnssReceiver::Impl {
         std::vector<int> prns;
         std::vector<double> towv;
         for (auto& t : trackers) {
-            if (t->sys != GnssGps || !t->carrierLocked() || !t->timeValid()) continue;
+            // QZSS keeps GPS time and sends the GPS navigation message: it joins the GPS satellites (IS-QZSS-PNT); SBAS is not used for ranging
+            if ((t->sys != GnssGps && t->sys != GnssQzss) || !t->carrierLocked() || !t->timeValid()) continue;
             double tow;
             if (!t->transmitTime(S, &tow)) continue;
             GnssMeasurement m;
-            m.sys = GnssGps; m.prn = t->prn; m.rxTime = S; m.txTow = tow; m.dopplerHz = t->dopplerHz(); m.cn0 = t->cn0();
+            m.sys = t->sys; m.prn = t->prn; m.rxTime = S; m.txTow = tow; m.dopplerHz = t->dopplerHz(); m.cn0 = t->cn0();
             meas.push_back(m);
         }
         // satellites with a usable ephemeris for the solution
@@ -391,7 +428,7 @@ struct GnssReceiver::Impl {
                 tTrue = meas[i].txTow - (dts - s.eph.tgd);
             }
             GnssObs o;
-            o.sys = GnssGps; o.prn = meas[i].prn;
+            o.sys = GnssGps; o.prn = meas[i].prn;          // QZSS too: one clock with GPS
             o.pr = kC * (gpsWrap(tr0 - meas[i].txTow) + (dts - s.eph.tgd));
             o.sat[0] = pos[0]; o.sat[1] = pos[1]; o.sat[2] = pos[2];
             o.weight = std::min(2.0, std::max(0.05, std::pow(10.0, (meas[i].cn0 - 45.0) / 10.0)));
@@ -436,18 +473,22 @@ struct GnssReceiver::Impl {
             }
             fix.nSats = sl.nUsed;
             for (int s = 0; s < GnssSystems; s++) fix.nSatsPerSystem[s] = 0;
-            fix.nSatsPerSystem[GnssGps] = sl.nUsed;
+            for (size_t k = 0; k < obs.size(); k++) if (sl.used[k]) fix.nSatsPerSystem[meas[idx[k]].sys]++;
+            if (fix.nSatsPerSystem[GnssQzss] > 0) { fix.systemInFix[GnssQzss] = true; fix.clockBiasM[GnssQzss] = fix.clockBiasM[GnssGps]; }
             fix.hdop = sl.hdop; fix.vdop = sl.vdop; fix.pdop = sl.pdop; fix.tdop = sl.tdop;
             fix.hErrM = sl.hErrM;
             fix.vErrM = sl.vErrM;
             fix.residualRmsM = (float)sl.rmsResidual;
-            char b[64];
-            snprintf(b, sizeof b, "GPS %d satellites", sl.nUsed);
+            std::string names;
+            for (int s = 0; s < GnssSystems; s++) if (fix.nSatsPerSystem[s] > 0) names += std::string(names.empty() ? "" : " + ") + gnssSystemName(s);
+            char b[96];
+            snprintf(b, sizeof b, "%s %d satellites", names.c_str(), sl.nUsed);
             fix.type = b;
             // GPS time of the measurement: the reference time less the clock error
             const double tGps = tr0 - sl.bias[GnssGps] / kC;
             int week = 0;
-            for (auto& m : meas) if (sat[m.prn].hasEph) { week = sat[m.prn].week; break; }
+            for (auto& m : meas) if (m.sys == GnssGps && sat[m.prn].hasEph) { week = sat[m.prn].week; break; }
+            if (week == 0) for (auto& m : meas) if (sat[m.prn].hasEph) { week = sat[m.prn].week; break; }
             double tow = tGps;
             if (tow < 0) { tow += 604800.0; week--; }
             if (tow >= 604800.0) { tow -= 604800.0; week++; }
@@ -524,8 +565,10 @@ struct GnssReceiver::Impl {
         t.seq = ++seq;
         t.inputRate = rate;
         t.centerMhz = centerMhz.load();
-        t.systemsMask = sysMask.load() & 1u;
+        t.systemsMask = sysMask.load() & (gnssSystemBit(GnssGps) | gnssSystemBit(GnssQzss) | gnssSystemBit(GnssSbas));
         t.activeMask = gpsActive ? 1u : 0u;
+        t.decodeMask = decodeMask();
+        t.sbasMessages = sbasTotal;
         t.signalSecs = signalNow;
         struct Row { const GnssTracker* t; };
         std::vector<const GnssTracker*> order;
@@ -572,8 +615,10 @@ struct GnssReceiver::Impl {
             }
             ni.hasAlmanac = s.alm.valid;
             ni.towS = s.towLast;
+            ni.sbasLastType = s.sbasLast; ni.sbasMessages = s.sbasCount; ni.sbasTypesSeen = s.sbasTypes;
             // subframes 1, 2, 3 come every 30 s, 6 s apart: the time left is until the last missing one has arrived
             if (s.hasEph) { ni.ephParts = 3; ni.ephEtaS = 0; }
+            else if (tr->sys == GnssSbas) { ni.ephParts = 0; ni.ephEtaS = -1; }
             else {
                 const bool has[4] = {false, s.pend.prn == tr->prn && s.pend.has1, s.pend.prn == tr->prn && s.pend.has2, s.pend.prn == tr->prn && s.pend.has3};
                 ni.ephParts = (int)has[1] + (int)has[2] + (int)has[3];
@@ -610,17 +655,31 @@ struct GnssReceiver::Impl {
                 if (el < 0) continue;
                 GnssSky sk;
                 sk.sys = GnssGps; sk.prn = p; sk.azDeg = (float)az; sk.elDeg = (float)el; sk.fromEphemeris = fromEph;
-                for (auto& tr : trackers) if (tr->prn == p) { sk.tracked = tr->carrierLocked(); sk.cn0 = sk.tracked ? tr->cn0() : 0.f; }
+                for (auto& tr : trackers) if (tr->sys == GnssGps && tr->prn == p) { sk.tracked = tr->carrierLocked(); sk.cn0 = sk.tracked ? tr->cn0() : 0.f; }
                 sk.used = sol[p].used;
                 sk.health = sat[p].hasEph ? (sat[p].eph.health ? 1 : 0) : (sat[p].alm.health ? 1 : 0);
+                t.sky.push_back(sk);
+            }
+            // QZSS from its ephemeris (SBAS: the geostationary position is in message type 9, not decoded, so it has no place in the sky plot)
+            for (int p = 193; p <= 202 && t.sky.size() < 64; p++) {
+                if (!sat[p].hasEph) continue;
+                double pos[3], az, el;
+                gpsEphemerisState(sat[p].eph, fix.gpsTow, pos, nullptr);
+                azElFromEcef(fix.ecef, pos, &az, &el);
+                if (el < 0) continue;
+                GnssSky sk;
+                sk.sys = GnssQzss; sk.prn = p; sk.azDeg = (float)az; sk.elDeg = (float)el; sk.fromEphemeris = true;
+                for (auto& tr : trackers) if (tr->sys == GnssQzss && tr->prn == p) { sk.tracked = tr->carrierLocked(); sk.cn0 = sk.tracked ? tr->cn0() : 0.f; }
+                sk.used = sol[p].used;
+                sk.health = sat[p].eph.health ? 1 : 0;
                 t.sky.push_back(sk);
             }
         }
         // search
         t.searching = gpsActive;
-        t.searchSys = GnssGps; t.searchPrn = gpsAcq.currentPrn();
+        t.searchSys = gpsAcq.currentPrn() > 0 ? l1caSystem(gpsAcq.currentPrn()) : GnssGps; t.searchPrn = gpsAcq.currentPrn();
         t.searchProgress = gpsAcq.progress(); t.searchRounds = gpsAcq.rounds();
-        t.acqSys = GnssGps; t.acqPrn = gpsAcq.lastPrn(); t.acqDopplerHz = (float)gpsAcq.lastDoppler(); t.acqPeakToNoise = gpsAcq.lastRatio();
+        t.acqSys = gpsAcq.lastPrn() > 0 ? l1caSystem(gpsAcq.lastPrn()) : GnssGps; t.acqPrn = gpsAcq.lastPrn(); t.acqDopplerHz = (float)gpsAcq.lastDoppler(); t.acqPeakToNoise = gpsAcq.lastRatio();
         t.acqCorr = gpsAcq.lastCorr(); t.acqPeakIndex = gpsAcq.lastPeakIndex();
         t.searchCenterHz = (float)gpsAcq.windowCenterHz(); t.searchHalfHz = (float)gpsAcq.windowHalfHz(); t.searchMs = gpsAcq.blocksNow();
         t.searchStage = t.nTracked > 0 ? 0 : stage;
@@ -639,7 +698,7 @@ struct GnssReceiver::Impl {
         t.clipPercent = (float)(clipFrac * 100.0);
         t.dcI = (float)dcI; t.dcQ = (float)dcQ;
         char b[120];
-        snprintf(b, sizeof b, "%d tracked, %d with ephemeris, %s", t.nTracked, (int)std::count_if(sat + 1, sat + 33, [](const SatNav& s) { return s.hasEph; }), fix.valid ? fix.type.c_str() : "no fix");
+        snprintf(b, sizeof b, "%d tracked, %d with ephemeris, %s", t.nTracked, (int)std::count_if(sat + 1, sat + kCaPrns, [](const SatNav& s) { return s.hasEph; }), fix.valid ? fix.type.c_str() : "no fix");
         t.status = b;
         std::lock_guard<std::mutex> lk(telMu);
         tel = std::move(t);
@@ -766,6 +825,13 @@ void GnssReceiver::setElevationMask(double deg) { p_->elMask = deg; }
 bool GnssReceiver::getEphemeris(int prn, GpsEphemeris& e, int* week) const {
     std::lock_guard<std::mutex> lk(p_->procMu);
     if (prn < 1 || prn > 32 || !p_->sat[prn].hasEph) return false;
+    e = p_->sat[prn].eph;
+    if (week) *week = p_->sat[prn].week;
+    return true;
+}
+bool GnssReceiver::getEphemerisOf(int sys, int prn, GpsEphemeris& e, int* week) const {
+    std::lock_guard<std::mutex> lk(p_->procMu);
+    if (prn < 1 || prn >= kCaPrns || l1caSystem(prn) != sys || !p_->sat[prn].hasEph) return false;
     e = p_->sat[prn].eph;
     if (week) *week = p_->sat[prn].week;
     return true;
