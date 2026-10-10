@@ -1,5 +1,6 @@
 // DAB receiver, transmission mode I: null-symbol and phase-reference synchronisation, carrier and timing tracking, DQPSK
 // demodulation, fast information channel (ensemble, services, labels) and the main service channel of the selected sub-channel.
+#include "dect2/text_charset.h"
 #include "dect2/dab.h"
 #include "dect2/fftutil.h"
 #include "dect2/dab_tii.h"
@@ -20,17 +21,9 @@ constexpr double kPi = 3.14159265358979323846;
 constexpr int kMaxShift = 80;      // integer carrier offset searched at the start: +-80 kHz covers 50 ppm at L band (1.49 GHz, 75 kHz)
 constexpr int kBackoff = 16;        // demodulation windows start this many samples before the useful part (inside the guard interval)
 
-// EBU Latin-based charset (the part that matters for labels) to UTF-8
-std::string labelText(const uint8_t* d, int n) {
-    std::string s;
-    for (int i = 0; i < n; i++) {
-        const unsigned c = d[i];
-        if (c < 0x20) continue;
-        if (c < 0x80) s += (char)c;
-        else { s += (char)(0xC0 | (c >> 6)); s += (char)(0x80 | (c & 0x3F)); }
-    }
-    while (!s.empty() && s.back() == ' ') s.pop_back();
-    return s;
+// A 16-byte label in the charset FIG 1 names (EN 300 401 5.2.2.2.1; EBU Latin unless it says otherwise) to clean UTF-8
+std::string labelText(int charset, const uint8_t* d, int n) {
+    return text::clean(text::dabCharset(charset, d, (size_t)n));
 }
 
 uint32_t getBits(const uint8_t* d, int pos, int n) {
@@ -434,20 +427,20 @@ struct DabReceiver::Impl {
     }
 
     void parseFig1(const uint8_t* d, int len) {
-        const int ext = d[0] & 7;
+        const int ext = d[0] & 7, cs = d[0] >> 4;
         const uint8_t* b = d + 1;
         const int n = len - 1;
-        if (ext == 0 && n >= 18) ens.label = labelText(b + 2, 16);
+        if (ext == 0 && n >= 18) ens.label = labelText(cs, b + 2, 16);
         else if (ext == 1 && n >= 18) {
             const uint32_t sid = (uint32_t)((b[0] << 8) | b[1]);
             DabService& sv = ens.services[sid];
             sv.sid = sid;
-            sv.label = labelText(b + 2, 16);
+            sv.label = labelText(cs, b + 2, 16);
         } else if (ext == 5 && n >= 20) {   // data service label (32-bit SId), e.g. DMB television
             const uint32_t sid = ((uint32_t)b[0] << 24) | ((uint32_t)b[1] << 16) | ((uint32_t)b[2] << 8) | b[3];
             DabService& sv = ens.services[sid];
             sv.sid = sid;
-            sv.label = labelText(b + 4, 16);
+            sv.label = labelText(cs, b + 4, 16);
         }
     }
 

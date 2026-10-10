@@ -1,4 +1,5 @@
 // The shared channel database: see channel_db.h.
+#include "dect2/text_charset.h"
 #include "dect2/channel_db.h"
 #include <algorithm>
 #include <cmath>
@@ -31,8 +32,11 @@ std::string trim(const std::string& s) {
 }
 // services in the sent text must not contain the separator or line breaks
 std::string cleanService(std::string s) {
-    for (auto& c : s) if (c == '|' || c == '\n' || c == '\r' || c == '"') c = ' ';
-    return trim(s);
+    // Names come from the air in many character sets; whatever a receiver let through, the list only takes valid UTF-8 without control or
+    // invisible characters (the submission check refuses those)
+    s = text::clean(s);
+    for (auto& c : s) if (c == '|' || c == '"') c = ' ';
+    return trim(text::clean(s));
 }
 bool sameChannel(const Row& a, const Row& b) { return std::fabs(a.freqMhz - b.freqMhz) <= 0.05; }
 

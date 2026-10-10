@@ -1,3 +1,4 @@
+#include "dect2/text_charset.h"
 #include "dect2/ts.h"
 #include <algorithm>
 #include <cstring>
@@ -89,7 +90,7 @@ std::string dvbText(const uint8_t* p, int n) {
         return r;
     };
     unsigned first = p[0];
-    if (first >= 0x20) s = convert("ISO-8859-1", p, n);                       // default table (close to ISO 6937)
+    if (first >= 0x20) s = text::iso6937(p, (size_t)n);                         // default table: ISO/IEC 6937 (EN 300 468 Annex A)
     else if (first >= 0x01 && first <= 0x0B && first != 0x0 && n > 1) {
         static const char* cs[] = {"", "ISO-8859-5", "ISO-8859-6", "ISO-8859-7", "ISO-8859-8", "ISO-8859-9", "ISO-8859-10", "ISO-8859-11", "", "ISO-8859-13", "ISO-8859-14", "ISO-8859-15"};
         s = convert(cs[first], p + 1, n - 1);
@@ -99,8 +100,8 @@ std::string dvbText(const uint8_t* p, int n) {
     } else if (first == 0x11 && n > 1) s = convert("UCS-2BE", p + 1, n - 1);
     else if (first == 0x15 && n > 1) s = std::string((const char*)p + 1, n - 1);
     else if (first == 0x14 && n > 1) s = convert("BIG5", p + 1, n - 1);
-    else s = convert("ISO-8859-1", p + 1, n - 1);
-    return clean(s);
+    else s = text::iso6937(p + 1, (size_t)(n - 1));   // reserved selector: the default table
+    return text::clean(clean(s));
 }
 
 const char* TsService::typeName() const {
