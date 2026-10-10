@@ -1,6 +1,7 @@
 // application state: preferences, device list, bandwidth, ingesting spectrum and receiver telemetry, channel list
 #include "app.h"
 #include "dect2/usb_diag.h"
+#include "dect2/rate_choice.h"
 
 // the name of the built-in test signal in the source list: it follows the mode
 static std::string synthLabel(const App& a) {
@@ -157,6 +158,30 @@ void saveRadioSettings(const App& a) {
     plat::prefs().flush();
 }
 
+// ---- the sample rate chosen per mode and per radio
+std::string rateModeId(const App& a) {
+    if (const ModeTuning* mt = a.family >= 6 ? modeTuning(a.family + 2) : nullptr) return mt->id;
+    static const char* kIds[] = {"dvb", "atsc", "dab", "atsc3", "isdbt", "fm"};
+    return a.family >= 0 && a.family < 6 ? kIds[a.family] : "mode" + std::to_string(a.family);
+}
+static std::string ratePrefKey(const App& a) {
+    if (a.devIdx < 0 || a.devIdx >= (int)a.devices.size()) return "";
+    const std::string rk = radioKeyOf(a.devices[a.devIdx]);
+    return rk.empty() ? "" : "rate." + rateModeId(a) + "." + rk;
+}
+std::string rateContext(const App& a) { return ratePrefKey(a) + "|" + std::to_string(a.devIdx) + "|" + std::to_string(a.family) + "|" + std::to_string(a.bwIdx) + "|" + std::to_string(a.dtmbBwMhz); }
+double savedSampleRate(const App& a) {
+    const std::string k = ratePrefKey(a);
+    return k.empty() ? 0 : plat::prefs().getD(k.c_str(), 0);
+}
+void saveSampleRate(App& a, double hz) {
+    const std::string k = ratePrefKey(a);
+    if (k.empty()) return;
+    plat::prefs().setD(k.c_str(), hz > 0 ? hz : 0);
+    plat::prefs().flush();
+}
+double modeMinSampleRate(const App& a) { return minSampleRateFor(engineStd(a), a.tune.bandwidthMhz > 0 ? a.tune.bandwidthMhz : kBw[a.bwIdx].mhz); }
+
 void applyBandwidth(App& a) {
     syncRadioSettings(a);   // the selected radio's own settings go with every start
     // HackRF Pro: the tuned centre is only exact at <= 10 Msps and at 20 Msps, so use 10 Msps (8 for narrow channels)
@@ -198,6 +223,15 @@ void applyBandwidth(App& a) {
         const DeviceInfo& dv = a.devices[a.devIdx];
         if (dv.isGeneric() && dv.maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, dv.maxRateHz);
     } else if (a.atscMode) { a.tune.bandwidthMhz = 6; a.tune.sampleRate = 8e6; if (a.devices[a.devIdx].isGeneric() && a.devices[a.devIdx].maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, a.devices[a.devIdx].maxRateHz); }   // an ATSC channel is always 6 MHz wide
+    // the rate chosen for this mode on this radio replaces the mode's own (Auto: nothing changes); one outside this radio's limits or below
+    // what the mode needs now (a wider DVB channel) is not used, the control shows Auto
+    a.autoRateHz = a.tune.sampleRate;
+    a.chosenRateHz = 0;
+    a.rateCtx = rateContext(a);
+    if (const double want = savedSampleRate(a); want > 0 && a.devices[a.devIdx].isRadio()) {
+        const RateCheck c = checkManualRate(rateLimitsOf(a.devices[a.devIdx]), modeMinSampleRate(a), want);
+        if (c.ok) { a.tune.sampleRate = want; a.chosenRateHz = want; }
+    }
     // the rate was lowered to the radio's top: a filter meant for the faster rate lets everything up to its edge fold into the band (the
     // 8-9 MHz filters of DTMB, analog TV, DVB-S and Iridium on a PlutoSDR's 4 Msps over USB); the radio's own choice for its rate (0) fits
     if (a.tune.basebandFilterHz > a.tune.sampleRate) a.tune.basebandFilterHz = 0;

@@ -85,7 +85,7 @@ std::vector<IdleHandle> gIdle;     // kept open, stopped, waiting for the next o
 std::vector<DeviceInfo> gKnown;
 SteadyClock::time_point gLastClose = SteadyClock::now() - std::chrono::hours(1);
 // per serial: the sample rates and whether it is a Mini (its firmware version string says "AirSpy MINI"), read at a listing (under gDevMu)
-struct AirspyModel { double minRate = 0, maxRate = 0; bool mini = false; };
+struct AirspyModel { std::vector<std::pair<double, double>> rates; double minRate = 0, maxRate = 0; bool mini = false; };
 std::map<uint64_t, AirspyModel> gModels;
 void probe(uint64_t sn, AirspyApi::airspy_device* d) {
     AirspyModel m;
@@ -93,7 +93,7 @@ void probe(uint64_t sn, AirspyApi::airspy_device* d) {
     if (airspy().get_samplerates(d, &count, 0) == 0 && count > 0) {
         std::vector<uint32_t> rates(std::min<uint32_t>(count, 16));
         if (airspy().get_samplerates(d, rates.data(), (uint32_t)rates.size()) == 0) {
-            for (uint32_t r : rates) if (r > 0) { m.maxRate = std::max(m.maxRate, (double)r); m.minRate = m.minRate > 0 ? std::min(m.minRate, (double)r) : r; }
+            for (uint32_t r : rates) if (r > 0) { m.rates.emplace_back((double)r, (double)r); m.maxRate = std::max(m.maxRate, (double)r); m.minRate = m.minRate > 0 ? std::min(m.minRate, (double)r) : r; }
         }
     }
     if (airspy().version_string_read) {
@@ -303,7 +303,7 @@ void listAirspy(std::vector<DeviceInfo>& out) {
             std::lock_guard<std::mutex> lk(gDevMu);
             const auto it = gModels.find(sn);
             if (it != gModels.end()) {
-                if (it->second.maxRate > 0) { d.minRateHz = it->second.minRate; d.maxRateHz = it->second.maxRate; }
+                if (it->second.maxRate > 0) { d.minRateHz = it->second.minRate; d.maxRateHz = it->second.maxRate; d.rateRanges = it->second.rates; }
                 if (it->second.mini) d.maxFreqHz = 1.7e9;
             }
         }

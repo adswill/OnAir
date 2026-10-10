@@ -85,7 +85,7 @@ double rateAtLeast(const std::vector<SoapySDR::Range>& ranges, double want) {
 
 // The ranges of each radio (by serial, or its arguments when it has none), read when it is started: the list is built from the enumerate
 // results alone, because opening every radio to ask makes a refresh slow and can take a radio from the program that is using it.
-struct SoapyRanges { double minRate = 0, maxRate = 0, gainMin = 0, gainMax = 0, minFreq = 0, maxFreq = 0; std::string biasKey; std::vector<std::string> antennas; std::vector<RadioSetting> settings; };
+struct SoapyRanges { std::vector<std::pair<double, double>> rates; double minRate = 0, maxRate = 0, gainMin = 0, gainMax = 0, minFreq = 0, maxFreq = 0; std::string biasKey; std::vector<std::string> antennas; std::vector<RadioSetting> settings; };
 std::mutex gRangesMu;
 std::map<std::string, SoapyRanges> gRanges;
 
@@ -168,7 +168,7 @@ std::string biasSetting(SoapySDR::Device* dev) {
 void rememberRanges(const std::string& key, SoapySDR::Device* dev) {
     SoapyRanges r;
     try {
-        for (const auto& x : dev->getSampleRateRange(SOAPY_SDR_RX, 0)) { r.maxRate = std::max(r.maxRate, x.maximum()); r.minRate = r.minRate == 0 ? x.minimum() : std::min(r.minRate, x.minimum()); }
+        for (const auto& x : dev->getSampleRateRange(SOAPY_SDR_RX, 0)) { if (x.step() <= 0 || x.maximum() <= x.minimum()) r.rates.emplace_back(x.minimum(), x.maximum()); r.maxRate = std::max(r.maxRate, x.maximum()); r.minRate = r.minRate == 0 ? x.minimum() : std::min(r.minRate, x.minimum()); }
         const auto g = dev->getGainRange(SOAPY_SDR_RX, 0);
         r.gainMin = g.minimum(); r.gainMax = g.maximum();
         for (const auto& x : dev->getFrequencyRange(SOAPY_SDR_RX, 0)) { r.maxFreq = std::max(r.maxFreq, x.maximum()); r.minFreq = r.minFreq == 0 ? x.minimum() : std::min(r.minFreq, x.minimum()); }
@@ -385,7 +385,7 @@ std::vector<DeviceInfo> listSoapyDevices(std::string& err) {
                 const auto it = gRanges.find(rangesKey(d.serial, d.soapyArgs));
                 if (it != gRanges.end()) {
                     const SoapyRanges& r = it->second;
-                    d.minRateHz = r.minRate; d.maxRateHz = r.maxRate; d.gainMinDb = r.gainMin; d.gainMaxDb = r.gainMax; d.minFreqHz = r.minFreq; d.maxFreqHz = r.maxFreq;
+                    d.minRateHz = r.minRate; d.maxRateHz = r.maxRate; d.rateRanges = r.rates; d.gainMinDb = r.gainMin; d.gainMaxDb = r.gainMax; d.minFreqHz = r.minFreq; d.maxFreqHz = r.maxFreq;
                     d.hasBiasTee = !r.biasKey.empty();
                     antennas = r.antennas;
                     d.settings = r.settings;

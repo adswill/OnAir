@@ -1,5 +1,6 @@
 // the top bar, the source options, the status bar, gain control and the standard switch
 #include "app.h"
+#include "dect2/rate_choice.h"
 
 // The converter resolution at the rate in use, for the ADC level advice and the AGC (gain.h): the 8-bit HackRF and RTL-SDR, the 12-bit
 // Airspy, LimeSDR, PlutoSDR, bladeRF and USRP, the 16-bit HF+ path; the SDRplay ADC gives up bits as its rate rises (API specification:
@@ -58,6 +59,99 @@ static void bandwidthNow(App& a) {
     a.engine.setBandwidthAuto(false);
     if (a.devices[a.devIdx].isRadio() && a.tune.sampleRate != oldRate) startReceiver(a);   // 8 vs 10 Msps: the radio is opened again
     else a.engine.setBandwidth(a.tune.bandwidthMhz);
+}
+
+// ---- the sample rate of the radio for this mode: Auto (the mode's own rate), one of the rates that suit the radio and the mode, or a typed one
+static std::string mspsText(double hz) {
+    char b[32];
+    snprintf(b, sizeof b, "%.3f", hz / 1e6);
+    std::string s = b;
+    while (!s.empty() && s.back() == '0') s.pop_back();
+    if (!s.empty() && s.back() == '.') s.pop_back();
+    return s + " Msps";
+}
+static void chooseSampleRate(App& a, double hz) {
+    saveSampleRate(a, hz);
+    const bool restart = a.engine.running() && a.devices[a.devIdx].isRadio();
+    const double old = a.tune.sampleRate;
+    a.tune.centerHz = a.freqMhz * 1e6;
+    applyBandwidth(a);
+    if (restart && a.tune.sampleRate != old) {   // the radio is opened again at the new rate, as after a change of mode
+        a.engine.log("restarting at " + mspsText(a.tune.sampleRate));
+        startReceiver(a);
+        a.mpd.reset(); a.quality.reset();
+    }
+}
+void sampleRateControl(App& a) {
+    const DeviceInfo& d = a.devices[a.devIdx];
+    const bool run = a.engine.running();
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextDisabled("RATE");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Sample rate of the radio for this mode");
+    ImGui::SameLine(0, 5 * gUi);
+    if (d.kind == DeviceInfo::File) {   // the file's own rate (set in the source options); nothing to choose
+        ImGui::TextUnformatted((mspsText(run ? a.engine.radioRate() : a.file.sampleRate) + " (file)").c_str());
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("A recording plays at the rate it was made at: set it with the file.");
+        return;
+    }
+    if (!run && a.rateCtx != rateContext(a)) applyBandwidth(a);   // another mode, radio or channel width: its own Auto and its own choice
+    const float w = std::max(110.f * gUi, ImGui::GetContentRegionAvail().x > 400 * gUi ? 150.f * gUi : ImGui::GetContentRegionAvail().x);
+    ImGui::SetNextItemWidth(w);
+    const bool radio = d.isRadio();
+    const RateLimits L = rateLimitsOf(d);
+    const double need = modeMinSampleRate(a);
+    const std::string preview = a.chosenRateHz > 0 ? mspsText(a.chosenRateHz) : "Auto (" + mspsText(a.autoRateHz > 0 ? a.autoRateHz : a.tune.sampleRate) + ")";
+    bool openManual = false;
+    ImGui::BeginDisabled(!radio || a.scanner.progress().running);
+    if (ImGui::BeginCombo("##srate", preview.c_str())) {
+        if (ImGui::Selectable(("Auto (" + mspsText(a.autoRateHz) + ")").c_str(), a.chosenRateHz == 0) && a.chosenRateHz != 0) chooseSampleRate(a, 0);
+        for (const RateEntry& e : rateEntries(L, need)) {
+            std::string label = mspsText(e.getHz);
+            if (std::fabs(e.askHz - e.getHz) > 1) label += " (for " + mspsText(e.askHz) + ")";
+            const bool sel = a.chosenRateHz > 0 && std::fabs(deliveredRate(L, a.chosenRateHz) - e.getHz) <= 1;
+            if (ImGui::Selectable(label.c_str(), sel) && !sel) chooseSampleRate(a, e.getHz);
+        }
+        ImGui::Separator();
+        if (ImGui::Selectable("Manual…")) openManual = true;
+        ImGui::EndCombo();
+    }
+    ImGui::EndDisabled();
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+        ImGui::BeginTooltip(); ImGui::PushTextWrapPos(420 * gUi);
+        if (!radio) ImGui::TextWrapped("The test signal is made at the mode's own rate (%s).", mspsText(a.tune.sampleRate).c_str());
+        else if (a.scanner.progress().running) ImGui::TextWrapped("A scan is using the radio and sets its own rate.");
+        else {
+            ImGui::TextWrapped("Sample rate of the radio for this mode, remembered for this radio. Auto is the mode's own rate.");
+            if (need > 0) ImGui::TextWrapped("This mode needs at least %s.", mspsText(need).c_str());
+            if (L.minHz > 0 || L.maxHz > 0) ImGui::TextWrapped("This radio: %s to %s.", L.minHz > 0 ? mspsText(L.minHz).c_str() : "?", L.maxHz > 0 ? mspsText(L.maxHz).c_str() : "?");
+            ImGui::TextWrapped("A higher rate shows more spectrum but needs more USB bandwidth and processor time: when the status bar reports samples lost on the radio side, choose a lower rate.");
+            if (run && a.engine.radioRate() > 0) ImGui::TextWrapped("The radio runs at %s.", mspsText(a.engine.radioRate()).c_str());
+        }
+        ImGui::PopTextWrapPos(); ImGui::EndTooltip();
+    }
+    if (run && radio && a.tune.sampleRate > 0 && std::fabs(a.engine.sampleRate() - a.tune.sampleRate) > a.tune.sampleRate * 1e-3) {   // the radio rounded it
+        ImGui::SameLine(0, 6 * gUi);
+        ImGui::TextColored(ImVec4(0.9f, 0.7f, 0.28f, 1), "runs at %s", mspsText(a.engine.sampleRate()).c_str());
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("The radio gave %s instead of the %s asked for.", mspsText(a.engine.sampleRate()).c_str(), mspsText(a.tune.sampleRate).c_str());
+    }
+    static double typed = 0;
+    static std::string why;
+    if (openManual) { typed = (a.chosenRateHz > 0 ? a.chosenRateHz : a.tune.sampleRate) / 1e6; why.clear(); ImGui::OpenPopup("##srateman"); }
+    if (ImGui::BeginPopup("##srateman")) {
+        ImGui::TextDisabled("Sample rate (Msps)");
+        ImGui::SetNextItemWidth(120 * gUi);
+        if (openManual) ImGui::SetKeyboardFocusHere();
+        const bool enter = ImGui::InputDouble("##sratev", &typed, 0, 0, "%.3f", ImGuiInputTextFlags_EnterReturnsTrue);
+        ImGui::SameLine();
+        if (ImGui::Button("Use") || enter) {
+            const RateCheck c = checkManualRate(L, need, std::round(typed * 1e3) * 1e3);
+            if (c.ok) { chooseSampleRate(a, std::round(typed * 1e3) * 1e3); ImGui::CloseCurrentPopup(); }
+            else why = c.why;
+        }
+        if (!why.empty()) ImGui::TextColored(ImVec4(0.95f, 0.45f, 0.35f, 1), "%s", why.c_str());
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape)) ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
 }
 
 void setDvbBandwidth(App& a, int idx) {
@@ -120,8 +214,13 @@ void toolbarParts(App& a, int mask, bool vertical) {
     ImGui::SetNextItemWidth(110 * gUi);
     ImGui::InputDouble("##freq", &a.freqMhz, 0, 0, "%.3f MHz");
     if (ImGui::IsItemDeactivatedAfterEdit()) retune = true;
+    if (vertical) sampleRateControl(a); else { ImGui::SameLine(0, 10 * gUi); sampleRateControl(a); }   // the sample rate, next to the frequency
     }
     const ModeUi* mu = modeUi(a.family);
+    if ((mask & TbTuner) && !(mask & TbFreq)) {   // the side panels: the frequency is in the top bar, the sample rate heads the tuner
+        sampleRateControl(a);
+        if (!vertical) flowNext(10 * gUi);
+    }
     if (mask & TbTuner) {
     if (mu) { if (mu->tuner) { if (!vertical && (mask & TbFreq)) flowNext(10 * gUi); mu->tuner(a, retune); } } else {
     if (!vertical && (mask & TbFreq)) flowNext(10 * gUi);   // one bar: the groups wrap in a narrow window

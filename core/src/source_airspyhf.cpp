@@ -199,6 +199,7 @@ void listAirspyHf(std::vector<DeviceInfo>& out) {
             if (count && airspyhf().get_samplerates(dev, rates, count) == 0) {
                 d.minRateHz = *std::min_element(rates, rates + count);
                 d.maxRateHz = *std::max_element(rates, rates + count);
+                for (uint32_t k = 0; k < count; k++) if (rates[k] > 0) d.rateRanges.emplace_back((double)rates[k], (double)rates[k]);
             }
             int32_t nb = 0;   // newer HF+ models power the antenna input; the library says how many switches the radio has
             d.hasBiasTee = airspyhf().set_bias_tee && airspyhf().get_bias_tee_count && airspyhf().get_bias_tee_count(dev, &nb) == 0 && nb > 0;

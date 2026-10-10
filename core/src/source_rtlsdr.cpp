@@ -324,6 +324,7 @@ void listRtl(std::vector<DeviceInfo>& out) {
         if (label.empty()) { const char* nm = rtl().get_device_name(i); label = nm ? nm : "RTL-SDR"; }
         d.name = label + (d.serial.empty() ? "" : " " + d.serial) + " (native, experimental)";
         d.maxRateHz = 2.56e6; d.minRateHz = 0.9e6;
+        d.rateRanges = {{0.225001e6, 0.3e6}, {0.900001e6, 2.56e6}};   // librtlsdr refuses 0.3 to 0.9 Msps (and above 3.2); faster than 2.56 drops samples
         d.gainMinDb = 0; d.gainMaxDb = 49.6;
         int tuner = -1;
         const std::string key = d.nativeArgs + "/" + label + "/" + d.serial;

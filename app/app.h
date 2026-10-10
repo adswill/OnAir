@@ -285,6 +285,9 @@ struct App {
     double scanHarvestT = 0;
     bool agcOn = false;
     std::string gainDev;   // the radio a.tune.gainDb was set for (board:serial); another radio starts at its own sensible gain
+    double autoRateHz = 0;      // the mode's own radio rate ("Auto" of the sample-rate control), set by applyBandwidth()
+    double chosenRateHz = 0;    // the rate chosen for this mode on this radio and applied by applyBandwidth() (0 = Auto)
+    std::string rateCtx;        // mode / radio / channel width applyBandwidth() last ran for (the control refreshes Auto when it changes)
     std::string radioKey;  // the radio a.tune.radio (its own settings, DeviceInfo::settings) was loaded for (radioKeyOf); "" = none
     AutoGain agc;
     GainSweep sweep;
@@ -430,6 +433,13 @@ void setFamily(App& a, int f);
 int engineStd(const App& a);
 void refreshDevices(App& a);
 void applyBandwidth(App& a);
+// The sample rate chosen per mode and per radio (prefs "rate.<mode id>.<radioKeyOf>", in Hz; absent or 0 = Auto, the mode's own rate)
+std::string rateModeId(const App& a);
+std::string rateContext(const App& a);
+double savedSampleRate(const App& a);
+void saveSampleRate(App& a, double hz);
+double modeMinSampleRate(const App& a);
+void sampleRateControl(App& a);   // toolbar.cpp: the "Sample rate" control under the frequency
 // The radio's own settings (DeviceInfo::settings, TuneSettings::radio), saved per radio: the key a radio is saved under, loading the
 // selected radio's values into a.tune.radio when another radio was chosen, saving them after a change
 std::string radioKeyOf(const DeviceInfo& d);

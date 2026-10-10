@@ -100,6 +100,10 @@ struct DeviceInfo {
     std::string nativeArgs;    // what the radio's own library wants to open it (index, serial, URI, ...)
     double maxRateHz = 0;      // fastest complex sample rate the radio offers (0 = unknown)
     double minRateHz = 0;
+    // The rates the radio offers when its driver lists them: each pair a range (lo == hi: one rate), between them rates it cannot run at (the
+    // RTL-SDR's 0.3 to 0.9 Msps). Empty = any rate between minRateHz and maxRateHz (or not known). The driver takes the smallest one at or
+    // above what is asked for (rate_choice.h).
+    std::vector<std::pair<double, double>> rateRanges;
     double gainMinDb = 0, gainMaxDb = 0;
     double minFreqHz = 0, maxFreqHz = 0;   // tuning range of the radio (0 = unknown)
     bool hasBiasTee = false;               // the radio and its library can power the antenna input (TuneSettings::biasTee)
