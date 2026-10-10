@@ -392,9 +392,14 @@ void listPluto(std::vector<DeviceInfo>& out) {
         }
         out.push_back(d);
     };
-    if (IioApi::iio_scan_context* sc = iio().v1 ? nullptr : iio().create_scan_context("usb:ip", 0)) {   // USB, plus the boards that announce themselves on the network (mDNS)
+    // USB, plus the boards that announce themselves on the network (mDNS). A libiio built without DNS-SD fails the whole "usb:ip" scan, and
+    // libiio 0.19 knows only one backend per scan: then USB alone
+    for (const char* backends : {"usb:ip", "usb"}) {
+        IioApi::iio_scan_context* sc = iio().v1 ? nullptr : iio().create_scan_context(backends, 0);
+        if (!sc) continue;
         IioApi::iio_context_info** info = nullptr;
         const auto n = iio().scan_context_get_info_list(sc, &info);
+        if (n <= 0) { if (info) iio().context_info_list_free(info); iio().scan_context_destroy(sc); continue; }
         for (long i = 0; i < (long)n && i < 16; i++) {
             const char* desc = iio().context_info_get_description(info[i]);
             const char* uri = iio().context_info_get_uri(info[i]);
@@ -404,6 +409,7 @@ void listPluto(std::vector<DeviceInfo>& out) {
         }
         if (info) iio().context_info_list_free(info);
         iio().scan_context_destroy(sc);
+        break;
     }
     if (const char* u = getenv("DECT2_PLUTO_URI")) add(u, "");   // a PlutoSDR on the network, e.g. ip:192.168.2.1
 }
