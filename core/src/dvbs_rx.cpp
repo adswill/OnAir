@@ -26,7 +26,9 @@ double dvbsMinAutoSymbolRate(double fs) { return std::max(60e3, fs * 40.0 / 4096
 ModeTuning dvbsTuning() {
     ModeTuning t;
     t.stdMode = 8; t.id = "dvbs"; t.name = "DVB-S/S2";
-    t.minMhz = 700; t.maxMhz = 2400; t.defMhz = 1500.0;       // the L-band IF of an LNB: 950 to 2150 MHz, 739 MHz for the QO-100 narrow band transponder
+    // The L-band IF of an LNB is 950 to 2150 MHz (739 MHz for the QO-100 narrow band transponder), but radio amateurs also send DVB-S/S2
+    // directly on 50, 70, 144, 437 MHz and 1.2 / 2.4 GHz, often narrow band (issue #30): the radio's own range is the only limit.
+    t.minMhz = 30; t.maxMhz = 6000; t.defMhz = 1500.0;
     t.sampleRate = 10000000.0; t.basebandHz = 8000000.0; t.bandwidthMhz = 8;
     t.minSampleRate = 2000000.0;
     return t;
