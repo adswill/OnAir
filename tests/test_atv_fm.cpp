@@ -21,6 +21,8 @@ struct FmOptions {
     double cfoHz = 1.5e6;       // the transmitter is not on the tuned frequency
     double devHz = 8e6;         // the sync tip to white swing is +-devHz
     int pattern = 0;            // the test card (its colour bars are what the picture is judged on)
+    double acTauMs = 0;         // > 0: the transmitter is AC coupled (a high-pass with this time constant before the modulator): the baseline follows the
+                                // picture, and the long broad pulses of the field sync shift it (what analog FPV video transmitters do)
 };
 
 // the generator's composite video (sync -0.43, blanking 0, white 1) at the radio's rate, as a frequency modulated carrier, 8 bits
@@ -31,6 +33,11 @@ std::vector<cf32> fmSignal(double secs, const FmOptions& o) {
     g.setCompositeTap([&](const float* v, size_t n) { comp.insert(comp.end(), v, v + n); });
     std::vector<cf32> sink((size_t)(secs * AtvGenerator::kInternalRate));
     g.generate(sink.data(), sink.size());
+    if (o.acTauMs > 0) {   // single-pole high-pass at the composite rate
+        const double a = std::exp(-1.0 / (o.acTauMs * 1e-3 * AtvGenerator::kInternalRate));
+        double y = 0, xp = comp.empty() ? 0.0 : comp[0];
+        for (float& c : comp) { const double x = c; y = a * (y + x - xp); xp = x; c = (float)y; }
+    }
     std::vector<cf32> in(comp.size()), v;
     for (size_t i = 0; i < comp.size(); i++) in[i] = cf32(comp[i], 0.f);
     ExactResampler rs;
@@ -95,7 +102,6 @@ double barError(const AtvFrame& f) {
     for (int i = 0; i < 8; i++) {
         float rgb[3]; atvEbuBar(i, rgb);
         for (int k = 0; k < 3; k++) worst = std::max(worst, std::fabs(c[i][k] - rgb[k]));
-        if (getenv("FM_DEBUG")) printf("   bar %d: got %.2f %.2f %.2f  want %.2f %.2f %.2f\n", i, c[i][0], c[i][1], c[i][2], rgb[0], rgb[1], rgb[2]);
     }
     return worst;
 }
@@ -115,15 +121,44 @@ void check(const char* name, const FmOptions& o, double secs, int maxLockMs, dou
     CHECK(t.fmSyncLow == o.syncLow, "%s: the polarity found is the wrong one", name);
     CHECK(t.blocksBad <= 4, "%s: damaged fields %llu", name, (unsigned long long)t.blocksBad);
     CHECK(r.frame && r.frame->width == 768 && r.frame->height == 576, "%s: picture size", name);
-    if (r.frame && getenv("FM_DUMP")) {
-        FILE* f = fopen((std::string(getenv("FM_DUMP")) + "_" + std::to_string(o.syncLow) + ".ppm").c_str(), "wb");
-        if (f) { fprintf(f, "P6\n%d %d\n255\n", r.frame->width, r.frame->height); for (size_t i = 0; i < (size_t)r.frame->width * r.frame->height; i++) fwrite(&r.frame->rgba[i * 4], 1, 3, f); fclose(f); }
-    }
     if (r.frame) {
         const double e = barError(*r.frame);
         printf("  colour bars: worst error %.3f\n", e);
         CHECK(e < maxBarErr, "%s: colour bars off by %.3f", name, e);
     }
+}
+
+// A recording of a real analog FPV link (cs8, 20 Msps), when ATV_FM_REAL names one: AC coupled, a sync of an eighth of the swing, and a baseline
+// that creeps by twice that over the lines after every field sync. Before the levels followed the baseline of a missed line the receiver lost the
+// line sync every few fields (152 times in 10 s) and never held a picture.
+void realRecording(const char* path) {
+    FILE* f = fopen(path, "rb");
+    if (!f) { printf("FAIL: cannot open %s\n", path); fails++; return; }
+    AtvReceiver rx;
+    rx.setSilent(true);
+    rx.setModulation(1);
+    int lost = 0;
+    rx.setLogCallback([&](const std::string& m) { if (m.find("line sync lost") != std::string::npos) lost++; });
+    rx.configure(20e6);
+    std::vector<int8_t> raw(2 * 65536);
+    std::vector<cf32> buf(65536);
+    AtvTelemetry t;
+    uint64_t seq = 0, total = 0;
+    for (size_t got; (got = fread(raw.data(), 2, 65536, f)) > 0;) {
+        for (size_t i = 0; i < got; i++) buf[i] = cf32(raw[2 * i] / 128.f, raw[2 * i + 1] / 128.f);
+        rx.feed(buf.data(), got);
+        total += got;
+        AtvTelemetry n;
+        if (rx.telemetry(n, seq)) { seq = n.seq; t = n; }
+    }
+    fclose(f);
+    const double secs = (double)total / 20e6;
+    printf("real FPV recording %s: %.1f s, state %d, %d lines, %s, fields ok %llu bad %llu, line sync lost %d times\n", path, secs, t.state, t.lines, t.colourSystem.c_str(),
+           (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad, lost);
+    CHECK(t.state == 2 && t.lines == 625, "the real recording is not locked at the end (state %d, %d lines)", t.state, t.lines);
+    CHECK(t.blocksOk > 40 * secs * 0.7, "only %llu fields decoded in %.1f s", (unsigned long long)t.blocksOk, secs);
+    CHECK(t.blocksBad <= 5, "damaged fields %llu", (unsigned long long)t.blocksBad);
+    CHECK(lost <= 2, "the line sync was lost %d times", lost);
 }
 
 }   // namespace
@@ -135,6 +170,10 @@ int main() {
     { FmOptions o; o.syncLow = false; check("sync highest, 30 dB", o, 4.5, 3500, 0.35); }
     // a weaker signal, another deviation and a larger offset from the tuned frequency
     { FmOptions o; o.cnrDb = 22; o.devHz = 6e6; o.cfoHz = -2.5e6; check("22 dB, +-6 MHz, -2.5 MHz off", o, 3.0, 2000, 0.45); }
+    // an AC coupled transmitter: the baseline follows the picture and is shifted by the long pulses of the field sync. (A real transmitter's sync is
+    // an eighth of the swing, not 30 %, and what the slicer has to follow is then much worse than here: the real recording below is the test
+    // of that; this one only checks that such a signal decodes.)
+    { FmOptions o; o.acTauMs = 2; check("AC coupled, 2 ms", o, 4.0, 2500, 0.45); }
     // only noise: no picture, and no trouble
     {
         std::mt19937 rng(3); std::normal_distribution<float> nd(0.f, 0.15f);
@@ -143,6 +182,7 @@ int main() {
         const Result r = decode(x, 20e6);
         CHECK(r.tel.state != 2 && !r.tel.dataValid, "noise decoded as a picture (state %d)", r.tel.state);
     }
+    if (const char* real = getenv("ATV_FM_REAL")) realRecording(real);
     printf(fails ? "atv_fm: %d FAILED\n" : "atv_fm: ok\n", fails);
     return fails ? 1 : 0;
 }
