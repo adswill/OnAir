@@ -22,7 +22,8 @@ static std::string rateWarning(const App& a) {
     const bool run = a.engine.running();
     const double rate = run ? a.engine.sampleRate() : d.isGeneric() ? d.maxRateHz : 0;
     const double bw = run && a.family == 0 && a.engine.activeBandwidth() > 0 ? a.engine.activeBandwidth() : kBw[a.bwIdx].mhz;
-    const double need = minSampleRateFor(engineStd(a), bw);
+    double need = minSampleRateFor(engineStd(a), bw);
+    if (a.family == 8 && a.atvFm) need = std::max(need, 16e6);   // FM video: a link is about 17 MHz wide
     if (rate <= 0 || need <= 0 || rate >= need - 1) return "";
     char what[64];
     if (a.family == 0) snprintf(what, sizeof what, "the %g MHz DVB-T2 / DVB-T channel", bw);

@@ -24,6 +24,8 @@ struct AtvTelemetry {
     int state = 0;               // 0 searching, 1 partly locked (carrier and line sync), 2 locked and decoding (line and field sync)
     double cfoHz = 0;            // vision carrier offset from the place the standard gives it in the channel (6, 7 or 8 MHz layout: by sound spacing and system; 5.5 MHz sound follows setChannelWidth, default 8)
     float snrDb = 0;             // video signal-to-noise ratio: 0.7 V of luminance against the rms noise on the porches, in the video band
+    int modulation = 0;          // 0 AM (broadcast), 1 FM video (FPV)
+    bool fmSyncLow = true;       // FM video: the sync tip is the lowest frequency (found by trial)
     bool dataValid = false;      // a picture is coming out (line and field sync are locked)
     uint64_t blocksOk = 0, blocksBad = 0;   // fields decoded with all their lines and with missing or damaged lines since the start
 

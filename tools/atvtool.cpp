@@ -27,7 +27,7 @@ static void usage() {
            "  --sound M       beeps (default), melody, carrier, none, tone\n"
            "  --no-groupdelay --nyquist-tx --no-setup\n"
            "  --frame-png F   also write the reference test card of the first frame as a PPM file\n"
-           "atvtool rx <file> --rate MSPS [--format cs8|cu8|cf32] [options]   run the receiver\n"
+           "atvtool rx <file> --rate MSPS [--format cs8|cu8|cf32] [--fm] [options]   run the receiver (--fm: FM video of an analog FPV link, 20 Msps)\n"
            "atvtool sweep [name-filter] [--secs N]   run the receiver over a list of impaired signals and print one line each\n");
 }
 
@@ -223,7 +223,7 @@ int main(int argc, char** argv) {
         double rate = 10e6;
         std::string fmtName, ppm, wav;
         double ppmEvery = 0;
-        bool envelope = false, verbose = false, bob = false;
+        bool envelope = false, verbose = false, bob = false, fm = false;
         int sysSel = -1, colSel = -1;
         double secs = 0;
         for (int i = 3; i < argc; i++) {
@@ -235,6 +235,7 @@ int main(int argc, char** argv) {
             else if (a == "--ppm-every") ppmEvery = atof(next());
             else if (a == "--wav") wav = next();
             else if (a == "--envelope") envelope = true;
+            else if (a == "--fm") fm = true;
             else if (a == "--bob") bob = true;
             else if (a == "--verbose") verbose = true;
             else if (a == "--secs") secs = atof(next());
@@ -250,6 +251,7 @@ int main(int argc, char** argv) {
         std::vector<float> audio;
         rx.setAudioTap([&](const float* l, const float*, size_t n) { audio.insert(audio.end(), l, l + n); });
         rx.setLogCallback([&](const std::string& m) { printf("log: %s\n", m.c_str()); });
+        if (fm) rx.setModulation(1);
         rx.configure(rate);
         if (!rx.ready()) { fprintf(stderr, "the sample rate is too low for analog TV (8 Msps at least)\n"); return 1; }
         if (envelope) rx.setDetector(1);
