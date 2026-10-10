@@ -5,6 +5,7 @@
 #include "dect2/hfdig_rtty.h"
 #include "dect2/hfdig_sstv.h"
 #include "dect2/hfdig_freedv.h"
+#include "dect2/hfdig_ftx.h"
 #include "dect2/marine_dsp.h"
 #include "dect2/audioout.h"
 #include "hfdig_usb.h"
@@ -119,7 +120,8 @@ struct HfdigReceiver::Impl {
     std::unique_ptr<HfdigRtty> rtty = makeRttyDecoder();
     std::unique_ptr<HfdigSstv> sstv = makeSstvDecoder();
     std::unique_ptr<HfdigFreedv> freedv = makeFreedvDecoder();
-    HfdigDecoder* decoders[3] = {rtty.get(), sstv.get(), freedv.get()};
+    std::unique_ptr<HfdigFtx> ftx = makeFtxDecoder();
+    HfdigDecoder* decoders[4] = {rtty.get(), sstv.get(), freedv.get(), ftx.get()};
     std::function<void(const float*, size_t)> audioTap, speechTap;
     Upsample6 up;
     std::vector<float> pcm;
@@ -142,7 +144,7 @@ struct HfdigReceiver::Impl {
         base.clear(); audio.clear(); pcm.clear();
         for (HfdigDecoder* d : decoders) d->reset();
         if (audioOut) audioOut->flush();
-        if (cb && curRate > 0) cb("HF digital: listening to the sideband audio for RTTY, SSTV and FreeDV");
+        if (cb && curRate > 0) cb("HF digital: listening to the sideband audio for RTTY, SSTV, FreeDV, FT8, FT4, FT2 and WSPR");
     }
 
     void playSpeech(const float* x, size_t n) {
@@ -169,6 +171,7 @@ struct HfdigReceiver::Impl {
         rtty->telemetry(tel.rtty);
         sstv->telemetry(tel.sstv);
         freedv->telemetry(tel.freedv);
+        ftx->telemetry(tel.ftx);
         std::lock_guard<std::mutex> lk(mu);
         pub = tel;
     }
@@ -236,6 +239,7 @@ void HfdigReceiver::setAudioTap(std::function<void(const float* x, size_t n)> cb
 void HfdigReceiver::setSpeechTap(std::function<void(const float* x, size_t n)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->speechTapSet = std::move(cb); p_->tapsReq = true; }
 
 HfdigRtty& HfdigReceiver::rtty() { return *p_->rtty; }
+HfdigFtx& HfdigReceiver::ftx() { return *p_->ftx; }
 
 ModeTuning hfdigTuning() {
     ModeTuning t;

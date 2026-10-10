@@ -8,7 +8,7 @@
 // SynthConfig:
 //   snrDb       signal to noise ratio in 3 kHz, for test audio with an rms of 0.35 (a sine of amplitude 0.5); louder audio gives more
 //   cfoHz       carrier offset (the audio moves up by it)
-//   modeOpt[0]  which test signal: 0 RTTY, 1 SSTV, 2 FreeDV
+//   modeOpt[0]  which test signal: 0 RTTY, 1 SSTV, 2 FreeDV, 3 FT8, 4 FT4, 5 WSPR, 6 FT2
 //   modeOpt[1..7], modeVal[0..3]: free for the chosen decoder's test audio (only one plays at a time)
 #pragma once
 #include "mode_synth.h"
@@ -30,7 +30,8 @@ public:
 std::unique_ptr<HfdigTestAudio> makeRttyTestAudio(const SynthConfig& cfg);
 std::unique_ptr<HfdigTestAudio> makeSstvTestAudio(const SynthConfig& cfg);
 std::unique_ptr<HfdigTestAudio> makeFreedvTestAudio(const SynthConfig& cfg);
-// The one modeOpt[0] picks (0 RTTY, 1 SSTV, 2 FreeDV; anything else: nullptr)
+std::unique_ptr<HfdigTestAudio> makeFtxTestAudio(const SynthConfig& cfg);   // hfdig_ftx_gen.cpp: modeOpt[0] 3 FT8, 4 FT4, 5 WSPR, 6 FT2
+// The one modeOpt[0] picks (0 RTTY, 1 SSTV, 2 FreeDV, 3 FT8, 4 FT4, 5 WSPR, 6 FT2; anything else: nullptr)
 std::unique_ptr<HfdigTestAudio> makeHfdigTestAudio(int which, const SynthConfig& cfg);
 
 } // namespace dect2

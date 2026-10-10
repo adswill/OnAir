@@ -18,11 +18,12 @@
 void hfdigRttyTab(App& a, const dect2::HfdigTelemetry& t);
 void hfdigSstvTab(App& a, const dect2::HfdigTelemetry& t);
 void hfdigFreedvTab(App& a, const dect2::HfdigTelemetry& t);
+void hfdigFtxTab(App& a, const dect2::HfdigTelemetry& t);
 
 namespace {
 
 struct State {
-    int view = 0;                        // 0 RTTY, 1 SSTV, 2 FreeDV
+    int view = 0;                        // 0 RTTY, 1 SSTV, 2 FreeDV, 3 FT8 / FT4 / FT2 / WSPR
     bool wasRunning = false;
     float pushedVol = -1;
     bool pushedMute = false;
@@ -149,11 +150,16 @@ void tick(App& a) {
 }
 
 void tab(App& a) {
-    subNav("hfdv", S.view, {"RTTY", "SSTV", "FreeDV"});
+    static bool viewLoaded = false;   // the view is remembered
+    if (!viewLoaded) { viewLoaded = true; S.view = (int)std::max(0L, std::min(3L, plat::prefs().getI("hfdigView", 0))); }
+    const int was = S.view;
+    subNav("hfdv", S.view, {"RTTY", "SSTV", "FreeDV", "FT8 / WSPR"});
+    if (S.view != was) plat::prefs().setI("hfdigView", S.view);
     const dect2::HfdigTelemetry& t = a.rx.hfdig;
     if (S.view == 0) hfdigRttyTab(a, t);
     else if (S.view == 1) hfdigSstvTab(a, t);
-    else hfdigFreedvTab(a, t);
+    else if (S.view == 2) hfdigFreedvTab(a, t);
+    else hfdigFtxTab(a, t);
 }
 
 void list(App& a) {
@@ -169,6 +175,7 @@ void list(App& a) {
     if (!S.rttyText.empty()) ev.push_back({S.rttyT, 0, 0});
     for (size_t i = 0; i < t.sstv.history.size() && i < 3; i++) if (t.sstv.history[i]) ev.push_back({(double)t.sstv.history[i]->unixTime, 1, i});
     if (!S.fdvText.empty()) ev.push_back({S.fdvT, 2, 0});
+    for (size_t i = t.ftx.decodes.size(), n = 0; i-- > 0 && n < 8; n++) ev.push_back({t.ftx.decodes[i].slotUtc, 3, i});   // the newest decodes
     if (ev.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("nothing yet: listening"); ImGui::PopTextWrapPos(); return; }
     std::stable_sort(ev.begin(), ev.end(), [](const Ev& x, const Ev& y) { return x.t > y.t; });   // newest first
     ImGui::PushTextWrapPos(0);
@@ -192,6 +199,12 @@ void list(App& a) {
                 ImGui::Dummy(ImVec2(p.w * z, p.h * z));
                 ImGui::GetWindowDrawList()->AddImage(p.tex->texture(), q, ImVec2(q.x + p.w * z, q.y + p.h * z));
             }
+        } else if (e.kind == 3) {
+            const auto& d = t.ftx.decodes[e.pic];
+            ImGui::TextColored(pal::heading(), "%s:", dect2::ftxModeName(d.mode)); ImGui::SameLine(0, 5 * gUi);
+            ImGui::PushFont(a.mono, 0);
+            if (d.cq) ImGui::TextColored(pal::okGreen(), "%s", d.msg.c_str()); else ImGui::TextUnformatted(d.msg.c_str());
+            ImGui::PopFont();
         } else {
             ImGui::TextColored(pal::heading(), "FreeDV:"); ImGui::SameLine(0, 5 * gUi);
             ImGui::Text("%s sync, text '%s'", S.fdvMode >= 0 ? dect2::freedvModeName(S.fdvMode) : "no", S.fdvText.c_str());
@@ -209,7 +222,7 @@ void panels(App& a) {
     const ImVec2 av = ImGui::GetContentRegionAvail();
     if (av.x < 80 || av.y < 80) return;
     const float cap = ImGui::GetTextLineHeightWithSpacing();
-    captionFit(av.x, "Audio 0 to 4000 Hz (upper sideband): the RTTY tones and the SSTV signal");
+    captionFit(av.x, "Audio 0 to 4000 Hz (upper sideband): the RTTY tones, the SSTV signal and the FT8 / WSPR decodes of the last slot");
     const float h1 = std::max(40.f, (av.y - 2 * cap) * 0.45f), h2 = std::max(40.f, av.y - 2 * cap - h1 - 6);
     const ImVec2 p0 = ImGui::GetCursorScreenPos();
     ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -236,10 +249,16 @@ void panels(App& a) {
         snprintf(b, sizeof b, "%d", hz);
         dl->AddText(ImVec2(X(hz) - (hz == 4000 ? 24 : 12) * gUi, wb + 3 * gUi), txt, b);
     }
-    if (have) for (float db = yBot; db <= yTop; db += 10) {
-        dl->AddLine(ImVec2(l, Y(db)), ImVec2(r, Y(db)), grid);
-        snprintf(b, sizeof b, "%.0f", db);
-        dl->AddText(ImVec2(p0.x + 4 * gUi, Y(db) - 7 * gUi), txt, b);
+    if (have) {
+        const float lh = ImGui::GetTextLineHeight();
+        float step = 10;   // labels at least a line apart
+        while (step < 80 && (Y(yBot) - Y(yBot + step)) < lh + 2) step += 10;
+        for (float db = yBot; db <= yTop; db += 10) {
+            dl->AddLine(ImVec2(l, Y(db)), ImVec2(r, Y(db)), grid);
+            if (std::fmod(db - yBot, step) != 0 || Y(db) - lh * 0.5f < top - 1 || Y(db) + lh * 0.5f > bot + 1) continue;
+            snprintf(b, sizeof b, "%.0f", db);
+            dl->AddText(ImVec2(p0.x + 4 * gUi, Y(db) - lh * 0.5f), txt, b);
+        }
     }
     // the SSTV signal's fixed tones, faint, and the RTTY tones once found
     struct Mark { double hz; const char* label; int row; };
@@ -250,7 +269,8 @@ void panels(App& a) {
             const float y0 = k ? wt : top, y1 = k ? wb : bot;
             dl->AddLine(ImVec2(X(m.hz), y0), ImVec2(X(m.hz), y1), cs, 1.f);
         }
-        dl->AddText(ImVec2(X(m.hz) + 3 * gUi, top + 2 * gUi + m.row * ImGui::GetTextLineHeight()), IM_COL32(110, 170, 235, 150), m.label);
+        if (bot - top > 5 * ImGui::GetTextLineHeight())   // room for these and the RTTY labels at the bottom
+            dl->AddText(ImVec2(X(m.hz) + 3 * gUi, top + 2 * gUi + m.row * ImGui::GetTextLineHeight()), IM_COL32(110, 170, 235, 150), m.label);
     }
     if (on && t.rtty.state >= 1 && t.rtty.markHz > 0) {
         const ImU32 cm = IM_COL32(120, 230, 140, 230), csp = IM_COL32(230, 180, 70, 230);
@@ -261,6 +281,15 @@ void panels(App& a) {
         }
         dl->AddText(ImVec2(X(t.rtty.markHz) + 3 * gUi, bot - ImGui::GetTextLineHeight() - 2 * gUi), cm, "RTTY mark");
         dl->AddText(ImVec2(X(t.rtty.spaceHz) + 3 * gUi, bot - 2 * ImGui::GetTextLineHeight() - 2 * gUi), csp, "space");
+    }
+    if (on) {   // the decodes of the newest slot of each mode, as ticks along the top of the waterfall
+        double newest[dect2::kFtxModes] = {};
+        for (const auto& d : t.ftx.decodes) newest[d.mode] = std::max(newest[d.mode], d.slotUtc);
+        for (const auto& d : t.ftx.decodes) {
+            if (d.slotUtc != newest[d.mode] || d.hz <= 0 || d.hz >= 4000) continue;
+            const float x = X(d.hz);
+            dl->AddLine(ImVec2(x, wt), ImVec2(x, wt + 8 * gUi), IM_COL32(240, 200, 90, 230), 2.f);
+        }
     }
     if (have) {
         std::vector<ImVec2> pts(S.spec.size());
@@ -296,6 +325,7 @@ void status(App& a) {
     lamp("RTTY", on && t.rtty.state >= 1 ? 1 : 0); flowNext(10 * gUi);
     lamp("SSTV", on && t.sstv.state == 1 ? 1 : 0); flowNext(10 * gUi);
     lamp("FreeDV", on && t.freedv.mode >= 0 ? 1 : 0); flowNext(10 * gUi);
+    lamp("FT8/WSPR", on && t.ftx.total > 0 ? (t.ftx.clockWarn ? 2 : 1) : 0); flowNext(10 * gUi);
     ImGui::TextDisabled("|"); flowNext(10 * gUi);
     ImGui::AlignTextToFramePadding();
     ImGui::TextDisabled("State"); ImGui::SameLine(0, 5 * gUi);

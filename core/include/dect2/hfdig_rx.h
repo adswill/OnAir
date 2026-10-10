@@ -1,5 +1,6 @@
 // HF digital receiver: one upper sideband channel on the HF bands, demodulated once to audio, and three decoders that all listen to the
-// same audio at the same time: RTTY (hfdig_rtty.h), SSTV (hfdig_sstv.h) and FreeDV digital voice (hfdig_freedv.h).
+// same audio at the same time: RTTY (hfdig_rtty.h), SSTV (hfdig_sstv.h), FreeDV digital voice (hfdig_freedv.h) and FT8 / FT4 / FT2 /
+// WSPR (hfdig_ftx.h).
 // The channel is mixed to 0 Hz (setSignalOffset) and brought to 24 kHz complex by the marine receiver's front end (marine_dsp.h); the
 // upper sideband from 200 to 3800 Hz above the dial frequency becomes real audio at 8000 Hz with a slow AGC (about -1 .. 1), as on a
 // communications receiver. Every decoder's feedAudio() gets that audio. FreeDV's speech goes back out through the receiver, with the
@@ -20,6 +21,7 @@ namespace dect2 {
 
 struct HfdigTelemetry;   // hfdig_tel.h
 class HfdigRtty;         // hfdig_rtty.h
+class HfdigFtx;          // hfdig_ftx.h
 
 constexpr double kHfdigAudioRate = 8000.0;   // the audio every decoder gets, and the rate of FreeDV's speech
 
@@ -51,6 +53,7 @@ public:
     void setSilent(bool s);                              // decode but do not open the sound device (tests, command line)
     void setAudioTap(std::function<void(const float* x, size_t n)> cb);    // tests: the demodulated 8 kHz audio, called from feed()
     void setSpeechTap(std::function<void(const float* x, size_t n)> cb);   // tests: FreeDV's 8 kHz speech, called from feed()
+    HfdigFtx& ftx();                                     // FT8 / FT4 / FT2 / WSPR: settings and the slot clock (thread safe, hfdig_ftx.h)
     HfdigRtty& rtty();                                   // the RTTY decoder's settings (thread safe, see hfdig_rtty.h)
 
 private:

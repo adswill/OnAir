@@ -18,6 +18,7 @@ std::unique_ptr<HfdigTestAudio> makeHfdigTestAudio(int which, const SynthConfig&
     case 0: return makeRttyTestAudio(cfg);
     case 1: return makeSstvTestAudio(cfg);
     case 2: return makeFreedvTestAudio(cfg);
+    case 3: case 4: case 5: case 6: return makeFtxTestAudio(cfg);
     default: return nullptr;
     }
 }
