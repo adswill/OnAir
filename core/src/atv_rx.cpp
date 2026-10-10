@@ -5,6 +5,7 @@
 //                                    sound channel  -> 48 kHz mono -> sound device
 #include "dect2/atv_rx.h"
 #include "atv_front.h"
+#include "atv_fm.h"
 #include "atv_video.h"
 #include "dect2/audioout.h"
 #include <algorithm>
@@ -31,6 +32,12 @@ struct AtvReceiver::Impl {
     AtvFront front;
     AtvVideo video;
     AtvSound sound;
+    AtvFmDemod fm;                      // FM video (FPV): the frequency of the carrier is the picture
+    std::atomic<int> modulation{0};     // 0 AM, 1 FM, as asked for (setModulation)
+    int active = 0;                     // the one the receiver is set up for
+    bool fmSyncLow = true;
+    uint64_t fmFlipAt = 0;
+
 
     // state
     enum Mode { kSearch, kTrial, kRun } mode = kSearch;
@@ -82,8 +89,37 @@ struct AtvReceiver::Impl {
         video.log = [this](const std::string& s) { log(s); };
         video.frameReady = [this](std::shared_ptr<const AtvFrame> f) { std::lock_guard<std::mutex> lk(mu); latest = std::move(f); };
         ready = true;
+        active = 0;
         resetAll();
+        if (modulation.load() == 1) switchModulation(1);
         if (!silent.load() && !audio) { /* opened on the first audio */ }
+    }
+
+    // broadcast transmitters send the colour 170 ns early (BT.470), which the decoder puts right; an FPV transmitter does not
+    void applyPrm() {
+        AtvVideoParams p = prm;
+        if (active == 1 && p.chromaDelayNs < 0) p.chromaDelayNs = 0;
+        video.setParams(p);
+    }
+
+    // AM and FM share the picture decoder; it takes the video rate of the radio side in use
+    void switchModulation(int m) {
+        if (!ready) return;
+        active = m;
+        if (m == 1) {
+            if (fs < 15.9e6) log("analog TV, FM video: a link is about 17 MHz wide, this input rate is too low (use 20 Msps)");
+            fm.configure(fs);
+            video.configure(fm.videoRate(), fm.videoRate() >= 9.5e6);
+            video.setNoiseScale(1.0);
+            video.setFmVideo(true);
+            applyPrm();
+        } else {
+            video.configure(front.videoRate(), front.colourCapable());
+            video.setNoiseScale(front.noiseGain() * fs / 5e6);
+            video.setFmVideo(false);
+            applyPrm();
+        }
+        resetAll();
     }
 
     void resetAll() {
@@ -102,10 +138,21 @@ struct AtvReceiver::Impl {
         trialAt = lostAt = 0;
         bad.clear();
         if (audio) audio->flush();
-        std::lock_guard<std::mutex> lk(mu);
-        tel = AtvTelemetry();
-        tel.seq = ++telSeq;
-        latest.reset();
+        {
+            std::lock_guard<std::mutex> lk(mu);
+            tel = AtvTelemetry();
+            tel.seq = ++telSeq;
+            latest.reset();
+        }
+        if (active == 1) startFm();
+    }
+
+    void startFm() {
+        fm.reset();
+        fmSyncLow = true; fm.setSyncLow(true);
+        search.setMonitor(true);          // the spectrum for the display
+        video.setSoundSpacing(0);
+        mode = kTrial; trialAt = nIn; lostAt = 0; fmFlipAt = nIn;
     }
 
     bool isBad(double hz) const {
@@ -174,8 +221,9 @@ struct AtvReceiver::Impl {
         if (!ready) return;
         {
             std::lock_guard<std::mutex> lk(prmMu);
-            if (prmDirty.exchange(false)) { prm = prmNew; video.setParams(prm); }
+            if (prmDirty.exchange(false)) { prm = prmNew; applyPrm(); }
         }
+        if (modulation.load() != active) switchModulation(modulation.load());
         // a NaN or infinite sample (a broken file) would stay for good in the DC estimate and the loops: such samples count as silence
         for (size_t k = 0; k < n; k++) {
             if (std::isfinite(x[k].real() + x[k].imag())) continue;
@@ -209,22 +257,53 @@ struct AtvReceiver::Impl {
         front.setSyncDetector(false); syncOn = false; video.syncDetectorChanged(false);
     }
 
-    void block(const cf32* x, size_t m) {
-        // DC removal (the radio's centre spike): the mean of the block moves a slow estimate, once per block. The picture and the sound carrier
-        // turn at megahertz, so their mean over a block is nothing; the spike does not turn.
+    // the radio's centre spike out of the block: the mean of the block moves a slow estimate, once per block. The picture and the sound carrier
+    // turn at megahertz, so their mean over a block is nothing; the spike does not turn.
+    void removeDc(const cf32* x, size_t m) {
         xd.resize(m);
-        {
-            // the sums in four lanes: a single running sum would make every addition wait for the last
-            float sr4[4] = {0, 0, 0, 0}, si4[4] = {0, 0, 0, 0};
-            size_t k = 0;
-            for (; k + 4 <= m; k += 4) for (size_t l = 0; l < 4; l++) { sr4[l] += x[k + l].real(); si4[l] += x[k + l].imag(); }
-            for (; k < m; k++) { sr4[0] += x[k].real(); si4[0] += x[k].imag(); }
-            const float sr = (sr4[0] + sr4[1]) + (sr4[2] + sr4[3]), si = (si4[0] + si4[1]) + (si4[2] + si4[3]);
-            const float w = std::min(1.f, dcA * (float)m);
-            dc += (cf32(sr, si) / (float)m - dc) * w;
-            const float dr = dc.real(), di = dc.imag();
-            for (size_t q = 0; q < m; q++) xd[q] = cf32(x[q].real() - dr, x[q].imag() - di);
+        // the sums in four lanes: a single running sum would make every addition wait for the last
+        float sr4[4] = {0, 0, 0, 0}, si4[4] = {0, 0, 0, 0};
+        size_t k = 0;
+        for (; k + 4 <= m; k += 4) for (size_t l = 0; l < 4; l++) { sr4[l] += x[k + l].real(); si4[l] += x[k + l].imag(); }
+        for (; k < m; k++) { sr4[0] += x[k].real(); si4[0] += x[k].imag(); }
+        const float sr = (sr4[0] + sr4[1]) + (sr4[2] + sr4[3]), si = (si4[0] + si4[1]) + (si4[2] + si4[3]);
+        const float w = std::min(1.f, dcA * (float)m);
+        dc += (cf32(sr, si) / (float)m - dc) * w;
+        const float dr = dc.real(), di = dc.imag();
+        for (size_t q = 0; q < m; q++) xd[q] = cf32(x[q].real() - dr, x[q].imag() - di);
+    }
+
+    // FM video: no carrier to find; the discriminator is the detector. The polarity (which end of the swing is the sync tip) is tried: when no lines
+    // lock within a second and a bit, the other one is.
+    void blockFm(const cf32* x, size_t m) {
+        removeDc(x, m);
+        nIn += m;
+        search.feed(xd.data(), m);
+        const size_t nv = fm.process(xd.data(), m);
+        if (nv) {
+            // the colour is demodulated from the i and q of the radio side: here the analytic signal of the video
+            video.process(fm.v(), fm.i(), fm.q(), nv);
         }
+        if (mode == kTrial) {
+            if (video.lineLocked()) {
+                mode = kRun; lostAt = 0;
+                log(std::string("analog TV, FM video: locked, the sync tip is the ") + (fmSyncLow ? "lowest" : "highest") + " frequency");
+            } else if (nIn - fmFlipAt > (uint64_t)(1.2 * fs)) {
+                fmSyncLow = !fmSyncLow; fm.setSyncLow(fmSyncLow);
+                video.reset();
+                fmFlipAt = nIn;
+                log(std::string("analog TV, FM video: no lines, trying the sync tip at the ") + (fmSyncLow ? "lowest" : "highest") + " frequency");
+            }
+        } else if (mode == kRun) {
+            if (video.lineLocked()) lostAt = 0;
+            else { if (!lostAt) lostAt = nIn; if (nIn - lostAt > (uint64_t)(2.0 * fs)) { log("analog TV, FM video: signal lost"); mode = kTrial; fmFlipAt = nIn; } }
+        }
+        if (nIn - lastTelAt >= (uint64_t)(fs * 0.25)) { lastTelAt = nIn; publish(); }
+    }
+
+    void block(const cf32* x, size_t m) {
+        if (active == 1) { blockFm(x, m); return; }
+        removeDc(x, m);
         nIn += m;
         if (mode == kSearch) {
             search.feed(xd.data(), m);
@@ -345,7 +424,12 @@ struct AtvReceiver::Impl {
             t.cfoHz = t.visionHz - best;
             search.display(t.visionHz, t.specLoMhz, t.specHiMhz, 170, t.specDb);
         }
-        t.state = (haveCarrier && mode != kSearch) ? (video.fieldLocked() ? 2 : video.lineLocked() ? 1 : 0) : 0;
+        t.modulation = active; t.fmSyncLow = fmSyncLow;
+        if (active == 1) {   // no carrier: the spectrum of the whole input
+            t.specLoMhz = -fs / 2e6 * 0.9; t.specHiMhz = fs / 2e6 * 0.9;
+            search.display(0, t.specLoMhz, t.specHiMhz, 170, t.specDb);
+        }
+        t.state = ((haveCarrier || active == 1) && mode != kSearch) ? (video.fieldLocked() ? 2 : video.lineLocked() ? 1 : 0) : 0;
         t.dataValid = t.state == 2 || (sound.present() && mode == kRun);
         std::lock_guard<std::mutex> lk(mu);
         t.seq = ++telSeq;
@@ -388,12 +472,13 @@ void AtvReceiver::setColour(bool on) { auto p = p_->curPrm(); p.colourOn = on; p
 void AtvReceiver::setSaturation(float s) { auto p = p_->curPrm(); p.saturation = s; p_->setPrm(p); }
 void AtvReceiver::setHue(float d) { auto p = p_->curPrm(); p.hueDeg = d; p_->setPrm(p); }
 void AtvReceiver::setDetector(int mode) { p_->detMode = mode; }
+void AtvReceiver::setModulation(int mode) { p_->modulation = mode == 1 ? 1 : 0; }
 void AtvReceiver::setChannelWidth(int mhz) { p_->chanWidthMhz = mhz; }
 
 ModeTuning atvTuning() {
     ModeTuning t;
     t.stdMode = 10; t.id = "atv"; t.name = "Analog TV";
-    t.minMhz = 45; t.maxMhz = 870; t.defMhz = 600.0;
+    t.minMhz = 45; t.maxMhz = 6000; t.defMhz = 600.0;
     t.sampleRate = 10000000.0; t.basebandHz = 9000000.0; t.bandwidthMhz = 8;
     t.minSampleRate = 8000000.0;
     // in system B/G the sound carrier (+2.75 MHz) is the mirror image of the vision carrier (-2.75 MHz) around the channel centre: the pair is

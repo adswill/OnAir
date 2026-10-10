@@ -80,6 +80,7 @@ struct AtvVideo::Impl {
     double noiseVar = 0;
     bool gainValid = false;
     double carrierAmp = 0, cnVar = 0, noiseScale = 1;
+    bool fmVideo = false;                       // FM video (analog FPV): the levels follow the baseline of an AC coupled transmitter
     double phErr2 = 1;
     int phGood = 0;
     bool phaseLockedFlag = false;
@@ -556,11 +557,33 @@ struct AtvVideo::Impl {
         return s / (double)(ib - ia + 1);
     }
 
+    // FM video (analog FPV): the transmitter is AC coupled, so the long broad pulses of the field sync shift the whole baseline and it creeps back
+    // over the next lines. The threshold of the slicer follows the levels of the lines whose pulse was found; once the baseline moved by half the
+    // sync height no pulse is found any more and the levels would stay where they were: the decoder gave up after 40 lines. The levels of a missed
+    // line are measured where its pulse is due instead, and used when they look like a sync pulse (about the height known).
+    void trackLevelsOnMiss(double tL) {
+        const AtvFormat& F = fmt;
+        const double d0 = Tr - Br;
+        if (d0 <= 0) return;
+        const double tip = meanRaw(tL + 1.4 * spu, tL + (F.syncUs - 0.7) * spu);
+        const double bpA = F.lines == 625 ? 8.3 : 8.1, bpB = F.lines == 625 ? 10.0 : 9.1;
+        const double b1m = meanRaw(tL + bpA * spu, tL + bpB * spu), b2m = meanRaw(tL - 1.15 * spu, tL - 0.35 * spu);
+        const double n1 = (bpB - bpA) * spu, n2 = 0.8 * spu;
+        const double bl = (b1m * n1 + b2m * n2) / (n1 + n2);
+        const double depth = tip - bl;
+        if (depth < 0.6 * d0 || depth > 1.5 * d0) return;
+        const double a = 1.0 / 8;
+        Tr += (tip - Tr) * a; Br += (bl - Br) * a;
+        hyst = std::max(0.1 * (Tr - Br), 1e-9);
+        thr = 0.5 * (Tr + Br);
+    }
+
     void processLine(const LineRec& r) {
         const double tL = r.tL;
         curNo = r.no;
         lineCount++;
         const AtvFormat& F = fmt;
+        if (!r.hadPulse && fmVideo && levelsValid && loopRunning) trackLevelsOnMiss(tL);
         // ---- levels from this line's sync pulse and porches
         double tip = 0, bl = 0;
         if (r.hadPulse) {
@@ -1332,6 +1355,7 @@ void AtvVideo::setParams(const AtvVideoParams& p) {
 void AtvVideo::setSoundSpacing(double mhz) { p_->soundSpacing = mhz; }
 void AtvVideo::setSlicerWidth(double us) { p_->setSlicerWidth(us); p_->fullReset(); }
 void AtvVideo::setNoiseScale(double s) { p_->noiseScale = s; }
+void AtvVideo::setFmVideo(bool on) { p_->fmVideo = on; }
 void AtvVideo::process(const float* v, const float* i, const float* q, size_t n) { p_->process(v, i, q, n); }
 bool AtvVideo::wantSyncDetector() const { return p_->phaseLockedFlag && p_->loopRunning; }
 void AtvVideo::syncDetectorChanged(bool on) {

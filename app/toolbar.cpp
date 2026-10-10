@@ -23,7 +23,8 @@ static std::string rateWarning(const App& a) {
     const bool run = a.engine.running();
     const double rate = run ? a.engine.sampleRate() : d.isGeneric() ? d.maxRateHz : 0;
     const double bw = run && a.family == 0 && a.engine.activeBandwidth() > 0 ? a.engine.activeBandwidth() : kBw[a.bwIdx].mhz;
-    const double need = minSampleRateFor(engineStd(a), bw);
+    double need = minSampleRateFor(engineStd(a), bw);
+    if (a.family == 8 && a.atvFm) need = std::max(need, 16e6);   // FM video: a link is about 17 MHz wide
     // a PlutoSDR on its USB cable run above what the cable carries (linkRateFor): why it may break up, and the fix
     if (run && d.steadyRateHz > 0 && rate >= need - 1) return linkNote(d, a.tune, rate);
     if (rate <= 0 || need <= 0 || rate >= need - 1) return "";

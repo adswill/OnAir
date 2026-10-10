@@ -18,7 +18,7 @@ struct State {
     bool colourOn = true;
     float saturation = 1.f, hue = 0.f;
     int detector = 0;                           // 0 automatic, 1 envelope only
-    int pushedDeint = -1, pushedSys = -2, pushedCol = -2, pushedDet = -1;
+    int pushedDeint = -1, pushedSys = -2, pushedCol = -2, pushedDet = -1, pushedMod = -1;
     bool pushedColourOn = true;
     float pushedSat = -1.f, pushedHue = -999.f;
     float pushedVol = -1.f;
@@ -49,6 +49,8 @@ void pushControls(App& a) {
     if (S.pushedSat != S.saturation) { rx.setSaturation(S.saturation); S.pushedSat = S.saturation; }
     if (S.pushedHue != S.hue) { rx.setHue(S.hue); S.pushedHue = S.hue; }
     if (S.pushedDet != S.detector) { rx.setDetector(S.detector); S.pushedDet = S.detector; }
+    const int mod = a.atvFm ? 1 : 0;
+    if (S.pushedMod != mod) { rx.setModulation(mod); S.pushedMod = mod; }
 }
 
 // the sound controls are shared with the other modes: push them to the receiver when they change or it starts
@@ -57,7 +59,7 @@ void tick(App& a) {
     const bool run = a.engine.running();
     if (run) {
         if (!S.wasRunning) {   // a new run: send everything again
-            S.pushedDeint = -1; S.pushedSys = -2; S.pushedCol = -2; S.pushedDet = -1; S.pushedSat = -1.f; S.pushedHue = -999.f; S.pushedVol = -1.f;
+            S.pushedDeint = -1; S.pushedSys = -2; S.pushedCol = -2; S.pushedDet = -1; S.pushedMod = -1; S.pushedSat = -1.f; S.pushedHue = -999.f; S.pushedVol = -1.f;
             S.pushedColourOn = !S.colourOn;
         }
         pushControls(a);
@@ -358,7 +360,8 @@ void receiver(App& a) {
     if (!on) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const AtvTelemetry& t = a.rx.atv;
     const float W = ImGui::GetContentRegionAvail().x;
-    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Spectrum around the vision carrier (dB, MHz from the carrier)"); ImGui::PopTextWrapPos(); }
+    const bool fmv = t.modulation == 1;   // FM video: no vision carrier; the whole input is the signal
+    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(fmv ? "Spectrum of the input (dB, MHz from the centre)" : "Spectrum around the vision carrier (dB, MHz from the carrier)"); ImGui::PopTextWrapPos(); }
     spectrumScope(a, ImVec2(W, std::min(170.f * gUi, ImGui::GetContentRegionAvail().y * 0.35f)), on);
     ImGui::Spacing();
     char b[160];
@@ -366,10 +369,20 @@ void receiver(App& a) {
     if (ImGui::BeginTable("##atvkv", 2, ImGuiTableFlags_SizingStretchSame)) {
         ImGui::TableNextColumn();
         ImGui::TextDisabled("Standard");
-        kv(a, "state", t.state == 2 ? "locked, decoding" : t.state == 1 ? "carrier and line sync" : "searching");
+        kv(a, "state", t.state == 2 ? "locked, decoding" : t.state == 1 ? (fmv ? "line sync" : "carrier and line sync") : (fmv ? "looking for lines" : "searching"));
         kv(a, "system", t.system.empty() ? "-" : t.system);
         kv(a, "colour system", t.colourSystem.empty() ? "-" : t.colourSystem + (t.colour ? "" : t.colourKiller ? " (burst too weak)" : ""));
         snprintf(b, sizeof b, "%d lines, %.3f fields/s", t.lines, t.fieldHz); kv(a, "raster", t.lines ? b : "-");
+        if (fmv) {
+            kv(a, "detector", "FM discriminator");
+            ImGui::Spacing();
+            ImGui::TextDisabled("FM video");
+            kv(a, "sync tip", t.state == 0 ? "trying" : t.fmSyncLow ? "lowest frequency" : "highest frequency");
+            snprintf(b, sizeof b, "%.1f dB", t.snrDb); kv(a, "video SNR", b);
+            ImGui::Spacing();
+            ImGui::TextDisabled("Sound");
+            kv(a, "audio", "not decoded");
+        } else {
         kv(a, "detector", t.syncDetector ? "synchronous" : "envelope");
         ImGui::Spacing();
         ImGui::TextDisabled("Carriers");
@@ -385,6 +398,7 @@ void receiver(App& a) {
         kv(a, "carrier", t.soundPresent ? "present" : "none");
         snprintf(b, sizeof b, "%.1f kHz", t.soundDevKhz); kv(a, "deviation", b);
         snprintf(b, sizeof b, "%.1f dBFS", t.soundLevelDb); kv(a, "audio level", b);
+        }
 
         ImGui::TableNextColumn();
         { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Line and field sync"); ImGui::PopTextWrapPos(); }
@@ -412,8 +426,22 @@ void nextIf(float w) { sameLineIf(w * gUi, 8 * gUi); }   // (it tested the room 
 // the width of a control that follows a label: wanted, but never wider than what is left
 float fit(float want) { return std::max(40.f * gUi, std::min(want * gUi, ImGui::GetContentRegionAvail().x - 6 * gUi)); }
 
-void tuner(App&, bool&) {
+void tuner(App& a, bool&) {
     loadState();
+    ImGui::TextDisabled("Modulation"); ImGui::SameLine(0, 5 * gUi);
+    ImGui::SetNextItemWidth(fit(130));
+    if (ImGui::BeginCombo("##atvmod", a.atvFm ? "FM video (FPV)" : "AM (broadcast)")) {
+        bool chg = false;
+        if (ImGui::Selectable("AM (broadcast)", !a.atvFm) && a.atvFm) { a.atvFm = false; chg = true; }
+        if (ImGui::Selectable("FM video (FPV)", a.atvFm) && !a.atvFm) { a.atvFm = true; chg = true; }
+        ImGui::EndCombo();
+        if (chg) {   // the radio runs at another rate: open it again
+            savePrefs(a);
+            if (a.engine.running()) startReceiver(a); else applyBandwidth(a);
+        }
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("AM: broadcast TV, a vision carrier with a sound carrier (PAL, SECAM, NTSC).\nFM video: analog FPV and video links (5.8 GHz, 1.2 GHz): the picture is the frequency of the carrier.\nNeeds 20 Msps, 17 MHz of the radio's band; the polarity is found by itself. The sound is not decoded yet.");
+    nextIf(240);
     ImGui::TextDisabled("System"); ImGui::SameLine(0, 5 * gUi);
     ImGui::SetNextItemWidth(fit(84));
     if (ImGui::BeginCombo("##atvsys", S.sysHint < 0 ? "automatic" : kSysNames[S.sysHint])) {

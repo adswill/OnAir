@@ -141,7 +141,7 @@ float freqDigits(App& a, float fontSize = 30.f) {
     static char typed[32] = "";
     const bool fm = a.fmMode, dab = a.dabMode;
     const ModeTuning* mt = a.family >= 6 ? modeTuning(a.family + 2) : nullptr;
-    const double lo = mt ? mt->minMhz : fm ? 87.5 : dab ? 174.0 : 1.0, hi = mt ? mt->maxMhz : fm ? 108.0 : dab ? 240.0 : 2000.0;
+    const double lo = mt ? mt->minMhz : fm ? 87.5 : dab ? 174.0 : 1.0, hi = mt ? mt->maxMhz : fm ? 108.0 : dab ? 240.0 : 6000.0;
     long long hz = (long long)std::llround(a.freqMhz * 1e6);
     char buf[16];
     snprintf(buf, sizeof buf, "%010lld", hz);   // ten digits: L-band (DVB-S, ADS-B) is above 1 GHz

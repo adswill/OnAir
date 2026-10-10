@@ -213,6 +213,8 @@ void applyBandwidth(App& a) {
         if (mt->stdMode == 9) {   // DTMB: the channel width the user picked (6 MHz in Cuba); the test signal follows it
             a.tune.bandwidthMhz = a.dtmbBwMhz; a.tune.basebandFilterHz = a.dtmbBwMhz * 1e6;
             a.tune.synth.modeOpt[7] = a.dtmbBwMhz == 6 ? 1 : 0;
+        } else if (mt->stdMode == 10 && a.atvFm) {   // analog FPV video: a link about 17 MHz wide, the radio's filter at 18 MHz
+            a.tune.bandwidthMhz = 18; a.tune.sampleRate = 20e6; a.tune.basebandFilterHz = 18e6;
         }
         const DeviceInfo& dv = a.devices[a.devIdx];
         if (dv.isGeneric()) a.tune.sampleRate = linkRateFor(dv, a.tune, a.tune.sampleRate, mt->minSampleRate);
@@ -262,6 +264,7 @@ void loadPrefs(App& a) {
     if (d.has("newUi")) a.newUi = d.getB("newUi", true);
     if (d.has("uiVariant")) a.uiVariant = std::max(0, std::min(7, (int)d.getI("uiVariant", 0)));
     if (d.has("dtmbBw")) a.dtmbBwMhz = d.getI("dtmbBw", 8) == 6 ? 6 : 8;
+    if (d.has("atvFm")) a.atvFm = d.getI("atvFm", 0) != 0;
     if (d.has("lightUi")) a.lightUi = d.getI("lightUi", 0) != 0;
     if (d.has("uiTheme")) a.uiTheme = std::max(0, std::min(2, (int)d.getI("uiTheme", 1)));
     if (d.has("fmStations")) {
@@ -324,6 +327,7 @@ void savePrefs(const App& a) {
     d.setI("uiTheme", a.uiTheme);
     d.setI("lightUi", a.lightUi ? 1 : 0);
     d.setI("dtmbBw", a.dtmbBwMhz);
+    d.setI("atvFm", a.atvFm ? 1 : 0);
     d.setI("uiVariant", a.uiVariant);
     {   // the stations the FM scan found: mhz|name|type|snr|stereo|rds, one per line
         std::string st;
