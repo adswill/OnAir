@@ -268,6 +268,7 @@ struct App {
     int computeMode = 2; // 0 CPU, 1 GPU, 2 auto
     int stdMode = 0;     // 0 auto, 1 DVB-T2, 2 DVB-T
     bool popOut = false, videoOnly = false;
+    bool popTop = true;      // the pop-out video window stays above other windows
     int histWindow = 60;
     int ttxPage = 100;
     int plpSel = -1; // -1 = automatic
@@ -390,6 +391,13 @@ struct App {
 bool tabItem(const char* name, Ic icon);
 extern bool gTightTabs;   // the tabs of mainTabs() get less padding (a narrow pane)
 void toggleFullscreen();
+GLFWmonitor* monitorFor(int x, int y, int w, int h);   // widgets.cpp: the monitor holding most of the rectangle
+// popout.cpp: the video pop-out as a window of its own
+extern bool gNoOsWindows;            // --hidden: no extra OS windows (the pop-out stays a panel inside the main window)
+void popOutFrame(App& a);            // inside the ImGui frame: opens/closes the window and builds its picture
+void popOutPresent();                // after the main frame (or instead of it while the main window is minimised): draws the window
+bool popOutShown();                  // the pop-out window is open and not minimised
+void popOutShutdown();               // before the graphics back end shuts down
 bool pillButton(const char* label, bool selected, float padX = 11);
 int subNav(const char* id, int& cur, std::initializer_list<const char*> names);
 float tagAt(ImDrawList* dl, ImVec2 pos, const char* text, ImU32 bg, ImU32 fg = IM_COL32(225, 232, 240, 255));

@@ -98,6 +98,45 @@ struct MtlVideo : Video {
     }
 };
 
+struct MtlSurface : Surface {
+    GLFWwindow* win;
+    CAMetalLayer* layer;
+    MTLRenderPassDescriptor* rpd;
+    explicit MtlSurface(GLFWwindow* w) : win(w) {
+        NSWindow* nswin = glfwGetCocoaWindow(w);
+        layer = [CAMetalLayer layer];
+        layer.device = gDevice;   // the same device: the video texture is used as it is
+        layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+        layer.framebufferOnly = YES;
+        nswin.contentView.layer = layer;
+        nswin.contentView.wantsLayer = YES;
+        rpd = [MTLRenderPassDescriptor new];
+    }
+    ~MtlSurface() override {
+        NSWindow* nswin = glfwGetCocoaWindow(win);
+        if (nswin) { nswin.contentView.layer = nil; nswin.contentView.wantsLayer = NO; }
+    }
+    void present(ImDrawData* dd, int fbW, int fbH) override {
+      @autoreleasepool {
+        if (fbW <= 0 || fbH <= 0) return;
+        if ((int)layer.drawableSize.width != fbW || (int)layer.drawableSize.height != fbH) layer.drawableSize = CGSizeMake(fbW, fbH);
+        id<CAMetalDrawable> drawable = [layer nextDrawable];
+        if (!drawable) return;
+        id<MTLCommandBuffer> cb = [gQueue commandBuffer];   // the same queue: the picture converted earlier is finished before this draws
+        rpd.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 1);
+        rpd.colorAttachments[0].texture = drawable.texture;
+        rpd.colorAttachments[0].loadAction = MTLLoadActionClear;
+        rpd.colorAttachments[0].storeAction = MTLStoreActionStore;
+        id<MTLRenderCommandEncoder> enc = [cb renderCommandEncoderWithDescriptor:rpd];
+        ImGui_ImplMetal_NewFrame(rpd);   // the same pixel format as the main window; the main frame sets its own again next time
+        ImGui_ImplMetal_RenderDrawData(dd, cb, enc);
+        [enc endEncoding];
+        [cb presentDrawable:drawable];
+        [cb commit];
+      }
+    }
+};
+
 struct MtlBackend : Backend {
     GLFWwindow* win;
     CAMetalLayer* layer;
@@ -153,6 +192,7 @@ struct MtlBackend : Backend {
         drawable = nil; cb = nil; enc = nil;
       }
     }
+    Surface* createSurface(GLFWwindow* w) override { return new MtlSurface(w); }
     void shutdown() override { ImGui_ImplMetal_Shutdown(); }
 };
 

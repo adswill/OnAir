@@ -60,6 +60,7 @@ GLFN(void, glClear, (GLbitfield))
 GLFN(void, glReadPixels, (GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, void*))
 GLFN(void, glReadBuffer, (GLenum))
 GLFN(void, glGetIntegerv, (GLenum, GLint*))
+GLFN(void, glFlush, ())
 #undef GLFN
 
 bool loadGl() {
@@ -71,7 +72,7 @@ bool loadGl() {
     LOAD(glGetShaderiv) LOAD(glGetShaderInfoLog) LOAD(glDeleteShader) LOAD(glCreateProgram) LOAD(glAttachShader) LOAD(glLinkProgram)
     LOAD(glGetProgramiv) LOAD(glUseProgram) LOAD(glGetUniformLocation) LOAD(glUniform1i) LOAD(glUniform3f) LOAD(glGenVertexArrays)
     LOAD(glBindVertexArray) LOAD(glDrawArrays) LOAD(glViewport) LOAD(glClearColor) LOAD(glClear) LOAD(glReadPixels) LOAD(glReadBuffer)
-    LOAD(glGetIntegerv)
+    LOAD(glGetIntegerv) LOAD(glFlush)
 #undef LOAD
     return ok;
 }
@@ -227,6 +228,31 @@ struct GlVideo : Video {
     }
 };
 
+// The pop-out window: its own context, sharing textures and buffers with the main one (the ImGui renderer makes its vertex array per draw,
+// as those are not shared). The main context is current again afterwards.
+struct GlSurface : Surface {
+    GLFWwindow* win;
+    explicit GlSurface(GLFWwindow* w) : win(w) {
+        GLFWwindow* prev = glfwGetCurrentContext();
+        glfwMakeContextCurrent(win);
+        glfwSwapInterval(0);   // the main window already waits for the display: two waits per frame would halve the frame rate
+        glfwMakeContextCurrent(prev);
+    }
+    void present(ImDrawData* dd, int fbW, int fbH) override {
+        if (fbW <= 0 || fbH <= 0) return;
+        GLFWwindow* prev = glfwGetCurrentContext();
+        if (prev) glFlush();   // the picture converted in the main context must reach the GPU before another context samples it
+        glfwMakeContextCurrent(win);
+        glBindFramebuffer(FRAMEBUFFER, 0);
+        glViewport(0, 0, fbW, fbH);
+        glClearColor(0, 0, 0, 1);
+        glClear(COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(dd);
+        glfwSwapBuffers(win);
+        glfwMakeContextCurrent(prev);
+    }
+};
+
 struct GlBackend : Backend {
     GLFWwindow* win;
     explicit GlBackend(GLFWwindow* w) : win(w) {}
@@ -251,6 +277,8 @@ struct GlBackend : Backend {
         }
         glfwSwapBuffers(win);
     }
+    GLFWwindow* shareWindow() const override { return win; }
+    Surface* createSurface(GLFWwindow* w) override { return new GlSurface(w); }
     void shutdown() override { ImGui_ImplOpenGL3_Shutdown(); }
 };
 

@@ -243,6 +243,10 @@ void playerTab(App& a) {
     if (ImGui::Checkbox("mute", &a.muted)) pl.setMuted(a.muted);
     flowNext();
     ImGui::Checkbox("pop out", &a.popOut);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Show the video in a window of its own (double-click it for full screen, Esc to leave)");
+    flowNext();
+    if (ImGui::Checkbox("on top", &a.popTop)) savePrefs(a);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Keep the pop-out video window above other windows");
     flowNext();
     if (ImGui::Button("Fullscreen")) { a.videoOnly = true; if (!glfwGetWindowMonitor(gWindow)) toggleFullscreen(); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Video fills the screen (press F or Esc to leave)");

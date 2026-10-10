@@ -23,6 +23,13 @@ struct Image {
     virtual void update(int x, int y, int w, int h, const uint32_t* rgba) = 0;
 };
 
+// A second OS window drawn with the same device (Metal) or a context sharing the main one (OpenGL): the video pop-out.
+struct Surface {
+    virtual ~Surface() {}
+    // draw dd (coordinates in window points) on a black background and present; fbW x fbH is the framebuffer in pixels
+    virtual void present(ImDrawData* dd, int fbW, int fbH) = 0;
+};
+
 struct Backend {
     virtual ~Backend() {}
     virtual Image* createImage(int w, int h, uint32_t fill) = 0;
@@ -30,6 +37,10 @@ struct Backend {
     virtual void newFrame(int fbW, int fbH, const float clear[4]) = 0;   // before ImGui::NewFrame(); sizes in pixels
     // render the draw data and present; if shotPath is set the finished frame is written there as a PNG
     virtual void endFrame(ImDrawData* dd, const char* shotPath) = 0;
+    // The window a new Surface's window must share its context with (OpenGL), or null (Metal: the window has no context).
+    virtual GLFWwindow* shareWindow() const { return nullptr; }
+    // After the window exists (created after windowHints() and with shareWindow()); delete the Surface before destroying the window.
+    virtual Surface* createSurface(GLFWwindow* window) = 0;
     virtual void shutdown() = 0;
 };
 

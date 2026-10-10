@@ -19,12 +19,8 @@ bool tabItem(const char* name, Ic icon) {
     return open;
 }
 
-void toggleFullscreen() {
-    if (!gWindow) return;
-    if (glfwGetWindowMonitor(gWindow)) { glfwSetWindowMonitor(gWindow, nullptr, gWinX, gWinY, gWinW, gWinH, 0); return; }
-    glfwGetWindowPos(gWindow, &gWinX, &gWinY); glfwGetWindowSize(gWindow, &gWinW, &gWinH);
-    // Full screen on the monitor the window is on (the one holding most of it), not always the primary one: someone who drags OnAir to a
-    // TV on the second output wants the picture there (issue #29).
+// The monitor holding most of the rectangle (screen coordinates), the primary one when it is on none.
+GLFWmonitor* monitorFor(int x, int y, int w, int h) {
     GLFWmonitor* m = glfwGetPrimaryMonitor();
     int count = 0;
     GLFWmonitor** mons = glfwGetMonitors(&count);
@@ -34,10 +30,20 @@ void toggleFullscreen() {
         glfwGetMonitorPos(mons[i], &mx, &my);
         const GLFWvidmode* mv = glfwGetVideoMode(mons[i]);
         if (!mv) continue;
-        const long ox = std::max(0, std::min(gWinX + gWinW, mx + mv->width) - std::max(gWinX, mx));
-        const long oy = std::max(0, std::min(gWinY + gWinH, my + mv->height) - std::max(gWinY, my));
+        const long ox = std::max(0, std::min(x + w, mx + mv->width) - std::max(x, mx));
+        const long oy = std::max(0, std::min(y + h, my + mv->height) - std::max(y, my));
         if (ox * oy > best) { best = ox * oy; m = mons[i]; }
     }
+    return m;
+}
+
+void toggleFullscreen() {
+    if (!gWindow) return;
+    if (glfwGetWindowMonitor(gWindow)) { glfwSetWindowMonitor(gWindow, nullptr, gWinX, gWinY, gWinW, gWinH, 0); return; }
+    glfwGetWindowPos(gWindow, &gWinX, &gWinY); glfwGetWindowSize(gWindow, &gWinW, &gWinH);
+    // Full screen on the monitor the window is on (the one holding most of it), not always the primary one: someone who drags OnAir to a
+    // TV on the second output wants the picture there (issue #29).
+    GLFWmonitor* m = monitorFor(gWinX, gWinY, gWinW, gWinH);
     if (!m) return;
     const GLFWvidmode* vm = glfwGetVideoMode(m);
     if (!vm) return;

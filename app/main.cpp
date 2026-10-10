@@ -278,7 +278,7 @@ void drawUI(App& a, ImVec2 disp) {
             ImGui::EndPopup();
         }
     }
-    if (a.popOut) {
+    if (a.popOut && gNoOsWindows) {   // --hidden: no OS window, the pop-out is a panel (popout.cpp makes the real window)
         ImGui::SetNextWindowSize(ImVec2(640 * gUi, 380 * gUi), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowPos(ImVec2(200, 160), ImGuiCond_FirstUseEver);
         ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 1));
@@ -341,7 +341,7 @@ int main(int argc, char** argv) {
     }
     glfwInit();
     gfx::windowHints();
-    for (int i = 1; i < argc; i++) if (std::string(argv[i]) == "--hidden") glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);   // dev: with --shot, render without showing the window
+    for (int i = 1; i < argc; i++) if (std::string(argv[i]) == "--hidden") { glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE); gNoOsWindows = true; }   // dev: with --shot, render without showing the window
     GLFWwindow* window = glfwCreateWindow(1500, 900, "OnAir", nullptr, nullptr);
     if (!window) return 1;
 #ifndef __APPLE__
@@ -484,7 +484,7 @@ int main(int argc, char** argv) {
                 const bool focused = glfwGetWindowAttrib(window, GLFW_FOCUSED) != 0;
                 double interval = 0;
                 if (!shotPath) {
-                    if (!shown) interval = 0.25;
+                    if (!shown && !popOutShown()) interval = 0.25;                                                  // the pop-out window keeps playing
                     else if (t - lastInputT < 1.0 || app.engine.player().selected() >= 0) interval = 1.0 / 60;      // typing, dragging, video
                     else if (app.engine.running()) interval = focused ? 1.0 / 30 : 1.0 / 15;                          // spectrum and waterfall
                     else interval = focused ? 0.1 : 0.25;                                                            // nothing is moving
@@ -499,7 +499,17 @@ int main(int argc, char** argv) {
             updateTick(app);
             int w, h;
             glfwGetFramebufferSize(window, &w, &h);
-            if (w == 0 || h == 0) { glfwWaitEventsTimeout(0.1); continue; }
+            if (w == 0 || h == 0 || glfwGetWindowAttrib(window, GLFW_ICONIFIED)) {
+                // minimised: nothing to draw in the main window, but the pop-out video window stays and keeps playing
+                if (!popOutShown()) { glfwWaitEventsTimeout(0.1); continue; }
+                ImGui_ImplGlfw_NewFrame();
+                ImGui::NewFrame();
+                app.video.update(app.engine.player());
+                popOutFrame(app);
+                ImGui::EndFrame();
+                popOutPresent();
+                continue;
+            }
             static const float kClear[4] = {0.04f, 0.045f, 0.05f, 1.f}, kClearLight[4] = {0.955f, 0.95f, 0.96f, 1.f};
             gfxBackend->newFrame(w, h, app.lightUi ? kClearLight : kClear);
             ImGui_ImplGlfw_NewFrame();
@@ -548,6 +558,7 @@ int main(int argc, char** argv) {
             last = now;
             const double tUi0 = glfwGetTime();
             drawUI(app, io.DisplaySize);
+            popOutFrame(app);
             ImGui::Render();
             if (app.lightUi) lightenDrawData(ImGui::GetDrawData());
             static const bool perf = getenv("DECT2_FPS") != nullptr;   // frame statistics on stderr: DECT2_FPS=1
@@ -571,6 +582,7 @@ int main(int argc, char** argv) {
                 fprintf(stderr, "stat: %s\n", app.engine.loadProfile().c_str());
             }
             gfxBackend->endFrame(ImGui::GetDrawData(), shotNow ? shotPath : nullptr);
+            popOutPresent();
             if (shotNow) {
                 { PlayerStats ps = app.engine.player().stats(); { BbStats bb = app.engine.bbStats(); fprintf(stderr, "stream: BB frames %llu lost %llu, PLP frames dropped by busy decoder %llu, FEC blocks ok %llu bad %llu, samples dropped %llu, CPU decode %.0f ms\n", (unsigned long long)bb.frames, (unsigned long long)bb.framesLost, (unsigned long long)app.rx.plpFramesDropped, (unsigned long long)app.rx.blocksOk, (unsigned long long)app.rx.blocksBad, (unsigned long long)app.engine.droppedSamples(), app.rx.plpDecodeMs); }
                 fprintf(stderr, "player: %s hw=%d %s %dx%d decoded %llu shown %llu late %llu errors %llu audio %s ch %d buf %.0f ms underruns %d A/V %+.0f ms\n", ps.status.c_str(), ps.hardware, ps.videoCodec.c_str(), ps.width, ps.height, (unsigned long long)ps.decoded, (unsigned long long)ps.shown, (unsigned long long)ps.late, (unsigned long long)ps.errors, ps.audioCodec.c_str(), ps.audioChannels, ps.audioBufferMs, ps.underruns, ps.avOffsetMs); }
@@ -580,6 +592,7 @@ int main(int argc, char** argv) {
     }
     app.engine.stop();
     updateOnExit(app);   // a downloaded update replaces this program once it has ended
+    popOutShutdown();   // its window and surface go before the back end
     gfxBackend->shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
