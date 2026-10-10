@@ -5,6 +5,8 @@
 #include "dect2/dsp_compat.h"
 #include "dect2/gen_util.h"
 #include <algorithm>
+#include <cstdio>
+#include <cstdlib>
 #include <cmath>
 #include <complex>
 
@@ -157,6 +159,8 @@ struct Demod::Impl {
     double posS = 0, perS = 0, chipS = 0;   // next symbol (channel samples), symbol and chip lengths
     double cfoBins = 0, drift = 0;
     double loopInt = 0;
+    double posS0 = 0;              // the data start (a frame that fails its CRC is demodulated again from here)
+    int retried = 0;
     double snrLin = 0, levelLin = 0;
     double frameStart = 0;
     uint8_t syncSeen = 0;
@@ -483,7 +487,7 @@ bool Demod::Impl::sfd(const ChanBuf& b) {
             for (int j = 1; j <= J; j++) if (okj[(size_t)j]) { const double w = wj[(size_t)j]; sw += w; sx += w * j; sy += w * ej[(size_t)j]; sxx += w * j * j; sxy += w * j * ej[(size_t)j]; n++; }
             slope = 0;
             if (n >= 4) { const double den = sw * sxx - sx * sx; if (den > 0) slope = (sw * sxy - sx * sy) / den; }
-            slope = std::max(-1e-4 * N, std::min(1e-4 * N, slope));
+            slope = std::max(-2.5e-4 * N, std::min(2.5e-4 * N, slope));   // up to 250 ppm
             epsUp = (sy - slope * sx) / sw + slope * -2.5;
         }
         double dres = 0.5 * (epsUp + epsDn);
@@ -511,6 +515,7 @@ bool Demod::Impl::sfd(const ChanBuf& b) {
     posS = origin + (s + 2.25 * (N + drift)) * rho;
     frameStart = origin + (s - (2.0 + p.preamble) * N) * rho;   // the first up-chirp of the preamble (of the configured length)
     loopInt = 0;
+    posS0 = posS; retried = 0;
     fd.start(sf, p.ldro);
     state = Data;
     return true;
@@ -526,6 +531,11 @@ void Demod::Impl::dataSymbol(const ChanBuf& b, std::vector<RxFrame>& out) {
     // by the phase step where the chirp wraps. That step itself measures it: the de-chirped symbol's two parts (before and after
     // the wrap at chip N - k) differ in phase by pi (tau + residual carrier offset), tau = how late the symbol starts, in chips.
     double adj = 0;
+    // wider loop for the first 40 symbols (the drift from a short preamble may be well off), then the narrow one
+    constexpr double kI0 = 0.3, kP0 = 0.8;
+    constexpr int kAcq = 40;
+    const bool acq = fd.pushed() <= kAcq;
+    const double kI = acq ? kI0 : 0.02, kP_ = acq ? kP0 : 0.3;
     const int fold = (N - k) % N;
     const double w = 4.0 * fold * (N - fold) / ((double)N * N);
     if (q > 8 && w > 0.25) {
@@ -538,8 +548,8 @@ void Demod::Impl::dataSymbol(const ChanBuf& b, std::vector<RxFrame>& out) {
         }
         const double tau = std::arg(s2 * std::conj(s1)) / kPi;
         const double e = std::max(-0.5, std::min(0.5, tau)) * w;
-        loopInt += 0.02 * e;
-        adj = 0.3 * e + loopInt;
+        loopInt += kI * e;
+        adj = kP_ * e + loopInt;
     } else adj = loopInt;
     posS += perS + adj * chipS;
     if (fd.pushed() == 8 && !fd.header().ok) { st.headerBad++; toSearch(posS); return; }
@@ -547,6 +557,20 @@ void Demod::Impl::dataSymbol(const ChanBuf& b, std::vector<RxFrame>& out) {
         RxFrame f;
         int corr = 0;
         fd.finish(f.payload, f.crcOk, corr);
+        if (fd.header().crc && !f.crcOk && retried < 2 && std::fabs(loopInt) > 0.02) {
+            // A short preamble at a low SNR leaves the clock drift poorly known: the timing loop catches up, but the first symbols
+            // may be lost. The loop's integral then holds the rest of the drift: demodulate the frame again from its start with it.
+            retried++;
+            const double dd = loopInt;
+            drift += dd;
+            chipS = rho * (1 + drift / N);
+            perS = N * chipS;
+            posS0 += 1.75 * dd * rho;
+            posS = posS0;           // the start was placed 2.25 symbols past the down-chirp, less half the slope
+            loopInt = 0;
+            fd.start(sf, p.ldro);
+            return;
+        }
         f.hdr = fd.header();
         f.corrected = corr;
         f.cfoHz = cfoBins * p.bwHz / N;
@@ -572,7 +596,7 @@ bool Demod::busy() const { return p_->state != Impl::Search; }
 const DemodStats& Demod::stats() const { return p_->st; }
 int64_t Demod::oldestNeeded() const {
     const Impl& m = *p_;
-    if (m.state == Impl::Data) return (int64_t)std::floor(m.posS) - m.K - 8;
+    if (m.state == Impl::Data) return (int64_t)std::floor(m.retried >= 2 ? m.posS : std::min(m.posS, m.posS0 - 4 * m.rho)) - m.K - 8;
     // the SFD search and the fine estimates look back up to 13 windows
     const double back = m.winStart(m.win - 14);
     return (int64_t)std::floor(std::max(back, m.origin - 8.0)) - m.K - 8;

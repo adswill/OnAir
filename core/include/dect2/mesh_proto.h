@@ -1,6 +1,7 @@
 // Meshtastic and MeshCore packet layer (no radio): decoding of LoRa payloads with the published default keys and
 // user-added keys, the LoRa settings of both protocols, and packet builders for the test signal.
 #pragma once
+#include "packet_aprs.h"
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -8,7 +9,7 @@
 
 namespace dect2 {
 
-enum class MeshProtocol { Meshtastic = 1, MeshCore = 2 };
+enum class MeshProtocol { Meshtastic = 1, MeshCore = 2, LoraAprs = 3, MeshCom = 4 };
 
 // what the LoRa layer knows about a received payload
 struct MeshRadioInfo {
@@ -69,6 +70,13 @@ struct MeshDecodeResult {
     MeshPacketInfo packet;
     std::vector<MeshNodeUpdate> nodes;
     std::vector<MeshTextMessage> messages;
+    // added later: LoRa APRS and MeshCom carry APRS-style text
+    bool hasAprs = false;
+    std::string aprsSource, aprsDest, aprsPath;   // TNC2 header: "SRC>DEST,PATH"; MeshCom: source path (relays) and destination
+    std::string aprsInfo;               // the APRS information field (MeshCom: type character + payload)
+    aprs::Info aprs;                    // aprs::parse() of aprsInfo (type "" when it did not parse)
+    int batteryPct = -1;                // MeshCom position "/B=" (battery, percent)
+    std::string raw;                    // the payload as printable text (other bytes as \xNN)
 };
 
 // Thread safety: decode* are const and may run while add* is called from another thread (the class locks internally).
@@ -156,5 +164,36 @@ std::vector<uint8_t> meshcoreGroupText(const uint8_t secret16[16], const MeshCor
                                        const std::vector<uint8_t>& path);                         // any 16 byte channel secret
 std::vector<uint8_t> meshcoreAck(uint32_t crc, const std::vector<uint8_t>& path);                 // flood ACK
 const uint8_t* meshcorePublicSecret();                                                            // the 16 bytes of the Public channel
+
+// ---- LoRa APRS (lora-aprs / CA2RXU iGate and tracker firmware) and MeshCom 4 (icssw.org) ----
+// LoRa APRS: payload = "<" 0xFF 0x01 + a TNC2 text packet "SRC>DEST,PATH:info" (lora_utils.cpp of richonguzman/LoRa_APRS_iGate,
+// encodeLoRaAPRS in MeshCom's aprs_functions.cpp). A trailing NUL, CR or LF is dropped.
+// MeshCom: type byte ':' text, '!' position, '@' HEY, 'A' (0x41) ack; message id (4 bytes, little endian); flags/max hop byte;
+// "SRCPATH>DEST" + type + payload + 0x00; hardware id; modulation (low nibble) | country << 4; 16-bit sum of all bytes so far (big
+// endian); firmware version; last hardware; sub version; 0x7E (decodeAPRS / encodeAPRS in icssw-org/MeshCom-Firmware
+// src/aprs_functions.cpp, MIT licence). An ack is 0x41, its own id (4), flags, the acknowledged id (4) and two more bytes (handleACK in
+// lora_functions.cpp, ack_functions.h: byte 5 = 0x80 | hops, bytes 10-11 = 01 00).
+MeshDecodeResult meshDecodeLoraAprs(const uint8_t* payload, size_t n);
+MeshDecodeResult meshDecodeMeshCom(const uint8_t* payload, size_t n);
+std::string meshPrintable(const uint8_t* p, size_t n);                    // printable ASCII kept, other bytes as \xNN
+
+// LoRa settings of the two (preamble: RadioLib's default 8 for LoRa APRS; MeshCom LORA_PREAMBLE_LENGTH 32, 8 in the country profiles)
+std::vector<MeshLoraSettings> loraAprsPresets();      // "LoRa APRS EU" 433.775, "LoRa APRS PL" 434.855 (SF9 4/7), "LoRa APRS UK" 439.9125, "LoRa APRS 915"
+std::vector<MeshLoraSettings> meshcomPresets();       // "MeshCom EU" 433.175 SF11 250 kHz 4/6, UK, LA, 868, 915, VR2, 435, 436, 442 (country_profile.cpp)
+
+// builders for the test signal
+std::vector<uint8_t> loraAprsFrame(const std::string& tnc2);
+struct MeshComFrame {
+    char type = ':';                    // ':' text, '!' position, '@' HEY
+    uint32_t msgId = 0;
+    int maxHop = 5;                     // 0..15
+    bool server = false, track = false, appOffline = false, mesh = true;
+    std::string sourcePath;             // "A61MC-2" or, relayed, "A61MC-2,A61MC-1"
+    std::string dest = "*";             // "*" all, a call or a group number
+    std::string payload;                // after the type character
+    uint8_t hw = 4, mod = 3, fw = 35, lastHw = 0x84;
+    char subVersion = 'a';
+};
+std::vector<uint8_t> meshcomBuild(const MeshComFrame& f);
 
 } // namespace dect2

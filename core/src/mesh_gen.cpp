@@ -66,6 +66,26 @@ const char* const kMcLines[] = {
     "Repeater on the tower is working well",
 };
 
+// 70 cm scene (region 2): LoRa APRS stations on 433.775 MHz and MeshCom nodes on 433.175 MHz, both around Dubai (made-up calls)
+struct AprsEv { double t; int station; const char* tnc2; };
+const AprsEv kAprs[] = {
+    {0.5, 0, "A61AB-7>APLRT1,WIDE1-1:!2504.83N/05508.42E>Marina tracker 12.6V"},
+    {8.0, 1, "A61CD-10>APLRG1:=2511.10N/05516.50E&LoRa iGate Al Barsha"},
+    {16.0, 2, "A61EF-9>APLRT1,A61CD-10*,WIDE1*:/071230z2512.00N/05518.00E_090/005g010t095h60b10080"},
+    {24.0, 0, "A61AB-7>APLRT1,WIDE1-1::A61EF-9  :Meet at the Marina at 9{01"},
+    {32.0, 1, "A61CD-10>APLRG1:;DXBMTG   *071200z2513.00N/05519.00E-Ham meeting Friday"},
+    {40.0, 2, "A61EF-9>APLRT1:>On the road to Abu Dhabi, 35\xc2\xb0" "C"},
+    {48.0, 0, "A61AB-7>APLRT1:T#005,199,000,255,073,123,01101001"},
+};
+struct McomEv { double t; int node; char type; const char* src; const char* dest; const char* payload; };
+const McomEv kMcom[] = {
+    {1.0, 0, '!', "A61MC-1", "*", "2505.10N/05510.20E#/B=085/A=000040"},
+    {7.0, 0, ':', "A61MC-1", "*", "Hello MeshCom from the Marina"},
+    {14.0, 1, '!', "A61MC-2,A61MC-1", "*", "2506.00N/05512.00E[/B=064"},
+    {21.0, 1, ':', "A61MC-2", "A61MC-1", "QSL, 59 here"},
+    {30.0, 1, ':', "A61MC-2", "262", "Group 262 check-in"},
+};
+
 struct MtNodeDef { const char* longName; const char* shortName; const char* hw; double lat, lon, alt; int role; };
 const MtNodeDef kMtNodes[6] = {
     {"Dubai Marina Base", "DMB1", "TBEAM", 25.0805, 55.1403, 12, 0},
@@ -94,11 +114,11 @@ struct Net {
 class MeshSynth : public ModeSynth {
 public:
     MeshSynth(const SynthConfig& cfg, double rate) : rate_(rate), cfg_(cfg), noise_((uint32_t)(cfg.modeOpt[2] ? cfg.modeOpt[2] : 1) * 7919u + 22u) {
-        const int prot = cfg.modeOpt[0] ? (cfg.modeOpt[0] & 3) : 3;
-        region_ = cfg.modeOpt[1] == 1 ? 1 : 0;
+        const int prot = cfg.modeOpt[0] ? (cfg.modeOpt[0] & 15) : 15;
+        region_ = cfg.modeOpt[1] == 1 ? 1 : cfg.modeOpt[1] == 2 ? 2 : 0;
         rng_.seed((uint32_t)(cfg.modeOpt[2] ? cfg.modeOpt[2] : 1));
         const double tuneOffset = meshTuning().tuneOffsetHz;
-        const double lf = meshtasticSlotHz(region_ == 1 ? "US" : "EU_868", "LongFast");
+        const double lf = region_ == 2 ? 0 : meshtasticSlotHz(region_ == 1 ? "US" : "EU_868", "LongFast");
         MeshLoraSettings s;
         if ((prot & 1) && meshtasticPreset("LongFast", s) && lf > 0) {
             mt_.on = true;
@@ -116,15 +136,30 @@ public:
                 mc_.bwHz = c.bwHz;
             }
         }
+        if (region_ == 2) {
+            // placed for a receiver tuned to MeshCom EU (433.175 MHz): MeshCom at -tuneOffsetHz, LoRa APRS 600 kHz above it
+            const double ref = 433.175e6;
+            for (const auto& x : meshcomPresets()) if (x.name == "MeshCom EU" && (prot & 8)) {
+                mcm_.on = true; mcm_.p = toParams(x); mcm_.offsetHz = -tuneOffset; mcm_.bwHz = x.bwHz;
+            }
+            for (const auto& x : loraAprsPresets()) if (x.name == "LoRa APRS EU" && (prot & 4)) {
+                const double off = x.freqHz - ref - tuneOffset;
+                if (std::fabs(off) + x.bwHz < 0.45 * rate) { ap_.on = true; ap_.p = toParams(x); ap_.offsetHz = off; ap_.bwHz = x.bwHz; }
+            }
+        }
         // node SNRs: evenly from the strongest (snrDb) to the weakest
         const double strong = cfg.snrDb, weak = cfg.modeVal[0] != 0 ? std::min(cfg.modeVal[0], cfg.snrDb) : cfg.snrDb - 20;
         for (int i = 0; i < 6; i++) mtSnr_[i] = strong - (strong - weak) * i / 5.0;
         for (int i = 0; i < 3; i++) mcSnr_[i] = strong - (strong - weak) * (i + 0.5) / 3.0;
+        for (int i = 0; i < 3; i++) apSnr_[i] = strong - (strong - weak) * i / 2.0;
+        for (int i = 0; i < 2; i++) mcmSnr_[i] = strong - (strong - weak) * i;
         // the noise: the strongest LongFast node at an amplitude of 0.35
         noiseRms_ = 0.35 / std::sqrt(std::pow(10.0, strong / 10) * 250e3 / rate);
         std::uniform_real_distribution<double> u(-1500, 1500);
         for (int i = 0; i < 6; i++) mtCfo_[i] = u(rng_);
         for (int i = 0; i < 3; i++) mcCfo_[i] = u(rng_);
+        for (int i = 0; i < 3; i++) apCfo_[i] = u(rng_);
+        for (int i = 0; i < 2; i++) mcmCfo_[i] = u(rng_);
         for (int i = 0; i < 6; i++) {
             mtNodes_[i].num = 0x2a000000u + (rng_() & 0x00ffffffu);
             mtNodes_[i].longName = kMtNodes[i].longName;
@@ -142,7 +177,8 @@ public:
         uint8_t sd[32], pub[32];
         if (meshcoreNodeKeys(mcNodes_[1], sd, pub)) repeaterHash_ = pub[0];
         nextId_ = 0x10000000u + (rng_() & 0x0fffffffu);
-        if (cfg.modeOpt[3] == 1) { mt_.nextFree = 1.0; mc_.nextFree = 1.0; }
+        if (cfg.modeOpt[3] == 2) jitter_ = 0;
+        if (cfg.modeOpt[3] == 1) { mt_.nextFree = 1.0; mc_.nextFree = 1.0; ap_.nextFree = 1.0; mcm_.nextFree = 1.0; }
     }
 
     double sampleRate() const override { return rate_; }
@@ -151,6 +187,8 @@ public:
         const double t0 = (double)pos_ / rate_, t1 = (double)(pos_ + n) / rate_;
         schedule(mt_, true, t1 + 1);
         schedule(mc_, false, t1 + 1);
+        schedule70(ap_, true, t1 + 1);
+        schedule70(mcm_, false, t1 + 1);
         for (size_t i = 0; i < n; i++) out[i] = cf32(0, 0);
         for (const auto& f : active_) f.render(out, n, t0, rate_);
         noise_.add(out, n, (float)(noiseRms_ / std::sqrt(2.0)));
@@ -189,6 +227,39 @@ private:
                 // the next frame on this frequency waits for this one and a pause (the firmware's random back-off)
                 net.nextFree = f.endSec() + std::uniform_real_distribution<double>(0.3, 0.9)(rng_);
             }
+            if (++net.nextEv >= nev) { net.nextEv = 0; net.cycle++; }
+        }
+    }
+
+    // the 70 cm scene: LoRa APRS (isAprs) or MeshCom frames from the tables above, the same every cycle except the MeshCom message ids
+    void schedule70(Net& net, bool isAprs, double until) {
+        if (!net.on) return;
+        const int nev = isAprs ? (int)(sizeof(kAprs) / sizeof(kAprs[0])) : (int)(sizeof(kMcom) / sizeof(kMcom[0]));
+        for (;;) {
+            const double et = isAprs ? kAprs[net.nextEv].t : kMcom[net.nextEv].t;
+            const int who = isAprs ? kAprs[net.nextEv].station : kMcom[net.nextEv].node;
+            const double start = std::max(net.cycle * kCycle + et, net.nextFree);
+            if (start > until) return;
+            std::vector<uint8_t> bytes;
+            if (isAprs) bytes = loraAprsFrame(kAprs[net.nextEv].tnc2);
+            else {
+                const McomEv& e = kMcom[net.nextEv];
+                MeshComFrame m;
+                m.type = e.type; m.msgId = newId(); m.sourcePath = e.src; m.dest = e.dest; m.payload = e.payload;
+                m.maxHop = std::string(e.src).find(',') != std::string::npos ? 4 : 5;
+                bytes = meshcomBuild(m);
+            }
+            lora::TxFrame f;
+            f.p = net.p;
+            f.data = lora::encode(net.p, bytes.data(), bytes.size());
+            f.startSec = start;
+            f.sroPpm = cfg_.sroPpm;
+            const double snr = (isAprs ? apSnr_[who] : mcmSnr_[who]) + std::uniform_real_distribution<double>(-1.5, 1.5)(rng_) * jitter_;
+            f.amp = (float)std::sqrt(std::pow(10.0, snr / 10) * noiseRms_ * noiseRms_ * net.bwHz / rate_);
+            f.freqHz = net.offsetHz + cfg_.cfoHz + (isAprs ? apCfo_[who] : mcmCfo_[who]);
+            f.phase0 = std::uniform_real_distribution<double>(0, 1)(rng_);
+            active_.push_back(f);
+            net.nextFree = f.endSec() + std::uniform_real_distribution<double>(0.3, 0.9)(rng_);
             if (++net.nextEv >= nev) { net.nextEv = 0; net.cycle++; }
         }
     }
@@ -243,7 +314,9 @@ private:
     genutil::NoiseSource noise_;
     std::mt19937 rng_;
     int region_ = 0;
-    Net mt_, mc_;
+    Net mt_, mc_, ap_, mcm_;
+    double apSnr_[3] = {}, mcmSnr_[2] = {}, apCfo_[3] = {}, mcmCfo_[2] = {};
+    double jitter_ = 1.0;     // the +-1.5 dB packet-to-packet SNR variation (0 when modeOpt[3] == 2: exact SNR for the tests)
     double noiseRms_ = 0.01;
     double mtSnr_[6] = {}, mcSnr_[3] = {}, mtCfo_[6] = {}, mcCfo_[3] = {};
     MeshtasticNode mtNodes_[6];

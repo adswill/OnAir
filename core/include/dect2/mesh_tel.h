@@ -3,6 +3,7 @@
 // Times are seconds of signal since the receiver started (timeSec says where "now" is); frequencies are absolute, in Hz, computed from
 // the frequency the receiver was told it is tuned to (MeshReceiver::setTunedHz).
 #pragma once
+#include "packet_tel.h"
 #include <cstdint>
 #include <cstdio>
 #include <string>
@@ -12,7 +13,7 @@ namespace dect2 {
 
 // One LoRa setting the receiver searches
 struct MeshDecoderInfo {
-    int protocol = 1;            // 1 Meshtastic, 2 MeshCore
+    int protocol = 1;            // 1 Meshtastic, 2 MeshCore, 3 LoRa APRS, 4 MeshCom
     std::string preset;          // "LongFast", "MediumFast", ..., "MeshCore EU"
     double freqHz = 0;           // channel centre
     double offsetHz = 0;         // from the tuned frequency
@@ -50,7 +51,18 @@ struct MeshPacket {
     bool decrypted = false;
     std::string note;            // why not decrypted ("encrypted (direct)", "unknown channel 0x1f", "CRC error")
     std::string detail;          // one short line about the content
-    std::string path;            // MeshCore path hashes
+    std::string path;            // MeshCore path hashes; LoRa APRS / MeshCom: the digipeaters or relays
+    std::string raw;             // LoRa APRS / MeshCom: the payload as printable text (other bytes as \xNN)
+};
+
+// A LoRa APRS or MeshCom station (the packet mode's station record, plus what the LoRa layer knows)
+struct MeshAprsStation {
+    int protocol = 3;            // 3 LoRa APRS, 4 MeshCom
+    PacketStation st;            // call, symbol, position, comment, last heard (signal seconds), frame count
+    std::string path;            // path of its last packet
+    std::string lastType;        // APRS type of its last packet ("Position", "Message", ...; MeshCom "TEXT", "POSITION")
+    float lastSnrDb = 0;
+    int batteryPct = -1;         // MeshCom "/B="
 };
 
 struct MeshNode {
@@ -104,7 +116,7 @@ struct MeshTelemetry {
     double inputRate = 0;
     double tunedHz = 0;
     int region = 0;              // 0 EU, 1 US
-    int protocols = 3;           // 1 Meshtastic, 2 MeshCore
+    int protocols = 15;          // 1 Meshtastic, 2 MeshCore, 4 LoRa APRS, 8 MeshCom
     bool presetSearch = false;   // all Meshtastic presets of the region, not only LongFast
     std::vector<MeshDecoderInfo> decoders;
     // tables (oldest first; at most 100 packets, 150 nodes, 100 messages: the oldest leave first, the node heard longest ago)
@@ -114,15 +126,20 @@ struct MeshTelemetry {
     std::vector<MeshTypeCount> counts;
     uint64_t preambles = 0, headerBad = 0;
     std::vector<std::string> userChannels;   // "Meshtastic: name", "MeshCore: name"
+    std::vector<MeshAprsStation> aprsStations;   // LoRa APRS and MeshCom stations and objects (at most 150; the one heard longest ago leaves)
 };
 
 inline std::string meshSummary(const MeshTelemetry& t) {
-    char b[160];
+    char b[220];
     if (t.state == 0) return "Mesh (LoRa): searching";
     int mt = 0, mc = 0;
     for (const auto& n : t.nodes) (n.protocol == 1 ? mt : mc)++;
-    snprintf(b, sizeof b, "Mesh (LoRa): %s, %llu frames, %d Meshtastic / %d MeshCore nodes, %zu messages, SNR %.1f dB",
-             t.state == 2 ? "decoding" : "signal", (unsigned long long)t.blocksOk, mt, mc, t.messages.size(), t.snrDb);
+    if (!t.aprsStations.empty())
+        snprintf(b, sizeof b, "Mesh (LoRa): %s, %llu frames, %d Meshtastic / %d MeshCore nodes, %zu APRS stations, %zu messages, SNR %.1f dB",
+                 t.state == 2 ? "decoding" : "signal", (unsigned long long)t.blocksOk, mt, mc, t.aprsStations.size(), t.messages.size(), t.snrDb);
+    else
+        snprintf(b, sizeof b, "Mesh (LoRa): %s, %llu frames, %d Meshtastic / %d MeshCore nodes, %zu messages, SNR %.1f dB",
+                 t.state == 2 ? "decoding" : "signal", (unsigned long long)t.blocksOk, mt, mc, t.messages.size(), t.snrDb);
     return b;
 }
 
