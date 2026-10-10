@@ -111,10 +111,12 @@ struct AtvReceiver::Impl {
             fm.configure(fs);
             video.configure(fm.videoRate(), fm.videoRate() >= 9.5e6);
             video.setNoiseScale(1.0);
+            video.setFmVideo(true);
             applyPrm();
         } else {
             video.configure(front.videoRate(), front.colourCapable());
             video.setNoiseScale(front.noiseGain() * fs / 5e6);
+            video.setFmVideo(false);
             applyPrm();
         }
         resetAll();
