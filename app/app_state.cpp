@@ -164,6 +164,8 @@ void applyBandwidth(App& a) {
     {   // a radio that cannot reach that rate runs as fast as it can (the source picks the nearest rate it offers)
         const DeviceInfo& dv = a.devices[a.devIdx];
         if (dv.isGeneric() && dv.maxRateHz > 0) a.tune.sampleRate = std::min(a.tune.sampleRate, dv.maxRateHz);
+        // the DVB-T/T2 8 MHz channel is natively 64/7 Msps: a PlutoSDR can run exactly that, which saves the receiver its resampler (a sixth of its work)
+        if (dv.kind == DeviceInfo::Native && dv.board == "pluto" && a.family == 0 && kBw[a.bwIdx].mhz == 8) a.tune.sampleRate = std::min(64e6 / 7, dv.maxRateHz > 0 ? dv.maxRateHz : 64e6 / 7);
         // "30 dB" is nearly deaf on an SDRplay (0..103), full gain on an Airspy (0..21), attenuation on an HF+: a radio that the gain was not
         // set for starts at 60 % of its own range (settings from before this rule keep their gain)
         if (dv.isGeneric() && dv.gainMaxDb > dv.gainMinDb) {

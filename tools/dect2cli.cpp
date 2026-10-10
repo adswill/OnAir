@@ -108,6 +108,8 @@ int main(int argc, char** argv) {
         printf("device: %s\n", dev.name.c_str());
         if (dev.isGeneric()) {
             if (dev.maxRateHz > 0) tune.sampleRate = std::min(tune.sampleRate, dev.maxRateHz);
+            // DVB-T/T2 at 8 MHz is natively 64/7 Msps: a PlutoSDR can run exactly that, which saves the receiver its resampler
+            if (dev.kind == DeviceInfo::Native && dev.board == "pluto" && standard <= 2 && tune.bandwidthMhz == 8) tune.sampleRate = std::min(64e6 / 7, dev.maxRateHz > 0 ? dev.maxRateHz : 64e6 / 7);
             if (tune.gainDb == 30) tune.gainDb = std::max(dev.gainMinDb, dev.gainMaxDb * 0.6);   // a sensible start; --gain overrides
             printf("radio: up to %.2f Msps, gain %.0f..%.0f dB, using %.2f Msps / %.0f dB\n", dev.maxRateHz / 1e6, dev.gainMinDb, dev.gainMaxDb, tune.sampleRate / 1e6, tune.gainDb);
         }
