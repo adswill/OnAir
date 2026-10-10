@@ -35,6 +35,9 @@ struct IioApi {
     // optional: device attributes (the AD9361's reference clock, "xo_correction", for the frequency correction)
     long long (DECT2_CALL* device_attr_read)(const iio_device*, const char*, char*, size_t) = nullptr;
     int (DECT2_CALL* device_attr_write_longlong)(const iio_device*, const char*, long long) = nullptr;
+    // optional: the context attributes, where the firmware names itself ("fw_version", "tezuka-v0.3.21" on a Tezuka)
+    const char* (DECT2_CALL* context_get_attr_value)(const iio_context*, const char*) = nullptr;
+    int (DECT2_CALL* device_set_kernel_buffers_count)(const iio_device*, unsigned) = nullptr;   // optional: more buffers queued in the kernel
     bool ok = false;
     bool v1 = false;   // libiio 1.x: another API (iio_create_context(params, uri), blocks instead of buffers), not supported yet
     DynLib lib;
@@ -66,6 +69,8 @@ struct IioApi {
         if (ok) {
             lib.opt(channel_attr_read, "iio_channel_attr_read"); lib.opt(strerror_, "iio_strerror");
             lib.opt(device_attr_read, "iio_device_attr_read"); lib.opt(device_attr_write_longlong, "iio_device_attr_write_longlong");
+            lib.opt(context_get_attr_value, "iio_context_get_attr_value");
+            lib.opt(device_set_kernel_buffers_count, "iio_device_set_kernel_buffers_count");
         }
     }
     // libiio reports failures as negative errno values (or NULL and errno)
@@ -93,6 +98,15 @@ constexpr double kUsbMaxRate = 4e6;   // USB 2: the continuous rate a Pluto keep
 // The link runs over the Pluto's USB cable: "usb:...", and its default network address ip:192.168.2.1 (pluto.local), which is the USB-gadget
 // Ethernet on the same USB 2 cable and keeps up with even less than libusb does. A Pluto on a real network (another address) may go faster.
 bool overUsbCable(const std::string& uri) { return uri.rfind("usb:", 0) == 0 || uri == "ip:192.168.2.1" || uri == "ip:pluto.local"; }
+
+// Whether the board at each URI runs Tezuka firmware (known once it was opened or probed): only then the IQ format can be chosen
+std::map<std::string, bool> gTezuka;
+bool isTezukaFw(const char* fw) {
+    if (!fw) return false;
+    std::string low = fw;
+    for (auto& c : low) c = (char)tolower((unsigned char)c);
+    return low.find("tezuka") != std::string::npos;
+}
 
 // The RX LO range the radio reported when it was last opened (stock AD9363 firmware: 325-3800 MHz, AD9364 mode: 70-6000 MHz)
 std::mutex gRangeMu;
@@ -182,6 +196,16 @@ protected:
         // the reference clock the driver computes with (Hz; 40 MHz plus the radio's stored calibration): the frequency correction moves it
         xoBase_ = 0; xoPpm_ = 0;
         gainMode_.clear();
+        fw_.clear(); tezuka_ = false;
+        if (iio().context_get_attr_value) {
+            if (const char* fw = iio().context_get_attr_value(ctx_, "fw_version")) {
+                fw_ = fw;
+                tezuka_ = isTezukaFw(fw);
+                { std::lock_guard<std::mutex> lk(gRangeMu); gTezuka[uri_] = tezuka_; }
+                fprintf(stderr, "PlutoSDR firmware: %s%s\n", fw_.c_str(), tezuka_ ? " (Tezuka)" : "");
+                fflush(stderr);
+            }
+        }
         if (iio().device_attr_read && iio().device_attr_write_longlong) {
             char v[64] = {0};
             double hz = 0;
@@ -220,8 +244,12 @@ protected:
             }
             requested_ = s.sampleRate;
             checkRate(s.sampleRate, err);
+            // Tezuka: with only the first channel enabled the FPGA sends 8-bit I/Q pairs (half the bytes on the cable); both enabled: 16-bit
+            cs8_ = tezuka_ && radioOption(s, "iqformat", "cs16") == "cs8";
             iio().channel_enable(i_);
-            iio().channel_enable(q_);
+            if (cs8_) iio().channel_disable(q_); else iio().channel_enable(q_);
+            // Tezuka: 8 kernel buffers (as SDR++ does) to ride out a late reader, up to ~32 MB of samples in flight at most
+            if (tezuka_ && iio().device_set_kernel_buffers_count) iio().device_set_kernel_buffers_count(rx_, kKernelBuffers);
             buf_ = iio().device_create_buffer(rx_, kBlock, false);
             if (!buf_) { err = "PlutoSDR: cannot allocate the sample buffer"; return false; }
         }
@@ -281,9 +309,16 @@ protected:
             const auto got = iio().buffer_refill(buf_);
             if (got <= 0) { if (++failures > 20) { fprintf(stderr, "PlutoSDR: stream error, stopping the source\n"); break; } continue; }
             failures = 0;
-            const int16_t* p = static_cast<const int16_t*>(iio().buffer_start(buf_));
-            const size_t n = std::min<size_t>((size_t)got / 4, kBlock);   // 4 bytes per I/Q sample
-            for (size_t k = 0; k < n; k++) conv_[k] = cf32(p[2 * k] / 2048.f, p[2 * k + 1] / 2048.f);   // 12-bit samples in 16 bits
+            size_t n;
+            if (cs8_) {
+                const int8_t* p = static_cast<const int8_t*>(iio().buffer_start(buf_));
+                n = std::min<size_t>((size_t)got / 2, kBlock);   // 2 bytes per I/Q sample
+                for (size_t k = 0; k < n; k++) conv_[k] = cf32(p[2 * k] / 128.f, p[2 * k + 1] / 128.f);
+            } else {
+                const int16_t* p = static_cast<const int16_t*>(iio().buffer_start(buf_));
+                n = std::min<size_t>((size_t)got / 4, kBlock);   // 4 bytes per I/Q sample
+                for (size_t k = 0; k < n; k++) conv_[k] = cf32(p[2 * k] / 2048.f, p[2 * k + 1] / 2048.f);   // 12-bit samples in 16 bits
+            }
             push(conv_.data(), n);
         }
     }
@@ -291,6 +326,7 @@ protected:
 
 private:
     static constexpr size_t kBlock = 1 << 16;
+    static constexpr unsigned kKernelBuffers = 8;
     std::string uri_;
     std::string serial_;   // USB: finds the radio again when its URI changed
     IioApi::iio_context* ctx_ = nullptr;
@@ -304,6 +340,9 @@ private:
     double loHz_ = 70e6, hiHz_ = 6e9;
     double xoBase_ = 0, xoPpm_ = 0;   // the reference clock at open (0 = cannot be corrected) and the correction applied to it
     std::string gainMode_;            // the gain_control_mode written
+    std::string fw_;                  // the firmware version the board reports ("" when it does not say)
+    bool tezuka_ = false;             // the firmware is Tezuka
+    bool cs8_ = false;                // streaming 8-bit samples (Tezuka only)
 };
 
 void listPluto(std::vector<DeviceInfo>& out) {
@@ -324,6 +363,26 @@ void listPluto(std::vector<DeviceInfo>& out) {
                                     "Manual: the gain slider (and OnAir's AGC) set the AD9361's gain (the default).\n"
                                     "Slow / fast attack: the AD9361's own AGC sets it (fast attack for bursts); the gain slider then has no effect.",
                                     {"manual", "slow_attack", "fast_attack"}, {"Manual", "Radio AGC, slow attack", "Radio AGC, fast attack"}, "manual")};
+        bool tez = false, known = false;
+        {
+            std::lock_guard<std::mutex> lk(gRangeMu);
+            auto t = gTezuka.find(uri);
+            if (t != gTezuka.end()) { tez = t->second; known = true; }
+        }
+        // a board on the network can be asked which firmware it runs without taking anything from a receiver (a USB one is learnt when opened)
+        if (!known && uri.rfind("ip:", 0) == 0 && iio().context_get_attr_value && !iio().v1) {
+            if (IioApi::iio_context* c = iio().create_context_from_uri(uri.c_str())) {
+                tez = isTezukaFw(iio().context_get_attr_value(c, "fw_version"));
+                iio().context_destroy(c);
+                std::lock_guard<std::mutex> lk(gRangeMu);
+                gTezuka[uri] = tez;
+            }
+        }
+        if (tez)
+            d.settings.push_back(choiceSetting("iqformat", "IQ format",
+                                               "Tezuka firmware only. CS16: 16-bit samples (the 12-bit converter, the default).\n"
+                                               "CS8: 8-bit samples, half the data on the cable, so a higher sample rate over USB or a slow network; less dynamic range.",
+                                               {"cs16", "cs8"}, {"CS16", "CS8"}, "cs16", true));
         {
             std::lock_guard<std::mutex> lk(gRangeMu);
             auto it = gRange.find(uri);
@@ -333,7 +392,7 @@ void listPluto(std::vector<DeviceInfo>& out) {
         }
         out.push_back(d);
     };
-    if (IioApi::iio_scan_context* sc = iio().v1 ? nullptr : iio().create_scan_context("usb", 0)) {
+    if (IioApi::iio_scan_context* sc = iio().v1 ? nullptr : iio().create_scan_context("usb:ip", 0)) {   // USB, plus the boards that announce themselves on the network (mDNS)
         IioApi::iio_context_info** info = nullptr;
         const auto n = iio().scan_context_get_info_list(sc, &info);
         for (long i = 0; i < (long)n && i < 16; i++) {
