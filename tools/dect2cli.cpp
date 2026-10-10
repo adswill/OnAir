@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
     bool continue_t2 = true;
     MultipathDetector mpd;
     QualityMeter qm;
-    bool useFile = false, haveDev = false, synthetic = false, listen = false;
+    bool useFile = false, haveDev = false, synthetic = false, listen = false, atvFm = false;
     std::string wavPath;
     std::vector<int16_t> wav;
     std::string record;
@@ -55,6 +55,7 @@ int main(int argc, char** argv) {
         std::string a = argv[i];
         auto next = [&]() { return i + 1 < argc ? argv[++i] : (char*)""; };
         if (a == "--hackrf") haveDev = true;
+        else if (a == "--atv-fm") atvFm = true;   // with --standard atv: FM video (analog FPV links), 20 Msps
         else if (a == "--freq") { freq = atof(next()); freqSet = true; }
         else if (a == "--lna") tune.lnaDb = atoi(next());
         else if (a == "--vga") tune.vgaDb = atoi(next());
@@ -95,6 +96,7 @@ int main(int argc, char** argv) {
         else if (a == "--service") out.serviceId = atoi(next());
         else if (a == "--no-null") out.dropNull = true;
     }
+    if (atvFm) { tune.bandwidthMhz = 18; tune.sampleRate = 20e6; tune.basebandFilterHz = 18e6; }
     tune.centerHz = freq * 1e6;
     tune.synth.mode = standard >= 4 ? standard : 0;   // the synthetic source plays that mode's test signal
     if (standard != 7 && standard < 8) tune.sampleRate = tune.bandwidthMhz >= 7 ? 10e6 : 8e6; // HackRF Pro: exact tuning only at <= 10 Msps
@@ -140,6 +142,7 @@ int main(int argc, char** argv) {
         for (size_t i = 0; i < n; i++) { wav.push_back((int16_t)std::lround(std::max(-1.f, std::min(1.f, l[i])) * 32767)); wav.push_back((int16_t)std::lround(std::max(-1.f, std::min(1.f, r[i])) * 32767)); }
     });
     e.setStandard(standard);
+    if (atvFm) e.atv().setModulation(1);
     e.setBandwidthAuto(autoBw);
     e.setSpectrumEnabled(autoBw);   // cli doesn't show the spectrum
     if (!e.start(dev, tune, file)) {
