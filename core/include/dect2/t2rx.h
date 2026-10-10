@@ -26,6 +26,7 @@
 #include "pager_tel.h"
 #include "packet_tel.h"
 #include "hfdig_tel.h"
+#include "airband_tel.h"
 #include "t2.h"
 #include "t2l1.h"
 #include "t2plp.h"
@@ -75,8 +76,9 @@ struct RxTelemetry {
     PagerTelemetry pager;    // valid when standard == 24
     PacketTelemetry packet;  // valid when standard == 25
     HfdigTelemetry hfdig;    // valid when standard == 26
+    AirbandTelemetry airband;   // valid when standard == 27
     uint64_t seq = 0;
-    int standard = 0;            // 0 DVB-T2, 1 DVB-T, 2 ATSC, 3 DAB, 4 ATSC 3.0 (details: Engine::atsc3Telemetry), 5 ISDB-T, 6 FM, 7 DVB-S/S2, 8 DTMB, 9 analog TV, 10 DMR, 11 DRM, 12 ADS-B, 13 GNSS, 14 radiosonde, 15 AIS, 16 marine, 17 ACARS, 18 Inmarsat-C, 19 Inmarsat Aero, 20 Iridium, 21 mesh, 22 HD Radio, 23 CDR, 24 pagers, 25 APRS / packet, 26 HF digital
+    int standard = 0;            // 0 DVB-T2, 1 DVB-T, 2 ATSC, 3 DAB, 4 ATSC 3.0 (details: Engine::atsc3Telemetry), 5 ISDB-T, 6 FM, 7 DVB-S/S2, 8 DTMB, 9 analog TV, 10 DMR, 11 DRM, 12 ADS-B, 13 GNSS, 14 radiosonde, 15 AIS, 16 marine, 17 ACARS, 18 Inmarsat-C, 19 Inmarsat Aero, 20 Iridium, 21 mesh, 22 HD Radio, 23 CDR, 24 pagers, 25 APRS / packet, 26 HF digital, 27 airband
     struct Dvbt {                // DVB-T only: TPS parameters and the channel decoder's statistics
         bool tpsOk = false, fecSync = false;
         int mode = 0, guard = 0, mod = 0, hier = 0, crHp = 0, crLp = 0, cellId = 0, frameIdx = 0, punctPhase = 0;

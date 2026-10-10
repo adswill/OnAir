@@ -740,7 +740,7 @@ void gainControl(App& a) {
 
 // The receiver modes. Adding a mode is one row here (and its family number in app.h / setFamily).
 // The families are also stored in the settings: 0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T, 5 FM, 6 DVB-S/S2, 7 DTMB, 8 analog TV, 9 DMR, 10 DRM, 11 ADS-B, 12 GNSS, 13 radiosonde, 14 AIS, 15 marine, 16 ACARS, 17 Inmarsat-C, 18 Inmarsat Aero, 19 Iridium, 20 mesh,
-// 21 HD Radio, 22 CDR, 23 pagers, 24 APRS / packet, 25 HF digital.
+// 21 HD Radio, 22 CDR, 23 pagers, 24 APRS / packet, 25 HF digital, 26 airband.
 // Within a group the rows are shown in this order; the keys 1-9 pick the modes in the same order.
 const ModeDef kModes[] = {
     {0, "DVB",        0, IM_COL32(52, 92, 108, 255),  "DVB-T2 / DVB-T, detected automatically",                                    "DVB-T2 and DVB-T, automatic (Europe, Middle East, Africa, Asia, Australia)", "T2 and T, automatic",   ImVec4(0.36f, 0.74f, 0.86f, 1)},
@@ -757,6 +757,7 @@ const ModeDef kModes[] = {
     {22, "CDR", 1, IM_COL32(140, 60, 60, 255), "CDR (China Digital Radio) OFDM digital radio in the FM band", "CDR: China's digital radio in the FM band", "China digital radio", ImVec4(0.94f, 0.48f, 0.44f, 1)},
     {11, "ADS-B", 2, IM_COL32(58, 98, 160, 255), "ADS-B / Mode S: aircraft on 1090 MHz", "ADS-B aircraft position and identity reports", "Aircraft, 1090 MHz", ImVec4(0.52f, 0.74f, 0.98f, 1)},
     {16, "ACARS", 2, IM_COL32(110, 100, 60, 255), "ACARS aircraft data link messages around 131 MHz", "ACARS: short messages between aircraft and the ground", "Aircraft messages, VHF", ImVec4(0.88f, 0.80f, 0.50f, 1)},
+    {26, "Airband", 2, IM_COL32(70, 96, 130, 255), "Airband AM voice, 118 to 137 MHz: several 25 and 8.33 kHz channels at once", "Airband: tower, ground and ATIS voice on several channels at once", "AM voice, 118-137 MHz", ImVec4(0.58f, 0.72f, 0.92f, 1)},
     {14, "AIS", 3, IM_COL32(40, 110, 140, 255), "AIS ship transponders on 161.975 and 162.025 MHz", "AIS: ship positions and identities", "Ships, 162 MHz", ImVec4(0.40f, 0.76f, 0.90f, 1)},
     {15, "Marine", 3, IM_COL32(48, 100, 120, 255), "Marine radio data: NAVTEX, DSC and weather fax from 100 kHz to 174 MHz", "Marine data: NAVTEX, DSC and other maritime messages", "NAVTEX, DSC", ImVec4(0.44f, 0.72f, 0.84f, 1)},
     {17, "Inmarsat-C", 4, IM_COL32(100, 80, 140, 255), "Inmarsat-C satellite messages (EGC safety and news broadcasts) near 1537.7 MHz", "Inmarsat-C: satellite safety and news broadcasts, needs an L-band antenna", "EGC, L-band", ImVec4(0.74f, 0.64f, 0.94f, 1)},

@@ -168,7 +168,7 @@ using SavedChannel = plat::Channel;
 // parts of the window the tour points at
 enum WizTarget { TgNone = 0, TgSwitch, TgToolbar, TgMain, TgRight, TgConst, TgCount };
 
-constexpr int kNumFamilies = 26;   // App::family runs from 0 to kNumFamilies - 1
+constexpr int kNumFamilies = 27;   // App::family runs from 0 to kNumFamilies - 1
 
 struct App {
     Engine engine;
@@ -213,7 +213,7 @@ struct App {
     int uiTheme = 1;          // its palette: 0 terminal, 1 instrument, 2 mono
     int dtmbBwMhz = 8;        // DTMB channel width: 8 MHz (China, Hong Kong), 6 MHz (Cuba)
     bool lightUi = false;     // View > Light: every colour drawn with its lightness turned over (dark on white), hues kept (main.cpp)
-    int family = 0;           // 0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T, 5 FM, 6 DVB-S/S2, 7 DTMB, 8 analog TV, 9 DMR, 10 DRM, 11 ADS-B, 12 GNSS, 13 radiosonde, 14 AIS, 15 marine, 16 ACARS, 17 Inmarsat-C, 18 Inmarsat Aero, 19 Iridium, 20 mesh, 21 HD Radio, 22 CDR, 23 pagers, 24 APRS / packet, 25 HF digital (6 and up: see ModeUi; engine standard code = family + 2)
+    int family = 0;           // 0 DVB, 1 ATSC, 2 DAB, 3 ATSC 3.0, 4 ISDB-T, 5 FM, 6 DVB-S/S2, 7 DTMB, 8 analog TV, 9 DMR, 10 DRM, 11 ADS-B, 12 GNSS, 13 radiosonde, 14 AIS, 15 marine, 16 ACARS, 17 Inmarsat-C, 18 Inmarsat Aero, 19 Iridium, 20 mesh, 21 HD Radio, 22 CDR, 23 pagers, 24 APRS / packet, 25 HF digital, 26 airband (6 and up: see ModeUi; engine standard code = family + 2)
     std::deque<float> dabSnrH, dabFicH;
     std::deque<float> fmSnrH, fmPilotH, fmRdsH;
     int fmDeemph = 50;        // FM de-emphasis in microseconds: 50 (Europe, Middle East, most of the world) or 75 (Americas, South Korea)

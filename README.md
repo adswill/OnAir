@@ -95,6 +95,7 @@ These receivers are built from the published specifications and checked end to e
 | **DMR** | Digital two-way radio | Talkgroups, IDs and data (no voice) |
 | **ADS-B** | Aircraft transponders, 1090 MHz | Aircraft on a map, with altitude, speed and callsign |
 | **ACARS** | Aircraft data link, VHF | Messages, and positions on a map |
+| **Airband** | AM voice, 118 - 137 MHz | Several 25 and 8.33 kHz channels at once: squelch, scan, priority, activity log |
 | **Inmarsat Aero** | Aircraft satellite data link, L band | Messages, and positions on a map |
 | **Inmarsat-C** | Maritime satellite broadcasts | Safety messages (SafetyNET) and system information |
 | **Iridium** | Satellite phone network | Satellites on a map, pager messages, ring alerts |

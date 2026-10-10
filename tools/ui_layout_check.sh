@@ -59,7 +59,8 @@ hdr	--mode hdr	Overview|Radio|Receiver|History
 cdr	--mode cdr	Overview|Radio|Receiver|History
 pager	--mode pager	Overview|Messages|Receiver|History
 packet	--mode packet	Overview|Packets|Receiver|History
-hfdig	--mode hfdig	Overview|Decoders|Receiver|History"
+hfdig	--mode hfdig	Overview|Decoders|Receiver|History
+airband	--mode airband	Overview|Channels|Receiver|History"
 
 JOBLIST="$OUT/jobs.txt"
 : > "$JOBLIST"

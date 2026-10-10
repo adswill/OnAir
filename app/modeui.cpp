@@ -21,6 +21,7 @@ extern const ModeUi kCdrUi;
 extern const ModeUi kPagerUi;
 extern const ModeUi kPacketUi;
 extern const ModeUi kHfdigUi;
+extern const ModeUi kAirbandUi;
 
 const ModeUi* modeUi(int family) {
     switch (family) {
@@ -44,6 +45,7 @@ const ModeUi* modeUi(int family) {
     case 23: return &kPagerUi;
     case 24: return &kPacketUi;
     case 25: return &kHfdigUi;
+    case 26: return &kAirbandUi;
     default: return nullptr;
     }
 }
