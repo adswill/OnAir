@@ -132,7 +132,7 @@ void fmHistory(App& a) {
     static bool wasRunning = false;
     static float lastVol = -1;
     static bool lastMute = false;
-    static int lastDe = 0;
+    static int lastDe = 0, lastW = -1;
     static bool lastScan = false;
     if (a.fmMode && a.engine.running()) {   // the sound controls are shared with the other modes: push them to the receiver when they change or it starts
         if (!wasRunning || a.volume != lastVol || a.muted != lastMute || a.fmScan.running != lastScan) {
@@ -142,6 +142,7 @@ void fmHistory(App& a) {
         }
     }
     if (a.fmMode && (a.fmDeemph != lastDe || (a.engine.running() && !wasRunning))) { a.engine.fm().setDeemphasis(a.fmDeemph); lastDe = a.fmDeemph; }
+    if (a.fmChanKhz != lastW) { a.engine.fm().setChannelWidth(a.fmChanKhz * 1e3); lastW = a.fmChanKhz; }   // the receiver keeps it between starts
     wasRunning = a.fmMode && a.engine.running();
     if (a.rx.standard != 6 || a.rx.seq == lastSeq) return;
     lastSeq = a.rx.seq;

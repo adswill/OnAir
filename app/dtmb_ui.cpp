@@ -269,12 +269,7 @@ void tuner(App& a, bool& retune) {
     static const char* const kW[] = {"8 MHz", "6 MHz (Cuba)"};
     int cur = a.dtmbBwMhz == 6 ? 1 : 0;
     ImGui::SetNextItemWidth(std::min(std::max(90 * gUi, ImGui::CalcTextSize(kW[1]).x + ImGui::GetFrameHeight() + 8 * gUi), ImGui::GetContentRegionAvail().x));
-    if (ImGui::Combo("##dtmbbw", &cur, kW, 2)) {
-        a.dtmbBwMhz = cur == 1 ? 6 : 8;
-        applyBandwidth(a);
-        savePrefs(a);
-        if (a.engine.running()) startReceiver(a);   // the receiver takes the width when it starts
-    }
+    if (ImGui::Combo("##dtmbbw", &cur, kW, 2)) setDtmbBandwidth(a, cur == 1 ? 6 : 8);
 }
 
 void decoder(App& a, bool&) {
@@ -354,6 +349,13 @@ void meters(const App& a, std::vector<ModeMeter>& out) {
 
 void scanTabCommon(App& a);   // scan_outputs.cpp: the scan tab of the TV modes (it sets the DTMB flag from the family)
 namespace { void scan(App& a) { scanTabCommon(a); } }
+
+void setDtmbBandwidth(App& a, int mhz) {
+    a.dtmbBwMhz = mhz == 6 ? 6 : 8;
+    applyBandwidth(a);
+    savePrefs(a);
+    if (a.engine.running()) startReceiver(a);   // the receiver takes the width when it starts
+}
 
 extern const ModeUi kDtmbUi;
 const ModeUi kDtmbUi = {

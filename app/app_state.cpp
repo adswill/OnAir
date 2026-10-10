@@ -242,6 +242,7 @@ void loadPrefs(App& a) {
         }
     }
     if (d.has("fmDeemph")) a.fmDeemph = d.getI("fmDeemph", 50) == 75 ? 75 : 50;
+    if (d.has("fmChanKhz")) { const int k = (int)d.getI("fmChanKhz", 0); a.fmChanKhz = k > 0 ? std::min(300, std::max(100, k)) : 0; }
     if (d.has("compute")) a.computeMode = std::max(0, std::min(2, (int)d.getI("compute", a.computeMode)));   // indexes the CPU / GPU / Auto names
     if (d.has("standard")) a.stdMode = std::max(0, std::min(2, (int)d.getI("standard", a.stdMode)));   // 0 auto, 1 DVB-T2, 2 DVB-T: engineStd() hands it on
     a.bwIdx = std::max(0, std::min((int)(sizeof kBw / sizeof *kBw) - 1, (int)d.getI("bw", 0)));
@@ -271,6 +272,7 @@ void savePrefs(const App& a) {
     d.setB("amp", a.tune.ampOn);
     d.setI("family", a.family);
     d.setI("fmDeemph", a.fmDeemph);
+    d.setI("fmChanKhz", a.fmChanKhz);
     d.setB("newUi", a.newUi);
     for (int f = 0; f < kNumFamilies; f++) {   // gains per mode (the current mode from the live settings)
         const bool cur = f == a.family;

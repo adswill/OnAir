@@ -9,6 +9,7 @@
 #include "dect2/fftutil.h"
 #include "dect2/resampler.h"
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <complex>
 #include <cstring>
@@ -21,7 +22,7 @@ namespace {
 constexpr double kPi = 3.14159265358979323846;
 constexpr int kAudioRate = 48000;
 constexpr double kDevHz = 75000.0;      // 100 % modulation
-constexpr double kChanPass = 110e3;     // the channel filter passes +-110 kHz and is 60 dB down by +-190 kHz
+constexpr double kChanPass = 110e3;     // the channel filter passes +-110 kHz and is 60 dB down by +-190 kHz (setChannelWidth() changes the pass band)
 constexpr double kChanStop = 190e3;
 constexpr int kMpxFft = 2048;
 
@@ -257,6 +258,9 @@ struct FmReceiver::Impl {
     double inRate = 0, fo = 0, fm = 0, fa = 0;
     bool ready = false;
     std::vector<DecimFir<cf32>> chan;
+    std::vector<int> chanStages;
+    double chanPass = kChanPass;                 // the pass band of chan, +- Hz
+    std::atomic<double> chanWant{kChanPass};     // set from another thread (setChannelWidth); feed() designs the filter again
     DecimFir<float> mpxDecim;
     cf32 prev = cf32(1, 0);
     // The radio's DC spike sits on the carrier when the radio is tuned exactly to the station. Its mean over half a second is taken out of the
@@ -371,20 +375,13 @@ struct FmReceiver::Impl {
         fo = fs / dTotal; fm = fo / 2; fa = fm / 5;
         dcChA = (float)(1.0 / (0.5 * fo));
         restartFinder(); setTune(0);
-        std::vector<int> stages;
+        chanStages.clear();
         int rest = dTotal;
         for (int p = 2; rest > 1;) {
-            if (rest % p == 0) { if (!stages.empty() && stages.back() * p <= 10) stages.back() *= p; else stages.push_back(p); rest /= p; }
+            if (rest % p == 0) { if (!chanStages.empty() && chanStages.back() * p <= 10) chanStages.back() *= p; else chanStages.push_back(p); rest /= p; }
             else p++;
         }
-        chan.assign(stages.size(), DecimFir<cf32>());
-        double r = fs;
-        for (size_t i = 0; i < stages.size(); i++) {
-            const double out = r / stages[i];
-            const bool last = i + 1 == stages.size();
-            chan[i].design(designLowpass(kChanPass, last ? kChanStop : out - kChanPass, r), stages[i]);
-            r = out;
-        }
+        designChan(chanWant.load());
         mpxDecim.design(designLowpass(112e3, 138e3, fo), 2);
         // pilot
         bp1.bandpass(19000, 30, fm); bp2.bandpass(19000, 30, fm);
@@ -401,6 +398,19 @@ struct FmReceiver::Impl {
         ready = true;
         reset();
         if (!silent && !audio) { audio = std::make_unique<AudioOut>(); audio->start(kAudioRate); audio->setStartThreshold(kAudioRate / 5); applyAudio(); }
+    }
+
+    // the channel filter, passing +-pass Hz; the last stage is down by pass + 80 kHz (190 kHz for the standard 110)
+    void designChan(double pass) {
+        chanPass = pass;
+        chan.assign(chanStages.size(), DecimFir<cf32>());
+        double r = inRate;
+        for (size_t i = 0; i < chanStages.size(); i++) {
+            const double out = r / chanStages[i];
+            const bool last = i + 1 == chanStages.size();
+            chan[i].design(designLowpass(pass, last ? pass + (kChanStop - kChanPass) : out - pass, r), chanStages[i]);
+            r = out;
+        }
     }
 
     void applyAudio() { if (audio) { audio->setVolume(volume); audio->setMuted(muted); } }
@@ -487,6 +497,7 @@ struct FmReceiver::Impl {
 
     void feed(const cf32* x, size_t n) {
         if (!ready || n == 0) return;
+        if (const double w = chanWant.load(std::memory_order_relaxed); w != chanPass) designChan(w);   // a new width: the filter starts empty
         if (finding) findFeed(x, n);
         if (tuneHz != 0) {
             mixBuf.resize(n);
@@ -732,6 +743,10 @@ void FmReceiver::setDeemphasis(double us) {
     p_->deemphUs = us;
     if (p_->ready) { p_->deL.configure(us, p_->fa); p_->deR.configure(us, p_->fa); }
 }
+void FmReceiver::setChannelWidth(double hz) {
+    p_->chanWant = hz > 0 ? std::min(kMaxChannelWidthHz, std::max(kMinChannelWidthHz, hz)) * 0.5 : kChanPass;
+}
+double FmReceiver::channelWidth() const { return 2 * p_->chanWant.load(); }
 void FmReceiver::setSilent(bool s) { p_->silent = s; }
 void FmReceiver::setAudioTap(std::function<void(const float*, const float*, size_t)> cb) { p_->tap = std::move(cb); }
 

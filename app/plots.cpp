@@ -26,10 +26,120 @@ static void clickToTune(App& a) {
     }
 }
 
+ChanWidth channelWidth(const App& a) {
+    ChanWidth w;
+    if (a.family == 0) {   // what the engine uses while it runs (Automatic may have just switched), else the choice
+        const double act = a.engine.running() ? a.engine.activeBandwidth() : 0;
+        w.mhz = act > 0 ? act : kBw[a.bwIdx].mhz;
+        w.settable = w.hasAuto = true; w.manual = !a.bwAuto;
+    } else if (a.atscMode) w.mhz = 6;   // ATSC 1.0 and 3.0, ISDB-T
+    else if (a.dabMode) w.mhz = 1.536;
+    else if (a.fmMode) {
+        w.settable = w.hasAuto = true; w.manual = a.fmChanKhz > 0;
+        w.mhz = (w.manual ? a.fmChanKhz * 1e3 : FmReceiver::kDefaultChannelWidthHz) / 1e6;
+    } else if (a.family == 7) { w.mhz = a.dtmbBwMhz; w.settable = w.manual = true; }
+    else if (a.family == 6 && a.engine.running() && a.rx.standard == 7 && a.rx.dvbs.symbolRate > 0) w.mhz = a.rx.dvbs.symbolRate * (1 + a.rx.dvbs.rollOff) / 1e6;
+    else if (const ModeTuning* mt = modeTuning(a.family + 2)) w.mhz = mt->bandwidthMhz;
+    return w;
+}
+
+std::string widthText(double mhz) {
+    char b[32];
+    if (mhz >= 1) snprintf(b, sizeof b, "%.4g MHz", mhz); else snprintf(b, sizeof b, "%.4g kHz", mhz * 1e3);
+    return b;
+}
+
+void channelWidthPopup(App& a) {
+    const ChanWidth cw = channelWidth(a);
+    ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 330 * gUi);
+    ImGui::TextDisabled("Channel width: %s", widthText(cw.mhz).c_str());
+    ImGui::Separator();
+    if (a.family == 0) {
+        if (ImGui::RadioButton("Automatic", a.bwAuto) && !a.bwAuto) setDvbBandwidth(a, -1);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("The width of the signal is measured in the spectrum and the receiver switches between 1.7, 5, 6, 7 and 8 MHz by itself.");
+        if (ImGui::RadioButton("Manual", !a.bwAuto) && a.bwAuto) setDvbBandwidth(a, a.bwIdx);
+        ImGui::BeginDisabled(a.bwAuto);
+        ImGui::Indent(ImGui::GetFrameHeight());
+        for (int i = 0; i < (int)(sizeof kBw / sizeof *kBw); i++) {
+            if (i) ImGui::SameLine();
+            if (ImGui::RadioButton(kBw[i].label, !a.bwAuto && i == a.bwIdx)) setDvbBandwidth(a, i);
+        }
+        ImGui::Unindent(ImGui::GetFrameHeight());
+        ImGui::EndDisabled();
+        ImGui::TextDisabled("DVB-T2 and DVB-T channels sit on this raster; a running radio may be opened again at another sample rate.");
+    } else if (a.fmMode) {
+        if (ImGui::RadioButton("Automatic (220 kHz)", a.fmChanKhz == 0) && a.fmChanKhz != 0) { a.fmChanKhz = 0; savePrefs(a); }
+        if (ImGui::RadioButton("Manual", a.fmChanKhz > 0) && a.fmChanKhz == 0) { a.fmChanKhz = 180; savePrefs(a); }
+        ImGui::BeginDisabled(a.fmChanKhz == 0);
+        ImGui::SameLine();
+        int k = a.fmChanKhz > 0 ? a.fmChanKhz : 220;
+        ImGui::SetNextItemWidth(150 * gUi);
+        if (ImGui::SliderInt("##fmchw", &k, (int)(FmReceiver::kMinChannelWidthHz / 1e3), (int)(FmReceiver::kMaxChannelWidthHz / 1e3), "%d kHz")) a.fmChanKhz = (k + 5) / 10 * 10;
+        if (ImGui::IsItemDeactivatedAfterEdit()) savePrefs(a);
+        ImGui::EndDisabled();
+        ImGui::TextDisabled("The receiver's channel filter. Narrower keeps a strong neighbour out (150 kHz copes with one 10 dB stronger 150 kHz away); "
+                            "below about 180 kHz loud passages distort a little and RDS suffers first.");
+    } else if (a.family == 7) {
+        if (ImGui::RadioButton("8 MHz", a.dtmbBwMhz != 6) && a.dtmbBwMhz == 6) setDtmbBandwidth(a, 8);
+        ImGui::SameLine();
+        if (ImGui::RadioButton("6 MHz (Cuba)", a.dtmbBwMhz == 6) && a.dtmbBwMhz != 6) setDtmbBandwidth(a, 6);
+        ImGui::TextDisabled("Set by the country: there is nothing to measure it from. A receiver set to the wrong width finds nothing.");
+    } else if (a.family == 6) {
+        ImGui::TextUnformatted("Follows the symbol rate: symbol rate x (1 + roll-off).");
+        ImGui::TextDisabled("Choose automatic or a manual symbol rate in the tuner to change it.");
+    } else {
+        const char* name = "This mode";
+        for (int i = 0; i < kNumModes; i++) if (kModes[i].family == a.family) name = kModes[i].name;
+        ImGui::Text("%s: fixed for this mode.", name);
+        ImGui::TextDisabled("The receiver's filters are made for the signal (or for the group of channels it watches), so a manual width would only make reception worse.");
+    }
+    ImGui::PopTextWrapPos();
+}
+
+// The channel band behind the trace (spectrum: a light fill and its edges) or on top of the picture (waterfall: the edges only)
+static void channelBand(const App& a, bool fill) {
+    const ChanWidth cw = channelWidth(a);
+    if (cw.mhz <= 0) return;
+    const double x0 = a.freqMhz - cw.mhz / 2, x1 = a.freqMhz + cw.mhz / 2;
+    if (fill) { plt::Spec band; band.FillColor = pal::accent(pal::dev() ? 0.14f : 0.16f); plt::PlotVBand("band", x0, x1, band); }
+    const double edges[2] = {x0, x1};
+    plt::Spec es; es.LineColor = pal::accent(fill ? 0.40f : 0.55f); es.LineWeight = 1.f;
+    plt::PlotInfLines("bandedges", edges, 2, es);
+}
+
+// "BW 7 MHz auto" in the top right corner of the spectrum: the width the band shows, and a click opens channelWidthPopup().
+// Left out when it would cover yLabel, which the plot draws in its top left corner.
+static void channelWidthButton(App& a, ImVec2 plotMin, ImVec2 plotSize, const char* yLabel) {
+    const ChanWidth cw = channelWidth(a);
+    if (cw.mhz <= 0) return;
+    char b[64];
+    snprintf(b, sizeof b, "BW %s%s###bwbtn", widthText(cw.mhz).c_str(), cw.hasAuto ? (cw.manual ? " manual" : " auto") : "");
+    const ImVec2 sz = ImGui::CalcTextSize(b, nullptr, true);
+    const float w = sz.x + 2 * ImGui::GetStyle().FramePadding.x, m = 4 * gUi;
+    if (plotSize.x < w + 2 * m + ImGui::CalcTextSize(yLabel).x + 12 * gUi || plotSize.y < sz.y + 2 * m) return;   // no room
+    const ImVec2 keep = ImGui::GetCursorScreenPos();
+    ImGui::SetCursorScreenPos(ImVec2(plotMin.x + plotSize.x - w - m, plotMin.y + m));
+    ImVec4 bg = ImGui::GetStyleColorVec4(ImGuiCol_FrameBg); bg.w = 0.85f;
+    ImGui::PushStyleColor(ImGuiCol_Button, bg);
+    ImGui::PushStyleColor(ImGuiCol_Text, cw.manual && cw.hasAuto ? pal::warnAmber() : ImGui::GetStyleColorVec4(ImGuiCol_Text));
+    if (ImGui::SmallButton(b)) ImGui::OpenPopup("##bwpop");
+    ImGui::PopStyleColor(2);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip(cw.settable ? "Channel width: the band the receiver works with (the light band).\nClick to choose automatic or a manual width."
+                                      : "Channel width: the band the receiver works with (the light band), set by the standard.");
+    ImGui::SetNextWindowPos(ImVec2(ImGui::GetItemRectMax().x, ImGui::GetItemRectMax().y + 2 * gUi), ImGuiCond_Appearing, ImVec2(1, 0));   // under the button, right-aligned
+    if (ImGui::BeginPopup("##bwpop")) { channelWidthPopup(a); ImGui::EndPopup(); }
+    ImGui::SetCursorScreenPos(keep);
+}
+
 void spectrumPlot(App& a, ImVec2 size, bool noFreqAxis) {
-    if (plt::BeginPlot("##spec", size, plt::Flags_NoLegend | plt::Flags_NoTitle)) {
-        if (noFreqAxis) plt::SetupAxes(nullptr, "power (dBFS/bin)", plt::AxisFlags_NoTickLabels, 0);   // the waterfall under it shows the frequencies
-        else plt::SetupAxes("frequency (MHz)", "power (dBFS/bin)");
+    static const char* const kYLabel = "power (dBFS/bin)";
+    ImVec2 plotMin, plotSize;
+    bool drawn = false;
+    if (plt::BeginPlot("##spec", size, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_Overlay)) {
+        drawn = true;
+        if (noFreqAxis) plt::SetupAxes(nullptr, kYLabel, plt::AxisFlags_NoTickLabels, 0);   // the waterfall under it shows the frequencies
+        else plt::SetupAxes("frequency (MHz)", kYLabel);
         double fs = (a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate) / 1e6;
         // follow a retune: when the centre or the span changes, bring the view back to the new band (otherwise it keeps the user's own zoom)
         static double lastC = 0, lastFs = 0;
@@ -39,16 +149,10 @@ void spectrumPlot(App& a, ImVec2 size, bool noFreqAxis) {
         plt::SetupAxisLimits(plt::X1, rc - fs / 2, rc + fs / 2, moved ? plt::Cond_Always : plt::Cond_Once);
         plt::SetupAxisLimits(plt::Y1, a.yMin, a.yMax, plt::Cond_Once);
         plt::SetupAxisFormat(plt::X1, "%.2f");
+        channelBand(a, true);
+        plotMin = plt::GetPlotPos(); plotSize = plt::GetPlotSize();
         if (!a.smooth.empty()) {
             auto x = xs(a);
-            // channel overlay: 8 MHz occupied band around the centre
-            double bw = kBw[a.bwIdx].mhz;
-            double xo[2] = {a.freqMhz - bw / 2 * 0.95, a.freqMhz + bw / 2 * 0.95};
-            double yo[2] = {a.yMax, a.yMax};
-            if (!pal::dev()) {   // the dev palette draws no tinted band behind the signal
-            plt::Spec band; band.FillColor = pal::accent(0.10f); band.LineColor = ImVec4(0, 0, 0, 0);
-            plt::PlotShaded("band", xo, yo, 2, a.yMin, band);
-            }
             if (a.peakHold) {
                 plt::Spec ps; ps.LineColor = pal::grey(0.40f); ps.LineWeight = 1.0f;
                 std::vector<double> yp(a.peak.begin(), a.peak.end());
@@ -77,6 +181,7 @@ void spectrumPlot(App& a, ImVec2 size, bool noFreqAxis) {
         clickToTune(a);
         plt::EndPlot();
     }
+    if (drawn) channelWidthButton(a, plotMin, plotSize, kYLabel);
 }
 
 void waterfallPlot(App& a, ImVec2 size) {
@@ -126,6 +231,7 @@ void waterfallPlot(App& a, ImVec2 size) {
             plt::PlotImage("b", tex, plt::Point(x0, -H - frac), plt::Point(x1, -(H - w) - frac), ImVec2(0, 0), ImVec2(1, (float)w / H));
         const float vNew = (w + 0.5f) / H;   // the gap above: the newest row, stretched
         if (frac > 0) plt::PlotImage("top", tex, plt::Point(x0, -frac), plt::Point(x1, 0), ImVec2(0, vNew), ImVec2(1, vNew));
+        channelBand(a, false);
         clickToTune(a);
         plt::EndPlot();
     }

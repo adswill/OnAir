@@ -23,6 +23,11 @@ public:
     void setVolume(float v);                             // 0 .. 1
     void setMuted(bool m);
     void setDeemphasis(double microseconds);             // 50 (Europe, Middle East, most of the world) or 75 (Americas, South Korea)
+    // The channel filter's pass band, the whole width in Hz (0 = the standard 220 kHz); held to kMin/kMaxChannelWidthHz. Narrower keeps a
+    // strong neighbour out at the cost of distortion on loud passages and of RDS; it takes effect with the next samples (any thread).
+    static constexpr double kDefaultChannelWidthHz = 220e3, kMinChannelWidthHz = 100e3, kMaxChannelWidthHz = 300e3;
+    void setChannelWidth(double hz);
+    double channelWidth() const;
     void setSilent(bool s);                              // decode but do not open the sound device (tests, command line)
     // Tests: the demodulated audio (left, right) at 48 kHz, called from feed()
     void setAudioTap(std::function<void(const float* left, const float* right, size_t n)> cb);

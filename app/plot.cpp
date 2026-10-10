@@ -193,6 +193,7 @@ void finishSetup() {
 
     // the mouse: panning (drag), zooming (wheel), back to the start (double click)
     const ImGuiID bid = ImGui::GetID("##plot");
+    if (C.flags & Flags_Overlay) ImGui::SetNextItemAllowOverlap();
     ImGui::ItemAdd(C.plot, bid);
     bool hov = false, held = false;
     ImGui::ButtonBehavior(C.plot, bid, &hov, &held, ImGuiButtonFlags_MouseButtonLeft);
@@ -441,6 +442,15 @@ void PlotText(const char* text, double x, double y, ImVec2 off) {
     C.dl->AddText(p, ImGui::ColorConvertFloat4ToU32(gStyle.Text), text);
 }
 
+void PlotVBand(const char*, double x0, double x1, const Spec& s) {
+    if (!C.active) return;
+    finishSetup();
+    if (!std::isfinite(x0 + x1)) return;
+    float a = px(std::min(x0, x1)), b = px(std::max(x0, x1));
+    if (b - a < 1) { const float m = 0.5f * (a + b); a = m - 0.5f; b = m + 0.5f; }
+    C.dl->AddRectFilled(ImVec2(a, C.plot.Min.y), ImVec2(b, C.plot.Max.y), ImGui::ColorConvertFloat4ToU32(pick(s.FillColor)));
+}
+
 int AddColormap(const char*, const ImVec4* colors, int n) {
     gMaps.emplace_back(colors, colors + n);
     return (int)gMaps.size() - 1;
@@ -453,6 +463,8 @@ Point GetPlotMousePos() {
     return Point(fromPx(m.x), fromPy(m.y));
 }
 bool IsPlotHovered() { return C.active && C.hovered; }
+ImVec2 GetPlotPos() { if (C.active) finishSetup(); return C.plot.Min; }
+ImVec2 GetPlotSize() { if (C.active) finishSetup(); return C.plot.GetSize(); }
 Rect GetPlotLimits() {
     Rect r;
     r.X.Min = C.lo[0]; r.X.Max = C.hi[0]; r.Y.Min = C.lo[1]; r.Y.Max = C.hi[1];

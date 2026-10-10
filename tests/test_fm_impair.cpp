@@ -9,7 +9,8 @@ using namespace dect2;
 static int fails = 0;
 #define CHECK(c, ...) do { if (!(c)) { printf("FAIL: "); printf(__VA_ARGS__); printf("\n"); fails++; } } while (0)
 
-static FmTelemetry run(const char* what, const FmGenConfig& c, double secs, const std::function<void(std::vector<cf32>&)>& fault) {
+// widthHz: the receiver's channel filter (FmReceiver::setChannelWidth; 0 = the standard one)
+static FmTelemetry run(const char* what, const FmGenConfig& c, double secs, const std::function<void(std::vector<cf32>&)>& fault, double widthHz = 0) {
     FmGenerator g(c);
     std::vector<cf32> x;
     g.generate((size_t)(secs * c.rate), x);
@@ -17,6 +18,7 @@ static FmTelemetry run(const char* what, const FmGenConfig& c, double secs, cons
     FmReceiver rx;
     rx.setSilent(true);
     rx.configure(c.rate);
+    rx.setChannelWidth(widthHz);
     FmTelemetry t;
     uint64_t seq = 0;
     for (size_t i = 0; i < x.size(); i += 65536) {
@@ -93,6 +95,21 @@ int main() {
         });
         CHECK(std::fabs(t.cfoHz) < 2000, "strong neighbour: moved to %+.0f Hz", t.cfoHz);
         rdsGood(t, "weak station, strong neighbour", 90, 8);
+    }
+    // a neighbour 150 kHz up and 10 dB stronger: with the standard 220 kHz filter its lower half takes over the discriminator; a manual
+    // 150 kHz channel width (FmReceiver::setChannelWidth) keeps it out and the station plays
+    for (double width : {0.0, 150e3}) {
+        char w[64]; snprintf(w, sizeof w, "neighbour +150 kHz +10 dB, %s", width > 0 ? "150 kHz" : "standard");
+        FmTelemetry t = run(w, base, 8, [](std::vector<cf32>& x) {
+            FmGenConfig o; o.rate = 2e6; o.ps = "OTHER   "; o.pi = 0x1234; o.rt = "other"; o.seed = 7; o.leftHz = 3100; o.rightHz = 4700;
+            FmGenerator g(o);
+            std::vector<cf32> y;
+            g.generate(x.size(), y);
+            impair::shift(y, 150e3, 2e6);
+            for (size_t i = 0; i < x.size(); i++) x[i] += y[i] * 3.162f;
+        }, width);
+        printf("%-34s SNR %.1f dB\n", "", t.snrDb);
+        if (width > 0) CHECK(t.state == 2 && t.stereo && t.snrDb > 30, "%s: state %d stereo %d SNR %.1f dB", w, t.state, t.stereo, t.snrDb);
     }
     // multipath: an echo 10 us late, 6 dB down (a reflection off hills): the constant-modulus equaliser takes it out
     {

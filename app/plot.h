@@ -18,7 +18,8 @@ namespace plt {
 enum Axis { X1 = 0, Y1 = 1 };
 enum Cond { Cond_Always, Cond_Once };
 
-enum Flags { Flags_None = 0, Flags_NoTitle = 1, Flags_NoLegend = 2, Flags_Equal = 4, Flags_NoMouseText = 8 };
+enum Flags { Flags_None = 0, Flags_NoTitle = 1, Flags_NoLegend = 2, Flags_Equal = 4, Flags_NoMouseText = 8,
+             Flags_Overlay = 16 };   // Overlay: controls drawn over the plot after EndPlot() get the mouse (a button in a corner)
 enum AxisFlags { AxisFlags_None = 0, AxisFlags_NoTickLabels = 1, AxisFlags_NoGridLines = 2, AxisFlags_AutoFit = 4 };
 enum Scale { Scale_Linear, Scale_Log10 };
 enum MarkerType { Marker_None, Marker_Circle, Marker_Cross };
@@ -81,6 +82,7 @@ void PlotImage(const char* label, ImTextureID tex, Point bmin, Point bmax, ImVec
 // values: rows x cols, row 0 at the top; the colour comes from the colour map set with PushColormap
 void PlotHeatmap(const char* label, const float* values, int rows, int cols, double scaleMin, double scaleMax, const char* fmt, Point bmin, Point bmax);
 void PlotText(const char* text, double x, double y, ImVec2 pixelOffset = ImVec2(0, 0));
+void PlotVBand(const char* label, double x0, double x1, const Spec& s = Spec());   // x0..x1 over the whole height (Spec::FillColor), at least a pixel wide
 
 // A colour map is a list of colours that are blended into each other.
 int AddColormap(const char* name, const ImVec4* colors, int n);
@@ -90,5 +92,7 @@ void PopColormap();
 Point GetPlotMousePos();
 bool IsPlotHovered();
 Rect GetPlotLimits();
+ImVec2 GetPlotPos();    // the plot area (inside the axes) on the screen
+ImVec2 GetPlotSize();
 
 } // namespace plt

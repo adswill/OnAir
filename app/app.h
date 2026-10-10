@@ -217,6 +217,7 @@ struct App {
     std::deque<float> dabSnrH, dabFicH;
     std::deque<float> fmSnrH, fmPilotH, fmRdsH;
     int fmDeemph = 50;        // FM de-emphasis in microseconds: 50 (Europe, Middle East, most of the world) or 75 (Americas, South Korea)
+    int fmChanKhz = 0;        // FM channel filter: 0 = automatic (the receiver's standard 220 kHz), else a manual width of 100 to 300 kHz
     struct DabScan {
         bool running = false; int idx = -1; double t0 = 0, lockT = 0, savedFreq = 218.64;
         struct Res { std::string name, label, stations; double mhz = 0; bool found = false; float snr = 0; };
@@ -441,6 +442,8 @@ void harvestScan(App& a);
 void scanDbTick(App& a);   // scan_db_ui.cpp: asks to share a finished scan
 void tuneToChannel(App& a, const SavedChannel& c);
 void followBandwidth(App& a);
+void setDvbBandwidth(App& a, int idx);   // toolbar.cpp: the DVB-T2 / DVB-T width kBw[idx] (manual), or idx < 0 for Automatic; a running receiver follows at once
+void setDtmbBandwidth(App& a, int mhz);  // dtmb_ui.cpp: 8 or 6 MHz; a running receiver starts again with it
 // toolbar.cpp
 void toolbar(App& a);
 void sourceOptions(App& a);
@@ -487,6 +490,13 @@ void mainTabs(App& a);          // the tab bar with the tabs that fit the curren
 void drawShell2(App& a, ImVec2 disp);   // ui2.cpp: the new interface
 void applyUiTheme(App& a);              // ui2.cpp: classic or new colours and shapes
 // plots.cpp
+// The width of the channel the mode's receiver works with: the light band on the spectrum, its edges on the waterfall. DVB-T2 / DVB-T: the
+// measured or chosen raster width; FM: the channel filter; DTMB: 8 or 6 MHz; DVB-S/S2: symbol rate x (1 + roll-off) once it is known; the
+// others: the width their standard (and receiver) fixes. settable: the user can choose it (channelWidthPopup), hasAuto: and leave it automatic.
+struct ChanWidth { double mhz = 0; bool settable = false, hasAuto = false, manual = false; };
+ChanWidth channelWidth(const App& a);
+std::string widthText(double mhz);   // "7 MHz", "1.536 MHz", "12.5 kHz"
+void channelWidthPopup(App& a);      // automatic or manual, where the mode allows it; otherwise what fixes the width
 void spectrumPlot(App& a, ImVec2 size, bool noFreqAxis = false);
 void waterfallPlot(App& a, ImVec2 size);
 void histogramPlot(App& a, ImVec2 size);
