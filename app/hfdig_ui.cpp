@@ -19,6 +19,7 @@ void hfdigRttyTab(App& a, const dect2::HfdigTelemetry& t);
 void hfdigSstvTab(App& a, const dect2::HfdigTelemetry& t);
 void hfdigFreedvTab(App& a, const dect2::HfdigTelemetry& t);
 void hfdigFtxTab(App& a, const dect2::HfdigTelemetry& t);
+void hfdigFtxPresetFt8(App& a);   // the FT8 shortcut of the mode list: decode FT8, show only FT8
 
 namespace {
 
@@ -129,6 +130,12 @@ void follow(const dect2::HfdigTelemetry& t) {
 bool live(const App& a) { return a.engine.running() && a.rx.standard == 26; }   // the engine reports its standard code minus one
 
 void tick(App& a) {
+    if (a.modePreset == 1) {   // picked as "FT8 / FT4 / WSPR" in the mode list: open the FT8 / WSPR view
+        a.modePreset = 0;
+        S.view = 3;
+        plat::prefs().setI("hfdigView", 3);
+        hfdigFtxPresetFt8(a);
+    }
     const bool run = a.engine.running();
     if (run && a.rx.standard == 26 && (!S.wasRunning || a.volume != S.pushedVol || a.muted != S.pushedMute)) {   // the sound controls are shared with the other modes
         a.engine.hfdig().setVolume(a.volume);

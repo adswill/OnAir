@@ -124,8 +124,24 @@ void loadState() {
     }
 }
 
+void applyRegion(App& a, int region) {
+    S.region = region;
+    plat::prefs().setI("meshRegion", region);
+    a.freqMhz = kPlans[region].mhz;                    // the plan's channel (Meshtastic LongFast, LoRa APRS, MeshCom)
+    a.tune.synth.modeOpt[1] = kPlans[region].synthRegion;
+}
+
 void tick(App& a) {
     loadState();
+    if (a.modePreset == 2) {   // picked as "LoRa APRS / MeshCom" in the mode list: the LoRa APRS EU plan, LoRa APRS decoding on, the APRS stations view
+        a.modePreset = 0;
+        applyRegion(a, 2);
+        S.protocols |= 4 | 8;
+        plat::prefs().setI("meshProtocols", S.protocols);
+        S.view = 5;
+        plat::prefs().setI("meshView", S.view);
+        savePrefs(a);   // the plan's frequency
+    }
     dect2::MeshReceiver& r = a.engine.mesh();
     if (!S.keysPushed) { pushKeys(a); S.keysPushed = true; }
     if (S.pushedRegion != S.region) { r.setRegion(kPlans[S.region].rxRegion); S.pushedRegion = S.region; }
@@ -492,12 +508,6 @@ void chatView(const App& a) {
 
 // ---------------------------------------------------------------- settings
 
-void applyRegion(App& a, int region) {
-    S.region = region;
-    plat::prefs().setI("meshRegion", region);
-    a.freqMhz = kPlans[region].mhz;                    // the plan's channel (Meshtastic LongFast, LoRa APRS, MeshCom)
-    a.tune.synth.modeOpt[1] = kPlans[region].synthRegion;
-}
 
 void settingsView(App& a) {
     loadState();

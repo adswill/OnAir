@@ -238,7 +238,7 @@ float freqDigits(App& a, float fontSize = 30.f) {
 void summaryText(App& a, std::string& l1, std::string& l2) {
     const bool run = a.engine.running();
     const ModeDef* cur = &kModes[0];
-    for (int i = 0; i < kNumModes; i++) if (kModes[i].family == a.family) cur = &kModes[i];
+    for (int i = 0; i < kNumModes; i++) if (modeSelected(a, kModes[i])) cur = &kModes[i];
     l1 = cur->name; l2 = run ? "starting" : "stopped";
     char b[96];
     if (run) {
@@ -319,7 +319,7 @@ void modeList(App& a) {
             ImGui::PopID();
             const bool hov = ImGui::IsItemHovered();
             const ImVec2 p0 = ImGui::GetItemRectMin();
-            const bool sel = m.family == a.family;
+            const bool sel = modeSelected(a, m);
             if (hov) dl->AddRectFilled(p0, ImVec2(p0.x + w, p0.y + h), IM_COL32(255, 255, 255, 12));
             const ImVec2 c(p0.x + 9 * gUi, p0.y + h * 0.5f);
             dl->AddCircle(c, 5 * gUi, u32(sel ? T.bright : T.dim), 0, 1.f);
@@ -328,7 +328,7 @@ void modeList(App& a) {
             const ImVec2 ss = ImGui::CalcTextSize(m.sub);
             if (p0.x + 24 * gUi + ImGui::CalcTextSize(m.name).x + 10 * gUi < p0.x + w - ss.x - 6 * gUi)   // no room: the name alone, not both on top of each other
                 dl->AddText(ImVec2(p0.x + w - ss.x - 6 * gUi, p0.y + (h - ss.y) * 0.5f), u32(T.dim), m.sub);
-            if (clicked) selectMode(a, m.family);
+            if (clicked) selectMode(a, m.family, m.preset);
             if (hov && running && !sel) ImGui::SetTooltip("Stop the receiver to switch mode");
         }
     }
@@ -393,7 +393,7 @@ void statusLine(App& a) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
     const bool run = a.engine.running();
     const ModeDef* cur = &kModes[0];
-    for (int i = 0; i < kNumModes; i++) if (kModes[i].family == a.family) cur = &kModes[i];
+    for (int i = 0; i < kNumModes; i++) if (modeSelected(a, kModes[i])) cur = &kModes[i];
     const float lh = ImGui::GetTextLineHeight();
     auto field = [&](const char* text, bool first = false, ImVec4 col = ImVec4(-1, 0, 0, 0), bool fit = false) {
         if (!first) {
@@ -493,7 +493,7 @@ float menuBar(App& a) {
                 if (g) ImGui::Separator();
                 for (int i = 0; i < kNumModes; i++) if (kModes[i].group == g) {
                     char k[4]; snprintf(k, sizeof k, "%d", ++key);
-                    if (ImGui::MenuItem(kModes[i].name, key <= 9 ? k : nullptr, kModes[i].family == a.family)) selectMode(a, kModes[i].family);   // only 1-9 are keys
+                    if (ImGui::MenuItem(kModes[i].name, key <= 9 ? k : nullptr, modeSelected(a, kModes[i]))) selectMode(a, kModes[i].family, kModes[i].preset);   // only 1-9 are keys
                 }
             }
             ImGui::EndMenu();
@@ -607,13 +607,22 @@ void logConsole(App& a, float h) {
 
 void modeCombo(App& a, float w) {
     const ModeDef* cur = &kModes[0];
-    for (int i = 0; i < kNumModes; i++) if (kModes[i].family == a.family) cur = &kModes[i];
+    for (int i = 0; i < kNumModes; i++) if (modeSelected(a, kModes[i])) cur = &kModes[i];
     ImGui::SetNextItemWidth(w);
     if (ImGui::BeginCombo("##modec", cur->name)) {
+        const char* q = modeSearchBox();
         for (int g = 0; g < kNumGroups; g++) {
-            if (g) ImGui::Separator();
+            bool any = false;
+            for (int i = 0; i < kNumModes; i++) any |= kModes[i].group == g && modeMatches(kModes[i], q);
+            if (!any) continue;
+            ImGui::Separator();
             ImGui::TextDisabled("%s", kGroupNames[g]);
-            for (int i = 0; i < kNumModes; i++) if (kModes[i].group == g && ImGui::Selectable(kModes[i].name, kModes[i].family == a.family)) selectMode(a, kModes[i].family);
+            for (int i = 0; i < kNumModes; i++) if (kModes[i].group == g && modeMatches(kModes[i], q)) {
+                ImGui::PushID(i);
+                if (ImGui::Selectable(kModes[i].name, modeSelected(a, kModes[i]))) selectMode(a, kModes[i].family, kModes[i].preset);
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", kModes[i].tip);
+                ImGui::PopID();
+            }
         }
         ImGui::EndCombo();
     }
@@ -1092,7 +1101,7 @@ void modeKeys(App& a) {
             const bool clicked = ImGui::InvisibleButton("##key", ImVec2(w, h));
             ImGui::PopID();
             const bool hov = ImGui::IsItemHovered();
-            const bool sel = m.family == a.family;
+            const bool sel = modeSelected(a, m);
             const ImVec2 p0 = ImGui::GetItemRectMin(), p1 = ImGui::GetItemRectMax();
             const ImU32 plate = sel ? IM_COL32(18, 19, 20, 255) : hov ? IM_COL32(58, 59, 60, 255) : IM_COL32(48, 49, 50, 255);
             dl->AddRectFilled(p0, p1, plate, 2.f);
@@ -1116,7 +1125,7 @@ void modeKeys(App& a) {
             dl->AddText(ImVec2(p0.x + 30 * gUi, p0.y + (h - ns.y) * 0.5f), u32(sel ? T.bright : (running ? T.dim : T.text)), m.name);
             const float sw = ss.x * 0.84f;
             if (p0.x + 30 * gUi + ns.x + 14 * gUi < p1.x - sw - 8 * gUi) dl->AddText(ImGui::GetFont(), fs * 0.84f, ImVec2(p1.x - sw - 8 * gUi, p0.y + (h - ss.y * 0.84f) * 0.5f), u32(T.dim), m.sub);
-            if (clicked) selectMode(a, m.family);
+            if (clicked) selectMode(a, m.family, m.preset);
             if (hov) ImGui::SetTooltip("%s", running && !sel ? "Stop the receiver to switch mode" : m.tip);
         }
         ImGui::Dummy(ImVec2(1, 2 * gUi));
@@ -1198,7 +1207,7 @@ void drawShell2(App& a, ImVec2 disp) {
         if (!io.WantTextInput && !ImGui::IsAnyItemActive() && !io.KeyCtrl && !io.KeyAlt && !io.KeySuper) {
             if (!gFreqHovered) for (int k = 0; k < 9; k++) if (ImGui::IsKeyPressed((ImGuiKey)(ImGuiKey_1 + k), false)) {
                 int n = 0;
-                for (int g = 0; g < kNumGroups; g++) for (int i = 0; i < kNumModes; i++) if (kModes[i].group == g && n++ == k) selectMode(a, kModes[i].family);
+                for (int g = 0; g < kNumGroups; g++) for (int i = 0; i < kNumModes; i++) if (kModes[i].group == g && n++ == k) selectMode(a, kModes[i].family, kModes[i].preset);
             }
             if (ImGui::IsKeyPressed(ImGuiKey_Space, false)) { if (a.engine.running()) a.engine.stop(); else startReceiver(a); }
         }

@@ -1,6 +1,7 @@
 // the top bar, the source options, the status bar, gain control and the standard switch
 #include "app.h"
 #include "dect2/rate_choice.h"
+#include <cctype>
 
 // The converter resolution at the rate in use, for the ADC level advice and the AGC (gain.h): the 8-bit HackRF and RTL-SDR, the 12-bit
 // Airspy, LimeSDR, PlutoSDR, bladeRF and USRP, the 16-bit HF+ path; the SDRplay ADC gives up bits as its rate rises (API specification:
@@ -28,7 +29,7 @@ static std::string rateWarning(const App& a) {
     if (rate <= 0 || need <= 0 || rate >= need - 1) return "";
     char what[64];
     if (a.family == 0) snprintf(what, sizeof what, "the %g MHz DVB-T2 / DVB-T channel", bw);
-    else { snprintf(what, sizeof what, "this mode"); for (int i = 0; i < kNumModes; i++) if (kModes[i].family == a.family) snprintf(what, sizeof what, "%s", kModes[i].name); }
+    else { snprintf(what, sizeof what, "this mode"); for (int i = 0; i < kNumModes; i++) if (modeSelected(a, kModes[i])) snprintf(what, sizeof what, "%s", kModes[i].name); }
     char b[360];
     snprintf(b, sizeof b, "This radio %s %.3g Msps; %s needs at least %.3g Msps, so %s. %s", run ? "runs at" : "gives at most", rate / 1e6, what, need / 1e6,
              a.family == 0 ? "only the spectrum is shown" : "the receiver cannot work with it",
@@ -768,18 +769,44 @@ const ModeDef kModes[] = {
     {12, "GNSS", 4, IM_COL32(130, 112, 52, 255), "GNSS satellites (GPS, GLONASS, BeiDou, Galileo) around 1575 MHz, needs an active antenna", "GNSS: satellite tracking and position fix", "GPS, GLONASS, BeiDou", ImVec4(0.90f, 0.78f, 0.42f, 1)},
     {13, "Radiosonde", 5, IM_COL32(60, 112, 150, 255), "Weather balloon radiosondes, 400 to 406 MHz (RS41, DFM, M10 and others)", "Radiosonde weather balloons: position, altitude and weather data", "Balloons, 403 MHz", ImVec4(0.46f, 0.74f, 0.94f, 1)},
     {9, "DMR", 5, IM_COL32(70, 120, 70, 255), "DMR two-slot digital voice and data, 12.5 kHz channel", "DMR (Digital Mobile Radio), two-slot TDMA", "Digital voice", ImVec4(0.62f, 0.84f, 0.46f, 1)},
-    {20, "Mesh", 5, IM_COL32(50, 120, 100, 255), "Meshtastic and MeshCore LoRa mesh messages (433, 868 and 915 MHz bands)", "LoRa mesh networks: Meshtastic and MeshCore", "Meshtastic, MeshCore", ImVec4(0.46f, 0.84f, 0.70f, 1)},
+    {20, "Mesh", 5, IM_COL32(50, 120, 100, 255), "Meshtastic and MeshCore LoRa mesh messages (433, 868 and 915 MHz bands)", "LoRa mesh networks: Meshtastic and MeshCore", "Meshtastic, MeshCore", ImVec4(0.46f, 0.84f, 0.70f, 1), 0, "mesh meshtastic meshcore lora aprs meshcom"},
     {23, "Pagers", 5, IM_COL32(110, 110, 50, 255), "POCSAG and FLEX paging messages on one 25 kHz channel", "Pagers: POCSAG and FLEX paging messages", "POCSAG, FLEX", ImVec4(0.84f, 0.84f, 0.44f, 1)},
-    {24, "APRS / Packet", 6, IM_COL32(90, 110, 60, 255), "APRS and AX.25 packet radio (1200 bd AFSK), 144.800 MHz in Europe", "APRS and AX.25 packet radio", "AX.25, 144.8 MHz", ImVec4(0.70f, 0.86f, 0.46f, 1)},
-    {25, "HF digital", 6, IM_COL32(100, 80, 130, 255), "RTTY, SSTV and FreeDV on one upper sideband channel, 1 to 30 MHz", "HF digital modes: RTTY, SSTV and FreeDV, all at once", "RTTY, SSTV, FreeDV", ImVec4(0.72f, 0.62f, 0.94f, 1)},
+    {24, "APRS / Packet", 6, IM_COL32(90, 110, 60, 255), "APRS and AX.25 packet radio (1200 bd AFSK), 144.800 MHz in Europe; LoRa APRS is its own entry", "APRS and AX.25 packet radio, 1200 bd AFSK on VHF (not LoRa APRS)", "AFSK, 144.8 MHz", ImVec4(0.70f, 0.86f, 0.46f, 1), 0, "aprs packet ax25 afsk"},
+    {20, "LoRa APRS / MeshCom", 6, IM_COL32(50, 110, 120, 255), "LoRa APRS and MeshCom on 70 cm, 433.775 MHz in Europe (opens Mesh with the LoRa APRS plan)", "LoRa APRS and MeshCom: APRS over LoRa on 433 MHz, part of the Mesh mode", "LoRa, 70 cm", ImVec4(0.55f, 0.70f, 0.98f, 1), 2, "lora aprs meshcom mesh 433"},
+    {25, "HF digital", 6, IM_COL32(100, 80, 130, 255), "RTTY, SSTV and FreeDV on one upper sideband channel, 1 to 30 MHz", "HF digital modes: RTTY, SSTV and FreeDV, all at once", "RTTY, SSTV, FreeDV", ImVec4(0.72f, 0.62f, 0.94f, 1), 0, "hf digital rtty sstv freedv ft8 ft4 ft2 wspr"},
+    {25, "FT8 / FT4 / WSPR", 6, IM_COL32(110, 70, 120, 255), "FT8, FT4, FT2 and WSPR weak-signal modes, 14.074 MHz (opens HF digital on its FT8 / WSPR view)", "FT8, FT4, FT2 and WSPR: weak-signal amateur modes, part of HF digital", "WSJT, 20 m", ImVec4(0.86f, 0.58f, 0.92f, 1), 1, "ft8 ft4 ft2 wspr wsjt"},
 };
 const int kNumModes = (int)(sizeof kModes / sizeof *kModes);
 const char* const kGroupNames[kNumGroups] = {"TV", "RADIO", "AVIATION", "MARITIME", "SATELLITE", "UTILITY", "AMATEUR"};
 float gSwitchWidth = 420;   // width of the mode selector as drawn (the guided tour points at it)
 
-void selectMode(App& a, int fam) {
-    if (a.engine.running()) a.engine.log("stop the receiver before switching mode");
-    else if (fam != a.family) { setFamily(a, fam); savePrefs(a); }
+void selectMode(App& a, int fam, int preset) {
+    if (a.engine.running()) { a.engine.log("stop the receiver before switching mode"); return; }
+    if (fam != a.family) setFamily(a, fam);
+    else if (!preset) return;
+    if (preset == 1) a.freqMhz = 14.074;   // FT8 on 20 m; the mesh screen tunes its own band plan
+    a.modePreset = preset;
+    savePrefs(a);
+}
+bool modeSelected(const App& a, const ModeDef& m) { return !m.preset && m.family == a.family; }
+bool modeMatches(const ModeDef& m, const char* q) {
+    if (!q || !*q) return true;
+    auto has = [&](const char* s) {
+        if (!s) return false;
+        std::string h(s), n(q);
+        for (auto& c : h) c = (char)tolower((unsigned char)c);
+        for (auto& c : n) c = (char)tolower((unsigned char)c);
+        return h.find(n) != std::string::npos;
+    };
+    return has(m.name) || has(m.sub) || has(m.blurb) || has(m.keys);
+}
+// a search box at the top of a mode drop-down; returns the query
+const char* modeSearchBox() {
+    static char q[32] = "";
+    if (ImGui::IsWindowAppearing()) { q[0] = 0; ImGui::SetKeyboardFocusHere(); }
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputTextWithHint("##modeq", "search (FT8, LoRa, APRS...)", q, sizeof q);
+    return q;
 }
 
 // Mode selector: the modes in groups (TV, radio) as one segmented control each; a drop-down when the window is too narrow for them all
@@ -788,7 +815,7 @@ void standardSwitch(App& a) {
     const float h = ImGui::GetFrameHeight() - 2;
     const ImVec2 p = ImGui::GetCursorScreenPos();
     const ModeDef* cur = &kModes[0];
-    for (const auto& m : kModes) if (m.family == a.family) cur = &m;
+    for (const auto& m : kModes) if (modeSelected(a, m)) cur = &m;
 
     float segW[32], segX[32], capX[kNumGroups] = {}, grpL[kNumGroups] = {}, grpR[kNumGroups] = {}, capW[kNumGroups];
     for (int g = 0; g < kNumGroups; g++) capW[g] = ImGui::CalcTextSize(kGroupNames[g]).x;
@@ -806,10 +833,19 @@ void standardSwitch(App& a) {
         gSwitchWidth = 170 * gUi;
         ImGui::SetNextItemWidth(gSwitchWidth);
         if (ImGui::BeginCombo("##mode", cur->name)) {
+            const char* q = modeSearchBox();
             for (int g = 0; g < kNumGroups; g++) {
-                if (g) ImGui::Separator();
+                bool any = false;
+                for (const auto& m : kModes) any |= m.group == g && modeMatches(m, q);
+                if (!any) continue;
+                ImGui::Separator();
                 ImGui::TextDisabled("%s", kGroupNames[g]);
-                for (const auto& m : kModes) if (m.group == g && ImGui::Selectable(m.name, m.family == a.family)) selectMode(a, m.family);
+                for (const auto& m : kModes) if (m.group == g && modeMatches(m, q)) {
+                    ImGui::PushID(&m);
+                    if (ImGui::Selectable(m.name, modeSelected(a, m))) selectMode(a, m.family, m.preset);
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", m.tip);
+                    ImGui::PopID();
+                }
             }
             ImGui::EndCombo();
         }
@@ -827,7 +863,7 @@ void standardSwitch(App& a) {
         dl->AddRect(ImVec2(grpL[g], p.y), ImVec2(grpR[g], p.y + h), IM_COL32(52, 60, 72, 255), 3.f);
     }
     int selPos = 0;
-    for (int i = 0; i < kNumModes; i++) if (kModes[i].family == a.family) selPos = i;
+    for (int i = 0; i < kNumModes; i++) if (modeSelected(a, kModes[i])) selPos = i;
     static float knobX = -1, knobW = 0;
     if (knobX < 0) { knobX = segX[selPos]; knobW = segW[selPos]; }
     knobX += (segX[selPos] - knobX) * 0.35f; knobW += (segW[selPos] - knobW) * 0.35f;
@@ -835,12 +871,12 @@ void standardSwitch(App& a) {
     for (int i = 0; i < kNumModes; i++) {
         ImGui::SetCursorScreenPos(ImVec2(segX[i], p.y));
         ImGui::PushID(i);
-        if (ImGui::InvisibleButton("##seg", ImVec2(segW[i], h))) selectMode(a, kModes[i].family);
+        if (ImGui::InvisibleButton("##seg", ImVec2(segW[i], h))) selectMode(a, kModes[i].family, kModes[i].preset);
         const bool hov = ImGui::IsItemHovered();
         if (hov) ImGui::SetTooltip("%s", kModes[i].tip);
         ImGui::PopID();
         const ImVec2 ts = ImGui::CalcTextSize(kModes[i].name);
-        dl->AddText(ImVec2(segX[i] + (segW[i] - ts.x) * 0.5f, p.y + (h - ts.y) * 0.5f), kModes[i].family == a.family ? IM_COL32(255, 255, 255, 255) : hov ? IM_COL32(220, 228, 236, 255) : IM_COL32(140, 152, 166, 255), kModes[i].name);
+        dl->AddText(ImVec2(segX[i] + (segW[i] - ts.x) * 0.5f, p.y + (h - ts.y) * 0.5f), modeSelected(a, kModes[i]) ? IM_COL32(255, 255, 255, 255) : hov ? IM_COL32(220, 228, 236, 255) : IM_COL32(140, 152, 166, 255), kModes[i].name);
     }
     ImGui::SetCursorScreenPos(ImVec2(p.x + total + 14, p.y));
     ImGui::AlignTextToFramePadding();

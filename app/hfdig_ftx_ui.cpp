@@ -162,6 +162,12 @@ void mapView(App& a, const dect2::HfdigFtxTelemetry& f, ImVec2 size) {
 
 } // namespace
 
+void hfdigFtxPresetFt8(App& a) {
+    a.engine.hfdig().ftx().setEnabled(0, true);   // 0 FT8
+    S.filter = 1;                                  // 1 + FT8
+    S.view = 0;
+}
+
 void hfdigFtxTab(App& a, const dect2::HfdigTelemetry& t) {
     using namespace dect2;
     if (!S.loaded) { S.loaded = true; S.map.zoom = (int)plat::prefs().getI("ftxZoom", 3); }

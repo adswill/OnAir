@@ -89,7 +89,7 @@ void channelWidthPopup(App& a) {
         ImGui::TextDisabled("Choose automatic or a manual symbol rate in the tuner to change it.");
     } else {
         const char* name = "This mode";
-        for (int i = 0; i < kNumModes; i++) if (kModes[i].family == a.family) name = kModes[i].name;
+        for (int i = 0; i < kNumModes; i++) if (modeSelected(a, kModes[i])) name = kModes[i].name;
         ImGui::Text("%s: fixed for this mode.", name);
         ImGui::TextDisabled("The receiver's filters are made for the signal (or for the group of channels it watches), so a manual width would only make reception worse.");
     }

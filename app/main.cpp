@@ -442,6 +442,7 @@ int main(int argc, char** argv) {
         if (std::string(argv[i]) == "--mode" && i + 1 < argc) { if (const ModeTuning* mt = modeTuningById(argv[++i])) setFamily(app, mt->stdMode - 2); }   // dev: dvbs, dtmb, atv, dmr, drm, adsb, gnss, sonde, ais, marine, acars, inmc, aero, iridium, mesh, hdr, cdr, pager, packet, hfdig or airband
         if (std::string(argv[i]) == "--sopt" && i + 2 < argc) { const int k = atoi(argv[i + 1]); if (k >= 0 && k < 8) app.tune.synth.modeOpt[k] = atoi(argv[i + 2]); i += 2; }       // dev: option k of the mode's test signal
         if (std::string(argv[i]) == "--sval" && i + 2 < argc) { const int k = atoi(argv[i + 1]); if (k >= 0 && k < 4) app.tune.synth.modeVal[k] = atof(argv[i + 2]); i += 2; }   // dev: value k of the mode's test signal
+        if (std::string(argv[i]) == "--pick" && i + 1 < argc) { const char* q = argv[++i]; for (int m = 0; m < kNumModes; m++) if (modeMatches(kModes[m], q)) { selectMode(app, kModes[m].family, kModes[m].preset); break; } }   // dev: pick the first mode-list row the search finds, as a click would
         if (std::string(argv[i]) == "--ui2") app.newUi = true;
         if (std::string(argv[i]) == "--theme" && i + 1 < argc) app.uiTheme = atoi(argv[++i]);
         if (std::string(argv[i]) == "--light") app.lightUi = true;   // dev: View > Light
