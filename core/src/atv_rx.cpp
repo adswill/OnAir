@@ -393,7 +393,7 @@ void AtvReceiver::setChannelWidth(int mhz) { p_->chanWidthMhz = mhz; }
 ModeTuning atvTuning() {
     ModeTuning t;
     t.stdMode = 10; t.id = "atv"; t.name = "Analog TV";
-    t.minMhz = 45; t.maxMhz = 870; t.defMhz = 600.0;
+    t.minMhz = 45; t.maxMhz = 6000; t.defMhz = 600.0;
     t.sampleRate = 10000000.0; t.basebandHz = 9000000.0; t.bandwidthMhz = 8;
     t.minSampleRate = 8000000.0;
     // in system B/G the sound carrier (+2.75 MHz) is the mirror image of the vision carrier (-2.75 MHz) around the channel centre: the pair is
