@@ -252,8 +252,8 @@ ModeTuning hfdigTuning() {
     t.sampleRate = 2000000;
     t.basebandHz = 1750000;
     t.bandwidthMhz = 0.003;
-    t.minSampleRate = 1000000;
-    t.tuneOffsetHz = 20000;                              // as marine: the radio sits 20 kHz above the dial frequency, away from its DC spike
+    t.minSampleRate = 250000;                            // the front end takes any rate down to its 96 kHz first stage: as PSK and JS8
+    t.tuneOffsetHz = 20000;                             // as marine: the radio sits 20 kHz above the dial frequency, away from its DC spike
     return t;
 }
 

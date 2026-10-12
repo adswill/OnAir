@@ -137,12 +137,12 @@ int main() {
     }
     // the whole receiver: the generator's audio as an upper sideband at 1 MHz with a frequency offset, a clock error and noise
     // c == 2: I and Q swapped: the upper sideband lands on the far side of the radio's centre, outside the channel; nothing may be
-    // decoded from it (no false decodes from what is left)
-    for (int c = 0; c < 3; c++) {
+    // decoded from it (no false decodes from what is left). c == 3: at 384 ksps, the fastest a Hermes Lite 2 streams
+    for (int c = 0; c < 4; c++) {
         SynthConfig sc;
         sc.modeOpt[0] = 3;
         sc.snrDb = 20;
-        const double rate = 1e6;
+        const double rate = c == 3 ? 384000 : 1e6;
         auto syn = makeHfdigSynth(sc, rate);
         std::vector<cf32> iq((size_t)(rate * 19));
         syn->generate(iq.data(), iq.size());
@@ -171,8 +171,8 @@ int main() {
             const FtxDecode* x = find(ft.decodes, s.msg);
             if (x && std::fabs(x->hz - (s.hz + off)) < 2.0) ok++;
         }
-        printf("receiver, %+.0f Hz %+.0f ppm%s: %d of %d\n", off, ppm, c == 2 ? ", I/Q swapped" : "", ok, (int)ftxTestStations(M).size());
-        if (c < 2) CHECK(ok == (int)ftxTestStations(M).size(), "receiver %+.0f Hz: %d", off, ok);
+        printf("receiver at %.0f ksps, %+.0f Hz %+.0f ppm%s: %d of %d\n", rate / 1e3, off, ppm, c == 2 ? ", I/Q swapped" : "", ok, (int)ftxTestStations(M).size());
+        if (c != 2) CHECK(ok == (int)ftxTestStations(M).size(), "receiver %+.0f Hz: %d", off, ok);
         else CHECK(ft.decodes.empty(), "I/Q swapped: %d decodes", (int)ft.decodes.size());
     }
     printf("%.1f s\n", std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count());
