@@ -3,6 +3,7 @@
 #include "dect2/rate_choice.h"
 #include "dect2/antenna_ports.h"
 #include "dect2/hdr_rx.h"
+#include <algorithm>
 #include <cctype>
 #include <memory>
 #include <thread>
@@ -172,7 +173,18 @@ void setDvbBandwidth(App& a, int idx) {
     savePrefs(a);
 }
 
-// ---- radios on the network (issues #28, #54, #68): a PlutoSDR by IP, an rtl_tcp server, a SoapyRemote server, a SpyServer
+// ---- radios on the network (issues #28, #54, #68): a PlutoSDR by IP, an rtl_tcp server, a SoapyRemote server, a SpyServer, a Hermes Lite 2
+
+// looks for Hermes Lite 2 radios on a worker thread (the broadcast waits 1.5 s for answers); netRadioWindow() takes the result
+static void startNetDiscovery(App& a) {
+    if (a.netDiscovery) return;
+    auto d = std::make_shared<App::NetDiscovery>();
+    a.netDiscovery = d;
+    a.netFound.clear();
+    a.netSearched = false;
+    std::thread([d] { d->found = discoverHermesLite2(1500); d->done = true; }).detach();
+}
+
 void netRadioWindow(App& a) {
     // a connection test that finished: add the radio and pick it, or say why not
     if (a.netAddProbe && a.netAddProbe->done) {
@@ -190,22 +202,61 @@ void netRadioWindow(App& a) {
             a.netAddOpen = false;
         } else a.netAddErr = pr->err;
     }
+    // a search that finished: the address of the first radio found (one not in use by another program first), unless one was typed
+    if (a.netDiscovery && a.netDiscovery->done) {
+        a.netFound = a.netDiscovery->found;
+        a.netDiscovery.reset();
+        a.netSearched = true;
+        std::stable_sort(a.netFound.begin(), a.netFound.end(), [](const FoundNetRadio& x, const FoundNetRadio& y) { return !x.busy && y.busy; });
+        if (a.netAddType == NetRadio::HermesLite2 && !a.netFound.empty() && a.netAddHost[0] == 0) {
+            snprintf(a.netAddHost, sizeof a.netAddHost, "%s", a.netFound[0].host.c_str());
+            a.netAddPort = netRadioDefaultPort(NetRadio::HermesLite2);
+        }
+    }
     if (!a.netAddOpen) return;
+    if (a.netAddType == NetRadio::HermesLite2 && !a.netSearched && !a.netDiscovery) startNetDiscovery(a);   // the window opened with that type
     ImGui::SetNextWindowSize(ImVec2(420 * gUi, 0), ImGuiCond_Appearing);
     if (!ImGui::Begin(trw("Network radios"), &a.netAddOpen, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize)) { ImGui::End(); return; }
     const bool busy = a.netAddProbe != nullptr;
     ImGui::BeginDisabled(busy);
-    static const char* kTypes[] = {"PlutoSDR (by IP)", "rtl_tcp", "SoapyRemote", "SpyServer"};
+    static const char* kTypes[] = {"PlutoSDR (by IP)", "rtl_tcp", "SoapyRemote", "SpyServer", "Hermes Lite 2"};
     ImGui::SetNextItemWidth(200 * gUi);
-    if (ImGui::Combo("Type", &a.netAddType, kTypes, 4)) {
+    if (ImGui::Combo("Type", &a.netAddType, kTypes, 5)) {
         const auto t = (NetRadio::Type)a.netAddType;
         a.netAddPort = netRadioDefaultPort(t);
         const std::string h = a.netAddHost;
-        if (h.empty() || h == netRadioDefaultHost(NetRadio::Pluto)) snprintf(a.netAddHost, sizeof a.netAddHost, "%s", netRadioDefaultHost(t));
+        const bool found = std::any_of(a.netFound.begin(), a.netFound.end(), [&](const FoundNetRadio& f) { return f.host == h; });
+        if (h.empty() || h == netRadioDefaultHost(NetRadio::Pluto) || found) snprintf(a.netAddHost, sizeof a.netAddHost, "%s", netRadioDefaultHost(t));
         a.netAddErr.clear();
+        if (t == NetRadio::HermesLite2) { a.netAddHost[0] = 0; startNetDiscovery(a); }   // its address comes from the answers
     }
     ImGui::SetNextItemWidth(200 * gUi);
-    ImGui::InputTextWithHint(tr("Address"), a.netAddType == NetRadio::Pluto ? "192.168.2.1" : "192.168.1.20 or raspberrypi.local", a.netAddHost, sizeof a.netAddHost);
+    ImGui::InputTextWithHint(tr("Address"), a.netAddType == NetRadio::Pluto ? "192.168.2.1" : a.netAddType == NetRadio::HermesLite2 ? "192.168.1.20" : "192.168.1.20 or raspberrypi.local", a.netAddHost, sizeof a.netAddHost);
+    if (a.netAddType == NetRadio::HermesLite2) {
+        ImGui::SameLine();
+        ImGui::BeginDisabled(a.netDiscovery != nullptr);
+        if (ImGui::Button(tr("Search"))) { a.netAddHost[0] = 0; startNetDiscovery(a); }
+        ImGui::EndDisabled();
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Look for Hermes Lite 2 radios on this computer's networks again"));
+        if (a.netDiscovery) ImGui::TextDisabled("%s", tr("searching for Hermes Lite 2 radios…"));
+        else if (a.netSearched && a.netFound.empty())
+            ImGui::TextColored(ImVec4(0.95f, 0.78f, 0.25f, 1), "%s", tr("No Hermes Lite 2 answered on this computer's networks: type its address."));
+        else if (a.netFound.size() > 1 || (a.netFound.size() == 1 && a.netFound[0].host != a.netAddHost)) {
+            ImGui::TextDisabled("%s", tr("Found:"));
+            for (size_t i = 0; i < a.netFound.size(); i++) {
+                const auto& f = a.netFound[i];
+                const std::string label = f.host + "  (" + f.detail + (f.busy ? ", in use" : "") + ")##hl2" + std::to_string(i);
+                if (ImGui::Selectable(label.c_str(), f.host == a.netAddHost)) {
+                    snprintf(a.netAddHost, sizeof a.netAddHost, "%s", f.host.c_str());
+                    a.netAddPort = netRadioDefaultPort(NetRadio::HermesLite2);
+                }
+            }
+        } else if (a.netFound.size() == 1) {
+            const auto& f = a.netFound[0];
+            ImGui::TextDisabled(tr("Found %s (%s)"), f.host.c_str(), f.detail.c_str());
+            if (f.busy) ImGui::TextColored(ImVec4(0.95f, 0.78f, 0.25f, 1), "%s", tr("It is streaming to another program: stop it there first."));
+        }
+    }
     ImGui::SetNextItemWidth(120 * gUi);
     ImGui::InputInt(tr("Port"), &a.netAddPort, 0, 0);
     a.netAddPort = std::max(0, std::min(65535, a.netAddPort));

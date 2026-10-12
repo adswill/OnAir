@@ -564,6 +564,11 @@ DeviceInfo spyServerDevice(const std::string& host, int port);
 std::unique_ptr<IqSource> makeSpyServer(const DeviceInfo& d);
 bool spyServerProbe(const std::string& host, int port, int timeoutMs, std::string& err);
 void spyServerCaps(DeviceInfo& d);
+// A Hermes Lite 2 (source_hermeslite2.cpp) at an IPv4 host and UDP port (1024). hermesLite2Probe sends it a discovery packet and waits for
+// its answer.
+DeviceInfo hermesLite2Device(const std::string& host, int port);
+std::unique_ptr<IqSource> makeHermesLite2(const DeviceInfo& d);
+bool hermesLite2Probe(const std::string& host, int port, int timeoutMs, std::string& err);
 
 } // namespace native
 } // namespace dect2

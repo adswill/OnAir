@@ -205,6 +205,11 @@ struct App {
     char netAddHost[128] = "";
     int netAddPort = 1234;
     std::string netAddErr;
+    // a search for Hermes Lite 2 radios (a discovery broadcast) running on a worker thread, and what the last one found
+    struct NetDiscovery { std::atomic<bool> done{false}; std::vector<FoundNetRadio> found; };
+    std::shared_ptr<NetDiscovery> netDiscovery;
+    std::vector<FoundNetRadio> netFound;
+    bool netSearched = false;
     int devIdx = 0;
     TuneSettings tune;
     FileOptions file;

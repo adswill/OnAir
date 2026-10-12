@@ -258,10 +258,12 @@ Radios on another computer or on the network are added from the source list: pic
 | **PlutoSDR** by IP | `192.168.2.1` (its USB network), or its address on your network | libiio's default |
 | **rtl_tcp** (an RTL-SDR shared by `rtl_tcp -a 0.0.0.0`) | the computer running `rtl_tcp` | 1234 |
 | **SoapyRemote** (any SoapySDR radio shared by `SoapySDRServer --bind`) | the computer running the server | 55132 |
+| **Hermes Lite 2** | found by itself on your networks (or type its address) | 1024 |
 
 - A Pluto on a real network (not its USB cable) is offered its full sample rate; how much of it arrives depends on the network.
 - rtl_tcp carries 8-bit samples at up to about 2.5 Msps; when the connection drops, OnAir connects again and counts the samples that were missed.
 - SoapyRemote needs a build with SoapySDR and the SoapyRemote module on both computers.
+- Choosing **Hermes Lite 2** searches this computer's networks for one (openHPSDR discovery) and fills in its address; **Search** looks again. It receives up to 38.4 MHz at 48 to 384 ksps, so only HF and narrow modes fit; the N2ADR filter board's band filters are switched with the frequency (a setting of the radio turns that off).
 
 ## Updates
 

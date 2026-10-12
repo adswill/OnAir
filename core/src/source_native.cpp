@@ -41,6 +41,7 @@ std::unique_ptr<IqSource> makeNativeSource(const DeviceInfo& d) {
     if (d.board == "airspyhf") return native::makeAirspyHf(d);   // ---- airspyhf
     if (d.board == "rtltcp") return native::makeRtlTcp(d);
     if (d.board == "spyserver") return native::makeSpyServer(d);
+    if (d.board == "hermeslite2") return native::makeHermesLite2(d);
     return nullptr;
 }
 

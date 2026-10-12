@@ -1,4 +1,5 @@
-// Network radios (netradio.h): the rtl_tcp and SpyServer clients against fake servers on localhost, a user-added Pluto address, the saved list.
+// Network radios (netradio.h): the rtl_tcp, SpyServer and Hermes Lite 2 clients against fake servers on localhost, a user-added Pluto
+// address, the saved list.
 #include "../core/src/tcp_client.h"
 #include "dect2/netradio.h"
 #include <atomic>
@@ -6,6 +7,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <map>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -430,6 +432,144 @@ static void testSpyServer() {
     rtl.stop();
 }
 
+// A fake Hermes Lite 2 on a UDP port of localhost: answers discovery (board 6, gateware 73.2), streams EP6 packets to whoever sent start
+// (the first 24-bit word of each sample -0.25, the second +0.5) and keeps the last value of each control register it was sent
+struct FakeHl2 {
+    sock_t s = kBadSock;
+    int port = 0;
+    std::thread th;
+    std::atomic<bool> run{true}, streaming{false};
+    std::atomic<int> starts{0}, stops{0};
+    std::mutex mu;
+    std::map<int, uint32_t> regs;
+
+    bool start() {
+        netInit();
+        s = socket(AF_INET, SOCK_DGRAM, 0);
+        if (s == kBadSock) return false;
+        sockaddr_in a{};
+        a.sin_family = AF_INET;
+        a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        if (bind(s, (sockaddr*)&a, sizeof a) != 0) return false;
+        socklen_t len = sizeof a;
+        getsockname(s, (sockaddr*)&a, &len);
+        port = ntohs(a.sin_port);
+        th = std::thread([this] { loop(); });
+        return true;
+    }
+    bool has(int reg, uint32_t v) { std::lock_guard<std::mutex> lk(mu); auto it = regs.find(reg); return it != regs.end() && it->second == v; }
+    bool waitFor(int reg, uint32_t v, int ms = 3000) {
+        for (int i = 0; i < ms / 10; i++) { if (has(reg, v)) return true; std::this_thread::sleep_for(std::chrono::milliseconds(10)); }
+        return false;
+    }
+    void loop() {
+        sockaddr_in client{};
+        uint32_t seq = 0;
+        while (run) {
+            fd_set rd; FD_ZERO(&rd); FD_SET(s, &rd);
+            timeval tv{0, 1000};
+            if (select((int)s + 1, &rd, nullptr, nullptr, &tv) > 0) {
+                unsigned char b[1500];
+                sockaddr_in from{};
+                socklen_t fl = sizeof from;
+                const long long n = recvfrom(s, (char*)b, sizeof b, 0, (sockaddr*)&from, &fl);
+                if (n >= 4 && b[0] == 0xEF && b[1] == 0xFE) {
+                    if (b[2] == 0x02 && n == 63) {   // discovery
+                        unsigned char r[60] = {0xEF, 0xFE, (unsigned char)(streaming ? 0x03 : 0x02), 0x00, 0x1C, 0xC0, 0xA2, 0x12, 0x34, 73, 6};
+                        r[0x15] = 2;
+                        sockSendTo(s, r, sizeof r, from);
+                    } else if (b[2] == 0x04) {
+                        if (b[3] & 1) { client = from; streaming = true; starts++; } else { streaming = false; stops++; }
+                    } else if (b[2] == 0x01 && b[3] == 0x02 && n == 1032) {
+                        std::lock_guard<std::mutex> lk(mu);
+                        for (int f = 0; f < 2; f++) {
+                            const unsigned char* c = b + 8 + 512 * f;
+                            if (c[0] != 0x7F || c[1] != 0x7F || c[2] != 0x7F) continue;
+                            regs[c[3] >> 1] = (uint32_t)c[4] << 24 | (uint32_t)c[5] << 16 | (uint32_t)c[6] << 8 | c[7];
+                        }
+                    }
+                }
+            }
+            if (streaming) {
+                unsigned char p[1032] = {0xEF, 0xFE, 0x01, 0x06, (unsigned char)(seq >> 24), (unsigned char)(seq >> 16), (unsigned char)(seq >> 8), (unsigned char)seq};
+                seq++;
+                for (int f = 0; f < 2; f++) {
+                    unsigned char* c = p + 8 + 512 * f;
+                    c[0] = c[1] = c[2] = 0x7F;
+                    for (int k = 0; k < 63; k++) {
+                        unsigned char* q = c + 8 + 8 * k;
+                        q[0] = 0xE0; q[1] = 0; q[2] = 0;   // -0.25
+                        q[3] = 0x40; q[4] = 0; q[5] = 0;   // +0.5
+                    }
+                }
+                sockSendTo(s, p, sizeof p, client);
+            }
+        }
+    }
+    void stop() { run = false; if (th.joinable()) th.join(); if (s != kBadSock) sockClose(s); }
+};
+
+static void testHermesLite2() {
+    FakeHl2 hl;
+    CHECK(hl.start());
+    if (!hl.port) return;
+    NetRadio nr; nr.type = NetRadio::HermesLite2; nr.host = "127.0.0.1"; nr.port = hl.port;
+    std::string err;
+    CHECK(probeNetRadio(nr, 1000, err));
+    const auto devs = netRadioDevices({nr});
+    CHECK(devs.size() == 1);
+    if (devs.empty()) { hl.stop(); return; }
+    const DeviceInfo d = devs[0];
+    CHECK(d.kind == DeviceInfo::Native && d.board == "hermeslite2" && d.nativeArgs == "127.0.0.1:" + std::to_string(hl.port));
+    CHECK(d.name == netRadioDeviceName(nr));
+    CHECK(d.rateRanges.size() == 4 && d.minRateHz == 48000 && d.maxRateHz == 384000 && d.gainMinDb == -12 && d.gainMaxDb == 48);
+    NetRadio dflt; dflt.type = NetRadio::HermesLite2; dflt.host = "192.168.1.50";
+    CHECK(netRadioDeviceName(dflt) == "Hermes Lite 2 192.168.1.50 (network)");   // the usual port is left out of the name
+
+    auto src = makeSource(d);
+    CHECK(src != nullptr);
+    if (!src) { hl.stop(); return; }
+    IqRing ring(1u << 20);
+    TuneSettings s;
+    s.sampleRate = 150e3;   // the 192 ksps step
+    s.centerHz = 7.074e6;
+    s.gainDb = 20;
+    err.clear();
+    CHECK(src->start(s, ring, err));
+    CHECK(std::fabs(src->sampleRate() - 192e3) < 1);
+    CHECK(hl.waitFor(0x00, 0x02080004));   // 192 ksps, the 40 m filter, duplex, one receiver
+    CHECK(hl.waitFor(0x02, 7074000));
+    CHECK(hl.waitFor(0x01, 7074000));
+    CHECK(hl.waitFor(0x0a, 0x40 | 32));    // +20 dB
+    std::vector<cf32> buf(4096);
+    CHECK(readIq(ring, buf));
+    bool okVals = true;
+    for (auto& v : buf) if (std::fabs(v.real() - 0.5f) > 1e-6f || std::fabs(v.imag() + 0.25f) > 1e-6f) okVals = false;
+    CHECK(okVals);
+
+    // live changes: frequency, rate, gain, no filter board
+    s.centerHz = 14.2e6; s.sampleRate = 384e3; s.gainDb = 60; s.radio["filters"] = "0";
+    CHECK(src->retune(s, err));
+    CHECK(hl.waitFor(0x00, 0x03000004));
+    CHECK(hl.waitFor(0x02, 14200000));
+    CHECK(hl.waitFor(0x0a, 0x40 | 60));    // its top, +48 dB
+    CHECK(std::fabs(src->sampleRate() - 384e3) < 1);
+    s.centerHz = 100e6;                    // beyond its range: said, and its top
+    err.clear();
+    CHECK(src->retune(s, err) && !err.empty());
+    CHECK(hl.waitFor(0x02, 38400000));
+    src->stop();
+    for (int i = 0; i < 100 && hl.stops < 1; i++) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    CHECK(hl.stops >= 1 && !hl.streaming);
+    hl.stop();
+
+    // nobody there (the fake's socket is closed now): no answer
+    err.clear();
+    CHECK(!probeNetRadio(nr, 300, err) && !err.empty());
+    // discovery on the real networks: whatever answers has an address
+    for (const auto& f : discoverHermesLite2(200)) CHECK(!f.host.empty());
+}
+
 static void testPluto() {
     NetRadio p; p.type = NetRadio::Pluto; p.host = "10.1.2.3";
     auto v = netRadioDevices({p});
@@ -457,10 +597,11 @@ static void testPrefs() {
     NetRadio b; b.type = NetRadio::RtlTcp; b.host = "raspberrypi.local"; b.port = 1234;
     NetRadio c; c.type = NetRadio::SoapyRemote; c.host = "10.0.0.7"; c.port = 55132;
     NetRadio e; e.type = NetRadio::SpyServer; e.host = "spy.lan"; e.port = 5555;
-    const std::string s = netRadiosToString({a, b, c, e});
+    NetRadio h; h.type = NetRadio::HermesLite2; h.host = "192.168.1.50"; h.port = 1024;
+    const std::string s = netRadiosToString({a, b, c, e, h});
     const auto back = netRadiosFromString(s);
-    CHECK(back.size() == 4 && back[0] == a && back[1] == b && back[2] == c && back[3] == e);
-    CHECK(netRadioDefaultPort(NetRadio::SpyServer) == 5555);
+    CHECK(back.size() == 5 && back[0] == a && back[1] == b && back[2] == c && back[3] == e && back[4] == h);
+    CHECK(netRadioDefaultPort(NetRadio::SpyServer) == 5555 && netRadioDefaultPort(NetRadio::HermesLite2) == 1024);
     CHECK(netRadiosFromString("junk;rtltcp,,1;bogus,h,1").empty());
     CHECK(netRadioDefaultPort(NetRadio::RtlTcp) == 1234 && netRadioDefaultPort(NetRadio::SoapyRemote) == 55132 && netRadioDefaultPort(NetRadio::Pluto) == 0);
 #ifdef DECT2_HAVE_SOAPY
@@ -480,6 +621,7 @@ int main() {
     testRtlTcp();
     testRtlTcpOther();
     testSpyServer();
+    testHermesLite2();
     if (fails) { fprintf(stderr, "%d failure(s)\n", fails); return 1; }
     printf("netradio: all passed\n");
     return 0;
