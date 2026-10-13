@@ -13,6 +13,11 @@ static uint32_t rng = 12345;
 static uint32_t rnd() { rng = rng * 1664525u + 1013904223u; return rng >> 8; }
 
 int main() {
+    // frame sync: the levels are the 48-bit word 0x5575F5FF77FF read a dibit at a time (the generator shares the table, so only this catches a wrong one)
+    for (int k = 0; k < p25::kSyncSym; k++) {
+        const int dd = (int)((0x5575F5FF77FFULL >> (46 - 2 * k)) & 3);
+        CHECK(p25::kSync[k] == p25::dibitToSym(dd), "sync symbol %d", k);
+    }
     // NID: up to 10 bit errors corrected
     for (int t = 0; t < 200; t++) {
         const int nac = (int)(rnd() & 0xFFF), duid = (int)(rnd() & 15);

@@ -290,15 +290,17 @@ struct P25Receiver::Impl {
         std::vector<float> v((size_t)len);
         std::vector<int> lv((size_t)len);
         double g = f.g, d = f.d;
-        // the symbol clock drifts against ours over a long frame (100 ppm is 0.9 samples over an LDU): the slope with the cleanest decisions
-        double bestE = 1e30, slope = 0;
-        for (int k = -8; k <= 8; k++) {
-            const double sl = k * 0.0002;   // samples per symbol
-            double e = 0;
-            for (int p = 0; p < len; p += 3) { const double x = (posAt(f, p, sl * (p - 23)) - d) / g, q = x - nearestLevel(x); e += q * q; }
-            if (e < bestE) { bestE = e; slope = sl; }
-        }
-        for (int p = 0; p < len; p++) v[(size_t)p] = posAt(f, p, slope * (p - 23));
+        // the symbol clock drifts against ours over a long frame (100 ppm is 0.9 samples over an LDU), and the sync's own timing is off when
+        // the carrier has only just come up: the offset and slope with the cleanest decisions
+        double bestE = 1e30, slope = 0, shift = 0;
+        for (int j = -4; j <= 4; j++)
+            for (int k = -8; k <= 8; k++) {
+                const double sh = j * 0.25, sl = k * 0.0002;   // samples, samples per symbol
+                double e = 0;
+                for (int p = 0; p < len; p += 3) { const double x = (posAt(f, p, sh + sl * (p - 23)) - d) / g, q = x - nearestLevel(x); e += q * q; }
+                if (e < bestE) { bestE = e; slope = sl; shift = sh; }
+            }
+        for (int p = 0; p < len; p++) v[(size_t)p] = posAt(f, p, shift + slope * (p - 23));
         for (int p = 0; p < len; p++) lv[(size_t)p] = p < p25::kSyncSym ? p25::kSync[p] : nearestLevel((v[(size_t)p] - d) / g);
         double g2, d2;
         lsFit(v.data(), lv.data(), len, g2, d2);

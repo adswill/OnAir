@@ -75,7 +75,7 @@ void bitsToHex(const uint8_t* b, int nHex, uint8_t* hex) { for (int i = 0; i < n
 void hexToBits(const uint8_t* hex, int nHex, uint8_t* b) { for (int i = 0; i < nHex; i++) for (int k = 0; k < 6; k++) b[6 * i + k] = (uint8_t)((hex[i] >> (5 - k)) & 1); }
 } // namespace
 
-const int kSync[kSyncSym] = {3, 3, 3, 3, -3, 3, 3, -3, -3, -3, 3, 3, -3, -3, -3, -3, 3, -3, 3, -3, -3, -3, -3, -3};
+const int kSync[kSyncSym] = {3, 3, 3, 3, 3, -3, 3, 3, -3, -3, 3, 3, -3, -3, -3, -3, 3, -3, 3, -3, -3, -3, -3, -3};
 
 const char* duidName(int d) {
     switch (d) {
