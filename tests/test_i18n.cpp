@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
     const bool dump = argc > 1 && !std::strcmp(argv[1], "--dump");   // the texts to translate, one per line in the catalog's escaping
     // the sources
     std::set<std::string> used;
-    for (const auto& e : fs::directory_iterator(fs::path(DECT2_SOURCE_DIR) / "app")) {
+    for (const auto& e : fs::recursive_directory_iterator(fs::path(DECT2_SOURCE_DIR) / "app")) {   // the modes live in app/<mode>/
         const std::string ext = e.path().extension().string(), name = e.path().filename().string();
         if ((ext != ".cpp" && ext != ".h" && ext != ".mm" && ext != ".inc") || name == "i18n.cpp" || name == "i18n.h") continue;
         std::ifstream f(e.path(), std::ios::binary);

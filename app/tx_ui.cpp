@@ -21,6 +21,7 @@ namespace {
 // The texts the core gives (refusal reasons, the radios' gain notes) come through tr() above; listed here so the translation files can be checked against the sources
 [[maybe_unused]] const char* const kCoreTexts[] = {
     N_("GNSS is not transmitted: its generator is a satellite-signal simulator (spoofing)"),
+    N_("TETRAPOL is not transmitted: receive only, control-channel system information"),
     N_("cellular signals are not transmitted: the generators model a network cell for testing the decoder"),
     N_("this is an analysis mode: there is nothing to transmit"),
     N_("Bluetooth is not transmitted: it would impersonate a Bluetooth advertiser"),

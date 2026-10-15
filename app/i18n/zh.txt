@@ -42,7 +42,6 @@ Device ID	Device ID
 Dial frequency the decoder should assume (the sound card is not tuned)	解码器应假定的刻度频率（声卡不会调谐）
 Drone Remote ID is not transmitted: it rides on Wi-Fi and Bluetooth advertisements	Drone Remote ID is not transmitted: it rides on Wi-Fi and Bluetooth advertisements
 DVB standard	DVB standard
-Empty: the built-in demo ensemble. Custom audio is not muxed into this encoder yet.	Empty: the built-in demo ensemble. Custom audio is not muxed into this encoder yet.
 Empty: the demo 802.15.4 scene.	Empty: the demo 802.15.4 scene.
 Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.
 Empty: the demo LoRa / mesh scene.	Empty: the demo LoRa / mesh scene.
@@ -53,7 +52,6 @@ File to send	File to send
 For WebSDR, a virtual audio cable (VAC), or a radio's speaker or line into the computer. Not a replacement for an SDR when you need megahertz of bandwidth.	用于 WebSDR、虚拟声卡线（VAC）或把电台扬声器/线路接入电脑。需要兆赫带宽时不能代替 SDR。
 For WebSDR, a virtual audio cable (VAC), or a radio's speaker or line into the computer. Not a replacement for an SDR when you need megahertz of bandwidth. The frequency field is the dial the decoder should assume; the sound card is not tuned. There is no gain or antenna power.	用于 WebSDR、虚拟声卡线（VAC）或把电台扬声器/线路接入电脑。需要兆赫带宽时不能代替 SDR。频率栏是解码器应假定的刻度；声卡不会调谐。没有增益或天线供电。
 Free text	Free text
-Function	Function
 Gain controls apply to radios only (not to a recording, a sound card, or the synthetic signal)	增益控制只对电台有效（不用于录音、声卡或合成信号）
 I/Q stereo	I/Q 立体声
 I/Q stereo: left is I, right is Q (HDSDR / WebSDR VAC). USB audio: real audio to analytic IQ for FT8, RTTY, CW, SSB from a speaker tap. LSB audio: the same, conjugate. Mono real: I is the sample, Q is 0 (real sampling, not FM discriminator audio).	I/Q 立体声：左为 I、右为 Q（HDSDR / WebSDR VAC）。USB 音频：把扬声器分接的实音频变成解析 IQ，用于 FT8、RTTY、CW、SSB。LSB 音频：同样，取共轭。单声道实数：I 为样点，Q 为 0（实采样，不是 FM 鉴频器音频）。
@@ -78,7 +76,6 @@ MMSI	MMSI
 Mode	模式
 Mono real	单声道实数
 Morse identification, up to four letters.	Morse identification, up to four letters.
-MPEG-TS (.ts, .m2ts) goes into the modulator. Other video is remuxed with the linked FFmpeg when it can. Empty: the built-in demo programme.	MPEG-TS (.ts, .m2ts) goes into the modulator. Other video is remuxed with the linked FFmpeg when it can. Empty: the built-in demo programme.
 Multitone paging is not transmitted: the generator is not the real (unpublished) format, only a detector test	Multitone paging is not transmitted: the generator is not the real (unpublished) format, only a detector test
 NAVTEX sends the text (ZCZC / NNNN are added when missing). DSC (when that service is selected) uses the MMSI.	NAVTEX sends the text (ZCZC / NNNN are added when missing). DSC (when that service is selected) uses the MMSI.
 No Red Pitaya answered on this computer's networks (is its SDR transceiver app running?): type its address.	No Red Pitaya answered on this computer's networks (is its SDR transceiver app running?): type its address.
@@ -107,13 +104,11 @@ Shift	Shift
 Sideband	Sideband
 Silence	Silence
 sound card	声卡
-Speed (0=512, 1=1200, 2=2400, 3=FLEX)	Speed (0=512, 1=1200, 2=2400, 3=FLEX)
 SSB (microphone)	SSB (microphone)
 SSTV mode	SSTV mode
 Station name (PS)	Station name (PS)
 Symbol rate (Hz)	Symbol rate (Hz)
 Talkgroup	Talkgroup
-Test card (or analog picture) plus live audio on the sound carrier.	Test card (or analog picture) plus live audio on the sound carrier.
 test DJI DroneID scene (custom serial is not packed)	test DJI DroneID scene (custom serial is not packed)
 test downlink scene (this generator does not take a custom message)	test downlink scene (this generator does not take a custom message)
 test LRPT/HRIT scene (custom image not wired)	test LRPT/HRIT scene (custom image not wired)
@@ -139,7 +134,6 @@ TX spectrum (IQ going to the radio)	TX spectrum (IQ going to the radio)
 Unmodulated carrier at this frequency and gain, for adjusting the transmission (drive, filter, SWR, dummy-load level) — not a message. Hold the button. Stop still applies. Not saved as transmitting.	Unmodulated carrier at this frequency and gain, for adjusting the transmission (drive, filter, SWR, dummy-load level) — not a message. Hold the button. Stop still applies. Not saved as transmitting.
 USB audio	USB 音频
 Vessel name	Vessel name
-Video / MPEG-TS file	Video / MPEG-TS file
 View	视图
 Help	帮助
 Language	语言
@@ -460,12 +454,7 @@ ATSC 3.0 does not report a signal-to-noise ratio yet; this bar shows how much of
 This bar shows how much of the recent data decodes.	此条显示最近数据的解码比例。
 multipath: %s	多径：%s
 Files and the test signal never lose samples: they wait for the receiver.	文件和测试信号不会丢失样本：它们会等待接收机。
-Radio side: %.2f s lost in %llu gaps, last %s	设备端：%.2f 秒丢失于 %llu 个间隙，最近一次 %s
-Samples that never arrived from the radio: its USB connection or driver could not keep up. Try a USB port directly on the computer (no hub), a shorter cable, or a lower sample rate.	样本没有从设备送达：其 USB 连接或驱动跟不上。请尝试直接插在电脑上的 USB 口（不用集线器）、更短的线缆或更低的采样率。
-CPU side: %.2f s skipped %llu times, last %s	CPU 端：%.2f 秒，跳过 %llu 次，最近一次 %s
-Signal OnAir had to skip because the receiver could not keep up with the sample rate. Close other programs, or pick a lower sample rate or a narrower channel.	由于接收机跟不上采样率，OnAir 不得不跳过的信号。请关闭其他程序，或选择更低的采样率或更窄的信道。
 Receiver load: %.0f%% of real time	接收机负载：实时的 %.0f%%
-The receiver's time on the sample thread per second of signal. Near or above 100%, signal is skipped.	每秒信号在采样线程上花费的接收机时间。接近或超过 100% 时会跳过信号。
 Demod	解调
 How the signal becomes the audio the decoders hear.\nAuto: USB below 30 MHz, NFM at and above.\nNFM: 12.5 kHz channel, no de-emphasis, 300 - 3000 Hz audio.\nISS SSTV on 145.800 MHz is FM.	信号如何变成解码器听到的音频。\n自动：30 MHz 以下用 USB，30 MHz 及以上用 NFM。\nNFM：12.5 kHz 信道，无去加重，音频 300 - 3000 Hz。\n国际空间站 145.800 MHz 的 SSTV 是 FM。
 #  the lamps
@@ -551,7 +540,6 @@ No TLEs yet: download them or paste some.	还没有 TLE：请下载或粘贴。
 No TLEs: open TLE data above.	没有 TLE：请打开上方的 TLE 数据。
 No passes in the next 24 hours.	未来 24 小时内没有过境。
 TLE data	TLE 数据
-From: celestrak.org/NORAD/elements/gp.php?GROUP=weather|stations|orbcomm|amateur&FORMAT=tle	来源：celestrak.org/NORAD/elements/gp.php?GROUP=weather|stations|orbcomm|amateur&FORMAT=tle
 %d TLEs, %d satellites listed	%d 条 TLE，列出 %d 颗卫星
 the oldest is %.0f days old: download again	最旧的已有 %.0f 天：请重新下载
 NORAD catalogue number	NORAD 编号

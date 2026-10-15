@@ -42,7 +42,6 @@ Device ID	Device ID
 Dial frequency the decoder should assume (the sound card is not tuned)	A dekóder által feltételezett tárcsa-frekvencia (a hangkártya nincs hangolva)
 Drone Remote ID is not transmitted: it rides on Wi-Fi and Bluetooth advertisements	Drone Remote ID is not transmitted: it rides on Wi-Fi and Bluetooth advertisements
 DVB standard	DVB standard
-Empty: the built-in demo ensemble. Custom audio is not muxed into this encoder yet.	Empty: the built-in demo ensemble. Custom audio is not muxed into this encoder yet.
 Empty: the demo 802.15.4 scene.	Empty: the demo 802.15.4 scene.
 Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.
 Empty: the demo LoRa / mesh scene.	Empty: the demo LoRa / mesh scene.
@@ -53,7 +52,6 @@ File to send	File to send
 For WebSDR, a virtual audio cable (VAC), or a radio's speaker or line into the computer. Not a replacement for an SDR when you need megahertz of bandwidth.	WebSDR-hez, virtuális hangkábelhez (VAC), vagy a rádió hangszórójához/vonalához a számítógépen. Nem helyettesíti az SDR-t, ha megahertznyi sávszélesség kell.
 For WebSDR, a virtual audio cable (VAC), or a radio's speaker or line into the computer. Not a replacement for an SDR when you need megahertz of bandwidth. The frequency field is the dial the decoder should assume; the sound card is not tuned. There is no gain or antenna power.	WebSDR-hez, virtuális hangkábelhez (VAC), vagy a rádió hangszórójához/vonalához a számítógépen. Nem helyettesíti az SDR-t, ha megahertznyi sávszélesség kell. A gyakoriságmező a dekóder által feltételezett tárcsa; a hangkártya nincs hangolva. Nincs erősítés és antenna-táp.
 Free text	Free text
-Function	Function
 Gain controls apply to radios only (not to a recording, a sound card, or the synthetic signal)	Az erősítésszabályzók csak rádiókra vonatkoznak (nem felvételre, hangkártyára vagy a szintetikus jelre)
 I/Q stereo	I/Q sztereó
 I/Q stereo: left is I, right is Q (HDSDR / WebSDR VAC). USB audio: real audio to analytic IQ for FT8, RTTY, CW, SSB from a speaker tap. LSB audio: the same, conjugate. Mono real: I is the sample, Q is 0 (real sampling, not FM discriminator audio).	I/Q sztereó: bal = I, jobb = Q (HDSDR / WebSDR VAC). USB hang: valós hang analitikus IQ-vá FT8, RTTY, CW, SSB-hez hangszóróról. LSB hang: ugyanez, konjugált. Mono valós: I a minta, Q = 0 (valós mintavétel, nem FM-diszkriminátor hang).
@@ -78,7 +76,6 @@ MMSI	MMSI
 Mode	Üzemmód
 Mono real	Mono valós
 Morse identification, up to four letters.	Morse identification, up to four letters.
-MPEG-TS (.ts, .m2ts) goes into the modulator. Other video is remuxed with the linked FFmpeg when it can. Empty: the built-in demo programme.	MPEG-TS (.ts, .m2ts) goes into the modulator. Other video is remuxed with the linked FFmpeg when it can. Empty: the built-in demo programme.
 Multitone paging is not transmitted: the generator is not the real (unpublished) format, only a detector test	Multitone paging is not transmitted: the generator is not the real (unpublished) format, only a detector test
 NAVTEX sends the text (ZCZC / NNNN are added when missing). DSC (when that service is selected) uses the MMSI.	NAVTEX sends the text (ZCZC / NNNN are added when missing). DSC (when that service is selected) uses the MMSI.
 No Red Pitaya answered on this computer's networks (is its SDR transceiver app running?): type its address.	No Red Pitaya answered on this computer's networks (is its SDR transceiver app running?): type its address.
@@ -107,13 +104,11 @@ Shift	Shift
 Sideband	Sideband
 Silence	Silence
 sound card	hangkártya
-Speed (0=512, 1=1200, 2=2400, 3=FLEX)	Speed (0=512, 1=1200, 2=2400, 3=FLEX)
 SSB (microphone)	SSB (microphone)
 SSTV mode	SSTV mode
 Station name (PS)	Station name (PS)
 Symbol rate (Hz)	Symbol rate (Hz)
 Talkgroup	Talkgroup
-Test card (or analog picture) plus live audio on the sound carrier.	Test card (or analog picture) plus live audio on the sound carrier.
 test DJI DroneID scene (custom serial is not packed)	test DJI DroneID scene (custom serial is not packed)
 test downlink scene (this generator does not take a custom message)	test downlink scene (this generator does not take a custom message)
 test LRPT/HRIT scene (custom image not wired)	test LRPT/HRIT scene (custom image not wired)
@@ -139,7 +134,6 @@ TX spectrum (IQ going to the radio)	TX spectrum (IQ going to the radio)
 Unmodulated carrier at this frequency and gain, for adjusting the transmission (drive, filter, SWR, dummy-load level) — not a message. Hold the button. Stop still applies. Not saved as transmitting.	Unmodulated carrier at this frequency and gain, for adjusting the transmission (drive, filter, SWR, dummy-load level) — not a message. Hold the button. Stop still applies. Not saved as transmitting.
 USB audio	USB hang
 Vessel name	Vessel name
-Video / MPEG-TS file	Video / MPEG-TS file
 View	Nézet
 Help	Súgó
 Language	Nyelv
@@ -455,12 +449,7 @@ ATSC 3.0 does not report a signal-to-noise ratio yet; this bar shows how much of
 This bar shows how much of the recent data decodes.	Ez a sáv azt mutatja, a legutóbbi adatból mennyi dekódolódik.
 multipath: %s	többutas terjedés: %s
 Files and the test signal never lose samples: they wait for the receiver.	A fájlok és a tesztjel sosem veszítenek mintát: megvárják a vevőt.
-Radio side: %.2f s lost in %llu gaps, last %s	Rádió oldal: %.2f mp veszett el %llu résben, utolsó %s
-Samples that never arrived from the radio: its USB connection or driver could not keep up. Try a USB port directly on the computer (no hub), a shorter cable, or a lower sample rate.	Minták, amelyek sosem érkeztek meg a rádióból: az USB-kapcsolata vagy az illesztőprogram nem bírta a tempót. Próbálj a számítógép közvetlen USB-portját (elosztó nélkül), rövidebb kábelt vagy kisebb mintavételi sebességet.
-CPU side: %.2f s skipped %llu times, last %s	CPU oldal: %.2f mp kimaradt %llu alkalommal, utolsó %s
-Signal OnAir had to skip because the receiver could not keep up with the sample rate. Close other programs, or pick a lower sample rate or a narrower channel.	Jel, amelyet az OnAirnek ki kellett hagynia, mert a vevő nem bírta a mintavételi sebességet. Zárj be más programokat, vagy válassz kisebb mintavételi sebességet vagy keskenyebb csatornát.
 Receiver load: %.0f%% of real time	Vevő terhelése: a valós idő %.0f%%-a
-The receiver's time on the sample thread per second of signal. Near or above 100%, signal is skipped.	A vevő ideje a mintaszálon egy másodpercnyi jelre. 100% körül vagy fölött a jel kimarad.
 Demod	Demod
 How the signal becomes the audio the decoders hear.\nAuto: USB below 30 MHz, NFM at and above.\nNFM: 12.5 kHz channel, no de-emphasis, 300 - 3000 Hz audio.\nISS SSTV on 145.800 MHz is FM.	Hogyan lesz a jelből az a hang, amit a dekóderek hallanak.\nAuto: USB 30 MHz alatt, NFM attól fölfelé.\nNFM: 12,5 kHz-es csatorna, nincs de-emfázis, 300 - 3000 Hz hang.\nAz ISS SSTV a 145,800 MHz-en FM.
 Sample stream. Green: the ADC level is in a healthy range. Amber: too low or high. Red: clipping.	Mintafolyam. Zöld: az ADC-szint egészséges tartományban van. Borostyán: túl alacsony vagy magas. Piros: túlvezérlés.
@@ -541,7 +530,6 @@ No TLEs yet: download them or paste some.	Még nincsenek TLE-k: tölts le vagy i
 No TLEs: open TLE data above.	Nincsenek TLE-k: nyisd meg fent a TLE-adatokat.
 No passes in the next 24 hours.	Nincs átvonulás a következő 24 órában.
 TLE data	TLE-adatok
-From: celestrak.org/NORAD/elements/gp.php?GROUP=weather|stations|orbcomm|amateur&FORMAT=tle	Innen: celestrak.org/NORAD/elements/gp.php?GROUP=weather|stations|orbcomm|amateur&FORMAT=tle
 %d TLEs, %d satellites listed	%d TLE, %d műhold listázva
 the oldest is %.0f days old: download again	a legrégebbi %.0f napos: tölts le újat
 NORAD catalogue number	NORAD katalógusszám

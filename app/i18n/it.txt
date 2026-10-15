@@ -37,7 +37,6 @@ Device ID	Device ID
 Dial frequency the decoder should assume (the sound card is not tuned)	Frequenza di dial che il decodificatore deve assumere (la scheda audio non viene sintonizzata)
 Drone Remote ID is not transmitted: it rides on Wi-Fi and Bluetooth advertisements	Drone Remote ID is not transmitted: it rides on Wi-Fi and Bluetooth advertisements
 DVB standard	DVB standard
-Empty: the built-in demo ensemble. Custom audio is not muxed into this encoder yet.	Empty: the built-in demo ensemble. Custom audio is not muxed into this encoder yet.
 Empty: the demo 802.15.4 scene.	Empty: the demo 802.15.4 scene.
 Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.
 Empty: the demo LoRa / mesh scene.	Empty: the demo LoRa / mesh scene.
@@ -48,7 +47,6 @@ File to send	File to send
 For WebSDR, a virtual audio cable (VAC), or a radio's speaker or line into the computer. Not a replacement for an SDR when you need megahertz of bandwidth.	Per WebSDR, un cavo audio virtuale (VAC) o l'altoparlante/linea di una radio nel computer. Non sostituisce un SDR quando servono megahertz di banda.
 For WebSDR, a virtual audio cable (VAC), or a radio's speaker or line into the computer. Not a replacement for an SDR when you need megahertz of bandwidth. The frequency field is the dial the decoder should assume; the sound card is not tuned. There is no gain or antenna power.	Per WebSDR, un cavo audio virtuale (VAC) o l'altoparlante/linea di una radio nel computer. Non sostituisce un SDR quando servono megahertz di banda. Il campo frequenza è il dial che il decodificatore deve assumere; la scheda audio non viene sintonizzata. Nessun guadagno né alimentazione antenna.
 Free text	Free text
-Function	Function
 Gain controls apply to radios only (not to a recording, a sound card, or the synthetic signal)	I controlli del guadagno valgono solo per le radio (non per una registrazione, una scheda audio o il segnale sintetico)
 I/Q stereo	I/Q stereo
 I/Q stereo: left is I, right is Q (HDSDR / WebSDR VAC). USB audio: real audio to analytic IQ for FT8, RTTY, CW, SSB from a speaker tap. LSB audio: the same, conjugate. Mono real: I is the sample, Q is 0 (real sampling, not FM discriminator audio).	I/Q stereo: sinistra = I, destra = Q (HDSDR / WebSDR VAC). Audio USB: audio reale in IQ analitico per FT8, RTTY, CW, SSB da un altoparlante. Audio LSB: lo stesso, coniugato. Mono reale: I è il campione, Q è 0 (campionamento reale, non audio del discriminatore FM).
@@ -71,7 +69,6 @@ MMSI	MMSI
 Mode	Modo
 Mono real	Mono reale
 Morse identification, up to four letters.	Morse identification, up to four letters.
-MPEG-TS (.ts, .m2ts) goes into the modulator. Other video is remuxed with the linked FFmpeg when it can. Empty: the built-in demo programme.	MPEG-TS (.ts, .m2ts) goes into the modulator. Other video is remuxed with the linked FFmpeg when it can. Empty: the built-in demo programme.
 Multitone paging is not transmitted: the generator is not the real (unpublished) format, only a detector test	Multitone paging is not transmitted: the generator is not the real (unpublished) format, only a detector test
 NAVTEX sends the text (ZCZC / NNNN are added when missing). DSC (when that service is selected) uses the MMSI.	NAVTEX sends the text (ZCZC / NNNN are added when missing). DSC (when that service is selected) uses the MMSI.
 PAN / short address	PAN / short address
@@ -98,13 +95,11 @@ Shift	Shift
 Sideband	Sideband
 Silence	Silence
 sound card	scheda audio
-Speed (0=512, 1=1200, 2=2400, 3=FLEX)	Speed (0=512, 1=1200, 2=2400, 3=FLEX)
 SSB (microphone)	SSB (microphone)
 SSTV mode	SSTV mode
 Station name (PS)	Station name (PS)
 Symbol rate (Hz)	Symbol rate (Hz)
 Talkgroup	Talkgroup
-Test card (or analog picture) plus live audio on the sound carrier.	Test card (or analog picture) plus live audio on the sound carrier.
 test DJI DroneID scene (custom serial is not packed)	test DJI DroneID scene (custom serial is not packed)
 test downlink scene (this generator does not take a custom message)	test downlink scene (this generator does not take a custom message)
 test LRPT/HRIT scene (custom image not wired)	test LRPT/HRIT scene (custom image not wired)
@@ -130,7 +125,6 @@ TX spectrum (IQ going to the radio)	TX spectrum (IQ going to the radio)
 Unmodulated carrier at this frequency and gain, for adjusting the transmission (drive, filter, SWR, dummy-load level) — not a message. Hold the button. Stop still applies. Not saved as transmitting.	Unmodulated carrier at this frequency and gain, for adjusting the transmission (drive, filter, SWR, dummy-load level) — not a message. Hold the button. Stop still applies. Not saved as transmitting.
 USB audio	Audio USB
 Vessel name	Vessel name
-Video / MPEG-TS file	Video / MPEG-TS file
 View	Visualizza
 Help	Aiuto
 Language	Lingua
@@ -446,12 +440,7 @@ ATSC 3.0 does not report a signal-to-noise ratio yet; this bar shows how much of
 This bar shows how much of the recent data decodes.	Questa barra mostra quanta parte dei dati recenti viene decodificata.
 multipath: %s	multipath: %s
 Files and the test signal never lose samples: they wait for the receiver.	I file e il segnale di prova non perdono mai campioni: aspettano il ricevitore.
-Radio side: %.2f s lost in %llu gaps, last %s	Lato radio: %.2f s persi in %llu interruzioni, ultima %s
-Samples that never arrived from the radio: its USB connection or driver could not keep up. Try a USB port directly on the computer (no hub), a shorter cable, or a lower sample rate.	Campioni mai arrivati dalla radio: la sua connessione USB o il driver non è riuscito a tenere il passo. Prova una porta USB direttamente sul computer (senza hub), un cavo più corto o una frequenza di campionamento più bassa.
-CPU side: %.2f s skipped %llu times, last %s	Lato CPU: %.2f s saltati %llu volte, ultima %s
-Signal OnAir had to skip because the receiver could not keep up with the sample rate. Close other programs, or pick a lower sample rate or a narrower channel.	Segnale che OnAir ha dovuto saltare perché il ricevitore non teneva il passo con la frequenza di campionamento. Chiudi altri programmi, oppure scegli una frequenza di campionamento più bassa o un canale più stretto.
 Receiver load: %.0f%% of real time	Carico del ricevitore: %.0f%% del tempo reale
-The receiver's time on the sample thread per second of signal. Near or above 100%, signal is skipped.	Il tempo del ricevitore sul thread dei campioni per ogni secondo di segnale. Vicino o oltre il 100%, il segnale viene saltato.
 Demod	Demod
 How the signal becomes the audio the decoders hear.\nAuto: USB below 30 MHz, NFM at and above.\nNFM: 12.5 kHz channel, no de-emphasis, 300 - 3000 Hz audio.\nISS SSTV on 145.800 MHz is FM.	Come il segnale diventa l'audio che i decodificatori sentono.\nAuto: USB sotto i 30 MHz, NFM da lì in su.\nNFM: canale da 12,5 kHz, senza de-enfasi, audio 300 - 3000 Hz.\nL'SSTV della ISS su 145,800 MHz è in FM.
 Sample stream. Green: the ADC level is in a healthy range. Amber: too low or high. Red: clipping.	Flusso di campioni. Verde: il livello ADC è in un intervallo sano. Ambra: troppo basso o alto. Rosso: clipping.
@@ -532,7 +521,6 @@ No TLEs yet: download them or paste some.	Ancora nessun TLE: scaricali o incolla
 No TLEs: open TLE data above.	Nessun TLE: apri i dati TLE qui sopra.
 No passes in the next 24 hours.	Nessun passaggio nelle prossime 24 ore.
 TLE data	Dati TLE
-From: celestrak.org/NORAD/elements/gp.php?GROUP=weather|stations|orbcomm|amateur&FORMAT=tle	Da: celestrak.org/NORAD/elements/gp.php?GROUP=weather|stations|orbcomm|amateur&FORMAT=tle
 %d TLEs, %d satellites listed	%d TLE, %d satelliti elencati
 the oldest is %.0f days old: download again	il più vecchio ha %.0f giorni: scarica di nuovo
 NORAD catalogue number	Numero di catalogo NORAD

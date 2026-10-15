@@ -37,7 +37,6 @@ Device ID	Device ID
 Dial frequency the decoder should assume (the sound card is not tuned)	デコーダーが仮定するダイヤル周波数（サウンドカードはチューニングしません）
 Drone Remote ID is not transmitted: it rides on Wi-Fi and Bluetooth advertisements	Drone Remote ID is not transmitted: it rides on Wi-Fi and Bluetooth advertisements
 DVB standard	DVB standard
-Empty: the built-in demo ensemble. Custom audio is not muxed into this encoder yet.	Empty: the built-in demo ensemble. Custom audio is not muxed into this encoder yet.
 Empty: the demo 802.15.4 scene.	Empty: the demo 802.15.4 scene.
 Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.
 Empty: the demo LoRa / mesh scene.	Empty: the demo LoRa / mesh scene.
@@ -48,7 +47,6 @@ File to send	File to send
 For WebSDR, a virtual audio cable (VAC), or a radio's speaker or line into the computer. Not a replacement for an SDR when you need megahertz of bandwidth.	WebSDR、仮想オーディオケーブル（VAC）、無線機のスピーカー／ライン入力用。MHz単位の帯域が必要なときのSDRの代わりにはなりません。
 For WebSDR, a virtual audio cable (VAC), or a radio's speaker or line into the computer. Not a replacement for an SDR when you need megahertz of bandwidth. The frequency field is the dial the decoder should assume; the sound card is not tuned. There is no gain or antenna power.	WebSDR、仮想オーディオケーブル（VAC）、無線機のスピーカー／ライン入力用。MHz単位の帯域が必要なときのSDRの代わりにはなりません。周波数欄はデコーダーが仮定するダイヤルで、サウンドカードはチューニングしません。ゲインもアンテナ給電もありません。
 Free text	Free text
-Function	Function
 Gain controls apply to radios only (not to a recording, a sound card, or the synthetic signal)	ゲイン操作はラジオのみです（録音、サウンドカード、合成信号には使いません）
 I/Q stereo	I/Q ステレオ
 I/Q stereo: left is I, right is Q (HDSDR / WebSDR VAC). USB audio: real audio to analytic IQ for FT8, RTTY, CW, SSB from a speaker tap. LSB audio: the same, conjugate. Mono real: I is the sample, Q is 0 (real sampling, not FM discriminator audio).	I/Qステレオ：左がI、右がQ（HDSDR / WebSDR VAC）。USBオーディオ：スピーカタップからのFT8/RTTY/CW/SSB向け実音声を解析IQへ。LSBオーディオ：同じ信号の共役。モノ実数：Iがサンプル、Qは0（実サンプリング。FMディスクリミネータ音声ではありません）。
@@ -71,7 +69,6 @@ MMSI	MMSI
 Mode	モード
 Mono real	モノ実数
 Morse identification, up to four letters.	Morse identification, up to four letters.
-MPEG-TS (.ts, .m2ts) goes into the modulator. Other video is remuxed with the linked FFmpeg when it can. Empty: the built-in demo programme.	MPEG-TS (.ts, .m2ts) goes into the modulator. Other video is remuxed with the linked FFmpeg when it can. Empty: the built-in demo programme.
 Multitone paging is not transmitted: the generator is not the real (unpublished) format, only a detector test	Multitone paging is not transmitted: the generator is not the real (unpublished) format, only a detector test
 NAVTEX sends the text (ZCZC / NNNN are added when missing). DSC (when that service is selected) uses the MMSI.	NAVTEX sends the text (ZCZC / NNNN are added when missing). DSC (when that service is selected) uses the MMSI.
 OnAir still asks the radio for it, but the radio or its driver may not reach this frequency, or the signal may be weak or absent.	OnAir still asks the radio for it, but the radio or its driver may not reach this frequency, or the signal may be weak or absent.
@@ -99,13 +96,11 @@ Shift	Shift
 Sideband	Sideband
 Silence	Silence
 sound card	サウンドカード
-Speed (0=512, 1=1200, 2=2400, 3=FLEX)	Speed (0=512, 1=1200, 2=2400, 3=FLEX)
 SSB (microphone)	SSB (microphone)
 SSTV mode	SSTV mode
 Station name (PS)	Station name (PS)
 Symbol rate (Hz)	Symbol rate (Hz)
 Talkgroup	Talkgroup
-Test card (or analog picture) plus live audio on the sound carrier.	Test card (or analog picture) plus live audio on the sound carrier.
 test DJI DroneID scene (custom serial is not packed)	test DJI DroneID scene (custom serial is not packed)
 test downlink scene (this generator does not take a custom message)	test downlink scene (this generator does not take a custom message)
 test LRPT/HRIT scene (custom image not wired)	test LRPT/HRIT scene (custom image not wired)
@@ -132,7 +127,6 @@ TX spectrum (IQ going to the radio)	TX spectrum (IQ going to the radio)
 Unmodulated carrier at this frequency and gain, for adjusting the transmission (drive, filter, SWR, dummy-load level) — not a message. Hold the button. Stop still applies. Not saved as transmitting.	Unmodulated carrier at this frequency and gain, for adjusting the transmission (drive, filter, SWR, dummy-load level) — not a message. Hold the button. Stop still applies. Not saved as transmitting.
 USB audio	USB オーディオ
 Vessel name	Vessel name
-Video / MPEG-TS file	Video / MPEG-TS file
 View	表示
 Help	ヘルプ
 Language	言語
@@ -453,12 +447,7 @@ ATSC 3.0 does not report a signal-to-noise ratio yet; this bar shows how much of
 This bar shows how much of the recent data decodes.	このバーは直近のデータのデコードできた割合を示します。
 multipath: %s	マルチパス: %s
 Files and the test signal never lose samples: they wait for the receiver.	ファイルとテスト信号はサンプルを失いません。受信機を待ちます。
-Radio side: %.2f s lost in %llu gaps, last %s	無線機側: %.2f 秒を欠落 (途切れ %llu 回)、直近 %s
-Samples that never arrived from the radio: its USB connection or driver could not keep up. Try a USB port directly on the computer (no hub), a shorter cable, or a lower sample rate.	無線機から届かなかったサンプルです。USB 接続またはドライバーが追いつきませんでした。コンピューターに直接 (ハブなしで) USB ポートに接続する、短いケーブルを使う、サンプルレートを下げる、のいずれかを試してください。
-CPU side: %.2f s skipped %llu times, last %s	CPU 側: %.2f 秒をスキップ (%llu 回)、直近 %s
-Signal OnAir had to skip because the receiver could not keep up with the sample rate. Close other programs, or pick a lower sample rate or a narrower channel.	受信機がサンプルレートに追いつけず、OnAir がスキップした信号です。他のプログラムを閉じるか、サンプルレートを下げる、またはより狭いチャンネルを選んでください。
 Receiver load: %.0f%% of real time	受信機の負荷: リアルタイムの %.0f%%
-The receiver's time on the sample thread per second of signal. Near or above 100%, signal is skipped.	信号 1 秒あたりに受信機がサンプルスレッドで費やす時間です。100% に近いか超えると、信号がスキップされます。
 Demod	復調
 How the signal becomes the audio the decoders hear.\nAuto: USB below 30 MHz, NFM at and above.\nNFM: 12.5 kHz channel, no de-emphasis, 300 - 3000 Hz audio.\nISS SSTV on 145.800 MHz is FM.	信号をデコーダーが聞く音声にする方法です。\n自動: 30 MHz 未満は USB、30 MHz 以上は NFM。\nNFM: 12.5 kHz チャンネル、ディエンファシスなし、300 - 3000 Hz の音声。\n145.800 MHz の ISS SSTV は FM です。
 #  the lamps
@@ -544,7 +533,6 @@ No TLEs yet: download them or paste some.	TLE がまだありません: ダウ�
 No TLEs: open TLE data above.	TLE がありません: 上の TLE データを開いてください。
 No passes in the next 24 hours.	今後 24 時間以内のパスはありません。
 TLE data	TLE データ
-From: celestrak.org/NORAD/elements/gp.php?GROUP=weather|stations|orbcomm|amateur&FORMAT=tle	取得元: celestrak.org/NORAD/elements/gp.php?GROUP=weather|stations|orbcomm|amateur&FORMAT=tle
 %d TLEs, %d satellites listed	TLE %d 件、衛星 %d 機を一覧表示
 the oldest is %.0f days old: download again	最も古いものは %.0f 日前です: 再ダウンロードしてください
 NORAD catalogue number	NORAD カタログ番号

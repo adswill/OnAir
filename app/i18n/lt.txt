@@ -42,7 +42,6 @@ Device ID	Device ID
 Dial frequency the decoder should assume (the sound card is not tuned)	Rinkimo dažnis, kurį dekoderis turi laikyti (garso plokštė nederinama)
 Drone Remote ID is not transmitted: it rides on Wi-Fi and Bluetooth advertisements	Drone Remote ID is not transmitted: it rides on Wi-Fi and Bluetooth advertisements
 DVB standard	DVB standard
-Empty: the built-in demo ensemble. Custom audio is not muxed into this encoder yet.	Empty: the built-in demo ensemble. Custom audio is not muxed into this encoder yet.
 Empty: the demo 802.15.4 scene.	Empty: the demo 802.15.4 scene.
 Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.
 Empty: the demo LoRa / mesh scene.	Empty: the demo LoRa / mesh scene.
@@ -53,7 +52,6 @@ File to send	File to send
 For WebSDR, a virtual audio cable (VAC), or a radio's speaker or line into the computer. Not a replacement for an SDR when you need megahertz of bandwidth.	WebSDR, virtualiam garso kabeliui (VAC) arba radijo garsiakalbiui / linijai į kompiuterį. Ne SDR pakaitalas, kai reikia megahercų juostos.
 For WebSDR, a virtual audio cable (VAC), or a radio's speaker or line into the computer. Not a replacement for an SDR when you need megahertz of bandwidth. The frequency field is the dial the decoder should assume; the sound card is not tuned. There is no gain or antenna power.	WebSDR, virtualiam garso kabeliui (VAC) arba radijo garsiakalbiui / linijai į kompiuterį. Ne SDR pakaitalas, kai reikia megahercų juostos. Dažnio laukas – rinkimo dažnis dekoderiui; garso plokštė nederinama. Nėra stiprinimo ir antenos maitinimo.
 Free text	Free text
-Function	Function
 Gain controls apply to radios only (not to a recording, a sound card, or the synthetic signal)	Stiprinimo valdikliai taikomi tik radijams (ne įrašui, garso plokštei ar sintetiniam signalui)
 I/Q stereo	I/Q stereo
 I/Q stereo: left is I, right is Q (HDSDR / WebSDR VAC). USB audio: real audio to analytic IQ for FT8, RTTY, CW, SSB from a speaker tap. LSB audio: the same, conjugate. Mono real: I is the sample, Q is 0 (real sampling, not FM discriminator audio).	I/Q stereo: kairė yra I, dešinė Q (HDSDR / WebSDR VAC). USB garsas: realus garsas į analitinį IQ FT8, RTTY, CW, SSB iš garsiakalbio. LSB garsas: tas pats, jungtinis. Mono realus: I yra ėminys, Q yra 0 (reali atranka, ne FM diskriminatoriaus garsas).
@@ -78,7 +76,6 @@ MMSI	MMSI
 Mode	Režimas
 Mono real	Mono realus
 Morse identification, up to four letters.	Morse identification, up to four letters.
-MPEG-TS (.ts, .m2ts) goes into the modulator. Other video is remuxed with the linked FFmpeg when it can. Empty: the built-in demo programme.	MPEG-TS (.ts, .m2ts) goes into the modulator. Other video is remuxed with the linked FFmpeg when it can. Empty: the built-in demo programme.
 Multitone paging is not transmitted: the generator is not the real (unpublished) format, only a detector test	Multitone paging is not transmitted: the generator is not the real (unpublished) format, only a detector test
 NAVTEX sends the text (ZCZC / NNNN are added when missing). DSC (when that service is selected) uses the MMSI.	NAVTEX sends the text (ZCZC / NNNN are added when missing). DSC (when that service is selected) uses the MMSI.
 No Red Pitaya answered on this computer's networks (is its SDR transceiver app running?): type its address.	No Red Pitaya answered on this computer's networks (is its SDR transceiver app running?): type its address.
@@ -107,13 +104,11 @@ Shift	Shift
 Sideband	Sideband
 Silence	Silence
 sound card	garso plokštė
-Speed (0=512, 1=1200, 2=2400, 3=FLEX)	Speed (0=512, 1=1200, 2=2400, 3=FLEX)
 SSB (microphone)	SSB (microphone)
 SSTV mode	SSTV mode
 Station name (PS)	Station name (PS)
 Symbol rate (Hz)	Symbol rate (Hz)
 Talkgroup	Talkgroup
-Test card (or analog picture) plus live audio on the sound carrier.	Test card (or analog picture) plus live audio on the sound carrier.
 test DJI DroneID scene (custom serial is not packed)	test DJI DroneID scene (custom serial is not packed)
 test downlink scene (this generator does not take a custom message)	test downlink scene (this generator does not take a custom message)
 test LRPT/HRIT scene (custom image not wired)	test LRPT/HRIT scene (custom image not wired)
@@ -139,7 +134,6 @@ TX spectrum (IQ going to the radio)	TX spectrum (IQ going to the radio)
 Unmodulated carrier at this frequency and gain, for adjusting the transmission (drive, filter, SWR, dummy-load level) — not a message. Hold the button. Stop still applies. Not saved as transmitting.	Unmodulated carrier at this frequency and gain, for adjusting the transmission (drive, filter, SWR, dummy-load level) — not a message. Hold the button. Stop still applies. Not saved as transmitting.
 USB audio	USB garsas
 Vessel name	Vessel name
-Video / MPEG-TS file	Video / MPEG-TS file
 View	Rodinys
 Help	Pagalba
 Language	Kalba
@@ -460,12 +454,7 @@ ATSC 3.0 does not report a signal-to-noise ratio yet; this bar shows how much of
 This bar shows how much of the recent data decodes.	Ši juosta rodo, kiek neseniai gautų duomenų dekoduojama.
 multipath: %s	daugiakelis sklidimas: %s
 Files and the test signal never lose samples: they wait for the receiver.	Failai ir bandomasis signalas niekada nepraranda mėginių: jie laukia imtuvo.
-Radio side: %.2f s lost in %llu gaps, last %s	Radijo pusė: %.2f s prarasta per %llu spragas, paskutinė %s
-Samples that never arrived from the radio: its USB connection or driver could not keep up. Try a USB port directly on the computer (no hub), a shorter cable, or a lower sample rate.	Mėginiai, kurie niekada neatkeliavo iš radijo: USB jungtis ar tvarkyklė nespėjo. Pabandykite USB prievadą tiesiai kompiuteryje (be šakotuvo), trumpesnį kabelį arba mažesnį diskretizavimo dažnį.
-CPU side: %.2f s skipped %llu times, last %s	CPU pusė: %.2f s praleista %llu kartų, paskutinį kartą %s
-Signal OnAir had to skip because the receiver could not keep up with the sample rate. Close other programs, or pick a lower sample rate or a narrower channel.	Signalas, kurį OnAir turėjo praleisti, nes imtuvas nespėjo su diskretizavimo dažniu. Uždarykite kitas programas arba pasirinkite mažesnį dažnį ar siauresnį kanalą.
 Receiver load: %.0f%% of real time	Imtuvo apkrova: %.0f%% realaus laiko
-The receiver's time on the sample thread per second of signal. Near or above 100%, signal is skipped.	Imtuvo laikas mėginių gijoje kiekvienai signalo sekundei. Kai apkrova artėja prie 100%, signalas praleidžiamas.
 Demod	Demod.
 How the signal becomes the audio the decoders hear.\nAuto: USB below 30 MHz, NFM at and above.\nNFM: 12.5 kHz channel, no de-emphasis, 300 - 3000 Hz audio.\nISS SSTV on 145.800 MHz is FM.	Kaip signalas paverčiamas garsu, kurį girdi dekoderiai.\nAuto: USB žemiau 30 MHz, NFM nuo 30 MHz.\nNFM: 12.5 kHz kanalas, be deemfazės, 300 - 3000 Hz garsas.\nTKS SSTV 145.800 MHz dažniu yra FM.
 #  the lamps
@@ -551,7 +540,6 @@ No TLEs yet: download them or paste some.	TLE dar nėra: atsisiųskite arba įkl
 No TLEs: open TLE data above.	TLE nėra: atverkite TLE duomenis viršuje.
 No passes in the next 24 hours.	Per artimiausias 24 valandas praskridimų nėra.
 TLE data	TLE duomenys
-From: celestrak.org/NORAD/elements/gp.php?GROUP=weather|stations|orbcomm|amateur&FORMAT=tle	Iš: celestrak.org/NORAD/elements/gp.php?GROUP=weather|stations|orbcomm|amateur&FORMAT=tle
 %d TLEs, %d satellites listed	TLE: %d, rodoma palydovų: %d
 the oldest is %.0f days old: download again	seniausias yra %.0f d. senumo: atsisiųskite iš naujo
 NORAD catalogue number	NORAD katalogo numeris
