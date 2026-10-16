@@ -10,6 +10,7 @@
 #include "dect2/specx_measure.h"
 #include "dect2/specx_rx.h"
 #include "dect2/specx_tel.h"
+#include "dect2/u8file.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -724,7 +725,7 @@ void list(App& a) {
     if (ImGui::SmallButton("Export")) {
         const std::string path = plat::saveFileDialog("bookmarks.csv");
         if (!path.empty()) {
-            std::ofstream o(path);
+            std::ofstream o(dect2::u8file(path));
             o << "name,frequency_hz,frequency_hi_hz,colour\n";
             for (auto& m : S.marks) {
                 std::string n = m.name; for (char& ch : n) if (ch == ',' || ch == '\n' || ch == '\r') ch = ' ';
@@ -738,7 +739,7 @@ void list(App& a) {
     if (ImGui::SmallButton("Import")) {
         const std::string path = plat::openFileDialog();
         if (!path.empty()) {
-            std::ifstream in(path);
+            std::ifstream in(dect2::u8file(path));
             std::string line;
             while (std::getline(in, line)) {
                 if (!line.empty() && line.back() == '\r') line.pop_back();

@@ -1,5 +1,6 @@
 // Minimal PNG writer (stored deflate blocks), used for --shot screenshots on back ends without an image library.
 #include "gfx.h"
+#include "dect2/u8file.h"
 #include <algorithm>
 #include <cstdio>
 #include <vector>
@@ -26,7 +27,7 @@ void chunk(FILE* f, const char* type, const std::vector<uint8_t>& data) {
 
 bool writePng(const char* path, const uint8_t* rgba, int w, int h) {
     initCrc();
-    FILE* f = fopen(path, "wb");
+    FILE* f = dect2::u8fopen(path, "wb");
     if (!f) return false;
     static const uint8_t sig[8] = {137, 80, 78, 71, 13, 10, 26, 10};
     fwrite(sig, 1, 8, f);

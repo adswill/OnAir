@@ -6,6 +6,7 @@
 #include "dect2/astro_dsp.h"
 #include "dect2/astro_rx.h"
 #include "dect2/astro_tel.h"
+#include "dect2/u8file.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -180,7 +181,7 @@ void exportCsv(App& a) {
     const std::string path = saveFileDialog(nm);
     if (path.empty()) return;
     const std::string csv = as::toCsv(S.res, S.on, S.par, a.rx.astro.doneSec);
-    FILE* f = fopen(path.c_str(), "wb");
+    FILE* f = dect2::u8fopen(path, "wb");
     S.note = f && fwrite(csv.data(), 1, csv.size(), f) == csv.size() ? "saved " + path : "could not write " + path;
     if (f) fclose(f);
 }

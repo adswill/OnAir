@@ -1,4 +1,5 @@
 #include "dect2/wb_bits.h"
+#include "dect2/u8file.h"
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
@@ -112,7 +113,7 @@ std::vector<size_t> findPattern(const Bits& b, const Bits& pat, bool inv, int ma
 }
 
 bool writeBitsText(const std::string& path, const Bits& b, std::string& err) {
-    FILE* f = fopen(path.c_str(), "wb");
+    FILE* f = u8fopen(path, "wb");
     if (!f) { err = "cannot write " + path; return false; }
     std::string line;
     for (size_t i = 0; i < b.size(); i++) {
@@ -124,7 +125,7 @@ bool writeBitsText(const std::string& path, const Bits& b, std::string& err) {
 }
 
 bool writeBitsBin(const std::string& path, const Bits& b, bool lsbFirst, std::string& err) {
-    FILE* f = fopen(path.c_str(), "wb");
+    FILE* f = u8fopen(path, "wb");
     if (!f) { err = "cannot write " + path; return false; }
     Bits padded = b;
     while (padded.size() % 8) padded.push_back(0);

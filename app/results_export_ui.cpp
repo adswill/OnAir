@@ -2,6 +2,7 @@
 #include "results_export.h"
 #include "app.h"
 #include "icons.h"
+#include "dect2/u8file.h"
 #include <ctime>
 #include <fstream>
 
@@ -35,7 +36,7 @@ bool saveButton(const Table& t, const char* kind, std::string& note, const char*
     if (path.empty()) return true;
     const Fmt pf = fmtFromPath(path);
     const bool typed = path.size() >= 4 && path.rfind('.') != std::string::npos && path.size() - path.rfind('.') <= 5;
-    std::ofstream o(path, std::ios::binary);
+    std::ofstream o(dect2::u8file(path), std::ios::binary);
     o << render(w, typed ? pf : f);
     o.flush();
     note = o ? "saved " + path : "could not write " + path;

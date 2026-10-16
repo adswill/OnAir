@@ -923,6 +923,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_direction tests/test_direction.cpp)
   target_link_libraries(test_direction PRIVATE dect2core)
   add_test(NAME direction COMMAND test_direction)
+  add_executable(test_u8file tests/test_u8file.cpp)
+  target_link_libraries(test_u8file PRIVATE dect2core)
+  add_test(NAME u8file COMMAND test_u8file)
 
   # tests/<mode>/test_<mode>_*.cpp: one test program each; tools/<mode>tool.cpp: the mode's generator / receiver tool
   foreach(m ${DECT2_MODES})

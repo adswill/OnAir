@@ -7,6 +7,7 @@
 #include "dect2/results_io.h"
 #include "dect2/timecompat.h"
 #include "scan_list.h"
+#include "dect2/u8file.h"
 #include <cstring>
 #include <ctime>
 #include <fstream>
@@ -251,7 +252,7 @@ void listTable(App& a) {
     if (ImGui::Button(tr("Import CSV..."))) {
         const std::string p = openFileDialog();
         if (!p.empty()) {
-            std::ifstream f(p, std::ios::binary); std::stringstream ss; ss << f.rdbuf();
+            std::ifstream f(dect2::u8file(p), std::ios::binary); std::stringstream ss; ss << f.rdbuf();
             std::vector<Entry> v = scanlist::fromCsv(ss.str());
             int unknown = 0;
             for (const Entry& e : v) if (modeIndex(e.mode) < 0) unknown++;
@@ -264,7 +265,7 @@ void listTable(App& a) {
     ImGui::SameLine();
     if (ImGui::Button(tr("Export CSV..."))) {
         const std::string p = saveFileDialog("scanlist.csv");
-        if (!p.empty()) { std::ofstream f(p, std::ios::binary); f << scanlist::toCsv(S.m.list); S.msg = std::string(tr(f ? "exported" : "could not write")) + " " + p; }
+        if (!p.empty()) { std::ofstream f(dect2::u8file(p), std::ios::binary); f << scanlist::toCsv(S.m.list); S.msg = std::string(tr(f ? "exported" : "could not write")) + " " + p; }
     }
     ImGui::SameLine();
     ImGui::BeginDisabled(run || S.m.list.empty());
