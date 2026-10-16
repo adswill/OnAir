@@ -48,6 +48,8 @@ struct MeshPacket {
     std::string from, to, channel;
     uint32_t packetId = 0;
     int hopLimit = -1, hopStart = -1;
+    bool viaMqtt = false;        // Meshtastic: the packet came into the mesh from MQTT (a gateway put it on the air)
+    int nextHop = -1, relayNode = -1;   // Meshtastic: last byte of the node number of the next hop and of the node that sent this copy (0 = none)
     bool decrypted = false;
     std::string note;            // why not decrypted ("encrypted (direct)", "unknown channel 0x1f", "CRC error")
     std::string detail;          // one short line about the content

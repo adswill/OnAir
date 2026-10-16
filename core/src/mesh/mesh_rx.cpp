@@ -346,6 +346,7 @@ struct MeshReceiver::Impl {
         row.note = pk.note;
         if (crcBad) row.note = row.note.empty() ? "CRC error" : std::string("CRC error; ") + row.note;
         row.detail = pk.detail;
+        row.viaMqtt = pk.viaMqtt; row.nextHop = pk.nextHop; row.relayNode = pk.relayNode;
         row.path = pk.path;
         count(proto_, pk.type.empty() ? "?" : pk.type);
         const int hops = proto_ == 1 ? (pk.hopStart > 0 && pk.hopLimit >= 0 && pk.hopStart >= pk.hopLimit ? pk.hopStart - pk.hopLimit : -1)
