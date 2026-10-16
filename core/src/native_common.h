@@ -207,6 +207,20 @@ inline std::vector<std::string> libNames(const char* stem, std::initializer_list
     for (auto& p : versionedLibs(stem, dirs)) if (std::find(v.begin(), v.end(), p) == v.end()) v.push_back(p);
 #else
     (void)winNames;
+    // The copy shipped with OnAir (<prefix>/lib/onair, next to the program's bin: the .deb and the portable package) first, by full path: a
+    // bare name would let the system's copy win (an older librtlsdr without the RTL-SDR Blog V4 support, for one). Missing there: no harm.
+    {
+        char path[4096];
+        const ssize_t n = readlink("/proc/self/exe", path, sizeof path - 1);
+        const std::string exe = n > 0 ? std::string(path, (size_t)n) : std::string();
+        const size_t sl = exe.find_last_of('/');
+        if (sl != std::string::npos) {
+            const std::string own = exe.substr(0, sl + 1) + "../lib/onair/";
+            for (const char* ver : soVersions) v.push_back(own + "lib" + stem + ".so" + ver);
+            v.push_back(own + "lib" + stem + ".so");
+            for (auto& p : versionedLibs(stem, {own})) if (std::find(v.begin(), v.end(), p) == v.end()) v.push_back(p);
+        }
+    }
     for (const char* ver : soVersions) v.push_back(std::string("lib") + stem + ".so" + ver);
     v.push_back(std::string("lib") + stem + ".so");
     // the multiarch folder of this build (Debian/Ubuntu); other distributions use lib64

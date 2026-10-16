@@ -370,6 +370,16 @@ static void radiosChecks(const char* dir, const char* ext) {
         e.clear();
         CHECK(!tv->start(t, ring, e) && has(e, "RTL-SDR gives at most 3.2 Msps; DVB-T/T2 needs about 10 Msps: use a faster radio"), "10 Msps: %s", e.c_str());
         tv.reset();
+        // an R820T whose PLL does not lock at the first try is asked again; a second refusal is not final for a frequency it is specified for
+        {
+            t.centerHz = 100e6; t.sampleRate = 2.048e6; t.bandwidthMhz = 0.2;
+            set("rtl.freqFail", 1);
+            auto pll = makeSource(d);
+            e.clear();
+            CHECK(pll->start(t, ring, e), "PLL unlocked once: %s", e.c_str());
+            pll->stop();
+            set("rtl.freqFail", 0);
+        }
         // the Blog V4 converts HF up itself: no direct sampling
         set("rtl.v4", 1);
         const double calls = std::max(0.0, st("rtl.dsCalls"));

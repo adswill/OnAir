@@ -50,22 +50,26 @@ PC
 
 # --- generic radios: SoapySDR (a DLL). Its RTL-SDR and Airspy modules are not built: the native drivers of the same name always win and hide them.
 
-[ -f "$P/lib/librtlsdr.a" ] || { step librtlsdr; unpack rtl-sdr-blog-1.3.6.tar.gz rtl-sdr-blog-1.3.6
-  sed -i.bak 's/^set(VERSION_INFO_PATCH_VERSION git)/set(VERSION_INFO_PATCH_VERSION 6)/' rtl-sdr-blog-1.3.6/CMakeLists.txt   # (the tarball has no git history to take the version from)
-  cmake -S rtl-sdr-blog-1.3.6 -B rtl-build "-DCMAKE_TOOLCHAIN_FILE=$TC" -DCMAKE_INSTALL_PREFIX=$P -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DVERSION=0.6.6 -DCMAKE_C_FLAGS="-std=gnu11" -DDETACH_KERNEL_DRIVER=OFF -DINSTALL_UDEV_RULES=OFF >/dev/null
+# osmocom/rtl-sdr v2.0.3 (rtl-sdr-2.0.3.tar.gz = https://github.com/osmocom/rtl-sdr/archive/refs/tags/v2.0.3.tar.gz), not the RTL-SDR Blog fork: the fork
+# has no V4 Lite ("Blog V4L") support, so that dongle gets no HF upconversion; v2.0.3 drives the V4, the V4L and stock dongles. The stamp makes a prefix
+# built from the fork (same file names) rebuild it. The tarball has no git history, but v2.0.3 is a numbered release, so no version patching is needed.
+[ -f "$P/lib/librtlsdr.a" ] && [ -f "$P/lib/.onair-rtlsdr-osmocom-2.0.3" ] || { step librtlsdr; rm -rf rtl-build rtl-sdr-blog-1.3.6; unpack rtl-sdr-2.0.3.tar.gz rtl-sdr-2.0.3
+  cmake -S rtl-sdr-2.0.3 -B rtl-build "-DCMAKE_TOOLCHAIN_FILE=$TC" -DCMAKE_INSTALL_PREFIX=$P -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_C_FLAGS="-std=gnu11" -DDETACH_KERNEL_DRIVER=OFF -DINSTALL_UDEV_RULES=OFF >/dev/null
   cmake --build rtl-build -j$JOBS --target rtlsdr_static >/dev/null
-  cp rtl-build/src/librtlsdr_static.a "$P/lib/librtlsdr.a"; cp rtl-sdr-blog-1.3.6/include/rtl-sdr.h rtl-sdr-blog-1.3.6/include/rtl-sdr_export.h "$P/include/"
+  cp rtl-build/src/librtlsdr_static.a "$P/lib/librtlsdr.a"; cp rtl-sdr-2.0.3/include/rtl-sdr.h rtl-sdr-2.0.3/include/rtl-sdr_export.h "$P/include/"
+  rm -f "$P/bin/librtlsdr.dll"   # (the DLL below is rebuilt from the same source)
   cat > "$P/lib/pkgconfig/librtlsdr.pc" <<PC
 prefix=$P
 libdir=\${prefix}/lib
 includedir=\${prefix}/include
 Name: librtlsdr
 Description: RTL-SDR library (static)
-Version: 0.6.6
+Version: 2.0.3
 Libs: -L\${libdir} -lrtlsdr -lusb-1.0
 Cflags: -I\${includedir} -DRTLSDR_STATIC
 Requires: libusb-1.0
 PC
+  touch "$P/lib/.onair-rtlsdr-osmocom-2.0.3"
 }
 
 # libairspy 1.0.10 frees its USB transfers after ending libusb in airspy_close(), which crashes on Windows (patches/airspy-1.0.10-close-order.patch).

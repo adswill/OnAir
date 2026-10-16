@@ -7,11 +7,15 @@ if [ "$1" = configure ]; then
         udevadm trigger --subsystem-match=usb >/dev/null 2>&1 || true
     fi
     # the blacklist only works for the next plug-in; unload the modules now unless a dongle is being used as a TV stick
-    if [ -r /proc/modules ] && command -v modprobe >/dev/null 2>&1 && grep -q '^dvb_usb_rtl28xxu ' /proc/modules 2>/dev/null; then
-        # modprobe -r refuses a module that is in use, so a dongle that is playing TV is left alone
-        for m in dvb_usb_rtl28xxu rtl2832_sdr rtl2832 rtl2830; do
-            modprobe -r "$m" >/dev/null 2>&1 || true
+    if [ -r /proc/modules ] && command -v modprobe >/dev/null 2>&1; then
+        # modprobe -r refuses a module that is in use, so a dongle that is playing TV is left alone (dependents first)
+        for m in dvb_usb_rtl28xxu rtl2832_sdr rtl2832 rtl2830 e4000; do
+            if grep -q "^$m " /proc/modules 2>/dev/null; then modprobe -r "$m" >/dev/null 2>&1 || true; fi
         done
+    fi
+    # the blacklist is also needed in the initramfs, or the TV driver is loaded again at boot before the file is read
+    if [ -f /etc/modprobe.d/onair-rtlsdr-blacklist.conf ] && command -v update-initramfs >/dev/null 2>&1 && [ -e /boot ] && [ ! -e /.dockerenv ]; then
+        update-initramfs -u >/dev/null 2>&1 || true
     fi
     # the same for the Mirics drivers that keep an SDRplay RSP from the SDRplay API (an RSP plugged in now is free after a replug)
     if [ -r /proc/modules ] && command -v modprobe >/dev/null 2>&1 && grep -q '^msi2500 ' /proc/modules 2>/dev/null; then

@@ -9,7 +9,9 @@ FROM ghcr.io/linuxserver/baseimage-selkies:ubuntunoble AS full
 ARG ONAIR_VERSION=0.2.5
 ARG TARGETARCH
 
-# The release .deb: it carries its own FFmpeg and the libraries of the radios OnAir drives itself; the SoapySDR modules add the rest.
+# The release .deb: it carries its own FFmpeg and the libraries of the radios OnAir drives itself (RTL-SDR: osmocom 2.0.3, in
+# /usr/lib/onair); the SoapySDR modules add the rest. The distribution's librtlsdr0 and the SoapySDR rtlsdr module are purged below, so
+# that nothing in the image can load a distribution librtlsdr.so.0 (not the verified 2.0.3) in place of the bundled one.
 # libfaad2: the SBR and parametric stereo of DAB+ HE-AAC stations (found at run time). mbelib and codec2 come with OnAir.
 # fonts-wqy-microhei: Chinese for the UI (one of the fonts OnAir looks for) in 5 MB, instead of the 90 MB of Noto CJK.
 RUN set -eux; \
@@ -17,9 +19,10 @@ RUN set -eux; \
     curl -fsSL -o /tmp/onair.deb \
       "https://github.com/adswill/OnAir/releases/download/v${ONAIR_VERSION}/onair_${ONAIR_VERSION}_${TARGETARCH:-$(dpkg --print-architecture)}.deb"; \
     apt-get install -y --no-install-recommends /tmp/onair.deb zenity soapysdr-module-all libfaad2 fonts-dejavu-core fonts-wqy-microhei; \
+    # The stock librtlsdr0 and the SoapySDR rtlsdr module (the metapackage soapysdr-module-all goes with it, the other modules stay),
     # Docker Engine (the base image can run Docker inside), the compiler tool chain, every locale at once (the one LANG names is
     # made at the start instead, init-onair) and Noto CJK. Matched by name so that the same list works on x86-64 and arm64.
-    dpkg-query -W -f='${Package}\n' | grep -E '^(docker-ce(-cli)?|docker-(buildx|compose)-plugin|containerd\.io|iptables|nftables|cmake(-data)?|git(-man)?|locales-all|fonts-noto-cjk|(gcc|g\+\+)(-[0-9]+)?(-[a-z0-9_-]+-linux-gnu)?|lib(stdc\+\+|gcc)-[0-9]+-dev|libc6-dev|libc-dev-bin|linux-libc-dev|lib(asan|tsan|lsan|ubsan|hwasan)[0-9]+|binutils(-common|-[a-z0-9_-]+-linux-gnu)?|libbinutils|libgprofng0|libctf0|libctf-nobfd0|libsframe1)$' | xargs -r apt-get purge -y; \
+    dpkg-query -W -f='${Package}\n' | grep -E '^(docker-ce(-cli)?|docker-(buildx|compose)-plugin|containerd\.io|librtlsdr0|soapysdr0\.8-module-rtlsdr|iptables|nftables|cmake(-data)?|git(-man)?|locales-all|fonts-noto-cjk|(gcc|g\+\+)(-[0-9]+)?(-[a-z0-9_-]+-linux-gnu)?|lib(stdc\+\+|gcc)-[0-9]+-dev|libc6-dev|libc-dev-bin|linux-libc-dev|lib(asan|tsan|lsan|ubsan|hwasan)[0-9]+|binutils(-common|-[a-z0-9_-]+-linux-gnu)?|libbinutils|libgprofng0|libctf0|libctf-nobfd0|libsframe1)$' | xargs -r apt-get purge -y; \
     locale-gen en_US.UTF-8; \
     rm -rf /tmp/* /var/lib/apt/lists/* /var/cache/apt/* /var/log/apt/* /var/log/dpkg.log /usr/share/doc/* /usr/share/man/* /usr/share/info/*
 

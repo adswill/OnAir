@@ -65,8 +65,8 @@ std::string mhz(double hz) {
 
 // What the dongle's USB strings say about its HF input:
 // - the RTL-SDR Blog V4 (R828D) and V4 Lite (R820T, USB product "Blog V4L") have an upconverter for HF that their library switches itself: no
-//   direct sampling. Same test as the Blog library (rtlsdr_check_dongle_model with "Blog V4" and "Blog V4L"; it leaves the V4L out of its own
-//   direct sampling below 24 MHz, tuner_r82xx.c upconverts below 28.8 MHz).
+//   direct sampling. Same test as osmocom librtlsdr 2.0.3 (rtlsdr_check_dongle_model with "Blog V4" and "Blog V4L"; tuner_r82xx.c upconverts
+//   below 28.8 MHz). The V4L reports an R820T. The RTL-SDR Blog fork 1.3.6 knows the V4 only.
 // - the RTL-SDR Blog V3 ("RTLSDRBlog" / "Blog V3") has its HF input on the RTL2832U's Q branch: direct sampling below 24 MHz.
 // - any other dongle has no HF input unless it was modified (the user can pick the I or Q input in the radio settings)
 enum RtlModel { kGeneric, kBlogV3, kBlogV4 };
@@ -224,9 +224,17 @@ protected:
         }
         // the library takes the frequency as a 32-bit Hz value: 4.29 GHz is all the wire format holds
         if (tuneHz > 4.29e9) addNote(err, "the RTL-SDR library takes at most 4.29 GHz (32-bit Hz): " + mhz(f) + " MHz was cut to that");
-        if (rtl().set_center_freq(dev_, (uint32_t)std::llround(std::min(tuneHz, 4.29e9))) < 0) {
+        const uint32_t tuneInt = (uint32_t)std::llround(std::min(tuneHz, 4.29e9));
+        int fr = rtl().set_center_freq(dev_, tuneInt);
+        // an R82xx whose PLL does not lock right away (a cold start, a band switch) fails once and works at the next try
+        if (fr < 0 && r82 && f >= specLo && (hi_ <= 0 || f <= hi_)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+            fr = rtl().set_center_freq(dev_, tuneInt);
+        }
+        if (fr < 0) {
             err = "RTL-SDR: the driver refused " + mhz(f) + " MHz" + (hi_ > 0 ? " (this radio is specified for " + mhz(specLo) + " to " + mhz(hi_) + " MHz)" : std::string());
-            openFailure_ = OpenFailure::Final;
+            // inside what an R82xx is specified for the refusal is most likely a PLL that did not lock: worth another open; outside it, final
+            openFailure_ = r82 && f >= specLo && (hi_ <= 0 || f <= hi_) ? OpenFailure::Retry : OpenFailure::Final;
             return false;
         }
         if (rtl().set_bias_tee && s.biasTee != bias_) {

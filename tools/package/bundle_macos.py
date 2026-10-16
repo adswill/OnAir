@@ -52,16 +52,22 @@ bundled = []
 # The radio libraries that OnAir loads at run time when they are present (the native drivers): they go into the app too, so that nothing has
 # to be installed next to it. Every version name a driver may ask for is kept (the symlinks of the Homebrew copy become symlinks here).
 # A missing one stops the build (a release without it would silently lose that radio), unless ONAIR_ALLOW_MISSING_RADIO_LIBS=1 (local test builds).
+# librtlsdr is osmocom/rtl-sdr v2.0.3 built from source (release.yml installs it to a prefix, passed in ONAIR_RTLSDR_PREFIX), not Homebrew's librtlsdr:
+# only that version drives the RTL-SDR Blog V4 Lite as well as the V4 and stock dongles. Without the variable, the Homebrew copy is used (local builds).
 # The value is how to get it. libiio has no Homebrew formula: Pluto users install ADI's libiio package, so it is optional here.
-REQUIRED = {"rtlsdr": "brew install librtlsdr", "airspy": "brew install airspy", "airspyhf": "brew install airspyhf",
+REQUIRED = {"rtlsdr": "build osmocom/rtl-sdr v2.0.3 and set ONAIR_RTLSDR_PREFIX (or brew install librtlsdr for a local build)", "airspy": "brew install airspy", "airspyhf": "brew install airspyhf",
             "bladeRF": "brew install libbladerf", "LimeSuite": "brew install limesuite", "uhd": "brew install uhd"}
 OPTIONAL = {"iio": "ADI's libiio package (github.com/analogdevicesinc/libiio/releases)"}
 allow_missing = os.environ.get("ONAIR_ALLOW_MISSING_RADIO_LIBS") == "1"
+rtlsdr_prefix = os.environ.get("ONAIR_RTLSDR_PREFIX")
+if rtlsdr_prefix and not glob.glob(os.path.join(rtlsdr_prefix, "lib", "librtlsdr*.dylib")):
+    sys.exit("error: ONAIR_RTLSDR_PREFIX=%s has no lib/librtlsdr*.dylib" % rtlsdr_prefix)
 links = []
 missing = []
 for stem in list(REQUIRED) + list(OPTIONAL):
     found = False
-    for d in SEARCH[:2]:
+    dirs = [os.path.join(rtlsdr_prefix, "lib")] if stem == "rtlsdr" and rtlsdr_prefix else SEARCH[:2]   # (only the osmocom build, never a stock copy beside it)
+    for d in dirs:
         for src in sorted(glob.glob(os.path.join(d, "lib%s.*dylib" % stem)) + glob.glob(os.path.join(d, "lib%s*.dylib" % stem))):
             name = os.path.basename(src)
             if name.endswith(".a"): continue

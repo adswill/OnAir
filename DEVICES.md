@@ -7,8 +7,9 @@ signal may be weak or absent") and the radio keeps running. What stays an error 
 (its error text is shown), and the few cases where the call cannot carry the number: RTL-SDR, rtl_tcp and Airspy take the frequency as a
 32-bit value in Hz (at most 4.29 GHz), and a negative frequency is turned into 0.
 
-RTL-SDR below 24 MHz picks the way down by itself (direct sampling "Auto"): the RTL-SDR Blog V4 and V4 Lite use the upconverter in the
-Blog library (OnAir never switches direct sampling on there), every other dongle samples its Q input directly (an RTL-SDR Blog V3 has its
+RTL-SDR below 24 MHz picks the way down by itself (direct sampling "Auto"): the RTL-SDR Blog V4 and V4 Lite use the upconverter that
+librtlsdr switches by itself (OnAir bundles osmocom rtl-sdr v2.0.3, which supports the V4 and V4 Lite; it never switches direct sampling on
+there, and an older librtlsdr without V4 Lite support, such as the RTL-SDR Blog fork 1.3.6, cannot upconvert a V4 Lite), every other dongle samples its Q input directly (an RTL-SDR Blog V3 has its
 HF input on Q; a stock dongle has no HF input, so the signal may be weak or absent unless it is modified). The radio settings can still
 pick the I input or switch direct sampling off. Over rtl_tcp "Auto" sends nothing and the server's own library decides.
 

@@ -53,7 +53,11 @@ EXPORT int rtlsdr_get_device_usb_strings(uint32_t, char* m, char* p, char* s) { 
 }
 EXPORT int rtlsdr_open(rtl_dev** d, uint32_t) { if (const int r = rtlOpenRefusal()) return r; if (getenv("FAKE_RTL_OPEN_FAIL")) return -6; *d = new rtl_dev; return 0; }   // ---- start failure: the app shows the error of a failed start
 EXPORT int rtlsdr_close(rtl_dev* d) { delete d; return 0; }
-EXPORT int rtlsdr_set_center_freq(rtl_dev*, uint32_t f) { rec("rtl.freq", f); return 0; }
+// rtl.freqFail = N: the next N calls fail (an R82xx PLL that does not lock at once)
+EXPORT int rtlsdr_set_center_freq(rtl_dev*, uint32_t f) {
+    if (fake_state("rtl.freqFail") > 0) { rec("rtl.freqFail", fake_state("rtl.freqFail") - 1); return -1; }
+    rec("rtl.freq", f); return 0;
+}
 EXPORT int rtlsdr_set_sample_rate(rtl_dev*, uint32_t r) { rec("rtl.rate", r); return 0; }
 EXPORT uint32_t rtlsdr_get_sample_rate(rtl_dev*) { return (uint32_t)fake_state("rtl.rate"); }
 EXPORT int rtlsdr_set_tuner_gain_mode(rtl_dev*, int m) { rec("rtl.gainmode", m); return 0; }

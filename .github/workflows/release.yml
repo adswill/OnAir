@@ -71,7 +71,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: brew install cmake pkg-config hackrf soapysdr libusb ffmpeg glfw librtlsdr airspy airspyhf libbladerf limesuite uhd   # the radio libraries go into the app (tools/package/bundle_macos.py)
+        run: brew install cmake pkg-config hackrf soapysdr libusb ffmpeg glfw airspy airspyhf libbladerf limesuite uhd   # the radio libraries go into the app (tools/package/bundle_macos.py)
+      # librtlsdr comes from osmocom/rtl-sdr v2.0.3, not Homebrew (stock librtlsdr, and the RTL-SDR Blog fork, cannot drive the V4 Lite: no HF upconversion)
+      - name: Build librtlsdr (osmocom/rtl-sdr v2.0.3)
+        run: |
+          git clone --depth 1 --branch v2.0.3 https://github.com/osmocom/rtl-sdr.git "$RUNNER_TEMP/rtl-sdr-src"
+          cmake -S "$RUNNER_TEMP/rtl-sdr-src" -B "$RUNNER_TEMP/rtl-sdr-build" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/rtl-sdr-prefix" -DINSTALL_UDEV_RULES=OFF -DDETACH_KERNEL_DRIVER=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+          cmake --build "$RUNNER_TEMP/rtl-sdr-build" -j 4   # all targets: the install step needs the static library too
+          cmake --install "$RUNNER_TEMP/rtl-sdr-build"
+          ls "$RUNNER_TEMP/rtl-sdr-prefix/lib"
+          echo "ONAIR_RTLSDR_PREFIX=$RUNNER_TEMP/rtl-sdr-prefix" >> "$GITHUB_ENV"
       - name: Build the app and the .dmg
         run: tools/package/make_dmg.sh "${{ needs.version.outputs.ver }}"
       - uses: actions/upload-artifact@v4
@@ -100,7 +109,7 @@ jobs:
       - name: "Build FFmpeg (static, only what OnAir uses, so that the packages do not depend on the FFmpeg of the system they are installed on)"
         if: steps.ffmpeg.outputs.cache-hit != 'true'
         run: tools/package/build_ffmpeg_static.sh "$HOME/ffmpeg"
-      - name: "Gather the radio libraries (RTL-SDR is built here from the RTL-SDR Blog source: the distribution's librtlsdr0 cannot drive the V4)"
+      - name: "Gather the radio libraries (RTL-SDR is built here from osmocom/rtl-sdr v2.0.3: the distribution's librtlsdr0 cannot drive the V4 or V4L)"
         run: tools/package/collect_radio_libs_linux.sh "$GITHUB_WORKSPACE/build/radiolibs"
       - name: Build
         run: |
