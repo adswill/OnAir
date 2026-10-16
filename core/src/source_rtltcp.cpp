@@ -22,6 +22,7 @@ enum : uint8_t {
 };
 enum { kTunerUnknown = 0, kE4000 = 1, kFC0012 = 2, kFC0013 = 3, kFC2580 = 4, kR820T = 5, kR828D = 6 };
 constexpr int kConnectMs = 3000;   // an unreachable server is reported after this
+constexpr int kGreetingMs = 10000; // a server still closing the previous client can take seconds to greet
 constexpr int kStallMs = 3000;     // no samples for this long: the connection is taken as lost
 
 // The tuner's gains in tenths of a dB, as librtlsdr's tuner drivers list them (what rtlsdr_get_tuner_gains gives the server)
@@ -94,7 +95,7 @@ protected:
         const sock_t k = tcpConnect(host, port, kConnectMs, e);
         if (k == kBadSock) { err = "rtl_tcp: " + e; openFailure_ = OpenFailure::Retry; return false; }
         sock_ = k;
-        sockRecvTimeout(sock_, kConnectMs);
+        sockRecvTimeout(sock_, kGreetingMs);
         unsigned char hdr[12];
         if (!sockRecvAll(sock_, hdr, sizeof hdr)) { err = "rtl_tcp: " + addr_ + " connected but sent no greeting (another client may have it)"; return false; }
         std::string magic;
