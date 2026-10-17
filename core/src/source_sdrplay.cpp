@@ -1,5 +1,5 @@
 // Native driver for the SDRplay RSPs (RSP1, RSP1A, RSP1B, RSP2, RSPduo, RSPdx, RSPdx-R2) through the SDRplay API 3.x. The API is a
-// service plus a library that the user installs from sdrplay.com (every SDRplay program needs it; OnAir does not ship it); the library is
+// service plus a library that the user installs from sdrplay.com (separately from SDRconnect; OnAir does not ship it); the library is
 // loaded at run time like the other radios' libraries (native_common.h). The API's interface is in sdrplay_api_min.h.
 #include "native_common.h"
 #define DECT2_SDRPLAY_CALL DECT2_CALL
@@ -66,6 +66,7 @@ struct SdrplayApi {
     sp::ErrT (DECT2_CALL* SelectDevice)(sp::DeviceT*) = nullptr;
     sp::ErrT (DECT2_CALL* ReleaseDevice)(sp::DeviceT*) = nullptr;
     const char* (DECT2_CALL* GetErrorString)(sp::ErrT) = nullptr;
+    sp::ErrorInfoT* (DECT2_CALL* GetLastError)(sp::DeviceT*) = nullptr;
     sp::ErrT (DECT2_CALL* GetDeviceParams)(void*, sp::DeviceParamsT**) = nullptr;
     sp::ErrT (DECT2_CALL* Init)(void*, sp::CallbackFnsT*, void*) = nullptr;
     sp::ErrT (DECT2_CALL* Uninit)(void*) = nullptr;
@@ -85,6 +86,7 @@ struct SdrplayApi {
              lib.get(GetDeviceParams, "sdrplay_api_GetDeviceParams") && lib.get(Init, "sdrplay_api_Init") && lib.get(Uninit, "sdrplay_api_Uninit") &&
              lib.get(Update, "sdrplay_api_Update");
         if (!ok) { fprintf(stderr, "SDRplay API library %s lacks functions OnAir needs (an API older than 3.x?)\n", lib.path.c_str()); fflush(stderr); }
+        if (ok) lib.opt(GetLastError, "sdrplay_api_GetLastError");
     }
     // The API wants Open() first and Close() last; it stays open while OnAir runs (a service that was not running yet is tried again on the
     // next rescan)
@@ -157,6 +159,7 @@ static const LnaBand kLnaRsp1B[] = {{50e6, 7, {0, 6, 12, 18, 37, 42, 61}},
                                     {1000e6, 10, {0, 7, 13, 19, 20, 27, 33, 39, 45, 64}},
                                     {1e12, 9, {0, 6, 12, 20, 26, 32, 38, 43, 62}}};
 static const LnaBand kLnaRsp2[] = {{420e6, 9, {0, 10, 15, 21, 24, 34, 39, 45, 64}}, {1000e6, 6, {0, 7, 10, 17, 22, 41}}, {1e12, 6, {0, 5, 21, 15, 15, 34}}};
+static const LnaBand kLnaHiZ[] = {{1e12, 5, {0, 6, 12, 18, 37}}};   // RSP2/RSPduo AM port, API 3.15 section 5
 static const LnaBand kLnaRspDx[] = {
     {12e6, 19, {0, 3, 6, 9, 12, 15, 24, 27, 30, 33, 36, 39, 42, 45, 48, 51, 54, 57, 60}},
     {50e6, 20, {0, 3, 6, 9, 12, 15, 18, 24, 27, 30, 33, 36, 39, 42, 45, 48, 51, 54, 57, 60}},
@@ -166,7 +169,8 @@ static const LnaBand kLnaRspDx[] = {
     {1000e6, 21, {0, 7, 10, 13, 16, 19, 22, 25, 31, 34, 37, 40, 43, 46, 49, 52, 55, 58, 61, 64, 67}},
     {1e12, 19, {0, 5, 8, 11, 14, 17, 20, 32, 35, 38, 41, 44, 47, 50, 53, 56, 59, 62, 65}}};
 
-static void lnaTable(unsigned char hw, const LnaBand*& first, size_t& count) {
+static void lnaTable(unsigned char hw, const LnaBand*& first, size_t& count, bool hiZ = false) {
+    if (hiZ && (hw == sp::kRsp2 || hw == sp::kRspDuo)) { first = kLnaHiZ; count = 1; return; }
     switch (hw) {
     case sp::kRsp1: first = kLnaRsp1; count = 3; return;
     case sp::kRsp1B: first = kLnaRsp1B; count = 4; return;
@@ -175,9 +179,9 @@ static void lnaTable(unsigned char hw, const LnaBand*& first, size_t& count) {
     default: first = kLnaRsp1A; count = 4; return;   // RSP1A, RSPduo (the same table) and models newer than this code
     }
 }
-static const LnaBand& lnaBand(unsigned char hw, double hz) {
+static const LnaBand& lnaBand(unsigned char hw, double hz, bool hiZ = false) {
     const LnaBand* t; size_t n;
-    lnaTable(hw, t, n);
+    lnaTable(hw, t, n, hiZ);
     for (size_t i = 0; i < n; i++) if (hz < t[i].upToHz) return t[i];
     return t[n - 1];
 }
@@ -187,18 +191,18 @@ static const LnaBand& lnaBand(unsigned char hw, double hz) {
 // that the LNA steps in with the smallest reduction that keeps gRdB at 50 or below, so the LNA keeps its gain (and the low noise figure)
 // as long as possible while the IF stage keeps some room either way.
 constexpr int kGrIfMin = 20, kGrIfMax = 59, kGrIfSoft = 50;
-static int sdrplayMaxGain(unsigned char hw) {
+static int sdrplayMaxGain(unsigned char hw, bool hiZ = false) {
     const LnaBand* t; size_t n;
-    lnaTable(hw, t, n);
+    lnaTable(hw, t, n, hiZ);
     int top = 0;
     for (size_t i = 0; i < n; i++) for (int k = 0; k < t[i].n; k++) top = std::max(top, t[i].gr[k]);
     return top + (kGrIfMax - kGrIfMin);
 }
-static void sdrplayGain(unsigned char hw, double hz, double gainDb, int& lnaState, int& gRdB) {
-    const int gMax = sdrplayMaxGain(hw);
+static void sdrplayGain(unsigned char hw, double hz, double gainDb, int& lnaState, int& gRdB, bool hiZ = false) {
+    const int gMax = sdrplayMaxGain(hw, hiZ);
     const int g = (int)std::lround(std::min<double>(gMax, std::max(0.0, gainDb)));
     const int reduce = gMax - g + kGrIfMin;   // total gain reduction wanted
-    const LnaBand& b = lnaBand(hw, hz);
+    const LnaBand& b = lnaBand(hw, hz, hiZ);
     int pick = -1;
     for (int k = 0; k < b.n; k++)   // the smallest LNA reduction that leaves the IF stage at kGrIfSoft or below (the tables are not all sorted)
         if (b.gr[k] >= reduce - kGrIfSoft && (pick < 0 || b.gr[k] < b.gr[pick])) pick = k;
@@ -258,15 +262,6 @@ public:
     }
     ~SdrplaySource() override { stop(); }
 
-    bool start(const TuneSettings& s, IqRing& ring, std::string& err) override {
-        initState_ = 0;
-        if (!NativeSource::start(s, ring, err)) return false;
-        // sdrplay_api_Init() runs on the stream thread: wait for its answer so that a refusal reaches the user
-        for (int i = 0; i < 1000 && initState_.load() == 0; i++) std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        if (initState_.load() < 0) { err = initErr_; stop(); return false; }
-        return true;
-    }
-
 protected:
     bool openDevice(const TuneSettings& s, std::string& err) override {
         SdrplayApi& api = sdrplayApi();
@@ -318,7 +313,7 @@ protected:
         // The settings of the tuner in use: an RSPduo opened on tuner 2 gets only rxChannelB (rxChannelA is null), so requiring
         // rxChannelA refused tuner 2 with "cannot read the radio's settings: sdrplay_api_Success" (issue #31)
         sp::RxChannelParamsT* chan = nullptr;
-        if (e == sp::Success && params_) chan = dev_.tuner == sp::Tuner_B ? (params_->rxChannelB ? params_->rxChannelB : params_->rxChannelA) : params_->rxChannelA;
+        if (e == sp::Success && params_) chan = dev_.tuner == sp::Tuner_B ? params_->rxChannelB : params_->rxChannelA;
         if (e != sp::Success || !chan) {
             err = "SDRplay: cannot read the radio's settings" + (e != sp::Success ? ": " + api.err(e) : std::string(dev_.tuner == sp::Tuner_B ? " (no settings for tuner 2)" : ""));
             params_ = nullptr;
@@ -336,8 +331,10 @@ protected:
         sp::RxChannelParamsT& ch = *ch_;
         unsigned int why = sp::Update_None;
         if (!live) {
-            // ADC rate 2..10.66 MHz, zero IF; below 2 Msps the API's decimation (2..32) brings it down
-            const double want = std::min(10.66e6, std::max(62.5e3, s.sampleRate > 0 ? s.sampleRate : 8e6));
+            initState_ = 0;
+            // API 3.x accepts ADC rates 2..10 MHz (3.15 rejects 10.66 MHz on the RSPduo).
+            // Below 2 Msps the API's decimation (2..32) brings it down.
+            const double want = std::min(10e6, std::max(62.5e3, s.sampleRate > 0 ? s.sampleRate : 8e6));
             int dec = 1;
             while (dec < 32 && want * dec < 2e6 - 1) dec *= 2;
             const double fs = std::max(2e6, want * dec);
@@ -373,7 +370,7 @@ protected:
         if (f < fMin || f > 2e9) addNote(err, std::string(dev_.hwVer == sp::kRsp1 ? "the SDRplay RSP1 is" : "SDRplay RSPs are") + " specified for " + (dev_.hwVer == sp::kRsp1 ? "10 kHz" : "1 kHz") + " to 2 GHz; the driver may not reach " + std::to_string((long long)std::llround(f / 1e3)) + " kHz or the signal may be weak or absent");
         if (std::fabs(f - ch.tunerParams.rfFreq.rfHz) > 0.5) { ch.tunerParams.rfFreq.rfHz = f; why |= sp::Update_Tuner_Frf; }
         int lna = 0, gr = 40;
-        sdrplayGain(dev_.hwVer, f, s.gainDb, lna, gr);
+        sdrplayGain(dev_.hwVer, f, s.gainDb, lna, gr, port_ == 2);
         if (lna != ch.tunerParams.gain.LNAstate || gr != ch.tunerParams.gain.gRdB) {
             ch.tunerParams.gain.LNAstate = (unsigned char)lna;
             ch.tunerParams.gain.gRdB = gr;
@@ -418,6 +415,10 @@ protected:
         const sp::ErrT e = sdrplayApi().Init(dev_.dev, &cb, this);
         if (e != sp::Success) {
             initErr_ = "SDRplay: the radio did not start: " + sdrplayApi().err(e);
+            if (sdrplayApi().GetLastError) {
+                const auto* detail = sdrplayApi().GetLastError(&dev_);
+                if (detail && detail->message[0]) initErr_ += ": " + trimmed(detail->message, sizeof detail->message);
+            }
             fprintf(stderr, "%s\n", initErr_.c_str());
             fflush(stderr);
             initState_ = -1;
@@ -443,6 +444,17 @@ protected:
     }
 
 private:
+    // Init runs on the stream thread, also after a rate change. Never report a successful start before the API accepts it.
+    bool waitForStreamStart(std::string& err) override {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        while (initState_.load() == 0 && std::chrono::steady_clock::now() < deadline)
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        if (initState_.load() == 1) return true;
+        err = initState_.load() < 0 ? initErr_ : "SDRplay: timed out waiting for the radio to start";
+        stop();
+        return false;
+    }
+
     // The radio settings (TuneSettings::radio): frequency correction, the notch filters, the RSPdx's HDR mode. Each field is written, with its
     // update flag, only when it differs from what the parameters hold: a setting the user never touched leaves the API's default alone.
     void radioSettings(const TuneSettings& s, double f, unsigned int& why, unsigned int& why1) {
@@ -487,7 +499,9 @@ private:
         switch (dev_.hwVer) {
         case sp::kRsp1A: case sp::kRsp1B: ch_->rsp1aTunerParams.biasTEnable = v; why |= sp::Update_Rsp1a_BiasTControl; return true;
         case sp::kRsp2: ch_->rsp2TunerParams.biasTEnable = v; why |= sp::Update_Rsp2_BiasTControl; return true;
-        case sp::kRspDuo: ch_->rspDuoTunerParams.biasTEnable = v; why |= sp::Update_RspDuo_BiasTControl; return true;
+        case sp::kRspDuo:
+            if (dev_.tuner != sp::Tuner_B) return false;   // only tuner 2's SMA supplies antenna power
+            ch_->rspDuoTunerParams.biasTEnable = v; why |= sp::Update_RspDuo_BiasTControl; return true;
         case sp::kRspDx: case sp::kRspDxR2:
             if (!params_->devParams) return false;
             params_->devParams->rspDxParams.biasTEnable = v;
@@ -580,9 +594,9 @@ void listSdrplay(std::vector<DeviceInfo>& out) {
         d.serial = serial;
         d.nativeArgs = ports.size() > 1 ? serial + "#" + std::to_string(pi) : serial;
         d.name = "SDRplay " + (model ? std::string(model) : "RSP (model " + std::to_string((int)dv.hwVer) + ")") + (serial.empty() ? "" : " " + serial) + (ports[pi].empty() ? "" : " " + ports[pi]) + " (native, experimental)";
-        d.maxRateHz = 10e6; d.minRateHz = 2e6;
-        d.gainMinDb = 0; d.gainMaxDb = sdrplayMaxGain(dv.hwVer);
-        d.hasBiasTee = sdrplayHasBiasT(dv.hwVer);
+        d.maxRateHz = 10e6; d.minRateHz = 62.5e3;   // includes the API's decimated rates
+        d.gainMinDb = 0; d.gainMaxDb = sdrplayMaxGain(dv.hwVer, pi == 2);
+        d.hasBiasTee = sdrplayHasBiasT(dv.hwVer) && (dv.hwVer != sp::kRspDuo || pi == 1);
         d.settings = sdrplaySettings(dv.hwVer);
         // the RSPs tune 1 kHz (RSP1: 10 kHz) to 2 GHz (configure clamps to that): listed, so that the app warns instead
         d.minFreqHz = dv.hwVer == sp::kRsp1 ? 10e3 : 1e3; d.maxFreqHz = 2e9;

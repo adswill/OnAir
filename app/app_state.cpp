@@ -146,7 +146,9 @@ void refreshDevices(App& a) {
     a.hackrfErr = err;
     a.hackrfErrHidden = false;
     a.usbHints = std::vector<std::string>();
-    if (a.devices.size() == 2) { a.usbHints = usbRadioHints(); for (auto& h : sdrplayApiHints()) a.usbHints.push_back(h); }   // reads sysfs: only here, not every frame
+    if (std::none_of(a.devices.begin(), a.devices.end(), [](const DeviceInfo& d) { return d.isRadio(); }))
+        a.usbHints = usbRadioHints();   // sound cards do not mean a USB radio was found
+    for (auto& h : sdrplayApiHints()) a.usbHints.push_back(h);
     if (hadRadio) {
         int idx = -1;
         for (int i = 2; i < (int)a.devices.size(); i++) if (a.devices[i].name == keep) { idx = i; break; }

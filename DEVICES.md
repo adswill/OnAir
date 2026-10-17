@@ -28,6 +28,64 @@ airspy_info
 - gain is the linearity gain, 0 to 21
 - 10 Msps needs a decent CPU, a 2-core laptop couldn't keep up with live ATSC
 
+# SDRplay RSPduo
+
+OnAir talks directly to the [SDRplay Hardware API](https://sdrplay.com/hardware-api/), which supplies IQ samples. Install API 3.x
+(tested with 3.15), then restart OnAir. **SDRconnect is a separate application**: installing it alone does not install the Hardware API
+OnAir needs. SDRconnect's [WebSocket API](https://sdrplay.com/websocket-api/) is not used by this driver. Close other programs using the
+RSPduo before starting it in OnAir.
+
+The radio list offers **Tuner 1** (SMA), **Tuner 2** (SMA), and **Tuner 1 Hi-Z**. Pick the socket with the antenna. Both SMA inputs cover
+1 kHz to 2 GHz; Hi-Z covers 1 kHz to 30 MHz. The gain slider uses the appropriate LNA table for that input. Antenna power is offered
+only on Tuner 2; leave it off unless the connected equipment needs it.
+
+- Single-tuner mode, one input at a time. Simultaneous dual-tuner operation, diversity, and master/slave sharing with another application
+  are not implemented. Multiple OnAir receivers cannot claim the same physical RSPduo at once.
+- Output sample rates: 62.5 kS/s to 10 MS/s, using the API's decimation below 2 MS/s. A rate change stops and restarts the stream.
+  API 3.15 rejects 10.66 MS/s on the tested device; requests above 10 MS/s are capped with a note about the actual rate.
+- Frequency, gain, PPM correction, and RF/MW and DAB notch filters can change while receiving. Failed starts and rate-change restarts
+  return the API error instead of reporting a running receiver with no samples.
+
+Hardware validation on Windows x64 with API 3.15 (2026-10-17): all three inputs streamed across 62.5 kS/s, 250 kS/s, 1, 2, 4, 8 and
+10 MS/s, including a 10.66 MS/s request capped to 10 MS/s. Frequency/gain sweeps covered 1 kHz to 2 GHz on SMA and 1 kHz to 30 MHz on
+Hi-Z, plus PPM/notch changes and repeated stop/start cycles. No ring-buffer drops or nonfinite samples occurred in those checks.
+Only Tuner 1 SMA had an antenna. In the Windows app it received FM at 100.2 MHz with carrier lock and RDS decoding (TRT), including
+changes between 2, 4, 8 and 10 MS/s. These checks establish streaming and reception, not calibrated sensitivity or RF accuracy.
+The 120-second FM run produced 121 seconds of 48 kHz stereo WAV audio (the station was mono), with carrier lock in all 78 telemetry
+reports, 1,359 decoded RDS groups, no reported sample drops, and no clipped PCM samples. Live GUI broadcast audio was also confirmed
+by listening after explicitly selecting Tuner 1. Physical USB unplug/replug recovered automatically in the running GUI, with broadcast
+audio returning and carrier/RDS lock restored.
+
+Build with `-DDECT2_BUILD_TESTS=ON`, then run `ctest --test-dir <build> -R '^sdrplay$' --output-on-failure` for the hardware-independent
+regression. It covers all inputs, tuner-B-only parameters/callbacks, Hi-Z gain states, bias-tee routing, low/high rates, failed Init,
+failed rate restarts, and reconnecting with settings changed while unplugged.
+
+The Windows and Linux GUI builds passed. Targeted SDRplay, FM, rate-choice and setup-help regressions passed on both platforms;
+Linux's no-bias native test also passed. The broader Linux native test has four failures involving Airspy HF+ and RTL-SDR; the same
+four failures were reproduced with the original driver and test sources at commit `6d4fc539`.
+
+The opt-in hardware tool uses OnAir's production source and keeps antenna power off:
+
+```sh
+sdrplay_probe --port 0 --freq 100200000 --gain 40 --secs 3 --matrix
+sdrplay_probe --port 1 --freq 100200000 --gain 40 --secs 3 --matrix
+sdrplay_probe --port 2 --freq 7100000 --gain 40 --secs 3 --matrix
+dect2cli --standard fm --freq 100.2 --gain 40 --secs 120 --wav rspduo-fm.wav
+```
+
+Frequencies are examples: use a local station for the FM reception test. The matrix also exercises maximum gain and can report
+overloads from strong local signals. Bias-tee switching is checked with the fake API; its physical output voltage was not measured.
+macOS and Linux hardware reception have not been tested on this device.
+
+To launch the GUI directly on a particular input, pass its exact source-list name (replace the serial with yours):
+
+```sh
+OnAir --device "SDRplay RSPduo YOUR_SERIAL Tuner 1 (native, experimental)" --fm --freq 100.2
+```
+
+`--device` starts that source and leaves the receiver stopped if it is absent. Bare `--autostart` is a developer option that starts
+the synthetic test signal; its FM test tones are not a received station, even when a broadcast frequency is displayed.
+
 # Fobos SDR (RigExpert)
 
 Not tested on a radio yet: the driver was written against RigExpert's library source and checked with a stand-in for the library

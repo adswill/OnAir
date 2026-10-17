@@ -455,10 +455,18 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_wsprnet PRIVATE dect2core)
   add_test(NAME wsprnet COMMAND test_wsprnet)
 
+  # The RSPduo regression also runs on Windows, where the vendor service and USB device are commonly used.
+  add_library(native_fakes SHARED tests/native_fakes.cpp)
+  set_target_properties(native_fakes PROPERTIES CXX_VISIBILITY_PRESET hidden)
+  add_executable(test_sdrplay tests/test_sdrplay.cpp)
+  target_link_libraries(test_sdrplay PRIVATE dect2core ${CMAKE_DL_LIBS})
+  add_dependencies(test_sdrplay native_fakes)
+  add_test(NAME sdrplay COMMAND test_sdrplay $<TARGET_FILE:native_fakes>)
+  add_executable(sdrplay_probe tools/sdrplay_probe.cpp)
+  target_link_libraries(sdrplay_probe PRIVATE dect2core)
+
   if(UNIX)
     # the native radio drivers against fake vendor libraries
-    add_library(native_fakes SHARED tests/native_fakes.cpp)
-    set_target_properties(native_fakes PROPERTIES CXX_VISIBILITY_PRESET hidden)
     add_executable(test_native tests/test_native.cpp)
     target_link_libraries(test_native PRIVATE dect2core ${CMAKE_DL_LIBS})
     add_dependencies(test_native native_fakes)

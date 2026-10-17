@@ -131,7 +131,7 @@ std::vector<std::string> usbRadioHints() {
 
 std::vector<std::string> sdrplayApiHints() {
     if (native::sdrplayApiInstalled() || !usbVendorPresent(0x1df7)) return {};
-    return {"An SDRplay RSP is plugged in but the SDRplay API is not installed: install the free SDRplay API from sdrplay.com/api (OnAir cannot ship it), then restart OnAir"};
+    return {"An SDRplay RSP is plugged in but the SDRplay API is not installed: install the free Hardware API from sdrplay.com/hardware-api (separately from SDRconnect), then restart OnAir"};
 }
 
 } // namespace dect2

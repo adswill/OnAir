@@ -261,6 +261,8 @@ namespace fakesdrplay {
 static sp::DevParamsT devParams;
 static sp::RxChannelParamsT chA;
 static sp::DeviceParamsT params{&devParams, &chA, nullptr};
+static sp::TunerSelectT selectedTuner = sp::Tuner_A;
+static unsigned char selectedModel = sp::kRsp1B;
 static int handle = 1;
 static std::atomic<bool> run{false};
 static std::atomic<bool> locked{false};
@@ -295,6 +297,14 @@ static void record() {
     rec("sdrplay.dabNotchDuo", chA.rspDuoTunerParams.rfDabNotchEnable); rec("sdrplay.amPortDuo", chA.rspDuoTunerParams.tuner1AmPortSel);
     rec("sdrplay.rfNotchDx", devParams.rspDxParams.rfNotchEnable); rec("sdrplay.dabNotchDx", devParams.rspDxParams.rfDabNotchEnable);
     rec("sdrplay.hdr", devParams.rspDxParams.hdrEnable);
+    rec("sdrplay.biasDuo", chA.rspDuoTunerParams.biasTEnable);
+}
+static bool validDuo() {
+    if (selectedModel != sp::kRspDuo) return true;
+    const auto& d = chA.rspDuoTunerParams;
+    const int states = d.tuner1AmPortSel == sp::RspDuo_AMPORT_1 ? 5 :
+        chA.tunerParams.rfFreq.rfHz < 60e6 ? 7 : chA.tunerParams.rfFreq.rfHz < 1e9 ? 10 : 9;
+    return chA.tunerParams.gain.LNAstate < states && (selectedTuner == sp::Tuner_B || !d.biasTEnable);
 }
 }   // namespace fakesdrplay
 EXPORT sp::ErrT sdrplay_api_Open(void) { fakesdrplay::defaults(); rec("sdrplay.open", 1); return sp::Success; }
@@ -306,11 +316,15 @@ EXPORT const char* sdrplay_api_GetErrorString(sp::ErrT) { return "fake error"; }
 EXPORT sp::ErrT sdrplay_api_GetDevices(sp::DeviceT* d, unsigned int* n, unsigned int max) {
     rec("sdrplay.listLocked", fakesdrplay::locked ? 1 : 0);
     *n = 0;
-    if (fake_state("sdrplay.selected") == 1 || max < 1) return sp::Success;   // a selected radio is not listed
+    if (fake_state("sdrplay.selected") == 1 || fake_state("sdrplay.absent") == 1 || max < 1) return sp::Success;
     memset(d, 0, sizeof *d);
     strcpy(d->SerNo, "2305012345");
     const double model = fake_state("sdrplay.model");   // ---- radio settings: another model (2 RSP2, 3 RSPduo, 4 RSPdx)
     d->hwVer = model > 0 ? (unsigned char)model : sp::kRsp1B; d->tuner = sp::Tuner_A; d->rspDuoMode = d->hwVer == sp::kRspDuo ? sp::RspDuoMode_Single_Tuner : sp::RspDuoMode_Unknown; d->valid = 1;
+    if (d->hwVer == sp::kRspDuo) {
+        d->tuner = sp::Tuner_Both;
+        if (fake_state("sdrplay.slaveOnly") == 1) d->rspDuoMode = sp::RspDuoMode_Slave;
+    }
     *n = 1;
     return sp::Success;
 }
@@ -318,15 +332,28 @@ EXPORT sp::ErrT sdrplay_api_SelectDevice(sp::DeviceT* d) {
     if (strcmp(d->SerNo, "2305012345") != 0 || !fakesdrplay::locked) return sp::Fail;
     d->dev = &fakesdrplay::handle;
     fakesdrplay::defaults();   // a radio is selected with the API's defaults
+    fakesdrplay::selectedTuner = d->tuner;
+    fakesdrplay::selectedModel = d->hwVer;
+    fakesdrplay::params.rxChannelA = d->tuner == sp::Tuner_B ? nullptr : &fakesdrplay::chA;
+    fakesdrplay::params.rxChannelB = d->tuner == sp::Tuner_B ? &fakesdrplay::chA : nullptr;
+    rec("sdrplay.tuner", d->tuner);
+    rec("sdrplay.mode", d->rspDuoMode);
     rec("sdrplay.selected", 1);
     return sp::Success;
 }
 EXPORT sp::ErrT sdrplay_api_ReleaseDevice(sp::DeviceT* d) { rec("sdrplay.selected", d->dev == &fakesdrplay::handle ? 0 : -1); return sp::Success; }
-EXPORT sp::ErrT sdrplay_api_GetDeviceParams(void* dev, sp::DeviceParamsT** p) { if (dev != &fakesdrplay::handle) return sp::NotInitialised; *p = &fakesdrplay::params; return sp::Success; }
+EXPORT sp::ErrT sdrplay_api_GetDeviceParams(void* dev, sp::DeviceParamsT** p) {
+    if (dev != &fakesdrplay::handle) return sp::NotInitialised;
+    if (fake_state("sdrplay.missingB") == 1) { fakesdrplay::params.rxChannelB = nullptr; fakesdrplay::params.rxChannelA = &fakesdrplay::chA; }
+    *p = &fakesdrplay::params;
+    return sp::Success;
+}
 EXPORT sp::ErrT sdrplay_api_Init(void* dev, sp::CallbackFnsT* cb, void* ctx) {
     using namespace fakesdrplay;
     if (dev != &handle || !cb || !cb->StreamACbFn || !cb->EventCbFn) return sp::InvalidParam;
     if (run) return sp::AlreadyInitialised;
+    if (fake_state("sdrplay.initFail") == 1 || !validDuo()) return sp::InvalidParam;
+    if (devParams.fsFreq.fsHz < 2e6 || devParams.fsFreq.fsHz > 10e6) return sp::OutOfRange;
     record();
     rec("sdrplay.inits", ++inits);
     rec("sdrplay.init", 1);
@@ -336,13 +363,19 @@ EXPORT sp::ErrT sdrplay_api_Init(void* dev, sp::CallbackFnsT* cb, void* ctx) {
         sp::EventParamsT ev;
         memset(&ev, 0, sizeof ev);
         ev.powerOverloadParams.powerOverloadChangeType = sp::Overload_Detected;
-        fns.EventCbFn(sp::PowerOverloadChange, sp::Tuner_A, &ev, ctx);   // one overload report: the driver must acknowledge it
+        fns.EventCbFn(sp::PowerOverloadChange, selectedTuner, &ev, ctx);   // one overload report: the driver must acknowledge it
         std::vector<short> xi(2016, (short)lround(kI * 32768)), xq(2016, (short)lround(kQ * 32768));
         sp::StreamCbParamsT p;
         memset(&p, 0, sizeof p);
         unsigned int reset = 1;
         while (run) {
-            for (int k = 0; k < 8 && run; k++) { p.numSamples = 2016; fns.StreamACbFn(xi.data(), xq.data(), &p, 2016, reset, ctx); reset = 0; p.firstSampleNum += 2016; }
+            if (fake_state("sdrplay.remove") == 1) {
+                rec("sdrplay.remove", 0);
+                fns.EventCbFn(sp::DeviceRemoved, selectedTuner, &ev, ctx);
+                break;
+            }
+            const auto stream = selectedTuner == sp::Tuner_B ? fns.StreamBCbFn : fns.StreamACbFn;
+            for (int k = 0; k < 8 && run; k++) { p.numSamples = 2016; stream(xi.data(), xq.data(), &p, 2016, reset, ctx); reset = 0; p.firstSampleNum += 2016; }
             pace();
         }
     });
@@ -360,6 +393,7 @@ EXPORT sp::ErrT sdrplay_api_Update(void* dev, sp::TunerSelectT tuner, sp::Reason
     using namespace fakesdrplay;
     if (dev != &handle) return sp::NotInitialised;
     if (!run) return sp::NotInitialised;
+    if (tuner != selectedTuner || !validDuo()) return sp::InvalidParam;
     rec("sdrplay.updTuner", tuner);
     if (why & sp::Update_Ctrl_OverloadMsgAck) rec("sdrplay.overloadAcks", ++acks);
     if (why & ~(unsigned)sp::Update_Ctrl_OverloadMsgAck) { rec("sdrplay.reasons", (double)why); record(); }

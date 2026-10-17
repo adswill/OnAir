@@ -230,7 +230,7 @@ std::vector<RadioMsg> radioMessages(const App& a) {
         const std::string w = srcNoted ? std::string() : radioRangeWarning(a.devices[a.devIdx], a.freqMhz, &a.tune.radio);
         if (!w.empty()) m.push_back({2, w});
     }
-    if (a.devices.size() <= 2) for (auto& h : a.usbHints) m.push_back({3, h});
+    for (auto& h : a.usbHints) m.push_back({3, h});
     return m;
 }
 

@@ -1367,7 +1367,7 @@ int main(int argc, char** argv) {
         if (b == "usrp") { CHECK(st("usrp.freq") == 522e6, "freq"); CHECK(st("usrp.rate") == 10e6, "rate"); CHECK(st("usrp.gain") == 30, "gain"); CHECK(st("usrp.cpuFmtFc32") == 1, "not fc32"); CHECK(st("usrp.cmd") == 97, "stream not started"); }
         if (b == "sdrplay") {
             CHECK(dev->name.find("RSP1B") != std::string::npos && dev->serial == "2305012345", "name/serial: %s", dev->name.c_str());
-            CHECK(dev->gainMaxDb == 103 && dev->maxRateHz == 10e6 && dev->minRateHz == 2e6, "ranges: gain to %.0f, rate %.0f..%.0f", dev->gainMaxDb, dev->minRateHz, dev->maxRateHz);
+            CHECK(dev->gainMaxDb == 103 && dev->maxRateHz == 10e6 && dev->minRateHz == 62.5e3, "ranges: gain to %.0f, rate %.0f..%.0f", dev->gainMaxDb, dev->minRateHz, dev->maxRateHz);
             CHECK(st("sdrplay.listLocked") == 1, "the device list was not read under LockDeviceApi");
             CHECK(st("sdrplay.selected") == 1, "not selected");
             CHECK(st("sdrplay.fs") == 10e6, "fsHz %.0f", st("sdrplay.fs"));

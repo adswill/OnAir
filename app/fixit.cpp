@@ -6,7 +6,7 @@ namespace fixit {
 
 namespace {
 constexpr const char* kZadig = "https://zadig.akeo.ie";
-constexpr const char* kSdrplay = "https://www.sdrplay.com/downloads/";
+constexpr const char* kSdrplay = "https://sdrplay.com/hardware-api/";
 constexpr const char* kHackrfFw = "https://hackrf.readthedocs.io/en/latest/updating_firmware.html";
 constexpr const char* kCodecs = "https://github.com/adswill/OnAir/blob/main/docs/CODECS.md";
 constexpr const char* kDevices = "https://github.com/adswill/OnAir/blob/main/DEVICES.md";
@@ -18,10 +18,10 @@ constexpr const char* kUdevCmd = "sudo ./install-udev-rules.sh   # in the OnAir 
 const Entry kTable[] = {
     // more specific patterns first: lookup() takes the first that occurs
     {"sdrplay_missing", "SDRplay API is not installed", N_("Install the SDRplay API"),
-     N_("An SDRplay RSP is plugged in, but its driver, the SDRplay API, is not installed. It is SDRplay's own software and its licence does not let OnAir include it, so it is a one-time download."),
-     {N_("Download the SDRplay API for this computer from sdrplay.com/api and run the installer."), N_("Restart OnAir (the installer starts SDRplay's background service)."), N_("Press the refresh button next to the radio list."), nullptr},
+     N_("An SDRplay RSP is plugged in, but the SDRplay Hardware API is not installed. Install it separately even if SDRconnect already works with the radio."),
+     {N_("Download the Hardware API for this computer from sdrplay.com/hardware-api and run the installer."), N_("Restart OnAir (the installer starts SDRplay's background service)."), N_("Press the refresh button next to the radio list."), nullptr},
      NONE, NONE, NONE,
-     {{Act::OpenUrl, N_("Open the SDRplay API page"), "https://www.sdrplay.com/api/", OsAll}, {Act::OpenDiagnostics, nullptr, "", 0}}},
+     {{Act::OpenUrl, N_("Open the SDRplay API page"), kSdrplay, OsAll}, {Act::OpenDiagnostics, nullptr, "", 0}}},
     {"sdrplay_service", "SDRplay API service", N_("The SDRplay service is not running"),
      N_("OnAir found the SDRplay software, but its background service does not answer, so the RSP cannot be opened."),
      NONE,

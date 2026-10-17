@@ -614,6 +614,7 @@ int main(int argc, char** argv) {
     receiversInit(app);   // RX 2 ... that were open at the last exit
 
     bool autostart = false, hackrfStart = false, fileStart = false, stress = false;
+    std::string startDevice;   // exact source name: select an RSPduo input without relying on enumeration order
     int stressFrame = 0, stressStep = 0;
     const char* shotPath = nullptr;
     double shotAfter = 0;      // dev: take the --shot after this many seconds instead of after a number of frames
@@ -621,6 +622,7 @@ int main(int argc, char** argv) {
     int shotFrame = 0;
     for (int i = 1; i < argc; i++) {
         if (std::string(argv[i]) == "--autostart") autostart = true;
+        if (std::string(argv[i]) == "--device" && i + 1 < argc) { startDevice = argv[++i]; autostart = true; }
         if (std::string(argv[i]) == "--stress") stress = true;   // dev: retune frequency and gain every second, like moving the controls
         if (std::string(argv[i]) == "--shot" && i + 1 < argc) shotPath = argv[++i];
         if (std::string(argv[i]) == "--shotdelay" && i + 1 < argc) shotAfter = atof(argv[++i]);
@@ -790,9 +792,19 @@ int main(int argc, char** argv) {
                 autostart = false;
                 app.devIdx = 0;
                 if (hackrfStart) for (int i = 0; i < (int)app.devices.size(); i++) if (app.devices[i].kind == (fileStart ? DeviceInfo::File : DeviceInfo::HackRF) || (!fileStart && app.devices[i].isRadio())) app.devIdx = i;
-                app.tune.centerHz = app.freqMhz * 1e6; applyBandwidth(app);
-                app.engine.setComputeMode(app.computeMode); app.engine.setStandard(engineStd(app));
-                app.engine.start(app.devices[app.devIdx], app.tune, app.file);
+                bool found = startDevice.empty();
+                if (!startDevice.empty()) {
+                    for (int i = 0; i < (int)app.devices.size(); i++) if (app.devices[i].name == startDevice) { app.devIdx = i; found = true; break; }
+                    if (!found) {
+                        const std::string msg = "Requested source not found: " + startDevice + ". Receiver was not started.";
+                        app.engine.log(msg); fprintf(stderr, "%s\n", msg.c_str());
+                    }
+                }
+                if (found) {
+                    app.tune.centerHz = app.freqMhz * 1e6; applyBandwidth(app);
+                    app.engine.setComputeMode(app.computeMode); app.engine.setStandard(engineStd(app));
+                    app.engine.start(app.devices[app.devIdx], app.tune, app.file);
+                }
             }
             if (fmScanAuto && app.fmMode && app.engine.running() && glfwGetTime() > 3.0) {
                 fmScanAuto = false;
