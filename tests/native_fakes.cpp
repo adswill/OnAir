@@ -317,7 +317,7 @@ EXPORT sp::ErrorInfoT* sdrplay_api_GetLastError(sp::DeviceT* dev) {
     static sp::ErrorInfoT info;
     if (!dev || dev->dev != &fakesdrplay::handle || fake_state("sdrplay.errorDetail") == 2) return nullptr;
     memset(&info, 0, sizeof info);
-    if (fake_state("sdrplay.errorDetail") == 1) strcpy(info.message, "vendor detail: sample rate rejected");
+    if (fake_state("sdrplay.errorDetail") == 1) snprintf(info.message, sizeof info.message, "%s", "vendor detail: sample rate rejected");
     return &info;
 }
 EXPORT sp::ErrT sdrplay_api_GetDevices(sp::DeviceT* d, unsigned int* n, unsigned int max) {
