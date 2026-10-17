@@ -153,6 +153,7 @@ int main(int argc, char** argv) {
     tune.synth.mode = standard >= 4 ? standard : 0;   // the synthetic source plays that mode's test signal
     if (standard != 7 && standard < 8) tune.sampleRate = tune.bandwidthMhz >= 7 ? 10e6 : 8e6; // HackRF Pro: exact tuning only at <= 10 Msps
     if (useFile && !record.empty()) { fprintf(stderr, "--record does not work with --file: the samples are already in that file\n"); return 1; }
+    if (!netRadio.empty() && (useFile || synthetic)) { fprintf(stderr, "--net-radio is a radio: it does not work with %s\n", useFile ? "--file" : "--synthetic"); return 1; }
     if (useFile) { dev.kind = DeviceInfo::File; dev.name = file.path; file.loop = false; }
     else if (synthetic) { dev.kind = DeviceInfo::Synthetic; dev.name = "synthetic"; }
     else {
