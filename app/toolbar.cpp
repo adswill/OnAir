@@ -1510,11 +1510,18 @@ float gSwitchWidth = 420;   // width of the mode selector as drawn (the guided t
 
 void selectMode(App& a, int fam, const char* subId) {
     if (txViewFlag()) { txSelectMode(a, fam, subId); return; }
-    if (a.engine.running()) { a.engine.log("stop the receiver before switching mode"); return; }
     const int sub = subIndexOf(subId);
     if (fam == a.family && (sub == a.sub || !sub)) return;
+    // Switch in one action: stop the old decoder before updating the mode, then
+    // restart using the new mode\x27s own frequency, sample rate and bandwidth.
+    const bool wasRunning = a.engine.running();
+    if (wasRunning) a.engine.stop();
     setMode(a, fam, sub);
     savePrefs(a);
+    if (wasRunning) {
+        a.engine.log("switching receiver mode");
+        startReceiver(a);
+    }
 }
 bool modeSelected(const App& a, const ModeDef& m) {
     if (txViewFlag()) return txModeHighlighted(m);
