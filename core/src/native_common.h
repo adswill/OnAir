@@ -450,9 +450,12 @@ public:
         const bool rateChange = s.sampleRate > 0 && std::fabs(s.sampleRate - requested_) > 1.0;
         if (rateChange && restartForRate()) {   // most radios change their sample rate only while not streaming
             stopStream();
-            const bool ok = open_ ? configure(s, err, false) : true;
+            if (open_ && !configure(s, err, false)) {
+                stop();   // partially applied settings must not reach a new stream
+                return false;
+            }
             startStream();
-            return ok && (!open_ || waitForStreamStart(err));
+            return !open_ || waitForStreamStart(err);
         }
         return configure(s, err, true);
     }

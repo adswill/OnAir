@@ -313,6 +313,13 @@ EXPORT sp::ErrT sdrplay_api_ApiVersion(float* v) { *v = 3.15f; return sp::Succes
 EXPORT sp::ErrT sdrplay_api_LockDeviceApi(void) { fakesdrplay::locked = true; return sp::Success; }
 EXPORT sp::ErrT sdrplay_api_UnlockDeviceApi(void) { fakesdrplay::locked = false; return sp::Success; }
 EXPORT const char* sdrplay_api_GetErrorString(sp::ErrT) { return "fake error"; }
+EXPORT sp::ErrorInfoT* sdrplay_api_GetLastError(sp::DeviceT* dev) {
+    static sp::ErrorInfoT info;
+    if (!dev || dev->dev != &fakesdrplay::handle || fake_state("sdrplay.errorDetail") == 2) return nullptr;
+    memset(&info, 0, sizeof info);
+    if (fake_state("sdrplay.errorDetail") == 1) strcpy(info.message, "vendor detail: sample rate rejected");
+    return &info;
+}
 EXPORT sp::ErrT sdrplay_api_GetDevices(sp::DeviceT* d, unsigned int* n, unsigned int max) {
     rec("sdrplay.listLocked", fakesdrplay::locked ? 1 : 0);
     *n = 0;
@@ -352,6 +359,8 @@ EXPORT sp::ErrT sdrplay_api_Init(void* dev, sp::CallbackFnsT* cb, void* ctx) {
     using namespace fakesdrplay;
     if (dev != &handle || !cb || !cb->StreamACbFn || !cb->EventCbFn) return sp::InvalidParam;
     if (run) return sp::AlreadyInitialised;
+    if (const double delay = fake_state("sdrplay.initDelayMs"); delay > 0)
+        std::this_thread::sleep_for(std::chrono::milliseconds((int)delay));
     if (fake_state("sdrplay.initFail") == 1 || !validDuo()) return sp::InvalidParam;
     if (devParams.fsFreq.fsHz < 2e6 || devParams.fsFreq.fsHz > 10e6) return sp::OutOfRange;
     record();

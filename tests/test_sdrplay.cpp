@@ -107,15 +107,37 @@ int main(int argc, char** argv) {
     source->stop();
     // A failed asynchronous Init must reach start(), and release the selection.
     set("sdrplay.initFail", 1);
-    CHECK(!source->start(t, ring, err));
-    CHECK(err.find("did not start") != std::string::npos && state("sdrplay.selected") == 0);
+    for (int detail : {0, 1, 2}) {   // empty details, a vendor message, and a null error-info pointer
+        set("sdrplay.errorDetail", detail);
+        CHECK(!source->start(t, ring, err));
+        CHECK(err.find("did not start") != std::string::npos && state("sdrplay.selected") == 0);
+        CHECK((err.find("vendor detail: sample rate rejected") != std::string::npos) == (detail == 1));
+    }
     set("sdrplay.initFail", 0);
     CHECK(source->start(t, ring, err));
     set("sdrplay.initFail", 1);
+    set("sdrplay.errorDetail", 1);
     t.sampleRate = 4e6;
     CHECK(!source->retune(t, err));
     CHECK(err.find("did not start") != std::string::npos && state("sdrplay.selected") == 0);
+    CHECK(err.find("vendor detail: sample rate rejected") != std::string::npos);
     set("sdrplay.initFail", 0);
+    set("sdrplay.errorDetail", 0);
+    // An Init that returns success after the five-second deadline must still fail and release its stream/selection.
+    for (bool restart : {false, true}) {
+        if (restart) CHECK(source->start(t, ring, err));
+        set("sdrplay.initDelayMs", 6000);
+        const auto began = std::chrono::steady_clock::now();
+        if (restart) { t.sampleRate = 2e6; CHECK(!source->retune(t, err)); }
+        else CHECK(!source->start(t, ring, err));
+        CHECK(std::chrono::steady_clock::now() - began >= std::chrono::seconds(5));
+        CHECK(err.find("timed out waiting") != std::string::npos);
+        CHECK(state("sdrplay.selected") == 0 && state("sdrplay.init") == 0);
+        set("sdrplay.initDelayMs", 0);
+    }
+    CHECK(source->start(t, ring, err));
+    ring.clear(); CHECK(samples(ring));
+    source->stop();
     // Do not silently configure A if the API has no settings for selected tuner B.
     set("sdrplay.missingB", 1);
     source = native::makeSdrplay(devices[1]);

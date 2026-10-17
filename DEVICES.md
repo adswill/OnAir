@@ -58,7 +58,8 @@ audio returning and carrier/RDS lock restored.
 
 Build with `-DDECT2_BUILD_TESTS=ON`, then run `ctest --test-dir <build> -R '^sdrplay$' --output-on-failure` for the hardware-independent
 regression. It covers all inputs, tuner-B-only parameters/callbacks, Hi-Z gain states, bias-tee routing, low/high rates, failed Init,
-failed rate restarts, and reconnecting with settings changed while unplugged.
+vendor error details, startup/rate-restart timeouts, and reconnecting with settings changed while unplugged. The `native_lifecycle`
+test checks that a rejected rate configuration releases the device without starting another stream, and that a fresh start still works.
 
 The Windows and Linux GUI builds passed. Targeted SDRplay, FM, rate-choice and setup-help regressions passed on both platforms;
 Linux's no-bias native test also passed. The broader Linux native test has four failures involving Airspy HF+ and RTL-SDR; the same
