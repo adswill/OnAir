@@ -6,6 +6,7 @@
 #include "dect2/engine/rate_choice.h"
 #include "dect2/net/netradio.h"
 #include "dect2/results/rx_json.h"
+#include "dect2/source/agc.h"
 #include "dect2/source/gain.h"
 #include "dect2/source/iq_file.h"
 #include <algorithm>
@@ -140,6 +141,12 @@ void ServerHost::init() {
 }
 
 // ---------------------------------------------------------------- tuning and start
+GainSetting hackrfGain(const DeviceInfo& d, double db, bool amp) {
+    const GainModel m = gainModelFor(d);
+    const int tot = (int)std::lround(std::max((double)m.minTotal(amp), std::min((double)m.maxTotal(amp, amp, 40), db)));
+    return m.split(tot, amp, 40);
+}
+
 TuneSettings ServerHost::buildTune(const DeviceInfo& d) const {
     const ModeEntry& m = modes_[(size_t)modeIdx_];
     TuneSettings t;
@@ -158,7 +165,7 @@ TuneSettings ServerHost::buildTune(const DeviceInfo& d) const {
         t.sampleRate = linkRateFor(d, t, t.sampleRate, minSampleRateFor(m.family, t.bandwidthMhz));
         t.gainDb = std::max(d.gainMinDb, std::min(d.gainMaxDb > d.gainMinDb ? d.gainMaxDb : 200.0, gainDb_));
     } else if (d.kind == DeviceInfo::HackRF) {
-        const GainSetting g = gainForTotal((int)std::lround(std::max(0.0, std::min(116.0, gainDb_))));
+        const GainSetting g = hackrfGain(d, gainDb_, cfg_.flag("amp", false));
         t.lnaDb = g.lna; t.vgaDb = g.vga; t.ampOn = g.amp;
     }
     return t;
@@ -324,10 +331,9 @@ bool ServerHost::setGainDb(double db, std::string& err) {
     if (devIdx_ >= 0 && devIdx_ < (int)devices_.size() && !devices_[(size_t)devIdx_].isRadio()) { err = "this source has no gain control"; return false; }
     gainDb_ = db;
     if (e_.running()) {
-        const GainSetting g = gainForTotal((int)std::lround(std::max(0.0, std::min(116.0, db))));
         const DeviceInfo& d = devices_[(size_t)devIdx_];
         if (d.isGeneric()) tune_.gainDb = std::max(d.gainMinDb, std::min(d.gainMaxDb > d.gainMinDb ? d.gainMaxDb : 200.0, db));
-        else { tune_.lnaDb = g.lna; tune_.vgaDb = g.vga; tune_.ampOn = g.amp; }
+        else { const GainSetting g = hackrfGain(d, db, cfg_.flag("amp", false)); tune_.lnaDb = g.lna; tune_.vgaDb = g.vga; tune_.ampOn = g.amp; }
     }
     saveState();
     return retuneLocked(err);
@@ -341,7 +347,7 @@ std::string ServerHost::statusJson() {
     char b[512];
     snprintf(b, sizeof b, ",\"frequencyHz\":%.0f,\"sampleRateHz\":%.0f,\"gainDb\":%s,\"gainMinDb\":%s,\"gainMaxDb\":%s,\"droppedSamples\":%llu,\"loadPct\":%.0f}",
              freqHz_, run ? e_.radioRate() : (rateHz_ > 0 ? rateHz_ : 0.0), jsonNum(gainDb_).c_str(), jsonNum(d && d->isGeneric() ? d->gainMinDb : 0).c_str(),
-             jsonNum(d ? (d->isGeneric() ? d->gainMaxDb : d->kind == DeviceInfo::HackRF ? 116 : 0) : 0).c_str(), (unsigned long long)e_.droppedSamples(), (double)e_.sampleLoss().loadPct);
+             jsonNum(d ? (d->isGeneric() ? d->gainMaxDb : d->kind == DeviceInfo::HackRF ? (cfg_.flag("amp", false) ? 116 : 102) : 0) : 0).c_str(), (unsigned long long)e_.droppedSamples(), (double)e_.sampleLoss().loadPct);
     return std::string("{\"running\":") + (run ? "true" : "false") + ",\"wanted\":" + (wantRun_ ? "true" : "false") + ",\"deviceIndex\":" + std::to_string(devIdx_) + ",\"device\":\"" +
            jsonEscape(d ? d->name : "") + "\",\"deviceKind\":\"" + (d ? kindName(d->kind) : "unknown") + "\",\"family\":" + std::to_string(m.family) + ",\"mode\":\"" + jsonEscape(m.name) +
            "\",\"modeId\":\"" + jsonEscape(m.id) + "\",\"sub\":" + (m.sub.empty() ? "null" : "\"" + jsonEscape(m.sub) + "\"") + ",\"demod\":\"" + demodName(demod_) + "\",\"error\":\"" + jsonEscape(err_) + "\"" + b;

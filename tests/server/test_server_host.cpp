@@ -236,8 +236,20 @@ static void testAutostartAndSupervision() {
     CHECK(host.wantRun(), "shutdown keeps what is wanted (so the next start brings it back)");
 }
 
+// A HackRF's gain from the browser: the amp only with amp=1 in the settings file
+static void testHackrfAmp() {
+    DeviceInfo d; d.kind = DeviceInfo::HackRF;
+    GainSetting g = hackrfGain(d, 70, false);
+    CHECK(!g.amp && g.lna + g.vga == 70, "70 dB without the amp: amp %d lna %d vga %d", g.amp, g.lna, g.vga);
+    g = hackrfGain(d, 110, false);
+    CHECK(!g.amp && g.lna + g.vga == 102, "110 dB without the amp stops at 102: amp %d lna %d vga %d", g.amp, g.lna, g.vga);
+    g = hackrfGain(d, 110, true);
+    CHECK(g.amp && g.lna + g.vga + 14 == 110, "110 dB with the amp: amp %d lna %d vga %d", g.amp, g.lna, g.vga);
+}
+
 int main() {
     testConfig();
+    testHackrfAmp();
     testHost();
     testAutostartAndSupervision();
     return testSummary("server_host");

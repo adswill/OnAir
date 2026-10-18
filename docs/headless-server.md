@@ -60,6 +60,7 @@ Plain `key=value` lines, `#` for comments. Default place: `~/.config/onair/serve
 | `file`, `file_rate` | play a recording (SigMF, cs8, ...) as another "radio" |
 | `mode` | a mode id: `fm`, `dab`, `t2`, `atsc`, `adsb`, `dvbs`, ... (all of `/api/v1/modes`) |
 | `freq_mhz`, `rate_msps` (0 = automatic), `gain_db` | tuning |
+| `amp` | HackRF: `1` lets the gain use the +14 dB amp (up to 116 dB). Off by default: the amp can be damaged by strong signals, so the gain then ends at 102 dB |
 | `audio_demod` | `auto`, `nfm`, `am`, `usb`, `lsb` for Listen (automatic picks by frequency; FM broadcast uses its own stereo audio) |
 | `autostart` | `1`: start the receiver when the server starts, and again 10 s after the radio comes back if it was unplugged. Start and Stop in the page set it |
 | `share_rtltcp`, `share_port` | also act as an rtl_tcp server (see above) |

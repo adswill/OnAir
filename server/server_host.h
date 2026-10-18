@@ -5,6 +5,7 @@
 #include "dect2/engine/engine.h"
 #include "dect2/engine/quality.h"
 #include "dect2/net/remote_api.h"
+#include "dect2/source/gain.h"
 #include "server_config.h"
 #include <atomic>
 #include <map>
@@ -14,6 +15,10 @@
 #include <vector>
 
 namespace onair_server {
+
+// A HackRF's total gain as its stages. The amp stays off unless the settings file says amp=1 (it can be damaged by strong signals), the same
+// rule as the app: without it the scale ends at 102 dB.
+dect2::GainSetting hackrfGain(const dect2::DeviceInfo& d, double db, bool amp);
 
 struct ModeEntry { int family = 0; std::string id, name, sub; double defMhz = 100; };
 
