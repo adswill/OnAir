@@ -476,14 +476,19 @@ const float* AudioCleanup::process(const float* in, int frames, float* scratch, 
     if (d.wasIdle) { for (auto& c : d.ch) c.reset(); d.wasIdle = false; }
     if (active) *active = true;
     bool mono = true;
-    for (int i = 0; i < frames; i++) { d.inL[i] = in[2 * i]; d.inR[i] = in[2 * i + 1]; if (std::fabs(in[2 * i] - in[2 * i + 1]) > 1e-6f) mono = false; }
+    for (int i = 0; i < frames; i++) {
+        // a NaN or infinity from a demodulator would stay in the recursive stages (noise estimate, filters) for good: it becomes silence
+        const float l = std::isfinite(in[2 * i]) ? in[2 * i] : 0.f, r = std::isfinite(in[2 * i + 1]) ? in[2 * i + 1] : 0.f;
+        d.inL[i] = l; d.inR[i] = r;
+        if (std::fabs(l - r) > 1e-6f) mono = false;
+    }
     d.ch[0].process(d.inL.data(), d.outL.data(), frames, s, d.slot[0]);
     if (mono) std::memcpy(d.outR.data(), d.outL.data(), (size_t)frames * sizeof(float));
     else d.ch[1].process(d.inR.data(), d.outR.data(), frames, s, d.slot[1]);
     for (int i = 0; i < frames; i++) {
         const float m = d.master.step(tgt, d.cMaster);
-        scratch[2 * i] = in[2 * i] + m * (d.outL[i] - in[2 * i]);
-        scratch[2 * i + 1] = in[2 * i + 1] + m * (d.outR[i] - in[2 * i + 1]);
+        scratch[2 * i] = d.inL[i] + m * (d.outL[i] - d.inL[i]);
+        scratch[2 * i + 1] = d.inR[i] + m * (d.outR[i] - d.inR[i]);
     }
     gateOpen_.store(!s.gate || d.ch[0].gOpen, std::memory_order_relaxed);
     nrGainDb_.store(s.nr ? d.ch[0].nrMean : 0.f, std::memory_order_relaxed);

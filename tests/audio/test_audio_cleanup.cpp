@@ -298,6 +298,17 @@ int main() {
             CHECK(100.0 * sec / 20.0 < 3.0 * (stereo ? 2 : 1), "too slow: %.2f %%", 100.0 * sec / 20.0);
         }
     }
+    // one NaN from a demodulator: the sound comes back right after it, with every recursive stage on
+    {
+        std::vector<float> c; std::vector<char> on; speechLike(R, 4, c, on); addWhite(c, 0.02, 5);
+        c[100 * 480 + 7] = std::nanf("");
+        AudioCleanupConfig cfg; AudioCleanup ac; ac.setConfig(&cfg); ac.prepare(R);
+        auto s = only(); s.nr = true; s.autoNotch = true; s.voice = true; s.level = true; cfg.set(s);
+        const auto y = run(ac, c);
+        size_t bad = 0;
+        for (size_t i = 100 * 480 + R; i < y.size(); i++) if (!std::isfinite(y[i])) bad++;
+        CHECK(bad == 0, "a single NaN must not silence the chain: %zu bad samples a second later", bad);
+    }
     printf(fails ? "audio cleanup: %d FAILED\n" : "audio cleanup: all passed\n", fails);
     return fails ? 1 : 0;
 }
