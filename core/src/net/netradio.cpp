@@ -243,8 +243,8 @@ std::vector<DeviceInfo> netRadioDevices(const std::vector<NetRadio>& v) {
         case NetRadio::Pluto: out.push_back(native::plutoDevice(plutoUri(r))); break;
         case NetRadio::RtlTcp: out.push_back(native::rtlTcpDevice(cleanHost(r.host), netRadioPort(r))); break;
         case NetRadio::SpyServer: out.push_back(native::spyServerDevice(cleanHost(r.host), netRadioPort(r))); break;
-        case NetRadio::HermesLite2: out.push_back(native::hermesLite2Device(cleanHost(r.host), netRadioPort(r))); break;
-        case NetRadio::RedPitaya: out.push_back(native::redPitayaDevice(cleanHost(r.host), netRadioPort(r))); break;
+        case NetRadio::HermesLite2: for (auto& d : native::hermesLite2Devices(cleanHost(r.host), netRadioPort(r))) out.push_back(d); break;   // one per receiver
+        case NetRadio::RedPitaya: for (auto& d : native::redPitayaDevices(cleanHost(r.host), netRadioPort(r))) out.push_back(d); break;
         case NetRadio::SdrppServer: out.push_back(native::sdrppDevice(cleanHost(r.host), netRadioPort(r))); break;
         case NetRadio::NrspSt: out.push_back(native::nrspStDevice(cleanHost(r.host), netRadioPort(r))); break;
         case NetRadio::KiwiSdr: {

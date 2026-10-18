@@ -15,6 +15,10 @@ tab strip show the process CPU load.
 - Radio claims (core/src/engine/device_claims.cpp): `Engine::start` claims the radio for `receiverId`; a second claim fails
   ("this radio is in use by RX n"). The source list shows such radios as "in use by RX n" and disables them. Network
   radios (rtl_tcp, SoapyRemote, SpyServer) are keyed by address, so they open once too. Test signal and files are free.
+- Radios with several receivers of their own: a Hermes Lite 2 or Red Pitaya lists one entry per receiver (slice), "RX1" keyed
+  by its address as before, "RX2" and up by `host:port/rxN`, so each one is claimed on its own and several tabs can use one
+  radio. The entries share one stream (source_hermeslite2.cpp, `Link`): the sample rate is the first one's, the receiver count
+  follows the highest one open.
 - Closing a tab (x) stops the engine, saves its results and releases the radio.
 - Audio: one receiver plays at a time (the speaker button of a tab); the others are muted (`rxForcedMute`).
 

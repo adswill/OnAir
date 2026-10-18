@@ -669,12 +669,16 @@ int sdrppRateCombo(const std::vector<SdrppWidget>& ui);
 SdrppGainPlan sdrppGainPlan(const std::vector<SdrppWidget>& ui);
 double sdrppSliderTarget(const SdrppWidget& w, const SdrppGainPlan& g, double gain);
 // A Hermes Lite 2 (source_hermeslite2.cpp) at an IPv4 host and UDP port (1024). hermesLite2Probe sends it a discovery packet and waits for
-// its answer.
+// its answer (which says how many receivers it has). hermesLite2Device is its RX1, hermesLite2Devices one entry per receiver
+// ("Hermes Lite 2 RX2 ..."): as many as it said it has, else four. The receivers of one radio share its stream and its sample rate.
 DeviceInfo hermesLite2Device(const std::string& host, int port);
+std::vector<DeviceInfo> hermesLite2Devices(const std::string& host, int port);
 std::unique_ptr<IqSource> makeHermesLite2(const DeviceInfo& d);
 bool hermesLite2Probe(const std::string& host, int port, int timeoutMs, std::string& err);
 // A Red Pitaya running the HPSDR-compatible SDR transceiver (the same openHPSDR protocol 1 client, source_hermeslite2.cpp), UDP port 1024
+// (three receivers: redPitayaDevices)
 DeviceInfo redPitayaDevice(const std::string& host, int port);
+std::vector<DeviceInfo> redPitayaDevices(const std::string& host, int port);
 std::unique_ptr<IqSource> makeRedPitaya(const DeviceInfo& d);
 bool redPitayaProbe(const std::string& host, int port, int timeoutMs, std::string& err);
 

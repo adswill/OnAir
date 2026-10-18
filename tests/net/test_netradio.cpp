@@ -4,6 +4,7 @@
 #include "../../core/src/source/native_common.h"
 #include "dect2/net/netradio.h"
 #include "dect2/net/share.h"
+#include "dect2/engine/device_claims.h"
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -546,6 +547,8 @@ struct FakeHl2 {
     std::mutex mu;
     std::map<int, uint32_t> regs;
     unsigned char board = 6, gateware = 73;   // the discovery reply's board id (the Red Pitaya server's: 1) and gateware version
+    unsigned char nr = 4;                     // the receivers its reply says it has (byte 0x13; the Red Pitaya server's says nothing: 0)
+    int layoutNr = 1, lag = 0;                // the layout it sends: like a real HL2, four more packets of the old one after a change
 
     bool start() {
         netInit();
@@ -580,6 +583,7 @@ struct FakeHl2 {
                 if (n >= 4 && b[0] == 0xEF && b[1] == 0xFE) {
                     if (b[2] == 0x02 && n == 63) {   // discovery
                         unsigned char r[60] = {0xEF, 0xFE, (unsigned char)(streaming ? 0x03 : 0x02), 0x00, 0x1C, 0xC0, 0xA2, 0x12, 0x34, gateware, board};
+                        r[0x13] = nr;
                         r[0x15] = 2;
                         sockSendTo(s, r, sizeof r, from);
                     } else if (b[2] == 0x04) {
@@ -597,13 +601,26 @@ struct FakeHl2 {
             if (streaming) {
                 unsigned char p[1032] = {0xEF, 0xFE, 0x01, 0x06, (unsigned char)(seq >> 24), (unsigned char)(seq >> 16), (unsigned char)(seq >> 8), (unsigned char)seq};
                 seq++;
+                int want = 1;   // the receivers register 0x00 asks for (C4[6:3]): that many in every sample slot
+                {
+                    std::lock_guard<std::mutex> lk(mu);
+                    auto it = regs.find(0x00);
+                    if (it != regs.end()) want = (int)((it->second >> 3) & 0x0f) + 1;
+                }
+                if (want != layoutNr && lag == 0) lag = 4;
+                if (lag > 0 && --lag == 0) layoutNr = want;
+                const int nrx = layoutNr;
+                const int slot = 6 * nrx + 2, per = 504 / slot;
                 for (int f = 0; f < 2; f++) {
                     unsigned char* c = p + 8 + 512 * f;
                     c[0] = c[1] = c[2] = 0x7F;
-                    for (int k = 0; k < 63; k++) {
-                        unsigned char* q = c + 8 + 8 * k;
-                        q[0] = 0xE0; q[1] = 0; q[2] = 0;   // -0.25
-                        q[3] = 0x40; q[4] = 0; q[5] = 0;   // +0.5
+                    for (int k = 0; k < per; k++) {
+                        for (int rx = 0; rx < nrx; rx++) {   // Q -0.25, I 0.5 for RX1, 0.375 for RX2, 0.25 for RX3, ...
+                            unsigned char* q = c + 8 + slot * k + 6 * rx;
+                            const int32_t iv = (int32_t)((0.5 - 0.125 * rx) * 8388608.0);
+                            q[0] = 0xE0; q[1] = 0; q[2] = 0;
+                            q[3] = (unsigned char)(iv >> 16); q[4] = (unsigned char)(iv >> 8); q[5] = (unsigned char)iv;
+                        }
                     }
                 }
                 sockSendTo(s, p, sizeof p, client);
@@ -617,7 +634,7 @@ struct FakeHl2 {
 // is only replaced by the fake's own. Frame layout, registers and start/stop are the HL2's.
 static void testRedPitaya() {
     FakeHl2 rp;
-    rp.board = 1; rp.gateware = 32;
+    rp.board = 1; rp.gateware = 32; rp.nr = 0;
     CHECK(rp.start());
     if (!rp.port) return;
     NetRadio nr; nr.type = NetRadio::RedPitaya; nr.host = "127.0.0.1"; nr.port = rp.port;
@@ -636,14 +653,15 @@ static void testRedPitaya() {
     }
     hl.stop();
     const auto devs = netRadioDevices({nr});
-    CHECK(devs.size() == 1);
+    CHECK(devs.size() == 3);   // its three receivers
     if (devs.empty()) { rp.stop(); return; }
     const DeviceInfo d = devs[0];
     CHECK(d.kind == DeviceInfo::Native && d.board == "redpitaya" && d.nativeArgs == "127.0.0.1:" + std::to_string(rp.port));
     CHECK(d.name == netRadioDeviceName(nr) && d.name.find("Red Pitaya") == 0);
     CHECK(d.rateRanges.size() == 4 && d.minRateHz == 48000 && d.maxRateHz == 384000 && d.maxFreqHz == 61.44e6 && d.gainMinDb == 0 && d.gainMaxDb == 0);
     NetRadio dflt; dflt.type = NetRadio::RedPitaya; dflt.host = "192.168.1.60";
-    CHECK(netRadioDeviceName(dflt) == "Red Pitaya 192.168.1.60 (network)");
+    CHECK(netRadioDeviceName(dflt) == "Red Pitaya RX1 192.168.1.60 (network)");
+    CHECK(devs.size() == 3 && devs[2].name == "Red Pitaya RX3 127.0.0.1:" + std::to_string(rp.port) + " (network)" && devs[2].nativeArgs == d.nativeArgs + "/rx3");
     CHECK(netRadioDefaultPort(NetRadio::RedPitaya) == 1024 && std::string(netRadioTypeName(NetRadio::RedPitaya)) == "Red Pitaya");
     const auto back = netRadiosFromString(netRadiosToString({dflt, nr}));
     CHECK(back.size() == 2 && back[0] == dflt && back[1] == nr);
@@ -705,14 +723,14 @@ static void testHermesLite2() {
     std::string err;
     CHECK(probeNetRadio(nr, 1000, err));
     const auto devs = netRadioDevices({nr});
-    CHECK(devs.size() == 1);
+    CHECK(devs.size() == 4);   // the receivers its discovery reply said it has
     if (devs.empty()) { hl.stop(); return; }
     const DeviceInfo d = devs[0];
     CHECK(d.kind == DeviceInfo::Native && d.board == "hermeslite2" && d.nativeArgs == "127.0.0.1:" + std::to_string(hl.port));
     CHECK(d.name == netRadioDeviceName(nr));
     CHECK(d.rateRanges.size() == 4 && d.minRateHz == 48000 && d.maxRateHz == 384000 && d.gainMinDb == -12 && d.gainMaxDb == 48);
     NetRadio dflt; dflt.type = NetRadio::HermesLite2; dflt.host = "192.168.1.50";
-    CHECK(netRadioDeviceName(dflt) == "Hermes Lite 2 192.168.1.50 (network)");   // the usual port is left out of the name
+    CHECK(netRadioDeviceName(dflt) == "Hermes Lite 2 RX1 192.168.1.50 (network)");   // the usual port is left out of the name
 
     auto src = makeSource(d);
     CHECK(src != nullptr);
@@ -756,6 +774,119 @@ static void testHermesLite2() {
     CHECK(!probeNetRadio(nr, 300, err) && !err.empty());
     // discovery on the real networks: whatever answers has an address
     for (const auto& f : discoverHermesLite2(200)) CHECK(!f.host.empty());
+}
+
+// whether every sample in a fresh read of the ring is (I, -0.25); all: also every sample the ring holds already (nothing of another
+// receiver, nothing of another layout got in)
+static bool ringIs(IqRing& ring, float i, bool all = false) {
+    std::vector<cf32> buf(2048);
+    if (all) {
+        std::vector<cf32> held(ring.available());
+        held.resize(ring.read(held.data(), held.size()));
+        for (auto& v : held) if (std::fabs(v.real() - i) > 1e-6f || std::fabs(v.imag() + 0.25f) > 1e-6f) return false;
+    }
+    ring.clear();
+    if (!readIq(ring, buf)) return false;
+    for (auto& v : buf) if (std::fabs(v.real() - i) > 1e-6f || std::fabs(v.imag() + 0.25f) > 1e-6f) return false;
+    return true;
+}
+
+// Several receivers (slices) of one Hermes Lite 2: one stream, the receiver count of the highest one open, each its own NCO and samples
+static void testHermesLite2Slices() {
+    FakeHl2 hl;
+    CHECK(hl.start());
+    if (!hl.port) return;
+    NetRadio nr; nr.type = NetRadio::HermesLite2; nr.host = "127.0.0.1"; nr.port = hl.port;
+    std::string err;
+    CHECK(probeNetRadio(nr, 1000, err));
+    auto devs = netRadioDevices({nr});
+    CHECK(devs.size() == 4);
+    if (devs.size() != 4) { hl.stop(); return; }
+    const std::string hp = "127.0.0.1:" + std::to_string(hl.port);
+    for (int k = 0; k < 4; k++) {
+        CHECK(devs[k].name == "Hermes Lite 2 RX" + std::to_string(k + 1) + " " + hp + " (network)");
+        CHECK(devs[k].nativeArgs == (k == 0 ? hp : hp + "/rx" + std::to_string(k + 1)) && devs[k].serial == devs[k].nativeArgs);
+    }
+    CHECK(deviceClaimKey(devs[0]) != deviceClaimKey(devs[1]));   // each one can go to its own OnAir receiver
+
+    // RX2 alone: two receivers in the stream (RX1's NCO where RX2 is), RX2's samples
+    auto rx2 = makeSource(devs[1]);
+    IqRing r2(1u << 20);
+    TuneSettings s2; s2.sampleRate = 150e3; s2.centerHz = 7.074e6; s2.gainDb = 20;
+    CHECK(rx2->start(s2, r2, err));
+    CHECK(std::fabs(rx2->sampleRate() - 192e3) < 1);
+    CHECK(hl.waitFor(0x00, 0x02080004 | 1 << 3));   // 192 ksps, the 40 m filter, two receivers
+    CHECK(hl.waitFor(0x03, 7074000));
+    CHECK(hl.waitFor(0x02, 7074000));
+    CHECK(ringIs(r2, 0.375f, true));   // the fake's first packets have its old layout (one receiver): not taken
+    const int starts = hl.starts;
+
+    // RX1 joins: the rate stays the one RX2 set (said when it is lower than asked), the filter follows the highest frequency
+    auto rx1 = makeSource(devs[0]);
+    IqRing r1(1u << 20);
+    TuneSettings s1; s1.sampleRate = 384e3; s1.centerHz = 14.2e6; s1.gainDb = 20;
+    err.clear();
+    CHECK(rx1->start(s1, r1, err) && err.find("share one sample rate") != std::string::npos);
+    CHECK(std::fabs(rx1->sampleRate() - 192e3) < 1);
+    CHECK(hl.waitFor(0x00, 0x02100004 | 1 << 3));   // the 20 m filter
+    CHECK(hl.waitFor(0x02, 14200000) && hl.waitFor(0x01, 14200000) && hl.waitFor(0x03, 7074000));
+    CHECK(hl.starts == starts);   // the receiver count did not change: no restart
+    CHECK(ringIs(r1, 0.5f) && ringIs(r2, 0.375f));
+
+    // RX4 joins: four receivers, while it streams (no restart); the packets of the old layout are not taken by anyone
+    auto rx4 = makeSource(devs[3]);
+    IqRing r4(1u << 20);
+    TuneSettings s4 = s2; s4.centerHz = 3.573e6;
+    err.clear();
+    CHECK(rx4->start(s4, r4, err));
+    CHECK(hl.waitFor(0x00, 0x02100004 | 3 << 3));
+    CHECK(hl.starts == starts);
+    CHECK(hl.waitFor(0x05, 3573000) && hl.waitFor(0x04, 14200000));   // RX3, not open: where RX1 is
+    CHECK(ringIs(r4, 0.125f, true) && ringIs(r1, 0.5f, true) && ringIs(r2, 0.375f, true));
+    // a rate change of one receiver while others are open is not made
+    s4.sampleRate = 384e3;
+    err.clear();
+    CHECK(rx4->retune(s4, err) && !err.empty());
+    CHECK(std::fabs(rx4->sampleRate() - 192e3) < 1);
+    // RX1's own frequency
+    s1.centerHz = 10.1e6;
+    CHECK(rx1->retune(s1, err));
+    CHECK(hl.waitFor(0x02, 10100000) && hl.waitFor(0x03, 7074000));
+
+    // RX4 goes: back to two receivers; then RX1 and RX2: the stream stops
+    rx4->stop();
+    CHECK(hl.waitFor(0x00, 0x02100004 | 1 << 3));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    CHECK(ringIs(r1, 0.5f, true) && ringIs(r2, 0.375f, true));
+    CHECK(hl.starts == starts);
+    rx1->stop();
+    CHECK(hl.streaming);
+    rx2->stop();
+    for (int i = 0; i < 100 && hl.streaming; i++) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    CHECK(!hl.streaming);
+
+    // the last one alone sets the rate again
+    auto again = makeSource(devs[1]);
+    s2.sampleRate = 384e3;
+    CHECK(again->start(s2, r2, err));
+    CHECK(std::fabs(again->sampleRate() - 384e3) < 1);
+    again->stop();
+
+    // a receiver the radio does not have: said, and not tried again
+    DeviceInfo rx5 = devs[3];
+    rx5.nativeArgs = hp + "/rx5";
+    auto five = makeSource(rx5);
+    err.clear();
+    CHECK(!five->start(s2, r2, err) && err.find("4 receivers") != std::string::npos);
+    // a radio that says it has two: two entries
+    FakeHl2 two;
+    two.nr = 2;
+    CHECK(two.start());
+    NetRadio n2 = nr; n2.port = two.port;
+    CHECK(probeNetRadio(n2, 1000, err));
+    CHECK(netRadioDevices({n2}).size() == 2);
+    two.stop();
+    hl.stop();
 }
 
 static void testPluto() {
@@ -867,6 +998,7 @@ int main() {
     testSpyServerBytes();
     testShare();
     testHermesLite2();
+    testHermesLite2Slices();
     testRedPitaya();
     if (fails) { fprintf(stderr, "%d failure(s)\n", fails); return 1; }
     printf("netradio: all passed\n");

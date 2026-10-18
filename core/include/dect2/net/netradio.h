@@ -55,7 +55,7 @@ std::vector<NetRadio> networkRadios();
 std::vector<DeviceInfo> netRadioDevices(const std::vector<NetRadio>& v);
 // "host:port" of r as the radio's device entry keys it (nativeArgs of a native radio)
 std::string netRadioHostPort(const NetRadio& r);
-// The name the entry of r has in the radio list
+// The name the entry of r has in the radio list (a Hermes Lite 2 or Red Pitaya: its RX1; one entry per receiver is listed)
 std::string netRadioDeviceName(const NetRadio& r);
 
 // Whether the radio answers within timeoutMs: a TCP connection to it (an rtl_tcp server must also send its "RTL0" header, a
@@ -66,7 +66,8 @@ bool probeNetRadio(const NetRadio& r, int timeoutMs, std::string& err);
 // A radio that answered a discovery: its IPv4 address, what it said about itself, and whether it is streaming to a program already
 struct FoundNetRadio {
     std::string host;
-    std::string detail;   // "MAC 00:1C:C0:A2:12:34, gateware 73.2"
+    std::string detail;   // "MAC 00:1C:C0:A2:12:34, gateware 73.2, 4 receivers"
+    int receivers = 0;    // the receivers (slices) it has, 0 = it did not say
     bool busy = false;
 };
 // The Hermes Lite 2 radios on this computer's networks: an openHPSDR discovery packet broadcast on each of them (UDP port 1024), the
