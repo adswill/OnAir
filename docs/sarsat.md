@@ -9,7 +9,7 @@ A 406 MHz beacon (EPIRB on a boat, ELT in an aircraft, PLB carried by a person) 
 | Item | How |
 |---|---|
 | Burst | 160 ms unmodulated carrier, then 24 sync bits (15 ones, 9 frame-sync bits `000101111`, or `011010000` for a self-test) and a 112 bit (short) or 144 bit (long) message, 400 bit/s, Manchester coded, phase modulated +-1.1 rad |
-| 15 hex ID | bits 26 - 85 |
+| 15 hex ID | bits 26 - 85, with the position bits of a standard location protocol at their default value, so the ID stays the same when the beacon moves |
 | Country | bits 27 - 36, the maritime identification digits (MID); about 270 are named |
 | Protocol | bit 26 (user / location) and bits 37 - 40: EPIRB, ELT, PLB, ship security, test, national |
 | Identification | MMSI, serial number and certificate, 24-bit aircraft address, aircraft operator, aircraft marking and call sign (Baudot), as far as the protocol has them |
@@ -29,4 +29,4 @@ The input is mixed to the dial offset and averaged to 32 kHz. Every 32 ms a wind
 
 ## Not verified against real beacons
 
-No real recording was available. The message layout, the protocol code table, the position and offset fields, the Baudot table and the homing bit were written from public descriptions of T.001 and need checking against a real beacon or the current T.001 before the details are relied on. The two BCH generator polynomials (`0x26D9E3`, `0x1539`) were checked to divide x^127+1 and x^63+1, as a BCH generator must. User protocols other than the aviation, maritime and serial ones show the raw identification field.
+No real recording was available. The message layout, the protocol code table, the position and offset fields, the Baudot table and the homing bit were written from public descriptions of T.001 and need checking against a real beacon or the current T.001 before the details are relied on. The protocol code tables (A2-A, A2-B) and the serial user beacon types were checked against T.001 (rev. March 2021). The two BCH generator polynomials (`0x26D9E3`, `0x1539`) were checked to divide x^127+1 and x^63+1, as a BCH generator must. User protocols other than the aviation, maritime and serial ones show the raw identification field.

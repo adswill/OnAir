@@ -21,7 +21,7 @@ std::vector<Spec> testBeacons() {
         v.push_back(s);
     }
     {   // ELT with a 24 bit aircraft address, long message: over the Baltic Sea
-        Spec s; s.protoCode = 6; s.mid = 211; s.ident = 0x3C6444; s.lat = 54.1310; s.lon = 12.0950; s.fine = true; s.homing = true;
+        Spec s; s.protoCode = 3; s.mid = 211; s.ident = 0x3C6444; s.lat = 54.1310; s.lon = 12.0950; s.fine = true; s.homing = true;
         v.push_back(s);
     }
     {   // a maritime user protocol beacon (no position in the message), short
@@ -29,7 +29,7 @@ std::vector<Spec> testBeacons() {
         v.push_back(s);
     }
     {   // an EPIRB in the southern hemisphere, long
-        Spec s; s.protoCode = 4; s.mid = 512; s.ident = (0x2B7u << 14) | 777u; s.lat = -36.8485; s.lon = 174.7633; s.fine = true;
+        Spec s; s.protoCode = 6; s.mid = 512; s.ident = (0x2B7u << 14) | 777u; s.lat = -36.8485; s.lon = 174.7633; s.fine = true;
         v.push_back(s);
     }
     return v;

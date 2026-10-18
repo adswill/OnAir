@@ -75,7 +75,7 @@ const MidRange kMid[] = {
     {270, 270, "Czechia"}, {271, 271, "Turkey"}, {272, 272, "Ukraine"}, {273, 273, "Russia"}, {274, 274, "North Macedonia"}, {275, 275, "Latvia"},
     {276, 276, "Estonia"}, {277, 277, "Lithuania"}, {278, 278, "Slovenia"}, {279, 279, "Serbia"},
     {301, 301, "Anguilla"}, {303, 303, "USA (Alaska)"}, {304, 305, "Antigua and Barbuda"}, {306, 306, "Netherlands Antilles"}, {307, 307, "Aruba"},
-    {308, 311, "Bahamas"}, {310, 310, "Bermuda"}, {312, 312, "Belize"}, {314, 314, "Barbados"}, {316, 316, "Canada"}, {319, 319, "Cayman Islands"},
+    {308, 309, "Bahamas"}, {310, 310, "Bermuda"}, {311, 311, "Bahamas"}, {312, 312, "Belize"}, {314, 314, "Barbados"}, {316, 316, "Canada"}, {319, 319, "Cayman Islands"},
     {321, 321, "Costa Rica"}, {323, 323, "Cuba"}, {325, 325, "Dominica"}, {327, 327, "Dominican Republic"}, {329, 329, "Guadeloupe"}, {330, 330, "Grenada"},
     {331, 331, "Greenland"}, {332, 332, "Guatemala"}, {334, 334, "Honduras"}, {336, 336, "Haiti"}, {338, 338, "USA"}, {339, 339, "Jamaica"},
     {341, 341, "Saint Kitts and Nevis"}, {343, 343, "Saint Lucia"}, {345, 345, "Mexico"}, {347, 347, "Martinique"}, {348, 348, "Montserrat"},
@@ -149,16 +149,18 @@ std::string protocolName(bool user, int code, std::string* type) {
         case 1: n = "Aviation user"; t = "ELT"; break;
         case 2: n = "Maritime user"; t = "EPIRB"; break;
         case 3: n = "Serial user"; t = "?"; break;
-        case 6: n = "Test user"; t = "Test"; break;
+        case 4: n = "National user"; break;
+        case 6: n = "Radio call sign user"; t = "EPIRB"; break;
+        case 7: n = "Test user"; t = "Test"; break;
         default: n = "User protocol " + std::to_string(code); break;
         }
     } else {
         switch (code) {
         case 2: n = "EPIRB, MMSI and location"; t = "EPIRB"; break;
-        case 3: n = "ELT, serial and location"; t = "ELT"; break;
-        case 4: n = "EPIRB, serial and location"; t = "EPIRB"; break;
+        case 3: n = "ELT, aircraft address and location"; t = "ELT"; break;
+        case 4: n = "ELT, serial and location"; t = "ELT"; break;
         case 5: n = "ELT, aircraft operator and location"; t = "ELT"; break;
-        case 6: n = "ELT, aircraft address and location"; t = "ELT"; break;
+        case 6: n = "EPIRB, serial and location"; t = "EPIRB"; break;
         case 7: n = "PLB, serial and location"; t = "PLB"; break;
         case 8: n = "ELT, national location"; t = "ELT"; break;
         case 10: n = "EPIRB, national location"; t = "EPIRB"; break;
@@ -218,7 +220,11 @@ bool decode(std::vector<uint8_t>& bits, Beacon& o) {
     o.userProto = bits[25] != 0;
     o.mid = (int)get(bits, 27, 36);
     o.country = countryOfMid(o.mid);
-    o.hexId = bitsToHex(bits, 26, 85);
+    {   // the 15 hex ID: bits 26-85, with the position of a standard location protocol at its default value (C/S T.001 3.3)
+        std::vector<uint8_t> id(bits.begin(), bits.begin() + 85);
+        if (!o.userProto && standardLocation((int)get(bits, 37, 40))) { put(id, 65, 85, 0); put(id, 66, 74, 511); put(id, 76, 85, 1023); }
+        o.hexId = bitsToHex(id, 26, 85);
+    }
     o.homing = bits[110] != 0;
     if (o.longMsg) {
         o.bch2Present = true;
@@ -235,8 +241,9 @@ bool decode(std::vector<uint8_t>& bits, Beacon& o) {
         case 2: o.idText = "call sign / MMSI digits " + baudotUnpack(get(bits, 40, 75), 6) + ", beacon " + baudotUnpack(get(bits, 76, 81), 1); break;
         case 3: {
             const int ty = (int)get(bits, 40, 42);
-            o.beaconType = ty == 0 ? "ELT" : ty == 1 ? "EPIRB" : ty == 2 ? "EPIRB" : ty == 4 ? "PLB" : "?";
-            snprintf(b, sizeof b, "%s, serial field %s", ty == 0 ? "ELT" : ty == 1 ? "float-free EPIRB" : ty == 2 ? "EPIRB (not float-free)" : ty == 4 ? "PLB" : "type unknown", bitsToHex(bits, 44, 73).c_str());
+            // bits 40-42: 000 ELT, 001 ELT with operator designator, 011 ELT with 24-bit address, 010 float-free EPIRB, 100 EPIRB not float-free, 110 PLB
+            o.beaconType = (ty == 0 || ty == 1 || ty == 3) ? "ELT" : (ty == 2 || ty == 4) ? "EPIRB" : ty == 6 ? "PLB" : "?";
+            snprintf(b, sizeof b, "%s, serial field %s", ty == 0 ? "ELT" : ty == 1 ? "ELT (aircraft operator)" : ty == 3 ? "ELT (24-bit address)" : ty == 2 ? "float-free EPIRB" : ty == 4 ? "EPIRB (not float-free)" : ty == 6 ? "PLB" : "type unknown", bitsToHex(bits, 44, 73).c_str());
             o.idText = b;
             break;
         }
@@ -253,7 +260,7 @@ bool decode(std::vector<uint8_t>& bits, Beacon& o) {
         o.idText = b;
         break;
     }
-    case 3: case 4: case 7:
+    case 4: case 6: case 7:
         snprintf(b, sizeof b, "certificate %d, serial %d", (int)get(bits, 41, 50), (int)get(bits, 51, 64));
         o.idText = b;
         break;
@@ -265,7 +272,7 @@ bool decode(std::vector<uint8_t>& bits, Beacon& o) {
         o.idText = b;
         break;
     }
-    case 6:
+    case 3:
         snprintf(b, sizeof b, "aircraft address %06X", (unsigned)get(bits, 41, 64));
         o.idText = b;
         break;

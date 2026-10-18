@@ -97,5 +97,40 @@ int main() {
         CHECK(decode(b, o) && o.selfTest && o.beaconType == "Test", "self-test");
     }
     CHECK(countryOfMid(277) == "Lithuania" && countryOfMid(366) == "USA" && countryOfMid(1).empty(), "countries");
+    CHECK(countryOfMid(310) == "Bermuda" && countryOfMid(309) == "Bahamas" && countryOfMid(311) == "Bahamas", "MID 310 is Bermuda");
+    {   // protocol codes of C/S T.001 tables A2-A (user) and A2-B (standard location)
+        std::string t;
+        CHECK(protocolName(false, 3, &t).find("aircraft address") != std::string::npos && t == "ELT", "location 3: ELT 24-bit address");
+        CHECK(protocolName(false, 4, &t).find("serial") != std::string::npos && t == "ELT", "location 4: ELT serial");
+        CHECK(protocolName(false, 6, &t).find("serial") != std::string::npos && t == "EPIRB", "location 6: EPIRB serial");
+        CHECK(protocolName(false, 7, &t).find("serial") != std::string::npos && t == "PLB", "location 7: PLB serial");
+        CHECK(protocolName(true, 6, &t).find("call sign") != std::string::npos && t == "EPIRB", "user 6: radio call sign");
+        CHECK(protocolName(true, 7, &t) == "Test user" && t == "Test", "user 7: test");
+    }
+    {   // a 24-bit address ELT: the address is read from bits 41-64
+        Spec s; s.protoCode = 3; s.mid = 211; s.ident = 0x3C6444; s.lat = 54.0; s.lon = 12.0;
+        std::vector<uint8_t> b = encode(s);
+        Beacon o;
+        CHECK(decode(b, o) && o.beaconType == "ELT" && o.idText == "aircraft address 3C6444", "24-bit address: %s %s", o.beaconType.c_str(), o.idText.c_str());
+    }
+    {   // serial user protocol, beacon type in bits 40-42
+        const char* want[8] = {"ELT", "ELT", "EPIRB", "ELT", "EPIRB", "?", "PLB", "?"};
+        for (int ty = 0; ty < 8; ty++) {
+            Spec s; s.longMsg = false; s.userProto = true; s.protoCode = 3; s.mid = 366; s.hasPos = false; s.userBits = (uint64_t)ty << 43;
+            std::vector<uint8_t> b = encode(s);
+            Beacon o;
+            CHECK(decode(b, o) && o.beaconType == want[ty], "serial user type %d: %s, want %s", ty, o.beaconType.c_str(), want[ty]);
+        }
+    }
+    {   // the 15 hex ID does not change with the position (C/S T.001 3.3)
+        Spec s; s.protoCode = 7; s.mid = 366; s.ident = (0x1A5u << 14) | 4021u; s.lat = 37.7749; s.lon = -122.4194;
+        std::vector<uint8_t> b1 = encode(s);
+        s.lat = -12.5; s.lon = 40.25;
+        std::vector<uint8_t> b2 = encode(s);
+        s.hasPos = false;
+        std::vector<uint8_t> b3 = encode(s);
+        Beacon o1, o2, o3;
+        CHECK(decode(b1, o1) && decode(b2, o2) && decode(b3, o3) && o1.hexId == o2.hexId && o1.hexId == o3.hexId, "hex id %s %s %s", o1.hexId.c_str(), o2.hexId.c_str(), o3.hexId.c_str());
+    }
     return testSummary("test_sarsat_proto");
 }
