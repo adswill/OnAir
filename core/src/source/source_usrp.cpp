@@ -142,6 +142,10 @@ protected:
 #endif
             if (!contains(dargs, "num_recv_frames")) dargs += std::string(dargs.empty() ? "" : ",") + "num_recv_frames=512";
         }
+        const bool bus = contains(args_, "type=b200");
+        if (bus) {
+            if (!contains(dargs, "num_recv_frames")) dargs += std::string(dargs.empty() ? "" : ",") + "num_recv_frames=128";
+        }
         if (uhd().make(&dev_, dargs.c_str()) != 0 || !dev_) {
             if (dev_) uhd().free_(&dev_);
             dev_ = nullptr;
