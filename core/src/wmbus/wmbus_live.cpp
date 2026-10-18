@@ -296,9 +296,12 @@ struct WmbusLiveReceiver::Impl {
             ch.pend.push_back((uint8_t)b);
             if (ch.pend.size() < 8) return;
             unsigned v = 0;
-            for (int i = 0; i < 8; i++) v = (v << 1) | ch.pend[(size_t)i];
+            for (size_t i = 0; i < ch.pend.size(); i++) v = (v << 1) | ch.pend[i];
+            // mode C: 0x54 then 0xCD (format A) or 0x3D (format B); 010101 is not a 3-of-6 word, so T1 never starts with 0x54
+            if (ch.pend.size() == 8 && v == 0x54) return;
+            if (ch.pend.size() > 8 && ch.pend.size() < 16) return;
             ch.decided = true;
-            if (v == 0xCD || v == 0x3D) { ch.coding = Coding::Nrz; ch.formatB = v == 0x3D; }
+            if (ch.pend.size() == 16 && ((v & 0xFF) == 0xCD || (v & 0xFF) == 0x3D)) { ch.coding = Coding::Nrz; ch.formatB = (v & 0xFF) == 0x3D; }
             else {
                 ch.coding = Coding::ThreeOfSix;
                 std::vector<uint8_t> pend = ch.pend;

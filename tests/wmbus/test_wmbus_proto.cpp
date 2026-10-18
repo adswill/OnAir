@@ -11,6 +11,37 @@ int main() {
     CHECK(crc16(chk, 9) == 0xC2B7, "CRC-16/EN-13757 check value %04X", crc16(chk, 9));
     for (int n = 0; n < 16; n++) { const int s = encode36((unsigned)n); CHECK(decode36((unsigned)s) == n && __builtin_popcount((unsigned)s) == 3, "3of6 %d", n); }
     CHECK(decode36(0x3F) == -1 && decode36(0) == -1, "invalid 3of6 words");
+    {   // the EN 13757-4 table itself (also in rtl_433 m_bus.c and rtl-wmbus): a round trip alone passes with a wrong table
+        static const unsigned ref[16] = {0x16, 0x0D, 0x0E, 0x0B, 0x1C, 0x19, 0x1A, 0x13, 0x2C, 0x25, 0x26, 0x23, 0x34, 0x31, 0x32, 0x29};
+        for (int n = 0; n < 16; n++) CHECK(encode36((unsigned)n) == (int)ref[n] && decode36(ref[n]) == n, "3of6 nibble %X: %02X, standard %02X", n, encode36((unsigned)n), ref[n]);
+        CHECK(decode36(0x38) == -1, "111000 is not a 3of6 word");
+    }
+    {   // mode C: after the 0x543D sync come 0x54 and then 0xCD (frame format A) or 0x3D (format B)
+        const std::vector<uint8_t> one = {0x00};
+        for (int fb = 0; fb < 2; fb++) {
+            auto c = encodeChips(fb ? Phy::C1B : Phy::C1A, one, 0);
+            unsigned v = 0;
+            for (int i = 0; i < 32; i++) v = (v << 1) | c[(size_t)i];
+            CHECK(v == (fb ? 0x543D543Du : 0x543D54CDu), "C1%c header chips %08X", fb ? 'B' : 'A', v);
+        }
+    }
+    {   // ELL (CI 0x8D): the encryption mode is bits 29-31 of the little-endian session number
+        std::vector<uint8_t> body = {0x44, 0x2D, 0x2C, 0x78, 0x56, 0x34, 0x12, 0x01, 0x07, 0x8D, 0x20, 0x01, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                     0x7A, 0x01, 0x00, 0x00, 0x00, 0x04, 0x13, 0x10, 0x27, 0x00, 0x00};
+        auto fr = buildFrame(body, false);
+        Frame f;
+        CHECK(parseFrame(fr.data(), fr.size(), false, f) && !f.encrypted && !f.records.empty(), "ELL in clear, SN time bits set: encrypted %d records %zu", f.encrypted, f.records.size());
+        body[12] = 0x00; body[15] = 0x20;   // SN 0x20000000: ENC 1, AES-CTR
+        fr = buildFrame(body, false);
+        Frame g;
+        CHECK(parseFrame(fr.data(), fr.size(), false, g) && g.encrypted && g.records.empty(), "ELL AES-CTR must be flagged: encrypted %d", g.encrypted);
+    }
+    {   // more DIFE bytes than the storage number has bits for
+        const uint8_t d[] = {0x84, 0x8F, 0x8F, 0x8F, 0x8F, 0x8F, 0x8F, 0x8F, 0x8F, 0x0F, 0x13, 0x01, 0, 0, 0};
+        std::vector<Record> r; bool m = false;
+        parseRecords(d, sizeof d, r, m);
+        CHECK(r.empty() || r[0].storage >= 0, "storage %d", r.empty() ? 0 : r[0].storage);
+    }
     CHECK(mfrCodeToString(mfrStringToCode("KAM")) == "KAM" && mfrStringToCode("KAM") == 0x2C2D, "manufacturer code %04X", mfrStringToCode("KAM"));
     for (int m = 0; m < WmbusGenerator::meterCount(); m++) {
         Phy ph;

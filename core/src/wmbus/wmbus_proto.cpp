@@ -29,7 +29,7 @@ uint16_t crc16(const uint8_t* d, size_t n) {
 }
 
 namespace {
-const uint8_t kT36[16] = {0x16, 0x0D, 0x0E, 0x0B, 0x1C, 0x19, 0x1A, 0x13, 0x2C, 0x25, 0x26, 0x23, 0x34, 0x32, 0x31, 0x38};
+const uint8_t kT36[16] = {0x16, 0x0D, 0x0E, 0x0B, 0x1C, 0x19, 0x1A, 0x13, 0x2C, 0x25, 0x26, 0x23, 0x34, 0x31, 0x32, 0x29};   // EN 13757-4 3-out-of-6 table
 }
 int encode36(unsigned n) { return kT36[n & 15]; }
 int decode36(unsigned six) {
@@ -181,7 +181,8 @@ bool parseRecords(const uint8_t* d, size_t n, std::vector<Record>& out, bool& mf
         for (int k = 0; ext && k < 10; k++) {
             if (i >= n) return false;
             const int e = d[i++];
-            r.storage |= (e & 15) << sh; sh += 4;
+            if (sh <= 27) r.storage |= (e & 15) << sh;   // storage fits 41 bits; keep the int shift defined
+            sh += 4;
             r.tariff |= ((e >> 4) & 3) << (2 * k);
             r.subunit |= ((e >> 6) & 1) << k;
             ext = e & 0x80;
@@ -319,7 +320,8 @@ bool parseFrame(const uint8_t* b, size_t n, bool formatB, Frame& f) {
     if (ci == 0x8C) { if (p + 3 > sz) return ok; p += 2; ci = f.data[p++]; }
     else if (ci == 0x8D) {
         if (p + 9 > sz) return ok;
-        if ((f.data[p + 2] >> 5) & 7) { f.encrypted = true; f.payload.assign(f.data.begin() + (long)p, f.data.end()); return ok; }
+        // the session number is 4 bytes little-endian after CC and ACC; ENC is its bits 29-31
+        if ((f.data[p + 5] >> 5) & 7) { f.encrypted = true; f.payload.assign(f.data.begin() + (long)p, f.data.end()); return ok; }
         p += 8; ci = f.data[p++];
     }
     if (ci == 0x7A || ci == 0x72 || ci == 0x7B) {
@@ -366,8 +368,8 @@ std::vector<uint8_t> encodeChips(Phy p, const std::vector<uint8_t>& air, int pre
     for (int i = 0; i < pre; i++) { c.push_back(0); c.push_back(1); }
     for (int i = 15; i >= 0; i--) c.push_back((sp.sync >> i) & 1);
     auto nrz = [&](unsigned v, int bits) { for (int i = bits - 1; i >= 0; i--) c.push_back((v >> i) & 1); };
-    if (p == Phy::C1A) nrz(0xCD, 8);
-    if (p == Phy::C1B) nrz(0x3D, 8);
+    if (p == Phy::C1A) nrz(0x54CD, 16);   // mode C sends 0x54 then the frame-format byte
+    if (p == Phy::C1B) nrz(0x543D, 16);
     for (uint8_t b : air) {
         if (sp.coding == Coding::Manchester) { for (int i = 7; i >= 0; i--) { const int bit = (b >> i) & 1; c.push_back((uint8_t)bit); c.push_back((uint8_t)!bit); } }
         else if (sp.coding == Coding::ThreeOfSix) { nrz((unsigned)encode36(b >> 4), 6); nrz((unsigned)encode36(b & 15), 6); }
