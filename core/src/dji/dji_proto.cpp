@@ -316,6 +316,19 @@ static float zcCoherence(const std::vector<cf32>& Y, const std::vector<cf32>& Z,
     return (float)(std::abs(acc) / (den + 1e-12));
 }
 
+// The same measure for a symbol already in carrier order (600 values, as the Zadoff-Chu sequence): index k is carrier k, not an FFT bin.
+static float zcCoherenceCarriers(const std::vector<cf32>& Y, const std::vector<cf32>& Z) {
+    cf32 acc(0, 0);
+    double den = 0;
+    cf32 prev = Y[0] * std::conj(Z[0]);
+    for (int k = 1; k < kCarriers; k++) {
+        const cf32 h = Y[(size_t)k] * std::conj(Z[(size_t)k]);
+        if (k != 300) { acc += h * std::conj(prev); den += (double)std::abs(h) * std::abs(prev); }
+        prev = h;
+    }
+    return (float)(std::abs(acc) / (den + 1e-12));
+}
+
 BurstResult receiveBurst(const std::vector<cf32>& x) {
     BurstResult r;
     const int N = (int)x.size();
@@ -421,8 +434,8 @@ BurstResult receiveBurst(const std::vector<cf32>& x) {
         for (int k = 0; k < kCarriers; k++) V[s][(size_t)k] = F[(size_t)carrierBin(k)];
     }
     if (!ok) return r;
-    r.zc1 = zcCoherence(V[kZcSym[0]], Z1, 0);
-    r.zc2 = zcCoherence(V[kZcSym[1]], Z2, 0);
+    r.zc1 = zcCoherenceCarriers(V[kZcSym[0]], Z1);
+    r.zc2 = zcCoherenceCarriers(V[kZcSym[1]], Z2);
     r.zc = r.zc1 > 0.3f && r.zc2 > 0.3f;
     if (!r.zc) return r;
     // 3. channel from the two Zadoff-Chu symbols; the common phase step between them carries any offset left

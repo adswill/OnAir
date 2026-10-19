@@ -122,6 +122,22 @@ int main() {
             CHECK(r.crcOk && r.id.serial == "SecureStorage?" && r.id.seq == id.seq && r.id.lonRaw == id.lonRaw, "decode");
             CHECK(r.variant == c.variant, "scrambler convention found: %d", r.variant);
         }
+        // noise-free bursts: the ZC measure must not read past the 600 carriers (it produced NaN on a clean burst)
+        for (int cfo : {0, 5000, -12000}) {
+            const DroneId id = sampleId(7);
+            const std::vector<cf32> b = buildBurst(airBits(id, 0), true);
+            std::vector<cf32> x((size_t)(300 + b.size() + 500), cf32(0, 0));
+            for (size_t i = 0; i < b.size(); i++) x[300 + i] = b[i];
+            for (size_t n = 0; n < x.size(); n++) {
+                const double ph = 2 * 3.14159265358979 * cfo * (double)n / kFs;
+                x[n] *= cf32((float)std::cos(ph), (float)std::sin(ph));
+            }
+            const BurstResult r = receiveBurst(x);
+            printf("  noise-free cfo %6d: zc %.4f %.4f crc %d\n", cfo, r.zc1, r.zc2, r.crcOk);
+            CHECK(std::isfinite(r.zc1) && std::isfinite(r.zc2), "noise-free ZC is not finite (%f %f)", r.zc1, r.zc2);
+            CHECK(r.zc1 > 0.9f && r.zc2 > 0.9f, "noise-free ZC %.3f %.3f", r.zc1, r.zc2);
+            CHECK(r.zc && r.crcOk && r.id.seq == id.seq, "noise-free burst (cfo %d) not decoded", cfo);
+        }
         // noise alone: no ZC
         int zc = 0;
         for (int t = 0; t < 10; t++) {
