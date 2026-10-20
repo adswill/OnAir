@@ -4,6 +4,7 @@
 #include "../app.h"
 #include "touch.h"
 #include "dect2/engine/rate_choice.h"
+#include "dect2/engine/click_tune.h"
 #include "dect2/source/antenna_ports.h"
 #include "dect2/hdr/hdr_rx.h"
 #include "dect2/dsp/baseband_filter.h"
@@ -466,7 +467,7 @@ static double dialMhzFromAbs(const App& a, double absMhz) {
     const ModeTuning* mt = a.family >= 6 ? modeTuning(a.family + 2) : nullptr;
     const bool file = !a.devices.empty() && a.devIdx >= 0 && a.devIdx < (int)a.devices.size() &&
                       (a.devices[a.devIdx].kind == DeviceInfo::File || a.devices[a.devIdx].isAudio());
-    return absMhz - (mt && !file ? mt->tuneOffsetHz / 1e6 : 0.0);
+    return dect2::dialMhzFromClick(absMhz, mt && !file ? mt->tuneOffsetHz : 0.0);   // the axis is the real RF: the clicked signal is the dial (#219)
 }
 
 void tuneDecode(App& a, double absMhz) {
