@@ -58,7 +58,10 @@ struct LbjReceiver::Impl {
     void ingest(const lbj::Burst& b) {
         tel.bursts++;
         for (const lbj::Page& p : lbj::pagesFromBurst(b)) {
-            if (!lbj::isLbjAddress(p.ric)) continue;
+            if (!lbj::isLbjAddress(p.ric)) {
+                sessions.basicSec = sessions.detailSec = -1e9;
+                continue;
+            }
             LbjMessage m;
             const uint64_t rej = sessions.rejected;
             if (lbj::parsePage(p, b.timeSec, sessions, m)) pushMessage(std::move(m), b);
@@ -155,15 +158,20 @@ void LbjReceiver::clearResults() { clearMessages(); }
 // Results file: one line per message, tab separated: train, km post, loco, speed, direction, wall time.
 std::string LbjReceiver::saveResults() const {
     std::lock_guard<std::mutex> lk(p_->mu);
-    std::string s = "lbj2\n";
+    std::string s = "lbj3\n";
     for (const auto& m : p_->tel.messages) {
-        s += m.train + '\t' + m.kmMarker + '\t' + m.loco + '\t' + m.speedKmh + '\t' + m.direction + '\t' + std::to_string((long long)m.wallTime) + '\n';
+        char position[96]; snprintf(position, sizeof position, "%.10f\t%.10f", m.latitude, m.longitude);
+        s += m.train + '\t' + m.kmMarker + '\t' + m.loco + '\t' + m.speedKmh + '\t' + m.direction + '\t' + std::to_string((long long)m.wallTime)
+            + '\t' + m.route + '\t' + m.locoCode + '\t' + m.locoSerial + '\t' + m.prefix + '\t' + m.trainBase + '\t' + m.cabEnd + '\t' + m.unknownTail + '\t' + m.networkTime
+            + '\t' + position + '\t' + std::to_string(m.positionValid) + '\t' + std::to_string(m.paired) + '\t' + std::to_string(m.timeSync) + '\t' + std::to_string(m.detailed)
+            + '\t' + std::to_string(m.address) + '\t' + std::to_string(m.correctedBits) + '\t' + std::to_string(m.crcOk) + '\n';
     }
     return s;
 }
 bool LbjReceiver::loadResults(const std::string& blob) {
     const bool v2 = blob.compare(0, 5, "lbj2\n") == 0;
-    if (!v2 && blob.compare(0, 5, "lbj1\n") != 0) return false;
+    const bool v3 = blob.compare(0, 5, "lbj3\n") == 0;
+    if (!v2 && !v3 && blob.compare(0, 5, "lbj1\n") != 0) return false;
     std::vector<LbjMessage> msgs;
     size_t i = 5;
     while (i < blob.size() && msgs.size() < kLbjLogMax) {
@@ -182,7 +190,14 @@ bool LbjReceiver::loadResults(const std::string& blob) {
             m.train = f[0];
             m.kmMarker = f[1];
             m.loco = f[2];
-            if (v2 && f.size() >= 6) { m.speedKmh = f[3]; m.direction = f[4]; m.wallTime = std::atoll(f[5].c_str()); }
+            if ((v2 || v3) && f.size() >= 6) { m.speedKmh = f[3]; m.direction = f[4]; m.wallTime = std::atoll(f[5].c_str()); }
+            if (v3) {
+                if (f.size() != 23) return false;
+                m.route = f[6]; m.locoCode = f[7]; m.locoSerial = f[8]; m.prefix = f[9]; m.trainBase = f[10]; m.cabEnd = f[11]; m.unknownTail = f[12]; m.networkTime = f[13];
+                m.latitude = std::atof(f[14].c_str()); m.longitude = std::atof(f[15].c_str());
+                m.positionValid = f[16] == "1" && std::isfinite(m.latitude) && std::isfinite(m.longitude) && m.latitude > 0 && m.latitude <= 60 && m.longitude >= 70 && m.longitude <= 140;
+                m.paired = f[17] == "1"; m.timeSync = f[18] == "1"; m.detailed = f[19] == "1"; m.address = (uint32_t)std::strtoul(f[20].c_str(), nullptr, 10); m.correctedBits = std::atoi(f[21].c_str()); m.crcOk = f[22] == "1";
+            }
             msgs.push_back(std::move(m));
         }
         i = e + 1;

@@ -6,7 +6,6 @@
 #include "lbj_tel.h"
 #include <cstddef>
 #include <cstdint>
-#include <map>
 #include <string>
 
 namespace dect2::lbj {
@@ -18,19 +17,14 @@ constexpr uint32_t kAddrBasic = 1234000;       // train number, speed, kilometre
 constexpr uint32_t kAddrBasicAlt = 1233999;
 constexpr uint32_t kAddrDetail = 1234002;      // locomotive and route (long messages)
 constexpr uint32_t kAddrDetailAlt = 1234001;
-constexpr uint32_t kAddrTime = 1234008;        // time broadcast (not decoded)
+constexpr uint32_t kAddrTime = 1234008;
 
 bool isLbjAddress(uint32_t ric);
 
 // What one train has told us in the last seconds (the long message arrives right after the short one).
 struct LbjSessionState {
-    struct Row {
-        std::string baseTrain, prefix, direction, speedKmh, kmMarker, loco, locoCode, route;
-        bool detailed = false;
-        double updatedSec = 0;
-    };
-    std::string lastTrain;
-    std::map<std::string, Row> sessions;
+    LbjMessage pendingBasic, pendingDetail;
+    double basicSec = -1e9, detailSec = -1e9;
     uint64_t emptyFrames = 0;                  // basic messages with every field blank ("----- --- -----")
     uint64_t rejected = 0;                     // LBJ-addressed pages that failed the plausibility checks
 };

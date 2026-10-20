@@ -2,6 +2,7 @@
 #include "app.h"
 #include "dect2/lbj/lbj_rx.h"
 #include "dect2/lbj/lbj_tel.h"
+#include <algorithm>
 #include <cstdio>
 #include <ctime>
 #include <string>
@@ -57,7 +58,7 @@ void tab(App& a) {
         ImGui::TextDisabled(tr("listening (level %.0f dBFS, offset %+.0f Hz)"), t.levelDb, t.cfoHz);
         return;
     }
-    if (ImGui::BeginTable("##lbjlog", 8, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable, ImVec2(0, ImGui::GetContentRegionAvail().y))) {
+    if (ImGui::BeginTable("##lbjlog", 8, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable, ImVec2(0, ImGui::GetContentRegionAvail().y * 0.7f))) {
         ImGui::TableSetupColumn(tr("Seen"));
         ImGui::TableSetupColumn(tr("Train"));
         ImGui::TableSetupColumn(tr("Speed km/h"));
@@ -86,6 +87,15 @@ void tab(App& a) {
             if (!m.crcOk) ImGui::PopStyleColor();
         }
         ImGui::EndTable();
+    }
+    S.sel = std::clamp(S.sel, 0, int(t.messages.size()) - 1);
+    const auto& m = t.messages[(size_t)S.sel];
+    if (m.timeSync) ImGui::Text(tr("Network time: %s"), m.networkTime.empty() ? "-" : m.networkTime.c_str());
+    if (m.detailed) {
+        ImGui::TextUnformatted(tr(m.paired ? "Basic and detail paired" : "Unpaired detail"));
+        if (m.positionValid) ImGui::Text("WGS-84: %.4f, %.4f", m.longitude, m.latitude);
+        if (!m.locoCode.empty()) ImGui::Text(tr("Locomotive code: %s, serial: %s"), m.locoCode.c_str(), m.locoSerial.c_str());
+        if (!m.cabEnd.empty()) ImGui::Text(tr("Cab end (raw): %s"), m.cabEnd.c_str());
     }
 }
 

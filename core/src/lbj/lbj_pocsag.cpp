@@ -96,7 +96,6 @@ std::vector<Page> pagesFromBurst(const Burst& b) {
     std::vector<Page> out;
     Page cur;
     bool open = false;
-    int nmsg = 0;
     auto flush = [&] { if (open) out.push_back(cur); open = false; };
     for (size_t i = 0; i < b.words.size(); i++) {
         const int slot = (int)((i % 16) / 2);
@@ -116,11 +115,9 @@ std::vector<Page> pagesFromBurst(const Burst& b) {
             cur.fixed = c.fixed;
             cur.addrFixedTwo = c.fixed == 2;
             open = true;
-            nmsg = 0;
         } else if (open) {
             cur.digits += numericDigits((w >> 11) & 0xFFFFF);
-            if (nmsg < 3) cur.fixed += c.fixed;
-            nmsg++;
+            cur.fixed += c.fixed;   // corrections in the extension matter too
         }
     }
     flush();

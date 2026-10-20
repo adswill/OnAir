@@ -265,6 +265,10 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxDect_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxTetrapol_.setSignalOffset(o);
         rxTetrapol_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
+        rxKlw_.setSignalOffset(o);
+        rxTdcs_.setSignalOffset(o);
+        rxKlw_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
+        rxTdcs_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxLbj_.setSignalOffset(o);
         rxLbj_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxEloran_.setSignalOffset(o);
@@ -454,6 +458,10 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxDect_.setLogCallback([this](const std::string& s) { log(s); });
     rxTetrapol_.configure(rate_);
     rxTetrapol_.setLogCallback([this](const std::string& s) { log(s); });
+    rxKlw_.configure(rate_);
+    rxTdcs_.configure(rate_);
+    rxKlw_.setLogCallback([this](const std::string& s) { log(s); });
+    rxTdcs_.setLogCallback([this](const std::string& s) { log(s); });
     rxLbj_.configure(rate_);
     rxLbj_.setLogCallback([this](const std::string& s) { log(s); });
     rxEloran_.configure(rate_);

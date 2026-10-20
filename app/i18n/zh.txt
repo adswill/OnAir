@@ -3511,3 +3511,44 @@ deselect	取消选择
 click a station on the map to select it	点击地图上的电台以选中
 %zu stations by their locators, %zu contact lines	按网格定位的 %zu 个电台，%zu 条通联连线
 %d stations at the centre of their grid squares, %zu contact lines	位于网格中心的 %d 个电台，%zu 条通联连线
+
+# Railway LBJ / KLW / TDCS
+End of train, FFSK	列尾数据，FFSK
+Train dispatch, FFSK	列车调度数据，FFSK
+Tail ID	列尾编号
+Pressure kPa	风压 kPa
+Cars	辆数
+Test frame	测试帧
+Start the receiver to listen	启动接收机开始接收
+Corrected bits: %d	纠错位数：%d
+Station %u, track %u, actual track %u, driver %u	车站 %u，股道 %u，实际股道 %u，司机号 %u
+Weight %u t, length %.1f	总重 %u 吨，换长 %.1f
+Signal %d, semaphore %d, locomotive role %d	信号 %d，信号机 %d，机车属性 %d
+Increasing mileage	增里程
+Decreasing mileage	减里程
+Action code: 0x%02X, reserved: 0x%02X	指令码：0x%02X，保留位：0x%02X
+Parameter: %s	参数：%s
+Clock: %s	时钟：%s
+Network time: %s	网络对时：%s
+Basic and detail paired	基础报文与扩展报文已配对
+Unpaired detail	未配对的扩展报文
+Locomotive code: %s, serial: %s	机车型号码：%s，机车号：%s
+Cab end (raw): %s	端位原码：%s
+Vent	排风
+Vent response	排风应答
+Pressure query	查询风压
+Pressure response	查询风压应答
+Disconnect	销号
+Disconnect response	销号应答
+Connect response	输号应答
+Tail pressure alarm	列尾主机风压报警
+Pressure alarm response	风压报警应答
+Tail low battery alarm	列尾主机电池欠压报警
+Low battery response	欠压报警应答
+Tail connection request	列尾主机输号请求
+Automatic pressure query	自动查询风压命令
+Automatic pressure response	自动查询风压应答
+Clock calibration	时钟校准信息
+Clock calibration response	时钟校准应答
+Pressure calibration	风压校准信息
+Pressure calibration response	风压校准应答

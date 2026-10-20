@@ -54,9 +54,9 @@ int main() {
         LbjMessage m;
         CHECK(lbj::parsePage(pages[0], 2.0, st, m), "basic page rejected");
         CHECK(m.train == "19533" && m.speedKmh == "67" && m.kmMarker == "38.2" && m.direction == "down" && m.crcOk, "fields: %s %s %s %s", m.train.c_str(), m.speedKmh.c_str(), m.kmMarker.c_str(), m.direction.c_str());
-        // the up direction is function 3
+        // Odd train numbers remain down even when the POCSAG function is 3
         const auto pu = lbj::pagesFromBurst(burstOf({lbj::basicPage("10481", 112, 12046, 3)}));
-        CHECK(lbj::parsePage(pu[0], 3.0, st, m) && m.direction == "up" && m.kmMarker == "1204.6" && m.speedKmh == "112", "up message");
+        CHECK(lbj::parsePage(pu[0], 3.0, st, m) && m.direction == "down" && m.kmMarker == "1204.6" && m.speedKmh == "112", "up message");
         // standing still: speed 0
         const auto p0 = lbj::pagesFromBurst(burstOf({lbj::basicPage("23017", 0, 50, 1)}));
         CHECK(lbj::parsePage(p0[0], 4.0, st, m) && m.speedKmh == "0" && m.kmMarker == "5.0", "speed 0");

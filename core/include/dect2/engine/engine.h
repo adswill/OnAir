@@ -120,6 +120,7 @@
 #include "dect2/goes/goes_rx.h"
 #include "dect2/elektro/elektro_rx.h"
 #include "dect2/lbj/lbj_rx.h"
+#include "dect2/railway/railway_rx.h"
 #include "dect2/dgps/dgps_engine.h"
 #include "dect2/eloran/eloran_engine.h"
 #include "dect2/mpt1327/mpt1327_engine.h"
@@ -457,6 +458,8 @@ public:
     EdacsReceiver& edacs() { return rxEdacs_; }   // EDACS control channel (telemetry through latestRx)
     MilhfReceiver& milhf() { return rxMilhf_; }   // HF waveform identifier: the audio clip for sigidwiki (telemetry through latestRx)
     DgpsReceiver& dgps() { return rxDgps_; }   // DGPS beacons: the station, the frames (telemetry through latestRx)
+    RailwayReceiver& klw() { return rxKlw_; }
+    RailwayReceiver& tdcs() { return rxTdcs_; }
     LbjReceiver& lbj() { return rxLbj_; }   // LBJ railway warnings (telemetry through latestRx)
     Vdl4Receiver& vdl4() { return rxVdl4_; }   // VDL Mode 4 (telemetry through latestRx)
     UatReceiver& uat() { return rxUat_; }         // UAT 978 MHz ADS-B / FIS-B / TIS-B (telemetry through latestRx)
@@ -724,6 +727,8 @@ private:
     GoesReceiver rxGoes_;
     ElektroReceiver rxEl_;
     LbjReceiver rxLbj_;
+    RailwayReceiver rxKlw_;
+    RailwayReceiver rxTdcs_{railway::Protocol::Tdcs};
     DgpsReceiver rxDgps_;
     ElLoranReceiver rxEloran_;
     MptReceiver rxMpt_;

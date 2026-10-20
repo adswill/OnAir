@@ -73,6 +73,39 @@ std::string rxTelemetryJson(const RxTelemetry& rx, const QualityReport* q) {
     case 41:
         d.num("symbolRate", rx.dvbc.symbolRate); d.num("qam", rx.dvbc.qam); d.num("merDb", rx.dvbc.merDb); d.num("levelDbfs", rx.dvbc.levelDbfs);
         break;
+    case 82: {
+        d.str("mode", "LBJ");
+        std::string rows = "[";
+        for (const auto& m : rx.lbj.messages) {
+            J row;
+            row.str("train", m.train); row.str("speedKmh", m.speedKmh); row.str("kilometer", m.kmMarker);
+            row.str("locomotive", m.loco); row.str("route", m.route); row.str("direction", m.direction);
+            row.b("paired", m.paired); row.b("timeSync", m.timeSync); row.str("networkTime", m.networkTime);
+            row.raw("latitude", m.positionValid ? jsonNum(m.latitude) : "null"); row.raw("longitude", m.positionValid ? jsonNum(m.longitude) : "null");
+            row.num("address", m.address); row.num("correctedBits", m.correctedBits); row.num("wallTime", double(m.wallTime));
+            if (rows.size() > 1) rows += ','; rows += '{' + row.s + '}';
+        }
+        d.raw("messages", rows + ']'); break;
+    }
+    case 147:
+    case 148: {
+        const auto& t = rx.standard == 147 ? rx.klw : rx.tdcs;
+        d.str("mode", rx.standard == 147 ? "KLW" : "TDCS");
+        std::string rows = "[";
+        for (const auto& m : t.messages) {
+            J row;
+            row.str("train", m.train); row.str("locomotive", m.locomotive); row.str("action", m.action);
+            row.num("actionCode", m.actionCode); row.str("tailId", m.tailId); row.str("parameter", m.parameter); row.str("clockSync", m.clockSync);
+            row.raw("pressureKpa", m.pressureKpa >= 0 ? std::to_string(m.pressureKpa) : "null");
+            row.num("speedKmh", m.speedKmh); row.raw("kilometer", m.kilometerValid ? jsonNum(m.kilometer) : "null");
+            row.b("testFrame", m.testFrame); row.b("increasingMileage", m.increasingMileage);
+            row.num("weightTonnes", m.weightTonnes); row.num("length", m.length); row.num("carCount", m.carCount);
+            row.num("station", m.station); row.num("track", m.track); row.num("actualTrack", m.actualTrack); row.num("driver", m.driver);
+            row.num("correctedBits", m.correctedBits); row.num("wallTime", double(m.wallTime));
+            if (rows.size() > 1) rows += ','; rows += '{' + row.s + '}';
+        }
+        d.raw("messages", rows + ']'); break;
+    }
     default: break;
     }
     if (!d.s.empty()) o.raw("details", "{" + d.s + "}");

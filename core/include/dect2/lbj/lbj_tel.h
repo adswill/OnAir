@@ -17,13 +17,18 @@ struct LbjMessage {
     std::string train;           // full train number (prefix + digits)
     std::string trainBase;       // numeric part
     std::string prefix;          // letter prefix (T, K, ...)
-    std::string direction;       // up / down / unknown (from function code when decoded)
+    std::string direction;       // up (even train number) / down (odd)
     std::string speedKmh;
     std::string kmMarker;        // kilometre post (e.g. 0123.4)
     std::string loco;            // locomotive type and number
     std::string locoCode;
     std::string route;
     std::string category;
+    std::string locoSerial, cabEnd, unknownTail, networkTime;
+    double latitude = 0, longitude = 0;   // WGS-84; only meaningful with positionValid
+    bool positionValid = false, paired = false, timeSync = false;
+    uint32_t address = 0;
+    int correctedBits = 0;
     bool detailed = false;       // long message with locomotive / route
     bool crcOk = false;
     float rssiDb = -200;

@@ -10,7 +10,7 @@ Receive only. Mode "LBJ", 821.2375 MHz (FM voice channel, 25 kHz). Code: `core/s
 | Transmitter offset | Each locomotive is off frequency by a different amount (we saw up to about 1.5 kHz on HackRF captures); the slicer threshold follows the carrier. |
 | Bursts | A burst is 100 to 400 bits (and up) of alternating preamble, the POCSAG sync word 0x7CD215D8, then one 512-bit batch (16 codewords) per sync word; usually one batch. Bursts are a few seconds apart per train and weak: the two samples have 4 to 10 bursts in 50 s. |
 | Codewords | Standard POCSAG: BCH(31,21), generator 0x769, even parity; idle word 0x7A89C197. All frames seen use numeric pages. |
-| Address | RIC 1234000 (function 1 or 3) in frame 0 (`RIC & 7` = 0 gives the slot). Function 1 is shown as direction "down", 3 as "up" (assumed from public descriptions, not provable from the recordings). |
+| Address | RIC 1234000 (function 1 or 3) in frame 0 (`RIC & 7` = 0 gives the slot). Direction follows the numeric train number: even is up, odd is down. The POCSAG function bits are not used to infer direction. |
 | Basic message | Three numeric message codewords = 15 characters: `TTTTT` train number (5 digits), a space, `SSS` speed in km/h (3 wide, right aligned), a space, `KKKKK` kilometre post in 0.1 km (5 wide, right aligned). Example off the air: `19533  67   382` = train 19533, 67 km/h, km 38.2; the same train 11 s later `19533  67   385`, and 11 s after that `...387` (0.2 km in 11 s at 67 km/h agrees). |
 | Blank message | `----- --- -----` (RIC 1234000, function 1): all fields unused. Seen once; counted as "blank", not listed. |
 
@@ -24,8 +24,7 @@ In the numeric alphabet the codes 10 to 15 are `*` `U` space `-` `)` `(`. A lost
 
 ## Not verified
 
-* The long messages (RIC 1234002 / 1234001, or appended to the basic page: locomotive type and number, train class letters, route as GBK text) and the time message (1234008): the layout in `parseDetail` follows public descriptions; none of the recordings contains one. The route text needs iconv (not on Windows: shown as ASCII only there).
-* Direction mapping (function 1 / 3).
+* The OnAir IQ recordings used for the original modem tests contain no long or time messages. Their application fields are now ported from railair-terminal and checked by `test_lbj_fields`; see [railway.md](railway.md) for the fixed offsets and pairing rules. GBK route text uses iconv on Unix and Windows code page 936 on Windows. Hardware testing of this port remains to be done.
 * Weak bursts: in the second recording (`...170033.cs8`) only one burst decodes (the blank frame in Python analysis); the C++ chain finds the LBJ address in two bursts but not a clean message. That file is weaker than the first.
 
 ## Test signal and tests
@@ -37,3 +36,5 @@ In the numeric alphabet the codes 10 to 15 are `*` `U` space `-` `)` `(`. A lost
 ## References and credits
 
 Format facts (what the fields mean, the three message classes) were taken from the READMEs of the LBJ projects by undef-i (LBJ_Console) and liujitong (CR-LBJ-Receiver), both GPL-3.0. No code of either was read or copied; the decoder was written from the POCSAG standard (ITU-R M.584), those descriptions and the recordings above. Credited in `tools/credits_data.tsv`.
+
+The extended message parser, pairing logic and shared locomotive names are now ported from [railair-terminal](https://github.com/frank-1225/railair-terminal), GPL-3.0-or-later. The original modem and its original recording tests are retained. See [railway.md](railway.md) for the additional provenance and receive-only KLW / TDCS modes.

@@ -47,6 +47,7 @@
 #include "dect2/mac/mac_tel.h"
 #include "dect2/gsmr/gsmr_tel.h"
 #include "dect2/lbj/lbj_tel.h"
+#include "dect2/railway/railway_tel.h"
 #include "dect2/dgps/dgps_engine.h"
 #include "dect2/eloran/eloran_engine.h"
 #include "dect2/mpt1327/mpt1327_engine.h"
@@ -251,6 +252,7 @@ struct RxTelemetry {
     TetraTelemetry tetra;       // valid when standard == 47
     MacTelemetry mac;           // valid when standard == 48
     GsmrTelemetry gsmr;         // valid when standard == 40
+    RailwayTelemetry klw, tdcs; // active standards 147 and 148
     LbjTelemetry lbj;           // valid when standard == 82 (LBJ, engine standard 83)
     ElLoranTelemetry eloran;    // valid when standard == 127 (eLoran / Loran-C, family 126)
     MptTelemetry mpt1327;       // valid when standard == 128 (MPT1327 trunking, family 127)

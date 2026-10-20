@@ -94,7 +94,7 @@ OnAir is a receiver first. It can also send test signals through a transmit-capa
 | **Two-way radio** | 7 | DMR, P25 (with a trunking follower), NXDN, dPMR, TETRA, TETRAPOL, tone decoders (CTCSS, DCS, DTMF, selcall) |
 | **Satellite and navigation** | 13 | Weather pictures from Meteor, GOES, Elektro-L and MetOp, Iridium, Inmarsat, Orbcomm, QO-100, CubeSat telemetry, GNSS, COSPAS-SARSAT 406 MHz distress beacons, GOES / Meteosat DCS platform reports |
 | **Two-way radio** | 6 | DMR, P25, NXDN, dPMR, D-STAR, M17, TETRA, TETRAPOL |
-| **Cellular and rail** | 5 | LTE, 5G NR and NB-IoT cells, GSM-R, LBJ |
+| **Cellular and rail** | 7 | LTE, 5G NR and NB-IoT cells, GSM-R, LBJ, KLW, TDCS |
 | **Pagers** | 3 | POCSAG, FLEX, Multitone |
 | **IoT and sensors** | 14 | ISM sensors, LoRaWAN, Meshtastic, MeshCore, Bluetooth LE, Zigbee, Wi-Fi, Wi-SUN, Wireless M-Bus, Z-Wave, DECT, ANT+ |
 | **Amateur** | 30 | FT8, FT4, WSPR, JS8Call, RTTY, PSK, MT63, FSQ, IFKP, SSTV, FreeDV, APRS, LoRa APRS, MeshCom and more |
@@ -296,6 +296,7 @@ No radio? Open an IQ recording through the *IQ recording file* source (cs8, cu8,
 ### Cellular and rail
 
 - **Cell towers** (LTE MIB / SIB1 - SIB5; towers on a map with an [OpenCelliD](#tools-and-notes) key), **5G NR cells** (SS/PBCH, PCI, RSRP, MIB; SIB1 is not decoded yet), **NB-IoT cells**, **GSM-R** (921 - 925 MHz) and **LBJ** (Chinese railway train warnings at 821.2375 MHz: train number, speed, kilometre post, direction; see [docs/lbj.md](docs/lbj.md)). Public broadcast information only.
+- **KLW** end-of-train data (default 866.2375 MHz) and **TDCS** train dispatch data (default 457.550 MHz): 1200 bit/s FFSK with BCH and CRC checks, locomotive and tail IDs, pressure / commands or train number, speed, mileage and consist fields. LBJ also decodes the fixed-position extension, WGS-84 coordinates and time broadcasts. [Details and test coverage](docs/railway.md).
 
 ### Pagers
 

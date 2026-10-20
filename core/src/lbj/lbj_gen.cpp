@@ -62,7 +62,7 @@ GenPage basicPage(const std::string& train, int speedKmh, int kmTenths, int func
 }
 
 std::vector<TestMessage> testMessages() {
-    return {{"19533", "67", "38.2", "down"}, {"10481", "112", "1204.6", "up"}, {"23017", "0", "5.0", "down"}, {"41205", "86", "311.9", "up"}};
+    return {{"19533", "67", "38.2", "down"}, {"10482", "112", "1204.6", "up"}, {"23017", "0", "5.0", "down"}, {"41206", "86", "311.9", "up"}};
 }
 
 } // namespace dect2::lbj

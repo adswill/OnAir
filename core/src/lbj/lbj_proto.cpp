@@ -1,203 +1,149 @@
-// LBJ: numeric POCSAG pages on 821.2375 MHz. Field layout of the short message was read off real recordings
-// (see docs/lbj.md); the long (locomotive / route) message follows public descriptions and is not yet verified on air.
+// LBJ fixed fields and single-use, five-second basic/detail pairing.
+// Ported from frank-1225/railair-terminal (GPL-3.0-or-later); docs/railway.md.
 #include "dect2/lbj/lbj_proto.h"
+#include "dect2/railway/railway_proto.h"
 #include <algorithm>
-#include <cctype>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
-#ifndef _WIN32
+#include <sstream>
+#ifdef _WIN32
+#include "dect2/common/platform.h"
+#else
 #include <iconv.h>
 #endif
-
 namespace dect2::lbj {
-
+namespace {
+bool digits(const std::string& s) {
+    return !s.empty() && std::all_of(s.begin(), s.end(), [](char c) { return c >= '0' && c <= '9'; });
+}
+std::string trim(std::string s) {
+    const auto a = s.find_first_not_of(' '), b = s.find_last_not_of(' ');
+    return a == std::string::npos ? "" : s.substr(a, b - a + 1);
+}
+bool blank(const std::string& s) { return s.find_first_not_of(" -*?") == std::string::npos; }
+std::string unhex(const std::string& numeric) {
+    const std::string codes = "0123456789*U -)(";
+    std::string out;
+    if (numeric.size() % 2) return {};
+    for (size_t i = 0; i < numeric.size(); i += 2) {
+        auto nibble = [&](char c) { return c == '.' ? size_t(10) : (c == ']' ? size_t(14) : (c == '[' ? size_t(15) : codes.find(c))); };
+        const size_t hi = nibble(numeric[i]), lo = nibble(numeric[i + 1]);
+        if (hi > 15 || lo > 15) return {};
+        out.push_back(char(hi * 16 + lo));
+    }
+    return out;
+}
+std::string gbk(std::string bytes) {
+    while (!bytes.empty() && (bytes.back() == 0 || (unsigned char)bytes.back() == 255)) bytes.pop_back();
+    if (bytes.empty()) return {};
+#ifdef _WIN32
+    const int n = MultiByteToWideChar(936, MB_ERR_INVALID_CHARS, bytes.data(), (int)bytes.size(), nullptr, 0);
+    if (!n) return {};
+    std::wstring wide((size_t)n, 0);
+    MultiByteToWideChar(936, MB_ERR_INVALID_CHARS, bytes.data(), (int)bytes.size(), wide.data(), n);
+    const int m = WideCharToMultiByte(CP_UTF8, 0, wide.data(), n, nullptr, 0, nullptr, nullptr);
+    std::string out((size_t)m, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wide.data(), n, out.data(), m, nullptr, nullptr);
+#else
+    iconv_t cd = iconv_open("UTF-8", "GBK");
+    if (cd == (iconv_t)-1) return {};
+    size_t left = bytes.size(), available = bytes.size() * 4 + 4;
+    std::string out(available, 0);
+    char* in = bytes.data(); char* target = out.data();
+    const size_t result = iconv(cd, &in, &left, &target, &available);
+    iconv_close(cd);
+    if (result == (size_t)-1 || left) return {};
+    out.resize(out.size() - available);
+#endif
+    for (unsigned char c : out) if (c < 32 || c == 127) return {};
+    return trim(out);
+}
+bool recent(double now, double before) { return now >= before && now - before <= 5.0; }
+void mergeBasic(const LbjMessage& basic, LbjMessage& detail) {
+    detail.trainBase = basic.trainBase; detail.train = detail.prefix + basic.trainBase;
+    detail.speedKmh = basic.speedKmh; detail.kmMarker = basic.kmMarker;
+    detail.direction = basic.direction; detail.paired = true;
+    detail.crcOk = detail.crcOk && basic.crcOk;
+    detail.correctedBits += basic.correctedBits;
+}
+bool basic(const Page& p, LbjSessionState& st, LbjMessage& out) {
+    const std::string text = p.digits.substr(0, p.digits.size() >= 65 ? 15 : std::string::npos);
+    if (blank(text)) { st.emptyFrames++; return false; }
+    std::string train, speed, km;
+    if (text.size() == 15) {
+        train = trim(text.substr(0, 5)); speed = trim(text.substr(5, 5)); km = trim(text.substr(10, 5));
+    } else {
+        std::istringstream in(text); std::string extra;
+        if (!(in >> train >> speed >> km) || (in >> extra)) return false;
+    }
+    if (!digits(train) || train.size() > 5) return false;
+    out.trainBase = std::to_string(std::atoi(train.c_str())); out.train = out.trainBase;
+    out.direction = std::atoi(train.c_str()) % 2 ? "down" : "up";
+    if (digits(speed) && speed.size() <= 3 && std::atoi(speed.c_str()) <= 400) out.speedKmh = std::to_string(std::atoi(speed.c_str()));
+    else if (!blank(speed)) return false;
+    const std::string magnitude = !km.empty() && km[0] == '-' ? km.substr(1) : km;
+    if (digits(magnitude) && magnitude.size() <= 5) {
+        char b[32]; snprintf(b, sizeof b, "%.1f", std::atoi(km.c_str()) / 10.0); out.kmMarker = b;
+    } else if (!blank(km)) return false;
+    return true;
+}
+bool detail(const Page& p, LbjMessage& out) {
+    if (p.missing || p.digits.size() < 47) return false;
+    const std::string& s = p.digits;
+    std::string prefix = unhex(s.substr(0, 4));
+    for (unsigned char c : prefix) if (c && (c < 32 || c > 126)) { prefix.clear(); break; }
+    prefix.erase(std::remove(prefix.begin(), prefix.end(), '\0'), prefix.end()); out.prefix = trim(prefix);
+    const std::string code = s.substr(4, 4), serial = s.substr(8, 4);
+    if (digits(code)) out.locoCode = code;
+    if (digits(serial)) out.locoSerial = serial;
+    if (!out.locoCode.empty() && !out.locoSerial.empty()) out.loco = railway::lbjLocomotive(code + serial);
+    out.cabEnd = s.substr(12, 2); out.route = gbk(unhex(s.substr(14, 16))); out.unknownTail = s.substr(47, 3);
+    if (digits(s.substr(30, 17))) {
+        const double lonMin = std::atoi(s.substr(33, 6).c_str()) / 10000.0, latMin = std::atoi(s.substr(41, 6).c_str()) / 10000.0;
+        const double lon = std::atoi(s.substr(30, 3).c_str()) + lonMin / 60, lat = std::atoi(s.substr(39, 2).c_str()) + latMin / 60;
+        if (lonMin < 60 && latMin < 60 && lon >= 70 && lon <= 140 && lat > 0 && lat <= 60) {
+            out.longitude = lon; out.latitude = lat; out.positionValid = true;
+        }
+    }
+    out.detailed = true; return true;
+}
+} // namespace
 bool isLbjAddress(uint32_t ric) {
     return ric == kAddrBasic || ric == kAddrBasicAlt || ric == kAddrDetail || ric == kAddrDetailAlt || ric == kAddrTime;
 }
-
-namespace {
-
-std::string trim(const std::string& s) {
-    size_t a = 0, b = s.size();
-    while (a < b && s[a] == ' ') a++;
-    while (b > a && s[b - 1] == ' ') b--;
-    return s.substr(a, b - a);
-}
-
-bool allDigits(const std::string& s) {
-    if (s.empty()) return false;
-    for (unsigned char c : s) if (!std::isdigit(c)) return false;
-    return true;
-}
-
-bool blankField(const std::string& s) {          // '-' and '*' fill unused fields, '?' marks digits lost to errors
-    for (unsigned char c : s) if (c != '-' && c != '*' && c != ' ' && c != '?') return false;
-    return true;
-}
-
-char hexNibble(char c) {                          // numeric codes 10..15 carry the hex digits A..F in the long message
-    switch (c) {
-    case '*': return 'A';
-    case 'U': return 'B';
-    case ' ': return 'C';
-    case '-': return 'D';
-    case ')': return 'E';
-    case '(': return 'F';
-    default: return c;
-    }
-}
-
-std::string gbkToUtf8(const std::string& hex) {
-    if (hex.size() < 4 || (hex.size() & 1)) return {};
-    std::string bytes;
-    for (size_t i = 0; i + 1 < hex.size(); i += 2) {
-        const char h[3] = {hex[i], hex[i + 1], 0};
-        char* end = nullptr;
-        const long v = std::strtol(h, &end, 16);
-        if (end != h + 2) return {};
-        bytes.push_back((char)v);
-    }
-    while (!bytes.empty() && bytes.back() == 0) bytes.pop_back();
-    if (bytes.empty()) return {};
-#ifndef _WIN32
-    iconv_t cd = iconv_open("UTF-8", "GBK");
-    if (cd != (iconv_t)-1) {
-        size_t inLeft = bytes.size(), outLeft = bytes.size() * 3 + 8;
-        std::string out(outLeft, '\0');
-        char* in = bytes.data();
-        char* o = out.data();
-        const size_t r = iconv(cd, &in, &inLeft, &o, &outLeft);
-        iconv_close(cd);
-        if (r != (size_t)-1 && inLeft == 0) {
-            out.resize(out.size() - outLeft);
-            return out;
-        }
-        return {};
-    }
-#endif
-    std::string asc;
-    for (unsigned char c : bytes) if (c >= 32 && c < 127) asc.push_back((char)c);
-    return asc;
-}
-
-std::string directionOf(int fn) {
-    if (fn == 1) return "down";
-    if (fn == 3) return "up";
-    return {};
-}
-
-void fill(const LbjSessionState::Row& r, double t, LbjMessage& out) {
-    out = LbjMessage();
-    out.timeSec = t;
-    out.trainBase = r.baseTrain;
-    out.prefix = r.prefix;
-    out.train = r.prefix + r.baseTrain;
-    out.direction = r.direction;
-    out.speedKmh = r.speedKmh;
-    out.kmMarker = r.kmMarker;
-    out.loco = r.loco;
-    out.locoCode = r.locoCode;
-    out.route = r.route;
-    out.detailed = r.detailed;
-    out.crcOk = true;
-}
-
-void expire(LbjSessionState& st, double now) {
-    for (auto it = st.sessions.begin(); it != st.sessions.end();) {
-        if (now - it->second.updatedSec > 10.0) {
-            if (st.lastTrain == it->first) st.lastTrain.clear();
-            it = st.sessions.erase(it);
-        } else
-            ++it;
-    }
-}
-
-bool parseBasic(const Page& p, double t, LbjSessionState& st, LbjMessage& out) {
-    if (p.digits.size() < 15) return false;
-    const std::string trainRaw = p.digits.substr(0, 5), speedRaw = p.digits.substr(5, 5), kmRaw = p.digits.substr(10, 5);
-    if (blankField(trainRaw) && blankField(speedRaw) && blankField(kmRaw)) { st.emptyFrames++; return false; }
-    const std::string train = trim(trainRaw), speed = trim(speedRaw), km = trim(kmRaw);
-    if (!allDigits(train)) { st.rejected++; return false; }   // a lost train number is not shown
-    LbjSessionState::Row row;
-    std::string base = train;
-    base.erase(0, std::min(base.find_first_not_of('0'), base.size() - 1));   // leading zeros are padding
-    if (allDigits(speed)) {
-        const int v = std::atoi(speed.c_str());
-        if (v > 400) { st.rejected++; return false; }   // no train runs that fast
-        row.speedKmh = std::to_string(v);
-    } else if (!blankField(speed)) { st.rejected++; return false; }
-    if (allDigits(km)) {
-        const int v = std::atoi(km.c_str());
-        char b[24];
-        snprintf(b, sizeof b, "%d.%d", v / 10, v % 10);
-        row.kmMarker = b;
-    } else if (!blankField(km)) { st.rejected++; return false; }
-    auto& s = st.sessions[base];
-    s.baseTrain = base;
-    s.direction = directionOf(p.function);
-    if (!row.speedKmh.empty()) s.speedKmh = row.speedKmh; else s.speedKmh.clear();
-    if (!row.kmMarker.empty()) s.kmMarker = row.kmMarker; else s.kmMarker.clear();
-    s.updatedSec = t;
-    st.lastTrain = base;
-    expire(st, t);
-    fill(s, t, out);
-    out.crcOk = p.digits.find('?') == std::string::npos && p.fixed <= 2;
-    return true;
-}
-
-// Long message: the last 50 characters are 25 bytes in hex. Offsets (characters): 0-3 two ASCII letters (train class prefix, e.g. "K"),
-// 4-6 locomotive type code, 7-11 locomotive number, 14-29 eight bytes of GBK text (the route). Unverified on air.
-bool parseDetail(const Page& p, double t, LbjSessionState& st, LbjMessage& out) {
-    if (p.missing || p.digits.size() < 30) return false;
-    const std::string buf = p.digits.size() > 50 ? p.digits.substr(p.digits.size() - 50) : p.digits;
-    std::string hex;
-    for (char c : buf) hex.push_back(hexNibble(c));
-    std::string prefix;
-    for (int i = 0; i < 2; i++) {
-        const int v = (int)std::strtol(hex.substr(i * 2, 2).c_str(), nullptr, 16);
-        if (v >= 'A' && v <= 'Z') prefix.push_back((char)v);
-    }
-    std::string locoCode = buf.substr(4, 3), locoNum = trim(buf.substr(7, 5)), loco;
-    if (allDigits(locoCode) && allDigits(locoNum)) loco = locoCode + "-" + locoNum;
-    else locoCode.clear();
-    std::string route = trim(gbkToUtf8(hex.substr(14, 16)));
-    for (unsigned char c : route) if (c < 32) { route.clear(); break; }
-    if (loco.empty() && route.empty()) { st.rejected++; return false; }
-    // attach to the train named by the short message of the last two seconds
-    const std::string id = st.lastTrain;
-    if (id.empty() || !st.sessions.count(id) || t - st.sessions[id].updatedSec > 2.0) return false;
-    auto& s = st.sessions[id];
-    if (!prefix.empty()) s.prefix = prefix;
-    if (!loco.empty()) { s.loco = loco; s.locoCode = locoCode; }
-    if (!route.empty()) s.route = route;
-    s.detailed = true;
-    s.updatedSec = t;
-    fill(s, t, out);
-    return true;
-}
-
-} // namespace
-
 bool parsePage(const Page& p, double t, LbjSessionState& st, LbjMessage& out) {
-    out = LbjMessage();
-    if (p.ric == kAddrBasic || p.ric == kAddrBasicAlt) {
-        const bool ok = parseBasic(p, t, st, out);
-        if (ok && p.digits.size() >= 50 + 15) {          // basic and long message in one page
-            LbjMessage o2;
-            Page q = p;
-            if (parseDetail(q, t, st, o2)) out = o2;
+    out = LbjMessage(); out.timeSec = t; out.address = p.ric; out.correctedBits = p.fixed;
+    out.crcOk = !p.missing && p.digits.find('?') == std::string::npos && p.fixed <= 2;
+    if (p.ric == kAddrTime) {
+        out.timeSync = true;
+        if (p.digits.size() >= 5 && digits(p.digits.substr(1, 4))) {
+            const int hour = std::atoi(p.digits.substr(1, 2).c_str()), minute = std::atoi(p.digits.substr(3, 2).c_str());
+            if (hour < 24 && minute < 60) out.networkTime = p.digits.substr(1, 2) + ":" + p.digits.substr(3, 2);
         }
-        return ok;
+        return true;
     }
-    if (p.ric == kAddrDetail || p.ric == kAddrDetailAlt) return parseDetail(p, t, st, out);
-    return false;
+    if (p.ric == kAddrBasic || p.ric == kAddrBasicAlt) {
+        const auto emptyBefore = st.emptyFrames;
+        if (!basic(p, st, out)) { st.basicSec = st.detailSec = -1e9; if (st.emptyFrames == emptyBefore) st.rejected++; return false; }
+        if (p.digits.size() < 65 && recent(t, st.detailSec)) {
+            LbjMessage merged = st.pendingDetail; mergeBasic(out, merged); merged.timeSec = t; out = std::move(merged); st.basicSec = -1e9;
+        } else { st.pendingBasic = out; st.basicSec = t; }
+        st.detailSec = -1e9;
+        if (p.digits.size() >= 65) {
+            Page q = p; q.ric = kAddrDetail; q.digits = p.digits.substr(p.digits.size() - 50);
+            LbjMessage extended; if (parsePage(q, t, st, extended)) out = std::move(extended);
+        }
+        return true;
+    }
+    if (p.ric == kAddrDetail || p.ric == kAddrDetailAlt) {
+        if (!detail(p, out)) { st.basicSec = st.detailSec = -1e9; st.rejected++; return false; }
+        if (recent(t, st.basicSec)) { mergeBasic(st.pendingBasic, out); st.detailSec = -1e9; }
+        else { st.pendingDetail = out; st.detailSec = t; }
+        st.basicSec = -1e9; return true;
+    }
+    st.basicSec = st.detailSec = -1e9; return false;
 }
-
 std::string formatBasic(const std::string& train, int speedKmh, int kmTenths) {
-    char b[48];
-    snprintf(b, sizeof b, "%-5s %3d %5d", train.c_str(), speedKmh, kmTenths);
-    return b;
+    char b[48]; snprintf(b, sizeof b, "%-5s %3d %5d", train.c_str(), speedKmh, kmTenths); return b;
 }
-
 } // namespace dect2::lbj
