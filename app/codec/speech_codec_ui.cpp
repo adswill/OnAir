@@ -167,7 +167,10 @@ void codecInstallHelper(const char* id) {
     ImGui::SameLine();
     if (ImGui::Button("Build steps")) dect2::openUrl("https://github.com/adswill/OnAir/blob/main/docs/CODECS.md#speech-codec-plug-ins-voice-modes");
     ImGui::SameLine();
+    if (ImGui::Button("Build helper page")) dect2::openUrl("https://github.com/adswill/OnAir/blob/main/docs/CODECS-BUILD-HELPER.md");
+    ImGui::SameLine();
     if (ImGui::Button("Rescan for plug-in")) speechCodecRescan(id);
+    ImGui::TextDisabled("Easiest way: run the build helper script (see the page below)");
     ImGui::TextDisabled("Upstream mbelib project page: https://github.com/lwvmobile/mbelib. OnAir downloads nothing for you.");
 }
 
