@@ -12,7 +12,7 @@ const i18n::Language kLanguages[] = {
     {"en", "English"}, {"de", "Deutsch"}, {"fr", "Fran\xC3\xA7" "ais"}, {"es", "Espa\xC3\xB1ol"},
     {"zh", "\xE4\xB8\xAD\xE6\x96\x87 (\xE7\xAE\x80\xE4\xBD\x93)"}, {"lt", "Lietuvi\xC5\xB3"}, {"hu", "Magyar"},
     {"ja", "\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E"}, {"pl", "Polski"}, {"nl", "Nederlands"},
-    {"pt", "Portugu\xC3\xAA" "s (Brasil)"}, {"it", "Italiano"}, {"ru", "\xD0\xA0\xD1\x83\xD1\x81\xD1\x81\xD0\xBA\xD0\xB8\xD0\xB9"},
+    {"pt", "Portugu\xC3\xAA" "s (Brasil)"}, {"pt-PT", "Portugu\xC3\xAA" "s (Portugal)"}, {"it", "Italiano"}, {"ru", "\xD0\xA0\xD1\x83\xD1\x81\xD1\x81\xD0\xBA\xD0\xB8\xD0\xB9"},
 };
 constexpr int kNumLanguages = (int)(sizeof kLanguages / sizeof *kLanguages);
 
@@ -35,14 +35,7 @@ std::string unescape(std::string_view s) {
     return o;
 }
 
-Loaded& load(int idx) {
-    static Loaded langs[kNumLanguages];
-    static bool done[kNumLanguages] = {};
-    Loaded& L = langs[idx];
-    if (done[idx]) return L;
-    done[idx] = true;
-    const char* text = i18n::catalogText(kLanguages[idx].code);
-    if (!text) return L;
+void parse(Loaded& L, const char* text) {   // a later text for the same key wins
     std::string_view all(text);
     size_t pos = 0;
     while (pos < all.size()) {
@@ -58,6 +51,19 @@ Loaded& load(int idx) {
         const std::string& v = L.store.emplace_back(unescape(line.substr(tab + 1)));
         L.map[std::string_view(k)] = v.c_str();
     }
+}
+
+Loaded& load(int idx) {
+    static Loaded langs[kNumLanguages];
+    static bool done[kNumLanguages] = {};
+    Loaded& L = langs[idx];
+    if (done[idx]) return L;
+    done[idx] = true;
+    const std::string code = kLanguages[idx].code;
+    const size_t dash = code.find('-');
+    if (dash != std::string::npos)   // a regional catalog (pt-PT) holds only the texts that differ from its base (pt)
+        if (const char* base = i18n::catalogText(code.substr(0, dash).c_str())) parse(L, base);
+    if (const char* text = i18n::catalogText(code.c_str())) parse(L, text);
     L.empty = L.map.empty();
     return L;
 }
@@ -79,10 +85,18 @@ const i18n::Language* i18n::languages(int& count) { count = kNumLanguages; retur
 const char* i18n::current() { return kLanguages[gCur].code; }
 
 const char* i18n::set(const std::string& code) {
-    std::string c;
-    for (char ch : code) { if (ch == '-' || ch == '_' || ch == '.' || ch == '@') break; c += (char)(ch >= 'A' && ch <= 'Z' ? ch - 'A' + 'a' : ch); }
+    std::string c, full;   // "pt" and "pt-pt" for "pt_PT.UTF-8"
+    for (char ch : code) {
+        if (ch == '.' || ch == '@') break;
+        if (ch == '-' || ch == '_') { full += '-'; continue; }
+        const char l = (char)(ch >= 'A' && ch <= 'Z' ? ch - 'A' + 'a' : ch);
+        if (full.size() == c.size()) c += l;
+        full += l;
+    }
+    auto lower = [](const char* s) { std::string o; for (; *s; s++) o += (char)(*s >= 'A' && *s <= 'Z' ? *s - 'A' + 'a' : *s); return o; };
     gCur = 0;
     for (int i = 0; i < kNumLanguages; i++) if (c == kLanguages[i].code) gCur = i;
+    for (int i = 0; i < kNumLanguages; i++) if (full != c && full == lower(kLanguages[i].code)) gCur = i;   // a listed region (pt-PT) wins over its base
     load(gCur);
     return kLanguages[gCur].code;
 }

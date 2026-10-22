@@ -1,4 +1,4 @@
-# OnAir interface in Portuguese. One text per line: the English text as in the source, a tab, the translation.
+# OnAir interface in Brazilian Portuguese; pt-PT.txt has the European Portuguese (Portugal) texts that differ. One text per line: the English text as in the source, a tab, the translation.
 # \n is a line break. Keep the printf conversions (%s, %d, %.1f ...) in the same order. tests/app/test_i18n.cpp checks this file.
 # Machine-quality translation, not reviewed by a native speaker.
 1 kHz test tone	1 kHz test tone

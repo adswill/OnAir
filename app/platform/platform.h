@@ -74,7 +74,7 @@ std::vector<std::string> uiFontCandidates();
 std::vector<std::string> cjkFontCandidates();   // system CJK font merged into the UI fonts for Chinese/Japanese/Korean service names
 std::vector<std::string> monoFontCandidates();
 
-// The language the user reads the system in, as a code such as "de", "zh-Hans" or "lt_LT.UTF-8" (i18n::set() takes the first letters)
+// The language the user reads the system in, as a code such as "de", "zh-Hans" or "lt_LT.UTF-8" (i18n::set() takes the first letters, or a listed region such as pt-PT)
 std::string uiLanguage();
 
 }

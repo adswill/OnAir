@@ -525,7 +525,7 @@ std::string uiLanguage() {
         case LANG_JAPANESE: return "ja";
         case LANG_POLISH: return "pl";
         case LANG_DUTCH: return "nl";
-        case LANG_PORTUGUESE: return "pt";
+        case LANG_PORTUGUESE: return SUBLANGID(GetUserDefaultUILanguage()) == SUBLANG_PORTUGUESE ? "pt-PT" : "pt";   // SUBLANG_PORTUGUESE: Portugal
         case LANG_ITALIAN: return "it";
         case LANG_RUSSIAN: return "ru";
         default: return "en";

@@ -16,8 +16,9 @@ const char* trw(const char* english);
 namespace i18n {
 struct Language { const char* code; const char* name; };   // name: in the language itself
 const Language* languages(int& count);                     // English first
-// Choose the language by code ("de", "fr", "es", "zh", "lt", "hu", "pt", "it", "ru" ... "en"); an unknown code or one with a region ("de-AT", "zh_CN.UTF-8",
-// "zh-Hans") is matched by its first letters. Returns the code actually chosen.
+// Choose the language by code ("de", "fr", "es", "zh", "lt", "hu", "pt", "pt-PT", "it", "ru" ... "en"); an unknown code or one with a region ("de-AT",
+// "zh_CN.UTF-8", "zh-Hans") is matched by its first letters, unless the list has that region ("pt-PT", "pt_PT.UTF-8" -> pt-PT). Returns the code chosen.
+// A regional catalog (pt-PT.txt) holds only the texts that differ from its base (pt.txt); the rest comes from the base.
 const char* set(const std::string& code);
 const char* current();                                     // "en" when nothing is chosen
 // The catalog text of a language (for the tests): lines of "English<TAB>translation", '#' comments, \n \t \\ escapes

@@ -139,12 +139,26 @@ int main(int argc, char** argv) {
             if (!v.empty() && specifiers(k) != specifiers(v)) { badFmt++; CHECK(false, "%s.txt:%d: the printf conversions differ: \"%s\" -> \"%s\"", langs[li].code, lineNo, k.c_str(), v.c_str()); }
             CHECK(v.find("##") == std::string::npos || k.find("##") != std::string::npos, "%s.txt:%d: the translation has a ## the key has not", langs[li].code, lineNo);
         }
+        std::map<std::string, std::string> base;   // a regional catalog (pt-PT) takes the other texts from its base (pt)
+        if (const char* dash = std::strchr(langs[li].code, '-')) {
+            const char* bt = i18n::catalogText(std::string(langs[li].code, dash).c_str());
+            CHECK(bt != nullptr, "no base catalog for %s", langs[li].code);
+            std::istringstream bin(bt ? bt : "");
+            for (std::string bl; std::getline(bin, bl);) {
+                if (!bl.empty() && bl.back() == '\r') bl.pop_back();
+                const size_t t = bl.find('\t');
+                if (bl.empty() || bl[0] == '#' || t == std::string::npos) continue;
+                base[unescapeCatalog(bl.substr(0, t))] = unescapeCatalog(bl.substr(t + 1));
+            }
+            for (const auto& kv : cat)
+                CHECK(!base.count(kv.first) || base[kv.first] != kv.second, "%s.txt: \"%s\" is the same as in the base catalog (leave it out)", langs[li].code, kv.first.c_str());
+        }
         int missing = 0;
         std::string sample;
         for (const std::string& u : used) {
             const size_t h = u.find("##");
             const std::string k = h != std::string::npos && h > 0 ? u.substr(0, h) : u;
-            if (k.empty() || cat.count(k) || cat.count(u)) continue;
+            if (k.empty() || cat.count(k) || cat.count(u) || base.count(k) || base.count(u)) continue;
             if (missing++ < 8) sample += "\n    \"" + k + "\"";
         }
         std::printf("%s: %zu entries, %d stale, %d with other conversions; warning: %d texts without a translation%s\n",
@@ -156,6 +170,13 @@ int main(int argc, char** argv) {
     CHECK(!std::strcmp(i18n::set("zh_CN.UTF-8"), "zh"), "zh_CN.UTF-8 -> zh");
     CHECK(!std::strcmp(i18n::set("zh-Hans-CN"), "zh"), "zh-Hans-CN -> zh");
     CHECK(!std::strcmp(i18n::set("pt-BR"), "pt") && !std::strcmp(i18n::set("ru_RU.UTF-8"), "ru") && !std::strcmp(i18n::set("it-IT"), "it"), "pt-BR -> pt, ru_RU.UTF-8 -> ru, it-IT -> it");
+    CHECK(!std::strcmp(i18n::set("pt-PT"), "pt-PT") && !std::strcmp(i18n::set("pt_PT.UTF-8"), "pt-PT") && !std::strcmp(i18n::set("pt"), "pt"),
+          "pt-PT, pt_PT.UTF-8 -> pt-PT, pt -> pt");
+    i18n::set("pt-BR");
+    const std::string brFile = tr("File"), brPeak = tr("Peak hold");
+    i18n::set("pt-PT");
+    CHECK(!std::strcmp(tr("File"), "Ficheiro") && brFile == "Arquivo", "File: %s in pt-PT, %s in pt", tr("File"), brFile.c_str());
+    CHECK(brPeak == tr("Peak hold") && brPeak != "Peak hold", "pt-PT takes Peak hold from pt: %s", tr("Peak hold"));
     CHECK(!std::strcmp(i18n::set("xx-YY"), "en"), "an unknown language -> en");
     i18n::set("en");
     CHECK(!std::strcmp(tr("Peak hold"), "Peak hold"), "English is the key itself");
