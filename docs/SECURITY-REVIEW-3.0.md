@@ -103,3 +103,16 @@ Verification state of the patches: 05 ran with `node --test` against the branch'
 - Whether the headless `onair-server` loads the voice key store anywhere (M2, last bullet): I saw no call, but did not search the whole tree.
 - The exact application setting names for M3, and whether `plat::cacheDir()` is per user on every platform for M4.
 - Cloudflare behaviour (what a Worker `fetch` may reach; rate-limit row cleanup relies on the cron trigger).
+
+## Fix status (2026-10-23, paused by the owner)
+Fixes are committed on local branches of the fixing worktree; only the tested one is pushed. Nothing else was pushed to a source branch.
+| source branch | fix | state |
+| --- | --- | --- |
+| webonair-dir-030 | L1 rate-limit salt, L2 replay after delete (tombstone) | PUSHED, `node --test` 24/24 |
+| backup-030 | H1 manifest binding, code/library locations refused, symlink/non-file targets refused, M3 settings allow-list with per-key tick (UI) | committed (local secfix-backup, bcfce5dc8), NOT compiled or run, not pushed |
+| external-api-030 | M1 rigctl HTTP/header hang-up, `\auth <token>` for F M S T | committed (local secfix-api, 3c2cb7640), NOT compiled or run, not pushed |
+| webonair-030 | M2 allow-list of web-safe modes, registry classification test | committed (local secfix-web, ae9b93033), NOT compiled or run, not pushed |
+| voice-keys-030, voice-keys-gui-030 | PBKDF2 round bound, failed keychain read keeps the master key, 0600 | committed (local secfix-vk 7ddce7a1b, secfix-vkgui cdc119f22), NOT compiled or run, not pushed |
+| ham-map-feed-030 | L4 callsign characters | committed (local secfix-ham, d5c07fd6a), NOT compiled or run, not pushed |
+| bluefile-030 | M4 private per-user folder + mkstemp, sample-rate range | committed (local secfix-blue, 95616b9b2), NOT compiled or run, not pushed |
+Not done: unpkg integrity hash (the hash is not known and a download is not allowed; vendoring needs a download). Test harness snippets are in the session scratchpad (`scratchpad/sec`).

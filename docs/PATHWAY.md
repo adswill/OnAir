@@ -136,3 +136,6 @@ Tag v0.2.9 (9e6b74a6), merged into main (7fe4c99d with the wide-bank test fix). 
 
 ## 2026-10-23: security review of the 3.0 network and privacy code (security-review-030)
 Read-only review of webonair, webonair-ui, webonair-dir, external-api, ham-map-feed, web-map, voice-keys(-gui), backup, datapacks, presets, bluefile and tx-studio through `git show pub/<branch>`. Result in docs/SECURITY-REVIEW-3.0.md: 1 high (backup manifest can write files outside the item's places, e.g. codecs/ which is dlopen'd), 4 medium (rigctl port drivable by a web page, web policy classifies unknown mode ids as data, backup restore applies any setting, BLUE conversion copy in a predictable shared temp name), several low. No memory-safety bug found in the BLUE, JSON, WebSocket or ZIP parsers. TX studio confirmed receive-only. Five small fixes with tests are patches against their source branches in docs/security-patches-3.0/ (not applied to main: the integrator applies them on rigctl/backup/voice-keys/ham-map-feed/webonair-dir).
+
+## 2026-10-23: security fixes applied to the source branches (paused)
+Pushed: webonair-dir-030 (rate-limit salt, tombstone after delete; node tests pass). Committed locally, untested, not pushed: backup-030, external-api-030, webonair-030, voice-keys-030/-gui-030, ham-map-feed-030, bluefile-030. See docs/SECURITY-REVIEW-3.0.md, "Fix status".
