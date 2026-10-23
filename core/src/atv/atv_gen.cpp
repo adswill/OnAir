@@ -8,6 +8,7 @@
 #include "dect2/atv/atv_card.h"
 #include "dect2/atv/atv_nbtv.h"
 #include "atv_dsp.h"
+#include "dect2/common/threadpool.h"
 #include "dect2/dsp/dsp_compat.h"
 #include <algorithm>
 #include <cmath>
@@ -142,6 +143,8 @@ struct AtvGenerator::Impl {
     size_t ghostPos = 0;
     NoiseSource noise;
     std::vector<cf32> blk;
+    std::vector<size_t> kAt;
+    std::vector<int> kPh;
 
     explicit Impl(const AtvGenConfig& c) : cfg(c), noise(c.seed) {
         if (!atvMakeFormat(c.sys, c.colour, fmt)) return;
@@ -709,21 +712,33 @@ struct AtvGenerator::Impl {
             const size_t b = std::min<size_t>(n - done, 2048);
             const int64_t need = (int64_t)std::floor(pos + (double)b * step) + kKernTaps;
             while (xvBase + (int64_t)xr.size() < need) produce();
+            // the positions are walked in order (pos accumulates exactly as before, whatever the chunking); the dot products of
+            // the interpolation kernel then run in parts on the shared pool: every output sample is independent, the result is the same for any N
+            if (kAt.size() < b) { kAt.resize(b); kPh.resize(b); }
             for (size_t j = 0; j < b; j++) {
                 const int64_t i0 = (int64_t)std::floor(pos);
                 int ph = (int)std::lround((pos - (double)i0) * kKernPhases);
                 int64_t ib = i0;
                 if (ph >= kKernPhases) { ph -= kKernPhases; ib++; }
-                const float* kk = &kern[(size_t)ph * kKernTaps];
-                const size_t at = (size_t)(ib - (kKernTaps / 2 - 1) - xvBase);
-                const float* xs = &xr[at];
-                const float* ys = &xi[at];
-                float re[4] = {0, 0, 0, 0}, im[4] = {0, 0, 0, 0};            // four lanes: the compiler turns this into vector code
-                for (int b = 0; b < kKernTaps; b += 4)
-                    for (int l = 0; l < 4; l++) { re[l] += kk[b + l] * xs[b + l]; im[l] += kk[b + l] * ys[b + l]; }
-                out[done + j] = cf32((re[0] + re[1]) + (re[2] + re[3]), (im[0] + im[1]) + (im[2] + im[3]));
+                kPh[j] = ph;
+                kAt[j] = (size_t)(ib - (kKernTaps / 2 - 1) - xvBase);
                 pos += step;
             }
+            auto resample = [&](size_t j0, size_t j1) {
+                for (size_t j = j0; j < j1; j++) {
+                    const float* kk = &kern[(size_t)kPh[j] * kKernTaps];
+                    const float* xs = &xr[kAt[j]];
+                    const float* ys = &xi[kAt[j]];
+                    float re[4] = {0, 0, 0, 0}, im[4] = {0, 0, 0, 0};            // four lanes: the compiler turns this into vector code
+                    for (int b = 0; b < kKernTaps; b += 4)
+                        for (int l = 0; l < 4; l++) { re[l] += kk[b + l] * xs[b + l]; im[l] += kk[b + l] * ys[b + l]; }
+                    out[done + j] = cf32((re[0] + re[1]) + (re[2] + re[3]), (im[0] + im[1]) + (im[2] + im[3]));
+                }
+            };
+            if (b >= 1024 && threadingEnabled()) {
+                const size_t parts = std::min<size_t>(4, (size_t)ThreadPool::shared().workers() + 1);
+                ThreadPool::shared().parallelFor(parts, [&](size_t q) { resample(b * q / parts, b * (q + 1) / parts); });
+            } else resample(0, b);
             sound(out + done, b, outCount);
             if (cfg.echoDb > 0 && !ghost.empty()) {
                 const cf32 g = std::polar((float)std::pow(10.0, -cfg.echoDb / 20.0), (float)(cfg.echoPhaseDeg * kPi / 180));
