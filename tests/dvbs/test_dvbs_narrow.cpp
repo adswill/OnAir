@@ -212,6 +212,20 @@ int main(int argc, char** argv) {
         }
     });
 
+    // 1b. the QO-100 DATV rates (125 and 333 kSym/s), off-centre, an LNB error and drift like an uncorrected PLL LNB, blind and picked
+    jobs.add([] {
+        jprintf("QO-100 DATV rates, 2.4 Msps:\n");
+        struct { double rs; int st; double roll, off, lnb; bool pick; } v[] = {
+            {125e3, 2, 0.35, 0.62e6, -38e3, false}, {333e3, 2, 0.25, -0.48e6, 27e3, false},
+            {125e3, 1, 0.35, -0.31e6, 44e3, true}, {333e3, 1, 0.35, 0.40e6, -61e3, true}, {333e3, 3, 0.10, 0.0, 15e3, false}};
+        for (const auto& q : v) {
+            Capture cap; cap.fs = 2.4e6; cap.lnbHz = q.lnb; cap.pick = q.pick; cap.driftHzPerSec = 8; cap.seed = 31 + (uint32_t)q.rs;
+            const Car c = q.st == 1 ? carS(q.rs, q.off, q.roll) : q.st == 2 ? carS2(q.rs, q.off, q.roll) : carS2x(q.rs, q.off, q.roll);
+            cap.secs = lockSecs(c) + std::max(1.0, 70000.0 / c.rs);
+            checkAll("QO-100", cap, {c}, runCapture(cap, {c}));
+        }
+    });
+
     // 2. eight carriers from 10 kSym/s to 2 MSym/s in one 8 Msps capture, the six roll-offs, LNB +73 kHz drifting 10 Hz/s
     jobs.add([] {
         jprintf("eight carriers in one 8 Msps capture:\n");
