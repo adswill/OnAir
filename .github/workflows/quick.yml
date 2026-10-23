@@ -1,0 +1,144 @@
+# Quick CI for agents: build only the requested targets of one branch and run only the tests named by a regex, on a
+# GitHub runner, in parallel with other runs. Dispatch with tools/quick_ci.sh (see docs/QUICK-CI.md). No lint, docs or packaging.
+# Dependencies, flags and ccache keys are copied from ci.yml / ci-full.yml. A new run for the SAME ref cancels the older one;
+# runs of other refs are independent.
+name: Quick CI
+
+run-name: Quick ${{ inputs.ref }} -R ${{ inputs.tests }} on ${{ inputs.os }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or commit to test"
+        required: true
+      tests:
+        description: "ctest -R regex of the tests to run"
+        required: true
+      targets:
+        description: "Space-separated cmake targets (empty: the targets the matching tests run)"
+        required: false
+        default: ""
+      os:
+        description: "Runner"
+        required: false
+        default: ubuntu-24.04
+        type: choice
+        options: [ubuntu-24.04, macos-latest, ubuntu-24.04-arm]
+      jobs:
+        description: "Parallel jobs for build and ctest (empty: the runner's cores)"
+        required: false
+        default: ""
+      timeout:
+        description: "Per-test timeout in seconds"
+        required: false
+        default: "900"
+
+concurrency:
+  group: quick-${{ inputs.ref }}
+  cancel-in-progress: true
+
+env:
+  CCACHE_DIR: ${{ github.workspace }}/.ccache
+  CCACHE_BASEDIR: ${{ github.workspace }}
+  CCACHE_MAXSIZE: 1G
+  CCACHE_COMPRESS: "true"
+  CCACHE_COMPRESSLEVEL: "6"
+
+jobs:
+  quick:
+    name: ${{ inputs.ref }} / ${{ inputs.os }}
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      # The helper scripts come from the commit this workflow runs from, not from the tested ref (which may predate them).
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: .quickci
+          sparse-checkout: tools/quick_ci
+      - name: Move the helper scripts out of the tree
+        run: mv .quickci/tools/quick_ci "$RUNNER_TEMP/quick_ci" && rm -rf .quickci
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build pkg-config ccache libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install cmake ninja pkg-config nasm ccache hackrf soapysdr libusb ffmpeg glfw
+      - uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-quick-${{ inputs.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-quick-${{ inputs.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-
+            ccache-quick-${{ inputs.os }}-
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-quick-${{ inputs.os }}-${{ hashFiles('rust/**/Cargo.lock') }}
+          restore-keys: cargo-quick-${{ inputs.os }}-
+      - name: Configure
+        run: |
+          T0=$(date +%s)
+          ccache -z
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=OFF -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee "$RUNNER_TEMP/configure.log"
+          echo "configure=$(( $(date +%s) - T0 ))" >> "$RUNNER_TEMP/times"
+      - name: Build the requested targets
+        id: build
+        env:
+          JOBS: ${{ inputs.jobs }}
+          TARGETS: ${{ inputs.targets }}
+          TESTS: ${{ inputs.tests }}
+        run: |
+          set -o pipefail
+          T0=$(date +%s)
+          if [ -z "$JOBS" ]; then JOBS=$( (nproc 2>/dev/null || sysctl -n hw.ncpu) ); fi
+          if [ -z "$TARGETS" ]; then TARGETS=$(python3 "$RUNNER_TEMP/quick_ci/targets.py" build "$TESTS"); fi
+          echo "targets: ${TARGETS:-<all>}"
+          echo "jobs=$JOBS" >> "$GITHUB_OUTPUT"
+          if [ -n "$TARGETS" ]; then
+            cmake --build build -j "$JOBS" --target $TARGETS 2>&1 | tee "$RUNNER_TEMP/build.log"
+          else
+            cmake --build build -j "$JOBS" 2>&1 | tee "$RUNNER_TEMP/build.log"
+          fi
+          echo "build=$(( $(date +%s) - T0 ))" >> "$RUNNER_TEMP/times"
+      - name: ccache statistics
+        if: always()
+        run: ccache -s | tee "$RUNNER_TEMP/ccache.txt"
+      - name: Test
+        id: test
+        env:
+          TESTS: ${{ inputs.tests }}
+          JOBS: ${{ steps.build.outputs.jobs }}
+          TMO: ${{ inputs.timeout }}
+        run: |
+          set -o pipefail
+          T0=$(date +%s)
+          ctest --test-dir build -R "$TESTS" -j "${JOBS:-2}" --output-on-failure --timeout "$TMO" --output-junit "$RUNNER_TEMP/junit.xml" 2>&1 | tee "$RUNNER_TEMP/ctest.log"
+          echo "test=$(( $(date +%s) - T0 ))" >> "$RUNNER_TEMP/times"
+      - name: Summary
+        if: always()
+        run: |
+          [ -f "$RUNNER_TEMP/times" ] && TIMES=$(tr '\n' ' ' < "$RUNNER_TEMP/times") || TIMES=""
+          python3 "$RUNNER_TEMP/quick_ci/summary.py" --title "Quick CI: ${{ inputs.ref }} on ${{ inputs.os }} (-R ${{ inputs.tests }})" \
+            --build-log "$RUNNER_TEMP/build.log" --junit "$RUNNER_TEMP/junit.xml" --ccache "$RUNNER_TEMP/ccache.txt" --times $TIMES >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the full logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quick-logs
+          retention-days: 3
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/configure.log
+            ${{ runner.temp }}/build.log
+            ${{ runner.temp }}/ctest.log
+            ${{ runner.temp }}/junit.xml
+            ${{ runner.temp }}/ccache.txt

@@ -1,0 +1,171 @@
+# Quick CI, whole project: one job builds everything once (ccache), then 8 jobs run the tests in parallel shards (7 fast shards
+# by test number, 1 shard with the slow-labelled tests), and a last job merges the results into one summary.
+# For the integration branch. Same dependencies and flags as ci-full.yml (see quick.yml and docs/QUICK-CI.md).
+name: Quick CI full
+
+run-name: Quick full ${{ inputs.ref }} on ${{ inputs.os }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or commit to test"
+        required: true
+      os:
+        description: "Runner"
+        required: false
+        default: ubuntu-24.04
+        type: choice
+        options: [ubuntu-24.04, macos-latest, ubuntu-24.04-arm]
+      timeout:
+        description: "Per-test timeout in seconds (the slow shard uses 3000)"
+        required: false
+        default: "900"
+
+concurrency:
+  group: quick-full-${{ inputs.ref }}
+  cancel-in-progress: true
+
+env:
+  CCACHE_DIR: ${{ github.workspace }}/.ccache
+  CCACHE_BASEDIR: ${{ github.workspace }}
+  CCACHE_MAXSIZE: 1G
+  CCACHE_COMPRESS: "true"
+  CCACHE_COMPRESSLEVEL: "6"
+
+jobs:
+  build:
+    name: Build (${{ inputs.os }})
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build pkg-config ccache libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install cmake ninja pkg-config nasm ccache hackrf soapysdr libusb ffmpeg glfw
+      - uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-quick-${{ inputs.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-quick-${{ inputs.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-
+            ccache-quick-${{ inputs.os }}-
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-quick-${{ inputs.os }}-${{ hashFiles('rust/**/Cargo.lock') }}
+          restore-keys: cargo-quick-${{ inputs.os }}-
+      - name: Configure and build everything
+        run: |
+          set -o pipefail
+          T0=$(date +%s)
+          ccache -z
+          J=$( (nproc 2>/dev/null || sysctl -n hw.ncpu) )
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=OFF -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee "$RUNNER_TEMP/build.log"
+          cmake --build build -j "$J" 2>&1 | tee -a "$RUNNER_TEMP/build.log"
+          echo "build=$(( $(date +%s) - T0 ))s" > "$RUNNER_TEMP/times"
+      - name: ccache statistics
+        if: always()
+        run: ccache -s | tee "$RUNNER_TEMP/ccache.txt"
+      # The tests need the executables and the CTest files of the build tree, not the object files. The path is the same
+      # on every runner of this repository, so the absolute paths inside the build tree stay valid.
+      - name: Pack the build tree
+        run: tar --exclude='*.o' --exclude='*.a' --exclude='*.rlib' --exclude='*.d' --exclude='*.obj' --exclude=.ninja_deps --exclude=.ninja_log -cf - build | zstd -3 -T0 -o "$RUNNER_TEMP/build.tar.zst"; ls -l "$RUNNER_TEMP/build.tar.zst"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-tree
+          path: ${{ runner.temp }}/build.tar.zst
+          retention-days: 1
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-logs
+          retention-days: 3
+          path: |
+            ${{ runner.temp }}/build.log
+            ${{ runner.temp }}/ccache.txt
+            ${{ runner.temp }}/times
+
+  test:
+    name: Tests ${{ matrix.name }}
+    needs: build
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: "1/7", sel: "-LE slow -I 1,,7" }
+          - { name: "2/7", sel: "-LE slow -I 2,,7" }
+          - { name: "3/7", sel: "-LE slow -I 3,,7" }
+          - { name: "4/7", sel: "-LE slow -I 4,,7" }
+          - { name: "5/7", sel: "-LE slow -I 5,,7" }
+          - { name: "6/7", sel: "-LE slow -I 6,,7" }
+          - { name: "7/7", sel: "-LE slow -I 7,,7" }
+          - { name: "slow", sel: "-L slow" }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - name: Install runtime libraries (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev
+      - name: Install runtime libraries (macOS)
+        if: runner.os == 'macOS'
+        run: brew install cmake hackrf soapysdr libusb ffmpeg
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-tree
+          path: ${{ runner.temp }}/bt
+      - name: Unpack the build tree
+        run: zstd -dc "$RUNNER_TEMP/bt/build.tar.zst" | tar -xf -
+      - name: Test
+        env:
+          TMO: ${{ inputs.timeout }}
+          SEL: ${{ matrix.sel }}
+        run: |
+          set -o pipefail
+          J=$( (nproc 2>/dev/null || sysctl -n hw.ncpu) )
+          [ "$SEL" = "-L slow" ] && TMO=3000
+          mkdir -p "$RUNNER_TEMP/out"
+          ctest --test-dir build $SEL -j "$J" --output-on-failure --timeout "$TMO" --output-junit "$RUNNER_TEMP/out/junit-${{ strategy.job-index }}.xml" 2>&1 | tee "$RUNNER_TEMP/out/ctest-${{ strategy.job-index }}.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tests-${{ strategy.job-index }}
+          retention-days: 3
+          path: ${{ runner.temp }}/out
+
+  summary:
+    name: Summary
+    needs: [build, test]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: tools/quick_ci
+      - uses: actions/download-artifact@v4
+        with:
+          path: art
+      - name: Merge
+        run: |
+          [ -f art/build-logs/times ] && TIMES="build=$(sed 's/build=//' art/build-logs/times)" || TIMES=""
+          python3 tools/quick_ci/summary.py --title "Quick CI full: ${{ inputs.ref }} on ${{ inputs.os }}" \
+            --build-log art/build-logs/build.log --ccache art/build-logs/ccache.txt \
+            --junit art/tests-*/junit-*.xml --times $TIMES >> "$GITHUB_STEP_SUMMARY"
+          echo "build job: ${{ needs.build.result }}, test jobs: ${{ needs.test.result }}" >> "$GITHUB_STEP_SUMMARY"
+          [ "${{ needs.build.result }}" = success ] && [ "${{ needs.test.result }}" = success ]
