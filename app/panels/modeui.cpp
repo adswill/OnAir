@@ -109,6 +109,7 @@ extern const ModeUi kLbjUi;
 extern const ModeUi kKlwUi;
 extern const ModeUi kTdcsUi;
 extern const ModeUi kHorusUi;
+extern const ModeUi kPskdUi;
 extern const ModeUi kSitorUi;
 extern const ModeUi kDgpsUi;
 extern const ModeUi kElLoranUi;
@@ -206,6 +207,7 @@ const ModeUi* modeUi(int family) {
     case dect2::railway::kKlwFamily: return &kKlwUi;
     case dect2::railway::kTdcsFamily: return &kTdcsUi;
     case dect2::horus::kFamily: return &kHorusUi;
+    case dect2::pskd::kFamily: return &kPskdUi;
     case 120: return &kDgpsUi;
     case 127: return &kMpt1327Ui;
     case 128: return &kFusionUi;
