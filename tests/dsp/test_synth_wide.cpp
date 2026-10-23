@@ -70,7 +70,10 @@ struct Radio {
     std::vector<std::complex<double>> z, rot;
     std::vector<int> idx;
     long long n = 0;
+    double lwHz = 0, wph = 0;   // free-running LO phase noise: Wiener phase of this Lorentzian linewidth (0 = none)
+    double fsHz = 1;
     void init(const std::vector<Tone>& tones, double fs) {
+        fsHz = fs;
         for (size_t m = 0; m < tones.size(); m++) {
             const double fbb = tones[m].f - fc - off;
             if (std::fabs(fbb) > 0.48 * fs) continue;
@@ -88,7 +91,13 @@ struct Radio {
             for (size_t i = 0; i < len; i++) { zz *= r; acc[i] += zz; }
             z[k] = zz / std::abs(zz) * std::abs(z[k]);
         }
-        for (size_t i = 0; i < len; i++) o[i] = cf32((float)acc[i].real() + nd(rng), (float)acc[i].imag() + nd(rng));
+        std::normal_distribution<double> pn(0.0, 1.0);
+        const double ws = std::sqrt(2 * kPi * lwHz / fsHz);
+        for (size_t i = 0; i < len; i++) {
+            std::complex<double> v = acc[i];
+            if (lwHz > 0) { wph += ws * pn(rng); v *= std::polar(1.0, wph); }
+            o[i] = cf32((float)v.real() + nd(rng), (float)v.imag() + nd(rng));
+        }
         n += (long long)len;
     }
 };
@@ -200,6 +209,45 @@ static void testScenario() {
     CHECK((int)sp.size() == (int)(rate / df), "spectrum size %zu", sp.size());
 }
 
+// Five radios with free-running oscillators (30 Hz Wiener linewidth each): the seams with per-hop phase tracking against without
+static double phaseNoiseMismatch(bool track, double* rmsDeg) {
+    SynthCfg c;
+    c.slices = 5; c.fs = 1e6; c.n = 512; c.stepBins = 300; c.alignFrames = 48; c.trackPhase = track;
+    SynthWideband sw;
+    if (!sw.configure(c)) return 0;
+    const double df = c.fs / c.n;
+    std::mt19937 rng(23);
+    std::uniform_real_distribution<double> U(0, 1);
+    std::vector<Tone> tones;
+    const double lo = -0.5 * sw.spanHz() + 10e3, hi = 0.5 * sw.spanHz() - 10e3;
+    for (double f = lo; f < hi; f += (2.2 + 1.5 * U(rng)) * df) tones.push_back({f, 0.004 + 0.006 * U(rng), 2 * kPi * U(rng)});
+    Radio rad[5];
+    const double off[5] = {0, 2100, -3300, 900, 4100}, q[5] = {0, 3e-6, -4e-6, 2e-6, -1e-6}, d[5] = {0, 12.2, -7.6, 25.1, 3.3};
+    for (int i = 0; i < 5; i++) {
+        rad[i].fc = (i - 2) * c.stepBins * df; rad[i].off = off[i]; rad[i].q = q[i]; rad[i].d = d[i]; rad[i].g = std::polar(1.0 + 0.1 * i, 0.5 * i);
+        rad[i].lwHz = 30; rad[i].init(tones, c.fs);
+    }
+    std::vector<cf32> blk, wide;
+    const size_t B = 4096;
+    double sum = 0; int cnt = 0;
+    for (size_t b = 0; b < (size_t)(2.4 * c.fs / B); b++) {
+        for (int i = 0; i < 5; i++) { rad[i].block(blk, B, rng); sw.push(i, blk.data(), B); }
+        sw.pull(wide); wide.clear();
+        if (b * B > 1.4 * c.fs && b % 8 == 0)
+            for (int p = 0; p < 4; p++) if (sw.pair(p).valid) { sum += sw.pair(p).mismatchDb; cnt++; }
+    }
+    if (rmsDeg) *rmsDeg = sw.pair(1).trackRmsDeg;
+    return cnt ? sum / cnt : 0;
+}
+
+static void testPhaseNoise() {
+    double rmsT = 0;
+    const double off = phaseNoiseMismatch(false, nullptr), on = phaseNoiseMismatch(true, &rmsT);
+    printf("5 radios, 30 Hz linewidth each: mean seam mismatch %.1f dB without phase tracking, %.1f dB with (%.1f deg per hop moved)\n", off, on, rmsT);
+    CHECK(on < off - 6.0, "phase tracking: %.1f dB vs %.1f dB without", on, off);
+    CHECK(on < -15.0, "tracked seams %.1f dB", on);
+}
+
 static void testBadConfig() {
     SynthWideband sw;
     SynthCfg c;
@@ -207,11 +255,14 @@ static void testBadConfig() {
     c = SynthCfg(); c.stepBins = 2401; CHECK(!sw.configure(c), "odd step accepted");
     c = SynthCfg(); c.stepBins = 3600; CHECK(!sw.configure(c), "no overlap accepted");
     c = SynthCfg(); c.n = 3000; CHECK(!sw.configure(c), "non power of 2 accepted");
+    c = SynthCfg(); c.slices = 6; CHECK(!sw.configure(c), "6 slices accepted");
+    c = SynthCfg(); c.slices = 5; c.stepBins = 2000; CHECK(sw.configure(c), "5 slices refused");
 }
 
 int main() {
     testHelpers();
     testBadConfig();
     testScenario();
+    testPhaseNoise();
     return testSummary("synth_wide");
 }

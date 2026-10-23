@@ -197,6 +197,7 @@ bool SynthWideband::configure(const SynthCfg& c) {
     shifted_.assign(c.slices, 0.0);
     stage_.assign(c.slices - 1, 0);
     lastMismatch_.assign(c.slices - 1, 0.f);
+    offRate_.assign(c.slices, 0.0); lastOff_.assign(c.slices, 0.0); lastOffT_.assign(c.slices, -1.0);
     win_ = sqrtHann(c.n);
     wwin_ = sqrtHann(m_);
     fftN_ = std::make_unique<Fft>(c.n);
@@ -368,6 +369,14 @@ void SynthWideband::hop() {
         if (r.head > (size_t)N * 8) { r.ring.erase(r.ring.begin(), r.ring.begin() + r.head); r.head = 0; }
     }
     t_ += (double)(N / 2) / c_.fs;
+    // a slice cut off from its left neighbour: its frequency correction follows the drift rate measured before
+    for (int i = 1; i < S; i++) {
+        Radio& r = r_[i];
+        if (!r.alive || r_[i - 1].alive || offRate_[i] == 0.0) continue;
+        r.off += offRate_[i] * (double)(N / 2) / c_.fs;
+        r.rs.set(r.ppm, r.off);
+        sl_[i].offsetHz = r.off;
+    }
     for (int p = 0; p + 1 < S; p++)
         if (r_[p].alive && r_[p + 1].alive && acc_[p].frames >= c_.alignFrames) solve(p);
 }
@@ -400,6 +409,7 @@ void SynthWideband::recalibrate() {
         shifted_[i] = 0;
         amp_[i] = 1; ph_[i] = 0; tau_[i] = 0;
         sl_[i].locked = false; sl_[i].offsetHz = 0; sl_[i].driftPpm = 0;
+        offRate_[i] = 0; lastOffT_[i] = -1;
     }
     for (int p = 0; p + 1 < c_.slices; p++) {
         acc_[p].clear(ov_); trk_[p] = Track(); stage_[p] = 0; tH_[p].clear(); dH_[p].clear();
@@ -507,8 +517,9 @@ void SynthWideband::solve(int p) {
     tau_[b] = tau_[p] + dp.delay;
     if (c_.trackPhase && (trk_[p].init || stage_[p] == 2)) {
         Track& t = trk_[p];
+        // the tracker measures the absolute seam phase every hop, so the block average only starts it (adding the block's mean residual
+        // back as a correction would fight the per-hop measurement)
         if (!t.init) { t = Track(); t.init = true; t.phi = dp.phase0; t.p00 = 0.1; t.p11 = 1e-3; }
-        else if (tracked) t.phi = std::remainder(t.phi + dp.phase0, 2.0 * kPi);   // the mean residual of the tracked phase (a slow bias)
         t.delay = dp.delay;
         ps.tracking = true;
         ph_[b] = ph_[p] + t.phi - 2.0 * kPi * dp.delay * w0 / N;
@@ -531,6 +542,17 @@ void SynthWideband::solve(int p) {
         tH_[p].clear(); dH_[p].clear();
     }
     sl_[b].locked = stage_[p] == 2 && ps.mismatchDb < -15.0 && dp.strength > 0.3;
+    // the drift rate of the frequency correction, from locked solves at least half a second apart
+    if (sl_[b].locked) {
+        if (lastOffT_[b] < 0) { lastOffT_[b] = t_; lastOff_[b] = rb.off; }
+        else if (t_ - lastOffT_[b] >= 0.5) {
+            const double rate = (rb.off - lastOff_[b]) / (t_ - lastOffT_[b]);
+            if (std::fabs(rate) < 50.0) offRate_[b] = 0.7 * offRate_[b] + 0.3 * rate;
+            lastOffT_[b] = t_; lastOff_[b] = rb.off;
+        }
+    } else {
+        lastOffT_[b] = -1;
+    }
     a.clear(ov_);
 }
 

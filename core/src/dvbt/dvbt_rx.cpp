@@ -737,6 +737,39 @@ struct DvbtReceiver::Impl {
         flushHeld(best);
     }
 
+    // Synthetic wideband input (setPhaseSegments): the slices of the stitched channel turn by slightly different phases. After the common
+    // phase, each segment between two seams gets the mean phase of its own continual pilots against their reference; across a seam's overlap
+    // the correction cross-fades like the stitch did. Off (empty) for every normal radio.
+    std::vector<double> segSeams; double segOv = 0;
+    void segmentPhase(std::vector<cf32>& Yc) {
+        const auto& cp = continualPilots(mode);
+        const int S = (int)segSeams.size() + 1;
+        const double dfc = fn / N;
+        auto segOf = [&](double f) { int s = 0; while (s < S - 1 && f > segSeams[(size_t)s]) s++; return s; };
+        std::vector<cd> acc((size_t)S, cd(0, 0));
+        for (size_t i = 0; i < cp.size(); i++) {
+            const double f = (cp[i] - kc) * dfc;
+            const int s = segOf(f);
+            bool inSeam = false;
+            for (double sm : segSeams) inSeam |= std::fabs(f - sm) < 0.5 * segOv;
+            if (inSeam) continue;
+            const cf32 v = Yc[cp[i]] / pilotValue(cp[i]);
+            acc[(size_t)s] += cd(v.real(), v.imag()) * std::conj(cd(cpRef[i].real(), cpRef[i].imag()));
+        }
+        std::vector<double> ph((size_t)S, 0.0);
+        for (int s = 0; s < S; s++) ph[(size_t)s] = std::abs(acc[(size_t)s]) > 0 ? std::arg(acc[(size_t)s]) : 0.0;
+        for (int k = 0; k < K; k++) {
+            const double f = (k - kc) * dfc;
+            const int s = segOf(f);
+            double a = ph[(size_t)s];
+            for (int j = 0; j + 1 < S; j++) {
+                const double lo = segSeams[(size_t)j] - 0.5 * segOv;
+                if (f > lo && f < lo + segOv) { const double w = (f - lo) / segOv; a = ph[(size_t)j] + w * std::remainder(ph[(size_t)j + 1] - ph[(size_t)j], 2 * M_PI); }
+            }
+            if (a != 0.0) Yc[k] *= cf32((float)std::cos(a), (float)-std::sin(a));
+        }
+    }
+
     void estimateAndDecode(int symIdx) {
         const auto& cp = continualPilots(mode);
         const auto& tpsK = tpsCarriers(mode);
@@ -777,6 +810,7 @@ struct DvbtReceiver::Impl {
         // derotate the whole symbol by (phi + slope*(k-kc))
         std::vector<cf32> Yc(K);
         for (int k = 0; k < K; k++) { const double a = -(phi + slope * (k - kc)); Yc[k] = Y[k] * cf32((float)std::cos(a), (float)std::sin(a)); }
+        if (!segSeams.empty() && cpRefValid) segmentPhase(Yc);
         for (size_t i = 0; i < cp.size(); i++) {
             const cf32 v = Yc[cp[i]] / pilotValue(cp[i]);
             cpRef[i] = cpRefValid ? cpRef[i] * 0.85f + v * 0.15f : v;
@@ -905,7 +939,8 @@ void DvbtReceiver::configure(double inputRateHz, double bandwidthMhz) {
     I.decimate = I.rateOk && !I.resampler.passthrough();
 }
 
-void DvbtReceiver::setLowPriority(bool lp) { p_->lpReq = lp; }   // applied by feed(), on the thread that decodes
+void DvbtReceiver::setLowPriority(bool lp) { p_->lpReq = lp; }
+void DvbtReceiver::setPhaseSegments(const std::vector<double>& seamsHz, double overlapHz) { p_->segSeams = seamsHz; std::sort(p_->segSeams.begin(), p_->segSeams.end()); p_->segOv = overlapHz; }   // applied by feed(), on the thread that decodes
 
 void DvbtReceiver::reset() { Impl& I = *p_; const double r = I.inRate, b = I.bwMhz; configure(r, b); }
 

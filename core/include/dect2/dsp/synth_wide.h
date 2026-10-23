@@ -157,6 +157,10 @@ private:
     std::vector<double> shifted_;                // per slice: integer sample shifts applied so far
     std::vector<int> stage_;                     // per pair: 0 coarse offset, 1 fine offset, 2 delay/gain tracking
     std::vector<float> lastMismatch_;
+    // per slice: how fast its frequency correction moves (Hz/s, thermal drift against slice 0), measured while it is aligned; while its left
+    // neighbour is down nothing can measure it, so the correction goes on at that rate (a middle radio that drops out does not leave the
+    // slices to its right drifting)
+    std::vector<double> offRate_, lastOff_, lastOffT_;
     double t_ = 0;
 };
 

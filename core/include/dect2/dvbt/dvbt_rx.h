@@ -5,6 +5,7 @@
 #include <functional>
 #include <memory>
 #include <cstdint>
+#include <vector>
 
 namespace dect2 {
 
@@ -16,6 +17,9 @@ public:
     void reset();
     // Hierarchical multiplexes: deliver the low-priority stream instead of the high-priority one (no effect otherwise)
     void setLowPriority(bool lp);
+    // Opt-in for a stitched radio group (synth_group.h): the seams (Hz from the channel centre) and the overlap width; every segment then gets
+    // its own common phase from its continual pilots. Empty (the default) = the normal path. Set before feeding.
+    void setPhaseSegments(const std::vector<double>& seamsHz, double overlapHz);
     void feed(const cf32* x, size_t n);
     bool telemetry(RxTelemetry& out, uint64_t lastSeq);
     // Called with decoded 188-byte transport packets (transport_error_indicator set on packets that could not be repaired) and the
