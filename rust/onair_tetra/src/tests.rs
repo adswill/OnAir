@@ -133,10 +133,15 @@ fn block_sysinfo_and_garbage() {
     }
 }
 
-/// A MAC-RESOURCE (SSI address, channel allocation, fill bits) carrying an LLC BL-UDATA, MLE discriminator 2 (CMCE) and a D-SETUP.
+/// A MAC-RESOURCE (SSI address, channel allocation, fill bits) carrying an LLC BL-UDATA, MLE discriminator 2 (CMCE) and a point-to-point D-SETUP.
 fn setup_block(enc_flag: u64, slots: u64, carrier: u64) -> Vec<u8> {
+    setup_block_to(enc_flag, slots, carrier, 0, 1)
+}
+
+/// The same with the communication type of the basic service information (0 point-to-point, 1 point-to-multipoint, ...) and the address type.
+fn setup_block_to(enc_flag: u64, slots: u64, carrier: u64, comm: u64, addr_type: u64) -> Vec<u8> {
     let mut w = W(vec![]);
-    for (v, n) in [(0, 2), (1, 1), (0, 1), (0, 2), (0, 1), (14, 6), (1, 3), (0x123456, 24), (0, 1), (0, 1), (1, 1)] {
+    for (v, n) in [(0, 2), (1, 1), (0, 1), (0, 2), (0, 1), (14, 6), (addr_type, 3), (0x123456, 24), (0, 1), (0, 1), (1, 1)] {
         w.put(v, n);
     }
     // channel allocation: type 0, timeslots, up/down 3, CLCH 0, cell change 0, carrier, no extended numbering, monitoring pattern 1
@@ -144,7 +149,7 @@ fn setup_block(enc_flag: u64, slots: u64, carrier: u64) -> Vec<u8> {
         w.put(v, n);
     }
     // LLC BL-UDATA (0010), MLE protocol discriminator 2, D-SETUP: type 00111, call id 777, time-out 5, hook 0, simplex 1, basic service information
-    for (v, n) in [(2, 4), (2, 3), (7, 5), (777, 14), (5, 4), (0, 1), (1, 1), (0, 3), (enc_flag, 1), (0, 2), (0, 2)] {
+    for (v, n) in [(2, 4), (2, 3), (7, 5), (777, 14), (5, 4), (0, 1), (1, 1), (0, 3), (enc_flag, 1), (comm, 2), (0, 2)] {
         w.put(v, n);
     }
     // fill bits: a 1 then 0s up to 14 octets
@@ -166,7 +171,7 @@ fn call_setup_encryption_flag() {
         assert_eq!(o.blk.resources, 1);
         assert_eq!(o.blk.n_call, 1);
         let c = o.blk.call[0];
-        assert_eq!((c.kind, c.call_id, c.enc, c.slots, c.carrier), (1, 777, want, 0b0100, 1234));
+        assert_eq!((c.kind, c.call_id, c.enc, c.slots, c.carrier, c.gssi), (1, 777, want, 0b0100, 1234, -1));
     }
     // D-TX-GRANTED, D-TX-CONTINUE, D-TX-CEASED (types 11, 10, 9): the call id, kind 4 (the call goes on)
     for ty in [11u64, 10, 9] {
@@ -191,4 +196,26 @@ fn call_setup_encryption_flag() {
     let mut o = Out { blk: MacBlock::default(), nwrk: &mut nw, nbr: &mut nb };
     parse_block(&b, &mut o);
     assert_eq!((o.blk.encrypted, o.blk.n_call), (1, 0));
+}
+
+#[test]
+fn call_setup_group_address() {
+    let call = |comm: u64, addr_type: u64| {
+        let b = setup_block_to(0, 0b0100, 1234, comm, addr_type);
+        let mut nw = [Nwrk::default(); 4];
+        let mut nb = [Neighbour::default(); 8];
+        let mut o = Out { blk: MacBlock::default(), nwrk: &mut nw, nbr: &mut nb };
+        parse_block(&b, &mut o);
+        assert_eq!(o.blk.n_call, 1);
+        o.blk.call[0]
+    };
+    // a group call (point-to-multipoint, acknowledged, broadcast) sent to an SSI: the SSI is the group's GSSI
+    for comm in [1u64, 2, 3] {
+        assert_eq!(call(comm, 1).gssi, 0x123456, "communication type {comm}");
+    }
+    // a point-to-point call is addressed to a terminal: its identity is not kept
+    assert_eq!(call(0, 1).gssi, -1);
+    // an address that is not an SSI (USSI, SMI): nothing kept
+    assert_eq!(call(1, 3).gssi, -1);
+    assert_eq!(call(1, 4).gssi, -1);
 }

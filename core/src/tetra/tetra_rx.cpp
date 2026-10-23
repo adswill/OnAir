@@ -628,6 +628,21 @@ struct TetraReceiver::Impl {
                     event(b, sec);
                 }
             }
+            for (const auto& e : m.calls) {
+                if (e.kind != 1 || e.gssi < 0) continue;   // only the set-up of a group call names its group
+                auto g = std::find_if(t->groups.begin(), t->groups.end(), [&](const TetraGroupInfo& x) { return x.gssi == e.gssi; });
+                if (g == t->groups.end()) {
+                    TetraGroupInfo n; n.gssi = e.gssi; n.firstWall = wallNow();
+                    t->groups.push_back(n);
+                    g = t->groups.end() - 1;
+                    snprintf(b, sizeof b, "%s: group call to GSSI %d (%s)", freqText(freq).c_str(), e.gssi, e.enc == 1 ? "end-to-end encrypted" : e.enc == 0 ? "clear" : "encryption not stated");
+                    event(b, sec);
+                }
+                if (g->lastCallId != e.callId) { g->calls++; g->lastCallId = e.callId; }   // a set-up is repeated while the call starts
+                if (e.enc >= 0) g->enc = e.enc;
+                g->lastWall = wallNow();
+                std::stable_sort(t->groups.begin(), t->groups.end(), [](const TetraGroupInfo& x, const TetraGroupInfo& y) { return x.calls > y.calls; });
+            }
             for (const auto& nw : m.nwrk) {
                 const bool first = !t->hasNwrk || t->neighbours.size() != nw.nbrs.size();
                 t->hasNwrk = true;

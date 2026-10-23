@@ -110,7 +110,8 @@ pub struct Nwrk {
 /// The call set-up facts of one clear CMCE PDU (ETSI EN 300 392-2 clause 14): kind 1 D-SETUP, 2 D-CONNECT, 3 D-DISCONNECT / D-RELEASE,
 /// 4 D-TX-GRANTED / D-TX-CONTINUE / D-TX-CEASED (the call goes on: a new talk spurt, or the end of one); the call
 /// identifier; `enc` the end-to-end encryption flag of the basic service information (0 clear, 1 encrypted, -1 not stated); `slots` the
-/// "timeslot assigned" bit map (MSB = timeslot 1) and `carrier` the carrier number of the channel allocation of the same MAC-RESOURCE, -1 when it has none.
+/// "timeslot assigned" bit map (MSB = timeslot 1) and `carrier` the carrier number of the channel allocation of the same MAC-RESOURCE, -1 when it has none;
+/// `gssi` the group (GSSI) a D-SETUP of a group call is addressed to, -1 otherwise (a call to a single terminal keeps no address).
 #[repr(C)]
 #[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
 pub struct CallInfo {
@@ -119,6 +120,7 @@ pub struct CallInfo {
     pub enc: i32,
     pub slots: i32,
     pub carrier: i32,
+    pub gssi: i32,
 }
 
 /// Call events kept per block.

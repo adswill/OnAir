@@ -1,6 +1,7 @@
 //! Signalling block walk (ETSI EN 300 392-2 clauses 21.4, 21.5 and the MLE of 18): the MAC PDUs of one SCH/HD or SCH/F block. Only broadcasts
-//! are read: SYSINFO and the MLE D-NWRK-BROADCAST (neighbour cells, network time). Addresses are skipped and never kept; any other message is only
-//! counted by protocol discriminator; air interface encrypted PDUs are only counted. No call, subscriber or short data content is read.
+//! are read: SYSINFO and the MLE D-NWRK-BROADCAST (neighbour cells, network time). Addresses are skipped and never kept, except the group (GSSI) a
+//! clear group call is set up for; any other message is only counted by protocol discriminator; air interface encrypted PDUs are only counted. No
+//! call, subscriber or short data content is read.
 use crate::abi::{CallInfo, MacBlock, Neighbour, Nwrk, MAX_CALLS};
 use crate::bits::Reader;
 use crate::sysinfo::{parse_sysinfo, Parsed};
@@ -102,10 +103,12 @@ fn parse_nwrk(r: &mut Reader, out: &mut Out) {
 /// The call set-up PDUs of the CMCE (ETSI EN 300 392-2 clause 14.7), after the MLE protocol discriminator: only the call identifier and the end-to-end
 /// encryption flag of the basic service information are kept (D-SETUP type 00111, D-CONNECT 00010, D-DISCONNECT 00100, D-RELEASE 00110; D-TX-CEASED 01001,
 /// D-TX-CONTINUE 01010 and D-TX-GRANTED 01011 give only the call id: the call is still going on). Nothing else
-/// of the call (parties, priority, content) is read. `slots` and `carrier` come from the channel allocation of the MAC-RESOURCE that carried the PDU.
-fn parse_cmce(r: &mut Reader, slots: i32, carrier: i32, out: &mut Out) {
+/// of the call (parties, priority, content) is read. `slots` and `carrier` come from the channel allocation of the MAC-RESOURCE that carried the PDU,
+/// `ssi` from its address (-1 when the address is not an SSI): a D-SETUP of a group call (communication type not point-to-point) is sent to the
+/// group, so the SSI is kept as its GSSI; a point-to-point call is addressed to a terminal and keeps nothing.
+fn parse_cmce(r: &mut Reader, slots: i32, carrier: i32, ssi: i32, out: &mut Out) {
     let ty = r.get(5);
-    let (kind, id, enc) = match ty {
+    let (kind, id, enc, gssi) = match ty {
         7 => {
             // D-SETUP: call id 14, call time-out 4, hook method 1, simplex/duplex 1, basic service information 8 (circuit mode type 3, encryption flag 1, ...)
             let id = r.get(14);
@@ -114,10 +117,11 @@ fn parse_cmce(r: &mut Reader, slots: i32, carrier: i32, out: &mut Out) {
             r.get(1);
             r.get(3);
             let e = r.bit();
+            let comm = r.get(2); // communication type: 0 point-to-point, 1 point-to-multipoint, 2 acknowledged, 3 broadcast
             if !r.ok {
                 return;
             }
-            (1, id, e as i32)
+            (1, id, e as i32, if comm != 0 { ssi } else { -1 })
         }
         2 => {
             // D-CONNECT: call id 14, call time-out 4, hook 1, simplex 1, transmission grant 2, transmission request permission 1, call ownership 1,
@@ -145,14 +149,14 @@ fn parse_cmce(r: &mut Reader, slots: i32, carrier: i32, out: &mut Out) {
                     }
                 }
             }
-            (2, id, enc)
+            (2, id, enc, -1)
         }
         4 | 6 => {
             let id = r.get(14);
             if !r.ok {
                 return;
             }
-            (3, id, -1)
+            (3, id, -1, -1)
         }
         9 | 10 | 11 => {
             // D-TX-CEASED, D-TX-CONTINUE, D-TX-GRANTED: the call goes on (a talk spurt starts or ends); only the call id is read
@@ -160,19 +164,19 @@ fn parse_cmce(r: &mut Reader, slots: i32, carrier: i32, out: &mut Out) {
             if !r.ok {
                 return;
             }
-            (4, id, -1)
+            (4, id, -1, -1)
         }
         _ => return,
     };
     let k = out.blk.n_call as usize;
     if k < MAX_CALLS {
-        out.blk.call[k] = CallInfo { kind, call_id: id as i32, enc, slots, carrier };
+        out.blk.call[k] = CallInfo { kind, call_id: id as i32, enc, slots, carrier, gssi };
         out.blk.n_call += 1;
     }
 }
 
 /// TL-SDU: the LLC header, then the MLE; only the mobility link entity's (protocol discriminator 5) broadcast and the CMCE call set-up facts are read.
-fn parse_tl_sdu(b: &[u8], from: usize, to: usize, slots: i32, carrier: i32, out: &mut Out) {
+fn parse_tl_sdu(b: &[u8], from: usize, to: usize, slots: i32, carrier: i32, ssi: i32, out: &mut Out) {
     let mut r = Reader::new(b, from, to);
     let llc = r.get(4);
     match llc {
@@ -200,7 +204,7 @@ fn parse_tl_sdu(b: &[u8], from: usize, to: usize, slots: i32, carrier: i32, out:
     }
     out.blk.by_pd[pd & 7] += 1;
     if pd == 2 {
-        parse_cmce(&mut r, slots, carrier, out);
+        parse_cmce(&mut r, slots, carrier, ssi, out);
         return;
     }
     if pd != 5 {
@@ -288,7 +292,16 @@ pub fn parse_block(b: &[u8], out: &mut Out) {
             len = n - pos;
         }
         out.blk.resources += 1;
-        r.get(ADDR_LEN[at & 7]); // the address is skipped, never kept
+        // the address (21.5.1): only an SSI (type 1, or 5 / 6 with an event label or usage marker after it) is passed on, for the GSSI of a group
+        // call set-up; any other address is skipped
+        let ssi = if matches!(at, 1 | 5 | 6) {
+            let v = r.get(24) as i32;
+            r.get(ADDR_LEN[at & 7] - 24);
+            v
+        } else {
+            r.get(ADDR_LEN[at & 7]);
+            -1
+        };
         if r.bit() {
             r.get(4); // power control
         }
@@ -330,7 +343,7 @@ pub fn parse_block(b: &[u8], out: &mut Out) {
                     }
                 }
                 if end > r.p {
-                    parse_tl_sdu(b, r.p, end, slots, carrier, out);
+                    parse_tl_sdu(b, r.p, end, slots, carrier, ssi, out);
                 }
             }
         }

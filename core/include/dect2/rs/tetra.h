@@ -1,6 +1,7 @@
 // C ABI of the Rust crate rust/onair_tetra (TETRA network information: the broadcasts every cell sends to all terminals). Written by hand; the Rust
 // test rust/onair/tests/headers.rs checks it against ffi.rs.
-// Bits are one per byte (0 / 1). No voice, no call or short data content and no subscriber address is read by any function.
+// Bits are one per byte (0 / 1). No voice, no call or short data content and no subscriber address is read by any function; the one address kept is
+// the group (GSSI) a clear group call is set up for.
 #pragma once
 #include <stdbool.h>
 #include <stddef.h>
@@ -32,8 +33,9 @@ typedef struct {   // a D-NWRK-BROADCAST; neighbours are nbr[nbr_first .. nbr_fi
 } OnairTetraNwrk;
 
 typedef struct {   // call set-up facts of one clear CMCE PDU: kind 1 D-SETUP, 2 D-CONNECT, 3 D-DISCONNECT / D-RELEASE; enc 0 clear, 1 encrypted, -1 not stated;
-                   // slots = "timeslot assigned" bit map (MSB = timeslot 1) and carrier = carrier number of the channel allocation of the same PDU, -1 when none
-    int32_t kind, call_id, enc, slots, carrier;
+                   // slots = "timeslot assigned" bit map (MSB = timeslot 1) and carrier = carrier number of the channel allocation of the same PDU, -1 when none;
+                   // gssi = the group a D-SETUP of a group call is sent to, -1 otherwise (a call to one terminal keeps no address)
+    int32_t kind, call_id, enc, slots, carrier, gssi;
 } OnairTetraCallInfo;
 
 typedef struct {   // what one signalling block held
@@ -44,7 +46,7 @@ typedef struct {   // what one signalling block held
     OnairTetraSysinfo si;
 } OnairTetraMacBlock;
 
-// ABI version of this module (3).
+// ABI version of this module (4).
 uint32_t onair_tetra_version(void);
 // Sizes of the records above in this order: Sync, Sysinfo, Neighbour, Nwrk, MacBlock (out: 5 size_t).
 void onair_tetra_struct_sizes(size_t* out);

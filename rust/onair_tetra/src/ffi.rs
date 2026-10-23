@@ -25,7 +25,7 @@ unsafe fn wr<'a, T>(p: *mut T, n: usize) -> &'a mut [T] {
 /// ABI version of this module's C interface; bump it when an exported signature changes.
 #[no_mangle]
 pub extern "C" fn onair_tetra_version() -> u32 {
-    3
+    4
 }
 
 /// Sizes of the `repr(C)` records (Sync, Sysinfo, Neighbour, Nwrk, MacBlock) so C++ can check its own layout at start-up.

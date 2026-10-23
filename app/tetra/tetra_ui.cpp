@@ -1,6 +1,7 @@
 // TETRA screens: the base station table (frequency, network code, location area, colour code, encryption, last heard), the details of
 // the selected carrier, its neighbour cells, the carriers seen in the spectrum, a scan over a span, and the log. Only what base stations
-// broadcast in the clear to every terminal is shown: nothing is decrypted, no voice, no short data, no subscriber identities.
+// broadcast in the clear to every terminal is shown, and the groups (GSSI) clear group calls are set up for: nothing is decrypted, no voice,
+// no short data, no subscriber identities.
 #include "app.h"
 #include "codec/speech_codec_ui.h"
 #include "dect2/audio/audioout.h"
@@ -290,6 +291,14 @@ void detail(App& a) {
     for (int i = 0; i < 4; i++) { ts += "TS" + std::to_string(i + 1) + " " + dect2::tetra::dlUsageText(c.tsUsage[i]); if (i < 3) ts += ", "; }
     ImGui::Text("timeslots: %s", ts.c_str());
     if (!c.netTime.empty()) ImGui::Text("network time: %s", c.netTime.c_str());
+    if (!c.groups.empty()) {
+        std::string gs;
+        for (const auto& g : c.groups) {
+            if (!gs.empty()) gs += ", ";
+            gs += std::to_string(g.gssi) + " (" + std::to_string(g.calls) + (g.calls == 1 ? " call" : " calls") + (g.enc == 1 ? ", encrypted)" : ")");
+        }
+        ImGui::Text("groups called (GSSI): %s", gs.c_str());
+    }
 }
 
 void neighbourView(App& a) {
@@ -345,7 +354,7 @@ void tick(App& a) {
 void tab(App& a) {
     scanBar(a);
     ImGui::PushTextWrapPos(0);
-    ImGui::TextDisabled("Receive only: the public information every TETRA base station broadcasts to all terminals (network code, location area, services, encryption advertised). Nothing is decrypted; no messages or identities are decoded. Clear (unencrypted) voice can be played only with a speech codec you install yourself; encrypted calls are never decoded.");
+    ImGui::TextDisabled("Receive only: the public information every TETRA base station broadcasts to all terminals (network code, location area, services, encryption advertised) and the group numbers (GSSI) of clear group calls. Nothing is decrypted; no messages or subscriber identities are decoded. Clear (unencrypted) voice can be played only with a speech codec you install yourself; encrypted calls are never decoded.");
     ImGui::PopTextWrapPos();
     voiceStrip(a);
     subNav("tetrav", S.view, {"Cells", "Neighbours", "Carriers", "Log"});
