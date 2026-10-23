@@ -14,11 +14,13 @@
 #include "dect2/common/ring.h"
 #include "dect2/common/stage_prof.h"
 #include "dect2/dsp/exact_resampler.h"
+#include "dect2/atv/atv_rx.h"
 #include "dect2/dtmb/dtmb_rx.h"
 #include "dect2/dvbc/dvbc_rx.h"
 #include "dect2/dvbs/dvbs_rx.h"
 #include "dect2/dvbt/dvbt_rx.h"
 #include "dect2/engine/mode_tuning.h"
+#include "dect2/isdbs/isdbs_rx.h"
 #include "dect2/isdbt/isdbt_rx.h"
 #include "dect2/source/source.h"
 #include "dect2/t2/t2rx.h"
@@ -87,6 +89,8 @@ std::vector<Case> cases() {
     v.push_back({"atsc3", "ATSC 3.0 (the test signal), radio at 10 Msps", 5, 10e6, 6, [](TuneSettings&) {}});
     v.push_back({"isdbt", "ISDB-T 6 MHz (the test signal), radio at 8 Msps", 6, 8e6, 6, [](TuneSettings& t) { t.isdbtBwMhz = 6; t.synth.isdbtBwMhz = 6; }});
     v.push_back({"dtmb", "DTMB 8 MHz (the test signal), radio at 10 Msps", stdOf("dtmb"), 10e6, 8, [](TuneSettings&) {}});
+    v.push_back({"isdbs", "ISDB-S (the test signal: TC8PSK 2/3 + QPSK 3/4 + BPSK 1/2), radio at 40 Msps", stdOf("isdbs"), 40e6, 0, [](TuneSettings&) {}});
+    v.push_back({"atv", "analogue TV (the test signal), radio at 10 Msps (digest: the pictures)", stdOf("atv"), 10e6, 8, [](TuneSettings&) {}});
     return v;
 }
 
@@ -264,6 +268,22 @@ Rx makeRx(const Case& c, std::function<void(const uint8_t*, size_t)> ts) {
             r.feed = [rx](const cf32* x, size_t n) { rx->feed(x, n); };
             r.finish = [rx] { rx->flush(); };
             r.destroy = [rx]() mutable { rx.reset(); };
+        } else if (c.id == "isdbs") {
+            auto rx = std::make_shared<IsdbsReceiver>();
+            rx->configure(rate); rx->setPacketCallback(tsCb);
+            r.feed = [rx](const cf32* x, size_t n) { rx->feed(x, n); };
+            r.destroy = [rx]() mutable { rx.reset(); };
+        } else if (c.id == "atv") {
+            // no transport stream: every new picture is hashed as 188 byte "packets" (the digest covers the pictures)
+            auto rx = std::make_shared<AtvReceiver>();
+            rx->setSilent(true);
+            rx->configure(rate);
+            auto last = std::make_shared<uint64_t>(0);
+            r.feed = [rx, last, ts](const cf32* x, size_t n) {
+                rx->feed(x, n);
+                if (auto f = rx->frame(*last)) { const size_t np = f->rgba.size() / 188; if (np) ts(f->rgba.data(), np); }
+            };
+            r.destroy = [rx]() mutable { rx.reset(); };
         } else if (c.id == "dtmb") {
             auto rx = std::make_shared<DtmbReceiver>();
             rx->configure(rate, c.bwMhz); rx->setPacketCallback(tsCb);
@@ -347,7 +367,13 @@ int main(int argc, char** argv) {
         fprintf(stderr, "running %s\n", c.id.c_str());   // (profilers wait for this line: the signal is generated)
         const Result r = run(c, sig);
         printf("\n== %s: %s\n", c.id.c_str(), c.what.c_str());
-        printf("   %.2f s of signal, %llu TS packets, digest %016llx\n", r.secs, (unsigned long long)r.packets, (unsigned long long)r.hash);
+        rusage ru; getrusage(RUSAGE_SELF, &ru);
+#ifdef __APPLE__
+        const double peakMb = (double)ru.ru_maxrss / 1048576.0;   // bytes on macOS
+#else
+        const double peakMb = (double)ru.ru_maxrss / 1024.0;      // kilobytes on Linux
+#endif
+        printf("   %.2f s of signal, %llu TS packets, digest %016llx, peak memory %.0f MB (process, signal included)\n", r.secs, (unsigned long long)r.packets, (unsigned long long)r.hash, peakMb);
         printf("   CPU s per s of signal: all threads %.3f, feed thread %.3f, busiest thread %.3f%s\n", r.cpuAll / r.secs, r.cpuFeed / r.secs, r.cpuBusiest / r.secs,
                r.cpuFeed / r.secs > 1 ? "  (TOO SLOW: the radio's ring would overflow)" : r.cpuBusiest / r.secs > 1 ? "  (TOO SLOW: a decoder thread falls behind)" : "");
         auto st = r.stages;

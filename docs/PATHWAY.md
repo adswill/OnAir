@@ -362,3 +362,9 @@ HD checkbox next to the channel picker (greyed out until an HD counterpart exist
 
 2026-10-22 (mode-drmplus-030): audit only, no code. DRM30 modes A-D and DRM+ (mode E, 100 kHz, 4/16-QAM, SDC 4-QAM, generator, tests/drm/test_drm_modee.cpp) are already in core/src/drm and auto-detected inside the one DRM entry. HD Radio FM (MP1/MP3) and AM (MA1 hybrid, MA3 all-digital: P1, P3, PIDS, L2, AAS, HDC via user-installed FAAD2 plug-in) are already in core/src/hdr with generator and tests/hdr/test_hdr_am.cpp. Per the one-entry-per-protocol rule they stay as DRM and HD Radio families; no new mode numbers used. Nothing added; still unverified without real signals: DRM+ unequal error protection, HD AM on-air.
 
+
+2026-10-23 (perf2-sat-tv-030, PARKED): branch = pub/integ-30 + merge of perf-dvb-030 (conflicts in CMakeLists.txt, dvbt.cpp, dvbt_rx.cpp resolved: integ's lists + t2ldpc.cpp, integ's pool call, perf-dvb's carrier-role cache, integ's plot cadence with the telemetry stage).
+bench_dvb: new cases isdbs (40 Msps) and atv (10 Msps, digest = pictures), peak memory printed. No receiver code changed yet.
+Baseline (guarded, nice 19, 4 s): dvbs2-8psk all 1.241 / feed 0.386, digest 209d97b2cfcbf63c; dvbs2-32apsk 1.536 / 0.388, 56f6f40d0c69847f; dvbs 0.647 / 0.471, 0e69a42e0add5dd8.
+Resume: baseline atsc, atsc3, isdbt, dtmb, isdbs, atv; profile dvbs2 with sample (dvbs/atsc/isdbt/dtmb/atsc3 have no DECT2_STAGE names yet: add them first); candidates SymbolTimer dot4 (80 taps a symbol), S2 workers (refine, demap, decodeFast8), ATSC equalize/pfbBlock.
+Avoid dvbs_rx.cpp search logic (dvbs-narrow-030); DecSAT-derived dvbs code in a commit needs the Arclamp co-author line.
