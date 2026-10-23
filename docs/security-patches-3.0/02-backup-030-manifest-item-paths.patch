@@ -1,0 +1,24 @@
+--- a/core/src/backup/backup.cpp
++++ b/core/src/backup/backup.cpp
+@@ -271,6 +271,8 @@
+         if (!safeRelPath(f.name)) return "unsafe path in the manifest: " + f.name;
+         const ItemDef* d = findItem(f.item);
+         if (!d) return "unknown item in the manifest: " + f.item;
++        // a file may only sit where its item keeps files; otherwise a crafted manifest could restore e.g. codecs/libmbe.dylib (loaded at run time)
++        if (itemOfPath(f.name) != f.item) return "a file does not belong to its item: " + f.name;
+         if (d->secret) { if (!m.secrets) return "secret file listed but the archive has no secrets"; continue; }
+         want.insert("data/" + f.name);
+         auto it = std::find_if(entries.begin(), entries.end(), [&](const Entry& e) { return e.name == "data/" + f.name; });
+--- a/tests/backup/test_backup.cpp
++++ b/tests/backup/test_backup.cpp
+@@ -124,6 +124,10 @@
+     CHECK(!checkManifestAgainst(bad, e).empty());
+     Manifest bad2 = m; bad2.files.push_back({"x", 1, "nosuchitem"});
+     CHECK(!checkManifestAgainst(bad2, e).empty());
++    // a file outside the places its item may use (here: the codecs folder, whose libraries are loaded at run time) is refused
++    Manifest bad3 = m; bad3.files.push_back({"codecs/libmbe.dylib", 4, "layouts"});
++    std::vector<Entry> e3 = e; e3.push_back({"data/codecs/libmbe.dylib", "evil"}); e3.push_back({"secrets.enc", "s"});
++    CHECK(!checkManifestAgainst(bad3, e3).empty());
+ 
+     std::string msg;
+     Manifest v = m;
