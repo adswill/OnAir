@@ -618,6 +618,24 @@ struct DabReceiver::Impl {
                 if (turn) o[n] *= rot[(size_t)(carrier[(size_t)n] + kCarriers / 2)];
                 magSum += std::abs(o[n]);
             }
+            // Common phase error: oscillator phase noise (and what is left of the carrier offset) turns all carriers of a symbol alike. The
+            // turn between two symbols is measured from the fourth power of the cells (the DQPSK points sit at odd multiples of 45 degrees) and
+            // taken out of the cells (the differential soft bits). Taking it out of the symbols for the channel estimate as well cost 0.3 dB at
+            // the FIC threshold and gained nothing (those frames go differential).
+            if (!baselineMode()) {
+                cd s4 = 0;
+                double m2s = 0;
+                for (int n = 0; n < kCarriers; n++) {
+                    const cd z(o[n].real(), o[n].imag());
+                    const double m2 = std::norm(z);
+                    if (m2 > 0) { const cd z2 = z * z; s4 += z2 * z2 / m2; m2s += m2; }
+                }
+                if (std::abs(s4) > 0.1 * m2s) {   // only where there is a signal (noise alone gives about 0.03)
+                    const double err = std::arg(-s4) / 4.0;
+                    const cf32 r1((float)std::cos(err), (float)-std::sin(err));
+                    for (int n = 0; n < kCarriers; n++) o[n] *= r1;
+                }
+            }
             prev.swap(cur);
         }
         const double meanMag = magSum / ((double)(kSymbols - 1) * kCarriers) + 1e-12;
@@ -1093,7 +1111,8 @@ void DabReceiver::configure(double inputRateHz) {
     I.inRate = inputRateHz;
     I.resample = std::fabs(inputRateHz - kRate) > 1.0;
     if (I.resample) I.rs.configure(inputRateHz, kRate, nullptr, 1.6e6);
-    I.cc.configure(inputRateHz, 1.536e6, 60e3, 1.5);
+    // an ensemble beyond the search's +-80 kHz is moved to the middle when there is no lock after 0.5 s (the lock takes 0.2 s, p90, down to 3 dB)
+    I.cc.configure(inputRateHz, 1.536e6, 60e3, 0.5);
     I.reset();
 }
 

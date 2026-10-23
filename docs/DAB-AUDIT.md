@@ -199,9 +199,9 @@ What was wrong: **MP2 at 24 kHz** (MPEG-2 half sampling rate, allowed by EN 300 
 services, typically the low-bit-rate UEP ones). Such a frame is 48 ms long and spans two logical frames; every 24 ms logical frame went to the
 decoder as if it were a whole frame. The first half decoded with the rest of the frame missing (garbage in the upper part of every frame), the
 second half failed and was concealed by repeating the last 40 ms: 1.5 times as much audio as sent, garbled, with clicks at every splice and a
-band limit of 12 kHz, which matches the report. Now the MP2 frames are cut out of the byte stream by their headers (a damaged header: the bytes
-are skipped and every logical frame's worth of them concealed), so the decoder always gets whole frames; at 48 kHz nothing changes (one frame
-per logical frame, the same bytes as before). The generator makes 24 kHz MP2 and mono MP2 for the test.
+band limit of 12 kHz, which matches the report. Now a logical frame whose header announces a frame of two logical frames is kept and decoded whole
+with the next one; everything else goes to the decoder exactly as before, so 48 kHz does not change (a first version that cut frames out of the
+byte stream by their headers cost one cutout per fade in dab_audit's MP2 deep fade case). The generator makes 24 kHz MP2 and mono MP2 for the test.
 
 Also: **scrambled services** (conditional access, FIG 0/2 CAId and the component's CA flag) were played as noise. The flags are now read
 (`DabService::caId`, `DabComponent::ca`); a scrambled station is not played and the panel says "Audio: scrambled (conditional access): cannot be
@@ -210,3 +210,28 @@ them; `dab_realworld` failed on x86-64 Linux for that).
 
 Not verified with the user's signal: the recording is the decoded audio, not IQ, so whether that service is 24 kHz MP2 is inferred from the
 symptoms (nothing above 12 kHz, garbling without dropouts). An IQ recording of the ensemble would confirm it.
+
+## Shared harness (tools/sens, docs/SENSITIVITY.md)
+
+`tools/sens/run.sh --full --mode dab` (its own channel models, SNR over the 1.536 MHz of the signal, 1 dB steps, FIB CRC as the metric, 3 s
+trials; before = `DECT2_DAB_BASELINE=1`, 12-40 trials a point). The committed baseline (`tests/sens/baseline/sens-baseline.json`) holds the "after".
+
+| scenario | before | after |
+|---|---|---|
+| AWGN, carrier 2 / 20 ppm | 3 dB (31 % FIBs bad at 3 dB) | 3 dB (7 % bad at 3 dB) |
+| off centre by 154 kHz | **no lock in 3 s** at any SNR | 5 dB, lock 0.64 s |
+| sample clock 50 ppm | 4 dB | 3 dB |
+| echo -6 dB at 30 us | 4 dB | 3 dB |
+| TU6, 20 Hz | 9 dB | **5 dB** |
+| Rician K = 10 dB | 4 dB | 3 dB |
+| phase noise 50 Hz | 6 dB | 5 dB |
+| combined (2 ppm, 20 ppm clock, echo, phase noise) | 7 dB | 6 dB |
+| lock, median / p90 | 0.19 / 0.19 s | 0.19 / 0.19 s |
+
+With 12 trials a point the phase noise and combined rows vary by +-2 dB from run to run; the values above are from 40 trials. The two
+measurements agree: dab_sens's FIC threshold of 1.6 dB over 2.048 MHz is 2.85 dB over 1.536 MHz, inside the harness's 3 dB step.
+
+Two more changes came from the harness: an ensemble beyond the +-80 kHz of the search is now moved to the middle after 0.5 s without lock
+(was 1.5 s, too late for a 3 s trial and a slow start for the user), and the common phase error of each symbol (oscillator phase noise) is
+measured from the fourth power of the differential cells and taken out of them where there is a signal. Taking it out of the channel
+estimate too cost 0.3 dB at the FIC threshold and was left out.
