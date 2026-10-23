@@ -1,5 +1,5 @@
-// Generic PSK demodulator and analyser (BPSK / QPSK / OQPSK / 8PSK): the pure DSP of the "PSK demodulator" mode (family 240).
-// Everything here works on blocks or streams of complex samples at any rate; no engine, no threads, no I/O except the bit sinks in pskdsp_out.cpp.
+// Generic PSK demodulator and analyser (BPSK / QPSK / OQPSK / 8PSK): the pure DSP of the "PSK demodulator" mode (family 202).
+// Everything here works on blocks or streams of complex samples at any rate; no engine, no threads, no I/O.
 //   channel  : find the strongest narrow signal in a span, its carrier and bandwidth (zooming in for narrow signals in wide captures)
 //   analyse  : blind symbol rate (|x|^2 envelope line, x^2 / x^4 side lines, refined by the timing loop), modulation order (power-law lines,
 //              then a trial demodulation per order scored by constellation fit and point use), roll-off, carrier and Doppler, MER / Es/N0 / Eb/N0
