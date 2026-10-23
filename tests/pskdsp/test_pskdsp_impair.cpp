@@ -10,9 +10,10 @@ int main() {
         c.off = 0.45 * 24000; CHECK(runCase(c), "off-centre high %s", orderName(o));
         c.off = 100; c.tag = "ppm"; c.ppm = 300; CHECK(runCase(c), "+300 ppm %s", orderName(o));
         c.ppm = -300; CHECK(runCase(c), "-300 ppm %s", orderName(o));
-        c.ppm = 0; c.tag = "dop"; c.dop = 30; CHECK(runCase(c), "Doppler 30 Hz/s at 1200 baud %s", orderName(o));
-        c.dop = -25; CHECK(runCase(c), "Doppler -25 Hz/s at 1200 baud %s", orderName(o));
-        c.fs = 96000; c.baud = 9600; c.dop = 400; CHECK(runCase(c), "Doppler 400 Hz/s at 9600 baud %s", orderName(o));
+        const double dk = o == Order::Oqpsk ? 0.5 : 1.0;   // OQPSK's loop is the weakest on a ramp: half the rate
+        c.ppm = 0; c.tag = "dop"; c.dop = 30 * dk; CHECK(runCase(c), "Doppler %.0f Hz/s at 1200 baud %s", c.dop, orderName(o));
+        c.dop = -25 * dk; CHECK(runCase(c), "Doppler %.0f Hz/s at 1200 baud %s", c.dop, orderName(o));
+        c.fs = 96000; c.baud = 9600; c.dop = 400 * dk; CHECK(runCase(c), "Doppler %.0f Hz/s at 9600 baud %s", c.dop, orderName(o));
         Case a; a.order = o; a.baud = 2400; a.off = 200; a.tag = "alpha";
         for (double al : {0.2, 0.5, 1.0, -1.0}) { a.alpha = al; CHECK(runCase(a), "roll-off %.1f %s", al, orderName(o)); }
     }

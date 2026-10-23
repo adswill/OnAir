@@ -7,11 +7,14 @@
 #include <cstdio>
 using namespace dect2::pskd;
 
+#ifndef PSKTEST_SEED
+#define PSKTEST_SEED 1
+#endif
 struct Case {
     Order order = Order::Bpsk;
     double fs = 48000, baud = 1200, off = 0, esn0 = 25, dop = 0, ppm = 0, alpha = 0.35;
     int symbols = 3000;
-    uint32_t seed = 1;
+    uint32_t seed = PSKTEST_SEED;
     const char* tag = "";
 };
 

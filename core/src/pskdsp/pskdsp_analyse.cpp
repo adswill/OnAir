@@ -325,41 +325,47 @@ Analysis analyse(const cf* x0, size_t n0, double fs, const AnalyseOptions& o) {
         }
         // the -3 dB width of an RRC spectrum is the symbol rate whatever the roll-off; a rectangular pulse is 12 % narrower
         const double w = A.carrier.bw3Hz;
-        for (int gi = -24; gi <= 24; gi++) {
+        for (int gi = -24; gi <= 36; gi++) {
             const double gf = 1.0 + 0.005 * gi;
-            { addCand(w * gf, 0.3, "bandwidth"); addCand(w * 0.88 * gf, 0.2, "bandwidth"); }
+            { addCand(w * gf, 0.3, "bandwidth"); addCand(w * 0.88 * gf, 0.2, "bandwidth"); addCand(A.carrier.bw10Hz / 1.5 * gf, 0.15, "bandwidth"); }   // the last: rectangular pulses (-10 dB width 1.5 symbol rates)
         }
     }
     if (cand.empty()) { A.status = "signal found, symbol rate unclear"; return A; }
     std::stable_sort(cand.begin(), cand.end(), [](const RateCandidate& a, const RateCandidate& b) { return a.conf > b.conf; });
-    if (cand.size() > 220) cand.resize(220);
+    if (cand.size() > 400) cand.resize(400);
 
     // ---- 5 trial demodulation per candidate and order
     const bool forceO = o.forceOrder != Order::Auto;
-    const double alphaS = o.forceAlpha >= 0 ? std::max(0.05, o.forceAlpha) : 0.35;
-    if (cand.size() > 12) {   // screening: how constant the symbol level is after a QPSK / OQPSK timing loop (it does not depend on the order)
+    const bool rect0 = o.forceAlpha == -1;
+    std::vector<double> alphaTry = o.forceAlpha >= 0 ? std::vector<double>{std::max(0.05, o.forceAlpha)} : rect0 ? std::vector<double>{0.0} : std::vector<double>{0.25, 0.7};
+    std::vector<double> alphaC(cand.size(), alphaTry.size() == 1 ? alphaTry[0] : 0.45);
+    if (cand.size() > 12) {   // screening: how constant the symbol level is after a QPSK / OQPSK timing loop (it does not depend on the order); two roll-offs, as ISI hides a right rate
         std::vector<std::pair<double, size_t>> sc;
+        std::vector<double> alphaWin(cand.size(), alphaC[0]);
         for (size_t c = 0; c < cand.size(); c++) {
             double ee = 9;
-            for (Order od : {Order::Qpsk, Order::Oqpsk}) ee = std::min(ee, runTrial(y, fsC, cand[c].baud, od, o.forceAlpha == -1 ? 0 : alphaS, 1500).expEvm);
+            for (double al : alphaTry)
+                for (Order od : {Order::Qpsk, Order::Oqpsk}) {
+                    const double e = runTrial(y, fsC, cand[c].baud, od, al, 2200).expEvm;
+                    if (e < ee) { ee = e; alphaWin[c] = al; }
+                }
             sc.push_back({ee - cand[c].conf * 0.02, c});   // equal scores: the lines before the bandwidth guesses
         }
         std::sort(sc.begin(), sc.end());
         std::vector<RateCandidate> keep;
-        for (size_t k = 0; k < std::min<size_t>(10, sc.size()); k++) keep.push_back(cand[sc[k].second]);
+        alphaC.clear();
+        for (size_t k = 0; k < std::min<size_t>(16, sc.size()); k++) { keep.push_back(cand[sc[k].second]); alphaC.push_back(alphaWin[sc[k].second]); }
         cand.swap(keep);
     }
-    double bestScore = 1e9; double winBaud = 0; Order bestO = Order::Bpsk;
+    double bestScore = 1e9; double winBaud = 0, winAlpha = alphaC.empty() ? 0.45 : alphaC[0]; Order bestO = Order::Bpsk;
     std::vector<std::pair<Order, double>> bestOrderEvm;
     std::vector<double> scores(cand.size(), 9.0), refBaud(cand.size(), 0.0);
     std::vector<Order> candOrder(cand.size(), Order::Bpsk);
-    const double alpha0 = o.forceAlpha >= 0 ? std::max(0.05, o.forceAlpha) : 0.35;
-    const bool rect0 = o.forceAlpha == -1;
     for (size_t c = 0; c < cand.size(); c++) {
         std::vector<Trial> tr;
         for (Order od : kOrders) {
             if (forceO && od != o.forceOrder) continue;
-            tr.push_back(runTrial(y, fsC, cand[c].baud, od, rect0 ? 0 : alpha0, 2500));
+            tr.push_back(runTrial(y, fsC, cand[c].baud, od, rect0 ? 0 : alphaC[c], 2500));
         }
         const int pi = forceO ? 0 : pickOrder(tr);
         if (pi < 0) continue;
@@ -377,7 +383,7 @@ Analysis analyse(const cf* x0, size_t n0, double fs, const AnalyseOptions& o) {
         for (size_t k = 0; k < std::min<size_t>(6, idx.size()); k++) {
             const size_t c = idx[k];
             if (scores[c] > 0.9 || refBaud[c] <= 0) continue;
-            const Trial t = runTrial(y, fsC, refBaud[c], candOrder[c], rect0 ? 0 : alpha0, 2500);
+            const Trial t = runTrial(y, fsC, refBaud[c], candOrder[c], rect0 ? 0 : alphaC[c], 2500);
             if (t.expEvm < scores[c] * 0.98) {
                 scores[c] = t.expEvm; cand[c].baud = refBaud[c];
                 refBaud[c] = t.spsMean > 0 ? fsC / t.spsMean : refBaud[c];
@@ -387,11 +393,15 @@ Analysis analyse(const cf* x0, size_t n0, double fs, const AnalyseOptions& o) {
     {
         size_t cb = 0;
         for (size_t c = 1; c < cand.size(); c++) if (scores[c] < scores[cb]) cb = c;
-        bestScore = scores[cb]; winBaud = cand[cb].baud; bestO = candOrder[cb];
+        bestScore = scores[cb]; winBaud = cand[cb].baud; bestO = candOrder[cb]; winAlpha = alphaC[cb];
+        std::vector<Trial> tr;   // the order again at the final rate (a refined candidate may have converged to another one than it was first ranked with)
         for (Order od : kOrders) {
             if (forceO && od != o.forceOrder) continue;
-            bestOrderEvm.push_back({od, runTrial(y, fsC, winBaud, od, rect0 ? 0 : alpha0, 2500).evm});
+            tr.push_back(runTrial(y, fsC, winBaud, od, rect0 ? 0 : winAlpha, 2500));
+            bestOrderEvm.push_back({od, tr.back().evm});
         }
+        const int pi = forceO ? 0 : pickOrder(tr);
+        if (pi >= 0) bestO = tr[(size_t)pi].order;
     }
     for (size_t c = 0; c < cand.size(); c++) cand[c].conf = std::clamp(1.0 - scores[c] / 0.9, 0.0, 1.0);
     std::stable_sort(cand.begin(), cand.end(), [](const RateCandidate& a, const RateCandidate& b) { return a.conf > b.conf; });
@@ -412,7 +422,7 @@ Analysis analyse(const cf* x0, size_t n0, double fs, const AnalyseOptions& o) {
     // ---- 7 pulse shape
     bool rect = false;
     double aEst = estimateRolloff(yy->data(), yy->size(), fsC, baud, &rect);
-    double alpha = alpha0; bool useRect = rect0;
+    double alpha = winAlpha; bool useRect = rect0;
     if (o.forceAlpha < -1.5) {
         const double opts[] = {aEst, 0.2, 0.35, 0.5, 1.0, -1};
         double best = 9;
