@@ -1,0 +1,27 @@
+// Precompiled header: standard library headers only (see cmake/PrecompiledHeaders.cmake). Keep it free of project headers.
+#pragma once
+#include <algorithm>
+#include <array>
+#include <atomic>
+#include <chrono>
+#include <cmath>
+#include <complex>
+#include <condition_variable>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <deque>
+#include <filesystem>
+#include <fstream>
+#include <functional>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <random>
+#include <set>
+#include <sstream>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
