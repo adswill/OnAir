@@ -12,6 +12,7 @@
 #include "dect2/mercury/mercury_phy.h"
 #include "dect2/mercury/mercury_gen.h"
 #include "dect2/mercury/mercury_mfsk.h"
+#include "dect2/mercury/mercury_proto.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>

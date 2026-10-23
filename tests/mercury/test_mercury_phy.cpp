@@ -118,6 +118,29 @@ int main() {
         CHECK(ok == 2, "audio path: %d of 2", ok);
     }
 
+    // real-world impairments, every mode: carrier offsets of tens of Hz (which also move the signal off-centre in the passband), sample
+    // clocks of +-100 ppm and noise 3 dB above the loopback point of the table above; each combination must deliver the payload exactly
+    {
+        const double offs[] = {-48, -33, 33, 48};
+        const double ppms[] = {-100, 100, 100, -100};
+        for (int m = 0; m < kNumOfdmModes; m++) {
+            int good = 0;
+            for (int k = 0; k < 4; k++) {
+                const std::vector<uint8_t> pay = randomPayload(m, 500 + (uint64_t)(m * 8 + k));
+                std::vector<GenBurst> sc(1);
+                sc[0].mode = m;
+                sc[0].frame = makeFrame(m, pay.data(), pay.size());
+                sc[0].gapSec = 0.8;
+                ChannelConfig ch;
+                ch.snrDb = snr[m] + 3; ch.cfoHz = offs[k]; ch.sroPpm = ppms[k]; ch.seed = 700 + (uint64_t)(m * 8 + k);
+                const std::vector<cf> x = renderScript(sc, ch, 0.41 + 0.013 * m + 0.007 * k);
+                for (const OfdmFrame& fr : run(x)) if (fr.mode == m && fr.ldpcOk && fr.payload == pay) { good++; break; }
+            }
+            printf("  %-8s impaired (+-33 / +-48 Hz, +-100 ppm): %d of 4\n", ofdmMode(m).name, good);
+            CHECK(good >= 3, "%s: %d of 4 impaired bursts delivered", ofdmMode(m).name, good);
+        }
+    }
+
     // noise alone (60 s): nothing decodes
     {
         std::vector<cf> x((size_t)(60 * 8000));

@@ -1,4 +1,6 @@
-// Mercury OFDM burst receiver (see mercury_phy.h).
+// Mercury OFDM burst receiver (see mercury_phy.h). The burst layout it looks for (modes, preamble, postamble, pilots, unique word)
+// follows Mercury's modem/freedv OFDM mode definitions (Rhizomatica/mercury, GPL-3.0, credits in THIRD_PARTY.md); the acquisition and
+// the estimators are OnAir's own.
 //
 // Acquisition. The 8 kHz input (1500 Hz of audio at 0 Hz) is low-passed and decimated into three streams: 1 kHz for the 3 and 4
 // carrier modes, 2 kHz for the 9 carrier ones, 4 kHz for the wide ones. In each, every distinct preamble and postamble (the modes that

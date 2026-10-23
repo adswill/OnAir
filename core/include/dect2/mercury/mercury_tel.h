@@ -1,4 +1,5 @@
-// Mercury receiver telemetry, shared by the receiver and the UI.
+// Mercury receiver telemetry, shared by the receiver and the UI. The frame and session fields name the things Mercury's protocol
+// documents (Rhizomatica/mercury, GPL-3.0, see mercury_proto.h) define; OnAir's own structure.
 // The first members are copied into RxTelemetry (history plot, top bar): keep them and their meaning.
 #pragma once
 #include <cstdint>

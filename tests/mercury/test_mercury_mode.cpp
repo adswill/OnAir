@@ -26,6 +26,7 @@ int main() {
     CHECK(reg != nullptr && std::string(reg->id) == "mercury", "modeTuning(206) not registered");
     const std::string table = readFile("app/ui/mode_table.cpp");
     CHECK(table.find("{204, \"Mercury (HF OFDM modem)\", 10,") != std::string::npos, "mode row for family 204 missing");
+    CHECK(table.find("Experimental: checked against its own modulator") != std::string::npos, "mode row must say experimental");
     const std::string appH = readFile("app/app.h");
     { const size_t q = appH.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && std::atoi(appH.c_str() + q + 29) >= 205, "kNumFamilies does not cover family 204"); }
     const std::string modeUi = readFile("app/panels/modeui.cpp");

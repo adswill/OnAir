@@ -1939,6 +1939,13 @@ if(DECT2_BUILD_TESTS)
   if(TARGET test_pskdsp_engine)   # reads the mode row and the help page from the source tree
     target_compile_definitions(test_pskdsp_engine PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
   endif()
+  # Mercury: the mode wiring test reads the sources; the HF channel sweep takes a few minutes ("test_mercury_channel full": the long table)
+  if(TARGET test_mercury_mode)
+    target_compile_definitions(test_mercury_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+  endif()
+  if(TARGET test_mercury_channel)
+    set_tests_properties(mercury_channel PROPERTIES TIMEOUT 900)
+  endif()
   # the signal identifier (docs/IDENTIFIER.md): specx_ideval (about thirty modes made from their parameters, impaired, a confusion matrix; a few
   # seconds), specx_idfeatures and specx_ident run with the rest. The matrix over every mode's own test signal renders each mode's generator
   # and takes minutes: the whole one and its quick form (20 dB, no frequency) are in the slow tier (nightly and release tags).
