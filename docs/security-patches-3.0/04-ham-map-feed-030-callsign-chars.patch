@@ -1,0 +1,37 @@
+--- a/core/src/ham/ham_mapfeed.cpp
++++ b/core/src/ham/ham_mapfeed.cpp
+@@ -37,10 +37,18 @@
+     return j + "}";
+ }
+ 
++// hamCallValid() checks only the longest part between slashes; the other parts (prefix / suffix) come off the air and are free text, and `to` is put
++// into the extra JSON as it is. Only letters, digits and '/' (at most 12 characters) go to the map.
++static bool callChars(const std::string& s) {
++    if (s.empty() || s.size() > 12) return false;
++    for (char c : s) if (!(std::isupper((unsigned char)c) || std::isdigit((unsigned char)c) || c == '/')) return false;
++    return true;
++}
++
+ bool buildTrack(const Contact& c, int gridChars, double nowUtc, Track& out) {
+     const std::string mode = normMode(c.mode);
+     const std::string from = up(c.from), to = up(c.to);
+-    if (mode.empty() || !hamCallValid(from) || !hamCallValid(to) || from == to) return false;
++    if (mode.empty() || !callChars(from) || !callChars(to) || !hamCallValid(from) || !hamCallValid(to) || from == to) return false;
+     double lat, lon;
+     if (!roundedCentre(c.fromGrid, gridChars, lat, lon)) return false;
+     double tlat = 0, tlon = 0;
+--- a/tests/ham/test_ham_mapfeed.cpp
++++ b/tests/ham/test_ham_mapfeed.cpp
+@@ -30,6 +30,12 @@
+     CHECK(buildTrack(nogrid, 4, 1000, t) && t.extra.find("tlat") == std::string::npos && t.extra.find("\"to\":\"DL1ABC\"") != std::string::npos, "partner without locator: call only");
+     Contact bad = mk("LY2XX", "DL1ABC"); bad.from = "NOTACALL!!";
+     CHECK(!buildTrack(bad, 4, 1000, t), "invalid callsign rejected");
++    // free text around the slash: the long part is a valid call, so hamCallValid passes it; it must not reach the extra JSON
++    bad = mk("LY2XX", "DL1ABC"); bad.to = "DL1ABC/\"},\"x\":{\"";
++    CHECK(!buildTrack(bad, 4, 1000, t), "quote in the partner call rejected");
++    bad = mk("LY2XX", "DL1ABC"); bad.from = "<IMG>/LY2XX";
++    CHECK(!buildTrack(bad, 4, 1000, t), "markup in the station call rejected");
++    CHECK(buildTrack(mk("LY2XX/P", "DL1ABC/MM"), 4, 1000, t), "portable / maritime suffixes still pass");
+     bad = mk("LY2XX", "DL1ABC"); bad.mode = "SSTV";
+     CHECK(!buildTrack(bad, 4, 1000, t), "unknown mode rejected");
+     bad = mk("LY2XX", "LY2XX");
