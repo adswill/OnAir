@@ -27,7 +27,13 @@ namespace dect2 {
 using namespace dvbs;
 
 double dvbsMaxSymbolRate(double fs, double rollOff) { return fs / (1.3 * (1.0 + rollOff)); }
-double dvbsMinAutoSymbolRate(double fs) { return std::max(60e3, fs * 40.0 / 4096.0 * 2.5); }   // about 40 spectrum bins across the carrier
+int dvbsFineFftSize(double fs) {
+    int n = 8192;
+    while (n < 131072 && fs / n > 200.0) n *= 2;
+    return n;
+}
+double dvbsNarrowSymbolRate(double fs) { return fs * 100.0 / 4096.0; }              // about 100 bins of the coarse spectrum
+double dvbsMinAutoSymbolRate(double fs) { return fs * 40.0 / dvbsFineFftSize(fs); }  // about 40 bins of the fine spectrum across the carrier
 
 ModeTuning dvbsTuning() {
     ModeTuning t;
@@ -164,6 +170,11 @@ struct DvbsReceiver::Impl {
     uint64_t reportAt = 0;
     SpectrumEstimator spec;
     SpectrumResult specRes;
+    // narrow carriers (below dvbsNarrowSymbolRate, down to about 10 kSym/s): a second spectrum with bins of about 200 Hz over the whole input
+    SpectrumEstimator specFine;
+    std::vector<SpectrumResult> coarseAll, fineCars;   // the latest survey of each: the wide carriers of the coarse one, the narrow ones of the fine one
+    bool fineDone = false;                              // fineCars holds a result of the current search
+    std::string searchWhy;                              // why the search has not started the front end yet (plain words)
     std::vector<float> psdDb;
     int searchTries = 0;
     std::vector<cf32> raw;                      // the latest input while searching, for cyclicRate()
@@ -233,6 +244,8 @@ struct DvbsReceiver::Impl {
         spec.reset();
         specRes = SpectrumResult();
         searchTries = 0;
+        specFine.reset(); specFine.setStride(fineStride(true));
+        coarseAll.clear(); fineCars.clear(); fineDone = false; searchWhy.clear();
         sym.clear(); y.clear();
         symTotal = 0; timingNarrow = false; recentred = false;
         huntBuf.clear(); huntSinceTry = 0;
@@ -275,8 +288,79 @@ struct DvbsReceiver::Impl {
         for (const auto& f : cidFrames) log("carrier ID " + dvbcid::guidText(f.guid));
     }
 
+    // ---- narrow carriers
+    size_t fineStride(bool searching) const {
+        // searching: about 48 segments a second; while a carrier is decoded the survey is refreshed every second or two at a tenth of the cost
+        return (size_t)std::max<double>((double)specFine.fftSize(), fs * (searching ? 0.02 : 0.05));
+    }
+    static bool usable(const SpectrumResult& r) { return r.valid && r.zscore >= 8.f && r.fitRms < 2.5f; }
+    // the narrow carriers of the fine spectrum: the wide ones the coarse spectrum measured are blanked out first, so that only what lies between them is left
+    void fineUpdate() {
+        std::vector<double> p = specFine.averaged();
+        const int n = (int)p.size();
+        if (n < 256 || specFine.segments() < 1) return;
+        std::vector<double> s(p);
+        std::nth_element(s.begin(), s.begin() + n * 15 / 100, s.end());
+        const double fl = s[(size_t)(n * 15 / 100)], bin = fs / n, nar = dvbsNarrowSymbolRate(fs);
+        for (const auto& r : coarseAll) {
+            if (!r.valid || r.rateHz < nar) continue;
+            const double w = r.edgeHiHz - r.edgeLoHz;
+            const int a = std::max(0, (int)std::floor((r.edgeLoHz - 0.35 * w) / bin + n / 2.0)), b = std::min(n - 1, (int)std::ceil((r.edgeHiHz + 0.35 * w) / bin + n / 2.0));
+            for (int k = a; k <= b; k++) p[(size_t)k] = fl;
+        }
+        const std::vector<SpectrumResult> all = analyseAllPsd(p, fs, std::max(1, specFine.segments()), 32);
+        fineCars.clear();
+        for (const auto& r : all) if (usable(r) && r.rateHz < nar && r.rateHz >= 0.8 * dvbsMinAutoSymbolRate(fs)) fineCars.push_back(r);
+        fineDone = true;
+    }
+    // every carrier measured: the wide ones from the coarse spectrum, the narrow ones from the fine one
+    std::vector<SpectrumResult> merged() const {
+        std::vector<SpectrumResult> v;
+        const double nar = dvbsNarrowSymbolRate(fs);
+        for (const auto& r : coarseAll) if (r.valid && r.rateHz >= nar) v.push_back(r);
+        for (const auto& r : fineCars) v.push_back(r);
+        std::sort(v.begin(), v.end(), [](const SpectrumResult& a, const SpectrumResult& b) { return a.centerHz < b.centerHz; });
+        return v;
+    }
+    // the carrier to decode: the one picked, else the one nearest the centre among those not much weaker than the strongest (as analysePsd does);
+    // with a manual symbol rate the carriers near that rate come first
+    bool choose(const std::vector<SpectrumResult>& all, SpectrumResult& out) const {
+        std::vector<SpectrumResult> v;
+        for (const auto& r : all) if (usable(r)) v.push_back(r);
+        const double manual = manualRs.load();
+        if (manual > 0) {
+            std::vector<SpectrumResult> near;
+            for (const auto& r : v) if (std::fabs(r.rateHz / manual - 1.0) < 0.25) near.push_back(r);
+            if (!near.empty()) v.swap(near);
+        }
+        if (v.empty()) return false;
+        const SpectrumResult* best = &v[0];
+        if (pickOn.load()) {
+            const double ph = pickHz.load();
+            for (const auto& r : v) if (std::fabs(r.centerHz - ph) < std::fabs(best->centerHz - ph)) best = &r;
+        } else {
+            float top = -1e30f;
+            for (const auto& r : v) top = std::max(top, r.plateauDb);
+            for (const auto& r : v) if (r.plateauDb >= top - 12.f && (best->plateauDb < top - 12.f || std::fabs(r.centerHz) < std::fabs(best->centerHz))) best = &r;
+        }
+        out = *best;
+        return true;
+    }
+    static std::string rateText(double hz) {
+        char b[48];
+        if (hz >= 1e6) snprintf(b, sizeof b, "%.3f MSym/s", hz / 1e6); else snprintf(b, sizeof b, "%.1f kSym/s", hz / 1e3);
+        return b;
+    }
+    // symbols the frame search needs before it can lock (see huntPush and tryDvbs2): the attempt interval or the S2 window, and a frame to decode
+    double huntSymbolsExpected() const {
+        const double interval = std::max(65536.0, 0.15 * rsUsed);
+        return std::max(interval, stdHint.load() == 1 ? (double)kHuntWindow : 100000.0) + 35000.0;
+    }
+    uint64_t huntSymbols = 0;          // symbols since the carrier was found (survives the rate dither)
+    SpectrumResult curRes;             // the carrier the front end works on
+
     void surveyUpdate() {
-        std::vector<SpectrumResult> all = spec.analyseAll(16);
+        const std::vector<SpectrumResult> all = merged();
         std::vector<DvbsCarrier> v;
         float top = -1e9f;
         for (const auto& r : all) top = std::max(top, r.plateauDb);
@@ -297,28 +381,50 @@ struct DvbsReceiver::Impl {
     }
 
     // ------------------------------------------------------------------------ search: spectrum -> front end
+    bool coarseWaiting = false;       // the coarse spectrum found no wide carrier to take: waiting for the fine one
+    void searchFailed(const std::string& why) {
+        searchWhy = why;
+        spec.reset(); specFine.reset(); fineDone = false; coarseWaiting = false;
+        searchTries++;
+    }
     void doSearch() {
-        if (spec.segments() < 48) return;
-        spec.setPick(pickOn.load(), pickHz.load());
-        specRes = spec.analyse();
-        surveyUpdate();
-        spec.display(psdDb, 512);
-        const double manual = manualRs.load();
-        const bool carrier = specRes.valid && specRes.zscore >= 8.f && specRes.fitRms < 2.5f;
-        double rs = manual > 0 ? manual : specRes.rateHz;
-        if (manual <= 0 && carrier) {
-            const double rc = cyclicRate(raw, fs, specRes.centerHz, rs);
+        if (spec.segments() < 48) { if (searchWhy.empty()) searchWhy = "measuring the spectrum"; return; }
+        const double manual = manualRs.load(), nar = dvbsNarrowSymbolRate(fs);
+        if (!coarseWaiting) {
+            spec.setPick(pickOn.load(), pickHz.load());
+            specRes = spec.analyse();
+            coarseAll = spec.analyseAll(16);
+            surveyUpdate();
+            spec.display(psdDb, 512);
+            // a wide carrier (the coarse spectrum measures it well) is taken at once, as before the fine spectrum existed
+            bool wide = usable(specRes) && specRes.rateHz >= nar && (manual <= 0 || manual >= nar);
+            if (wide && pickOn.load() && std::fabs(specRes.centerHz - pickHz.load()) > 0.5 * specRes.rateHz) wide = false;
+            if (!wide) coarseWaiting = true;
+        }
+        SpectrumResult c = specRes;
+        if (coarseWaiting) {
+            if (specFine.segments() < 48) { searchWhy = "looking for narrow carriers"; return; }
+            fineUpdate();
+            surveyUpdate();
+            if (!choose(merged(), c)) {
+                const bool weak = specRes.zscore >= 4.f || std::any_of(fineCars.begin(), fineCars.end(), [](const SpectrumResult& r) { return r.zscore >= 4.f; });
+                searchFailed(weak ? "something is there, but too weak to measure: a better antenna or dish alignment, more gain" : "no carrier stands out of the noise");
+                return;
+            }
+            coarseWaiting = false;
+        }
+        double rs = manual > 0 ? manual : c.rateHz;
+        if (manual <= 0 && c.rateHz >= nar) {   // the raw window (kCyclicN samples) holds too few symbols of a narrow carrier for its cyclic line
+            const double rc = cyclicRate(raw, fs, c.centerHz, rs);
             if (rc > 0) {
                 if (std::fabs(rc / rs - 1) > 0.01) logf("symbol rate %.3f Msym/s from the spectrum's width, %.4f from its cyclic line", rs / 1e6, rc / 1e6);
                 rs = rc;
             }
         }
-        if (!carrier || rs < dvbsMinAutoSymbolRate(fs) * (manual > 0 ? 0.0 : 1.0) || rs > dvbsMaxSymbolRate(fs, 0.35) * 1.02) {
-            spec.reset();
-            searchTries++;
-            return;
-        }
-        startFront(specRes, rs);
+        if (manual <= 0 && rs < dvbsMinAutoSymbolRate(fs)) { searchFailed("the carrier (" + rateText(rs) + ") is narrower than the receiver can measure at this sample rate: set the symbol rate"); return; }
+        if (rs > dvbsMaxSymbolRate(fs, 0.35) * 1.02) { searchFailed("the carrier (" + rateText(rs) + ") is wider than this sample rate can carry: raise the sample rate"); return; }
+        specRes = c;
+        startFront(c, rs);
     }
 
     void startFront(const SpectrumResult& r, double rs) {
@@ -336,6 +442,8 @@ struct DvbsReceiver::Impl {
         sfStrip.reset(); sfWasLocked = sfWasPilots = false;
         rsNominal = rs; huntFails = 0; ditherIdx = 0; huntCycles = 0;
         mode = kHunt;
+        curRes = r; huntSymbols = 0; searchWhy.clear();
+        specFine.reset(); specFine.setStride(fineStride(false));
         logf("carrier found: %.3f Msym/s, %+.0f kHz from the centre", rs / 1e6, r.centerHz / 1e3);
     }
 
@@ -353,7 +461,7 @@ struct DvbsReceiver::Impl {
             sfOut.clear(); sfStrip.push(sym.data(), sym.size(), sfOut); sym.swap(sfOut);
             // the super-frame grid was found (or its pilots) while the frames were being followed: their symbols were not taken out until now, so the receiver starts again
             const bool lk = sfStrip.view().carriesPlframes(), pl = sfPilotsNow();
-            if (mode == kS2 && ((lk && !sfWasLocked) || (pl && !sfWasPilots))) { s2.stop(); tsLockFlag = false; mode = kHunt; huntBuf.clear(); huntSinceTry = 0; }
+            if (mode == kS2 && ((lk && !sfWasLocked) || (pl && !sfWasPilots))) { s2.stop(); tsLockFlag = false; mode = kHunt; huntBuf.clear(); huntSinceTry = 0; huntSymbols = 0; }
             sfWasLocked = lk; sfWasPilots = pl;
         }
         if (sym.empty()) return;
@@ -362,6 +470,7 @@ struct DvbsReceiver::Impl {
             if (dumpF && dumpCount < 64ull * 1024 * 1024) { fwrite(sym.data(), sizeof(cf32), sym.size(), dumpF); dumpCount += sym.size(); }
         }
         symTotal += sym.size();
+        huntSymbols += sym.size();
         rateNow = front.symbolRateNow();
         if (!timingNarrow && symTotal > 40000) { front.timer().setLoop(0.004, 0.707); timingNarrow = true; }
         if (!recentred && symTotal > 200000) { front.recentre(); recentred = true; }
@@ -461,7 +570,7 @@ struct DvbsReceiver::Impl {
         if (s2.lost()) {
             s2.stop();
             tsLockFlag = false;
-            mode = kHunt; huntBuf.clear(); huntSinceTry = 0;
+            mode = kHunt; huntBuf.clear(); huntSinceTry = 0; huntSymbols = 0;
         }
     }
 
@@ -533,7 +642,7 @@ struct DvbsReceiver::Impl {
         if (s1Lost.load()) {
             s1th.stop();
             s1Lost = false;
-            mode = kHunt; huntBuf.clear(); huntSinceTry = 0;
+            mode = kHunt; huntBuf.clear(); huntSinceTry = 0; huntSymbols = 0;
         }
     }
 
@@ -762,6 +871,21 @@ struct DvbsReceiver::Impl {
         t.secsSinceLock = t.tsLock ? nowSec - (double)lockSinceInput / fs : 0;
         t.netBitrate = netBitrate;
         t.state = t.dataValid ? 2 : (mode == kSearch ? 0 : 1);
+        // progress and the reason in plain words
+        if (mode == kSearch) t.searchStatus = searchWhy.empty() ? "looking for a carrier" : searchWhy;
+        else if (!t.tsLock && rsUsed > 0) {
+            const double exp = huntSymbolsExpected();
+            t.huntSecs = (double)huntSymbols / rsUsed;
+            t.huntSecsExpected = exp / rsUsed;
+            const std::string rate = rateText(rsUsed);
+            if (mode == kHunt && (double)huntSymbols < 2.0 * exp) t.searchStatus = "carrier found (" + rate + "): looking for DVB-S/S2 frames";
+            else if (mode == kHunt && specRes.valid && specRes.snrDb < 3.f) t.searchStatus = "carrier found (" + rate + "), but too weak to decode";
+            else if (mode == kHunt) t.searchStatus = "carrier found (" + rate + "), but no DVB-S/S2 frames in it: another kind of signal, or the symbol rate is off";
+            else if (mode == kS2 && t.framesSeen > 3 && t.blocksOk == 0)
+                t.searchStatus = "DVB-S2 frames found, but nothing decodes: too weak, or a physical layer scrambling code is in use (set it under Advanced)";
+            else if (mode == kS2) t.searchStatus = "DVB-S2 frames found: decoding";
+            else if (mode == kS1) t.searchStatus = t.lockFrame ? "DVB-S: decoding" : "DVB-S code found: waiting for the packet sync";
+        }
         {
             std::lock_guard<std::mutex> lk(cellMu);
             if (!cells.empty()) {
@@ -802,6 +926,7 @@ void DvbsReceiver::configure(double inputRateHz) {
     p_->fs = inputRateHz;
     p_->spec.configure(inputRateHz, 4096);
     p_->spec.setStride((size_t)std::max(4096.0, inputRateHz * 0.004));
+    p_->specFine.configure(inputRateHz, dvbsFineFftSize(inputRateHz));
     p_->resetState();
 }
 bool DvbsReceiver::ready() const { return p_->fs >= dvbsTuning().minSampleRate - 1; }
@@ -901,6 +1026,7 @@ void DvbsReceiver::feed(const cf32* x, size_t n) {
     }
     I.inputCount += n;
     I.spec.push(x, n);
+    I.specFine.push(x, n);
     if (I.mode == Impl::kSearch) {
         I.raw.insert(I.raw.end(), x, x + n);
         if (I.raw.size() > (size_t)kCyclicN) I.raw.erase(I.raw.begin(), I.raw.end() - kCyclicN);
@@ -914,6 +1040,14 @@ void DvbsReceiver::feed(const cf32* x, size_t n) {
         if (I.mode != Impl::kSearch && I.spec.segments() >= 8) {
             I.spec.setPick(I.pickOn.load(), I.pickHz.load());
             I.specRes = I.spec.analyse();
+            I.coarseAll = I.spec.analyseAll(16);
+            if (I.specFine.segments() >= 24) { I.fineUpdate(); I.specFine.reset(); }
+            if (I.rsUsed < dvbsNarrowSymbolRate(I.fs)) {
+                // a narrow carrier: the coarse spectrum cannot measure it; the fine survey's carrier at the front end's frequency stands for it
+                I.specRes = I.curRes;
+                for (const auto& r : I.fineCars)
+                    if (std::fabs(r.centerHz - I.front.config().centerHz) < 0.25 * I.rsUsed) I.specRes = r;
+            }
             I.surveyUpdate();
             I.spec.display(I.psdDb, 512);
             I.spec.reset();

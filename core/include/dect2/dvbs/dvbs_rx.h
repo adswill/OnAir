@@ -56,7 +56,12 @@ ModeTuning dvbsTuning();
 
 // The highest symbol rate the receiver accepts at an input rate: about 1.3 samples per symbol times (1 + roll-off) of bandwidth
 double dvbsMaxSymbolRate(double inputRateHz, double rollOff = 0.35);
-// The lowest symbol rate that the spectrum analysis can measure at an input rate (below it a manual symbol rate is needed)
+// The lowest symbol rate that the spectrum analysis can measure at an input rate (below it a manual symbol rate is needed): about 8 kSym/s at
+// any input rate, since a second, finer spectrum (dvbsFineFftSize) looks for the narrow carriers
 double dvbsMinAutoSymbolRate(double inputRateHz);
+// Carriers below this rate are measured in the fine spectrum, the ones above in the coarse 4096-point one (about 100 of its bins)
+double dvbsNarrowSymbolRate(double inputRateHz);
+// The fine spectrum's size at an input rate: bins of about 200 Hz or less (8192 to 131072 points)
+int dvbsFineFftSize(double inputRateHz);
 
 } // namespace dect2

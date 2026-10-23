@@ -3,6 +3,26 @@
 The receiver takes the L-band IF of an LNB and finds the carrier, symbol rate, roll-off, modulation and code rate by itself (DVB-S: EN 300 421; DVB-S2: EN 302 307-1;
 DVB-S2X: EN 302 307-2, including the VL-SNR frames). See `docs/dvbs-decsat-parity.md` for what was added from the study of DecSAT and what was left out.
 
+## Narrow carriers (10 kSym/s and up)
+
+The search measures every carrier in two spectra of the same input: the coarse one (4096 points) for the wide carriers, and a fine one with bins of
+about 200 Hz (`dvbsFineFftSize`: 16384 points at 2.4 Msps, 65536 at 8 to 10 Msps, 131072 at 20 Msps) for the carriers narrower than about 100 coarse
+bins (`dvbsNarrowSymbolRate`: 59 kSym/s at 2.4 Msps, 195 kSym/s at 8 Msps). The wide carriers are blanked out of the fine spectrum before it is read,
+so the narrow ones between them are found too; the Receiver tab's carrier list shows both, symbol rates below 1 MSym/s in kSym/s. The lowest rate
+measured blind is about 40 fine bins (`dvbsMinAutoSymbolRate`: 6 kSym/s at 2.4 Msps, 5 kSym/s at 8 Msps). The carrier's centre comes from the fit of
+the raised cosine to about 80 or more bins, a few tens of Hz for a 10 kSym/s carrier, so an LNB error of any size (the spectrum covers the whole
+input) leaves well under the +-1/8 symbol rate that the QPSK carrier estimate and the S2 header search pull in.
+
+Everything after the search counts symbols, not seconds (the front end decimates by halfbands to 3 to 6 samples per symbol and resamples to two; the
+timing loop, the carrier loops, the hunt windows and the sync timeouts are per symbol), so a narrow carrier behaves as a wide one, only slower:
+DVB-S locks after about 70 000 to 100 000 symbols (7 to 10 s at 10 kSym/s), DVB-S2 after about 135 000 (three normal frames to find the
+headers and one to decode: about 13 s at 10 kSym/s). The status line shows what the search is doing, about how long it still needs, and why it
+fails in plain words ("no carrier stands out of the noise", "too weak", "no DVB-S/S2 frames in it", "a physical layer scrambling code is in use").
+The symbol rate field takes kSym/s; Auto (the default) needs nothing typed.
+
+Tests: `tests/dvbs/test_dvbs_narrow.cpp` (see the table in the PATHWAY entry of 2026-10-23 for lock times and thresholds). Only synthetic signals
+from the repo's own modulator have been decoded so far; what a real narrow satellite carrier adds is listed there.
+
 ## IP data (GSE)
 
 When the BBFRAMEs of a DVB-S2 signal carry a generic stream instead of a transport stream (an IP data service, a VSAT outbound), the receiver de-encapsulates **GSE**

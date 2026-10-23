@@ -47,6 +47,12 @@ const char* stdName(int s) { return s == 1 ? "DVB-S" : s == 2 ? "DVB-S2" : s == 
 
 std::string fmt(const char* f, double v) { char b[48]; snprintf(b, sizeof b, f, v); return b; }
 std::string cnt(uint64_t v) { return std::to_string((unsigned long long)v); }
+// a symbol rate in the unit that reads best: kSym/s below 1 MSym/s (narrow carriers, down to about 10 kSym/s), MSym/s above
+std::string rateStr(double hz, int msymDigits = 3) {
+    char b[48];
+    if (hz < 1e6) snprintf(b, sizeof b, hz < 100e3 ? "%.2f kSym/s" : "%.1f kSym/s", hz / 1e3); else snprintf(b, sizeof b, "%.*f MSym/s", msymDigits, hz / 1e6);
+    return b;
+}
 
 // Eb/N0 per information bit: Es/N0 less 10 log10 of the bits a symbol carries (modulation times code rate; DVB-S also times 188/204 for the Reed-Solomon code)
 bool ebN0(const DvbsTelemetry& t, double& out) {
@@ -150,7 +156,7 @@ void statusRows(App& a, const DvbsTelemetry& t, bool on, bool run, bool standalo
     else if (t.lockSpectrum) ro("State", "Locking", pal::accent());
     else ro("State", "Searching", kDim);
     if (t.standard) ro("Standard", stdName(t.standard));
-    if (t.symbolRate > 0) ro("Symbol rate", fmt("%.3f Msym/s", t.symbolRate / 1e6) + (t.symbolRateManual ? " (set)" : ""));
+    if (t.symbolRate > 0) ro("Symbol rate", rateStr(t.symbolRate) + (t.symbolRateManual ? " (set)" : ""));
     if (t.standard && !t.modulationName.empty()) {
         std::string m = t.modulationName + " " + t.codeRate;
         if (t.standard >= 2 && t.frameSize == 2) m += " short";
@@ -160,6 +166,13 @@ void statusRows(App& a, const DvbsTelemetry& t, bool on, bool run, bool standalo
         ro("Mode", m);
     }
     flowBreak();
+    // what the automatic search is doing, or why it does not lock, and how long a narrow carrier takes (a DVB-S2 frame at 10 kSym/s lasts over 3 s)
+    if (!t.tsLock && !t.searchStatus.empty()) {
+        std::string w = t.searchStatus;
+        if (t.huntSecsExpected > 1.5 && t.huntSecs < t.huntSecsExpected) w += fmt("  (about %.0f s left)", t.huntSecsExpected - t.huntSecs);
+        ro("Search", w, kDim);
+        flowBreak();
+    }
     if (t.lockCarrier) {
         ro("Es/N0", fmt("%.1f dB", t.snrDb));
         double eb;
@@ -196,8 +209,8 @@ void summary(const App& a, std::string& l1, std::string& l2) {
         if (!t.modulationName.empty()) l1 += " " + t.modulationName + " " + t.codeRate;
     }
     char b[96];
-    if (t.tsLock) snprintf(b, sizeof b, "locked  %.2f Msym/s  Es/N0 %.1f dB", t.symbolRate / 1e6, t.snrDb);
-    else if (t.lockSpectrum) snprintf(b, sizeof b, "locking  %.2f Msym/s", t.symbolRate / 1e6);
+    if (t.tsLock) snprintf(b, sizeof b, "locked  %s  Es/N0 %.1f dB", rateStr(t.symbolRate, 2).c_str(), t.snrDb);
+    else if (t.lockSpectrum) snprintf(b, sizeof b, "locking  %s", rateStr(t.symbolRate, 2).c_str());
     else snprintf(b, sizeof b, "searching for a carrier");
     l2 = b;
 }
@@ -334,7 +347,7 @@ void carriersSection(App& a, const DvbsTelemetry& t) {
             for (const auto& c : t.carriers) {
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn(); ImGui::Text("%+.3f MHz", c.centerHz / 1e6);
-                ImGui::TableNextColumn(); ImGui::Text("%.3f Msym/s", c.rateHz / 1e6);
+                ImGui::TableNextColumn(); ImGui::TextUnformatted(rateStr(c.rateHz).c_str());
                 ImGui::TableNextColumn(); if (c.rollOff > 0) ImGui::Text("%.2f", c.rollOff); else ImGui::TextUnformatted("-");
                 ImGui::TableNextColumn(); ImGui::Text("%.1f dB", c.levelDb);
                 ImGui::TableNextColumn(); ImGui::Text("%.1f dB", c.snrDb);
@@ -518,10 +531,10 @@ void receiver(App& a) {
     if (t.lockSpectrum) L.push_back({"spectrum fit", fmt("%.2f", t.spectrumFitRms) + (t.spectrumFitRms < 0.3f ? "  (looks like a carrier)" : t.spectrumFitRms < 1.f ? "" : "  (does not look like a carrier)")});
 
     head(L, "SYMBOL RATE");
-    L.push_back({"in use", t.symbolRate > 0 ? fmt("%.4f Msym/s", t.symbolRate / 1e6) : "-"});
+    L.push_back({"in use", t.symbolRate > 0 ? rateStr(t.symbolRate, 4) : "-"});
     L.push_back({"source", t.symbolRateManual ? "set by hand" : "from the spectrum"});
-    L.push_back({"from spectrum", t.symbolRateSpectrum > 0 ? fmt("%.4f Msym/s", t.symbolRateSpectrum / 1e6) : "-"});
-    L.push_back({"timing loop", t.symbolRateLoop > 0 ? fmt("%.4f Msym/s", t.symbolRateLoop / 1e6) : "-"});
+    L.push_back({"from spectrum", t.symbolRateSpectrum > 0 ? rateStr(t.symbolRateSpectrum, 4) : "-"});
+    L.push_back({"timing loop", t.symbolRateLoop > 0 ? rateStr(t.symbolRateLoop, 4) : "-"});
     if (t.symbolRate > 0 && t.symbolRateLoop > 0) L.push_back({"loop vs used", fmt("%+.0f ppm", (t.symbolRateLoop / t.symbolRate - 1) * 1e6)});
     {
         const char* src = t.rollOffSource == 2 ? "signalled" : t.rollOffSource == 1 ? "measured" : "assumed";
@@ -620,7 +633,8 @@ void tuner(App& a, bool& retune) {
     bool ch = false;
     ImGui::TextDisabled("Symbol rate");
     if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("Auto measures the width of the carrier in the spectrum. Set it by hand for weak or narrow carriers, or when Auto is a few percent off.\n\n"
+        ImGui::SetTooltip("Auto (the default) finds the symbol rate, roll-off and standard by itself, from about 10 kSym/s up to what the sample rate carries.\n"
+                          "Narrow carriers take longer to lock: the receiver needs about 150 000 symbols (15 s at 10 kSym/s). Untick Auto only to force a rate (kSym/s).\n\n"
                           "A HackRF sees about 17 MHz of band at most (20 Msps), which is a carrier of up to about %.1f Msym/s.\n"
                           "At %.0f Msps the limit is %.1f Msym/s. Wide transponders (27.5 Msym/s and more) do not fit: use a recording or a wider radio.",
                           dvbsMaxSymbolRate(20e6) / 1e6, fs / 1e6, dvbsMaxSymbolRate(fs) / 1e6);
@@ -637,9 +651,10 @@ void tuner(App& a, bool& retune) {
     sameLineIf(104 * gUi, 6 * gUi);
     ImGui::BeginDisabled(autoSr);
     ImGui::SetNextItemWidth(std::min(104 * gUi, ImGui::GetContentRegionAvail().x));   // no wider than the side panel
-    double v = autoSr ? (live(a) ? a.rx.dvbs.symbolRate / 1e6 : 0.0) : S.srMsym;
-    if (ImGui::InputDouble("##dvbssrv", &v, 0, 0, autoSr ? "%.3f Msym/s" : "%.3f Msym/s")) {
-        if (!autoSr) { S.srMsym = std::max(0.05, std::min(maxMsym, v)); ch = true; }
+    // in kSym/s, so that narrow carriers (10 kSym/s) and wide ones (27500 kSym/s) are typed the same way
+    double v = (autoSr ? (live(a) ? a.rx.dvbs.symbolRate / 1e6 : 0.0) : S.srMsym) * 1e3;
+    if (ImGui::InputDouble("##dvbssrv", &v, 0, 0, "%.1f kSym/s")) {
+        if (!autoSr) { S.srMsym = std::max(0.005, std::min(maxMsym, v / 1e3)); ch = true; }
     }
     ImGui::EndDisabled();
     ImGui::TextDisabled("Standard");
