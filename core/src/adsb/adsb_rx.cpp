@@ -3,11 +3,14 @@
 #include "dect2/adsb/adsb_rx.h"
 #include "dect2/adsb/adsb_demod.h"
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstring>
 #include <mutex>
 
 namespace dect2 {
+
+namespace { int64_t steadyNow() { return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(); } }
 
 struct AdsbReceiver::Impl {
     std::mutex mu;                       // protects tracker, the report fields and the callbacks
@@ -20,6 +23,7 @@ struct AdsbReceiver::Impl {
     std::function<void(const std::string&)> log;
     std::function<void(const AdsbFrame&)> frameCb;
     std::atomic<bool> resetPending{false};
+    std::atomic<int64_t> lastFeedNs{0};  // steady clock of the last feed: a new start moves the clock on by the time it was stopped (#85)
 
     // report state (under mu)
     uint64_t seq = 0;
@@ -123,7 +127,13 @@ void AdsbReceiver::resetStats() { std::lock_guard<std::mutex> lk(p_->mu); p_->tr
 void AdsbReceiver::configure(double inputRateHz) {
     std::lock_guard<std::mutex> lk(p_->mu);
     p_->rate = inputRateHz;
-    p_->demod.configure(inputRateHz);
+    p_->demod.configure(inputRateHz);   // (the demodulator's clock runs on through it)
+    // #85: started again after a stop (another mode ran in between): the clock moves on by the time it was stopped, so the aircraft heard
+    // before show their real age and leave the table after the drop time, instead of looking as if heard a moment ago
+    if (const int64_t last = p_->lastFeedNs.load(); last > 0) {
+        const double gap = (double)(steadyNow() - last) * 1e-9;
+        if (gap > 1.0) p_->demod.advance(gap);
+    }
     p_->demod.setThresholds(p_->kPulse, p_->kGap);
     // reset() keeps the sample counter, so timeSec continues. Do not rewind the aircraft table onto a 0..now catch-up:
     // that made even/odd CPR times differ by minutes and no pair decoded.
@@ -152,6 +162,7 @@ void AdsbReceiver::feed(const cf32* x, size_t n) {
     if (p.dSum > -0.5f) p.demod.setDetector(p.dSum, p.dMin, p.dData, p.dWorth);
     p.demod.setCoherent(p.coherent);
     p.demod.feed(x, n);
+    p.lastFeedNs.store(steadyNow(), std::memory_order_relaxed);
     const double t = p.demod.timeSec();
     while (t >= p.nextReport) {
         p.report(p.nextReport);

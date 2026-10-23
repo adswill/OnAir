@@ -2,8 +2,10 @@
 #include "dect2/drm/drm_usac_lib.h"
 #include "../source/native_common.h"
 #include <algorithm>
+#include <atomic>
 #include <cstdlib>
 #include <filesystem>
+#include <mutex>
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -44,26 +46,74 @@ std::vector<std::string> UsacLib::codecFolderCandidates() {
     return v;
 }
 
+namespace {
+std::mutex gRepMu;
+UsacLib::Report gRep;
+std::atomic<uint64_t> gGen{1};
+bool fileThere(const std::string& p) { std::error_code ec; return std::filesystem::is_regular_file(std::filesystem::path(p), ec); }
+#ifdef _WIN32
+// why LoadLibrary refused a file that is there, in plain words (#266: the DLL was in the codecs folder but nothing said why it did not load)
+std::string winLoadError(DWORD e) {
+    switch (e) {
+    case ERROR_MOD_NOT_FOUND: return "a DLL it needs is missing (put the DLLs that came with it, e.g. libgcc_s_seh-1.dll, libwinpthread-1.dll, libstdc++-6.dll, in the same folder)";
+    case ERROR_BAD_EXE_FORMAT: return "wrong kind of DLL (a 32-bit build: OnAir needs the 64-bit libfdk-aac)";
+    case ERROR_ACCESS_DENIED: return "access denied (blocked by the antivirus or the file's permissions)";
+    default: return "Windows error " + std::to_string((unsigned long)e);
+    }
+}
+#endif
+} // namespace
+
 UsacLib UsacLib::load(const std::string& path) {
     std::vector<std::string> names;
     if (!path.empty()) names.push_back(path);
     if (const char* e = std::getenv("DECT2_FDKAAC_LIB")) if (*e) names.push_back(e);
     for (const std::string& n : codecFolderCandidates()) names.push_back(n);   // a copy in a codecs folder wins over the system's
     void* h = nullptr;
+    Report rep;
+    std::string used;
 #ifdef _WIN32
     for (const char* n : {"libfdk-aac-2.dll", "libfdk-aac.dll", "fdk-aac.dll", "libfdk-aac-1.dll"}) names.push_back(n);
     for (const std::string& n : names) {
         const bool full = n.find('\\') != std::string::npos || n.find('/') != std::string::npos;   // a full path: its own folder is searched for the DLLs it needs
-        if ((h = full ? (void*)LoadLibraryExA(n.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH) : (void*)LoadLibraryA(n.c_str()))) break;
+        if (full && !fileThere(n)) continue;
+        if ((h = full ? (void*)LoadLibraryExA(n.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH) : (void*)LoadLibraryA(n.c_str()))) { used = n; break; }
+        if (full) rep.failed.push_back(n + ": " + winLoadError(GetLastError()));
     }
     auto sym = [&](const char* s) -> void* { return h ? (void*)GetProcAddress((HMODULE)h, s) : nullptr; };
 #else
     for (const char* n : {"libfdk-aac.so.2", "libfdk-aac.so", "libfdk-aac.2.dylib", "libfdk-aac.dylib", "/opt/homebrew/lib/libfdk-aac.dylib", "/usr/local/lib/libfdk-aac.dylib"}) names.push_back(n);
-    for (const std::string& n : names) if ((h = dlopen(n.c_str(), RTLD_NOW | RTLD_LOCAL))) break;
+    for (const std::string& n : names) {
+        const bool full = n.find('/') != std::string::npos;
+        if (full && !fileThere(n)) continue;
+        if ((h = dlopen(n.c_str(), RTLD_NOW | RTLD_LOCAL))) { used = n; break; }
+        if (full) { const char* why = dlerror(); rep.failed.push_back(n + ": " + (why ? why : "cannot be loaded")); }
+    }
     auto sym = [&](const char* s) -> void* { return h ? dlsym(h, s) : nullptr; };
 #endif
-    return fromResolver(sym);   // the library handle stays open for the life of the program
+    UsacLib l = fromResolver(sym);   // the library handle stays open for the life of the program
+    if (h && !l.ok()) rep.failed.push_back(used + ": loaded, but it has no AAC decoder functions (not libfdk-aac, or a build without the decoder)");
+    rep.loaded = l.ok();
+    if (rep.loaded) rep.path = used;
+    { std::lock_guard<std::mutex> lk(gRepMu); gRep = rep; }
+    return l;
 }
+
+UsacLib::Report UsacLib::lastReport() { std::lock_guard<std::mutex> lk(gRepMu); return gRep; }
+
+namespace {
+std::mutex gSharedMu;
+UsacLib gShared;
+uint64_t gSharedGen = 0;
+}
+UsacLib UsacLib::shared() {
+    std::lock_guard<std::mutex> lk(gSharedMu);
+    const uint64_t g = gGen.load();
+    if (gSharedGen != g) { gShared = load(); gSharedGen = g; }
+    return gShared;
+}
+void UsacLib::rescan() { gGen++; }
+uint64_t UsacLib::generation() { return gGen.load(); }
 
 bool UsacSession::open(const std::vector<uint8_t>& asc) {
     close();

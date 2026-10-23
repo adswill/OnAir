@@ -21,6 +21,9 @@ namespace {
 struct State {
     int view = 0;                        // 0 messages, 1 statistics
     char filter[48] = "";                // matches the address or the text
+    char watch[256] = "";                // the capcode watch list (#269), saved as pagerWatch
+    dect2::PagerWatch watched;           // watch, parsed
+    bool watchOnly = false;              // the Messages view shows only watched addresses (saved as pagerWatchOnly)
     bool pocsag = true, flex = true;
     bool decodedOnly = false;            // hide tone-only and empty pages from the table, Copy and the list (saved as pagerDecodedOnly)
     bool baud512 = true, baud1200 = true, baud2400 = true;
@@ -47,6 +50,9 @@ void loadRead() {
     const long m = d.getI("pocsagRead", dect2::kPocsagReadAuto);
     S.readMode = m >= 0 && m < dect2::kPocsagReadModes ? (int)m : dect2::kPocsagReadAuto;
     S.decodedOnly = d.getI("pagerDecodedOnly", 0) != 0;
+    snprintf(S.watch, sizeof S.watch, "%s", d.getS("pagerWatch", "").c_str());
+    S.watched = dect2::pagerParseWatch(S.watch);
+    S.watchOnly = d.getI("pagerWatchOnly", 0) != 0;
     const long b = d.getI("pocsagBaud", 7);
     S.baud512 = (b & 1) != 0;
     S.baud1200 = (b & 2) != 0;
@@ -109,6 +115,7 @@ std::string oneLine(const std::string& s) {
 
 bool passes(const dect2::PagerMessage& m) {   // m: resolved
     if (m.flex ? !S.flex : !S.pocsag) return false;
+    if (S.watchOnly && !S.watched.empty() && !S.watched.has(m.address)) return false;
     if (!S.filter[0]) return true;
     char adr[16];
     snprintf(adr, sizeof adr, "%u", (unsigned)m.address);
@@ -154,6 +161,11 @@ void messageView(App& a) {
     ImGui::SetNextItemWidth(150 * gUi);
     ImGui::InputText("##pgf", S.filter, sizeof S.filter);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Show only pages whose address or text contains this.");
+    flowNext(12 * gUi);
+    ImGui::BeginDisabled(S.watched.empty());
+    if (ImGui::Checkbox(tr("Watched only"), &S.watchOnly)) { plat::prefs().setI("pagerWatchOnly", S.watchOnly ? 1 : 0); plat::prefs().flush(); }
+    ImGui::EndDisabled();
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Show only the capcodes of the watch list (set it in the Capcodes view)"));
     flowNext(12 * gUi);
     ImGui::Checkbox("POCSAG", &S.pocsag);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("POCSAG is the ITU-R M.584 / CCIR Radiopaging Code No. 1 (RPC1): the same signal, so CCIR paging on the pager bands is decoded here at 512, 1200 and 2400 baud. The CCIR 5-tone selective calls are in the Tones mode."));
@@ -326,16 +338,42 @@ void capcodeView(App& a) {
     const bool wide = wideActive(a);
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("%zu addresses heard in the last %zu pages. Click an address to filter the Messages view by it.", rows.size(), messagesOf(t).size());
+    if (!wide && modeSupportsWide(a.family))
+        ImGui::TextDisabled("%s", tr("Unknown frequency? Turn on Whole span (top right of the spectrum): every pager carrier in the band the radio captures is decoded, and the MHz column shows where each capcode was heard."));
     ImGui::PopTextWrapPos();
-    if (!ImGui::BeginTable("##pgcap", 5 + (wide ? 1 : 0), ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    // the watch list (#269): capcodes to keep an eye on; their rows are marked here and the Messages view can show only them
+    auto saveWatch = [] { S.watched = dect2::pagerParseWatch(S.watch); plat::prefs().setS("pagerWatch", S.watch); plat::prefs().flush(); };
+    ImGui::TextDisabled("%s", tr("Watch list")); ImGui::SameLine(0, 5 * gUi);
+    ImGui::SetNextItemWidth(260 * gUi);
+    if (ImGui::InputTextWithHint("##pgwatch", "1234 5678 2000-2099", S.watch, sizeof S.watch)) saveWatch();
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Capcodes (RICs) to watch, separated by spaces or commas; a range like 2000-2099. Watched rows are marked; Messages > Watched only shows just them."));
+    auto toggle = [&](uint32_t adr) {
+        std::string s = S.watch;
+        if (S.watched.has(adr)) {   // remove the exact number (a range that holds it stays)
+            const std::string n = std::to_string(adr);
+            std::string out, tok;
+            std::istringstream in(s);
+            while (in >> tok) if (tok != n && tok != n + ",") out += (out.empty() ? "" : " ") + tok;
+            s = out;
+        } else s += (s.empty() ? "" : " ") + std::to_string(adr);
+        snprintf(S.watch, sizeof S.watch, "%s", s.c_str());
+        saveWatch();
+    };
+    if (!ImGui::BeginTable("##pgcap", 6 + (wide ? 1 : 0), ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
-    ImGui::TableSetupColumn("Address"); ImGui::TableSetupColumn("Pages"); ImGui::TableSetupColumn("Last"); ImGui::TableSetupColumn("Speed");
+    ImGui::TableSetupColumn("Watch"); ImGui::TableSetupColumn("Address"); ImGui::TableSetupColumn("Pages"); ImGui::TableSetupColumn("Last"); ImGui::TableSetupColumn("Speed");
     if (wide) ImGui::TableSetupColumn("MHz");
     ImGui::TableSetupColumn("Last text", ImGuiTableColumnFlags_WidthStretch);
     ImGui::TableHeadersRow();
     for (size_t i = 0; i < rows.size() && i < 500; i++) {
         const dect2::PagerHeard& r = rows[i];
         ImGui::TableNextRow();
+        const bool w = S.watched.has(r.address);
+        if (w) ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, ImGui::GetColorU32(pal::accent(0.25f)));
+        ImGui::TableNextColumn();
+        bool wv = w;
+        char wid[24]; snprintf(wid, sizeof wid, "##pgw%zu", i);
+        if (ImGui::Checkbox(wid, &wv)) toggle(r.address);
         ImGui::TableNextColumn();
         char lab[32];
         snprintf(lab, sizeof lab, "%u##cap%zu", (unsigned)r.address, i);

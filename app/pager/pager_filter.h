@@ -45,4 +45,35 @@ inline std::vector<PagerHeard> pagerHeardTable(const std::vector<PagerMessage>& 
     return rows;
 }
 
+// The capcode watch list (#269): addresses typed as numbers separated by spaces, commas or semicolons, and ranges "1000-1099".
+// Anything else is skipped. A range is kept as one entry; at most 256 entries.
+struct PagerWatch {
+    std::vector<std::pair<uint32_t, uint32_t>> ranges;
+    bool empty() const { return ranges.empty(); }
+    bool has(uint32_t a) const {
+        for (const auto& r : ranges) if (a >= r.first && a <= r.second) return true;
+        return false;
+    }
+};
+inline PagerWatch pagerParseWatch(const std::string& s) {
+    PagerWatch w;
+    size_t i = 0;
+    auto num = [&](uint32_t& v) {
+        if (i >= s.size() || s[i] < '0' || s[i] > '9') return false;
+        uint64_t x = 0;
+        while (i < s.size() && s[i] >= '0' && s[i] <= '9') { x = x * 10 + (uint64_t)(s[i] - '0'); if (x > 0xFFFFFFFFull) x = 0xFFFFFFFFull; i++; }
+        v = (uint32_t)x;
+        return true;
+    };
+    while (i < s.size() && w.ranges.size() < 256) {
+        uint32_t a = 0, b = 0;
+        if (!num(a)) { i++; continue; }
+        b = a;
+        if (i < s.size() && s[i] == '-') { i++; if (!num(b)) b = a; }
+        if (b < a) std::swap(a, b);
+        w.ranges.emplace_back(a, b);
+    }
+    return w;
+}
+
 }  // namespace dect2

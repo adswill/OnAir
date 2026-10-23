@@ -82,6 +82,12 @@ inline double radioNumber(const TuneSettings& s, const std::string& key, double 
 }
 // The frequency correction every radio offers (key "ppm"): the radio's clock error in parts per million, positive when its clock runs fast
 // (a signal then shows up below its real frequency)
+// "Decimate in OnAir" (#233, radio setting "decim"): the radio runs this many times faster than the mode asks and OnAir brings the
+// samples down to the mode's rate itself (for radios that are poor at low rates). 1 = off; 2, 4, 8 or 16.
+inline int radioDecimation(const TuneSettings& s) {
+    const int d = (int)radioNumber(s, "decim", 1);
+    return d == 2 || d == 4 || d == 8 || d == 16 ? d : 1;
+}
 inline double radioPpm(const TuneSettings& s) { const double p = radioNumber(s, "ppm", 0); return p > -1000 && p < 1000 ? p : 0; }
 // The frequency to ask a radio for so that it really receives hz, for radios whose library has no correction of its own: a clock that runs
 // fast by ppm tunes every frequency that much too high

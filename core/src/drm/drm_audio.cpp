@@ -265,7 +265,8 @@ struct AudioDecoder::Impl {
         fdk.reset();
         open = false; started = false; rsReady = false;
     }
-    static const UsacLib& usacLib() { static const UsacLib l = UsacLib::load(); return l; }
+    static UsacLib usacLib() { return UsacLib::shared(); }   // loaded once; again after UsacLib::rescan() (the DRM panel)
+    uint64_t libGen = 0;                    // the UsacLib generation openXhe() saw
 
     bool openXhe() {
         closeCodec();
@@ -273,8 +274,9 @@ struct AudioDecoder::Impl {
         if (asc.empty()) { info = "xHE-AAC: the configuration in the SDC cannot be read"; return false; }
         char nb[160];
         snprintf(nb, sizeof nb, "xHE-AAC, %.1f kHz %s", cfg.rateHz() / 1000.0, cfg.mode == 2 ? "stereo" : "mono");
-        if (usacLib().ok()) {
-            fdk.reset(new UsacSession(usacLib()));
+        libGen = UsacLib::generation();
+        if (const UsacLib lib = usacLib(); lib.ok()) {
+            fdk.reset(new UsacSession(lib));
             if (fdk->open(asc)) { open = true; info = std::string(nb) + " (libfdk-aac)"; baseInfo = info; return true; }
             fdk.reset();
         }
@@ -341,6 +343,7 @@ struct AudioDecoder::Impl {
     }
 
     bool decodeAu(const std::vector<uint8_t>& au, std::vector<float>& out) {
+        if (cfg.coding == 3 && !fdk && libGen != UsacLib::generation()) openXhe();   // "Look again" in the DRM panel: libfdk-aac added while running
         if (!open) return false;
         if (!started) {
             if (au.empty() || !(au[0] & 0x80)) { gap(out, auOut); return false; }   // usacIndependencyFlag: the first frame the decoder can start with

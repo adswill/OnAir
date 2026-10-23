@@ -4,6 +4,7 @@
 #include "dect2/common/thread_name.h"
 #include "../app.h"
 #include "dect2/engine/rate_choice.h"
+#include "dect2/engine/updater.h"
 #include "dect2/source/antenna_ports.h"
 #include "dect2/hdr/hdr_rx.h"
 #include "dect2/source/hamlib_link.h"
@@ -218,6 +219,9 @@ void netRadioWindow(App& a) {
     }
     ImGui::EndDisabled();
     if (busy) { ImGui::SameLine(); ImGui::TextDisabled("%s", tr("connecting…")); }
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("Setting up the server…"))) dect2::openUrl("https://github.com/adswill/OnAir/blob/main/docs/NETWORK_RADIOS.md");   // #248
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("How to run rtl_tcp, SpyServer, SoapySDRServer, SDR++ server, KiwiSDR or TCI on the radio's computer, and what to do when it does not connect (opens the guide in the browser)"));
     if (!a.netAddErr.empty()) { ImGui::PushTextWrapPos(400 * gUi); ImGui::TextColored(ImVec4(1.f, 0.45f, 0.4f, 1), tr("Cannot connect: %s"), tr(a.netAddErr.c_str())); ImGui::PopTextWrapPos(); }
     if (!a.netRadios.empty()) netRadioList(a);
     ImGui::End();

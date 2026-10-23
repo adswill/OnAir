@@ -3485,3 +3485,34 @@ deselect	選択解除
 click a station on the map to select it	地図上の局をクリックして選択
 %zu stations by their locators, %zu contact lines	%zu局（ロケーター位置）、交信ライン%zu本
 %d stations at the centre of their grid squares, %zu contact lines	%d局（グリッドの中心）、交信ライン%zu本
+Labels on the map	Labels on the map
+The callsign, altitude and speed boxes beside the aircraft. Off: cleaner in crowded areas; the selected aircraft still shows its box.	The callsign, altitude and speed boxes beside the aircraft. Off: cleaner in crowded areas; the selected aircraft still shows its box.
+1/min	1/min
+1/30 s	1/30 s
+Slow rows for long watches: one row a minute keeps about 8.5 hours in the picture	Slow rows for long watches: one row a minute keeps about 8.5 hours in the picture
+The picture holds the last %.1f hours.	The picture holds the last %.1f hours.
+The picture holds the last %.0f minutes.	The picture holds the last %.0f minutes.
+Average the rows	Average the rows
+Clock time on the time scale	Clock time on the time scale
+The waterfall's time scale shows the time of day of each row instead of seconds ago	The waterfall's time scale shows the time of day of each row instead of seconds ago
+time of day	time of day
+Watched only	Watched only
+Show only the capcodes of the watch list (set it in the Capcodes view)	Show only the capcodes of the watch list (set it in the Capcodes view)
+Unknown frequency? Turn on Whole span (top right of the spectrum): every pager carrier in the band the radio captures is decoded, and the MHz column shows where each capcode was heard.	Unknown frequency? Turn on Whole span (top right of the spectrum): every pager carrier in the band the radio captures is decoded, and the MHz column shows where each capcode was heard.
+Watch list	Watch list
+Capcodes (RICs) to watch, separated by spaces or commas; a range like 2000-2099. Watched rows are marked; Messages > Watched only shows just them.	Capcodes (RICs) to watch, separated by spaces or commas; a range like 2000-2099. Watched rows are marked; Messages > Watched only shows just them.
+Off	Off
+Decimate in OnAir	Decimate in OnAir
+Setting up the server…	Setting up the server…
+How to run rtl_tcp, SpyServer, SoapySDRServer, SDR++ server, KiwiSDR or TCI on the radio's computer, and what to do when it does not connect (opens the guide in the browser)	How to run rtl_tcp, SpyServer, SoapySDRServer, SDR++ server, KiwiSDR or TCI on the radio's computer, and what to do when it does not connect (opens the guide in the browser)
+Use docking	Use docking
+Dock left	Dock left
+Dock right	Dock right
+Dock top	Dock top
+Dock bottom	Dock bottom
+Dock as a tab of the spectrum	Dock as a tab of the spectrum
+Undock	Undock
+Next tab	Next tab
+Previous tab	Previous tab
+The radio runs this many times faster than the mode asks, and OnAir filters the samples down to the mode's rate itself.\nFor radios that are poor at low sample rates (images, a weak anti-alias filter). Costs CPU and USB bandwidth;\nthe radio's highest rate still applies. Off: the radio runs at the mode's rate.	The radio runs this many times faster than the mode asks, and OnAir filters the samples down to the mode's rate itself.\nFor radios that are poor at low sample rates (images, a weak anti-alias filter). Costs CPU and USB bandwidth;\nthe radio's highest rate still applies. Off: the radio runs at the mode's rate.
+At a set speed each row is the highest level of the frames in between, so a short burst is never missed.\nAverage: the mean level instead, which calms the noise and shows steady weak signals better.	At a set speed each row is the highest level of the frames in between, so a short burst is never missed.\nAverage: the mean level instead, which calms the noise and shows steady weak signals better.

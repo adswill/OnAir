@@ -50,6 +50,8 @@ void displayControls() {
     bool ch = false;
     if (ImGui::Checkbox(tr("Colour by altitude"), &S.disp.altColour)) ch = true;
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Aircraft and their tracks: low is warm, high is cool, on the ground is grey. Off: white, grey when the signal is old."));
+    if (ImGui::Checkbox(tr("Labels on the map"), &S.disp.labels)) ch = true;
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The callsign, altitude and speed boxes beside the aircraft. Off: cleaner in crowded areas; the selected aircraft still shows its box."));
     ImGui::SetNextItemWidth(140 * gUi);
     if (ImGui::SliderInt(tr("Track width (px)"), &S.disp.trackWidth, ad::kMinTrackWidth, ad::kMaxTrackWidth)) { S.disp.trackWidth = ad::clampTrackWidth(S.disp.trackWidth); ch = true; }
     bool never = S.disp.dropSec == 0;
@@ -62,7 +64,7 @@ void displayControls() {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("An aircraft that has not been heard for this long leaves the table and the map. Never keeps them until the list is cleared (the table holds at most 2000)."));
     if (ch) {
         plat::Prefs& p = plat::prefs();
-        p.setB(ad::kPrefAltColour, S.disp.altColour); p.setI(ad::kPrefTrackWidth, S.disp.trackWidth); p.setI(ad::kPrefDropSec, S.disp.dropSec);
+        p.setB(ad::kPrefAltColour, S.disp.altColour); p.setB(ad::kPrefLabels, S.disp.labels); p.setI(ad::kPrefTrackWidth, S.disp.trackWidth); p.setI(ad::kPrefDropSec, S.disp.dropSec);
         p.flush();
     }
     ImGui::EndPopup();

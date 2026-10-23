@@ -18,6 +18,7 @@
 #include <vector>
 
 extern const ModeUi kAdsbUi;   // below, in adsb_ui.cpp
+extern const ModeUi kModeAcUi;  // modeac_ui.cpp: it draws the ADS-B map (full screen too)
 
 namespace adsbui {
 

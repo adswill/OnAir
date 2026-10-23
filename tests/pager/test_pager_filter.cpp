@@ -31,5 +31,13 @@ int main() {
         v.erase(v.begin() + 5);
         CHECK(pagerHeardTable(v)[1].address == 1234 && pagerHeardTable(v)[1].lastText == "first", "a tone-only page does not erase the last text");
     }
+    {   // #269: the capcode watch list
+        const PagerWatch w = pagerParseWatch("1234, 99;  2000-2099 abc 3000-2990 77-");
+        CHECK(w.ranges.size() == 5, "watch entries: %zu", w.ranges.size());
+        CHECK(w.has(1234) && w.has(99) && w.has(2000) && w.has(2050) && w.has(2099) && !w.has(2100), "numbers and a range");
+        CHECK(w.has(2995) && w.has(77) && !w.has(78), "a reversed range and a dangling dash");
+        CHECK(pagerParseWatch("").empty() && pagerParseWatch("none").empty(), "empty list");
+        CHECK(pagerParseWatch("99999999999").has(0xFFFFFFFFu), "too large a number is clamped");
+    }
     return testSummary("pager_filter");
 }

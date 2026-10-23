@@ -21,7 +21,8 @@ namespace dect2 {
 namespace {
 
 using dect2::math::kPi;
-constexpr int kMaxActive = 8;                 // carriers decoded at the same time
+constexpr int kMaxActive = 8;                 // carriers decoded at the same time (a capture over 4 Msps: kMaxActiveWide)
+constexpr int kMaxActiveWide = 16;            // a wide capture holds more of the band (#236): 129-137 MHz fits in 10 Msps
 constexpr int kMaxChanInfo = 24;
 constexpr double kBlockSec = 0.008;           // spectrum look every 8 ms
 constexpr double kLookbackSec = 0.060;        // a new carrier is decoded from this long before it was noticed (the pre-key is 53 ms)
@@ -49,6 +50,7 @@ struct Cand {
 struct AcarsReceiver::Impl {
     std::mutex procMu, telMu;
     double fs = 0, offsetHz = 0, centerHz = 131.5e6, thrDb = 8;
+    int maxAct = kMaxActive;   // decoders at once (init: more on a wide capture)
     std::vector<double> userCh;
     bool dirty = true;
 
@@ -102,7 +104,7 @@ struct AcarsReceiver::Impl {
         if (!userCh.empty()) {
             for (double f : userCh) add(f, true);
         } else {
-            const double span = std::min(0.45 * fs, 2.5e6);
+            const double span = 0.45 * fs;   // the whole capture (#236: was at most +-2.5 MHz, so most of a 10 Msps capture was not searched)
             const double lo = std::ceil((centerHz - span) / 25e3) * 25e3;
             for (double f = lo; f <= centerHz + span; f += 25e3)
                 if (f >= 118e6 && f <= 137e6) add(f, false);
@@ -124,11 +126,12 @@ struct AcarsReceiver::Impl {
         pw.assign((size_t)nf, 0.f);
         pwTmp.assign((size_t)nf, 0.f);
         pool.clear();
-        for (int i = 0; i < kMaxActive; i++) {
+        maxAct = fs > 4e6 ? kMaxActiveWide : kMaxActive;
+        for (int i = 0; i < maxAct; i++) {
             pool.push_back(std::make_unique<AcarsChannelRx>());
             pool.back()->configure(fs, 0);
         }
-        slotUsed.assign(kMaxActive, false);
+        slotUsed.assign(maxAct, false);
         dirty = true;
         clearRun();
     }
@@ -222,7 +225,7 @@ struct AcarsReceiver::Impl {
                     nAct--;
                 }
             } else if (c->ratio >= on && wr >= c->coolUntil) {
-                if (nAct >= kMaxActive) {   // every decoder busy: take the one on the weakest carrier that has not started a frame, if this one is 3 dB stronger
+                if (nAct >= maxAct) {   // every decoder busy: take the one on the weakest carrier that has not started a frame, if this one is 3 dB stronger
                     Cand* weak = nullptr;
                     for (auto& o : cands)
                         if (o.active && pool[(size_t)o.slot]->framesStarted() == o.framesAtStart && (!weak || o.ratio < weak->ratio)) weak = &o;
@@ -239,7 +242,7 @@ struct AcarsReceiver::Impl {
 
     void activate(Cand& c) {
         int slot = -1;
-        for (int i = 0; i < kMaxActive; i++) if (!slotUsed[(size_t)i]) { slot = i; break; }
+        for (int i = 0; i < maxAct; i++) if (!slotUsed[(size_t)i]) { slot = i; break; }
         if (slot < 0) return;
         slotUsed[(size_t)slot] = true;
         c.slot = slot; c.active = true; c.seen = true;

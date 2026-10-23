@@ -636,6 +636,17 @@ static void radioSettingsChecks(const char* dir, const char* ext) {
         CHECK(lo == 0.1e6 && hi == 6e9, "HackRF Pro range %.0f-%.0f", lo, hi);
     }
 
+    {   // #233: "Decimate in OnAir" takes 2, 4, 8 or 16; anything else is off
+        TuneSettings t;
+        CHECK(radioDecimation(t) == 1, "decimation default %d", radioDecimation(t));
+        t.radio["decim"] = "4";
+        CHECK(radioDecimation(t) == 4, "decimation 4: %d", radioDecimation(t));
+        t.radio["decim"] = "3";
+        CHECK(radioDecimation(t) == 1, "decimation 3 is off: %d", radioDecimation(t));
+        t.radio["decim"] = "junk";
+        CHECK(radioDecimation(t) == 1, "decimation junk is off: %d", radioDecimation(t));
+    }
+
     if (use(lib("rtlsdr").c_str())) {
         DeviceInfo d = first("rtlsdr");
         CHECK(hasSetting(d, "ppm") && hasSetting(d, "ds") && !hasSetting(d, "offset"), "R820T settings: ppm %d ds %d offset %d", hasSetting(d, "ppm"), hasSetting(d, "ds"), hasSetting(d, "offset"));
@@ -653,6 +664,12 @@ static void radioSettingsChecks(const char* dir, const char* ext) {
             CHECK(src->retune(t, e) && st("rtl.ppmCalls") == 1, "RTL: the same correction set again (%.0f calls)", st("rtl.ppmCalls"));
             t.radio.erase("ppm");
             CHECK(src->retune(t, e) && st("rtl.ppm") == 0, "RTL: correction back to 0: %.0f", st("rtl.ppm"));
+            // #233: the chip's AGC is off at open and follows the radio setting
+            CHECK(hasSetting(d, "rtlagc") && st("rtl.agc") == 0, "RTL AGC: listed %d, at open %.0f", hasSetting(d, "rtlagc"), st("rtl.agc"));
+            t.radio["rtlagc"] = "1";
+            CHECK(src->retune(t, e) && st("rtl.agc") == 1, "RTL AGC on: %.0f", st("rtl.agc"));
+            t.radio.erase("rtlagc");
+            CHECK(src->retune(t, e) && st("rtl.agc") == 0, "RTL AGC off again: %.0f", st("rtl.agc"));
             src->stop();
         }
         src.reset();

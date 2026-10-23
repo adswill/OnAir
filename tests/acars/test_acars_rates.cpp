@@ -31,6 +31,13 @@ int main() {
         const auto r = scene(c, w, 0.98);
         printf("      receiver %.0f x real time\n", r.rtf);
     }
+    {   // #236: a 10 Msps capture is searched across all of it, not only +-2.5 MHz around the centre
+        auto c = base(30);
+        c.rate = 10e6; c.secs = 16;
+        c.gen.centerHz = 131.5e6;
+        c.gen.channelsHz = {127.825e6, 135.125e6, 131.725e6};
+        scene(c, "10 Msps, channels 3.6 MHz off the centre", 0.98);
+    }
     printf(fails ? "acars rates: %d FAILED\n" : "acars rates: all passed\n", fails);
     return fails ? 1 : 0;
 }

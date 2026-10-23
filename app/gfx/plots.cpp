@@ -4,6 +4,7 @@
 #include "tune_drag.h"
 #include "spec_axis.h"
 #include "dect2/specan/specan_dsp.h"
+#include <ctime>
 
 // Click on the spectrum or the waterfall to tune to that frequency (a drag still pans). The grid follows the mode: FM 0.1 MHz, DMR 12.5 kHz, else 1 kHz.
 // The Identify tool: with it on (key I, or the "Identify" button), a click on a signal identifies it and a drag across it identifies what is inside;
@@ -950,15 +951,31 @@ void wfDisplayPopup(App& a) {
     }
     ImGui::Separator();
     ImGui::TextDisabled("%s", tr("Speed (rows a second)"));
-    static const float rates[] = {0, 0.1f, 0.2f, 0.5f, 1, 2, 5, 10, 15};
-    for (int i = 0; i < 9; i++) {
-        if (i == 5) ImGui::NewLine();
-        if (i && i != 5) ImGui::SameLine(0, 4 * gUi);
-        char lb[24]; if (rates[i] == 0) snprintf(lb, sizeof lb, "%s", tr("max")); else snprintf(lb, sizeof lb, "%g", rates[i]);
-        if (ImGui::RadioButton(lb, a.wf.rowsPerSec == rates[i])) { a.wf.setRate(rates[i]); savePrefs(a); }
+    static const float rates[] = {0, 15, 10, 5, 2, 1, 0.5f, 0.2f, 0.1f, 1.f / 30, 1.f / 60};
+    for (int i = 0; i < 11; i++) {
+        if (i == 6) ImGui::NewLine();
+        if (i && i != 6) ImGui::SameLine(0, 4 * gUi);
+        char lb[32];
+        if (rates[i] == 0) snprintf(lb, sizeof lb, "%s", tr("max"));
+        else if (rates[i] < 0.05f) snprintf(lb, sizeof lb, "%s", rates[i] < 0.02f ? tr("1/min") : tr("1/30 s"));
+        else snprintf(lb, sizeof lb, "%g", rates[i]);
+        if (ImGui::RadioButton(lb, std::fabs(a.wf.rowsPerSec - rates[i]) < 1e-4f)) { a.wf.setRate(rates[i]); savePrefs(a); }
     }
-    const double secs = Waterfall::H * (a.wf.timeKnown() || a.wf.nStamps > 8 ? a.wf.rowDt : 1.0 / 30);
-    ImGui::TextDisabled(tr("The picture holds the last %.0f s."), secs);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Slow rows for long watches: one row a minute keeps about 8.5 hours in the picture"));
+    {
+        const double secs = Waterfall::H * (a.wf.timeKnown() || a.wf.nStamps > 8 ? a.wf.rowDt : 1.0 / 30);
+        if (secs >= 2 * 3600) ImGui::TextDisabled(tr("The picture holds the last %.1f hours."), secs / 3600);
+        else if (secs >= 120) ImGui::TextDisabled(tr("The picture holds the last %.0f minutes."), secs / 60);
+        else ImGui::TextDisabled(tr("The picture holds the last %.0f s."), secs);
+    }
+    ImGui::BeginDisabled(!a.wf.slow());
+    if (ImGui::Checkbox(tr("Average the rows"), &a.wf.rowAverage)) { a.wf.accEmpty = true; savePrefs(a); }
+    ImGui::EndDisabled();
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+        ImGui::SetTooltip("%s", tr("At a set speed each row is the highest level of the frames in between, so a short burst is never missed.\n"
+                                   "Average: the mean level instead, which calms the noise and shows steady weak signals better."));
+    if (ImGui::Checkbox(tr("Clock time on the time scale"), &a.wf.clockLabels)) savePrefs(a);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The waterfall's time scale shows the time of day of each row instead of seconds ago"));
     ImGui::Separator();
     if (ImGui::Checkbox(tr("Pause"), &a.wf.paused)) { if (!a.wf.paused) a.wf.nextRowT = 0; }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Stop adding rows: the picture stays, and drag or the wheel on the waterfall scroll and zoom back through it"));
@@ -1504,11 +1521,15 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
     if (a.wf.s3d.on) { waterfall3dPlot(a, size); return; }   // the 3D view (wf3d_plot.cpp) in its place, from the same history and colours
     // The time scale is worked out once and kept until the plot changes size (or the first real measure of the row time is in),
     // so the labels never move while the picture scrolls under them.
-    struct Scale { ImVec2 avail{-1, -1}; bool measured = false; double dt = 0; std::vector<double> pos; std::vector<std::string> lab; std::vector<const char*> cstr; };
+    struct Scale { ImVec2 avail{-1, -1}; bool measured = false, clock = false; double dt = 0; long long clockSec = 0; std::vector<double> pos; std::vector<std::string> lab; std::vector<const char*> cstr; };
     static Scale sc;
     const ImVec2 avail = ImGui::GetContentRegionAvail();
     const bool measured = a.wf.timeKnown();
-    if (avail.x != sc.avail.x || avail.y != sc.avail.y || measured != sc.measured || (a.wf.slow() && std::fabs(a.wf.rowDt - sc.dt) > 1e-9)) {
+    // clock labels (#237): the positions stay, the texts are the time of day of those rows, made again when the newest row moves on a second
+    const long long clockSec = a.wf.clockLabels ? (long long)std::time(nullptr) : 0;
+    if (avail.x != sc.avail.x || avail.y != sc.avail.y || measured != sc.measured || (a.wf.slow() && std::fabs(a.wf.rowDt - sc.dt) > 1e-9) ||
+        a.wf.clockLabels != sc.clock || clockSec != sc.clockSec) {
+        sc.clock = a.wf.clockLabels; sc.clockSec = clockSec;
         sc.avail = avail; sc.measured = measured; sc.dt = a.wf.rowDt > 0 ? a.wf.rowDt : 1.0 / 30;   // a zero would make the label step zero: an endless loop
         // a 1-2-5 step that gives a label about every three text lines
         const double secs = H * sc.dt, want = std::max(2.0, (double)avail.y / (ImGui::GetTextLineHeight() * 3));
@@ -1518,6 +1539,16 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
         sc.pos.clear(); sc.lab.clear(); sc.cstr.clear();
         for (double s = 0; s <= secs + 1e-9; s += step) {
             char b[32]; snprintf(b, sizeof b, "%.*f", dec, s > 0 ? -s : 0.0);
+            if (sc.clock) {
+                const time_t t = (time_t)(clockSec - (long long)std::llround(s));
+                struct tm tmv {};
+#ifdef _WIN32
+                localtime_s(&tmv, &t);
+#else
+                localtime_r(&t, &tmv);
+#endif
+                strftime(b, sizeof b, step >= 60 ? "%H:%M" : "%H:%M:%S", &tmv);
+            }
             sc.pos.push_back(-s / sc.dt); sc.lab.push_back(b);
         }
         for (auto& s : sc.lab) sc.cstr.push_back(s.c_str());
@@ -1528,7 +1559,7 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
     plt::SetNextPlotLook(plotLook(a, false));
     if (plt::BeginPlot("##wf", size, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_Overlay | (a.specSmoothZoom ? plt::Flags_SmoothZoom : 0) | extraFlags | ((a.family == 55 && generalDragging(1)) || bandEdgeDragging(1) ? plt::Flags_NoPan : 0) | (a.identifyTool || ImGui::GetIO().KeyShift ? plt::Flags_NoPan : 0))) {
         drawn = true;
-        plt::SetupAxes(nullptr, tr("seconds ago"), plt::AxisFlags_NoTickLabels | (a.specGrid ? 0 : plt::AxisFlags_NoGridLines), plt::AxisFlags_Inside | (a.specGrid ? 0 : plt::AxisFlags_NoGridLines));   // the spectrum above shows the frequencies
+        plt::SetupAxes(nullptr, a.wf.clockLabels ? tr("time of day") : tr("seconds ago"), plt::AxisFlags_NoTickLabels | (a.specGrid ? 0 : plt::AxisFlags_NoGridLines), plt::AxisFlags_Inside | (a.specGrid ? 0 : plt::AxisFlags_NoGridLines));   // the spectrum above shows the frequencies
         double fs = (a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate) / 1e6;
         const double rc = radioCenterMhz(a);
         // the picture starts half a bin left of the band edge, so each bin's colour sits under the trace point of that bin (#270)

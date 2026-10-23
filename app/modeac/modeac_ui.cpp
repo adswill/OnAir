@@ -292,6 +292,14 @@ void meters(const App& a, std::vector<ModeMeter>& out) {
 
 } // namespace
 
+// draw_ui.cpp: the map popped out over the whole window in Mode A/C (#235): the ADS-B map and its aircraft panel, on Mode A/C's aircraft
+extern const ModeUi kModeAcUi;
+bool modeacFullMap(App& a, ImVec2 disp) {
+    if (modeUi(a.family) != &kModeAcUi) return false;
+    AdsbView v(a);
+    return adsbFullMap(a, disp);
+}
+
 extern const ModeUi kModeAcUi;
 const ModeUi kModeAcUi = {
     .sideTitle = "CODES",

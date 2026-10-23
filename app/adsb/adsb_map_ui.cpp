@@ -238,7 +238,7 @@ static void drawAircraft(ImDrawList* dl, const AdsbTelemetry& t, ImVec2 p0, ImVe
         }
         if (est && !lite) { pospred::drawPredictionMarks(dl, pe, q, fill, gPred.ellipses); pospred::hoverTooltip(pe, q); }
         if (!lite && acarslog::count(ac.icao) > 0) dl->AddCircleFilled(ImVec2(q.x + 8 * gUi, q.y - 8 * gUi), 3.f * gUi, IM_COL32(245, 160, 40, 255));   // it has sent ACARS messages
-        if (lite ? sel : (S.map.zoom >= 6 || sel)) {
+        if (lite || !S.disp.labels ? sel : (S.map.zoom >= 6 || sel)) {   // labels off (#85): only the selected aircraft has its box
             char l1[48]; snprintf(l1, sizeof l1, "%s", ac.callsign.empty() ? icaoText(ac.icao).c_str() : ac.callsign.c_str());
             char l2[48] = "", l3[48] = "";
             if (ac.ground) snprintf(l2, sizeof l2, "GND");
@@ -384,13 +384,14 @@ void mapView(App& a, ImVec2 size) {
 // main.cpp: the map or radar over the whole window while it is popped out (the "full screen" button); false when it is not
 bool adsbFullMap(App& a, ImVec2 disp) {
     if (!S.full) return false;
-    if (modeUi(a.family) != &kAdsbUi) { S.full = false; return false; }
+    if (modeUi(a.family) != &kAdsbUi && modeUi(a.family) != &kModeAcUi) { S.full = false; return false; }   // Mode A/C draws this map too (#235: its full screen button did nothing)
     if (S.viewMode != 0 && S.viewMode != 2) { S.full = false; return false; }
     if (!ImGui::GetIO().WantTextInput && !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId) && ImGui::IsKeyPressed(ImGuiKey_Escape, false)) { S.full = false; return false; }
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(disp);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-    ImGui::Begin("##adsbfull", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollWithMouse);
+    // NoBringToFrontOnFocus: a click on the map must not raise it over the aircraft panel (#235: the second aircraft clicked showed no panel)
+    ImGui::Begin("##adsbfull", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoBringToFrontOnFocus);
     ImGui::PopStyleVar();
     if (S.viewMode == 2) radar(a, ImGui::GetContentRegionAvail());
     else mapView(a, ImGui::GetContentRegionAvail());

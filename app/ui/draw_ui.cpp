@@ -287,7 +287,7 @@ void drawUI(App& a, ImVec2 disp, bool draw) {
     videoOnlyKeys(a);
     if (a.videoOnly) { videoOnlyWindow(a, disp); return; }
     applyUiTheme(a);
-    if (adsbFullMap(a, disp)) return;   // the ADS-B map popped out over the whole window
+    if (modeacFullMap(a, disp) || adsbFullMap(a, disp)) return;   // the ADS-B map popped out over the whole window (in Mode A/C too, #235)
     if (adsbmap::fullDraw(&a, a.family, disp)) return;   // any other map screen: the tab it is on over the whole window (the "full screen" button on the map)
     if (a.touchUi) touch::shell(a, disp);   // the touch interface (ui/touch_shell.cpp) over either interface's panels
     else if (a.newUi) drawShell2(a, disp);

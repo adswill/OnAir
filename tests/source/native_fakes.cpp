@@ -61,7 +61,7 @@ EXPORT uint32_t rtlsdr_get_sample_rate(rtl_dev*) { return (uint32_t)fake_state("
 EXPORT int rtlsdr_set_tuner_gain_mode(rtl_dev*, int m) { rec("rtl.gainmode", m); return 0; }
 EXPORT int rtlsdr_get_tuner_gains(rtl_dev*, int* g) { static const int v[] = {0, 90, 140, 270, 370, 496}; if (g) memcpy(g, v, sizeof v); return 6; }
 EXPORT int rtlsdr_set_tuner_gain(rtl_dev*, int g) { rec("rtl.gain", g); return 0; }
-EXPORT int rtlsdr_set_agc_mode(rtl_dev*, int) { return 0; }
+EXPORT int rtlsdr_set_agc_mode(rtl_dev*, int on) { rec("rtl.agc", on); return 0; }
 EXPORT int rtlsdr_reset_buffer(rtl_dev*) { return 0; }
 EXPORT int rtlsdr_read_async(rtl_dev* d, void (*cb)(unsigned char*, uint32_t, void*), void* ctx, uint32_t, uint32_t) {
     std::vector<unsigned char> b(16384);

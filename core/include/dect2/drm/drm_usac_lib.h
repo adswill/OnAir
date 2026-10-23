@@ -24,6 +24,19 @@ struct UsacLib {
     static UsacLib load(const std::string& path = std::string());
     static std::vector<std::string> codecFolderCandidates();   // libfdk-aac files in the OnAir codecs folders, in the order tried
     static const char* libraryHint();               // names to install, for the in-app message
+
+    // What the last load() found (#266, #247), for the DRM panel: the file that loaded, or the files that were there but failed and why
+    // (a 32-bit DLL, a DLL it needs that is missing, a library without the decoder functions).
+    struct Report {
+        bool loaded = false;
+        std::string path;                            // the library that loaded (a bare name when the system search found it)
+        std::vector<std::string> failed;             // "<file>: <reason>" for files that exist but did not load
+    };
+    static Report lastReport();
+    // The process-wide library the DRM decoder uses: loaded on first use, and again after rescan() (a file dropped in while OnAir runs).
+    static UsacLib shared();
+    static void rescan();
+    static uint64_t generation();                    // bumped by rescan(): a decoder that opened before reopens to pick the new library up
 };
 
 // One decoder session on top of UsacLib: open with the ASC, feed raw access units, get 16-bit PCM.

@@ -430,7 +430,7 @@ void calibrateFrequencyDraw(App& a) {
     const DeviceInfo& d = a.devices[a.devIdx];
     if (!d.isRadio()) { cal().open = false; return; }
     syncRadioSettings(a);
-    if (calibrateDialog(a, d) && a.engine.running()) { a.tune.centerHz = a.freqMhz * 1e6; a.engine.retune(a.tune); }
+    if (calibrateDialog(a, d) && a.engine.running()) { a.tune.centerHz = settingsRetuneCentreHz(a); a.engine.retune(a.tune); }
 }
 
 void radioSettingsUi(App& a, bool vertical) {
@@ -441,6 +441,7 @@ void radioSettingsUi(App& a, bool vertical) {
     int changedN = 0;
     for (const auto& r : d.settings) if (a.tune.radio.count(r.key)) changedN++;
     if (a.tune.radio.count(dect2::convKeyPreset())) changedN++;
+    if (a.tune.radio.count("decim")) changedN++;
     char title[64];
     snprintf(title, sizeof title, changedN ? tr("Radio settings (%d changed)###radioset") : tr("Radio settings###radioset"), changedN);
     bool open = false;
@@ -463,6 +464,29 @@ void radioSettingsUi(App& a, bool vertical) {
         if (r.restart) restart = true; else retune = true;
     }
     if (converterUi(a, vertical)) { saveRadioSettings(a); retune = true; }
+    if (d.kind == DeviceInfo::HackRF || d.kind == DeviceInfo::Soapy || d.kind == DeviceInfo::Native) {   // #233: decimation in OnAir, for radios that are poor at low sample rates
+        static const int kDec[] = {1, 2, 4, 8, 16};
+        const int cur = dect2::radioDecimation(a.tune);
+        char lb[48];
+        if (cur > 1) snprintf(lb, sizeof lb, "%d x", cur); else snprintf(lb, sizeof lb, "%s", tr("Off"));
+        ImGui::SetNextItemWidth(110 * gUi);
+        if (ImGui::BeginCombo(tr("Decimate in OnAir"), lb)) {
+            for (int v : kDec) {
+                char o[48];
+                if (v > 1) snprintf(o, sizeof o, "%d x", v); else snprintf(o, sizeof o, "%s", tr("Off"));
+                if (ImGui::Selectable(o, v == cur)) {
+                    if (v > 1) a.tune.radio["decim"] = std::to_string(v); else a.tune.radio.erase("decim");
+                    saveRadioSettings(a);
+                    restart = true;
+                }
+            }
+            ImGui::EndCombo();
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("%s", tr("The radio runs this many times faster than the mode asks, and OnAir filters the samples down to the mode's rate itself.\n"
+                                       "For radios that are poor at low sample rates (images, a weak anti-alias filter). Costs CPU and USB bandwidth;\n"
+                                       "the radio's highest rate still applies. Off: the radio runs at the mode's rate."));
+    }
     {
         bool hasPpm = false;
         for (const auto& r : d.settings) if (r.key == "ppm") hasPpm = true;
@@ -481,5 +505,5 @@ void radioSettingsUi(App& a, bool vertical) {
     if (vertical) ImGui::TreePop(); else ImGui::EndPopup();
     if (!a.engine.running()) return;   // the next start takes them
     if (restart) { a.engine.log("radio setting changed: restarting the radio"); startReceiver(a); }
-    else if (retune) { a.tune.centerHz = a.freqMhz * 1e6; a.engine.retune(a.tune); }
+    else if (retune) { a.tune.centerHz = settingsRetuneCentreHz(a); a.engine.retune(a.tune); }
 }

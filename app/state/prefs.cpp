@@ -95,7 +95,7 @@ const std::vector<PrefKey>& keyTable() {
         num("tetraSlotId", AT(a.tetraSlotId), 0, 0, 16777215, true),
         num("tetraSingle", AT(a.tetraSingle), 0, 0, 1, true),
         num("wfMap", AT(a.wf.map), -1, -1, (int)Waterfall::NumMaps - 1, true),
-        flagB("wfAuto", AT(a.wf.autoTrack), false),
+        flagB("wfAuto", AT(a.wf.autoTrack), false), flagB("wfAvg", AT(a.wf.rowAverage), false, false, true), flagB("wfClock", AT(a.wf.clockLabels), false, false, true),
         real("wfGamma", AT(a.wf.gamma), 0.4, 2.5),
         real("wfBright", AT(a.wf.brightness), -0.5, 0.5), real("wfContrast", AT(a.wf.contrast), 0.25, 4),
         num("wfDetail", AT(a.wf.detail), 0, 0, Waterfall::kMaxCols, true), flagB("wfPerMode", AT(a.wfPerMode), false, false, true),

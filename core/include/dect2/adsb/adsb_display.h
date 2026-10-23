@@ -9,6 +9,7 @@ namespace dect2::adsbd {
 inline constexpr const char* kPrefAltColour = "adsbAltColour";   // bool, default true
 inline constexpr const char* kPrefTrackWidth = "adsbTrackWidth"; // int px, 1 - 6, default 2
 inline constexpr const char* kPrefDropSec = "adsbDropSec";       // int s, 0 = never, default 60
+inline constexpr const char* kPrefLabels = "adsbLabels";         // bool, default true: the label boxes on the map (#85: off in crowded areas, the selected aircraft keeps its own)
 
 inline constexpr int kDefaultTrackWidth = 2, kMinTrackWidth = 1, kMaxTrackWidth = 6;
 inline constexpr int kDefaultDropSec = 60, kMinDropSec = 5, kMaxDropSec = 3600;
@@ -17,6 +18,7 @@ struct Options {
     bool altColour = true;
     int trackWidth = kDefaultTrackWidth;
     int dropSec = kDefaultDropSec;   // 0: never
+    bool labels = true;              // label boxes beside the aircraft on the map (the selected one always has its box)
 };
 
 inline int clampTrackWidth(int w) { return std::max(kMinTrackWidth, std::min(kMaxTrackWidth, w)); }

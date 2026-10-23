@@ -87,6 +87,21 @@ static void testCodecFolder() {
     CHECK(std::find(c.begin(), c.end(), d + "libfdk-aac-2.dll") != c.end(), "usual name tried in the codecs folder");
     CHECK(std::find(c.begin(), c.end(), d + "Libfdk-AAC-custom.dll") != c.end(), "oddly named fdk-aac file in the codecs folder found");
     CHECK(std::find(c.begin(), c.end(), d + "unrelated.dll") == c.end(), "unrelated files are ignored");
+    // issue 266/247: a file that is there but cannot load is reported with its reason, for the DRM panel
+#if defined(__APPLE__)
+    const std::string bad = d + "libfdk-aac.dylib";
+#else
+    const std::string bad = d + "libfdk-aac.so.2";
+#endif
+    { FILE* f = fopen(bad.c_str(), "w"); if (f) { fputs("not a library", f); fclose(f); } }
+    (void)UsacLib::load();
+    const UsacLib::Report r = UsacLib::lastReport();
+    bool listed = false;
+    for (const auto& s : r.failed) if (s.rfind(bad + ": ", 0) == 0) listed = true;
+    CHECK(listed, "a broken libfdk-aac in the codecs folder is reported (%zu failures)", r.failed.size());
+    const uint64_t g = UsacLib::generation();
+    UsacLib::rescan();
+    CHECK(UsacLib::generation() == g + 1, "rescan bumps the generation");
     fs::remove_all(root);
 }
 

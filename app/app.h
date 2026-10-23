@@ -109,7 +109,11 @@ struct Waterfall {
     int map = -1;            // the colour map (Map); -1: the one that goes with the interface theme
     bool autoTrack = false;  // the intensity range follows the noise floor
     float autoBelow = 6.f, autoHeadroom = 2.f;   // the auto range: dB under the noise floor, dB over the strongest signal
-    float rowsPerSec = 0;    // 0: one row per spectrum frame (about 30 a second); else this many rows a second, each the highest level of the frames in between
+    float rowsPerSec = 0;    // 0: one row per spectrum frame (about 30 a second); else this many rows a second (down to one a minute), each the highest level of the frames in between
+    bool rowAverage = false; // slow rows: the average of the frames in between instead of the highest level (#237: calmer noise on long watches)
+    bool clockLabels = false;// the time scale shows the clock time of the rows instead of "seconds ago" (#237)
+    int accN = 0;            // frames summed into acc (rowAverage)
+    std::vector<float> accOut;
     bool paused = false;     // no new rows: the picture stays and can be scrolled back
     double nextRowT = 0;
     double trackT = 0;
@@ -125,7 +129,7 @@ struct Waterfall {
         nStamps++;
         pushT = t;
     }
-    bool slow() const { return rowsPerSec > 0.05f && rowsPerSec < 28.f; }   // rows come at a set, slower pace
+    bool slow() const { return rowsPerSec > 0.001f && rowsPerSec < 28.f; }   // rows come at a set, slower pace (one a minute is 1/60)
     bool timeKnown() const { return nStamps >= 128 || slow(); }
     void setRate(float r) { rowsPerSec = r; nStamps = 0; nextRowT = 0; accEmpty = true; rowDt = slow() ? 1.0 / r : 1.0 / 30; }
 
@@ -177,14 +181,21 @@ struct Waterfall {
         if (paused || dbfs.empty()) return false;
         if (paletteStale()) palette();
         const float* d = dbfs.data();
-        if (slow()) {   // the highest level of every bin since the last row, so a short burst is not missed
-            if (acc.size() != dbfs.size() || accEmpty) { acc = dbfs; accEmpty = false; }
+        if (slow()) {   // the highest level of every bin since the last row, so a short burst is not missed (or their average: rowAverage)
+            if (acc.size() != dbfs.size() || accEmpty) { acc = dbfs; accEmpty = false; accN = 1; }
+            else if (rowAverage) { for (size_t i = 0; i < dbfs.size(); i++) acc[i] += dbfs[i]; accN++; }
             else for (size_t i = 0; i < dbfs.size(); i++) acc[i] = std::max(acc[i], dbfs[i]);
             if (now < nextRowT) return false;
             const double dt = 1.0 / rowsPerSec;
             nextRowT = now - nextRowT > dt ? now + dt : nextRowT + dt;
             accEmpty = true;
             d = acc.data();
+            if (rowAverage && accN > 1) {   // the mean level in dB of the frames in between
+                accOut.resize(acc.size());
+                const float k = 1.f / (float)accN;
+                for (size_t i = 0; i < acc.size(); i++) accOut[i] = acc[i] * k;
+                d = accOut.data();
+            }
             extra = 0;
         }
         for (int i = 0; i <= extra; i++) writeFrom(d, dbfs.size());
@@ -836,6 +847,7 @@ void toggleFullscreen();
 void handleFullscreenHotkeys();          // F11 and Alt+Enter; ignored while a text field has the keyboard
 std::string adsbJamBody(const std::string& station);   // adsb_ui.cpp: the POST /jam body of the GPS interference cells ("" when there is nothing to share)
 bool adsbFullMap(App& a, ImVec2 disp);           // adsb_ui.cpp: the ADS-B map or radar over the whole window when it is popped out
+bool modeacFullMap(App& a, ImVec2 disp);         // modeac_ui.cpp: the same in Mode A/C (its aircraft, #235)
 void receiverLocation(double& lat, double& lon);  // adsb_ui.cpp: the one receiver position (the ADS-B antenna position)
 bool receiverLocationSet();                        // the user has set it (else it is a placeholder)
 void receiverPositionFields(App& a);               // its fields (latitude, longitude, altitude) and the Locate button
@@ -1216,6 +1228,9 @@ void receiverGlance(App& a, float w, float h);       // analysis_tabs.cpp: a few
 void tuneFreq(App& a, double mhz);                     // set the frequency now (resets the FM receiver)
 void tuneDecode(App& a, double absMhz);                // sticky LO: decode absMhz without moving the radio centre
 void spectrumTune(App& a, double absMhz);              // spectrum / waterfall click (respects tuningMode)
+// The radio centre (Hz) for a retune that only changes the gain or a radio setting: a.freqMhz, unless a click decodes off the centre
+// (tuneDecode, "Decode offset only"): then the radio stays where it is (#236: the AGC retuned the radio onto the clicked signal)
+double settingsRetuneCentreHz(const App& a);
 void uplinkNoteAdsb(const dect2::AdsbTelemetry& t);   // uplink_ui.cpp: callsigns heard by the ADS-B mode in this session
 double meshSampleRate(App& a);                  // mesh_ui.cpp: the radio rate the selected LoRa bandwidth needs (2 Msps; 4 above 500 kHz)
 void dvbsStatusRows(App& a, const DvbsTelemetry& t, bool on, bool run);   // dvbs_ui.cpp: the lock lamps and readouts of a report (QO-100's decoder panel)

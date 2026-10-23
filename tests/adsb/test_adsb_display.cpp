@@ -1,5 +1,8 @@
 // ADS-B display options: altitude colours, the drop time and the pref keys (dect2/adsb/adsb_display.h).
 #include "dect2/adsb/adsb_display.h"
+#include "dect2/adsb/adsb_demod.h"
+#include <cmath>
+#include <vector>
 #include <cstdio>
 #include <cstring>
 using namespace dect2::adsbd;
@@ -28,7 +31,21 @@ int main() {
     CHECK(trackerDropSec(0) > 1e8 && trackerDropSec(45) == 45, "tracker drop");
     // defaults keep the old behaviour
     Options o;
-    CHECK(o.altColour && o.dropSec == 60 && o.trackWidth == 2, "defaults");
+    CHECK(o.altColour && o.dropSec == 60 && o.trackWidth == 2 && o.labels, "defaults");
+    CHECK(!strcmp(kPrefLabels, "adsbLabels"), "labels pref key");
+    {   // #85: the demodulator clock runs on through a new start and can be moved on by the time the receiver was stopped
+        dect2::AdsbDemod d;
+        d.configure(2.4e6);
+        std::vector<dect2::cf32> z(240000, dect2::cf32(0, 0));
+        d.feed(z.data(), z.size());
+        const double t1 = d.timeSec();
+        d.configure(2.4e6);
+        CHECK(std::fabs(d.timeSec() - t1) < 1e-3, "clock kept through configure: %.4f -> %.4f", t1, d.timeSec());
+        d.advance(30);
+        CHECK(std::fabs(d.timeSec() - t1 - 30) < 1e-3, "advance 30 s: %.4f", d.timeSec() - t1);
+        d.configure(10e6);
+        CHECK(std::fabs(d.timeSec() - t1 - 30) < 1e-3, "clock kept through a rate change: %.4f", d.timeSec() - t1);
+    }
     CHECK(!strcmp(kPrefAltColour, "adsbAltColour") && !strcmp(kPrefTrackWidth, "adsbTrackWidth") && !strcmp(kPrefDropSec, "adsbDropSec"), "pref keys");
     printf(fails ? "FAILED\n" : "adsb display ok\n");
     return fails ? 1 : 0;

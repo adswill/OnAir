@@ -115,7 +115,7 @@ void startMode(App& a, ag::AgMode m) {
     AgUi& s = S();
     syncContext(a);
     if (s.run == ag::AgMode::Once || s.run == ag::AgMode::Safe) {   // a one-shot in progress: stopped, back to where it started
-        if (s.c.active()) { ag::applyPlan(s.prof, s.c.startPlan(), a.tune); if (a.engine.running()) { a.tune.centerHz = a.freqMhz * 1e6; a.engine.retune(a.tune); } }
+        if (s.c.active()) { ag::applyPlan(s.prof, s.c.startPlan(), a.tune); if (a.engine.running()) { a.tune.centerHz = settingsRetuneCentreHz(a); a.engine.retune(a.tune); } }
     }
     s.run = m;
     s.oneShot = (m == ag::AgMode::Once || m == ag::AgMode::Safe) ? m : ag::AgMode::Off;
@@ -320,7 +320,7 @@ void advancedPopup(App& a) {
                 cmd.plan.ampOn = a.tune.ampOn;
                 a.agcOn = false;
                 applyCmd(a, cmd);
-                if (a.engine.running()) { a.tune.centerHz = a.freqMhz * 1e6; a.engine.retune(a.tune); }
+                if (a.engine.running()) { a.tune.centerHz = settingsRetuneCentreHz(a); a.engine.retune(a.tune); }
                 savePrefs(a);
             }
         }
@@ -451,7 +451,7 @@ void autogainControl(App& a, bool vertical, bool running) {
         if (ImGui::Button(tr("Undo gain"))) {
             a.tune.lnaDb = s.undoTune.lnaDb; a.tune.vgaDb = s.undoTune.vgaDb; a.tune.gainDb = s.undoTune.gainDb; a.tune.radio = s.undoTune.radio;
             a.agcOn = s.undoAgc; agcReset(a);
-            if (a.engine.running()) { a.tune.centerHz = a.freqMhz * 1e6; a.engine.retune(a.tune); }
+            if (a.engine.running()) { a.tune.centerHz = settingsRetuneCentreHz(a); a.engine.retune(a.tune); }
             s.undoable = false;
             savePrefs(a);
             a.engine.log("auto gain: undone");

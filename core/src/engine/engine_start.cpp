@@ -97,6 +97,12 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
         snprintf(b, sizeof b, "offset tuning: the radio sits %.3f MHz below the channel at %.2f Msps, its DC spike outside the channel; the receiver gets %.3f Msps",
                  offHz_.load() / 1e6, srcRate_ / 1e6, rate_.load() / 1e6);
         log(b);
+    } else if (radioDecimation(tune) > 1 && live_.load() && tune.sampleRate > 0 && srcRate_ > tune.sampleRate * 1.001 && offRs_.configure(srcRate_, tune.sampleRate)) {
+        // "Decimate in OnAir" (#233): the radio was asked for a multiple of the mode's rate (radioTune); the receivers get the mode's rate
+        offRs_.reset(); offResample_ = true; rate_ = tune.sampleRate;
+        char b[160];
+        snprintf(b, sizeof b, "decimation in OnAir: the radio runs at %.3f Msps, the receiver gets %.3f Msps", srcRate_ / 1e6, rate_.load() / 1e6);
+        log(b);
     }
     decodeMix_.set(decodeShiftHz_.load(), rate_.load());   // sticky tuning, mixed just before the receiver (after the offset resampler)
     {

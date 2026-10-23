@@ -246,7 +246,7 @@ void gainControl(App& a) {
     } else {
         // auto gain (autogain_ui.cpp): Auto, Optimise once, Safe start write a.tune themselves; Off keeps only the meters going
         if (autogainStep(a)) {
-            a.tune.centerHz = a.freqMhz * 1e6;
+            a.tune.centerHz = settingsRetuneCentreHz(a);
             a.engine.retune(a.tune);
             savePrefs(a);
         }
@@ -254,7 +254,7 @@ void gainControl(App& a) {
     }
     if (changed) {
         if (generic) a.tune.gainDb = g.vga; else { a.tune.lnaDb = g.lna; a.tune.vgaDb = g.vga; a.tune.ampOn = g.amp; }
-        a.tune.centerHz = a.freqMhz * 1e6;
+        a.tune.centerHz = settingsRetuneCentreHz(a);
         a.engine.retune(a.tune);
         if (!a.sweep.active() || true) savePrefs(a);
         if (a.agcOn && !a.sweep.active() && generic) a.engine.log("AGC: gain " + std::to_string(g.vga) + " dB");

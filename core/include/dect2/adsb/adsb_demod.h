@@ -33,6 +33,8 @@ public:
 
     void configure(double rate);
     void reset();                                  // forget the signal and the noise estimate; the clock keeps running
+    // moves the clock on by sec without samples (the receiver was stopped that long, #85: aircraft then age and drop) and resets
+    void advance(double sec) { if (rate_ > 0 && sec > 0) { samples_ += (uint64_t)std::llround(sec * rate_); reset(); } }
     void setSink(Sink s) { sink_ = std::move(s); }
     void feed(const cf32* x, size_t n);
 

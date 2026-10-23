@@ -177,6 +177,10 @@ std::vector<RadioSetting> rtlSettings(int tuner, RtlModel m) {
                                   {"auto", "off", "i", "q"}, {"Auto", "Off", "I input", "Q input"}, "auto"));
     if (offsetCapable(tuner))
         v.push_back(boolSetting("offset", "Offset tuning", "Tunes the E4000/FC00xx tuner off the centre and shifts back digitally: no DC spike in the middle\n(not with direct sampling)."));
+    // #233: the RTL2832U's own digital AGC (rtlsdr_set_agc_mode). Off by default: OnAir sets the tuner gain itself. On, it lifts weak HF
+    // signals in direct sampling (V3 Q branch), where the tuner gain does nothing.
+    v.push_back(boolSetting("rtlagc", "RTL AGC (chip gain)", "The RTL2832U chip's own automatic gain, after the tuner. Mostly for HF with direct sampling (RTL-SDR Blog V3 Q branch),\n"
+                            "where the tuner gain has no effect and weak signals stay low. On VHF/UHF leave it off: it can overload on strong signals."));
     if (m != kBlogV4 && m != kBlogV3)
         v.push_back(boolSetting("dxp", "Treat as DXpatrol SDR", "For a DXpatrol that shows up under a generic name: use its HF input (direct sampling, Q branch) below 28 MHz and the 100 kHz lower limit.\n(Tick it on the radio list entry of the DXpatrol; takes effect on the next start.)", m == kDxPatrol));
     return v;
@@ -241,7 +245,7 @@ protected:
         fflush(stderr);
         tunerRange(tuner_, model_, lo_, hi_);
         ds_ = 0;
-        bias_ = offset_ = false;
+        bias_ = offset_ = agc_ = false;
         ppm_ = 0;   // librtlsdr opens without a correction
         rtl().set_agc_mode(dev_, 0);
         rtl().set_tuner_gain_mode(dev_, 1);   // manual gain: OnAir runs its own AGC
@@ -326,6 +330,10 @@ protected:
             openFailure_ = OpenFailure::Final;
             return false;
         }
+        {   // the chip's digital AGC (#233)
+            const bool agc = radioFlag(s, "rtlagc");
+            if (agc != agc_ && rtl().set_agc_mode(dev_, agc ? 1 : 0) == 0) agc_ = agc;
+        }
         if (rtl().set_bias_tee && s.biasTee != bias_) {
             if (rtl().set_bias_tee(dev_, s.biasTee ? 1 : 0) == 0) bias_ = s.biasTee;
             else if (s.biasTee) { fprintf(stderr, "RTL-SDR: the radio refused the bias-tee\n"); fflush(stderr); }
@@ -405,7 +413,7 @@ private:
     RtlApi::rtlsdr_dev_t* dev_ = nullptr;
     int tuner_ = kTunerUnknown;
     RtlModel model_ = kGeneric;
-    bool v4_ = false, bias_ = false, offset_ = false;
+    bool v4_ = false, bias_ = false, offset_ = false, agc_ = false;
     int ds_ = 0;    // direct sampling in use: 0 off, 1 I, 2 Q
     int ppm_ = 0;   // the correction the library has
     double lo_ = 0, hi_ = 0;

@@ -26,6 +26,7 @@ static inline double integral(const double* cum, const float* pw, double x) {
 }
 
 void AdsbDemod::configure(double rate) {
+    const double keepSec = rate_ > 0 ? (double)samples_ / rate_ : 0.0;   // the clock runs on through a new start (#85): it was set back to 0
     inRate_ = rate;
     up_ = rate < 4.5e6;
     rate_ = up_ ? 2.0 * rate : rate;
@@ -47,7 +48,7 @@ void AdsbDemod::configure(double rate) {
         z_.assign(4096, cf32(0, 0));
     }
     for (auto& h : hist_) h = cf32(0, 0);
-    samples_ = 0;
+    samples_ = rate_ > 0 ? (uint64_t)std::llround(keepSec * rate_) : 0;
     reset();
     pw_.reserve(kPiece + (size_t)(spus_ * 140) + 64);
     zs_.reserve(kPiece + (size_t)(spus_ * 140) + 64);

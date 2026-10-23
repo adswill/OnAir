@@ -28,7 +28,7 @@ void setGain(App& a, int g, const GainSetting* stages = nullptr) {
 }
 void apply(App& a) {
     if (!a.engine.running()) return;
-    a.tune.centerHz = a.freqMhz * 1e6;
+    a.tune.centerHz = settingsRetuneCentreHz(a);
     a.engine.retune(a.tune);
 }
 

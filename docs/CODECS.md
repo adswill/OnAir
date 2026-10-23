@@ -361,6 +361,11 @@ Some DRM stations (for example the CNR-1 xHE-AAC broadcast on 13.825 MHz) use to
 "(libfdk-aac)" next to the audio format when it is used. Without it the DRM view says which library to install.
 Install: Linux `libfdk-aac2` (Debian/Ubuntu, may need non-free/multiverse) or `fdk-aac`; macOS `brew install fdk-aac`; Windows a
 `libfdk-aac-2.dll` (or any `*fdk*aac*.dll`) in the OnAir **codecs folder** (see below; press **Look again** or restart OnAir) or beside the program. A different file can be named in the environment variable `DECT2_FDKAAC_LIB`.
+The DRM view's **Audio** section has a line **xHE-AAC decoder** that says, in plain words, one of three things: *loaded* (with the file
+it loaded), *not installed* (with the exact file name and the codecs folder path, and an **Open codecs folder** button), or *found but
+not loaded* with the reason: on Windows "a DLL it needs is missing" (an MSYS2/MinGW build also needs `libgcc_s_seh-1.dll`,
+`libwinpthread-1.dll` and sometimes `libstdc++-6.dll` in the same folder) or "wrong kind of DLL" (a 32-bit build; OnAir is 64-bit).
+**Look again** loads it without restarting OnAir.
 Check the licence and your local patent situation before installing it. Status: the frames and the stream configuration follow ETSI ES 201 980;
 the decoding with a real libfdk-aac against a real DRM xHE-AAC recording has not been verified yet.
 

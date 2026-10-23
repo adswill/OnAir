@@ -38,6 +38,8 @@ TuneSettings Engine::radioTune(const TuneSettings& t) const {
     }
     if (noTuneOffset_.load()) if (const ModeTuning* mt = modeTuning(stdMode_.load())) if (mt->minSampleRate > 0) r.radio["audio_min_rate"] = std::to_string(mt->minSampleRate);   // a sound card: interpolated up to what the mode's receiver needs
     if (offHz_ > 0) { r.centerHz -= offHz_; r.sampleRate = offRate_; r.basebandFilterHz = 0; }   // offset tuning: the radio below the channel
+    else if (const int d = radioDecimation(t); d > 1 && t.sampleRate > 0 && !specanSweep_ && src_ && src_->realtimeHardware())
+        r.sampleRate = t.sampleRate * d;   // #233: the radio runs faster, start() resamples back down to the mode's rate (offRs_)
     if (specanSweep_) {   // HackrfSource sweeps this range itself (MHz)
         double lo = 0, hi = 0;
         rxSpecan_.range(lo, hi);

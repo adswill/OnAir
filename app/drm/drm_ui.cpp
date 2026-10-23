@@ -4,6 +4,8 @@
 #include "panels/gallery.h"
 #include "panels/enhance_ui.h"
 #include "panels/journaline_view.h"
+#include "codec/speech_codec_ui.h"
+#include "dect2/drm/drm_usac_lib.h"
 #include <cmath>
 #include <ctime>
 #include <deque>
@@ -522,6 +524,36 @@ void summary(const App& a, std::string& l1, std::string& l2) {
 
 // ---------------------------------------------------------------- the Receiver tab
 
+// The xHE-AAC decoder (libfdk-aac, user-installed, never shipped: docs/CODECS.md) in plain words (#266, #247): loaded from where, or not
+// found with the exact file to put where, or found but refused and why. "Look again" loads it without a restart.
+static void xheDecoderState() {
+    using dect2::drm::UsacLib;
+    (void)UsacLib::shared();   // the first look (the decoder makes the same call)
+    const UsacLib::Report r = UsacLib::lastReport();
+    ImGui::PushTextWrapPos(0);
+    if (r.loaded) {
+        ImGui::TextColored(kGood, "xHE-AAC decoder: libfdk-aac loaded");
+        ImGui::SameLine(); ImGui::TextDisabled("(%s)", r.path.c_str());
+    } else {
+#if defined(_WIN32)
+        const char* file = "libfdk-aac-2.dll (64-bit)";
+#elif defined(__APPLE__)
+        const char* file = "libfdk-aac.2.dylib (or brew install fdk-aac)";
+#else
+        const char* file = "libfdk-aac.so.2 (or the fdk-aac package of your distribution)";
+#endif
+        ImGui::TextColored(kWarn, "xHE-AAC decoder: not installed. Most DRM stations (AAC) play without it; xHE-AAC ones (e.g. CNR-1) need it.");
+        ImGui::TextDisabled("To add it: put %s in the codecs folder, then press Look again. OnAir never ships it (patent licence): you install it yourself.", file);
+        ImGui::TextDisabled("codecs folder: %s", appcodec::codecsFolder().c_str());
+        for (const std::string& f : r.failed) ImGui::TextColored(kBad, "found but not loaded: %s", f.c_str());
+    }
+    appcodec::openCodecFolderButtons();
+    ImGui::SameLine();
+    if (ImGui::Button("Look again##xhe")) UsacLib::rescan();
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Look for libfdk-aac in the codecs folders again (after copying it there), no restart needed");
+    ImGui::PopTextWrapPos();
+}
+
 void receiver(App& a) {
     const DrmTelemetry& t = a.rx.drm;
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
@@ -572,6 +604,7 @@ void receiver(App& a) {
     kf("concealed", "%.1f %% of the last 10 s;  %.1f s in all (%.1f s faded to silence), %llu times", t.audioConcealedPct, t.audioConcealedSecs + t.audioMutedSecs, t.audioMutedSecs,
        (unsigned long long)t.audioConcealEvents);
     kf("playout", "%.2f s queued, sound card %+.0f ppm from the radio, %d underruns", t.audioQueueSecs, t.audioDriftPpm, t.audioUnderruns);
+    xheDecoderState();
     sectionHeader(Ic::Layers, "Services");
     if (t.services.empty()) ImGui::TextDisabled("none yet");
     for (const auto& s : t.services) {

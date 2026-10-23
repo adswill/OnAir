@@ -118,8 +118,13 @@ void place(ImGuiWindow* w) {
     const std::string k = keyOf(w->Name);
     if (!dock::contains(gTree, k)) return;
     const auto it = gF.place.find(k);
-    if (it != gF.place.end() && g.MovingWindow == w && ImGui::IsMouseDragging(0, 10 * gUi) && w->TitleBarRect().Contains(g.IO.MouseClickedPos[0])) {
-        undock(k, w, true);   // dragged out by its title (a drag inside the window does not undock it)
+    // dragged out by its title (a drag inside the window does not undock it). ImGui has already moved the window this frame, so the
+    // press is tested against the title bar where the window was docked
+    if (it != gF.place.end() && g.MovingWindow == w && ImGui::IsMouseDragging(0, 10 * gUi) &&
+        ImRect(it->second.x, it->second.y, it->second.x + it->second.w, it->second.y + w->TitleBarHeight).Contains(g.IO.MouseClickedPos[0])) {
+        w->Pos = ImVec2(it->second.x, it->second.y);
+        w->Size = ImVec2(it->second.w, it->second.h);
+        undock(k, w, true);
         return;
     }
     if (!gF.space || it == gF.place.end()) { w->HiddenFramesCanSkipItems = 1; return; }   // another tab is shown, or no dock space this frame
@@ -353,9 +358,13 @@ void dockPanes(App& a) {
 }
 
 void dockMenu(App& a) {
+    // the shortcut text: ImGui swaps Cmd and Ctrl on macOS, so there the keys are Cmd+Option
+    static std::string scBuf[12];
+    static int scN = 0;
+    auto sc = [](const char* key) { std::string& b = scBuf[scN++ % 12]; b = std::string(ImGui::GetIO().ConfigMacOSXBehaviors ? "Cmd+Opt+" : "Ctrl+Alt+") + key; return b.c_str(); };
     if (!ImGui::BeginMenu(tr("Docking"))) return;
     ImGui::BeginDisabled(a.touchUi);
-    if (ImGui::MenuItem(tr("Use docking"), "Ctrl+Alt+D", &a.dockOn)) savePrefs(a);
+    if (ImGui::MenuItem(tr("Use docking"), sc("D"), &a.dockOn)) savePrefs(a);
     ImGui::EndDisabled();
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
         ImGui::SetTooltip("%s", tr(a.touchUi ? "Not with the touch interface." : "Arrange the panels and tool windows into a docked layout: drag a window by its title onto a target. Off: everything floats as before."));
@@ -377,15 +386,15 @@ void dockMenu(App& a) {
         const std::string lab = gFocus.empty() ? std::string(tr("(click a window first)")) : labelOf(gFocus, it == gF.win.end() ? nullptr : it->second);
         ImGui::BeginDisabled(gFocus.empty());
         if (ImGui::BeginMenu((std::string(tr("Window")) + ": " + lab + "###dkwin").c_str())) {
-            if (ImGui::MenuItem(tr("Dock left"), "Ctrl+Alt+Left")) cmdEdge(dock::Zone::Left);
-            if (ImGui::MenuItem(tr("Dock right"), "Ctrl+Alt+Right")) cmdEdge(dock::Zone::Right);
-            if (ImGui::MenuItem(tr("Dock top"), "Ctrl+Alt+Up")) cmdEdge(dock::Zone::Top);
-            if (ImGui::MenuItem(tr("Dock bottom"), "Ctrl+Alt+Down")) cmdEdge(dock::Zone::Bottom);
-            if (ImGui::MenuItem(tr("Dock as a tab of the spectrum"), "Ctrl+Alt+Enter")) cmdTab();
+            if (ImGui::MenuItem(tr("Dock left"), sc("Left"))) cmdEdge(dock::Zone::Left);
+            if (ImGui::MenuItem(tr("Dock right"), sc("Right"))) cmdEdge(dock::Zone::Right);
+            if (ImGui::MenuItem(tr("Dock top"), sc("Up"))) cmdEdge(dock::Zone::Top);
+            if (ImGui::MenuItem(tr("Dock bottom"), sc("Down"))) cmdEdge(dock::Zone::Bottom);
+            if (ImGui::MenuItem(tr("Dock as a tab of the spectrum"), sc("Enter"))) cmdTab();
             const bool docked = dock::contains(gTree, gFocus);
-            if (ImGui::MenuItem(tr("Undock"), "Ctrl+Alt+U", false, docked)) cmdUndock();
-            if (ImGui::MenuItem(tr("Next tab"), "Ctrl+Alt+PageDown", false, docked)) cmdCycle(1);
-            if (ImGui::MenuItem(tr("Previous tab"), "Ctrl+Alt+PageUp", false, docked)) cmdCycle(-1);
+            if (ImGui::MenuItem(tr("Undock"), sc("U"), false, docked)) cmdUndock();
+            if (ImGui::MenuItem(tr("Next tab"), sc("PageDown"), false, docked)) cmdCycle(1);
+            if (ImGui::MenuItem(tr("Previous tab"), sc("PageUp"), false, docked)) cmdCycle(-1);
             ImGui::EndMenu();
         }
         ImGui::EndDisabled();
@@ -454,10 +463,11 @@ bool stDrag(int rel) {   // press at `from`, move to `to` in steps, let go
 }
 bool stChord(int rel, ImGuiKey k) {   // Ctrl+Alt+k
     ImGuiIO& io = ImGui::GetIO();
-    if (rel == 0) { io.AddKeyEvent(ImGuiMod_Ctrl, true); io.AddKeyEvent(ImGuiMod_Alt, true); }
+    const ImGuiKey ctrl = io.ConfigMacOSXBehaviors ? ImGuiMod_Super : ImGuiMod_Ctrl;   // ImGui swaps Cmd and Ctrl on macOS: io.KeyCtrl is Cmd there
+    if (rel == 0) { io.AddKeyEvent(ctrl, true); io.AddKeyEvent(ImGuiMod_Alt, true); }
     else if (rel == 1) io.AddKeyEvent(k, true);
-    else if (rel == 2) { io.AddKeyEvent(k, false); std::printf("dock selftest: (keys ctrl %d alt %d super %d focus '%s' nav '%s')\n", io.KeyCtrl, io.KeyAlt, io.KeySuper, gFocus.c_str(), GImGui->NavWindow ? GImGui->NavWindow->Name : "-"); }
-    else if (rel == 3) { io.AddKeyEvent(ImGuiMod_Ctrl, false); io.AddKeyEvent(ImGuiMod_Alt, false); }
+    else if (rel == 2) io.AddKeyEvent(k, false);
+    else if (rel == 3) { io.AddKeyEvent(ctrl, false); io.AddKeyEvent(ImGuiMod_Alt, false); }
     return rel >= 5;
 }
 ImGuiWindow* stWin(const char* k) { const auto it = gF.win.find(k); return it == gF.win.end() ? nullptr : it->second; }
@@ -467,7 +477,7 @@ void stNext() { gST.step++; gST.t0 = gST.f; }
 
 void selfTestFrame(App& a) {
     ImGuiContext& g = *GImGui;
-    const int rel = ++gST.f - gST.t0;
+    const int rel = gST.f++ - gST.t0;   // 0 on the first frame of a step
     ImGuiWindow* map = stWin("Map");
     switch (gST.step) {
     case 0:   // settle: the map open and floating, the default layout, no popup in the way
@@ -485,13 +495,12 @@ void selfTestFrame(App& a) {
             gST.from = stTitle(map); gST.to = ImVec2(q.x + q.w * 0.5f, q.y + q.h * 0.5f);
         }
         if (!stDrag(rel)) return;
-        std::printf("dock selftest: (tree %s, from %.0f,%.0f to %.0f,%.0f, map at %.0f,%.0f)\n", dock::serialise(gTree).c_str(), gST.from.x, gST.from.y, gST.to.x, gST.to.y, map->Pos.x, map->Pos.y);
         stCheck(dock::contains(gTree, "Map") && dock::leafOf(gTree, "Map") != dock::leafOf(gTree, kMain), "dragged onto a target: docked beside the spectrum");
         stNext();
         return;
     case 2:   // let the layout settle, then drag it out by its title to a place without a target
         if (rel < 4) return;
-        if (rel == 4) { gST.from = stTitle(map); gST.to = ImVec2(gST.from.x + 50 * gUi, gST.from.y + 60 * gUi); }
+        if (rel == 4) { const dock::LeafBox* b = stLeaf(kMain); gST.from = stTitle(map); gST.to = ImVec2(b->r.x + b->r.w * 0.25f, b->r.y + b->r.h * 0.3f); }   // away from every target
         if (!stDrag(rel - 4)) return;
         stCheck(!dock::contains(gTree, "Map"), "a docked window dragged by its title floats");
         stNext();
@@ -559,7 +568,6 @@ void selfTestFrame(App& a) {
     case 8:   // docking off: the windows float again
         if (rel == 0) { a.dockOn = false; return; }
         if (rel < 4) return;
-        if (map) std::printf("dock selftest: (map flags %x active %d tree %s)\n", (unsigned)map->Flags, map->Active, dock::serialise(gTree).c_str());
         stCheck(map && !(map->Flags & ImGuiWindowFlags_NoResize), "docking off: the map is an ordinary window again");
         std::printf("dock selftest: %d failed\n", gST.fails);
         std::fflush(stdout);

@@ -296,15 +296,27 @@ void controls(App& a) {
     {
         const auto& tt = a.rx.specan;
         const bool nat = tt.inputRate > 0 ? tt.native : true;   // before the first sweep: the HackRF's own
-        std::vector<double> ch = dect2::saBinChoices(tt.inputRate, nat);
-        ch.erase(std::remove_if(ch.begin(), ch.end(), [](double h) { return h > 1.05e6; }), ch.end());
-        const double applied = dect2::saPickRes(S.rbwHz, tt.inputRate, nat).binHz;
+        // #85: round widths. The FFT bins are a power-of-two fraction of the rate; the output grid takes any width at or above the finest
+        // bin (specan_rx: saMakeGrid at max(asked, bin)), so 3, 5, 10, 25 kHz ... are exact. Below the finest bin, the finest bin is offered.
+        const std::vector<double> fine = dect2::saBinChoices(tt.inputRate, nat);
+        const double finest = fine.empty() ? 0 : fine.back();
+        std::vector<double> ch;
+        if (finest > 0) ch.push_back(finest);
+        for (double h : {1e3, 2e3, 3e3, 5e3, 10e3, 25e3, 50e3, 100e3, 250e3, 500e3, 1e6}) if (h > finest * 1.01) ch.push_back(h);
+        const double applied = std::max(S.rbwHz, dect2::saPickRes(S.rbwHz, tt.inputRate, nat).binHz);
         if (ImGui::BeginCombo("##sarbw", rbwText(applied).c_str())) {
             for (double h : ch) if (ImGui::Selectable(rbwText(h).c_str(), std::fabs(h - applied) < 1e-6 * h)) { S.rbwHz = h; other = true; }
+            ImGui::Separator();
+            static float customKhz = 0;
+            if (ImGui::IsWindowAppearing()) customKhz = (float)(applied / 1e3);
+            ImGui::SetNextItemWidth(80 * gUi);
+            ImGui::InputFloat("kHz##sarbwc", &customKhz, 0, 0, "%.2f");
+            if (ImGui::IsItemDeactivatedAfterEdit() && customKhz > 0) { S.rbwHz = std::max((double)customKhz * 1e3, finest); other = true; }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Any width at or above the finest bin (%s here); press Enter", rbwText(finest).c_str());
             ImGui::EndCombo();
         }
     }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Resolution: the FFT bin width, the real value. The FFT size is a power of two, so the widths follow the sample rate (the HackRF sweep: 20 MHz / 4096 = 4.88 kHz is the finest; the finest bins are slow over a wide range)");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Resolution: the width of each point of the trace and of the CSV export (exact; any width from the finest FFT bin up). The HackRF sweep: 20 MHz / 4096 = 4.88 kHz is the finest; the finest bins are slow over a wide range");
     flowNext(10 * gUi);
     ImGui::TextDisabled("Avg"); ImGui::SameLine();
     ImGui::SetNextItemWidth(80 * gUi);
