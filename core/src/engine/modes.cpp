@@ -726,7 +726,7 @@ std::string modeSummary(const RxTelemetry& t) {
     case 153: return argosSummary(t.argos);
     case 154: return sigfoxModeSummary(t.sigfoxm);
     case 145: return sbSummary(t.satbeacon);
-    case pskd::kActiveStandard: return pskdSummary(t.pskdm);   // PSK demodulator (active standard 203)
+    case pskd::kPskdActiveStandard: return pskdSummary(t.pskdm);   // PSK demodulator (active standard 203)
     case 149: return nfcSummary(t.nfc);   // NFC / RFID 13.56 MHz (active standard 149)
     case 155: return isdbsSummary(t.isdbs);
     case 57: return ridSummary(t.rid);

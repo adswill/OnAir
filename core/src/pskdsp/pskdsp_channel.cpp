@@ -15,7 +15,7 @@ struct Spec {
     size_t nfft = 0;
 };
 
-Spec spectrum(const cf* x, size_t n, size_t nfft) {
+Spec spectrum(const cf* x, size_t n, size_t nfft, double fill) {
     Spec r;
     r.nfft = nfft;
     std::vector<double> p = signallab::psd(x, n, nfft);
@@ -32,9 +32,17 @@ Spec spectrum(const cf* x, size_t n, size_t nfft) {
         for (int d = -h; d <= h; d++) { long j = (long)i + d; if (j >= 0 && j < (long)nfft) { a += p[(size_t)j]; m++; } }
         r.s[i] = a / m;
     }
-    std::vector<double> sorted(r.s);
+    // the part of the span that holds samples (the rest is a filter's empty edge, not noise)
+    long lo = 0, hi = (long)nfft - 1;
+    if (fill < 0.98) {
+        const long half = (long)(std::max(0.05, fill) * (double)nfft / 2);
+        lo = std::max(0L, (long)c - half + 2); hi = std::min((long)nfft - 1, (long)c + half - 2);
+    }
+    std::vector<double> sorted(r.s.begin() + lo, r.s.begin() + hi + 1);
     std::sort(sorted.begin(), sorted.end());
-    r.noise = std::max(1e-30, sorted[nfft / 5] * 1.15);   // 20th percentile: robust while the signal fills less than 80 % of the span
+    r.noise = std::max(1e-30, sorted[sorted.size() / 5] * 1.15);   // 20th percentile: robust while the signal fills less than 80 % of the span
+    for (long i = 0; i < lo; i++) r.s[(size_t)i] = 0;
+    for (long i = hi + 1; i < (long)nfft; i++) r.s[(size_t)i] = 0;
     return r;
 }
 
@@ -62,15 +70,15 @@ size_t fftSize(size_t n) {
 }
 } // namespace
 
-Carrier findCarrier(const cf* x, size_t n, double fs, bool nearOnly, double nearHz, double maxDistHz) {
+Carrier findCarrier(const cf* x, size_t n, double fs, bool nearOnly, double nearHz, double maxDistHz, double fill) {
     Carrier c;
     if (n < 1024 || fs <= 0) return c;
     size_t nfft = fftSize(n);
     std::vector<cf> work;
-    const cf* cur = x; size_t curN = n; double curFs = fs, curOff = 0;   // curOff: this block's centre from the original centre
+    const cf* cur = x; size_t curN = n; double curFs = fs, curOff = 0, curFill = fill;   // curOff: this block's centre from the original centre
     Spec sp; Region best;
     for (int pass = 0; pass < 4; pass++) {
-        sp = spectrum(cur, curN, nfft);
+        sp = spectrum(cur, curN, nfft, curFill);
         auto regs = regions(sp, 2.5);
         if (regs.empty()) return c;
         const double bin = curFs / (double)nfft;
@@ -98,7 +106,7 @@ Carrier findCarrier(const cf* x, size_t n, double fs, bool nearOnly, double near
         std::vector<cf> z = signallab::channelise(tmp, curFs, cen - curOff, want / 2, fsOut);
         if (z.size() < 1024 || fsOut >= curFs * 0.9) break;
         work.swap(z);
-        curOff = cen; curFs = fsOut; cur = work.data(); curN = work.size();
+        curOff = cen; curFill = std::min(1.0, 0.54 * want / fsOut); curFs = fsOut; cur = work.data(); curN = work.size();
         nfft = fftSize(curN);
     }
     const double bin = curFs / (double)nfft;

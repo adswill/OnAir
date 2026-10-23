@@ -160,7 +160,7 @@ void Engine::configureReceiver(int a, double r) {
     case 121: rxDgps_.configure(r); break;
     case 127: rxEloran_.configure(r); break;
     case 149: rxNfc_.configure(r); break;
-    case pskd::kActiveStandard: rxPskd_.configure(r); break;
+    case pskd::kPskdActiveStandard: rxPskd_.configure(r); break;
     case 128: rxMpt_.configure(r); break;
     case 129: rxFusion_.configure(r); break;
     case 141: rxArd_.configure(r); break;
@@ -303,7 +303,7 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 121: rxDgps_.setSignalOffset(o); rxDgps_.setCenterHz(centreHz); break;
     case 127: rxEloran_.setSignalOffset(o); rxEloran_.setCenterHz(centreHz); break;
     case 149: rxNfc_.setSignalOffset(o); rxNfc_.setCenterHz(centreHz); break;
-    case pskd::kActiveStandard: rxPskd_.setSignalOffset(o); rxPskd_.setCenterHz(centreHz); break;
+    case pskd::kPskdActiveStandard: rxPskd_.setSignalOffset(o); rxPskd_.setCenterHz(centreHz); break;
     case 128: rxMpt_.setSignalOffset(o); rxMpt_.setCenterHz(centreHz); break;
     case 129: rxFusion_.setSignalOffset(o); rxFusion_.setCenterHz(centreHz); break;
     case 141: rxArd_.setSignalOffset(o); break;

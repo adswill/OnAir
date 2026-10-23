@@ -199,7 +199,7 @@ int poll81(Rx& rx, RxTelemetry& t, uint64_t* seqs) {
 // The report of the receivers from DVB-S on (the first mode and the second, each with its own report numbers): 1 = a new one in t,
 // 0 = none new, -1 = a is not one of them
 static_assert(horus::kActiveStandard < Engine::kPollSeqSlots, "the Horus poll slot is its active standard");
-static_assert(pskd::kPollSlot < Engine::kPollSeqSlots, "the PSK demodulator poll slot is inside the table");
+static_assert(pskd::kPskdPollSlot < Engine::kPollSeqSlots, "the PSK demodulator poll slot is inside the table");
 int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     if (wideOn_.load(std::memory_order_relaxed) && WideModes::supports(a)) return wide_.telemetry(a, t, wideSeq_[a & 255]) ? 1 : 0;
     t.wide.clear();
@@ -284,7 +284,7 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 154: return pollStd(rxSfx_, 154, t, seqs[144], &RxTelemetry::sigfoxm);   // Sigfox (slot 144)
     case 121: return pollStd(rxDgps_, 121, t, seqs[110], &RxTelemetry::dgps);   // DGPS beacons (slot 110)
     case 127: return pollStd(rxEloran_, 127, t, seqs[111], &RxTelemetry::eloran);   // eLoran / Loran-C (slot 111)
-    case pskd::kActiveStandard: return pollStd(rxPskd_, pskd::kActiveStandard, t, seqs[pskd::kPollSlot], &RxTelemetry::pskdm);   // PSK demodulator (slot 163)
+    case pskd::kPskdActiveStandard: return pollStd(rxPskd_, pskd::kPskdActiveStandard, t, seqs[pskd::kPskdPollSlot], &RxTelemetry::pskdm);   // PSK demodulator (slot 163)
     case 149: return pollStd(rxNfc_, 149, t, seqs[141], &RxTelemetry::nfc);   // NFC / RFID 13.56 MHz (slot 141)
     case 128: return pollStd(rxMpt_, 128, t, seqs[112], &RxTelemetry::mpt1327);   // MPT1327 trunking (slot 112)
     case 129: return pollStd(rxFusion_, 129, t, seqs[117], &RxTelemetry::fusion);   // Yaesu Fusion (slot 117)

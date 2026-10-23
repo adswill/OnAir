@@ -230,12 +230,12 @@ Analysis analyse(const cf* x0, size_t n0, double fs, const AnalyseOptions& o) {
     if (o.haveCarrier) {
         A.carrier.found = true;
         A.carrier.offsetHz = o.carrierHz;
-        Carrier near = findCarrier(x, n, fs, true, o.carrierHz, std::max(o.bwHz, 1.0));
+        Carrier near = findCarrier(x, n, fs, true, o.carrierHz, std::max(o.bwHz, 1.0), o.fill);
         A.carrier = near;
         if (o.bwHz > 0) { A.carrier.occHz = o.bwHz; A.carrier.found = true; }
         A.carrier.offsetHz = o.carrierHz;
         if (!A.carrier.found) A.carrier.found = true;
-    } else A.carrier = findCarrier(x, n, fs);
+    } else A.carrier = findCarrier(x, n, fs, false, 0, 0, o.fill);
     if (!A.carrier.found) { A.status = "no signal found"; return A; }
     A.signal = true;
     char b[200];

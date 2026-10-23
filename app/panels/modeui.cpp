@@ -207,7 +207,7 @@ const ModeUi* modeUi(int family) {
     case dect2::railway::kKlwFamily: return &kKlwUi;
     case dect2::railway::kTdcsFamily: return &kTdcsUi;
     case dect2::horus::kFamily: return &kHorusUi;
-    case dect2::pskd::kFamily: return &kPskdUi;
+    case dect2::pskd::kPskdFamily: return &kPskdUi;
     case 120: return &kDgpsUi;
     case 127: return &kMpt1327Ui;
     case 128: return &kFusionUi;

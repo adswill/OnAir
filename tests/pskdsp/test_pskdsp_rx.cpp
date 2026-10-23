@@ -36,15 +36,16 @@ static int matched(const PskdTelemetry& t, const Bits& sync, const pskd::GenTrut
 
 int main() {
     // numbers
-    CHECK(pskd::kFamily == 202 && pskd::kStandard == 204 && pskd::kActiveStandard == 203 && pskd::kPollSlot == 163, "mode numbers of docs/MODE-NUMBERS.md");
-    CHECK(pskd::kPollSlot < Engine::kPollSeqSlots, "poll slot inside the table");
+    CHECK(pskd::kPskdFamily == 202 && pskd::kPskdStandard == 204 && pskd::kPskdActiveStandard == 203 && pskd::kPskdPollSlot == 163, "mode numbers of docs/MODE-NUMBERS.md");
+    CHECK(pskd::kPskdPollSlot < Engine::kPollSeqSlots, "poll slot inside the table");
     const ModeTuning tu = pskdTuning();
-    CHECK(tu.stdMode == pskd::kStandard && modeTuningById("pskdemod") == modeTuning(pskd::kStandard), "registry resolves pskdemod by id and standard");
+    CHECK(tu.stdMode == pskd::kPskdStandard && modeTuningById("pskdemod") == modeTuning(pskd::kPskdStandard), "registry resolves pskdemod by id and standard");
     {
         auto engine = std::make_unique<Engine>();
-        engine->setStandard(pskd::kStandard);
+        engine->setStandard(pskd::kPskdStandard);
+        engine->pskdemod().configure(48000);   // publishes a first telemetry, as loading results does for Horus
         RxTelemetry rx;
-        CHECK(engine->latestRx(rx, 0) && rx.standard == pskd::kActiveStandard, "idle snapshot on the PSK demodulator active standard (got %d)", rx.standard);
+        CHECK(engine->latestRx(rx, 0) && rx.standard == pskd::kPskdActiveStandard, "idle snapshot on the PSK demodulator active standard (got %d)", rx.standard);
     }
 
     const Bits sync = pskd::parseBitsOrHex("1ACFFC1D");

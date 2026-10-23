@@ -13,7 +13,7 @@ namespace dect2 {
 
 ModeTuning pskdTuning() {
     ModeTuning t;
-    t.stdMode = pskd::kStandard;
+    t.stdMode = pskd::kPskdStandard;
     t.id = "pskdemod"; t.name = "PSK demodulator";
     t.minMhz = 0.1; t.maxMhz = 6000; t.defMhz = 435.0;
     t.sampleRate = 1000000; t.bandwidthMhz = 0.9; t.minSampleRate = 8000; t.tuneOffsetHz = 30000;
@@ -35,7 +35,7 @@ struct PskdReceiver::Impl {
     pskd::BitOptions bo;
     std::string syncText;
     // input
-    double rate = 0, offset = 0, center = 0, t = 0, r1 = 0, lastPublish = -1, nextAnalyse = 1;
+    double rate = 0, offset = 0, center = 0, t = 0, r1 = 0, lastPublish = -1, nextAnalyse = 1, fill = 1.0;
     bool ready = false, rescan = false;
     pskd::Channeliser stage1;
     std::vector<cf32> s1buf;
@@ -69,7 +69,8 @@ struct PskdReceiver::Impl {
         double span = searchHz > 0 ? searchHz : std::min(rate * 0.9, 250000.0);
         span = std::min(span, rate * 0.98);
         tel.searchHz = span;
-        stage1.configure(rate, offset, span, 0);
+        if (rate < 3.0 * span) { stage1.configureMix(rate, offset); fill = 1.0; }   // no rate change: an interpolated band-limited input has empty edges
+        else { stage1.configure(rate, offset, span, 0); fill = std::min(1.0, span / stage1.outRate()); }
         r1 = stage1.outRate();
         tel.specLoHz = -r1 / 2; tel.specStepHz = r1 / 1024;
     }
@@ -77,7 +78,7 @@ struct PskdReceiver::Impl {
     pskd::AnalyseOptions options() const {
         pskd::AnalyseOptions a;
         a.forceOrder = order; a.forceBaud = forceBaud; a.forceAlpha = forceAlpha; a.snapStandard = snap;
-        a.haveCarrier = manual; a.carrierHz = manualHz; a.bwHz = manualBw; a.maxSeconds = 5;
+        a.haveCarrier = manual; a.carrierHz = manualHz; a.bwHz = manualBw; a.maxSeconds = 5; a.fill = fill;
         return a;
     }
 

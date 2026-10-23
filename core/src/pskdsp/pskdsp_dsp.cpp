@@ -113,6 +113,14 @@ void Channeliser::configure(double fsIn, double offsetHz, double passHz, double 
     reset();
 }
 
+void Channeliser::configureMix(double fsIn, double offsetHz) {
+    fsIn_ = fsIn; fsOut_ = fsIn; pass_ = fsIn;
+    cicD_ = 1; up_ = 1; firD_ = 1;
+    fir_.assign(1, 1.0f);
+    setOffset(offsetHz);
+    reset();
+}
+
 void Channeliser::setOffset(double hz) { off_ = hz; dphi_ = fsIn_ > 0 ? -2 * kPi * hz / fsIn_ : 0; }
 
 void Channeliser::reset() {
