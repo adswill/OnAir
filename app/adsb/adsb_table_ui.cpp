@@ -82,6 +82,7 @@ void aircraftTable(App& a, bool compact) {
     const int cols = compact ? 7 : 27;
     if (!compact) {
         static std::string note;
+        auto make = [&]() {
         resexp::Table x; x.cols = {"time", "frequency_hz", "mode", "icao", "registration", "country", "operator", "callsign", "type", "source", au::altCol(S.units), "geo_" + std::string(au::altCol(S.units)), au::speedCol(S.units), "speed_kind", "ias_kt", "mach", "heading_deg", "heading_kind", au::vrateCol(S.units), "lat", "lon", "fix", au::distCol(S.units), "bearing_deg", "squawk", "selected_" + std::string(au::altCol(S.units)), "emergency", "nacp", "adsb_version", "tisb", "ground", "messages", "age_s", "pos_age_s", "level_dbfs"};
         const std::string now = resexp::stamp();
         if (on) for (const auto& ac : t.aircraft)
@@ -93,7 +94,9 @@ void aircraftTable(App& a, bool compact) {
                    ac.hasSquawk ? std::to_string(ac.squawk) : "", ac.hasSelAlt ? uAlt(ac.selAltFt) : "", ac.emergency ? dect2::adsb::emergencyName(ac.emergency) : "",
                    ac.nacp >= 0 ? std::to_string(ac.nacp) : "", ac.adsbVersion >= 0 ? std::to_string(ac.adsbVersion) : "", ac.tisb ? "1" : "", ac.ground ? "1" : "",
                    std::to_string(ac.messages), resexp::num(ac.ageSec, 0), ac.hasPos ? resexp::num(ac.posAgeSec, 0) : "", resexp::num(ac.levelDbfs, 0)});
-        resexp::saveButton(x, "adsb", note, "svadsb");
+        return x;
+        };
+        resexp::saveButtonLazy(make, "adsb", note, "svadsb");   // built once a second at most and when saved, not every frame
         ImGui::SameLine();
         unitsControls();
         ImGui::SameLine(); displayControls();
@@ -124,8 +127,10 @@ void aircraftTable(App& a, bool compact) {
     std::vector<const AdsbAircraft*> rows;   // by address, not by last heard: the rows do not move about
     if (on) for (const auto& x : t.aircraft) rows.push_back(&x);
     std::sort(rows.begin(), rows.end(), [](const AdsbAircraft* x, const AdsbAircraft* y) { return x->icao < y->icao; });
-    for (const AdsbAircraft* pac : rows) {
-        const AdsbAircraft& ac = *pac;
+    ImGuiListClipper clip;   // only the visible rows are formatted (300 aircraft x 27 cells of string building a frame before)
+    clip.Begin((int)rows.size());
+    while (clip.Step()) for (int ri = clip.DisplayStart; ri < clip.DisplayEnd; ri++) {
+        const AdsbAircraft& ac = *rows[(size_t)ri];
         ImGui::TableNextRow();
         const bool emg = ac.emergency > 0;
         if (emg) ImGui::PushStyleColor(ImGuiCol_Text, pal::badRed());

@@ -55,12 +55,15 @@ void codesTable(App& a, bool compact) {
     const ModeAcTelemetry& t = a.rx.modeac;
     const bool on = mlive(a);
     if (!compact) {
-        resexp::Table x;
-        x.cols = {"time", "frequency_hz", "mode", "squawk", "altitude_ft", "type", "spi", "replies", "level_dbfs", "age_s", "icao", "callsign"};
-        const std::string now = resexp::stamp();
-        if (on) for (const auto& c : t.codes)
-            x.add({now, "1090000000", "Mode A/C", dect2::modeac::squawkText(c.squawk), c.altValid ? std::to_string(c.altFt) : "", kindName(c), c.spi ? "1" : "", std::to_string(c.count), resexp::num(c.levelDbfs, 0), resexp::num(c.ageSec, 0), c.icao ? icaoText(c.icao) : "", c.callsign});
-        resexp::saveButton(x, "modeac", M.note, "svmodeac");
+        auto make_x = [&]() {   // built only when needed (once a second for the clip log, and on save)
+            resexp::Table x;
+            x.cols = {"time", "frequency_hz", "mode", "squawk", "altitude_ft", "type", "spi", "replies", "level_dbfs", "age_s", "icao", "callsign"};
+            const std::string now = resexp::stamp();
+            if (on) for (const auto& c : t.codes)
+                x.add({now, "1090000000", "Mode A/C", dect2::modeac::squawkText(c.squawk), c.altValid ? std::to_string(c.altFt) : "", kindName(c), c.spi ? "1" : "", std::to_string(c.count), resexp::num(c.levelDbfs, 0), resexp::num(c.ageSec, 0), c.icao ? icaoText(c.icao) : "", c.callsign});
+            return x;
+        };
+        resexp::saveButtonLazy(make_x, "modeac", M.note, "svmodeac");
         unitsControls();
         if (!M.note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", M.note.c_str()); }
     }

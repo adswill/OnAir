@@ -303,13 +303,16 @@ void vesselTable(App& a, bool compact) {
     const int cols = compact ? 3 : 7;
     if (!compact) {
         static std::string note;
-        resexp::Table x; x.cols = {"time", "frequency_hz", "mode", "name", "mmsi", "type", "sog_kn", "lat", "lon", "heard_s_ago", "channel", "long_range", "received_unix"};
-        const std::string now = resexp::stamp();
-        for (const auto& v : t.vessels)
-            x.add({now, resexp::num(dect2::aisChannelHz(dect2::aisChannelIndex(v.channel)), 0), "AIS", nameOf(v), std::to_string(v.mmsi), v.shipType >= 0 ? dect2::aisShipTypeText(v.shipType) : dect2::aisClassText(v.cls),
-                   v.sog >= 0 ? resexp::num(v.sog, 1) : "", v.hasPos ? resexp::num(v.lat, 6) : "", v.hasPos ? resexp::num(v.lon, 6) : "", resexp::num(v.ageSec, 0), chLabel(v.channel),
-                   v.longRange ? "1" : "0", v.lastUtc > 0 ? resexp::num(v.lastUtc, 3) : ""}, v.lastUtc);
-        resexp::saveButton(x, "ais", note, "svais");
+        auto make_x = [&]() {   // built only when needed (once a second for the clip log, and on save)
+            resexp::Table x; x.cols = {"time", "frequency_hz", "mode", "name", "mmsi", "type", "sog_kn", "lat", "lon", "heard_s_ago", "channel", "long_range", "received_unix"};
+            const std::string now = resexp::stamp();
+            for (const auto& v : t.vessels)
+                x.add({now, resexp::num(dect2::aisChannelHz(dect2::aisChannelIndex(v.channel)), 0), "AIS", nameOf(v), std::to_string(v.mmsi), v.shipType >= 0 ? dect2::aisShipTypeText(v.shipType) : dect2::aisClassText(v.cls),
+                       v.sog >= 0 ? resexp::num(v.sog, 1) : "", v.hasPos ? resexp::num(v.lat, 6) : "", v.hasPos ? resexp::num(v.lon, 6) : "", resexp::num(v.ageSec, 0), chLabel(v.channel),
+                       v.longRange ? "1" : "0", v.lastUtc > 0 ? resexp::num(v.lastUtc, 3) : ""}, v.lastUtc);
+            return x;
+        };
+        resexp::saveButtonLazy(make_x, "ais", note, "svais");
         if (!note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", note.c_str()); }
     }
     ImGuiTableFlags fl = ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Sortable;

@@ -52,6 +52,7 @@ class TableLog {
 public:
     void configure(bool on, double maxSeconds, size_t maxBytes);
     bool enabled() const { return on_; }
+    bool due(const std::string& kind, double now) const;                          // would observe() take a table now? (lets a caller skip building one)
     void observe(const std::string& kind, const resexp::Table& t, double now);   // rate limited to once a second per kind; unknown rows get `now`
     resexp::Table range(Range r, std::string* kindsOut = nullptr) const;         // all kinds, rows first seen inside r, with a "table" column first
     size_t bytes() const { return bytes_; }

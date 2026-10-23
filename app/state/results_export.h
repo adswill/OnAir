@@ -1,5 +1,6 @@
 // Shared "Save results..." export: columns + rows -> CSV or JSON. No GUI includes here, so tests can link it.
 #pragma once
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -34,5 +35,8 @@ std::string stamp();                  // YYYYmmdd-HHMM, local time
 // GUI half (results_export_ui.cpp): floppy-icon "Save results..." button; kind = "lte", "dvb"...
 // Asks for a file (.csv default, .json by file name), writes it, puts a status line in `note`.
 bool saveButton(const Table& t, const char* kind, std::string& note, const char* id = "saveres");
+// The same, but the table is only built (by `make`) when it is needed: once a second for the clip log, and when the button is used.
+// For tables with many rows and cells (the ADS-B table: every aircraft, 34 columns, built every frame before).
+bool saveButtonLazy(const std::function<Table()>& make, const char* kind, std::string& note, const char* id = "saveres");
 
 }  // namespace resexp

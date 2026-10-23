@@ -362,3 +362,10 @@ HD checkbox next to the channel picker (greyed out until an HD counterpart exist
 
 2026-10-22 (mode-drmplus-030): audit only, no code. DRM30 modes A-D and DRM+ (mode E, 100 kHz, 4/16-QAM, SDC 4-QAM, generator, tests/drm/test_drm_modee.cpp) are already in core/src/drm and auto-detected inside the one DRM entry. HD Radio FM (MP1/MP3) and AM (MA1 hybrid, MA3 all-digital: P1, P3, PIDS, L2, AAS, HDC via user-installed FAAD2 plug-in) are already in core/src/hdr with generator and tests/hdr/test_hdr_am.cpp. Per the one-entry-per-protocol rule they stay as DRM and HD Radio families; no new mode numbers used. Nothing added; still unverified without real signals: DRM+ unequal error protection, HD AM on-air.
 
+
+## 2026-10-23 perf2-aviation-data-030 (PARKED, nothing built or measured)
+Resume note. 1) Uncompiled WIP: resexp::saveButtonLazy + TableLog::due (app/state, app/clips); the results-table export is no longer built every frame in ADS-B, AIS, ACARS (2), HFDL, VDL2, Mode A/C and Mesh (3); ADS-B table uses ImGuiListClipper; positionLooksWrong allocates nothing in the usual case.
+2) First step: build bench_modes, baseline adsb,ism,ais,acars,vdl2,hfdl,wifi,lorawan,ble,iridium,loraraw (0.2.7 table has hfdl 0.77 @4 Msps, wifi 0.46 @20, lorawan 0.29); ADS-B core was already 0.043 s/s at 2.4 Msps (docs/PERFORMANCE-DSP.md).
+3) pub/perf-linux-030 conflicts with integ-30 (ui2_shell.cpp, CMakeLists.txt) and already does trail thinning/culling and tile decode on the worker: do not redo those; merge is the owner's call.
+4) Ideas not started: cached triangulation for drawPlane (imgui micro-bench in scratchpad/uib/b.cpp), ISM feed per-sample loop vectorising, clip observe key includes the time column so it never dedups.
+5) Apply the same lazy table to the remaining 12 saveButton call sites if wanted; check each builds, then run the touched modes' tests.

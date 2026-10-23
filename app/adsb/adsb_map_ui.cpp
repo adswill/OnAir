@@ -116,16 +116,20 @@ void drawPlane(ImDrawList* dl, ImVec2 c, float headingDeg, float r, ImU32 fill, 
 // away than any 1090 MHz signal carries (500 nm; real ranges end near 250). Then lat/lon get the middle of the aircraft (median, so one
 // bad fix does not pull it), which is within about 100 nm of the receiver: good enough for the map, not for exact ranges.
 bool positionLooksWrong(const AdsbTelemetry& t, double& lat, double& lon, double& nearestNm) {
-    std::vector<double> las, los;
     nearestNm = 1e9;
+    size_t n = 0;
+    const double p1 = S.refLat * M_PI / 180, s1 = std::sin(p1), c1 = std::cos(p1);   // the reference's trigonometry once, not per aircraft
     for (const auto& ac : t.aircraft) {
         if (!ac.hasPos) continue;
-        las.push_back(ac.lat); los.push_back(ac.lon);
-        const double p1 = S.refLat * M_PI / 180, p2 = ac.lat * M_PI / 180, dl = (ac.lon - S.refLon) * M_PI / 180;
-        const double c = std::sin(p1) * std::sin(p2) + std::cos(p1) * std::cos(p2) * std::cos(dl);
+        n++;
+        const double p2 = ac.lat * M_PI / 180, dl = (ac.lon - S.refLon) * M_PI / 180;
+        const double c = s1 * std::sin(p2) + c1 * std::cos(p2) * std::cos(dl);
         nearestNm = std::min(nearestNm, std::acos(std::max(-1.0, std::min(1.0, c))) * 3440.065);   // great circle, Earth radius in nm
     }
-    if (las.size() < 3 || nearestNm < 500) return false;
+    if (n < 3 || nearestNm < 500) return false;   // the usual case allocates nothing
+    std::vector<double> las, los;
+    las.reserve(n); los.reserve(n);
+    for (const auto& ac : t.aircraft) if (ac.hasPos) { las.push_back(ac.lat); los.push_back(ac.lon); }
     std::nth_element(las.begin(), las.begin() + las.size() / 2, las.end());
     std::nth_element(los.begin(), los.begin() + los.size() / 2, los.end());
     lat = las[las.size() / 2]; lon = los[los.size() / 2];
@@ -346,7 +350,7 @@ void mapView(App& a, ImVec2 size) {
     if (clicked) S.sel = hit ? hit->icao : 0xFFFFFFFFu;
     dl->PopClipRect();
     mapCorner(a, p0, size, wrongRef, areaLat, areaLon, nearest);
-    plat::prefs().setI("adsbZoom", S.map.zoom);
+    { static int savedZoom = -1; if (savedZoom != S.map.zoom) { savedZoom = S.map.zoom; plat::prefs().setI("adsbZoom", S.map.zoom); } }   // only when it changed (was a prefs write every frame)
     int withPos = 0;
     if (on) for (const auto& ac : t.aircraft) if (ac.hasPos) withPos++;
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + size.y - ImGui::GetTextLineHeight() - 6 * gUi));

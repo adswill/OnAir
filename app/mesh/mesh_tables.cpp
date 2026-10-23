@@ -44,19 +44,22 @@ void nodeTable(const App& a, bool compact) {
     const bool on = live(a);
     if (!compact) {
         static std::string note;
-        resexp::Table x;
-        x.cols = {"time", "frequency_hz", "mode", "name", "short_name", "id", "hardware", "role", "lat", "lon", "alt_m", "snr_db", "hops", "battery_pct",
-                  "voltage", "battery_time", "temp_c", "humidity_pct", "pressure_hpa", "sensors_time", "heard_s_ago", "packets"};
-        const double now = (double)std::time(nullptr);
-        for (const dect2::MeshNode* n : sortedNodes(a)) {
-            const double ep = meshEpoch(t, n->lastHeard, now);
-            x.add({meshTime(ep), resexp::num(a.freqMhz * 1e6, 0), protoName(n->protocol), n->longName, n->shortName, n->id, n->hwModel, n->role,
-                   n->hasPosition ? resexp::num(n->lat, 6) : "", n->hasPosition ? resexp::num(n->lon, 6) : "", n->hasPosition ? resexp::num(n->altM, 0) : "",
-                   resexp::num(n->lastSnrDb, 1), n->hopsAway >= 0 ? std::to_string(n->hopsAway) : "", n->batteryPct >= 0 ? resexp::num(n->batteryPct, 0) : "",
-                   n->voltage >= 0 ? resexp::num(n->voltage, 2) : "", meshTime(meshEpoch(t, n->devSec, now)), n->hasEnv ? resexp::num(n->tempC, 1) : "",
-                   n->hasEnv ? resexp::num(n->humidity, 0) : "", n->hasEnv ? resexp::num(n->pressureHpa, 1) : "", meshTime(meshEpoch(t, n->envSec, now)), n->lastHeard >= 0 ? resexp::num(t.timeSec - n->lastHeard, 0) : "", std::to_string(n->packets)}, ep);
-        }
-        resexp::saveButton(x, "mesh-nodes", note, "svmn");
+        auto make_x = [&]() {   // built only when needed (once a second for the clip log, and on save)
+            resexp::Table x;
+            x.cols = {"time", "frequency_hz", "mode", "name", "short_name", "id", "hardware", "role", "lat", "lon", "alt_m", "snr_db", "hops", "battery_pct",
+                      "voltage", "battery_time", "temp_c", "humidity_pct", "pressure_hpa", "sensors_time", "heard_s_ago", "packets"};
+            const double now = (double)std::time(nullptr);
+            for (const dect2::MeshNode* n : sortedNodes(a)) {
+                const double ep = meshEpoch(t, n->lastHeard, now);
+                x.add({meshTime(ep), resexp::num(a.freqMhz * 1e6, 0), protoName(n->protocol), n->longName, n->shortName, n->id, n->hwModel, n->role,
+                       n->hasPosition ? resexp::num(n->lat, 6) : "", n->hasPosition ? resexp::num(n->lon, 6) : "", n->hasPosition ? resexp::num(n->altM, 0) : "",
+                       resexp::num(n->lastSnrDb, 1), n->hopsAway >= 0 ? std::to_string(n->hopsAway) : "", n->batteryPct >= 0 ? resexp::num(n->batteryPct, 0) : "",
+                       n->voltage >= 0 ? resexp::num(n->voltage, 2) : "", meshTime(meshEpoch(t, n->devSec, now)), n->hasEnv ? resexp::num(n->tempC, 1) : "",
+                       n->hasEnv ? resexp::num(n->humidity, 0) : "", n->hasEnv ? resexp::num(n->pressureHpa, 1) : "", meshTime(meshEpoch(t, n->envSec, now)), n->lastHeard >= 0 ? resexp::num(t.timeSec - n->lastHeard, 0) : "", std::to_string(n->packets)}, ep);
+            }
+            return x;
+        };
+        resexp::saveButtonLazy(make_x, "mesh-nodes", note, "svmn");
         ImGui::SameLine();
         if (ImGui::SmallButton("Report...")) {   // a short text summary: copied to the clipboard and saved as .txt
             char mhz[32];
@@ -131,18 +134,21 @@ void telemetryTable(const App& a) {
     auto opt = [](double v, int dec) { return v >= 0 ? resexp::num(v, dec) : std::string(); };
     {
         static std::string note;
-        resexp::Table x;
-        x.cols = {"time", "frequency_hz", "mode", "name", "id", "battery_pct", "voltage", "channel_util_pct", "air_util_tx_pct", "uptime_s", "temp_c", "humidity_pct",
-                  "pressure_hpa", "lat", "lon", "alt_m"};
-        const double now = (double)std::time(nullptr);
-        for (const auto& r : t.readings) {
-            const double ep = r.unixTime > 0 ? r.unixTime : meshEpoch(t, r.timeSec, now);
-            x.add({meshTime(ep), resexp::num(a.freqMhz * 1e6, 0), protoName(r.protocol), nameOf(r), r.id, opt(r.batteryPct, 0), opt(r.voltage, 2), opt(r.channelUtilPct, 1),
-                   opt(r.airUtilTxPct, 1), r.uptimeS >= 0 ? std::to_string(r.uptimeS) : "", r.hasEnv ? resexp::num(r.tempC, 1) : "", r.hasEnv ? resexp::num(r.humidity, 0) : "",
-                   r.hasEnv ? resexp::num(r.pressureHpa, 1) : "", r.hasPosition ? resexp::num(r.lat, 6) : "", r.hasPosition ? resexp::num(r.lon, 6) : "",
-                   r.hasPosition ? resexp::num(r.altM, 0) : ""}, ep);
-        }
-        resexp::saveButton(x, "mesh-telemetry", note, "svmt");
+        auto make_x = [&]() {   // built only when needed (once a second for the clip log, and on save)
+            resexp::Table x;
+            x.cols = {"time", "frequency_hz", "mode", "name", "id", "battery_pct", "voltage", "channel_util_pct", "air_util_tx_pct", "uptime_s", "temp_c", "humidity_pct",
+                      "pressure_hpa", "lat", "lon", "alt_m"};
+            const double now = (double)std::time(nullptr);
+            for (const auto& r : t.readings) {
+                const double ep = r.unixTime > 0 ? r.unixTime : meshEpoch(t, r.timeSec, now);
+                x.add({meshTime(ep), resexp::num(a.freqMhz * 1e6, 0), protoName(r.protocol), nameOf(r), r.id, opt(r.batteryPct, 0), opt(r.voltage, 2), opt(r.channelUtilPct, 1),
+                       opt(r.airUtilTxPct, 1), r.uptimeS >= 0 ? std::to_string(r.uptimeS) : "", r.hasEnv ? resexp::num(r.tempC, 1) : "", r.hasEnv ? resexp::num(r.humidity, 0) : "",
+                       r.hasEnv ? resexp::num(r.pressureHpa, 1) : "", r.hasPosition ? resexp::num(r.lat, 6) : "", r.hasPosition ? resexp::num(r.lon, 6) : "",
+                       r.hasPosition ? resexp::num(r.altM, 0) : ""}, ep);
+            }
+            return x;
+        };
+        resexp::saveButtonLazy(make_x, "mesh-telemetry", note, "svmt");
         ImGui::SameLine();
         ImGui::TextDisabled("%zu reports (the last %d kept); KML / GPX: one point per position", t.readings.size(), 2000);
         if (!note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", note.c_str()); }
@@ -185,25 +191,28 @@ void packetTable(const App& a) {
     const bool on = live(a);
     {
         static std::string note;
-        resexp::Table x;
-        x.cols = {"time", "frequency_hz", "mode", "type", "from", "to", "channel", "bytes", "decrypted", "hop_limit", "hop_start", "snr_db", "level_dbfs", "sf", "bw_hz",
-                  "detail", "raw", "packet_id", "relay_node", "next_hop", "via_mqtt", "cfo_hz"};
-        const double now = (double)std::time(nullptr);
-        for (const dect2::MeshPacket& p : t.packets) {
-            const double ep = p.unixTime > 0 ? p.unixTime : meshEpoch(t, p.timeSec, now);
-            // Meshtastic header: the packet id ties together the copies of one packet (flood) and the same packet seen by the node or MQTT;
-            // relay_node is who sent this copy, next_hop who should send it on (last byte of the node number, 0 = none)
-            const bool mt = p.protocol == 1 && p.parsed;
-            char pid[12] = "", rel[4] = "", nxt[4] = "";
-            if (mt) snprintf(pid, sizeof pid, "%08x", p.packetId);
-            if (mt && p.relayNode >= 0) snprintf(rel, sizeof rel, "%02x", p.relayNode);
-            if (mt && p.nextHop >= 0) snprintf(nxt, sizeof nxt, "%02x", p.nextHop);
-            x.add({meshTime(ep), resexp::num(p.freqHz, 0), protoName(p.protocol), p.crcOk ? p.type : "CRC error", p.from, p.to, p.channel, std::to_string(p.size),
-                   p.decrypted ? "yes" : "no", p.hopLimit >= 0 ? std::to_string(p.hopLimit) : "", p.hopStart >= 0 ? std::to_string(p.hopStart) : "",
-                   resexp::num(p.snrDb, 1), resexp::num(p.levelDb, 1), std::to_string(p.sf), resexp::num(p.bwHz, 0), p.detail.empty() ? p.note : p.detail, p.raw,
-                   pid, rel, nxt, mt ? (p.viaMqtt ? "yes" : "no") : "", resexp::num(p.cfoHz, 0)}, ep);
-        }
-        resexp::saveButton(x, "mesh-packets", note, "svmp");
+        auto make_x = [&]() {   // built only when needed (once a second for the clip log, and on save)
+            resexp::Table x;
+            x.cols = {"time", "frequency_hz", "mode", "type", "from", "to", "channel", "bytes", "decrypted", "hop_limit", "hop_start", "snr_db", "level_dbfs", "sf", "bw_hz",
+                      "detail", "raw", "packet_id", "relay_node", "next_hop", "via_mqtt", "cfo_hz"};
+            const double now = (double)std::time(nullptr);
+            for (const dect2::MeshPacket& p : t.packets) {
+                const double ep = p.unixTime > 0 ? p.unixTime : meshEpoch(t, p.timeSec, now);
+                // Meshtastic header: the packet id ties together the copies of one packet (flood) and the same packet seen by the node or MQTT;
+                // relay_node is who sent this copy, next_hop who should send it on (last byte of the node number, 0 = none)
+                const bool mt = p.protocol == 1 && p.parsed;
+                char pid[12] = "", rel[4] = "", nxt[4] = "";
+                if (mt) snprintf(pid, sizeof pid, "%08x", p.packetId);
+                if (mt && p.relayNode >= 0) snprintf(rel, sizeof rel, "%02x", p.relayNode);
+                if (mt && p.nextHop >= 0) snprintf(nxt, sizeof nxt, "%02x", p.nextHop);
+                x.add({meshTime(ep), resexp::num(p.freqHz, 0), protoName(p.protocol), p.crcOk ? p.type : "CRC error", p.from, p.to, p.channel, std::to_string(p.size),
+                       p.decrypted ? "yes" : "no", p.hopLimit >= 0 ? std::to_string(p.hopLimit) : "", p.hopStart >= 0 ? std::to_string(p.hopStart) : "",
+                       resexp::num(p.snrDb, 1), resexp::num(p.levelDb, 1), std::to_string(p.sf), resexp::num(p.bwHz, 0), p.detail.empty() ? p.note : p.detail, p.raw,
+                       pid, rel, nxt, mt ? (p.viaMqtt ? "yes" : "no") : "", resexp::num(p.cfoHz, 0)}, ep);
+            }
+            return x;
+        };
+        resexp::saveButtonLazy(make_x, "mesh-packets", note, "svmp");
         if (!note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", note.c_str()); }
     }
     ImGui::Checkbox("raw payload", &S.rawView);

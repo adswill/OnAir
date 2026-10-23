@@ -448,16 +448,19 @@ void aircraftView(const App& a) {
     const dect2::Vdl2Telemetry& t = a.rx.vdl2;
     {
         static std::string note;
-        resexp::Table x; x.cols = {"icao", "registration", "flight", "lat", "lon", "alt_ft", "gs_kt", "track_deg", "gs_derived_kt", "track_derived_deg", "vrate_derived_fpm", "derived_dt_s"};
-        if (live(a)) for (const auto& c : t.aircraft) {
-            if (!c.hasPos) continue;
-            const derivedkin::Info k = kinOf(c, t.nowSec);
-            x.add({hex6(c.icao), c.reg, c.flight, resexp::num(c.lat, 5), resexp::num(c.lon, 5), c.hasAlt ? std::to_string(c.altFt) : "",
-                   c.hasKin ? resexp::num(c.groundKt, 0) : "", c.hasKin && c.hasTrack ? resexp::num(c.trackDeg, 0) : "",
-                   k.d.ok ? resexp::num(k.d.gsKt, 0) : "", k.d.ok && k.d.hasTrack ? resexp::num(k.d.trackDeg, 0) : "", k.d.ok && k.d.hasVs ? resexp::num(k.d.vsFpm, 0) : "",
-                   k.d.ok ? resexp::num(k.d.dtSec, 0) : ""});
-        }
-        resexp::saveButton(x, "vdl2_aircraft", note, "svvdair");
+        auto make_x = [&]() {   // built only when needed (once a second for the clip log, and on save)
+            resexp::Table x; x.cols = {"icao", "registration", "flight", "lat", "lon", "alt_ft", "gs_kt", "track_deg", "gs_derived_kt", "track_derived_deg", "vrate_derived_fpm", "derived_dt_s"};
+            if (live(a)) for (const auto& c : t.aircraft) {
+                if (!c.hasPos) continue;
+                const derivedkin::Info k = kinOf(c, t.nowSec);
+                x.add({hex6(c.icao), c.reg, c.flight, resexp::num(c.lat, 5), resexp::num(c.lon, 5), c.hasAlt ? std::to_string(c.altFt) : "",
+                       c.hasKin ? resexp::num(c.groundKt, 0) : "", c.hasKin && c.hasTrack ? resexp::num(c.trackDeg, 0) : "",
+                       k.d.ok ? resexp::num(k.d.gsKt, 0) : "", k.d.ok && k.d.hasTrack ? resexp::num(k.d.trackDeg, 0) : "", k.d.ok && k.d.hasVs ? resexp::num(k.d.vsFpm, 0) : "",
+                       k.d.ok ? resexp::num(k.d.dtSec, 0) : ""});
+            }
+            return x;
+        };
+        resexp::saveButtonLazy(make_x, "vdl2_aircraft", note, "svvdair");
         if (!note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", note.c_str()); }
     }
     if (!ImGui::BeginTable("##vdair", 12, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;

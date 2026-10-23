@@ -138,6 +138,11 @@ double TableLog::oldest() const { double o = 0; for (const auto& k : kinds_) if 
 WfHistory& wfHistory() { static WfHistory h; return h; }
 TableLog& tableLog() { static TableLog t; return t; }
 void TableLog::clear() { kinds_.clear(); bytes_ = 0; }
+bool TableLog::due(const std::string& kind, double now) const {
+    if (!on_) return false;
+    for (const auto& x : kinds_) if (x.name == kind) return now - x.lastObs >= 1.0;
+    return true;
+}
 void TableLog::observe(const std::string& kind, const resexp::Table& t, double now) {
     if (!on_ || t.rows.empty()) return;
     Kind* k = nullptr;

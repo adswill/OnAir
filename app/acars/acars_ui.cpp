@@ -194,12 +194,15 @@ void messageView(App& a) {
     filterRow();
     {
         static std::string note;
-        resexp::Table x; x.cols = {"time", "frequency_hz", "mode", "direction", "registration", "flight", "label", "meaning", "text"};
-        if (on) for (const auto& m : t.messages) {
-            if (!passes(m)) continue;
-            x.add({clock(m.wallTime), resexp::num(m.freqHz, 0), "ACARS", m.downlink ? "down" : "up", m.reg, m.downlink ? m.flightId : "", m.label, m.labelText, m.text});
-        }
-        resexp::saveButton(x, "acars", note, "svacars");
+        auto make_x = [&]() {   // built only when needed (once a second for the clip log, and on save)
+            resexp::Table x; x.cols = {"time", "frequency_hz", "mode", "direction", "registration", "flight", "label", "meaning", "text"};
+            if (on) for (const auto& m : t.messages) {
+                if (!passes(m)) continue;
+                x.add({clock(m.wallTime), resexp::num(m.freqHz, 0), "ACARS", m.downlink ? "down" : "up", m.reg, m.downlink ? m.flightId : "", m.label, m.labelText, m.text});
+            }
+            return x;
+        };
+        resexp::saveButtonLazy(make_x, "acars", note, "svacars");
         if (!note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", note.c_str()); }
     }
     const float H = ImGui::GetContentRegionAvail().y;
@@ -457,16 +460,19 @@ void aircraftView(const App& a) {
     const bool on = live(a);
     {
         static std::string note;
-        resexp::Table x; x.cols = {"registration", "flight", "icao", "lat", "lon", "alt_ft", "gs_kt", "track_deg", "gs_derived_kt", "track_derived_deg", "vrate_derived_fpm", "derived_dt_s"};
-        if (on) for (const auto& c : t.aircraft) {
-            if (!c.hasPos) continue;
-            const derivedkin::Info k = kinOf(c, t.nowSec);
-            x.add({c.reg, c.flight, icaoText(c.icao), resexp::num(c.lat, 5), resexp::num(c.lon, 5), c.hasAlt ? std::to_string(c.altFt) : "",
-                   c.hasSpeed ? resexp::num(c.speedKt, 0) : "", c.hasSpeed && c.hasTrack ? resexp::num(c.trackDeg, 0) : "",
-                   k.d.ok ? resexp::num(k.d.gsKt, 0) : "", k.d.ok && k.d.hasTrack ? resexp::num(k.d.trackDeg, 0) : "", k.d.ok && k.d.hasVs ? resexp::num(k.d.vsFpm, 0) : "",
-                   k.d.ok ? resexp::num(k.d.dtSec, 0) : ""});
-        }
-        resexp::saveButton(x, "acars_aircraft", note, "svacair");
+        auto make_x = [&]() {   // built only when needed (once a second for the clip log, and on save)
+            resexp::Table x; x.cols = {"registration", "flight", "icao", "lat", "lon", "alt_ft", "gs_kt", "track_deg", "gs_derived_kt", "track_derived_deg", "vrate_derived_fpm", "derived_dt_s"};
+            if (on) for (const auto& c : t.aircraft) {
+                if (!c.hasPos) continue;
+                const derivedkin::Info k = kinOf(c, t.nowSec);
+                x.add({c.reg, c.flight, icaoText(c.icao), resexp::num(c.lat, 5), resexp::num(c.lon, 5), c.hasAlt ? std::to_string(c.altFt) : "",
+                       c.hasSpeed ? resexp::num(c.speedKt, 0) : "", c.hasSpeed && c.hasTrack ? resexp::num(c.trackDeg, 0) : "",
+                       k.d.ok ? resexp::num(k.d.gsKt, 0) : "", k.d.ok && k.d.hasTrack ? resexp::num(k.d.trackDeg, 0) : "", k.d.ok && k.d.hasVs ? resexp::num(k.d.vsFpm, 0) : "",
+                       k.d.ok ? resexp::num(k.d.dtSec, 0) : ""});
+            }
+            return x;
+        };
+        resexp::saveButtonLazy(make_x, "acars_aircraft", note, "svacair");
         if (!note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", note.c_str()); }
     }
     if (!ImGui::BeginTable("##acair", 12, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;

@@ -11,10 +11,11 @@ namespace resexp {
 
 static const double kStart = (double)std::time(nullptr);   // when OnAir started: the "since start" cut
 
-bool saveButton(const Table& t, const char* kind, std::string& note, const char* id) {
+static bool saveButtonImpl(const Table* t, const std::function<Table()>* make, const char* kind, std::string& note, const char* id) {
     static int fmt = 0, scope = 1;   // Fmt order below; scope 0 = since start, 1 = all
     static const Fmt order[] = {Fmt::Csv, Fmt::Json, Fmt::Adif, Fmt::Kml, Fmt::Gpx, Fmt::GeoJson};
-    clips::tableLog().observe(kind, t, (double)std::time(nullptr));   // radio clips: remembers what the table showed (rate limited inside)
+    if (t) clips::tableLog().observe(kind, *t, (double)std::time(nullptr));   // radio clips: remembers what the table showed (rate limited inside)
+    else if (clips::tableLog().due(kind, (double)std::time(nullptr))) clips::tableLog().observe(kind, (*make)(), (double)std::time(nullptr));
     ImGui::PushID(id);
     bool hit = iconFlat(Ic::Save, "Save results: CSV, JSON, ADIF logbook (ham modes), KML, GPX or GeoJSON (anything with positions)");
     ImGui::SameLine();
@@ -31,7 +32,7 @@ bool saveButton(const Table& t, const char* kind, std::string& note, const char*
     ImGui::PopID();
     if (!hit) return false;
     const Fmt f = order[fmt];
-    Table w = t;
+    Table w = t ? *t : (*make)();
     const double now = (double)std::time(nullptr);
     w.epoch.resize(w.rows.size(), 0);
     for (double& e : w.epoch) if (e <= 0) e = now;   // a live snapshot: seen now
@@ -47,5 +48,8 @@ bool saveButton(const Table& t, const char* kind, std::string& note, const char*
     note = o ? "saved " + path : "could not write " + path;
     return true;
 }
+
+bool saveButton(const Table& t, const char* kind, std::string& note, const char* id) { return saveButtonImpl(&t, nullptr, kind, note, id); }
+bool saveButtonLazy(const std::function<Table()>& make, const char* kind, std::string& note, const char* id) { return saveButtonImpl(nullptr, &make, kind, note, id); }
 
 }  // namespace resexp
