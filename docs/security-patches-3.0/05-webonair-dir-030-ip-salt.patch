@@ -1,0 +1,39 @@
+--- a/web/onair-directory/src/index.js
++++ b/web/onair-directory/src/index.js
+@@ -25,10 +25,18 @@
+     "INSERT INTO rl(k, win, n, exp) VALUES(?1, ?2, 1, ?3) ON CONFLICT(k) DO UPDATE SET n = CASE WHEN win = excluded.win THEN n + 1 ELSE 1 END, win = excluded.win, exp = excluded.exp RETURNING n"
+   ).bind(key, win, now + windowSec * 2).first();
+   return (row ? row.n : 1) <= limit;
++}
++// Without the IP_SALT secret the hash must not be a fixed function of the address (a fixed one can be reversed over the whole IPv4 range from
++// the rows of the rl table): a random salt per Worker instance is used instead, so the rate limits still work but the keys mean nothing later.
++let fallbackSalt = null;
++function ipSalt(env) {
++  if (env.IP_SALT) return env.IP_SALT;
++  if (!fallbackSalt) fallbackSalt = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
++  return fallbackSalt;
+ }
+ async function ipKey(env, request) {
+   const ip = request.headers.get("cf-connecting-ip") || "unknown";
+-  return (await sha256Hex((env.IP_SALT || "unsalted") + "|" + ip)).slice(0, 24);
++  return (await sha256Hex(ipSalt(env) + "|" + ip)).slice(0, 24);
+ }
+ 
+ // ---- DNS and the reachability probe ----------------------------------------------------------------------------------------------------
+--- a/web/onair-directory/test/handlers.test.js
++++ b/web/onair-directory/test/handlers.test.js
+@@ -271,3 +271,14 @@
+   const r = await handle(new Request("https://dir.test/api/v1/admin/reports", { headers: { authorization: "Bearer x" } }), bare, {}, deps());
+   assert.equal(r.status, 404);
+ });
++
++test("rate-limit keys are not a fixed hash of the address when IP_SALT is missing", async () => {
++  const env = mkEnv();
++  delete env.IP_SALT;
++  await post(env, "/api/v1/heartbeat", { not: "a record" }, "9.9.9.9");
++  const keys = [...env.DB.t.rl.keys()];
++  assert.ok(keys.length > 0);
++  const { sha256Hex } = await import("../src/crypto.js");
++  const fixed = (await sha256Hex("unsalted|9.9.9.9")).slice(0, 24);
++  assert.ok(keys.every((k) => !k.endsWith(fixed)), "key must not be sha256('unsalted|ip')");
++});
