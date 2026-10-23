@@ -35,7 +35,10 @@ function Main {
     foreach ($t in @('OnAir-Laptop-Keepalive', 'OnAir-Laptop-Setup-Resume')) {
         try { Unregister-ScheduledTask -TaskName $t -Confirm:$false -ErrorAction SilentlyContinue } catch { }
     }
-    Info 'Done.'
+    foreach ($dir in @([Environment]::GetFolderPath('Desktop'), [Environment]::GetFolderPath('Startup'))) {
+        if ($dir) { Remove-Item -Path (Join-Path $dir 'OnAir Monitor.lnk') -Force -ErrorAction SilentlyContinue }
+    }
+    Info 'Done (the OnAir Monitor shortcuts are removed too).'
 
     Say 'Step 2: stopping the runner'
     if (Distro-Present) {

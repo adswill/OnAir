@@ -43,6 +43,23 @@ One restart during the first run (only if Windows needs it for WSL). Later runs:
 - Runner log inside Ubuntu: `wsl -d Ubuntu-24.04 -u root -e journalctl -u "actions.runner.*" -n 100`.
 - Job logs and summaries: the Actions tab of `github.com/adswill/OnAir-ci`.
 
+## Watching it
+
+Double-click `OnAir Monitor` on the Desktop (the setup creates it), or `OnAir-Monitor.cmd` itself. A window opens with a live retro dashboard, redrawn twice a second:
+
+- RUNNER: idle, busy or offline, the service state, how long the runner has been up, its last log line.
+- CURRENT JOB: branch, commit, targets and test regex, and one bar per phase (checkout, configure, build, test, summary) with times.
+- BUILD: the ninja bar (files done of total), files per second, ETA, the files being compiled right now, ccache hit rate and size.
+- TESTS: the ctest bar, the latest passed tests, and failures in red with their first error line.
+- LAPTOP VITALS: load per CPU thread, RAM and swap of Ubuntu, free disk on the Ubuntu disk and on C:, CPU temperature when Windows passes it to WSL, GPU load, VRAM and temperature.
+- HISTORY: the last jobs with result, duration and start time.
+
+Keys: `q` quit, `l` the last log lines, `h` the full history, any other key back. If the boxes and bars show as odd characters, run `OnAir-Monitor.cmd --ascii`. The window wants 120x40 (it works from 100x30; Windows Terminal keeps its own size, so make the window bigger if it says it is too small).
+
+How it gets its data: the jobs write small state files to `~/onair-monitor/state/` inside Ubuntu (`current.json`, `history.json`, `configure.log`, `build.log`, `ctest.log`), using `scripts/onair_state.py` in OnAir-ci. Every job also installs the newest monitor from the OnAir checkout into `~/onair-monitor/` (`tools/laptop-installer/monitor/`). The monitor only reads these files, `/proc`, the runner's `_diag` logs, `ccache -s` and `nvidia-smi`. It has no token and changes nothing, so it can stay open all the time, and closing it does not stop a job.
+
+During setup you are asked once whether the monitor should open by itself at login (default no). To change it later, add or delete `OnAir Monitor` in the Startup folder (Win+R, `shell:startup`). Preview without the laptop: `python3 tools/laptop-installer/monitor/monitor.py --demo`. `OnAir-Monitor.cmd` is generated: edit `tools/laptop-installer/monitor/monitor.py`, raise its `VERSION`, and run `python3 tools/laptop-installer/build_monitor.py`.
+
 ## How to turn it off
 
 - Quick pause: Task Manager, or `wsl --shutdown` in a terminal. The runner shows offline and jobs wait.

@@ -134,6 +134,44 @@ function Get-AcMinutes([string]$sub, [string]$setting) {
     return $null
 }
 
+# The live monitor window (OnAir-Monitor.cmd). A full copy is used when it sits next to this installer; otherwise a
+# small launcher runs the copy that every job installs to ~/onair-monitor inside Ubuntu.
+$MonitorLauncher = @'
+@echo off
+rem OnAir Monitor (small launcher written by OnAir-Laptop-Setup). ASCII only, no secrets.
+title OnAir Monitor
+chcp 65001 >nul
+if not defined WT_SESSION mode con: cols=120 lines=40
+wsl.exe -d Ubuntu-24.04 -u onair -e sh -c "if [ -f ~/onair-monitor/monitor.py ]; then exec python3 ~/onair-monitor/monitor.py %*; else echo The monitor is installed by the first job. Until then double-click OnAir-Monitor.cmd.; sleep 10; fi"
+if errorlevel 1 pause
+'@
+
+function Install-Monitor([bool]$autostart) {
+    try {
+        $dest = Join-Path $DataDir 'OnAir-Monitor.cmd'
+        $full = Join-Path $SrcDir 'OnAir-Monitor.cmd'
+        if (Test-Path $full) { Copy-Item -Path $full -Destination $dest -Force }
+        else { Set-Content -Path $dest -Value $MonitorLauncher -Encoding ASCII }
+        $sh = New-Object -ComObject WScript.Shell
+        $dirs = @([Environment]::GetFolderPath('Desktop'))
+        if ($autostart) { $dirs += [Environment]::GetFolderPath('Startup') }
+        foreach ($d in $dirs) {
+            if (-not $d) { continue }
+            $lnk = $sh.CreateShortcut((Join-Path $d 'OnAir Monitor.lnk'))
+            $lnk.TargetPath = $dest
+            $lnk.WorkingDirectory = $DataDir
+            $lnk.Description = 'Live view of what the OnAir laptop worker is building and testing'
+            $lnk.IconLocation = (Join-Path $env:SystemRoot 'System32\cmd.exe') + ',0'
+            $lnk.Save()
+        }
+        if (-not $autostart) {
+            $st = [Environment]::GetFolderPath('Startup')
+            if ($st) { Remove-Item -Path (Join-Path $st 'OnAir Monitor.lnk') -Force -ErrorAction SilentlyContinue }
+        }
+        Info ('Desktop shortcut "OnAir Monitor" created' + $(if ($autostart) { ' (it also opens at login).' } else { '.' }))
+    } catch { Warn ('Could not create the OnAir Monitor shortcut: ' + $_.Exception.Message) }
+}
+
 # ---------------------------------------------------------------- bash step scripts (run inside Ubuntu as root)
 $StepUser = @'
 set -e
@@ -303,6 +341,19 @@ function Main {
     if ($tok -and ($tok -notmatch '^[A-Za-z0-9]{20,}$')) { Die 'The registration token has a wrong format. Ask Claude for a new installer.' }
     if ($tok) { Set-Content -Path (Join-Path $PrivDir 'runner-token.txt') -Value $tok -Encoding ASCII }
 
+    # ---- the only question, asked now so the rest runs unattended (also after the restart)
+    $autoFile = Join-Path $DataDir 'monitor-autostart.txt'
+    if (-not (Test-Path $autoFile)) {
+        $ans = ''
+        if (-not $Resume) {
+            try { $ans = Read-Host '  Open the OnAir Monitor window automatically when you log in? [y/N]' } catch { $ans = '' }
+        }
+        $v = 'no'
+        if ($ans -match '^\s*[yY]') { $v = 'yes' }
+        Set-Content -Path $autoFile -Value $v -Encoding ASCII
+    }
+    $monitorAuto = ((Get-Content $autoFile -Raw).Trim() -eq 'yes')
+
     # ---- 1. checks
     Say 'Step 1 of 8: checking this computer'
     $build = [Environment]::OSVersion.Version.Build
@@ -415,6 +466,7 @@ function Main {
     # ---- 8. service, keep-alive, power, self-test
     Say 'Step 8 of 8: starting the runner service, keep-alive and power settings'
     Register-KeepaliveTask
+    Install-Monitor $monitorAuto
     try { Start-ScheduledTask -TaskName $KeepTask } catch { Log ('keepalive start: ' + $_.Exception.Message) }
     $acStandby = Join-Path $DataDir 'prev-standby-ac-min.txt'
     if (-not (Test-Path $acStandby)) {
