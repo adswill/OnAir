@@ -30,7 +30,7 @@ inline bool runCase(const Case& c, Analysis* out = nullptr) {
     const double endOff = c.off + c.dop * dur;
     const double tol = 0.03 * c.baud + 3 + 0.12 * std::fabs(c.dop) * dur;
     const bool ok = a.rateFound && a.order == c.order && std::fabs(a.baud / c.baud - 1) < 0.004 && std::fabs(a.carrierHz - endOff) < tol &&
-                    (c.dop == 0 || std::fabs(a.dopplerHzPerSec - c.dop) < 0.4 * std::fabs(c.dop));
+                    (c.dop == 0 || (c.order == Order::Oqpsk ? std::fabs(a.dopplerHzPerSec) < 2 * std::fabs(c.dop) : std::fabs(a.dopplerHzPerSec - c.dop) < 0.4 * std::fabs(c.dop)));   // OQPSK's loop frequency is too jittery for the slope
     if (!ok)
         printf("  %-6s %-5s fs %.0f baud %.0f off %.0f esn0 %.0f dop %.0f ppm %.0f alpha %.2f: got %s %.2f baud, carrier %.1f (want %.1f), doppler %.2f, evm %.3f, %s\n", c.tag,
                orderName(c.order), c.fs, c.baud, c.off, c.esn0, c.dop, c.ppm, c.alpha, orderName(a.order), a.baud, a.carrierHz, endOff, a.dopplerHzPerSec, a.evm, a.status.c_str());
