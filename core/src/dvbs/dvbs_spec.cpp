@@ -102,7 +102,8 @@ SpectrumResult analyseOne(const std::vector<double>& psd, double fs, int segment
         for (int k = c - w; k <= c + w; k++) p[k] = p[c - w - 1] + (p[c + w + 1] - p[c - w - 1]) * (double)(k - (c - w - 1)) / (2 * w + 2);
     }
     const std::vector<double> sm = boxcar(median5(p), 2);
-    const std::vector<double> wide = boxcar(p, std::max(8, n / 128));
+    // (at most 32 bins: the fine spectrum of the narrow carriers has up to 131072 bins, and a 10 kSym/s carrier covers only about 60 of them)
+    const std::vector<double> wide = boxcar(p, std::max(8, std::min(32, n / 128)));
     // noise floor: a low percentile of the spectrum (corrected for the bias of a percentile of a noisy average)
     std::vector<double> s(sm);
     std::sort(s.begin(), s.end());

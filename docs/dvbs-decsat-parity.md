@@ -24,7 +24,7 @@ Chunks: 1 GSE, IP, PCAP and the IP view; 2 MPE and ULE; 3 ACM, VCM, multistream,
 | PL scrambling codes (Gold n found from pilots) | done (manual code + pilot hunt); S2X Table 19e preferred sequences | 3: check against Table 19e |
 | Low roll-offs 0.15/0.10/0.05 signalled by RO alternating with 11 | done | |
 | Blind symbol rate, roll-off, constellation, DVB-S2/S2X detection ("Identify") | done in the receiver's own hunt (spectrum, roll-off, pilots) | |
-| Narrow carriers (down to about 10 kBd) | partial (the DVB-S/S2 receiver starts at about 1 Msym/s) | skipped: needs DecSAT's VFO front end (see below) |
+| Narrow carriers (down to about 10 kBd) | added: a fine second spectrum finds and measures carriers from about 6 kSym/s blind, in any capture with wide ones beside them; the front end and loops are per symbol (docs/dvbs.md, "Narrow carriers"); verified on synthetic signals only | 2026-10-23 |
 | ACM/VCM: MODCOD per frame, VCM flag | done (telemetry), ACM terminal table added with GSE | 1, 3 |
 | Multistream (ISI): one stream chosen; each ISI to its own stage | added: every ISI is listed (content, CCM/ACM, MODCODs, rate); the chosen one is decoded as a transport stream and every GSE, GSE-HEM or packet stream is read at the same time, each with its own reader | 3 |
 | S2X superframing (Annex E): start sequence, format, formats 0 and 1 | added (ported; formats 2 to 7 are named only), with a phase correction over the removed symbols that DecSAT's stage does not have | 3 |

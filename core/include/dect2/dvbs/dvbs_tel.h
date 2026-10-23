@@ -147,6 +147,10 @@ struct DvbsTelemetry {
     bool lockFec = false;            // the error correction delivers (LDPC/BCH frames or Viterbi + Reed-Solomon)
     bool tsLock = false;             // transport stream packets are flowing
     double secsSinceLock = 0;        // seconds since the transport stream lock was gained (0: no lock)
+    // progress of the automatic search in plain words (narrow carriers take seconds: a DVB-S2 frame at 10 kSym/s lasts over three seconds)
+    double huntSecs = 0;             // seconds of signal the receiver has spent on the carrier it found (0 while searching or locked)
+    double huntSecsExpected = 0;     // about how long the frame search needs at this symbol rate (0: not known)
+    std::string searchStatus;        // what the receiver is doing or why it does not lock ("carrier too weak", "not DVB-S/S2", ...); empty when locked
 
     // pictures
     std::vector<cf32> cells;                 // recent symbols after carrier recovery, at most 2048, unit mean power

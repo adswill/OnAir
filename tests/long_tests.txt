@@ -19,6 +19,7 @@ drm_engine
 dtmb_faults
 dtmb_impair
 dtmb_real
+dvbs_narrow
 dvbs_rx2
 dvbs_rx3
 fm_impair
