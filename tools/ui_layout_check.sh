@@ -112,6 +112,7 @@ fsq	--mode fsq	Overview|FSQ|Receiver|History
 ifkp	--mode ifkp	Overview|IFKP|Receiver|History
 cquam	--mode cquam	Overview|C-QUAM|Receiver|History
 ardop	--mode ardop	Overview|ARDOP|Receiver|History
+mercury	--mode mercury	Overview|Mercury|Receiver|History
 mscatter	--mode mscatter	Overview|Meteors|Receiver|History
 goesdcs	--mode goesdcs	Overview|Platforms|Receiver|History
 modeac	--mode modeac	Overview|Replies|Receiver|History

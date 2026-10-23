@@ -100,6 +100,7 @@ This list is taken from the tables in `core/src/tx/tx.cpp` (`txModes()`).
 | ifkp | IFKP | 118 | makeIfkpSynth |
 | cquam | AM stereo (C-QUAM) | 109 | makeCquamSynth |
 | ardop | ARDOP | 109 | makeArdopSynth |
+| mercury | Mercury (HF OFDM modem) | 232 | makeMercurySynth |
 | zwave | Z-Wave | 100 | makeZwaveSynth |
 | mscatter | Meteor scatter | 106 | makeMscatterSynth |
 | goesdcs | GOES DCS | 109 | makeGoesDcsSynth |

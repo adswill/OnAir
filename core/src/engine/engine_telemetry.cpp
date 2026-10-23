@@ -313,6 +313,7 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 145: return pollStd(rxSb_, 145, t, seqs[140], &RxTelemetry::satbeacon);   // TV sat beacon decoder (slot 140)
     case 130: return pollStd(rxLtr_, 130, t, seqs[126], &RxTelemetry::ltr);     // LTR control channel (slot 126)
     case 131: return pollStd(rxEdacs_, 131, t, seqs[127], &RxTelemetry::edacs); // EDACS control channel (slot 127)
+    case 231: return pollStd(rxMercury_, 231, t, seqs[230], &RxTelemetry::mercury);   // Mercury HF OFDM modem (slot 230)
     default: return -1;
     }
 }

@@ -319,6 +319,7 @@ No radio? Open an IQ recording through the *IQ recording file* source (cs8, cu8,
 - **WSJT family:** FT8, FT4, FT2, WSPR (with an optional spot upload to wsprnet.org), JT65, JT9, Q65, FST4 / FST4W, MSK144, and **JS8Call**.
 - **MT63** (500 / 1000 / 2000 Hz, short and long interleave found automatically, 64 carriers with Walsh-Hadamard coded characters; [details](docs/mt63.md)).
 - **ARDOP** (the Winlink HF modem, monitor only: frame types, connect requests, IDs and pings with call signs, ACK / NAK quality and the text of 4FSK data frames; PSK and QAM frames are listed by header; [details](docs/ardop.md)).
+- **Mercury** (the HERMES HF modem of Rhizomatica, monitor only: every OFDM data mode at once, DATAC0 to DATAC17 and QAM16C2, with its LDPC decoded; CQ, CALL and ACCEPT with call signs, the carousel's polls and data rounds of a connected session reassembled in both directions, DISCONNECT, broadcast messages and RaptorQ files to view or save; encrypted sessions are listed, never decoded; the MFSK floor is not decoded; [details](docs/mercury.md)).
 - **Keyboard modes:** PSK31 / 63, RTTY, CW (every signal in a 14 kHz window), Olivia, Contestia, MFSK, THOR, DominoEX, Hellschreiber. Picture modes: **SSTV** and **HamDRM** (EasyPal).
 
 ### Amateur: voice and packet

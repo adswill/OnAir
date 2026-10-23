@@ -128,6 +128,7 @@ std::vector<TxModeSpec> makeTxTable() {
         mk("ifkp", "IFKP", 118, "makeIfkpSynth", kOpt, kUnv),
         mk("cquam", "AM stereo (C-QUAM)", 109, "makeCquamSynth", kOpt, kUnv),
         mk("ardop", "ARDOP", 142, "makeArdopSynth", kOpt, kUnv),
+        mk("mercury", "Mercury (HF OFDM modem)", 232, "makeMercurySynth: demo link, broadcast message and RaptorQ file, test IQ only", kOpt, kUnv),
         mk("zwave", "Z-Wave", 100, "makeZwaveSynth", kOpt, kUnv),
         mk("mscatter", "Meteor scatter", 106, "makeMscatterSynth", kOpt, kUnv),
         mk("goesdcs", "GOES DCS", 143, "makeGoesDcsSynth", kOpt, kUnv),
