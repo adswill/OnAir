@@ -14,6 +14,7 @@ struct AtvFrame {
     int width = 0, height = 0;   // 768 x 576 for 625 lines, 640 x 480 for 525
     double fieldRate = 50;       // fields per second of the signal
     bool colour = false;         // the picture has colour (burst locked), otherwise it is grey
+    bool untuned = false;        // the snow of an empty channel (AtvReceiver::setShowSnow), not a picture of a signal
     int field = 0;               // the field that was completed last (0 = first = upper lines)
     std::vector<uint8_t> rgba;   // width * height * 4
 };
@@ -57,6 +58,7 @@ struct AtvTelemetry {
     float burstLevel = 0;        // burst amplitude, share of nominal
     float chromaPhaseErrDeg = 0; // burst phase error after the loop
     // sound
+    std::string soundSystem;     // what the sound comes from: "FM", "NICAM stereo", "A2 stereo", "A2 dual, sound A", ... ("" until known)
     bool soundPresent = false;
     float soundDevKhz = 0;       // peak deviation in the last moment
     float soundLevelDb = -120;   // audio level, dB re full scale

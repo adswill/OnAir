@@ -297,6 +297,8 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 72: return pollStd(rxLr_, 72, t, seqs[66], &RxTelemetry::loraraw);
     case 201: return pollStd(rxLw_, 201, t, seqs[160], &RxTelemetry::lorawan);   // LoRaWAN all channels (slot 160)
     case 202: return pollStd(rxLs_, 202, t, seqs[161], &RxTelemetry::lorasat);   // LoRa satellites (slot 161)
+    case 204: return pollStd(rxPac_, 204, t, seqs[164], &RxTelemetry::pactor);   // PACTOR-I monitor (slot 164)
+    case 203: return pollStd(rxPskd_, 203, t, seqs[163], &RxTelemetry::pskd);   // PSK demodulator (slot 163)
     case 99: return pollStd(rxZw_, 99, t, seqs[90], &RxTelemetry::zwave);
     case 85: return pollStd(rxWs_, 85, t, seqs[79], &RxTelemetry::wisun);
     case 86: return pollStd(rxEcz_, 86, t, seqs[80], &RxTelemetry::eczas);

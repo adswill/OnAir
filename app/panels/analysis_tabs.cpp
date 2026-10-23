@@ -737,7 +737,7 @@ static std::string fmtUtc(int64_t t) {
     return b;
 }
 
-static std::string g_carouselSaved;
+void carouselView(App& a);   // carousel_view.cpp: carousels, files, preview, MHEG-5 scene drawing
 static void tsTablesView(App& a, int view) {
     const TsSnapshot& ts = a.ts;
     const SiSnapshot* si = ts.si.get();
@@ -809,15 +809,7 @@ static void tsTablesView(App& a, int view) {
         for (const auto& sv : ts.services) if (sv.scrambled) scr++;
         ImGui::Text("%d of %zu services arrive scrambled", scr, ts.services.size());
     } else if (view == 6) {   // carousels
-        if (!ts.carousels || ts.carousels->empty()) none("no DSM-CC carousel found");
-        else {
-            if (ImGui::Button("Save files")) { const std::string dir = plat::dataDir() + "/carousels"; g_carouselSaved = std::to_string(a.engine.saveCarouselFiles(dir)) + " files saved to " + dir + "  (open index.html there for a gallery)"; }
-            if (!g_carouselSaved.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", g_carouselSaved.c_str()); }
-            for (const auto& c : *ts.carousels) {
-                ImGui::TextColored(pal::accent(), "PID 0x%04X  %s  %zu modules, %.0f of %.0f KB, %zu files   (DSI %llu, DII %llu, DDB %llu)", c.pid, c.objectCarousel ? (c.gatewayKnown ? "object carousel" : "object carousel (gateway not yet received)") : "data carousel", c.modules.size(), (double)c.bytesDone / 1024, (double)c.bytesTotal / 1024, c.files.size(), (unsigned long long)c.dsi, (unsigned long long)c.dii, (unsigned long long)c.ddb);
-                for (size_t i = 0; i < c.files.size() && i < 200; i++) ImGui::Text("  %s  %llu bytes", c.files[i].path.c_str(), (unsigned long long)c.files[i].size);
-            }
-        }
+        carouselView(a);
     } else if (view == 7) {   // application signalling and other payloads
         if (!ts.data) none("no private data PIDs found");
         else {

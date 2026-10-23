@@ -24,6 +24,10 @@ const std::vector<Preset>& presets() {
         {"Lacuna Space - uplink channel 868.5 (EU868)", 868.5, 0, 125, 5, 0x34, true, Plausible, "LACUNA", "As above, third default EU868 channel."},
         {"Space LoRaWAN uplinks, US915 sub-band 2 (903.9 - 905.3)", 904.6, 0, 125, 5, 0x34, true, Uncertain, "",
          "Ground devices of satellite LoRa services in North America use the US915 uplink channels; sub-band 2 is the common one. Uncertain which services listen there."},
+        {"FOSSASAT (401.703 MHz, settings from issue #229)", 401.703, 11, 125, 8, -1, false, Plausible, "FOSSASAT",
+         "SF11, 125 kHz, CR 4/8 as a user posted them from the TinyGS settings (issue #229); the sync word is searched (0x12 and 0x34). Not checked against a signal."},
+        {"137.055 MHz LoRa telemetry, SF8 / 41.7 kHz (issue #229)", 137.055, 8, 41, 5, 0x12, false, Plausible, "",
+         "SF8, 41.7 kHz, CR 4/5, sync 0x12, 15-symbol preamble, CRC on, as a user posted them from the TinyGS settings (issue #229). Not checked against a signal."},
         {"Generic 70 cm LoRa cubesat, SF10 / 125 kHz", 437.4, 10, 125, 0, 0x12, false, Uncertain, "",
          "A guess for experimenters: many amateur LoRa beacons sit between 435 and 438 MHz at 125 kHz and SF9 - SF12. Use it as a search start, not as a fact."},
     };

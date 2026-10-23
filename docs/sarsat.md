@@ -40,3 +40,13 @@ Not verified: no real SGB recording was available, only the generated signal. Th
 ## Not verified against real beacons
 
 No real recording was available. The message layout, the protocol code table, the position and offset fields, the Baudot table and the homing bit were written from public descriptions of T.001 and need checking against a real beacon or the current T.001 before the details are relied on. The protocol code tables (A2-A, A2-B) and the serial user beacon types were checked against T.001 (rev. March 2021). The two BCH generator polynomials (`0x26D9E3`, `0x1539`) were checked to divide x^127+1 and x^63+1, as a BCH generator must. User protocols other than the aviation, maritime and serial ones show the raw identification field.
+
+## The satellites' L-band downlink (issue #214)
+
+The search and rescue satellites repeat the 406.0 - 406.1 MHz band on their downlink, each one at its own place in 1544 - 1545 MHz.
+The frequency box has a 1544.500 MHz entry. **Search the whole capture** (on by itself between 1543.5 and 1546 MHz, or ticked by hand)
+runs a bank of burst finders 90 kHz apart across up to 1.1 MHz of the input (as much as the sample rate holds: 2 Msps covers the whole
+downlink band), so the satellites do not have to be found by hand. A burst heard in two channels (the overlap, or a weak alias further
+away that can still pass the BCH check with corrections) is listed once: the strongest copy, then the one with fewer corrections.
+Tested with the generated beacons 260 and 330 kHz from the dial at 1 Msps (`tests/sarsat/test_sarsat_rx.cpp`); not checked against a
+real downlink recording.

@@ -49,9 +49,9 @@ The TS tab has views for the service information of the stream: **Networks** (th
 modulation, FEC, orbital position and service count; other networks too), **Other services** (the SDT other: names and providers of services in other transport streams, and the
 event counts and running events of the EIT other), **Bouquets** (the BAT), **Time** (the TDT, the TOT with local time offsets), **Conditional access** (the CAT: the CA systems and their
 EMM PIDs by name, and which services arrive scrambled; signalling only, nothing is descrambled), **Carousels** (DSM-CC data and object carousels: modules, completeness, the file tree of
-an object carousel; **Save files** writes them to `carousels/pid_XXXX/...` in the data folder with cleaned paths) and **Data** (the AIT: HbbTV and MHP applications with name, control
+an object carousel; a progress bar per carousel, the file list with size and completeness, **Save all files** writes them to `carousels/pid_XXXX/...` in the data folder with cleaned paths and an `index.html`, and clicking a file previews it: text as text, PNG/JPEG as a picture, MHEG-5 files as the named object tree and, for a Scene, a static drawing of its Rectangles, Text and Bitmaps; experimental, scripts and interactive links are not run or followed) and **Data** (the AIT: HbbTV and MHP applications with name, control
 code, transport (object carousel or HTTP URL base) and initial path; SCTE-35 cues; EBU data and every private PID labelled by what it carries). The sources are `core/src/tv/si_tables.cpp`,
-`dsmcc.cpp` and `ts_data.cpp`.
+`dsmcc.cpp`, `ts_data.cpp`, `mheg.cpp` and `mheg_render.cpp` (MHEG-5 tag names from the ISO13522-MHEG-5 ASN.1 module as published in the RedButton engine) and the view in `app/panels/carousel_view.cpp`. Hong Kong TVB and other DTMB services send weather and stock pages this way (issue 176).
 
 **Multicast media** in the IP view: SAP announcements with their SDP (session names, media, codecs), RTP streams (payload type, codec, loss, rate) and MPEG-TS in UDP or RTP, each
 analysed by a TS demultiplexer (services found, scrambling noted). Audio and video are not decoded here.

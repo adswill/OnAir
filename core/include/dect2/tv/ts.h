@@ -90,6 +90,7 @@ public:
     TsSnapshot snapshot() const;
     // the files of the DSM-CC carousels found so far, saved to dir/pid_XXXX/path; returns the number of files written
     size_t saveCarouselFiles(const std::string& dir) const { return dsmcc_.extractTo(dir); }
+    std::map<int, std::vector<DsmccFile>> carouselFiles(size_t maxBytes) const { return dsmcc_.files(maxBytes); }   // the complete files per PID (copies; for the viewer)
     // Programme guide per service id, sorted by start time (now/next plus the schedule when the broadcaster sends it).
     std::map<int, std::vector<EpgEvent>> epg() const;
     void reset();

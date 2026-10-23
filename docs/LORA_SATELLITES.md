@@ -59,3 +59,10 @@ MIC, join request, join accept framing, rejoin request, proprietary). "Level" is
 checked; the 32-bit counter is not rebuilt (it needs the session). Unverified on real traffic: only the generator was used.
 
 Mode numbers used: families 200 and 201 (engine standards 202, 203; active 201, 202; poll slots 160, 161); kNumFamilies 202, kPollSeqSlots 170.
+
+## Presets from issue #229
+
+Two entries come from the settings a user posted from TinyGS: FOSSASAT on 401.703 MHz (SF11, 125 kHz, CR 4/8) and LoRa telemetry on
+137.055 MHz (SF8, 41.7 kHz, CR 4/5, sync 0x12). 41.7 kHz is now a bandwidth of its own (the Bandwidth list and the presets). Neither was
+checked against a real signal. The FSK satellites of the same thread (InnoSat 9.6 kbit/s FSK with the 0x930B51DE sync word) belong to the
+CubeSat telemetry mode, which hunts that sync word.

@@ -21,6 +21,7 @@ struct CellTower {
     int band = 0;                 // from SIB1 when it was read, else the first band that holds the frequency (bandConfirmed false)
     bool bandConfirmed = false;   // SIB1's freqBandIndicator (or the only band above 64 that holds the frequency) says so
     std::vector<int> bandsAlso;   // the other bands that hold the frequency (2125 MHz: band 4 is also 1, 10, 65, 66)
+    bool mfbi = false;            // bandsAlso is the cell's own multiBandInfoList from SIB1 (multiple frequency band indicator), not a guess
     int pci = 0;
     bool tdd = false, extCp = false;
     int nRb = 0, ports = 0, phichDur = 0, phichRes = 0;   // MIB: bandwidth in resource blocks, antenna ports, PHICH duration / Ng index

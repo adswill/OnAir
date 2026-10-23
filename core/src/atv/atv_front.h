@@ -33,13 +33,15 @@ public:
     void spectrumDb(std::vector<float>& db, double& binHz) const;
     // true: keep a running average, one spectrum every 25 ms, for the display (the picture is being decoded) instead of collecting for the search
     void setMonitor(bool on);
+    // lines closer than this to the centre are the radio's own spike and are not looked at (12 kHz; none when the vision carrier may be tuned)
+    void setCentreExclusion(double hz) { exclHz_ = hz; }
     // Monitor spectrum around a carrier: `points` values from loMhz to hiMhz above `centreHz`, dB below the strongest of them (peak of the bins in each step)
     void display(double centreHz, double loMhz, double hiMhz, int points, std::vector<float>& out) const;
     // The strongest line within +-halfWidthHz of centreHz in the monitor spectrum: its frequency (parabolic interpolation) and how far it stands
     // above the rest of that stretch, dB, and its level (dB, arbitrary reference). False when there is no spectrum yet.
     bool peakNear(double centreHz, double halfWidthHz, double& fHz, double& promDb, double& levelDb) const;
 private:
-    double fs_ = 0;
+    double fs_ = 0, exclHz_ = 12e3;
     bool monitor_ = false;
     size_t nfft_ = 8192, fill_ = 0, skip_ = 0;
     std::vector<cf32> buf_;

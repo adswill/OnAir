@@ -48,7 +48,9 @@ struct LteSib1 {
     bool barred = false, intraFreqReselAllowed = true, csgIndication = false;
     int qRxLevMinDbm = -140, qRxLevMinOffset = 0;
     int pMax = -99;                   // dBm, -99 = absent
-    int band = 0;                     // freqBandIndicator (1..64; a higher band sits in the extension and is not read)
+    int band = 0;                     // freqBandIndicator: 1..64, or 65..256 from freqBandIndicator-v9e0 (the root field then says 64)
+    std::vector<int> multiBands;      // multiBandInfoList (v8h0) with the v9e0 bands above 64 filled in: the other bands this cell is also in (MFBI)
+    bool imsEmergency = false;        // ims-EmergencySupport-r9 (v920)
     struct Sched { int periodRf = 8; std::vector<int> sibs; };   // sibs: 3 = SIB3 ...
     std::vector<Sched> sched;
     bool tdd = false; int sfAssign = 0, specialSf = 0;

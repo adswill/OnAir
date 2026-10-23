@@ -169,6 +169,8 @@ void Engine::configureReceiver(int a, double r) {
     case 72: rxLr_.configure(r); break;
     case 201: rxLw_.configure(r); break;
     case 202: rxLs_.configure(r); break;
+    case 204: rxPac_.configure(r); break;
+    case 203: rxPskd_.configure(r); break;
     case 85: rxWs_.configure(r); break;
     case 99: rxZw_.configure(r); break;
     case 86: rxEcz_.configure(r); break;
@@ -311,6 +313,8 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 72: rxLr_.setSignalOffset(o); break;
     case 201: rxLw_.setSignalOffset(o); rxLw_.setCenterHz(centreHz); break;
     case 202: rxLs_.setSignalOffset(o); rxLs_.setCenterHz(centreHz); break;
+    case 204: rxPac_.setSignalOffset(o); break;
+    case 203: rxPskd_.setSignalOffset(o); break;
     case 99: rxZw_.setSignalOffset(o); rxZw_.setCenterHz(centreHz); rxZw_.setDialHz(dialHz); break;
     case 85: rxWs_.setSignalOffset(o); rxWs_.setCenterHz(centreHz); rxWs_.setDialHz(dialHz); break;
     case 86: rxEcz_.setSignalOffset(o); break;

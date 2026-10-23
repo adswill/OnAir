@@ -18,7 +18,7 @@ namespace dect2 {
 namespace {
 LoraSatSettings sanitize(LoraSatSettings s) {
     s.sf = std::max(5, std::min(12, s.sf));
-    s.bwKhz = s.bwKhz <= 62 ? 62 : s.bwKhz <= 125 ? 125 : s.bwKhz <= 250 ? 250 : 500;
+    s.bwKhz = s.bwKhz <= 41 ? 41 : s.bwKhz <= 62 ? 62 : s.bwKhz <= 125 ? 125 : s.bwKhz <= 250 ? 250 : 500;
     s.sync = s.sync < 0 ? -1 : std::min(255, s.sync);
     s.preamble = std::max(6, std::min(65, s.preamble));
     s.dopplerMaxHz = std::max(0.0, std::min(60e3, s.dopplerMaxHz));
@@ -93,13 +93,13 @@ struct LoraSatReceiver::Impl {
         if (cfg.followDial && tel.dialHz > 0) pr = lorasat::nearest(tel.dialHz / 1e6);
         if (pr >= 0) {
             const lorasat::Preset& p = lorasat::presets()[(size_t)pr];
-            bws = {p.bwKhz == 62 ? 62500.0 : p.bwKhz * 1e3};
+            bws = {lorasat::bandwidthHz(p.bwKhz)};
             if (p.sf > 0) sfs = {p.sf}; else if (cfg.autoSf) for (int s = 7; s <= 12; s++) sfs.push_back(s); else sfs = {cfg.sf};
             if (p.sync >= 0) syncs = {p.sync}; else syncs = {0x12, 0x34};
             tel.presetRunning = pr;
         } else {
             if (cfg.autoBw) bws = {125e3, 250e3, 500e3};
-            else bws = {cfg.bwKhz == 62 ? 62500.0 : cfg.bwKhz * 1e3};
+            else bws = {lorasat::bandwidthHz(cfg.bwKhz)};
             if (cfg.autoSf) for (int s = 7; s <= 12; s++) sfs.push_back(s); else sfs = {cfg.sf};
             if (cfg.sync < 0) syncs = {0x12, 0x34}; else syncs = {cfg.sync};
         }

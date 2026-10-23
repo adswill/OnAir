@@ -108,6 +108,8 @@ wmbus	--mode wmbus	Overview|Meters|Receiver|History
 tones	--mode tones	Overview|Tones|Receiver|History
 sarsat	--mode sarsat	Overview|Beacons|Receiver|History
 argos	--mode argos	Overview|Argos|Receiver|History
+pactor	--mode pactor	Overview|PACTOR-I|Receiver|History
+pskd	--mode pskd	Overview|PSK|Receiver|History
 sigfox	--mode sigfox	Overview|Sigfox|Receiver|History
 mt63	--mode mt63	Overview|MT63|Receiver|History
 fsq	--mode fsq	Overview|FSQ|Receiver|History

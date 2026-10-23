@@ -2,6 +2,7 @@
 // freqBandIndicator is 64 for every band above 64), and 4, 13, 14 as 1, 20, 28 (the first band that holds the frequency was shown as if known).
 // Values from 36.101 Table 5.7.3-1: N_DL = N_Offs-DL + 10 (F_DL - F_DL_low).
 #include "dect2/cell/cell_rx.h"
+#include "dect2/cell/cell_asn.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -55,5 +56,24 @@ int main() {
     c = lteBandFor(640e6, 0);
     CHECK(c.band == 71 && !c.confirmed, "a single candidate before SIB1 is still unconfirmed");
     CHECK(lteBandFor(1000e6, 0).band == 0, "outside every band");
+    // SIB1's extensions (36.331 v890 / v8h0 / v9e0 / v920): a band above 64 from freqBandIndicator-v9e0 and the MFBI list
+    {
+        using namespace dect2::cell;
+        struct T { int band; std::vector<int> multi; bool ims; } t[] = {{66, {4}, false}, {71, {}, false}, {106, {8}, true}, {8, {106, 26}, false}, {20, {}, true}, {3, {}, false}};
+        for (const auto& e : t) {
+            LteSib1 s;
+            Plmn p; p.mcc = 310; p.mnc = 410; p.mncDigits = 3; s.plmns.push_back(p);
+            Plmn q; q.mcc = 313; q.mnc = 100; q.mncDigits = 3; s.plmns.push_back(q);
+            s.tac = 77; s.cellId = 0x1234567; s.band = e.band; s.multiBands = e.multi; s.imsEmergency = e.ims;
+            s.sched = {{16, {3}}}; s.siWindowMs = 20;
+            LteBcch b;
+            CHECK(lteParseBcch(lteEncodeSib1(s), b) && b.isSib1, "sib1 B%d parses", e.band);
+            CHECK(b.sib1.band == e.band, "band %d read as %d", e.band, b.sib1.band);
+            CHECK(b.sib1.multiBands == e.multi, "B%d MFBI list (%zu read)", e.band, b.sib1.multiBands.size());
+            CHECK(b.sib1.imsEmergency == e.ims && b.sib1.plmns.size() == 2 && b.sib1.tac == 77, "B%d other fields", e.band);
+        }
+        const LteBandChoice c = lteBandFor(2140e6, 66);
+        CHECK(c.band == 66 && c.confirmed, "band 66 from v9e0 is confirmed");
+    }
     return testSummary("cell_bands");
 }

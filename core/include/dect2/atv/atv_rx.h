@@ -4,8 +4,8 @@
 // and colour into 768 x 576 (625 lines) or 640 x 480 (525 lines) pictures, and plays the sound of the FM carrier.
 // Written to the engine's contract: configure() once the sample rate is known, feed() from the analysis thread (never blocks),
 // telemetry(), frame() and the setters from the interface thread (they are safe while feed() runs).
-// NICAM and the two-carrier systems (A2) are not decoded; the sound channel is a class of its own (AtvSound in atv_front.h) so a second
-// carrier can be added next to it.
+// Sound: the FM (or AM) sound carrier is the sound channel AtvSound (atv_front.h); NICAM-728 and the two-carrier system A2 next to it
+// are found by themselves and replace the mono sound when valid (atv_sound2.h; setSoundSystem turns that off).
 #pragma once
 #include "atv_tel.h"
 #include "dect2/engine/mode_tuning.h"
@@ -47,6 +47,11 @@ public:
     void setSaturation(float s);                         // 1 = as sent
     void setHue(float degrees);                          // NTSC tint
     void setChannelWidth(int mhz);                       // 6, 7 or 8 (default 8): the channel the user tuned; only matters for the carrier offset of 5.5 MHz sound (B/G)
+    // Without a picture signal show the untuned picture (snow: the noise of the channel on a free-running raster) instead of nothing, as a TV does;
+    // for hunting weak signals. Off by default. Such pictures have AtvFrame::untuned set.
+    void setShowSnow(bool on);
+    void setSoundSystem(int mode);                       // 0 automatic (NICAM-728 or A2 when there, else the FM sound), 1 the FM / AM sound carrier only
+    void setDualSound(int channel);                      // two-language NICAM or A2: 0 the first channel (sound A), 1 the second (sound B)
     void setDetector(int mode);                          // 0 automatic (synchronous when the carrier is locked), 1 envelope detector only
     // 0 broadcast TV (amplitude modulated vision carrier, found by a search), 1 FM video as analog FPV links send it (the channel is the centre of
     // the input; the polarity is found by trial). FM needs 16 Msps or more (a 17 MHz wide signal); the picture decoder is the same.

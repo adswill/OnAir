@@ -3,6 +3,7 @@
 //   input -> DC removal -> [searching: spectrum -> vision carrier + sound carrier]
 //                       -> [running: vision channel -> picture decoder -> pictures]
 //                                    sound channel  -> 48 kHz mono -> sound device
+#include "dect2/atv/atv_sound2.h"
 #include "dect2/atv/atv_rx.h"
 #include "atv_front.h"
 #include "atv_fm.h"
@@ -33,6 +34,13 @@ struct AtvReceiver::Impl {
     AtvFront front;
     AtvVideo video;
     AtvSound sound;
+    A2Rx a2rx;                          // second sound: A2 (two FM carriers) and NICAM-728, found by themselves
+    NicamRx nicrx;
+    std::atomic<int> sndMode{0};        // 0 automatic, 1 FM sound only
+    std::atomic<int> dualChoice{0};     // dual sound: 0 sound A / first channel, 1 sound B / second channel
+    std::vector<float> audioR, a2l, a2r, nl, nr;
+    uint64_t a2Next = 0, a2Until = 0;   // when A2 is looked for next, and until when this time
+    std::string soundSys;
     AtvFmDemod fm;                      // FM video (FPV): the frequency of the carrier is the picture
     std::atomic<int> modulation{0};     // 0 AM, 1 FM, 2 NBTV on AM, 3 NBTV on FM, as asked for (setModulation)
     // NBTV and mechanical television: the video is the audio of an AM or narrow FM signal at the centre of the input
@@ -83,6 +91,69 @@ struct AtvReceiver::Impl {
 
     void log(const std::string& s) { if (logCb) logCb(s); }
 
+    // Every picture, from the decoders and from the snow below, gets the next number of one sequence, so the interface can tell which is newer
+    uint64_t frameSeq = 0;
+    void publishFrame(std::shared_ptr<const AtvFrame> f) {
+        std::lock_guard<std::mutex> lk(mu);
+        if (!f) return;
+        auto c = std::make_shared<AtvFrame>(*f);
+        c->seq = ++frameSeq;
+        latest = std::move(c);
+    }
+
+    // ---- the untuned picture ("snow"), for hunting weak signals: while there is no picture signal the detected video of the channel is drawn
+    // on a free-running raster of 625 lines at 15625 Hz, as a TV without a station does. The grey follows the noise (its mean and spread are tracked).
+    std::atomic<bool> snowOn{false};
+    struct Snow {
+        static constexpr int W = 768, H = 576;
+        std::vector<uint8_t> img;
+        int px = 0, line = 0;
+        double pend = 0, accSum = 0, mean = 0, var = 0;
+        int accN = 0;
+        double last = 0;
+        bool have = false;
+    } sn;
+
+    void snowReset() { sn.img.clear(); sn.px = sn.line = 0; sn.pend = sn.accSum = 0; sn.accN = 0; sn.have = false; sn.last = 0; }
+
+    // v: detected video samples at `rate`
+    void snowFeed(const float* v, size_t n, double rate) {
+        if (rate < 1e6) return;
+        if (sn.img.empty()) sn.img.assign((size_t)Snow::W * Snow::H * 4, 255);
+        const double spp = rate / (Snow::W / 64e-6);          // input samples a pixel (768 pixels in 64 us)
+        for (size_t i = 0; i < n; i++) {
+            sn.accSum += v[i]; sn.accN++;
+            sn.pend += 1.0;
+            while (sn.pend >= spp) {
+                sn.pend -= spp;
+                if (sn.accN) { sn.last = sn.accSum / sn.accN; sn.accSum = 0; sn.accN = 0; }
+                const double px = sn.last;
+                if (!sn.have) { sn.mean = px; sn.var = 1e-6; sn.have = true; }
+                sn.mean += (px - sn.mean) * 2e-5; const double d = px - sn.mean; sn.var += (d * d - sn.var) * 2e-5;
+                const double sd = std::sqrt(std::max(sn.var, 1e-12));
+                const int g = (int)std::lround(128.0 + 40.0 * d / sd);
+                const uint8_t u = (uint8_t)std::max(0, std::min(255, g));
+                uint8_t* o = &sn.img[((size_t)sn.line * Snow::W + (size_t)sn.px) * 4];
+                o[0] = o[1] = o[2] = u; o[3] = 255;
+                if (++sn.px >= Snow::W) {
+                    sn.px = 0;
+                    if (++sn.line >= Snow::H) {
+                        sn.line = 0;
+                        auto f = std::make_shared<AtvFrame>();
+                        f->width = Snow::W; f->height = Snow::H; f->fieldRate = 50; f->colour = false; f->untuned = true; f->rgba = sn.img;
+                        publishFrame(f);
+                    }
+                }
+            }
+        }
+    }
+    std::vector<float> snowBuf;
+    void snowAm(const cf32* x, size_t m) {
+        snowBuf.resize(m);
+        for (size_t i = 0; i < m; i++) snowBuf[i] = std::abs(x[i]);
+        snowFeed(snowBuf.data(), m, fs);
+    }
+
     void configure(double rate) {
         fs = rate;
         ready = false;
@@ -90,14 +161,18 @@ struct AtvReceiver::Impl {
         dcA = (float)(1.0 / (0.0005 * rate));
         search.configure(rate);
         searchInv.configure(rate);
+        searchRaw.configure(rate); searchRawInv.configure(rate);
+        searchRaw.setCentreExclusion(0); searchRawInv.setCentreExclusion(0);
         front.configure(rate);
         sound.configure(rate);
+        a2rx.configure(rate);
+        nicrx.configure(rate);
         video.configure(front.videoRate(), front.colourCapable());
         videoRateNow = front.videoRate();
         video.setNoiseScale(front.noiseGain() * rate / 5e6);
         video.carrierError = [this](double rad, double trust) { front.carrierError(rad, trust); };
         video.log = [this](const std::string& s) { log(s); };
-        video.frameReady = [this](std::shared_ptr<const AtvFrame> f) { std::lock_guard<std::mutex> lk(mu); latest = std::move(f); };
+        video.frameReady = [this](std::shared_ptr<const AtvFrame> f) { publishFrame(std::move(f)); };
         ready = true;
         active = 0;
         resetAll();
@@ -119,7 +194,7 @@ struct AtvReceiver::Impl {
             nbtvFmt = nbtvAsk; nbtvDev = nbtvDevAsk;
         }
         nbtv.configure(fs, nbtvFmt, active == 3, nbtvDev);
-        nbtv.decoder().frameReady = [this](std::shared_ptr<const AtvFrame> f) { std::lock_guard<std::mutex> lk(mu); latest = std::move(f); };
+        nbtv.decoder().frameReady = [this](std::shared_ptr<const AtvFrame> f) { publishFrame(std::move(f)); };
         nbtv.decoder().log = [this](const std::string& s) { log(s); };
         char b[160];
         snprintf(b, sizeof b, "analog TV: %s from %s, audio at %.1f kHz", nbtvFmt.name().c_str(), active == 3 ? "narrow FM" : "AM", nbtv.audioRate() / 1e3);
@@ -163,20 +238,21 @@ struct AtvReceiver::Impl {
     void resetAll() {
         if (!ready) return;
         search.setMonitor(false);
-        searchInv.reset(); inverted = false;
+        searchInv.reset(); searchRaw.reset(); searchRawInv.reset(); inverted = false;
         front.reset();
         front.setPlan(5.5);
         syncVideoRate();
         video.setNoiseScale(front.noiseGain() * fs / 5e6);
         pending.clear();
         video.reset();
-        sound.reset();
-        mode = kSearch; haveCarrier = false; syncOn = false;
+        sound.reset(); a2rx.reset(); nicrx.reset(); soundSys.clear(); a2Next = a2Until = 0;
+        mode = kSearch; haveCarrier = false; syncOn = false; rawMode = false;
         front.setSyncDetector(false);
         dc = cf32(0, 0);
         trialAt = lostAt = 0;
         bad.clear();
         if (audio) audio->flush();
+        snowReset();
         {
             std::lock_guard<std::mutex> lk(mu);
             tel = AtvTelemetry();
@@ -210,6 +286,15 @@ struct AtvReceiver::Impl {
         return false;
     }
 
+    // The user tuned the vision carrier itself (channel tables list it, tuners show it): the carrier sits at 0 Hz, where the DC removal of the
+    // radio's centre spike takes it away. A search that finds nothing is repeated without DC removal, and only a carrier within 40 kHz of the centre counts.
+    bool rawMode = false;
+    AtvCarrierSearch searchRaw, searchRawInv;
+    void setRaw(bool on) {
+        if (on && !rawMode) log("analog TV: the vision carrier is at the centre of the input (tuned to the vision frequency)");
+        rawMode = on;
+        dc = cf32(0, 0);
+    }
     bool trialWeak = false;
     uint64_t afcAt = 0;
     double afcPrev = 0;
@@ -311,13 +396,14 @@ struct AtvReceiver::Impl {
     }
 
     void backToSearch() {
-        mode = kSearch; haveCarrier = false; search.setMonitor(false); sound.reset();
+        mode = kSearch; haveCarrier = false; setRaw(false); search.setMonitor(false); sound.reset();
         front.setSyncDetector(false); syncOn = false; video.syncDetectorChanged(false);
     }
 
     // the radio's centre spike out of the block: the mean of the block moves a slow estimate, once per block. The picture and the sound carrier
     // turn at megahertz, so their mean over a block is nothing; the spike does not turn.
     void removeDc(const cf32* x, size_t m) {
+        if (rawMode) { xd.assign(x, x + m); return; }      // a vision carrier at the centre: the DC estimate would take it away (see the search)
         xd.resize(m);
         // the sums in four lanes: a single running sum would make every addition wait for the last
         float sr4[4] = {0, 0, 0, 0}, si4[4] = {0, 0, 0, 0};
@@ -341,6 +427,7 @@ struct AtvReceiver::Impl {
         if (nv) {
             // the colour is demodulated from the i and q of the radio side: here the analytic signal of the video
             video.process(fm.v(), fm.i(), fm.q(), nv);
+            if (snowOn.load() && mode != kRun) snowFeed(fm.v(), nv, fm.videoRate());
         }
         if (mode == kTrial) {
             if (video.lineLocked()) {
@@ -378,6 +465,9 @@ struct AtvReceiver::Impl {
             xc.resize(m);
             for (size_t q = 0; q < m; q++) xc[q] = std::conj(xd[q]);
             searchInv.feed(xc.data(), m);
+            searchRaw.feed(x, m);
+            for (size_t q = 0; q < m; q++) xc[q] = std::conj(x[q]);
+            searchRawInv.feed(xc.data(), m);
             if (search.spectra() >= 24) {
                 // the mirrored spectrum wins only clearly (its sound carrier sits on the right side of the vision carrier, its vestigial sideband
                 // has the right shape), so a normal signal never turns
@@ -387,14 +477,30 @@ struct AtvReceiver::Impl {
                 if (inv != inverted) log(inv ? "analog TV: the spectrum is mirrored (I and Q swapped)" : "analog TV: the spectrum is the right way round");
                 inverted = inv;
                 pending = inv ? b : a;
-                searchInv.reset();
-                if (!nextCandidate()) search.reset();
+                // a "carrier" within 40 kHz of the centre is more likely a line next to a carrier at the centre (the DC removal took it away) than a carrier
+                // a vision carrier at the very centre (the user tuned the vision frequency): two more searches on the input as it is, without the
+                // DC removal that would take that carrier away; only a carrier near the centre with a sound carrier beside it counts, and it
+                // is taken when it is at least as good as the best of the others
+                std::vector<AtvCarrier> r1 = searchRaw.candidates(), r2 = searchRawInv.candidates();
+                auto centred = [](std::vector<AtvCarrier>& v) {
+                    v.erase(std::remove_if(v.begin(), v.end(), [](const AtvCarrier& c) { return std::fabs(c.visionHz) > 40e3 || c.spacingMhz <= 0 || c.visionDb < 12; }), v.end());
+                };
+                centred(r1); centred(r2);
+                const double s1 = r1.empty() ? -1e9 : r1[0].score, s2 = r2.empty() ? -1e9 : r2[0].score, sn = pending.empty() ? -1e9 : pending[0].score;
+                if (std::max(s1, s2) > -1e8 && std::max(s1, s2) >= sn) {
+                    inverted = s2 > s1;
+                    pending = inverted ? r2 : r1;
+                    setRaw(true);
+                }
+                searchInv.reset(); searchRaw.reset(); searchRawInv.reset();
+                if (!nextCandidate()) { setRaw(false); search.reset(); }
             }
         } else {
             if (inverted) for (size_t q = 0; q < m; q++) xd[q] = std::conj(xd[q]);
             search.feed(xd.data(), m);          // the spectrum for the display, a few FFTs a second
             runBlock(m);
         }
+        if (snowOn.load() && mode != kRun) snowAm(xd.data(), m);
         if (nIn - lastTelAt >= (uint64_t)(fs * 0.25)) { lastTelAt = nIn; publish(); }
     }
 
@@ -411,8 +517,9 @@ struct AtvReceiver::Impl {
             if (am != sound.am()) sound.setAm(am);
         }
         sound.setCarrier(front.carrierHz() + soundOff);
-        audioBuf.clear();
+        audioBuf.clear(); audioR.clear();
         sound.process(xd.data(), m, audioBuf);
+        secondSound(m);
         emitAudio();
         // supervision
         if (mode == kTrial) {
@@ -433,13 +540,47 @@ struct AtvReceiver::Impl {
         }
     }
 
+    // NICAM-728 and A2 next to the FM sound (atv_sound2.h): when one of them is there and valid its sound replaces the mono FM sound
+    void secondSound(size_t m) {
+        soundSys = "FM";
+        const double sp = carrier.spacingMhz;
+        const bool sysI = sp > 5.9 && sp < 6.1;
+        if (sndMode.load() != 0 || !video.lineLocked() || !(sp == 5.5 || sp == 6.5 || sysI)) return;
+        const double vis = front.carrierHz();
+        // NICAM: its carrier is 5.85 MHz (system I: 6.552 MHz) above the vision carrier
+        nl.clear(); nr.clear();
+        nicrx.process(xd.data(), m, vis + (sysI ? nicam::kCarrierSpacingIMhz : nicam::kCarrierSpacingMhz) * 1e6, sysI, dualChoice.load(), nl, nr);
+        // A2: a second FM carrier 242 kHz above the first, with a pilot. Looked for for a second now and then (the two extra filter chains cost
+        // as much as the sound channel itself), and followed for as long as the pilot is there.
+        bool a2Active = false;
+        if ((sp == 5.5 || sp == 6.5) && !sound.am()) {
+            if (nIn >= a2Next) { a2Until = nIn + (uint64_t)(1.2 * fs); a2Next = nIn + (uint64_t)(6 * fs); }
+            a2Active = nIn < a2Until || a2rx.status().carrier2;
+            if (a2Active) {
+                a2l.clear(); a2r.clear();
+                a2rx.process(xd.data(), m, vis + sp * 1e6 + sound.trimHz(), 50, 50, a2l, a2r);
+            } else a2rx.reset();
+        }
+        const A2Status as = a2rx.status();
+        if (nicrx.audioValid()) {
+            const NicamStatus ns = nicrx.status();
+            soundSys = ns.mode == 0 ? "NICAM stereo" : ns.mode == 1 ? (dualChoice.load() ? "NICAM dual mono, channel 2" : "NICAM dual mono, channel 1") : "NICAM mono";
+            audioBuf = nl; audioR = nr;
+        } else if (a2Active && as.carrier2 && as.mode >= 1 && a2l.size() == a2r.size()) {
+            soundSys = as.mode == 1 ? "A2 stereo" : (dualChoice.load() ? "A2 dual, sound B" : "A2 dual, sound A");
+            if (as.mode == 2) { const std::vector<float>& c = dualChoice.load() ? a2r : a2l; audioBuf = c; audioR = c; }
+            else { audioBuf = a2l; audioR = a2r; }
+        } else if (a2Active && as.carrier2 && as.mode == 0) soundSys = "FM mono (A2 pilot)";
+    }
+
     void emitAudio() {
         if (audioBuf.empty()) return;
         const size_t n = audioBuf.size();
+        const bool stereo = audioR.size() == n;
         const float vol = volume.load();
         {
             std::lock_guard<std::mutex> lk(tapMu);
-            if (tap) tap(audioBuf.data(), audioBuf.data(), n);
+            if (tap) tap(audioBuf.data(), stereo ? audioR.data() : audioBuf.data(), n);
         }
         if (silent.load()) return;
         if (!audio) {
@@ -449,7 +590,7 @@ struct AtvReceiver::Impl {
         }
         audio->setVolume(vol); audio->setMuted(muted.load());
         inter.resize(n * 2 + 2);
-        for (size_t i = 0; i < n; i++) { inter[2 * i] = audioBuf[i]; inter[2 * i + 1] = audioBuf[i]; }
+        for (size_t i = 0; i < n; i++) { inter[2 * i] = audioBuf[i]; inter[2 * i + 1] = stereo ? audioR[i] : audioBuf[i]; }
         int frames = (int)n;
         if (audio->playing()) {
             // the radio's clock and the sound card's differ by a few ppm: keep the queue near 0.2 s by adding or removing one frame per block
@@ -494,6 +635,7 @@ struct AtvReceiver::Impl {
         t.syncDepthPct = vi.syncTip; t.whitePeak = vi.whitePeak; t.burstLevel = vi.burstLevel; t.syncCompressionPct = vi.syncCompressionPct; t.chromaPhaseErrDeg = vi.chromaErrDeg;
         t.blocksOk = vi.fieldsOk; t.blocksBad = vi.fieldsBad;
         t.lineWave = vi.lineWave; t.vbiWave = vi.vbiWave;
+        t.soundSystem = soundSys;
         t.soundPresent = sound.present(); t.soundDevKhz = sound.devKhz(); t.soundLevelDb = sound.levelDb();
         if (haveCarrier) {
             const AtvFormat vf = video.format();
@@ -570,6 +712,9 @@ void AtvReceiver::setChromaDelayNs(double ns) { auto p = p_->curPrm(); p.chromaD
 void AtvReceiver::setColour(bool on) { auto p = p_->curPrm(); p.colourOn = on; p_->setPrm(p); }
 void AtvReceiver::setSaturation(float s) { auto p = p_->curPrm(); p.saturation = s; p_->setPrm(p); }
 void AtvReceiver::setHue(float d) { auto p = p_->curPrm(); p.hueDeg = d; p_->setPrm(p); }
+void AtvReceiver::setShowSnow(bool on) { p_->snowOn = on; }
+void AtvReceiver::setSoundSystem(int mode) { p_->sndMode = mode == 1 ? 1 : 0; }
+void AtvReceiver::setDualSound(int channel) { p_->dualChoice = channel == 1 ? 1 : 0; }
 void AtvReceiver::setDetector(int mode) { p_->detMode = mode; }
 void AtvReceiver::setModulation(int mode) { p_->modulation = mode >= 0 && mode <= 3 ? mode : 0; }
 void AtvReceiver::setNbtv(int lines, double frameHz, double devKhz, bool vertical) {

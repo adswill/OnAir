@@ -12,9 +12,10 @@
 using namespace dect2;
 #include "../common/test_util.h"
 
-static SarsatTelemetry run(const SynthConfig& cfg, double rate, double seconds, bool noiseOnly = false) {
+static SarsatTelemetry run(const SynthConfig& cfg, double rate, double seconds, bool noiseOnly = false, bool wide = false) {
     SarsatReceiver rx;
     rx.configure(rate);
+    rx.setWideSearch(wide);
     rx.setSignalOffset(-sarsatTuning().tuneOffsetHz);
     auto syn = makeSarsatSynth(cfg, rate);
     std::vector<cf32> buf(32768);
@@ -95,6 +96,20 @@ int main() {
         countFound(run(cfg, rate, seconds), "-40 kHz (wide transponder)");
         cfg.cfoHz = 300; cfg.snrDb = 14;
         countFound(run(cfg, rate, seconds * 2), "14 dB");
+    }
+    {   // the whole-capture search (issue #214, the 1544 - 1545 MHz downlink): beacons far from the dial at 1 Msps, merged without duplicates
+        SynthConfig cfg; cfg.snrDb = 25;
+        for (double off : {330000.0, -260000.0, 2000.0}) {
+            cfg.cfoHz = off;
+            char what[64]; snprintf(what, sizeof what, "whole capture, %+.0f kHz", off / 1e3);
+            const SarsatTelemetry t = run(cfg, 1e6, seconds, false, true);
+            countFound(t, what);
+            CHECK(t.wideChannels >= 9 && t.wideSpanHz >= 800e3, "%s: %d channels", what, t.wideChannels);
+            if (!t.log.empty()) CHECK(std::fabs(t.log.front().cfoHz - off) < 3000, "%s: reported at %.0f Hz", what, t.log.front().cfoHz);
+            CHECK((int)t.log.size() <= (int)sarsat::testBeacons().size() * 2, "%s: %zu entries (duplicates?)", what, t.log.size());
+        }
+        const SarsatTelemetry n = run(cfg, 1e6, 10, true, true);
+        CHECK(n.log.empty(), "whole capture: noise gave %zu messages", n.log.size());
     }
     {   // a real recording (issue #223): I/Q wav at 37.5 kHz, carrier near +1.44 kHz, moved to the tuning offset at 256 kHz
         std::string path = __FILE__;

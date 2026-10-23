@@ -502,3 +502,11 @@ tools/sens/sens_sweep (+ run.sh, compare.py, docs/SENSITIVITY.md, workflow sens-
 
 ## 2026-10-23 Written side of 3.0 (docs-3-0-030)
 docs/CHANGELOG-3.0.md is now generated: `python3 tools/release/gen_changelog.py` reads tools/release/changelog-3.0.src.md, computes the new modes (154 in all, +10 since 0.2.9, from app/ui/mode_table.cpp), the contributors and the issue reporters (gh, read only), and moves every bullet whose [[branch]] tags are not merged into pub/integ-30 to "Not in this build yet" (all before/after tables for dec-* and perf2-* are there until those branches merge). It also rewrites the README mode-table counts (markers modes-table and modecount; the duplicated "What it does" rows are gone), and tools/release/gen_i18n_new.py writes docs/I18N-NEW-STRINGS-3.0.md (1625 strings new since 0.2.9, none translated, text not frozen). README has a "What is new in 3.0" section and screenshot placeholders (comments only). docs/README.md lists the docs it was missing; CODECS.md has the Iridium plug-in row. docs/WEBSITE-3.0.md holds the config.json snippet, the download/mirror pattern and page text for ~/onair-website-new (not touched, nothing deployed). scratchpad/replies-3.0/INDEX.md now lists all drafts. Numbers come only from PATHWAY entries and branch commit notes, all on generated signals. Re-run both scripts as branches land.
+
+## 2026-10-23 issues round: new modes and decoder requests (issue-modes-030)
+Status check of 22 mode/decoder issues against integ-30 and the pub branches (table: docs/ISSUES-2026-10-23-modes.md). New: PSK demodulator
+mode (#282, family 202: blind symbol rate from the |x|^2, x^2/x^4 side and OQPSK rail lines, order by trial demodulation, zoom for narrow
+signals, Doppler following, DPSK/NRZ-M/NRZ-S, G3RUH/CCSDS, sync hunt incl. OQPSK rail pairing, bit saving; tests/pskdsp), PACTOR-I monitor
+(#216, family 203, sub-branch), MHEG-5 carousel viewer and static renderer (#176, sub-branch), NICAM-728 / A2 and the snow option for
+analogue TV (#73/#239, sub-branch), SIB1 MFBI and bands above 64 (#164), SARSAT whole-capture search for 1544 MHz (#214), 41.7 kHz LoRa and
+the #229 presets. Everything new is checked against generated signals only.

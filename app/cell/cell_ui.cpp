@@ -77,12 +77,12 @@ std::vector<size_t>& shown(const dect2::CellTelemetry& t) {
     v = dect2::filterCells(t.cells, filterNow());
     return v;
 }
-// "B66 (also B4, B25)"; a band taken from the frequency alone is "B1? (or B4, B10)" until SIB1 has been read
+// "B66 (also B4, B25)"; a band taken from the frequency alone is "B1? (or B4, B10)" until SIB1 has been read; "B106 (MFBI B8)" when SIB1 lists them
 std::string bandText(const dect2::CellTower& c) {
     if (!c.band) return "?";
     std::string o = "B" + std::to_string(c.band) + (c.bandConfirmed ? "" : "?");
     if (!c.bandsAlso.empty()) {
-        o += c.bandConfirmed ? " (also " : " (or ";
+        o += c.mfbi ? " (MFBI " : c.bandConfirmed ? " (also " : " (or ";
         for (size_t i = 0; i < c.bandsAlso.size() && i < 4; i++) o += (i ? ", B" : "B") + std::to_string(c.bandsAlso[i]);
         if (c.bandsAlso.size() > 4) o += "...";
         o += ")";

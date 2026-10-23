@@ -148,7 +148,7 @@ void presetsView(App& a) {
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", p.note);
         ImGui::TableNextColumn(); ImGui::Text("%.3f", p.mhz);
         ImGui::TableNextColumn(); if (p.sf) ImGui::Text("%d", p.sf); else ImGui::TextDisabled("search");
-        ImGui::TableNextColumn(); ImGui::Text("%d", p.bwKhz == 62 ? 62 : p.bwKhz);
+        ImGui::TableNextColumn(); ImGui::Text("%.1f", dect2::lorasat::bandwidthHz(p.bwKhz) / 1e3);
         ImGui::TableNextColumn(); ImGui::TextUnformatted(dect2::lorasat::confidenceName(p.conf));
         ImGui::TableNextColumn(); ImGui::TextUnformatted(p.uplinkOnly ? "ground to satellite" : "satellite to ground");
     }
@@ -177,10 +177,10 @@ void settings(App& a, bool& retune) {
     if (!S.cfg.autoBw) {
         ImGui::SameLine(0, 5 * gUi);
         ImGui::SetNextItemWidth(std::min(90 * gUi, ImGui::GetContentRegionAvail().x));
-        static const int kBw[] = {62, 125, 250, 500};
-        char l[16]; snprintf(l, sizeof l, "%s", S.cfg.bwKhz == 62 ? "62.5 kHz" : (std::to_string(S.cfg.bwKhz) + " kHz").c_str());
+        static const int kBw[] = {41, 62, 125, 250, 500};
+        char l[16]; snprintf(l, sizeof l, "%s", S.cfg.bwKhz == 41 ? "41.7 kHz" : S.cfg.bwKhz == 62 ? "62.5 kHz" : (std::to_string(S.cfg.bwKhz) + " kHz").c_str());
         if (ImGui::BeginCombo("##lsbw", l)) {
-            for (int b : kBw) { snprintf(l, sizeof l, "%s", b == 62 ? "62.5 kHz" : (std::to_string(b) + " kHz").c_str()); if (ImGui::Selectable(l, b == S.cfg.bwKhz)) { S.cfg.bwKhz = b; ch = true; } }
+            for (int b : kBw) { snprintf(l, sizeof l, "%s", b == 41 ? "41.7 kHz" : b == 62 ? "62.5 kHz" : (std::to_string(b) + " kHz").c_str()); if (ImGui::Selectable(l, b == S.cfg.bwKhz)) { S.cfg.bwKhz = b; ch = true; } }
             ImGui::EndCombo();
         }
     }

@@ -190,6 +190,13 @@ struct SarsatReceiver::Impl {
     std::function<void(const std::string&)> log;
     double fs = 0, offHz = 0;
     bool rateSet = false;
+    // whole-capture search: child receivers 90 kHz apart
+    bool wide = false, kidsDirty = true;
+    std::vector<std::unique_ptr<SarsatReceiver>> kids;
+    std::vector<double> kidShift;              // each child's centre from the dial
+    std::vector<uint64_t> kidSeq;
+    std::vector<SarsatEntry> pending;          // decoded in some channel, waiting 1.5 s for a better copy of the same burst
+    double wideSpan = 0;
 
     // mixer and the average down to 32 kHz
     double loRe = 1, loIm = 0, stRe = 1, stIm = 0;
@@ -372,6 +379,7 @@ SarsatReceiver::~SarsatReceiver() = default;
 void SarsatReceiver::configure(double inputRateHz) {
     std::lock_guard<std::mutex> lk(p_->mu);
     p_->fs = inputRateHz;
+    p_->kidsDirty = true;
     p_->rateSet = inputRateHz >= sarsatTuning().minSampleRate - 1;
     p_->resetState();
     p_->tel.inputRate = inputRateHz;
@@ -382,6 +390,7 @@ void SarsatReceiver::setSignalOffset(double hz) {
     std::lock_guard<std::mutex> lk(p_->mu);
     if (hz == p_->offHz) return;
     p_->offHz = hz;
+    p_->kidsDirty = true;
     const double w = -2 * kPi * hz / (p_->fs > 0 ? p_->fs : 1);
     p_->stRe = std::cos(w); p_->stIm = std::sin(w);
     const double w2 = -2 * kPi * (hz + sarsat::kSgbOffsetHz) / (p_->fs > 0 ? p_->fs : 1);
@@ -394,6 +403,7 @@ bool SarsatReceiver::ready() const {
 void SarsatReceiver::reset() {
     std::lock_guard<std::mutex> lk(p_->mu);
     p_->resetState();
+    p_->kidsDirty = true;
     const uint64_t seq = p_->tel.seq;
     p_->tel = SarsatTelemetry();
     p_->tel.seq = seq + 1;
@@ -418,11 +428,76 @@ bool SarsatReceiver::telemetry(SarsatTelemetry& out, uint64_t lastSeq) {
     return true;
 }
 
+void SarsatReceiver::setWideSearch(bool on) { std::lock_guard<std::mutex> lk(p_->mu); if (on != p_->wide) { p_->wide = on; p_->kidsDirty = true; } }
+bool SarsatReceiver::wideSearch() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->wide; }
+double SarsatReceiver::wideSpanHz() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->wide ? p_->wideSpan : 0; }
+
 void SarsatReceiver::feed(const cf32* x, size_t n) {
     if (!x || !n) return;
     std::lock_guard<std::mutex> lk(p_->mu);
     Impl& m = *p_;
     if (!m.rateSet) { m.tel.state = 0; return; }
+    if (m.wide) {
+        if (m.kidsDirty) {
+            m.kidsDirty = false;
+            m.kids.clear(); m.kidShift.clear(); m.kidSeq.clear(); m.pending.clear();
+            const double span = std::min(0.85 * m.fs, 1.1e6);
+            const int k = std::max(1, (int)std::ceil(span / 90e3));
+            m.wideSpan = k * 90e3;
+            for (int i = 0; i < k; i++) {
+                const double d = (i - (k - 1) / 2.0) * 90e3;
+                auto r = std::make_unique<SarsatReceiver>();
+                r->configure(m.fs);
+                r->setSignalOffset(m.offHz + d);
+                m.kids.push_back(std::move(r)); m.kidShift.push_back(d); m.kidSeq.push_back(0);
+            }
+            m.tel.wideSpanHz = m.wideSpan; m.tel.wideChannels = k;
+        }
+        bool changed = false;
+        for (size_t i = 0; i < m.kids.size(); i++) {
+            m.kids[i]->feed(x, n);
+            SarsatTelemetry kt;
+            const uint64_t oldBurst = m.kidSeq[i];
+            if (!m.kids[i]->telemetry(kt, 0)) continue;
+            m.tel.levelDb = kt.levelDb; m.tel.timeSec = kt.timeSec;
+            // new entries of this child: those past the count it had (log is newest first)
+            const uint64_t total = kt.blocksOk;
+            for (uint64_t j = 0; j < total - std::min(total, oldBurst) && j < kt.log.size(); j++) {
+                SarsatEntry e = kt.log[(size_t)j];
+                e.cfoHz += (float)m.kidShift[i];
+                // one burst is heard in several channels: next to it (the overlap) and as weaker aliases further away, which can even pass
+                // the BCH check with corrections. Keep the strongest copy (then the one with fewer corrections) of each burst time.
+                bool merged = false;
+                for (auto& o : m.pending)
+                    if (std::fabs(o.timeSec - e.timeSec) < 0.4) {
+                        if (e.snrDb > o.snrDb + 0.5f || (std::fabs(e.snrDb - o.snrDb) <= 0.5f && e.b.corrected < o.b.corrected)) o = e;
+                        merged = true; break;
+                    }
+                if (!merged) m.pending.push_back(e);
+            }
+            m.kidSeq[i] = total;
+            m.tel.blocksBad = std::max(m.tel.blocksBad, kt.blocksBad);
+        }
+        m.n32 += (uint64_t)((double)n / std::max(1.0, m.fs) * Impl::kDet);
+        for (size_t q = 0; q < m.pending.size();) {
+            if (m.timeSec() - m.pending[q].timeSec < 1.5) { q++; continue; }
+            const SarsatEntry e = m.pending[q];
+            m.pending.erase(m.pending.begin() + (long)q);
+            m.tel.log.insert(m.tel.log.begin(), e);
+            if (m.tel.log.size() > kSarsatLogMax) m.tel.log.pop_back();
+            m.tel.blocksOk++; m.tel.bursts++; m.tel.dataValid = true; m.tel.cfoHz = e.cfoHz; m.tel.snrDb = e.snrDb;
+            m.lastDecodeSec = e.timeSec;
+            changed = true;
+            if (m.log) {
+                char line[256];
+                snprintf(line, sizeof line, "COSPAS-SARSAT %s %s %s at %+.1f kHz", e.b.hexId.c_str(), e.b.beaconType.c_str(), e.b.country.c_str(), e.cfoHz / 1e3);
+                m.log(line);
+            }
+        }
+        if (changed || m.timeSec() - m.lastPublish >= 0.25) { m.lastPublish = m.timeSec(); m.publish(); }
+        return;
+    }
+    if (!m.kids.empty()) { m.kids.clear(); m.tel.wideSpanHz = 0; m.tel.wideChannels = 0; }
     const double binW = m.fs / Impl::kDet;
     for (size_t i = 0; i < n; i++) {
         float re = x[i].real(), im = x[i].imag();

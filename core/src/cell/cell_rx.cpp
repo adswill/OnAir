@@ -105,7 +105,7 @@ std::vector<int> lteBandsOfHz(double hz) {
 LteBandChoice lteBandFor(double hz, int sib1Band) {
     LteBandChoice c;
     const std::vector<int> all = lteBandsOfHz(hz);
-    if (sib1Band >= 1 && sib1Band <= 63) {
+    if (sib1Band >= 1 && sib1Band != 64) {   // 65..256: freqBandIndicator-v9e0, read from SIB1's extension
         c.band = sib1Band; c.confirmed = true;
         for (int b : all) if (b != sib1Band) c.also.push_back(b);
         return c;
@@ -403,7 +403,11 @@ struct CellReceiver::Impl {
                 t->barred = s.barred; t->qRxLevMinDbm = s.qRxLevMinDbm; t->pMaxDbm = s.pMax;
                 if (s.band > 0) {
                     const LteBandChoice bc = lteBandFor(t->freqHz, s.band);   // 64: a band above 64 (66, 71...), from the frequency
-                    if (bc.band > 0) { t->band = bc.band; t->bandConfirmed = bc.confirmed; t->bandsAlso = bc.also; }
+                    if (bc.band > 0) { t->band = bc.band; t->bandConfirmed = bc.confirmed; t->bandsAlso = bc.also; t->mfbi = false; }
+                    // MFBI: the cell names the other bands it is in; those replace the guess from the frequency
+                    std::vector<int> mb;
+                    for (int x : s.multiBands) if (x != t->band && x != 64 && std::find(mb.begin(), mb.end(), x) == mb.end()) mb.push_back(x);
+                    if (!mb.empty()) { t->bandsAlso = mb; t->mfbi = true; }
                     if (center > 0 && t->band > 0) { const int e = lteNearestEarfcn(t->freqHz, t->band); if (e >= 0) t->earfcn = e; }
                 }
                 t->sched.clear();

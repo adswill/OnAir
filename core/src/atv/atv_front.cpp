@@ -146,7 +146,7 @@ std::vector<AtvCarrier> AtvCarrierSearch::candidates() const {
     const int nearBy = bin(24e3), farBy = bin(90e3);
     for (int k = 0; k < n; k++) {
         const double f = freqOf(k);
-        if (std::fabs(f) < 12e3 || std::fabs(f) > fs_ / 2 - 150e3) continue;
+        if (std::fabs(f) < exclHz_ || std::fabs(f) > fs_ / 2 - 150e3) continue;
         const float v = at(k);
         bool top = true;
         for (int d = -8; d <= 8 && top; d++) if (d != 0 && at(k + d) > v) top = false;
@@ -179,9 +179,10 @@ std::vector<AtvCarrier> AtvCarrierSearch::candidates() const {
                 peak = std::max(peak, 10 * std::log10(sm / 7));
                 line = std::max(line, (double)at(kc + d));
             }
-            double fl = 0; int cnt = 0;
-            for (int d = bin(150e3); d <= bin(320e3); d += 3) { fl += pw(kc + d) + pw(kc - d); cnt += 2; }
-            const double prom = peak - 10 * std::log10(fl / cnt);
+            // the floor: the quieter side (a second sound carrier, as A2 has 242 kHz above the first, would lift the floor on one side)
+            double flU = 0, flL = 0; int cnt = 0;
+            for (int d = bin(150e3); d <= bin(320e3); d += 3) { flU += pw(kc + d); flL += pw(kc - d); cnt++; }
+            const double prom = peak - 10 * std::log10(std::min(flU, flL) / cnt);
             // a line there stronger than the one taken for the vision carrier: that one is the sound carrier of a channel turned round (A, L')
             // and this is its vision carrier, not a sound carrier
             if (prom > bestProm && line <= at(c.k)) { bestProm = prom; r.spacingMhz = atvSpacingMhz(s); r.soundHz = fsnd; r.soundDb = prom; r.soundRelDb = peak - at(c.k); }

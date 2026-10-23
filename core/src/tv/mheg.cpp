@@ -8,8 +8,6 @@ constexpr size_t kMaxNodes = 400000;
 
 std::string tagName(int cls, uint32_t tag) {
     char b[32];
-    if (cls == 1 && tag == 0) return "Application";
-    if (cls == 1 && tag == 1) return "Scene";
     if (cls == 0) {
         switch (tag) {
         case 1: return "BOOLEAN";
@@ -115,6 +113,63 @@ void putLen(std::vector<uint8_t>& o, size_t len) {
     o.push_back((uint8_t)(0x80 | n));
     while (n) o.push_back(t[--n]);
 }
+
+// ---- names of the MHEG-5 tags, from the ASN.1 module ISO13522-MHEG-5 (ITU-T T.172 02/1998) as published in redbutton-browser/ISO13522-MHEG-5.asn
+// (RedButton MHEG-5 engine, GPL-2.0-or-later; the tag numbers are facts of the standard). The module uses IMPLICIT TAGS, so the numbers are context-specific tags
+// and a tag number means different things in different places: the names are given by where a node sits (group, item list, item). Tags not in that module
+// text stay numbered ("[n]").
+const char* groupAttr(uint32_t t, bool scene) {
+    switch (t) {
+    case 2: return "standard-identifier"; case 3: return "standard-version"; case 4: return "object-information";
+    case 5: return "on-start-up"; case 6: return "on-close-down"; case 7: return "original-group-cache-priority"; case 8: return "items";
+    }
+    if (!scene) switch (t) { case 35: return "on-spawn-close-down"; case 36: return "on-restart"; case 37: return "default-attributes"; }
+    else switch (t) { case 51: return "input-event-register"; case 52: return "scene-coordinate-system"; case 53: return "aspect-ratio"; case 54: return "moving-cursor"; case 55: return "next-scenes"; }
+    return nullptr;
+}
+const char* itemClass(uint32_t t) {   // GroupItem ::= CHOICE { resident-program [9] ... list-group [34] }
+    static const char* names[] = {"ResidentProgram", "RemoteProgram", "InterchangedProgram", "Palette", "Font", "CursorShape", "BooleanVariable", "IntegerVariable",
+        "OctetStringVariable", "ObjectRefVariable", "ContentRefVariable", "Link", "Stream", "Bitmap", "LineArt", "DynamicLineArt", "Rectangle", "Hotspot", "SwitchButton",
+        "PushButton", "Text", "EntryField", "HyperText", "Slider", "TokenGroup", "ListGroup"};
+    return t >= 9 && t <= 34 ? names[t - 9] : nullptr;
+}
+const char* itemAttr(uint32_t cls, uint32_t t) {   // cls: the item class tag (9..34)
+    switch (t) {   // IngredientClass
+    case 56: return "initially-active"; case 57: return "content-hook"; case 58: return "original-content"; case 59: return "shared";
+    }
+    if (cls == 20) switch (t) { case 62: return "link-condition"; case 63: return "link-effect"; }
+    if (cls >= 9 && cls <= 11) switch (t) { case 64: return "name"; case 65: return "initially-available"; }   // ProgramClass (resident, remote, interchanged)
+    if (cls >= 22 && cls <= 32) switch (t) {   // VisibleClass
+    case 76: return "original-box-size"; case 77: return "original-position"; case 78: return "original-palette-ref";
+    }
+    if (cls == 22) switch (t) { case 79: return "tiling"; case 80: return "original-transparency"; }
+    if (cls == 23 || cls == 24 || cls == 25) switch (t) {   // LineArt, DynamicLineArt, Rectangle
+    case 81: return "bordered-bounding-box"; case 82: return "original-line-width"; case 83: return "original-line-style"; case 84: return "original-ref-line-colour"; case 85: return "original-ref-fill-colour";
+    }
+    if (cls == 29) switch (t) {   // Text
+    case 38: return "character-set"; case 39: return "background-colour"; case 41: return "text-colour"; case 43: return "font-attributes";
+    case 86: return "original-font"; case 87: return "horizontal-justification"; case 88: return "vertical-justification"; case 89: return "line-orientation"; case 90: return "start-corner"; case 91: return "text-wrapping";
+    }
+    return nullptr;
+}
+void nameItem(MhegNode& item, uint32_t cls) {
+    for (auto& k : item.kids) {
+        if (k.cls != 2) continue;
+        if (const char* n = itemAttr(cls, k.tag)) k.name = n;
+        if (k.tag == 58)   // ContentBody: included-content OCTET STRING or ReferencedContent SEQUENCE { content-reference, [60] content-size, [61] content-cache-priority }
+            for (auto& r : k.kids) if (r.cls == 0 && r.tag == 16) for (auto& f : r.kids) { if (f.cls == 2 && f.tag == 60) f.name = "content-size"; if (f.cls == 2 && f.tag == 61) f.name = "content-cache-priority"; }
+    }
+}
+void nameTree(MhegNode& root) {
+    if (root.cls != 2 || root.tag > 1) return;
+    const bool scene = root.tag == 1;
+    root.name = scene ? "Scene" : "Application";   // InterchangedObject ::= CHOICE { application [0], scene [1] }
+    for (auto& k : root.kids) {
+        if (k.cls != 2) continue;
+        if (const char* n = groupAttr(k.tag, scene)) k.name = n;
+        if (k.tag == 8) for (auto& it : k.kids) if (it.cls == 2) if (const char* n = itemClass(it.tag)) { const uint32_t c = it.tag; it.name = n; nameItem(it, c); }
+    }
+}
 } // namespace
 
 MhegParse mhegParse(const uint8_t* p, size_t n) {
@@ -124,6 +179,7 @@ MhegParse mhegParse(const uint8_t* p, size_t n) {
         MhegNode nd;
         size_t before = pos;
         if (!parseOne(p, pos, n, nd, 0, r.nodes, r.error)) { pos = before; break; }
+        nameTree(nd);
         r.roots.push_back(std::move(nd));
     }
     r.consumed = pos;
@@ -131,7 +187,7 @@ MhegParse mhegParse(const uint8_t* p, size_t n) {
 }
 
 bool mhegLooksLikeApplication(const uint8_t* p, size_t n) {
-    if (n < 2 || (p[0] != 0x60 && p[0] != 0x61)) return false;
+    if (n < 2 || (p[0] != 0xA0 && p[0] != 0xA1)) return false;
     MhegNode nd;
     size_t pos = 0, nodes = 0;
     std::string err;

@@ -13,7 +13,8 @@
 //              modeVal[0] the pictures a second (0 = 12.5), modeOpt[2] the picture; the carrier is at the centre plus cfoHz
 //   modeOpt[1] colour: 0 the usual one for the system (PAL, NTSC for M), 1 PAL, 2 NTSC, 3 SECAM, 4 none (monochrome)
 //   modeOpt[2] picture: 0 test card, 1 colour bars, 2 grey ramp
-//   modeOpt[3] sound: 0 1 kHz tone with short interruptions, 1 melody, 2 unmodulated carrier, 3 no sound carrier, 4 continuous 1 kHz tone
+//   modeOpt[3] sound: 0 1 kHz tone with short interruptions, 1 melody, 2 unmodulated carrier, 3 no sound carrier, 4 continuous 1 kHz tone;
+//              plus 8 times the second sound system: 1 A2 stereo, 2 A2 dual, 3 A2 mono, 4 NICAM stereo, 5 NICAM dual mono (atv_sound2.h)
 //   modeOpt[4] hum: 0 off, 1 50 Hz, 2 60 Hz (level modeVal[0] percent of the carrier, default 4)
 //   modeOpt[5] 1 = no group-delay pre-correction of the colour (BT.470 Table 3 item 14: 170 ns)
 //   modeOpt[6] 1 = the transmitter already has the Nyquist slope (a modulator with a SAW filter) instead of a flat vestigial region
@@ -42,6 +43,9 @@ struct AtvGenConfig {
     double syncCompression = 0;   // 0 .. 0.9
     double humPct = 0, humHz = 50;
     int sound = 0;                // see above
+    // second sound: 0 none, 1 A2 stereo, 2 A2 dual, 3 A2 mono with its pilot (B/G and D/K), 4 NICAM-728 stereo, 5 NICAM-728 two mono channels (atv_sound2.h);
+    // the tones are 1 kHz (left, sound A) and 1.5 kHz (right, sound B). In a synth the value is modeOpt[3] / 8.
+    int sound2 = 0;
     int pattern = 0;              // 0 card, 1 bars, 2 ramp
     std::string ident;            // text on the test card; empty: ONAIR TEST
     // 48 kHz interleaved stereo for the sound carrier (mic / file). Empty: the built-in tone / melody of `sound`.

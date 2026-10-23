@@ -315,7 +315,14 @@ void synth(App&, bool&) {
     ImGui::PopTextWrapPos();
 }
 
-void tick(App&) {}
+// the whole-capture search: on by itself on the L-band downlink (each satellite somewhere in 1544 - 1545 MHz), or by hand
+bool gWideSet = false, gWideLoaded = false;
+bool wideWanted(const App& a) { return gWideSet || (a.freqMhz > 1543.5 && a.freqMhz < 1546.0); }
+
+void tick(App& a) {
+    if (!gWideLoaded) { gWideLoaded = true; gWideSet = plat::prefs().getB("sarsatWide", false); }
+    if (a.engine.running()) a.engine.sarsat().setWideSearch(wideWanted(a));
+}
 
 // issue #214: the satellites repeat the 406.0 - 406.1 MHz band on their L-band downlink (each one at its own place in 1544 - 1545 MHz)
 void tuner(App& a, bool& retune) {
@@ -331,6 +338,15 @@ void tuner(App& a, bool& retune) {
     }
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("%s", tr("Beacons send on 406.0 - 406.1 MHz. The search and rescue satellites repeat that band on their downlink, each one somewhere in 1544 - 1545 MHz (an L-band antenna): tune near a satellite's carrier there."));
+    flowNext(8 * gUi);
+    char lb[96]; snprintf(lb, sizeof lb, "%s##sarwide", tr("Search the whole capture"));
+    bool w = wideWanted(a);
+    const bool automatic = !gWideSet && w;
+    if (ImGui::Checkbox(lb, &w)) { gWideSet = w; plat::prefs().setB("sarsatWide", w); }
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", tr("Look for beacon bursts across the whole sample rate (up to 1.1 MHz) instead of 100 kHz around the dial. On by itself on the 1544 - 1545 MHz downlink. Set the radio to 2 Msps to cover the whole downlink band."));
+    if (automatic) { flowNext(4 * gUi); ImGui::TextDisabled("%s", tr("(on by itself for the downlink)")); }
+    if (live(a) && a.rx.sarsat.wideSpanHz > 0) { flowNext(6 * gUi); ImGui::TextDisabled(tr("%.0f kHz searched"), a.rx.sarsat.wideSpanHz / 1e3); }
     flowEnd();
 }
 

@@ -392,7 +392,7 @@ Result analyze(const float* x, size_t n, double fs) {
         }
         if (f.shiftHz > 0 && f.bwHz < 700.0) {
             std::snprintf(b, sizeof b, "two peaks %.0f Hz apart, band %.0f Hz", f.shiftHz, f.bwHz);
-            add("PACTOR-I / 200 Bd FSK (200 Hz shift)", 0.55 * closeTo(f.shiftHz, 200.0, 40.0) + 0.1, b, "Two-tone FSK with a 200 Hz shift (PACTOR-I is 100 or 200 Bd); identification by shift only.", "https://en.wikipedia.org/wiki/PACTOR");
+            add("PACTOR-I / 200 Bd FSK (200 Hz shift)", 0.55 * closeTo(f.shiftHz, 200.0, 40.0) + 0.1, b, "Two-tone FSK with a 200 Hz shift (PACTOR-I is 100 or 200 Bd); identification by shift only. Open the PACTOR-I mode (HF UTILITY, experimental) to try to read it; PACTOR-II, -III and -IV are proprietary and not supported.", "https://en.wikipedia.org/wiki/PACTOR");
             if (f.baudHz > 0 && std::fabs(f.baudHz - 100.0) < 15.0)
                 add("PACTOR-II-like (100 Bd DPSK, narrow)", 0.30 + 0.2 * closeTo(f.baudHz, 100.0, 15.0), b, "A 100 baud clock in a band of a few hundred Hz; PACTOR-II uses two DPSK carriers 100 Hz apart (unverified match).", "https://en.wikipedia.org/wiki/PACTOR");
         }

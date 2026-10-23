@@ -20,6 +20,10 @@ struct State {
     bool colourOn = true;
     float saturation = 1.f, hue = 0.f;
     int detector = 0;                           // 0 automatic, 1 envelope only
+    bool snow = false;                          // show the noise of an empty channel instead of nothing (kept in the settings)
+    int soundSys = 0;                           // 0 automatic (NICAM, A2), 1 FM / AM sound carrier only
+    int dualCh = 0;                             // two-language sound: 0 first, 1 second
+    int pushedSnow = -1, pushedSoundSys = -1, pushedDualCh = -1;
     int pushedDeint = -1, pushedSys = -2, pushedCol = -2, pushedDet = -1, pushedMod = -1, pushedLines = -1;
     float pushedFps = -1.f;
     bool pushedColourOn = true;
@@ -36,6 +40,8 @@ void loadState() {
     if (S.loaded) return;
     S.loaded = true;
     S.deint = (int)plat::prefs().getI("atvDeint", 0) == 1 ? 1 : 0;
+    S.snow = plat::prefs().getI("atvSnow", 0) != 0;
+    S.dualCh = (int)plat::prefs().getI("atvDualCh", 0) == 1 ? 1 : 0;
 }
 
 const ImVec4 kDim(0.62f, 0.65f, 0.68f, 1);
@@ -53,6 +59,9 @@ void pushControls(App& a) {
     if (S.pushedSat != S.saturation) { rx.setSaturation(S.saturation); S.pushedSat = S.saturation; }
     if (S.pushedHue != S.hue) { rx.setHue(S.hue); S.pushedHue = S.hue; }
     if (S.pushedDet != S.detector) { rx.setDetector(S.detector); S.pushedDet = S.detector; }
+    if (S.pushedSnow != (int)S.snow) { rx.setShowSnow(S.snow); S.pushedSnow = (int)S.snow; }
+    if (S.pushedSoundSys != S.soundSys) { rx.setSoundSystem(S.soundSys); S.pushedSoundSys = S.soundSys; }
+    if (S.pushedDualCh != S.dualCh) { rx.setDualSound(S.dualCh); S.pushedDualCh = S.dualCh; }
     if (S.pushedLines != a.atvNbtvLines || S.pushedFps != a.atvNbtvFps) { rx.setNbtv(a.atvNbtvLines, a.atvNbtvFps); S.pushedLines = a.atvNbtvLines; S.pushedFps = a.atvNbtvFps; }
     const int mod = a.atvNbtv ? 1 + a.atvNbtv : a.atvFm ? 1 : 0;
     if (S.pushedMod != mod) { rx.setModulation(mod); S.pushedMod = mod; }
@@ -65,7 +74,7 @@ void tick(App& a) {
     if (run) {
         if (!S.wasRunning) {   // a new run: send everything again
             S.pushedDeint = -1; S.pushedSys = -2; S.pushedCol = -2; S.pushedDet = -1; S.pushedMod = -1; S.pushedSat = -1.f; S.pushedHue = -999.f; S.pushedVol = -1.f;
-            S.pushedLines = -1; S.pushedFps = -1.f;
+            S.pushedLines = -1; S.pushedFps = -1.f; S.pushedSnow = S.pushedSoundSys = S.pushedDualCh = -1;
             S.pushedColourOn = !S.colourOn;
         }
         pushControls(a);
@@ -224,7 +233,7 @@ void picture(App& a, ImVec2 box) {
     const ImVec2 q0(p0.x + (box.x - sz.x) * 0.5f, p0.y + (box.y - sz.y) * 0.5f), q1(q0.x + sz.x, q0.y + sz.y);
     if (S.img && S.frame) {
         dl->AddImage(S.enh.texture(S.img)->texture(), q0, q1);
-        if (!on || t.state != 2) dl->AddRectFilled(q0, q1, IM_COL32(0, 0, 0, 150));   // an old picture
+        if ((!on || t.state != 2) && !S.frame->untuned) dl->AddRectFilled(q0, q1, IM_COL32(0, 0, 0, 150));   // an old picture
     }
     const char* msg = nullptr;
     if (!a.engine.running()) msg = "stopped";
@@ -232,7 +241,9 @@ void picture(App& a, ImVec2 box) {
     else if (t.state == 0) msg = "no signal";
     else if (t.state == 1) msg = "carrier found, waiting for sync";
     else if (!S.frame) msg = "waiting for a picture";
-    if (msg) {
+    if (msg && S.img && S.frame && S.frame->untuned && on && t.state != 2) {   // the snow is on show: the words go small in a corner
+        dl->AddText(ImVec2(q0.x + 6 * gUi, q1.y - ImGui::GetTextLineHeight() - 4 * gUi), IM_COL32(230, 232, 235, 255), msg);
+    } else if (msg) {
         const ImVec2 ts = ImGui::CalcTextSize(msg);
         dl->AddText(ImVec2(p0.x + (box.x - ts.x) * 0.5f, p0.y + (box.y - ts.y) * 0.5f), IM_COL32(170, 174, 178, 255), msg);
     }
@@ -504,6 +515,22 @@ void decoder(App&, bool&) {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Always use the envelope detector. The default locks to the carrier (synchronous detection), which\nsurvives ghosts and overmodulation better, and falls back to the envelope detector by itself.");
     ImGui::TextDisabled("Saturation"); ImGui::SameLine(0, 5 * gUi); ImGui::SetNextItemWidth(fit(90));
     ImGui::SliderFloat("##atvsat", &S.saturation, 0.f, 2.f, "%.2f");
+    if (ImGui::Checkbox("Show snow when there is no picture", &S.snow)) { plat::prefs().setI("atvSnow", S.snow ? 1 : 0); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Without a picture signal, draw the noise of the channel as a TV does with no station (snow) instead of nothing.\nA weak carrier shows up in it before the picture locks. Off by default.");
+    ImGui::TextDisabled("Sound"); ImGui::SameLine(0, 5 * gUi); ImGui::SetNextItemWidth(fit(130));
+    if (ImGui::BeginCombo("##atvsnd", S.soundSys == 0 ? "Automatic" : "FM / AM carrier only")) {
+        if (ImGui::Selectable("Automatic", S.soundSys == 0)) S.soundSys = 0;
+        if (ImGui::Selectable("FM / AM carrier only", S.soundSys == 1)) S.soundSys = 1;
+        ImGui::EndCombo();
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Automatic: NICAM-728 digital sound or A2 two-carrier sound (stereo, two languages) when the channel has it, else the FM or AM sound.");
+    nextIf(280);
+    ImGui::TextDisabled("Two languages"); ImGui::SameLine(0, 5 * gUi); ImGui::SetNextItemWidth(fit(90));
+    if (ImGui::BeginCombo("##atvdual", S.dualCh == 0 ? "First" : "Second")) {
+        if (ImGui::Selectable("First", S.dualCh == 0)) { S.dualCh = 0; plat::prefs().setI("atvDualCh", 0); }
+        if (ImGui::Selectable("Second", S.dualCh == 1)) { S.dualCh = 1; plat::prefs().setI("atvDualCh", 1); }
+        ImGui::EndCombo();
+    }
     nextIf(240);
     ImGui::TextDisabled("Tint"); ImGui::SameLine(0, 5 * gUi); ImGui::SetNextItemWidth(fit(90));
     ImGui::SliderFloat("##atvhue", &S.hue, -30.f, 30.f, "%.0f deg");
@@ -549,7 +576,11 @@ void synth(App& a, bool& changed) {
         ImGui::TextDisabled("picture"); ImGui::SameLine(110 * gUi);
         combo("##tpic", sc.modeOpt[2], {"test card", "colour bars", "grey ramp"}, 120);
         ImGui::TextDisabled("sound"); ImGui::SameLine(110 * gUi);
-        combo("##tsnd", sc.modeOpt[3], {"tone, with gaps", "melody", "carrier only", "no carrier", "steady tone"}, 120);
+        int snd = sc.modeOpt[3] & 7, snd2 = sc.modeOpt[3] >> 3;
+        combo("##tsnd", snd, {"tone, with gaps", "melody", "carrier only", "no carrier", "steady tone"}, 120);
+        ImGui::TextDisabled("second sound"); ImGui::SameLine(110 * gUi);
+        combo("##tsnd2", snd2, {"none", "A2 stereo", "A2 two languages", "A2 mono (pilot)", "NICAM stereo", "NICAM two languages"}, 120);
+        sc.modeOpt[3] = snd | (snd2 << 3);
         ImGui::TextDisabled("hum"); ImGui::SameLine(110 * gUi);
         combo("##thum", sc.modeOpt[4], {"off", "50 Hz", "60 Hz"}, 120);
         bool ghost = sc.echoDb != 0;
@@ -579,12 +610,13 @@ void list(App& a) {
     char b[96];
     snprintf(b, sizeof b, "%.1f dB", t.snrDb); kv(a, "video SNR", b, 90);
     if (t.modulation >= 2) kv(a, "sound", "none (the audio is the picture)", 90);
+    else if (!t.soundSystem.empty() && t.soundSystem != "FM" && t.soundSystem.compare(0, 2, "FM") != 0) kv(a, "sound", t.soundSystem, 90);
     else if (t.soundHz != 0 && t.soundDevKhz <= 0.01f && t.soundPresent) kv(a, "sound", "AM", 90);
     else if (t.soundHz != 0) { snprintf(b, sizeof b, "FM, %.1f kHz dev.", t.soundDevKhz); kv(a, "sound", t.soundPresent ? b : "carrier only", 90); }
     else kv(a, "sound", "none found", 90);
     ImGui::Spacing();
     ImGui::PushTextWrapPos(0);
-    ImGui::TextDisabled("Tune the centre of the channel; the vision carrier is found by itself. NICAM and two-carrier sound are not decoded.");
+    ImGui::TextDisabled("Tune the centre of the channel (or the vision carrier itself); the vision carrier is found by itself. NICAM-728 and A2 sound are decoded when the channel has them.");
     ImGui::PopTextWrapPos();
 }
 

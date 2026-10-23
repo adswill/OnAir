@@ -29,6 +29,8 @@ struct SarsatTelemetry {
     uint64_t blocksOk = 0, blocksBad = 0;   // bursts decoded / bursts seen but the checks failed
     uint64_t bursts = 0;
     double timeSec = 0, inputRate = 0;
+    double wideSpanHz = 0;         // the whole-capture search covers this much (0: off)
+    int wideChannels = 0;
     std::vector<SarsatEntry> log;  // newest first
 };
 

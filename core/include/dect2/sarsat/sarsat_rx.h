@@ -38,6 +38,11 @@ public:
     void feed(const cf32* x, size_t n);
     bool telemetry(SarsatTelemetry& out, uint64_t lastSeq);
     void setLogCallback(std::function<void(const std::string&)> cb);
+    // Search the whole capture (issue #214: the satellites' L-band downlink, each satellite somewhere in 1544 - 1545 MHz): a bank of
+    // burst finders 90 kHz apart across up to 1.1 MHz of the input (as much as the sample rate holds), merged into one beacon list.
+    void setWideSearch(bool on);
+    bool wideSearch() const;
+    double wideSpanHz() const;          // what the bank covers now (0: off)
 
 private:
     struct Impl;

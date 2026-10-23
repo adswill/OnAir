@@ -104,8 +104,82 @@ void plmnId(Coder& c, Plmn& p, Plmn& prev) {
     prev = p;
 }
 
+// SIB1's non-critical extensions (36.331): v890 { lateNonCriticalExtension OCTET STRING (CONTAINING v8h0), nonCriticalExtension v920 },
+// v8h0 { multiBandInfoList SEQUENCE (SIZE (1..8)) OF FreqBandIndicator (1..64), nonCriticalExtension v9e0 },
+// v9e0 { freqBandIndicator-v9e0 (65..256), multiBandInfoList-v9e0 SEQUENCE (SIZE (1..8)) OF SEQUENCE { freqBandIndicator-v9e0 OPTIONAL }, ... },
+// v920 { ims-EmergencySupport-r9 ENUMERATED {true} OPTIONAL, ... }. Read as far as these; later additions are left alone.
+bool needsExt(const LteSib1& s) { return s.band > 64 || !s.multiBands.empty() || s.imsEmergency; }
+
+void sib1V8h0(Coder& c, LteSib1& s) {
+    std::vector<int> root, hi;   // the root list (1..64) and, for each entry, its v9e0 band (0: none)
+    for (int b : s.multiBands) { root.push_back(b > 64 ? 64 : b); hi.push_back(b > 64 ? b : 0); }
+    bool hasList = !root.empty();
+    bool hasV9e0 = s.band > 64 || std::any_of(hi.begin(), hi.end(), [](int v) { return v > 0; });
+    c.b(hasList); c.b(hasV9e0);
+    if (hasList) {
+        int n = (int)root.size(); c.i(n, 1, 8);
+        if (c.rd()) { root.assign((size_t)n, 0); hi.assign((size_t)n, 0); }
+        for (int& b : root) c.i(b, 1, 64);
+    }
+    if (hasV9e0 && c.ok()) {
+        bool hasFbi = s.band > 64, hasMl = std::any_of(hi.begin(), hi.end(), [](int v) { return v > 0; }), hasNce = false;
+        c.b(hasFbi); c.b(hasMl); c.b(hasNce);
+        int fbi = s.band > 64 ? s.band : 65;
+        if (hasFbi) { c.i(fbi, 65, 256); if (c.rd() && c.ok()) s.band = fbi; }
+        if (hasMl) {
+            int n = (int)hi.size(); c.i(n, 1, 8);
+            if (c.rd()) hi.assign((size_t)n, 0);
+            for (int& v : hi) {
+                bool has = v > 0; c.b(has);
+                int t = v > 0 ? v : 65;
+                if (has) { c.i(t, 65, 256); if (c.rd()) v = t; }
+            }
+        }
+    }
+    if (c.rd() && c.ok()) {
+        s.multiBands.clear();
+        for (size_t k = 0; k < root.size(); k++) s.multiBands.push_back(k < hi.size() && hi[k] > 0 ? hi[k] : root[k]);
+    }
+}
+
+void sib1Ext(Coder& c, LteSib1& s) {
+    // v890
+    bool hasLate = !s.multiBands.empty() || s.band > 64, hasV920 = s.imsEmergency;
+    c.b(hasLate); c.b(hasV920);
+    if (hasLate) {
+        if (c.rd()) {
+            BitReader& r = *c.r;
+            size_t len = r.u(8);
+            if (len & 0x80) { if (len & 0x40) { r.fail(); return; } len = ((len & 0x3f) << 8) | r.u(8); }
+            const size_t start = r.pos();
+            if (!r.ok()) return;
+            Bits inner;
+            for (size_t k = 0; k < len * 8 && r.ok(); k++) inner.push_back((uint8_t)r.bit());
+            if (!r.ok()) return;
+            BitReader ir(inner);
+            Coder ic; ic.r = &ir;
+            sib1V8h0(ic, s);
+            (void)start;
+        } else {
+            BitWriter iw;
+            Coder ic; ic.w = &iw;
+            sib1V8h0(ic, s);
+            iw.padOctet();
+            const size_t len = iw.bits().size() / 8;
+            if (len < 128) c.w->u((uint32_t)len, 8); else c.w->u((uint32_t)(0x8000 | len), 16);
+            for (uint8_t v : iw.bits()) c.w->bit(v != 0);
+        }
+    }
+    if (hasV920 && c.ok()) {
+        bool hasIms = s.imsEmergency, hasCsi = false, hasNce = false;
+        c.b(hasIms); c.b(hasCsi); c.b(hasNce);
+        if (hasIms) { int t = 0; c.i(t, 0, 0); }   // ENUMERATED {true}: no bits
+        if (c.rd() && c.ok()) s.imsEmergency = hasIms;
+    }
+}
+
 void sib1(Coder& c, LteSib1& s) {
-    bool hasPmax = s.pMax != -99, hasTdd = s.tdd, hasNce = false;
+    bool hasPmax = s.pMax != -99, hasTdd = s.tdd, hasNce = !c.rd() && needsExt(s);
     c.b(hasPmax); c.b(hasTdd); c.b(hasNce);
     // cellAccessRelatedInfo
     bool hasCsgId = false;
@@ -132,7 +206,9 @@ void sib1(Coder& c, LteSib1& s) {
     int q = s.qRxLevMinDbm / 2; c.i(q, -70, -22); if (c.rd()) s.qRxLevMinDbm = q * 2;
     if (hasOff) c.i(s.qRxLevMinOffset, 1, 8);
     if (hasPmax) c.i(s.pMax, -30, 33);
-    c.i(s.band, 1, 64);
+    int rootBand = s.band > 64 ? 64 : s.band;
+    c.i(rootBand, 1, 64);
+    if (c.rd()) s.band = rootBand;
     int ns = (int)s.sched.size();
     c.i(ns, 1, 32);
     if (c.rd()) s.sched.assign((size_t)ns, LteSib1::Sched());
@@ -158,7 +234,7 @@ void sib1(Coder& c, LteSib1& s) {
     if (hasTdd) { c.i(s.sfAssign, 0, 6); c.i(s.specialSf, 0, 8); }
     c.ev(s.siWindowMs, kSiWin, 7);
     c.i(s.valueTag, 0, 31);
-    (void)hasNce;   // the non-critical extensions (later releases) are not read
+    if (hasNce) sib1Ext(c, s);
 }
 
 void acConfig(Coder& c, bool& barred) {

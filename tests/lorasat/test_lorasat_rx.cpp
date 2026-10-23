@@ -83,7 +83,7 @@ int main() {
         CHECK(v.size() >= 5, "presets: %zu", v.size());
         bool sane = true, honest = true;
         for (const auto& p : v) {
-            sane &= p.mhz > 400 && p.mhz < 930 && (p.bwKhz == 62 || p.bwKhz == 125 || p.bwKhz == 250 || p.bwKhz == 500) && (p.sf == 0 || (p.sf >= 7 && p.sf <= 12)) && p.name[0] && p.note[0];
+            sane &= p.mhz > 130 && p.mhz < 930 && (p.bwKhz == 41 || p.bwKhz == 62 || p.bwKhz == 125 || p.bwKhz == 250 || p.bwKhz == 500) && (p.sf == 0 || (p.sf >= 7 && p.sf <= 12)) && p.name[0] && p.note[0];
             honest &= p.conf != Documented;   // nothing here was checked against a real signal
         }
         CHECK(sane, "every preset has a plausible frequency, bandwidth and spreading factor, a name and a note");
@@ -121,6 +121,16 @@ int main() {
         CHECK(names, "the pass planner's satellite name belongs on every frame");
         CHECK(t.tracked == "TEST-SAT 1" && t.trackedNorad == 25544, "tracked satellite in the telemetry");
         CHECK(t.doppler.size() == c.frames.size(), "Doppler points %zu", t.doppler.size());
+    }
+    {   // 137.055 MHz, SF8 / 41.7 kHz (the issue #229 settings), set by hand and through the preset at that frequency
+        LoraSatGenConfig c = config(137.055, framesAt(8, 125e3 / 3, 0x12, {40, 200, 300, 420}, 1.5), 10);
+        LoraSatSettings s; s.autoBw = false; s.bwKhz = 41; s.autoSf = false; s.sf = 8; s.sync = 0x12;
+        const LoraSatTelemetry t = run(c, s, seconds(c));
+        printf("  137.055 MHz SF8 41.7 kHz: %zu of %zu\n", decoded(t, c), c.frames.size());
+        CHECK(decoded(t, c) == c.frames.size(), "137.055 MHz 41.7 kHz: %zu of %zu frames", decoded(t, c), c.frames.size());
+        LoraSatSettings f;   // the preset picked by the dial
+        const LoraSatTelemetry u = run(c, f, seconds(c), 137.055e6 + loraSatTuning().tuneOffsetHz);
+        CHECK(decoded(u, c) == c.frames.size() && u.presetRunning >= 0, "137.055 MHz preset: %zu of %zu (preset %d)", decoded(u, c), c.frames.size(), u.presetRunning);
     }
     {   // 868.1 MHz: twice the shift and the rate; SF9 - SF12 around the closest approach (the worst case for a long frame)
         for (int sf : {9, 10, 11, 12}) {

@@ -7,6 +7,7 @@
 #include "dect2/atv/atv_gen.h"
 #include "dect2/atv/atv_card.h"
 #include "dect2/atv/atv_nbtv.h"
+#include "dect2/atv/atv_sound2.h"
 #include "atv_dsp.h"
 #include "dect2/common/threadpool.h"
 #include "dect2/dsp/dsp_compat.h"
@@ -117,6 +118,10 @@ struct AtvGenerator::Impl {
 
     // sound, ghost, noise
     Programme prog;
+    std::unique_ptr<A2Tx> a2tx;                      // second sound: A2 second carrier, or the NICAM carrier
+    std::unique_ptr<NicamTx> nictx;
+    A2TxConfig a2cfg;
+    bool a2on = false;
     double sndPh = 0;                                // the sound carrier phase, radians (a running sum, reduced only where it is used)
     std::vector<float> sPh, sAm;
     std::vector<double> sPhD;
@@ -125,6 +130,7 @@ struct AtvGenerator::Impl {
     std::vector<float> livePcm;
     size_t livePos = 0;
     double liveAt(double t) {
+        if (!cfg.pullAudio && a2on && cfg.sound != 2 && cfg.sound != 3) return A2Tx::firstCarrierAudio(a2cfg, t);
         if (!cfg.pullAudio) return prog.at(t);
         constexpr double sr = 48000.0;
         const size_t want = (size_t)std::max(1.0, t * sr) + 8;
@@ -174,6 +180,7 @@ struct AtvGenerator::Impl {
         a.assign((size_t)kVsbTaps / 2, 0.f); aBase = -(int64_t)kVsbTaps / 2;   // silence before the start
         firNext = 0;
         applyRuntime(c, true);
+        setupSound2();
         ok = true;
     }
 
@@ -320,6 +327,22 @@ struct AtvGenerator::Impl {
                 sum += w[m];
             }
             for (int m = 0; m < kKernTaps; m++) kern[(size_t)p * kKernTaps + m] = (float)(w[m] / sum);
+        }
+    }
+
+    // second sound (cfg.sound2): 1 A2 stereo, 2 A2 dual, 3 A2 mono with its pilot, 4 NICAM stereo, 5 NICAM with two mono channels
+    void setupSound2() {
+        const int m = cfg.sound2;
+        if (m <= 0 || fmt.amSound || fmt.mirrored) return;
+        const double amp = cfg.level * std::pow(10.0, fmt.soundRelDb / 20.0);
+        if (m <= 3) {
+            if (fmt.soundSpacingMhz != 5.5 && fmt.soundSpacingMhz != 6.5) return;   // A2 exists in B/G and D/K
+            a2cfg.rate = cfg.rate; a2cfg.mode = m == 1 ? 1 : m == 2 ? 2 : 0; a2cfg.preUs = fmt.preEmphUs;
+            a2cfg.level2 = amp * 0.45; a2cfg.withFirst = false;
+            a2tx = std::make_unique<A2Tx>(a2cfg); a2on = true;
+        } else {
+            NicamTxConfig nc; nc.rate = cfg.rate; nc.wide = fmt.sys == kAtvI; nc.mode = m == 5 ? 1 : 0; nc.level = cfg.level / 10.0;
+            nictx = std::make_unique<NicamTx>(nc);
         }
     }
 
@@ -743,6 +766,8 @@ struct AtvGenerator::Impl {
                 ThreadPool::shared().parallelFor(parts, [&](size_t q) { resample(b * q / parts, b * (q + 1) / parts); });
             } else resample(0, b);
             sound(out + done, b, outCount);
+            if (a2tx) a2tx->add(out + done, b, atvSoundOffsetHz(fmt) + cfg.cfoHz);
+            if (nictx) nictx->add(out + done, b, atvVisionOffsetHz(fmt) + (fmt.sys == kAtvI ? nicam::kCarrierSpacingIMhz : nicam::kCarrierSpacingMhz) * 1e6 + cfg.cfoHz);
             if (cfg.echoDb > 0 && !ghost.empty()) {
                 const cf32 g = std::polar((float)std::pow(10.0, -cfg.echoDb / 20.0), (float)(cfg.echoPhaseDeg * kPi / 180));
                 for (size_t j = 0; j < b; j++) {
@@ -812,7 +837,8 @@ public:
         c.echoDelayUs = s.modeVal[2] > 0 ? s.modeVal[2] : 1.5;
         c.echoPhaseDeg = s.modeVal[3];
         c.pattern = std::min(2, std::max(0, s.modeOpt[2]));
-        c.sound = std::min(4, std::max(0, s.modeOpt[3]));
+        c.sound = std::min(4, std::max(0, s.modeOpt[3] & 7));
+        c.sound2 = std::min(5, std::max(0, s.modeOpt[3] >> 3));
         c.humPct = s.modeOpt[4] ? (s.modeVal[0] > 0 ? s.modeVal[0] : 4.0) : 0;
         c.humHz = s.modeOpt[4] == 2 ? 60 : 50;
         c.groupDelay = s.modeOpt[5] == 0;
