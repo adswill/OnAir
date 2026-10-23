@@ -71,7 +71,7 @@ jobs:
           ccache -z
           J=$( (nproc 2>/dev/null || sysctl -n hw.ncpu) )
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=OFF -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee "$RUNNER_TEMP/build.log"
-          cmake --build build -j "$J" 2>&1 | tee -a "$RUNNER_TEMP/build.log"
+          cmake --build build -j "$J" -- -k 0 2>&1 | tee -a "$RUNNER_TEMP/build.log"
           echo "build=$(( $(date +%s) - T0 ))s" > "$RUNNER_TEMP/times"
       - name: ccache statistics
         if: always()
