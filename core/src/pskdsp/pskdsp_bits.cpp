@@ -194,7 +194,7 @@ std::string bitsAscii(const Bits& b, size_t from, size_t n) {
 void BitDecoder::configure(Order o, const BitOptions& b) { o_ = o; b_ = b; reset(); }
 
 void BitDecoder::reset() {
-    rot_ = b_.rotation; conj_ = b_.conj;
+    rot_ = b_.rotation; conj_ = b_.conj; shift_ = shiftLeft_ = b_.bitShift & 1;
     resolved_ = b_.sync.empty() || !b_.autoAmbiguity;
     hunt_.clear();
     prevIdx_ = 0; prevBit_ = 0; havePrev_ = false;
@@ -222,6 +222,7 @@ void BitDecoder::emit(cf z, Bits& out, std::vector<float>* soft) {
     const size_t L = b_.sync.size();
     const int maxErr = maxErrFor(b_);
     for (int k = 0; k < nb; k++) {
+        if (shiftLeft_ > 0) { shiftLeft_--; continue; }
         uint8_t v = raw[k];
         if (b_.diff == Diff::NrzM || b_.diff == Diff::NrzS) {
             const uint8_t ch = (uint8_t)(v != prevBit_);
@@ -249,6 +250,13 @@ void BitDecoder::emit(cf z, Bits& out, std::vector<float>* soft) {
             // output lags by L bits so the sync word itself is never de-randomised
             pend_.push_back(v);
             if (hit) {
+                while (pend_.size() > L) {   // the bits before the sync word still belong to the frame that ended
+                    uint8_t p = pend_.front();
+                    pend_.erase(pend_.begin());
+                    if (ccsdsOn_ && (b_.ccsdsFrameBits == 0 || ccsdsPos_ < b_.ccsdsFrameBits)) p ^= seq[ccsdsPos_ % seq.size()];
+                    if (ccsdsOn_) ccsdsPos_++;
+                    out.push_back((uint8_t)(p ^ (b_.invert ? 1 : 0)));
+                }
                 for (uint8_t p : pend_) out.push_back((uint8_t)(p ^ (b_.invert ? 1 : 0)));
                 pend_.clear();
                 ccsdsOn_ = true; ccsdsPos_ = 0;
@@ -286,10 +294,11 @@ void BitDecoder::push(const cf* sym, size_t n, Bits& out, std::vector<float>* so
         }
         hunt_.push_back(sym[i]);
         if (hunt_.size() < huntN) continue;
-        int bestR = rot_; bool bestC = conj_;
-        const int bestHits = huntBest(bestR, bestC);
+        int bestR = rot_, bestS = shift_; bool bestC = conj_;
+        const int bestHits = huntBest(bestR, bestC, bestS);
         if (bestHits > 0) {
             rot_ = bestR; conj_ = bestC; resolved_ = true;
+            if (syncs_ == 0) { shift_ = bestS; shiftLeft_ = bestS; }
             sinceHit_ = 0;
             std::vector<cf> held;
             held.swap(hunt_);
@@ -316,20 +325,22 @@ BitResult symbolsToBits(const std::vector<cf>& sym, Order o, const BitOptions& b
     return r;
 }
 
-int BitDecoder::huntBest(int& bestR, bool& bestC) const {
+int BitDecoder::huntBest(int& bestR, bool& bestC, int& bestS) const {
     const int M = orderPoints(o_);
     int bestHits = 0;
+    const int nShift = o_ == Order::Oqpsk && syncs_ == 0 ? 2 : 1;
+    for (int sh = 0; sh < nShift; sh++)
     for (int c = 0; c < 2; c++)
         for (int r = 0; r < M; r++) {
             BitOptions t = b_;
-            t.autoAmbiguity = false; t.rotation = r; t.conj = c != 0; t.invert = false;
+            t.autoAmbiguity = false; t.rotation = r; t.conj = c != 0; t.invert = false; t.bitShift = nShift > 1 ? sh : shift_;
             if (t.scr == Scrambler::Ccsds) t.scr = Scrambler::None;   // the sync word is not randomised
             BitDecoder d;
             d.configure(o_, t);
             Bits bb;
             d.push(hunt_.data(), hunt_.size(), bb);
             const int hits = (int)findSync(bb, b_.sync, maxErrFor(b_)).size();
-            if (hits > bestHits) { bestHits = hits; bestR = r; bestC = c != 0; }
+            if (hits > bestHits) { bestHits = hits; bestR = r; bestC = c != 0; bestS = t.bitShift; }
         }
     return bestHits;
 }
@@ -337,8 +348,8 @@ int BitDecoder::huntBest(int& bestR, bool& bestC) const {
 void BitDecoder::drain(Bits& out, std::vector<float>* soft) {
     // end of a block: decide on what is held even if it is short
     if (resolved_ || hunt_.empty()) return;
-    int r = rot_; bool c = conj_;
-    if (huntBest(r, c) > 0) { rot_ = r; conj_ = c; resolved_ = true; }
+    int r = rot_, sh = shift_; bool c = conj_;
+    if (huntBest(r, c, sh) > 0) { rot_ = r; conj_ = c; resolved_ = true; if (syncs_ == 0) { shift_ = sh; shiftLeft_ = sh; } }
     std::vector<cf> held;
     held.swap(hunt_);
     for (const cf& z : held) emit(z, out, soft);

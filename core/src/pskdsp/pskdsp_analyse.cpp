@@ -435,6 +435,17 @@ Analysis analyse(const cf* x0, size_t n0, double fs, const AnalyseOptions& o) {
     if (o.forceBaud > 0) { A.baud = o.forceBaud; A.baudSnapped = false; }
     A.rateFound = true;
     if (A.baudSnapped && std::fabs(A.baud - baud) > 0.0005 * baud) f = runTrial(*yy, fsC, A.baud, bestO, useRect ? 0 : alpha, 12000, true, 0.004);
+    if (f.evm > 0.3 && o.forceAlpha < -1.5) {   // the whole block fits worse than the short trials said: try the other pulse shapes on all of it
+        const double opts2[] = {aEst, 0.2, 0.25, 0.35, 0.5, 0.75, 1.0, -1};
+        for (double a : opts2) {
+            const Trial t = runTrial(*yy, fsC, A.baud, bestO, a <= 0 ? 0 : a, 12000, true, 0.004);
+            if (t.evm < f.evm * 0.9) { f = t; alpha = a <= 0 ? 0.35 : a; useRect = a <= 0; }
+        }
+        A.alpha = alpha; A.rect = useRect;
+        char sh2[64];
+        if (useRect) snprintf(sh2, sizeof sh2, "rectangular"); else snprintf(sh2, sizeof sh2, "RRC %.2f", alpha);
+        A.shape = sh2;
+    }
     A.baudConf = std::clamp(1.0 - f.evm / 0.9, 0.0, 1.0);
     A.orderConf = A.baudConf;
     A.evm = f.evm;

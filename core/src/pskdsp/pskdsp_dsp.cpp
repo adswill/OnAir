@@ -226,6 +226,7 @@ void Demod::reset() {
     havePrev_ = false;
     evmAcc_ = 0; phVar_ = 1;
     nIn_ = nSym_ = 0;
+    estSum_ = {}; estDone_ = false;
 }
 
 DemodStats Demod::stats() const {
@@ -265,8 +266,41 @@ void Demod::process(const cf* x, size_t n, std::vector<cf>& sym, std::vector<flo
         buf_.push_back(cf(re, im) * rot);
         phase_ = wrapPi(phase_ + freq_);
         nIn_++;
+        if (!estDone_) {   // the first carrier phase from the M-th power of the matched-filter output: a decision-directed loop alone can stall half way between two decisions
+            const float a = std::abs(cf(re, im));
+            if (a > 0) {
+                std::complex<double> v(re / a, im / a), r = v;
+                for (int k = 1; k < M; k++) r *= v;
+                estSum_ += r;
+            }
+            if (nIn_ >= (uint64_t)(96 * sps)) {
+                estDone_ = true;
+                if (std::abs(estSum_) > 0.15 * (double)nIn_) {
+                    const double ang = std::arg(estSum_);
+                    const double ph = M == 2 ? ang / 2 : M == 4 ? (ang - kPi) / 4 : ang / 8;
+                    const cf back((float)std::cos(ph), (float)-std::sin(ph));
+                    for (cf& v : buf_) v *= back;
+                    phase_ = wrapPi(phase_ + ph);
+                }
+                {   // and the first symbol timing from the baud-rate line of the level (OQPSK: of the real rail squared, which peaks at the I symbols)
+                    std::complex<double> S(0, 0);
+                    double tot = 0;
+                    for (size_t i = 0; i < buf_.size(); i++) {
+                        const double w = oq ? (double)buf_[i].real() * buf_[i].real() : (double)std::norm(buf_[i]);
+                        const double a = -2 * kPi * (double)i / sps;
+                        S += w * std::complex<double>(std::cos(a), std::sin(a));
+                        tot += w;
+                    }
+                    if (tot > 0 && std::abs(S) > 0.04 * tot) {
+                        double tau = std::arg(S) / (2 * kPi) * sps;
+                        if (tau < 0) tau += sps;
+                        nextT_ = bufBase_ + tau + std::ceil((2 * sps + 4 - tau) / sps) * sps;
+                    }
+                }
+            }
+        }
         // symbol strobes whose samples (and the half-symbol lookahead of OQPSK) have arrived
-        while (nextT_ + (oq ? half : 0) + 3 < bufBase_ + (double)buf_.size()) {
+        while (estDone_ && nextT_ + (oq ? half : 0) + 3 < bufBase_ + (double)buf_.size()) {
             if (agc_ <= 0) {   // first strobe: start the level from the samples so far
                 double p = 0;
                 for (const cf& v : buf_) p += std::norm(v);
@@ -303,14 +337,18 @@ void Demod::process(const cf* x, size_t n, std::vector<cf>& sym, std::vector<flo
                 const double t0 = nextT_ - 2 * sps;
                 for (int k = 0; k < 16; k++) eye->push_back((float)(aligned(t0 + k * sps / 8).real() * g));
             }
+            if (nSym_ >= 300 && nSym_ % 150 == 0) {   // a decision-directed loop can sit on the unstable point half way between two decisions: kick it off
+                const double lim = kPi / M;
+                if (phVar_ > 0.6 * lim * lim) phase_ = wrapPi(phase_ + 0.35 * lim);
+            }
             sym.push_back(z);
             if (phErr) phErr->push_back((float)pe);
             if (tErr) tErr->push_back((float)te);
             prevSym_ = z; prevM_ = zm; havePrev_ = true;
             nSym_++;
             // advance
-            const double acq = 1.0 + 5.0 * std::max(0.0, 1.0 - (double)nSym_ / 700.0);   // wide loop while acquiring, the set bandwidth afterwards
-            spsAdj_ -= tKi_ * acq * acq * te * sps;
+            const double acq = 1.0 + 2.0 * std::max(0.0, 1.0 - (double)nSym_ / 700.0);   // wide loop while acquiring, the set bandwidth afterwards
+            spsAdj_ -= tKi_ * acq * te * sps;
             spsAdj_ = std::clamp(spsAdj_, -0.02 * sps, 0.02 * sps);
             nextT_ += sps + spsAdj_ - tKp_ * acq * te * sps;
         }

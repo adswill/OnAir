@@ -117,6 +117,7 @@ private:
     double evmAcc_ = 0, phVar_ = 0;
     uint64_t nIn_ = 0, nSym_ = 0;
     double eyeT_ = 0;
+    std::complex<double> estSum_{}; bool estDone_ = false;   // first carrier phase
 };
 
 // decide: nearest M-PSK point (BPSK 0 / 180 degrees, QPSK and OQPSK +-45 / +-135, 8PSK k x 45); idx 0..M-1 counts counter-clockwise
@@ -180,6 +181,7 @@ struct BitOptions {
     bool autoAmbiguity = true;   // try every rotation and both spectral senses against the sync word
     int rotation = 0; bool conj = false;   // used when autoAmbiguity is off or there is no sync word
     bool invert = false;         // invert the output bits
+    int bitShift = 0;            // drop this many bits at the start (0 or 1): OQPSK read with the rails the other way round comes out one bit late
     size_t ccsdsFrameBits = 0;   // CCSDS randomiser: bits after each sync word it covers (0: up to the next sync word)
 };
 struct BitResult {
@@ -216,10 +218,10 @@ public:
     uint64_t syncCount() const { return syncs_; }
 private:
     void emit(cf z, Bits& out, std::vector<float>* soft);
-    int huntBest(int& r, bool& c) const;   // sync hits of the best rotation / sense on hunt_
+    int huntBest(int& r, bool& c, int& shift) const;   // sync hits of the best rotation / sense / bit shift on hunt_
     Bits pend_;
     Order o_ = Order::Bpsk; BitOptions b_;
-    int rot_ = 0; bool conj_ = false; bool resolved_ = false;
+    int rot_ = 0, shift_ = 0, shiftLeft_ = 0; bool conj_ = false; bool resolved_ = false;
     std::vector<cf> hunt_;       // symbols held until the sync hunt decides
     int prevIdx_ = 0; uint8_t prevBit_ = 0; bool havePrev_ = false;
     uint32_t g3_ = 0;            // G3RUH descrambler register (past input bits)
