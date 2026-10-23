@@ -1,27 +1,16 @@
 // Multi-channel TV: two or three adjacent DVB-T / DVB-T2 channels decoded from ONE wide capture (a LimeSDR, USRP, BladeRF or PlutoSDR covers
 // 2-3 channels of 7 / 8 MHz at once).
 //
+// Since whole-span TV (docs/WHOLESPAN-TV-DESIGN.md) this is SpanTv (spantv/spantv.h) configured for DVB-T2 or DVB-T on the channel raster:
 //   feed(span) -> SpanScanner (which raster slots carry a signal)
 //              -> per occupied slot, on the slot's own thread: ChannelFilter (mix, low-pass, resample) -> receiver -> BB unpack -> TsDemux
 //
 // Every instance keeps its own receiver, transport-stream demultiplexer, service list and EPG. One slot is "selected": its packets go to the
-// sink (the engine's player, outputs and network tuner) while the others keep decoding. The slots follow the whole-span design (wide_bank.h):
-// no state is shared between receivers.
+// sink (the engine's player, outputs and network tuner) while the others keep decoding.
 #pragma once
-#include "dect2/tv/bbunpack.h"
-#include "channelizer.h"
-#include "dect2/t2/t2rx.h"
+#include "spantv/spantv.h"
+#include "dect2/t2/t2rx.h"           // RxTelemetry (poll), as before the refactor
 #include "dect2/dvbt/dvbt_rx.h"
-#include "dect2/tv/ts.h"
-#include "dect2/channels/tvchan.h"
-#include <atomic>
-#include <climits>
-#include <functional>
-#include <map>
-#include <memory>
-#include <mutex>
-#include <string>
-#include <vector>
 
 namespace dect2 {
 
@@ -36,67 +25,22 @@ struct MultiTvOptions {
     double thresholdDb = 6;       // a slot is occupied this far above the quietest part of the span
 };
 
-struct MultiService {
-    int slot = 0;
-    double offsetHz = 0;
-    TsService svc;
-};
-
-class MultiTv {
+class MultiTv : public SpanTv {
 public:
-    using Sink = std::function<void(int slot, const uint8_t* packets, size_t count, double seconds, const TsSnapshot& snap)>;
-
-    MultiTv();
-    ~MultiTv();
-    MultiTv(const MultiTv&) = delete;
-    MultiTv& operator=(const MultiTv&) = delete;
-
+    using SpanTv::configure;
     // false when the span cannot hold even one channel of this width
-    bool configure(const MultiTvOptions& o);
-    const MultiTvOptions& options() const { return o_; }
-    void reset();                          // stops the receivers; the scan starts again
-    void feed(const cf32* x, size_t n);
-    void wait();                           // returns when every receiver has taken what feed() gave it (tests, end of a file)
-
-    // The selected slot's packets (a burst, with the demultiplexer's snapshot after it); called on a receiver thread
-    void setSink(Sink s);
-    void setSelected(int slot);
-    int selected() const { return sel_.load(); }
-
-    // Polls every receiver; true when the selected slot has a new telemetry (then in t, with t.tvChannels filled in)
-    bool poll(RxTelemetry& t);
-    std::vector<TvChannelRow> channels();
-    std::vector<MultiService> services();
-    TsSnapshot snapshot(int slot);
-    std::map<int, std::vector<EpgEvent>> epg(int slot);
-    BbStats bbStats(int slot);
-    std::vector<int> runningSlots();
-    double gridOffsetHz() const { return gridOff_; }
-    // test hook: the slots the scan measured (the last evaluation)
-    std::vector<SlotPower> lastMeasure();
+    bool configure(const MultiTvOptions& o) {
+        mo_ = o;
+        SpanTvOptions s;
+        s.stdMode = o.dvbt ? 2 : 1;
+        s.spanRate = o.spanRate; s.widthMhz = o.widthMhz; s.gridOffsetHz = o.gridOffsetHz; s.autoGrid = o.autoGrid;
+        s.maxChannels = o.maxChannels; s.blocking = o.blocking; s.thresholdDb = o.thresholdDb;
+        return SpanTv::configure(s);
+    }
+    const MultiTvOptions& options() const { return mo_; }
 
 private:
-    struct Slot;
-    void evaluate();
-    void mtvDeliver(int slot, const uint8_t* pk, size_t n, double secs, const TsSnapshot& snap);   // a receiver thread: the selected slot's packets go on
-    void startSlot(const SlotPower& p);
-    void stopSlot(size_t i);   // under mu_
-    Slot* find(int slot);
-
-    MultiTvOptions o_;
-    double gridOff_ = 0;
-    bool gridFixed_ = false;
-    SpanScanner scan_;
-    std::vector<ChannelSlotPos> slots_;
-    std::vector<SlotPower> measured_;
-    size_t sinceEval_ = 0;
-    size_t queueLimit_ = 1u << 19;   // samples that may wait for one receiver
-    std::mutex mu_;
-    std::vector<std::unique_ptr<Slot>> live_;
-    std::atomic<int> sel_{INT_MIN / 2};
-    Sink sink_;
-    std::mutex sinkMu_;
-    int lastSelPolled_ = INT_MIN / 2;
+    MultiTvOptions mo_;
 };
 
 } // namespace dect2

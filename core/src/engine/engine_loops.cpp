@@ -94,7 +94,16 @@ void Engine::analysisLoop() {
         {
             RxTelemetry t;
             const bool dvbt = activeStd_.load() == 1;
-            if (activeStd_.load() == 2) {
+            if (mtvActive_.load() && spanTvSupported(activeStd_.load() + 1)) {   // whole-span TV (spantv.h): the selected signal's report, with the table of all
+                if (auto m = mtvGet()) {
+                    RxTelemetry mt;
+                    if (m->poll(mt)) {
+                        mt.tvChannels = m->channels();
+                        std::lock_guard<std::mutex> lk(rxMu_);
+                        publishRx(std::move(mt));
+                    }
+                }
+            } else if (activeStd_.load() == 2) {
                 AtscTelemetry at;
                 if (rxA_.telemetry(at, atscSeq_)) {
                     atscSeq_ = at.seq;
@@ -178,15 +187,6 @@ void Engine::analysisLoop() {
                     t.fm = std::move(ft);
                     std::lock_guard<std::mutex> lk(rxMu_);
                     publishRx(std::move(t));
-                }
-            } else if (mtvActive_.load() && activeStd_.load() <= 1) {
-                if (auto m = mtvGet()) {
-                    RxTelemetry mt;
-                    if (m->poll(mt)) {
-                        mt.tvChannels = m->channels();
-                        std::lock_guard<std::mutex> lk(rxMu_);
-                        publishRx(std::move(mt));
-                    }
                 }
             } else if (const int pm = pollMode(activeStd_.load(), t, modeSeq_); pm >= 0) {
                 if (pm == 1) { std::lock_guard<std::mutex> lk(rxMu_); publishRx(std::move(t)); }

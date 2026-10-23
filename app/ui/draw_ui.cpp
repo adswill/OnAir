@@ -204,7 +204,8 @@ static void floatingWindows(App& a, ImVec2 disp) {
     dect2::PskReporter::get().setDialHz(a.freqMhz * 1e6);
     dect2::WsprNet::get().setDialHz(a.freqMhz * 1e6);
     a.engine.setWideDecode(a.wideDecode && modeSupportsWideHf(a.family));
-    a.engine.setMultiChannel(a.mtvOn && a.family == 0, a.mtvMax, a.mtvGrid);
+    a.engine.setMultiChannel(a.mtvOn && spanTvMode(a), a.mtvMax, a.mtvGrid);   // whole-span TV: DVB-T/T2, ATSC, ISDB-T, DTMB, DVB-S/S2, DVB-C
+    a.engine.setSpanDecodeAll(a.mtvAll);
     feedsWindow(a);
     automationWindow(a);
     protolabWindow(a);

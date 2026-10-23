@@ -195,6 +195,8 @@ set_source_files_properties(third_party/uat_fec/fec.c third_party/uat_fec/decode
   core/src/uat/uat_fec_bridge.c core/src/uat/uat_decode.c PROPERTIES LANGUAGE C)
 file(GLOB DECT2_ATSC3_SYNTH_SRC CONFIGURE_DEPENDS core/src/atsc3/atsc3_synth*.cpp)
 target_sources(dect2core PRIVATE ${DECT2_ATSC3_SYNTH_SRC})
+file(GLOB DECT2_SPANTV_SRC CONFIGURE_DEPENDS core/src/spantv/*.cpp)   # whole-span TV (docs/WHOLESPAN-TV-DESIGN.md)
+target_sources(dect2core PRIVATE ${DECT2_SPANTV_SRC})
 target_include_directories(dect2core PUBLIC core/include)
 # aircraft position estimation (IMM filter, route knowledge, wind field, per-aircraft hub): its own small library so its test builds without the receivers
 add_library(dect2track STATIC core/src/track/track_imm.cpp core/src/track/track_route.cpp core/src/track/track_airports.cpp core/src/track/track_hub.cpp)
@@ -1388,6 +1390,12 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_multitv_wide tests/engine/test_multitv_wide.cpp)   # the same on a 61.44 Msps capture (LimeSDR)
   target_link_libraries(test_multitv_wide PRIVATE dect2core)
   add_test(NAME multitv_wide COMMAND test_multitv_wide)
+
+  foreach(t spantv_golden spantv_pool spantv_analyzer spantv_dvbs spantv_tv)   # whole-span TV (docs/WHOLESPAN-TV-DESIGN.md): SpanTv, its analyser, tracker, pool and adapters
+    add_executable(test_${t} tests/engine/test_${t}.cpp)
+    target_link_libraries(test_${t} PRIVATE dect2core)
+    add_test(NAME ${t} COMMAND test_${t})
+  endforeach()
 
   add_executable(test_dual_engine tests/engine/test_dual_engine.cpp)   # two modes at once (Engine::setSecondary)
   target_link_libraries(test_dual_engine PRIVATE dect2core)

@@ -454,26 +454,65 @@ void playerTab(App& a) {
     stor->SetFloat(ctlKey, ImGui::GetCursorPosY() - ctlY);
 }
 
-// Multi-channel TV: the channels of the span, one receiver each (click: this channel plays and shows in detail, the others keep decoding)
+// Multi-channel TV: the channels of the span, one receiver each (click: this channel plays and shows in detail, the others keep decoding).
+// Whole-span satellite TV (DVB-S/S2, free frequency): the transponders found in the capture, with their symbol rate, MODCOD and a decode switch each.
 static void multiChannelTable(App& a) {
     const std::vector<TvChannelRow>& rows = a.rx.tvChannels;
-    sectionHeader(Ic::Radio, "Channels in the span");
-    if (rows.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("looking for channels in the capture..."); ImGui::PopTextWrapPos(); return; }
-    if (!ImGui::BeginTable("##mtvchans", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) return;
-    ImGui::TableSetupColumn(tr("Channel MHz")); ImGui::TableSetupColumn(tr("State")); ImGui::TableSetupColumn(tr("Services")); ImGui::TableSetupColumn(tr("SNR dB"));
-    ImGui::TableSetupColumn(tr("Load")); ImGui::TableSetupColumn(tr("Network"), ImGuiTableColumnFlags_WidthStretch);
+    bool freeFreq = spanTvFreeFreq(a);
+    for (const TvChannelRow& r : rows) if (r.rsHz > 0) freeFreq = true;
+    sectionHeader(Ic::Radio, freeFreq ? "Signals in the span" : "Channels in the span");
+    if (rows.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(freeFreq ? "looking for transponders in the capture..." : "looking for channels in the capture..."); ImGui::PopTextWrapPos(); return; }
+    {   // plain progress: what the span holds and what is being done with it
+        int found = 0, dec = 0, locked = 0;
+        for (const TvChannelRow& r : rows) { found += r.occupied || r.running; dec += r.running; locked += r.running && r.locked; }
+        ImGui::TextDisabled("%d %s found, %d decoding, %d locked", found, freeFreq ? (found == 1 ? "signal" : "signals") : (found == 1 ? "channel" : "channels"), dec, locked);
+    }
+    if (freeFreq) {   // the pool: decode all, and the CPU it takes against its budget
+        if (ImGui::Checkbox(tr("Decode all"), &a.mtvAll)) savePrefs(a);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("on: a receiver for every transponder the CPU budget allows (the playing one first)\noff: only the one that plays"));
+        const double pool = a.engine.spanPoolCores(), bud = a.engine.spanBudgetCores();
+        if (bud > 0) {
+            ImGui::SameLine();
+            char ov[48]; snprintf(ov, sizeof ov, "%.1f / %.1f cores", pool, bud);
+            ImGui::ProgressBar((float)std::min(1.0, pool / bud), ImVec2(140 * gUi, 0), ov);
+        }
+    }
+    const bool lnb = freeFreq && engineStd(a) == 8 && a.mtvLnbLo > 0;
+    const int cols = freeFreq ? (lnb ? 9 : 8) : 6;
+    if (!ImGui::BeginTable("##mtvchans", cols, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) return;
+    if (freeFreq) { ImGui::TableSetupColumn(tr("Dec")); ImGui::TableSetupColumn(tr("IF MHz")); if (lnb) ImGui::TableSetupColumn(tr("Sky MHz")); ImGui::TableSetupColumn(tr("kBd")); }
+    else ImGui::TableSetupColumn(tr("Channel MHz"));
+    ImGui::TableSetupColumn(tr("State")); ImGui::TableSetupColumn(tr("Services")); ImGui::TableSetupColumn(tr("SNR dB"));
+    ImGui::TableSetupColumn(tr("Load")); ImGui::TableSetupColumn(freeFreq ? tr("Signal") : tr("Network"), ImGuiTableColumnFlags_WidthStretch);
     ImGui::TableHeadersRow();
     for (const TvChannelRow& r : rows) {
         ImGui::TableNextRow();
+        ImGui::PushID(r.slot);
+        if (freeFreq) {   // the user's own decode switch for this signal
+            ImGui::TableNextColumn();
+            bool dec = !r.decodeOff;
+            if (ImGui::Checkbox("##dec", &dec)) a.engine.setSpanDecode(r.slot, dec);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("decode this signal (off: no receiver unless it plays)"));
+        }
         ImGui::TableNextColumn();
-        char b[48]; snprintf(b, sizeof b, "%.3f##tc%d", radioCenterMhz(a) + r.offsetHz / 1e6, r.slot);
-        if (!r.occupied && !r.running) { ImGui::BeginDisabled(); ImGui::Selectable(b, false, ImGuiSelectableFlags_SpanAllColumns); ImGui::EndDisabled(); }
-        else if (ImGui::Selectable(b, r.selected, ImGuiSelectableFlags_SpanAllColumns) && r.running) a.engine.selectTvChannel(r.slot);
-        ImGui::TableNextColumn(); ImGui::TextUnformatted(!r.occupied && !r.running ? tr("empty") : !r.running ? tr("waiting") : r.locked ? tr("locked") : r.state > 0 ? tr("partial") : tr("searching"));
+        const double ifMhz = radioCenterMhz(a) + r.offsetHz / 1e6;
+        char b[48]; snprintf(b, sizeof b, "%.3f##tc%d", ifMhz, r.slot);
+        const ImGuiSelectableFlags sf = ImGuiSelectableFlags_SpanAllColumns | (freeFreq ? ImGuiSelectableFlags_AllowOverlap : 0);
+        if (!r.occupied && !r.running) { ImGui::BeginDisabled(); ImGui::Selectable(b, false, sf); ImGui::EndDisabled(); }
+        else if (ImGui::Selectable(b, r.selected, sf) && (r.running || freeFreq)) a.engine.selectTvChannel(r.slot);   // satellite: a signal without a receiver gets one
+        if (lnb) { ImGui::TableNextColumn(); const double lo = a.mtvLnbLo; ImGui::Text("%.3f", lo < 6000 ? lo - ifMhz : lo + ifMhz); }
+        if (freeFreq) { ImGui::TableNextColumn(); if (r.rsHz > 0) ImGui::Text("%.0f", r.rsHz / 1e3); else ImGui::TextDisabled("-"); }
+        ImGui::TableNextColumn();
+        const char* st = !r.occupied && !r.running ? tr("empty") : !r.running ? (r.clipped ? tr("at the edge") : r.decodeOff ? tr("off") : tr("waiting")) : r.locked ? tr("locked")
+                       : r.noLock ? (r.aboveDb < 8 ? tr("too weak") : tr("no lock (unsupported?)")) : r.state > 0 ? tr("partial") : tr("searching");
+        ImGui::TextUnformatted(st);
         ImGui::TableNextColumn(); if (r.running) ImGui::Text("%d", r.services); else ImGui::TextDisabled("-");
-        ImGui::TableNextColumn(); if (r.running && r.locked) ImGui::Text("%.1f", r.snrDb); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (r.running && r.locked) ImGui::Text("%.1f", r.snrDb); else if (freeFreq && r.aboveDb > 0) ImGui::TextDisabled("%.0f", r.aboveDb); else ImGui::TextDisabled("-");
         ImGui::TableNextColumn(); if (r.running) ImGui::Text("%.0f %%", r.cpuPct); else ImGui::TextDisabled("-");
-        ImGui::TableNextColumn(); ImGui::TextUnformatted(r.network.c_str());
+        ImGui::TableNextColumn();
+        if (freeFreq) { std::string s = r.params; if (!r.network.empty()) s += (s.empty() ? "" : ", ") + r.network; if (r.dropped) s += " (drops)"; ImGui::TextUnformatted(s.c_str()); }
+        else ImGui::TextUnformatted(r.network.c_str());
+        ImGui::PopID();
     }
     ImGui::EndTable();
     ImGui::Spacing();

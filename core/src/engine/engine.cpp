@@ -103,7 +103,7 @@ void Engine::stop() {
     stopReq_ = true;
     if (th_.joinable()) th_.join();
     mtvActive_ = false;
-    { std::shared_ptr<MultiTv> m; { std::lock_guard<std::mutex> lk(mtvMu_); m.swap(mtv_); } }   // the channels' receivers stop with the radio
+    { std::shared_ptr<SpanTv> m; { std::lock_guard<std::mutex> lk(mtvMu_); m.swap(mtv_); } }   // the channels' receivers stop with the radio
     mtvKeyRate_ = -1;
     rec_.stop();   // a recording ends with the radio (the analysis thread is gone, nothing pushes any more)
     tm_.off();     // the rolling memory too (the next start() sets it up again)
@@ -352,7 +352,7 @@ void Engine::feedReceiver(int a, const cf32* x, size_t n) {
         if (auto sink = std::atomic_load(&pluginSink_)) (*sink)(reinterpret_cast<const float*>(x), n, rate_.load());
         return;
     }
-    if (a <= 1 && mtvActive_.load(std::memory_order_relaxed)) { if (auto m = mtvGet()) { m->feed(x, n); return; } }   // multi-channel TV: one receiver per channel of the span
+    if (mtvActive_.load(std::memory_order_relaxed) && spanTvSupported(a + 1)) { if (auto m = mtvGet()) if (m->spanOptions().stdMode == a + 1) { m->feed(x, n); return; } }   // whole-span TV: one receiver per signal of the span
     if (wideOn_.load(std::memory_order_relaxed) && WideModes::supports(a)) {
         if (a == 24) wide_.setPagerOptions(rxPager_.protocols(), rxPager_.pocsagBauds());   // the screens' POCSAG / FLEX / baud choice reaches every carrier
         if (a == 24 || a == 25) wide_.setNarrowChannels(rxPager_.narrowChannel(), rxPacket_.narrowChannel());   // the 12.5 / 25 kHz choice too

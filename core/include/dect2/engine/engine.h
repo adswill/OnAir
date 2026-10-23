@@ -303,7 +303,7 @@ public:
     void setMultiChannel(bool on, int maxChannels = 0, int grid = 0);
     bool multiChannel() const { return mtvOn_.load(); }                  // asked for
     bool multiChannelActive() const { return mtvActive_.load(); }        // running now (the mode, the span and the width allow it)
-    static bool multiChannelSupported(int stdMode) { return stdMode == 1 || stdMode == 2; }   // DVB-T2, DVB-T
+    static bool multiChannelSupported(int stdMode) { return spanTvSupported(stdMode); }   // DVB-T2, DVB-T, DVB-S/S2 ... (whole-span TV, spantv/adapter.h)
     static int defaultMaxChannels();                                      // 2 on a laptop, 3 on a desktop
     static int slotsInSpan(double spanRate, double widthMhz, int grid);   // channels of the raster that fit the capture
     void selectTvChannel(int slot);                                       // the channel that plays and shows in detail
@@ -311,6 +311,12 @@ public:
     std::vector<TvChannelRow> tvChannels();
     std::vector<MultiService> multiServices();                            // every service of every channel, with the channel it comes from
     std::string multiChannelNote() const { std::lock_guard<std::mutex> lk(mtvNoteMu_); return mtvNote_; }
+    // whole-span TV (spantv.h): decode every signal the budget allows or only the selected one; the user's switch per signal; the pool's CPU
+    void setSpanDecodeAll(bool on);
+    void setSpanDecode(int slot, bool on);
+    void setSpanPinned(int slot, bool on);                                // a recording / stream of that signal: priority after the playing one
+    double spanPoolCores() const { auto m = mtvGet(); return m ? m->poolCores() : 0; }
+    double spanBudgetCores() const { auto m = mtvGet(); return m ? m->budgetCores() : 0; }
     // Transport stream (phase 4)
     TsSnapshot tsSnapshot();
     BbStats bbStats();
@@ -543,14 +549,14 @@ private:
     std::function<void(const PlpResult&)> plpDump_;
     void onPlp(const PlpResult& r);
     // multi-channel TV (setMultiChannel)
-    std::shared_ptr<MultiTv> mtv_;
+    std::shared_ptr<SpanTv> mtv_;
     mutable std::mutex mtvMu_;               // mtv_ (the analysis thread replaces it, the interface reads it)
-    std::shared_ptr<MultiTv> mtvGet() const { std::lock_guard<std::mutex> lk(mtvMu_); return mtv_; }
-    std::atomic<bool> mtvOn_{false}, mtvActive_{false};
+    std::shared_ptr<SpanTv> mtvGet() const { std::lock_guard<std::mutex> lk(mtvMu_); return mtv_; }
+    std::atomic<bool> mtvOn_{false}, mtvActive_{false}, mtvAll_{true};
     std::atomic<int> mtvMax_{0}, mtvGrid_{0};
     double mtvKeyRate_ = -1, mtvKeyBw_ = 0;
     int mtvKeyStd_ = -1, mtvKeyMax_ = -1, mtvKeyGrid_ = -1;
-    bool mtvKeyOn_ = false;
+    bool mtvKeyOn_ = false, mtvKeyAll_ = true;
     mutable std::mutex mtvNoteMu_;
     std::string mtvNote_;
     void syncMultiTv();                       // the analysis thread: starts, changes or stops the multi-channel receivers when the settings or the capture changed

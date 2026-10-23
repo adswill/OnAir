@@ -56,8 +56,18 @@ static float identifyButton(App& a, ImVec2 plotMin, ImVec2 plotSize, float right
     return w + m;
 }
 
+// Whole-span TV on a free-frequency standard: the mouse is on one of the signals (a click there plays it, multiMarkers, instead of retuning)
+static bool onSpanSignal(const App& a, double mhz) {
+    if (!a.engine.multiChannelActive()) return false;
+    const double c = radioCenterMhz(a);
+    for (const TvChannelRow& r : a.rx.tvChannels)
+        if (r.rsHz > 0 && r.bwHz > 0 && std::fabs(mhz - (c + r.offsetHz / 1e6)) <= r.bwHz / 2e6) return true;
+    return false;
+}
+
 static void clickToTune(App& a, int plotId) {
     if (autoLabelsHovered()) return;   // the mouse is on a name: it tunes (autolabel.cpp)
+    if (plt::IsPlotHovered() && onSpanSignal(a, plt::GetPlotMousePos().x)) return;
     if (a.family == 55) { generalPlotMouse(a, plotId); return; }   // the general receiver: its channel marker, without retuning the radio
     if (!plt::IsPlotHovered() || a.fmScan.running) return;
     if (a.identifyTool || ImGui::GetIO().KeyShift) return;   // the Identify tool and Shift+drag select a signal instead of tuning (identifyPlotInput)
@@ -267,7 +277,8 @@ void wideSwitch(App& a, ImVec2 plotMin, ImVec2 plotSize) {
 // "Multi-channel" switch (DVB-T2 / DVB-T): when the capture holds more than one channel of the chosen width, decode every occupied channel of it, one
 // receiver each. Same place as "Whole span" (the TV modes do not have that one). Right click: how many at once, and where the channel raster sits.
 static bool multiAvailable(const App& a) {
-    if (a.family != 0) return false;
+    if (spanTvFreeFreq(a)) return (a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate) >= 1e6;   // DVB-S/S2, DVB-C: signals at any frequency (whole-span TV)
+    if (!spanTvMode(a)) return false;
     const double rate = a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate;
     return Engine::slotsInSpan(rate, channelWidth(a).mhz, 0) >= 2;
 }
@@ -288,7 +299,9 @@ void multiSwitch(App& a, ImVec2 plotMin, ImVec2 plotSize) {
     if (run) {   // how many decoders run now
         int n = 0;
         for (const TvChannelRow& r : a.rx.tvChannels) if (r.running) n++;
-        char cb[32]; snprintf(cb, sizeof cb, "%d decoders", n);
+        char cb[64];
+        const double pool = a.engine.spanPoolCores(), bud = a.engine.spanBudgetCores();
+        if (bud > 0) snprintf(cb, sizeof cb, "%d decoders, %.1f of %.1f cores", n, pool, bud); else snprintf(cb, sizeof cb, "%d decoders", n);
         const ImVec2 cs = ImGui::CalcTextSize(cb);
         if (x - cs.x - 10 * gUi > plotMin.x) ImGui::GetWindowDrawList()->AddText(ImVec2(x - cs.x - 8 * gUi, plotMin.y + m + 2 * gUi), IM_COL32(245, 190, 70, 255), cb);
     }
@@ -302,6 +315,19 @@ void multiSwitch(App& a, ImVec2 plotMin, ImVec2 plotSize) {
         int mx = a.mtvMax > 0 ? a.mtvMax : Engine::defaultMaxChannels();
         ImGui::SetNextItemWidth(120 * gUi);
         if (ImGui::SliderInt(tr("Receivers at once"), &mx, 1, 8)) { a.mtvMax = mx; savePrefs(a); }
+        if (spanTvFreeFreq(a)) {   // free frequency: the CPU budget decides when the count is automatic
+            bool autoN = a.mtvMax == 0;
+            if (ImGui::Checkbox(tr("Automatic (as many as the CPU allows)"), &autoN)) { a.mtvMax = autoN ? 0 : Engine::defaultMaxChannels(); savePrefs(a); }
+        }
+        if (ImGui::Checkbox(tr("Decode all signals (off: only the one that plays)"), &a.mtvAll)) savePrefs(a);
+        if (spanTvFreeFreq(a)) {   // no raster for satellite or cable; the LNB's oscillator gives the sky frequency column (manual: the radio cannot switch the LNB)
+            if (engineStd(a) == 8) {
+                ImGui::SetNextItemWidth(120 * gUi);
+                if (ImGui::InputInt(tr("LNB oscillator MHz (0: IF only)"), &a.mtvLnbLo, 0, 0)) { a.mtvLnbLo = std::max(0, std::min(30000, a.mtvLnbLo)); savePrefs(a); }
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("universal Ku LNB: 9750 (low band) or 10600 (high band); C-band: 5150 (sky = oscillator - IF)"));
+            }
+            ImGui::EndPopup(); ImGui::SetCursorScreenPos(keep); return;
+        }
         static const char* kGrid[3] = {"find out", "capture centred on a channel", "capture between two channels"};
         ImGui::SetNextItemWidth(220 * gUi);
         if (ImGui::BeginCombo(tr("Channel raster"), tr(kGrid[a.mtvGrid]))) {
@@ -316,20 +342,29 @@ void multiSwitch(App& a, ImVec2 plotMin, ImVec2 plotSize) {
 // The channels of multi-channel TV: the channel edges and the centre of each on the spectrum (the playing one in the accent colour)
 static void multiMarkers(App& a) {
     if (!a.engine.multiChannelActive()) return;
-    const double c = radioCenterMhz(a), halfW = channelWidth(a).mhz * 0.5;
+    const double c = radioCenterMhz(a), rasterHalf = channelWidth(a).mhz * 0.5;
     int k = 0;
     for (const TvChannelRow& r : a.rx.tvChannels) {
         if (!r.occupied && !r.running) continue;
         const double f = c + r.offsetHz / 1e6;
-        const ImVec4 col = r.selected ? pal::accent(0.9f) : r.locked ? ImVec4(0.55f, 0.85f, 0.55f, 0.6f) : ImVec4(0.85f, 0.75f, 0.45f, 0.5f);
+        // the signal's own width (free-frequency standards: the transponder's Rs (1 + roll-off)), else the raster's
+        const double halfW = r.rsHz > 0 && r.bwHz > 0 ? r.bwHz / 2e6 : rasterHalf;
+        // grey: seen, no receiver; amber: searching; green: locked; the accent: playing
+        const ImVec4 col = r.selected ? pal::accent(0.9f) : !r.running ? ImVec4(0.6f, 0.6f, 0.6f, 0.45f) : r.locked ? ImVec4(0.55f, 0.85f, 0.55f, 0.6f) : ImVec4(0.85f, 0.75f, 0.45f, 0.5f);
         for (int e = -1; e <= 1; e += 2) {
             const double xx[2] = {f + e * halfW, f + e * halfW}, yy[2] = {a.yMin, a.yMax};
             plt::Spec s; s.LineColor = col; s.LineWeight = r.selected ? 1.5f : 1.f;
             char id[24]; snprintf(id, sizeof id, "##mc%d", k++);
             plt::PlotLine(id, xx, yy, 2, s);
         }
-        char lb[48]; snprintf(lb, sizeof lb, "%.3f", f);
+        char lb[80];
+        if (r.rsHz > 0) snprintf(lb, sizeof lb, "%.3f %.0f kBd", f, r.rsHz / 1e3); else snprintf(lb, sizeof lb, "%.3f", f);
         plt::PlotText(lb, f, a.yMax, ImVec2(0, 10));
+        // a click inside the band plays this signal
+        if (plt::IsPlotHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && ImGui::GetIO().KeyShift == false) {
+            const double mx = plt::GetPlotMousePos().x;
+            if (r.rsHz > 0 && mx >= f - halfW && mx <= f + halfW && !r.selected) a.engine.selectTvChannel(r.slot);
+        }
     }
 }
 

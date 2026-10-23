@@ -402,6 +402,8 @@ struct App {
     bool mtvOn = false;       // "Multi-channel": decode two or three adjacent TV channels of a wide capture (DVB-T2 / DVB-T)
     int mtvMax = 0;           // receivers at once (0: 2 on a laptop, 3 on a desktop)
     int mtvGrid = 0;          // 0 find out, 1 the capture is centred on a channel, 2 between two channels
+    bool mtvAll = true;       // whole-span TV: decode every signal within the budget (false: the selected one only)
+    int mtvLnbLo = 0;         // whole-span DVB-S: the LNB's oscillator in MHz for the sky frequency column (0: show the IF only; below 6000: C-band, sky = LO - IF)
     std::vector<MultiService> mtvSvc;   // every service of every channel (refreshed with ts)
     bool atvWide = false;     // analog TV: system E chosen (14 MHz channel, 10 MHz of video): the radio runs at 20 Msps
     bool reduceCpuHidden = true;   // View > Reduce CPU when hidden: no drawing while the window is minimised or hidden (decoding goes on)
@@ -820,6 +822,9 @@ const dect2::SubMode* curSub(const App& a);    // the protocol entry selected, n
 int subIndexOf(const char* id);                // 1 .. kNumSubModes, 0 when not one
 int modeSlot(const App& a);                    // index of famFreq / famGain for the current entry
 int engineStd(const App& a);
+// whole-span TV (spantv.h): the mode has a receiver per signal of a wide capture; freeFreq: its signals sit at any frequency (satellite, cable), not on a raster
+bool spanTvMode(const App& a);
+bool spanTvFreeFreq(const App& a);
 void refreshDevices(App& a);
 void kiwiFindWindow(App& a);    // the "Find KiwiSDR" window (toolbar_rig.cpp)
 void netRadioWindow(App& a);   // the "Add network radio" window (toolbar_rig.cpp)
