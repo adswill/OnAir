@@ -4,9 +4,13 @@
 # runs of other refs are independent.
 name: Quick CI
 
-run-name: Quick ${{ inputs.ref }} -R ${{ inputs.tests }} on ${{ inputs.os }}
+run-name: Quick ${{ inputs.ref || github.sha }} -R ${{ inputs.tests || '^modes$' }} on ${{ inputs.os || 'ubuntu-24.04' }}
 
 on:
+  # TEMPORARY: GitHub only dispatches a workflow that exists on the default branch, so until this is merged a push to the
+  # branch quick-ci-030 runs it with the defaults (ref = the pushed commit, tests ^modes$). Remove this trigger after the merge.
+  push:
+    branches: [quick-ci-030]
   workflow_dispatch:
     inputs:
       ref:
@@ -35,7 +39,7 @@ on:
         default: "900"
 
 concurrency:
-  group: quick-${{ inputs.ref }}
+  group: quick-${{ inputs.ref || github.sha }}
   cancel-in-progress: true
 
 env:
@@ -47,13 +51,13 @@ env:
 
 jobs:
   quick:
-    name: ${{ inputs.ref }} / ${{ inputs.os }}
-    runs-on: ${{ inputs.os }}
+    name: ${{ inputs.ref || github.sha }} / ${{ inputs.os || 'ubuntu-24.04' }}
+    runs-on: ${{ inputs.os || 'ubuntu-24.04' }}
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || github.sha }}
       # The helper scripts come from the commit this workflow runs from, not from the tested ref (which may predate them).
       - uses: actions/checkout@v4
         with:
@@ -73,17 +77,17 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: .ccache
-          key: ccache-quick-${{ inputs.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}-${{ github.run_id }}
+          key: ccache-quick-${{ inputs.os || 'ubuntu-24.04' }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}-${{ github.run_id }}
           restore-keys: |
-            ccache-quick-${{ inputs.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-
-            ccache-quick-${{ inputs.os }}-
+            ccache-quick-${{ inputs.os || 'ubuntu-24.04' }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-
+            ccache-quick-${{ inputs.os || 'ubuntu-24.04' }}-
       - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-          key: cargo-quick-${{ inputs.os }}-${{ hashFiles('rust/**/Cargo.lock') }}
-          restore-keys: cargo-quick-${{ inputs.os }}-
+          key: cargo-quick-${{ inputs.os || 'ubuntu-24.04' }}-${{ hashFiles('rust/**/Cargo.lock') }}
+          restore-keys: cargo-quick-${{ inputs.os || 'ubuntu-24.04' }}-
       - name: Configure
         run: |
           T0=$(date +%s)
@@ -95,7 +99,7 @@ jobs:
         env:
           JOBS: ${{ inputs.jobs }}
           TARGETS: ${{ inputs.targets }}
-          TESTS: ${{ inputs.tests }}
+          TESTS: ${{ inputs.tests || '^modes$' }}
         run: |
           set -o pipefail
           T0=$(date +%s)
@@ -115,9 +119,9 @@ jobs:
       - name: Test
         id: test
         env:
-          TESTS: ${{ inputs.tests }}
+          TESTS: ${{ inputs.tests || '^modes$' }}
           JOBS: ${{ steps.build.outputs.jobs }}
-          TMO: ${{ inputs.timeout }}
+          TMO: ${{ inputs.timeout || '900' }}
         run: |
           set -o pipefail
           T0=$(date +%s)
@@ -127,7 +131,7 @@ jobs:
         if: always()
         run: |
           [ -f "$RUNNER_TEMP/times" ] && TIMES=$(tr '\n' ' ' < "$RUNNER_TEMP/times") || TIMES=""
-          python3 "$RUNNER_TEMP/quick_ci/summary.py" --title "Quick CI: ${{ inputs.ref }} on ${{ inputs.os }} (-R ${{ inputs.tests }})" \
+          python3 "$RUNNER_TEMP/quick_ci/summary.py" --title "Quick CI: ${{ inputs.ref || github.sha }} on ${{ inputs.os || 'ubuntu-24.04' }} (-R ${{ inputs.tests || '^modes$' }})" \
             --build-log "$RUNNER_TEMP/build.log" --junit "$RUNNER_TEMP/junit.xml" --ccache "$RUNNER_TEMP/ccache.txt" --times $TIMES >> "$GITHUB_STEP_SUMMARY"
       - name: Upload the full logs
         if: always()

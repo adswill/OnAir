@@ -3,9 +3,13 @@
 # For the integration branch. Same dependencies and flags as ci-full.yml (see quick.yml and docs/QUICK-CI.md).
 name: Quick CI full
 
-run-name: Quick full ${{ inputs.ref }} on ${{ inputs.os }}
+run-name: Quick full ${{ inputs.ref || github.sha }} on ${{ inputs.os || 'ubuntu-24.04' }}
 
 on:
+  # TEMPORARY: GitHub only dispatches a workflow that exists on the default branch, so until this is merged a push to the
+  # branch quick-ci-030 runs it with the defaults (ref = the pushed commit, tests ^modes$). Remove this trigger after the merge.
+  push:
+    branches: [quick-ci-030]
   workflow_dispatch:
     inputs:
       ref:
@@ -23,7 +27,7 @@ on:
         default: "900"
 
 concurrency:
-  group: quick-full-${{ inputs.ref }}
+  group: quick-full-${{ inputs.ref || github.sha }}
   cancel-in-progress: true
 
 env:
@@ -35,13 +39,13 @@ env:
 
 jobs:
   build:
-    name: Build (${{ inputs.os }})
-    runs-on: ${{ inputs.os }}
+    name: Build (${{ inputs.os || 'ubuntu-24.04' }})
+    runs-on: ${{ inputs.os || 'ubuntu-24.04' }}
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || github.sha }}
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -53,17 +57,17 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: .ccache
-          key: ccache-quick-${{ inputs.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}-${{ github.run_id }}
+          key: ccache-quick-${{ inputs.os || 'ubuntu-24.04' }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}-${{ github.run_id }}
           restore-keys: |
-            ccache-quick-${{ inputs.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-
-            ccache-quick-${{ inputs.os }}-
+            ccache-quick-${{ inputs.os || 'ubuntu-24.04' }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-
+            ccache-quick-${{ inputs.os || 'ubuntu-24.04' }}-
       - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-          key: cargo-quick-${{ inputs.os }}-${{ hashFiles('rust/**/Cargo.lock') }}
-          restore-keys: cargo-quick-${{ inputs.os }}-
+          key: cargo-quick-${{ inputs.os || 'ubuntu-24.04' }}-${{ hashFiles('rust/**/Cargo.lock') }}
+          restore-keys: cargo-quick-${{ inputs.os || 'ubuntu-24.04' }}-
       - name: Configure and build everything
         run: |
           set -o pipefail
@@ -99,7 +103,7 @@ jobs:
   test:
     name: Tests ${{ matrix.name }}
     needs: build
-    runs-on: ${{ inputs.os }}
+    runs-on: ${{ inputs.os || 'ubuntu-24.04' }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -116,7 +120,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || github.sha }}
       - name: Install runtime libraries (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -133,7 +137,7 @@ jobs:
         run: zstd -dc "$RUNNER_TEMP/bt/build.tar.zst" | tar -xf -
       - name: Test
         env:
-          TMO: ${{ inputs.timeout }}
+          TMO: ${{ inputs.timeout || '900' }}
           SEL: ${{ matrix.sel }}
         run: |
           set -o pipefail
@@ -164,7 +168,7 @@ jobs:
       - name: Merge
         run: |
           [ -f art/build-logs/times ] && TIMES="build=$(sed 's/build=//' art/build-logs/times)" || TIMES=""
-          python3 tools/quick_ci/summary.py --title "Quick CI full: ${{ inputs.ref }} on ${{ inputs.os }}" \
+          python3 tools/quick_ci/summary.py --title "Quick CI full: ${{ inputs.ref || github.sha }} on ${{ inputs.os || 'ubuntu-24.04' }}" \
             --build-log art/build-logs/build.log --ccache art/build-logs/ccache.txt \
             --junit art/tests-*/junit-*.xml --times $TIMES >> "$GITHUB_STEP_SUMMARY"
           echo "build job: ${{ needs.build.result }}, test jobs: ${{ needs.test.result }}" >> "$GITHUB_STEP_SUMMARY"
