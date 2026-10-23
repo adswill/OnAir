@@ -1,0 +1,28 @@
+--- a/core/src/net/api_policy.cpp
++++ b/core/src/net/api_policy.cpp
+@@ -277,6 +277,9 @@
+     if (lineIn.size() > kMaxRigctlLine) return rprt(-8);
+     std::string line = lineIn;
+     while (!line.empty() && (line.back() == '\r' || line.back() == '\n')) line.pop_back();
++    // Cross-protocol guard: a web page can POST text/plain to this port ("POST / HTTP/1.1", headers, then a body such as "F 145500000").
++    // No rigctl command contains " HTTP/", so hang up at the request line, before any body line is executed.
++    if (line.find(" HTTP/") != std::string::npos) { quit = true; return std::string(); }
+     for (unsigned char c : line) if (c < 9 || (c > 13 && c < 32) || c == 127) return rprt(-8);
+     std::vector<std::string> w = words(line);
+     if (w.empty()) return rprt(-1);
+--- a/tests/net/test_api_policy.cpp
++++ b/tests/net/test_api_policy.cpp
+@@ -161,6 +161,13 @@
+     CHECK(!q && h("q").empty() && q, "q quits without a reply");
+     q = false;
+     CHECK(h("\\chk_vfo") == "0\n" && h("+f") == "433920000\n", "chk_vfo, extended prefix answered plainly");
++    // an HTTP request line (a web page POSTing text/plain to the rigctl port) ends the connection and runs nothing
++    q = false;
++    const double before = r.hz;
++    CHECK(h("POST / HTTP/1.1").empty() && q && r.hz == before, "HTTP request line: hang up");
++    q = false;
++    CHECK(h("GET /x HTTP/1.0\r\n").empty() && q, "HTTP/1.0 request line: hang up");
++    q = false;
+ }
+ 
+ // ---------------------------------------------------------------- sockets
