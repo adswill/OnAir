@@ -88,14 +88,15 @@ struct Trial {
     int used = 0;
     std::vector<cf> sym;
     double freqEndHz = 0, dopplerHzPerSec = 0, spsMean = 0;
+    double expEvm = 0.5;   // from the M2M4 moment estimate of Es/N0 (needs no decisions): the EVM a correct order shows
 };
 
-Trial runTrial(const std::vector<cf>& y, double fs, double baud, Order o, double alpha, size_t maxSym, bool wantTrack = false) {
+Trial runTrial(const std::vector<cf>& y, double fs, double baud, Order o, double alpha, size_t maxSym, bool wantTrack = false, double tbn = 0.004) {
     Trial t;
     t.order = o;
     t.baud = baud;
     DemodConfig dc;
-    dc.order = o; dc.sps = fs / baud; dc.alpha = alpha;
+    dc.order = o; dc.sps = fs / baud; dc.alpha = alpha; dc.carrierBn = 0.02; dc.fllGain = 0.03; dc.timingBn = tbn;
     Demod d;
     d.configure(dc);
     const size_t maxIn = (size_t)((double)maxSym * dc.sps);
@@ -126,6 +127,13 @@ Trial runTrial(const std::vector<cf>& y, double fs, double baud, Order o, double
         cnt[(size_t)idx]++;
     }
     t.evm = std::sqrt(e / (double)(N - from));
+    {   // M2M4 estimator for a constant-modulus signal in complex Gaussian noise: S = sqrt(2 M2^2 - M4), N = M2 - S
+        double m2 = 0, m4 = 0;
+        for (size_t i = from; i < N; i++) { const double a = std::norm(t.sym[i]) / pw; m2 += a; m4 += a * a; }
+        m2 /= (double)(N - from); m4 /= (double)(N - from);
+        const double S = std::sqrt(std::max(0.0, 2 * m2 * m2 - m4)), Nn = std::max(m2 - S, 1e-3 * m2);
+        t.expEvm = std::clamp(std::sqrt(Nn / std::max(S, 1e-6)), 0.03, 1.5);
+    }
     for (int c : cnt) if ((double)c >= 0.4 / M * (double)(N - from)) t.used++;
     t.lockMetric = d.stats().lockMetric;
     t.freqEndHz = d.stats().freq * fs / (2 * kPi);
@@ -140,8 +148,18 @@ Trial runTrial(const std::vector<cf>& y, double fs, double baud, Order o, double
     return t;
 }
 
-// the lowest order whose fit is close to the best one among those that use all their points
+// the lowest order that uses all its points and fits as well as the measured noise says a correct one must (M2M4 estimate); else the
+// lowest-order fit close to the best one
 int pickOrder(const std::vector<Trial>& tr) {
+    double exp = 1e9;
+    for (const auto& t : tr) exp = std::min(exp, t.expEvm);
+    int pick = -1;
+    for (size_t i = 0; i < tr.size(); i++) {
+        if (tr[i].used != orderPoints(tr[i].order) || tr[i].evm > 1.4 * exp + 0.03) continue;
+        // QPSK and OQPSK exclude each other (the other one's EVM is far worse); a higher order must be clearly better to replace a lower one
+        if (pick < 0 || tr[i].evm < 0.7 * tr[(size_t)pick].evm) pick = (int)i;
+    }
+    if (pick >= 0) return pick;
     double best = 1e9;
     for (const auto& t : tr) if (t.used == orderPoints(t.order)) best = std::min(best, t.evm);
     for (size_t i = 0; i < tr.size(); i++)
@@ -248,7 +266,14 @@ Analysis analyse(const cf* x0, size_t n0, double fs, const AnalyseOptions& o) {
             const std::vector<double> p = powerSpectrum(y, Ms[i], nfft);
             const double halfWin = 0.06 * pass * Ms[i] / fsC * (double)nfft;   // the residual carrier is small: lines at +-baud are the cyclic ones
             const size_t cB = nfft / 2, w = (size_t)std::max(3.0, halfWin);
-            const Line l = strongest(p, 0, nfft, cB - w, cB + w + 1);
+            Line l = strongest(p, 0, nfft, cB - w, cB + w + 1);
+            {   // a line stands out from the pedestal next to it (OQPSK's x^2 has a broad skirt but no line)
+                const size_t pk = (size_t)std::lround(l.pos);
+                std::vector<double> nb;
+                for (long d = -48; d <= 48; d++) if (std::labs(d) >= 5 && (long)pk + d >= 0 && (long)pk + d < (long)nfft) nb.push_back(p[(size_t)((long)pk + d)]);
+                const double loc = std::max(1e-30, medianOf(nb));
+                l.db = std::min(l.db, 10 * std::log10(std::max(1e-30, l.val) / loc) + 3.0);
+            }
             *dbs[i] = l.db;
             if (!got && l.db > 14) { got = true; bestDb = l.db; fc = (l.pos - (double)nfft / 2) * fsC / (double)nfft / Ms[i]; }
         }
@@ -300,20 +325,34 @@ Analysis analyse(const cf* x0, size_t n0, double fs, const AnalyseOptions& o) {
         }
         // the -3 dB width of an RRC spectrum is the symbol rate whatever the roll-off; a rectangular pulse is 12 % narrower
         const double w = A.carrier.bw3Hz;
-        for (int gi = -15; gi <= 15; gi++) {
-            const double gf = 1.0 + 0.01 * gi;
+        for (int gi = -24; gi <= 24; gi++) {
+            const double gf = 1.0 + 0.005 * gi;
             { addCand(w * gf, 0.3, "bandwidth"); addCand(w * 0.88 * gf, 0.2, "bandwidth"); }
         }
     }
     if (cand.empty()) { A.status = "signal found, symbol rate unclear"; return A; }
     std::stable_sort(cand.begin(), cand.end(), [](const RateCandidate& a, const RateCandidate& b) { return a.conf > b.conf; });
-    if (cand.size() > 90) cand.resize(90);
+    if (cand.size() > 220) cand.resize(220);
 
     // ---- 5 trial demodulation per candidate and order
     const bool forceO = o.forceOrder != Order::Auto;
+    const double alphaS = o.forceAlpha >= 0 ? std::max(0.05, o.forceAlpha) : 0.35;
+    if (cand.size() > 12) {   // screening: how constant the symbol level is after a QPSK / OQPSK timing loop (it does not depend on the order)
+        std::vector<std::pair<double, size_t>> sc;
+        for (size_t c = 0; c < cand.size(); c++) {
+            double ee = 9;
+            for (Order od : {Order::Qpsk, Order::Oqpsk}) ee = std::min(ee, runTrial(y, fsC, cand[c].baud, od, o.forceAlpha == -1 ? 0 : alphaS, 1500).expEvm);
+            sc.push_back({ee - cand[c].conf * 0.02, c});   // equal scores: the lines before the bandwidth guesses
+        }
+        std::sort(sc.begin(), sc.end());
+        std::vector<RateCandidate> keep;
+        for (size_t k = 0; k < std::min<size_t>(10, sc.size()); k++) keep.push_back(cand[sc[k].second]);
+        cand.swap(keep);
+    }
     double bestScore = 1e9; double winBaud = 0; Order bestO = Order::Bpsk;
     std::vector<std::pair<Order, double>> bestOrderEvm;
-    std::vector<double> scores(cand.size(), 9.0);
+    std::vector<double> scores(cand.size(), 9.0), refBaud(cand.size(), 0.0);
+    std::vector<Order> candOrder(cand.size(), Order::Bpsk);
     const double alpha0 = o.forceAlpha >= 0 ? std::max(0.05, o.forceAlpha) : 0.35;
     const bool rect0 = o.forceAlpha == -1;
     for (size_t c = 0; c < cand.size(); c++) {
@@ -324,11 +363,34 @@ Analysis analyse(const cf* x0, size_t n0, double fs, const AnalyseOptions& o) {
         }
         const int pi = forceO ? 0 : pickOrder(tr);
         if (pi < 0) continue;
-        scores[c] = tr[(size_t)pi].evm;
-        if (scores[c] < bestScore) {
-            bestScore = scores[c]; winBaud = cand[c].baud; bestO = tr[(size_t)pi].order;
-            bestOrderEvm.clear();
-            for (auto& t : tr) bestOrderEvm.push_back({t.order, t.evm});
+        double ee = 9;
+        for (const auto& t : tr) ee = std::min(ee, t.expEvm);
+        scores[c] = ee;   // the symbol rate is ranked by how constant the symbol level is (M2M4), which does not depend on the order
+        candOrder[c] = tr[(size_t)pi].order;
+        refBaud[c] = tr[(size_t)pi].spsMean > 0 ? fsC / tr[(size_t)pi].spsMean : cand[c].baud;
+    }
+    // the timing loop pulls in slowly from a rate that is off by a few tenths of a percent: run the best ones again at the rate the loop reached
+    for (int round = 0; round < 2; round++) {
+        std::vector<size_t> idx(cand.size());
+        for (size_t i = 0; i < idx.size(); i++) idx[i] = i;
+        std::sort(idx.begin(), idx.end(), [&](size_t a, size_t b) { return scores[a] < scores[b]; });
+        for (size_t k = 0; k < std::min<size_t>(6, idx.size()); k++) {
+            const size_t c = idx[k];
+            if (scores[c] > 0.9 || refBaud[c] <= 0) continue;
+            const Trial t = runTrial(y, fsC, refBaud[c], candOrder[c], rect0 ? 0 : alpha0, 2500);
+            if (t.expEvm < scores[c] * 0.98) {
+                scores[c] = t.expEvm; cand[c].baud = refBaud[c];
+                refBaud[c] = t.spsMean > 0 ? fsC / t.spsMean : refBaud[c];
+            } else if (round == 0) refBaud[c] = (refBaud[c] + (t.spsMean > 0 ? fsC / t.spsMean : refBaud[c])) / 2;
+        }
+    }
+    {
+        size_t cb = 0;
+        for (size_t c = 1; c < cand.size(); c++) if (scores[c] < scores[cb]) cb = c;
+        bestScore = scores[cb]; winBaud = cand[cb].baud; bestO = candOrder[cb];
+        for (Order od : kOrders) {
+            if (forceO && od != o.forceOrder) continue;
+            bestOrderEvm.push_back({od, runTrial(y, fsC, winBaud, od, rect0 ? 0 : alpha0, 2500).evm});
         }
     }
     for (size_t c = 0; c < cand.size(); c++) cand[c].conf = std::clamp(1.0 - scores[c] / 0.9, 0.0, 1.0);
@@ -364,7 +426,7 @@ Analysis analyse(const cf* x0, size_t n0, double fs, const AnalyseOptions& o) {
     if (useRect) snprintf(sh, sizeof sh, "rectangular"); else snprintf(sh, sizeof sh, "RRC %.2f", alpha);
     A.shape = sh;
     // ---- 8 final run
-    Trial f = runTrial(*yy, fsC, baud, bestO, useRect ? 0 : alpha, 12000, true);
+    Trial f = runTrial(*yy, fsC, baud, bestO, useRect ? 0 : alpha, 12000, true, 0.004);
     if (f.sym.size() < 200) { A.status = "need more samples"; return A; }
     A.baudRaw = f.spsMean > 0 ? fsC / f.spsMean : baud;
     const double snapped = o.snapStandard ? snapRate(A.baudRaw, 0.006) : 0;
@@ -372,7 +434,7 @@ Analysis analyse(const cf* x0, size_t n0, double fs, const AnalyseOptions& o) {
     A.baud = A.baudSnapped ? snapped : A.baudRaw;
     if (o.forceBaud > 0) { A.baud = o.forceBaud; A.baudSnapped = false; }
     A.rateFound = true;
-    if (A.baudSnapped && std::fabs(A.baud - baud) > 0.0005 * baud) f = runTrial(*yy, fsC, A.baud, bestO, useRect ? 0 : alpha, 12000, true);
+    if (A.baudSnapped && std::fabs(A.baud - baud) > 0.0005 * baud) f = runTrial(*yy, fsC, A.baud, bestO, useRect ? 0 : alpha, 12000, true, 0.004);
     A.baudConf = std::clamp(1.0 - f.evm / 0.9, 0.0, 1.0);
     A.orderConf = A.baudConf;
     A.evm = f.evm;

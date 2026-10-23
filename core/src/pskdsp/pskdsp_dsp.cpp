@@ -292,7 +292,7 @@ void Demod::process(const cf* x, size_t n, std::vector<cf>& sym, std::vector<flo
             for (int k = 1; k < M; k++) zm *= z;
             double fe = 0;
             if (havePrev_ && c_.fllGain > 0) fe = std::arg(zm * std::conj(prevM_)) / M;
-            const double fll = c_.fllGain * (phVar_ < 0.08 ? 0.25 : 1.0);
+            const double fll = c_.fllGain * (nSym_ < 400 ? 1.0 : (phVar_ < 0.08 ? 0.02 : 0.2));   // the FLL pulls in; afterwards it only adds jitter
             freq_ += (cKi_ * pe + fll * fe) / sps;
             phase_ = wrapPi(phase_ + cKp_ * pe);
             phVar_ = 0.99 * phVar_ + 0.01 * pe * pe;
@@ -309,9 +309,10 @@ void Demod::process(const cf* x, size_t n, std::vector<cf>& sym, std::vector<flo
             prevSym_ = z; prevM_ = zm; havePrev_ = true;
             nSym_++;
             // advance
-            spsAdj_ -= tKi_ * te * sps;
+            const double acq = 1.0 + 5.0 * std::max(0.0, 1.0 - (double)nSym_ / 700.0);   // wide loop while acquiring, the set bandwidth afterwards
+            spsAdj_ -= tKi_ * acq * acq * te * sps;
             spsAdj_ = std::clamp(spsAdj_, -0.02 * sps, 0.02 * sps);
-            nextT_ += sps + spsAdj_ - tKp_ * te * sps;
+            nextT_ += sps + spsAdj_ - tKp_ * acq * te * sps;
         }
         // drop what no strobe needs any more (keep three symbols behind the next one for the eye)
         if (buf_.size() > 4096 + (size_t)(4 * sps)) {
