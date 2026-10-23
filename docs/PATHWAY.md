@@ -139,3 +139,6 @@ Read-only review of webonair, webonair-ui, webonair-dir, external-api, ham-map-f
 
 ## 2026-10-23: security fixes applied to the source branches (paused)
 Pushed: webonair-dir-030 (rate-limit salt, tombstone after delete; node tests pass). Committed locally, untested, not pushed: backup-030, external-api-030, webonair-030, voice-keys-030/-gui-030, ham-map-feed-030, bluefile-030. See docs/SECURITY-REVIEW-3.0.md, "Fix status".
+
+## 2026-10-23 (later): rigctl and web allow-list fixes pushed
+external-api-030 and webonair-030 got their security fixes (tests green); discard-keyfile-030 added for the key-store lock-out. See docs/SECURITY-REVIEW-3.0.md.

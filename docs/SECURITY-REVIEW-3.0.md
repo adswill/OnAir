@@ -116,3 +116,10 @@ Fixes are committed on local branches of the fixing worktree; only the tested on
 | ham-map-feed-030 | L4 callsign characters | committed (local secfix-ham, d5c07fd6a), NOT compiled or run, not pushed |
 | bluefile-030 | M4 private per-user folder + mkstemp, sample-rate range | committed (local secfix-blue, 95616b9b2), NOT compiled or run, not pushed |
 Not done: unpkg integrity hash (the hash is not known and a download is not allowed; vendoring needs a download). Test harness snippets are in the session scratchpad (`scratchpad/sec`).
+
+### Update (after the owner plugged in)
+- external-api-030: PUSHED (f6f169051). Token only when "let other computers connect" is on (sess.required = cfg.allowLan); T 0 and S 0 stay free; HTTP and header lines hang up. Built test_api_policy, ctest -R api_policy passed.
+- webonair-030: PUSHED (ae9b93033). Allow-list; HostDecoder uses the sub-mode id (ft8, wspr, sstv, wefax) as the kind, so the approved modes stay on. Built test_web_safety, passed. Same area as webonair-ranges-030 and webonair-decoders-030: the integrator merges server/web/web_policy.h and web_policy.cpp (new DecoderClass::Other, the lists in web_policy.cpp).
+- discard-keyfile-030 (new branch on top of untested-secfix-vkgui-030): discardKeyFile() and a "Move the old key file aside" button in the Keys window. ctest -R ^voice_keys$ passed; the window code was not compiled (app target not built).
+- backup, voice-keys, voice-keys-gui, ham, blue: merged by the integrator from the untested-secfix branches; the vk/vkgui merge needs discard-keyfile-030 on top.
+- Still open: unpkg integrity hash.
