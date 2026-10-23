@@ -6,8 +6,9 @@
 #
 # Pushes nothing: the branch must already be on GitHub. Dispatches the workflow, waits (one API call every 45 s, backs off on
 # 403/429, gives up after --max-wait, default 90 min), prints the summary and exits 0 only when the run succeeded.
-# --via <ref>: the branch the WORKFLOW FILE is taken from (default main). Until quick.yml is merged into main, use
-# --via quick-ci-030; the branch to test is still the first argument. See docs/QUICK-CI.md.
+# --via <ref>: the branch the WORKFLOW FILE is taken from (default main). GitHub only dispatches a workflow that exists on the
+# default branch, so this works once quick.yml is merged into main (a dispatch of a workflow only on a branch returns 404).
+# The repository is the one of the git remote "pub" (override with QUICK_CI_REPO=owner/name). See docs/QUICK-CI.md.
 set -u
 BRANCH="${1:-}"; [ -z "$BRANCH" ] && { sed -n 2,11p "$0"; exit 2; }
 shift
@@ -27,6 +28,9 @@ done
 if [ $FULL -eq 0 ] && [ -z "$TESTS" ]; then echo "need a tests regex (or --full)"; exit 2; fi
 if [ $FULL -eq 1 ]; then WF="quick-full.yml"; else WF="quick.yml"; fi
 
+REPO="${QUICK_CI_REPO:-$(git remote get-url pub 2>/dev/null | sed -E 's#.*github.com[:/]##; s#\.git$##')}"
+[ -z "$REPO" ] && REPO="adswill/OnAir"
+export GH_REPO="$REPO"
 START=$(date -u +%s)
 ARGS=(-f "ref=$BRANCH" -f "os=$OS")
 if [ $FULL -eq 0 ]; then
