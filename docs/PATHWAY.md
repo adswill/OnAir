@@ -506,3 +506,19 @@ signals, Doppler following, DPSK/NRZ-M/NRZ-S, G3RUH/CCSDS, sync hunt incl. OQPSK
 (#216, family 203, sub-branch), MHEG-5 carousel viewer and static renderer (#176, sub-branch), NICAM-728 / A2 and the snow option for
 analogue TV (#73/#239, sub-branch), SIB1 MFBI and bands above 64 (#164), SARSAT whole-capture search for 1544 MHz (#214), 41.7 kHz LoRa and
 the #229 presets. Everything new is checked against generated signals only.
+
+### Handover (issue-modes-030, 2026-10-23 evening)
+State pushed: issue-modes-030 at ff296d5a1, merged with integ-30 4833aaacc, no conflicts left. Laptop run on that sha was queued
+(log: scratchpad psk/laptop4.log, regex ^(pskdsp_|pactor_|mode_numbers$|mheg|atv_|i18n|tetrapol_|signallab|cell_bands|cell_phy|sarsat_rx|lorasat_rx|lora_modes));
+the run before it failed only on the platform.h <initializer_list> error that integ-30 4833aaacc fixes.
+Tested on the Mac (standalone clang builds): test_pskdsp_analyse / _bits / _rx, test_sarsat_rx (with the whole-capture cases), the SIB1
+MFBI round trip of test_cell_bands. Syntax-checked only: app/pskdsp/pskdsp_ui.cpp, engine wiring, app/sarsat, app/cell. NOT run yet:
+test_pskdsp_engine, test_lorasat_rx (new 137.055 MHz / 41.7 kHz case), test_pactor_* (sub-agent could not build), test_mode_numbers,
+atv engine tests, the full app build. Next agent: wait for / re-dispatch that laptop run, fix what fails:
+- PSK (#282): core/src/pskdsp/*, app/pskdsp/pskdsp_ui.cpp, tests/pskdsp/*. Labelled experimental. If test_pskdsp_engine is flaky on the
+  laptop (wall-clock 12 s loop), lengthen the loop rather than loosen the checks.
+- LoRa sats (#229): core/src/lorasat/lorasat_presets.cpp (2 presets, bwKhz 41 = 41.7 kHz via lorasat::bandwidthHz), tests/lorasat.
+  If 41.7 kHz does not decode, drop the 41 preset/option, keep the 401.703 one.
+- PACTOR-I (#216): core/src/pactor, app/pactor; experimental; Huffman table user-loaded (owner decision whether to bundle).
+- MHEG-5 (#176), NICAM/A2 + snow (#73/#239): sub-branch work merged; i18n catalog entries not added (tr() falls back to English).
+Status table: docs/ISSUES-2026-10-23-modes.md. Reply drafts: session scratchpad replies-3.0/<issue>-*.md (nothing posted).
