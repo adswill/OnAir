@@ -362,3 +362,10 @@ HD checkbox next to the channel picker (greyed out until an HD counterpart exist
 
 2026-10-22 (mode-drmplus-030): audit only, no code. DRM30 modes A-D and DRM+ (mode E, 100 kHz, 4/16-QAM, SDC 4-QAM, generator, tests/drm/test_drm_modee.cpp) are already in core/src/drm and auto-detected inside the one DRM entry. HD Radio FM (MP1/MP3) and AM (MA1 hybrid, MA3 all-digital: P1, P3, PIDS, L2, AAS, HDC via user-installed FAAD2 plug-in) are already in core/src/hdr with generator and tests/hdr/test_hdr_am.cpp. Per the one-entry-per-protocol rule they stay as DRM and HD Radio families; no new mode numbers used. Nothing added; still unverified without real signals: DRM+ unequal error protection, HD AM on-air.
 
+
+2026-10-23 (perf2-voice-030) PARKED. Resume note:
+- build/ in this worktree has bench_modes + bench_wide built (Release); nothing else touched, no optimisation done yet.
+- tests/bench/bench_wide.cpp (new, in CMake): N DMR carriers through WideModes, prints CPU s/s, per carrier, RSS, log digest. Not yet run.
+- Next: baseline `bench_modes --mode dmr,p25,nxdn,dstar,dpmr,m17,tetra,pocsag,flex,mpt1327,ltr,edacs --seconds 10`, `bench_wide --carriers 50` (and 100, --threads 0/1).
+- Then `sample` the top entries; DMR 48 kHz chain (dmr_rx.cpp StreamFir per-sample dots, AFC FFT) and the per-carrier Channelizer are first suspects.
+- Keep outputs bit-identical (digest); earlier work: docs/PERFORMANCE-DSP.md.

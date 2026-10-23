@@ -734,6 +734,8 @@ if(DECT2_BUILD_TESTS)
   if(NOT WIN32)   # the benchmark uses fork/waitpid/getrusage (POSIX only)
     add_executable(bench_modes tests/bench/bench_modes.cpp)
     target_link_libraries(bench_modes PRIVATE dect2core)
+    add_executable(bench_wide tests/bench/bench_wide.cpp)   # N carriers through the whole-span bank: CPU per carrier and a digest of the calls
+    target_link_libraries(bench_wide PRIVATE dect2core)
     add_executable(bench_tx tests/bench/bench_tx.cpp)   # the transmit generators' cost and sample hash (nothing is transmitted)
     target_link_libraries(bench_tx PRIVATE dect2core)
     # keeps the per-mode benchmark from rotting: three modes, one second each (the full run is: bench_modes --out <prefix>, see docs/optimising-a-mode.md)
