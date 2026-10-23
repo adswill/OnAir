@@ -42,8 +42,8 @@ int main() {
     CHECK(tu.stdMode == pskd::kPskdStandard && modeTuningById("pskdemod") == modeTuning(pskd::kPskdStandard), "registry resolves pskdemod by id and standard");
     {
         auto engine = std::make_unique<Engine>();
+        engine->pskdemod().configure(48000);   // publishes a first telemetry (as loading results does for Horus); setStandard then shows it
         engine->setStandard(pskd::kPskdStandard);
-        engine->pskdemod().configure(48000);   // publishes a first telemetry, as loading results does for Horus
         RxTelemetry rx;
         CHECK(engine->latestRx(rx, 0) && rx.standard == pskd::kPskdActiveStandard, "idle snapshot on the PSK demodulator active standard (got %d)", rx.standard);
     }
