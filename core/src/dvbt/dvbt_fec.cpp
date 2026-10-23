@@ -1,4 +1,5 @@
 #include "dect2/dvbt/dvbt_fec.h"
+#include "dect2/common/stage_prof.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -31,6 +32,7 @@ void FecDecoder::pushSymbol(const cf32* cells, const float* n0, int symIdx) {
     // Hierarchical modulation: the high-priority stream is the first two bits of every cell (y0, y1: the quadrant), bit-interleaved by
     // branches I0 and I1 exactly like QPSK, and coded at the HP rate. The LP stream is the other v - 2 bits (branches I2..), at the LP rate.
     const int m = p_.hier ? (lp_ ? v - 2 : 2) : v;
+    DECT2_STAGE_VAR(dm, "dvbt.demap");
     static thread_local std::vector<cf32> c2;
     static thread_local std::vector<float> n2, llr, llr2;
     c2.resize(N); n2.resize(N); llr.resize((size_t)N * m); llr2.resize((size_t)N * m);
@@ -50,6 +52,7 @@ void FecDecoder::pushSymbol(const cf32* cells, const float* n0, int symIdx) {
     }
     llrQueue_.insert(llrQueue_.end(), llr2.begin(), llr2.end());
     st_.symbols++;
+    dm.stop();
     // decode in blocks of 16 symbols (the carry gives the trellis its history)
     if (llrQueue_.size() >= (size_t)N * m * 16) process(false);
 }
@@ -78,7 +81,9 @@ void FecDecoder::process(bool) {
         long bestMetric = -1; int bestPhase = 0;
         for (int ph = 0; ph < k; ph++) {
             std::vector<int8_t> s;
+            DECT2_STAGE_VAR(dp, "dvbt.depuncture");
             Viterbi::depuncture(llrQueue_.data(), llrQueue_.size(), rate, ph, s, scale);
+            dp.stop();
             std::vector<uint8_t> b;
             long metric = 0;
             Viterbi::decode(s, b, 4, &metric);
@@ -88,6 +93,7 @@ void FecDecoder::process(bool) {
         st_.punctPhase = bestPhase;
         st_.phaseLocked = true;
     }
+    DECT2_STAGE_VAR(dp, "dvbt.depuncture");
     Viterbi::depuncture(llrQueue_.data(), llrQueue_.size(), rate, st_.punctPhase, soft, scale);
     // each block starts at a symbol boundary and every symbol holds a whole number of puncture periods, so the phase repeats
     const size_t L = 192;
@@ -96,11 +102,13 @@ void FecDecoder::process(bool) {
     const size_t steps = window.size() / 2;
     std::vector<uint8_t> dec;
     long metric = 0;
+    dp.stop();
     Viterbi::decode(window, dec, 4, &metric);
+    DECT2_STAGE("dvbt.rs");
     st_.viterbiMargin = steps ? (double)metric / (double)(steps * 2 * 22) : 0;
     const size_t fromStep = carry_.empty() ? 0 : L;                 // history steps were emitted before
     const size_t toStep = steps > L ? steps - L : 0;                // the tail is not yet reliable
-    for (size_t t = fromStep; t < toStep; t++) bits_.push_back(dec[t]);
+    if (toStep > fromStep) bits_.insert(bits_.end(), dec.begin() + fromStep, dec.begin() + toStep);
     // keep the last 2L steps as history
     const size_t keep = std::min(window.size() / 2, 2 * L);
     carry_.assign(window.end() - 2 * keep, window.end());

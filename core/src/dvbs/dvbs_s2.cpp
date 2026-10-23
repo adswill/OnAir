@@ -365,6 +365,33 @@ void s2MapBits(const uint8_t* bits, int nbits, int mod, int rate, cf32* out) {
     }
 }
 
+namespace {
+// Max-log LLRs, eight symbols at a time (the loops over the eight lanes become vector instructions): the squared distance to every point, and
+// for each bit the smallest distance among the points with that bit 1 minus the smallest among those with it 0. The same arithmetic as the
+// one-symbol-at-a-time loop it replaced, so the same values (a minimum does not depend on the order), at a fraction of the cost: 32APSK was the
+// largest part of a DVB-S2 receiver.
+template <int M>
+void demapApsk(const cf32* sym, int n, const float* cr, const float* ci, float w, float* llr) {
+    constexpr int P = 1 << M, B = 8;
+    for (int i0 = 0; i0 < n; i0 += B) {
+        const int cnt = std::min(B, n - i0);
+        float yr[B], yi[B];
+        for (int l = 0; l < B; l++) { const cf32 v = sym[i0 + (l < cnt ? l : 0)]; yr[l] = v.real(); yi[l] = v.imag(); }
+        float m0[M][B], m1[M][B];
+        for (int b = 0; b < M; b++) for (int l = 0; l < B; l++) { m0[b][l] = 1e30f; m1[b][l] = 1e30f; }
+        for (int p = 0; p < P; p++) {
+            float d[B];
+            for (int l = 0; l < B; l++) { const float a = yr[l] - cr[p], b = yi[l] - ci[p]; d[l] = a * a + b * b; }
+            for (int b = 0; b < M; b++) {
+                if ((p >> (M - 1 - b)) & 1) { for (int l = 0; l < B; l++) m1[b][l] = std::min(m1[b][l], d[l]); }
+                else { for (int l = 0; l < B; l++) m0[b][l] = std::min(m0[b][l], d[l]); }
+            }
+        }
+        for (int l = 0; l < cnt; l++) for (int b = 0; b < M; b++) llr[(size_t)(i0 + l) * M + b] = (m1[b][l] - m0[b][l]) * w;
+    }
+}
+} // namespace
+
 void s2Demap(const cf32* sym, int n, int mod, int rate, float sigma2, float* llr) {
     const int m = mod + 2;
     const float w = 1.f / (2.f * std::max(sigma2, 1e-6f));
@@ -377,6 +404,15 @@ void s2Demap(const cf32* sym, int n, int mod, int rate, float sigma2, float* llr
     const int P = 1 << m;
     float cr[256], ci[256];
     for (int p = 0; p < P; p++) { cr[p] = c[p].real(); ci[p] = c[p].imag(); }
+    switch (m) {
+    case 3: demapApsk<3>(sym, n, cr, ci, w, llr); return;
+    case 4: demapApsk<4>(sym, n, cr, ci, w, llr); return;
+    case 5: demapApsk<5>(sym, n, cr, ci, w, llr); return;
+    case 6: demapApsk<6>(sym, n, cr, ci, w, llr); return;
+    case 7: demapApsk<7>(sym, n, cr, ci, w, llr); return;
+    case 8: demapApsk<8>(sym, n, cr, ci, w, llr); return;
+    default: break;
+    }
     for (int i = 0; i < n; i++) {
         float d[256];
         const float yr = sym[i].real(), yi = sym[i].imag();

@@ -42,6 +42,10 @@ private:
 };
 const BchCode& bchFor(const PlpFec& f);
 
+// ---- the LDPC decoder of the data PLPs: LdpcCode::decodeFast's layered normalised min-sum, with the same results bit for bit, at less
+// cost per block (buffers kept per thread, no clearing, the parity check on sign bytes: core/src/t2/t2ldpc.cpp)
+bool t2LdpcDecode(const LdpcCode& code, const std::vector<float>& llr, int maxIter, std::vector<uint8_t>& hard, int* iters = nullptr, float alpha = 0.78f);
+
 // ---- bit interleaver: map[p] = index (in the LDPC codeword) of the bit carried by label bit p
 // (p = cell * bitsPerCell + position, position 0 = MSB of the cell label)
 const std::vector<int>& bitInterleaverMap(const PlpFec& f);
@@ -53,6 +57,8 @@ void qamMapBlock(const PlpFec& f, const std::vector<uint16_t>& labels, std::vect
 // Soft demapping of a FEC block. `n0[i]` is the noise variance per real dimension of equalised cell i.
 // Output llr has cells*bitsPerCell entries in label-bit order (positive = bit 0).
 void qamDemapBlock(const PlpFec& f, const cf32* cells, const float* n0, int nCells, float* llr);
+// The same with the bit de-interleaver folded in: llr has the block's nLdpc entries in codeword order (llr[map[p]] = label LLR p)
+void qamDemapBlockToCodeword(const PlpFec& f, const cf32* cells, const float* n0, int nCells, float* llr);
 // Exact (slow) version over the whole constellation, used as a reference in tests.
 void qamDemapBlockExact(const PlpFec& f, const cf32* cells, const float* n0, int nCells, float* llr);
 

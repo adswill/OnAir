@@ -148,6 +148,15 @@ void Engine::logDvbtEvents(const RxTelemetry& t) {
         log(t.dvbt.fecSync ? "transport stream locked (Viterbi + Reed-Solomon)" : "transport stream sync lost");
         logTFec_ = t.dvbt.fecSync;
     }
+    if (t.dvbt.fecDropped < logTFecDropped_) logTFecDropped_ = 0;   // a new receiver
+    const auto nowT = std::chrono::steady_clock::now();
+    if (t.dvbt.fecDropped > logTFecDropped_ && nowT - logTFecAt_ > std::chrono::seconds(5)) {   // at most every 5 s
+        logTFecAt_ = nowT;
+        snprintf(b, sizeof b, "DVB-T: this computer is too slow for the error correction (stages dvbt.demap, dvbt.viterbi, dvbt.rs): %llu symbols dropped",
+                 (unsigned long long)(t.dvbt.fecDropped - logTFecDropped_));
+        log(b);
+        logTFecDropped_ = t.dvbt.fecDropped;
+    }
 }
 
 void Engine::logRxEvents(const RxTelemetry& t) {

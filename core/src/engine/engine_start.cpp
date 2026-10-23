@@ -130,6 +130,11 @@ void Engine::configureTvReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rx_.setPipelined(pipe);
     }
     rxT_.configure(rate_, tune.bandwidthMhz);
+    {   // DVB-T: the error correction on its own thread for a live radio, so the analysis thread only demodulates (DECT2_PIPELINE=0/1 forces it)
+        bool pipe = src_->realtimeHardware();
+        if (const char* e = getenv("DECT2_PIPELINE")) pipe = atoi(e) != 0;
+        rxT_.setPipelined(pipe);
+    }
     rxT_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });
     rxA_.configure(rate_);
     rxA_.setBlocking(!src_->realtimeHardware());

@@ -877,7 +877,7 @@ private:
     void logDvbtEvents(const RxTelemetry& t);
     void logIsdbtEvents(const RxTelemetry& t);
     int logIMode_ = -1, logIGi_ = -1, logITmcc_ = -1; bool logISync_ = false;
-    int logTMode_ = -1, logTGi_ = -1, logTTps_ = -1; bool logTFec_ = false;
+    int logTMode_ = -1, logTGi_ = -1, logTTps_ = -1; bool logTFec_ = false; uint64_t logTFecDropped_ = 0; std::chrono::steady_clock::time_point logTFecAt_{};
     std::mutex rxMu_;
     RxTelemetry rxTel_;
     // Every receiver counts its reports from 1, so after a change of mode (or a restart) its numbers would lie below the last one the interface

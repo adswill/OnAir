@@ -288,6 +288,7 @@ struct RxTelemetry {
         uint64_t packets = 0, rsClean = 0, rsCorrected = 0, rsFailed = 0;
         double viterbiMargin = 0, secSinceTps = 0;
         int symbolIdx = 0;
+        uint64_t fecDropped = 0;   // symbols the error correction thread was too slow for (pipelined receiver: dropped, the decoder restarted)
     } dvbt;
     struct Isdbt {               // ISDB-T only: the TMCC parameters and the statistics of the three layers
         bool tmccOk = false;

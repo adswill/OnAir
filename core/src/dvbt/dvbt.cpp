@@ -1,4 +1,5 @@
 #include "dect2/common/thread_name.h"
+#include "dect2/common/stage_prof.h"
 #include "dect2/common/threadpool.h"
 #include "dect2/fec/fec_proto.h"
 #include "dect2/dvbt/dvbt.h"
@@ -663,13 +664,14 @@ void Viterbi::decode(const std::vector<int8_t>& soft, std::vector<uint8_t>& out,
     const size_t chunks = (steps + C - 1) / C;
     std::vector<long> metrics(chunks, 0);
     auto work = [&](size_t ci) {
+        DECT2_STAGE("dvbt.viterbi");
         const size_t a = ci * C, b = std::min(steps, a + C);
         const size_t lo = a > L ? a - L : 0, hi = std::min(steps, b + L);
         static thread_local std::vector<uint8_t> bits;   // reused by every chunk this thread decodes
         long mt = 0;
         fecp::viterbiRange(soft.data() + 2 * lo, hi - lo, bits, &mt);   // 64-state K = 7 trellis: core/src/fec/fec_proto.cpp (C++) or the Rust crate onair_fec (aarch64)
         metrics[ci] = mt;
-        for (size_t t = a; t < b; t++) out[t] = bits[t - lo];
+        std::copy(bits.begin() + (a - lo), bits.begin() + (b - lo), out.begin() + a);
     };
     // the chunks are independent and each writes only its own part of out and metrics: on the shared pool (the threads were started and
     // joined per block before: about 200 thread starts a second for an 8K multiplex)

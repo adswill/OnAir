@@ -43,12 +43,13 @@ struct Result {
     size_t badLate = 0;     // bad packets that came out more than 100 ms after a disturbance had ended
     size_t lost = 0;        // packets missing or damaged after the first good one (counter gaps plus bad packets)
     double firstGoodSec = -1;   // seconds of signal fed when the first good packet came out
+    uint64_t digest = 1469598103934665603ull;   // FNV-1a over every packet delivered, in order
 };
 
 // burstMs > 0: a burst of noise at burstSnrDb (against the signal) starting burstAtSec into the signal, to see how the receiver rides out a disturbance
 // dcDbc < 0: a constant offset at that level against the signal, as the DC spike of a HackRF
 static Result run(const dvbt::Params& p, int frames, double snrDb, double cfoHz, double echoDb, int echoDelay, double sroPpm, double bwMhz = 8,
-                  double burstMs = 0, double burstSnrDb = 0, double burstAtSec = 0, int slipSamples = 0, double dcDbc = 0) {
+                  double burstMs = 0, double burstSnrDb = 0, double burstAtSec = 0, int slipSamples = 0, double dcDbc = 0, bool pipelined = false) {
     const double fn = nativeRateHz(bwMhz);
     // transmit: packets carry a counter so the receiver output can be checked
     uint32_t counter = 0;
@@ -61,12 +62,14 @@ static Result run(const dvbt::Params& p, int frames, double snrDb, double cfoHz,
     });
     DvbtReceiver rx;
     rx.configure(fn, bwMhz);
+    if (pipelined) rx.setPipelined(true, true);   // the error correction on its own thread (as for a live radio), waiting instead of dropping
     Result r;
     uint32_t expectNext = 0; bool started = false;
     size_t fed = 0;   // samples given to the receiver so far (the packet callback runs inside feed())
     uint32_t lastCounter = 0;
     const size_t burstEnd = burstMs > 0 ? (size_t)((burstAtSec + burstMs / 1e3) * fn) + 40000 : 0;
     rx.setPacketCallback([&](const uint8_t* pk, size_t n, double) {
+        for (size_t i = 0; i < n * 188; i++) r.digest = (r.digest ^ pk[i]) * 1099511628211ull;
         for (size_t i = 0; i < n; i++) {
             const uint8_t* q = pk + i * 188;
             r.packets++;
@@ -124,6 +127,7 @@ static Result run(const dvbt::Params& p, int frames, double snrDb, double cfoHz,
         rx.feed(outv.data() + i, n);
         if (++chunkNo % 4 == 0 && fed > (size_t)(0.3 * fn)) { RxTelemetry t; rx.telemetry(t, 0); if (t.state >= 1 && t.dvbt.tpsOk) r.maxCfoErr = std::max(r.maxCfoErr, std::fabs(t.cfoHz - cfoHz)); }
     }
+    rx.flush();
     r.secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
     rx.telemetry(r.tel, 0);
     r.locked = r.tel.state >= 1; r.tps = r.tel.dvbt.tpsOk; r.snr = r.tel.dataSnrDb; r.level = rx.detectLevel();
@@ -181,6 +185,24 @@ int main() {
             jprintf("    first good packet %.2f s after the signal became decodable\n", wait);
             CHECK(r.firstGoodSec > 0 && wait < 0.8, "%s: first good packet %.2f s after the signal became decodable", c.name, wait);
         }
+        });
+    }
+    // The error correction on its own thread (setPipelined, live radios) must deliver exactly what the synchronous receiver delivers: the
+    // same packets in the same order, also across a resynchronisation (lost samples: erased and held-back symbols go through the queue too)
+    struct P { int mode, gi, mod, cr, frames, slip; const char* name; } pcases[] = {
+        {dvbt::k8K, dvbt::kGi8, dvbt::k64Qam, dvbt::kR23, 10, 0, "pipelined 8K 64-QAM 2/3"},
+        {dvbt::k2K, dvbt::kGi4, dvbt::k16Qam, dvbt::kR34, 30, 0, "pipelined 2K 16-QAM 3/4"},
+        {dvbt::k8K, dvbt::kGi16, dvbt::k64Qam, dvbt::kR34, 50, 3000, "pipelined 8K 64-QAM 3/4, 3000 samples lost"},
+    };
+    for (auto& c : pcases) {
+        if (only && !strstr(c.name, only)) continue;
+        jobs.add([&c] {
+            dvbt::Params p; p.mode = c.mode; p.guard = c.gi; p.mod = c.mod; p.crHp = c.cr; p.crLp = c.cr;
+            const Result a = run(p, c.frames, 30, 800, 0, 0, 0, 8, 0, 0, c.slip ? 1.2 : 0, c.slip, 0, false);
+            const Result b = run(p, c.frames, 30, 800, 0, 0, 0, 8, 0, 0, c.slip ? 1.2 : 0, c.slip, 0, true);
+            const bool ok = a.good > 50 && a.packets == b.packets && a.digest == b.digest && b.tel.dvbt.packets == a.tel.dvbt.packets;
+            jprintf("%-42s packets %zu / %zu, digest %016llx / %016llx  %s\n", c.name, a.packets, b.packets, (unsigned long long)a.digest, (unsigned long long)b.digest, ok ? "OK" : "FAILED");
+            CHECK(ok, "%s: the pipelined receiver delivered something else", c.name);
         });
     }
     jobs.run();

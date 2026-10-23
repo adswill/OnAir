@@ -1,5 +1,7 @@
 #include "dect2/dvbt/dvbt_rx.h"
 #include "dect2/dvbt/dvbt_fec.h"
+#include "dect2/common/stage_pipeline.h"
+#include "dect2/common/stage_prof.h"
 #include "dect2/channels/chan_locate.h"
 #include "dect2/dsp/exact_resampler.h"
 #include "dect2/dsp/fftutil.h"
@@ -128,10 +130,7 @@ struct DvbtReceiver::Impl {
     double sigma2 = 0.05;             // noise variance of Y (per complex carrier)
     double snrDb = 0;
     FecDecoder fec;
-    std::vector<uint8_t> pktBuf;
-    double streamSecs = 0;
     uint64_t symbols = 0;
-    uint64_t packetsOut = 0;
     std::function<void(const uint8_t*, size_t, double)> cb;
 
     // ---- telemetry
@@ -139,10 +138,6 @@ struct DvbtReceiver::Impl {
     RxTelemetry tel;
     uint64_t seq = 0;
     std::vector<cf32> eqShow, rawShow, tpsShow, pilotShow;
-    // scratch of estimateAndDecode, kept between symbols (no allocation per symbol)
-    std::vector<cf32> scrGrid, scrEq;
-    std::vector<float> scrN0;
-    std::vector<uint8_t> scrRoles;
     // the plots are read about 30 times a second: they are rebuilt every ~25 ms of signal, not every six symbols, and only copied into the telemetry when new
     uint64_t showSeq = 0, pubShowSeq = ~0ull;
     uint64_t lastShowSym = 0; bool showEver = false;
@@ -167,13 +162,14 @@ struct DvbtReceiver::Impl {
         tpsBitsSeen.clear(); tpsBase = 0; prevTps.clear(); prevCp.clear(); prevValid = false; prevWin = INT64_MIN; tpsOk = false; tpsFailures = 0; secSinceTps = 0;
         for (int i = 0; i < 4; i++) { hypVotes[i] = 0; hypScore[i] = 0; }
         grid.clear(); gridAge.clear(); cpRef.clear(); cpRefValid = false; gridFilled = 0;
-        fec.reset(); held.clear(); holding = false; streamSecs = 0; symbols = 0; packetsOut = 0; detect = 0;
+        fecReset(); held.clear(); holding = false; symbols = 0; detect = 0;
         buf.clear(); base = 0; resampler.reset(); dc = cf32(0, 0); clk.reset(); mirror = false;
         eqShow.clear(); rawShow.clear(); chMag.clear(); chPh.clear(); irDb.clear();
     }
 
     // ------------------------------------------------------------------ acquisition: FFT size and guard interval from the cyclic prefix
     bool acquire() {
+        DECT2_STAGE("dvbt.acquire");
         struct Cand { double score; int mode, gi; int64_t pos; cd corr; };
         Cand best{0, -1, -1, 0, cd(0, 0)};
         const int64_t b0 = base;
@@ -268,7 +264,7 @@ struct DvbtReceiver::Impl {
         grid.assign((size_t)(K + 2) / 3 + 1, cf32(0, 0)); gridAge.assign(grid.size(), 255);
         cpRef.assign(continualPilots(mode).size(), cf32(1, 0)); cpRefValid = false; gridFilled = 0;
         for (int i = 0; i < 4; i++) { hypVotes[i] = 0; hypScore[i] = 0; }
-        fec.reset(); streaming = false; phaseCheck = false; postResync = 0;
+        fecReset(); streaming = false; phaseCheck = false; postResync = 0;
         state = 1;
         return true;
     }
@@ -276,6 +272,7 @@ struct DvbtReceiver::Impl {
     // ------------------------------------------------------------------ one symbol
     // Transforms the symbol whose CP starts at `s` (integer) into carriers Y[0..K-1]
     void transform(int64_t s) {
+        DECT2_STAGE("dvbt.fft");
         const int64_t w = s + G - back;
         const double ph0 = -2.0 * M_PI * epsFrac * (double)(w % 1048576) / N;
         const double dph = -2.0 * M_PI * epsFrac / N;
@@ -311,6 +308,7 @@ struct DvbtReceiver::Impl {
         return cd(sr, si);
     }
     void cpTrack(int64_t s, double& err, double& epsRaw, double& mag, double& rho) {
+        DECT2_STAGE("dvbt.sync");
         double bestM = -1; int bestD = 0; cd bestC = 0;
         double ms[13];
         // the 13 windows (offsets -6..6) overlap in all but two samples: one full sum, then each step drops one product and adds one
@@ -424,6 +422,7 @@ struct DvbtReceiver::Impl {
     // integer CFO: continual pilots keep their value in every symbol, so Y_l[k+s] conj(Y_{l-1}[k+s]) has one common phase when s is right
     std::vector<cf32> prevRawFull;     // previous symbol's full FFT (for the integer search over a range of shifts)
     void integerSearch(int64_t s) {
+        DECT2_STAGE("dvbt.sync");
         // transform without carrier shift into fbuf for the next symbol, keep the previous one
         if (prevRawFull.size() != (size_t)N) prevRawFull.assign(N, cf32(0, 0));
         std::vector<cf32> cur(fbuf.begin(), fbuf.end());
@@ -546,6 +545,8 @@ struct DvbtReceiver::Impl {
     void processCarriers() {
         const auto& tpsK = tpsCarriers(mode);
         const auto& cpK = continualPilots(mode);
+        {
+        DECT2_STAGE("dvbt.tps");
         // ---- TPS bit for this symbol: differential BPSK against the previous symbol
         if (prevValid && prevTps.size() == tpsK.size() && prevCp.size() == cpK.size()) {
             // When the timing loop moved the FFT window by d samples since the previous symbol, carrier f turned by 2 pi f d / N:
@@ -583,6 +584,7 @@ struct DvbtReceiver::Impl {
         for (size_t i = 0; i < cpK.size(); i++) prevCp[i] = Y[cpK[i]];
         prevValid = true;
         if (tpsBitsSeen.size() > 4000) { tpsBitsSeen.erase(tpsBitsSeen.begin(), tpsBitsSeen.begin() + 2000); tpsBase += 2000; }
+        }
 
         // ---- frame sync from the TPS block (sync word + BCH)
         if (!tpsOk) {
@@ -641,7 +643,7 @@ struct DvbtReceiver::Impl {
                 tpsOk = true;
                 secSinceTps = 0;
                 tpsFailures = 0;
-                fec.configure(prm);
+                fecPrm = prm;
                 // everything before this point has been consumed; the symbols after p+67 are processed from now on, but the
                 // symbol index of the current symbol is derived from the frame start
                 return;
@@ -663,7 +665,7 @@ struct DvbtReceiver::Impl {
             secSinceTps = 0;
             frameIdx = fi;
             frameRefAbs = f0; frameRefIdx = fi;
-            if (!(q == prm)) { prm = q; fec.configure(prm); }
+            if (!(q == prm)) { prm = q; fecPrm = prm; }
         } else if (postResync > 0) {
             // After a resync the first frame that comes round holds the gap and is expected to fail. If the second one fails too, whole symbols went
             // missing (more than the scattered-pilot check can tell, which is only the position modulo four): look for the TPS block again at once,
@@ -711,16 +713,10 @@ struct DvbtReceiver::Impl {
     void fecPush(const cf32* eq, const float* n0, int symIdx) {
         const int Nd = dataCarriers(mode);
         if (holding) { held.push_back({std::vector<cf32>(eq, eq + Nd), std::vector<float>(n0, n0 + Nd), symIdx}); return; }
-        fec.pushSymbol(eq, n0, symIdx);
-        streamSecs += (double)(N + G) / fn;
-        fec.takePackets(pktBuf);
-        if (!pktBuf.empty()) {
-            packetsOut += pktBuf.size() / 188;
-            detect = 3;
-            if (cb) cb(pktBuf.data(), pktBuf.size() / 188, streamSecs);
-            streamSecs = 0;
-            pktBuf.clear();
-        } else if (detect.load() < 2) detect = 2;
+        FecJob j = takeJob();
+        j.eq.assign(eq, eq + Nd); j.n0.assign(n0, n0 + Nd);
+        j.symIdx = symIdx; j.prm = fecPrm; j.lp = lpReq.load(); j.secs = (double)(N + G) / fn; j.seq = fecSeqOut++;
+        fecPipe->push(std::move(j));
     }
     void flushHeld(int extra) {
         holding = false;
@@ -762,10 +758,13 @@ struct DvbtReceiver::Impl {
     }
 
     void estimateAndDecode(int symIdx) {
+        DECT2_STAGE_VAR(est, "dvbt.chanest");
         const auto& cp = continualPilots(mode);
         const auto& tpsK = tpsCarriers(mode);
         // ---- per-symbol common phase and timing slope from the continual pilots, relative to their running reference
-        std::vector<cf32> c(cp.size());
+        // (the work buffers are members, kept from symbol to symbol: nothing is allocated per symbol)
+        std::vector<cf32>& c = ceC;
+        c.resize(cp.size());
         for (size_t i = 0; i < cp.size(); i++) c[i] = Y[cp[i]] / pilotValue(cp[i]);
         if (cpRefValid) {
             // The symbol's common phase and phase ramp (timing) relative to the continual-pilot reference. The running totals
@@ -777,7 +776,8 @@ struct DvbtReceiver::Impl {
                 accSlope += 2 * M_PI * winShift / N;
                 accPhi += 2 * M_PI * (double)intShift * winShift / N;
             }
-            std::vector<cd> z(cp.size());
+            std::vector<cd>& z = ceZ;
+            z.resize(cp.size());
             cd tot = 0;
             for (size_t i = 0; i < cp.size(); i++) {
                 const double a = accPhi + accSlope * (double)(cp[i] - kc);
@@ -798,9 +798,21 @@ struct DvbtReceiver::Impl {
             accPhi += dPhi; accSlope += dSlope;
         }
         const double phi = accPhi, slope = accSlope;
-        // derotate the whole symbol by (phi + slope*(k-kc))
-        std::vector<cf32> Yc(K);
-        for (int k = 0; k < K; k++) { const double a = -(phi + slope * (k - kc)); Yc[k] = Y[k] * cf32((float)std::cos(a), (float)std::sin(a)); }
+        // derotate the whole symbol by (phi + slope*(k-kc)): an exact phasor at the start of every block of 64 carriers and a table for the
+        // steps inside it (a sine and a cosine per carrier cost more than the rest of the channel estimate)
+        std::vector<cf32>& Yc = ceYc;
+        Yc.resize(K);
+        {
+            constexpr int B = 64;
+            cf32 tab[B];
+            for (int j = 0; j < B; j++) tab[j] = cf32((float)std::cos(-slope * j), (float)std::sin(-slope * j));
+            for (int k0 = 0; k0 < K; k0 += B) {
+                const double a = -(phi + slope * (k0 - kc));
+                const cf32 c0((float)std::cos(a), (float)std::sin(a));
+                const int e = std::min(B, K - k0);
+                for (int j = 0; j < e; j++) Yc[k0 + j] = Y[k0 + j] * (c0 * tab[j]);
+            }
+        }
         for (size_t i = 0; i < cp.size(); i++) {
             const cf32 v = Yc[cp[i]] / pilotValue(cp[i]);
             cpRef[i] = cpRefValid ? cpRef[i] * 0.85f + v * 0.15f : v;
@@ -825,19 +837,19 @@ struct DvbtReceiver::Impl {
         for (size_t i = 0; i < cp.size(); i++) if (cp[i] % 3 == 0) { grid[cp[i] / 3] = cpRef[i]; gridAge[cp[i] / 3] = 0; }
         for (auto& a : gridAge) if (a < 250) a++;
         gridFilled++;
-        if (gridFilled < 4) { if (streaming) pushErasure(symIdx); return; }
+        if (gridFilled < 4) { est.stop(); if (streaming) pushErasure(symIdx); return; }
         const double tau0 = (double)back + (double)G / 2.0;
-        std::vector<cf32>& g = scrGrid;
+        std::vector<cf32>& g = ceG;
         g.assign(grid.begin(), grid.begin() + (ptrdiff_t)std::min(grid.size(), (size_t)(K + 2) / 3));
         g.resize((size_t)(K + 2) / 3, cf32(0, 0));
         interp.run(g, 3, K, N, tau0, H, 1.0);
         // ---- equalise the data carriers
-        std::vector<uint8_t>& roles = scrRoles;
-        carrierRoles(mode, symIdx, roles);
+        if (roleMode != mode) { for (int l = 0; l < 4; l++) carrierRoles(mode, l, roleCache[l]); roleMode = mode; }   // the pattern repeats every 4 symbols
+        const std::vector<uint8_t>& roles = roleCache[symIdx % 4];
         const int Nd = dataCarriers(mode);
-        std::vector<cf32>& eq = scrEq;
-        std::vector<float>& n0 = scrN0;
-        eq.resize((size_t)Nd); n0.resize((size_t)Nd);
+        std::vector<cf32>& eq = ceEq;
+        std::vector<float>& n0 = ceN0;
+        eq.resize(Nd); n0.resize(Nd);
         int di = 0;
         for (int k = 0; k < K && di < Nd; k++) {
             if (roles[k] != 0) continue;
@@ -847,12 +859,14 @@ struct DvbtReceiver::Impl {
             di++;
         }
         if (di != Nd) return;
+        est.stop();
         fecPush(eq.data(), n0.data(), symIdx);
         streaming = true;
         // ---- display data
         const uint64_t showEvery = (uint64_t)std::max(6.0, std::ceil(0.025 * fn / (double)(N + G)));
         if (!showEver || symbols - lastShowSym >= showEvery) {
             showEver = true; lastShowSym = symbols; showSeq++;
+            DECT2_STAGE("dvbt.telemetry");
             eqShow.clear();
             const int step = std::max(1, Nd / 1500);
             for (int i = 0; i < Nd; i += step) eqShow.push_back(eq[i]);
@@ -878,9 +892,80 @@ struct DvbtReceiver::Impl {
     }
     int chDecimV = 1;
     size_t lastTpsK = 0;
+    std::vector<cf32> ceC, ceYc, ceG, ceEq;   // estimateAndDecode()'s work buffers
+    std::vector<cd> ceZ;
+    std::vector<float> ceN0;
+    std::vector<uint8_t> roleCache[4];
+    int roleMode = -1;
+
+    // ------------------------------------------------------------------ the error correction stage
+    // Demapping, Viterbi and Reed-Solomon of one symbol after another. Synchronous by default (feed() returns with everything decoded); with
+    // setPipelined(true) (live radios) on a thread of its own behind a bounded queue, so the thread that feeds the receiver (the one the radio's
+    // ring waits for) only resamples, synchronises and equalises: in 8K 64-QAM 2/3 the decoder is more than half of the work. A queue that
+    // overflows (the decoder is too slow for this machine) drops the oldest symbols; the decoder then starts afresh at the next one (it finds
+    // the packet sync again within a block) and the drops are counted (fecDrops, logged with DECT2_DEBUG).
+    struct FecJob { std::vector<cf32> eq; std::vector<float> n0; int symIdx = 0; Params prm; bool lp = false; double secs = 0; uint64_t seq = 0; };
+    Params fecPrm;                   // what the decoder is configured with: applied in order with the symbols (producer)
+    uint64_t fecSeqOut = 0;          // producer: sequence number of the next symbol
+    uint64_t fecSeqIn = 0;           // decoder: the one it expects
+    std::atomic<uint64_t> fecDrops{0};
+    std::vector<uint8_t> pktBuf;     // decoder thread from here on
+    double streamSecs = 0;
+    uint64_t packetsOut = 0;
+    std::mutex fecMu;                // guards fecSnap and spare
+    FecStats fecSnap;
+    std::vector<FecJob> spare;       // jobs whose buffers can be used again
+    FecJob takeJob() {
+        std::lock_guard<std::mutex> lk(fecMu);
+        if (spare.empty()) return FecJob();
+        FecJob j = std::move(spare.back());
+        spare.pop_back();
+        return j;
+    }
+    void fecRun(FecJob&& j) {
+        if (j.seq != fecSeqIn) {   // the queue overflowed: symbols are missing
+            fecDrops += j.seq - fecSeqIn;
+            if (getenv("DECT2_DEBUG")) fprintf(stderr, "  [dbg] DVB-T decoder too slow (stages dvbt.viterbi, dvbt.demap, dvbt.rs): %llu symbols dropped\n", (unsigned long long)(j.seq - fecSeqIn));
+            fec.reset();
+        }
+        fecSeqIn = j.seq + 1;
+        fec.configure(j.prm);
+        if (j.lp != fec.lowPriority()) fec.setLowPriority(j.lp);
+        fec.pushSymbol(j.eq.data(), j.n0.data(), j.symIdx);
+        streamSecs += j.secs;
+        fec.takePackets(pktBuf);
+        if (!pktBuf.empty()) {
+            packetsOut += pktBuf.size() / 188;
+            detect = 3;
+            if (cb) cb(pktBuf.data(), pktBuf.size() / 188, streamSecs);
+            streamSecs = 0;
+            pktBuf.clear();
+        } else if (detect.load() < 2) detect = 2;
+        std::lock_guard<std::mutex> lk(fecMu);
+        fecSnap = fec.stats();
+        if (spare.size() < 16) spare.push_back(std::move(j));
+    }
+    // drops what is queued, waits for the decoder to be idle, then resets it (producer)
+    void fecReset() {
+        if (fecPipe) fecPipe->reset();
+        fec.reset();
+        fecSeqIn = fecSeqOut;
+        streamSecs = 0; packetsOut = 0; pktBuf.clear();
+        std::lock_guard<std::mutex> lk(fecMu);
+        fecSnap = fec.stats();
+    }
+    bool fecBlocking = false;
+    void makeFecPipe(bool threaded, bool blocking) {
+        fecPipe.reset();
+        fecBlocking = blocking;
+        fecPipe = std::make_unique<StagePipeline<FecJob>>("onair-dvbt-fec", [this](FecJob&& j) { fecRun(std::move(j)); }, 192,
+                                                          blocking ? QueuePolicy::Block : QueuePolicy::DropOldest, threaded);
+    }
+    std::unique_ptr<StagePipeline<FecJob>> fecPipe;   // last: destroyed first, so no job runs on a half-destroyed receiver
 
     // ------------------------------------------------------------------ telemetry
     void publish() {
+        DECT2_STAGE("dvbt.telemetry");
         RxTelemetry t;
         t.standard = 1;
         t.rateOk = rateOk;
@@ -911,10 +996,12 @@ struct DvbtReceiver::Impl {
         t.l1preOk = tpsOk; t.l1postOk = tpsOk;
         t.dvbt.tpsOk = tpsOk; t.dvbt.mode = mode; t.dvbt.guard = gi;
         if (tpsOk) { t.dvbt.mod = prm.mod; t.dvbt.hier = prm.hier; t.dvbt.crHp = prm.crHp; t.dvbt.crLp = prm.crLp; t.dvbt.cellId = prm.cellId; t.dvbt.frameIdx = frameIdx; }
-        const FecStats& fs = fec.stats();
+        FecStats fs;
+        { std::lock_guard<std::mutex> lk(fecMu); fs = fecSnap; }
         t.dvbt.fecSync = fs.syncLocked; t.dvbt.packets = fs.packets; t.dvbt.rsClean = fs.rsClean; t.dvbt.rsCorrected = fs.rsCorrected; t.dvbt.rsFailed = fs.rsFailed;
         t.dvbt.viterbiMargin = fs.viterbiMargin; t.dvbt.punctPhase = fs.punctPhase; t.dvbt.secSinceTps = secSinceTps;
         t.dvbt.symbolIdx = tpsOk ? (int)((absSym - frameStartAbs) % 68) : -1;
+        t.dvbt.fecDropped = fecDrops.load();
         t.blocksOk = fs.rsClean + fs.rsCorrected; t.blocksBad = fs.rsFailed;
         t.plpValid = tpsOk; t.plpFrames = fs.packets;
         t.plpMerDb = snrDb;
@@ -928,7 +1015,7 @@ struct DvbtReceiver::Impl {
     }
 };
 
-DvbtReceiver::DvbtReceiver() : p_(new Impl) {}
+DvbtReceiver::DvbtReceiver() : p_(new Impl) { p_->makeFecPipe(false, false); }
 DvbtReceiver::~DvbtReceiver() = default;
 
 void DvbtReceiver::configure(double inputRateHz, double bandwidthMhz) {
@@ -943,7 +1030,16 @@ void DvbtReceiver::configure(double inputRateHz, double bandwidthMhz) {
     I.decimate = I.rateOk && !I.resampler.passthrough();
 }
 
-void DvbtReceiver::setLowPriority(bool lp) { p_->lpReq = lp; }   // applied by feed(), on the thread that decodes
+void DvbtReceiver::setLowPriority(bool lp) { p_->lpReq = lp; }   // applied with the next symbol, on the thread that decodes
+
+void DvbtReceiver::setPipelined(bool on, bool blocking) {
+    Impl& I = *p_;
+    if (I.fecPipe->threaded() == (on && threadingEnabled()) && I.fecBlocking == blocking) return;
+    I.fecPipe->flush();
+    I.makeFecPipe(on, blocking);
+}
+
+void DvbtReceiver::flush() { p_->fecPipe->flush(); p_->publish(); }   // (the telemetry then has the decoder's final counts)
 
 void DvbtReceiver::reset() { Impl& I = *p_; const double r = I.inRate, b = I.bwMhz; configure(r, b); }
 
@@ -953,7 +1049,7 @@ int DvbtReceiver::detectLevel() const { return p_->detect.load(); }
 void DvbtReceiver::feed(const cf32* x, size_t n) {
     Impl& I = *p_;
     if (!I.rateOk || !n) return;
-    if (I.lpReq.load() != I.fec.lowPriority()) I.fec.setLowPriority(I.lpReq.load());
+    DECT2_STAGE_VAR(inp, "dvbt.input");
     // DC removal (the radio's centre spike, a HackRF's is several times a carrier): the mean of the block moves a slow estimate. Left in,
     // it lands on the centre carrier, which is a continual pilot: that pilot's error then poisons the common phase, the noise estimate
     // and, through the pilot grid, the channel estimate of every carrier, and nothing decodes. The time constant is long (50 ms) so that
@@ -989,11 +1085,15 @@ void DvbtReceiver::feed(const cf32* x, size_t n) {
     }
     I.mixer.apply(I.dcOut.data(), n);
     if (I.mirror) for (size_t q = 0; q < n; q++) I.dcOut[q] = std::conj(I.dcOut[q]);
-    I.stage.clear();
-    if (I.decimate) I.resampler.process(x, n, I.stage);
-    else I.stage.assign(x, x + n);
-    I.clk.process(I.stage);
-    I.buf.insert(I.buf.end(), I.stage.begin(), I.stage.end());
+    inp.stop();
+    {
+        DECT2_STAGE("dvbt.resample");
+        I.stage.clear();
+        if (I.decimate) I.resampler.process(x, n, I.stage);
+        else I.stage.assign(x, x + n);
+        I.clk.process(I.stage);
+        I.buf.insert(I.buf.end(), I.stage.begin(), I.stage.end());
+    }
     // work through the buffer
     for (int guard = 0; guard < 100000; guard++) {
         if (I.state == 0) {

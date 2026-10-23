@@ -35,9 +35,11 @@ public:
     // Queues a block of symbols (copied). Returns false when it was dropped because the thread is too far behind.
     bool push(const cf32* z, size_t n) {
         std::unique_lock<std::mutex> lk(mu_);
-        if (queued_ + n > maxSymbols_) {
-            if (blocking_) spaceCv_.wait(lk, [&] { return queued_ + n <= maxSymbols_ || stopFlag_; });
-            if (queued_ + n > maxSymbols_) { dropped_ += n; return false; }
+        // a block larger than the whole queue goes in once the queue is empty (waiting for room it can never have hung push() for good)
+        auto fits = [&] { return queued_ + n <= maxSymbols_ || (blocking_ && queued_ == 0); };
+        if (!fits()) {
+            if (blocking_) spaceCv_.wait(lk, [&] { return fits() || stopFlag_; });
+            if (!fits()) { dropped_ += n; return false; }
         }
         Item it;
         if (!free_.empty()) { it.data = std::move(free_.back()); free_.pop_back(); }

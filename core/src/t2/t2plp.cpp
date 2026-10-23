@@ -1,3 +1,4 @@
+#include "dect2/common/stage_prof.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/t2/t2plp.h"
 #include "dect2/dsp/gpu_ldpc.h"
@@ -38,8 +39,11 @@ PlpResult PlpDecoder::decodeNow(const PlpJob& job, int threads, bool useGpu, con
     res.blocks = nb;
     std::vector<cf32> rx((size_t)nb * cells);
     std::vector<float> n0((size_t)nb * cells);
-    cellDeinterleave(job.fec, nb, job.tiBlocks, job.cells.data(), rx.data());
-    cellDeinterleaveF(job.fec, nb, job.tiBlocks, job.n0.data(), n0.data());
+    {
+        DECT2_STAGE("t2.deinterleave");
+        cellDeinterleave(job.fec, nb, job.tiBlocks, job.cells.data(), rx.data());
+        cellDeinterleaveF(job.fec, nb, job.tiBlocks, job.n0.data(), n0.data());
+    }
     if (getenv("DECT2_PLPDUMP")) {
         double m = 0, nn = 0; size_t cnt = job.cells.size();
         for (auto& c : job.cells) m += std::abs(c);
@@ -69,10 +73,7 @@ PlpResult PlpDecoder::decodeNow(const PlpJob& job, int threads, bool useGpu, con
     if (useGpu && GpuLdpc::instance().available()) {
         gLlr.resize((size_t)nb * d.nLdpc);
         parallelFor(nb, threads, [&](int b) {
-            std::vector<float> llrLab((size_t)cells * bps);
-            qamDemapBlock(job.fec, rx.data() + (size_t)b * cells, n0.data() + (size_t)b * cells, cells, llrLab.data());
-            float* llr = gLlr.data() + (size_t)b * d.nLdpc;
-            for (int p = 0; p < d.nLdpc; p++) llr[map[p]] = llrLab[p];
+            qamDemapBlockToCodeword(job.fec, rx.data() + (size_t)b * cells, n0.data() + (size_t)b * cells, cells, gLlr.data() + (size_t)b * d.nLdpc);
         });
         gHard.resize((size_t)nb * d.nLdpc); gOk.resize(nb); gIt.resize(nb);
         if (GpuLdpc::instance().decode(ldpc, gLlr.data(), nb, 50, gHard.data(), gOk.data(), gIt.data())) res.usedGpu = true;
@@ -97,11 +98,13 @@ PlpResult PlpDecoder::decodeNow(const PlpJob& job, int threads, bool useGpu, con
             hard.assign(gHard.begin() + (size_t)b * d.nLdpc, gHard.begin() + (size_t)(b + 1) * d.nLdpc);
             o.iters = gIt[b];
         } else {
-            std::vector<float> llrLab((size_t)cells * bps);
-            qamDemapBlock(job.fec, c, nn, cells, llrLab.data());
-            for (int p = 0; p < d.nLdpc; p++) llr[map[p]] = llrLab[p];
-            ldpc.decodeFast(llr, 50, hard, &o.iters);
+            DECT2_STAGE_VAR(dm, "t2.demap");
+            qamDemapBlockToCodeword(job.fec, c, nn, cells, llr.data());
+            dm.stop();
+            DECT2_STAGE("t2.ldpc");
+            t2LdpcDecode(ldpc, llr, 50, hard, &o.iters);
         }
+        DECT2_STAGE_VAR(bc, "t2.bch");
         // hard decisions before LDPC, for the pre-FEC bit error rate
         long pre = 0;
         std::vector<uint8_t> bb(hard.begin(), hard.begin() + d.kLdpc);
@@ -116,12 +119,14 @@ PlpResult PlpDecoder::decodeNow(const PlpJob& job, int threads, bool useGpu, con
             if (backlog && backlog->load() > 0) return false;
             return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count() < 0.6 * job.frameSec * 1000.0;
         };
+        bc.stop();
         if (corr < 0 && !lost && onSchedule()) {
+            DECT2_STAGE("t2.ldpc (retries)");
             static const float kAlpha[3] = {0.78f, 0.66f, 0.9f};
             std::vector<uint8_t> h2;
             for (int a = 0; a < 3 && corr < 0 && onSchedule(); a++) {
                 int it2 = 0;
-                ldpc.decodeFast(llr, 150, h2, &it2, kAlpha[a]);
+                t2LdpcDecode(ldpc, llr, 150, h2, &it2, kAlpha[a]);
                 std::vector<uint8_t> b2(h2.begin(), h2.begin() + d.kLdpc);
                 int c2 = bch.decode(b2);
                 if (c2 >= 0) { corr = c2; bb = std::move(b2); hard = std::move(h2); o.iters = it2; o.retried = true; }
@@ -140,6 +145,7 @@ PlpResult PlpDecoder::decodeNow(const PlpJob& job, int threads, bool useGpu, con
         for (int i = 0; i < d.kBch; i++) o.frame.bits[i] ^= rnd0[i];
         parseBbHeader(o.frame.bits.data(), o.frame.header);
         if (!measure) return;
+        DECT2_STAGE("t2.measure+constellation");
         // reconstruct the codeword to measure the pre-LDPC error rate and the MER
         std::vector<uint8_t> cw(bb.begin(), bb.begin() + d.kBch);
         bch.encode(cw, d.kBch);

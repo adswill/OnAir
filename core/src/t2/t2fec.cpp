@@ -233,95 +233,77 @@ const AxisMap& axisMap(int mod) {
 }
 const float kRotDeg[4] = {29.f, 16.8f, 8.6f, 3.576334375f};
 
-// max-log LLRs of one axis: bits of the axis index, most significant first
-inline void axisLlr(const std::vector<float>& lev, int nb, float y, float w, float* out) {
-    float d[16];
-    const int L = 1 << nb;
-    for (int i = 0; i < L; i++) { float e = y - lev[i]; d[i] = e * e * w; }
-    for (int b = 0; b < nb; b++) {
-        const int sh = nb - 1 - b;
-        float m0 = 1e30f, m1 = 1e30f;
-        for (int i = 0; i < L; i++) { if ((i >> sh) & 1) m1 = std::min(m1, d[i]); else m0 = std::min(m0, d[i]); }
-        out[b] = m1 - m0;
-    }
-}
 } // namespace
 
 namespace {
-// max-log LLR of axis bit b is w * f_b(y), where f_b(y) = min over levels with bit 1 minus min over levels with bit 0 of (y-level)^2.
-// f_b is piecewise linear in y, so a fine grid with linear interpolation is exact up to ~1e-3.
-struct AxisLut {
-    static constexpr int G = 2048;
-    float R = 0, scale = 0;
-    int nb = 0;
-    std::vector<float> re[4], im[4]; // [bit][G+1]
-};
-const AxisLut& axisLut(int mod) {
-    static AxisLut luts[4];
-    static std::once_flag once;
-    std::call_once(once, [] {
-        for (int m = 0; m < 4; m++) {
-            const AxisMap& A = axisMap(m);
-            AxisLut& L = luts[m];
-            L.nb = A.bitsPerAxis;
-            float mx = 0;
-            for (float v : A.reLevel) mx = std::max(mx, std::fabs(v));
-            for (float v : A.imLevel) mx = std::max(mx, std::fabs(v));
-            L.R = mx + 1.0f;
-            L.scale = (float)AxisLut::G / (2 * L.R);
-            for (int axis = 0; axis < 2; axis++) {
-                const auto& lev = axis ? A.imLevel : A.reLevel;
-                auto* out = axis ? L.im : L.re;
-                const int nlev = 1 << L.nb;
-                for (int b = 0; b < L.nb; b++) {
-                    out[b].resize(AxisLut::G + 2);
-                    const int sh = L.nb - 1 - b;
-                    for (int g = 0; g <= AxisLut::G + 1; g++) {
-                        float y = -L.R + (float)g / L.scale;
-                        float m0 = 1e30f, m1 = 1e30f;
-                        for (int i = 0; i < nlev; i++) { float e = y - lev[i]; e *= e; if ((i >> sh) & 1) m1 = std::min(m1, e); else m0 = std::min(m0, e); }
-                        out[b][g] = m1 - m0;
-                    }
+// Max-log LLRs of a block, eight cells at a time: per axis the squared distance to each of the 2^NB levels, and per axis bit the smallest
+// distance among the levels with that bit 1 minus the smallest among those with it 0. Exact (the table with linear interpolation it replaced
+// was within about 1e-3), and the loops over the eight lanes run as vector instructions (about five times faster than the table).
+// With `map` the values go straight to their places in the LDPC codeword (the bit de-interleaver), else in label-bit order.
+template <int NB>
+void demapAxes(const PlpFec& f, const cf32* cells, const float* n0, int nCells, float* llr, const int* map) {
+    constexpr int L = 1 << NB, M = 2 * NB, B = 8;
+    const AxisMap& A = axisMap(f.mod);
+    float levR[L], levI[L];
+    for (int i = 0; i < L; i++) { levR[i] = A.reLevel[(size_t)i]; levI[i] = A.imLevel[(size_t)i]; }
+    int posR[NB], posI[NB];
+    for (int b = 0; b < NB; b++) { posR[b] = A.reBits[(size_t)b]; posI[b] = A.imBits[(size_t)b]; }
+    float cr = 1.f, sr = 0.f;
+    if (f.rotation) { const double a = kRotDeg[f.mod] * M_PI / 180.0; cr = (float)std::cos(a); sr = (float)std::sin(a); }
+    for (int s0 = 0; s0 < nCells; s0 += B) {
+        const int cnt = std::min(B, nCells - s0);
+        float yI[B], yQ[B], w[B];
+        for (int l = 0; l < B; l++) {
+            const int s = s0 + (l < cnt ? l : 0);
+            float nv;
+            if (f.rotation) {
+                const int s1 = s + 1 < nCells ? s + 1 : 0;
+                // derotate the (I from this cell, Q from the next cell) observation back onto the unrotated grid
+                const float aI = cells[s].real(), aQ = cells[s1].imag();
+                yI[l] = aI * cr + aQ * sr;
+                yQ[l] = aQ * cr - aI * sr;
+                nv = 0.5f * (n0[s] + n0[s1]);
+            } else { yI[l] = cells[s].real(); yQ[l] = cells[s].imag(); nv = n0[s]; }
+            w[l] = 1.f / std::max(1e-9f, 2 * nv);
+        }
+        float outR[NB][B], outI[NB][B];
+        for (int axis = 0; axis < 2; axis++) {
+            const float* y = axis ? yQ : yI;
+            const float* lev = axis ? levI : levR;
+            float m0[NB][B], m1[NB][B];
+            for (int b = 0; b < NB; b++) for (int l = 0; l < B; l++) { m0[b][l] = 1e30f; m1[b][l] = 1e30f; }
+            for (int i = 0; i < L; i++) {
+                float e[B];
+                for (int l = 0; l < B; l++) { const float d = y[l] - lev[i]; e[l] = d * d; }
+                for (int b = 0; b < NB; b++) {
+                    if ((i >> (NB - 1 - b)) & 1) { for (int l = 0; l < B; l++) m1[b][l] = std::min(m1[b][l], e[l]); }
+                    else { for (int l = 0; l < B; l++) m0[b][l] = std::min(m0[b][l], e[l]); }
                 }
             }
+            float (*out)[B] = axis ? outI : outR;
+            for (int b = 0; b < NB; b++) for (int l = 0; l < B; l++) out[b][l] = w[l] * (m1[b][l] - m0[b][l]);
         }
-    });
-    return luts[mod];
+        for (int l = 0; l < cnt; l++) {
+            const size_t o = (size_t)(s0 + l) * M;
+            if (map) for (int b = 0; b < NB; b++) { llr[map[o + (size_t)posR[b]]] = outR[b][l]; llr[map[o + (size_t)posI[b]]] = outI[b][l]; }
+            else for (int b = 0; b < NB; b++) { llr[o + (size_t)posR[b]] = outR[b][l]; llr[o + (size_t)posI[b]] = outI[b][l]; }
+        }
+    }
+}
+void demapDispatch(const PlpFec& f, const cf32* cells, const float* n0, int nCells, float* llr, const int* map) {
+    switch (f.mod) {
+    case 0: demapAxes<1>(f, cells, n0, nCells, llr, map); break;
+    case 1: demapAxes<2>(f, cells, n0, nCells, llr, map); break;
+    case 2: demapAxes<3>(f, cells, n0, nCells, llr, map); break;
+    default: demapAxes<4>(f, cells, n0, nCells, llr, map); break;
+    }
 }
 } // namespace
 
-void qamDemapBlock(const PlpFec& f, const cf32* cells, const float* n0, int nCells, float* llr) {
-    const AxisMap& A = axisMap(f.mod);
-    const AxisLut& L = axisLut(f.mod);
-    const int M = 2 * (f.mod + 1), nb = A.bitsPerAxis;
-    float cr = 1.f, sr = 0.f;
-    if (f.rotation) { double a = kRotDeg[f.mod] * M_PI / 180.0; cr = (float)std::cos(a); sr = (float)std::sin(a); }
-    float lr[8], li[8];
-    for (int s = 0; s < nCells; s++) {
-        float yI, yQ, nv;
-        if (f.rotation) {
-            int s1 = (s + 1) % nCells;
-            // derotate the (I from this cell, Q from the next cell) observation back onto the unrotated grid
-            float aI = cells[s].real(), aQ = cells[s1].imag();
-            yI = aI * cr + aQ * sr;
-            yQ = aQ * cr - aI * sr;
-            nv = 0.5f * (n0[s] + n0[s1]);
-        } else { yI = cells[s].real(); yQ = cells[s].imag(); nv = n0[s]; }
-        const float w = 1.f / std::max(1e-9f, 2 * nv);
-        {
-            auto lut = [&](const std::vector<float>* tab, float y, float* res) {
-                float t = (y + L.R) * L.scale;
-                t = std::min(std::max(t, 0.f), (float)AxisLut::G - 0.001f);
-                const int i = (int)t;
-                const float fr = t - (float)i;
-                for (int b = 0; b < nb; b++) res[b] = w * (tab[b][i] + fr * (tab[b][i + 1] - tab[b][i]));
-            };
-            lut(L.re, yI, lr);
-            lut(L.im, yQ, li);
-        }
-        float* o = llr + (size_t)s * M;
-        for (int b = 0; b < nb; b++) { o[A.reBits[b]] = lr[b]; o[A.imBits[b]] = li[b]; }
-    }
+void qamDemapBlock(const PlpFec& f, const cf32* cells, const float* n0, int nCells, float* llr) { demapDispatch(f, cells, n0, nCells, llr, nullptr); }
+
+void qamDemapBlockToCodeword(const PlpFec& f, const cf32* cells, const float* n0, int nCells, float* llr) {
+    demapDispatch(f, cells, n0, nCells, llr, bitInterleaverMap(f).data());
 }
 
 // ============================================================================ cell / time interleaver

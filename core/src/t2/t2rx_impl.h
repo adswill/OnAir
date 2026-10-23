@@ -1,3 +1,4 @@
+#include "dect2/common/stage_prof.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/t2/t2rx.h"
 #include "dect2/t2/t2ofdm.h"
@@ -37,13 +38,20 @@
 namespace dect2 {
 
 // Where the receiver thread spends its time (shown in the log when a source stops): resampler, P1 search, guard check, symbols, FFTs, data stage.
+// The same stages, by name and in CPU time without the stages inside them, for tests/bench/bench_dvb.cpp (dect2/common/stage_prof.h).
 namespace t2rxi {
 struct StageClock {
-        std::chrono::steady_clock::time_point t0;
+    std::chrono::steady_clock::time_point t0;
     int which;
-    explicit StageClock(int w) : t0(std::chrono::steady_clock::now()), which(w) {}
+    prof::Scope ps;
+    explicit StageClock(int w) : t0(std::chrono::steady_clock::now()), which(w), ps(stage(w)) {}
     ~StageClock() { g()[which] += std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count(); }
     static double* g() { static double v[9] = {}; return v; }
+    static prof::Stage& stage(int w) {
+        static prof::Stage s[9] = {prof::Stage("t2.resample"), prof::Stage("t2.p1"), prof::Stage("t2.guard"), prof::Stage("t2.symbol"), prof::Stage("t2.fft"),
+                                   prof::Stage("t2.chanest+eq"), prof::Stage("t2.cp-track"), prof::Stage("t2.display"), prof::Stage("t2.p2+l1")};
+        return s[w];
+    }
 };
 }
 using cd = std::complex<double>;
