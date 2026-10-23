@@ -99,6 +99,7 @@ public:
     void process(const cf* x, size_t n, std::vector<cf>& sym, std::vector<float>* phErr = nullptr, std::vector<float>* tErr = nullptr,
                  std::vector<float>* eye = nullptr);   // eye: the I rail, 16 points per symbol (resampled), for the eye diagram
     DemodStats stats() const;
+    void addFreq(double radPerSample) { freq_ += radPerSample; }   // re-centre: the channeliser moved by this much
     const DemodConfig& config() const { return c_; }
 private:
     DemodConfig c_;

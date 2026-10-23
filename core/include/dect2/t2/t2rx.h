@@ -49,6 +49,7 @@
 #include "dect2/lbj/lbj_tel.h"
 #include "dect2/railway/railway_tel.h"
 #include "dect2/horus/horus_tel.h"
+#include "dect2/pskdsp/pskdsp_tel.h"
 #include "dect2/dgps/dgps_engine.h"
 #include "dect2/eloran/eloran_engine.h"
 #include "dect2/nfc/nfc_engine.h"
@@ -269,6 +270,7 @@ struct RxTelemetry {
     HorusTelemetry horus;       // active standard 157 (Project Horus balloons, family 156)
     LbjTelemetry lbj;           // valid when standard == 82 (LBJ, engine standard 83)
     ElLoranTelemetry eloran;    // valid when standard == 127 (eLoran / Loran-C, family 126)
+    PskdTelemetry pskdm;        // valid when standard == 203 (PSK demodulator, family 202, engine standard 204)
     NfcTelemetry nfc;           // valid when standard == 149 (NFC / RFID 13.56 MHz, family 148, engine standard 150)
     IsdbsTelemetry isdbs;       // valid when standard == 155 (ISDB-S, family 154)
     MptTelemetry mpt1327;       // valid when standard == 128 (MPT1327 trunking, family 127)

@@ -287,6 +287,8 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxEloran_.setSignalOffset(o);
         rxEloran_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxNfc_.setSignalOffset(o);
+        rxPskd_.setSignalOffset(o);
+        rxPskd_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxNfc_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxDgps_.setSignalOffset(o);
         rxFusion_.setSignalOffset(o);
@@ -500,6 +502,8 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxEloran_.setLogCallback([this](const std::string& s) { log(s); });
     rxNfc_.configure(rate_);
     rxNfc_.setLogCallback([this](const std::string& s) { log(s); });
+    rxPskd_.configure(rate_);
+    rxPskd_.setLogCallback([this](const std::string& s) { log(s); });
     rxSbas_.configure(rate_);
     rxSbas_.setLogCallback([this](const std::string& s) { log(s); });
     rxMilhf_.configure(rate_);
