@@ -1,0 +1,30 @@
+--- a/core/src/voicekeys/key_persist.cpp
++++ b/core/src/voicekeys/key_persist.cpp
+@@ -168,8 +168,10 @@
+     std::vector<uint8_t> master;
+     if (source == 1) {
+         if (passphrase.empty()) return "this key file needs a passphrase";
++        // the round count is read from the file: an imported file with 4 billion rounds would hang the program, one with 0 would be a free guess
++        if (rounds < 1000 || rounds > 5000000) return "the key file is damaged";
+         master.assign(32, 0);
+-        pbkdf2HmacSha256((const uint8_t*)passphrase.data(), passphrase.size(), salt, 16, rounds ? rounds : 1, master.data(), 32);
++        pbkdf2HmacSha256((const uint8_t*)passphrase.data(), passphrase.size(), salt, 16, rounds, master.data(), 32);
+     } else {
+         if (master32.size() != 32) return "the keychain master key is unavailable";
+         master = master32;
+--- a/tests/voicekeys/test_voice_keys.cpp
++++ b/tests/voicekeys/test_voice_keys.cpp
+@@ -144,6 +144,13 @@
+     std::vector<VoiceKey> back;
+     CHECK(decryptStore(file, {}, "correct horse", back).empty() && back.size() == 1 && back[0].name == "n1", "decrypt with right passphrase");
+     CHECK(!decryptStore(file, {}, "wrong passphrase", back).empty(), "wrong passphrase rejected");
++    {   // the PBKDF2 round count (bytes 23..26: magic 6, flag 1, salt 16) comes from the file: absurd values are refused at once
++        std::string evil = file;
++        for (int i = 0; i < 4; i++) evil[23 + i] = (char)0xFF;
++        CHECK(!decryptStore(evil, {}, "correct horse", back).empty(), "4 billion rounds refused");
++        for (int i = 0; i < 4; i++) evil[23 + i] = 0;
++        CHECK(!decryptStore(evil, {}, "correct horse", back).empty(), "0 rounds refused");
++    }
+ 
+     // keychain-style master key path
+     std::vector<uint8_t> master(32); for (int i = 0; i < 32; i++) master[i] = (uint8_t)(i * 7 + 1);
