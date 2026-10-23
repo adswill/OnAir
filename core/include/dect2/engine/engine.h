@@ -142,6 +142,7 @@
 #include "dect2/asterix/asterix_engine.h"
 #include "dect2/argos/argos_rx.h"
 #include "dect2/sigfox/sigfox_rx.h"
+#include "dect2/mercury/mercury_rx.h"
 #include "dect2/uat/uat_rx.h"
 #include "dect2/hrpt/hrpt_rx.h"
 #include "dect2/tv/bbunpack.h"
@@ -494,6 +495,7 @@ public:
     SigfoxReceiver& sigfox() { return rxSfx_; }   // Sigfox uplinks: clear (telemetry through latestRx)
     P25p2Receiver& p25p2() { return rxP25p2_; }   // P25 Phase 2 (family 180, engine standard 182)
     MilhfReceiver& milhf() { return rxMilhf_; }   // HF waveform identifier: the audio clip for sigidwiki (telemetry through latestRx)
+    MercuryReceiver& mercury() { return rxMercury_; }   // Mercury HF OFDM modem monitor: modes, known callsigns, files (telemetry through latestRx)
     DgpsReceiver& dgps() { return rxDgps_; }   // DGPS beacons: the station, the frames (telemetry through latestRx)
     RailwayReceiver& klw() { return rxKlw_; }
     RailwayReceiver& tdcs() { return rxTdcs_; }
@@ -801,6 +803,7 @@ private:
     AsterixReceiver rxAsterix_;
     ArgosReceiver rxArgos_;
     SigfoxReceiver rxSfx_;
+    MercuryReceiver rxMercury_;
     Vdl4Receiver rxVdl4_;
     UatReceiver rxUat_;
     HrptReceiver rxHrpt_;

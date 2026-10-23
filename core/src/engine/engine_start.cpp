@@ -249,6 +249,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxIfkp_.setSignalOffset(o);
         rxCq_.setSignalOffset(o);
         rxArd_.setSignalOffset(o);
+        rxMercury_.setSignalOffset(o);
         rxZw_.setDialHz(tune.centerHz);
         rxZw_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxSb_.setSignalOffset(o);
@@ -524,6 +525,8 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxMarineVhf_.setLogCallback([this](const std::string& s) { log(s); });
     rxP25p2_.configure(rate_);
     rxP25p2_.setLogCallback([this](const std::string& s) { log(s); });
+    rxMercury_.configure(rate_);
+    rxMercury_.setLogCallback([this](const std::string& s) { log(s); });
     rxMt_.configure(rate_);
     rxMt_.setLogCallback([this](const std::string& s) { log(s); });
     rxZb_.setLogCallback([this](const std::string& s) { log(s); });
