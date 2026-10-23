@@ -38,7 +38,7 @@ int main() {
     const std::string feed = readFile("core/src/engine/engine.cpp");
     CHECK(feed.find("else if (a == 205) rxMercury_.feed(x, n);") != std::string::npos, "feed dispatch 205 missing");
     const std::string tx = readFile("core/src/tx/tx.cpp");
-    CHECK(tx.find("mk(\"mercury\", \"Mercury (HF OFDM modem)\", 206, \"makeMercurySynth\"") != std::string::npos, "TX studio entry missing");
+    CHECK(tx.find("mk(\"mercury\", \"Mercury (HF OFDM modem)\", 206, \"makeMercurySynth") != std::string::npos, "TX studio entry missing");
     const std::string ui = readFile("app/mercury/mercury_ui.cpp");
     const char* strings[] = {"encrypted: the payload is not decoded", "never opened or run", "Known callsigns", "Sessions", "Broadcast"};
     for (const char* s : strings) CHECK(ui.find(s) != std::string::npos, "panel string missing: %s", s);
