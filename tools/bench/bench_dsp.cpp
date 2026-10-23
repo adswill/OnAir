@@ -1,7 +1,7 @@
 // Signal-processing cost table: CPU seconds per second of signal for the DSP kernels and the receivers that take most of the CPU, measured
 // without the Engine, the GUI or the radio (those are other people's tables). Not part of ctest; build and run with tools/bench/bench_dsp.sh.
 //
-//   bench_dsp [--list] [--only name[,name..]] [--seconds S] [--repeat N] [--best N] [--md]
+//   bench_dsp [--list] [--only name[,name..]] [--seconds S] [--repeat N] [--best N] [--md] [--digest]
 //
 // Every row: the signal is made first (not timed), then fed in blocks of 16384 samples (receivers) or the kernel runs over it; the figure is the
 // process CPU time (user + system, all threads: getrusage) spent per second of signal, so a busy machine does not change it much. A receiver
@@ -39,6 +39,11 @@
 #include "dect2/dtmb/dtmb_gen.h"
 #include "dect2/dtmb/dtmb_rx.h"
 #include "dect2/dab/dab.h"
+#include "dect2/drm/drm_rx.h"
+#include "dect2/hdr/hdr_rx.h"
+#include "dect2/hdr/hdr_gen.h"
+#include "dect2/airband/airband_rx.h"
+#include "dect2/airband/airband_gen.h"
 #include "dect2/dab/dab_gen.h"
 #include "dect2/atsc/atsc_gen.h"
 #include "dect2/atsc/atsc_rx.h"
@@ -67,6 +72,12 @@ double cpuNow() {
     getrusage(RUSAGE_SELF, &u);
     return u.ru_utime.tv_sec + u.ru_utime.tv_usec * 1e-6 + u.ru_stime.tv_sec + u.ru_stime.tv_usec * 1e-6;
 }
+
+// --digest: every receiver row also hashes its output (FNV-1a) and prints the hash as "items", so a speed change can be shown to leave the output as it was
+bool g_dg = false;
+uint64_t g_h = 1469598103934665603ull;
+void dgAdd(const void* p, size_t n) { auto* b = (const uint8_t*)p; for (size_t i = 0; i < n; i++) { g_h ^= b[i]; g_h *= 1099511628211ull; } }
+void dgStr(const std::string& s) { dgAdd(s.data(), s.size()); }
 
 struct Row { std::string name, what; double rate = 0, sigSec = 0, cpu = 0; long long items = 0; };
 
@@ -100,13 +111,14 @@ template <class Rx>
 Row feedRx(const char* name, const char* what, double rate, const std::vector<cf32>& sig, const std::function<void(Rx&, long long&)>& setup) {
     Row r; r.name = name; r.what = what; r.rate = rate; r.sigSec = sig.size() / rate;
     auto rx = std::make_unique<Rx>();
+    g_h = 1469598103934665603ull;
     long long items = 0;
     setup(*rx, items);
     const double c0 = cpuNow();
     for (size_t i = 0; i < sig.size(); i += 16384) rx->feed(sig.data() + i, std::min<size_t>(16384, sig.size() - i));
     rx.reset();
     r.cpu = cpuNow() - c0;
-    r.items = items;
+    r.items = g_dg ? (long long)(g_h & 0x3fffffffffffffffull) : items;
     return r;
 }
 
@@ -233,14 +245,14 @@ std::vector<Bench> benches() {
     b.push_back({"fm", "FM broadcast receiver (stereo, RDS) at 2 Msps", 2e6, [](double secs) {
         FmGenConfig g; g.rate = 2e6; FmGenerator gen(g);
         std::vector<cf32> sig; gen.generate((size_t)(secs * 2e6), sig);
-        return feedRx<FmReceiver>("fm", "", 2e6, sig, [](FmReceiver& rx, long long&) { rx.configure(2e6); rx.setSilent(true); });
+        return feedRx<FmReceiver>("fm", "", 2e6, sig, [](FmReceiver& rx, long long&) { rx.configure(2e6); rx.setSilent(true); if (g_dg) rx.setAudioTap([](const float* l, const float* r, size_t n) { dgAdd(l, n * 4); dgAdd(r, n * 4); }); });
     }});
     auto general = [&](const char* name, int demod, double rate) {
         b.push_back({name, "general receiver", rate, [=](double secs) {
             SynthConfig c = cfgFor(0); c.modeOpt[0] = demod; c.modeVal[0] = 50e3;
             auto sig = synth(makeGeneralSynth(c, rate), secs);
             return feedRx<GeneralReceiver>(name, "", rate, sig, [=](GeneralReceiver& rx, long long& it) {
-                rx.configure(rate); rx.setDemod(demod); rx.setChannelOffsetHz(50e3); logCount(rx, it); rx.setSilent(true); });
+                rx.configure(rate); rx.setDemod(demod); rx.setChannelOffsetHz(50e3); logCount(rx, it); rx.setSilent(true); if (g_dg) rx.setAudioTap([](const float* x, size_t n) { dgAdd(x, n * 4); }); });
         }});
     };
     general("nfm", 0, 2.4e6);
@@ -289,7 +301,7 @@ std::vector<Bench> benches() {
     }});
     b.push_back({"dab", "DAB receiver at 2.048 Msps", 2.048e6, [](double secs) {
         auto sig = synth(makeDabSynth(cfgFor(0), 2.048e6), secs);
-        return feedRx<DabReceiver>("dab", "", 2.048e6, sig, [](DabReceiver& rx, long long& it) { rx.configure(2.048e6); rx.setPacketCallback([&it](const uint8_t*, size_t n, double) { it += (long long)n; }); });
+        return feedRx<DabReceiver>("dab", "", 2.048e6, sig, [](DabReceiver& rx, long long& it) { rx.configure(2.048e6); rx.audio().setSilent(true); rx.select(1); if (g_dg) rx.audio().setPcmTap([](const float* x, int n) { dgAdd(x, (size_t)n * 8); }); rx.setPacketCallback([&it](const uint8_t*, size_t n, double) { it += (long long)n; }); });
     }});
     b.push_back({"atsc", "ATSC 1.0 receiver at 8 Msps", 8e6, [](double secs) {
         uint32_t counter = 0;
@@ -314,11 +326,62 @@ std::vector<Bench> benches() {
     }});
     b.push_back({"dab_idle", "DAB receiver on noise at 2.048 Msps", 2.048e6, [](double secs) {
         auto sig = noiseSig(2.048e6, secs);
-        return feedRx<DabReceiver>("dab_idle", "", 2.048e6, sig, [](DabReceiver& rx, long long&) { rx.configure(2.048e6); });
+        return feedRx<DabReceiver>("dab_idle", "", 2.048e6, sig, [](DabReceiver& rx, long long&) { rx.configure(2.048e6); rx.audio().setSilent(true); });
     }});
     b.push_back({"fm_idle", "FM broadcast receiver on noise at 2 Msps", 2e6, [](double secs) {
         auto sig = noiseSig(2e6, secs);
         return feedRx<FmReceiver>("fm_idle", "", 2e6, sig, [](FmReceiver& rx, long long&) { rx.configure(2e6); rx.setSilent(true); });
+    }});
+    b.push_back({"drm", "DRM30 receiver at 48 kHz (mode B, 64-QAM, AAC)", 48e3, [](double secs) {
+        auto sig = synth(makeDrmSynth(cfgFor(12), 48e3), secs);
+        return feedRx<DrmReceiver>("drm", "", 48e3, sig, [](DrmReceiver& rx, long long&) { rx.configure(48e3); rx.setSilent(true); if (g_dg) rx.setAudioTap([](const float* l, const float* r, size_t n) { dgAdd(l, n * 4); dgAdd(r, n * 4); }); });
+    }});
+    b.push_back({"drm_idle", "DRM30 receiver on noise at 48 kHz", 48e3, [](double secs) {
+        auto sig = noiseSig(48e3, secs);
+        return feedRx<DrmReceiver>("drm_idle", "", 48e3, sig, [](DrmReceiver& rx, long long&) { rx.configure(48e3); rx.setSilent(true); });
+    }});
+    b.push_back({"hdr_fm", "HD Radio FM hybrid receiver at 2 Msps", 2e6, [](double secs) {
+        SynthConfig c = cfgFor(0); c.modeOpt[0] = 0;
+        auto sig = synth(makeHdrSynth(c, 2e6), secs);
+        return feedRx<HdrReceiver>("hdr_fm", "", 2e6, sig, [](HdrReceiver& rx, long long& it) { rx.configure(2e6); rx.setSilent(true); logCount(rx, it); if (g_dg) { rx.setAudioTap([](const float* x, size_t n) { dgAdd(x, n * 8); }); rx.setLogCallback([](const std::string& s) { dgStr(s); }); } });
+    }});
+    b.push_back({"hdr_am", "HD Radio AM hybrid receiver at 1 Msps", 1e6, [](double secs) {
+        SynthConfig c = cfgFor(0); c.modeOpt[0] = 1;
+        auto sig = synth(makeHdrSynth(c, 1e6), secs);
+        return feedRx<HdrReceiver>("hdr_am", "", 1e6, sig, [](HdrReceiver& rx, long long& it) { rx.configure(1e6); rx.setSilent(true); logCount(rx, it); });
+    }});
+    b.push_back({"hdr_idle", "HD Radio FM receiver on noise at 2 Msps", 2e6, [](double secs) {
+        auto sig = noiseSig(2e6, secs);
+        return feedRx<HdrReceiver>("hdr_idle", "", 2e6, sig, [](HdrReceiver& rx, long long&) { rx.configure(2e6); rx.setSilent(true); });
+    }});
+    b.push_back({"airband", "airband receiver, test layout (5 channels) at 1 Msps", 1e6, [](double secs) {
+        AirbandGenConfig g; g.chans = airbandTestLayout(); g.snrDb = 25; g.rate = 1e6; g.dialOffsetHz = -airbandTuning().tuneOffsetHz;
+        AirbandGenerator gen(g);
+        std::vector<cf32> sig((size_t)(secs * 1e6));
+        for (size_t o = 0; o < sig.size(); o += 65536) gen.generate(sig.data() + o, std::min<size_t>(65536, sig.size() - o));
+        const double dial = 118.700e6;
+        const auto list = airbandChannelsFor(g.chans, dial);
+        return feedRx<AirbandReceiver>("airband", "", 1e6, sig, [&](AirbandReceiver& rx, long long&) {
+            rx.setSilent(true); rx.configure(1e6); rx.setCenterHz(dial + airbandTuning().tuneOffsetHz); rx.setChannels(list); if (g_dg) rx.setMixTap([](const float* x, size_t n) { dgAdd(x, n * 4); }); });
+    }});
+    b.push_back({"fm_chan20", "20 ChannelFilters 20 Msps -> 500 kHz (many-station FM front end, receivers not included)", 20e6, [](double secs) {
+        Row r; r.name = "fm_chan20"; r.rate = 20e6;
+        auto sig = noiseSig(20e6, std::min(secs, 2.0)); r.sigSec = sig.size() / 20e6;
+        std::vector<ChannelFilter> ch(20);
+        for (int k = 0; k < 20; k++) ch[k].configure(20e6, -9.5e6 + 1e6 * k, 500e3);
+        std::vector<cf32> out; out.reserve(1 << 15);
+        const double c0 = cpuNow();
+        for (size_t i = 0; i < sig.size(); i += 16384) {
+            const size_t n = std::min<size_t>(16384, sig.size() - i);
+            for (auto& c : ch) { out.clear(); c.process(sig.data() + i, n, out); r.items += out.size(); }
+        }
+        r.cpu = cpuNow() - c0;
+        return r;
+    }});
+    b.push_back({"fm500", "FM broadcast receiver (stereo, RDS) at 500 ksps (one station of a channelised bank)", 500e3, [](double secs) {
+        FmGenConfig g; g.rate = 500e3; FmGenerator gen(g);
+        std::vector<cf32> sig; gen.generate((size_t)(secs * 500e3), sig);
+        return feedRx<FmReceiver>("fm500", "", 500e3, sig, [](FmReceiver& rx, long long&) { rx.configure(500e3); rx.setSilent(true); if (g_dg) rx.setAudioTap([](const float* l, const float* r, size_t n) { dgAdd(l, n * 4); dgAdd(r, n * 4); }); });
     }});
     return b;
 }
@@ -340,6 +403,7 @@ int main(int argc, char** argv) {
         else if (!strcmp(argv[i], "--best") && i + 1 < argc) best = std::max(1, atoi(argv[++i]));
         else if (!strcmp(argv[i], "--list")) list = true;
         else if (!strcmp(argv[i], "--md")) md = true;
+        else if (!strcmp(argv[i], "--digest")) g_dg = true;
     }
     auto all = benches();
     if (list) { for (auto& b : all) printf("%-14s %s\n", b.name.c_str(), b.what.c_str()); return 0; }

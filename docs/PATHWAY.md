@@ -362,3 +362,8 @@ HD checkbox next to the channel picker (greyed out until an HD counterpart exist
 
 2026-10-22 (mode-drmplus-030): audit only, no code. DRM30 modes A-D and DRM+ (mode E, 100 kHz, 4/16-QAM, SDC 4-QAM, generator, tests/drm/test_drm_modee.cpp) are already in core/src/drm and auto-detected inside the one DRM entry. HD Radio FM (MP1/MP3) and AM (MA1 hybrid, MA3 all-digital: P1, P3, PIDS, L2, AAS, HDC via user-installed FAAD2 plug-in) are already in core/src/hdr with generator and tests/hdr/test_hdr_am.cpp. Per the one-entry-per-protocol rule they stay as DRM and HD Radio families; no new mode numbers used. Nothing added; still unverified without real signals: DRM+ unequal error protection, HD AM on-air.
 
+
+## 2026-10-23 Perf campaign, broadcast audio group: parked (perf2-audio-bcast-030)
+Done: bench rows added to tools/bench/bench_dsp.cpp (drm, drm_idle, hdr_fm, hdr_am, hdr_idle, airband, fm_chan20, fm500), dab rows now select sub 1 and run silent, and --digest hashes each receiver's output (items = FNV) for bit-identical checks. Nothing measured yet (build was still queued).
+Next: build dect2core in build/ (cmake already configured), run the scratchpad-style bench (CORE_BUILD=build, EXTRA_SRCS = drm/hdr/airband sources) for baselines, record --digest hashes, profile fm (per-sample double sin/cos/atan2 at 500 ksps) first, then dab Viterbi, drm, hdr, airband, fm_chan20.
+Note: FmReceiver::configure needs >= 500 ksps, so a many-station FM bank must channelise to 500 kHz.
