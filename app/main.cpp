@@ -162,6 +162,20 @@ static void textSizeKeys(App& app) {
 
 // the developer flags that act once the receiver runs: --autostart, --fmscan, --stress
 static void devAutomation(App& app, DevOpts& o) {
+    {   // dev/test only: DECT2_CLICKS="frame:x:y,frame:x:y" injects a left click at (x,y) on those frames (hidden --shot runs of popups and buttons)
+        static const char* env = getenv("DECT2_CLICKS");
+        if (env) {
+            const int fr = ImGui::GetFrameCount();
+            int f; float x, y; const char* c = env;
+            while (sscanf(c, "%d:%f:%f", &f, &x, &y) == 3) {
+                ImGuiIO& io = ImGui::GetIO();
+                if (fr == f - 1) io.AddMousePosEvent(x, y);
+                if (fr == f) io.AddMouseButtonEvent(0, true);
+                if (fr == f + 2) io.AddMouseButtonEvent(0, false);
+                c = strchr(c, ','); if (!c) break; c++;
+            }
+        }
+    }
     if (o.memSelfTest && ++o.memFrame == 3) { fflush(stdout); std::exit(memorySelfTest(app)); }   // the Memory recall check (tests/app/run_memory_recall.cmake)
     if (o.autostart) {
         o.autostart = false;

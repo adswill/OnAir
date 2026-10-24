@@ -123,6 +123,7 @@ void waterfall3dPlot(App& a, ImVec2 size) {
     const ImVec2 avail = ImGui::GetContentRegionAvail();
     ImVec2 sz(size.x > 0 ? size.x : avail.x, size.y > 0 ? size.y : avail.y);
     sz.x = std::max(60.f, sz.x); sz.y = std::max(60.f, sz.y);
+    ImGui::SetNextItemAllowOverlap();   // the corner buttons are drawn over it afterwards: they must get the clicks (else "3D" did nothing and the view could not be left)
     ImGui::InvisibleButton("##wf3d", sz, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight | ImGuiButtonFlags_MouseButtonMiddle);
     const bool hovered = ImGui::IsItemHovered(), active = ImGui::IsItemActive();
     if (hovered) { ImGui::SetItemKeyOwner(ImGuiKey_MouseWheelY); }
@@ -236,8 +237,23 @@ void waterfall3dPlot(App& a, ImVec2 size) {
             acc = mx = 0; n = 0; tp = glfwGetTime();
         }
     }
-    specCornerPopup(a, a.wf.paused ? "Paused###wfbtn" : "3D###wfbtn", "##wfpop", o, sz, 0, 40 * gUi, ImGui::GetTextLineHeight() + 6 * gUi, a.wf.paused || s.frozen,
+    {   // "2D" back to the flat spectrum and waterfall, and "Reset view" for the camera, left of the popup button
+        const float bw = specCornerPopup(a, a.wf.paused ? "Paused###wfbtn" : "3D###wfbtn", "##wfpop", o, sz, 0, 40 * gUi, ImGui::GetTextLineHeight() + 6 * gUi, a.wf.paused || s.frozen,
                     tr("Waterfall: 3D view, colour map, intensity range, speed and pause"), wfDisplayPopup);
+        const float m = 4 * gUi, fp = ImGui::GetStyle().FramePadding.x * 2;
+        const std::string labs[2] = {std::string(tr("2D")) + "###wf3d2d", std::string(tr("Reset view")) + "###wf3dreset"};
+        float used = bw;
+        for (int i = 0; i < 2; i++) {
+            const float w = ImGui::CalcTextSize(labs[i].c_str(), nullptr, true).x + fp, x = o.x + sz.x - used - w - m;
+            if (bw <= 0 || x < o.x + 40 * gUi) break;
+            const ImVec2 keep = ImGui::GetCursorScreenPos();
+            ImGui::SetCursorScreenPos(ImVec2(x, o.y + m + ImGui::GetTextLineHeight() + 6 * gUi));
+            if (ImGui::SmallButton(labs[i].c_str())) { if (i == 0) { s.on = false; savePrefs(a); } else { s.cam = w3d::preset(s.preset); savePrefs(a); } }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", i == 0 ? tr("Back to the flat spectrum and waterfall (the waterfall history is kept)") : tr("Camera back to the chosen angle and zoom (double click does the same)"));
+            ImGui::SetCursorScreenPos(keep);
+            used += w + m;
+        }
+    }
 }
 
 void waterfall3dPopup(App& a) {
@@ -245,6 +261,8 @@ void waterfall3dPopup(App& a) {
     if (ImGui::Checkbox(tr("3D view"), &s.on)) savePrefs(a);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The history as a landscape: drag to orbit, Shift or right drag to pan, wheel to zoom, Ctrl+wheel for the height, click to tune"));
     if (!s.on) return;
+    ImGui::SameLine(0, 8 * gUi);
+    if (ImGui::Button(tr("Reset view##wf3dpop"))) { s.cam = w3d::preset(s.preset); savePrefs(a); }
     ImGui::SameLine(0, 8 * gUi);
     ImGui::Checkbox(tr("Freeze"), &s.frozen);
     for (int i = 0; i < w3d::NumPresets; i++) {

@@ -93,6 +93,41 @@ void tvRecordStart(App& a) {
 }
 
 // Record, timer, pause / live buffer
+void tvPlaybackRow(App& a) {
+    Player& pl = a.engine.player();
+    const Player::ShiftStats ss = pl.shift();
+    ImGui::BeginDisabled(pl.selected() < 0);
+    if (ImGui::Button(ss.paused ? "Play##tvps" : "Pause##tvps")) { if (ss.paused) pl.play(); else pl.pause(); }
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("Freeze the picture; the service keeps filling the buffer. Play resumes from here (Space)");
+    flowNext(6 * gUi);
+    static float drag = 0; static bool dragging = false;
+    const float maxS = (float)std::max(1.0, ss.bufferedSec);
+    float v = dragging ? drag : (float)std::max(0.0, ss.bufferedSec - ss.behindSec);
+    {   // the seek bar takes what the buttons after it (Jump to live, the buffer box and its label) leave; on a narrow panel those wrap to the next line
+        const ImGuiStyle& st = ImGui::GetStyle();
+        const float after = ImGui::CalcTextSize("Jump to live").x + 2 * st.FramePadding.x + 84 * gUi + st.ItemInnerSpacing.x + ImGui::CalcTextSize("buffer").x + 2 * 6 * gUi + 2 * st.ItemSpacing.x;
+        const float avail = ImGui::GetContentRegionAvail().x;
+        ImGui::SetNextItemWidth(std::min(avail, std::max(120.f * gUi, avail - after)));
+    }
+    char lab[48]; snprintf(lab, sizeof lab, ss.behind ? "-%s behind" : "live", clockText(dragging ? maxS - v : ss.behindSec).c_str());
+    if (ImGui::SliderFloat("##tvseek", &v, 0, maxS, lab)) { drag = v; dragging = true; }
+    if (ImGui::IsItemDeactivated()) { if (dragging) pl.seekBehind(v >= maxS - 0.5f ? 0 : maxS - v); dragging = false; }
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("How far behind live the picture is. Drag to go back (up to %s) or forward.", clockText(ss.bufferedSec).c_str());
+    flowNext(6 * gUi);
+    ImGui::BeginDisabled(!ss.behind);
+    if (ImGui::Button("Jump to live##tvlive")) pl.goLive();
+    ImGui::EndDisabled();
+    flowNext(6 * gUi);
+    ImGui::SetNextItemWidth(84 * gUi);
+    char cur[24]; snprintf(cur, sizeof cur, "%d MB", pl.bufferMB());
+    if (ImGui::BeginCombo("buffer##tvbuf", cur)) {
+        for (int mb : {64, 128, 256, 512, 1024, 2048}) { char l[24]; snprintf(l, sizeof l, "%d MB", mb); if (ImGui::Selectable(l, mb == pl.bufferMB())) { pl.setBufferMB(mb); a.tvBufMb = mb; plat::prefs().setI("tvBufMb", mb); } }
+        ImGui::EndCombo();
+    }
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("Memory for the live buffer (filled %.0f MB). When it is full the oldest part is dropped.", ss.bufferBytes / 1e6);
+    ImGui::EndDisabled();
+}
+
 void tvRecordRow(App& a) {
     Player& pl = a.engine.player();
     const Player::RecStats rs = pl.recording();
@@ -141,33 +176,6 @@ void tvRecordRow(App& a) {
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", a.tvRecDonePath.c_str());
     }
     flowBreak();
-    // pause / live buffer
-    const Player::ShiftStats ss = pl.shift();
-    ImGui::BeginDisabled(pl.selected() < 0);
-    if (ImGui::Button(ss.paused ? "Play##tvps" : "Pause##tvps")) { if (ss.paused) pl.play(); else pl.pause(); }
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("Freeze the picture; the service keeps filling the buffer. Play resumes from here (Space)");
-    flowNext(6 * gUi);
-    static float drag = 0; static bool dragging = false;
-    const float maxS = (float)std::max(1.0, ss.bufferedSec);
-    float v = dragging ? drag : (float)std::max(0.0, ss.bufferedSec - ss.behindSec);
-    ImGui::SetNextItemWidth(std::max(120.f * gUi, ImGui::GetContentRegionAvail().x - 270 * gUi));   // the seek bar takes what the other controls leave
-    char lab[48]; snprintf(lab, sizeof lab, ss.behind ? "-%s behind" : "live", clockText(dragging ? maxS - v : ss.behindSec).c_str());
-    if (ImGui::SliderFloat("##tvseek", &v, 0, maxS, lab)) { drag = v; dragging = true; }
-    if (ImGui::IsItemDeactivated()) { if (dragging) pl.seekBehind(v >= maxS - 0.5f ? 0 : maxS - v); dragging = false; }
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("How far behind live the picture is. Drag to go back (up to %s) or forward.", clockText(ss.bufferedSec).c_str());
-    flowNext(6 * gUi);
-    ImGui::BeginDisabled(!ss.behind);
-    if (ImGui::Button("Jump to live##tvlive")) pl.goLive();
-    ImGui::EndDisabled();
-    flowNext(6 * gUi);
-    ImGui::SetNextItemWidth(84 * gUi);
-    char cur[24]; snprintf(cur, sizeof cur, "%d MB", pl.bufferMB());
-    if (ImGui::BeginCombo("buffer##tvbuf", cur)) {
-        for (int mb : {64, 128, 256, 512, 1024, 2048}) { char l[24]; snprintf(l, sizeof l, "%d MB", mb); if (ImGui::Selectable(l, mb == pl.bufferMB())) { pl.setBufferMB(mb); a.tvBufMb = mb; plat::prefs().setI("tvBufMb", mb); } }
-        ImGui::EndCombo();
-    }
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("Memory for the live buffer (filled %.0f MB). When it is full the oldest part is dropped.", ss.bufferBytes / 1e6);
-    ImGui::EndDisabled();
     if (!a.tvRecErr.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextColored(pal::warnAmber(), "%s", a.tvRecErr.c_str()); ImGui::PopTextWrapPos(); }
 }
 } // namespace
@@ -400,7 +408,9 @@ void playerTab(App& a) {
     const float ctlY = ImGui::GetCursorPosY();
     if (ImGui::Button(pl.selected() >= 0 ? tr("Stop##tvplay") : tr("Play##tvplay"))) { if (pl.selected() >= 0) pl.select(-1); else if (a.playReq < 0 && !a.ts.services.empty()) { int sid = a.ts.services[0].id; pl.select(sid); pl.setVolume(a.volume); } }
     flowNext();
-    ImGui::SetNextItemWidth(160 * gUi);
+    tvPlaybackRow(a);   // transport: Pause, the live bar, Jump to live, the buffer size
+    flowBreak();
+    ImGui::SetNextItemWidth(std::min(160.f * gUi, std::max(60.f * gUi, ImGui::GetContentRegionAvail().x * 0.5f)));
     if (ImGui::SliderFloat(tr("Volume##tvvol"), &a.volume, 0, 1, "%.2f")) pl.setVolume(a.volume);
     flowNext();
     if (ImGui::Checkbox(tr("Mute##tvmute"), &a.muted)) pl.setMuted(a.muted);
@@ -427,7 +437,7 @@ void playerTab(App& a) {
             {"hrv", "Croatian"}, {"srp", "Serbian"}, {"slv", "Slovenian"}, {"rus", "Russian"}, {"ukr", "Ukrainian"}, {"ara", "Arabic"}, {"zho", "Chinese"}};
         const char* cur = "Broadcaster's order";
         for (auto& l : kLangs) if (epgLanguageKey(l.code) == epgLanguageKey(a.tvLang)) cur = l.name;
-        ImGui::SetNextItemWidth(150 * gUi);
+        ImGui::SetNextItemWidth(std::min(150.f * gUi, std::max(70.f * gUi, ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize("language").x - 12 * gUi)));
         if (ImGui::BeginCombo("language", cur)) {
             for (auto& l : kLangs) if (ImGui::Selectable(l.name, epgLanguageKey(l.code) == epgLanguageKey(a.tvLang))) { a.tvLang = l.code; savePrefs(a); }
             ImGui::EndCombo();
@@ -450,7 +460,7 @@ void playerTab(App& a) {
             }
         }
         std::string lab = tracks[cur].codec + " " + tracks[cur].lang;
-        ImGui::SetNextItemWidth(170 * gUi);
+        ImGui::SetNextItemWidth(std::min(170.f * gUi, std::max(70.f * gUi, ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize("Audio").x - 12 * gUi)));
         if (ImGui::BeginCombo(tr("Audio##tvaudio"), lab.c_str())) {
             for (int i = 0; i < (int)tracks.size(); i++) {
                 std::string l = tracks[i].codec + " " + tracks[i].lang + " (" + std::to_string(tracks[i].channels) + " ch)";
