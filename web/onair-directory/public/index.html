@@ -3,44 +3,85 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="color-scheme" content="dark light">
-  <meta name="description" content="Public OnAir Web servers: receivers you can listen to in a browser. Servers list themselves; nothing about listeners is collected.">
-  <title>OnAir Servers</title>
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Public OnAir Web receivers you can listen to in a browser. Receivers list themselves; nothing about listeners is collected.">
+  <title>OnAir Receivers</title>
   <link rel="icon" href="data:,">
-  <link href="https://unpkg.com/maplibre-gl@5.7.3/dist/maplibre-gl.css" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header class="bar">
-    <a class="name" href="https://on-air.dev">OnAir</a><span class="sep">/</span><span class="cur">Servers</span>
-    <span class="count" id="count" aria-live="polite"></span>
+  <header class="top">
+    <div class="wrap top-in">
+      <a class="brand" href="https://on-air.dev">OnAir</a>
+      <span class="crumb">Public receivers</span>
+      <a class="docs" href="https://github.com/adswill/OnAir/blob/main/docs/ONAIR-WEB.md">List your own</a>
+    </div>
   </header>
-  <div class="filters">
-    <input id="q" type="search" placeholder="Search name, radio, description" aria-label="Search" maxlength="60" autocomplete="off">
-    <select id="band" aria-label="Band">
-      <option value="">All bands</option>
-      <option value="lf">LF</option><option value="mw">MW</option><option value="hf">HF</option><option value="80m">80 m</option><option value="40m">40 m</option><option value="20m">20 m</option>
-      <option value="vhf">VHF</option><option value="fm">FM broadcast</option><option value="air">Airband</option><option value="marine">Marine VHF</option><option value="2m">2 m</option>
-      <option value="dab">DAB</option><option value="uhf">UHF</option><option value="70cm">70 cm</option><option value="tv">TV</option><option value="l">L band</option>
-    </select>
-    <label class="chk"><input id="free" type="checkbox"> Free slots</label>
-  </div>
-  <main>
-    <section id="list" aria-label="Servers"></section>
-    <div id="map" role="application" aria-label="Map of servers"></div>
+
+  <main class="wrap">
+    <p class="note">Anyone can list a receiver here. Entries are self-registered and not vetted: open them at your own risk, and use Report if something is wrong. The directory stores no listener data.</p>
+
+    <form class="tools" id="tools" role="search" onsubmit="return false">
+      <label class="srch"><span class="vh">Search receivers</span><input id="q" type="search" placeholder="Search name, radio, place, description" maxlength="60" autocomplete="off"></label>
+      <label class="sel"><span class="vh">Sort by</span>
+        <select id="sort">
+          <option value="users">Most listeners</option>
+          <option value="free">Most free slots</option>
+          <option value="name">Name</option>
+          <option value="seen">Last seen</option>
+          <option value="freq">Lowest frequency</option>
+          <option value="dist" disabled>Nearest</option>
+        </select></label>
+      <label class="sel"><span class="vh">Frequency scale</span>
+        <select id="scale">
+          <option value="log">Scale: 0.1 MHz to 6 GHz (log)</option>
+          <option value="hf">Scale: 0 to 30 MHz</option>
+          <option value="vu">Scale: 30 MHz to 1 GHz</option>
+        </select></label>
+      <button type="button" id="loc" class="btn" aria-pressed="false">Show distance</button>
+      <label class="chk"><input id="free" type="checkbox"> Free slots only</label>
+    </form>
+    <div class="chips" id="chips" role="group" aria-label="Band"></div>
+
+    <div class="status" id="status" role="status" aria-live="polite">Loading receivers...</div>
+
+    <table class="tbl" id="tbl" hidden>
+      <thead>
+        <tr><th scope="col" class="c-name">Receiver</th><th scope="col" class="c-cov"><span id="axis-title">Coverage</span><div class="axis" id="axis" aria-hidden="true"></div></th><th scope="col" class="c-num">Listeners</th><th scope="col" class="c-num" id="th-dist" hidden>Distance</th><th scope="col" class="c-num">Seen</th><th scope="col" class="c-act"><span class="vh">Actions</span></th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+
+    <section id="empty" class="empty" hidden aria-labelledby="empty-h">
+      <h2 id="empty-h">No receivers listed</h2>
+      <p>Nobody is listed right now, or nothing matches your filters. A receiver appears here only when its owner turns the directory on in <code>onair-server</code>.</p>
+      <p>To list yours, add these to the server settings file, start <code>onair-server --web</code>, read the preview it prints, then add the confirmation code it gives:</p>
+<pre>web_directory=1
+web_directory_url=https://web.on-air.dev
+web_public_url=https://radio.example.org
+web_directory_loc=54.69,25.28     # optional, or a locator such as KO24pq
+web_directory_radio=HackRF Pro
+web_directory_desc=Wideband receiver on the roof
+web_directory_ack=&lt;code from the preview&gt;</pre>
+      <p>The address must be HTTPS. Only name, address, rough location, coverage and listener counts are sent, every 5 minutes. Full steps: <a href="https://github.com/adswill/OnAir/blob/main/docs/ONAIR-WEB.md">OnAir Web guide</a> and <a href="https://github.com/adswill/OnAir/blob/main/docs/ONAIR-DIRECTORY.md">directory notes</a>.</p>
+    </section>
   </main>
-  <footer>Servers list themselves and send only their name, address, coarse location, coverage and user counts. <a href="https://github.com/adswill/OnAir">OnAir</a> &middot; map &copy; OpenStreetMap</footer>
-  <dialog id="rep">
+
+  <footer class="wrap foot">
+    <span>Data: <a href="/api/v1/servers">/api/v1/servers</a> (JSON, open to any site). Your location, if you share it, stays in this browser.</span>
+    <a href="https://github.com/adswill/OnAir">OnAir on GitHub</a>
+  </footer>
+
+  <dialog id="rep" aria-labelledby="rep-h">
     <form method="dialog" id="repform">
-      <h2>Report a server</h2>
-      <p id="repname"></p>
+      <h2 id="rep-h">Report a receiver</h2>
+      <p id="repname" class="dim"></p>
       <label>Reason <select id="repreason"><option value="abuse">Abuse</option><option value="illegal">Illegal content</option><option value="offline">Offline</option><option value="wrong-info">Wrong information</option><option value="other">Other</option></select></label>
       <label>Details <textarea id="reptext" maxlength="500" rows="3"></textarea></label>
-      <div class="row"><button value="cancel" type="button" id="repcancel">Cancel</button><button value="ok" type="submit">Send report</button></div>
+      <div class="row"><button value="cancel" type="button" id="repcancel" class="btn">Cancel</button><button value="ok" type="submit" class="btn primary">Send report</button></div>
       <p id="repmsg" role="status"></p>
     </form>
   </dialog>
-  <script src="https://unpkg.com/maplibre-gl@5.7.3/dist/maplibre-gl.js"></script>
   <script type="module" src="/app.js"></script>
 </body>
 </html>
