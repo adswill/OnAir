@@ -17,7 +17,65 @@ radio --(raw samples, the radio's rate)--> onair-server
 
 Because every listener only cuts its own few bins out of the shared transform, the cost of a listener does not grow with the radio's sample rate (see the sizing table). The control page and the remote-control API (port 8765) are unchanged and stay private: web listeners never control the radio itself (its centre frequency, rate, gain or mode), only their own virtual receiver.
 
-## Quick start (your own network)
+## Quick start in 5 minutes
+
+You need: a computer with OnAir's `onair-server` and an SDR (HackRF, RTL-SDR, Airspy and so on). With a HackRF Pro use 10 Msps. OnAir Web is receive-only: nobody who listens can transmit or change your radio.
+
+1. Start the server with the web part switched on:
+   ```
+   onair-server --web --web-lan
+   ```
+   No radio at hand? Add `--device test` and you get a built-in test signal.
+2. On the same computer open `http://127.0.0.1:8073/`. On another computer or phone in your home network open `http://<address of the server>:8073/`.
+3. You see the waterfall. Click on it to tune, pick a mode (AM, NFM, WFM, USB, LSB, CW) and press the speaker to hear it. Every person who opens the page gets their own tuning, nobody tunes anybody else away.
+4. Choose what the listeners can tune: the radio's centre frequency and sample rate are set in the control page (port 8765) or with `freq_mhz=` and `rate_msps=` in `~/.config/onair/server.conf`. A wider rate gives more spectrum but uses more processor time.
+
+That is all for your own network. To let people from outside listen, read on.
+
+## What web.on-air.dev is (and is not)
+
+`https://web.on-air.dev` is only the **viewer**: a copy of the browser page, nothing else. It has no radio. Without a receiver behind the address it says "There is no OnAir receiver behind this address". A receiver exists only where somebody runs `onair-server --web`. If you want your own public address, you run the server and put a name in front of it, as below. (The page also works from your own server at port 8073; you do not need web.on-air.dev for that.)
+
+## Put it on the internet with a Cloudflare Tunnel
+
+A tunnel gives your server an `https://` address without opening a port on your router, and it works behind CGNAT. Free, needs no domain for a quick test.
+
+1. Install `cloudflared` (https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/).
+2. Put these in `~/.config/onair/server.conf` and start the server (do not use `--web-lan` for the public part; the tunnel comes from this same computer):
+   ```
+   web=1
+   web_trust_proxy=1
+   web_auth=invite
+   web_max_users=4
+   web_origin=https://YOUR-NAME.trycloudflare.com
+   ```
+   The `web_origin` line must be exactly the page address the listeners will open (scheme and name, no slash at the end, no path). You only know the name after step 3, so start the tunnel first, copy the name, then add the line and restart the server.
+3. Start the tunnel:
+   ```
+   cloudflared tunnel --url http://127.0.0.1:8073
+   ```
+   It prints an `https://something.trycloudflare.com` address. That is your page origin. (A quick tunnel gets a new random name each time it starts. For a fixed name make a named tunnel on your own domain in the Cloudflare dashboard, pointing at `http://127.0.0.1:8073`.)
+4. Make an invite for each person you want to let in (see "Admin API" below), or use `web_auth=password` with `web_password=` (8 characters or more). Send the link in this form:
+   ```
+   https://YOUR-NAME.trycloudflare.com/#invite=TOKEN
+   ```
+   The part after `#` never reaches the server's logs.
+5. Keep `web_max_users` small. Everybody who listens uses your upload bandwidth (about 10 to 50 kbit/s audio each, more with the waterfall zoomed) and sits on your computer's processor.
+
+Honest status: the server is tested with synthetic signals and many simulated clients. We have not yet tried it with real browsers over the internet beyond one demo, so expect rough edges and tell us what you find. Radio laws differ by country: you, the host, are responsible for what your receiver lets people listen to. See "Safety and legal defaults" below, and use `web_allow_range` to limit the frequencies if needed.
+
+## Troubleshooting
+
+* **"There is no OnAir receiver behind this address" / status "no receiver".** The page was loaded from a plain web host (such as web.on-air.dev), or the server is not running, or the tunnel/proxy points at the wrong port. Start `onair-server --web` and check `http://127.0.0.1:8073/web/v1/info` on that computer; it must answer with JSON. The tunnel or proxy must forward to `127.0.0.1:8073`.
+* **"Connection lost. Reconnecting."** The browser's WebSocket closed and it retries by itself. Common causes: the server or tunnel was stopped; a proxy that does not pass WebSockets (nginx needs the `Upgrade` lines, see "On the internet"); wrong origin (next point). Check the server's log for the reason.
+* **Wrong origin.** The page was opened under an address the server does not know (for example the tunnel's name changed, or you use `https://` at the tunnel but `web_origin` still has the old name). Set `web_origin=<exactly the address in the browser's address bar, without the path>` (the option can be repeated) and restart the server. Also set `web_trust_proxy=1` when a tunnel or proxy sits in front.
+* **"Server busy or full".** `web_max_users` listeners are already in. The page tries again by itself every few seconds. Raise `web_max_users` only if your processor and upload can carry it.
+* **"Access refused: wrong or missing password or invite".** The link has no `#invite=TOKEN`, the token was revoked, or the password is wrong. Five wrong tries from one address block it for a minute.
+* **"This server needs HTTPS".** The page was opened over plain `http://` from outside your network. Use the tunnel's `https://` address.
+* **No sound.** Browsers want one click before they play audio: press the speaker button. Check that the mode and bandwidth fit the signal and that squelch is not closed.
+* **Port 8073 shows nothing from another computer.** You started without `--web-lan` (then only this computer is let in), or a firewall blocks the port.
+
+## Quick start (your own network, more detail)
 
 ```
 onair-server --web --web-lan --device test      # the built-in test signal; drop --device test for your radio

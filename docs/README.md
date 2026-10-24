@@ -97,7 +97,7 @@ The user guides and notes that live in the repository. The same text is on the [
 | [NIXOS.md](NIXOS.md) | OnAir on NixOS and Nix |
 | [ONAIR-DIRECTORY.md](ONAIR-DIRECTORY.md) | OnAir Web directory |
 | [ONAIR-WEB-PROTOCOL.md](ONAIR-WEB-PROTOCOL.md) | OnAir Web protocol, version 1 |
-| [ONAIR-WEB.md](ONAIR-WEB.md) | OnAir Web: share your radio with many listeners |
+| [ONAIR-WEB.md](ONAIR-WEB.md) | OnAir Web: share your radio with many listeners (quick start, Cloudflare Tunnel, troubleshooting) |
 | [PACKET.md](PACKET.md) | APRS / Packet (AX.25) |
 | [PAGER_CCIR.md](PAGER_CCIR.md) | CCIR paging in OnAir |
 | [PERFORMANCE-DSP.md](PERFORMANCE-DSP.md) | Signal-processing cost (0.3.0 work, branch perf-dsp-030) |
