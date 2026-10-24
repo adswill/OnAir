@@ -361,6 +361,7 @@ export function createCard(host, api) {
     if (t._hdg != null) add("Track", (t.heading != null ? dv : "") + String(Math.round(t._hdg)).padStart(3, "0") + "°" + (t.heading == null ? " (from trail)" : ""), "", t.heading != null ? dvTip : "");
     add("Position", fmtLat(t.lat) + "  " + fmtLon(t.lon));
     add("Position age", ageText((now - posMs(t)) / 1000));
+    if (t.by) add("Last heard by", t.by + " " + ageText((now - (t.heard_at || t.t)) / 1000));   // optional public name of the station; shown as text only
     if (t.kind === "aircraft" || t.kind === "flarm") add("Source", SRC_NAME[src] || t.sub || "");
     if (t.cat && t.kind !== "aircraft") add("Category", t.cat);
     else if (t.cat && /^[AB][0-7]$/.test(t.cat)) add("Emitter category", t.cat);

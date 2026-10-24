@@ -6,6 +6,7 @@
 // delta endpoint are all served from here, so they cost no SQL reads at all.
 
 import { cleanDoa, DOA_TTL_MS } from "./doa.js";
+import { cleanBy, BY_SEARCH_LIMIT } from "./by-name.js";
 
 export const KINDS = new Set([
   "aircraft", "vessel", "sonde", "aprs", "ham", "drone", "flarm", "sat", "buoy", "dsc", "station", "gnss", "doa",
@@ -144,7 +145,7 @@ export function mergeTrackMeta(prev, inc) {
   return out;
 }
 
-export function sanitize(raw, now, station) {
+export function sanitize(raw, now, station, by = "") {
   if (!raw || typeof raw !== "object") return null;
   const kind = String(raw.kind || "");
   if (!KINDS.has(kind)) return null;
@@ -192,6 +193,7 @@ export function sanitize(raw, now, station) {
     cat: String(raw.cat || "").slice(0, 48),
     extra: String(raw.extra || "").slice(0, 120),
     path: kind === "gnss" || kind === "doa" ? [] : path.slice(-80),   // no trails for navigation satellites
+    by: kind === "doa" ? "" : cleanBy(by),   // optional public name of the sender; "" = anonymous. Already checked by the caller, checked again here
     t: now,
   };
 }
@@ -259,9 +261,9 @@ export function mergePath(oldArr, incoming, lon, lat) {
 }
 
 /** Fields whose change is visible to a viewer: they bump the version and go out as an upsert. */
-const VISIBLE = ["lat", "lon", "alt", "heading", "speed", "label", "sub", "squawk", "cat", "src", "extra", "est", "dv", "vrate"];
+const VISIBLE = ["by", "lat", "lon", "alt", "heading", "speed", "label", "sub", "squawk", "cat", "src", "extra", "est", "dv", "vrate"];
 /** Fields whose change makes the row worth writing back at once (not only on the periodic heartbeat). */
-const SIG = ["kind", "label", "sub", "squawk", "cat", "src", "extra", "est", "dv"];
+const SIG = ["by", "kind", "label", "sub", "squawk", "cat", "src", "extra", "est", "dv"];
 const sigOf = (r) => SIG.map((k) => r[k]).join("\u0001");
 
 export class TrackBook {
@@ -286,7 +288,7 @@ export class TrackBook {
       const row = {
         id: r.id, kind: r.kind, label: r.label, sub: r.sub, lat: r.lat, lon: r.lon, alt: r.alt, heading: r.heading,
         speed: r.speed, extra: r.extra, t: r.t, squawk: r.squawk, cat: r.cat, vrate: r.vrate, src: r.src, age: r.age,
-        est: r.est ? 1 : 0, dv: r.dv ? 1 : 0, path: Array.isArray(path) ? path : [], ver: this.version, json: null, w: null,
+        est: r.est ? 1 : 0, dv: r.dv ? 1 : 0, by: r.by || "", path: Array.isArray(path) ? path : [], ver: this.version, json: null, w: null,
       };
       row.w = { at: r.t, lat: row.lat, lon: row.lon, sig: sigOf(row) };
       this.rows.set(row.id, row);
@@ -314,6 +316,7 @@ export class TrackBook {
     if (prev) for (const k of VISIBLE) if (prev[k] !== merged[k]) { visible = true; break; }
     const row = prev || { id: t.id, ver: 0, json: null, w: null };
     for (const k of ["kind", "label", "sub", "lat", "lon", "alt", "heading", "speed", "extra", "t", "squawk", "cat", "vrate", "src", "age", "est", "dv", "path"]) row[k] = merged[k];
+    row.by = merged.by || "";
     row.est = row.est ? 1 : 0;
     row.dv = row.dv ? 1 : 0;
     if (visible) { row.ver = ++this.version; row.json = null; if (row.kind === "doa") this.doaVersion = this.version; }
@@ -354,6 +357,7 @@ export class TrackBook {
       lat: row.lat, lon: row.lon, alt: row.alt, heading: row.heading, speed: row.speed,
       extra: row.extra, t: row.t, squawk: row.squawk, cat: row.cat, vrate: row.vrate,
       src: row.src, age: row.age, est: row.est ? 1 : 0, dv: row.dv ? 1 : 0,
+      ...(row.by ? { by: row.by, heard_at: row.t } : {}),   // last writer wins: the sender of the newest report
     });
     return row.json;
   }
@@ -413,6 +417,17 @@ export class TrackBook {
     const deletes = [...this.pendingDeletes];
     this.pendingDeletes.clear();
     return { upserts, deletes };
+  }
+
+  /** Tracks whose last contributor is `key` (lower case; exact match, or prefix when `prefix`), newest first, at most `limit`. */
+  byUser(key, prefix = true, limit = BY_SEARCH_LIMIT) {
+    const out = [];
+    for (const row of this.rows.values()) {
+      const b = row.by ? row.by.toLowerCase() : "";
+      if (b && (b === key || (prefix && b.startsWith(key)))) out.push(row);
+    }
+    out.sort((a, b) => b.t - a.t);
+    return out.slice(0, limit);
   }
 
   /** True while something is waiting to be written (the hub keeps an alarm armed). */

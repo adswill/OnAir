@@ -2,7 +2,8 @@
 // Cell size in degrees shrinks with zoom; a cell with fewer than `minSize` points is returned as singles.
 
 export function cellDeg(zoom, px = 56) {
-  return px * 360 / (256 * Math.pow(2, zoom));
+  // whole zoom levels only: cell boundaries stay put while zooming within a level, so members do not hop between clusters
+  return px * 360 / (256 * Math.pow(2, Math.floor(zoom)));
 }
 
 /** Returns {clusters, singles}. keep(id) forces a point to stay single (e.g. the selected track). */

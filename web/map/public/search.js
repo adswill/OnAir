@@ -27,3 +27,24 @@ export function passesFilter(t, on, maxAgeSec, nowMs = Date.now()) {
   if (maxAgeSec != null && (nowMs - t.t) / 1000 > maxAgeSec) return false;
   return true;
 }
+
+/** Does the track's last contributor match the name filter? `key` is lower case; exact match, or prefix when `prefix`. */
+export function byMatches(t, key, prefix = true) {
+  const b = t && t.by ? String(t.by).toLowerCase() : "";
+  return !!b && !!key && (b === key || (prefix && b.startsWith(key)));
+}
+
+/** Users whose name starts with (or equals) the query: [{ name, n }] with the number of icons, most icons first. Needs 2 characters. */
+export function searchUsers(tracks, q, limit = 3) {
+  q = String(q || "").trim().toLowerCase();
+  if (q.length < 2) return [];
+  const by = new Map();
+  for (const t of tracks) {
+    if (!t.by) continue;
+    const k = String(t.by).toLowerCase();
+    if (!k.startsWith(q)) continue;
+    const e = by.get(k);
+    if (e) e.n++; else by.set(k, { name: t.by, n: 1 });
+  }
+  return [...by.values()].sort((a, b) => b.n - a.n || a.name.localeCompare(b.name)).slice(0, limit);
+}

@@ -324,6 +324,7 @@ struct App {
     std::string mapDeclinedVersion;               // ONAIR_VERSION when "No, do not ask again" was chosen; another version asks again
     bool mapDeclined = false;                     // the start-up question was answered "No, do not ask again" (the Server menu still works)
     std::string mapStationId;                     // client id for /ingest, generated once
+    std::string mapName;                          // Server > Your name on the map: public, optional, empty = anonymous; only what the user typed and applied (never from the OS user name)
     std::string mapServer;                        // empty: https://map.on-air.dev (a local worker URL for developers)
     bool feedsOpen = false;   // View > Data feeds: the window (feeds_ui.cpp)
     bool swarmOpen = false;   // View > LAN swarm: the window (swarm_ui.cpp)

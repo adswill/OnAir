@@ -89,3 +89,21 @@ test("consent: nothing before a choice, always is remembered, decline is not", (
   assert.equal(readChoice(broken), null);
   saveChoice(broken, "always");
 });
+
+test("cluster cells are stable within a zoom level", () => {
+  assert.equal(cellDeg(3.2), cellDeg(3.9));
+  assert.ok(cellDeg(4.0) < cellDeg(3.9));
+  const pts = Array.from({ length: 40 }, (_, i) => ({ id: "p" + i, kind: "air", lon: 10 + (i % 8) * 0.3, lat: 50 + Math.floor(i / 8) * 0.3 }));
+  const a = clusterPoints(pts, 3.1), b = clusterPoints(pts, 3.8);
+  assert.deepEqual(a.clusters, b.clusters);
+});
+
+import { searchUsers, byMatches } from "../public/search.js";
+test("user search: prefix, case-insensitive, counts icons; byMatches filters", () => {
+  const ts = [{ id: "a", by: "Anna" }, { id: "b", by: "anna" }, { id: "c", by: "Annabel" }, { id: "d" }, { id: "e", by: "Ben" }];
+  assert.deepEqual(searchUsers(ts, "ANNA").map((u) => [u.name.toLowerCase(), u.n]), [["anna", 2], ["annabel", 1]]);
+  assert.deepEqual(searchUsers(ts, "a"), []);
+  assert.equal(ts.filter((t) => byMatches(t, "anna")).length, 3);
+  assert.equal(ts.filter((t) => byMatches(t, "anna", false)).length, 2);
+  assert.equal(byMatches({ id: "x" }, "anna"), false);
+});

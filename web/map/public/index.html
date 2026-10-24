@@ -37,8 +37,9 @@
     <span class="counts" id="counts" aria-label="Tracks per layer"></span>
     <span class="clock" id="clock"></span>
     <span class="viewers" id="viewers" hidden></span>
+    <button type="button" class="bychip" id="byChip" hidden></button>
     <div class="search">
-      <input id="q" type="search" placeholder="Search callsign, reg, hex, MMSI" aria-label="Search callsign, registration, ICAO hex or MMSI" role="combobox" aria-expanded="false" aria-controls="results" aria-autocomplete="list" autocomplete="off" spellcheck="false">
+      <input id="q" type="search" placeholder="Search callsign, reg, hex, MMSI, user" aria-label="Search callsign, registration, ICAO hex, MMSI or user name" role="combobox" aria-expanded="false" aria-controls="results" aria-autocomplete="list" autocomplete="off" spellcheck="false">
       <kbd class="slash" aria-hidden="true">/</kbd>
       <ul id="results" role="listbox" aria-label="Search results" hidden></ul>
     </div>
@@ -106,7 +107,7 @@
 
   <div class="consent" id="consent" role="dialog" aria-modal="false" aria-labelledby="consentT" hidden>
     <strong id="consentT">Aircraft photos</strong>
-    <p>Photos of a selected aircraft come from Planespotters.net and are loaded by your browser, which tells them your IP address. Nothing is requested until you say yes. No tracking or analytics are used on this site.</p>
+    <p>Photos of a selected aircraft come from Planespotters.net and are loaded by your browser, which tells them your IP address. Nothing is requested until you say yes. No tracking or analytics are used on this site. If a station chose to send a name, that name is public: it is shown on the icons that station heard last and can be searched.</p>
     <div class="cbtns">
       <button type="button" id="consentAccept">Accept</button>
       <button type="button" id="consentAlways">Always yes</button>

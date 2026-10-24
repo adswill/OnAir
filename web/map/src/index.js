@@ -1,3 +1,4 @@
+import { validateBy, searchKey, BY_SEARCH_LIMIT } from "./by-name.js";
 import { sanitizeList, mergeStored, takeBudget, MSG_TTL_MS, MSG_TOTAL_MAX, MSG_PER_INGEST } from "./msgs.js";
 import { parseIngestBody } from "./lenient-json.js";
 import { TrailStore, SqlBackend } from "./trail-store.js";
@@ -125,6 +126,7 @@ export class MapHub {
     add("age", "REAL");
     add("path", "TEXT");
     add("dv", "INTEGER");    // 1: speed / heading / vertical rate are derived from position reports (or estimated), not broadcast
+    add("by", "TEXT");       // optional public name of the station that heard it last (empty: anonymous)
     add("est", "INTEGER");   // 1: the position is an estimate (dead reckoning) the app sent, not a received fix
     sql.exec(`
       CREATE TABLE IF NOT EXISTS meta (
@@ -145,7 +147,7 @@ export class MapHub {
     // The whole live picture is read once per start; from here on SQLite is write-behind storage, not the source.
     const now = Date.now();
     this.book.load(sql.exec(
-      "SELECT id, kind, label, sub, lat, lon, alt, heading, speed, extra, t, squawk, cat, vrate, src, age, path, est, dv FROM tracks",
+      "SELECT id, kind, label, sub, lat, lon, alt, heading, speed, extra, t, squawk, cat, vrate, src, age, path, est, dv, by FROM tracks",
     ).toArray());
     this.book.expire(now);
     try {
@@ -219,16 +221,16 @@ export class MapHub {
     this.ctx.storage.transactionSync(() => {
       for (const t of upserts) {
         sql.exec(
-          `INSERT INTO tracks (id, kind, label, sub, lat, lon, alt, heading, speed, extra, t, squawk, cat, vrate, src, age, path, est, dv)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `INSERT INTO tracks (id, kind, label, sub, lat, lon, alt, heading, speed, extra, t, squawk, cat, vrate, src, age, path, est, dv, by)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(id) DO UPDATE SET
              kind=excluded.kind, label=excluded.label, sub=excluded.sub,
              lat=excluded.lat, lon=excluded.lon, alt=excluded.alt,
              heading=excluded.heading, speed=excluded.speed, extra=excluded.extra, t=excluded.t,
              squawk=excluded.squawk, cat=excluded.cat, vrate=excluded.vrate, src=excluded.src,
-             age=excluded.age, path=excluded.path, est=excluded.est, dv=excluded.dv`,
+             age=excluded.age, path=excluded.path, est=excluded.est, dv=excluded.dv, by=excluded.by`,
           t.id, t.kind, t.label, t.sub, t.lat, t.lon, t.alt, t.heading, t.speed, t.extra, t.t,
-          t.squawk, t.cat, t.vrate, t.src, t.age, JSON.stringify(t.path), t.est ? 1 : 0, t.dv ? 1 : 0,
+          t.squawk, t.cat, t.vrate, t.src, t.age, JSON.stringify(t.path), t.est ? 1 : 0, t.dv ? 1 : 0, t.by || "",
         );
       }
       for (let i = 0; i < deletes.length; i += 90) {
@@ -292,6 +294,7 @@ export class MapHub {
     if (url.pathname === "/msgs" && req.method === "GET") return this.msgs(req);
     if (url.pathname === "/jam" && req.method === "POST") return this.jamPost(req);
     if (url.pathname === "/jam" && req.method === "GET") return this.jamGet();
+    if (url.pathname.startsWith("/api/by/") && req.method === "GET") return this.byUser(url);
     if (url.pathname === "/ws") return this.ws(req);
     return json({ error: "not found" }, 404);
   }
@@ -316,13 +319,16 @@ export class MapHub {
       return json({ error: "slow down" }, 429);
     }
 
+    // optional public name (body.by): checked here, never logged; a bad one is dropped (the data is still taken) and the reply says why
+    const byCheck = validateBy(typeof body.by === "string" ? body.by.slice(0, 80) : null);
+    const by = byCheck.ok ? byCheck.name : "";
     let kept = 0;
     let msgBudgetLeft = MSG_PER_INGEST;
     let doaLeft = MAX_DOA_PER_INGEST;
     let sawDoa = false;
     for (const raw of tracks) {
       if (raw && raw.kind === "doa") { if (doaLeft-- <= 0) continue; }
-      const t = sanitize(raw, now, station);
+      const t = sanitize(raw, now, station, by);
       if (!t) continue;
       const row = this.book.accept(t, now);
       if (!row) continue;
@@ -345,7 +351,9 @@ export class MapHub {
     this.armFlush(now);
     this.scheduleBroadcast();
     this.maybeBroadcastLoad(now);
-    return json({ ok: true, n: kept, load: this.loadMetrics(now) });
+    const reply = { ok: true, n: kept, load: this.loadMetrics(now) };
+    if (!byCheck.ok) reply.by_error = byCheck.message;
+    return json(reply);
   }
 
   // ---------- GPS interference cells (aggregate only, see jam.js) ----------
@@ -389,6 +397,20 @@ export class MapHub {
       id: t.id, kind: t.kind, label: t.label, sub: t.sub, lat: t.lat, lon: t.lon, alt: t.alt, heading: t.heading, speed: t.speed,
       extra: t.extra, t: t.t, squawk: t.squawk, cat: t.cat, vrate: t.vrate, src: t.src, age: t.age, est: t.est ? 1 : 0, dv: t.dv ? 1 : 0,
     };
+  }
+
+  /** GET /api/by/<name>[?exact=1]: the tracks whose last contributor is that name (case-insensitive, prefix unless exact), at most 200. */
+  byUser(url) {
+    const raw = url.pathname.slice("/api/by/".length);
+    const key = searchKey(raw);
+    if (!key) return json({ error: "The name is empty or has characters a name cannot have.", tracks: [], users: [] }, 400);
+    const v = validateBy(key);
+    if (!v.ok && v.code !== "length") return json({ error: v.message, tracks: [], users: [] }, 400);
+    const rows = this.book.byUser(key, url.searchParams.get("exact") !== "1", BY_SEARCH_LIMIT);
+    const counts = new Map();
+    for (const r of rows) counts.set(r.by, (counts.get(r.by) || 0) + 1);
+    const users = [...counts].map(([name, n]) => ({ name, n })).sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
+    return json({ users, tracks: rows.map((r) => JSON.parse(this.book.wire(r))), limit: BY_SEARCH_LIMIT });
   }
 
   // ---------- ACARS messages (cached in memory, written back with the flush) ----------
@@ -690,7 +712,7 @@ export default {
       return cachedLive(req, env, ctx, url);
     }
     const api = url.pathname === "/ingest" || url.pathname === "/live" || url.pathname === "/msgs" || url.pathname === "/ws" || url.pathname === "/jam"
-      || url.pathname === "/trail" || url.pathname === "/trails";
+      || url.pathname === "/trail" || url.pathname === "/trails" || url.pathname.startsWith("/api/by/");
     if (api) {
       const id = env.MAP.idFromName("hub-v2");
       return env.MAP.get(id).fetch(req);

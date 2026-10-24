@@ -320,3 +320,9 @@ kbd { font: 10.5px/1 var(--mono); padding: 2px 5px; border: 1px solid var(--line
 .cbtns button:hover { background: var(--hover); }
 .cstate { margin-top: 8px; font-size: 12px; color: var(--dim); }
 .linkbtn { background: none; border: 0; color: var(--accent); cursor: pointer; font: inherit; padding: 0; text-decoration: underline; }
+
+/* "Show everyone" chip while the map is filtered to one user's icons */
+.bychip { position: fixed; top: 56px; left: 50%; transform: translateX(-50%); z-index: 7; max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line-soft); background: var(--hover); color: inherit; font: inherit; font-size: 12.5px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+.bychip[hidden] { display: none; }
+#results li.hd { display: block; cursor: default; color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; padding: 5px 10px 3px; }

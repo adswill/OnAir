@@ -13,7 +13,7 @@ import { watchMapTheme, themeKey, onThemeChange } from "./theme.js";
 import { mergeTrails, appendLive, toLine } from "./trail.js";
 import { cellsToGeo, LEVEL_COLOURS } from "./jamlayer.js";
 import { clusterPoints, shouldCluster } from "./cluster.js";
-import { searchTracks as rankTracks } from "./search.js";
+import { searchTracks as rankTracks, searchUsers, byMatches } from "./search.js";
 import { initConsent, photoAllowed } from "./consent-ui.js";
 import { initHam } from "./ham-ui.js";
 
@@ -44,6 +44,7 @@ const KINDS = [
 const on = Object.fromEntries(KINDS.map((k) => [k.id, true]));
 const kindOf = Object.fromEntries(KINDS.map((k) => [k.id, k]));
 let tracks = new Map();
+let byFilter = "";   // lower-case user name while the map shows only that user's icons ("" = everyone)
 let selected = null;
 let liveOk = false;
 let everLive = false;
@@ -301,23 +302,32 @@ function easedHeading(t, hdg) {
   return t._dh;
 }
 
-/** Returns a (lon, lat) => bool for the padded viewport, or null when everything is in view anyway (few tracks, world view). */
-function viewTest() {
-  if (tracks.size <= 150 || !map.loaded() || map.getZoom() < 3) return null;
-  const b = map.getBounds();
-  const w = b.getWest(), e = b.getEast(), s = b.getSouth(), n = b.getNorth();
-  if (e - w >= 300) return null;
-  const cx = (w + e) / 2, cy = (s + n) / 2, hx = (e - w) / 2 * 1.3 + 0.2, hy = (n - s) / 2 * 1.3 + 0.2;
-  return (lon, lat) => Math.abs(((lon - cx + 540) % 360 + 360) % 360 - 180) <= hx && Math.abs(lat - cy) <= hy;
+/** The only way tracks reach the renderer. A setData while the previous one is still being tiled cancels those tile
+ * loads (they end up errored and their icons vanish until the next quiet moment), so rebuilds are coalesced:
+ * at most one in flight, the latest state is pushed as soon as it lands. */
+let liveBusy = false, liveDirty = false, liveBusyTimer = 0;
+function pushLive() {
+  const src = map.getSource("live");
+  if (!src) return;
+  if (liveBusy) { liveDirty = true; return; }
+  liveBusy = true;
+  clearTimeout(liveBusyTimer);
+  liveBusyTimer = setTimeout(liveIdle, 1500);   // safety: never stay blocked
+  src.setData(geojson());
 }
+function liveIdle() {
+  clearTimeout(liveBusyTimer);
+  liveBusy = false;
+  if (liveDirty) { liveDirty = false; pushLive(); }
+}
+map.on("sourcedata", (e) => { if (e.sourceId === "live" && liveBusy && map.isSourceLoaded("live")) liveIdle(); });
 
 function geojson() {
   const features = [];
   const theme = themeKey();
-  const inView = viewTest();   // beyond ~150 tracks only what is on (or near) the screen is handed to the renderer
   for (const t of tracks.values()) {
     if (!on[t.kind] || t.kind === "doa" || t.kind === "fix") continue;   // drawn by the DF layers
-    if (inView && t.id !== selected && !inView(t.lon, t.lat)) continue;
+    if (byFilter && !byMatches(t, byFilter)) continue;
     const hdg = effectiveHeading(t);
     const dot = datalinkDotUntilHeading(t, hdg);
     const shape = shapeFor(t);
@@ -346,27 +356,21 @@ function geojson() {
   return { type: "FeatureCollection", features: clusterFeatures(features) };
 }
 
-/** Zoomed out with many tracks: dense cells become one counted bubble (clusters source), the rest stay single icons. */
+/** Zoomed out with many tracks: dense cells become one counted bubble, the rest stay single icons.
+ * Bubbles live in the SAME source as the icons (property cl=1), so one setData swaps both atomically: a separate
+ * clusters source was reloaded on every rebuild and its tiles kept ending up errored, so bubbles and icons flickered. */
 function clusterFeatures(features) {
-  const csrc = map.getSource("clusters");
   const zoom = map.getZoom();
-  if (!shouldCluster(features.length, zoom)) {
-    if (csrc && clusterState) { csrc.setData({ type: "FeatureCollection", features: [] }); clusterState = false; }
-    return features;
-  }
+  if (!shouldCluster(features.length, zoom)) return features;
   const pts = features.map((f) => ({ id: f.properties.id, kind: f.properties.kind, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] }));
   const { clusters, singles } = clusterPoints(pts, zoom, { keep: (id) => id === selected });
   const keepIds = new Set(singles.map((p) => p.id));
-  if (csrc) {
-    csrc.setData({ type: "FeatureCollection", features: clusters.map((c) => ({
-      type: "Feature", properties: { n: c.n, label: c.n >= 1000 ? Math.round(c.n / 100) / 10 + "k" : String(c.n) },
-      geometry: { type: "Point", coordinates: [c.lon, c.lat] },
-    })) });
-    clusterState = true;
-  }
-  return features.filter((f) => keepIds.has(f.properties.id));
+  const bubbles = clusters.map((c) => ({
+    type: "Feature", properties: { cl: 1, n: c.n, label: c.n >= 1000 ? Math.round(c.n / 100) / 10 + "k" : String(c.n) },
+    geometry: { type: "Point", coordinates: [c.lon, c.lat] },
+  }));
+  return features.filter((f) => keepIds.has(f.properties.id)).concat(bubbles);
 }
-let clusterState = false;
 
 function trailGeo() {
   const g = trailGeoSelected();
@@ -559,6 +563,7 @@ function visibleTracks() {
   const out = [];
   for (const t of tracks.values()) {
     if (!on[t.kind]) continue;
+    if (byFilter && !byMatches(t, byFilter)) continue;
     if (q && !matchText(t, q)) continue;
     out.push(t);
   }
@@ -639,8 +644,7 @@ function renderStats() {
 // ---------- apply / upsert ----------
 
 function apply() {
-  const src = map.getSource("live");
-  if (src) src.setData(geojson());
+  pushLive();
   const tr = map.getSource("trails");
   if (tr) tr.setData(trailGeo());
   renderLayers();
@@ -750,8 +754,7 @@ function selectTrack(t) {
   sheet.onOpen();
   setHash(t);
   applyListSel();
-  const src = map.getSource("live");
-  if (src) src.setData(geojson());
+  pushLive();
   const tr = map.getSource("trails");
   if (tr) tr.setData(trailGeo());
   if (window.matchMedia("(max-width: 860px)").matches) setRailOpen(false);
@@ -764,8 +767,7 @@ function clearSelection() {
   sheet.onClose();
   setHash(null);
   applyListSel();
-  const src = map.getSource("live");
-  if (src) src.setData(geojson());
+  pushLive();
   const tr = map.getSource("trails");
   if (tr) tr.setData(trailGeo());
 }
@@ -823,7 +825,6 @@ function toast(msg) {
 
 map.on("load", () => {
   map.addSource("trails", { type: "geojson", data: trailGeo() });
-  map.addSource("clusters", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
   map.addSource("live", { type: "geojson", data: geojson() });
   map.addLayer({
     id: "trail", type: "line", source: "trails",
@@ -850,7 +851,7 @@ map.on("load", () => {
   map.addLayer({ id: "dffix", type: "circle", source: "trails", filter: ["==", ["get", "kind"], "dffix"],
     paint: { "circle-radius": 7, "circle-color": "#ff5a5a", "circle-stroke-width": 2, "circle-stroke-color": "#ffffff" } });
   map.addLayer({ id: "dffixlabel", type: "symbol", source: "trails", filter: ["==", ["get", "kind"], "dffix"],
-    layout: { "text-field": ["concat", "TX ", ["get", "label"]], "text-size": 12, "text-offset": [0, 1.4], "text-anchor": "top", "text-font": ["Open Sans Regular"] },
+    layout: { "text-field": ["concat", "TX ", ["get", "label"]], "text-size": 12, "text-offset": [0, 1.4], "text-anchor": "top", "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"] },
     paint: { "text-color": "#ffd0d0", "text-halo-color": "#0b0c0d", "text-halo-width": 1.5 } });
   // selected state: soft glow plus a ring in the track's colour
   map.addLayer({
@@ -905,7 +906,7 @@ map.on("load", () => {
   const dark = themeKey() === "d";
   map.addLayer({
     id: "lab", type: "symbol", source: "live", minzoom: 7.5,
-    filter: ["all", ["!=", ["get", "label"], ""], ["==", ["to-number", ["get", "sel"]], 0], ["!=", ["get", "kind"], "gnss"]],
+    filter: ["all", ["!=", ["to-number", ["get", "cl"], 0], 1], ["!=", ["get", "label"], ""], ["==", ["to-number", ["get", "sel"]], 0], ["!=", ["get", "kind"], "gnss"]],
     layout: { ...labelLayout, "text-allow-overlap": false, "text-ignore-placement": false },
     paint: { "text-color": dark ? "#dfe2e5" : "#14181c", "text-halo-color": dark ? "#0b0c0d" : "#ffffff", "text-halo-width": 1.4, "text-opacity": 0.92 },
   });
@@ -916,7 +917,7 @@ map.on("load", () => {
     paint: { "text-color": dark ? "#ffffff" : "#000000", "text-halo-color": dark ? "#0b0c0d" : "#ffffff", "text-halo-width": 1.6 },
   });
   map.addLayer({
-    id: "clusterDot", type: "circle", source: "clusters",
+    id: "clusterDot", type: "circle", source: "live", filter: ["==", ["to-number", ["get", "cl"], 0], 1],
     paint: {
       "circle-radius": ["interpolate", ["linear"], ["get", "n"], 4, 13, 50, 20, 500, 30],
       "circle-color": themeKey() === "d" ? "#2a3a4c" : "#dce8f4",
@@ -924,14 +925,14 @@ map.on("load", () => {
     },
   });
   map.addLayer({
-    id: "clusterNum", type: "symbol", source: "clusters",
-    layout: { "text-field": ["get", "label"], "text-size": 12, "text-font": ["Open Sans Regular"], "text-allow-overlap": true },
+    id: "clusterNum", type: "symbol", source: "live", filter: ["==", ["to-number", ["get", "cl"], 0], 1],
+    layout: { "text-field": ["get", "label"], "text-size": 12, "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"], "text-allow-overlap": true },
     paint: { "text-color": themeKey() === "d" ? "#e4e6e8" : "#14181c" },
   });
   map.on("click", "clusterDot", (e) => {
     map.easeTo({ center: e.lngLat, zoom: Math.min(map.getZoom() + 2, 8), duration: REDUCED ? 0 : 400 });
   });
-  map.on("zoomend", () => { const src = map.getSource("live"); if (src) src.setData(geojson()); });
+  map.on("zoomend", () => { pushLive(); });
   map.on("mouseenter", "clusterDot", () => { map.getCanvas().style.cursor = "pointer"; });
   map.on("mouseleave", "clusterDot", () => { map.getCanvas().style.cursor = ""; });
   initHam({ map, tracks: () => tracks, selectById: (id) => { const t = tracks.get(id); if (t) focusTrack(id); }, esc, REDUCED });
@@ -962,8 +963,14 @@ map.on("load", () => {
   ensureMotionLoop();
 });
 
-// the visible part of the map changed: hand the renderer the tracks that are now near the screen
-map.on("moveend", () => { const src = map.getSource("live"); if (src && tracks.size > 150) src.setData(geojson()); });
+// no viewport culling: the source always holds every track (the renderer culls itself), so panning/zooming never drops icons.
+// Clusters are recomputed whenever the zoom crosses a whole level, not only when the gesture ends.
+let lastZoomStep = null;
+map.on("zoom", () => {
+  const z = Math.floor(map.getZoom());
+  if (lastZoomStep === null) { lastZoomStep = z; return; }
+  if (z !== lastZoomStep) { lastZoomStep = z; pushLive(); }
+});
 
 // user panning cancels follow mode
 for (const ev of ["dragstart", "wheel", "touchstart"]) {
@@ -1005,15 +1012,22 @@ function searchTracks(q) { return rankTracks(tracks.values(), q, 8); }
 
 function renderResults() {
   const q = qEl.value;
-  resItems = searchTracks(q);
+  const users = searchUsers(tracks.values(), q, 3);
+  resItems = [...users.map((u) => ({ user: u })), ...searchTracks(q).map((t) => ({ t }))];
   resIdx = resItems.length ? 0 : -1;
   if (q.trim().length < 2) { resEl.hidden = true; qEl.setAttribute("aria-expanded", "false"); return; }
   resEl.hidden = false;
   qEl.setAttribute("aria-expanded", "true");
-  resEl.innerHTML = resItems.length
-    ? resItems.map((t, i) => `<li role="option" id="res${i}" data-id="${esc(t.id)}" aria-selected="${i === 0}"><img alt="" src="${miniUrl(shapeFor(t), colorOf(t.kind, t))}" width="18" height="18"><b>${esc(t.label || t.id)}</b><span>${esc(cap(t.kind) + (t.sub ? " · " + t.sub : ""))}</span></li>`).join("")
-    : `<li class="none">No match on the map right now</li>`;
+  let html = "";
+  resItems.forEach((it, i) => {
+    if (it.user && i === 0) html += `<li class="hd" role="presentation">Users</li>`;
+    if (it.t && (i === 0 || resItems[i - 1].user)) html += users.length ? `<li class="hd" role="presentation">Tracks</li>` : "";
+    if (it.user) html += `<li role="option" id="res${i}" data-user="${esc(it.user.name)}" aria-selected="${i === 0}"><span></span><b>${esc(it.user.name)}</b><span>${it.user.n} icon${it.user.n === 1 ? "" : "s"}</span></li>`;
+    else { const t = it.t; html += `<li role="option" id="res${i}" data-id="${esc(t.id)}" aria-selected="${i === 0}"><img alt="" src="${miniUrl(shapeFor(t), colorOf(t.kind, t))}" width="18" height="18"><b>${esc(t.label || t.id)}</b><span>${esc(cap(t.kind) + (t.sub ? " · " + t.sub : ""))}</span></li>`; }
+  });
+  resEl.innerHTML = html || `<li class="none">No match on the map right now</li>`;
   for (const li of resEl.querySelectorAll("li[data-id]")) li.onmousedown = (e) => { e.preventDefault(); pickResult(li.dataset.id); };
+  for (const li of resEl.querySelectorAll("li[data-user]")) li.onmousedown = (e) => { e.preventDefault(); pickUser(li.dataset.user); };
 }
 
 function pickResult(id) {
@@ -1023,10 +1037,36 @@ function pickResult(id) {
   focusTrack(id);
 }
 
+const byChip = $("byChip");
+
+/** Show only the icons last heard by this user and fit the map to them; the chip puts everyone back. */
+function pickUser(name) {
+  resEl.hidden = true;
+  qEl.setAttribute("aria-expanded", "false");
+  qEl.blur();
+  setByFilter(String(name).toLowerCase(), name);
+}
+
+function setByFilter(key, shown) {
+  byFilter = key;
+  if (key) {
+    byChip.textContent = "Showing only " + shown + " \u00b7 show everyone \u2715";
+    byChip.hidden = false;
+    const pts = [...tracks.values()].filter((t) => byMatches(t, key));
+    if (pts.length) {
+      let w = 180, s = 90, e = -180, n = -90;
+      for (const t of pts) { const [lo, la] = displayLonLat(t); w = Math.min(w, lo); e = Math.max(e, lo); s = Math.min(s, la); n = Math.max(n, la); }
+      map.fitBounds([[w, s], [e, n]], { padding: { top: 90, bottom: 140, left: 40, right: 40 }, maxZoom: 8, duration: REDUCED ? 0 : 500 });
+    } else toast("No icons from that user are on the map right now.");
+  } else byChip.hidden = true;
+  apply();
+}
+byChip.onclick = () => setByFilter("", "");
+
 function moveResult(d) {
   if (!resItems.length) return;
   resIdx = (resIdx + d + resItems.length) % resItems.length;
-  [...resEl.children].forEach((li, i) => li.setAttribute("aria-selected", String(i === resIdx)));
+  [...resEl.querySelectorAll("li[role=option]")].forEach((li, i) => li.setAttribute("aria-selected", String(i === resIdx)));
   qEl.setAttribute("aria-activedescendant", "res" + resIdx);
 }
 
@@ -1042,8 +1082,10 @@ qEl.addEventListener("keydown", (e) => {
   else if (e.key === "ArrowUp") { e.preventDefault(); moveResult(-1); }
   else if (e.key === "Enter") {
     if (!resItems.length) renderResults();
-    const t = resItems[Math.max(0, resIdx)];
-    if (t) pickResult(t.id); else toast("No match on the map right now.");
+    const it = resItems[Math.max(0, resIdx)];
+    if (it && it.user) pickUser(it.user.name);
+    else if (it) pickResult(it.t.id);
+    else toast("No match on the map right now.");
   } else if (e.key === "Escape") {
     if (qEl.value) { qEl.value = ""; query = ""; renderResults(); renderListSoon(); }
     else qEl.blur();
@@ -1057,6 +1099,7 @@ document.addEventListener("keydown", (e) => {
   const inField = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || "");
   if (e.key === "/" && !inField && !e.metaKey && !e.ctrlKey) { e.preventDefault(); qEl.focus(); qEl.select(); return; }
   if (e.key === "Escape" && !inField) {
+    if (byFilter && !selected) { setByFilter("", ""); return; }
     if (selected) clearSelection();
     else if ($("rail").classList.contains("open")) setRailOpen(false);
   }
@@ -1139,8 +1182,7 @@ let motionTimer = 0;
 let pulse = 0;
 function refreshMotion() {
   if (document.hidden) return;
-  const live = map.getSource("live");
-  if (live) live.setData(geojson());
+  pushLive();
   const tr = map.getSource("trails");
   if (tr && selected) tr.setData(trailGeo());
   if (selected && map.getLayer("halo") && !REDUCED) {

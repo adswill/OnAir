@@ -2,6 +2,7 @@
 // Only positions the signal itself sent (no TLE catalogue, receiver GNSS, RID operator, FLARM stealth, cell towers, synthetic test signal).
 #include <cstdlib>
 #include "dect2/common/thread_name.h"
+#include "map_name.h"
 #include "derived_kin.h"
 #include "../app.h"
 #include "../state/receivers.h"
@@ -580,8 +581,10 @@ void attachVoice(std::vector<Track>& tracks) {
     if (sent.size() > 3000) sent.clear();
 }
 
-std::string buildJson(const std::string& station, const std::vector<Track>& tracks) {
-    std::string j = "{\"station\":\"" + jsonEsc(station) + "\",\"tracks\":[";
+std::string buildJson(const std::string& station, const std::vector<Track>& tracks, const std::string& byName = std::string()) {
+    std::string j = "{\"station\":\"" + jsonEsc(station) + "\"";
+    if (!byName.empty()) j += ",\"by\":\"" + jsonEsc(byName) + "\"";   // optional public name, only when the user applied one; old servers ignore it
+    j += ",\"tracks\":[";
     bool first = true;
     for (const Track& t : tracks) {
         if (!first) j += ',';
@@ -691,6 +694,33 @@ void stopSend(App& s) {
     gNeedRetryPopup.store(false, std::memory_order_relaxed);
     gPingNow = false;
     mapLog("send disabled");
+}
+
+// "Your name on the map": optional and public. Nothing is sent until the user has typed a name and pressed Use this name.
+// Never filled in from the OS user name. The preview line shows exactly what goes out.
+void nameEditor(App& s) {
+    static char buf[40] = {0};
+    static bool init = false;
+    if (!init) { std::snprintf(buf, sizeof buf, "%s", s.mapName.c_str()); init = true; }
+    ImGui::PushTextWrapPos(380 * gUi);
+    ImGui::TextUnformatted(tr("Your name on the map (optional)"));
+    ImGui::InputTextWithHint("##mapname", tr("empty = anonymous"), buf, sizeof buf);
+    std::string name;
+    const int r = mapname::check(buf, name);
+    if (r == 0) ImGui::TextDisabled(tr("This is what will be sent: name = %s"), name.empty() ? tr("(none, anonymous)") : name.c_str());
+    else {
+        const char* why = r == 1 ? tr("Use 2 to 24 characters.") : r == 2 ? tr("Use only letters, digits, spaces and _ - . in the name.")
+                        : r == 3 ? tr("The name cannot be a web address or e-mail address.") : tr("That name is not allowed. Please choose another.");
+        ImGui::TextColored(ImVec4(0.9f, 0.5f, 0.3f, 1.f), "%s", why);
+    }
+    ImGui::TextDisabled("%s", tr("This name is public. It is shown on every icon you were the last to hear, and people can search for it on the map. Leave it empty to stay anonymous."));
+    ImGui::PopTextWrapPos();
+    if (r != 0) ImGui::BeginDisabled(true);
+    if (ImGui::Button(tr("Use this name")) && r == 0) { s.mapName = name; savePrefs(s); }
+    if (r != 0) ImGui::EndDisabled();
+    ImGui::SameLine();
+    if (ImGui::Button(tr("Stay anonymous"))) { buf[0] = 0; s.mapName.clear(); savePrefs(s); }
+    if (!s.mapName.empty()) ImGui::TextDisabled(tr("Sending as: %s"), s.mapName.c_str());
 }
 
 // "Also share interesting ACARS messages": free text and crew / operations / company / maintenance messages from the aircraft on the map.
@@ -827,7 +857,7 @@ void consentPopup(App& a) {
     ImGui::SetNextWindowSizeConstraints(ImVec2(420 * gUi, 0), ImVec2(520 * gUi, 400 * gUi));
     if (!ImGui::BeginPopupModal("##mapconsent", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) return;
     ImGui::PushTextWrapPos(480 * gUi);
-    ImGui::TextUnformatted(tr("When this is on, positions decoded from the signals you receive are sent to map.on-air.dev so they can appear on the public map. Catalogue satellite orbits, your receiver location, drone operator locations, privacy-flagged FLARM aircraft, and the built-in test signal are not sent. You can turn this off at any time from Server."));
+    ImGui::TextUnformatted(tr("When this is on, positions decoded from the signals you receive are sent to map.on-air.dev so they can appear on the public map. Catalogue satellite orbits, your receiver location, drone operator locations, privacy-flagged FLARM aircraft, and the built-in test signal are not sent. Your name is not sent unless you choose to type one under Server > Your name on the map; if you do, it is public, shown on the icons you were the last to hear, and searchable. You can turn this off at any time from Server."));
     ImGui::Dummy(ImVec2(0, 4 * gUi));
     ImGui::TextUnformatted(tr("Messages that aircraft send by ACARS (free text and crew, operations, company and maintenance messages) can be shown on the aircraft's card as well, with phone numbers and e-mail addresses removed. This is a separate choice that you can change in the Server menu."));
     static bool shareMsgs = true;
@@ -958,6 +988,7 @@ void mapSendServerMenu(App& a) {
     if (rootApp(a).mapSend) jamToggle(rootApp(a), true);
     if (rootApp(a).mapSend) hamToggle(rootApp(a), true);
     if (rootApp(a).mapSend && rootApp(a).mapHam) hamPrecisionToggle(rootApp(a), true);
+    if (rootApp(a).mapSend && ImGui::BeginMenu(tr("Your name on the map"))) { nameEditor(rootApp(a)); ImGui::EndMenu(); }
     ImGui::Separator();
     roomsMenu(rootApp(a), true);
     ImGui::TextDisabled("%s", tr("The map is at map.on-air.dev"));
@@ -975,6 +1006,7 @@ void mapSendButton(App& a) {
         if (rootApp(a).mapSend) jamToggle(rootApp(a), false);
         if (rootApp(a).mapSend) hamToggle(rootApp(a), false);
         if (rootApp(a).mapSend && rootApp(a).mapHam) hamPrecisionToggle(rootApp(a), false);
+        if (rootApp(a).mapSend && ImGui::BeginMenu(tr("Your name on the map"))) { nameEditor(rootApp(a)); ImGui::EndMenu(); }
         ImGui::Separator();
         roomsMenu(rootApp(a), false);
         ImGui::TextDisabled("%s", tr("The map is at map.on-air.dev"));
@@ -1097,7 +1129,7 @@ void mapSendTick(App& a) {
         lastSend = now;
     } else if (!ping) return;
     gPingNow = false;
-    startPost(originOf(s) + "/ingest", buildJson(s.mapStationId, tracks), (int)tracks.size());
+    startPost(originOf(s) + "/ingest", buildJson(s.mapStationId, tracks, s.mapName), (int)tracks.size());
 }
 
 bool mapPauseForTransmit(App& a) {

@@ -160,7 +160,7 @@ const std::vector<PrefKey>& keyTable() {
         shared(flagI("discordOn", AT(a.discordOn), false)), shared(flagI("discordFreq", AT(a.discordFreq), true)),
         shared(rx1(flagI("mapSend", AT(a.mapSend), false, false))), shared(rx1(flagI("mapConsent", AT(a.mapConsent), false, false))), shared(rx1(flagI("mapMsgs", AT(a.mapMsgs), false, false))), shared(rx1(flagI("mapJam", AT(a.mapJam), false, false))), shared(rx1(flagI("mapHam", AT(a.mapHam), false, false))), shared(rx1(flagI("mapHamConsent", AT(a.mapHamConsent), false, false))), shared(rx1(flagI("mapHam6", AT(a.mapHam6), false, false))), shared(rx1(flagI("mapVoice", AT(a.mapVoice), false, false))),
         shared(rx1(flagI("mapDeclined", AT(a.mapDeclined), false, false))), shared(rx1(text("mapDeclinedVersion", AT(a.mapDeclinedVersion)))),
-        shared(rx1(text("mapStationId", AT(a.mapStationId)))), shared(rx1(text("mapServer", AT(a.mapServer)))),
+        shared(rx1(text("mapStationId", AT(a.mapStationId)))), shared(rx1(text("mapServer", AT(a.mapServer)))), shared(rx1(text("mapName", AT(a.mapName)))),
         shared(flagI("lightUi", AT(a.lightUi), false)), shared(flagI("highContrast", AT(a.highContrast), false)),
         shared(text("uiLang", AT(a.uiLang))),
         shared(text("bandPlan", AT(a.bandPlan))),
