@@ -32,7 +32,7 @@
   <label>Your name (shown to the host only)<input id="loginName" maxlength="32" autocomplete="nickname"></label>
   <label id="loginPwRow">Password<input id="loginPw" type="password" maxlength="128" autocomplete="current-password"></label>
   <label id="loginInvRow">Invite code<input id="loginInv" maxlength="128" autocomplete="off"></label>
-  <button id="loginGo" type="submit" class="primary">Connect</button>
+  <button id="loginGo" type="submit">Connect</button>
 </form>
 
 <main id="app" class="app" hidden>
@@ -43,7 +43,8 @@
         <input id="freqInput" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Type a frequency in MHz, or add kHz or Hz">
         <span class="dim">MHz</span>
       </form>
-      <button id="freqType" type="button" class="quiet" title="Type a frequency (Enter)">Type</button>
+      <span class="unit dim" aria-hidden="true">Hz</span>
+      <button id="freqType" type="button" title="Type a frequency (Enter)">Type</button>
     </div>
     <div class="smeter">
       <div class="sread"><span id="stext" class="mono sval">S0</span><span id="sdb" class="mono dim">-- dBFS</span></div>
@@ -79,42 +80,49 @@
         <button type="button" role="tab" aria-selected="false" data-tab="bands" id="tabBands">Bands</button>
         <button type="button" role="tab" aria-selected="false" data-tab="marks" id="tabMarks">Saved</button>
         <button type="button" role="tab" aria-selected="false" data-tab="dec" id="tabDec">Decoders</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="help" id="tabHelp">Help</button>
       </div>
-      <button id="audioQuick" type="button" class="primary narrow" aria-pressed="false">Listen</button>
+      <button id="audioQuick" type="button" class="narrow" aria-pressed="false">Listen</button>
       <button id="grab" type="button" class="quiet narrow" aria-expanded="true" aria-controls="sheetBody" aria-label="Collapse controls">&#9660;</button>
     </div>
     <div class="sheetbody" id="sheetBody">
       <div id="paneTune" class="pane" role="tabpanel" aria-labelledby="tabTune">
-        <div class="audiorow">
-          <button id="audioBtn" type="button" class="primary" aria-pressed="false">Listen</button>
-          <button id="muteBtn" type="button" aria-pressed="false" title="Mute (M)">Mute</button>
-          <label class="slider grow">Volume <output id="volOut" class="mono">70</output>
+        <details class="sect" open>
+          <summary>Audio</summary>
+          <div class="audiorow">
+            <button id="audioBtn" type="button" aria-pressed="false">Listen</button>
+            <label class="chk"><input id="muteBtn" type="checkbox"><span class="box" aria-hidden="true"></span>Mute</label>
+          </div>
+          <label class="slider">Volume <output id="volOut" class="mono">70</output>
             <input id="vol" type="range" min="0" max="100" step="1" value="70">
           </label>
-        </div>
-        <div class="field">
-          <span class="lab" id="modeLab">Mode</span>
-          <div class="modes" id="modes" role="radiogroup" aria-labelledby="modeLab"></div>
-        </div>
-        <label class="slider">Bandwidth <output id="bwOut" class="mono">-</output>
-          <input id="bw" type="range" min="0" max="100" step="1">
-        </label>
-        <label class="slider">Squelch <output id="sqOut" class="mono">open</output>
-          <input id="sq" type="range" min="-150" max="-20" step="1" value="-150">
-        </label>
-        <label class="field">
-          <span class="lab">Tuning step</span>
-          <select id="step"></select>
-        </label>
-        <details class="disp">
+          <label class="slider">Squelch <output id="sqOut" class="mono">open</output>
+            <input id="sq" type="range" min="-150" max="-20" step="1" value="-150">
+          </label>
+        </details>
+        <details class="sect" open>
+          <summary>Tuner</summary>
+          <div class="field">
+            <span class="lab" id="modeLab">Mode</span>
+            <div class="modes" id="modes" role="radiogroup" aria-labelledby="modeLab"></div>
+          </div>
+          <label class="slider">Bandwidth <output id="bwOut" class="mono">-</output>
+            <input id="bw" type="range" min="0" max="100" step="1">
+          </label>
+          <label class="field">
+            <span class="lab">Tuning step</span>
+            <select id="step"></select>
+          </label>
+        </details>
+        <details class="sect">
           <summary>Display</summary>
           <label class="field"><span class="lab">Waterfall colours</span><select id="palette"></select></label>
           <label class="slider">Range <output id="rangeOut" class="mono">70 dB</output><input id="range" type="range" min="20" max="120" step="1" value="70"></label>
           <label class="slider">Floor <output id="floorOut" class="mono">0 dB</output><input id="floorAdj" type="range" min="-30" max="30" step="1" value="0"></label>
         </details>
-        <details class="disp keys">
+        <details class="sect">
           <summary>Keyboard</summary>
-          <dl class="mono">
+          <dl class="keys mono">
             <dt>Left Right</dt><dd>tune one step (Shift: ten)</dd>
             <dt>Enter</dt><dd>type a frequency</dd>
             <dt>1 - 6</dt><dd>mode</dd>
@@ -138,11 +146,32 @@
         <div id="decList" class="chips"></div>
         <div id="decOut" class="decout" aria-live="off"></div>
       </div>
+      <div id="paneHelp" class="pane help" role="tabpanel" aria-labelledby="tabHelp" hidden>
+        <h3 class="sep">How to listen</h3>
+        <ol>
+          <li>Click a station on the spectrum or the waterfall to tune to it, or press Enter and type a frequency in MHz, for example 98.3. Scroll to zoom, drag to move along the band.</li>
+          <li>Choose the mode that matches the signal: NFM for most voice radio, WFM for FM broadcast, AM for airband and shortwave, USB or LSB for amateur voice, CW for Morse. Drag the edges of the shaded passband, or use the Bandwidth slider, to fit the signal.</li>
+          <li>Press Listen. Your browser only plays sound after you press it. Use Volume and Mute as needed.</li>
+          <li>Squelch keeps the audio quiet until a signal is stronger than the level you set. Move it right until the hiss stops. Fully left means open.</li>
+          <li>Bands jump to a whole band. Saved keeps your own frequencies on this device: Save current stores the frequency, mode and bandwidth.</li>
+        </ol>
+        <h3 class="sep">What the messages mean</h3>
+        <dl class="msgs">
+          <dt>Connecting to the receiver.</dt><dd>The page is reaching the receiver. Nothing is wrong yet.</dd>
+          <dt>Connected. Waiting for the first spectrum.</dt><dd>You are in; the first picture arrives within a second or two.</dd>
+          <dt>Offline. Retrying in N s.</dt><dd>The connection dropped. The page tries again by itself.</dd>
+          <dt>busy</dt><dd>The receiver has all its listener places taken. It keeps retrying.</dd>
+          <dt>sign in</dt><dd>This receiver needs a password or an invite code.</dd>
+          <dt>No receiver here.</dt><dd>This address is a web page only, with no OnAir receiver behind it.</dd>
+          <dt>Moved to the nearest allowed frequency.</dt><dd>The host only allows some ranges. Allowed ranges are listed above the spectrum.</dd>
+          <dt>dB spectrum / dBFS</dt><dd>The signal meter is relative to the receiver's full scale, not calibrated. Without audio it shows the spectrum level.</dd>
+        </dl>
+      </div>
     </div>
   </aside>
 </main>
 
-<footer class="foot dim"><span>Receive only. No transmit control exists.</span> <span id="footInfo"></span></footer>
+<footer class="foot"><span>Receive only. No transmit control exists.</span> <span id="footInfo" class="dim"></span></footer>
 </div>
 
 <script src="onair-lib.js"></script>

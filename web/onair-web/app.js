@@ -18,7 +18,7 @@
     ws: null, info: null, welcome: null, ranges: null, cap: null, bounds: null, view: null, full: null,
     freq: 0, mode: "nfm", low: -6250, high: 6250, sq: -150, agc: "slow",
     audioOn: false, muted: false, volume: store.get("vol", 70), level: -150, peak: -150, peakAt: 0,
-    spectrumOn: false, subs: [], step: store.get("step", 5000), palette: store.get("palette", "amber"),
+    spectrumOn: false, subs: [], step: store.get("step", 5000), palette: store.get("palette", "turbo"),
     range: store.get("range", 70), floorAdj: store.get("floorAdj", 0),
     attempt: 0, retryTimer: 0, retryAt: 0, stopRetry: false, pendingTune: 0, lastTuneSent: 0, tuneTimer: 0,
     rows: [], rowSeq: -1, audioSeq: -1, lost: 0, decoders: {}, views: {}, decDirty: false, name: store.get("name", ""), invite: "", password: "",
@@ -181,7 +181,7 @@
   const spec = $("spec"), wf = $("wf"), ax = $("ax"), ov = $("ov");
   const sctx = spec.getContext("2d"), wctx = wf.getContext("2d"), actx = ax.getContext("2d"), octx = ov.getContext("2d");
   let pal = L.makePalette(S.palette), pix = null;
-  const C = { bg: "#0a0908", grid: "#1d1913", gridMajor: "#2a251e", text: "#9a917f", accent: "#dba64d", axisBg: "#0e0c0b" };
+  const C = { bg: "#040405", grid: "rgba(150,155,160,0.16)", gridMajor: "#545557", text: "#999c9e", accent: "#e6e8eb", axisBg: "#222324" };
   const FONT = (px) => `${px}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
   const dirty = { spec: 1, wf: 1, ov: 1 };
   let raf = 0, hover = null;   // hover: { x (css px), hz } while the pointer is over the scope
@@ -257,7 +257,7 @@
       lastX = x;
     }
     sctx.strokeStyle = C.accent; sctx.lineWidth = Math.max(1, dpr); sctx.stroke();
-    if (started) { sctx.lineTo(lastX, H); sctx.lineTo(0, H); sctx.closePath(); sctx.fillStyle = "rgba(219,166,77,0.10)"; sctx.fill(); }
+    if (started) { sctx.lineTo(lastX, H); sctx.lineTo(0, H); sctx.closePath(); sctx.fillStyle = "rgba(230,232,235,0.08)"; sctx.fill(); }
   }
   // the passband, the tuned frequency and the pointer: one transparent canvas over spectrum, axis and waterfall
   function passEdges(W) {
@@ -268,8 +268,8 @@
     const W = ov.width, H = ov.height; octx.clearRect(0, 0, W, H);
     const e = passEdges(W); if (!e) return;
     const axTop = spec.clientHeight * dpr, axH = ax.clientHeight * dpr;
-    octx.fillStyle = "rgba(219,166,77,0.12)"; octx.fillRect(e.x0, 0, Math.max(2, e.x1 - e.x0), H);
-    octx.fillStyle = "rgba(219,166,77,0.55)";
+    octx.fillStyle = "rgba(230,232,235,0.09)"; octx.fillRect(e.x0, 0, Math.max(2, e.x1 - e.x0), H);
+    octx.fillStyle = "rgba(230,232,235,0.55)";
     octx.fillRect(Math.round(e.x0), 0, Math.max(1, Math.round(dpr)), H); octx.fillRect(Math.round(e.x1), 0, Math.max(1, Math.round(dpr)), H);
     // grips on the axis strip show that the edges can be dragged
     const gh = 10 * dpr, gw = 3 * dpr, gy = axTop + (axH - gh) / 2;
@@ -282,8 +282,8 @@
       const txt = L.formatMHz(hover.hz, 4) + " MHz" + (hover.db != null ? "  " + hover.db.toFixed(0) + " dB" : "");
       octx.font = FONT(11 * dpr); octx.textBaseline = "middle"; octx.textAlign = "left";
       const tw = octx.measureText(txt).width + 10 * dpr, bx = L.clamp(x + 8 * dpr, 2, W - tw - 2), by = 4 * dpr;
-      octx.fillStyle = "rgba(12,11,10,0.92)"; octx.fillRect(bx, by, tw, 18 * dpr);
-      octx.strokeStyle = "#3a342c"; octx.lineWidth = 1; octx.strokeRect(bx + 0.5, by + 0.5, tw, 18 * dpr);
+      octx.fillStyle = "rgba(34,35,36,0.95)"; octx.fillRect(bx, by, tw, 18 * dpr);
+      octx.strokeStyle = "#545557"; octx.lineWidth = 1; octx.strokeRect(bx + 0.5, by + 0.5, tw, 18 * dpr);
       octx.fillStyle = C.text; octx.fillText(txt, bx + 5 * dpr, by + 9.5 * dpr);
     }
   }
@@ -330,8 +330,8 @@
   function renderScopeMsg() {
     let t = "";
     if (S.notServer) t = "No receiver here.";
-    else if (!S.welcome) t = S.connState === "offline" ? "Offline. " + (S.retryNote || "") : S.connState === "sign in" ? "Sign in to listen." : "Connecting to the receiver...";
-    else if (!S.rows.length) t = "Waiting for the first spectrum...";
+    else if (!S.welcome) t = S.connState === "offline" ? "Offline. " + (S.retryNote || "") : S.connState === "sign in" ? "Sign in to listen." : "Connecting to the receiver.";
+    else if (!S.rows.length) t = "Connected. Waiting for the first spectrum.";
     $("scopeMsg").textContent = t.trim();
   }
 
@@ -470,7 +470,7 @@
   }
   function renderAudio() {
     for (const id of ["audioBtn", "audioQuick"]) { const b = $(id); b.setAttribute("aria-pressed", String(S.audioOn)); b.textContent = S.audioOn ? "Stop" : "Listen"; }
-    const m = $("muteBtn"); m.setAttribute("aria-pressed", String(S.muted)); m.textContent = S.muted ? "Unmute" : "Mute";
+    $("muteBtn").checked = S.muted;
   }
   function onAudio(f) {
     if (!S.audioOn) return;
@@ -745,7 +745,7 @@
     S.tab = name;
     for (const o of document.querySelectorAll(".tabs button")) o.setAttribute("aria-selected", String(o.dataset.tab === name));
     $("paneTune").hidden = !(name === "tune" || isWide());
-    for (const [k, id] of [["bands", "paneBands"], ["marks", "paneMarks"], ["dec", "paneDec"]]) $(id).hidden = name !== k;
+    for (const [k, id] of [["bands", "paneBands"], ["marks", "paneMarks"], ["dec", "paneDec"], ["help", "paneHelp"]]) $(id).hidden = name !== k;
     S.decDirty = true; renderDecoders();
   }
   function setSheet(open) {
@@ -773,7 +773,7 @@
     $("sq").addEventListener("input", (e) => { S.sq = +e.target.value; renderSquelch(); persist(); send(L.msg.rx({ squelch_db: S.sq })); });
     $("vol").addEventListener("input", (e) => { S.volume = +e.target.value; store.set("vol", S.volume); renderVolume(); });
     $("audioBtn").addEventListener("click", toggleAudio);
-    $("muteBtn").addEventListener("click", () => { S.muted = !S.muted; renderAudio(); applyVolume(); });
+    $("muteBtn").addEventListener("change", (e) => { S.muted = e.target.checked; renderAudio(); applyVolume(); });
     $("zoomIn").addEventListener("click", () => zoom(0.5));
     $("zoomOut").addEventListener("click", () => zoom(2));
     $("zoomFull").addEventListener("click", () => setView({ start: S.full.start, stop: S.full.stop }));

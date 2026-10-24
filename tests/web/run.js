@@ -221,6 +221,11 @@ test("passband level is the power inside the passband", () => {
   assert.ok(Math.abs(L.passbandLevel(row, 98e6, -100, 100) - -20) < 3.5);   // narrower than a bin: the bin under the tuned frequency
   assert.strictEqual(L.passbandLevel(row, 120e6, -100, 100), null);
 });
+test("palettes: turbo is first, dark blue to red, every name builds 256 colours", () => {
+  assert.strictEqual(L.PALETTE_NAMES[0], "turbo");
+  for (const n of L.PALETTE_NAMES) assert.strictEqual(L.makePalette(n).length, 768, n);
+  const p = L.makePalette("turbo"); assert.ok(p[765] > 180 && p[766] < 80 && p[2] < 100);
+});
 test("s-meter scale ticks sit where the bar fills", () => {
   const t = L.sMeterTicks(), s9 = t.find((x) => x.label === "9");
   assert.ok(Math.abs(s9.frac - L.sMeter(-66).frac) < 1e-9);
