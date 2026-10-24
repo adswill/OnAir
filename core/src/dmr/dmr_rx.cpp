@@ -297,10 +297,11 @@ struct DmrReceiver::Impl {
         noiseDbfs = -120; cnrDb = 0; noiseKnown = false;
         std::lock_guard<std::mutex> lk(mu);
         lastNow = 0;
-        DmrTelemetry t;                  // the call log and the messages stay (clearResults)
+        DmrTelemetry t;                  // the call log, the messages and the position history stay (clearResults)
         link.snapshot(t);
         tel = DmrTelemetry();
         tel.callLog = std::move(t.callLog); tel.messages = std::move(t.messages); tel.calls = t.calls;
+        tel.locations = std::move(t.locations);
         tel.seq = ++telSeq;
     }
 

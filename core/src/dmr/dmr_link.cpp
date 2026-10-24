@@ -72,9 +72,11 @@ void Link::reset() {
     const double t0 = nowSec();          // the clock starts again: the kept calls and messages move back by the time it had reached
     std::vector<DmrCall> calls = std::move(tel_.callLog);
     std::vector<DmrMessage> msgs = std::move(tel_.messages);
+    std::vector<DmrLocation> locs = std::move(tel_.locations);   // the map history stays, like the calls and messages
     const uint64_t nCalls = tel_.calls;
     for (auto& c : calls) { c.startSec -= t0; c.endSec -= t0; c.active = false; }
     for (auto& m : msgs) m.sec -= t0;
+    for (auto& l : locs) l.sec -= t0;   // the map history moves back with the clock too
     memset(ring_, 0, sizeof ring_);
     n_ = 0;
     memset(rho_, 0, sizeof rho_);
@@ -85,6 +87,7 @@ void Link::reset() {
     centre_ = 0;
     tel_ = DmrTelemetry();
     tel_.seq = seq;
+    tel_.locations = std::move(locs);
     setLogs(std::move(calls), std::move(msgs), nCalls);
     eye_.clear();
     cc_ = -1;
