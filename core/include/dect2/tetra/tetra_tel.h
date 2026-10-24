@@ -1,7 +1,7 @@
 // TETRA receiver telemetry, shared by the receiver and the UI.
 // Only what a TETRA base station broadcasts in the clear to every terminal is here: the network identity (MCC, MNC), colour code, location
-// area, the cell's carriers and services, its neighbour cells and whether the network uses air interface encryption. No subscriber
-// identity, no call, no short data content and no voice is decoded or kept; encrypted signalling is only counted.
+// area, the cell's carriers and services, its neighbour cells and whether the network uses air interface encryption, and the groups (GSSI) clear group
+// calls are set up for. No subscriber identity, no call, no short data content and no voice is decoded or kept; encrypted signalling is only counted.
 // The first members of TetraTelemetry are copied into RxTelemetry (history plot, top bar): keep them and their meaning.
 #pragma once
 #include <cstdint>
@@ -15,6 +15,15 @@ struct TetraNeighbourInfo {
     int cellId = 0, carrier = 0, la = -1, cellLoad = 0, mcc = -1, mnc = -1;
     bool synced = false;
     double freqHz = 0;            // from the carrier number and band (0: unknown)
+};
+
+// A group (GSSI) a group call was set up for in the clear signalling of a cell (D-SETUP): the address of the group, never of a terminal
+struct TetraGroupInfo {
+    int gssi = 0;
+    int enc = -1;                 // the end-to-end encryption flag of the last set-up: 0 clear, 1 encrypted, -1 not stated
+    uint64_t calls = 0;           // call set-ups heard (each call identifier once)
+    int lastCallId = -1;
+    int64_t firstWall = 0, lastWall = 0;
 };
 
 // One TETRA carrier (main control channel or another carrier of the cell), keyed by its frequency and network identity
@@ -49,6 +58,8 @@ struct TetraCell {
     int reselect = 0;
     std::string netTime;
     std::vector<TetraNeighbourInfo> neighbours;
+    // CMCE: the groups clear group calls were set up for, most calls first
+    std::vector<TetraGroupInfo> groups;
     // ACCESS-ASSIGN: downlink use of timeslots 1 - 4 (-1 not seen; see tetra::dlUsageText)
     int tsUsage[4] = {-1, -1, -1, -1};
     uint64_t clearPdus = 0;            // clear MLE messages seen (counted only)
