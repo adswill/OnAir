@@ -13,12 +13,18 @@
   <header class="top">
     <div class="wrap top-in">
       <a class="brand" href="https://on-air.dev">OnAir</a>
-      <span class="crumb">Public receivers</span>
-      <a class="docs" href="https://github.com/adswill/OnAir/blob/main/docs/ONAIR-WEB.md">List your own</a>
+      <nav class="tabs" id="tabs" role="tablist" aria-label="Sections">
+        <a role="tab" href="#receivers" data-t="receivers">Receivers</a>
+        <a role="tab" href="#listen" data-t="listen">Listen</a>
+        <a role="tab" href="#list" data-t="list">List your receiver</a>
+        <a role="tab" href="#run" data-t="run">Run your own</a>
+        <a role="tab" href="#faq" data-t="faq">FAQ</a>
+      </nav>
     </div>
   </header>
 
   <main class="wrap">
+  <div id="p-receivers" class="page">
     <p class="note">Anyone can list a receiver here. Entries are self-registered and not vetted: open them at your own risk, and use Report if something is wrong. The directory stores no listener data.</p>
 
     <form class="tools" id="tools" role="search" onsubmit="return false">
@@ -63,8 +69,102 @@ web_directory_loc=54.69,25.28     # optional, or a locator such as KO24pq
 web_directory_radio=HackRF Pro
 web_directory_desc=Wideband receiver on the roof
 web_directory_ack=&lt;code from the preview&gt;</pre>
-      <p>The address must be HTTPS. Only name, address, rough location, coverage and listener counts are sent, every 5 minutes. Full steps: <a href="https://github.com/adswill/OnAir/blob/main/docs/ONAIR-WEB.md">OnAir Web guide</a> and <a href="https://github.com/adswill/OnAir/blob/main/docs/ONAIR-DIRECTORY.md">directory notes</a>.</p>
+      <p>The address must be HTTPS. Only name, address, rough location, coverage and listener counts are sent, every 5 minutes. Full steps: <a href="https://github.com/adswill/OnAir/blob/v3.0.0/docs/ONAIR-WEB.md">OnAir Web guide</a> and <a href="https://github.com/adswill/OnAir/blob/v3.0.0/docs/ONAIR-DIRECTORY.md">directory notes</a>.</p>
     </section>
+  </div>
+
+  <div id="p-listen" class="page" hidden>
+    <h1>Listen to a receiver</h1>
+    <p class="lead">You need nothing but a browser. No account, no download.</p>
+    <ol class="steps">
+      <li><b>Open the <a href="#receivers">Receivers</a> tab.</b> Each row is a radio somebody shares. The bar shows which frequencies it covers; Listeners shows how many people are on it out of how many it allows (for example 2/6).</li>
+      <li><b>Pick one that covers what you want.</b> Use the band buttons (FM, Air, HF ...) or the search box. Rows with no free slot (3/3) are full: try another or come back later.</li>
+      <li><b>Click Listen.</b> The receiver opens in a new tab. It is the owner's own page, not ours.</li>
+      <li><b>Press the play or audio button there and choose a frequency.</b> Your browser needs a click before it will play sound.</li>
+      <li><b>If it asks for a password or invite,</b> the owner keeps it private. Ask them; nothing here can give you one.</li>
+    </ol>
+    <p>Something wrong with a receiver? Use Report next to it. Listings are written by their owners and nobody checks them first.</p>
+    <p>Full guide for listeners and owners: <a href="https://github.com/adswill/OnAir/blob/v3.0.0/docs/ONAIR-WEB.md">OnAir Web guide</a> or the <a href="https://github.com/adswill/OnAir/wiki/OnAir-Web">wiki page</a>.</p>
+  </div>
+
+  <div id="p-list" class="page" hidden>
+    <h1>List your receiver here</h1>
+    <p class="lead">Listing is optional and off by default. Nobody has to approve it; your server signs each message so nobody else can edit your entry.</p>
+    <p>Before you start: you need a running OnAir Web server that listeners can reach over <b>HTTPS</b> (see <a href="#run">Run your own</a>, step 6).</p>
+    <ol class="steps">
+      <li><b>Open the server settings file</b> (on Linux <code>~/.config/onair/server.conf</code>) and add:
+<pre>web_directory=1
+web_directory_url=https://web.on-air.dev
+web_public_url=https://radio.example.org
+web_directory_radio=HackRF Pro
+web_directory_desc=Wideband receiver on the roof
+web_directory_loc=54.69,25.28</pre>
+        Replace <code>web_public_url</code> with the HTTPS address listeners open. The location is optional (leave the line out for none); a Maidenhead locator such as <code>KO24pq</code> works too. Set <code>web_directory_loc_decimals=2</code> to keep it to about 1 km.</li>
+      <li><b>Start the server:</b> <code>onair-server --web</code>. Nothing is sent yet.</li>
+      <li><b>Read the preview it prints.</b> It shows the exact data that would be sent, where it goes, and a confirmation code.</li>
+      <li><b>Add the code to the settings file</b> as <code>web_directory_ack=&lt;code&gt;</code> and restart. If you later change the name, address, location or description, you get a new code and must look again.</li>
+      <li><b>Wait about a minute.</b> Your receiver appears on the <a href="#receivers">Receivers</a> tab and is refreshed every 5 minutes. If the server stops, the entry disappears after about 15 minutes.</li>
+      <li><b>To remove yourself:</b> run <code>onair-server --directory-remove</code>, or set <code>web_directory=0</code>.</li>
+    </ol>
+    <p>What is sent: name, description, address, rough location, radio name, frequency coverage, listener limit and the current <i>number</i> of listeners. Never sent: who listens, what they listen to, or your own IP address. Details: <a href="https://github.com/adswill/OnAir/blob/v3.0.0/docs/ONAIR-DIRECTORY.md">directory notes</a>.</p>
+  </div>
+
+  <div id="p-run" class="page" hidden>
+    <h1>Run your own receiver</h1>
+    <p class="lead">One radio, many listeners: each listener gets their own virtual receiver inside what your radio captures. Receive only.</p>
+    <div class="callout">The 3.0.0 downloads contain the desktop app but not the <code>onair-server</code> program yet, so for now you build it from source (steps 1 and 2). It is one command per step. If you only want to try OnAir itself, the app is on the <a href="https://github.com/adswill/OnAir/releases/tag/v3.0.0">3.0.0 release page</a>.</div>
+    <ol class="steps">
+      <li><b>Get the source</b> (needs git, CMake, a C++ compiler and Rust; the <a href="https://github.com/adswill/OnAir/blob/v3.0.0/README.md#build-from-source">build notes</a> list the packages per system):
+<pre>git clone --branch v3.0.0 https://github.com/adswill/OnAir.git
+cd OnAir</pre></li>
+      <li><b>Build the server.</b>
+<pre># Linux and macOS
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target onair-server -j4
+
+# Windows (Developer PowerShell)
+cmake -S . -B build
+cmake --build build --config Release --target onair-server</pre></li>
+      <li><b>Start it.</b> Plug in your radio, then:
+<pre># Linux and macOS
+./build/onair-server --web --web-lan
+
+# Windows
+build\Release\onair-server.exe --web --web-lan</pre>
+        No radio yet? Add <code>--device test</code> for the built-in test signal.</li>
+      <li><b>Open it.</b> On any computer or phone on your network go to <code>http://&lt;address of the server&gt;:8073</code>. On the server itself use <code>http://127.0.0.1:8073</code>. On plain HTTP only private network addresses are let in.</li>
+      <li><b>Choose who may listen.</b> Add to the settings file, then restart:
+<pre>web_auth=password          # open, password or invite
+web_password=choose-eight-or-more
+web_max_users=6</pre>
+        Invite links look like <code>http://host:8073/#invite=TOKEN</code>. Start with a password or invites: open access means anyone, and they share your upload bandwidth.</li>
+      <li><b>Put it on the internet</b> without opening your router. Install <a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/">cloudflared</a> and run:
+<pre>cloudflared tunnel --url http://127.0.0.1:8073</pre>
+        It prints an <code>https://....trycloudflare.com</code> address. That is your public HTTPS address; it changes each time you start it. For a fixed name use a named tunnel or a reverse proxy: see the <a href="https://github.com/adswill/OnAir/blob/v3.0.0/docs/ONAIR-WEB.md#on-the-internet">guide</a>.</li>
+      <li><b>List it here</b> (optional): follow <a href="#list">List your receiver</a>, using the address from step 6 as <code>web_public_url</code>.</li>
+    </ol>
+    <p>All settings, limits, frequency restrictions and the admin API: <a href="https://github.com/adswill/OnAir/blob/v3.0.0/docs/ONAIR-WEB.md">OnAir Web guide</a>, <a href="https://github.com/adswill/OnAir/wiki/OnAir-Web">wiki</a>, <a href="https://on-air.dev/docs/onair-web/">website copy</a>.</p>
+  </div>
+
+  <div id="p-faq" class="page" hidden>
+    <h1>FAQ</h1>
+    <dl class="faq">
+      <dt>Can listeners transmit or control my radio?</dt>
+      <dd>No. OnAir Web is receive only. Listeners tune their own virtual receiver; they cannot change your radio's frequency, gain or mode, and the protocol refuses transmit requests.</dd>
+      <dt>What does this directory store about listeners?</dt>
+      <dd>Nothing. It never sees who listens: servers send only a count. This page uses no cookies and no analytics. If you share your location for distances, it stays in your browser.</dd>
+      <dt>What does it store about receivers?</dt>
+      <dd>What the owner chose to send (see <a href="#list">List your receiver</a>). The server's IP address is not stored.</dd>
+      <dt>Are the listed receivers checked?</dt>
+      <dd>No. Entries are self-registered. A green dot means the directory asked the address and an OnAir server answered; grey means not checked. Use Report if something is wrong.</dd>
+      <dt>Is it legal to share my receiver?</dt>
+      <dd>Rules differ by country. Receiving some services (for example private or encrypted traffic) can be restricted, and you are responsible for what your receiver offers. OnAir keeps voice and pager decoders off until the host accepts a legal notice, and you can limit frequencies. This is not legal advice.</dd>
+      <dt>Why is my receiver not showing?</dt>
+      <dd>Check that you added the confirmation code, that the public address starts with <code>https://</code> and opens from outside your network, and that the server's clock is right (within 5 minutes). Give it a few minutes.</dd>
+      <dt>Where do I ask for help?</dt>
+      <dd><a href="https://discord.gg/Kky9c6atm">OnAir Discord</a> or <a href="https://github.com/adswill/OnAir/issues">GitHub issues</a>.</dd>
+    </dl>
+  </div>
   </main>
 
   <footer class="wrap foot">

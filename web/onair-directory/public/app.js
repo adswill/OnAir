@@ -1,6 +1,16 @@
 // OnAir receiver directory page. Fetches /api/v1/servers once a minute and filters, sorts and draws everything in the browser.
 // Server values go in with textContent only (never innerHTML); links only for http(s) URLs the Worker already validated.
 // Location, if the visitor shares it, is used for distances in this page only and is never sent anywhere. No analytics, no cookies.
+// Tabs: #receivers (default), #listen, #list, #run, #faq. Plain hash routing, every page is in index.html.
+function route() {
+  const t = (location.hash || "#receivers").slice(1);
+  const k = ["receivers", "listen", "list", "run", "faq"].includes(t) ? t : "receivers";
+  for (const p of document.querySelectorAll(".page")) p.hidden = p.id !== "p-" + k;
+  for (const a of document.querySelectorAll("#tabs a")) a.setAttribute("aria-selected", String(a.dataset.t === k));
+  if (k !== "receivers" || !location.hash) window.scrollTo(0, 0);
+}
+addEventListener("hashchange", route);
+route();
 const $ = (id) => document.getElementById(id);
 const M = 1e6;
 // Bands in Hz, as the API's band filter defines them (approximate for the chips).
