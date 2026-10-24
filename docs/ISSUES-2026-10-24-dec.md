@@ -5,7 +5,7 @@ All 14 checked against v3.0.0 (git merge-base --is-ancestor on each fix commit).
 | # | title | request | status | commit/branch | not verified | reply draft |
 |---|-------|---------|--------|---------------|--------------|-------------|
 | 277 | analog TV slow | TX generator 3-4 s per second of content | partly (done before: test card skipped when live frame; resampler multi-core; bench 2-5x real time on Apple silicon) | ea9dfcc0a | reporter's CPU/rate/settings unknown; needs owner (screenshot of parameters) | 277-atv-tx-slow.md |
-| 275 | CDR decode failed | 98.2 MHz IQ (WeTransfer) does not decode / lock | needs owner / recording (link needs a browser; download needs owner's OK) | none | all | 275-cdr-decode.md |
+| 275 | CDR decode failed | 98.2 MHz IQ does not decode / lock | not fixed; reproduced: file is 768 ksps (7708672 samples = 10 s + 28672), cdrtool never locks (no SDC); spectrum = FM + two ~30 kHz digital blocks at 162-192 kHz (likely spectrum mode 9/10 hybrid); sync search only returns false inner-band fits, outer-band modes 9/10 reach metric 0.66 max. Tried choosing the mode by pilot coherence instead of sync energy: no change, reverted | none | cause not found; needs deeper work or a second recording / station parameters | 275-cdr-decode.md |
 | 273 | TETRAPOL polarity | automatic INV/NOR | done before | 966a7231a | real network | 273-tetrapol-polarity.md |
 | 267 | TETRA echo | slot / carrier / 25 kHz choice, no echo | done before | a528ef196 (+#259) | real recording | 267-tetra-echo.md |
 | 262 | DAB tuning fault | click/drag in wide capture | done before | 48ccfb1f4 | real radio | 262-dab-tuning.md |
@@ -19,4 +19,4 @@ All 14 checked against v3.0.0 (git merge-base --is-ancestor on each fix commit).
 | 210 | DAB+ crash RTL-SDR v3 | crash | done before (buffer read before start, regression test) | ed4c053e8 | reporter retest on 0.2.9+ | 210-dab-rtl-crash.md |
 | 223 | Cospas wider bandwidth | 100 kHz, fewer false decodes | done before | ec1bf9292, 94e47accf | more recordings | 223-cospas.md |
 
-Counts: done before 11, partly 2 (#277, #249), needs owner 1 (#275), fixed now 0, added now 0, not possible 0.
+Counts: done before 11, partly 2 (#277, #249), open 1 (#275, reproduced, not fixed), fixed now 0, added now 0, not possible 0.
