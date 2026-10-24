@@ -150,6 +150,7 @@ void tick(App& a) {
     loadState();
     feedEstimates(a.rx.vdl2);
     if (!a.engine.running()) { S.wasRunning = false; S.pushedChans[0] = '\x01'; S.pushedChans[1] = 0; return; }
+    a.engine.vdl2().setWholeSpan(a.family == 27 && a.wideDecode);   // the Whole span switch (top right of the spectrum)
     if (std::strcmp(S.pushedChans, S.chans) != 0) {
         std::vector<double> hz;
         const char* p = S.chans;
@@ -634,7 +635,7 @@ void tuner(App& a, bool&) {
     ImGui::TextDisabled("Channels MHz");
     ImGui::SetNextItemWidth(std::min(230 * gUi, ImGui::GetContentRegionAvail().x));
     if (ImGui::InputTextWithHint("##vdch", "Europe: 136.725 - 136.975", S.chans, sizeof S.chans)) plat::prefs().setS("vdl2Chans", S.chans);
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("The VDL2 channels to decode, separated by spaces. Empty: the European set,\n136.725 136.775 136.825 136.875 136.900 and 136.975 (the common signalling channel).\nNorth America uses 136.650 136.700 136.800 136.975. Tune between the channels: every channel inside the sample band is decoded.");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("The VDL2 channels to decode, separated by spaces. Empty: the European set,\n136.725 136.775 136.825 136.875 136.900 and 136.975 (the common signalling channel).\nNorth America uses 136.650 136.700 136.800 136.975. Tune between the channels: every channel inside the sample band is decoded.\nWhole span (top right of the spectrum): every VDL2 channel used worldwide inside the capture, plus this list.");
 }
 
 void synth(App& a, bool& changed) {

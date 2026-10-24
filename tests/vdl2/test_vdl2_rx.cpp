@@ -243,6 +243,28 @@ int main() {
         printf("  %-44s %llu frames, %llu failed bursts\n", "noise only (and NaN samples)", (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
         CHECK(t.blocksOk == 0, "frames decoded from noise");
     }
+    // Whole span: the worldwide channel set inside the capture, plus the list (#236)
+    {
+        auto inBand = [](bool whole, const std::vector<double>& list) {
+            Vdl2Receiver rx;
+            rx.configure(2e6);
+            rx.setCenterHz(kCenter);
+            rx.setWholeSpan(whole);
+            if (!list.empty()) rx.setChannels(list);
+            std::vector<cf32> x(40000, cf32(0, 0));
+            rx.feed(x.data(), x.size());
+            Vdl2Telemetry t;
+            rx.telemetry(t, 0);
+            int n = 0;
+            for (const auto& c : t.channels) n += c.inBand ? 1 : 0;
+            return n;
+        };
+        const int a = inBand(false, {}), b = inBand(true, {}), c = inBand(true, {136.500e6}), d = inBand(false, {136.500e6});
+        printf("  %-44s %d channels off, %d on, %d on + list, %d list only\n", "Whole span channels in band (2 Msps)", a, b, c, d);
+        CHECK(a == 6, "Europe set: %d channels in band", a);
+        CHECK(b == 11, "worldwide set at 136.85 MHz, 2 Msps: %d channels in band", b);
+        CHECK(c == b + 1 && d == 1, "the list is added to the set (%d) / replaces it (%d)", c, d);
+    }
     printf(fails ? "vdl2 rx: %d FAILED\n" : "vdl2 rx: all passed\n", fails);
     return fails ? 1 : 0;
 }

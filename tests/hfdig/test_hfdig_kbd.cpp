@@ -363,6 +363,30 @@ int main() {
             CHECK(t.hellTotal == 0, "%s: noise alone drew %llu columns", kbdVariantName(KbdHell, v), (unsigned long long)t.hellTotal);
         }
     }
+    // a user's font file draws what the built-in glyphs cannot (#225): Polish l with stroke, Turkish s with cedilla, an arrow
+    {
+        std::string here = __FILE__;
+        here = here.substr(0, here.rfind("/tests/")) + "/third_party/fonts/Inter-Regular.ttf";
+        unsigned short g[14];
+        const int cps[] = {0x142, 0x15F, 0x2192};
+        bool before = false;
+        for (int cp : cps) before = before || kbd::hellGlyph(cp, g);
+        CHECK(!before, "no font file: the extra letters are '?' (false)");
+        std::string err;
+        CHECK(kbd::hellLoadUserFont("/nonexistent/font.ttf", err) == false && !err.empty(), "a missing font file is refused");
+        CHECK(kbd::hellLoadUserFont(here, err), "Inter loads: %s", err.c_str());
+        for (int cp : cps) {
+            const bool ok = kbd::hellGlyph(cp, g);
+            int ink = 0, outside = 0;
+            for (int r = 0; r < 14; r++) { for (int b = 0; b < 16; b++) if (g[r] & (1 << b)) { ink++; if (r < 2 || r > 11) outside++; } }
+            CHECK(ok && ink >= 4 && outside == 0, "U+%04X from the font: ok %d, %d pixels, %d outside rows 2..11", cp, ok, ink, outside);
+        }
+        CHECK(kbd::hellGlyph('A', g) && g[2] != 0 + 0xFFFF, "ASCII keeps the built-in Feld glyph");
+        { unsigned short ref[14]; for (int i = 0; i < 14; i++) ref[i] = kbd::kHellFont['A' - ' '][i]; bool same = true; for (int i = 0; i < 14; i++) same = same && g[i] == ref[i]; CHECK(same, "ASCII is unchanged by the font"); }
+        CHECK(!kbd::hellGlyph(0x4E2D, g), "a character the font does not have stays '?'");
+        kbd::hellLoadUserFont("", err);
+        CHECK(!kbd::hellGlyph(0x142, g), "font cleared: back to '?'");
+    }
     printf(fails ? "FAILED %d\n" : "ok\n", fails);
     return fails ? 1 : 0;
 }

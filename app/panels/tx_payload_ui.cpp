@@ -3,6 +3,7 @@
 #include "tx_state.h"
 #include "../ui/typography.h"
 #include "dect2/hfdig/hfdig_sstv.h"
+#include "dect2/hfdig/hfdig_kbd.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -62,6 +63,31 @@ void audioSourceRow(TxUi& s, bool running) {
         const float pk = s.session.stats().audioPeak;
         ImGui::ProgressBar(pk, ImVec2(220 * gUi, 0), tr("Mic level"));
     }
+}
+
+// Hellschreiber: the font file for characters the built-in glyphs cannot draw (Chinese, Japanese, Korean, symbols). Under Advanced; empty = built in.
+void hellFontRow() {
+    static bool init = false;
+    static char path[512] = "";
+    static std::string msg;
+    auto apply = [&](const std::string& p) {
+        std::string err;
+        if (dect2::kbd::hellLoadUserFont(p, err)) { msg = p.empty() ? std::string() : std::string(tr("Font loaded.")); plat::prefs().setS("hellFont", p); }
+        else { msg = tr(err.c_str()); }
+    };
+    if (!init) { init = true; snprintf(path, sizeof path, "%s", plat::prefs().getS("hellFont", "").c_str()); if (path[0]) apply(path); }
+    if (!ImGui::TreeNode(tr("Advanced: font for other scripts"))) return;
+    ImGui::TextWrapped("%s", tr("Letters, digits, accented Latin, Cyrillic and Greek are built in. For Chinese, Japanese, Korean or symbols choose a .ttf or .otf font file that has them "
+                                "(for example GNU Unifont or Noto Sans CJK, downloaded from their own sites; OnAir does not ship it). Characters the font lacks stay '?'."));
+    ImGui::SetNextItemWidth(320 * gUi);
+    ImGui::InputText(tr("Font file"), path, sizeof path);
+    ImGui::SameLine();
+    if (ImGui::Button(tr("Browse…##hellfont"))) { const std::string p = openFileDialog(); if (!p.empty()) snprintf(path, sizeof path, "%s", p.c_str()); }
+    if (ImGui::Button(tr("Use this font"))) apply(path);
+    ImGui::SameLine();
+    if (ImGui::Button(tr("Built-in glyphs only"))) { path[0] = 0; apply(""); }
+    if (!msg.empty()) ImGui::TextDisabled("%s", msg.c_str());
+    ImGui::TreePop();
 }
 
 void browseFile(TxUi& s, const char* id) {
@@ -325,6 +351,7 @@ void payloadPanel(TxUi& s, const TxModeSpec& mode, bool running) {
         break;
     case TxPayloadKind::Keyboard:
         if (ImGui::InputText(tr("Text"), s.text, sizeof s.text)) saveStr("tx.text", s.text);
+        if (mode.id && std::string(mode.id) == "hell") hellFontRow();
         break;
     case TxPayloadKind::Cw:
         if (ImGui::InputText(tr("Text"), s.text, sizeof s.text)) saveStr("tx.text", s.text);

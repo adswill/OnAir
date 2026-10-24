@@ -1026,6 +1026,7 @@ struct ModeUi {
     void (*meters)(const App&, std::vector<ModeMeter>& out) = nullptr;   // the meter bank of the Scope: Meters layout
 };
 bool modeSupportsWideHf(int family);                    // modeui.cpp: the HF families that decode the visible span inside the receiver (CW, PSK, HF digital)
+bool modeSupportsWideChannels(int family);               // modeui.cpp: VDL2, HFDL (Whole span = every channel of the capture, set on the receiver)
 bool modeSupportsWide(int family);                      // modeui.cpp: the families that can decode the whole visible span (CW, PSK, HF digital)
 const ModeUi* modeUi(int family);                       // modeui.cpp: nullptr for the original families (0 to 5)
 const char* listTitle(const App& a, bool upper);        // "STATIONS", "SERVICES" or the mode's own, for the list on the right

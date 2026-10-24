@@ -98,6 +98,7 @@ struct HfdlReceiver::Impl {
     double rate = 0, offset = 0, center = 0;
     std::vector<double> want;
     bool rebuild = true;
+    bool whole = false;                  // Whole span: the station table in the capture plus the user's list
     std::vector<Chan> ch;
     std::vector<float> fir, mf;
     std::vector<cf32> firC;                   // the baseband filter with a centre offset (empty: use fir)
@@ -149,7 +150,8 @@ struct HfdlReceiver::Impl {
         if (rate < 1) return;
         const double c = center > 0 ? center : kDefCentre;
         const double half = rate / 2 - 3000;
-        std::vector<double> list = want.empty() ? hfdlChannelsNear(c, std::max(0.0, half * 0.95)) : want;
+        std::vector<double> list = want.empty() || whole ? hfdlChannelsNear(c, std::max(0.0, half * 0.95)) : want;
+        if (whole && !want.empty()) { list.insert(list.end(), want.begin(), want.end()); std::sort(list.begin(), list.end()); list.erase(std::unique(list.begin(), list.end()), list.end()); }
         // Shared first stage, wide captures only: the capture is low-passed and decimated once, before the channels, and the channels run at rate / F.
         // Decided by the output rate: rate / F must cover the span of the channels (the station table or the list, whichever is wider) with
         // kDecimMargin, so F >= 2 needs a capture of about 2.4 times that span (64 MHz, not 32 MHz). Up to 16 MHz and at 32 MHz F is 1: no change.
@@ -742,6 +744,7 @@ void HfdlReceiver::setCenterHz(double hz) { std::lock_guard<std::mutex> lk(p_->m
 bool HfdlReceiver::ready() const { return p_->rate >= hfdlTuning().minSampleRate - 1; }
 void HfdlReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->logCb = std::move(cb); }
 void HfdlReceiver::setBasebandFilter(const BasebandFilterCfg& c) { std::lock_guard<std::mutex> lk(p_->mu); if (c != p_->bbf) { p_->bbf = c; p_->rebuild = true; } }
+void HfdlReceiver::setWholeSpan(bool on) { std::lock_guard<std::mutex> lk(p_->mu); if (on != p_->whole) { p_->whole = on; p_->rebuild = true; } }
 void HfdlReceiver::setChannels(const std::vector<double>& hz) { std::lock_guard<std::mutex> lk(p_->mu); if (hz != p_->want) { p_->want = hz; p_->rebuild = true; } }
 
 void HfdlReceiver::reset() {

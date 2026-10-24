@@ -151,6 +151,7 @@ void tick(App& a) {
     loadState();
     if (live(a)) feedRange(a.rx.hfdl);
     if (!a.engine.running()) { S.pushedChans[0] = '\x01'; S.pushedChans[1] = 0; return; }
+    a.engine.hfdl().setWholeSpan(a.family == 35 && a.wideDecode);   // the Whole span switch (top right of the spectrum)
     if (std::strcmp(S.pushedChans, S.chans) != 0) {
         std::vector<double> hz;
         const char* p = S.chans;
@@ -595,7 +596,7 @@ void tuner(App& a, bool&) {
     ImGui::TextDisabled("Channels kHz");
     ImGui::SetNextItemWidth(std::min(230 * gUi, ImGui::GetContentRegionAvail().x));
     if (ImGui::InputTextWithHint("##hfch", "the station table", S.chans, sizeof S.chans)) plat::prefs().setS("hfdlChans", S.chans);
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("The HFDL channels to decode (dial frequencies in kHz, upper sideband), separated by spaces.\nEmpty: every frequency of the built-in ground station table inside the sample band.");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("The HFDL channels to decode (dial frequencies in kHz, upper sideband), separated by spaces.\nEmpty: every frequency of the built-in ground station table inside the sample band.\nWhole span (top right of the spectrum): the table plus this list; with it off, this list replaces the table.");
 }
 
 void synth(App& a, bool& changed) {

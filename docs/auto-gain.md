@@ -79,3 +79,18 @@ the weak-signal margin goal; the lock freeze; reacquisition after a retune.
 
 **Not verified on hardware.** The thresholds are rules of thumb tuned on the simulation; the tuner table of radios other than the R820T
 (E4000 etc.) is the R820T's, and a driver that snaps differently will still work (it takes the closest value).
+
+## Gain stages by hand (#233)
+
+The gain slider stays the simple default and moves every stage together. Radios that advertise their stages also list them under "Radio settings",
+one setting each, "-1" or untouched meaning "follow the slider"; a stage set by hand is applied after the slider's gain, so the slider still moves
+the others:
+
+| Radio | Settings |
+|---|---|
+| any SoapySDR radio with 2+ gain elements | `gain.<element>` (LNA, VGA, TIA, PGA, ...) |
+| HackRF | LNA, VGA and amp sliders (always there) |
+| Airspy R2 / Mini | `gain.lna`, `gain.mixer`, `gain.vga` (0..15; libairspy's own stage calls) |
+| SDRplay RSP | `lnastate` (RF/LNA gain reduction state, band dependent) and `ifgr` (IF gain reduction 20..59 dB) |
+| Fobos SDR | LNA step (`lna`) |
+| RTL-SDR | RTL AGC switch (the library has no per-stage call for the common tuners) |

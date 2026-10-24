@@ -161,7 +161,7 @@ static const char* const kRestoreSafe[] = {
     "genDeNfm", "genDeWfm", "genDemod", "genFlac", "genGain", "genMp3", "genNb", "genNbDb", "genOffset", "genPitch", "genPreRoll", "genSqAuto", "genSqDb", "genSqOn",
     "genTxHang", "genTxIq", "gnssElMask", "gnssZoom", "goesAutoSave", "goesFilter", "goesSaveCadu", "ham.audioOut", "ham.call", "ham.cwWpm",
     "ham.grid", "ham.licence", "ham.name", "ham.qth", "ham.rig", "ham.txHz", "hdrAm9k", "hdrLastAm", "hdrLastFm", "hfbClock", "hfbDwell", "hfbHop",
-    "hfbListen", "hfbPpm", "hfbView", "hfdigHamdrmAutoSave", "hfdigListen", "hfdigSstvAutoSave", "hfdigView", "hfdlChans", "hfdlZoom",
+    "hfbListen", "hfbPpm", "hfbView", "hellFont", "hfdigHamdrmAutoSave", "hfdigListen", "hfdigSstvAutoSave", "hfdigView", "hfdlChans", "hfdlZoom",
     "hiddenRadios", "hlB", "hlBody", "hlDec", "hlDwell", "hlL", "hlRa", "hlReg2", "hlRegion", "hlRx", "hlScan", "hlTsys", "hlWidth", "hrptVar",
     "hrptView", "hwVideo", "inmcSat", "inmcSearch", "ionoDbHi", "ionoLocked", "ionoRange", "ionoTraces", "iridiumBitsName", "iridiumBitsOn",
     "iridiumThr", "iridiumZoom", "js8Listen", "js8Zoom", "lrAutoBw", "lrAutoSf", "lrBw", "lrCr", "lrCrc", "lrImplicit", "lrLdro", "lrLen", "lrPre",

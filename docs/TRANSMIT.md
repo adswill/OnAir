@@ -163,3 +163,12 @@ This list is taken from the tables in `core/src/tx/tx.cpp` (`txModes()`).
 ### Modes without a generator
 
 Nothing is refused: OnAir blocks no mode, frequency or power. A mode can only be missing when it has no signal generator (for example the signal workbench, engine code 75); the panel then says "this mode has no transmit generator". Limits of the radio (no transmit path, a sample rate too low for the mode) are reported as they come.
+
+### Hellschreiber text in other scripts (#225)
+
+Hellschreiber sends letters, digits, accented Latin, Cyrillic and Greek from its built-in glyphs. For Chinese, Japanese, Korean and symbols, pick a
+font file (`.ttf` / `.otf`) under Advanced in the transmit panel of Hellschreiber ("Advanced: font for other scripts"). OnAir draws the characters the
+built-in glyphs lack from that file, 10 pixels high inside the 14-pixel column (the receiver finds the column start from the blank rows above and
+below), at most 16 columns wide. Characters the font does not have stay `?`. No font is bundled: download one (GNU Unifont or Noto Sans CJK, from their
+own sites) and keep its licence. The choice is remembered (setting `hellFont`). The built-in glyphs always win for ASCII, Latin-1, Cyrillic and Greek,
+so the fldigi-compatible picture is unchanged. Transmitting is still behind Arm, the licence box and the band plan.

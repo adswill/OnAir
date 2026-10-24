@@ -726,6 +726,10 @@ static void radioSettingsChecks(const char* dir, const char* ext) {
             t.radio["gainmode"] = "sensitivity"; t.radio["ppm"] = "10";
             CHECK(src->retune(t, e) && st("airspy.table") == 1 && st("airspy.gain") == 15, "Airspy sensitivity: table %.0f gain %.0f", st("airspy.table"), st("airspy.gain"));
             CHECK(st("airspy.freq") == std::llround(522e6 / 1.00001), "Airspy 10 ppm: freq %.0f", st("airspy.freq"));
+            CHECK(hasSetting(d, "gain.lna") && hasSetting(d, "gain.mixer") && hasSetting(d, "gain.vga"), "Airspy gain stage settings (#233)");
+            CHECK(st("airspy.lna") == -1e300 && st("airspy.vga") == -1e300, "Airspy stages untouched by default");
+            t.radio["gain.lna"] = "7"; t.radio["gain.vga"] = "20"; t.radio["gain.mixer"] = "-1";
+            CHECK(src->retune(t, e) && st("airspy.lna") == 7 && st("airspy.vga") == 15 && st("airspy.mixer") == -1e300, "Airspy stages by hand: lna %.0f vga %.0f mixer %.0f", st("airspy.lna"), st("airspy.vga"), st("airspy.mixer"));
             src->stop();
         }
         src.reset();
@@ -836,6 +840,12 @@ static void radioSettingsChecks(const char* dir, const char* ext) {
         if (ok) {
             t.centerHz = 530e6;
             CHECK(src->retune(t, e) && ((unsigned)st("sdrplay.reasons") & (kPpm | kNotch1a | kDab1a)) == 0, "RSP1B: an untouched setting was updated (reasons 0x%08x)", (unsigned)st("sdrplay.reasons"));
+            CHECK(hasSetting(d, "lnastate") && hasSetting(d, "ifgr"), "RSP1B gain stage settings (#233)");
+            { const double l0 = st("sdrplay.lna"), g0 = st("sdrplay.grdb");
+              t.radio["lnastate"] = "2"; t.radio["ifgr"] = "30";
+              CHECK(src->retune(t, e) && st("sdrplay.lna") == 2 && st("sdrplay.grdb") == 30, "RSP1B stages by hand: lna %.0f (was %.0f) IF reduction %.0f (was %.0f)", st("sdrplay.lna"), l0, st("sdrplay.grdb"), g0);
+              t.radio.erase("lnastate"); t.radio.erase("ifgr");
+              CHECK(src->retune(t, e) && st("sdrplay.lna") == l0 && st("sdrplay.grdb") == g0, "RSP1B stages back to the gain slider: lna %.0f IF %.0f", st("sdrplay.lna"), st("sdrplay.grdb")); }
             t.radio["rfnotch"] = "1"; t.radio["ppm"] = "2.5";
             CHECK(src->retune(t, e) && st("sdrplay.rfNotch1a") == 1 && st("sdrplay.ppm") == 2.5 && ((unsigned)st("sdrplay.reasons") & (kPpm | kNotch1a)) == (kPpm | kNotch1a),
                   "RSP1B FM/MW notch and 2.5 ppm live: notch %.0f ppm %.2f reasons 0x%08x", st("sdrplay.rfNotch1a"), st("sdrplay.ppm"), (unsigned)st("sdrplay.reasons"));

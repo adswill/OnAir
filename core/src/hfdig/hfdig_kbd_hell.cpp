@@ -51,7 +51,8 @@ const Dr kDraw[] = {
     {0x393,{31,16,16,16,16}},{0x394,{4,10,10,17,31}},{0x398,{14,17,31,17,14}},{0x39B,{4,10,10,17,17}},{0x39E,{31,0,14,0,31}},{0x3A0,{31,17,17,17,17}},
     {0x3A3,{31,16,8,16,31}},{0x3A6,{4,14,21,14,4}},{0x3A8,{21,21,14,4,4}},{0x3A9,{14,17,17,10,27}}};
 // Latin-1 letters 0xC0 .. 0xFF: base letter and accent (g grave, a acute, c circumflex, t tilde, d diaeresis, r ring, '-' none)
-bool hellGlyph(int cp, unsigned short out[14]) {
+namespace {
+bool hellGlyphBuiltin(int cp, unsigned short out[14]) {
     static const char* kBase = "AAAAAAACEEEEIIIIDNOOOOO*OUUUUYTsaaaaaaaceeeeiiiidnooooo/ouuuuyty";
     static const char* kAcc  = "gactdr--gacdgacd-tgactd--gacda--gactdr--gacdgacd-tgactd--gacda-d";
     int base = cp;
@@ -93,6 +94,12 @@ bool hellGlyph(int cp, unsigned short out[14]) {
                    case 'd': m = 0x5000; break; case 'r': m = 0x6000; break; default: break; }
     if (m) { out[0] |= m; out[1] |= m; }
     return ok;
+}
+} // namespace
+
+bool hellGlyph(int cp, unsigned short out[14]) {
+    if (hellGlyphBuiltin(cp, out)) return true;
+    return hellUserGlyph(cp, out);   // the user's font file, for what the built-in glyphs cannot draw
 }
 
 namespace {

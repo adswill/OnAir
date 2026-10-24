@@ -98,6 +98,11 @@ struct DemodOut {
 } // namespace
 
 std::vector<double> vdl2EuropeChannels() { return {136.725e6, 136.775e6, 136.825e6, 136.875e6, 136.900e6, 136.975e6}; }
+// every VDL2 channel in use worldwide (Europe, North America, Asia-Pacific): 131.250 .. 131.825 and the 136.650 .. 136.975 block
+std::vector<double> vdl2WorldChannels() {
+    return {131.250e6, 131.425e6, 131.450e6, 131.475e6, 131.525e6, 131.550e6, 131.725e6, 131.825e6, 136.650e6, 136.700e6, 136.725e6,
+            136.775e6, 136.800e6, 136.825e6, 136.850e6, 136.875e6, 136.900e6, 136.925e6, 136.975e6};
+}
 
 struct Vdl2Receiver::Impl {
     std::mutex mu;               // settings and telemetry
@@ -105,6 +110,7 @@ struct Vdl2Receiver::Impl {
     bool havePending = false, track = true;
     std::vector<double> want = vdl2EuropeChannels();
     bool rebuild = true;
+    bool whole = false;                  // Whole span: every channel in use worldwide that lies in the capture, plus the user's list
     std::function<void(const std::string&)> logCb;
     // DSP set-up
     int Da = 1, Db = 1;
@@ -155,6 +161,7 @@ struct Vdl2Receiver::Impl {
         const double c = effCenter();
         const double half = rate * 0.5 - 14e3;
         std::vector<double> f = want.empty() ? vdl2EuropeChannels() : want;
+        if (whole) { const auto w = vdl2WorldChannels(); f.insert(f.end(), w.begin(), w.end()); }
         std::sort(f.begin(), f.end());
         f.erase(std::unique(f.begin(), f.end()), f.end());
         for (double fr : f) {
@@ -532,6 +539,7 @@ void Vdl2Receiver::setSignalOffset(double hz) { std::lock_guard<std::mutex> lk(p
 void Vdl2Receiver::setCenterHz(double hz) { std::lock_guard<std::mutex> lk(p_->mu); if (p_->center != hz) { p_->center = hz; p_->rebuild = true; } }
 bool Vdl2Receiver::ready() const { return p_->rate >= vdl2Tuning().minSampleRate - 1; }
 void Vdl2Receiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->logCb = std::move(cb); }
+void Vdl2Receiver::setWholeSpan(bool on) { std::lock_guard<std::mutex> lk(p_->mu); if (on != p_->whole) { p_->whole = on; p_->rebuild = true; } }
 void Vdl2Receiver::setChannels(const std::vector<double>& hz) { std::lock_guard<std::mutex> lk(p_->mu); if (hz != p_->want) { p_->want = hz; p_->rebuild = true; } }
 void Vdl2Receiver::setTuneErrorHz(double hz) { std::lock_guard<std::mutex> lk(p_->mu); p_->pendingTune = hz; p_->havePending = true; }
 void Vdl2Receiver::setTrackTuning(bool on) { std::lock_guard<std::mutex> lk(p_->mu); p_->track = on; }

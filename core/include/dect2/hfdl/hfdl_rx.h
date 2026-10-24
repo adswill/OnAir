@@ -46,6 +46,7 @@ public:
     void setLogCallback(std::function<void(const std::string&)> cb);
 
     void setBasebandFilter(const BasebandFilterCfg& c);  // the channel filter (default: 3.4 kHz Blackman); a change restarts the channel chains
+    void setWholeSpan(bool on);                          // Whole span: the station table in the capture plus the list; off: the list replaces the table
     void setChannels(const std::vector<double>& dialHz); // empty: every frequency of the station table inside the band
 
 private:

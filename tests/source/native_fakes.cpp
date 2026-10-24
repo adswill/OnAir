@@ -112,7 +112,10 @@ EXPORT const char* airspy_error_name(int e) { return e == -2 ? "AIRSPY_ERROR_INV
 EXPORT int airspy_set_sample_type(as_dev*, int t) { rec("airspy.type", t); return 0; }
 EXPORT int airspy_set_freq(as_dev*, uint32_t f) { rec("airspy.freq", f); return 0; }
 EXPORT int airspy_set_linearity_gain(as_dev*, uint8_t g) { rec("airspy.gain", g); rec("airspy.table", 0); return 0; }
-EXPORT int airspy_set_sensitivity_gain(as_dev*, uint8_t g) { rec("airspy.gain", g); rec("airspy.table", 1); return 0; }   // ---- radio settings
+EXPORT int airspy_set_sensitivity_gain(as_dev*, uint8_t g) { rec("airspy.gain", g); rec("airspy.table", 1); return 0; }
+EXPORT int airspy_set_lna_gain(as_dev*, uint8_t g) { rec("airspy.lna", g); return 0; }
+EXPORT int airspy_set_mixer_gain(as_dev*, uint8_t g) { rec("airspy.mixer", g); return 0; }
+EXPORT int airspy_set_vga_gain(as_dev*, uint8_t g) { rec("airspy.vga", g); return 0; }   // ---- radio settings
 EXPORT int airspy_start_rx(as_dev* d, int (*cb)(airspy_transfer_t*), void* ctx) {
     d->run = true;
     d->th = std::thread([d, cb, ctx] {

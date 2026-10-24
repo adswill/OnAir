@@ -31,6 +31,9 @@ struct AirspyApi {
     int (DECT2_CALL* set_freq)(airspy_device*, uint32_t) = nullptr;
     int (DECT2_CALL* set_linearity_gain)(airspy_device*, uint8_t) = nullptr;
     int (DECT2_CALL* set_rf_bias)(airspy_device*, uint8_t) = nullptr;   // optional
+    int (DECT2_CALL* set_lna_gain)(airspy_device*, uint8_t) = nullptr;     // optional: the three stages by hand (0..15 each)
+    int (DECT2_CALL* set_mixer_gain)(airspy_device*, uint8_t) = nullptr;
+    int (DECT2_CALL* set_vga_gain)(airspy_device*, uint8_t) = nullptr;
     int (DECT2_CALL* set_sensitivity_gain)(airspy_device*, uint8_t) = nullptr;   // optional (libairspy 1.0.6 and later)
     int (DECT2_CALL* start_rx)(airspy_device*, cb_t, void*) = nullptr;
     int (DECT2_CALL* stop_rx)(airspy_device*) = nullptr;
@@ -48,6 +51,9 @@ struct AirspyApi {
              lib.get(set_linearity_gain, "airspy_set_linearity_gain") && lib.get(start_rx, "airspy_start_rx") && lib.get(stop_rx, "airspy_stop_rx");
         lib.opt(list_devices, "airspy_list_devices");   // optional: get() would log "radio disabled" for an older library that works
         lib.opt(set_rf_bias, "airspy_set_rf_bias");
+        lib.opt(set_lna_gain, "airspy_set_lna_gain");
+        lib.opt(set_mixer_gain, "airspy_set_mixer_gain");
+        lib.opt(set_vga_gain, "airspy_set_vga_gain");
         lib.opt(set_sensitivity_gain, "airspy_set_sensitivity_gain");
         lib.opt(is_streaming, "airspy_is_streaming");
         lib.opt(version_string_read, "airspy_version_string_read");
@@ -61,6 +67,9 @@ struct AirspyApi {
     }
 };
 AirspyApi& airspy() { static AirspyApi a; return a; }
+// the three amplifier stages the library lets one set by hand
+struct StageFn { const char* key; const char* label; int (DECT2_CALL* AirspyApi::*fn)(AirspyApi::airspy_device*, uint8_t); };
+const StageFn kStages[] = {{"gain.lna", "LNA", &AirspyApi::set_lna_gain}, {"gain.mixer", "mixer", &AirspyApi::set_mixer_gain}, {"gain.vga", "VGA (IF)", &AirspyApi::set_vga_gain}};
 
 namespace {
 using SteadyClock = std::chrono::steady_clock;
@@ -195,6 +204,12 @@ protected:
         const uint8_t g = (uint8_t)std::min(21.0, std::max(0.0, std::round(s.gainDb)));
         if (radioOption(s, "gainmode", "linearity") == "sensitivity" && airspy().set_sensitivity_gain) airspy().set_sensitivity_gain(dev_, g);
         else airspy().set_linearity_gain(dev_, g);
+        // a stage set by hand (settings "gain.lna" / "gain.mixer" / "gain.vga", -1 = follow the gain slider) is applied after the slider's gain
+        for (const auto& st : kStages) {
+            auto fn = airspy().*(st.fn);
+            const int v = fn ? (int)std::lround(atof(radioOption(s, st.key, "-1").c_str())) : -1;
+            if (v >= 0) fn(dev_, (uint8_t)std::min(15, v));
+        }
         if (airspy().set_rf_bias && (!live || s.biasTee != bias_)) {
             if (airspy().set_rf_bias(dev_, s.biasTee ? 1 : 0) == 0) bias_ = s.biasTee;
         }
@@ -377,6 +392,15 @@ void listAirspy(std::vector<DeviceInfo>& out) {
                                                "How the gain steps share out over the LNA, mixer and IF amplifiers (libairspy's two tables).\n"
                                                "Linearity: strong signals overload later (the default). Sensitivity: more front-end gain for weak signals.",
                                                {"linearity", "sensitivity"}, {"Linearity", "Sensitivity"}, "linearity"));
+        for (const auto& st : kStages) {
+            if (!(airspy().*(st.fn))) continue;
+            RadioSetting r;
+            r.type = RadioSetting::Number; r.key = st.key; r.label = std::string("Gain stage: ") + st.label;
+            r.help = std::string("The ") + st.label + " amplifier by hand, 0 to 15 (the radio's own steps). -1: follow the gain slider (the default). "
+                     "Set by hand it replaces what the slider gives this stage; the other stages still follow the slider. Takes effect on the next gain change or retune.";
+            r.minV = -1; r.maxV = 15; r.step = 1; r.def = "-1";
+            d.settings.push_back(r);
+        }
         list.push_back(d);
     }
     {

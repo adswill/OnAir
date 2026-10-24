@@ -353,7 +353,8 @@ static std::set<int>& wideFamilies() {
     static std::set<int> s = {9, 31, 33, 38, 45, 50, 23, 24, 127, 128, 129, 130};
     return s;
 }
-bool modeSupportsWide(int family) { return modeSupportsWideHf(family) || wideFamilies().count(family) > 0; }
+bool modeSupportsWideChannels(int family) { return family == 27 || family == 35; }   // VDL2, HFDL: the receiver decodes every channel in the capture (setWholeSpan)
+bool modeSupportsWide(int family) { return modeSupportsWideHf(family) || modeSupportsWideChannels(family) || wideFamilies().count(family) > 0; }
 void registerWideMode(int family) { wideFamilies().insert(family); }
 bool wideActive(const App& a) { return a.wideDecode && modeSupportsWide(a.family) && a.engine.running() && Engine::wideSupported(a.family + 1) && a.rx.standard == a.family + 1; }
 

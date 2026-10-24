@@ -211,6 +211,14 @@ static void sdrplayGain(unsigned char hw, double hz, double gainDb, int& lnaStat
     gRdB = std::min(kGrIfMax, std::max(kGrIfMin, reduce - b.gr[pick]));
 }
 
+// A gain stage the user set by hand ("lnastate" = the LNA state, "ifgr" = the IF gain reduction, -1 or absent: follow the gain slider)
+static void sdrplayStageOverride(unsigned char hw, double hz, const TuneSettings& s, int& lnaState, int& gRdB, bool hiZ = false) {
+    const int l = (int)std::lround(atof(radioOption(s, "lnastate", "-1").c_str()));
+    const int g = (int)std::lround(atof(radioOption(s, "ifgr", "-1").c_str()));
+    if (l >= 0) lnaState = std::min(l, lnaBand(hw, hz, hiZ).n - 1);
+    if (g >= 0) gRdB = std::min(kGrIfMax, std::max(kGrIfMin, g));
+}
+
 // Antenna power (bias-tee): the RSP1A/1B, RSP2, RSPduo and RSPdx/dx-R2 have it, each in its own part of the parameters; the RSP1 has none
 static bool sdrplayHasBiasT(unsigned char hw) {
     return hw == sp::kRsp1A || hw == sp::kRsp1B || hw == sp::kRsp2 || hw == sp::kRspDuo || hw == sp::kRspDx || hw == sp::kRspDxR2;
@@ -232,6 +240,16 @@ static std::vector<RadioSetting> sdrplaySettings(unsigned char hw) {
         v.push_back(boolSetting("dabnotch", "DAB notch", "The radio's notch filter for DAB (band III, about 155-260 MHz): cuts strong DAB multiplexes. Leave it off to receive DAB."));
     if (sdrplayIsDx(hw))
         v.push_back(boolSetting("hdr", "HDR mode (below 2 MHz)", "The RSPdx's high dynamic range mode for the bands below 2 MHz (LF, MW): fewer intermodulation products and spurs.\nUsed only while tuned below 2 MHz."));
+    {   // the two gain stages by hand; -1 follows the gain slider (the default)
+        RadioSetting l;
+        l.type = RadioSetting::Number; l.key = "lnastate"; l.label = "Gain stage: LNA state"; l.unit = ""; l.minV = -1; l.maxV = 27; l.step = 1; l.def = "-1";
+        l.help = "The RF (LNA) gain reduction by hand: 0 = the most LNA gain, higher = more reduction (the steps depend on the model and the band; a value past the last one is the last). -1: follow the gain slider (the default).";
+        v.push_back(l);
+        RadioSetting g;
+        g.type = RadioSetting::Number; g.key = "ifgr"; g.label = "Gain stage: IF gain reduction"; g.unit = "dB"; g.minV = -1; g.maxV = kGrIfMax; g.step = 1; g.def = "-1";
+        g.help = "The IF gain reduction by hand, 20 to 59 dB (more = less gain). -1: follow the gain slider (the default). Set by hand it replaces what the slider gives the IF stage.";
+        v.push_back(g);
+    }
     return v;
 }
 
@@ -368,6 +386,7 @@ protected:
         if (std::fabs(f - ch.tunerParams.rfFreq.rfHz) > 0.5) { ch.tunerParams.rfFreq.rfHz = f; why |= sp::Update_Tuner_Frf; }
         int lna = 0, gr = 40;
         sdrplayGain(dev_.hwVer, f, s.gainDb, lna, gr, port_ == 2);
+        sdrplayStageOverride(dev_.hwVer, f, s, lna, gr, port_ == 2);
         if (lna != ch.tunerParams.gain.LNAstate || gr != ch.tunerParams.gain.gRdB) {
             ch.tunerParams.gain.LNAstate = (unsigned char)lna;
             ch.tunerParams.gain.gRdB = gr;

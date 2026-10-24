@@ -22,6 +22,8 @@ namespace dect2 {
 
 // The European VDL2 channels: 136.975 (CSC), 136.725, 136.775, 136.825, 136.875, 136.900 MHz
 std::vector<double> vdl2EuropeChannels();
+// Every VDL2 channel in use worldwide (the Whole span switch decodes those inside the capture)
+std::vector<double> vdl2WorldChannels();
 
 class Vdl2Receiver {
 public:
@@ -42,6 +44,7 @@ public:
     void setLogCallback(std::function<void(const std::string&)> cb);
 
     void setChannels(const std::vector<double>& hz);     // absolute channel frequencies; empty = the European set
+    void setWholeSpan(bool on);                          // Whole span: the worldwide channel set (vdl2WorldChannels) in the capture plus the list; off: the list or the European set
     void setTuneErrorHz(double hz);                      // a starting guess of the radio's tuning error (measured from then on)
     void setTrackTuning(bool on);                        // follow the tuning error from the decoded bursts (default on)
 

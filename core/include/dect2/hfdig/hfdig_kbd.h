@@ -100,4 +100,11 @@ struct KbdTxConfig {
 std::unique_ptr<HfdigTestAudio> makeKbdTx(const KbdTxConfig& cfg);
 std::unique_ptr<HfdigTestAudio> makeKbdTestAudio(const SynthConfig& cfg);   // hfdig_kbd_gen.cpp: modeOpt[0] 26 .. 31
 
+// Hellschreiber text in any script: the built-in glyphs cover ASCII, accented Latin, Cyrillic and Greek; a font file (.ttf / .otf) the user chose draws
+// the rest (Chinese, Japanese, Korean, symbols). Nothing is bundled. An empty path goes back to the built-in glyphs; false with err when the file cannot be used.
+namespace kbd {
+bool hellLoadUserFont(const std::string& path, std::string& err);
+std::string hellUserFontPath();
+} // namespace kbd
+
 } // namespace dect2
