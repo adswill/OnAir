@@ -25,6 +25,9 @@ size_t voiceCount(uint32_t icao, const std::string& callsign, const std::string&
 std::vector<dect2::AcarsLogEntry> voiceForTrack(const std::string& id, const std::string& label, int callsignHolders);
 // The visible indicator: true and the words while transcription is running ("Transcribing airband with tiny.en").
 bool indicator(std::string& text);
+// What it is doing in plain words ("Listening for speech.", "Model missing: ...", "No speech heard in the last 10 s."). level: 0 information, 1 working, 2 a problem.
+std::string statusLine(int* level);
+void shotReport();   // dev (--shot): the status line, the counters and every transcript line on stderr, "tx: ..."
 
 
 // ---- Auto subtitles (docs/TRANSCRIBE.md): captions from the speech of the sound you hear, on a receiver's overlay

@@ -42,18 +42,18 @@ struct Rx1 {   // the settings are the program's, not one receiver's
 };
 
 struct Cfg {
-    bool enabled = false;       // the master switch: off until the user turns it on
+    bool enabled = true;        // the master switch: on, it only does anything once a speech model file is in the models folder
     bool airband = true;        // with the master switch on: the airband channels
-    bool marine = false;        // marine VHF voice (off: it can be private)
-    bool other = false;         // the sound of any other mode (amateur, CB, FM ...): off
+    bool marine = true;         // marine VHF voice
+    bool other = true;          // "Transcribe what I am listening to": the sound of any other mode (FM, AM, amateur, CB, digital voice ...)
     std::string model = "tiny.en";   // a catalogue id, or "file:<name>" for a file the user put in the models folder
     std::string lang = "en";    // "auto" needs a multilingual model
     bool translate = false;     // also keep an English translation of foreign speech (multilingual model)
     int threads = 2;            // CPU budget: threads of the speech engine
     int days = 7;               // retention
     // auto subtitles
-    bool cap = false;           // master switch for captions (separate from the transcripts: nothing is kept in a file)
-    std::set<int> capModes;     // the standards it runs for (empty: none)
+    bool cap = true;            // master switch for captions (separate from the transcripts: nothing is kept in a file)
+    std::set<int> capModes;     // the standards it runs for (all that can be captioned until the user changes it)
     int capSource = 3;          // dect2::CaptionSource: TV subtitles from the station / generated / both / generated only where the station sends none
     int capSize = 100, capBg = 75, capLines = 2;
     bool capTop = false;
@@ -98,18 +98,19 @@ void load() {
     C.loaded = true;
     Rx1 r;
     plat::Prefs& d = plat::prefs();
-    C.enabled = d.getB("txEnabled", false);
+    C.enabled = d.getB("txEnabled", true);
     C.airband = d.getB("txAirband", true);
-    C.marine = d.getB("txMarine", false);
-    C.other = d.getB("txOther", false);
+    C.other = d.getB("txOther", true);
+    C.marine = d.getB("txMarine", true);
     C.model = d.getS("txModel", "tiny.en");
     C.lang = d.getS("txLang", "en");
     C.translate = d.getB("txTranslate", false);
     C.threads = (int)std::max(1L, std::min(8L, d.getI("txThreads", 2)));
     C.days = (int)std::max(1L, std::min(365L, d.getI("txDays", 7)));
-    C.cap = d.getB("capOn", false);
+    C.cap = d.getB("capOn", true);
     {
-        std::stringstream ss(d.getS("capModes", ""));
+        std::stringstream ss(d.getS("capModes", "*"));   // "*": every mode that can be captioned
+        if (d.getS("capModes", "*") == "*") for (int k : dect2::captionStandards()) C.capModes.insert(k);
         std::string t;
         while (std::getline(ss, t, ',')) if (!t.empty() && dect2::captionStandardEligible(atoi(t.c_str()))) C.capModes.insert(atoi(t.c_str()));
     }
@@ -118,6 +119,13 @@ void load() {
     C.capTop = d.getB("capTop", false);
     C.capShow = (int)std::max(0L, std::min(2L, d.getI("capShow", 0)));
     C.capSave = d.getB("capSave", true);
+    if (d.getI("txVer", 0) < 31) {
+        // Settings saved by 3.0 have "other modes" and the captions off (the old defaults): FM and every other voice mode produced nothing. Once, turn
+        // on what the one switch "Transcribe what I am listening to" means.
+        C.other = C.marine = C.cap = true;
+        for (int k : dect2::captionStandards()) C.capModes.insert(k);
+        save();
+    }
 }
 void save() {
     Rx1 r;
@@ -125,6 +133,7 @@ void save() {
     d.setB("txEnabled", C.enabled); d.setB("txAirband", C.airband); d.setB("txMarine", C.marine); d.setB("txOther", C.other);
     d.setS("txModel", C.model); d.setS("txLang", C.lang); d.setB("txTranslate", C.translate); d.setI("txThreads", C.threads); d.setI("txDays", C.days);
     d.setB("capOn", C.cap); d.setI("capSource", C.capSource); d.setI("capSize", C.capSize); d.setI("capBg", C.capBg); d.setI("capLines", C.capLines);
+    d.setI("txVer", 31);
     d.setB("capTop", C.capTop); d.setI("capShow", C.capShow); d.setB("capSave", C.capSave);
     { std::string m; for (int k : C.capModes) m += (m.empty() ? "" : ",") + std::to_string(k); d.setS("capModes", m); }
     d.flush();
@@ -151,6 +160,21 @@ bool modelPresent(const std::string& setting) {
     const dect2::SpeechModel* m = dect2::findSpeechModel(setting);
     return m && dect2::speechModelInstalled(modelsDir(), *m);
 }
+
+// The model to use when the chosen one is not in the folder: the best one that is (English first: small.en hears the most words), so a
+// downloaded or copied model works without visiting the settings. Nothing is downloaded here.
+bool autoPickModel() {
+    if (modelPresent(C.model)) return false;
+    for (const char* id : {"small.en", "base.en", "tiny.en", "small", "base", "tiny"})
+        if (modelPresent(id)) { C.model = id; return true; }
+    for (const auto& f : dect2::userSpeechModels(modelsDir())) { C.model = "file:" + f; return true; }
+    return false;
+}
+
+std::atomic<int64_t> gSoundMs{0};             // the last time the tap delivered sound
+std::atomic<int64_t> gSegMs{0};               // the last time a speech piece was cut or a transcript line appeared
+uint64_t gSegSeen = 0;
+std::atomic<int64_t> gFirstSoundMs{0};        // when the sound began to arrive (0: none now)
 
 void applyConfig() {
     dect2::TranscribeConfig c = gTr.config();
@@ -192,10 +216,12 @@ void onAirband(int rxId, int chan, const float* x, size_t n) {
 void onCaptionSound(const float* mono, size_t n, int rate);
 
 void onSound(const float* mono, size_t n, int rate) {
+    { const int64_t t = wallMs(); gSoundMs.store(t, std::memory_order_relaxed); int64_t z = 0; gFirstSoundMs.compare_exchange_strong(z, t); }
     onCaptionSound(mono, n, rate);
     {
         std::lock_guard<std::mutex> lk(gMu);
         if (!gCtx.valid) return;
+        if (gCapCtx.valid && gCtx.mode == "audio") return;   // the caption engine already reads this sound; its lines also go to the transcripts (below)
     }
     dect2::SourceInfo si;
     {
@@ -284,22 +310,56 @@ bool backendReady() { return gBackend != nullptr; }
 
 bool& windowOpen() { return gWindowOpen; }
 
-bool indicator(std::string& text) {
-    if (!backendReady()) return false;
-    if (!C.enabled) {
-        if (!C.cap) return false;
-        text = tr("Generating captions from the sound");
-        return true;
+// What the transcription is doing, in plain words. level: 0 information, 1 working, 2 a problem the user can fix.
+std::string statusLine(int* level) {
+    int lv = 0;
+    if (!level) level = &lv;
+    *level = 0;
+    if (!C.enabled && !C.cap) return tr("Transcription is off.");
+    if (!dect2::whisperAvailable()) { *level = 2; return tr("This build has no speech engine."); }
+    if (!modelPresent(C.model) && !backendReady()) { *level = 2; return tr("Model missing: download a speech model (Transcripts > Settings and speech model)."); }
+    if (!backendReady()) {
+        if (gLoadState.load() == 3) { *level = 2; std::lock_guard<std::mutex> lk(gMu); return gLoadErr.empty() ? std::string(tr("The speech model could not be loaded.")) : gLoadErr; }
+        return tr("Model loading ...");
     }
-    std::string what;
-    if (C.airband) what = "airband";
-    if (C.marine) what += (what.empty() ? "" : ", ") + std::string("marine");
-    if (C.other) what += (what.empty() ? "" : ", ") + std::string("other modes");
-    if (what.empty()) return false;
-    char b[160];
-    snprintf(b, sizeof b, tr("Transcribing speech: %s"), what.c_str());
-    text = b;
+    App* h = receiverHeard();
+    const bool heard = h && h->engine.running();
+    bool air = false;
+    for (App* r : receiversAll()) if (r && r->engine.running() && r->rx.standard == 27 && C.enabled && C.airband) air = true;
+    if (!heard && !air) return tr("Waiting for a receiver that plays sound.");
+    if (heard && !air) {
+        const int s = h->rx.standard;
+        const bool covered = (C.cap && C.capModes.count(s) && dect2::captionStandardEligible(s)) || (C.enabled && (s == 16 ? C.marine : s == 27 ? C.airband : C.other));
+        if (!covered) { *level = 2; return tr("This mode is not transcribed: tick 'Transcribe what I am listening to' in the settings."); }
+    }
+    const dect2::TranscriberStats a = gTr.stats(), b = gCap.stats();
+    if (a.errors + b.errors && a.kept + b.kept == 0) { *level = 2; return std::string(tr("The speech engine failed: ")) + (a.error.empty() ? b.error : a.error); }
+    if (a.busy || a.queued || b.busy || b.queued) { *level = 1; return tr("Transcribing speech ..."); }
+    if (gTr.active() || gCap.active()) { *level = 1; return tr("Hearing speech ..."); }
+    const int64_t now = wallMs(), snd = gSoundMs.load(), seg = gSegMs.load();
+    if (!air && (snd == 0 || now - snd > 4000)) return tr("Waiting for sound from the receiver (is it muted or silent?).");
+    if (a.segments + b.segments && a.kept + b.kept == 0 && now - seg < 10000) { return std::string(tr("Speech heard, nothing readable in it yet (")) + (a.lastFilter.empty() ? "noise" : a.lastFilter) + ")"; }
+    if (now - std::max(seg, gFirstSoundMs.load()) > 10000) return tr("No speech heard in the last 10 s.");
+    return tr("Listening for speech.");
+}
+
+bool indicator(std::string& text) {
+    if (!C.enabled && !C.cap) return false;
+    int lv = 0;
+    text = statusLine(&lv);
+    (void)lv;
     return true;
+}
+
+void shotReport() {
+    load();
+    int lv = 0;
+    const std::string sl = statusLine(&lv);
+    const dect2::TranscriberStats a = gTr.stats(), b = gCap.stats();
+    fprintf(stderr, "tx: status [%d] %s | model %s ready %d | transcripts: segments %llu kept %llu filtered %llu (%s) errors %llu | captions: segments %llu kept %llu filtered %llu (%s) music %llu\n", lv, sl.c_str(),
+            C.model.c_str(), backendReady() ? 1 : 0, (unsigned long long)a.segments, (unsigned long long)a.kept, (unsigned long long)a.filtered, a.lastFilter.c_str(), (unsigned long long)a.errors,
+            (unsigned long long)b.segments, (unsigned long long)b.kept, (unsigned long long)b.filtered, b.lastFilter.c_str(), (unsigned long long)b.musicSkipped);
+    for (const auto& e : gStore.find({}, 100)) fprintf(stderr, "tx: line [%s] %s\n", e.mode.c_str(), e.text.c_str());
 }
 
 void tick(App& first) {
@@ -322,6 +382,12 @@ void tick(App& first) {
             std::lock_guard<std::mutex> lk(gMu);
             const auto it = gTracks.find(rx);
             if (it != gTracks.end() && it->second) it->second->add(e);
+            if (C.enabled && C.other && gCtx.valid && gCtx.mode == "audio") {   // one speech engine for both: the line is a transcript too
+                dect2::TranscriptEntry t = e;
+                t.mode = "audio"; t.channel = gCtx.channel; t.freqHz = gCapCtx.freqHz; t.id = 0;
+                gStore.add(t);
+            }
+            gSegMs.store(wallMs(), std::memory_order_relaxed);
         });
         applyConfig();
     }
@@ -336,7 +402,10 @@ void tick(App& first) {
     static std::string lastLang;
     static bool lastTr = false, lastCap = false;
     if (lastEnabled != C.enabled || lastThreads != C.threads || lastLang != C.lang || lastTr != C.translate || lastCap != C.cap) { lastCap = C.cap; lastTr = C.translate; lastEnabled = C.enabled; lastThreads = C.threads; lastLang = C.lang; applyConfig(); }
+    if ((C.enabled || C.cap) && autoPickModel()) save();
     ensureBackend();
+    { const int64_t nw = wallMs(); if (gSoundMs.load() && nw - gSoundMs.load() > 4000) gFirstSoundMs.store(0);
+      const uint64_t sg = gTr.stats().segments + gCap.stats().segments; if (sg != gSegSeen) { gSegSeen = sg; gSegMs.store(nw); } }
     if (gDl.state() == dect2::ModelDownloader::State::Done) {
         const std::string id = gDl.modelId();
         if (!modelPresent(C.model)) { C.model = id; save(); }
@@ -410,9 +479,9 @@ void tick(App& first) {
 void shutdown() {
     if (gSinkOn) { dect2::AudioTap::instance().setSink(nullptr); gSinkOn = false; }
     for (App* r : receiversAll()) if (r && gTapOn[r->rxId]) { r->engine.airband().setChannelTap(nullptr); gTapOn[r->rxId] = false; }
-    gTr.configure([&] { auto c = gTr.config(); c.enabled = false; return c; }());
+    gTr.shutdown();     // a transcription in progress is aborted and joined: it must not run while the program's statics are destroyed
+    gCap.shutdown();
     gTr.setBackend(nullptr);
-    gCap.configure([&] { auto c = gCap.config(); c.enabled = false; return c; }());
     gCap.setBackend(nullptr);
     gBackend.reset();
     if (gLoadTh.joinable()) gLoadTh.join();
@@ -513,7 +582,7 @@ void captions(App& a) {
     std::string ind;
     if (!C.enabled || !backendReady()) {
         ImGui::AlignTextToFramePadding();
-        ImGui::TextDisabled("%s", C.enabled ? tr("Live captions: loading the speech model ...") : tr("Live captions: off."));
+        { int lv = 0; const std::string sl = C.enabled ? statusLine(&lv) : std::string(tr("Live captions: off.")); ImGui::TextColored(lv == 2 ? pal::warnAmber() : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled), "%s", sl.c_str()); }
         ImGui::SameLine();
         if (ImGui::SmallButton(tr("Set up transcripts"))) gWindowOpen = true;
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Turns what is said on the airband channels into text as it is heard. It needs a speech model that you download or put in the models folder."));
@@ -535,7 +604,7 @@ void captions(App& a) {
     f.mode = "airband";
     const auto v = gStore.find(f, 3);
     ImGui::BeginChild("##capbox", ImVec2(0, 78 * gUi), true);
-    if (v.empty()) ImGui::TextDisabled("%s", tr("Nothing heard yet."));
+    if (v.empty()) { int lv = 0; const std::string sl = statusLine(&lv); ImGui::TextDisabled("%s", sl.c_str()); }
     ImGui::PushTextWrapPos(0);
     for (auto it = v.rbegin(); it != v.rend(); ++it) {
         ImGui::TextDisabled("%s  %s", tstr(it->wall).c_str(), it->channel.c_str());
@@ -614,7 +683,7 @@ const char* kLangs[][2] = {{"en", "English"}, {"auto", "Auto-detect (needs a mul
 
 void settingsPanel() {
     ImGui::PushTextWrapPos(0);
-    ImGui::TextColored(pal::warnAmber(), "%s", tr("Privacy: what is said on public aviation radio is public, but the speech engine runs here on your computer and the text is kept in your data folder. Do not use it on private conversations: marine, amateur, CB and every other mode are off until you choose them, and a visible line shows whenever transcription is on."));
+    ImGui::TextColored(pal::warnAmber(), "%s", tr("Privacy: what is said on public aviation radio is public, but the speech engine runs here on your computer and the text is kept in your data folder. Do not use it on private conversations. It is on for what you are listening to (FM, AM, marine, amateur, CB, digital voice ...) once a speech model is installed; untick the boxes below to stop it. A visible line shows what it is doing."));
     ImGui::PopTextWrapPos();
     ImGui::Spacing();
     bool ch = false;
@@ -625,8 +694,8 @@ void settingsPanel() {
     ImGui::SameLine();
     ch |= ImGui::Checkbox(tr("Marine VHF"), &C.marine);
     ImGui::SameLine();
-    ch |= ImGui::Checkbox(tr("Any other mode that plays sound (amateur, CB, FM ...)"), &C.other);
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Takes the sound you hear. Music and private conversations are not meant for this: leave it off unless you need it."));
+    ch |= ImGui::Checkbox(tr("Transcribe what I am listening to"), &C.other);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Takes the sound you hear in any mode (FM, AM, amateur, CB, digital voice ...) and turns the speech in it into text. Music is skipped."));
     ImGui::EndDisabled();
     if (ch) { save(); applyConfig(); }
 
@@ -1004,7 +1073,8 @@ void captionsWindow(App& a) {
         const dect2::TranscriberStats ts = gCap.stats();
         ImGui::SetWindowFontScale((float)st.sizePct / 100.f);
         ImGui::PushTextWrapPos(0);
-        if (cues.empty()) ImGui::TextDisabled("%s", (ts.busy || ts.queued) ? tr("working ...") : tr("listening ..."));
+        if (cues.empty()) { int lv = 0; const std::string sl = statusLine(&lv); ImGui::TextColored(lv == 2 ? pal::warnAmber() : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled), "%s", sl.c_str()); }
+        (void)ts;
         for (const auto& c : cues) {
             ImGui::TextUnformatted(capLine(c).c_str());
         }

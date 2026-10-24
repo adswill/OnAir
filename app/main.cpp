@@ -6,6 +6,7 @@
 #endif
 #include "app.h"
 #include "ui/contrast.h"
+#include "transcribe/transcribe_app.h"
 #include "state/tune_worker.h"
 #include "ui/touch.h"
 #include "dect2/source/iq_file.h"
@@ -226,6 +227,7 @@ static void statusLog(App& app) {
 
 // after the --shot picture: the stream and player state on stderr
 static void shotReport(App& app) {
+    tx::shotReport();
     { for (int i = 0; i < 20; i++) savePrefs(app);   // the cost of the save that every tuning event used to cost on the UI thread, 20 runs
       const tunestat::Stats& ts = tuneStats(); fprintf(stderr, "tune: settings save mean %.2f ms max %.2f ms (n=%u); retunes %u mean %.2f ms max %.2f ms; saves deferred by the debounce %u\n", ts.saveMsMean(), ts.saveMsMax, ts.saves, ts.retunes, ts.retuneMsMean(), ts.retuneMsMax, ts.savesDeferred);
       const tunework::Stats tw = tunework::stats(); fprintf(stderr, "tune thread: posted %llu, radio calls %llu, coalesced %llu, UI post max %.3f ms, driver call mean %.2f ms max %.2f ms\n", (unsigned long long)tw.posted, (unsigned long long)tw.done, (unsigned long long)tw.coalesced, tw.postMsMax, tw.callMsMean, tw.callMsMax); }

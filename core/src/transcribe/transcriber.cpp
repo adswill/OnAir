@@ -4,6 +4,8 @@
 #include <cctype>
 #include <chrono>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <set>
 #include <sstream>
 
@@ -164,6 +166,18 @@ TranscriberStats Transcriber::stats() const {
     return s;
 }
 
+void Transcriber::shutdown() {
+    std::shared_ptr<SpeechBackend> be;
+    {
+        std::lock_guard<std::mutex> lk(mu_);
+        cfg_.enabled = false;
+        q_.clear();
+        be = backend_;
+    }
+    if (be) be->abort();   // whisper keeps running its decoder otherwise, and the program's statics (ggml's mutex) are gone while it does: a crash at exit
+    stopWorkers();
+}
+
 void Transcriber::clearStats() { std::lock_guard<std::mutex> lk(mu_); st_ = TranscriberStats{}; }
 
 bool Transcriber::active() const {
@@ -210,6 +224,7 @@ std::string Transcriber::promptFor(const SourceInfo& s) const {
 }
 
 bool Transcriber::takeSegment(Src& s, VoiceSegment&& g, std::vector<Job>& ready) {   // mu_ is held
+    if (std::getenv("ONAIR_TX_DEBUG")) fprintf(stderr, "tx-debug: piece %.1f s level %.1f dB syllabic %.2f stdDb %.1f music %d\n", g.durSec, g.levelDb, g.syllabic, g.stdDb, g.music ? 1 : 0);
     if (g.music) { st_.musicSkipped++; return false; }
     Job j;
     j.src = s.info; j.seg = std::move(g); j.turn = ++s.turn;

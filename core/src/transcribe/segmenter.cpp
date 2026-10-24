@@ -65,7 +65,9 @@ void speechEnvelopeFeatures(const std::vector<float>& e, float& syllabic, float&
     syllabic = all > 0 ? (float)(band / all) : 0.f;
 }
 
-bool looksLikeSpeech(float syllabic, float stdDb) { return stdDb >= 3.0f && syllabic >= 0.25f; }
+// Real FM speech measured syllabic 0.20 and stdDb 13: with the old 0.25 limit every piece of clear speech was thrown away as music. A level that swings
+// by 8 dB or more is speech (or a drum solo) whatever its rhythm; whisper itself writes [Music] for the rest and the filters drop that.
+bool looksLikeSpeech(float syllabic, float stdDb) { return stdDb >= 3.0f && (syllabic >= 0.25f || (stdDb >= 8.0f && syllabic >= 0.10f)); }
 
 VoiceSegmenter::VoiceSegmenter(int inRate, const SegmenterOptions& o) : rate_(std::max(1000, inRate)), o_(o) {
     blk_ = std::max<size_t>(8, (size_t)(rate_ / 50));

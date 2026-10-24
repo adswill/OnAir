@@ -2,6 +2,7 @@
 #include "dect2/transcribe/transcriber.h"
 #include "whisper.h"
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <mutex>
 #include <vector>
@@ -32,6 +33,7 @@ public:
         return true;
     }
     const char* name() const override { return "whisper.cpp"; }
+    void abort() override { abort_.store(true); }
     bool englishOnly() const override { return !multi_; }
 
     SpeechResult transcribe(const float* pcm, size_t n, const SpeechOptions& o) override {
@@ -52,11 +54,14 @@ public:
         p.temperature = 0.f;
         p.temperature_inc = 0.2f;
         p.no_speech_thold = 0.6f;
+        p.abort_callback = [](void* u) { return static_cast<std::atomic<bool>*>(u)->load(); };
+        p.abort_callback_user_data = &abort_;
         p.translate = multi_ && o.translate;
         p.initial_prompt = o.prompt.empty() ? nullptr : o.prompt.c_str();
         const std::string lang = multi_ ? o.language : std::string("en");
-        p.language = lang == "auto" ? nullptr : lang.c_str();
-        p.detect_language = lang == "auto";
+        // "auto": language "auto" makes whisper detect it and then transcribe. detect_language = true would only detect and return NO text.
+        p.language = lang.c_str();
+        p.detect_language = false;
         // at least a second of audio: the engine pads short input, but it hallucinates on less
         std::vector<float> padded;
         if (n < 16000) { padded.assign(pcm, pcm + n); padded.resize(16000, 0.f); pcm = padded.data(); n = padded.size(); }
@@ -94,6 +99,7 @@ public:
 private:
     whisper_context* ctx_ = nullptr;
     bool multi_ = false;
+    std::atomic<bool> abort_{false};
     std::mutex mu_;
     std::vector<whisper_state*> free_;
 };

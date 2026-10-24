@@ -42,6 +42,7 @@ public:
     virtual SpeechResult transcribe(const float* pcm16k, size_t n, const SpeechOptions& o) = 0;   // may be called from several threads
     virtual const char* name() const { return "speech"; }
     virtual bool englishOnly() const { return true; }
+    virtual void abort() {}   // the program is ending: a transcription in progress returns as soon as it can
 };
 
 // whisper.cpp behind SpeechBackend. nullptr and *err when the model cannot be loaded, or when this build has no whisper.cpp.
@@ -114,6 +115,7 @@ public:
     void waitIdle();                                      // tests: until the queue is empty and nothing runs
     void setSynchronous(bool on);                         // tests: the work runs in feed(), no threads
     void clearStats();
+    void shutdown();                                      // the program is ending: aborts the running transcription, stops the workers and waits for them
 
 private:
     struct Job { SourceInfo src; VoiceSegment seg; int turn = 0; };
