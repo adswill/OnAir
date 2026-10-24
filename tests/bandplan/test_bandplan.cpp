@@ -140,6 +140,8 @@ int main() {
     // ---- defaults from the language and locale
     CHECK(reg.defaultFor("de", "") == "de" && reg.defaultFor("lt", "en_US.UTF-8") == "lt" && reg.defaultFor("ja", "") == "jp" && reg.defaultFor("zh", "") == "cn", "language picks a plan");
     CHECK(reg.defaultFor("en", "en_GB.UTF-8") == "gb" && reg.defaultFor("en", "en_US.UTF-8") == "us" && reg.defaultFor("en", "en_AU") == "au" && reg.defaultFor("en", "") == "" && reg.defaultFor("hu", "") == "eu", "locale region picks a plan");
+    CHECK(reg.defaultFor("pt_PT", "") == "eu" && reg.defaultFor("pt-PT", "") == "eu" && reg.defaultFor("pt_PT.UTF-8", "") == "eu" && reg.defaultFor("pt", "") == "br" && reg.defaultFor("pt-BR", "") == "br",
+          "Portuguese (Portugal) picks the CEPT plan, other Portuguese the Brazilian one");
 
     // ---- JSON and CSV round trips of every built-in plan
     for (const Plan& p : builtinPlans()) {

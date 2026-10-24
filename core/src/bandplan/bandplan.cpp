@@ -615,6 +615,9 @@ std::string Registry::localeFromEnv() {
 std::string Registry::defaultFor(const std::string& lang, const std::string& locale) const {
     static const std::pair<const char*, const char*> byLang[] = {{"de", "de"}, {"fr", "fr"}, {"it", "it"}, {"es", "es"}, {"nl", "nl"}, {"pl", "pl"}, {"lt", "lt"},
                                                                 {"ja", "jp"}, {"zh", "cn"}, {"pt", "br"}, {"hu", "eu"}};
+    std::string full = lower(lang.substr(0, lang.find_first_of(".@")));
+    std::replace(full.begin(), full.end(), '_', '-');
+    if (full == "pt-pt" && find("eu")) return "eu";   // Portuguese (Portugal): the CEPT plan, not Brazil's
     std::string l = lower(lang.substr(0, lang.find_first_of("-_")));
     for (const auto& e : byLang) if (l == e.first && find(e.second)) return e.second;
     // the region of the system locale: en_GB.UTF-8 -> GB
