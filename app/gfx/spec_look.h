@@ -61,12 +61,12 @@ constexpr int kTraceCyan = 3, kTraceLightBlue = 8, kTracePaleCyan = 9, kTracePal
 
 // OnAir's look (one look; the palette, the trace colour and the rest stay the user's): black, a (35,35,35) grid both ways, a pale cyan
 // trace (140,226,237) over a fill of the same colour at alpha 0.2, the tuned channel a white block at alpha 0.2 with a red edge and a yellow
-// centre, big kHz offsets on a black strip, the Navy heat waterfall with the noise floor at its dark end. Any saved look number (the old
+// centre, absolute frequency labels on a black strip, the Navy heat waterfall with the noise floor at its dark end. Any saved look number (the old
 // presets) reads as this one.
 inline const LookSet& lookSet(int) {
     static const LookSet k = {"OnAir", false, {0, 0, 0, 1}, {0, 0, 0, 1}, {0.78f, 0.80f, 0.82f, 0.17f}, true, 0.f, 0.f, kTracePaleCyan, 1.5f, true, 0.21f, 0.21f, 0,
          InterpCubic, {1, 1, 1, 0.20f}, {1, 1, 1, 0.20f}, {1.f, 0.10f, 0.08f, 0.95f}, 1.f, {1.f, 0.95f, 0.10f, 0.95f}, 1.f, {1, 1, 1, 0.f}, 0.f,
-         true, {0, 0, 0, 1}, {0.96f, 0.96f, 0.96f, 1}, 1.35f, false, LabelsOffset, kMapNavyHeat, true, true,
+         true, {0, 0, 0, 1}, {0.96f, 0.96f, 0.96f, 1}, 1.35f, false, LabelsAbsolute, kMapNavyHeat, true, true,
          {0.06f, 0.06f, 0.07f, 0.92f}, {0.5f, 0.5f, 0.52f, 0.8f}, {0.95f, 0.95f, 0.95f, 1}, 3.f, 80.f, 3.f};
     return k;
 }

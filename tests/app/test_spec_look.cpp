@@ -26,6 +26,12 @@ int main() {
     check(tickLabel(101.5, 0.5, LabelsOffset, 100.0, 1) == "1.5K" || tickLabel(101.5, 0.5, LabelsOffset, 100.0, 1) == "1500K", "offset under 1 MHz step in K");
     check(tickLabel(102, 1, LabelsOffset, 100.0, 1) == "2M", "offset M labels");
     check(tickLabel(100.0125, 0.0025, LabelsOffset, 100.0, 1) == "12.5K", "offset decimals");
+    // the shipped look shows absolute frequencies (3.0.0 showed offsets "0, 1, 2, -1, -2 M")
+    check(lookSet(0).labelMode == LabelsAbsolute, "default look labels are frequencies");
+    { const auto t = freqTicks(97, 99, 1000, 8, 28, lookSet(0).labelMode, 98.0);
+      bool has98 = false, off = false;
+      for (const auto& k : t) if (k.major && !k.label.empty()) { if (k.label == "98" || k.label == "98.0") has98 = true; if (k.label == "0" || k.label.back() == 'M' || k.label.back() == 'K') off = true; }
+      check(has98 && !off, "FM span ticks are absolute MHz"); }
     check(freqUnit(0.1, 0.5) == 0 && freqUnit(87, 108) == 1 && freqUnit(10400, 10500) == 2, "units");
     // ticks over many spans and widths: majors on the step, labels never touch, never leave the axis, a minor between majors
     const double charPx = 8, gap = 28;
