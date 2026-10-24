@@ -95,6 +95,12 @@ void VoiceSegmenter::block(const float* x, size_t n, int64_t endMs, const std::f
     // noise floor: follows a fall at once, a rise slowly (a long transmission must not raise it)
     if (db < floorDb_) floorDb_ = db; else floorDb_ += (db - floorDb_) * (active_ ? 0.0005 : 0.01);
     floorDb_ = std::max(floorDb_, -80.0);
+    // The steady hiss of a receiver (FM, ham, marine: above the gate) must become the floor within seconds. Starting from -80 dB with a slow rise it
+    // looked like voice for minutes: the transmission never ended, was cut into 27 s pieces of noise and the speech in it was never read. So the floor
+    // also rises to the quietest block of the last 2 s (speech always dips below that between words; a steady bed does not).
+    recent_.push_back((float)db);
+    if (recent_.size() > 100) recent_.pop_front();
+    if (recent_.size() >= 100) floorDb_ = std::max(floorDb_, (double)*std::min_element(recent_.begin(), recent_.end()));
     const bool voice = db > std::max(o_.gateDb, floorDb_ + o_.marginDb);
     const size_t preMax = (size_t)(o_.preRollSec * rate_);
     if (!active_) {

@@ -1105,6 +1105,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_whisper_model tests/transcribe/test_whisper_model.cpp)   # needs DECT2_WHISPER_MODEL (a model file); passes as skipped without it
   target_link_libraries(test_whisper_model PRIVATE dect2core)
   add_test(NAME whisper_model COMMAND test_whisper_model)
+  add_executable(test_transcribe_speech tests/transcribe/test_transcribe_speech.cpp)   # real speech through the app's path; skipped without DECT2_WHISPER_MODEL + DECT2_SPEECH_WAV
+  target_link_libraries(test_transcribe_speech PRIVATE dect2core)
+  add_test(NAME transcribe_speech COMMAND test_transcribe_speech)
   add_executable(test_audio_monitor tests/audio/test_audio_monitor.cpp)
   target_link_libraries(test_audio_monitor PRIVATE dect2core)
   add_test(NAME audio_monitor COMMAND test_audio_monitor)

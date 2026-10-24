@@ -6,6 +6,7 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <vector>
 
@@ -53,6 +54,7 @@ private:
     size_t voicedBlocks_ = 0, quietRun_ = 0;
     double sumPow_ = 0;
     double floorDb_ = -80;
+    std::deque<float> recent_;            // the last 100 block levels (dB), for the noise floor
     float lastDb_ = -120;
     int64_t startMs_ = 0;
     std::vector<float> env_;              // block levels (dB) of the transmission so far, for the music judgement
