@@ -161,6 +161,7 @@ void onAbort(int) {   // abort() and std::terminate do not raise an exception
 }
 
 void arm(const fs::path& txt, const fs::path& dmp) {
+    if (getenv("ONAIR_NO_CRASH_REPORT")) return;   // leave crashes to a debugger such as WinDbg (#291)
     wcsncpy(gReportW, txt.wstring().c_str(), 1023);
     wcsncpy(gDumpW, dmp.wstring().c_str(), 1023);
     SetUnhandledExceptionFilter(onException);

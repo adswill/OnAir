@@ -637,3 +637,5 @@ All six items are implemented (none behind a switch): max-FFT smooth trace = spi
 
 ## 2026-10-24: issue-feat-031 (4 small 3.1 features)
 #165 already done in 3.0 (checked). #225 Hellschreiber user font file for CJK/symbols (hfdig_kbd_hellfont.cpp, stb_truetype from imgui, nothing bundled). #233 Airspy lna/mixer/vga and SDRplay LNA state / IF reduction as radio settings (-1 = follow the slider). #236 Whole span for VDL2 (worldwide channel set) and HFDL (table + list). Tests: test_vdl2_rx, test_hfdig_kbd, test_native. Status table: docs/ISSUES-2026-10-24-feat.md.
+### 2026-10-24 issue-ui-031
+Checked 16 UI/platform issues against v3.0.0: 15 already fixed there; #291 fixed (server setvbuf size 0 on Windows, ONAIR_NO_CRASH_REPORT env). Table: docs/ISSUES-2026-10-24-ui.md. fix-spectrum-axis-030 still unmerged.
