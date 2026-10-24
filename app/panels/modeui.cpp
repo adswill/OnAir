@@ -355,7 +355,7 @@ static std::set<int>& wideFamilies() {
 }
 bool modeSupportsWide(int family) { return modeSupportsWideHf(family) || wideFamilies().count(family) > 0; }
 void registerWideMode(int family) { wideFamilies().insert(family); }
-bool wideActive(const App& a) { return a.wideDecode && modeSupportsWide(a.family) && a.engine.running() && Engine::wideSupported(a.family + 1) && a.rx.standard == a.family + 1; }
+bool wideActive(const App& a) { return (a.wideDecode || a.wideFollow) && modeSupportsWide(a.family) && a.engine.running() && Engine::wideSupported(a.family + 1) && a.rx.standard == a.family + 1; }
 
 bool wideFamOn(const App& a, int f) {
     if (f < 0 || f >= 192) return false;
@@ -374,9 +374,10 @@ void wideSync(App& a) {
         lastFam = a.family;
         a.wideDecode = wideFamOn(a, a.family);
         a.wideSel = 0; lastSel = -1;
+        if (a.wideFollow) { a.wideFollow = false; a.engine.setWideFollow(false, {}); }   // the follower belongs to the mode left
     }
     if (a.wideTuningDirty) { a.engine.setWideTuning(a.wideTuning); a.wideTuningDirty = false; }
-    const bool on = a.wideDecode && modeSupportsWide(a.family) && Engine::wideSupported(a.family + 1);
+    const bool on = (a.wideDecode || a.wideFollow) && modeSupportsWide(a.family) && Engine::wideSupported(a.family + 1);
     if (on != lastOn) { a.engine.setWideVoice(on); lastOn = on; a.wideSel = 0; lastSel = -1; }
     if (!on) return;
     if (a.wideSel != lastSel) { a.engine.setWideSelected(a.wideSel); lastSel = a.wideSel; }

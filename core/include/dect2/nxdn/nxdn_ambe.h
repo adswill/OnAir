@@ -17,6 +17,7 @@ public:
     ~NxdnAmbe();
     bool ok() const;
     void decode(const uint8_t bits[72], int16_t pcm[160]);
+    void decodeFr(const char fr[4][24], int16_t pcm[160]);   // the four code words already de-interleaved (P25 Phase 2 has its own bit order)
 private:
     struct Impl;
     std::unique_ptr<Impl> p_;

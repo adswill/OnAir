@@ -1,10 +1,12 @@
 // P25 Phase 2 receiver (see p25p2_rx.h; the protocol layout is in p25p2_proto.h and is this program's own reading of public descriptions).
 #include "dect2/p25p2/p25p2_rx.h"
+#include "dect2/dsp/cic3.h"
 #include "dect2/p25p2/p25p2_proto.h"
 #include "dect2/p25/p25_proto.h"
 #include "dect2/p25p2/p25p2_tel.h"
 #include "dect2/nxdn/nxdn_ambe.h"
 #include "dect2/audio/audioout.h"
+#include "dect2/voice/voice_monitor.h"
 #include "dect2/common/mathconst.h"
 #include <algorithm>
 #include <atomic>
@@ -54,7 +56,7 @@ struct P25p2Receiver::Impl {
     double fd = 0, inv = 1;
     std::complex<double> lo{1, 0}, loStep{1, 0};
     int loCount = 0;
-    std::complex<double> integ[3], combPrev[3];
+    Cic3 cic;   // the decimator (dsp/cic3.h: exact for as long as it runs)
     int decCount = 0;
     std::vector<cf32> dbuf;
     int64_t dN = 0;
@@ -68,7 +70,7 @@ struct P25p2Receiver::Impl {
         inv = 1.0 / ((double)D * D * D);
         lo = 1; loCount = 0;
         loStep = rate > 0 ? std::polar(1.0, -2 * kPi * offset / rate) : std::complex<double>(1, 0);
-        for (int i = 0; i < 3; i++) integ[i] = combPrev[i] = 0;
+        cic.reset();
         decCount = 0;
         dbuf.assign(8192, cf32(0, 0)); dN = 0;
         rstep = fd / kFs;
@@ -96,11 +98,10 @@ struct P25p2Receiver::Impl {
         const std::complex<double> v = x * lo;
         lo *= loStep;
         if (++loCount >= 4096) { loCount = 0; lo /= std::abs(lo); }
-        integ[0] += v; integ[1] += integ[0]; integ[2] += integ[1];
+        cic.integrate(v);
         if (++decCount >= D) {
             decCount = 0;
-            std::complex<double> c = integ[2];
-            for (int k = 0; k < 3; k++) { const std::complex<double> t = c; c = c - combPrev[k]; combPrev[k] = t; }
+            const std::complex<double> c = cic.comb();
             dbuf[(size_t)(dN & 8191)] = cf32((float)(c.real() * inv), (float)(c.imag() * inv));
             dN++;
             while (dN > (int64_t)std::floor(rp) + M) {
@@ -126,22 +127,23 @@ struct P25p2Receiver::Impl {
     bool win = false;
     int64_t winStart = 0;
     int winDist[kSps] = {};
-    // the lock
+    // the lock: bursts of 180 dibits from the sync word on (as XMC_SDR P25_P2_Decode)
     bool locked = false;
-    int64_t nextDibitN = 0, syncEndPred = 0, pendingShift = 0;   // syncEndPred: a sample at which a sync word ends, modulo one superframe
-    int slotIdx = 0, slotPos = 0, missed = 0, badRun = 0;
-    uint8_t buf[p25p2::kSlotDibits];
+    int64_t nextDibitN = 0, syncEndPred = 0, pendingShift = 0;   // syncEndPred: a sample at which a sync word ends, modulo one burst
+    int slotIdx = 0, slotPos = 0, dibSinceSync = 0;              // slotIdx: the slot of the superframe (0..11) the burst being received is taken to be
+    uint8_t buf[p25p2::kBurstDibits];
     double lastSync = -10, snrAvg = 0;
+    static constexpr int kLostDibits = 2 * p25p2::kSlotsPerSuperframe * p25p2::kSlotDibits;   // no sync word for two superframes: the lock is lost
 
     void initFilter() {
         double sum = 0;
-        for (int k = 0; k < kTaps; k++) { h[k] = (float)p25p2::rrcImpulse((double)(k - kTaps / 2) / kSps, 0.2); sum += h[k]; }
+        for (int k = 0; k < kTaps; k++) { h[k] = (float)p25p2::rrcImpulse((double)(k - kTaps / 2) / kSps, p25p2::kRollOff); sum += h[k]; }
         for (float& v : h) v = (float)(v / sum);
         for (auto& v : zr) v = cf32(0, 0);
         for (auto& v : yr) v = cf32(0, 0);
         for (auto& v : angr) v = 0;
         for (auto& r : reg) r = 0;
-        n = 0; win = false; locked = false; cfoStep = 0; slotIdx = slotPos = missed = badRun = 0;
+        n = 0; win = false; locked = false; cfoStep = 0; slotIdx = slotPos = dibSinceSync = 0;
     }
 
     void sample(cf32 z) {
@@ -193,43 +195,38 @@ struct P25p2Receiver::Impl {
         lastSync = sigSec();
         const double snr = 10 * std::log10(1.0 / std::max(1e-4, bestVar));
         snrAvg = snrAvg == 0 ? snr : snrAvg + 0.3 * (snr - snrAvg);
-        if (!locked || missed >= 2) {
-            cfoStep = bestMean;
-            locked = true; missed = 0; badRun = 0;
-            slotIdx = 0; slotPos = p25p2::kIschDibits;
-            for (int k = 0; k < p25p2::kIschDibits; k++) buf[k] = (uint8_t)((p25p2::kSyncWord >> (38 - 2 * k)) & 3);
-            syncEndPred = bestN; pendingShift = 0;
-            nextDibitN = bestN + kSps;
-            return;
-        }
-        constexpr int64_t kSf = (int64_t)p25p2::kSlotsPerSuperframe * p25p2::kSlotDibits * kSps;
-        int64_t shift = ((bestN - syncEndPred) % kSf + kSf) % kSf;
-        if (shift > kSf / 2) shift -= kSf;
-        if (std::llabs((long long)shift) <= 3) {
-            pendingShift += shift;             // the symbol clock follows the sync, from the next slot on
-            syncEndPred += shift;
-            cfoStep += 0.5 * wrapPi((float)(bestMean - cfoStep));
-            missed = 0;
-        }
+        constexpr int64_t kB = (int64_t)p25p2::kBurstDibits * kSps;
+        if (locked) {
+            int64_t shift = ((bestN - syncEndPred) % kB + kB) % kB;
+            if (shift > kB / 2) shift -= kB;
+            if (std::llabs((long long)shift) <= 3) {
+                pendingShift += shift;             // the symbol clock follows the sync, from the next burst on
+                syncEndPred += shift;
+                cfoStep += 0.5 * wrapPi((float)(bestMean - cfoStep));
+                dibSinceSync = 0;
+                return;
+            }
+            // a sync word off the burst boundary: the demodulator slipped and every burst since is misframed. Only an exact one re-frames a running
+            // lock (a chance match in the payload is 2^-40 per position).
+            if (winDist[bestN - winStart] != 0) return;
+            tel.realigns++;
+        } else cfoStep = bestMean;
+        locked = true; dibSinceSync = 0;
+        slotPos = p25p2::kIschDibits;            // the slot counter runs on: the I-ISCH puts it right
+        p25p2::ischSync(buf);
+        syncEndPred = bestN; pendingShift = 0;
+        nextDibitN = bestN + kSps;
     }
 
     void takeDibit(int dib) {
         buf[slotPos++] = (uint8_t)dib;
-        if (slotPos == p25p2::kIschDibits) {
-            if (slotIdx == 0) {
-                if (p25p2::syncDistance(buf) <= 8) { missed = 0; badRun = 0; } else { missed++; tel.ischBad++; if (missed >= 3) { unlock(); return; } }
-            } else {
-                int slot = 0, sf = 0;
-                if (p25p2::ischDecode(buf, slot, sf)) { slotIdx = slot; badRun = 0; }
-                else { tel.ischBad++; if (++badRun >= 12) { unlock(); return; } }
-            }
-        }
-        if (slotPos == p25p2::kSlotDibits) {
-            processSlot();
-            slotIdx = (slotIdx + 1) % p25p2::kSlotsPerSuperframe;
-            slotPos = 0;
-            nextDibitN += pendingShift; pendingShift = 0;
-        }
+        dibSinceSync++;
+        if (slotPos < p25p2::kBurstDibits) return;
+        processBurst();
+        slotIdx = (slotIdx + 1) % p25p2::kSlotsPerSuperframe;
+        slotPos = 0;
+        nextDibitN += pendingShift; pendingShift = 0;
+        if (dibSinceSync > kLostDibits) unlock();
     }
 
     void unlock() { locked = false; tel.unlocks++; slotPos = 0; }
@@ -285,6 +282,7 @@ struct P25p2Receiver::Impl {
         }
         c = P25p2Call();
         c.slot = ci + 1; c.active = true; c.wallTime = (int64_t)time(nullptr); c.startSec = sigSec();
+        if (src < 0 && dst < 0 && hint[ci].dst >= 0) { src = hint[ci].src; dst = hint[ci].dst; group = hint[ci].group; }   // what the grant said
         c.src = src; c.dst = dst; c.group = group; c.lateEntry = late;
         c.cryptoKnown = cryptoKnown; c.algId = alg;
         c.encrypted = cryptoKnown && (alg != p25p2::kAlgClear && alg != 0);
@@ -306,26 +304,33 @@ struct P25p2Receiver::Impl {
         snprintf(b, sizeof b, "slot %d: %s, %.1f s, %u voice frames", ci + 1, seen ? "call ended" : "signal lost", c.durSec, (unsigned)c.voiceFrames);
         event(b);
         if (tel.audioSlot == ci + 1) tel.audioSlot = 0;
+        held[ci].clear();
+        ess[ci].nb = 0;
         flushAudio();
     }
-    // fills in what a voice channel user message tells about the call on the slot (starting it when it is not known yet)
+    // fills in what a voice channel user message tells about the call on the slot (starting it when it is not known yet). Its service options can
+    // say encrypted, never clear: the NSW PSN sends AES calls without the bit (the PTT or the ESS decides).
     void userMsg(int ci, int svc, int dst, int src, bool group) {
         lastAct[ci] = sigSec();
         P25p2Call& c = tel.now[ci];
-        if (!c.active) { startCall(ci, src, dst, group, true, p25p2::kAlgClear, svc, true); tel.now[ci].cryptoKnown = true; return; }
+        if (!c.active) { startCall(ci, src, dst, group, false, p25p2::kAlgClear, svc, true); return; }
         if (c.src < 0) c.src = src;
         if (c.dst < 0) { c.dst = dst; c.group = group; }
         else if (!group && c.group) { c.dst = dst; c.group = false; }   // the PTT carries a group address; a unit to unit user message corrects it
         c.emergency = c.emergency || (svc & 0x80) != 0;
-        if (svc & 0x40) c.encrypted = true;
-        c.cryptoKnown = true;
+        if (svc & 0x40) { c.encrypted = true; c.cryptoKnown = true; }
         if (group) touchTg(dst, src, 0, c.encrypted, c.emergency, false, false);
     }
 
     void grant(int tg, int src, int ch, bool group, int opts) {
         const double now = sigSec();
         for (auto& g : grants)
-            if (g.tg == tg && g.src == src && g.ch == ch && g.group == group && now - g.last < 4) { g.last = now; return; }
+            if (g.tg == tg && g.src == src && g.ch == ch && g.group == group && now - g.last < 4) {
+                g.last = now;
+                if (freqOf(ch) > 0)   // the identifier update came after the first grant: the log entry gets its frequency now
+                    for (auto& e : tel.log) if (e.kind == 1 && e.channel == ch && e.dst == tg && e.src == src && e.freqHz <= 0) { e.freqHz = freqOf(ch); break; }
+                return;
+            }
         grants.erase(std::remove_if(grants.begin(), grants.end(), [&](const Grant& g) { return now - g.last > 10; }), grants.end());
         grants.push_back({tg, src, ch, group, now});
         P25p2Call c;
@@ -453,31 +458,112 @@ struct P25p2Receiver::Impl {
     float upPrev = 0;
     std::unique_ptr<AudioOut> audioOut;
 
-    void voiceFrame(int ci, const uint8_t* dib36) {
+    struct Frame { char fr[4][24]; };
+    // voice of a call whose encryption is not known yet (joined late, no ESS yet): played once the ESS says clear. The grant on the control channel
+    // is no guide: the NSW PSN grants AES calls without the encryption bit in the service options.
+    std::vector<Frame> held[2];
+    bool vocUsed[2] = {false, false};  // the slot's vocoder has state from a call (a FACCH resets it)
+
+    void voiceFrame(int ci, const char fr[4][24]) {
         uint8_t bits[72];
-        for (int i = 0; i < 36; i++) { bits[2 * i] = (uint8_t)((dib36[i] >> 1) & 1); bits[2 * i + 1] = (uint8_t)(dib36[i] & 1); }
+        p25p2::ambeFlatten(fr, bits);
         lastAct[ci] = sigSec();
-        if (!tel.now[ci].active) startCall(ci, -1, -1, true, false, p25p2::kAlgClear, -1, true);
+        tel.voiceSec[ci] = sigSec();
+        if (!tel.now[ci].active) {
+            startCall(ci, -1, -1, true, false, p25p2::kAlgClear, -1, true);
+        }
         P25p2Call& c = tel.now[ci];
         c.voiceFrames++;
         tel.voiceFrames++;
         const bool clear = c.cryptoKnown && !c.encrypted;
         if (vtap) vtap(ci + 1, bits, clear);
-        if (!clear) { if (c.encrypted) tel.encryptedSkipped++; return; }   // encrypted (or not yet known): reported, never decoded
+        if (c.encrypted) { tel.encryptedSkipped++; offer(ci, true); return; }   // reported (and listed in the voice monitor), never decoded
+        if (!c.cryptoKnown) {
+            if (held[ci].size() < 2 * 18) { Frame f; std::copy_n(&fr[0][0], 4 * 24, &f.fr[0][0]); held[ci].push_back(f); }
+            return;
+        }
+        play(ci, fr);
+    }
+
+    // the ESS of a slot has decoded: the call's encryption is known now
+    void essKnown(int ci, int alg, int key) {
+        lastAct[ci] = sigSec();
+        if (!tel.now[ci].active) startCall(ci, -1, -1, true, true, alg, -1, true);
+        P25p2Call& c = tel.now[ci];
+        const bool was = c.cryptoKnown && c.encrypted;
+        c.cryptoKnown = true; c.algId = alg; c.keyId = key;
+        c.encrypted = alg != p25p2::kAlgClear;
+        if (c.encrypted && !was) {
+            char b[96];
+            snprintf(b, sizeof b, "slot %d: encrypted, algorithm 0x%02X key %d (not decoded)", ci + 1, alg, key);
+            event(b);
+            touchTg(c.dst, c.src, 0, true, c.emergency, false, false);
+        }
+        if (c.encrypted) tel.encryptedSkipped += held[ci].size();
+        else for (const Frame& f : held[ci]) play(ci, f.fr);
+        held[ci].clear();
+    }
+
+    struct Ess { uint8_t b[16] = {}, a[28] = {}; int nb = 0; };
+    Ess ess[2];
+    void essB(int ci, const uint8_t* d) {
+        Ess& e = ess[ci];
+        if (e.nb >= 4) e.nb = 0;
+        p25p2::hexbitsGet(d + p25p2::kEssBPos, 4, e.b + 4 * e.nb);
+        e.nb++;
+    }
+    void essA(int ci, const uint8_t* d) {
+        Ess& e = ess[ci];
+        p25p2::hexbitsGet(d + p25p2::kEssA1Pos, 16, e.a);
+        p25p2::hexbitsGet(d + p25p2::kEssA2Pos, 12, e.a + 16);
+        const bool full = e.nb == 4;      // the four ESS-B parts of the four 4V bursts before
+        e.nb = 0;
+        if (!full) return;
+        int alg = 0, key = 0;
+        uint8_t mi[9];
+        if (!p25p2::essDecode(e.b, e.a, alg, key, mi)) { tel.essBad++; return; }
+        tel.essOk++;
+        essKnown(ci, alg, key);
+    }
+
+    // The voice monitor (voice_monitor.h, the "p25" one: Phase 1 and Phase 2 calls are one list, one played at a time) lists the call and says
+    // whether it is played. Without a monitor (silent) the slot choice decides alone.
+    struct Hint { int src = -1, dst = -1; bool group = true; double carrierHz = 0; };
+    Hint hint[2], hintSet[2];
+    bool hintReq = false;
+    voice::CallInfo playing;
+    voice::Monitor* activeMonitor() { return silent.load() ? nullptr : &voice::monitor("p25"); }
+    voice::Verdict offer(int ci, bool encrypted) {
+        voice::Monitor* mon = activeMonitor();
+        if (!mon) return voice::Verdict::Play;
+        const P25p2Call& c = tel.now[ci];
+        voice::CallInfo info;
+        info.src = c.src > 0 ? (uint32_t)c.src : 0; info.dst = c.dst > 0 ? (uint32_t)c.dst : 0;
+        info.group = c.group; info.emergency = c.emergency; info.encrypted = encrypted;
+        info.slot = ci + 1; info.carrierHz = hint[ci].carrierHz;
+        info.codecMissing = !tel.codec;
+        if (tel.colorCode > 0) { char b[24]; snprintf(b, sizeof b, "NAC %03X", tel.colorCode); info.access = b; }
+        const voice::Verdict v = mon->offer(info);
+        if (v == voice::Verdict::Play) playing = info;
+        return v;
+    }
+
+    void play(int ci, const char fr[4][24]) {
+        P25p2Call& c = tel.now[ci];
         c.clearFrames++;
         const int l = listen.load();
-        bool want;
-        if (l) want = l == ci + 1;
-        else {
+        if (l && l != ci + 1) return;   // the chosen slot only (the trunking follower's call)
+        if (!l && !activeMonitor()) {   // no monitor: the first slot heard plays
             if (tel.audioSlot == 0 || !tel.now[tel.audioSlot - 1].active) tel.audioSlot = ci + 1;
-            want = tel.audioSlot == ci + 1;
+            if (tel.audioSlot != ci + 1) return;
         }
-        if (l) tel.audioSlot = l;
-        if (!want) return;
+        if (offer(ci, false) != voice::Verdict::Play) return;
+        tel.audioSlot = ci + 1;
         if (!ambe[ci] && tel.codec) ambe[ci] = std::make_unique<NxdnAmbe>();
         if (!ambe[ci] || !ambe[ci]->ok()) return;
         int16_t pcm[160];
-        ambe[ci]->decode(bits, pcm);
+        ambe[ci]->decodeFr(fr, pcm);
+        vocUsed[ci] = true;
         for (int16_t s : pcm) aud8.push_back(s / 32768.f);
         tel.voiceDecoded++;
         c.voice = true;
@@ -487,33 +573,66 @@ struct P25p2Receiver::Impl {
     void flushAudio() {
         if (aud8.empty()) return;
         if (tap) tap(aud8.data(), aud8.size());
-        if (!silent.load()) {
+        voice::Monitor* mon = activeMonitor();
+        if (mon) mon->audio(playing, aud8.data(), aud8.size(), 1, 8000);   // the call's recording (when on)
+        if (!silent.load() && mon) {
             pcmOut.clear();
             for (float s : aud8) {
                 for (int k = 1; k <= 6; k++) { const float v = upPrev + (s - upPrev) * k / 6.f; pcmOut.push_back(v); pcmOut.push_back(v); }
                 upPrev = s;
             }
-            if (!audioOut) { audioOut = std::make_unique<AudioOut>(); audioOut->start(48000); audioOut->setStartThreshold(48000 / 5); }
-            audioOut->setVolume(volume.load()); audioOut->setMuted(muted.load());
+            voice::ensureOutput(audioOut, *mon);   // on the mode's output device
+            audioOut->setVolume(volume.load() * mon->volume()); audioOut->setMuted(muted.load());
             if (audioOut->bufferedFrames() > 48000 * 3 / 2) audioOut->flush();
             audioOut->write(pcmOut.data(), (int)(pcmOut.size() / 2));
         }
         aud8.clear();
     }
 
-    void processSlot() {
+    // the descrambler (setSystem): dibit i of the burst in slot s is XORed with seq[s * 180 + i]
+    uint8_t seq[p25p2::kScrambleDibits] = {};
+
+    void processBurst() {
         tel.slots++;
+        // the ISCH: the sync word (S-ISCH) or the I-ISCH with the logical channel and where in the superframe the burst is (as XMC_SDR)
+        const uint64_t isch = p25p2::ischValue(buf);
+        int ci = p25p2::slotChannel(slotIdx);
+        if (__builtin_popcountll(isch ^ p25p2::kSyncWord) > kSyncMax) {
+            int errs = 0;
+            const int v = p25p2::ischDecode(isch, &errs);
+            if (v < 0) tel.ischBad++;
+            else {
+                (errs ? tel.ischCorrected : tel.ischExact)++;
+                // I-ISCH in slots 0, 1 (location 0), 4, 5 (1) and 8, 9 (2), the channel bit giving the slot of the pair; the sync word in the others.
+                // (XMC_SDR sets slot 4 from channel 0 location 1; the rest is read off a recording of the NSW PSN.)
+                const int ch = (v >> 5) & 3, loc = (v >> 3) & 3;
+                if (loc < 3) slotIdx = 4 * loc + (ch & 1);
+                ci = ch & 1;
+            }
+        }
         tel.slotNow = slotIdx;
-        const int ci = slotIdx & 1;
-        const uint8_t* body = buf + p25p2::kIschDibits;
-        const int duid = p25p2::duidDecode(body);
-        const uint8_t* pay = body + p25p2::kDuidDibits;
+        uint8_t d[p25p2::kBurstDibits];
+        const uint8_t* sq = seq + (size_t)slotIdx * p25p2::kSlotDibits;
+        for (int i = 0; i < p25p2::kBurstDibits; i++) d[i] = (uint8_t)(buf[i] ^ sq[i]);
+        const int duid = p25p2::duidGet(buf);
+        char fr[4][24];
         switch (duid) {
-        case p25p2::kDuid4V: tel.v4++; for (int k = 0; k < 4; k++) voiceFrame(ci, pay + k * p25p2::kVoiceDibits); break;
-        case p25p2::kDuid2V: tel.v2++; for (int k = 0; k < 2; k++) voiceFrame(ci, pay + k * p25p2::kVoiceDibits); break;
-        case p25p2::kDuidSacch: case p25p2::kDuidFacch: {
-            const bool facch = duid == p25p2::kDuidFacch;
+        case p25p2::kDuid4V:
+            tel.v4++;
+            essB(ci, d);
+            for (int k = 0; k < 4; k++) { p25p2::ambeGet(d, p25p2::kVoiceOff[k], fr); voiceFrame(ci, fr); }
+            break;
+        case p25p2::kDuid2V:
+            tel.v2++;
+            essA(ci, d);
+            for (int k = 0; k < 2; k++) { p25p2::ambeGet(d, p25p2::kVoiceOff[k], fr); voiceFrame(ci, fr); }
+            break;
+        case p25p2::kDuidSacch: case p25p2::kDuidFacch: case p25p2::kDuidSacchClear: case p25p2::kDuidFacchClear: {
+            const bool facch = duid == p25p2::kDuidFacch || duid == p25p2::kDuidFacchClear;
             (facch ? tel.facch : tel.sacch)++;
+            if (facch && vocUsed[ci]) { ambe[ci].reset(); vocUsed[ci] = false; }   // a call boundary: the vocoder starts afresh
+            uint8_t pay[p25p2::kPayloadDibits];
+            p25p2::payloadGet(duid == p25p2::kDuidSacchClear || duid == p25p2::kDuidFacchClear ? buf : d, pay);
             uint8_t mac[p25p2::kFacchMacBytes];
             int fixed = 0;
             if (p25p2::macDecode(facch, pay, mac, &fixed)) {
@@ -522,12 +641,19 @@ struct P25p2Receiver::Impl {
             } else tel.blocksBad++;
             break;
         }
-        default: tel.slotsBad++; break;
+        case p25p2::kDuidLcch: break;
+        default: tel.slotsBad++; tel.duidBad++; break;
         }
     }
 
     // ------------------------------------------------------------ requests, report
     bool clearReq = false;
+    bool sysReq = false;
+    int sysWacn = 0, sysId = 0, sysNac = 0;
+    void applySystem() {
+        p25p2::scrambleSeq(sysWacn, sysId, sysNac, seq);
+        tel.wacn = sysWacn; tel.sysId = sysId; tel.colorCode = sysNac;
+    }
     static void moveLists(P25p2Telemetry& to, P25p2Telemetry& from) {
         to.adjacent = std::move(from.adjacent); to.talkgroups = std::move(from.talkgroups); to.log = std::move(from.log); to.events = std::move(from.events); to.site = from.site;
         for (int i = 0; i < 16; i++) to.idens[i] = from.idens[i];
@@ -536,21 +662,26 @@ struct P25p2Receiver::Impl {
     void takeRequests() {
         std::lock_guard<std::mutex> lk(mu);
         if (clearReq) { P25p2Telemetry e; moveLists(tel, e); clearReq = false; }
+        if (sysReq) { sysReq = false; applySystem(); }
+        if (hintReq) { hintReq = false; hint[0] = hintSet[0]; hint[1] = hintSet[1]; }
     }
+    uint64_t followTag = 0, followTagSet = 0;
     void resetState() {
-        { std::lock_guard<std::mutex> lk(mu); rate = rateSet; offset = offsetSet; }
+        { std::lock_guard<std::mutex> lk(mu); rate = rateSet; offset = offsetSet; followTag = followTagSet; }
         for (int i = 0; i < 2; i++) if (tel.now[i].active) endCall(i, false);
         initFront();
         initFilter();
         power = 0; nPower = 0; nIn = 0; nextReport = 0.25 * rate;
         lastSync = lastGood = -10; snrAvg = 0; lastAct[0] = lastAct[1] = -10;
         grants.clear();
-        const uint64_t seq = tel.seq;
+        const uint64_t tseq = tel.seq;
         P25p2Telemetry keep;
         moveLists(keep, tel);
         for (auto& c : keep.log) c.startSec -= tel.timeSec;
-        tel = P25p2Telemetry(); tel.seq = seq;
+        tel = P25p2Telemetry(); tel.seq = tseq;
         moveLists(tel, keep);
+        { std::lock_guard<std::mutex> lk(mu); sysReq = false; applySystem(); }
+        for (int i = 0; i < 2; i++) { held[i].clear(); ess[i].nb = 0; vocUsed[i] = false; }
         tel.inputRate = rate;
         tel.codec = nxdnAmbeAvailable(&tel.codecPath);
     }
@@ -570,6 +701,7 @@ struct P25p2Receiver::Impl {
         tel.cfoHz = cfoStep * kSymRate() / (2 * kPi);
         tel.snrDb = (float)snrAvg;
         tel.listenSlot = listen.load();
+        tel.followTag = followTag;
         const int64_t wall = (int64_t)time(nullptr);
         for (auto& t : tel.talkgroups) t.active = wall - t.lastWall < 3;
         tel.state = (tel.now[0].active || tel.now[1].active) ? 2 : locked ? 1 : 0;
@@ -622,6 +754,22 @@ void P25p2Receiver::setLogCallback(std::function<void(const std::string&)> cb) {
 void P25p2Receiver::setVolume(float v) { p_->volume = std::max(0.f, std::min(1.f, v)); }
 void P25p2Receiver::setMuted(bool m) { p_->muted = m; }
 void P25p2Receiver::setSilent(bool s) { p_->silent = s; }
+void P25p2Receiver::setSystem(int wacn, int sysId, int nac) {
+    std::lock_guard<std::mutex> lk(p_->mu);
+    p_->sysWacn = wacn & 0xFFFFF; p_->sysId = sysId & 0xFFF; p_->sysNac = nac & 0xFFF;
+    p_->sysReq = true;
+}
+void P25p2Receiver::setCallHint(int slot, int src, int dst, bool group, double carrierHz) {
+    if (slot < 1 || slot > 2) return;
+    std::lock_guard<std::mutex> lk(p_->mu);
+    Impl::Hint& h = p_->hintSet[slot - 1];
+    h.src = src; h.dst = dst; h.group = group; h.carrierHz = carrierHz;
+    p_->hintReq = true;
+}
+void P25p2Receiver::startFollow(uint64_t tag) {
+    { std::lock_guard<std::mutex> lk(p_->mu); p_->followTagSet = tag; }
+    p_->resetReq = true;
+}
 void P25p2Receiver::setListenSlot(int s) { p_->listen = s < 0 || s > 2 ? 0 : s; }
 void P25p2Receiver::setAudioTap(std::function<void(const float*, size_t)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->tapSet = std::move(cb); p_->tapReq = true; }
 void P25p2Receiver::setVoiceTap(std::function<void(int, const uint8_t*, bool)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->vtapSet = std::move(cb); p_->tapReq = true; }

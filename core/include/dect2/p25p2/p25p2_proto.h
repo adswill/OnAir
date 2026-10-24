@@ -1,17 +1,16 @@
 // APCO Project 25 Phase 2 (TDMA, TIA-102.BBAB physical layer / BBAC MAC) protocol pieces shared by the receiver and the test signal.
 // Receive only: nothing here is used to transmit.
 //
-// WHAT IS KNOWN AND WHAT IS NOT. Written without access to the standards documents, from public descriptions as remembered. Only the broad facts are
-// held to be right: 6000 symbols/s (12 kbit/s) on 12.5 kHz, two time slots (30 ms each, 180 dibits), a 12-slot superframe of 360 ms, differential QPSK
-// steps of +-pi/4 and +-3pi/4 (H-DQPSK uplink / H-CPM downlink are received as the same dibits here), the 40-bit frame sync word 0x575D57F7FF, the
-// voice frame of 72 bits (AMBE+2 half rate, 4V = four frames, 2V = two), Reed-Solomon over GF(64) for the MAC PDUs (RS(46,26) SACCH, RS(52,30) FACCH:
-// the same code family as Phase 1, p25::rsEncode), MAC opcodes (signal, PTT, end PTT, idle, active, hangtime) and the TSBK-equivalent MAC messages
-// (the Phase 1 TSBK opcode plus 0x40: grant 0x40, update 0x42, unit-to-unit 0x44, RFSS / network / adjacent status 0x7A..0x7C, identifier update 0x7D / 0x74).
-// NOT established, so these are this program's own layout, kept in this one file so that a correction is a one-place change: the ISCH coding of the
-// slot number (the real I-ISCH code is not known here, a 5-fold repetition stands in), where in the superframe the sync-carrying ISCH sits (every 12th
-// slot here), the exact bit positions inside a burst (a 4-dibit DUID, then the payload), the interleave of the MAC PDU codewords (none), the CRC of
-// the MAC PDU (CCITT as in Phase 1), the AMBE+2 bit order inside a voice frame (the same as DMR / NXDN), and the pulse shape (root raised cosine, 0.2).
-// The encryption sync (ESS) areas of the voice bursts are never decoded: an encrypted call is recognised from the algorithm ID of the PTT message only.
+// WHERE THE LAYOUT COMES FROM. The burst layer follows the decoder of XMC_SDR (P25_P2_Decode, heard working on the NSW PSN, WACN BEE00 system 2D1):
+// 6000 symbols/s differential QPSK (+-pi/4, +-3pi/4) in 12.5 kHz through a 0.35 root raised cosine, 180-dibit bursts of 30 ms, 12 to a 360 ms
+// superframe, each starting with a 40-bit ISCH: the sync word 0x575D57F7FF (S-ISCH) or a (40,9) code word (I-ISCH: channel, location, first,
+// ultraframe count). The DUID is an (8,4) code spread over dibits 20, 57, 142 and 179 of the burst. The bursts are scrambled (TIA-102.BBAC 7.2.5)
+// with a 44-bit LFSR seeded from the WACN, the system ID and the colour code (NAC) of the system, 4320 bits per superframe; the receiver gets the
+// seed from the Phase 1 control channel (P25p2Receiver::setSystem). 4V bursts carry four 72-bit AMBE+2 half-rate frames and 12 dibits of the
+// encryption sync (ESS-B), 2V bursts two frames and the ESS-A parity; the ESS is RS(44,16) over GF(64) and gives the algorithm ID, key ID and MI.
+// NOT established: the MAC PDUs of the SACCH / FACCH bursts (XMC does not decode them). Their codewords (RS(46,26) SACCH, RS(52,30) FACCH, a CCITT
+// CRC, no interleave) sit in the burst positions after the ISCH that the DUID leaves free: this program's own layout, used by its test signal. On a
+// real channel they are expected not to decode (RS / CRC fail) and are only counted; calls are then found from the voice bursts and the ESS.
 #pragma once
 #include <cstdint>
 #include <string>
@@ -22,22 +21,23 @@ namespace p25p2 {
 
 constexpr double kSymbolRate = 6000.0;
 constexpr int kSlotDibits = 180;               // 30 ms
-constexpr int kIschDibits = 20;                // 40 bits at the start of every slot
+constexpr int kBurstDibits = kSlotDibits;
+constexpr int kIschDibits = 20;                // 40 bits at the start of every burst
 constexpr int kSlotsPerSuperframe = 12;        // 360 ms
 constexpr uint64_t kSyncWord = 0x575D57F7FFULL;   // 40 bits, MSB first
-constexpr int kVoiceDibits = 36;               // one 72-bit AMBE+2 frame
-constexpr int kDuidDibits = 4;                 // after the ISCH
-constexpr int kPayloadDibits = kSlotDibits - kIschDibits - kDuidDibits;   // 156
+constexpr int kVoiceBits = 72;                 // one AMBE+2 half-rate frame
+constexpr int kScrambleDibits = 10 + kSlotsPerSuperframe * kSlotDibits;   // 10 leading zero dibits, then 4320 bits
 
-// DUIDs of the bursts (4 bits, sent with their complement)
-enum Duid { kDuid4V = 0x0, kDuid2V = 0x6, kDuidSacch = 0x9, kDuidFacch = 0xC };
+// DUIDs of the bursts (4 bits, an (8,4) code word spread over four dibits)
+enum Duid { kDuid4V = 0, kDuidSacch = 3, kDuid2V = 6, kDuidFacch = 9, kDuidSacchClear = 12, kDuidLcch = 13, kDuidFacchClear = 15 };
 const char* duidName(int d);
 
 // Dibit <-> differential phase step in units of pi/4: 00 +1, 01 +3, 10 -1, 11 -3 (the C4FM table of Phase 1)
 inline int dibitStep(int d) { static const int t[4] = {1, 3, -1, -3}; return t[d & 3]; }
 inline int stepDibit(int s) { return s == 3 ? 1 : s == 1 ? 0 : s == -1 ? 2 : 3; }
 
-// Root raised cosine impulse response at time t (in symbols), roll-off alpha (0.2: this program's assumption)
+// Root raised cosine impulse response at time t (in symbols), roll-off alpha
+constexpr double kRollOff = 0.35;
 inline double rrcImpulse(double t, double a) {
     const double pi = 3.14159265358979323846;
     const double at = a * t;
@@ -50,19 +50,49 @@ inline double rrcImpulse(double t, double a) {
     return (__builtin_sin(pi * t * (1.0 - a)) + 4.0 * at * __builtin_cos(pi * t * (1.0 + a))) / (pi * t * (1.0 - 16.0 * at * at));
 }
 
-// ---- ISCH
-// The sync-carrying ISCH is the sync word itself; the others carry the slot number (4 bits) and the superframe number in the ultraframe (2 bits).
+// ---- ISCH (the first 20 dibits of every burst)
 void ischSync(uint8_t dibits[kIschDibits]);
-void ischInfo(int slot, int superframe, uint8_t dibits[kIschDibits]);
-// Decodes an information ISCH; false when it cannot be one. errs: repetition disagreements (of 40).
-bool ischDecode(const uint8_t dibits[kIschDibits], int& slot, int& superframe, int* errs = nullptr);
-inline bool slotCarriesSync(int slot) { return slot == 0; }
+uint64_t ischValue(const uint8_t dibits[kIschDibits]);        // the 40 bits, the first dibit in the top bits
 int syncDistance(const uint8_t dibits[kIschDibits]);          // bits that differ from the sync word
+// I-ISCH: 7 information bits, channel (bits 6..5), location (4..3), first (2), ultraframe count (1..0)
+inline int ischInfoOf(int channel, int loc, int first, int uf) { return ((channel & 3) << 5) | ((loc & 3) << 3) | ((first & 1) << 2) | (uf & 3); }
+uint64_t ischWord(int info);
+void ischInfo(int info, uint8_t dibits[kIschDibits]);
+// The nearest I-ISCH code word within 7 bit errors: its information bits, else -1. errs: the distance.
+int ischDecode(uint64_t v, int* errs = nullptr);
+// The logical channel (0 or 1) of the burst in slot s (0..11) of the superframe: the slot parity, the other way round in slots 10 and 11
+inline int slotChannel(int s) { return (s & 1) ^ (s > 9 ? 1 : 0); }
 
-// ---- bursts (slot payload after the ISCH)
-// DUID: 4 bits + complement as 4 dibits. Returns the DUID or -1.
-void duidEncode(int duid, uint8_t dibits[kDuidDibits]);
-int duidDecode(const uint8_t dibits[kDuidDibits]);
+// ---- scrambling: dibit i of the burst in slot s of the superframe is XORed with seq[s * 180 + i]. All-zero seed: an all-zero sequence.
+void scrambleSeq(int wacn, int sysId, int nac, uint8_t seq[kScrambleDibits]);
+
+// ---- DUID
+constexpr int kDuidPos[4] = {20, 57, 142, 179};
+int duidWord(int duid);                                        // the 8-bit code word
+void duidPut(int duid, uint8_t burst[kBurstDibits]);
+int duidGet(const uint8_t burst[kBurstDibits], int* raw = nullptr);   // the DUID, -1 when it cannot be corrected
+
+// ---- voice: 72-bit frames at bit offsets 2, 76, 172, 246 (4V) or 2, 76 (2V), counted from dibit 20 of the burst (a dibit's high bit first)
+constexpr int kVoiceOff[4] = {2, 76, 172, 246};
+// the AMBE+2 frame as mbelib's code words (C0 24 bits, C1 23, C2 11, C3 14) <-> its place in the burst
+void ambeGet(const uint8_t burst[kBurstDibits], int bitOff, char fr[4][24]);
+void ambePut(const char fr[4][24], int bitOff, uint8_t burst[kBurstDibits]);
+// the 72 bits of a frame in code word order (C0, C1, C2, C3) <-> the code words
+void ambeFlatten(const char fr[4][24], uint8_t bits[kVoiceBits]);
+void ambeUnflatten(const uint8_t bits[kVoiceBits], char fr[4][24]);
+
+// ---- encryption sync: ESS-B (16 hexbits, 4 in each 4V burst at dibit 94), ESS-A (28 parity hexbits: 16 at dibit 94 and 12 at dibit 143 of the 2V burst)
+constexpr int kEssBPos = 94, kEssBDibits = 12, kEssA1Pos = 94, kEssA1Dibits = 48, kEssA2Pos = 143, kEssA2Dibits = 36;
+void essEncode(int algId, int keyId, const uint8_t mi[9], uint8_t essB[16], uint8_t essA[28]);
+// RS(44,16): corrects essB in place; an algorithm ID of 0 is reported as 0x80 (clear). fixed: hexbits corrected.
+bool essDecode(uint8_t essB[16], const uint8_t essA[28], int& algId, int& keyId, uint8_t mi[9], int* fixed = nullptr);
+void hexbitsPut(const uint8_t* hex, int n, uint8_t* dibits);   // n hexbits -> 3n dibits
+void hexbitsGet(const uint8_t* dibits, int n, uint8_t* hex);
+
+// ---- MAC PDU codewords (this program's layout, see above): the 156 burst dibits after the ISCH that are not DUID dibits, in order
+constexpr int kPayloadDibits = kBurstDibits - kIschDibits - 4;
+void payloadPut(const uint8_t* dibits, int n, uint8_t burst[kBurstDibits]);   // n <= kPayloadDibits; the rest is left as it is
+void payloadGet(const uint8_t burst[kBurstDibits], uint8_t dibits[kPayloadDibits]);
 
 // MAC PDU codewords. SACCH: 17 MAC bytes + CRC-16 + 4 spare bits = 26 hexbits -> RS(46,26) -> 138 dibits. FACCH: 20 bytes + CRC-16 + 4 spare bits = 30 hexbits
 // -> RS(52,30) -> 156 dibits.

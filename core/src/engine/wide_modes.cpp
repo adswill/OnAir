@@ -133,6 +133,8 @@ struct WideModes::Impl {
     WideTuning tuning = [] { WideTuning t; t.cpuBudget = 0; return t; }();   // no CPU limit until the engine sets one (tests run faster than real time)
     double centerHz = 0;
     std::vector<double> extraPriors;
+    bool followOnly = false;            // setFollowOnly: only these channels are decoded (a trunking follower's granted calls)
+    std::vector<double> followHz;
 
     template <class Rx, class Tel> WideBank<Rx, Tel>* put(int m, WideOps<Rx, Tel> ops, Tel RxTelemetry::*slot) {
         auto* bk = new Bank<Rx, Tel>(std::move(ops), slot);
@@ -164,6 +166,11 @@ struct WideModes::Impl {
         const std::vector<FreqEntry>& db = builtinFrequencies();
         for (auto& [m, bk] : banks) {
             std::vector<double> v;
+            if (followOnly) {   // nothing but the channels asked for (none: no carrier at all)
+                for (double f : followHz) if (bk->rate > 0 && std::fabs(f - centerHz) < bk->rate / 2) v.push_back(f);
+                bk->setPriorsAbs(std::move(v), true);
+                continue;
+            }
             if (tuning.usePriors && bk->rate > 0 && centerHz > 0) {
                 const std::vector<std::string> ids = freqDbModes(m);
                 for (const FreqEntry& e : db)
@@ -436,6 +443,7 @@ void WideModes::setTuning(const WideTuning& t) {
 }
 const WideTuning& WideModes::tuning() const { return p_->tuning; }
 void WideModes::setExtraPriors(const std::vector<double>& absHz) { p_->extraPriors = absHz; p_->priors(); }
+void WideModes::setFollowOnly(bool on, const std::vector<double>& absHz) { p_->followOnly = on; p_->followHz = absHz; p_->priors(); }
 
 std::string WideModes::startRecording(int m, int id, const std::string& dir) { BankBase* b = p_->bank(m); return b ? b->startRecording(id, dir) : std::string(); }
 void WideModes::stopRecording(int m, int id) { if (BankBase* b = p_->bank(m)) b->stopRecording(id); }

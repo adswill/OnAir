@@ -158,6 +158,8 @@ struct Action {
     uint64_t callId = 0;
     int slice = -1;              // OpenSlice / CloseSlice / Listen: the follower's own slice number
     double freqHz = 0;           // OpenSlice / Retune
+    bool tdma = false;           // OpenSlice / Retune: a P25 Phase 2 voice channel (needs the Phase 2 receiver, seeded with the site's WACN / system / NAC)
+    int slot = -1;               // ... its time slot, 0 or 1
     std::string text;            // Notice; RecordStart: the file name stem
 };
 
@@ -169,7 +171,8 @@ struct FollowConfig {
     double returnTimeoutSec = 3.0;   // back on the control channel but nothing heard for this long: start looking
     double edgeGuardHz = 12500;  // a voice channel this close to the edge of the capture is not taken as inside
     double sliceBandwidthHz = 12500;
-    bool allowRetune = true;     // the single radio may leave the control channel for a call
+    bool allowRetune = false;    // the single radio may leave the control channel for a call (and look for the control channel when it is lost); off: it stays
+    bool followPhase2 = true;    // follow P25 Phase 2 (TDMA) grants (inside the capture: one at a time, the engine runs one Phase 2 receiver)
     bool record = true;
 };
 
@@ -182,7 +185,9 @@ public:
     void setConfig(const FollowConfig& c) { cfg_ = c; }
     const FollowConfig& config() const { return cfg_; }
     // The capture: centre and span of what the radio delivers now. spanHz 0: only the tuned channel (every other frequency needs a retune).
-    void setCapture(double centerHz, double spanHz) { centerHz_ = centerHz; spanHz_ = spanHz; }
+    // slices: Phase 1 calls inside it can be decoded there (whole-span decoding is on). A Phase 2 call inside it needs no such thing: the Phase 2
+    // receiver runs as the second mode anywhere in the capture.
+    void setCapture(double centerHz, double spanHz, bool slices = true) { centerHz_ = centerHz; spanHz_ = spanHz; slices_ = slices; }
     void setControlChannel(double hz, const std::vector<double>& candidates);
     // A control channel message arrived (any good TSBK)
     void onControlSeen(double now);
@@ -191,6 +196,9 @@ public:
     // The slice (or the hopped radio) hears voice from the call, or its terminator
     void onVoice(uint64_t callId, double now);
     void onTerminator(uint64_t callId, double now);
+    // Stop following the call but keep it in the log as running (its grant repeats keep it there, not followed); it ends by silence on the
+    // control channel like any call nobody follows
+    void leave(uint64_t callId, double now);
     // Time passes: ends calls, returns the radio, rotates through control channel candidates
     void tick(double now, CallLog& log);
     std::vector<Action> takeActions();
@@ -201,14 +209,16 @@ public:
     bool inSpan(double freqHz) const;
     double currentControlHz() const { return ccHz_; }
     double radioHz() const { return radioHz_; }   // where the single radio was last told to be (0: not told)
+    std::vector<double> sliceFreqs(bool tdma) const;   // the open slices (inside the capture) of Phase 1 (tdma false) or Phase 2 calls
     void reset();
 
 private:
-    struct Slot { uint64_t callId = 0; int prio = 0; double freqHz = 0, startSec = 0, lastSec = 0; bool used = false, hopped = false; };
+    struct Slot { uint64_t callId = 0; int prio = 0; double freqHz = 0, startSec = 0, lastSec = 0; bool used = false, hopped = false, tdma = false, leave = false; };
     std::vector<Slot> slots_;
     FollowConfig cfg_;
     FollowState state_ = FollowState::NoControl;
     double centerHz_ = 0, spanHz_ = 0, ccHz_ = 0, radioHz_ = 0, homeHz_ = 0;
+    bool slices_ = true;
     std::vector<double> cands_;
     size_t candIdx_ = 0;
     double lastCcSec_ = -1e9, stateSince_ = 0, lastNow_ = 0, dwellStart_ = 0;
@@ -266,11 +276,16 @@ public:
     void onTsbk(const p25::Tsbk& t, int nac, double nowSec);
     void onTsbkBad(double nowSec);
     void onDmrCsbk(int opcode, int fid, const uint8_t data[8], double nowSec);
-    void setCapture(double centerHz, double spanHz) { follower.setCapture(centerHz, spanHz); }
+    void setCapture(double centerHz, double spanHz, bool slices = true) { follower.setCapture(centerHz, spanHz, slices); }
     void tick(double nowSec);
     std::vector<Action> takeActions() { return follower.takeActions(); }
     void onVoice(uint64_t callId, double now) { follower.onVoice(callId, now); }
     void onTerminator(uint64_t callId, double now) { follower.onTerminator(callId, now); }
+    // The voice channel says the call is encrypted (the Phase 2 ESS: grants do not always say so): logged as encrypted, and left
+    void onEncrypted(uint64_t callId, double now) {
+        if (CallRecord* r = log.byId(callId)) { r->encrypted = true; r->followed = false; if (r->note.empty()) r->note = "encrypted (voice channel): left"; }
+        follower.leave(callId, now);   // its grant repeats must not open it again
+    }
     ControllerStatus status(double nowSec) const;
     std::vector<std::string> messages;   // newest last, at most 200
     void clear();

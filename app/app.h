@@ -298,6 +298,7 @@ struct App {
     int atvNbtvLines = 32;    // NBTV / mechanical: lines (24 .. 240) and pictures a second; 32 at 12.5 is the NBTVA standard
     float atvNbtvFps = 12.5f;
     bool identifyTool = false;   // the Identify tool (key I): a click or a drag on the spectrum identifies the signal instead of tuning (never saved)
+    bool wideFollow = false;  // a trunking follower runs the whole-span bank for its granted channels only (Engine::setWideFollow); set by the mode, every frame
     bool wideDecode = false;  // "Whole span": decode every carrier in the visible span, not only the tuned one (only for modes that opt in: modeSupportsWide)
     uint64_t wideFamMask = 0; // the switch per mode family (bit = family); wideDecode is the current mode's bit
     uint64_t wideFamMaskHi[2] = {0, 0};   // the same for families 64-127 and 128-191 (wideFamOn / setWideFam read and write all three)

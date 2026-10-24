@@ -154,7 +154,7 @@ int main() {
         setupSite(c, 0);
         c.setCapture(chHz(0x1001), 0);   // only the control channel
         feed(c, gen::idenUp(5, 856000000, 12500, 0, 12500), 0);
-        FollowConfig fc; fc.hangSec = 1.5;
+        FollowConfig fc; fc.hangSec = 1.5; fc.allowRetune = true;
         c.follower.setConfig(fc);
         feed(c, gen::grpVGrant(4, 0x5010, 4001, 1), 1.0);
         auto a = c.takeActions();
@@ -183,6 +183,8 @@ int main() {
         // while one call is followed inside the capture a second one outside does not take the radio away
         Controller e;
         setupSite(e, 0);
+        FollowConfig fe; fe.allowRetune = true;
+        e.follower.setConfig(fe);
         e.setCapture(851.1e6, 1.0e6);
         feed(e, gen::idenUp(5, 856000000, 12500, 0, 12500), 0);
         feed(e, gen::grpVGrant(4, 0x1010, 5001, 1), 1);
@@ -197,7 +199,7 @@ int main() {
         setupSite(c, 0);
         feed(c, gen::sccb(1, 5, 0x1020, 0x1021), 0);
         c.setCapture(chHz(0x1001), 0);
-        FollowConfig fc; fc.ccLossSec = 2; fc.ccDwellSec = 1;
+        FollowConfig fc; fc.ccLossSec = 2; fc.ccDwellSec = 1; fc.allowRetune = true;
         c.follower.setConfig(fc);
         c.tick(1.0);
         CHECK(c.follower.state() == FollowState::ControlHold, "holding");
@@ -295,6 +297,95 @@ int main() {
         CHECK(true, "survived");
         uint8_t d[8];
         for (int i = 0; i < 2000; i++) { for (auto& b : d) b = (uint8_t)rand(); c.onDmrCsbk(0x30 + rand() % 4, rand() % 3 ? 0 : 1, d, now += 0.01); }
+    }
+    // ---- P25 Phase 2 grants (a TDMA identifier, two slots per carrier): followed with the carrier and the slot, one at a time inside the capture
+    {
+        Controller c;
+        setupSite(c, 0);
+        feed(c, gen::idenUpTdma(6, 3, 851006250, 12500, -45000000), 0);   // channel 6-0x21: carrier 0x10 (851.20625 MHz), slot 1
+        c.setCapture(851.1e6, 2.4e6);
+        FollowConfig fc; fc.hangSec = 2;
+        c.follower.setConfig(fc);
+        feed(c, gen::grpVGrant(0x04, 0x6021, 7001, 11), 1.0);
+        auto a = c.takeActions();
+        bool open = false;
+        for (const auto& x : a) if (x.kind == Action::OpenSlice && x.tdma && x.slot == 1 && std::fabs(x.freqHz - chHz(0x1010)) < 1) open = true;
+        CHECK(open, "Phase 2 grant opens a Phase 2 slice on the carrier with its slot (%zu actions)", a.size());
+        CHECK(c.log.records().back().followed && c.log.records().back().slot == 1, "Phase 2 call followed");
+        // the other slot of a carrier while one Phase 2 call runs inside the capture: busy (one Phase 2 receiver)
+        feed(c, gen::grpVGrant(0x04, 0x6020, 7002, 12), 1.1);
+        a = c.takeActions();
+        CHECK(count(a, Action::OpenSlice) == 0 && c.log.records().back().missed && c.log.records().back().note.find("one Phase 2 call") != std::string::npos,
+              "second Phase 2 call: '%s'", c.log.records().back().note.c_str());
+        // a Phase 1 call next to it is still followed
+        feed(c, gen::grpVGrant(0x04, 0x1012, 7003, 13), 1.2);
+        a = c.takeActions();
+        CHECK(count(a, Action::OpenSlice) == 1 && !a[0].tdma, "Phase 1 call beside the Phase 2 one");
+        // the voice channel says encrypted: logged so, and the slice closes
+        const uint64_t id = c.log.records()[c.log.records().size() - 3].id;
+        c.onEncrypted(id, 1.5);
+        c.tick(1.6);
+        a = c.takeActions();
+        bool closed = false;
+        for (const auto& x : a) if (x.kind == Action::CloseSlice && x.callId == id && x.tdma) closed = true;
+        CHECK(closed && c.log.byId(id)->encrypted && c.log.byId(id)->active && !c.log.byId(id)->followed, "encrypted on the voice channel: left, still running");
+        // its grant keeps being repeated on the control channel: that must not open it again (the open / close loop heard on the NSW PSN)
+        const size_t nRec = c.log.records().size();
+        feed(c, gen::grpVGrant(0x04, 0x6021, 7001, 11), 1.7);
+        c.tick(1.8);
+        a = c.takeActions();
+        CHECK(count(a, Action::OpenSlice) == 0 && c.log.records().size() == nRec, "grant repeat of the encrypted call: %zu actions, %zu records", a.size(), c.log.records().size());
+        c.tick(5.0);   // no more grants: it ends like any call nobody follows
+        CHECK(!c.log.byId(id)->active, "the encrypted call ends when its grants stop");
+        // a wide capture without whole-span decoding: the Phase 2 call is still taken in place (the second mode needs no carrier decoders),
+        // a Phase 1 call in it hops the radio, or with retuning off says what to turn on
+        {
+            Controller w;
+            setupSite(w, 0);
+            feed(w, gen::idenUpTdma(6, 3, 851006250, 12500, -45000000), 0);
+            w.setCapture(851.1e6, 30.72e6, false);
+            FollowConfig fw; fw.allowRetune = false;
+            w.follower.setConfig(fw);
+            feed(w, gen::grpVGrant(0x04, 0x6021, 7101, 21), 1.0);
+            a = w.takeActions();
+            CHECK(count(a, Action::OpenSlice) == 1 && a[0].tdma && a[0].slot == 1, "Phase 2 in a capture without whole-span decoding: '%s'", w.log.records().back().note.c_str());
+            feed(w, gen::grpVGrant(0x04, 0x1012, 7102, 22), 1.1);
+            a = w.takeActions();
+            CHECK(count(a, Action::OpenSlice) == 0 && w.log.records().back().note.find("whole-span decoding") != std::string::npos, "Phase 1 there: '%s'", w.log.records().back().note.c_str());
+            Controller h;
+            setupSite(h, 0);
+            FollowConfig fh; fh.allowRetune = true;
+            h.follower.setConfig(fh);
+            h.setCapture(851.1e6, 30.72e6, false);
+            feed(h, gen::grpVGrant(0x04, 0x1012, 7103, 23), 1.0);
+            a = h.takeActions();
+            CHECK(count(a, Action::Retune) == 1 && count(a, Action::OpenSlice) == 0, "Phase 1 in the capture without whole-span decoding hops");
+        }
+        // Phase 2 following off: the old note
+        Controller d;
+        setupSite(d, 0);
+        feed(d, gen::idenUpTdma(6, 3, 851006250, 12500, -45000000), 0);
+        d.setCapture(851.1e6, 2.4e6);
+        FollowConfig f2; f2.followPhase2 = false;
+        d.follower.setConfig(f2);
+        feed(d, gen::grpVGrant(0x04, 0x6021, 7001, 11), 1.0);
+        CHECK(d.takeActions().empty() && !d.log.records().back().followed && d.log.records().back().note.find("Phase 2 following is off") != std::string::npos, "Phase 2 off");
+        // outside the capture: the radio hops with the slot, the voice keeps it there (no grant repeats are heard on the voice channel)
+        Controller e;
+        setupSite(e, 0);
+        feed(e, gen::idenUpTdma(6, 3, 856000000, 12500, 0), 0);
+        e.setCapture(chHz(0x1001), 0);
+        FollowConfig f3; f3.hangSec = 1.5; f3.allowRetune = true;
+        e.follower.setConfig(f3);
+        feed(e, gen::grpVGrant(0x04, 0x6020, 7004, 14), 1.0);
+        a = e.takeActions();
+        CHECK(count(a, Action::Retune) == 1 && a[0].tdma && a[0].slot == 0 && std::fabs(a[0].freqHz - (856000000 + 16 * 12500.0)) < 1, "Phase 2 hop with slot 0");
+        const uint64_t hid = e.log.records().back().id;
+        for (double t = 1.5; t < 6; t += 0.5) { e.onVoice(hid, t); e.tick(t); }
+        CHECK(e.follower.state() == FollowState::Hopped, "voice keeps the Phase 2 hop (%s)", followStateName(e.follower.state()));
+        e.tick(8);
+        a = e.takeActions();
+        CHECK(count(a, Action::Retune) == 1 && !a.back().tdma && std::fabs(a.back().freqHz - chHz(0x1001)) < 1, "back to the control channel after the call");
     }
     return testSummary("p25 trunk");
 }

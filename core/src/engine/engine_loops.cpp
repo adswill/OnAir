@@ -202,6 +202,11 @@ void Engine::analysisLoop() {
                 }
             } else if (const int pm = pollMode(activeStd_.load(), t, modeSeq_); pm >= 0) {
                 if (pm == 1) { std::lock_guard<std::mutex> lk(rxMu_); publishRx(std::move(t)); }
+                if (stdReq_.load()) {   // another receiver asked for while running, without a restart (the P25 follower hopping to a Phase 2 channel)
+                    const int was = activeStd_.load();
+                    autoSelect(rxTel_, false);
+                    if (activeStd_.load() != was) placeReceiverAsPrimary(activeStd_.load());
+                }
             } else if (dvbt ? rxT_.telemetry(t, rxSeq) : rx_.telemetry(t, rxSeq)) {
                 rxSeq = t.seq;
                 if (dvbt) logDvbtEvents(t); else logRxEvents(t);

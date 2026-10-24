@@ -37,7 +37,7 @@ int main() {
     CHECK(cm.find(" p25p2 ") != std::string::npos, "p25p2 not in DECT2_MODES");
     CHECK(cm.find("test_p25p2_plugin") != std::string::npos, "the plug-in test is not given the stub codec path");
     const std::string ui = readFile("app/p25p2/p25p2_ui.cpp");
-    for (const char* s : {"Listen to", "first heard", "slot 1", "slot 2", "a.rx.standard == 181", "never read"})
+    for (const char* s : {"Listen to", "first heard", "slot 1", "slot 2", "a.rx.standard == 181", "WACN / system / NAC"})
         CHECK(ui.find(s) != std::string::npos, "P25 Phase 2 panel string missing: %s", s);
     const std::string tel = readFile("core/src/engine/engine_telemetry.cpp");
     CHECK(tel.find("case 181: return pollStd(rxP25p2_, 181, t, seqs[181]") != std::string::npos, "poll case missing");

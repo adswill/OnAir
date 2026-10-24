@@ -1,5 +1,6 @@
 // dPMR receiver (see dpmr_rx.h).
 #include "dect2/dpmr/dpmr_rx.h"
+#include "dect2/dsp/cic3.h"
 #include "dect2/results/results_io.h"
 #include "dect2/dpmr/dpmr_tel.h"
 #include "dect2/dpmr/dpmr_proto.h"
@@ -79,7 +80,7 @@ struct DpmrReceiver::Impl {
     double fd = 0, inv = 1;
     std::complex<double> lo{1, 0}, loStep{1, 0};
     int loCount = 0;
-    std::complex<double> integ[3], combPrev[3];
+    Cic3 cic;   // the decimator (dsp/cic3.h: exact for as long as it runs)
     int decCount = 0;
     std::vector<cf32> dbuf;
     int64_t dN = 0;
@@ -95,7 +96,7 @@ struct DpmrReceiver::Impl {
         inv = 1.0 / ((double)D * D * D);
         lo = 1; loCount = 0;
         loStep = rate > 0 ? std::polar(1.0, -2 * kPi * (offset + hopHz()) / rate) : std::complex<double>(1, 0);
-        for (int i = 0; i < 3; i++) integ[i] = combPrev[i] = 0;
+        cic.reset();
         decCount = 0;
         dbuf.assign(8192, cf32(0, 0)); dN = 0;
         rstep = fd / kFs;
@@ -124,11 +125,10 @@ struct DpmrReceiver::Impl {
         const std::complex<double> v = x * lo;
         lo *= loStep;
         if (++loCount >= 4096) { loCount = 0; lo /= std::abs(lo); }
-        integ[0] += v; integ[1] += integ[0]; integ[2] += integ[1];
+        cic.integrate(v);
         if (++decCount < D) return;
         decCount = 0;
-        std::complex<double> c = integ[2];
-        for (int k = 0; k < 3; k++) { const std::complex<double> t = c; c = c - combPrev[k]; combPrev[k] = t; }
+        const std::complex<double> c = cic.comb();
         dbuf[(size_t)(dN & 8191)] = cf32((float)(c.real() * inv), (float)(c.imag() * inv));
         dN++;
         while (dN > (int64_t)std::floor(rp) + M) {

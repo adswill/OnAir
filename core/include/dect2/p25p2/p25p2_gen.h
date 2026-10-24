@@ -1,6 +1,7 @@
 // P25 Phase 2 test signal: a base station downlink of two logical channels made of the bursts of p25p2_proto.h, differential QPSK through a root
 // raised cosine, with a carrier offset and noise. The voice frames are a known pattern (p25p2VoiceBits): there is no free AMBE+2 encoder.
-// Everything here follows the program's own layout (p25p2_proto.h): the receiver is tested against it, not against a real transmitter.
+// The superframe (which slots carry the sync word, the I-ISCH, the order of 4V / 2V / SACCH bursts of each channel), the voice and ESS places and
+// the scrambling follow the on-air layout of p25p2_proto.h; the MAC PDUs in the SACCH / FACCH bursts are the program's own layout.
 #pragma once
 #include "dect2/common/ring.h"
 #include <cstdint>
@@ -24,7 +25,9 @@ struct P25p2GenConfig {
     double cfoHz = 0;              // carrier offset
     int superframes = 12;
     int leadDibits = 13;           // random dibits in front of the first sync (not a whole slot)
-    int colorCode = 0x293;
+    int colorCode = 0x293;         // the NAC: sent in the END_PTT, and a part of the scrambling seed
+    bool scramble = false;         // scramble the bursts with the seed WACN / system / colour code (the receiver needs setSystem with the same)
+    int wacn = 0xBEE00, sysId = 0x3A5;
     uint32_t seed = 7;
     std::vector<P25p2GenCall> calls;
     std::vector<std::vector<uint8_t>> sysMsgs;   // MAC messages sent round robin in the signalling bursts of idle channels (and of both channels before a call)

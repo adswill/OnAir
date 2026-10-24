@@ -556,6 +556,7 @@ public:
     void setWideTuning(const WideTuning& t) { wide_.setTuning(t); }
     WideTuning wideTuning() const { return wide_.tuning(); }
     void setWideExtraPriors(const std::vector<double>& absHz) { wide_.setExtraPriors(absHz); }
+    void setWideFollow(bool on, const std::vector<double>& absHz) { wide_.setFollowOnly(on, absHz); }   // only these channels get a decoder (WideModes::setFollowOnly)
     // IQ of one carrier of the running mode to an IQ WAV file in dir (the path, "" on failure)
     std::string startWideRecording(int carrierId, const std::string& dir) { return wide_.startRecording(activeStd_.load(), carrierId, dir); }
     void stopWideRecording(int carrierId) { wide_.stopRecording(activeStd_.load(), carrierId); }

@@ -22,6 +22,7 @@ struct P25p2Call {
     bool encrypted = false;      // reported only: nothing is decrypted, the voice of such a call never reaches a codec
     bool cryptoKnown = false;    // false: joined late and no message has said yet (voice is held back until it does)
     int algId = 0x80;
+    int keyId = 0;               // from the encryption sync (ESS) of the voice bursts
     int channel = -1;            // grants: the channel number
     double freqHz = 0;           // grants: its frequency, when the identifier update was heard
     bool lateEntry = false;
@@ -47,6 +48,10 @@ struct P25p2Telemetry {
     uint64_t syncs = 0, slots = 0, slotsBad = 0, ischBad = 0, unlocks = 0;
     uint64_t v4 = 0, v2 = 0, sacch = 0, facch = 0, rsCorrected = 0;
     uint64_t voiceFrames = 0, voiceDecoded = 0, encryptedSkipped = 0;
+    uint64_t ischExact = 0, ischCorrected = 0, duidBad = 0, essOk = 0, essBad = 0, realigns = 0;
+    int wacn = 0, sysId = 0, colorCode = 0;   // the descrambler seed in use (all 0: not descrambled)
+    uint64_t followTag = 0;                   // P25p2Receiver::startFollow: the reports since that reset
+    double voiceSec[2] = {-10, -10};          // signal time of the last voice burst on slot 1 / slot 2
     bool codec = false;          // an AMBE+2 decoder (plug-in "ambe2" or mbelib) is available
     std::string codecPath;
     int listenSlot = 0, audioSlot = 0;   // the choice (0 first heard, 1, 2) and the slot actually playing

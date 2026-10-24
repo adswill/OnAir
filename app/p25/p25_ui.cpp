@@ -12,6 +12,8 @@
 #include "dect2/p25/p25_rx.h"
 #include "dect2/p25/p25_tel.h"
 #include "dect2/p25/trunk.h"
+#include "dect2/p25p2/p25p2_rx.h"
+#include "dect2/p25p2/p25p2_tel.h"
 #include "dect2/audio/audio_rec.h"
 #include "dect2/common/u8file.h"
 #include "platform/platform.h"
@@ -25,6 +27,7 @@
 #include <cstdio>
 #include <ctime>
 #include <string>
+#include <map>
 #include <vector>
 
 namespace {
@@ -46,6 +49,16 @@ struct Trunk {
     uint64_t recCall = 0;
     std::string status;
     char csvPath[300] = "";
+    // the call the radio left the control channel for (Retune with a call): its voice keeps it open, the control channel cannot be heard
+    uint64_t hopCall = 0;
+    uint64_t hopSeq = 0;
+    // a followed P25 Phase 2 call: the Phase 2 receiver on its carrier, as the first mode (the radio hopped) or as the second mode (inside the capture)
+    uint64_t p2Call = 0;
+    int p2Slot = 0;
+    int p2Seed[3] = {0, 0, 0};           // WACN, system, NAC the receiver was seeded with
+    bool p2Hop = false, p2Second = false;
+    uint64_t p2Seq = 0;
+    std::vector<double> wideList;        // the Phase 1 channels the whole-span bank decodes for the follower (whole-span decoding off)
 };
 Trunk T;
 
@@ -67,6 +80,12 @@ void tgSave(const std::string& path) {
 }
 
 bool live(const App& a) { return a.rx.standard == 51; }   // the engine reports its standard code minus one
+constexpr int kP25p2Std = 182;                             // the engine standard of P25 Phase 2 (family 180)
+
+int p25p2ModeIdx() {
+    for (int i = 0; i < kNumModes; i++) if (kModes[i].family == kP25p2Std - 2 && !kModes[i].subId) return i;
+    return -1;
+}
 
 std::string clock(int64_t t) {
     if (t <= 0) return "-";
@@ -260,7 +279,11 @@ void messageView(App& a) {
 
 void trunkTick(App& a) {
     if (!T.loaded) { T.loaded = true; if (std::filesystem::exists(std::filesystem::u8path(tgFile()))) tgLoad(tgFile(), false); }
-    if (!T.on || !live(a)) return;
+    // Following without whole-span decoding: the whole-span bank runs for the granted Phase 1 channels only (a decoder per call, none for the rest)
+    const bool wantFollow = T.on && live(a) && !a.wideDecode;
+    if (wantFollow != a.wideFollow) { a.wideFollow = wantFollow; a.engine.setWideFollow(wantFollow, {}); T.wideList.clear(); }
+    if (!T.on && T.p2Hop) { a.engine.setStandard(engineStd(a)); T.p2Hop = false; T.p2Call = 0; }   // following turned off on a Phase 2 channel
+    if (!T.on || (!live(a) && !T.p2Hop)) return;   // on a Phase 2 voice channel the Phase 2 receiver is the first mode
     using namespace dect2::trunk;
     const double now = nowSec();
     const dect2::P25Telemetry& t = a.rx.p25;
@@ -270,11 +293,73 @@ void trunkTick(App& a) {
         dect2::p25::Tsbk k; k.opcode = r.opcode; k.mfid = r.mfid; k.args = r.args;
         T.ctl.onTsbk(k, r.nac, now);
     }
-    T.ctl.setCapture(radioCenterMhz(a) * 1e6, wideActive(a) ? t.inputRate : 0);
+    // the whole capture counts for Phase 2 calls (the second mode takes any channel in it); Phase 1 calls in it need whole-span decoding
+    T.ctl.setCapture(a.engine.captureCentreHz(), a.engine.sampleRate(), wideActive(a));
+    // the radio is on a voice channel: what it hears keeps the call open (no grant repeats reach it there)
+    if (T.hopCall && !T.p2Hop && live(a) && t.seq != T.hopSeq) { T.hopSeq = t.seq; if (t.now.active) T.ctl.onVoice(T.hopCall, now); }
+    if (T.p2Call) {
+        const dect2::P25p2Telemetry& p = T.p2Second ? a.second.rx.p25p2 : a.rx.p25p2;
+        if (p.seq != T.p2Seq && p.followTag == T.p2Call && (T.p2Second || a.rx.standard == kP25p2Std - 1)) {   // reports of this call only
+            T.p2Seq = p.seq;
+            // the Phase 2 screens (running as the second mode) push their own slot choice and seed: this call's win
+            dect2::P25p2Receiver& r = a.engine.p25p2();
+            r.setListenSlot(T.p2Slot + 1);
+            if (p.wacn != T.p2Seed[0] || p.sysId != T.p2Seed[1] || p.colorCode != T.p2Seed[2]) r.setSystem(T.p2Seed[0], T.p2Seed[1], T.p2Seed[2]);
+            const dect2::P25p2Call& c = p.now[T.p2Slot];
+            if (c.active && c.cryptoKnown && c.encrypted) T.ctl.onEncrypted(T.p2Call, now);   // the ESS says encrypted, whatever the grant said
+            else if (p.timeSec - p.voiceSec[T.p2Slot] < 0.6) T.ctl.onVoice(T.p2Call, now);
+        }
+    }
     T.ctl.tick(now);
+    // a Phase 2 call: seed the receiver with the site's WACN / system / NAC (the descrambler) and pick the slot. a.engine.p25p2() is the receiver
+    // either way: the engine runs a second mode on the idle receiver of that mode (Engine::setSecondary), and a hop makes it the first mode.
+    auto p2Start = [&](const Action& ac) {
+        const SiteInfo& si = T.ctl.sys.site();
+        dect2::P25p2Receiver& r = a.engine.p25p2();
+        T.p2Seed[0] = si.wacn < 0 ? 0 : si.wacn;
+        T.p2Seed[1] = si.sysId < 0 ? 0 : si.sysId;
+        T.p2Seed[2] = si.nac >= 0 ? si.nac : T.p2Seed[1];   // the NAC from the control channel's NID; XMC_SDR uses the system ID where it is not known
+        r.setSystem(T.p2Seed[0], T.p2Seed[1], T.p2Seed[2]);
+        r.setListenSlot(ac.slot + 1);
+        r.startFollow(ac.callId);   // afresh: nothing of the previous call (its slot's encryption above all) may reach this one
+        r.setCallHint(1, -1, -1, true, 0); r.setCallHint(2, -1, -1, true, 0);
+        if (const CallRecord* cr = T.ctl.log.byId(ac.callId)) r.setCallHint(ac.slot + 1, cr->src, cr->tg, cr->group, cr->freqHz);   // the voice channel does not name the talker
+        T.p2Call = ac.callId; T.p2Slot = ac.slot & 1; T.p2Seq = 0;
+    };
+    auto p2Stop = [&]() {
+        if (T.p2Second) { setSecondMode(a, -1, 0); a.engine.setSecondarySound(a.second.audio); }
+        T.p2Second = false; T.p2Call = 0;
+    };
     for (const Action& ac : T.ctl.takeActions()) {
         switch (ac.kind) {
-        case Action::Retune: tuneFreq(a, ac.freqHz / 1e6); break;
+        case Action::Retune:
+            if (T.p2Second) p2Stop();
+            if (ac.tdma) {   // the one radio leaves the control channel for a Phase 2 call: its decoder takes over (no radio restart)
+                p2Start(ac);
+                if (!T.p2Hop) { a.engine.setStandard(kP25p2Std); T.p2Hop = true; }
+            } else {
+                if (T.p2Hop) { a.engine.setStandard(engineStd(a)); T.p2Hop = false; }   // back to the Phase 1 receiver
+                T.p2Call = 0;
+            }
+            T.hopCall = ac.callId; T.hopSeq = 0;
+            tuneFreq(a, ac.freqHz / 1e6);
+            break;
+        case Action::OpenSlice:
+            if (ac.tdma) {   // inside the capture: the Phase 2 receiver runs as the second mode, the control channel stays decoded
+                p2Start(ac);
+                const int idx = p25p2ModeIdx();
+                T.p2Second = idx >= 0 && setSecondMode(a, idx, ac.freqHz / 1e6);
+                if (T.p2Second) a.engine.setSecondarySound(true);
+                else {
+                    T.ctl.messages.push_back("Phase 2 call on " + mhz(ac.freqHz) + " could not start: " + a.engine.secondaryNote());
+                    T.ctl.onTerminator(ac.callId, now);
+                    T.p2Call = 0;
+                }
+            }
+            break;
+        case Action::CloseSlice:
+            if (ac.tdma && ac.callId == T.p2Call) p2Stop();
+            break;
         case Action::Notice: T.ctl.messages.push_back(ac.text); break;
         case Action::RecordStart: {
             dect2::AudioRecorder& rec = dect2::AudioRecorder::instance();
@@ -297,6 +382,10 @@ void trunkTick(App& a) {
             break;
         default: break;
         }
+    }
+    if (a.wideFollow) {   // the bank decodes what is followed now
+        std::vector<double> v = T.ctl.follower.sliceFreqs(false);
+        if (v != T.wideList) { T.wideList = v; a.engine.setWideFollow(true, v); }
     }
     if (wideActive(a)) {   // the sound follows the call that should be heard
         const uint64_t id = T.ctl.follower.audibleCall();
@@ -328,13 +417,24 @@ void followView(App& a) {
           (unsigned long long)st.tsbkGood, (unsigned long long)st.tsbkBad, st.crcOkPct, (unsigned)st.activeCalls, (unsigned long long)st.missed);
     const SiteInfo& si = T.ctl.sys.site();
     if (si.valid) kvRow(a, "site", "WACN %05X system %03X RFSS %d site %d NAC %03X", si.wacn < 0 ? 0 : si.wacn, si.sysId < 0 ? 0 : si.sysId, si.rfss, si.site, si.nac < 0 ? 0 : si.nac);
-    if (wideActive(a)) ImGui::TextDisabled("wide capture: calls inside the span are followed by the carrier decoders (up to %d at once)", T.ctl.follower.config().maxSlices);
-    else ImGui::TextDisabled("single channel: the radio leaves the control channel for each call (turn on whole-span decoding to follow inside the capture)");
+    if (T.p2Call) {
+        const dect2::P25p2Telemetry& p = T.p2Second ? a.second.rx.p25p2 : a.rx.p25p2;
+        kvRow(a, "Phase 2", "slot %d %s, descrambler %05X / %03X / %03X, ESS %llu ok, %llu voice frames", T.p2Slot + 1, T.p2Second ? "(second mode)" : "(radio on the channel)",
+              p.wacn, p.sysId, p.colorCode, (unsigned long long)p.essOk, (unsigned long long)p.voiceFrames);
+    }
+    if (a.wideFollow) ImGui::TextDisabled("calls inside the capture get a decoder when they are granted (up to %d Phase 1 at once, one Phase 2 as the second mode); outside it the radio leaves the control channel for them", T.ctl.follower.config().maxSlices);
+    else if (wideActive(a)) ImGui::TextDisabled("whole span: every carrier in the capture is decoded, the sound moves to the followed call (up to %d at once)", T.ctl.follower.config().maxSlices);
+    else ImGui::TextDisabled("single channel: the radio leaves the control channel for each call");
     FollowConfig fc = T.ctl.follower.config();
     ImGui::SetNextItemWidth(110 * gUi); bool ch = ImGui::SliderInt("simultaneous calls", &fc.maxSlices, 1, 4);
     ImGui::SameLine(0, 10 * gUi); ImGui::SetNextItemWidth(110 * gUi); ch |= ImGui::SliderFloat("hang time s", &S.hang, 0.5f, 6.f, "%.1f");
     fc.hangSec = S.hang;
     ch |= ImGui::Checkbox("retune the radio", &fc.allowRetune);
+    ImGui::SameLine(0, 10 * gUi);
+    ch |= ImGui::Checkbox("Phase 2 calls", &fc.followPhase2);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Follow P25 Phase 2 (TDMA) voice grants: the Phase 2 receiver decodes the granted slot, descrambled with the site's\n"
+                          "WACN, system and NAC from this control channel. Inside a wide capture one Phase 2 call at a time runs as the second mode.");
     ImGui::SameLine(0, 10 * gUi);
     bool so = T.ctl.tgs.scanOnly();
     if (ImGui::Checkbox("scan list only", &so)) T.ctl.tgs.setScanOnly(so);
@@ -418,6 +518,7 @@ void tick(App& a) {
     dect2::P25Receiver& r = a.engine.p25();
     if (!S.wasRunning || a.volume != S.pushedVol || a.muted != S.pushedMute) {   // the sound controls are shared with the other modes
         r.setVolume(a.volume); r.setMuted(a.muted);
+        a.engine.p25p2().setVolume(a.volume); a.engine.p25p2().setMuted(a.muted);   // the followed Phase 2 calls
         S.pushedVol = a.volume; S.pushedMute = a.muted;
     }
     S.wasRunning = true;
@@ -444,15 +545,23 @@ void list(App& a) {
     ImGui::TableSetupColumn("TG"); ImGui::TableSetupColumn("Heard", ImGuiTableColumnFlags_WidthStretch);
     const auto& n = a.rx.p25.now;
     if (n.active && !n.group) {
+        const ImVec4 c = n.encrypted ? pal::warnAmber() : pal::okGreen();
         ImGui::TableNextRow();
-        ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0); ImGui::TextColored(pal::okGreen(), "%s", dect2::p25Id(n.src).c_str()); ImGui::PopFont();
-        ImGui::TableNextColumn(); ImGui::TextColored(pal::okGreen(), "on air -> %s", dstOf(n).c_str());
+        ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0); ImGui::TextColored(c, "%s", dect2::p25Id(n.src).c_str()); ImGui::PopFont();
+        ImGui::TableNextColumn(); ImGui::TextColored(c, "on air -> %s%s", dstOf(n).c_str(), n.encrypted ? ", encrypted" : "");
     }
+    // a running call is encrypted when the follower's record says so (that includes what a Phase 2 voice channel's encryption sync said: grants
+    // do not always tell), else when the talkgroup was heard encrypted
+    std::map<int, bool> runningEnc;
+    for (const auto& r : T.ctl.log.records()) if (r.active && r.group && !r.dmr) runningEnc[r.tg] = r.encrypted;
     for (const auto& g : tg) {
+        const auto it = runningEnc.find(g.tg);
+        const bool enc = g.encrypted || (it != runningEnc.end() && it->second);
+        const ImVec4 on = enc ? pal::warnAmber() : pal::okGreen();   // active: green in the clear, orange encrypted
         ImGui::TableNextRow();
-        ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0); ImGui::TextColored(g.active ? pal::okGreen() : ImGui::GetStyleColorVec4(ImGuiCol_Text), "%d", g.tg); ImGui::PopFont();
+        ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0); ImGui::TextColored(g.active ? on : ImGui::GetStyleColorVec4(ImGuiCol_Text), "%d", g.tg); ImGui::PopFont();
         ImGui::TableNextColumn();
-        if (g.active) ImGui::TextColored(pal::okGreen(), "active, unit %s", dect2::p25Id(g.lastSrc).c_str());
+        if (g.active) ImGui::TextColored(on, "active, unit %s%s", dect2::p25Id(g.lastSrc).c_str(), enc ? ", encrypted" : "");
         else ImGui::TextDisabled("%s  %u grants, %u calls", clock(g.lastWall).c_str(), g.grants, g.calls);
     }
     ImGui::EndTable();

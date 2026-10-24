@@ -36,6 +36,7 @@ bool Engine::secondaryAllowed(int m) {
     case 61: case 63:
     // the narrow-channel modes added later (each has its configureReceiver / placeReceiver / pollMode case and a test signal that decodes beside another mode)
     case 65: case 67: case 68: case 71: case 72: case 73: case 74: case 76: case 77: case 78: case 79: case 80: case 81: case 82: case 83: case 84:
+    case 182:   // P25 Phase 2: the voice channel the trunking follower opens beside the Phase 1 control channel
         return true;
     default:
         return false;
@@ -236,6 +237,7 @@ void Engine::muteReceiver(int a, bool m) {
     if (WideModes::supports(a)) wide_.setMuted(m);
     switch (a) {
     case 10: rxDmr_.setMuted(m); break;
+    case 181: rxP25p2_.setMuted(m); break;
     case 22: rxHdr_.setMuted(m); break;
     case 26: rxHfdig_.setMuted(m); break;
     case 27: rxAirband_.setMuted(m); break;

@@ -52,6 +52,12 @@ int Follower::activeSlices() const {
     return n;
 }
 
+std::vector<double> Follower::sliceFreqs(bool tdma) const {
+    std::vector<double> v;
+    for (const Slot& s : slots_) if (s.used && !s.hopped && s.tdma == tdma) v.push_back(s.freqHz);
+    return v;
+}
+
 uint64_t Follower::audibleCall() const {
     const Slot* best = nullptr;
     for (const Slot& s : slots_) {
@@ -74,14 +80,23 @@ void Follower::close(Slot& s, CallLog& log, double now, const char* why) {
     a.kind = Action::RecordStop; a.callId = s.callId; a.slice = idx;
     if (cfg_.record) out_.push_back(a);
     a.kind = s.hopped ? Action::Notice : Action::CloseSlice;
+    a.tdma = s.tdma;
     if (!s.hopped) out_.push_back(a);
     if (CallRecord* r = log.byId(s.callId)) {
-        r->active = false;
-        r->durSec = std::max(0.0, std::max(s.lastSec, r->lastSec) - r->startSec);
+        if (!s.leave) {
+            r->active = false;
+            r->durSec = std::max(0.0, std::max(s.lastSec, r->lastSec) - r->startSec);
+        }
         if (why && *why && r->note.empty()) r->note = why;
     }
     (void)now;
-    s.used = false;
+    s.used = false; s.leave = false;
+}
+
+void Follower::leave(uint64_t callId, double now) {
+    lastNow_ = now;
+    for (Slot& s : slots_)
+        if (s.used && s.callId == callId) { s.leave = true; s.lastSec = now - cfg_.hangSec - 0.001; }   // closed at the next tick, the call stays in the log
 }
 
 void Follower::goHome(double now) {
@@ -122,7 +137,7 @@ void Follower::onGrant(const Grant& g, const TalkgroupList::Decision& d, double 
         r.lastSec = now;
         if (g.src >= 0 && r.src < 0) r.src = g.src;
         if (g.emergency) r.emergency = true;
-        for (Slot& s : slots_) if (s.used && s.callId == r.id) s.lastSec = now;
+        for (Slot& s : slots_) if (s.used && s.callId == r.id && !s.leave) s.lastSec = now;
         return;
     }
     CallRecord rec;
@@ -141,7 +156,9 @@ void Follower::onGrant(const Grant& g, const TalkgroupList::Decision& d, double 
     if (g.encrypted) { skip("encrypted: not followed", false); return; }
     if (!d.follow) { skip(d.reason, false); return; }
     if (g.freqHz <= 0) { skip("channel frequency not known yet (no identifier update heard)", false); return; }
-    if (g.tdma && !g.dmr) { skip("P25 Phase 2 TDMA voice: no Phase 2 demodulator", false); return; }
+    const bool p2 = g.tdma && !g.dmr;
+    const int p2Slot = p2 ? g.slot : -1;   // the Phase 2 time slot of the call (-1: Phase 1)
+    if (p2 && !cfg_.followPhase2) { skip("P25 Phase 2 call: Phase 2 following is off", false); return; }
     const int prio = d.priority;
     auto lowest = [&](bool hoppedOnly, bool anyOnly) -> Slot* {
         Slot* v = nullptr;
@@ -158,16 +175,29 @@ void Follower::onGrant(const Grant& g, const TalkgroupList::Decision& d, double 
         noticed_.push_back({g.freqHz, now});
         note(text);
     };
-    if (inSpan(g.freqHz)) {
+    // one Phase 2 call at a time inside the capture (the engine has one Phase 2 receiver to run beside the control channel): the running one
+    // gives way to a higher priority call, else this call does not get in
+    auto phase2Room = [&]() {
+        for (Slot& x : slots_) {
+            if (!x.used || x.hopped || !x.tdma) continue;
+            if (effPrio(prio) >= effPrio(x.prio)) return false;
+            close(x, log, now, "preempted by a higher priority call");
+        }
+        return true;
+    };
+    const bool captured = inSpan(g.freqHz);
+    if (captured && (p2 || slices_)) {
+        if (p2 && !phase2Room()) { skip("busy: one Phase 2 call at a time inside the capture", true); return; }
         Slot* s = freeSlot();
         if (!s) {
             Slot* v = lowest(false, false);
             if (v && effPrio(prio) < effPrio(v->prio)) { close(*v, log, now, "preempted by a higher priority call"); s = v; }
         }
         if (!s) { skip("busy: every slice is in use", true); return; }
-        s->used = true; s->hopped = false; s->callId = id; s->prio = prio; s->freqHz = g.freqHz; s->startSec = s->lastSec = now;
+        s->used = true; s->hopped = false; s->tdma = p2; s->callId = id; s->prio = prio; s->freqHz = g.freqHz; s->startSec = s->lastSec = now;
         Action a;
         a.kind = Action::OpenSlice; a.callId = id; a.slice = (int)(s - slots_.data()); a.freqHz = g.freqHz;
+        a.tdma = s->tdma; a.slot = p2Slot;
         out_.push_back(a);
         if (cfg_.record) {
             Action rs;
@@ -182,6 +212,11 @@ void Follower::onGrant(const Grant& g, const TalkgroupList::Decision& d, double 
         return;
     }
     // outside the capture: the radio has to leave the control channel, which blinds it to every other grant
+    if (!cfg_.allowRetune && captured) {   // a Phase 1 call inside the capture, but nothing decodes it there
+        skip("inside the capture: turn on whole-span decoding (or let the radio retune)", true);
+        announce("Call on " + std::to_string(g.freqHz / 1e6).substr(0, 9) + " MHz is inside the capture: turn on whole-span decoding to follow it there");
+        return;
+    }
     if (!cfg_.allowRetune) {
         skip("needs a wider capture or a second radio", true);
         announce("Call on " + std::to_string(g.freqHz / 1e6).substr(0, 9) + " MHz is outside the capture: needs a wider capture or a second radio");
@@ -199,9 +234,10 @@ void Follower::onGrant(const Grant& g, const TalkgroupList::Decision& d, double 
     if (homeHz_ <= 0 && ccHz_ <= 0) homeHz_ = centerHz_;
     Slot* s = freeSlot();
     if (!s) return;
-    s->used = true; s->hopped = true; s->callId = id; s->prio = prio; s->freqHz = g.freqHz; s->startSec = s->lastSec = now;
+    s->used = true; s->hopped = true; s->tdma = p2; s->callId = id; s->prio = prio; s->freqHz = g.freqHz; s->startSec = s->lastSec = now;
     Action a;
     a.kind = Action::Retune; a.callId = id; a.freqHz = g.freqHz;
+    a.tdma = s->tdma; a.slot = p2Slot;
     out_.push_back(a);
     radioHz_ = g.freqHz;
     if (cfg_.record) {
@@ -218,7 +254,7 @@ void Follower::onGrant(const Grant& g, const TalkgroupList::Decision& d, double 
 
 void Follower::onVoice(uint64_t callId, double now) {
     lastNow_ = now;
-    for (Slot& s : slots_) if (s.used && s.callId == callId) s.lastSec = now;
+    for (Slot& s : slots_) if (s.used && s.callId == callId && !s.leave) s.lastSec = now;
 }
 
 void Follower::onTerminator(uint64_t callId, double now) {

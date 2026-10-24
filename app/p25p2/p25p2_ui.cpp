@@ -1,6 +1,7 @@
 // P25 Phase 2 screens: the two time slots (unit ID, talkgroup, emergency, encryption, voice), the call log with the voice channel grants, the trunking
-// system (site, adjacent sites, channel identifiers), the talkgroups, the decoded MAC messages, and the "Listen to" slot choice. Receive only; encrypted calls
-// are only reported. The field layout is the program's own reading of public descriptions and has not met a real signal (core/include/dect2/p25p2/p25p2_proto.h).
+// system (site, adjacent sites, channel identifiers), the talkgroups, the decoded MAC messages, the "Listen to" slot choice and the descrambler seed
+// (WACN / system / NAC of the site, which the P25 trunking follower fills in by itself). Receive only; encrypted calls are only reported. The burst layer
+// follows the on-air layout; the MAC PDUs are the program's own reading (core/include/dect2/p25p2/p25p2_proto.h).
 #include "app.h"
 #include "dect2/codec/codec_registry.h"
 #include "../codec/speech_codec_ui.h"
@@ -20,6 +21,8 @@ struct State {
     int listen = 0;                      // 0 first heard, 1, 2
     bool wasRunning = false;
     float pushedVol = -1; bool pushedMute = false; int pushedListen = -1;
+    uint32_t wacn = 0, sysId = 0, nac = 0;   // the descrambler seed typed in (all 0: not descrambled)
+    bool seedDirty = false;
 };
 State S;
 
@@ -57,6 +60,7 @@ void tick(App& a) {
         S.pushedVol = a.volume; S.pushedMute = a.muted;
     }
     if (!S.wasRunning || S.listen != S.pushedListen) { r.setListenSlot(S.listen); S.pushedListen = S.listen; }
+    if (!S.wasRunning || S.seedDirty) { r.setSystem((int)S.wacn, (int)S.sysId, (int)S.nac); S.seedDirty = false; }
     S.wasRunning = true;
 }
 
@@ -71,8 +75,9 @@ void voiceLine() {
     ImGui::TextDisabled("(?)");
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("OnAir only receives. It shows what P25 Phase 2 radios send in the clear: talkgroups, unit IDs, the trunking system and,\n"
-                          "with your own AMBE+2 codec plug-in, clear voice. Encrypted calls are only reported as encrypted; nothing is decrypted,\n"
-                          "and the encryption sync fields are never read. The frame layout is not yet checked against a real signal.\n"
+                          "with your own AMBE+2 codec plug-in, clear voice. Encrypted calls are only reported as encrypted (from the encryption sync);\n"
+                          "nothing is decrypted. A Phase 2 channel is scrambled with its site's WACN, system and NAC: enter them (the Phase 1 control\n"
+                          "channel shows them), or let the P25 trunking follower open the channel.\n"
                           "Listening to radio services is regulated in many countries: follow the rules where you live.");
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("Listen to");
@@ -83,6 +88,19 @@ void voiceLine() {
         for (int i = 0; i < 3; i++) if (ImGui::Selectable(ls[i], S.listen == i)) S.listen = i;
         ImGui::EndCombo();
     }
+    ImGui::SameLine(0, 14 * gUi);
+    ImGui::TextUnformatted("WACN / system / NAC");
+    auto hexField = [](const char* id, uint32_t* v, uint32_t max, float w) {
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(w * gUi);
+        if (ImGui::InputScalar(id, ImGuiDataType_U32, v, nullptr, nullptr, max > 0xFFF ? "%05X" : "%03X", ImGuiInputTextFlags_CharsHexadecimal)) {
+            if (*v > max) *v = max;
+            S.seedDirty = true;
+        }
+    };
+    hexField("##p2wacn", &S.wacn, 0xFFFFF, 60);
+    hexField("##p2sys", &S.sysId, 0xFFF, 45);
+    hexField("##p2nac", &S.nac, 0xFFF, 45);
 }
 
 void slotCard(App& a, int i) {
@@ -96,7 +114,7 @@ void slotCard(App& a, int i) {
     ImGui::PopFont();
     kvRow(a, "call", "%s%s", n.group ? "group" : "unit to unit", n.lateEntry ? ", joined late" : "");
     if (n.emergency) { ImGui::TextDisabled("note"); kvColumn(130 * gUi); ImGui::TextColored(pal::warnAmber(), "EMERGENCY"); }
-    if (!n.cryptoKnown) { ImGui::TextDisabled("encryption"); kvColumn(130 * gUi); ImGui::TextColored(pal::warnAmber(), "not known yet: no sound until a message says"); }
+    if (!n.cryptoKnown) { ImGui::TextDisabled("encryption"); kvColumn(130 * gUi); ImGui::TextColored(pal::warnAmber(), "not known yet: no sound until the encryption sync says"); }
     else if (n.encrypted) { ImGui::TextDisabled("encryption"); kvColumn(130 * gUi); ImGui::TextColored(pal::warnAmber(), "encrypted (algorithm 0x%02X): no sound (not decrypted)", n.algId); }
     kvRow(a, "duration", "%.1f s, %u voice frames", n.durSec, n.voiceFrames);
     kvRow(a, "voice", "%s", n.encrypted ? "-" : n.voice ? "playing (AMBE+2)" : t.codec ? "-" : "no codec: frames counted only");

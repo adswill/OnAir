@@ -1,7 +1,8 @@
-// P25 Phase 2 receiver against the generated signal (p25p2_gen.h): clean, with noise, with carrier offsets, at several input rates, with the slot choice.
-// Covered: sync and slot clock, ISCH, 4V / 2V / SACCH / FACCH bursts, MAC PTT / END_PTT / ACTIVE / grants / status / identifier updates, the call table,
-// that an encrypted call is reported and none of its voice reaches the tap as clear. NOT covered: a real transmitter, a real recording, H-CPM, fading,
-// timing offsets of the radio's clock (the generator and the receiver share the layout of p25p2_proto.h).
+// P25 Phase 2 receiver against the generated signal (p25p2_gen.h): clean, with noise, with carrier offsets, at several input rates, with the slot choice,
+// scrambled with and without the right seed. Covered: sync and burst framing, S-ISCH / I-ISCH and the slot of the superframe, the DUID, the
+// descrambling, 4V / 2V / SACCH / FACCH bursts, the ESS, MAC PTT / END_PTT / ACTIVE / grants / status / identifier updates, the call table, that an
+// encrypted call is reported and none of its voice reaches the tap as clear. NOT covered here: a real transmitter (the burst layer was checked on a
+// recording of the NSW PSN with tools/p25p2tool), H-CPM, fading, timing offsets of the radio's clock.
 #include "dect2/p25p2/p25p2_gen.h"
 #include "dect2/p25p2/p25p2_proto.h"
 #include "dect2/p25p2/p25p2_rx.h"
@@ -31,11 +32,12 @@ static P25p2GenConfig baseConfig() {
     return c;
 }
 
-static P25p2Telemetry run(const P25p2GenConfig& c, Frames* fr, int listen = 0, size_t* audio = nullptr) {
+static P25p2Telemetry run(const P25p2GenConfig& c, Frames* fr, int listen = 0, size_t* audio = nullptr, const int* seed = nullptr) {
     P25p2Receiver rx;
     rx.setSilent(true);
     rx.setListenSlot(listen);
     rx.configure(c.rate);
+    if (seed) rx.setSystem(seed[0], seed[1], seed[2]);
     if (fr) rx.setVoiceTap([fr](int slot, const uint8_t* bits, bool clear) { fr->bits[slot].emplace_back(bits, bits + 72); fr->clear[slot].push_back(clear); });
     if (audio) rx.setAudioTap([audio](const float*, size_t n) { *audio += n; });
     const std::vector<cf32> s = p25p2Signal(c);
@@ -156,6 +158,43 @@ int main() {
             CHECK(t.listenSlot == listen, "listen %d reported as %d", listen, t.listenSlot);
             CHECK(fr.bits[1].size() > 20 && fr.bits[2].size() > 20, "both slots are still seen with listen %d", listen);
         }
+    }
+    // ---- scrambled (as every real channel): decodes with the seed of the control channel, and with a wrong one the voice and the ESS fail
+    {
+        P25p2GenConfig c = baseConfig();
+        c.scramble = true; c.snrDb = 30; c.seed = 9;
+        const int good[3] = {c.wacn, c.sysId, c.colorCode}, bad[3] = {c.wacn, c.sysId, c.colorCode ^ 1};
+        Frames fr;
+        const P25p2Telemetry t = run(c, &fr, 0, nullptr, good);
+        checkDecode(c, t, fr, 0.95, "scrambled");
+        CHECK(t.wacn == c.wacn && t.sysId == c.sysId && t.colorCode == c.colorCode, "scrambled: seed reported %05X %03X %03X", t.wacn, t.sysId, t.colorCode);
+        CHECK(t.essOk >= 8 && t.essBad == 0, "scrambled: ESS ok %llu bad %llu", (unsigned long long)t.essOk, (unsigned long long)t.essBad);
+        Frames fw;
+        const P25p2Telemetry w = run(c, &fw, 0, nullptr, bad);
+        CHECK(w.essOk == 0 && w.blocksOk == 0, "wrong seed: ESS ok %llu, MAC ok %llu", (unsigned long long)w.essOk, (unsigned long long)w.blocksOk);
+        size_t match = 0;
+        for (size_t i = 0; i < fw.bits[1].size(); i++)
+            for (int k = 0; k < 200; k++) { uint8_t ex[72]; p25p2VoiceBits(1, k, ex); if (std::memcmp(ex, fw.bits[1][i].data(), 72) == 0) { match++; break; } }
+        CHECK(match == 0, "wrong seed: %zu voice frames came out right", match);
+        CHECK(w.ischExact > 10 && w.duidBad == 0, "wrong seed: the ISCH and the DUID are not scrambled (%llu, %llu)", (unsigned long long)w.ischExact, (unsigned long long)w.duidBad);
+        printf("scrambled: ESS ok %llu, I-ISCH exact %llu\n", (unsigned long long)t.essOk, (unsigned long long)t.ischExact);
+    }
+    // ---- a call joined without its PTT: the voice is held until the ESS says clear (or dropped when it says encrypted)
+    {
+        P25p2GenConfig c = baseConfig();
+        c.calls[0].startSf = -1; c.calls[0].nSf = 8;   // the PTT is never sent
+        c.calls[1].startSf = -1; c.calls[1].nSf = 8;
+        Frames fr;
+        size_t audio = 0;
+        const P25p2Telemetry t = run(c, &fr, 0, &audio);
+        const P25p2Call* a = nullptr;
+        const P25p2Call* b = nullptr;
+        for (const auto& x : t.log) { if (x.kind == 0 && x.slot == 1) a = &x; if (x.kind == 0 && x.slot == 2) b = &x; }
+        CHECK(a && !a->encrypted && a->algId == 0x80 && a->clearFrames + 4 >= a->voiceFrames, "late entry, clear: %s %u of %u", a ? "found" : "missing", a ? a->clearFrames : 0, a ? a->voiceFrames : 0);
+        CHECK(b && b->encrypted && b->algId == 0x84 && b->keyId == 0x1234 && b->clearFrames == 0, "late entry, encrypted: %s", b ? "wrong" : "missing");
+        size_t clear2 = 0;
+        for (bool v : fr.clear[2]) clear2 += v;
+        CHECK(clear2 == 0, "late entry: %zu encrypted frames handed on as clear", clear2);
     }
     // ---- pure noise: nothing is found
     {
