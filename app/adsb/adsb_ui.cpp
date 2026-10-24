@@ -157,7 +157,9 @@ void tab(App& a) {
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     const float dw = std::min(250.f * gUi, W * 0.26f);
     // the readout beside the map and radar; beside the table only once an aircraft is picked (its ACARS messages are in it)
-    const bool pane = S.viewMode == 0 || S.viewMode == 2 || (S.viewMode == 1 && S.sel != 0xFFFFFFFFu);
+    const bool picked = S.sel != 0xFFFFFFFFu;
+    // a narrow panel gives the whole width to the map or radar until an aircraft is picked: a readout squeezed to a third of it helps nobody
+    const bool pane = ((S.viewMode == 0 || S.viewMode == 2) && (W >= 640 * gUi || picked)) || (S.viewMode == 1 && picked);
     ImGui::BeginChild("##adsb_l", ImVec2(pane ? W - dw - 8 * gUi : W, H));
     if (S.viewMode == 0) mapView(a, ImGui::GetContentRegionAvail());
     else if (S.viewMode == 1) aircraftTable(a, false);

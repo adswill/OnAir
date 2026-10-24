@@ -1,6 +1,7 @@
 // ADS-B screens: the radar plot around the receiver and the map of aircraft (tiles, trails, range rings), with the full-window map.
 // Split from adsb_ui.cpp; the tile map itself (projection, tiles, controls) is in adsb_map.cpp.
 // The shared state and helpers are declared in adsb_internal.h.
+#include "../map/bar_flow.h"
 #include "adsb_internal.h"
 #include "map/pos_predict.h"
 #include "adsb_acars.h"
@@ -279,38 +280,58 @@ static void drawAircraft(ImDrawList* dl, const AdsbTelemetry& t, ImVec2 p0, ImVe
 
 // the buttons in the map corner, the "antenna position looks wrong" note and the position / right-click popups
 static void mapCorner(App& a, ImVec2 p0, ImVec2 size, bool wrongRef, double areaLat, double areaLon, double nearest) {
-    // controls in the corner
-    ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 8 * gUi));
+    // controls in the corner: they wrap onto further lines when the map is narrow, so nothing runs off its edge
+    const float left = p0.x + 8 * gUi, right = p0.x + size.x - 8 * gUi;
+    const ImGuiStyle& st = ImGui::GetStyle();
+    float lastRight = left - 6 * gUi, rowTop = p0.y + 8 * gUi, bottom = rowTop;
+    auto place = [&](float w, float gap) {   // put the cursor where an item w wide goes
+        const barflow::Spot sp = barflow::next(lastRight, w, gap, left, right);
+        if (sp.newLine) rowTop = bottom + 4 * gUi;
+        ImGui::SetCursorScreenPos(ImVec2(sp.x, rowTop));
+    };
+    auto done = [&]() { lastRight = ImGui::GetItemRectMax().x; bottom = std::max(bottom, ImGui::GetItemRectMax().y); };
+    auto btnW = [&](const char* l) { return ImGui::CalcTextSize(l).x + 2 * st.FramePadding.x; };
+    auto chkW = [&](const char* l) { return ImGui::GetFrameHeight() + st.ItemInnerSpacing.x + ImGui::CalcTextSize(l).x; };
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.06f, 0.07f, 0.08f, 0.85f));
+    place(26 * gUi, 0);
     if (ImGui::Button("+", ImVec2(26 * gUi, 0))) S.map.zoom = std::min(adsbmap::kMaxZoom, S.map.zoom + 1); if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Zoom in"));
-    ImGui::SameLine(0, 2 * gUi);
+    done(); place(26 * gUi, 2 * gUi);
     if (ImGui::Button("-", ImVec2(26 * gUi, 0))) S.map.zoom = std::max(adsbmap::kMinZoom, S.map.zoom - 1); if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Zoom out"));
-    ImGui::SameLine(0, 6 * gUi);
+    done(); place(btnW("antenna"), 6 * gUi);
     if (ImGui::Button("antenna")) { S.map.lat = S.refLat; S.map.lon = S.refLon; S.mapHome = true; }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Centre the map on the antenna");
-    ImGui::SameLine(0, 2 * gUi);
+    done(); place(btnW("position"), 2 * gUi);
     if (ImGui::Button("position")) ImGui::OpenPopup("##adsbpos");
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Set where the antenna is: for ranges, the radar rings and decoding positions locally. You can also right-click the map.");
-    ImGui::SameLine(0, 6 * gUi);
+    done(); place(btnW(tr("Exit full screen")), 6 * gUi);
     if (adsbmap::fullButton(S.full, "map")) S.full = !S.full;
     ImGui::PopStyleColor();
-    ImGui::SameLine(0, 6 * gUi);
-    unitsControls();
-    ImGui::SameLine(0, 6 * gUi);
+    done();
+    {   // units: the label and the drop-down(s) stay together
+        const float w = ImGui::CalcTextSize("Units").x + st.ItemSpacing.x + 130 * gUi + (S.units.metric() ? st.ItemSpacing.x + 70 * gUi : 0.f);
+        place(w, 6 * gUi);
+        unitsControls();
+        done();
+    }
+    place(btnW(tr("Display")), 6 * gUi);
     displayControls();
-    ImGui::SameLine(0, 6 * gUi);
+    done();
+    place(chkW("winds aloft"), 6 * gUi);
     if (ImGui::Checkbox("winds aloft", &S.winds)) { plat::prefs().setB("adsbWinds", S.winds); plat::prefs().flush(); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Wind arrows (downwind) at the aircraft, coloured by altitude: derived from Comm-B 5,0 + 6,0 replies, or reported in 4,4.");
-    ImGui::SameLine(0, 6 * gUi);
+    done(); place(chkW("GPS interference"), 6 * gUi);
     if (ImGui::Checkbox("GPS interference", &S.jamLayer)) { plat::prefs().setB("adsbGpsJam", S.jamLayer); plat::prefs().flush(); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Shades 0.5 degree squares by the share of aircraft that reported a poor GPS position (NACp / NIC low, or a position jump) in the last hour; at least 3 aircraft per square. An indicator, not proof of jamming.");
-    ImGui::SameLine(0, 6 * gUi);
+    done();
     gPred.load("adsb", true, false);
+    place(chkW(tr("Predict positions")) + (gPred.predict ? 6 * gUi + chkW(tr("uncertainty")) : 0.f), 6 * gUi);
     gPred.controls();
-    ImGui::SameLine(0, 6 * gUi);
+    done();
+    place(0, 6 * gUi);   // tiles / online map wrap by themselves (adsbmap::tileControls)
     adsbmap::tileControls(nullptr, false);
+    bottom = std::max(bottom, ImGui::GetItemRectMax().y);
     if (wrongRef) {
-        ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 38 * gUi));
+        ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, bottom + 6 * gUi));
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.18f, 0.14f, 0.04f, 0.92f));
         ImGui::BeginChild("##wrongref", ImVec2(std::min(size.x - 16 * gUi, 520 * gUi), 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
         ImGui::PushTextWrapPos(0);

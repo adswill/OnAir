@@ -103,6 +103,7 @@ GLFWwindow* createMainWindow(int argc, char** argv) {
         return nullptr;
     }
     if (gfx::level() > 0) fprintf(stderr, "graphics: %s\n", gfx::levelName());
+    if (const char* sz = std::getenv("ONAIR_WINDOW_SIZE")) { int w = 0, h = 0; if (sscanf(sz, "%dx%d", &w, &h) == 2 && w >= 200 && h >= 200) glfwSetWindowSize(window, w, h); }   // dev: window size for screenshots, e.g. 700x800
 #ifndef __APPLE__
     {   // the default size is in pixels: make the window as large (in points) as on a 96 dpi display, but never larger than the screen
         // (a 1366 x 768 laptop at 100 % is common: a 1500 x 900 window would hang off its bottom and right edges, hiding the status bar)
