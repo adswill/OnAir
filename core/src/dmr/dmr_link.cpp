@@ -2,6 +2,7 @@
 #include "dmr_link.h"
 #include "dect2/dmr/dmr_dsp.h"
 #include "dect2/dmr/dmr_lrrp.h"
+#include "dect2/dmr/dmr_nmea.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -855,13 +856,20 @@ void Link::finishMessage(Track& t) {
     }
     if (crcOk) {
         DmrLocation loc;
-        if (parseDmrLrrp(data.data(), data.size(), loc)) {
+        bool have = parseDmrLrrp(data.data(), data.size(), loc);
+        bool nmea = false;
+        if (!have) {   // a plain-text NMEA sentence (e.g. $GNRMC) carried in a short-data / UDT message
+            nmea = parseDmrNmea(msg.text.data(), msg.text.size(), loc) ||
+                   parseDmrNmea((const char*)data.data(), data.size(), loc);
+            have = nmea;
+        }
+        if (have) {
             loc.sec = now; loc.slot = slotOf(t); loc.src = m.hdr.src; loc.dst = m.hdr.dst;
             loc.unixSec = (double)std::time(nullptr);
             if (tel_.locations.size() >= 512) tel_.locations.erase(tel_.locations.begin());
             tel_.locations.push_back(loc);
             if (loc.hasFix) {
-                msg.format = "LRRP GPS";
+                msg.format = nmea ? "NMEA GPS" : "LRRP GPS";
                 snprintf(fb, sizeof fb, "%.5f, %.5f", loc.lat, loc.lon);
                 msg.text = fb;
             } else {
