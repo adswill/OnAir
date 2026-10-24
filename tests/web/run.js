@@ -191,6 +191,42 @@ test("s-meter", () => {
   assert.strictEqual(L.sMeter(-90).s, 5); assert.strictEqual(L.sMeter(-46).text, "S9+20"); assert.strictEqual(L.sMeter(NaN).text, "S0");
   assert.ok(L.sMeter(-30).frac <= 1 && L.sMeter(-200).frac === 0);
 });
+test("frequency axis ticks are absolute MHz with just enough decimals", () => {
+  let t = L.axisTicks({ start: 96e6, stop: 100e6 }, 1000, 90);
+  assert.strictEqual(t.step, 5e5); assert.deepStrictEqual(t.major.map((x) => x.label), ["96.0", "96.5", "97.0", "97.5", "98.0", "98.5", "99.0", "99.5", "100.0"]);
+  t = L.axisTicks({ start: 97.95e6, stop: 98.05e6 }, 1000, 90);
+  assert.strictEqual(t.decimals, 2); assert.strictEqual(t.major[0].label, "97.95"); assert.strictEqual(t.major[5].label, "98.00");
+  t = L.axisTicks({ start: 98e6, stop: 98.002e6 }, 400, 90);
+  assert.strictEqual(t.decimals, 4); assert.strictEqual(t.major[0].label, "98.0000");
+  t = L.axisTicks({ start: 1088e6, stop: 1092e6 }, 800, 90);
+  assert.ok(t.major.every((x) => +x.label >= 1088 && +x.label <= 1092));
+  assert.ok(L.axisTicks({ start: 0, stop: 30e6 }, 1200, 90).major.length >= 5);
+  assert.strictEqual(L.tickDecimals(1e6), 0); assert.strictEqual(L.tickDecimals(25e3), 3); assert.strictEqual(L.formatMHz(98e6, 3), "98.000");
+});
+test("readout digit groups and passband edge dragging", () => {
+  assert.deepStrictEqual(L.readoutDigits(98000000), ["0", "098", "000", "000"]);
+  assert.deepStrictEqual(L.readoutDigits(1090000000), ["1", "090", "000", "000"]);
+  assert.deepStrictEqual(L.readoutDigits(-5), ["0", "000", "000", "000"]);
+  assert.deepStrictEqual(L.dragEdge("nfm", -6250, 6250, "low", -4000), { low_hz: -4000, high_hz: 4000 });
+  assert.deepStrictEqual(L.dragEdge("nfm", -6250, 6250, "high", 999999), { low_hz: -10000, high_hz: 10000 });
+  assert.deepStrictEqual(L.dragEdge("usb", 100, 2800, "high", 3000), { low_hz: 100, high_hz: 3000 });
+  assert.deepStrictEqual(L.dragEdge("usb", 100, 2800, "high", 150), { low_hz: 100, high_hz: 600 });
+  assert.deepStrictEqual(L.dragEdge("lsb", -2800, -100, "low", -3200), { low_hz: -3200, high_hz: -100 });
+});
+test("passband level is the power inside the passband", () => {
+  const levels = new Uint8Array(100).fill(0); levels[50] = 255;   // one strong bin at 98.0 MHz
+  const row = { bins: 100, startHz: 97e6, stopHz: 99e6, floorDb: -100, topDb: -20, levels };
+  const inside = L.passbandLevel(row, 98e6, -50000, 50000), outside = L.passbandLevel(row, 97.3e6, -50000, 50000);
+  assert.ok(inside > outside + 20, inside + " vs " + outside);
+  assert.ok(Math.abs(L.passbandLevel(row, 98e6, -100, 100) - -20) < 3.5);   // narrower than a bin: the bin under the tuned frequency
+  assert.strictEqual(L.passbandLevel(row, 120e6, -100, 100), null);
+});
+test("s-meter scale ticks sit where the bar fills", () => {
+  const t = L.sMeterTicks(), s9 = t.find((x) => x.label === "9");
+  assert.ok(Math.abs(s9.frac - L.sMeter(-66).frac) < 1e-9);
+  assert.ok(Math.abs(t.find((x) => x.label === "+20").frac - L.sMeter(-46).frac) < 1e-9);
+  assert.ok(t.every((x) => x.frac >= 0 && x.frac <= 1));
+});
 test("decoder tables render any JSON shape", () => {
   const t = L.toTable([{ icao: "4CA123", alt: 36000 }, { icao: "400ABC", spd: 450 }]);
   assert.strictEqual(t.kind, "table"); assert.deepStrictEqual(t.columns, ["icao", "alt", "spd"]); assert.deepStrictEqual(t.rows[1], ["400ABC", "", "450"]);

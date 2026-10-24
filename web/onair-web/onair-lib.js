@@ -264,8 +264,57 @@
     let s, over = 0;
     if (levelDb <= s9) s = clamp(Math.round(9 + (levelDb - s9) / 6), 0, 9);
     else { s = 9; over = Math.round((levelDb - s9) / 10) * 10; }
-    const frac = clamp((levelDb + 120) / 90, 0, 1);
+    const frac = clamp((levelDb + 120) / 100, 0, 1);
     return { s, over, text: over ? "S9+" + over : "S" + s, frac };
+  }
+
+
+  // ---- frequency axis: ticks on round numbers with just enough decimals, always absolute MHz ----
+  const TICK_STEPS = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1e3, 2e3, 5e3, 1e4, 2e4, 5e4, 1e5, 2e5, 5e5, 1e6, 2e6, 5e6, 1e7, 2e7, 5e7, 1e8];
+  /** MHz text for hz with a fixed number of decimals (0..6). */
+  function formatMHz(hz, decimals) { return (hz / 1e6).toFixed(clamp(decimals | 0, 0, 6)); }
+  /** Decimals (of MHz) needed to write a multiple of stepHz exactly: 1 MHz 0, 500 kHz 1, 100 kHz 1, 50 kHz 2, 1 kHz 3, 500 Hz 4. */
+  function tickDecimals(stepHz) { let d = 0; while (d < 6 && Math.abs(stepHz / 1e6 * Math.pow(10, d) - Math.round(stepHz / 1e6 * Math.pow(10, d))) > 1e-9) d++; return d; }
+  /** Labelled (major) and unlabelled (minor) ticks for a view drawn `width` px wide; a label needs about minLabelPx. */
+  function axisTicks(view, width, minLabelPx) {
+    const span = view.stop - view.start, want = Math.max(2, Math.floor(width / (minLabelPx || 90)));
+    let step = TICK_STEPS.find((t) => span / t <= want) || TICK_STEPS[TICK_STEPS.length - 1];
+    const i = TICK_STEPS.indexOf(step), minorStep = i > 0 ? (TICK_STEPS[i] / TICK_STEPS[i - 1] === 2 ? step / 2 : step / (TICK_STEPS[i] / TICK_STEPS[i - 1] > 2.5 ? 5 : 2)) : step;
+    const decimals = tickDecimals(step), major = [], minor = [];
+    for (let k = Math.ceil(view.start / step - 1e-9); k * step <= view.stop + 1e-6; k++) { const hz = k * step; major.push({ hz, label: formatMHz(hz, decimals) }); }
+    if (minorStep < step) for (let k = Math.ceil(view.start / minorStep - 1e-9); k * minorStep <= view.stop + 1e-6; k++) { const hz = k * minorStep; if (Math.abs(hz / step - Math.round(hz / step)) > 1e-6) minor.push(hz); }
+    return { step, decimals, major, minor };
+  }
+  /** Readout groups for the big display: "0.098.000.000" as { groups:["0","098","000","000"] } ; 10 digits, Hz resolution. */
+  function readoutDigits(hz) { const s = String(Math.max(0, Math.round(hz))).padStart(10, "0"); return [s.slice(0, 1), s.slice(1, 4), s.slice(4, 7), s.slice(7)]; }
+  /** New low/high (Hz offsets from the tuned frequency) after dragging one passband edge to offsetHz. edge: "low" | "high". Symmetric modes move both edges. */
+  function dragEdge(mode, low, high, edge, offsetHz) {
+    if (mode === "usb" || mode === "lsb") {
+      const r = MODE_BW_RANGE[mode], lim = MODE_LIMITS[mode];
+      let lo = low, hi = high;
+      if (edge === "high") hi = offsetHz; else lo = offsetHz;
+      if (hi - lo < r[0]) { if (edge === "high") hi = lo + r[0]; else lo = hi - r[0]; }
+      if (hi - lo > r[1]) { if (edge === "high") hi = lo + r[1]; else lo = hi - r[1]; }
+      lo = clamp(Math.round(lo), lim[0], lim[1]); hi = clamp(Math.round(hi), lim[0], lim[1]);
+      return { low_hz: lo, high_hz: hi };
+    }
+    return passband(mode, Math.abs(offsetHz) * 2);
+  }
+  /** Level in dB of the signal inside the passband [freq+low, freq+high], power-summed over the spectrum bins; null when no bin falls inside. */
+  function passbandLevel(row, freq, low, high) {
+    const bh = (row.stopHz - row.startHz) / row.bins, a = freq + low, b = freq + high;
+    let i0 = Math.max(0, Math.ceil((a - row.startHz) / bh - 0.5)), i1 = Math.min(row.bins - 1, Math.floor((b - row.startHz) / bh - 0.5));
+    if (i1 < i0) { i0 = i1 = clamp(Math.round((freq - row.startHz) / bh - 0.5), 0, row.bins - 1); if (freq < row.startHz || freq > row.stopHz) return null; }
+    let sum = 0, n = 0;
+    for (let i = i0; i <= i1; i++) { sum += Math.pow(10, levelToDb(row, row.levels[i]) / 10); n++; }
+    return n ? 10 * Math.log10(sum / n) : null;
+  }
+  /** Tick marks for the S-meter scale: S1..S9 every 6 dB below -66 dBFS, then +20/+40, as { label, frac }. */
+  function sMeterTicks() {
+    const out = [];
+    for (let s = 1; s <= 9; s += 2) out.push({ label: String(s), frac: clamp((-66 - (9 - s) * 6 + 120) / 100, 0, 1) });
+    for (const o of [20, 40]) out.push({ label: "+" + o, frac: clamp((-66 + o + 120) / 100, 0, 1) });
+    return out;
   }
 
   // ---- decoder results: turn any JSON value into rows for a table ----
@@ -417,7 +466,7 @@
     adpcmDecode, parseSpectrum, parseAudio, levelToDb, msg, parseServerText, closeAdvice, sanitizeText,
     formatFreq, parseFreq, stepLabel, snap, passband, bandwidthOf, captureBounds, fullBounds,
     hzToX, xToHz, normView, zoomView, panView, viewIsFull, bandSlice, freqToBin, binToFreq, rowToPixels,
-    makePalette, sMeter, toTable, findTables, clamp,
+    makePalette, sMeter, formatMHz, passbandLevel, tickDecimals, axisTicks, readoutDigits, dragEdge, sMeterTicks, toTable, findTables, clamp,
     guardMargin, rangeActive, mergeRanges, rangeCheck, rangeSnap, rangeModes, visibleRanges, hiddenRanges, rangeOverlaps, describeRanges, readRanges,
   };
 });

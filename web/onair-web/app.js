@@ -22,7 +22,7 @@
     range: store.get("range", 70), floorAdj: store.get("floorAdj", 0),
     attempt: 0, retryTimer: 0, retryAt: 0, stopRetry: false, pendingTune: 0, lastTuneSent: 0, tuneTimer: 0,
     rows: [], rowSeq: -1, audioSeq: -1, lost: 0, decoders: {}, views: {}, decDirty: false, name: store.get("name", ""), invite: "", password: "",
-    bw: 0,
+    bw: 0, tuneExtra: {}, connState: "", retryNote: "", drag: null, notServer: false, sheetOpen: store.get("sheet", true), tab: "tune",
   };
   const bands = [
     { n: "LW broadcast", s: 148500, e: 283500, f: 189000, m: "am" }, { n: "MW broadcast", s: 526500, e: 1606500, f: 1000000, m: "am" },
@@ -37,10 +37,10 @@
   ];
 
   // ---------- small UI helpers ----------
-  function setConn(text, cls) { const c = $("conn"); c.textContent = text; c.className = "pill " + (cls || ""); }
+  function setConn(text, cls) { const c = $("conn"); c.textContent = text; c.className = "pill " + (cls || ""); S.connState = text; renderScopeMsg(); }
   function banner(text) { const b = $("banner"); b.hidden = !text; b.textContent = text || ""; }
   function send(m) { if (S.ws && S.ws.readyState === 1) { S.ws.send(JSON.stringify(m)); return true; } return false; }
-  const fmtMHz = (hz) => (hz / 1e6).toFixed(hz % 1e6 === 0 ? 1 : 3);
+  const fmtMHz = (hz) => { const t = (hz / 1e6).toFixed(6).replace(/0+$/, "").replace(/\.$/, ""); return t.includes(".") ? t : t + ".0"; };
   function schedule(fn, ms) { let t = 0; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; }
 
   // ---------- frequency display ----------
@@ -49,7 +49,7 @@
     const f = $("freq"); f.textContent = "";
     for (let i = 9; i >= 0; i--) {
       const d = el("span", "d", "0"); d.dataset.place = String(i); digitEls[i] = d; f.appendChild(d);
-      if (i === 7 || i === 4) f.appendChild(el("span", "p", "."));
+      if (i === 9 || i === 6 || i === 3) f.appendChild(el("span", "p", "."));
     }
     f.addEventListener("pointerdown", (e) => {
       const d = e.target.closest(".d"); if (!d) return;
@@ -69,23 +69,35 @@
       else if (e.key === "Enter") { typeFreq(); e.preventDefault(); }
     });
   }
+  const mhzText = (hz) => (hz / 1e6).toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
   function renderFreq() {
     const s = String(Math.max(0, Math.round(S.freq))).padStart(10, "0");
     let lead = true;
     for (let i = 9; i >= 0; i--) {
-      const ch = s[9 - i]; if (ch !== "0" || i < 3) lead = false;
+      const ch = s[9 - i]; if (ch !== "0" || i < 6) lead = false;
       digitEls[i].textContent = ch; digitEls[i].className = "d" + (lead ? " z" : "");
     }
-    const f = $("freq"); f.setAttribute("aria-valuenow", String(S.freq)); f.setAttribute("aria-valuetext", L.formatFreq(S.freq).replace(/\./g, " ") + " hertz");
+    const f = $("freq"); f.setAttribute("aria-valuenow", String(S.freq)); f.setAttribute("aria-valuetext", mhzText(S.freq) + " megahertz");
     const s0 = $("viewText");
-    if (S.view) s0.textContent = fmtMHz(S.view.start) + " - " + fmtMHz(S.view.stop) + " MHz";
+    if (S.view) s0.textContent = L.formatMHz(S.view.start, 3) + " to " + L.formatMHz(S.view.stop, 3) + " MHz";
+    invalidate({ ov: 1 });
   }
+  // typing a frequency replaces the readout in place (no dialog, no layout shift)
   function typeFreq() {
-    const t = prompt("Frequency (MHz, or with kHz / Hz):", (S.freq / 1e6).toFixed(6).replace(/0+$/, "").replace(/\.$/, ""));
-    if (t == null) return;
-    const hz = L.parseFreq(t);
-    if (isNaN(hz)) { banner("That is not a frequency."); return; }
-    banner(""); setFreq(hz, true);
+    const form = $("freqForm"), inp = $("freqInput");
+    form.hidden = false; $("freq").hidden = true; $("freqType").hidden = true;
+    inp.value = mhzText(S.freq); inp.focus(); inp.select();
+  }
+  function closeType() { $("freqForm").hidden = true; $("freq").hidden = false; $("freqType").hidden = false; }
+  function wireType() {
+    $("freqForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const hz = L.parseFreq($("freqInput").value);
+      if (isNaN(hz)) { banner("That is not a frequency. Type it in MHz, for example 98.3, or add kHz or Hz."); return; }
+      banner(""); closeType(); setFreq(hz, true); $("freq").focus();
+    });
+    $("freqInput").addEventListener("keydown", (e) => { if (e.key === "Escape") { closeType(); $("freq").focus(); } });
+    $("freqInput").addEventListener("blur", () => setTimeout(() => { if (document.activeElement !== $("freqInput") && !$("freqForm").hidden) closeType(); }, 100));
   }
 
   // ---------- tuning ----------
@@ -103,31 +115,33 @@
     if (followView && S.view && (S.freq < S.view.start || S.freq > S.view.stop)) {
       const sp = S.view.stop - S.view.start; setView({ start: S.freq - sp / 2, stop: S.freq + sp / 2 });
     }
-    renderFreq(); drawSpectrum(); persist(); sendTune();
+    renderFreq(); renderBandsActive(); persist(); sendTune();
   }
   function changeFreq(d) { setFreq(S.freq + d, true); }
+  // tune messages are sent at most every 60 ms; fields asked for in between are merged into the next one
   function sendTune(extra) {
     S.pendingTune = performance.now();
-    const m = Object.assign({ freq_hz: S.freq }, extra || {});
-    const go = () => { S.lastTuneSent = performance.now(); send(L.msg.tune(m)); };
+    Object.assign(S.tuneExtra, extra || {});
+    const go = () => { S.lastTuneSent = performance.now(); const m = Object.assign({ freq_hz: S.freq }, S.tuneExtra); S.tuneExtra = {}; send(L.msg.tune(m)); };
     clearTimeout(S.tuneTimer);
-    const wait = Math.max(0, 70 - (performance.now() - S.lastTuneSent));
-    if (extra || wait === 0) go(); else S.tuneTimer = setTimeout(go, wait);
+    const wait = Math.max(0, 60 - (performance.now() - S.lastTuneSent));
+    if (wait === 0) go(); else S.tuneTimer = setTimeout(go, wait);
   }
   function setMode(mode) {
     if (!L.MODES.includes(mode)) return;
     S.mode = mode;
     const d = L.MODE_DEFAULT[mode]; S.low = d[0]; S.high = d[1];
     if (L.rangeActive(S.ranges)) S.freq = Math.round(clampFreq(S.freq));   // the new passband must fit too
-    renderMode(); renderFreq(); drawSpectrum(); sendTune({ mode });
+    renderMode(); renderFreq(); sendTune({ mode });
     if (S.audioOn) sendAudio();
     persist();
   }
-  function setBandwidth(bw) {
-    const pb = L.passband(S.mode, bw); S.low = pb.low_hz; S.high = pb.high_hz;
+  function applyPassband(pb) {
+    S.low = pb.low_hz; S.high = pb.high_hz;
     if (L.rangeActive(S.ranges)) S.freq = Math.round(clampFreq(S.freq));
-    renderMode(); renderFreq(); sendTune({ low_hz: S.low, high_hz: S.high }); drawSpectrum();
+    renderMode(); renderFreq(); sendTune({ low_hz: S.low, high_hz: S.high }); persist();
   }
+  function setBandwidth(bw) { applyPassband(L.passband(S.mode, bw)); }
   function buildModes(allowed) {
     const box = $("modes"); box.textContent = "";
     for (const m of L.MODES) {
@@ -143,6 +157,7 @@
     s.min = r[0]; s.max = r[1]; s.step = r[1] > 30000 ? 1000 : 50; s.value = bw;
     $("bwOut").textContent = bw >= 1000 ? (bw / 1000).toFixed(bw % 1000 ? 2 : 0) + " kHz" : bw + " Hz";
     S.bw = bw; $("freq").setAttribute("data-mode", S.mode);
+    invalidate({ ov: 1 });
   }
 
   // ---------- persistence of the last tuning ----------
@@ -158,34 +173,67 @@
   }, 120);
   function setView(v) {
     if (!S.bounds) return;
-    S.view = L.normView(v, S.full); renderFreq(); drawSpectrum(); redrawWaterfall(); requestSpan();
+    S.view = L.normView(v, S.full); renderFreq(); invalidate({ spec: 1, wf: 1 }); requestSpan();
   }
   function zoom(f, anchor) { setView(L.zoomView(S.view, S.full, f, anchor == null ? S.freq : anchor)); }
 
-  // ---------- drawing ----------
-  const spec = $("spec"), wf = $("wf");
-  const sctx = spec.getContext("2d"), wctx = wf.getContext("2d");
+  // ---------- drawing: everything is painted from requestAnimationFrame, at most once per frame ----------
+  const spec = $("spec"), wf = $("wf"), ax = $("ax"), ov = $("ov");
+  const sctx = spec.getContext("2d"), wctx = wf.getContext("2d"), actx = ax.getContext("2d"), octx = ov.getContext("2d");
   let pal = L.makePalette(S.palette), pix = null;
+  const C = { bg: "#0a0908", grid: "#1d1913", gridMajor: "#2a251e", text: "#9a917f", accent: "#dba64d", axisBg: "#0e0c0b" };
+  const FONT = (px) => `${px}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
+  const dirty = { spec: 1, wf: 1, ov: 1 };
+  let raf = 0, hover = null;   // hover: { x (css px), hz } while the pointer is over the scope
+  function invalidate(w) { for (const k in w) dirty[k] = 1; if (!raf) raf = requestAnimationFrame(frame); }
+  function frame() {
+    raf = 0;
+    const dpr = window.devicePixelRatio || 1;
+    const resized = [spec, ax, wf, ov].map(fit).some(Boolean);
+    if (resized) { dirty.spec = dirty.wf = dirty.ov = 1; }
+    if (dirty.wf) { dirty.wf = 0; redrawWaterfall(); }
+    if (dirty.spec) { dirty.spec = 0; drawSpectrum(dpr); drawAxis(dpr); }
+    if (dirty.ov) { dirty.ov = 0; drawOverlay(dpr); }
+    if (resized) requestSpan();
+  }
   function fit(c) {
-    const dpr = window.devicePixelRatio || 1, w = Math.max(50, Math.round(c.clientWidth * dpr)), h = Math.max(50, Math.round(c.clientHeight * dpr));
+    const dpr = window.devicePixelRatio || 1, w = Math.max(50, Math.round(c.clientWidth * dpr)), h = Math.max(10, Math.round(c.clientHeight * dpr));
     if (c.width !== w || c.height !== h) { c.width = w; c.height = h; return true; }
     return false;
   }
   function rowLo(row) { return row.floorDb + S.floorAdj; }
-  function drawSpectrum() {
-    fit(spec); const W = spec.width, H = spec.height, dpr = window.devicePixelRatio || 1;
-    sctx.fillStyle = "#0a0908"; sctx.fillRect(0, 0, W, H);
+  function drawAxis(dpr) {
+    const W = ax.width, H = ax.height; actx.fillStyle = C.axisBg; actx.fillRect(0, 0, W, H);
     if (!S.view) return;
-    const v = S.view, span = v.stop - v.start;
-    // grid
-    const cand = [1e3, 2e3, 5e3, 1e4, 2e4, 5e4, 1e5, 2e5, 5e5, 1e6, 2e6, 5e6, 1e7, 2e7, 5e7];
-    let g = cand.find((c) => span / c <= 8) || 5e7;
-    sctx.font = `${11 * dpr}px ui-monospace, Menlo, monospace`; sctx.textBaseline = "top";
-    for (let f = Math.ceil(v.start / g) * g; f < v.stop; f += g) {
-      const x = Math.round(L.hzToX(v, f, W)) + 0.5;
-      sctx.strokeStyle = "#241f19"; sctx.lineWidth = 1; sctx.beginPath(); sctx.moveTo(x, 0); sctx.lineTo(x, H); sctx.stroke();
-      sctx.fillStyle = "#8d8473"; sctx.fillText(g >= 1e6 ? (f / 1e6).toFixed(g >= 1e6 ? 0 : 1) : (f / 1e6).toFixed(g >= 1e5 ? 1 : 3), x + 3, 2);
+    const t = L.axisTicks(S.view, W / dpr, 84);
+    actx.font = FONT(11 * dpr); actx.textBaseline = "middle"; actx.textAlign = "center";
+    actx.strokeStyle = "#4a4338"; actx.lineWidth = 1; actx.beginPath();
+    for (const hz of t.minor) { const x = Math.round(L.hzToX(S.view, hz, W)) + 0.5; actx.moveTo(x, H); actx.lineTo(x, H - 4 * dpr); }
+    for (const m of t.major) { const x = Math.round(L.hzToX(S.view, m.hz, W)) + 0.5; actx.moveTo(x, H); actx.lineTo(x, H - 7 * dpr); }
+    actx.stroke(); actx.fillStyle = C.text;
+    for (const m of t.major) {
+      const x = L.hzToX(S.view, m.hz, W), w = actx.measureText(m.label).width / 2 + 3 * dpr;
+      actx.fillText(m.label, L.clamp(x, w, W - w), H / 2 - 3 * dpr);
     }
+    actx.strokeStyle = C.gridMajor; actx.beginPath(); actx.moveTo(0, H - 0.5); actx.lineTo(W, H - 0.5); actx.stroke();
+  }
+  function drawSpectrum(dpr) {
+    const W = spec.width, H = spec.height;
+    sctx.fillStyle = C.bg; sctx.fillRect(0, 0, W, H);
+    if (!S.view) return;
+    const v = S.view, row = S.rows[S.rows.length - 1];
+    // vertical grid on the major ticks, horizontal grid every 10 dB with the level at the left edge
+    const t = L.axisTicks(v, W / dpr, 84);
+    sctx.strokeStyle = C.grid; sctx.lineWidth = 1; sctx.beginPath();
+    for (const m of t.major) { const x = Math.round(L.hzToX(v, m.hz, W)) + 0.5; sctx.moveTo(x, 0); sctx.lineTo(x, H); }
+    if (row) {
+      const lo = rowLo(row), yOf = (db) => H - L.clamp((db - lo) / S.range, 0, 1) * (H - 4) - 2;
+      sctx.font = FONT(10 * dpr); sctx.textBaseline = "bottom"; sctx.textAlign = "left";
+      const dbStep = (H / dpr) * 10 / S.range < 26 ? 20 : 10;
+      for (let db = Math.ceil(lo / dbStep) * dbStep; db <= lo + S.range; db += dbStep) { const y = Math.round(yOf(db)) + 0.5; sctx.moveTo(0, y); sctx.lineTo(W, y); }
+      sctx.stroke(); sctx.fillStyle = C.text;
+      for (let db = Math.ceil(lo / dbStep) * dbStep; db <= lo + S.range; db += dbStep) { const y = yOf(db); if (y > 12 * dpr && y < H - 2) sctx.fillText(String(db), 4 * dpr, y - 1); }
+    } else sctx.stroke();
     // the host's ranges: what is not visible is darkened, the allowed bands get a strip on top, blocked ones a red tint
     if (L.rangeActive(S.ranges)) {
       sctx.fillStyle = "rgba(0,0,0,0.62)";
@@ -197,24 +245,49 @@
       sctx.fillStyle = "rgba(190,60,50,0.22)";
       for (const b of S.ranges.block) { if (b.hi < v.start || b.lo > v.stop) continue; const x = L.hzToX(v, Math.max(b.lo, v.start), W), y = L.hzToX(v, Math.min(b.hi, v.stop), W); sctx.fillRect(x, 0, Math.max(2, y - x), H); }
     }
-    // passband and tuned marker
-    const x0 = L.hzToX(v, S.freq + S.low, W), x1 = L.hzToX(v, S.freq + S.high, W), xc = L.hzToX(v, S.freq, W);
-    sctx.fillStyle = "rgba(219,166,77,0.14)"; sctx.fillRect(x0, 0, Math.max(2, x1 - x0), H);
-    sctx.strokeStyle = "#dba64d"; sctx.lineWidth = Math.max(1, dpr); sctx.beginPath(); sctx.moveTo(xc, 0); sctx.lineTo(xc, H); sctx.stroke();
-    // trace
-    const row = S.rows[S.rows.length - 1];
-    if (row) {
-      pix = L.rowToPixels(row, v, W, pix);
-      sctx.strokeStyle = "#dba64d"; sctx.lineWidth = Math.max(1, dpr); sctx.beginPath();
-      let started = false;
-      for (let x = 0; x < W; x++) {
-        if (!pix[x]) { started = false; continue; }
-        const db = L.levelToDb(row, pix[x]), y = H - L.clamp((db - rowLo(row)) / S.range, 0, 1) * (H - 4) - 2;
-        if (!started) { sctx.moveTo(x, y); started = true; } else sctx.lineTo(x, y);
-      }
-      sctx.stroke();
+    if (!row) return;
+    // trace: a line over a faint fill
+    pix = L.rowToPixels(row, v, W, pix);
+    const lo = rowLo(row), yOf = (db) => H - L.clamp((db - lo) / S.range, 0, 1) * (H - 4) - 2;
+    sctx.beginPath(); let started = false, lastX = 0;
+    for (let x = 0; x < W; x++) {
+      if (!pix[x]) { started = false; continue; }
+      const y = yOf(L.levelToDb(row, pix[x]));
+      if (!started) { sctx.moveTo(x, y); started = true; } else sctx.lineTo(x, y);
+      lastX = x;
+    }
+    sctx.strokeStyle = C.accent; sctx.lineWidth = Math.max(1, dpr); sctx.stroke();
+    if (started) { sctx.lineTo(lastX, H); sctx.lineTo(0, H); sctx.closePath(); sctx.fillStyle = "rgba(219,166,77,0.10)"; sctx.fill(); }
+  }
+  // the passband, the tuned frequency and the pointer: one transparent canvas over spectrum, axis and waterfall
+  function passEdges(W) {
+    if (!S.view) return null;
+    return { x0: L.hzToX(S.view, S.freq + S.low, W), x1: L.hzToX(S.view, S.freq + S.high, W), xc: L.hzToX(S.view, S.freq, W) };
+  }
+  function drawOverlay(dpr) {
+    const W = ov.width, H = ov.height; octx.clearRect(0, 0, W, H);
+    const e = passEdges(W); if (!e) return;
+    const axTop = spec.clientHeight * dpr, axH = ax.clientHeight * dpr;
+    octx.fillStyle = "rgba(219,166,77,0.12)"; octx.fillRect(e.x0, 0, Math.max(2, e.x1 - e.x0), H);
+    octx.fillStyle = "rgba(219,166,77,0.55)";
+    octx.fillRect(Math.round(e.x0), 0, Math.max(1, Math.round(dpr)), H); octx.fillRect(Math.round(e.x1), 0, Math.max(1, Math.round(dpr)), H);
+    // grips on the axis strip show that the edges can be dragged
+    const gh = 10 * dpr, gw = 3 * dpr, gy = axTop + (axH - gh) / 2;
+    octx.fillStyle = C.accent; octx.fillRect(Math.round(e.x0 - gw / 2), gy, gw, gh); octx.fillRect(Math.round(e.x1 - gw / 2), gy, gw, gh);
+    octx.fillRect(Math.round(e.xc), 0, Math.max(1, Math.round(dpr)), H);
+    octx.beginPath(); octx.moveTo(e.xc - 5 * dpr, axTop - 7 * dpr); octx.lineTo(e.xc + 5 * dpr, axTop - 7 * dpr); octx.lineTo(e.xc, axTop - 1 * dpr); octx.closePath(); octx.fill();
+    if (hover && !S.drag) {
+      const x = hover.x * dpr;
+      octx.fillStyle = "rgba(220,212,198,0.35)"; octx.fillRect(Math.round(x), 0, Math.max(1, Math.round(dpr)), H);
+      const txt = L.formatMHz(hover.hz, 4) + " MHz" + (hover.db != null ? "  " + hover.db.toFixed(0) + " dB" : "");
+      octx.font = FONT(11 * dpr); octx.textBaseline = "middle"; octx.textAlign = "left";
+      const tw = octx.measureText(txt).width + 10 * dpr, bx = L.clamp(x + 8 * dpr, 2, W - tw - 2), by = 4 * dpr;
+      octx.fillStyle = "rgba(12,11,10,0.92)"; octx.fillRect(bx, by, tw, 18 * dpr);
+      octx.strokeStyle = "#3a342c"; octx.lineWidth = 1; octx.strokeRect(bx + 0.5, by + 0.5, tw, 18 * dpr);
+      octx.fillStyle = C.text; octx.fillText(txt, bx + 5 * dpr, by + 9.5 * dpr);
     }
   }
+  const ROWH = () => Math.max(1, Math.round(2 * (window.devicePixelRatio || 1)));
   function paintWfRow(img, y, row) {
     const W = img.width, px = img.data; pix = L.rowToPixels(row, S.view, W, pix);
     const lo = rowLo(row);
@@ -226,48 +299,90 @@
     }
   }
   function redrawWaterfall() {
-    fit(wf); const W = wf.width, H = wf.height;
-    wctx.fillStyle = "#0a0908"; wctx.fillRect(0, 0, W, H);
+    const W = wf.width, H = wf.height, rh = ROWH();
+    wctx.fillStyle = C.bg; wctx.fillRect(0, 0, W, H);
     if (!S.view || !S.rows.length) return;
-    const img = wctx.createImageData(W, H);
+    const img = wctx.createImageData(W, H), line = W * 4;
     for (let y = 0; y < H; y++) {
-      const row = S.rows[S.rows.length - 1 - y];
-      if (!row) { for (let x = 0; x < W; x++) { const o = (y * W + x) * 4; img.data[o] = 10; img.data[o + 1] = 9; img.data[o + 2] = 8; img.data[o + 3] = 255; } continue; }
-      paintWfRow(img, y, row);
+      const k = (y / rh) | 0, o = y * line;
+      if (y % rh) { img.data.copyWithin(o, o - line, o); continue; }
+      const row = S.rows[S.rows.length - 1 - k];
+      if (!row) { for (let x = 0; x < W; x++) { const q = o + x * 4; img.data[q] = 10; img.data[q + 1] = 9; img.data[q + 2] = 8; img.data[q + 3] = 255; } continue; }
+      paintWfRow({ width: W, data: img.data }, y, row);
     }
     wctx.putImageData(img, 0, 0);
   }
   function onRow(row) {
-    S.rows.push(row); if (S.rows.length > 700) S.rows.splice(0, S.rows.length - 600);
+    const first = !S.rows.length;
+    S.rows.push(row); if (S.rows.length > 900) S.rows.splice(0, S.rows.length - 800);
+    if (first) renderScopeMsg();
+    if (!S.audioOn) { const db = L.passbandLevel(row, S.freq, S.low, S.high); if (db != null) { S.level = db; if (db > S.peak) { S.peak = db; S.peakAt = performance.now(); } } }
     if (!S.view) return;
-    if (fit(wf)) { redrawWaterfall(); } else {
-      const W = wf.width, H = wf.height;
-      wctx.drawImage(wf, 0, 1);
-      const img = wctx.createImageData(W, 1); paintWfRow(img, 0, row); wctx.putImageData(img, 0, 0); void H;
+    if (fit(wf)) { invalidate({ wf: 1 }); } else {
+      const W = wf.width, rh = ROWH();
+      wctx.drawImage(wf, 0, rh);
+      const img = wctx.createImageData(W, 1); paintWfRow(img, 0, row); wctx.putImageData(img, 0, 0);
+      if (rh > 1) wctx.drawImage(wf, 0, 0, W, 1, 0, 1, W, rh - 1);
     }
-    drawSpectrum();
+    invalidate({ spec: 1 });
+  }
+  // the scope says in words why it is empty
+  function renderScopeMsg() {
+    let t = "";
+    if (S.notServer) t = "No receiver here.";
+    else if (!S.welcome) t = S.connState === "offline" ? "Offline. " + (S.retryNote || "") : S.connState === "sign in" ? "Sign in to listen." : "Connecting to the receiver...";
+    else if (!S.rows.length) t = "Waiting for the first spectrum...";
+    $("scopeMsg").textContent = t.trim();
   }
 
-  // ---------- pointer interaction on the scope (tap = tune, drag = pan, wheel / pinch = zoom) ----------
+  // ---------- pointer interaction on the scope ----------
+  // click = tune. Drag a passband edge = bandwidth. Drag inside the passband = fine tune. Drag elsewhere = pan. Wheel / pinch = zoom.
   function attachScope(c) {
-    const ptrs = new Map(); let startView = null, moved = false, startX = 0, pinch0 = 0, pinchView = null;
-    const wpos = (e) => { const r = c.getBoundingClientRect(); return (e.clientX - r.left) / r.width; };
+    const ptrs = new Map(); let startView = null, moved = false, startX = 0, pinch0 = 0, pinchView = null, mode = "pan", edge = "high", grab = 0;
+    const rect = () => c.getBoundingClientRect();
+    const wpos = (e) => { const r = rect(); return (e.clientX - r.left) / r.width; };
+    const hitTest = (e) => {
+      const r = rect(), W = r.width, x = e.clientX - r.left, p = passEdges(W); if (!p) return "pan";
+      const tol = e.pointerType === "touch" ? 16 : 7;
+      const d0 = Math.abs(x - p.x0), d1 = Math.abs(x - p.x1);
+      if (Math.min(d0, d1) <= tol && p.x1 - p.x0 > 3) { edge = d0 < d1 ? "low" : "high"; return "edge"; }
+      if (x > p.x0 && x < p.x1) return "inside";
+      return "pan";
+    };
+    const hoverInfo = (e) => {
+      if (!S.view) return null;
+      const f = wpos(e), hz = L.xToHz(S.view, f, 1); let db = null;
+      const row = S.rows[S.rows.length - 1];
+      if (row && pix && pix.length) { const px = pix[Math.min(pix.length - 1, Math.max(0, Math.floor(f * pix.length)))]; if (px) db = L.levelToDb(row, px); }
+      return { x: e.clientX - rect().left, hz, db };
+    };
     c.addEventListener("pointerdown", (e) => {
-      c.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, e);
-      if (ptrs.size === 1) { startView = S.view; moved = false; startX = e.clientX; }
-      else if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch0 = Math.abs(a.clientX - b.clientX) || 1; pinchView = S.view; moved = true; }
+      try { c.setPointerCapture(e.pointerId); } catch (err) { /* synthetic or already released */ } ptrs.set(e.pointerId, e);
+      if (ptrs.size === 1) { startView = S.view; moved = false; startX = e.clientX; mode = hitTest(e); S.drag = mode; if (mode === "inside" && S.view) grab = L.xToHz(S.view, wpos(e), 1) - S.freq; }
+      else if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch0 = Math.abs(a.clientX - b.clientX) || 1; pinchView = S.view; moved = true; mode = "pan"; S.drag = "pan"; }
+      c.focus({ preventScroll: true });
     });
     c.addEventListener("pointermove", (e) => {
-      if (!ptrs.has(e.pointerId) || !S.view) return;
+      if (!ptrs.has(e.pointerId)) {   // no button: show the pointer, and which gesture a press here would start
+        hover = hoverInfo(e); const h = e.pointerType === "touch" ? "pan" : hitTest(e);
+        c.style.cursor = h === "edge" ? "ew-resize" : h === "inside" ? "grab" : "crosshair"; invalidate({ ov: 1 }); return;
+      }
+      if (!S.view) return;
       ptrs.set(e.pointerId, e);
       if (ptrs.size === 2 && pinchView) {
         const [a, b] = [...ptrs.values()], d = Math.abs(a.clientX - b.clientX) || 1;
-        const r = c.getBoundingClientRect(), mid = ((a.clientX + b.clientX) / 2 - r.left) / r.width;
+        const r = rect(), mid = ((a.clientX + b.clientX) / 2 - r.left) / r.width;
         setView(L.zoomView(pinchView, S.full, pinch0 / d, pinchView.start + mid * (pinchView.stop - pinchView.start)));
       } else if (ptrs.size === 1 && startView) {
         if (!moved && Math.abs(e.clientX - startX) > 6) moved = true;
-        if (moved) {
-          const w = c.getBoundingClientRect().width, dHz = -((e.clientX - startX) / w) * (startView.stop - startView.start);
+        if (!moved) return;
+        if (mode === "edge") {
+          const hz = L.xToHz(S.view, wpos(e), 1) - S.freq;
+          applyPassband(L.dragEdge(S.mode, S.low, S.high, edge, hz));
+        } else if (mode === "inside") {
+          setFreq(L.snap(L.xToHz(S.view, wpos(e), 1) - grab, S.step), true);
+        } else {
+          const w = rect().width, dHz = -((e.clientX - startX) / w) * (startView.stop - startView.start);
           setView(L.panView(startView, S.full, dHz));
         }
       }
@@ -277,9 +392,11 @@
       const wasMoved = moved; ptrs.delete(e.pointerId);
       if (ptrs.size === 0 && !wasMoved && S.view && e.type === "pointerup") setFreq(L.snap(L.xToHz(S.view, wpos(e), 1), S.step));
       if (ptrs.size < 2) pinchView = null;
-      if (ptrs.size === 1) { const r = [...ptrs.values()][0]; startView = S.view; startX = r.clientX; moved = true; }
+      if (ptrs.size === 1) { const r = [...ptrs.values()][0]; startView = S.view; startX = r.clientX; moved = true; mode = "pan"; }
+      if (ptrs.size === 0) { S.drag = null; if (e.pointerType === "touch") hover = null; invalidate({ ov: 1 }); }
     };
     c.addEventListener("pointerup", up); c.addEventListener("pointercancel", up);
+    c.addEventListener("pointerleave", (e) => { if (!ptrs.has(e.pointerId)) { hover = null; invalidate({ ov: 1 }); } });
     c.addEventListener("wheel", (e) => {
       if (!S.view) return; e.preventDefault();
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) { setView(L.panView(S.view, S.full, (e.deltaX / c.clientWidth) * (S.view.stop - S.view.start))); return; }
@@ -288,13 +405,22 @@
   }
 
   // ---------- S-meter ----------
+  function buildSticks() {
+    const box = $("sticks"); box.textContent = "";
+    for (const t of L.sMeterTicks()) { const s = el("span", t.label[0] === "+" ? "hot" : "", t.label); s.style.left = (t.frac * 100).toFixed(2) + "%"; box.appendChild(s); }
+  }
+  let lastMeter = "";
   function drawMeter() {
     const now = performance.now();
     if (now - S.peakAt > 1200) S.peak = Math.max(S.level, S.peak - 0.6);
     const m = L.sMeter(S.level), pk = L.sMeter(S.peak);
-    $("sfill").style.width = (m.frac * 100).toFixed(1) + "%"; $("speak").style.left = (pk.frac * 100).toFixed(1) + "%";
-    $("stext").textContent = m.text; $("sdb").textContent = isFinite(S.level) && S.level > -190 ? S.level.toFixed(0) + " dBFS" : "-- dBFS";
-    const sb = $("sbar"); sb.setAttribute("aria-valuenow", String(Math.round(m.frac * 100))); sb.setAttribute("aria-valuetext", m.text);
+    const key = m.frac.toFixed(3) + pk.frac.toFixed(3) + m.text + Math.round(S.level);
+    if (key !== lastMeter) {
+      lastMeter = key;
+      $("sfill").style.transform = "scaleX(" + m.frac.toFixed(3) + ")"; $("speak").style.left = (pk.frac * 100).toFixed(1) + "%";
+      $("stext").textContent = m.text; $("sdb").textContent = isFinite(S.level) && S.level > -190 ? S.level.toFixed(0) + (S.audioOn ? " dBFS" : " dB spectrum") : "-- dB";
+      const sb = $("sbar"); sb.setAttribute("aria-valuenow", String(Math.round(m.frac * 100))); sb.setAttribute("aria-valuetext", m.text);
+    }
     requestAnimationFrame(drawMeter);
   }
 
@@ -343,7 +469,7 @@
     renderAudio();
   }
   function renderAudio() {
-    const b = $("audioBtn"); b.setAttribute("aria-pressed", String(S.audioOn)); b.textContent = S.audioOn ? "Stop" : "Listen";
+    for (const id of ["audioBtn", "audioQuick"]) { const b = $(id); b.setAttribute("aria-pressed", String(S.audioOn)); b.textContent = S.audioOn ? "Stop" : "Listen"; }
     const m = $("muteBtn"); m.setAttribute("aria-pressed", String(S.muted)); m.textContent = S.muted ? "Unmute" : "Mute";
   }
   function onAudio(f) {
@@ -383,6 +509,7 @@
     const key = "n" + t.length + ":" + t.slice(0, 24);
     $("notice").hidden = store.get("noticeAck") === key;
     $("noticeOk").onclick = () => { store.set("noticeAck", key); $("notice").hidden = true; };
+    $("noticeMore").onclick = () => { const p = $("noticeText"), open = p.classList.toggle("clamp") === false; $("noticeMore").textContent = open ? "Less" : "More"; $("noticeMore").setAttribute("aria-expanded", String(open)); };
   }
   function authNeeded() {
     const a = S.info && S.info.auth;
@@ -425,7 +552,7 @@
     S.retryAt = performance.now() + adv.delayMs;
     const tick = () => {
       const s = Math.max(0, Math.ceil((S.retryAt - performance.now()) / 1000));
-      banner(adv.text + (s ? " Retrying in " + s + " s." : ""));
+      banner(adv.text + (s ? " Retrying in " + s + " s." : "")); S.retryNote = s ? "Retrying in " + s + " s." : "Retrying now."; renderScopeMsg();
       if (s > 0) S.retryTimer = setTimeout(tick, 500); else { fetchInfo().then(connect); }
     };
     tick();
@@ -447,7 +574,7 @@
     S.bounds = L.captureBounds(S.cap); S.full = L.fullBounds(S.cap);
     S.full = { start: Math.max(S.full.start, 0), stop: S.full.stop };
     S.view = S.view ? L.normView(S.view, S.full) : { start: S.full.start, stop: S.full.stop };
-    S.rows = []; renderFreq(); buildBands(); drawSpectrum(); redrawWaterfall(); requestSpan();
+    S.rows = []; renderFreq(); buildBands(); invalidate({ spec: 1, wf: 1 }); renderScopeMsg(); requestSpan();
   }
   function onWelcome(m) {
     S.welcome = m; S.attempt = 0; S.kickText = ""; banner("");
@@ -493,7 +620,7 @@
       const sn = L.rangeSnap(S.ranges, S.mode, S.freq, S.low, S.high, S.cap);
       if (sn !== null && Math.round(sn) !== S.freq) { S.freq = Math.round(sn); if (changed) banner("The host changed the allowed ranges: your frequency was moved."); sendTune(); }
     } else if (changed) banner("");
-    renderMode(); renderFreq(); drawSpectrum();
+    renderMode(); renderFreq(); invalidate({ spec: 1 });
   }
   function onState(m) {
     if (performance.now() - S.pendingTune > 600) {
@@ -506,7 +633,7 @@
     if (Array.isArray(m.subscriptions)) { S.subKeys = m.subscriptions; renderDecoderButtons(); }
     const d = typeof m.degrade === "number" ? m.degrade : 0;
     if (d > 0) $("footInfo").textContent = "The server is sending fewer spectrum rows to keep your connection within its limits (level " + d + ").";
-    drawSpectrum();
+    invalidate({ spec: 1 });
   }
 
   // ---------- squelch / volume ----------
@@ -515,10 +642,12 @@
 
   // ---------- bands and bookmarks ----------
   function buildBands() {
-    const box = $("bandList"); box.textContent = "";
+    const box = $("bandList"); box.textContent = ""; let hidden = 0, shown = 0;
     for (const b of bands) {
       const slice = S.full ? L.bandSlice({ start: b.s, stop: b.e }, S.bounds) : null;
-      const btn = el("button", null, b.n); btn.type = "button"; btn.disabled = !slice || !L.rangeOverlaps(S.ranges, b.s, b.e, 1000);
+      if (!slice || !L.rangeOverlaps(S.ranges, b.s, b.e, 1000)) { hidden++; continue; }
+      shown++;
+      const btn = el("button", null, b.n); btn.type = "button"; btn.dataset.s = String(b.s); btn.dataset.e = String(b.e);
       btn.appendChild(el("span", "f", fmtMHz(b.s) + " - " + fmtMHz(b.e) + " MHz"));
       btn.addEventListener("click", () => {
         const f = L.clamp(b.f, slice.start, slice.stop); setView(slice);
@@ -527,7 +656,10 @@
       });
       box.appendChild(btn);
     }
+    $("bandNote").textContent = !S.full ? "" : !shown ? "No preset band falls inside this receiver's capture. Use the spectrum or type a frequency." : hidden ? hidden + " preset bands are outside this receiver's capture and are not listed." : "";
+    renderBandsActive();
   }
+  function renderBandsActive() { for (const b of $("bandList").children) b.setAttribute("aria-current", String(S.freq >= +b.dataset.s && S.freq <= +b.dataset.e)); }
   function marks() { return store.get("marks", []); }
   function renderMarks() {
     const ul = $("markList"); ul.textContent = "";
@@ -535,7 +667,7 @@
     if (!list.length) ul.appendChild(el("li", "dim", "No bookmarks yet."));
     list.forEach((m, i) => {
       const li = el("li"); const go = el("button", "go", m.name); go.type = "button";
-      go.appendChild(el("span", null, L.formatFreq(m.f).replace(/^0+(?=\d)/, "") + " " + m.m.toUpperCase()));
+      go.appendChild(el("span", null, fmtMHz(m.f) + " MHz " + m.m.toUpperCase()));
       go.addEventListener("click", () => {
         if (S.bounds && (m.f < S.bounds.start || m.f > S.bounds.stop)) { banner("That bookmark is outside this server's capture."); return; }
         banner(""); if (m.m !== S.mode) { S.mode = m.m; S.low = m.lo; S.high = m.hi; renderMode(); sendTune({ mode: m.m, low_hz: m.lo, high_hz: m.hi }); }
@@ -547,7 +679,7 @@
     });
   }
   function addMark() {
-    const name = L.sanitizeText($("markName").value, 40) || L.formatFreq(S.freq).replace(/^0+(?=\d)/, "");
+    const name = L.sanitizeText($("markName").value, 40) || fmtMHz(S.freq) + " MHz";
     const l = marks(); l.push({ name, f: S.freq, m: S.mode, lo: S.low, hi: S.high }); store.set("marks", l.slice(-200));
     $("markName").value = ""; renderMarks();
   }
@@ -606,6 +738,22 @@
     if (!out.children.length) out.appendChild(el("p", "dim", S.subs.length ? "Waiting for results." : "Pick a decoder above."));
   }
 
+  // ---------- controls sheet (bottom sheet on a phone, side column on a wide screen) ----------
+  const isWide = () => matchMedia("(min-width: 960px)").matches;
+  function showTab(name) {
+    if (isWide() && name === "tune") name = "bands";   // on a wide screen the tuning controls sit above the tabs and are always shown
+    S.tab = name;
+    for (const o of document.querySelectorAll(".tabs button")) o.setAttribute("aria-selected", String(o.dataset.tab === name));
+    $("paneTune").hidden = !(name === "tune" || isWide());
+    for (const [k, id] of [["bands", "paneBands"], ["marks", "paneMarks"], ["dec", "paneDec"]]) $(id).hidden = name !== k;
+    S.decDirty = true; renderDecoders();
+  }
+  function setSheet(open) {
+    S.sheetOpen = open; store.set("sheet", open); $("sheet").classList.toggle("collapsed", !open);
+    $("grab").setAttribute("aria-expanded", String(open)); $("grab").setAttribute("aria-label", open ? "Collapse controls" : "Expand controls");
+    invalidate({ spec: 1, wf: 1, ov: 1 });
+  }
+
   // ---------- wiring ----------
   function init() {
     buildFreq();
@@ -615,10 +763,10 @@
     stepSel.addEventListener("change", () => { S.step = +stepSel.value; store.set("step", S.step); });
     const pSel = $("palette");
     for (const n of L.PALETTE_NAMES) { const o = el("option", null, n); o.value = n; pSel.appendChild(o); }
-    pSel.value = S.palette; pSel.addEventListener("change", () => { S.palette = pSel.value; pal = L.makePalette(S.palette); store.set("palette", S.palette); redrawWaterfall(); });
+    pSel.value = S.palette; pSel.addEventListener("change", () => { S.palette = pSel.value; pal = L.makePalette(S.palette); store.set("palette", S.palette); invalidate({ wf: 1 }); });
     $("range").value = S.range; $("floorAdj").value = S.floorAdj;
-    $("range").addEventListener("input", (e) => { S.range = +e.target.value; store.set("range", S.range); redrawWaterfall(); drawSpectrum(); });
-    $("floorAdj").addEventListener("input", (e) => { S.floorAdj = +e.target.value; store.set("floorAdj", S.floorAdj); redrawWaterfall(); drawSpectrum(); });
+    $("range").addEventListener("input", (e) => { S.range = +e.target.value; store.set("range", S.range); $("rangeOut").textContent = S.range + " dB"; invalidate({ spec: 1, wf: 1 }); });
+    $("floorAdj").addEventListener("input", (e) => { S.floorAdj = +e.target.value; store.set("floorAdj", S.floorAdj); $("floorOut").textContent = (S.floorAdj > 0 ? "+" : "") + S.floorAdj + " dB"; invalidate({ spec: 1, wf: 1 }); });
     pal = L.makePalette(S.palette);
     $("freqType").addEventListener("click", typeFreq);
     $("bw").addEventListener("input", (e) => setBandwidth(+e.target.value));
@@ -629,26 +777,32 @@
     $("zoomIn").addEventListener("click", () => zoom(0.5));
     $("zoomOut").addEventListener("click", () => zoom(2));
     $("zoomFull").addEventListener("click", () => setView({ start: S.full.start, stop: S.full.stop }));
-    $("zoomSig").addEventListener("click", () => setView({ start: S.freq - 25000, stop: S.freq + 25000 }));
+    $("zoomSig").addEventListener("click", () => { const half = L.clamp(S.bw * 3, 10000, 500000); setView({ start: S.freq - half, stop: S.freq + half }); });
     $("markAdd").addEventListener("click", addMark);
     $("markName").addEventListener("keydown", (e) => { if (e.key === "Enter") addMark(); });
-    for (const t of document.querySelectorAll(".tabs button")) t.addEventListener("click", () => {
-      for (const o of document.querySelectorAll(".tabs button")) { const on = o === t; o.setAttribute("aria-selected", String(on)); $("pane" + o.dataset.tab[0].toUpperCase() + o.dataset.tab.slice(1)).hidden = !on; }
-      S.decDirty = true; renderDecoders();
-    });
-    attachScope(spec); attachScope(wf);
-    $("spectrum").addEventListener("keydown", (e) => {
+    for (const t of document.querySelectorAll(".tabs button")) t.addEventListener("click", () => { showTab(t.dataset.tab); if (!isWide() && !S.sheetOpen) setSheet(true); });
+    $("grab").addEventListener("click", () => setSheet(!S.sheetOpen));
+    $("audioQuick").addEventListener("click", toggleAudio);
+    $("noticeText").classList.add("clamp");
+    matchMedia("(min-width: 960px)").addEventListener("change", () => showTab(S.tab));
+    $("rangeOut").textContent = S.range + " dB"; $("floorOut").textContent = (S.floorAdj > 0 ? "+" : "") + S.floorAdj + " dB";
+    buildSticks(); wireType(); setSheet(S.sheetOpen); showTab("tune");
+    attachScope(ov);
+    $("stage").addEventListener("keydown", (e) => {
       if (e.key === "ArrowLeft") { changeFreq(-S.step * (e.shiftKey ? 10 : 1)); e.preventDefault(); }
       else if (e.key === "ArrowRight") { changeFreq(S.step * (e.shiftKey ? 10 : 1)); e.preventDefault(); }
     });
     document.addEventListener("keydown", (e) => {
       const t = e.target; if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA")) return;
-      if (t && (t.id === "freq" || t.id === "spectrum")) { if (!/^[0-9mM+=-]$/.test(e.key)) return; }
+      if (t && (t.id === "freq" || t.id === "stage")) { if (!/^[0-9mMlL+=\-\[\]]$/.test(e.key)) return; }
       else if (t && t.tagName === "BUTTON" && /^[ ]$|Enter/.test(e.key)) return;
       if (!S.welcome) return;
       if (e.key === "m" || e.key === "M") { S.muted = !S.muted; renderAudio(); applyVolume(); }
       else if (/^[1-6]$/.test(e.key)) { const m = $("modes").children[+e.key - 1]; if (m) setMode(m.dataset.mode); }
+      else if (e.key === "l" || e.key === "L") toggleAudio();
+      else if (e.key === "0") setView({ start: S.full.start, stop: S.full.stop });
+      else if (e.key === "[" || e.key === "]") { const i = L.STEPS.indexOf(S.step) + (e.key === "]" ? 1 : -1); if (i >= 0 && i < L.STEPS.length) { S.step = L.STEPS[i]; $("step").value = String(S.step); store.set("step", S.step); } }
       else if (e.key === "+" || e.key === "=") zoom(0.5);
       else if (e.key === "-") zoom(2);
       else if (e.key === "ArrowLeft" && !(t && t.id === "freq")) { changeFreq(-S.step * (e.shiftKey ? 10 : 1)); }
@@ -659,7 +813,7 @@
       S.password = $("loginPw").value; if ($("loginInv").value.trim()) S.invite = $("loginInv").value.trim();
       $("loginPw").value = ""; $("login").hidden = true; banner(""); connect();
     });
-    window.addEventListener("resize", schedule(() => { redrawWaterfall(); drawSpectrum(); requestSpan(); }, 150));
+    if (window.ResizeObserver) new ResizeObserver(() => invalidate({ spec: 1, wf: 1, ov: 1 })).observe($("stage")); else window.addEventListener("resize", () => invalidate({ spec: 1, wf: 1, ov: 1 }));
     document.addEventListener("visibilitychange", () => { if (!document.hidden && S.ws && S.ws.readyState > 1 && !S.stopRetry) { clearTimeout(S.retryTimer); fetchInfo().then(connect); } });
     renderVolume(); renderAudio(); renderMarks(); renderSquelch(); renderFreq(); drawMeter();
     setInterval(renderDecoders, 500);

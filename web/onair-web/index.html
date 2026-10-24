@@ -9,10 +9,11 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<a class="skip" href="#spectrum">Skip to spectrum</a>
+<a class="skip" href="#stage">Skip to spectrum</a>
 
+<div class="shell">
 <header class="top">
-  <div class="brand"><span class="logo" aria-hidden="true">&#9679;</span> <span id="srvName">OnAir Web</span><span id="srvWhere" class="dim"></span></div>
+  <div class="brand"><span id="srvName">OnAir Web</span><span id="srvWhere" class="dim"></span></div>
   <div class="status" role="status" aria-live="polite">
     <span id="conn" class="pill">offline</span>
     <span id="users" class="pill dim" title="Listeners on this server">- / -</span>
@@ -20,10 +21,10 @@
 </header>
 
 <div id="notice" class="notice" role="note" hidden>
-  <p id="noticeText"></p>
+  <p id="noticeText" class="clamp"></p>
+  <button id="noticeMore" type="button" class="quiet" aria-expanded="false">More</button>
   <button id="noticeOk" type="button">Understood</button>
 </div>
-
 <div id="banner" class="banner" role="alert" hidden></div>
 
 <form id="login" class="panel login" hidden autocomplete="off">
@@ -35,83 +36,114 @@
 </form>
 
 <main id="app" class="app" hidden>
-  <section class="panel tuner" aria-label="Receiver">
-    <div class="freqrow">
-      <div id="freq" class="freq" role="spinbutton" tabindex="0" aria-label="Frequency in hertz. Arrow keys tune by the step, Page Up and Page Down by ten steps, Enter to type a frequency" aria-valuemin="0" aria-valuenow="0"></div>
-      <div class="freqtools">
-        <label class="small">Step
-          <select id="step" aria-label="Tuning step"></select>
-        </label>
-        <button id="freqType" type="button" title="Type a frequency">Type</button>
-      </div>
+  <section class="readout" aria-label="Frequency and signal">
+    <div class="freqbox">
+      <div id="freq" class="freq" role="spinbutton" tabindex="0" aria-label="Frequency in megahertz. Arrow keys tune by the step, Page Up and Page Down by ten steps, Enter to type a frequency" aria-valuemin="0" aria-valuenow="0" title="Click above or below a digit to change it, or scroll over it"></div>
+      <form id="freqForm" class="freqform" hidden>
+        <input id="freqInput" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Type a frequency in MHz, or add kHz or Hz">
+        <span class="dim">MHz</span>
+      </form>
+      <button id="freqType" type="button" class="quiet" title="Type a frequency (Enter)">Type</button>
     </div>
-
-    <div class="row">
-      <div class="modes" id="modes" role="radiogroup" aria-label="Mode"></div>
-      <label class="slider bw">Bandwidth <output id="bwOut" class="mono">-</output>
-        <input id="bw" type="range" min="0" max="100" step="1" aria-label="Bandwidth">
-      </label>
-    </div>
-
-    <div class="row meters">
-      <div class="smeter" aria-label="Signal strength">
-        <div class="sbar" role="meter" id="sbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Signal level"><i id="sfill"></i><b id="speak"></b></div>
-        <div class="sticks" aria-hidden="true"><span>1</span><span>3</span><span>5</span><span>7</span><span>9</span><span>+20</span><span>+40</span></div>
-        <div class="sread"><span id="stext" class="mono">S0</span> <span id="sdb" class="mono dim">-- dBFS</span></div>
-      </div>
-      <label class="slider">Squelch <output id="sqOut" class="mono">open</output>
-        <input id="sq" type="range" min="-150" max="-20" step="1" value="-150" aria-label="Squelch">
-      </label>
-      <label class="slider">Volume <output id="volOut" class="mono">70</output>
-        <input id="vol" type="range" min="0" max="100" step="1" value="70" aria-label="Volume">
-      </label>
-      <button id="audioBtn" type="button" class="primary" aria-pressed="false">Listen</button>
-      <button id="muteBtn" type="button" aria-pressed="false" title="Mute (M)">Mute</button>
+    <div class="smeter">
+      <div class="sread"><span id="stext" class="mono sval">S0</span><span id="sdb" class="mono dim">-- dBFS</span></div>
+      <div class="sbar" role="meter" id="sbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Signal level, relative to full scale"><i id="sfill"></i><b id="speak"></b></div>
+      <div class="sticks mono" id="sticks" aria-hidden="true"></div>
     </div>
   </section>
 
-  <section class="panel scope" aria-label="Spectrum and waterfall">
+  <section class="scope" aria-label="Spectrum and waterfall">
     <div class="scopebar">
-      <button id="zoomOut" type="button" aria-label="Zoom out" title="Zoom out (-)">&minus;</button>
-      <button id="zoomIn" type="button" aria-label="Zoom in" title="Zoom in (+)">+</button>
-      <button id="zoomFull" type="button" title="Show the whole capture">Full</button>
-      <button id="zoomSig" type="button" title="Zoom around the tuned frequency">Around</button>
-      <select id="palette" aria-label="Waterfall colours"></select>
-      <label class="small">Range <input id="range" type="range" min="20" max="120" step="1" value="70" aria-label="Spectrum range in dB"></label>
-      <label class="small">Floor <input id="floorAdj" type="range" min="-30" max="30" step="1" value="0" aria-label="Spectrum floor offset in dB"></label>
+      <div class="btns">
+        <button id="zoomOut" type="button" aria-label="Zoom out" title="Zoom out (-)">&minus;</button>
+        <button id="zoomIn" type="button" aria-label="Zoom in" title="Zoom in (+)">+</button>
+        <button id="zoomFull" type="button" title="Show the whole capture (0)">Full</button>
+        <button id="zoomSig" type="button" title="Zoom around the tuned frequency">Tuned</button>
+      </div>
       <span id="viewText" class="dim mono"></span>
     </div>
     <div id="rangeInfo" class="rangeinfo" role="note" hidden></div>
-    <div id="spectrum" class="canvaswrap" tabindex="0" role="application" aria-label="Spectrum. Click to tune, drag to pan, scroll or pinch to zoom, arrow keys to tune">
-      <canvas id="spec"></canvas>
-    </div>
-    <div class="canvaswrap wf">
-      <canvas id="wf" aria-label="Waterfall. Click to tune, drag to pan"></canvas>
+    <div id="stage" class="stage" tabindex="0" role="application" aria-label="Spectrum and waterfall. Click to tune, drag to pan, drag the passband edges to change bandwidth, scroll or pinch to zoom, arrow keys to tune">
+      <canvas id="spec" class="spec"></canvas>
+      <canvas id="ax" class="ax"></canvas>
+      <canvas id="wf" class="wf"></canvas>
+      <canvas id="ov" class="ov"></canvas>
+      <div id="scopeMsg" class="scopemsg" role="status" aria-live="polite"></div>
     </div>
   </section>
 
-  <section class="panel side" aria-label="Bands and bookmarks">
-    <div class="tabs" role="tablist">
-      <button type="button" role="tab" aria-selected="true" data-tab="bands" id="tabBands">Bands</button>
-      <button type="button" role="tab" aria-selected="false" data-tab="marks" id="tabMarks">Bookmarks</button>
-      <button type="button" role="tab" aria-selected="false" data-tab="dec" id="tabDec">Decoders</button>
-    </div>
-    <div id="paneBands" role="tabpanel" aria-labelledby="tabBands"><div id="bandList" class="chips"></div></div>
-    <div id="paneMarks" role="tabpanel" aria-labelledby="tabMarks" hidden>
-      <div class="markadd">
-        <input id="markName" maxlength="40" placeholder="Name" aria-label="Bookmark name">
-        <button id="markAdd" type="button">Save current</button>
+  <aside class="sheet" id="sheet" aria-label="Controls">
+    <div class="sheethead">
+      <div class="tabs" role="tablist" aria-label="Controls">
+        <button type="button" role="tab" aria-selected="true" data-tab="tune" id="tabTune" class="narrow">Tune</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="bands" id="tabBands">Bands</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="marks" id="tabMarks">Saved</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="dec" id="tabDec">Decoders</button>
       </div>
-      <ul id="markList" class="marks"></ul>
+      <button id="audioQuick" type="button" class="primary narrow" aria-pressed="false">Listen</button>
+      <button id="grab" type="button" class="quiet narrow" aria-expanded="true" aria-controls="sheetBody" aria-label="Collapse controls">&#9660;</button>
     </div>
-    <div id="paneDec" role="tabpanel" aria-labelledby="tabDec" hidden>
-      <div id="decList" class="chips"></div>
-      <div id="decOut" class="decout" aria-live="off"></div>
+    <div class="sheetbody" id="sheetBody">
+      <div id="paneTune" class="pane" role="tabpanel" aria-labelledby="tabTune">
+        <div class="audiorow">
+          <button id="audioBtn" type="button" class="primary" aria-pressed="false">Listen</button>
+          <button id="muteBtn" type="button" aria-pressed="false" title="Mute (M)">Mute</button>
+          <label class="slider grow">Volume <output id="volOut" class="mono">70</output>
+            <input id="vol" type="range" min="0" max="100" step="1" value="70">
+          </label>
+        </div>
+        <div class="field">
+          <span class="lab" id="modeLab">Mode</span>
+          <div class="modes" id="modes" role="radiogroup" aria-labelledby="modeLab"></div>
+        </div>
+        <label class="slider">Bandwidth <output id="bwOut" class="mono">-</output>
+          <input id="bw" type="range" min="0" max="100" step="1">
+        </label>
+        <label class="slider">Squelch <output id="sqOut" class="mono">open</output>
+          <input id="sq" type="range" min="-150" max="-20" step="1" value="-150">
+        </label>
+        <label class="field">
+          <span class="lab">Tuning step</span>
+          <select id="step"></select>
+        </label>
+        <details class="disp">
+          <summary>Display</summary>
+          <label class="field"><span class="lab">Waterfall colours</span><select id="palette"></select></label>
+          <label class="slider">Range <output id="rangeOut" class="mono">70 dB</output><input id="range" type="range" min="20" max="120" step="1" value="70"></label>
+          <label class="slider">Floor <output id="floorOut" class="mono">0 dB</output><input id="floorAdj" type="range" min="-30" max="30" step="1" value="0"></label>
+        </details>
+        <details class="disp keys">
+          <summary>Keyboard</summary>
+          <dl class="mono">
+            <dt>Left Right</dt><dd>tune one step (Shift: ten)</dd>
+            <dt>Enter</dt><dd>type a frequency</dd>
+            <dt>1 - 6</dt><dd>mode</dd>
+            <dt>L</dt><dd>listen on / off</dd>
+            <dt>M</dt><dd>mute</dd>
+            <dt>+ -</dt><dd>zoom</dd>
+            <dt>0</dt><dd>show the whole capture</dd>
+            <dt>[ ]</dt><dd>tuning step</dd>
+          </dl>
+        </details>
+      </div>
+      <div id="paneBands" class="pane" role="tabpanel" aria-labelledby="tabBands" hidden><div id="bandList" class="bandlist"></div><p id="bandNote" class="dim small"></p></div>
+      <div id="paneMarks" class="pane" role="tabpanel" aria-labelledby="tabMarks" hidden>
+        <div class="markadd">
+          <input id="markName" maxlength="40" placeholder="Name" aria-label="Name for the saved frequency">
+          <button id="markAdd" type="button">Save current</button>
+        </div>
+        <ul id="markList" class="marks"></ul>
+      </div>
+      <div id="paneDec" class="pane" role="tabpanel" aria-labelledby="tabDec" hidden>
+        <div id="decList" class="chips"></div>
+        <div id="decOut" class="decout" aria-live="off"></div>
+      </div>
     </div>
-  </section>
+  </aside>
 </main>
 
-<footer class="foot dim">OnAir Web. Receive only: there is no transmit control. <span id="footInfo"></span></footer>
+<footer class="foot dim"><span>Receive only. No transmit control exists.</span> <span id="footInfo"></span></footer>
+</div>
 
 <script src="onair-lib.js"></script>
 <script src="onair-decoders.js"></script>
