@@ -572,9 +572,23 @@ static void testEngine() {
     r = http("127.0.0.1", port, post("/api/v1/stop", "{}", port)); CHECK(r.status == 200 && !h.running, "stop through the API");
 }
 
+// the FM block of the telemetry: the RDS identification (PI in hexadecimal, null while unknown), the share of good RDS blocks and the programme type
+static void testFmJson() {
+    RxTelemetry rx;
+    rx.standard = 6;
+    rx.fm.rdsSync = true; rx.fm.psName = "ATLANTID"; rx.fm.ptyText = "Pop Music"; rx.fm.rdsBlockOkPct = 87.5f; rx.fm.piCode = 0xE2a1;
+    std::string j = rxTelemetryJson(rx);
+    CHECK(j.find("\"piCode\":\"E2A1\"") != std::string::npos && j.find("\"rdsBlockOkPct\":87.5") != std::string::npos && j.find("\"ptyText\":\"Pop Music\"") != std::string::npos, "FM RDS fields: %s", j.c_str());
+    rx.fm.piCode = 0x0A01;
+    CHECK(rxTelemetryJson(rx).find("\"piCode\":\"0A01\"") != std::string::npos, "PI keeps four digits");
+    rx.fm.piCode = 0;
+    CHECK(rxTelemetryJson(rx).find("\"piCode\":null") != std::string::npos, "PI unknown: null");
+}
+
 int main(int argc, char** argv) {
     const bool onlyEngine = argc > 1 && !strcmp(argv[1], "engine");
     testHelpers();
+    testFmJson();
     if (!onlyEngine) {
         FakeHost h;
         RemoteApiServer srv(h);

@@ -63,6 +63,8 @@ std::string rxTelemetryJson(const RxTelemetry& rx, const QualityReport* q) {
     case 6:
         d.b("carrier", rx.fm.carrier); d.num("snrDb", rx.fm.snrDb); d.num("levelDbfs", rx.fm.levelDbfs); d.num("deviationKhz", rx.fm.devKhz);
         d.b("stereo", rx.fm.stereo); d.b("rdsSync", rx.fm.rdsSync); d.str("psName", rx.fm.psName); d.str("radioText", rx.fm.radioText);
+        d.num("rdsBlockOkPct", rx.fm.rdsBlockOkPct); d.str("ptyText", rx.fm.ptyText);
+        if (rx.fm.piCode) { char pi[8]; snprintf(pi, sizeof pi, "%04X", rx.fm.piCode & 0xFFFF); d.str("piCode", pi); } else d.raw("piCode", "null");   // hexadecimal, as on a receiver's display
         break;
     case 7:
         d.num("symbolRate", rx.dvbs.symbolRate); d.num("snrDb", rx.dvbs.snrDb); d.num("merDb", rx.dvbs.merDb); d.b("dataValid", rx.dvbs.dataValid);
