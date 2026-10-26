@@ -572,9 +572,23 @@ static void testEngine() {
     r = http("127.0.0.1", port, post("/api/v1/stop", "{}", port)); CHECK(r.status == 200 && !h.running, "stop through the API");
 }
 
+// the FM block of the telemetry: the RDS PI also as four hexadecimal digits (piCode), null while unknown
+static void testFmPiCode() {
+    RxTelemetry rx;
+    rx.standard = 6;
+    rx.fm.piCode = 0xE2a1;
+    std::string j = rxTelemetryJson(rx);
+    CHECK(j.find("\"piCode\":\"E2A1\"") != std::string::npos && j.find("\"pi\":58017") != std::string::npos, "PI as hex and as a number: %s", j.c_str());
+    rx.fm.piCode = 0x0A01;
+    CHECK(rxTelemetryJson(rx).find("\"piCode\":\"0A01\"") != std::string::npos, "PI keeps four digits");
+    rx.fm.piCode = 0;
+    CHECK(rxTelemetryJson(rx).find("\"piCode\":null") != std::string::npos, "PI unknown: null");
+}
+
 int main(int argc, char** argv) {
     const bool onlyEngine = argc > 1 && !strcmp(argv[1], "engine");
     testHelpers();
+    testFmPiCode();
     if (!onlyEngine) {
         FakeHost h;
         RemoteApiServer srv(h);

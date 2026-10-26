@@ -67,7 +67,9 @@ std::string rxTelemetryJson(const RxTelemetry& rx, const QualityReport* q) {
         d.b("carrier", rx.fm.carrier); d.num("snrDb", rx.fm.snrDb); d.num("levelDbfs", rx.fm.levelDbfs); d.num("deviationKhz", rx.fm.devKhz);
         d.b("stereo", rx.fm.stereo); d.b("rdsSync", rx.fm.rdsSync); d.str("psName", rx.fm.psName); d.str("radioText", rx.fm.radioText);
         d.num("stereoPct", rx.fm.stereoPct); d.num("multipathPct", rx.fm.multipathPct); d.b("equaliser", rx.fm.equaliser);
-        d.num("pi", rx.fm.piCode); d.str("pty", rx.fm.ptyText); d.num("rdsBlockOkPct", rx.fm.rdsBlockOkPct); d.u64("rdsGroups", rx.fm.rdsGroups);
+        d.num("pi", rx.fm.piCode);
+        if (rx.fm.piCode) { char pi[8]; snprintf(pi, sizeof pi, "%04X", (unsigned)(rx.fm.piCode & 0xFFFF)); d.str("piCode", pi); } else d.raw("piCode", "null");   // the PI as a receiver shows it
+        d.str("pty", rx.fm.ptyText); d.num("rdsBlockOkPct", rx.fm.rdsBlockOkPct); d.u64("rdsGroups", rx.fm.rdsGroups);
         d.u64("rdsBlocksCorrected", rx.fm.rds.blocksCorrected); d.str("ptyn", rx.fm.rds.ptyn); d.str("ert", rx.fm.rds.ert);
         if (rx.fm.rds.ecc >= 0) d.num("ecc", rx.fm.rds.ecc);
         if (rx.fm.rds.clockUtc) { d.num("clockUtc", (double)rx.fm.rds.clockUtc); d.num("clockOffsetMin", rx.fm.rds.clockOffsetMin); }
