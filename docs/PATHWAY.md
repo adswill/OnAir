@@ -717,3 +717,6 @@ Checked on a combined merge: dect2 app builds, test_videogen passes (run from th
 
 - #352 (drfruct): whole-span sound goes to a carrier with a voice call before one that is only locked (DMR first). wide_bank_audio and dmr_wide pass. Only clash: the unmerged fix33-discord branch touches the same test file (test_dmr_wide.cpp), a text conflict to resolve when it merges.
 - #353 (peterdewitte): GitHub Actions bumped to Node 24 versions (checkout v7, cache v6, upload v7, download v8, setup-java v6); tags verified, release.yml flow unchanged. Docker pins and gradle action left for a later change.
+
+## 2026-10-27: V4 range experiment (exp33-v4range)
+Prepared an experiment on receiving above 1.766 GHz with an RTL-SDR Blog V4 by harmonic mixing (LO = target / 3 or 5): `tools/v4range.cpp` (CMake target `v4range`, ctest `v4range_selftest`), `docs/V4-RANGE-EXPERIMENT.md` with prior art, harmonic table, owner instructions and an honest prediction. Selftest on synthetic data passes. Not run on hardware: the V4 dropped off the bus during development. No product code changed.
