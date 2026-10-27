@@ -2,7 +2,7 @@
 
 Question: can the V4 (R828D tuner, rated 0.5 MHz to 1.766 GHz) receive Wi-Fi at 2.4 GHz and S-band satellites at 2.2-2.3 GHz with software only?
 
-Status: tool and analysis ready, **not yet run on hardware** (the V4 was not attached when this was written; see "Not verified"). Prediction below.
+Status: run on the owner's V4 (round 1) and extended with quiet-LO selection and the 7th/9th/11th harmonics (round 2). See "Results".
 
 ## 1. Prior art (only what was found; nothing is invented)
 
@@ -63,7 +63,7 @@ Image: the tuner's image rejection puts the mirror at +-2 IF = 7.14 MHz away: ou
 
 1. Plug in the V4, the stock telescopic antenna 0.5-1 m from the Wi-Fi router (a router talking to a client gives the most traffic). Keep the other USB devices off; close OnAir and anything else using the dongle. Install librtlsdr (Mac: `brew install librtlsdr`; the Blog fork is best for the V4: https://github.com/rtlsdrblog/rtl-sdr-blog).
 2. Build: `cmake --build build --target v4range` (or `clang++ -std=c++17 -O2 tools/v4range.cpp -o v4range`).
-3. Run: `./build/v4range` — about 1 minute. It first checks FM and GPS L1 below the limit (is the rig alive), then sweeps 2380-2500 MHz on the 3rd and 5th harmonic and identifies the strongest detections. Output: console list plus `v4range.csv`.
+3. Run: `./build/v4range` — about 1-2 minutes. It checks FM and GPS L1 below the limit, surveys the dongle range for quiet LOs, sweeps 2380-2500 MHz on the 3rd, 5th, 7th, 9th and 11th harmonic (quiet LOs only), identifies the peaks and prints the verdict. Output: console plus `v4range.csv`. `--survey-only` prints just the quiet-LO table.
 4. Whole range later: `./build/v4range --full` (1.8-3.6 GHz, about 12 minutes for both harmonics). S-band satellites need a dish and LNA (add `--range 2200-2300`).
 
 Troubleshooting: "no RTL-SDR found" or read errors: another program holds the dongle, or the USB link is flaky; on Linux blacklist `dvb_usb_rtl28xxu`. If every harmonic reads about the same, try `--gain 40` (overload) and a lower-gain antenna.
@@ -78,6 +78,22 @@ Honest prediction (not measured): works for strong nearby signals only. The deve
 
 If the dongle shows nothing above the baseline for Wi-Fi at one metre with both harmonics, the answer is that the V4 front end blocks it, and a V3 or a filter-free path is needed: report that and stop.
 
+## Results
+
+**Round 1** (owner, V4, Lithuania; 3rd and 5th harmonic, 2380-2500 MHz): reference OK (FM margin 41.9 dB, GPS L1 11.1 dB). Many strong detections (+25 to +29 dB on the 3rd, +5 to +9 dB on the 5th), **every identified one labelled "fundamental"**, none 3rd or 5th. Reading: the dongle tuned to 788-831 MHz (LTE800 downlink) and 471-500 MHz (UHF TV) hears those directly through the V4's UHF path, which swamps any weak harmonic in the same IF. No evidence of harmonic reception.
+
+**Round 2** (this change). The software-only answer to that is to choose a harmonic whose LO lands where the fundamental band is empty. `v4range` now:
+- supports the 3rd, 5th, 7th, 9th and 11th harmonic (default: all five). The odd-harmonic textbook weights are 1/N, i.e. roughly -9.5, -14, -17, -19, -21 dB against the fundamental (a textbook figure, not a measurement; the tuner filters add to it);
+- runs a **quiet-LO survey** first (about 20 s): measures every dongle frequency the harmonic steps would use as a fundamental (short dwell), calls a 2 MHz slice quiet when its power is within 2 dB of the quietest 15 percent and no steady carrier stands 6 dB over its floor, and also requires both neighbours to be quiet (the 6 MHz IF filter lets them in). It prints the quiet LO windows for the Wi-Fi band, the S-band and the share of quiet LO per 200 MHz over 1.8-3.6 GHz, and then measures only quiet steps (steps that cover Wi-Fi channels 1, 6 and 11 are always measured; `--all-steps` measures everything). If a harmonic has no quiet step at all, the 20 percent least busy ones are measured and marked "busy LO";
+- identifies each narrow peak separately (the LO is moved by df = 40 kHz; a harmonic of order N moves N x df), so a weak 7th/9th/11th harmonic beside a strong fundamental in the same IF gets its own label. The selftest includes strong fundamental plus a harmonic 22 dB weaker for N = 3, 5, 7, 9 and 11 (all identified; 20 checks);
+- prints a **verdict**: "harmonic reception demonstrated: YES/NO" (YES needs a clear 3rd-11th label on a known signal) and the level of Wi-Fi channels 1, 6, 11 against the quiet-band noise floor for every harmonic, even when nothing is found.
+
+Survey on the owner's V4, 210-833 MHz (round 2, antenna as in round 1): 49 of 312 slices quiet. Wi-Fi band: almost no quiet LO (3rd: 7 percent of the LO range, 5th/7th/9th/11th: 0 percent); S-band: 3rd 32 percent quiet, the others 0. So the sub-GHz bands this antenna sees are busy up to the 200 MHz region too; the quiet LOs are mostly where the 3rd or 5th land for 2.0-2.8 GHz and 3.2 GHz, 3.6 GHz targets.
+
+Full run, 2380-2500 MHz, all five harmonics (this machine, V4, same antenna; about 1 minute): no detection with a 3rd-11th label. Wi-Fi channel levels against the quiet-band noise floor of each run: 3rd harmonic +26 to +30 dB but on busy LOs (labelled "fundamental", ch6 "unclear"), i.e. LTE800 not Wi-Fi; 5th +4 to +10 dB, "fundamental" or not identified, busy LO; 7th, 9th and 11th +0.4 to +2.4 dB, below the detection threshold. Verdict: **harmonic reception demonstrated: NO**. The 3rd-harmonic ch6 result ("unclear", +30 dB, busy LO) is the only one a person should look at in the CSV, but the busy fundamental (LTE800) explains it.
+
+Honest reading: with the V4 as it is (no extra filter), harmonic reception of Wi-Fi is not demonstrated. If the Wi-Fi router is idle or far, the harmonics may simply be below the noise; the quiet-LO approach gives them a fair chance but they would also need to be above the noise by their conversion loss. The next experiment is the one that is allowed to add hardware: a 1.7 GHz high-pass filter or an LNA ahead of the dongle (as in the original article), which is outside this software-only test.
+
 ## Not verified
 
-The V4 enumerated once during development (the library found it), then dropped off the USB bus, so no read from hardware was completed. Everything about the hardware path (read sizes, tuning, gain list) is written from the API and is untested on a radio. The identification logic is tested with synthetic data only. The first run may need small fixes.
+The tool runs on the V4 (round 1 by the owner; the survey and sweep also on this machine). Not shown: any positive harmonic detection, so the 3rd-11th labelling on a real signal is verified on synthetic data only.

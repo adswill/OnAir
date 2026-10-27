@@ -720,3 +720,6 @@ Checked on a combined merge: dect2 app builds, test_videogen passes (run from th
 
 ## 2026-10-27: V4 range experiment (exp33-v4range)
 Prepared an experiment on receiving above 1.766 GHz with an RTL-SDR Blog V4 by harmonic mixing (LO = target / 3 or 5): `tools/v4range.cpp` (CMake target `v4range`, ctest `v4range_selftest`), `docs/V4-RANGE-EXPERIMENT.md` with prior art, harmonic table, owner instructions and an honest prediction. Selftest on synthetic data passes. Not run on hardware: the V4 dropped off the bus during development. No product code changed.
+
+## 2026-10-27: v4range round 2 (quiet LO, 7th/9th/11th)
+After the owner's first V4 run (every detection was the fundamental: LTE800 and UHF TV hear straight through the V4 UHF path), `v4range` got a quiet-LO survey, harmonics 7/9/11, per-peak identification (weak harmonic beside a strong fundamental) and a verdict with the Wi-Fi channel levels. Selftest 20 checks pass. Run on the V4: no harmonic reception demonstrated (7th/9th/11th: +0.4 to +2.4 dB on Wi-Fi channels, nothing labelled). Fixed: max-hold of pure noise is already 12 dB over the floor, so the quiet test uses the mean spectrum.
