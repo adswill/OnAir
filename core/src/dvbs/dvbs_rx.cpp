@@ -177,6 +177,8 @@ struct DvbsReceiver::Impl {
     // hunting
     std::vector<cf32> huntBuf;
     uint64_t huntSinceTry = 0;
+    bool earlyTried = false;   // the first hunt of a round already ran on the young buffer
+    int earlySegs = 0;         // spectrum segment count at which the quick carrier check last ran
     double rsNominal = 0;                       // the rate the spectrum (or the user) gave; hunts that fail try rates a little either side of it
     int huntFails = 0, ditherIdx = 0, huntCycles = 0;     // failed attempts at one rate, the rate in the dither list, complete lists tried
     // DVB-S: the carrier loop and the decoder run on a thread of their own, fed with the symbols of the front end
@@ -298,7 +300,17 @@ struct DvbsReceiver::Impl {
 
     // ------------------------------------------------------------------------ search: spectrum -> front end
     void doSearch() {
-        if (spec.segments() < 48) return;
+        // a strong carrier is plain after a third of the averaging: 16 or 32 segments are enough then (a weak one waits for the full 48, as before)
+        const int segs = spec.segments();
+        bool quick = false;
+        if (segs < 16) earlySegs = 0;
+        else if (segs < 48 && (segs == 16 || segs == 32) && segs != earlySegs) {
+            earlySegs = segs;
+            spec.setPick(pickOn.load(), pickHz.load());
+            const SpectrumResult q = spec.analyse();
+            quick = q.valid && q.zscore >= 20.f && q.fitRms < 1.5f && q.snrDb >= 12.f;
+        }
+        if (segs < 48 && !quick) return;
         spec.setPick(pickOn.load(), pickHz.load());
         specRes = spec.analyse();
         surveyUpdate();
@@ -382,9 +394,16 @@ struct DvbsReceiver::Impl {
     void huntPush() {
         huntBuf.insert(huntBuf.end(), sym.begin(), sym.end());
         if (huntBuf.size() > 2 * kHuntKeep) huntBuf.erase(huntBuf.begin(), huntBuf.end() - (std::ptrdiff_t)kHuntKeep);
+        if (huntSinceTry == 0) earlyTried = false;
         huntSinceTry += sym.size();
         // a signal that is not there is looked for less often: the interval doubles after each complete round of rates, up to four times as long
         const uint64_t interval = std::max<uint64_t>(65536, (uint64_t)(0.15 * rsUsed)) * (uint64_t)std::min(4, 1 << std::min(huntCycles, 2));
+        // the first round tries once early (a strong carrier has two headers in 100000 symbols); that try is not counted as a failure, the normal
+        // schedule follows from where it started
+        if (!earlyTried && huntCycles == 0 && huntFails == 0 && huntSinceTry < interval && huntBuf.size() >= 100000 && huntSinceTry >= 100000 && symTotal > 20000) {
+            earlyTried = true;
+            if (tryDvbs2()) { huntFails = 0; return; }
+        }
         if (huntBuf.size() >= kHuntWindow && huntSinceTry >= interval && symTotal > 20000) {
             huntSinceTry = 0;
             if (tryDvbs2() || tryDvbs()) { huntFails = 0; return; }
