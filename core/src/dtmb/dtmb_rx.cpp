@@ -485,6 +485,7 @@ struct DtmbReceiver::Impl {
             for (int i = 0; i < kSiSymbols; i++) { b.si[(size_t)i] = bins[(size_t)sb[i]]; b.sivar[(size_t)i] = var[(size_t)sb[i]]; }
             for (int i = 0; i < kDataSymbols; i++) { b.data[(size_t)i] = bins[(size_t)db[i]]; b.dvar[(size_t)i] = var[(size_t)db[i]]; }
             normalise(b);
+            if (siOk && carriers == 3780) commonPhase(b);
         }
         if (trySingle) {
             Prof::Scope pe(prof, 2);
@@ -706,6 +707,31 @@ struct DtmbReceiver::Impl {
         regrid(S, newFrac);
         dropBefore(S - 2048);
         return true;
+    }
+
+    // The phase common to all carriers of the body, from the 36 system information symbols (their word is known once the system information is
+    // decoded), taken out of data and system information: the carrier phase moves inside a frame (phase noise) and the headers only give its ends.
+    void commonPhase(Body& b) {
+        static const bool off = std::getenv("DTMB_NOCPE") != nullptr;
+        if (off) return;
+        uint8_t chips[kSiSymbols];
+        siChips(siIndex, chips);
+        const float r2 = 1.f / std::sqrt(2.f);
+        cf32 acc(0, 0);
+        double wsum = 0, psum = 0;
+        for (int i = 0; i < kSiSymbols; i++) {
+            const float w = 1.f / b.sivar[(size_t)i];
+            const float sgn = chips[i] ? r2 : -r2;
+            acc += w * b.si[(size_t)i] * cf32(sgn, -sgn);   // times the conjugate of the reference sgn (1 + j)
+            wsum += w; psum += w * std::abs(b.si[(size_t)i]);
+        }
+        // reliable only when the symbols agree with the word (coherence) and are not wild
+        if (wsum <= 0 || std::abs(acc) < 0.6 * psum) return;
+        const float phi = std::arg(acc);
+        if (std::fabs(phi) < 0.004f) return;
+        const cf32 rot = std::polar(1.f, -phi);
+        for (auto& v : b.data) v *= rot;
+        for (auto& v : b.si) v *= rot;
     }
 
     // ------------------------------------------------------------------ system information

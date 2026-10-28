@@ -55,10 +55,13 @@ public:
     void run(const cf32* r, const Taps& ha, const int8_t* chipsA, const Taps& hb, const int8_t* chipsB, int headerLength, double amp, cf32* bins, float* var);
     // frequency response of the last run (3780 values), for the display
     const std::vector<cf32>& response() const { return resp_; }
+    // phase of the channel at the second header against the first, taken out of the body by a ramp (0: not applied)
+    float lastTheta() const { return lastTheta_; }
 
 private:
     MixedFft fft_;
     std::vector<cf32> z_, y_, hh_, resp_;
+    float lastTheta_ = 0.f;
 };
 
 // Body of a single carrier frame (C=1): the 3780 symbols in transmit order, after the leakage of the headers is removed and the channel is undone by a

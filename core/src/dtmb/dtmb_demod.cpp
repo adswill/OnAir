@@ -2,6 +2,8 @@
 #include "dect2/dtmb/dtmb_demod.h"
 #include <algorithm>
 #include <cmath>
+#include <complex>
+#include <cstdlib>
 #include "dtmb_simd.h"
 
 namespace dect2::dtmb {
@@ -180,11 +182,27 @@ static void removeLeakage(const cf32* r, const Taps& ha, const int8_t* chipsA, c
     }
 }
 
-// Variance of the error that a channel change between the two headers puts on the body (see BodyEqualizer::run)
-static float headerDifference(const Taps& ha, const Taps& hb) {
-    float diff = 0.f;
+// Phase of the channel at the second header against the first: the argument of the correlation of the two impulse responses. Only used when the
+// two responses are the same channel up to a rotation (coherence over 0.85); otherwise 0.
+static float headerRotation(const Taps& ha, const Taps& hb) {
+    cf32 c(0, 0);
+    float ea = 0, eb = 0;
     const int lo = -std::max(ha.pre, hb.pre), hi = std::max(ha.post, hb.post);
-    for (int m = lo; m < hi; m++) diff += std::norm(ha.at(m) - hb.at(m));
+    for (int m = lo; m < hi; m++) {
+        const cf32 a = ha.at(m), b = hb.at(m);
+        c += b * std::conj(a); ea += std::norm(a); eb += std::norm(b);
+    }
+    if (ea <= 0.f || eb <= 0.f || std::abs(c) < 0.85f * std::sqrt(ea * eb)) return 0.f;
+    return std::arg(c);
+}
+
+// Variance of the error that a channel change between the two headers puts on the body (see BodyEqualizer::run); the second header is rotated back
+// by `theta` first (the rotation is taken out of the body samples in the time domain)
+static float headerDifference(const Taps& ha, const Taps& hb, float theta = 0.f) {
+    float diff = 0.f;
+    const cf32 rot = std::polar(1.f, -theta);
+    const int lo = -std::max(ha.pre, hb.pre), hi = std::max(ha.post, hb.post);
+    for (int m = lo; m < hi; m++) diff += std::norm(ha.at(m) - hb.at(m) * rot);
     return diff;
 }
 
@@ -193,6 +211,24 @@ void BodyEqualizer::run(const cf32* r, const Taps& ha, const int8_t* chipsA, con
     const int pre = ha.pre, post = ha.post;
     // z[t'] = r - leakage of both headers, for t' = -pre .. N + post - 1 (stored at z[t' + pre])
     removeLeakage(r, ha, chipsA, hb, chipsB, Lh, amp, N, z_.data());
+    // The carrier phase moves between the two headers (phase noise, a carrier offset the front end has not taken out): the phase of the channel
+    // at each header is known, the body between them follows the line through the two. It is taken out of the samples (a ramp in the time domain is
+    // not a per carrier correction), relative to the mean phase that the mean response below carries. A fast jitter inside the body stays.
+    static const bool noRamp = std::getenv("DTMB_NORAMP") != nullptr;
+    const float theta = noRamp ? 0.f : headerRotation(ha, hb);
+    lastTheta_ = theta;
+    if (theta != 0.f) {
+        const int span = N + post + pre;
+        const double inv = 1.0 / (double)(N + Lh);
+        const double f0 = ((double)(-pre) + 0.5 * Lh) * inv - 0.5;
+        std::complex<double> w = std::polar(1.0, -(double)theta * f0);
+        const std::complex<double> step = std::polar(1.0, -(double)theta * inv);
+        for (int i = 0; i < span; i++) {
+            z_[(size_t)i] *= cf32((float)w.real(), (float)w.imag());
+            w *= step;
+            if ((i & 255) == 255) w /= std::abs(w);
+        }
+    }
     // circular convolution: the tail beyond the body wraps to its start, the leakage before it to its end
     for (int t = 0; t < N; t++) y_[(size_t)t] = z_[(size_t)(t + pre)];
     for (int t = 0; t < post; t++) y_[(size_t)t] += z_[(size_t)(N + t + pre)];
@@ -210,8 +246,13 @@ void BodyEqualizer::run(const cf32* r, const Taps& ha, const int8_t* chipsA, con
     // difference is an error of the carriers that no noise estimate sees. A body with a level step in the middle would otherwise come out as
     // confidently wrong symbols, and the symbol interleaver spreads those over about 170 frames of codewords. Half the difference is the worst
     // error, a quarter of its energy the variance of a linear change.
-    const float diff = headerDifference(ha, hb);
-    const float noise = 0.5f * (ha.noise + hb.noise) + 0.25f * diff;
+    const float diff = headerDifference(ha, hb, theta);
+    // what stays of the phase movement: the path of the phase between the two headers is not a line; its deviation from the line has about a
+    // twelfth of the variance of the whole movement (a Wiener process pinned at both ends, taken without its mean, which the receiver tracks)
+    double pm = 0;
+    for (int k = 0; k < N; k++) pm += std::norm(hh_[(size_t)k]);
+    pm /= N;
+    const float noise = 0.5f * (ha.noise + hb.noise) + 0.25f * diff + (float)(0.04 * (double)theta * theta * pm);
     for (int k = 0; k < N; k++) {
         const float p = std::norm(hh_[(size_t)k]);
         const float den = std::max(p, 1e-9f);
