@@ -156,6 +156,7 @@ struct FmRx::Impl {
     uint64_t syncs = 0, p1Frames = 0, p1Bad = 0;
     int badRun = 0;
     int lastBc = -1;
+    float gL[kBlk], gU[kBlk];        // per-symbol gain of the lower / upper sideband against the block average
     std::vector<cf32> constel;
     struct Px { PxDeinterleaver dei; std::vector<float> buf, blk; bool started = false; } px[2];   // P3 and P4 on the extended partitions
 
@@ -327,14 +328,33 @@ struct FmRx::Impl {
         for (int n = 0; n < kBlk; n++) s += std::fabs(S(ref, n).real());
         return s / kBlk;
     }
-    void adjustData(int lower, int upper) {
+    // The data carriers between two references: the channel interpolated linearly in amplitude and phase. The amplitude of the references is a
+    // block average (one value per carrier) times g[n], the gain of the symbol n relative to that average (a fade inside the block), so that
+    // a deep fade in the middle of a block does not wreck the scale of all its symbols.
+    void adjustData(int lower, int upper, const float* g) {
         const float s0 = smag(lower), s19 = smag(upper);
         for (int n = 0; n < kBlk; n++) {
             const cf32 up = std::polar(1.f, P(upper, n)), lo = std::polar(1.f, P(lower, n));
             for (int k = 1; k < kPw; k++) {
-                const cf32 C = cf32((float)kPw, (float)kPw) / ((float)k * s19 * up + (float)(kPw - k) * s0 * lo);
+                const cf32 C = cf32((float)kPw, (float)kPw) / (((float)k * s19 * up + (float)(kPw - k) * s0 * lo) * g[n]);
                 S(lower + k, n) *= C;
             }
+        }
+    }
+    // gain of every symbol of the block against the block average, from all the references of one sideband (flat over the sideband's 70 kHz
+    // for a short echo or a fade), smoothed over three symbols
+    void symbolGain(int first, int step, int count, float* g) {
+        float raw[kBlk], mean = 0;
+        for (int n = 0; n < kBlk; n++) {
+            float a = 0;
+            for (int i = 0; i < count; i++) a += std::fabs(S(first + i * step, n).real());
+            raw[n] = a / (float)count;
+            mean += raw[n];
+        }
+        mean /= (float)kBlk;
+        for (int n = 0; n < kBlk; n++) {
+            const float a = (raw[std::max(0, n - 1)] + raw[n] + raw[std::min(kBlk - 1, n + 1)]) / 3.f;
+            g[n] = mean > 1e-9f ? std::max(0.05f, std::min(1.5f, a / mean)) : 1.f;
         }
     }
     void detectCfo() {
@@ -392,9 +412,11 @@ struct FmRx::Impl {
         if (state != 2) return;
         // channel estimate between the references, sample clock and frequency tracking
         float se = 0, ang = 0, sxy = 0, sx2 = 0;
+        symbolGain(kLbStart, kPw, ppb + 1, gL);
+        symbolGain(kUbEnd, -kPw, ppb + 1, gU);
         for (int i = 0; i < ppb * kPw; i += kPw) {
-            adjustData(kLbStart + i, kLbStart + i + kPw);
-            adjustData(kUbEnd - i - kPw, kUbEnd - i);
+            adjustData(kLbStart + i, kLbStart + i + kPw, gL);
+            adjustData(kUbEnd - i - kPw, kUbEnd - i, gU);
             se += phaseDiff(P(kLbStart + i, 0), P(kLbStart + i + kPw, 0));
             se += phaseDiff(P(kUbEnd - i - kPw, 0), P(kUbEnd - i, 0));
         }
@@ -411,31 +433,39 @@ struct FmRx::Impl {
         angle = ang;
         for (int i = 0; i < ppb * kPw + 1; i += kPw) { cFreq[(size_t)(kLbStart + i)] -= ang; cFreq[(size_t)(kUbEnd - i)] -= ang; }
         // modulation error of the primary main data subcarriers
-        float eL = 0, eU = 0;
-        for (int n = 0; n < kBlk; n++)
+        float eL = 0, eU = 0, wL = 0, wU = 0;   // eL, eU: error power; wL, wU the same weighted by the symbol gain squared (the weight of the soft bits)
+        for (int n = 0; n < kBlk; n++) {
+            float aL = 0, aU = 0;
             for (int i = 0; i < kPmPart * kPw; i += kPw)
                 for (int j = 1; j < kPw; j++) {
                     cf32 c = S(kLbStart + i + j, n);
-                    eL += norm2(cf32(c.real() >= 0 ? 1.f : -1.f, c.imag() >= 0 ? 1.f : -1.f) - c);
+                    aL += norm2(cf32(c.real() >= 0 ? 1.f : -1.f, c.imag() >= 0 ? 1.f : -1.f) - c);
                     c = S(kUbEnd - i - kPw + j, n);
-                    eU += norm2(cf32(c.real() >= 0 ? 1.f : -1.f, c.imag() >= 0 ? 1.f : -1.f) - c);
+                    aU += norm2(cf32(c.real() >= 0 ? 1.f : -1.f, c.imag() >= 0 ? 1.f : -1.f) - c);
                 }
+            eL += aL; eU += aU;
+            wL += aL * gL[n] * gL[n]; wU += aU * gU[n] * gU[n];
+        }
         errL += eL; errU += eU;
+        float gg2L = 0, gg2U = 0;
+        for (int n = 0; n < kBlk; n++) { gg2L += gL[n] * gL[n]; gg2U += gU[n] * gU[n]; }
+        gg2L /= (float)kBlk; gg2U /= (float)kBlk;
         const float sigBlk = 2.f * kBlk * kPmPart * 18;
         if (++merCnt == 4) {
             merL = 10 * std::log10(sigBlk * (float)merCnt / std::max(1e-9f, errL));
             merU = 10 * std::log10(sigBlk * (float)merCnt / std::max(1e-9f, errU));
             merCnt = 0; errL = errU = 0;
         }
-        const float multL = std::max(1.f, std::min(127.f, sigBlk / std::max(1e-9f, eL) * 10));
-        const float multU = std::max(1.f, std::min(127.f, sigBlk / std::max(1e-9f, eU) * 10));
+        const float multL = std::max(1.f, std::min(127.f, sigBlk * gg2L / std::max(1e-9f, wL) * 10));
+        const float multU = std::max(1.f, std::min(127.f, sigBlk * gg2U / std::max(1e-9f, wU) * 10));
         float* blk = &pm[(size_t)bc * kPmBlock];
         int o = 0;
         for (int n = 0; n < kBlk; n++) {
+            const float mL = multL * gL[n] * gL[n], mU = multU * gU[n] * gU[n];   // a symbol in a fade counts for less (LLR is proportional to the gain squared)
             for (int i = kLbStart; i < kLbStart + kPmPart * kPw; i += kPw)
-                for (int j = 1; j < kPw; j++) { const cf32 c = S(i + j, n); blk[o++] = clamp1(c.real()) * multL; blk[o++] = clamp1(c.imag()) * multL; }
+                for (int j = 1; j < kPw; j++) { const cf32 c = S(i + j, n); blk[o++] = clamp1(c.real()) * mL; blk[o++] = clamp1(c.imag()) * mL; }
             for (int i = kUbEnd - kPmPart * kPw; i < kUbEnd; i += kPw)
-                for (int j = 1; j < kPw; j++) { const cf32 c = S(i + j, n); blk[o++] = clamp1(c.real()) * multU; blk[o++] = clamp1(c.imag()) * multU; }
+                for (int j = 1; j < kPw; j++) { const cf32 c = S(i + j, n); blk[o++] = clamp1(c.real()) * mU; blk[o++] = clamp1(c.imag()) * mU; }
         }
         constel.clear();
         for (int n = 0; n < kBlk; n += 8)
@@ -451,10 +481,11 @@ struct FmRx::Impl {
                 int q = 0;
                 const int first = kPmPart + ch * 2;
                 for (int n = 0; n < kBlk; n++) {
+                    const float mL = multL * gL[n] * gL[n], mU = multU * gU[n] * gU[n];
                     for (int p = first; p < first + np; p++)
-                        for (int j = 1; j < kPw; j++) { const cf32 c = S(kLbStart + p * kPw + j, n); xb[(size_t)q++] = clamp1(c.real()) * multL; xb[(size_t)q++] = clamp1(c.imag()) * multL; }
+                        for (int j = 1; j < kPw; j++) { const cf32 c = S(kLbStart + p * kPw + j, n); xb[(size_t)q++] = clamp1(c.real()) * mL; xb[(size_t)q++] = clamp1(c.imag()) * mL; }
                     for (int p = first + np - 1; p >= first; p--)
-                        for (int j = 1; j < kPw; j++) { const cf32 c = S(kUbEnd - (p + 1) * kPw + j, n); xb[(size_t)q++] = clamp1(c.real()) * multU; xb[(size_t)q++] = clamp1(c.imag()) * multU; }
+                        for (int j = 1; j < kPw; j++) { const cf32 c = S(kUbEnd - (p + 1) * kPw + j, n); xb[(size_t)q++] = clamp1(c.real()) * mU; xb[(size_t)q++] = clamp1(c.imag()) * mU; }
                 }
                 decodePx(ch, cm == 2 ? kP3LenMp2 : kP3LenMp3);
             }
@@ -514,7 +545,7 @@ struct FmRx::Impl {
         p1Frames++;
         if (!sink->transfer(bits.data(), kP1LenFm, 0)) {
             p1Bad++;
-            if (++badRun >= 2) { state = 0; badRun = 0; }   // lost: search again
+            if (++badRun >= 4) { state = 0; badRun = 0; }   // lost: search again (4 bad frames: a fade of a second or so does not drop the sync)
         } else badRun = 0;
     }
 };
