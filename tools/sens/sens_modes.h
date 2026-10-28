@@ -466,11 +466,11 @@ inline std::vector<Mode> allModes() {
     }
     {   // HD Radio: FM hybrid MP1 and AM hybrid MA1 (P1 transfer frames with a valid header)
         for (int am = 0; am < 2; am++) {
-            Mode m = base(am ? "hdr-am" : "hdr-fm", am ? "HD Radio AM (MA1)" : "HD Radio FM (MP1)", "ofdm-radio", 23, 2e6, 6.0, am ? 30e3 : 400e3, am ? 1.0 : 98.1);
+            Mode m = base(am ? "hdr-am" : "hdr-fm", am ? "HD Radio AM (MA1)" : "HD Radio FM (MP1)", "ofdm-radio", 23, am ? 1e6 : 2e6, 6.0, am ? 30e3 : 400e3, am ? 1.0 : 98.1);   // the engine runs AM at 1 Msps, FM at 2 Msps
             m.echoUs = am ? 100 : 3; m.snrHi = am ? 40 : 30; m.maxJobs = 4;
             m.secs = am ? 20.0 : 10.0;   // AM gives its first P1 frame about 7 s after sync (4 frames of diversity delay); FM: ~6 frames to count
             m.pnHz = am ? 3 : 10;        // 363 Hz (FM) / 181 Hz (AM) spacing
-            m.gen = [am](size_t n) { SynthConfig c; c.modeOpt[0] = am; return clean(23, c, 2e6, n); };
+            m.gen = [am](size_t n) { SynthConfig c; c.modeOpt[0] = am; return clean(23, c, am ? 1e6 : 2e6, n); };
             m.make = factory<HdrReceiver, HdrTelemetry>([](HdrReceiver& rx, double r) { rx.setSilent(true); rx.configure(r); }, blocks<HdrTelemetry>);
             add(m);
         }
