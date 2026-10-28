@@ -210,7 +210,7 @@ FecChain::Result FecChain::decode(const Job& j, LdpcCode::Decoder& dec, int maxI
     Result r;
     std::vector<uint8_t> info((size_t)code_.infoBits());
     const double t0 = nowSec();
-    const LdpcCode::Result lr = dec.decode(j.llr.data(), info.data(), maxIter);
+    const LdpcCode::Result lr = dec.decode(j.llr.data(), info.data(), maxIter, 0.6f, false);
     r.iterations = lr.iterations;
     r.ldpcSec = nowSec() - t0;
     if (!lr.ok) return r;
@@ -263,7 +263,7 @@ void FecChain::decodeBatch(std::vector<Job>& jobs, std::vector<Result>& out, Ldp
         std::vector<uint8_t> info(m * infoN), ok(m);
         std::vector<int> iters(m);
         const double t0 = wallSec();
-        if (GpuLdpc::instance().decodeQc(code_.qcTable(), llr.data(), (int)m, kMaxIter, info.data(), ok.data(), iters.data(), 0.6f)) {
+        if (GpuLdpc::instance().decodeQc(code_.qcTable(), llr.data(), (int)m, kMaxIter, info.data(), ok.data(), iters.data(), 0.6f, false)) {
             const double dt = wallSec() - t0;
             for (size_t i = 0; i < m; i++) {
                 Result r;
