@@ -14,6 +14,7 @@ constexpr size_t kLagSyms = (size_t)kZcLen;                       // 251
 constexpr size_t kLag = kLagSyms * (size_t)kSps;                  // 1004 samples
 constexpr size_t kWinSyms = (size_t)(kZcLen + kZcGuard);          // 261: the part of the preamble that repeats with lag 251
 constexpr size_t kWin = kWinSyms * (size_t)kSps;                  // 1044 samples
+constexpr int kMaxDown = 20000;                                     // above this the resampling ratio is taken from the rate rounded to 1 kHz
 
 using cd = std::complex<double>;
 
@@ -76,12 +77,17 @@ double preambleRho(const std::vector<cf>& mf, double tau, double fHz, const std:
 
 FrameReceiver::FrameReceiver(const FrameReceiverConfig& cfg) : cfg_(cfg) {
     if (cfg_.inputRate < 1) cfg_.inputRate = kRefRate;
+    // the exact ratio, unless it is huge: 64/7 Msps (9142857, DVB-T2's 8 MHz rate) shares almost no factor with the widths and needed 329 million
+    // taps (1.3 GB, seconds on every engine start). The rate rounded to a whole kHz (16 ppm there, less than a radio's clock error) keeps it small.
+    int ratioRate = cfg_.inputRate;
+    for (int w = 0; w < kNumWidths; w++)
+        if (cfg_.inputRate / std::gcd(kSps * kWidths[w].symRate, cfg_.inputRate) > kMaxDown) ratioRate = std::max(1000, (int)std::lround(cfg_.inputRate / 1000.0) * 1000);
     double longest = 0;
     for (int w = 0; w < kNumWidths; w++) {
         const int fsw = kSps * kWidths[w].symRate;
-        const int g = std::gcd(fsw, cfg_.inputRate);
+        const int g = std::gcd(fsw, ratioRate);
         up_[w] = fsw / g;
-        down_[w] = cfg_.inputRate / g;
+        down_[w] = ratioRate / g;
         const int syms = std::max(kWidths[w].frameSymbols, frameSymbolCount(kCtrlProfile, kCtrlMaxBlocks));
         longest = std::max(longest, (double)syms * kSps * down_[w] / up_[w]);
     }
