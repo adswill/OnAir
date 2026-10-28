@@ -379,6 +379,7 @@ struct FmReceiver::Impl {
 
     // the channel filter, passing +-pass Hz; the last stage is down by pass + 80 kHz (190 kHz for the standard 110)
     void designChan(double pass) {
+        if (inRate > 0) pass = std::min(pass, 0.45 * inRate);   // what the sample rate can carry
         chanPass = pass;
         chan.assign(chanStages.size(), DecimFir<cf32>());
         double r = inRate;
@@ -810,7 +811,7 @@ void FmReceiver::setSquelch(float snrDb) { p_->squelchDb = std::max(0.f, std::mi
 void FmReceiver::setStationFinder(bool on) { p_->autoFind = on; }
 
 void FmReceiver::setChannelWidth(double hz) {
-    p_->chanWant = hz > 0 ? std::min(kMaxChannelWidthHz, std::max(kMinChannelWidthHz, hz)) * 0.5 : kChanPass;
+    p_->chanWant = hz > 0 ? std::max(kMinChannelWidthHz, hz) * 0.5 : kChanPass;   // (3.4: any width above a floor of 10 kHz; designChan keeps it inside the sample rate)
 }
 double FmReceiver::channelWidth() const { return 2 * p_->chanWant.load(); }
 void FmReceiver::setSilent(bool s) { p_->silent = s; }

@@ -251,6 +251,15 @@ void tuner(App& a, bool& retune) {
     for (int i = 1; i < 7; i++) if (std::fabs(S.srMsym - kRates[i]) < 1e-6) ri = i;
     if (combo("##dvbcsr", 96, ri, kRateNames)) { S.srMsym = kRates[ri]; saveState(a); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Msym/s. Auto measures it from the signal; a manual rate that does not lock gives way to the measured one.");
+    {   // 3.4: any symbol rate, not only the list
+        flowNext(4 * gUi);
+        static float typed = 0;
+        static double synced = -1;
+        if (synced != S.srMsym) { typed = (float)S.srMsym; synced = S.srMsym; }   // follows the list, not the typing
+        ImGui::SetNextItemWidth(70 * gUi);
+        if (ImGui::InputFloat("Msym/s##dvbcsrfree", &typed, 0, 0, "%.3f", ImGuiInputTextFlags_EnterReturnsTrue)) { S.srMsym = typed > 0 ? (double)typed : 0.0; saveState(a); }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Type any symbol rate in Msym/s and press Enter (0 = auto).");
+    }
     flowNext(8 * gUi);
     ImGui::TextDisabled("QAM");
     sameLineIf(50 * gUi, 5 * gUi);

@@ -489,6 +489,10 @@ void toolbarParts(App& a, int mask, bool vertical) {
         if (!vertical) vSeparator();
         mu->decoder(a, retune);
     }
+    if ((mask & TbDecoder) && captureRowShown(a)) {   // 3.4: the Advanced row of every mode: custom bandwidth and custom sample rate (state/rx_width.cpp)
+        if (!vertical) vSeparator();
+        rxWidthControl(a, retune);
+    }
     if (mask & TbDecoder) { bbfSyncImpl(); if (const char* bk = dect2::bbf::keyForFamily(a.family); *bk) { if (!vertical) vSeparator(); bbfWidget(a, bk); } }
     if (!vertical) flowEnd();
 

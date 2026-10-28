@@ -58,7 +58,7 @@ void bodyFace(App& a, float bodyH, ImVec2 disp) {
         toolbarParts(a, TbTuner, true);
         a.tgMin[TgSwitch] = ImGui::GetCursorScreenPos();
         modeList(a);
-        if (a.family == 0 || a.family == 3 || ((modeUi(a.family) && modeUi(a.family)->decoder) || *dect2::bbf::keyForFamily(a.family))) toolbarParts(a, TbDecoder, true);
+        if (a.family == 0 || a.family == 3 || captureRowShown(a) || ((modeUi(a.family) && modeUi(a.family)->decoder) || *dect2::bbf::keyForFamily(a.family))) toolbarParts(a, TbDecoder, true);
         endModule();
         const float rest = topH - (cH + 38 * gUi) - modeModH - 9 * gUi;          // what the first two modules leave
         const float listH = std::max(150.f * gUi, rest * 0.64f), logH = std::max(60.f * gUi, rest - listH);

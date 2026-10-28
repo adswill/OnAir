@@ -259,7 +259,7 @@ void sidebar(App& a) {
         ImGui::Unindent(6 * gUi);
         ImGui::Spacing();
     }
-    if ((a.family == 0 || a.family == 3 || ((modeUi(a.family) && modeUi(a.family)->decoder) || *dect2::bbf::keyForFamily(a.family))) && section(N_("Decoder"))) {
+    if ((a.family == 0 || a.family == 3 || captureRowShown(a) || ((modeUi(a.family) && modeUi(a.family)->decoder) || *dect2::bbf::keyForFamily(a.family))) && section(N_("Decoder"))) {
         ImGui::Indent(6 * gUi);
         toolbarParts(a, TbDecoder, true);
         ImGui::Unindent(6 * gUi);

@@ -309,6 +309,5 @@ const ModeUi kTetrapolUi = {
     .status = status,
     .summary = summary,
     .tuner = tuner,   // in the order ModeUi declares them (GCC refuses another order)
-    .decoder = rxWidthControl,
     .tick = tick,
 };

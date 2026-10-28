@@ -727,7 +727,6 @@ const ModeUi kVdl2Ui = {
     .status = status,
     .summary = summary,
     .tuner = tuner,
-    .decoder = rxWidthControl,
     .synth = synth,
     .tick = tick,
     .meters = meters,

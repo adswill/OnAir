@@ -225,6 +225,17 @@ void slotPanel(App& a) {
     }
     ImGui::SameLine();
     ImGui::TextDisabled("%s", a.tetraSingle ? "only the 25 kHz channel at the dial frequency is filtered out and decoded" : "every carrier in the span is searched for");
+    if (!a.tetraSingle) {   // 3.4: how much of the capture is searched; a wide capture (Advanced > Custom bandwidth / sample rate) lists and decodes every carrier in it
+        ImGui::SameLine(0, 14 * gUi);
+        ImGui::TextDisabled("%s", "searching the middle");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(60 * gUi);
+        int pct = a.tetraSearchPct;
+        if (ImGui::InputInt("##tetrasearch", &pct, 0, 0)) { a.tetraSearchPct = std::max(1, std::min(99, pct)); a.engine.tetra().setSearchBand(a.tetraSearchPct / 100.0); }
+        ImGui::SameLine();
+        ImGui::TextDisabled("%s", "% of the capture");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "72 % is the flat part of a radio's decimation filter. Raise it on a wide capture whose edges are flat too. The wider the capture (Advanced: Custom bandwidth and sample rate), the more carriers are listed and decoded.");
+    }
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("Listen to");
     ImGui::SameLine();
@@ -282,6 +293,9 @@ const char* kHelp =
     "This mode reads only what a TETRA base station broadcasts in the clear to every terminal: the network code (MCC, MNC), colour code, "
     "location area, the cell's carriers and duplex spacing, its neighbour cells, the services it offers and whether the network uses air "
     "interface encryption is advertised. The same information is shown by open-source tools such as osmo-tetra.\n\n"
+    "Wide captures: under Advanced in the top bar, tick Custom for the bandwidth and for the sample rate and set any value; there is no upper limit in OnAir, the radio decides what it can do. "
+    "A HackRF at 10 to 20 Msps captures 7 to 14 MHz of the middle of the band (the rest is its filter's roll-off): every TETRA carrier inside is listed and its control channel decoded, with the processor load growing "
+    "slowly with the number of carriers (one shared FFT cuts them out). \"searching the middle N %\" sets how much of the capture is searched. A capture needs about 8 bytes per sample for 2.3 s (0.4 GB at 20 Msps).\n\n"
     "It does not decrypt anything, does not transmit, does not join or disturb any network, and does not decode or play voice, short "
     "data messages or subscriber identities. Signalling that carries an encryption mode is only counted. A cell is described as using air interface encryption only when it advertises class 2 or 3, or its signalling says so; class 1 cells and scrambling are not encryption.\n\n"
     "You are responsible for following your country's rules on receiving radio signals.";
@@ -309,6 +323,7 @@ void spanOf(double& lo, double& hi) {
     case 0: lo = 390; hi = 395; break;
     case 1: lo = 410; hi = 430; break;
     case 2: lo = 450; hi = 470; break;
+    case 4: lo = 380; hi = 400; break;   // the whole 380 - 400 MHz range, in steps of the capture (a wide capture covers it in one or two)
     default: lo = std::min(S.lo, S.hi); hi = std::max(S.lo, S.hi); break;
     }
 }
@@ -317,7 +332,7 @@ void makePlan(const App& a) {
     S.plan.clear();
     double lo, hi;
     spanOf(lo, hi);
-    const double w = std::max(0.15, a.tune.sampleRate / 1e6 * 0.8);   // the part of the sample band searched whole
+    const double w = std::max(0.15, a.tune.sampleRate / 1e6 * std::max(0.05, a.tetraSearchPct / 100.0));   // the part of the sample band searched whole
     for (double c = lo + w / 2; c - w / 2 < hi && S.plan.size() < 400; c += w) S.plan.push_back(std::round(c * 1000) / 1000);
 }
 
@@ -336,9 +351,9 @@ void scanBar(App& a) {
     ImGui::AlignTextToFramePadding();
     ImGui::TextDisabled("Span");
     flowNext(16 * gUi);
-    static const char* spans[] = {"390 - 395 MHz (emergency services)", "410 - 430 MHz", "450 - 470 MHz", "Custom"};
+    static const char* spans[] = {"390 - 395 MHz (emergency services)", "410 - 430 MHz", "450 - 470 MHz", "Custom", "380 - 400 MHz (whole range)"};
     ImGui::SetNextItemWidth(220 * gUi);
-    ImGui::Combo("##tspan", &S.span, spans, 4);
+    ImGui::Combo("##tspan", &S.span, spans, 5);
     if (S.span == 3) {
         flowNext(10 * gUi);
         ImGui::SetNextItemWidth(80 * gUi); ImGui::InputDouble("##tlo", &S.lo, 0, 0, "%.3f");
@@ -476,6 +491,7 @@ void tick(App& a) {
         dect2::tetra::SlotSelect sel; sel.mode = (dect2::tetra::SlotMode)a.tetraSlotMode; sel.slot = a.tetraSlotNum; sel.id = (uint32_t)a.tetraSlotId;
         a.engine.tetra().setVoiceSlot(sel);
         a.engine.tetra().setSingleCarrier(a.tetraSingle != 0);
+        a.engine.tetra().setSearchBand(a.tetraSearchPct / 100.0);
     }
     if (!S.scanning) return;
     if (!a.engine.running()) { S.scanning = false; return; }
@@ -519,7 +535,7 @@ void receiver(App& a) {
     ImGui::Text("%s", dect2::tetraSummary(t).c_str());
     ImGui::Text("%llu blocks searched, %llu signalling blocks decoded, %llu failed", (unsigned long long)t.blocks, (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
     ImGui::Text("input %.2f Msps, %.1f dBFS", t.inputRate / 1e6, t.levelDb);
-    ImGui::TextDisabled("pi/4-DQPSK 18 ksym/s, 25 kHz channels; %.1f MHz of the band at a time: use Scan for a wider span", t.inputRate / 1e6 * 0.8);
+    ImGui::TextDisabled("pi/4-DQPSK 18 ksym/s, 25 kHz channels; %.1f MHz of the band at a time: raise the sample rate and bandwidth (Advanced > Custom) or use Scan for a wider span", t.inputRate / 1e6 * a.tetraSearchPct / 100.0);
 }
 
 void status(App& a) {
@@ -531,6 +547,32 @@ void status(App& a) {
 void summary(const App& a, std::string& l1, std::string& l2) {
     l1 = "TETRA";
     if (live(a)) l2 = dect2::tetraSummary(a.rx.tetra);
+}
+
+// The test signal: one cell, two cells, or (3.4) a wide capture with many carriers at different levels and tuning errors; the capture's width comes from
+// Advanced > Custom bandwidth / sample rate (a 10 MHz bandwidth carries a dozen carriers across 7 MHz)
+void synthOptions(App& a, bool& changed) {
+    dect2::SynthConfig& sc = a.tune.synth;
+    ImGui::TextDisabled("%s", "TETRA test signal");
+    flowNext(10 * gUi);
+    static const char* scenes[] = {"one cell (wide capture from 4 Msps)", "two cells", "wide capture"};
+    int sc0 = std::max(0, std::min(2, sc.modeOpt[0]));
+    if (sc0 == 0 && a.tune.sampleRate >= 4e6) sc0 = 2;
+    ImGui::SetNextItemWidth(120 * gUi);
+    if (ImGui::BeginCombo("##tetrascene", scenes[sc0])) {
+        for (int i = 0; i < 3; i++) if (ImGui::Selectable(scenes[i], i == sc0)) { sc.modeOpt[0] = i; changed = true; }
+        ImGui::EndCombo();
+    }
+    if (sc0 == 2) {
+        flowNext(10 * gUi);
+        int n = sc.modeOpt[1] > 0 ? sc.modeOpt[1] : 12;
+        ImGui::SetNextItemWidth(70 * gUi);
+        if (ImGui::InputInt("carriers##tetran", &n, 0, 0)) { sc.modeOpt[1] = std::max(1, n); changed = true; }
+    }
+    flowNext(14 * gUi); ImGui::TextDisabled("%s", "SNR"); ImGui::SameLine(); ImGui::SetNextItemWidth(90 * gUi);
+    float snr = (float)sc.snrDb; if (ImGui::SliderFloat("##tsnr", &snr, 5, 45, "%.0f dB")) { sc.snrDb = snr; changed = true; }
+    flowNext(); ImGui::TextDisabled("%s", "CFO"); ImGui::SameLine(); ImGui::SetNextItemWidth(110 * gUi);
+    float cfo = (float)(sc.cfoHz / 1e3); if (ImGui::SliderFloat("##tcfo", &cfo, -20, 20, "%.2f kHz")) { sc.cfoHz = cfo * 1e3; changed = true; }
 }
 
 } // namespace
@@ -545,6 +587,6 @@ const ModeUi kTetraUi = {
     .list = list,
     .status = status,
     .summary = summary,
-    .decoder = rxWidthControl,
+    .synth = synthOptions,
     .tick = tick,
 };

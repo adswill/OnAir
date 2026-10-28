@@ -74,7 +74,7 @@ int fixIsdbtBw(int v) { return v == 0 || v == 7 || v == 8 ? v : 6; }
 int fixRegion(int v) { return v == 1 || v == 2 ? v : 0; }
 int fixDeemph(int v) { return v == 75 ? 75 : v == 0 ? 0 : 50; }   // 0: off
 int fixAudioBw(int v) { return v == 12000 || v == 8000 || v == 5000 ? v : 0; }
-int fixChanKhz(int v) { return v > 0 ? std::min(300, std::max(100, v)) : 0; }
+int fixChanKhz(int v) { return v > 0 ? std::max(10, v) : 0; }   // (3.4: any manual width; the slider runs 100 - 300 kHz, a typed one goes beyond)
 int fixTone(int v) { return std::max(-6, std::min(6, v)); }
 int fixRecFormat(int v) { return v == 1 || v == 2 ? v : 0; }
 
@@ -97,6 +97,7 @@ const std::vector<PrefKey>& keyTable() {
         num("tetraSlotMode", AT(a.tetraSlotMode), 0, 0, 3, true), num("tetraSlotNum", AT(a.tetraSlotNum), 1, 1, 4, true),
         num("tetraSlotId", AT(a.tetraSlotId), 0, 0, 16777215, true),
         num("tetraSingle", AT(a.tetraSingle), 0, 0, 1, true),
+        num("tetraSearchPct", AT(a.tetraSearchPct), 72, 1, 99, true),
         num("wfMap3", AT(a.wf.map), cmap::NavyHeat, -1, (int)Waterfall::NumMaps - 1, true),   // 3.0: a new key, everyone starts on Navy heat (the old looks set their own maps)
         flagB("wfAutoFloor", AT(a.wf.autoTrack), true),   // new key with the floor-anchored range (3.0): everyone starts on auto
         flagB("specAutoDb", AT(a.specAutoDb), true), flagB("specPerHz", AT(a.specPerHz), true),
