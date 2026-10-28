@@ -798,15 +798,22 @@ struct DrmReceiver::Impl {
     // fd is taken a little wider than measured: smoothing too little costs less than smoothing a fast channel away.
     // Below 1 Hz of Doppler spread the Wiener filter gains about 1 dB (16-QAM at 8 dB: 11 % of the audio frames lost instead of 74 %); in faster
     // channels the noise estimate also holds the change of the channel, the filter would smooth too much: the linear interpolation is used there
-    static constexpr double kWienerMaxDopplerHz = 1.0;
+    // Above 1 Hz the second-difference noise estimate (sigma2) is mostly the channel's own change; the Wiener weights then take the noise from the
+    // pilot power (accP = P + noise) minus the signal power implied by the measured correlation (pilotP), never more than sigma2.
+    static constexpr double kWienerMaxDopplerHz = 4.0;
     bool wienerOn() const { return dopplerSm < kWienerMaxDopplerHz; }
+    double sigmaW() const {
+        if (dopplerSm < 1.0 || pilotP <= 0) return sigma2;
+        return std::min(sigma2, std::max(accP - pilotP, 1e-3 * pilotP));
+    }
     void wienerWeights() {
         wienOk = false;
         if (statN < 30 || pilotP <= 0 || sigma2 <= 0) return;
         wien.assign((size_t)gy * kWT, 0.f);
         const double symSec = (double)Ts / fs;
         const double fd = std::max(0.3, 1.5 * dopplerSm + 0.2);
-        const double beta = sigma2 / pilotP;
+        const double sg = sigmaW();
+        const double beta = sg / pilotP;
         auto R = [&](double dt) { const double a = kPi * fd * dt; return std::exp(-a * a); };
         double mseSum = 0;
         for (int d = 0; d < gy; d++) {
@@ -836,7 +843,7 @@ struct DrmReceiver::Impl {
             // assumed Doppler spread, which is on the wide side: not counted, so that the weights of the cells keep their scale when the filter is
             // switched on)
             (void)wr;
-            mseSum += sigma2 * w2;
+            mseSum += sg * w2;
         }
         wienMse = mseSum / gy;
         wienOk = true;
