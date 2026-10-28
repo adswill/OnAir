@@ -1,6 +1,7 @@
 // HD Radio receiver (see hdr_rx.h): resampling to 744187.5 Hz, the FM and AM Layer 1 receivers, Layer 2 and the data services, and the
 // telemetry for the interface.
 #include "dect2/hdr/hdr_rx.h"
+#include "dect2/channels/channel_find.h"
 #include "dect2/dsp/exact_resampler.h"
 #include "dect2/hdr/hdr_fec.h"
 #include "dect2/hdr/hdr_hdc.h"
@@ -68,6 +69,10 @@ struct HdrReceiver::Impl {
     double mirrorSince = 0;                // signal time of the last change of `mirror`
     static constexpr double kMirrorWait = 12;   // seconds without any P1 frame before the other side is tried
     std::vector<cf32> clean;
+    // Moves a station far from the middle of the sample band (a radio tuned beside it, a recording made at an offset) to the middle: the FM
+    // receiver's own carrier search covers +-13.8 kHz, the AM one a few kHz. FM runs at 1.5 Msps and more, AM at 1 Msps and less (hdrSampleRate),
+    // so the rate tells which finder fits (FM: the analog host with its two sidebands, 400 kHz; AM: 30 kHz).
+    ChannelCentre cc;
     double lostFor = 0;
     int64_t nIn = 0;
     double now = 0;                        // signal seconds
@@ -109,6 +114,10 @@ struct HdrReceiver::Impl {
         fmSink.badP1 = amSink.badP1 = 0;
         band = 0; lostFor = 0;
         mirror = false; mirrorSince = 0;
+        // the finder only acts when the receiver has no block sync after 3 s (FM locks in 2 to 3 s); with `retry` a wrong pick (a strong
+        // neighbour 200 kHz away on the US FM band) is given up after the dwell time and the middle is tried again
+        if (curRate >= kHdrFmMinRate) { cc.configure(curRate, 400e3, 12e3, 3.0); cc.setRetry(6); }
+        else { cc.configure(curRate, 30e3, 6e3, 3.0); cc.setRetry(12); }
         nIn = 0; now = 0; nextReport = 0; power = 0; nPower = 0; busy = 0;
         lastPids = 0; lastPidsAt = -1e9; lotVersion = 0;
     }
@@ -126,7 +135,7 @@ struct HdrReceiver::Impl {
         tel.band = band;
         tel.state = s.state;
         if (s.state == 2 && now - lastP1 < 3.5) tel.state = 3;
-        tel.cfoHz = s.cfoHz;
+        tel.cfoHz = s.cfoHz + cc.offsetHz();
         tel.merLower = s.merLower; tel.merUpper = s.merUpper;
         tel.snrDb = s.state == 2 ? 0.5f * (s.merLower + s.merUpper) : 0.f;
         tel.ber = s.ber;
@@ -182,6 +191,8 @@ struct HdrReceiver::Impl {
             else if (mirror) v = std::conj(v);
         }
         x = clean.data();
+        cc.process(clean.data(), n, fm.state() == 2 || am.state() == 2);
+        if (cc.takeChanged()) { rs.reset(); fm.reset(); am.reset(); amM.reset(); band = 0; lostFor = 0; fmSink.badP1 = amSink.badP1 = 0; }
         for (size_t i = 0; i < n; i++) power += (double)std::norm(x[i]);
         nPower += (int64_t)n;
         bb.clear();
@@ -212,6 +223,7 @@ struct HdrReceiver::Impl {
         if (noneGood && ((band == 0 && amM.state() == 2 && am.state() != 2) || (band == 1 && fmSink.badP1 >= 3) || now - mirrorSince > kMirrorWait)) {
             mirror = !mirror;
             mirrorSince = now;
+            cc.reset();
             band = 0; lostFor = 0; fm.reset(); am.reset(); amM.reset();
             fmSink.badP1 = amSink.badP1 = 0;
             say(mirror ? "HD Radio: the spectrum is mirrored (I and Q swapped), turning it round" : "HD Radio: trying the spectrum the right way round");
