@@ -369,9 +369,8 @@ struct DrmReceiver::Impl {
     }
 
     // mayMirror: no frequency references found -> the next search looks at the mirrored spectrum (not while the tracker runs)
-    Acq acquire(bool mayMirror = true) {
+    Acq acquire(bool mayMirror = true, size_t W = 72000) {
         Acq res;
-        const size_t W = 72000;
         if (total - base < W) return res;
         const uint64_t absStart = total - W;
         const cf32* z = buf.data() + (absStart - base);
@@ -396,7 +395,7 @@ struct DrmReceiver::Impl {
         std::vector<double> P((size_t)Tu, 0.0), E1((size_t)Tu, 0.0);
         std::vector<std::complex<double>> C1((size_t)Tu, 0.0);
         const int nsy = std::min(40, nsB - 2);
-        if (nsy < 8) return res;
+        if (nsy < (W < 72000 ? 12 : 8)) return res;
         int used = 0;
         for (int j = 0; j < nsy; j++) {
             const size_t st = tauB + (size_t)j * (size_t)Tsym + (size_t)(Tg - Tg / 2);
@@ -1306,10 +1305,14 @@ struct DrmReceiver::Impl {
 
     void run() {
         if (phase == kSearch && !eLane) {
-            if (total - lastSearch >= 19200 && total - base >= 72000) {
+            // The first tries run on a growing window (0.6 s on, every 0.2 s: 18 or more symbols are plenty for the guard correlation and the
+            // three tones at a good SNR); from 1.5 s on the full window every 0.4 s as before. The short windows never turn the spectrum round.
+            const uint64_t avail = total - base;
+            const bool early = avail < 72000;
+            if (avail >= (early ? 28800 : 72000) && total - lastSearch >= (early ? 9600 : 19200)) {
                 lastSearch = total;
                 statSearchRuns++;
-                const Acq a = acquire();
+                const Acq a = early ? acquire(false, (size_t)avail) : acquire();
                 if (a.ok) startTracking(a);
             }
             // DRM+ every 0.4 s
