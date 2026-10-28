@@ -95,7 +95,7 @@ struct Result {
 // width of the box of a label (text and padding) in pixels; detailed: with its detail
 using WidthFn = std::function<float(const Label&, bool detailed)>;
 
-// Names for the same station and mode (within tolMhz) merge to the strongest source. Distinct database names and band-plan channels stay separate.
+// Names for the same station and mode (within tolMhz) merge to the strongest source. Distinct names from the database or memories and band-plan channels stay separate.
 inline std::vector<size_t> mergeSame(const Store& s, std::vector<size_t> idx, double tolMhz) {
     std::vector<char> gone(idx.size(), 0);
     for (size_t i = 0; i < idx.size(); i++) {
@@ -103,7 +103,8 @@ inline std::vector<size_t> mergeSame(const Store& s, std::vector<size_t> idx, do
         for (size_t j = i + 1; j < idx.size() && s.at(idx[j]).mhz - s.at(idx[i]).mhz <= tolMhz; j++) {
             if (gone[j] || s.at(idx[j]).src == Band) continue;
             const Label& a = s.at(idx[i]); const Label& b = s.at(idx[j]);
-            if (a.mode != b.mode || (a.src == FreqDb && b.src == FreqDb && a.text != b.text)) continue;
+            if (a.mode != b.mode) continue;
+            if ((a.src == FreqDb || a.src == Memories) && (b.src == FreqDb || b.src == Memories) && a.text != b.text) continue;
             if (b.prio > a.prio) { gone[i] = 1; break; }
             gone[j] = 1;
         }
