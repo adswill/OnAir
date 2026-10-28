@@ -1,6 +1,7 @@
 // Pagers: the "Decoded only" table filter. Pure predicate so a test can check it; the UI applies it to the message table, the Copy export and the side list.
 #pragma once
 #include "dect2/pager/pager_tel.h"
+#include "dect2/pager/pager_ignore.h"
 #include <algorithm>
 #include <cstdint>
 #include <string>
@@ -43,6 +44,19 @@ inline std::vector<PagerHeard> pagerHeardTable(const std::vector<PagerMessage>& 
     }
     std::sort(rows.begin(), rows.end(), [](const PagerHeard& a, const PagerHeard& b) { return a.count != b.count ? a.count > b.count : a.lastSerial > b.lastSerial; });
     return rows;
+}
+
+// The Ignore list (pager_ignore.h) in the table: lists[0] is POCSAG's, lists[1] FLEX's. A page of an ignored address is hidden unless "show ignored" is on;
+// the pages are never removed, so turning the switch on brings every one of them back. The UI uses this one predicate for the table, the side list,
+// Copy, Save, auto-save and the Capcodes view.
+inline bool pagerIsIgnored(const PagerIgnore* lists, const PagerMessage& m) { return lists[m.flex ? 1 : 0].has(m.address); }
+inline bool pagerIgnoreVisible(const PagerIgnore* lists, const PagerMessage& m, bool showIgnored) { return showIgnored || !pagerIsIgnored(lists, m); }
+// Counts the pages the Ignore list hides (0 when showIgnored).
+inline size_t pagerIgnoreHidden(const PagerIgnore* lists, const std::vector<PagerMessage>& msgs, bool showIgnored) {
+    if (showIgnored) return 0;
+    size_t n = 0;
+    for (const PagerMessage& m : msgs) if (pagerIsIgnored(lists, m)) n++;
+    return n;
 }
 
 // The capcode watch list (#269): addresses typed as numbers separated by spaces, commas or semicolons, and ranges "1000-1099".

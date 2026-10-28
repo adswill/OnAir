@@ -39,5 +39,53 @@ int main() {
         CHECK(pagerParseWatch("").empty() && pagerParseWatch("none").empty(), "empty list");
         CHECK(pagerParseWatch("99999999999").has(0xFFFFFFFFu), "too large a number is clamped");
     }
+    {   // feat34-c: the Ignore list
+        PagerIgnore w = pagerParseIgnore("836000-836999, 12 # a comment 777\n5000-5100 5050-5200 5201 83?00 9*7\nabc 3000-2990 99999999999");
+        CHECK(w.has(836000) && w.has(836500) && w.has(836999) && !w.has(835999) && !w.has(837000), "range edges");
+        CHECK(w.has(12) && !w.has(777), "a single number; a comment is skipped");
+        CHECK(w.has(5000) && w.has(5150) && w.has(5200) && w.has(5201) && !w.has(5202) && !w.has(4999), "overlapping and touching ranges merge");
+        CHECK(w.has(83100) && w.has(83900) && !w.has(8300) && !w.has(83110) && !w.has(831000), "? is one digit");
+        CHECK(w.has(97) && w.has(9007) && w.has(912347) && !w.has(98) && !w.has(9), "* matches any digits, also none");
+        CHECK(w.has(2995) && w.has(0xFFFFFFFFu), "reversed range, clamped number");
+        CHECK(!w.has(0) && pagerParseIgnore("").empty() && pagerParseIgnore("none # x").empty(), "empty and junk");
+        // canonical text round trip
+        const PagerIgnore w2 = pagerParseIgnore(pagerIgnoreText(w));
+        CHECK(w2.ranges == w.ranges && w2.patterns == w.patterns, "text round trip");
+        // add and remove: a range is split
+        PagerIgnore r = pagerParseIgnore("100-200");
+        CHECK(r.remove(150) && !r.has(150) && r.has(149) && r.has(151) && r.ranges.size() == 2, "remove splits a range");
+        CHECK(r.remove(100) && r.remove(200) && r.ranges.size() == 2 && r.ranges[0].first == 101 && r.ranges[1].second == 199, "remove at the ends");
+        r.add(150, 150); r.add(100, 100); r.add(200, 200);
+        CHECK(r.ranges.size() == 1 && r.ranges[0].first == 100 && r.ranges[0].second == 200, "adding the holes back merges to one range");
+        PagerIgnore pw = pagerParseIgnore("83*");
+        CHECK(!pw.remove(830) && pw.has(830), "a wildcard match cannot be removed one by one");
+        // huge list: 200000 disjoint ranges, lookups stay exact
+        std::string big;
+        for (uint32_t i = 0; i < 200000; i++) { big += std::to_string(i * 20 + 5) + "-" + std::to_string(i * 20 + 9) + "\n"; }
+        const PagerIgnore hg = pagerParseIgnore(big);
+        CHECK(hg.ranges.size() == 200000, "huge list entries %zu", hg.ranges.size());
+        size_t wrong = 0;
+        for (uint32_t a = 0; a < 4000000; a += 3) { const bool exp = (a % 20) >= 5 && (a % 20) <= 9; if (hg.has(a) != exp) wrong++; }
+        CHECK(wrong == 0, "huge list lookups wrong: %zu", wrong);
+        // a huge list of single numbers that touch merges to one range
+        std::string seq; for (uint32_t i = 1; i <= 50000; i++) seq += std::to_string(i) + " ";
+        CHECK(pagerParseIgnore(seq).ranges.size() == 1, "consecutive numbers merge");
+        // table filtering: per protocol, show-ignored brings every page back
+        PagerIgnore lists[2] = {pagerParseIgnore("1000-1999"), pagerParseIgnore("1500")};
+        std::vector<PagerMessage> v;
+        auto add = [&](bool flex, uint32_t adr) { PagerMessage m = msg(flex, kPagerAlpha, "x"); m.address = adr; v.push_back(m); };
+        add(false, 1500); add(true, 1500); add(false, 2000); add(true, 1600); add(false, 1999); add(true, 1500);
+        size_t vis = 0; for (const auto& m : v) if (pagerIgnoreVisible(lists, m, false)) vis++;
+        CHECK(vis == 2, "visible with the list on: %zu", vis);
+        CHECK(pagerIgnoreHidden(lists, v, false) == 4, "hidden count %zu", pagerIgnoreHidden(lists, v, false));
+        vis = 0; for (const auto& m : v) if (pagerIgnoreVisible(lists, m, true)) vis++;
+        CHECK(vis == v.size() && pagerIgnoreHidden(lists, v, true) == 0, "show ignored brings all %zu back", vis);
+        CHECK(!pagerIsIgnored(lists, v[1]) == false && !pagerIsIgnored(lists, v[3]), "FLEX 1500 ignored, FLEX 1600 not");
+        // the list the receivers read
+        pagerIgnoreSet(true, lists[1]); pagerIgnoreSet(false, lists[0]);
+        CHECK(pagerIgnored(false, 1500) && !pagerIgnored(true, 1600) && pagerIgnored(true, 1500), "receiver-side lookup per protocol");
+        pagerIgnoreSet(false, PagerIgnore());
+        CHECK(!pagerIgnored(false, 1500), "cleared");
+    }
     return testSummary("pager_filter");
 }

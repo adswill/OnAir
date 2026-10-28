@@ -11,6 +11,7 @@
 #include "dect2/dmr/dmr_dsp.h"
 #include "dect2/dsp/exact_resampler.h"
 #include "dect2/pager/pager_proto.h"
+#include "dect2/pager/pager_ignore.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -302,14 +303,15 @@ struct PagerReceiver::Impl {
             tel.speeds[spd].messages++;
             tel.messagesTotal++;
             tel.dataValid = true;
-            if (automation::wants(automation::FPager)) {   // the automations (automation/engine.h)
+            const bool ignored = pagerIgnored(flex, pm.address);   // the Ignore list: kept in the list, but no automation (notification, recording, webhook) and no log line
+            if (!ignored && automation::wants(automation::FPager)) {   // the automations (automation/engine.h)
                 automation::Event ev("pager.message");
                 ev.at(automation::wallNow(), flex ? "FLEX" : "POCSAG", 0);
                 ev.str("protocol", flex ? "FLEX" : "POCSAG").str("speed", pagerSpeedName(spd)).num("address", pm.address).num("function", pm.function)
                     .str("type", pagerTypeName(pm.type)).str("text", pm.text).flag("damaged", pm.damaged);
                 automation::emit(std::move(ev));
             }
-            if (sn <= 40) {
+            if (sn <= 40 && !ignored) {
                 char b[160];
                 snprintf(b, sizeof b, "Pagers: %s %u %s", pagerSpeedName(spd), (unsigned)pm.address, pagerTypeName(pm.type));
                 say(b);
