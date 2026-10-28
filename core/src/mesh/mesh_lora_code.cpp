@@ -391,5 +391,77 @@ void TxFrame::render(cf32* out, size_t n, double t0, double rate) const {
     }
 }
 
+namespace {
+// Depth-first search of recoverJumps: the first block whose parity fails holds the jump; every symbol of it is tried as the first
+// moved one, with every candidate shift, and the search goes on after the block when that cleans it.
+struct JumpSearch {
+    int sf = 11, cr = 5, n = 2048, maxJumps = 3, solutions = 0, bestJumps = 0;
+    bool ldro = false;
+    std::vector<int> shifts;
+    std::vector<uint8_t> best;
+    bool blockClean(const std::vector<uint16_t>& b, int at) const {
+        if (at + cr > (int)b.size()) return true;
+        const int sfApp = ldro ? sf - 2 : sf;
+        uint32_t cw[12] = {};
+        for (int i = 0; i < cr; i++) {
+            const uint32_t x = (b[(size_t)(at + i)] + (uint32_t)n - 1) % (uint32_t)n;
+            const uint32_t v = ldro ? gray(((x + 2) >> 2) & ((1u << sfApp) - 1)) : gray(x);
+            for (int j = 0; j < sfApp; j++) {
+                const int r = ((i - j - 1) % sfApp + sfApp) % sfApp;
+                cw[r] |= ((v >> (sfApp - 1 - j)) & 1) << (cr - 1 - i);
+            }
+        }
+        for (int r = 0; r < sfApp; r++) { int e = 0; hammingDecode((uint8_t)cw[r], cr, &e); if (e) return false; }
+        return true;
+    }
+    void solve(const std::vector<uint16_t>& b, int fromBlock, int depth) {
+        if (solutions > 1) return;
+        const int nb = ((int)b.size() - 8) / cr;
+        int fb = -1;
+        for (int k = fromBlock; k < nb; k++) if (!blockClean(b, 8 + k * cr)) { fb = k; break; }
+        if (fb < 0) {
+            if (depth == 0) return;   // nothing to undo: the CRC error is somewhere the parity cannot see
+            FrameDecoder fd; fd.start(sf, ldro);
+            for (uint16_t v : b) { fd.push(v); if (fd.done()) break; }
+            std::vector<uint8_t> pl; bool ok = false; int corr = 0;
+            if (!(fd.done() && fd.finish(pl, ok, corr) && ok)) return;
+            // the same payload by another path (a nearby shift that LDRO's coarser bins cannot tell apart, or the same shift modulo
+            // 2^sf at a low SF) is one solution; a different payload makes the result ambiguous
+            if (solutions == 0) { solutions = 1; best = pl; bestJumps = depth; }
+            else if (pl != best) solutions = 2;
+            else bestJumps = std::min(bestJumps, depth);
+            return;
+        }
+        if (depth == maxJumps) return;
+        const int s0 = 8 + fb * cr;
+        for (int j = s0; j < s0 + cr; j++)
+            for (int d : shifts) {
+                std::vector<uint16_t> c = b;
+                for (size_t i = (size_t)j; i < c.size(); i++) c[i] = (uint16_t)(((int)c[i] - d + n) % n);
+                if (blockClean(c, s0)) solve(c, fb + 1, depth + 1);
+            }
+    }
+};
+} // namespace
+
+int recoverJumps(int sf, bool ldro, const std::vector<uint16_t>& bins, double quantum, std::vector<uint8_t>& payload, int maxJumps) {
+    if (bins.size() < 8 || quantum <= 0 || maxJumps <= 0) return 0;
+    FrameDecoder hd; hd.start(sf, ldro);
+    for (int i = 0; i < 8; i++) hd.push(bins[(size_t)i]);
+    if (!hd.header().ok || !hd.header().crc) return 0;
+    JumpSearch js; js.sf = sf; js.ldro = ldro; js.cr = hd.header().cr; js.n = 1 << sf; js.maxJumps = maxJumps;
+    for (int m = -15; m <= 15; m++) {
+        if (!m) continue;
+        for (int e = -2; e <= 2; e++) {
+            const int d = (((int)std::lround(m * quantum) + e) % js.n + js.n) % js.n;   // the same shift once, modulo 2^sf
+            if (d && std::find(js.shifts.begin(), js.shifts.end(), d) == js.shifts.end()) js.shifts.push_back(d);
+        }
+    }
+    js.solve(bins, 0, 0);
+    if (js.solutions != 1) return 0;   // none, or more than one: not trusted
+    payload = js.best;
+    return js.bestJumps;
+}
+
 } // namespace lora
 } // namespace dect2
