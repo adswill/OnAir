@@ -45,6 +45,7 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | SSDV pictures | 206 | 208 | 207 | 183 | feat32-modes2 | fsphil/ssdv |
 | EBICab / Eurobalise | 207 | 209 | 208 | 184 | feat32-modes2 | needs a user test |
 | Inmarsat (all carriers) | 208 | 210 | 209 | 185 | feat33-inmarsat | 3.3; numbers may need to move at merge |
+| Internet TV (IPTV) | 209 | 211 | 210 | - | feat34-iptv | no radio, no receiver, no poll slot; 3.4 |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |
@@ -52,6 +53,6 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 Protocol entries (a row with a subId, such as FT8 in HF digital or POCSAG in pagers) share their family on purpose; the test checks
 that each (family, subId) pair is unique instead.
 
-`kNumFamilies` = 209, `kPollSeqSlots` = 186.
+`kNumFamilies` = 210, `kPollSeqSlots` = 186.
 
 A new mode takes the next free family above the highest one in this table and the next free poll slot, and adds its row here.

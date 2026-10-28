@@ -316,7 +316,8 @@ static void externalPlayerBox(App& a) {
 void playerTab(App& a) {
     Player& pl = a.engine.player();
     PlayerStats ps = pl.stats();
-    {   // channel selector (muxes found by the scanner) and the signal-quality bar
+    const bool iptvScreen = a.family == 209;   // Internet TV draws its own header and guide and reuses the picture and the controls
+    if (!iptvScreen) {   // channel selector (muxes found by the scanner) and the signal-quality bar
         const SavedChannel* cur = nullptr;
         for (auto& c : a.channels) if (std::fabs(c.freqMhz - a.freqMhz) < 0.01) cur = &c;
         char fb[48]; snprintf(fb, sizeof fb, "%.3f MHz", a.freqMhz);
@@ -365,7 +366,7 @@ void playerTab(App& a) {
         sameLineIf(qMin, 18 * gUi);   // on a line of its own when the tab is narrow
         qualityBar(a, std::max(qMin, ImGui::GetContentRegionAvail().x - 8));
     }
-    {   // PLP selector for multi-PLP multiplexes, and a notice for anything the receiver cannot decode
+    if (!iptvScreen) {   // PLP selector for multi-PLP multiplexes, and a notice for anything the receiver cannot decode
         const RxTelemetry& rx = a.rx;
         if (rx.plpList.size() > 1) {
             static const char* mods[] = {"QPSK", "16-QAM", "64-QAM", "256-QAM"};
@@ -488,7 +489,7 @@ void playerTab(App& a) {
     flowBreak();
     tvPlaybackBar(a);
     flowBreak();
-    if (pl.selected() >= 0) {   // what is on now, and what comes next
+    if (pl.selected() >= 0 && !iptvScreen) {   // what is on now, and what comes next
         const EpgEvent* nx = nullptr;
         const EpgEvent* cur = epgCurrent(a, pl.selected(), &nx);
         if (cur) {

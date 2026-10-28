@@ -275,6 +275,7 @@ No radio? Open an IQ recording through the *IQ recording file* source (cs8, cu8,
 
 - **ADS-B** (1090 MHz): aircraft on a map with altitude, speed and callsign; aviation or metric units; feeds from other receivers; offline registrations and countries; range statistics.
 - **Mode A/C** (1090 MHz secondary-radar replies): squawk and altitude of aircraft that answer radar, the ident pulse, emergency squawks, matched to the Mode S aircraft of the same capture on the ADS-B map; [details](docs/modeac.md).
+- **Internet TV (IPTV)** (no radio): playlists (M3U / M3U8) and single streams (HLS, MPEG-TS over HTTP, UDP, RTP, multicast) with channel list, favourites, XMLTV guide and the antenna TV's player; OnAir ships no channels and plays no DRM streams; [details](docs/IPTV.md).
 - **ASTERIX** (no radio: UDP or a recording): EUROCONTROL surveillance data, CAT 021 ADS-B, CAT 048 monoradar plots and CAT 062 system tracks, as a track table and a map; [details](docs/asterix.md). A radar's own pulses cannot be received by a software radio, so this reads the data a radar or ground station sends.
 - **UAT** (978 MHz, DO-282): ADS-B reports, FIS-B weather products, TIS-B traffic relay. **Mode S uplink** (1030 MHz, needs 8 Msps): interrogator codes, TCAS coordination.
 - **ACARS**, **VDL Mode 2** (every channel at once), **VDL Mode 4** (STDMA; spec-based, no live captures validated yet) and **HFDL** (every channel in the band at once), with positions on a map.

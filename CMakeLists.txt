@@ -177,6 +177,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES inmsat)   # Inmarsat all-carriers mode (3.3, docs/INMARSAT-REVAMP.md): core/src/inmsat, tests/inmsat
   list(APPEND DECT2_MODES pskdsp)   # PSK demodulator and analyser (family 202, #282): core/src/pskdsp, app/pskdsp, tests/pskdsp
 target_sources(dect2core PRIVATE core/src/tv/mheg_render.cpp core/src/tv/ts_proto_rs.cpp core/src/common/text_charset_rs.cpp core/src/tv/dvb_text.cpp core/src/tv/dvb_text_rs.cpp core/src/tv/teletext_rs.cpp core/src/tv/dvbsub_rs.cpp core/src/tv/epg.cpp core/src/tv/subtitle_export.cpp core/src/tv/recorder.cpp core/src/tv/timeshift.cpp core/src/tv/playback.cpp core/src/tv/dsmcc.cpp core/src/tv/mheg.cpp core/src/tv/rcs.cpp core/src/tv/si_tables.cpp core/src/tv/ts_data.cpp core/src/tv/hd_pair.cpp) # MPEG-TS parsing layer (C++ or the Rust crate onair_ts) and the TV recorder (guide, schedule, timeshift, playback) (C++ or the Rust crate onair_ts)
+target_sources(dect2core PRIVATE core/src/tv/iptv_parse.cpp core/src/tv/iptv_http.cpp core/src/tv/iptv_stream.cpp core/src/tv/iptv_mode.cpp)   # Internet TV (IPTV): playlists, guide, HTTP(S)/HLS/UDP reader (docs/IPTV.md)
 target_sources(dect2core PRIVATE core/src/fec/fec_proto.cpp core/src/fec/fec_proto_rs.cpp)   # Reed-Solomon (DVB-T, ATSC, DAB), DVB-T2 BCH and the LDPC tables (the Rust crate onair_fec), the K = 7 Viterbi decoder (C++)
 target_sources(dect2core PRIVATE core/src/files/files_proto_rs.cpp)   # CSV, SigMF, WAV, TLE, SQLite pages, results container (the Rust crate onair_files)
 target_sources(dect2core PRIVATE core/src/net/net_proto_rs.cpp)   # remote API HTTP / WebSocket text, rtl_tcp, SpyServer, SDR++ server and network radio list parsing (the Rust crate onair_net)
@@ -208,6 +209,12 @@ target_sources(dect2core PRIVATE core/src/ros/ros_detect.cpp)   # ROS identifier
 option(DECT2_WITH_TLS "Serve the remote-control API over HTTPS / wss (links OpenSSL)" OFF)
 target_sources(dect2core PRIVATE core/src/net/tls_conn.cpp core/src/net/remote_json.cpp)
 target_sources(dect2core PRIVATE core/src/net/swarm.cpp core/src/net/swarm_net.cpp core/src/net/swarm_ctl.cpp)   # LAN swarm: announce packets, merged results, range splitting, pairing handshake, memory sync
+if(UNIX AND NOT APPLE AND NOT DECT2_WITH_TLS)
+  find_package(OpenSSL QUIET)   # Linux: https for Internet TV (docs/IPTV.md) uses the system's OpenSSL 3 when it is installed
+  if(OPENSSL_FOUND)
+    set(DECT2_WITH_TLS ON)
+  endif()
+endif()
 if(DECT2_WITH_TLS)
   find_package(OpenSSL REQUIRED)
   target_compile_definitions(dect2core PRIVATE DECT2_TLS)
@@ -477,8 +484,8 @@ else()
 endif()
 if(APPLE)
   # Metal LDPC decoder and CoreAudio output
-  target_sources(dect2core PRIVATE core/src/dsp/gpu_ldpc.mm core/src/dsp/gpu_viterbi.mm core/src/audio/audioout_coreaudio.mm core/src/audio/audioin_coreaudio.mm core/src/audio/videoin_avfoundation.mm core/src/tv/conceal_apple.mm core/src/power/power_apple.mm)
-  set_source_files_properties(core/src/dsp/gpu_ldpc.mm core/src/dsp/gpu_viterbi.mm core/src/tv/conceal_apple.mm core/src/audio/videoin_avfoundation.mm core/src/power/power_apple.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
+  target_sources(dect2core PRIVATE core/src/dsp/gpu_ldpc.mm core/src/dsp/gpu_viterbi.mm core/src/audio/audioout_coreaudio.mm core/src/audio/audioin_coreaudio.mm core/src/audio/videoin_avfoundation.mm core/src/tv/conceal_apple.mm core/src/tv/iptv_http_cocoa.mm core/src/power/power_apple.mm)
+  set_source_files_properties(core/src/dsp/gpu_ldpc.mm core/src/dsp/gpu_viterbi.mm core/src/tv/conceal_apple.mm core/src/audio/videoin_avfoundation.mm core/src/tv/iptv_http_cocoa.mm core/src/power/power_apple.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
   if(DECT2_WIN_AVX2 AND (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64" OR CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64"))
     # Intel Mac, opt-in: the whole receiver built for AVX2 (the program checks for it at start and says so if missing); off by default, see dect2/dsp/simd.h
     target_compile_options(dect2core PRIVATE -mavx2 -mfma)
@@ -521,7 +528,8 @@ else()
   if(WIN32)
     # MinGW-w64 (MSYS2): Winsock for the network outputs, iphlpapi to list the computer's addresses
     target_compile_definitions(dect2core PUBLIC _USE_MATH_DEFINES WIN32_LEAN_AND_MEAN NOMINMAX _WIN32_WINNT=0x0A00)
-    target_link_libraries(dect2core PUBLIC ws2_32 iphlpapi shell32 crypt32)
+    target_link_libraries(dect2core PUBLIC ws2_32 iphlpapi shell32 crypt32 winhttp)
+    target_sources(dect2core PRIVATE core/src/tv/iptv_http_win.cpp)   # https for Internet TV through the system's TLS (Schannel)
     target_link_libraries(dect2core PUBLIC dbghelp)   # minidump for the crash report
     if(DECT2_WIN_AVX2 AND CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64|x64" AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
       # Windows, opt-in: the whole receiver built for AVX2 (the program checks for it at start and says so if missing); off by default, see dect2/dsp/simd.h
@@ -550,6 +558,8 @@ if(DECT2_BUILD_APP)
   add_executable(test_picsave tests/app/test_picsave.cpp)   # picture save paths, names, collisions, delete with undo (app/state/picsave.h)
   add_test(NAME picsave COMMAND test_picsave)
   list(APPEND APP_SOURCES app/map/contact_lines.cpp)   # contact lines on the QSO-mode maps
+  file(GLOB DECT2_IPTV_UI CONFIGURE_DEPENDS app/iptv/*.cpp)   # Internet TV (family 209): its core is in core/src/tv
+  list(APPEND APP_SOURCES ${DECT2_IPTV_UI})
   foreach(m ${DECT2_MODES})   # app/<mode>/*.cpp: the screens of a mode added after FM
     file(GLOB DECT2_MODE_UI CONFIGURE_DEPENDS app/${m}/*.cpp)
     list(APPEND APP_SOURCES ${DECT2_MODE_UI})
@@ -923,6 +933,10 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_ts tests/tv/test_ts.cpp)
   target_link_libraries(test_ts PRIVATE dect2core)
   add_test(NAME ts COMMAND test_ts)
+  add_executable(test_iptv tests/tv/test_iptv.cpp)   # Internet TV: M3U / XMLTV / HLS parsing, URLs, AES-128, and the stream reader against a local server (docs/IPTV.md)
+  target_link_libraries(test_iptv PRIVATE dect2core)
+  target_include_directories(test_iptv PRIVATE core/src)
+  add_test(NAME iptv COMMAND test_iptv)
   add_executable(test_mux_change tests/tv/test_mux_change.cpp)
   target_link_libraries(test_mux_change PRIVATE dect2core)
   add_test(NAME mux_change COMMAND test_mux_change)

@@ -4,6 +4,7 @@ The user guides and notes that live in the repository. The same text is on the [
 
 | File | Topic | What it covers |
 |---|---|---|
+| [IPTV.md](IPTV.md) | Internet TV (IPTV) | Plays playlists (M3U) and single streams (HLS, MPEG-TS over HTTP, UDP, RTP) with a channel list, favourites and an XMLTV guide. Ships no channels, no DRM. How https works in the FFmpeg-free fetcher. |
 | [asterix.md](asterix.md) | ASTERIX surveillance data | Receive only. The mode ASTERIX decodes CAT 021, 048 and 062 radar and ADS-B data from UDP or a file into a track table and a map. |
 | [audio-cleanup.md](audio-cleanup.md) | Audio cleanup | A chain that cleans the sound you hear. |
 | [auto-gain.md](auto-gain.md) | Auto gain (AGC) | The AGC keeps a radio's front end at the best operating point for the active mode. |
