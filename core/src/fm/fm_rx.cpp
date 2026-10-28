@@ -454,10 +454,10 @@ struct FmReceiver::Impl {
         const float floorP = all[all.size() / 2];
         const float centre = score(0);
         double hz = 0;
-        // A weak station (carrier to noise 5 to 10 dB) stands only 2 to 10 times over the floor in these averaged spectra, which are very steady
-        // (a median over 300 bins of a 16 frame average): the bar is 2 times the floor, not 10. A station already at the centre (more than a third
+        // A weak station (carrier to noise 5 to 10 dB) stands only 3 to 10 times over the floor in these averaged spectra, which are very steady
+        // (a median over 300 bins of a 16 frame average): the bar is 3 times the floor, not 10. A station already at the centre (more than a third
         // of the best window, or 10 times the floor) is the one tuned to and stays.
-        if (best > 2 * floorP && centre < std::min(10 * floorP, 0.35f * best)) {
+        if (best > 3 * floorP && centre < std::min(10 * floorP, 0.35f * best)) {
             // the centre of the station: the power centroid over +-100 kHz around the best window
             double sp = 0, sf = 0;
             const int w = (int)(100e3 / binHz);
