@@ -19,7 +19,7 @@ inline void node(const OnairMeshNode& c, MeshNodeUpdate& u) {
     u.longName = str(c.long_name); u.shortName = str(c.short_name); u.hwModel = str(c.hw_model); u.role = str(c.role); u.publicKey = str(c.public_key);
     u.hasPosition = c.has_position != 0; u.lat = c.lat; u.lon = c.lon; u.altM = c.alt_m;
     u.batteryPct = c.battery_pct; u.voltage = c.voltage; u.hasEnv = c.has_env != 0; u.tempC = c.temp_c; u.humidity = c.humidity; u.pressureHpa = c.pressure_hpa;
-    u.positionTime = c.position_time; u.channelUtilPct = c.channel_util_pct; u.airUtilTxPct = c.air_util_tx_pct; u.uptimeS = (long)c.uptime_s; u.sats = c.sats;
+    u.positionTime = c.position_time; u.channelUtilPct = c.channel_util_pct; u.airUtilTxPct = c.air_util_tx_pct; u.uptimeS = c.uptime_s; u.sats = c.sats;
     u.signatureChecked = c.signature_checked != 0; u.signatureOk = c.signature_ok != 0;
 }
 inline void message(const OnairMeshMessage& c, MeshTextMessage& m) {
