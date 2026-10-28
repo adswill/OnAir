@@ -11,12 +11,16 @@
 #include <cstdio>
 #include <cmath>
 #include <ctime>
+#include <filesystem>
+#include <fstream>
 #include <map>
 #include <sstream>
 #include <string>
 #include <vector>
 
 namespace {
+
+namespace fs = std::filesystem;
 
 struct State {
     int view = 0;                        // 0 messages, 1 statistics
@@ -31,6 +35,11 @@ struct State {
     int pushedNarrow = -1;
     bool loaded = false;
     int readMode = dect2::kPocsagReadAuto;   // PocsagReadMode, saved as "pocsagRead"
+    dect2::PagerIgnore ign[2];               // the Ignore list per protocol (0 POCSAG, 1 FLEX), saved as pagerIgnorePocsag / pagerIgnoreFlex (pager_ignore.h)
+    std::string ignEdit[2];                  // the editor text of each list
+    bool showIgnored = false;                // show the ignored pages too, marked (saved as pagerShowIgnored)
+    int ignProto = -1;                       // the protocol the editor shows: 0 POCSAG, 1 FLEX; -1 until chosen from the mode
+    std::string ignNote;                     // the result of the last import or export
     std::map<uint32_t, int> byAddress;       // POCSAG address -> kPocsagReadAlpha or kPocsagReadNumeric, saved as "pocsagReadAddr" ("ric:a ric:n ...")
 };
 State S;
@@ -53,6 +62,12 @@ void loadRead() {
     snprintf(S.watch, sizeof S.watch, "%s", d.getS("pagerWatch", "").c_str());
     S.watched = dect2::pagerParseWatch(S.watch);
     S.watchOnly = d.getI("pagerWatchOnly", 0) != 0;
+    S.showIgnored = d.getI("pagerShowIgnored", 0) != 0;
+    for (int f = 0; f < 2; f++) {
+        S.ign[f] = dect2::pagerParseIgnore(d.getS(f ? "pagerIgnoreFlex" : "pagerIgnorePocsag", ""));
+        S.ignEdit[f] = dect2::pagerIgnoreText(S.ign[f]);
+        dect2::pagerIgnoreSet(f != 0, S.ign[f]);   // the receivers read it (no automation for an ignored page)
+    }
     const long b = d.getI("pocsagBaud", 7);
     S.baud512 = (b & 1) != 0;
     S.baud1200 = (b & 2) != 0;
@@ -78,6 +93,45 @@ void saveRead(const App& a) {
     plat::prefs().setI("pocsagRead", S.readMode);
     plat::prefs().setS("pocsagReadAddr", v);
     savePrefs(a);
+}
+
+// ---------------------------------------------------------------- the Ignore list
+
+fs::path pth(const std::string& s) { return fs::path(reinterpret_cast<const char8_t*>(s.c_str())); }
+
+bool ignoredMsg(const dect2::PagerMessage& m) { return dect2::pagerIsIgnored(S.ign, m); }
+
+// the list of protocol f changed: tell the receivers, save it
+void ignChanged(int f) {
+    dect2::pagerIgnoreSet(f != 0, S.ign[f]);
+    plat::prefs().setS(f ? "pagerIgnoreFlex" : "pagerIgnorePocsag", dect2::pagerIgnoreText(S.ign[f]));
+    plat::prefs().flush();
+}
+void ignEdited(int f) { S.ign[f] = dect2::pagerParseIgnore(S.ignEdit[f]); ignChanged(f); }   // typed in the editor
+void ignAdd(const dect2::PagerMessage& m) {
+    const int f = m.flex ? 1 : 0;
+    S.ign[f].add(m.address, m.address);
+    S.ignEdit[f] = dect2::pagerIgnoreText(S.ign[f]);
+    ignChanged(f);
+}
+void ignRemove(const dect2::PagerMessage& m) {
+    const int f = m.flex ? 1 : 0;
+    S.ign[f].remove(m.address);
+    S.ignEdit[f] = dect2::pagerIgnoreText(S.ign[f]);
+    ignChanged(f);
+}
+uint64_t ignCovered(const dect2::PagerIgnore& w) {   // addresses the numbers and ranges cover (wildcards not counted)
+    uint64_t n = 0;
+    for (const auto& r : w.ranges) n += (uint64_t)r.second - r.first + 1;
+    return n;
+}
+int resizeCb(ImGuiInputTextCallbackData* d) {
+    if (d->EventFlag == ImGuiInputTextFlags_CallbackResize) {
+        auto* str = static_cast<std::string*>(d->UserData);
+        str->resize((size_t)d->BufTextLen);
+        d->Buf = str->data();
+    }
+    return 0;
 }
 
 // The page as the user wants it read: the "Message type" setting, or the address override. FLEX pages are left alone.
@@ -124,8 +178,10 @@ bool passes(const dect2::PagerMessage& m) {   // m: resolved
 }
 
 // passes() plus the "Decoded only" switch; hidden (when given) is incremented for a page that only that switch removed.
-bool shows(const dect2::PagerMessage& m, size_t* hidden = nullptr) {
+// ignoredHidden (when given) is incremented for a page that only the Ignore list removed.
+bool shows(const dect2::PagerMessage& m, size_t* hidden = nullptr, size_t* ignoredHidden = nullptr) {
     if (!passes(m)) return false;
+    if (!S.showIgnored && ignoredMsg(m)) { if (ignoredHidden) (*ignoredHidden)++; return false; }
     if (S.decodedOnly && !dect2::pagerIsDecoded(m)) { if (hidden) (*hidden)++; return false; }
     return true;
 }
@@ -166,6 +222,14 @@ void messageView(App& a) {
     if (ImGui::Checkbox(tr("Watched only"), &S.watchOnly)) { plat::prefs().setI("pagerWatchOnly", S.watchOnly ? 1 : 0); plat::prefs().flush(); }
     ImGui::EndDisabled();
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Show only the capcodes of the watch list (set it in the Capcodes view)"));
+    flowNext(12 * gUi);
+    {
+        const bool any = !S.ign[0].empty() || !S.ign[1].empty();
+        ImGui::BeginDisabled(!any);
+        if (ImGui::Checkbox(tr("Show ignored##pgsi"), &S.showIgnored)) { plat::prefs().setI("pagerShowIgnored", S.showIgnored ? 1 : 0); plat::prefs().flush(); }
+        ImGui::EndDisabled();
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Also show the pages of ignored addresses, in grey. Ignored pages are only hidden, never deleted. Right-click an address to ignore it; the list is in the Capcodes view."));
+    }
     flowNext(12 * gUi);
     ImGui::Checkbox("POCSAG", &S.pocsag);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("POCSAG is the ITU-R M.584 / CCIR Radiopaging Code No. 1 (RPC1): the same signal, so CCIR paging on the pager bands is decoded here at 512, 1200 and 2400 baud. The CCIR 5-tone selective calls are in the Tones mode."));
@@ -248,31 +312,38 @@ void messageView(App& a) {
         ImGui::TableSetupColumn(dect2::timefmt::zone() == dect2::timefmt::Zone::Local ? "Time (local)" : "Time UTC"); ImGui::TableSetupColumn("Protocol"); ImGui::TableSetupColumn("Address"); ImGui::TableSetupColumn("Fn");
         ImGui::TableSetupColumn("Type"); ImGui::TableSetupColumn("Message", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableHeadersRow();
-        size_t shown = 0, matching = 0, hiddenTones = 0;
+        size_t shown = 0, matching = 0, hiddenTones = 0, hiddenIgnored = 0;
         if (on) {
             for (const auto& raw : all) {
                 const dect2::PagerMessage m = resolved(raw);
-                if (!shows(m, &hiddenTones)) continue;
+                if (!shows(m, &hiddenTones, &hiddenIgnored)) continue;
                 matching++;
                 if (shown >= kShown) continue;
                 shown++;
                 ImGui::TableNextRow();
+                const bool ig = S.showIgnored && ignoredMsg(m);
+                if (ig) ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
                 if (wide) { ImGui::TableNextColumn(); wideCarrierCell(a, m.carrierId, m.carrierHz); }
                 ImGui::TableNextColumn(); ImGui::TextUnformatted(clock(m.wallTime).c_str());
-                ImGui::TableNextColumn(); ImGui::PushStyleColor(ImGuiCol_Text, pal::accent()); ImGui::TextUnformatted(dect2::pagerSpeedName(m.speed)); ImGui::PopStyleColor();
+                ImGui::TableNextColumn(); if (!ig) ImGui::PushStyleColor(ImGuiCol_Text, pal::accent()); ImGui::TextUnformatted(dect2::pagerSpeedName(m.speed)); if (!ig) ImGui::PopStyleColor();
                 ImGui::TableNextColumn();
                 ImGui::PushID((int)(m.serial * 31u + (unsigned)(int)std::lround(m.carrierHz / 100.0)));   // serials restart per carrier
                 ImGui::Text("%u", (unsigned)m.address);
-                if (!m.flex && ImGui::BeginPopupContextItem("##pgadr", ImGuiPopupFlags_MouseButtonRight)) {
-                    const auto it = S.byAddress.find(m.address);
-                    const int cur = it == S.byAddress.end() ? -1 : it->second;
+                if (ImGui::BeginPopupContextItem("##pgadr", ImGuiPopupFlags_MouseButtonRight)) {
                     ImGui::TextDisabled("Address %u", (unsigned)m.address);
-                    if (ImGui::MenuItem("Always alphanumeric", nullptr, cur == dect2::kPocsagReadAlpha)) { S.byAddress[m.address] = dect2::kPocsagReadAlpha; saveRead(a); }
-                    if (ImGui::MenuItem("Always numeric", nullptr, cur == dect2::kPocsagReadNumeric)) { S.byAddress[m.address] = dect2::kPocsagReadNumeric; saveRead(a); }
-                    if (ImGui::MenuItem("Auto (the Message type setting)", nullptr, cur < 0)) { S.byAddress.erase(m.address); saveRead(a); }
+                    if (!m.flex) {
+                        const auto it = S.byAddress.find(m.address);
+                        const int cur = it == S.byAddress.end() ? -1 : it->second;
+                        if (ImGui::MenuItem("Always alphanumeric", nullptr, cur == dect2::kPocsagReadAlpha)) { S.byAddress[m.address] = dect2::kPocsagReadAlpha; saveRead(a); }
+                        if (ImGui::MenuItem("Always numeric", nullptr, cur == dect2::kPocsagReadNumeric)) { S.byAddress[m.address] = dect2::kPocsagReadNumeric; saveRead(a); }
+                        if (ImGui::MenuItem("Auto (the Message type setting)", nullptr, cur < 0)) { S.byAddress.erase(m.address); saveRead(a); }
+                        ImGui::Separator();
+                    }
+                    if (ig) { if (ImGui::MenuItem(tr("Stop ignoring this address"))) ignRemove(m); }
+                    else if (ImGui::MenuItem(tr("Ignore this address"))) ignAdd(m);
                     ImGui::EndPopup();
                 }
-                if (!m.flex && ImGui::IsItemHovered()) ImGui::SetTooltip("Right-click to choose how pages to this address are read.");
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", m.flex ? tr("Right-click to ignore this address.") : tr("Right-click to choose how pages to this address are read, or to ignore it."));
                 ImGui::PopID();
                 ImGui::TableNextColumn(); ImGui::TextUnformatted(fnText(m).c_str());
                 ImGui::TableNextColumn(); ImGui::TextUnformatted(typeText(m).c_str());
@@ -287,12 +358,19 @@ void messageView(App& a) {
                     snprintf(reason, sizeof reason, why[m.readHow], m.looksAlpha ? "looks like text" : "does not look like text");
                     ImGui::SetTooltip("Shown as %s, %s\n\nAlphanumeric: %s\nNumeric: %s", dect2::pagerTypeName(m.type), reason, oneLine(m.alphaText).c_str(), m.numText.c_str());
                 }
+                if (ig) ImGui::PopStyleColor();
             }
         }
         ImGui::EndTable();
+        if (on && hiddenIgnored) {
+            ImGui::PushTextWrapPos(0); ImGui::TextDisabled(tr("ignored: %zu messages hidden"), hiddenIgnored); ImGui::SameLine(0, 8 * gUi);
+            if (ImGui::SmallButton(tr("Show ignored##pgsi2"))) { S.showIgnored = true; plat::prefs().setI("pagerShowIgnored", 1); plat::prefs().flush(); }
+            ImGui::PopTextWrapPos();
+        }
         if (on && matching && hiddenTones) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(tr("%zu tone-only or undecoded pages hidden"), hiddenTones); ImGui::PopTextWrapPos(); }
         if (!on) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "start the receiver to see pages"); ImGui::PopTextWrapPos(); }
         else if (!matching && hiddenTones) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(tr("%zu tone-only or undecoded pages hidden (Decoded only)"), hiddenTones); ImGui::PopTextWrapPos(); }
+        else if (!matching && hiddenIgnored) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", tr("All pages matching the filter are from ignored addresses.")); ImGui::PopTextWrapPos(); }
         else if (!matching) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(all.empty() ? "no page yet" : "no page matches the filter"); ImGui::PopTextWrapPos(); }
     }
 }
@@ -330,11 +408,81 @@ void statsView(App& a) {
     ImGui::PopTextWrapPos();
 }
 
+// The Ignore list editor (Capcodes view): one list per protocol, typed or imported; entries are numbers, ranges (836000-836999) and wildcards (8360*, 83?00).
+void ignoreEditor(App& a, size_t hiddenAdr) {
+    if (S.ignProto < 0) { const SubMode* sm = curSub(a); S.ignProto = sm && sm->decoders == 2 ? 1 : 0; }
+    const int f = S.ignProto;
+    const dect2::PagerIgnore& w = S.ign[f];
+    char head[96];
+    snprintf(head, sizeof head, "%s (%zu)###pgign", tr("Ignore list"), S.ign[0].entries() + S.ign[1].entries());
+    if (!ImGui::CollapsingHeader(head)) {
+        if (hiddenAdr) { ImGui::SameLine(); ImGui::TextDisabled(tr("ignored: %zu addresses hidden"), hiddenAdr); }
+        return;
+    }
+    ImGui::PushTextWrapPos(0);
+    ImGui::TextDisabled("%s", tr("Addresses whose pages you do not want to see. One per line or separated by spaces: a number (836001), a range (836000-836999) or a wildcard (8360*, 83?00). Pages are hidden, never deleted: Show ignored brings them back. Ignored pages also do not trigger notifications, recordings or automations."));
+    ImGui::PopTextWrapPos();
+    ImGui::TextDisabled("%s", tr("Protocol")); ImGui::SameLine(0, 5 * gUi);
+    ImGui::SetNextItemWidth(110 * gUi);
+    if (ImGui::BeginCombo("##pgigp", f ? "FLEX" : "POCSAG")) {
+        if (ImGui::Selectable("POCSAG", f == 0)) S.ignProto = 0;
+        if (ImGui::Selectable("FLEX", f == 1)) S.ignProto = 1;
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine(0, 10 * gUi);
+    ImGui::TextDisabled(tr("%zu entries, %llu addresses"), w.entries(), (unsigned long long)ignCovered(w));
+    if (ImGui::InputTextMultiline("##pgigt", S.ignEdit[f].data(), S.ignEdit[f].capacity() + 1, ImVec2(-1, 90 * gUi), ImGuiInputTextFlags_CallbackResize, resizeCb, &S.ignEdit[f])) ignEdited(f);
+    if (ImGui::Button(tr("Import..."))) {
+        const std::string p = plat::openFileDialog();
+        if (!p.empty()) {
+            std::ifstream in(pth(p), std::ios::binary);
+            std::stringstream ss;
+            ss << in.rdbuf();
+            if (!in && ss.str().empty()) S.ignNote = tr("Could not read the file.");
+            else {
+                dect2::PagerIgnore add = dect2::pagerParseIgnore(ss.str());
+                const size_t n = add.entries();
+                S.ign[f].ranges.insert(S.ign[f].ranges.end(), add.ranges.begin(), add.ranges.end());
+                S.ign[f].patterns.insert(S.ign[f].patterns.end(), add.patterns.begin(), add.patterns.end());
+                S.ign[f].normalise();
+                S.ignEdit[f] = dect2::pagerIgnoreText(S.ign[f]);
+                ignChanged(f);
+                S.ignNote = std::string(tr("Imported")) + ": " + std::to_string(n) + " " + tr("entries");
+            }
+        }
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Add the addresses of a text file to this list (same format as the editor; lines starting with # are comments)."));
+    ImGui::SameLine();
+    if (ImGui::Button(tr("Export..."))) {
+        const std::string p = plat::saveFileDialog(f ? "flex-ignore.txt" : "pocsag-ignore.txt");
+        if (!p.empty()) {
+            std::ofstream out(pth(p), std::ios::binary);
+            out << "# OnAir " << (f ? "FLEX" : "POCSAG") << " ignore list\n" << dect2::pagerIgnoreText(w);
+            S.ignNote = out ? std::string(tr("Saved")) + ": " + p : std::string(tr("Could not write the file."));
+        }
+    }
+    ImGui::SameLine();
+    ImGui::BeginDisabled(w.empty());
+    if (ImGui::Button(tr("Clear##pgigc"))) { S.ign[f] = dect2::PagerIgnore(); S.ignEdit[f].clear(); ignChanged(f); }
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+    if (ImGui::Checkbox(tr("Show ignored##pgsi3"), &S.showIgnored)) { plat::prefs().setI("pagerShowIgnored", S.showIgnored ? 1 : 0); plat::prefs().flush(); }
+    if (hiddenAdr) { ImGui::SameLine(); ImGui::TextDisabled(tr("ignored: %zu addresses hidden"), hiddenAdr); }
+    if (!S.ignNote.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", S.ignNote.c_str()); ImGui::PopTextWrapPos(); }
+    ImGui::Spacing();
+}
+
 // Every address heard in the page list, busiest first. A click on a row puts the address into the message filter.
 void capcodeView(App& a) {
     const dect2::PagerTelemetry& t = a.rx.pager;
     if (!live(a)) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "start the receiver to see the capcodes"); ImGui::PopTextWrapPos(); return; }
-    const std::vector<dect2::PagerHeard> rows = dect2::pagerHeardTable(messagesOf(t));
+    const std::vector<dect2::PagerHeard> heard = dect2::pagerHeardTable(messagesOf(t));
+    std::vector<dect2::PagerHeard> rows;
+    size_t hiddenAdr = 0;
+    for (const auto& r : heard) {
+        if (!S.showIgnored && S.ign[r.flex ? 1 : 0].has(r.address)) { hiddenAdr++; continue; }
+        rows.push_back(r);
+    }
     const bool wide = wideActive(a);
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("%zu addresses heard in the last %zu pages. Click an address to filter the Messages view by it.", rows.size(), messagesOf(t).size());
@@ -347,6 +495,7 @@ void capcodeView(App& a) {
     ImGui::SetNextItemWidth(260 * gUi);
     if (ImGui::InputTextWithHint("##pgwatch", "1234 5678 2000-2099", S.watch, sizeof S.watch)) saveWatch();
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Capcodes (RICs) to watch, separated by spaces or commas; a range like 2000-2099. Watched rows are marked; Messages > Watched only shows just them."));
+    ignoreEditor(a, hiddenAdr);
     auto toggle = [&](uint32_t adr) {
         std::string s = S.watch;
         if (S.watched.has(adr)) {   // remove the exact number (a range that holds it stays)
@@ -359,9 +508,9 @@ void capcodeView(App& a) {
         snprintf(S.watch, sizeof S.watch, "%s", s.c_str());
         saveWatch();
     };
-    if (!ImGui::BeginTable("##pgcap", 6 + (wide ? 1 : 0), ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    if (!ImGui::BeginTable("##pgcap", 7 + (wide ? 1 : 0), ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
-    ImGui::TableSetupColumn("Watch"); ImGui::TableSetupColumn("Address"); ImGui::TableSetupColumn("Pages"); ImGui::TableSetupColumn("Last"); ImGui::TableSetupColumn("Speed");
+    ImGui::TableSetupColumn("Watch"); ImGui::TableSetupColumn("Ignore"); ImGui::TableSetupColumn("Address"); ImGui::TableSetupColumn("Pages"); ImGui::TableSetupColumn("Last"); ImGui::TableSetupColumn("Speed");
     if (wide) ImGui::TableSetupColumn("MHz");
     ImGui::TableSetupColumn("Last text", ImGuiTableColumnFlags_WidthStretch);
     ImGui::TableHeadersRow();
@@ -374,6 +523,17 @@ void capcodeView(App& a) {
         bool wv = w;
         char wid[24]; snprintf(wid, sizeof wid, "##pgw%zu", i);
         if (ImGui::Checkbox(wid, &wv)) toggle(r.address);
+        ImGui::TableNextColumn();
+        {
+            const int f = r.flex ? 1 : 0;
+            bool iv = S.ign[f].has(r.address);
+            char iid[24]; snprintf(iid, sizeof iid, "##pgi%zu", i);
+            if (ImGui::Checkbox(iid, &iv)) {
+                dect2::PagerMessage pm; pm.flex = r.flex; pm.address = r.address;
+                if (iv) ignAdd(pm); else ignRemove(pm);
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Ignore this address: its pages are hidden everywhere (not deleted)."));
+        }
         ImGui::TableNextColumn();
         char lab[32];
         snprintf(lab, sizeof lab, "%u##cap%zu", (unsigned)r.address, i);
@@ -422,6 +582,7 @@ void list(App& a) {
         if (n >= 100) break;
         const dect2::PagerMessage m = resolved(raw);
         if (S.decodedOnly && !dect2::pagerIsDecoded(m)) continue;
+        if (!S.showIgnored && ignoredMsg(m)) continue;
         n++;
         ImGui::TableNextRow();
         if (wide) { ImGui::TableNextColumn(); wideCarrierCell(a, m.carrierId, m.carrierHz); }
