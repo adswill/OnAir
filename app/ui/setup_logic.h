@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 #include "learn_logic.h"
+#include "dect2/channels/tvplan.h"
 
 #ifndef N_
 #define N_(s) s
@@ -224,6 +225,7 @@ struct Derived {
     bool dab3 = false;                // DAB radio in band III
     int tvMhz = 8;                    // UHF channel width
     std::string tv;                   // "DVB-T2" ... from the region table
+    std::string tvPlan;               // the TV channel plan of the country for that standard (core/include/dect2/channels/tvplan.h), "" when none
     double lat = 0, lon = 0;          // the receiver position (ADS-B, maps, satellite passes)
     bool havePosition = false;
 };
@@ -245,6 +247,10 @@ inline Derived derive(const Country* c, double lat, double lon, bool havePositio
     d.fmStepKhz = d.itu == 2 ? 200 : 100;
     const learn::Region& r = learn::regions(nullptr)[learn::clampRegion(d.region)];
     d.tv = r.tvId ? std::string("DTMB") : r.tvFamily == 1 ? "ATSC" : r.tvFamily == 4 ? "ISDB-T" : r.tvStd == 2 ? "DVB-T" : "DVB-T2";
+    {   // the numbered channels: the country's plan for its standard (DTMB: China's)
+        const unsigned m = d.tv == "ATSC" ? dect2::tvplan::Atsc | dect2::tvplan::Atsc3 : d.tv == "ISDB-T" ? dect2::tvplan::IsdbT : d.tv == "DTMB" ? dect2::tvplan::Dtmb : dect2::tvplan::DvbAny;
+        if (const dect2::tvplan::Plan* tp = dect2::tvplan::defaultPlan(d.country, m)) d.tvPlan = tp->id;
+    }
     return d;
 }
 inline Derived deriveFromPlace(const Place& p) { return derive(countryByCode(p.country), p.lat, p.lon, true); }

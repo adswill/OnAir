@@ -28,6 +28,25 @@ int main() {
         CHECK(K[i].tvMhz == 6 || K[i].tvMhz == 7 || K[i].tvMhz == 8, "%s: TV channel width", K[i].code);
         if (*K[i].bandPlan) CHECK(plans.find(std::string("\"id\":\"") + K[i].bandPlan + "\"") != std::string::npos, "%s: band plan %s exists", K[i].code, K[i].bandPlan);
     }
+    // the TV channel plan of every country (core tvplan.h): there is one, and where the plan lists the country its UHF width is the country's
+    for (int i = 0; i < nk; i++) {
+        const Derived d = derive(&K[i], K[i].lat, K[i].lon, true);
+        const dect2::tvplan::Plan* tp = dect2::tvplan::find(d.tvPlan);
+        CHECK(tp != nullptr, "%s: TV channel plan '%s' exists", K[i].code, d.tvPlan.c_str());
+        if (!tp) continue;
+        bool listed = false;
+        for (const std::string& cc : tp->countries) if (cc == K[i].code) listed = true;
+        if (listed) {
+            const dect2::tvplan::Channel& top = tp->channels.back();   // the highest channel is UHF in every digital plan
+            CHECK((int)std::lround(top.bwHz / 1e6) == K[i].tvMhz, "%s: plan %s UHF width %g vs %d", K[i].code, tp->id.c_str(), top.bwHz / 1e6, K[i].tvMhz);
+        }
+    }
+    {
+        CHECK(derive(countryByCode("LT"), 0, 0, true).tvPlan == "eu" && derive(countryByCode("US"), 0, 0, true).tvPlan == "us" && derive(countryByCode("JP"), 0, 0, true).tvPlan == "jp"
+              && derive(countryByCode("CN"), 0, 0, true).tvPlan == "cn" && derive(countryByCode("BR"), 0, 0, true).tvPlan == "br" && derive(countryByCode("AU"), 0, 0, true).tvPlan == "au"
+              && derive(countryByCode("KR"), 0, 0, true).tvPlan == "kr" && derive(countryByCode("GB"), 0, 0, true).tvPlan == "eu", "TV channel plan per country");
+        CHECK(!deriveSkipped().tvPlan.empty(), "skipped setup: still a default plan");
+    }
     for (int i = 0; i < nc; i++) {
         const Country* c = countryByCode(C[i].country);
         CHECK(c != nullptr, "city %s: country %s", C[i].name, C[i].country);
