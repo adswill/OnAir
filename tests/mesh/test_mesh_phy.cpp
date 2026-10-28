@@ -1,6 +1,7 @@
 // Mesh (LoRa) physical layer: known answers of the coding chain, encode -> decode for every SF / CR / LDRO, error correction,
 // and modulation -> channelizer -> demodulator bit-exact at a clean SNR for SF 7..12 and the four bandwidths.
 #include "../data/mesh/testutil.h"
+#include <chrono>
 #include <cstring>
 using namespace dect2;
 using namespace meshtest;
@@ -119,6 +120,19 @@ static void jumps() {
                 out.clear();
                 CHECK(lora::recoverJumps(sf, ldro, bad, q, out) == 0 && out.empty(), "sf%d cr%d ldro%d: a wrong symbol is not a jump", sf, cr, ldro);
             }
+    // stress: a valid header followed by noise (the worst case, every block fails) gives up, quickly, with nothing
+    {
+        lora::Params p; p.sf = 12; p.cr = 8; p.crc = true;
+        const auto pay = randomBytes(g, 255);
+        auto sym = lora::encode(p, pay.data(), pay.size());
+        for (size_t i = 8; i < sym.size(); i++) sym[i] = (uint16_t)(g() % 4096);
+        std::vector<uint8_t> out;
+        const auto t0 = std::chrono::steady_clock::now();
+        const int r = lora::recoverJumps(12, false, sym, q, out);
+        const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+        CHECK(r == 0 && out.empty() && ms < 2000, "noise after the header: %d jumps, %.0f ms", r, ms);
+        printf("jump search on noise (SF12, 255 bytes, 4/8): %.1f ms\n", ms);
+    }
     // through the demodulator: SF11 / 250 kHz at 2.048 Msps, 96 samples cut out in the middle of the payload
     lora::Params p; p.sf = 11; p.bwHz = 250e3; p.cr = 5; p.preamble = 16; p.syncWord = 0x2B;
     const double rate = 2.048e6;

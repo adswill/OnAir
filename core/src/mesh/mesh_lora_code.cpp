@@ -399,12 +399,18 @@ struct JumpSearch {
     bool ldro = false;
     std::vector<int> shifts;
     std::vector<uint8_t> best;
-    bool blockClean(const std::vector<uint16_t>& b, int at) const {
+    long work = 0;               // blocks checked; the search gives up (no recovery) past kBudget, whatever the frame
+    static constexpr long kBudget = 200000;
+    bool overBudget() const { return work > kBudget; }
+    // the block at `at` with every symbol from `from` on moved down by d bins (from = -1: as it is)
+    bool blockClean(const std::vector<uint16_t>& b, int at, int from = -1, int d = 0) {
+        work++;
         if (at + cr > (int)b.size()) return true;
         const int sfApp = ldro ? sf - 2 : sf;
         uint32_t cw[12] = {};
         for (int i = 0; i < cr; i++) {
-            const uint32_t x = (b[(size_t)(at + i)] + (uint32_t)n - 1) % (uint32_t)n;
+            const int raw = b[(size_t)(at + i)] - (from >= 0 && at + i >= from ? d : 0);
+            const uint32_t x = (uint32_t)((raw + 2 * n - 1) % n);
             const uint32_t v = ldro ? gray(((x + 2) >> 2) & ((1u << sfApp) - 1)) : gray(x);
             for (int j = 0; j < sfApp; j++) {
                 const int r = ((i - j - 1) % sfApp + sfApp) % sfApp;
@@ -415,7 +421,7 @@ struct JumpSearch {
         return true;
     }
     void solve(const std::vector<uint16_t>& b, int fromBlock, int depth) {
-        if (solutions > 1) return;
+        if (solutions > 1 || overBudget()) return;
         const int nb = ((int)b.size() - 8) / cr;
         int fb = -1;
         for (int k = fromBlock; k < nb; k++) if (!blockClean(b, 8 + k * cr)) { fb = k; break; }
@@ -436,9 +442,11 @@ struct JumpSearch {
         const int s0 = 8 + fb * cr;
         for (int j = s0; j < s0 + cr; j++)
             for (int d : shifts) {
+                if (solutions > 1 || overBudget()) return;
+                if (!blockClean(b, s0, j, d)) continue;   // checked in place: the frame is copied only for a shift that cleans the block
                 std::vector<uint16_t> c = b;
                 for (size_t i = (size_t)j; i < c.size(); i++) c[i] = (uint16_t)(((int)c[i] - d + n) % n);
-                if (blockClean(c, s0)) solve(c, fb + 1, depth + 1);
+                solve(c, fb + 1, depth + 1);
             }
     }
 };
@@ -458,7 +466,7 @@ int recoverJumps(int sf, bool ldro, const std::vector<uint16_t>& bins, double qu
         }
     }
     js.solve(bins, 0, 0);
-    if (js.solutions != 1) return 0;   // none, or more than one: not trusted
+    if (js.solutions != 1 || js.overBudget()) return 0;   // none, more than one, or not searched to the end: not trusted
     payload = js.best;
     return js.bestJumps;
 }
