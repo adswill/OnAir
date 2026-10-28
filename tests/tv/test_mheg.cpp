@@ -2,6 +2,7 @@
 #include "dect2/common/png.h"
 #include "dect2/tv/dsmcc.h"
 #include "dect2/tv/mheg.h"
+#include "mheg_gen.h"
 #include <algorithm>
 using namespace dect2;
 #include "../common/test_util.h"
@@ -142,6 +143,30 @@ int main() {
             for (size_t i = 8; i < bad.size(); i += 7) bad[i] ^= 0x5A;
             auto pb = mhegParse(bad.data(), bad.size());
             for (auto& rt : pb.roots) mhegRenderScene(rt, res);
+        }
+    }
+    // the stage-2 synthetic application: generated, carried in a carousel, parsed and drawn
+    {
+        auto app = mhegtest::makeTestApp(makePng(32, 32, 200, 50, 50));
+        CHECK(app.files.size() == 4, "4 test files");
+        auto secs3 = buildObjectCarousel(app.files, 3, 180, true);
+        DsmccCarousel c3;
+        for (int round = 0; round < 2; round++) for (auto& s : secs3) c3.section(s.data(), (int)s.size());
+        auto fl = c3.files();
+        CHECK(fl.size() == 4, "carousel holds 4 files, got %zu", fl.size());
+        const DsmccFile* s1 = mhegFindFile(fl, "s1");
+        CHECK(s1 != nullptr, "scene s1 found");
+        if (s1) {
+            auto ps = mhegParse(s1->data.data(), s1->data.size());
+            CHECK(ps.error.empty() && ps.roots.size() == 1 && ps.roots[0].name == "Scene", "s1 parses: %s", ps.error.c_str());
+            MhegResolve res = [&](const std::string& r, std::vector<uint8_t>& out) { const DsmccFile* f = mhegFindFile(fl, r); if (!f) return false; out = f->data; return true; };
+            MhegRender rr = mhegRenderScene(ps.roots[0], res);
+            CHECK(rr.links == 5 && rr.ops.size() == 3, "s1: 5 links, 3 visible ops (rect, text, bitmap), got %d / %zu", rr.links, rr.ops.size());
+            if (rr.ops.size() == 3) CHECK(rr.ops[1].text == "Press red" && !rr.ops[2].image.empty(), "text and bitmap");
+        }
+        for (const char* n : {"a", "s2"}) {
+            const DsmccFile* f = mhegFindFile(fl, n);
+            CHECK(f && mhegParse(f->data.data(), f->data.size()).error.empty(), "%s parses", n);
         }
     }
     return testSummary("mheg");
