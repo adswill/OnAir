@@ -422,9 +422,11 @@ struct DabReceiver::Impl {
         for (int n = 0; n < kCarriers; n++) out[n] = hTmp[(size_t)bin[(size_t)n]];
     }
 
-    bool channelSoft(uint64_t, bool good) {
+    // Returns how many symbols (1..) of the frame got soft bits from the channel estimate: all of them for a good frame, the first ones only
+    // while the estimate holds (the FIC sits right after the phase reference), 0 for plain differential detection.
+    int channelSoft(uint64_t, bool good) {
         coherent = false;
-        if (ys.size() != (size_t)kSymbols * kCarriers) return false;
+        if (ys.size() != (size_t)kSymbols * kCarriers) return 0;
         std::vector<cf32> e(kCarriers);
         // the phase reference: the raw estimate and the taps that stand out (12 times the median tap power), widened by two samples
         for (int n = 0; n < kCarriers; n++) e[(size_t)n] = ys[(size_t)n] * prsConj[(size_t)bin[(size_t)n]];
@@ -441,12 +443,13 @@ struct DabReceiver::Impl {
         for (int i = 0; i < kTu; i++)
             if (p[(size_t)i] > thr) for (int d = -2; d <= 2; d++) tapMask[(size_t)((i + d + kTu) % kTu)] = 1.f / kTu;
         for (float m : tapMask) kept += m > 0;
-        if (kept == 0 || kept > kTu / 4) return false;   // nothing stands out (no signal) or nothing is sparse (noise-like): plain differential
+        if (kept == 0 || kept > kTu / 4) return 0;   // nothing stands out (no signal) or nothing is sparse (noise-like): plain differential
         hA.resize(kCarriers); hB.resize(kCarriers);
         cleanEstimate(e.data(), hA.data());
         static const float r2 = 0.70710678f;
         std::vector<float> L((size_t)(kSymbols - 1) * 2 * kCarriers);
         double sum = 0, dH = 0, pH = 0;
+        int nCoh = kSymbols - 1;   // symbols while the running change of the estimate stays small
         hP.assign(hA.begin(), hA.end());   // the estimate two symbols back (a straight line through the last two predicts the next)
         for (int l = 1; l < kSymbols; l++) {
             const cf32* y0 = &ys[(size_t)(l - 1) * kCarriers];
@@ -483,23 +486,31 @@ struct DabReceiver::Impl {
                 sum += std::fabs(l0) + std::fabs(l1);
             }
             for (int n = 0; n < kCarriers; n++) { dH += std::norm(hB[(size_t)n] - hA[(size_t)n]); pH += std::norm(hA[(size_t)n]); }
+            if (nCoh == kSymbols - 1 && !(dH < 0.05 * pH)) nCoh = l - 1;
             hP.swap(hA);
             hA.swap(hB);
         }
         // A channel that changes fast (Doppler of some 40 Hz and more, a car on a motorway in Band III) makes the decided symbols, and with them
         // the estimate, unreliable: that frame goes back to plain differential detection, which follows the channel without decisions.
         coherent = std::isfinite(sum) && std::isfinite(dH) && dH < 0.05 * pH;
-        if (!coherent) return false;
-        const double mean = sum / ((double)L.size()) + 1e-12;
-        if (good) llrRef = llrRef > 0 ? 0.8 * llrRef + 0.2 * mean : mean;
+        if (!std::isfinite(sum) || !std::isfinite(dH)) return 0;
+        // a frame whose estimate fails only later still gives the FIC (symbols 1 .. kFicSymbols) from the estimate if it held that long
+        const int use = coherent ? kSymbols - 1 : std::min(nCoh, kFicSymbols);
+        if (use <= 0 || (!coherent && baselineMode())) return 0;
+        const size_t nL = (size_t)use * 2 * kCarriers;
+        double sumU = 0;
+        for (size_t i = 0; i < nL; i++) sumU += std::fabs(L[i]);
+        if (!coherent) sum = sumU;
+        const double mean = sum / (coherent ? (double)L.size() : (double)nL) + 1e-12;
+        if (good && coherent) llrRef = llrRef > 0 ? 0.8 * llrRef + 0.2 * mean : mean;
         const float sc = (float)(40.0 / std::max(mean, llrRef));
         auto q8 = [&](float v) { return (int8_t)std::max(-127.f, std::min(127.f, std::round(v * sc))); };
-        for (int l = 1; l < kSymbols; l++) {
+        for (int l = 1; l <= use; l++) {
             const float* o = &L[(size_t)(l - 1) * 2 * kCarriers];
             int8_t* dst = l <= kFicSymbols ? &ficSoft[(size_t)(l - 1) * 2 * kCarriers] : &mscSoft[(size_t)(l - kFicSymbols - 1) * 2 * kCarriers];
             for (int i = 0; i < 2 * kCarriers; i++) dst[i] = q8(o[i]);
         }
-        return true;
+        return use;
     }
 
     // ------------------------------------------------------------ one frame
@@ -659,11 +670,9 @@ struct DabReceiver::Impl {
                 dst[kCarriers + n] = (int8_t)std::max(-127.f, std::min(127.f, std::round(-o[n].imag() * sc)));
             }
         };
-        if (!diffOnly && channelSoft(U, !missed)) {}
-        else {
-            for (int l = 1; l <= kFicSymbols; l++) soft(l, &ficSoft[(size_t)(l - 1) * 2 * kCarriers]);
-            for (int l = kFicSymbols + 1; l < kSymbols; l++) soft(l, &mscSoft[(size_t)(l - kFicSymbols - 1) * 2 * kCarriers]);
-        }
+        const int nCohSym = diffOnly ? 0 : channelSoft(U, !missed);
+        for (int l = nCohSym + 1; l <= kFicSymbols; l++) soft(l, &ficSoft[(size_t)(l - 1) * 2 * kCarriers]);
+        for (int l = std::max(nCohSym, kFicSymbols) + 1; l < kSymbols; l++) soft(l, &mscSoft[(size_t)(l - kFicSymbols - 1) * 2 * kCarriers]);
         // quality: phase scatter of the differential cells around the nearest odd multiple of 45 degrees
         {
             double err2 = 0; size_t cnt = 0;
