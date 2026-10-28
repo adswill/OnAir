@@ -1014,6 +1014,29 @@ struct Core {
         return true;
     }
 
+    // Plain feed-forward taps for one stretch [i0, i1) of the field, trained on the decided levels `pl` of a first decoding of the field (the known
+    // sync symbols are in it) wherever the received soft value `y` agrees with the decision. A channel that moves during the field (a Doppler
+    // shift of a few Hz already turns a ghost by a large angle over 24 ms) is followed by fitting the stretches one by one.
+    bool trainFFwin(const View& v, const std::vector<float>& pl, const std::vector<float>& y, int i0, int i1, Taps& tp) {
+        tp.NP = 103; tp.B = 0;
+        const int n = tp.L() + 1;
+        std::vector<float> X, tgt;
+        const int step = std::max(1, (i1 - i0) / 5000);
+        X.reserve((size_t)(5200) * n);
+        for (int t = i0; t < i1; t += step) {
+            if (std::fabs(y[(size_t)t] - pl[(size_t)t]) > 1.5f) continue;
+            const size_t o = X.size(); X.resize(o + n);
+            float* x = &X[o];
+            for (int k = 0; k < tp.L(); k++) x[k] = v.at(v.f0 + t + kNFf - k);
+            x[n - 1] = 1.f;
+            tgt.push_back(pl[(size_t)t]);
+        }
+        std::vector<double> sol;
+        if (!solveLs(X, tgt, n, 2e-5, sol)) return false;
+        unpackTaps(sol, tp);
+        return true;
+    }
+
     // Decision feedback taps: feed-forward 65 + feedback 128. `dataRows` lists positions p (inside the field, >= 832 + B) used with the
     // symbol levels lvl[] (full field) and the soft values y[] to skip rows where decision and reception disagree.
     bool trainDFE(const View& v, const View& dv, const float* fsLv, const std::vector<float>& lvl, const std::vector<float>& y, double ridge, Taps& tp) {
@@ -1225,6 +1248,38 @@ struct Core {
                         snrAvg = snr2; measureData();
                     } else dec = keep;
                 }
+            }
+        }
+        // Third try, for a channel that changes during the field: the stretches of the field are equalised with taps fitted to the first decoding's own
+        // decisions, stretch by stretch. Kept only when it leaves fewer damaged segments.
+        static const bool noWin = getenv("ATSC_NOWIN3") != nullptr;
+        if (!noWin && st.segments > 0 && st.rsFailed * 20 > st.segments && st.rsFailed * 2 < st.segments) {
+            std::vector<float> pl;
+            levelsFromPath(fsLv, psym, hv, tp.B, pl);
+            constexpr int kWins = 6;
+            std::vector<float> lvW(lv);
+            bool any = false;
+            for (int w = 0; w < kWins; w++) {
+                const int i0 = (int)((int64_t)kFieldSyms * w / kWins), i1 = (int)((int64_t)kFieldSyms * (w + 1) / kWins);
+                Taps tw;
+                if (!trainFFwin(view, pl, lv, i0, i1, tw)) continue;
+                std::vector<float> l2, h2;
+                equalize(view, fsLv, tw, nullptr, l2, h2);
+                for (int i = std::max(i0, kSegSyms); i < i1; i++) lvW[(size_t)i] = l2[(size_t)i];
+                any = true;
+            }
+            if (any) {
+                FieldDecoder keep = dec;
+                dec = backup;
+                FieldStats st3;
+                std::vector<uint8_t> out3((size_t)kDataSegs * kTsBytes), psym3((size_t)kFieldSyms, 0);
+                const std::vector<float> lv3d = scaled(lvW);
+                const int np3 = dec.decode(lv3d.data(), out3.data(), &st3, psym3.data());
+                if (st3.rsFailed < st.rsFailed) {
+                    if (dbg) fprintf(stderr, "[atsc] windowed re-fit: RS fail %d -> %d\n", st.rsFailed, st3.rsFailed);
+                    st = st3; np = np3; out = std::move(out3); psym = std::move(psym3); lv = std::move(lvW);
+                    measureData();
+                } else dec = keep;
             }
         }
         tVit += now() - tM2;
