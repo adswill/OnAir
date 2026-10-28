@@ -470,7 +470,7 @@ struct Core {
             // none at 0.0015), and the narrow one also copes better with oscillator phase noise (a 20 Hz Wiener linewidth at 25 dB: 20 % bad
             // packets against 67 %); the wide one is needed to settle (a -1.5 dB echo at 8 us never locked with the narrow loop from the start)
             static const float kPa = getenv("ATSC_PA") ? (float)atof(getenv("ATSC_PA")) : 0.0035f;
-            static const float kPaN = getenv("ATSC_PAN") ? (float)atof(getenv("ATSC_PAN")) : 0.0015f;
+            static const float kPaN = getenv("ATSC_PAN") ? (float)atof(getenv("ATSC_PAN")) : 0.005f;
             const float alpha = tracking ? (goodRun > 600000 ? kPaN : kPa) * weakScale : 0.035f, beta = alpha * alpha / 4.0f / (tracking ? 1.0f : 4.0f);
             const float xa = kPllScale * alpha * e;       // phase correction, at most about 0.17 rad: a small-angle rotation is exact enough (renormalised below)
             ph *= cf32(1.f - 0.5f * xa * xa, -xa);
