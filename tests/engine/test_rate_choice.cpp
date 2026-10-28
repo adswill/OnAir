@@ -21,9 +21,12 @@ int main() {
         e = rateEntries(L, minSampleRateFor(1, 8));
         CHECK(!has(e, 6e6) && has(e, 8e6) && has(e, 10e6));
         CHECK(checkManualRate(L, 0, 12.345e6).ok && checkManualRate(L, 0, 12.345e6).hz == 12.345e6);
-        CHECK(!checkManualRate(L, 0, 25e6).ok && checkManualRate(L, 0, 25e6).why == "this radio runs at 2 to 20 Msps");
+        // 3.4: no rate is refused; the driver gets the typed value and the user a warning
+        CHECK(checkManualRate(L, 0, 25e6).ok && checkManualRate(L, 0, 25e6).hz == 25e6 && !checkManualRate(L, 0, 25e6).why.empty());
+        CHECK(checkManualRate(L, 0, 0.3e6).ok && checkManualRate(L, 0, 0.3e6).hz == 0.3e6 && !checkManualRate(L, 0, 0.3e6).why.empty());
+        CHECK(checkManualRate(L, 0, 12.345e6).why.empty());
         RateCheck c = checkManualRate(L, 7.9e6, 6e6);
-        CHECK(!c.ok && c.why == "this mode needs at least 7.9 Msps");
+        CHECK(c.ok && c.hz == 6e6 && c.why == "below 7.9 Msps this decoder may not work");
         CHECK(!checkManualRate(L, 0, 0).ok && !checkManualRate(L, 0, NAN).ok);
     }
     {   // an RTL-SDR through SoapySDR: 0.225-0.3 and 0.9-3.2 Msps, nothing between
@@ -33,9 +36,9 @@ int main() {
         auto e = rateEntries(L, 0);
         CHECK(has(e, 0.25e6) && !has(e, 0.5e6) && has(e, 1e6) && has(e, 3.2e6) && !has(e, 4e6));
         RateCheck c = checkManualRate(L, 0, 0.5e6);
-        CHECK(!c.ok && c.why == "this radio cannot run between 0.3 and 0.9 Msps");
+        CHECK(c.ok && c.hz == 0.5e6 && c.why.rfind("this radio lists nothing between 0.3 and 0.9 Msps", 0) == 0);
         CHECK(checkManualRate(L, 0, 0.28e6).ok && checkManualRate(L, 0, 2.4e6).ok);
-        CHECK(!checkManualRate(L, 0.5e6, 0.28e6).ok);   // FM needs 0.5
+        CHECK(checkManualRate(L, 0.5e6, 0.28e6).ok && !checkManualRate(L, 0.5e6, 0.28e6).why.empty());   // FM needs 0.5: a warning only
         CHECK(deliveredRate(L, 0.5e6) == 0.9e6);
     }
     {   // the native RTL-SDR: 0.9 to 2.56 Msps
@@ -44,7 +47,7 @@ int main() {
         const RateLimits L = rateLimitsOf(d);
         auto e = rateEntries(L, 0);
         CHECK(!has(e, 0.25e6) && has(e, 1e6) && has(e, 2.56e6) && !has(e, 3.2e6));
-        CHECK(!checkManualRate(L, 0, 0.5e6).ok && !checkManualRate(L, 0, 3e6).ok);
+        CHECK(checkManualRate(L, 0, 0.5e6).ok && checkManualRate(L, 0, 3e6).ok && checkManualRate(L, 0, 3e6).hz == 3e6);   // asked for as typed
     }
     {   // an Airspy R2: only 2.5 and 10 Msps, a typed rate rounds up to the next one
         DeviceInfo d; d.kind = DeviceInfo::Native; d.minRateHz = 2.5e6; d.maxRateHz = 10e6; d.rateRanges = {{10e6, 10e6}, {2.5e6, 2.5e6}};

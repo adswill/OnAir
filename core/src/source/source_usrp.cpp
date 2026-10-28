@@ -300,7 +300,7 @@ protected:
             // The range is the one of the master clock in use: a B2xx starts at 16 MHz (ad936x_manager::DEFAULT_TICK_RATE) and raises it
             // itself for a faster rate (b200_impl::coerce_rx_samp_rate), so a rate above the range is asked for first; the range's top
             // only when the radio refuses it
-            const double want = std::max(s.sampleRate > 0 ? s.sampleRate : 10e6, lo);
+            const double want = s.rateChosen && s.sampleRate > 0 ? s.sampleRate : std::max(s.sampleRate > 0 ? s.sampleRate : 10e6, lo);   // (3.4: a chosen rate goes to UHD as it is)
             if (uhd().set_rx_rate(dev_, want, ch) != 0 && (want <= hi || uhd().set_rx_rate(dev_, hi, ch) != 0)) { err = "USRP: the sample rate was refused: " + uhd().text(dev_); return false; }
             double actual = std::min(want, hi);
             uhd().get_rx_rate(dev_, ch, &actual);

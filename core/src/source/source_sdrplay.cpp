@@ -353,7 +353,7 @@ protected:
             initState_ = 0;
             // API 3.x accepts ADC rates 2..10 MHz (3.15 rejects 10.66 MHz on the RSPduo).
             // Below 2 Msps the API's decimation (2..32) brings it down.
-            const double want = std::min(10e6, std::max(62.5e3, s.sampleRate > 0 ? s.sampleRate : 8e6));
+            const double want = s.rateChosen && s.sampleRate > 0 ? s.sampleRate : std::min(10e6, std::max(62.5e3, s.sampleRate > 0 ? s.sampleRate : 8e6));   // (3.4: a rate the user chose goes to the API as it is)
             int dec = 1;
             while (dec < 32 && want * dec < 2e6 - 1) dec *= 2;
             const double fs = std::max(2e6, want * dec);

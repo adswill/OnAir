@@ -74,15 +74,16 @@ std::vector<RateEntry> rateEntries(const RateLimits& L, double modeMinHz) {
 }
 
 RateCheck checkManualRate(const RateLimits& L, double modeMinHz, double hz) {
+    // 3.4: nothing is refused here. A rate outside what the radio lists, in a gap between its ranges or below what the decoder works with is
+    // handed to the driver as typed; `why` is then a warning for the user (the driver has the last word and its own error message is shown).
     RateCheck c;
     if (!(hz > 0) || !std::isfinite(hz)) { c.why = "enter a rate in Msps"; return c; }
+    std::string warn;
     const bool lo = L.minHz > 0 && hz < L.minHz - 1, hi = L.maxHz > 0 && hz > L.maxHz + 1;
     if (lo || hi) {
-        if (L.minHz > 0 && L.maxHz > 0) c.why = "this radio runs at " + msps(L.minHz) + " to " + msps(L.maxHz) + " Msps";
-        else c.why = lo ? "this radio needs at least " + msps(L.minHz) + " Msps" : "this radio gives at most " + msps(L.maxHz) + " Msps";
-        return c;
-    }
-    if (!L.ranges.empty() && !allSingle(L)) {
+        if (L.minHz > 0 && L.maxHz > 0) warn = "this radio lists " + msps(L.minHz) + " to " + msps(L.maxHz) + " Msps; the driver may refuse " + msps(hz) + " Msps";
+        else warn = lo ? "this radio lists at least " + msps(L.minHz) + " Msps; the driver may refuse " + msps(hz) + " Msps" : "this radio lists at most " + msps(L.maxHz) + " Msps; the driver may refuse " + msps(hz) + " Msps";
+    } else if (!L.ranges.empty() && !allSingle(L)) {
         double below = 0, above = 0;
         bool inside = false;
         for (const auto& r : L.ranges) {
@@ -91,13 +92,13 @@ RateCheck checkManualRate(const RateLimits& L, double modeMinHz, double hz) {
             if (r.first > hz && (above == 0 || r.first < above)) above = r.first;
         }
         if (!inside) {
-            if (below > 0 && above > 0) c.why = "this radio cannot run between " + msps(below) + " and " + msps(above) + " Msps";
-            else c.why = "this radio does not offer " + msps(hz) + " Msps";
-            return c;
+            if (below > 0 && above > 0) warn = "this radio lists nothing between " + msps(below) + " and " + msps(above) + " Msps; the driver may refuse " + msps(hz) + " Msps";
+            else warn = "this radio does not list " + msps(hz) + " Msps; the driver may refuse it";
         }
     }
-    c.hz = deliveredRate(L, hz);
-    if (modeMinHz > 0 && c.hz < modeMinHz - 1) { c.hz = 0; c.why = "this mode needs at least " + msps(modeMinHz) + " Msps"; return c; }
+    c.hz = warn.empty() ? deliveredRate(L, hz) : hz;
+    if (warn.empty() && modeMinHz > 0 && c.hz < modeMinHz - 1) warn = "below " + msps(modeMinHz) + " Msps this decoder may not work";
+    c.why = warn;
     c.ok = true;
     return c;
 }

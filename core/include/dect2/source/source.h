@@ -39,6 +39,7 @@ struct TuneSettings {
     double centerHz = 522e6;
     double sampleRate = 18285714.2857; // 2x native rate for an 8 MHz channel
     double basebandFilterHz = 0;       // 0 = auto
+    bool rateChosen = false;           // the user chose this sample rate (Custom): a driver's own safety cap on the rate (an RTL-SDR's 2.56 Msps) does not hold it down; the driver may still refuse it and says so
     double gainDb = 30;                // overall gain of generic (SoapySDR) radios; the three HackRF stages below are not used there
     int lnaDb = 16;                    // 0..40 step 8
     int vgaDb = 20;                    // 0..62 step 2
