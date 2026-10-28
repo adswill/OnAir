@@ -668,8 +668,13 @@ void AtvVideo::Impl::processLine(const LineRec& r) {
             cnVar = cnVar > 0 ? cnVar + (var - cnVar) * 0.03 : var;
             if (syncQ > 0.5f) doCarrierErr(ph, std::min(1.0, snr / 12.0));
             phErr2 += (ph * ph - phErr2) * 0.03;
-            if (phErr2 < 0.12) { if (phGood < 1000) phGood++; } else phGood = 0;
-            phaseLockedFlag = phGood > 60;
+            // hysteresis: the detector is entered below 0.12 rad^2 for 60 lines and left only above 0.45 (a carrier with phase noise sits near
+            // the entry bar, and every switch of the detector restarts the levels)
+            if (phaseLockedFlag) { if (phErr2 > 0.45) { phaseLockedFlag = false; phGood = 0; } }
+            else {
+                if (phErr2 < 0.12) { if (phGood < 1000) phGood++; } else phGood = 0;
+                phaseLockedFlag = phGood > 60;
+            }
         }
     }
     // ---- which picture line is this?
