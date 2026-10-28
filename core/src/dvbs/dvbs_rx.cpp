@@ -171,7 +171,7 @@ struct DvbsReceiver::Impl {
     DvbsFront front;
     std::vector<cf32> sym, y;
     uint64_t symTotal = 0;
-    bool timingNarrow = false, recentred = false;
+    bool timingNarrow = false, recentred = false, timingFine = false;
     double rsUsed = 0, rollUsed = 0.35;
     int rollSource = 0;
     // hunting
@@ -234,7 +234,7 @@ struct DvbsReceiver::Impl {
         specRes = SpectrumResult();
         searchTries = 0;
         sym.clear(); y.clear();
-        symTotal = 0; timingNarrow = false; recentred = false;
+        symTotal = 0; timingNarrow = false; recentred = false; timingFine = false;
         huntBuf.clear(); huntSinceTry = 0;
         s1th.stop();
         s1.reset(); s1Symbols = 0; s1Mark = 0; s1Lost = false;
@@ -331,7 +331,7 @@ struct DvbsReceiver::Impl {
         front.configure(c);
         front.timer().setLoop(0.02, 0.707);
         rsUsed = rs; rollUsed = roll;
-        symTotal = 0; timingNarrow = false; recentred = false;
+        symTotal = 0; timingNarrow = false; recentred = false; timingFine = false;
         huntBuf.clear(); huntSinceTry = 0;
         sfStrip.reset(); sfWasLocked = sfWasPilots = false;
         rsNominal = rs; huntFails = 0; ditherIdx = 0; huntCycles = 0;
@@ -365,6 +365,8 @@ struct DvbsReceiver::Impl {
         rateNow = front.symbolRateNow();
         if (!timingNarrow && symTotal > 40000) { front.timer().setLoop(0.004, 0.707); timingNarrow = true; }
         if (!recentred && symTotal > 200000) { front.recentre(); recentred = true; }
+        // once the rate offset is taken out the loop only has the timing jitter left to fight: a narrower loop has less of it near threshold
+        if (!timingFine && recentred && symTotal > 300000) { front.timer().setLoop(0.0018, 0.707); timingFine = true; }
         switch (mode) {
         case kHunt: huntPush(); break;
         case kS1: s1Push(); break;
@@ -401,7 +403,7 @@ struct DvbsReceiver::Impl {
                 front.configure(c);
                 front.timer().setLoop(0.02, 0.707);
                 rsUsed = c.symbolRate;
-                symTotal = 0; timingNarrow = false; recentred = false;
+                symTotal = 0; timingNarrow = false; recentred = false; timingFine = false;
                 huntBuf.clear(); huntSinceTry = 0;
             }
         }
