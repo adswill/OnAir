@@ -812,6 +812,27 @@ struct AmRx::Impl {
                 se += phaseDiff(std::arg(puM[col]), std::arg(puM[col - 1]));
             }
         }
+        // Each column's gain is the division by two noisy training symbols, which adds about 1.5 dB of noise to a 64-QAM cell. The channel
+        // changes slowly from one carrier to the next, so the gains are smoothed over five neighbouring columns (triangular weights, fewer at
+        // the edges): the noise in the estimate falls to a quarter. Not in time: the carrier offset turns the phase from block to block.
+        {
+            auto smooth = [](cf32* m) {
+                cf32 h[kAmCols], o[kAmCols];
+                for (int c = 0; c < kAmCols; c++) h[c] = std::norm(m[c]) > 1e-20f ? 1.f / m[c] : cf32(0, 0);
+                for (int c = 0; c < kAmCols; c++) {
+                    cf32 acc(0, 0); float ws = 0;
+                    for (int d = -2; d <= 2; d++) {
+                        const int q = c + d;
+                        if (q < 0 || q >= kAmCols) continue;
+                        const float w = (float)(3 - std::abs(d));
+                        acc += w * h[q]; ws += w;
+                    }
+                    o[c] = acc / ws;
+                }
+                for (int c = 0; c < kAmCols; c++) if (std::norm(o[c]) > 1e-20f) m[c] = 1.f / o[c];
+            };
+            smooth(plM); smooth(puM); smooth(sM); smooth(tM);
+        }
         se = se / (2 * (kAmCols - 1)) * kFftAm / (2 * kPi);
         samperr = (int)std::lround(se);
         // The sample clock: the timing error of the blocks grows by the clock error. The window only moves in whole samples once a block, and
