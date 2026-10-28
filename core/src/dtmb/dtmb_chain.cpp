@@ -26,6 +26,10 @@ constexpr size_t kGpuBatch = 32;      // codewords the GPU takes at once
 namespace {
 constexpr size_t kQueueLimit = 256;   // codewords waiting for a worker before old ones are dropped (about 50 ms of the fastest modes, 8 MB)
 constexpr int kMaxIter = 60;
+// Check rule of the LDPC decoder: scaled two-minimum (box-plus corrected) min-sum. The correction recovers most of the gap to belief propagation, so
+// the scale can be closer to one than the plain min-sum 0.6.
+constexpr float kLdpcAlpha = 0.75f;
+constexpr bool kLdpcBox = true;
 constexpr int kSearchIter = 20;      // alignment attempts (32QAM, 4QAM-NR) give up sooner
 constexpr int kSearchEvery = 16;     // frames between alignment attempts that failed
 constexpr int kThrottleAfter = 24;   // failed codewords in a row before the decoder only probes
@@ -210,7 +214,7 @@ FecChain::Result FecChain::decode(const Job& j, LdpcCode::Decoder& dec, int maxI
     Result r;
     std::vector<uint8_t> info((size_t)code_.infoBits());
     const double t0 = nowSec();
-    const LdpcCode::Result lr = dec.decode(j.llr.data(), info.data(), maxIter);
+    const LdpcCode::Result lr = dec.decode(j.llr.data(), info.data(), maxIter, kLdpcAlpha, kLdpcBox);
     r.iterations = lr.iterations;
     r.ldpcSec = nowSec() - t0;
     if (!lr.ok) return r;
@@ -263,7 +267,7 @@ void FecChain::decodeBatch(std::vector<Job>& jobs, std::vector<Result>& out, Ldp
         std::vector<uint8_t> info(m * infoN), ok(m);
         std::vector<int> iters(m);
         const double t0 = wallSec();
-        if (GpuLdpc::instance().decodeQc(code_.qcTable(), llr.data(), (int)m, kMaxIter, info.data(), ok.data(), iters.data(), 0.6f)) {
+        if (GpuLdpc::instance().decodeQc(code_.qcTable(), llr.data(), (int)m, kMaxIter, info.data(), ok.data(), iters.data(), kLdpcAlpha, kLdpcBox)) {
             const double dt = wallSec() - t0;
             for (size_t i = 0; i < m; i++) {
                 Result r;
