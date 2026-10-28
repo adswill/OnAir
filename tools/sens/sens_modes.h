@@ -82,6 +82,7 @@ struct Mode {
     double echoUs = 5;      // delay of the 2 path echo (about half the mode's guard interval / symbol)
     double fdHz = 10;       // Doppler of the fading profiles
     double snrHi = 30;      // where a sweep starts
+    double pnHz = 50;       // linewidth of the phase noise scenarios (a mode with a narrow subcarrier spacing needs a realistic one)
     int maxJobs = 8;        // trials at once (big receivers hold a lot of memory)
     bool heavy = false;     // needs tens of seconds of signal: only with --heavy
     std::function<Sig(size_t n)> gen;   // the clean signal, noise free; at least n samples
@@ -352,7 +353,7 @@ inline std::vector<Mode> allModes() {
     }
     {   // DRM mode B, 10 kHz
         Mode m = base("drm", "DRM", "ofdm-radio", 12, 2e6, 8.0, 10e3, 10);
-        m.echoUs = 1000; m.fdHz = 2; m.snrHi = 28; m.maxJobs = 4;
+        m.echoUs = 1000; m.fdHz = 2; m.snrHi = 28; m.maxJobs = 4; m.pnHz = 1;   // 46.9 Hz spacing: 50 Hz is not decodable by any receiver
         m.gen = [](size_t n) { SynthConfig c; c.modeOpt[4] = 1; c.modeOpt[5] = 1; return clean(12, c, 2e6, n); };
         m.make = factory<DrmReceiver, DrmTelemetry>([](DrmReceiver& rx, double r) { rx.setSilent(true); rx.configure(r); }, blocks<DrmTelemetry>);
         add(m);
@@ -476,6 +477,8 @@ inline std::vector<Mode> allModes() {
         for (int am = 0; am < 2; am++) {
             Mode m = base(am ? "hdr-am" : "hdr-fm", am ? "HD Radio AM (MA1)" : "HD Radio FM (MP1)", "ofdm-radio", 23, 2e6, 6.0, am ? 30e3 : 400e3, am ? 1.0 : 98.1);
             m.echoUs = am ? 100 : 3; m.snrHi = am ? 40 : 30; m.maxJobs = 4;
+            m.secs = am ? 20.0 : 10.0;   // AM gives its first P1 frame about 7 s after sync (4 frames of diversity delay); FM: ~6 frames to count
+            m.pnHz = am ? 3 : 10;        // 363 Hz (FM) / 181 Hz (AM) spacing
             m.gen = [am](size_t n) { SynthConfig c; c.modeOpt[0] = am; return clean(23, c, 2e6, n); };
             m.make = factory<HdrReceiver, HdrTelemetry>([](HdrReceiver& rx, double r) { rx.setSilent(true); rx.configure(r); }, blocks<HdrTelemetry>);
             add(m);
