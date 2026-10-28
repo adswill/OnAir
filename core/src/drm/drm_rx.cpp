@@ -276,7 +276,7 @@ struct DrmReceiver::Impl {
         ready = front.configure(rate);
         eOk = other.front.configure(rate, kFsE, kMinRateE);
         other.fs = kFsE; fs = kFs;
-        cc.configure(rate, 10000, 12000, 4.0);
+        cc.configure(rate, 10000, 12000, 1.9);   // the first acquisition window is 1.5 s: decide right after it
         corr.reset(); corrPpm = 0; corr.setPpm(0);
         other.corr.reset(); other.corrPpm = 0; other.corr.setPpm(0);
         inCount = 0;
