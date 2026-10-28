@@ -50,7 +50,7 @@ LdpcCode::LdpcCode(Rate r) : rate_(r) {
     edgeBase_.assign((size_t)c_ + 1, 0);
     for (int i = 0; i < c_; i++) edgeBase_[(size_t)i + 1] = edgeBase_[(size_t)i] + (int)rows_[(size_t)i].size();
     qc_.z = kLdpcZ; qc_.blockRows = c_; qc_.blockCols = 59; qc_.punctured = 5; qc_.clip = 1000.f;
-    qc_.giveUpIter[0] = 4; qc_.giveUpDiv[0] = 4; qc_.giveUpIter[1] = 12; qc_.giveUpDiv[1] = 5;   // as in Decoder::decodeBody
+    qc_.giveUpIter[0] = 4; qc_.giveUpDiv[0] = 3; qc_.giveUpIter[1] = 12; qc_.giveUpDiv[1] = 4;   // as in Decoder::decodeBody
     qc_.rowStart.assign(1, 0);
     for (const auto& row : rows_) {
         for (const Edge& e : row) { qc_.col.push_back(e.col); qc_.shift.push_back(e.shift); }
@@ -354,7 +354,7 @@ DECT2_SIMD_MEMBER_BODY LdpcCode::Result LdpcCode::Decoder::decodeBody(const floa
                 for (const Edge& ed : code_.rows_[(size_t)row]) acc = acc ^ rotr(hardOf(ed.col), ed.shift);
                 weight += std::popcount(acc.lo) + std::popcount(acc.hi);
             }
-            if (weight > (iter == 4 ? code_.c_ * Z / 4 : code_.c_ * Z / 5)) break;
+            if (weight > (iter == 4 ? code_.c_ * Z / 3 : code_.c_ * Z / 4)) break;
         }
     }
     emitInfo();
