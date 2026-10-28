@@ -1,4 +1,4 @@
-// Band plans in the interface: the plan picker with import / export / delete (scan tab), the channel list of the TV modes (toolbar) and the scan
+// Band plans in the interface: the plan picker with import / export / delete (scan tab), the TV channel selector is tvchan_ui.cpp (toolbar) and the scan
 // ranges taken from the active plan. The plans, their files and their validation are in core (dect2/bandplan/bandplan.h); the format is in docs/band-plans.md.
 #include "../app.h"
 #include "../platform/platform.h"
@@ -194,34 +194,6 @@ bool bandPlanPicker(App& a) {
         ImGui::PushTextWrapPos(0);
         ImGui::TextDisabled(tr("Not fully verified: %s"), cur->note.c_str());
         ImGui::PopTextWrapPos();
-    }
-    return changed;
-}
-
-bool tvChannelCombo(App& a) {
-    const std::vector<const bp::Band*> bands = tvBands(a);
-    if (bands.empty()) return false;
-    const double hz = a.freqMhz * 1e6;
-    std::string cur;
-    for (const bp::Band* b : bands) { bp::Channel c; if (b->channelAt(hz, c, 200e3)) { cur = c.label; break; } }
-    char lbl[48];
-    std::snprintf(lbl, sizeof lbl, "%s", cur.empty() ? tr("Channel") : cur.c_str());
-    bool changed = false;
-    ImGui::SetNextItemWidth(std::min(100 * gUi, ImGui::GetContentRegionAvail().x));
-    if (ImGui::BeginCombo("##tvch", lbl)) {
-        for (const bp::Band* b : bands) {
-            ImGui::TextDisabled("%s", b->name.c_str());
-            for (const bp::Channel& c : b->list(2000)) {
-                char l[80];
-                std::snprintf(l, sizeof l, "%-4s %.3f MHz##%s%.0f", c.label.c_str(), c.centreHz / 1e6, b->name.c_str(), c.centreHz);
-                if (ImGui::Selectable(l, c.label == cur && std::fabs(c.centreHz - hz) < 200e3)) { a.freqMhz = c.centreHz / 1e6; changed = true; }
-            }
-        }
-        ImGui::EndCombo();
-    }
-    if (ImGui::IsItemHovered()) {
-        const bp::Plan* p = activePlan(a);
-        ImGui::SetTooltip(tr("TV channels of the band plan %s (change it in the Scan tab)."), p ? p->name.c_str() : "");
     }
     return changed;
 }

@@ -242,6 +242,8 @@ void tuner(App& a, bool& retune) {
         }
         ImGui::EndCombo();
     }
+    sameLineIf(130 * gUi, 6 * gUi);
+    { const double before = a.freqMhz; if (tvChannelCombo(a)) { const double f = a.freqMhz; a.freqMhz = before; tuneFreq(a, f); } }   // the numbered cable channels (S1-S41, E, UHF)
     flowNext(8 * gUi);
     ImGui::TextDisabled("Symbol rate");
     sameLineIf(90 * gUi, 5 * gUi);

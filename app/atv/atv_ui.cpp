@@ -449,7 +449,7 @@ void nextIf(float w) { sameLineIf(w * gUi, 8 * gUi); }   // (it tested the room 
 // the width of a control that follows a label: wanted, but never wider than what is left
 float fit(float want) { return std::max(40.f * gUi, std::min(want * gUi, ImGui::GetContentRegionAvail().x - 6 * gUi)); }
 
-void tuner(App& a, bool&) {
+void tuner(App& a, bool& retune) {
     loadState();
     ImGui::TextDisabled("Modulation"); ImGui::SameLine(0, 5 * gUi);
     ImGui::SetNextItemWidth(fit(130));
@@ -468,6 +468,7 @@ void tuner(App& a, bool&) {
         }
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("AM: broadcast TV, a vision carrier with a sound carrier (PAL, SECAM, NTSC), negative or positive modulation.\nFM video: analog FPV and video links (5.8 GHz, 1.2 GHz): the picture is the frequency of the carrier.\nNeeds 20 Msps, 17 MHz of the radio's band; the polarity is found by itself. The sound is not decoded yet.\nNBTV / mechanical: Narrow Bandwidth Television (32 lines, 12.5 pictures a second) or another mechanical line count,\nsent as the audio of an AM or narrow FM transmitter: tune the transmitter to the centre (within 50 kHz).");
+    if (!a.atvFm && !a.atvNbtv) { nextIf(150); if (tvChannelCombo(a)) retune = true; }   // the analog channels of the region (the centre of the channel is tuned)
     if (a.atvNbtv) {
         nextIf(240);
         ImGui::TextDisabled("Lines"); ImGui::SameLine(0, 5 * gUi);

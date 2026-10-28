@@ -279,6 +279,7 @@ static void setupFinish(App& a, int how) {
             plat::prefs().setI("fmStepKhz", d.fmStepKhz);
             plat::prefs().setI("ituRegion", d.itu);
             plat::prefs().setS("locCountry", d.country);
+            tvPlanFollowLocation();   // the TV channel plans (tvplan.h) start from this country
             plat::prefs().setS("locTimeZone", d.tz);
             plat::prefs().setB("dabBand3", d.dab3);
             plat::prefs().setD("adsbLat", d.lat);
