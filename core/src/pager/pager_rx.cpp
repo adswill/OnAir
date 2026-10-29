@@ -303,7 +303,7 @@ struct PagerReceiver::Impl {
             tel.speeds[spd].messages++;
             tel.messagesTotal++;
             tel.dataValid = true;
-            const bool ignored = pagerIgnored(flex, pm.address);   // the Ignore list: kept in the list, but no automation (notification, recording, webhook) and no log line
+            const bool ignored = pagerIgnored(flex, pm.address);   // the Ignore list: kept in the list, but no automation (notification, recording, webhook)
             if (!ignored && automation::wants(automation::FPager)) {   // the automations (automation/engine.h)
                 automation::Event ev("pager.message");
                 ev.at(automation::wallNow(), flex ? "FLEX" : "POCSAG", 0);
@@ -311,9 +311,9 @@ struct PagerReceiver::Impl {
                     .str("type", pagerTypeName(pm.type)).str("text", pm.text).flag("damaged", pm.damaged);
                 automation::emit(std::move(ev));
             }
-            if (sn <= 40 && !ignored) {
+            if (sn <= 40) {
                 char b[160];
-                snprintf(b, sizeof b, "Pagers: %s %u %s", pagerSpeedName(spd), (unsigned)pm.address, pagerTypeName(pm.type));
+                snprintf(b, sizeof b, "Pagers: %s %u %s%s", pagerSpeedName(spd), (unsigned)pm.address, pagerTypeName(pm.type), ignored ? " (ignored)" : "");
                 say(b);
             }
         }
