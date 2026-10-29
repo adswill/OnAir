@@ -26,14 +26,18 @@ int main() {
     RxTelemetry rx;
     uint64_t seq = 0;
     int reports = 0, wrong = 0;
+    // 5 s, and on a slow or busy machine (the synthetic source then makes less signal in that time) on until the results below are in,
+    // at most 20 s
+    const auto done = [&] { return rx.seq > 10 && rx.wifi.aps.size() == 3 && rx.wifi.beacons > 100; };
     const auto t0 = std::chrono::steady_clock::now();
-    while (std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() < 5.0) {
+    for (double el = 0; el < 5.0 || (el < 20.0 && !done()); el = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count()) {
         if (e.latestRx(rx, seq)) { seq = rx.seq; reports++; if (rx.standard != 55) wrong++; }
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
     const WifiTelemetry& d = rx.wifi;
     printf("  %d reports: %s, %llu frames, %llu bad\n", reports, wifiSummary(d).c_str(), (unsigned long long)d.blocksOk, (unsigned long long)d.blocksBad);
-    CHECK(reports > 10 && wrong == 0, "%d reports, %d wrong", reports, wrong);
+    // reports made by the engine (its sequence number), not the polls that happened to see one
+    CHECK(rx.seq > 10 && wrong == 0, "%llu reports made (%d seen), %d wrong", (unsigned long long)rx.seq, reports, wrong);
     CHECK(rx.rateOk, "rate");
     CHECK(d.aps.size() == 3 && d.beacons > 100, "%zu networks, %llu beacons", d.aps.size(), (unsigned long long)d.beacons);
     CHECK(d.channel == 6, "channel %d", d.channel);

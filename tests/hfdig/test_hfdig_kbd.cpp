@@ -365,8 +365,7 @@ int main() {
     }
     // a user's font file draws what the built-in glyphs cannot (#225): Polish l with stroke, Turkish s with cedilla, an arrow
     {
-        std::string here = __FILE__;
-        here = here.substr(0, here.rfind("/tests/")) + "/third_party/fonts/Inter-Regular.ttf";
+        const std::string here = std::string(DECT2_SOURCE_DIR) + "/third_party/fonts/Inter-Regular.ttf";
         unsigned short g[14];
         const int cps[] = {0x142, 0x15F, 0x2192};
         bool before = false;

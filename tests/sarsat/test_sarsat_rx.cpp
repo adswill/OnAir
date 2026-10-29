@@ -112,8 +112,7 @@ int main() {
         CHECK(n.log.empty(), "whole capture: noise gave %zu messages", n.log.size());
     }
     {   // a real recording (issue #223): I/Q wav at 37.5 kHz, carrier near +1.44 kHz, moved to the tuning offset at 256 kHz
-        std::string path = __FILE__;
-        path = path.substr(0, path.rfind("tests/")) + "tests/data/sarsat/epirbsignal_223.wav";
+        const std::string path = std::string(DECT2_SOURCE_DIR) + "/tests/data/sarsat/epirbsignal_223.wav";
         FILE* f = fopen(path.c_str(), "rb");
         CHECK(f != nullptr, "cannot open %s", path.c_str());
         if (f) {

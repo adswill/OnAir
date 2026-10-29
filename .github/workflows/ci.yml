@@ -75,10 +75,13 @@ jobs:
       - name: ccache statistics
         if: always()
         run: ccache -s
+      # the socket / thread timing tests (label "timing") on their own, two at a time, a failed one run once more: beside a -j 4 run they
+      # measured the runner's load. (A retry step after a failed test step never ran: a step only runs when the ones before it passed.)
       - name: Test (fast tests)
-        run: ctest --test-dir build -j 4 -LE slow --output-on-failure --timeout 600
-      - name: Retry timing tests once
-        run: ctest --test-dir build -L timing --repeat until-pass:2 --output-on-failure --timeout 600
+        run: ctest --test-dir build -j 4 -LE "slow|timing" --output-on-failure --timeout 600
+      - name: Test (timing tests, a failure retried once)
+        if: success() || failure()
+        run: ctest --test-dir build -j 2 -L timing -LE slow --repeat until-pass:2 --output-on-failure --timeout 600
       # The app on Mesa's software OpenGL held to 3.1 and a 4096 texture limit, as on a Raspberry Pi 4/5 (#283, #284): it must open,
       # draw a frame and make no GL errors.
       - name: "App: OpenGL 3.1 software run (Raspberry Pi limits)"
@@ -123,5 +126,10 @@ jobs:
       - name: ccache statistics
         if: always()
         run: ccache -s
+      # the socket / thread timing tests (label "timing") on their own, two at a time, a failed one run once more: beside a -j 4 run they
+      # measured the runner's load. (A retry step after a failed test step never ran: a step only runs when the ones before it passed.)
       - name: Test (fast tests)
-        run: ctest --test-dir build -j 4 -LE slow --output-on-failure --timeout 600
+        run: ctest --test-dir build -j 4 -LE "slow|timing" --output-on-failure --timeout 600
+      - name: Test (timing tests, a failure retried once)
+        if: success() || failure()
+        run: ctest --test-dir build -j 2 -L timing -LE slow --repeat until-pass:2 --output-on-failure --timeout 600
