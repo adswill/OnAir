@@ -288,7 +288,7 @@ void receiver(App& a) {
     kvRow(a, "plan", "%s", dect2::lorawan::planName(t.cfg.plan));
     kvRow(a, "channels", "%s", t.note.c_str());
     kvRow(a, "frames", "%llu good, %llu CRC errors, %llu preambles", (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad, (unsigned long long)t.preambles);
-    if (t.cfg.fsk && dect2::lorawan::planHasFsk(t.cfg.plan))
+    if (t.cfg.fsk && !dect2::lorawan::planFskChannelsMhz(t.cfg.plan).empty())   // DR7 in the plan (planHasFsk) is not enough: a channel to listen on
         kvRow(a, "FSK (DR7)", "%llu frames, %llu sync words, %llu CRC errors", (unsigned long long)t.fskFrames, (unsigned long long)t.fskSyncs, (unsigned long long)t.fskCrcBad);
     static const char* const mt[] = {"join req", "join acc", "unconf up", "unconf down", "conf up", "conf down", "rejoin", "proprietary"};
     std::string by;

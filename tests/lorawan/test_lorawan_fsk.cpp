@@ -164,6 +164,7 @@ int main() {
         EXPECT(planHasFsk(EU868) && planHasFsk(AS923_1) && planHasFsk(EU433) && !planHasFsk(US915) && !planHasFsk(AU915), "plans with DR7");
         EXPECT(planFskChannelsMhz(EU868).size() == 1 && std::fabs(planFskChannelsMhz(EU868)[0] - 868.8) < 1e-9, "EU868 FSK channel");
         EXPECT(planFskChannelsMhz(AS923_1).size() == 1 && std::fabs(planFskChannelsMhz(AS923_1)[0] - 924.8) < 1e-9 && planFskChannelsMhz(US915).empty(), "AS923-1 / US915 FSK channels");
+        EXPECT(planFskChannelsMhz(EU433).empty() && planFskChannelsMhz(AS923_2).empty(), "DR7 but no common FSK channel: EU433, AS923-2");
     }
     {   // 2. frames encoded here against the radio's packet handler as the datasheets describe it
         using namespace lorawan;
