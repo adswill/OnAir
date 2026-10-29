@@ -34,7 +34,8 @@ int main() {
         return rx.seq > 10 && k == cubesat::kNumFramings;
     };
     const auto t0 = std::chrono::steady_clock::now();
-    for (double el = 0; el < 6.0 || (el < 20.0 && !done()); el = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count()) {
+    const auto elapsed = [&] { return std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count(); };
+    while (elapsed() < 6.0 || (elapsed() < 20.0 && !done())) {
         if (e.latestRx(rx, seq)) { seq = rx.seq; reports++; if (rx.standard != 62) wrong++; }
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }

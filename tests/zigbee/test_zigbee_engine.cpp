@@ -31,7 +31,8 @@ int main() {
     // at most 20 s
     const auto done = [&] { return rx.seq > 10 && rx.zigbee.pans.size() == 2 && rx.zigbee.devices.size() >= 5 && rx.zigbee.blocksOk > 300 && rx.zigbee.ppsHist.size() >= 3; };
     const auto t0 = std::chrono::steady_clock::now();
-    for (double el = 0; el < 5.0 || (el < 20.0 && !done()); el = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count()) {
+    const auto elapsed = [&] { return std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count(); };
+    while (elapsed() < 5.0 || (elapsed() < 20.0 && !done())) {
         if (e.latestRx(rx, seq)) { seq = rx.seq; reports++; if (rx.standard != 66) wrong++; }
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }

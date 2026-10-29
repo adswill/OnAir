@@ -30,7 +30,8 @@ int main() {
     // at most 20 s
     const auto done = [&] { return rx.seq > 10 && rx.ble.devices.size() >= 5 && rx.ble.blocksOk > 1000; };
     const auto t0 = std::chrono::steady_clock::now();
-    for (double el = 0; el < 5.0 || (el < 20.0 && !done()); el = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count()) {
+    const auto elapsed = [&] { return std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count(); };
+    while (elapsed() < 5.0 || (elapsed() < 20.0 && !done())) {
         if (e.latestRx(rx, seq)) { seq = rx.seq; reports++; if (rx.standard != 52) wrong++; }
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
