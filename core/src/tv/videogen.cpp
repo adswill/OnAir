@@ -3,7 +3,7 @@
 // go to a .ts file (as fast as the encoder runs) or to tsout's paced UDP / RTP sender (in real time).
 // The camera comes from VideoIn (listVideoInputs / start / copyYuv420), the microphone from AudioIn. Pictures and video files are
 // decoded here, frame by frame, so a file is encoded faster than real time with its picture and sound in step. The test generator
-// draws its test picture (drawTestCard) straight into the output frame, its message under the overlay.
+// draws its test picture (drawTestCard) straight into the output frame.
 #include "dect2/tv/videogen.h"
 #include "dect2/audio/audioin.h"
 #include "dect2/audio/videoin.h"
@@ -555,21 +555,6 @@ void VideoGenerator::Impl::run(GenConfig c) {
         auto noError = [&] { std::lock_guard<std::mutex> lk(mu); return st.error.empty(); };
         OverlayRenderer ovr;
         ovr.setFont(c.font);
-        // the generator's message: one centred line in the chequerboard under the bars, smaller when it would not fit
-        std::vector<uint8_t> msg;
-        if (c.source == Source::Generator && !c.message.empty() && ovr.hasFont()) {
-            Layout ml;
-            Block b;
-            b.text = c.message;
-            b.fontPx = std::max(8.0f, H * 0.07f);
-            const float wide = ovr.blockRect(b, s, W, H).w;
-            if (wide > W * 0.94f) b.fontPx = std::max(8.0f, b.fontPx * W * 0.94f / wide);
-            const Rect r = ovr.blockRect(b, s, W, H);
-            b.x = std::max(0.0f, (W - r.w) / 2 / W);
-            b.y = 0.47f;
-            ml.blocks.push_back(b);
-            ovr.render(ml, s, 0, W, H, msg);
-        }
         Layout lay;
         uint64_t laySerial = ~0ull;
         std::vector<uint8_t> ovl;
@@ -604,7 +589,6 @@ void VideoGenerator::Impl::run(GenConfig c) {
                 }
             } else if (c.source == Source::Generator) {
                 drawTestCard(out.y.data(), W, out.u.data(), W / 2, out.v.data(), W / 2, W, H, (int)(n % (1 << 30)), fps, c.pattern);
-                if (!msg.empty()) OverlayRenderer::blendYuv420(msg.data(), W, H, out.y.data(), W, out.u.data(), W / 2, out.v.data(), W / 2);
             } else if (c.source == Source::Picture) {
                 const uint8_t* sp[3] = {still.y.data(), still.u.data(), still.v.data()};
                 const int ss[3] = {still.w, still.w / 2, still.w / 2};

@@ -10,7 +10,6 @@
 #include "dect2/audio/audioin.h"
 #include "dect2/audio/videoin.h"
 #include "dect2/common/u8file.h"
-#include "dect2/tx/tx_templates.h"
 #include "dect2/tv/videogen.h"
 #include <algorithm>
 #include <chrono>
@@ -54,12 +53,11 @@ const ParamGroup kGroups[] = {
 // The "(?)" text of each settings row, by its English label (docs/VIDEO-GENERATOR.md says the same at more length)
 struct RowHelp { const char* label; const char* help; };
 const RowHelp kRowHelp[] = {
-    {N_("Input"), N_("What is encoded. Camera: a webcam or an HDMI / SDI capture card, opened only when you press Start. Still picture: one image sent as a continuous stream (a test card, a slide). Video file: any file FFmpeg can read, played from the start and looped when the length is longer. Test generator: a copy of the transmitter's own moving test picture (the test transport stream the DVB-T2 T2Generator carries in its real PLP), with a message such as a CQ call written across it.")},
+    {N_("Input"), N_("What is encoded. Camera: a webcam or an HDMI / SDI capture card, opened only when you press Start. Still picture: one image sent as a continuous stream (a test card, a slide). Video file: any file FFmpeg can read, played from the start and looped when the length is longer. Test generator: a copy of the transmitter's own moving test picture (the test transport stream the DVB-T2 T2Generator carries in its real PLP). Put a callsign or other text on it with the Overlay tab.")},
     {N_("Camera"), N_("The cameras and capture cards found when this window opened. Press Refresh after plugging one in.")},
     {N_("Picture"), N_("A PNG, JPEG, BMP or other picture. It is scaled to the resolution below with the picture fit you choose.")},
     {N_("Video file"), N_("The length below follows the file when you choose it. Picture and sound are decoded in step, so a file is encoded faster than real time when the output is a .ts file.")},
     {N_("Pattern"), N_("The test generator's picture. Test card: colour bars, a moving sweep and a chequerboard with a bouncing ball, so motion and lost packets are easy to see. Colour bars and Grey ramp: still pictures to check colours and levels. A white bar grows along the bottom once a second.")},
-    {N_("Message"), N_("The text across the test picture. The buttons fill in the transmitter's templates (CQ call, Beacon, Test pattern, RYRY) with the callsign and grid of the Transmit panel. Leave it empty for the picture alone.")},
     {N_("Picture fit"), N_("When the source has another shape than the output (a 4:3 camera in a 16:9 picture). Stretch: fill the picture, shapes look wider or narrower. Letterbox: keep the whole source, with black bars. Crop: fill the picture and cut the edges.")},
     {N_("Sound"), N_("What the audio tracks carry. The test tone (1 kHz at -20 dBFS) is handy to check a receiver's sound. The sound of the video file is only there with a video file as input. Silence still makes a valid audio track.")},
     {N_("Microphone"), N_("The sound input to use. It is opened only when you press Start.")},
@@ -159,7 +157,7 @@ std::string saveCfg(const GenConfig& c) {
     char b[64];
     std::string o = saveSettings(c.enc);
     o += "g.src=" + std::to_string((int)c.source) + "\n" + "g.cam=" + c.cameraId + "\n" + "g.path=" + c.path + "\n";
-    o += "g.pat=" + std::to_string(c.pattern) + "\n" + "g.msg=" + c.message + "\n";
+    o += "g.pat=" + std::to_string(c.pattern) + "\n";
     o += "g.audio=" + std::to_string((int)c.audio) + "\n" + "g.mic=" + c.micId + "\n" + "g.out=" + std::to_string((int)c.output) + "\n";
     o += "g.ts=" + c.tsPath + "\n" + "g.host=" + c.host + "\n" + "g.port=" + std::to_string(c.port) + "\n" + "g.ttl=" + std::to_string(c.ttl) + "\n";
     snprintf(b, sizeof b, "%.3f", c.seconds);
@@ -181,7 +179,6 @@ void loadCfg(const std::string& text, GenConfig& c) {
         const int i = atoi(v.c_str());
         if (k == "src") c.source = (Source)std::clamp(i, 0, 3);
         else if (k == "pat") c.pattern = std::clamp(i, 0, 2);
-        else if (k == "msg") c.message = v;
         else if (k == "cam") c.cameraId = v;
         else if (k == "path") c.path = v;
         else if (k == "audio") c.audio = (AudioSource)std::clamp(i, 0, 3);
@@ -196,12 +193,14 @@ void loadCfg(const std::string& text, GenConfig& c) {
     }
 }
 
-// The interface's own TrueType font (Inter) for the overlay text: the biggest font the atlas was built from
+// The interface's own TrueType font (Inter, or the monospaced font of the classic look) for the overlay text: the biggest base font the
+// atlas was built from. The CJK fonts merged into them are left out: they are bigger, and a fallback such as Droid Sans Fallback has no
+// Latin letters, so every character came out as an empty box.
 std::shared_ptr<const std::vector<uint8_t>> atlasFont() {
     const ImFontAtlas* at = ImGui::GetIO().Fonts;
     const ImFontConfig* best = nullptr;
     for (const ImFontConfig& c : at->Sources)
-        if (c.FontData && c.FontDataSize > 1000 && (!best || c.FontDataSize > best->FontDataSize)) best = &c;
+        if (!c.MergeMode && c.FontData && c.FontDataSize > 1000 && (!best || c.FontDataSize > best->FontDataSize)) best = &c;
     if (!best) return nullptr;
     const uint8_t* d = (const uint8_t*)best->FontData;
     return std::make_shared<std::vector<uint8_t>>(d, d + best->FontDataSize);
@@ -297,24 +296,6 @@ void saveSoon(State& s) {
 
 // ---- the first tab: sources, output, encoding ----
 
-// the test generator: its picture and the message, with the TX studio's templates (the Transmit panel's callsign and grid)
-void generatorRows(GenConfig& c, float col, float w) {
-    rowLabel(N_("Pattern"), col);
-    combo("##vgpat", c.pattern, kPatternNames, 3, w);
-    rowLabel(N_("Message"), col);
-    inputText("##vgmsg", c.message, w);
-    ImGui::Dummy(ImVec2(0, 0));   // the template buttons under the field
-    ImGui::SameLine(col);
-    plat::Prefs& p = plat::basePrefs();
-    const char* const names[dect2::kTxTemplateCount] = {tr("CQ call"), tr("Beacon"), tr("Test pattern"), "RYRY"};
-    for (int i = 0; i < dect2::kTxTemplateCount; i++) {
-        if (i) ImGui::SameLine();
-        if (ImGui::SmallButton(names[i])) c.message = dect2::txTemplateText((dect2::TxTemplate)i, p.getS("tx.callsign", ""), p.getS("tx.grid", ""));
-    }
-    ImGui::SameLine();
-    if (ImGui::SmallButton(tr("Clear##vgmsg"))) c.message.clear();
-}
-
 void sourceSection(State& s, float col, float w) {
     GenConfig& c = s.cfg;
     ImGui::SeparatorText(tr("Source"));
@@ -341,7 +322,8 @@ void sourceSection(State& s, float col, float w) {
         ImGui::EndDisabled();
         if (s.probed && s.cams.empty()) ImGui::TextDisabled("%s", tr("No camera found. Connect one and press Refresh."));
     } else if (c.source == Source::Generator) {
-        generatorRows(c, col, w);
+        rowLabel(N_("Pattern"), col);
+        combo("##vgpat", c.pattern, kPatternNames, 3, w);
     } else {
         rowLabel(c.source == Source::Picture ? N_("Picture") : N_("Video file"), col);
         if (inputText("##vgpath", c.path, w - 90 * gUi) && c.source == Source::VideoFile) {

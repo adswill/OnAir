@@ -15,7 +15,7 @@
 namespace dect2::vgen {
 
 // Generator: a copy of the moving test picture of the transmitter's built-in test transport stream (demo_ts.cpp, the one the DVB-T2
-// T2Generator carries in its real PLP), drawn at the output resolution (drawTestCard), with a message across it
+// T2Generator carries in its real PLP), drawn at the output resolution (drawTestCard); text goes on it with the overlay
 enum class Source { Camera, Picture, VideoFile, Generator };
 enum class AudioSource { Silence, Tone, FromFile, Microphone };
 enum class Output { File, Udp, Rtp };
@@ -26,7 +26,6 @@ struct GenConfig {
     std::string cameraId;              // empty = the default camera
     std::string path;                  // Picture / VideoFile
     int pattern = 0;                   // Generator: 0 test card, 1 colour bars, 2 grey ramp
-    std::string message;               // Generator: the text across the picture (the TX studio's templates: tx_templates.h); empty = none
     AudioSource audio = AudioSource::Tone;
     std::string micId;                 // empty = the default input
     double toneHz = 1000;
