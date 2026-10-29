@@ -31,7 +31,10 @@ int main() {
     // at most 20 s
     const auto done = [&] { return rx.seq > 10 && rx.halow.nets.size() == 4 && rx.halow.blocksOk > 300 && rx.halow.ppsHist.size() >= 3; };
     const auto t0 = std::chrono::steady_clock::now();
-    for (double el = 0; el < 5.0 || (el < 20.0 && !done()); el = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count()) {
+    // a while with elapsed() instead of a for that updates the time in its step: Cppcheck called that for condition always false
+    // (knownConditionTrueFalse), a false positive, and Codacy then fails the PR
+    const auto elapsed = [&] { return std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count(); };
+    while (elapsed() < 5.0 || (elapsed() < 20.0 && !done())) {
         if (e.latestRx(rx, seq)) { seq = rx.seq; reports++; if (rx.standard != 71) wrong++; }
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
@@ -58,7 +61,8 @@ int main() {
         uint64_t seq2 = 0;
         const auto s0 = std::chrono::steady_clock::now();
         const auto all = [&] { return rx2.halow.nets.size() == 6 && rx2.halow.perWidth[3] > 0 && rx2.halow.perWidth[4] > 0; };
-        for (double el = 0; el < 6.0 || (el < 20.0 && !all()); el = std::chrono::duration<double>(std::chrono::steady_clock::now() - s0).count()) {   // as above
+        const auto elapsed2 = [&] { return std::chrono::duration<double>(std::chrono::steady_clock::now() - s0).count(); };
+        while (elapsed2() < 6.0 || (elapsed2() < 20.0 && !all())) {   // as above
             if (e2.latestRx(rx2, seq2)) seq2 = rx2.seq;
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
