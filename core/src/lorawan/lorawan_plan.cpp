@@ -108,6 +108,16 @@ void planSfRange(int plan, double bwKhz, bool downlink, int& lo, int& hi) {
     lo = 7; hi = usau ? (downlink ? 12 : 10) : 12;
 }
 
+bool planHasFsk(int plan) { return plan == EU868 || plan == EU433 || plan == AS923_1 || plan == AS923_2 || plan == AS923_3 || plan == AS923_4; }
+
+std::vector<double> planFskChannelsMhz(int plan) {
+    // TheThingsNetwork/lorawan-frequency-plans: EU_863_870.yml fsk-channel 868800000 (in the 868.7 - 869.2 MHz sub-band, 0.1 % duty cycle),
+    // AS_923_925.yml fsk-channel 924800000 (the plan whose channels are AS923-1's 923.2 - 924.6 MHz)
+    if (plan == EU868) return {868.8};
+    if (plan == AS923_1) return {924.8};
+    return {};
+}
+
 // ---------------------------------------------------------------- MAC layer
 
 const char* mtypeName(int t) {

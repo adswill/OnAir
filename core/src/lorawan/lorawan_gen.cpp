@@ -1,7 +1,9 @@
 // LoRaWAN test signal (see lorawan_gen.h).
 #include "dect2/lorawan/lorawan_gen.h"
+#include "dect2/common/mathconst.h"
 #include "dect2/common/stable_random.h"
 #include "dect2/dsp/gen_util.h"
+#include "dect2/lorawan/lorawan_fsk.h"
 #include "dect2/lorawan/lorawan_rx.h"
 #include <algorithm>
 #include <cmath>
@@ -80,6 +82,34 @@ double lorawanSceneSeconds(const std::vector<LorawanGenFrame>& v) {
     return end + 0.2;
 }
 
+std::vector<LorawanFskFrame> lorawanFskTestSchedule(int plan) {
+    using namespace lorawan;
+    std::vector<LorawanFskFrame> v;
+    const std::vector<double> ch = planFskChannelsMhz(plan);
+    if (ch.empty()) return v;
+    auto mk = [&](const std::vector<uint8_t>& pl, double start, double cfo, double bt, uint8_t pre) {
+        LorawanFskFrame f;
+        f.mhz = ch[0]; f.payload = pl; f.startSec = start; f.cfoHz = cfo; f.bt = bt; f.preamble = pre;
+        return f;
+    };
+    Build b;
+    // an uplink that starts while the SF11 uplink of the LoRa scene is still on the air (on another channel)
+    b.mtype = 2; b.devAddr = 0x26015A7E; b.adr = true; b.fcnt = 812; b.fport = 3; b.frm = noise(24, 11); b.mic = 0x6C1E2F33;
+    v.push_back(mk(build(b), 0.12, 3000, 1.0, 0x55));
+    // a join request from an SX1276 set up as LoRaMac-node does it: no Gaussian shaping, 0xAA preamble
+    v.push_back(mk(buildJoinRequest(0x70B3D57ED0000002ull, 0x0004A30B001C0530ull, 0x1D2C, 0x7E57F00D), 0.6, -4200, 0.0, 0xAA));
+    // the gateway's answer to the uplink in RX1 (one second later, same channel and data rate): ACK and a LinkADRReq
+    b = Build(); b.mtype = 3; b.devAddr = 0x26015A7E; b.fcnt = 77; b.ack = true; b.fopts = {0x03, 0x71, 0x07, 0x00, 0x01}; b.mic = 0x0DDBA110;
+    v.push_back(mk(build(b), 1.12, 0, 1.0, 0x55));
+    return v;
+}
+
+double lorawanFskSceneSeconds(const std::vector<LorawanFskFrame>& v) {
+    double end = 0;
+    for (const auto& f : v) end = std::max(end, f.startSec + lorawan::fsk::airSeconds(f.payload.size()));
+    return end > 0 ? end + 0.05 : 0;
+}
+
 struct LorawanGenerator::Impl {
     LorawanGenConfig c;
     double noiseRms = 0;
@@ -92,10 +122,34 @@ struct LorawanGenerator::Impl {
     std::vector<Active> active;
     double lastEnd = 0;
     std::vector<cf32> tmp;
+    struct ActiveFsk { int64_t at; std::vector<cf32> s; };   // FSK frames rendered whole, from sample `at`
+    std::vector<ActiveFsk> fsk;
+    double fskCycle = 0, fskPeriod = 0, fskEnd = 0;
 
     explicit Impl(const LorawanGenConfig& cfg) : c(cfg), noise(cfg.seed * 7919u + 3u), rng(cfg.seed * 977u + 5u) {
         nextStart = c.leadSec;
         if (c.snrDb < 99) noiseRms = c.amp / std::sqrt(std::pow(10.0, c.snrDb / 10) * 125e3 / c.rate);
+        fskPeriod = c.fskPeriodSec > 0 ? c.fskPeriodSec : std::max(c.frames.empty() ? 0.0 : lorawanSceneSeconds(c.frames), lorawanFskSceneSeconds(c.fsk)) + 0.3;
+    }
+
+    void scheduleFsk(double until) {
+        while (!c.fsk.empty() && fskCycle <= until) {
+            for (const LorawanFskFrame& g : c.fsk) {
+                const double t = fskCycle + g.startSec;
+                const double sampleAt = t * c.rate;
+                const int64_t at = (int64_t)std::floor(sampleAt);
+                const double off = (g.mhz - c.dialMhz) * 1e6 + c.dialOffsetHz + c.cfoHz + g.cfoHz;
+                const std::vector<uint8_t> bits = lorawan::fsk::frameBits(g.payload.data(), g.payload.size(), g.preamble);
+                const double ph = dect2::uniform_real_distribution<double>(0, 2 * math::kPi)(rng);
+                ActiveFsk a;
+                a.at = at;
+                a.s = lorawan::fsk::modulate(bits, c.rate, off, g.bt, c.sroPpm, (double)at - sampleAt, (float)(c.amp * std::pow(10.0, g.snrOffDb / 20)), ph);
+                fskEnd = std::max(fskEnd, t + (double)a.s.size() / c.rate);
+                fsk.push_back(std::move(a));
+            }
+            if (!c.loop) { fskCycle = 1e300; break; }
+            fskCycle += fskPeriod;
+        }
     }
 
     void schedule(double until) {
@@ -128,13 +182,19 @@ struct LorawanGenerator::Impl {
 
 LorawanGenerator::LorawanGenerator(const LorawanGenConfig& c) : p_(std::make_unique<Impl>(c)) {}
 LorawanGenerator::~LorawanGenerator() = default;
-double LorawanGenerator::endSec() const { return p_->lastEnd; }
+double LorawanGenerator::endSec() const { return std::max(p_->lastEnd, p_->fskEnd); }
 
 void LorawanGenerator::generate(cf32* out, size_t n) {
     Impl& m = *p_;
     const double t0 = (double)m.pos / m.c.rate, t1 = (double)(m.pos + (int64_t)n) / m.c.rate;
     m.schedule(t1 + 1);
+    m.scheduleFsk(t1 + 1);
     for (size_t i = 0; i < n; i++) out[i] = cf32(0, 0);
+    for (const auto& a : m.fsk) {
+        const int64_t s0 = std::max(a.at, m.pos), s1 = std::min(a.at + (int64_t)a.s.size(), m.pos + (int64_t)n);
+        for (int64_t j = s0; j < s1; j++) out[(size_t)(j - m.pos)] += a.s[(size_t)(j - a.at)];
+    }
+    m.fsk.erase(std::remove_if(m.fsk.begin(), m.fsk.end(), [&](const Impl::ActiveFsk& a) { return a.at + (int64_t)a.s.size() <= m.pos + (int64_t)n; }), m.fsk.end());
     for (const auto& a : m.active) {
         if (!a.inverted) { a.f.render(out, n, t0, m.c.rate); continue; }
         m.tmp.assign(n, cf32(0, 0));
@@ -159,6 +219,7 @@ public:
         c.cfoHz = s.cfoHz;
         c.sroPpm = s.sroPpm;
         c.frames = lorawanTestSchedule(plan);
+        c.fsk = lorawanFskTestSchedule(plan);
         gen_ = std::make_unique<LorawanGenerator>(c);
     }
     double sampleRate() const override { return rate_; }
