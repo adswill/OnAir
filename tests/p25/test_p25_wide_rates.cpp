@@ -15,7 +15,8 @@ static void scene(int a, double fs) {
     const ModeTuning* mt = modeTuning(a + 1);
     const double off = mt ? -mt->tuneOffsetHz : 0;
     // carriers at -0.36, +0.05 and +0.33 of the rate, each with a small error of its own (inside the search window)
-    const double pos[3] = {-0.36 * fs, 0.05 * fs, 0.33 * fs}, err[3] = {1800, -2300, 900}, lvl[3] = {1.f, 0.5f, 0.25f};
+    const double pos[3] = {-0.36 * fs, 0.05 * fs, 0.33 * fs}, err[3] = {1800, -2300, 900};
+    const float lvl[3] = {1.f, 0.5f, 0.25f};
     std::unique_ptr<ModeSynth> g[3];
     double hz[3];
     for (int k = 0; k < 3; k++) {
