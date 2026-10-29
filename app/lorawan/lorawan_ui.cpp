@@ -2,15 +2,19 @@
 // the channel list of the plan with its counters, the plan and options. LoRaWAN FSK frames (DR7, lorawan_fsk.h) are in the same table, marked "FSK DR7". Receive only and keyless: the payloads are encrypted with the devices' session keys
 // and are shown as bytes, no key is handled, nothing is decrypted, no MIC is checked, nothing is sent. "Level" is dB below full scale, not calibrated to dBm.
 #include "app.h"
+#include "dect2/automation/rules.h"
+#include "dect2/common/u8file.h"
 #include "dect2/lorawan/lorawan_plan.h"
 #include "dect2/lorawan/lorawan_rx.h"
 #include "dect2/lorawan/lorawan_tel.h"
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cmath>
 #include <cstdarg>
 #include <cstdio>
 #include <ctime>
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -23,6 +27,7 @@ struct State {
     char filter[64] = "";
     int type = 0;
     bool hex = false;
+    std::string msg;              // the result of the last export
 };
 State S;
 
@@ -57,6 +62,52 @@ std::string clock(int64_t t) {
     snprintf(b, sizeof b, "%02d:%02d:%02d", g.tm_hour, g.tm_min, g.tm_sec);
     return b;
 }
+// The UTC date and time of a frame for the CSV export (ISO 8601)
+std::string isoUtc(int64_t t) {
+    if (t <= 0) return "";
+    const time_t tt = (time_t)t;
+    struct tm g;
+#ifdef _WIN32
+    gmtime_s(&g, &tt);
+#else
+    gmtime_r(&tt, &g);
+#endif
+    std::array<char, 32> b{};
+    snprintf(b.data(), b.size(), "%04d-%02d-%02dT%02d:%02d:%02dZ", g.tm_year + 1900, g.tm_mon + 1, g.tm_mday, g.tm_hour, g.tm_min, g.tm_sec);
+    return b.data();
+}
+std::string fixed(double v, int decimals) { std::array<char, 48> b{}; snprintf(b.data(), b.size(), "%.*f", decimals, v); return b.data(); }
+std::string hex8(uint32_t v) { std::array<char, 16> b{}; snprintf(b.data(), b.size(), "%08X", v); return b.data(); }
+
+// The frames of the table (filter and type applied, newest first) as CSV; text fields quoted as needed (automation::csvField)
+std::string framesCsv(const dect2::LorawanTelemetry& t, const std::vector<size_t>& rows) {
+    using dect2::automation::csvField;
+    std::string o = "time_utc,channel_mhz,modulation,sf,bw_khz,gateway_downlink,type,devaddr,dev_eui,join_eui,fcnt,fport,level_dbfs,snr_db,"
+                    "freq_offset_hz,mic,crc,flags,mac_commands,summary,phy_payload_hex\n";
+    for (size_t i : rows) {
+        const dect2::LwFrame& r = t.log[i];
+        o += isoUtc(r.wallTime) + "," + fixed(r.freqHz / 1e6, 3) + "," + (r.fsk ? "fsk" : "lora") + ",";
+        o += (r.fsk ? std::string() : std::to_string(r.sf)) + "," + (r.fsk ? std::string() : fixed(r.bwHz / 1e3, 0)) + "," + (r.inverted ? "1" : "0") + ",";
+        o += csvField(r.type) + "," + (r.hasDevAddr ? hex8(r.devAddr) : std::string()) + ",";
+        o += (r.devEui ? dect2::lorawan::eui(r.devEui) : std::string()) + "," + (r.joinEui ? dect2::lorawan::eui(r.joinEui) : std::string()) + ",";
+        o += (r.hasDevAddr ? std::to_string(r.fcnt) : std::string()) + "," + (r.fport >= 0 ? std::to_string(r.fport) : std::string()) + ",";
+        o += fixed(r.levelDb, 1) + "," + fixed(r.snrDb, 1) + "," + fixed(r.cfoHz, 0) + ",";
+        o += (r.lorawan && r.mtype != 7 && r.mtype != 1 ? hex8(r.mic) : std::string()) + "," + (!r.hasCrc ? "none" : r.crcOk ? "ok" : "bad") + ",";
+        o += csvField(r.flags) + "," + csvField(r.mac) + "," + csvField(r.summary) + "," + r.hex + "\n";
+    }
+    return o;
+}
+
+// Asks where to save, writes the CSV and leaves the result in S.msg
+void exportFrames(const dect2::LorawanTelemetry& t, const std::vector<size_t>& rows) {
+    const std::string name = "lorawan_frames_" + isoUtc((int64_t)std::time(nullptr)).substr(0, 10) + ".csv";
+    const std::string p = saveFileDialog(name.c_str());
+    if (p.empty()) return;
+    std::ofstream f(dect2::u8file(p), std::ios::binary);
+    if (f) { f << framesCsv(t, rows); f.close(); }
+    S.msg = f ? std::to_string(rows.size()) + " frames saved to " + p : "could not write " + p;
+}
+
 std::string lower(std::string s) { for (char& c : s) c = (char)std::tolower((unsigned char)c); return s; }
 void kvRow(const App& a, const char* k, const char* fmt, ...) {
     ImGui::TextDisabled("%s", k); kvColumn(130 * gUi);
@@ -91,6 +142,10 @@ void framesView(App& a) {
     ImGui::Checkbox("hex", &S.hex);
     flowNext(10 * gUi);
     if (ImGui::Button("Clear")) a.engine.lorawan().clearResults();
+    flowNext(10 * gUi);
+    const bool doExport = ImGui::Button("Export");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Save the frames in the table (with the filter applied) as a CSV file");
+    if (!S.msg.empty()) { flowNext(10 * gUi); ImGui::TextDisabled("%s", S.msg.c_str()); }
     flowBreak();
     const std::string f = lower(S.filter);
     std::vector<size_t> rows;
@@ -107,6 +162,7 @@ void framesView(App& a) {
         }
         rows.push_back(i);
     }
+    if (doExport) exportFrames(t, rows);
     if (!ImGui::BeginTable("##lwlog", 12, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV,
                            ImVec2(0, ImGui::GetContentRegionAvail().y)))
         return;
