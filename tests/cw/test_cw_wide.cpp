@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdio>
 using namespace dect2;
+#include "../common/cpu_time.h"
 #include "../common/test_util.h"
 
 int main() {
@@ -36,9 +37,9 @@ int main() {
         double cpu = 0;
         for (double tm = 0; tm < 40; tm += 0.1) {
             g.generate(x.data(), x.size());
-            const std::clock_t t0 = std::clock();
+            const double t0 = processCpuSecs();
             r.feed(x.data(), x.size());
-            cpu += (double)(std::clock() - t0) / CLOCKS_PER_SEC;
+            cpu += (processCpuSecs() - t0);
             CwTelemetry tt;
             if (r.telemetry(tt, seq)) { seq = tt.seq; t = std::move(tt); }
         }

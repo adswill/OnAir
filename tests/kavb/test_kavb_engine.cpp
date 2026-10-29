@@ -23,6 +23,7 @@
 #include <vector>
 using namespace dect2;
 namespace fs = std::filesystem;
+#include "../common/cpu_time.h"
 #include "../common/test_util.h"
 
 struct Impair {
@@ -79,7 +80,7 @@ static Result receive(const std::vector<cf32>& sig0, double rate, const Impair& 
     std::vector<cf32> blk;
     double ph = 0;
     const double dph = 2 * 3.141592653589793 * im.cfoHz / rate;
-    const std::clock_t t0 = std::clock();
+    const double t0 = processCpuSecs();
     for (size_t pos = 0; pos < sig.size() + (size_t)(2 * rate); pos += 4096) {
         blk.assign(4096, cf32(0.f, 0.f));
         for (size_t i = 0; i < 4096; i++) {
@@ -95,7 +96,7 @@ static Result receive(const std::vector<cf32>& sig0, double rate, const Impair& 
         KavbTelemetry t;
         if (rx.telemetry(t, seq)) { seq = t.seq; r.t = t; }
     }
-    r.secWork = (double)(std::clock() - t0) / CLOCKS_PER_SEC;
+    r.secWork = (processCpuSecs() - t0);
     r.secSignal = (double)sig.size() / rate;
     rx.setOutputFile("");
     if (!outFile.empty()) r.saved = readFile(outFile);

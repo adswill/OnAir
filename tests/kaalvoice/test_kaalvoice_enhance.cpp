@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <memory>
+#include "../common/cpu_time.h"
 #include "../common/test_util.h"
 
 using namespace kvtest;
@@ -278,10 +279,10 @@ int main() {
             for (int on = 0; on < 2; on++) {
                 c.enhance = on;
                 Decoder d(c);
-                const std::clock_t t0 = std::clock();
+                const double t0 = processCpuSecs();
                 for (int rep = 0; rep < 3; rep++)
                     for (size_t i = 0; i < fr.size(); i++) d.decode(ty[i], fr[i].data(), fr[i].size(), o.data());
-                t[on] = (double)(std::clock() - t0) / CLOCKS_PER_SEC / (3.0 * fr.size() * 0.04);
+                t[on] = (processCpuSecs() - t0) / (3.0 * fr.size() * 0.04);
             }
             if (print) printf("  %s decoder CPU per second of speech: %.4f (enhancer off %.4f)\n", profileName(p), t[1], t[0]);
             CHECK(t[1] < 0.15, "%s: decoder with the enhancer below 0.15 of a core (%.4f)", profileName(p), t[1]);

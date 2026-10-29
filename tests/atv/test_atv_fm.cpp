@@ -4,6 +4,7 @@
 #include "dect2/atv/atv_testkit.h"
 #include "dect2/common/stable_random.h"
 #include "dect2/dsp/exact_resampler.h"
+#include "../common/cpu_time.h"
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -82,9 +83,9 @@ Result decode(const std::vector<cf32>& x, double rate) {
     const size_t chunk = 65536;
     for (size_t done = 0; done < x.size();) {
         const size_t n = std::min(chunk, x.size() - done);
-        const std::clock_t c0 = std::clock();
+        const double c0 = processCpuSecs();
         rx.feed(x.data() + done, n);
-        cpu += (double)(std::clock() - c0) / CLOCKS_PER_SEC;
+        cpu += (processCpuSecs() - c0);
         done += n;
         AtvTelemetry t;
         if (rx.telemetry(t, seq)) { seq = t.seq; r.tel = t; if (t.state == 2 && r.lockedAfterMs < 0) r.lockedAfterMs = (int)(1000.0 * (double)done / rate); }
