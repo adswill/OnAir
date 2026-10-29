@@ -27,6 +27,17 @@ PagerMessage newMessage() {
 
 // ---------------------------------------------------------------- POCSAG
 
+bool pocsagLooksAlphaGerman(const std::string& alpha) {
+    std::vector<uint8_t> bits;
+    for (char ch : alpha) {
+        int c = (unsigned char)ch & 0x7F;
+        if (c == '[' || c == '\\' || c == ']') c = 'A';                  // Ä Ö Ü
+        else if (c == '{' || c == '|' || c == '}' || c == '~') c = 'a';  // ä ö ü ß
+        for (int k = 0; k < 7; k++) bits.push_back((uint8_t)((c >> k) & 1));
+    }
+    return pocsagLooksAlpha(bits);
+}
+
 std::vector<uint8_t> pocsagBits(const std::vector<PocsagPage>& pages, int preambleBits) {
     std::vector<std::array<uint32_t, 16>> batches;
     std::array<uint32_t, 16> blank;
@@ -91,6 +102,7 @@ void PocsagParser::finish(std::vector<PagerMessage>& out) {
         m.numText = numericFromBits(bits_, false);
         m.alphaText = alphaFromBits(bits_);
         m.looksAlpha = pocsagLooksAlpha(bits_);
+        m.looksAlphaDe = m.looksAlpha || pocsagLooksAlphaGerman(m.alphaText);
         m.type = kPagerNumeric;
         pocsagApplyRead(m, readMode);
     }

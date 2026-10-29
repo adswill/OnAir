@@ -37,6 +37,9 @@ std::vector<uint8_t> pocsagBits(const std::vector<PocsagPage>& pages, int preamb
 // The message bits (first transmitted first) read as 7-bit characters look like real text: mostly letters, digits and spaces, few odd signs,
 // no run of control characters, at least 3 characters. Auto mode reads such a message as alphanumeric whatever its function code.
 bool pocsagLooksAlpha(const std::vector<uint8_t>& bits);
+// The same for the German character set: the places [ \ ] { | } ~ of the 7-bit text are umlauts and sharp s, so they count as letters
+// (a short page such as "Brand Gro~" is text, not noise). alpha: the text as alphaFromBits gives it.
+bool pocsagLooksAlphaGerman(const std::string& alpha);
 
 class PocsagParser {
 public:

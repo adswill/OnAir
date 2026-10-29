@@ -28,6 +28,8 @@ struct State {
     bool decodedOnly = false;            // hide tone-only and empty pages from the table, Copy and the list (saved as pagerDecodedOnly)
     bool baud512 = true, baud1200 = true, baud2400 = true;
     int pushedBaud = -1;
+    int charset = dect2::kPocsagCharAuto;    // PocsagCharset choice, saved as "pocsagCharset"
+    int pushedCharset = -1;
     int pushedNarrow = -1;
     bool loaded = false;
     int readMode = dect2::kPocsagReadAuto;   // PocsagReadMode, saved as "pocsagRead"
@@ -49,6 +51,8 @@ void loadRead() {
     plat::Prefs& d = plat::prefs();
     const long m = d.getI("pocsagRead", dect2::kPocsagReadAuto);
     S.readMode = m >= 0 && m < dect2::kPocsagReadModes ? (int)m : dect2::kPocsagReadAuto;
+    const long cs = d.getI("pocsagCharset", dect2::kPocsagCharAuto);
+    S.charset = cs >= 0 && cs < dect2::kPocsagCharsets ? (int)cs : dect2::kPocsagCharAuto;
     S.decodedOnly = d.getI("pagerDecodedOnly", 0) != 0;
     snprintf(S.watch, sizeof S.watch, "%s", d.getS("pagerWatch", "").c_str());
     S.watched = dect2::pagerParseWatch(S.watch);
@@ -76,17 +80,23 @@ void saveRead(const App& a) {
     std::string v;
     for (const auto& [ric, mode] : S.byAddress) v += std::to_string(ric) + (mode == dect2::kPocsagReadAlpha ? ":a " : ":n ");
     plat::prefs().setI("pocsagRead", S.readMode);
+    plat::prefs().setI("pocsagCharset", S.charset);
     plat::prefs().setS("pocsagReadAddr", v);
     savePrefs(a);
 }
+
+// The character set of POCSAG text in use: the choice, with Auto decided by the country of the setup location (German for DE, AT, CH).
+int charsetNow() { return dect2::pocsagCharsetResolve(S.charset, plat::prefs().getS("locCountry", "")); }
 
 // The page as the user wants it read: the "Message type" setting, or the address override. FLEX pages are left alone.
 dect2::PagerMessage resolved(const dect2::PagerMessage& m) {
     dect2::PagerMessage v = m;
     if (m.flex || m.numText.empty() && m.alphaText.empty()) return v;
     const auto it = S.byAddress.find(m.address);
-    if (it != S.byAddress.end()) dect2::pocsagApplyRead(v, it->second, true);
-    else dect2::pocsagApplyRead(v, S.readMode);
+    const int cs = charsetNow();
+    if (it != S.byAddress.end()) dect2::pocsagApplyRead(v, it->second, true, cs);
+    else dect2::pocsagApplyRead(v, S.readMode, false, cs);
+    v.alphaText = dect2::pocsagTextIn(m.alphaText, cs);
     return v;
 }
 
@@ -210,6 +220,21 @@ void messageView(App& a) {
             ImGui::EndCombo();
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("How POCSAG messages are read: as text (alphanumeric) or digits. Right-click an address to fix it for that address.");
+        flowNext(12 * gUi);
+        ImGui::TextDisabled("%s", tr("Characters")); ImGui::SameLine(0, 5 * gUi);
+        ImGui::SetNextItemWidth(170 * gUi);
+        if (ImGui::BeginCombo("##pgchars", dect2::pocsagCharsetName(S.charset))) {
+            static const char* const tips[] = {
+                "German (umlauts) when your location is Germany, Austria or Switzerland, the plain 7-bit set elsewhere.",
+                "The plain 7-bit set of the POCSAG standard: [ \\ ] { | } ~ are shown as they are.",
+                "German networks send the umlauts in the places of [ \\ ] { | } ~ (DIN 66003): Ä Ö Ü ä ö ü and ß."};
+            for (int i = 0; i < dect2::kPocsagCharsets; i++) {
+                if (ImGui::Selectable(dect2::pocsagCharsetName(i), S.charset == i)) { S.charset = i; saveRead(a); }
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tips[i]);
+            }
+            ImGui::EndCombo();
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "How the characters of POCSAG text are read. German networks send umlauts as [ \\ ] { | } ~ (ä ö ü, Ä Ö Ü, ß). Shown, copied, saved and filtered as the chosen set.");
         flowNext(12 * gUi);
     }
     const bool wide = wideActive(a);   // whole span: a Frequency column (the carrier each page came from)
@@ -394,6 +419,8 @@ void tick(App& a) {
     const int m = baudMask();
     if ((int)a.pagerNarrow != S.pushedNarrow) { a.engine.pager().setNarrowChannel(a.pagerNarrow); S.pushedNarrow = a.pagerNarrow; }
     if (m != S.pushedBaud) { a.engine.pager().setPocsagBauds(m); S.pushedBaud = m; }
+    const int cs = charsetNow();
+    if (cs != S.pushedCharset) { a.engine.pager().setPocsagCharset(cs); S.pushedCharset = cs; }
 }
 
 void tab(App& a) {

@@ -38,6 +38,7 @@ struct PagerMessage {
     // POCSAG pages with a message: both readings, so the UI can switch between them; empty for FLEX and tone pages
     std::string numText, alphaText;
     bool looksAlpha = false;     // the alphanumeric reading looks like real text (pager::pocsagLooksAlpha)
+    bool looksAlphaDe = false;   // the same when the umlaut places [ \ ] { | } ~ count as letters (German character set, pager::pocsagLooksAlphaGerman)
     int readHow = 0;             // PocsagReadHow: why type was picked
     // whole-span decoding (wide_modes.h): the carrier that sent it; carrierId 0 = the single receiver. carrierHz: relative to the radio's centre.
     int carrierId = 0;
@@ -55,8 +56,47 @@ inline const char* pocsagReadHowName(int h) {
     static const char* const n[] = {"function", "auto", "forced", "address"};
     return h >= 0 && h <= kPocsagHowAddress ? n[h] : "?";
 }
+// The character set of POCSAG text. The standard sets only the 7-bit code; German networks use the national variant DIN 66003 / ISO 646-DE and send
+// the umlauts in the places of [ \ ] { | } ~. Auto picks German for DE, AT and CH (the location country of the setup) and the plain set elsewhere.
+// The raw alphaText is never changed: the character set is applied when the text is read (pocsagApplyRead), so the choice can be changed later.
+enum PocsagCharset { kPocsagCharAuto, kPocsagCharPlain, kPocsagCharGerman, kPocsagCharsets };
+inline const char* pocsagCharsetName(int c) {
+    static const char* const n[] = {"Automatic (by country)", "Plain 7-bit (ASCII)", "German (DIN 66003)"};
+    return c >= 0 && c < kPocsagCharsets ? n[c] : "?";
+}
+// The set to use for a choice and the ISO 3166 country code of the location (either case, may be empty): never returns Auto.
+inline int pocsagCharsetResolve(int choice, const std::string& country) {
+    if (choice == kPocsagCharGerman || choice == kPocsagCharPlain) return choice;
+    if (country.size() == 2) {
+        const char a = (char)(country[0] & ~0x20), b = (char)(country[1] & ~0x20);
+        if ((a == 'D' && b == 'E') || (a == 'A' && b == 'T') || (a == 'C' && b == 'H')) return kPocsagCharGerman;
+    }
+    return kPocsagCharPlain;
+}
+// Text read as DIN 66003 -> UTF-8: [ Ä, \ Ö, ] Ü, { ä, | ö, } ü, ~ ß. Every other character is kept (@ stays @: networks keep it for e-mail
+// addresses, although DIN 66003 puts the section sign there).
+inline std::string pocsagGermanText(const std::string& s) {
+    std::string o;
+    o.reserve(s.size() + 8);
+    for (char c : s) {
+        switch (c) {
+            case '[': o += "\xC3\x84"; break;    // Ä
+            case '\\': o += "\xC3\x96"; break;   // Ö
+            case ']': o += "\xC3\x9C"; break;    // Ü
+            case '{': o += "\xC3\xA4"; break;    // ä
+            case '|': o += "\xC3\xB6"; break;    // ö
+            case '}': o += "\xC3\xBC"; break;    // ü
+            case '~': o += "\xC3\x9F"; break;    // ß
+            default: o += c;
+        }
+    }
+    return o;
+}
+inline std::string pocsagTextIn(const std::string& raw, int charset) { return charset == kPocsagCharGerman ? pocsagGermanText(raw) : raw; }
+
 // Picks the reading of a POCSAG message (type, text, readHow) for a mode; byAddress marks a per-address override. FLEX and tone pages are left alone.
-inline void pocsagApplyRead(PagerMessage& m, int mode, bool byAddress = false) {
+// charset: kPocsagCharPlain or kPocsagCharGerman (resolve Auto first with pocsagCharsetResolve); it changes only the alphanumeric text.
+inline void pocsagApplyRead(PagerMessage& m, int mode, bool byAddress = false, int charset = kPocsagCharPlain) {
     if (m.flex || (m.type != kPagerNumeric && m.type != kPagerAlpha)) return;
     bool alpha;
     if (mode == kPocsagReadAlpha || mode == kPocsagReadNumeric) { alpha = mode == kPocsagReadAlpha; m.readHow = byAddress ? kPocsagHowAddress : kPocsagHowForced; }
@@ -65,11 +105,11 @@ inline void pocsagApplyRead(PagerMessage& m, int mode, bool byAddress = false) {
         // text-like wins; otherwise numeric, except that a page sent as alphanumeric (function 1 to 3) stays so unless its numeric reading is plain digits
         bool plain = !m.numText.empty();
         for (char c : m.numText) plain = plain && ((c >= '0' && c <= '9') || c == ' ' || c == '-');
-        alpha = m.looksAlpha || (m.function != 0 && !plain);
+        alpha = m.looksAlpha || (charset == kPocsagCharGerman && m.looksAlphaDe) || (m.function != 0 && !plain);
         m.readHow = kPocsagHowAuto;
     }
     m.type = alpha ? kPagerAlpha : kPagerNumeric;
-    m.text = alpha ? m.alphaText : m.numText;
+    m.text = alpha ? pocsagTextIn(m.alphaText, charset) : m.numText;
 }
 
 // Code words of one speed: good as received, repaired by the BCH code, lost.

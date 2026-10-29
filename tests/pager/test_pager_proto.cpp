@@ -2,6 +2,7 @@
 #include "dect2/pager/pager_proto.h"
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <string>
 #include <vector>
 using namespace dect2;
@@ -267,7 +268,74 @@ static void pocsagRoundTripTests() {
     }
 }
 
+// German POCSAG character set (DIN 66003): the table, mixed text, numeric vs alphanumeric pages, a real-world style page, Auto by country.
+static void germanTests() {
+    // the whole table
+    const char* const from = "[\\]{|}~";
+    const char* const to[] = {"\xC3\x84", "\xC3\x96", "\xC3\x9C", "\xC3\xA4", "\xC3\xB6", "\xC3\xBC", "\xC3\x9F"};
+    for (int i = 0; i < 7; i++) CHECK(pocsagGermanText(std::string(1, from[i])) == to[i], "table entry %d", i);
+    CHECK(pocsagGermanText("abc @^_`#$%&*()-+=:;<>,.?/!\"' 0123 ABC") == "abc @^_`#$%&*()-+=:;<>,.?/!\"' 0123 ABC", "other characters unchanged");
+    CHECK(pocsagGermanText("") .empty(), "empty");
+    CHECK(pocsagTextIn("[{", kPocsagCharPlain) == "[{" && pocsagTextIn("[{", kPocsagCharAuto) == "[{", "plain keeps the raw text");
+    // every 7-bit character goes through the encoder and parser unharmed: raw alphaText holds all printable ASCII
+    std::string all;
+    for (int c = 0x20; c < 0x7F; c++) all += (char)c;
+    {
+        std::vector<PagerMessage> out = decodePocsag({{4000, 3, kPagerAlpha, all}}, kPocsagReadAlpha);
+        CHECK(out.size() == 1 && out[0].alphaText == all, "all printable ASCII round trip");
+        PagerMessage m = out[0];
+        pocsagApplyRead(m, kPocsagReadAlpha, false, kPocsagCharGerman);
+        std::string want;
+        for (char c : all) { const char* q = std::strchr(from, c); want += q ? std::string(to[q - from]) : std::string(1, c); }
+        CHECK(m.text == want && m.alphaText == all, "German reading of the full table, raw text kept");
+        pocsagApplyRead(m, kPocsagReadAlpha, false, kPocsagCharPlain);
+        CHECK(m.text == all, "back to plain");
+    }
+    // a real-world style page and mixed text (what a German network sends for the umlauts)
+    const std::string raw = "Feuerwehr Einsatz: Br{nde in der Gro~en Stra~e 12, K\\che / Gesch{ftsr{ume, Nachalarm f]r [rzte. Bitte pr]fen: info@leitstelle.de";
+    const std::string de = "Feuerwehr Einsatz: Br\xC3\xA4nde in der Gro\xC3\x9F" "en Stra\xC3\x9F" "e 12, K\xC3\x96" "che / Gesch\xC3\xA4" "ftsr\xC3\xA4ume, Nachalarm f\xC3\x9C" "r \xC3\x84rzte. Bitte pr\xC3\x9C" "fen: info@leitstelle.de";
+    {
+        std::vector<PagerMessage> out = decodePocsag({{1000, 3, kPagerAlpha, raw}}, kPocsagReadAuto);
+        CHECK(out.size() == 1 && out[0].alphaText == raw, "real-world page decodes raw");
+        PagerMessage m = out[0];
+        pocsagApplyRead(m, kPocsagReadAuto, false, kPocsagCharGerman);
+        CHECK(m.type == kPagerAlpha && m.text == de, "real-world page German: '%s'", m.text.c_str());
+    }
+    // a short page with an umlaut is text only in the German reading (function 0: would be numeric noise otherwise)
+    {
+        std::vector<PagerMessage> out = decodePocsag({{2000, 0, kPagerAlpha, "Brand Gro~"}}, kPocsagReadAuto);
+        CHECK(out.size() == 1 && out[0].looksAlphaDe, "short German page looks like text");
+        PagerMessage m = out[0];
+        pocsagApplyRead(m, kPocsagReadAuto, false, kPocsagCharGerman);
+        CHECK(m.type == kPagerAlpha && m.text == "Brand Gro\xC3\x9F", "short page German '%s'", m.text.c_str());
+    }
+    // a numeric page is never touched: its '[' and ']' are digit codes, not letters
+    {
+        std::vector<PagerMessage> out = decodePocsag({{3000, 0, kPagerNumeric, "12[34]-U 5"}}, kPocsagReadNumeric);
+        CHECK(out.size() == 1 && out[0].type == kPagerNumeric, "numeric page");
+        const std::string before = out[0].text;
+        PagerMessage m = out[0];
+        pocsagApplyRead(m, kPocsagReadNumeric, false, kPocsagCharGerman);
+        CHECK(m.text == before && m.text.find('[') != std::string::npos && m.text.find("\xC3") == std::string::npos, "numeric text unchanged '%s'", m.text.c_str());
+    }
+    // tone-only and FLEX pages are left alone
+    {
+        PagerMessage f; f.flex = true; f.type = kPagerAlpha; f.text = "a[b"; f.alphaText = "a[b";
+        pocsagApplyRead(f, kPocsagReadAuto, false, kPocsagCharGerman);
+        CHECK(f.text == "a[b", "FLEX text untouched");
+    }
+    // Auto by country
+    CHECK(pocsagCharsetResolve(kPocsagCharAuto, "DE") == kPocsagCharGerman && pocsagCharsetResolve(kPocsagCharAuto, "at") == kPocsagCharGerman
+          && pocsagCharsetResolve(kPocsagCharAuto, "CH") == kPocsagCharGerman, "auto: DE AT CH");
+    CHECK(pocsagCharsetResolve(kPocsagCharAuto, "GB") == kPocsagCharPlain && pocsagCharsetResolve(kPocsagCharAuto, "") == kPocsagCharPlain
+          && pocsagCharsetResolve(kPocsagCharAuto, "DEU") == kPocsagCharPlain, "auto: others plain");
+    CHECK(pocsagCharsetResolve(kPocsagCharGerman, "GB") == kPocsagCharGerman && pocsagCharsetResolve(kPocsagCharPlain, "DE") == kPocsagCharPlain, "explicit choice wins");
+    // damaged page: the text keeps going and is converted
+    printf("  German character set ok\n");
+}
+
 int main() {
+    germanTests();
     bchTests();
     pocsagTests();
     pocsagRoundTripTests();

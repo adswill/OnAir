@@ -171,7 +171,7 @@ static const char* const kRestoreSafe[] = {
     "meshRegion", "meshView", "meshZoom", "meteorAutoSave", "meteorEnh", "meteorMod", "meteorView", "monDemod", "monDev", "monDev2", "monLatency",
     "monOut2", "monVol", "monVol2", "monWav", "monYield", "mt63Bandwidth", "mt63Interleave", "mt63Listen", "navChime", "navNight", "navZoom",
     "ndbListen", "ndbTone", "orbcommMaxCh", "orbcommZoom", "pagerDecodedOnly", "passCubes", "passDopMeasure", "passMinEl", "passNotifyMin",
-    "passResv", "passResvFrom", "passResvTo", "passSched", "passTleAuto", "passTleOk", "passTleTry", "passUseDerived", "pocsagBaud", "pocsagRead",
+    "passResv", "passResvFrom", "passResvTo", "passSched", "passTleAuto", "passTleOk", "passTleTry", "passUseDerived", "pocsagBaud", "pocsagCharset", "pocsagRead",
     "pocsagReadAddr", "popH", "popW", "popX", "popY", "prIll", "prLock", "prMhz", "prNlms", "prSrc", "prTaps", "prTxLat", "prTxLon", "prTxSet",
     "prop_bw", "prop_d", "prop_eirp", "prop_env", "prop_f", "prop_gnd", "prop_h", "prop_lat", "prop_lon", "prop_mi", "prop_mo", "prop_nf",
     "prop_now", "prop_power", "prop_punit", "prop_res", "prop_rxg", "prop_rxh", "prop_sfi", "prop_snr", "prop_txg", "prop_txh", "prop_y",
