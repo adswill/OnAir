@@ -8,6 +8,7 @@
 //  7. UDP and RTP streaming to a local port: whole TS datagrams, RTP header with payload type 33
 // Run from the source root (the overlay font is third_party/fonts/Inter-Medium.ttf).
 #include "dect2/tv/videogen.h"
+#include "dect2/tx/tx_templates.h"
 #include <chrono>
 #include <cmath>
 #include <cstdarg>
@@ -451,6 +452,49 @@ static bool encodeFile(GenConfig c, std::string& err) {
     return err.empty() && g.stats().finished;
 }
 
+// The test generator: its copy of the transmitter's test picture at the output size, with a template message across it
+static void testGenerator(const fs::path& dir, const fs::path& pic) {
+    // the picture itself: bars from white to black, a ramp from black to white, the same at any size
+    for (int k = 0; k < 2; k++) {
+        const int W = k ? 1280 : 640, H = k ? 720 : 360;
+        std::vector<uint8_t> y((size_t)W * H), u((size_t)W * H / 4), v((size_t)W * H / 4);
+        drawTestCard(y.data(), W, u.data(), W / 2, v.data(), W / 2, W, H, 0, 25, 1);
+        CHECK(y[0] == 235 && y[(size_t)H / 2 * W + W - 1] == 16, "%dx%d colour bars: white to black (%d %d)", W, H, y[0], y[(size_t)H / 2 * W + W - 1]);
+        drawTestCard(y.data(), W, u.data(), W / 2, v.data(), W / 2, W, H, 0, 25, 2);
+        CHECK(y[0] == 16 && y[(size_t)W - 1] > 230 && u[0] == 128, "%dx%d grey ramp (%d %d)", W, H, y[0], y[(size_t)W - 1]);
+        drawTestCard(y.data(), W, u.data(), W / 2, v.data(), W / 2, W, H, 12, 25, 0);
+        int bar = 0;
+        for (int x = 0; x < W; x++) bar += y[(size_t)(H - H / 20) * W + x] == 235;
+        CHECK(bar > W * 0.4 && bar < W * 0.55, "%dx%d test card: the second bar is half way at frame 12 of 25 (%d)", W, H, bar);
+    }
+    CHECK(dect2::txTemplateText(dect2::TxTemplate::CqCall, "ON4ABC", "") == "CQ CQ CQ DE ON4ABC ON4ABC K", "CQ call template");
+    CHECK(dect2::txTemplateText(dect2::TxTemplate::Beacon, "", "") == "VVV DE N0CALL KO24", "beacon template");
+
+    GenConfig c = pictureConfig(pic);   // its encoder settings, without the picture and the overlay
+    c.source = Source::Generator;
+    c.path.clear();
+    c.overlay.blocks.clear();
+    c.pattern = 1;
+    c.output = Output::File;
+    c.seconds = 2;
+    c.tsPath = (dir / "generator_plain.ts").string();
+    std::string err;
+    CHECK(encodeFile(c, err), "test generator without a path: %s", err.c_str());
+    const TsInfo ti = parseTs(readAll(c.tsPath));
+    CHECK(ti.sync && ti.packets > 50 && ti.streams.size() == 2, "test generator: a TS with video and audio (%zu packets, %zu streams)", ti.packets, ti.streams.size());
+    const double plain = firstFrameLuma(c.tsPath);
+    CHECK(std::fabs(plain - 125.5) < 6, "colour bars: mean luma near 125.5 (%.1f)", plain);
+    c.message = dect2::txTemplateText(dect2::TxTemplate::Ryry, "", "");
+    c.tsPath = (dir / "generator_ryry.ts").string();
+    CHECK(encodeFile(c, err), "test generator with a message: %s", err.c_str());
+    const double withText = firstFrameLuma(c.tsPath);
+    CHECK(withText >= 0 && std::fabs(withText - plain) > 1, "the message changes the picture (%.1f against %.1f)", withText, plain);
+    c.pattern = 3;
+    VideoGenerator g;
+    CHECK(!g.start(c, err), "a pattern out of range is refused");
+    std::printf("test generator: luma %.1f, with RYRY %.1f\n", plain, withText);
+}
+
 // The settings of a crash on Windows: MPEG-2, CBR, 10 kbit/s, 640x360, 2 fps. FFmpeg aborted the program ("vbv_delay < 0xFFFF"):
 // a picture took longer than vbv_delay holds. Now the rate is raised to the minimum and, for a noise picture, the headers say VBR.
 static void testMpeg2LowRate(const fs::path& dir) {
@@ -725,6 +769,7 @@ int main() {
     testTsFile(dir, pic);
     testH264(dir, pic);
     testMpeg2LowRate(dir);
+    testGenerator(dir, pic);
     testVideoFile(dir, pic);
     testFailures(dir, pic);
     testStopAndOverlayChanges(dir, pic);

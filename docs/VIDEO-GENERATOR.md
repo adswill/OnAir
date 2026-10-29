@@ -20,7 +20,7 @@ Every setting in the window has a (?) with a short version of what is written he
 ## Quick start
 
 1. Open Tools > Digital video generator.
-2. On **Sources and encoding**, choose the input (Camera, Still picture or Video file) and the output (MPEG-TS file, UDP or RTP stream).
+2. On **Sources and encoding**, choose the input (Camera, Still picture, Video file or Test generator) and the output (MPEG-TS file, UDP or RTP stream).
 3. Leave the encoding settings at their defaults, or change them: the **Estimated bitrate** panel on the right follows every change.
 4. Optionally place an overlay on the **Overlay** tab, and check on **Digital Television Mode Selector** which DVB modes carry the stream.
 5. Press **Start encoding** (file) or **Start streaming** (UDP / RTP). Stop ends a stream; a file stops by itself at its length.
@@ -32,6 +32,7 @@ Every setting in the window has a (?) with a short version of what is written he
 | Camera | A webcam, or an HDMI / SDI capture card. The list is made when the window opens (Refresh after plugging one in); the camera itself is opened only when you press Start. A camera is always encoded in real time. |
 | Still picture | One picture (PNG, JPEG, BMP, ...) sent as a continuous stream at the chosen frame rate: a test card, a slide, a station logo. Length one minute unless you change it. |
 | Video file | Any file FFmpeg can read. The length follows the file when you choose it. When the length is longer than the file, the file starts again. Picture and sound are decoded in step, so writing a `.ts` file goes faster than real time. |
+| Test generator | A copy of the transmitter's own moving test picture: the one in the test transport stream that the TX studio's generators carry (for DVB-T2, the T2Generator's real PLP), drawn at the output resolution. **Pattern**: Test card (colour bars, a moving sweep, a chequerboard with a bouncing ball), Colour bars or Grey ramp; a white bar grows along the bottom once a second. **Message**: a line of text across the picture, under the overlay; the buttons fill in the TX studio's templates (**CQ call**, **Beacon**, **Test pattern**, **RYRY**) with the callsign and grid of the Transmit panel. Length one minute unless you change it; a `.ts` file is written faster than real time. Picture fit does not apply. |
 
 **Picture fit** decides what happens when the source has another shape than the output, such as a 4:3 camera in a 16:9 picture:
 **Stretch** fills the picture (shapes look wider), **Letterbox** keeps the whole source with black bars, **Crop** fills the picture and

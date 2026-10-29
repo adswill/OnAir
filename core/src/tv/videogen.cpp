@@ -2,7 +2,8 @@
 // video encoder, the sound -> one encoder per audio track, both into FFmpeg's MPEG-TS muxer (mux rate, service, PIDs), whose packets
 // go to a .ts file (as fast as the encoder runs) or to tsout's paced UDP / RTP sender (in real time).
 // The camera comes from VideoIn (listVideoInputs / start / copyYuv420), the microphone from AudioIn. Pictures and video files are
-// decoded here, frame by frame, so a file is encoded faster than real time with its picture and sound in step.
+// decoded here, frame by frame, so a file is encoded faster than real time with its picture and sound in step. The test generator
+// draws its test picture (drawTestCard) straight into the output frame, its message under the overlay.
 #include "dect2/tv/videogen.h"
 #include "dect2/audio/audioin.h"
 #include "dect2/audio/videoin.h"
@@ -19,6 +20,7 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <condition_variable>
@@ -39,6 +41,55 @@ std::string averr(int e) {
     av_strerror(e, b, sizeof b);
     return b;
 }
+
+// the test generator's colour bars, white, yellow, cyan, green, magenta, red, blue, black (BT.601, limited range)
+constexpr std::array<uint8_t, 8> kBarY = {235, 210, 170, 145, 106, 81, 41, 16};
+constexpr std::array<uint8_t, 8> kBarU = {128, 16, 166, 54, 202, 90, 240, 128};
+constexpr std::array<uint8_t, 8> kBarV = {128, 146, 16, 34, 222, 240, 110, 128};
+
+} // namespace
+
+// The test generator's picture: the one of the transmitter's test transport stream (demo_ts.cpp, made for 640 x 360 at 25 fps), drawn
+// here at any resolution. The bars and the ramp follow the width; the squares, the ball, the sweep and the second bar follow the height.
+void drawTestCard(uint8_t* py, int ys, uint8_t* pu, int us, uint8_t* pv, int vs, int W, int H, int n, double fps, int picture) {
+    const double t = (double)n / fps, sc = H / 360.0;
+    const int cell = std::max(2, (int)std::lround(40 * sc)), scroll = n * std::max(1, (int)std::lround(2 * sc));
+    const int mul = picture == 2 ? 1 : 3, off = picture == 2 ? 0 : n * std::max(1, (int)std::lround(6 * sc));   // the ramp stands still
+    const int ballX = (int)(W * (0.5 + 0.42 * std::sin(1.3 * t))), ballY = (int)(H * (0.62 + 0.17 * std::sin(2.9 * t)));
+    const int outer = (int)std::lround(46 * sc), inner = (int)std::lround(14 * sc);
+    for (int row = 0; row < H; row++) {
+        uint8_t* ly = py + (size_t)row * ys;
+        uint8_t* lu = nullptr;
+        uint8_t* lv = nullptr;
+        if (!(row & 1)) { lu = pu + (size_t)(row / 2) * us; lv = pv + (size_t)(row / 2) * vs; }
+        int band = 2;   // 0 bars, 1 ramp or sweep, 2 chequerboard with the ball
+        if (picture == 1 || (picture == 0 && row < H * 0.38)) band = 0;
+        else if (picture == 2 || row < H * 0.44) band = 1;
+        for (int col = 0; col < W; col++) {
+            uint8_t Y = 52, U = 128, V = 128;
+            if (band == 0) {
+                const size_t i = (size_t)(col * 8 / W);
+                Y = kBarY[i]; U = kBarU[i]; V = kBarV[i];
+            } else if (band == 1) {
+                Y = (uint8_t)(16 + ((col * mul + off) % W) * 219 / W);
+            } else {
+                const int ex = col - ballX, ey = row - ballY, d2 = ex * ex + ey * ey;
+                if (d2 < inner * inner) Y = 235;
+                else if (d2 < outer * outer) { Y = 210; U = 90; V = 170; }
+                else if (((col + scroll) / cell + row / cell) & 1) { Y = 70; U = 134; V = 122; }
+            }
+            ly[col] = Y;
+            if (lu && !(col & 1)) { lu[col / 2] = U; lv[col / 2] = V; }
+        }
+    }
+    // along the bottom, full once a second
+    const int perSec = std::max(1, (int)std::lround(fps)), margin = std::max(1, (int)std::lround(20 * sc));
+    const int len = (n % perSec) * (W - 2 * margin) / perSec;
+    for (int row = H - (int)std::lround(22 * sc); row < H - (int)std::lround(12 * sc); row++)
+        std::fill_n(py + (size_t)row * ys + margin, len, (uint8_t)235);
+}
+
+namespace {
 
 // A planar YUV 4:2:0 picture we own
 struct Yuv {
@@ -340,7 +391,7 @@ void VideoGenerator::Impl::run(GenConfig c) {
     std::string err;
     if (c.source == Source::Camera) {
         if (!cam.start(VideoIn::Camera, c.cameraId, err)) { fail(err.empty() ? "cannot open the camera" : err); return; }
-    } else {
+    } else if (c.source != Source::Generator) {
         if (!vfile.open(c.path, true, s.sampleRate, err)) { fail(err); return; }
         if (c.source == Source::Picture) {
             if (!vfile.next() || !vfile.toYuv(still)) { fail("cannot decode the picture " + c.path); return; }
@@ -504,6 +555,21 @@ void VideoGenerator::Impl::run(GenConfig c) {
         auto noError = [&] { std::lock_guard<std::mutex> lk(mu); return st.error.empty(); };
         OverlayRenderer ovr;
         ovr.setFont(c.font);
+        // the generator's message: one centred line in the chequerboard under the bars, smaller when it would not fit
+        std::vector<uint8_t> msg;
+        if (c.source == Source::Generator && !c.message.empty() && ovr.hasFont()) {
+            Layout ml;
+            Block b;
+            b.text = c.message;
+            b.fontPx = std::max(8.0f, H * 0.07f);
+            const float wide = ovr.blockRect(b, s, W, H).w;
+            if (wide > W * 0.94f) b.fontPx = std::max(8.0f, b.fontPx * W * 0.94f / wide);
+            const Rect r = ovr.blockRect(b, s, W, H);
+            b.x = std::max(0.0f, (W - r.w) / 2 / W);
+            b.y = 0.47f;
+            ml.blocks.push_back(b);
+            ovr.render(ml, s, 0, W, H, msg);
+        }
         Layout lay;
         uint64_t laySerial = ~0ull;
         std::vector<uint8_t> ovl;
@@ -536,6 +602,9 @@ void VideoGenerator::Impl::run(GenConfig c) {
                         fitter.run(sp, ss, src.w, src.h, out, c.fit);
                     }
                 }
+            } else if (c.source == Source::Generator) {
+                drawTestCard(out.y.data(), W, out.u.data(), W / 2, out.v.data(), W / 2, W, H, (int)(n % (1 << 30)), fps, c.pattern);
+                if (!msg.empty()) OverlayRenderer::blendYuv420(msg.data(), W, H, out.y.data(), W, out.u.data(), W / 2, out.v.data(), W / 2);
             } else if (c.source == Source::Picture) {
                 const uint8_t* sp[3] = {still.y.data(), still.u.data(), still.v.data()};
                 const int ss[3] = {still.w, still.w / 2, still.w / 2};
@@ -686,7 +755,8 @@ bool VideoGenerator::start(const GenConfig& c, std::string& err) {
     if (running()) { err = "already running"; return false; }
     if (p_->th.joinable()) p_->th.join();
     if (c.output == Output::File && c.tsPath.empty()) { err = "choose a .ts file to write"; return false; }
-    if (c.source != Source::Camera && c.path.empty()) { err = "choose a picture or video file"; return false; }
+    if ((c.source == Source::Picture || c.source == Source::VideoFile) && c.path.empty()) { err = "choose a picture or video file"; return false; }
+    if (c.source == Source::Generator && (c.pattern < 0 || c.pattern > 2)) { err = "the test pattern must be 0 to 2"; return false; }
     if (c.output != Output::File && (c.port <= 0 || c.port > 65535)) { err = "the port must be 1 to 65535"; return false; }
     if (c.enc.width < 16 || c.enc.height < 16) { err = "the picture is too small"; return false; }
     {
