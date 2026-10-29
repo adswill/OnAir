@@ -886,6 +886,7 @@ std::string saveFileDialog(const char* name);
 void wfExportRow(App& a, double now);   // gfx/wf_export.cpp: a row the waterfall took, for a running PNG export
 void wfExportPopup(App& a);             // gfx/wf_export.cpp: the Start / Stop block of the waterfall popup
 void loadPrefs(App& a);
+void pagerIgnoreStartup();                      // loads the pager Ignore lists into the receivers at start (app/pager/pager_ui.cpp)
 void loadFeedPrefs(App& a);         // feeds_ui.cpp: the data feed settings, and starts the ones that are on
 void saveFeedPrefs(const App& a);
 void gainOptButtons(App& a, bool running);   // gain_opt_ui.cpp: "Optimise gain" / "Cancel" and "Undo gain" on the gain row

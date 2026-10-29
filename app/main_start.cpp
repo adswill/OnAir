@@ -40,6 +40,7 @@ void startApp(App& app, int argc, char** argv) {
                   + (kept.empty() ? std::string("The old settings could not be kept.") : "The old settings are kept in " + kept + ".");
     }
     loadPrefs(app);
+    pagerIgnoreStartup();   // the pager Ignore lists apply from the first page, whichever screen is open
     if (failedStarts == 1) {
         app.newUi = !app.newUi;
         guardNote = std::string("OnAir did not finish starting last time, so it opens with the ") + (app.newUi ? "new" : "classic")

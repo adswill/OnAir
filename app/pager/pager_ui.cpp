@@ -107,7 +107,19 @@ void ignChanged(int f) {
     plat::prefs().setS(f ? "pagerIgnoreFlex" : "pagerIgnorePocsag", dect2::pagerIgnoreText(S.ign[f]));
     plat::prefs().flush();
 }
-void ignEdited(int f) { S.ign[f] = dect2::pagerParseIgnore(S.ignEdit[f]); ignChanged(f); }   // typed in the editor
+// typed in the editor: only the warnings are refreshed while typing (half-typed text such as "836000-8" must not become the list); the list is
+// applied and saved when the editor loses focus
+void ignTyping(int f) {
+    std::string warn;
+    dect2::pagerParseIgnore(S.ignEdit[f], &warn);
+    S.ignNote = warn.empty() ? std::string() : std::string(tr("Check")) + ": " + warn;
+}
+void ignEdited(int f) {
+    std::string warn;
+    S.ign[f] = dect2::pagerParseIgnore(S.ignEdit[f], &warn);
+    S.ignNote = warn.empty() ? std::string() : std::string(tr("Check")) + ": " + warn;
+    ignChanged(f);
+}
 void ignAdd(const dect2::PagerMessage& m) {
     const int f = m.flex ? 1 : 0;
     S.ign[f].add(m.address, m.address);
@@ -116,9 +128,11 @@ void ignAdd(const dect2::PagerMessage& m) {
 }
 void ignRemove(const dect2::PagerMessage& m) {
     const int f = m.flex ? 1 : 0;
-    S.ign[f].remove(m.address);
+    const bool gone = S.ign[f].remove(m.address);
     S.ignEdit[f] = dect2::pagerIgnoreText(S.ign[f]);
     ignChanged(f);
+    if (!gone) S.ignNote = std::to_string(m.address) + " " + tr("is covered by the wildcard") + " " + S.ign[f].coveringPattern(m.address) + " " + tr("which stays: edit it in the Ignore list (Capcodes view).");
+    else S.ignNote.clear();
 }
 uint64_t ignCovered(const dect2::PagerIgnore& w) {   // addresses the numbers and ranges cover (wildcards not counted)
     uint64_t n = 0;
@@ -339,7 +353,11 @@ void messageView(App& a) {
                         if (ImGui::MenuItem("Auto (the Message type setting)", nullptr, cur < 0)) { S.byAddress.erase(m.address); saveRead(a); }
                         ImGui::Separator();
                     }
-                    if (ig) { if (ImGui::MenuItem(tr("Stop ignoring this address"))) ignRemove(m); }
+                    if (ig) {
+                        const std::string cp = S.ign[m.flex ? 1 : 0].coveringPattern(m.address);
+                        if (!cp.empty()) { ImGui::BeginDisabled(); ImGui::MenuItem((std::string(tr("Covered by the wildcard")) + " " + cp + " (" + tr("edit it in the Capcodes view") + ")").c_str()); ImGui::EndDisabled(); }
+                        else if (ImGui::MenuItem(tr("Stop ignoring this address"))) ignRemove(m);
+                    }
                     else if (ImGui::MenuItem(tr("Ignore this address"))) ignAdd(m);
                     ImGui::EndPopup();
                 }
@@ -416,6 +434,7 @@ void ignoreEditor(App& a, size_t hiddenAdr) {
     char head[96];
     snprintf(head, sizeof head, "%s (%zu)###pgign", tr("Ignore list"), S.ign[0].entries() + S.ign[1].entries());
     if (!ImGui::CollapsingHeader(head)) {
+        if (!S.ignNote.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", S.ignNote.c_str()); ImGui::PopTextWrapPos(); }
         if (hiddenAdr) { ImGui::SameLine(); ImGui::TextDisabled(tr("ignored: %zu addresses hidden"), hiddenAdr); }
         return;
     }
@@ -431,7 +450,8 @@ void ignoreEditor(App& a, size_t hiddenAdr) {
     }
     ImGui::SameLine(0, 10 * gUi);
     ImGui::TextDisabled(tr("%zu entries, %llu addresses"), w.entries(), (unsigned long long)ignCovered(w));
-    if (ImGui::InputTextMultiline("##pgigt", S.ignEdit[f].data(), S.ignEdit[f].capacity() + 1, ImVec2(-1, 90 * gUi), ImGuiInputTextFlags_CallbackResize, resizeCb, &S.ignEdit[f])) ignEdited(f);
+    if (ImGui::InputTextMultiline("##pgigt", S.ignEdit[f].data(), S.ignEdit[f].capacity() + 1, ImVec2(-1, 90 * gUi), ImGuiInputTextFlags_CallbackResize, resizeCb, &S.ignEdit[f])) ignTyping(f);
+    if (ImGui::IsItemDeactivatedAfterEdit()) ignEdited(f);
     if (ImGui::Button(tr("Import..."))) {
         const std::string p = plat::openFileDialog();
         if (!p.empty()) {
@@ -532,7 +552,11 @@ void capcodeView(App& a) {
                 dect2::PagerMessage pm; pm.flex = r.flex; pm.address = r.address;
                 if (iv) ignAdd(pm); else ignRemove(pm);
             }
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Ignore this address: its pages are hidden everywhere (not deleted)."));
+            if (ImGui::IsItemHovered()) {
+                const std::string cp = iv ? S.ign[f].coveringPattern(r.address) : std::string();
+                if (!cp.empty()) ImGui::SetTooltip("%s %s", tr("Covered by the wildcard"), cp.c_str());
+                else ImGui::SetTooltip("%s", tr("Ignore this address: its pages are hidden everywhere (not deleted)."));
+            }
         }
         ImGui::TableNextColumn();
         char lab[32];
@@ -642,6 +666,10 @@ void summary(const App& a, std::string& l1, std::string& l2) {
 }
 
 } // namespace
+
+// Loads the Ignore lists from the settings into the receivers' store. Called once at start, so the lists apply (no notification, recording or
+// webhook for an ignored page) from the first page, whichever screen is open.
+void pagerIgnoreStartup() { loadRead(); }
 
 extern const ModeUi kPagerUi;
 const ModeUi kPagerUi = {
