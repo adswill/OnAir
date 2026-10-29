@@ -953,6 +953,7 @@ void txPanel(App& a);              // the guided transmit panel (tx_panel.cpp): 
 void txSelectMode(App& a, int family, const char* subId);
 bool txModeHighlighted(const ModeDef& m);
 void txTick(App& a);               // every frame: gives the radio back when a transmission ended; the on-screen TX indicator
+void iptvShutdown();               // iptv_ui.cpp: stops the stream (the program's end)
 void txShutdown();                 // stops a running transmission (the radio goes quiet before it returns); the program's end
 bool txActive();
 void savePrefs(const App& a);

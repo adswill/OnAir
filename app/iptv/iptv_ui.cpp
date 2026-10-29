@@ -544,6 +544,8 @@ void tab(App& a) {
 
 void list(App& a) {
     loadState();
+    takeResults(a);
+    if (S.dirty) rebuildShown();
     ImGui::SetNextItemWidth(-1);
     if (ImGui::InputTextWithHint("##iptvsearch", "search channels", S.searchBuf, sizeof S.searchBuf)) { S.search = S.searchBuf; S.dirty = true; }
     // groups
@@ -617,11 +619,22 @@ void summary(const App&, std::string& l1, std::string& l2) {
 
 void tick(App& a) {
     loadState();
+    {   // dev/test only: DECT2_IPTV_PLAY=<address> starts that stream once (hidden --shot runs)
+        static bool done = false;
+        if (!done) { done = true; if (const char* u = std::getenv("DECT2_IPTV_PLAY")) { if (S.channels.size()) play(a, S.channels[0].url, &S.channels[0], S.channels[0].name); else play(a, u, nullptr, ""); } }
+    }
     S.lastTick = glfwGetTime();
     a.engine.player().setVolume(a.volume);
 }
 
 } // namespace
+
+void iptvShutdown() {
+    S.stream.stop();
+    if (S.loader.joinable()) S.loader.join();
+    S.logoRun = false;
+    if (S.logoTh.joinable()) S.logoTh.join();
+}
 
 extern const ModeUi kIptvUi;
 const ModeUi kIptvUi = {
