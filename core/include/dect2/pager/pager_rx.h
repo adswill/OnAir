@@ -36,6 +36,8 @@ public:
     bool narrowChannel() const;
     int protocols() const;                               // the masks as set (the whole-span bank copies them to its receivers)
     int pocsagBauds() const;
+    void setPocsagCharset(int cs);                       // PocsagCharset, already resolved (kPocsagCharPlain default, kPocsagCharGerman): the text of new POCSAG pages; alphaText stays raw
+    int pocsagCharset() const;
     void setLogCallback(std::function<void(const std::string&)> cb);   // events for the log pane; may be called from the receiver thread
 
 private:

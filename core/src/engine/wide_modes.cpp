@@ -128,7 +128,7 @@ struct WideModes::Impl {
     WideBank<FusionReceiver, FusionTelemetry>* fusion = nullptr;
     bool pagerNarrow = false, packetNarrow = false;   // the single receivers' channel width, copied to every carrier receiver (setNarrowChannels)
     int packetFix = 0, packetEmph = 0;                // setPacketOptions: the packet receiver's fix bits and emphasis, for every carrier receiver
-    int pagerProtos = 3, pagerBauds = 7;   // the single receiver's settings, copied to every carrier's receiver (setPagerOptions)
+    int pagerProtos = 3, pagerBauds = 7, pagerCharset = 1;   // the single receiver's settings, copied to every carrier's receiver (setPagerOptions)
     bool muted = false;
     float volume = 1.f;
     int sel = 0;
@@ -249,7 +249,7 @@ struct WideModes::Impl {
         // so a carrier found late gets the half second before it was found, and a carrier stays for half a minute after its last burst.
         WideOps<PagerReceiver, PagerTelemetry> g;
         g.outRate = 192000; g.occupiedHz = 24000; g.preRollSec = kPreRoll;
-        g.setup = [this](PagerReceiver& r) { r.setWideInput(true); r.setProtocols(pagerProtos); r.setPocsagBauds(pagerBauds); r.setNarrowChannel(pagerNarrow); };
+        g.setup = [this](PagerReceiver& r) { r.setWideInput(true); r.setProtocols(pagerProtos); r.setPocsagBauds(pagerBauds); r.setPocsagCharset(pagerCharset); r.setNarrowChannel(pagerNarrow); };
         g.clear = [](PagerReceiver& r) { r.clearResults(); };
         g.clearLists = [](PagerTelemetry& t) {
             t.messages.reset(); t.messagesTotal = 0; t.blocksOk = t.blocksBad = 0; t.signal = t.sync = false;
@@ -461,10 +461,10 @@ void WideModes::setFollowOnly(bool on, const std::vector<double>& absHz) { p_->f
 std::string WideModes::startRecording(int m, int id, const std::string& dir) { BankBase* b = p_->bank(m); return b ? b->startRecording(id, dir) : std::string(); }
 void WideModes::stopRecording(int m, int id) { if (BankBase* b = p_->bank(m)) b->stopRecording(id); }
 
-void WideModes::setPagerOptions(int protocols, int bauds) {
-    if (protocols == p_->pagerProtos && bauds == p_->pagerBauds) return;
-    p_->pagerProtos = protocols; p_->pagerBauds = bauds;
-    p_->pager->forEach([&](PagerReceiver& r) { r.setProtocols(protocols); r.setPocsagBauds(bauds); });
+void WideModes::setPagerOptions(int protocols, int bauds, int charset) {
+    if (protocols == p_->pagerProtos && bauds == p_->pagerBauds && charset == p_->pagerCharset) return;
+    p_->pagerProtos = protocols; p_->pagerBauds = bauds; p_->pagerCharset = charset;
+    p_->pager->forEach([&](PagerReceiver& r) { r.setProtocols(protocols); r.setPocsagBauds(bauds); r.setPocsagCharset(charset); });
 }
 
 // The carriers stay 25 kHz apart in the bank (WideBank steps by stepHz); the width only narrows the filter inside each carrier's receiver

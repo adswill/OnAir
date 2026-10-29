@@ -17,6 +17,14 @@ OnAir decodes this in Pagers > POCSAG (512, 1200 and 2400 baud boxes). A transmi
 pager bands is therefore already received; if it does not decode, check the channel width (12.5 / 25 kHz), the frequency offset and the
 "Message type" setting (some networks send text with function 0).
 
+## German umlauts (character set)
+
+Alphanumeric POCSAG text is 7-bit. German networks use the national variant DIN 66003 (ISO 646-DE) and send the umlauts in the places of
+`[ \ ] { | } ~`: `[` = Ä, `\` = Ö, `]` = Ü, `{` = ä, `|` = ö, `}` = ü, `~` = ß. In Pagers > POCSAG the "Characters" box picks the set:
+Automatic (German when your setup location is Germany, Austria or Switzerland, plain elsewhere), Plain 7-bit, or German. The choice applies
+to what is shown, copied, saved, filtered and sent to automations; the raw characters are kept, so changing the box re-reads old pages.
+`@` is left as `@` (DIN 66003 puts the section sign there, but networks keep `@` for e-mail addresses). Numeric pages and FLEX are not changed.
+
 Other things called "CCIR" that are NOT paging code No. 1:
 
 - CCIR 5-tone sequential selective calling (the "CCIR" tone set of ZVEI / EEA / EIA / DZVEI). That is in the Tones mode.

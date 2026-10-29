@@ -59,7 +59,7 @@ public:
     // The radio's centre frequency: carriers still inside the span after a retune keep running; those that have gone keep their absolute
     // frequency in the logs (any thread)
     void setCenterHz(double hz);
-    void setPagerOptions(int protocols, int pocsagBauds);   // the single receiver's POCSAG / FLEX and baud selection, for the carrier receivers
+    void setPagerOptions(int protocols, int pocsagBauds, int charset = 1);   // the single receiver's POCSAG / FLEX and baud selection, for the carrier receivers
     void setNarrowChannels(bool pager, bool packet);        // 12.5 kHz channel filter in the pager / packet carrier receivers (25 kHz carrier spacing stays)
     void setPacketOptions(int fixBits, int emphasis);       // the packet receiver's "fix bits" and audio emphasis, for every carrier receiver
     void setTuning(const WideTuning& t);                    // every bank

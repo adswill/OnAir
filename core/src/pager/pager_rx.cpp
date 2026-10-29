@@ -131,6 +131,7 @@ struct PagerReceiver::Impl {
     bool wideInput = false;                // setWideInput(): a channelised carrier, not a radio capture
     std::atomic<int> protoMask{3};        // setProtocols(): 1 POCSAG, 2 FLEX
     std::atomic<bool> narrow{false};      // setNarrowChannel(): the channel filter of a 12.5 kHz channel, not 25 kHz
+    std::atomic<int> pocsagCharset{kPocsagCharPlain};   // setPocsagCharset(): the resolved character set of the text
     std::atomic<int> pocsagBaudMask{7};   // setPocsagBauds(): 1 512, 2 1200, 4 2400 bd
 
     // ---- receiver thread
@@ -288,6 +289,7 @@ struct PagerReceiver::Impl {
     // ---- results
     void emit(std::vector<PagerMessage>& v, int spd, bool flex) {
         for (PagerMessage& pm : v) {
+            if (!pm.flex && pocsagCharset.load() == kPocsagCharGerman) pocsagApplyRead(pm, parser.readMode, false, kPocsagCharGerman);   // the text the log and automations see
             uint64_t sn;
             {
                 std::lock_guard<std::mutex> lk(mu);
@@ -819,6 +821,8 @@ void PagerReceiver::setNarrowChannel(bool on) {
 }
 bool PagerReceiver::narrowChannel() const { return p_->narrow; }
 void PagerReceiver::setPocsagBauds(int mask) { p_->pocsagBaudMask = mask & 7; }
+int PagerReceiver::pocsagCharset() const { return p_->pocsagCharset; }
+void PagerReceiver::setPocsagCharset(int cs) { p_->pocsagCharset = cs == kPocsagCharGerman ? kPocsagCharGerman : kPocsagCharPlain; }
 void PagerReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }
 
 ModeTuning pagerTuning() {

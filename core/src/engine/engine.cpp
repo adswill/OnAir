@@ -403,7 +403,7 @@ void Engine::feedReceiver(int a, const cf32* x, size_t n) {
     }
     if (mtvActive_.load(std::memory_order_relaxed) && (mtvSat_.load(std::memory_order_relaxed) ? a == 7 : a <= 1)) { if (auto m = mtvGet()) { m->feed(x, n); return; } }   // multi-channel TV: one receiver per channel of the span
     if (wideOn_.load(std::memory_order_relaxed) && WideModes::supports(a)) {
-        if (a == 24) wide_.setPagerOptions(rxPager_.protocols(), rxPager_.pocsagBauds());   // the screens' POCSAG / FLEX / baud choice reaches every carrier
+        if (a == 24) wide_.setPagerOptions(rxPager_.protocols(), rxPager_.pocsagBauds(), rxPager_.pocsagCharset());   // the screens' POCSAG / FLEX / baud choice reaches every carrier
         if (a == 24 || a == 25) wide_.setNarrowChannels(rxPager_.narrowChannel(), rxPacket_.narrowChannel());   // the 12.5 / 25 kHz choice too
         if (a == 25) wide_.setPacketOptions(rxPacket_.fixBits(), rxPacket_.emphasis());                         // and fix bits / emphasis
         wide_.feed(a, x, n);
