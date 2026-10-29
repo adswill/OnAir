@@ -31,9 +31,12 @@ void startApp(App& app, int argc, char** argv) {
     // start the other interface is tried (the classic and the new one share little drawing code); after two in a row the saved
     // settings are set aside and OnAir starts with the defaults
     // a start with arguments (the dev and test runs: --shot, --hidden ...) is left out: it neither changes the settings nor counts
+    for (int i = 1; i < argc; i++) if (std::string(argv[i]) == "--reset-settings") requestSettingsReset(true);   // the same reset from the command line
+    const std::string resetNote = applySettingsReset();   // Backup > Reset all settings, or --reset-settings: before anything is loaded
+    if (!resetNote.empty()) fprintf(stderr, "%s\n", resetNote.c_str());
     const int failedStarts = argc > 1 ? 0 : dect2::crash::failedStarts();
     if (argc > 1) dect2::crash::startupDone();
-    std::string guardNote;
+    std::string guardNote = resetNote;
     if (failedStarts >= 2) {
         const std::string kept = plat::prefs().setAside();
         guardNote = "OnAir did not finish starting " + std::to_string(failedStarts) + " times in a row, so it starts with the default settings this time. "
@@ -141,6 +144,7 @@ void parseDevFlags(App& app, int argc, char** argv, DevOpts& o) {
         if (std::string(argv[i]) == "--packs") app.packsOpen = true;   // dev: open View > Data packs
         if (std::string(argv[i]) == "--map") app.mapOpen = true;   // dev: open View > Map
         if (std::string(argv[i]) == "--memory-selftest") o.memSelfTest = true;
+        if (std::string(argv[i]) == "--mode-selftest") o.modeSelfTest = true;   // dev: mode switches checked on a hidden run (app/state/mode_selftest.cpp)
         if (std::string(argv[i]) == "--memdev" && i + 1 < argc) memoryDev(atoi(argv[++i]));   // dev: 1 the Store current dialog, 2 the quick list as a window
         if (std::string(argv[i]) == "--memory") app.memoryOpen = true;   // dev: open View > Memory
         if (std::string(argv[i]) == "--memtab") app.memoryTab = true;    // dev: the Memory tab of the main screen

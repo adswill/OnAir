@@ -180,6 +180,7 @@ static void devAutomation(App& app, DevOpts& o) {
             }
         }
     }
+    if (o.modeSelfTest && ++o.modeFrame == 3) { fflush(stdout); std::exit(modeSelfTest(app)); }   // tests/app/run_mode_switch.cmake
     if (o.memSelfTest && ++o.memFrame == 3) { fflush(stdout); std::exit(memorySelfTest(app)); }   // the Memory recall check (tests/app/run_memory_recall.cmake)
     if (o.autostart) {
         o.autostart = false;

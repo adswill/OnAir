@@ -154,7 +154,7 @@ using SavedChannel = plat::Channel;
 enum WizTarget { TgNone = 0, TgSwitch, TgToolbar, TgMain, TgRight, TgConst, TgCount };
 
 constexpr int kNumFamilies = 209;   // App::family runs from 0 to kNumFamilies - 1
-constexpr int kNumSubModes = 32;   // dect2::subModes(): the protocols of HF digital, mesh, pagers, marine and VOR / ILS listed as modes of their own
+constexpr int kNumSubModes = 48;   // dect2::subModes(): the protocols of HF digital, mesh, pagers, marine and VOR / ILS listed as modes of their own
 constexpr int kNumSlots = kNumFamilies + kNumSubModes;   // what keeps its own frequency and gains: each family, and each protocol entry
 
 struct App {
@@ -753,6 +753,7 @@ struct ModeDef;
 bool freqdbPickMhz(const ModeDef& m, float width, double& mhz);   // freqdb_ui.cpp: the transmitter's band presets of one mode-list row; true when one is picked
 void freqdbKnownCombo(App& a, float width);         // freqdb_ui.cpp: the Tuner panel's "Known frequencies" drop-down for the mode on screen
 void memoryTabItem(App& a);                        // memory_ui.cpp: the "Memory" tab when View > Memory as a tab is on (inside the main tab bar)
+int modeSelfTest(App& a);                          // mode_selftest.cpp: --mode-selftest, the frequency after every mode switch (exit code = failures)
 int memorySelfTest(App& a);                        // memory_selftest.cpp: --memory-selftest, the recall checked on a hidden run (exit code = failures)
 void memoryDev(int what);                          // memory_ui.cpp: --memdev (screenshots)
 void memoryQuickBar(App& a);                       // memory_lists_ui.cpp: the starred memories of the switched-on lists as one row of buttons (every mode)
@@ -844,6 +845,7 @@ void setFamily(App& a, int f);                 // a family with protocol entries
 void setMode(App& a, int f, int sub);          // a mode-list entry: family and protocol entry (0 none, or the family's first)
 const dect2::SubMode* curSub(const App& a);    // the protocol entry selected, nullptr for a mode without them
 int subIndexOf(const char* id);                // 1 .. kNumSubModes, 0 when not one
+bool keepsFrequencyOnSwitch(int fromStd, int toStd, double mhz);   // the rule for keeping the frequency when the mode changes (app_state.cpp)
 int modeSlot(const App& a);                    // index of famFreq / famGain for the current entry
 int engineStd(const App& a);
 void refreshDevices(App& a);
@@ -886,6 +888,10 @@ std::string saveFileDialog(const char* name);
 void wfExportRow(App& a, double now);   // gfx/wf_export.cpp: a row the waterfall took, for a running PNG export
 void wfExportPopup(App& a);             // gfx/wf_export.cpp: the Start / Stop block of the waterfall popup
 void loadPrefs(App& a);
+std::string resetMarkerPath();      // prefs.cpp: the file that asks for a reset of all settings at the next start
+bool requestSettingsReset(bool on); // prefs.cpp: Backup > Reset all settings: on writes the marker, off removes it; false when the marker could not be written
+bool settingsResetRequested();
+std::string applySettingsReset();   // prefs.cpp, first thing at start (and --reset-settings): sets the saved settings aside when the marker is there; returns a note, empty when nothing was reset
 void loadFeedPrefs(App& a);         // feeds_ui.cpp: the data feed settings, and starts the ones that are on
 void saveFeedPrefs(const App& a);
 void gainOptButtons(App& a, bool running);   // gain_opt_ui.cpp: "Optimise gain" / "Cancel" and "Undo gain" on the gain row

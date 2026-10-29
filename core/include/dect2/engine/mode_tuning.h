@@ -24,6 +24,7 @@ struct ModeTuning {
     // What the engine skips of "Remove DC spike" and "IQ correction" (iq_correct.h) for this mode, because it would harm it (tests/engine/test_iq_modes.cpp):
     bool carrierAtCentre = false;   // the wanted signal can have a carrier on the radio's centre, which the DC removal would take with the spike
     bool notCircular = false;       // the wanted signal is not circular around the centre, which the blind IQ estimate would take for an imbalance
+    double bandMinMhz = 0, bandMaxMhz = 0;   // the usual band the mode declared, kept when modeTuning() opens minMhz / maxMhz to any frequency (0 = not known, plugin modes)
 };
 
 // Registry (modes.cpp): nullptr when the code or the id is not one of these modes

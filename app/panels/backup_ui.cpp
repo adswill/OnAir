@@ -44,6 +44,7 @@ struct State {
     std::map<std::string, bool> confirmTick; // settings that need an explicit tick before a restore applies them (key -> ticked)
     std::string dry;                         // dry-run report
     bool confirmReplace = false;
+    bool confirmReset = false;
     // automatic
     bool autoOn = false;
     int keep = 4;
@@ -475,6 +476,18 @@ void backupWindow(App& a) {
         helpText("A safety backup of the current state (without secrets) is saved in the backups folder first.");
         if (s.confirmReplace) ImGui::TextColored(ImVec4(0.95f, 0.78f, 0.25f, 1), "%s", tr("Click Restore now again to overwrite. A safety backup is made first."));
         if (!s.dry.empty()) ImGui::TextWrapped("%s", s.dry.c_str());
+    }
+    ImGui::SeparatorText(tr("Reset all settings"));
+    ImGui::TextWrapped("%s", tr("Starts OnAir again with the default settings: every mode on its own frequency, no saved layout or radio choice. Recordings, memories and other files in the data folder stay. The old settings are kept in a file."));
+    if (settingsResetRequested()) {
+        ImGui::TextColored(ImVec4(0.95f, 0.78f, 0.25f, 1), "%s", tr("The settings are reset the next time OnAir starts: close OnAir and open it again."));
+        if (ImGui::Button(tr("Cancel the reset"))) requestSettingsReset(false);
+    } else {
+        if (ImGui::Button(s.confirmReset ? tr("Click again to reset all settings") : tr("Reset all settings ..."))) {
+            if (!s.confirmReset) s.confirmReset = true;
+            else { s.confirmReset = false; if (!requestSettingsReset(true)) { s.msg = tr("The reset could not be written to the data folder."); s.msgBad = true; } }
+        }
+        helpText("Also available as the start option --reset-settings. docs/RESET.md lists where OnAir keeps its settings.");
     }
     if (!s.msg.empty()) {
         ImGui::Spacing();

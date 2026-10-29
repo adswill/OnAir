@@ -15,6 +15,7 @@ struct DevOpts {
     bool fmScanAuto = false;   // dev: start the FM band scan as soon as the receiver runs
     double fileVfoMhz = 0;     // dev: --vfo MHz, a recording: put the tune box there once the receiver runs (what a click or drag on the spectrum does)
     int shotFrame = 0;
+    bool modeSelfTest = false; int modeFrame = 0;   // dev: --mode-selftest
     bool memSelfTest = false; int memFrame = 0;   // dev: --memory-selftest: apply memories to this receiver, check, exit
 };
 

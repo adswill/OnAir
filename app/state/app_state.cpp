@@ -85,6 +85,17 @@ std::string slotKey(int slot) {   // the suffix of the per-mode settings: the fa
     return slot - kNumFamilies < n ? std::string(".") + t[slot - kNumFamilies].id : std::to_string(slot);
 }
 
+// The one rule for keeping the frequency over a mode switch: only between the modes that listen to the output of a satellite LNB (DVB-S/S2, MAC,
+// QO-100, the TV sat beacon decoder, ISDB-S), when the frequency is on the LNB's output (1000 to 2100 MHz) and in the new mode's usual band.
+// Every other switch tunes the new mode's own remembered or default frequency. (modeTuning() opens every mode's range to any frequency, so
+// the range of a mode says nothing here: the usual band is bandMinMhz / bandMaxMhz.)
+bool keepsFrequencyOnSwitch(int fromStd, int toStd, double mhz) {
+    const auto lnbMode = [](int s) { return s == 8 || s == 49 || s == 55 || s == 146 || s == 156; };
+    if (fromStd == toStd || !lnbMode(fromStd) || !lnbMode(toStd) || !(mhz >= 1000 && mhz <= 2100)) return false;
+    const ModeTuning* nt = modeTuning(toStd);
+    return nt && mhz >= nt->bandMinMhz && mhz <= nt->bandMaxMhz;
+}
+
 void setFamily(App& a, int f) { setMode(a, f, firstSubOf(f)); }
 
 void setMode(App& a, int f, int sub) {
@@ -103,15 +114,8 @@ void setMode(App& a, int f, int sub) {
         else if (a.family == 5 || f >= 6) { a.tune.lnaDb = 32; a.tune.vgaDb = 34; a.tune.ampOn = false; }   // the amp is off unless the user turns it on (it can be damaged by strong signals): its 14 dB are in the VGA
         else a.tune.ampOn = false;   // a mode without remembered gains (the TV modes) never inherits another mode's amp
     }
-    // #338: between two satellite modes the frequency stays when it is on the LNB's output
-    double carryMhz = 0;
-    if (a.family >= 6 && f >= 6 && a.family != f) {
-        const ModeTuning* ot = modeTuning(a.family + 2);
-        const ModeTuning* nt = modeTuning(f + 2);
-        // both cover the LNB's output (1000 to 2100 MHz, where DVB-S, ISDB-S, D2-MAC, the sat beacon decoder and QO-100 live) and the frequency is in it
-        const auto lnb = [](const ModeTuning* t) { return t->minMhz <= 1000 && t->maxMhz >= 2100; };
-        if (ot && nt && lnb(ot) && lnb(nt) && a.freqMhz >= 1000 && a.freqMhz <= 2100) carryMhz = a.freqMhz;
-    }
+    // #338: between two satellite modes the frequency stays when it is on the LNB's output (see keepsFrequencyOnSwitch)
+    const double carryMhz = a.family >= 6 && f >= 6 && a.family != f && keepsFrequencyOnSwitch(a.family + 2, f + 2, a.freqMhz) ? a.freqMhz : 0;
     a.sub = sub;
     setFamilyFlags(a, f);
     if (f >= 6) {

@@ -5,6 +5,7 @@
 #include "state_internal.h"
 #include <algorithm>
 #include <climits>
+#include <filesystem>
 #include <cstring>
 #include <chrono>
 
@@ -309,6 +310,23 @@ void loadModeAndGains(plat::Prefs& d, App& a) {
     }
     if (const int sl = modeSlot(a); sl >= 0 && sl < kNumSlots && a.famGain[sl].known) { a.tune.lnaDb = a.famGain[sl].lna; a.tune.vgaDb = a.famGain[sl].vga; a.tune.ampOn = a.famGain[sl].amp; }
     for (int f = 6; f < kNumSlots; f++) a.famFreq[f] = d.getD(("fFreq" + slotKey(f)).c_str(), 0.0);
+    if (d.getI("fFreqRule", 1) < 2) {   // 3.1 to 3.3 carried a frequency of 1000 - 2100 MHz into any mode (a bug): forget those, a mode outside its usual band comes back on its default
+        int n = 0;
+        const SubMode* t = subModes(n);
+        const auto polluted = [](int std, double mhz) {
+            const ModeTuning* mt = std >= 8 ? modeTuning(std) : nullptr;
+            return mt && mt->bandMaxMhz > 0 && mhz >= 1000 && mhz <= 2100 && !(mhz >= mt->bandMinMhz && mhz <= mt->bandMaxMhz);
+        };
+        for (int f = 6; f < kNumSlots; f++) {
+            const int std = f < kNumFamilies ? f + 2 : (f - kNumFamilies < n ? t[f - kNumFamilies].stdMode : 0);
+            if (polluted(std, a.famFreq[f])) a.famFreq[f] = 0;
+        }
+        const int sl = modeSlot(a);
+        if (a.family >= 6 && !curSub(a) && polluted(a.family + 2, a.freqMhz)) {
+            const ModeTuning* mt = modeTuning(a.family + 2);
+            a.freqMhz = a.famFreq[sl] > 0 ? a.famFreq[sl] : mt->defMhz;
+        }
+    }
     if (const SubMode* sm = curSub(a)) {   // the protocol entry's own frequency
         const ModeTuning* mt = modeTuning(sm->stdMode);
         const double fr = a.famFreq[modeSlot(a)];
@@ -328,6 +346,7 @@ void saveModeAndGains(plat::Prefs& d, const App& a) {
         d.setI(("gVga" + k).c_str(), cur ? a.tune.vgaDb : a.famGain[f].vga);
         d.setB(("gAmp" + k).c_str(), cur ? a.tune.ampOn : a.famGain[f].amp);
     }
+    d.setI("fFreqRule", 2);
     for (int f = 6; f < kNumSlots; f++) if (a.famFreq[f] > 0 || (f == curSlot && a.family >= 6)) d.setD(("fFreq" + slotKey(f)).c_str(), f == curSlot ? a.freqMhz : a.famFreq[f]);
 }
 
@@ -489,4 +508,27 @@ void savePrefs(const App& a) {
     tvHdSave(a);
     saveFeedPrefs(a);
     d.flush();
+}
+
+// ---- Reset all settings. The settings are not only in the data folder: on macOS they are in the user defaults (~/Library/Preferences/org.onair.dect2.plist,
+// or <program name>.plist for a program outside the bundle; cfprefsd keeps a cached copy, so deleting the file alone does not help), so a reset goes
+// through the platform's own store (Prefs::setAside). It is done at the next start, before anything is loaded, because the running program writes
+// its settings again at exit. docs/RESET.md lists every place.
+std::string resetMarkerPath() { return plat::dataDir() + "/reset-settings.flag"; }
+bool settingsResetRequested() { std::error_code ec; return std::filesystem::exists(std::filesystem::path(reinterpret_cast<const char8_t*>(resetMarkerPath().c_str())), ec); }
+bool requestSettingsReset(bool on) {
+    const std::filesystem::path p(reinterpret_cast<const char8_t*>(resetMarkerPath().c_str()));
+    std::error_code ec;
+    if (!on) { std::filesystem::remove(p, ec); return true; }
+    FILE* f = fopen(resetMarkerPath().c_str(), "wb");
+    if (!f) return false;
+    fputs("reset all settings at the next start\n", f);
+    fclose(f);
+    return true;
+}
+std::string applySettingsReset() {
+    if (!settingsResetRequested()) return "";
+    const std::string kept = plat::prefs().setAside();
+    requestSettingsReset(false);
+    return kept.empty() ? "All settings were reset (the old ones could not be kept)." : "All settings were reset. The old ones are kept in " + kept + ".";
 }
