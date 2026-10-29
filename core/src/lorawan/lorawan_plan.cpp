@@ -108,6 +108,18 @@ void planSfRange(int plan, double bwKhz, bool downlink, int& lo, int& hi) {
     lo = 7; hi = usau ? (downlink ? 12 : 10) : 12;
 }
 
+std::vector<LrfhssRate> planLrfhssRates(int plan) {
+    // {DR, CR (3 = 1/3, 1 = 2/3), bandwidth index (2 = 136.719 kHz, 4 = 335.938 kHz, 8 = 1523.438 kHz), grid (1 = 3.9 kHz, 0 = 25.4 kHz), headers}
+    if (plan == EU868) return {{8, 3, 2, 1, 3}, {9, 1, 2, 1, 2}, {10, 3, 4, 1, 3}, {11, 1, 4, 1, 2}};
+    if (plan == US915) return {{5, 3, 8, 0, 3}, {6, 1, 8, 0, 2}};
+    return {};
+}
+
+int lrfhssDataRate(int plan, int cr, int bw, int grid) {
+    for (const LrfhssRate& r : planLrfhssRates(plan)) if (r.cr == cr && r.bw == bw && r.grid == grid) return r.dr;
+    return -1;
+}
+
 // ---------------------------------------------------------------- MAC layer
 
 const char* mtypeName(int t) {

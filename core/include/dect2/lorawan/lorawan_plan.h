@@ -28,6 +28,15 @@ std::vector<PlanChannel> planChannels(int plan);
 std::vector<PlanChannel> selectChannels(int plan, int subBand, bool downlinks);
 // The spreading factors a plan's data rates use on a bandwidth (DR table of RP002): 125 kHz SF7 - SF12 (US / AU: SF7 - SF10 uplink, SF7 - SF12 on downlinks), 250 kHz SF7, 500 kHz SF8 (up) / SF7 - SF12 (down)
 void planSfRange(int plan, double bwKhz, bool downlink, int& sfMin, int& sfMax);
+// LR-FHSS data rates of a plan (RP002-1.0.3): EU868 DR8 - DR11 (OCW 136.719 / 335.938 kHz, 3.9 kHz grid), US915 DR5 - DR6 (OCW 1.523 MHz,
+// 25.4 kHz grid, on the 500 kHz uplink channels 64 - 71); none in the other plans. Codes as in lrfhss.h (cr: 3 = 1/3, 1 = 2/3; grid: 1 = 3.9 kHz).
+struct LrfhssRate {
+    int dr = 0;
+    int cr = 3, bw = 2, grid = 1;
+    int headers = 3;                       // header copies: 3 at CR 1/3, 2 at CR 2/3
+};
+std::vector<LrfhssRate> planLrfhssRates(int plan);
+int lrfhssDataRate(int plan, int cr, int bw, int grid);   // the DR number, -1 when the plan has no such LR-FHSS rate
 
 // ---- MAC layer ----
 struct MacCommand {
