@@ -75,36 +75,59 @@ struct PagerIgnore {
         return !has(a);
     }
 
+    // The first wildcard pattern that matches a (empty when none): such an address cannot be taken out one by one.
+    std::string coveringPattern(uint32_t a) const {
+        const std::string s = std::to_string(a);
+        for (const std::string& p : patterns) if (wildMatch(p, s)) return p;
+        return std::string();
+    }
+
     size_t entries() const { return ranges.size() + patterns.size(); }
 };
 
-// Parses the text form. Numbers above 4294967295 are clamped; a reversed range is turned round; "5-" is the number 5.
-inline PagerIgnore pagerParseIgnore(const std::string& s) {
+// Parses the text form. Numbers above 4294967295 are clamped; a reversed range is turned round; "5-" is the number 5. A token is a run of digits,
+// '*', '?' and '-'. A wildcard with a dash ("83?00-84000") is not defined and is rejected whole, as is any token with more than one dash.
+// When warn is given it gets one line per problem (clamped, turned round, rejected), at most five, so an editor can tell the user.
+inline PagerIgnore pagerParseIgnore(const std::string& s, std::string* warn = nullptr) {
     PagerIgnore w;
-    size_t i = 0;
-    auto num = [&](uint32_t& v) {
-        if (i >= s.size() || s[i] < '0' || s[i] > '9') return false;
-        uint64_t x = 0;
-        while (i < s.size() && s[i] >= '0' && s[i] <= '9') { x = x * 10 + (uint64_t)(s[i] - '0'); if (x > 0xFFFFFFFFull) x = 0xFFFFFFFFull; i++; }
-        v = (uint32_t)x;
-        return true;
+    int nwarn = 0;
+    auto note = [&](const std::string& m) {
+        if (!warn) return;
+        if (nwarn++ < 5) { if (!warn->empty()) *warn += "; "; *warn += m; }
+        else if (nwarn == 6) *warn += "; ...";
     };
+    // digits -> value; clamped is set when the number does not fit
+    auto toNum = [&](const std::string& d, uint32_t& v, bool& clamped) {
+        uint64_t x = 0;
+        for (char c : d) { x = x * 10 + (uint64_t)(c - '0'); if (x > 0xFFFFFFFFull) { x = 0xFFFFFFFFull; clamped = true; } }
+        v = (uint32_t)x;
+    };
+    size_t i = 0;
     while (i < s.size()) {
         if (s[i] == '#') { while (i < s.size() && s[i] != '\n') i++; continue; }
+        const auto tokChar = [](char c) { return std::isdigit((unsigned char)c) || c == '*' || c == '?' || c == '-'; };
+        if (!tokChar(s[i])) { i++; continue; }
         const size_t start = i;
-        // a wildcard token: digits with at least one * or ?
-        size_t j = i; bool wild = false;
-        while (j < s.size() && (std::isdigit((unsigned char)s[j]) || s[j] == '*' || s[j] == '?')) { if (s[j] == '*' || s[j] == '?') wild = true; j++; }
-        if (wild && (j >= s.size() || s[j] != '-')) {
-            w.patterns.push_back(s.substr(start, j - start));
-            i = j;
+        while (i < s.size() && tokChar(s[i])) i++;
+        const std::string tok = s.substr(start, i - start);
+        const bool wild = tok.find_first_of("*?") != std::string::npos;
+        const size_t dashes = (size_t)std::count(tok.begin(), tok.end(), '-');
+        if (wild) {
+            if (dashes) note("'" + tok + "': a wildcard cannot be part of a range, left out");
+            else w.patterns.push_back(tok);
             continue;
         }
+        if (dashes > 1 || tok[0] == '-') { note("'" + tok + "' is not a number or a range, left out"); continue; }
+        const size_t d = tok.find('-');
         uint32_t a = 0, b = 0;
-        if (!num(a)) { i++; continue; }
-        b = a;
-        if (i < s.size() && s[i] == '-') { i++; if (!num(b)) b = a; }
-        if (b < a) std::swap(a, b);
+        bool clamped = false;
+        if (d == std::string::npos) { toNum(tok, a, clamped); b = a; }
+        else {
+            toNum(tok.substr(0, d), a, clamped);
+            if (d + 1 < tok.size()) toNum(tok.substr(d + 1), b, clamped); else b = a;
+        }
+        if (clamped) note("'" + tok + "' is above 4294967295, clamped");
+        if (b < a) { note("'" + tok + "' is reversed, turned round"); std::swap(a, b); }
         w.ranges.emplace_back(a, b);
     }
     w.normalise();

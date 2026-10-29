@@ -70,6 +70,19 @@ int main() {
         // a huge list of single numbers that touch merges to one range
         std::string seq; for (uint32_t i = 1; i <= 50000; i++) seq += std::to_string(i) + " ";
         CHECK(pagerParseIgnore(seq).ranges.size() == 1, "consecutive numbers merge");
+        {   // a wildcard with a dash is rejected whole (no stray entries); other malformed tokens too
+            std::string warn;
+            PagerIgnore x = pagerParseIgnore("83?00-84000 5 9*-12 -7 1-2-3 4294967296 20-10", &warn);
+            CHECK(x.patterns.empty(), "wildcard range leaves no pattern");
+            CHECK(!x.has(0) && !x.has(83) && !x.has(0) && !x.has(84000) && !x.has(100) && !x.has(7) && !x.has(2) && !x.has(3), "no stray entries");
+            CHECK(x.has(5) && x.has(15) && x.has(0xFFFFFFFFu) && !x.has(21) && x.ranges.size() == 3, "valid tokens survive: %zu ranges", x.ranges.size());
+            CHECK(warn.find("83?00-84000") != std::string::npos && warn.find("clamped") != std::string::npos, "warnings name the problems: %s", warn.c_str());
+            std::string w2;
+            pagerParseIgnore("836000-836999 12 8360* 83?00", &w2);
+            CHECK(w2.empty(), "good input has no warning: %s", w2.c_str());
+            PagerIgnore c = pagerParseIgnore("83*");
+            CHECK(c.coveringPattern(830) == "83*" && c.coveringPattern(930).empty(), "covering pattern");
+        }
         // table filtering: per protocol, show-ignored brings every page back
         PagerIgnore lists[2] = {pagerParseIgnore("1000-1999"), pagerParseIgnore("1500")};
         std::vector<PagerMessage> v;
