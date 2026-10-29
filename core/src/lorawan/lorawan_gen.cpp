@@ -69,6 +69,33 @@ std::vector<LorawanGenFrame> lorawanTestSchedule(int plan) {
     return v;
 }
 
+std::vector<LrfhssGenFrame> lorawanLrfhssSchedule(int plan) {
+    using namespace lorawan;
+    std::vector<LrfhssGenFrame> v;
+    struct Item { int dr; double mhz, start; int seq, dev; uint32_t addr; uint16_t fcnt; int port; size_t len; std::vector<uint8_t> fopts; double cfo; };
+    std::vector<Item> items;
+    if (plan == EU868)
+        items = {{8, 868.1, 0.10, 17, 0, 0x260C0801u, 412, 2, 11, {}, 700},
+                 {10, 868.3, 0.35, 260, -2, 0x260C1002u, 9, 5, 6, {0x02}, -1200},
+                 {9, 868.5, 2.40, 300, 3, 0x260C0903u, 77, 3, 24, {}, 400},
+                 {11, 868.3, 2.70, 451, 1, 0x260C1104u, 1500, 10, 30, {0x06, 0x50, 0x09}, -300}};
+    else if (plan == US915)
+        items = {{5, 904.6, 0.10, 100, 7, 0x260C0505u, 21, 2, 8, {}, 900}, {6, 903.0, 0.30, 333, -11, 0x260C0606u, 3, 4, 20, {0x02}, -600}};
+    for (const Item& it : items) {
+        LrfhssGenFrame f;
+        for (const LrfhssRate& r : planLrfhssRates(plan))
+            if (r.dr == it.dr) { f.p.cr = r.cr; f.p.bw = r.bw; f.p.grid = r.grid; f.p.headers = r.headers; }
+        Build b;
+        b.mtype = 2; b.devAddr = it.addr; b.fcnt = it.fcnt; b.fport = it.port; b.adr = true; b.fopts = it.fopts;
+        b.frm = noise(it.len, it.addr); b.mic = 0x4C524600u + (uint32_t)it.dr;   // "LRF" and the data rate
+        f.payload = build(b);
+        f.mhz = it.mhz; f.hopSeqId = it.seq; f.deviceOffset = it.dev; f.startSec = it.start; f.cfoHz = it.cfo;
+        f.snrOffDb = -16;            // a 488 bit/s hop is far narrower than a 125 kHz LoRa channel: 16 dB below a LoRa frame is an Eb/N0 8 dB over its SNR
+        v.push_back(f);
+    }
+    return v;
+}
+
 double lorawanSceneSeconds(const std::vector<LorawanGenFrame>& v) {
     double t = 0.05, end = 0;
     for (const auto& f : v) {
@@ -92,8 +119,11 @@ struct LorawanGenerator::Impl {
     std::vector<Active> active;
     double lastEnd = 0;
     std::vector<cf32> tmp;
+    LrfhssRenderer lr;
+    bool lrRound = false;      // the LR-FHSS frames of this round of the scene are scheduled
 
-    explicit Impl(const LorawanGenConfig& cfg) : c(cfg), noise(cfg.seed * 7919u + 3u), rng(cfg.seed * 977u + 5u) {
+    explicit Impl(const LorawanGenConfig& cfg)
+        : c(cfg), noise(cfg.seed * 7919u + 3u), rng(cfg.seed * 977u + 5u), lr(cfg.rate, cfg.dialMhz, cfg.dialOffsetHz, cfg.sroPpm, cfg.seed) {
         nextStart = c.leadSec;
         if (c.snrDb < 99) noiseRms = c.amp / std::sqrt(std::pow(10.0, c.snrDb / 10) * 125e3 / c.rate);
     }
@@ -105,6 +135,15 @@ struct LorawanGenerator::Impl {
                 next = 0;
                 cycle = std::max(lastEnd + 0.3, nextStart);
                 nextStart = cycle;
+                lrRound = false;
+            }
+            if (!lrRound) {
+                lrRound = true;
+                for (const LrfhssGenFrame& g : c.lrfhss) {
+                    const double st = cycle + std::max(0.0, g.startSec);
+                    lr.add(g, st, c.amp * std::pow(10.0, g.snrOffDb / 20), c.cfoHz);
+                    lastEnd = std::max(lastEnd, st + lrfhssFrameSeconds(g));
+                }
             }
             const LorawanGenFrame& g = c.frames[next];
             const double base = (g.startSec >= 0 ? cycle + g.startSec : nextStart);
@@ -141,6 +180,7 @@ void LorawanGenerator::generate(cf32* out, size_t n) {
         a.f.render(m.tmp.data(), n, t0, m.c.rate);
         for (size_t i = 0; i < n; i++) out[i] += std::conj(m.tmp[i]);
     }
+    m.lr.render(out, n, t0);
     if (m.noiseRms > 0) m.noise.add(out, n, (float)(m.noiseRms / std::sqrt(2.0)));
     m.active.erase(std::remove_if(m.active.begin(), m.active.end(), [&](const Impl::Active& a) { return a.f.endSec() < t1; }), m.active.end());
     m.pos += (int64_t)n;
@@ -159,6 +199,7 @@ public:
         c.cfoHz = s.cfoHz;
         c.sroPpm = s.sroPpm;
         c.frames = lorawanTestSchedule(plan);
+        if (s.modeOpt[1] == 0) c.lrfhss = lorawanLrfhssSchedule(plan);
         gen_ = std::make_unique<LorawanGenerator>(c);
     }
     double sampleRate() const override { return rate_; }

@@ -19,6 +19,7 @@ struct LorawanSettings {
     bool privateSync = false;     // also sync word 0x12 (private networks that use it); the public LoRaWAN word is 0x34
     int maxChannels = 24;         // demodulator sets run at most (the ones nearest the radio's centre first): the CPU limit
     bool include250_500 = true;   // the 250 kHz (DR6) and 500 kHz channels of the plan
+    bool lrfhss = true;           // also LR-FHSS frames (EU868 DR8 - DR11, US915 DR5 - DR6) anywhere in the captured band (lrfhss_rx.h)
 };
 
 struct LwFrame {
@@ -53,6 +54,12 @@ struct LwFrame {
     std::string mac;              // MAC commands in FOpts, comma separated, with values
     std::string summary;
     std::string hex;              // the whole PHY payload
+    // LR-FHSS frames (lrfhss = true): sf and bwHz are 0; snrDb is the Eb/N0 estimated on a header hop
+    bool lrfhss = false;
+    int dr = -1;                  // the plan's data rate (EU868 DR8 - DR11, US915 DR5 - DR6), -1 when the plan has no such rate
+    int lrCr = -1;                // coding rate code of lrfhss.h (3 = 1/3, 1 = 2/3)
+    float ocwKhz = 0, gridKhz = 0;   // occupied channel width and hop grid
+    int hopSeq = -1, hops = 0, hopsHeard = 0;
 };
 
 struct LwDevice {
@@ -96,6 +103,8 @@ struct LorawanTelemetry {
     uint64_t perSf[13] = {};
     uint64_t perType[8] = {};     // by MType
     uint32_t channelsInBand = 0, channelsListed = 0, demodulators = 0;
+    bool lrfhssOn = false;        // the LR-FHSS receiver runs
+    uint64_t lrCandidates = 0, lrHeaders = 0, lrFrames = 0, lrCrcBad = 0;   // LR-FHSS: candidate hops, good headers, good frames, frames whose CRC failed
     std::string note;             // why channels are missing ("12 of 72 channels fit the captured band; sample rate 2 Msps")
     std::vector<LwChannelInfo> channels;
     std::vector<LwFrame> log;     // newest first, at most kLwLogMax

@@ -300,6 +300,22 @@ SPDX-FileCopyrightText = [
 ]
 SPDX-License-Identifier = "GPL-3.0-or-later"
 
+# Semtech sx126x_driver (Clear BSD): the LR-FHSS coding chain (whitening, CRC, convolutional code, puncturing, interleavers, header layout,
+# hopping sequence and grid) in core/src/lrfhss/lrfhss.cpp, also as adapted in RadioLib (MIT). The receiver, test signal and tests are
+# OnAir's own code; the Semtech line is added to the whole set.
+[[annotations]]
+path = [
+  "core/src/lrfhss/**",
+  "core/include/dect2/lrfhss/**",
+  "tests/lrfhss/**",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = [
+  "Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors",
+  "Copyright Semtech Corporation 2021 (sx126x_driver, https://github.com/Lora-net/sx126x_driver)",
+]
+SPDX-License-Identifier = "GPL-3.0-or-later AND BSD-3-Clause-Clear"
+
 # etisnoop FIG analyser (GPL-3.0-or-later)
 [[annotations]]
 path = [

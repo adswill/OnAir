@@ -200,10 +200,10 @@ struct Receiver::Impl {
         for (long i = 2; i + 2 < (long)N; i++) {
             const double f = ((double)i - (double)(N / 2)) * binHz;
             if (f < lo || f > hi) continue;
+            // the floor on each side; the higher one counts, so that the edge of a wide signal (a LoRa channel) is no peak
             const auto a = range(i - 40, i - 5), b = range(i + 5, i + 40);
-            const double cnt = a.second + b.second;
-            if (cnt < 8) continue;
-            const double mean = (a.first + b.first) / cnt;
+            if (a.second < 4 || b.second < 4) continue;
+            const double mean = std::max(a.first / a.second, b.first / b.second);
             if (mean <= 0) continue;
             r[(size_t)i] = (nat[(size_t)i - 1] + nat[(size_t)i] + nat[(size_t)i + 1]) / (3 * mean);
         }
@@ -337,7 +337,7 @@ struct Receiver::Impl {
         for (long m = m0; m <= m1; m++) pw += std::norm(e.y[(size_t)m]);
         pw /= (double)L;
         const double binHzF = kChanRate / (double)nf;
-        const int maxBin = (int)(450.0 / binHzF);
+        const int maxBin = (int)(800.0 / binHzF);   // the detector gives the carrier to about half a 488 Hz bin, the filter passes 1 kHz
         std::vector<float> mag(nf);
         for (int p = 1; p >= -1; p -= 2) {
             std::vector<cf32> buf(nf, cf32(0, 0));
@@ -378,6 +378,17 @@ struct Receiver::Impl {
         for (int i = 0; i < 40; i++) a[(size_t)(2 + i)] = air[(size_t)i] ? 1 : -1;
         for (int i = 0; i < kSyncBits; i++) a[(size_t)(42 + i)] = (kLorawanSync >> (31 - i)) & 1u ? 1 : -1;
         for (int i = 0; i < 40; i++) a[(size_t)(74 + i)] = air[(size_t)(40 + i)] ? 1 : -1;
+        // the timing again, now over all 112 known bits (the sync word alone can be a sample or two off at a low SNR)
+        {
+            long bestTau = tau;
+            float bestM = -1;
+            for (long o = -6; o <= 6; o++) {
+                cf32 c(0, 0);
+                for (int i = 2; i < kHeaderBits; i++) c += at(e.d, tau + o + 8L * (i - kSyncRef)) * (float)a[(size_t)i];
+                if (std::norm(c) > bestM) { bestM = std::norm(c); bestTau = tau + o; }
+            }
+            tau = bestTau;
+        }
         int pol = 1;
         double df = 0, amp = 0, noise = 1;
         if (!headerCarrier(e, tau, a, pol, df, amp, noise)) return;

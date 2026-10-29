@@ -4,6 +4,7 @@
 #include "dect2/automation/engine.h"
 #include "dect2/lorawan/lora_bank.h"
 #include "dect2/lorawan/lorawan_plan.h"
+#include "dect2/lrfhss/lrfhss_rx.h"
 #include "dect2/net/feeds.h"
 #include "dect2/results/results_io.h"
 #include <algorithm>
@@ -59,6 +60,9 @@ struct LorawanReceiver::Impl {
     // analysis thread
     lorabank::Bank bank;
     std::vector<lorabank::Decoded> got;
+    lrfhss::Receiver lr;                         // LR-FHSS over the whole capture (lrfhss_rx.h)
+    std::vector<lrfhss::RxFrame> lrGot;
+    bool lrOn = false;
     double rate = 0, offset = 0, center = 0;
     LorawanSettings cfg;
     LorawanTelemetry tel;
@@ -102,6 +106,9 @@ struct LorawanReceiver::Impl {
         tel.channels.clear(); tel.note.clear();
         planCh.clear(); chanFreq.clear(); planIndex.clear();
         std::vector<lorabank::Channel> bc;
+        lrOn = cfg.lrfhss && rate > 0;
+        tel.lrfhssOn = lrOn;
+        lr.configure(lrOn ? rate : 0);
         if (rate <= 0) { bank.configure(0, bc); return; }
         // where the dial is: the radio's centre plus the signal offset; unknown centre: the plan's own dial
         dialHz = center > 0 ? center + offset : lorawanPlanCentreMhz(cfg.plan) * 1e6;
@@ -161,7 +168,8 @@ struct LorawanReceiver::Impl {
         snprintf(b, sizeof b, "%u of %zu %s channels are decoded (%zu fit the %.2f Msps capture around %s MHz%s)", tel.channelsInBand, bc.size(), lorawan::planName(cfg.plan), nFit, rate / 1e6,
                  mhzText(dialHz / 1e6).c_str(), nFit > (size_t)cfg.maxChannels ? ", the rest is over the channel limit" : "");
         tel.note = b;
-        logf(std::string("LoRaWAN: ") + b);
+        if (lrOn) tel.note += "; LR-FHSS across the whole capture";
+        logf(std::string("LoRaWAN: ") + tel.note);
     }
 
     void onFrame(const lorabank::Decoded& d) {
@@ -174,10 +182,35 @@ struct LorawanReceiver::Impl {
         r.bwHz = d.bwHz; r.sf = d.sf; r.inverted = d.inverted;
         r.hasCrc = d.f.hdr.crc; r.crcOk = d.f.crcOk;
         r.snrDb = (float)d.f.snrDb; r.levelDb = (float)d.f.levelDb; r.cfoHz = d.f.cfoHz; r.len = (int)d.f.payload.size(); r.corrected = d.f.corrected;
-        r.hex = lorawan::hex(d.f.payload.data(), d.f.payload.size());
+        if (d.chan < tel.channels.size()) { tel.channels[d.chan].frames++; if (!good) tel.channels[d.chan].crcBad++; }
+        logFrame(std::move(r), d.f.payload, good, d.f.hdr.crc);
+    }
+
+    // an LR-FHSS frame (only those with a good CRC are listed; the others are counted)
+    void onLrFrame(const lrfhss::RxFrame& f) {
+        if (!f.crcOk) return;
+        LwFrame r;
+        r.wallTime = (int64_t)std::time(nullptr);
+        r.sec = f.sec;
+        r.chan = -1;
+        r.freqHz = f.centreHz + dialHz - offset;     // the OCW centre (the device offset taken as 0)
+        r.hasCrc = true; r.crcOk = true;
+        r.snrDb = f.ebN0Db; r.levelDb = f.levelDb; r.len = (int)f.payload.size(); r.corrected = f.bitErrors;
+        r.lrfhss = true;
+        r.lrCr = f.hdr.cr;
+        r.dr = lorawan::lrfhssDataRate(cfg.plan, f.hdr.cr, f.hdr.bw, f.hdr.grid);
+        r.ocwKhz = (float)(lrfhss::occupiedHz(f.hdr.bw) / 1e3);
+        r.gridKhz = (float)(lrfhss::gridHz(f.hdr.grid) / 1e3);
+        r.hopSeq = f.hdr.hopSeqId; r.hops = f.hops; r.hopsHeard = f.hopsHeard;
+        logFrame(std::move(r), f.payload, true, true);
+    }
+
+    // the MAC layer, the device table, the counters and the log, for both kinds of frame
+    void logFrame(LwFrame r, const std::vector<uint8_t>& payload, bool good, bool hasCrc) {
+        r.hex = lorawan::hex(payload.data(), payload.size());
         if (good) {
-            const lorawan::Frame m = lorawan::parse(d.f.payload.data(), d.f.payload.size());
-            if (!m.ok && !d.f.hdr.crc) return;      // a header-only frame (downlink) that is no LoRaWAN is most likely noise
+            const lorawan::Frame m = lorawan::parse(payload.data(), payload.size());
+            if (!m.ok && !hasCrc) return;      // a header-only frame (downlink) that is no LoRaWAN is most likely noise
             if (m.ok) {
                 r.lorawan = true; r.mtype = m.mtype; r.uplink = m.uplink;
                 r.type = lorawan::mtypeName(m.mtype);
@@ -193,7 +226,6 @@ struct LorawanReceiver::Impl {
                 if (m.mtype >= 0 && m.mtype < 8) tel.perType[m.mtype]++;
             } else { r.type = "not LoRaWAN"; r.summary = m.why; }
         } else r.type = "CRC error";
-        if (d.chan < tel.channels.size()) { tel.channels[d.chan].frames++; if (!good) tel.channels[d.chan].crcBad++; }
         if (good) {
             tel.blocksOk++; tel.dataValid = true; lastGood = sigSec();
             tel.cfoHz = r.cfoHz; tel.snrDb = r.snrDb;
@@ -202,8 +234,9 @@ struct LorawanReceiver::Impl {
             if (automation::wants(automation::FLora)) {
                 automation::Event ev("lora.packet");
                 ev.at(automation::wallNow(), "LoRaWAN", r.freqHz);
-                ev.str("kind", "lorawan").str("hex", r.hex).num("snr_db", r.snrDb).num("sf", r.sf);
-                if (r.hasDevAddr) { char b[16]; snprintf(b, sizeof b, "%08X", r.devAddr); ev.str("devaddr", b); }
+                ev.str("kind", r.lrfhss ? "lorawan-lrfhss" : "lorawan").str("hex", r.hex).num("snr_db", r.snrDb).num("sf", r.sf);
+                if (r.lrfhss) ev.num("dr", r.dr);
+                if (r.hasDevAddr) { std::string da(9, '\0'); snprintf(&da[0], da.size(), "%08X", r.devAddr); da.resize(8); ev.str("devaddr", da); }
                 automation::emit(std::move(ev));
             }
         } else tel.blocksBad++;
@@ -277,6 +310,7 @@ struct LorawanReceiver::Impl {
         const uint32_t cl = tel.channelsListed, ci = tel.channelsInBand, dm = tel.demodulators;
         tel = LorawanTelemetry(); tel.seq = seq; tel.inputRate = rate; tel.cfg = c; tel.channels = chans; tel.note = note;
         tel.channelsListed = cl; tel.channelsInBand = ci; tel.demodulators = dm; tel.centerHz = center; tel.centreKnown = center > 0;
+        tel.lrfhssOn = lrOn;
         for (auto& x : tel.channels) x.frames = x.crcBad = x.preambles = 0;
     }
 
@@ -326,6 +360,13 @@ void LorawanReceiver::feed(const cf32* x, size_t n) {
     if (m.rate >= lorawanTuning().minSampleRate - 1) {
         m.bank.feed(x, n, m.got);
         m.processBlockFrames();
+    }
+    if (m.lrOn) {
+        m.lr.feed(x, n, m.lrGot);
+        for (const auto& f : m.lrGot) m.onLrFrame(f);
+        m.lrGot.clear();
+        const lrfhss::RxStats& ls = m.lr.stats();
+        m.tel.lrCandidates = ls.candidates; m.tel.lrHeaders = ls.headers; m.tel.lrFrames = ls.frames; m.tel.lrCrcBad = ls.crcBad;
     }
     while ((double)m.nIn >= m.nextReport) {
         m.nextReport += 0.25 * m.rate;

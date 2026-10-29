@@ -4,9 +4,11 @@
 //
 // SynthConfig (makeLorawanSynth): snrDb = SNR of a 125 kHz frame in its bandwidth; cfoHz added to every frame; sroPpm = the transmitters' clock error.
 //   modeOpt[0]  the plan (lorawan::Plan: 0 EU868, 1 US915, 2 AU915, 3 AS923-1 ... 7 EU433)
+//   modeOpt[1]  0: with the plan's LR-FHSS frames (EU868, US915: lorawanLrfhssSchedule), 1: LoRa only
 #pragma once
 #include "dect2/engine/mode_synth.h"
 #include "dect2/lorawan/lorawan_plan.h"
+#include "dect2/lrfhss/lrfhss_gen.h"
 #include "dect2/mesh/mesh_lora.h"
 #include <cstdint>
 #include <memory>
@@ -37,6 +39,7 @@ struct LorawanGenConfig {
     bool loop = true;
     uint32_t seed = 1;
     std::vector<LorawanGenFrame> frames;
+    std::vector<LrfhssGenFrame> lrfhss;   // LR-FHSS frames (startSec from the start of each round of the scene; snrOffDb against amp)
 };
 
 class LorawanGenerator {
@@ -54,6 +57,8 @@ private:
 // downlinks with MAC commands). Frames follow each other, some overlap on different channels.
 std::vector<LorawanGenFrame> lorawanTestSchedule(int plan);
 double lorawanSceneSeconds(const std::vector<LorawanGenFrame>& v);
+// LR-FHSS frames for the scene of a plan: EU868 DR8 - DR11 (two of them overlapping in time), US915 DR5 - DR6; none for the other plans
+std::vector<LrfhssGenFrame> lorawanLrfhssSchedule(int plan);
 
 std::unique_ptr<ModeSynth> makeLorawanSynth(const SynthConfig& cfg, double sampleRate);
 

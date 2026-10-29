@@ -5,6 +5,7 @@
 #include "dect2/lorawan/lorawan_plan.h"
 #include "dect2/lorawan/lorawan_rx.h"
 #include "dect2/lorawan/lorawan_tel.h"
+#include "dect2/lrfhss/lrfhss.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -29,7 +30,7 @@ State S;
 void saveState() {
     auto& p = plat::prefs();
     p.setI("lwPlan", S.cfg.plan); p.setI("lwSub", S.cfg.subBand); p.setB("lwDown", S.cfg.downlinks); p.setB("lwDef", S.cfg.defaultsOnly);
-    p.setB("lwPriv", S.cfg.privateSync); p.setI("lwMax", S.cfg.maxChannels); p.setB("lwWide", S.cfg.include250_500);
+    p.setB("lwPriv", S.cfg.privateSync); p.setI("lwMax", S.cfg.maxChannels); p.setB("lwWide", S.cfg.include250_500); p.setB("lwLr", S.cfg.lrfhss);
     p.flush();
 }
 void loadState(App& a) {
@@ -38,6 +39,7 @@ void loadState(App& a) {
     auto& p = plat::prefs();
     S.cfg.plan = (int)p.getI("lwPlan", 0); S.cfg.subBand = (int)p.getI("lwSub", 0); S.cfg.downlinks = p.getB("lwDown", true); S.cfg.defaultsOnly = p.getB("lwDef", false);
     S.cfg.privateSync = p.getB("lwPriv", false); S.cfg.maxChannels = (int)p.getI("lwMax", 24); S.cfg.include250_500 = p.getB("lwWide", true);
+    S.cfg.lrfhss = p.getB("lwLr", true);
     a.engine.lorawan().setSettings(S.cfg);
 }
 void apply(App& a) { a.engine.lorawan().setSettings(S.cfg); saveState(); }
@@ -68,7 +70,8 @@ void privacyNote() {
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("Receive only and keyless: the headers every LoRaWAN gateway in range receives in the clear (message type, DevAddr, frame counter, port, MIC, MAC commands; "
                         "DevEUI and JoinEUI of join requests). The payloads are encrypted with the devices' own session keys and stay bytes: OnAir handles no keys, never decrypts, "
-                        "never checks a MIC and never transmits. These are other people's devices. Needs a radio with 2 Msps or more; a 4 Msps capture covers all eight EU868 channels.");
+                        "never checks a MIC and never transmits. These are other people's devices. Needs a radio with 2 Msps or more; a 4 Msps capture covers all eight EU868 channels. "
+                        "LR-FHSS frames (EU868 DR8 - DR11, US915 DR5 - DR6) are found anywhere in the capture; that receiver is checked on synthetic signals only.");
     ImGui::PopTextWrapPos();
 }
 
@@ -120,8 +123,18 @@ void framesView(App& a) {
             ImGui::TableNextColumn(); ImGui::TextUnformatted(clock(r.wallTime).c_str());
             ImGui::TableNextColumn(); ImGui::Text("%.3f%s", r.freqHz / 1e6, r.inverted ? " v" : "");
             if (r.inverted && ImGui::IsItemHovered()) ImGui::SetTooltip("Inverted IQ: sent by a gateway (downlink)");
-            ImGui::TableNextColumn(); ImGui::Text("%d", r.sf);
-            ImGui::TableNextColumn(); ImGui::Text("%.0f", r.bwHz / 1e3);
+            ImGui::TableNextColumn();
+            if (r.lrfhss) {
+                if (r.dr >= 0) ImGui::TextColored(pal::accent(), "LR-FHSS DR%d", r.dr); else ImGui::TextColored(pal::accent(), "%s", "LR-FHSS");
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("LR-FHSS, coding rate %s, hop sequence %d, %d of %d payload hops heard, %d coded bits corrected\nSNR column: Eb/N0 of a header hop",
+                                      dect2::lrfhss::crName(r.lrCr), r.hopSeq, r.hopsHeard, r.hops, r.corrected);
+            } else ImGui::Text("%d", r.sf);
+            ImGui::TableNextColumn();
+            if (r.lrfhss) {
+                ImGui::Text("%.0f / %.1f", r.ocwKhz, r.gridKhz);
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Occupied channel width / hop grid, kHz");
+            } else ImGui::Text("%.0f", r.bwHz / 1e3);
             ImGui::TableNextColumn(); ImGui::TextUnformatted(r.type.c_str());
             ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0);
             if (r.hasDevAddr) ImGui::Text("%08X", r.devAddr); else if (r.devEui) ImGui::TextUnformatted(dect2::lorawan::eui(r.devEui).c_str()); else ImGui::TextDisabled("-");
@@ -157,7 +170,7 @@ void devicesView(App& a) {
         ImGui::TableNextColumn(); ImGui::Text("%u", d.missed);
         ImGui::TableNextColumn(); if (d.fcnt >= 0) ImGui::Text("%ld", d.fcnt); else ImGui::TextDisabled("-");
         ImGui::TableNextColumn(); if (d.lastFport >= 0) ImGui::Text("%d", d.lastFport); else ImGui::TextDisabled("-");
-        ImGui::TableNextColumn(); ImGui::Text("%d", d.sf);
+        ImGui::TableNextColumn(); if (d.sf > 0) ImGui::Text("%d", d.sf); else ImGui::TextDisabled("%s", "LR");
         ImGui::TableNextColumn(); ImGui::TextUnformatted(d.lastType.c_str());
     }
     ImGui::EndTable();
@@ -219,6 +232,9 @@ void settings(App& a, bool& retune) {
     flowNext(10 * gUi);
     ch |= ImGui::Checkbox("250 / 500 kHz", &S.cfg.include250_500);
     flowNext(10 * gUi);
+    ch |= ImGui::Checkbox("LR-FHSS", &S.cfg.lrfhss);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Also LR-FHSS frames (EU868 DR8 - DR11, US915 DR5 - DR6): narrow GMSK hops anywhere in the capture. Synthetic tests only so far.");
+    flowNext(10 * gUi);
     ImGui::AlignTextToFramePadding();
     ImGui::TextDisabled("Max channels"); ImGui::SameLine(0, 5 * gUi);
     ImGui::SetNextItemWidth(std::min(80 * gUi, ImGui::GetContentRegionAvail().x));
@@ -259,7 +275,7 @@ void list(App& a) {
         const auto& d = t.devices[i];
         ImGui::TableNextRow();
         ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0); ImGui::TextUnformatted(d.id.c_str()); ImGui::PopFont();
-        ImGui::TableNextColumn(); ImGui::TextDisabled("%d", d.sf);
+        ImGui::TableNextColumn(); if (d.sf > 0) ImGui::TextDisabled("%d", d.sf); else ImGui::TextDisabled("%s", "LR");
         ImGui::TableNextColumn(); if (d.fcnt >= 0) ImGui::TextDisabled("%ld", d.fcnt);
     }
     ImGui::EndTable();
@@ -276,6 +292,10 @@ void receiver(App& a) {
     std::string by;
     for (int i = 0; i < 8; i++) if (t.perType[i]) { char b[48]; snprintf(b, sizeof b, "%s%s %llu", by.empty() ? "" : ", ", mt[i], (unsigned long long)t.perType[i]); by += b; }
     kvRow(a, "by type", "%s", by.empty() ? "-" : by.c_str());
+    if (t.lrfhssOn)
+        kvRow(a, "LR-FHSS", "%llu frames, %llu headers, %llu CRC errors, %llu candidate hops", (unsigned long long)t.lrFrames, (unsigned long long)t.lrHeaders,
+              (unsigned long long)t.lrCrcBad, (unsigned long long)t.lrCandidates);
+    else kvRow(a, "LR-FHSS", "%s", "off");
     kvRow(a, "centre", t.centreKnown ? "%.4f MHz" : "unknown (the plan's own is assumed)", t.centerHz / 1e6);
     kvRow(a, "input", "%.3f Msps, %.1f dBFS", t.inputRate / 1e6, t.levelDb);
     ImGui::Spacing();
@@ -309,6 +329,9 @@ void synth(App& a, bool& changed) {
         for (int p = 0; p < dect2::lorawan::kPlans; p++) if (ImGui::Selectable(dect2::lorawan::planName(p), o == p)) { o = p; changed = true; }
         ImGui::EndCombo();
     }
+    bool lr = a.tune.synth.modeOpt[1] == 0;
+    if (ImGui::Checkbox("LR-FHSS frames", &lr)) { a.tune.synth.modeOpt[1] = lr ? 0 : 1; changed = true; }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "EU868 DR8 - DR11 or US915 DR5 - DR6 LR-FHSS frames in the test signal");
 }
 
 } // namespace
