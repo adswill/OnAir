@@ -25,8 +25,9 @@ static void realCapture(const char* path) {
     FILE* f = fopen(path, "rb");
     if (!f) { printf("real capture: cannot open %s\n", path); return; }
     Manager m;
-    ManagerConfig c; c.rate = rate; c.centerHz = 1546.153e6; c.budget = 24;
+    ManagerConfig c; c.rate = rate; c.centerHz = getenv("DECT2_INMSAT_CENTER") ? atof(getenv("DECT2_INMSAT_CENTER")) * 1e6 : 1546.153e6; c.budget = 24;
     m.configure(c);
+    if (getenv("DECT2_INMSAT_LAT")) m.setLocation(true, atof(getenv("DECT2_INMSAT_LAT")), getenv("DECT2_INMSAT_LON") ? atof(getenv("DECT2_INMSAT_LON")) : 0);
     std::map<int, uint64_t> sinkFrames;
     m.setVoiceSink([&](int id, double, const std::vector<uint8_t>& fr, double) { if (fr.size() == 12) sinkFrames[id]++; });
     const size_t chunk = 1 << 18;
@@ -50,8 +51,10 @@ static void realCapture(const char* path) {
     }
     printf("  messages %llu, SUs %llu ok / %llu bad, state %d; satellite: valid %d, name '%s', confidence %.2f, summary: %s\n", (unsigned long long)s.messagesTotal,
            (unsigned long long)s.susOk, (unsigned long long)s.susBad, s.state, (int)s.sat.valid, s.sat.name.c_str(), s.sat.confidence, s.sat.summary.c_str());
-    for (const auto& cnd : s.sat.ranked)
-        printf("    candidate index %d: confidence %.2f, az %.0f el %.0f, visible %d, %zu pieces of evidence\n", cnd.index, cnd.confidence, cnd.azimuthDeg, cnd.elevationDeg, (int)cnd.visible, cnd.evidence.size());
+    for (const auto& cnd : s.sat.ranked) {
+        printf("    candidate %s: confidence %.2f, az %.0f el %.0f, visible %d\n", satTable()[(size_t)cnd.index].name, cnd.confidence, cnd.azimuthDeg, cnd.elevationDeg, (int)cnd.visible);
+        for (const auto& e : cnd.evidence) printf("        %s: %s%s (score %.2f)\n", e.kind.c_str(), e.available ? "" : "(no data) ", e.text.c_str(), e.score);
+    }
 }
 
 int main() {
