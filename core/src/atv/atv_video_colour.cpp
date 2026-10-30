@@ -222,7 +222,7 @@ void AtvVideo::Impl::secamLine(double tL, bool havePicture) {
     const AtvFormat& F = fmt;
     const double g = lineGain();
     if (!secamReady || g <= 0) return;
-    const long hr = std::lround((tL - vsyncT) * 2.0 / P);
+    const long hr = std::lround(2.0 * (double)curNo - vsyncH);
     long H = ((long)F.broadStart[vsyncField] + hr) % F.halfLines;
     if (H < 0) H += F.halfLines;
     const long L = (H >> 1) + 1;                                // the line number of the standard
