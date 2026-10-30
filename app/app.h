@@ -74,6 +74,7 @@
 using namespace dect2;
 
 #include "gfx/waterfall.h"
+#include "vfo/vfo_state.h"
 
 extern std::string gForceTab;
 extern bool gSpectrumInShell;   // the Unified layout draws the spectrum and waterfall itself: a mode's tab must not draw a second one
@@ -568,6 +569,8 @@ struct App {
     Scanner scanner;
     ScanConfig scanCfg;
     int scanPreset = 0;
+    std::vector<VfoRow> vfoRows;   // multi-VFO channels (vfo_ui.cpp; saved as vfoRows)
+    bool vfoPanel = false, vfoArm = false;   // the channel list is open; the next click on the spectrum or waterfall adds a channel
     std::string bandPlan;     // the active band plan (bandplan_ui.cpp): empty = automatic from the language and region, "none" = the built-in ranges
     bool scanWasRunning = false;
     bool scanShowAll = true;            // the TV scan list: the services of every scanned transponder (off: only the tuned one)
@@ -1170,6 +1173,14 @@ bool identifyRegionMhz(double& loMhz, double& hiMhz);      // the region of the 
 void identifyWindow(App& a);   // every frame: the window while it is open
 // general_ui.cpp: the general receiver's channel marker on the spectrum (plotId 0) and the waterfall (1): a click puts the channel
 // there (inside the band, without retuning the radio), its filter edges can be dragged
+// vfo_ui.cpp: multi-VFO (docs/MULTI-VFO.md): extra channels on the same capture. vfoPlotMouse: Add channel armed (or Alt held) and a click adds one, a band's
+// centre can be dragged; true when the mouse was used. vfoBands draws the bands; vfoSync pushes the rows to the engine every frame.
+bool vfoPlotMouse(App& a, int plotId);
+void vfoBands(const App& a, bool fill);
+void vfoSync(App& a);
+void vfoPanelWindow(App& a);
+void vfoPopupSection(App& a);
+void vfoAddAt(App& a, double mhz);
 void generalPlotMouse(App& a, int plotId);
 void generalChannelBand(const App& a, bool fill);
 bool generalDragging(int plotId);

@@ -215,6 +215,7 @@ void Engine::applyReset() {
     ring_.clear();
     holdDelivery(300);
     if (auto m = mtvGet()) m->reset();   // multi-channel TV: the channels are found again
+    vfo_.reset();                        // multi-VFO: the channels forget the signal
     rx_.reset();
     rxT_.reset();
     rxA_.reset();
@@ -396,11 +397,24 @@ void Engine::setPluginSink(PluginIqSink f) {
     std::atomic_store(&pluginSink_, f ? std::make_shared<const PluginIqSink>(std::move(f)) : std::shared_ptr<const PluginIqSink>());
 }
 
+void Engine::vfoFeed(const cf32* x, size_t n) {
+    vfo_.setSink([this](const float* st, size_t frames) {
+        if (!vfoSoundOn_.load()) return;
+        std::lock_guard<std::mutex> lk(vfoOutMu_);
+        if (!vfoOut_) { vfoOut_.reset(new AudioOut()); if (!vfoOut_->start(VfoBank::kAudioRate)) { vfoOut_.reset(); return; } }
+        vfoOut_->write(st, (int)frames);
+    });
+    vfo_.feed(x, n);
+}
+
+void Engine::vfoCloseSound() { std::lock_guard<std::mutex> lk(vfoOutMu_); vfoOut_.reset(); }
+
 void Engine::feedReceiver(int a, const cf32* x, size_t n) {
     if (a >= 1001) {   // a plugin mode (mode_tuning.h kPluginStdBase): the plugin host takes the samples
         if (auto sink = std::atomic_load(&pluginSink_)) (*sink)(reinterpret_cast<const float*>(x), n, rate_.load());
         return;
     }
+    if (vfoN_.load(std::memory_order_relaxed)) vfoFeed(x, n);   // multi-VFO: the extra channels on the same capture (the mode's own receiver still gets the samples below)
     if (mtvActive_.load(std::memory_order_relaxed) && (mtvSat_.load(std::memory_order_relaxed) ? a == 7 : a <= 1)) { if (auto m = mtvGet()) { m->feed(x, n); return; } }   // multi-channel TV: one receiver per channel of the span
     if (wideOn_.load(std::memory_order_relaxed) && WideModes::supports(a)) {
         if (a == 24) wide_.setPagerOptions(rxPager_.protocols(), rxPager_.pocsagBauds());   // the screens' POCSAG / FLEX / baud choice reaches every carrier

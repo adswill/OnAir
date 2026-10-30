@@ -139,6 +139,7 @@ double clickTuneMhz(const App& a, double mhz, bool snap) {
 
 static void clickToTune(App& a, int plotId) {
     if (autoLabelsHovered()) return;   // the mouse is on a name: it tunes (autolabel.cpp)
+    if (vfoPlotMouse(a, plotId)) return;   // multi-VFO: Add channel click, a channel's centre dragged
     if (fileBoxDrag(a, plotId)) return;
     if (a.family == 55) { generalPlotMouse(a, plotId); return; }   // the general receiver: its channel marker, without retuning the radio
     if (bandEdgeDrag(a, plotId)) return;
@@ -315,7 +316,7 @@ static void tunerDraw(const App& a, bool spectrum) {
     tstyle::draw(ImGui::GetWindowDrawList(), I);
 }
 
-static void channelBand(const App& a, bool fill) {
+static void channelBandMain(const App& a, bool fill) {
     if (a.family == 55) { generalChannelBand(a, fill); return; }
     if (a.tunerStyle > 0) { if (!fill) tunerDraw(a, false); return; }   // the spectrum draws it over the trace (below)
     const ChanWidth cw = channelWidth(a);
@@ -327,6 +328,8 @@ static void channelBand(const App& a, bool fill) {
     plt::Spec es; es.LineColor = pal::accent(fill ? 0.40f : 0.55f); es.LineWeight = 1.f;
     plt::PlotInfLines("bandedges", edges, 2, es);
 }
+
+static void channelBand(const App& a, bool fill) { channelBandMain(a, fill); vfoBands(a, fill); }   // + the multi-VFO channels' bands
 
 // "BW 7 MHz auto" in the top right corner of the spectrum: the width the band shows, and a click opens channelWidthPopup().
 // Left out when it would cover yLabel, which the plot draws in its top left corner.
@@ -984,6 +987,7 @@ static bool levelSlider(const char* id, float* v, float lo, float hi, const char
 }
 
 void wfDisplayPopup(App& a) {
+    vfoPopupSection(a);   // multi-VFO: Add channel, the channel list
     if (ImGui::Button(tr("Reset spectrum"))) resetSpectrum(a);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Restore the default spectrum and waterfall levels and the usual half-and-half split (does not change panel layout)"));
     ImGui::Separator();

@@ -64,3 +64,7 @@ clicks), and returns the input pointer itself while off.
 tail elimination, SNR and level squelch in the chain, CTCSS and DCS detection (and rejection of other tones/codes and noise), AGC level and
 noise-floor hold, auto notch depth and noise kept, clarifier and CW pitch moving a tone, stereo modes, settings round trip and clamping,
 device fallback, spectrum peak, meter and clip count, pass-through when off.
+
+## Several channels at once (multi-VFO)
+
+Extra channels on one capture, each with its own frequency, mode, squelch, volume and pan; the open ones are mixed to the sound output, pager and APRS channels decode in parallel. See docs/MULTI-VFO.md.

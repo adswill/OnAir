@@ -23,6 +23,8 @@
 #include "dect2/atv/atv_rx.h"
 #include "dect2/dmr/dmr_rx.h"
 #include "wide_modes.h"
+#include "vfo.h"
+#include "dect2/audio/audioout.h"
 #include "dect2/drm/drm_rx.h"
 #include "dect2/adsb/adsb_rx.h"
 #include "dect2/gnss/gnss_rx.h"
@@ -575,6 +577,17 @@ public:
     // IQ of one carrier of the running mode to an IQ WAV file in dir (the path, "" on failure)
     std::string startWideRecording(int carrierId, const std::string& dir) { return wide_.startRecording(activeStd_.load(), carrierId, dir); }
     void stopWideRecording(int carrierId) { wide_.stopRecording(activeStd_.load(), carrierId); }
+    // Multi-VFO (vfo.h): extra channels on the same capture, each with its own frequency, mode, squelch and mixer settings; their sound is mixed
+    // and played beside the mode's own. Offsets are from the capture centre (captureCentreHz()). With no channels nothing runs. Any thread.
+    void setVfoChannels(const std::vector<VfoConfig>& c) { vfo_.setChannels(c); vfoN_.store((int)c.size()); if (c.empty()) vfoCloseSound(); }
+    size_t vfoChannelCount() const { return (size_t)vfoN_.load(); }
+    std::vector<VfoStatus> vfoStatus() const { return vfo_.status(); }
+    bool vfoPager(int id, PagerTelemetry& t) const { return vfo_.pagerTelemetry(id, t); }
+    bool vfoPacket(int id, PacketTelemetry& t) const { return vfo_.packetTelemetry(id, t); }
+    double vfoLoad() const { return vfo_.load(); }                       // above 1 the channels fall behind: warn, never refuse
+    std::string vfoWarning(int id) const { return vfo_.warning(id); }
+    void vfoClearResults() { vfo_.clearResults(); }
+    void setVfoSound(bool on) { vfoSoundOn_.store(on); }                // false: decode and measure, never open the sound device (tests, --mute)
     void clearAllResults();                              // the lists of every mode at once (the top bar's Clear all)
     // the files of the DSM-CC carousels of the stream received, saved to dir/pid_XXXX/path (clear broadcast data); returns the number of files written
     size_t saveCarouselFiles(const std::string& dir) { std::lock_guard<std::mutex> lk(tsMu_); return demux_.saveCarouselFiles(dir); }
@@ -723,6 +736,13 @@ private:
     AtvReceiver rxAtv_;
     DmrReceiver rxDmr_;
     WideModes wide_;
+    VfoBank vfo_;
+    std::atomic<int> vfoN_{0};
+    std::atomic<bool> vfoSoundOn_{true};
+    std::unique_ptr<AudioOut> vfoOut_;
+    std::mutex vfoOutMu_;
+    void vfoFeed(const cf32* x, size_t n);
+    void vfoCloseSound();
     std::atomic<bool> wideOn_{false};
     uint64_t wideSeq_[256] = {};
     DrmReceiver rxDrm_;

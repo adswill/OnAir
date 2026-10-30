@@ -179,6 +179,7 @@ void Engine::configureTvReceivers(const DeviceInfo& dev, const TuneSettings& tun
     rxGnss_.setLogCallback([this](const std::string& s) { log(s); });
     rxGnss_.setClockCompare(dev.isRadio());   // the satellites' UTC against the computer's clock: a radio only (a file or the simulator keeps its own date)
     wide_.setLogCallback([this](const std::string& s) { log(s); });
+    vfo_.configure(rate_);   // multi-VFO: the extra channels follow the capture's rate
 }
 
 // Gives every narrow-channel receiver the channel offset and centre/dial frequency it needs
