@@ -8,12 +8,14 @@
 #include "gfx/gfx.h"
 #include "platform/platform.h"
 #include "dect2/common/time_fmt.h"
+#include "dect2/inmsat/inmsat_planes.h"
 #include "dect2/inmsat/inmsat_rx.h"
 #include "dect2/inmsat/inmsat_tel.h"
 #include "dect2/inmsat/inmsat_voice.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstdlib>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
@@ -39,7 +41,9 @@ struct State {
     char filter[24] = "";
     adsbmap::View map;
     bool mapFollow = true;
-    uint32_t selAes = 0;
+    std::string sel;                     // planeKey of the selected aircraft
+    char search[40] = "";
+    bool autoJumped = false;             // the screen opened itself on the Aircraft view once
 };
 State S;
 
@@ -85,6 +89,19 @@ void header(App& a) {
     if (live(a)) {
         const dect2::InmsatTelemetry& t = a.rx.inmsat;
         ImGui::TextDisabled("%.2f Msps, %zu carriers, %zu windows, CPU %.1f of %.0f", t.rate / 1e6, t.carriers.size(), t.windows.size(), t.cpuCost, t.cpuBudget);
+        flowNext(10 * gUi);
+        // the aircraft with a position, one click from anywhere; before the first one, what is being waited for
+        const int placed = dect2::inmsat::placedCount(t.aircraft);
+        if (placed > 0) {
+            char b[64]; snprintf(b, sizeof b, "%d aircraft with a position##inmchip", placed);
+            ImGui::PushStyleColor(ImGuiCol_Button, S.view == 2 ? ImVec4(0.17f, 0.36f, 0.58f, 1) : ImVec4(0.12f, 0.30f, 0.52f, 0.9f));
+            if (ImGui::Button(b)) S.view = 2;
+            ImGui::PopStyleColor();
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Show these aircraft on the map (Aircraft view).");
+        } else {
+            ImGui::TextDisabled("waiting for position reports (%zu aircraft heard)", t.aircraft.size());
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Aero channels carry only what the aircraft report: an ADS-C position every few minutes, or ACARS messages with a position.\nAircraft appear on the map as their reports arrive; that can take several minutes.");
+        }
     }
     flowEnd();
 }
@@ -227,16 +244,82 @@ void messagesView(App& a) {
     ImGui::EndTable();
 }
 
+// the grid of the offline map (no tiles on screen): latitude and longitude of every graticule line, on the map's left and top edges
+void gridLabels(ImDrawList* dl, ImVec2 p0, ImVec2 size) {
+    const int step = S.map.zoom < 4 ? 30 : 10;
+    const ImU32 col = IM_COL32(150, 160, 170, 200);
+    char b[16];
+    for (int la = -80; la <= 80; la += step) {
+        const float y = adsbmap::project(la, S.map.lon).y;
+        if (y < p0.y + 36 * gUi || y > p0.y + size.y - 22 * gUi) continue;
+        snprintf(b, sizeof b, "%d%c", std::abs(la), la < 0 ? 'S' : la > 0 ? 'N' : ' ');
+        dl->AddText(ImVec2(p0.x + 3, y - ImGui::GetTextLineHeight() - 1), col, b);
+    }
+    for (int lo = -180; lo <= 180; lo += step) {
+        const float x = adsbmap::project(S.map.lat, lo).x;
+        if (x < p0.x + 40 * gUi || x > p0.x + size.x - 30 * gUi) continue;
+        snprintf(b, sizeof b, "%d%c", std::abs(lo), lo < 0 ? 'W' : lo > 0 ? 'E' : ' ');
+        dl->AddText(ImVec2(x + 3, p0.y + size.y - 2 * ImGui::GetTextLineHeight() - 4), col, b);
+    }
+}
+
+std::string planeLabel(const dect2::AeroAircraft& c, double ageSec) {
+    std::string s = dect2::inmsat::planeName(c);
+    char b[40];
+    if (c.hasAlt) { snprintf(b, sizeof b, "  FL%03d", (c.altFt + 50) / 100); s += b; }
+    if (c.hasSpeed) { snprintf(b, sizeof b, "  %.0f kt", c.speedKt); s += b; }
+    if (c.hasTrack) { snprintf(b, sizeof b, "  %03.0f", c.trackDeg); s += b; }
+    if (ageSec >= 0) s += "  " + dect2::inmsat::ageText(ageSec);
+    return s;
+}
+
+std::string heardOn(const dect2::InmsatTelemetry& t, const dect2::AeroAircraft& c) {
+    std::string s = t.sat.valid ? t.sat.name : "satellite ?";
+    char b[48];
+    if (c.heardHz > 0) { snprintf(b, sizeof b, ", %.4f MHz", c.heardHz / 1e6); s += b; }
+    if (c.heardBitRate) { snprintf(b, sizeof b, ", %d bit/s", c.heardBitRate); s += b; }
+    return s;
+}
+
+// the box about the selected aircraft, over the map's top right corner
+void planeBox(ImDrawList* dl, ImVec2 p0, ImVec2 size, const dect2::InmsatTelemetry& t, const dect2::AeroAircraft& c, int64_t now) {
+    std::vector<std::string> ln;
+    char b[160];
+    ln.push_back(dect2::inmsat::planeName(c) + (c.registration.empty() || c.registration == dect2::inmsat::planeName(c) ? "" : "  " + c.registration));
+    const std::string icao = dect2::inmsat::planeIcao(c);
+    if (!icao.empty()) ln.push_back("ICAO " + icao);
+    if (c.hasPos) {
+        snprintf(b, sizeof b, "%.4f %.4f", c.lat, c.lon); ln.push_back(b);
+        std::string v;
+        if (c.hasAlt) { snprintf(b, sizeof b, "%d ft", c.altFt); v += b; }
+        if (c.hasSpeed) { snprintf(b, sizeof b, "%s%.0f kt", v.empty() ? "" : ", ", c.speedKt); v += b; }
+        if (c.hasTrack) { snprintf(b, sizeof b, "%strack %03.0f", v.empty() ? "" : ", ", c.trackDeg); v += b; }
+        if (!v.empty()) ln.push_back(v);
+        ln.push_back("position " + dect2::inmsat::ageText(dect2::inmsat::posAgeSec(c, now)) + " ago, " + (c.posKind.empty() ? dect2::inmsat::planeSourceName(c.posSource) : c.posKind));
+    } else ln.push_back("no position report yet");
+    ln.push_back("heard on " + heardOn(t, c));
+    snprintf(b, sizeof b, "%llu messages, %llu positions", (unsigned long long)c.messages, (unsigned long long)c.positions); ln.push_back(b);
+    float w = 0;
+    for (const auto& s : ln) w = std::max(w, ImGui::CalcTextSize(s.c_str()).x);
+    const float lh = ImGui::GetTextLineHeight();
+    const ImVec2 a(p0.x + size.x - w - 20 * gUi, p0.y + 8 * gUi);
+    dl->AddRectFilled(a, ImVec2(a.x + w + 12 * gUi, a.y + lh * (float)ln.size() + 10 * gUi), IM_COL32(10, 12, 14, 225), 3.f);
+    for (size_t i = 0; i < ln.size(); i++) dl->AddText(ImVec2(a.x + 6 * gUi, a.y + 5 * gUi + lh * (float)i), i == 0 ? IM_COL32(255, 255, 255, 255) : IM_COL32(205, 210, 215, 255), ln[i].c_str());
+}
+
 void mapCanvas(App& a, ImVec2 size) {
     const dect2::InmsatTelemetry& t = a.rx.inmsat;
+    const int64_t now = (int64_t)std::time(nullptr);
     const ImVec2 p0 = ImGui::GetCursorScreenPos();
     if (S.mapFollow) {
         double la0 = 90, la1 = -90, lo0 = 180, lo1 = -180; int n = 0;
         for (const auto& c : t.aircraft) if (c.hasPos) { la0 = std::min(la0, c.lat); la1 = std::max(la1, c.lat); lo0 = std::min(lo0, c.lon); lo1 = std::max(lo1, c.lon); n++; }
         if (n) {
             S.map.lat = (la0 + la1) / 2; S.map.lon = (lo0 + lo1) / 2;
-            const double span = std::max(0.5, std::max(lo1 - lo0, (la1 - la0) * 1.4));
-            S.map.zoom = std::max(2, std::min(10, (int)std::floor(std::log2(0.7 * size.x * 360.0 / (256.0 * span)))));
+            // at least about 6 degrees across, so one aircraft is shown with its surroundings; offline the coastline is drawn to zoom 8 only
+            const double span = std::max(6.0, std::max(lo1 - lo0, (la1 - la0) * 1.4));
+            const int zmax = adsbmap::online() ? 10 : 8;
+            S.map.zoom = std::max(2, std::min(zmax, (int)std::floor(std::log2(0.7 * size.x * 360.0 / (256.0 * span)))));
         }
     }
     const double lat0 = S.map.lat, lon0 = S.map.lon;
@@ -244,34 +327,58 @@ void mapCanvas(App& a, ImVec2 size) {
     if (S.map.lat != lat0 || S.map.lon != lon0) S.mapFollow = false;
     ImDrawList* dl = ImGui::GetWindowDrawList();
     dl->PushClipRect(p0, ImVec2(p0.x + size.x, p0.y + size.y), true);
+    if (!adsbmap::tilesAvailable()) gridLabels(dl, p0, size);
     ImVec2 click; const bool clicked = adsbmap::clickedAt(click);
     const dect2::AeroAircraft* hit = nullptr; float best = 18 * gUi;
     int placed = 0;
+    // trails and the predicted route first, so the aircraft are drawn over them
     for (const auto& c : t.aircraft) {
         if (!c.hasPos) continue;
         placed++;
-        const ImU32 col = adsbmap::acColour(adsbmap::AcSrc::Sat, t.timeSec - c.posTime, 0.5f);
-        for (size_t i = 1; i < c.track.size(); i++)
-            dl->AddLine(adsbmap::project(c.track[i - 1].lat, c.track[i - 1].lon), adsbmap::project(c.track[i].lat, c.track[i].lon), col, 1.5f);
+        const float fade = dect2::inmsat::posFade(dect2::inmsat::posAgeSec(c, now));
+        for (size_t i = 1; i < c.track.size(); i++) {
+            if (dect2::inmsat::segmentCrossesDateLine(c.track[i - 1].lon, c.track[i].lon)) continue;
+            const float k = 0.35f + 0.65f * (float)i / (float)c.track.size();   // older parts of the trail are fainter
+            dl->AddLine(adsbmap::project(c.track[i - 1].lat, c.track[i - 1].lon), adsbmap::project(c.track[i].lat, c.track[i].lon), adsbmap::acColour(adsbmap::AcSrc::Sat, 0, fade * k), 1.8f);
+        }
+        if (!c.route.empty() && !dect2::inmsat::segmentCrossesDateLine(c.lon, c.route[0].second)) {
+            ImVec2 prev = adsbmap::project(c.lat, c.lon);
+            for (const auto& w : c.route) {
+                const ImVec2 q = adsbmap::project(w.first, w.second);
+                dl->AddLine(prev, q, IM_COL32(120, 170, 230, (int)(110 * fade)), 1.f);
+                prev = q;
+            }
+        }
     }
     for (const auto& c : t.aircraft) {
         if (!c.hasPos) continue;
         const ImVec2 q = adsbmap::project(c.lat, c.lon);
         if (q.x < p0.x - 60 || q.y < p0.y - 60 || q.x > p0.x + size.x + 60 || q.y > p0.y + size.y + 60) continue;
-        const bool sel = S.selAes && c.aesId == S.selAes;
-        dl->AddCircleFilled(q, 5 * gUi, adsbmap::acColour(adsbmap::AcSrc::Sat, t.timeSec - c.posTime));
-        dl->AddCircle(q, 5 * gUi, sel ? IM_COL32(255, 255, 255, 255) : IM_COL32(0, 0, 0, 150), 16, sel ? 1.6f : 1.f);
-        if (S.map.zoom >= 5 || sel || placed <= 12) {
-            std::string s = !c.flight.empty() ? c.flight : !c.registration.empty() ? c.registration : "?";
-            if (c.hasAlt) { char b[24]; snprintf(b, sizeof b, "  FL%03d", (c.altFt + 50) / 100); s += b; }
+        const bool sel = !S.sel.empty() && dect2::inmsat::planeKey(c) == S.sel;
+        const double age = dect2::inmsat::posAgeSec(c, now);
+        const float fade = dect2::inmsat::posFade(age);
+        const ImU32 fill = adsbmap::acColour(adsbmap::AcSrc::Sat, 0, fade), edge = sel ? IM_COL32(255, 255, 255, 255) : IM_COL32(0, 0, 0, (int)(170 * fade));
+        const float r = 6.5f * gUi;
+        if (c.hasTrack) {   // an arrow pointing the way it flies
+            const float th = (float)(c.trackDeg * 0.017453292519943295), sx = std::sin(th), sy = -std::cos(th);
+            const ImVec2 tip(q.x + sx * r * 1.5f, q.y + sy * r * 1.5f), l(q.x - sx * r * 0.9f - sy * r * 0.9f, q.y - sy * r * 0.9f + sx * r * 0.9f), rr(q.x - sx * r * 0.9f + sy * r * 0.9f, q.y - sy * r * 0.9f - sx * r * 0.9f), nt(q.x - sx * r * 0.35f, q.y - sy * r * 0.35f);
+            dl->AddQuadFilled(tip, l, nt, rr, fill);
+            dl->AddQuad(tip, l, nt, rr, edge, sel ? 2.f : 1.f);
+        } else {
+            dl->AddCircleFilled(q, 5 * gUi, fill);
+            dl->AddCircle(q, 5 * gUi, edge, 16, sel ? 2.f : 1.f);
+        }
+        if (S.map.zoom >= 5 || sel || placed <= 30) {
+            const std::string s = planeLabel(c, age);
             const ImVec2 ts = ImGui::CalcTextSize(s.c_str());
-            dl->AddRectFilled(ImVec2(q.x + 9 * gUi, q.y - ts.y / 2 - 2), ImVec2(q.x + 17 * gUi + ts.x, q.y + ts.y / 2 + 2), IM_COL32(10, 12, 14, 210), 2.f);
-            dl->AddText(ImVec2(q.x + 13 * gUi, q.y - ts.y / 2), IM_COL32(235, 238, 240, 255), s.c_str());
+            dl->AddRectFilled(ImVec2(q.x + 11 * gUi, q.y - ts.y / 2 - 2), ImVec2(q.x + 19 * gUi + ts.x, q.y + ts.y / 2 + 2), IM_COL32(10, 12, 14, (int)(215 * std::max(fade, 0.55f))), 2.f);
+            dl->AddText(ImVec2(q.x + 15 * gUi, q.y - ts.y / 2), IM_COL32(235, 238, 240, (int)(255 * std::max(fade, 0.55f))), s.c_str());
         }
         const float d = std::hypot(q.x - click.x, q.y - click.y);
         if (clicked && d < best) { best = d; hit = &c; }
     }
-    if (clicked) S.selAes = hit ? hit->aesId : 0;
+    if (clicked) S.sel = hit ? dect2::inmsat::planeKey(*hit) : std::string();
+    if (!S.sel.empty()) for (const auto& c : t.aircraft) if (dect2::inmsat::planeKey(c) == S.sel) { planeBox(dl, p0, size, t, c, now); break; }
     dl->PopClipRect();
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 8 * gUi));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.06f, 0.07f, 0.08f, 0.85f));
@@ -280,40 +387,131 @@ void mapCanvas(App& a, ImVec2 size) {
     if (ImGui::Button("-##inmz", ImVec2(26 * gUi, 0))) { S.map.zoom = std::max(adsbmap::kMinZoom, S.map.zoom - 1); S.mapFollow = false; }
     ImGui::SameLine(0, 6 * gUi);
     if (ImGui::Button("fit##inmz")) S.mapFollow = true;
+    ImGui::SameLine(0, 6 * gUi);
+    if (ImGui::Button("?##inmhelp")) ImGui::OpenPopup("##inmplanehelp");
     ImGui::PopStyleColor();
+    if (ImGui::BeginPopup("##inmplanehelp")) {
+        ImGui::PushTextWrapPos(420 * gUi);
+        ImGui::TextUnformatted("Where the aircraft are");
+        ImGui::Separator();
+        ImGui::TextWrapped("%s", "Inmarsat Aero channels carry only what an aircraft reports about itself: an ADS-C position report every few minutes, plus ACARS messages with a position in the text (POS and label 16 / 20 reports, weather reports). So aircraft appear one by one, minutes apart: a map with few planes after a short time is normal, not broken.");
+        ImGui::Spacing();
+        ImGui::TextWrapped("%s", "An arrow points the way the aircraft was heading; a dot means no direction is known. The shade fades as the last position gets old (full for 5 minutes, faint after 40). The line behind it is its trail, the thin line ahead is the route in its last ADS-C report. Click an aircraft (or a row below) for its details and messages.");
+        ImGui::Spacing();
+        ImGui::TextWrapped("%s", "Without network access the map shows coastlines and a latitude / longitude grid from the data built into OnAir. Log-on messages give an aircraft's ICAO address but no position. CPDLC position reports are not decoded yet. Unverified against a real capture: needs a user test.");
+        ImGui::PopTextWrapPos();
+        ImGui::EndPopup();
+    }
     ImGui::SameLine(0, 6 * gUi);
     adsbmap::tileControls("never the position itself");
+    if (!placed) {   // never an empty, silent map: say what is happening
+        const char* msg = "waiting for position reports";
+        const char* sub = "ADS-C and ACARS position reports come every few minutes per aircraft";
+        const ImVec2 a1 = ImGui::CalcTextSize(msg), a2 = ImGui::CalcTextSize(sub);
+        const float bw = std::max(a1.x, a2.x) + 24 * gUi, bh = a1.y + a2.y + 18 * gUi;
+        const ImVec2 b0(p0.x + (size.x - bw) / 2, p0.y + (size.y - bh) / 2);
+        dl->AddRectFilled(b0, ImVec2(b0.x + bw, b0.y + bh), IM_COL32(10, 12, 14, 215), 4.f);
+        dl->AddText(ImVec2(b0.x + (bw - a1.x) / 2, b0.y + 6 * gUi), IM_COL32(240, 200, 110, 255), msg);
+        dl->AddText(ImVec2(b0.x + (bw - a2.x) / 2, b0.y + 12 * gUi + a1.y), IM_COL32(190, 195, 200, 255), sub);
+    }
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + size.y - ImGui::GetTextLineHeight() - 6 * gUi));
-    if (!placed) adsbmap::legend(size.x, "no position report yet (ADS-C and text reports come every few minutes)");
-    else adsbmap::legend(size.x, "%d of %zu aircraft placed", placed, t.aircraft.size());
+    const char* offline = adsbmap::tilesAvailable() ? "" : "   offline map: coastlines and grid";
+    if (!placed) adsbmap::legend(size.x, "no aircraft with a position yet (%zu heard)%s", t.aircraft.size(), offline);
+    else adsbmap::legend(size.x, "%d of %zu aircraft with a position%s", placed, t.aircraft.size(), offline);
     ImGui::SetCursorScreenPos(ImVec2(p0.x, p0.y + size.y));
     ImGui::Dummy(ImVec2(0, 0));
 }
 
-void aircraftView(App& a) {
+void aircraftTable(App& a) {
     const dect2::InmsatTelemetry& t = a.rx.inmsat;
-    const float h = ImGui::GetContentRegionAvail().y;
-    mapCanvas(a, ImVec2(ImGui::GetContentRegionAvail().x, std::max(120.f * gUi, h * 0.55f)));
-    if (!ImGui::BeginTable("##inmair", 7, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    const int64_t now = (int64_t)std::time(nullptr);
+    ImGui::TextDisabled("Search"); ImGui::SameLine(); ImGui::SetNextItemWidth(150 * gUi);
+    ImGui::InputText("##inmsearch", S.search, sizeof S.search);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Flight, registration, ICAO address (hex) or report type.");
+    ImGui::SameLine(); ImGui::TextDisabled("%d with a position, %zu heard", dect2::inmsat::placedCount(t.aircraft), t.aircraft.size());
+    if (!ImGui::BeginTable("##inmair", 11, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_Sortable | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV,
+                           ImVec2(0, std::max(60.f * gUi, ImGui::GetContentRegionAvail().y)))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
-    ImGui::TableSetupColumn("Aircraft"); ImGui::TableSetupColumn("Registration"); ImGui::TableSetupColumn("Position"); ImGui::TableSetupColumn("Altitude");
-    ImGui::TableSetupColumn("Source"); ImGui::TableSetupColumn("Messages"); ImGui::TableSetupColumn("Last", ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn("Flight", 0, 0, 0);
+    ImGui::TableSetupColumn("Registration", ImGuiTableColumnFlags_NoSort, 0, 1);
+    ImGui::TableSetupColumn("ICAO", ImGuiTableColumnFlags_NoSort, 0, 2);
+    ImGui::TableSetupColumn("Position", ImGuiTableColumnFlags_NoSort, 0, 3);
+    ImGui::TableSetupColumn("Altitude", ImGuiTableColumnFlags_PreferSortDescending, 0, 4);
+    ImGui::TableSetupColumn("Speed", ImGuiTableColumnFlags_PreferSortDescending, 0, 5);
+    ImGui::TableSetupColumn("Track", ImGuiTableColumnFlags_NoSort, 0, 6);
+    ImGui::TableSetupColumn("Age", ImGuiTableColumnFlags_DefaultSort, 0, 7);
+    ImGui::TableSetupColumn("Source", ImGuiTableColumnFlags_NoSort, 0, 8);
+    ImGui::TableSetupColumn("Heard on", ImGuiTableColumnFlags_NoSort | ImGuiTableColumnFlags_WidthStretch, 0, 9);
+    ImGui::TableSetupColumn("Msgs", ImGuiTableColumnFlags_PreferSortDescending, 0, 10);
     ImGui::TableHeadersRow();
+    dect2::inmsat::PlaneSort key = dect2::inmsat::PlaneSort::Age; bool desc = false;
+    if (ImGuiTableSortSpecs* sp = ImGui::TableGetSortSpecs(); sp && sp->SpecsCount > 0) {
+        const int id = (int)sp->Specs[0].ColumnUserID;
+        key = id == 0 ? dect2::inmsat::PlaneSort::Name : id == 4 ? dect2::inmsat::PlaneSort::Altitude : id == 5 ? dect2::inmsat::PlaneSort::Speed : id == 10 ? dect2::inmsat::PlaneSort::Messages : dect2::inmsat::PlaneSort::Age;
+        desc = sp->Specs[0].SortDirection == ImGuiSortDirection_Descending;
+    }
     ImGui::PushFont(a.mono, 0);
-    for (const auto& c : t.aircraft) {
+    for (size_t i : dect2::inmsat::sortedPlanes(t.aircraft, key, desc, S.search, now)) {
+        const dect2::AeroAircraft& c = t.aircraft[i];
+        const double age = dect2::inmsat::posAgeSec(c, now);
+        const std::string k = dect2::inmsat::planeKey(c);
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        char id[40]; snprintf(id, sizeof id, "%s##inma%06X", c.flight.empty() ? (c.aesId ? "-" : "?") : c.flight.c_str(), c.aesId);
-        if (ImGui::Selectable(id, S.selAes && c.aesId == S.selAes, ImGuiSelectableFlags_SpanAllColumns)) { S.selAes = c.aesId; if (c.hasPos) { S.map.lat = c.lat; S.map.lon = c.lon; S.mapFollow = false; } }
+        char id[64]; snprintf(id, sizeof id, "%s##inma%s", dect2::inmsat::planeName(c).c_str(), k.c_str());
+        if (ImGui::Selectable(id, !S.sel.empty() && k == S.sel, ImGuiSelectableFlags_SpanAllColumns)) { S.sel = k; if (c.hasPos) { S.map.lat = c.lat; S.map.lon = c.lon; S.mapFollow = false; } }
         ImGui::TableNextColumn(); ImGui::TextUnformatted(c.registration.c_str());
-        ImGui::TableNextColumn(); if (c.hasPos) ImGui::Text("%.3f %.3f", c.lat, c.lon); else ImGui::TextDisabled("-");
-        ImGui::TableNextColumn(); if (c.hasAlt) ImGui::Text("FL%03d", (c.altFt + 50) / 100); else ImGui::TextDisabled("-");
-        ImGui::TableNextColumn(); ImGui::TextDisabled("%s", c.posKind.c_str());
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(dect2::inmsat::planeIcao(c).c_str());
+        ImGui::TableNextColumn(); if (c.hasPos) ImGui::Text("%.3f %.3f", c.lat, c.lon); else ImGui::TextDisabled("waiting");
+        ImGui::TableNextColumn(); if (c.hasPos && c.hasAlt) ImGui::Text("FL%03d", (c.altFt + 50) / 100); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (c.hasSpeed) ImGui::Text("%.0f kt", c.speedKt); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (c.hasTrack) ImGui::Text("%03.0f", c.trackDeg); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (age >= 0) ImGui::TextUnformatted(dect2::inmsat::ageText(age).c_str()); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); ImGui::TextDisabled("%s", c.hasPos ? (c.posKind.empty() ? dect2::inmsat::planeSourceName(c.posSource) : c.posKind.c_str()) : "-");
+        ImGui::TableNextColumn(); ImGui::TextDisabled("%s", heardOn(t, c).c_str());
         ImGui::TableNextColumn(); ImGui::Text("%llu", (unsigned long long)c.messages);
-        ImGui::TableNextColumn(); ImGui::TextDisabled("%s", dect2::timefmt::clock(c.lastWall).c_str());
     }
     ImGui::PopFont();
     ImGui::EndTable();
+}
+
+// the messages of the selected aircraft, newest first
+void aircraftHistory(App& a, ImVec2 size) {
+    const dect2::InmsatTelemetry& t = a.rx.inmsat;
+    const dect2::AeroAircraft* sel = nullptr;
+    for (const auto& c : t.aircraft) if (!S.sel.empty() && dect2::inmsat::planeKey(c) == S.sel) { sel = &c; break; }
+    ImGui::BeginChild("##inmhist", size, true);
+    if (!sel) {
+        ImGui::TextDisabled("%s", "click an aircraft on the map or in the list to see its messages");
+    } else {
+        ImGui::TextUnformatted(dect2::inmsat::planeName(*sel).c_str());
+        const auto hist = dect2::inmsat::planeHistory(t.messages, *sel, 40);
+        ImGui::SameLine(); ImGui::TextDisabled("%zu messages kept", hist.size());
+        ImGui::PushFont(a.mono, 0);
+        ImGui::PushTextWrapPos(0);
+        for (size_t i = hist.size(); i-- > 0;) {
+            const dect2::AeroMessage& m = *hist[i];
+            ImGui::TextDisabled("%s %s %s%s", dect2::timefmt::clock(m.wallTime).c_str(), m.label.c_str(), m.uplink ? "up" : "down", m.hasPos ? "  position" : "");
+            ImGui::TextUnformatted((m.decoded.empty() ? m.text : m.decoded).c_str());
+        }
+        ImGui::PopTextWrapPos();
+        ImGui::PopFont();
+    }
+    ImGui::EndChild();
+}
+
+void aircraftView(App& a) {
+    const float h = ImGui::GetContentRegionAvail().y, w = ImGui::GetContentRegionAvail().x;
+    mapCanvas(a, ImVec2(w, std::max(120.f * gUi, h * 0.55f)));
+    const float bh = ImGui::GetContentRegionAvail().y;
+    if (w > 900 * gUi) {
+        ImGui::BeginChild("##inmtblc", ImVec2(w * 0.64f, bh), false);
+        aircraftTable(a);
+        ImGui::EndChild();
+        ImGui::SameLine();
+        aircraftHistory(a, ImVec2(0, bh));
+    } else {
+        aircraftTable(a);
+    }
 }
 
 void voiceView(App& a) {
@@ -324,6 +522,10 @@ void voiceView(App& a) {
                               "without a real C-channel signal, and need a user test with a real capture. Voice also needs the AMBE codec, which you install yourself (docs/CODECS.md). Unencrypted traffic only.");
     ImGui::PopTextWrapPos();
     ImGui::Spacing();
+    codecHelpButton(CodecHelp::AeroAmbe);
+    ImGui::SameLine();
+    if (!t.codecReady) ImGui::TextDisabled("%s", "No AMBE codec installed: press ? for how to install it and Open codecs folder.");
+    else ImGui::TextDisabled("%s", "AMBE codec installed.");
     if (!t.voiceMessage.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.35f, 1), "%s", t.voiceMessage.c_str()); ImGui::PopTextWrapPos(); }
     else if (t.codecReady) ImGui::TextDisabled("%s", "Codec loaded.");
     if (ImGui::Checkbox("Record calls##inmrec", &S.record)) plat::prefs().setI("inmsatRecord", S.record ? 1 : 0);
@@ -387,6 +589,11 @@ void tuner(App&, bool&) {
 
 void tab(App& a) {
     load();
+    if (!S.autoJumped) {   // open on the aircraft map the first time positions exist (once: a later choice of another view stays)
+        const int dv = adsbmap::devView(-1);
+        if (dv >= 0) { S.view = dv; S.autoJumped = true; }
+        else if (live(a) && dect2::inmsat::placedCount(a.rx.inmsat.aircraft) > 0) { S.autoJumped = true; if (S.view == 0) S.view = 2; }
+    }
     header(a);
     ImGui::Spacing();
     subNav("inmsat", S.view, {"Carriers", "Messages", "Aircraft", "Voice"});
@@ -403,16 +610,21 @@ void tab(App& a) {
 void list(App& a) {
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const dect2::InmsatTelemetry& t = a.rx.inmsat;
+    const int64_t now = (int64_t)std::time(nullptr);
+    ImGui::TextDisabled("%d of %zu with a position", dect2::inmsat::placedCount(t.aircraft), t.aircraft.size());
     if (!ImGui::BeginTable("##inml", 3, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
-    ImGui::TableSetupColumn("Aircraft"); ImGui::TableSetupColumn("Msgs"); ImGui::TableSetupColumn("Last", ImGuiTableColumnFlags_WidthStretch);
-    for (const auto& c : t.aircraft) {
+    ImGui::TableSetupColumn("Aircraft"); ImGui::TableSetupColumn("Position", ImGuiTableColumnFlags_WidthStretch); ImGui::TableSetupColumn("Msgs");
+    for (size_t i : dect2::inmsat::sortedPlanes(t.aircraft, dect2::inmsat::PlaneSort::Age, false, "", now)) {
+        const dect2::AeroAircraft& c = t.aircraft[i];
+        const std::string k = dect2::inmsat::planeKey(c);
         ImGui::TableNextRow();
         ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0);
-        char id[48]; snprintf(id, sizeof id, "%s##inmal%06X", !c.flight.empty() ? c.flight.c_str() : !c.registration.empty() ? c.registration.c_str() : "?", c.aesId);
-        if (ImGui::Selectable(id, S.selAes && c.aesId == S.selAes)) S.selAes = c.aesId;
+        char id[64]; snprintf(id, sizeof id, "%s##inmal%s", dect2::inmsat::planeName(c).c_str(), k.c_str());
+        if (ImGui::Selectable(id, !S.sel.empty() && k == S.sel)) { S.sel = k; S.view = 2; if (c.hasPos) { S.map.lat = c.lat; S.map.lon = c.lon; S.mapFollow = false; } }
         ImGui::PopFont();
+        ImGui::TableNextColumn();
+        if (c.hasPos) ImGui::TextDisabled("%s", dect2::inmsat::ageText(dect2::inmsat::posAgeSec(c, now)).c_str()); else ImGui::TextDisabled("waiting");
         ImGui::TableNextColumn(); ImGui::Text("%llu", (unsigned long long)c.messages);
-        ImGui::TableNextColumn(); ImGui::TextDisabled("%s", dect2::timefmt::clock(c.lastWall).c_str());
     }
     ImGui::EndTable();
     if (t.aircraft.empty()) ImGui::TextDisabled("%s", "no aircraft yet");

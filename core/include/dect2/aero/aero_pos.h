@@ -30,6 +30,10 @@ struct AeroPosition {
     std::vector<std::pair<double, double>> route;   // ADS-C predicted route: next and next + 1 waypoints
 };
 
+// A position as reported may be out of range or wrapped: latitude beyond +-90 or not a number is refused (false), longitude is brought into
+// -180 .. 180 (a 190 E report is 170 W), and exactly 0, 0 (a receiver with no fix) is refused. Used before any position is shown.
+bool aeroSanitizePosition(double& lat, double& lon);
+
 // Text reports only. False when the text has none of the formats above.
 bool aeroParseTextPosition(const std::string& label, const std::string& text, AeroPosition& out);
 

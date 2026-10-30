@@ -50,6 +50,8 @@ struct AeroMessage {
     std::string decoded;          // ADS-C groups in plain words (aero_adsc.h), "" when the message has none
     bool hasPos = false;          // the message carried a position (ADS-C or a text report, aero_pos.h)
     double lat = 0, lon = 0;
+    double heardOffsetHz = 0;     // the carrier it came on, against the receiver's own centre (the Inmarsat all-carriers mode makes it absolute)
+    double heardHz = 0;           // absolute frequency of that carrier, 0 when the capture centre is not known
 };
 
 struct AeroTrackPoint {
@@ -83,6 +85,10 @@ struct AeroAircraft {
     uint64_t positions = 0;
     std::vector<AeroTrackPoint> track;                 // oldest first, up to 24, the last is the current position
     std::vector<std::pair<double, double>> route;      // ADS-C predicted route of the last report (next, next + 1)
+    int heardBitRate = 0;         // the P channel the last message came on: its rate (600, 1200, 10500) and carrier
+    double heardOffsetHz = 0;     // against the receiver's own centre
+    double heardHz = 0;           // absolute (Inmarsat all-carriers mode), 0 unknown
+    uint32_t icao = 0;            // airframe id from an ADS-C report (when the log-on gave none)
 };
 
 // What the P channel's system table SUs said (JAERO's reading, aero_su.h): the satellite id and longitude, the P channel of the satellite's
