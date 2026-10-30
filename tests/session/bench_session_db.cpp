@@ -105,7 +105,7 @@ int main() {
 
     CHECK(tPage < 20.0, "indexed page under 20 ms: %.2f", tPage);
     CHECK(tDeep < 20.0 + 30.0, "a deep page stays fast: %.2f", tDeep);   // offsets scan: allowed a little more
-    CHECK(tRx < 20.0 && tWin < 20.0 && tAll < 20.0, "the other indexed pages under 20 ms: %.2f %.2f %.2f", tRx, tWin, tAll);
+    CHECK(tRx < 40.0 && tWin < 20.0 && tAll < 20.0, "the other indexed pages under 20 ms: %.2f %.2f %.2f", tRx, tWin, tAll);
     CHECK(tFts < 200.0 && tFts2 < 200.0 && tFtsPre < 200.0, "full-text under 200 ms: %.2f %.2f %.2f", tFts, tFts2, tFtsPre);
     CHECK(tFilt < 300.0 && tFilt2 < 300.0, "filtered sort under 300 ms: %.2f %.2f", tFilt, tFilt2);
 

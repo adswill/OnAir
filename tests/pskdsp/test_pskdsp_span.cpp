@@ -54,12 +54,14 @@ int main() {
         PskdTelemetry t0 = run(x, fs, 0);
         printf("auto:    state %d baud %.1f cfo %+.1f syncs %llu (not asserted)\n", t0.state, t0.baud, t0.cfoHz, (unsigned long long)t0.syncs);
     }
-    // below 2.5 kHz is raised to it; 200 kHz is the automatic value
+    // no limits (the owner's rule): a span below 2.5 kHz is used as asked, not raised; 200 kHz is the automatic value
     {
         auto x = threeSignals(fs, 1200, 6000, 6);
         PskdTelemetry t = run(x, fs, 1000);
-        CHECK(std::fabs(t.spanHz - 2500) < 1, "span %.1f", t.spanHz);
-        CHECK(t.state == 2, "not locked at 2.5 kHz");
+        CHECK(std::fabs(t.spanHz - 1000) < 1, "span %.1f", t.spanHz);
+        PskdTelemetry t25 = run(x, fs, 2500);
+        CHECK(std::fabs(t25.spanHz - 2500) < 1, "span %.1f", t25.spanHz);
+        CHECK(t25.state == 2, "not locked at 2.5 kHz");
         PskdTelemetry t1 = run(x, fs, 200000);
         CHECK(std::fabs(t1.spanHz - 200000) < 1, "span %.1f", t1.spanHz);
         PskdTelemetry t0 = run(x, fs, 0);

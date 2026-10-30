@@ -1412,7 +1412,6 @@ The channel raster of your country: TV channels for the scan and the channel lis
 Reads a band plan from a CSV or JSON file (format in docs/band-plans.md), checks it and keeps it in your settings folder. Nothing is changed when the file has a mistake; the message says where.	Sávtervet olvas be CSV- vagy JSON-fájlból (formátum: docs/band-plans.md), ellenőrzi, és a beállítások mappájában tárolja. Hibás fájlnál semmi sem változik; az üzenet megmondja, hol a hiba.
 Saves the plan as a JSON file, or as CSV when the name ends in .csv. A built-in plan makes a good starting point for your own.	A tervet JSON-fájlként menti, vagy CSV-ként, ha a név .csv-re végződik. A beépített terv jó kiindulópont a sajátodhoz.
 Deletes one of your own band plans. The built-in plans stay.	Töröl egy saját sávtervet. A beépített tervek megmaradnak.
-TV channels of the band plan %s (change it in the Scan tab).	A(z) %s sávterv TV-csatornái (a Keresés fülön módosítható).
 # ACARS messages on the aircraft, and sharing them with the map
 Crew	Személyzet
 Operations	Üzemeltetés

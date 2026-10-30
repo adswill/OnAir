@@ -1426,7 +1426,6 @@ The channel raster of your country: TV channels for the scan and the channel lis
 Reads a band plan from a CSV or JSON file (format in docs/band-plans.md), checks it and keeps it in your settings folder. Nothing is changed when the file has a mistake; the message says where.	Nuskaito dažnių planą iš CSV arba JSON failo (formatas docs/band-plans.md), patikrina ir saugo nustatymų aplanke. Jei faile klaida, niekas nekeičiama; pranešime nurodoma vieta.
 Saves the plan as a JSON file, or as CSV when the name ends in .csv. A built-in plan makes a good starting point for your own.	Išsaugo planą kaip JSON failą arba kaip CSV, jei pavadinimas baigiasi .csv. Įtaisytas planas yra geras pradžios taškas savajam.
 Deletes one of your own band plans. The built-in plans stay.	Ištrina vieną jūsų pačių dažnių planą. Įtaisytieji planai lieka.
-TV channels of the band plan %s (change it in the Scan tab).	Dažnių plano %s TV kanalai (keičiama skirtuke Skenavimas).
 # ACARS messages on the aircraft, and sharing them with the map
 Crew	Įgula
 Operations	Eksploatacija

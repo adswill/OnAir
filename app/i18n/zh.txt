@@ -1426,7 +1426,6 @@ The channel raster of your country: TV channels for the scan and the channel lis
 Reads a band plan from a CSV or JSON file (format in docs/band-plans.md), checks it and keeps it in your settings folder. Nothing is changed when the file has a mistake; the message says where.	从 CSV 或 JSON 文件读取频段规划（格式见 docs/band-plans.md），检查后保存在设置文件夹中。文件有错误时不会改动任何内容，提示会指出位置。
 Saves the plan as a JSON file, or as CSV when the name ends in .csv. A built-in plan makes a good starting point for your own.	将规划保存为 JSON 文件；文件名以 .csv 结尾时保存为 CSV。内置规划是创建自己规划的好起点。
 Deletes one of your own band plans. The built-in plans stay.	删除你自己的一个频段规划。内置规划会保留。
-TV channels of the band plan %s (change it in the Scan tab).	频段规划 %s 的电视频道（可在“扫描”选项卡中更改）。
 # ACARS messages on the aircraft, and sharing them with the map
 Crew	机组
 Operations	运行

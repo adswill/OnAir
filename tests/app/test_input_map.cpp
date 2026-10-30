@@ -20,7 +20,7 @@ int main() {
     check(s.bind[(int)Action::Mode3] == key(ImGuiKey_3), "3 is mode 3");
     check(s.bind[(int)Action::DbUp] == key(ImGuiKey_UpArrow, M_Ctrl) && s.bind[(int)Action::DbWider] == key(ImGuiKey_UpArrow, M_Ctrl | M_Shift), "Ctrl+Up / Ctrl+Shift+Up");
     check(s.bind[(int)Action::PageDown] == key(ImGuiKey_PageDown, M_Ctrl), "Ctrl+PageDown");
-    check(!s.bind[(int)Action::TuneUp].bound() && !s.bind[(int)Action::Mute].bound(), "the new actions start unbound");
+    check(s.bind[(int)Action::TuneUp] == key(ImGuiKey_RightArrow) && s.bind[(int)Action::TuneDown] == key(ImGuiKey_LeftArrow) && !s.bind[(int)Action::Mute].bound(), "arrow keys tune by default (feat arrow keys); Mute starts unbound");
     check(!anyConflict(s), "no conflicts in the defaults");
     check(saveBindings(s).empty(), "nothing to save for the defaults");
     for (int i = 0; i < kActions; i++) check((int)defs()[i].id == i, "the table is in the enum's order");

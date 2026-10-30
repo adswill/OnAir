@@ -1426,7 +1426,6 @@ The channel raster of your country: TV channels for the scan and the channel lis
 Reads a band plan from a CSV or JSON file (format in docs/band-plans.md), checks it and keeps it in your settings folder. Nothing is changed when the file has a mistake; the message says where.	CSV または JSON ファイル（形式は docs/band-plans.md）からバンドプランを読み込み、検査して設定フォルダーに保存します。ファイルに誤りがあれば何も変更されず、メッセージに場所が示されます。
 Saves the plan as a JSON file, or as CSV when the name ends in .csv. A built-in plan makes a good starting point for your own.	プランを JSON ファイルとして、名前が .csv で終わる場合は CSV として保存します。内蔵プランは自作プランの出発点に最適です。
 Deletes one of your own band plans. The built-in plans stay.	自分のバンドプランを 1 つ削除します。内蔵プランは残ります。
-TV channels of the band plan %s (change it in the Scan tab).	バンドプラン %s のテレビチャンネル（スキャンタブで変更できます）。
 # ACARS messages on the aircraft, and sharing them with the map
 Crew	乗員
 Operations	運航

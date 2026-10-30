@@ -133,9 +133,9 @@ void vfoPopupSection(App& a) {
 
 void vfoPanelWindow(App& a) {
     if (!a.vfoPanel) return;
-    ImGui::SetNextWindowSize(ImVec2(560 * gUi, 260 * gUi), ImGuiCond_FirstUseEver);
+    firstWindowSize(560 * gUi, 260 * gUi);
     bool open = true;
-    if (ImGui::Begin(tr("Channels"), &open)) {
+    if (ImGui::Begin(trw("Channels"), &open)) {
         if (ImGui::Button(a.vfoArm ? tr("Click on the waterfall...") : tr("Add channel"))) a.vfoArm = !a.vfoArm;
         ImGui::SameLine();
         if (ImGui::Button(tr("Add here")) ) vfoAddAt(a, a.freqMhz);

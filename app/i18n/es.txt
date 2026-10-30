@@ -1426,7 +1426,6 @@ The channel raster of your country: TV channels for the scan and the channel lis
 Reads a band plan from a CSV or JSON file (format in docs/band-plans.md), checks it and keeps it in your settings folder. Nothing is changed when the file has a mistake; the message says where.	Lee un plan de bandas de un archivo CSV o JSON (formato en docs/band-plans.md), lo comprueba y lo guarda en su carpeta de ajustes. Si el archivo tiene un error no se cambia nada; el mensaje indica dónde.
 Saves the plan as a JSON file, or as CSV when the name ends in .csv. A built-in plan makes a good starting point for your own.	Guarda el plan como archivo JSON, o como CSV si el nombre acaba en .csv. Un plan integrado es un buen punto de partida para el suyo.
 Deletes one of your own band plans. The built-in plans stay.	Borra uno de sus planes de bandas. Los planes integrados se quedan.
-TV channels of the band plan %s (change it in the Scan tab).	Canales de TV del plan de bandas %s (se cambia en la pestaña Escaneo).
 # ACARS messages on the aircraft, and sharing them with the map
 Crew	Tripulación
 Operations	Operaciones

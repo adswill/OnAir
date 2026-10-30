@@ -869,7 +869,7 @@ static void testRedPitaya() {
     const DeviceInfo d = devs[0];
     CHECK(d.kind == DeviceInfo::Native && d.board == "redpitaya" && d.nativeArgs == "127.0.0.1:" + std::to_string(rp.port));
     CHECK(d.name == netRadioDeviceName(nr) && d.name.find("Red Pitaya") == 0);
-    CHECK(d.rateRanges.size() == 4 && d.minRateHz == 48000 && d.maxRateHz == 384000 && d.maxFreqHz == 61.44e6 && d.gainMinDb == 0 && d.gainMaxDb == 0);
+    CHECK(d.rateRanges.size() == 4 && d.minRateHz == 48000 && d.maxRateHz == 384000 && d.maxFreqHz == 61.44e6 && d.gainMinDb == 0 && d.gainMaxDb == 40);   // digital gain 0..+40 dB (aa9326c89)
     NetRadio dflt; dflt.type = NetRadio::RedPitaya; dflt.host = "192.168.1.60";
     CHECK(netRadioDeviceName(dflt) == "Red Pitaya RX1 192.168.1.60 (network)");
     CHECK(devs.size() == 3 && devs[2].name == "Red Pitaya RX3 127.0.0.1:" + std::to_string(rp.port) + " (network)" && devs[2].nativeArgs == d.nativeArgs + "/rx3");
@@ -884,7 +884,7 @@ static void testRedPitaya() {
     TuneSettings s;
     s.sampleRate = 100e3;   // the 192 ksps step
     s.centerHz = 14.074e6;
-    s.gainDb = 20;          // ignored: it has no gain register here
+    s.gainDb = 0;           // the Red Pitaya gain is a digital gain on the samples: 0 dB leaves them as sent
     err.clear();
     CHECK(src->start(s, ring, err));
     CHECK(std::fabs(src->sampleRate() - 192e3) < 1);
