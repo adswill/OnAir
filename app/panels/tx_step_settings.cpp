@@ -158,6 +158,49 @@ void destinationPanel(TxUi& s, const TxModeSpec& mode, bool running) {
     }
 }
 
+// The IQ of the transmission on a TCP socket (tx_iqstream.h): for GNU Radio and other programs, on the radio, the file or the test path alike
+TxIqStreamConfig txIqStreamFromPrefs() {
+    plat::Prefs& p = plat::basePrefs();
+    TxIqStreamConfig c;
+    c.enabled = p.getB("tx.iqTcp", false);
+    c.port = std::max(1, std::min(65534, (int)p.getI("tx.iqTcpPort", 7355)));
+    c.bindAddr = p.getS("tx.iqTcpBind", "127.0.0.1");
+    c.format = (TxIqFormat)std::max(0, std::min(4, (int)p.getI("tx.iqTcpFmt", 0)));
+    c.headerLine = p.getB("tx.iqTcpHeader", false);
+    return c;
+}
+
+void iqStreamPanel(TxUi& s, bool running) {
+    plat::Prefs& pr = plat::basePrefs();
+    (void)s;
+    TxIqStreamConfig c = txIqStreamFromPrefs();
+    ImGui::BeginDisabled(running);
+    if (ImGui::Checkbox("Send the IQ over TCP##iqtcp", &c.enabled)) pr.setB("tx.iqTcp", c.enabled);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Serves the IQ of the transmission on a TCP port while it runs (also in a test or into a file), for GNU Radio: a TCP source client, complex samples. It never stops a transmission; if the port cannot be opened the log says so.");
+    if (c.enabled) {
+        ImGui::SetNextItemWidth(100 * gUi);
+        int port = c.port;
+        if (ImGui::InputInt("Port##iqtcp", &port, 0, 0)) pr.setI("tx.iqTcpPort", std::max(1, std::min(65534, port)));
+        ImGui::SameLine();
+        char bind[64];
+        snprintf(bind, sizeof bind, "%s", c.bindAddr.c_str());
+        ImGui::SetNextItemWidth(130 * gUi);
+        if (ImGui::InputText("Bind address##iqtcp", bind, sizeof bind)) pr.setS("tx.iqTcpBind", bind);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "127.0.0.1: this computer only (default). 0.0.0.0: any computer on the network can read the IQ.");
+        const char* fm[] = {"cf32", "cs16", "ci16", "cs8", "cu8"};
+        ImGui::SetNextItemWidth(100 * gUi);
+        if (ImGui::BeginCombo("Format##iqtcp", fm[(int)c.format])) {
+            for (int i = 0; i < 5; i++) if (ImGui::Selectable(fm[i], (int)c.format == i)) pr.setI("tx.iqTcpFmt", i);
+            ImGui::EndCombo();
+        }
+        ImGui::SameLine();
+        if (ImGui::Checkbox("JSON line first##iqtcp", &c.headerLine)) pr.setB("tx.iqTcpHeader", c.headerLine);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Put one line of JSON (format, sample_rate, center_freq, mode) before the samples. Off: raw samples only; read the same line from port + 1.");
+        ImGui::TextDisabled("Sample rate and centre frequency: connect to port %d and read one JSON line (it also works while nothing is sent).", c.port + 1);
+    }
+    ImGui::EndDisabled();
+}
+
 // The Basic block: radio, level, what to send; then Advanced (folded)
 void stepSettings(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const TxModeSpec* mode, bool running) {
     if (!mode) { ImGui::TextDisabled("%s", tr("Choose a signal in the list.")); return; }
@@ -167,6 +210,7 @@ void stepSettings(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const 
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Runs the signal generator at the radio's sample rate into nothing: no radio is opened and nothing is sent. The spectrum and levels show what would go out."));
 
     destinationPanel(s, *mode, running);
+    iqStreamPanel(s, running);
     radioRow(a, s, radio, running);
     if (conflict && !noRadio(s)) {
         char b[400];

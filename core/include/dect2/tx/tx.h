@@ -33,6 +33,7 @@
 #include "dect2/audio/audioin.h"
 #include "dect2/audio/videoin.h"
 #include "dect2/tv/demo_ts.h"
+#include "dect2/tx/tx_iqstream.h"
 #include <atomic>
 #include <condition_variable>
 #include <deque>
@@ -234,6 +235,7 @@ public:
     // Change frequency / gain / bandwidth while sending (a radio that cannot says so in err and goes on as it was). Applied between two writes by the sender thread.
     bool retune(const TxTune& t, std::string& err);
     bool dryRun() const { return dry_; }
+    int iqClients() const { return iq_ ? iq_->clients() : -1; }   // TCP IQ stream: connected clients, -1 when the stream is off or could not open
     Stats stats() const;
     std::vector<std::string> log() const;          // what was sent and what happened, oldest first, each with the time
     void setLogCallback(std::function<void(const std::string&)> f) { std::lock_guard<std::mutex> lk(mu_); cb_ = std::move(f); }
@@ -249,6 +251,7 @@ private:
     void tapWrite(const cf32* x, size_t n);
 
     std::unique_ptr<TxSink> sink_;
+    std::unique_ptr<TxIqStream> iq_;   // the IQ on a TCP socket (tx_iqstream.h), when the setting is on
     std::unique_ptr<TxGenerator> gen_;
     std::unique_ptr<AudioIn> audio_;
     std::unique_ptr<VideoIn> video_;

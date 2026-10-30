@@ -172,7 +172,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
 # The modes added after FM (DVB-S/S2, DTMB, analog TV, DMR, DRM, ADS-B): every core/src/<mode>/*.cpp belongs to its mode, so a mode can add files without editing this list
   set(DECT2_MODES autodet fsq ifkp cquam selfcal dvbs dtmb atv dmr drm adsb gnss dab sonde ais marine acars inmc aero iridium mesh hdr cdr pager packet hfdig airband vdl2 ism vor ils m17 cell cw dstar hfdl nxdn gsmr psk js8 specx wb specan dvbc dpmr orbcomm uplink tetra tetrapol ale mac astro p25 ble iono qo100 wifi general time rid meteor nr cubesat ccsds goes globalstar vdes hrpt zigbee flarm hfbeacon dji nbiot halow codar datawell same multitone loraraw ant dect elektro ndb lbj railway horus eczas vdl4 uat wisun fpv wmbus tones sarsat mt63 zwave mscatter dgps dme sitor kris kavb kapp kaft eloran mpt1327 fusion ardop goesdcs modeac bletrk ltr edacs p25p2 kait satbeacon kaws milhf nfc kaal ham prop antd lorawan lorasat isdbs marinevhf argos sigfox sbas asterix voice)
   list(APPEND DECT2_MODES pactor)   # PACTOR-I monitor (family 203): core/src/pactor, app/pactor, tests/pactor
-  list(APPEND DECT2_MODES roshf ssdv ebicab)   # ROS (HF) detector (family 205), SSDV pictures (206), EBICab / Eurobalise up-link (207): core/src/<mode>, app/<mode>, tests/<mode>
+  list(APPEND DECT2_MODES roshf ssdv ebicab nrf24)   # ROS (HF) detector (family 205), SSDV pictures (206), EBICab / Eurobalise up-link (207): core/src/<mode>, app/<mode>, tests/<mode>
   list(APPEND DECT2_MODES esubghz)   # Flipper Zero Sub-GHz chat, receive and send (family 204): core/src/esubghz, app/esubghz, tests/esubghz
   list(APPEND DECT2_MODES inmsat)   # Inmarsat all-carriers mode (3.3, docs/INMARSAT-REVAMP.md): core/src/inmsat, tests/inmsat
   list(APPEND DECT2_MODES pskdsp)   # PSK demodulator and analyser (family 202, #282): core/src/pskdsp, app/pskdsp, tests/pskdsp
@@ -221,7 +221,7 @@ if(DECT2_WITH_TLS)
   target_compile_definitions(dect2core PRIVATE DECT2_TLS)
   target_link_libraries(dect2core PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 endif()
-target_sources(dect2core PRIVATE core/src/tx/tx.cpp core/src/tx/tx_payload.cpp core/src/tx/tx_voice.cpp core/src/tx/tx_iqfile.cpp core/src/tx/tx_measure.cpp core/src/tx/tx_studio.cpp core/src/audio/audioin.cpp core/src/audio/videoin.cpp core/src/audio/neural_nr.cpp core/src/audio/audio_cleanup.cpp core/src/audio/audio_control.cpp core/src/audio/voice_inversion.cpp) # transmit: modes, payloads, live voice/video, the TX session (tx.h)
+target_sources(dect2core PRIVATE core/src/tx/tx.cpp core/src/tx/tx_payload.cpp core/src/tx/tx_voice.cpp core/src/tx/tx_iqfile.cpp core/src/tx/tx_iqstream.cpp core/src/tx/tx_measure.cpp core/src/tx/tx_studio.cpp core/src/audio/audioin.cpp core/src/audio/videoin.cpp core/src/audio/neural_nr.cpp core/src/audio/audio_cleanup.cpp core/src/audio/audio_control.cpp core/src/audio/voice_inversion.cpp) # transmit: modes, payloads, live voice/video, the TX session (tx.h)
 foreach(m ${DECT2_MODES})
   file(GLOB DECT2_MODE_SRC CONFIGURE_DEPENDS core/src/${m}/*.cpp)
   target_sources(dect2core PRIVATE ${DECT2_MODE_SRC})
@@ -1313,6 +1313,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_inmsat_mode PRIVATE dect2core)
     target_compile_definitions(test_inmsat_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME inmsat_mode COMMAND test_inmsat_mode)
+    add_executable(test_nrf24_mode tests/app/test_nrf24_mode.cpp)   # nRF24L01: tuning, mode row, engine / panel wiring, the radios named
+    target_link_libraries(test_nrf24_mode PRIVATE dect2core)
+    target_compile_definitions(test_nrf24_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME nrf24_mode COMMAND test_nrf24_mode)
     add_executable(test_esubghz_mode tests/app/test_esubghz_mode.cpp)   # Flipper Zero Sub-GHz chat: tuning, mode row, engine / panel / TX wiring, transmit rules
     target_link_libraries(test_esubghz_mode PRIVATE dect2core)
     target_compile_definitions(test_esubghz_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
@@ -1656,6 +1660,9 @@ if(DECT2_BUILD_TESTS)
     add_executable(test_tx_iqfile tests/tx/test_tx_iqfile.cpp)   # transmit into an IQ file: every format written and read back with the project reader (nothing is transmitted)
     target_link_libraries(test_tx_iqfile PRIVATE dect2core)
     add_test(NAME tx_iqfile COMMAND test_tx_iqfile)
+    add_executable(test_tx_iqstream tests/tx/test_tx_iqstream.cpp)   # the transmit IQ on a TCP socket: every format, header and side channel, reconnect, dry run (loopback client)
+    target_link_libraries(test_tx_iqstream PRIVATE dect2core)
+    add_test(NAME tx_iqstream COMMAND test_tx_iqstream)
     add_executable(test_tx_quality_a tests/tx/test_tx_quality_a.cpp)   # TX signal quality, modes acars .. iono: level, clipping, DC, ACLR, spurs, fades, block seams; --rt: through the receiver
     target_link_libraries(test_tx_quality_a PRIVATE dect2core)
     add_test(NAME tx_quality_a COMMAND test_tx_quality_a)
