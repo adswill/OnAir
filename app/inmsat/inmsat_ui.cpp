@@ -40,6 +40,7 @@ struct State {
     double pushedLat = -999, pushedLon = -999;
     bool record = false;
     int pushedRecord = -1;
+    float pushedVol = -1; int pushedMute = -1;
     char filter[24] = "";
     adsbmap::View map;
     bool mapFollow = true;
@@ -563,6 +564,8 @@ void tick(App& a) {
     if (!a.engine.running()) { S.pushedFocus = -1; S.pushedBudget = -1; S.pushedInmc = -1; S.pushedRecord = -1; return; }
     dect2::InmsatReceiver& r = a.engine.inmsat();
     if (S.focusId != S.pushedFocus) { r.setFocus(S.focusId); S.pushedFocus = S.focusId; }
+    if (a.volume != S.pushedVol) { r.setVolume(a.volume); S.pushedVol = a.volume; }          // the sound controls are shared with the other modes
+    if ((int)a.muted != S.pushedMute) { r.setMuted(a.muted); S.pushedMute = (int)a.muted; }
     if (S.budget != S.pushedBudget) { r.setBudget(S.budget); S.pushedBudget = S.budget; }
     if ((int)S.inmcOn != S.pushedInmc) { r.setInmarsatC(S.inmcOn); S.pushedInmc = (int)S.inmcOn; }
     if (S.pushedSat != S.satChoice) { r.setSatelliteOverride(S.satChoice); S.pushedSat = S.satChoice; }

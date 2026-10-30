@@ -1,6 +1,10 @@
 // Inmarsat all-carriers receiver (inmsat_rx.h).
 #include "dect2/inmsat/inmsat_rx.h"
 #include "dect2/inmsat/inmsat_tel.h"
+#include "dect2/audio/audioout.h"
+#include "dect2/dsp/up6.h"
+#include <algorithm>
+#include <atomic>
 #include <mutex>
 
 namespace dect2 {
@@ -13,6 +17,31 @@ struct InmsatReceiver::Impl {
     std::mutex mu;
     InmsatTelemetry cache;
     bool have = false;
+    // the sound: the mixer's 8 kHz output, pulled in step with the samples fed, up to 48 kHz stereo on the default output device
+    std::unique_ptr<AudioOut> out;
+    Up6 up;
+    std::atomic<float> volume{1.f};
+    std::atomic<bool> muted{false};
+    double audioDue = 0;                 // 8 kHz samples owed to the output
+    std::vector<int16_t> pcm8;
+    std::vector<float> pcm48;
+    void pullAudio(size_t fed) {
+        audioDue += (double)fed / rate * 8000.0;
+        const int n8 = (int)audioDue;
+        if (n8 < 160) return;
+        audioDue -= n8;
+        pcm8.resize((size_t)n8);
+        voice.mix(pcm8.data(), (size_t)n8);
+        bool any = false;
+        for (int16_t v : pcm8) any |= v != 0;
+        if (!any && (!out || out->bufferedFrames() == 0)) return;    // nothing plays: leave the output alone (another mode's sound, the monitor)
+        if (!out) { out = std::make_unique<AudioOut>(); out->start(48000); }
+        pcm48.clear();
+        for (int16_t v : pcm8) up.push(v / 32768.f, [&](float y) { pcm48.push_back(y); pcm48.push_back(y); });
+        out->setVolume(volume.load()); out->setMuted(muted.load());
+        if (out->bufferedFrames() > 48000 * 3 / 2) out->flush();
+        out->write(pcm48.data(), (int)(pcm48.size() / 2));
+    }
 };
 
 InmsatReceiver::InmsatReceiver() : p_(std::make_unique<Impl>()) {}
@@ -42,9 +71,12 @@ void InmsatReceiver::setFocus(int id) { p_->mgr.setFocus(id); }
 void InmsatReceiver::setBudget(double u) { p_->mgr.setBudget(u); }
 void InmsatReceiver::setInmarsatC(bool on) { p_->mgr.setInmcOn(on); }
 inmsat::VoiceMixer& InmsatReceiver::voice() { return p_->voice; }
+void InmsatReceiver::setVolume(float v) { p_->volume = std::max(0.f, std::min(1.f, v)); }
+void InmsatReceiver::setMuted(bool m) { p_->muted = m; }
 
 void InmsatReceiver::feed(const cf32* x, size_t n) {
     p_->mgr.feed(x, n);
+    if (p_->rate > 0) p_->pullAudio(n);
     inmsat::Snapshot s;
     if (!p_->mgr.snapshot(s, p_->lastMgrSeq)) return;
     p_->lastMgrSeq = s.seq;

@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <deque>
 #include <map>
+#include <filesystem>
 #include <mutex>
 
 namespace dect2::inmsat {
@@ -86,7 +87,11 @@ VoiceMixer::VoiceMixer() : p_(std::make_unique<Impl>()) {}
 VoiceMixer::~VoiceMixer() { std::lock_guard<std::mutex> lk(p_->mu); for (auto& kv : p_->chans) p_->closeCall(kv.second); }
 void VoiceMixer::setDecoderFactory(DecoderFactory f) { std::lock_guard<std::mutex> lk(p_->mu); p_->factory = std::move(f); p_->chans.clear(); }
 void VoiceMixer::setCodecFolder(const std::string& folder) { std::lock_guard<std::mutex> lk(p_->mu); p_->folder = folder; }
-void VoiceMixer::setRecording(const std::string& dir) { std::lock_guard<std::mutex> lk(p_->mu); p_->recDir = dir; }
+void VoiceMixer::setRecording(const std::string& dir) {
+    std::lock_guard<std::mutex> lk(p_->mu);
+    p_->recDir = dir;
+    if (!dir.empty()) { std::error_code ec; std::filesystem::create_directories(std::filesystem::path(dir), ec); }   // the pictures folder's Inmarsat subfolder may not exist yet
+}
 void VoiceMixer::setMute(int id, bool on) { std::lock_guard<std::mutex> lk(p_->mu); p_->chans[id].info.id = id; p_->chans[id].info.mute = on; }
 void VoiceMixer::setSolo(int id, bool on) { std::lock_guard<std::mutex> lk(p_->mu); p_->chans[id].info.id = id; p_->chans[id].info.solo = on; }
 
