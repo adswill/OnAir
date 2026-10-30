@@ -4,6 +4,7 @@
 // a sync pattern: the POCSAG sync word at the three baud rates (the symbol sampling instants follow from the baud rate) and the FLEX sync 1 marker.
 // The first that finds its pattern locks on (in either polarity) and reads the transmission; the symbol timing follows the data. The protocol layers
 // are in pager_proto.cpp.
+#include "dect2/session/mode_adapters.h"
 #include "dect2/pager/pager_rx.h"
 #include "dect2/dsp/baseband_filter.h"
 #include "dect2/automation/engine.h"
@@ -807,6 +808,7 @@ bool PagerReceiver::telemetry(PagerTelemetry& out, uint64_t lastSeq) {
     std::lock_guard<std::mutex> lk(p_->mu);
     if (p_->pub.seq <= lastSeq) return false;
     out = p_->pub;
+    sess::observePager(out);
     return true;
 }
 void PagerReceiver::setProtocols(int mask) { p_->protoMask = mask & 3; }
