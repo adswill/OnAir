@@ -6,6 +6,7 @@
 #include "dect2/dpmr/dpmr_proto.h"
 #include "dect2/bandplan/bandplan.h"
 #include "dect2/channels/freq_db.h"
+#include "dect2/channels/tvplan.h"
 #include "dect2/dsp/fftutil.h"
 #include "dect2/nxdn/nxdn_proto.h"
 #include "dect2/p25/p25_proto.h"
@@ -862,6 +863,7 @@ static void calibrate(Result& R) {
     R.verdict = t.confidence >= kLikelyFrom && p2 < 0.5 * t.confidence ? VerdictLikely : VerdictAmbiguous;
 }
 
+static void applyTvPlanPrior(Result& R, const Features& f);
 static void applyPriors(Result& R, const Features& f) {
     const double hz = f.rfHz, tol = std::max(6.25e3, 0.5 * f.obwHz);
     std::vector<const FreqEntry*> nearBy;
@@ -898,6 +900,44 @@ static void applyPriors(Result& R, const Features& f) {
             bool hit = false;
             for (const std::string& w : want) if (!w.empty() && bandModes.count(w)) hit = true;
             if (hit) { c.score = std::min(100.0, c.score + 4); c.evidence.push_back("the band plan suggests this mode in " + bandName + " (+4)"); }
+        }
+    }
+    applyTvPlanPrior(R, f);
+}
+
+// TV channel plans as a prior: a flat block 6, 7 or 8 MHz wide whose centre sits on a channel of a TV plan (ISDB-T with its 1/7 MHz offset) is
+// a television channel of that width, whatever the country. The standards the plans carry say which modes can sit there (ATSC on 6 MHz plans,
+// DTMB on 8 and 6, DVB-T/T2 and ISDB-T on all three, DVB-C on 8 and 6). Only used when the RF frequency is known; it never creates a candidate.
+static void applyTvPlanPrior(Result& R, const Features& f) {
+    if (f.rfHz <= 0 || f.obwHz < 4.6e6 || f.obwHz > 8.6e6) return;
+    if (!(f.flatTop || f.shape == ShapeFlat || f.shape == ShapeRounded)) return;   // a block, not a few tones
+    struct Hit { const tvplan::Plan* plan; const tvplan::Channel* ch; };
+    std::vector<Hit> hits;
+    unsigned stds = 0;
+    double widthMhz = 0;
+    for (const tvplan::Plan& pl : tvplan::plans()) {
+        if (!(pl.stds & (tvplan::DvbAny | tvplan::Atsc | tvplan::Atsc3 | tvplan::IsdbT | tvplan::Dtmb | tvplan::DvbC))) continue;
+        const tvplan::Channel* c = pl.at(f.rfHz, 0.35e6);
+        if (!c || c->bwHz < 5.9e6 || c->bwHz > 8.1e6) continue;
+        if (f.obwHz < 0.68 * c->bwHz || f.obwHz > 1.04 * c->bwHz) continue;   // the measured 99 % width fits the channel
+        hits.push_back({&pl, c});
+        stds |= pl.stds;
+        widthMhz = c->bwHz / 1e6;
+    }
+    if (hits.empty()) return;
+    const Hit& h = hits[0];
+    char b[200];
+    snprintf(b, sizeof b, "TV channel plan: channel %s of %s (%.0f MHz wide)", h.ch->label.c_str(), h.plan->name.c_str(), h.ch->bwHz / 1e6);
+    R.priors.push_back(b);
+    (void)widthMhz;
+    struct Map { const char* mode; unsigned std; };
+    static const Map maps[] = {{"dvbt", tvplan::DvbAny}, {"atsc", tvplan::Atsc}, {"atsc3", tvplan::Atsc3}, {"isdbt", tvplan::IsdbT}, {"dtmb", tvplan::Dtmb}, {"dvbc", tvplan::DvbC}};
+    for (Candidate& c : R.cands) {
+        for (const Map& m : maps) {
+            if (c.modeId != m.mode || !(stds & m.std)) continue;
+            c.score = std::min(100.0, c.score + 4);
+            c.evidence.push_back(std::string("the frequency is on a ") + (h.ch->bwHz / 1e6 > 7.5 ? "8" : h.ch->bwHz / 1e6 > 6.5 ? "7" : "6") + " MHz TV channel raster (" + h.ch->label + " of " + h.plan->name + ") (+4)");
+            break;
         }
     }
 }
@@ -1549,8 +1589,11 @@ Memory toMemory(const Candidate& c, const Features& f) {
     m.name = b;
     m.freqHz = (uint64_t)std::llround(f.rfHz);
     m.mode = !c.subId.empty() ? c.subId : c.modeId == "dvbt" ? "dvb" : c.modeId;
-    if (c.modeId == "dvbt") m.options["dvbBw"] = "auto";
     if (f.obwHz > 0) m.bandwidthHz = f.obwHz;
+    // the measured width reaches the mode: DVB-T / T2 takes the channel width as an index (8, 7, 6, 5, 1.7 MHz), left on auto only when nothing was measured
+    if (c.modeId == "dvbt") m.options["dvbBw"] = f.obwHz > 7.2e6 ? "0" : f.obwHz > 6.2e6 ? "1" : f.obwHz > 5.2e6 ? "2" : f.obwHz > 3.0e6 ? "3" : f.obwHz > 0 ? "4" : "auto";
+    if (c.name == "NFM voice") m.options["genDemod"] = "0";   // GenNfm
+    if (c.modeId == "general" && f.obwHz > 0) { char w[32]; snprintf(w, sizeof w, "%.0f", f.obwHz); m.options["genWidthHz"] = w; }   // the General receiver's filter width (it clamps to what the demodulator allows)
     if (c.modeId == "dtmb") m.options["dtmbBwMhz"] = f.obwHz > 6.8e6 ? "8" : "6";
     if (c.modeId == "isdbt") m.options["isdbtBwMhz"] = f.obwHz > 7.0e6 ? "8" : f.obwHz > 6.0e6 ? "7" : "6";
     m.tags = "identified";

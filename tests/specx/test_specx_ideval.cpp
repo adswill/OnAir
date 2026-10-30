@@ -364,6 +364,10 @@ struct Outcome {
     bool called = false;              // the verdict was not "unknown"
     double conf = 0, ms = 0;
     int verify = 0;                   // the verify verdict of the truth when it is a candidate
+    double openBwHz = 0, obwHz = 0;   // what the Open / Add to memory button gets (toMemory of the best candidate) and the width the identifier measured
+    std::string openMode, openDvbBw, openGenWidth;
+    std::vector<std::string> priors;
+    std::vector<std::string> topEvidence;
     std::string summary;
 };
 
@@ -400,6 +404,15 @@ Outcome runOne(const Case& c, double snrDb, int known, int trial) {
     out.top1 = out.called ? res.cands[0].name : "(unknown)";
     out.conf = res.cands.empty() ? 0 : res.cands[0].confidence;
     out.summary = res.summary;
+    out.priors = res.priors;
+    out.obwHz = res.f.obwHz;
+    if (!res.cands.empty()) {
+        const Memory mem = toMemory(res.cands[0], res.f);
+        out.openBwHz = mem.bandwidthHz; out.openMode = mem.mode;
+        auto o1 = mem.options.find("dvbBw"); if (o1 != mem.options.end()) out.openDvbBw = o1->second;
+        auto o2 = mem.options.find("genWidthHz"); if (o2 != mem.options.end()) out.openGenWidth = o2->second;
+        out.topEvidence = res.cands[0].evidence;
+    }
     if (getenv("FEAT")) {   // the measurement in one line (for tuning)
         const Features& f = res.f;
         char b[400];
@@ -416,6 +429,139 @@ Outcome runOne(const Case& c, double snrDb, int known, int trial) {
         if (k < 3 && out.groupRank < 0 && std::find(c.truth.begin(), c.truth.end(), nm) != c.truth.end()) out.groupRank = (int)k;
     }
     return out;
+}
+
+
+// ---------------------------------------------------------------------------------------------------- the gaps: voice modes, more OFDM, noise, TV rasters
+
+// speech-like audio: a few hundred Hz to ~3 kHz, with a syllable envelope (4 Hz)
+std::vector<double> speechAudio(Rng& r, size_t n, double fs, double hiHz) {
+    std::vector<double> a(n);
+    double lp1 = 0, lp2 = 0, env = 0.5;
+    const double k = std::min(0.9, 2 * kPi * hiHz / fs);
+    for (size_t i = 0; i < n; i++) {
+        lp1 += k * (r.n() - lp1); lp2 += k * (lp1 - lp2);
+        env += 4.0 / fs * 6 * (r.n() * 0.5 + 0.5 - env) * 0.2;
+        a[i] = lp2 * (0.6 + 0.4 * std::sin(2 * kPi * 4 * (double)i / fs));
+    }
+    double m = 1e-9;
+    for (double v : a) m = std::max(m, std::fabs(v));
+    for (double& v : a) v /= m;
+    (void)env;
+    return a;
+}
+
+struct Extra { Case c; int level; };   // 2: the truth must be among the first three; 1: only "not wrongly sure"; 0: a known gap, reported (GAP) but not failed
+
+std::vector<Extra> extraCases() {
+    std::vector<Extra> v;
+    auto add = [&](const char* label, std::vector<std::string> truth, double fs, double sec, double bw, double mhz, int must, std::function<Sig(Rng&, size_t, double, double)> mk) {
+        Case c; c.label = label; c.truth = std::move(truth); c.fs = fs; c.sec = sec; c.bwHz = bw; c.mhz = mhz; c.make = std::move(mk);
+        v.push_back({c, must});
+    };
+    // SSB: upper sideband, 300 to 2700 Hz, as a sum of tones (50 Hz apart) under a syllable envelope
+    add("SSB voice", {"SSB voice", "Airband voice"}, 24e3, 1.5, 2.4e3, 7.1, 1, [](Rng& r, size_t n, double, double) {
+        Sig x(n);
+        std::vector<double> ph, am, fr;
+        for (int k = 0; k < 90; k++) { fr.push_back(r.u(300, 2700)); ph.push_back(r.u(0, 2 * kPi)); am.push_back(r.u(0.4, 1)); }   // no common spacing: speech is not periodic
+        const std::vector<double> env = speechAudio(r, n, 24e3, 30);
+        for (size_t i = 0; i < n; i++) {
+            const double t = (double)i / 24e3;
+            cf32 s(0, 0);
+            for (size_t k = 0; k < fr.size(); k++) s += (float)am[k] * cf32((float)std::cos(2 * kPi * fr[k] * t + ph[k]), (float)std::sin(2 * kPi * fr[k] * t + ph[k]));
+            x[i] = s * (float)(0.35 + 0.65 * std::fabs(env[i]));
+        }
+        return x;
+    });
+    // narrow FM voice: 2.5 kHz deviation, audio to 3 kHz
+    add("NFM voice", {"NFM voice", "Airband voice"}, 48e3, 1.0, 11e3, 145.5, 1, [](Rng& r, size_t n, double, double kd) {
+        Sig x(n);
+        const std::vector<double> a = speechAudio(r, n, 48e3, 3000);
+        double ph = 0;
+        for (size_t i = 0; i < n; i++) { ph += 2 * kPi * 2500 * kd * a[i] / 48e3; x[i] = cf32((float)std::cos(ph), (float)std::sin(ph)); }
+        return x;
+    });
+    // wide FM, mono: no pilot, no stereo subcarrier
+    add("WFM mono", {"FM broadcast"}, 1e6, 0.4, 180e3, 98.5, 2, [](Rng& r, size_t n, double, double kd) {
+        Sig x(n);
+        double ph = 0, f1 = r.u(300, 3000), p1 = 0;
+        const std::vector<double> a = speechAudio(r, n, 1e6, 8000);
+        for (size_t i = 0; i < n; i++) {
+            p1 += 2 * kPi * f1 / 1e6;
+            ph += 2 * kPi * 75e3 * kd * (0.6 * a[i] + 0.3 * std::sin(p1)) / 1e6;
+            x[i] = cf32((float)std::cos(ph), (float)std::sin(ph));
+        }
+        return x;
+    });
+    // ISDB-T mode 2 (Tu 504 us, 2809 carriers of 1.984 kHz = 5.57 MHz) at 512/63 Msps
+    add("ISDB-T", {"ISDB-T", "DVB-T / T2"}, 512e6 / 63, 0.1, 5.6e6, 569.143, 2, [](Rng& r, size_t n, double, double) { return ofdm(4096, 2809, 512, n, r, 12); });
+    // DVB-T2 8k normal, extended carrier mode (6913 carriers, Tu 896 us), 8 MHz at 64/7 Msps
+    add("DVB-T2", {"DVB-T / T2"}, 64e6 / 7, 0.14, 7.7e6, 538, 0, [](Rng& r, size_t n, double, double) { return ofdm(8192, 6913, 256, n, r, 12); });
+    add("DVB-T2 16k", {"DVB-T / T2"}, 64e6 / 7, 0.2, 7.7e6, 538, 0, [](Rng& r, size_t n, double, double) { return ofdm(16384, 13921, 512, n, r, 12); });
+    add("DVB-T2 8k nopil", {"DVB-T / T2"}, 64e6 / 7, 0.14, 7.7e6, 538, 0, [](Rng& r, size_t n, double, double) { return ofdm(8192, 6817, 256, n, r, 0); });
+    // DVB-T on a 7 MHz channel (Tu 256 us, 1705 carriers of 3.906 kHz, 8 Msps), band III channel E8
+    add("DVB-T 7 MHz", {"DVB-T / T2"}, 8e6, 0.12, 6.66e6, 198.5, 2, [](Rng& r, size_t n, double, double) { return ofdm(2048, 1705, 512, n, r, 12); });
+    return v;
+}
+
+// Noise only must be "I do not know", at every rate, and a wide flat block of noise on a TV channel must not turn into a TV mode
+void testNoise() {
+    struct N { double fs, mhz; const char* what; };
+    const N ns[] = {{48e3, 145.5, "48 kS/s"}, {250e3, 98.5, "250 kS/s"}, {2.4e6, 433.9, "2.4 MS/s"}, {64e6 / 7, 522, "8 MHz on TV channel 27"}, {8e6, 198.5, "7 MHz on a band III channel"}};
+    for (const N& n : ns) {
+        Rng r(0xC0FFEEu ^ (uint32_t)n.fs);
+        const size_t len = (size_t)std::min(1.5e6, n.fs * 0.3);
+        Sig x(len);
+        for (auto& v : x) v = cf32((float)r.n(), (float)r.n());
+        for (int known = 0; known < 2; known++) {
+            const Region rg = regionAt(x.data(), x.size(), n.fs, 0);
+            Options o;
+            o.loHz = rg.loHz; o.hiHz = rg.hiHz;
+            o.rfHz = known ? n.mhz * 1e6 : 0;
+            o.usePriors = known != 0;
+            const Result res = identify(x.data(), x.size(), n.fs, o);
+            CHECK(res.verdict == VerdictUnknown, "noise at %s%s: not Unknown (%s, %.0f %%)", n.what, known ? " with the frequency known" : "", res.cands.empty() ? "?" : res.cands[0].name.c_str(), res.cands.empty() ? 0.0 : res.cands[0].confidence * 100);
+            bool tvPrior = false;
+            for (const std::string& p : res.priors) if (p.rfind("TV channel plan", 0) == 0) tvPrior = true;
+            CHECK(!tvPrior || res.f.snrDb > 3, "noise at %s: a TV channel prior without a signal", n.what);
+        }
+    }
+}
+
+void testExtras() {
+    for (const Extra& e : extraCases()) {
+        int found = 0, sure = 0;
+        for (int known = 0; known < 2; known++) {
+            const Outcome o = runOne(e.c, 25, known, 0);
+            found += o.called && o.groupRank >= 0;
+            sure += o.called && o.groupRank < 0 && o.conf >= 0.5;
+            printf("  extra %-12s %s -> %-18s %3.0f %% %s open width %.0f Hz (measured %.0f)\n", e.c.label.c_str(), known ? "freq " : "blind", o.top1.c_str(), o.conf * 100, o.called ? "" : "(unknown)", o.openBwHz, o.obwHz);
+            if (getenv("FEAT")) printf("     %s\n", o.summary.c_str());
+            CHECK(o.openBwHz > 0 && std::fabs(o.openBwHz - o.obwHz) < 1, "%s: the Open button carries no measured width (%.0f of %.0f Hz)", e.c.label.c_str(), o.openBwHz, o.obwHz);
+        }
+        if (e.level == 0) { printf("  GAP: %s: found %d of 2, wrong and sure %d\n", e.c.label.c_str(), found, sure); continue; }
+        CHECK(sure == 0, "%s: wrong and sure of it", e.c.label.c_str());
+        if (e.level == 2) CHECK(found == 2, "%s: the truth was not among the first three (%d of 2)", e.c.label.c_str(), found);
+    }
+}
+
+// The TV channel plans as a prior: on the raster (and the right width) it shows, with the same samples off the raster it does not; the mode's own widths reach Open
+void testTvPrior() {
+    auto run = [](const Case& c, double mhz) {
+        Case k = c; k.mhz = mhz;
+        return runOne(k, 25, 1, 0);
+    };
+    auto has = [](const Outcome& o) { for (const std::string& p : o.priors) if (p.rfind("TV channel plan", 0) == 0) return true; return false; };
+    for (const Extra& e : extraCases()) {
+        if (e.c.label != "DVB-T2" && e.c.label != "DVB-T 7 MHz" && e.c.label != "ISDB-T") continue;
+        const double ch = e.c.label == "DVB-T2" ? 538.0 : e.c.label == "DVB-T 7 MHz" ? 198.5 : 569.0 + 1.0 / 7;   // channel 29 (E.U.), E8, ISDB-T ch 27 (Brazil / Japan raster, 1/7 MHz offset)
+        const Outcome on = run(e.c, ch), off = run(e.c, ch + 3.5);
+        CHECK(has(on), "%s on the raster: no TV channel plan prior", e.c.label.c_str());
+        if (e.c.label != "DVB-T 7 MHz") {   // band III has so many overlapping plans (6, 7, 8 MHz) that no frequency there is off every raster
+            std::string pr; for (const std::string& p : off.priors) pr += p + "; "; CHECK(!has(off), "%s 3.5 MHz off the raster: a TV channel plan prior anyway (%s)", e.c.label.c_str(), pr.c_str());
+        }
+        if (!on.openDvbBw.empty() && e.c.label != "ISDB-T") CHECK(on.openDvbBw != "auto", "%s: Open leaves the DVB width on auto although %.1f MHz was measured", e.c.label.c_str(), on.obwHz / 1e6);
+    }
 }
 
 struct Tally { int n = 0, top1 = 0, top3 = 0, group1 = 0, group3 = 0, wrongSure = 0, unknown = 0; };
@@ -493,6 +639,14 @@ int main(int argc, char** argv) {
         CHECK(a.top1 == b.top1 && a.conf == b.conf && a.summary == b.summary, "not deterministic: %s %.4f / %s %.4f", a.top1.c_str(), a.conf, b.top1.c_str(), b.conf);
     }
     if (!only.empty() || verbose) { printf("(partial or verbose run: thresholds not checked)\n"); return 0; }
+    // the Open / Add to memory button carries the measured width in every case that was called
+    for (const Outcome& o : res) if (o.called && o.openBwHz > 0) CHECK(std::fabs(o.openBwHz - o.obwHz) < 1, "%s: the Open width %.0f Hz is not the measured %.0f Hz", o.label.c_str(), o.openBwHz, o.obwHz);
+    int noWidth = 0;
+    for (const Outcome& o : res) noWidth += o.called && o.obwHz > 0 && o.openBwHz <= 0;
+    CHECK(noWidth == 0, "%d identified runs gave the Open button no width", noWidth);
+    testExtras();
+    testNoise();
+    testTvPrior();
     // the thresholds: what this set measured (docs/IDENTIFIER.md) less a margin for the platforms' floating point
     const Tally& m15 = bySnr[15], &m25 = bySnr[25], &m10 = bySnr[10];
     CHECK(pct(m15.top3, m15.n) >= 76, "top-3 at 15 dB SNR %.1f %% (>= 76)", pct(m15.top3, m15.n));
