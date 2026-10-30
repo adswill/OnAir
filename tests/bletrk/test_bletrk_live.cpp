@@ -17,7 +17,7 @@ using namespace dect2;
 int main() {
     std::mutex mu;
     std::vector<automation::Event> seen;
-    automation::global().setTap([&](const automation::Event& e) { std::lock_guard<std::mutex> lk(mu); seen.push_back(e); }, 1u << automation::FBle);
+    automation::global().setTap([&](const automation::Event& e) { std::lock_guard<std::mutex> lk(mu); seen.push_back(e); }, automation::familyBit(automation::FBle));
 
     BleGenConfig c;
     c.snrDb = 30;

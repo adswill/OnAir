@@ -172,7 +172,7 @@ void testWriterThreadAndTap() {
     db.open(":memory:");
     db.start();
     au::Engine eng;
-    eng.setTap([&](const au::Event& e) { db.enqueue(e); }, (1u << au::FAcars) | (1u << au::FPager) | (1u << au::FAdsb));
+    eng.setTap([&](const au::Event& e) { db.enqueue(e); }, au::familyBit(au::FAcars) | au::familyBit(au::FPager) | au::familyBit(au::FAdsb));
     CHECK(eng.wants(au::FAcars) && !eng.wants(au::FAis), "tap makes the decoders emit");
     eng.submit(acars("A6-EDA", "ONE", kT0));
     eng.submit(pager(5, "TWO", kT0 + 1));

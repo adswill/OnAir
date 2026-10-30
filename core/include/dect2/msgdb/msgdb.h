@@ -25,6 +25,7 @@ struct Record {
     bool hasPos = false;
     std::string extra;        // all fields as "key=value" lines (searched)
     std::string source;       // the recording / IQ file this was decoded from (event field file / source_file / recording), empty for a live receiver
+    int64_t sessionId = 0;    // the session (core/include/dect2/session) this record summarises: View > Messages jumps to the mode's Items tab with it; 0 = none
 };
 
 struct Filter {
@@ -36,6 +37,7 @@ struct Filter {
     bool posOnly = false;
     double freqLo = 0, freqHi = 0;   // Hz, 0 = open (a record without a frequency never matches a set range)
     std::string source;       // substring of the source file name, empty = any
+    int64_t sessionId = 0;    // only the record of this session (0 = any)
     bool relevance = false;   // order by text relevance (bm25: identity > message > extra) instead of newest first; needs text
     int limit = 500;
     int offset = 0;
@@ -46,6 +48,8 @@ struct Limits {
     int64_t maxRows = 1000000;        // 0 = no limit
     double maxAgeDays = 0;            // 0 = keep forever
     int64_t maxBytes = 512ll << 20;   // size cap of the file, 0 = no cap; the oldest rows go first
+    int64_t maxRowsPerFamily = 0;     // 0 = no quota; else no event family ("acars", "session" ...) keeps more rows than this, the oldest of that family go first,
+                                      // so a chatty family cannot push the others out of the shared cap
 };
 
 struct Stats { int64_t rows = 0; int64_t bytes = 0; double oldest = 0, newest = 0; };

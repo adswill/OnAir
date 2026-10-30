@@ -20,6 +20,7 @@
 
 namespace dect2 {
 class AudioOut;
+namespace sess { class SessionStore; }
 
 namespace voice {
 
@@ -100,6 +101,7 @@ struct CallEntry {
     bool priority = false;
     std::string label;           // the label of the target (labels)
     std::string file;            // the recording (empty: none)
+    uint64_t sessionId = 0;      // the call's Session in the session store (core/include/dect2/session), 0 = none
     double seconds() const { return lastSec > firstSec ? lastSec - firstSec : 0.0; }
 };
 
@@ -131,6 +133,12 @@ public:
     std::string label(const CallInfo& c) const;
     static std::string targetToken(const CallInfo& c);   // what holdCurrent / muteToken put in the list for this call
 
+    // ---- the session store (docs/MODE-EXPERIENCE.md, 2.2a). Every call is also handed to the store as a Session when it opens, now and then
+    // while it runs, and when it ends: only a queue push, never SQLite or file work under this monitor's mutex. The store's key is (mode, receiver).
+    void setSessionReceiver(uint16_t receiver);   // the receiver instance this monitor serves (a wide capture or a second SDR has its own monitor)
+    uint16_t sessionReceiver() const;
+    void setSessionStore(sess::SessionStore* store);   // nullptr: the program's store (sess::global()); tests pass their own, and reset it before it is destroyed
+
     // ---- tests: the clocks (seconds) and the end of idle calls
     void setClock(std::function<double()> monotonic, std::function<int64_t()> wall = nullptr);
     void housekeep();
@@ -140,7 +148,7 @@ public:
 
 private:
     struct Rec;
-    struct Live { CallEntry e; std::unique_ptr<Rec> rec; };
+    struct Live { CallEntry e; std::unique_ptr<Rec> rec; double sessSec = -1e9; Verdict sessVerdict = Verdict::Busy; bool sessEnc = false, sessEmerg = false; };
     std::string mode_;
     mutable std::mutex mu_;
     Settings set_;
@@ -161,6 +169,12 @@ private:
     void applyLocked();
     std::string labelLocked(const CallInfo& c) const;
     void openRecLocked(Live& l, int channels, int rate);
+    uint16_t sessRx_ = 0;
+    sess::SessionStore* sessStore_ = nullptr;
+    bool sessNamed_ = false;
+    sess::SessionStore* sessionStore() const;
+    void sessionSyncLocked(Live& l, double t);   // begin or update (throttled) the call's session
+    void sessionEndLocked(Live& l);              // end it, link its recording
 };
 
 // The monitor of a mode ("dmr", "p25", "nxdn", "dpmr", "dstar", "ysf", "tetra", "m17"): created on first use, lives for the program.

@@ -459,7 +459,7 @@ void applyStreamer() {
         const std::string line = apipol::eventLine(e, 0, apipol::kMaxUdpLine - 1);
         if (t.cfg.on) t.host.ring.push(line);
         if (t.udpCfg.on) t.udp.send(line);
-    }, (1u << dect2::automation::kFamilies) - 1);
+    }, dect2::automation::kAllFamilies);
 }
 void applyAll() {
     State& s = st();

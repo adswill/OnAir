@@ -436,7 +436,7 @@ void Manager::dispatchEvent(const automation::Event& ev) {
 void Manager::attachAutomation() {
     if (p_->automationAttached) return;
     p_->automationAttached = true;
-    automation::global().setObserver([this](const automation::Event& e) { dispatchEvent(e); }, (1u << automation::kFamilies) - 1);
+    automation::global().setObserver([this](const automation::Event& e) { dispatchEvent(e); }, automation::kAllFamilies);
 }
 void Manager::tick(double now) {
     std::vector<std::pair<std::string, std::string>> failed;

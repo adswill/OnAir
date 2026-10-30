@@ -78,6 +78,27 @@ std::vector<EventInfo> build() {
     v.push_back({"satellite.aos", "Tracked satellite pass starts", "Passes window", "", 137.1e6, {
         {"name", 's', "satellite", "NOAA 19"}, {"max_el_deg", 'n', "highest elevation of the pass", "62"}}});
     v.push_back({"satellite.los", "Tracked satellite pass ends", "Passes window", "", 137.1e6, {{"name", 's', "satellite", "NOAA 19"}}});
+    // the end-of-session summaries of the mode experience framework (core/include/dect2/session): ids, counts and the title; never an alias, note or message text
+    {
+        static const char* kSes = "Calls, threads and tracks";
+        auto sessionFields = [] {
+            return std::vector<FieldInfo>{
+                {"session_id", 's', "the session's id (a number written as text: it is 63 bits wide)", "1766010347528192001"},
+                {"key", 's', "what the mode calls it: talkgroup and slot, capcode, ICAO address (a short tag for personal ids)", "TG 91/slot1"},
+                {"title", 's', "the title shown in the Items tab", "DMR TG 91 Worldwide, 12 s"},
+                {"kind", 's', "call, thread or track", "call"},
+                {"verdict", 's', "clear, encrypted, unreadable or test (encrypted ones are metadata only)", "clear"},
+                {"mode_num", 'n', "the mode's number (docs/MODE-NUMBERS.md)", "9"},
+                {"receiver", 'n', "receiver instance 0, 1 ...", "0"},
+                {"duration_s", 'n', "length in seconds", "12"},
+                {"events", 'n', "frames, messages or points in it", "40"},
+                {"emergency", 'b', "marked as an emergency", "false"},
+            };
+        };
+        v.push_back({"session.call", "A call ended", kSes, "DMR", 438.5e6, sessionFields()});
+        v.push_back({"session.thread", "A message thread ended", kSes, "ACARS", 131.725e6, sessionFields()});
+        v.push_back({"session.track", "A track ended", kSes, "ADS-B", 1090e6, sessionFields()});
+    }
     v.push_back({"time.minute", "Every minute (time-of-day triggers)", "clock", "", 0, {
         {"hour", 'n', "local hour 0 to 23", "7"}, {"minute", 'n', "minute 0 to 59", "30"}, {"weekday", 'n', "0 Sunday to 6 Saturday", "1"}}});
     return v;

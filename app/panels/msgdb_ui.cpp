@@ -75,8 +75,8 @@ void applySettings() {
     l.maxBytes = (int64_t)S.maxMB << 20;
     l.maxAgeDays = S.keepDays;
     mdb::global().setLimits(l);
-    const uint32_t mask = (1u << au::FAdsb) | (1u << au::FAcars) | (1u << au::FVdl2) | (1u << au::FHfdl) | (1u << au::FPager) | (1u << au::FAis) | (1u << au::FAprs) |
-                          (1u << au::FSonde) | (1u << au::FLora) | (1u << au::FBle) | (1u << au::FRid) | (1u << au::FDsc);
+    const au::FamilyMask mask = au::familyBit(au::FAdsb) | au::familyBit(au::FAcars) | au::familyBit(au::FVdl2) | au::familyBit(au::FHfdl) | au::familyBit(au::FPager) | au::familyBit(au::FAis) | au::familyBit(au::FAprs) |
+                                au::familyBit(au::FSonde) | au::familyBit(au::FLora) | au::familyBit(au::FBle) | au::familyBit(au::FRid) | au::familyBit(au::FDsc) | au::familyBit(au::FSession);
     if (S.record) au::global().setTap([](const au::Event& e) { mdb::global().enqueue(e); }, mask);
     else au::global().setTap(nullptr, 0);
 }
