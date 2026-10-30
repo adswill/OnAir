@@ -160,6 +160,21 @@ void prepGeneric(Rx& rx, double rate, int stdMode) {
     if constexpr (requires { rx.setCenterHz(0.0); }) rx.setCenterHz(mt ? mt->defMhz * 1e6 : 0.0);
 }
 
+// Power of the strongest sinusoid within +-searchHz of hz in x (mean removed, n samples at 48 kHz). A sample clock error of a few tens of ppm moves
+// the 1 kHz test tone by a few hundredths of a hertz; measured at exactly 1000.000 Hz the tone leaks into "everything else" and the audio
+// SNR is capped at about 27 dB, which made the 20 dB criterion fail early and read as a loss of sensitivity (FM: 7 dB, with 50 ppm).
+inline double tonePower(const float* x, size_t n, double mean, double hz, double searchHz = 1.5) {
+    auto at = [&](double f) {
+        std::complex<double> c = 0, r = 1; const std::complex<double> st = std::polar(1.0, -2 * M_PI * f / 48000.0);
+        for (size_t i = 0; i < n; i++) { c += (x[i] - mean) * r; r *= st; if ((i & 1023) == 1023) r = std::polar(1.0, -2 * M_PI * f * (double)(i + 1) / 48000.0); }
+        return 2 * std::norm(c / (double)n);
+    };
+    double best = at(hz), bf = hz;
+    for (double f = hz - searchHz; f <= hz + searchHz + 1e-9; f += 0.2) { const double v = at(f); if (v > best) { best = v; bf = f; } }
+    for (double f = bf - 0.2; f <= bf + 0.2 + 1e-9; f += 0.02) { const double v = at(f); if (v > best) best = v; }
+    return best;
+}
+
 // FM audio: the 1 kHz tone against everything else over the last half second of the left channel (the 3 kHz tone of the right channel leaking
 // over is not noise). "Valid" = at least 20 dB.
 struct FmAudio : Session {
@@ -180,11 +195,7 @@ struct FmAudio : Session {
         mean /= (double)n;
         for (size_t i = 0; i < n; i++) tot += (x[i] - mean) * (x[i] - mean);
         tot /= (double)n;
-        auto tone = [&](double hz) {
-            std::complex<double> c = 0, r = 1; const std::complex<double> st = std::polar(1.0, -2 * M_PI * hz / 48000.0);
-            for (size_t i = 0; i < n; i++) { c += (x[i] - mean) * r; r *= st; if ((i & 1023) == 1023) r = std::polar(1.0, -2 * M_PI * hz * (double)(i + 1) / 48000.0); }
-            return 2 * std::norm(c / (double)n);
-        };
+        auto tone = [&](double hz) { return tonePower(x, n, mean, hz); };
         const double p1 = tone(1000), p3 = tone(3000);
         const double snr = 10 * std::log10(std::max(1e-15, p1) / std::max(1e-15, tot - p1 - p3));
         return {snr >= 20 ? 1.0 : 0.0, snr >= 20 ? 0.0 : 1.0};
@@ -217,9 +228,7 @@ struct GeneralAudio : Session {
         mean /= (double)n;
         for (size_t i = 0; i < n; i++) tot += (x[i] - mean) * (x[i] - mean);
         tot /= (double)n;
-        std::complex<double> c = 0;
-        for (size_t i = 0; i < n; i++) c += (x[i] - mean) * std::polar(1.0, -2 * M_PI * 1000.0 * (double)i / 48000.0);
-        const double p1 = 2 * std::norm(c / (double)n);
+        const double p1 = tonePower(x, n, mean, 1000.0);
         const double snr = 10 * std::log10(std::max(1e-15, p1) / std::max(1e-15, tot - p1));
         return {snr >= 20 ? 1.0 : 0.0, snr >= 20 ? 0.0 : 1.0};
     }
