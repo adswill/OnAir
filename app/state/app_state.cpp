@@ -108,8 +108,10 @@ void setMode(App& a, int f, int sub) {
     if (a.family >= 6 && f >= 6 && a.family != f) {
         const ModeTuning* ot = modeTuning(a.family + 2);
         const ModeTuning* nt = modeTuning(f + 2);
-        // both cover the LNB's output (1000 to 2100 MHz, where DVB-S, ISDB-S, D2-MAC, the sat beacon decoder and QO-100 live) and the frequency is in it
-        const auto lnb = [](const ModeTuning* t) { return t->minMhz <= 1000 && t->maxMhz >= 2100; };
+        // Only the modes that listen to a satellite dish's LNB output (1000 to 2100 MHz): DVB-S/S2 (8), MAC (49), QO-100 (55), the TV sat beacon decoder
+        // (146) and ISDB-S (156). The tuning ranges cannot tell them apart any more (every mode accepts any frequency), and a frequency such as 1927 MHz
+        // used to follow the user into ADS-B, airband or FM.
+        const auto lnb = [](const ModeTuning* t) { return t->stdMode == 8 || t->stdMode == 49 || t->stdMode == 55 || t->stdMode == 146 || t->stdMode == 156; };
         if (ot && nt && lnb(ot) && lnb(nt) && a.freqMhz >= 1000 && a.freqMhz <= 2100) carryMhz = a.freqMhz;
     }
     a.sub = sub;
