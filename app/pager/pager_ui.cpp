@@ -23,6 +23,8 @@ struct State {
     char filter[48] = "";                // matches the address or the text
     char watch[256] = "";                // the capcode watch list (#269), saved as pagerWatch
     dect2::PagerWatch watched;           // watch, parsed
+    char ignore[256] = "";               // capcodes to hide from the Messages view (saved as pagerIgnore)
+    dect2::PagerWatch ignored;           // ignore, parsed
     bool watchOnly = false;              // the Messages view shows only watched addresses (saved as pagerWatchOnly)
     bool pocsag = true, flex = true;
     bool decodedOnly = false;            // hide tone-only and empty pages from the table, Copy and the list (saved as pagerDecodedOnly)
@@ -55,6 +57,8 @@ void loadRead() {
     snprintf(S.watch, sizeof S.watch, "%s", d.getS("pagerWatch", "").c_str());
     S.watched = dect2::pagerParseWatch(S.watch);
     S.watchOnly = d.getI("pagerWatchOnly", 0) != 0;
+    snprintf(S.ignore, sizeof S.ignore, "%s", d.getS("pagerIgnore", "").c_str());
+    S.ignored = dect2::pagerParseWatch(S.ignore);
     const long b = d.getI("pocsagBaud", 7);
     S.baud512 = (b & 1) != 0;
     S.baud1200 = (b & 2) != 0;
@@ -119,6 +123,7 @@ std::string oneLine(const std::string& s) {
 
 bool passes(const dect2::PagerMessage& m) {   // m: resolved
     if (m.flex ? !S.flex : !S.pocsag) return false;
+    if (!S.ignored.empty() && S.ignored.has(m.address)) return false;
     if (S.watchOnly && !S.watched.empty() && !S.watched.has(m.address)) return false;
     if (!S.filter[0]) return true;
     char adr[16];
@@ -360,6 +365,13 @@ void capcodeView(App& a) {
     ImGui::SetNextItemWidth(260 * gUi);
     if (ImGui::InputTextWithHint("##pgwatch", "1234 5678 2000-2099", S.watch, sizeof S.watch)) saveWatch();
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Capcodes (RICs) to watch, separated by spaces or commas; a range like 2000-2099. Watched rows are marked; Messages > Watched only shows just them."));
+    ImGui::TextDisabled("%s", tr("Ignore list")); ImGui::SameLine(0, 5 * gUi);
+    ImGui::SetNextItemWidth(260 * gUi);
+    if (ImGui::InputTextWithHint("##pgignore", "1234 5678 2000-2099", S.ignore, sizeof S.ignore)) {
+        S.ignored = dect2::pagerParseWatch(S.ignore);
+        plat::prefs().setS("pagerIgnore", S.ignore); plat::prefs().flush();
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Capcodes (RICs) whose pages are hidden from Messages, separated by spaces or commas; a range like 2000-2099. Works for POCSAG and FLEX. The pages are still received."));
     auto toggle = [&](uint32_t adr) {
         std::string s = S.watch;
         if (S.watched.has(adr)) {   // remove the exact number (a range that holds it stays)
