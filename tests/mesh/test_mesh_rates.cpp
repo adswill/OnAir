@@ -2,6 +2,7 @@
 // with 8-bit samples and odd chunk sizes: every frame decodes, none fails its CRC; the CPU time per second of signal is printed.
 // Also the US region at 10 Msps, where Meshtastic (906.875 MHz) and MeshCore (910.525 MHz) are 3.65 MHz apart.
 #include "dect2/mesh/mesh_gen.h"
+#include "../common/cpu_time.h"
 #include "../common/ci_slack.h"
 #include "dect2/mesh/mesh_rx.h"
 #include <cmath>
@@ -26,9 +27,9 @@ static void run(double rate, double secs, int region, size_t chunk) {
     for (size_t done = 0; done < (size_t)(secs * rate); done += chunk) {
         syn->generate(buf.data(), chunk);
         for (auto& v : buf) v = cf32(std::round(v.real() * 127.f) / 127.f, std::round(v.imag() * 127.f) / 127.f);
-        const std::clock_t a = std::clock();
+        const double a = processCpuSecs();
         rx.feed(buf.data(), chunk);
-        cpu += (double)(std::clock() - a) / CLOCKS_PER_SEC;
+        cpu += (processCpuSecs() - a);
     }
     MeshTelemetry t;
     rx.telemetry(t, 0);

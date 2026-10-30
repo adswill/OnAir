@@ -11,6 +11,7 @@
 #include <vector>
 using namespace dect2;
 
+#include "../common/cpu_time.h"
 #include "../common/test_util.h"
 
 static void run(const char* name, double rate, int mask, double secs, size_t chunk, double ebn0 = 0) {
@@ -33,9 +34,9 @@ static void run(const char* name, double rate, int mask, double secs, size_t chu
     double feedSecs = 0;
     for (double done = 0; done < secs * rate; done += (double)buf.size()) {
         syn.generate(buf.data(), buf.size());
-        const std::clock_t c0 = std::clock();          // processor time: the machine may be busy with other work
+        const double c0 = processCpuSecs();          // processor time: the machine may be busy with other work
         for (size_t i = 0; i < buf.size(); i += chunk) rx.feed(buf.data() + i, std::min(chunk, buf.size() - i));
-        feedSecs += (double)(std::clock() - c0) / CLOCKS_PER_SEC;
+        feedSecs += (processCpuSecs() - c0);
     }
     rx.telemetry(t, 0);
     const auto sent = syn.takeFrames();

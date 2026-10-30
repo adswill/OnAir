@@ -8,6 +8,7 @@
 #include "dect2/engine/engine.h"
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/tx/tx.h"
+#include "../common/cpu_time.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -42,7 +43,7 @@ TxRequest request(const char* id, bool demo) {
     return r;
 }
 
-double cpuSeconds() { return (double)std::clock() / CLOCKS_PER_SEC; }
+double cpuSeconds() { return processCpuSecs(); }
 
 // samples as the session makes them: generator, shared output stage (fade-in), limiter
 bool make(const TxModeSpec& m, const TxRequest& r, double rate, size_t n, size_t block, std::vector<cf32>& x, double* genCpu, std::vector<cf32>* preLimit) {

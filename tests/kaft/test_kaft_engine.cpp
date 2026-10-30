@@ -24,6 +24,7 @@
 #include <vector>
 using namespace dect2;
 namespace fs = std::filesystem;
+#include "../common/cpu_time.h"
 #include "../common/test_util.h"
 #include "../common/ci_slack.h"
 
@@ -59,7 +60,7 @@ static Result feedAll(KaftLiveReceiver& rx, const std::vector<cf32>& sig, double
     // Es/N0 = P fs / (symRate sigma^2); the symbol rate is taken from the first frame's width: callers pass a rate-normalised value through esn0Db
     const float sigma = std::isfinite(esn0Db) ? (float)std::sqrt(pSig / std::pow(10.0, esn0Db / 10.0) / 2.0) : 0.f;   // per component, for a noise power of P/10^(x/10) in the sample rate
     std::vector<cf32> blk;
-    const std::clock_t t0 = std::clock();
+    const double t0 = processCpuSecs();
     double ph = 0;
     const double dph = 2 * 3.141592653589793 * cfoHz / rate;
     const size_t b0 = (size_t)(blankFrom * (double)sig.size()), b1 = (size_t)(blankTo * (double)sig.size());
@@ -75,7 +76,7 @@ static Result feedAll(KaftLiveReceiver& rx, const std::vector<cf32>& sig, double
         KaftTelemetry t;
         if (rx.telemetry(t, seq)) { seq = t.seq; r.t = t; }
     }
-    r.secWork = (double)(std::clock() - t0) / CLOCKS_PER_SEC;   // CPU seconds of this process
+    r.secWork = (processCpuSecs() - t0);   // CPU seconds of this process
     r.secSignal = (double)sig.size() / rate;
     return r;
 }

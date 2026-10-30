@@ -14,6 +14,7 @@
 #include <vector>
 using namespace dect2;
 
+#include "../common/cpu_time.h"
 #include "../common/test_util.h"
 
 static void quant8(cf32* x, size_t n) {
@@ -42,9 +43,9 @@ int main() {
         syn->generate(buf.data(), buf.size());
         for (auto& v : buf) peak = std::max(peak, (double)std::max(std::fabs(v.real()), std::fabs(v.imag())));
         quant8(buf.data(), buf.size());
-        const std::clock_t a = std::clock();
+        const double a = processCpuSecs();
         rx.feed(buf.data(), buf.size());
-        rxSecs += (double)(std::clock() - a) / CLOCKS_PER_SEC;
+        rxSecs += (processCpuSecs() - a);
         if (rx.telemetry(t, last)) { CHECK(t.seq > last, "seq"); last = t.seq; reports++; }
     }
     rx.telemetry(t, 0);
@@ -128,9 +129,9 @@ int main() {
             for (auto& v : buf) v = cf32(0, 0);
             ns.add(buf.data(), buf.size(), 0.05f);
             quant8(buf.data(), buf.size());
-            const std::clock_t a = std::clock();
+            const double a = processCpuSecs();
             r2.feed(buf.data(), buf.size());
-            cpu += (double)(std::clock() - a) / CLOCKS_PER_SEC;
+            cpu += (processCpuSecs() - a);
         }
         const double s = 300.0 * buf.size() / rate;
         MeshTelemetry t3;
