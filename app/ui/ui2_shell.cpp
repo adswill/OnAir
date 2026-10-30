@@ -285,6 +285,7 @@ void sidebar(App& a) {
         tool("Mode Builder...", a.modeBuilderOpen, N_("Build a decoder without code: describe the modulation, sync word, frame, FEC, CRC and fields, test it on a recording, add it to the mode list"));
         tool("TX studio...", a.txStudioOpen, N_("Make a transmit signal as a file: spectrum, waterfall, measurements and a decoder check. No radio, nothing is transmitted"));
         tool("Digital video generator...", a.videoGenOpen, N_("Encode a camera, a still picture or a video file with an overlay into an MPEG transport stream: a .ts file or a UDP / RTP stream (port 5000)"));
+        tool("Integrations...", a.integrationsOpen, N_("Send decoded events (aircraft, ships, APRS, pagers, sondes ...) to an MQTT broker, Home Assistant, a webhook or a JSON-lines file. Off until you set it up"));
         tool("Watchlists...", a.watchlistOpen, N_("Alerts when listed aircraft, ships, call signs, frequencies or words are heard: notification, sound, ntfy, Telegram or webhook"));
         tool("Automations...", a.automationOpen, N_("Rules and scripts: when something is decoded, notify, record, tune or call a webhook"));
         tool("Plugins...", a.pluginsOpen, N_("Add decoders and actions without rebuilding OnAir: install, enable and set up plugins"));
@@ -632,6 +633,7 @@ static void viewMenu(App& a) {
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Make a transmit signal as a file, with spectrum, waterfall, measurements and a decoder check. No radio, nothing is transmitted."));
         if (ImGui::MenuItem(tr("Digital video generator..."), nullptr, &a.videoGenOpen)) savePrefs(a);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Encode a camera, a still picture or a video file with an overlay into an MPEG transport stream: a .ts file or a UDP / RTP stream (port 5000)"));
+        ImGui::MenuItem(tr("Integrations..."), nullptr, &a.integrationsOpen);
         ImGui::MenuItem(tr("Watchlists..."), nullptr, &a.watchlistOpen);
         ImGui::MenuItem(tr("Automations..."), nullptr, &a.automationOpen);
         ImGui::MenuItem(tr("Plugins..."), nullptr, &a.pluginsOpen);

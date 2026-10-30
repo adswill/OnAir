@@ -78,7 +78,7 @@ public:
     std::string scriptError(const std::string& id) const;
 
     // true when some enabled rule or script wants events of this family (a lock-free read for the decoders)
-    bool wants(int family) const { return family >= 0 && family < kFamilies && ((mask_.load(std::memory_order_relaxed) | tapMask_.load(std::memory_order_relaxed) | observeMask_.load(std::memory_order_relaxed) | watchMask_.load(std::memory_order_relaxed) | streamMask_.load(std::memory_order_relaxed)) >> family & 1); }
+    bool wants(int family) const { return family >= 0 && family < kFamilies && ((mask_.load(std::memory_order_relaxed) | tapMask_.load(std::memory_order_relaxed) | observeMask_.load(std::memory_order_relaxed) | watchMask_.load(std::memory_order_relaxed) | streamMask_.load(std::memory_order_relaxed) | publishMask_.load(std::memory_order_relaxed)) >> family & 1); }
     // A tap sees every submitted event of the given families (bit = familyBit(Family)), on the decoder's thread, whether or not a rule wants it. It must not block
     // (the message database only queues). Pass an empty function to remove it.
     void setTap(std::function<void(const Event&)> f, FamilyMask familyMask);
@@ -89,6 +89,8 @@ public:
     void setWatcher(std::function<void(const Event&)> f, FamilyMask familyMask);
     // A streamer is a fourth such hook (the remote API's message stream and UDP output); same rules as a tap. An empty function removes it.
     void setStreamer(std::function<void(const Event&)> f, FamilyMask familyMask);
+    // A publisher is a fifth such hook (the Integrations: MQTT and the JSON-lines/webhook sink); same rules as a tap. An empty function removes it.
+    void setPublisher(std::function<void(const Event&)> f, FamilyMask familyMask);
     void submit(Event&& ev);                             // queue; never blocks
     uint64_t dropped() const { return dropped_.load(); }
 
@@ -114,6 +116,9 @@ private:
     std::atomic<FamilyMask> observeMask_{0};
     std::atomic<FamilyMask> watchMask_{0};
     std::atomic<FamilyMask> streamMask_{0};
+    std::atomic<FamilyMask> publishMask_{0};
+    std::mutex publishMu_;
+    std::function<void(const Event&)> publish_;
     std::mutex streamMu_;
     std::function<void(const Event&)> stream_;
     std::mutex watchMu_;
