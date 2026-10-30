@@ -5,6 +5,8 @@
 #include "dect2/inmc/inmc_rx.h"
 #include "dect2/mesh/mesh_lora.h"
 #include <algorithm>
+#include <cstdio>
+#include <cstdlib>
 #include <cmath>
 #include <map>
 #include <mutex>
@@ -168,10 +170,12 @@ struct Manager::Impl {
                 if (!w->aero) w->aero = std::make_unique<AeroReceiver>();
                 w->aero->configure(w->outRate);
                 w->aero->setSignalOffset(0);
+                w->aero->setSearchSpan(cfg.windowBwHz / 2);   // the channelizer output is wider than the window: its neighbours leak in at the edges
                 if (w->inmc) {
                     w->inmc->configure(w->outRate);
                     w->inmc->setSignalOffset(w->inmcOffset);
                     w->inmc->setChannelSearch(true);
+                    w->inmc->setSearchSpan(cfg.windowBwHz / 2);
                 }
             }
         }
@@ -251,6 +255,17 @@ struct Manager::Impl {
         for (const auto& r : retiredI) for (const auto& m : r.messages) s.egc.push_back(m);
         std::stable_sort(s.egc.begin(), s.egc.end(), [](const InmcMessage& a, const InmcMessage& b) { return a.rxUnix > b.rxUnix; });
         if (s.egc.size() > 150) s.egc.resize(150);
+        if (getenv("DECT2_INMSAT_DEBUG")) {                 // what the Aero receivers report per window, against the detector's carriers
+            for (size_t wi = 0; wi < wins.size(); wi++) {
+                const Window& w = *wins[wi];
+                if (!w.aero) continue;
+                for (const auto& ch : w.at.channels)
+                    fprintf(stderr, "[inmsat dbg] window %zu centre %+.1f kHz out %.0f: aero channel at %+.1f kHz (abs %+.1f kHz) rate %d state %d level %.0f ebn0 %.1f frames %llu\n",
+                            wi, w.centerHz / 1e3, w.outRate, ch.offsetHz / 1e3, (w.centerHz + ch.offsetHz) / 1e3, ch.bitRate, ch.state, ch.levelDb, ch.ebn0Db, (unsigned long long)ch.frames);
+            }
+            size_t nsys = 0; for (const auto& ap : as) nsys += ap.first->sys.size();
+            fprintf(stderr, "[inmsat dbg] sys facts %zu, centre %.0f\n", nsys, cfg.centerHz);
+        }
         // carrier table: the detector's carriers, with what the receivers made of them
         for (const auto& c : det.carriers()) {
             if (!c.confirmed) continue;
@@ -258,11 +273,13 @@ struct Manager::Impl {
             r.id = c.id; r.offsetHz = c.offsetHz; r.widthHz = c.widthHz; r.snrDb = c.snrDb; r.cls = c.cls;
             r.freqHz = cfg.centerHz != 0 ? cfg.centerHz + c.offsetHz : 0;
             r.focus = c.id == focusId;
+            // the window that owns the carrier is the first one covering it, but the receivers' channels are matched across all windows:
+            // the Aero and Inmarsat-C receivers report channels over their whole channelizer output, so a carrier is often decoded by a
+            // window whose declared span does not cover it, and the C-channel decoders sit in whichever window had room
+            const double reach = std::max(3000.0, c.widthHz / 2 + 1500);
             for (size_t wi = 0; wi < wins.size(); wi++) {
                 const Window& w = *wins[wi];
-                if (!covers(w, c.offsetHz)) continue;
-                r.window = (int)wi;
-                const double reach = std::max(3000.0, c.widthHz / 2 + 1500);
+                if (r.window < 0 && covers(w, c.offsetHz)) r.window = (int)wi;
                 if (w.aero) {
                     for (const auto& ch : w.at.channels) {
                         if (std::fabs(w.centerHz + ch.offsetHz - c.offsetHz) > reach) continue;
@@ -284,7 +301,6 @@ struct Manager::Impl {
                         }
                     }
                 }
-                break;
             }
             r.parked = r.window < 0;
             r.voiceCandidate = c.cls == CarrierClass::Wide && r.state < 2 && det.nowSec() - c.firstSeen > 20;
