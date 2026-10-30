@@ -58,6 +58,7 @@ The user guides and notes that live in the repository. The same text is on the [
 | [TRANSCRIBE.md](TRANSCRIBE.md) | Live transcripts: airband and marine voice as text | > **Off until you turn it on, and no speech model is included.** OnAir downloads one only when you click, or reads a file you put in the models folder. |
 | [TRANSMIT.md](TRANSMIT.md) | Transmit | **You are responsible.** OnAir limits nothing: |
 | [trunking.md](trunking.md) | Trunking follower (P25, DMR Tier III) | Receive only. |
+| [TV-CHANNELS.md](TV-CHANNELS.md) | TV channels | The Channel selector of every TV mode: the channel plan of a country for DVB-T/T2, ATSC, ISDB-T, DTMB, DVB-C and analog, with sources. |
 | [tv-recorder.md](tv-recorder.md) | TV recorder: programme guide, recordings, timeshift, subtitles | Works on the DVB transport stream that OnAir already decodes (DVB-T/T2, DVB-C, DVB-S/S2, ISDB-T, DTMB and the others that deliver an MPEG-TS). |
 | [UPDATE-MIRROR.md](UPDATE-MIRROR.md) | Updating when GitHub is blocked or slow | OnAir normally asks `api.github.com` for the newest release and downloads the package from `github.com`. |
 | [watchlists.md](watchlists.md) | Watchlists and alerts | View > Watchlists. |

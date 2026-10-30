@@ -1286,7 +1286,8 @@ bool dabChannelCombo(App& a);
 struct TvRange { std::string label; double startMhz = 0, stopMhz = 0, stepMhz = 0, bwMhz = 0; };
 bool bandPlanPicker(App& a);
 std::vector<double> bandPlanChannels(const App& a, double loHz, double hiHz);   // the plan's channels of the current mode's bands in the range (whole-span priors)
-bool tvChannelCombo(App& a);
+bool tvChannelCombo(App& a);   // tvchan_ui.cpp: the Channel selector (previous / next, plan list, region) of every TV mode; true when it changed the frequency
+void tvPlanFollowLocation();     // tvchan_ui.cpp: the setup wizard set a country: the TV channel plans follow it again
 std::vector<TvRange> tvBandRanges(App& a);
 // the FM broadcast range of the active plan, MHz: 87.5 - 108, widened to the plan's FM bands (Japan's 76 - 95, Brazil's extended FM from 76)
 void fmBandRange(const App& a, double& loMhz, double& hiMhz);

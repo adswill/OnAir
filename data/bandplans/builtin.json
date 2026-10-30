@@ -26,7 +26,7 @@
 "tv-au":{"source":"ACMA channel plan for digital TV (7 MHz VHF and UHF channels; ch 9A between 9 and 10)",
  "bands":[
   {"name":"VHF TV","service":"tv","start_hz":174000000,"end_hz":230000000,"channels":[{"label":"6","centre_hz":177500000},{"label":"7","centre_hz":184500000},{"label":"8","centre_hz":191500000},{"label":"9","centre_hz":198500000},{"label":"9A","centre_hz":205500000},{"label":"10","centre_hz":212500000},{"label":"11","centre_hz":219500000},{"label":"12","centre_hz":226500000}],"bandwidth_hz":7000000,"modes":["DVB-T2","DVB-T"],"note":"VHF ch 6-12 including 9A, 7 MHz"},
-  {"name":"UHF TV","service":"tv","start_hz":526500000,"end_hz":694500000,"step_hz":7000000,"bandwidth_hz":7000000,"first_channel":28,"first_centre_hz":530000000,"modes":["DVB-T2","DVB-T"],"note":"UHF ch 28-51, 7 MHz (ch 52-69 were cleared for mobile)"}]},
+  {"name":"UHF TV","service":"tv","start_hz":526000000,"end_hz":694000000,"step_hz":7000000,"bandwidth_hz":7000000,"first_channel":28,"first_centre_hz":529500000,"modes":["DVB-T2","DVB-T"],"note":"UHF ch 28-51, 7 MHz (ch 52-69 were cleared for mobile)"}]},
 "tv-cn":{"source":"SARFT GB 20600 / GY/T channel plan for DTMB (DS6-12 VHF, DS13-24 and DS25-48 UHF, all 8 MHz); check against your own city",
  "bands":[
   {"name":"VHF TV","service":"tv","start_hz":167000000,"end_hz":223000000,"step_hz":8000000,"bandwidth_hz":8000000,"first_channel":6,"first_centre_hz":171000000,"modes":["DTMB"],"note":"DS6-DS12"},

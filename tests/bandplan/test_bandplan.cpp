@@ -91,7 +91,7 @@ int main() {
       const Band* v = B(p, "tv", "VHF TV");
       Channel c;
       CHECK(v && v->count() == 8 && v->channelAt(205.5e6, c) && c.label == "9A", "Australia has channel 9A at 205.5 MHz");
-      ch(B(p, "tv", "UHF TV"), 28, 530e6, "au"); ch(B(p, "tv", "UHF TV"), 51, 691e6, "au");
+      ch(B(p, "tv", "UHF TV"), 28, 529.5e6, "au"); ch(B(p, "tv", "UHF TV"), 51, 690.5e6, "au");
       CHECK(B(p, "tv", "UHF TV")->bandwidthHz == 7e6, "Australia UHF is 7 MHz"); }
     { const Plan* p = P(reg, "cn");
       ch(B(p, "tv", "VHF TV"), 6, 171e6, "cn"); ch(B(p, "tv", "VHF TV"), 12, 219e6, "cn");
