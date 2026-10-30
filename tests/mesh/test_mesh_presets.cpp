@@ -13,6 +13,7 @@
 #include <vector>
 using namespace dect2;
 
+#include "../common/cpu_time.h"
 #include "../common/test_util.h"
 
 int main() {
@@ -53,9 +54,9 @@ int main() {
     rx.configure(rate);
     rx.setSignalOffset(off);
     rx.setPresetSearch(true);
-    const std::clock_t a = std::clock();
+    const double a = processCpuSecs();
     for (size_t i = 0; i < x.size(); i += 65536) rx.feed(x.data() + i, std::min<size_t>(65536, x.size() - i));
-    const double cpu = (double)(std::clock() - a) / CLOCKS_PER_SEC;
+    const double cpu = (processCpuSecs() - a);
     MeshTelemetry tel;
     rx.telemetry(tel, 0);
     std::set<std::string> got;

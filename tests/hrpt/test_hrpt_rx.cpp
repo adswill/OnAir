@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <random>
 using namespace dect2;
+#include "../common/cpu_time.h"
 #include "../common/test_util.h"
 
 struct Case { const char* name; int variant; double rate, snr, cfo, ppm, phase, drift, seconds; bool invert; int minLines; };
@@ -32,9 +33,9 @@ static void run(const Case& k) {
     double cpu = 0;
     for (double done = 0; done < k.seconds * k.rate; done += (double)buf.size()) {
         gen.generate(buf.data(), buf.size());
-        const std::clock_t t0 = std::clock();
+        const double t0 = processCpuSecs();
         rx.feed(buf.data(), buf.size());
-        cpu += (double)(std::clock() - t0) / CLOCKS_PER_SEC;
+        cpu += (processCpuSecs() - t0);
         if (rx.telemetry(t, seq)) seq = t.seq;
     }
     printf("  %s: %s; cfo %.0f Hz (sent %.0f), Es/N0 %.1f dB, lock %.2f, %llu ok %llu bad, rotation %d, %llu lines, RS %llu, receiver %.2f s CPU for %.2f s\n",

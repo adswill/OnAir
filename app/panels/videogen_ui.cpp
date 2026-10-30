@@ -30,7 +30,8 @@ const Res kRes[] = {{320, 240}, {352, 288}, {640, 360}, {704, 576}, {720, 576}, 
 const double kFps[] = {1, 2, 5, 10, 12.5, 15, 20, 25, 30};
 const int kAudioKbps[] = {64, 96, 128, 160, 192, 256};
 const int kSampleRates[] = {32000, 44100, 48000};
-const char* const kSourceNames[] = {N_("Camera"), N_("Still picture"), N_("Video file")};
+const char* const kSourceNames[] = {N_("Camera"), N_("Still picture"), N_("Video file"), N_("Test generator")};
+const char* const kPatternNames[] = {N_("Test card"), N_("Colour bars"), N_("Grey ramp")};
 const char* const kAudioNames[] = {N_("Silence"), N_("Test tone (1 kHz)"), N_("Sound of the video file"), N_("Microphone")};
 const char* const kOutputNames[] = {N_("MPEG-TS file (.ts)"), N_("UDP stream"), N_("RTP stream")};
 const char* const kFitNames[] = {N_("Stretch"), N_("Letterbox"), N_("Crop")};
@@ -52,10 +53,11 @@ const ParamGroup kGroups[] = {
 // The "(?)" text of each settings row, by its English label (docs/VIDEO-GENERATOR.md says the same at more length)
 struct RowHelp { const char* label; const char* help; };
 const RowHelp kRowHelp[] = {
-    {N_("Input"), N_("What is encoded. Camera: a webcam or an HDMI / SDI capture card, opened only when you press Start. Still picture: one image sent as a continuous stream (a test card, a slide). Video file: any file FFmpeg can read, played from the start and looped when the length is longer.")},
+    {N_("Input"), N_("What is encoded. Camera: a webcam or an HDMI / SDI capture card, opened only when you press Start. Still picture: one image sent as a continuous stream (a test card, a slide). Video file: any file FFmpeg can read, played from the start and looped when the length is longer. Test generator: a copy of the transmitter's own moving test picture (the test transport stream the DVB-T2 T2Generator carries in its real PLP). Put a callsign or other text on it with the Overlay tab.")},
     {N_("Camera"), N_("The cameras and capture cards found when this window opened. Press Refresh after plugging one in.")},
     {N_("Picture"), N_("A PNG, JPEG, BMP or other picture. It is scaled to the resolution below with the picture fit you choose.")},
     {N_("Video file"), N_("The length below follows the file when you choose it. Picture and sound are decoded in step, so a file is encoded faster than real time when the output is a .ts file.")},
+    {N_("Pattern"), N_("The test generator's picture. Test card: colour bars, a moving sweep and a chequerboard with a bouncing ball, so motion and lost packets are easy to see. Colour bars and Grey ramp: still pictures to check colours and levels. A white bar grows along the bottom once a second.")},
     {N_("Picture fit"), N_("When the source has another shape than the output (a 4:3 camera in a 16:9 picture). Stretch: fill the picture, shapes look wider or narrower. Letterbox: keep the whole source, with black bars. Crop: fill the picture and cut the edges.")},
     {N_("Sound"), N_("What the audio tracks carry. The test tone (1 kHz at -20 dBFS) is handy to check a receiver's sound. The sound of the video file is only there with a video file as input. Silence still makes a valid audio track.")},
     {N_("Microphone"), N_("The sound input to use. It is opened only when you press Start.")},
@@ -155,6 +157,7 @@ std::string saveCfg(const GenConfig& c) {
     char b[64];
     std::string o = saveSettings(c.enc);
     o += "g.src=" + std::to_string((int)c.source) + "\n" + "g.cam=" + c.cameraId + "\n" + "g.path=" + c.path + "\n";
+    o += "g.pat=" + std::to_string(c.pattern) + "\n";
     o += "g.audio=" + std::to_string((int)c.audio) + "\n" + "g.mic=" + c.micId + "\n" + "g.out=" + std::to_string((int)c.output) + "\n";
     o += "g.ts=" + c.tsPath + "\n" + "g.host=" + c.host + "\n" + "g.port=" + std::to_string(c.port) + "\n" + "g.ttl=" + std::to_string(c.ttl) + "\n";
     snprintf(b, sizeof b, "%.3f", c.seconds);
@@ -174,7 +177,8 @@ void loadCfg(const std::string& text, GenConfig& c) {
         if (line.compare(0, 2, "g.") != 0 || eq == std::string::npos) continue;
         const std::string k = line.substr(2, eq - 2), v = line.substr(eq + 1);
         const int i = atoi(v.c_str());
-        if (k == "src") c.source = (Source)std::clamp(i, 0, 2);
+        if (k == "src") c.source = (Source)std::clamp(i, 0, 3);
+        else if (k == "pat") c.pattern = std::clamp(i, 0, 2);
         else if (k == "cam") c.cameraId = v;
         else if (k == "path") c.path = v;
         else if (k == "audio") c.audio = (AudioSource)std::clamp(i, 0, 3);
@@ -189,12 +193,14 @@ void loadCfg(const std::string& text, GenConfig& c) {
     }
 }
 
-// The interface's own TrueType font (Inter) for the overlay text: the biggest font the atlas was built from
+// The interface's own TrueType font (Inter, or the monospaced font of the classic look) for the overlay text: the biggest base font the
+// atlas was built from. The CJK fonts merged into them are left out: they are bigger, and a fallback such as Droid Sans Fallback has no
+// Latin letters, so every character came out as an empty box.
 std::shared_ptr<const std::vector<uint8_t>> atlasFont() {
     const ImFontAtlas* at = ImGui::GetIO().Fonts;
     const ImFontConfig* best = nullptr;
     for (const ImFontConfig& c : at->Sources)
-        if (c.FontData && c.FontDataSize > 1000 && (!best || c.FontDataSize > best->FontDataSize)) best = &c;
+        if (!c.MergeMode && c.FontData && c.FontDataSize > 1000 && (!best || c.FontDataSize > best->FontDataSize)) best = &c;
     if (!best) return nullptr;
     const uint8_t* d = (const uint8_t*)best->FontData;
     return std::make_shared<std::vector<uint8_t>>(d, d + best->FontDataSize);
@@ -295,9 +301,9 @@ void sourceSection(State& s, float col, float w) {
     ImGui::SeparatorText(tr("Source"));
     rowLabel(N_("Input"), col);
     int src = (int)c.source;
-    if (combo("##vgsrc", src, kSourceNames, 3, w)) {
+    if (combo("##vgsrc", src, kSourceNames, 4, w)) {
         c.source = (Source)src;
-        if (c.source == Source::Picture && !s.lengthEdited) c.seconds = 60;   // a picture: one minute unless changed
+        if ((c.source == Source::Picture || c.source == Source::Generator) && !s.lengthEdited) c.seconds = 60;   // one minute unless changed
         if (c.source != Source::VideoFile && c.audio == AudioSource::FromFile) c.audio = AudioSource::Tone;
     }
     if (c.source == Source::Camera) {
@@ -315,6 +321,9 @@ void sourceSection(State& s, float col, float w) {
         if (ImGui::Button(tr("Refresh##vgcam"))) startProbe(s);
         ImGui::EndDisabled();
         if (s.probed && s.cams.empty()) ImGui::TextDisabled("%s", tr("No camera found. Connect one and press Refresh."));
+    } else if (c.source == Source::Generator) {
+        rowLabel(N_("Pattern"), col);
+        combo("##vgpat", c.pattern, kPatternNames, 3, w);
     } else {
         rowLabel(c.source == Source::Picture ? N_("Picture") : N_("Video file"), col);
         if (inputText("##vgpath", c.path, w - 90 * gUi) && c.source == Source::VideoFile) {
@@ -335,7 +344,9 @@ void sourceSection(State& s, float col, float w) {
     }
     rowLabel(N_("Picture fit"), col);
     int fit = (int)c.fit;
+    ImGui::BeginDisabled(c.source == Source::Generator);   // drawn at the output size
     if (combo("##vgfit", fit, kFitNames, 3, w)) c.fit = (Fit)fit;
+    ImGui::EndDisabled();
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("When the source has another shape than the output (a 4:3 camera in 16:9): stretch it, keep it whole with black bars, or fill the picture and cut the edges"));
     rowLabel(N_("Sound"), col);
     int au = (int)c.audio;

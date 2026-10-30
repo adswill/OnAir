@@ -19,6 +19,7 @@
 #include <vector>
 #include "dect2/common/mathconst.h"
 using namespace dect2;
+#include "../common/cpu_time.h"
 #include "../common/test_util.h"
 
 constexpr double kFs = 2400000, kOff = -20000, kT0 = 1767225600.0;
@@ -119,9 +120,9 @@ int main() {
                     }
                     x[i] = cf32((float)v.real(), (float)v.imag());
                 }
-                const std::clock_t t0 = std::clock();
+                const double t0 = processCpuSecs();
                 r.feed(x.data(), x.size());
-                cpu += (double)(std::clock() - t0) / CLOCKS_PER_SEC;
+                cpu += (processCpuSecs() - t0);
                 HfdigTelemetry tt;
                 if (r.telemetry(tt, seq)) { seq = tt.seq; t = std::move(tt); }
             }
@@ -174,9 +175,9 @@ int main() {
                     for (auto& l : L) a += l.next();
                     v = cf32((float)a.real(), (float)a.imag());
                 }
-                const std::clock_t t0 = std::clock();
+                const double t0 = processCpuSecs();
                 r.feed(x.data(), x.size());
-                cpu += (double)(std::clock() - t0) / CLOCKS_PER_SEC;
+                cpu += (processCpuSecs() - t0);
                 HfdigTelemetry tt;
                 if (r.telemetry(tt, seq)) { seq = tt.seq; t = std::move(tt); }
             }

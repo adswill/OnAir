@@ -1,16 +1,20 @@
 // LoRaWAN (all channels) screens: the frame table (time, channel, SF, type, DevAddr, FCnt, FPort, level, SNR, MAC commands, payload bytes), the device list,
-// the channel list of the plan with its counters, the plan and options. Receive only and keyless: the payloads are encrypted with the devices' session keys
+// the channel list of the plan with its counters, the plan and options. LoRaWAN FSK frames (DR7, lorawan_fsk.h) are in the same table, marked "FSK DR7". Receive only and keyless: the payloads are encrypted with the devices' session keys
 // and are shown as bytes, no key is handled, nothing is decrypted, no MIC is checked, nothing is sent. "Level" is dB below full scale, not calibrated to dBm.
 #include "app.h"
+#include "dect2/automation/rules.h"
+#include "dect2/common/u8file.h"
 #include "dect2/lorawan/lorawan_plan.h"
 #include "dect2/lorawan/lorawan_rx.h"
 #include "dect2/lorawan/lorawan_tel.h"
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cmath>
 #include <cstdarg>
 #include <cstdio>
 #include <ctime>
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -23,13 +27,14 @@ struct State {
     char filter[64] = "";
     int type = 0;
     bool hex = false;
+    std::string msg;              // the result of the last export
 };
 State S;
 
 void saveState() {
     auto& p = plat::prefs();
     p.setI("lwPlan", S.cfg.plan); p.setI("lwSub", S.cfg.subBand); p.setB("lwDown", S.cfg.downlinks); p.setB("lwDef", S.cfg.defaultsOnly);
-    p.setB("lwPriv", S.cfg.privateSync); p.setI("lwMax", S.cfg.maxChannels); p.setB("lwWide", S.cfg.include250_500);
+    p.setB("lwPriv", S.cfg.privateSync); p.setI("lwMax", S.cfg.maxChannels); p.setB("lwWide", S.cfg.include250_500); p.setB("lwFsk", S.cfg.fsk);
     p.flush();
 }
 void loadState(App& a) {
@@ -38,6 +43,7 @@ void loadState(App& a) {
     auto& p = plat::prefs();
     S.cfg.plan = (int)p.getI("lwPlan", 0); S.cfg.subBand = (int)p.getI("lwSub", 0); S.cfg.downlinks = p.getB("lwDown", true); S.cfg.defaultsOnly = p.getB("lwDef", false);
     S.cfg.privateSync = p.getB("lwPriv", false); S.cfg.maxChannels = (int)p.getI("lwMax", 24); S.cfg.include250_500 = p.getB("lwWide", true);
+    S.cfg.fsk = p.getB("lwFsk", true);
     a.engine.lorawan().setSettings(S.cfg);
 }
 void apply(App& a) { a.engine.lorawan().setSettings(S.cfg); saveState(); }
@@ -56,6 +62,52 @@ std::string clock(int64_t t) {
     snprintf(b, sizeof b, "%02d:%02d:%02d", g.tm_hour, g.tm_min, g.tm_sec);
     return b;
 }
+// The UTC date and time of a frame for the CSV export (ISO 8601)
+std::string isoUtc(int64_t t) {
+    if (t <= 0) return "";
+    const time_t tt = (time_t)t;
+    struct tm g;
+#ifdef _WIN32
+    gmtime_s(&g, &tt);
+#else
+    gmtime_r(&tt, &g);
+#endif
+    std::array<char, 32> b{};
+    snprintf(b.data(), b.size(), "%04d-%02d-%02dT%02d:%02d:%02dZ", g.tm_year + 1900, g.tm_mon + 1, g.tm_mday, g.tm_hour, g.tm_min, g.tm_sec);
+    return b.data();
+}
+std::string fixed(double v, int decimals) { std::array<char, 48> b{}; snprintf(b.data(), b.size(), "%.*f", decimals, v); return b.data(); }
+std::string hex8(uint32_t v) { std::array<char, 16> b{}; snprintf(b.data(), b.size(), "%08X", v); return b.data(); }
+
+// The frames of the table (filter and type applied, newest first) as CSV; text fields quoted as needed (automation::csvField)
+std::string framesCsv(const dect2::LorawanTelemetry& t, const std::vector<size_t>& rows) {
+    using dect2::automation::csvField;
+    std::string o = "time_utc,channel_mhz,modulation,sf,bw_khz,gateway_downlink,type,devaddr,dev_eui,join_eui,fcnt,fport,level_dbfs,snr_db,"
+                    "freq_offset_hz,mic,crc,flags,mac_commands,summary,phy_payload_hex\n";
+    for (size_t i : rows) {
+        const dect2::LwFrame& r = t.log[i];
+        o += isoUtc(r.wallTime) + "," + fixed(r.freqHz / 1e6, 3) + "," + (r.fsk ? "fsk" : "lora") + ",";
+        o += (r.fsk ? std::string() : std::to_string(r.sf)) + "," + (r.fsk ? std::string() : fixed(r.bwHz / 1e3, 0)) + "," + (r.inverted ? "1" : "0") + ",";
+        o += csvField(r.type) + "," + (r.hasDevAddr ? hex8(r.devAddr) : std::string()) + ",";
+        o += (r.devEui ? dect2::lorawan::eui(r.devEui) : std::string()) + "," + (r.joinEui ? dect2::lorawan::eui(r.joinEui) : std::string()) + ",";
+        o += (r.hasDevAddr ? std::to_string(r.fcnt) : std::string()) + "," + (r.fport >= 0 ? std::to_string(r.fport) : std::string()) + ",";
+        o += fixed(r.levelDb, 1) + "," + fixed(r.snrDb, 1) + "," + fixed(r.cfoHz, 0) + ",";
+        o += (r.lorawan && r.mtype != 7 && r.mtype != 1 ? hex8(r.mic) : std::string()) + "," + (!r.hasCrc ? "none" : r.crcOk ? "ok" : "bad") + ",";
+        o += csvField(r.flags) + "," + csvField(r.mac) + "," + csvField(r.summary) + "," + r.hex + "\n";
+    }
+    return o;
+}
+
+// Asks where to save, writes the CSV and leaves the result in S.msg
+void exportFrames(const dect2::LorawanTelemetry& t, const std::vector<size_t>& rows) {
+    const std::string name = "lorawan_frames_" + isoUtc((int64_t)std::time(nullptr)).substr(0, 10) + ".csv";
+    const std::string p = saveFileDialog(name.c_str());
+    if (p.empty()) return;
+    std::ofstream f(dect2::u8file(p), std::ios::binary);
+    if (f) { f << framesCsv(t, rows); f.close(); }
+    S.msg = f ? std::to_string(rows.size()) + " frames saved to " + p : "could not write " + p;
+}
+
 std::string lower(std::string s) { for (char& c : s) c = (char)std::tolower((unsigned char)c); return s; }
 void kvRow(const App& a, const char* k, const char* fmt, ...) {
     ImGui::TextDisabled("%s", k); kvColumn(130 * gUi);
@@ -68,7 +120,8 @@ void privacyNote() {
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("Receive only and keyless: the headers every LoRaWAN gateway in range receives in the clear (message type, DevAddr, frame counter, port, MIC, MAC commands; "
                         "DevEUI and JoinEUI of join requests). The payloads are encrypted with the devices' own session keys and stay bytes: OnAir handles no keys, never decrypts, "
-                        "never checks a MIC and never transmits. These are other people's devices. Needs a radio with 2 Msps or more; a 4 Msps capture covers all eight EU868 channels.");
+                        "never checks a MIC and never transmits. These are other people's devices. Needs a radio with 2 Msps or more; a 4 Msps capture covers all eight EU868 channels "
+                        "and the FSK channel (DR7, 868.8 MHz).");
     ImGui::PopTextWrapPos();
 }
 
@@ -89,6 +142,10 @@ void framesView(App& a) {
     ImGui::Checkbox("hex", &S.hex);
     flowNext(10 * gUi);
     if (ImGui::Button("Clear")) a.engine.lorawan().clearResults();
+    flowNext(10 * gUi);
+    const bool doExport = ImGui::Button("Export");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Save the frames in the table (with the filter applied) as a CSV file");
+    if (!S.msg.empty()) { flowNext(10 * gUi); ImGui::TextDisabled("%s", S.msg.c_str()); }
     flowBreak();
     const std::string f = lower(S.filter);
     std::vector<size_t> rows;
@@ -105,6 +162,7 @@ void framesView(App& a) {
         }
         rows.push_back(i);
     }
+    if (doExport) exportFrames(t, rows);
     if (!ImGui::BeginTable("##lwlog", 12, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV,
                            ImVec2(0, ImGui::GetContentRegionAvail().y)))
         return;
@@ -120,8 +178,16 @@ void framesView(App& a) {
             ImGui::TableNextColumn(); ImGui::TextUnformatted(clock(r.wallTime).c_str());
             ImGui::TableNextColumn(); ImGui::Text("%.3f%s", r.freqHz / 1e6, r.inverted ? " v" : "");
             if (r.inverted && ImGui::IsItemHovered()) ImGui::SetTooltip("Inverted IQ: sent by a gateway (downlink)");
-            ImGui::TableNextColumn(); ImGui::Text("%d", r.sf);
-            ImGui::TableNextColumn(); ImGui::Text("%.0f", r.bwHz / 1e3);
+            ImGui::TableNextColumn();
+            if (r.fsk) {
+                ImGui::TextColored(pal::accent(), "%s", "FSK DR7");
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "LoRaWAN FSK (DR7): 50 kbit/s GFSK, deviation 25 kHz, CRC-16 and whitening\nFrequency offset in the tooltip of the last column");
+            } else ImGui::Text("%d", r.sf);
+            ImGui::TableNextColumn();
+            if (r.fsk) {
+                ImGui::TextDisabled("%s", "50 kb/s");
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Bit rate (the FSK channel is about 100 kHz wide)");
+            } else ImGui::Text("%.0f", r.bwHz / 1e3);
             ImGui::TableNextColumn(); ImGui::TextUnformatted(r.type.c_str());
             ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0);
             if (r.hasDevAddr) ImGui::Text("%08X", r.devAddr); else if (r.devEui) ImGui::TextUnformatted(dect2::lorawan::eui(r.devEui).c_str()); else ImGui::TextDisabled("-");
@@ -134,7 +200,8 @@ void framesView(App& a) {
             ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0);
             ImGui::TextUnformatted(S.hex || !r.lorawan ? r.hex.c_str() : (r.mac.empty() ? (r.flags.empty() ? r.summary.c_str() : r.flags.c_str()) : r.mac.c_str()));
             ImGui::PopFont();
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s\n%s\n%d bytes%s", r.summary.c_str(), r.hex.c_str(), r.len, r.lorawan ? ", payload encrypted (never decrypted)" : "");
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("%s\n%s\n%d bytes%s\nfrequency offset %+.1f kHz", r.summary.c_str(), r.hex.c_str(), r.len, r.lorawan ? ", payload encrypted (never decrypted)" : "", r.cfoHz / 1e3);
         }
     ImGui::EndTable();
     if (t.log.empty()) ImGui::TextDisabled("no frames yet");
@@ -157,7 +224,7 @@ void devicesView(App& a) {
         ImGui::TableNextColumn(); ImGui::Text("%u", d.missed);
         ImGui::TableNextColumn(); if (d.fcnt >= 0) ImGui::Text("%ld", d.fcnt); else ImGui::TextDisabled("-");
         ImGui::TableNextColumn(); if (d.lastFport >= 0) ImGui::Text("%d", d.lastFport); else ImGui::TextDisabled("-");
-        ImGui::TableNextColumn(); ImGui::Text("%d", d.sf);
+        ImGui::TableNextColumn(); if (d.fsk) ImGui::TextDisabled("%s", "FSK"); else ImGui::Text("%d", d.sf);
         ImGui::TableNextColumn(); ImGui::TextUnformatted(d.lastType.c_str());
     }
     ImGui::EndTable();
@@ -175,7 +242,7 @@ void channelsView(App& a) {
         ImGui::TableNextRow();
         ImGui::TableNextColumn(); ImGui::Text("%.3f", c.freqHz / 1e6);
         ImGui::TableNextColumn(); ImGui::Text("%.0f kHz", c.bwHz / 1e3);
-        ImGui::TableNextColumn(); ImGui::Text("%d - %d", c.sfMin, c.sfMax);
+        ImGui::TableNextColumn(); if (c.fsk) ImGui::TextColored(pal::accent(), "%s", "FSK DR7"); else ImGui::Text("%d - %d", c.sfMin, c.sfMax);
         ImGui::TableNextColumn(); ImGui::TextUnformatted(c.downlinkOnly ? "gateway downlink" : "uplink / both");
         ImGui::TableNextColumn(); if (c.inBand) ImGui::TextColored(pal::okGreen(), "yes"); else ImGui::TextDisabled("no");
         ImGui::TableNextColumn(); ImGui::Text("%llu", (unsigned long long)c.preambles);
@@ -219,6 +286,11 @@ void settings(App& a, bool& retune) {
     flowNext(10 * gUi);
     ch |= ImGui::Checkbox("250 / 500 kHz", &S.cfg.include250_500);
     flowNext(10 * gUi);
+    ch |= ImGui::Checkbox("FSK (DR7)", &S.cfg.fsk);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", "Also the plan's FSK channel: 50 kbit/s GFSK on 868.8 MHz (EU868) or 924.8 MHz (AS923-1), the channel The Things Network's gateways use. "
+                                "Synthetic tests only so far.");
+    flowNext(10 * gUi);
     ImGui::AlignTextToFramePadding();
     ImGui::TextDisabled("Max channels"); ImGui::SameLine(0, 5 * gUi);
     ImGui::SetNextItemWidth(std::min(80 * gUi, ImGui::GetContentRegionAvail().x));
@@ -259,7 +331,7 @@ void list(App& a) {
         const auto& d = t.devices[i];
         ImGui::TableNextRow();
         ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0); ImGui::TextUnformatted(d.id.c_str()); ImGui::PopFont();
-        ImGui::TableNextColumn(); ImGui::TextDisabled("%d", d.sf);
+        ImGui::TableNextColumn(); if (d.fsk) ImGui::TextDisabled("%s", "FSK"); else ImGui::TextDisabled("%d", d.sf);
         ImGui::TableNextColumn(); if (d.fcnt >= 0) ImGui::TextDisabled("%ld", d.fcnt);
     }
     ImGui::EndTable();
@@ -272,6 +344,8 @@ void receiver(App& a) {
     kvRow(a, "plan", "%s", dect2::lorawan::planName(t.cfg.plan));
     kvRow(a, "channels", "%s", t.note.c_str());
     kvRow(a, "frames", "%llu good, %llu CRC errors, %llu preambles", (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad, (unsigned long long)t.preambles);
+    if (t.cfg.fsk && !dect2::lorawan::planFskChannelsMhz(t.cfg.plan).empty())   // DR7 in the plan (planHasFsk) is not enough: a channel to listen on
+        kvRow(a, "FSK (DR7)", "%llu frames, %llu sync words, %llu CRC errors", (unsigned long long)t.fskFrames, (unsigned long long)t.fskSyncs, (unsigned long long)t.fskCrcBad);
     static const char* const mt[] = {"join req", "join acc", "unconf up", "unconf down", "conf up", "conf down", "rejoin", "proprietary"};
     std::string by;
     for (int i = 0; i < 8; i++) if (t.perType[i]) { char b[48]; snprintf(b, sizeof b, "%s%s %llu", by.empty() ? "" : ", ", mt[i], (unsigned long long)t.perType[i]); by += b; }

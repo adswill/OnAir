@@ -28,6 +28,13 @@ std::vector<PlanChannel> planChannels(int plan);
 std::vector<PlanChannel> selectChannels(int plan, int subBand, bool downlinks);
 // The spreading factors a plan's data rates use on a bandwidth (DR table of RP002): 125 kHz SF7 - SF12 (US / AU: SF7 - SF10 uplink, SF7 - SF12 on downlinks), 250 kHz SF7, 500 kHz SF8 (up) / SF7 - SF12 (down)
 void planSfRange(int plan, double bwKhz, bool downlink, int& sfMin, int& sfMax);
+// FSK (DR7: 50 kbit/s GFSK, lorawan_fsk.h): whether the plan's data rate table has it (RP002: EU863-870, EU433 and AS923 do, US902-928 and
+// AU915-928 do not). RP002 gives it no default channel: a gateway runs one FSK channel of the network's choosing. What the receiver listens
+// on is planFskChannelsMhz: a plan with DR7 and no common channel (EU433, AS923-2/3/4) gets no FSK receiver.
+bool planHasFsk(int plan);
+// The FSK channel(s) networks use: EU868 868.8 MHz and AS923-1 924.8 MHz, as in The Things Network's frequency plans (EU_863_870, AS_923_925);
+// empty for the other plans (no common channel)
+std::vector<double> planFskChannelsMhz(int plan);
 
 // ---- MAC layer ----
 struct MacCommand {

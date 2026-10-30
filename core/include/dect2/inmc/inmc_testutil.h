@@ -2,8 +2,8 @@
 #pragma once
 #include "inmc_gen.h"
 #include "inmc_rx.h"
+#include "dect2/common/cpu_meter.h"
 #include <chrono>
-#include <ctime>
 #include <cmath>
 #include <cstdio>
 #include <functional>
@@ -72,9 +72,9 @@ inline InmcRunResult runInmc(const InmcRunOpts& o) {
             buf[k] = v;
         }
         if (o.resetAt >= 0 && !didReset && (double)done / o.gen.rate >= o.resetAt) { rx.reset(); didReset = true; }
-        const std::clock_t t0 = std::clock();      // CPU time, so that other programs on the machine do not distort it
+        const uint64_t t0 = cpu::processNs();      // CPU time, so that other programs on the machine do not distort it (std::clock() is wall time on Windows)
         rx.feed(buf.data(), n);
-        wall += (double)(std::clock() - t0) / CLOCKS_PER_SEC;
+        wall += (double)(cpu::processNs() - t0) * 1e-9;
         done += n;
         if (res.firstSyncSec < 0 && rx.telemetry(t, seq)) {
             seq = t.seq;

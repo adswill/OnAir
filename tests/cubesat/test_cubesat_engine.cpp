@@ -26,14 +26,25 @@ int main() {
     RxTelemetry rx;
     uint64_t seq = 0;
     int reports = 0, wrong = 0;
+    // 6 s, and on a slow or busy machine (the synthetic source then makes less signal in that time) on until the results below are in,
+    // at most 20 s
+    const auto done = [&] {
+        int k = 0;
+        for (int i = 0; i < cubesat::kNumFramings; i++) k += rx.cube.perFraming[i] > 0;
+        return rx.seq > 10 && k == cubesat::kNumFramings;
+    };
     const auto t0 = std::chrono::steady_clock::now();
-    while (std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() < 6.0) {
+    // a while with elapsed() instead of a for that updates the time in its step: Cppcheck called that for condition always false
+    // (knownConditionTrueFalse), a false positive, and Codacy then fails the PR
+    const auto elapsed = [&] { return std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count(); };
+    while (elapsed() < 6.0 || (elapsed() < 20.0 && !done())) {
         if (e.latestRx(rx, seq)) { seq = rx.seq; reports++; if (rx.standard != 62) wrong++; }
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
     const CubeTelemetry& c = rx.cube;
     printf("  %d reports: %s, %zu frames, %llu bad\n", reports, cubesatSummary(c).c_str(), c.frames.size(), (unsigned long long)c.blocksBad);
-    CHECK(reports > 10 && wrong == 0, "%d reports, %d wrong", reports, wrong);
+    // reports made by the engine (its sequence number), not the polls that happened to see one
+    CHECK(rx.seq > 10 && wrong == 0, "%llu reports made (%d seen), %d wrong", (unsigned long long)rx.seq, reports, wrong);
     CHECK(rx.rateOk, "rate");
     int kinds = 0;
     for (int k = 0; k < cubesat::kNumFramings; k++) kinds += c.perFraming[k] > 0;

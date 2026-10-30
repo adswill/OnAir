@@ -5,6 +5,7 @@
 // (printed, not limited) and the channeliser must be faster than it.
 #include "dect2/hfdl/hfdl_rx.h"
 #include "dect2/hfdl/hfdl_proto.h"
+#include "../common/cpu_time.h"
 #include "../common/ci_slack.h"
 #include <chrono>
 #include <cstdio>
@@ -31,10 +32,10 @@ static double run(double rate, double secs, int mode = -1) {
     const size_t chunks = (size_t)(secs * rate / (double)N);
     const double simSecs = (double)(chunks * N) / rate;
     const auto t0 = std::chrono::steady_clock::now();
-    const std::clock_t c0 = std::clock();
+    const double c0 = processCpuSecs();
     for (size_t i = 0; i < chunks; i++) rx.feed(buf.data(), N);
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() / simSecs;
-    const double cpu = (double)(std::clock() - c0) / CLOCKS_PER_SEC / simSecs;
+    const double cpu = (processCpuSecs() - c0) / simSecs;
     HfdlTelemetry t;
     rx.telemetry(t, ~0ull);
     int inBand = 0;

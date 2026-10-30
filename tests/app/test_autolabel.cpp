@@ -87,6 +87,42 @@ int main() {
         t.finish();
         CHECK(layout(t, view(90, 100), width).placed.size() == 2, "stations 200 kHz apart stay two");
     }
+    // different protocols sharing a frequency remain separate labels on separate rows, even when a database entry or memory has higher priority
+    for (int src : {FreqDb, Memories}) {
+        Store s;
+        Label a = mk(869.525, "Aidon e-meters", src, 0.5f); a.mode = "ism"; a.bwMhz = 0.025; s.add(a);
+        Label b = mk(869.525, "LoRaWAN EU868 RX2", FreqDb); b.mode = "lorawan"; b.bwMhz = 0.125; s.add(b);
+        Label c = mk(869.525, "Meshtastic EU868 default (LongFast)", FreqDb); c.mode = "meshtastic"; c.bwMhz = 0.250; s.add(c); s.finish();
+        for (View v : {view(869, 870), view(869.5, 869.55)}) {
+            Result r = layout(s, v, width);
+            CHECK(r.candidates == 3 && r.placed.size() == 3 && !overlap(r), "all three protocols retain their labels at both zoom levels");
+            int rows[3] = {}; for (const Placed& p : r.placed) rows[p.row]++;
+            CHECK(rows[0] == 1 && rows[1] == 1 && rows[2] == 1, "one co-channel label per row");
+        }
+    }
+    // distinct database and memory names in one mode remain separate; duplicate entries still merge to the higher priority
+    for (int aSrc : {FreqDb, Memories}) for (int bSrc : {FreqDb, Memories}) {
+        Store s;
+        Label a = mk(100, "CHANNEL A", aSrc); a.mode = "ism"; a.bwMhz = 0.125; s.add(a);
+        Label b = a; b.text = "CHANNEL B"; b.src = bSrc; b.bwMhz = 0.025; s.add(b);
+        Label c = a; c.prio = 0.5f; c.bwMhz = 0.250; s.add(c); s.finish();
+        Result r = layout(s, view(99, 101), width);
+        CHECK(r.candidates == 2 && r.placed.size() == 2 && !overlap(r), "keep distinct names, merge duplicate identities (%d, %d)", aSrc, bSrc);
+        for (const Placed& p : r.placed) if (s.at(p.idx).text == "CHANNEL A") CHECK(s.at(p.idx).bwMhz == 0.250, "the higher priority bandwidth wins for a duplicate entry");
+        if (aSrc != bSrc) {
+            r = layout(s, view(99, 101, 1), width);
+            CHECK(r.candidates == 2 && r.placed.size() == 1 && r.dropped == 1 && s.at(r.placed[0].idx).src == Memories, "the memory takes priority when only one name fits");
+        }
+    }
+    // a memory with the same name overrides the database, including its bandwidth, in either insertion order
+    for (bool memoryFirst : {false, true}) {
+        Store s;
+        Label a = mk(100, "CHANNEL A", FreqDb); a.mode = "ism"; a.bwMhz = 0.125;
+        Label b = a; b.src = Memories; b.bwMhz = 0.250;
+        s.add(memoryFirst ? b : a); s.add(memoryFirst ? a : b); s.finish();
+        Result r = layout(s, view(99, 101), width);
+        CHECK(r.candidates == 1 && r.placed.size() == 1 && s.at(r.placed[0].idx).src == Memories && s.at(r.placed[0].idx).bwMhz == 0.250, "the memory overrides the matching database entry");
+    }
     // zoom-aware: a wide view thins the names out, a narrow one shows them all
     {
         Store s;

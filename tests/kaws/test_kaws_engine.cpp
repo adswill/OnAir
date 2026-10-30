@@ -23,6 +23,7 @@
 #include <vector>
 using namespace dect2;
 namespace fs = std::filesystem;
+#include "../common/cpu_time.h"
 #include "../common/test_util.h"
 
 static constexpr double kBase = 1.8e9;   // a multiple of 240 s: slot index parity and every slot grid line up
@@ -72,7 +73,7 @@ static Run run(const TxRequest& req, int profile, double rate, double ifHz, doub
     std::vector<cf32> blk(8192);
     uint64_t seq = 0;
     bool started = false;
-    const std::clock_t c0 = std::clock();
+    const double c0 = processCpuSecs();
     size_t pos = 0;
     // the first 3 s of the stream are noise only (the transmit generator's own start, at kBase, comes after them)
     const size_t lead = (size_t)(3.0 * rate);
@@ -96,7 +97,7 @@ static Run run(const TxRequest& req, int profile, double rate, double ifHz, doub
     for (int k = 0; k < 40; k++) rx.feed(blk.data(), blk.size());   // a report after the searches
     KawsTelemetry t;
     for (int k = 0; k < 3; k++) if (rx.telemetry(t, seq)) { seq = t.seq; out.t = t; }
-    out.cpu = (double)(std::clock() - c0) / CLOCKS_PER_SEC;
+    out.cpu = (processCpuSecs() - c0);
     return out;
 }
 
