@@ -4,6 +4,7 @@
 // and the hand-over to the generator (TxRequest::opt / the legacy request fields) need no other change. A value only reaches a generator that reads its key.
 // Nothing here limits a value to what is lawful or safe: a slider's range is what the generator can make.
 #include "tx_state.h"
+#include "dect2/audio/audio_control.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
