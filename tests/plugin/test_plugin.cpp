@@ -358,7 +358,7 @@ void testManager() {
         // events: plugin emit -> automation
         std::vector<automation::Event> seen;
         // (observer for plugin.* events)
-        automation::global().setTap([&](const automation::Event& e) { seen.push_back(e); }, 1u << automation::FPlugin);
+        automation::global().setTap([&](const automation::Event& e) { seen.push_back(e); }, automation::familyBit(automation::FPlugin));
         r = m.start("fake", "event", err);
         if (r) {
             auto iq = tone(16, 1e6, 100, 0.5);

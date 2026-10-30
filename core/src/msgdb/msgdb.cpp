@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <map>
@@ -25,7 +26,7 @@ namespace {
 using automation::Event;
 using automation::Value;
 
-const char* kKept[] = {"adsb", "acars", "vdl2", "hfdl", "pager", "ais", "aprs", "sonde", "lora", "ble", "rid", "dsc", "qso", "mesh", "dab", "epg"};
+const char* kKept[] = {"adsb", "acars", "vdl2", "hfdl", "pager", "ais", "aprs", "sonde", "lora", "ble", "rid", "dsc", "qso", "mesh", "dab", "epg", "session"};
 
 std::string family(const std::string& type) { return type.substr(0, type.find('.')); }
 
@@ -159,7 +160,14 @@ bool fromEvent(const Event& ev, Record& r) {
         r.lat = la->second.n; r.lon = lo->second.n; r.hasPos = true;
     }
     r.source = first(ev, {"file", "source_file", "recording", "iq_file"});
+    const bool isSession = f == "session";
+    if (isSession) {   // a session summary: the key is the identity, the title the text, the id links to the session; extra keeps ids and counts only
+        r.ident = fld(ev, "key");
+        r.text = fld(ev, "title");
+        r.sessionId = (int64_t)strtoll(fld(ev, "session_id").c_str(), nullptr, 10);
+    }
     for (const auto& kv : ev.f) {
+        if (isSession && (kv.first == "key" || kv.first == "title")) continue;
         std::string v = kv.second.text();
         for (char& c : v) if (c == '\n' || c == '\r') c = ' ';
         r.extra += kv.first + "=" + v + "\n";
@@ -167,7 +175,7 @@ bool fromEvent(const Event& ev, Record& r) {
     return true;
 }
 
-struct Bind { bool isNum; double d; std::string s; };
+struct Bind { bool isNum; double d; std::string s; int64_t i = 0; bool isInt = false; };   // isInt: a 64 bit integer (a session id does not fit a double)
 
 struct Db::Impl {
     mutable std::mutex mu;
@@ -187,7 +195,7 @@ struct Db::Impl {
 
     bool insert(const Record& r) {
         sqlite3_stmt* st = nullptr;
-        if (sqlite3_prepare_v2(db, "INSERT INTO msgs(t,type,mode,freq,ident,txt,lat,lon,extra,src) VALUES(?,?,?,?,?,?,?,?,?,?)", -1, &st, nullptr) != SQLITE_OK) return false;
+        if (sqlite3_prepare_v2(db, "INSERT INTO msgs(t,type,mode,freq,ident,txt,lat,lon,extra,src,sid,fam) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", -1, &st, nullptr) != SQLITE_OK) return false;
         sqlite3_bind_double(st, 1, r.time);
         sqlite3_bind_text(st, 2, r.type.c_str(), -1, SQLITE_TRANSIENT);
         sqlite3_bind_text(st, 3, r.mode.c_str(), -1, SQLITE_TRANSIENT);
@@ -198,6 +206,8 @@ struct Db::Impl {
         else { sqlite3_bind_null(st, 7); sqlite3_bind_null(st, 8); }
         sqlite3_bind_text(st, 9, r.extra.c_str(), -1, SQLITE_TRANSIENT);
         sqlite3_bind_text(st, 10, r.source.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_int64(st, 11, r.sessionId);
+        sqlite3_bind_text(st, 12, family(r.type).c_str(), -1, SQLITE_TRANSIENT);
         const bool ok = sqlite3_step(st) == SQLITE_DONE;
         sqlite3_finalize(st);
         return ok;
@@ -220,12 +230,14 @@ struct Db::Impl {
         if (f.since > 0) { andw("m.t >= ?"); b.push_back({true, f.since, ""}); }
         if (f.until > 0) { andw("m.t <= ?"); b.push_back({true, f.until, ""}); }
         if (f.posOnly) andw("m.lat IS NOT NULL");
+        if (f.sessionId != 0) { andw("m.sid = ?"); b.push_back({true, 0, "", f.sessionId, true}); }
         sql += w;
     }
 
     static void bindAll(sqlite3_stmt* st, const std::vector<Bind>& b) {
         for (size_t i = 0; i < b.size(); i++) {
-            if (b[i].isNum) sqlite3_bind_double(st, (int)i + 1, b[i].d);
+            if (b[i].isInt) sqlite3_bind_int64(st, (int)i + 1, b[i].i);
+            else if (b[i].isNum) sqlite3_bind_double(st, (int)i + 1, b[i].d);
             else sqlite3_bind_text(st, (int)i + 1, b[i].s.c_str(), -1, SQLITE_TRANSIENT);
         }
     }
@@ -241,7 +253,7 @@ struct Db::Impl {
         std::string sql;
         std::vector<Bind> b;
         where(f, sql, b);
-        std::string q = "SELECT m.id,m.t,m.type,m.mode,m.freq,m.ident,m.txt,m.lat,m.lon,m.extra,m.src" + sql +
+        std::string q = "SELECT m.id,m.t,m.type,m.mode,m.freq,m.ident,m.txt,m.lat,m.lon,m.extra,m.src,m.sid" + sql +
                         (!ftsQuery(f.text).empty() && f.relevance ? " ORDER BY r.rk ASC, m.t DESC, m.id DESC" : f.oldestFirst ? " ORDER BY m.t ASC, m.id ASC" : " ORDER BY m.t DESC, m.id DESC");
         if (!noLimit) q += " LIMIT " + std::to_string(std::max(1, std::min(f.limit, 100000))) + " OFFSET " + std::to_string(std::max(0, f.offset));
         sqlite3_stmt* st = nullptr;
@@ -256,6 +268,7 @@ struct Db::Impl {
             r.ident = col(st, 5); r.text = col(st, 6);
             if (sqlite3_column_type(st, 7) != SQLITE_NULL) { r.hasPos = true; r.lat = sqlite3_column_double(st, 7); r.lon = sqlite3_column_double(st, 8); }
             r.extra = col(st, 9); r.source = col(st, 10);
+            r.sessionId = sqlite3_column_int64(st, 11);
             out.push_back(std::move(r));
         }
         sqlite3_finalize(st);
@@ -277,6 +290,20 @@ struct Db::Impl {
         int64_t gone = 0;
         auto del = [&](const std::string& sql) { if (exec(sql.c_str())) gone += sqlite3_changes(db); };
         if (lim.maxAgeDays > 0) del("DELETE FROM msgs WHERE t < " + num(automation::wallNow() - lim.maxAgeDays * 86400, 0));
+        if (lim.maxRowsPerFamily > 0) {
+            // a chatty family may not push the others out: each keeps at most maxRowsPerFamily rows (the oldest of that family go)
+            std::vector<std::pair<std::string, int64_t>> fams;
+            sqlite3_stmt* fs = nullptr;
+            if (sqlite3_prepare_v2(db, "SELECT fam, count(*) FROM msgs GROUP BY fam", -1, &fs, nullptr) == SQLITE_OK)
+                while (sqlite3_step(fs) == SQLITE_ROW) fams.push_back({col(fs, 0), sqlite3_column_int64(fs, 1)});
+            sqlite3_finalize(fs);
+            for (const auto& fc : fams) {
+                if (fc.second <= lim.maxRowsPerFamily) continue;
+                std::string esc;
+                for (char c : fc.first) { if (c == '\'') esc += '\''; esc += c; }
+                del("DELETE FROM msgs WHERE id IN (SELECT id FROM msgs WHERE fam = '" + esc + "' ORDER BY t ASC, id ASC LIMIT " + std::to_string(fc.second - lim.maxRowsPerFamily) + ")");
+            }
+        }
         if (lim.maxRows > 0) {
             const int64_t n = scalar("SELECT count(*) FROM msgs");
             if (n > lim.maxRows) del("DELETE FROM msgs WHERE id IN (SELECT id FROM msgs ORDER BY t ASC, id ASC LIMIT " + std::to_string(n - lim.maxRows) + ")");
@@ -357,21 +384,29 @@ bool Db::open(const std::string& path, std::string* err) {
     if (path != ":memory:") { p_->exec("PRAGMA journal_mode=WAL"); p_->exec("PRAGMA synchronous=NORMAL"); }
     const char* schema =
         "CREATE TABLE IF NOT EXISTS msgs(id INTEGER PRIMARY KEY, t REAL NOT NULL, type TEXT NOT NULL, mode TEXT NOT NULL DEFAULT '', freq REAL NOT NULL DEFAULT 0,"
-        " ident TEXT NOT NULL DEFAULT '', txt TEXT NOT NULL DEFAULT '', lat REAL, lon REAL, extra TEXT NOT NULL DEFAULT '', src TEXT NOT NULL DEFAULT '');"
+        " ident TEXT NOT NULL DEFAULT '', txt TEXT NOT NULL DEFAULT '', lat REAL, lon REAL, extra TEXT NOT NULL DEFAULT '', src TEXT NOT NULL DEFAULT '',"
+        " sid INTEGER NOT NULL DEFAULT 0, fam TEXT NOT NULL DEFAULT '');"
         "CREATE INDEX IF NOT EXISTS msgs_t ON msgs(t);"
         "CREATE INDEX IF NOT EXISTS msgs_mode_t ON msgs(mode, t);"
+        "CREATE INDEX IF NOT EXISTS msgs_fam_t ON msgs(fam, t);"
+        "CREATE INDEX IF NOT EXISTS msgs_sid ON msgs(sid) WHERE sid <> 0;"
         "CREATE VIRTUAL TABLE IF NOT EXISTS msgs_fts USING fts5(ident, txt, extra, mode, content='msgs', content_rowid='id', tokenize='unicode61 remove_diacritics 2');"
         "CREATE TRIGGER IF NOT EXISTS msgs_ai AFTER INSERT ON msgs BEGIN INSERT INTO msgs_fts(rowid,ident,txt,extra,mode) VALUES(new.id,new.ident,new.txt,new.extra,new.mode); END;"
         "CREATE TRIGGER IF NOT EXISTS msgs_ad AFTER DELETE ON msgs BEGIN INSERT INTO msgs_fts(msgs_fts,rowid,ident,txt,extra,mode) VALUES('delete',old.id,old.ident,old.txt,old.extra,old.mode); END;";
     char* em = nullptr;
     {   // a file from before the source column: add it (the full-text index does not cover it)
         sqlite3_stmt* st = nullptr;
-        bool hasTable = false, hasSrc = false;
+        bool hasTable = false, hasSrc = false, hasSid = false;
         if (sqlite3_prepare_v2(db, "PRAGMA table_info(msgs)", -1, &st, nullptr) == SQLITE_OK) {
-            while (sqlite3_step(st) == SQLITE_ROW) { hasTable = true; const unsigned char* n = sqlite3_column_text(st, 1); if (n && std::string((const char*)n) == "src") hasSrc = true; }
+            while (sqlite3_step(st) == SQLITE_ROW) { hasTable = true; const unsigned char* n = sqlite3_column_text(st, 1); if (n && std::string((const char*)n) == "src") hasSrc = true; if (n && std::string((const char*)n) == "sid") hasSid = true; }
         }
         sqlite3_finalize(st);
         if (hasTable && !hasSrc) p_->exec("ALTER TABLE msgs ADD COLUMN src TEXT NOT NULL DEFAULT ''");
+        if (hasTable && !hasSid) {   // a file from before the session link and the family column: add both, fill the family of the old rows once
+            p_->exec("ALTER TABLE msgs ADD COLUMN sid INTEGER NOT NULL DEFAULT 0");
+            p_->exec("ALTER TABLE msgs ADD COLUMN fam TEXT NOT NULL DEFAULT ''");
+            p_->exec("UPDATE msgs SET fam = substr(type, 1, instr(type || '.', '.') - 1)");
+        }
     }
     if (sqlite3_exec(db, schema, nullptr, nullptr, &em) != SQLITE_OK) {
         if (err) *err = em ? em : "schema";

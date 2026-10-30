@@ -252,7 +252,7 @@ void testHook() {
     w.setSettings(s);
     w.setLists({mk(Kind::Aircraft, {"4840D6"}, "P")});
     w.start();
-    eng.setWatcher([&](const au::Event& e) { w.submit(e); }, (1u << au::kFamilies) - 1);
+    eng.setWatcher([&](const au::Event& e) { w.submit(e); }, au::kAllFamilies);
     CHECK(eng.wants(au::FAdsb), "the watcher makes the family wanted");
     eng.submit(adsb("4840D6", "KLM"));
     for (int i = 0; i < 100 && w.history().empty(); i++) std::this_thread::sleep_for(std::chrono::milliseconds(20));

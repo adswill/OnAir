@@ -112,8 +112,7 @@ void apply() {
     bool any = false;
     for (const wl::List& l : S.lists) if (l.enabled && !l.values.empty()) any = true;
     // the decoders build events for a family only when somebody wants them: hook in only while a list can match
-    const uint32_t all = (1u << au::kFamilies) - 1;
-    const uint32_t mask = all & ~((1u << au::FTime) | (1u << au::FReceiver) | (1u << au::FSatellite));
+    const au::FamilyMask mask = au::kAllFamilies & ~(au::familyBit(au::FTime) | au::familyBit(au::FReceiver) | au::familyBit(au::FSatellite) | au::familyBit(au::FVoice) | au::familyBit(au::FSession));
     if (S.set.enabled && any) au::global().setWatcher([](const au::Event& e) { wl::global().submit(e); }, mask);
     else au::global().setWatcher(nullptr, 0);
 }

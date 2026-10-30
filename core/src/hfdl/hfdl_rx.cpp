@@ -1,4 +1,5 @@
 // HFDL receiver (hfdl_rx.h)
+#include "dect2/session/mode_adapters.h"
 #include "dect2/hfdl/hfdl_rx.h"
 #include "dect2/dsp/rrc.h"
 #include "dect2/dsp/fftutil.h"
@@ -851,6 +852,7 @@ bool HfdlReceiver::telemetry(HfdlTelemetry& out, uint64_t lastSeq) {
     if (p_->seq == lastSeq) return false;
     out = p_->tel;
     out.seq = p_->seq;
+    sess::observeHfdl(out);
     return true;
 }
 

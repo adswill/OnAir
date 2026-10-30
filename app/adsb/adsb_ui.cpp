@@ -2,6 +2,7 @@
 // list, receiver, panels, status, summary, tuner, decoder, synth, meters). The table views are in adsb_table_ui.cpp, the
 // radar and map in adsb_map_ui.cpp.
 #include "adsb_internal.h"
+#include "ui/kit/session_list.h"
 void vdl2NoteAdsb(const dect2::AdsbTelemetry& t);   // vdl2_ui.cpp: VDL2 links its aircraft to what ADS-B heard
 
 using namespace adsbui;
@@ -153,7 +154,7 @@ void tick(App& a) {
 // ---------------------------------------------------------------- the hooks
 
 void tab(App& a) {
-    subNav("adsbv", S.viewMode, {"Map", "Table", "Radar", tr("Range"), "Range stats"});
+    subNav("adsbv", S.viewMode, {"Map", "Table", "Radar", tr("Range"), "Range stats", tr("Tracks")});
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     const float dw = std::min(250.f * gUi, W * 0.26f);
     // the readout beside the map and radar; beside the table only once an aircraft is picked (its ACARS messages are in it)
@@ -166,6 +167,7 @@ void tab(App& a) {
     else if (S.viewMode == 1) aircraftTable(a, false);
     else if (S.viewMode == 2) radar(a, ImGui::GetContentRegionAvail());
     else if (S.viewMode == 3) rangeView(S.range, ImGui::GetContentRegionAvail(), au::distOut(S.units, 1.0 / 1.852), au::distUnit(S.units), "adsb", receiverLocationSet());
+    else if (S.viewMode == 5) kit::sessionItems(11, 3, "adsb");
     else statsView(a);
     ImGui::EndChild();
     if (pane) {

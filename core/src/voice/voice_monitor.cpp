@@ -2,6 +2,8 @@
 #include "dect2/voice/voice_monitor.h"
 #include "dect2/audio/audioout.h"
 #include "dect2/common/timecompat.h"
+#include "dect2/session/session_store.h"
+#include "dect2/session/voice_bridge.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -294,8 +296,47 @@ void Monitor::finishLocked(Live& l) {
         fs::path jp = fs::path(l.rec->path); jp.replace_extension(".json");
         if (FILE* f = fopen(jp.string().c_str(), "wb")) { fwrite(js.data(), 1, js.size(), f); fclose(f); }
     }
+    sessionEndLocked(l);
     hist_.push_front(l.e);
     while (hist_.size() > 1000) hist_.pop_back();
+}
+
+// ---------------------------------------------------------------- the session store bridge (voice_session_bridge.cpp builds the Session)
+
+sess::SessionStore* Monitor::sessionStore() const { return sessStore_ ? sessStore_ : &sess::global(); }
+void Monitor::setSessionReceiver(uint16_t receiver) { std::lock_guard<std::mutex> lk(mu_); sessRx_ = receiver; }
+uint16_t Monitor::sessionReceiver() const { std::lock_guard<std::mutex> lk(mu_); return sessRx_; }
+void Monitor::setSessionStore(sess::SessionStore* store) { std::lock_guard<std::mutex> lk(mu_); sessStore_ = store; }
+
+void Monitor::sessionSyncLocked(Live& l, double t) {
+    if (sess::voicebridge::modeNumber(mode_) < 0) return;
+    sess::SessionStore* st = sessionStore();
+    if (!st->isOpen()) return;
+    CallEntry& e = l.e;
+    const bool enc = e.info.encrypted, emerg = e.info.emergency;
+    if (e.sessionId == 0) {
+        if (!sessNamed_) { st->setModeName((uint16_t)sess::voicebridge::modeNumber(mode_), sess::voicebridge::modeName(mode_)); sessNamed_ = true; }
+        sess::Session s = sess::voicebridge::toSession(e, mode_, sessRx_, false);
+        s.id = 0;
+        e.sessionId = st->begin(std::move(s));
+    } else if (t - l.sessSec >= 1.0 || e.verdict != l.sessVerdict || enc != l.sessEnc || emerg != l.sessEmerg) {
+        st->update(sess::voicebridge::toSession(e, mode_, sessRx_, false));   // at most once a second, sooner when something that matters changed
+    } else {
+        return;
+    }
+    l.sessSec = t;
+    l.sessVerdict = e.verdict;
+    l.sessEnc = enc;
+    l.sessEmerg = emerg;
+}
+
+void Monitor::sessionEndLocked(Live& l) {
+    CallEntry& e = l.e;
+    if (e.sessionId == 0) return;
+    sess::SessionStore* st = sessionStore();
+    // the call is over: wallEnd is set. A recording is linked (never one of an encrypted call: the monitor does not make one)
+    st->end(sess::voicebridge::toSession(e, mode_, sessRx_, true));
+    if (!e.file.empty() && !e.info.encrypted) st->link(e.sessionId, sess::LinkType::Audio, e.file, e.wallEnd * 1000);
 }
 
 void Monitor::housekeepLocked(double t) {
@@ -384,6 +425,7 @@ Verdict Monitor::offer(const CallInfo& c0) {
     }
     if (v == Verdict::Play) { cur_ = key; curLast_ = t; curPrio_ = e.priority; e.played++; }
     e.verdict = v;
+    sessionSyncLocked(it->second, t);
     return v;
 }
 

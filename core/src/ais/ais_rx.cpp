@@ -4,6 +4,7 @@
 // Front end, per pair: mix the pair's middle to 0 Hz, decimate to about 100 kHz, resample to exactly 96 kHz; each channel is mixed to zero, filtered
 // and decimated to 48 kHz (5 samples per bit). A power detector finds the bursts (they are short and stand alone), each one is cut out of a ring of samples
 // and decoded offline by aisDecodeBurst (ais_phy.cpp). The message layer and the station table are here.
+#include "dect2/session/mode_adapters.h"
 #include "dect2/marine/marine_mmsi.h"
 #include "dect2/ais/ais_rx.h"
 #include "dect2/dsp/baseband_filter.h"
@@ -680,6 +681,7 @@ bool AisReceiver::telemetry(AisTelemetry& out, uint64_t lastSeq) {
     std::lock_guard<std::mutex> lk(p_->telMu);
     if (p_->pub.seq <= lastSeq) return false;
     out = p_->pub;
+    sess::observeAis(out);
     return true;
 }
 void AisReceiver::clearResults() {

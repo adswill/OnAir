@@ -213,6 +213,12 @@ bool pillButton(const char* label, bool selected, float padX) {
 
 // A row of pills that switches between sub-views of a tab. Returns the selected index.
 int subNav(const char* id, int& cur, std::initializer_list<const char*> names) {
+    {   // test aid (hidden GUI checks): DECT2_SUBNAV="adsbv=5" opens that pill the first time the row is drawn
+        static std::map<std::string, bool> done;
+        const char* e = getenv("DECT2_SUBNAV");
+        const std::string key = id;
+        if (e && !done[key]) { done[key] = true; const std::string v = e; const size_t q = v.find('='); if (q != std::string::npos && v.substr(0, q) == key) cur = atoi(v.c_str() + q + 1); }
+    }
     ImGui::PushID(id);
     int i = 0;
     for (const char* n : names) { if (i) sameLineIf(ImGui::CalcTextSize(n).x + 22 * gUi, 6 * gUi); if (pillButton(n, cur == i)) cur = i; i++; }   // wraps in a narrow tab

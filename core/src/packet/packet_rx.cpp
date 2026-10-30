@@ -6,6 +6,7 @@
 // "fix bits" (a failed frame retried with one or two bits flipped), and a sound-card mode where the input is FM-demodulated audio.
 // 9600 baud: two slicers with different filters, a clock loop, the G3RUH descrambler (x^17 + x^12 + 1) and NRZI.
 // The frame layer is packet_ax25.*, the APRS layer packet_aprs.*.
+#include "dect2/session/mode_adapters.h"
 #include "dect2/packet/packet_rx.h"
 #include "dect2/automation/engine.h"
 #include "dect2/results/results_io.h"
@@ -449,6 +450,7 @@ bool PacketReceiver::telemetry(PacketTelemetry& out, uint64_t lastSeq) {
     std::lock_guard<std::mutex> lk(p_->telMu);
     if (p_->pub.seq <= lastSeq) return false;
     out = p_->pub;
+    sess::observePacket(out);
     return true;
 }
 void PacketReceiver::clearResults() {
