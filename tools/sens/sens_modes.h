@@ -245,6 +245,7 @@ inline std::vector<Mode> allModes() {
 
     {   // DVB-T2: 8K, GI 1/8, 64-QAM 2/3 rotated
         Mode m = base("dvbt2", "DVB-T2", "ofdm-tv", 1, nativeRateHz(8), 2.0, 7.61e6, 522);
+        m.pnHz = 1;   // a TV tuner: about -75 dBc/Hz at 1 kHz; the 50 Hz default is far worse than any receiver front end and no OFDM TV receiver decodes it
         m.echoUs = 14; m.maxJobs = 4; m.snrHi = 30;
         m.gen = [](size_t n) {
             TxParams tp;
@@ -261,6 +262,7 @@ inline std::vector<Mode> allModes() {
     }
     {   // DVB-T: 8K, GI 1/8, 64-QAM 2/3
         Mode m = base("dvbt", "DVB-T", "ofdm-tv", 2, nativeRateHz(8), 1.5, 7.61e6, 522);
+        m.pnHz = 1;   // a TV tuner: about -75 dBc/Hz at 1 kHz; the 50 Hz default is far worse than any receiver front end and no OFDM TV receiver decodes it
         m.echoUs = 14; m.maxJobs = 6; m.snrHi = 30;
         m.gen = [](size_t n) {
             dvbt::Params p; p.mode = dvbt::k8K; p.guard = dvbt::kGi8; p.mod = dvbt::k64Qam; p.crHp = p.crLp = dvbt::kR23;
@@ -276,6 +278,7 @@ inline std::vector<Mode> allModes() {
     }
     {   // ATSC 8-VSB
         Mode m = base("atsc", "ATSC 1.0", "single-carrier-tv", 3, 8e6, 1.5, 5.38e6, 600);
+        m.pnHz = 1;   // a TV tuner: about -75 dBc/Hz at 1 kHz; the 50 Hz default is far worse than any receiver front end and no OFDM TV receiver decodes it
         m.echoUs = 3; m.snrHi = 30;
         m.gen = [](size_t n) {
             atsc::ChannelConfig cc; cc.snrDb = 120;
@@ -299,6 +302,7 @@ inline std::vector<Mode> allModes() {
     }
     {   // ISDB-T 13 segments
         Mode m = base("isdbt", "ISDB-T", "ofdm-tv", 6, 10e6, 2.0, 5.57e6, 600);
+        m.pnHz = 1;   // a TV tuner: about -75 dBc/Hz at 1 kHz; the 50 Hz default is far worse than any receiver front end and no OFDM TV receiver decodes it
         m.echoUs = 10; m.maxJobs = 6; m.snrHi = 30;
         m.gen = [](size_t n) { return clean(6, SynthConfig(), 10e6, n); };
         m.make = factory<IsdbtReceiver, RxTelemetry>([](IsdbtReceiver& rx, double r) { rx.configure(r); },
@@ -332,6 +336,7 @@ inline std::vector<Mode> allModes() {
     }
     {   // DTMB PN945 64-QAM 0.6
         Mode m = base("dtmb", "DTMB", "ofdm-tv", 9, 10e6, 2.0, 7.56e6, 600);
+        m.pnHz = 1;   // a TV tuner: about -75 dBc/Hz at 1 kHz; the 50 Hz default is far worse than any receiver front end and no OFDM TV receiver decodes it
         m.echoUs = 10; m.maxJobs = 4; m.snrHi = 32;
         m.gen = [](size_t n) { return clean(9, SynthConfig(), 10e6, n); };
         m.make = factory<DtmbReceiver, DtmbTelemetry>([](DtmbReceiver& rx, double r) { rx.configure(r); }, blocks<DtmbTelemetry>, true);
