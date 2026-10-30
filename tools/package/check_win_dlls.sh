@@ -17,7 +17,7 @@ command -v "$OBJDUMP" >/dev/null 2>&1 || { echo "no objdump found (install mingw
 
 # DLLs every Windows has, plus api-ms-win-* (the universal C runtime forwarders)
 SYSTEM=" $(echo kernel32 user32 gdi32 advapi32 shell32 ole32 oleaut32 ws2_32 wsock32 iphlpapi setupapi winusb cfgmgr32 crypt32 bcrypt ntdll msvcrt ucrtbase \
-    opengl32 gdiplus dnsapi ncrypt dwrite rpcrt4 usp10 bcryptprimitives d3d11 dxgi d3dcompiler_47 dbghelp comdlg32 imm32 msimg32 winmm version shlwapi secur32 userenv mswsock dwmapi uxtheme hid avrt mfplat ksuser \
+    opengl32 gdiplus dnsapi ncrypt dwrite rpcrt4 usp10 bcryptprimitives d3d11 dxgi d3dcompiler_47 dbghelp comdlg32 imm32 msimg32 winmm winhttp version shlwapi secur32 userenv mswsock dwmapi uxtheme hid avrt mfplat ksuser \
     propsys powrprof) "
 is_system() {
     case "$1" in api-ms-win-*) return 0;; esac
