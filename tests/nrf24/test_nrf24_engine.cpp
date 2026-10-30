@@ -1,4 +1,4 @@
-// nRF24L01 through the engine (setStandard(211)): the synthetic source plays Enhanced ShockBurst frames, the receiver reports through latestRx().
+// nRF24L01 through the engine (setStandard(212)): the synthetic source plays Enhanced ShockBurst frames, the receiver reports through latestRx().
 #include "dect2/nrf24/nrf24_rx.h"
 #include "dect2/engine/engine.h"
 #include <chrono>
@@ -9,27 +9,27 @@ using namespace dect2;
 
 int main() {
     const ModeTuning mt = nrf24Tuning();
-    CHECK(mt.stdMode == 211 && modeTuningById("nrf24") && modeTuningById("nrf24")->stdMode == 211 && modeTuning(211), "tuning table");
+    CHECK(mt.stdMode == 212 && modeTuningById("nrf24") && modeTuningById("nrf24")->stdMode == 212 && modeTuning(212), "tuning table");
     Engine e;
     DeviceInfo dev;
     TuneSettings t;
     t.centerHz = mt.defMhz * 1e6;
     t.bandwidthMhz = mt.bandwidthMhz;
     t.sampleRate = mt.sampleRate;
-    t.synth.mode = 211;
+    t.synth.mode = 212;
     t.synth.snrDb = 16;
     t.synth.modeOpt[0] = 3;   // all three data rates
     t.synth.modeOpt[1] = 0;
     FileOptions fo;
-    e.setStandard(211);
+    e.setStandard(212);
     CHECK(e.start(dev, t, fo), "engine start");
-    CHECK(e.activeStandard() == 210, "active standard %d", e.activeStandard());
+    CHECK(e.activeStandard() == 211, "active standard %d", e.activeStandard());
     RxTelemetry rx;
     uint64_t seq = 0;
     int reports = 0, wrong = 0;
     const auto t0 = std::chrono::steady_clock::now();
     while (std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() < 12.0) {
-        if (e.latestRx(rx, seq)) { seq = rx.seq; reports++; if (rx.standard != 210) wrong++; }
+        if (e.latestRx(rx, seq)) { seq = rx.seq; reports++; if (rx.standard != 211) wrong++; }
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
     const Nrf24Telemetry& s = rx.nrf24;

@@ -16,7 +16,7 @@ namespace {
 struct State { int view = 0; };
 State S;
 
-bool live(const App& a) { return a.rx.standard == 210; }   // the engine reports its standard code minus one
+bool live(const App& a) { return a.rx.standard == 211; }   // the engine reports its standard code minus one
 
 void banner(App& a) {
     ImGui::AlignTextToFramePadding();

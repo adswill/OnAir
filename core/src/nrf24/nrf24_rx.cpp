@@ -451,7 +451,7 @@ bool Nrf24Receiver::telemetry(Nrf24Telemetry& out, uint64_t lastSeq) {
 
 ModeTuning nrf24Tuning() {
     ModeTuning t;
-    t.stdMode = 211; t.id = "nrf24"; t.name = "nRF24L01";
+    t.stdMode = 212; t.id = "nrf24"; t.name = "nRF24L01";
     t.minMhz = 2400; t.maxMhz = 2526; t.defMhz = 2402;
     t.sampleRate = 8e6;
     t.basebandHz = 0;

@@ -600,7 +600,7 @@ std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, do
     case 208: return makeSsdvSynth(cfg, sampleRate);
     case 209: return makeEbicabSynth(cfg, sampleRate);
     case 210: return makeInmsatSynth(cfg, sampleRate);
-    case 211: return makeNrf24Synth(cfg, sampleRate);
+    case 212: return makeNrf24Synth(cfg, sampleRate);
     case 204: return makePskdSynth(cfg, sampleRate);
     case 86: return makeWisunSynth(cfg, sampleRate);
     case 100: return makeZwaveSynth(cfg, sampleRate);
@@ -732,7 +732,7 @@ std::string modeSummary(const RxTelemetry& t) {
     case 207: return ssdvSummary(t.ssdv);
     case 208: return ebicabSummary(t.ebicab);
     case 209: return inmsatSummary(t.inmsat);
-    case 210: return nrf24Summary(t.nrf24);
+    case 211: return nrf24Summary(t.nrf24);
     case 203: return pskdSummary(t.pskd);
     case 85: return wisunSummary(t.wisun);
     case 99: return zwaveSummary(t.zwave);
