@@ -115,6 +115,8 @@ static void readModeTests() {
     CHECK(m.type == kPagerAlpha && m.readHow == kPocsagHowAddress && m.text.rfind("QD4639", 0) == 0, "override alpha");
     pocsagApplyRead(m, kPocsagReadAuto);
     CHECK(m.type == kPagerAlpha && m.readHow == kPocsagHowAuto, "override back to auto");
+    CHECK(pagerApplyCharset("a[{|}~]", kPagerCharGerman) == "a\xC3\x84\xC3\xA4\xC3\xB6\xC3\xBC\xC3\x9F\xC3\x9C", "German national characters");
+    CHECK(pagerApplyCharset("a[{", kPagerCharAscii) == "a[{", "ASCII leaves the text alone");
 
     // random numeric pages and random noise words must rarely look like text
     srand(11);

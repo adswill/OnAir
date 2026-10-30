@@ -31,6 +31,7 @@ struct State {
     int pushedNarrow = -1;
     bool loaded = false;
     int readMode = dect2::kPocsagReadAuto;   // PocsagReadMode, saved as "pocsagRead"
+    int charset = dect2::kPagerCharAscii;    // PagerCharset, saved as "pagerCharset"
     std::map<uint32_t, int> byAddress;       // POCSAG address -> kPocsagReadAlpha or kPocsagReadNumeric, saved as "pocsagReadAddr" ("ric:a ric:n ...")
 };
 State S;
@@ -49,6 +50,7 @@ void loadRead() {
     plat::Prefs& d = plat::prefs();
     const long m = d.getI("pocsagRead", dect2::kPocsagReadAuto);
     S.readMode = m >= 0 && m < dect2::kPocsagReadModes ? (int)m : dect2::kPocsagReadAuto;
+    { const long cs = d.getI("pagerCharset", 0); S.charset = cs >= 0 && cs < dect2::kPagerCharsets ? (int)cs : 0; }
     S.decodedOnly = d.getI("pagerDecodedOnly", 0) != 0;
     snprintf(S.watch, sizeof S.watch, "%s", d.getS("pagerWatch", "").c_str());
     S.watched = dect2::pagerParseWatch(S.watch);
@@ -76,6 +78,7 @@ void saveRead(const App& a) {
     std::string v;
     for (const auto& [ric, mode] : S.byAddress) v += std::to_string(ric) + (mode == dect2::kPocsagReadAlpha ? ":a " : ":n ");
     plat::prefs().setI("pocsagRead", S.readMode);
+    plat::prefs().setI("pagerCharset", S.charset);
     plat::prefs().setS("pocsagReadAddr", v);
     savePrefs(a);
 }
@@ -87,6 +90,7 @@ dect2::PagerMessage resolved(const dect2::PagerMessage& m) {
     const auto it = S.byAddress.find(m.address);
     if (it != S.byAddress.end()) dect2::pocsagApplyRead(v, it->second, true);
     else dect2::pocsagApplyRead(v, S.readMode);
+    if (v.type == dect2::kPagerAlpha) v.text = dect2::pagerApplyCharset(v.text, S.charset);
     return v;
 }
 
@@ -210,6 +214,15 @@ void messageView(App& a) {
             ImGui::EndCombo();
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("How POCSAG messages are read: as text (alphanumeric) or digits. Right-click an address to fix it for that address.");
+        flowNext(12 * gUi);
+        ImGui::TextDisabled("Characters"); ImGui::SameLine(0, 5 * gUi);
+        ImGui::SetNextItemWidth(130 * gUi);
+        if (ImGui::BeginCombo("##pgchars", dect2::pagerCharsetName(S.charset))) {
+            for (int i = 0; i < dect2::kPagerCharsets; i++)
+                if (ImGui::Selectable(dect2::pagerCharsetName(i), S.charset == i)) { S.charset = i; saveRead(a); }
+            ImGui::EndCombo();
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("German networks send ä ö ü ß and Ä Ö Ü in the place of [ ] { | } ~ \\ (DIN 66003). Choose German to show them as letters.");
         flowNext(12 * gUi);
     }
     const bool wide = wideActive(a);   // whole span: a Frequency column (the carrier each page came from)

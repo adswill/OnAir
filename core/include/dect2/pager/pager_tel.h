@@ -55,6 +55,28 @@ inline const char* pocsagReadHowName(int h) {
     static const char* const n[] = {"function", "auto", "forced", "address"};
     return h >= 0 && h <= kPocsagHowAddress ? n[h] : "?";
 }
+// National character sets for the 7-bit alphanumeric text. German (DIN 66003, used by German POCSAG networks): [ \\ ] { | } ~ are Ä Ö Ü ä ö ü ß.
+enum PagerCharset { kPagerCharAscii = 0, kPagerCharGerman = 1, kPagerCharsets = 2 };
+inline const char* pagerCharsetName(int c) { return c == kPagerCharGerman ? "German (ä ö ü ß)" : "ASCII"; }
+inline std::string pagerApplyCharset(const std::string& in, int cs) {
+    if (cs != kPagerCharGerman) return in;
+    std::string o;
+    o.reserve(in.size() + 4);
+    for (char c : in) {
+        switch (c) {
+        case '[': o += "\xC3\x84"; break;    // Ä
+        case '\\': o += "\xC3\x96"; break;   // Ö
+        case ']': o += "\xC3\x9C"; break;    // Ü
+        case '{': o += "\xC3\xA4"; break;    // ä
+        case '|': o += "\xC3\xB6"; break;    // ö
+        case '}': o += "\xC3\xBC"; break;    // ü
+        case '~': o += "\xC3\x9F"; break;    // ß
+        default: o += c;
+        }
+    }
+    return o;
+}
+
 // Picks the reading of a POCSAG message (type, text, readHow) for a mode; byAddress marks a per-address override. FLEX and tone pages are left alone.
 inline void pocsagApplyRead(PagerMessage& m, int mode, bool byAddress = false) {
     if (m.flex || (m.type != kPagerNumeric && m.type != kPagerAlpha)) return;
