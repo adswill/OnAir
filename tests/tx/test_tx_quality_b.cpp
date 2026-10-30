@@ -16,6 +16,9 @@
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/hfdig/hfdig_rx.h"
 #include "dect2/hfdig/hfdig_tel.h"
+#include "../common/cpu_report.h"
+#include "../common/ci_slack.h"
+#include "../common/cpu_time.h"
 #include <random>
 #include <algorithm>
 #include <chrono>
@@ -48,15 +51,8 @@ struct Q {
 };
 
 // CPU time of this thread: the machine may be busy with other work, and the wall clock would then measure that instead of the generator
-double cpuNow() {
-#ifdef _WIN32
-    return (double)std::clock() / CLOCKS_PER_SEC;
-#else
-    timespec ts{};
-    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
-    return (double)ts.tv_sec + ts.tv_nsec * 1e-9;
-#endif
-}
+// (std::clock() is that wall clock on Windows)
+double cpuNow() { return threadCpuSecs(); }
 
 void welch(const std::vector<cf32>& x, int nfft, std::vector<double>& psd, bool steadyOnly = false) {
     int log2n = 0;
@@ -118,8 +114,9 @@ bool measure(const TxModeSpec& m, Q& q, std::string& err) {
     }
     // the real-time factor from the median block: even thread CPU time grows when a shared runner's other jobs take the core's caches and
     // its second hardware thread (NR and Remote ID at 20 Msps measured 1.6 .. 1.9 x alone and 0.8 .. 1.1 x beside a full ctest -j); the
-    // median keeps the generator's own speed and drops those stretches. A single block (short runs): the whole-run figure.
-    if (per.size() >= 3) {
+    // median keeps the generator's own speed and drops those stretches. A single block (short runs), or a CPU clock in scheduler ticks
+    // (Windows: 15.6 ms against 1.6 ms blocks at 20 Msps): the whole-run figure.
+    if (per.size() >= 3 && !cpuClockCoarse()) {
         std::nth_element(per.begin(), per.begin() + (long)(per.size() / 2), per.end());
         q.rt = (blk / q.rate) / std::max(per[per.size() / 2], 1e-9);
     } else q.rt = q.secs / std::max(cpu, 1e-9);
@@ -272,7 +269,8 @@ int main(int argc, char** argv) {
         CHECK(q.rms > 1e-4, "%s: no signal (rms %.2g)", id.c_str(), q.rms);
         CHECK(q.over1 == 0, "%s: %.3f %% of the samples are above full scale (clipped by the limiter)", id.c_str(), q.over1 * 100);
         CHECK(q.over09 < 0.01, "%s: %.2f %% of the samples reach the soft limiter", id.c_str(), q.over09 * 100);
-        CHECK(q.rt > 1.5, "%s: generated at only %.2f x real time (thread CPU time)", id.c_str(), q.rt);
+        cpuCal("tx_quality_b", id, q.rt, "x-realtime", '>', 1.5 / ciSlack());
+        CHECK(q.rt > 1.5 / ciSlack(), "%s: generated at only %.2f x real time (thread CPU time), the limit is %.2f", id.c_str(), q.rt, 1.5 / ciSlack());
         // UAT's generator writes dump978-style phase steps (2 samples a bit, +-12 kHz at 2 Msps instead of 1.041667 Mbit/s at +-312.5 kHz): a
         // carrier with wide, weak data sidebands. Its far power is bounded at -30 dBc until the modulator and the receiver move to the standard
         CHECK(q.farDb < (id == "uat" ? -30 : -40), "%s: %.1f dBc of the power lies more than 3 occupied bandwidths away", id.c_str(), q.farDb);

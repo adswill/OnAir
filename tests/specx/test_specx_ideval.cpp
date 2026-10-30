@@ -17,6 +17,7 @@
 #include "dect2/nxdn/nxdn_proto.h"
 #include "dect2/p25/p25_proto.h"
 #include "dect2/pager/pager_proto.h"
+#include "../common/cpu_report.h"
 #include "../common/ci_slack.h"
 #include <algorithm>
 #include <atomic>
@@ -502,6 +503,7 @@ int main(int argc, char** argv) {
     CHECK(pct(knownT.top1, knownT.n) >= pct(m15.top1, m15.n) - 7, "the frequency known made top-1 worse: %.1f %% against %.1f %% blind", pct(knownT.top1, knownT.n), pct(m15.top1, m15.n));
     CHECK(pct(m15.wrongSure, m15.n) <= 12, "wrong with confidence >= 50 %% at 15 dB: %.1f %% (<= 12)", pct(m15.wrongSure, m15.n));
     CHECK(verN == 0 || pct(verBad, verN) <= 15, "the verify step failed the truth in %.1f %% of the runs (<= 15)", pct(verBad, verN));
+    cpuCal("specx_ideval", "identify() on average", sumMs / std::max<size_t>(1, res.size()), "ms", '<', 250 * ciSlack());
     CHECK(sumMs / std::max<size_t>(1, res.size()) < 250 * ciSlack(), "identify() took %.0f ms on average (limit %.0f)", sumMs / std::max<size_t>(1, res.size()), 250 * ciSlack());
     return testSummary("specx_ideval");
 }

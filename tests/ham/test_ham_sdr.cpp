@@ -7,6 +7,7 @@
 #include "dect2/ham/ham_sdr.h"
 #include <chrono>
 #include <thread>
+#include "../common/cpu_report.h"
 #include "../common/test_util.h"
 using namespace dect2;
 using namespace dect2::ham;
@@ -149,6 +150,7 @@ int main() {
         const auto t0 = std::chrono::steady_clock::now();
         ch.process(a.data(), a.size(), out);
         const double cpu = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+        cpuCal("ham_sdr", "1.2 s of audio at " + std::to_string((long long)rate) + " Hz", cpu, "wall-s", '<', 1.2);
         CHECK(cpu < 1.2, "rate %.0f: 1.2 s of audio took %.2f s of CPU (must run faster than real time)", rate, cpu);
         CHECK(std::fabs((double)out.size() - 1.2 * rate) < 4 * rate / 48000, "rate %.0f: %zu samples for 1.2 s", rate, out.size());
         float early = 0;
@@ -353,6 +355,7 @@ int main() {
         for (size_t i = 0; i < a.size(); i += 480) { out.clear(); ch.process(a.data() + i, std::min<size_t>(480, a.size() - i), out); }
         const double cpu = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
         printf("SSB chain at 2.016 MHz: %.1f %% of real time\n", cpu / 2.0 * 100);
+        cpuCal("ham_sdr", "SSB chain, 2 s of audio to 2.016 MHz", cpu, "wall-s", '<', 1.0);
         CHECK(cpu < 1.0, "2 s of audio to 2.016 MHz IQ in %.2f s", cpu);
     }
     return testSummary("ham_sdr");

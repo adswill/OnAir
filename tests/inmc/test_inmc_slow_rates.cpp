@@ -2,6 +2,7 @@
 // Slow: the generator has to make up to 20 million samples a second.
 #include "dect2/inmc/inmc_testutil.h"
 using namespace dect2;
+#include "../common/cpu_report.h"
 #include "../common/test_util.h"
 
 int main() {
@@ -18,6 +19,7 @@ int main() {
                (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad, t.cfoHz, t.ebn0Db, r.rtf);
         CHECK(t.blocksOk >= 2 && t.blocksBad == 0, "%.2f Msps: %llu good, %llu bad", rate / 1e6, (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
         CHECK(std::fabs(t.cfoHz + 2500) < 4, "%.2f Msps: carrier %+.1f Hz", rate / 1e6, t.cfoHz);
+        cpuCal("inmc_slow_rates", cpuCalMsps(rate), r.rtf, "x-realtime", '>', 3);
         CHECK(r.rtf > 3, "%.2f Msps: only %.1fx real time", rate / 1e6, r.rtf);
     }
     printf(fails ? "FAILED\n" : "inmc_slow_rates ok\n");

@@ -2,6 +2,7 @@
 // deviation, burst timing and symbol length are known: the measurements must come out within the tolerances below, at any frequency offset,
 // with noise, and fast enough (under 200 ms). Also the region helpers (regionAt, findRegions), the calibrated reject option and the text forms.
 #include "dect2/engine/sig_ident.h"
+#include "../common/cpu_report.h"
 #include "../common/ci_slack.h"
 #include "dect2/common/stable_random.h"
 #include <chrono>
@@ -228,6 +229,7 @@ int main() {
         const auto t0 = std::chrono::steady_clock::now();
         const Result r = id(x, fs);
         const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+        cpuCal("specx_idfeatures", "wide signal", ms, "ms", '<', 200 * ciSlack());
         CHECK(ms < 200 * ciSlack(), "wide signal: %.0f ms (limit %.0f)", ms, 200 * ciSlack());
         (void)r;
     }
@@ -238,6 +240,7 @@ int main() {
         const auto t0 = std::chrono::steady_clock::now();
         const Result r = id(x, fs);
         const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+        cpuCal("specx_idfeatures", "narrow signal in a 2 Msps capture", ms, "ms", '<', 200 * ciSlack());
         CHECK(ms < 200 * ciSlack(), "narrow signal in a 2 Msps capture: %.0f ms (limit %.0f)", ms, 200 * ciSlack());
         CHECK(std::fabs(r.f.symRate / 4800 - 1) < 0.02, "narrow signal in a 2 Msps capture: rate %.1f", r.f.symRate);
     }

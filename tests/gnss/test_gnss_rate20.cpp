@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <cstdio>
+#include "../common/cpu_report.h"
 using namespace dect2;
 using namespace dect2::gnsstest;
 using dect2::testpar::CaseOut;
@@ -27,6 +28,7 @@ static void centred(CaseOut& out) {
     out.print("20 Msps: %s, error %.2f / %.2f m, first fix %.1f s; feed() took %.1f s for %.0f s of signal: %.1fx real time\n", gnssSummary(t).c_str(), hz, vt, t.fix.firstFixSecs, r.cpuSecs, o.secs, o.secs / r.cpuSecs);
     CHECK(t.fix.valid && t.fix.nSats >= nTx - 2, "no fix, or too few satellites (%d of %d)", t.fix.nSats, nTx);
     CHECK(hz < 12.0 && std::fabs(vt) < 20.0, "position error %.1f / %.1f m", hz, vt);
+    cpuCal("gnss_rate20", "20 Msps", o.secs / r.cpuSecs, "x-realtime", '>', 2.0, !GNSS_SANITIZED && ciSlack() == 1);
     if (!GNSS_SANITIZED && !std::getenv("CI")) CHECK(o.secs / r.cpuSecs > 2.0, "real-time factor %.2f", o.secs / r.cpuSecs);
     CHECK(t.activeMask == 1u && t.inputRate == 20e6, "set-up fields");
 }

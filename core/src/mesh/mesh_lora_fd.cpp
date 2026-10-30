@@ -1,5 +1,7 @@
 // Frequency-domain channeliser for several LoRa channels of one wide capture: one forward FFT of the input (overlap-save) shared by all
 // channels; per channel only a small inverse FFT of the bins around its centre (the decimation) with a smooth band-pass on them.
+// STOP: a change here also needs a run of the full mesh rates test, which ctest does not run: test_mesh_rates --full
+// (tests/mesh/test_mesh_rates.cpp).
 #include "dect2/mesh/mesh_lora.h"
 #include "dect2/dsp/dsp_compat.h"
 #include <algorithm>
