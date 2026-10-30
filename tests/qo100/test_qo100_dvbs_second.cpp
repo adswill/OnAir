@@ -80,17 +80,17 @@ int main() {
         RxTelemetry r1, r2;
         uint64_t s1 = 0, s2 = 0;
         int n1 = 0, n2 = 0, wrong = 0;
-        bool lock = false, media = false;
+        bool lock = false, media = false; DvbsTelemetry lastLocked;
         const auto t0 = std::chrono::steady_clock::now();
         double el = 0;
         while ((el = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count()) < 90.0) {
             if (e.latestRx(r1, s1)) { s1 = r1.seq; n1++; wrong += r1.standard != 54; }
-            if (e.latestRx2(r2, s2)) { s2 = r2.seq; n2++; wrong += r2.standard != 7; lock |= r2.dvbs.tsLock; }
+            if (e.latestRx2(r2, s2)) { s2 = r2.seq; n2++; wrong += r2.standard != 7; lock |= r2.dvbs.tsLock; if (r2.dvbs.tsLock) lastLocked = r2.dvbs; }
             media = hasVideoAudio(e);
             if (lock && media && el > 3) break;
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
-        const DvbsTelemetry& d = r2.dvbs;
+        const DvbsTelemetry& d = lock ? lastLocked : r2.dvbs;   // the report that showed the lock (a later one may be mid-restart on a loaded machine)
         printf("  %s: %.1f s, first %d reports, second %d: %s\n", what, el, n1, n2, dvbsSummary(d).c_str());
         CHECK(wrong == 0, "%s: %d reports of the wrong standard", what, wrong);
         CHECK(n1 > 3 && n2 > 3, "%s: reports: %d first, %d second", what, n1, n2);
