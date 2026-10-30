@@ -116,6 +116,9 @@ std::unique_ptr<TxSink> makeNullTxSink();
 // signal goes out that far below the frequency asked for (APRS 50 kHz down, #351). The modes with their own transmit chain place theirs themselves.
 double txModeTuneOffsetHz(const TxModeSpec& m);
 
+// The analog FM voice's CTCSS tone: fm.ctcssIdx 1 .. 50 is the standard tone of that number (67.0 .. 254.1 Hz), 0 or beyond is none.
+double txCtcssToneHz(int idx);
+
 class TxGenerator {
 public:
     virtual ~TxGenerator() = default;

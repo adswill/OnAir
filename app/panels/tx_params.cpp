@@ -38,6 +38,19 @@ P C(const char* key, Sec sec, const char* label, const char* tip, double def, st
     return p;
 }
 
+// Off, then the 50 standard CTCSS tones (kCtcssHz); the choice index n > 0 is kCtcssHz[n - 1] (read in tx_voice.cpp as fm.ctcssIdx)
+std::vector<const char*> ctcssChoices() {
+    static std::vector<std::string> names;
+    static std::vector<const char*> ptrs;
+    if (ptrs.empty()) {
+        names.reserve(51);
+        names.push_back("Off");
+        for (float f : dect2::actl::kCtcssHz) { char b[24]; snprintf(b, sizeof b, "%.1f Hz", f); names.push_back(b); }
+        for (const auto& n : names) ptrs.push_back(n.c_str());
+    }
+    return ptrs;
+}
+
 void add(std::vector<P>& v, std::initializer_list<P> l) { v.insert(v.end(), l.begin(), l.end()); }
 
 // the audio chain every analog voice shares: the test tone, the filters, the speech compressor and the VOX
@@ -117,8 +130,7 @@ std::vector<P> build(const TxModeSpec& m, bool analog, int variant) {
         add(v, {
             F("fm.deviation", Sec::Modulation, N_("Deviation"), N_("How far the audio swings the frequency. 2.5 kHz is a 12.5 kHz channel, 5 kHz a 25 kHz channel."), 5000, 500, 25000, "%.0f Hz", nullptr, Bind::Deviation),
             F("fm.preemphUs", Sec::Modulation, N_("Pre-emphasis"), N_("Boosts the high notes before sending (0 = off)."), 50, 0, 150, "%.0f µs"),
-            F("fm.ctcssHz", Sec::Modulation, N_("CTCSS tone"), N_("A sub-audible tone that opens a receiver's squelch (0 = off). 67 to 254.1 Hz."), 0, 0, 300, "%.1f Hz"),
-            F("fm.ctcssPct", Sec::Modulation, N_("CTCSS level"), N_("The tone's share of the deviation."), 15, 3, 30, "%.0f %%", "fm.ctcssHz>0"),
+            C("fm.ctcssIdx", Sec::Modulation, N_("CTCSS tone"), N_("A sub-audible tone that opens a receiver's squelch. Pick one of the standard tones (67.0 to 254.1 Hz); Off sends none. Its level is the usual 12 percent of the deviation."), 0, ctcssChoices()),
             F("fm.level", Sec::Output, N_("RF level"), N_("The size of the signal as a share of full scale."), 0.4, 0.05, 1.0, "%.2f"),
         });
         voiceAudio(v, 300, 3000);

@@ -116,6 +116,26 @@ int main() {
             CHECK(at > centre * 100, "%s kind %d: power at the dial %.1f dB, at the radio's centre %.1f dB", id, kind, db(at), db(centre));
         }
     }
+    // #373: the CTCSS tone comes from the pull-down of standard tones (fm.ctcssIdx), at 600 Hz peak deviation with the default 5 kHz
+    {
+        const int idx = 14;   // 103.5 Hz
+        const double want = txCtcssToneHz(idx);
+        CHECK(std::fabs(want - 103.5) < 0.01 && txCtcssToneHz(0) == 0 && txCtcssToneHz(51) == 0, "tone table: %.2f", want);
+        TxRequest c; c.modeId = "general"; c.analogVoice = true; c.audioSrc = 3; c.opt["fm.ctcssIdx"] = idx;
+        auto y = make("general", c, fs, n);
+        CHECK(!y.empty(), "ctcss generator");
+        if (!y.empty()) {
+            std::vector<cf32> f(y.size() - 1);   // instantaneous frequency, as a real number in the real part
+            for (size_t i = 1; i < y.size(); i++) f[i - 1] = cf32((float)(std::arg(std::conj(y[i - 1]) * y[i]) * fs / (2 * M_PI)), 0.f);
+            double mean = 0;
+            for (size_t i = 60000; i < f.size(); i++) mean += f[i].real();
+            mean /= (double)(f.size() - 60000);
+            for (auto& v : f) v = cf32(v.real() - (float)mean, 0.f);   // the dial offset is a constant
+            const double at = std::sqrt(powerAt(f, want, fs, 60000)) * 2, off = std::sqrt(powerAt(f, 203.5, fs, 60000)) * 2;
+            CHECK(std::fabs(at - 600) < 80, "CTCSS peak deviation %.0f Hz (want about 600)", at);
+            CHECK(off < 60, "no energy at another tone: %.0f Hz", off);
+        }
+    }
     printf(fails ? "%d failure(s)\n" : "all passed\n", fails);
     return fails ? 1 : 0;
 }

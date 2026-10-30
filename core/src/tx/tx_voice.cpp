@@ -1,6 +1,7 @@
 // Analog voice for TX: NFM, AM, USB/LSB of a microphone, a file, a 1 kHz tone or silence. Broadcast FM (stereo + RDS) lives in fm_gen.cpp.
 #include "dect2/tx/tx.h"
 #include "dect2/engine/mode_tuning.h"
+#include "dect2/audio/audio_control.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -94,7 +95,8 @@ public:
         ssbCar_ = (float)(r.o("ssb.carrierPct", 0) / 100.0);
         fmLevel_ = (float)r.o("fm.level", 0.40);
         ctcss_ = r.o("fm.ctcssHz", 0);
-        ctcssPct_ = r.o("fm.ctcssPct", 15) / 100.0;
+        if (const int ix = (int)r.o("fm.ctcssIdx", 0); ix > 0) ctcss_ = txCtcssToneHz(ix);   // the panel's pull-down of the standard tones (#373)
+        ctcssPct_ = r.o("fm.ctcssPct", 12) / 100.0;   // the usual 600 Hz at 5 kHz deviation
         step_ = kFs / rate_;
         acc_ = 1.0;
         // Hilbert taps (odd, zeros on even), Hamming-windowed: delay of kHilN samples on the real path
@@ -212,6 +214,8 @@ private:
     std::vector<cf32> tmp_;
 };
 }
+
+double txCtcssToneHz(int idx) { return idx >= 1 && idx <= 50 ? (double)actl::kCtcssHz[idx - 1] : 0.0; }
 
 std::unique_ptr<ModeSynth> makeTxVoiceSynth(const TxModeSpec& m, const TxRequest& r, double rate) {
     const std::string id = m.id ? m.id : "";
