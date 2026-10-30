@@ -167,6 +167,7 @@ void qualityChecks(bool demo) {
         double secs = 1.5;
         if (ftx) { rate = std::max(250e3, m->minRateHz); secs = 16; }   // a whole slot, at a quarter of the rate
         if (!strcmp(l.id, "goesdcs")) secs = 4;   // its first message starts after 1.5 s
+        if (!strcmp(l.id, "eczas")) secs = 6;     // starts at the clock's time in its 3 s slots: two whole slots, wherever the window falls
         const Metrics k = measure(*m, r, rate, secs);
         printf("  %-11s %8.1f %7.3f %8.4f %7.1f %9.1f %7.1f %7.1f %7.1f %7.2g\n", l.id, k.xRealtime, k.peak, k.overKneePct, k.dcDb, k.obwHz / 1e3, k.aclrDb, k.spurDb, k.start05Db, k.blockDiff);
         CHECK(k.nonFinite == 0, "%s: %zu samples are NaN or infinite", l.id, k.nonFinite);
