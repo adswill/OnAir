@@ -1,5 +1,6 @@
 // Inmarsat Aero receiver: a band search finds P-channel carriers (up to 6), each gets a front end (mixer + CIC decimator to about 48 kHz)
 // and demodulators for 600, 1200 and 10500 bit/s until one of them holds frame sync; the frames go to the SU layer (aero_su.h).
+#include "dect2/session/mode_adapters.h"
 #include "dect2/aero/aero_rx.h"
 #include "dect2/results/results_io.h"
 #include "dect2/aero/aero_demod.h"
@@ -614,6 +615,7 @@ bool AeroReceiver::telemetry(AeroTelemetry& out, uint64_t lastSeq) {
     std::lock_guard<std::mutex> lk(p_->snapMu);
     if (p_->snap.seq <= lastSeq) return false;
     out = p_->snap;
+    sess::observeAero(out);
     return true;
 }
 void AeroReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }

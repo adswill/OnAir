@@ -2,6 +2,8 @@
 // positions on a map (the ADS-B map underneath, as for APRS and M17), the calling-channel presets, and a "?" about the mbelib library the
 // voice needs (docs/CODECS.md).
 #include "app.h"
+#include "ui/kit/mode_frame.h"
+#include "ui/kit/session_list.h"
 #include "voice/voice_monitor_ui.h"
 #include "dect2/codec/codec_registry.h"
 #include "dect2/codec/codec_registry.h"
@@ -218,7 +220,9 @@ void tab(App& a) {
         l.errorRate = l.locked ? t.berPct / 100.f : -1.f;
         voiceui::strip(a, "dstar", "D-STAR", l);
     }
-    subNav("dstarv", S.view, {"Now", "Calls", "Messages", "Map"});
+    kit::modeHeader({33, "D-STAR", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    kit::modeNav("dstarv", S.view, {{tr("Live"), 0}, {tr("Calls"), 4}, {tr("Map"), 3}, {tr("Call list"), 1, true}, {tr("Messages"), 2, true}});
+    if (S.view == 4) { kit::sessionItems(33, 1, "dstar"); return; }
     if (S.view == 0) nowView(a); else if (S.view == 1) callsView(a); else if (S.view == 2) messageView(a); else mapView(a);
 }
 

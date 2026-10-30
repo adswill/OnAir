@@ -98,6 +98,11 @@ void startApp(App& app, int argc, char** argv) {
     {   // the session store (docs/MODE-EXPERIENCE.md): logging is on by default; it never blocks the start
         std::string err;
         if (!dect2::sess::global().open(plat::dataDir(), dect2::sess::StoreConfig(), &err)) app.engine.log("session history is off: " + err);
+        // the names the user sees for the modes that fill the store from their telemetry (the voice monitors name theirs)
+        struct N { uint16_t m; const char* n; };
+        for (const N& x : {N{11, "ADS-B"}, N{14, "AIS"}, N{23, "Pagers"}, N{24, "APRS"}, N{16, "ACARS"}, N{27, "VDL2"}, N{35, "HFDL"}, N{83, "UAT"}, N{13, "Radiosondes"},
+                           N{17, "Inmarsat-C"}, N{18, "Inmarsat Aero"}, N{19, "Iridium"}, N{20, "LoRa mesh"}, N{44, "Orbcomm"}})
+            dect2::sess::global().setModeName(x.m, x.n);
     }
     app.engine.setResultsDir(plat::dataDir() + "/results");
     dect2::datasets::setUserDir(plat::dataDir() + "/datasets");   // before the first frequency / airport lookup: the user's layers over the bundled data

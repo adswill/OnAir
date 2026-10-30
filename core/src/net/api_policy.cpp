@@ -95,7 +95,7 @@ struct Row { const char* path; Ep ep; bool post; };
 const Row kRows[] = {
     {"/api/v1/status", Ep::Status, false},       {"/api/v1/devices", Ep::Devices, false},   {"/api/v1/modes", Ep::Modes, false},
     {"/api/v1/telemetry", Ep::Telemetry, false}, {"/api/v1/spectrum", Ep::Spectrum, false}, {"/api/v1/rotator", Ep::Rotator, false},
-    {"/api/v1/ws", Ep::Ws, false},               {"/api/v1/events", Ep::Events, false},     {"/api/v1/memories", Ep::Memories, false},
+    {"/api/v1/ws", Ep::Ws, false},               {"/api/v1/events", Ep::Events, false},     {"/api/v1/memories", Ep::Memories, false}, {"/api/v1/sessions", Ep::Sessions, false},
     {"/api/v1/scheduler", Ep::Scheduler, false}, {"/api/v1/audio", Ep::Audio, false},       {"/api/v1/recording", Ep::Recording, false},
     {"/api/v1/start", Ep::Start, true},          {"/api/v1/stop", Ep::Stop, true},          {"/api/v1/mode", Ep::Mode, true},
     {"/api/v1/frequency", Ep::Frequency, true},  {"/api/v1/samplerate", Ep::SampleRate, true}, {"/api/v1/gain", Ep::Gain, true},

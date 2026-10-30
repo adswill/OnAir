@@ -3,6 +3,7 @@
 // radar and map in adsb_map_ui.cpp.
 #include "adsb_internal.h"
 #include "ui/kit/session_list.h"
+#include "ui/kit/mode_frame.h"
 void vdl2NoteAdsb(const dect2::AdsbTelemetry& t);   // vdl2_ui.cpp: VDL2 links its aircraft to what ADS-B heard
 
 using namespace adsbui;
@@ -154,7 +155,8 @@ void tick(App& a) {
 // ---------------------------------------------------------------- the hooks
 
 void tab(App& a) {
-    subNav("adsbv", S.viewMode, {"Map", "Table", "Radar", tr("Range"), "Range stats", tr("Tracks")});
+    kit::modeHeader({11, "ADS-B", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    kit::modeNav("adsbv", S.viewMode, {{tr("Live"), 1}, {tr("Tracks"), 5}, {tr("Map"), 0}, {tr("Radar"), 2, true}, {tr("Range"), 3, true}, {tr("Range stats"), 4, true}});
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     const float dw = std::min(250.f * gUi, W * 0.26f);
     // the readout beside the map and radar; beside the table only once an aircraft is picked (its ACARS messages are in it)

@@ -5,6 +5,7 @@
 // matched filter that also decimates to about 10 ksps (r2), Gardner timing recovery with a cubic interpolator, soft symbols. Frames are found by
 // their 128 unique word symbols (spread over the whole frame, every 162 symbols), which also gives the polarity; then deinterleave, soft Viterbi,
 // descramble, packets (inmc_pkt.cpp). Everything runs in feed(): at 2 Msps the cost is a few multiplications per input sample.
+#include "dect2/session/mode_adapters.h"
 #include "dect2/inmc/inmc_rx.h"
 #include "dect2/results/results_io.h"
 #include "dect2/dsp/fftutil.h"
@@ -815,6 +816,7 @@ bool InmcReceiver::telemetry(InmcTelemetry& out, uint64_t lastSeq) {
     std::lock_guard<std::mutex> lk(p_->mu);
     if (p_->tel.seq <= lastSeq) return false;
     out = p_->tel;
+    sess::observeInmc(out);
     return true;
 }
 void InmcReceiver::clearResults() {

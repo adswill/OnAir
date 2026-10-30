@@ -2,6 +2,7 @@
 #include "dect2/voice/voice_monitor.h"
 #include "dect2/audio/audioout.h"
 #include "dect2/common/timecompat.h"
+#include "dect2/session/record_rules.h"
 #include "dect2/session/session_store.h"
 #include "dect2/session/voice_bridge.h"
 #include <algorithm>
@@ -272,6 +273,7 @@ void Monitor::finishLocked(Live& l) {
         wavHeader(r.f, r.rate, r.bytes);
         fclose(r.f);
         r.f = nullptr;
+        if (l.autoState > 0 && l.autoRule && !set_.record) sess::rules().addUsage(l.autoRule, (uint64_t)r.bytes + 44);   // counts against the rule's disk cap
     }
     l.e.active = false;
     l.e.wallEnd = wall_ ? wall_() : unixNow();
@@ -452,16 +454,37 @@ void Monitor::openRecLocked(Live& l, int channels, int rate) {
     l.e.file = r.path;
 }
 
+bool Monitor::autoRecLocked(Live& l) {
+    sess::RecordRules& rr = sess::rules();
+    const bool em = l.e.info.emergency;
+    if (l.autoState < 0 || em != l.autoEmerg || l.autoGen != rr.gen()) {
+        const int m = sess::voicebridge::modeNumber(mode_);
+        l.autoState = 0;
+        if (m >= 0 && rr.enabled()) {
+            const sess::RecordDecision d = rr.decide(sess::voicebridge::toSession(l.e, mode_, sessRx_, false));
+            l.autoState = d.audio ? 1 : 0;
+            l.autoRule = d.ruleId;
+            l.autoMaxSec = d.maxSeconds;
+        }
+        l.autoEmerg = em;
+        l.autoGen = rr.gen();
+    }
+    return l.autoState > 0;
+}
+
 void Monitor::audio(const CallInfo& c, const float* pcm, size_t frames, int channels, int rate) {
     if (!pcm || !frames || channels < 1 || rate <= 0) return;
     std::lock_guard<std::mutex> lk(mu_);
-    if (!set_.record || c.encrypted) return;
+    if (c.encrypted) return;
     auto it = live_.find(cur_);
     if (it == live_.end() || it->second.e.verdict != Verdict::Play || it->second.e.info.encrypted) return;
     Live& l = it->second;
+    const bool manual = set_.record;
+    if (!manual && !autoRecLocked(l)) return;
     if (!l.rec) openRecLocked(l, channels, rate);
     Rec& r = *l.rec;
     if (!r.f || r.rate != rate) return;
+    if (!manual && l.autoMaxSec && r.bytes / 2.0 >= (double)l.autoMaxSec * rate) return;   // the rule's longest recording
     std::vector<int16_t> s(frames);
     for (size_t i = 0; i < frames; i++) {
         const float v = std::max(-1.f, std::min(1.f, pcm[i * (size_t)channels]));

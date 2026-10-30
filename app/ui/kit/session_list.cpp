@@ -1,5 +1,6 @@
 #include "session_list.h"
 #include "app.h"
+#include "record_rules_ui.h"
 #include "dect2/session/privacy.h"
 #include "dect2/session/session_store.h"
 #include "dect2/session/track_book.h"
@@ -91,6 +92,7 @@ void sessionItems(uint16_t mode, int kind, const char* idc) {
     bool onv = on;
     if (ImGui::Checkbox(tr("Keep history"), &onv)) st.setLogging(mode, onv);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Saves who, when and how long (never audio, never message text) so the list survives a restart. Turn off to keep only the current run."));
+    ImGui::SameLine(); recordBar(mode);
     const StoreStats ss = st.stats();
     if (ss.dropped) { ImGui::SameLine(); ImGui::TextColored(ImVec4(0.9f, 0.6f, 0.2f, 1), "%s: %llu", tr("dropped"), (unsigned long long)ss.dropped); }
     if (st.firstRunNoticeNeeded()) {
@@ -202,6 +204,7 @@ void sessionItems(uint16_t mode, int kind, const char* idc) {
         ImGui::TextDisabled("%s  -  %s", when(cur->startWall).c_str(), cur->active() ? tr("live") : dur(cur->durationMs).c_str());
         bool kept = (cur->flags & FlagStarred) != 0;
         if (ImGui::Checkbox(tr("Keep (never delete)"), &kept)) st.setStarred(cur->id, kept);
+        recordThisButton(*cur);
         if (!cur->who[0].empty()) ImGui::Text("%s: %s", tr("From"), cur->who[0].c_str());
         if (!cur->who[1].empty()) ImGui::Text("%s: %s", tr("To"), cur->who[1].c_str());
         if (!cur->alias[0].empty()) ImGui::Text("%s: %s", tr("Name"), cur->alias[0].c_str());
@@ -220,6 +223,7 @@ void sessionItems(uint16_t mode, int kind, const char* idc) {
         if (e1 || e2) st.setNote(cur->id, s.noteBuf, s.tagBuf);
         ImGui::EndChild();
     }
+    recordRulesDialog(mode);
     ImGui::PopID();
 }
 

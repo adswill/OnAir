@@ -2,6 +2,7 @@
 // (all fields, altitude and temperature plots, calibration progress), the carriers the search found in the band, and the test signal options.
 #include "app.h"
 #include "ui/kit/session_list.h"
+#include "ui/kit/mode_frame.h"
 #include "dect2/sonde/sonde_land.h"
 #include "dect2/geo/maidenhead.h"
 #include "../adsb/adsb_map.h"
@@ -294,7 +295,8 @@ void carrierStrip(const App& a, ImVec2 size) {
 // ---------------------------------------------------------------- the hooks
 
 void tab(App& a) {
-    subNav("sondev", S.viewMode, {"Map", "Table", tr("Tracks")});
+    kit::modeHeader({13, "Radiosondes", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    kit::modeNav("sondev", S.viewMode, {{tr("Live"), 0}, {tr("Tracks"), 2}, {tr("Table"), 1, true}});
     if (S.viewMode == 2) { kit::sessionItems(13, 3, "sonde"); return; }
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     if (S.viewMode == 1) { sondeTable(a, false); return; }

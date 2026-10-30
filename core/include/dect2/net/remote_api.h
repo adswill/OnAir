@@ -62,6 +62,7 @@ public:
     virtual void audioClose(int) {}
     // ---- optional: the rest of the control surface (docs/REMOTE-API.md). A getter returning an empty string / a setter returning false with err
     // "not supported" make the server answer 501. None of these can transmit or touch keys, credentials or security settings.
+    virtual std::string sessionsJson(const std::string& query) { (void)query; return std::string(); }   // calls, threads and tracks, paged (results/sessions_json.h); empty = not offered
     virtual std::string memoriesJson() { return std::string(); }      // the memory list (read only)
     virtual std::string schedulerJson() { return std::string(); }     // the scheduled jobs (read only)
     virtual std::string audioJson() { return std::string(); }         // volume, mute

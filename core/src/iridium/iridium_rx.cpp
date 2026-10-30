@@ -1,6 +1,7 @@
 // Iridium receiver: the detector runs in feed(), the bursts are demodulated and decoded on a worker thread that reads them from a
 // ring of input samples (no copy per burst on the feed side; a burst whose samples were overwritten before the worker got to it is
 // dropped and counted).
+#include "dect2/session/mode_adapters.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/iridium/iridium_rx.h"
 #include "dect2/dsp/simd.h"
@@ -574,6 +575,7 @@ bool IridiumReceiver::telemetry(IridiumTelemetry& out, uint64_t lastSeq) {
     std::lock_guard<std::mutex> lk(p_->mu);
     if (p_->tel.seq <= lastSeq) return false;
     out = p_->tel;
+    sess::observeIridium(out);
     return true;
 }
 void IridiumReceiver::clearResults() { std::lock_guard<std::mutex> lk(p_->mu); p_->clearLists(); }

@@ -1,4 +1,5 @@
 // Orbcomm receiver (orbcomm_rx.h).
+#include "dect2/session/mode_adapters.h"
 #include "dect2/orbcomm/orbcomm_rx.h"
 #include "dect2/results/results_io.h"
 #include "dect2/dsp/fftutil.h"
@@ -673,6 +674,7 @@ bool OrbcommReceiver::telemetry(OrbcommTelemetry& out, uint64_t lastSeq) {
     std::lock_guard<std::mutex> lk(p_->mu);
     if (p_->tel.seq == 0 || p_->tel.seq == lastSeq) return false;
     out = p_->tel;
+    sess::observeOrbcomm(out);
     return true;
 }
 

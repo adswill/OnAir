@@ -31,7 +31,7 @@ struct State {
     int correction = 2;
     std::deque<float> rate, snr;                // good messages per second and SNR, a point per report
     uint64_t lastSeq = 0;
-    int viewMode = 0;                           // 0 map, 1 table, 2 radar
+    int viewMode = 1;                           // 1 table (Live), 0 map, 2 radar
     adsbmap::View map;
     bool mapHome = true;                        // the map follows the antenna position until the user drags it
     dect2::adsbu::Units units;                  // display units (prefs adsbUnits, adsbSpeedUnit)

@@ -457,3 +457,22 @@ Each item is a branch-sized work item with files, structs and tests. Order matte
 10. **Airband adapter and minimal RecorderHook.** Files: core/include/dect2/session/recorder_hook.h, core/src/session/recorder_hook.cpp (WAV, pre-roll from `AudioClipRing`, concurrent-encoder cap, drop counter, `links` registration), airband adapter next to the airband receiver, simple rule editor dialog (app/ui/kit/rule_editor.h/.cpp with the 3.4 triggers and the category acknowledgement). Tests: `tests/session/test_recorder_hook.cpp`, `tests/session/test_record_rules.cpp`. Effort L.
 
 After step 10: owner reviews the pilot screenshots (8.2); then Wave 1 roll-out to NXDN, dPMR, D-STAR, M17, P25.
+
+## 11. Implementation status (3.4, feat34-mode-experience2)
+
+What is built and where. Sessions are logged (metadata only) in every mode listed; the Items tab is the shared `kit::sessionItems`.
+
+| Group | Modes (mode number) | Items tab | Adapter |
+|-------|--------------------|-----------|---------|
+| Voice (Calls) | DMR 9, NXDN 38, P25 50, dPMR 45, D-STAR 33, Yaesu Fusion 128, TETRA 46, M17 31 | Calls | `voice::Monitor` bridge (`voice_bridge.h`) |
+| Aviation / maritime (Tracks) | ADS-B 11, AIS 14, ACARS 16, VDL2 27, HFDL 35, UAT 83, radiosondes 13, APRS 24 | Tracks | `mode_adapters.cpp`, `mode_adapters_air.cpp` |
+| Messages (Threads) | Pagers 23, Inmarsat-C 17 | Threads | `mode_adapters.cpp`, `mode_adapters_data.cpp` |
+| Satellite / mesh (Tracks) | Inmarsat Aero 18, Iridium 19 (satellites and aircraft), Orbcomm 44, LoRa mesh 20 (Meshtastic/MeshCore nodes, LoRaWAN devices, LoRa APRS/MeshCom stations) | Tracks | `mode_adapters_data.cpp` |
+
+Not yet rolled out (no Items tab, no adapter): Airband/Marine/General voice, analog TV and DVB (Programmes/Services), DSC/NAVTEX/SAME (Heard), HF digital modes, GNSS, cell, BLE/WiFi/Zigbee (Devices), Argos, Globalstar, LoRa satellites, KA modes, and everything of Wave 4 to 6. The frame (Live | Items | Map | More) and the status header (`app/ui/kit/mode_frame.cpp`) are used by every mode in the table above; the old per-mode lamp rows stay under the header until they move to More > Signal. Tabs not yet in the standard names keep their old labels.
+
+### 11.1 Auto-record (section 3, first slice)
+`core/include/dect2/session/record_rules.h`: master switch OFF by default, rules = mode + (talkgroup / source / name or callsign / frequency / anything) + audio and/or IQ clip + emergency only + longest call + disk cap. Encrypted or unreadable sessions never get a decision. Voice monitors record the played call's audio by rule (`voice::Monitor::audio`); other modes' audio and all IQ clips are started by the session store's writer thread through handlers (`app/panels/automation_sink.cpp`, the same `record_audio` / `record_iq` actions the automations use). The editor is `kit::recordRulesDialog` ("Rules..." beside the Record switch in every Items tab); a row's "Record this" adds a rule and turns recording on in one click. Rules are saved beside the sessions database (`record_rules.txt`). Not built: pre-roll, FLAC/MP3 on a worker pool, library naming, per-category notices, schedule triggers, notify action, IQ files counting against the disk cap (only audio does).
+
+### 11.2 Remote API paging
+`GET /api/v1/sessions?mode=&kind=&offset=&limit=(max 200)&q=&active=1&since=` (`results/sessions_json.h`); the payload has ids, key, title, times and counts only. Telemetry JSON carries `sessions.gen`. msgdb already has the `sid` column and the `session_id` filter; the jump from View > Messages to the Items row is not built.

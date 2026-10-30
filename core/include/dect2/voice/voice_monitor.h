@@ -148,7 +148,8 @@ public:
 
 private:
     struct Rec;
-    struct Live { CallEntry e; std::unique_ptr<Rec> rec; double sessSec = -1e9; Verdict sessVerdict = Verdict::Busy; bool sessEnc = false, sessEmerg = false; };
+    struct Live { CallEntry e; std::unique_ptr<Rec> rec; double sessSec = -1e9; Verdict sessVerdict = Verdict::Busy; bool sessEnc = false, sessEmerg = false;
+        int autoState = -1; uint64_t autoGen = 0; bool autoEmerg = false; uint32_t autoRule = 0, autoMaxSec = 0; };   // autoState: record rule decision (-1 unknown, 0 no, 1 record)
     std::string mode_;
     mutable std::mutex mu_;
     Settings set_;
@@ -169,6 +170,7 @@ private:
     void applyLocked();
     std::string labelLocked(const CallInfo& c) const;
     void openRecLocked(Live& l, int channels, int rate);
+    bool autoRecLocked(Live& l);                 // a record rule (session/record_rules.h) wants this call's audio
     uint16_t sessRx_ = 0;
     sess::SessionStore* sessStore_ = nullptr;
     bool sessNamed_ = false;

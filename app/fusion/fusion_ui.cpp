@@ -1,6 +1,8 @@
 // Yaesu System Fusion screens (work in progress): lock, frame counts, call mode, source / destination callsigns, repeater, the slow data
 // text and the state of the speech codec plug-in. The voice needs a codec that the user installs (codec id "ysf", docs/CODECS.md).
 #include "app.h"
+#include "ui/kit/mode_frame.h"
+#include "ui/kit/session_list.h"
 #include "voice/voice_monitor_ui.h"
 #include "codec/speech_codec_ui.h"
 #include "dect2/fusion/fusion_rx.h"
@@ -73,6 +75,10 @@ void tab(App& a) {
         l.errorRate = l.locked && tot > 20 ? (float)(t.dchBad / tot) : -1.f;   // the frames whose data channel failed its check
         voiceui::strip(a, "ysf", "Yaesu System Fusion", l);
     }
+    kit::modeHeader({128, "Yaesu Fusion", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    static int fview = 0;
+    kit::modeNav("ysfv", fview, {{tr("Live"), 0}, {tr("Calls"), 1}});
+    if (fview == 1) { kit::sessionItems(128, 1, "ysf"); return; }
     if (!live(a)) {
         ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "tune to a Yaesu Fusion channel (2 m or 70 cm, 12.5 kHz) and start the receiver");
         codecBlock(a);

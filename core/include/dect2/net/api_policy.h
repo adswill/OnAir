@@ -46,7 +46,7 @@ Size checkSizes(size_t headerBytes, const std::string& contentLengthHeader, size
 
 // ---- routes
 enum class Ep {
-    None, Page, Index, Status, Devices, Modes, Telemetry, Spectrum, Rotator, Ws, Events, Memories, Scheduler, Audio, Recording,
+    None, Page, Index, Status, Devices, Modes, Telemetry, Spectrum, Rotator, Ws, Events, Memories, Sessions, Scheduler, Audio, Recording,
     Start, Stop, Mode, Frequency, SampleRate, Gain, AutoGain, Bandwidth, Squelch, Volume, Mute, RecordStart, RecordStop,
     RotatorGoto, RotatorStop, RotatorPark, TxStatus, TxStart, TxStop, Extra
 };

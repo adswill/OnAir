@@ -248,6 +248,12 @@ struct RemoteApiServer::Impl {
             if (j.empty()) sendErr(s, 501, "no transmitter in this program"); else send(s, 200, j);
             return;
         }
+        if (pr.ep == apipol::Ep::Sessions) {   // paged: ?mode=&kind=&offset=&limit=(<=200)&q=&active=1&since=
+            std::string j;
+            { std::lock_guard<std::mutex> lk(hostMu); j = host.sessionsJson(rq.query); }
+            if (j.empty()) sendErr(s, 501, "not available in this program"); else send(s, j.compare(0, 8, "{\"error\"") == 0 ? 400 : 200, j);
+            return;
+        }
         if (pr.ep == apipol::Ep::Memories || pr.ep == apipol::Ep::Scheduler || pr.ep == apipol::Ep::Audio || pr.ep == apipol::Ep::Recording) {
             std::string j;
             { std::lock_guard<std::mutex> lk(hostMu); j = pr.ep == apipol::Ep::Memories ? host.memoriesJson() : pr.ep == apipol::Ep::Scheduler ? host.schedulerJson() : pr.ep == apipol::Ep::Audio ? host.audioJson() : host.recordingJson(); }

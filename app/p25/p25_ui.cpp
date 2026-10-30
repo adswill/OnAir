@@ -3,6 +3,8 @@
 // messages, and a "?" about the mbelib library the voice needs (docs/CODECS.md). Receive only; encrypted calls are only reported.
 #include "dect2/common/time_fmt.h"
 #include "app.h"
+#include "ui/kit/mode_frame.h"
+#include "ui/kit/session_list.h"
 #include "voice/voice_monitor_ui.h"
 #include "dect2/codec/codec_registry.h"
 #include "dect2/codec/codec_registry.h"
@@ -748,7 +750,9 @@ void tab(App& a) {
         l.errorRate = l.locked ? t.berPct / 100.f : -1.f;
         voiceui::strip(a, "p25", "P25", l);
     }
-    subNav("p25v", S.view, {"Now", "Calls", "Trunking", "Talkgroups", "Messages", "Follow"});
+    kit::modeHeader({50, "P25", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    kit::modeNav("p25v", S.view, {{tr("Live"), 0}, {tr("Calls"), 6}, {tr("Call list"), 1, true}, {tr("Trunking"), 2, true}, {tr("Talkgroups"), 3, true}, {tr("Messages"), 4, true}, {tr("Follow"), 5, true}});
+    if (S.view == 6) { kit::sessionItems(50, 1, "p25"); return; }
     if (S.view == 0) nowView(a); else if (S.view == 1) callsView(a); else if (S.view == 2) trunkingView(a); else if (S.view == 3) talkgroupView(a); else if (S.view == 4) messageView(a); else followView(a);
 }
 

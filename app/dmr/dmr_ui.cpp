@@ -1,6 +1,7 @@
 // DMR screens: the two time slots and the call log, the symbol plots, the receiver counters and the options of the test signal.
 #include "app.h"
 #include "ui/kit/session_list.h"
+#include "ui/kit/mode_frame.h"
 #include "dmr_map.h"
 #include "dect2/dmr/dmr_ambe.h"
 #include "../codec/speech_codec_ui.h"
@@ -292,7 +293,8 @@ void callsView(App& a) {
 }
 
 void tab(App& a) {
-    subNav("dmrv", S.view, {"Calls", "Map", "Table", tr("History")});
+    kit::modeHeader({9, "DMR", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    kit::modeNav("dmrv", S.view, {{tr("Live"), 0}, {tr("Calls"), 3}, {tr("Map"), 1}, {tr("Table"), 2, true}});
     if (S.view == 3) { kit::sessionItems(9, 1, "dmr"); return; }
     if (S.view == 1) { dmrMap(a); return; }
     if (S.view == 2) { dmrTable(a); return; }

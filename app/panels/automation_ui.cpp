@@ -781,6 +781,7 @@ void automationWindow(App& a) {
     if (!started) {
         started = true;
         eng.setSink(&automationapp::sink());
+        automationapp::autoRecordInstall();
         eng.setLogDir(dirPath() + "/logs");
         eng.start();
     }

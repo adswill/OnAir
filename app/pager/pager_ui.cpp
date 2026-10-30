@@ -1,6 +1,7 @@
 // Pagers screens: lamps for the signal, the sync and the two protocols; the message list with a filter; the statistics per speed.
 #include "dect2/common/time_fmt.h"
 #include "ui/kit/session_list.h"
+#include "ui/kit/mode_frame.h"
 #include "app.h"
 #include "pager_filter.h"
 #include "../ui/msglog_ui.h"
@@ -426,7 +427,8 @@ void tab(App& a) {
     loadRead();
     lampRow(a);
     ImGui::Spacing();
-    subNav("pagerv", S.view, {"Messages", "Capcodes", "Statistics", tr("Threads")});
+    kit::modeHeader({23, "Pagers", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    kit::modeNav("pagerv", S.view, {{tr("Live"), 0}, {tr("Threads"), 3}, {tr("Capcodes"), 1, true}, {tr("Statistics"), 2, true}});
     if (S.view == 0) messageView(a); else if (S.view == 1) capcodeView(a); else if (S.view == 3) kit::sessionItems(23, 2, "pager"); else statsView(a);
 }
 

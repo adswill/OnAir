@@ -1,4 +1,5 @@
 #include "dect2/results/rx_json.h"
+#include "dect2/results/sessions_json.h"
 #include "dect2/source/gain_opt.h"
 #include "dect2/net/remote_api.h"
 #include <cstdio>
@@ -22,6 +23,7 @@ const char* const kStd[] = {"DVB-T2", "DVB-T", "ATSC", "DAB", "ATSC 3.0", "ISDB-
 std::string rxTelemetryJson(const RxTelemetry& rx, const QualityReport* q) {
     J o;
     o.u64("seq", rx.seq);
+    o.raw("sessions", sessionStatusJson());   // the counter a client watches; the list itself is /api/v1/sessions (paged)
     o.num("standard", rx.standard);
     if (rx.standard >= 0 && rx.standard < (int)(sizeof kStd / sizeof *kStd)) o.str("standardName", kStd[rx.standard]);
     o.num("state", rx.state);   // 0 searching, 1 converging, 2 locked

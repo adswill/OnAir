@@ -1,6 +1,8 @@
 // Mesh (LoRa) mode entry: the screen state, the mode's tick, and the entry points the shell calls (tab, list, receiver,
 // panels, status, summary, tuner, decoder, synth, meters). The tables, views, LoRaWAN screens and settings are in the other mesh_*.cpp.
 #include "mesh_internal.h"
+#include "ui/kit/mode_frame.h"
+#include "ui/kit/session_list.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -180,28 +182,30 @@ void tick(App& a) {
 
 void tab(App& a) {
     loadState();
+    kit::modeHeader({20, "LoRa mesh", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
     if (const int m = subMask(a)) {   // a protocol entry: only its own views (LoRa APRS: stations instead of nodes and chat; MeshCom: stations and chat; LoRaWAN: devices and frames)
-        static const int aprsIds[] = {5, 1, 3, 4}, comIds[] = {5, 1, 2, 3, 4}, meshIds[] = {0, 1, 2, 3, 8, 4}, lwIds[] = {6, 7, 4};
+        static const int aprsIds[] = {5, 1, 3, 4, 9}, comIds[] = {5, 1, 2, 3, 4, 9}, meshIds[] = {0, 1, 2, 3, 8, 4, 9}, lwIds[] = {6, 7, 4, 9};
         const bool ap = m == 4, com = m == 8, lw = m == 16;
         const int* ids = ap ? aprsIds : com ? comIds : lw ? lwIds : meshIds;
-        const int n = ap ? 4 : lw ? 3 : com ? 5 : 6;
+        const int n = ap ? 5 : lw ? 4 : com ? 6 : 7;
         int k = 0;
         for (int i = 0; i < n; i++) if (ids[i] == S.view) k = i;
-        if (ap) subNav("meshva", k, {"Stations", "Map", "Packets", "Settings"});
-        else if (com) subNav("meshvc", k, {"Stations", "Map", "Chat", "Packets", "Settings"});
-        else if (lw) subNav("meshvl", k, {"Devices", "Frames", "Settings"});
-        else subNav("meshvm", k, {"Nodes", "Map", "Chat", "Packets", "Telemetry", "Settings"});
+        if (ap) subNav("meshva", k, {"Stations", "Map", "Packets", "Settings", tr("Tracks")});
+        else if (com) subNav("meshvc", k, {"Stations", "Map", "Chat", "Packets", "Settings", tr("Tracks")});
+        else if (lw) subNav("meshvl", k, {"Devices", "Frames", "Settings", tr("Tracks")});
+        else subNav("meshvm", k, {"Nodes", "Map", "Chat", "Packets", "Telemetry", "Settings", tr("Tracks")});
         S.view = ids[k];
     } else {
         if (S.view == 7) S.view = 3;
-        static const int ids[] = {0, 1, 2, 3, 8, 4, 5, 6};   // the views in the order of the tabs (7, the LoRaWAN frames, has no tab here)
+        static const int ids[] = {0, 1, 2, 3, 8, 4, 5, 6, 9};   // the views in the order of the tabs (7, the LoRaWAN frames, has no tab here)
         int k = 0;
-        for (int i = 0; i < 8; i++) if (ids[i] == S.view) k = i;
-        subNav("meshv", k, {"Nodes", "Map", "Chat", "Packets", "Telemetry", "Settings", "APRS", "LoRaWAN"});
+        for (int i = 0; i < 9; i++) if (ids[i] == S.view) k = i;
+        subNav("meshv", k, {"Nodes", "Map", "Chat", "Packets", "Telemetry", "Settings", "APRS", "LoRaWAN", tr("Tracks")});
         S.view = ids[k];
     }
     plat::prefs().setI("meshView", S.view);
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
+    if (S.view == 9) { kit::sessionItems(20, 3, "mesh"); return; }
     if (S.view == 0) { nodeTable(a, false); return; }
     if (S.view == 2) { chatView(a); return; }
     if (S.view == 3) { packetTable(a); return; }

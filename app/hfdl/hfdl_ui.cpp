@@ -3,6 +3,7 @@
 // per bearing from the receiver). Band presets in the tuner.
 #include "dect2/common/time_fmt.h"
 #include "ui/kit/session_list.h"
+#include "ui/kit/mode_frame.h"
 #include "../adsb/adsb_map.h"
 #include "app.h"
 #include "map/pos_predict.h"
@@ -506,7 +507,8 @@ void channelView(const App& a) {
 
 void tab(App& a) {
     loadState();
-    subNav("hfdlv", S.viewMode, {"Messages", "Map", "Aircraft", "Ground stations", "Channels", tr("Range"), tr("Tracks")});
+    kit::modeHeader({35, "HFDL", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    kit::modeNav("hfdlv", S.viewMode, {{tr("Live"), 0}, {tr("Tracks"), 6}, {tr("Map"), 1}, {tr("Aircraft"), 2, true}, {tr("Ground stations"), 3, true}, {tr("Channels"), 4, true}, {tr("Range"), 5, true}});
     if (S.viewMode == 6) { kit::sessionItems(35, 3, "hfdl"); return; }
     if (S.viewMode == 0) messageView(a);
     else if (S.viewMode == 1) mapView(a);

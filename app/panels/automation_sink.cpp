@@ -5,6 +5,7 @@
 #include "automation_internal.h"
 #include "dect2/audio/audio_rec.h"
 #include "dect2/audio/audioout.h"
+#include "dect2/session/record_rules.h"
 #include <chrono>
 #include <cmath>
 #include <condition_variable>
@@ -259,7 +260,41 @@ ActionSink& sink() {
     return s;
 }
 
+// ---- auto-record (core/include/dect2/session/record_rules.h): the rules' IQ clips, and the audio of modes that have no voice monitor of their own.
+// The store's writer thread only queues; the clip is started here, on the interface thread, with the same actions the automations use.
+namespace {
+struct ArReq { bool iq; int sec; };
+std::mutex gArMu;
+std::deque<ArReq> gArQ;
+bool voiceMonitorMode(uint16_t m) { return m == 9 || m == 38 || m == 50 || m == 45 || m == 33 || m == 128 || m == 46 || m == 31; }
+}  // namespace
+
+void autoRecordInstall() {
+    dect2::sess::rules().setHandlers(
+        [](const dect2::sess::Session& s, const dect2::sess::RecordDecision& d) {
+            std::lock_guard<std::mutex> lk(gArMu);
+            if (gArQ.size() > 32) return;
+            if (d.iq) gArQ.push_back({true, (int)std::max<uint32_t>(1, d.iqSeconds)});
+            if (d.audio && !voiceMonitorMode(s.mode)) gArQ.push_back({false, (int)(d.maxSeconds ? d.maxSeconds : 3600)});
+        },
+        [](uint64_t) {});
+}
+
 void uiTick(App& a) {
+    for (;;) {
+        ArReq r;
+        {
+            std::lock_guard<std::mutex> lk(gArMu);
+            if (gArQ.empty()) break;
+            r = gArQ.front();
+            gArQ.pop_front();
+        }
+        Pending p;
+        p.kind = r.iq ? "record_iq" : "record_audio";
+        p.p["seconds"] = std::to_string(r.sec);
+        const auto res = doOnUi(a, p);
+        a.engine.log(std::string("auto-record ") + p.kind + ": " + res.second);
+    }
     for (;;) {
         Pending p;
         {

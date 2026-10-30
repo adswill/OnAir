@@ -15,6 +15,7 @@
 #include <cmath>
 #include <filesystem>
 #include "dect2/results/rx_json.h"
+#include "dect2/results/sessions_json.h"
 #include <chrono>
 #include <condition_variable>
 #include <cstdio>
@@ -130,6 +131,7 @@ struct Host : RemoteApiHost {
 
     // ---- the rest of the control surface (docs/REMOTE-API.md). Nothing here transmits or touches keys, credentials or security settings.
     apipol::EventRing ring{512};
+    std::string sessionsJson(const std::string& q) override { return dect2::sessionsJson(q); }
     std::string memoriesJson() override {
         return query([](App&) {
             std::string o = "{\"memories\":[";

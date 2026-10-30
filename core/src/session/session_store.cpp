@@ -1,4 +1,5 @@
 #include "dect2/session/session_store.h"
+#include "dect2/session/record_rules.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/session/retention.h"
 #include <algorithm>
@@ -15,6 +16,7 @@
 #include <set>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 #ifdef _WIN32
 #include <windows.h>
 #elif defined(__APPLE__)
@@ -153,6 +155,9 @@ struct SessionStore::Impl {
     std::atomic<bool> settingsDirty{false};
     bool noticeAck = false;
     double nextSettingsSave = 0;
+    std::string rulesPath;               // auto-record rules beside the settings
+    uint64_t rulesSavedGen = 0;
+    std::unordered_set<uint64_t> recFired;   // sessions a record rule has been told about (writer thread only)
 
     // writer-thread state
     int txOps = 0;
@@ -314,6 +319,21 @@ struct SessionStore::Impl {
         return false;
     }
 
+    // auto-record (record_rules.h): tell the handlers when a session starts matching a rule and when it ends. Handlers only queue work.
+    void recordCheck(bool ending, const Session& s) {
+        RecordRules& rr = rules();
+        if (ending) {
+            if (recFired.erase(s.id)) rr.notifyEnd(s.id);
+            return;
+        }
+        if (recFired.count(s.id) || !rr.enabled()) return;
+        const RecordDecision d = rr.decide(s);
+        if (!d.any()) return;
+        if (recFired.size() > 20000) recFired.clear();
+        recFired.insert(s.id);
+        rr.notifyStart(s, d);
+    }
+
     void applySegment(std::deque<Op>& batch, size_t from, size_t to) {
         const int64_t now = wallMs();
         // 1. every snapshot: protect, window, event; the database gets the last one of each session
@@ -324,6 +344,7 @@ struct SessionStore::Impl {
             if (!isSnapshot(o)) continue;
             Session s = std::move(o.s);
             if (o.t == Op::End && s.endWall == 0) s.endWall = now;
+            recordCheck(o.t == Op::End, s);   // on the raw ids, before they are replaced by tags
             mask(s);
             const bool wasEnded = hotApply(s);
             if (o.t == Op::End && !wasEnded) emitEnded(s);
@@ -447,6 +468,10 @@ struct SessionStore::Impl {
                     nextHeartbeat = now + 1.0;
                 }
             }
+            if (!rulesPath.empty() && rules().gen() != rulesSavedGen && (now >= nextSettingsSave || doStop)) {
+                rulesSavedGen = rules().gen();
+                if (!writeOwnerOnlyFile(rulesPath, rules().saveText())) dbErrors++;
+            }
             if (settingsDirty.load() && !settingsPath.empty() && (now >= nextSettingsSave || doStop)) {
                 settingsDirty = false;
                 nextSettingsSave = now + 1.0;
@@ -534,6 +559,14 @@ bool SessionStore::openAt(const std::string& dbPath, const StoreConfig& cfg, std
             ss << in.rdbuf();
             loadSettings(ss.str());
         }
+        I.rulesPath = strOf(pathOf(dbPath).parent_path() / "record_rules.txt");
+        if (fs::is_regular_file(pathOf(I.rulesPath), ec)) {
+            std::ifstream in(pathOf(I.rulesPath), std::ios::binary);
+            std::stringstream ss;
+            ss << in.rdbuf();
+            rules().loadText(ss.str());
+        }
+        I.rulesSavedGen = rules().gen();
     }
     I.settingsDirty = false;
     I.ids.clear();

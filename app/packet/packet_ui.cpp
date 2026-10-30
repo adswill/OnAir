@@ -1,6 +1,7 @@
 // APRS / Packet screens: the stations heard (table and map, the ADS-B map underneath, as for AIS), the log of raw packets, the state lamps.
 #include "app.h"
 #include "ui/kit/session_list.h"
+#include "ui/kit/mode_frame.h"
 #include "../adsb/adsb_map.h"
 #include "dect2/geo/maidenhead.h"
 #include "dect2/packet/packet_tel.h"
@@ -388,7 +389,8 @@ void tab(App& a) {
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Radio IQ: an SDR (or a sound card carrying IQ). FM audio: a sound card on a radio's discriminator (9600 baud too) or speaker output (1200 baud), with the sound card chosen as the radio."));
         flowNext(10 * gUi);
     }
-    subNav("pktv", S.view, {"Stations", "Map", "Packets", tr("History")});
+    kit::modeHeader({24, "APRS / Packet", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    kit::modeNav("pktv", S.view, {{tr("Live"), 0}, {tr("Tracks"), 3}, {tr("Map"), 1}, {tr("Log"), 2, true}});
     if (S.view == 2) { packetLog(a); return; }
     if (S.view == 3) { kit::sessionItems(24, 3, "aprs"); return; }
     if (S.view == 1) { mapView(a, ImGui::GetContentRegionAvail()); return; }

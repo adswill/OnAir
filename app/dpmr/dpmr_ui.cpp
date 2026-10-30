@@ -3,6 +3,8 @@
 // voice needs (docs/CODECS.md).
 #include "dect2/common/time_fmt.h"
 #include "app.h"
+#include "ui/kit/mode_frame.h"
+#include "ui/kit/session_list.h"
 #include "voice/voice_monitor_ui.h"
 #include "dect2/codec/codec_registry.h"
 #include "dect2/codec/codec_registry.h"
@@ -179,7 +181,9 @@ void tab(App& a) {
         l.errorRate = l.locked ? t.berPct / 100.f : -1.f;
         voiceui::strip(a, "dpmr", "dPMR", l);
     }
-    subNav("dpmrv", S.view, {"Now", "Calls", "Messages"});
+    kit::modeHeader({45, "dPMR", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    kit::modeNav("dpmrv", S.view, {{tr("Live"), 0}, {tr("Calls"), 3}, {tr("Call list"), 1, true}, {tr("Messages"), 2, true}});
+    if (S.view == 3) { kit::sessionItems(45, 1, "dpmr"); return; }
     if (S.view == 0) nowView(a); else if (S.view == 1) callsView(a); else messageView(a);
 }
 

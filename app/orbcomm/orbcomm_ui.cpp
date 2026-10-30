@@ -1,6 +1,8 @@
 // Orbcomm screens: the satellites on the map (position from their own ephemeris, with the recent track), the satellite list (ID,
 // last heard, Doppler, position), the packet log by type, and per downlink the differential constellation and the eye.
 #include "app.h"
+#include "ui/kit/mode_frame.h"
+#include "ui/kit/session_list.h"
 #include "ui/ui_common.h"
 #include "../adsb/adsb_map.h"
 #include "dect2/orbcomm/orbcomm_rx.h"
@@ -255,7 +257,9 @@ void signalView(App& a, float W, float H) {
 
 void tab(App& a) {
     loadState();
-    subNav("orbv", S.view, {"Map", "Packets", "Satellites", "Signal"});
+    kit::modeHeader({44, "Orbcomm", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    kit::modeNav("orbv", S.view, {{tr("Live"), 0}, {tr("Tracks"), 4}, {tr("Log"), 1, true}, {tr("Satellites"), 2, true}, {tr("Signal"), 3, true}});
+    if (S.view == 4) { kit::sessionItems(44, 3, "orbcomm"); return; }
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     if (S.view == 1) { packetLog(a, ImGui::GetCursorPosY() + H); return; }
     if (S.view == 2) { ImGui::BeginChild("##orbst", ImVec2(0, 0)); satTable(a, false); ImGui::Spacing(); satDetail(a); ImGui::EndChild(); return; }

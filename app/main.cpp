@@ -275,7 +275,7 @@ static void shutdownApp(App& app, gfx::Backend* gfxBackend, GLFWwindow* window) 
     app.engine.stop();
     app.engine.flushResults();
     appResultsSave(app, true);
-    for (uint16_t m : {dect2::sess::kModeAdsb, dect2::sess::kModeAis, dect2::sess::kModeAprs, dect2::sess::kModePager}) dect2::sess::adaptersEnd(m);   // open tracks end now, not at the next start
+    dect2::sess::adaptersEndAll();   // open tracks end now, not at the next start
     dect2::sess::global().close();
     updateOnExit(app);   // a downloaded update replaces this program once it has ended
     popOutShutdown();   // its window and surface go before the back end

@@ -1,6 +1,7 @@
 // ACARS screens: the message list with a detail pane, the aircraft table and the channel bars.
 #include "dect2/common/time_fmt.h"
 #include "ui/kit/session_list.h"
+#include "ui/kit/mode_frame.h"
 #include "../panels/photo_links_ui.h"
 #include "../adsb/adsb_map.h"
 #include "app.h"
@@ -537,7 +538,8 @@ void channelView(const App& a) {
 
 void tab(App& a) {
     loadState();
-    subNav("acarsv", S.viewMode, {"Messages", "Aircraft map", "Aircraft", "Channels", tr("Tracks")});
+    kit::modeHeader({16, "ACARS", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    kit::modeNav("acarsv", S.viewMode, {{tr("Live"), 0}, {tr("Tracks"), 4}, {tr("Map"), 1}, {tr("Aircraft"), 2, true}, {tr("Channels"), 3, true}});
     if (S.viewMode == 4) { kit::sessionItems(16, 3, "acars"); return; }
     if (S.viewMode == 0) messageView(a);
     else if (S.viewMode == 1) mapView(a);

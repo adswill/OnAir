@@ -2,6 +2,7 @@
 // ground stations, and the channel list with its activity.
 #include "dect2/common/time_fmt.h"
 #include "ui/kit/session_list.h"
+#include "ui/kit/mode_frame.h"
 #include "../adsb/adsb_map.h"
 #include "app.h"
 #include "map/pos_predict.h"
@@ -586,7 +587,8 @@ void channelView(const App& a) {
 
 void tab(App& a) {
     loadState();
-    subNav("vdl2v", S.viewMode, {"Messages", "Map", "Aircraft", "Ground stations", "Channels", tr("Tracks")});
+    kit::modeHeader({27, "VDL2", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    kit::modeNav("vdl2v", S.viewMode, {{tr("Live"), 0}, {tr("Tracks"), 5}, {tr("Map"), 1}, {tr("Aircraft"), 2, true}, {tr("Ground stations"), 3, true}, {tr("Channels"), 4, true}});
     if (S.viewMode == 5) { kit::sessionItems(27, 3, "vdl2"); return; }
     if (S.viewMode == 0) messageView(a);
     else if (S.viewMode == 1) mapView(a);

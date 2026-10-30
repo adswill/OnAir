@@ -2,6 +2,8 @@
 // decoded control messages, the site information, and a "?" about the mbelib library the voice needs (docs/CODECS.md).
 #include "dect2/common/time_fmt.h"
 #include "app.h"
+#include "ui/kit/mode_frame.h"
+#include "ui/kit/session_list.h"
 #include "voice/voice_monitor_ui.h"
 #include "dect2/codec/codec_registry.h"
 #include "../codec/speech_codec_ui.h"
@@ -157,7 +159,9 @@ void tab(App& a) {
         l.errorRate = l.locked ? t.berPct / 100.f : -1.f;
         voiceui::strip(a, "nxdn", "NXDN", l);
     }
-    subNav("nxdnv", S.view, {"Now", "Calls", "Messages", "Site"});
+    kit::modeHeader({38, "NXDN", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    kit::modeNav("nxdnv", S.view, {{tr("Live"), 0}, {tr("Calls"), 4}, {tr("Call list"), 1, true}, {tr("Messages"), 2, true}, {tr("Site"), 3, true}});
+    if (S.view == 4) { kit::sessionItems(38, 1, "nxdn"); return; }
     if (S.view == 0) nowView(a); else if (S.view == 1) callsView(a); else if (S.view == 2) messageView(a); else siteView(a);
 }
 

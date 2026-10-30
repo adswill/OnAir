@@ -2,6 +2,8 @@
 // the selected carrier, its neighbour cells, the carriers seen in the spectrum, a scan over a span, and the log. Only what base stations
 // broadcast in the clear to every terminal is shown: nothing is decrypted, no voice, no short data, no subscriber identities.
 #include "app.h"
+#include "ui/kit/mode_frame.h"
+#include "ui/kit/session_list.h"
 #include "voice/voice_monitor_ui.h"
 #include "dect2/voice/voice_monitor.h"
 #include "codec/speech_codec_ui.h"
@@ -511,7 +513,9 @@ void tab(App& a) {
     ImGui::PopTextWrapPos();
     voiceStrip(a);
     slotPanel(a);
-    subNav("tetrav", S.view, {"Cells", "Neighbours", "Carriers", "Log"});
+    kit::modeHeader({46, "TETRA", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    kit::modeNav("tetrav", S.view, {{tr("Live"), 0}, {tr("Calls"), 4}, {tr("Neighbours"), 1, true}, {tr("Carriers"), 2, true}, {tr("Log"), 3, true}});
+    if (S.view == 4) { kit::sessionItems(46, 1, "tetra"); return; }
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "start the receiver to find the TETRA base stations around you"); return; }
     if (S.view == 0) {
         const float h = ImGui::GetContentRegionAvail().y;

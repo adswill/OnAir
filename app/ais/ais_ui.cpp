@@ -3,6 +3,7 @@
 // Satellite AIS panel (ais_sat_ui.cpp).
 #include "../panels/photo_links_ui.h"
 #include "ui/kit/session_list.h"
+#include "ui/kit/mode_frame.h"
 #include "app.h"
 #include "state/results_export.h"
 #include "../adsb/adsb_map.h"
@@ -20,7 +21,7 @@ using dect2::AisVessel;
 
 struct State {
     bool loaded = false;
-    int view = 0;                    // 0 map, 1 table, 2 messages, 3 NMEA, 4 range, 5 satellite
+    int view = 1;                    // 1 table (Live), 0 map, 2 messages, 3 NMEA, 4 range, 5 satellite
     uint32_t sel = 0;                // the selected station (MMSI), 0 = none
     adsbmap::View map;
     bool mapFollow = true;           // the map fits the stations until the user drags it
@@ -455,7 +456,8 @@ void nmeaView(App& a) {
 
 void tab(App& a) {
     loadState();
-    subNav("aisv", S.view, {"Map", "Table", "Messages", "NMEA", tr("Range"), tr("Satellite"), tr("Tracks")});
+    kit::modeHeader({14, "AIS", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    kit::modeNav("aisv", S.view, {{tr("Live"), 1}, {tr("Tracks"), 6}, {tr("Map"), 0}, {tr("Log"), 2, true}, {tr("NMEA"), 3, true}, {tr("Range"), 4, true}, {tr("Satellite"), 5, true}});
     const bool on = live(a);
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     if (S.view == 2) {
