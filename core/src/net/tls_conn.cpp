@@ -75,11 +75,12 @@ static int loadSystemRoots(SSL_CTX* c) {
 #endif
     return n;
 }
-Ctx* makeClientCtx(std::string& err) {
+Ctx* makeClientCtx(std::string& err, bool insecure) {
     SSL_CTX* c = SSL_CTX_new(TLS_client_method());
     if (!c) { err = "TLS: " + sslErr(); return nullptr; }
     SSL_CTX_set_min_proto_version(c, TLS1_2_VERSION);
-    SSL_CTX_set_verify(c, SSL_VERIFY_PEER, nullptr);
+    SSL_CTX_set_verify(c, insecure ? SSL_VERIFY_NONE : SSL_VERIFY_PEER, nullptr);   // insecure: only when the user ticked the Advanced box for one stream
+    if (insecure) return new Ctx{c};
     int roots = 0;
     if (std::getenv("SSL_CERT_FILE") || std::getenv("SSL_CERT_DIR")) { if (SSL_CTX_set_default_verify_paths(c) == 1) ++roots; }   // the user chose the store
     if (!roots) { roots = loadSystemRoots(c); if (!roots && SSL_CTX_set_default_verify_paths(c) == 1) ++roots; }
@@ -91,8 +92,8 @@ Conn* connect(Ctx* c, sock_t s, const std::string& host, std::string& err) {
     if (!ssl) { err = sslErr(); return nullptr; }
     SSL_set_fd(ssl, (int)s);
     SSL_set_tlsext_host_name(ssl, host.c_str());
-    SSL_set1_host(ssl, host.c_str());
-    if (SSL_connect(ssl) != 1) { err = "TLS handshake failed: " + sslErr(); SSL_free(ssl); return nullptr; }
+    if (SSL_CTX_get_verify_mode(c->c) != SSL_VERIFY_NONE) SSL_set1_host(ssl, host.c_str());
+    if (SSL_connect(ssl) != 1) { { long vr = SSL_get_verify_result(ssl); err = vr != X509_V_OK ? std::string("certificate problem: ") + X509_verify_cert_error_string(vr) : "TLS handshake failed: " + sslErr(); } SSL_free(ssl); return nullptr; }
     return new Conn{ssl};
 }
 long read(Conn* c, void* d, size_t n) { return SSL_read(c->s, d, (int)n); }
@@ -106,7 +107,7 @@ bool available() { return false; }
 Ctx* makeCtx(const std::string&, const std::string&, std::string& err) { err = "this build has no TLS support (built without OpenSSL): use a reverse proxy such as Caddy or nginx in front of the server"; return nullptr; }
 void freeCtx(Ctx*) {}
 Conn* accept(Ctx*, sock_t, std::string& err) { err = "no TLS"; return nullptr; }
-Ctx* makeClientCtx(std::string& err) { err = "this build has no TLS support (built without OpenSSL)"; return nullptr; }
+Ctx* makeClientCtx(std::string& err, bool) { err = "this build has no TLS support (built without OpenSSL)"; return nullptr; }
 Conn* connect(Ctx*, sock_t, const std::string&, std::string& err) { err = "no TLS"; return nullptr; }
 long read(Conn*, void*, size_t) { return -1; }
 long write(Conn*, const void*, size_t) { return -1; }

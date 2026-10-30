@@ -265,6 +265,7 @@ static void shutdownApp(App& app, gfx::Backend* gfxBackend, GLFWwindow* window) 
     layoutSaveNow();
     workspaceSessionEnd(app);   // the last-session file is marked clean first: the state is the one at exit
     delete gDiscord;   // clears the status and joins its thread
+    iptvShutdown();    // an Internet TV stream stops reading before the player and the engine go away
     txShutdown();      // the transmitter goes quiet before anything else is closed
     pluginShutdown();  // plugin threads and helper processes end, the crash marker goes
     receiversShutdown(app);

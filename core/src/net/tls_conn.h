@@ -16,7 +16,7 @@ Conn* accept(Ctx*, sock_t s, std::string& err);   // the handshake on a blocking
 long read(Conn*, void* d, size_t n);               // bytes, or <= 0 (closed / error / timeout)
 long write(Conn*, const void* d, size_t n);
 bool pending(Conn*);                               // decrypted bytes already waiting (select() does not see them)
-Ctx* makeClientCtx(std::string& err);   // verifies the server certificate against the system CA store (SSL_CERT_FILE / SSL_CERT_DIR also work); TLS 1.2 and up
+Ctx* makeClientCtx(std::string& err, bool insecure = false);   // verifies the server certificate against the system CA store (SSL_CERT_FILE / SSL_CERT_DIR also work); TLS 1.2 and up
 Conn* connect(Ctx*, sock_t s, const std::string& host, std::string& err);   // client handshake on a connected blocking socket; host is checked against the certificate and sent as SNI
 void close(Conn*);                                 // close_notify, then frees (the socket stays the caller's)
 }

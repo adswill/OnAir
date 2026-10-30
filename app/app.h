@@ -154,7 +154,7 @@ using SavedChannel = plat::Channel;
 // parts of the window the tour points at
 enum WizTarget { TgNone = 0, TgSwitch, TgToolbar, TgMain, TgRight, TgConst, TgCount };
 
-constexpr int kNumFamilies = 209;   // App::family runs from 0 to kNumFamilies - 1
+constexpr int kNumFamilies = 210;   // App::family runs from 0 to kNumFamilies - 1
 constexpr int kNumSubModes = 32;   // dect2::subModes(): the protocols of HF digital, mesh, pagers, marine and VOR / ILS listed as modes of their own
 constexpr int kNumSlots = kNumFamilies + kNumSubModes;   // what keeps its own frequency and gains: each family, and each protocol entry
 
@@ -961,6 +961,7 @@ void txPanel(App& a);              // the guided transmit panel (tx_panel.cpp): 
 void txSelectMode(App& a, int family, const char* subId);
 bool txModeHighlighted(const ModeDef& m);
 void txTick(App& a);               // every frame: gives the radio back when a transmission ended; the on-screen TX indicator
+void iptvShutdown();               // iptv_ui.cpp: stops the stream (the program's end)
 void txShutdown();                 // stops a running transmission (the radio goes quiet before it returns); the program's end
 bool txActive();
 void savePrefs(const App& a);
