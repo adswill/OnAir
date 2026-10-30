@@ -3,6 +3,7 @@
 #include "dect2/aero/aero_adsc.h"
 
 #include <cctype>
+#include <cmath>
 #include <cstdlib>
 
 namespace dect2 {
@@ -85,10 +86,19 @@ bool label16(const std::string& s, AeroPosition& out) {
 
 } // namespace
 
+bool aeroSanitizePosition(double& lat, double& lon) {
+    if (!std::isfinite(lat) || !std::isfinite(lon) || std::fabs(lat) > 90.0) return false;
+    if (std::fabs(lon) > 360.0) return false;
+    if (lon > 180.0) lon -= 360.0;
+    else if (lon < -180.0) lon += 360.0;
+    if (lat == 0.0 && lon == 0.0) return false;
+    return true;
+}
+
 bool aeroParseTextPosition(const std::string& label, const std::string& text, AeroPosition& out) {
     out = AeroPosition();
     out.source = 2;
-    if (label == "16" && label16(text, out)) { out.valid = true; return true; }
+    if ((label == "16" || label == "12") && label16(text, out)) { out.valid = true; return true; }
     const bool tenths = label != "20";
     for (const char* key : {"POS", "/PS"}) {
         size_t f = 0;

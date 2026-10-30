@@ -9,7 +9,17 @@ One mode that finds and decodes every Inmarsat L-band carrier of a wide capture 
 1. Pick **Inmarsat (all carriers)**, tune to the middle of your satellite's L-band channels (about 1545.6 MHz) and use a sample rate of **6 Msps or more** if your radio does it. An L-band antenna (patch or helix, with an LNA) is needed.
 2. Press nothing: the search runs by itself (**Auto**; the Auto button forgets the carriers and searches again).
 3. **Carriers** shows the whole capture as a strip and a table: frequency, type, bit rate, level, Eb/N0, state, last activity, ocean region for Inmarsat-C. Click a row to focus it (a focused carrier is never parked).
-4. **Messages** lists ACARS and ADS-C from all P channels and Inmarsat-C EGC broadcasts, with a filter. **Aircraft** shows the aircraft with a position report on a map (reports come every few minutes). **Voice** is described below.
+4. **Messages** lists ACARS and ADS-C from all P channels and Inmarsat-C EGC broadcasts, with a filter. **Aircraft** shows the aircraft with a position on a map (reports come every few minutes; see below). The screen opens on it by itself the first time a position is decoded, and the header always says how many aircraft have one (click it to jump there). **Voice** is described below.
+
+## Where the aircraft are
+
+Aero P channels carry only what an aircraft reports about itself, so planes appear slowly: an ADS-C position report every few minutes (a default contract is 3 to 15 minutes), and ACARS messages with a position in the text. Until the first one arrives the map says "waiting for position reports". That is normal, not a fault.
+
+Positions are taken from every source the receiver decodes: ADS-C reports (basic, with the earth and air reference groups for speed and track, and the predicted route), ARINC 702 "POS" and "/PS" position reports (also the position inside weather and flight reports that use that field), label 20 and label 16 / 12 reports. Log-on and log-off messages give an aircraft's ICAO address and ground station but no position; CPDLC position reports are ASN.1-encoded and are not decoded yet. Positions outside the globe (latitude beyond 90, longitude beyond 360, or exactly 0, 0) are dropped; a longitude past 180 wraps to the other side.
+
+On the map each aircraft is an arrow (the way it was heading; a dot when no direction is known) labelled with flight or registration, flight level, ground speed, track and the age of the position. It fades as the position ages: solid for 5 minutes, faint after 40. The line behind it is its trail, the thin line ahead the route in its last ADS-C report. Click an aircraft, or a row of the table under the map, for the ICAO address, position, source, the satellite and carrier (frequency and bit rate) it was heard on, and its recent messages. The table sorts on flight, altitude, speed, age and message count and has a search box (flight, registration, ICAO hex, report type).
+
+Without network access (or with the online map off) the map shows coastlines and a labelled latitude / longitude grid from the data built into OnAir, so it is never blank. Tiles, when used, only send tile numbers, never a position. The "?" on the map says the same in the app. Needs a user test with a real capture.
 
 ## Which satellite
 

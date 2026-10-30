@@ -1,6 +1,7 @@
 // Manager of the Inmarsat all-carriers mode (inmsat_manager.h).
 #include "dect2/inmsat/inmsat_manager.h"
 #include "dect2/aero/aero_rx.h"
+#include "dect2/inmsat/inmsat_planes.h"
 #include "dect2/inmc/inmc_rx.h"
 #include "dect2/mesh/mesh_lora.h"
 #include <algorithm>
@@ -50,6 +51,7 @@ struct Manager::Impl {
     std::vector<std::unique_ptr<Window>> wins;
     std::unique_ptr<lora::FdChannelizer> chz;
     std::vector<AeroTelemetry> retiredA;
+    std::vector<double> retiredAc;      // the window centre each retired Aero table belonged to (its carrier offsets are against it)
     std::vector<InmcTelemetry> retiredI;
     Snapshot snap;
     double lastPublish = -1;
@@ -61,7 +63,7 @@ struct Manager::Impl {
         cfg = c;
         cfg.detector.rate = c.rate;
         det.configure(cfg.detector);
-        wins.clear(); chz.reset(); retiredA.clear(); retiredI.clear();
+        wins.clear(); chz.reset(); retiredA.clear(); retiredAc.clear(); retiredI.clear();
         lastSearches = 0; lastPublish = -1;
         std::lock_guard<std::mutex> lk(snapMu);
         snap = Snapshot();
@@ -74,9 +76,9 @@ struct Manager::Impl {
     double totalCost() const { double s = 0; for (const auto& w : wins) s += winCost(*w); return s; }
 
     void retire(Window& w) {
-        if (w.aero && (!w.at.messages.empty() || !w.at.aircraft.empty())) retiredA.push_back(w.at);
+        if (w.aero && (!w.at.messages.empty() || !w.at.aircraft.empty())) { retiredA.push_back(w.at); retiredAc.push_back(w.centerHz); }
         if (w.inmc && !w.it.messages.empty()) retiredI.push_back(w.it);
-        if (retiredA.size() > 16) retiredA.erase(retiredA.begin());
+        if (retiredA.size() > 16) { retiredA.erase(retiredA.begin()); retiredAc.erase(retiredAc.begin()); }
         if (retiredI.size() > 16) retiredI.erase(retiredI.begin());
     }
 
@@ -219,23 +221,22 @@ struct Manager::Impl {
             wi.aero = w->aero != nullptr; wi.inmc = w->inmc != nullptr; wi.cost = winCost(*w);
             s.windows.push_back(wi);
         }
-        std::vector<const AeroTelemetry*> as;
-        for (const auto& w : wins) if (w->aero) as.push_back(&w->at);
-        for (const auto& r : retiredA) as.push_back(&r);
-        std::map<uint32_t, AeroAircraft> air;
-        for (const AeroTelemetry* a : as) {
-            for (const auto& m : a->messages) s.messages.push_back(m);
+        std::vector<std::pair<const AeroTelemetry*, double>> as;   // each Aero table with its window's centre
+        for (const auto& w : wins) if (w->aero) as.push_back({&w->at, w->centerHz});
+        for (size_t i = 0; i < retiredA.size(); i++) as.push_back({&retiredA[i], i < retiredAc.size() ? retiredAc[i] : 0.0});
+        std::map<std::string, AeroAircraft> air;
+        for (const auto& [a, wc] : as) {
+            const double base = cfg.centerHz != 0 ? cfg.centerHz + wc : 0;   // absolute frequency of this window's centre
+            for (auto m : a->messages) {
+                m.heardHz = base != 0 ? base + m.heardOffsetHz : 0;
+                s.messages.push_back(m);
+            }
             for (const auto& l : a->logons) s.logons.push_back(l);
-            for (const auto& ac : a->aircraft) {
-                auto it = air.find(ac.aesId);
-                if (it == air.end()) {
-                    air[ac.aesId] = ac;
-                } else {
-                    AeroAircraft& o = it->second;
-                    const uint64_t total = o.messages + ac.messages;
-                    if (ac.lastWall > o.lastWall) o = ac;
-                    o.messages = total;
-                }
+            for (auto ac : a->aircraft) {
+                ac.heardHz = base != 0 && ac.heardBitRate ? base + ac.heardOffsetHz : 0;
+                auto it = air.find(planeKey(ac));
+                if (it == air.end()) air[planeKey(ac)] = ac;
+                else mergeAircraft(it->second, ac);
             }
             s.messagesTotal += a->messagesTotal; s.positionsTotal += a->positionsTotal; s.susOk += a->blocksOk; s.susBad += a->blocksBad;
         }
@@ -301,8 +302,8 @@ struct Manager::Impl {
             SatInput si;
             si.haveLocation = haveLoc; si.latDeg = locLat; si.lonDeg = locLon; si.manual = satManual;
             for (const auto& r : s.carriers) if (r.type == CarrierType::AeroP && r.freqHz > 0) si.carriers.push_back({r.freqHz, r.bitRate, true});
-            for (const AeroTelemetry* a : as)
-                for (const auto& e : a->sys) { SatSysFact f; f.kind = e.kind; f.satId = e.satId; f.lonDeg = e.lonDeg; f.pMHz = e.pMHz; f.spotBeam = e.spotBeam; f.gesId = e.gesId; si.sys.push_back(f); }
+            for (const auto& asp : as) { const AeroTelemetry* a = asp.first;
+                for (const auto& e : a->sys) { SatSysFact f; f.kind = e.kind; f.satId = e.satId; f.lonDeg = e.lonDeg; f.pMHz = e.pMHz; f.spotBeam = e.spotBeam; f.gesId = e.gesId; si.sys.push_back(f); } }
             for (const auto& w : wins) if (w->inmc) {
                 if (w->it.ncs.valid) si.inmcRegions.push_back(w->it.ncs.sat);
                 for (const auto& ch : w->it.channels) if (ch.sat >= 0) si.inmcRegions.push_back(ch.sat);

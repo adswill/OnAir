@@ -389,7 +389,10 @@ struct AeroReceiver::Impl {
             am.blockId = m.blockId; am.msgNo = m.msgNo; am.text = m.text.substr(0, 240); am.crcOk = m.crcOk;
             AeroPosition pos;
             if (m.crcOk) aeroPositionFromMessage(m.label, m.text, m.uplink, pos, &am.decoded);
+            if (pos.valid && !aeroSanitizePosition(pos.lat, pos.lon)) pos.valid = false;   // out of range or no fix: not a position
             if (pos.valid) { am.hasPos = true; am.lat = pos.lat; am.lon = pos.lon; }
+            const double heardOff = chanFreq(c) - offsetHz;
+            am.heardOffsetHz = heardOff;
             messages.push_back(am);
             if (messages.size() > kMaxMessages) messages.erase(messages.begin());
             messagesTotal++;
@@ -400,6 +403,7 @@ struct AeroReceiver::Impl {
             a.lastText = m.text.substr(0, 80);
             a.messages++;
             a.lastHeard = now(); a.lastWall = wall;
+            a.heardBitRate = e.bitRate; a.heardOffsetHz = heardOff;
             if (pos.valid) addPosition(a, pos, wall);
             std::string line = "Aero: ACARS " + (m.registration.empty() ? std::string("?") : m.registration) + " " + m.label + (m.flight.empty() ? "" : " " + m.flight) + " ";
             line += m.text.substr(0, 60);
@@ -437,6 +441,7 @@ struct AeroReceiver::Impl {
                 trk = std::fmod(std::atan2(y, x) * 180 / kPi + 360, 360);
             }
         }
+        if (p.icao) a.icao = p.icao;
         a.hasPos = true; a.lat = p.lat; a.lon = p.lon;
         a.hasAlt = p.hasAlt; a.altFt = p.altFt;
         a.hasTrack = hasTrk; a.trackDeg = trk;
