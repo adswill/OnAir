@@ -9,6 +9,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <csignal>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -67,6 +68,8 @@ struct Queue {
 
 double env(const char* n, double d) { const char* v = getenv(n); return v ? atof(v) : d; }
 std::string envs(const char* n, const char* d) { const char* v = getenv(n); return v ? v : d; }
+std::atomic<bool> gStop{false};
+void onSignal(int) { gStop = true; }     // SIGINT / SIGTERM: stop the radio cleanly (an Airspy killed mid-stream delivers a broken stream until it is replugged)
 }
 
 int main() {
@@ -75,6 +78,8 @@ int main() {
     const double rate = env("DECT2_LIVE_RATE", 10e6), mhz = env("DECT2_LIVE_MHZ", 1545.85);
     const int gain = (int)env("DECT2_LIVE_GAIN", 14), bias = (int)env("DECT2_LIVE_BIAS", 1);
     const double snip = env("DECT2_LIVE_SNIP", 0);
+    // the C-channel pool to watch (MHz): every wide carrier in it is listed and the raw capture starts on the first one (not only on a sync)
+    const double poolLo = env("DECT2_LIVE_POOL_LO", 1546.09), poolHi = env("DECT2_LIVE_POOL_HI", 1546.33);
     std::string dir = envs("DECT2_LIVE_DIR", "");
     if (dir.empty()) dir = std::string(getenv("HOME") ? getenv("HOME") : ".") + "/inmsat_live";
     std::error_code ec; std::filesystem::create_directories(dir, ec);
@@ -94,6 +99,7 @@ int main() {
     Manager m;
     ManagerConfig c; c.rate = rate; c.centerHz = mhz * 1e6; c.budget = (double)env("DECT2_LIVE_BUDGET", 24);
     m.configure(c);
+    m.setLocation(true, env("DECT2_LIVE_LAT", 48.85), env("DECT2_LIVE_LON", 2.35));   // the geometry evidence of the satellite identification
     std::vector<std::string> logs; std::mutex logMu;
     m.setLogCallback([&](const std::string& s) { std::lock_guard<std::mutex> lk(logMu); logs.push_back(s); });
     VoiceMixer voice;
@@ -138,6 +144,7 @@ int main() {
     });
     if (r.startRx(r.dev, cb, &q) != 0) { printf("airspy_start_rx failed\n"); run = false; worker.join(); return 1; }
 
+    std::signal(SIGINT, onSignal); std::signal(SIGTERM, onSignal);
     const auto t0 = std::chrono::steady_clock::now();
     double next = 10;
     uint64_t lastSeq = 0;
@@ -164,9 +171,11 @@ int main() {
                 const VoiceStatus vs = voice.status();
                 printf("[%6.1f s] %zu carriers, %zu windows, cost %.1f/%.0f, msgs %llu, SUs %llu/%llu, floor %.0f dB, sat %s | voice: %d active, codec %s | queue drop %.1f s\n",
                        el, s.carriers.size(), s.windows.size(), s.cpuCost, s.cpuBudget, (unsigned long long)s.messagesTotal, (unsigned long long)s.susOk,
-                       (unsigned long long)s.susBad, s.floorDb, s.sat.name.empty() ? "?" : s.sat.name.c_str(), vs.activeCalls, vs.codecReady ? "ready" : "none", q.dropped / rate);
+                       (unsigned long long)s.susBad, s.floorDb, s.sat.valid ? (s.sat.name + " " + std::to_string((int)(100 * s.sat.confidence)) + "%" + (s.sat.ambiguous ? " (ambiguous)" : "")).c_str() : "?",
+                       vs.activeCalls, vs.codecReady ? "ready" : "none", q.dropped / rate);
                 for (const auto& row : s.carriers) {
-                    if (row.type != CarrierType::AeroC && !(row.voiceCandidate && row.snrDb > 15)) continue;
+                    const bool inPool = row.cls == CarrierClass::Wide && row.freqHz >= poolLo * 1e6 && row.freqHz <= poolHi * 1e6 && row.snrDb > 8;
+                    if (row.type != CarrierType::AeroC && !inPool && !(row.voiceCandidate && row.snrDb > 20)) continue;
                     printf("    %.4f MHz %5.1f kHz %4.1f dB  %-14s state %d  Eb/N0 %4.1f  frames %5llu  voice %6llu%s\n", row.freqHz / 1e6, row.widthHz / 1e3, row.snrDb,
                            row.type == CarrierType::AeroC ? "Aero C (voice)" : "wide, no sync", row.state, row.ebn0Db, (unsigned long long)row.frames,
                            (unsigned long long)row.voiceFrames, row.parked ? "  parked" : "");
@@ -180,8 +189,9 @@ int main() {
                 fflush(stdout);
             }
         }
-        if (el >= secs) break;
+        if (el >= secs || gStop) break;
     }
+    if (gStop) printf("stopped by a signal at %.0f s\n", std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count());
     r.stopRx(r.dev);
     run = false; worker.join();
     if (snipFile) fclose(snipFile);

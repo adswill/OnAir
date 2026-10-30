@@ -43,11 +43,15 @@ static void realCapture(const char* path) {
     m.snapshot(s, 0);
     printf("real capture %s: %.0f s, %zu carriers, %zu windows, cost %.1f of %.1f\n", path, secs, s.carriers.size(), s.windows.size(), s.cpuCost, s.cpuBudget);
     for (const auto& r : s.carriers) {
-        if (r.type != CarrierType::AeroC && !r.voiceCandidate) continue;
-        printf("  %.4f MHz  width %.1f kHz  snr %.1f dB  %s  state %d  Eb/N0 %.1f dB  frames %llu  voice frames %llu  (sink %llu)\n", r.freqHz / 1e6, r.widthHz / 1e3,
-               r.snrDb, r.type == CarrierType::AeroC ? "Aero C (voice)" : "wide, no sync", r.state, r.ebn0Db, (unsigned long long)r.frames,
-               (unsigned long long)r.voiceFrames, (unsigned long long)sinkFrames[r.id]);
+        if (r.type == CarrierType::Unknown && !r.voiceCandidate && r.state == 0 && r.snrDb < 15) continue;
+        printf("  %.4f MHz  width %5.1f kHz  snr %4.1f dB  %-14s rate %5d  state %d  Eb/N0 %4.1f dB  frames %5llu  voice frames %5llu (sink %llu)%s%s\n", r.freqHz / 1e6, r.widthHz / 1e3,
+               r.snrDb, carrierTypeName(r.type), r.bitRate, r.state, r.ebn0Db, (unsigned long long)r.frames,
+               (unsigned long long)r.voiceFrames, (unsigned long long)sinkFrames[r.id], r.voiceCandidate ? "  candidate" : "", r.parked ? "  parked" : "");
     }
+    printf("  messages %llu, SUs %llu ok / %llu bad, state %d; satellite: valid %d, name '%s', confidence %.2f, summary: %s\n", (unsigned long long)s.messagesTotal,
+           (unsigned long long)s.susOk, (unsigned long long)s.susBad, s.state, (int)s.sat.valid, s.sat.name.c_str(), s.sat.confidence, s.sat.summary.c_str());
+    for (const auto& cnd : s.sat.ranked)
+        printf("    candidate index %d: confidence %.2f, az %.0f el %.0f, visible %d, %zu pieces of evidence\n", cnd.index, cnd.confidence, cnd.azimuthDeg, cnd.elevationDeg, (int)cnd.visible, cnd.evidence.size());
 }
 
 int main() {

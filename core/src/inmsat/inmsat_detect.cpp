@@ -126,13 +126,42 @@ struct CarrierDetector::Impl {
                 if (s[(size_t)k] > thr) { b = k; gap = 0; } else gap++;
                 k++;
             }
-            double wsum = 0, fsum = 0, peak = 0;
-            for (int q = a; q <= b; q++) {
-                const double w = std::max(0.0, (double)s[(size_t)q] - floorP);
-                wsum += w; fsum += w * fOf(q); peak = std::max(peak, (double)s[(size_t)q]);
+            // neighbouring carriers whose skirts meet above the threshold (Aero C channels sit 8 to 12 kHz apart) would make one region:
+            // cut it at every valley at least 5 dB below the two peaks around it, peaks at least 2.5 kHz apart
+            std::vector<int> cuts;
+            {
+                const int minSep = std::max(2, (int)std::lround(2500.0 / bin));
+                auto dB = [&](int q) { float v = 0; int n = 0; for (int d = -1; d <= 1; d++) if (q + d >= a && q + d <= b) { v += specDb[(size_t)(q + d)]; n++; } return v / (float)n; };
+                int lastPeak = -1;
+                for (int q = a + 1; q < b; q++) {
+                    if (!(dB(q) > dB(q - 1) && dB(q) >= dB(q + 1))) continue;        // a local maximum
+                    if (lastPeak >= 0 && q - lastPeak >= minSep) {
+                        int v = lastPeak; float vmin = dB(lastPeak);
+                        for (int u = lastPeak + 1; u < q; u++) if (dB(u) < vmin) { vmin = dB(u); v = u; }
+                        // a valley between two carriers is at least 1 kHz wide; a C channel's own spectrum has a narrow notch at its centre
+                        const float lid = std::min(dB(lastPeak), dB(q)) - 5.f;
+                        int lo = v, hi = v;
+                        while (lo > lastPeak && dB(lo - 1) <= lid) lo--;
+                        while (hi < q && dB(hi + 1) <= lid) hi++;
+                        const bool valley = vmin <= lid && (hi - lo + 1) * bin >= 1000.0;
+                        if (valley) { cuts.push_back(v); lastPeak = q; }
+                        else if (dB(q) > dB(lastPeak)) lastPeak = q;      // the same carrier: keep its higher point
+                    } else if (lastPeak < 0 || dB(q) > dB(lastPeak)) lastPeak = q;
+                }
             }
-            const double width = (b - a + 1) * bin;
-            if (wsum > 0 && width <= cfg.maxWidthHz && width >= bin) regs.push_back({fsum / wsum, width, (float)(10 * std::log10(peak / floorP))});
+            cuts.push_back(b + 1);
+            int segA = a;
+            for (int cut : cuts) {
+                const int segB = cut - 1;
+                double wsum = 0, fsum = 0, peak = 0;
+                for (int q = segA; q <= segB; q++) {
+                    const double w = std::max(0.0, (double)s[(size_t)q] - floorP);
+                    wsum += w; fsum += w * fOf(q); peak = std::max(peak, (double)s[(size_t)q]);
+                }
+                const double width = (segB - segA + 1) * bin;
+                if (wsum > 0 && width <= cfg.maxWidthHz && width >= bin) regs.push_back({fsum / wsum, width, (float)(10 * std::log10(peak / floorP))});
+                segA = cut;
+            }
             j = b + 1;
         }
         std::sort(regs.begin(), regs.end(), [](const Region& x, const Region& y) { return x.peak > y.peak; });
@@ -144,6 +173,7 @@ struct CarrierDetector::Impl {
                 const double reach = std::max(1500.0, std::max(r.width, cars[q].widthHz) / 2);
                 if (std::fabs(r.freq - cars[q].offsetHz) < reach) { m = (int)q; break; }
             }
+            if (m >= 0 && hit[(size_t)m] && std::fabs(r.freq - cars[(size_t)m].offsetHz) > 2000) m = -1;   // a second region this far from the centre is a neighbour, not a piece
             if (m >= 0) {
                 DetectedCarrier& c = cars[(size_t)m];
                 if (hit[(size_t)m]) continue;            // two pieces of one carrier: the stronger came first

@@ -27,7 +27,7 @@ const char* carrierTypeName(CarrierType t) {
 namespace {
 constexpr double kMargin = 20000;       // a carrier must sit this far inside a window's edge
 constexpr double kAeroCost = 1.0, kInmcCost = 0.6;
-constexpr double kCCost = 0.25;         // one C-channel demodulator (8400 bit/s, brought down to about 8 samples per bit)
+constexpr size_t kCMaxPerWindow = 8;    // C-channel demodulators per window (8400 bit/s, brought down to about 8 samples per bit: cheap)
 constexpr double kCMaxWidth = 12000;    // a wide carrier up to this width gets a C-channel demodulator (a C channel is about 7 kHz)
 constexpr double kWindowHold = 20;      // seconds a window stays without any carrier
 }
@@ -47,7 +47,9 @@ struct Manager::Impl {
     // an Aero C channel (voice) decoder on one wide carrier of a window: the carrier is mixed to 0 Hz and handed to AeroDemod(8400)
     struct CChan {
         int carrierId = 0;
-        double offsetHz = 0;          // against the capture centre
+        int sub = 0;                  // a wide region can hold two C channels 8 to 12 kHz apart that the detector did not tell apart: 0 / 1 = one decoder near each edge
+        double subHz = 0;             // this decoder's place against the carrier's centre
+        double offsetHz = 0;          // the carrier's centre against the capture centre
         double mixInc = 0, mixPhase = 0;
         std::unique_ptr<AeroDemod> demod;
         uint64_t frames = 0, susOk = 0, susBad = 0, voiceFrames = 0;
@@ -91,7 +93,9 @@ struct Manager::Impl {
     bool ready() const { return cfg.rate >= 600000; }
 
     bool covers(const Window& w, double off) const { return std::fabs(off - w.centerHz) <= cfg.windowBwHz / 2 - kMargin; }
-    double winCost(const Window& w) const { return kAeroCost + (w.inmc ? kInmcCost : 0) + kCCost * (double)w.cchans.size(); }
+    // the C decoders are cheap (about a tenth of an Aero receiver) and capped per window, so they are not charged to the budget: the windows
+    // would use it all first and no C channel would ever get a decoder
+    double winCost(const Window& w) const { return kAeroCost + (w.inmc ? kInmcCost : 0); }
     double totalCost() const { double s = 0; for (const auto& w : wins) s += winCost(*w); return s; }
 
     void retire(Window& w) {
@@ -207,9 +211,11 @@ struct Manager::Impl {
                 const DetectedCarrier* c = nullptr;
                 for (const auto& d : cars) if (d.id == w->cchans[i]->carrierId && d.confirmed) c = &d;
                 if (!c || !covers(*w, c->offsetHz)) { w->cchans.erase(w->cchans.begin() + (long)i); continue; }
-                if (std::fabs(c->offsetHz - w->cchans[i]->offsetHz) > 1500) {   // the detector moved it: follow (the demodulator searches +-2 kHz)
-                    w->cchans[i]->offsetHz = c->offsetHz;
-                    w->cchans[i]->mixInc = -2 * M_PI * (c->offsetHz - w->centerHz) / w->outRate;
+                const double subHz = subPlace(*c, w->cchans[i]->sub);
+                if (std::fabs(c->offsetHz + subHz - (w->cchans[i]->offsetHz + w->cchans[i]->subHz)) > 1500) {   // the detector moved it: follow and start again
+                    w->cchans[i]->offsetHz = c->offsetHz; w->cchans[i]->subHz = subHz;
+                    w->cchans[i]->mixInc = -2 * M_PI * (c->offsetHz + subHz - w->centerHz) / w->outRate;
+                    if (w->cchans[i]->demod) w->cchans[i]->demod->reset();
                 }
                 i++;
             }
@@ -218,21 +224,30 @@ struct Manager::Impl {
             if (!c.confirmed || c.cls != CarrierClass::Wide || c.widthHz > kCMaxWidth) continue;
             for (auto& w : wins) {
                 if (!covers(*w, c.offsetHz) || w->outRate <= 0) continue;
-                bool have = false;
-                for (const auto& cc : w->cchans) have |= cc->carrierId == c.id;
-                if (have) break;
-                if (totalCost() + kCCost > cfg.budget + 1e-9) break;
-                auto cc = std::make_unique<CChan>();
-                cc->carrierId = c.id;
-                cc->offsetHz = c.offsetHz;
-                cc->mixInc = -2 * M_PI * (c.offsetHz - w->centerHz) / w->outRate;
-                cc->demod = std::make_unique<AeroDemod>(8400, w->outRate, 2000);
-                CChan* raw = cc.get();
-                cc->demod->setCallback([this, raw](AeroFrameEvent& e) { onCFrame(*raw, e); });
-                w->cchans.push_back(std::move(cc));
+                for (int sub = 0; sub < subCount(c); sub++) {
+                    bool have = false;
+                    for (const auto& cc : w->cchans) have |= cc->carrierId == c.id && cc->sub == sub;
+                    if (have) continue;
+                    if (w->cchans.size() >= kCMaxPerWindow) break;     // the strongest carriers come first in `cars`
+                    auto cc = std::make_unique<CChan>();
+                    cc->carrierId = c.id; cc->sub = sub;
+                    cc->offsetHz = c.offsetHz; cc->subHz = subPlace(c, sub);
+                    cc->mixInc = -2 * M_PI * (c.offsetHz + cc->subHz - w->centerHz) / w->outRate;
+                    cc->demod = std::make_unique<AeroDemod>(8400, w->outRate, 2500);
+                    CChan* raw = cc.get();
+                    cc->demod->setCallback([this, raw](AeroFrameEvent& e) { onCFrame(*raw, e); });
+                    w->cchans.push_back(std::move(cc));
+                }
                 break;
             }
         }
+    }
+    // a region wider than one C channel (about 7 kHz) may be two neighbours whose skirts met: one decoder near each edge, each searching +-2.5 kHz
+    static int subCount(const DetectedCarrier& c) { return c.widthHz > 9500 ? 2 : 1; }
+    static double subPlace(const DetectedCarrier& c, int sub) {
+        if (subCount(c) == 1) return 0;
+        const double d = std::max(2500.0, c.widthHz / 2 - 3400);
+        return sub == 0 ? -d : d;
     }
 
     void onCFrame(CChan& cc, AeroFrameEvent& e) {
@@ -241,12 +256,12 @@ struct Manager::Impl {
         if (e.susOk) cc.lastGood = t;
         // the voice goes on while the frames check (JAERO DecodeC: Voicesignal once the data carrier is detected)
         if (!(e.susOk || cc.demod->dataLock()) || e.voice.size() != (size_t)kAeroCVoiceBytes) return;
-        const double f = cfg.centerHz != 0 ? cfg.centerHz + cc.offsetHz : cc.offsetHz;
+        const double f = (cfg.centerHz != 0 ? cfg.centerHz : 0) + cc.offsetHz + cc.subHz + (cc.demod ? cc.demod->freqHz() : 0);
         std::vector<uint8_t> fr(12);
         for (int k = 0; k < kAeroCVoiceFrames; k++) {
             std::copy(e.voice.begin() + 12 * k, e.voice.begin() + 12 * (k + 1), fr.begin());
             cc.voiceFrames++;
-            if (voiceSink) voiceSink(cc.carrierId, f, fr, t + 0.02 * k);
+            if (voiceSink) voiceSink(cc.carrierId * 4 + cc.sub, f, fr, t + 0.02 * k);   // one mixer channel per decoder (two calls can share a detector carrier)
         }
     }
 
@@ -380,14 +395,14 @@ struct Manager::Impl {
                         }
                     }
                 }
-                for (const auto& cc : w.cchans) {       // the C-channel (voice) decoder on this carrier
+                for (const auto& cc : w.cchans) {       // the C-channel (voice) decoders on this carrier (one, or one near each edge of a wide region)
                     if (cc->carrierId != c.id || !cc->demod) continue;
                     const int st = cc->demod->dataLock() ? 3 : cc->demod->synced() ? 2 : cc->demod->acquired() ? 1 : 0;
                     if (st >= 2 && st > r.state) {
                         r.type = CarrierType::AeroC; r.bitRate = 8400; r.state = st; r.ebn0Db = cc->ebn0Db;
                         r.frames = cc->frames; r.idleSec = cc->lastGood >= 0 ? std::max(0.0, det.nowSec() - cc->lastGood) : -1;
                     }
-                    r.voiceFrames = cc->voiceFrames;
+                    r.voiceFrames += cc->voiceFrames;
                 }
             }
             r.parked = r.window < 0;
