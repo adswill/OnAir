@@ -370,6 +370,7 @@ void syncNetRadios(App& a) {
 void loadPrefs(App& a) {
     plat::Prefs& d = plat::prefs();
     a.netRadios = netRadiosFromString(d.getS("netRadios", ""));
+    a.vfoRows = vfoRowsFromString(d.getS("vfoRows", ""));   // multi-VFO channels
     a.netRadiosSeen = a.netRadios;
     a.synthGroups = synthGroupsFromString(d.getS("synthGroups", ""));
     a.hamlibRigs = hamlibRigsFromString(d.getS("hamlibRigs", ""));
@@ -459,6 +460,7 @@ void savePrefs(const App& a) {
         d.setS("netRadios", netRadiosToString(merged));
         a.netRadiosSeen = merged;
     }
+    d.setS("vfoRows", vfoRowsToString(a.vfoRows));
     if (a.rxId == 1) {
         d.setS("synthGroups", synthGroupsToString(a.synthGroups));
         d.setS("hamlibRigs", hamlibRigsToString(a.hamlibRigs));
