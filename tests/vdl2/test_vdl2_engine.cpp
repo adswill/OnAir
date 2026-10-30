@@ -43,7 +43,8 @@ int main() {
     printf("  %d reports: %s\n  %zu messages (ACARS %d, X.25 %d, XID %d), %d aircraft placed, %d ground stations placed\n", reports, vdl2Summary(v).c_str(), v.messages.size(), acars, x25, xid, withPos, gsPos);
     CHECK(reports > 20 && wrong == 0, "%d reports, %d wrong", reports, wrong);
     CHECK(rx.rateOk, "rate");
-    CHECK(v.channels.size() == 6 && inBand == 6, "%zu channels, %d in band", v.channels.size(), inBand);
+    CHECK(v.channels.size() == 8 && inBand == 8,   // the 3.4 European set has 136.675 and 136.850 too (#400)
+           "%zu channels, %d in band", v.channels.size(), inBand);
     CHECK(v.blocksOk >= 20 && rx.blocksOk == v.blocksOk, "%llu frames", (unsigned long long)v.blocksOk);
     CHECK(v.blocksBad * 10 <= v.blocksOk, "%llu bad bursts", (unsigned long long)v.blocksBad);
     CHECK(acars > 0 && x25 > 0 && xid > 0, "kinds");

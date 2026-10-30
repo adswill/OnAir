@@ -1409,7 +1409,6 @@ The channel raster of your country: TV channels for the scan and the channel lis
 Reads a band plan from a CSV or JSON file (format in docs/band-plans.md), checks it and keeps it in your settings folder. Nothing is changed when the file has a mistake; the message says where.	Legge un piano di banda da un file CSV o JSON (formato in docs/band-plans.md), lo controlla e lo conserva nella cartella delle impostazioni. Se il file ha un errore non cambia nulla; il messaggio indica dove.
 Saves the plan as a JSON file, or as CSV when the name ends in .csv. A built-in plan makes a good starting point for your own.	Salva il piano come file JSON, o come CSV se il nome termina in .csv. Un piano integrato è un buon punto di partenza per il tuo.
 Deletes one of your own band plans. The built-in plans stay.	Elimina uno dei tuoi piani di banda. I piani integrati restano.
-TV channels of the band plan %s (change it in the Scan tab).	Canali TV del piano di banda %s (si cambia nella scheda Scansione).
 # ACARS messages on the aircraft, and sharing them with the map
 Crew	Equipaggio
 Operations	Operazioni
@@ -2763,14 +2762,12 @@ holding the level	livello mantenuto
 # transmit panel: top bar, Basic / Advanced, per-signal parameters
 0 is the normal suppressed carrier. A little carrier helps a receiver lock on; the top of the range is as strong as the loudest audio.	0 è la normale portante soppressa. Un po' di portante aiuta il ricevitore ad agganciarsi; il massimo dell'intervallo è forte quanto l'audio più alto.
 A second tone added to the first (0 = off). Two tones make a two-tone linearity test.	Un secondo tono sommato al primo (0 = disattivato). Due toni formano una prova di linearità a due toni.
-A sub-audible tone that opens a receiver's squelch (0 = off). 67 to 254.1 Hz.	Un tono subaudio che apre lo squelch di un ricevitore (0 = disattivato). Da 67 a 254,1 Hz.
 AM (carrier and sidebands)	AM (portante e bande laterali)
 AM sends the carrier and both sidebands. Double sideband with suppressed carrier sends only the sidebands.	L'AM trasmette la portante e entrambe le bande laterali. La doppia banda laterale con portante soppressa trasmette solo le bande laterali.
 Audio above this level is turned down.	L'audio sopra questo livello viene abbassato.
 Audio frequency	Frequenza audio
 Boosts the high notes before sending (0 = off).	Enfatizza gli alti prima dell'invio (0 = disattivato).
 Boosts the high notes before sending. 50 µs in Europe and most of the world, 75 µs in the Americas.	Enfatizza gli alti prima dell'invio. 50 µs in Europa e nella maggior parte del mondo, 75 µs nelle Americhe.
-CTCSS level	Livello CTCSS
 CTCSS tone	Tono CTCSS
 Carrier injection	Iniezione di portante
 Carrier level	Livello della portante
@@ -2865,7 +2862,6 @@ The signal goes out only while there is sound on the audio input.	Il segnale esc
 The signal goes out only while you hold the button down.	Il segnale esce solo finché tieni premuto il pulsante.
 The size of the carrier as a share of full scale. At a depth of 85 percent the peaks reach about full scale.	La dimensione della portante come quota del fondo scala. Con profondità dell'85 per cento i picchi raggiungono circa il fondo scala.
 The size of the signal as a share of full scale.	La dimensione del segnale come quota del fondo scala.
-The tone's share of the deviation.	La quota di deviazione occupata dal tono.
 The transmit frequency follows the receiver's. Typing a different one here unlinks them. Click to unlink.	La frequenza di trasmissione segue quella del ricevitore. Digitarne un'altra qui le scollega. Clicca per scollegare.
 The transmit frequency is its own. The receiver is on %.6f MHz. Click to make the transmitter follow it.	La frequenza di trasmissione è indipendente. Il ricevitore è su %.6f MHz. Clicca perché il trasmettitore la segua.
 Threshold	Soglia
