@@ -437,8 +437,8 @@ void listRtl(std::vector<DeviceInfo>& out) {
         else if (isBlogV4Lite(trimmed(vendor, sizeof vendor), label)) label = "RTL-SDR Blog V4 Lite";
         else if (label.empty()) { const char* nm = rtl().get_device_name(i); label = nm ? nm : "RTL-SDR"; }
         d.name = label + (d.serial.empty() ? "" : " " + d.serial) + " (native, experimental)";
-        d.maxRateHz = model == kDxPatrol ? kDxpMaxRate : 2.56e6; d.minRateHz = 0.9e6;
-        d.rateRanges = {{0.225001e6, 0.3e6}, {0.900001e6, model == kDxPatrol ? kDxpMaxRate : 2.56e6}};   // librtlsdr refuses 0.3 to 0.9 Msps (and above 3.2); faster than 2.56 drops samples
+        d.maxRateHz = kDxpMaxRate; d.minRateHz = 0.9e6;
+        d.rateRanges = {{0.225001e6, 0.3e6}, {0.900001e6, kDxpMaxRate}};   // librtlsdr refuses 0.3 to 0.9 Msps (and above 3.2); the dongles (NESDR SMArt v5 ...) are sold for up to 3.2 Msps, some drop samples above 2.56 (the automatic rate stays at or below 2.56)
         d.gainMinDb = 0; d.gainMaxDb = 49.6;
         int tuner = -1;
         const std::string key = d.nativeArgs + "/" + label + "/" + d.serial;

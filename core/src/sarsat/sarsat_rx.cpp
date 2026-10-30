@@ -129,6 +129,12 @@ bool tryDecode(const Slicer& s, const Cand& c, Beacon& out, int& matches) {
     if (matches < 23) return false;
     Beacon o;
     if (!decode(b, o)) return false;
+    // BCH-1 repairs any 82-bit word within 3 bits of a codeword (4.4 % of random words), and this search tries thousands of timings/rates/polarities.
+    // So a candidate that needed the full repair must at least have a perfect sync word, a country code that exists and, for a long message,
+    // an intact second check; otherwise it is noise or a second-generation burst (issue #404).
+    if (o.country.empty()) return false;
+    if (o.corrected >= 3 && matches < kSyncBits) return false;
+    if (o.corrected >= 2 && o.longMsg && !o.bch2Ok) return false;
     o.selfTest = c.test;
     o.rawHex = bitsToHex(b, 1, o.longMsg ? kLongBits : kShortBits);
     out = o;

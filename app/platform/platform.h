@@ -48,6 +48,10 @@ bool decodeImage(const std::string& path, int& w, int& h, std::vector<uint32_t>&
 std::string cacheDir();
 // A folder for downloaded files the user keeps (map tiles kept until deleted): system cleaners leave it alone. Created on demand. UTF-8.
 std::string dataDir();
+// The built-in data folder, where the pointer to a chosen folder is kept; and setting that choice ("" = back to the built-in one). Takes effect at the next start;
+// the existing files are not moved (the settings window says so). DECT2_DATA_DIR still wins.
+std::string defaultDataDir();
+bool setDataDir(const std::string& path);
 // Downloads url into file (UTF-8 path) with the curl program, which Windows 10 and later, macOS and nearly every Linux have (no TLS library
 // is linked). On Windows it runs without a console window. Gives up after about 15 s. False when the download did not work.
 bool fetchUrl(const std::string& url, const std::string& file, const std::string& userAgent);

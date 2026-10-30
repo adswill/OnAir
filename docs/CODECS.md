@@ -488,6 +488,8 @@ channel at the dial frequency, one timeslot or one carrier.
 
 **Install helper.** The DMR panel (and the **?** button of NXDN, dPMR, D-STAR and P25) shows whether the plug-in is loaded (with its path) or not found (with the exact file name for your OS), the codecs folder, and three buttons: **Open codecs folder** (made if missing), **Build steps** (this page) and **Rescan for plug-in** (looks again without a restart). OnAir downloads nothing for you. Upstream mbelib: <https://github.com/lwvmobile/mbelib>.
 
+**MP3 recording (LAME).** `libmp3lame` (`libmp3lame.dll` on Windows) is searched in the same codecs folders: put it in your user codecs folder (`%LOCALAPPDATA%\OnAir\codecs` on Windows) and an update will not remove it. A copy next to the program still works, but the installer replaces that folder.
+
 ## Nothing patented is bundled
 
 OnAir never includes, downloads or links a patented codec. That covers mbelib / mbelib-neo (IMBE, AMBE, AMBE+2 and the TETRA codec), the HD Radio HDC decoder (the patched FAAD2), DRA+, the AC-4 decoder, the Iridium and Inmarsat voice codecs and the TETRAPOL RP-CELP codec: you build or install them yourself, they load from your user codecs folder, and the voice stays silent until you do. The **KA modes** (KAAL, KAPP, KAFT, KAVB, KAIT and KAWS) use their own codecs, written for OnAir and not covered by third-party patents as far as is known (KAAL voice uses its own MDCT codec, KAIT its own wavelet picture codec), so they need nothing from you. KAVB has no video or audio codec yet.

@@ -1117,6 +1117,7 @@ void tuneFreq(App& a, double mhz);                     // set the frequency now 
 void tuneDecode(App& a, double absMhz);                // sticky LO: decode absMhz without moving the radio centre
 void spectrumTune(App& a, double absMhz);              // spectrum / waterfall click (respects tuningMode)
 void uplinkNoteAdsb(const dect2::AdsbTelemetry& t);   // uplink_ui.cpp: callsigns heard by the ADS-B mode in this session
+double meshRtlRate(App& a);                     // mesh_ui.cpp: 1.024 Msps on an RTL-SDR for a channel of up to 500 kHz, else 0 (#386)
 double meshSampleRate(App& a);                  // mesh_ui.cpp: the radio rate the selected LoRa bandwidth needs (2 Msps; 4 above 500 kHz)
 void dvbsStatusRows(App& a, const DvbsTelemetry& t, bool on, bool run);   // dvbs_ui.cpp: the lock lamps and readouts of a report (QO-100's decoder panel)
 bool dvbsAutoService();         // dvbs_ui.cpp: start the only service of a DVB-S/S2 signal by itself (#322)

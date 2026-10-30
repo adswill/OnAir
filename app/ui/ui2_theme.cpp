@@ -108,6 +108,21 @@ void typographyChoice(bool menu) {
     }
 }
 
+// Data folder (issue #383): where OnAir keeps maps, recordings and settings files. Chosen here, used from the next start; nothing is moved.
+void dataFolderChoice() {
+    static char buf[512];
+    static bool init = false;
+    if (!init) { init = true; snprintf(buf, sizeof buf, "%s", plat::dataDir().c_str()); }
+    ImGui::TextDisabled("%s", tr("Data folder (applies after a restart; existing files are not moved)"));
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputText("##datafolder", buf, sizeof buf);
+    if (ImGui::SmallButton(tr("Browse..."))) { const std::string d = plat::openFolderDialog(); if (!d.empty()) snprintf(buf, sizeof buf, "%s", d.c_str()); }
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("Use this folder"))) plat::setDataDir(buf);
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("Default"))) { plat::setDataDir(""); snprintf(buf, sizeof buf, "%s", plat::defaultDataDir().c_str()); }
+}
+
 // View > Time display: every time shown or exported (message lists, logs, status bars) in UTC or local time. Saved data stays UTC.
 void timeDisplayChoice(bool menu) {
     const bool local = dect2::timefmt::zone() == dect2::timefmt::Zone::Local;

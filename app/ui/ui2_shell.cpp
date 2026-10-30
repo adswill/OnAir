@@ -304,6 +304,7 @@ void sidebar(App& a) {
         themeChoice(a, false);
         accentMenu();
         typographyChoice(false);
+        dataFolderChoice();
         timeDisplayChoice(false);
         int pct = (int)std::lround(a.uiTextScale * 100);
         ImGui::SetNextItemWidth(-1);

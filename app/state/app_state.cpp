@@ -337,6 +337,8 @@ void applyBandwidth(App& a) {
             a.tune.bandwidthMhz = 18; a.tune.sampleRate = 20e6; a.tune.basebandFilterHz = 18e6;
         } else if (mt->stdMode == 10 && a.atvWide && !a.atvNbtv) {   // system E: a 14 MHz channel
             a.tune.bandwidthMhz = 14; a.tune.sampleRate = 20e6; a.tune.basebandFilterHz = 16e6;
+        } else if (mt->stdMode == 22 && meshRtlRate(a) > 0) {   // Mesh on an RTL-SDR: 1.024 Msps, no lost samples (#386)
+            a.tune.sampleRate = meshRtlRate(a); a.tune.basebandFilterHz = 0.45 * a.tune.sampleRate;
         } else if (mt->stdMode == 22 && meshSampleRate(a) > mt->sampleRate) {   // Mesh: 2.4 GHz LoRa (812.5 / 1625 kHz) needs more
             a.tune.sampleRate = meshSampleRate(a); a.tune.basebandFilterHz = 0.875 * a.tune.sampleRate;
         } else if (mt->stdMode == 61) {   // Meteor-M LRPT: a 2 Msps capture keeps the 150 kHz channel inside the window while the tracker moves the centre
