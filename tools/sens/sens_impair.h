@@ -70,19 +70,42 @@ inline void shift(Sig& x, double hz, double rate, double phase0) {
     }
 }
 
-// sample clock error: the receiver gets (1 + ppm/1e6) times as many samples per second of signal. 4 point cubic (Catmull-Rom) interpolation:
-// cheap enough for 10 Msps, and a fraction of a dB worse than a long sinc near the band edge (the same for every run, so comparisons hold).
+// sample clock error: the receiver gets (1 + ppm/1e6) times as many samples per second of signal. Windowed sinc interpolation, 24 taps (Kaiser,
+// beta 9) at 1024 fractional positions: flat to 0.4 of the sample rate and 60 dB down above 0.55, because wide modes (ATSC 5.4 MHz at 8 Msps,
+// DVB-T 7.6 MHz at 9.1 Msps) fill most of the band and a 4 point cubic (Catmull-Rom) interpolator damaged them by a time varying filter that moved
+// with the fractional position: a clean ATSC signal with 10 ppm read 19 dB data SNR, a harness loss that looked like a receiver that cannot follow a clock.
 inline Sig clockError(const Sig& x, double ppm) {
-    if (ppm == 0 || x.size() < 8) return x;
+    if (ppm == 0 || x.size() < 64) return x;
+    constexpr int H = 12, NPH = 1024;
+    static const std::vector<float> tab = [] {
+        auto i0 = [](double v) { double s = 1, t = 1; for (int k = 1; k < 40; k++) { t *= (v / (2.0 * k)) * (v / (2.0 * k)); s += t; } return s; };
+        const double beta = 9.0, den = i0(beta);
+        std::vector<float> t((size_t)NPH * 2 * H);
+        for (int p = 0; p < NPH; p++) {
+            const double f = (double)p / NPH;
+            double sum = 0; std::vector<double> w(2 * H);
+            for (int k = -H + 1; k <= H; k++) {
+                const double u = (double)k - f;                       // distance of tap k from the interpolation point
+                const double r = u / H;
+                const double win = std::fabs(r) < 1 ? i0(beta * std::sqrt(1 - r * r)) / den : 0.0;
+                const double sinc = std::fabs(u) < 1e-12 ? 1.0 : std::sin(M_PI * u) / (M_PI * u);
+                w[(size_t)(k + H - 1)] = sinc * win; sum += w[(size_t)(k + H - 1)];
+            }
+            for (int k = 0; k < 2 * H; k++) t[(size_t)p * 2 * H + k] = (float)(w[(size_t)k] / sum);
+        }
+        return t;
+    }();
     const double step = 1.0 / (1.0 + ppm * 1e-6);
     Sig y;
     y.reserve((size_t)((double)x.size() / step) + 2);
-    for (double t = 1; t < (double)x.size() - 3; t += step) {
+    for (double t = H; t < (double)x.size() - H - 2; t += step) {
         const size_t i = (size_t)t;
-        const float f = (float)(t - (double)i);
-        const cf32 p0 = x[i - 1], p1 = x[i], p2 = x[i + 1], p3 = x[i + 2];
-        const cf32 a = -0.5f * p0 + 1.5f * p1 - 1.5f * p2 + 0.5f * p3, b = p0 - 2.5f * p1 + 2.f * p2 - 0.5f * p3, c = -0.5f * p0 + 0.5f * p2;
-        y.push_back(((a * f + b) * f + c) * f + p1);
+        const int ph = std::min(NPH - 1, (int)((t - (double)i) * NPH + 0.5));
+        const float* k = &tab[(size_t)ph * 2 * H];
+        const cf32* p = &x[i - (H - 1)];
+        float re = 0, im = 0;
+        for (int j = 0; j < 2 * H; j++) { re += k[j] * p[j].real(); im += k[j] * p[j].imag(); }
+        y.push_back(cf32(re, im));
     }
     return y;
 }
