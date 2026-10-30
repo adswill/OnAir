@@ -8,7 +8,7 @@ namespace dect2 {
 struct InmsatReceiver::Impl {
     inmsat::Manager mgr;
     inmsat::VoiceMixer voice;
-    double rate = 0;
+    double rate = 0, centreHz = 0;      // the capture centre, kept across configure() (the engine may set it before or after)
     uint64_t lastMgrSeq = 0, seq = 0;
     std::mutex mu;
     InmsatTelemetry cache;
@@ -23,6 +23,7 @@ void InmsatReceiver::configure(double r) {
     inmsat::ManagerConfig c;
     c.rate = r;
     p_->mgr.configure(c);
+    if (p_->centreHz != 0) p_->mgr.setCenter(p_->centreHz);
     // the C-channel decoders hand their coded voice frames to the mixer (which plays them through the user's codec, or keeps them in .bits)
     inmsat::VoiceMixer* voice = &p_->voice;
     p_->mgr.setVoiceSink([voice](int id, double f, const std::vector<uint8_t>& frame, double t) { voice->pushFrame(id, f, frame, t); });
@@ -34,7 +35,7 @@ bool InmsatReceiver::ready() const { return p_->mgr.ready(); }
 void InmsatReceiver::reset() { p_->mgr.reset(); }
 void InmsatReceiver::clearResults() { p_->mgr.clearResults(); }
 void InmsatReceiver::setLogCallback(std::function<void(const std::string&)> cb) { p_->mgr.setLogCallback(std::move(cb)); }
-void InmsatReceiver::setCenterFrequency(double hz) { p_->mgr.setCenter(hz); }
+void InmsatReceiver::setCenterFrequency(double hz) { p_->centreHz = hz; p_->mgr.setCenter(hz); }
 void InmsatReceiver::setLocation(bool k, double la, double lo) { p_->mgr.setLocation(k, la, lo); }
 void InmsatReceiver::setSatelliteOverride(const std::string& n) { p_->mgr.setSatelliteOverride(n); }
 void InmsatReceiver::setFocus(int id) { p_->mgr.setFocus(id); }

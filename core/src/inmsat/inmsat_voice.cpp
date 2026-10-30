@@ -61,6 +61,7 @@ struct VoiceMixer::Impl {
     bool codecReady = false;
 
     DecoderFactory fac() const { return factory ? factory : DecoderFactory([] { return codec::pluginVocoder("aeroambe"); }); }
+    bool recDirEmptyImpl() const { return recDir.empty(); }
 
     void closeCall(Ch& c) {
         c.wav.close();
@@ -93,9 +94,16 @@ void VoiceMixer::pushFrame(int id, double freqHz, const std::vector<uint8_t>& co
     std::lock_guard<std::mutex> lk(p_->mu);
     auto& c = p_->chans[id];
     c.info.id = id; c.info.freqHz = freqHz;
-    if (!c.triedDec) {                    // one decoder per channel, asked for once; the factory returns nullptr when the codec is not installed
+    auto recDirEmpty = [&] { return p_->recDirEmptyImpl(); };
+    // one decoder per channel; the factory returns nullptr while the codec is not installed (or not loaded yet: the app loads the plug-in a
+    // moment after the start), so a channel without one asks again at every new call and every 5 s of frames
+    if (!c.dec && (!c.triedDec || !c.info.active || c.info.frames % 250 == 0)) {
         c.triedDec = true;
         c.dec = p_->fac()();
+        if (c.dec && c.info.active && !recDirEmpty() && c.info.recording.empty()) {   // a call that began without the codec: start its WAV now
+            const std::string base = c.info.rawFile.size() > 5 ? c.info.rawFile.substr(0, c.info.rawFile.size() - 5) : std::string();
+            if (!base.empty() && c.wav.open(base + ".wav", c.dec->sampleRate())) c.info.recording = base + ".wav";
+        }
     }
     if (!c.info.active) p_->openCall(c, timeSec);
     c.info.frames++;
