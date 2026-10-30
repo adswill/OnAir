@@ -286,6 +286,15 @@ int main() {
         rx.telemetry(t, 0);
         CHECK(t.channels.size() == 24, "24 channels listed: %zu", t.channels.size());
     }
+    // #394: the distance of an aircraft from the receiver (VDL2 aircraft table)
+    {
+        Vdl2Aircraft c;
+        double nm = 0;
+        CHECK(!vdl2AircraftRangeNm(c, 0, 52.0, 5.0, nm), "no position, no range");
+        c.hasPos = true; c.lat = 52.0; c.lon = 6.0; c.posTime = 0;   // one degree of longitude at 52 N is 37 NM
+        CHECK(vdl2AircraftRangeNm(c, 0, 52.0, 5.0, nm) && std::fabs(nm - 36.9) < 1.0, "range %.1f NM (want about 37)", nm);
+        CHECK(vdl2AircraftRangeNm(c, 0, 52.0, 6.0, nm) && nm < 0.01, "same point: %.3f NM", nm);
+    }
     printf(fails ? "vdl2 rx: %d FAILED\n" : "vdl2 rx: all passed\n", fails);
     return fails ? 1 : 0;
 }

@@ -716,6 +716,9 @@ double settingsRetuneCentreHz(const App& a);
 void receiverLocation(double& lat, double& lon);  // adsb_ui.cpp: the one receiver position (the ADS-B antenna position)
 bool receiverLocationSet();                        // the user has set it (else it is a placeholder)
 void receiverPositionFields(App& a);               // its fields (latitude, longitude, altitude) and the Locate button
+std::string adsbTypeOfIcao(uint32_t icao);          // adsb_ui.cpp: the aircraft type from the aircraft database (aircraft.csv), "" when unknown (VDL2 uses it too)
+std::string adsbDistText(double nm);               // adsb_ui.cpp: a distance in the units chosen for ADS-B (NM or km), no unit
+const char* adsbDistUnit();                         // its unit
 double receiverAltitudeM();                         // its height above sea level, metres (0 until set)
 void setReceiverLocation(App& a, double lat, double lon);   // move it (saved), e.g. View > Map's "Use as my location"
 void syncAdsbReference(App& a);                              // push antenna position into the ADS-B tracker while that mode is running
