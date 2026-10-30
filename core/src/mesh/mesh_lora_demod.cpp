@@ -744,6 +744,13 @@ void Demod::Impl::dataSymbol(const ChanBuf& b, std::vector<RxFrame>& out) {
         RxFrame f;
         int corr = 0;
         fd.finish(f.payload, f.crcOk, corr);
+        if (fd.header().crc && !f.crcOk && retried == 0 && !p.implicitHdr && p.jumpChips > 0) {
+            // samples lost before the demodulator (a radio or link dropping a block) move every later symbol by the same amount (#386)
+            std::vector<uint8_t> fixed;
+            if (const int jumps = recoverJumps(sf, p.ldro, fd.bins(), p.jumpChips, fixed); jumps > 0) {
+                f.payload = fixed; f.crcOk = true; f.jumpsFixed = jumps; st.jumpFixed++;
+            }
+        }
         if (fd.header().crc && !f.crcOk && retried < 3 && p.cfoTrack <= 0) {
             // A short preamble at a low SNR leaves the clock drift poorly known: the timing loop catches up, but the first symbols
             // may be lost. The loop's integral then holds the rest of the drift: demodulate the frame again from its start with it.

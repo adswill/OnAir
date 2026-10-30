@@ -27,6 +27,9 @@ struct Params {
     int implicitLen = 0;
     double carrierHz = 0;        // cfoTrack > 0: the carrier frequency when known (a Doppler shift stretches the symbol clock by the same fraction)
     double cfoTrack = 0;         // 0: the carrier offset is measured once per frame (every plain LoRa link); > 0: followed through the frame at this loop gain (satellites: Doppler rate)
+    // A CRC-bad frame is searched for sample jumps of multiples of this many chips (recoverJumps); 0 turns the search off. An RTL-SDR at
+    // 2.048 Msps drops ~96 samples at a time, 11.7 chips at 250 kHz (#386); other losses or bandwidths simply find nothing.
+    double jumpChips = 11.7;
 };
 
 // RadioLib turns the low data rate optimisation on when a symbol lasts 16 ms or more (SX126x::setSpreadingFactor, autoLDRO)
@@ -46,6 +49,11 @@ uint8_t hammingEncode(uint8_t nibble, int cr);                 // cr 5..8: a cod
 uint8_t hammingDecode(uint8_t cw, int cr, int* errors);        // errors: 0, 1 (corrected), 2 (detected, not corrected; 4/8 only)
 uint8_t headerChecksum(uint8_t n0, uint8_t n1, uint8_t n2);    // 5 bits over the three header nibbles
 uint16_t payloadCrc(const uint8_t* p, size_t n);               // the 16 bits sent after the payload (sent low byte first)
+// Samples lost in the receive chain shift every later symbol of a frame by the same number of bins. For an explicit-header frame whose
+// CRC failed: finds up to maxJumps such points, block by block with the Hamming parity, trying shifts of m x quantum +- 2 bins
+// (m = +-1..+-15). The payload is taken only when every block's parity is clean, the CRC is right and exactly one solution exists.
+// Returns the number of jumps undone (0: not recovered, payload untouched). A jump inside the header is not handled.
+int recoverJumps(int sf, bool ldro, const std::vector<uint16_t>& bins, double quantum, std::vector<uint8_t>& payload, int maxJumps = 3);
 inline uint32_t gray(uint32_t x) { return x ^ (x >> 1); }
 uint32_t grayDecode(uint32_t g);
 int dataSymbols(const Params& p, size_t payloadLen);           // symbols after the SFD: 8 + ceil(...) (CR + 4)
@@ -84,6 +92,7 @@ public:
     // after done(): the payload, whether its CRC was right, and how many codewords needed a correction
     bool finish(std::vector<uint8_t>& payload, bool& crcOk, int& corrected);
     bool softFixed() const { return fixed_; }                  // the CRC was only right after the soft list search (a few uncertain symbols replaced)
+    const std::vector<uint16_t>& bins() const { return bins_; }   // the hard bins pushed so far
 private:
     void block(size_t at, int cwLen, int sfApp, bool reduced);
     bool assemble(const std::vector<uint8_t>& nib, std::vector<uint8_t>& payload, bool& crcOk) const;
@@ -121,6 +130,7 @@ struct RxFrame {
     double sfoPpm = 0;           // clock offset measured over the frame
     double snrDb = 0;            // in the LoRa bandwidth
     int softFixed = 0;           // 1: the frame's CRC only came out right after the soft-decision list search
+    int jumpsFixed = 0;          // sample jumps undone to get the CRC right (recoverJumps)
     double levelDb = 0;          // signal power, dB relative to full scale at the channel output
     double startSample = 0;      // start of the frame (its preamble of the configured length), channel samples since the start
     double endSample = 0;
@@ -129,7 +139,7 @@ struct RxFrame {
 
 // Events of the demodulator for the receiver's statistics
 struct DemodStats {
-    uint64_t preambles = 0, syncBad = 0, headerBad = 0, frames = 0, crcBad = 0;
+    uint64_t preambles = 0, syncBad = 0, headerBad = 0, frames = 0, crcBad = 0, jumpFixed = 0;
 };
 
 // The channel resampled once at the chip rate (chip m sits at channel sample m x rho; cubic interpolation): every spreading factor of a
