@@ -2,6 +2,8 @@
 #include "dect2/inmsat/inmsat_manager.h"
 #include "dect2/aero/aero_rx.h"
 #include "dect2/inmsat/inmsat_planes.h"
+#include "dect2/aero/aero_demod.h"
+#include "dect2/aero/aero_phy.h"
 #include "dect2/inmc/inmc_rx.h"
 #include "dect2/mesh/mesh_lora.h"
 #include <algorithm>
@@ -25,6 +27,8 @@ const char* carrierTypeName(CarrierType t) {
 namespace {
 constexpr double kMargin = 20000;       // a carrier must sit this far inside a window's edge
 constexpr double kAeroCost = 1.0, kInmcCost = 0.6;
+constexpr double kCCost = 0.25;         // one C-channel demodulator (8400 bit/s, brought down to about 8 samples per bit)
+constexpr double kCMaxWidth = 12000;    // a wide carrier up to this width gets a C-channel demodulator (a C channel is about 7 kHz)
 constexpr double kWindowHold = 20;      // seconds a window stays without any carrier
 }
 
@@ -38,11 +42,24 @@ struct Manager::Impl {
     double locLat = 0, locLon = 0;
     std::string satManual;
     std::function<void(const std::string&)> log;
+    Manager::VoiceSink voiceSink;
 
+    // an Aero C channel (voice) decoder on one wide carrier of a window: the carrier is mixed to 0 Hz and handed to AeroDemod(8400)
+    struct CChan {
+        int carrierId = 0;
+        double offsetHz = 0;          // against the capture centre
+        double mixInc = 0, mixPhase = 0;
+        std::unique_ptr<AeroDemod> demod;
+        uint64_t frames = 0, susOk = 0, susBad = 0, voiceFrames = 0;
+        float ebn0Db = 0;
+        double lastGood = -1;         // stream seconds of the last frame whose SUs checked
+        std::vector<cf32> tmp;
+    };
     struct Window {
         double centerHz = 0, outRate = 0;
         std::unique_ptr<AeroReceiver> aero;
         std::unique_ptr<InmcReceiver> inmc;
+        std::vector<std::unique_ptr<CChan>> cchans;
         lora::ChanBuf buf;
         AeroTelemetry at;
         InmcTelemetry it;
@@ -74,7 +91,7 @@ struct Manager::Impl {
     bool ready() const { return cfg.rate >= 600000; }
 
     bool covers(const Window& w, double off) const { return std::fabs(off - w.centerHz) <= cfg.windowBwHz / 2 - kMargin; }
-    double winCost(const Window& w) const { return kAeroCost + (w.inmc ? kInmcCost : 0); }
+    double winCost(const Window& w) const { return kAeroCost + (w.inmc ? kInmcCost : 0) + kCCost * (double)w.cchans.size(); }
     double totalCost() const { double s = 0; for (const auto& w : wins) s += winCost(*w); return s; }
 
     void retire(Window& w) {
@@ -177,7 +194,59 @@ struct Manager::Impl {
                     w->inmc->setChannelSearch(true);
                     w->inmc->setSearchSpan(cfg.windowBwHz / 2);
                 }
+                w->cchans.clear();                         // the window's rate may have changed: the C decoders start again below
             }
+        }
+        planCChannels(cars);
+    }
+
+    // a C-channel (voice) decoder on every wide carrier a window covers, within the budget; gone carriers lose theirs
+    void planCChannels(const std::vector<DetectedCarrier>& cars) {
+        for (auto& w : wins) {
+            for (size_t i = 0; i < w->cchans.size();) {
+                const DetectedCarrier* c = nullptr;
+                for (const auto& d : cars) if (d.id == w->cchans[i]->carrierId && d.confirmed) c = &d;
+                if (!c || !covers(*w, c->offsetHz)) { w->cchans.erase(w->cchans.begin() + (long)i); continue; }
+                if (std::fabs(c->offsetHz - w->cchans[i]->offsetHz) > 1500) {   // the detector moved it: follow (the demodulator searches +-2 kHz)
+                    w->cchans[i]->offsetHz = c->offsetHz;
+                    w->cchans[i]->mixInc = -2 * M_PI * (c->offsetHz - w->centerHz) / w->outRate;
+                }
+                i++;
+            }
+        }
+        for (const auto& c : cars) {
+            if (!c.confirmed || c.cls != CarrierClass::Wide || c.widthHz > kCMaxWidth) continue;
+            for (auto& w : wins) {
+                if (!covers(*w, c.offsetHz) || w->outRate <= 0) continue;
+                bool have = false;
+                for (const auto& cc : w->cchans) have |= cc->carrierId == c.id;
+                if (have) break;
+                if (totalCost() + kCCost > cfg.budget + 1e-9) break;
+                auto cc = std::make_unique<CChan>();
+                cc->carrierId = c.id;
+                cc->offsetHz = c.offsetHz;
+                cc->mixInc = -2 * M_PI * (c.offsetHz - w->centerHz) / w->outRate;
+                cc->demod = std::make_unique<AeroDemod>(8400, w->outRate, 2000);
+                CChan* raw = cc.get();
+                cc->demod->setCallback([this, raw](AeroFrameEvent& e) { onCFrame(*raw, e); });
+                w->cchans.push_back(std::move(cc));
+                break;
+            }
+        }
+    }
+
+    void onCFrame(CChan& cc, AeroFrameEvent& e) {
+        cc.frames++; cc.susOk += (uint64_t)e.susOk; cc.susBad += (uint64_t)e.susBad; cc.ebn0Db = e.ebn0Db;
+        const double t = det.nowSec();
+        if (e.susOk) cc.lastGood = t;
+        // the voice goes on while the frames check (JAERO DecodeC: Voicesignal once the data carrier is detected)
+        if (!(e.susOk || cc.demod->dataLock()) || e.voice.size() != (size_t)kAeroCVoiceBytes) return;
+        const double f = cfg.centerHz != 0 ? cfg.centerHz + cc.offsetHz : cc.offsetHz;
+        std::vector<uint8_t> fr(12);
+        for (int k = 0; k < kAeroCVoiceFrames; k++) {
+            std::copy(e.voice.begin() + 12 * k, e.voice.begin() + 12 * (k + 1), fr.begin());
+            cc.voiceFrames++;
+            if (voiceSink) voiceSink(cc.carrierId, f, fr, t + 0.02 * k);
         }
     }
 
@@ -194,6 +263,16 @@ struct Manager::Impl {
                 const size_t k = (size_t)std::min<int64_t>(e - i, 32768);
                 if (w->aero) w->aero->feed(b.at(i), k);
                 if (w->inmc) w->inmc->feed(b.at(i), k);
+                for (auto& cc : w->cchans) {              // each C decoder sees its carrier at 0 Hz
+                    cc->tmp.resize(k);
+                    const cf32* src = b.at(i);
+                    for (size_t j = 0; j < k; j++) {
+                        cc->tmp[j] = src[j] * cf32((float)std::cos(cc->mixPhase), (float)std::sin(cc->mixPhase));
+                        cc->mixPhase += cc->mixInc;
+                        if (cc->mixPhase > M_PI) cc->mixPhase -= 2 * M_PI; else if (cc->mixPhase < -M_PI) cc->mixPhase += 2 * M_PI;
+                    }
+                    cc->demod->feed(cc->tmp.data(), k);
+                }
                 i += (int64_t)k;
             }
             b.trim(e);
@@ -301,9 +380,18 @@ struct Manager::Impl {
                         }
                     }
                 }
+                for (const auto& cc : w.cchans) {       // the C-channel (voice) decoder on this carrier
+                    if (cc->carrierId != c.id || !cc->demod) continue;
+                    const int st = cc->demod->dataLock() ? 3 : cc->demod->synced() ? 2 : cc->demod->acquired() ? 1 : 0;
+                    if (st >= 2 && st > r.state) {
+                        r.type = CarrierType::AeroC; r.bitRate = 8400; r.state = st; r.ebn0Db = cc->ebn0Db;
+                        r.frames = cc->frames; r.idleSec = cc->lastGood >= 0 ? std::max(0.0, det.nowSec() - cc->lastGood) : -1;
+                    }
+                    r.voiceFrames = cc->voiceFrames;
+                }
             }
             r.parked = r.window < 0;
-            r.voiceCandidate = c.cls == CarrierClass::Wide && r.state < 2 && det.nowSec() - c.firstSeen > 20;
+            r.voiceCandidate = r.type != CarrierType::AeroC && c.cls == CarrierClass::Wide && r.state < 2 && det.nowSec() - c.firstSeen > 20;
             s.carriers.push_back(r);
         }
         {   // the common prefix
@@ -349,6 +437,7 @@ void Manager::clearResults() {
         if (w->aero) w->aero->clearResults();
         if (w->inmc) w->inmc->clearResults();
         w->at = AeroTelemetry(); w->it = InmcTelemetry(); w->lastA = w->lastI = 0;
+        for (auto& cc : w->cchans) { cc->frames = cc->susOk = cc->susBad = cc->voiceFrames = 0; cc->lastGood = -1; }
     }
     p_->retiredA.clear(); p_->retiredI.clear();
 }
@@ -366,5 +455,6 @@ void Manager::setLocation(bool known, double lat, double lon) { std::lock_guard<
 void Manager::setSatelliteOverride(const std::string& name) { std::lock_guard<std::mutex> lk(p_->mu); p_->satManual = name; }
 void Manager::setFocus(int id) { std::lock_guard<std::mutex> lk(p_->mu); p_->focusId = id; }
 void Manager::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }
+void Manager::setVoiceSink(VoiceSink sink) { std::lock_guard<std::mutex> lk(p_->mu); p_->voiceSink = std::move(sink); }
 
 } // namespace dect2::inmsat

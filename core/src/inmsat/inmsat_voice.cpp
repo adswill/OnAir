@@ -60,7 +60,7 @@ struct VoiceMixer::Impl {
     std::map<int, Ch> chans;
     bool codecReady = false;
 
-    DecoderFactory fac() const { return factory ? factory : DecoderFactory([] { return codec::pluginVocoder("ambe"); }); }
+    DecoderFactory fac() const { return factory ? factory : DecoderFactory([] { return codec::pluginVocoder("aeroambe"); }); }
 
     void closeCall(Ch& c) {
         c.wav.close();
@@ -144,10 +144,10 @@ VoiceStatus VoiceMixer::status() const {
         s.activeCalls += kv.second.info.active;
     }
     if (!s.codecReady) {
-        bool loaded = codec::pluginLoaded("ambe");
+        bool loaded = codec::pluginLoaded("aeroambe");
         if (p_->factory) loaded = true;        // a test or the app supplied its own decoder: it works or says so when asked to decode
         if (!loaded)
-            s.message = "Voice needs the AMBE codec, which OnAir does not include. Install it yourself: " + codec::pluginStatusLine("ambe", p_->folder) +
+            s.message = "Voice needs the Aero AMBE codec (4800 bit/s), which OnAir does not include. Install it yourself: " + codec::pluginStatusLine("aeroambe", p_->folder) +
                         " See docs/CODECS.md. Until then the voice stays silent; calls are still counted and their coded frames are saved.";
     }
     return s;

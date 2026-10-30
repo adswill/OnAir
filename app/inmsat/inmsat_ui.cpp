@@ -198,7 +198,8 @@ void carriersView(App& a) {
         ImGui::TableNextColumn();
         std::string note = c.region;
         if (!c.station.empty()) note += (note.empty() ? "" : ", ") + c.station;
-        if (c.voiceCandidate) note += std::string(note.empty() ? "" : ", ") + "may be a voice (C) channel: not decoded";
+        if (c.type == dect2::inmsat::CarrierType::AeroC) note += std::string(note.empty() ? "" : ", ") + "voice: " + std::to_string((unsigned long long)c.voiceFrames) + " coded frames";
+        else if (c.voiceCandidate) note += std::string(note.empty() ? "" : ", ") + "wide, no decoder in sync (not a C channel in a call, or too weak)";
         if (c.type == dect2::inmsat::CarrierType::Unknown && !c.voiceCandidate && !c.parked && c.state < 1) note += std::string(note.empty() ? "" : ", ") + dect2::inmsat::carrierClassName(c.cls);
         ImGui::TextDisabled("%s", note.c_str());
     }
@@ -517,9 +518,10 @@ void aircraftView(App& a) {
 void voiceView(App& a) {
     const dect2::InmsatTelemetry& t = a.rx.inmsat;
     ImGui::PushTextWrapPos(0);
-    ImGui::TextDisabled("%s", "Aero C channels carry circuit-mode voice from the ground station to the aircraft. OnAir finds and lists these carriers, but it cannot demodulate them yet: "
-                              "the C-channel modulation and framing are not in a public specification we may reproduce. The mixer, the per-call recorder and the codec hook below are built and tested "
-                              "without a real C-channel signal, and need a user test with a real capture. Voice also needs the AMBE codec, which you install yourself (docs/CODECS.md). Unencrypted traffic only.");
+    ImGui::TextDisabled("%s", "Aero C channels carry circuit-mode voice from the ground station to the aircraft, 8400 bit/s OQPSK in 0.5 s frames. Every wide carrier in a window gets a "
+                              "C-channel decoder (the framing follows JAERO, github.com/jontio/JAERO); a carrier whose frames check shows as \"Aero C (voice)\" in the Carriers tab and its calls "
+                              "appear below. Verified on real captures (France, Alphasat / 15.5W, October 2026). Voice needs the Aero AMBE codec (4800 bit/s), which you install yourself "
+                              "(docs/CODECS.md); without it the calls are counted and their coded frames saved. Unencrypted traffic only.");
     ImGui::PopTextWrapPos();
     ImGui::Spacing();
     codecHelpButton(CodecHelp::AeroAmbe);
@@ -531,9 +533,9 @@ void voiceView(App& a) {
     if (ImGui::Checkbox("Record calls##inmrec", &S.record)) plat::prefs().setI("inmsatRecord", S.record ? 1 : 0);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Writes each call to <Save pictures to>/Inmarsat as a WAV (with the codec) and always as the raw coded frames (.bits), so a capture is not wasted.");
     ImGui::Spacing();
-    int cand = 0;
-    for (const auto& c : t.carriers) cand += c.voiceCandidate;
-    ImGui::TextDisabled("%d carrier%s may be voice channels (wide, no data decoder in sync).", cand, cand == 1 ? "" : "s");
+    int cand = 0, cch = 0;
+    for (const auto& c : t.carriers) { cand += c.voiceCandidate; cch += c.type == dect2::inmsat::CarrierType::AeroC; }
+    ImGui::TextDisabled("%d C channel%s in sync; %d wide carrier%s with no decoder in sync.", cch, cch == 1 ? "" : "s", cand, cand == 1 ? "" : "s");
     if (t.voice.empty()) { ImGui::TextDisabled("%s", "no calls"); return; }
     if (!ImGui::BeginTable("##inmv", 7, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) return;
     ImGui::TableSetupColumn("Carrier"); ImGui::TableSetupColumn("State"); ImGui::TableSetupColumn("Frames"); ImGui::TableSetupColumn("Level"); ImGui::TableSetupColumn("Mute");

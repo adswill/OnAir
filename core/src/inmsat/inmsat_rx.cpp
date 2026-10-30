@@ -23,6 +23,9 @@ void InmsatReceiver::configure(double r) {
     inmsat::ManagerConfig c;
     c.rate = r;
     p_->mgr.configure(c);
+    // the C-channel decoders hand their coded voice frames to the mixer (which plays them through the user's codec, or keeps them in .bits)
+    inmsat::VoiceMixer* voice = &p_->voice;
+    p_->mgr.setVoiceSink([voice](int id, double f, const std::vector<uint8_t>& frame, double t) { voice->pushFrame(id, f, frame, t); });
     std::lock_guard<std::mutex> lk(p_->mu);
     p_->have = false; p_->lastMgrSeq = 0;
 }

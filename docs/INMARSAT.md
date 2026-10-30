@@ -43,9 +43,11 @@ The 34 MHz downlink (1525 to 1559 MHz) never fits in one capture. Retune to see 
 
 ## What is not decoded
 
-- **Aero C channels (voice).** They are listed ("may be a voice (C) channel") but cannot be demodulated yet: the C-channel modulation and framing are not in a public specification OnAir may reproduce. The voice mixer (per-carrier mute and solo), the call recorder and the codec hook are built and tested with test frames, but nothing feeds them from the air. This needs a user test with a real C-channel capture.
+- **Call set-up and other C-channel signalling** beyond "Call progress" (AES and GES ids): shown as raw signal units only.
+
+- **Aero C channels (voice)** are decoded (3.4): every wide carrier in a window gets a C-channel decoder (8400 bit/s OQPSK, 0.5 s frames of 25 coded voice frames and three signal units; the framing follows JAERO, the reference decoder). A carrier whose frames check shows as "Aero C (voice)" in the Carriers tab with its Eb/N0 and the count of voice frames, and its call appears in the Voice tab with mute, solo and the recorder. Verified on real captures (Alphasat 25E and 15.5W from France, October 2026: four aircraft in one capture, three calls at once, 94 % of the frames of a clean carrier). Signalling units other than "Call progress" are not interpreted. Carriers that stay "wide, no decoder in sync" are not C channels in a call (the 7 kHz carriers near the P group at 1545.2 to 1545.5 MHz are something else).
 - **R and T channels** are aircraft-to-satellite signals on 1626.5 to 1660.5 MHz. A ground receiver sees them only from nearby aircraft; they are not decoded.
-- **Voice codec.** Aero voice uses an AMBE-family codec. The codec is never shipped: OnAir never includes, downloads or links it: you build or install the plug-in yourself (`onair-codec-ambe`, see [CODECS.md](CODECS.md)). Until then the voice stays silent; calls are counted and their coded frames are saved. Only unencrypted traffic is ever played.
+- **Voice codec.** Aero voice uses AMBE at 4800 bit/s (96-bit frames). The codec is never shipped: OnAir never includes, downloads or links it: you build the plug-in yourself (`onair-codec-aeroambe`, `tools/addons/aeroambe`, around the mbelib of libaeroambe; see [CODECS.md](CODECS.md)). Until then the voice stays silent; calls are counted and their coded frames are saved as `.bits`. Only unencrypted traffic is ever played.
 
 ## How it relates to other tools
 
