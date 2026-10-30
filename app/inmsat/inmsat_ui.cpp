@@ -3,6 +3,8 @@
 // recording, the user-installed codec). One Auto button restarts the search; the CPU budget and the Inmarsat-C switch are under Advanced.
 // What the mode does and does not decode is said on the Voice tab and in docs/INMARSAT.md. See docs/INMARSAT-REVAMP.md.
 #include "../adsb/adsb_map.h"
+#include "../codec/speech_codec_ui.h"
+#include "dect2/codec/codec_registry.h"
 #include "../panels/picsave_ui.h"
 #include "app.h"
 #include "gfx/gfx.h"
@@ -526,10 +528,9 @@ void voiceView(App& a) {
     ImGui::Spacing();
     codecHelpButton(CodecHelp::AeroAmbe);
     ImGui::SameLine();
-    if (!t.codecReady) ImGui::TextDisabled("%s", "No AMBE codec installed: press ? for how to install it and Open codecs folder.");
-    else ImGui::TextDisabled("%s", "AMBE codec installed.");
-    if (!t.voiceMessage.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.35f, 1), "%s", t.voiceMessage.c_str()); ImGui::PopTextWrapPos(); }
-    else if (t.codecReady) ImGui::TextDisabled("%s", "Codec loaded.");
+    appcodec::voiceCodecLine("aeroambe", "Aero AMBE");   // found / notice to accept / missing, with the prompt and the install help (? opens it too)
+    if (t.codecReady) ImGui::TextDisabled("%s", "Codec loaded.");
+    else if (!t.voiceMessage.empty() && !dect2::codec::pluginLoaded("aeroambe")) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", t.voiceMessage.c_str()); ImGui::PopTextWrapPos(); }
     if (ImGui::Checkbox("Record calls##inmrec", &S.record)) plat::prefs().setI("inmsatRecord", S.record ? 1 : 0);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Writes each call to <Save pictures to>/Inmarsat as a WAV (with the codec) and always as the raw coded frames (.bits), so a capture is not wasted.");
     ImGui::Spacing();
@@ -558,6 +559,7 @@ void voiceView(App& a) {
 
 void tick(App& a) {
     load();
+    if (live(a)) appcodec::voiceCodecTick("aeroambe");   // the user's Aero AMBE plug-in (docs/CODECS.md), loaded whichever tab is shown
     if (!a.engine.running()) { S.pushedFocus = -1; S.pushedBudget = -1; S.pushedInmc = -1; S.pushedRecord = -1; return; }
     dect2::InmsatReceiver& r = a.engine.inmsat();
     if (S.focusId != S.pushedFocus) { r.setFocus(S.focusId); S.pushedFocus = S.focusId; }

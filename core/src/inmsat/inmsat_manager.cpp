@@ -27,7 +27,9 @@ const char* carrierTypeName(CarrierType t) {
 namespace {
 constexpr double kMargin = 20000;       // a carrier must sit this far inside a window's edge
 constexpr double kAeroCost = 1.0, kInmcCost = 0.6;
-constexpr size_t kCMaxPerWindow = 8;    // C-channel demodulators per window (8400 bit/s, brought down to about 8 samples per bit: cheap)
+constexpr size_t kCMaxPerWindow = 6;    // C-channel demodulators per window (8400 bit/s, brought down to about 8 samples per bit: cheap)
+constexpr size_t kCMaxTotal = 16;       // ... and in all: a 10 Msps capture shows 200 carriers, a decoder on every wide one would swamp the CPU
+constexpr float kCMinSnrDb = 8;         // a C channel below this does not decode anyway
 constexpr double kCMaxWidth = 12000;    // a wide carrier up to this width gets a C-channel demodulator (a C channel is about 7 kHz)
 constexpr double kWindowHold = 20;      // seconds a window stays without any carrier
 }
@@ -210,7 +212,7 @@ struct Manager::Impl {
             for (size_t i = 0; i < w->cchans.size();) {
                 const DetectedCarrier* c = nullptr;
                 for (const auto& d : cars) if (d.id == w->cchans[i]->carrierId && d.confirmed) c = &d;
-                if (!c || !covers(*w, c->offsetHz)) { w->cchans.erase(w->cchans.begin() + (long)i); continue; }
+                if (!c || !covers(*w, c->offsetHz) || pSynced(*w, c->offsetHz)) { w->cchans.erase(w->cchans.begin() + (long)i); continue; }
                 const double subHz = subPlace(*c, w->cchans[i]->sub);
                 if (std::fabs(c->offsetHz + subHz - (w->cchans[i]->offsetHz + w->cchans[i]->subHz)) > 1500) {   // the detector moved it: follow and start again
                     w->cchans[i]->offsetHz = c->offsetHz; w->cchans[i]->subHz = subHz;
@@ -220,10 +222,12 @@ struct Manager::Impl {
                 i++;
             }
         }
-        for (const auto& c : cars) {
-            if (!c.confirmed || c.cls != CarrierClass::Wide || c.widthHz > kCMaxWidth) continue;
+        for (const auto& c : cars) {                        // strongest first
+            if (!c.confirmed || c.cls != CarrierClass::Wide || c.widthHz > kCMaxWidth || c.snrDb < kCMinSnrDb) continue;
+            if (totalC() >= kCMaxTotal) break;
             for (auto& w : wins) {
                 if (!covers(*w, c.offsetHz) || w->outRate <= 0) continue;
+                if (pSynced(*w, c.offsetHz)) break;             // a P channel (10500 bit/s is as wide as a C channel): no C decoder on it
                 for (int sub = 0; sub < subCount(c); sub++) {
                     bool have = false;
                     for (const auto& cc : w->cchans) have |= cc->carrierId == c.id && cc->sub == sub;
@@ -241,6 +245,12 @@ struct Manager::Impl {
                 break;
             }
         }
+    }
+    size_t totalC() const { size_t n = 0; for (const auto& w : wins) n += w->cchans.size(); return n; }
+    // a P-channel receiver of this window holds frames on a carrier near `off`
+    static bool pSynced(const Window& w, double off) {
+        for (const auto& ch : w.at.channels) if (ch.state >= 2 && std::fabs(w.centerHz + ch.offsetHz - off) < 6000) return true;
+        return false;
     }
     // a region wider than one C channel (about 7 kHz) may be two neighbours whose skirts met: one decoder near each edge, each searching +-2.5 kHz
     static int subCount(const DetectedCarrier& c) { return c.widthHz > 9500 ? 2 : 1; }
