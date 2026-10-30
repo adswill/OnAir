@@ -84,31 +84,53 @@ void fmStatus(App& a) {
     lamp("Stereo", !live ? 0 : fm.stereo ? 1 : fm.carrier ? 2 : 0, (int)Ic::Speaker); flowNext(12 * gUi);
     lamp("RDS", !live ? 0 : fm.rdsSync && fm.rdsBlockOkPct >= 60 ? 1 : fm.rdsSync ? 2 : 0); flowNext(10 * gUi);
     ImGui::TextDisabled("|"); flowNext(10 * gUi);
-    auto ro = [&](const char* label, const std::string& val, ImVec4 col = ImVec4(0.93f, 0.95f, 0.97f, 1)) {
+    // Each readout must be one flow group. Reserve space for changing numeric
+    // values so the next-frame layout does not repeatedly switch rows.
+    auto ro = [&](const char* label, const std::string& val, int minChars = 0,
+                  ImVec4 col = ImVec4(0.93f, 0.95f, 0.97f, 1)) {
+        ImGui::BeginGroup();
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled("%s", label); ImGui::SameLine(0, 5 * gUi);
-        ImGui::PushFont(a.mono, 0); ImGui::TextColored(col, "%s", val.c_str()); ImGui::PopFont();
+        ImGui::PushFont(a.mono, 0);
+        const float valueWidth = ImGui::CalcTextSize(val.c_str()).x;
+        ImGui::TextColored(col, "%s", val.c_str());
+        if (minChars > 0) {
+            const std::string sample((size_t)minChars, '0');
+            const float reserved = ImGui::CalcTextSize(sample.c_str()).x;
+            if (valueWidth < reserved) {
+                ImGui::SameLine(0, 0);
+                ImGui::Dummy(ImVec2(reserved - valueWidth, ImGui::GetTextLineHeight()));
+            }
+        }
+        ImGui::PopFont();
+        ImGui::EndGroup();
         flowNext(15 * gUi);
     };
     char b[96];
-    if (!run) ro("State", "stopped", ImVec4(0.6f, 0.64f, 0.68f, 1));
-    else if (!live) ro("State", "starting", ImVec4(0.6f, 0.64f, 0.68f, 1));
-    else if (fm.state == 2) ro("State", "Locked", ImVec4(0.35f, 0.90f, 0.45f, 1));
-    else if (fm.state == 1) ro("State", "Weak", ImVec4(0.95f, 0.85f, 0.35f, 1));
-    else ro("State", "No station", ImVec4(0.6f, 0.64f, 0.68f, 1));
-    if (live && fm.state >= 1) {
-        ro("Sound", fm.stereo ? "Stereo" : "Mono");
-        const std::string ps = fmTrim(fm.psName);
-        if (!ps.empty()) ro("Station", ps);
+    if (!run) ro("State", "stopped", 10, ImVec4(0.6f, 0.64f, 0.68f, 1));
+    else if (!live) ro("State", "starting", 10, ImVec4(0.6f, 0.64f, 0.68f, 1));
+    else if (fm.state == 2) ro("State", "Locked", 10, ImVec4(0.35f, 0.90f, 0.45f, 1));
+    else if (fm.state == 1) ro("State", "Weak", 10, ImVec4(0.95f, 0.85f, 0.35f, 1));
+    else ro("State", "No station", 10, ImVec4(0.6f, 0.64f, 0.68f, 1));
+    if (run) {
+        const bool tuned = live && fm.state >= 1;
+        ro("Sound", tuned ? (fm.stereo ? "Stereo" : "Mono") : "-", 6);
+        const std::string ps = tuned ? fmTrim(fm.psName) : std::string();
+        ro("Station", ps.empty() ? "-" : ps, 8);
     }
     flowBreak();
-    if (live && fm.state >= 1) {
-        snprintf(b, sizeof b, "%.1f dB", fm.snrDb); ro("SNR", b);
-        snprintf(b, sizeof b, "%.0f kHz", fm.devKhz); ro("Deviation", b, fm.devKhz > 80 ? ImVec4(0.95f, 0.70f, 0.15f, 1) : ImVec4(0.93f, 0.95f, 0.97f, 1));
-        if (fm.stereo) { snprintf(b, sizeof b, "%.1f %%", fm.pilotPct); ro("Pilot", b); }
-        snprintf(b, sizeof b, "%+.0f Hz", fm.cfoHz); ro("Offset", b);
+    if (run) {
+        const bool tuned = live && fm.state >= 1;
+        if (tuned) snprintf(b, sizeof b, "%.1f dB", fm.snrDb); else snprintf(b, sizeof b, "-");
+        ro("SNR", b, 9);
+        if (tuned) snprintf(b, sizeof b, "%.0f kHz", fm.devKhz); else snprintf(b, sizeof b, "-");
+        ro("Deviation", b, 9, tuned && fm.devKhz > 80 ? ImVec4(0.95f, 0.70f, 0.15f, 1) : ImVec4(0.93f, 0.95f, 0.97f, 1));
+        if (tuned && fm.stereo) snprintf(b, sizeof b, "%.1f %%", fm.pilotPct); else snprintf(b, sizeof b, "-");
+        ro("Pilot", b, 8);
+        if (tuned) snprintf(b, sizeof b, "%+.0f Hz", fm.cfoHz); else snprintf(b, sizeof b, "-");
+        ro("Offset", b, 11);
     }
-    if (run) { snprintf(b, sizeof b, "%.3f Msps", a.engine.sampleRate() / 1e6); ro("fs", b); }
+    if (run) { snprintf(b, sizeof b, "%.3f Msps", a.engine.sampleRate() / 1e6); ro("fs", b, 12); }
     ImGui::AlignTextToFramePadding();
     iconInline(Ic::Gauge, iconDim(), 0.9f); ImGui::SameLine(0, 4 * gUi); ImGui::TextDisabled("Level"); ImGui::SameLine(0, 5 * gUi);
     {
@@ -129,7 +151,7 @@ void fmStatus(App& a) {
         if (ImGui::IsItemHovered() && live) ImGui::SetTooltip("Audio signal-to-noise ratio %.1f dB (45 dB and up is studio-clean).\nChannel power %.1f dBFS.", fm.snrDb, fm.levelDbfs);
     }
     flowNext(15 * gUi);
-    if (run) { const SampleLoss l = a.engine.sampleLoss(); ro("dropped", lossText(l), lossColour(l)); lossTooltip(l); }
+    if (run) { const SampleLoss l = a.engine.sampleLoss(); ro("dropped", lossText(l), 27, lossColour(l)); lossTooltip(l); }
     if (run && a.devices[a.devIdx].kind != DeviceInfo::File) {
         ImGui::AlignTextToFramePadding();
         if (adc == AdcStatus::Overload) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.35f, 0.25f, 1), "ADC OVERLOAD - %s", a.agcOn ? "AGC is lowering the gain" : "reduce the gain (strong FM stations nearby)"); ImGui::PopTextWrapPos(); }
