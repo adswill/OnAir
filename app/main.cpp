@@ -5,6 +5,8 @@
 #include <unistd.h>
 #endif
 #include "dect2/common/time_source.h"
+#include "dect2/session/mode_adapters.h"
+#include "dect2/session/session_store.h"
 #include "dect2/source/device_pick.h"
 #include "app.h"
 #include "ui/contrast.h"
@@ -270,6 +272,8 @@ static void shutdownApp(App& app, gfx::Backend* gfxBackend, GLFWwindow* window) 
     app.engine.stop();
     app.engine.flushResults();
     appResultsSave(app, true);
+    for (uint16_t m : {dect2::sess::kModeAdsb, dect2::sess::kModeAis, dect2::sess::kModeAprs, dect2::sess::kModePager}) dect2::sess::adaptersEnd(m);   // open tracks end now, not at the next start
+    dect2::sess::global().close();
     updateOnExit(app);   // a downloaded update replaces this program once it has ended
     popOutShutdown();   // its window and surface go before the back end
     gfxBackend->shutdown();

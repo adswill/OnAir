@@ -1,3 +1,4 @@
+#include "dect2/session/mode_adapters.h"
 #include "dect2/uat/uat_rx.h"
 #include "dect2/uat/uat_demod.h"
 #include "dect2/uat/uat_proto.h"
@@ -90,6 +91,7 @@ bool UatReceiver::telemetry(UatTelemetry& out, uint64_t lastSeq) {
     out.snrDb = p_->snrInit ? p_->snrEma : 0;
     out.blocksOk = p_->tracker.good();
     out.blocksBad = p_->tracker.bad();
+    sess::observeUat(out);
     return true;
 }
 

@@ -1,4 +1,5 @@
 // VDL Mode 2 receiver: see vdl2_rx.h.
+#include "dect2/session/mode_adapters.h"
 #include "dect2/vdl2/vdl2_rx.h"
 #include "dect2/dsp/baseband_filter.h"
 #include "dect2/dsp/group_decimator.h"
@@ -652,6 +653,7 @@ bool Vdl2Receiver::telemetry(Vdl2Telemetry& out, uint64_t lastSeq) {
     if (p_->seq == lastSeq) return false;
     out = p_->tel;
     out.seq = p_->seq;
+    sess::observeVdl2(out);
     return true;
 }
 

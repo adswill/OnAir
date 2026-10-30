@@ -2,6 +2,7 @@
 // with the rates of the channels (AIS 1, AIS 2, and the long-range channels 75 and 76 when the capture holds them), the raw NMEA log, and the
 // Satellite AIS panel (ais_sat_ui.cpp).
 #include "../panels/photo_links_ui.h"
+#include "ui/kit/session_list.h"
 #include "app.h"
 #include "state/results_export.h"
 #include "../adsb/adsb_map.h"
@@ -454,7 +455,7 @@ void nmeaView(App& a) {
 
 void tab(App& a) {
     loadState();
-    subNav("aisv", S.view, {"Map", "Table", "Messages", "NMEA", tr("Range"), tr("Satellite")});
+    subNav("aisv", S.view, {"Map", "Table", "Messages", "NMEA", tr("Range"), tr("Satellite"), tr("Tracks")});
     const bool on = live(a);
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     if (S.view == 2) {
@@ -465,6 +466,7 @@ void tab(App& a) {
     if (S.view == 3) { nmeaView(a); return; }
     if (S.view == 4) { rangeView(S.range, ImGui::GetContentRegionAvail(), 0.5399568, "nm", "ais", receiverLocationSet()); return; }
     if (S.view == 5) { aisSatPanel(a); return; }
+    if (S.view == 6) { kit::sessionItems(14, 3, "ais"); return; }
     const float cw = std::min(320.f * gUi, W * 0.34f);
     ImGui::BeginChild("##ais_l", ImVec2(W - cw - 8 * gUi, H));
     if (S.view == 0) mapView(a, ImGui::GetContentRegionAvail());

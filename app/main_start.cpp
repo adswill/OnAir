@@ -2,6 +2,7 @@
 // Split from main.cpp.
 // The flags are listed where they are parsed (parseDevFlags); none of them is saved.
 #include "dect2/packs/datasets.h"
+#include "dect2/session/session_store.h"
 #include "ui/input_map.h"
 #include "dect2/source/device_pick.h"
 #ifdef __linux__
@@ -94,6 +95,10 @@ void startApp(App& app, int argc, char** argv) {
     workspaceSessionStart(app, argc == 1);   // the last-session file: a session that did not end is offered for restore
     if (getenv("DECT2_DEMO")) { wizAction(app, 2); }   // test: start the demo programme straight away
     // the decoded results of the last run (each mode's lists, until its Clear), then saved every 30 s and at exit
+    {   // the session store (docs/MODE-EXPERIENCE.md): logging is on by default; it never blocks the start
+        std::string err;
+        if (!dect2::sess::global().open(plat::dataDir(), dect2::sess::StoreConfig(), &err)) app.engine.log("session history is off: " + err);
+    }
     app.engine.setResultsDir(plat::dataDir() + "/results");
     dect2::datasets::setUserDir(plat::dataDir() + "/datasets");   // before the first frequency / airport lookup: the user's layers over the bundled data
     appResultsLoad(app);

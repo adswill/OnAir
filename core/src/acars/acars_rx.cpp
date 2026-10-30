@@ -1,3 +1,4 @@
+#include "dect2/session/mode_adapters.h"
 #include "dect2/acars/acars_rx.h"
 #include "dect2/automation/engine.h"
 #include "dect2/net/feeds.h"
@@ -480,6 +481,7 @@ bool AcarsReceiver::telemetry(AcarsTelemetry& out, uint64_t lastSeq) {
     std::lock_guard<std::mutex> lk(p_->telMu);
     if (p_->pub.seq <= lastSeq) return false;
     out = p_->pub;
+    sess::observeAcars(out);
     return true;
 }
 

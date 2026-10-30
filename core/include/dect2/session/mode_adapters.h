@@ -9,6 +9,7 @@
 
 namespace dect2 {
 struct AdsbTelemetry; struct AisTelemetry; struct PacketTelemetry; struct PagerTelemetry;
+struct AcarsTelemetry; struct Vdl2Telemetry; struct HfdlTelemetry; struct UatTelemetry; struct SondeTelemetry;
 namespace sess {
 
 constexpr uint16_t kModeAdsb = 11, kModeAis = 14, kModePager = 23, kModeAprs = 24, kModeDmr = 9;
@@ -17,6 +18,13 @@ void observeAdsb(const AdsbTelemetry& t, uint16_t receiver = 0);
 void observeAis(const AisTelemetry& t, uint16_t receiver = 0);
 void observePacket(const PacketTelemetry& t, uint16_t receiver = 0);
 void observePager(const PagerTelemetry& t, uint16_t receiver = 0);
+// group 2 (mode_adapters_air.cpp): aircraft that talk and radiosondes, one Track each
+void observeAcars(const AcarsTelemetry& t, uint16_t receiver = 0);   // family 16
+void observeVdl2(const Vdl2Telemetry& t, uint16_t receiver = 0);     // 27
+void observeHfdl(const HfdlTelemetry& t, uint16_t receiver = 0);     // 35
+void observeUat(const UatTelemetry& t, uint16_t receiver = 0);       // 83
+void observeSonde(const SondeTelemetry& t, uint16_t receiver = 0);   // 13
+void adaptersEndAir(uint16_t mode, uint16_t receiver = 0);
 // the mode was switched or the receiver closed: end its open sessions
 void adaptersEnd(uint16_t mode, uint16_t receiver = 0);
 

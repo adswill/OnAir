@@ -1,6 +1,7 @@
 // Radiosonde screens: the map with every sonde's track and a balloon marker, the table of sondes heard, the detail of the selected one
 // (all fields, altitude and temperature plots, calibration progress), the carriers the search found in the band, and the test signal options.
 #include "app.h"
+#include "ui/kit/session_list.h"
 #include "dect2/sonde/sonde_land.h"
 #include "dect2/geo/maidenhead.h"
 #include "../adsb/adsb_map.h"
@@ -293,7 +294,8 @@ void carrierStrip(const App& a, ImVec2 size) {
 // ---------------------------------------------------------------- the hooks
 
 void tab(App& a) {
-    subNav("sondev", S.viewMode, {"Map", "Table"});
+    subNav("sondev", S.viewMode, {"Map", "Table", tr("Tracks")});
+    if (S.viewMode == 2) { kit::sessionItems(13, 3, "sonde"); return; }
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     if (S.viewMode == 1) { sondeTable(a, false); return; }
     const float cw = std::min(300.f * gUi, W * 0.32f);

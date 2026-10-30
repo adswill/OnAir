@@ -1,4 +1,5 @@
 // Radiosonde receiver (see sonde_rx.h).
+#include "dect2/session/mode_adapters.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/sonde/sonde_rx.h"
 #include "dect2/automation/engine.h"
@@ -743,6 +744,7 @@ bool SondeReceiver::telemetry(SondeTelemetry& out, uint64_t lastSeq) {
     std::lock_guard<std::mutex> lk(p_->mu);
     if (p_->tel.seq <= lastSeq) return false;
     out = p_->tel;
+    sess::observeSonde(out);
     return true;
 }
 void SondeReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }

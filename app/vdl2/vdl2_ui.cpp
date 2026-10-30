@@ -1,6 +1,7 @@
 // VDL Mode 2 screens: the message log with a filter and a detail pane, a map of the positions the messages carry, the aircraft and
 // ground stations, and the channel list with its activity.
 #include "dect2/common/time_fmt.h"
+#include "ui/kit/session_list.h"
 #include "../adsb/adsb_map.h"
 #include "app.h"
 #include "map/pos_predict.h"
@@ -585,7 +586,8 @@ void channelView(const App& a) {
 
 void tab(App& a) {
     loadState();
-    subNav("vdl2v", S.viewMode, {"Messages", "Map", "Aircraft", "Ground stations", "Channels"});
+    subNav("vdl2v", S.viewMode, {"Messages", "Map", "Aircraft", "Ground stations", "Channels", tr("Tracks")});
+    if (S.viewMode == 5) { kit::sessionItems(27, 3, "vdl2"); return; }
     if (S.viewMode == 0) messageView(a);
     else if (S.viewMode == 1) mapView(a);
     else if (S.viewMode == 2) aircraftView(a);

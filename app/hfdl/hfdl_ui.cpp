@@ -2,6 +2,7 @@
 // the aircraft, the ground stations with their status, the channel list with its activity, and the range plot (furthest position report
 // per bearing from the receiver). Band presets in the tuner.
 #include "dect2/common/time_fmt.h"
+#include "ui/kit/session_list.h"
 #include "../adsb/adsb_map.h"
 #include "app.h"
 #include "map/pos_predict.h"
@@ -505,7 +506,8 @@ void channelView(const App& a) {
 
 void tab(App& a) {
     loadState();
-    subNav("hfdlv", S.viewMode, {"Messages", "Map", "Aircraft", "Ground stations", "Channels", tr("Range")});
+    subNav("hfdlv", S.viewMode, {"Messages", "Map", "Aircraft", "Ground stations", "Channels", tr("Range"), tr("Tracks")});
+    if (S.viewMode == 6) { kit::sessionItems(35, 3, "hfdl"); return; }
     if (S.viewMode == 0) messageView(a);
     else if (S.viewMode == 1) mapView(a);
     else if (S.viewMode == 2) aircraftView(a);
