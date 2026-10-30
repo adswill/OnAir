@@ -121,6 +121,68 @@ int main() {
     }
     printf("voice frames: %zu sent, %zu received, %zu matched in order\n", sentVoice.size(), got.size(), matched);
     CHECK(got.size() >= 250 && matched == got.size(), "voice frames reach the sink bit-exact (%zu of %zu)", matched, got.size());
+
+    // ---- two C channels right next to each other (5 kHz apart on the 2.5 kHz raster, as seen on the air): one region for the detector,
+    // two decoders, two calls in the mixer, each with its own frames ----
+    {
+        std::mt19937 g2(33);
+        AeroFrameEncoder encA(8400), encB(8400);
+        AeroModulator modA(8400, fs, 0), modB(8400, fs, 0);
+        const double cfoA = 80e3, cfoB = 85e3;
+        std::vector<std::vector<uint8_t>> sentA, sentB;
+        Manager m2;
+        ManagerConfig c2; c2.rate = fs; c2.centerHz = 1546.0e6; c2.budget = 6;
+        m2.configure(c2);
+        std::map<int, std::vector<std::vector<uint8_t>>> got2;
+        m2.setVoiceSink([&](int id, double, const std::vector<uint8_t>& fr, double) { got2[id].push_back(fr); });
+        auto fill = [&](AeroFrameEncoder& enc, AeroModulator& mod, std::vector<std::vector<uint8_t>>& sent) {
+            while (mod.queuedBits() < 2u * fmt->totalBits()) {
+                std::vector<uint8_t> su(kAeroCSuBytes, 0), v(kAeroCVoiceBytes);
+                for (int k = 0; k < 3; k++) { for (int i = 0; i < 10; i++) su[12 * k + i] = (uint8_t)g2(); su[12 * k] = 0x30; aeroSuSetCrc(&su[12 * k]); }
+                for (auto& b : v) b = (uint8_t)g2();
+                for (int k = 0; k < kAeroCVoiceFrames; k++) sent.emplace_back(v.begin() + 12 * k, v.begin() + 12 * (k + 1));
+                const auto bits = enc.cFrame(su.data(), v.data());
+                mod.pushBits(bits.data(), bits.size());
+            }
+        };
+        std::vector<cf32> bufA(chunk), bufB(chunk);
+        double phA = 0, phB = 0;
+        genutil::NoiseSource noise2(6);
+        for (size_t done = 0; done < total;) {
+            fill(encA, modA, sentA); fill(encB, modB, sentB);
+            const size_t n = std::min(chunk, total - done);
+            modA.generate(bufA.data(), n); modB.generate(bufB.data(), n);
+            for (size_t i = 0; i < n; i++) {
+                bufA[i] = bufA[i] * cf32((float)std::cos(phA), (float)std::sin(phA)) * 0.05f + bufB[i] * cf32((float)std::cos(phB), (float)std::sin(phB)) * 0.05f;
+                phA += 2 * M_PI * cfoA / fs; if (phA > M_PI) phA -= 2 * M_PI;
+                phB += 2 * M_PI * cfoB / fs; if (phB > M_PI) phB -= 2 * M_PI;
+            }
+            noise2.add(bufA.data(), n, (float)(sigma * 0.05));
+            m2.feed(bufA.data(), n);
+            done += n;
+        }
+        Snapshot s2;
+        CHECK(m2.snapshot(s2, 0), "a snapshot (pair)");
+        int cRows = 0; uint64_t vf = 0;
+        for (const auto& r : s2.carriers) if (r.offsetHz > 70e3 && r.offsetHz < 95e3) {
+            printf("pair: carrier at %.0f Hz, width %.1f kHz, %s, state %d, voice frames %llu\n", r.offsetHz, r.widthHz / 1e3, carrierTypeName(r.type), r.state, (unsigned long long)r.voiceFrames);
+            cRows += r.type == CarrierType::AeroC; vf += r.voiceFrames;
+        }
+        CHECK(cRows >= 1, "the pair decodes as Aero C");
+        auto matchedIn = [](const std::vector<std::vector<uint8_t>>& got, const std::vector<std::vector<uint8_t>>& sent) {
+            size_t n = 0, pos = 0;
+            for (const auto& fr : got) { while (pos < sent.size() && sent[pos] != fr) pos++; if (pos < sent.size()) { n++; pos++; } }
+            return n;
+        };
+        int chansA = 0, chansB = 0;
+        for (const auto& kv : got2) {
+            const size_t a = matchedIn(kv.second, sentA), b = matchedIn(kv.second, sentB);
+            printf("pair: mixer channel %d: %zu frames, %zu of A, %zu of B\n", kv.first, kv.second.size(), a, b);
+            if (a >= 200 && a == kv.second.size()) chansA++;
+            if (b >= 200 && b == kv.second.size()) chansB++;
+        }
+        CHECK(chansA == 1 && chansB == 1, "both neighbours reach the mixer on their own channels, bit-exact (A %d, B %d)", chansA, chansB);
+    }
     if (const char* path = getenv("DECT2_INMSAT_CAPTURE")) realCapture(path);
     return testSummary("inmsat_cchannel");
 }
