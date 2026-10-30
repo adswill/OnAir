@@ -50,6 +50,13 @@ AEROAMBE_API int onair_speech_decode(void* st, const uint8_t* coded, size_t n, i
     int errs = 0, errs2 = 0;
     if (!s || !coded || n != 12 || max < 160) return -1;
     for (int i = 0; i < 96; i++) s->ambe_fr[rW[i]][rX[i]] = (char)((coded[i >> 3] >> (i & 7)) & 1);
-    mbe_processAmbe4800x3600Frame((short*)pcm, &errs, &errs2, s->err, s->ambe_fr, s->ambe_d, &s->cur, &s->prev, &s->prevEnh, 1);
+    /* unvoiced-sound quality 3 (mbelib's default; 1 is the roughest). A frame with more than 3 corrected errors is one mbelib would
+     * synthesise from the previous frame's parameters; silence sounds cleaner than that stretch (A/B on real calls, 2026-10-30).
+     * Set ONAIR_AEROAMBE_UVQ (1..64) and ONAIR_AEROAMBE_MUTE (errors beyond which a frame is muted, -1 = mbelib's own rule) to try others. */
+    static int uvq = -1, mute = -2;
+    if (uvq < 0) { const char* e = getenv("ONAIR_AEROAMBE_UVQ"); uvq = e ? atoi(e) : 3; if (uvq < 1 || uvq > 64) uvq = 3; }
+    if (mute < -1) { const char* e = getenv("ONAIR_AEROAMBE_MUTE"); mute = e ? atoi(e) : 3; }
+    mbe_processAmbe4800x3600Frame((short*)pcm, &errs, &errs2, s->err, s->ambe_fr, s->ambe_d, &s->cur, &s->prev, &s->prevEnh, uvq);
+    if (mute >= 0 && errs2 > mute) memset(pcm, 0, 160 * sizeof(int16_t));
     return 160;
 }

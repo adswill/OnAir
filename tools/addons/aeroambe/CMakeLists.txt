@@ -27,3 +27,11 @@ if(NOT MSVC)
   target_link_libraries(onair-codec-aeroambe PRIVATE m)
 endif()
 set_target_properties(onair-codec-aeroambe PROPERTIES PREFIX "" C_VISIBILITY_PRESET hidden)   # onair-codec-aeroambe.so / .dylib / .dll
+# decode_bits: a call's .bits file (the coded frames OnAir saves next to each recording) -> 8 kHz WAV, with the vocoder settings as options,
+# to compare them by ear on real calls: decode_bits in.bits out.wav [uvquality 1..64] [mute: errors beyond which a frame is silenced, -1 = mbelib's rule]
+add_executable(decode_bits decode_bits.c)
+target_include_directories(decode_bits PRIVATE "${AEROAMBE_MBELIB}")
+target_link_libraries(decode_bits PRIVATE "${AEROAMBE_MBE_LIB}")
+if(NOT MSVC)
+  target_link_libraries(decode_bits PRIVATE m)
+endif()
