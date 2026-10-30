@@ -288,6 +288,7 @@ static void sweep() {
 }
 
 int main(int argc, char** argv) {
+    setvbuf(stdout, nullptr, _IONBF, 0);   // unbuffered: a crash on the Windows runner (segfault seen in CI) must not swallow the progress lines
     if (argc > 1 && !strcmp(argv[1], "sweep")) { sweep(); return 0; }
     if (argc > 4 && !strcmp(argv[1], "one")) {   // one case: test_isdbs one <mod 1..7> <Es/N0 dB> <carrier Hz>
         RunResult r = run(single(atoi(argv[2]), atof(argv[3]), atof(argv[4]), 0), 200, -1);
