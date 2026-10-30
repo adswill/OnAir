@@ -1504,9 +1504,12 @@ static void wheelPolicy(App& a, inputmap::Area area, ImVec2 size) {
 static void extraInputActions(App& a, bool hov) {
     using namespace inputmap;
     Settings& st = settings();
+    // tuning and the step work anywhere in the window (not only over the plots), except while typing in a text box (pressed() checks that)
+    if (pressed(Action::TuneUp, true)) tuneBySteps(a, 1);
+    if (pressed(Action::TuneDown, true)) tuneBySteps(a, -1);
+    if (pressed(Action::StepNext)) { st.stepHz = stepShift(st.stepHz, 1); save(); toast(std::string(tr("Tuning step")) + ": " + stepText(st.stepHz)); }
+    if (pressed(Action::StepPrev)) { st.stepHz = stepShift(st.stepHz, -1); save(); toast(std::string(tr("Tuning step")) + ": " + stepText(st.stepHz)); }
     if (hov) {
-        if (pressed(Action::TuneUp, true)) tuneBySteps(a, 1);
-        if (pressed(Action::TuneDown, true)) tuneBySteps(a, -1);
         if (gXHi > gXLo) {
             const double c = (gXLo + gXHi) * 0.5, sp = gXHi - gXLo;
             if (pressed(Action::ZoomIn, true)) { gXLo = c - sp * 0.4; gXHi = c + sp * 0.4; clampFreqViewToBand(a); }
@@ -1515,8 +1518,6 @@ static void extraInputActions(App& a, bool hov) {
             if (pressed(Action::PanRight, true)) { gXLo += sp * 0.25; gXHi += sp * 0.25; clampFreqViewToBand(a); }
         }
         if (pressed(Action::ZoomReset)) { const double fs = sampleRateMhz(a), rc = radioCenterMhz(a); gXLo = rc - fs / 2; gXHi = rc + fs / 2; }
-        if (pressed(Action::StepNext)) { st.stepHz = stepShift(st.stepHz, 1); save(); toast(std::string(tr("Tuning step")) + ": " + stepText(st.stepHz)); }
-        if (pressed(Action::StepPrev)) { st.stepHz = stepShift(st.stepHz, -1); save(); toast(std::string(tr("Tuning step")) + ": " + stepText(st.stepHz)); }
         if (pressed(Action::WfPause)) a.wf.paused = !a.wf.paused;
     }
 }
