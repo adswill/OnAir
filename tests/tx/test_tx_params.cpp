@@ -99,6 +99,23 @@ int main() {
     std::vector<cf32> w(6000, cf32(1, 0));
     txOutputStage(ramp, w.data(), w.size(), 0, fs);   // 1 ms at 2.5 MHz = 2500 samples
     CHECK(w[0].real() == 0 && w[1250].real() > 0.45f && w[1250].real() < 0.55f && w[5000].real() == 1.f, "fade-in ramp");
+    // #374: a mode the radio is tuned off the dial for (the General receiver is 250 kHz above) puts its analog voice at the dial frequency, not on the radio's centre
+    for (const char* id : {"general", "airband"}) {
+        const double off = txModeTuneOffsetHz(*txModeById(id));
+        CHECK(off != 0, "%s has a tuning offset", id);
+        if (off == 0) continue;
+        for (int kind : {0, 1, 2, 3}) {
+            TxRequest v; v.modeId = id; v.analogVoice = true; v.kind = kind; v.toneHz = 1000; v.audioSrc = 2; v.deviationHz = 1000;
+            v.opt["audio.hpHz"] = 0; v.opt["audio.lpHz"] = 0;
+            auto y = make(id, v, fs, n);
+            CHECK(!y.empty(), "%s voice generator", id);
+            if (y.empty()) continue;
+            // the tone / carrier is within 3 kHz of the dial frequency (-off in the samples), not of 0 Hz
+            double at = 0, centre = 0;
+            for (double d = -3000; d <= 3000; d += 250) { at = std::max(at, powerAt(y, -off + d, fs, 60000)); centre = std::max(centre, powerAt(y, d, fs, 60000)); }
+            CHECK(at > centre * 100, "%s kind %d: power at the dial %.1f dB, at the radio's centre %.1f dB", id, kind, db(at), db(centre));
+        }
+    }
     printf(fails ? "%d failure(s)\n" : "all passed\n", fails);
     return fails ? 1 : 0;
 }

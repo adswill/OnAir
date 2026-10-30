@@ -224,13 +224,15 @@ std::unique_ptr<ModeSynth> makeTxVoiceSynth(const TxModeSpec& m, const TxRequest
         const int k = r.kind == 2 ? 3 : r.kind == 3 ? 4 : r.kind == 1 ? 2 : 1;
         return std::make_unique<AnalogVoice>(rate, 5.5e6, k, r);
     }
+    // the radio is told the dial frequency plus the mode's tuning offset (tx.cpp, #351), so the signal sits that far below the radio's centre (#374)
+    const double dialOff = -txModeTuneOffsetHz(m);
     if (r.analogVoice || r.kind == 1 || r.kind == 2 || r.kind == 3) {
         const int k = r.kind == 2 ? 3 : r.kind == 3 ? 4 : r.kind == 1 ? 2 : 1;
-        return std::make_unique<AnalogVoice>(rate, 0, k, r);
+        return std::make_unique<AnalogVoice>(rate, dialOff, k, r);
     }
-    if (id == "qo100") return std::make_unique<AnalogVoice>(rate, 0, 3, r);
+    if (id == "qo100") return std::make_unique<AnalogVoice>(rate, dialOff, 3, r);
     (void)id;
-    return std::make_unique<AnalogVoice>(rate, 0, 1, r);
+    return std::make_unique<AnalogVoice>(rate, dialOff, 1, r);
 }
 
 std::unique_ptr<ModeSynth> makeTxMixSynth(std::unique_ptr<ModeSynth> a, std::unique_ptr<ModeSynth> b, double rate) {
