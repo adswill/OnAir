@@ -8,6 +8,7 @@
 #include "../state/receivers.h"
 #include "map_ask.h"
 #include "../rooms/rooms.h"
+#include "../webshare/webshare.h"
 #include "../adsb/adsb_acars.h"
 #include "../transcribe/transcribe_app.h"
 #ifndef ONAIR_VERSION
@@ -986,8 +987,11 @@ void mapSendServerMenu(App& a) {
     ImGui::Separator();
     roomsMenu(rootApp(a), true);
     ImGui::TextDisabled("%s", tr("The map is at map.on-air.dev"));
+    ImGui::Separator();
+    webshare::drawItems(a, true);
     ImGui::EndMenu();
     mapPopups(a);
+    webshare::drawPopups(a);
 }
 
 void mapSendButton(App& a) {
@@ -1004,9 +1008,12 @@ void mapSendButton(App& a) {
         ImGui::Separator();
         roomsMenu(rootApp(a), false);
         ImGui::TextDisabled("%s", tr("The map is at map.on-air.dev"));
+        ImGui::Separator();
+        webshare::drawItems(a, false);
         ImGui::EndPopup();
     }
     mapPopups(a);
+    webshare::drawPopups(a);
 }
 
 bool mapFamilySends(int family) {

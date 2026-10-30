@@ -7,6 +7,7 @@
 #include "dect2/common/time_source.h"
 #include "dect2/source/device_pick.h"
 #include "app.h"
+#include "webshare/webshare.h"
 #include "ui/contrast.h"
 #include "transcribe/transcribe_app.h"
 #include "state/tune_worker.h"
@@ -259,6 +260,7 @@ static void shotReport(App& app) {
 
 // orderly shutdown: transmitter quiet, receivers stopped, results saved, windows and back end closed
 static void shutdownApp(App& app, gfx::Backend* gfxBackend, GLFWwindow* window) {
+    webshare::stopAll();   // the OnAir Web easy setup's server and tunnel end with the app
     savePrefsFlush();
     layoutSaveNow();
     workspaceSessionEnd(app);   // the last-session file is marked clean first: the state is the one at exit

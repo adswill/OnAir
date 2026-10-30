@@ -65,6 +65,12 @@ struct HttpResult { int status = 0; int net = 0; std::string body; std::string d
 HttpResult httpRequest(const std::string& method, const std::string& url, const std::string& body, const std::string& userAgent, int timeoutSec);
 // Starts a program with arguments and does not wait for it. No shell is ever involved: every argument stays one argument. False and err when it did not start.
 bool spawnProgram(const std::string& program, const std::vector<std::string>& args, std::string& err);
+// Starts a program that keeps running, its output (both streams) written to logFile. Returns its process id, 0 and err when it did not start.
+// childAlive() asks whether it still runs, stopChild() asks it to end. Used by the OnAir Web easy setup.
+long spawnChild(const std::string& program, const std::vector<std::string>& args, const std::string& logFile, std::string& err);
+bool childAlive(long pid);
+std::string exePath();   // the running program's full path
+void stopChild(long pid);
 // A desktop notification (Notification Center on macOS, a toast on Windows, notify-send on Linux when installed). False when the system could not show one.
 bool notify(const std::string& title, const std::string& body);
 // The position from the system's location service (on macOS this is Wi-Fi positioning and needs the user's permission).

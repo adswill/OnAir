@@ -8,6 +8,8 @@
 #ifdef _WIN32
 #include <windows.h>
 #else
+#include <csignal>
+#include <fcntl.h>
 #include <spawn.h>
 #include <sys/wait.h>
 #include <thread>
@@ -15,7 +17,24 @@
 extern char** environ;
 #endif
 
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
+
 namespace plat {
+
+std::string exePath() {
+#if defined(_WIN32)
+    char p[MAX_PATH * 2] = {0};
+    return GetModuleFileNameA(nullptr, p, (DWORD)sizeof p - 1) ? std::string(p) : std::string();
+#elif defined(__APPLE__)
+    char p[4096]; uint32_t n = sizeof p;
+    return _NSGetExecutablePath(p, &n) == 0 ? std::string(p) : std::string();
+#else
+    char p[4096]; const ssize_t n = readlink("/proc/self/exe", p, sizeof p - 1);
+    return n > 0 ? std::string(p, (size_t)n) : std::string();
+#endif
+}
 
 namespace {
 std::string oneLine(const std::string& s, size_t n) {
@@ -61,6 +80,42 @@ bool spawnProgram(const std::string& program, const std::vector<std::string>& ar
     return true;
 }
 
+long spawnChild(const std::string& program, const std::vector<std::string>& args, const std::string& logFile, std::string& err) {
+    SECURITY_ATTRIBUTES sa{sizeof sa, nullptr, TRUE};
+    HANDLE log = CreateFileW(wide(logFile).c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, &sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (log == INVALID_HANDLE_VALUE) { err = "cannot write " + logFile; return 0; }
+    std::wstring cmd = quoteArg(wide(program));
+    for (const std::string& a : args) cmd += L" " + quoteArg(wide(a));
+    STARTUPINFOW si{};
+    si.cb = sizeof si;
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdOutput = si.hStdError = log;
+    si.hStdInput = INVALID_HANDLE_VALUE;
+    PROCESS_INFORMATION pi{};
+    const BOOL ok = CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, TRUE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi);
+    CloseHandle(log);
+    if (!ok) { err = "cannot start " + program; return 0; }
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    return (long)pi.dwProcessId;
+}
+
+bool childAlive(long pid) {
+    HANDLE h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, (DWORD)pid);
+    if (!h) return false;
+    DWORD code = 0;
+    const bool alive = GetExitCodeProcess(h, &code) && code == STILL_ACTIVE;
+    CloseHandle(h);
+    return alive;
+}
+
+void stopChild(long pid) {
+    HANDLE h = OpenProcess(PROCESS_TERMINATE, FALSE, (DWORD)pid);
+    if (!h) return;
+    TerminateProcess(h, 0);
+    CloseHandle(h);
+}
+
 bool notify(const std::string& title, const std::string& body) {
     SetEnvironmentVariableW(L"ONAIR_NOTE_T", wide(oneLine(title, 120)).c_str());
     SetEnvironmentVariableW(L"ONAIR_NOTE_B", wide(oneLine(body, 240)).c_str());
@@ -86,6 +141,28 @@ bool spawnProgram(const std::string& program, const std::vector<std::string>& ar
     dect2::namedThread("onair-reap", [pid] { int st = 0; waitpid(pid, &st, 0); }).detach();   // reaped when it ends, nobody waits for it
     return true;
 }
+
+long spawnChild(const std::string& program, const std::vector<std::string>& args, const std::string& logFile, std::string& err) {
+    std::vector<char*> argv;
+    argv.push_back(const_cast<char*>(program.c_str()));
+    for (const std::string& a : args) argv.push_back(const_cast<char*>(a.c_str()));
+    argv.push_back(nullptr);
+    posix_spawn_file_actions_t fa;
+    posix_spawn_file_actions_init(&fa);
+    posix_spawn_file_actions_addopen(&fa, 0, "/dev/null", O_RDONLY, 0);
+    posix_spawn_file_actions_addopen(&fa, 1, logFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    posix_spawn_file_actions_adddup2(&fa, 1, 2);
+    pid_t pid = 0;
+    const int rc = posix_spawnp(&pid, program.c_str(), &fa, nullptr, argv.data(), environ);
+    posix_spawn_file_actions_destroy(&fa);
+    if (rc != 0) { err = "cannot start " + program; return 0; }
+    dect2::namedThread("onair-reap", [pid] { int st = 0; waitpid(pid, &st, 0); }).detach();
+    return (long)pid;
+}
+
+bool childAlive(long pid) { return pid > 0 && kill((pid_t)pid, 0) == 0; }
+
+void stopChild(long pid) { if (pid > 0) kill((pid_t)pid, SIGTERM); }
 
 bool notify(const std::string& title, const std::string& body) {
     std::string err;

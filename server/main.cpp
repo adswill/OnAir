@@ -67,6 +67,7 @@ static void usage() {
 }
 
 int main(int argc, char** argv) {
+    setvbuf(stdout, nullptr, _IOLBF, 0);   // a log file (the app's easy setup reads the directory preview from it) sees each line at once
     setvbuf(stdout, nullptr, _IOLBF, 4096);   // size 0 is invalid with _IOLBF on the Windows CRT (#291); a service log (journald, a file) shows lines as they happen
     dect2::crash::install("crash-server");
     if (!dect2::cpuSupportsBuild()) { fprintf(stderr, "this build needs a processor with AVX2 and FMA\n"); return 1; }

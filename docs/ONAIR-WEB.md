@@ -72,6 +72,15 @@ New to this? docs/HOST-A-RECEIVER.md walks through it for complete beginners (Ta
 
 `web_plain_internet=1` lets plain HTTP in from every address. Do not use it except behind something else that does the encryption.
 
+## Easy setup inside OnAir (two buttons)
+
+In the app open **Server** and use the OnAir Web block:
+
+1. **Share my radio on the web** starts `onair-server --web` (from the OnAir package) and a Cloudflare quick tunnel, which gives your page a public `https://....trycloudflare.com` address. No account, no router settings. The first time, OnAir asks before downloading the small helper program `cloudflared` from github.com/cloudflare/cloudflared (it is used from your PATH or Homebrew if you already have it). The app's own receiver stops while you share: the web server uses the radio. The address changes each time you share.
+2. **List it on the public directory** shows exactly what web.on-air.dev will receive (the same preview the server prints, see docs/ONAIR-DIRECTORY.md), and lists the server after one **List it** click. You can give a name, the radio and a rounded location (about 1 km); leave the location empty to send none.
+
+**Stop sharing** (or closing OnAir) ends the server and the tunnel and the listing expires by itself after a few minutes. Files and logs are in the `webshare` folder of OnAir's data folder (`server.conf`, `server.log`, `tunnel.log`). The tunnel address is a random one, so the directory entry changes when you share again; for a fixed address use a named Cloudflare tunnel or your own domain as described above.
+
 ## Access and limits
 
 | Key | Default | Meaning |
