@@ -6,6 +6,7 @@
 #include "dect2/common/thread_name.h"
 #include "../app.h"
 #include "dect2/common/u8file.h"
+#include "dect2/loraraw/loraraw_lab.h"
 #include "dect2/protolab/protolab.h"
 #include "dect2/signallab/signallab.h"
 #include "dect2/source/source.h"
@@ -62,6 +63,18 @@ struct State {
     // frames tab
     int frameLen = 0;
     char syncText[80] = "";
+    // LoRa demodulator
+    int lrSource = 0;                 // 0 the Recording tab's file, 1 the last spectrum selection
+    int lrSf = 7, lrBwIdx = 2, lrCr = 5, lrLdro = 0, lrImplicitLen = 16, lrPreamble = 8;
+    double lrBwHz = 125000;           // used when lrBwIdx is the last entry (custom)
+    int lrSync = 0x12;
+    bool lrImplicit = false, lrCrc = true, lrInvert = false;
+    double lrOffset = 0;
+    bool lrAutoOffset = true;
+    std::vector<dect2::lora::LabFrame> lrFrames;
+    dect2::lora::DemodStats lrStats;
+    dect2::lora::LabDetect lrDet;
+    std::string lrNote;
     // evaluation
     int evalCases = 40;
     std::string evalText;
@@ -743,6 +756,167 @@ void evaluationTab() {
     }
 }
 
+const double kLrBw[] = {7800, 10400, 15600, 20800, 31250, 41700, 62500, 125000, 250000, 500000};
+const char* const kLrBwNames = "7.8 kHz\0" "10.4 kHz\0" "15.6 kHz\0" "20.8 kHz\0" "31.25 kHz\0" "41.7 kHz\0" "62.5 kHz\0" "125 kHz\0" "250 kHz\0" "500 kHz\0" "custom\0";
+
+dect2::lora::LabSettings lrSettings() {
+    dect2::lora::LabSettings s;
+    s.sf = std::clamp(S.lrSf, 5, 12);
+    s.bwHz = S.lrBwIdx >= 0 && S.lrBwIdx < 10 ? kLrBw[S.lrBwIdx] : std::max(1000.0, S.lrBwHz);
+    s.cr = std::clamp(S.lrCr, 5, 8);
+    s.syncWord = S.lrSync & 0xFF;
+    s.implicitHdr = S.lrImplicit;
+    s.implicitLen = std::clamp(S.lrImplicitLen, 1, 255);
+    s.crc = S.lrCrc;
+    s.ldro = S.lrLdro - 1;   // combo: automatic, off, on
+    s.invertIq = S.lrInvert;
+    s.preamble = std::clamp(S.lrPreamble, 4, 64);
+    s.offsetHz = S.lrOffset;
+    return s;
+}
+
+void lrApply(const dect2::lora::LabSettings& s) {
+    S.lrSf = s.sf;
+    S.lrBwIdx = 10; S.lrBwHz = s.bwHz;
+    for (int i = 0; i < 10; i++) if (std::fabs(kLrBw[i] - s.bwHz) < 0.5) S.lrBwIdx = i;
+    S.lrCr = s.cr; S.lrSync = s.syncWord; S.lrCrc = s.crc; S.lrInvert = s.invertIq; S.lrLdro = s.ldro + 1; S.lrOffset = s.offsetHz; S.lrImplicit = false;
+}
+
+// Reads the chosen source into samples at their rate; false with S.err set
+bool lrSamples(App& a, std::vector<dect2::cf32>& x, double& fs, double& selOffset) {
+    selOffset = 0;
+    if (S.lrSource == 1) {
+        dect2::sigid::Capture::Kept k;
+        uint64_t seq = 0;
+        if (!a.engine.sigid().keptSamples(k, seq) || k.x.empty()) { S.err = tr("No selection yet: select the signal on the spectrum first."); return false; }
+        x = std::move(k.x); fs = k.rateHz; selOffset = k.centreOffHz;
+        return true;
+    }
+    return false;
+}
+
+void loraTab(App& a) {
+    const bool busy = S.run == 1;
+    ImGui::TextWrapped("%s", tr("Demodulates LoRa (chirp spread spectrum) frames from the Recording or the last spectrum selection with the settings below, or finds the settings itself. Receive only: nothing is decrypted."));
+    ImGui::RadioButton(tr("Recording (the file of the Recording tab)"), &S.lrSource, 0);
+    ImGui::SameLine();
+    ImGui::RadioButton(tr("Last spectrum selection"), &S.lrSource, 1);
+    if (S.lrSource == 0) ImGui::TextDisabled("%s %s @ %.0f Hz", tr("File:"), S.path[0] ? S.path : tr("(none, pick one in the Recording tab)"), S.rate);
+    ImGui::SetNextItemWidth(70 * gUi);
+    ImGui::InputInt(tr("Spreading factor"), &S.lrSf, 0, 0); S.lrSf = std::clamp(S.lrSf, 5, 12);
+    ImGui::SameLine(); ImGui::SetNextItemWidth(110 * gUi);
+    ImGui::Combo(tr("Bandwidth"), &S.lrBwIdx, kLrBwNames);
+    if (S.lrBwIdx == 10) { ImGui::SameLine(); ImGui::SetNextItemWidth(100 * gUi); ImGui::InputDouble("##lrbw", &S.lrBwHz, 0, 0, "%.0f Hz"); }
+    ImGui::SetNextItemWidth(110 * gUi);
+    ImGui::Combo(tr("Coding rate"), &S.lrCr, "\0\0\0\0\0""4/5\0""4/6\0""4/7\0""4/8\0");
+    S.lrCr = std::clamp(S.lrCr, 5, 8);
+    if (!S.lrImplicit && ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Only used with the implicit header: an explicit header carries the coding rate."));
+    ImGui::SameLine(); ImGui::SetNextItemWidth(70 * gUi);
+    ImGui::InputInt(tr("Sync word (hex)"), &S.lrSync, 0, 0, ImGuiInputTextFlags_CharsHexadecimal); S.lrSync &= 0xFF;
+    ImGui::SetNextItemWidth(150 * gUi);
+    ImGui::Combo(tr("Low data rate optimisation"), &S.lrLdro, "automatic\0off\0on\0");
+    ImGui::Checkbox(tr("Implicit header"), &S.lrImplicit);
+    if (S.lrImplicit) {
+        ImGui::SameLine(); ImGui::SetNextItemWidth(70 * gUi); ImGui::InputInt(tr("Payload bytes"), &S.lrImplicitLen, 0, 0);
+        ImGui::SameLine(); ImGui::Checkbox(tr("CRC"), &S.lrCrc);
+    }
+    ImGui::SameLine(); ImGui::Checkbox(tr("Inverted IQ"), &S.lrInvert);
+    ImGui::SetNextItemWidth(70 * gUi);
+    ImGui::InputInt(tr("Preamble chirps"), &S.lrPreamble, 0, 0);
+    ImGui::SameLine(); ImGui::SetNextItemWidth(110 * gUi);
+    ImGui::InputDouble(tr("Offset from the centre (Hz)"), &S.lrOffset, 0, 0, "%.0f");
+    ImGui::Checkbox(tr("Auto-detect also measures the offset"), &S.lrAutoOffset);
+    const bool haveSrc = S.lrSource == 1 || S.path[0];
+    ImGui::BeginDisabled(busy || !haveSrc);
+    const bool run = ImGui::Button(tr("Demodulate"));
+    ImGui::SameLine();
+    const bool det = ImGui::Button(tr("Auto-detect parameters"));
+    ImGui::EndDisabled();
+    if (run || det) {
+        const dect2::lora::LabSettings ls = lrSettings();
+        const bool detect = det, autoOff = S.lrAutoOffset;
+        const int src = S.lrSource;
+        const std::string path = S.path;
+        static const dect2::protolab::IqFormat fmts[] = {dect2::protolab::IqFormat::Cf32, dect2::protolab::IqFormat::Cs16, dect2::protolab::IqFormat::Cu8, dect2::protolab::IqFormat::Cs8};
+        const auto fmt = fmts[std::clamp(S.fmt, 0, 3)];
+        const double rate = S.rate, fileOff = S.offset;
+        std::vector<dect2::cf32> sel;
+        double selRate = 0, selOff = 0;
+        bool ok = true;
+        if (src == 1) { std::lock_guard<std::mutex> lk(S.mu); S.err.clear(); ok = lrSamples(a, sel, selRate, selOff); }
+        if (ok) startWork(detect ? tr("searching the LoRa parameters") : tr("demodulating LoRa"), [=, sel = std::move(sel)]() mutable {
+            std::vector<dect2::cf32> x;
+            double fs = rate, off = fileOff;
+            if (src == 1) { x = std::move(sel); fs = selRate; off = selOff; }
+            else {
+                std::vector<dect2::protolab::cf> iq;
+                std::string err;
+                if (!dect2::protolab::loadIq(path, fmt, iq, err, 30000000)) { std::lock_guard<std::mutex> lk(S.mu); S.err = err; return; }
+                x.assign(iq.begin(), iq.end());
+            }
+            if (detect) {
+                dect2::lora::LabDetectOptions o;
+                o.autoOffset = autoOff; o.offsetHz = ls.offsetHz + (src == 1 ? off : 0);
+                const dect2::lora::LabDetect d = dect2::lora::labAutoDetect(x.data(), x.size(), fs, o);
+                dect2::lora::LabResult r;
+                if (d.found) r = dect2::lora::labDemodulate(x.data(), x.size(), fs, d.settings);
+                std::lock_guard<std::mutex> lk(S.mu);
+                S.lrDet = d; S.lrNote = d.note; S.lrFrames = r.frames; S.lrStats = r.stats;
+                if (d.found) lrApply(d.settings);
+            } else {
+                dect2::lora::LabSettings s2 = ls;
+                if (src == 1) s2.offsetHz += off;
+                const dect2::lora::LabResult r = dect2::lora::labDemodulate(x.data(), x.size(), fs, s2);
+                char b[200];
+                snprintf(b, sizeof b, "%zu frame(s); preambles %llu, bad sync word %llu, bad header %llu, CRC failures %llu", r.frames.size(), (unsigned long long)r.stats.preambles,
+                         (unsigned long long)r.stats.syncBad, (unsigned long long)r.stats.headerBad, (unsigned long long)r.stats.crcBad);
+                std::lock_guard<std::mutex> lk(S.mu);
+                S.lrDet = dect2::lora::LabDetect(); S.lrNote = b; S.lrFrames = r.frames; S.lrStats = r.stats;
+            }
+        });
+    }
+    if (!S.lrNote.empty()) ImGui::TextWrapped("%s", S.lrNote.c_str());
+    if (!S.lrDet.candidates.empty()) {
+        ImGui::TextDisabled("%s", tr("Combinations that heard a preamble (best first):"));
+        int shown = 0;
+        for (const auto& c : S.lrDet.candidates) {
+            if (++shown > 6) break;
+            ImGui::BulletText("SF%d, %.1f kHz: %d frame(s), %d with a good CRC, %d preamble(s)", c.sf, c.bwHz / 1e3, c.frames, c.crcOk, c.preambles);
+        }
+    }
+    if (!S.lrFrames.empty() && ImGui::BeginTable("##lrframes", 7, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY, ImVec2(0, 220 * gUi))) {
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableSetupColumn(tr("Time (s)"), ImGuiTableColumnFlags_WidthFixed, 70 * gUi);
+        ImGui::TableSetupColumn(tr("CR"), ImGuiTableColumnFlags_WidthFixed, 36 * gUi);
+        ImGui::TableSetupColumn(tr("CRC"), ImGuiTableColumnFlags_WidthFixed, 54 * gUi);
+        ImGui::TableSetupColumn(tr("SNR"), ImGuiTableColumnFlags_WidthFixed, 54 * gUi);
+        ImGui::TableSetupColumn(tr("Offset"), ImGuiTableColumnFlags_WidthFixed, 70 * gUi);
+        ImGui::TableSetupColumn(tr("Hex"), ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn(tr("Text"), ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableHeadersRow();
+        for (const auto& f : S.lrFrames) {
+            std::string hex, txt;
+            char b[8];
+            for (uint8_t c : f.payload) { snprintf(b, sizeof b, "%02X ", c); hex += b; txt += (c >= 32 && c < 127) ? (char)c : '.'; }
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn(); ImGui::Text("%.3f", f.startSec);
+            ImGui::TableNextColumn(); ImGui::Text("4/%d", f.cr);
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(!f.crcPresent ? "none" : f.crcOk ? "good" : "BAD");
+            ImGui::TableNextColumn(); ImGui::Text("%.1f", f.snrDb);
+            ImGui::TableNextColumn(); ImGui::Text("%+.0f", f.cfoHz);
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(hex.c_str());
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(txt.c_str());
+        }
+        ImGui::EndTable();
+    }
+    if (!S.lrFrames.empty() && ImGui::Button(tr("Copy the frames as hex"))) {
+        std::string t;
+        char b[8];
+        for (const auto& f : S.lrFrames) { for (uint8_t c : f.payload) { snprintf(b, sizeof b, "%02X", c); t += b; } t += "\n"; }
+        ImGui::SetClipboardText(t.c_str());
+    }
+}
+
 void windowPanel(App& a) {
     firstWindowSize(820 * gUi, 680 * gUi);
     if (!ImGui::Begin(trw("Signal Lab"), &a.signallabOpen)) { ImGui::End(); return; }
@@ -770,6 +944,7 @@ void windowPanel(App& a) {
             if (ImGui::BeginTabItem(trw("6 Bit viewer"))) { bitViewerTab(); ImGui::EndTabItem(); }
             if (ImGui::BeginTabItem(trw("Export"))) { exportTab(); ImGui::EndTabItem(); }
         }
+        if (ImGui::BeginTabItem(trw("LoRa demodulator"))) { loraTab(a); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem(trw("Evaluation"))) { evaluationTab(); ImGui::EndTabItem(); }
         ImGui::EndTabBar();
     }

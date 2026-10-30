@@ -174,3 +174,14 @@ Other exports: frames as CSV (one row per frame: index, burst, start bit, length
 - `app/panels/signallab_ui.cpp`: the window.
 - `tests/signallab/test_signallab.cpp`: unit tests per stage (`quick`), the gate (`gate`), the harness (`evaluate N seed`), one random
   case with its log (`case N`).
+
+## LoRa demodulator
+
+Tab "LoRa demodulator" (source: the Recording tab's file or the last spectrum selection). Settings: spreading factor 5 to 12, bandwidth 7.8 to 500 kHz
+(or any value), coding rate 4/5 to 4/8 (implicit header only: an explicit header carries it), sync word, low data rate optimisation (automatic, off, on),
+implicit or explicit header with payload length and CRC, inverted IQ (the samples are conjugated), preamble length and the signal offset. **Auto-detect
+parameters** searches every bandwidth that fits the sample rate (narrowed by the measured signal width) and SF7 to SF12 with the usual sync words;
+combinations that heard a preamble but no frame are searched again with all 256 sync words; if nothing is found the inverted IQ sense is tried. It reports
+SF, bandwidth, coding rate, sync word, CRC, LDRO and IQ sense, fills the settings in and demodulates. Limits: it needs an explicit header (an implicit header
+frame has no coding rate to read), only the first 12 s are searched, and SF5/SF6 are not searched automatically. Code: `core/src/loraraw/loraraw_lab.cpp`
+(on the mesh receiver's Channelizer and Demod), test `test_loraraw_lab`.

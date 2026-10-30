@@ -13,6 +13,12 @@ namespace dect2::mpt1327 {
 
 constexpr double kBitRate = 1200.0;
 
+// How codewords are framed. Standard: only the SYNC word (0xC4D7 or its complement) starts a codeword. Tolerant: the sync word is not checked;
+// a codeword is taken at any position where the last 64 bits have good check bits, and once a good codeword is found the next ones are
+// taken on the 64 bit grid (as TrunkView does on French networks, whose sync word differs from the standard). Auto: standard framing, and
+// tolerant framing is added when no exact sync word has been seen after 8 s of audio.
+enum class SyncMode { Standard, Tolerant, Auto };
+
 struct Event {
     double t = 0;        // seconds of audio since reset
     Message msg;
@@ -24,6 +30,7 @@ struct Stats {
     uint64_t ccsc = 0;       // control channel system codewords seen
     uint64_t messages = 0;   // address codewords decoded
     int sys = -1;            // system identity from the last good CCSC
+    bool tolerant = false;   // sync word check is off (Tolerant, or Auto after the fallback)
     bool locked = false;     // a good codeword within the last 3 s
     double t = 0;
 };
@@ -33,6 +40,8 @@ public:
     Decoder();
     ~Decoder();
     void reset();
+    void setSyncMode(SyncMode m);
+    SyncMode syncMode() const;
     void process(const float* audio, size_t n, double fs);   // FM discriminator audio at fs Hz (any rate above about 6 kHz)
     const Stats& stats() const;
     std::vector<Event> takeEvents();                          // messages decoded since the last call

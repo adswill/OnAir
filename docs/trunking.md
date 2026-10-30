@@ -51,3 +51,21 @@ Import reads the header row, case-insensitive, any column order: `Decimal` (also
 ## Tests
 
 `test_p25_trunk` (system model, follow state machine, the voice radio with a fake second receiver (hand-off, preempt, hang, encrypted, failures), priority, lockout, scan lists, rotating control channel, CSV, encrypted handling, 20000 random messages and junk CSV), `test_p25_trunk_rf` (the synthetic control channel through the receiver into the controller), `test_p25p2_proto` / `test_p25p2_rx` (the Phase 2 burst layer, the scrambling against XMC_SDR's sequence, the ESS, scrambled and late-entry calls). `tools/p25p2tool` runs recordings: `p25p2tool cc <file> <rate>` lists a control channel's site, identifiers and grants, and `p25p2tool p2 <file> <rate> --wacn X --sys X --nac X --slot N --wav out.wav` decodes a Phase 2 voice channel.
+
+## MPT 1327 and TETRAPOL (French networks)
+
+**MPT 1327 framing.** The control channel receiver ("Framing" box on the MPT1327 screen) has three modes. *Standard*: a codeword starts only after the
+SYNC word 0xC4D7 (or its complement). *Ignore sync word*: the sync word is not checked; any position where the last 64 bits have valid check bits is
+taken as the end of a codeword, and while codewords stay good the next ones are read on the 64 bit grid (this is how TrunkView handles French
+networks, whose sync word is not the standard one). A failed codeword drops back to the search. Without a sync word the tone polarity cannot be read from it (a codeword and its complement are both valid), so it is voted from bit 1: the mapping that gives more address codewords wins. *Automatic* (default): standard framing, and the
+tolerant framing is switched on when no exact sync word has been seen after 8 s of audio. Cost of the tolerant mode: a random 64 bit pattern passes the
+check about once in 130000 positions, so a false codeword is possible on noise; the control channel system identity is then read from bits 2 to 16 of a
+codeword that ends in a sync-like word (4 bits wrong allowed). Test: `test_mpt1327` (foreign sync word).
+
+**TETRAPOL.** The channel spacing box offers 10 kHz (France) and 12.5 kHz (e.g. Switzerland), and the arrows step by one channel. "Follow clear calls to
+their traffic channel": the control channel announces a group call with a channel NUMBER (D_GROUP_ACTIVATION); OnAir shows the number only for clear calls
+and follows only those. Enter the channel number of the control channel you are tuned to; the traffic channel is then at control frequency + (granted number -
+control number) x spacing, the radio retunes there (it does not follow inside a wide capture) and returns to the control channel when the call has been
+quiet for 6 s (8 s if nothing was heard). A network with a duplex gap or a non-contiguous plan needs the right control channel number or will land on a wrong
+frequency. Voice: calls on French networks (and the Swiss ones) are normally encrypted, and encrypted calls are never followed, decoded or decrypted. A clear
+call needs the user-installed TETRAPOL codec plug-in (RP-CELP is patented and is not shipped, see CODECS.md).

@@ -28,6 +28,14 @@ struct State {
     int band = 0;         // 0 automatic, 1 VHF, 2 UHF
     bool listen = true;
     bool record = false;
+    bool follow = false;      // follow a clear group call from the control channel to its traffic channel (saved)
+    int ccChan = -1;          // channel number of the control channel being received (saved), -1 unknown
+    bool followInit = false;
+    bool following = false;
+    double ccMhz = 0;         // where to return to
+    double followStart = 0, lastVoice = 0;
+    int followedCh = -1;
+    int64_t seenWall = 0;
     int appliedPol = -1, appliedBand = -1, appliedListen = -1, appliedRec = -1;
 };
 State S;
@@ -262,7 +270,7 @@ void tuner(App& a, bool& retune) {
         a.engine.tetrapol().setSpacingHz(S.spacing);
         sp = S.spacing;
     }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Channel spacing of the network: 12.5 kHz (France and most of Europe) or 10 kHz. The arrows step by one channel.");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Channel spacing of the network: 10 kHz (France) or 12.5 kHz (Switzerland and others). The arrows step by one channel.");
     const double stepMhz = sp / 1e6;
     auto snap = [&](double mhz) { return std::round(mhz / stepMhz) * stepMhz; };
     ImGui::SameLine(0, 6 * gUi);
@@ -273,12 +281,58 @@ void tuner(App& a, bool& retune) {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("the channel above. Hold for a continuous change.");
 }
 
-void receiver(App& a) { a.engine.tetrapol().setSpacingHz(spacingHz()); }
+// Control channel to traffic channel following. The grant (D_GROUP_ACTIVATION) gives a channel NUMBER and only clear calls expose it
+// (encrypted grants are never followed). The frequency is control channel + (grant - control channel number) x raster; the radio is retuned
+// there and returned to the control channel when the call has been quiet for 6 s (or nothing was heard in 8 s).
+void followTick(App& a) {
+    if (!S.followInit) {
+        S.followInit = true;
+        S.follow = plat::prefs().getI("tpolFollow", 0) != 0;
+        S.ccChan = plat::prefs().getI("tpolCcChan", -1);
+    }
+    if (!S.follow) { S.following = false; return; }
+    const double now = ImGui::GetTime();
+    const dect2::TetrapolTelemetry& t = a.rx.tetrapol;
+    if (S.following) {
+        bool onAir = false;
+        for (const auto& c : t.calls) if (c.active) onAir = true;
+        if (onAir) S.lastVoice = now;
+        if (now - S.lastVoice > (S.lastVoice > S.followStart ? 6.0 : 8.0)) {
+            S.following = false;
+            tuneFreq(a, S.ccMhz);
+        }
+        return;
+    }
+    if (S.ccChan < 0) return;
+    for (const auto& act : t.activations) {
+        if (act.verdict != 1 || act.channelId < 0 || act.lastWall <= S.seenWall || act.channelId == S.ccChan) continue;
+        S.seenWall = act.lastWall;
+        const double hz = dect2::tetrapolChannelHz(a.freqMhz * 1e6, S.ccChan, act.channelId, spacingHz());
+        if (hz <= 0) return;
+        S.following = true; S.followStart = now; S.lastVoice = now; S.followedCh = act.channelId; S.ccMhz = a.freqMhz;
+        tuneFreq(a, hz / 1e6);
+        return;
+    }
+}
+
+void followControls(App& a) {
+    (void)a;
+    if (ImGui::Checkbox("Follow clear calls to their traffic channel", &S.follow)) plat::prefs().setI("tpolFollow", S.follow ? 1 : 0);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("When the control channel announces a clear (unencrypted) group call, the radio retunes to that channel and returns to the control channel afterwards.\nEncrypted calls are never followed and never decoded.\nNeeds the channel number of this control channel, below.");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(70 * gUi);
+    if (ImGui::InputInt("Control channel number", &S.ccChan, 0, 0)) { if (S.ccChan < -1) S.ccChan = -1; plat::prefs().setI("tpolCcChan", S.ccChan); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Channel number of the control channel you are tuned to (from the network's channel plan; -1 unknown). Traffic channel = this frequency + (granted number - this number) x channel spacing.");
+    if (S.following) ImGui::TextDisabled("following channel %d", S.followedCh);
+}
+
+void receiver(App& a) { a.engine.tetrapol().setSpacingHz(spacingHz()); followControls(a); }
 void list(App&) {}
 void tick(App& a) {
     // the codec loads (and is handed to the receiver) whatever tab is shown
     apply(a);
     if (!live(a)) return;
+    followTick(a);
     wire(a);
     appcodec::voiceCodecTick("tetrapol");
     if (!a.engine.tetrapol().hasCodec()) {

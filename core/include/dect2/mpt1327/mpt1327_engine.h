@@ -2,6 +2,7 @@
 // Engine stdMode 129, active standard 128 (family 127, "MPT1327 trunking (WIP)"). Receive only; control channel messages only: no traffic channel audio is decoded
 // and nothing encrypted is decoded.
 #pragma once
+#include "dect2/mpt1327/mpt1327_rx.h"
 #include "dect2/engine/mode_tuning.h"
 #include <complex>
 #include <cstddef>
@@ -41,6 +42,7 @@ struct MptTelemetry {
     uint64_t blocksOk = 0;         // = good
     uint64_t blocksBad = 0;        // = bad
     bool locked = false;
+    bool syncTolerant = false;     // the sync word check is off (Tolerant setting, or the Auto fallback)
     float levelDb = -200;          // level of the last block, dBFS
     uint64_t good = 0;             // codewords with good check bits
     uint64_t bad = 0;              // codewords after a sync whose check bits failed
@@ -60,6 +62,8 @@ public:
     void configure(double inputRateHz);
     void setSignalOffset(double hz);     // where the control channel sits relative to 0 Hz in the input (about -tuneOffsetHz)
     void setCenterHz(double hz);
+    void setSyncMode(mpt1327::SyncMode m);   // Standard / Tolerant (French networks) / Auto
+    mpt1327::SyncMode syncMode() const;
     bool ready() const;
     void reset();
     void feed(const std::complex<float>* x, size_t n);

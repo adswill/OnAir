@@ -1,6 +1,7 @@
 // MPT 1327 control channel decoder: MSK-style differential FFSK demodulator, per-phase sync search, codeword framing.
 #include "dect2/mpt1327/mpt1327_rx.h"
 #include <cmath>
+#include <cstdio>
 #include <complex>
 
 namespace dect2::mpt1327 {
@@ -40,6 +41,11 @@ struct Decoder::Impl {
     uint64_t nextBit = 0;
     uint64_t cwAcc = 0;
     double lastGoodT = -1e9;
+    SyncMode mode = SyncMode::Auto;
+    uint64_t stdSyncs = 0;      // sync words matched exactly (either polarity)
+    bool tolActive = false;
+    int tolVote[2] = {0, 0};   // tolerant framing: codewords seen with bit 1 set in the normal / inverted tone mapping
+    static constexpr double kAutoWait = 8.0;   // seconds without any exact sync before the tolerant framing is switched on in Auto mode
 
     Impl() {
         // Hamming windowed sinc lowpass, cutoff 900 Hz
@@ -67,15 +73,30 @@ struct Decoder::Impl {
         for (auto& e : eye) e = 0;
         collecting = false;
         lastGoodT = -1e9;
+        stdSyncs = 0;
+        tolVote[0] = tolVote[1] = 0;
+        tolActive = (mode == SyncMode::Tolerant);
     }
 
-    void finishCodeword() {
+    static bool plausible(uint64_t cw) { const int pc = __builtin_popcountll(cw); return pc >= 8 && pc <= 56; }
+
+    void finishCodeword() { handleCodeword(inverted ? ~cwAcc : cwAcc); }
+
+    void handleCodeword(uint64_t cw) {
         collecting = false;
-        const uint64_t cw = inverted ? ~cwAcc : cwAcc;
         const double t = (double)sample / kFs;
-        if (valid(cw)) {
+        if (valid(cw) && (!tolActive || plausible(cw))) {
             st.good++;
             lastGoodT = t;
+            if (tolActive) {   // codewords follow each other on the 64 bit grid: carry on without looking for a sync word
+                int sys = -1;
+                const uint16_t lo = (uint16_t)(cw & 0xFFFF);
+                if ((cw >> 63) == 0 && (decodeCcsc(cw, sys) || __builtin_popcount(lo ^ kSync) <= 4)) {
+                    if (sys < 0) sys = (int)field(cw, 2, 15);
+                    st.ccsc++; st.sys = sys;
+                }
+                collecting = true; bitsLeft = 64; cwAcc = 0;
+            }
             Message m;
             if (decodeAddress(cw, m)) {
                 st.messages++;
@@ -102,7 +123,28 @@ struct Decoder::Impl {
         const uint64_t h = hist[ph];
         const uint16_t lo = (uint16_t)(h & 0xFFFF);
         const bool inv = lo == (uint16_t)~kSync;
-        if (lo != kSync && !inv) return;
+        const bool exact = lo == kSync || inv;
+        if (exact) stdSyncs++;
+        else if (mode == SyncMode::Auto && !tolActive && stdSyncs == 0 && (double)sample / kFs > kAutoWait) tolActive = true;
+        st.tolerant = tolActive;
+        if (!exact) {
+            if (!tolActive) return;
+            // sync word not checked: a position is the end of a codeword when the 64 bits up to it have good check bits (either polarity)
+            const bool vf = plausible(h) && valid(h), vi = vf;   // silence and constant carriers are valid all-zero codewords
+            if (!vf && !vi) return;
+            int best2 = ph;
+            for (int q = 0; q < kSpb; q++) if (eye[q] > eye[best2] * 1.0001f) best2 = q;
+            int d2 = best2 - ph;
+            if (d2 > kSpb / 2) d2 -= kSpb;
+            if (d2 <= -kSpb / 2) d2 += kSpb;
+            // the code contains the all-ones word, so a codeword and its complement are both valid: the polarity is voted from bit 1
+            // (address codewords, which dominate a control channel, have it set; the first tone mapping that gives more of them wins)
+            tolVote[((h >> 63) & 1) ? 0 : 1]++;
+            inverted = tolVote[1] > tolVote[0];
+            nextBit = (uint64_t)((int64_t)sample + d2) + kSpb;   // the codeword that just ended is taken now, the next one follows on the grid
+            handleCodeword(inverted ? ~h : h);
+            return;
+        }
         const uint64_t cwPrev = inv ? ~h : h;   // the last 64 bits: a control channel system codeword when this is a real sync
         int sys = 0;
         const bool real = valid(cwPrev) && decodeCcsc(cwPrev, sys);
@@ -171,6 +213,8 @@ struct Decoder::Impl {
 Decoder::Decoder() : p_(new Impl) {}
 Decoder::~Decoder() = default;
 void Decoder::reset() { p_->reset(); }
+void Decoder::setSyncMode(SyncMode m) { p_->mode = m; p_->tolActive = (m == SyncMode::Tolerant); }
+SyncMode Decoder::syncMode() const { return p_->mode; }
 void Decoder::process(const float* audio, size_t n, double fs) { p_->process(audio, n, fs); }
 const Stats& Decoder::stats() const { return p_->st; }
 std::vector<Event> Decoder::takeEvents() { std::vector<Event> e; e.swap(p_->events); return e; }

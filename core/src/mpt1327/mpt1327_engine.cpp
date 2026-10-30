@@ -83,6 +83,7 @@ struct MptReceiver::Impl {
         snap.messages = st.messages;
         snap.sysId = st.sys;
         snap.locked = st.locked;
+        snap.syncTolerant = st.tolerant;
         snap.dataValid = st.locked;
         snap.blocksOk = st.good;
         snap.blocksBad = st.bad;
@@ -123,6 +124,9 @@ bool MptReceiver::ready() const {
     std::lock_guard<std::mutex> l(p_->mu);
     return p_->rate >= mpt1327Tuning().minSampleRate && p_->fsEff > 0;
 }
+
+void MptReceiver::setSyncMode(mpt1327::SyncMode m) { std::lock_guard<std::mutex> l(p_->mu); p_->dec.setSyncMode(m); }
+mpt1327::SyncMode MptReceiver::syncMode() const { std::lock_guard<std::mutex> l(p_->mu); return p_->dec.syncMode(); }
 
 void MptReceiver::reset() { std::lock_guard<std::mutex> l(p_->mu); p_->clearState(); }
 
