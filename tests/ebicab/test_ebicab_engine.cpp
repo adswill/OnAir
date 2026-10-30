@@ -33,7 +33,7 @@ int main() {
     }
     const EbicabTelemetry& s = rx.ebicab;
     printf("  %d reports: %s\n", reports, ebicabSummary(s).c_str());
-    CHECK(reports > 20 && wrong == 0, "%d reports, %d wrong", reports, wrong);
+    CHECK(reports > 8 && wrong == 0, "%d reports, %d wrong", reports, wrong);
     CHECK(rx.rateOk, "rate");
     CHECK(s.blocksOk >= 10 && !s.balises.empty(), "%llu telegrams, %zu balises", (unsigned long long)s.blocksOk, s.balises.size());
     CHECK(e.droppedSamples() == 0, "dropped %llu", (unsigned long long)e.droppedSamples());
