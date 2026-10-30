@@ -60,6 +60,16 @@ checked; the 32-bit counter is not rebuilt (it needs the session). Unverified on
 
 Mode numbers used: families 200 and 201 (engine standards 202, 203; active 201, 202; poll slots 160, 161); kNumFamilies 202, kPollSeqSlots 170.
 
+### FSK (DR7)
+
+core/src/lorawan/lorawan_fsk.cpp: LoRaWAN FSK (DR7: 50 kbit/s GFSK, deviation 25 kHz, BT 1, 5 preamble bytes, sync word C1 94 C1, length byte,
+CRC-16 CCITT seed 0x1D0F complemented, PN9 whitening seed 0x1FF over length, payload and CRC; RP002-1.0.2 4.2 and LoRaMac-node's radio set-up).
+The plans that have DR7 are EU868, EU433 and AS923; RP002 gives no channel for it, so the receiver listens where The Things Network's gateways do:
+868.8 MHz (EU868) and 924.8 MHz (AS923-1). It runs next to the LoRa bank over the same capture (setting "FSK (DR7)", on by default); good
+frames go in the same table as "FSK DR7" with level, SNR (in 100 kHz) and the frequency offset. The test signal sends three FSK frames on that
+channel (an uplink overlapping a LoRa frame, a join request from an unshaped SX1276-style transmitter, the gateway's acknowledgement).
+Synthetic tests only; not checked against a real transmitter (tests/lorawan/test_lorawan_fsk.cpp).
+
 ## Presets from issue #229
 
 Two entries come from the settings a user posted from TinyGS: FOSSASAT on 401.703 MHz (SF11, 125 kHz, CR 4/8) and LoRa telemetry on

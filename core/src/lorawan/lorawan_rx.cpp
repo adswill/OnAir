@@ -3,6 +3,7 @@
 #include "dect2/lorawan/lorawan_rx.h"
 #include "dect2/automation/engine.h"
 #include "dect2/lorawan/lora_bank.h"
+#include "dect2/lorawan/lorawan_fsk.h"
 #include "dect2/lorawan/lorawan_plan.h"
 #include "dect2/net/feeds.h"
 #include "dect2/results/results_io.h"
@@ -65,6 +66,11 @@ struct LorawanReceiver::Impl {
     std::vector<lorawan::PlanChannel> planCh;   // the channels of the bank, by bank index
     std::vector<double> chanFreq;               // absolute (or dial-relative) centre of each bank channel
     std::vector<size_t> planIndex;              // bank channel -> index in the plan's ascending list
+    lorawan::fsk::Receiver fskRx;               // the plan's FSK (DR7) channel(s), over the same capture
+    std::vector<lorawan::fsk::RxFrame> fskGot;
+    std::vector<double> fskFreq;                // absolute (or dial-relative) centre of each FSK channel
+    std::vector<size_t> fskTel;                 // FSK channel -> index in tel.channels
+    bool fskOn = false;
     int64_t nIn = 0;
     double nextReport = 0, lastGood = -1e9;
     double power = 0; int64_t nPower = 0;
@@ -101,8 +107,9 @@ struct LorawanReceiver::Impl {
         tel.cfg = cfg; tel.inputRate = rate; tel.centerHz = center; tel.centreKnown = center > 0;
         tel.channels.clear(); tel.note.clear();
         planCh.clear(); chanFreq.clear(); planIndex.clear();
+        fskFreq.clear(); fskTel.clear(); fskOn = false;
         std::vector<lorabank::Channel> bc;
-        if (rate <= 0) { bank.configure(0, bc); return; }
+        if (rate <= 0) { bank.configure(0, bc); fskRx.configure(0, {}); return; }
         // where the dial is: the radio's centre plus the signal offset; unknown centre: the plan's own dial
         dialHz = center > 0 ? center + offset : lorawanPlanCentreMhz(cfg.plan) * 1e6;
         const auto all = lorawan::planChannels(cfg.plan);
@@ -157,15 +164,31 @@ struct LorawanReceiver::Impl {
         tel.channelsInBand = 0;
         for (size_t i = 0; i < bc.size(); i++) if (!bc[i].sfs.empty()) tel.channelsInBand++;
         tel.demodulators = (uint32_t)bank.decoders();
+        // the FSK channel(s) of the plan: one more receiver over the same samples, listed after the LoRa channels
+        std::vector<double> fskOff;
+        uint32_t fskIn = 0;
+        if (cfg.fsk) {
+            for (double mhz : lorawan::planFskChannelsMhz(cfg.plan)) {
+                const double off = mhz * 1e6 - dialHz + offset;
+                LwChannelInfo ci;
+                ci.freqHz = mhz * 1e6; ci.bwHz = 2 * lorawan::fsk::kBitRate; ci.fsk = true; ci.inBand = lorawan::fsk::Receiver::fits(rate, off);
+                fskTel.push_back(tel.channels.size());
+                tel.channels.push_back(ci);
+                fskFreq.push_back(mhz * 1e6); fskOff.push_back(off);
+                fskIn += ci.inBand;
+            }
+        }
+        fskRx.configure(rate, fskOff);
+        fskOn = fskIn > 0;
         char b[220];
-        snprintf(b, sizeof b, "%u of %zu %s channels are decoded (%zu fit the %.2f Msps capture around %s MHz%s)", tel.channelsInBand, bc.size(), lorawan::planName(cfg.plan), nFit, rate / 1e6,
-                 mhzText(dialHz / 1e6).c_str(), nFit > (size_t)cfg.maxChannels ? ", the rest is over the channel limit" : "");
+        snprintf(b, sizeof b, "%u of %zu %s channels are decoded (%zu fit the %.2f Msps capture around %s MHz%s)%s", tel.channelsInBand, bc.size(), lorawan::planName(cfg.plan), nFit, rate / 1e6,
+                 mhzText(dialHz / 1e6).c_str(), nFit > (size_t)cfg.maxChannels ? ", the rest is over the channel limit" : "",
+                 fskIn ? ", and the FSK channel" : (fskOff.empty() ? "" : "; the FSK channel lies outside the capture"));
         tel.note = b;
         logf(std::string("LoRaWAN: ") + b);
     }
 
     void onFrame(const lorabank::Decoded& d) {
-        const bool good = d.f.crcOk || !d.f.hdr.crc;
         LwFrame r;
         r.wallTime = (int64_t)std::time(nullptr);
         r.sec = d.sec;
@@ -174,10 +197,30 @@ struct LorawanReceiver::Impl {
         r.bwHz = d.bwHz; r.sf = d.sf; r.inverted = d.inverted;
         r.hasCrc = d.f.hdr.crc; r.crcOk = d.f.crcOk;
         r.snrDb = (float)d.f.snrDb; r.levelDb = (float)d.f.levelDb; r.cfoHz = d.f.cfoHz; r.len = (int)d.f.payload.size(); r.corrected = d.f.corrected;
-        r.hex = lorawan::hex(d.f.payload.data(), d.f.payload.size());
+        logFrame(std::move(r), d.f.payload, d.chan);
+    }
+
+    // a LoRaWAN FSK frame (only good CRCs come here)
+    void onFskFrame(const lorawan::fsk::RxFrame& f) {
+        LwFrame r;
+        r.wallTime = (int64_t)std::time(nullptr);
+        r.sec = f.sec;
+        r.chan = -1;
+        r.freqHz = f.chan < fskFreq.size() ? fskFreq[f.chan] : 0;
+        r.bwHz = lorawan::fsk::kBitRate; r.sf = 0; r.fsk = true;
+        r.hasCrc = true; r.crcOk = f.crcOk;
+        r.snrDb = f.snrDb; r.levelDb = f.levelDb; r.cfoHz = f.cfoHz; r.len = (int)f.payload.size();
+        tel.fskFrames++;
+        logFrame(std::move(r), f.payload, f.chan < fskTel.size() ? fskTel[f.chan] : (size_t)-1);
+    }
+
+    // the MAC layer, the device table and the counters of a frame (LoRa or FSK); telChan: index in tel.channels
+    void logFrame(LwFrame r, const std::vector<uint8_t>& payload, size_t telChan) {
+        const bool good = r.crcOk || !r.hasCrc;
+        r.hex = lorawan::hex(payload.data(), payload.size());
         if (good) {
-            const lorawan::Frame m = lorawan::parse(d.f.payload.data(), d.f.payload.size());
-            if (!m.ok && !d.f.hdr.crc) return;      // a header-only frame (downlink) that is no LoRaWAN is most likely noise
+            const lorawan::Frame m = lorawan::parse(payload.data(), payload.size());
+            if (!m.ok && !r.hasCrc) return;      // a header-only frame (downlink) that is no LoRaWAN is most likely noise
             if (m.ok) {
                 r.lorawan = true; r.mtype = m.mtype; r.uplink = m.uplink;
                 r.type = lorawan::mtypeName(m.mtype);
@@ -193,7 +236,7 @@ struct LorawanReceiver::Impl {
                 if (m.mtype >= 0 && m.mtype < 8) tel.perType[m.mtype]++;
             } else { r.type = "not LoRaWAN"; r.summary = m.why; }
         } else r.type = "CRC error";
-        if (d.chan < tel.channels.size()) { tel.channels[d.chan].frames++; if (!good) tel.channels[d.chan].crcBad++; }
+        if (telChan < tel.channels.size()) { tel.channels[telChan].frames++; if (!good) tel.channels[telChan].crcBad++; }
         if (good) {
             tel.blocksOk++; tel.dataValid = true; lastGood = sigSec();
             tel.cfoHz = r.cfoHz; tel.snrDb = r.snrDb;
@@ -202,7 +245,7 @@ struct LorawanReceiver::Impl {
             if (automation::wants(automation::FLora)) {
                 automation::Event ev("lora.packet");
                 ev.at(automation::wallNow(), "LoRaWAN", r.freqHz);
-                ev.str("kind", "lorawan").str("hex", r.hex).num("snr_db", r.snrDb).num("sf", r.sf);
+                ev.str("kind", "lorawan").str("hex", r.hex).num("snr_db", r.snrDb).num("sf", r.sf).str("modulation", r.fsk ? "fsk" : "lora");
                 if (r.hasDevAddr) { char b[16]; snprintf(b, sizeof b, "%08X", r.devAddr); ev.str("devaddr", b); }
                 automation::emit(std::move(ev));
             }
@@ -231,7 +274,7 @@ struct LorawanReceiver::Impl {
             dv = &tel.devices.back();
             dv->id = id; dv->devAddr = r.devAddr; dv->hasDevAddr = r.hasDevAddr;
         }
-        dv->lastHeard = r.sec; dv->freqHz = r.freqHz; dv->sf = r.sf; dv->lastSnrDb = r.snrDb; dv->lastLevelDb = r.levelDb;
+        dv->lastHeard = r.sec; dv->freqHz = r.freqHz; dv->sf = r.sf; dv->fsk = r.fsk; dv->lastSnrDb = r.snrDb; dv->lastLevelDb = r.levelDb;
         dv->packets++;
         if (r.mtype == 0 || r.mtype == 6) { dv->joins++; dv->devEui = lorawan::eui(r.devEui); if (r.joinEui) dv->joinEui = lorawan::eui(r.joinEui); }
         if (r.hasDevAddr) {
@@ -258,6 +301,16 @@ struct LorawanReceiver::Impl {
         for (const auto& s : st) { pre += s.preambles; hb += s.headerBad; if (s.chan < chPre.size()) chPre[s.chan] += s.preambles; }
         tel.preambles = pre; tel.headerBad = hb;
         for (size_t i = 0; i < chPre.size(); i++) tel.channels[i].preambles = chPre[i];
+        // the FSK channel(s): frames, then the sync words found as "preambles" of the channel
+        for (const auto& f : fskGot) onFskFrame(f);
+        fskGot.clear();
+        const auto& fs = fskRx.stats();
+        uint64_t sy = 0, cb = 0;
+        for (size_t i = 0; i < fs.size() && i < fskTel.size(); i++) {
+            sy += fs[i].syncs; cb += fs[i].crcBad;
+            if (fskTel[i] < tel.channels.size()) { tel.channels[fskTel[i]].preambles = fs[i].syncs; tel.channels[fskTel[i]].crcBad = fs[i].crcBad; }
+        }
+        tel.fskSyncs = sy; tel.fskCrcBad = cb;
     }
 
     void resetState() {
@@ -325,6 +378,7 @@ void LorawanReceiver::feed(const cf32* x, size_t n) {
     m.nIn += (int64_t)n;
     if (m.rate >= lorawanTuning().minSampleRate - 1) {
         m.bank.feed(x, n, m.got);
+        if (m.fskOn) m.fskRx.feed(x, n, m.fskGot);
         m.processBlockFrames();
     }
     while ((double)m.nIn >= m.nextReport) {

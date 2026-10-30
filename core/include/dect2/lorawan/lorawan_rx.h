@@ -1,6 +1,7 @@
 // LoRaWAN monitor (wide capture): every channel of a regional plan (EU868, US915, AU915, AS923-1..4, EU433) that fits the radio's captured band is
 // demodulated at once, at all the spreading factors the plan's data rates use (SF7 - SF12 at 125 kHz, SF7 at 250 kHz, SF8 at 500 kHz uplink,
-// SF7 - SF12 at 500 kHz downlink), including the gateways' inverted-IQ frames. The frames are parsed down to the MAC layer (lorawan_plan.h): message type,
+// SF7 - SF12 at 500 kHz downlink), including the gateways' inverted-IQ frames, and the plan's FSK channel (DR7, 50 kbit/s GFSK: lorawan_fsk.h; synthetic
+// tests only so far) as one more receiver over the same samples. The frames are parsed down to the MAC layer (lorawan_plan.h): message type,
 // DevAddr, frame control, counter, port, MIC, MAC commands, join request / accept framing. RECEIVE ONLY and keyless: the payloads are encrypted with
 // the devices' session keys and stay bytes, no key is handled, nothing is decrypted, no MIC is checked, nothing is sent.
 // Written to the engine's contract: configure() once the sample rate is known, feed() from the analysis thread (never blocks), telemetry() and the
