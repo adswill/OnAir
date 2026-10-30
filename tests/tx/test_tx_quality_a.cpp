@@ -244,9 +244,13 @@ bool roundTrip(const char* id, double snrDb, double cfoHz, double secs) {
     p /= (double)std::max<size_t>(1, on);
     const Metrics k = measure(*m, r, rate, std::min(secs, 1.5));
     const double sigma = std::sqrt(p * rate / std::max(k.obwHz, 100.0) / std::pow(10.0, snrDb / 10) / 2);
+    // a generator of a mode with offset tuning (ModeTuning::tuneOffsetHz) puts the signal that far below the centre, for a radio tuned
+    // above it; a recording has the channel on the centre (the engine applies no offset to a File device), so it is moved back up
+    const ModeTuning* mt = modeTuning(m->stdMode);
+    const double shiftHz = cfoHz + (mt ? mt->tuneOffsetHz : 0);
     double ph = 0;
-    const double w = 2 * M_PI * cfoHz / rate;
-    for (auto& v : x) { v *= std::polar(1.f, (float)ph); ph += w; if (ph > M_PI) ph -= 2 * M_PI; }
+    const double w = 2 * M_PI * shiftHz / rate;
+    for (auto& v : x) { v *= std::polar(1.f, (float)ph); ph += w; if (ph > M_PI) ph -= 2 * M_PI; if (ph < -M_PI) ph += 2 * M_PI; }
     genutil::NoiseSource ns(7);
     ns.add(x.data(), x.size(), (float)sigma);
     char path[256];
@@ -261,12 +265,12 @@ bool roundTrip(const char* id, double snrDb, double cfoHz, double secs) {
     fclose(f);
     Engine e;
     DeviceInfo dev; dev.kind = DeviceInfo::File; dev.name = "tx recording";
-    const ModeTuning* mt = modeTuning(m->stdMode);
     TuneSettings t;
     t.sampleRate = rate; t.centerHz = 100e6;
     t.bandwidthMhz = mt ? mt->bandwidthMhz : 8;
     FileOptions fo; fo.path = path; fo.format = FileFormat::CF32; fo.sampleRate = rate; fo.loop = true;
     e.setStandard(m->stdMode);
+    if (const SubMode* sm = subModeById(id)) applySubMode(e, sm);   // a protocol of a family (Contestia, DominoEX in HF digital): its decoder, as the app picks it
     bool locked = false;
     if (e.start(dev, t, fo)) {
         RxTelemetry rx;
@@ -274,7 +278,12 @@ bool roundTrip(const char* id, double snrDb, double cfoHz, double secs) {
         const auto t0 = std::chrono::steady_clock::now();
         while (!locked && std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() < 60) {
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
-            if (e.latestRx(rx, seq)) { seq = rx.seq; locked = rx.state == 2 && rx.dataValid; }
+            if (e.latestRx(rx, seq)) {
+                seq = rx.seq;
+                // decoding (BLE's highest state is 1: a good packet in the last 5 s); the HF digital family keeps its keyboard modes'
+                // lock and text in their own telemetry (its common state stays 0): the sent text must come out
+                locked = m->stdMode == 27 ? rx.hfdig.kbd.state == 1 && rx.hfdig.kbd.text.find(r.text) != std::string::npos : rx.state >= 1 && rx.dataValid;
+            }
         }
         e.stop();
     }
