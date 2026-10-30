@@ -1,4 +1,6 @@
 // Mesh (LoRa) test signal: see mesh_gen.h.
+// STOP: a change here also needs a run of the full mesh rates test, which ctest does not run: test_mesh_rates --full
+// (tests/mesh/test_mesh_rates.cpp).
 #include "dect2/mesh/mesh_gen.h"
 #include "dect2/common/stable_random.h"
 #include "dect2/dsp/gen_util.h"
