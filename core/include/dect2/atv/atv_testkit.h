@@ -4,8 +4,8 @@
 #include "atv_card.h"
 #include "atv_gen.h"
 #include "atv_rx.h"
+#include "dect2/common/cpu_meter.h"
 #include <chrono>
-#include <ctime>
 #include <cmath>
 #include <functional>
 #include <memory>
@@ -112,9 +112,9 @@ inline Run run(const AtvGenConfig& cfg, double secs, const Options& o = Options(
                 auto q = [](float v) { return std::round(std::min(127.f, std::max(-128.f, v * 128.f))) / 128.f; };
                 s = cf32(q(s.real()), q(s.imag()));
             }
-        const std::clock_t c0 = std::clock();
+        const uint64_t c0 = cpu::processNs();
         rx.feed(buf.data(), n);
-        cpu += (double)(std::clock() - c0) / CLOCKS_PER_SEC;       // CPU time of the process: does not grow when the machine is busy with other things
+        cpu += (double)(cpu::processNs() - c0) * 1e-9;             // CPU time of the process: does not grow when the machine is busy with other things
         done += n;
         AtvTelemetry t;
         if (rx.telemetry(t, seq)) {

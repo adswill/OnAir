@@ -1,16 +1,17 @@
 // ADS-B simulation harness (see adsb_sim.h).
 #include "dect2/adsb/adsb_sim.h"
+#include "dect2/common/cpu_meter.h"
 #include <algorithm>
 #include <chrono>
-#include <ctime>
 #include <cmath>
 #include <map>
 
 namespace dect2 {
 
 namespace {
-// CPU time of the process, so that a busy machine does not make the receiver look slow (the harness runs on one thread)
-double cpuNow() { return (double)std::clock() / CLOCKS_PER_SEC; }
+// CPU time of the process, so that a busy machine does not make the receiver look slow (the harness runs on one thread; std::clock() is
+// the wall clock on Windows)
+double cpuNow() { return (double)cpu::processNs() * 1e-9; }
 
 struct Gauss {
     uint64_t s[2];
