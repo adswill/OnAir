@@ -933,6 +933,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_viterbi8_ber tests/fec/test_viterbi8_ber.cpp)   # the 8-bit DVB-T Viterbi's bit error rate against the exact decoder's
   target_link_libraries(test_viterbi8_ber PRIVATE dect2core)
   add_test(NAME viterbi8_ber COMMAND test_viterbi8_ber)
+  add_executable(test_dvbt_quantise tests/dvbt/test_dvbt_quantise.cpp)   # the soft values for the 8-bit Viterbi are clipped to +-limit on every SIMD path (#365)
+  target_link_libraries(test_dvbt_quantise PRIVATE dect2core)
+  add_test(NAME dvbt_quantise COMMAND test_dvbt_quantise)
   add_executable(test_viterbi_gpu tests/fec/test_viterbi_gpu.cpp)   # the GPU Viterbi (Metal) against the exact CPU decoder; passes where there is no GPU
   target_link_libraries(test_viterbi_gpu PRIVATE dect2core)
   add_test(NAME viterbi_gpu COMMAND test_viterbi_gpu)
