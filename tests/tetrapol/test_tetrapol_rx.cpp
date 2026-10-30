@@ -7,6 +7,7 @@
 #include "dect2/tetrapol/tetrapol_tel.h"
 #include "dect2/engine/modes.h"
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <random>
@@ -244,6 +245,10 @@ static void testRetune() {
 }
 
 int main() {
+    // traffic channel frequency from a grant: French 10 kHz raster, Swiss 12.5 kHz, unknown control channel number
+    CHECK(std::fabs(tetrapolChannelHz(400.0e6, 10, 14, 10000) - 400.04e6) < 1, "10 kHz raster, +4 channels");
+    CHECK(std::fabs(tetrapolChannelHz(400.0e6, 10, 6, 12500) - 399.95e6) < 1, "12.5 kHz raster, -4 channels");
+    CHECK(tetrapolChannelHz(400.0e6, -1, 6, 10000) < 0, "control channel number unknown");
     testTables();
     testFrames();
     testStream();

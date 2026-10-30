@@ -97,6 +97,37 @@ int main() {
     const std::vector<uint64_t> msgs = sampleMessages();
     const std::vector<uint8_t> bits = controlChannelBits(20001, msgs);
 
+    // --- French-style framing: the sync word is not the standard one
+    {
+        // the 16 bit SYNC inside every control channel system codeword is replaced by another word (and the check bits re-made are not needed:
+        // the CCSC check bits cover the info bits only, the replaced bits are the check bits' neighbours so the codeword is rebuilt with encode)
+        std::vector<uint8_t> b = bits;
+        const uint16_t alt = 0x35A9;
+        // locate every 16 bit SYNC and rewrite it
+        int n = 0;
+        for (size_t i = 0; i + 16 <= b.size(); i++) {
+            uint32_t w = 0;
+            for (int k = 0; k < 16; k++) w = (w << 1) | b[i + k];
+            if (w == kSync) { for (int k = 0; k < 16; k++) b[i + k] = (alt >> (15 - k)) & 1; n++; i += 15; }
+        }
+        CHECK(n >= 2, "sync words rewritten: %d", n);
+        for (bool inv : {false, true}) {
+        std::vector<float> a = ffskAudio(b, 24000, inv);
+        a.insert(a.end(), 24000 * 2, 0.f);
+        for (SyncMode m : {SyncMode::Standard, SyncMode::Tolerant, SyncMode::Auto}) {
+            Decoder d;
+            d.setSyncMode(m);
+            std::vector<float> in(24000 * 10, 0.f);   // 10 s of silence first: lets Auto time out
+            in.insert(in.end(), a.begin(), a.end());
+            for (size_t i = 0; i < in.size(); i += 1000) d.process(in.data() + i, std::min<size_t>(1000, in.size() - i), 24000);
+            std::vector<uint64_t> got;
+            for (const Event& e : d.takeEvents()) got.push_back(e.msg.cw);
+            if (m == SyncMode::Standard) CHECK(got.empty(), "standard framing finds nothing behind a foreign sync word: %zu", got.size());
+            else CHECK(got.size() >= msgs.size() - 1, "mode %d inv %d: %zu of %zu messages", (int)m, (int)inv, got.size(), msgs.size());
+        }
+        }
+    }
+
     // --- decoder on FFSK audio
     for (double fs : {24000.0, 48000.0, 44100.0, 12000.0}) {
         for (bool inv : {false, true}) {

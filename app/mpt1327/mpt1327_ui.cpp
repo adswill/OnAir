@@ -60,6 +60,14 @@ void tab(App& a) {
     const dect2::MptTelemetry& t = a.rx.mpt1327;
     ImGui::TextUnformatted("MPT1327 trunking (WIP): 1200 bit/s FFSK control channel, control messages only");
     ImGui::Spacing();
+    {
+        const char* items[] = {"Standard sync word", "Ignore sync word (French networks)", "Automatic"};
+        int m = (int)a.engine.mpt1327().syncMode();
+        ImGui::SetNextItemWidth(260 * gUi);
+        if (ImGui::Combo("Framing", &m, items, 3)) a.engine.mpt1327().setSyncMode((dect2::mpt1327::SyncMode)m);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Standard: codewords start after the MPT1327 SYNC word.\nIgnore sync word: codewords are framed by their check bits and followed on the 64 bit grid, for networks whose sync word differs (French).\nAutomatic: standard, switching to the tolerant framing when no sync word is seen for 8 s.");
+        if (t.syncTolerant) { ImGui::SameLine(); ImGui::TextDisabled("sync check off"); }
+    }
     ImGui::Text("Lock: %s", t.locked ? "locked" : "searching");
     if (t.sysId >= 0) ImGui::Text("System identity: %d", t.sysId);
     else ImGui::TextDisabled("System identity: -");

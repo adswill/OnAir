@@ -83,6 +83,14 @@ struct TetrapolTelemetry {
     std::vector<TetrapolActivation> activations;
 };
 
+// Frequency of traffic channel `channel` on a network whose control channel is channel `ccChannel` at ccHz: TETRAPOL channels sit on the
+// network's raster (10 kHz in France, 12.5 kHz in e.g. Switzerland). The signalling carries channel NUMBERS only, so the control channel's own
+// number must be known (the user enters it); a network with a duplex gap or a non-contiguous plan needs a manual correction. < 0 when unknown.
+inline double tetrapolChannelHz(double ccHz, int ccChannel, int channel, int spacingHz) {
+    if (ccChannel < 0 || channel < 0 || ccHz <= 0) return -1;
+    return ccHz + (double)(channel - ccChannel) * (double)spacingHz;
+}
+
 constexpr size_t kTetrapolLogMax = 300;
 constexpr size_t kTetrapolMax = 200;
 constexpr size_t kTetrapolCallsMax = 50;
