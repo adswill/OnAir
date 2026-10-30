@@ -77,6 +77,10 @@ struct TetrapolReceiver::Impl {
 
     // front end
     cf32 rot{1.f, 0.f}, step{1.f, 0.f};
+    // Frequency control: a radio's carrier error (20 ppm at 400 MHz is 8 kHz) sits in the channel filter's skirt and costs 7 dB at 3 kHz; the
+    // discriminator's slow mean is the error, and the mixer is steered by it (a loop of about 50 ms, much slower than the average itself)
+    double afcAcc = 0, afcW = 0;      // fast mean of the discriminator output (rad per work sample), accumulated mixer correction (rad per input sample)
+    int afcCnt = 0;
     cf32 boxSum{0.f, 0.f};
     int boxN = 0;
     double hold = 0;
@@ -112,7 +116,7 @@ struct TetrapolReceiver::Impl {
     std::string statusText;
 
     void retune() {
-        const double w = -2 * kPi * offHz / std::max(fs, 1.0);
+        const double w = -2 * kPi * offHz / std::max(fs, 1.0) - afcW;
         step = cf32((float)std::cos(w), (float)std::sin(w));
     }
 
@@ -506,13 +510,21 @@ struct TetrapolReceiver::Impl {
             if (dcN < 8000) dcN++;
             dc += (d - dc) / (double)dcN;
             dq.push_back((float)(d - dc));
+            afcAcc += 0.002 * (d - afcAcc);
+            if (++afcCnt >= 64) {
+                afcCnt = 0;
+                afcW += 0.02 * afcAcc * adv;
+                const double lim = 2 * kPi * 7000.0 / std::max(fs, 1.0);
+                afcW = std::max(-lim, std::min(lim, afcW));
+                retune();
+            }
         }
         rot /= std::abs(rot);
         if (n) {
             const double p = pow / (double)n;
             tel.levelDb = p > 1e-20 ? (float)(10.0 * std::log10(p)) : -200.f;
         }
-        tel.cfoHz = offHz + dc * kWork / (2 * kPi);
+        tel.cfoHz = offHz + (afcW * fs + 0.0) / (2 * kPi) + dc * kWork / (2 * kPi);
         if (softVar > 0) tel.snrDb = (float)(10.0 * std::log10(std::max(1e-6, (double)softAbs * softAbs / softVar)));
     }
 
@@ -544,6 +556,7 @@ struct TetrapolReceiver::Impl {
         prevZ = cf32(0.f, 0.f);
         dc = 0;
         dcN = 0;
+        afcAcc = 0; afcW = 0; afcCnt = 0; retune();
         dq.clear();
         tsym = kSps;
         softAbs = softVar = 0;

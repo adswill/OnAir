@@ -274,6 +274,13 @@ int main() {
         CHECK(t.band == (c.band ? tp::kVhf : tp::kUhf), "band found %d", t.band);
         CHECK(clear == 1 && enc == 1 && numbersOnEnc == 0, "activations clear %d enc %d (numbers kept on encrypted: %d)", clear, enc, numbersOnEnc);
     }
+    // a 20 ppm radio at 400 MHz is 8 kHz out (the sweep uses a quarter of the channel, 3.1 kHz): near the threshold the frames decoded must stay close to
+    // those of a signal on the centre (before the frequency control 3.1 kHz at 12 dB gave half of them)
+    for (double cfo : {3125.0, -3125.0}) {
+        const TetrapolTelemetry on = run(12, 0, 0, 250000, 0, 0, 3.0), off = run(12, cfo, 0, 250000, 0, 0, 3.0);
+        printf("  snr 12: centre ok %llu, cfo %+.0f ok %llu\n", (unsigned long long)on.blocksOk, cfo, (unsigned long long)off.blocksOk);
+        CHECK(off.blocksOk * 10 >= on.blocksOk * 8, "cfo %+.0f at 12 dB: %llu frames against %llu on the centre", cfo, (unsigned long long)off.blocksOk, (unsigned long long)on.blocksOk);
+    }
     // polarity set by hand: the right one works, the wrong one never syncs
     {
         const TetrapolTelemetry r = run(30, 0, 0, 250000, 1, 0, 2.0, 2);
