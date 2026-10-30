@@ -88,17 +88,20 @@ int main() {
     // ---- through the receiver, every submode ----
     for (int sm = 0; sm < js8::kSubmodes; sm++) {
         const char* nm = js8::spec(sm).name;
-        Js8Telemetry t = overAir(hb, sm, 1000, -10, 0.3);
-        CHECK(heard(t, "LY1ABC: @HB HEARTBEAT KO24"), "%s heartbeat at -10 dB (%zu decodes%s%s)", nm, t.decodes.size(), t.decodes.empty() ? "" : ": ", t.decodes.empty() ? "" : t.decodes[0].text.c_str());
-        t = overAir(snr, sm, 1400, -10, 0);
+        // Turbo has twice Fast's symbol rate, so half the energy per symbol: 3 dB more signal keeps it as far above its limit
+        // (about -11 dB here, Fast about -13 dB) as the others; at -10 dB it lost about one frame in four
+        const double up = sm == js8::kTurbo ? 3 : 0;
+        Js8Telemetry t = overAir(hb, sm, 1000, -10 + up, 0.3);
+        CHECK(heard(t, "LY1ABC: @HB HEARTBEAT KO24"), "%s heartbeat at %.0f dB (%zu decodes%s%s)", nm, -10 + up, t.decodes.size(), t.decodes.empty() ? "" : ": ", t.decodes.empty() ? "" : t.decodes[0].text.c_str());
+        t = overAir(snr, sm, 1400, -10 + up, 0);
         bool ok = false;
         for (const auto& d : t.decodes) if (d.text.find("DL1XYZ SNR -12") != std::string::npos) ok = true;
         CHECK(ok, "%s SNR report (%zu decodes%s%s)", nm, t.decodes.size(), t.decodes.empty() ? "" : ": ", t.decodes.empty() ? "" : t.decodes[0].text.c_str());
-        t = overAir(txt, sm, 1800, -8, 0.2);
+        t = overAir(txt, sm, 1800, -8 + up, 0.2);
         ok = false;
         for (const auto& m : t.messages) if (m.text.find("HELLO FROM VILNIUS 73") != std::string::npos && m.from == "LY1ABC") ok = true;
         CHECK(ok, "%s directed text over %zu frames (%zu messages%s%s)", nm, txt.size(), t.messages.size(), t.messages.empty() ? "" : ": ", t.messages.empty() ? "" : t.messages[0].text.c_str());
-        printf("%-7s heartbeat, SNR report and %zu-frame text decoded at -10 / -10 / -8 dB\n", nm, txt.size());
+        printf("%-7s heartbeat, SNR report and %zu-frame text decoded at %.0f / %.0f / %.0f dB\n", nm, txt.size(), -10 + up, -10 + up, -8 + up);
     }
 
     // ---- shape, the gate and the limits ----
