@@ -66,6 +66,7 @@ The user guides and notes that live in the repository. The same text is on the [
 | [esubghz.md](esubghz.md) | Flipper Zero Sub-GHz chat | Chat with Flipper Zero devices (Enhanced Sub-GHz Chat app), plain or AES-256-GCM encrypted, receive and send. |
 | [roshf.md](roshf.md) | ROS (HF) detector | Detects the ROS weak-signal HF mode and names its sub-mode; text decoding partial (needs a public spec). |
 | [ssdv.md](ssdv.md) | SSDV pictures | Balloon and satellite pictures from SSDV packets (FSK / RTTY-framed), built up while they arrive. |
+| [nrf24.md](nrf24.md) | nRF24L01 | Enhanced ShockBurst frames on one 2.4 GHz channel, 250 kbit/s / 1 / 2 Mbit/s, address sniffer (needs a 2.4 GHz SDR; needs a user test). |
 | [INMARSAT.md](INMARSAT.md) | Inmarsat (all carriers) | Every Aero P and Inmarsat-C carrier of one wide capture at once; C voice not decoded (needs a user test). |
 | [ebicab.md](ebicab.md) | EBICab / Eurobalise | Balise up-link telegrams per SUBSET-036 (needs a user test); EBICab formats not public. |
 

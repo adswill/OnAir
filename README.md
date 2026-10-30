@@ -308,6 +308,7 @@ No radio? Open an IQ recording through the *IQ recording file* source (cs8, cu8,
 - **Cell towers** (LTE MIB / SIB1 - SIB5; towers on a map with an [OpenCelliD](#tools-and-notes) key), **5G NR cells** (SS/PBCH, PCI, RSRP, MIB; SIB1 is not decoded yet), **NB-IoT cells**, **GSM-R** (921 - 925 MHz) and **LBJ** (Chinese railway train warnings at 821.2375 MHz: train number, speed, kilometre post, direction; see [docs/lbj.md](docs/lbj.md)). Public broadcast information only.
 - **KLW** end-of-train data (default 866.2375 MHz) and **TDCS** train dispatch data (default 457.550 MHz): 1200 bit/s FFSK with BCH and CRC checks, locomotive and tail IDs, pressure / commands or train number, speed, mileage and consist fields. LBJ also decodes the fixed-position extension, WGS-84 coordinates and time broadcasts. [Details and test coverage](docs/railway.md).
 - **EBICab / Eurobalise** (needs a user test, receive only: the Eurobalise balise up-link around 4.234 MHz decoded to its telegrams per UNISIG SUBSET-036; EBICab 700 / 900 telegram formats are not public and are only listed as bursts; [details](docs/ebicab.md)).
+- **nRF24L01** (needs a user test, receive only: Enhanced ShockBurst frames of nRF24L01(+) chips on one 2.4 GHz channel, 250 kbit/s, 1 and 2 Mbit/s, address found by CRC; needs a 2.4 GHz SDR such as HackRF, PlutoSDR or bladeRF; [details](docs/nrf24.md))
 
 ### Pagers
 

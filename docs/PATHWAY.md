@@ -754,3 +754,10 @@ Merged with the authors' commits, no conflicts among them. #369 (DVB-T 64-QAM ba
 ## 2026-10-30: transmit IQ over TCP (3.4, community request)
 
 - New core/src/tx/tx_iqstream.cpp: the IQ of a TxSession (radio, IQ file or dry run) is served on a TCP port (default 7355, 127.0.0.1) in cf32 / cs16 / ci16 / cs8 / cu8, optional JSON header line, side channel on port + 1 with rate and centre frequency. Sender-thread hook after every sink write; never blocks, a port problem is a log warning only (transmit is never refused). Settings in the TX destination block. test_tx_iqstream (loopback client) passes. UDP variant not done.
+
+## 2026-10-30: nRF24L01 receive mode (3.4, community request)
+
+- New mode "nRF24L01" (family 209, engine standard 211, poll slot 186; row in docs/MODE-NUMBERS.md): Enhanced ShockBurst sniffer, GFSK 250 kbit/s / 1 / 2 Mbit/s, channel N = 2400 + N MHz, 3-5 byte addresses found by trying positions and lengths and accepting a valid CRC-16; CRC-8 frames need a third sight. core/src/nrf24 (proto, rx, gen), app/nrf24 panel (Frames / Addresses / Other bursts), docs/nrf24.md, tests nrf24_proto / rx / sweep / engine (+ app/test_nrf24_mode wiring test, built with the app).
+- Receiver: one 450 kHz detector on the raw IQ, the three demodulators run on the stored burst only (about 20-35% of one core at 10 Msps). Lessons: detecting on the whole 8 Msps band loses 250 kbit/s frames (in-band SNR); noise-only needs the power averaged over a few independent filtered samples; an end margin that reaches into noise ruins the level estimate; CRC-8 chance matches recur with every repeat of a real frame, so they need a stricter rule (third sight, never on an address known to use CRC-16, dropped when a CRC-16 frame explains the burst).
+- Yield on the synthetic signal (about 300 frames/s offered): 250k full at 14 dB Eb/N0, 1M and 2M full at 18 dB (92% / 90% at 16 dB); short 2 Mbit/s frames (3-byte address, 4 byte payload) are the weakest. Carrier offset +-100 kHz and +-1000 ppm clock cost nothing. Needs a user test: no real recording, no on-air check. No GUI screenshot taken (app not built in this worktree).
+
