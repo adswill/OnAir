@@ -1,6 +1,7 @@
 // APRS / Packet screens: the stations heard (table and map, the ADS-B map underneath, as for AIS), the log of raw packets, the state lamps.
 #include "app.h"
 #include "../adsb/adsb_map.h"
+#include "dect2/geo/maidenhead.h"
 #include "dect2/packet/packet_tel.h"
 #include <algorithm>
 #include <cmath>
@@ -204,6 +205,39 @@ void mapView(App& a, ImVec2 size) {
     }
     if (clicked) S.sel = hit ? hit->call : std::string();
     dl->PopClipRect();
+    if (on && !S.sel.empty()) {   // the station card: everything heard about the selected station
+        for (const auto& v : t.stations) {
+            if (v.call != S.sel) continue;
+            char b[8][160];
+            int n = 0;
+            snprintf(b[n++], 160, "%s%s", v.call.c_str(), v.isObject ? "  (object)" : "");
+            if (v.symTable && v.symCode) snprintf(b[n++], 160, "symbol %c%c   %u frames   last heard %.0f s ago", v.symTable, v.symCode, (unsigned)v.count, std::max(0.0, t.timeSec - v.lastHeardSec));
+            if (v.hasPos) {
+                snprintf(b[n++], 160, "%.5f, %.5f  (%s)", v.lat, v.lon, dect2::toMaidenhead(v.lat, v.lon, 6).c_str());
+                double rl, ro, km, brg; receiverLocation(rl, ro); dect2::greatCircle(rl, ro, v.lat, v.lon, km, brg);
+                snprintf(b[n++], 160, "%.1f km at %.0f deg from the receiver", km, brg);
+            }
+            if (v.hasAlt || v.hasSpeed || v.hasCourse) {
+                std::string m;
+                if (v.hasAlt) m += "altitude " + std::to_string((int)v.altM) + " m   ";
+                if (v.hasSpeed) m += "speed " + std::to_string((int)v.speedKnots) + " kn   ";
+                if (v.hasCourse) m += "course " + std::to_string(v.courseDeg) + " deg";
+                snprintf(b[n++], 160, "%s", m.c_str());
+            }
+            if (!v.via.empty()) snprintf(b[n++], 160, "sent by %s", v.via.c_str());
+            if (v.carrierHz > 0) snprintf(b[n++], 160, "carrier %.4f MHz", v.carrierHz / 1e6);
+            if (!v.comment.empty()) snprintf(b[n++], 160, "%s", v.comment.c_str());
+            float w = 0;
+            for (int i = 0; i < n; i++) w = std::max(w, ImGui::CalcTextSize(b[i]).x);
+            const float lh = ImGui::GetTextLineHeightWithSpacing();
+            const ImVec2 c0(p0.x + size.x - w - 24 * gUi, p0.y + 8 * gUi);
+            if (c0.x > p0.x + 80 * gUi) {
+                dl->AddRectFilled(c0, ImVec2(c0.x + w + 16 * gUi, c0.y + n * lh + 10 * gUi), IM_COL32(10, 12, 14, 225), 4.f);
+                dl->AddRect(c0, ImVec2(c0.x + w + 16 * gUi, c0.y + n * lh + 10 * gUi), IM_COL32(90, 96, 104, 255), 4.f);
+                for (int i = 0; i < n; i++) dl->AddText(ImVec2(c0.x + 8 * gUi, c0.y + 5 * gUi + i * lh), i == 0 ? IM_COL32(255, 255, 255, 255) : IM_COL32(205, 210, 215, 255), b[i]);
+            }
+        }
+    }
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 8 * gUi));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.06f, 0.07f, 0.08f, 0.85f));
     if (ImGui::Button("+", ImVec2(26 * gUi, 0))) { S.map.zoom = std::min(adsbmap::kMaxZoom, S.map.zoom + 1); S.mapFollow = false; } if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Zoom in"));
