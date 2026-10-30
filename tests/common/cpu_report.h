@@ -13,10 +13,10 @@
 #include <thread>
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
-#elif defined(__x86_64__) || defined(__i386__)
-#include <cpuid.h>
-#elif defined(_M_X64) || defined(_M_IX86)
+#elif defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX86))
 #include <intrin.h>
+#elif defined(__x86_64__) || defined(__i386__)   // GCC and Clang, also MinGW (which defines _M_X64 too)
+#include <cpuid.h>
 #endif
 
 // the processor's own name ("13th Gen Intel(R) Core(TM) i7-1365U", "Apple M1"); "unknown" where it has none to give
@@ -31,7 +31,7 @@ inline std::string cpuCalModel() {
 #elif defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
     std::array<unsigned, 12> r{};
     for (unsigned i = 0; i < 3; i++) {
-#if defined(_M_X64) || defined(_M_IX86)
+#if defined(_MSC_VER)
         std::array<int, 4> q{};
         __cpuid(q.data(), (int)(0x80000002u + i));
         for (int k = 0; k < 4; k++) r[i * 4 + k] = (unsigned)q[(size_t)k];
