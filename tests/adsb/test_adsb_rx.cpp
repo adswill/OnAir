@@ -5,6 +5,7 @@
 #include "dect2/adsb/adsb_sim.h"
 #include "dect2/adsb/adsb_demod.h"
 #include "dect2/adsb/adsb_gen.h"
+#include "../common/cpu_report.h"
 #include "../common/jobs.h"
 #include <algorithm>
 #include <chrono>
@@ -579,6 +580,7 @@ static void testSpeed() {
         AdsbSimResult r = adsbSimulate(c, rx);
         const double rtf = r.signalSec / std::max(r.cpuSec, 1e-9);
         jprintf("  %5.1f Msps, 40 aircraft (%.0f msg/s sent): feed() runs %.1fx real time\n", rate / 1e6, r.sent.size() / r.signalSec, rtf);
+        cpuCal("adsb_rx", cpuCalMsps(rate), rtf, "x-realtime", '>', 3.0, !SANITIZED);
         if (!SANITIZED) CHECK(rtf >= 3.0, "%.1f Msps: only %.1fx real time", rate / 1e6, rtf);
     }
 }

@@ -4,6 +4,7 @@
 #include "dect2/atv/atv_testkit.h"
 #include "dect2/common/stable_random.h"
 #include "dect2/dsp/exact_resampler.h"
+#include "../common/cpu_report.h"
 #include "../common/cpu_time.h"
 #include <cmath>
 #include <cstdio>
@@ -117,6 +118,7 @@ void check(const char* name, const FmOptions& o, double secs, int maxLockMs, dou
     for (const auto& l : r.log) printf("  log: %s\n", l.c_str());
     printf("  receiver: %.0f %% of real time\n", r.cpuPct);
     // the speed check only on a quiet machine: CI runs many tests side by side (and the Linux build in an emulating container)
+    cpuCal("atv_fm", name, r.cpuPct, "%-realtime", '<', 85, ciSlack() == 1);
     if (!std::getenv("CI")) CHECK(r.cpuPct < 85, "%s: %.0f %% of real time", name, r.cpuPct);
     CHECK(t.modulation == 1, "%s: not in FM mode", name);
     CHECK(t.state == 2 && t.dataValid, "%s: not locked (state %d)", name, t.state);

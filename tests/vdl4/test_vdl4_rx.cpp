@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdio>
 #include <vector>
+#include "../common/cpu_report.h"
 using namespace dect2;
 static int fails = 0;
 #define CHECK(c, fmt, ...) do { if (!(c)) { printf("FAIL line %d: " fmt "\n", __LINE__ __VA_OPT__(,) __VA_ARGS__); fails++; } } while (0)
@@ -51,6 +52,7 @@ int main() {
             Vdl4Telemetry t;
             rx.telemetry(t, ~0ull);
             // CPU guard: a spin shows as many times real time; allow a slow CI machine and a debug/sanitizer build
+            cpuCal("vdl4_rx", cpuCalMsps(rate) + ", cfo " + std::to_string((long long)cfo) + " Hz", cpu / simSec, "cpu-s/s", '<', 6, !SANITIZED);
             CHECK(SANITIZED || cpu < simSec * 6, "%.2f Msps cfo %.0f: %.2f s CPU for %.1f s of samples", rate / 1e6, cfo, cpu, simSec);
             if (rate >= 400e3 - 1) CHECK(t.rateOk, "%.2f Msps should be accepted", rate / 1e6);
             else CHECK(!t.rateOk && vdl4Summary(t).find("too low") != std::string::npos, "%.2f Msps must say the rate is too low: %s", rate / 1e6, vdl4Summary(t).c_str());

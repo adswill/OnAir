@@ -14,6 +14,7 @@
 #include <vector>
 using namespace dect2;
 
+#include "../common/cpu_report.h"
 #include "../common/cpu_time.h"
 #include "../common/test_util.h"
 
@@ -137,9 +138,11 @@ int main() {
         MeshTelemetry t3;
         r2.telemetry(t3, 0);
         printf("noise only: %.2f s of CPU for %.1f s (%.0fx real time), %llu false preambles, %llu frames\n", cpu, s, s / cpu, (unsigned long long)t3.preambles, (unsigned long long)(t3.blocksOk + t3.blocksBad));
+        cpuCal("mesh_rx", "noise only", s / cpu, "x-realtime", '>', 3);
         CHECK(s / cpu > 3, "noise only: %.1fx real time", s / cpu);
         CHECK(t3.blocksOk == 0, "frames out of noise");
     }
+    cpuCal("mesh_rx", "signal", secs / rxSecs, "x-realtime", '>', 3);
     CHECK(secs / rxSecs > 3, "%.1fx real time", secs / rxSecs);
     if (fails) { printf("%d failures\n", fails); return 1; }
     printf("ok\n");

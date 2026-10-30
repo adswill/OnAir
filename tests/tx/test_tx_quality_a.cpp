@@ -8,6 +8,7 @@
 #include "dect2/engine/engine.h"
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/tx/tx.h"
+#include "../common/cpu_report.h"
 #include "../common/cpu_time.h"
 #include <algorithm>
 #include <chrono>
@@ -181,6 +182,7 @@ void qualityChecks(bool demo) {
         CHECK(k.first == 0, "%s: the first sample is %.2f x the rms: the key-up is not faded in", l.id, k.first);
         CHECK(k.start05Db < -10, "%s: the first 0.5 ms are at %.1f dB of the rms: the key-up fade is missing", l.id, k.start05Db);
         if (l.blockExact && !ftx) CHECK(k.blockDiff >= 0 && k.blockDiff < 0.01, "%s: blocks of 4093 samples give other samples (max difference %.3g): a seam at block edges", l.id, k.blockDiff);
+        cpuCal("tx_quality_a", l.id, k.xRealtime, "x-realtime", '>', 0.25);
         CHECK(k.xRealtime > 0.25, "%s: the generator makes %.2f s of signal per CPU second: far from real time", l.id, k.xRealtime);
     }
 }

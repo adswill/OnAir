@@ -16,6 +16,7 @@
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/hfdig/hfdig_rx.h"
 #include "dect2/hfdig/hfdig_tel.h"
+#include "../common/cpu_report.h"
 #include "../common/ci_slack.h"
 #include "../common/cpu_time.h"
 #include <random>
@@ -268,6 +269,7 @@ int main(int argc, char** argv) {
         CHECK(q.rms > 1e-4, "%s: no signal (rms %.2g)", id.c_str(), q.rms);
         CHECK(q.over1 == 0, "%s: %.3f %% of the samples are above full scale (clipped by the limiter)", id.c_str(), q.over1 * 100);
         CHECK(q.over09 < 0.01, "%s: %.2f %% of the samples reach the soft limiter", id.c_str(), q.over09 * 100);
+        cpuCal("tx_quality_b", id, q.rt, "x-realtime", '>', 1.5 / ciSlack());
         CHECK(q.rt > 1.5 / ciSlack(), "%s: generated at only %.2f x real time (thread CPU time), the limit is %.2f", id.c_str(), q.rt, 1.5 / ciSlack());
         // UAT's generator writes dump978-style phase steps (2 samples a bit, +-12 kHz at 2 Msps instead of 1.041667 Mbit/s at +-312.5 kHz): a
         // carrier with wide, weak data sidebands. Its far power is bounded at -30 dBc until the modulator and the receiver move to the standard
