@@ -47,8 +47,8 @@ struct State {
     char fText[32] = "";                 // filter: the summary or detail contains this
     int fKind = 0;                       // 0 all, 1 ACARS, 2 ATN (X.25 / CLNP), 3 link (XID, S, U)
     uint64_t selected = 0;
-    char chans[160] = "";                // channel list in MHz, empty = the European six
-    char pushedChans[160] = "\x01";
+    char chans[400] = "";                // channel list in MHz, empty = the European set (any number of channels, #400)
+    char pushedChans[400] = "\x01";
     bool wasRunning = false;
     adsbmap::View map;
     bool mapFollow = true;
@@ -667,8 +667,20 @@ void tuner(App& a, bool&) {
     (void)a;
     ImGui::TextDisabled("Channels MHz");
     ImGui::SetNextItemWidth(std::min(230 * gUi, ImGui::GetContentRegionAvail().x));
-    if (ImGui::InputTextWithHint("##vdch", "Europe: 136.725 - 136.975", S.chans, sizeof S.chans)) plat::prefs().setS("vdl2Chans", S.chans);
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("The VDL2 channels to decode, separated by spaces. Empty: the European set,\n136.725 136.775 136.825 136.875 136.900 and 136.975 (the common signalling channel).\nNorth America uses 136.650 136.700 136.800 136.975. Tune between the channels: every channel inside the sample band is decoded.\nWhole span (top right of the spectrum): every VDL2 channel used worldwide inside the capture, plus this list.");
+    if (ImGui::InputTextWithHint("##vdch", "Europe: 136.675 - 136.975", S.chans, sizeof S.chans)) plat::prefs().setS("vdl2Chans", S.chans);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("The VDL2 channels to decode, separated by spaces. Empty: the European set,\n136.675 136.725 136.775 136.825 136.850 136.875 136.900 and 136.975 (the common signalling channel).\nThere is no limit on the number of channels.\nNorth America uses 136.650 136.700 136.800 136.975. Tune between the channels: every channel inside the sample band is decoded.\nWhole span (top right of the spectrum): every VDL2 channel used worldwide inside the capture, plus this list.");
+    auto fill = [&](const std::vector<double>& v) {
+        std::string t;
+        for (double f : v) { char b[16]; snprintf(b, sizeof b, "%s%.3f", t.empty() ? "" : " ", f / 1e6); t += b; }
+        snprintf(S.chans, sizeof S.chans, "%s", t.c_str());
+        plat::prefs().setS("vdl2Chans", S.chans);
+    };
+    if (ImGui::SmallButton("Europe")) { S.chans[0] = 0; plat::prefs().setS("vdl2Chans", S.chans); }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Europe 2027")) fill(dect2::vdl2Europe2027Channels());
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("The 12 channels 136.700 .. 136.975 MHz that Europe brings in from January 2027.");
+    ImGui::SameLine();
+    if (ImGui::SmallButton("North America")) S.chans[0] = 0, snprintf(S.chans, sizeof S.chans, "136.100 136.300 136.650 136.800 136.975"), plat::prefs().setS("vdl2Chans", S.chans);
 }
 
 void synth(App& a, bool& changed) {

@@ -20,8 +20,10 @@
 
 namespace dect2 {
 
-// The European VDL2 channels: 136.975 (CSC), 136.725, 136.775, 136.825, 136.875, 136.900 MHz
+// The European VDL2 channels: 136.975 (CSC), 136.675, 136.725, 136.775, 136.825, 136.850, 136.875, 136.900 MHz
 std::vector<double> vdl2EuropeChannels();
+// The European channels from 2027: 136.700 .. 136.975 MHz in 25 kHz steps (12 channels)
+std::vector<double> vdl2Europe2027Channels();
 // Every VDL2 channel in use worldwide (the Whole span switch decodes those inside the capture)
 std::vector<double> vdl2WorldChannels();
 
