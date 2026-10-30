@@ -82,6 +82,7 @@ struct Mode {
     double echoUs = 5;      // delay of the 2 path echo (about half the mode's guard interval / symbol)
     double fdHz = 10;       // Doppler of the fading profiles
     double snrHi = 30;      // where a sweep starts
+    double pnHz = 50;       // linewidth of the phase noise scenarios (a mode with a narrow subcarrier spacing needs a realistic one)
     int maxJobs = 8;        // trials at once (big receivers hold a lot of memory)
     bool heavy = false;     // needs tens of seconds of signal: only with --heavy
     std::function<Sig(size_t n)> gen;   // the clean signal, noise free; at least n samples
@@ -160,6 +161,21 @@ void prepGeneric(Rx& rx, double rate, int stdMode) {
     if constexpr (requires { rx.setCenterHz(0.0); }) rx.setCenterHz(mt ? mt->defMhz * 1e6 : 0.0);
 }
 
+// Power of the strongest sinusoid within +-searchHz of hz in x (mean removed, n samples at 48 kHz). A sample clock error of a few tens of ppm moves
+// the 1 kHz test tone by a few hundredths of a hertz; measured at exactly 1000.000 Hz the tone leaks into "everything else" and the audio
+// SNR is capped at about 27 dB, which made the 20 dB criterion fail early and read as a loss of sensitivity (FM: 7 dB, with 50 ppm).
+inline double tonePower(const float* x, size_t n, double mean, double hz, double searchHz = 1.5) {
+    auto at = [&](double f) {
+        std::complex<double> c = 0, r = 1; const std::complex<double> st = std::polar(1.0, -2 * M_PI * f / 48000.0);
+        for (size_t i = 0; i < n; i++) { c += (x[i] - mean) * r; r *= st; if ((i & 1023) == 1023) r = std::polar(1.0, -2 * M_PI * f * (double)(i + 1) / 48000.0); }
+        return 2 * std::norm(c / (double)n);
+    };
+    double best = at(hz), bf = hz;
+    for (double f = hz - searchHz; f <= hz + searchHz + 1e-9; f += 0.2) { const double v = at(f); if (v > best) { best = v; bf = f; } }
+    for (double f = bf - 0.2; f <= bf + 0.2 + 1e-9; f += 0.02) { const double v = at(f); if (v > best) best = v; }
+    return best;
+}
+
 // FM audio: the 1 kHz tone against everything else over the last half second of the left channel (the 3 kHz tone of the right channel leaking
 // over is not noise). "Valid" = at least 20 dB.
 struct FmAudio : Session {
@@ -180,11 +196,7 @@ struct FmAudio : Session {
         mean /= (double)n;
         for (size_t i = 0; i < n; i++) tot += (x[i] - mean) * (x[i] - mean);
         tot /= (double)n;
-        auto tone = [&](double hz) {
-            std::complex<double> c = 0, r = 1; const std::complex<double> st = std::polar(1.0, -2 * M_PI * hz / 48000.0);
-            for (size_t i = 0; i < n; i++) { c += (x[i] - mean) * r; r *= st; if ((i & 1023) == 1023) r = std::polar(1.0, -2 * M_PI * hz * (double)(i + 1) / 48000.0); }
-            return 2 * std::norm(c / (double)n);
-        };
+        auto tone = [&](double hz) { return tonePower(x, n, mean, hz); };
         const double p1 = tone(1000), p3 = tone(3000);
         const double snr = 10 * std::log10(std::max(1e-15, p1) / std::max(1e-15, tot - p1 - p3));
         return {snr >= 20 ? 1.0 : 0.0, snr >= 20 ? 0.0 : 1.0};
@@ -217,9 +229,7 @@ struct GeneralAudio : Session {
         mean /= (double)n;
         for (size_t i = 0; i < n; i++) tot += (x[i] - mean) * (x[i] - mean);
         tot /= (double)n;
-        std::complex<double> c = 0;
-        for (size_t i = 0; i < n; i++) c += (x[i] - mean) * std::polar(1.0, -2 * M_PI * 1000.0 * (double)i / 48000.0);
-        const double p1 = 2 * std::norm(c / (double)n);
+        const double p1 = tonePower(x, n, mean, 1000.0);
         const double snr = 10 * std::log10(std::max(1e-15, p1) / std::max(1e-15, tot - p1));
         return {snr >= 20 ? 1.0 : 0.0, snr >= 20 ? 0.0 : 1.0};
     }
@@ -235,6 +245,7 @@ inline std::vector<Mode> allModes() {
 
     {   // DVB-T2: 8K, GI 1/8, 64-QAM 2/3 rotated
         Mode m = base("dvbt2", "DVB-T2", "ofdm-tv", 1, nativeRateHz(8), 2.0, 7.61e6, 522);
+        m.pnHz = 1;   // a TV tuner: about -75 dBc/Hz at 1 kHz; the 50 Hz default is far worse than any receiver front end and no OFDM TV receiver decodes it
         m.echoUs = 14; m.maxJobs = 4; m.snrHi = 30;
         m.gen = [](size_t n) {
             TxParams tp;
@@ -251,6 +262,7 @@ inline std::vector<Mode> allModes() {
     }
     {   // DVB-T: 8K, GI 1/8, 64-QAM 2/3
         Mode m = base("dvbt", "DVB-T", "ofdm-tv", 2, nativeRateHz(8), 1.5, 7.61e6, 522);
+        m.pnHz = 1;   // a TV tuner: about -75 dBc/Hz at 1 kHz; the 50 Hz default is far worse than any receiver front end and no OFDM TV receiver decodes it
         m.echoUs = 14; m.maxJobs = 6; m.snrHi = 30;
         m.gen = [](size_t n) {
             dvbt::Params p; p.mode = dvbt::k8K; p.guard = dvbt::kGi8; p.mod = dvbt::k64Qam; p.crHp = p.crLp = dvbt::kR23;
@@ -266,6 +278,7 @@ inline std::vector<Mode> allModes() {
     }
     {   // ATSC 8-VSB
         Mode m = base("atsc", "ATSC 1.0", "single-carrier-tv", 3, 8e6, 1.5, 5.38e6, 600);
+        m.pnHz = 1;   // a TV tuner: about -75 dBc/Hz at 1 kHz; the 50 Hz default is far worse than any receiver front end and no OFDM TV receiver decodes it
         m.echoUs = 3; m.snrHi = 30;
         m.gen = [](size_t n) {
             atsc::ChannelConfig cc; cc.snrDb = 120;
@@ -289,6 +302,7 @@ inline std::vector<Mode> allModes() {
     }
     {   // ISDB-T 13 segments
         Mode m = base("isdbt", "ISDB-T", "ofdm-tv", 6, 10e6, 2.0, 5.57e6, 600);
+        m.pnHz = 1;   // a TV tuner: about -75 dBc/Hz at 1 kHz; the 50 Hz default is far worse than any receiver front end and no OFDM TV receiver decodes it
         m.echoUs = 10; m.maxJobs = 6; m.snrHi = 30;
         m.gen = [](size_t n) { return clean(6, SynthConfig(), 10e6, n); };
         m.make = factory<IsdbtReceiver, RxTelemetry>([](IsdbtReceiver& rx, double r) { rx.configure(r); },
@@ -322,6 +336,7 @@ inline std::vector<Mode> allModes() {
     }
     {   // DTMB PN945 64-QAM 0.6
         Mode m = base("dtmb", "DTMB", "ofdm-tv", 9, 10e6, 2.0, 7.56e6, 600);
+        m.pnHz = 1;   // a TV tuner: about -75 dBc/Hz at 1 kHz; the 50 Hz default is far worse than any receiver front end and no OFDM TV receiver decodes it
         m.echoUs = 10; m.maxJobs = 4; m.snrHi = 32;
         m.gen = [](size_t n) { return clean(9, SynthConfig(), 10e6, n); };
         m.make = factory<DtmbReceiver, DtmbTelemetry>([](DtmbReceiver& rx, double r) { rx.configure(r); }, blocks<DtmbTelemetry>, true);
@@ -343,7 +358,7 @@ inline std::vector<Mode> allModes() {
     }
     {   // DRM mode B, 10 kHz
         Mode m = base("drm", "DRM", "ofdm-radio", 12, 2e6, 8.0, 10e3, 10);
-        m.echoUs = 1000; m.fdHz = 2; m.snrHi = 28; m.maxJobs = 4;
+        m.echoUs = 1000; m.fdHz = 2; m.snrHi = 28; m.maxJobs = 4; m.pnHz = 1;   // 46.9 Hz spacing: 50 Hz is not decodable by any receiver
         m.gen = [](size_t n) { SynthConfig c; c.modeOpt[4] = 1; c.modeOpt[5] = 1; return clean(12, c, 2e6, n); };
         m.make = factory<DrmReceiver, DrmTelemetry>([](DrmReceiver& rx, double r) { rx.setSilent(true); rx.configure(r); }, blocks<DrmTelemetry>);
         add(m);
@@ -467,6 +482,8 @@ inline std::vector<Mode> allModes() {
         for (int am = 0; am < 2; am++) {
             Mode m = base(am ? "hdr-am" : "hdr-fm", am ? "HD Radio AM (MA1)" : "HD Radio FM (MP1)", "ofdm-radio", 23, 2e6, 6.0, am ? 30e3 : 400e3, am ? 1.0 : 98.1);
             m.echoUs = am ? 100 : 3; m.snrHi = am ? 40 : 30; m.maxJobs = 4;
+            m.secs = am ? 20.0 : 10.0;   // AM gives its first P1 frame about 7 s after sync (4 frames of diversity delay); FM: ~6 frames to count
+            m.pnHz = am ? 3 : 10;        // 363 Hz (FM) / 181 Hz (AM) spacing
             m.gen = [am](size_t n) { SynthConfig c; c.modeOpt[0] = am; return clean(23, c, 2e6, n); };
             m.make = factory<HdrReceiver, HdrTelemetry>([](HdrReceiver& rx, double r) { rx.setSilent(true); rx.configure(r); }, blocks<HdrTelemetry>);
             add(m);

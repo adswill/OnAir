@@ -3,7 +3,9 @@
 // card the receiver is compared with. Every line printed here is a number that is in the report.
 #include "dect2/atv/atv_testkit.h"
 #include "../common/jobs.h"
+#include "dect2/engine/mode_synth.h"
 #include <atomic>
+#include <random>
 #include <cmath>
 #include <cstdio>
 
@@ -88,6 +90,35 @@ int main() {
         CHECK(r.tel.state == 2 && r.tel.colour && w < 0.06, "clock %+.0f ppm: state %d colour %d bars %.3f", ppm, r.tel.state, (int)r.tel.colour, w);
         CHECK(nearBy(r.tel.lineErrPpm, -ppm, 8), "clock %+.0f ppm: line rate error read as %.1f ppm (expected %.0f)", ppm, r.tel.lineErrPpm, -ppm);
         CHECK(nearBy(r.tel.fieldHz, 50.0 * (1 - ppm * 1e-6), 0.01), "clock %+.0f ppm: field rate %.4f", ppm, r.tel.fieldHz);
+    });
+    // ---- sample clock error in noise, on the engine's own test signal (the sensitivity sweep's): the sync pulses sit at changing places between
+    // the samples, their measured widths and positions scatter, and the loop has to keep the line period all the same. A field that lost a tenth
+    // of its lines is a bad field; before the fix a 50 ppm clock turned most fields bad at a video SNR of 10 dB and the line rate was never found.
+    for (double ppm : {-50.0, 50.0}) for (double snrDb : {14.0, 10.0}) jobs.add([&, ppm, snrDb] {
+        SynthConfig sc; sc.modeOpt[3] = 4; sc.snrDb = 120;
+        auto syn = makeModeSynth(10, sc, 10e6);
+        std::vector<cf32> x((size_t)(10e6 * 3.0));
+        for (size_t o = 0; o < x.size(); o += 65536) syn->generate(x.data() + o, std::min<size_t>(65536, x.size() - o));
+        // the receiver's clock runs fast by ppm: 4 point cubic interpolation, then white noise of the given SNR in 7 MHz
+        const double step = 1.0 / (1.0 + ppm * 1e-6);
+        std::vector<cf32> y;
+        for (double t = 1; t < (double)x.size() - 3; t += step) {
+            const size_t k = (size_t)t; const float f = (float)(t - (double)k);
+            const cf32 p0 = x[k - 1], p1 = x[k], p2 = x[k + 1], p3 = x[k + 2];
+            y.push_back((((-0.5f * p0 + 1.5f * p1 - 1.5f * p2 + 0.5f * p3) * f + (p0 - 2.5f * p1 + 2.f * p2 - 0.5f * p3)) * f + (-0.5f * p0 + 0.5f * p2)) * 1.f * f + p1);
+        }
+        double pw = 0; for (const cf32& v : y) pw += std::norm(v); pw /= (double)y.size();
+        const double sigma = std::sqrt(pw * (10e6 / 7e6) / std::pow(10.0, snrDb / 10) / 2);
+        std::mt19937 rng(7); std::normal_distribution<float> nd(0.f, (float)sigma);
+        for (cf32& v : y) v += cf32(nd(rng), nd(rng));
+        AtvReceiver rx; rx.setSilent(true); rx.configure(10e6);
+        for (size_t o = 0; o < y.size(); o += 50000) rx.feed(y.data() + o, std::min<size_t>(50000, y.size() - o));
+        AtvTelemetry t; rx.telemetry(t, 0);
+        char nm[64]; snprintf(nm, sizeof nm, "clock %+.0f ppm, SNR %.0f dB (sweep signal)", ppm, snrDb);
+        jprintf("%-44s state %d fields good %llu bad %llu  line %+.1f ppm\n", nm, t.state, (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad, t.lineErrPpm);
+        CHECK(t.state == 2, "%s: state %d", nm, t.state);
+        CHECK(t.blocksOk >= 40 && t.blocksBad * 10 <= t.blocksOk, "%s: %llu fields good, %llu bad", nm, (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
+        CHECK(nearBy(t.lineErrPpm, -ppm, 15), "%s: line rate error read as %.1f ppm (expected %.0f)", nm, t.lineErrPpm, -ppm);
     });
     // ---- sample rates a radio offers (below 8 Msps the receiver says so and does not run)
     for (double rate : {8e6, 10e6, 12.5e6, 16e6, 20e6}) jobs.add([&, rate] {

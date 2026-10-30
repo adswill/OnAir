@@ -125,3 +125,64 @@ Reference figures (perfect channel estimation, from the standards' own tables). 
 Viterbi, AWGN: QPSK 1/2 3.5, 16-QAM 1/2 9.3, 16-QAM 2/3 11.4, 64-QAM 2/3 16.7, 64-QAM 3/4 18.2 dB. TS 102 831 V1.2.1 Table 44, raw
 (C/N)0 for BER 1e-7 after LDPC (64800 bits), AWGN, no pilots: QPSK 1/2 1.0, 16-QAM 1/2 6.0, 64-QAM 2/3 13.5, 256-QAM 2/3 17.8 dB, plus
 0.29-0.53 dB for the pilots (Table 46; 8K PP2 0.39). L1-pre decodes at -4 dB (TS 102 831 clause 14.7).
+
+## Measured sensitivity of every mode (2026-10-30, campaign feat34-quality)
+
+Threshold SNR in dB (lowest SNR with at least 90 % success, 8 trials a point, 1 dB steps, full tier, GitHub runner; `-` = no 90 % point even at the top SNR). Mode order as the sweep lists them. Lower is better. These are the committed-harness numbers (windowed sinc clock error, audio tone found at its own frequency, per-mode phase noise: TV tuners 1 Hz, DRM 1 Hz, HDR 3 / 10 Hz, others 50 Hz). Narrowband modes under `offcentre` are moved outside their own channel, and `tu6` is Rayleigh fading with 10 Hz Doppler: gaps there are mostly physics, not receiver loss.
+
+| mode | awgn | cfo2ppm | cfo20ppm | offcentre | sro50ppm | echo | tu6 | rician | phasenoise | combined |
+|---|---|---|---|---|---|---|---|---|---|---|
+| dvbt2 | 14 | 14 | 14 | 14 | 14 | 17 | 20 | 16 | 15 | 18 |
+| dvbt | 15 | 15 | 15 | 15 | 15 | 16 | 22 | 16 | 15 | 16 |
+| atsc | 15 | 15 | 15 | 15 | 15 | 17 | - | 22 | 15 | 17 |
+| dab | 3 | 3 | 3 | 5 | 3 | 3 | 5 | 4 | 5 | 9 |
+| isdbt | 18 | 18 | 18 | 18 | 18 | 20 | - | 19 | 19 | 20 |
+| fm | 5 | 5 | 5 | 12 | 5 | 3 | - | 12 | 6 | 3 |
+| fm-rds | 16 | 16 | 16 | 16 | 16 | 18 | 26 | 17 | 15 | 14 |
+| dvbs2 | 3 | 3 | 3 | 3 | 3 | - | - | 4 | 4 | - |
+| dtmb | 18 | 18 | 17 | 20 | 18 | 19 | 23 | 20 | 19 | 19 |
+| atv | -4 | -4 | -4 | -4 | -5 | 9 -> **7** | - | 0 | - | - |
+| dmr | 5 | 5 | 5 | - | 5 | 3 | 9 | 5 | 5 | 3 |
+| drm | 16 | 16 | 16 | - | 16 | 20 | 24 | 17 | - | - |
+| adsb | 14 | 14 | 14 | 14 | 14 | 13 | 22 | 14 | 14 | 12 |
+| sonde | 12 | 13 | 12 | 13 | 14 | 13 | - | 17 | 13 | 9 |
+| ais | 16 | 16 | 16 | - | 15 | 14 | 21 | 16 | 16 | 18 |
+| acars | 7 | 7 | 7 | 12 | 10 | 5 | 19 | 9 | 7 | 5 |
+| aero | 11 | 11 | 12 | 11 | 12 | 18 | - | 13 | - | - |
+| iridium | 12 | 12 | 12 | 12 | 12 | 13 | 14 | 12 | 12 | 15 |
+| globalstar | 0 | 0 | 0 | 3 | 0 | 0 | -3 | 0 | 0 | 0 |
+| orbcomm | 8 | 8 | 8 | 7 | 8 | 5 | 17 | 9 | 8 | 6 |
+| argos | 17 | 13 | 13 | 13 | 13 | 10 | 17 | 13 | 13 | 10 |
+| sarsat | 0 | 1 | 5 | 5 | 1 | -2 | 3 | 0 | 3 | 0 |
+| wisun | 10 | 10 | 11 | - | 10 | 15 | 17 | 11 | 10 | 15 |
+| halow | 7 | 7 | 7 | 7 | 7 | 7 | 10 | 8 | 7 | 8 |
+| zigbee | 2 | 2 | 2 | - | 3 | 6 | 13 | 3 | 2 | 7 |
+| zwave | 10 | 13 | 9 | 22 | 10 | 17 | 13 | 10 | 10 | 13 |
+| sigfox | 17 | 5 | 1 | - | 16 | 20 | - | 17 | - | - |
+| ble | 8 | 8 | 8 | - | 8 | 14 | - | 9 | 8 | 17 |
+| inmc | 0 | 0 | 0 | - | 0 | 0 | - | 0 | - | - |
+| am | 27 | 27 | 27 | - | 27 | 28 | - | - | 27 | 29 |
+| am-sync | 27 | 27 | 27 | - | 27 | 28 | - | - | - | - |
+| ssb | 20 | - | - | - | - | 22 | - | - | - | - |
+| hdr-fm | 16 | 17 | 17 | - | 16 | 22 | - | 17 | - | - |
+| hdr-am | 37 | 24 | - | - | 36 | 37 | - | 40 | - | - |
+| pager | 1 | 2 | 2 | - | 0 | 0 | 13 | 3 | 1 | 1 |
+| packet | 5 | 5 | 5 | - | 5 | 5 | 21 | 8 | 5 | 5 |
+| vdl2 | 12 | 12 | 12 | - | 11 | 14 | 15 | 13 | - | - |
+| dstar | 8 | 7 | 9 | 8 | 8 | 8 | 21 | 9 | 8 | 8 |
+| nxdn | 9 | 8 | 8 | - | 8 | 8 | 14 | 9 | 8 | 9 |
+| dpmr | 7 | 7 | 7 | - | 7 | 7 | 12 | 8 | 10 | 9 |
+| m17 | 5 | 5 | 6 | 5 | 4 | 5 | 5 | 4 | 5 | 5 |
+| tetrapol | 10 | 10 | 17 -> **10** | - | 10 -> **11** | 8 | 13 | 11 | 12 | 10 |
+| p25 | 6 | 6 | 8 | - | 6 | 6 | 13 | 9 | 6 | 7 |
+| meteor | 8 | 5 | 8 | - | 5 | 3 | - | 7 | - | - |
+| hrpt | 8 | 3 | 4 | - | 4 | 8 | - | 8 | 7 | 16 |
+| goes | -1 | -1 | -1 | -1 | -1 | 1 | - | 0 | -1 | 1 |
+
+`a -> b` marks a change made by this campaign (same seeds, same harness). Modes with `-` in the awgn column or in a long run of scenarios are the next candidates; the largest remaining gaps against the AWGN threshold are ATV echo (+11 after the fix), FM rician (+7), Z-Wave echo (+7), ACARS offcentre (+5) and every narrowband mode in TU6 fading.
+
+### Harness corrections made on the way (why some old numbers moved)
+
+- `sro50ppm` used a 4 point cubic interpolator that damaged wide modes by a filter that moved with the fractional position; a clean ATSC signal with 10 ppm read 19 dB data SNR. Now a 24 tap Kaiser sinc. ATSC at 30 dB, 50 ppm: good 4230 / bad 11006 before, 18356 / 0 after (the receiver was fine).
+- FM, AM and SSB audio: the 1 kHz tone is searched +-1.5 Hz; at exactly 1000 Hz a 50 ppm clock error capped the audio SNR near 27 dB (FM `sro50ppm` 12 dB -> 5 dB).
+- Phase noise linewidth per mode (`Mode::pnHz`); at the 50 Hz default no TV OFDM or ATSC receiver decoded even at 30 dB. False-lock rate on noise only is reported per mode.

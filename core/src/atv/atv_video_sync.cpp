@@ -278,6 +278,7 @@ void AtvVideo::Impl::vsync(double t_v) {
     if (haveVsync) finishField();
     haveVsync = true; vsyncT = t_v; vsyncField = field; vsyncMiss = 0; vsyncCount++;
     curField = field; fieldLines = 0;
+    vsyncH = 2.0 * (double)(lineNo + 1) + (double)std::lround(2.0 * d);
     vbiPending = true; vbiT = t_v;
 }
 
@@ -584,7 +585,14 @@ void AtvVideo::Impl::processLines() {
     if (vbiPending && vbiT + 14 * P + 30 <= (double)nAbs && lineGain() > 0) { captureVbi(); vbiPending = false; }
     // a field sync that did not come: after about a field and a half without one the vertical position is lost
     if (haveVsync && loopRunning && fmtKnown && (double)nAbs - vsyncT > (fmt.lines * 0.5 * 1.6) * P) {
-        vsyncMiss++; vsyncT += fmt.lines * 0.5 * P; vsyncField ^= 1;     // keep counting: the next field is due
+        vsyncMiss++; vsyncT += fmt.lines * 0.5 * P; vsyncH += fmt.lines; vsyncField ^= 1;     // keep counting: the next field is due
+        // The slicer cuts the broad pulses of the field sync to pieces in noise (the line sync survives better): once a field sync is missed
+        // and the sync is not far above the noise, the matched filters take over, which find them down to the lowest signals.
+        if (!weakMode && vsyncMiss >= 2 && levelsValid && noiseVar > 0 && (Tr - Br) < 1.6 * std::sqrt(noiseVar)) {
+            weakMode = true; weakMidPending = false; weakQ = 0.6f; weakLow = 0; weakN = 0; weakLock = true; weakStrong = 0;
+            pState = 0; bCount = 0; goodRun = std::max(goodRun, 8);
+            doLog("analog TV: noisy signal, line and field sync by matched filters");
+        }
         if (vsyncMiss > 12) haveVsync = false;
     }
 }
@@ -676,8 +684,7 @@ void AtvVideo::Impl::processLine(const LineRec& r) {
     int row = -1, field = 0;
     bool visible = false;
     if (haveVsync) {
-        const double h = (tL - vsyncT) * 2.0 / P;
-        const long hr = std::lround(h);
+        const long hr = std::lround(2.0 * (double)curNo - vsyncH);
         const int off = F.visibleStartH(vsyncField) - F.broadStart[vsyncField];
         if (hr >= off && ((hr - off) & 1) == 0) {
             const long k = (hr - off) / 2;

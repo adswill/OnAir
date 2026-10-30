@@ -73,6 +73,7 @@ struct AtvVideo::Impl {
     double bFirst = 0, bLast = 0;
     bool haveVsync = false;
     double vsyncT = 0;
+    double vsyncH = 0;     // the field sync in half lines on the loop's own line count (lineNo): rows follow from counted lines, not from time / P, so a line period that is a few ppm off or jitters in noise cannot slip the row
     int vsyncField = 0;
     int vsyncMiss = 0;
     double lastVsyncT = 0;
@@ -297,6 +298,10 @@ struct AtvVideo::Impl {
         const Raster& R = raster(rast);
         if (w >= R.nMin && w <= R.nMax) normalPulse(t0, t1);
         else if (w > R.bMin && w < R.bMax) broadPulse(t0);
+        // In noise the width of the slicer's pulse scatters by +-2 us (the edges move on their own), and a locked loop would lose every sixth line:
+        // a pulse that starts inside the gate of the line that is due is that line's sync whatever width it measured. (Equalising pulses of the
+        // field sync start there as well, at the line start, which is where the line is; those in the middle of a line are far outside the gate.)
+        else if (loopRunning && goodRun >= 8 && w >= 0.4 * R.nMin && w <= 1.4 * R.nMax && std::fabs(t0 - tNext) <= gate()) normalPulse(t0, t1);
     }
 
     void normalPulse(double t0, double t1);
@@ -313,7 +318,9 @@ struct AtvVideo::Impl {
     void lineMiss() {
         lineQ.push_back({tNext, false, ++lineNo});
         tNext += P;
-        goodRun = 0;
+        // an established loop keeps its slow gains over a missed line or two (in noise the sync is missed now and then; the fast acquisition gains
+        // would then kick the line period by the noise of the next pulses and slip the loop)
+        if (missRun >= 3) goodRun = 0;
         syncQ += (0.f - syncQ) / 32.f;
         if (++missRun > 40 || syncQ < 0.08f) { loseLock(); }
     }
@@ -329,7 +336,10 @@ struct AtvVideo::Impl {
     void broadPulse(double t0) {
         if (!loopRunning) return;
         const double half = 0.5 * P;
+        // (in noise a broad pulse is cut in two or goes under now and then: one that is missing in the run, a full line after the last, still
+        // counts, as two)
         if (bCount > 0 && std::fabs((t0 - bLast) - half) < 0.18 * P) { bCount++; bLast = t0; }
+        else if (bCount > 0 && bCount + 2 <= fmt.broadPulses && std::fabs((t0 - bLast) - 2 * half) < 0.18 * P) { bCount += 2; bLast = t0; }
         else { bCount = 1; bFirst = bLast = t0; }
         const int need = fmt.broadPulses;
         if (fmtKnown && bCount == need) vsync(bFirst);
