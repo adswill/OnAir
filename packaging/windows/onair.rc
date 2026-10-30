@@ -1,8 +1,8 @@
 #include <winver.h>
 1 ICON "OnAir.ico"
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION 3,3,0,0
-PRODUCTVERSION 3,3,0,0
+FILEVERSION 3,4,0,0
+PRODUCTVERSION 3,4,0,0
 BEGIN
   BLOCK "StringFileInfo"
   BEGIN
@@ -10,7 +10,7 @@ BEGIN
     BEGIN
       VALUE "FileDescription", "OnAir DVB-T2 / DVB-T / ATSC / DAB receiver"
       VALUE "ProductName", "OnAir"
-      VALUE "ProductVersion", "3.3.0"
+      VALUE "ProductVersion", "3.4.0"
       VALUE "LegalCopyright", "Code: GPL-3.0-or-later. OnAir name and logo (c) 2026 Kristijonas Adomaitis, all rights reserved; the logo is not covered by the GPL."
     END
   END

@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
 set(ONAIR_ROOT ${CMAKE_CURRENT_SOURCE_DIR})   # the repository root (CMAKE_SOURCE_DIR is the bridge's folder when this is built as a subproject, as the Android app does)
 if(APPLE AND NOT DEFINED ANDROID_ABI)
-  project(OnAir VERSION 3.3.0 LANGUAGES C CXX OBJCXX)
+  project(OnAir VERSION 3.4.0 LANGUAGES C CXX OBJCXX)
   set(CMAKE_OBJCXX_STANDARD 20)
 else()
-  project(OnAir VERSION 3.3.0 LANGUAGES C CXX)
+  project(OnAir VERSION 3.4.0 LANGUAGES C CXX)
 endif()
 
 # A compiler cache, when one is installed, makes repeat builds take seconds (-DDECT2_CCACHE=OFF turns it off).
