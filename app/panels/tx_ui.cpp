@@ -304,6 +304,7 @@ bool startTx(App& a, TxUi& s, const DeviceInfo* radio, const TxModeSpec* mode, b
         lim = TxRateLimits{radio->txMinRateHz, radio->txMaxRateHz};
         mapPauseForTransmit(a);   // before the radio is keyed, so this frame cannot post what the receiver hears from it
     }
+    txIqStreamSetConfig(txIqStreamFromPrefs());
     if (s.session.start(std::move(sink), req, lim, err)) {
         s.radioName = toFile ? std::string("IQ file ") + s.ifPathUsed : s.dryRun ? std::string(tr("test (no RF)")) : radio->name;
         s.modeName = mode->name; s.freqSent = req.tune.centerHz;

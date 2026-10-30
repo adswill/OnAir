@@ -1015,6 +1015,13 @@ bool TxSession::start(std::unique_ptr<TxSink> sink, const TxRequest& r, const Tx
     if (sink_->takesIq()) t.offsetHz += txModeTuneOffsetHz(*mode);   // the signal sits tuneOffsetHz below the radio's centre: the dial frequency (#351)
     if (!sink_->open(t, err)) { note("could not start: " + err); sink_.reset(); return false; }
     rate_ = sink_->sampleRate() > 0 ? sink_->sampleRate() : t.sampleRate;
+    iq_.reset();
+    if (const TxIqStreamConfig ic = txIqStreamConfig(); ic.enabled) {   // the IQ on TCP (also in a dry run); a problem here is a warning, never a refusal
+        auto st = std::make_unique<TxIqStream>();
+        std::string ie;
+        if (st->start(ic, rate_, r.tune.centerHz, r.modeId, ie)) { iq_ = std::move(st); note("IQ stream on TCP port " + std::to_string(iq_->port()) + " (" + txIqFormatName(ic.format) + ")" + (ie.empty() ? "" : "; " + ie)); }
+        else note("warning: the IQ stream on TCP port " + std::to_string(ic.port) + " could not start: " + ie);
+    }
     // Allow small hardware rounding, but never silently replace a manual Fs with
     // a different clock (for example the faster rate of an already-running RX).
     if (r.tune.sampleRate != 0 && std::fabs(rate_ - t.sampleRate) > std::max(1.0, t.sampleRate * 1e-4)) {
@@ -1205,6 +1212,7 @@ void TxSession::senderLoop() {
             const size_t m = std::min(piece, blk.size() - off);
             std::string e;
             if (!sink_->write(blk.data() + off, m, e)) { fail(e); ok = false; break; }
+            if (iq_) iq_->push(blk.data() + off, m);
             if (!underrun) sent_ += m;
             last = blk[off + m - 1];
             applyRetune();
@@ -1285,6 +1293,7 @@ void TxSession::stop() {
         note(b);
     }
     sink_.reset();
+    iq_.reset();
     gen_.reset();
     if (audio_) { audio_->stop(); audio_.reset(); }
     if (video_) { video_->stop(); video_.reset(); }

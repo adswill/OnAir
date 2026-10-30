@@ -161,6 +161,21 @@ This list is taken from the tables in `core/src/tx/tx.cpp` (`txModes()`).
 | ndb | NDB beacons | 31 | makeNdbSynth |
 | elektro | Elektro-L | 82 | makeElektroSynth |
 
+## The transmit IQ over TCP (GNU Radio)
+
+Transmit settings > "Send the IQ over TCP" serves the IQ of the running transmission on a TCP socket, so a program such as GNU Radio can receive the
+signals OnAir generates. It works for a radio, an IQ file and the "Test (dry run, no RF)" path alike, and it never stops or refuses a transmission:
+if the port cannot be opened the transmit log says so and the transmission goes on.
+
+* Data port (default 7355, bind address 127.0.0.1 = this computer only; 0.0.0.0 for the network). Format cf32 (float, little endian), cs16 / ci16 (int16, same bytes),
+  cs8 (int8) or cu8 (uint8, 127.5 = zero), interleaved I then Q. A client that connects later gets the samples from that moment; a client that cannot keep up loses
+  whole blocks; a client that leaves is dropped and can connect again. The stream restarts with each transmission on the same port.
+* "JSON line first": the stream starts with one line of JSON before the samples.
+* Side channel on port + 1: connect, read one line `{"onair_tx_iq":1,"format":"cf32","sample_rate":2000000,"center_freq":522000000,"mode":"dvbt2","active":true}` and the
+  connection is closed. It answers while a transmission runs, so a flow graph can read the rate and the centre frequency without touching the data stream.
+* GNU Radio: a TCP Source block (client mode, address 127.0.0.1, port 7355, item type complex for cf32, or short with Interleaved Short to Complex for cs16).
+* Tests: `test_tx_iqstream` (loopback client; every format, header, side channel, reconnect, a stalled client, a dry-run session).
+
 ### The one rule: the map guard
 
 OnAir blocks no transmission, but what you transmit must never come back as "received" data on the shared OnAir map (someone could transmit a fake AIS ship or a fake aircraft and have it published as real). So:
