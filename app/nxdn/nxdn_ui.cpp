@@ -153,7 +153,7 @@ void tab(App& a) {
         const dect2::NxdnTelemetry& t = a.rx.nxdn;
         voiceui::Link l;
         l.live = live(a); l.locked = l.live && t.state >= 1; l.codecName = "AMBE+2"; l.codecId = "ambe2";
-        l.codecReady = t.ambe || dect2::codec::pluginLoaded("ambe2");
+        l.codecReady = t.ambe || dect2::nxdnAmbeAvailable();
         l.errorRate = l.locked ? t.berPct / 100.f : -1.f;
         voiceui::strip(a, "nxdn", "NXDN", l);
     }
