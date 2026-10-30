@@ -110,7 +110,7 @@ static std::string mspsText(double hz) {
     return s + " Msps";
 }
 static void manualRatePopup(App& a, const char* id, bool open, const RateLimits& L, double need);
-static void chooseSampleRate(App& a, double hz) {
+void chooseSampleRate(App& a, double hz) {
     const double prev = savedSampleRate(a);
     saveSampleRate(a, hz);
     a.rateRefusal.clear();
