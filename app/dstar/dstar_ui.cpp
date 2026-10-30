@@ -216,7 +216,7 @@ void tab(App& a) {
         const dect2::DstarTelemetry& t = a.rx.dstar;
         voiceui::Link l;
         l.live = live(a); l.locked = l.live && t.state >= 1; l.codecName = "AMBE"; l.codecId = "ambe";
-        l.codecReady = t.ambe || dect2::codec::pluginLoaded("ambe");
+        l.codecReady = t.ambe || dect2::dstarAmbeAvailable();
         l.errorRate = l.locked ? t.berPct / 100.f : -1.f;
         voiceui::strip(a, "dstar", "D-STAR", l);
     }

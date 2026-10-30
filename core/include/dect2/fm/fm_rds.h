@@ -106,6 +106,9 @@ private:
     // group decoder
     char psBuf_[9] = "        ";
     uint8_t psSeen_ = 0;
+    char psAnyBuf_[9] = "        ";   // the latest bytes of each segment whatever came before: a scrolling name never fills psBuf_ (#350)
+    uint8_t psAnySeen_ = 0;
+    int psSince_ = 0;                 // type 0 groups since the name last completed
     char rtBuf_[65] = {};
     int rtAb_ = -1;
     uint16_t rtSeen_ = 0;

@@ -612,6 +612,15 @@ static void quantise(const float* llr, size_t n, float scale, int8_t* q, int lim
     }
 #elif defined(__SSE2__) && !defined(DECT2_NO_SIMD)
     const __m128 sc = _mm_set1_ps(scale);
+    if (limit < 127) {   // the 8-bit decoder's range, as in the NEON path: without this clip the strong carriers reach +-127, the 8-bit Viterbi's int8 branch
+        // metrics (+-2 * limit by design) wrap, and a decodable mux never finds packet sync on x86 (#365, found by peterdewitte)
+        const __m128i hi = _mm_set1_epi16((short)limit), lo = _mm_set1_epi16((short)-limit);
+        for (; j + 8 <= n; j += 8) {
+            const __m128i a = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(llr + j), sc)), b = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(llr + j + 4), sc));
+            const __m128i w = _mm_max_epi16(_mm_min_epi16(_mm_packs_epi32(a, b), hi), lo);
+            _mm_storel_epi64((__m128i*)(q + j), _mm_packs_epi16(w, _mm_setzero_si128()));
+        }
+    }
     for (; j + 8 <= n; j += 8) {
         const __m128i a = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(llr + j), sc)), b = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(llr + j + 4), sc));
         _mm_storel_epi64((__m128i*)(q + j), _mm_packs_epi16(_mm_packs_epi32(a, b), _mm_setzero_si128()));

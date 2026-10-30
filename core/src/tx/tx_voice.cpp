@@ -1,6 +1,7 @@
 // Analog voice for TX: NFM, AM, USB/LSB of a microphone, a file, a 1 kHz tone or silence. Broadcast FM (stereo + RDS) lives in fm_gen.cpp.
 #include "dect2/tx/tx.h"
 #include "dect2/engine/mode_tuning.h"
+#include "dect2/audio/audio_control.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -94,7 +95,8 @@ public:
         ssbCar_ = (float)(r.o("ssb.carrierPct", 0) / 100.0);
         fmLevel_ = (float)r.o("fm.level", 0.40);
         ctcss_ = r.o("fm.ctcssHz", 0);
-        ctcssPct_ = r.o("fm.ctcssPct", 15) / 100.0;
+        if (const int ix = (int)r.o("fm.ctcssIdx", 0); ix > 0) ctcss_ = txCtcssToneHz(ix);   // the panel's pull-down of the standard tones (#373)
+        ctcssPct_ = r.o("fm.ctcssPct", 12) / 100.0;   // the usual 600 Hz at 5 kHz deviation
         step_ = kFs / rate_;
         acc_ = 1.0;
         // Hilbert taps (odd, zeros on even), Hamming-windowed: delay of kHilN samples on the real path
@@ -213,6 +215,8 @@ private:
 };
 }
 
+double txCtcssToneHz(int idx) { return idx >= 1 && idx <= 50 ? (double)actl::kCtcssHz[idx - 1] : 0.0; }
+
 std::unique_ptr<ModeSynth> makeTxVoiceSynth(const TxModeSpec& m, const TxRequest& r, double rate) {
     const std::string id = m.id ? m.id : "";
     if (id == "airband" || m.stdMode == 28) {
@@ -224,13 +228,15 @@ std::unique_ptr<ModeSynth> makeTxVoiceSynth(const TxModeSpec& m, const TxRequest
         const int k = r.kind == 2 ? 3 : r.kind == 3 ? 4 : r.kind == 1 ? 2 : 1;
         return std::make_unique<AnalogVoice>(rate, 5.5e6, k, r);
     }
+    // the radio is told the dial frequency plus the mode's tuning offset (tx.cpp, #351), so the signal sits that far below the radio's centre (#374)
+    const double dialOff = -txModeTuneOffsetHz(m);
     if (r.analogVoice || r.kind == 1 || r.kind == 2 || r.kind == 3) {
         const int k = r.kind == 2 ? 3 : r.kind == 3 ? 4 : r.kind == 1 ? 2 : 1;
-        return std::make_unique<AnalogVoice>(rate, 0, k, r);
+        return std::make_unique<AnalogVoice>(rate, dialOff, k, r);
     }
-    if (id == "qo100") return std::make_unique<AnalogVoice>(rate, 0, 3, r);
+    if (id == "qo100") return std::make_unique<AnalogVoice>(rate, dialOff, 3, r);
     (void)id;
-    return std::make_unique<AnalogVoice>(rate, 0, 1, r);
+    return std::make_unique<AnalogVoice>(rate, dialOff, 1, r);
 }
 
 std::unique_ptr<ModeSynth> makeTxMixSynth(std::unique_ptr<ModeSynth> a, std::unique_ptr<ModeSynth> b, double rate) {

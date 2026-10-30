@@ -124,6 +124,16 @@ inline bool vdl2AircraftPositionNow(const Vdl2Aircraft& c, double nowSec, double
     return true;
 }
 
+// Distance in nautical miles from the receiver (refLat, refLon) to the aircraft's position now (as vdl2AircraftPositionNow); false without a position (#394)
+inline bool vdl2AircraftRangeNm(const Vdl2Aircraft& c, double nowSec, double refLat, double refLon, double& nm) {
+    double lat = 0, lon = 0;
+    int alt = 0;
+    bool pred = false;
+    if (!vdl2AircraftPositionNow(c, nowSec, lat, lon, alt, pred)) return false;
+    nm = vdl2DistNm(refLat, refLon, lat, lon);
+    return true;
+}
+
 struct Vdl2GroundStation {
     uint32_t addr = 0;
     int type = 4;

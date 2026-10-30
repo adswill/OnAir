@@ -7,6 +7,7 @@
 #include "dect2/vdl2/vdl2_proto.h"
 #include "dect2/vdl2/vdl2_rx.h"
 #include "../common/impair.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -261,9 +262,38 @@ int main() {
         };
         const int a = inBand(false, {}), b = inBand(true, {}), c = inBand(true, {136.500e6}), d = inBand(false, {136.500e6});
         printf("  %-44s %d channels off, %d on, %d on + list, %d list only\n", "Whole span channels in band (2 Msps)", a, b, c, d);
-        CHECK(a == 6, "Europe set: %d channels in band", a);
-        CHECK(b == 11, "worldwide set at 136.85 MHz, 2 Msps: %d channels in band", b);
+        CHECK(a == 8, "Europe set: %d channels in band", a);
+        CHECK(b == 14, "worldwide set at 136.85 MHz, 2 Msps: %d channels in band", b);
         CHECK(c == b + 1 && d == 1, "the list is added to the set (%d) / replaces it (%d)", c, d);
+    }
+    // #400: the European set of 2027 (12 channels) and more than 16 channels at once
+    {
+        const auto e = vdl2Europe2027Channels(), w = vdl2WorldChannels(), eu = vdl2EuropeChannels();
+        CHECK(e.size() == 12 && std::fabs(e.front() - 136.700e6) < 1 && std::fabs(e.back() - 136.975e6) < 1, "Europe 2027: %zu channels", e.size());
+        int missing = 0;
+        for (double f : e) { bool has = false; for (double g : w) has |= std::fabs(f - g) < 1; missing += !has; }
+        CHECK(missing == 0, "%d of the 2027 channels are not in the worldwide set", missing);
+        CHECK(std::count_if(eu.begin(), eu.end(), [](double f) { return std::fabs(f - 136.675e6) < 1 || std::fabs(f - 136.850e6) < 1; }) == 2, "136.675 and 136.850 are in the European set");
+        Vdl2Receiver rx;
+        rx.configure(2e6);
+        rx.setCenterHz(kCenter);
+        std::vector<double> many;
+        for (int k = 0; k < 24; k++) many.push_back(136.050e6 + 25e3 * k);   // 24 channels in 25 kHz steps
+        rx.setChannels(many);
+        std::vector<cf32> x(40000, cf32(0, 0));
+        rx.feed(x.data(), x.size());
+        Vdl2Telemetry t;
+        rx.telemetry(t, 0);
+        CHECK(t.channels.size() == 24, "24 channels listed: %zu", t.channels.size());
+    }
+    // #394: the distance of an aircraft from the receiver (VDL2 aircraft table)
+    {
+        Vdl2Aircraft c;
+        double nm = 0;
+        CHECK(!vdl2AircraftRangeNm(c, 0, 52.0, 5.0, nm), "no position, no range");
+        c.hasPos = true; c.lat = 52.0; c.lon = 6.0; c.posTime = 0;   // one degree of longitude at 52 N is 37 NM
+        CHECK(vdl2AircraftRangeNm(c, 0, 52.0, 5.0, nm) && std::fabs(nm - 36.9) < 1.0, "range %.1f NM (want about 37)", nm);
+        CHECK(vdl2AircraftRangeNm(c, 0, 52.0, 6.0, nm) && nm < 0.01, "same point: %.3f NM", nm);
     }
     printf(fails ? "vdl2 rx: %d FAILED\n" : "vdl2 rx: all passed\n", fails);
     return fails ? 1 : 0;

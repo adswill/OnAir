@@ -99,11 +99,17 @@ struct DemodOut {
 
 } // namespace
 
-std::vector<double> vdl2EuropeChannels() { return {136.725e6, 136.775e6, 136.825e6, 136.875e6, 136.900e6, 136.975e6}; }
+std::vector<double> vdl2EuropeChannels() { return {136.675e6, 136.725e6, 136.775e6, 136.825e6, 136.850e6, 136.875e6, 136.900e6, 136.975e6}; }
+// Europe from 2027: the whole 136.700 .. 136.975 block in 25 kHz steps, brought in gradually (#400)
+std::vector<double> vdl2Europe2027Channels() {
+    std::vector<double> v;
+    for (int k = 0; k < 12; k++) v.push_back(136.700e6 + 25e3 * k);
+    return v;
+}
 // every VDL2 channel in use worldwide (Europe, North America, Asia-Pacific): 131.250 .. 131.825 and the 136.650 .. 136.975 block
 std::vector<double> vdl2WorldChannels() {
-    return {131.250e6, 131.425e6, 131.450e6, 131.475e6, 131.525e6, 131.550e6, 131.725e6, 131.825e6, 136.650e6, 136.700e6, 136.725e6,
-            136.775e6, 136.800e6, 136.825e6, 136.850e6, 136.875e6, 136.900e6, 136.925e6, 136.975e6};
+    return {131.250e6, 131.425e6, 131.450e6, 131.475e6, 131.525e6, 131.550e6, 131.725e6, 131.825e6, 136.650e6, 136.675e6, 136.700e6, 136.725e6,
+            136.750e6, 136.775e6, 136.800e6, 136.825e6, 136.850e6, 136.875e6, 136.900e6, 136.925e6, 136.950e6, 136.975e6};
 }
 
 struct Vdl2Receiver::Impl {

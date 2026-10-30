@@ -281,6 +281,19 @@ static void testCharset() {
         feedRt(d, "FM 93.9 \xBD\xBB\xCD\xA8\xB5\xE7\xCC\xA8");
         CHECK(d.rt == "FM 93.9 \xE4\xBA\xA4\xE9\x80\x9A\xE7\x94\xB5\xE5\x8F\xB0", "GB2312 RT: got %s", d.rt.c_str());
     }
+    {   // #350: a name that scrolls a character per group and arrives in patchy order never completes the strict collection; it is still shown (no '?', no placeholders)
+        RdsDecoder d;
+        const std::string txt = "\xD6\xD0\xB9\xFA\xD6\xAE\xC9\xF9\xBD\xBB\xCD\xA8\xB9\xE3\xB2\xA5";   // 8 characters
+        const uint8_t ok[4] = {0, 0, 0, 0};
+        for (int t = 0; t < 120; t++) {
+            const size_t start = (size_t)(t % 5) * 2;   // moves a character every group
+            static const int order[6] = {0, 1, 0, 2, 0, 3};   // segments arrive in a patchy order (groups lost to noise): four different ones never follow each other
+            const int s = order[t % 6];
+            const uint16_t g[4] = {kPi, B(0, 0, 8 | s), 0xCDCD, (uint16_t)((uint8_t)txt[start + 2 * s] << 8 | (uint8_t)txt[start + 2 * s + 1])};
+            d.onGroup(g, ok, 1e9);
+        }
+        CHECK(!d.ps.empty() && d.ps.find('?') == std::string::npos && d.ps.find('_') == std::string::npos, "scrolling PS: got '%s'", d.ps.c_str());
+    }
     {   // the same bytes with the GB2312 reading off: EBU Latin letters, never '?'
         RdsDecoder d; d.charset = 0;
         feedPs(d, "\xD6\xD0\xB9\xFA\xD6\xAE\xC9\xF9");

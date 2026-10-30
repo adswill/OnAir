@@ -746,7 +746,7 @@ void tab(App& a) {
         const dect2::P25Telemetry& t = a.rx.p25;
         voiceui::Link l;
         l.live = live(a); l.locked = l.live && t.state >= 1; l.codecName = "IMBE"; l.codecId = "imbe";
-        l.codecReady = t.imbe || dect2::codec::pluginLoaded("imbe");
+        l.codecReady = t.imbe || dect2::p25ImbeAvailable()   /* mbelib or a plug-in: also while the receiver restarts on a retune (#348) */;
         l.errorRate = l.locked ? t.berPct / 100.f : -1.f;
         voiceui::strip(a, "p25", "P25", l);
     }

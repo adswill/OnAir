@@ -260,8 +260,14 @@ void RdsDecoder::decodeGroup(const uint16_t b[4], const uint8_t err[4], double n
         if ((psSeen_ >> seg & 1) && (psBuf_[seg * 2] != c0 || psBuf_[seg * 2 + 1] != c1)) psSeen_ = 0;
         psBuf_[seg * 2] = c0; psBuf_[seg * 2 + 1] = c1;
         psSeen_ |= (uint8_t)(1 << seg);
-        if (psSeen_ == 15) { ps = rdsText(psBuf_, 8, charset); psSeen_ = 0; info.psPartial = ps; }
-        else {
+        psAnyBuf_[seg * 2] = c0; psAnyBuf_[seg * 2 + 1] = c1; psAnySeen_ |= (uint8_t)(1 << seg);
+        psSince_++;
+        if (psSeen_ == 15) { ps = rdsText(psBuf_, 8, charset); psSeen_ = 0; psAnySeen_ = 0; psSince_ = 0; info.psPartial = ps; }
+        else if (psAnySeen_ == 15 && psSince_ >= 40) {
+            // a name that scrolls changes between its segments, so the strict collection above never completes (Chinese stations in particular send a
+            // moving name of 4 characters): after about 40 groups the latest segments are shown as one name, as a scrolling display would
+            ps = rdsText(psAnyBuf_, 8, charset); psSeen_ = 0; psAnySeen_ = 0; psSince_ = 0; info.psPartial = ps;
+        } else {
             char p[9] = "________";
             for (int s = 0; s < 4; s++) if (psSeen_ >> s & 1) { p[s * 2] = psBuf_[s * 2]; p[s * 2 + 1] = psBuf_[s * 2 + 1]; }
             if (ps.empty()) info.psPartial = rdsText(p, 8, charset);

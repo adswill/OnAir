@@ -99,6 +99,43 @@ int main() {
     std::vector<cf32> w(6000, cf32(1, 0));
     txOutputStage(ramp, w.data(), w.size(), 0, fs);   // 1 ms at 2.5 MHz = 2500 samples
     CHECK(w[0].real() == 0 && w[1250].real() > 0.45f && w[1250].real() < 0.55f && w[5000].real() == 1.f, "fade-in ramp");
+    // #374: a mode the radio is tuned off the dial for (the General receiver is 250 kHz above) puts its analog voice at the dial frequency, not on the radio's centre
+    for (const char* id : {"general", "airband"}) {
+        const double off = txModeTuneOffsetHz(*txModeById(id));
+        CHECK(off != 0, "%s has a tuning offset", id);
+        if (off == 0) continue;
+        for (int kind : {0, 1, 2, 3}) {
+            TxRequest v; v.modeId = id; v.analogVoice = true; v.kind = kind; v.toneHz = 1000; v.audioSrc = 2; v.deviationHz = 1000;
+            v.opt["audio.hpHz"] = 0; v.opt["audio.lpHz"] = 0;
+            auto y = make(id, v, fs, n);
+            CHECK(!y.empty(), "%s voice generator", id);
+            if (y.empty()) continue;
+            // the tone / carrier is within 3 kHz of the dial frequency (-off in the samples), not of 0 Hz
+            double at = 0, centre = 0;
+            for (double d = -3000; d <= 3000; d += 250) { at = std::max(at, powerAt(y, -off + d, fs, 60000)); centre = std::max(centre, powerAt(y, d, fs, 60000)); }
+            CHECK(at > centre * 100, "%s kind %d: power at the dial %.1f dB, at the radio's centre %.1f dB", id, kind, db(at), db(centre));
+        }
+    }
+    // #373: the CTCSS tone comes from the pull-down of standard tones (fm.ctcssIdx), at 600 Hz peak deviation with the default 5 kHz
+    {
+        const int idx = 14;   // 103.5 Hz
+        const double want = txCtcssToneHz(idx);
+        CHECK(std::fabs(want - 103.5) < 0.01 && txCtcssToneHz(0) == 0 && txCtcssToneHz(51) == 0, "tone table: %.2f", want);
+        TxRequest c; c.modeId = "general"; c.analogVoice = true; c.audioSrc = 3; c.opt["fm.ctcssIdx"] = idx;
+        auto y = make("general", c, fs, n);
+        CHECK(!y.empty(), "ctcss generator");
+        if (!y.empty()) {
+            std::vector<cf32> f(y.size() - 1);   // instantaneous frequency, as a real number in the real part
+            for (size_t i = 1; i < y.size(); i++) f[i - 1] = cf32((float)(std::arg(std::conj(y[i - 1]) * y[i]) * fs / (2 * M_PI)), 0.f);
+            double mean = 0;
+            for (size_t i = 60000; i < f.size(); i++) mean += f[i].real();
+            mean /= (double)(f.size() - 60000);
+            for (auto& v : f) v = cf32(v.real() - (float)mean, 0.f);   // the dial offset is a constant
+            const double at = std::sqrt(powerAt(f, want, fs, 60000)) * 2, off = std::sqrt(powerAt(f, 203.5, fs, 60000)) * 2;
+            CHECK(std::fabs(at - 600) < 80, "CTCSS peak deviation %.0f Hz (want about 600)", at);
+            CHECK(off < 60, "no energy at another tone: %.0f Hz", off);
+        }
+    }
     printf(fails ? "%d failure(s)\n" : "all passed\n", fails);
     return fails ? 1 : 0;
 }

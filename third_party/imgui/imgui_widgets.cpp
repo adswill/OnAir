@@ -47,6 +47,7 @@ Index of this file:
 // System includes
 #include <stdint.h>     // intptr_t
 #include <string>
+#include <vector>
 
 //-------------------------------------------------------------------------
 // Warnings
@@ -163,6 +164,87 @@ ImGuiID gOnAirCopyId = 0;
 bool gOnAirCopySeen = false;
 static std::string gOnAirCopyText;
 
+// OnAir: the text selection (#344). The byte offsets of the selected part of the text with the id gOnAirSelId.
+ImGuiID gOnAirSelId = 0;
+static int gOnAirSelA = 0, gOnAirSelB = 0;
+
+struct OnAirLine { const char* b; const char* e; float y; };
+
+// the lines the text is drawn in: split at newlines, then at the wrap width (the blanks a wrap swallows stay at the end of the line before)
+static void OnAirTextLines(const char* tb, const char* te, float wrap_width, std::vector<OnAirLine>& out)
+{
+    ImGuiContext& g = *GImGui;
+    float y = 0.0f;
+    const char* s = tb;
+    for (;;)
+    {
+        const char* nl = (const char*)memchr(s, '\n', (size_t)(te - s));
+        const char* seg_end = nl ? nl : te;
+        while (true)
+        {
+            const char* le = seg_end;
+            if (wrap_width > 0.0f && s < seg_end)
+            {
+                le = g.Font->CalcWordWrapPosition(g.FontSize, s, seg_end, wrap_width);
+                if (le == s) le = s + 1;   // a character wider than the line still takes a line
+                if (le > seg_end) le = seg_end;
+            }
+            out.push_back({s, le, y});
+            y += g.FontSize;
+            if (le >= seg_end) break;
+            s = le;
+            while (s < seg_end && (*s == ' ' || *s == '\t')) s++;   // the blanks the wrap swallows
+            if (s >= seg_end) break;
+        }
+        if (!nl) break;
+        s = nl + 1;
+        if (s > te) break;
+    }
+}
+
+// the byte offset in [tb, te] of the character boundary nearest to the point p, for text drawn at origin
+static int OnAirTextIndexAt(ImVec2 origin, const char* tb, const char* te, float wrap_width, ImVec2 p)
+{
+    std::vector<OnAirLine> lines;
+    OnAirTextLines(tb, te, wrap_width, lines);
+    ImGuiContext& g = *GImGui;
+    if (lines.empty()) return 0;
+    int li = (int)((p.y - origin.y) / g.FontSize);
+    li = ImClamp(li, 0, (int)lines.size() - 1);
+    const OnAirLine& ln = lines[(size_t)li];
+    const float x = p.x - origin.x;
+    if (x <= 0.0f) return (int)(ln.b - tb);
+    const char* best = ln.b;
+    float prev = 0.0f;
+    for (const char* c = ln.b; c < ln.e;)
+    {
+        unsigned int cp;
+        const int n = ImTextCharFromUtf8(&cp, c, ln.e);
+        const char* nx = c + (n > 0 ? n : 1);
+        const float w = g.Font->CalcTextSizeA(g.FontSize, FLT_MAX, 0.0f, ln.b, nx).x;
+        if (x < (prev + w) * 0.5f) return (int)(c - tb);
+        prev = w;
+        best = nx;
+        c = nx;
+    }
+    return (int)(best - tb);
+}
+
+static void OnAirTextHighlight(ImDrawList* dl, ImVec2 origin, const char* tb, const char* te, float wrap_width, int lo, int hi, ImU32 col)
+{
+    ImGuiContext& g = *GImGui;
+    std::vector<OnAirLine> lines;
+    OnAirTextLines(tb, te, wrap_width, lines);
+    for (const OnAirLine& ln : lines)
+    {
+        const int b = (int)(ln.b - tb), e = (int)(ln.e - tb);
+        const int a = ImMax(lo, b), z = ImMin(hi, e);
+        if (a >= z) continue;
+        const float x0 = g.Font->CalcTextSizeA(g.FontSize, FLT_MAX, 0.0f, ln.b, tb + a).x, x1 = g.Font->CalcTextSizeA(g.FontSize, FLT_MAX, 0.0f, ln.b, tb + z).x;
+        dl->AddRectFilled(ImVec2(origin.x + x0, origin.y + ln.y), ImVec2(origin.x + x1, origin.y + ln.y + g.FontSize), col);
+    }
+}
+
 void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -196,21 +278,44 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
         // Render (we don't hide text after ## in this end-user function)
         RenderTextWrapped(bb.Min, text_begin, text_end, wrap_width);
 
-        // OnAir: text can be copied (#344). Hover it and press Ctrl+C (or Ctrl+Insert), or right-click it for a one-entry "Copy" menu. Only a text nothing
-        // else lies under (no hovered widget, no editing in progress) is taken, so the context menus of rows and the input fields keep their clicks.
-        if (text_end > text_begin && (g.IO.MouseClicked[1] || (g.IO.KeyCtrl && (IsKeyPressed(ImGuiKey_C, false) || IsKeyPressed(ImGuiKey_Insert, false))) || gOnAirCopyId != 0))
+        // OnAir: text can be copied (#344). Drag over it to select a part (the part is highlighted), then Ctrl+C / Ctrl+Insert, or right-click, Copy. Without a selection
+        // Ctrl+C while the pointer is over the text, or the right-click menu, copies the whole text. Only a text nothing else lies under (no hovered widget, no editing in
+        // progress) is taken, so the context menus of rows and the input fields keep their clicks.
+        if (text_end > text_begin && (g.IO.MouseClicked[0] || g.IO.MouseClicked[1] || (g.IO.KeyCtrl && (IsKeyPressed(ImGuiKey_C, false) || IsKeyPressed(ImGuiKey_Insert, false))) || gOnAirCopyId != 0 || gOnAirSelId != 0))
         {
             const ImGuiID copy_id = ImHashData(text_begin, (size_t)(text_end - text_begin), window->IDStack.back());
-            if (g.ActiveId == 0 && g.HoveredId == 0 && ItemHoverable(bb, 0, g.LastItemData.ItemFlags))
+            const bool free_hover = g.ActiveId == 0 && g.HoveredId == 0 && ItemHoverable(bb, 0, g.LastItemData.ItemFlags);
+            if (free_hover && g.IO.MouseClicked[0])
             {
-                if (g.IO.KeyCtrl && (IsKeyPressed(ImGuiKey_C, false) || IsKeyPressed(ImGuiKey_Insert, false)))
-                    SetClipboardText(std::string(text_begin, text_end).c_str());
-                else if (g.IO.MouseClicked[1])
-                {
-                    gOnAirCopyId = copy_id;
-                    gOnAirCopyText.assign(text_begin, text_end);
-                    OpenPopupEx(copy_id, ImGuiPopupFlags_None);
-                }
+                gOnAirSelId = copy_id;
+                gOnAirSelA = gOnAirSelB = OnAirTextIndexAt(bb.Min, text_begin, text_end, wrap_width, g.IO.MousePos);
+                SetActiveID(copy_id, window);
+            }
+            else if (g.IO.MouseClicked[0] && gOnAirSelId == copy_id)
+                gOnAirSelId = 0;   // a click somewhere else
+            const bool mine = gOnAirSelId == copy_id;
+            if (mine && g.ActiveId == copy_id)
+            {
+                KeepAliveID(copy_id);
+                if (g.IO.MouseDown[0])
+                    gOnAirSelB = OnAirTextIndexAt(bb.Min, text_begin, text_end, wrap_width, g.IO.MousePos);
+                else
+                    ClearActiveID();
+            }
+            const bool has_sel = mine && gOnAirSelA != gOnAirSelB;
+            const int sel_lo = ImMin(gOnAirSelA, gOnAirSelB), sel_hi = ImMax(gOnAirSelA, gOnAirSelB);
+            if (has_sel)
+                OnAirTextHighlight(window->DrawList, bb.Min, text_begin, text_end, wrap_width, sel_lo, sel_hi, GetColorU32(ImGuiCol_TextSelectedBg));
+            const bool ctrl_c = g.IO.KeyCtrl && (IsKeyPressed(ImGuiKey_C, false) || IsKeyPressed(ImGuiKey_Insert, false));
+            if (ctrl_c && has_sel && (g.ActiveId == 0 || g.ActiveId == copy_id))
+                SetClipboardText(std::string(text_begin + sel_lo, text_begin + sel_hi).c_str());
+            else if (free_hover && ctrl_c)
+                SetClipboardText(std::string(text_begin, text_end).c_str());
+            else if (free_hover && g.IO.MouseClicked[1])
+            {
+                gOnAirCopyId = copy_id;
+                if (has_sel) gOnAirCopyText.assign(text_begin + sel_lo, text_begin + sel_hi); else gOnAirCopyText.assign(text_begin, text_end);
+                OpenPopupEx(copy_id, ImGuiPopupFlags_None);
             }
             if (gOnAirCopyId == copy_id && BeginPopupEx(copy_id, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
             {
