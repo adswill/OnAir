@@ -1,12 +1,19 @@
 #include "dect2/results/sessions_json.h"
-#include "dect2/net/remote_api.h"
 #include "dect2/session/session_store.h"
 #include <algorithm>
+#include <cstdio>
 #include <cstdlib>
 
 namespace dect2 {
 
 namespace {
+std::string jesc(const std::string& s) {
+    std::string o;
+    for (unsigned char c : s) {
+        if (c == '"') o += "\\\""; else if (c == '\\') o += "\\\\"; else if (c < 0x20) { char b[8]; snprintf(b, sizeof b, "\\u%04x", c); o += b; } else o += (char)c;
+    }
+    return o;
+}
 std::string param(const std::string& q, const std::string& key) {
     size_t i = 0;
     while (i <= q.size()) {
@@ -62,8 +69,8 @@ std::string sessionsJson(const std::string& query) {
     for (const Session& s : pg.rows) {
         if (!first) o += ',';
         first = false;
-        o += "{\"id\":\"" + std::to_string(s.id) + "\",\"mode\":" + std::to_string(s.mode) + ",\"modeName\":\"" + jsonEscape(global().modeName(s.mode)) + "\",\"kind\":\"" + kindName((Kind)s.kind) + "\",\"key\":\"" + jsonEscape(s.key) +
-             "\",\"title\":\"" + jsonEscape(s.title) + "\",\"start\":" + std::to_string(s.startWall) + ",\"end\":" + std::to_string(s.endWall) + ",\"durationMs\":" + std::to_string(s.durationMs) +
+        o += "{\"id\":\"" + std::to_string(s.id) + "\",\"mode\":" + std::to_string(s.mode) + ",\"modeName\":\"" + jesc(global().modeName(s.mode)) + "\",\"kind\":\"" + kindName((Kind)s.kind) + "\",\"key\":\"" + jesc(s.key) +
+             "\",\"title\":\"" + jesc(s.title) + "\",\"start\":" + std::to_string(s.startWall) + ",\"end\":" + std::to_string(s.endWall) + ",\"durationMs\":" + std::to_string(s.durationMs) +
              ",\"freqHz\":" + std::to_string(s.freqHz) + ",\"verdict\":\"" + verdictName((Verdict)s.verdict) + "\",\"events\":" + std::to_string(s.eventCount) + ",\"active\":" + (s.active() ? "true" : "false") +
              ",\"emergency\":" + ((s.flags & FlagEmergency) ? "true" : "false") + "}";
     }
