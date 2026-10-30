@@ -34,9 +34,9 @@ public:
     // RDS meanings: 0 Auto, 1 RDS (Europe), 2 RBDS (US): the programme type names and the call letters in the PI code (fm_rbds.h). Auto reads the
     // tuned frequency (odd tenths = RBDS); tunedMhz is the station's frequency, give it again after a retune (any thread).
     void setRdsRegion(int region, double tunedMhz);
-    // The channel filter's pass band, the whole width in Hz (0 = the standard 220 kHz); held to kMin/kMaxChannelWidthHz. Narrower keeps a
+    // The channel filter's pass band, the whole width in Hz (0 = the standard 220 kHz); held only to a sane floor (kMinChannelWidthHz) and to what the sample rate carries; 3.4 removed the 100 - 300 kHz limit. Narrower keeps a
     // strong neighbour out at the cost of distortion on loud passages and of RDS; it takes effect with the next samples (any thread).
-    static constexpr double kDefaultChannelWidthHz = 220e3, kMinChannelWidthHz = 100e3, kMaxChannelWidthHz = 300e3;
+    static constexpr double kDefaultChannelWidthHz = 220e3, kMinChannelWidthHz = 10e3, kMaxChannelWidthHz = 300e3;   // kMax: the end of the slider's range (a typed width goes beyond it)
     void setChannelWidth(double hz);
     void setStationFinder(bool on);                      // look for a station off the centre and move to it (recordings); off for a live radio
     double channelWidth() const;

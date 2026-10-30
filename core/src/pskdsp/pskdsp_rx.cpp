@@ -20,7 +20,7 @@ PskdSettings sanitize(PskdSettings s) {
     if (!(s.baud >= 0) || s.baud > 5e6) s.baud = 0;
     if (s.alpha != -2 && s.alpha != -1) s.alpha = std::clamp(s.alpha, 0.0, 1.0);
     if (!(s.spanHz >= 0)) s.spanHz = 0;
-    if (s.spanHz > 0) s.spanHz = std::clamp(s.spanHz, 2500.0, 50e6);   // a manual channel bandwidth starts at 2.5 kHz (#308)
+    if (s.spanHz > 0 && s.spanHz < 100.0) s.spanHz = 100.0;   // (3.4: any manual channel bandwidth; below 100 Hz the filter degenerates)
     s.diff = std::clamp(s.diff, 0, 3);
     s.scrambler = std::clamp(s.scrambler, 0, 2);
     if (s.sync.size() > 256) s.sync.resize(256);

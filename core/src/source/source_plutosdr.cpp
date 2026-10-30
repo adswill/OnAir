@@ -319,7 +319,7 @@ protected:
             err = "PlutoSDR: disable Low-rate FIR (RX only) to receive while TX is running";
             return false;
         }
-        const double want = std::min(std::max(s.sampleRate > 0 ? s.sampleRate : 10e6, 2.1e6), 61.44e6);
+        const double want = s.rateChosen && s.sampleRate > 0 ? s.sampleRate : std::min(std::max(s.sampleRate > 0 ? s.sampleRate : 10e6, 2.1e6), 61.44e6);   // (3.4: a chosen rate goes to the AD9361 as it is)
         return duplexRate(want, radio_->txRate, err) && radio_->duplex(err);
     }
     bool configure(const TuneSettings& s, std::string& err, bool live) override {
@@ -339,7 +339,7 @@ protected:
         if (!live) {
             if (buf_) { iio().buffer_destroy(buf_); buf_ = nullptr; }
             // the converter runs 0.52 - 61.44 Msps; below 2.083 Msps it needs a decimation filter: stay at or above that
-            double want = std::min(std::max(s.sampleRate > 0 ? s.sampleRate : 10e6, 2.1e6), 61.44e6);
+            double want = s.rateChosen && s.sampleRate > 0 ? s.sampleRate : std::min(std::max(s.sampleRate > 0 ? s.sampleRate : 10e6, 2.1e6), 61.44e6);   // (3.4: a chosen rate goes to the AD9361 as it is)
             if (radio_->tx) want = radio_->txRate;
             if (firOn_) setFir(false);   // a rate chosen now may not be one for the FIR
             if (wantsFir(s.sampleRate) && radioFlag(s, "lowratefir")) {

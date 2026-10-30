@@ -65,6 +65,11 @@ public:
     // Which traffic slot is listened to (tetra_slots.h): Auto (the first clear voice), a slot 1..4, or the slot carrying a talkgroup / ISSI.
     // Encrypted and unknown-state slots stay undecoded whatever is chosen.
     void setVoiceSlot(const SlotSelect& s);
+    // The part of the capture the carrier search looks at, as a fraction of the sample rate centred on the capture (default tetra::kUsableBand =
+    // 0.72, the flat part of a radio's decimation filter). A wide capture on a radio whose passband is flatter can search more of it (0.9);
+    // nothing is refused above or below. Any thread.
+    void setSearchBand(double fraction);
+    double searchBand() const;
     // Single carrier: only the 25 kHz channel at the dial frequency (setSignalOffset) is filtered out and decoded; the span is not searched.
     // Off (default): the whole span is searched for carriers. The same call seen on two carriers of the span is played once either way.
     bool busy() const;                // a block is captured or being searched (tools: feed a file only as fast as it is searched)
@@ -81,8 +86,8 @@ namespace tetra {
 // One carrier brought to 72 kHz (4 samples per symbol): x at fs mixed down by shiftHz and filtered to the TETRA channel
 std::vector<cf32> channelize(const cf32* x, size_t n, double fs, double shiftHz);
 
-// The carriers of a capture at fs, strongest first (at most 24): 25 kHz wide rises of the spectrum within the middle kUsableBand of the
-// span, where a radio's decimation filter is flat (the span the application steps by). The floor the rises are measured against is local,
+// The carriers of a capture at fs, strongest first (all of them; maxCarriers > 0 keeps only that many): 25 kHz wide rises of the spectrum within
+// the middle `usableBand` (default kUsableBand) of the span, where a radio's decimation filter is flat (the span the application steps by). The floor the rises are measured against is local,
 // the 20th percentile of the spectrum within kFloorWindowHz around each bin: a floor taken over the whole span sat in the roll-off of the
 // passband at its edges, and the whole passband then stood above the threshold as one rise too wide to be carriers, or was cut into
 // carriers only where the noise happened to dip, so the carriers of a capture came and went from one capture to the next.
@@ -93,7 +98,13 @@ struct CarrierPeak {
 };
 constexpr double kUsableBand = 0.72;
 constexpr double kFloorWindowHz = 600e3;
-std::vector<CarrierPeak> findCarriers(const cf32* x, size_t n, double fs);
+std::vector<CarrierPeak> findCarriers(const cf32* x, size_t n, double fs, double usableBand = kUsableBand, size_t maxCarriers = 0);
+
+// Several carriers of one wide capture, each brought to 72 kHz, through ONE shared forward FFT (lora::FdChannelizer, the channeliser of the LoRa and
+// Inmarsat banks): the cost is the FFT of the capture plus a small inverse FFT per carrier, not a mixer and a filter over the whole capture for
+// every carrier. offsets in Hz from the centre of the capture; the result has one entry per offset (empty when too short). Same samples as
+// channelize() within the carrier's own channel.
+std::vector<std::vector<cf32>> channelizeMany(const cf32* x, size_t n, double fs, const std::vector<double>& offsets);
 
 // What one carrier's capture held
 struct CarrierDecode {

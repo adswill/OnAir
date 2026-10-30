@@ -18,7 +18,7 @@ struct Builtin {
         add({"fmDeemph", [](const App& a) { return a.fmMode; }, [](const App& a) { return std::to_string(a.fmDeemph); }, [](App& a, const std::string& v) { a.fmDeemph = s2i(v) == 75 ? 75 : 50; }});
         add({"fmMono", [](const App& a) { return a.fmMode; }, [](const App& a) { return b2s(a.fmMono); }, [](App& a, const std::string& v) { a.fmMono = v == "1"; a.fmStereo = a.fmMono ? 1 : 0; }});
         add({"fmChanKhz", [](const App& a) { return a.fmMode; }, [](const App& a) { return std::to_string(a.fmChanKhz); },
-             [](App& a, const std::string& v) { const int k = s2i(v); a.fmChanKhz = k <= 0 ? 0 : std::max(100, std::min(300, k)); }});
+             [](App& a, const std::string& v) { const int k = s2i(v); a.fmChanKhz = k <= 0 ? 0 : std::max(10, k); }});
         add({"fmRegion", [](const App& a) { return a.fmMode; }, [](const App& a) { return std::to_string(a.fmRegion); }, [](App& a, const std::string& v) { a.fmRegion = std::max(0, std::min(2, s2i(v))); }});
         add({"pagerNarrow", [](const App& a) { return a.family == 23; }, [](const App& a) { return b2s(a.pagerNarrow); }, [](App& a, const std::string& v) { a.pagerNarrow = v == "1"; }});
         add({"packetNarrow", [](const App& a) { return a.family == 24; }, [](const App& a) { return b2s(a.packetNarrow); }, [](App& a, const std::string& v) { a.packetNarrow = v == "1"; }});

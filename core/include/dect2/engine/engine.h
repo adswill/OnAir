@@ -216,6 +216,8 @@ public:
     ~Engine();
 
     bool start(const DeviceInfo& dev, const TuneSettings& tune, const FileOptions& file);
+    // Why the last start() returned false, in the driver's own words (empty when it succeeded): the app shows it when a rate or bandwidth the user typed is refused
+    std::string startError() const { std::lock_guard<std::mutex> lk(noteMu_); return startErr_; }
     // The number of this receiver (RX 1, RX 2 ...): the radio it opens is claimed for it (device_claims.h), another receiver cannot open it too
     void setReceiverId(int id) { receiverId_ = id; }
     int receiverId() const { return receiverId_; }
@@ -998,6 +1000,7 @@ private:
     uint64_t rateOff0_ = 0;    // offered-sample count at rateT0_
     std::string reconnectErr_;
     mutable std::mutex noteMu_;
+    std::string startErr_;
     std::string note_, retuneNote_;     // sourceNote(): the driver's note at the start, at the last retune
     void setNote(const std::string& n, bool retune);
     std::atomic<double> rate_{0};

@@ -258,7 +258,7 @@ protected:
         std::string warn;
         bool ok = true;
         auto set = [&](const char* prop, const std::string& v) { ok = ok && ws_.sendText(msg("set_property", prop, v)); };
-        const long long rate = std::llround(std::min(std::max(s.sampleRate > 0 ? s.sampleRate : 2e6, kMinRate), kMaxRate));
+        const long long rate = std::llround(s.rateChosen && s.sampleRate > 0 ? s.sampleRate : std::min(std::max(s.sampleRate > 0 ? s.sampleRate : 2e6, kMinRate), kMaxRate));   // (3.4: a chosen rate goes to the server as it is)
         if (rate != sentRate_) { set("device_sample_rate", std::to_string(rate)); sentRate_ = rate; }
         // the radio's centre; the VFO is put on it, too, as the IQ stream is the whole band
         const long long hz = std::llround(std::max(s.centerHz, 0.0));

@@ -224,7 +224,7 @@ void bodyTiles(App& a, float bodyH, ImVec2 disp) {
     ImGui::Spacing();
     a.tgMin[TgSwitch] = ImGui::GetCursorScreenPos();
     ImGui::TextDisabled("%s", tr("mode")); modeList(a);
-    if (a.family == 0 || a.family == 3 || ((modeUi(a.family) && modeUi(a.family)->decoder) || *dect2::bbf::keyForFamily(a.family))) { ImGui::Spacing(); ImGui::TextDisabled("%s", tr("decoder")); toolbarParts(a, TbDecoder, true); }
+    if (a.family == 0 || a.family == 3 || captureRowShown(a) || ((modeUi(a.family) && modeUi(a.family)->decoder) || *dect2::bbf::keyForFamily(a.family))) { ImGui::Spacing(); ImGui::TextDisabled("%s", tr("decoder")); toolbarParts(a, TbDecoder, true); }
     endPane();
     const float row2 = ImGui::GetContentRegionAvail().y;
     const float wD = std::floor(W * 0.70f);

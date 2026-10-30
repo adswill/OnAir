@@ -26,8 +26,9 @@ struct RateEntry { double askHz = 0, getHz = 0; };   // what the app asks for, w
 // limits that deliver at least the mode's minimum (modeMinHz, 0 = none). Sorted, without two entries delivering the same rate.
 std::vector<RateEntry> rateEntries(const RateLimits& L, double modeMinHz);
 
-struct RateCheck { bool ok = false; double hz = 0; std::string why; };   // hz: the rate the radio will deliver; why: one line when refused
-// A typed rate: within the radio's limits, not in a gap between its ranges, and the rate delivered at least the mode's minimum.
+struct RateCheck { bool ok = false; double hz = 0; std::string why; };   // ok: false only for a value that is not a rate (0, NaN); hz: the rate the driver is asked for; why: a one-line warning, never a refusal
+// A typed rate (3.4: every positive rate goes to the driver). One outside the radio's limits, in a gap between its ranges or below the mode's
+// minimum only gets a warning in `why`; the driver decides, and the app shows its own message if it refuses.
 RateCheck checkManualRate(const RateLimits& L, double modeMinHz, double hz);
 
 // The radio's baseband filter (TuneSettings::basebandFilterHz, 0 = the radio's own choice for its rate) once the rate is settled. filterHz:

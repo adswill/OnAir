@@ -68,8 +68,10 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     }
     // the spectrum analyser on a HackRF: the radio's own sweep (DECT2_SPECAN_STEPPED=1 steps it like any other radio)
     specanSweep_ = stdMode_.load() == 44 && dev.kind == DeviceInfo::HackRF && !getenv("DECT2_SPECAN_STEPPED");
+    { std::lock_guard<std::mutex> lk(noteMu_); startErr_.clear(); }
     if (!src_->start(hwTune(tune), ring_, err)) {
         log("source start failed: " + err + " (" + dev.name + ")");   // the radio the user selected, so a failure names it
+        { std::lock_guard<std::mutex> lk(noteMu_); startErr_ = err.empty() ? "the radio did not start" : err; }
         src_.reset();
         releaseDevice(receiverId_);
         return false;

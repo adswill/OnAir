@@ -191,7 +191,7 @@ protected:
                 const double sc = rr->scale > 0 ? rr->scale : 1.0;
                 rmin = std::ceil(rr->min * sc); rmax = std::floor(rr->max * sc);
             }
-            const unsigned want = (unsigned)std::llround(std::min(std::max(s.sampleRate > 0 ? s.sampleRate : 10e6, rmin), rmax));
+            const unsigned want = (unsigned)std::llround(s.rateChosen && s.sampleRate > 0 ? s.sampleRate : std::min(std::max(s.sampleRate > 0 ? s.sampleRate : 10e6, rmin), rmax));   // (3.4: a chosen rate goes to libbladeRF as it is)
             if (const int r = blade().set_sample_rate(dev_, ch, want, &actual); r != 0) { err = "bladeRF: the sample rate was refused: " + blade().text(r); return false; }
             rate_ = actual ? actual : want;
             requested_ = s.sampleRate;

@@ -255,7 +255,7 @@ protected:
         if (!dev_) return false;
         if (!live) {
             // a TV channel cannot be squeezed into what a dongle delivers: say so instead of streaming a useless rate
-            if (s.sampleRate > 3.2e6) {   // (the DXpatrol is sold for up to 3.2 Msps, the same ceiling)
+            if (s.sampleRate > 3.2e6 && !s.rateChosen) {   // (a rate the user chose goes to the driver as it is; the DXpatrol is sold for up to 3.2 Msps, the same ceiling)
                 char b[200];
                 snprintf(b, sizeof b, "RTL-SDR gives at most 3.2 Msps; %s needs about %.0f Msps: use a faster radio", familyOf(s), s.sampleRate / 1e6);
                 err = b;
@@ -263,7 +263,7 @@ protected:
                 return false;
             }
             // stable rates are 225-300 kHz and 0.9-3.2 MHz; above about 2.56 MHz most dongles drop samples
-            double want = std::min(s.sampleRate > 0 ? s.sampleRate : 2.048e6, model_ == kDxPatrol ? kDxpMaxRate : 2.56e6);
+            double want = s.rateChosen && s.sampleRate > 0 ? s.sampleRate : std::min(s.sampleRate > 0 ? s.sampleRate : 2.048e6, model_ == kDxPatrol ? kDxpMaxRate : 2.56e6);   // (3.4: a chosen rate is not capped)
             if (want < 900001 && (want > 300000 || want <= 225000)) want = 900001;   // librtlsdr refuses 225 kHz and below as well
             if (const int r = rtl().set_sample_rate(dev_, (uint32_t)std::lround(want)); r < 0) {
                 err = "RTL-SDR: the sample rate of " + mhz(want) + " Msps was refused (error " + std::to_string(r) + ")";

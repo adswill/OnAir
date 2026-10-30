@@ -174,7 +174,7 @@ protected:
             }
         }
         const double maxRate = any ? kAnyMaxRate : other ? kOtherMaxRate : 3.2e6;
-        if ((custom > 0 ? custom : s.sampleRate) > maxRate * 1.0001) {
+        if ((custom > 0 ? custom : s.sampleRate) > maxRate * 1.0001 && !s.rateChosen) {   // (a rate the user chose goes to the server as it is)
             char b[200];
             if (other) snprintf(b, sizeof b, "an rtl_tcp server gives at most 20 Msps; this mode needs about %.0f Msps: use a faster radio", s.sampleRate / 1e6);
             else snprintf(b, sizeof b, "an RTL-SDR (rtl_tcp) gives at most 3.2 Msps; this mode needs about %.0f Msps: use a faster radio "
@@ -187,7 +187,7 @@ protected:
         if (any) want = std::min(std::max(custom > 0 ? custom : s.sampleRate > 0 ? s.sampleRate : 2.048e6, kAnyMinRate), kAnyMaxRate);
         else if (other) want = std::min(std::max(s.sampleRate > 0 ? s.sampleRate : 2.048e6, kOtherMinRate), kOtherMaxRate);
         else {
-            want = std::min(s.sampleRate > 0 ? s.sampleRate : 2.048e6, 2.56e6);   // a real RTL-SDR drops samples above 2.56 Msps
+            want = s.rateChosen && s.sampleRate > 0 ? s.sampleRate : std::min(s.sampleRate > 0 ? s.sampleRate : 2.048e6, 2.56e6);   // a real RTL-SDR drops samples above 2.56 Msps (unless the user chose the rate)
             if (want < 900001 && (want > 300000 || want <= 225000)) want = 900001;
         }
         const uint32_t rate = (uint32_t)std::lround(want);

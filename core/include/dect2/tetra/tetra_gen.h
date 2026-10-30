@@ -8,7 +8,10 @@
 //   snrDb       signal to noise inside the 25 kHz channel of the strongest carrier
 //   cfoHz       the radio's tuning error
 //   sroPpm      the base station's symbol clock relative to the radio's sample clock
-//   modeOpt[0]  scene: 0 one cell (392.4125 MHz, encrypted network), 1 two cells (392.4125 and 392.6000 MHz, the second in the clear)
+//   modeOpt[0]  scene: 0 one cell (392.4125 MHz, encrypted network), 1 two cells (392.4125 and 392.6000 MHz, the second in the clear),
+//               2 a wide capture (3.4): modeOpt[1] cells (default 12) spread over the middle 72 % of the sample rate on the 25 kHz raster, each with its
+//               (the default scene 0 becomes this one when the capture is 4 Msps or more), each with its
+//               own colour code, location area and base-station tuning error (up to +-4 kHz), at levels up to 12 dB apart; every second one encrypted
 // The carriers sit at their frequencies relative to a radio centred on 392.5 MHz (the mode's default).
 #pragma once
 #include "dect2/engine/mode_synth.h"
@@ -34,6 +37,11 @@ constexpr double kTetraTestCentreHz = 392.5e6;
 
 int tetraTestCells(int scene);
 TetraCellCfg tetraTestCell(int scene, int index);
+
+// Scene 2: cell `index` of `count` for a capture of `rateHz`: its carrier offset from the centre (a multiple of 25 kHz), its own tuning error and its
+// configuration (colour code 1 + index; main carrier and frequency match). The offsets are distinct and sorted by index.
+struct TetraWideCell { TetraCellCfg cfg; double offHz = 0, errHz = 0; };
+TetraWideCell tetraWideCell(int index, int count, double rateHz);
 
 namespace tetra {
 // The 510 bits of one downlink slot of this cell; abs counts slots from multiframe 1, frame 1, timeslot 1

@@ -2,6 +2,7 @@
 // training sequences, the broadcast channels decoded.
 #include "dect2/common/thread_name.h"
 #include "dect2/tetra/tetra_rx.h"
+#include "dect2/mesh/mesh_lora.h"
 #include "dect2/results/results_io.h"
 #include "dect2/cell/cell_dsp.h"
 #include "dect2/tetra/tetra_tel.h"
@@ -393,7 +394,7 @@ CarrierDecode decodeCarrier(const cf32* x, size_t n, int kMcc, int kMnc, int kCc
 
 // ---------------------------------------------------------------- receiver
 
-std::vector<tetra::CarrierPeak> tetra::findCarriers(const cf32* x, size_t n, double fs) {
+std::vector<tetra::CarrierPeak> tetra::findCarriers(const cf32* x, size_t n, double fs, double usableBand, size_t maxCarriers) {
     std::vector<CarrierPeak> out;
     const int nfft = cell::pow2At((int)(fs / 1000.0));
     if (nfft < 64 || n < (size_t)nfft * 8) return out;
@@ -403,7 +404,8 @@ std::vector<tetra::CarrierPeak> tetra::findCarriers(const cf32* x, size_t n, dou
     const double bin = fs / nfft;
     // the usable band: the middle kUsableBand of the span, where a radio's decimation filter is flat (the span the application steps by);
     // the roll-off outside it is neither searched nor taken into the floor
-    const int lo = nfft / 2 - (int)(nfft * kUsableBand / 2), hi = nfft / 2 + (int)(nfft * kUsableBand / 2) - 1;
+    const double ub = usableBand > 0 && std::isfinite(usableBand) ? std::min(usableBand, 0.999) : kUsableBand;   // (a fraction: nothing else is refused)
+    const int lo = std::max(1, nfft / 2 - (int)(nfft * ub / 2)), hi = std::min(nfft - 2, nfft / 2 + (int)(nfft * ub / 2) - 1);
     // the local floor: the 20th percentile of the usable bins within kFloorWindowHz / 2 of each bin, taken on a grid of nfft / 128 bins and
     // held between the grid points (a carrier is 25 kHz wide and a row of them a few hundred kHz: the floor is the noise between the rows)
     const int half = std::max(8, (int)(kFloorWindowHz / 2 / bin)), step = std::max(1, nfft / 128);
@@ -440,7 +442,26 @@ std::vector<tetra::CarrierPeak> tetra::findCarriers(const cf32* x, size_t n, dou
         i = j + 1;
     }
     std::sort(out.begin(), out.end(), [](const CarrierPeak& a, const CarrierPeak& b) { return a.levelDb > b.levelDb; });
-    if (out.size() > 24) out.resize(24);
+    if (maxCarriers > 0 && out.size() > maxCarriers) out.resize(maxCarriers);
+    return out;
+}
+
+std::vector<std::vector<cf32>> tetra::channelizeMany(const cf32* x, size_t n, double fs, const std::vector<double>& offsets) {
+    std::vector<std::vector<cf32>> out(offsets.size());
+    if (offsets.empty() || n < 4096) return out;
+    std::vector<lora::FdChannelizer::Spec> specs;
+    for (double o : offsets) specs.push_back({o, 50e3});   // a 25 kHz channel and its neighbours' skirts: the same passband the single path leaves (+-40 kHz)
+    lora::FdChannelizer fd(fs, specs);
+    std::vector<lora::ChanBuf> bufs(offsets.size());
+    std::vector<lora::ChanBuf*> ptrs;
+    for (auto& b : bufs) { b.clear(0); ptrs.push_back(&b); }
+    constexpr size_t kChunk = size_t(1) << 20;   // the channeliser keeps only what the next segment needs: the capture is never copied whole
+    for (size_t i = 0; i < n; i += kChunk) fd.process(x + i, std::min(kChunk, n - i), ptrs);
+    for (size_t k = 0; k < offsets.size(); k++) {
+        const size_t m = (size_t)(bufs[k].end() - bufs[k].begin());
+        if (m < 64) continue;
+        out[k] = channelize(bufs[k].at(bufs[k].begin()), m, fd.outRate(k), 0.0);   // already centred: only the resampling to 4 samples per symbol is left
+    }
     return out;
 }
 
@@ -474,6 +495,7 @@ struct TetraReceiver::Impl {
     // the user's choice (issue #267): the timeslot to listen to (0 the first with clear voice), the carrier (0 any), only the carrier at the dial frequency
     std::atomic<int> wantTn{0};
     std::atomic<double> wantCarrierHz{0.0};
+    std::atomic<double> searchBand{tetra::kUsableBand};   // the part of the capture the carrier search covers (setSearchBand)
     std::atomic<bool> single{false};      // Single carrier: only the user's channel is decoded, no search of the span
     std::atomic<double> playCarrierHz{0.0};   // the stream whose voice reached the sink in the last capture (0: none)
     std::atomic<int> playTn{0};
@@ -481,6 +503,8 @@ struct TetraReceiver::Impl {
     // middle of two 25 kHz grid steps changed name every time, losing its call state and its place in the voice stream), so a carrier within
     // kSameCarrierHz of a known one is that carrier. Analysis thread only.
     static constexpr double kSameCarrierHz = 9e3;
+    static constexpr double kSharedFromHz = 4e6;      // from this input rate (and this many carriers) the carriers are cut out with one shared FFT
+    static constexpr size_t kSharedMinCarriers = 3;
     std::vector<std::pair<double, long>> carrierNames;
     long nextName = 1;
     long callKey(double center, double off) {
@@ -541,7 +565,7 @@ struct TetraReceiver::Impl {
     }
 
     // 25 kHz humps in the spectrum: runs of bins over the floor, split into 25 kHz carriers
-    std::vector<Carrier> carriers(const std::vector<cf32>& x, double fs) { return tetra::findCarriers(x.data(), x.size(), fs); }
+    std::vector<Carrier> carriers(const std::vector<cf32>& x, double fs) { return tetra::findCarriers(x.data(), x.size(), fs, searchBand.load()); }
 
     void process(const std::vector<cf32>& x, double center, double fs, double sec, uint64_t g) {
         std::vector<Carrier> car;
@@ -552,6 +576,11 @@ struct TetraReceiver::Impl {
             { std::lock_guard<std::mutex> lk(mu); off0 = sigOff; }
             if (std::fabs(off0) < fs * 0.45) { Carrier c; c.off = off0; c.levelDb = 0; c.powerDb = 0; car.push_back(c); }
         } else car = carriers(x, fs);
+        // A wide capture with several carriers: one shared FFT brings them all to 72 kHz (a mixer and a filter over the whole capture for each
+        // carrier would take longer than the capture lasts). A narrow capture keeps the per-carrier path, bit for bit as before.
+        std::vector<std::vector<cf32>> pre;
+        const bool shared = !single.load() && fs >= kSharedFromHz && car.size() >= kSharedMinCarriers;
+        if (shared) { std::vector<double> offs; for (const auto& c : car) offs.push_back(c.off); pre = tetra::channelizeMany(x.data(), x.size(), fs, offs); }
         const int tnWant = wantTn.load();
         const double carWant = wantCarrierHz.load();
         bool gaveVoice = false;
@@ -563,7 +592,8 @@ struct TetraReceiver::Impl {
         // carrier that gave silence is never heard in front of (or besides) the carrier that gave the speech
         tetra::FrameBuffer fallback;
         bool haveFallback = false, voiced = false;
-        for (const auto& c : car) {
+        for (size_t ci = 0; ci < car.size(); ci++) {
+            const auto& c = car[ci];
             if (gen.load() != g) return;   // retuned meanwhile: these samples belong to another frequency
             int kMcc = -1, kMnc = -1, kCc = -1;
             tetra::SlotInfo known[4];   // what this carrier's cell showed so far, for following a talkgroup / ISSI
@@ -576,7 +606,7 @@ struct TetraReceiver::Impl {
                     break;
                 }
             }
-            const std::vector<cf32> s = tetra::channelize(x.data(), x.size(), fs, c.off);
+            const std::vector<cf32> s = shared && ci < pre.size() && !pre[ci].empty() ? std::move(pre[ci]) : tetra::channelize(x.data(), x.size(), fs, c.off);
             if (callTrackers.size() > 64) { callTrackers.clear(); timelines.clear(); }
             const long key = callKey(center, c.off);
             int voiceTn = 0;
@@ -773,6 +803,8 @@ bool TetraReceiver::ready() const { std::lock_guard<std::mutex> lk(p_->mu); retu
 void TetraReceiver::setVoiceSink(SpeechFrameSink* s) { p_->voiceSink.store(s); }
 void TetraReceiver::setVoiceTimeslot(int tn) { p_->wantTn = tn >= 1 && tn <= 4 ? tn : 0; }
 void TetraReceiver::setVoiceCarrier(double hz) { p_->wantCarrierHz = hz > 0 ? hz : 0.0; }
+void TetraReceiver::setSearchBand(double f) { if (f > 0 && std::isfinite(f)) p_->searchBand.store(std::min(f, 0.999)); }
+double TetraReceiver::searchBand() const { return p_->searchBand.load(); }
 void TetraReceiver::setSingleCarrier(bool on) { if (p_->single.exchange(on) != on) p_->gen++; }
 bool TetraReceiver::singleCarrier() const { return p_->single.load(); }
 double TetraReceiver::voiceCarrierHz() const { return p_->playCarrierHz.load(); }

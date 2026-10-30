@@ -244,7 +244,7 @@ void channelWidthPopup(App& a) {
         ImGui::SameLine();
         int k = a.fmChanKhz > 0 ? a.fmChanKhz : 220;
         ImGui::SetNextItemWidth(150 * gUi);
-        if (ImGui::SliderInt("##fmchw", &k, (int)(FmReceiver::kMinChannelWidthHz / 1e3), (int)(FmReceiver::kMaxChannelWidthHz / 1e3), "%d kHz")) a.fmChanKhz = (k + 5) / 10 * 10;
+        if (ImGui::SliderInt("##fmchw", &k, 100, (int)(FmReceiver::kMaxChannelWidthHz / 1e3), "%d kHz")) a.fmChanKhz = std::max(10, (k + 5) / 10 * 10);   // (Ctrl-click to type any width)
         if (ImGui::IsItemDeactivatedAfterEdit()) savePrefs(a);
         ImGui::EndDisabled();
         ImGui::TextDisabled("%s", tr("The receiver's channel filter. Narrower keeps a strong neighbour out (150 kHz copes with one 10 dB stronger 150 kHz away); "

@@ -12,6 +12,7 @@
 #include "dect2/net/api_servers.h"
 #include "dect2/net/remote_api.h"
 #include "../memory/memory_options.h"
+#include <cmath>
 #include <filesystem>
 #include "dect2/results/rx_json.h"
 #include <chrono>
@@ -371,13 +372,22 @@ struct Host : RemoteApiHost {
         return run([hz](App& a, std::string& e) {
             const DeviceInfo& d = a.devices[(size_t)a.devIdx];
             if (d.kind == DeviceInfo::File) { e = "a recording plays at its own rate"; return false; }
-            if (hz > 0 && d.isRadio() && ((d.maxRateHz > 0 && hz > d.maxRateHz * 1.0001) || (d.minRateHz > 0 && hz < d.minRateHz * 0.9999))) { e = "outside the sample rates of this radio"; return false; }
+            if (hz > 0 && !std::isfinite(hz)) { e = "not a sample rate"; return false; }
+            // 3.4: a rate outside what the radio lists is passed on like any typed one (the driver decides); the app puts the old rate back if it refuses
+            const double prev = savedSampleRate(a);
             saveSampleRate(a, hz);   // what the "Rate" control does
             const bool restart = a.engine.running() && d.isRadio();
             const double old = a.tune.sampleRate;
             a.tune.centerHz = a.freqMhz * 1e6;
             applyBandwidth(a);
-            if (restart && a.tune.sampleRate != old) { startReceiver(a); a.mpd.reset(); a.quality.reset(); }
+            if (restart && a.tune.sampleRate != old) {
+                startReceiver(a); a.mpd.reset(); a.quality.reset();
+                if (!a.engine.running() && hz > 0) {   // the radio refused it: its own words, and the previous rate is back
+                    e = "the radio refused this sample rate" + (a.engine.startError().empty() ? std::string() : ": " + a.engine.startError());
+                    saveSampleRate(a, prev); applyBandwidth(a); startReceiver(a);
+                    return false;
+                }
+            }
             return true;
         }, err);
     }

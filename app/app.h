@@ -213,6 +213,7 @@ struct App {
     ImVec2 tgMin[8], tgMax[8];   // screen rectangles of the parts of the window the tour points at
     VideoTex video;
     float volume = 1.f;
+    int tetraSearchPct = 72;   // TETRA: the middle part of the capture the carrier search covers, % (72 = the flat part of a radio's filter; a wide capture can search more); saved
     int tetraSingle = 0;   // TETRA carrier choice: 0 search the span, 1 single carrier (one 25 kHz channel at the dial frequency); saved
     int tetraSlotMode = 0, tetraSlotNum = 1, tetraSlotId = 0;   // TETRA 'Listen to': 0 auto, 1 slot (tetraSlotNum 1..4), 2 talkgroup, 3 ISSI (tetraSlotId); saved
     bool muted = false, subsOn = true;
@@ -552,8 +553,10 @@ struct App {
     double scanHarvestT = 0;
     bool agcOn = false;
     std::string gainDev;   // the radio a.tune.gainDb was set for (board:serial); another radio starts at its own sensible gain
+    double autoBwMhz = 0;       // the mode's own (standard) bandwidth, set by applyBandwidth() before a custom one is applied
     double autoRateHz = 0;      // the mode's own radio rate ("Auto" of the sample-rate control), set by applyBandwidth()
     double chosenRateHz = 0;    // the rate chosen for this mode on this radio and applied by applyBandwidth() (0 = Auto)
+    std::string rateRefusal;    // the driver's own words when it refused a rate or width the user chose (the previous setting is back); shown beside the control
     std::string biasCtx;        // the mode / radio the antenna power was last loaded for (biasContext)
     std::string rateCtx;        // mode / radio / channel width applyBandwidth() last ran for (the control refreshes Auto when it changes)
     std::string radioKey;  // the radio a.tune.radio (its own settings, DeviceInfo::settings) was loaded for (radioKeyOf); "" = none
@@ -860,8 +863,10 @@ double halowWantedWidthMhz();     // and the widest channel it means, for the sp
 // The sample rate chosen per mode and per radio (prefs "rate.<mode id>.<radioKeyOf>", in Hz; absent or 0 = Auto, the mode's own rate)
 std::string rateModeId(const App& a);
 std::string rateContext(const App& a);
-double rxWidthMhz(int stdMode);               // state/rx_width.cpp: the receive bandwidth chosen for VDL2, TETRA, TETRAPOL (0 = Auto)
-void rxWidthControl(App& a, bool& retune);    // and its control (the decoder options of those three modes)
+double rxWidthMhz(const App& a);              // state/rx_width.cpp: the custom bandwidth of this mode in MHz (0 = the mode's own standard width)
+void rxWidthControl(App& a, bool& retune);    // and its Advanced row (custom bandwidth + custom sample rate), shown for every mode
+bool captureRowShown(const App& a);           // the Advanced row is drawn for a radio or the test signal (not a recording or a sound card)
+bool sampleRateAdvanced(App& a);              // ui/toolbar_source.cpp: the sample-rate half of that row (true when it changed the rate)
 double savedSampleRate(const App& a);
 void saveSampleRate(App& a, double hz);
 double modeMinSampleRate(const App& a);

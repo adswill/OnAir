@@ -428,7 +428,7 @@ void wideSettingsPopup(App& a) {
         ImGui::SetNextItemWidth(160 * gUi); if (ImGui::SliderFloat(tr("Hold s"), &hold, 1, 120, "%.0f")) { w.holdSec = hold; ch = true; }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("A quiet carrier keeps its decoder this long"));
     }
-    ImGui::SetNextItemWidth(160 * gUi); if (ImGui::SliderInt(tr("Carriers at most"), &w.maxCarriers, 1, 32)) ch = true;
+    ImGui::SetNextItemWidth(160 * gUi); if (ImGui::SliderInt(tr("Carriers at most"), &w.maxCarriers, 1, 32)) { w.maxCarriers = std::max(1, w.maxCarriers); ch = true; }   // (Ctrl-click to type more than 32: the CPU limit below is what holds the load down)
     ImGui::SetNextItemWidth(160 * gUi); if (ImGui::SliderFloat(tr("CPU limit %"), &cpu, 0, 100, cpu <= 0 ? "off" : "%.0f")) { w.cpuBudget = cpu / 100.0; ch = true; }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("When the decoders take longer than this share of real time, the weakest carrier is dropped (never the one you listen to)"));
     {   // the channel raster: automatic (the mode's own: 12.5 kHz for DMR) or a fixed one; found frequencies snap to its channel centres

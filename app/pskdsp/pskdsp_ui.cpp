@@ -386,8 +386,8 @@ void decoder(App&, bool&) {
             if (pi == 0) {
                 float khz = (float)(S.customSpan / 1e3);
                 ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Bandwidth")); ImGui::SameLine(170 * gUi); ImGui::SetNextItemWidth(w);
-                if (ImGui::SliderFloat("##pskdbwkhz", &khz, 2.5f, 200.f, "%.1f kHz", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_AlwaysClamp)) { S.customSpan = std::clamp((double)khz, 2.5, 200.0) * 1e3; S.cfg.spanHz = S.customSpan; store(); }
-                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Ctrl-click to type a value. Keep the signal and its sidebands inside it, and the neighbours outside."));
+                if (ImGui::SliderFloat("##pskdbwkhz", &khz, 2.5f, 200.f, "%.1f kHz", ImGuiSliderFlags_Logarithmic)) { S.customSpan = std::max((double)khz, 0.1) * 1e3; S.cfg.spanHz = S.customSpan; store(); }
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Ctrl-click to type any value (no limit). Keep the signal and its sidebands inside it, and the neighbours outside."));
             }
         }
     }

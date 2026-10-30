@@ -34,7 +34,7 @@ static void testSlotsAndRates() {
     DeviceInfo lime; lime.kind = DeviceInfo::Native; lime.board = "lime"; lime.minRateHz = 0.1e6; lime.maxRateHz = 61.44e6;
     auto e = rateEntries(rateLimitsOf(lime), 0);
     CHECK(has(e, 30.72e6) && has(e, 40e6) && has(e, 61.44e6) && has(e, 20e6), "LimeSDR rate list lacks the wide rates (%zu entries)", e.size());
-    CHECK(checkManualRate(rateLimitsOf(lime), 0, 61.44e6).ok && !checkManualRate(rateLimitsOf(lime), 0, 62e6).ok, "manual rate limits");
+    CHECK(checkManualRate(rateLimitsOf(lime), 0, 61.44e6).why.empty() && checkManualRate(rateLimitsOf(lime), 0, 62e6).ok && !checkManualRate(rateLimitsOf(lime), 0, 62e6).why.empty(), "manual rate: a warning above the radio's list, never a refusal");
     DeviceInfo mini = lime; mini.maxRateHz = 30.72e6;
     e = rateEntries(rateLimitsOf(mini), 0);
     CHECK(has(e, 30.72e6) && !has(e, 40e6) && !has(e, 61.44e6), "LimeSDR Mini list stops at 30.72");

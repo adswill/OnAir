@@ -160,7 +160,7 @@ protected:
             // a Mini on a USB 2 port cannot carry more than the 12-bit packed link allows: said once, the rate is still asked for
             if (board_.mini && !board_.usb3 && s.sampleRate > kLimeMiniUsb2RateHz)
                 addNote(err, "LimeSDR Mini: this is a USB 2 port, samples above about 15 Msps are lost; use a USB 3 port (blue) for 20 or 30.72 Msps");
-            const double want = std::min(std::max(s.sampleRate > 0 ? s.sampleRate : 10e6, range.min), board_.mini ? std::min(range.max, 30.72e6) : range.max);
+            const double want = s.rateChosen && s.sampleRate > 0 ? s.sampleRate : std::min(std::max(s.sampleRate > 0 ? s.sampleRate : 10e6, range.min), board_.mini ? std::min(range.max, 30.72e6) : range.max);   // (3.4: a chosen rate goes to LimeSuite as it is)
             if (lime().set_sample_rate(dev_, want, 0) != 0) { err = "LimeSDR: the sample rate was refused" + lime().text(); return false; }
             rate_ = want;
             // the rate the clock generator really gives ("Use LMS_GetSampleRate() to obtain actual sample rate values", LimeSuite.h)

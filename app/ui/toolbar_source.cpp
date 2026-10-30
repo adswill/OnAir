@@ -12,6 +12,7 @@
 #include "dect2/source/iq_file.h"
 #include <algorithm>
 #include <cctype>
+#include <map>
 #include <memory>
 #include <thread>
 #include "toolbar_internal.h"
@@ -108,9 +109,12 @@ static std::string mspsText(double hz) {
     if (!s.empty() && s.back() == '.') s.pop_back();
     return s + " Msps";
 }
+static void manualRatePopup(App& a, const char* id, bool open, const RateLimits& L, double need);
 static void chooseSampleRate(App& a, double hz) {
+    const double prev = savedSampleRate(a);
     saveSampleRate(a, hz);
-    const bool restart = a.engine.running() && a.devices[a.devIdx].isRadio();
+    a.rateRefusal.clear();
+    const bool restart = a.engine.running() && (a.devices[a.devIdx].isRadio() || a.devices[a.devIdx].kind == DeviceInfo::Synthetic);
     const double old = a.tune.sampleRate;
     a.tune.centerHz = a.freqMhz * 1e6;
     applyBandwidth(a);
@@ -118,6 +122,14 @@ static void chooseSampleRate(App& a, double hz) {
         a.engine.log("restarting at " + mspsText(a.tune.sampleRate));
         startReceiver(a);
         a.mpd.reset(); a.quality.reset();
+        if (!a.engine.running() && hz > 0) {   // 3.4: the driver has the last word: its own message, and the previous setting is back
+            const std::string why = a.engine.startError();
+            a.rateRefusal = mspsText(hz) + " refused by the radio" + (why.empty() ? std::string() : ": " + why) + "; back to the previous setting";
+            a.engine.log(a.rateRefusal);
+            saveSampleRate(a, prev);
+            applyBandwidth(a);
+            startReceiver(a);
+        }
     }
 }
 bool lowerSampleRate(App& a, double& prevChoiceHz, double& newHz) {
@@ -160,7 +172,7 @@ void sampleRateControl(App& a) {
     // row it moved between the lines every frame
     const float w = std::min(150.f * gUi, std::max(110.f * gUi, ImGui::GetWindowWidth() - 2 * ImGui::GetStyle().WindowPadding.x));
     ImGui::SetNextItemWidth(w);
-    const bool radio = d.isRadio();
+    const bool radio = d.isRadio() || d.kind == DeviceInfo::Synthetic;   // the test signal follows a chosen rate too
     const RateLimits L = rateLimitsOf(d);
     const double need = modeMinSampleRate(a);
     const std::string preview = a.chosenRateHz > 0 ? mspsText(a.chosenRateHz) : std::string(tr("Auto")) + " (" + mspsText(a.autoRateHz > 0 ? a.autoRateHz : a.tune.sampleRate) + ")";
@@ -168,7 +180,7 @@ void sampleRateControl(App& a) {
     ImGui::BeginDisabled(!radio || a.scanner.progress().running);
     if (ImGui::BeginCombo("##srate", preview.c_str())) {
         if (ImGui::Selectable((std::string(tr("Auto")) + " (" + mspsText(a.autoRateHz) + ")").c_str(), a.chosenRateHz == 0) && a.chosenRateHz != 0) chooseSampleRate(a, 0);
-        for (const RateEntry& e : rateEntries(L, need)) {
+        for (const RateEntry& e : rateEntries(L, 0)) {   // (3.4: a rate below the mode's need is listed too: it only warns)
             std::string label = mspsText(e.getHz);
             if (std::fabs(e.askHz - e.getHz) > 1) label += " (for " + mspsText(e.askHz) + ")";
             const bool sel = a.chosenRateHz > 0 && std::fabs(deliveredRate(L, a.chosenRateHz) - e.getHz) <= 1;
@@ -197,26 +209,98 @@ void sampleRateControl(App& a) {
         ImGui::TextColored(ImVec4(0.9f, 0.7f, 0.28f, 1), tr("runs at %s"), mspsText(a.engine.sampleRate()).c_str());
         if (ImGui::IsItemHovered()) ImGui::SetTooltip(tr("The radio gave %s instead of the %s asked for."), mspsText(a.engine.sampleRate()).c_str(), mspsText(a.tune.sampleRate).c_str());
     }
+    if (!a.rateRefusal.empty()) {   // the radio refused what was typed: its own message, the previous rate is back
+        ImGui::SameLine(0, 6 * gUi);
+        ImGui::TextColored(ImVec4(0.95f, 0.45f, 0.35f, 1), "%s", tr("refused"));
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", a.rateRefusal.c_str());
+    } else if (a.chosenRateHz > 0 && radio) {   // a chosen rate outside the radio's list or below the decoder's need: warned, never blocked
+        const RateCheck wc = checkManualRate(L, need, a.chosenRateHz);
+        if (!wc.why.empty()) {
+            ImGui::SameLine(0, 6 * gUi);
+            ImGui::TextColored(ImVec4(0.9f, 0.7f, 0.28f, 1), "!");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", wc.why.c_str());
+        }
+    }
+    manualRatePopup(a, "##srateman", openManual, L, need);
+}
+
+// The popup that takes a typed rate in Msps. Any positive rate is used: a rate the radio does not list only gets a warning, and the driver's
+// own message is shown if it refuses (chooseSampleRate puts the previous setting back).
+static void manualRatePopup(App& a, const char* id, bool open, const RateLimits& L, double need) {
     static double typed = 0;
     static std::string why;
-    if (openManual) { typed = (a.chosenRateHz > 0 ? a.chosenRateHz : a.tune.sampleRate) / 1e6; why.clear(); ImGui::OpenPopup("##srateman"); }
-    if (ImGui::BeginPopup("##srateman")) {
+    if (open) { typed = (a.chosenRateHz > 0 ? a.chosenRateHz : a.tune.sampleRate) / 1e6; why.clear(); ImGui::OpenPopup(id); }
+    if (ImGui::BeginPopup(id)) {
         ImGui::TextDisabled("%s", tr("Sample rate (Msps)"));
         ImGui::SetNextItemWidth(120 * gUi);
-        if (openManual) ImGui::SetKeyboardFocusHere();
+        if (open) ImGui::SetKeyboardFocusHere();
         ImGui::InputDouble("##sratev", &typed, 0, 0, "%.3f");   // InputScalar does not take EnterReturnsTrue (an assertion in Windows builds)
         const bool enter = ImGui::IsItemDeactivatedAfterEdit() && (ImGui::IsKeyPressed(ImGuiKey_Enter, false) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter, false));
         ImGui::SameLine();
         if (ImGui::Button(tr("Use")) || enter) {
-            const RateCheck c = checkManualRate(L, need, std::round(typed * 1e3) * 1e3);
-            if (c.ok) { chooseSampleRate(a, std::round(typed * 1e3) * 1e3); ImGui::CloseCurrentPopup(); }
+            const double hz = std::round(typed * 1e3) * 1e3;
+            const RateCheck c = checkManualRate(L, need, hz);
+            if (c.ok) { chooseSampleRate(a, hz); ImGui::CloseCurrentPopup(); }   // any positive rate goes to the driver; a warning is shown beside the control
             else why = c.why;
         }
         if (!why.empty()) ImGui::TextColored(ImVec4(0.95f, 0.45f, 0.35f, 1), "%s", why.c_str());
+        else if (typed > 0) { const RateCheck c = checkManualRate(L, need, std::round(typed * 1e3) * 1e3); if (!c.why.empty()) ImGui::TextColored(ImVec4(0.9f, 0.7f, 0.28f, 1), "%s", c.why.c_str()); }
         if (ImGui::IsKeyPressed(ImGuiKey_Escape)) ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
     }
 }
+
+// The sample-rate half of the Advanced row (rx_width.cpp): the mode's standard rate as text and a Custom tick that opens the list of rates the radio
+// lists and a free entry. The choice is the same one the RATE box of the top bar makes (saved per mode and radio).
+bool sampleRateAdvanced(App& a) {
+    const DeviceInfo& d = a.devices[a.devIdx];
+    if (!(d.isRadio() || d.kind == DeviceInfo::Synthetic)) return false;   // a recording, a sound card: their own rate
+    const RateLimits L = rateLimitsOf(d);
+    const double need = modeMinSampleRate(a);
+    static std::map<std::string, double> lastCustom;   // the custom rate of a mode while its tick is off
+    const std::string lk = rateModeId(a) + "|" + std::to_string(a.devIdx);
+    bool custom = a.chosenRateHz > 0, openManual = false, changed = false;
+    flowNext(14 * gUi);
+    char sb[96];
+    snprintf(sb, sizeof sb, "%s: %s (%s)", tr("Sample rate"), mspsText(a.autoRateHz > 0 ? a.autoRateHz : a.tune.sampleRate).c_str(), tr("standard"));
+    ImGui::TextDisabled("%s", custom ? tr("Sample rate") : sb);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The radio's sample rate for this mode, remembered for this radio. The standard rate is the mode's own; tick Custom to choose any rate: the ones the radio lists, or a typed one that goes to the driver as it is. A rate the radio does not list, or below what the decoder needs, only gets a warning."));
+    flowNext(8 * gUi);
+    if (ImGui::Checkbox(tr("Custom##srcustom"), &custom)) {
+        changed = true;
+        if (custom) chooseSampleRate(a, lastCustom.count(lk) ? lastCustom[lk] : (a.autoRateHz > 0 ? a.autoRateHz : a.tune.sampleRate));
+        else { lastCustom[lk] = a.chosenRateHz; chooseSampleRate(a, 0); }
+    }
+    if (custom) {
+        flowNext(6 * gUi);
+        ImGui::SetNextItemWidth(130 * gUi);
+        if (ImGui::BeginCombo("##srateadv", mspsText(a.chosenRateHz).c_str())) {
+            for (const RateEntry& e : rateEntries(L, 0)) {   // all the radio's rates, none hidden for being below the mode's need (that only warns)
+                std::string label = mspsText(e.getHz);
+                if (std::fabs(e.askHz - e.getHz) > 1) label += " (for " + mspsText(e.askHz) + ")";
+                const bool sel = std::fabs(deliveredRate(L, a.chosenRateHz) - e.getHz) <= 1;
+                if (ImGui::Selectable(label.c_str(), sel) && !sel) { chooseSampleRate(a, e.getHz); changed = true; }
+            }
+            ImGui::Separator();
+            if (ImGui::Selectable(tr("Other…"))) openManual = true;
+            ImGui::EndCombo();
+        }
+        const RateCheck wc = checkManualRate(L, need, a.chosenRateHz);
+        if (!wc.why.empty()) {
+            ImGui::SameLine(0, 6 * gUi);
+            ImGui::TextColored(ImVec4(0.9f, 0.7f, 0.28f, 1), "!");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", wc.why.c_str());
+        }
+    }
+    if (!a.rateRefusal.empty()) {
+        ImGui::SameLine(0, 6 * gUi);
+        ImGui::TextColored(ImVec4(0.95f, 0.45f, 0.35f, 1), "%s", tr("refused"));
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", a.rateRefusal.c_str());
+    }
+    manualRatePopup(a, "##srateman2", openManual, L, need);
+    return changed;
+}
+
 
 void setDvbBandwidth(App& a, int idx) {
     if (idx < 0) a.bwAuto = true;   // followBandwidth() hands the detection back to the engine
