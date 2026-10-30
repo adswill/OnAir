@@ -157,5 +157,36 @@ int main() {
         const SarsatTelemetry t = run(cfg, rate, 20, true);
         CHECK(t.log.empty(), "noise gave %zu messages", t.log.size());
     }
+    {   // a radio with no antenna: noise with short blips, a wandering tone and a tone that comes and goes. None of it is a burst.
+        SarsatReceiver rx;
+        rx.configure(rate);
+        rx.setSignalOffset(-sarsatTuning().tuneOffsetHz);
+        const double f0 = sarsatTuning().tuneOffsetHz + 4000.0;
+        std::vector<cf32> buf(32768);
+        unsigned s = 4242;
+        uint64_t n = 0, seq = 0;
+        double ph = 0;
+        SarsatTelemetry t;
+        for (double done = 0; done < 30 * rate; done += (double)buf.size()) {
+            for (auto& v : buf) {
+                s = s * 1664525u + 1013904223u; const float a = ((s >> 8) & 0xFFFF) / 65536.f - 0.5f;
+                s = s * 1664525u + 1013904223u; const float b = ((s >> 8) & 0xFFFF) / 65536.f - 0.5f;
+                const double sec = (double)n / rate;
+                const double cyc = std::fmod(sec, 3.0);
+                double amp = 0, f = f0;
+                if (cyc < 0.15) amp = 0.4;                                              // a 150 ms blip
+                else if (cyc >= 1.0 && cyc < 1.6) { amp = 0.4; f = f0 + (cyc - 1.0) * 5000.0; }   // 0.6 s tone that wanders 3 kHz
+                else if (cyc >= 2.0 && cyc < 2.5) { amp = (std::fmod(sec * 4, 1.0) < 0.5) ? 0.4 : 0.0; }   // keyed on and off
+                ph += 2 * M_PI * f / rate;
+                v = cf32(a * 0.3f + (float)(amp * std::cos(ph)), b * 0.3f + (float)(amp * std::sin(ph)));
+                n++;
+            }
+            rx.feed(buf.data(), buf.size());
+            SarsatTelemetry x;
+            if (rx.telemetry(x, seq)) { seq = x.seq; t = x; }
+        }
+        CHECK(t.bursts == 0, "spurs counted as %llu bursts", (unsigned long long)t.bursts);
+        CHECK(t.blocksBad == 0 && t.log.empty(), "spurs: %llu failed checks, %zu messages", (unsigned long long)t.blocksBad, t.log.size());
+    }
     return testSummary("test_sarsat_rx");
 }

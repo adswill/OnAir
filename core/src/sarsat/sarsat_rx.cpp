@@ -227,7 +227,8 @@ struct SarsatReceiver::Impl {
     // burst state
     bool active = false;
     int miss = 0, dets = 0;
-    uint64_t firstBlockStart = 0;
+    uint64_t firstBlockStart = 0, lastDetEnd = 0;   // sample counts (at kDet): first block of a burst, end of its last block with a line
+    std::vector<float> linePow;                       // power of the line in each detecting block of the burst
     std::vector<double> peaks;
     float peakSnr = -200, peakLevel = -200;
     double lastDecodeSec = -1e9, lastPublish = 0;
@@ -264,7 +265,20 @@ struct SarsatReceiver::Impl {
     void finishBurst() {
         active = false;
         if (dets >= 4 && peakSnr >= 10.f) {
-            tel.bursts++;
+            // Only a burst that looks like a beacon is counted when it does not decode. A beacon holds one steady line for 0.3 s or more, and after
+            // its 160 ms unmodulated preamble the phase-modulated data lowers the carrier line (about 7 dB). A radio with no antenna shows short
+            // blips, wandering tones and steady tones: none of those is a burst. A burst that decodes always counts.
+            bool plausible = lastDetEnd > firstBlockStart && (double)(lastDetEnd - firstBlockStart) >= 0.30 * kDet && linePow.size() >= 8;
+            if (plausible) {
+                const auto mm = std::minmax_element(peaks.begin(), peaks.end());
+                plausible = *mm.second - *mm.first <= 600.0;
+            }
+            if (plausible) {
+                std::vector<float> pre(linePow.begin(), linePow.begin() + 5), post(linePow.begin() + 5, linePow.end());
+                std::nth_element(pre.begin(), pre.begin() + 2, pre.end());
+                std::nth_element(post.begin(), post.begin() + (long)(post.size() / 2), post.end());
+                plausible = post[post.size() / 2] <= 0.7f * pre[2];
+            }
             const uint64_t start = firstBlockStart >= 8192 ? firstBlockStart - 8192 : 0;
             const uint64_t from = n32 > kRing - 4096 && start < n32 - (kRing - 4096) ? n32 - (kRing - 4096) : start;
             std::vector<cf32> x;
@@ -288,6 +302,7 @@ struct SarsatReceiver::Impl {
             }
             sarsat::Beacon b;
             const bool got = sarsat::demodBurst(y, 0.0, b);
+            if (got || plausible) tel.bursts++;
             if (got) {
                 SarsatEntry e;
                 e.wallTime = (int64_t)std::time(nullptr);
@@ -304,12 +319,12 @@ struct SarsatReceiver::Impl {
                     snprintf(line, sizeof line, "COSPAS-SARSAT %s %s %s%s", b.hexId.c_str(), b.beaconType.c_str(), b.country.c_str(), b.hasPos ? " (position)" : "");
                     log(line);
                 }
-            } else {
+            } else if (plausible) {
                 tel.blocksBad++;
             }
             tel.cfoHz = carrier; tel.snrDb = peakSnr; tel.levelDb = peakLevel;
         }
-        peaks.clear(); dets = 0; peakSnr = -200; peakLevel = -200;
+        peaks.clear(); linePow.clear(); dets = 0; peakSnr = -200; peakLevel = -200;
         publish();
     }
 
@@ -350,8 +365,8 @@ struct SarsatReceiver::Impl {
             snr = 10.f * std::log10(std::max(1e-3f, (s3 - 3 * nm) / (1.5f * nm)));
         }
         if (det) {
-            if (!active) { active = true; firstBlockStart = base; miss = 0; dets = 0; peakSnr = -200; peakLevel = -200; peaks.clear(); }
-            miss = 0; dets++;
+            if (!active) { active = true; firstBlockStart = base; miss = 0; dets = 0; peakSnr = -200; peakLevel = -200; peaks.clear(); linePow.clear(); }
+            miss = 0; dets++; lastDetEnd = n32; linePow.push_back(pmax);
             peaks.push_back(f);
             peakSnr = std::max(peakSnr, snr);
             peakLevel = std::max(peakLevel, 10.f * std::log10((float)(pw / kBlock) + 1e-12f));
