@@ -2779,14 +2779,12 @@ holding the level	lygis išlaikomas
 # transmit panel: top bar, Basic / Advanced, per-signal parameters
 0 is the normal suppressed carrier. A little carrier helps a receiver lock on; the top of the range is as strong as the loudest audio.	0 – įprasta nuslopinta nešlio banga. Šiek tiek nešlio padeda imtuvui užsifiksuoti; didžiausia reikšmė tokia stipri kaip garsiausias garsas.
 A second tone added to the first (0 = off). Two tones make a two-tone linearity test.	Antras tonas, pridedamas prie pirmojo (0 = išjungta). Du tonai sudaro dviejų tonų tiesiškumo bandymą.
-A sub-audible tone that opens a receiver's squelch (0 = off). 67 to 254.1 Hz.	Neišgirstamas tonas, atidarantis imtuvo triukšmo slopintuvą (0 = išjungta). 67–254,1 Hz.
 AM (carrier and sidebands)	AM (nešlys ir šoninės juostos)
 AM sends the carrier and both sidebands. Double sideband with suppressed carrier sends only the sidebands.	AM siunčia nešlį ir abi šonines juostas. Dvigubos šoninės juostos su nuslopintu nešliu siunčia tik šonines juostas.
 Audio above this level is turned down.	Garsas, viršijantis šį lygį, nutildomas.
 Audio frequency	Garso dažnis
 Boosts the high notes before sending (0 = off).	Prieš siunčiant sustiprina aukštus tonus (0 = išjungta).
 Boosts the high notes before sending. 50 µs in Europe and most of the world, 75 µs in the Americas.	Prieš siunčiant sustiprina aukštus tonus. 50 µs Europoje ir didžiojoje pasaulio dalyje, 75 µs Amerikoje.
-CTCSS level	CTCSS lygis
 CTCSS tone	CTCSS tonas
 Carrier injection	Nešlio įterpimas
 Carrier level	Nešlio lygis
@@ -2881,7 +2879,6 @@ The signal goes out only while there is sound on the audio input.	Signalas siun�
 The signal goes out only while you hold the button down.	Signalas siunčiamas tik tol, kol laikote mygtuką nuspaustą.
 The size of the carrier as a share of full scale. At a depth of 85 percent the peaks reach about full scale.	Nešlio dydis kaip visos skalės dalis. Esant 85 procentų gyliui, viršūnės pasiekia beveik visą skalę.
 The size of the signal as a share of full scale.	Signalo dydis kaip visos skalės dalis.
-The tone's share of the deviation.	Tono dalis nuo nuokrypio.
 The transmit frequency follows the receiver's. Typing a different one here unlinks them. Click to unlink.	Siuntimo dažnis seka imtuvo dažnį. Įvedus kitą čia, jie atsiejami. Spustelėkite, kad atsietumėte.
 The transmit frequency is its own. The receiver is on %.6f MHz. Click to make the transmitter follow it.	Siuntimo dažnis yra atskiras. Imtuvas veikia %.6f MHz dažniu. Spustelėkite, kad siųstuvas jį sektų.
 Threshold	Slenkstis

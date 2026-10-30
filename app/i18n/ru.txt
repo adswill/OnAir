@@ -2762,14 +2762,12 @@ holding the level	уровень удерживается
 # transmit panel: top bar, Basic / Advanced, per-signal parameters
 0 is the normal suppressed carrier. A little carrier helps a receiver lock on; the top of the range is as strong as the loudest audio.	0 — обычная подавленная несущая. Немного несущей помогает приёмнику захватить сигнал; верх диапазона так же силён, как самый громкий звук.
 A second tone added to the first (0 = off). Two tones make a two-tone linearity test.	Второй тон, добавляемый к первому (0 = выкл.). Два тона дают двухтональный тест линейности.
-A sub-audible tone that opens a receiver's squelch (0 = off). 67 to 254.1 Hz.	Неслышимый тон, открывающий шумоподавитель приёмника (0 = выкл.). От 67 до 254,1 Гц.
 AM (carrier and sidebands)	AM (несущая и боковые полосы)
 AM sends the carrier and both sidebands. Double sideband with suppressed carrier sends only the sidebands.	AM передаёт несущую и обе боковые полосы. Двухполосная с подавленной несущей передаёт только боковые полосы.
 Audio above this level is turned down.	Звук выше этого уровня приглушается.
 Audio frequency	Звуковая частота
 Boosts the high notes before sending (0 = off).	Усиливает высокие частоты перед передачей (0 = выкл.).
 Boosts the high notes before sending. 50 µs in Europe and most of the world, 75 µs in the Americas.	Усиливает высокие частоты перед передачей. 50 мкс в Европе и большинстве стран мира, 75 мкс в Америке.
-CTCSS level	Уровень CTCSS
 CTCSS tone	Тон CTCSS
 Carrier injection	Добавление несущей
 Carrier level	Уровень несущей
@@ -2864,7 +2862,6 @@ The signal goes out only while there is sound on the audio input.	Сигнал �
 The signal goes out only while you hold the button down.	Сигнал передаётся только пока вы удерживаете кнопку.
 The size of the carrier as a share of full scale. At a depth of 85 percent the peaks reach about full scale.	Размер несущей как доля полной шкалы. При глубине 85 процентов пики достигают почти полной шкалы.
 The size of the signal as a share of full scale.	Размер сигнала как доля полной шкалы.
-The tone's share of the deviation.	Доля тона в девиации.
 The transmit frequency follows the receiver's. Typing a different one here unlinks them. Click to unlink.	Частота передачи следует за частотой приёмника. Ввод другой здесь разрывает связь. Нажмите, чтобы разорвать.
 The transmit frequency is its own. The receiver is on %.6f MHz. Click to make the transmitter follow it.	Частота передачи независима. Приёмник настроен на %.6f МГц. Нажмите, чтобы передатчик следовал за ним.
 Threshold	Порог

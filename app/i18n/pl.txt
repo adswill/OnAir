@@ -2779,14 +2779,12 @@ holding the level	poziom utrzymany
 # transmit panel: top bar, Basic / Advanced, per-signal parameters
 0 is the normal suppressed carrier. A little carrier helps a receiver lock on; the top of the range is as strong as the loudest audio.	0 to zwykła stłumiona fala nośna. Odrobina nośnej pomaga odbiornikowi się zsynchronizować; górny kraniec zakresu jest tak mocny jak najgłośniejszy dźwięk.
 A second tone added to the first (0 = off). Two tones make a two-tone linearity test.	Drugi ton dodany do pierwszego (0 = wyłączony). Dwa tony tworzą dwutonowy test liniowości.
-A sub-audible tone that opens a receiver's squelch (0 = off). 67 to 254.1 Hz.	Ton podsłuchowo niesłyszalny, który otwiera blokadę szumów odbiornika (0 = wyłączony). 67 do 254,1 Hz.
 AM (carrier and sidebands)	AM (nośna i wstęgi boczne)
 AM sends the carrier and both sidebands. Double sideband with suppressed carrier sends only the sidebands.	AM nadaje falę nośną i obie wstęgi boczne. Dwuwstęgowa z tłumioną nośną nadaje tylko wstęgi boczne.
 Audio above this level is turned down.	Dźwięk powyżej tego poziomu jest ściszany.
 Audio frequency	Częstotliwość audio
 Boosts the high notes before sending (0 = off).	Podbija wysokie tony przed nadaniem (0 = wyłączone).
 Boosts the high notes before sending. 50 µs in Europe and most of the world, 75 µs in the Americas.	Podbija wysokie tony przed nadaniem. 50 µs w Europie i większości świata, 75 µs w obu Amerykach.
-CTCSS level	Poziom CTCSS
 CTCSS tone	Ton CTCSS
 Carrier injection	Wstrzyknięcie nośnej
 Carrier level	Poziom nośnej
@@ -2881,7 +2879,6 @@ The signal goes out only while there is sound on the audio input.	Sygnał jest n
 The signal goes out only while you hold the button down.	Sygnał jest nadawany tylko wtedy, gdy trzymasz wciśnięty przycisk.
 The size of the carrier as a share of full scale. At a depth of 85 percent the peaks reach about full scale.	Wielkość nośnej jako część pełnej skali. Przy głębokości 85 procent szczyty sięgają prawie pełnej skali.
 The size of the signal as a share of full scale.	Wielkość sygnału jako część pełnej skali.
-The tone's share of the deviation.	Udział tonu w dewiacji.
 The transmit frequency follows the receiver's. Typing a different one here unlinks them. Click to unlink.	Częstotliwość nadawania podąża za odbiornikiem. Wpisanie tu innej rozłącza je. Kliknij, aby rozłączyć.
 The transmit frequency is its own. The receiver is on %.6f MHz. Click to make the transmitter follow it.	Częstotliwość nadawania jest niezależna. Odbiornik jest na %.6f MHz. Kliknij, aby nadajnik za nim podążał.
 Threshold	Próg

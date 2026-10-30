@@ -2779,14 +2779,12 @@ holding the level	niveau wordt vastgehouden
 # transmit panel: top bar, Basic / Advanced, per-signal parameters
 0 is the normal suppressed carrier. A little carrier helps a receiver lock on; the top of the range is as strong as the loudest audio.	0 is de gewone onderdrukte draaggolf. Een beetje draaggolf helpt de ontvanger te vergrendelen; het bovenste einde van het bereik is even sterk als het luidste geluid.
 A second tone added to the first (0 = off). Two tones make a two-tone linearity test.	Een tweede toon bovenop de eerste (0 = uit). Twee tonen vormen een tweetoons-lineariteitstest.
-A sub-audible tone that opens a receiver's squelch (0 = off). 67 to 254.1 Hz.	Een niet-hoorbare toon die de squelch van een ontvanger opent (0 = uit). 67 tot 254,1 Hz.
 AM (carrier and sidebands)	AM (draaggolf en zijbanden)
 AM sends the carrier and both sidebands. Double sideband with suppressed carrier sends only the sidebands.	AM zendt de draaggolf en beide zijbanden uit. Dubbele zijband met onderdrukte draaggolf zendt alleen de zijbanden uit.
 Audio above this level is turned down.	Geluid boven dit niveau wordt zachter gezet.
 Audio frequency	Audiofrequentie
 Boosts the high notes before sending (0 = off).	Versterkt de hoge tonen voor het zenden (0 = uit).
 Boosts the high notes before sending. 50 µs in Europe and most of the world, 75 µs in the Americas.	Versterkt de hoge tonen voor het zenden. 50 µs in Europa en het grootste deel van de wereld, 75 µs in Amerika.
-CTCSS level	CTCSS-niveau
 CTCSS tone	CTCSS-toon
 Carrier injection	Draaggolfinjectie
 Carrier level	Draaggolfniveau
@@ -2881,7 +2879,6 @@ The signal goes out only while there is sound on the audio input.	Het signaal ga
 The signal goes out only while you hold the button down.	Het signaal gaat alleen uit zolang je de knop ingedrukt houdt.
 The size of the carrier as a share of full scale. At a depth of 85 percent the peaks reach about full scale.	De grootte van de draaggolf als deel van het volle bereik. Bij een diepte van 85 procent halen de pieken ongeveer het volle bereik.
 The size of the signal as a share of full scale.	De grootte van het signaal als deel van het volle bereik.
-The tone's share of the deviation.	Het aandeel van de toon in de deviatie.
 The transmit frequency follows the receiver's. Typing a different one here unlinks them. Click to unlink.	De zendfrequentie volgt die van de ontvanger. Een andere typen ontkoppelt ze. Klik om te ontkoppelen.
 The transmit frequency is its own. The receiver is on %.6f MHz. Click to make the transmitter follow it.	De zendfrequentie staat los. De ontvanger staat op %.6f MHz. Klik om de zender die te laten volgen.
 Threshold	Drempel

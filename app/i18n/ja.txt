@@ -2779,14 +2779,12 @@ holding the level	レベルを維持しています
 # transmit panel: top bar, Basic / Advanced, per-signal parameters
 0 is the normal suppressed carrier. A little carrier helps a receiver lock on; the top of the range is as strong as the loudest audio.	0 は通常の搬送波抑圧です。少し搬送波を入れると受信機が同期しやすくなります。範囲の上限は最も大きい音声と同じ強さです。
 A second tone added to the first (0 = off). Two tones make a two-tone linearity test.	最初のトーンに加える 2 つ目のトーン（0 = オフ）。2 つのトーンで 2 トーン直線性テストになります。
-A sub-audible tone that opens a receiver's squelch (0 = off). 67 to 254.1 Hz.	受信機のスケルチを開く可聴下トーン（0 = オフ）。67〜254.1 Hz。
 AM (carrier and sidebands)	AM（搬送波と側波帯）
 AM sends the carrier and both sidebands. Double sideband with suppressed carrier sends only the sidebands.	AM は搬送波と両側波帯を送ります。搬送波抑圧の両側波帯は側波帯だけを送ります。
 Audio above this level is turned down.	このレベルを超える音声は下げられます。
 Audio frequency	オーディオ周波数
 Boosts the high notes before sending (0 = off).	送信前に高音を持ち上げます（0 = オフ）。
 Boosts the high notes before sending. 50 µs in Europe and most of the world, 75 µs in the Americas.	送信前に高音を持ち上げます。ヨーロッパや世界の大半では 50 µs、アメリカ大陸では 75 µs。
-CTCSS level	CTCSS レベル
 CTCSS tone	CTCSS トーン
 Carrier injection	搬送波の注入
 Carrier level	搬送波レベル
@@ -2881,7 +2879,6 @@ The signal goes out only while there is sound on the audio input.	音声入力�
 The signal goes out only while you hold the button down.	ボタンを押している間だけ信号が送信されます。
 The size of the carrier as a share of full scale. At a depth of 85 percent the peaks reach about full scale.	搬送波の大きさを、フルスケールに対する割合で示します。変調度 85 パーセントではピークがほぼフルスケールに達します。
 The size of the signal as a share of full scale.	信号の大きさを、フルスケールに対する割合で示します。
-The tone's share of the deviation.	トーンが偏移に占める割合です。
 The transmit frequency follows the receiver's. Typing a different one here unlinks them. Click to unlink.	送信周波数は受信機に追従します。ここで別の周波数を入力すると連動が外れます。クリックで連動を解除します。
 The transmit frequency is its own. The receiver is on %.6f MHz. Click to make the transmitter follow it.	送信周波数は独立しています。受信機は %.6f MHz です。クリックすると送信側が受信機に追従します。
 Threshold	しきい値

@@ -2779,14 +2779,12 @@ holding the level	manteniendo el nivel
 # transmit panel: top bar, Basic / Advanced, per-signal parameters
 0 is the normal suppressed carrier. A little carrier helps a receiver lock on; the top of the range is as strong as the loudest audio.	0 es la portadora suprimida normal. Un poco de portadora ayuda al receptor a engancharse; el extremo superior del rango es tan fuerte como el audio más alto.
 A second tone added to the first (0 = off). Two tones make a two-tone linearity test.	Un segundo tono sumado al primero (0 = apagado). Dos tonos forman una prueba de linealidad de dos tonos.
-A sub-audible tone that opens a receiver's squelch (0 = off). 67 to 254.1 Hz.	Un tono subaudible que abre el silenciador de un receptor (0 = apagado). De 67 a 254,1 Hz.
 AM (carrier and sidebands)	AM (portadora y bandas laterales)
 AM sends the carrier and both sidebands. Double sideband with suppressed carrier sends only the sidebands.	AM envía la portadora y ambas bandas laterales. La doble banda lateral con portadora suprimida envía solo las bandas laterales.
 Audio above this level is turned down.	El audio por encima de este nivel se reduce.
 Audio frequency	Frecuencia de audio
 Boosts the high notes before sending (0 = off).	Realza los agudos antes de enviar (0 = apagado).
 Boosts the high notes before sending. 50 µs in Europe and most of the world, 75 µs in the Americas.	Realza los agudos antes de enviar. 50 µs en Europa y la mayor parte del mundo, 75 µs en América.
-CTCSS level	Nivel de CTCSS
 CTCSS tone	Tono CTCSS
 Carrier injection	Inyección de portadora
 Carrier level	Nivel de portadora
@@ -2881,7 +2879,6 @@ The signal goes out only while there is sound on the audio input.	La señal sale
 The signal goes out only while you hold the button down.	La señal sale solo mientras mantienes pulsado el botón.
 The size of the carrier as a share of full scale. At a depth of 85 percent the peaks reach about full scale.	El tamaño de la portadora como porcentaje de la escala completa. Con una profundidad del 85 por ciento, los picos llegan casi a la escala completa.
 The size of the signal as a share of full scale.	El tamaño de la señal como porcentaje de la escala completa.
-The tone's share of the deviation.	La parte de la desviación que ocupa el tono.
 The transmit frequency follows the receiver's. Typing a different one here unlinks them. Click to unlink.	La frecuencia de transmisión sigue la del receptor. Si escribes otra aquí, se desvinculan. Haz clic para desvincular.
 The transmit frequency is its own. The receiver is on %.6f MHz. Click to make the transmitter follow it.	La frecuencia de transmisión es independiente. El receptor está en %.6f MHz. Haz clic para que el transmisor la siga.
 Threshold	Umbral

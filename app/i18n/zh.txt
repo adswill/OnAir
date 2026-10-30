@@ -2779,14 +2779,12 @@ holding the level	保持当前电平
 # transmit panel: top bar, Basic / Advanced, per-signal parameters
 0 is the normal suppressed carrier. A little carrier helps a receiver lock on; the top of the range is as strong as the loudest audio.	0 为通常的抑制载波。加入少量载波可帮助接收机锁定；范围上限与最响的音频一样强。
 A second tone added to the first (0 = off). Two tones make a two-tone linearity test.	叠加在第一个音调上的第二个音调（0 = 关闭）。两个音调构成双音线性度测试。
-A sub-audible tone that opens a receiver's squelch (0 = off). 67 to 254.1 Hz.	可打开接收机静噪的亚音频音（0 = 关闭）。67 至 254.1 Hz。
 AM (carrier and sidebands)	AM（载波和边带）
 AM sends the carrier and both sidebands. Double sideband with suppressed carrier sends only the sidebands.	AM 发送载波和两个边带。抑制载波的双边带只发送边带。
 Audio above this level is turned down.	高于此电平的音频会被压低。
 Audio frequency	音频频率
 Boosts the high notes before sending (0 = off).	发送前提升高音（0 = 关闭）。
 Boosts the high notes before sending. 50 µs in Europe and most of the world, 75 µs in the Americas.	发送前提升高音。欧洲和世界大部分地区为 50 µs，美洲为 75 µs。
-CTCSS level	CTCSS 电平
 CTCSS tone	CTCSS 音
 Carrier injection	载波注入
 Carrier level	载波电平
@@ -2881,7 +2879,6 @@ The signal goes out only while there is sound on the audio input.	仅当音频�
 The signal goes out only while you hold the button down.	仅在按住按钮期间发出信号。
 The size of the carrier as a share of full scale. At a depth of 85 percent the peaks reach about full scale.	载波大小占满量程的比例。调制深度为百分之八十五时，峰值接近满量程。
 The size of the signal as a share of full scale.	信号大小占满量程的比例。
-The tone's share of the deviation.	该音占频偏的比例。
 The transmit frequency follows the receiver's. Typing a different one here unlinks them. Click to unlink.	发射频率跟随接收机。在此输入不同的频率会解除联动。点击可解除联动。
 The transmit frequency is its own. The receiver is on %.6f MHz. Click to make the transmitter follow it.	发射频率是独立的。接收机在 %.6f MHz。点击可让发射机跟随接收机。
 Threshold	阈值

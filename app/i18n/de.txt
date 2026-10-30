@@ -2779,14 +2779,12 @@ holding the level	Pegel wird gehalten
 # transmit panel: top bar, Basic / Advanced, per-signal parameters
 0 is the normal suppressed carrier. A little carrier helps a receiver lock on; the top of the range is as strong as the loudest audio.	0 ist der normale unterdrückte Träger. Ein wenig Träger hilft dem Empfänger beim Einrasten; das obere Ende des Bereichs ist so stark wie das lauteste Audio.
 A second tone added to the first (0 = off). Two tones make a two-tone linearity test.	Ein zweiter Ton, der zum ersten addiert wird (0 = aus). Zwei Töne ergeben einen Zweiton-Linearitätstest.
-A sub-audible tone that opens a receiver's squelch (0 = off). 67 to 254.1 Hz.	Ein unhörbarer Ton, der die Rauschsperre eines Empfängers öffnet (0 = aus). 67 bis 254,1 Hz.
 AM (carrier and sidebands)	AM (Träger und Seitenbänder)
 AM sends the carrier and both sidebands. Double sideband with suppressed carrier sends only the sidebands.	AM sendet den Träger und beide Seitenbänder. Doppelseitenband mit unterdrücktem Träger sendet nur die Seitenbänder.
 Audio above this level is turned down.	Audio oberhalb dieses Pegels wird abgesenkt.
 Audio frequency	Audiofrequenz
 Boosts the high notes before sending (0 = off).	Hebt vor dem Senden die hohen Töne an (0 = aus).
 Boosts the high notes before sending. 50 µs in Europe and most of the world, 75 µs in the Americas.	Hebt vor dem Senden die hohen Töne an. 50 µs in Europa und dem Großteil der Welt, 75 µs in Amerika.
-CTCSS level	CTCSS-Pegel
 CTCSS tone	CTCSS-Ton
 Carrier injection	Trägerzumischung
 Carrier level	Trägerpegel
@@ -2881,7 +2879,6 @@ The signal goes out only while there is sound on the audio input.	Das Signal wir
 The signal goes out only while you hold the button down.	Das Signal wird nur gesendet, solange du die Taste gedrückt hältst.
 The size of the carrier as a share of full scale. At a depth of 85 percent the peaks reach about full scale.	Die Größe des Trägers als Anteil des Vollausschlags. Bei einem Modulationsgrad von 85 Prozent erreichen die Spitzen etwa den Vollausschlag.
 The size of the signal as a share of full scale.	Die Größe des Signals als Anteil des Vollausschlags.
-The tone's share of the deviation.	Der Anteil des Tons am Hub.
 The transmit frequency follows the receiver's. Typing a different one here unlinks them. Click to unlink.	Die Sendefrequenz folgt der des Empfängers. Gibst du hier eine andere ein, werden beide getrennt. Klicken zum Trennen.
 The transmit frequency is its own. The receiver is on %.6f MHz. Click to make the transmitter follow it.	Die Sendefrequenz ist eigenständig. Der Empfänger steht auf %.6f MHz. Klicken, damit der Sender ihr folgt.
 Threshold	Schwelle

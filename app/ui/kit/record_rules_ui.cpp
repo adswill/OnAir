@@ -83,7 +83,7 @@ void recordRulesDialog(uint16_t mode) {
     const float u = gUi;
     ImGui::SetNextWindowSize(ImVec2(560 * u, 520 * u), ImGuiCond_Appearing);
     bool open = true;
-    if (!ImGui::Begin(tr("Record rules"), &open, ImGuiWindowFlags_NoCollapse)) { ImGui::End(); if (!open) e.open = false; return; }
+    if (!ImGui::Begin(trw("Record rules"), &open, ImGuiWindowFlags_NoCollapse)) { ImGui::End(); if (!open) e.open = false; return; }
     bool on = rr.enabled();
     if (ImGui::Checkbox(tr("Auto-record (off by default)"), &on)) rr.setEnabled(on);
     ImGui::TextWrapped("%s", tr("When a call or track starts and a rule matches, its audio (and optionally a short IQ clip) is saved to your recordings folder. Encrypted or unreadable traffic is never recorded: only the log line is kept. Nothing is ever blocked, and nothing is uploaded. Laws about recording differ by country and by kind of traffic (telephony, pagers, private radio): you are responsible for yours. Files are kept until you delete them."));
