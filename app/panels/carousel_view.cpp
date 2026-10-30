@@ -4,6 +4,7 @@
 #include "../app.h"
 #include "dect2/common/png.h"
 #include "dect2/tv/mheg.h"
+#include "dect2/tv/mheg_engine.h"
 #include <algorithm>
 #include <chrono>
 #include <cstring>
@@ -111,8 +112,7 @@ void buildPreview(const std::vector<dect2::DsmccFile>& all, const dect2::DsmccFi
 
 ImU32 col(uint32_t rgba) { return IM_COL32(rgba >> 24, (rgba >> 16) & 255, (rgba >> 8) & 255, rgba & 255); }
 
-void drawScene(const Pv& p) {
-    const dect2::MhegRender& r = p.render;
+void drawScene(const dect2::MhegRender& r, const std::vector<std::unique_ptr<gfx::Image>>& opImg) {
     const float avail = ImGui::GetContentRegionAvail().x;
     const float sc = std::max(0.2f, std::min(1.5f, avail / (float)r.width));
     const ImVec2 o = ImGui::GetCursorScreenPos();
@@ -128,7 +128,7 @@ void drawScene(const Pv& p) {
             if ((op.fill & 255) && op.fill) dl->AddRectFilled(a, b, col(op.fill));
             if ((op.line & 255) && op.lineWidth > 0) dl->AddRect(a, b, col(op.line), 0, 0, std::max(1.f, op.lineWidth * sc));
         } else if (op.kind == dect2::MhegDrawOp::Bitmap) {
-            if (i < p.opImg.size() && p.opImg[i]) dl->AddImage(p.opImg[i]->texture(), a, b);
+            if (i < opImg.size() && opImg[i]) dl->AddImage(opImg[i]->texture(), a, b);
             else { dl->AddRect(a, b, IM_COL32(200, 120, 60, 255)); dl->AddText(ImVec2(a.x + 3, a.y + 2), IM_COL32(200, 120, 60, 255), op.missing ? "bitmap not received" : "bitmap"); }
         } else {
             if (op.background & 255) dl->AddRectFilled(a, b, col(op.background));
@@ -155,6 +155,70 @@ void drawScene(const Pv& p) {
     dl->PopClipRect();
     dl->AddRect(o, ImVec2(o.x + r.width * sc, o.y + r.height * sc), IM_COL32(120, 120, 120, 255));
 }
+// Red Button: the MHEG-5 interpreter runs the application of the first object carousel that has a start-up file ("a" or "startup"), with on-screen remote keys.
+struct Live {
+    std::unique_ptr<dect2::MhegEngine> eng;
+    std::map<std::string, dect2::DsmccFile> files;   // snapshot used by the fetch callback
+    std::map<std::string, std::unique_ptr<gfx::Image>> img;
+    std::string msg;
+};
+Live L;
+bool liveFetch(const std::string& path, std::vector<uint8_t>& out) {
+    for (const std::string& pre : {std::string(), std::string("/"), std::string("~/")}) {
+        auto it = L.files.find(pre + path);
+        if (it != L.files.end()) { out = it->second.data; return true; }
+    }
+    for (auto& kv : L.files) { const std::string& k = kv.first; if (k.size() >= path.size() && k.compare(k.size() - path.size(), path.size(), path) == 0 && (k.size() == path.size() || k[k.size() - path.size() - 1] == '/')) { out = kv.second.data; return true; } }
+    return false;
+}
+void redButton(App& a) {
+    ImGui::TextColored(pal::accent(), "%s", tr("Red Button (MHEG-5 interactive TV)"));
+    ImGui::PushTextWrapPos(0);
+    ImGui::TextDisabled("%s", tr("Runs the application from the carousel with a subset of MHEG-5. Tested with synthetic carousels only, not with a real UK broadcast."));
+    ImGui::PopTextWrapPos();
+    if (!L.eng || !L.eng->running()) {
+        if (ImGui::Button(tr("Start Red Button"))) {
+            L.files.clear(); L.img.clear();
+            for (const auto& kv : a.engine.carouselFiles()) for (const auto& f : kv.second) L.files[f.path] = f;
+            L.eng.reset(new dect2::MhegEngine(liveFetch));
+            bool ok = false;
+            for (const char* e : {"a", "startup", "//startup", "~//a"}) if (L.eng->start(e, (uint64_t)(nowS() * 1000))) { ok = true; break; }
+            L.msg = ok ? "" : tr("No start-up application in the carousel yet.");
+            if (!ok) L.eng.reset();
+        }
+        if (!L.msg.empty()) ImGui::TextDisabled("%s", L.msg.c_str());
+        return;
+    }
+    L.eng->step((uint64_t)(nowS() * 1000));
+    int k = 0;
+    struct B { const char* n; ImU32 c; int code; } bs[] = {{"Red", IM_COL32(200, 40, 40, 255), dect2::MhegKeys::Red}, {"Green", IM_COL32(40, 160, 60, 255), dect2::MhegKeys::Green}, {"Yellow", IM_COL32(200, 170, 30, 255), dect2::MhegKeys::Yellow}, {"Blue", IM_COL32(50, 90, 200, 255), dect2::MhegKeys::Blue}};
+    for (auto& b : bs) {
+        ImGui::PushStyleColor(ImGuiCol_Button, b.c);
+        if (ImGui::Button(tr(b.n))) k = b.code;
+        ImGui::PopStyleColor();
+        ImGui::SameLine();
+    }
+    if (ImGui::Button(tr("Up"))) k = dect2::MhegKeys::Up;
+    ImGui::SameLine(); if (ImGui::Button(tr("Down"))) k = dect2::MhegKeys::Down;
+    ImGui::SameLine(); if (ImGui::Button(tr("Left"))) k = dect2::MhegKeys::Left;
+    ImGui::SameLine(); if (ImGui::Button(tr("Right"))) k = dect2::MhegKeys::Right;
+    ImGui::SameLine(); if (ImGui::Button(tr("OK"))) k = dect2::MhegKeys::Select;
+    ImGui::SameLine(); if (ImGui::Button(tr("Back"))) k = dect2::MhegKeys::Cancel;
+    ImGui::SameLine(); if (ImGui::Button(tr("Stop"))) { L.eng.reset(); return; }
+    if (k) { L.eng->key(k); L.eng->step((uint64_t)(nowS() * 1000)); }
+    dect2::MhegRender r = L.eng->render();
+    std::vector<std::unique_ptr<gfx::Image>> imgs;   // textures are cached by file reference, the draw list takes raw pointers through a view vector
+    for (const auto& op : r.ops) {
+        if (op.kind == dect2::MhegDrawOp::Bitmap && !op.image.empty() && !L.img.count(op.ref)) { int w = 0, h = 0; L.img[op.ref] = makeImage(op.image, w, h); }
+        imgs.push_back(nullptr);
+    }
+    // draw with cached textures: temporarily move them into the per-op vector, then back
+    for (size_t i = 0; i < r.ops.size(); i++) if (r.ops[i].kind == dect2::MhegDrawOp::Bitmap && L.img.count(r.ops[i].ref)) imgs[i] = std::move(L.img[r.ops[i].ref]);
+    if (r.width > 0) drawScene(r, imgs);
+    for (size_t i = 0; i < r.ops.size(); i++) if (imgs[i]) L.img[r.ops[i].ref] = std::move(imgs[i]);
+    ImGui::TextDisabled("scene %s, %llu events, %llu links fired, %llu unsupported actions", L.eng->scene().c_str(), (unsigned long long)L.eng->stats().events, (unsigned long long)L.eng->stats().linksFired, (unsigned long long)L.eng->stats().unsupported);
+    ImGui::Separator();
+}
 } // namespace
 
 void carouselView(App& a) {
@@ -163,6 +227,7 @@ void carouselView(App& a) {
     ImGui::PushTextWrapPos(0);
     ImGui::TextColored(pal::accent(), "%s", tr("EXPERIMENTAL: the file preview and the MHEG-5 scene drawing are untested on a real broadcast stream (no recording was available). Scripts and interactive links are not run or followed."));
     ImGui::PopTextWrapPos();
+    redButton(a);
     if (ImGui::Button(tr("Save all files"))) {
         const std::string dir = plat::dataDir() + "/carousels";
         S.saved = std::to_string(a.engine.saveCarouselFiles(dir)) + tr(" files saved to ") + dir + tr("  (open index.html there for a gallery)");
@@ -224,7 +289,7 @@ void carouselView(App& a) {
         ImGui::TextDisabled("%s", tr("MHEG-5 file (ISO/IEC 13522-5). Interactive links not followed."));
         if (p.haveRender) {
             ImGui::Text(tr("Scene %dx%d: %zu drawn items, %d links and %d programs (not run)"), p.render.width, p.render.height, p.render.ops.size(), p.render.links, p.render.programs);
-            drawScene(p);
+            drawScene(p.render, p.opImg);
             for (const auto& n : p.render.notes) ImGui::TextDisabled("%s", n.c_str());
         }
         ImGui::Checkbox(tr("Show the object tree"), &S.showTree);
