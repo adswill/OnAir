@@ -180,7 +180,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES esubghz)   # Flipper Zero Sub-GHz chat, receive and send (family 204): core/src/esubghz, app/esubghz, tests/esubghz
   list(APPEND DECT2_MODES inmsat)   # Inmarsat all-carriers mode (3.3, docs/INMARSAT-REVAMP.md): core/src/inmsat, tests/inmsat
   list(APPEND DECT2_MODES pskdsp)   # PSK demodulator and analyser (family 202, #282): core/src/pskdsp, app/pskdsp, tests/pskdsp
-target_sources(dect2core PRIVATE core/src/tv/mheg_render.cpp core/src/tv/ts_proto_rs.cpp core/src/common/text_charset_rs.cpp core/src/tv/dvb_text.cpp core/src/tv/dvb_text_rs.cpp core/src/tv/teletext_rs.cpp core/src/tv/dvbsub_rs.cpp core/src/tv/epg.cpp core/src/tv/subtitle_export.cpp core/src/tv/recorder.cpp core/src/tv/timeshift.cpp core/src/tv/playback.cpp core/src/tv/dsmcc.cpp core/src/tv/mheg.cpp core/src/tv/rcs.cpp core/src/tv/si_tables.cpp core/src/tv/ts_data.cpp core/src/tv/hd_pair.cpp) # MPEG-TS parsing layer (C++ or the Rust crate onair_ts) and the TV recorder (guide, schedule, timeshift, playback) (C++ or the Rust crate onair_ts)
+target_sources(dect2core PRIVATE core/src/tv/mheg_render.cpp core/src/tv/ts_proto_rs.cpp core/src/common/text_charset_rs.cpp core/src/tv/dvb_text.cpp core/src/tv/dvb_text_rs.cpp core/src/tv/teletext_rs.cpp core/src/tv/dvbsub_rs.cpp core/src/tv/epg.cpp core/src/tv/subtitle_export.cpp core/src/tv/recorder.cpp core/src/tv/timeshift.cpp core/src/tv/playback.cpp core/src/tv/dsmcc.cpp core/src/tv/mheg.cpp core/src/tv/mheg_engine.cpp core/src/tv/rcs.cpp core/src/tv/si_tables.cpp core/src/tv/ts_data.cpp core/src/tv/hd_pair.cpp) # MPEG-TS parsing layer (C++ or the Rust crate onair_ts) and the TV recorder (guide, schedule, timeshift, playback) (C++ or the Rust crate onair_ts)
 target_sources(dect2core PRIVATE core/src/fec/fec_proto.cpp core/src/fec/fec_proto_rs.cpp)   # Reed-Solomon (DVB-T, ATSC, DAB), DVB-T2 BCH and the LDPC tables (the Rust crate onair_fec), the K = 7 Viterbi decoder (C++)
 target_sources(dect2core PRIVATE core/src/files/files_proto_rs.cpp)   # CSV, SigMF, WAV, TLE, SQLite pages, results container (the Rust crate onair_files)
 target_sources(dect2core PRIVATE core/src/net/net_proto_rs.cpp)   # remote API HTTP / WebSocket text, rtl_tcp, SpyServer, SDR++ server and network radio list parsing (the Rust crate onair_net)
@@ -928,6 +928,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_mheg tests/tv/test_mheg.cpp)
   target_link_libraries(test_mheg PRIVATE dect2core)
   add_test(NAME mheg COMMAND test_mheg)
+  add_executable(test_mheg_engine tests/tv/test_mheg_engine.cpp)
+  target_link_libraries(test_mheg_engine PRIVATE dect2core)
+  add_test(NAME mheg_engine COMMAND test_mheg_engine)
   add_executable(test_ts tests/tv/test_ts.cpp)
   target_link_libraries(test_ts PRIVATE dect2core)
   add_test(NAME ts COMMAND test_ts)
