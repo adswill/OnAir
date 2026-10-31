@@ -1,19 +1,39 @@
 <!doctype html>
 <meta charset="utf-8"><title>Icon sheet</title>
-<style>body{margin:0;font:11px system-ui;color:#999}.row{display:flex;flex-wrap:wrap}.d{background:#1b1d20}.l{background:#dfe3e6;color:#333}.c{width:92px;text-align:center;padding:4px 0}canvas{width:80px;height:80px}</style>
+<!-- Every icon of the set, as the map draws it (canvas, 3 states) and as the page draws it (SVG sprite, 3 sizes), on a dark and a light ground.
+     Run `node test/dev-server.js --serve` and open http://localhost:8791/icon-sheet?theme=d (or theme=l). -->
+<style>
+  body{margin:0;font:11px system-ui;background:var(--bg);color:var(--fg)}
+  body.d{--bg:#1b1d20;--fg:#a9afb5;--ico-line:#0b0c0d}
+  body.l{--bg:#dfe3e6;--fg:#333;--ico-line:#0e1216}
+  h2{margin:10px 12px 2px;font:600 11px system-ui;letter-spacing:.08em;text-transform:uppercase}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:0 6px;padding:4px 12px}
+  .c{display:grid;grid-template-columns:auto auto auto 1fr;gap:4px;align-items:center;padding:3px 0;border-bottom:1px solid rgba(128,128,128,.18)}
+  .c b{grid-column:1/-1;font-weight:500}
+  canvas{width:36px;height:36px}
+  svg.ico{display:block}
+</style>
+<body>
 <div id="o"></div>
 <script type="module">
-import { SHAPES } from "../public/shapes.js";
-import { drawShape } from "../public/icons.js";
+import { SHAPES } from "/shapes.js";
+import { drawShape } from "/icons.js";
+import { LEGEND, spriteSvg, iconSvg } from "/iconsvg.js";
+const theme = new URLSearchParams(location.search).get("theme") === "l" ? "l" : "d";
+document.body.className = theme;
+document.body.insertAdjacentHTML("afterbegin", spriteSvg());
 const o = document.getElementById("o");
-const col = (n) => n.startsWith("ship") ? "#8cb8eb" : n.startsWith("aprs") || n === "ham" ? "#8ccc9e" : n.startsWith("sat") ? "#9ad0f0" : n.startsWith("drone") ? "#e0ad6b" : "#e6e8ea";
-for (const theme of ["d", "l"]) {
-  const row = document.createElement("div"); row.className = "row " + theme; o.appendChild(row);
-  for (const n of Object.keys(SHAPES)) {
+const col = (n) => n.startsWith("ship") || n === "buoy" || n === "dsc" ? "#8cb8eb" : n.startsWith("aprs") || n.startsWith("ham") ? "#8ccc9e" : n.startsWith("sat") ? "#9ad0f0" : n.startsWith("drone") || n === "uav" ? "#e0ad6b" : n === "sonde" ? "#cc94c7" : "#e6e8ea";
+for (const [title, rows] of LEGEND) {
+  o.insertAdjacentHTML("beforeend", `<h2>${title}</h2>`);
+  const g = document.createElement("div"); g.className = "grid"; o.appendChild(g);
+  for (const [n, label] of rows) {
+    const c = col(n);
     const cell = document.createElement("div"); cell.className = "c";
-    const c = drawShape(n, theme === "l" && !n.startsWith("ship") ? "#4a5560" : col(n), 96, theme);
-    cell.appendChild(c); cell.appendChild(document.createElement("br")); cell.append(n);
-    row.appendChild(cell);
+    cell.insertAdjacentHTML("beforeend", `<b>${label}</b>`);
+    for (const st of ["", "h", "x"]) cell.appendChild(drawShape(n, c, 96, theme, st));
+    cell.insertAdjacentHTML("beforeend", `<span style="display:flex;gap:6px;align-items:center">${iconSvg(n, { color: c, size: 14 })}${iconSvg(n, { color: c, size: 22 })}${iconSvg(n, { color: c, size: 22, state: "stale" })}</span>`);
+    g.appendChild(cell);
   }
 }
 </script>

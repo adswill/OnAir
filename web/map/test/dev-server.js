@@ -1,5 +1,5 @@
 // dev-server.js - run the map page locally against the REAL hub rules, without Cloudflare.
-//   node test/dev-server.js --serve [--port 8791] [--seed]
+//   node test/dev-server.js --serve [--port 8791] [--seed] [--still]
 // Serves public/, takes POST /ingest through the same sanitize() + TrackBook the Durable Object uses, and answers /live (full and ?since=),
 // /meta, /trail(s), /jam, /msgs, /api/by. `--seed` posts the demo tracks plus a set of ham contacts exactly as the desktop app sends them
 // (map_send.cpp: kind "ham", extra = ham_mapfeed.cpp JSON). Not used in production; tests import {createHub} to drive the same code.
@@ -73,8 +73,11 @@ async function cached(key, url) {
 }
 const VENDOR = { "maplibre-gl.js": "https://unpkg.com/maplibre-gl@5.7.3/dist/maplibre-gl.js", "maplibre-gl.css": "https://unpkg.com/maplibre-gl@5.7.3/dist/maplibre-gl.css" };
 
-export function start(port = 8791, seed = false) {
+export function start(port = 8791, seed = false, live = true) {
   const hub = createHub();
+  const sockets = new Set();
+  const frame = (str) => { const payload = Buffer.from(str); const head = payload.length < 126 ? Buffer.from([0x81, payload.length]) : payload.length < 65536 ? Buffer.from([0x81, 126, payload.length >> 8, payload.length & 255]) : (() => { const b = Buffer.alloc(10); b[0] = 0x81; b[1] = 127; b.writeBigUInt64BE(BigInt(payload.length), 2); return b; })(); return Buffer.concat([head, payload]); };
+  const push = (tracks) => { const f = frame(JSON.stringify({ type: "upsert", tracks })); for (const so of sockets) so.write(f); };
   if (seed) {
     hub.ingest({ tracks: sampleHamRaw() });
     import("../public/demo.js").then(({ generateDemo }) => {
@@ -82,6 +85,18 @@ export function start(port = 8791, seed = false) {
       const raw = tracks.filter((t) => t.kind !== "doa" && t.kind !== "fix").map((t) => ({ ...t, id: t.id.split(":").slice(1).join(":"), path: undefined, age: 0 }));
       for (let i = 0; i < raw.length; i += 200) hub.ingest({ tracks: raw.slice(i, i + 200) });
       console.log("seeded", hub.book.size, "tracks");
+      // keep the seed fresh (a real station re-reports every few seconds); the ham contacts keep their original ages
+      if (live) setInterval(() => {
+        for (const r of raw) {   // move aircraft and ships along their heading, climb or descend a little: gives the page real history
+          if (!Number.isFinite(r.heading) || !r.speed || (r.kind !== "aircraft" && r.kind !== "vessel")) continue;
+          const nm = (r.speed * 8) / 3600, k = Math.PI / 180;
+          r.lat += (nm / 60) * Math.cos(r.heading * k); r.lon += (nm / 60) * Math.sin(r.heading * k) / Math.max(0.2, Math.cos(r.lat * k));
+          if (r.kind === "aircraft" && Number.isFinite(r.alt)) r.alt = Math.max(0, r.alt + (r.vrate || 0) * 8 / 60 + Math.sin(Date.now() / 20000 + r.lat) * 40);
+        }
+        hub.ingest({ tracks: sampleHamRaw().map((h, i) => ({ ...h, age: [20, 40, 120, 135, 300, 1500][i] })) });
+        for (let i = 0; i < raw.length; i += 200) hub.ingest({ tracks: raw.slice(i, i + 200) });
+        push(hub.live().tracks);   // the real hub sends only the changed rows; this sends all, which keeps the page fresh
+      }, 8000).unref();
     });
   }
   const server = http.createServer((req, res) => {
@@ -114,13 +129,18 @@ export function start(port = 8791, seed = false) {
         .catch(() => { res.writeHead(502); res.end(); });
       return;
     }
+    if (u.pathname === "/icon-sheet") { res.writeHead(200, { "Content-Type": "text/html" }); return res.end(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "icon-sheet.html"))); }
     if (u.pathname === "/" || u.pathname === "/index.html") {
       let html = fs.readFileSync(path.join(PUB, "index.html"), "utf8").replace(/https:\/\/unpkg\.com\/maplibre-gl@5\.7\.3\/dist\//g, "/vendor/");
-      // ?shot=1 (screenshots): no consent popup; ?theme=dark|light|auto sets the theme before the page starts
+      // ?shot=1 (screenshots): the consent popup is hidden and nothing is requested from third parties; ?theme=dark|light|auto sets the theme before the page starts
       if (u.searchParams.has("shot")) {
         const th = u.searchParams.get("theme");
-        const js = `try{localStorage.setItem("onair.map.consent","always");${th ? `localStorage.setItem("onair.map.theme",${JSON.stringify(th === "dark" || th === "light" ? th : "auto")});` : ""}}catch(e){}`;
-        html = html.replace("<head>", "<head><script>" + js + "</script>");
+        const js = `try{${th ? `localStorage.setItem("onair.map.theme",${JSON.stringify(th === "dark" || th === "light" ? th : "auto")});` : ""}}catch(e){}`;
+        html = html.replace("<head>", "<head><script>" + js + "</script><style>.consent{display:none!important}</style>");   // the photo popup would cover the map; no choice is stored, so no photo is requested
+        if (u.searchParams.get("sel")) {   // select a track a few seconds after start (what a click in the list does)
+          const id = JSON.stringify(u.searchParams.get("sel"));
+          html = html.replace("</body>", `<script>setTimeout(function(){var b=document.querySelector('#list button[data-id='+JSON.stringify(${id})+']');if(b)b.click()},4000)</script></body>`);
+        }
         if (u.searchParams.get("css")) html = html.replace("</head>", "<style>" + u.searchParams.get("css").replace(/[<]/g, "") + "</style></head>");   // debugging aid: extra CSS
       }
       res.writeHead(200, { "Content-Type": "text/html", "Cache-Control": "no-store" });
@@ -136,9 +156,9 @@ export function start(port = 8791, seed = false) {
     if (new URL(req.url, "http://x").pathname !== "/ws") return socket.destroy();
     const accept = crypto.createHash("sha1").update(req.headers["sec-websocket-key"] + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").digest("base64");
     socket.write("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " + accept + "\r\n\r\n");
-    const payload = Buffer.from(JSON.stringify({ type: "hello", ...hub.live(), load: { pct: 8, viewers: 1, stations: 1, tracks: hub.book.size } }));
-    const head = payload.length < 126 ? Buffer.from([0x81, payload.length]) : payload.length < 65536 ? Buffer.from([0x81, 126, payload.length >> 8, payload.length & 255]) : (() => { const b = Buffer.alloc(10); b[0] = 0x81; b[1] = 127; b.writeBigUInt64BE(BigInt(payload.length), 2); return b; })();
-    socket.write(Buffer.concat([head, payload]));
+    socket.write(frame(JSON.stringify({ type: "hello", ...hub.live(), load: { pct: 8, viewers: 1, stations: 1, tracks: hub.book.size } })));
+    sockets.add(socket);
+    socket.on("close", () => sockets.delete(socket));
     socket.on("error", () => {});
   });
   server.listen(port, () => console.log("map dev server on http://localhost:" + port));
@@ -147,5 +167,5 @@ export function start(port = 8791, seed = false) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url) && process.argv.includes("--serve")) {   // `node --test test/` loads this file too: it must not start a server
   const i = process.argv.indexOf("--port");
-  start(i > 0 ? Number(process.argv[i + 1]) : 8791, process.argv.includes("--seed"));
+  start(i > 0 ? Number(process.argv[i + 1]) : 8791, process.argv.includes("--seed"), !process.argv.includes("--still"));   // --still: no periodic updates (steady screenshots)
 }
