@@ -117,7 +117,7 @@ const BaudotEnt kBaudot[] = {
     {'U', 0x3C}, {'V', 0x2F}, {'W', 0x39}, {'X', 0x37}, {'Y', 0x35}, {'Z', 0x31}, {'0', 0x0D}, {'1', 0x1D}, {'2', 0x19}, {'3', 0x10},
     {'4', 0x0A}, {'5', 0x01}, {'6', 0x15}, {'7', 0x1C}, {'8', 0x0C}, {'9', 0x03}, {' ', 0x24}, {'-', 0x18}, {'/', 0x17}};
 
-bool standardLocation(int code) { return code == 2 || code == 3 || code == 4 || code == 5 || code == 6 || code == 7 || code == 12 || code == 14; }
+bool standardLocation(int code) { return code == 2 || code == 3 || code == 4 || code == 5 || code == 6 || code == 7 || code == 12 || code == 14 || code == 9; }   // 9: ELT-DT, whose position field is laid out the same way (#407)
 
 }  // namespace
 
@@ -163,6 +163,7 @@ std::string protocolName(bool user, int code, std::string* type) {
         case 6: n = "EPIRB, serial and location"; t = "EPIRB"; break;
         case 7: n = "PLB, serial and location"; t = "PLB"; break;
         case 8: n = "ELT, national location"; t = "ELT"; break;
+        case 9: n = "ELT-DT, distress tracking location"; t = "ELT-DT"; break;
         case 10: n = "EPIRB, national location"; t = "EPIRB"; break;
         case 11: n = "PLB, national location"; t = "PLB"; break;
         case 12: n = "Ship security (SSAS)"; t = "Ship security"; break;
@@ -223,6 +224,9 @@ bool decode(std::vector<uint8_t>& bits, Beacon& o) {
     {   // the 15 hex ID: bits 26-85, with the position of a standard location protocol at its default value (C/S T.001 3.3)
         std::vector<uint8_t> id(bits.begin(), bits.begin() + 85);
         if (!o.userProto && standardLocation((int)get(bits, 37, 40))) { put(id, 65, 85, 0); put(id, 66, 74, 511); put(id, 76, 85, 1023); }
+        // ELT-DT (location protocol 9) has no fixed beacon identity: bits 41-64 change from burst to burst (activation, altitude, age of the fix),
+        // so they stay out of the 15 hex ID or one transmitter shows up as a new beacon every burst (#407)
+        if (!o.userProto && get(bits, 37, 40) == 9) put(id, 41, 64, 0);
         o.hexId = bitsToHex(id, 26, 85);
     }
     o.homing = bits[110] != 0;
@@ -275,6 +279,9 @@ bool decode(std::vector<uint8_t>& bits, Beacon& o) {
     case 3:
         snprintf(b, sizeof b, "aircraft address %06X", (unsigned)get(bits, 41, 64));
         o.idText = b;
+        break;
+    case 9:
+        o.idText = "no fixed identity, status field " + bitsToHex(bits, 41, 64);
         break;
     default: o.idText = "identification field " + bitsToHex(bits, 41, 64); break;
     }

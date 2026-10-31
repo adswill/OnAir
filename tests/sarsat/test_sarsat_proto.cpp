@@ -132,5 +132,26 @@ int main() {
         Beacon o1, o2, o3;
         CHECK(decode(b1, o1) && decode(b2, o2) && decode(b3, o3) && o1.hexId == o2.hexId && o1.hexId == o3.hexId, "hex id %s %s %s", o1.hexId.c_str(), o2.hexId.c_str(), o3.hexId.c_str());
     }
+    {   // #407: ELT-DT (location protocol 9): named, position decoded, one hex ID however the status bits change
+        Spec d; d.longMsg = true; d.userProto = false; d.mid = 226; d.protoCode = 9; d.lat = 43.56; d.lon = 1.48111; d.hasPos = true; d.fine = true;
+        std::string id0; double la0 = 0;
+        for (uint32_t st : {0x000000u, 0x06253Fu, 0xA5A5A5u, 0xFFFFFEu}) {
+            d.ident = st;
+            std::vector<uint8_t> b = encode(d);
+            Beacon o;
+            CHECK(decode(b, o) && o.valid && o.protoCode == 9, "ELT-DT decodes");
+            CHECK(o.protoName.find("ELT-DT") != std::string::npos && o.beaconType == "ELT-DT", "ELT-DT named: %s / %s", o.protoName.c_str(), o.beaconType.c_str());
+            CHECK(o.hasPos && std::fabs(o.lat - 43.56) < 0.002 && std::fabs(o.lon - 1.48111) < 0.002, "ELT-DT position %.4f %.4f", o.lat, o.lon);
+            if (id0.empty()) { id0 = o.hexId; la0 = o.lat; }
+            CHECK(o.hexId == id0 && o.hexId.size() == 15, "ELT-DT hex ID stable: %s vs %s", o.hexId.c_str(), id0.c_str());
+            // two damaged bits and a 5 Hz-class slip do not change the identity
+            std::vector<uint8_t> bad = b; bad[50] ^= 1; bad[90] ^= 1;
+            Beacon o2;
+            CHECK(decode(bad, o2) && o2.hexId == id0 && std::fabs(o2.lat - la0) < 1e-9, "ELT-DT after two bit errors");
+        }
+        Spec e = d; e.mid = 227; e.ident = 1;
+        std::vector<uint8_t> be = encode(e); Beacon oe;
+        CHECK(decode(be, oe) && oe.hexId != id0, "another country is another beacon");
+    }
     return testSummary("test_sarsat_proto");
 }
