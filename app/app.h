@@ -1111,6 +1111,9 @@ bool modeListed(const App& a, const ModeDef& m, const char* query = nullptr);   
 bool modeHiddenNow(const App& a, const ModeDef& m);                           // hidden by the user (a search still finds it: tag it "hidden")
 bool modeGroupListed(const App& a, int group, const char* query = nullptr);   // at least one mode of the group is listed
 void modeVisibilityWindow(App& a);
+bool& settingsOpen();          // the Settings window is open (menu bar > Settings, Ctrl+,)
+void settingsWindow(App& a);   // ui/settings_window.cpp: every preference in one searchable window (docs/SETTINGS.md)
+int settingsUnboundRows();     // rows of the table with no field behind them (listed on stderr)
 void startReceiver(App& a);     // what the Start button does
 double audioViewOffsetHz(const App& a);   // a sound card in a Real mode with the audio-range view: where the spectrum's centre lies from the dial (else 0)
 void applyAudioSettings(App& a);   // the sound-card options into a.tune.radio (toolbar_source.cpp)

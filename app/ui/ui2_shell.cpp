@@ -747,6 +747,7 @@ float menuBar(App& a) {
         const float mx1 = ImGui::GetCursorScreenPos().x;
         tourMark("memory", ImVec2(mx0, my0), ImVec2(mx1, my1));
         mapSendServerMenu(a);
+        if (ImGui::MenuItem(tr("Settings"))) settingsOpen() = !settingsOpen();   // a window of its own, not a submenu (Ctrl+,)
         const float sx1 = ImGui::GetCursorScreenPos().x;
         tourMark("server", ImVec2(mx1, my0), ImVec2(sx1, my1));
         const float hx0 = ImGui::GetCursorScreenPos().x;
@@ -796,6 +797,7 @@ float menuBar(App& a) {
     tx::windowPanel(a);
     reportProblemWindow(a);
     modeVisibilityWindow(a);
+    settingsWindow(a);
     backupWindow(a);
     tx::captionsWindow(a);
     return menuH;
