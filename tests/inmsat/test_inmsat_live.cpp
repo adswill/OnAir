@@ -14,7 +14,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <deque>
-#include <dlfcn.h>
 #include <filesystem>
 #include <map>
 #include <mutex>
@@ -25,6 +24,23 @@ using namespace dect2;
 using namespace dect2::inmsat;
 
 #include "../common/test_util.h"
+#ifdef _WIN32
+#include <windows.h>
+static void* libOpen(const char* n) { return (void*)LoadLibraryA(n); }
+static void* libSym(void* l, const char* n) { return (void*)GetProcAddress((HMODULE)l, n); }
+static const char* libErr() { return "LoadLibrary failed"; }
+static const char* const kAirspyNames[] = {"libairspy.dll", "airspy.dll", nullptr};
+#else
+#include <dlfcn.h>
+static void* libOpen(const char* n) { return dlopen(n, RTLD_NOW); }
+static void* libSym(void* l, const char* n) { return dlsym(l, n); }
+static const char* libErr() { const char* e = dlerror(); return e ? e : "?"; }
+#ifdef __APPLE__
+static const char* const kAirspyNames[] = {"libairspy.dylib", "libairspy.0.dylib", nullptr};
+#else
+static const char* const kAirspyNames[] = {"libairspy.so.0", "libairspy.so", nullptr};
+#endif
+#endif
 
 namespace {
 struct airspy_device;
@@ -36,10 +52,9 @@ struct Airspy {
     int (*setFreq)(airspy_device*, uint32_t); int (*setLin)(airspy_device*, uint8_t); int (*setBias)(airspy_device*, uint8_t); int (*setPacking)(airspy_device*, uint8_t);
     int (*startRx)(airspy_device*, cb_fn, void*); int (*stopRx)(airspy_device*);
     bool load() {
-        lib = dlopen("libairspy.so.0", RTLD_NOW);
-        if (!lib) lib = dlopen("libairspy.so", RTLD_NOW);
-        if (!lib) { printf("libairspy not found: %s\n", dlerror()); return false; }
-        auto g = [&](const char* n) { void* p = dlsym(lib, n); if (!p) printf("missing %s\n", n); return p; };
+        for (const char* const* n = kAirspyNames; *n && !lib; n++) lib = libOpen(*n);
+        if (!lib) { printf("libairspy not found: %s\n", libErr()); return false; }
+        auto g = [&](const char* n) { void* p = libSym(lib, n); if (!p) printf("missing %s\n", n); return p; };
         *(void**)&open = g("airspy_open"); *(void**)&close = g("airspy_close"); *(void**)&setRate = g("airspy_set_samplerate");
         *(void**)&setType = g("airspy_set_sample_type"); *(void**)&setFreq = g("airspy_set_freq"); *(void**)&setLin = g("airspy_set_linearity_gain");
         *(void**)&setBias = g("airspy_set_rf_bias"); *(void**)&setPacking = g("airspy_set_packing"); *(void**)&startRx = g("airspy_start_rx"); *(void**)&stopRx = g("airspy_stop_rx");
