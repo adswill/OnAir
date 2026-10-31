@@ -8,6 +8,7 @@
 // excess (and the cell erased when the excess is huge). On clean carriers nothing changes (the threshold is several sigma of the average).
 // DECT2_OFDM_NO_ERASE=1 switches it off, DECT2_OFDM_FLAT_N0=1 additionally drops the channel-state weighting (both for A/B tests only).
 #pragma once
+#include <cstdint>
 #include <algorithm>
 #include <cmath>
 #include <complex>
