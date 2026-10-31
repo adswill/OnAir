@@ -76,6 +76,40 @@ void stage2(const std::vector<cf>& x1, double rate1, double offHz, int Q, std::v
     }
 }
 
+// Keeps only the wanted sideband of a baseband window (the carrier at 0, the voice at +150 .. +3150 Hz) and drops what is on the other side of the
+// carrier: an SSB neighbour 3.3 - 5 kHz below the dial has its edge at -1.5 .. -0.3 kHz in this channel. 'Valid' output only (taps - 1 samples shorter).
+std::vector<cf> sidebandFilter(const cf* x, size_t n, double rate) {
+    constexpr size_t T = 121;
+    static thread_local double cachedRate = 0;
+    static thread_local std::vector<cf> h;
+    if (rate != cachedRate) {
+        h.assign(T, cf(0, 0));
+        const double fc = 1500.0 / rate, shift = 1650.0 / rate;
+        double sum = 0;
+        std::vector<double> lp(T);
+        for (size_t k = 0; k < T; k++) {
+            const double m = (double)k - (double)(T - 1) / 2;
+            const double sinc = m == 0 ? 2 * fc : std::sin(2 * kPi * fc * m) / (kPi * m);
+            const double wd = 0.42 - 0.5 * std::cos(2 * kPi * (double)k / (double)(T - 1)) + 0.08 * std::cos(4 * kPi * (double)k / (double)(T - 1));
+            lp[k] = sinc * wd; sum += lp[k];
+        }
+        for (size_t k = 0; k < T; k++) {
+            const double m = (double)k - (double)(T - 1) / 2, a = -2 * kPi * shift * m;   // correlation form below: the response is the mirror image of this kernel's
+            h[k] = cf((float)(lp[k] / sum * std::cos(a)), (float)(lp[k] / sum * std::sin(a)));
+        }
+        cachedRate = rate;
+    }
+    std::vector<cf> y;
+    if (n < T + 8) return y;
+    y.resize(n - T + 1);
+    for (size_t i = 0; i + T <= n; i++) {
+        float ar = 0, ai = 0;
+        for (size_t k = 0; k < T; k++) { ar += h[k].real() * x[i + k].real() - h[k].imag() * x[i + k].imag(); ai += h[k].real() * x[i + k].imag() + h[k].imag() * x[i + k].real(); }
+        y[i] = cf(ar, ai);
+    }
+    return y;
+}
+
 double medianOf(std::vector<double> v) { if (v.empty()) return 0; std::nth_element(v.begin(), v.begin() + (long)v.size() / 2, v.end()); return v[v.size() / 2]; }
 }  // namespace
 
@@ -326,7 +360,9 @@ void Scanner::Impl::analyse(double tw, std::vector<Detection>& out) {
         if (t.side == Side::Lsb) for (cf& v : x2) v = std::conj(v);   // the voice band is below the carrier: mirror it so that the analysis always sees 0 .. +3 kHz
         // drop the filter start
         const size_t drop = std::min<size_t>(x2.size() / 4, 40);
-        const WindowVoice wv = t.va.process(x2.data() + drop, x2.size() - drop, rate2, noiseChan);
+        std::vector<cf> xf = sidebandFilter(x2.data() + drop, x2.size() - drop, rate2);
+        const WindowVoice wv = xf.empty() ? t.va.process(x2.data() + drop, x2.size() - drop, rate2, noiseChan)
+                                          : t.va.process(xf.data(), xf.size(), rate2, noiseChan, x2.data() + drop, x2.size() - drop);
         const VoiceFeatures vf = t.va.features();
         t.pitch = vf.pitchHz;
         t.sc.push_back(vf.score);

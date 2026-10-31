@@ -35,7 +35,7 @@ Synthetic speech-like SSB (harmonics on a vibrato pitch with formants, syllables
 
 ## Honest limits
 
-- Only synthetic signals were available: no real HF recording was used. The speech is a generator with the properties the detector looks at, not a voice. Real band noise, QRM, adjacent SSB at 3 kHz spacing, selective fading, AGC pumping and different transmit filters are untested.
+- Only synthetic signals were available: no real HF recording was used. The speech is a generator with the properties the detector looks at, not a voice. Real band noise, QRM, adjacent SSB closer than 3.3 kHz (3.3 and 4 kHz spacing, talking at the same time, is covered by a synthetic test), selective fading, AGC pumping and different transmit filters are untested.
 - Sensitivity: stations about 18 dB or more over the noise in their own bandwidth are found; at about 14-16 dB with 6 dB of fading 3 of 4 test stations were found. Confirmation takes about 3-5 s of speech, so the start of a conversation is back-dated but its first seconds are not recorded.
 - Two SSB stations closer than the width of one (about 3 kHz apart) merge into one band and are rejected; stations inside +-150 Hz of the DC spike are affected by the spike removal.
 - A pair of speakers with similar pitch and no pause between them counts as one voice; the voice count is a guess for nets.

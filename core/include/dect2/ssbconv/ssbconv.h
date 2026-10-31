@@ -63,7 +63,10 @@ public:
     VoiceAnalyzer();
     void reset();
     // One window of complex baseband audio (the suppressed carrier at 0, the signal at 0..+3 kHz). noiseDb: the noise power in the same units, dB.
-    WindowVoice process(const cf* x, size_t n, double rateHz, double noiseDb);
+    // raw (optional): the same window before the sideband filter (the suppressed carrier at 0, an adjacent station on the other side of it still in):
+    // the carrier / tone check and the mirrored-sideband check (an AM or DSB signal has the same audio on both sides of the carrier) look at it,
+    // while x (the filtered window, only the wanted sideband) is what the frames, pitch and band share are measured on, so a neighbour 3.3 - 5 kHz away does not spoil them.
+    WindowVoice process(const cf* x, size_t n, double rateHz, double noiseDb, const cf* raw = nullptr, size_t nRaw = 0);
     VoiceFeatures features() const { return f_; }
     float tiltNow() const { return tiltNow_; }       // this window only
     float pitchNow() const { return pitchNow_; }
@@ -76,6 +79,7 @@ private:
     VoiceFeatures f_;
     float tiltNow_ = 0, pitchNow_ = 0;
     double hang_ = 0;   // frames of hang time left
+    double mNeg_ = 0, mPos_ = 0;   // energy at -800..-250 Hz and +250..+800 Hz of the raw window (forgetting): a DSB / AM signal has both
     double sLo_ = 0, sHi_ = 0;   // energy at 300-1100 Hz and 1900-2700 Hz over the active windows (forgetting), for the tilt
     void recompute();
 };

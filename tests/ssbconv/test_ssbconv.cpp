@@ -389,6 +389,44 @@ static void testDemoScenario() {
     CHECK(net != nullptr && net->ended, "demo: the net is found and has ended");
 }
 
+// Adjacent channels and narrow AM: two SSB stations 3.3 and 4 kHz apart that talk at the same time are two conversations (the neighbour's edge is inside
+// the other's audio channel, on the far side of its carrier: the sideband filter keeps it out), and a 3 kHz wide AM (with and without carrier) is not SSB.
+static void addAm(std::vector<cf>& iq, double rate, double off, double lpHz, double carrier, double gain, int seed) {
+    std::vector<float> v = synth::voiceAudio((double)iq.size() / rate, 130, seed);
+    const double a = std::exp(-2 * M_PI * lpHz / 8000);
+    float y1 = 0, y2 = 0, y3 = 0, mx = 1e-9f;
+    for (float& x : v) { y1 = (float)(a * y1 + (1 - a) * x); y2 = (float)(a * y2 + (1 - a) * y1); y3 = (float)(a * y3 + (1 - a) * y2); x = y3; mx = std::max(mx, std::fabs(x)); }
+    double ph = 0;
+    for (size_t i = 0; i < iq.size(); i++) {
+        const double p = (double)i * 8000.0 / rate; const size_t k = (size_t)p;
+        if (k + 1 >= v.size()) break;
+        const double au = v[k] * (1 - (p - (double)k)) / mx + v[k + 1] * (p - (double)k) / mx;
+        ph += 2 * M_PI * off / rate;
+        const double env = gain * (carrier + 0.8 * au);
+        iq[i] += cf((float)(env * std::cos(ph)), (float)(env * std::sin(ph)));
+    }
+}
+
+static void testNeighboursAndAm() {
+    const double rate = 96000, centre = 14.2e6;
+    Filter all; all.showMuted = true;
+    for (double sp : {4000.0, 3300.0}) {
+        std::vector<Station> st;
+        st.push_back(voice(10000, Side::Usb, 115, 11, 9, 5, 0, 0.3));
+        st.push_back(voice(10000 + sp, Side::Usb, 170, 12, 7, 6, 1, 0.3));
+        Run r; r.feed(synth::make(rate, 60, st, 0.05, 3), rate, centre);
+        const auto l = r.book.list(120, all, SortBy::Frequency);
+        CHECK(l.size() == 2, "two simultaneous stations %.0f Hz apart are two conversations (%zu)", sp, l.size());
+        CHECK(nearConv(l, centre + 10000, 300) && nearConv(l, centre + 10000 + sp, 300), "both found at %.0f Hz spacing", sp);
+    }
+    for (double car : {1.0, 0.0}) {
+        std::vector<cf> iq = synth::make(rate, 50, {}, 0.05, 3);
+        addAm(iq, rate, 12000, 1500, car, car > 0 ? 0.4 : 0.5, 5);
+        Run r; r.feed(iq, rate, centre);
+        CHECK(r.book.list(120, all).empty(), "3 kHz wide AM (carrier %.0f) is not SSB", car);
+    }
+}
+
 int main() {
     testFormats();
     testVoiceAnalyzer();
@@ -400,6 +438,7 @@ int main() {
     testNoiseAndConvention();
     testRates();
     testImpairmentSweep();
+    testNeighboursAndAm();
     testDemoScenario();
     return testSummary("ssbconv");
 }

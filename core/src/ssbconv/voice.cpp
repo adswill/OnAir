@@ -42,9 +42,9 @@ float pitchOf(const cf* x, size_t n, double rate, float* maxR) {
 }  // namespace
 
 VoiceAnalyzer::VoiceAnalyzer() { reset(); }
-void VoiceAnalyzer::reset() { fr_.clear(); f_ = VoiceFeatures(); tiltNow_ = 0; pitchNow_ = 0; hang_ = 0; sLo_ = sHi_ = 0; }
+void VoiceAnalyzer::reset() { fr_.clear(); f_ = VoiceFeatures(); tiltNow_ = 0; pitchNow_ = 0; hang_ = 0; sLo_ = sHi_ = 0; mNeg_ = mPos_ = 0; }
 
-WindowVoice VoiceAnalyzer::process(const cf* x, size_t n, double rate, double noiseDb) {
+WindowVoice VoiceAnalyzer::process(const cf* x, size_t n, double rate, double noiseDb, const cf* raw, size_t nRaw) {
     WindowVoice wv;
     const size_t F = (size_t)std::lround(rate / 100.0);
     if (F < 20 || n < F * 5) return wv;
@@ -109,14 +109,34 @@ WindowVoice VoiceAnalyzer::process(const cf* x, size_t n, double rate, double no
         bandFrac = tot > 0 ? (float)(inb / tot) : 0;
         tilt = (lo > 0 && hi > 0) ? (float)(10 * std::log10(lo / hi)) : 0;
         eLo = lo; eHi = hi;
-        // strongest line vs the next separate peak
-        size_t mi = 0; for (size_t i = 1; i < N; i++) if (P[i] > P[mi]) mi = i;
+        // strongest line vs the next separate peak (of the raw window when there is one: a carrier at 0 Hz is part of what must be seen)
+        std::vector<double> R;
+        if (raw && nRaw >= N) {
+            R.assign(N, 0.0);
+            for (size_t s = 0; s + N <= nRaw; s += N / 2) {
+                std::vector<cf> b(N);
+                for (size_t i = 0; i < N; i++) b[i] = raw[s + i] * (float)(0.5 - 0.5 * std::cos(2 * kPi * (double)i / (double)N));
+                fft(b);
+                for (size_t i = 0; i < N; i++) R[i] += std::norm(b[i]);
+            }
+        }
+        const std::vector<double>& T = R.empty() ? P : R;
+        size_t mi = 0; for (size_t i = 1; i < N; i++) if (T[i] > T[mi]) mi = i;
         double second = 0;
         for (size_t i = 0; i < N; i++) {
             const size_t d = i > mi ? i - mi : mi - i;
-            if (std::min(d, N - d) >= 5) second = std::max(second, P[i]);
+            if (std::min(d, N - d) >= 5) second = std::max(second, T[i]);
         }
-        toneDb = second > 0 ? (float)(10 * std::log10(P[mi] / second)) : 0;
+        toneDb = second > 0 ? (float)(10 * std::log10(T[mi] / second)) : 0;
+        if (!R.empty() && wv.activeShare >= 0.15f) {
+            double neg = 0, pos = 0;
+            for (size_t i = 0; i < N; i++) {
+                const double f = (i < N / 2 ? (double)i : (double)i - (double)N) * bin;
+                if (f >= 250 && f <= 800) pos += R[i];
+                if (f <= -250 && f >= -800) neg += R[i];
+            }
+            mNeg_ = 0.92 * mNeg_ + neg; mPos_ = 0.92 * mPos_ + pos;
+        }
     }
     tiltNow_ = wv.activeShare >= 0.15f ? tilt : 0;
     f_.toneDb = f_.toneDb == 0 ? toneDb : 0.7f * f_.toneDb + 0.3f * toneDb;   // smoothed over windows
@@ -176,6 +196,7 @@ void VoiceAnalyzer::recompute() {
     const float sTilt = clamp01((f_.tiltDb - 2.f) / 4.f);   // signed: voice has more energy near the carrier; the mirrored sideband does not
     const float sAct = clamp01(f_.activeFrac / 0.15f);
     f_.score = std::min(std::min(sDepth, sVoiced), std::min(sTone, sBand)) * (0.55f + 0.25f * sMod + 0.2f * sTilt) * sAct;
+    if (mPos_ > 0 && mNeg_ > 0.35 * mPos_) f_.score *= 0.2f;   // the same audio on both sides of the carrier: AM / DSB, not a single sideband
     if (f_.tiltDb < -4.f) f_.score *= 0.2f;   // wrong sideband assumed: the band is mirrored
 }
 
