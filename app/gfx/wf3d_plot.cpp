@@ -215,7 +215,7 @@ void waterfall3dPlot(App& a, ImVec2 size) {
         if (h.ok) {
             const double mhz = w3d::uToMhz(h.u, s.grid.cols, gMap.c0, gMap.c1, gMap.W, gMap.imgLo, gMap.fs);
             const double ago = h.v * (s.grid.rows - 1) * std::max(1, s.key.group) * (a.wf.rowDt > 0 ? a.wf.rowDt : 1.0 / 30);
-            const double tune = a.family == 55 || a.fmScan.running || a.identifyTool ? NAN : clickTuneMhz(a, mhz);
+            const double tune = isGeneralFamily(a.family) || a.fmScan.running || a.identifyTool ? NAN : clickTuneMhz(a, mhz);
             float sx, sy, d;
             if (w3d::project(p, h.p, sx, sy, d)) dl->AddCircle(ImVec2(o.x + sx, o.y + sy), 4 * gUi, IM_COL32(255, 80, 80, 220), 12, 1.5f * gUi);
             if (!std::isnan(tune)) ImGui::SetTooltip(tr("%.4f MHz, %.1f s ago: click to tune"), mhz, ago);

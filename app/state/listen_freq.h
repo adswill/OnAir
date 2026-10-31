@@ -5,4 +5,4 @@
 #include "freq_model.h"
 
 void tuneListen(App& a, double mhz);   // toolbar.cpp: a new listening frequency: the VFO inside the captured band, the radio only past its edge
-inline double listenMhz(const App& a) { return a.family == 55 ? generalListenHz(a) / 1e6 : a.freqMhz; }
+inline double listenMhz(const App& a) { return isGeneralFamily(a.family) ? generalListenHz(a) / 1e6 : a.freqMhz; }
