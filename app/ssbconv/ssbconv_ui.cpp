@@ -390,7 +390,8 @@ void timelineTab(double now) {
         const float x = p0.x + labelW + w * (float)i / (float)ticks;
         dl->AddLine(ImVec2(x, p0.y + 16 * gUi), ImVec2(x, p0.y + 16 * gUi + rowH * (float)rows.size()), grid);
         const std::string s = clockOf(t0 + (now - t0) * i / ticks).substr(0, h <= 0.34 ? 8 : 5);
-        dl->AddText(ImVec2(x - 12 * gUi, p0.y), dim, s.c_str());
+        const float tw = ImGui::CalcTextSize(s.c_str()).x;
+        dl->AddText(ImVec2(i == ticks ? x - tw : x - tw * 0.5f, p0.y), dim, s.c_str());
     }
     float y = p0.y + 16 * gUi;
     for (const auto& r : rows) {
