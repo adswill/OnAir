@@ -26,7 +26,7 @@ namespace {
 using automation::Event;
 using automation::Value;
 
-const char* kKept[] = {"adsb", "acars", "vdl2", "hfdl", "pager", "ais", "aprs", "sonde", "lora", "ble", "rid", "dsc", "qso", "mesh", "dab", "epg", "session"};
+const char* kKept[] = {"adsb", "acars", "vdl2", "hfdl", "pager", "ais", "aprs", "sonde", "lora", "ble", "rid", "dsc", "qso", "mesh", "dab", "epg", "session", "msg"};
 
 std::string family(const std::string& type) { return type.substr(0, type.find('.')); }
 
