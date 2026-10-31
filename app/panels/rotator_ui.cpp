@@ -1,14 +1,20 @@
-// View > Antenna rotator: GS-232-compatible rotator, calibration offsets, limits, park.
+// View > Antenna rotator / mount: GS-232, Hamlib rotctld or ASCOM Alpaca mount, calibration offsets, limits, park, satellite pass tracking.
 #include "../app.h"
 #include "../ui/typography.h"
 #include "dect2/geo/passes.h"
 #include "dect2/source/rotator.h"
+#include "dect2/source/mount_driver.h"
+#include "dect2/source/mount_track.h"
 #include "dect2/specan/rot_scan.h"
 #include "imgui.h"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <memory>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -21,6 +27,14 @@ struct State {
     int baud = 9600;
     char tcpHost[128] = "127.0.0.1";
     int tcpPort = 4533;
+    int protocol = 0;          // TCP link: 0 GS-232, 1 Hamlib rotctld, 2 ASCOM Alpaca
+    int alpacaDev = 0;
+    bool passDrive = false;    // follow the tracked satellite pass (passes_ui)
+    bool passPark = true;      // park after LOS (otherwise just stop)
+    bool prepDone = false, tracking = false;
+    double lastTrackT = 0, lastAz = -999, lastEl = -999;
+    std::vector<std::string> found;   // Alpaca servers answering discovery
+    std::string discoverMsg;
     float cmdAz = 0.f, cmdEl = 0.f;
     bool autoConnect = false;
     bool showMechanical = false;
@@ -43,6 +57,14 @@ struct State {
     } peak;
 };
 State S;
+
+// Test button: the probe talks to the mount on its own thread so the window never waits for a dead host.
+struct ProbeJob {
+    std::mutex mu;
+    bool running = false, done = false, ok = false;
+    std::string msg;
+};
+std::shared_ptr<ProbeJob> gProbe = std::make_shared<ProbeJob>();
 
 static void saveUiPrefs();
 
@@ -174,6 +196,10 @@ void load() {
     S.linkUi = (int)d.getI("rotLink", 0);
     S.baud = (int)d.getI("rotBaud", 9600);
     S.tcpPort = (int)d.getI("rotTcpPort", 4533);
+    S.protocol = (int)d.getI("rotProto", 0);
+    S.alpacaDev = (int)d.getI("rotAlpacaDev", 0);
+    S.passDrive = d.getB("rotPass", false);
+    S.passPark = d.getB("rotPassPark", true);
     S.autoConnect = d.getB("rotAuto", false);
     S.showMechanical = d.getB("rotShowMech", false);
     S.azOff = (float)d.getD("rotAzOff", 0);
@@ -202,6 +228,8 @@ dect2::RotatorConfig buildCfg() {
         c.link = dect2::RotatorLink::Tcp;
         c.host = S.tcpHost;
         c.tcpPort = std::max(1, std::min(65535, S.tcpPort));
+        c.protocol = S.protocol == 1 ? dect2::RotatorProtocol::Rotctld : S.protocol == 2 ? dect2::RotatorProtocol::Alpaca : dect2::RotatorProtocol::Gs232;
+        c.alpacaDevice = std::max(0, S.alpacaDev);
     }
     return c;
 }
@@ -211,6 +239,10 @@ void saveUiPrefs() {
     d.setI("rotLink", S.linkUi);
     d.setI("rotBaud", S.baud);
     d.setI("rotTcpPort", S.tcpPort);
+    d.setI("rotProto", S.protocol);
+    d.setI("rotAlpacaDev", S.alpacaDev);
+    d.setB("rotPass", S.passDrive);
+    d.setB("rotPassPark", S.passPark);
     d.setB("rotAuto", S.autoConnect);
     d.setB("rotShowMech", S.showMechanical);
     d.setD("rotAzOff", S.azOff);
@@ -251,6 +283,48 @@ void rotatorPointBearing(double bearingDeg, double elDeg) {
     r.gotoAzEl(bearingDeg, elDeg);
 }
 
+// ---- satellite pass tracking (called from passes_ui trackTick / endPass)
+bool rotatorPassDrive() { load(); return S.passDrive && S.linkUi != 0; }
+
+bool rotatorPassWanted() { load(); return S.passDrive; }
+
+void rotatorPassSetDrive(bool on) {
+    load();
+    S.passDrive = on;
+    saveUiPrefs();
+}
+
+void rotatorPassStep(const dect2::MountPlan& m) {
+    if (!rotatorPassDrive()) return;
+    dect2::Rotator& r = dect2::Rotator::get();
+    const double now = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    if (m.phase == dect2::MountPhase::Preposition) {
+        if (S.prepDone) return;
+        if (!r.connected()) applyConnect();
+        r.gotoAzEl(m.azDeg, 0.0);   // wait at the rise point
+        S.prepDone = true;
+    } else if (m.phase == dect2::MountPhase::Track) {
+        const double every = r.supportsRates() ? 0.5 : 1.0;   // a speed order lapses after 3 s, so it is repeated
+        if (now - S.lastTrackT < every) return;
+        const bool rates = r.supportsRates();
+        if (!rates && std::fabs(dect2::azDelta(S.lastAz, m.azDeg)) < 0.5 && std::fabs(m.elDeg - S.lastEl) < 0.5) return;   // goto mounts: only for a real move
+        if (!r.connected()) applyConnect();
+        r.trackAzEl(m.azDeg, m.elDeg, m.azRateDegS, m.elRateDegS);
+        S.lastTrackT = now; S.lastAz = m.azDeg; S.lastEl = m.elDeg;
+        S.tracking = true;
+    }
+}
+
+void rotatorPassEnd() {
+    load();
+    if (!S.tracking && !S.prepDone) return;
+    S.tracking = S.prepDone = false;
+    S.lastAz = S.lastEl = -999;
+    if (S.linkUi == 0) return;
+    dect2::Rotator& r = dect2::Rotator::get();
+    if (S.passPark) r.park(); else r.stop();
+}
+
 void rotatorTick(App& a) {
     if (a.rxId != 1) return;
     load();
@@ -277,7 +351,7 @@ void rotatorWindow(App& a) {
     bool changed = false;
 
     ImGui::PushTextWrapPos(440 * gUi);
-    ImGui::TextDisabled("%s", tr("GS-232 / Yaesu ASCII (W, C, ;). Corrected az/el include your offsets below."));
+    ImGui::TextDisabled("%s", tr("Antenna rotator or telescope mount: GS-232 / Yaesu, Hamlib rotctld (works with almost any rotator) or ASCOM Alpaca. Corrected az/el include your offsets below."));
     ImGui::PopTextWrapPos();
 
     changed |= ImGui::RadioButton(tr("Off"), &S.linkUi, 0);
@@ -293,12 +367,65 @@ void rotatorWindow(App& a) {
         changed |= ImGui::InputInt(tr("Baud"), &S.baud, 0, 0);
         S.baud = std::max(1200, std::min(115200, S.baud));
     } else if (S.linkUi == 2) {
+        const int oldProto = S.protocol;
+        bool pc = ImGui::RadioButton(tr("GS-232"), &S.protocol, 0);
+        ImGui::SameLine();
+        pc |= ImGui::RadioButton(tr("Hamlib rotctld"), &S.protocol, 1);
+        ImGui::SameLine();
+        pc |= ImGui::RadioButton(tr("ASCOM Alpaca"), &S.protocol, 2);
+        if (pc && oldProto != S.protocol) {   // the usual port of each
+            if (S.protocol == 2 && (S.tcpPort == 4533 || S.tcpPort == 4533)) S.tcpPort = 11111;
+            else if (S.protocol != 2 && S.tcpPort == 11111) S.tcpPort = 4533;
+            changed = true;
+        }
+        if (S.protocol == 1) ImGui::TextDisabled("%s", tr("Start rotctld (Hamlib) for your rotator, then connect here. Goto mounts."));
+        if (S.protocol == 2) ImGui::TextDisabled("%s", tr("Alpaca runs over HTTP on every OS. On Windows, reach an ASCOM driver through the ASCOM Remote server. Takes Alt/Az positions, and axis speeds when the mount allows it."));
         ImGui::SetNextItemWidth(180 * gUi);
         changed |= ImGui::InputText(tr("Host"), S.tcpHost, sizeof S.tcpHost);
         ImGui::SameLine();
         ImGui::SetNextItemWidth(90 * gUi);
         changed |= ImGui::InputInt(tr("Port"), &S.tcpPort, 0, 0);
         S.tcpPort = std::max(1, std::min(65535, S.tcpPort));
+        if (S.protocol == 2) {
+            ImGui::SetNextItemWidth(90 * gUi);
+            changed |= ImGui::InputInt(tr("Telescope number"), &S.alpacaDev, 0, 0);
+            S.alpacaDev = std::max(0, S.alpacaDev);
+            if (ImGui::Button(tr("Find Alpaca servers"))) {
+                S.found = dect2::alpacaDiscover(1200);
+                S.discoverMsg = S.found.empty() ? tr("No Alpaca server answered on this network.") : "";
+            }
+            for (const std::string& f : S.found) {
+                if (ImGui::Selectable(f.c_str())) {
+                    const size_t c = f.rfind(':');
+                    snprintf(S.tcpHost, sizeof S.tcpHost, "%s", f.substr(0, c).c_str());
+                    S.tcpPort = std::atoi(f.c_str() + c + 1);
+                    changed = true;
+                }
+            }
+            if (!S.discoverMsg.empty()) ImGui::TextDisabled("%s", S.discoverMsg.c_str());
+        }
+        if (S.protocol != 0) {
+            std::unique_lock<std::mutex> pl(gProbe->mu);
+            const bool busy = gProbe->running;
+            pl.unlock();
+            ImGui::BeginDisabled(busy);
+            if (ImGui::Button(tr("Test connection"))) {
+                std::shared_ptr<ProbeJob> job = gProbe;
+                const dect2::RotatorConfig cfg = buildCfg();
+                { std::lock_guard<std::mutex> lk(job->mu); job->running = true; job->done = false; job->msg.clear(); }
+                std::thread([job, cfg] {
+                    dect2::MountPos pos;
+                    std::string msg;
+                    const bool ok = dect2::probeMount(cfg, pos, msg);
+                    std::lock_guard<std::mutex> lk(job->mu);
+                    job->ok = ok; job->msg = msg; job->running = false; job->done = true;
+                }).detach();
+            }
+            ImGui::EndDisabled();
+            std::lock_guard<std::mutex> lk(gProbe->mu);
+            if (gProbe->running) { ImGui::SameLine(); ImGui::TextDisabled("%s", tr("testing…")); }
+            else if (gProbe->done) ImGui::TextColored(gProbe->ok ? pal::okGreen() : pal::badRed(), "%s", gProbe->msg.c_str());
+        }
     }
 
     changed |= ImGui::Checkbox(tr("Connect on start"), &S.autoConnect);
@@ -442,6 +569,18 @@ void rotatorWindow(App& a) {
             ImGui::PushTextWrapPos(440 * gUi);
             ImGui::TextColored(pal::okGreen(), "%s", S.calMsg.c_str());
             ImGui::PopTextWrapPos();
+        }
+    }
+
+    if (typo::collapsingHeader(tr("Satellite passes"), ImGuiTreeNodeFlags_DefaultOpen)) {
+        changed |= ImGui::Checkbox(tr("Point the mount at the tracked satellite"), &S.passDrive);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Turn on Track in View > Satellite passes. The mount waits at the rise point before AOS, follows the satellite through the pass (with axis speeds on mounts that take them) and parks or stops at LOS."));
+        ImGui::BeginDisabled(!S.passDrive);
+        changed |= ImGui::Checkbox(tr("Park after the pass (otherwise stop)"), &S.passPark);
+        ImGui::EndDisabled();
+        if (S.passDrive && S.linkUi == 0) ImGui::TextColored(pal::warnAmber(), "%s", tr("Choose a connection above first."));
+        if (S.passDrive && S.linkUi != 0) {
+            ImGui::TextDisabled(rot.supportsRates() ? "%s" : "%s", rot.supportsRates() ? tr("This mount takes axis speeds: smooth tracking.") : tr("Goto mount: a new position about once a second."));
         }
     }
 

@@ -10,13 +10,17 @@
 namespace dect2 {
 
 enum class RotatorLink { None = 0, Serial, Tcp };
+// What the TCP link speaks: GS-232 ASCII (PstRotator, Arduino rotators), Hamlib rotctld, or ASCOM Alpaca HTTP (see mount_driver.h).
+enum class RotatorProtocol { Gs232 = 0, Rotctld, Alpaca };
 
 struct RotatorConfig {
     RotatorLink link = RotatorLink::None;
     std::string serialDevice;   // e.g. /dev/tty.usbserial-1410 or COM3
     int baud = 9600;
     std::string host = "127.0.0.1";
-    int tcpPort = 4533;
+    int tcpPort = 4533;         // rotctld default 4533; Alpaca default 11111
+    RotatorProtocol protocol = RotatorProtocol::Gs232;   // Rotctld and Alpaca need link = Tcp
+    int alpacaDevice = 0;       // Alpaca telescope device number
 };
 
 // North correction and optional travel limits (mechanical degrees). Park and user commands use corrected (true) az/el.
@@ -63,6 +67,10 @@ public:
     void gotoAzEl(double correctedAzDeg, double correctedElDeg);
     void gotoMechanicalAzEl(double azDeg, double elDeg);   // calibration sweeps: no offset / limits applied
     void park();
+    // Follow a moving target (corrected az/el, plus its speed in deg/s). Mounts that take a speed (Alpaca MoveAxis) are driven by a
+    // rate loop; others get a goto. Speeds expire after 3 s unless refreshed, so a stalled app never leaves the mount running away.
+    void trackAzEl(double correctedAzDeg, double correctedElDeg, double azRateDegS, double elRateDegS);
+    bool supportsRates() const;
     RotatorStatus status() const;
     bool connected() const { return connected_.load(std::memory_order_relaxed); }
     // JSON for GET /api/v1/rotator (mechanical + corrected, moving, link).

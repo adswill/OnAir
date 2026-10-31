@@ -202,6 +202,7 @@ target_sources(dect2core PRIVATE core/src/packs/packs.cpp core/src/packs/dataset
 target_sources(dect2core PRIVATE core/src/voicekeys/voice_crypto.cpp core/src/voicekeys/voice_keys.cpp core/src/voicekeys/voice_decrypt.cpp core/src/voicekeys/key_persist.cpp)
 target_sources(dect2core PRIVATE core/src/net/remote_api.cpp core/src/net/api_policy.cpp core/src/net/map_guard.cpp core/src/net/api_servers.cpp core/src/net/satnogs.cpp core/src/results/rx_json.cpp core/src/source/gain_opt.cpp core/src/mesh/mesh_report.cpp core/src/source/rotator.cpp)   # remote-control API server, telemetry JSON, gain optimiser, mesh report text, antenna rotator
 target_sources(dect2core PRIVATE core/src/net/remote_api.cpp core/src/net/api_policy.cpp core/src/net/api_servers.cpp core/src/results/rx_json.cpp core/src/source/gain_opt.cpp core/src/mesh/mesh_report.cpp core/src/source/rotator.cpp)   # remote-control API server, telemetry JSON, gain optimiser, mesh report text, antenna rotator
+target_sources(dect2core PRIVATE core/src/source/mount_driver.cpp core/src/source/mount_track.cpp)   # antenna mount drivers: Hamlib rotctld, ASCOM Alpaca; pass-driven mount plan
 target_sources(dect2core PRIVATE core/src/results/sessions_json.cpp)   # the sessions as paged JSON for the remote API
 target_sources(dect2core PRIVATE core/src/packs/packs.cpp)   # offline data packs: catalog, download with resume, checksums, disk guard, delete
 target_sources(dect2core PRIVATE third_party/ssdv/ssdv.c third_party/ssdv/rs8.c)   # SSDV packet decoder / encoder (fsphil/ssdv, GPL-3.0-or-later; rs8.c Phil Karn LGPL), see THIRD_PARTY.md
@@ -1507,6 +1508,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_enhance tests/image/test_enhance.cpp)
   target_link_libraries(test_enhance PRIVATE dect2core)
   add_test(NAME image_enhance COMMAND test_enhance)
+  add_executable(test_mount tests/source/test_mount.cpp)
+  target_link_libraries(test_mount PRIVATE dect2core)
+  add_test(NAME mount COMMAND test_mount)
   add_executable(test_passes tests/geo/test_passes.cpp)
   target_link_libraries(test_passes PRIVATE dect2core)
   add_test(NAME passes COMMAND test_passes)

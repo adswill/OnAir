@@ -957,6 +957,10 @@ void rotatorTick(App& a);          // rotator_ui.cpp: signal-peak azimuth calibr
 void rotatorLoadPrefs();           // rotator_ui.cpp: prefs and optional auto-connect
 void rotatorSavePrefs();
 void rotatorPointBearing(double bearingDeg, double elDeg);
+bool rotatorPassDrive();                       // rotator_ui.cpp: the mount follows the tracked satellite pass
+bool rotatorPassWanted();                      // the "point the mount" box is ticked
+void rotatorPassSetDrive(bool on);
+void rotatorPassEnd();                         // pass over or tracking cancelled: park or stop the mount
 // The transmitter (tx_ui.cpp): independent of the receivers, with its own radio. The state is not an App's; transmitting is never saved.
 struct ModeDef;
 bool& txViewFlag();                // the RX / TX switch: true = TX view (never saved: the program opens in RX view)
