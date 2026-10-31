@@ -3,6 +3,9 @@
 #pragma once
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
 #include <set>
 #include <string>
 #include <vector>
@@ -105,5 +108,62 @@ inline void applyPreset(Rules& r, const std::string& preset, const std::vector<s
 
 // the settings tree's search: a group matches by its name or by any of its modes
 inline bool containsNoCase(const std::string& hay, const std::string& needle) { return needle.empty() || lowerAscii(hay).find(lowerAscii(needle)) != std::string::npos; }
+
+// ---- the saved copy: a small file of its own (modes-shown.txt in the data folder), written the moment a tick changes and read at the start.
+// It does not depend on settings.conf, which a startup guard can set aside or a locked folder can keep from being replaced.
+// Four lines: "hiddenModes=a|b", "hiddenGroups=...", "favs=...", "favsOnly=0/1". A name never holds a | or a line break.
+inline std::string toText(const Rules& r) {
+    return "hiddenModes=" + joinList(r.hiddenModes) + "\nhiddenGroups=" + joinList(r.hiddenGroups) + "\nfavs=" + joinList(r.favs) +
+           "\nfavsOnly=" + (r.favsOnly ? "1" : "0") + "\n";
+}
+inline bool fromText(const std::string& text, Rules& out) {
+    Rules r;
+    std::istringstream in(text);
+    std::string line;
+    int seen = 0;
+    while (std::getline(in, line)) {
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        const size_t eq = line.find('=');
+        if (eq == std::string::npos) continue;
+        const std::string k = line.substr(0, eq), v = line.substr(eq + 1);
+        if (k == "hiddenModes") { r.hiddenModes = parseList(v); seen++; }
+        else if (k == "hiddenGroups") { r.hiddenGroups = parseList(v); seen++; }
+        else if (k == "favs") { r.favs = parseList(v); seen++; }
+        else if (k == "favsOnly") { r.favsOnly = v == "1"; seen++; }
+    }
+    if (seen < 4) return false;   // not our file (or cut short): the caller keeps what it has
+    out = r;
+    return true;
+}
+inline std::filesystem::path u8path(const std::string& p) { return std::filesystem::path(reinterpret_cast<const char8_t*>(p.c_str())); }
+// write to a temp file and replace; when the replace is refused (a virus scanner or a sync client holds the file) write in place
+inline bool writeFile(const std::string& path, const Rules& r) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    if (u8path(path).has_parent_path()) fs::create_directories(u8path(path).parent_path(), ec);
+    const std::string text = toText(r), tmp = path + ".tmp";
+    {
+        std::ofstream f(u8path(tmp), std::ios::binary | std::ios::trunc);
+        if (!f) return false;
+        f << text;
+        f.flush();
+        if (!f) return false;
+    }
+    fs::rename(u8path(tmp), u8path(path), ec);
+    if (!ec) return true;
+    fs::remove(u8path(tmp), ec);
+    std::ofstream f(u8path(path), std::ios::binary | std::ios::trunc);
+    if (!f) return false;
+    f << text;
+    f.flush();
+    return (bool)f;
+}
+inline bool readFile(const std::string& path, Rules& out) {
+    std::ifstream f(u8path(path), std::ios::binary);
+    if (!f) return false;
+    std::stringstream ss;
+    ss << f.rdbuf();
+    return fromText(ss.str(), out);
+}
 
 }  // namespace modevis

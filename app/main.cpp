@@ -264,6 +264,7 @@ static void shotReport(App& app) {
 static void shutdownApp(App& app, gfx::Backend* gfxBackend, GLFWwindow* window) {
     webshare::stopAll();   // the OnAir Web easy setup's server and tunnel end with the app
     savePrefsFlush();
+    plat::prefs().flush();   // anything set since the last write (a retry of a refused write, a key set without a save)
     layoutSaveNow();
     workspaceSessionEnd(app);   // the last-session file is marked clean first: the state is the one at exit
     delete gDiscord;   // clears the status and joins its thread

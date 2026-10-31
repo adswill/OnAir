@@ -52,6 +52,31 @@ int main() {
     applyPreset(p, "Marine", gr);
     check(p.hiddenModes.empty() && p.favs.count("F") && p.favsOnly, "preset keeps favourites");
     check(containsNoCase("Aviation", "avi") && containsNoCase("x", ""), "search");
+    {   // the saved copy: text round trip, the file on disk (a fresh "start" reads it back), the replace-refused path, a file that is not ours
+        Rules a;
+        a.hiddenModes = {"DVB-T2", "ADS-B", "FM (stereo)"}; a.hiddenGroups = {"AMATEUR - DIGITAL", "PLUGINS"}; a.favs = {"DAB+"}; a.favsOnly = true;
+        Rules b;
+        check(fromText(toText(a), b) && b.hiddenModes == a.hiddenModes && b.hiddenGroups == a.hiddenGroups && b.favs == a.favs && b.favsOnly, "text round trip");
+        check(fromText(toText(Rules()), b) && isDefault(b), "default round trip");
+        check(!fromText("hello\n", b) && !fromText("hiddenModes=a\n", b), "not ours / cut short");
+        check(fromText("hiddenModes=x\r\nhiddenGroups=\r\nfavs=\r\nfavsOnly=0\r\n", b) && b.hiddenModes.count("x") == 1, "CRLF file (edited in Notepad)");
+        namespace fs = std::filesystem;
+        const std::string dir = (fs::temp_directory_path() / "onair_modevis_test").string(), path = dir + "/sub/modes-shown.txt";
+        fs::remove_all(fs::path(dir));
+        Rules c;
+        check(!readFile(path, c), "no file yet");
+        check(writeFile(path, a), "write creates the folder");
+        check(readFile(path, c) && c.hiddenModes == a.hiddenModes && c.favsOnly, "read back after a restart");
+        a.hiddenModes.erase("ADS-B"); a.favsOnly = false;
+        check(writeFile(path, a) && readFile(path, c) && !c.hiddenModes.count("ADS-B") && !c.favsOnly, "a later change replaces the earlier");
+        // a directory where the temp file goes: the temp write fails, nothing is claimed saved
+        fs::create_directories(fs::path(dir + "/blocked/modes-shown.txt.tmp"));
+        check(!writeFile(dir + "/blocked/modes-shown.txt", a), "unwritable target reports false");
+        // the destination cannot be renamed over (a directory): the in-place write fails too and reports it
+        fs::create_directories(fs::path(dir + "/dest/modes-shown.txt"));
+        check(!writeFile(dir + "/dest/modes-shown.txt", a), "refused replace and in-place both fail: false");
+        fs::remove_all(fs::path(dir));
+    }
     if (!fails) printf("ok\n");
     return fails;
 }
