@@ -587,6 +587,8 @@ static void radiosChecks(const char* dir, const char* ext) {
 namespace dect2 {
 uint32_t hackrfAutoFilterHz(double sampleRate, double channelMhz);   // hackrf_usb.cpp
 void hackrfBoardRange(int id, double& lo, double& hi);
+RadioSetting hackrfFilterSetting();
+uint32_t hackrfFilterFor(const TuneSettings& s);
 }
 static bool hasSetting(const DeviceInfo& d, const char* key) {
     for (const auto& r : d.settings) if (r.key == key) return true;
@@ -628,6 +630,23 @@ static void radioSettingsChecks(const char* dir, const char* ext) {
     CHECK(hackrfAutoFilterHz(10e6, 8) == 5000000 && hackrfAutoFilterHz(10e6, 7) == 5000000, "HackRF filter 8/7 MHz at 10 Msps: %u / %u", hackrfAutoFilterHz(10e6, 8), hackrfAutoFilterHz(10e6, 7));
     CHECK(hackrfAutoFilterHz(8e6, 6) == 5000000, "HackRF filter 6 MHz at 8 Msps: %u (5 MHz expected)", hackrfAutoFilterHz(8e6, 6));
     CHECK(hackrfAutoFilterHz(8e6, 5) == 3500000 && hackrfAutoFilterHz(8e6, 1.7) == 3500000 && hackrfAutoFilterHz(4e6, 0.25) == 1750000, "HackRF filter narrow channels: %u %u %u", hackrfAutoFilterHz(8e6, 5), hackrfAutoFilterHz(8e6, 1.7), hackrfAutoFilterHz(4e6, 0.25));
+    {   // 3.5: the Advanced baseband filter choice beats the mode's and the automatic width, for any rate
+        TuneSettings t; t.sampleRate = 10e6; t.bandwidthMhz = 8;
+        CHECK(hackrfFilterFor(t) == 5000000, "HackRF filter Auto at 10 Msps: %u", hackrfFilterFor(t));
+        t.basebandFilterHz = 1750000;
+        CHECK(hackrfFilterFor(t) == 1750000, "HackRF mode filter kept in Auto: %u", hackrfFilterFor(t));
+        t.radio["bbfilter"] = "auto";
+        CHECK(hackrfFilterFor(t) == 1750000, "HackRF bbfilter=auto keeps the mode's filter: %u", hackrfFilterFor(t));
+        const uint32_t widths[] = {1750000, 2500000, 3500000, 5000000, 5500000, 6000000, 7000000, 8000000, 9000000, 10000000, 12000000, 14000000, 15000000, 20000000, 24000000, 28000000};
+        const RadioSetting rs = hackrfFilterSetting();
+        CHECK(rs.key == "bbfilter" && rs.def == "auto" && rs.values.size() == 17 && rs.names.size() == 17, "HackRF filter setting lists Auto + 16 widths: %zu", rs.values.size());
+        for (size_t i = 0; i < 16; i++) {
+            t.radio["bbfilter"] = std::to_string(widths[i]);
+            CHECK(hackrfFilterFor(t) == widths[i] && rs.values[i + 1] == std::to_string(widths[i]), "HackRF chosen filter %u: %u", widths[i], hackrfFilterFor(t));
+        }
+        t.radio["bbfilter"] = "junk";
+        CHECK(hackrfFilterFor(t) == 1750000, "HackRF junk bbfilter falls back to Auto: %u", hackrfFilterFor(t));
+    }
     {
         double lo = 0, hi = 0;
         hackrfBoardRange(2, lo, hi);

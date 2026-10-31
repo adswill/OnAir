@@ -17,6 +17,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <mutex>
 #include <thread>
@@ -91,6 +92,22 @@ uint32_t hackrfAutoFilterHz(double sampleRate, double channelMhz) {
         if (want > bw && want <= 0.75 * sampleRate) bw = want;
     }
     return bw;
+}
+
+RadioSetting hackrfFilterSetting() {
+    std::vector<std::string> v{"auto"}, n{"Auto (follows the sample rate)"};
+    for (uint32_t f : kFilterHz) { v.push_back(std::to_string(f)); char b[24]; std::snprintf(b, sizeof b, "%g MHz", f / 1e6); n.push_back(b); }
+    return choiceSetting("bbfilter", "Baseband filter",
+        "The HackRF's analogue low-pass filter before the converter. Auto picks the width from the sample rate (half of it, 5 MHz at 10 Msps, wider for\n"
+        "a wide channel) and from the mode. Choose a width to override it: as wide as the sample rate allows to see the whole capture, narrower to\n"
+        "reject a strong signal outside the channel. Takes effect at once.", v, n, "auto");
+}
+
+// An explicit choice wins over the mode's filter and the automatic one; otherwise the mode's filter (basebandFilterHz), else Auto.
+uint32_t hackrfFilterFor(const TuneSettings& s) {
+    const std::string o = radioOption(s, "bbfilter", "auto");
+    if (o != "auto" && !o.empty()) { const long v = std::strtol(o.c_str(), nullptr, 10); if (v > 0) return (uint32_t)v; }
+    return s.basebandFilterHz > 0 ? (uint32_t)s.basebandFilterHz : hackrfAutoFilterHz(s.sampleRate, s.bandwidthMhz);
 }
 
 // The tuning range of each board (libhackrf's board list: Jawbreaker 10-6000 MHz, One 1-6000 MHz, rad1o 50-4000 MHz; the HackRF Pro
@@ -304,7 +321,7 @@ private:
             if (r < 0) return fail("set sample rate", r);
             rate_ = s.sampleRate;
         }
-        const uint32_t bw = s.basebandFilterHz > 0 ? (uint32_t)s.basebandFilterHz : hackrfAutoFilterHz(s.sampleRate, s.bandwidthMhz);
+        const uint32_t bw = hackrfFilterFor(s);
         const uint32_t bwHz = bw;   // a width given in the settings is used as given
         {
             int r = dev_.out(kBasebandFilterSet, (uint16_t)(bwHz & 0xffff), (uint16_t)(bwHz >> 16));
@@ -609,7 +626,7 @@ static DeviceInfo hackrfFdEntry(libusb_device_handle* h, const std::string& seri
     } else if (!why.empty()) info.board = "HackRF (" + why + ")";
     const std::string tail = info.serial.size() > 8 ? info.serial.substr(info.serial.size() - 8) : info.serial;
     info.name = info.board + (tail.empty() ? std::string() : " (" + tail + ")");
-    info.settings = {ppmSetting(0.1)};
+    info.settings = {ppmSetting(0.1), hackrfFilterSetting()};
     info.minRateHz = 2e6; info.maxRateHz = 20e6;
     return info;
 }
@@ -660,7 +677,7 @@ std::vector<DeviceInfo> listUsbHackrfDevices(std::string& err) {
         }
         const std::string tail = info.serial.size() > 8 ? info.serial.substr(info.serial.size() - 8) : info.serial;
         info.name = info.board + (tail.empty() ? std::string() : " (" + tail + ")");
-        info.settings = {ppmSetting(0.1)};   // amplifier and antenna power have their own controls
+        info.settings = {ppmSetting(0.1), hackrfFilterSetting()};   // amplifier and antenna power have their own controls
         info.canTransmit = true;             // OnAir's own USB driver has a transmit path (see UsbHackrfTx); the libhackrf fallback has none
         info.txChannels = 1;                 // one SMA output
         info.txMinRateHz = 2e6; info.txMaxRateHz = 20e6;
