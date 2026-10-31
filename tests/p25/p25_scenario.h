@@ -405,11 +405,11 @@ struct Rig {
             }
             for (const CallRecord& cr : ctl.log.records()) {
                 if (!cr.active || !cr.followed || cr.dmr || cr.slot >= 0 || cr.id == hopCall || !ctl.follower.inSpan(cr.freqHz)) continue;
-                const WideCarrier* near = nullptr; double bd = 9000;
-                for (const auto& c : wt.wide) { const double d = std::fabs(radio.centreHz + c.hz - cr.freqHz); if (d < bd) { bd = d; near = &c; } }
-                if (!near) continue;
-                if (near->active) { wideVoiceReports++; ctl.onVoice(cr.id, now); }
-                else if (near->idleSec > 1.0) ctl.onTerminator(cr.id, now);
+                const WideCarrier* nearC = nullptr; double bd = 9000;
+                for (const auto& c : wt.wide) { const double d = std::fabs(radio.centreHz + c.hz - cr.freqHz); if (d < bd) { bd = d; nearC = &c; } }
+                if (!nearC) continue;
+                if (nearC->active) { wideVoiceReports++; ctl.onVoice(cr.id, now); }
+                else if (nearC->idleSec > 1.0) ctl.onTerminator(cr.id, now);
             }
         }
         ctl.tick(now);

@@ -583,11 +583,11 @@ void trunkTick(App& a) {
         const double ctr0 = radioCenterMhz(a) * 1e6;
         for (const CallRecord& cr : T.ctl.log.records()) {
             if (!cr.active || !cr.followed || cr.dmr || cr.slot >= 0 || cr.id == T.hopCall || cr.id == T.rm.call || !T.ctl.follower.inSpan(cr.freqHz)) continue;
-            const dect2::WideCarrier* near = nullptr; double bd = 9000;
-            for (const auto& c : a.rx.wide) { const double d = std::fabs(ctr0 + c.hz - cr.freqHz); if (d < bd) { bd = d; near = &c; } }
-            if (!near) continue;
-            if (near->active) T.ctl.onVoice(cr.id, now);
-            else if (near->idleSec > 1.0) T.ctl.onTerminator(cr.id, now);
+            const dect2::WideCarrier* nearC = nullptr; double bd = 9000;
+            for (const auto& c : a.rx.wide) { const double d = std::fabs(ctr0 + c.hz - cr.freqHz); if (d < bd) { bd = d; nearC = &c; } }
+            if (!nearC) continue;
+            if (nearC->active) T.ctl.onVoice(cr.id, now);
+            else if (nearC->idleSec > 1.0) T.ctl.onTerminator(cr.id, now);
         }
     }
     if (wideActive(a)) {   // the sound follows the call that should be heard
