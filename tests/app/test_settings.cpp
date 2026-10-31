@@ -1,6 +1,7 @@
 // Settings window rules: the table is sound, the search finds rows across categories, reset goes to the default, export / import round trip.
 #include "../../app/ui/settings_table.h"
 #include <cstdio>
+#include <cstring>
 #include <set>
 static int fails = 0;
 static void check(bool ok, const char* w) { if (!ok) { printf("FAIL: %s\n", w); fails++; } }
