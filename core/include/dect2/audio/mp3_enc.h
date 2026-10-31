@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include "dect2/codec/codec_paths.h"
 #if defined(_WIN32)
 #include <windows.h>
 #else
@@ -78,10 +79,14 @@ private:
         Api a;
         void* h = nullptr;
 #if defined(_WIN32)
-        for (const char* n : {"libmp3lame.dll", "libmp3lame-0.dll", "lame_enc.dll", "mp3lame.dll"}) { if ((h = (void*)LoadLibraryA(n))) break; }
+        const std::vector<std::string> lameNames = {"libmp3lame.dll", "libmp3lame-0.dll", "lame_enc.dll", "mp3lame.dll"};
+        // a copy in an OnAir codecs folder first: it survives an update, unlike one put next to the program (#376)
+        for (const std::string& n : codec::systemLibraryPaths(lameNames)) { if ((h = (void*)LoadLibraryExA(n.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH))) break; }
+        if (!h) for (const std::string& n : lameNames) { if ((h = (void*)LoadLibraryA(n.c_str()))) break; }
         auto sym = [&](const char* s) { return h ? (void*)GetProcAddress((HMODULE)h, s) : nullptr; };
 #else
-        for (const char* n : {"libmp3lame.so.0", "libmp3lame.so", "libmp3lame.0.dylib", "libmp3lame.dylib", "/opt/homebrew/lib/libmp3lame.dylib", "/usr/local/lib/libmp3lame.dylib"}) { if ((h = dlopen(n, RTLD_NOW | RTLD_LOCAL))) break; }
+        for (const std::string& n : codec::systemLibraryPaths({"libmp3lame.so.0", "libmp3lame.so", "libmp3lame.0.dylib", "libmp3lame.dylib"})) { if ((h = dlopen(n.c_str(), RTLD_NOW | RTLD_LOCAL))) break; }
+        if (!h) for (const char* n : {"libmp3lame.so.0", "libmp3lame.so", "libmp3lame.0.dylib", "libmp3lame.dylib", "/opt/homebrew/lib/libmp3lame.dylib", "/usr/local/lib/libmp3lame.dylib"}) { if ((h = dlopen(n, RTLD_NOW | RTLD_LOCAL))) break; }
         auto sym = [&](const char* s) { return h ? dlsym(h, s) : nullptr; };
 #endif
 #define M(f, s) a.f = reinterpret_cast<decltype(a.f)>(sym(s))

@@ -109,5 +109,18 @@ int main() {
         CHECK(hit.size() == 2, "dirsWithFile finds both: %zu", hit.size());
         fs::remove_all(root, ec);
     }
+    {   // #279 #376: a single-library codec (LAME, FAAD2) is found in the codecs folders, user folder first, the program folder last
+        CodecPathInput in;
+        in.exeDir = "C:/Radio/SDRApps/Onair/"; in.userDir = "C:/Users/me/AppData/Local/OnAir/codecs";
+        const auto dirs = codecSearchDirs(in);
+        const std::vector<std::string> names = {"libmp3lame.dll", "lame_enc.dll"};
+        std::vector<std::string> have = {"C:/Radio/SDRApps/Onair/libmp3lame.dll", "C:/Users/me/AppData/Local/OnAir/codecs/lame_enc.dll", "C:/Radio/SDRApps/Onair/codecs/libmp3lame.dll"};
+        const auto ex = [&](const std::string& p) { for (const auto& h : have) if (h == p) return true; return false; };
+        const auto r = libraryPaths(dirs, {"C:/Radio/SDRApps/Onair"}, names, ex);
+        CHECK(r.size() == 3 && r[0] == "C:/Users/me/AppData/Local/OnAir/codecs/lame_enc.dll", "user folder first: %zu", r.size());
+        CHECK(r[1] == "C:/Radio/SDRApps/Onair/codecs/libmp3lame.dll" && r[2] == "C:/Radio/SDRApps/Onair/libmp3lame.dll", "then the codecs folder next to the program, then the program folder");
+        CHECK(libraryPaths(dirs, {}, {"nothing.dll"}, ex).empty(), "nothing found");
+        CHECK(libraryPaths({}, {"C:/x", "C:/x/"}, {"a"}, [](const std::string&) { return true; }).size() == 1, "a folder listed twice counts once");
+    }
     return testSummary("codec_paths");
 }

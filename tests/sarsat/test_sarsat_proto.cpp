@@ -153,5 +153,31 @@ int main() {
         std::vector<uint8_t> be = encode(e); Beacon oe;
         CHECK(decode(be, oe) && oe.hexId != id0, "another country is another beacon");
     }
+    {   // #404: noise must rarely pass as a beacon; a damaged real beacon still does
+        uint32_t x = 12345u;
+        auto rnd = [&]() { x ^= x << 13; x ^= x >> 17; x ^= x << 5; return x; };
+        int pass = 0, pass3 = 0;
+        const int N = 300000;
+        for (int n = 0; n < N; n++) {
+            std::vector<uint8_t> b(kShortBits);
+            for (auto& v : b) v = (uint8_t)(rnd() & 1u);
+            b[24] = 0;
+            Beacon o;
+            if (decode(b, o)) { pass++; pass3 += o.corrected == 3; }
+        }
+        printf("  noise: %d of %d accepted (%d with 3 repairs)\n", pass, N, pass3);
+        CHECK(pass * 100 < N * 1, "noise accepted %d of %d (was about 4 in 100 before the plausibility check)", pass, N);
+        int ok = 0, tot = 0;   // real beacons with 2 and 3 damaged bits anywhere in the protected field
+        for (const Spec& sp : testBeacons()) {
+            for (int off = 0; off < 20; off++) {
+                std::vector<uint8_t> d = encode(sp);
+                const int nerr = 2 + off % 2;
+                for (int k = 0; k < nerr; k++) d[(size_t)(26 + (off * 7 + k * 23) % 80)] ^= 1;
+                Beacon r;
+                tot++; ok += decode(d, r) && r.valid;
+            }
+        }
+        CHECK(ok * 10 >= tot * 8, "damaged real beacons still decode: %d of %d", ok, tot);
+    }
     return testSummary("test_sarsat_proto");
 }

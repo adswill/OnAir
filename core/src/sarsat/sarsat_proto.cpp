@@ -208,7 +208,27 @@ std::string baudotUnpack(uint64_t v, int n) {
     return s;
 }
 
+namespace {
+bool decodeRaw(std::vector<uint8_t>& bits, Beacon& o);
+}
+
+// #404: BCH(82,61) repairs 3 bits, so about 4 in 100 random 112 bit blocks pass it. A message that needed 2 or 3 repairs must therefore also make sense
+// (a country that exists, a protocol that has a name); a real beacon with that much damage still does, noise rarely.
 bool decode(std::vector<uint8_t>& bits, Beacon& o) {
+    const std::vector<uint8_t> keep = bits;
+    if (!decodeRaw(bits, o)) return false;
+    if (o.corrected >= 2 && o.valid) {
+        const bool named = o.protoName.rfind("Location protocol ", 0) != 0 && o.protoName.rfind("User protocol ", 0) != 0;
+        bool odd = false;
+        if (o.userProto) odd = o.idText.find('?') != std::string::npos;   // Baudot text with a code that is no character
+        else if (standardLocation(o.protoCode) && !o.hasPos) odd = !(get(bits, 66, 74) == 511 && get(bits, 76, 85) == 1023);   // neither a position nor "no position"
+        if (o.country.empty() || !named || odd) { bits = keep; o = Beacon(); return false; }
+    }
+    return true;
+}
+
+namespace {
+bool decodeRaw(std::vector<uint8_t>& bits, Beacon& o) {
     o = Beacon();
     if (bits.size() < (size_t)kShortBits) return false;
     const int c1 = bch1().correct(bits, 25);
@@ -306,6 +326,8 @@ bool decode(std::vector<uint8_t>& bits, Beacon& o) {
     }
     return true;
 }
+
+}  // namespace
 
 std::vector<uint8_t> encode(const Spec& s) {
     std::vector<uint8_t> b((size_t)(s.longMsg ? kLongBits : kShortBits), 0);
