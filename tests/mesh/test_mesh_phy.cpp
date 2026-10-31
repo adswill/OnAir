@@ -155,6 +155,68 @@ static void jumps() {
     }
 }
 
+// Lost samples of any count and place (#386): a USB or network link drops whatever it drops, not only 96 samples; two drops in one frame, a
+// drop with noise on the signal, other bandwidths. Reported per case; a frame that stays bad is not asserted unless the case is one the
+// search is meant to cover (a drop in the payload).
+static void jumpsAnyCount() {
+    std::mt19937 g(31);
+    struct Case { int sf; double bw, rate; int cr; };
+    const Case cases[] = {{11, 250e3, 2.048e6, 5}, {9, 250e3, 2.048e6, 8}, {8, 125e3, 2.048e6, 6}, {10, 500e3, 2.4e6, 5}};
+    int tried = 0, fixedN = 0;
+    for (const auto& c : cases) {
+        lora::Params p; p.sf = c.sf; p.bwHz = c.bw; p.cr = c.cr; p.preamble = 16; p.syncWord = 0x2B;
+        const double ts = lora::symbolSeconds(p.sf, p.bwHz);
+        const double chipSamples = c.rate / c.bw;
+        for (int lost : {20, 50, 96, 130, 211, 333}) {
+            for (int two = 0; two < 2; two++) {
+                lora::TxFrame f; f.p = p;
+                const auto pay = randomBytes(g, 40);
+                f.data = lora::encode(p, pay.data(), pay.size());
+                f.startSec = 0.05; f.amp = 0.3f;
+                auto x = render({f}, f.endSec() + 0.1, c.rate, 0.02);
+                const size_t base = (size_t)((f.startSec + (p.preamble + 4.25) * ts) * c.rate);
+                const size_t total = f.data.size();
+                size_t at2 = base + (size_t)((8 + (total - 8) * 0.7) * ts * c.rate);
+                size_t at1 = base + (size_t)((8 + (total - 8) * 0.3) * ts * c.rate);
+                if (two) x.erase(x.begin() + (long)at2, x.begin() + (long)at2 + lost / 2 + 7);
+                x.erase(x.begin() + (long)at1, x.begin() + (long)at1 + lost);
+                p.jumpChips = chipSamples > 0 ? 11.7 : 0;
+                Chain ch(c.rate, 0, p);
+                ch.feedAll(x, 8192);
+                const bool got = ch.frames.size() == 1 && ch.frames[0].crcOk && ch.frames[0].payload == pay;
+                tried++; fixedN += got;
+                printf("  lost-sample SF%d bw %.0fk rate %.3fM lost %d%s: %s (%.1f chips)\n", c.sf, c.bw / 1e3, c.rate / 1e6, lost, two ? " + " : "",
+                       got ? "recovered" : "NOT recovered", lost / chipSamples);
+                if (got) CHECK(ch.frames[0].payload == pay, "wrong payload accepted");
+                else if (!ch.frames.empty() && ch.frames[0].crcOk) CHECK(false, "a frame with the wrong payload passed its CRC");
+            }
+        }
+    }
+    printf("lost-sample recovery: %d of %d cases\n", fixedN, tried);
+    CHECK(fixedN >= tried - 4, "lost-sample recovery fell to %d of %d (two drops at SF10/500k are known gaps)", fixedN, tried);
+    {   // false recoveries: damaged frames (symbol noise after a valid header) never come back as a different payload
+        int accepted = 0, trials = 0;
+        double worstMs = 0;
+        for (int sf = 7; sf <= 12; sf++)
+            for (int cr = 5; cr <= 8; cr += 3)
+                for (int k = 0; k < 15; k++) {
+                    lora::Params p; p.sf = sf; p.cr = cr; p.crc = true;
+                    const auto pay = randomBytes(g, 20 + (int)(g() % 100));
+                    auto sym = lora::encode(p, pay.data(), pay.size());
+                    for (size_t i = 8; i < sym.size(); i++) if (g() % 5 == 0) sym[i] = (uint16_t)(g() % (1u << sf));
+                    std::vector<uint8_t> out;
+                    const auto t0 = std::chrono::steady_clock::now();
+                    const int r = lora::recoverJumps(sf, false, sym, 11.7, out);
+                    worstMs = std::max(worstMs, std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
+                    trials++;
+                    if (r > 0 && out != pay) accepted++;
+                }
+        printf("false recoveries on damaged frames: %d of %d, slowest search %.0f ms\n", accepted, trials, worstMs);
+        CHECK(accepted == 0, "%d damaged frames came back as a wrong payload", accepted);
+        CHECK(worstMs < 1500, "jump search took %.0f ms", worstMs);
+    }
+}
+
 static void modem() {
     std::mt19937 g(7);
     struct Case { int sf; double bw; int cr; bool ldro; double rate; double off; };
@@ -196,6 +258,7 @@ int main() {
     kats();
     coding();
     jumps();
+    jumpsAnyCount();
     modem();
     if (fails) { printf("%d failures\n", fails); return 1; }
     printf("ok\n");
