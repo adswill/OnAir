@@ -27,6 +27,11 @@
 #include "dect2/time/time_tel.h"
 #include "dect2/milhf/milhf_engine.h"
 #include <algorithm>
+#include <ctime>
+#ifdef _WIN32
+#define gmtime_r(t, r) (gmtime_s((r), (t)) == 0 ? (r) : nullptr)
+#define localtime_r(t, r) (localtime_s((r), (t)) == 0 ? (r) : nullptr)
+#endif
 #include <atomic>
 #include <chrono>
 #include <cmath>
