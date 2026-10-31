@@ -503,6 +503,7 @@ void T2Receiver::Impl::runDataStage() {
     H.resize(K);
     std::vector<cf32> eqv((size_t)K);
     std::vector<float> n0v((size_t)K);
+    std::vector<cf32> ceE; std::vector<float> ceN;
     for (int l = firstData; l < L; l++) {
         const float* ha; const float* hb; float dl;
         if (nSeg > 1) {
@@ -534,6 +535,13 @@ void T2Receiver::Impl::runDataStage() {
             } else {
                 equalise(reinterpret_cast<const float*>(&frameCells[l][off]), reinterpret_cast<const float*>(H.data()), noiseCar.data(), (float)symScale[(size_t)l],
                          reinterpret_cast<float*>(eqv.data()), n0v.data(), K);
+                if (flatN0) { double m = 0; for (int jj = 0; jj < cD; jj++) m += n0v[(size_t)di[(size_t)jj]]; m /= std::max(1, cD); for (int jj = 0; jj < cD; jj++) n0v[(size_t)di[(size_t)jj]] = (float)m; }   // A/B: the mean for all
+                if (carrierErase.enabled()) {   // only the data carriers (pilots have another power); gathered, tracked per carrier, scattered back
+                    ceE.resize((size_t)cD); ceN.resize((size_t)cD);
+                    for (int jj = 0; jj < cD; jj++) { ceE[(size_t)jj] = eqv[(size_t)di[(size_t)jj]]; ceN[(size_t)jj] = n0v[(size_t)di[(size_t)jj]]; }
+                    carrierErase.apply(ceE.data(), ceN.data(), di.data(), cD, K);
+                    for (int jj = 0; jj < cD; jj++) n0v[(size_t)di[(size_t)jj]] = ceN[(size_t)jj];
+                }
                 for (int jj = 0; jj < cD; jj++) { const int kk = di[(size_t)jj]; orig[Hi[(size_t)jj]] = eqv[(size_t)kk]; on0[Hi[(size_t)jj]] = n0v[(size_t)kk]; }
             }
         }

@@ -29,6 +29,7 @@
 #include <memory>
 #include <condition_variable>
 #include <thread>
+#include "dect2/ofdm/csi_erase.h"
 #include <string>
 #include <vector>
 // The inside of the DVB-T2 receiver (t2rx.cpp has the public interface). The work is spread over t2rx.cpp (driver, resampler thread, telemetry),
@@ -214,6 +215,8 @@ struct T2Receiver::Impl {
     int kMax = 0;
     std::vector<std::vector<cf32>> p2cells;
     GridInterpolator interp;
+    ofdm::CarrierInterference carrierErase;   // narrowband-interferer erasure per carrier, tracked over the symbols of all frames
+    const bool flatN0 = ofdm::envOn("DECT2_OFDM_FLAT_N0");   // A/B tests only: no channel-state weighting
     // data stage: the pilot map and the cell types of every symbol only change with the signal configuration, not from frame to frame
     struct DsCache {
         PilotConfig pc; int L = 0;

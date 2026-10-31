@@ -1,4 +1,5 @@
 #include "dect2/common/thread_name.h"
+#include "dect2/ofdm/csi_erase.h"
 #include "dect2/isdbt/isdbt_demod.h"
 #include "dect2/dvbt/dvbt_fec.h"
 #include "dect2/t2/t2ofdm.h"
@@ -206,6 +207,9 @@ struct Demod::Impl {
     std::vector<cf32> prevY;
     bool prevValid = false;
     double sigma2 = 1e-3, snr = 0;
+    ofdm::CarrierInterference carrierErase;   // erases carriers hit by a narrowband interferer (coherent segments)
+    const bool flatN0 = ofdm::envOn("DECT2_OFDM_FLAT_N0");   // A/B tests only: no channel-state weighting
+    std::vector<int> ceK;
     // common phase and phase ramp (timing) of the symbols against the pilots, as running totals so that nothing has to be unwrapped
     double accPhi = 0, accSlope = 0;
     bool trackOn = true;
@@ -314,6 +318,7 @@ struct Demod::Impl {
         mergeInto(carryOut);   // what the receiver would already have taken before the layers start again
         p = pp; mode = p.mode;
         cps = carriersPerSegment(mode); dps = dataPerSegment(mode); K = totalCarriers(mode); N = fftN(mode);
+        carrierErase.reset(K);
         segmentLayout(p, seg);
         for (int i = 0; i < 3; i++) {
             if (p.layer[i].used()) layer[i].configure(mode, p.layer[i]); else layer[i] = LayerDecoder();
@@ -467,6 +472,7 @@ struct Demod::Impl {
         if (trackOn) { track(Yraw, symIdx); Y = Yd.data(); } else Y = Yraw;
         const uint16_t* rnd = mode == 1 ? tables::kRandomizing1 : mode == 2 ? tables::kRandomizing2 : tables::kRandomizing3;
         std::vector<uint8_t> roles((size_t)cps);
+        ceK.resize((size_t)cps);
         // per segment: received data values and their noise variance, in data-carrier order
         std::vector<std::vector<cf32>> val(kSegments);
         std::vector<std::vector<float>> nv(kSegments);
@@ -522,8 +528,11 @@ struct Demod::Impl {
                     const float g2 = std::max(1e-9f, std::norm(h));
                     val[(size_t)s][(size_t)di] = Y[k] * std::conj(h) / g2;
                     nv[(size_t)s][(size_t)di] = (float)(sigma2 / g2);
+                    ceK[(size_t)di] = k;
                     di++;
                 }
+                if (flatN0 && di > 0) { double m = 0; for (int j = 0; j < di; j++) m += nv[(size_t)s][(size_t)j]; m /= di; for (int j = 0; j < di; j++) nv[(size_t)s][(size_t)j] = (float)m; }   // A/B: the mean for all
+                carrierErase.apply(val[(size_t)s].data(), nv[(size_t)s].data(), ceK.data(), di, K);   // carriers hit by a narrowband interferer
             }
         }
         if (noiseCnt == 0 && runs.empty() && cpRefValid) {
