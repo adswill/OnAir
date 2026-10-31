@@ -1,4 +1,5 @@
 // application state: preferences, device list, bandwidth, ingesting spectrum and receiver telemetry, channel list
+#include "freq_remember.h"
 #include "rx_width.h"
 #include "../rooms/rooms.h"
 #include "../app.h"
@@ -87,6 +88,8 @@ std::string slotKey(int slot) {   // the suffix of the per-mode settings: the fa
 
 void setFamily(App& a, int f) { setMode(a, f, firstSubOf(f)); }
 
+bool rememberedFreqOk(const ModeTuning* mt, double def, double fr) { return mt && freqrem::ok(mt->minMhz, mt->maxMhz, def, fr); }
+
 void setMode(App& a, int f, int sub) {
     {   // a protocol entry of another family, or none for a family that has them: the family's first
         int n = 0;
@@ -120,7 +123,7 @@ void setMode(App& a, int f, int sub) {
         const ModeTuning* mt = modeTuning(f + 2);
         const SubMode* sm = curSub(a);
         const double def = sm ? sm->defMhz : mt ? mt->defMhz : a.freqMhz;
-        a.freqMhz = mt && a.famFreq[to] >= mt->minMhz && a.famFreq[to] <= mt->maxMhz ? a.famFreq[to] : def;
+        a.freqMhz = rememberedFreqOk(mt, def, a.famFreq[to]) ? a.famFreq[to] : def;
         if (carryMhz > 0) a.freqMhz = carryMhz;
     }
     if (f == 0 && !(a.freqMhz >= 170 && a.freqMhz <= 870)) a.freqMhz = 522.0;       // a TV channel, not a leftover FM or DAB frequency

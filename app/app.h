@@ -857,6 +857,7 @@ void setFamily(App& a, int f);                 // a family with protocol entries
 void setMode(App& a, int f, int sub);          // a mode-list entry: family and protocol entry (0 none, or the family's first)
 const dect2::SubMode* curSub(const App& a);    // the protocol entry selected, nullptr for a mode without them
 int subIndexOf(const char* id);                // 1 .. kNumSubModes, 0 when not one
+bool rememberedFreqOk(const ModeTuning* mt, double def, double fr);   // #393: a remembered frequency that is plausible for the mode
 int modeSlot(const App& a);                    // index of famFreq / famGain for the current entry
 int engineStd(const App& a);
 void refreshDevices(App& a);

@@ -1,6 +1,6 @@
 # Threading in OnAir (0.2.7)
 
-Survey of how threads are used, the shared framework (`core/include/dect2/common/threadpool.h`, `queue.h`, `stage_pipeline.h`), where it is applied and where it is deliberately not. Rule for everything here: **the output is bit-identical for any number of threads**; `DECT2_THREADS=0` runs every shared piece on the calling thread (debugging, determinism checks), `DECT2_THREADS=N` fixes the pool size, unset = hardware_concurrency - 1 (1 to 8).
+Survey of how threads are used, the shared framework (`core/include/dect2/common/threadpool.h`, `queue.h`, `stage_pipeline.h`), where it is applied and where it is deliberately not. Rule for everything here: **the output is bit-identical for any number of threads**; `DECT2_THREADS=0` runs every shared piece on the calling thread (debugging, determinism checks), `DECT2_THREADS=N` fixes the pool size, unset = hardware_concurrency - 1 (1 to 8). The same number can be saved as `threads=N` in the settings file (0 to 64, #372; automatic when absent), read at start-up; the environment variable wins.
 
 ## 1. Threads today
 
