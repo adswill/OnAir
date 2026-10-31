@@ -49,7 +49,7 @@ int memoryModeIndex(const std::string& key) { return scanModeIndex(key); }
 dect2::Memory memoryCapture(const App& a) {
     dect2::Memory m;
     m.freqHz = (uint64_t)std::llround(a.freqMhz * 1e6);
-    if (a.family == 55) { const double hz = generalListenHz(a); if (hz > 0) m.freqHz = (uint64_t)std::llround(hz); }   // the general receiver listens off its dial
+    if (isGeneralFamily(a.family)) { const double hz = generalListenHz(a); if (hz > 0) m.freqHz = (uint64_t)std::llround(hz); }   // the general receiver listens off its dial
     for (int i = 0; i < kNumModes; i++) if (modeSelected(a, kModes[i])) { m.mode = memoryModeKey(kModes[i]); break; }
     m.family = a.family;
     if (const dect2::SubMode* s = curSub(a)) m.subId = s->id;
@@ -111,7 +111,7 @@ struct AppHost : dect2::MemoryHost {
     }
     void setFrequencyHz(uint64_t hz) override {
         const double mhz = (double)hz / 1e6;
-        if (a.family == 55) generalRecallHz(a, (double)hz);
+        if (isGeneralFamily(a.family)) generalRecallHz(a, (double)hz);
         if (a.engine.running() && !restart) { tuneFreq(a, mhz); return; }
         a.freqMhz = std::min(dect2::kMaxTuneMhz, std::max(0.001, mhz));
         a.tune.centerHz = a.freqMhz * 1e6;

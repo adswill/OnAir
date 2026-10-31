@@ -75,8 +75,10 @@ struct State {
 State S;
 
 void tip(const char* t) { if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", t); }
-bool live(const App& a) { return a.rx.standard == 56; }   // the engine reports its standard code minus one
-const dect2::GeneralTelemetry& T(const App& a) { return a.rx.general; }
+bool isSw(const App& a) { return a.family == kShortwaveFamily; }   // Shortwave listens with this same screen
+bool live(const App& a) { return a.rx.standard == (isSw(a) ? 212 : 56); }   // the engine reports its standard code minus one
+const dect2::GeneralTelemetry& T(const App& a) { return isSw(a) ? a.rx.shortwave.general : a.rx.general; }
+dect2::GeneralReceiver& grx(App& a) { return isSw(a) ? a.engine.shortwave().general() : a.engine.general(); }
 
 bool nrOffered(int demod) { return demod == dect2::GenNfm || demod == dect2::GenWfm || demod == dect2::GenAm; }   // speech: not SSB data, CW or music
 const int kDefStep[dect2::GenDemodCount] = {9, 11, 2, 1, 1, 1};   // 12.5 kHz NFM, 50 kHz WFM, 1 kHz AM, 100 Hz SSB / CW
@@ -176,8 +178,8 @@ void startRecording(App& a) {
     std::strftime(ts, sizeof ts, "%Y%m%d-%H%M%S", std::localtime(&now));
     char name[128];
     snprintf(name, sizeof name, "/onair_%s_%.4fMHz_%s.%s", dect2::generalDemodName(S.demod), listenHz(a) / 1e6, ts, S.mp3 ? "mp3" : S.flac ? "flac" : "wav");
-    a.engine.general().setRecordFormat(S.flac, recTags(a, listenHz(a))); a.engine.general().setRecordMp3(S.mp3);
-    if (!a.engine.general().startRecording(dir + name)) S.recErr = "cannot write " + dir + name;
+    grx(a).setRecordFormat(S.flac, recTags(a, listenHz(a))); grx(a).setRecordMp3(S.mp3);
+    if (!grx(a).startRecording(dir + name)) S.recErr = "cannot write " + dir + name;
     else S.recErr.clear();
 }
 
@@ -439,19 +441,19 @@ void controls(App& a) {
 
     // S-meter and recording
     sMeter(a);
-    const bool rec = live(a) ? T(a).recording : a.engine.general().recording();
+    const bool rec = live(a) ? T(a).recording : grx(a).recording();
     if (!rec) {
         ImGui::BeginDisabled(!a.engine.running());
         if (ImGui::SmallButton(S.mp3 ? "Record MP3" : S.flac ? "Record FLAC" : "Record WAV")) startRecording(a);
         ImGui::EndDisabled();
         tip("Record what you hear (after the squelch, before the volume) to a 16-bit 48 kHz WAV file in the audio-recordings folder");
-    } else if (ImGui::SmallButton("Stop recording")) a.engine.general().stopRecording();
+    } else if (ImGui::SmallButton("Stop recording")) grx(a).stopRecording();
     ImGui::SameLine(0, 6 * gUi);
-    if (ImGui::Checkbox("FLAC", &S.flac)) { plat::prefs().setB("genFlac", S.flac); a.engine.general().setRecordFormat(S.flac, recTags(a, listenHz(a))); a.engine.general().setRecordMp3(S.mp3); }
+    if (ImGui::Checkbox("FLAC", &S.flac)) { plat::prefs().setB("genFlac", S.flac); grx(a).setRecordFormat(S.flac, recTags(a, listenHz(a))); grx(a).setRecordMp3(S.mp3); }
     tip("Save recordings as FLAC (lossless, about half the size of WAV, with the frequency and date as tags) instead of WAV");
     ImGui::SameLine(0, 6 * gUi);
     ImGui::BeginDisabled(!dect2::GeneralReceiver::mp3Available());
-    if (ImGui::Checkbox("MP3", &S.mp3)) { plat::prefs().setB("genMp3", S.mp3); a.engine.general().setRecordMp3(S.mp3); }
+    if (ImGui::Checkbox("MP3", &S.mp3)) { plat::prefs().setB("genMp3", S.mp3); grx(a).setRecordMp3(S.mp3); }
     ImGui::EndDisabled();
     tip(dect2::GeneralReceiver::mp3Available() ? "Save recordings as MP3 (64 kbit/s mono, small files); wins over FLAC" : "MP3 needs the LAME library (libmp3lame): install it (brew install lame, apt install libmp3lame0, or put libmp3lame.dll next to OnAir). OnAir does not ship it.");
     {   // one file per transmission, for the voice modes
@@ -460,14 +462,14 @@ void controls(App& a) {
             std::error_code ec;
             const std::string dir = plat::dataDir() + "/audio-recordings";
             std::filesystem::create_directories(dir, ec);
-            auto& r = a.engine.general();
+            auto& r = grx(a);
             r.setRecordFormat(S.flac, recTags(a, listenHz(a))); r.setRecordMp3(S.mp3);
             r.setListenHz(listenHz(a));
             r.setTransmissionGate(S.preRoll, S.txHang, channelIq(S.demod), true);
             r.setTransmissionRecording(S.txRec, dir, "");
         }
         tip("One file each time the squelch opens. It starts with the pre-roll, so the first syllable is kept, and it stays open through the hang so a pause between words is not a new file. The name has the time, the frequency and the mode, and a line is added to transmissions.csv. Clips under half a second are dropped. Needs the squelch on.");
-        if (S.txRec) { ImGui::SameLine(0, 6 * gUi); ImGui::TextDisabled("%d saved", a.engine.general().transmissionFiles()); }
+        if (S.txRec) { ImGui::SameLine(0, 6 * gUi); ImGui::TextDisabled("%d saved", grx(a).transmissionFiles()); }
     }
     if (live(a) && (T(a).recording || !T(a).recordPath.empty())) {
         ImGui::SameLine(0, 8 * gUi);
@@ -535,6 +537,7 @@ void noiseRemoverUi(App& a) {
 
 // ---- more channels from the same capture
 void extraChannelsUi(App& a) {
+    if (isSw(a)) return;
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("Channels");
     ImGui::SameLine();
@@ -606,10 +609,10 @@ void tick(App& a) {
     }
     if (S.lastDial >= 0 && std::fabs(a.freqMhz - S.lastDial) > 1e-9) { S.chanOff = 0; save(); }   // the dial was moved elsewhere
     S.lastDial = a.freqMhz;
-    auto& r = a.engine.general();
-    r.setDemod(S.demod);
+    auto& r = grx(a);
+    if (isSw(a)) { a.engine.shortwave().setDemod(S.demod); a.engine.shortwave().setChannelOffsetHz(S.chanOff); }   // the decoders follow the channel marker
+    else { r.setDemod(S.demod); r.setChannelOffsetHz(S.chanOff); }
     r.setWidthHz(S.width[S.demod]);
-    r.setChannelOffsetHz(S.chanOff);
     r.setSquelch(S.sqOn, S.sqAuto, S.sqDb);
     r.setAgc(S.agc, S.gainDb);
     r.setDeemphUs(S.demod == dect2::GenNfm ? kDeemph[S.deNfm] : S.demod == dect2::GenWfm ? kDeemph[S.deWfm] : 0);
@@ -622,6 +625,7 @@ void tick(App& a) {
     r.setNoiseRemover(nrOffered(S.demod) && S.nrOn[S.demod], S.nrStr[S.demod] / 100.f);
     r.setListenHz(listenHz(a));
     r.setTransmissionGate(S.preRoll, S.txHang, channelIq(S.demod), true);
+    if (isSw(a)) return;   // Shortwave has no extra channels: its decoders are the extra listeners
     a.engine.setGeneralExtraCount(S.nExtra);
     for (int i = 0; i < S.nExtra && i < dect2::Engine::kGeneralExtra; i++) {   // the other channels: the squelch and gain of the main one, their own offset and demodulator
         auto& x = a.engine.generalExtra(i);
@@ -711,12 +715,18 @@ void generalSetListenHz(App& a, double hz) { load(); setListen(a, hz); }   // th
 void generalRecallHz(App& a, double hz) { load(); S.chanOff = 0; a.freqMhz = hz / 1e6; S.lastDial = a.freqMhz; save(); }   // the channel back on the dial, the dial on hz
 // ---- the remote API (app/platform/remote_api_app.cpp): the demodulator and the squelch of the General receiver
 int generalApiDemod() { load(); return S.demod; }
+// Shortwave (app/shortwave): the General screen's pieces
+void generalControlsPanel(App& a) { controls(a); }
+void generalTick(App& a) { tick(a); }
+void generalApiSetWidthHz(double hz) { load(); S.width[S.demod] = dect2::generalClampWidth(S.demod, hz); save(); }
+double generalApiWidthHz() { load(); return S.width[S.demod]; }
+dect2::GeneralReceiver& generalRx(App& a) { return grx(a); }
 bool generalApiSetDemod(int d) { load(); if (d < 0 || d >= dect2::GenDemodCount) return false; setDemod(d); return true; }
 void generalApiSquelch(bool on, bool autoLevel, double db) { load(); S.sqOn = on; S.sqAuto = autoLevel; if (db > -140 && db < 20) S.sqDb = (float)db; save(); }
 bool generalApiRecord(App& a, bool on, std::string& err) {
     load();
-    if (!on) { a.engine.general().stopRecording(); return true; }
-    if (a.engine.general().recording()) { err = "already recording"; return false; }
+    if (!on) { grx(a).stopRecording(); return true; }
+    if (grx(a).recording()) { err = "already recording"; return false; }
     startRecording(a);
     if (!S.recErr.empty()) { err = S.recErr; return false; }
     return true;
@@ -726,7 +736,7 @@ namespace {
 std::string numS(double v) { char b[32]; snprintf(b, sizeof b, "%.6g", v); return b; }
 double numV(const std::string& s, double def) { char* e = nullptr; const double d = strtod(s.c_str(), &e); return e == s.c_str() ? def : d; }
 const bool gGenOptions = [] {
-    auto is = [](const App& a) { return a.family == 55; };
+    auto is = [](const App& a) { return isGeneralFamily(a.family); };
     MemoryOptionReg r1({"genDemod", is, [](const App&) { load(); return std::to_string(S.demod); },
                         [](App&, const std::string& v) { load(); S.demod = std::clamp((int)numV(v, S.demod), 0, (int)dect2::GenDemodCount - 1); save(); }});
     MemoryOptionReg r2({"genWidthHz", is, [](const App&) { load(); return numS(S.width[S.demod]); },

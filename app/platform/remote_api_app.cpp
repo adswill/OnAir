@@ -169,7 +169,7 @@ struct Host : RemoteApiHost {
     }
     bool setBandwidthHz(double hz, std::string& err) override {
         return run([hz](App& a, std::string& e) {
-            if (a.family == 55) { e = "the General receiver has its own filter widths in the app"; return false; }
+            if (isGeneralFamily(a.family)) { e = "the General receiver has its own filter widths in the app"; return false; }
             a.engine.setBandwidthAuto(false);
             a.engine.setBandwidth(hz / 1e6);
             return true;
@@ -441,7 +441,7 @@ struct RigAdapter : apipol::RigctlRadio {
     bool setMode(const std::string& m, int) override {
         const int d = demodOf(m);
         std::string e;
-        return d >= 0 && host.run([d](App& a, std::string&) { return a.family == 55 && generalApiSetDemod(d); }, e);
+        return d >= 0 && host.run([d](App& a, std::string&) { return isGeneralFamily(a.family) && generalApiSetDemod(d); }, e);
     }
 };
 

@@ -154,7 +154,10 @@ using SavedChannel = plat::Channel;
 // parts of the window the tour points at
 enum WizTarget { TgNone = 0, TgSwitch, TgToolbar, TgMain, TgRight, TgConst, TgCount };
 
-constexpr int kNumFamilies = 211;   // App::family runs from 0 to kNumFamilies - 1
+constexpr int kNumFamilies = 212;   // App::family runs from 0 to kNumFamilies - 1
+constexpr int kShortwaveFamily = 211;   // Shortwave (engine standard 213): the general receiver with one-click HF decoders
+// The two modes that listen with the General receiver's screen (app/general): the General receiver and Shortwave
+inline bool isGeneralFamily(int f) { return f == 55 || f == kShortwaveFamily; }
 constexpr int kNumSubModes = 32;   // dect2::subModes(): the protocols of HF digital, mesh, pagers, marine and VOR / ILS listed as modes of their own
 constexpr int kNumSlots = kNumFamilies + kNumSubModes;   // what keeps its own frequency and gains: each family, and each protocol entry
 
@@ -771,6 +774,11 @@ void memoryToolbarButton(App& a);                  // memory_ui.cpp: the same qu
 void memoryMenu(App& a);                           // memory_ui.cpp: the "M" menu of the menu bar: open, store, the favourites and the ten most recent
 double generalListenHz(const App& a);
 void generalSetListenHz(App& a, double hz);       // general_ui.cpp: move the listening frequency (SDR++: the VFO inside the captured band, else the radio)
+void generalControlsPanel(App& a);                  // general_ui.cpp: the General screen's controls (frequency, demodulator, filter, squelch, recording), for Shortwave
+void generalTick(App& a);                           // ... and its per-frame push to the receiver (Shortwave pushes the same settings to its own general receiver)
+void generalApiSetWidthHz(double hz);
+double generalApiWidthHz();
+dect2::GeneralReceiver& generalRx(App& a);          // the general receiver of the mode on screen (General: the engine's, Shortwave: the one inside its receiver)
 int generalApiDemod();                              // general_ui.cpp, for the remote API: the demodulator (GeneralDemod), set it, the squelch
 bool generalApiSetDemod(int demod);
 void generalApiSquelch(bool on, bool autoLevel, double db);
