@@ -2,6 +2,7 @@
 // POCSAG: ITU-R M.584-2. FLEX has no free specification; the layout here follows the public descriptions of the protocol.
 // Bit order: a "word" is 32 bits with the first transmitted bit in bit 31: 21 data bits, 10 BCH check bits, one even parity bit.
 #pragma once
+#include "pager_combine.h"
 #include "pager_tel.h"
 #include <cstdint>
 #include <string>
@@ -41,12 +42,28 @@ bool pocsagLooksAlpha(const std::vector<uint8_t>& bits);
 class PocsagParser {
 public:
     int readMode = kPocsagReadAuto;                // PocsagReadMode
-    void reset();
+    void reset();                                  // a new lock: the open message goes; the history of copies stays (clearCopies())
+    void clearCopies();
     void word(uint32_t raw, int slot, std::vector<PagerMessage>& out);   // slot 0 to 15 in the batch; finished pages are appended to out
     void flush(std::vector<PagerMessage>& out);
     int ok = 0, fixed = 0, failed = 0;             // code words since the caller cleared them
+    // Multi-copy combining (#20): a repeated message (same RIC and function, matching words) is voted with the earlier copies code word by code
+    // word, so a word that is lost in this copy is taken from another one. The copy being decoded always wins where it is good. Off here (the
+    // bit-level golden tests feed repeated damaged pages); the receiver turns it on (PagerReceiver::setCombineCopies, default on).
+    bool combine = false;
+    int combineWindowSec = 900;                    // copies older than this are forgotten
+    int64_t clockOverride = -1;                    // tests: the clock in seconds (-1 = the wall clock)
+    int combinedMessages = 0, recoveredWords = 0;  // statistics since reset()
 private:
+    struct Group { uint32_t ric = 0; int fn = 0; int64_t wall = 0; std::vector<PocsagCopy> copies; };
     void finish(std::vector<PagerMessage>& out);
+    void combineCopies(int64_t wall);
+    int copies_ = 1;
+    uint32_t term_ = 0;                            // the word that ended the open message (Idle or the next address word)
+    bool hasTerm_ = false;
+    bool combinedNow_ = false;
+    std::vector<uint32_t> raw_;                    // the code words of the open message, the address word first
+    std::vector<Group> groups_;
     bool have_ = false, damaged_ = false;
     int gap_ = 0;                                  // unrepaired message words since the last good one (20 bits each)
     uint32_t ric_ = 0;

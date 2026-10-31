@@ -73,13 +73,16 @@ std::vector<uint8_t> pocsagBits(const std::vector<PocsagPage>& pages, int preamb
     return out;
 }
 
-void PocsagParser::reset() { have_ = false; damaged_ = false; gap_ = 0; bits_.clear(); ok = fixed = failed = 0; }
+void PocsagParser::reset() { hasTerm_ = false; have_ = false; damaged_ = false; gap_ = 0; bits_.clear(); raw_.clear(); ok = fixed = failed = 0; }
 
 void PocsagParser::finish(std::vector<PagerMessage>& out) {
     gap_ = 0;                                       // a gap at the end of a page is not message text
     if (!have_) return;
     have_ = false;
     PagerMessage m = newMessage();
+    if (combine) combineCopies(m.wallTime);
+    m.copies = copies_;
+    m.combined = combinedNow_;
     m.flex = false;
     m.address = ric_;
     m.function = fn_;
@@ -97,26 +100,80 @@ void PocsagParser::finish(std::vector<PagerMessage>& out) {
     out.push_back(std::move(m));
 }
 
-void PocsagParser::flush(std::vector<PagerMessage>& out) { finish(out); }
+// Multi-copy combining (#20): see pager_combine.h. raw_ holds the open message; on a match with an earlier copy the lost words are
+// taken from it and bits_ / damaged_ are rebuilt from the merged words.
+void PocsagParser::combineCopies(int64_t wall) {
+    copies_ = 1; combinedNow_ = false;
+    if (clockOverride >= 0) wall = clockOverride;
+    groups_.erase(std::remove_if(groups_.begin(), groups_.end(), [&](const Group& g) { return wall - g.wall > combineWindowSec || wall < g.wall; }), groups_.end());
+    PocsagCopy cur;
+    cur.words = raw_;
+    cur.hasTerm = hasTerm_; cur.term = term_;
+    Group* hit = nullptr;
+    std::vector<const PocsagCopy*> use;
+    use.push_back(&cur);
+    for (Group& g : groups_) {
+        if (g.ric != ric_ || g.fn != fn_) continue;
+        for (size_t k = g.copies.size(); k-- > 0;)
+            if (pocsagSameMessage(cur, g.copies[k])) { use.push_back(&g.copies[k]); hit = &g; }
+        if (hit) break;
+    }
+    if (use.size() > 1) {
+        copies_ = (int)use.size();
+        const MergedCopy mc = mergePocsagCopies(use);
+        if (mc.recovered > 0) {
+            // rebuild the message bits; a word that is still lost leaves a gap, the lost tail is dropped
+            bits_.clear(); fixedBits_ = 0; damaged_ = false;
+            int gap = 0;
+            for (size_t i = 1; i < mc.words.size(); i++) {
+                const PocsagWord c = pocsagClassify(mc.words[i]);
+                if (!mc.valid[i] || c.kind != PocsagWord::Data) { gap++; damaged_ = true; continue; }
+                for (; gap > 0; gap--) for (int b = 0; b < 20; b++) bits_.push_back(0);
+                for (int b = 19; b >= 0; b--) bits_.push_back((uint8_t)((c.a >> b) & 1));
+                fixedBits_ += c.bits;
+            }
+            combinedNow_ = true;
+            combinedMessages++;
+            recoveredWords += mc.recovered;
+        }
+    }
+    if (hit) {
+        hit->wall = wall;
+        hit->copies.push_back(cur);
+        if (hit->copies.size() > 4) hit->copies.erase(hit->copies.begin());
+    } else {
+        Group g; g.ric = ric_; g.fn = fn_; g.wall = wall; g.copies.push_back(cur);
+        groups_.push_back(std::move(g));
+        if (groups_.size() > 64) groups_.erase(groups_.begin());
+    }
+}
+
+void PocsagParser::clearCopies() { groups_.clear(); raw_.clear(); combinedMessages = recoveredWords = 0; }
+
+void PocsagParser::flush(std::vector<PagerMessage>& out) { hasTerm_ = false; finish(out); }
 
 void PocsagParser::word(uint32_t raw, int slot, std::vector<PagerMessage>& out) {
     const PocsagWord c = pocsagClassify(raw);
     if (c.kind == PocsagWord::Failed) {
         // a message word we cannot repair keeps the page open: its 20 bits become a gap, filled in when a later message word arrives
         failed++;
-        if (have_) { damaged_ = true; gap_++; }
+        if (have_) { damaged_ = true; gap_++; raw_.push_back(raw); }
         return;
     }
     if (c.fixed) fixed++; else ok++;
-    if (c.kind == PocsagWord::Idle) { finish(out); return; }
+    if (c.kind == PocsagWord::Idle) { term_ = raw; hasTerm_ = true; finish(out); hasTerm_ = false; return; }
     if (c.kind == PocsagWord::Address) {
+        term_ = raw; hasTerm_ = true;
         finish(out);
+        hasTerm_ = false;
         have_ = true; damaged_ = false;
         ric_ = (c.a << 3) | (uint32_t)(slot >> 1);
         fn_ = (int)c.b;
         fixedBits_ = c.bits;
         bits_.clear();
+        raw_.assign(1, raw);
     } else if (have_) {
+        raw_.push_back(raw);
         for (; gap_ > 0; gap_--) for (int i = 0; i < 20; i++) bits_.push_back(0);     // keeps the later bits where they belong
         for (int i = 19; i >= 0; i--) bits_.push_back((uint8_t)((c.a >> i) & 1));
         fixedBits_ += c.bits;
