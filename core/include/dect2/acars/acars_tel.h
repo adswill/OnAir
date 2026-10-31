@@ -24,6 +24,8 @@ struct AcarsMessage {
     char blockId = 0;            // '0'..'9' downlink, letters uplink
     bool downlink = false;       // aircraft to ground (block id is a digit)
     bool finalBlock = true;      // ETX (last block of the message); false: ETB, more blocks follow
+    int blocks = 1;              // blocks joined into this message (ETB continuation), 1 for a single block
+    bool incomplete = false;     // the last block never came (timeout) or one was missed: the text is what was received
     std::string msgNum;          // downlink: message number "M12"
     char msgSeq = 0;             // downlink: block sequence letter of that message
     std::string flightId;        // downlink: six characters, e.g. "EK0201"

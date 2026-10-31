@@ -7,6 +7,8 @@
 #include "dect2/results/results_io.h"
 #include "dect2/net/feeds.h"
 #include "dect2/vdl2/vdl2_proto.h"
+#include "dect2/acars/acars_reasm.h"
+#include "vdl2_internal.h"
 #include <algorithm>
 #include <cmath>
 #include <complex>
@@ -134,6 +136,8 @@ struct Vdl2Receiver::Impl {
     uint64_t nIn = 0;
     // results
     Vdl2Telemetry tel;
+    using Reasm = AcarsReassembler<Vdl2Message, &Vdl2Message::acarsText>;
+    Reasm reasm;
     uint64_t serial = 0, seq = 0;
     double lastGood = -1e9, lastBurst = -1e9;
     float lastSnr = 0;
@@ -150,6 +154,7 @@ struct Vdl2Receiver::Impl {
         }
         for (auto& g : tel.stations) if (g.lastHeardSec != 0) g.lastHeardSec += dt;
         tel.nowSec += dt;
+        reasm.clear();
     }
 
     double effCenter() const { return center > 0 ? center : kDefaultCenter - offset; }
@@ -476,6 +481,34 @@ struct Vdl2Receiver::Impl {
         m.serial = ++serial;
         tel.blocksOk++;
         if (firstOfBurst) { tel.rsFixedTotal += (uint64_t)fixed; if (headerFixed) tel.headerFixed++; }
+        // multi-block ACARS: hold the ETB frames, list one message when the ETX frame (or the timeout) completes it
+        if (m.acars && m.acarsCrcOk) {
+            std::vector<Reasm::Done> cut;
+            Reasm::Done whole;
+            AcarsPiece pc;
+            char who[16]; snprintf(who, sizeof who, "@%06X", m.src & 0xFFFFFF);
+            pc.reg = m.reg + who; pc.label = m.label; pc.msgNum = m.msgNum; pc.downlink = m.fromAir; pc.blockId = m.blockId; pc.msgSeq = m.acarsSeq; pc.finalBlock = m.acarsFinal;
+            const auto rr = reasm.feed(pc, Vdl2Message(m), m.timeSec, whole, cut);
+            for (auto& d : cut) finishMessage(std::move(d.msg), d.blocks, d.incomplete);
+            if (rr == Reasm::Result::Held) {
+                m.part = true;                          // the raw block stays in the frame log (#309), the lists show the joined message
+                tel.messages.insert(tel.messages.begin(), std::move(m));
+                if (tel.messages.size() > kVdl2MsgMax) tel.messages.pop_back();
+                seq++;
+                return;
+            }
+            if (rr == Reasm::Result::Complete) { whole.msg.timeSec = m.timeSec; whole.msg.wallTime = m.wallTime; finishMessage(std::move(whole.msg), whole.blocks, whole.incomplete); return; }
+        }
+        finishMessage(std::move(m), 1, false);
+    }
+
+    // the rest of a finished message: aircraft and ground station tables, feeds, automations, the list. mu held.
+    void finishMessage(Vdl2Message&& m, int blocks, bool incomplete) {
+        if (blocks > 1 || incomplete) {
+            m.acarsBlocks = blocks; m.acarsIncomplete = incomplete; m.acarsFinal = true;
+            if (blocks > 1) m.serial = ++serial;
+            vdl2ReanalyseJoined(m);
+        }
         if (m.hasPos) tel.positionsTotal++;
         // aircraft: the source when it is one, else the destination when it is one
         const bool srcAir = m.srcType == 1, dstAir = m.dstType == 1;
@@ -613,6 +646,7 @@ void Vdl2Receiver::feed(const cf32* x, size_t n) {
     std::lock_guard<std::mutex> lk(I.mu);
     const double now = (double)I.nIn / I.rate;
     I.tel.nowSec = now;
+    { std::vector<Vdl2Receiver::Impl::Reasm::Done> cut; I.reasm.flush(now, cut); for (auto& d : cut) I.finishMessage(std::move(d.msg), d.blocks, d.incomplete); }
     I.tel.inputRate = I.rate; I.tel.channelRate = I.fs1;
     I.tel.centerHz = I.effCenter();
     I.tel.cfoHz = I.tuneErr;
@@ -632,7 +666,7 @@ void Vdl2Receiver::feed(const cf32* x, size_t n) {
 
 void Vdl2Receiver::clearResults() {
     std::lock_guard<std::mutex> lk(p_->mu);
-    p_->tel.messages.clear(); p_->tel.aircraft.clear(); p_->tel.stations.clear();
+    p_->tel.messages.clear(); p_->tel.aircraft.clear(); p_->tel.stations.clear(); p_->reasm.clear();
     p_->seq++;
 }
 std::string Vdl2Receiver::saveResults() const {
