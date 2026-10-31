@@ -131,7 +131,13 @@ struct CarrierDetector::Impl {
                 const double w = std::max(0.0, (double)s[(size_t)q] - floorP);
                 wsum += w; fsum += w * fOf(q); peak = std::max(peak, (double)s[(size_t)q]);
             }
-            const double width = (b - a + 1) * bin;
+            // the width is measured 10 dB under the peak (never below the floor threshold): a strong carrier's skirts and side lobes stay
+            // above the floor threshold for kilohertz (an Inmarsat-C channel at 40 dB measured 12 kHz instead of 2, and was classed wide)
+            const double lvl = std::max((double)thr, peak * 0.1);
+            int wa = a, wb = b;
+            while (wa < b && s[(size_t)wa] <= lvl) wa++;
+            while (wb > wa && s[(size_t)wb] <= lvl) wb--;
+            const double width = (wb - wa + 1) * bin;
             if (wsum > 0 && width <= cfg.maxWidthHz && width >= bin) regs.push_back({fsum / wsum, width, (float)(10 * std::log10(peak / floorP))});
             j = b + 1;
         }
