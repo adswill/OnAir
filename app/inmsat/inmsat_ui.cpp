@@ -3,6 +3,8 @@
 // recording, the user-installed codec). One Auto button restarts the search; the CPU budget and the Inmarsat-C switch are under Advanced.
 // What the mode does and does not decode is said on the Voice tab and in docs/INMARSAT.md. See docs/INMARSAT-REVAMP.md.
 #include "../adsb/adsb_map.h"
+#include "../codec/speech_codec_ui.h"
+#include "dect2/codec/codec_registry.h"
 #include "../panels/picsave_ui.h"
 #include "app.h"
 #include "gfx/gfx.h"
@@ -38,6 +40,7 @@ struct State {
     double pushedLat = -999, pushedLon = -999;
     bool record = false;
     int pushedRecord = -1;
+    float pushedVol = -1; int pushedMute = -1;
     char filter[24] = "";
     adsbmap::View map;
     bool mapFollow = true;
@@ -198,7 +201,8 @@ void carriersView(App& a) {
         ImGui::TableNextColumn();
         std::string note = c.region;
         if (!c.station.empty()) note += (note.empty() ? "" : ", ") + c.station;
-        if (c.voiceCandidate) note += std::string(note.empty() ? "" : ", ") + "may be a voice (C) channel: not decoded";
+        if (c.type == dect2::inmsat::CarrierType::AeroC) note += std::string(note.empty() ? "" : ", ") + "voice: " + std::to_string((unsigned long long)c.voiceFrames) + " coded frames";
+        else if (c.voiceCandidate) note += std::string(note.empty() ? "" : ", ") + "wide, no decoder in sync (not a C channel in a call, or too weak)";
         if (c.type == dect2::inmsat::CarrierType::Unknown && !c.voiceCandidate && !c.parked && c.state < 1) note += std::string(note.empty() ? "" : ", ") + dect2::inmsat::carrierClassName(c.cls);
         ImGui::TextDisabled("%s", note.c_str());
     }
@@ -517,23 +521,23 @@ void aircraftView(App& a) {
 void voiceView(App& a) {
     const dect2::InmsatTelemetry& t = a.rx.inmsat;
     ImGui::PushTextWrapPos(0);
-    ImGui::TextDisabled("%s", "Aero C channels carry circuit-mode voice from the ground station to the aircraft. OnAir finds and lists these carriers, but it cannot demodulate them yet: "
-                              "the C-channel modulation and framing are not in a public specification we may reproduce. The mixer, the per-call recorder and the codec hook below are built and tested "
-                              "without a real C-channel signal, and need a user test with a real capture. Voice also needs the AMBE codec, which you install yourself (docs/CODECS.md). Unencrypted traffic only.");
+    ImGui::TextDisabled("%s", "Aero C channels carry circuit-mode voice from the ground station to the aircraft, 8400 bit/s OQPSK in 0.5 s frames. Every wide carrier in a window gets a "
+                              "C-channel decoder (the framing follows JAERO, github.com/jontio/JAERO); a carrier whose frames check shows as \"Aero C (voice)\" in the Carriers tab and its calls "
+                              "appear below. Verified on real captures (France, Alphasat / 15.5W, October 2026). Voice needs the Aero AMBE codec (4800 bit/s), which you install yourself "
+                              "(docs/CODECS.md); without it the calls are counted and their coded frames saved. Unencrypted traffic only.");
     ImGui::PopTextWrapPos();
     ImGui::Spacing();
     codecHelpButton(CodecHelp::AeroAmbe);
     ImGui::SameLine();
-    if (!t.codecReady) ImGui::TextDisabled("%s", "No AMBE codec installed: press ? for how to install it and Open codecs folder.");
-    else ImGui::TextDisabled("%s", "AMBE codec installed.");
-    if (!t.voiceMessage.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.35f, 1), "%s", t.voiceMessage.c_str()); ImGui::PopTextWrapPos(); }
-    else if (t.codecReady) ImGui::TextDisabled("%s", "Codec loaded.");
+    appcodec::voiceCodecLine("aeroambe", "Aero AMBE");   // found / notice to accept / missing, with the prompt and the install help (? opens it too)
+    if (t.codecReady) ImGui::TextDisabled("%s", "Codec loaded.");
+    else if (!t.voiceMessage.empty() && !dect2::codec::pluginLoaded("aeroambe")) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", t.voiceMessage.c_str()); ImGui::PopTextWrapPos(); }
     if (ImGui::Checkbox("Record calls##inmrec", &S.record)) plat::prefs().setI("inmsatRecord", S.record ? 1 : 0);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Writes each call to <Save pictures to>/Inmarsat as a WAV (with the codec) and always as the raw coded frames (.bits), so a capture is not wasted.");
     ImGui::Spacing();
-    int cand = 0;
-    for (const auto& c : t.carriers) cand += c.voiceCandidate;
-    ImGui::TextDisabled("%d carrier%s may be voice channels (wide, no data decoder in sync).", cand, cand == 1 ? "" : "s");
+    int cand = 0, cch = 0;
+    for (const auto& c : t.carriers) { cand += c.voiceCandidate; cch += c.type == dect2::inmsat::CarrierType::AeroC; }
+    ImGui::TextDisabled("%d C channel%s in sync; %d wide carrier%s with no decoder in sync.", cch, cch == 1 ? "" : "s", cand, cand == 1 ? "" : "s");
     if (t.voice.empty()) { ImGui::TextDisabled("%s", "no calls"); return; }
     if (!ImGui::BeginTable("##inmv", 7, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) return;
     ImGui::TableSetupColumn("Carrier"); ImGui::TableSetupColumn("State"); ImGui::TableSetupColumn("Frames"); ImGui::TableSetupColumn("Level"); ImGui::TableSetupColumn("Mute");
@@ -556,9 +560,12 @@ void voiceView(App& a) {
 
 void tick(App& a) {
     load();
+    if (live(a)) appcodec::voiceCodecTick("aeroambe");   // the user's Aero AMBE plug-in (docs/CODECS.md), loaded whichever tab is shown
     if (!a.engine.running()) { S.pushedFocus = -1; S.pushedBudget = -1; S.pushedInmc = -1; S.pushedRecord = -1; return; }
     dect2::InmsatReceiver& r = a.engine.inmsat();
     if (S.focusId != S.pushedFocus) { r.setFocus(S.focusId); S.pushedFocus = S.focusId; }
+    if (a.volume != S.pushedVol) { r.setVolume(a.volume); S.pushedVol = a.volume; }          // the sound controls are shared with the other modes
+    if ((int)a.muted != S.pushedMute) { r.setMuted(a.muted); S.pushedMute = (int)a.muted; }
     if (S.budget != S.pushedBudget) { r.setBudget(S.budget); S.pushedBudget = S.budget; }
     if ((int)S.inmcOn != S.pushedInmc) { r.setInmarsatC(S.inmcOn); S.pushedInmc = (int)S.inmcOn; }
     if (S.pushedSat != S.satChoice) { r.setSatelliteOverride(S.satChoice); S.pushedSat = S.satChoice; }

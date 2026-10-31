@@ -18,6 +18,7 @@ public:
 
     void configure(double inputRateHz);
     void setSignalOffset(double hz);                     // where the wanted channel sits relative to 0 Hz in the input
+    void setSearchSpan(double hz);                       // look for carriers within +-hz of 0 Hz only (0 = the whole input, the default)
     bool ready() const;                                  // false when the input rate is too low for this mode
     void reset();                                        // after a retune: forget the signal (the decoded tables stay: clearResults)
     void feed(const cf32* x, size_t n);

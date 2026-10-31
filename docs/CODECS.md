@@ -349,10 +349,25 @@ Details and the external-player route (save the TS / stream UDP, copy the VLC / 
 The player panel has a **?** button next to these messages. A channel that signals a CA system (a CA descriptor, free_CA_mode) but sends
 its streams in the clear is not shown as scrambled: OnAir goes by the scrambling bits of the stream packets.
 
-## AMBE (Inmarsat Aero voice)
+## AMBE (Inmarsat Aero voice) <a id="aeroambe"></a>
 
-Aero C channel voice uses an AMBE vocoder. OnAir decodes the P channel data only and does not tune voice channels. Separate programs,
-for example JAERO (<https://github.com/jontio/JAERO>), work on C channels.
+Aero C channel voice uses AMBE at 4800 bit/s (not the 3600 bit/s AMBE of D-STAR: the plain mbelib cannot decode it). The Inmarsat
+all-carriers mode (docs/INMARSAT.md) demodulates the C channels itself and hands each 96-bit coded voice frame (12 bytes, low bit of
+byte 0 first, as received) to a speech codec **plug-in with the id `aeroambe`** (`onair-codec-aeroambe.dll` / `.so` / `.dylib`), which you build
+yourself; without it the calls are counted and their frames saved as `.bits`. The decoder is the mbelib of libaeroambe, the library JAERO uses
+(<https://github.com/jontio/libaeroambe>, folder `mbelib-master`, function `mbe_processAmbe4800x3600Frame`). Check the licence and your local
+patent situation before building it. Steps (Linux and macOS; Windows with MSYS2 the same way):
+
+```
+git clone https://github.com/jontio/libaeroambe
+cmake -S libaeroambe/mbelib-master -B libaeroambe/mbelib-master/build -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+cmake --build libaeroambe/mbelib-master/build
+cd <OnAir source>/tools/addons/aeroambe
+cmake -S . -B build -DAEROAMBE_MBELIB=<path>/libaeroambe/mbelib-master && cmake --build build
+```
+
+Copy `build/onair-codec-aeroambe.so` (`.dylib`, `.dll`) and the `libmbe` it links into the codecs folder, press **Look again** in Help > Voice codecs
+and accept the notice. The plug-in's output is sample-exact with JAERO's on the same frames.
 
 ## AMBE variant (Iridium voice)
 

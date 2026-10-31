@@ -252,6 +252,7 @@ void Engine::muteReceiver(int a, bool m) {
     case 32: rxM17_.setMuted(m); break;
     case 129: rxFusion_.setMuted(m); break;
     case 34: rxDstar_.setMuted(m); break;
+    case 209: rxInmsat_.setMuted(m); break;
     case 35: rxCw_.setMuted(m); break;
     case 37: rxPsk_.setMuted(m); break;
     case 38: rxJs8_.setMuted(m); break;

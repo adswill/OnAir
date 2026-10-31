@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <deque>
 #include <map>
+#include <filesystem>
 #include <mutex>
 
 namespace dect2::inmsat {
@@ -60,7 +61,8 @@ struct VoiceMixer::Impl {
     std::map<int, Ch> chans;
     bool codecReady = false;
 
-    DecoderFactory fac() const { return factory ? factory : DecoderFactory([] { return codec::pluginVocoder("ambe"); }); }
+    DecoderFactory fac() const { return factory ? factory : DecoderFactory([] { return codec::pluginVocoder("aeroambe"); }); }
+    bool recDirEmptyImpl() const { return recDir.empty(); }
 
     void closeCall(Ch& c) {
         c.wav.close();
@@ -85,7 +87,11 @@ VoiceMixer::VoiceMixer() : p_(std::make_unique<Impl>()) {}
 VoiceMixer::~VoiceMixer() { std::lock_guard<std::mutex> lk(p_->mu); for (auto& kv : p_->chans) p_->closeCall(kv.second); }
 void VoiceMixer::setDecoderFactory(DecoderFactory f) { std::lock_guard<std::mutex> lk(p_->mu); p_->factory = std::move(f); p_->chans.clear(); }
 void VoiceMixer::setCodecFolder(const std::string& folder) { std::lock_guard<std::mutex> lk(p_->mu); p_->folder = folder; }
-void VoiceMixer::setRecording(const std::string& dir) { std::lock_guard<std::mutex> lk(p_->mu); p_->recDir = dir; }
+void VoiceMixer::setRecording(const std::string& dir) {
+    std::lock_guard<std::mutex> lk(p_->mu);
+    p_->recDir = dir;
+    if (!dir.empty()) { std::error_code ec; std::filesystem::create_directories(std::filesystem::path(dir), ec); }   // the pictures folder's Inmarsat subfolder may not exist yet
+}
 void VoiceMixer::setMute(int id, bool on) { std::lock_guard<std::mutex> lk(p_->mu); p_->chans[id].info.id = id; p_->chans[id].info.mute = on; }
 void VoiceMixer::setSolo(int id, bool on) { std::lock_guard<std::mutex> lk(p_->mu); p_->chans[id].info.id = id; p_->chans[id].info.solo = on; }
 
@@ -93,9 +99,16 @@ void VoiceMixer::pushFrame(int id, double freqHz, const std::vector<uint8_t>& co
     std::lock_guard<std::mutex> lk(p_->mu);
     auto& c = p_->chans[id];
     c.info.id = id; c.info.freqHz = freqHz;
-    if (!c.triedDec) {                    // one decoder per channel, asked for once; the factory returns nullptr when the codec is not installed
+    auto recDirEmpty = [&] { return p_->recDirEmptyImpl(); };
+    // one decoder per channel; the factory returns nullptr while the codec is not installed (or not loaded yet: the app loads the plug-in a
+    // moment after the start), so a channel without one asks again at every new call and every 5 s of frames
+    if (!c.dec && (!c.triedDec || !c.info.active || c.info.frames % 250 == 0)) {
         c.triedDec = true;
         c.dec = p_->fac()();
+        if (c.dec && c.info.active && !recDirEmpty() && c.info.recording.empty()) {   // a call that began without the codec: start its WAV now
+            const std::string base = c.info.rawFile.size() > 5 ? c.info.rawFile.substr(0, c.info.rawFile.size() - 5) : std::string();
+            if (!base.empty() && c.wav.open(base + ".wav", c.dec->sampleRate())) c.info.recording = base + ".wav";
+        }
     }
     if (!c.info.active) p_->openCall(c, timeSec);
     c.info.frames++;
@@ -144,10 +157,10 @@ VoiceStatus VoiceMixer::status() const {
         s.activeCalls += kv.second.info.active;
     }
     if (!s.codecReady) {
-        bool loaded = codec::pluginLoaded("ambe");
+        bool loaded = codec::pluginLoaded("aeroambe");
         if (p_->factory) loaded = true;        // a test or the app supplied its own decoder: it works or says so when asked to decode
         if (!loaded)
-            s.message = "Voice needs the AMBE codec, which OnAir does not include. Install it yourself: " + codec::pluginStatusLine("ambe", p_->folder) +
+            s.message = "Voice needs the Aero AMBE codec (4800 bit/s), which OnAir does not include. Install it yourself: " + codec::pluginStatusLine("aeroambe", p_->folder) +
                         " See docs/CODECS.md. Until then the voice stays silent; calls are still counted and their coded frames are saved.";
     }
     return s;

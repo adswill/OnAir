@@ -15,7 +15,8 @@ namespace dect2 {
 struct AeroFrameEvent {
     int bitRate = 0;
     uint16_t header = 0;
-    std::vector<uint8_t> bytes;        // the frame's information bytes (72 or 312)
+    std::vector<uint8_t> bytes;        // the frame's information bytes (72 or 312; C channel: the 36 bytes of its three SUs)
+    std::vector<uint8_t> voice;        // C channel (8400 bit/s) only: 25 coded voice frames of 12 bytes (aero_phy.h)
     int susOk = 0, susBad = 0;
     int uwErrors = 0;                  // bit errors in the unique word, -1 when it was not found and the frame was taken on timing alone
     float channelBer = 0;
