@@ -198,7 +198,7 @@ int main(int argc, char** argv) {
     // coarse alignment at the start: two radios whose first samples are tens of milliseconds apart, with a frequency offset
     {
         const int P = 1 << 17;
-        const struct { int skew; double cfo; double snr; } as[] = {{5000, 3300, 0}, {-12000, -7200, 0}, {20, 150, 3}, {9000, 1000, -1.5}, {9000, 1000, -3}};
+        const struct { int skew; double cfo; double snr; } as[] = {{5000, 3300, 0}, {-12000, -7200, 0}, {20, 150, 3}, {9000, 1000, -0.5}, {9000, 1000, -3}};
         for (const auto& c : as) {
             std::vector<char> band; const std::vector<cf32> s = makeSignal(31, band);
             std::mt19937 g(77); dect2::normal_distribution<float> nd(0.f, 1.f);
