@@ -82,6 +82,8 @@ int main() {
     CHECK(std::abs(guessSampleRate(pCs8) - kRate) < 1 && std::abs(guessSampleRate(pCf32) - kRate) < 1, "the name gives the sample rate back");
     CHECK(guessFormat(pCs8) == FileFormat::CS8 && guessFormat(pCf32) == FileFormat::CF32, "the name gives the format back");
     CHECK(fs::path(pCf32).filename().string().rfind("onair_fm_93.900MHz_1Msps_", 0) == 0, "the name has the mode, the frequency and the rate");
+    CHECK(guessFormat("/home/u/iqdatIQ.bin") == FileFormat::CF32 && std::abs(guessSampleRate("/home/u/iqdatIQ.bin") - 1.125e6) < 1, "AOR ariq_rcv iqdatIQ.bin reads as cf32 at 1.125 Msps");
+    CHECK(guessFormat("dump.bin") == FileFormat::CS8 && guessSampleRate("dump.bin") == 0, "other .bin names are not taken for AOR files");
     CHECK(std::abs(guessSampleRate("onair_dvb_554.000MHz_10Msps_20261009-071530.cs8") - 10e6) < 1 && std::abs(guessSampleRate("onair_dab_225.648MHz_2.048Msps_x.cf32") - 2.048e6) < 1, "the documented file names parse");
     CHECK(liveCs8 >= 1 && liveCf32 >= 1, "the live signal was received");
 

@@ -690,14 +690,23 @@ std::unique_ptr<TxSink> makeTxSink(const DeviceInfo& d) {
     }
 }
 
+// "iqdatIQ.bin": the file AOR's Linux recorder (ariq_rcv) writes for the AR5700D / AR2300 / AR5001D / AR6000 I/Q output: float32 I/Q pairs at 1.125 Msps
+static bool isAorIqName(const std::string& path) {
+    std::string n = path.substr(path.find_last_of("/\\") == std::string::npos ? 0 : path.find_last_of("/\\") + 1);
+    for (auto& c : n) c = (char)tolower((unsigned char)c);
+    return n.rfind("iqdatiq", 0) == 0 && n.size() > 4 && n.compare(n.size() - 4, 4, ".bin") == 0;
+}
+
 FileFormat guessFormat(const std::string& path) {
     auto ends = [&](const char* e) { size_t n = strlen(e); return path.size() >= n && path.compare(path.size() - n, n, e) == 0; };
     if (ends(".cu8") || ends(".u8")) return FileFormat::CU8;
     if (ends(".cf32") || ends(".fc32") || ends(".cfile")) return FileFormat::CF32;
+    if (isAorIqName(path)) return FileFormat::CF32;   // AOR's ariq_rcv writes float32 I/Q
     return FileFormat::CS8;
 }
 
 double guessSampleRate(const std::string& path) {
+    if (isAorIqName(path)) return 1.125e6;
     std::string n = path;
     for (auto& c : n) c = (char)tolower((unsigned char)c);
     size_t p = n.find("msps");
