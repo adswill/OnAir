@@ -572,6 +572,17 @@ void trunkTick(App& a) {
         for (double f : T.ctl.follower.sliceFreqs(false)) v.push_back(f);
         if (v != T.wideList) { T.wideList = v; a.engine.setWideFollow(true, v); }
     }
+    if (wideActive(a)) {   // a Phase 1 call decoded inside the capture lives on its carrier, not on grant repeats (they come every few seconds on a busy site)
+        const double ctr0 = radioCenterMhz(a) * 1e6;
+        for (const CallRecord& cr : T.ctl.log.records()) {
+            if (!cr.active || !cr.followed || cr.dmr || cr.slot >= 0 || cr.id == T.hopCall || cr.id == T.rm.call || !T.ctl.follower.inSpan(cr.freqHz)) continue;
+            const dect2::WideCarrier* near = nullptr; double bd = 9000;
+            for (const auto& c : a.rx.wide) { const double d = std::fabs(ctr0 + c.hz - cr.freqHz); if (d < bd) { bd = d; near = &c; } }
+            if (!near) continue;
+            if (near->active) T.ctl.onVoice(cr.id, now);
+            else if (near->idleSec > 1.0) T.ctl.onTerminator(cr.id, now);
+        }
+    }
     if (wideActive(a)) {   // the sound follows the call that should be heard
         const uint64_t id = T.ctl.follower.audibleCall();
         const CallRecord* r = id ? T.ctl.log.byId(id) : nullptr;
@@ -655,6 +666,7 @@ void followView(App& a) {
     kvRow(a, "control channel", "%llu good, %llu bad (%.0f %% ok), %u calls on air, %llu not followed",
           (unsigned long long)st.tsbkGood, (unsigned long long)st.tsbkBad, st.crcOkPct, (unsigned)st.activeCalls, (unsigned long long)st.missed);
     const SiteInfo& si = T.ctl.sys.site();
+    if (T.tsbkGap) kvRow(a, "missed", "%llu control messages were not read in time (the screen stalled)", (unsigned long long)T.tsbkGap);
     if (si.valid) kvRow(a, "site", "WACN %05X system %03X RFSS %d site %d NAC %03X", si.wacn < 0 ? 0 : si.wacn, si.sysId < 0 ? 0 : si.sysId, si.rfss, si.site, si.nac < 0 ? 0 : si.nac);
     if (T.p2Call) {
         const dect2::P25p2Telemetry& p = T.p2Second ? a.second.rx.p25p2 : a.rx.p25p2;
