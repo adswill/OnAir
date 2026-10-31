@@ -255,7 +255,7 @@ static void nativeRobustChecks(const std::string& dir, const char* ext, const st
         const std::string root = dir + "/root";
         for (const char* d : {"", "/sys", "/sys/bus", "/sys/bus/usb", "/sys/bus/usb/devices", "/sys/module", "/sys/module/dvb_usb_rtl28xxu", "/dev", "/dev/bus", "/dev/bus/usb", "/dev/bus/usb/001",
                               "/sys/bus/usb/devices/1-1", "/sys/bus/usb/devices/1-2", "/sys/bus/usb/devices/1-2:1.0", "/sys/bus/usb/devices/1-3", "/sys/bus/usb/devices/usb1",
-                              "/sys/bus/usb/devices/1-4", "/sys/bus/usb/devices/1-4:1.0"})
+                              "/sys/bus/usb/devices/1-4", "/sys/bus/usb/devices/1-4:1.0", "/sys/bus/usb/devices/1-5"})
             mkdir((root + d).c_str(), 0755);
         auto dev = [&](const char* name, const char* vid, const char* pid, int devnum, int mode) {
             const std::string p = root + "/sys/bus/usb/devices/" + name;
