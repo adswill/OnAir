@@ -9,6 +9,7 @@
 #include <random>
 #include <thread>
 #include <vector>
+#include "../common/cpu_report.h"
 
 using namespace dect2;
 static int fails = 0;
@@ -192,7 +193,9 @@ int main() {
         auto t2 = std::chrono::steady_clock::now();
         const double toff = std::chrono::duration<double>(t1 - t0).count() / 10.0, ton = std::chrono::duration<double>(t2 - t1).count() / 10.0;
         printf("CPU per second of audio: off %.5f s (includes the test's own copying), on (split-band) %.4f s\n", toff, ton);
+        cpuCal("voice_inversion", "off", toff, "wall-s/s", '<', 0.003);
         CHECK(toff < 0.003, "off costs %.5f", toff);
+        cpuCal("voice_inversion", "on (split-band)", ton, "wall-s/s", '<', 0.05);
         CHECK(ton < 0.05, "on costs %.4f", ton);
     }
     printf(fails ? "FAILED (%d)\n" : "voice inversion: all passed\n", fails);

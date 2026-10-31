@@ -7,6 +7,7 @@
 //   test_specx_idmatrix --quick    SNR 20 dB, 1 trial, no frequency: for tuning
 //   test_specx_idmatrix --mode id  only the cases whose label contains id; --v prints every case
 #include "dect2/bandplan/bandplan.h"
+#include "../common/cpu_report.h"
 #include "../common/ci_slack.h"
 #include "dect2/common/stable_random.h"
 #include "dect2/channels/freq_db.h"
@@ -447,7 +448,9 @@ int main(int argc, char** argv) {
     CHECK(rej[2] >= rejN[2] - 1, "two unrelated tones answered \"unknown\" %d of %d times", rej[2], rejN[2]);
     CHECK(rej[1] >= rejN[1] / 2, "band-limited noise answered \"unknown\" %d of %d times", rej[1], rejN[1]);
     // speed: the target is 200 ms; the test allows a slow CI machine
+    cpuCal("specx_idmatrix", "identify() on average", nMs ? sumMs / nMs : 0.0, "ms", '<', 150 * ciSlack(), nMs > 0);
     CHECK(nMs && sumMs / nMs < 150 * ciSlack(), "identify() took %.0f ms on average, the target is 100 and the limit here 150", nMs ? sumMs / nMs : 0.0);
+    cpuCal("specx_idmatrix", "identify() at worst", maxMs, "ms", '<', 500 * ciSlack());
     CHECK(maxMs < 500 * ciSlack(), "identify() took %.0f ms at worst, the target is 200 and the limit here 500", maxMs);
     return testSummary("specx_idmatrix");
 }

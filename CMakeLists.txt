@@ -2248,6 +2248,12 @@ if(DECT2_BUILD_TESTS)
   if(TARGET test_pskdsp_engine)   # reads the mode row and the help page from the source tree
     target_compile_definitions(test_pskdsp_engine PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
   endif()
+  # read a file of the source tree (a recording, a font): __FILE__ does not lead there (-ffile-prefix-map, Windows separators)
+  foreach(t test_sarsat_rx test_hfdig_kbd)
+    if(TARGET ${t})
+      target_compile_definitions(${t} PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    endif()
+  endforeach()
   # the signal identifier (docs/IDENTIFIER.md): specx_ideval (about thirty modes made from their parameters, impaired, a confusion matrix; a few
   # seconds), specx_idfeatures and specx_ident run with the rest. The matrix over every mode's own test signal renders each mode's generator
   # and takes minutes: the whole one and its quick form (20 dB, no frequency) are in the slow tier (nightly and release tags).
@@ -2372,8 +2378,9 @@ if(DECT2_BUILD_TESTS)
       set_tests_properties(${t} PROPERTIES LABELS slow)
     endif()
   endforeach()
-  # socket/thread timing tests: label "timing"; CI re-runs only these once on failure (ctest --repeat until-pass:2 -L timing)
-  foreach(t voice_inversion atsc3_synth_basic scan_synth dvbs_engine isdbt_rx radio_mode_glue atv_switch tx wifi_engine multitone_engine native_netradio native_sdrpp feeds feed_targets rooms_net discord_rpc remote_api plugin ais_engine marine_engine inmc_engine scan_soapy dvbc_engine qo100_dvbs_second asterix_engine tx_quality_b tx_quality_a_rt)
+  # socket/thread timing tests and CPU speed limits: label "timing"; CI runs these apart from the -j 4 run, a failed one twice (ci.yml)
+  foreach(t voice_inversion atsc3_synth_basic scan_synth dvbs_engine isdbt_rx radio_mode_glue atv_switch tx wifi_engine multitone_engine native_netradio native_sdrpp feeds feed_targets rooms_net discord_rpc remote_api plugin ais_engine marine_engine inmc_engine scan_soapy dvbc_engine qo100_dvbs_second asterix_engine tx_quality_b tx_quality_a_rt
+          halow_engine wisun_engine iono_engine dtmb_engine mesh_rates kaft_engine)
     if(TEST ${t})
       set_property(TEST ${t} APPEND PROPERTY LABELS timing)
     endif()

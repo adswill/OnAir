@@ -1,5 +1,6 @@
 // KAFT physical layer: clean loopback of every profile at every width, AWGN with a carrier offset, width detection from the preamble
 #include "dect2/kaft/kaft_rx.h"
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <string>
@@ -112,6 +113,34 @@ int main() {
         CHECK(decodeWaveform(rx, c).empty(), "500 kHz frame heard by the 200 kHz branch");
         c.forceWidth = 1;
         CHECK(decodeWaveform(rx, c).size() == 1, "500 kHz frame heard by the 500 kHz branch");
+    }
+
+    // an input rate that shares almost no factor with the widths: 64/7 Msps (DVB-T2's 8 MHz rate, 9142857 as an integer). The exact ratio needed 329
+    // million taps (1.3 GB, seconds on every engine start); the receiver now takes the ratio of the rate rounded to 1 kHz (16 ppm) and must
+    // be quick to make and still decode a frame
+    {
+        Rng rng(91);
+        const FrameSpec spec = makeSpec(1, Width::W1M, 3, 5, rng);
+        const std::vector<cf> ref = channel(buildFrame(spec), Width::W1M, 20.0, 0.0, rng);
+        const int rate = 9142857;
+        std::vector<cf> x((size_t)((double)ref.size() * rate / kRefRate) - 4);
+        for (size_t n = 0; n < x.size(); n++) {   // cubic (Catmull-Rom) interpolation from the reference rate
+            const double t = (double)n * kRefRate / rate;
+            const size_t i = (size_t)t;
+            const float u = (float)(t - (double)i);
+            const cf p0 = ref[i ? i - 1 : 0], p1 = ref[i], p2 = ref[i + 1], p3 = ref[i + 2];
+            x[n] = p1 + 0.5f * u * (p2 - p0 + u * (2.f * p0 - 5.f * p1 + 4.f * p2 - p3 + u * (3.f * (p1 - p2) + p3 - p0)));
+        }
+        FrameReceiverConfig c;
+        c.inputRate = rate;
+        const auto t0 = std::chrono::steady_clock::now();
+        FrameReceiver r(c);
+        const double made = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+        CHECK(made < 2.0, "the receiver at 64/7 Msps took %.1f s to make", made);
+        r.push(x);
+        r.flush();
+        const std::vector<RxFrame> fr = r.take();
+        CHECK(fr.size() == 1 && sameFrame(fr[0], spec, 3), "64/7 Msps: %zu frames, blocks %d of 3 ok", fr.size(), fr.empty() ? 0 : fr[0].blocksOk());
     }
 
     // (c) width detection at a low SNR (Es/N0 7 dB (P0 reaches FER 1e-2 near 2 dB; 200 kHz still misses a frame in 3 at 5 dB, 0 dB was far below what the code can do), P0) at all three widths, three noise realisations each

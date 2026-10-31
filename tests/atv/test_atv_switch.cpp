@@ -32,9 +32,10 @@ int main() {
     runFor(10, a, 3.0, n2, f2);
     runFor(10, a, 3.0, n3, f3);   // the same mode again: its receiver starts counting again too
     printf("GNSS %d reports; analog TV %d reports, the first after %d ms; again %d reports, the first after %d ms\n", n1, n2, f2, n3, f3);
-    CHECK(n1 >= 15, "GNSS reports %d", n1);
     // the bug this guards against showed no reports at all; the shared CI machines are slower, so the counts are looser there
     const bool ci = std::getenv("CI") != nullptr;
+    // the GNSS run only has to push seq past what the analog TV receiver counts to (CI once gave 14 in 6 s under -j 4)
+    CHECK(n1 >= (ci ? 5 : 15), "GNSS reports %d", n1);
     const int minN = ci ? 3 : 8, maxMs = ci ? 3000 : 1000;
     CHECK(n2 >= minN && f2 >= 0 && f2 < maxMs, "analog TV after GNSS: %d reports, first after %d ms", n2, f2);
     CHECK(n3 >= minN && f3 >= 0 && f3 < maxMs, "analog TV again: %d reports, first after %d ms", n3, f3);

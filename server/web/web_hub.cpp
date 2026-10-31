@@ -198,6 +198,7 @@ void WebHub::processPending() {
             inQ_.pop_front();
             inSamples_ -= c.x.size();
         }
+        std::lock_guard<std::mutex> g(procMu_);
         processChunk(c);
     }
 }
@@ -213,7 +214,7 @@ void WebHub::dspLoop() {
             if (!run_) break;
             if (!inQ_.empty()) { c = std::move(inQ_.front()); inQ_.pop_front(); inSamples_ -= c.x.size(); have = true; }
         }
-        if (have) processChunk(c);
+        if (have) { std::lock_guard<std::mutex> g(procMu_); processChunk(c); }
         const double now = wallSeconds();
         if (now >= nextPoll) {   // the decoders' results, 5 times a second, also when no samples come
             nextPoll = now + 0.2;

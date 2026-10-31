@@ -449,8 +449,8 @@ struct IsdbsReceiver::Impl {
             if (need) groupBranches(L, (int)g, F.data(), &br[(size_t)G.step0]);
         }
         {   // the next frame's W1: its first 6 bits, BPSK at F[39936 ...]
-            Branch nb[kHeaderBits];
-            headerBranches(F.data() + kFrameSyms, nb);
+            Branch nb[6];
+            headerBranches(F.data() + kFrameSyms, nb, 6);   // only kExtra = 12 symbols of the next frame are kept
             for (int i = 0; i < 6; i++) br[(size_t)L.totalSteps + (size_t)i] = nb[i];
         }
         std::vector<int8_t> forced((size_t)total, -1);

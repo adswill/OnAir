@@ -12,6 +12,7 @@
 #include <cstdio>
 using namespace dect2;
 using namespace dect2::inmsat;
+#include "../common/cpu_report.h"
 #include "../common/test_util.h"
 
 namespace {
@@ -117,6 +118,7 @@ int main() {
     for (const auto& c : snap.carriers) if (c.type == CarrierType::AeroP && !c.satellite.empty()) named++;
     CHECK(named >= 1, "carriers with a satellite name: %d", named);
     CHECK(snap.susBad == 0, "bad SUs %llu", (unsigned long long)snap.susBad);
+    cpuCal("inmsat_manager", "all carriers", secs / cpu, "x-realtime", '>', 1.0);
     CHECK(secs / cpu > 1.0, "slower than real time: %.2fx", secs / cpu);
     return testSummary("inmsat_manager");
 }

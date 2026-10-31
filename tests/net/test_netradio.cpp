@@ -915,6 +915,20 @@ static void testRedPitaya() {
     okVals = true;
     for (auto& v : buf) if (std::fabs(v.real() + 0.25f) > 1e-6f || std::fabs(v.imag() - 0.5f) > 1e-6f) okVals = false;
     CHECK(okVals);
+    // +20 dB of digital gain: the samples ten times larger, still no LNA register
+    s.gainDb = 20;
+    CHECK(src->retune(s, err));
+    for (int i = 0; i < 100; i++) { std::this_thread::sleep_for(std::chrono::milliseconds(10)); }
+    ring.clear();
+    CHECK(readIq(ring, buf));
+    okVals = true;
+    for (auto& v : buf) if (std::fabs(v.real() + 2.5f) > 1e-5f || std::fabs(v.imag() - 5.0f) > 1e-5f) okVals = false;
+    CHECK(okVals);
+    {
+        std::lock_guard<std::mutex> lk(rp.mu);
+        CHECK(rp.regs.find(0x0a) == rp.regs.end());
+    }
+    s.gainDb = 0;
     s.centerHz = 70e6;   // beyond its specified range: said, and sent as asked
     err.clear();
     CHECK(src->retune(s, err) && !err.empty());

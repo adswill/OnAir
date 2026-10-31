@@ -28,8 +28,14 @@ int main() {
     RxTelemetry rx;
     uint64_t seq = 0;
     int reports = 0, wrong = 0;
+    // 5 s, and on a slow or busy machine (the synthetic source then makes less signal in that time) on until the results below are in,
+    // at most 20 s
+    const auto done = [&] { return rx.seq > 10 && rx.wisun.nodes.size() == 3 && rx.wisun.blocksOk > 100 && rx.wisun.ppsHist.size() >= 3; };
     const auto t0 = std::chrono::steady_clock::now();
-    while (std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() < 5.0) {
+    // a while with elapsed() instead of a for that updates the time in its step: Cppcheck called that for condition always false
+    // (knownConditionTrueFalse), a false positive, and Codacy then fails the PR
+    const auto elapsed = [&] { return std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count(); };
+    while (elapsed() < 5.0 || (elapsed() < 20.0 && !done())) {
         if (e.latestRx(rx, seq)) { seq = rx.seq; reports++; if (rx.standard != 85) wrong++; }
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
