@@ -164,6 +164,14 @@ export function generateDemo(nowMs = Date.now()) {
   [["G05", "GPS", 49.0, 14.4], ["E11", "Galileo", 49.0, 15.4], ["C08", "BeiDou", 49.0, 16.4], ["R17", "GLONASS", 49.0, 17.4]].forEach(([n, sub, lat, lon]) => {
     push({ id: "gnss:" + n, kind: "gnss", label: n, sub, src: "gnss", lat, lon, alt: 20000, t: nowMs, age: 0, path: [] });
   });
+  // amateur contacts, in the exact form the desktop app posts them (ham_mapfeed.cpp): the station is the track, extra carries the contact hints
+  [["LY2XX", "FT8", 14075200, "DL1ABC", 48.5, 11.0, 54.5, 25.0, 40], ["DL1ABC", "FT8", 14076100, "LY2XX", 54.5, 25.0, 48.5, 11.0, 200], ["W1AW", "FT4", 14081000, "EA8ZZ", 28.5, -16.0, 41.5, -73.0, 600],
+    ["JA1YY", "WSPR", 14097100, "VK3AA", -37.5, 145.0, 35.5, 139.0, 900], ["OH2BB", "JS8", 7078000, "SM5CC", 59.5, 17.0, 60.5, 25.0, 1500], ["ZL1QQ", "QSO", 21300000, "KH6WW", 21.5, -158.0, -37.5, 175.0, 2400],
+    ["F5ABC", "FT8", 28074500, "PY2XX", -23.5, -47.0, 47.5, 5.0, 90], ["SP9ZZ", "WSPR", 10138700, "G4ABC", 52.5, -1.0, 50.5, 19.0, 300]].forEach(([cs, mode, f, to, tlat, tlon, lat, lon, ageS]) => {
+    const band = f < 8e6 ? "40m" : f < 11e6 ? "30m" : f < 15e6 ? "20m" : f < 22e6 ? "15m" : "10m";
+    push({ id: "ham:" + cs, kind: "ham", label: cs, sub: "ham " + mode, src: "ham", lat, lon, t: nowMs, age: ageS,
+      extra: `{"m":"${mode}","f":${f},"b":"${band}","to":"${to}","tlat":${tlat},"tlon":${tlon}}`, path: [] });
+  });
   // direction finding demo: three stations around Vilnius hear a 433.92 MHz transmitter; the server would intersect the lines into a fix
   {
     const tx = { lat: 54.70, lon: 25.30 };

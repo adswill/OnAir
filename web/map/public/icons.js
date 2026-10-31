@@ -12,7 +12,7 @@ import { shapeOf } from "./shapes.js";
 export const ICON_PX = 96;       // canvas size; the box is -32..32 units
 export const PIXEL_RATIO = 3;    // 96 px at pixelRatio 3 = 32 CSS px at icon-size 1, crisp on 2x/3x screens
 const UNIT = 0.5;                // CSS px per drawing unit at icon-size 1 (32 px / 64 units)
-const OUTLINE_PX = 1.2;          // outline width in CSS px
+const OUTLINE_PX = 1.15;          // outline width in CSS px
 
 /** Outline / detail colours per map theme. */
 const THEME = {
@@ -57,8 +57,16 @@ export function altitudeGradientCss() {
 // ---------- image ids ----------
 
 /** Compose an image id. `color` may be "#rrggbb"; theme is "d" or "l". */
-export function iconId(shape, color, theme = "d") {
-  return shape + "|" + String(color).replace("#", "").toLowerCase() + "|" + (theme === "l" ? "l" : "d");
+export function iconId(shape, color, theme = "d", state = "") {
+  return shape + "|" + String(color).replace("#", "").toLowerCase() + "|" + (theme === "l" ? "l" : "d") + (state ? "|" + state : "");
+}
+
+/** Icon states: "h" = hovered (light halo behind the shape), "x" = stale (faded fill). Normal is "". */
+export const STATES = ["", "h", "x"];
+/** Like parseIconId, plus the state as a 4th element ("" when none or unknown). */
+export function parseIconIdFull(id) {
+  const [shape, hex, theme, st] = String(id).split("|");
+  return [shape, "#" + (hex || "c8cacc"), theme === "l" ? "l" : "d", STATES.includes(st) ? st : ""];
 }
 
 /** Parse an image id into [shape, "#rrggbb", theme]. Two-part ids (older code) mean the dark theme. */
@@ -83,7 +91,7 @@ function withAlpha(hex, a) {
 }
 
 /** Draw a shape into a fresh canvas: translucent discs, body fill with a faint sheen, 1.2 px outline, detail, strokes. */
-export function drawShape(shapeName, color, px = ICON_PX, theme = "d") {
+export function drawShape(shapeName, color, px = ICON_PX, theme = "d", state = "") {
   const sh = shapeOf(shapeName);
   const th = THEME[theme] || THEME.d;
   const c = document.createElement("canvas");
@@ -124,22 +132,20 @@ export function drawShape(shapeName, color, px = ICON_PX, theme = "d") {
   for (const d of sh.lines || []) {
     g.strokeStyle = color; g.lineWidth = thin; g.stroke(path2d(d));
   }
-  // body: fill, faint top-left sheen, outline
-  const grad = g.createLinearGradient(-22, -26, 22, 26);
-  grad.addColorStop(0, th.sheen);
-  grad.addColorStop(0.55, "rgba(255,255,255,0)");
-  grad.addColorStop(1, th.shade);
-  for (const d of sh.body) {
-    const p = path2d(d);
-    g.fillStyle = color; g.fill(p);
-    g.fillStyle = grad; g.fill(p);
+  if (state === "h") {   // hovered: a light halo under the whole shape
+    g.strokeStyle = theme === "l" ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.85)"; g.lineWidth = outlineW + 5;
+    for (const d of sh.body) g.stroke(path2d(d));
   }
+  // body: flat fill (the same look as the SVG sprite in iconsvg.js), hairline outline. A stale icon is faded.
+  if (state === "x") g.globalAlpha = 0.55;
+  for (const d of sh.body) { g.fillStyle = color; g.fill(path2d(d)); }
   g.strokeStyle = th.outline;
   g.lineWidth = outlineW;
   for (const d of sh.body) g.stroke(path2d(d));
   g.strokeStyle = th.detail;
   g.lineWidth = 1.0;
   for (const d of sh.detail || []) g.stroke(path2d(d));
+  g.globalAlpha = 1;
   return c;
 }
 
@@ -153,8 +159,8 @@ export function asImage(c) {
 export function installLazyIcons(map) {
   map.on("styleimagemissing", (e) => {
     if (!String(e.id).includes("|") || map.hasImage(e.id)) return;
-    const [shape, color, theme] = parseIconId(e.id);
-    try { map.addImage(e.id, asImage(drawShape(shape, color, ICON_PX, theme)), { pixelRatio: PIXEL_RATIO }); } catch { /* map gone */ }
+    const [shape, color, theme, state] = parseIconIdFull(e.id);
+    try { map.addImage(e.id, asImage(drawShape(shape, color, ICON_PX, theme, state)), { pixelRatio: PIXEL_RATIO }); } catch { /* map gone */ }
   });
 }
 

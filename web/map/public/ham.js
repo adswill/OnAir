@@ -46,7 +46,9 @@ export function hamHints(t) {
 }
 
 /** Contacts from ham tracks. `peerPos(callsign)` may supply a position for a peer that is itself a known track. */
-export function buildContacts(tracks, nowMs = Date.now(), peerPos = null) {
+export function buildContacts(tracksIn, nowMs = Date.now(), peerPos = null) {
+  // the page passes Map.values(): an iterator, which is spent after one pass (this used to leave every contact list empty)
+  const tracks = Array.isArray(tracksIn) ? tracksIn : [...tracksIn];
   const byCall = new Map();
   for (const t of tracks) if (t.kind === "ham" && t.label) byCall.set(String(t.label).toUpperCase(), t);
   const out = [];

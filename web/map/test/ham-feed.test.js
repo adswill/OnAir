@@ -75,3 +75,14 @@ test("a station that works a second partner replaces its contact (one track per 
 test("hints survive odd input without throwing", () => {
   for (const extra of ["", "{", "null", "[]", '{"to":5}', '{"tlat":"x","tlon":1}', undefined]) assert.equal(hamHints({ extra }), null);
 });
+
+test("ROOT CAUSE of the page-side zero: the page passes Map.values() (an iterator); buildContacts walked it twice, so the second pass saw nothing", () => {
+  const hub = createHub(() => NOW);
+  hub.ingest({ tracks: sampleHamRaw() });
+  const byId = new Map(hub.live().tracks.map((t) => [t.id, t]));
+  assert.equal(byId.size, 6);
+  const c = buildContacts(byId.values(), NOW);   // exactly what ham-ui.js does
+  assert.equal(c.length, 6, "contacts from an iterator");
+  assert.equal(buildContacts(new Set(byId.values()), NOW).length, 6, "and from a Set");
+  assert.equal(buildContacts(byId, NOW).length, 0, "a Map itself yields [k, v] pairs, not tracks: callers must pass .values()");
+});

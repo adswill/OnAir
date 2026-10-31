@@ -2,14 +2,16 @@
 // Modules: geo.js (maths), types.js (type -> icon shape), shapes.js + icons.js (map icons), airports.js,
 // card.js (info card), demo.js (?demo=1 preview data). Everything here is browser-only glue.
 
-import { iconId, installLazyIcons, paintMini, altitudeColor, altitudeGradientCss, ALT_STOPS } from "./icons.js";
+import { iconId, installLazyIcons, altitudeColor, altitudeGradientCss, ALT_STOPS } from "./icons.js";
 import { SHAPES } from "./shapes.js";
 import { iconShape, vesselScale } from "./types.js";
 import { createCard } from "./card.js";
 import { dfFeatures } from "./df.js";
 import { createSheet } from "./sheet.js";
 import { generateDemo, stepDemo } from "./demo.js";
-import { watchMapTheme, themeKey, onThemeChange } from "./theme.js";
+import { watchMapTheme, themeKey, onThemeChange, cycleTheme, themePref } from "./theme.js";
+import { iconSvg, spriteSvg, LEGEND } from "./iconsvg.js";
+import { LAYER_GROUPS, AGE_OPTIONS, staleSecOf, ageFade, passesAge, SHORTCUTS } from "./view.js";
 import { mergeTrails, appendLive, toLine } from "./trail.js";
 import { cellsToGeo, LEVEL_COLOURS } from "./jamlayer.js";
 import { clusterPoints, shouldCluster } from "./cluster.js";
@@ -23,6 +25,7 @@ const VIEW = (new URLSearchParams(location.search).get("view") || "").split(",")
 const HAS_VIEW = VIEW.length === 3 && VIEW.every(Number.isFinite);
 const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const $ = (id) => document.getElementById(id);
+document.body.insertAdjacentHTML("afterbegin", spriteSvg());   // the icon set for everything outside the map canvas (see iconsvg.js)
 
 const KINDS = [
   { id: "aircraft", name: "Aircraft", color: "#e6e8ea", shape: "narrow" },
@@ -54,6 +57,12 @@ let query = "";
 let followId = null;      // id being followed (map kept centred)
 let showTrack = true;     // draw the selected track's trail (remembered across reloads)
 try { if (localStorage.getItem("onair.map.showTrack") === "0") showTrack = false; } catch { /* storage blocked */ }
+let maxAgeMin = 0;        // age filter in minutes (0 = any), remembered
+try { maxAgeMin = Number(localStorage.getItem("onair.map.maxAge")) || 0; } catch { /* storage blocked */ }
+/** Report age in seconds: the hub's `age` field is the age when it was stored, so add the time since then. */
+function reportAgeSec(t, now = Date.now()) { return Math.max(0, (now - positionTimeMs(t)) / 1000); }
+function agePasses(t, now) { return passesAge(reportAgeSec(t, now), maxAgeMin); }
+function staleOf(t) { const s = srcOf(t); return staleSecOf(t.kind, s && SRC[s] ? SRC[s].stale : undefined); }
 let demoMeta = {};
 let altMode = false;      // colour aircraft by altitude (remembered)
 try { altMode = localStorage.getItem("onair.map.altColor") === "1"; } catch { /* storage blocked */ }
@@ -325,9 +334,11 @@ map.on("sourcedata", (e) => { if (e.sourceId === "live" && liveBusy && map.isSou
 function geojson() {
   const features = [];
   const theme = themeKey();
+  const nowMs = Date.now();
   for (const t of tracks.values()) {
     if (!on[t.kind] || t.kind === "doa" || t.kind === "fix") continue;   // drawn by the DF layers
     if (byFilter && !byMatches(t, byFilter)) continue;
+    if (maxAgeMin && !agePasses(t, nowMs)) continue;
     const hdg = effectiveHeading(t);
     const dot = datalinkDotUntilHeading(t, hdg);
     const shape = shapeFor(t);
@@ -349,6 +360,7 @@ function geojson() {
         iconRot: shapeRotates(shape) && hdg != null && !dot && !(t.dv && !(t.speed >= 8)) ? 1 : 0,
         sel: t.id === selected ? 1 : 0,
         est: t.est ? 1 : 0,   // an estimated (dead-reckoned) position: drawn as a ghost
+        op: ageFade(reportAgeSec(t, nowMs), staleOf(t)),   // older reports fade out
       },
       geometry: { type: "Point", coordinates: displayLonLat(t) },
     });
@@ -512,45 +524,56 @@ function esc(s) {
 
 // ---------- layers, list, stats ----------
 
-const miniCache = new Map();
-/** Data URL of a small icon (cached per shape+colour) so lists use <img> instead of redrawing canvases. */
-function miniUrl(shape, color) {
-  const k = shape + color + themeKey();
-  let u = miniCache.get(k);
-  if (!u) {
-    const c = document.createElement("canvas");
-    paintMini(c, shape, color, 18, themeKey());
-    u = c.toDataURL();
-    miniCache.set(k, u);
-  }
-  return u;
-}
-
 watchMapTheme(map);
 
 let layersBuilt = false;
-/** Build the layer toggles once; later calls only refresh the counts (keeps focus and hover state). */
+/** Build the grouped layer rows once; later calls only refresh the counts (keeps focus and hover state). */
 function renderLayers() {
   const counts = {};
-  for (const t of tracks.values()) counts[t.kind] = (counts[t.kind] || 0) + 1;
+  const now = Date.now();
+  for (const t of tracks.values()) if (!maxAgeMin || agePasses(t, now)) counts[t.kind] = (counts[t.kind] || 0) + 1;
   const el = $("layers");
   if (!layersBuilt) {
     layersBuilt = true;
-    el.innerHTML = KINDS.map((k) => `<label data-k="${k.id}">
-      <input type="checkbox" data-k="${k.id}" checked aria-label="${k.name}">
-      <img class="ico" alt="" src="${miniUrl(k.shape, k.color)}" width="18" height="18">
-      <span>${k.name}</span>
-      <span class="n" data-n="${k.id}">0</span>
-    </label>`).join("");
+    el.innerHTML = LAYER_GROUPS.map(([title, ids]) => `<div class="lg" data-g="${esc(title)}"><div class="lg-h"><span>${esc(title)}</span><b data-gn="${esc(title)}">0</b></div>` +
+      ids.map((id) => kindOf[id]).filter(Boolean).map((k) => `<label class="lrow" data-k="${k.id}" style="--lc:${k.color}">
+        <input type="checkbox" data-k="${k.id}" checked aria-label="${k.name}">
+        ${iconSvg(k.shape, { color: k.color, size: 20 })}
+        <span>${k.name}</span>
+        <button type="button" class="only" data-only="${k.id}" title="Show only ${esc(k.name)}" aria-label="Show only ${esc(k.name)}">only</button>
+        <span class="n" data-n="${k.id}">0</span>
+        <span class="share"><i data-share="${k.id}"></i></span>
+      </label>`).join("") + "</div>").join("");
     for (const box of el.querySelectorAll("input")) {
       box.onchange = () => { on[box.dataset.k] = box.checked; box.closest("label").classList.toggle("off", !box.checked); apply(); };
     }
+    for (const b of el.querySelectorAll("button.only")) {
+      b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); soloLayers([b.dataset.only]); };
+    }
   }
+  let max = 1;
+  for (const k of KINDS) max = Math.max(max, counts[k.id] || 0);
   for (const k of KINDS) {
     const n = el.querySelector(`[data-n="${k.id}"]`);
     const v = String(counts[k.id] || 0);
     if (n && n.textContent !== v) n.textContent = v;
+    const row = el.querySelector(`.lrow[data-k="${k.id}"]`);
+    if (row) row.classList.toggle("zero", !counts[k.id]);
+    const sh = el.querySelector(`[data-share="${k.id}"]`);
+    if (sh) sh.style.setProperty("--w", ((counts[k.id] || 0) / max * 100).toFixed(0) + "%");
   }
+  for (const [title, ids] of LAYER_GROUPS) {
+    const g = el.querySelector(`[data-gn="${title}"]`);
+    const v = String(ids.reduce((a, id) => a + (counts[id] || 0), 0));
+    if (g && g.textContent !== v) g.textContent = v;
+  }
+}
+
+/** Show only the given layers (and hide the rest). */
+function soloLayers(ids) {
+  for (const k of KINDS) on[k.id] = ids.includes(k.id);
+  for (const box of $("layers").querySelectorAll("input")) { box.checked = on[box.dataset.k]; box.closest("label").classList.toggle("off", !box.checked); }
+  apply();
 }
 
 function matchText(t, q) {
@@ -564,6 +587,7 @@ function visibleTracks() {
   for (const t of tracks.values()) {
     if (!on[t.kind]) continue;
     if (byFilter && !byMatches(t, byFilter)) continue;
+    if (maxAgeMin && !agePasses(t)) continue;
     if (q && !matchText(t, q)) continue;
     out.push(t);
   }
@@ -589,7 +613,7 @@ function renderList() {
   const now = Date.now();
   el.innerHTML = list.slice(0, 200).map((t) => `
     <button type="button" data-id="${esc(t.id)}" class="${t.id === selected ? "sel" : ""}">
-      <img class="sym" alt="" src="${miniUrl(shapeFor(t), colorOf(t.kind, t))}" width="18" height="18" loading="lazy">
+      ${iconSvg(shapeFor(t), { color: colorOf(t.kind, t), size: 18, cls: "sym", rotate: t.heading, state: reportAgeSec(t, now) > staleOf(t) ? "stale" : "" })}
       <span class="lab">${esc(t.label || t.id)}</span>
       <span class="age">${esc(age(now - t.t))}</span>
       <span class="sub">${esc(cap(t.kind) + (t.sub ? " · " + t.sub : ""))}</span>
@@ -632,7 +656,7 @@ function renderStats() {
   const counts = {};
   for (const t of tracks.values()) counts[t.kind] = (counts[t.kind] || 0) + 1;
   const chips = KINDS.filter((k) => counts[k.id]).map((k) =>
-    `<span class="chip" title="${esc(k.name)}"><img alt="" src="${miniUrl(k.shape, k.color)}" width="14" height="14">${counts[k.id].toLocaleString()}<span class="chip-n"> ${esc(k.name.toLowerCase())}</span></span>`);
+    `<span class="chip" title="${esc(k.name)}">${iconSvg(k.shape, { color: k.color, size: 14 })}${counts[k.id].toLocaleString()}<span class="chip-n"> ${esc(k.name.toLowerCase())}</span></span>`);
   const html = chips.length ? chips.join("") : `<span class="chip-none">${liveOk ? "no reports" : "…"}</span>`;
   const box = $("counts");
   if (box._html !== html) { box.innerHTML = html; box._html = html; }
@@ -650,6 +674,7 @@ function apply() {
   renderLayers();
   renderListSoon();
   renderStats();
+  document.dispatchEvent(new Event("onair:tracks"));   // the ham contacts panel follows the data (ham-ui.js)
   $("hint").classList.toggle("hide", tracks.size > 0);
   $("overlay").hidden = tracks.size > 0 || liveOk || DEMO;
   if (selected && !tracks.has(selected)) clearSelection();
@@ -875,7 +900,7 @@ map.on("load", () => {
       "circle-color": ["get", "color"],
       "circle-stroke-width": 1.2,
       "circle-stroke-color": "#0b0c0d",
-      "circle-opacity": ["case", ["==", ["to-number", ["get", "est"]], 1], 0.5, 1],
+      "circle-opacity": ["*", ["to-number", ["get", "op"], 1], ["case", ["==", ["to-number", ["get", "est"]], 1], 0.5, 1]],
     },
   });
   map.addLayer({
@@ -892,7 +917,17 @@ map.on("load", () => {
       "icon-size": ["interpolate", ["linear"], ["zoom"], 1.5, ["*", 0.5, ["get", "scale"]], 4, ["*", 0.7, ["get", "scale"]], 8, ["*", 0.95, ["get", "scale"]], 12, ["*", 1.25, ["get", "scale"]]],
       "symbol-sort-key": ["to-number", ["get", "sel"]],
     },
-    paint: { "icon-opacity": ["case", ["==", ["to-number", ["get", "est"]], 1], 0.5, 1] },
+    paint: { "icon-opacity": ["*", ["to-number", ["get", "op"], 1], ["case", ["==", ["to-number", ["get", "est"]], 1], 0.5, 1]] },
+  });
+  // hovered icon: the same shape with a light halo (icon state "h"), drawn above the others
+  map.addLayer({
+    id: "symhover", type: "symbol", source: "live", filter: ["==", ["get", "id"], ""],
+    layout: {
+      "icon-image": ["concat", ["get", "icon"], "|h"],
+      "icon-rotate": ["case", ["==", ["to-number", ["get", "iconRot"]], 1], ["to-number", ["get", "heading"]], 0],
+      "icon-rotation-alignment": "map", "icon-pitch-alignment": "map", "icon-allow-overlap": true, "icon-ignore-placement": true, "icon-anchor": "center",
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 1.5, ["*", 0.5, ["get", "scale"]], 4, ["*", 0.7, ["get", "scale"]], 8, ["*", 0.95, ["get", "scale"]], 12, ["*", 1.25, ["get", "scale"]]],
+    },
   });
   // callsigns: only for the selected track, and for everything once zoomed in (the renderer drops labels that would collide)
   const labelLayout = {
@@ -1023,7 +1058,7 @@ function renderResults() {
     if (it.user && i === 0) html += `<li class="hd" role="presentation">Users</li>`;
     if (it.t && (i === 0 || resItems[i - 1].user)) html += users.length ? `<li class="hd" role="presentation">Tracks</li>` : "";
     if (it.user) html += `<li role="option" id="res${i}" data-user="${esc(it.user.name)}" aria-selected="${i === 0}"><span></span><b>${esc(it.user.name)}</b><span>${it.user.n} icon${it.user.n === 1 ? "" : "s"}</span></li>`;
-    else { const t = it.t; html += `<li role="option" id="res${i}" data-id="${esc(t.id)}" aria-selected="${i === 0}"><img alt="" src="${miniUrl(shapeFor(t), colorOf(t.kind, t))}" width="18" height="18"><b>${esc(t.label || t.id)}</b><span>${esc(cap(t.kind) + (t.sub ? " · " + t.sub : ""))}</span></li>`; }
+    else { const t = it.t; html += `<li role="option" id="res${i}" data-id="${esc(t.id)}" aria-selected="${i === 0}">${iconSvg(shapeFor(t), { color: colorOf(t.kind, t), size: 18 })}<b>${esc(t.label || t.id)}</b><span>${esc(cap(t.kind) + (t.sub ? " · " + t.sub : ""))}</span></li>`; }
   });
   resEl.innerHTML = html || `<li class="none">No match on the map right now</li>`;
   for (const li of resEl.querySelectorAll("li[data-id]")) li.onmousedown = (e) => { e.preventDefault(); pickResult(li.dataset.id); };
@@ -1200,26 +1235,11 @@ function ensureMotionLoop() {
   motionTimer = window.setInterval(refreshMotion, 250);
 }
 
-/** Fill the collapsible icon guide (what each shape means). */
+/** Fill the collapsible icon legend: every shape by group, then what normal, stale and selected look like. */
 function renderIconGuide() {
-  const g = (title, rows) => `<h4>${title}</h4>` + rows.map(([s, n]) => `<div><img alt="" src="${miniUrl(s, "#c8cacc")}" width="22" height="22">${n}</div>`).join("");
-  $("iconkey").innerHTML =
-    g("Aircraft", [
-      ["narrow", "Narrow-body jet"], ["wide", "Wide-body twin"], ["quad", "Four-engine (A380 / 747)"], ["regional", "Regional jet"], ["bizjet", "Business jet"],
-      ["turboprop", "Turboprop"], ["light", "Light aircraft"], ["lighttwin", "Light twin"], ["heli", "Helicopter"], ["fighter", "Fighter"],
-      ["delta", "Delta-wing fighter"], ["transport", "Military transport"], ["glider", "Glider"], ["balloon", "Balloon"], ["airship", "Airship"],
-      ["uav", "Fixed-wing UAV"], ["plane", "Unknown aircraft"], ["vehicle", "Ground vehicle"],
-    ])
-    + g("Ships (the dashed line is the course)", [
-      ["ship_cargo", "Cargo"], ["ship_tanker", "Tanker"], ["ship_passenger", "Passenger / ferry"], ["ship_hsc", "High-speed craft"], ["ship_tug", "Tug"],
-      ["ship_fishing", "Fishing"], ["ship_sailing", "Sailing"], ["ship_pleasure", "Pleasure craft"], ["ship_military", "Military"], ["ship_sar", "Search and rescue"],
-      ["ship_pilot", "Pilot"], ["ship_dredger", "Dredger"], ["ship_other", "Other / unknown"],
-    ])
-    + g("Other", [
-      ["drone", "Drone"], ["drone_rid", "Drone with Remote ID"], ["sonde", "Radiosonde"], ["sat", "Satellite"], ["sat_gnss", "GNSS satellite"],
-      ["aprs_car", "APRS vehicle"], ["aprs_truck", "APRS truck"], ["aprs_house", "APRS home"], ["aprs_wx", "APRS weather station"],
-      ["aprs_digi", "APRS digipeater"], ["aprs_balloon", "APRS balloon"], ["aprs_ship", "APRS boat"], ["ham", "Amateur station"], ["buoy", "Buoy"],
-    ]);
+  const g = (title, rows) => `<h4>${esc(title)}</h4>` + rows.map(([sh, n]) => `<div>${iconSvg(sh, { color: "#c8cacc", size: 22 })}${esc(n)}</div>`).join("");
+  $("iconkey").innerHTML = LEGEND.map(([title, rows]) => g(title, rows)).join("") +
+    `<div class="lstates"><span>${iconSvg("narrow", { color: "#e6e8ea", size: 20 })}Live</span><span>${iconSvg("narrow", { color: "#e6e8ea", size: 20, state: "stale" })}Stale: fades with age</span><span>${iconSvg("narrow", { color: "#e6e8ea", size: 20, state: "sel" })}Selected</span></div>`;
 }
 
 // altitude colouring: option + legend in the Filters sheet
@@ -1248,13 +1268,99 @@ onThemeChange((k) => {
       map.setPaintProperty(id, "text-halo-color", dark ? "#0b0c0d" : "#ffffff");
     } catch { /* layers not added yet */ }
   }
-  for (const k2 of KINDS) {
-    const img = document.querySelector(`#layers label[data-k="${k2.id}"] img.ico`);
-    if (img) img.src = miniUrl(k2.shape, k2.color);
-  }
+  syncThemeBtn();
   renderIconGuide();
   renderListSoon();
   apply();
+});
+
+// ---------- filters, hover tooltip, theme button, shortcuts ----------
+
+const ageSel = $("ageSel");
+if (ageSel) {
+  ageSel.innerHTML = AGE_OPTIONS.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
+  ageSel.value = AGE_OPTIONS.some(([v]) => v === String(maxAgeMin)) ? String(maxAgeMin) : "";
+  ageSel.onchange = () => {
+    maxAgeMin = Number(ageSel.value) || 0;
+    try { localStorage.setItem("onair.map.maxAge", String(maxAgeMin)); } catch { /* storage blocked */ }
+    renderLayers(); renderListSoon(); apply();
+  };
+}
+$("filtersReset")?.addEventListener("click", () => {
+  maxAgeMin = 0; if (ageSel) ageSel.value = "";
+  try { localStorage.removeItem("onair.map.maxAge"); } catch { /* storage blocked */ }
+  for (const k of KINDS) on[k.id] = true;
+  for (const box of $("layers").querySelectorAll("input")) { box.checked = true; box.closest("label").classList.remove("off"); }
+  renderLayers(); renderListSoon(); apply();
+});
+
+function syncThemeBtn() {
+  const b = $("themeBtn");
+  if (!b) return;
+  const p = themePref();
+  b.title = "Theme: " + p + " (T to change)";
+  b.setAttribute("aria-label", "Theme: " + p + ". Press to change");
+}
+$("themeBtn")?.addEventListener("click", () => { cycleTheme(); syncThemeBtn(); toast("Theme: " + themePref()); });
+syncThemeBtn();
+
+// hover: the icon gets a halo and a small tooltip (mouse only; touch has the card)
+const tip = $("tip");
+let hoverId = "";
+function setHover(id) {
+  if (id === hoverId) return;
+  hoverId = id;
+  try { map.setFilter("symhover", ["all", ["==", ["get", "id"], id], ["==", ["to-number", ["get", "sym"]], 1]]); } catch { /* layer not added yet */ }
+}
+function tipHtml(t) {
+  const m = t.meta || {};
+  const bits = [];
+  if (t.alt != null && Number.isFinite(t.alt)) bits.push(Math.round(t.alt).toLocaleString() + " ft");
+  if (t.speed != null && Number.isFinite(t.speed)) bits.push(Math.round(t.speed) + " kt");
+  bits.push(age(Date.now() - t.t) + " ago");
+  return `<b>${esc(t.label || t.id)}</b><span>${esc(cap(t.kind) + (t.sub ? " · " + t.sub : "") + (m.type ? " · " + m.type : ""))}</span><div class="tl">${bits.map((x) => `<span>${esc(x)}</span>`).join("")}</div>`;
+}
+if (window.matchMedia("(hover: hover)").matches) {
+  map.on("mousemove", (e) => {
+    if (!map.getLayer("sym")) return;
+    const box = [[e.point.x - 10, e.point.y - 10], [e.point.x + 10, e.point.y + 10]];
+    const f = map.queryRenderedFeatures(box, { layers: ["sym", "dot"] })[0];
+    const t = f && tracks.get(f.properties.id);
+    if (!t) { setHover(""); tip.hidden = true; return; }
+    setHover(t.id);
+    tip.innerHTML = tipHtml(t);
+    tip.hidden = false;
+    const r = $("map").getBoundingClientRect();
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    tip.style.left = Math.min(r.left + e.point.x + 14, window.innerWidth - w - 8) + "px";
+    tip.style.top = Math.max(8, r.top + e.point.y - h - 12) + "px";
+  });
+  map.getCanvas().addEventListener("mouseleave", () => { setHover(""); tip.hidden = true; });
+}
+
+// keyboard help
+const help = $("help");
+function showHelp(v) { if (help) help.hidden = !v; }
+if (help) {
+  $("helpList").innerHTML = SHORTCUTS.map(([k, d]) => `<dt><kbd>${esc(k)}</kbd></dt><dd>${esc(d)}</dd>`).join("");
+  $("helpBtn")?.addEventListener("click", () => showHelp(true));
+  $("helpClose")?.addEventListener("click", () => showHelp(false));
+  help.addEventListener("click", (e) => { if (e.target === help) showHelp(false); });
+}
+document.addEventListener("keydown", (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || "")) return;
+  const k = e.key;
+  if (k === "Escape" && help && !help.hidden) { showHelp(false); e.stopImmediatePropagation(); return; }
+  if (k === "?") { showHelp(help.hidden); return; }
+  if (k === "t" || k === "T") { cycleTheme(); syncThemeBtn(); toast("Theme: " + themePref()); return; }
+  if (k === "l" || k === "L") { const r = $("rail"); if (window.matchMedia("(max-width: 860px)").matches) setRailOpen(!r.classList.contains("open")); else { r.classList.toggle("collapsed"); $("map").classList.toggle("wide"); map.resize(); } return; }
+  if (k === "f" || k === "F") { if (selected) { followId = followId === selected ? null : selected; card.syncToggles(); } return; }
+  if (k === "0") { map.easeTo({ center: [10, 30], zoom: 2, duration: REDUCED ? 0 : 400 }); return; }
+  if (k === "a" || k === "A") { soloLayers(KINDS.map((x) => x.id)); return; }
+  if (k === "+" || k === "=") { map.zoomIn(); return; }
+  if (k === "-" || k === "_") { map.zoomOut(); return; }
+  if (/^[1-5]$/.test(k)) { const g = LAYER_GROUPS[Number(k) - 1]; if (g) soloLayers(g[1]); }
 });
 
 // ---------- start ----------
