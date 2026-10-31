@@ -2,6 +2,7 @@
 // and demodulators for 600, 1200 and 10500 bit/s until one of them holds frame sync; the frames go to the SU layer (aero_su.h).
 #include "dect2/session/mode_adapters.h"
 #include "dect2/aero/aero_rx.h"
+#include "dect2/automation/engine.h"
 #include "dect2/results/results_io.h"
 #include "dect2/aero/aero_demod.h"
 #include "dect2/aero/aero_phy.h"
@@ -412,6 +413,16 @@ struct AeroReceiver::Impl {
             if (pos.valid) { am.hasPos = true; am.lat = pos.lat; am.lon = pos.lon; }
             const double heardOff = chanFreq(c) - offsetHz;
             am.heardOffsetHz = heardOff;
+            if (automation::wants(automation::FMsg)) {   // "Save decoded messages", Integrations, automations (automation/engine.h)
+                char aes[16];
+                std::snprintf(aes, sizeof aes, "%06X", am.aesId);
+                automation::Event ex;
+                ex.str("registration", am.registration).str("flight", am.flight).str("label", am.label).str("label_text", am.labelText).str("aes", aes)
+                  .flag("uplink", am.uplink).flag("crc_ok", am.crcOk).num("bit_rate", am.bitRate).num("ges_id", am.gesId).num("heard_offset_hz", am.heardOffsetHz);
+                if (!am.decoded.empty()) ex.str("decoded", am.decoded);
+                if (am.hasPos) ex.num("lat", am.lat).num("lon", am.lon);
+                automation::emitMessage("aero", "Inmarsat Aero", 0, am.registration.empty() ? std::string(aes) : am.registration, am.text, e.ebn0Db, std::move(ex));
+            }
             messages.push_back(am);
             if (messages.size() > kMaxMessages) messages.erase(messages.begin());
             messagesTotal++;

@@ -12,6 +12,8 @@
 #include "dect2/common/u8file.h"
 #include "dect2/tv/videogen.h"
 #include <algorithm>
+#include <atomic>
+#include <mutex>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -32,7 +34,7 @@ const int kAudioKbps[] = {64, 96, 128, 160, 192, 256};
 const int kSampleRates[] = {32000, 44100, 48000};
 const char* const kSourceNames[] = {N_("Camera"), N_("Still picture"), N_("Video file"), N_("Test generator")};
 const char* const kPatternNames[] = {N_("Test card"), N_("Colour bars"), N_("Grey ramp")};
-const char* const kAudioNames[] = {N_("Silence"), N_("Test tone (1 kHz)"), N_("Sound of the video file"), N_("Microphone")};
+const char* const kAudioNames[] = {N_("Silence"), N_("Test tone (1 kHz)"), N_("Sound of the video file"), N_("Microphone"), N_("Your own sound file / folder")};
 const char* const kOutputNames[] = {N_("MPEG-TS file (.ts)"), N_("UDP stream"), N_("RTP stream")};
 const char* const kFitNames[] = {N_("Stretch"), N_("Letterbox"), N_("Crop")};
 const char* const kContentNames[] = {N_("Video only"), N_("Video + audio"), N_("Video + multiple audio tracks")};
@@ -107,7 +109,7 @@ struct State {
     std::vector<dect2::VideoInputDevice> cams, camsFound;
     std::vector<dect2::AudioInputDevice> mics, micsFound;
     VideoGenerator gen;
-    std::string msg;
+    std::string msg, note;   // msg: a problem (red); note: what a drop just set
     std::string savedCfg, savedLayout, sentLayout;
     double lastSave = 0;
     double minRateNoticeUntil = 0;   // the video bitrate was raised to the MPEG-2 minimum: explain why until then
@@ -156,10 +158,12 @@ void writeText(const std::string& p, const std::string& t) {
 std::string saveCfg(const GenConfig& c) {
     char b[64];
     std::string o = saveSettings(c.enc);
-    o += "g.src=" + std::to_string((int)c.source) + "\n" + "g.cam=" + c.cameraId + "\n" + "g.path=" + c.path + "\n";
+    o += "g.src=" + std::to_string((int)c.source) + "\n" + "g.cam=" + c.cameraId + "\n" + "g.path=" + c.path + "\n" + "g.apath=" + c.audioPath + "\n" + "g.loop=" + (c.loop ? "1" : "0") + "\n";
     o += "g.pat=" + std::to_string(c.pattern) + "\n";
     o += "g.audio=" + std::to_string((int)c.audio) + "\n" + "g.mic=" + c.micId + "\n" + "g.out=" + std::to_string((int)c.output) + "\n";
     o += "g.ts=" + c.tsPath + "\n" + "g.host=" + c.host + "\n" + "g.port=" + std::to_string(c.port) + "\n" + "g.ttl=" + std::to_string(c.ttl) + "\n";
+    snprintf(b, sizeof b, "%.1f", c.slideSeconds);
+    o += std::string("g.slide=") + b + "\n";
     snprintf(b, sizeof b, "%.3f", c.seconds);
     o += std::string("g.secs=") + b + "\n" + "g.fit=" + std::to_string((int)c.fit) + "\n";
     return o;
@@ -181,7 +185,10 @@ void loadCfg(const std::string& text, GenConfig& c) {
         else if (k == "pat") c.pattern = std::clamp(i, 0, 2);
         else if (k == "cam") c.cameraId = v;
         else if (k == "path") c.path = v;
-        else if (k == "audio") c.audio = (AudioSource)std::clamp(i, 0, 3);
+        else if (k == "audio") c.audio = (AudioSource)std::clamp(i, 0, 4);
+        else if (k == "apath") c.audioPath = v;
+        else if (k == "loop") c.loop = i != 0;
+        else if (k == "slide") c.slideSeconds = std::clamp(atof(v.c_str()), 0.5, 3600.0);
         else if (k == "mic") c.micId = v;
         else if (k == "out") c.output = (Output)std::clamp(i, 0, 2);
         else if (k == "ts" && !v.empty()) c.tsPath = v;
@@ -296,6 +303,46 @@ void saveSoon(State& s) {
 
 // ---- the first tab: sources, output, encoding ----
 
+// the stream length follows what was chosen: a video's own length, a slideshow's pictures times their seconds
+void fitLength(State& s) {
+    GenConfig& c = s.cfg;
+    if (s.lengthEdited) return;
+    if (c.source == Source::VideoFile) {
+        const auto v = listMedia(c.path, MediaKind::Video);
+        double d = 0;
+        for (const auto& f : v) d += mediaSeconds(f);
+        if (d > 0) c.seconds = d;
+    } else if (c.source == Source::Picture) {
+        const size_t n = listMedia(c.path, MediaKind::Picture).size();
+        c.seconds = n > 1 ? (double)n * std::max(0.5, c.slideSeconds) : 60;
+    }
+}
+
+// Files dropped on the window (GLFW's drop callback, vgQueueDrop): a picture or a folder of pictures becomes the picture / slideshow, a
+// video or a folder of videos the video, a sound file or folder the sound; one drop sets only its own slot.
+std::mutex gDropMu;
+std::vector<std::string> gDrops;
+std::atomic<bool> gWantDrops{false};
+
+void applyDrops(State& s) {
+    std::vector<std::string> d;
+    { std::lock_guard<std::mutex> lk(gDropMu); d.swap(gDrops); }
+    if (d.empty() || s.gen.running()) return;
+    GenConfig& c = s.cfg;
+    for (const std::string& p : d) {
+        const MediaKind k = dropKind(p);
+        if (k == MediaKind::Picture) { c.source = Source::Picture; c.path = p; fitLength(s); s.note = std::string(tr("Picture set: ")) + p; }
+        else if (k == MediaKind::Video) {
+            c.source = Source::VideoFile; c.path = p;
+            if (c.audio == AudioSource::Silence) c.audio = AudioSource::FromFile;
+            fitLength(s);
+            s.note = std::string(tr("Video set: ")) + p;
+        }
+        else if (k == MediaKind::Audio) { c.audio = AudioSource::AudioFile; c.audioPath = p; s.note = std::string(tr("Sound set: ")) + p; }
+        else s.msg = std::string(tr("Not a picture, video or sound: ")) + p;
+    }
+}
+
 void sourceSection(State& s, float col, float w) {
     GenConfig& c = s.cfg;
     ImGui::SeparatorText(tr("Source"));
@@ -325,22 +372,29 @@ void sourceSection(State& s, float col, float w) {
         rowLabel(N_("Pattern"), col);
         combo("##vgpat", c.pattern, kPatternNames, 3, w);
     } else {
-        rowLabel(c.source == Source::Picture ? N_("Picture") : N_("Video file"), col);
-        if (inputText("##vgpath", c.path, w - 90 * gUi) && c.source == Source::VideoFile) {
-            const double d = mediaSeconds(c.path);
-            if (d > 0) { c.seconds = d; s.lengthEdited = false; }
+        rowLabel(c.source == Source::Picture ? N_("Picture or folder") : N_("Video file or folder"), col);
+        if (inputText("##vgpath", c.path, w - 170 * gUi)) fitLength(s);
+        ImGui::SameLine();
+        if (ImGui::Button(tr("File...##vgpath"))) {
+            const std::string p = plat::openFileDialog();
+            if (!p.empty()) { c.path = p; fitLength(s); }
         }
         ImGui::SameLine();
-        if (ImGui::Button(tr("Browse...##vgpath"))) {
-            const std::string p = plat::openFileDialog();
-            if (!p.empty()) {
-                c.path = p;
-                if (c.source == Source::VideoFile) {
-                    const double d = mediaSeconds(p);   // the length follows the video
-                    if (d > 0) { c.seconds = d; s.lengthEdited = false; }
-                }
-            }
+        if (ImGui::Button(tr("Folder...##vgpath"))) {
+            const std::string p = plat::openFolderDialog();
+            if (!p.empty()) { c.path = p; fitLength(s); }
         }
+        const auto items = listMedia(c.path, c.source == Source::Picture ? MediaKind::Picture : MediaKind::Video);
+        if (!c.path.empty() && items.empty()) ImGui::TextColored(ImVec4(1.f, 0.6f, 0.4f, 1), "%s", tr("Nothing to play there: choose a file, or a folder with pictures / videos."));
+        else if (items.size() > 1) ImGui::TextDisabled(c.source == Source::Picture ? tr("Slideshow of %d pictures, in name order") : tr("%d videos, played in name order"), (int)items.size());
+        rowLabel(N_("Repeat"), col);
+        ImGui::Checkbox(tr("Start again at the end##vgloop"), &c.loop);
+        if (c.source == Source::Picture && items.size() > 1) {
+            rowLabel(N_("Seconds per picture"), col);
+            ImGui::SetNextItemWidth(w);
+            if (ImGui::InputDouble("##vgslide", &c.slideSeconds, 1.0, 5.0, "%.1f")) { c.slideSeconds = std::clamp(c.slideSeconds, 0.5, 3600.0); fitLength(s); }
+        }
+        ImGui::TextDisabled("%s", tr("Tip: drag a picture, video, sound file or folder onto this window."));
     }
     rowLabel(N_("Picture fit"), col);
     int fit = (int)c.fit;
@@ -350,8 +404,20 @@ void sourceSection(State& s, float col, float w) {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("When the source has another shape than the output (a 4:3 camera in 16:9): stretch it, keep it whole with black bars, or fill the picture and cut the edges"));
     rowLabel(N_("Sound"), col);
     int au = (int)c.audio;
-    std::vector<bool> en = {true, true, c.source == Source::VideoFile, true};
-    if (combo("##vgaudio", au, kAudioNames, 4, w, &en, N_("Only with a video file as input"))) c.audio = (AudioSource)au;
+    std::vector<bool> en = {true, true, c.source == Source::VideoFile, true, true};
+    if (combo("##vgaudio", au, kAudioNames, 5, w, &en, N_("Only with a video file as input"))) c.audio = (AudioSource)au;
+    if (c.audio == AudioSource::AudioFile) {
+        rowLabel(N_("Sound file or folder"), col);
+        inputText("##vgapath", c.audioPath, w - 170 * gUi);
+        ImGui::SameLine();
+        if (ImGui::Button(tr("File...##vgapath"))) { const std::string p = plat::openFileDialog(); if (!p.empty()) c.audioPath = p; }
+        ImGui::SameLine();
+        if (ImGui::Button(tr("Folder...##vgapath"))) { const std::string p = plat::openFolderDialog(); if (!p.empty()) c.audioPath = p; }
+        const size_t n = listMedia(c.audioPath, MediaKind::Audio).size();
+        if (!c.audioPath.empty() && n == 0) ImGui::TextColored(ImVec4(1.f, 0.6f, 0.4f, 1), "%s", tr("No sound files there."));
+        else if (n > 1) ImGui::TextDisabled(tr("%d sound files, played in name order"), (int)n);
+        if (c.source == Source::Camera) ImGui::TextDisabled("%s", tr("The sound file replaces the camera's microphone."));
+    }
     if (c.audio == AudioSource::Microphone) {
         rowLabel(N_("Microphone"), col);
         std::string cur = tr("Default input");
@@ -968,7 +1034,7 @@ void controlBar(State& s) {
             run.enc.videoEncoder = pickVideoEncoder(c.enc.videoEncoder, videoEncoders());
             run.font = s.font;
             std::string err;
-            if (s.gen.start(run, err)) { s.msg.clear(); s.sentLayout = saveLayout(c.overlay); s.startedAt = ImGui::GetTime(); s.prevSerial = 0; }
+            if (s.gen.start(run, err)) { s.msg.clear(); s.note.clear(); s.sentLayout = saveLayout(c.overlay); s.startedAt = ImGui::GetTime(); s.prevSerial = 0; }
             else s.msg = err;
         }
         ImGui::EndDisabled();
@@ -998,6 +1064,8 @@ void controlBar(State& s) {
         ImGui::TextColored(ImVec4(0.95f, 0.4f, 0.35f, 1), "%s", st.error.c_str());
     } else if (!s.msg.empty()) {
         ImGui::TextColored(ImVec4(0.95f, 0.4f, 0.35f, 1), "%s", tr(s.msg.c_str()));
+    } else if (!s.note.empty()) {
+        ImGui::TextDisabled("%s", s.note.c_str());
     } else if (st.finished && c.output == Output::File && st.frames > 0) {
         ImGui::TextDisabled("%s: %s (%.1f s, %.1f MB). %s", tr("Written"), c.tsPath.c_str(), st.seconds, st.bytes / 1e6, tr("The transmitter takes it as its \"MPEG-TS / video file\"."));
     } else ImGui::NewLine();
@@ -1019,13 +1087,23 @@ void controlBar(State& s) {
 
 } // namespace
 
+bool vgQueueDrop(int n, const char** paths) {
+    if (!gWantDrops) return false;
+    std::lock_guard<std::mutex> lk(gDropMu);
+    for (int i = 0; i < n; i++) gDrops.push_back(paths[i]);
+    return true;
+}
+
 void videoGenWindow(App& a) {
     State& s = S();
     if (!a.videoGenOpen) {
+        gWantDrops = false;
         if (s.init && s.gen.running()) s.gen.stop();   // closing the window stops the stream or the file (it is closed properly)
         return;
     }
     loadOnce(s);
+    gWantDrops = true;
+    applyDrops(s);
     if (!s.probed && s.probe.valid() && s.probe.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
         s.probe.get();
         s.cams = s.camsFound;

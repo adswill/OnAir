@@ -575,7 +575,7 @@ void remoteApiSection(App& a) {
     ch2 |= ImGui::IsItemDeactivatedAfterEdit();
     ch2 |= ImGui::Checkbox(tr("rigctl: let other computers connect (changes need \\auth <token> first)"), &s.rigCfg.allowLan);
     if (s.rigCfg.on && !s.rigSrv.error().empty()) ImGui::TextColored(pal::badRed(), "%s", s.rigSrv.error().c_str());
-    ch2 |= ImGui::Checkbox(tr("Send decoded messages as UDP JSON lines"), &s.udpCfg.on);
+    ch2 |= ImGui::Checkbox(tr("Send decoded messages as UDP JSON lines (network only, no file; use View > Integrations > Save messages for files)"), &s.udpCfg.on);
     char hb[32];
     snprintf(hb, sizeof hb, "%s", s.udpCfg.host.c_str());
     ImGui::SetNextItemWidth(130 * gUi);

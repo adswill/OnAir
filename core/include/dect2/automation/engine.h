@@ -47,7 +47,7 @@ struct FireReport {
 
 struct RuleStats { int matched = 0, fired = 0, suppressed = 0, errors = 0; double lastFired = 0; std::string lastError; };
 
-enum Family { FAdsb, FAcars, FVdl2, FHfdl, FPager, FAis, FAprs, FSonde, FGnss, FLora, FBle, FRid, FDsc, FSignal, FReceiver, FSatellite, FTime, FPlugin, FVoice, FSession, kFamilies };   // FVoice: "voice.<type>" call events of the digital voice modes, FSession: "session.<kind>" end-of-session summaries (core/include/dect2/session); FPlugin: "plugin.<type>" events that plugins emit (core/include/dect2/plugin)
+enum Family { FAdsb, FAcars, FVdl2, FHfdl, FPager, FAis, FAprs, FSonde, FGnss, FLora, FBle, FRid, FDsc, FSignal, FReceiver, FSatellite, FTime, FPlugin, FVoice, FSession, FMsg, kFamilies };   // FVoice: "voice.<type>" call events of the digital voice modes, FMsg: "msg.<kind>" text messages of modes without a family of their own (Inmarsat-C, Aero, NAVTEX ...; see automation::emitMessage), FSession: "session.<kind>" end-of-session summaries (core/include/dect2/session); FPlugin: "plugin.<type>" events that plugins emit (core/include/dect2/plugin)
 static_assert(kFamilies <= 64, "the family masks are 64 bits wide (FamilyMask)");
 // A set of families as a bit mask (bit = Family). 64 bits: more than 32 families are possible, so never write 1u << family.
 using FamilyMask = uint64_t;
@@ -134,6 +134,17 @@ private:
 Engine& global();
 inline bool wants(Family f) { return global().wants(f); }
 inline void emit(Event&& ev) { global().submit(std::move(ev)); }
+// msg.<kind>: one decoded text message of a mode that has no family of its own (kind "inmarsat_c", "aero", "navtex" ...). `source` is the
+// sender / ship / aircraft / station id, `quality` an SNR or similar (NaN = unknown), `fields` more named values. Feeds Integrations, "Save decoded
+// messages", the message database and the automations through one hook.
+inline void emitMessage(const char* kind, const std::string& mode, double freqHz, const std::string& source, const std::string& text, double quality, Event&& extra = Event()) {
+    if (!wants(FMsg)) return;
+    extra.type = std::string("msg.") + kind;
+    extra.at(wallNow(), mode, freqHz);
+    extra.str("source", source).str("text", text);
+    if (std::isfinite(quality)) extra.num("snr_db", quality);
+    emit(std::move(extra));
+}
 // receiver.state: state is started, stopped, dropped, reconnected or overload
 inline void receiverState(const char* state, const std::string& detail) {
     if (!wants(FReceiver)) return;

@@ -447,6 +447,20 @@ void testEngine() {
         Event nopos("adsb.aircraft"); nopos.str("hex", "C");
         r.eng.process(nopos);
         CHECK(r.sink.count() == 3, "an event without a position never matches a geofence");
+        {   // #403: the notification shows the distance although the event carried none
+            Rig rd;
+            Rule d = simple("D", "adsb.aircraft", "", notify("{{hex}} {{distance_km}} km"));
+            rd.eng.setRules({d});
+            rd.eng.process(aircraft("A", 1, 54.75, 25.28));
+            CHECK(rd.sink.count() == 1 && rd.sink.calls[0].second.at("body").find("km") != std::string::npos &&
+                  rd.sink.calls[0].second.at("body").find("{{") == std::string::npos && rd.sink.calls[0].second.at("body").find("A  km") == std::string::npos && rd.sink.calls[0].second.at("body").find("A 6.9") == 0,
+                  "distance_km filled from the station: %s", rd.sink.count() ? rd.sink.calls[0].second.at("body").c_str() : "");
+            Rule c = simple("C", "adsb.aircraft", "distance_km < 20", notify("c"));
+            Rig rc; rc.eng.setRules({c});
+            rc.eng.process(aircraft("A", 1, 54.75, 25.28));
+            rc.eng.process(aircraft("B", 1, 56.0, 25.28));
+            CHECK(rc.sink.count() == 1, "distance_km condition works without a distance in the event: %zu", rc.sink.count());
+        }
         Rig r2;
         r2.eng.setStation(false, 0, 0);
         r2.eng.setRules({home});
