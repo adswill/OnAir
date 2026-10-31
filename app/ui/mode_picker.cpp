@@ -135,7 +135,7 @@ void modePicker(App& a) {
     modeInfoFill();
     if (!S.open && !S.want && ImGui::IsKeyPressed(ImGuiKey_M, false) && !io.WantTextInput && !io.KeyCtrl && !io.KeySuper && !io.KeyAlt && !io.KeyShift
         && !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel))
-        S.want = true;
+    { S.want = true; io.InputQueueCharacters.resize(0); }   // the M that opened it must not land in the search box
     {   // dev/test only: DECT2_MODEPICK="tab=3,group=2,q=adsb,hidden=1,tags=2" opens the window on frame 3 of a hidden --shot run
         static const char* env = getenv("DECT2_MODEPICK");
         static int frame = 0;
