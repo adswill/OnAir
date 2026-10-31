@@ -51,6 +51,7 @@ struct Cand {
 
 struct AcarsReceiver::Impl {
     std::mutex procMu, telMu;
+    bool joinBlocks = true;
     double fs = 0, offsetHz = 0, centerHz = 131.5e6, thrDb = 8;
     int maxAct = kMaxActive;   // decoders at once (init: more on a wide capture)
     std::vector<double> userCh;
@@ -313,7 +314,7 @@ struct AcarsReceiver::Impl {
         Reasm::Done whole;
         AcarsPiece pc;
         pc.reg = m.reg; pc.label = m.label; pc.msgNum = m.msgNum; pc.downlink = m.downlink; pc.blockId = m.blockId; pc.msgSeq = m.msgSeq; pc.finalBlock = m.finalBlock;
-        const auto rr = reasm.feed(pc, AcarsMessage(m), tSec, whole, cut);
+        const auto rr = joinBlocks ? reasm.feed(pc, AcarsMessage(m), tSec, whole, cut) : Reasm::Result::Single;
         for (auto& d : cut) finishMessage(std::move(d.msg), d.blocks, d.incomplete);
         if (rr == Reasm::Result::Held) return;
         if (rr == Reasm::Result::Complete) { whole.msg.timeSec = tSec; finishMessage(std::move(whole.msg), whole.blocks, whole.incomplete); return; }
@@ -323,7 +324,7 @@ struct AcarsReceiver::Impl {
     // Everything a finished message goes through: position, aircraft table, feeds, automations, the list. Called with telMu held.
     void finishMessage(AcarsMessage&& m, int blocks, bool incomplete) {
         const double tSec = m.timeSec;
-        m.blocks = blocks; m.incomplete = incomplete; m.finalBlock = true;
+        m.blocks = blocks; m.incomplete = incomplete; if (blocks > 1) m.finalBlock = true;
         if (blocks > 1) m.serial = ++serial;
         // positions: the ARINC 622 ADS-C reports and the plain-text position reports (the code the Aero mode uses); only from aircraft
         AeroPosition pos;
@@ -463,6 +464,7 @@ void AcarsReceiver::setChannels(const std::vector<double>& hz) {
     p_->userCh = hz;
     p_->dirty = true;
 }
+void AcarsReceiver::setJoinBlocks(bool on) { std::lock_guard<std::mutex> lk(p_->procMu); p_->joinBlocks = on; }
 void AcarsReceiver::setThresholdDb(double db) { std::lock_guard<std::mutex> lk(p_->procMu); p_->thrDb = std::max(3.0, std::min(30.0, db)); }
 
 bool AcarsReceiver::ready() const {

@@ -154,7 +154,7 @@ void aisAlertsPanel(App& a) {
     if (!S.fenceErrors.empty()) for (const std::string& e : S.fenceErrors) ImGui::TextColored(ImVec4(0.9f, 0.35f, 0.3f, 1), "%s", e.c_str());
     ImGui::Spacing();
     ImGui::TextDisabled("%s", tr("Alerts use the station filter (the Filter button above the table): only the stations it shows raise them."));
-    if (ImGui::TreeNode(tr("Advanced"))) {
+    if (ImGui::TreeNode(trw("Advanced"))) {
         ch |= ImGui::SliderFloat(tr("same ship again after (minutes)"), &S.cooldownMin, 1.f, 120.f, "%.0f");
         ch |= ImGui::Checkbox(tr("my own ship is moving"), &S.ownMoving);
         if (S.ownMoving) {

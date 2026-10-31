@@ -312,7 +312,7 @@ void listBody(App& a) {
             if (ignoreId) S.g.ignore(ignoreId);
         }
     }
-    if (ImGui::TreeNode(tr("Advanced"))) {
+    if (ImGui::TreeNode(trw("Advanced"))) {
         int k = a.genAutoReleaseKhz;
         ImGui::SetNextItemWidth(110 * gUi);
         if (ImGui::InputInt(tr("Keep decoding within (kHz)"), &k, 0, 0)) { a.genAutoReleaseKhz = std::max(0, k); save = true; }

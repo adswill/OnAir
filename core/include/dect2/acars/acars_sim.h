@@ -24,6 +24,7 @@ struct AcarsSimCfg {
     double resetAt = -1;                  // call reset() then
     std::vector<double> userChannels;     // setChannels()
     double thrDb = 8;
+    bool joinBlocks = false;              // the sim measures block decoding: every block is a message (reassembly has its own test, acars_reasm)
     bool centerSet = true;                // call setCenterHz(gen.centerHz)
     double offsetHz = 0;                  // setSignalOffset
     std::function<void(cf32* x, size_t n)> mod;   // after generation, before the 8 bit rounding (tests/common/impair.h faults)
@@ -63,6 +64,7 @@ inline AcarsSimResult runAcarsSim(AcarsSimCfg c) {
     if (c.centerSet) rx.setCenterHz(c.gen.centerHz);
     if (!c.userChannels.empty()) rx.setChannels(c.userChannels);
     rx.setThresholdDb(c.thrDb);
+    rx.setJoinBlocks(c.joinBlocks);
     std::vector<cf32> buf(c.chunk);
     size_t left = (size_t)(c.secs * c.rate);
     const size_t total = left;

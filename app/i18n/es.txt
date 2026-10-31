@@ -377,8 +377,6 @@ The test signal is made at the mode's own rate (%s).	La señal de prueba se gene
 This mode needs at least %s.	Este modo necesita al menos %s.
 This radio: %s to %s.	Esta radio: %s a %s.
 The radio runs at %s.	La radio funciona a %s.
-runs at %s	funciona a %s
-The radio gave %s instead of the %s asked for.	La radio da %s en lugar de los %s pedidos.
 A higher rate shows more spectrum but needs more USB bandwidth and processor time: when the status bar reports samples lost on the radio side, choose a lower rate.	Una frecuencia mayor muestra más espectro pero necesita más ancho de banda USB y tiempo de procesador: si la barra de estado indica muestras perdidas en la radio, elija una frecuencia menor.
 A recording plays at the rate it was made at: set it with the file.	Una grabación se reproduce a la frecuencia con que se hizo: ajústela junto al archivo.
 A scan is using the radio and sets its own rate.	Una búsqueda está usando la radio y fija su propia frecuencia.

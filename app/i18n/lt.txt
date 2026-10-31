@@ -377,8 +377,6 @@ The test signal is made at the mode's own rate (%s).	Bandomasis signalas kuriama
 This mode needs at least %s.	Šiam režimui reikia bent %s.
 This radio: %s to %s.	Šis radijas: nuo %s iki %s.
 The radio runs at %s.	Radijas veikia %s dažniu.
-runs at %s	veikia %s
-The radio gave %s instead of the %s asked for.	Radijas duoda %s vietoje prašytų %s.
 A higher rate shows more spectrum but needs more USB bandwidth and processor time: when the status bar reports samples lost on the radio side, choose a lower rate.	Didesnis dažnis rodo platesnį spektrą, bet reikalauja daugiau USB pralaidumo ir procesoriaus laiko: jei būsenos juosta praneša apie radijo pusėje prarastus mėginius, pasirinkite mažesnį dažnį.
 A recording plays at the rate it was made at: set it with the file.	Įrašas atkuriamas tuo dažniu, kuriuo buvo padarytas: nustatykite jį prie failo.
 A scan is using the radio and sets its own rate.	Paieška naudoja radiją ir nustato savo dažnį.

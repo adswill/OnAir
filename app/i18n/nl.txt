@@ -370,8 +370,6 @@ The test signal is made at the mode's own rate (%s).	Het testsignaal wordt gemaa
 This mode needs at least %s.	Deze modus heeft minstens %s nodig.
 This radio: %s to %s.	Deze radio: %s tot %s.
 The radio runs at %s.	De radio draait op %s.
-runs at %s	draait op %s
-The radio gave %s instead of the %s asked for.	De radio gaf %s in plaats van de gevraagde %s.
 A higher rate shows more spectrum but needs more USB bandwidth and processor time: when the status bar reports samples lost on the radio side, choose a lower rate.	Een hogere frequentie toont meer spectrum maar vraagt meer USB-bandbreedte en rekentijd: meldt de statusbalk verloren samples aan de radiozijde, kies dan een lagere frequentie.
 A recording plays at the rate it was made at: set it with the file.	Een opname wordt afgespeeld met de frequentie waarmee hij is gemaakt: stel die in bij het bestand.
 A scan is using the radio and sets its own rate.	Een scan gebruikt de radio en stelt zijn eigen frequentie in.

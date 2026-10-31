@@ -377,8 +377,6 @@ The test signal is made at the mode's own rate (%s).	测试信号按该模式自
 This mode needs at least %s.	此模式至少需要 %s。
 This radio: %s to %s.	此设备：%s 至 %s。
 The radio runs at %s.	设备当前运行在 %s。
-runs at %s	运行在 %s
-The radio gave %s instead of the %s asked for.	设备给出的是 %s，而不是请求的 %s。
 A higher rate shows more spectrum but needs more USB bandwidth and processor time: when the status bar reports samples lost on the radio side, choose a lower rate.	更高的采样率能显示更宽的频谱，但需要更多 USB 带宽和处理器时间：状态栏报告设备端丢失样本时，请选择更低的采样率。
 A recording plays at the rate it was made at: set it with the file.	录制文件按录制时的采样率播放：请在文件处设置。
 A scan is using the radio and sets its own rate.	扫描正在使用设备，并自行设置采样率。

@@ -373,8 +373,6 @@ The test signal is made at the mode's own rate (%s).	A tesztjel az üzemmód saj
 This mode needs at least %s.	Ehhez az üzemmódhoz legalább %s kell.
 This radio: %s to %s.	Ez a rádió: %s – %s.
 The radio runs at %s.	A rádió %s sebességgel fut.
-runs at %s	%s sebességgel fut
-The radio gave %s instead of the %s asked for.	A rádió %s értéket adott a kért %s helyett.
 A higher rate shows more spectrum but needs more USB bandwidth and processor time: when the status bar reports samples lost on the radio side, choose a lower rate.	Nagyobb sebesség több spektrumot mutat, de több USB-sávszélességet és processzoridőt igényel: ha az állapotsor a rádió oldalán elveszett mintákat jelez, válassz kisebbet.
 A recording plays at the rate it was made at: set it with the file.	A felvétel azzal a sebességgel játszódik le, amivel készült: a fájllal együtt állítható.
 A scan is using the radio and sets its own rate.	Egy keresés használja a rádiót, és saját sebességet állít be.

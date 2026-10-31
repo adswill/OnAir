@@ -89,7 +89,7 @@ void section(RadioIdKind k) {
     tick(k);
     const bool dmr = k == RadioIdKind::Dmr;
     ImGui::PushID(nameOf(k));
-    if (ImGui::CollapsingHeader(tr("Names from a radio ID list"))) {
+    if (ImGui::CollapsingHeader(trw("Names from a radio ID list"))) {
         const size_t n = dect2::radioIdCount(k);
         ImGui::PushTextWrapPos(0);
         if (n) ImGui::TextDisabled("%s: %s", tr("Loaded"), s.info.empty() ? (std::to_string(n) + " radio IDs").c_str() : s.info.c_str());
