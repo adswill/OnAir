@@ -3,6 +3,7 @@
 // the stitched rate) and USB warnings, and saves the group by the radios' serials. While a group runs it shows the alignment of every seam
 // and radio (overlap mismatch, drift, lock, dropouts, delivered samples) with a Recalibrate button and a switch per radio (hot remove/add).
 #include "../app.h"
+#include "dect2/source/diversity_source.h"
 #include <algorithm>
 #include <cstdio>
 #include <string>
@@ -15,7 +16,8 @@ bool groupable(const DeviceInfo& d) { return d.isRadio() && d.kind != DeviceInfo
 void loadIntoEditor(App& a, int gi) {
     a.groupEdit = gi;
     a.groupPick.clear();
-    if (gi < 0 || gi >= (int)a.synthGroups.size()) {
+    if (gi < 0 || gi >= (int)a.synthGroups.size() || a.synthGroups[(size_t)gi].diversity) {   // a diversity pair has no editor: make it again
+        a.groupEdit = -1;
         a.groupName[0] = 0;
         a.groupCenterMhz = a.freqMhz; a.groupSpanMhz = 8.0; a.groupRateMsps = 0;
         return;
@@ -96,6 +98,35 @@ void runningStatus(App& a, const std::string& name) {
     if (!st.usbWarning.empty()) { ImGui::PushTextWrapPos(0.0f); ImGui::TextColored(ImVec4(0.95f, 0.78f, 0.25f, 1), "%s", st.usbWarning.c_str()); ImGui::PopTextWrapPos(); }
 }
 
+// the live state of a running diversity pair: what it is doing, how much it gains, the mode, a re-measure button
+void diversityRunning(App& a, const std::string& name) {
+    DiversitySourceStatus st;
+    if (!diversityStatus(name, st)) return;
+    ImGui::SeparatorText(tr("Diversity pair running"));
+    const ImVec4 good(0.4f, 0.85f, 0.45f, 1), warn(0.95f, 0.78f, 0.25f, 1);
+    ImGui::TextColored(st.combining ? good : warn, "%s", st.state.c_str());
+    for (const auto& m : st.members) {
+        ImGui::BulletText("%s: %s, %.1f %% of the samples", m.name.c_str(), m.running ? tr("delivering") : tr("not delivering"), m.deliveredPct);
+        if (!m.error.empty() && ImGui::IsItemHovered()) ImGui::SetTooltip("%s", m.error.c_str());
+    }
+    if (st.combining) {
+        ImGui::Text(tr("Signal-to-noise in the signal's band: radio 1 %.1f dB, radio 2 %.1f dB, combined about %.1f dB"), st.dsp.snrADb, st.dsp.snrBDb, st.dsp.outSnrDb);
+        ImGui::TextDisabled(tr("Frequency offset between the radios %.0f Hz, delay %d samples, level of radio 2 against radio 1 %.1f dB"), st.dsp.cfoHz, st.dsp.lagSamples, st.dsp.gainBDb);
+    }
+    int mode = st.mode;
+    ImGui::SetNextItemWidth(220 * gUi);
+    const char* modes[] = {tr("Selection (the better radio)"), tr("Maximal-ratio (adds both)")};
+    if (ImGui::Combo(tr("Combining"), &mode, modes, 2)) {
+        diversitySetMode(name, mode);
+        for (auto& g : a.synthGroups) if (g.name == name && g.diversity) { g.diversityMode = mode; savePrefs(a); }
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Maximal-ratio adds the two signals in phase so the noise partly cancels: up to 3 dB better with two equal radios. Selection simply uses the better radio and is the safe choice when the two do not hear the same signal."));
+    ImGui::SameLine();
+    if (ImGui::Button(tr("Measure again"))) diversityRealign(name);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Find the delay and frequency offset between the two radios again (after moving an antenna or a cable)."));
+    if (!st.usbWarning.empty()) { ImGui::PushTextWrapPos(0.0f); ImGui::TextColored(warn, "%s", st.usbWarning.c_str()); ImGui::PopTextWrapPos(); }
+}
+
 } // namespace
 
 void synthGroupWindow(App& a) {
@@ -110,17 +141,53 @@ void synthGroupWindow(App& a) {
                                  "Fine for the spectrum, waterfall, FM/AM, narrow voice and scanning; wide digital TV across the seams is experimental. See docs/SYNTH-WIDEBAND.md."));
     ImGui::PopTextWrapPos();
 
+    // diversity pair: two radios on one frequency, combined for weak narrowband signals (one click)
+    ImGui::SeparatorText(tr("Diversity pair (weak signals)"));
+    ImGui::PushTextWrapPos(540 * gUi);
+    ImGui::TextDisabled("%s", tr("Two radios tuned to the same frequency (two antennas, or the same antenna through a splitter) are combined into one better signal for narrowband modes "
+                                 "such as FM, AM, voice and paging. Off until you make a pair. Needs a signal both radios hear; see docs/DIVERSITY.md."));
+    ImGui::PopTextWrapPos();
+    {
+        std::vector<int> cand;
+        for (int i = 0; i < (int)a.devices.size(); i++) if (groupable(a.devices[(size_t)i])) cand.push_back(i);
+        // two radios of the same kind first (two RTL-SDRs), else the first two
+        int ia = -1, ib = -1;
+        for (size_t x = 0; x < cand.size() && ia < 0; x++)
+            for (size_t y = x + 1; y < cand.size(); y++)
+                if (a.devices[(size_t)cand[x]].board == a.devices[(size_t)cand[y]].board) { ia = cand[x]; ib = cand[y]; break; }
+        if (ia < 0 && cand.size() >= 2) { ia = cand[0]; ib = cand[1]; }
+        ImGui::BeginDisabled(ia < 0);
+        if (ImGui::Button(tr("Make a diversity pair from two radios"))) {
+            SynthGroupDef g;
+            g.diversity = true; g.diversityMode = 1;
+            g.members = {memberOf(a.devices[(size_t)ia]), memberOf(a.devices[(size_t)ib])};
+            std::string base = "Pair";
+            for (int n = 1;; n++) {
+                g.name = base + " " + std::to_string(n);
+                bool clash = false;
+                for (const auto& o : a.synthGroups) if (o.name == g.name) clash = true;
+                if (!clash) break;
+            }
+            a.synthGroups.push_back(g);
+            savePrefs(a);
+            a.devicesDirty = true;   // "Diversity: <name>" shows up in the radio list
+        }
+        ImGui::EndDisabled();
+        if (ia >= 0) { ImGui::SameLine(); ImGui::TextDisabled("%s + %s", a.devices[(size_t)ia].name.c_str(), a.devices[(size_t)ib].name.c_str()); }
+        else { ImGui::SameLine(); ImGui::TextDisabled("%s", tr("needs two radios")); }
+    }
+
     // the saved groups
     if (!a.synthGroups.empty()) {
         ImGui::SeparatorText(tr("Saved groups"));
         for (int gi = 0; gi < (int)a.synthGroups.size(); gi++) {
             ImGui::PushID(gi);
             const SynthGroupDef& g = a.synthGroups[(size_t)gi];
-            ImGui::Text("%s  (%zu radios, %.3f MHz span)", g.name.c_str(), g.members.size(), g.spanHz / 1e6);
+            if (g.diversity) ImGui::Text("%s  (%s)", g.name.c_str(), tr("diversity pair"));
+            else ImGui::Text("%s  (%zu radios, %.3f MHz span)", g.name.c_str(), g.members.size(), g.spanHz / 1e6);
             ImGui::SameLine();
-            if (ImGui::SmallButton(tr("Edit"))) loadIntoEditor(a, gi);
-            ImGui::SameLine();
-            const bool live = [&] { SynthGroupStatus s; return synthGroupStatus(g.name, s); }();
+            if (!g.diversity) { if (ImGui::SmallButton(tr("Edit"))) loadIntoEditor(a, gi); ImGui::SameLine(); }
+            const bool live = [&] { SynthGroupStatus s; DiversitySourceStatus d; return g.diversity ? diversityStatus(g.name, d) : synthGroupStatus(g.name, s); }();
             ImGui::BeginDisabled(live);
             if (ImGui::SmallButton(tr("Delete"))) {
                 a.synthGroups.erase(a.synthGroups.begin() + gi);
@@ -229,8 +296,10 @@ void synthGroupWindow(App& a) {
     ImGui::EndDisabled();
 
     // the running group (the one chosen in the radio list)
-    if (a.devIdx >= 0 && a.devIdx < (int)a.devices.size() && a.devices[(size_t)a.devIdx].kind == DeviceInfo::Group)
+    if (a.devIdx >= 0 && a.devIdx < (int)a.devices.size() && a.devices[(size_t)a.devIdx].kind == DeviceInfo::Group) {
         runningStatus(a, a.devices[(size_t)a.devIdx].nativeArgs);
+        diversityRunning(a, a.devices[(size_t)a.devIdx].nativeArgs);
+    }
 
     ImGui::End();
     if (!a.groupOpen) wasOpen = false;

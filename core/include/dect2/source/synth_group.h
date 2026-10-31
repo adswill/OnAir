@@ -30,6 +30,9 @@ struct SynthGroupDef {
     double centerHz = 100e6;                 // the frequency the dialog proposes (the receiver's own frequency is what is tuned)
     double spanHz = 8e6;                     // total span wanted
     double childRateHz = 0;                  // the members' common sample rate; 0 = automatic (2.4 Msps for RTL-SDRs, else what they all reach)
+    bool diversity = false;                  // a diversity pair (diversity_source.h): exactly 2 radios tuned to the SAME frequency and combined for weak signals,
+                                             // not stitched side by side; span and centre are not used
+    int diversityMode = 1;                   // 1 = maximal-ratio combining, 0 = selection (dsp/diversity.h)
 };
 
 // How the span is cut: centre of each slice relative to the group centre, overlap, the span reached and the stitched output rate.

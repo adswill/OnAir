@@ -188,6 +188,18 @@ public:
     void setCpuBudget(double frac) { std::lock_guard<std::mutex> g(m_); budget_ = std::max(0.0, frac); if (budget_ == 0) { finder_.setCap(0); tooSlow_ = false; } }
     // known channels (absolute Hz: the frequency database and the band plan of the mode); they are found at a lower threshold
     void setPriorsAbs(std::vector<double> absHz, bool only = false) { std::lock_guard<std::mutex> g(m_); priorsAbs_ = std::move(absHz); priorOnly_ = only; applyPriors(); }
+    // The carriers that are not within 0.6 raster steps of one of these absolute frequencies are let go now (the finder forgets them too): a channel
+    // taken off a follow list (the wide session) stops at once instead of when it falls silent.
+    void releaseOutside(const std::vector<double>& absHz) {
+        std::lock_guard<std::mutex> g(m_);
+        std::vector<int> ids;
+        for (auto& s : live_) {
+            bool keep = false;
+            for (double f : absHz) if (std::fabs(f - (center_ + s->car.hz)) < 0.6 * cfg_.stepHz) keep = true;
+            if (!keep) ids.push_back(s->car.id);
+        }
+        for (int id : ids) { finder_.forget(id); retire(id); }
+    }
     // test hook: the load as if measured (< 0: measure)
     void setLoadOverride(double v) { std::lock_guard<std::mutex> g(m_); loadOverride_ = v; }
 

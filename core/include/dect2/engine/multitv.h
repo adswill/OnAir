@@ -72,6 +72,10 @@ public:
 
     // The selected slot's packets (a burst, with the demultiplexer's snapshot after it); called on a receiver thread
     void setSink(Sink s);
+    // Only these slots get (and keep) a receiver; a running receiver on another slot is stopped. Not called: every occupied slot (up to
+    // maxChannels). Used by the wide session to place each slot on the standard it was identified as, and to switch a channel off.
+    void setAllowedSlots(const std::vector<int>& slots);
+    void clearAllowedSlots();
     void setSelected(int slot);
     int selected() const { return sel_.load(); }
 
@@ -114,6 +118,8 @@ private:
     std::mutex sinkMu_;
     int lastSelPolled_ = INT_MIN / 2;
     std::vector<TpTrack> tracks_;   // sat: the transponders followed over time (under mu_)
+    bool restrict_ = false;
+    std::vector<int> allowed_;
     int nextId_ = 1;
 };
 

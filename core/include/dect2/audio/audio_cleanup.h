@@ -17,6 +17,7 @@ namespace dect2 {
 struct AudioCleanupSettings {
     bool master = false;           // the chain is on
     bool nr = false;  float nrStrength = 0.5f;                   // 0..1
+    bool neural = false; float neuralStrength = 1.0f;            // RNNoise voice noise remover on every mode's audio (speech only; off by default)
     bool autoNotch = false;                                      // whistles, carriers, heterodynes
     bool notch = false; float notchHz = 1000.f; float notchWidth = 0.5f;   // manual notch; width 0 (narrowest) .. 1 (widest)
     bool level = false; float levelTargetDb = -20.f; float levelAmount = 0.7f; bool levelHold = true;   // RMS target, 0..1, keep noise from being boosted
@@ -37,9 +38,9 @@ public:
     void set(const AudioCleanupSettings& s);
     AudioCleanupSettings get() const;
     // fields read by the audio thread
-    std::atomic<bool> master{false}, nr{false}, autoNotch{false}, notch{false}, level{false}, levelHold{true}, gate{false}, voice{false}, deess{false};
+    std::atomic<bool> master{false}, nr{false}, neural{false}, autoNotch{false}, notch{false}, level{false}, levelHold{true}, gate{false}, voice{false}, deess{false};
     std::atomic<bool> recCleaned{false}, skipSilence{false};
-    std::atomic<float> nrStrength{0.5f}, notchHz{1000.f}, notchWidth{0.5f}, levelTargetDb{-20.f}, levelAmount{0.7f}, gateOffsetDb{9.f},
+    std::atomic<float> nrStrength{0.5f}, neuralStrength{1.0f}, notchHz{1000.f}, notchWidth{0.5f}, levelTargetDb{-20.f}, levelAmount{0.7f}, gateOffsetDb{9.f},
         voiceAmount{0.6f}, deessAmount{0.5f};
     // what the running chains do, for the UI (written by the audio threads, any of them: the last one wins)
     mutable std::atomic<float> statNrDb{0.f}, statNotchHz{0.f};

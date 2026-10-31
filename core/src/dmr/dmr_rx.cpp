@@ -30,6 +30,10 @@ constexpr int kSpecN = 1024;
 // at the input rate, ahead of the decimation (which passes +-22 kHz), so that a carrier near the edge is brought into the middle; a smaller one by
 // the oscillator at 48 kHz, after the DC removal, so that the radio's DC spike is not moved into the channel.
 constexpr int kAfcFrames = 8;
+// Fast start (3.5): a cold receiver does not wait for the whole sum. After kAfcFastFrames frames (64 ms) a carrier at least kAfcFastRatio times the noise
+// is accepted at once (an offset of 7 kHz or more would otherwise cost the first 0.2 s of a short call); weaker ones still wait for the full sum.
+constexpr int kAfcFastFrames = 3;
+constexpr double kAfcFastRatio = 20.0;
 constexpr double kCoarseHz = 7000.0;
 constexpr double kAfcRange = 18000.0, kAfcHalfWidth = 2500.0, kAfcMinStep = 1500.0, kAfcMinRatio = 4.0;
 constexpr int kPublishSamples = 12000;                      // 0.25 s at 48 kHz
@@ -281,6 +285,7 @@ struct DmrReceiver::Impl {
         if (!rsPass) rs.reset();
         dc = cf32(0, 0); dcCount = 0;
         ncoPhase = 0; ncoHz = 0; coarseHz = 0; coarsePhase = 0;
+        histPos = 0; histN = 0; replayPending = false; replayMixHz = 0;
         invert = carrierSeen = false; quietReports = 0; lastOk = 0;
         chan.reset(); mf.reset();
         prevB = cf32(1, 0);
@@ -366,15 +371,15 @@ struct DmrReceiver::Impl {
         flushAudio();
     }
 
-    void sample48(cf32 xin) {
-        // DC: the radio's spike sits in the middle of the channel. A fast start, then 0.1 s.
-        const float a = (float)(1.0 / std::min<double>((double)++dcCount, 4800.0));
-        dc += (xin - dc) * a;
-        const cf32 x = xin - dc;
-        // spectrum frames
-        specBuf.push_back(x);
-        if ((int)specBuf.size() == kSpecN) { spectrumFrame(); specBuf.clear(); }
-        // carrier offset correction
+    // The last 0.3 s of the signal after the DC removal, kept so that a carrier found late (the coarse offset search needs 64 ms or more) is replayed
+    // through the corrected oscillator: the sync of the first burst has usually gone by when the offset is known, and a short call has no second one.
+    static constexpr size_t kHist = 14400;
+    std::vector<cf32> hist = std::vector<cf32>(kHist);
+    size_t histPos = 0, histN = 0;
+    bool replayPending = false;
+    double replayMixHz = 0;                  // extra mixing the stored samples need (the coarse oscillator moved)
+
+    void chainSample(cf32 x) {
         const cf32 rot((float)std::cos(ncoPhase), (float)-std::sin(ncoPhase));
         ncoPhase += 2 * kPi * ncoHz / kWorkRate;
         if (ncoPhase > kPi) ncoPhase -= 2 * kPi; else if (ncoPhase < -kPi) ncoPhase += 2 * kPi;
@@ -388,6 +393,39 @@ struct DmrReceiver::Impl {
         link.push(y);
         const double nd = link.takeNcoDelta();
         if (nd != 0) ncoHz += nd;
+    }
+
+    void replay() {
+        replayPending = false;
+        if (histN == 0) return;
+        chan.reset(); mf.reset();
+        prevB = cf32(1, 0);
+        link.rewind(histN);
+        const double w = -2 * kPi * replayMixHz / kWorkRate;
+        const cf32 stp((float)std::cos(w), (float)std::sin(w));
+        cf32 ph(1.f, 0.f);
+        const size_t start = (histPos + kHist - histN) % kHist;
+        for (size_t i = 0; i < histN; i++) {
+            cf32& h = hist[(start + i) % kHist];
+            if (replayMixHz != 0) { h *= ph; ph *= stp; if ((i & 255) == 255) ph /= std::abs(ph); }
+            chainSample(h);
+        }
+        replayMixHz = 0;
+    }
+
+    void sample48(cf32 xin) {
+        // DC: the radio's spike sits in the middle of the channel. A fast start, then 0.1 s.
+        const float a = (float)(1.0 / std::min<double>((double)++dcCount, 4800.0));
+        dc += (xin - dc) * a;
+        const cf32 x = xin - dc;
+        hist[histPos] = x;
+        histPos = (histPos + 1) % kHist;
+        if (histN < kHist) histN++;
+        // spectrum frames
+        specBuf.push_back(x);
+        if ((int)specBuf.size() == kSpecN) { spectrumFrame(); specBuf.clear(); }
+        if (replayPending) replay();       // includes this sample
+        else chainSample(x);
         if (++samplesSincePublish >= kPublishSamples) publish();
     }
 
@@ -408,13 +446,14 @@ struct DmrReceiver::Impl {
         specFresh = false;
         afcHead = (afcHead + 1) % kAfcFrames;
         if (afcFilled < kAfcFrames) afcFilled++;
-        if (afcFilled == kAfcFrames) coarseCarrier();
+        if (afcFilled >= kAfcFastFrames) coarseCarrier(afcFilled < kAfcFrames);
     }
 
     // Where is the carrier? Only while no slot is followed. The estimate is the centre of the strongest +-2.5 kHz window, refined by the centroid of the
     // power above the noise floor (the lowest quarter of the bins within +-21 kHz, which the decimation filters pass: the channel covers less than a
     // quarter of them, wherever it is).
-    void coarseCarrier() {
+    void coarseCarrier(bool fast = false) {
+        const double minRatio = fast ? kAfcFastRatio : kAfcMinRatio;
         const double binHz = kWorkRate / kSpecN;
         // the summed spectrum in order of frequency, bin j at (j - N/2) * binHz, and its running sum
         std::vector<double>& ps = afcPrefix;
@@ -441,13 +480,13 @@ struct DmrReceiver::Impl {
             }
             // A peak at the edge of the near range with more power beyond it is the skirt of a carrier outside the range (a strong neighbour on the next
             // channel), not a carrier: its centroid would pull the oscillator off the wanted channel. Look further out instead.
-            if (range < kAfcRange && best >= kAfcMinRatio * n0 * bestBins && std::fabs(bestC) > range - 1500.0) {
+            if (range < kAfcRange && best >= minRatio * n0 * bestBins && std::fabs(bestC) > range - 1500.0) {
                 const double out = bestC > 0 ? 1500.0 : -1500.0;
                 if (sumRange(bestC + out - kAfcHalfWidth, bestC + out + kAfcHalfWidth) > 1.05 * best) best = 0;
             }
-            if (best >= kAfcMinRatio * n0 * bestBins) break;
+            if (best >= minRatio * n0 * bestBins) break;
         }
-        if (best < kAfcMinRatio * n0 * bestBins) { afcPrev = 1e9; return; }
+        if (best < minRatio * n0 * bestBins) { afcPrev = 1e9; return; }
         double num = 0, den = 0;
         for (int j = jOf(bestC - kAfcHalfWidth - 500.0); j < jOf(bestC + kAfcHalfWidth + 500.0); j++) {
             const double f = (j - kSpecN / 2) * binHz;
@@ -467,11 +506,15 @@ struct DmrReceiver::Impl {
         link.shiftOffset(est - ncoHz);
         // syncs found far off the centre were measured through the edge of the channel filter: their levels are wrong
         if (std::fabs(est - ncoHz) > 3000) link.forgetCalibration();
+        const double prevCoarse = coarseHz;
         const double total = coarseHz + est;
         if (std::fabs(total) > kCoarseHz) { coarseHz = total; ncoHz = 0; }
         else { coarseHz = 0; ncoHz = total; }
         link.setCentre(total);
         afcPrev = 1e9;
+        replayPending = true;
+        replayMixHz = coarseHz - prevCoarse;
+        if (coarseHz != prevCoarse) { std::fill(afcFrames.begin(), afcFrames.end(), 0.f); std::fill(afcSum.begin(), afcSum.end(), 0.0); afcHead = 0; }
         afcFilled = 0;      // the spectrum is taken before the oscillator, but let the filters and the sync search settle for a moment
     }
 

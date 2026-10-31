@@ -5,6 +5,7 @@
 //  - notch/band filters: the trapezoidal state-variable filter, A. Simper (Cytomic) "Linear Trapezoidal Integrated SVF"
 //  - biquads: R. Bristow-Johnson, "Audio EQ Cookbook"
 #include "dect2/audio/audio_cleanup.h"
+#include "dect2/audio/neural_nr.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -290,6 +291,8 @@ struct FloorTracker {
 struct Chan {
     float rate = 48000;
     SpecNr nr;
+    std::unique_ptr<NeuralNr> nn;   // RNNoise (neural_nr.h), made in init() (never on the audio thread); null when the rate is unsupported
+    bool nnWas = false;
     AutoNotch an;
     Svf manual; Ramp manG; float manHz = 0, manQ = 0;
     Ramp nrW, anW, eqW, dsW, lvW, gtW;
@@ -309,6 +312,7 @@ struct Chan {
         rate = r;
         int n = 128; while (n < 1024 && n < 0.0053f * r) n <<= 1;
         nr.init(n); nr.setRate(r);
+        nn.reset(NeuralNr::rateSupported((int)r) ? new NeuralNr((int)r) : nullptr); nnWas = false;
         int m = 512; while (m < 4096 && m < 0.0213f * r) m <<= 1;
         an.init(m, r);
         gFloor.init(r / 32.f); lFloor.init(r / 32.f);
@@ -352,6 +356,11 @@ struct Chan {
                 out[i] = dryD + w * (wet - dryD);
             }
             if (track) nrMean = nr.meanGainDb;
+        }
+        // 2b. neural voice noise remover (RNNoise, speech only; passes the samples through untouched while off)
+        if (nn) {
+            if (s.neural != nnWas) { nn->setEnabled(s.neural); if (s.neural) nn->reset(); nnWas = s.neural; }
+            if (s.neural) { nn->setStrength(s.neuralStrength); nn->process(out, (size_t)n); }
         }
         // 3. voice EQ + de-esser
         {
@@ -506,13 +515,14 @@ void AudioCleanupConfig::set(const AudioCleanupSettings& s) {
     nrStrength = cl(s.nrStrength, 0, 1); notchHz = cl(s.notchHz, 30, 20000); notchWidth = cl(s.notchWidth, 0, 1);
     levelTargetDb = cl(s.levelTargetDb, -40, -6); levelAmount = cl(s.levelAmount, 0, 1); gateOffsetDb = cl(s.gateOffsetDb, 3, 30);
     voiceAmount = cl(s.voiceAmount, 0, 1); deessAmount = cl(s.deessAmount, 0, 1);
+    neural = s.neural; neuralStrength = cl(s.neuralStrength, 0, 1);
     nr = s.nr; autoNotch = s.autoNotch; notch = s.notch; level = s.level; levelHold = s.levelHold; gate = s.gate; voice = s.voice; deess = s.deess;
     recCleaned = s.recCleaned; skipSilence = s.skipSilence;
     master = s.master;
 }
 AudioCleanupSettings AudioCleanupConfig::get() const {
     AudioCleanupSettings s;
-    s.master = master; s.nr = nr; s.nrStrength = nrStrength; s.autoNotch = autoNotch; s.notch = notch; s.notchHz = notchHz; s.notchWidth = notchWidth;
+    s.master = master; s.neural = neural; s.neuralStrength = neuralStrength; s.nr = nr; s.nrStrength = nrStrength; s.autoNotch = autoNotch; s.notch = notch; s.notchHz = notchHz; s.notchWidth = notchWidth;
     s.level = level; s.levelTargetDb = levelTargetDb; s.levelAmount = levelAmount; s.levelHold = levelHold; s.gate = gate; s.gateOffsetDb = gateOffsetDb;
     s.voice = voice; s.voiceAmount = voiceAmount; s.deess = deess; s.deessAmount = deessAmount; s.recCleaned = recCleaned; s.skipSilence = skipSilence;
     return s;

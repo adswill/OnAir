@@ -3,7 +3,14 @@
 Removes steady background noise from speech with [RNNoise](https://github.com/xiph/rnnoise) (Xiph.Org, BSD-3-Clause; vendored in
 `third_party/rnnoise`, tag v0.1.1, small built-in model). Off by default.
 
-Where: **General receiver** (checkbox "Noise remover (neural)" under the audio filters, shown for NFM, WFM and AM; the choice and the strength are
+Where: **every mode's sound** (since 3.5): the shared audio cleanup chain (`audio_cleanup.h`, one per audio output, so analog and digital voice
+alike: NFM, AM, SSB, DMR, P25, NXDN, D-STAR, dPMR, TETRA, M17, Iridium and the rest) has a **Voice noise remover (neural)** switch with its own
+strength, kept per kind of mode (Settings > Audio cleanup; in the simple view for the speech kinds, always in Advanced). It sits after the
+spectral noise reduction and before the voice EQ, adds about 20 ms, and is off by default. Test: `tests/audio/test_cleanup_neural.cpp` (noise
+between bursts 20 to 27 dB down at 8, 16, 24 and 48 kHz, speech level kept, any chunking, toggling, unsupported rates pass through). Do not turn it on
+together with the General receiver's own switch below (it would clean twice). The original places:
+
+**General receiver** (checkbox "Noise remover (neural)" under the audio filters, shown for NFM, WFM and AM; the choice and the strength are
 remembered per demodulator, so switching to USB, LSB or CW never has it on) and **Airband** (the mixed audio). It is not offered for
 SSB, CW, music or data modes: it treats anything that is not speech as noise.
 

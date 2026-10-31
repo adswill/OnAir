@@ -85,6 +85,7 @@ struct BankBase {
     virtual std::string startRecording(int id, const std::string& dir) = 0;
     virtual void stopRecording(int id) = 0;
     virtual void setLoadOverride(double v) = 0;
+    virtual void releaseOutside(const std::vector<double>& hz) = 0;
     double rate = 0, origin = 0;
 };
 
@@ -110,6 +111,7 @@ template <class Rx, class Tel> struct Bank : BankBase {
     std::string startRecording(int id, const std::string& dir) override { return b.startRecording(id, dir); }
     void stopRecording(int id) override { b.stopRecording(id); }
     void setLoadOverride(double v) override { b.setLoadOverride(v); }
+    void releaseOutside(const std::vector<double>& hz) override { b.releaseOutside(hz); }
 };
 
 } // namespace
@@ -137,6 +139,7 @@ struct WideModes::Impl {
     std::vector<double> extraPriors;
     bool followOnly = false;            // setFollowOnly: only these channels are decoded (a trunking follower's granted calls)
     std::vector<double> followHz;
+    std::map<int, std::vector<double>> followMode;   // setFollowOnlyFor: per mode (wide session); wins over the global one
 
     template <class Rx, class Tel> WideBank<Rx, Tel>* put(int m, WideOps<Rx, Tel> ops, Tel RxTelemetry::*slot) {
         auto* bk = new Bank<Rx, Tel>(std::move(ops), slot);
@@ -168,6 +171,12 @@ struct WideModes::Impl {
         const std::vector<FreqEntry>& db = builtinFrequencies();
         for (auto& [m, bk] : banks) {
             std::vector<double> v;
+            auto fm = followMode.find(m);
+            if (fm != followMode.end()) {   // the wide session placed these channels on this mode
+                for (double f : fm->second) if (bk->rate > 0 && std::fabs(f - centerHz) < bk->rate / 2) v.push_back(f);
+                bk->setPriorsAbs(std::move(v), true);
+                continue;
+            }
             if (followOnly) {   // nothing but the channels asked for (none: no carrier at all)
                 for (double f : followHz) if (bk->rate > 0 && std::fabs(f - centerHz) < bk->rate / 2) v.push_back(f);
                 bk->setPriorsAbs(std::move(v), true);
@@ -456,6 +465,11 @@ void WideModes::setTuning(const WideTuning& t) {
 }
 const WideTuning& WideModes::tuning() const { return p_->tuning; }
 void WideModes::setExtraPriors(const std::vector<double>& absHz) { p_->extraPriors = absHz; p_->priors(); }
+void WideModes::setFollowOnlyFor(int stdMode, bool on, const std::vector<double>& absHz) {
+    if (on) p_->followMode[stdMode] = absHz; else p_->followMode.erase(stdMode);
+    p_->priors();
+    if (on) if (BankBase* b = p_->bank(stdMode)) b->releaseOutside(absHz);
+}
 void WideModes::setFollowOnly(bool on, const std::vector<double>& absHz) { p_->followOnly = on; p_->followHz = absHz; p_->priors(); }
 
 std::string WideModes::startRecording(int m, int id, const std::string& dir) { BankBase* b = p_->bank(m); return b ? b->startRecording(id, dir) : std::string(); }

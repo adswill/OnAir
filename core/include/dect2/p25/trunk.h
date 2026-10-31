@@ -222,6 +222,7 @@ public:
     bool inSpan(double freqHz) const;
     double currentControlHz() const { return ccHz_; }
     double radioHz() const { return radioHz_; }   // where the single radio was last told to be (0: not told)
+    std::vector<double> heardControlChannels() const { return searchList(); }   // hunt order: heard on (most recent first), then the system's candidates
     std::vector<double> sliceFreqs(bool tdma) const;   // the open slices (inside the capture) of Phase 1 (tdma false) or Phase 2 calls
     void reset();
 
@@ -245,6 +246,8 @@ private:
     void goHome(double now);
     double tunedHz() const;
     void searchAt(double hz, double now);
+    std::vector<double> searchList() const;
+    std::vector<std::pair<double, double>> good_;   // frequencies a control message was heard on, and when
     void setState(FollowState s, double now) { if (state_ != s) { state_ = s; stateSince_ = now; } }
     Slot* freeSlot();
 };

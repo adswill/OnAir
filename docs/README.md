@@ -34,6 +34,7 @@ The user guides and notes that live in the repository. The same text is on the [
 | [mt63.md](mt63.md) | MT63 | MT63 is the keyboard-to-keyboard mode of Pawel Jalocha (SP9VRC) that is built to survive fading, interference and a badly tuned dial: |
 | [multi-sdr.md](multi-sdr.md) | Several radios at once (multi-SDR) | Warning shown when a receiver is added: |
 | [noise-remover.md](noise-remover.md) | Neural noise remover (Listen) | Removes steady background noise from speech with RNNoise (Xiph.Org, BSD-3-Clause; vendored in |
+| [DIVERSITY.md](DIVERSITY.md) | Diversity pair (two radios, one better signal) | Two radios on one frequency combined by selection or maximal-ratio combining for weak narrowband signals; off until a pair is made; start-up alignment, delay / offset / drift tracking, tested SNR gains and limits. |
 | [nrsp-st.md](nrsp-st.md) | SDRplay nRSP-ST (network) | Source: |
 | [optimising-a-mode.md](optimising-a-mode.md) | Optimising a mode | The rule: |
 | [PACKS.md](PACKS.md) | Data packs (work without internet) | View > Data packs lists data you can download once and then use offline: |
