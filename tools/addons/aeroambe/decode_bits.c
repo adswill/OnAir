@@ -32,7 +32,8 @@ int main(int argc, char** argv) {
         fwrite(pcm, 2, 160, out); bytes += 320; n++;
     }
     fseek(out, 4, SEEK_SET); w32(out, 36 + (uint32_t)bytes); fseek(out, 40, SEEK_SET); w32(out, (uint32_t)bytes); fclose(out); fclose(in);
-    printf("%s: %ld frames (%.1f s), uvquality %d, mute>%d: %ld muted, post-filter %s; corrected-error histogram 0..7+:", argv[2], n, n * 0.02, uvq, mute, muted, post ? "on" : "off");
+    fputs(argv[2], stdout);
+    printf(": %ld frames (%.1f s), uvquality %d, mute>%d: %ld muted, post-filter %s; corrected-error histogram 0..7+:", n, n * 0.02, uvq, mute, muted, post ? "on" : "off");
     for (int i = 0; i < 8; i++) printf(" %ld", hist[i]); printf("\n");
     return 0;
 }
