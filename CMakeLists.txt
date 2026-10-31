@@ -781,6 +781,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_mpt1327 tests/mpt1327/test_mpt1327.cpp)   # MPT1327 control channel: check code, address codewords, FFSK decoder, engine receiver
   target_link_libraries(test_mpt1327 PRIVATE dect2core)
   add_test(NAME mpt1327 COMMAND test_mpt1327)
+  add_executable(test_mpt1327_chan tests/mpt1327/test_mpt1327_chan.cpp)   # channel number to frequency
+  target_include_directories(test_mpt1327_chan PRIVATE core/include)
+  add_test(NAME mpt1327_chan COMMAND test_mpt1327_chan)
 
   add_executable(test_l1 tests/t2/test_l1.cpp)
   target_link_libraries(test_l1 PRIVATE dect2core)

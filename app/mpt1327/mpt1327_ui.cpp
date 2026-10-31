@@ -1,6 +1,7 @@
 // MPT1327 trunking screens (work in progress): lock, good and bad codewords, the system identity, the control message list
 // and the channel table.
 #include "app.h"
+#include "dect2/mpt1327/mpt1327_chan.h"
 #include "dect2/mpt1327/mpt1327_engine.h"
 #include <cstdio>
 #include <string>
@@ -33,9 +34,20 @@ void messageTable(const dect2::MptTelemetry& t, float height) {
     ImGui::EndTable();
 }
 
+// Channel plan for the Frequency column: the control channel's number and the spacing (the radio is tuned to the control channel).
+int gCtrlCh = -1;
+float gSpacingKhz = 12.5f;
+
 void channelTable(const dect2::MptTelemetry& t) {
-    if (!ImGui::BeginTable("mpt_chans", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV)) return;
+    if (gCtrlCh < 0) for (const dect2::MptChannelRow& c : t.channels) if (c.controlChannel) { gCtrlCh = c.channel; break; }   // the announced one
+    ImGui::SetNextItemWidth(90 * gUi);
+    ImGui::InputInt("Control channel number", &gCtrlCh, 0, 0);
+    ImGui::SameLine(); ImGui::SetNextItemWidth(90 * gUi);
+    ImGui::InputFloat("Spacing kHz", &gSpacingKhz, 0, 0, "%.3f");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Traffic channels are named by number. With the control channel's number and the channel spacing the frequency follows (a contiguous plan; a duplex gap needs the right number).");
+    if (!ImGui::BeginTable("mpt_chans", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV)) return;
     ImGui::TableSetupColumn("Channel", ImGuiTableColumnFlags_WidthFixed, 60 * gUi);
+    ImGui::TableSetupColumn("Frequency", ImGuiTableColumnFlags_WidthFixed, 100 * gUi);
     ImGui::TableSetupColumn("Use", ImGuiTableColumnFlags_WidthFixed, 110 * gUi);
     ImGui::TableSetupColumn("Seen", ImGuiTableColumnFlags_WidthFixed, 50 * gUi);
     ImGui::TableSetupColumn("Last called");
@@ -44,6 +56,11 @@ void channelTable(const dect2::MptTelemetry& t) {
     for (const dect2::MptChannelRow& c : t.channels) {
         ImGui::TableNextRow();
         ImGui::TableNextColumn(); ImGui::Text("%d", c.channel);
+        ImGui::TableNextColumn();
+        {
+            const double f = dect2::mpt1327::channelFreqHz(c.channel, gCtrlCh, t.centerHz, (double)gSpacingKhz * 1000.0);
+            if (f > 0) ImGui::Text("%.4f MHz", f / 1e6); else ImGui::TextDisabled("-");
+        }
         ImGui::TableNextColumn(); ImGui::TextUnformatted(c.controlChannel ? "control channel" : "traffic (GTC)");
         ImGui::TableNextColumn(); ImGui::Text("%u", (unsigned)c.count);
         ImGui::TableNextColumn(); ImGui::TextUnformatted(c.called.empty() ? "-" : c.called.c_str());
