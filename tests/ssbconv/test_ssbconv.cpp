@@ -330,6 +330,15 @@ static void testRates() {
     const auto l = r.book.list(12, all);
     CHECK(l.size() == 1 && l[0].side == Side::Lsb, "1.92 Msps capture: LSB station found (%zu)", l.size());
     if (!l.empty()) CHECK(std::fabs(l[0].dialHz - (3.7e6 - 300000)) < 250, "1.92 Msps frequency %.0f", l[0].dialHz - 3.7e6);
+    // 2.048 Msps: the decimation does not land on 48 kHz / 8 kHz exactly (47.6 kHz, 7.94 kHz audio): everything is measured with the real rates
+    const double r2 = 2048000;
+    std::vector<Station> s2;
+    s2.push_back(voice(250000, Side::Usb, 128, 43, 1e9, 0, 0, 0.5));
+    Run q;
+    q.feed(synth::make(r2, 9, s2, 0.004, 4), r2, 10.12e6);
+    const auto l2 = q.book.list(12, all);
+    CHECK(l2.size() == 1 && l2[0].side == Side::Usb, "2.048 Msps capture: USB station found (%zu)", l2.size());
+    if (!l2.empty()) CHECK(std::fabs(l2[0].dialHz - (10.12e6 + 250000)) < 250, "2.048 Msps frequency %.0f", l2[0].dialHz - 10.12e6);
 }
 
 static void testImpairmentSweep() {
