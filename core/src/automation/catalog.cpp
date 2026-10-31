@@ -73,6 +73,14 @@ std::vector<EventInfo> build() {
         {"lat", 'n', "latitude of the position in the call", "55.1"}, {"lon", 'n', "longitude of the position in the call", "11.2"}}});
     v.push_back({"signal.new", "New signal found by the sweep scanner", "Sweep scanner", "Sweep", 433.92e6, {
         {"bw_hz", 'n', "width", "12500"}, {"peak_db", 'n', "peak level dBFS", "-60"}, {"snr_db", 'n', "signal to noise ratio", "18"}}});
+    v.push_back({"signal.ssb_conversation_new", "New SSB conversation found", "Conversations window", "Conversations", 14.2e6, {
+        {"id", 'n', "conversation number", "3"}, {"freq_hz", 'n', "frequency of the suppressed carrier", "14220000"}, {"sideband", 's', "USB or LSB", "USB"}, {"band", 's', "band", "20 m"},
+        {"service", 's', "amateur, maritime SSB, aviation HF, CB or utility", "Amateur"}, {"overs", 'n', "overs so far", "1"}, {"speakers", 'n', "voices heard", "1"},
+        {"snr_db", 'n', "signal over the noise floor of the capture", "18"}, {"kind", 's', "single call, QSO, rag chew or net", "single call"}, {"talk_s", 'n', "seconds of voice", "4"}}});
+    v.push_back({"signal.ssb_conversation_ended", "SSB conversation ended", "Conversations window", "Conversations", 14.2e6, {
+        {"id", 'n', "conversation number", "3"}, {"freq_hz", 'n', "frequency of the suppressed carrier", "14220000"}, {"sideband", 's', "USB or LSB", "USB"}, {"band", 's', "band", "20 m"},
+        {"service", 's', "amateur, maritime SSB, aviation HF, CB or utility", "Amateur"}, {"overs", 'n', "overs", "9"}, {"speakers", 'n', "voices heard", "2"},
+        {"snr_db", 'n', "signal over the noise floor of the capture", "18"}, {"kind", 's', "single call, QSO, rag chew or net", "QSO"}, {"talk_s", 'n', "seconds of voice", "412"}}});
     v.push_back({"receiver.state", "Receiver state changed", "all", "", 0, {
         {"state", 's', "started, stopped, dropped, reconnected, overload", "dropped"}, {"detail", 's', "a few words", "radio stopped sending samples"}}});
     v.push_back({"satellite.aos", "Tracked satellite pass starts", "Passes window", "", 137.1e6, {

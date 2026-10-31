@@ -27,7 +27,8 @@ constexpr int kListenId = 9100;   // the Multi-VFO row this window owns
 struct Block { std::vector<sc::cf> x; double rate = 0, centre = 0, t = 0; };
 
 struct St {
-    std::mutex mu;                       // book, scanner results, settings the worker reads
+    std::mutex smu;                      // the scanner (the worker feeds it; the window changes its options). Order: smu, then mu
+    std::mutex mu;                       // book, auto-listen, recorder
     sc::ConversationBook book;
     sc::Scanner scanner;
     sc::AutoListen autoListen;
@@ -77,8 +78,12 @@ void publishEvents(const std::vector<sc::BookEvent>& ev) {
 
 void processBlock(Block& b) {
     // the scanner has its own state; the book is shared with the window
-    std::vector<sc::Detection> dets = S.scanner.feed(b.x.data(), b.x.size(), b.rate, b.centre, b.t);
-    S.busy = S.scanner.busy();
+    std::vector<sc::Detection> dets;
+    {
+        std::lock_guard<std::mutex> sl(S.smu);
+        dets = S.scanner.feed(b.x.data(), b.x.size(), b.rate, b.centre, b.t);
+        S.busy = S.scanner.busy();
+    }
     std::lock_guard<std::mutex> lk(S.mu);
     std::vector<sc::BookEvent> ev = S.book.update(b.t, dets);
     if (dets.empty()) { std::vector<sc::BookEvent> e2 = S.book.tick(b.t); ev.insert(ev.end(), e2.begin(), e2.end()); }
@@ -133,6 +138,7 @@ void tapFn(const std::complex<float>* x, size_t n, double rate) {
 }
 
 void applyOptions() {
+    std::lock_guard<std::mutex> sl(S.smu);
     std::lock_guard<std::mutex> lk(S.mu);
     sc::BookOptions bo = S.book.options();
     bo.conversationGapSec = S.demo ? 10.0 : S.gapSec; bo.overGapSec = S.overGap; bo.freqTolHz = S.tolHz;
@@ -145,6 +151,7 @@ void applyOptions() {
 void startDemo() {
     ensureStarted();
     {
+        std::lock_guard<std::mutex> sl(S.smu);
         std::lock_guard<std::mutex> lk(S.mu);
         S.book.clear(); S.scanner.reset(); S.demo = true; S.demoBusy = true; S.demoNow = 0;
         sc::BookOptions bo = S.book.options(); bo.conversationGapSec = 10; S.book.setOptions(bo);
@@ -168,6 +175,7 @@ void startDemo() {
 }
 
 void stopDemo() {
+    std::lock_guard<std::mutex> sl(S.smu);
     std::lock_guard<std::mutex> lk(S.mu);
     S.demo = false; S.demoNow = 0; S.book.clear(); S.scanner.reset();
 }
@@ -389,11 +397,11 @@ void settingsTab(App& a) {
         S.note = writeFile(p, js) ? std::string(tr("Saved ")) + p : tr("Could not save the file.");
     }
     ImGui::SameLine();
-    if (ImGui::Button(tr("Clear the list"))) { std::lock_guard<std::mutex> lk(S.mu); S.book.clear(); S.scanner.reset(); }
+    if (ImGui::Button(tr("Clear the list"))) { std::lock_guard<std::mutex> sl(S.smu); std::lock_guard<std::mutex> lk(S.mu); S.book.clear(); S.scanner.reset(); }
     (void)a;
 }
 
-void window(App& a) {
+void conversationsWindow(App& a) {
     firstWindowSize(1080 * gUi, 560 * gUi);
     if (!ImGui::Begin(trw("Conversations"), &a.ssbConvOpen)) { ImGui::End(); return; }
     const double now = nowT();
@@ -404,7 +412,7 @@ void window(App& a) {
     else if (!a.engine.running()) ImGui::TextDisabled("%s", tr("no radio running"));
     else {
         const double rate = S.lastRate.load();
-        size_t nb = 0; { std::lock_guard<std::mutex> lk(S.mu); nb = S.scanner.trackCount(); }
+        size_t nb = 0; { std::lock_guard<std::mutex> sl(S.smu); nb = S.scanner.trackCount(); }
         ImGui::TextDisabled(tr("scanning %.3f MHz, span %.0f kHz, %zu tracked, %.0f%% of one core"), a.engine.captureCentreHz() / 1e6, rate / 1e3, nb, S.busy.load() * 100);
     }
     ImGui::SameLine();
@@ -497,7 +505,7 @@ void ssbConvWindow(App& a) {
         }
         if (S.listening && !S.demo) for (VfoRow& r : a.vfoRows) if (r.id == kListenId) r.vol = (float)std::min(1.0, std::max(0.0, S.autoListen.enabled ? S.autoListen.gain(now) : 1.0));
     }
-    if (a.ssbConvOpen) window(a);
+    if (a.ssbConvOpen) conversationsWindow(a);
 }
 
 void ssbConvDevOpen(App& a, bool demo) {
