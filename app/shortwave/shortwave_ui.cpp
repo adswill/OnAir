@@ -210,7 +210,7 @@ void decoderStrip(App& a) {
         for (int i = 0; i < n; i++) {
             if (strcmp(tab[i].group, g) != 0) continue;
             const Dec d = tab[i].id;
-            if (first) { flowBreak(); ImGui::TextDisabled("%-11s", g); ImGui::SameLine(0, 4 * gUi); first = false; }
+            if (first) { flowNext(10 * gUi); ImGui::TextDisabled("%s", g); first = false; }
             const bool on = r.decoderActive(d);
             const auto* st = statusOf(a, d);
             ImGui::PushID(i);
@@ -313,11 +313,6 @@ void pane(App& a, Dec d, const dect2::SwDecoderStatus* st, float height) {
     const auto& info = dect2::swr::decoderInfo(d);
     ImGui::PushID((int)d);
     ImGui::BeginChild("##swpane", ImVec2(0, height), true);
-    ImGui::TextColored(ImVec4(0.92f, 0.78f, 0.46f, 1), "%s", info.name);
-    ImGui::SameLine(0, 8 * gUi);
-    const int state = st ? st->state : 0;
-    ImGui::TextColored(stateColor(state), "%s", st && !st->status.empty() ? st->status.c_str() : "starting");
-    ImGui::SameLine(ImGui::GetContentRegionAvail().x > 220 * gUi ? ImGui::GetWindowContentRegionMax().x - 215 * gUi : 0);
     if (ImGui::SmallButton("Clear")) r.clearDecoder(d);
     tip("Empty this pane");
     ImGui::SameLine(0, 3 * gUi);
@@ -334,6 +329,10 @@ void pane(App& a, Dec d, const dect2::SwDecoderStatus* st, float height) {
     ImGui::SameLine(0, 3 * gUi);
     if (ImGui::SmallButton("Stop")) r.stopDecoder(d);
     tip("Stop this decoder");
+    ImGui::SameLine(0, 10 * gUi);
+    const bool named = st && st->status.rfind(info.name, 0) == 0;   // the status line already starts with the decoder's name
+    if (!named) { ImGui::TextColored(ImVec4(0.92f, 0.78f, 0.46f, 1), "%s", info.name); ImGui::SameLine(0, 6 * gUi); }
+    ImGui::TextColored(stateColor(st ? st->state : 0), "%s", st && !st->status.empty() ? st->status.c_str() : "starting");
     if (st && !st->note.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextColored(pal::warnAmber(), "%s", st->note.c_str()); ImGui::PopTextWrapPos(); }
     if (st && st->image && st->image->w > 0) {
         updateTexture(a, (int)d, *st->image, st->imageSeq);
@@ -368,7 +367,7 @@ void panes(App& a) {
         return;
     }
     const ImVec2 avail = ImGui::GetContentRegionAvail();
-    const float minH = 120 * gUi;
+    const float minH = 150 * gUi;
     const bool wide = avail.x >= 760 * gUi && run.size() > 1;
     if (wide) {
         const int cols = std::min<int>((int)run.size(), avail.x >= 1100 * gUi ? 3 : 2);
@@ -390,6 +389,12 @@ void panes(App& a) {
 
 void tab(App& a) {
     load();
+    if (!gSpectrumInShell) {   // the classic layout: the waterfall (click it to tune) stays above the decoders
+        const float h = std::clamp(ImGui::GetContentRegionAvail().y * 0.30f, 150.f * gUi, 400.f * gUi);
+        ImGui::BeginChild("##swspec", ImVec2(0, h), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+        spectrumWaterfall(a, specWaterfallSplit(), false);
+        ImGui::EndChild();
+    }
     const ImVec2 avail = ImGui::GetContentRegionAvail();
     const bool twoCol = avail.x >= 980 * gUi;
     if (twoCol) {
@@ -420,7 +425,6 @@ void tab(App& a) {
         ImGui::EndChild();
         if (ImGui::CollapsingHeader("Receiver controls", ImGuiTreeNodeFlags_DefaultOpen)) generalControlsPanel(a);
     }
-    if (!gSpectrumInShell) spectrumWaterfall(a, specWaterfallSplit(), false);
 }
 
 void receiver(App& a) {
@@ -470,6 +474,8 @@ void devPress(App& a) {
     static bool done = false;
     if (done || !env || !*env || !live(a)) return;
     done = true;
+    static const char* khz = getenv("DECT2_SW_KHZ");   // dev / test only: the listening frequency in kHz (the marker on a signal of the test slice)
+    if (khz && atof(khz) > 0) generalSetListenHz(a, atof(khz) * 1e3);
     std::string s = env;
     size_t i = 0;
     while (i <= s.size()) {
