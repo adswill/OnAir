@@ -106,7 +106,7 @@ static std::vector<Scene> sceneList() {
         {"IMD pair, airspy", "airspy", 11, 446e6, 12.5e3, 2.4e6, 100e3, -105, {{600e3, -56}, {1100e3, -56}}},
         {"ADC clip from max gain", "hackrf", 11, 446e6, 12.5e3, 2.4e6, 100e3, -80, {{300e3, -55}}, 3, 8, -1, 100},
         {"DVB-T2 beside a strong tower", "hackrf", 1, 586e6, 7.6e6, 9.14e6, 0, -100, {{4e6, -60}}, 3, 8, -1, 25},
-        {"pulsed ADS-B", "hackrf", 13, 1090e6, 2e6, 2.4e6, 0, -90, {{800e3, -50}}, 15},
+        {"pulsed ADS-B (parity)", "hackrf", 13, 1090e6, 2e6, 2.4e6, 0, -90, {{800e3, -50}}, 15, 8, -1, -1000, false, 0, -0.3},
         {"stale memory prior", "hackrf", 11, 446e6, 12.5e3, 2.4e6, 100e3, -100, {{600e3, -50}, {-700e3, -52}}, 3, 8, -1, 20, true, 70},
         {"quiet band, weak (parity)", "pluto", 11, 1.65e9, 12.5e3, 2.4e6, 100e3, -122, {}, 3, 8, -1, -1000, false, 0, -0.9},
     };
@@ -223,6 +223,7 @@ static void testMeter() {
     std::mt19937 rng(7);
     std::normal_distribution<float> nd(0.f, 0.05f);
     std::vector<std::complex<float>> blk(48000);
+    { BlockStats a0; std::vector<float> s0; CHECK(!m.take(a0, s0) && !m.armed() == false, "the meter costs nothing until somebody asks, and take() arms it"); }
     const int N = 4;   // 4 blocks of 20 ms
     uint64_t clipped = 0, total = 0;
     for (int b = 0; b < 20; b++) {   // 1 s: noise with 3 clipped samples per block, a full-scale pulse once

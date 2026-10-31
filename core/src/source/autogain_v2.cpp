@@ -22,7 +22,7 @@ void AutoGainController::climbReset(double now) {
     clTrial_ = false; settled_ = false; cand_ = 0; candKind_ = 0; clStep_ = 2; rejectRun_ = 0; clMark_ = -1;
     base_ = Run(); tri_ = Run(); mBase_ = Run(); mTri_ = Run(); specPow_.clear(); specCnt_ = 0; specBase_.clear(); settledAt_ = -1e9; settledJ_ = 0;
     wasLocked_ = false; lockLostAt_ = -1; status_.clear(); limit_.clear(); lastDecision_.clear(); retuneWhy_.clear(); slope_ = 1;
-    dwellFrom_ = now; jRecent_ = 0; jRecentN_ = 0; clDir_ = 1; statusAt_ = -1e9; rejUp_ = 0; idleCycles_ = 0; idleCycles_ = 0;
+    dwellFrom_ = now; jRecent_ = 0; jRecentN_ = 0; clDir_ = 1; statusAt_ = -1e9; rejUp_ = 0; idleCycles_ = 0; goodGain_ = -1e9;
 }
 
 bool AutoGainController::objective(double& j) const {
@@ -97,6 +97,24 @@ bool AutoGainController::tickClimb(const AgInput& in, AgCommand& out) {
     if (tgt_.usePeakHold && in.adc.holdHeadroomDb < 119) eff = std::min(eff, in.adc.holdHeadroomDb);
     const double minHead = tgt_.minHeadroomDb;
     const double dwell = set_.dwellSec / sp;
+    // after an overload: back up fast (up to 12 dB a step, 1.1 s apart) to just under the gain that clipped, as the old loop did; a burst must not cost minutes
+    {
+        const bool recovering = !ovTimes_.empty() && goodGain_ > -1e8 && cur_.totalDb < goodGain_ - 2 && now - ovTimes_.back() > 1.5 / sp;
+        if (!clTrial_ && recovering && now - lastUp_ >= 1.1 / sp && now - lastDown_ >= 1.5 / sp) {
+            // never into the headroom floor again: the room the signal left (1 dB of headroom per dB of gain), in what this unit really does per nominal dB
+            const double room = headAvg_ - tgt_.minHeadroomDb - 1.0;
+            const double sc = radio_.calibrated() ? 1.0 : (radio_.driverSplits && radio_.singleControl() ? unitScale_ : 1.0);
+            const double target = std::min({maxGain(), ceilingDb(now), goodGain_, cur_.totalDb + std::max(0.0, room) / std::max(0.5, sc)});
+            if (cur_.totalDb < target - 0.5) {
+                const double to = std::min(nextStep(cur_.totalDb, std::min(12.0, target - cur_.totalDb), pol_), target);
+                if (to > cur_.totalDb + 0.01) {
+                    move(now, to, pol_, f2("recovering after an overload: back toward %.0f dB", goodGain_), out);
+                    settled_ = false; cand_ = 0;
+                    return true;
+                }
+            }
+        }
+    }
     // too close to full scale: down at once, in proportion (a trial that gets there is undone, see evaluateTrial)
     if (eff < minHead && !clTrial_ && now - lastDown_ >= 0.8 / sp) {
         const double to = nextStep(cur_.totalDb, -std::min(10.0, minHead - eff + 1.0), pol_);
@@ -193,6 +211,7 @@ bool AutoGainController::startTrial(const AgInput& in, AgCommand& out) {
     }
     // every candidate in the cycle was rejected or is not available: settled here
     settled_ = true; settledAt_ = now; settledJ_ = base_.mean; cand_ = 0; idleCycles_++;
+    if (!(in.adc.clipFraction > tgt_.clipLimit)) goodGain_ = cur_.totalDb;
     const bool comf = comfortable();
     phase_ = comf ? Phase::Frozen : Phase::Tracking;
     lastDecision_ = comf ? "settled: the decoder is comfortably over its threshold" : "settled: no neighbouring gain is better";
@@ -271,8 +290,11 @@ bool AutoGainController::evaluateTrial(const AgInput& in, AgCommand& out) {
         } else why = accept ? (sensWhy ? f2("+%.1f dB kept: the noise floor was only %.1f dB over the ADC's", dg, mBase_.mean) : f2("+%.1f dB kept: objective +%.1f dB", dg, dJ)) : f2("+%.1f dB undone: objective only %+.1f dB (needs %.1f)", dg, dJ, thr);
     } else if (candKind_ == 2) {
         const bool nearLimit = basePlan_.totalDb > 0 && (tight || eff < tgt_.minHeadroomDb + 1.0);
-        accept = dJ > thr || (nearLimit && dJ > -0.25 * thr);
-        why = accept ? f2("%.1f dB kept: objective %+.1f dB", dg, dJ) : f2("%.1f dB undone: objective %+.1f dB", dg, dJ);
+        // the objective can be blind to a front end that compresses or makes products at the higher gain (a floor margin only grows with gain): the slope test decides then
+        const bool slopeSaysDown = (imd || comp) && dg < 0;
+        accept = dJ > thr || (nearLimit && dJ > -0.25 * thr) || slopeSaysDown;
+        if (slopeSaysDown) { limit_ = imd ? "intermodulation" : "compression"; ceil_ = cur_.totalDb + 0.01; ceilUntil_ = std::max(ceilUntil_, now + 180.0 / std::max(0.25, set_.loopSpeed)); }
+        why = accept ? (slopeSaysDown ? f2("%.1f dB kept: ", dg) + slopeWhy : f2("%.1f dB kept: objective %+.1f dB", dg, dJ)) : f2("%.1f dB undone: objective %+.1f dB", dg, dJ);
     } else {
         accept = !imd && !comp && !clip && !tight && dJ > thr;
         why = accept ? f2("other stage split kept: objective +%.1f dB", dJ) : f2("other stage split undone: objective %+.1f dB", dJ);

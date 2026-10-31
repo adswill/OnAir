@@ -391,6 +391,7 @@ private:
     std::string status_, limit_, lastDecision_, retuneWhy_;
     double slope_ = 1, unitScale_ = 1;     // unitScale_: the real dB per nominal dB of this unit, learned from the strongest line's rise on each step
     int rejectRun_ = 0, rejUp_ = 0, idleCycles_ = 0;
+    double goodGain_ = -1e9;     // the gain the loop last settled at without clipping (a burst is recovered to this, not to the gain that clipped)
     double stepReal(double from, double to) const;
     double jRecent_ = 0; int jRecentN_ = 0;
     // Optimise once / Safe

@@ -30,6 +30,7 @@ public:
     // Peek without draining (the display)
     BlockStats peek() const;
     uint64_t samples() const { return total_.load(std::memory_order_relaxed); }
+    bool armed() const { return total_.load(std::memory_order_relaxed) < wantUntil_.load(std::memory_order_relaxed); }
 
 private:
     void window();
@@ -37,7 +38,7 @@ private:
     float winNorm_ = 1.f;
     double rate_ = 0; int bits_ = 8;
     // accumulators of the engine thread (mutex-guarded copy into pub_ once per 50 ms window)
-    float wPeak_ = 0; uint64_t wClip_ = 0, wN_ = 0; double wPow_ = 0; uint32_t wHist_[kHist] = {};
+    float wPeak_ = 0; uint64_t wClip_ = 0, wN_ = 0, wHistN_ = 0; double wPow_ = 0; uint32_t wHist_[kHist] = {};
     size_t wTarget_ = 1;
     // hold
     float hold_ = 0; uint64_t holdAge_ = 0;
@@ -47,10 +48,10 @@ private:
     uint32_t specN_ = 0;
     // published (since last take)
     mutable std::mutex mu_;
-    float pPeak_ = 0, pHold_ = 0; uint64_t pClip_ = 0, pN_ = 0; double pPow_ = 0; uint32_t pHist_[kHist] = {};
+    float pPeak_ = 0, pHold_ = 0; uint64_t pClip_ = 0, pN_ = 0, pHistN_ = 0; double pPow_ = 0; uint32_t pHist_[kHist] = {};
     std::vector<float> pSpecPow_; uint32_t pSpecN_ = 0;
     std::vector<float> lastSpec_;
-    std::atomic<uint64_t> total_{0};
+    std::atomic<uint64_t> total_{0}, wantUntil_{0};
 };
 
 // The headroom the hold gives, dB under full scale of the peak-hold (120 when none)

@@ -221,9 +221,15 @@ Single-control radios only (RTL-SDR, Airspy, SDRplay, Pluto, Lime); HackRF's LNA
 Final SNR in the channel of the settled gain (old headroom loop / Auto v2 / exhaustive best): weak signal beside two strong carriers (HackRF) 1.6 / 8.4 / 8.5 dB;
 RTL-SDR beside FM stations 8.4 / 15.2 / 15.3; two carriers whose product falls in the channel: HackRF 12.2 / 22.2 / 23.1, RTL-SDR 12.1 / 18.2 / 18.2, Airspy
 17.3 / 22.3 / 22.3; ADC clipping from the top gain 26.8 / 35.5 / 35.7; DVB-T2 beside a strong tower -19.3 / -9.5 / -5.1; pulsed ADS-B -19.6 / -14.4 / -1.6; a stale
-remembered gain 1.6 / 8.5 / 8.5. A quiet band with a weak signal is parity within a dB (the climb moves in steps of at least `improveDb`; Pluto 5.8 / 5.2 / 7.0).
+remembered gain 1.6 / 8.5 / 8.5. Pulsed ADS-B is parity (-19.6 / -19.6 / best -1.6 dB: the sensitivity objective grows with gain and cannot see the compression that costs the SNR; the earlier wins on this scene were luck of the random path). A quiet band with a weak signal is parity within a dB (the climb moves in steps of at least `improveDb`; Pluto 5.8 / 5.2 / 7.0).
 Cost: the loop spends 5-20 % of the time on a neighbouring gain while it is not comfortably locked (a probe lasts about 1.5 s, the interval grows 6 / 12 / 24 / 45 s).
 The existing suites (`autogain`, `autogain_smart`) now pin `AgSettings::v2 = false`: they count gain changes and reversals, which the probing of v2 does by design.
+
+### Known weaker than the old loop
+
+Bursts (`AGV2=1 test_agc_burst`): after a strong burst the v2 loop recovers to the last settled gain in up to 12 dB steps 1.1 s apart, but with a burst every few seconds it
+ends 22-24 dB under the settled gain and makes 4-10 gain moves per burst, where the old loop ends 5-16 dB under with 4 moves; `test_agc_burst` therefore pins the old loop
+by default. Pager / keying-heavy bands can select the old loop in the Auto gain settings. Pulsed (ADS-B) and quiet-band Auto are parity, not better.
 
 ### Not verified on hardware
 
