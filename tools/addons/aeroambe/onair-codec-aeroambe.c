@@ -58,8 +58,9 @@ AEROAMBE_API int onair_speech_decode(void* st, const uint8_t* coded, size_t n, i
     static int uvq = -1, mute = -2, post = -1;
     if (uvq < 0) { const char* e = getenv("ONAIR_AEROAMBE_UVQ"); uvq = e ? atoi(e) : 3; if (uvq < 1 || uvq > 64) uvq = 3; }
     if (mute < -1) { const char* e = getenv("ONAIR_AEROAMBE_MUTE"); mute = e ? atoi(e) : 3; }
-    /* post-filter (aeroambe_post.h: 250-3400 Hz band, slow AGC, soft limiter); ONAIR_AEROAMBE_POST=0 for the raw vocoder output */
-    if (post < 0) { const char* e = getenv("ONAIR_AEROAMBE_POST"); post = e ? atoi(e) != 0 : 1; }
+    /* post-filter (aeroambe_post.h: 250-3400 Hz band, slow AGC, soft limiter), off by default: no audible gain in an A/B on real calls
+     * (2026-10-31), the raw vocoder output is kept; ONAIR_AEROAMBE_POST=1 turns it on */
+    if (post < 0) { const char* e = getenv("ONAIR_AEROAMBE_POST"); post = e ? atoi(e) != 0 : 0; }
     mbe_processAmbe4800x3600Frame((short*)pcm, &errs, &errs2, s->err, s->ambe_fr, s->ambe_d, &s->cur, &s->prev, &s->prevEnh, uvq);
     if (mute >= 0 && errs2 > mute) memset(pcm, 0, 160 * sizeof(int16_t));
     if (post) aeropost_run(&s->post, pcm, 160);
