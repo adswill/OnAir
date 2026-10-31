@@ -20,6 +20,7 @@ void selectMode(App& a, int fam, const char* subId) {
     if (txViewFlag()) { txSelectMode(a, fam, subId); return; }
     if (int k = 0; autodetRow(subId, &k)) { autodetSelect(a, k); return; }   // "TV (auto)", "Digital voice (auto)"
     autodetCancel(a);   // any other row: the automatic mode ends
+    modeRecordRecent(a, fam, subId);   // the Mode Browser's Recent tab
     const int sub = subIndexOf(subId);
     if (fam == a.family && (sub == a.sub || !sub)) return;
     // Switch in one action: stop the old decoder before updating the mode, then
