@@ -17,6 +17,7 @@ struct Workspace {
     int lnaDb = 0, vgaDb = 0;
     bool ampOn = false;
     std::string panels;       // comma-separated names of the open windows
+    std::string modes;        // the Modes shown rules (modevis text, or "default"); empty in a workspace saved before 3.5: left as they are
 };
 
 Workspace workspaceCapture(const App& a, const std::string& name);    // the live settings of this receiver

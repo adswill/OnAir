@@ -24,6 +24,7 @@
 #include <vector>
 using namespace dect2;
 namespace fs = std::filesystem;
+#include "../common/cpu_report.h"
 #include "../common/cpu_time.h"
 #include "../common/test_util.h"
 #include "../common/ci_slack.h"
@@ -257,6 +258,7 @@ int main() {
         const Result r = feedAll(rx, sig, rate, 0, INFINITY);
         const double cpuPerSec = r.secWork / (r.secSignal + 3.0 * 0.0);
         printf("speed: %.1f s of signal at 2.4 Msps: %.2f s of CPU (%.2f x real time), files %zu\n", r.secSignal, r.secWork, cpuPerSec, r.t.files.size());
+        cpuCal("kaft_engine", "10 s at 2.4 Msps", r.secWork, "cpu-s", '<', 5.0 * ciSlack());
         CHECK(r.secWork < 5.0 * ciSlack(), "10 s of 2.4 Msps took %.2f s of CPU, the limit is %.1f s", r.secWork, 5.0 * ciSlack());
         CHECK(!r.t.files.empty(), "the speed run still delivers the file");
     }

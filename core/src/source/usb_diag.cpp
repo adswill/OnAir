@@ -96,6 +96,8 @@ std::vector<std::string> hintsUnder(const std::string& root) {
         if (dev.find(':') != std::string::npos) continue;   // an interface, not a device
         uint16_t vid = 0, pid = 0;
         if (!readHex(e.path() / "idVendor", vid) || !readHex(e.path() / "idProduct", pid)) continue;
+        if (vid == 0x08d0 && pid == 0xa001)   // AOR AR5700D / AR2300 / AR5001D / AR6000 I/Q output after the firmware download (docs/AOR-AR5700D.md)
+            out.push_back("An AOR receiver's I/Q output is plugged in: OnAir cannot stream it live (the vendor protocol is not published). Record it with AOR's ariq_rcv or AR-IQ3 and open the .bin as a file (1.125 Msps float IQ), or feed the receiver's audio/IF into OnAir's Sound card source. See docs/AOR-AR5700D.md");
         const char* radio = radioOf(vid, pid);
         if (!radio) continue;
         if (rtlTvDriver && std::string(radio) == "RTL-SDR" && boundTo(devices, dev, "dvb_usb_rtl28xxu"))

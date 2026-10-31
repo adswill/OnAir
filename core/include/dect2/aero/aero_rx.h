@@ -17,6 +17,7 @@ public:
     ~AeroReceiver();
 
     void configure(double inputRateHz);
+    void setSearchLimit(double hz);                      // 0 = whole input; else the band search only looks within +-hz of 0 (the Inmarsat window's pass-band: the rest of its input is empty)
     void setSignalOffset(double hz);                     // where the wanted channel sits relative to 0 Hz in the input
     bool ready() const;                                  // false when the input rate is too low for this mode
     void reset();                                        // after a retune: forget the signal (the decoded tables stay: clearResults)

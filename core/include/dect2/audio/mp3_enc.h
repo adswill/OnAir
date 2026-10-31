@@ -1,6 +1,7 @@
 // MP3 recording through LAME (libmp3lame), loaded at run time: OnAir does not ship the library (LGPL, patents in some regions), so MP3 is
 // offered when it is installed and the WAV / FLAC recorders work without it.
 #pragma once
+#include "dect2/codec/codec_paths.h"
 #include <cstdint>
 #include <cstdio>
 #include <string>
@@ -78,10 +79,27 @@ private:
         Api a;
         void* h = nullptr;
 #if defined(_WIN32)
-        for (const char* n : {"libmp3lame.dll", "libmp3lame-0.dll", "lame_enc.dll", "mp3lame.dll"}) { if ((h = (void*)LoadLibraryA(n))) break; }
+        // the codecs folders first (the user folder survives an update, the program folder does not: issue #376), then the system search path
+        const std::vector<codec::CodecDir> dirs = codec::systemCodecDirs();
+        for (const char* n : {"libmp3lame.dll", "libmp3lame-0.dll", "lame_enc.dll", "mp3lame.dll"}) {
+            for (const auto& d : dirs) {
+                const std::string full = codec::joinPath(d.path, n);
+                const int wn = MultiByteToWideChar(CP_UTF8, 0, full.c_str(), -1, nullptr, 0);
+                if (wn <= 1) continue;
+                std::wstring w((size_t)wn, L'\0');
+                MultiByteToWideChar(CP_UTF8, 0, full.c_str(), -1, w.data(), wn);
+                if ((h = (void*)LoadLibraryExW(w.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH))) break;
+            }
+            if (h) break;
+        }
+        if (!h) for (const char* n : {"libmp3lame.dll", "libmp3lame-0.dll", "lame_enc.dll", "mp3lame.dll"}) { if ((h = (void*)LoadLibraryA(n))) break; }
         auto sym = [&](const char* s) { return h ? (void*)GetProcAddress((HMODULE)h, s) : nullptr; };
 #else
-        for (const char* n : {"libmp3lame.so.0", "libmp3lame.so", "libmp3lame.0.dylib", "libmp3lame.dylib", "/opt/homebrew/lib/libmp3lame.dylib", "/usr/local/lib/libmp3lame.dylib"}) { if ((h = dlopen(n, RTLD_NOW | RTLD_LOCAL))) break; }
+        for (const char* n : {"libmp3lame.so.0", "libmp3lame.so", "libmp3lame.0.dylib", "libmp3lame.dylib"}) {
+            for (const auto& d : codec::systemCodecDirs()) { if ((h = dlopen(codec::joinPath(d.path, n).c_str(), RTLD_NOW | RTLD_LOCAL))) break; }
+            if (h) break;
+        }
+        if (!h) for (const char* n : {"libmp3lame.so.0", "libmp3lame.so", "libmp3lame.0.dylib", "libmp3lame.dylib", "/opt/homebrew/lib/libmp3lame.dylib", "/usr/local/lib/libmp3lame.dylib"}) { if ((h = dlopen(n, RTLD_NOW | RTLD_LOCAL))) break; }
         auto sym = [&](const char* s) { return h ? dlsym(h, s) : nullptr; };
 #endif
 #define M(f, s) a.f = reinterpret_cast<decltype(a.f)>(sym(s))

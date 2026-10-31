@@ -47,6 +47,9 @@ public:
     void setCentre(double hz) { centre_ = hz; }   // the front end found the carrier this far from the tuned frequency (radio error), syncs are accepted around it
     void forgetCalibration();
     void dropTracks();                             // the front end changed the polarity: every track and calibration is wrong                      // the front end moved a long way: level calibrations from syncs seen before are not trusted
+    // The front end replays the last `k` samples through the new oscillator (a carrier found a little late): forget the tracks and take the clock back
+    // by k, so that the burst that already went by is found again and every time stays right.
+    void rewind(uint64_t k);
     void shiftOffset(double hz);                    // the front end moved its oscillator by this much (up): the symbol levels move down by it
     // the call log and the messages stay through reset() (their times move back as the clock starts again); Clear and a loaded file set them
     void setLogs(std::vector<DmrCall> calls, std::vector<DmrMessage> msgs, uint64_t calls0) { tel_.callLog = std::move(calls); tel_.messages = std::move(msgs); tel_.calls = calls0; }

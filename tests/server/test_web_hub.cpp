@@ -276,7 +276,28 @@ static void testSettings() {
     CHECK(fl.blocked("1.2.3.4", 101) && !fl.blocked("1.2.3.5", 101) && !fl.blocked("1.2.3.4", 161), "failed logins block for 60 s");
 }
 
+// web_spectrum=0 (the setup window's "audio only"): the spectrum request is refused with a sentence and no rows are ever sent, audio still works
+static void testAudioOnly() {
+    WebHub h;
+    HubLimits L; L.spectrum = false;
+    h.setLimits(L);
+    std::string c, w;
+    size_t pos = 0;
+    pushTones(h, {}, 0.01, pos);
+    AdmitRequest a; a.ip = "10.0.0.1";
+    const int u = h.admit(a, c, w);
+    h.handle(u, msg("{\"type\":\"audio\",\"on\":true,\"codec\":\"pcm16\",\"rate\":12000}"));
+    h.handle(u, msg("{\"type\":\"spectrum\",\"on\":true,\"bins\":512,\"fps\":10}"));
+    pushTones(h, {1000}, 0.5, pos);
+    Drained d = drainAll(h, u);
+    int rows = 0, frames = 0;
+    for (auto& b : d.bin) { if ((uint8_t)b[0] == kFrameSpectrum) rows++; else frames++; }
+    CHECK(rows == 0 && frames > 0, "audio only: %d spectrum rows, %d audio frames", rows, frames);
+    CHECK(hasText(d, "audio only"), "the listener is told why");
+}
+
 int main() {
+    testAudioOnly();
     testAdmission();
     testTwoListeners();
     testPolicyAndDecoders();

@@ -20,7 +20,7 @@ struct Waterfall {
     static constexpr int kMaxCols = 65536;    // the cap of the finer history: 32 MB of levels
     enum Map { Classic = cmap::Classic, Viridis = cmap::Viridis, Inferno = cmap::Inferno, Grey = cmap::Grey, Turbo = cmap::Turbo, Cividis = cmap::Cividis,   // Cividis: made to read the same with red-green colour blindness
                Magma = cmap::Magma, SdrClassic = cmap::SdrClassic, Ice = cmap::Ice, Fire = cmap::Fire, NightRed = cmap::NightRed, HighContrast = cmap::HighContrast,
-               Custom = cmap::Custom, NavyHeat = cmap::NavyHeat, BlueGreen = cmap::BlueGreen, NumMaps = cmap::NumMaps };
+               Custom = cmap::Custom, NavyHeat = cmap::NavyHeat, BlueGreen = cmap::BlueGreen, Amber = cmap::Amber, Paper = cmap::Paper, NumMaps = cmap::NumMaps };
     static const char* mapName(int m) { return cmap::name(m); }
     gfx::Image* img = nullptr;       // the history as a texture at the standard width (other waterfalls draw it; not written for a finer history)
     uint32_t lut[256] = {};
@@ -83,7 +83,7 @@ struct Waterfall {
     void setRate(float r) { rowsPerSec = r; nStamps = 0; nextRowT = 0; accEmpty = true; rowDt = slow() || fast() ? 1.0 / r : 1.0 / 30; }
 
     static int& themeMode() { static int m = 0; return m; }   // the interface theme's waterfall choice (pal::wfMode(), set by the app each frame)
-    int effMap() const { return map >= 0 && map < NumMaps ? map : themeMode() == 2 ? Turbo : themeMode() == 1 ? Grey : Classic; }
+    int effMap() const { return map >= 0 && map < NumMaps ? map : themeMode() == 5 ? Paper : themeMode() == 4 ? Amber : themeMode() == 3 ? Magma : themeMode() == 2 ? Turbo : themeMode() == 1 ? Grey : Classic; }
     static int& curMap() { static int m = 0; return m; }   // the map in use, for the other waterfalls (modes with their own picture) that colour with jet()
     static uint32_t jet(float v) { return color(curMap(), v); }
     bool paletteStale() const {

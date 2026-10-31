@@ -198,6 +198,7 @@ void WebHub::processPending() {
             inQ_.pop_front();
             inSamples_ -= c.x.size();
         }
+        std::lock_guard<std::mutex> g(procMu_);
         processChunk(c);
     }
 }
@@ -213,7 +214,7 @@ void WebHub::dspLoop() {
             if (!run_) break;
             if (!inQ_.empty()) { c = std::move(inQ_.front()); inQ_.pop_front(); inSamples_ -= c.x.size(); have = true; }
         }
-        if (have) processChunk(c);
+        if (have) { std::lock_guard<std::mutex> g(procMu_); processChunk(c); }
         const double now = wallSeconds();
         if (now >= nextPoll) {   // the decoders' results, 5 times a second, also when no samples come
             nextPoll = now + 0.2;
@@ -645,6 +646,7 @@ void WebHub::handle(int id, const ClientMsg& m) {
         s.ad = AdpcmState();
         s.pend.clear();
     } else if (m.type == ClientMsg::Spectrum) {
+        if (m.on && !L.spectrum) { fail(err::OutOfRange, "this server shares audio only: the spectrum is switched off by its owner"); return; }
         if (m.bins > L.maxBins) { fail(err::OutOfRange, "at most " + std::to_string(L.maxBins) + " bins"); return; }
         if (m.fps > L.maxFps) { fail(err::OutOfRange, "at most " + std::to_string(L.maxFps) + " rows a second"); return; }
         if (m.on && m.hasSpan && rate > 0 && (m.stopHz < centre - rate * 0.5 || m.startHz > centre + rate * 0.5)) { fail(err::OutOfRange, "the span is outside the capture"); return; }

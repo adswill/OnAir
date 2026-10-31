@@ -203,7 +203,62 @@ static void testAck() {
     CHECK(dirPreview(a, c.url).find("web/v1/info") != std::string::npos, "reachability text when opted in");
 }
 
+
+#define CHK(c) CHECK(c, "%s", #c)
+// ---- what happened, in words a person can act on (step 2 of the OnAir Web setup)
+static void testOutcomes() {
+    DirOutcome o = dirClassifyHttp(200, "{\"ok\":true}", 0, false);
+    CHK(o.ok && o.code == "ok");
+    o = dirClassifyHttp(400, "{\"ok\":false,\"error\":\"invalid\",\"details\":[\"ts is too far from the directory's clock\"]}", 900, true);
+    CHK(!o.ok && o.code == "clock" && o.advice.find("automatic date and time") != std::string::npos);
+    o = dirClassifyHttp(400, "{\"ok\":false,\"error\":\"invalid\",\"details\":[\"url host is not a public name\"]}", 0, false);
+    CHK(o.code == "invalid" && o.message.find("url host is not a public name") != std::string::npos && o.advice.find("public https://") != std::string::npos);
+    o = dirClassifyHttp(422, "{\"ok\":false,\"error\":\"url host does not resolve to public addresses only\"}", 0, false);
+    CHK(o.code == "resolving" && o.retrySoon);
+    o = dirClassifyHttp(429, "{}", 0, false);
+    CHK(o.code == "rate" && !o.retrySoon);
+    o = dirClassifyHttp(503, "{\"error\":\"the directory is full\"}", 0, false);
+    CHK(o.code == "full");
+    o = dirClassifyHttp(502, "<html>bad gateway</html>", 0, false);
+    CHK(o.code == "server" && o.advice.find("Nothing is wrong with your setup") != std::string::npos);
+    o = dirClassifyHttp(409, "{\"error\":\"ts is not newer than the last accepted request\"}", 0, false);
+    CHK(o.code == "conflict" && o.retrySoon);
+    o = dirClassifyHttp(401, "{}", 0, false);
+    CHK(o.code == "key");
+    // no answer at all
+    CHK(dirClassifyNet("dns", "", "web.on-air.dev").retrySoon);
+    CHK(dirClassifyNet("tls_cert", "", "x").advice.find("date and time") != std::string::npos);
+    CHK(dirClassifyNet("no_curl", "", "x").code == "no_curl");
+    CHK(dirClassifyNet("weird", "boom", "x").code == "other");
+    // the public address
+    CHK(dirClassifyPublic(200, true, "", "https://a.trycloudflare.com/").ok);
+    o = dirClassifyPublic(0, false, "timeout", "https://a.trycloudflare.com/");
+    CHK(!o.ok && o.advice.find("tunnel") != std::string::npos && o.advice.find("port") != std::string::npos);
+    CHK(dirClassifyPublic(530, false, "", "u").message.find("web server behind it") != std::string::npos);
+    // retry schedule: seconds for a probably temporary failure, backing off for the others, never over the beat interval
+    CHK(dirRetryDelay(1, true, 300) == 5 && dirRetryDelay(3, true, 300) == 15 && dirRetryDelay(99, true, 300) == 60);
+    CHK(dirRetryDelay(1, false, 300) == 20 && dirRetryDelay(5, false, 300) == 300 && dirRetryDelay(5, false, 60) == 60);
+    // the server's clock from its Date header
+    long long t = 0;
+    CHK(dirParseHttpDate("Sat, 31 Oct 2026 10:00:00 GMT", t) && t == 1793440800);
+    CHK(!dirParseHttpDate("yesterday", t));
+    // the status file round trip
+    DirStatus ds;
+    ds.state = "error"; ds.last = dirClassifyHttp(422, "{}", 0, false); ds.attempts = 4; ds.fails = 3; ds.lastTry = 100; ds.nextTry = 110; ds.id = "onair-0123456789abcdef";
+    DirStatus back;
+    CHK(dirStatusParse(dirStatusJson(ds), back));
+    CHK(back.state == "error" && back.last.code == "resolving" && back.last.retrySoon && back.fails == 3 && back.nextTry == 110 && back.last.advice == ds.last.advice);
+    CHK(!dirStatusParse("not json", back));
+    // the directory address: https, or plain http for this computer only (the tests)
+    std::string out, err;
+    CHK(dirNormalizeEndpoint("https://web.on-air.dev", out, err) && out == "https://web.on-air.dev/");
+    CHK(dirNormalizeEndpoint("http://127.0.0.1:9911/x", out, err) && out == "http://127.0.0.1:9911/x/");
+    CHK(!dirNormalizeEndpoint("http://example.org/", out, err));
+    CHK(!dirNormalizeEndpoint("http://127.0.0.1.evil.org/", out, err));
+}
+
 int main() {
+    testOutcomes();
     testVector();
     testBody();
     testClean();

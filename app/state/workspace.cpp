@@ -14,10 +14,10 @@ namespace {
 struct PanelFlag { const char* name; bool App::*flag; };
 const PanelFlag kPanels[] = {
     {"gallery", &App::galleryOpen}, {"direction-finder", &App::dfOpen}, {"interference", &App::rfiOpen},
-    {"passive-radar", &App::passiveRadarOpen}, {"passes", &App::passesOpen}, {"station-health", &App::stationHealthOpen}, {"reception-doctor", &App::doctorOpen},
+    {"passive-radar", &App::passiveRadarOpen}, {"passes", &App::passesOpen}, {"station-health", &App::stationHealthOpen}, {"reception-doctor", &App::doctorOpen}, {"rf-fingerprint", &App::rfFpOpen},
     {"sweep", &App::sweepOpen}, {"scanner", &App::scannerOpen}, {"scanview", &App::scanViewOpen}, {"memory", &App::memoryOpen}, {"packs", &App::packsOpen}, {"datasets", &App::datasetsOpen},
     {"frequencies", &App::freqOpen}, {"map", &App::mapOpen}, {"propagation", &App::propOpen}, {"rotator", &App::rotatorOpen}, {"feeds", &App::feedsOpen},
-    {"watchlist", &App::watchlistOpen}, {"integrations", &App::integrationsOpen}, {"messages", &App::msgdbOpen}, {"protocol-lab", &App::protolabOpen}, {"mode-builder", &App::modeBuilderOpen}, {"signal-lab", &App::signallabOpen},
+    {"conversations", &App::ssbConvOpen}, {"watchlist", &App::watchlistOpen}, {"integrations", &App::integrationsOpen}, {"messages", &App::msgdbOpen}, {"protocol-lab", &App::protolabOpen}, {"mode-builder", &App::modeBuilderOpen}, {"signal-lab", &App::signallabOpen},
     {"automation", &App::automationOpen},
     {"antenna-designer", &App::antdOpen},
 };
@@ -52,10 +52,10 @@ std::string encodeRecord(const Workspace& w) {
     char num[160];
     snprintf(num, sizeof num, "%.6f|%.0f|%d|%d|%d", w.freqMhz, w.sampleRateHz, w.lnaDb, w.vgaDb, w.ampOn ? 1 : 0);
     return escapeField(w.name) + "|" + escapeField(w.devName) + "|" + std::to_string(w.family) + "|" + escapeField(w.subId) + "|" + num
-         + "|" + escapeField(w.panels);
+         + "|" + escapeField(w.panels) + "|" + escapeField(w.modes);
 }
 
-// name|device|family|sub|freq|rate|lna|vga|amp|panels (the panels field may be empty)
+// name|device|family|sub|freq|rate|lna|vga|amp|panels|modes (the last two may be missing or empty)
 bool decodeRecord(const std::string& line, Workspace& w) {
     const std::vector<std::string> f = splitRecord(line);
     if (f.size() < 9) return false;
@@ -63,6 +63,7 @@ bool decodeRecord(const std::string& line, Workspace& w) {
     w.freqMhz = atof(f[4].c_str()); w.sampleRateHz = atof(f[5].c_str());
     w.lnaDb = atoi(f[6].c_str()); w.vgaDb = atoi(f[7].c_str()); w.ampOn = f[8] == "1";
     w.panels = f.size() > 9 ? f[9] : std::string();
+    w.modes = f.size() > 10 ? f[10] : std::string();
     return !w.name.empty();
 }
 
@@ -116,6 +117,7 @@ Workspace workspaceCapture(const App& a, const std::string& name) {
     w.freqMhz = a.freqMhz;
     w.sampleRateHz = a.tune.sampleRate;
     w.lnaDb = a.tune.lnaDb; w.vgaDb = a.tune.vgaDb; w.ampOn = a.tune.ampOn;
+    w.modes = modeVisibilityText(a);
     for (const PanelFlag& p : kPanels) {
         if (!(a.*(p.flag))) continue;
         if (!w.panels.empty()) w.panels += ',';
@@ -147,6 +149,7 @@ bool workspaceApply(App& a, const Workspace& w, std::string& why) {
         std::string rest = "," + w.panels + ",";
         for (const PanelFlag& p : kPanels) a.*(p.flag) = rest.find("," + std::string(p.name) + ",") != std::string::npos;
     }
+    if (!w.modes.empty()) modeVisibilityApplyText(a, w.modes);   // the modes it showed
     savePrefs(a);
     return true;
 }

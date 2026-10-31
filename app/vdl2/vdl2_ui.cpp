@@ -127,7 +127,7 @@ void feedEstimates(const dect2::Vdl2Telemetry& t) {
     for (const auto& m : t.messages) {   // newest first: route / ETA / destination lines of ACARS downlinks
         if (m.serial <= gTextSerial) break;
         newest = std::max(newest, m.serial);
-        if (m.fromAir && m.acars && !m.acarsText.empty()) gPred.hub.feedText(dect2::track::keyFromIcao(m.src), m.label, m.acarsText, m.timeSec, (double)(m.wallTime % 86400));
+        if (m.fromAir && m.acars && !m.part && !m.acarsText.empty()) gPred.hub.feedText(dect2::track::keyFromIcao(m.src), m.label, m.acarsText, m.timeSec, (double)(m.wallTime % 86400));
     }
     gTextSerial = newest;
     gPred.hub.purge(t.nowSec, 3 * 3600);
@@ -177,6 +177,7 @@ void tick(App& a) {
 // ---------------------------------------------------------------- messages
 
 bool passes(const dect2::Vdl2Telemetry& t, const dect2::Vdl2Message& m) {
+    if (m.part) return false;   // an ETB block: the joined message stands in for it (the frame log keeps it)
     if (S.fKind == 1 && !m.acars) return false;
     if (S.fKind == 2 && !(m.proto == "X.25" || m.proto == "CLNP" || m.proto == "COTP" || m.proto == "ES-IS" || m.proto == "IDRP")) return false;
     if (S.fKind == 3 && (m.acars || m.frameKind == 'I')) return false;

@@ -1,4 +1,5 @@
 // DAB / DAB+ audio: superframe assembly (Reed-Solomon, firecode, access units) and decoding with FFmpeg.
+#include "dect2/codec/codec_paths.h"
 #include "dect2/dab/dab.h"
 #include "dect2/common/endian.h"
 #include "dect2/audio/audioout.h"
@@ -53,10 +54,13 @@ struct Faad {
     bool ok = false;
     Faad() {
 #ifdef _WIN32
-        for (const char* n : {"libfaad.dll", "libfaad2.dll", "libfaad-2.dll", "libfaad2-2.dll", "faad2.dll", "faad.dll"}) { if ((h = (void*)LoadLibraryA(n))) break; }
+        const std::vector<std::string> names = {"libfaad.dll", "libfaad2.dll", "libfaad-2.dll", "libfaad2-2.dll", "faad2.dll", "faad.dll"};
+        for (const std::string& n : codec::systemLibraryPaths(names)) { if ((h = (void*)LoadLibraryExA(n.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH))) break; }   // the OnAir codecs folders first (#279)
+        if (!h) for (const std::string& n : names) { if ((h = (void*)LoadLibraryA(n.c_str()))) break; }
         auto sym = [&](const char* s) { return h ? (void*)GetProcAddress((HMODULE)h, s) : nullptr; };
 #else
-        for (const char* n : {"libfaad.so.2", "libfaad.so", "libfaad.2.dylib", "libfaad.dylib", "/opt/homebrew/lib/libfaad.dylib", "/usr/local/lib/libfaad.dylib"}) { if ((h = dlopen(n, RTLD_NOW | RTLD_LOCAL))) break; }
+        for (const std::string& n : codec::systemLibraryPaths({"libfaad.so.2", "libfaad.so", "libfaad.2.dylib", "libfaad.dylib"})) { if ((h = dlopen(n.c_str(), RTLD_NOW | RTLD_LOCAL))) break; }   // the OnAir codecs folders first (#279)
+        if (!h) for (const char* n : {"libfaad.so.2", "libfaad.so", "libfaad.2.dylib", "libfaad.dylib", "/opt/homebrew/lib/libfaad.dylib", "/usr/local/lib/libfaad.dylib"}) { if ((h = dlopen(n, RTLD_NOW | RTLD_LOCAL))) break; }
         auto sym = [&](const char* s) { return h ? dlsym(h, s) : nullptr; };
 #endif
         open = (Open)sym("NeAACDecOpen"); getConf = (GetConf)sym("NeAACDecGetCurrentConfiguration"); setConf = (SetConf)sym("NeAACDecSetConfiguration");

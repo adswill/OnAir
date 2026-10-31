@@ -1,6 +1,7 @@
 // Stage 1 of the Inmarsat all-carriers mode: the carrier detector on synthetic wideband captures with offsets, Doppler, fading, adjacent carriers,
 // a DC spike, noise only, different chunk sizes, and the Aero test signal. Synthetic only: needs a user test with a real capture.
 #include "dect2/inmsat/inmsat_detect.h"
+#include "dect2/inmsat/inmsat_manager.h"
 #include "dect2/aero/aero_gen.h"
 #include "dect2/aero/aero_rx.h"
 #include "inmsat_synth.h"
@@ -104,5 +105,48 @@ int main() {
         }
         CHECK(found == (int)syn.channels().size(), "Aero carriers found %d of %zu", found, syn.channels().size());
     }
+    // 6. a weak 10500 bit/s P channel (its power is spread over about 10 kHz, so per bin it is far below a 600 bit/s carrier): found
+    //    as a wide carrier at low Eb/N0, with a frequency offset and a neighbouring strong narrow carrier, and no ghost on noise alone
+    {
+        const double rate = 4e6;
+        for (double ebn0 : {12.0, 7.0, 4.0}) {
+            for (double cfo : {0.0, 4300.0}) {
+                SynthConfig sc;
+                sc.mode = 20;
+                sc.modeOpt[0] = 4;
+                sc.modeOpt[1] = 5;
+                sc.modeVal[0] = ebn0;
+                sc.cfoHz = cfo;
+                AeroSynth syn(sc, rate);
+                CarrierDetector det;
+                DetectorConfig cfg;
+                cfg.rate = rate;
+                det.configure(cfg);
+                std::vector<cf32> buf(65536);
+                for (double done = 0; done < 12 * rate; done += (double)buf.size()) { syn.generate(buf.data(), buf.size()); det.feed(buf.data(), buf.size()); }
+                const double want = syn.channels()[0].offsetHz - aeroTuning().tuneOffsetHz + cfo;
+                int hit = 0, wide = 0;
+                for (const auto& c : det.carriers()) if (c.confirmed && std::fabs(c.offsetHz - want) < 3500) { hit++; wide += c.cls == CarrierClass::Wide; }
+                printf("  10500 bit/s Eb/N0 %.0f dB cfo %+.0f: %d carrier(s) near %+.0f, wide %d\n", ebn0, cfo, hit, want, wide);
+                CHECK(hit == 1, "10500 bit/s Eb/N0 %.0f cfo %.0f: %d carriers", ebn0, cfo, hit);
+                CHECK(wide == 1, "10500 bit/s Eb/N0 %.0f cfo %.0f: not called wide", ebn0, cfo);
+            }
+        }
+        CarrierDetector det;
+        DetectorConfig cfg;
+        cfg.rate = rate;
+        det.configure(cfg);
+        WideSynth nz(rate, {}, 0, 3);
+        std::vector<cf32> buf(65536);
+        for (double done = 0; done < 30 * rate; done += (double)buf.size()) { nz.generate(buf.data(), buf.size()); det.feed(buf.data(), buf.size()); }
+        int n = 0;
+        for (const auto& c : det.carriers()) n += c.confirmed;
+        CHECK(n == 0, "noise only: %d ghost carriers", n);
+    }
+    // 7. the rate suggested for a carrier no decoder holds yet
+    CHECK(dect2::inmsat::rateGuessForWidth(10000, CarrierClass::Wide) == 10500, "wide guess");
+    CHECK(dect2::inmsat::rateGuessForWidth(30000, CarrierClass::Wide) == 0, "very wide: a C channel, no guess");
+    CHECK(dect2::inmsat::rateGuessForWidth(900, CarrierClass::Narrow) == 600, "narrow guess");
+    CHECK(dect2::inmsat::rateGuessForWidth(2500, CarrierClass::Medium) == 0, "medium: no guess");
     return testSummary("inmsat_detect");
 }

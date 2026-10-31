@@ -193,6 +193,8 @@ void begin(App& a, bool all) {
 }
 } // namespace
 
+bool identifyBusy() { return I.open; }
+
 bool identifyRegionMhz(double& loMhz, double& hiMhz) {
     if (!I.open || I.all || I.widthHz <= 0) return false;
     loMhz = I.loMhz; hiMhz = I.hiMhz;

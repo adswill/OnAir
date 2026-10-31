@@ -193,8 +193,8 @@ float viterbi(const Branch* b, int n, int startState, int endState, const int8_t
     return metric;
 }
 
-void headerBranches(const cf32* frame, Branch* out) {
-    for (int i = 0; i < kHeaderBits; i++) {
+void headerBranches(const cf32* frame, Branch* out, int nbits) {
+    for (int i = 0; i < nbits; i++) {
         const float x = 2.f * frame[2 * i].real(), y = 2.f * frame[2 * i + 1].real();
         Branch& B = out[i];
         B.m[0] = x + y; B.m[1] = x - y; B.m[2] = -x + y; B.m[3] = -x - y;

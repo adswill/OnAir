@@ -1,4 +1,5 @@
 #include "platform.h"
+#include "datadir_ptr.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -61,6 +62,14 @@ std::string cacheDir() {
     return d.UTF8String;
 }
 
+std::string defaultDataDir() {
+    NSArray* a = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
+    if (!a.count) return cacheDir();
+    NSString* d = [a[0] stringByAppendingPathComponent:@"OnAir"];
+    [[NSFileManager defaultManager] createDirectoryAtPath:d withIntermediateDirectories:YES attributes:nil error:nil];
+    return d.UTF8String;
+}
+
 std::string dataDir() {
     // DECT2_DATA_DIR: another folder for everything OnAir writes (test runs keep away from the user's own data)
     if (const char* o = getenv("DECT2_DATA_DIR"); o && *o) {
@@ -68,12 +77,11 @@ std::string dataDir() {
         std::filesystem::create_directories(std::filesystem::path(reinterpret_cast<const char8_t*>(o)), ec);
         return o;
     }
-    NSArray* a = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
-    if (!a.count) return cacheDir();
-    NSString* d = [a[0] stringByAppendingPathComponent:@"OnAir"];
-    [[NSFileManager defaultManager] createDirectoryAtPath:d withIntermediateDirectories:YES attributes:nil error:nil];
-    return d.UTF8String;
+    const std::string def = defaultDataDir();
+    const std::string chosen = readDataDirPointer(def);   // the folder picked in the settings (issue #383)
+    return chosen.empty() ? def : chosen;
 }
+bool setDataDir(const std::string& path) { return writeDataDirPointer(defaultDataDir(), path); }
 
 bool decodeImage(const std::string& path, int& w, int& h, std::vector<uint32_t>& rgba) {
     @autoreleasepool {

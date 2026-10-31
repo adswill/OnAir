@@ -27,6 +27,8 @@ extern "C" {
 #include <cstdio>
 #include <cstring>
 #include <deque>
+#include <filesystem>
+#include <set>
 #include <mutex>
 #include <thread>
 
@@ -137,14 +139,18 @@ struct MediaReader {
     double loopBase = 0, lastT = 0, frameDur = 0.04;
     int loops = 0;
     int64_t framesThisLoop = 0;
+    bool loopFile = true;   // false: next() ends at the end of the file (a playlist moves on to the next one)
 
-    ~MediaReader() {
+    ~MediaReader() { release(); }
+    void release() {
         av_frame_free(&fr);
         av_packet_free(&pkt);
         avcodec_free_context(&dec);
         avformat_close_input(&fc);
         sws_freeContext(sws);
         swr_free(&swr);
+        sws = nullptr; fc = nullptr; dec = nullptr; si = -1;
+        loops = 0; framesThisLoop = 0; loopBase = lastT = 0; frameDur = 0.04;
     }
     bool open(const std::string& path, bool wantVideo, int sampleRate, std::string& err) {
         video = wantVideo;
@@ -179,7 +185,7 @@ struct MediaReader {
             int r = avcodec_receive_frame(dec, fr);
             if (r >= 0) { framesThisLoop++; return true; }
             if (r == AVERROR_EOF) {
-                if (framesThisLoop == 0) return false;   // nothing came out of the last pass: looping would never end
+                if (framesThisLoop == 0 || !loopFile) return false;   // nothing came out of the last pass: looping would never end
                 framesThisLoop = 0;
                 loops++;
                 loopBase = lastT + frameDur;
@@ -333,6 +339,48 @@ std::string vlcOpenUrl(Output o, const std::string& host, int port) {
     return std::string(o == Output::Rtp ? "rtp://@" : "udp://@") + (isMulticast(host) ? host : std::string()) + ":" + std::to_string(port);
 }
 
+static std::string lowerExt(const std::string& path) {
+    std::string e = std::filesystem::path(path).extension().string();
+    for (char& ch : e) ch = (char)std::tolower((unsigned char)ch);
+    return e;
+}
+MediaKind mediaKind(const std::string& path) {
+    static const std::set<std::string> pic = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".ppm", ".pgm", ".pnm"};
+    static const std::set<std::string> vid = {".mp4", ".m4v", ".mov", ".mkv", ".avi", ".webm", ".ts", ".m2ts", ".mts", ".mpg", ".mpeg", ".vob", ".wmv", ".flv", ".ogv", ".3gp"};
+    static const std::set<std::string> aud = {".wav", ".mp3", ".flac", ".ogg", ".oga", ".opus", ".m4a", ".aac", ".wma", ".aif", ".aiff", ".mp2", ".ac3"};
+    const std::string e = lowerExt(path);
+    if (pic.count(e)) return MediaKind::Picture;
+    if (vid.count(e)) return MediaKind::Video;
+    if (aud.count(e)) return MediaKind::Audio;
+    return MediaKind::Unknown;
+}
+std::vector<std::string> listMedia(const std::string& path, MediaKind kind) {
+    namespace fsx = std::filesystem;
+    std::vector<std::string> out;
+    std::error_code ec;
+    if (path.empty()) return out;
+    if (fsx::is_directory(fsx::path(path), ec)) {
+        for (const auto& de : fsx::directory_iterator(fsx::path(path), ec)) {
+            std::error_code e2;
+            if (!de.is_regular_file(e2)) continue;
+            if (mediaKind(de.path().string()) == kind) out.push_back(de.path().string());
+        }
+        auto key = [](const std::string& x) { std::string k = fsx::path(x).filename().string(); for (char& ch : k) ch = (char)std::tolower((unsigned char)ch); return k; };
+        std::sort(out.begin(), out.end(), [&](const std::string& a, const std::string& b) { return key(a) < key(b); });
+    } else if (fsx::exists(fsx::path(path), ec)) {
+        out.push_back(path);
+    }
+    return out;
+}
+
+MediaKind dropKind(const std::string& path) {
+    std::error_code ec;
+    if (!std::filesystem::is_directory(std::filesystem::path(path), ec)) return mediaKind(path);
+    for (MediaKind k : {MediaKind::Picture, MediaKind::Video, MediaKind::Audio})
+        if (!listMedia(path, k).empty()) return k;
+    return MediaKind::Unknown;
+}
+
 double mediaSeconds(const std::string& path) {
     AVFormatContext* fc = nullptr;
     if (path.empty() || avformat_open_input(&fc, path.c_str(), nullptr, nullptr) < 0) return 0;
@@ -384,6 +432,8 @@ void VideoGenerator::Impl::run(GenConfig c) {
     // sources
     VideoIn cam;
     MediaReader vfile, afile;
+    std::vector<std::string> vlist, alist;   // the picture / video files and the sound files, in play order
+    size_t vidx = 0, aidx = 0;
     AudioIn mic;
     Yuv still, src, out;
     out.resize(W, H);
@@ -392,18 +442,30 @@ void VideoGenerator::Impl::run(GenConfig c) {
     if (c.source == Source::Camera) {
         if (!cam.start(VideoIn::Camera, c.cameraId, err)) { fail(err.empty() ? "cannot open the camera" : err); return; }
     } else if (c.source != Source::Generator) {
-        if (!vfile.open(c.path, true, s.sampleRate, err)) { fail(err); return; }
+        vlist = listMedia(c.path, c.source == Source::Picture ? MediaKind::Picture : MediaKind::Video);
+        if (vlist.empty()) { fail("no " + std::string(c.source == Source::Picture ? "pictures" : "videos") + " in " + c.path); return; }
+        if (!vfile.open(vlist[0], true, s.sampleRate, err)) { fail(err); return; }
+        vfile.loopFile = vlist.size() < 2 && c.loop && c.source != Source::Picture;
         if (c.source == Source::Picture) {
-            if (!vfile.next() || !vfile.toYuv(still)) { fail("cannot decode the picture " + c.path); return; }
+            if (!vfile.next() || !vfile.toYuv(still)) { fail("cannot decode the picture " + vlist[0]); return; }
             const uint8_t* sp[3] = {still.y.data(), still.u.data(), still.v.data()};
             const int ss[3] = {still.w, still.w / 2, still.w / 2};
             fitter.run(sp, ss, still.w, still.h, out, c.fit);
+        } else if (vlist.size() > 1 || !c.loop) {
+            vfile.loopFile = false;
         }
     }
     bool fileSound = false;
-    if (tracks > 0 && c.audio == AudioSource::FromFile && c.source == Source::VideoFile) {
+    if (tracks > 0 && (c.audio == AudioSource::AudioFile || (c.audio == AudioSource::FromFile && c.source == Source::VideoFile))) {
         std::string aerr;
-        fileSound = afile.open(c.path, false, s.sampleRate, aerr);   // a file without sound gives silence
+        if (c.audio == AudioSource::AudioFile) alist = listMedia(c.audioPath, MediaKind::Audio);
+        else alist = vlist;
+        if (c.audio == AudioSource::AudioFile && alist.empty()) { fail("no sound files in " + c.audioPath); return; }
+        if (!alist.empty()) {
+            fileSound = afile.open(alist[0], false, s.sampleRate, aerr);   // a file without sound gives silence
+            if (c.audio == AudioSource::AudioFile && !fileSound) { fail(aerr); return; }
+            afile.loopFile = alist.size() < 2 && c.loop;
+        }
     }
     if (tracks > 0 && c.audio == AudioSource::Microphone) {
         if (!mic.start(AudioIn::Mic, s.sampleRate, c.micId, 0, err)) { fail(err.empty() ? "cannot open the microphone" : err); return; }
@@ -565,6 +627,42 @@ void VideoGenerator::Impl::run(GenConfig c) {
         double phase = 0;
         bool haveFileFrame = false, fileEnded = false, pending = false;
         double nextFileT = 0;
+        bool listDone = false;      // loop off and the last file has ended: the stream ends too
+        double slideT = 0;          // a folder of pictures: when the next one is due
+        auto openVideo = [&](size_t i, double at) {
+            vfile.release();
+            std::string e;
+            if (!vfile.open(vlist[i], true, s.sampleRate, e)) return false;
+            vfile.loopFile = false;
+            vfile.loopBase = at;
+            return true;
+        };
+        // the next decoded frame of the video playlist (a single looped file loops inside the reader)
+        auto nextVideoFrame = [&](double at) {
+            if (vfile.next()) return true;
+            if (vlist.size() < 2 && c.loop) return false;
+            for (size_t tries = 0; tries < vlist.size(); tries++) {
+                if (++vidx >= vlist.size()) {
+                    if (!c.loop) { listDone = true; return false; }
+                    vidx = 0;
+                }
+                if (openVideo(vidx, at) && vfile.next()) return true;
+            }
+            listDone = true;
+            return false;
+        };
+        auto audioMore = [&]() {
+            if (afile.audioInto(fifo)) return true;
+            if (alist.size() < 2 && c.loop) return false;
+            for (size_t tries = 0; tries < alist.size(); tries++) {
+                if (aidx >= alist.size()) { if (!c.loop) return false; aidx = 0; }
+                else if (++aidx >= alist.size()) { if (!c.loop) return false; aidx = 0; }
+                afile.release();
+                std::string e;
+                if (afile.open(alist[aidx], false, s.sampleRate, e)) { afile.loopFile = false; if (afile.audioInto(fifo)) return true; }
+            }
+            return false;
+        };
         SwsContext* prevSws = nullptr;
         auto lastPreview = std::chrono::steady_clock::now() - std::chrono::seconds(1);
         const auto t0 = std::chrono::steady_clock::now();
@@ -590,6 +688,16 @@ void VideoGenerator::Impl::run(GenConfig c) {
             } else if (c.source == Source::Generator) {
                 drawTestCard(out.y.data(), W, out.u.data(), W / 2, out.v.data(), W / 2, W, H, (int)(n % (1 << 30)), fps, c.pattern);
             } else if (c.source == Source::Picture) {
+                if (vlist.size() > 1 && t >= slideT + std::max(0.5, c.slideSeconds)) {   // the next picture of the folder
+                    slideT = t;
+                    for (size_t tries = 0; tries < vlist.size(); tries++) {
+                        if (++vidx >= vlist.size()) {
+                            if (!c.loop) { listDone = true; break; }
+                            vidx = 0;
+                        }
+                        if (openVideo(vidx, 0) && vfile.next() && vfile.toYuv(still)) break;
+                    }
+                }
                 const uint8_t* sp[3] = {still.y.data(), still.u.data(), still.v.data()};
                 const int ss[3] = {still.w, still.w / 2, still.w / 2};
                 fitter.run(sp, ss, still.w, still.h, out, c.fit);   // again: the overlay drew on the last one
@@ -597,12 +705,12 @@ void VideoGenerator::Impl::run(GenConfig c) {
                 // the newest file frame at or before t (frames are repeated or skipped to reach the output rate); the decoded frame
                 // after it waits in the reader (pending) until its time comes
                 if (!haveFileFrame && !fileEnded) {
-                    if (vfile.next()) { vfile.frameTime(); haveFileFrame = vfile.toYuv(src); }   // the first frame is shown from t = 0
+                    if (nextVideoFrame(t)) { vfile.frameTime(); haveFileFrame = vfile.toYuv(src); }   // the first frame is shown from t = 0
                     else fileEnded = true;
                 }
                 while (!fileEnded) {
                     if (!pending) {
-                        if (!vfile.next()) { fileEnded = true; break; }
+                        if (!nextVideoFrame(t)) { fileEnded = true; break; }
                         nextFileT = vfile.frameTime();
                         pending = true;
                     }
@@ -616,6 +724,7 @@ void VideoGenerator::Impl::run(GenConfig c) {
                     fitter.run(sp, ss, src.w, src.h, out, c.fit);
                 }
             }
+            if (listDone && (c.source == Source::Picture || fileEnded)) break;   // loop off: the last file has played
             // the overlay
             {
                 std::lock_guard<std::mutex> lk(mu);
@@ -655,7 +764,7 @@ void VideoGenerator::Impl::run(GenConfig c) {
                     } else if (c.audio == AudioSource::Microphone) {
                         mic.read(abuf.data(), fs);
                     } else if (fileSound) {
-                        while (fifo.size() < (size_t)fs * 2 && afile.audioInto(fifo)) {}
+                        while (fifo.size() < (size_t)fs * 2 && audioMore()) {}
                         const size_t m = std::min(fifo.size(), (size_t)fs * 2);
                         std::fill(abuf.begin(), abuf.end(), 0.f);
                         std::copy(fifo.begin(), fifo.begin() + (std::ptrdiff_t)m, abuf.begin());
@@ -739,7 +848,9 @@ bool VideoGenerator::start(const GenConfig& c, std::string& err) {
     if (running()) { err = "already running"; return false; }
     if (p_->th.joinable()) p_->th.join();
     if (c.output == Output::File && c.tsPath.empty()) { err = "choose a .ts file to write"; return false; }
-    if ((c.source == Source::Picture || c.source == Source::VideoFile) && c.path.empty()) { err = "choose a picture or video file"; return false; }
+    if ((c.source == Source::Picture || c.source == Source::VideoFile) && c.path.empty()) { err = "choose a picture or video file (or a folder)"; return false; }
+    if (c.source != Source::Generator && c.source != Source::Camera && listMedia(c.path, c.source == Source::Picture ? MediaKind::Picture : MediaKind::Video).empty()) { err = "there is nothing to play in " + c.path; return false; }
+    if (c.audio == AudioSource::AudioFile && listMedia(c.audioPath, MediaKind::Audio).empty()) { err = "choose a sound file (or a folder of them)"; return false; }
     if (c.source == Source::Generator && (c.pattern < 0 || c.pattern > 2)) { err = "the test pattern must be 0 to 2"; return false; }
     if (c.output != Output::File && (c.port <= 0 || c.port > 65535)) { err = "the port must be 1 to 65535"; return false; }
     if (c.enc.width < 16 || c.enc.height < 16) { err = "the picture is too small"; return false; }

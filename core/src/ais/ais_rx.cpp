@@ -11,6 +11,7 @@
 #include "dect2/automation/engine.h"
 #include "dect2/net/feeds.h"
 #include "dect2/ais/ais_phy.h"
+#include "dect2/ais/ais_alerts.h"
 #include "dect2/ais/ais_proto.h"
 #include "dect2/ais/ais_longrange.h"
 #include "dect2/ais/ais_sat.h"
@@ -171,6 +172,9 @@ struct AisReceiver::Impl {
     AisPhyConfig phy;
     std::function<void(char, const ais::Bits&, double, double, double)> frameCb;   // every frame with a good FCS (VDES ASM listens through it)
     bool forwardFeeds = true;
+    bool collisionCancel = true;
+    AisAlertEngine alertEng;
+    std::deque<AisAlertRecord> alertLog;
 
     void logLine(const std::string& s) { if (log) log(s); }
     double now() const { return fs > 0 ? (double)inSamples / fs : 0.0; }
@@ -359,6 +363,39 @@ struct AisReceiver::Impl {
                 .num("sog_kt", v.sog).num("cog_deg", v.cog).num("nav_status", v.navStatus).str("class", cls[v.cls >= 0 && v.cls <= 5 ? v.cls : 5]).str("destination", v.destination);
             automation::emit(std::move(ev));
         }
+        if (m.hasPos) raiseAlerts(v);
+    }
+
+    // CPA and geofence alerts for one position update
+    void raiseAlerts(const AisVessel& v) {
+        const double utc = v.lastUtc > 0 ? v.lastUtc : automation::wallNow();
+        for (const AisAlert& a : alertEng.update(v, utc)) {
+            AisAlertRecord r;
+            r.utc = a.utc; r.kind = a.kind; r.fence = a.fence; r.mmsi = a.mmsi; r.name = a.name;
+            r.lat = a.lat; r.lon = a.lon; r.distNm = a.distNm; r.dcpaNm = a.dcpaNm; r.tcpaMin = a.tcpaMin;
+            alertLog.push_back(r);
+            while (alertLog.size() > 50) alertLog.pop_front();
+            char b[160];
+            if (a.kind == "cpa") snprintf(b, sizeof b, "AIS alert: %u %s will pass %.2f nm in %.0f min", a.mmsi, a.name.c_str(), a.dcpaNm, a.tcpaMin);
+            else snprintf(b, sizeof b, "AIS alert: %u %s %s %s", a.mmsi, a.name.c_str(), a.kind == "enter" ? "entered" : "left", a.fence.c_str());
+            logLine(b);
+            if (!automation::wants(automation::FAis)) continue;
+            static const char* const cls[] = {"A", "B", "base", "aid", "SAR", "other"};
+            const char* cn = cls[a.cls >= 0 && a.cls <= 5 ? a.cls : 5];
+            if (a.kind == "cpa") {
+                automation::Event ev("ais.cpa");
+                ev.at(automation::wallNow(), "AIS", aisChannelHz(aisChannelIndex(v.channel)));
+                ev.num("mmsi", a.mmsi).str("name", a.name).num("ship_type", a.shipType).str("class", cn).num("lat", a.lat).num("lon", a.lon)
+                    .num("sog_kt", a.sogKn).num("cog_deg", a.cogDeg).num("distance_nm", a.distNm).num("cpa_nm", a.dcpaNm).num("tcpa_min", a.tcpaMin);
+                automation::emit(std::move(ev));
+            } else {
+                automation::Event ev("ais.geofence");
+                ev.at(automation::wallNow(), "AIS", aisChannelHz(aisChannelIndex(v.channel)));
+                ev.num("mmsi", a.mmsi).str("name", a.name).num("ship_type", a.shipType).str("class", cn).num("lat", a.lat).num("lon", a.lon)
+                    .num("sog_kt", a.sogKn).num("cog_deg", a.cogDeg).num("distance_nm", a.distNm).str("fence", a.fence).str("transition", a.kind);
+                automation::emit(std::move(ev));
+            }
+        }
     }
 
     void onFrame(int c, const ais::Bits& bits, double snrDb, double cfoHz, double startSec = -1, int layer = 0) {
@@ -384,6 +421,7 @@ struct AisReceiver::Impl {
         ch[c].dop.add(tnow, cfoHz);
         if (layer == 1) t.recovered++;
         if (layer >= 2) t.cancelled++;
+        if (!sat && layer >= 1) t.collisionRecovered++;
         // the time stamp of the reception (message 27 carries none)
         if (timeBase == 0) timeBase = automation::wallNow() - tnow;
         AisRxRecord rec;
@@ -451,6 +489,13 @@ struct AisReceiver::Impl {
             AisCollisionConfig cc;
             cc.chanTaps = &h2;
             cr = aisDecodeCollided(seg.data(), seg.size(), core0, core1, phy, hints[c], cc);
+        } else if (collisionCancel) {
+            // coast mode: the same successive cancellation as the satellite mode, but only a little Doppler-free frequency search (two transmitters
+            // differ by up to about 1 kHz) and two layers, so a clean burst costs one extra fit and noise bursts a few tries
+            AisCollisionConfig cc;
+            cc.chanTaps = &h2;
+            cc.maxLayers = 2; cc.maxCandidates = 3; cc.searchHz = 1000; cc.gridHz = 500; cc.minSepHz = 250;
+            cr = aisDecodeCollided(seg.data(), seg.size(), core0, core1, phy, {}, cc);
         } else {
             const AisBurstResult r = aisDecodeBurst(seg.data(), seg.size(), core0, core1, phy);
             cr.bad = r.bad; cr.cfoHz = r.cfoHz;
@@ -555,6 +600,7 @@ struct AisReceiver::Impl {
         }
         AisTelemetry o = t;
         fillLists(o, tnow);
+        o.alerts.assign(alertLog.begin(), alertLog.end());
         std::lock_guard<std::mutex> lk(telMu);
         o.seq = ++seq;
         pub = std::move(o);
@@ -653,6 +699,14 @@ void AisReceiver::setSatelliteMode(bool on) {
     if (p_->isReady) p_->designChannels();
     for (auto& h : p_->hints) h.clear();
 }
+void AisReceiver::setCollisionCancel(bool on) {
+    std::lock_guard<std::mutex> lk(p_->procMu);
+    p_->collisionCancel = on;
+}
+void AisReceiver::setAlertConfig(const AisAlertConfig& c) {
+    std::lock_guard<std::mutex> lk(p_->procMu);
+    p_->alertEng.configure(c);
+}
 void AisReceiver::setSatelliteTle(const Tle* tle) {
     std::lock_guard<std::mutex> lk(p_->procMu);
     p_->satSgp.reset();
@@ -686,7 +740,7 @@ bool AisReceiver::telemetry(AisTelemetry& out, uint64_t lastSeq) {
 }
 void AisReceiver::clearResults() {
     std::lock_guard<std::mutex> lk(p_->procMu);
-    p_->vessels.clear(); p_->nmea.clear(); p_->recent.clear();
+    p_->vessels.clear(); p_->nmea.clear(); p_->recent.clear(); p_->alertLog.clear(); p_->alertEng.clear();
     p_->republish();
 }
 std::string AisReceiver::saveResults() const {

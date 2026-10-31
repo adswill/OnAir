@@ -51,7 +51,7 @@ struct MeshNodeUpdate {
     std::string publicKey;              // MeshCore: full public key in hex
     uint32_t positionTime = 0;          // unix time sent with the position (0 = none)
     double channelUtilPct = -1, airUtilTxPct = -1;    // -1 = not in this packet
-    long uptimeS = -1;
+    int64_t uptimeS = -1;   // a uint32 from the radio: long is 32 bit on Windows
     int sats = -1;
     bool signatureChecked = false, signatureOk = false;   // MeshCore adverts
 };

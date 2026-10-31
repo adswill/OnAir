@@ -77,7 +77,7 @@ constexpr uint8_t kVdl2CtrlUI = 0x03, kVdl2CtrlXID = 0xAF;          // U frames 
 bool vdl2ParseFrame(const uint8_t* f, size_t n, Vdl2Message& m);
 
 // ---- information field builders (test signal, tests) ----
-std::vector<uint8_t> vdl2AcarsInfo(const std::string& reg, const std::string& label, char blockId, const std::string& text, char ack = 0x15, char mode = '2');
+std::vector<uint8_t> vdl2AcarsInfo(const std::string& reg, const std::string& label, char blockId, const std::string& text, char ack = 0x15, char mode = '2', bool lastBlock = true);
 // an X.25 data packet with a CLNP DT header and a COTP DT TPDU around `user` (the payload of an ATN application)
 std::vector<uint8_t> vdl2X25ClnpData(int lcn, int ps, int pr, const std::vector<uint8_t>& srcNsap, const std::vector<uint8_t>& dstNsap, const std::vector<uint8_t>& user);
 std::vector<uint8_t> vdl2X25CallRequest(int lcn, const std::string& calledBcd, const std::string& callingBcd);

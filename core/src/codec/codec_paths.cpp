@@ -2,6 +2,7 @@
 #include <cctype>
 #include <cstdint>
 #include <cstdlib>
+#include <filesystem>
 #include <mutex>
 #ifdef _WIN32
 #include <windows.h>
@@ -107,6 +108,25 @@ std::vector<CodecDir> dirsWithFile(const std::vector<CodecDir>& dirs, const std:
     return r;
 }
 
+std::vector<std::string> libraryPaths(const std::vector<CodecDir>& dirs, const std::vector<std::string>& extraDirs, const std::vector<std::string>& names,
+                                      const std::function<bool(const std::string&)>& exists) {
+    std::vector<std::string> folders, out;
+    for (const auto& d : dirs) folders.push_back(d.path);
+    for (const auto& d : extraDirs) if (!d.empty()) folders.push_back(d);
+    std::vector<std::string> seen;
+    for (const auto& f : folders) {
+        bool dup = false;
+        for (const auto& s : seen) dup |= samePath(s, f);
+        if (dup) continue;
+        seen.push_back(f);
+        for (const auto& n : names) {
+            const std::string full = joinPath(f, n);
+            if (exists(full)) out.push_back(full);
+        }
+    }
+    return out;
+}
+
 void setExtraCodecDir(const std::string& dir) { std::lock_guard<std::mutex> lk(gMu); gExtra = dir; }
 std::string extraCodecDir() { std::lock_guard<std::mutex> lk(gMu); return gExtra; }
 
@@ -166,6 +186,17 @@ std::vector<CodecDir> systemCodecDirs() {
     if (const char* e = getenv("ONAIR_CODEC_DIR")) in.envDir = e;
     in.extraDir = extraCodecDir();
     return codecSearchDirs(in);
+}
+
+std::vector<std::string> systemLibraryPaths(const std::vector<std::string>& names) {
+    const auto exists = [](const std::string& p) {
+        try {
+            const std::u8string u(reinterpret_cast<const char8_t*>(p.data()), p.size());   // the paths are UTF-8, also on Windows
+            std::error_code ec;
+            return std::filesystem::is_regular_file(std::filesystem::path(u), ec);
+        } catch (const std::exception&) { return false; }
+    };
+    return libraryPaths(systemCodecDirs(), {programDir()}, names, exists);
 }
 
 } // namespace dect2::codec

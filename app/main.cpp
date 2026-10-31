@@ -264,6 +264,7 @@ static void shotReport(App& app) {
 static void shutdownApp(App& app, gfx::Backend* gfxBackend, GLFWwindow* window) {
     webshare::stopAll();   // the OnAir Web easy setup's server and tunnel end with the app
     savePrefsFlush();
+    plat::prefs().flush();   // anything set since the last write (a retry of a refused write, a key set without a save)
     layoutSaveNow();
     workspaceSessionEnd(app);   // the last-session file is marked clean first: the state is the one at exit
     delete gDiscord;   // clears the status and joins its thread
@@ -338,6 +339,20 @@ int main(int argc, char** argv) {
         const long v = plat::prefs().getI("uiTypography", 0);
         typo::setVariant(v == 1 ? typo::Clean : v == 2 ? typo::Compact : typo::Classic);
     }
+    {   // #372: the number of decoding threads (0 = none beyond the caller, 1..64), saved as "threads" in the settings; automatic when absent. Read before the first pool use;
+        // DECT2_THREADS in the environment wins. Takes effect at the next start.
+        if (plat::prefs().has("threads") && !std::getenv("DECT2_THREADS")) {
+            const long n = plat::prefs().getI("threads", -1);
+            if (n >= 0 && n <= 64) {
+                const std::string v = std::to_string(n);
+#ifdef _WIN32
+                _putenv_s("DECT2_THREADS", v.c_str());
+#else
+                setenv("DECT2_THREADS", v.c_str(), 0);
+#endif
+            }
+        }
+    }
     {   // View > Time display: UTC (default) or the computer's local time, with an optional (UTC)/(local) label
         dect2::timefmt::setZone(plat::prefs().getB("timeLocal", false) ? dect2::timefmt::Zone::Local : dect2::timefmt::Zone::Utc);
         dect2::timefmt::setLabel(plat::prefs().getB("timeLabel", false));
@@ -360,7 +375,7 @@ int main(int argc, char** argv) {
 
 
     ImGui_ImplGlfw_InitForOther(window, true);
-    glfwSetDropCallback(window, [](GLFWwindow*, int n, const char** paths) { if (n > 0) wbQueueDrop(paths[0]); });   // a recording dropped on the window: the Signal workbench opens it
+    glfwSetDropCallback(window, [](GLFWwindow*, int n, const char** paths) { if (n > 0 && !vgQueueDrop(n, paths)) wbQueueDrop(paths[0]); });   // a recording dropped on the window: the Signal workbench opens it
     watchMonitors();
     if (gWayland) ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;   // see chooseGlfwPlatform()
 
@@ -389,7 +404,7 @@ int main(int argc, char** argv) {
             if (minimisedFrame(window, app, o, w, h)) continue;
             static const float kClear[4] = {0.04f, 0.045f, 0.05f, 1.f}, kClearLight[4] = {0.955f, 0.95f, 0.96f, 1.f};
             static const float kClearHc[4] = {0.f, 0.f, 0.f, 1.f};
-            gfxBackend->newFrame(w, h, app.highContrast ? kClearHc : app.lightUi ? kClearLight : kClear);
+            gfxBackend->newFrame(w, h, app.highContrast ? kClearHc : (app.lightUi || (app.newUi && app.uiTheme == 7)) ? kClearLight : kClear);
             ImGui_ImplGlfw_NewFrame();
             applyDisplayScale(window, app, baseStyle);
             ImGui::NewFrame();
@@ -406,7 +421,7 @@ int main(int argc, char** argv) {
             keepWindowsReachable();
             ImGui::Render();
             if (app.highContrast) lightenDrawData(ImGui::GetDrawData(), false, true);   // High contrast wins over Light
-            else if (app.lightUi) lightenDrawData(ImGui::GetDrawData());
+            else if (app.lightUi || (app.newUi && app.uiTheme == 7)) lightenDrawData(ImGui::GetDrawData());
             perfLog(tUi0);
             perfFrame(glfwGetTime(), glfwGetTime() - tUi0, pi.interval, pi.battery, pi.occluded, app.perfOverlay);
             const bool shotNow = o.shotPath && (o.shotAfter > 0 ? glfwGetTime() > o.shotAfter : ++o.shotFrame == (o.hackrfStart ? (app.playReq >= 0 || app.engine.player().selected() >= 0 ? 2400 : 900) : 400));

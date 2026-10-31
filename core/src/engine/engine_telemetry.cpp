@@ -302,7 +302,9 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 207: return pollStd(rxSsdv_, 207, t, seqs[183], &RxTelemetry::ssdv);   // Ssdv (slot 183)
     case 208: return pollStd(rxEbi_, 208, t, seqs[184], &RxTelemetry::ebicab);   // Ebicab (slot 184)
     case 209: return pollStd(rxInmsat_, 209, t, seqs[185], &RxTelemetry::inmsat);   // Inmsat (slot 185)
+    case 213: return pollStd(rxSw_, 213, t, seqs[188], &RxTelemetry::shortwave);   // Shortwave (slot 188)
     case 211: return pollStd(rxNrf_, 211, t, seqs[186], &RxTelemetry::nrf24);   // nRF24L01 (slot 186)
+    case 212: return pollStd(rxAtis_, 212, t, seqs[187], &RxTelemetry::atis);   // ATIS inland waterways (slot 187)
     case 205: return pollStd(rxEsg_, 205, t, seqs[165], &RxTelemetry::esubghz);   // Flipper Zero Sub-GHz chat (slot 165)
     case 203: return pollStd(rxPskd_, 203, t, seqs[163], &RxTelemetry::pskd);   // PSK demodulator (slot 163)
     case 99: return pollStd(rxZw_, 99, t, seqs[90], &RxTelemetry::zwave);

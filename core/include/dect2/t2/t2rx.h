@@ -105,6 +105,8 @@
 #include "dect2/ebicab/ebicab_tel.h"
 #include "dect2/inmsat/inmsat_tel.h"
 #include "dect2/nrf24/nrf24_tel.h"
+#include "dect2/atis/atis_tel.h"
+#include "dect2/shortwave/shortwave_tel.h"
 #include "dect2/pskdsp/pskdsp_tel.h"
 #include "dect2/wisun/wisun_tel.h"
 #include "dect2/zwave/zwave_tel.h"
@@ -228,6 +230,8 @@ struct RxTelemetry {
     PactorTelemetry pactor;   // valid when standard == 204 (PACTOR-I monitor, family 203, engine standard 205)
     RoshfTelemetry roshf;     // valid when standard == 206 (ROS (HF) detector, family 205, engine standard 207)
     SsdvTelemetry ssdv;       // valid when standard == 207 (SSDV pictures, family 206, engine standard 208)
+    AtisTelemetry atis;       // valid when standard == 212 (ATIS inland waterways, family 211, engine standard 213)
+    ShortwaveTelemetry shortwave;   // valid when standard == 213 (Shortwave, family 212, engine standard 214)
     Nrf24Telemetry nrf24;     // valid when standard == 211 (nRF24L01, family 210, engine standard 212)
     InmsatTelemetry inmsat;   // valid when standard == 209 (Inmarsat all carriers, family 208, engine standard 210)
     EbicabTelemetry ebicab;   // valid when standard == 208 (EBICab / Eurobalise, family 207, engine standard 209)

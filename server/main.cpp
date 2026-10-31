@@ -9,6 +9,7 @@
 #include "server_host.h"
 #include "web/web_config.h"
 #include "web/web_decoders.h"
+#include "web/web_json.h"
 #include <atomic>
 #include <chrono>
 #include <csignal>
@@ -61,6 +62,9 @@ static void usage() {
            "  --web-port N       OnAir Web port (default 8073)\n"
            "  --web-lan          OnAir Web on every interface (without TLS only private addresses are let in)\n"
            "  --directory-remove remove this server from the public OnAir Web directory now (signed with its key), then exit\n"
+           "  --directory-preview  print the confirmation code, then exactly what the directory would receive; send nothing, exit\n"
+           "  --directory-run    only the directory listing, as its own program: reads the running web server's info and sends the heartbeat (needs web_directory_ack); status in web_directory_status.json\n"
+           "  --directory-test   check the directory, the local web server and the public address one by one (one JSON line each), exit\n"
            "  --version, --help\n\n"
            "Settings file: plain key=value lines (see docs/headless-server.md).\n",
            ONAIR_SERVER_VERSION, defaultConfigPath().c_str());
@@ -88,7 +92,7 @@ int main(int argc, char** argv) {
     api.token = cfg.get("token");
     api.tlsCert = cfg.get("tls_cert");
     api.tlsKey = cfg.get("tls_key");
-    bool dirRemove = false;
+    bool dirRemove = false, dirPreviewOnly = false, dirRun = false, dirTest = false;
     bool newToken = false, share = cfg.flag("share_rtltcp", false);
     int sharePort = (int)cfg.num("share_port", 1234);
     for (int i = 1; i < argc; i++) {
@@ -109,6 +113,9 @@ int main(int argc, char** argv) {
         else if (a == "--web-port") cfg.set("web_port", next());
         else if (a == "--web-lan") cfg.set("web_lan", "1");
         else if (a == "--directory-remove") dirRemove = true;
+        else if (a == "--directory-preview") dirPreviewOnly = true;
+        else if (a == "--directory-run") dirRun = true;
+        else if (a == "--directory-test") dirTest = true;
         else if (a == "--share-rtltcp") { share = true; if (i + 1 < argc && argv[i + 1][0] != '-') sharePort = atoi(argv[++i]); }
         else { fprintf(stderr, "unknown option %s (try --help)\n", a.c_str()); return 2; }
     }
@@ -133,6 +140,33 @@ int main(int argc, char** argv) {
         std::string err;
         if (!d->removeNow(webCfg.directory, err)) { fprintf(stderr, "onair-server: directory removal failed: %s\n", err.c_str()); return 1; }
         printf("onair-server: removed from the directory %s. It stays removed until web_directory is on and a heartbeat is sent again.\n", webCfg.directory.url.c_str());
+        return 0;
+    }
+    if (dirPreviewOnly || dirRun || dirTest) {   // the listing as small programs of its own: the radio and the web server are not touched (the settings file is not written)
+        onair_web::DirectoryConfig dc = webCfg.directory;
+        dc.name = dc.name.empty() ? webCfg.name : dc.name;
+        dc.maxUsers = webCfg.limits.maxUsers;
+        const int webPort = (int)cfg.num("web_port", 8073);
+        if (dirTest) {
+            std::atomic<bool> never{false};
+            onair_web::directoryCheck(dc, webPort, [](const std::string& l) { printf("%s\n", l.c_str()); fflush(stdout); }, never);
+            return 0;
+        }
+        if (dirPreviewOnly) {
+            std::string pv, ack, err;
+            const std::string info = onair_web::directoryStandInInfo(dc);
+            if (!onair_web::directoryPreview(dc, info, pv, ack, err)) { printf("error=%s\n", err.c_str()); return 1; }
+            printf("ack=%s\n---\n%s", ack.c_str(), pv.c_str());   // line 1: the confirmation code, then the exact text the directory would receive
+            return 0;
+        }
+        std::unique_ptr<onair_web::DirectoryHeartbeat> d(onair_web::makeDirectoryHeartbeat());
+        std::atomic<bool> never{false};
+        std::string err;
+        if (!d->start(dc, [webPort, &never] { return onair_web::fetchLocalInfo(webPort, never); }, err)) { fprintf(stderr, "onair-server: %s\n", err.c_str()); return 1; }
+        signal(SIGINT, onSignal);
+        signal(SIGTERM, onSignal);
+        while (!gQuit) std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        d->stop();
         return 0;
     }
     if (saveCfg) {

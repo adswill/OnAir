@@ -47,6 +47,7 @@ struct RdsInfo {
     std::vector<RdsEon> eon;            // other networks
     std::string psPartial;              // the name being collected, '_' where nothing has come yet ("" when nothing has)
     uint64_t blocksGood = 0, blocksCorrected = 0, blocksBad = 0;
+    uint64_t blocksVoted = 0;   // blocks rebuilt by voting over repeated copies (a subset of blocksCorrected)
 };
 
 // Content type names of RadioText+ (the RT+ specification, 64 classes)
@@ -67,7 +68,9 @@ public:
     void onGroup(const uint16_t blocks[4], const uint8_t err[4], double now);
     void setGroupTap(GroupTap tap) { tap_ = std::move(tap); }
     // Error correction on (default): off keeps only the blocks whose checkword is right. Before the first bit (not thread safe).
-    void setCorrection(bool burst, bool soft) { ecBurst_ = burst; ecSoft_ = soft; }
+    void setCorrection(bool burst, bool soft) { ecBurst_ = burst; ecSoft_ = soft; ecVote_ = soft; }   // voting (repeated copies of a block) comes with the top level
+
+    void setVoting(bool on) { ecVote_ = on; }   // after setCorrection; on by default
 
     // state
     bool synced = false;
@@ -101,7 +104,15 @@ private:
     int nHits_ = 0;
     uint16_t blk_[4] = {};
     uint8_t err_[4] = {2, 2, 2, 2};
-    bool ecBurst_ = true, ecSoft_ = true;
+    bool ecBurst_ = true, ecSoft_ = true, ecVote_ = true;
+    // Voting: the bad blocks of one position (A, B, C, D) are kept with their bit reliabilities. Groups repeat (block A is the PI in every
+    // group, a PS or RT segment comes again every few seconds), so three or more copies that lie close together vote bit by bit (weighted
+    // by reliability), and the result is taken only when its checkword is right.
+    struct VoteCopy { uint32_t w; float llr[26]; uint64_t at; };
+    static constexpr int kVote = 8;
+    VoteCopy vote_[4][kVote] = {};
+    int nVote_[4] = {}, votePos_[4] = {};
+    bool voteBlock(uint32_t& w, int pos);
     GroupTap tap_;
     // group decoder
     char psBuf_[9] = "        ";

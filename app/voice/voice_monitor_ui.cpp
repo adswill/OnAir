@@ -6,6 +6,7 @@
 #include "dect2/audio/audioout.h"
 #include "dect2/engine/updater.h"
 #include "dect2/voice/voice_monitor.h"
+#include "dect2/voice/conversation.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -13,6 +14,7 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <ctime>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -25,8 +27,9 @@ namespace fs = std::filesystem;
 namespace {
 
 struct Bufs {   // the text boxes of a mode's filters, kept while being typed in
-    char allow[1024] = {}, mute[1024] = {}, prio[1024] = {}, hold[64] = {}, labels[4096] = {}, dir[512] = {}, search[96] = {};
+    char allow[1024] = {}, mute[1024] = {}, prio[1024] = {}, hold[64] = {}, labels[32768] = {}, dir[512] = {}, search[96] = {};
     uint64_t gen = 0;   // the settings these were filled from
+    std::string importNote;   // what the last "Import names" did
 };
 
 struct UiState {
@@ -79,6 +82,7 @@ std::string target(const vm::CallEntry& e) {
 std::string source(const vm::CallEntry& e) {
     std::string s = vm::sourceText(e.info);
     if (!e.info.alias.empty()) s += " (" + e.info.alias + ")";
+    if (!e.srcLabel.empty() && e.srcLabel != e.label) s += "  " + e.srcLabel;
     return s;
 }
 
@@ -320,6 +324,171 @@ void historyTab(vm::Monitor& m, Bufs& b) {
     ImGui::EndTable();
 }
 
+void heardTab(vm::Monitor& m) {
+    const auto h = m.heard(300);
+    ImGui::TextDisabled("%zu radios heard this session. Click a name to hold or mute it.", h.size());
+    if (!ImGui::BeginTable("##vmheard", 7, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    ImGui::TableSetupScrollFreeze(0, 1);
+    ImGui::TableSetupColumn("Last heard", ImGuiTableColumnFlags_WidthFixed, 74 * gUi);
+    ImGui::TableSetupColumn("Radio / callsign", ImGuiTableColumnFlags_WidthStretch, 1.f);
+    ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch, 1.f);
+    ImGui::TableSetupColumn("Last talkgroup", ImGuiTableColumnFlags_WidthStretch, 0.8f);
+    ImGui::TableSetupColumn("Calls", ImGuiTableColumnFlags_WidthFixed, 44 * gUi);
+    ImGui::TableSetupColumn("Airtime s", ImGuiTableColumnFlags_WidthFixed, 70 * gUi);
+    ImGui::TableSetupColumn("Errors", ImGuiTableColumnFlags_WidthFixed, 60 * gUi);
+    ImGui::TableHeadersRow();
+    for (const auto& e : h) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(clockText(e.lastWall).c_str());
+        ImGui::TableNextColumn();
+        ImGui::PushID(e.key.c_str());
+        const std::string who = vm::sourceText(e.last);
+        if (ImGui::Selectable(who.c_str(), false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap)) {}
+        if (ImGui::BeginPopupContextItem("##vmheardmenu", ImGuiPopupFlags_MouseButtonLeft | ImGuiPopupFlags_MouseButtonRight)) {
+            const std::string tok = e.last.src ? std::to_string(e.last.src) : e.last.srcText;
+            if (ImGui::MenuItem("Mute this radio")) m.muteToken(tok), save();
+            if (ImGui::MenuItem("Hold on its last talkgroup")) m.holdTarget(vm::Monitor::targetToken(e.last)), save();
+            if (ImGui::MenuItem("Copy ID")) ImGui::SetClipboardText(tok.c_str());
+            ImGui::EndPopup();
+        }
+        ImGui::PopID();
+        if (e.emergency) { ImGui::SameLine(); ImGui::TextColored(pal::badRed(), "EMERGENCY"); }
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(e.name.c_str());
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(vm::targetText(e.last).c_str());
+        ImGui::TableNextColumn(); ImGui::Text("%u", e.calls);
+        ImGui::TableNextColumn(); ImGui::Text("%.0f", e.seconds);
+        ImGui::TableNextColumn(); if (e.errorRate >= 0) ImGui::Text("%.1f %%", e.errorRate * 100.f); else ImGui::TextDisabled("-");
+    }
+    ImGui::EndTable();
+}
+
+// ---- Conversations: the calls of this mode grouped into threads by talkgroup (or the two radios of a private call), carrier and slot.
+struct ConvUi {
+    char search[96] = {};
+    int gapIdx = 1, sinceIdx = 0, slot = 0;
+    float minSec = 0, maxErrPct = 0;
+    bool playedOnly = false, withAudio = false, hideEnc = false;
+    std::string exported;   // where the last export went
+};
+std::map<std::string, ConvUi> gConv;
+
+bool writeText(const std::string& path, const std::string& text) {
+    std::error_code ec;
+    fs::create_directories(fs::path(path).parent_path(), ec);
+    std::ofstream o(path, std::ios::binary);
+    if (!o) return false;
+    o << text;
+    return (bool)o;
+}
+
+void conversationsTab(vm::Monitor& m) {
+    ConvUi& u = gConv[m.mode()];
+    static const double gaps[] = {30, 60, 300, 900, 3600};
+    static const char* gapNames[] = {"30 s", "1 min", "5 min", "15 min", "1 hour"};
+    static const int64_t sinces[] = {0, 3600, 6 * 3600, 24 * 3600};
+    static const char* sinceNames[] = {"all session", "last hour", "last 6 hours", "last 24 hours"};
+    ImGui::SetNextItemWidth(200 * gUi);
+    ImGui::InputTextWithHint("##cvsearch", "search: talkgroup, ID, callsign, name, state", u.search, sizeof u.search);
+    ImGui::SameLine(); ImGui::SetNextItemWidth(90 * gUi);
+    if (ImGui::BeginCombo("##cvgap", gapNames[u.gapIdx])) {
+        for (int i = 0; i < 5; ++i) if (ImGui::Selectable(gapNames[i], u.gapIdx == i)) u.gapIdx = i;
+        ImGui::EndCombo();
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("A conversation ends after this much quiet on its talkgroup.");
+    ImGui::SameLine(); ImGui::SetNextItemWidth(110 * gUi);
+    if (ImGui::BeginCombo("##cvsince", sinceNames[u.sinceIdx])) {
+        for (int i = 0; i < 4; ++i) if (ImGui::Selectable(sinceNames[i], u.sinceIdx == i)) u.sinceIdx = i;
+        ImGui::EndCombo();
+    }
+    ImGui::Checkbox("Played only", &u.playedOnly); ImGui::SameLine();
+    ImGui::Checkbox("With recording", &u.withAudio); ImGui::SameLine();
+    ImGui::Checkbox("Hide encrypted", &u.hideEnc); ImGui::SameLine();
+    ImGui::SetNextItemWidth(80 * gUi); ImGui::SliderFloat("##cvmin", &u.minSec, 0, 20, u.minSec <= 0 ? "any length" : "over %.0f s");
+    ImGui::SameLine(); ImGui::SetNextItemWidth(90 * gUi); ImGui::SliderFloat("##cverr", &u.maxErrPct, 0, 20, u.maxErrPct <= 0 ? "any signal" : "errors < %.0f %%");
+    ImGui::SameLine(); ImGui::SetNextItemWidth(70 * gUi);
+    if (ImGui::BeginCombo("##cvslot", u.slot ? (u.slot == 1 ? "slot 1" : "slot 2") : "all slots")) {
+        if (ImGui::Selectable("all slots", u.slot == 0)) u.slot = 0;
+        if (ImGui::Selectable("slot 1", u.slot == 1)) u.slot = 1;
+        if (ImGui::Selectable("slot 2", u.slot == 2)) u.slot = 2;
+        ImGui::EndCombo();
+    }
+    vm::ConvFilter f;
+    f.query = u.search; f.minSeconds = u.minSec; f.maxErrorRate = u.maxErrPct > 0 ? u.maxErrPct / 100.f : -1.f;
+    f.playedOnly = u.playedOnly; f.withAudioOnly = u.withAudio; f.hideEncrypted = u.hideEnc; f.slot = u.slot;
+    if (sinces[u.sinceIdx] > 0) f.sinceWall = (int64_t)std::time(nullptr) - sinces[u.sinceIdx];
+    std::vector<vm::CallEntry> all = m.history(std::string(), 1000);
+    for (const auto& c : m.calls()) {   // a live call that the history does not list yet
+        bool have = false;
+        for (const auto& h : all) if (h.id == c.id) { have = true; break; }
+        if (!have) all.push_back(c);
+    }
+    const auto conv = vm::groupConversations(all, gaps[u.gapIdx], f);
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextDisabled("%zu conversations", conv.size());
+    ImGui::SameLine();
+    const std::string dir = recordFolder(m) + "/exports";
+    char stamp[32]; { struct tm g; dect2::localTime(std::time(nullptr), &g); snprintf(stamp, sizeof stamp, "%04d%02d%02d-%02d%02d%02d", g.tm_year + 1900, g.tm_mon + 1, g.tm_mday, g.tm_hour, g.tm_min, g.tm_sec); }
+    if (ImGui::SmallButton("Export CSV")) { const std::string p = dir + "/conversations-" + m.mode() + "-" + stamp + ".csv"; u.exported = writeText(p, vm::conversationsCsv(conv)) ? p : "could not write " + p; }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Export JSON")) { const std::string p = dir + "/conversations-" + m.mode() + "-" + stamp + ".json"; u.exported = writeText(p, vm::conversationsJson(conv, m.mode())) ? p : "could not write " + p; }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Open exports folder")) openFolder(dir);
+    if (!u.exported.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", u.exported.c_str()); }
+    if (!ImGui::BeginTable("##vmconv", 7, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    ImGui::TableSetupScrollFreeze(0, 1);
+    ImGui::TableSetupColumn("Conversation", ImGuiTableColumnFlags_WidthStretch, 1.f);
+    ImGui::TableSetupColumn("Last heard", ImGuiTableColumnFlags_WidthFixed, 70 * gUi);
+    ImGui::TableSetupColumn("Calls", ImGuiTableColumnFlags_WidthFixed, 44 * gUi);
+    ImGui::TableSetupColumn("Talk s", ImGuiTableColumnFlags_WidthFixed, 56 * gUi);
+    ImGui::TableSetupColumn("Talkers", ImGuiTableColumnFlags_WidthStretch, 1.f);
+    ImGui::TableSetupColumn("Signal", ImGuiTableColumnFlags_WidthFixed, 90 * gUi);
+    ImGui::TableSetupColumn("Audio", ImGuiTableColumnFlags_WidthFixed, 60 * gUi);
+    ImGui::TableHeadersRow();
+    int row = 0;
+    for (const auto& v : conv) {
+        ImGui::PushID(row++);
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        const std::string head = v.title + (v.label.empty() ? "" : "  " + v.label) + (v.slot ? "  slot " + std::to_string(v.slot) : "");
+        const bool openNode = ImGui::TreeNodeEx("##cv", ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_AllowOverlap, "%s", head.c_str());
+        if (v.active) { ImGui::SameLine(); ImGui::TextColored(pal::okGreen(), "live"); }
+        if (v.encrypted) { ImGui::SameLine(); ImGui::TextColored(pal::warnAmber(), "%zu encrypted", v.encrypted); }
+        if (v.emergency) { ImGui::SameLine(); ImGui::TextColored(pal::badRed(), "emergency"); }
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(clockText(v.lastWall).c_str());
+        ImGui::TableNextColumn(); ImGui::Text("%zu", v.calls.size());
+        ImGui::TableNextColumn(); ImGui::Text("%.0f", v.talkSeconds);
+        ImGui::TableNextColumn();
+        { std::string t; for (size_t i = 0; i < v.talkers.size() && i < 3; ++i) t += (i ? ", " : "") + v.talkers[i].who; if (v.talkers.size() > 3) t += " +" + std::to_string(v.talkers.size() - 3); ImGui::TextUnformatted(t.c_str()); }
+        ImGui::TableNextColumn();
+        if (v.avgError >= 0) ImGui::TextColored(v.avgError < 0.02f ? pal::okGreen() : v.avgError < 0.08f ? pal::warnAmber() : pal::badRed(), "%s %.1f %%", vm::signalLabel(v.avgError), v.avgError * 100.f);
+        else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (v.withAudio) ImGui::Text("%zu clip%s", v.withAudio, v.withAudio == 1 ? "" : "s"); else ImGui::TextDisabled("-");
+        if (openNode) {
+            for (size_t i = 0; i < v.calls.size(); ++i) {
+                const auto& c = v.calls[v.calls.size() - 1 - i];   // newest call first inside a thread
+                ImGui::PushID((int)c.id);
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn(); ImGui::Indent(18 * gUi); ImGui::TextUnformatted(source(c).c_str());
+                ImGui::SameLine(); ImGui::TextDisabled("%s", c.played ? (c.active ? "playing" : "played") : vm::verdictText(c.verdict));
+                ImGui::Unindent(18 * gUi);
+                ImGui::TableNextColumn(); ImGui::TextUnformatted(clockText(c.wallStart).c_str());
+                ImGui::TableNextColumn(); ImGui::TextUnformatted("");
+                ImGui::TableNextColumn(); ImGui::Text("%.1f", c.seconds());
+                ImGui::TableNextColumn(); ImGui::TextUnformatted(c.info.access.empty() ? "" : c.info.access.c_str());
+                ImGui::TableNextColumn();
+                if (c.errorRate >= 0) ImGui::Text("%s %.1f %%", vm::signalLabel(c.errorRate), c.errorRate * 100.f); else ImGui::TextDisabled("-");
+                ImGui::TableNextColumn();
+                if (!c.file.empty()) { if (ImGui::SmallButton("Play")) dect2::openUrl(c.file); if (ImGui::IsItemHovered()) ImGui::SetTooltip("Opens the recording in your sound player:\n%s", c.file.c_str()); }
+                else ImGui::TextDisabled("-");
+                ImGui::PopID();
+            }
+            ImGui::TreePop();
+        }
+        ImGui::PopID();
+    }
+    ImGui::EndTable();
+}
+
 bool listBox(const char* label, const char* id, char* buf, size_t n, const char* tip, float h) {
     ImGui::TextUnformatted(label);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tip);
@@ -344,11 +513,32 @@ void filtersTab(vm::Monitor& m, vm::Settings s, Bufs& b) {
     float hang = (float)s.hangSec;
     if (ImGui::SliderFloat("##vmhang", &hang, 0.5f, 10.f, "%.1f s")) { s.hangSec = hang; ch = true; }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("How long the sound stays with a call after its last frame, so the answer in a conversation is heard\nbefore another talkgroup takes over.");
-    const float h = std::max(48.f * gUi, (ImGui::GetContentRegionAvail().y - 5 * ImGui::GetTextLineHeightWithSpacing()) / 4.f);
+    ImGui::SameLine();
+    float hs = (float)s.holdSec;
+    ImGui::AlignTextToFramePadding(); ImGui::TextUnformatted("Release after"); ImGui::SameLine();
+    ImGui::SetNextItemWidth(110 * gUi);
+    if (ImGui::SliderFloat("##vmholdsec", &hs, 0.f, 300.f, hs < 1.f ? "never" : "%.0f s", ImGuiSliderFlags_Logarithmic)) { s.holdSec = hs < 1.f ? 0.0 : hs; ch = true; }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("The hold lets go by itself after this long without a call on the held talkgroup, so you do not miss the rest of the\nband after forgetting a hold. Never: held until you release it.");
+    const float h = std::max(48.f * gUi, (ImGui::GetContentRegionAvail().y - 6 * ImGui::GetTextLineHeightWithSpacing()) / 4.f);
     if (listBox("Allow list", "##vmallow", b.allow, sizeof b.allow, ids, h)) { s.allow = b.allow; ch = true; }
     if (listBox("Mute list (never played)", "##vmmute", b.mute, sizeof b.mute, ids, h)) { s.mute = b.mute; ch = true; }
     if (listBox("Priority (takes the sound from any other call)", "##vmprio", b.prio, sizeof b.prio, ids, h)) { s.priority = b.prio; ch = true; }
-    if (listBox("Names (one per line: 91=Worldwide)", "##vmlabels", b.labels, sizeof b.labels, "A name for a talkgroup, radio ID or callsign, shown in the card and the lists and searched in the history.", h)) { s.labels = b.labels; ch = true; }
+    if (ImGui::SmallButton("Import names...")) {
+        const std::string path = plat::openFileDialog();
+        if (!path.empty()) {
+            std::ifstream f(path, std::ios::binary);
+            std::stringstream ss; ss << f.rdbuf();
+            size_t n = 0;
+            const std::string add = vm::importLabels(ss.str(), vm::ListKind::Auto, &n);
+            const std::string merged = vm::mergeLabels(s.labels, add);
+            if (n == 0) b.importNote = "No usable lines found (expected: ID,name per line, or a RadioID.net user.csv).";
+            else if (merged.size() >= sizeof b.labels) b.importNote = "That list is too big (" + std::to_string(n) + " names); trim it to the radios you hear.";
+            else { s.labels = merged; snprintf(b.labels, sizeof b.labels, "%s", merged.c_str()); ch = true; b.importNote = "Imported " + std::to_string(n) + " names from " + fs::path(path).filename().string() + "."; }
+        }
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Add names from a file: a RadioID.net user.csv (radio IDs with callsign and name), a BrandMeister or TGIF talkgroup\nlist, or any file with an ID and a name per line. Names with the same ID are replaced.");
+    if (!b.importNote.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", b.importNote.c_str()); }
+    if (listBox("Names (one per line: 91=Worldwide, RID 3120123=LY1ABC Jonas)", "##vmlabels", b.labels, sizeof b.labels, "A name for a talkgroup, radio ID or callsign, shown in the card and the lists and searched in the history.", h)) { s.labels = b.labels; ch = true; }
     if (ch) { m.setSettings(s); b.gen = m.settingsGen(); save(); }
 }
 
@@ -397,6 +587,7 @@ void helpTab(const char* title) {
         "Status: locked means a signal of the mode is being decoded. 'codec missing' means the voice codec plug-in is not installed: the calls "
         "are still listed. Install it with the ? button next to the codec line (Help > Voice codecs lists them all). Encrypted calls are shown "
         "as encrypted and are never decoded.\n\n"
+        "Conversations: the calls of a talkgroup (or the two radios of a private call) on one slot, grouped while the quiet between them stays under the gap you choose. Open a row to see every call with its talker, length, signal (bit errors) and recording; Play opens the recording in your sound player. Search and the filters narrow the list, Export CSV / JSON write it into the recordings folder (exports). Encrypted calls are listed as encrypted and have no audio.\n\n"
         "Recording: each played call becomes a WAV file and a JSON file of its details. The history keeps the last 1000 calls of this session "
         "and can be searched by talkgroup, ID, callsign, name or state.");
     ImGui::PopTextWrapPos();
@@ -428,7 +619,9 @@ void window(App& a) {
     else ImGui::TextDisabled("nobody talking");
     if (ImGui::BeginTabBar("##vmtabs")) {
         if (ImGui::BeginTabItem("Calls")) { callsTab(m, s); ImGui::EndTabItem(); }
+        if (ImGui::BeginTabItem("Conversations")) { conversationsTab(m); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem("History")) { historyTab(m, b); ImGui::EndTabItem(); }
+        if (ImGui::BeginTabItem("Last heard")) { heardTab(m); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem("Filters")) { filtersTab(m, s, b); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem("Sound")) { soundTab(m, s, b, titleOf(S.mode)); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem("Help")) { helpTab(titleOf(S.mode)); ImGui::EndTabItem(); }

@@ -1121,6 +1121,7 @@ int curlDownloadFile(const std::string& url, const std::string& outFile, uint64_
                                         "-H", "User-Agent: OnAir", "-o", outFile, url};
     return runCurl(a, nullptr, cancel, tick);
 }
+int curlRun(const std::vector<std::string>& args, std::string* out, const std::atomic<bool>& cancel) { return runCurl(args, out, cancel, {}); }
 std::string curlDownloadError(int rc) {
     if (rc == kCurlCancelled) return "cancelled";
     if (rc == kCurlMissing) return curlError(rc, "the download");

@@ -42,17 +42,19 @@ std::string Log::render(Fmt f) const {
             if (!m.flight.empty()) o += "  flight " + m.flight;
             o += "\n";
             if (!m.detail.empty()) { o += "  " + m.detail; if (o.back() != '\n') o += "\n"; }
+            if (m.part) o += "  (one block of a longer ACARS message; the joined message follows)\n";
+            if (m.acarsBlocks > 1) o += "  (joined from " + std::to_string(m.acarsBlocks) + " blocks" + (m.acarsIncomplete ? ", the end did not arrive" : "") + ")\n";
             if (m.acars && !m.acarsText.empty()) o += "  ACARS " + m.label + ": " + m.acarsText + "\n";
             o += "\n";
         }
         return o;
     }
     resexp::Table t;
-    t.cols = {"utc", "freq_mhz", "level_dbfs", "snr_db", "from", "from_type", "to", "to_type", "frame", "protocol", "registration", "flight", "label", "summary", "acars_text", "detail",
+    t.cols = {"utc", "freq_mhz", "level_dbfs", "snr_db", "from", "from_type", "to", "to_type", "frame", "protocol", "registration", "flight", "label", "summary", "acars_text", "blocks", "raw_block", "detail",
               "lat", "lon", "alt_ft"};
     for (const auto& m : rows_) {
         t.add({utc(m.wallTime), resexp::num(m.freqHz / 1e6, 4), resexp::num(m.levelDb, 1), resexp::num(m.snrDb, 1), hex6(m.src), kind(m.srcType), hex6(m.dst), kind(m.dstType),
-               m.frameName, m.proto, m.reg, m.flight, m.label, m.summary, m.acarsText, m.detail,
+               m.frameName, m.proto, m.reg, m.flight, m.label, m.summary, m.acarsText, m.acars ? std::to_string(m.acarsBlocks) : "", m.part ? "1" : "", m.detail,
                m.hasPos ? resexp::num(m.lat, 5) : "", m.hasPos ? resexp::num(m.lon, 5) : "", m.hasAlt ? std::to_string(m.altFt) : ""},
               (double)m.wallTime);
     }

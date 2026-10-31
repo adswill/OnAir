@@ -1,6 +1,7 @@
 // All types at once: the default three sondes, then six (two RS41, two DFM, M10, M20), then seven with an RS92, in one band.
 // Every sonde must be found on its own channel, with the position and speed of the test flight.
 #include "dect2/sonde/sonde_testkit.h"
+#include "../common/cpu_report.h"
 using namespace dect2;
 using namespace dect2::sondetest;
 
@@ -38,6 +39,7 @@ int main() {
         CHECK(r.tel.state == 2 && r.tel.dataValid && r.tel.carriers.size() == 3, "state %d carriers %zu", r.tel.state, r.tel.carriers.size());
         for (const auto& s : r.tel.sondes) CHECK(s.channel >= 0 && s.active && std::fabs(s.freqHz - (403.0e6 + 2500 + (s.type == "RS41" ? 0 : s.type == "DFM" ? -800e3 : 1100e3))) < 800.0, "%s frequency %.0f", s.serial.c_str(), s.freqHz);
         printf("three sondes: rtf %.0f, frames ok %llu bad %llu\n", r.rtf, (unsigned long long)r.tel.blocksOk, (unsigned long long)r.tel.blocksBad);
+        cpuCal("sonde_all_rf", "three sondes", r.rtf, "x-realtime", '>', 3.0, !kSanitized);
         if (!kSanitized) CHECK(r.rtf > 3.0, "real-time factor %.1f", r.rtf);
     }
     {
@@ -49,6 +51,7 @@ int main() {
         CHECK(r.tel.channelsUsed == 6, "channels %d", r.tel.channelsUsed);
         { int withTrack = 0; for (const auto& s : r.tel.sondes) withTrack += s.trackIncluded ? 1 : 0; CHECK(withTrack == 5, "%d sondes carry a track", withTrack); }
         printf("six sondes: rtf %.0f, frames ok %llu bad %llu\n", r.rtf, (unsigned long long)r.tel.blocksOk, (unsigned long long)r.tel.blocksBad);
+        cpuCal("sonde_all_rf", "six sondes", r.rtf, "x-realtime", '>', 3.0, !kSanitized);
         if (!kSanitized) CHECK(r.rtf > 3.0, "real-time factor %.1f", r.rtf);
     }
     {

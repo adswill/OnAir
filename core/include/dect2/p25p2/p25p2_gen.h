@@ -16,6 +16,11 @@ struct P25p2GenCall {
     int src = 1234567, group = 1001;
     int algId = 0x80;              // 0x80 clear; anything else: reported as encrypted, its voice is never decoded
     bool unitToUnit = false;       // group stays the target unit
+    int keyId = 0x1234;            // key ID of an encrypted call (ESS, and the PTT when pttInfo)
+    bool pttInfo = false;          // the PTT carries the message indicator and key ID of the ESS (real transmitters do)
+    bool noPtt = false;            // no PTT is sent: a listener joins the call late
+    bool noEss = false;            // the ESS fields of the voice bursts are random (the encryption sync never decodes)
+    int essBadSf = -1;             // in this superframe (absolute) the ESS-A is random: one ESS is lost
     int svcOpts = 0;               // 0x80 emergency, 0x40 encrypted in the service options of the voice channel user message
 };
 
@@ -30,6 +35,7 @@ struct P25p2GenConfig {
     bool scramble = false;         // scramble the bursts with the seed WACN / system / colour code (the receiver needs setSystem with the same)
     int wacn = 0xBEE00, sysId = 0x3A5;
     uint32_t seed = 7;
+    int dropFirstSlots = 0;        // the signal starts this many slots into the first superframe (a receiver joining mid-superframe)
     std::vector<P25p2GenCall> calls;
     std::vector<std::vector<uint8_t>> sysMsgs;   // MAC messages sent round robin in the signalling bursts of idle channels (and of both channels before a call)
 };

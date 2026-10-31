@@ -34,6 +34,17 @@ std::string parsePreview(const std::string& log) {
     return last == std::string::npos ? std::string() : s.substr(0, last + 1);
 }
 
+std::string tunnelAdvice(const std::string& log) {
+    auto has = [&](const char* t) { return log.find(t) != std::string::npos; };
+    if (has("no such host") || has("lookup ") || has("dial tcp") || has("i/o timeout") || has("network is unreachable"))
+        return "The tunnel program cannot reach Cloudflare. Check the internet connection (and any VPN or firewall), then press Start sharing again. Without a tunnel you can still share on your own network: Access > Link > Only my network.";
+    if (has("429") || has("Too Many Requests") || has("rate limit"))
+        return "Cloudflare's free quick tunnels are busy or rate limited right now. Wait a few minutes and try again, or use your own address (Access > Link > My own address).";
+    if (has("x509") || has("certificate"))
+        return "The tunnel program does not trust the connection (a proxy or antivirus that inspects HTTPS, or a wrong clock). Check the date and time, or use Access > Link > Only my network.";
+    return {};
+}
+
 bool cleanLine(const std::string& s, size_t maxLen) {
     if (s.size() > maxLen) return false;
     for (unsigned char c : s) if (c < 0x20 || c == 0x7F) return false;

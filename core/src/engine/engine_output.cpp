@@ -70,6 +70,12 @@ void Engine::onPlp(const PlpResult& r) {
     outputs_.burstDone(r.frameSec);
 }
 
+std::string Engine::setT2Export(const T2ExportConfig& c) {
+    std::lock_guard<std::mutex> lk(t2ExportMu_);
+    if (!t2Export_) t2Export_ = std::make_unique<T2Export>();
+    return t2Export_->configure(c) ? std::string() : t2Export_->error();
+}
+
 void Engine::setPacketTap(std::function<void(const uint8_t*, size_t, const TsSnapshot*, double)> f) { std::lock_guard<std::mutex> lk(tsMu_); tap_ = std::move(f); }
 void Engine::setRecorderTap(std::function<void(const uint8_t*, size_t, const TsSnapshot*, double)> f) { std::lock_guard<std::mutex> lk(tsMu_); rtap_ = std::move(f); }
 void Engine::clearServices() { std::lock_guard<std::mutex> lk(tsMu_); demux_.reset(); tsSnap_ = TsSnapshot(); }

@@ -128,6 +128,11 @@ enum MacMsg {
 };
 const char* macMsgName(int op);
 int macMsgLen(int op);                 // bytes including the opcode; 0 when the opcode is not known here (parsing of the PDU stops)
+// The length of the message that starts at m (avail bytes are left in the PDU), by the rules of OP25's p25p2_tdma.cc (boatbod/op25, GPL-3, rules only):
+// 0x00 Null Information fills the rest of the PDU; 0x08 Null Avoid Zero Bias carries its length in the low 6 bits of byte 1; 0x11 and 0x12 (indirect
+// group paging, unit to unit answer style variable lists) are ((byte1 & 3) + 1) * 2 + 2 and * 3 + 2 bytes; a manufacturer message (top bits 10) has
+// its length in the low 6 bits of byte 2, falling back to the table when that is 0; every other opcode takes the table. 0: unknown, parsing stops.
+int macMsgLenAt(const uint8_t* m, int avail);
 
 struct MacHeader { int opcode = 0, offset = 0; };
 inline uint8_t macHeaderByte(int opcode, int offset) { return (uint8_t)(((opcode & 7) << 5) | ((offset & 7) << 2)); }
@@ -138,6 +143,7 @@ constexpr int kPttMiOff = 1, kPttAlgOff = 10, kPttKeyOff = 11, kPttSrcOff = 13, 
 // END_PTT fields: 4 reserved bits + colour code (12 bits), source 3, group 2 (the layout of the PTT's address fields)
 constexpr int kEndColorOff = 1, kEndSrcOff = 13, kEndGrpOff = 16, kEndLen = 18;   // colour code: the low 12 bits of the two bytes at kEndColorOff
 constexpr int kAlgClear = 0x80;
+constexpr int kMsgGrpVGrantExt = 0xC0, kMsgGrpVGrantUpdExt = 0xC3;   // extended forms: service options, channel (T), channel (R), group (, source)
 
 inline uint32_t be24(const uint8_t* p) { return ((uint32_t)p[0] << 16) | ((uint32_t)p[1] << 8) | p[2]; }
 inline uint32_t be16(const uint8_t* p) { return ((uint32_t)p[0] << 8) | p[1]; }
@@ -146,7 +152,7 @@ inline void put24(uint8_t* p, uint32_t v) { p[0] = (uint8_t)(v >> 16); p[1] = (u
 inline void put16(uint8_t* p, uint32_t v) { p[0] = (uint8_t)(v >> 8); p[1] = (uint8_t)v; }
 
 // Builders (the test signal and the unit tests); each returns a MAC PDU padded with zero bytes to n bytes
-std::vector<uint8_t> macPtt(int n, int src, int group, int algId);
+std::vector<uint8_t> macPtt(int n, int src, int group, int algId, int keyId = 0, const uint8_t* mi = nullptr);   // mi: 9 bytes
 std::vector<uint8_t> macEndPtt(int n, int src, int group, int colorCode);
 std::vector<uint8_t> macActive(int n, int svcOpts, int group, int src);               // MAC_ACTIVE carrying a group voice channel user message
 std::vector<uint8_t> macActiveUu(int n, int svcOpts, int target, int src);            // ... a unit-to-unit voice channel user message

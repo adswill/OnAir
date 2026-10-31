@@ -36,6 +36,14 @@ void loadState() {
     S.map.zoom = (int)d.getI("sondeZoom", 8);
 }
 
+// landing prediction with the descent smoothed over the user's averaging window (Advanced, 0 to 60 s; 0 is the instantaneous velocity)
+float avgWindowS() { return std::min(60.f, std::max(0.f, (float)plat::prefs().getD("sondeAvgS", 10.0))); }
+dect2::SondeLanding landing(const SondeInfo& s) {
+    dect2::SondeLandOpts o; o.windowS = avgWindowS();
+    static const std::vector<dect2::SondeTrackPoint> none;
+    return dect2::predictSondeLandingTrack(s.trackIncluded ? s.track : none, s.lat, s.lon, s.altM, s.vSpeed, s.hSpeed, s.headingDeg, o);
+}
+
 ImU32 typeColour(int kind, float alpha = 1.f) {
     static const float c[7][3] = {{0.7f, 0.7f, 0.7f}, {0.40f, 0.70f, 0.95f}, {0.55f, 0.85f, 0.50f}, {0.95f, 0.75f, 0.30f}, {0.92f, 0.45f, 0.40f}, {0.80f, 0.55f, 0.90f}, {0.45f, 0.85f, 0.85f}};
     const int k = kind >= 0 && kind < 7 ? kind : 0;
@@ -113,7 +121,7 @@ void mapView(App& a, ImVec2 size) {
         }
         if (isSel) dl->AddCircle(q, 10 * gUi, IM_COL32(255, 255, 255, 230), 28, 1.6f);
         if (s.hasVel && s.vSpeed < -1.0) {   // predicted landing: a dashed line and a cross
-            const dect2::SondeLanding ld = dect2::predictSondeLanding(s.lat, s.lon, s.altM, s.vSpeed, s.hSpeed, s.headingDeg);
+            const dect2::SondeLanding ld = landing(s);
             if (ld.valid) {
                 const ImVec2 e = adsbmap::project(ld.lat, ld.lon);
                 const float dx = e.x - q.x, dy = e.y - q.y, len = std::hypot(dx, dy);
@@ -225,7 +233,7 @@ void detailCard(const App& a) {
     if (sp && s.burstKillS >= 0) snprintf(b, sizeof b, "%d min", s.burstKillS / 60); else snprintf(b, sizeof b, "-");
     kv("kill timer", b);
     if (sp && s.hasPos && s.hasVel && s.vSpeed < -1.0) {   // a falling sonde: where it should land and how far that is from you
-        const dect2::SondeLanding ld = dect2::predictSondeLanding(s.lat, s.lon, s.altM, s.vSpeed, s.hSpeed, s.headingDeg);
+        const dect2::SondeLanding ld = landing(s);
         if (ld.valid) {
             snprintf(b, sizeof b, "%.4f, %.4f in %d:%02d", ld.lat, ld.lon, (int)ld.secondsLeft / 60, (int)ld.secondsLeft % 60);
             kv("landing (estimate)", b);
@@ -451,6 +459,12 @@ void decoder(App& a, bool&) {
     sameLineIf(ImGui::CalcTextSize("clear list").x + 2 * ImGui::GetStyle().FramePadding.x, 8 * gUi);
     if (ImGui::SmallButton("clear list")) { a.engine.sonde().clearSondes(); S.sel.clear(); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Forget the sondes heard so far (the receiver keeps following the carriers).");
+    if (ImGui::TreeNodeEx("Advanced##sdadv", ImGuiTreeNodeFlags_NoTreePushOnOpen)) {
+        float w = avgWindowS();
+        ImGui::TextDisabled("landing average"); ImGui::SameLine(); ImGui::SetNextItemWidth(std::min(100 * gUi, ImGui::GetContentRegionAvail().x));
+        if (ImGui::SliderFloat("##sdavg", &w, 0.f, 60.f, "%.0f s")) plat::prefs().setD("sondeAvgS", w);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("A sonde under its parachute swings and spirals, which makes the landing prediction jump.\nThe drift is averaged over this many seconds (default 10) and the wind of the layers still below is taken from the way up.\n0 uses the instantaneous velocity.");
+    }
 }
 
 void synth(App& a, bool& changed) {

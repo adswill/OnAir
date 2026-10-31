@@ -13,6 +13,7 @@
 #include <vector>
 using namespace dect2;
 
+#include "../common/cpu_report.h"
 #include "../common/cpu_time.h"
 #include "../common/test_util.h"
 
@@ -67,6 +68,7 @@ int main() {
            (unsigned long long)tel.blocksBad, cpu, x.size() / rate, x.size() / rate / cpu);
     CHECK(got == want, "messages");
     CHECK(tel.blocksBad == 0, "CRC errors");
+    cpuCal("mesh_presets", "2 Msps, every preset", x.size() / rate / cpu, "x-realtime", '>', 3);
     CHECK(x.size() / rate / cpu > 3, "speed");
     if (fails) { printf("%d failures\n", fails); return 1; }
     printf("ok\n");

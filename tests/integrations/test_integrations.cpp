@@ -8,12 +8,16 @@
 #include <atomic>
 #include <chrono>
 #include <cstdio>
+#include <filesystem>
+#include <fstream>
 #include <mutex>
+#include <sstream>
 #include <thread>
 
 using namespace dect2::integrations;
 namespace mq = dect2::integrations::mqtt;
 namespace au = dect2::automation;
+namespace js = dect2::automation::json;
 
 namespace {
 au::Event adsb(const char* hex, const char* cs) {
@@ -439,6 +443,97 @@ void testEngineHook() {
     eng.setPublisher(nullptr, 0);
     CHECK(!eng.wants(au::FAdsb), "hook removed");
 }
+
+std::string slurp(const std::filesystem::path& p) { std::ifstream f(p, std::ios::binary); std::stringstream ss; ss << f.rdbuf(); return ss.str(); }
+int countFiles(const std::filesystem::path& d) { int n = 0; std::error_code ec; for (auto& e : std::filesystem::directory_iterator(d, ec)) { (void)e; n++; } return n; }
+
+// "Save decoded messages": events from the global engine (the same path the decoders use) end up in one file per day per mode.
+void testArchive() {
+    namespace fs = std::filesystem;
+    const fs::path root = fs::temp_directory_path() / "onair_archive_test";
+    fs::remove_all(root);
+    for (int fmt = 0; fmt < 3; fmt++) {
+        const fs::path dir = root / std::to_string(fmt);
+        Hub hub;
+        Settings s;
+        s.archive.enabled = true; s.archive.folder = dir.string(); s.archive.format = (ArchiveFormat)fmt;
+        CHECK(s.anyEnabled() && !s.anySink() && s.hookFamilies() == archiveFamilies(), "archive alone enables the hook, no sink");
+        hub.setSettings(s);
+        hub.start();
+        au::Engine& eng = au::global();
+        eng.setPublisher([&](const au::Event& e) { hub.submit(e); }, s.hookFamilies());
+        const double t0 = 1792232100.0;   // 2026-10-17T11:55:00Z
+        // Inmarsat-C, Aero, NAVTEX through the helper decoders call; ACARS, ADS-B, POCSAG as plain events
+        au::Event ex; ex.str("service", "NAVAREA warning").num("id", 17);
+        au::emitMessage("inmarsat_c", "Inmarsat-C", 1541.45e6, "123/26", "NAVAREA IV 123/26, \"quoted\", comma\nline two", 7.5, std::move(ex));
+        au::Event ea; ea.str("label", "H1").str("registration", "N123AB");
+        au::emitMessage("aero", "Inmarsat Aero", 1545.0e6, "N123AB", "POS N4012W07312", 9.0, std::move(ea));
+        au::Event nv; nv.str("header", "EA01");
+        au::emitMessage("navtex", "NAVTEX", 518e3, "E", "GALE WARNING", std::nan(""), std::move(nv));
+        au::Event ac("acars.message"); ac.at(t0, "ACARS", 131.725e6); ac.str("tail", "G-ABCD").str("text", "HELLO").num("snr_db", 12);
+        eng.submit(std::move(ac));
+        au::Event pg("pager.message"); pg.at(t0, "POCSAG", 152.0e6); pg.str("address", "1234567").str("message", "TEST PAGE");
+        eng.submit(std::move(pg));
+        eng.submit(adsb("4840D6", "KLM1023"));
+        au::Event vc("voice.call"); vc.at(t0, "DMR", 0);   // not a message family
+        eng.submit(std::move(vc));
+        CHECK(hub.flush(3000), "archive flush");
+        eng.setPublisher(nullptr, 0);
+        hub.stop();
+        // set the event time of the helper events is "now"; compare by file prefix
+        int files = 0, inm = 0;
+        std::error_code ec;
+        for (auto& e : fs::directory_iterator(dir, ec)) {
+            files++;
+            const std::string n = e.path().filename().string();
+            const std::string body = slurp(e.path());
+            CHECK(n.rfind("onair-", 0) == 0 && n.substr(n.size() - std::string(archiveExt((ArchiveFormat)fmt)).size()) == archiveExt((ArchiveFormat)fmt), "file name %s", n.c_str());
+            if (n.find("Inmarsat-C") != std::string::npos) {
+                inm++;
+                CHECK(body.find("NAVAREA IV 123/26") != std::string::npos && body.find("123/26") != std::string::npos, "Inmarsat-C text in %s", n.c_str());
+                if (fmt == 0) {
+                    js::Value v; std::string err;
+                    CHECK(js::parse(body.substr(0, body.find('\n')), v, err) && v.str("mode") == "Inmarsat-C" && v.str("source") == "123/26" && v.num("freq_hz") == 1541.45e6 && v.num("quality") == 7.5 &&
+                              v.str("text").find("line two") != std::string::npos && v.str("timestamp").size() == 20 && v.str("timestamp").back() == 'Z', "JSON Lines record fields: %s", err.c_str());
+                } else if (fmt == 1) {
+                    js::Value v; std::string err;
+                    CHECK(js::parse(body, v, err) && v.type == js::Value::Arr, "JSON file is one valid array: %s", err.c_str());
+                } else {
+                    CHECK(body.rfind(archiveCsvHeader() + "\n", 0) == 0 && body.find("\"NAVAREA IV 123/26, \"\"quoted\"\"") != std::string::npos, "CSV header and quoting");
+                }
+            }
+            if (n.find("voice") != std::string::npos || n.find("DMR") != std::string::npos) CHECK(false, "voice call must not be archived");
+        }
+        CHECK(files == 6 && inm == 1, "one file per mode (%d files)", files);
+    }
+    // JSON array stays valid over many appends; a second event of a mode lands in the same file
+    {
+        ArchiveSettings a; a.enabled = true; a.folder = (root / "multi").string(); a.format = ArchiveFormat::Json;
+        for (int i = 0; i < 5; i++) { au::Event e("hfdl.message"); e.at(1792232100.0 + i, "HFDL", 8.9e6); e.str("text", "m" + std::to_string(i)); CHECK(archiveWrite(a, e).empty(), "write %d", i); }
+        const std::string body = slurp(root / "multi" / "onair-HFDL-2026-10-17.json");
+        js::Value v; std::string err;
+        CHECK(js::parse(body, v, err) && v.type == js::Value::Arr && v.a.size() == 5, "five records in one valid array (%s)", err.c_str());
+        // the day rolls over at UTC midnight
+        au::Event n("hfdl.message"); n.at(1792232100.0 + 86400, "HFDL", 8.9e6);
+        archiveWrite(a, n);
+        CHECK(fs::exists(root / "multi" / "onair-HFDL-2026-10-18.json"), "next day, next file");
+        CHECK(archiveIso(0) == "1970-01-01T00:00:00Z" && archiveFileName(n, ArchiveFormat::Csv) == "onair-HFDL-2026-10-18.csv", "iso and name");
+        ArchiveSettings bad; bad.enabled = true;
+        CHECK(!archiveWrite(bad, n).empty(), "no folder is an error, not a crash");
+    }
+    // settings round trip and "off means off"
+    {
+        Settings s, t; std::string err;
+        s.archive.enabled = true; s.archive.folder = "/x/y"; s.archive.format = ArchiveFormat::Csv;
+        CHECK(fromJson(toJson(s), t, err) && t.archive.enabled && t.archive.folder == "/x/y" && t.archive.format == ArchiveFormat::Csv, "archive settings round trip");
+        Hub hub; Settings off; off.archive.folder = (root / "off").string(); hub.setSettings(off); hub.start();
+        hub.submit(adsb("A", "B")); hub.flush(500); hub.stop();
+        CHECK(!fs::exists(root / "off"), "disabled: no folder created");
+        Settings e; e.archive.enabled = true;
+        CHECK(!e.anyEnabled(), "enabled without a folder does nothing");
+    }
+    fs::remove_all(root);
+}
 }  // namespace
 
 int main() {
@@ -451,5 +546,6 @@ int main() {
     testSinks();
     testTlsRefused();
     testEngineHook();
+    testArchive();
     return testSummary("integrations");
 }

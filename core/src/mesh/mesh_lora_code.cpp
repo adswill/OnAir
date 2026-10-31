@@ -399,9 +399,9 @@ struct JumpSearch {
     bool ldro = false;
     std::vector<int> shifts;
     std::vector<uint8_t> best;
-    long work = 0;               // blocks checked; the search gives up (no recovery) past kBudget, whatever the frame
-    static constexpr long kBudget = 200000;
-    bool overBudget() const { return work > kBudget; }
+    long work = 0;               // blocks checked; the search gives up (no recovery) past the budget, whatever the frame
+    long budget = 200000;
+    bool overBudget() const { return work > budget; }
     // the block at `at` with every symbol from `from` on moved down by d bins (from = -1: as it is)
     bool blockClean(const std::vector<uint16_t>& b, int at, int from = -1, int d = 0) {
         work++;
@@ -466,9 +466,17 @@ int recoverJumps(int sf, bool ldro, const std::vector<uint16_t>& bins, double qu
         }
     }
     js.solve(bins, 0, 0);
-    if (js.solutions != 1 || js.overBudget()) return 0;   // none, more than one, or not searched to the end: not trusted
-    payload = js.best;
-    return js.bestJumps;
+    if (js.solutions == 1 && !js.overBudget()) { payload = js.best; return js.bestJumps; }
+    if (js.solutions != 0 || js.overBudget() || maxJumps < 2) return 0;   // ambiguous, or not searched to the end: not trusted
+    // Nothing at the usual quantum: a link drops whatever count of samples it drops, and the shift in bins is that count over the samples per
+    // chip, so any shift modulo 2^sf is possible. Every shift, one or two jumps, with a larger budget; the checks are the same (every
+    // block's parity, the CRC, one candidate only).
+    JumpSearch all; all.sf = sf; all.ldro = ldro; all.cr = js.cr; all.n = js.n; all.maxJumps = 2; all.budget = 1500000;
+    for (int d = 1; d < all.n; d++) all.shifts.push_back(d);
+    all.solve(bins, 0, 0);
+    if (all.solutions != 1 || all.overBudget()) return 0;
+    payload = all.best;
+    return all.bestJumps;
 }
 
 } // namespace lora

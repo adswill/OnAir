@@ -34,6 +34,24 @@ Every setting in the window has a (?) with a short version of what is written he
 | Video file | Any file FFmpeg can read. The length follows the file when you choose it. When the length is longer than the file, the file starts again. Picture and sound are decoded in step, so writing a `.ts` file goes faster than real time. |
 | Test generator | A copy of the transmitter's own moving test picture: the one in the test transport stream that the TX studio's generators carry (for DVB-T2, the T2Generator's real PLP), drawn at the output resolution. **Pattern**: Test card (colour bars, a moving sweep, a chequerboard with a bouncing ball), Colour bars or Grey ramp; a white bar grows along the bottom once a second. Put a callsign, a CQ call or other text on it with the **Overlay** tab. Length one minute unless you change it; a `.ts` file is written faster than real time. Picture fit does not apply. |
 
+### Your own picture, video and sound
+
+For every TV mode that sends a `.ts` file (DVB-T, T2, S, S2, C, ATSC, ISDB-T, DTMB) the content is whatever this tool encodes, so choosing your
+own material here changes what a synthetic signal carries.
+
+- **Drag and drop**: with the window open, drop a picture, a video, a sound file or a folder anywhere on OnAir. A picture or video becomes the
+  input, a sound file becomes the sound ("Your own sound file / folder"); a folder is taken by what it holds (pictures first, then videos, then sound).
+- **Folders**: a folder of pictures is a slideshow (**Seconds per picture**, in name order, not case sensitive); a folder of videos is played one
+  after the other; a folder of sound files is played in order. File lists are by name; other files in the folder are ignored.
+- **Repeat** ("Start again at the end", on by default): the file or folder starts over until the stream length is reached. Off: the stream
+  ends with the last file (a slideshow after its last picture, a video at its end, a sound file followed by silence).
+- **Sound**: "Your own sound file / folder" accepts WAV, MP3, FLAC, OGG, Opus, AAC/M4A and others FFmpeg reads, or the sound of a video file.
+- **Length**: choosing a video sets the length to its own length (a folder: the sum); a slideshow to pictures times seconds. Change it any time.
+- **Picture fit** (below) keeps the aspect: Letterbox shows the whole picture with bars, Crop fills, Stretch distorts.
+- Reading files is done by the FFmpeg already linked for the generator (no extra decoder, nothing bundled); a format FFmpeg lacks is reported as an error.
+
+Analog TV transmit (TX studio) already takes a picture/video file or camera on its own; use the same files there.
+
 **Picture fit** decides what happens when the source has another shape than the output, such as a 4:3 camera in a 16:9 picture:
 **Stretch** fills the picture (shapes look wider), **Letterbox** keeps the whole source with black bars, **Crop** fills the picture and
 cuts the edges.

@@ -165,6 +165,7 @@ void RdsDecoder::pushBit(int bit, float reliability) {
         uint8_t e = 2;
         if (syn == offsetOfPos(expect_) || (expect_ == 2 && syn == kOffsets[3])) e = 0;
         else if (correct(w, syn, expect_)) e = 1;
+        else if (ecVote_ && voteBlock(w, expect_)) { e = 1; info.blocksVoted++; }
         if (e == 0) info.blocksGood++; else if (e == 1) info.blocksCorrected++; else info.blocksBad++;
         okPct += ((e < 2 ? 100.f : 0.f) - okPct) * 0.05f;
         badRun_ = e == 0 ? 0 : e == 1 ? badRun_ : badRun_ + 1;
@@ -195,6 +196,46 @@ void RdsDecoder::pushBit(int bit, float reliability) {
     nHits_ = k;
     if (nHits_ == 8) { std::memmove(hits_, hits_ + 1, sizeof(Hit) * 7); nHits_ = 7; }
     hits_[nHits_++] = {bitNo_, p};
+}
+
+// Voting over repeated copies of a bad block (see the header). A copy joins when it is within kClose bits of the new word; at least two
+// of them are needed, so the result is the vote of three words, which must also give the checkword of the position. Random bits give
+// three close words rarely (about 4% a pair) and a right checkword 1 in 1024, so a wrong block is a one in a million event; the copies
+// used are dropped, so one set of words never votes twice.
+bool RdsDecoder::voteBlock(uint32_t& w, int pos) {
+    constexpr int kClose = 8, kFar = 5;
+    VoteCopy cur;
+    cur.w = w; cur.at = bitNo_;
+    for (int i = 0; i < 26; i++) {
+        const float r = std::max(0.01f, rel_[(bitNo_ - 26 + (uint64_t)i) & 31]);
+        cur.llr[i] = ((w >> (25 - i)) & 1) ? r : -r;
+    }
+    VoteCopy* st = vote_[pos];
+    int nearIdx[kVote], nn = 0;
+    for (int k = 0; k < nVote_[pos]; k++) {
+        if (bitNo_ - st[k].at > 26ull * 4 * 40) continue;   // older than about 40 groups (3.5 s): another part of the cycle
+        if (__builtin_popcount(st[k].w ^ w) <= kClose) nearIdx[nn++] = k;
+    }
+    if (nn >= 2) {
+        float sum[26];
+        for (int i = 0; i < 26; i++) sum[i] = cur.llr[i];
+        for (int j = 0; j < nn; j++) for (int i = 0; i < 26; i++) sum[i] += st[nearIdx[j]].llr[i];
+        uint32_t v = 0;
+        for (int i = 0; i < 26; i++) v = (v << 1) | (sum[i] > 0 ? 1u : 0u);
+        const uint32_t syn = rdsRem(v, 26);
+        // every copy must lie within kFar bits of the result: a result that needs a copy to be very wrong is a chance hit of the checkword
+        bool tight = __builtin_popcount(v ^ w) <= kFar;
+        for (int j = 0; j < nn && tight; j++) tight = __builtin_popcount(v ^ st[nearIdx[j]].w) <= kFar;
+        if (tight && (syn == offsetOfPos(pos) || (pos == 2 && syn == kOffsets[3]))) {
+            for (int j = nn - 1; j >= 0; j--) { st[nearIdx[j]] = st[nVote_[pos] - 1]; nVote_[pos]--; }
+            w = v;
+            return true;
+        }
+    }
+    // not usable (yet): keep this copy, the oldest goes when the store is full
+    if (nVote_[pos] < kVote) st[nVote_[pos]++] = cur;
+    else { st[votePos_[pos]] = cur; votePos_[pos] = (votePos_[pos] + 1) % kVote; }
+    return false;
 }
 
 void RdsDecoder::block(uint32_t w, uint8_t err, int pos, uint32_t raw) {

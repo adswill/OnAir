@@ -20,7 +20,7 @@ struct St {
     bool started = false, dirty = false;
     ig::Settings set;
     char host[200] = "", user[120] = "", pass[200] = "", clientId[80] = "", topic[200] = "", haPrefix[80] = "", haBase[80] = "";
-    char hookUrl[400] = "", hookToken[300] = "", jsonlPath[400] = "";
+    char hookUrl[400] = "", hookToken[300] = "", jsonlPath[400] = "", arcFolder[400] = "";
     std::string note;
 };
 St S;
@@ -41,6 +41,7 @@ void loadBuffers() {
     copyTo(S.hookUrl, sizeof S.hookUrl, s.webhook.url);
     copyTo(S.hookToken, sizeof S.hookToken, s.webhook.token);
     copyTo(S.jsonlPath, sizeof S.jsonlPath, s.jsonl.path);
+    copyTo(S.arcFolder, sizeof S.arcFolder, s.archive.folder);
 }
 
 void save() {
@@ -68,7 +69,7 @@ void load() {
 void apply() {
     ig::Hub& h = ig::global();
     h.setSettings(S.set);
-    if (S.set.anyEnabled() && S.set.families) au::global().setPublisher([](const au::Event& e) { ig::global().submit(e); }, S.set.families);
+    if (S.set.hookFamilies()) au::global().setPublisher([](const au::Event& e) { ig::global().submit(e); }, S.set.hookFamilies());
     else au::global().setPublisher(nullptr, 0);
 }
 
@@ -88,7 +89,7 @@ struct FamilyRow { int fam; const char* label; };
 const FamilyRow kFamilies[] = {
     {au::FAdsb, N_("Aircraft (ADS-B)")}, {au::FAcars, N_("ACARS")}, {au::FVdl2, N_("VDL Mode 2")}, {au::FHfdl, N_("HFDL")}, {au::FPager, N_("Pagers")},
     {au::FAis, N_("Ships (AIS)")}, {au::FDsc, N_("DSC")}, {au::FAprs, N_("APRS")}, {au::FSonde, N_("Radiosondes")}, {au::FGnss, N_("GNSS")}, {au::FLora, N_("LoRa and mesh")},
-    {au::FBle, N_("Bluetooth")}, {au::FRid, N_("Drone Remote ID")}, {au::FSignal, N_("Signals (SARSAT, beacons, ...)")}, {au::FVoice, N_("Digital voice calls (who called whom, never audio)")},
+    {au::FBle, N_("Bluetooth")}, {au::FRid, N_("Drone Remote ID")}, {au::FSignal, N_("Signals (SARSAT, beacons, ...)")}, {au::FMsg, N_("Text messages (Inmarsat-C, Aero, NAVTEX ...)")}, {au::FVoice, N_("Digital voice calls (who called whom, never audio)")},
     {au::FPlugin, N_("Plug-in events")}, {au::FSession, N_("Finished sessions")}, {au::FSatellite, N_("Satellite passes")}, {au::FTime, N_("Time signals")}, {au::FReceiver, N_("Receiver status")},
 };
 
@@ -161,6 +162,29 @@ void webTab() {
     if (ch) S.dirty = true;
 }
 
+// "Save decoded messages": one toggle, a folder, a format. Every mode that decodes text or messages feeds it (ADS-B, ACARS, VDL2, HFDL, POCSAG/FLEX, APRS, AIS,
+// Inmarsat-C, Aero, NAVTEX, DSC, LoRa ...). One file per day per mode: onair-<mode>-<YYYY-MM-DD>.<jsonl|json|csv>.
+void saveTab() {
+    ig::ArchiveSettings& a = S.set.archive;
+    bool ch = false;
+    if (ImGui::Checkbox(tr("Save decoded messages to files"), &a.enabled)) {
+        if (a.enabled && a.folder.empty()) { a.folder = plat::dataDir() + "/messages"; copyTo(S.arcFolder, sizeof S.arcFolder, a.folder); }
+        ch = true;
+    }
+    ImGui::TextWrapped("%s", tr("Every message OnAir decodes, in every mode, is appended to a file in the folder below: one file per day per mode (for example onair-Inmarsat-C-2026-10-31.jsonl). Each record has the UTC time, mode, sender / id, frequency, signal quality and the message text with all decoded fields."));
+    ch |= field(tr("Folder"), "arcdir", S.arcFolder, sizeof S.arcFolder, a.folder, 380, tr("a folder you can write to"));
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("Use the default"))) { a.folder = plat::dataDir() + "/messages"; copyTo(S.arcFolder, sizeof S.arcFolder, a.folder); ch = true; }
+    int f = (int)a.format;
+    ImGui::SetNextItemWidth(260 * gUi);
+    if (ImGui::Combo(tr("Format"), &f, "JSON Lines (one message per line)\0JSON (one array per file)\0CSV (opens in a spreadsheet)\0")) { a.format = (ig::ArchiveFormat)f; ch = true; }
+    const ig::Stats s = ig::global().stats();
+    ImGui::TextDisabled("%s", s.archiveStatus.empty() ? tr("off") : s.archiveStatus.c_str());
+    ImGui::Text("%s %llu, %s %llu", tr("saved"), (unsigned long long)s.archiveRecords, tr("failed"), (unsigned long long)s.archiveFailed);
+    ImGui::TextDisabled("%s", tr("This is separate from the message database and from the UDP output (Settings > Server), which sends over the network and writes no file."));
+    if (ch) S.dirty = true;
+}
+
 void whatTab() {
     bool ch = false;
     ImGui::TextWrapped("%s", tr("Choose what goes out. Voice entries are call records (who, which talkgroup), never audio. Encrypted traffic is not decoded, so nothing of it goes out."));
@@ -182,6 +206,7 @@ void statusTab() {
     ImGui::Text("MQTT: %s", s.mqttStatus.empty() ? tr("off") : s.mqttStatus.c_str());
     ImGui::Text("%s %llu, %s %llu", tr("sent"), (unsigned long long)s.mqttSent, tr("failed"), (unsigned long long)s.mqttFailed);
     ImGui::Text("Webhook: %llu %s, %llu %s", (unsigned long long)s.webhookSent, tr("sent"), (unsigned long long)s.webhookFailed, tr("failed"));
+    ImGui::Text("%s: %llu", tr("Saved messages"), (unsigned long long)s.archiveRecords);
     ImGui::Text("JSON-lines: %llu %s", (unsigned long long)s.jsonlLines, tr("lines"));
     ImGui::Text("%s %llu, %s %llu", tr("Dropped (queue full):"), (unsigned long long)s.dropped, tr("over the rate limit:"), (unsigned long long)s.rateDropped);
     ImGui::Separator();
@@ -194,6 +219,7 @@ void windowPanel(App& a) {
     ImGui::TextWrapped("%s", tr("Send what OnAir decodes to other programs: MQTT (Home Assistant, Node-RED ...), a webhook or a file. Everything is off until you tick it and type the address."));
     if (!S.note.empty()) ImGui::TextDisabled("%s", S.note.c_str());
     if (ImGui::BeginTabBar("igtabs")) {
+        if (ImGui::BeginTabItem(trw("Save messages"))) { saveTab(); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem(trw("MQTT"))) { mqttTab(); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem(trw("Webhook and file"))) { webTab(); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem(trw("What to send"))) { whatTab(); ImGui::EndTabItem(); }

@@ -447,6 +447,20 @@ void testEngine() {
         Event nopos("adsb.aircraft"); nopos.str("hex", "C");
         r.eng.process(nopos);
         CHECK(r.sink.count() == 3, "an event without a position never matches a geofence");
+        {   // #403: the notification shows the distance although the event carried none
+            Rig rd;
+            Rule d = simple("D", "adsb.aircraft", "", notify("{{hex}} {{distance_km}} km"));
+            rd.eng.setRules({d});
+            rd.eng.process(aircraft("A", 1, 54.75, 25.28));
+            CHECK(rd.sink.count() == 1 && rd.sink.calls[0].second.at("body").find("km") != std::string::npos &&
+                  rd.sink.calls[0].second.at("body").find("{{") == std::string::npos && rd.sink.calls[0].second.at("body").find("A  km") == std::string::npos && rd.sink.calls[0].second.at("body").find("A 6.9") == 0,
+                  "distance_km filled from the station: %s", rd.sink.count() ? rd.sink.calls[0].second.at("body").c_str() : "");
+            Rule c = simple("C", "adsb.aircraft", "distance_km < 20", notify("c"));
+            Rig rc; rc.eng.setRules({c});
+            rc.eng.process(aircraft("A", 1, 54.75, 25.28));
+            rc.eng.process(aircraft("B", 1, 56.0, 25.28));
+            CHECK(rc.sink.count() == 1, "distance_km condition works without a distance in the event: %zu", rc.sink.count());
+        }
         Rig r2;
         r2.eng.setStation(false, 0, 0);
         r2.eng.setRules({home});
@@ -571,6 +585,19 @@ void testEngine() {
         CHECK(!r.eng.test(x, sampleEvent("pager.message", kT0), false).matched, "wrong type");
         Rule bad = x; bad.when = "((";
         CHECK(r.eng.test(bad, hit, false).why.find("character") != std::string::npos, "syntax error shown");
+    }
+    {   // {{distance_km}} works for an ADS-B aircraft in a notification (issue #403)
+        Rig r;
+        r.eng.setStation(true, 54.6872, 25.2797);
+        Rule x = simple("Near", "adsb.aircraft", "has('lat')", notify("{{callsign}} {{distance_km}} km"));
+        x.geo = Rule::GeoCircle; x.geoHome = true; x.geoRadiusKm = 20; x.geoEnterOnly = true;
+        r.eng.setRules({x});
+        Event a("adsb.aircraft");
+        a.str("hex", "ABC123").str("callsign", "TST1").num("lat", 54.7872).num("lon", 25.2797);
+        r.eng.process(a);
+        CHECK(r.sink.count("notify") == 1, "aircraft within 20 km notified");
+        const std::string body = r.sink.calls.back().second.at("body");
+        CHECK(body.find("TST1 11.") == 0 && body.find("km") != std::string::npos, "distance in the notification: %s", body.c_str());
     }
     {   // time.minute and sonde landing
         Rig r;

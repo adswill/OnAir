@@ -183,6 +183,8 @@ struct PagerReceiver::Impl {
     int speed = 0;
     // POCSAG
     pager::PocsagParser parser;
+    pager::FlexPhaseCombiner flexComb;     // multi-copy combining of repeated FLEX phases (#20)
+    std::atomic<bool> combineOn{true};     // setCombineCopies(): both protocols
     int wi = 0, bi = 0; uint32_t curWord = 0; bool inSync = false;
     float wordRel[32] = {};                // the reliability of each bit of curWord, relative to the outer amplitude
     bool firstBatch = false;               // the batch after a searched sync: held until enough of its words are valid
@@ -259,6 +261,7 @@ struct PagerReceiver::Impl {
         blkPow = 0; blkN = 0; noiseFloor = 0; snrEma = 0; sigHold = 0; haveFloor = false;
         peakH = -1; locked = false; lockH = -1; hold = 0;
         parser.reset();
+        parser.combine = combineOn.load();
         {
             std::lock_guard<std::mutex> lk(mu);
             for (auto& m : list) m.timeSec -= t0;   // the messages stay (clearResults)
@@ -676,7 +679,10 @@ struct PagerReceiver::Impl {
                 if (fixedW != words[i])
                     for (int j = 0; j < 32; j++) fb[p][(size_t)((i / 8) * 256 + j * 8 + i % 8)] = (uint8_t)((fixedW >> (31 - j)) & 1u);
             }
+            const size_t g0 = got.size();
+            const int recovered = combineOn.load() ? flexComb.process(fmode->speed * 4 + p, fb[p].data(), (int64_t)std::time(nullptr)) : 0;
             pager::flexDecodePhase(fb[p].data(), got, st[p]);
+            if (recovered > 0) for (size_t k = g0; k < got.size(); k++) { got[k].combined = true; got[k].copies = 2; }
             any |= st[p].biwOk;
             ok += st[p].ok; fixed += st[p].fixed; failed += st[p].failed;
         }
@@ -820,6 +826,8 @@ void PagerReceiver::setNarrowChannel(bool on) {
     if (p_->narrow.exchange(on) != on) p_->resetReq = true;   // the filter is rebuilt by the receiver thread
 }
 bool PagerReceiver::narrowChannel() const { return p_->narrow; }
+void PagerReceiver::setCombineCopies(bool on) { p_->combineOn = on; }
+bool PagerReceiver::combineCopies() const { return p_->combineOn; }
 void PagerReceiver::setPocsagBauds(int mask) { p_->pocsagBaudMask = mask & 7; }
 void PagerReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }
 

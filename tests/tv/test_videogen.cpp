@@ -8,6 +8,7 @@
 //  7. UDP and RTP streaming to a local port: whole TS datagrams, RTP header with payload type 33
 // Run from the source root (the overlay font is third_party/fonts/Inter-Medium.ttf).
 #include "dect2/tv/videogen.h"
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdarg>
@@ -569,6 +570,218 @@ static void testVideoFile(const fs::path& dir, const fs::path& pic) {
     CHECK(ms.videoFrames == 15 && ms.audioPackets > 0, "picture and a silent sound track (%d, %d)", ms.videoFrames, ms.audioPackets);
 }
 
+
+// ---- your own picture / video / sound: files and folders ----
+static void writeGrey(const fs::path& p, int grey) {   // a solid grey 64x48 picture
+    std::ofstream f(p, std::ios::binary);
+    f << "P6\n64 48\n255\n";
+    for (int i = 0; i < 64 * 48; i++) { const unsigned char px[3] = {(unsigned char)grey, (unsigned char)grey, (unsigned char)grey}; f.write((const char*)px, 3); }
+}
+static void writeWav(const fs::path& p, double hz, double seconds) {   // 48 kHz mono 16 bit sine
+    const int n = (int)(48000 * seconds);
+    std::ofstream f(p, std::ios::binary);
+    auto u32 = [&](uint32_t v) { f.write((const char*)&v, 4); };
+    auto u16 = [&](uint16_t v) { f.write((const char*)&v, 2); };
+    f.write("RIFF", 4); u32(36 + n * 2); f.write("WAVEfmt ", 8); u32(16); u16(1); u16(1); u32(48000); u32(96000); u16(2); u16(16);
+    f.write("data", 4); u32(n * 2);
+    for (int i = 0; i < n; i++) { const int16_t v = (int16_t)(12000 * std::sin(2 * M_PI * hz * i / 48000.0)); u16((uint16_t)v); }
+}
+// mean luma of every decoded picture, in order
+static std::vector<double> lumaSeries(const fs::path& p) {
+    std::vector<double> r;
+    AVFormatContext* fc = nullptr;
+    if (avformat_open_input(&fc, p.string().c_str(), nullptr, nullptr) < 0) return r;
+    const AVCodec* c = nullptr;
+    const int si = avformat_find_stream_info(fc, nullptr) >= 0 ? av_find_best_stream(fc, AVMEDIA_TYPE_VIDEO, -1, -1, &c, 0) : -1;
+    AVCodecContext* dec = si >= 0 && c ? avcodec_alloc_context3(c) : nullptr;
+    AVPacket* pk = av_packet_alloc();
+    AVFrame* fr = av_frame_alloc();
+    auto grab = [&] {
+        while (avcodec_receive_frame(dec, fr) >= 0) {
+            double sum = 0;
+            for (int y = 0; y < fr->height; y++) for (int x = 0; x < fr->width; x++) sum += fr->data[0][(size_t)y * fr->linesize[0] + x];
+            r.push_back(sum / ((double)fr->width * fr->height));
+        }
+    };
+    if (dec && avcodec_parameters_to_context(dec, fc->streams[si]->codecpar) >= 0 && avcodec_open2(dec, c, nullptr) >= 0) {
+        while (av_read_frame(fc, pk) >= 0) {
+            if (pk->stream_index == si && avcodec_send_packet(dec, pk) >= 0) grab();
+            av_packet_unref(pk);
+        }
+        avcodec_send_packet(dec, nullptr);
+        grab();
+    }
+    av_frame_free(&fr); av_packet_free(&pk); avcodec_free_context(&dec); avformat_close_input(&fc);
+    return r;
+}
+// RMS of the first audio track between two times (seconds)
+static double audioRms(const fs::path& p, double t0, double t1) {
+    AVFormatContext* fc = nullptr;
+    if (avformat_open_input(&fc, p.string().c_str(), nullptr, nullptr) < 0) return -1;
+    const AVCodec* c = nullptr;
+    const int si = avformat_find_stream_info(fc, nullptr) >= 0 ? av_find_best_stream(fc, AVMEDIA_TYPE_AUDIO, -1, -1, &c, 0) : -1;
+    AVCodecContext* dec = si >= 0 && c ? avcodec_alloc_context3(c) : nullptr;
+    AVPacket* pk = av_packet_alloc();
+    AVFrame* fr = av_frame_alloc();
+    double sum = 0, first = -1; long cnt = 0;
+    auto grab = [&] {
+        while (avcodec_receive_frame(dec, fr) >= 0) {
+            const double t = fr->pts == AV_NOPTS_VALUE ? 0 : (double)fr->pts * av_q2d(fc->streams[si]->time_base);
+            if (first < 0) first = t;
+            if (t - first < t0 || t - first >= t1) continue;
+            for (int i = 0; i < fr->nb_samples; i++) {
+                double v = 0;
+                switch (fr->format) {
+                case AV_SAMPLE_FMT_S16: v = ((const int16_t*)fr->data[0])[(size_t)i * fr->ch_layout.nb_channels] / 32768.0; break;
+                case AV_SAMPLE_FMT_S16P: v = ((const int16_t*)fr->data[0])[i] / 32768.0; break;
+                case AV_SAMPLE_FMT_FLT: v = ((const float*)fr->data[0])[(size_t)i * fr->ch_layout.nb_channels]; break;
+                case AV_SAMPLE_FMT_FLTP: v = ((const float*)fr->data[0])[i]; break;
+                default: break;
+                }
+                sum += v * v; cnt++;
+            }
+        }
+    };
+    if (dec && avcodec_parameters_to_context(dec, fc->streams[si]->codecpar) >= 0 && avcodec_open2(dec, c, nullptr) >= 0) {
+        while (av_read_frame(fc, pk) >= 0) {
+            if (pk->stream_index == si && avcodec_send_packet(dec, pk) >= 0) grab();
+            av_packet_unref(pk);
+        }
+        avcodec_send_packet(dec, nullptr);
+        grab();
+    }
+    av_frame_free(&fr); av_packet_free(&pk); avcodec_free_context(&dec); avformat_close_input(&fc);
+    return cnt ? std::sqrt(sum / (double)cnt) : 0;
+}
+static double meanOf(const std::vector<double>& v, size_t a, size_t b) {
+    b = std::min(b, v.size());
+    if (a >= b) return -1;
+    double s = 0;
+    for (size_t i = a; i < b; i++) s += v[i];
+    return s / (double)(b - a);
+}
+
+static void testOwnContent(const fs::path& dir, const fs::path& pic) {
+    // file kinds and folder listing
+    CHECK(mediaKind("a.PNG") == MediaKind::Picture && mediaKind("x/b.mp4") == MediaKind::Video && mediaKind("c.Flac") == MediaKind::Audio && mediaKind("d.txt") == MediaKind::Unknown, "media kinds by extension");
+    const fs::path slides = dir / "slides";
+    fs::create_directories(slides);
+    writeGrey(slides / "b_mid.ppm", 128);
+    writeGrey(slides / "A_dark.ppm", 40);
+    writeGrey(slides / "c_bright.ppm", 220);
+    std::ofstream(slides / "notes.txt") << "not media";
+    const auto lst = listMedia(slides.string(), MediaKind::Picture);
+    CHECK(lst.size() == 3 && fs::path(lst[0]).filename() == "A_dark.ppm" && fs::path(lst[2]).filename() == "c_bright.ppm", "folder listed by name, not case sensitive, media only (%zu)", lst.size());
+    CHECK(listMedia((slides / "A_dark.ppm").string(), MediaKind::Video).size() == 1, "a single file gives itself");
+    CHECK(dropKind(slides.string()) == MediaKind::Picture && dropKind((slides / "notes.txt").string()) == MediaKind::Unknown && dropKind(dir.string()) != MediaKind::Video, "drop kinds: a folder by what it holds");
+    CHECK(listMedia((dir / "nothing_here").string(), MediaKind::Picture).empty(), "a missing path gives nothing");
+
+    // a folder of pictures is a slideshow, 1 s each, in order, starting over
+    GenConfig c = pictureConfig(slides);
+    c.overlay.blocks.clear();
+    c.output = Output::File;
+    c.tsPath = (dir / "slides.ts").string();
+    c.seconds = 3.5;
+    c.slideSeconds = 1;
+    c.fit = Fit::Stretch;
+    c.enc.videoEncoder = "mpeg2video";
+    std::string err;
+    CHECK(encodeFile(c, err), "slideshow: %s", err.c_str());
+    auto ls = lumaSeries(c.tsPath);
+    CHECK(ls.size() == 35, "slideshow: 35 pictures (%zu)", ls.size());
+    const double s0 = meanOf(ls, 2, 8), s1 = meanOf(ls, 12, 18), s2 = meanOf(ls, 22, 28), s3 = meanOf(ls, 32, 35);
+    CHECK(s0 < s1 - 20 && s1 < s2 - 20, "slideshow: dark, mid, bright in name order (%.0f %.0f %.0f)", s0, s1, s2);
+    CHECK(std::fabs(s3 - s0) < 12, "slideshow: starts over with the first picture (%.0f against %.0f)", s3, s0);
+    // loop off: ends with the last picture
+    c.loop = false;
+    c.seconds = 10;
+    c.tsPath = (dir / "slides_once.ts").string();
+    CHECK(encodeFile(c, err), "slideshow once: %s", err.c_str());
+    ls = lumaSeries(c.tsPath);
+    CHECK(ls.size() >= 28 && ls.size() <= 32, "slideshow once: ends after the last picture (%zu pictures)", ls.size());
+    CHECK(ls.size() > 5 && meanOf(ls, ls.size() - 5, ls.size()) > 150, "slideshow once: ends on the bright picture");
+
+    // your own sound file: heard, looped or played once
+    const fs::path wav = dir / "mine.wav";
+    writeWav(wav, 880, 0.5);
+    GenConfig a = pictureConfig(pic);
+    a.output = Output::File;
+    a.audio = AudioSource::AudioFile;
+    a.audioPath = wav.string();
+    a.tsPath = (dir / "own_audio.ts").string();
+    a.seconds = 2;
+    a.enc.videoEncoder = "mpeg2video";
+    CHECK(encodeFile(a, err), "own sound looped: %s", err.c_str());
+    const double l0 = audioRms(a.tsPath, 0.1, 0.4), l1 = audioRms(a.tsPath, 1.2, 1.9);
+    CHECK(l0 > 0.05 && l1 > 0.05, "own sound: heard at the start and after the loop (rms %.3f, %.3f)", l0, l1);
+    a.loop = false;
+    a.tsPath = (dir / "own_audio_once.ts").string();
+    CHECK(encodeFile(a, err), "own sound once: %s", err.c_str());
+    const double o0 = audioRms(a.tsPath, 0.1, 0.4), o1 = audioRms(a.tsPath, 1.2, 1.9);
+    CHECK(o0 > 0.05 && o1 < 0.01, "own sound once: then silence (rms %.3f, %.3f)", o0, o1);
+    // a folder of sounds is played in order
+    const fs::path snd = dir / "sounds";
+    fs::create_directories(snd);
+    writeWav(snd / "1.wav", 440, 0.5);
+    writeWav(snd / "2.wav", 1760, 0.5);
+    a.audioPath = snd.string();
+    a.loop = true;
+    a.tsPath = (dir / "own_folder.ts").string();
+    CHECK(encodeFile(a, err), "sound folder: %s", err.c_str());
+    CHECK(audioRms(a.tsPath, 0.1, 0.4) > 0.05 && audioRms(a.tsPath, 0.6, 0.9) > 0.05 && audioRms(a.tsPath, 1.6, 1.9) > 0.05, "sound folder: the files follow each other and start over");
+
+    // a folder of videos plays one after the other and ends with the last
+    const fs::path vids = dir / "vids";
+    fs::create_directories(vids);
+    GenConfig mk = pictureConfig(slides / "A_dark.ppm");
+    mk.overlay.blocks.clear(); mk.output = Output::File; mk.seconds = 1; mk.enc.videoEncoder = "mpeg2video"; mk.fit = Fit::Stretch;
+    mk.tsPath = (vids / "1_dark.ts").string();
+    CHECK(encodeFile(mk, err), "make clip 1: %s", err.c_str());
+    mk.path = (slides / "c_bright.ppm").string();
+    mk.tsPath = (vids / "2_bright.ts").string();
+    CHECK(encodeFile(mk, err), "make clip 2: %s", err.c_str());
+    GenConfig v = pictureConfig(pic);
+    v.overlay.blocks.clear();
+    v.source = Source::VideoFile;
+    v.path = vids.string();
+    v.audio = AudioSource::FromFile;
+    v.output = Output::File;
+    v.tsPath = (dir / "vids_once.ts").string();
+    v.seconds = 8;
+    v.loop = false;
+    v.fit = Fit::Stretch;
+    v.enc.videoEncoder = "mpeg2video";
+    CHECK(encodeFile(v, err), "video folder once: %s", err.c_str());
+    ls = lumaSeries(v.tsPath);
+    CHECK(ls.size() >= 18 && ls.size() <= 24, "video folder once: ends after the second clip (%zu pictures)", ls.size());
+    CHECK(ls.size() > 12 && meanOf(ls, 1, 7) < 100 && meanOf(ls, ls.size() - 6, ls.size()) > 150, "video folder: dark clip, then bright clip (%.0f, %.0f)", meanOf(ls, 1, 7), meanOf(ls, ls.size() > 6 ? ls.size() - 6 : 0, ls.size()));
+    v.loop = true;
+    v.seconds = 4.5;
+    v.tsPath = (dir / "vids_loop.ts").string();
+    CHECK(encodeFile(v, err), "video folder looped: %s", err.c_str());
+    ls = lumaSeries(v.tsPath);
+    CHECK(ls.size() == 45 && meanOf(ls, 41, 45) < 100, "video folder looped: 45 pictures, starts over with clip 1 (%zu)", ls.size());
+    // a single video, loop off
+    v.path = (vids / "1_dark.ts").string();
+    v.tsPath = (dir / "one_once.ts").string();
+    v.loop = false;
+    v.seconds = 5;
+    CHECK(encodeFile(v, err), "single video once: %s", err.c_str());
+    ls = lumaSeries(v.tsPath);
+    CHECK(ls.size() >= 8 && ls.size() <= 12, "single video once: ends with the file (%zu pictures)", ls.size());
+
+    // refusals
+    VideoGenerator g;
+    GenConfig bad = v;
+    bad.path = (dir / "empty_dir").string();
+    fs::create_directories(bad.path);
+    CHECK(!g.start(bad, err) && !err.empty(), "an empty folder is refused");
+    bad = a;
+    bad.audioPath = "";
+    CHECK(!g.start(bad, err) && !err.empty(), "own sound without a file is refused");
+    std::printf("own content: slideshow, sound files, video folders ok\n");
+}
+
 // What goes wrong: refused at start, or reported in the stats when the run cannot go on; never a hang or a crash
 static void testFailures(const fs::path& dir, const fs::path& pic) {
     VideoGenerator g;
@@ -769,6 +982,7 @@ int main() {
     testMpeg2LowRate(dir);
     testGenerator(dir, pic);
     testVideoFile(dir, pic);
+    testOwnContent(dir, pic);
     testFailures(dir, pic);
     testStopAndOverlayChanges(dir, pic);
 #ifndef _WIN32

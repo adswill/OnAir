@@ -13,6 +13,24 @@ Every mode that needs a codec has a small **?** button. It shows whether the lib
 looks for, the exact folders it searches, an **Open codecs folder** button (it makes the folder if it is missing) and **Look again**
 (searches again, no restart).
 
+## Quick start: install the voice codecs (Codec Setup)
+
+1. Open **Help > Voice codecs**. The **Codec setup** section at the top lists every voice codec plug-in with its status: *working*, *installed*, *wrong processor* or *missing*, the exact file OnAir looks for and the folder it was found in. **Open codecs folder** opens (and creates) the folder, **Rescan all** looks again without a restart, **Copy build command** copies the command below, and the section shows the steps for your own operating system first.
+2. Build the plug-ins on your own computer with the helper (details and legal note: [CODECS-BUILD-HELPER.md](CODECS-BUILD-HELPER.md)). It needs `git`, `cmake` and a C compiler:
+
+   | OS | Tools (once) | Command (run in the OnAir source folder) |
+   |---|---|---|
+   | macOS | `xcode-select --install`, `brew install cmake git` | `bash tools/codec-builder/build-codecs.sh` |
+   | Linux | `sudo apt install git cmake build-essential` | `bash tools/codec-builder/build-codecs.sh` |
+   | Windows | MSYS2 with `mingw-w64-x86_64-gcc cmake make git` | `powershell -ExecutionPolicy Bypass -File tools\codec-builder\build-codecs.ps1` |
+
+   Type `all` (or the ids you want: `ambe2` DMR/NXDN/dPMR, `ambe` D-STAR, `imbe` P25 phase 1, `tetra`, `ysf` Yaesu Fusion), read the patent and licence notice, type `yes`. The helper downloads the open-source mbelib-neo from its authors at a pinned commit, builds the plug-ins for **this** computer and copies them into the codecs folder. For an unattended run: `bash tools/codec-builder/build-codecs.sh --ids all --yes` (adds `--src <folder>` to use an mbelib-neo source you already have, `--out <folder>` for another codecs folder).
+3. Back in OnAir press **Rescan all**, open a voice mode once and accept the notice for each codec (shown once). Encrypted calls are never decoded.
+
+The built files are yours: they are never committed to the OnAir repository and never added to a release package.
+
+**Conversation tracker.** Every voice mode has the same one in the **Voice monitor** window (the strip button or Help menu), tab **Conversations**: calls grouped into conversations by talkgroup (or the two radios of a private call), carrier and slot, with talk time, talkers, signal (bit errors), recording clips (**Play** opens the WAV in your player), search, filters (played only, with recording, hide encrypted, length, signal, slot, time) and **Export CSV / JSON** into the recordings folder (`exports`).
+
 ## Which mode needs which codec
 
 | Mode | Codec | Library you provide |
@@ -487,6 +505,8 @@ slots or carriers is heard once. Encrypted calls are listed and never decoded or
 channel at the dial frequency, one timeslot or one carrier.
 
 **Install helper.** The DMR panel (and the **?** button of NXDN, dPMR, D-STAR and P25) shows whether the plug-in is loaded (with its path) or not found (with the exact file name for your OS), the codecs folder, and three buttons: **Open codecs folder** (made if missing), **Build steps** (this page) and **Rescan for plug-in** (looks again without a restart). OnAir downloads nothing for you. Upstream mbelib: <https://github.com/lwvmobile/mbelib>.
+
+**MP3 recording (LAME).** `libmp3lame` (`libmp3lame.dll` on Windows) is searched in the same codecs folders: put it in your user codecs folder (`%LOCALAPPDATA%\OnAir\codecs` on Windows) and an update will not remove it. A copy next to the program still works, but the installer replaces that folder.
 
 ## Nothing patented is bundled
 

@@ -41,3 +41,9 @@ rust/Cargo.lock
 rust/target/
 sdk/rust/**/target/
 sdk/rust/**/Cargo.lock
+
+# Voice codec plug-ins are built by the user and never committed or shipped
+/onair-codec-*
+*/onair-codec-*.dylib
+*/onair-codec-*.so
+*/onair-codec-*.dll

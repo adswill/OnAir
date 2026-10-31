@@ -12,7 +12,7 @@ address, press **Connect**. It is then in the Radio list with the others and is 
 | SDR# / Airspy **SpyServer** | SpyServer | 5555 | Airspy and RTL-SDR, also over the internet (it sends only the part you watch) |
 | **SoapySDRServer** (SoapyRemote) | SoapyRemote | 55132 | any radio with a SoapySDR module (SDRplay, LimeSDR, HackRF, USRP ...) |
 | **SDR++** started as `sdrpp --server` | SDR++ server | 5259 | whatever SDR++ supports, one client at a time |
-| **KiwiSDR** (local or public) | KiwiSDR | 8073 | HF 0-30 MHz, 12 kHz of IQ; **Find KiwiSDR…** lists public ones |
+| **KiwiSDR** (local or public), **Web-888** | KiwiSDR | 8073 | HF 0-30 MHz, 12 kHz of IQ; **Find KiwiSDR…** lists public ones |
 | **ExpertSDR3 TCI** (SunSDR) | TCI (network) | 50001 | SunSDR radios, receive only |
 | **SDRconnect** WebSocket server | SDRplay nRSP-ST (SDRconnect) | 5454 | the network RSP |
 | PlutoSDR | PlutoSDR (by IP) | libiio | `192.168.2.1` over USB gadget, or its Ethernet address |
@@ -45,6 +45,9 @@ window first. In OnAir: type **SDR++ server**, the address, port 5259.
 Type **KiwiSDR**, the receiver's address and port (8073), a password if the owner set one, or **Find KiwiSDR…** to pick a public
 receiver. OnAir takes the 12 kHz IQ stream: HF modes only (DRM, FT8, WSPR, HFDL, weather fax, time signals ...). Be kind to public
 receivers: each one has only a few channels.
+
+**Web-888** (and other KiwiSDR-compatible receivers): they run the KiwiSDR server on port 8073, so add them as type **KiwiSDR** with their
+address. Same 12 kHz IQ, same HF modes. Not tested on a real Web-888 yet: tell us if the connection works or what the log says.
 
 ## Troubleshooting
 

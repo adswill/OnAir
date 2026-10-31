@@ -475,6 +475,18 @@ int macMsgLen(int op) {
     return 0;
 }
 
+int macMsgLenAt(const uint8_t* m, int avail) {
+    if (avail <= 0) return 0;
+    const int op = m[0];
+    if (op == 0x00) return avail;
+    if (avail < 2) return macMsgLen(op);
+    if (op == 0x08) return m[1] & 0x3F;
+    if (op == 0x11) return (((m[1] & 3) + 1) * 2) + 2;
+    if (op == 0x12) return (((m[1] & 3) + 1) * 3) + 2;
+    if ((op >> 6) == 2 && avail > 2 && (m[2] & 0x3F)) return m[2] & 0x3F;
+    return macMsgLen(op);
+}
+
 namespace {
 std::vector<uint8_t> pad(std::vector<uint8_t> v, int n) { v.resize((size_t)n, 0); return v; }
 std::vector<uint8_t> argMsg(int op, uint64_t a) {
@@ -485,10 +497,12 @@ std::vector<uint8_t> argMsg(int op, uint64_t a) {
 }
 } // namespace
 
-std::vector<uint8_t> macPtt(int n, int src, int group, int algId) {
+std::vector<uint8_t> macPtt(int n, int src, int group, int algId, int keyId, const uint8_t* mi) {
     std::vector<uint8_t> v((size_t)kPttLen, 0);
     v[0] = macHeaderByte(kMacPtt, 0);
     v[kPttAlgOff] = (uint8_t)algId;
+    put16(&v[kPttKeyOff], (uint32_t)keyId);
+    if (mi) for (int i = 0; i < 9; i++) v[(size_t)(kPttMiOff + i)] = mi[i];
     put24(&v[kPttSrcOff], (uint32_t)src);
     put16(&v[kPttGrpOff], (uint32_t)group);
     return pad(v, n);

@@ -10,11 +10,11 @@
 #include <string>
 
 namespace cmap {
-enum Map { Classic, Viridis, Inferno, Grey, Turbo, Cividis, Magma, SdrClassic, Ice, Fire, NightRed, HighContrast, Custom, SdrppSmooth, OxideBlue, NavyHeat, BlueGreen, NumMaps };
+enum Map { Classic, Viridis, Inferno, Grey, Turbo, Cividis, Magma, SdrClassic, Ice, Fire, NightRed, HighContrast, Custom, SdrppSmooth, OxideBlue, NavyHeat, BlueGreen, Amber, Paper, NumMaps };
 
 inline const char* name(int m) {
     static const char* const n[NumMaps] = {"Classic", "Viridis", "Inferno", "Grey", "Turbo", "Cividis", "Magma", "Deep heat", "Ice", "Fire", "Night (red)", "High contrast", "Custom",
-                                           "Smooth heat", "Deep blue", "Navy heat", "Blue green"};
+                                           "Smooth heat", "Deep blue", "Navy heat", "Blue green", "Amber", "Paper"};
     return n[m < 0 || m >= NumMaps ? 0 : m];
 }
 // reads the same with the common colour blindnesses (perceptually even, one hue ramp or lightness only)
@@ -138,7 +138,12 @@ inline uint32_t color(int map, float v) {
     // floor in a mid blue, signals through a light blue and teal to green; the top end goes on to a pale green-yellow
     static const float bgreen[10][3] = {{0, 0, 40}, {0, 2, 92}, {0, 5, 128}, {0, 9, 160}, {0, 14, 180}, {8, 96, 188}, {5, 134, 160},
                                         {2, 154, 102}, {40, 205, 60}, {225, 255, 150}};
+    // Amber: black, brown, amber, pale yellow (the Mono Pro look). Paper: white, pale blue, blue, navy (for the Daylight look, the floor is light)
+    static const float amber[6][3] = {{0, 0, 0}, {34, 18, 0}, {110, 60, 0}, {214, 130, 0}, {255, 190, 40}, {255, 245, 200}};
+    static const float paper[7][3] = {{246, 248, 252}, {214, 228, 246}, {150, 190, 235}, {70, 130, 215}, {30, 80, 170}, {20, 40, 110}, {10, 14, 50}};
     switch (map) {
+    case Amber: return stopsColor(amber, 6, v);
+    case Paper: return stopsColor(paper, 7, v);
     case NavyHeat: return stopsColor(navy, 15, v);
     case BlueGreen: return stopsColor(bgreen, 10, v);
     case Cividis: return stopsColor(cividis, 9, v);

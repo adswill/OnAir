@@ -29,10 +29,10 @@ struct Panel { const char* name; bool App::*on; };
 const Panel kPanels[] = {
     {"Passes", &App::passesOpen}, {"Scheduler", &App::schedulerOpen}, {"Recordings", &App::recmgrOpen}, {"SatNOGS transmitters", &App::satnogsOpen}, {"Direction finder", &App::dfOpen}, {"Interference hunter", &App::rfiOpen},
     {"Passive radar", &App::passiveRadarOpen}, {"Images", &App::galleryOpen}, {"Data feeds...", &App::feedsOpen},
-    {"Messages...", &App::msgdbOpen}, {"Protocol lab...", &App::protolabOpen}, {"TX studio...", &App::txStudioOpen}, {"Mode Builder...", &App::modeBuilderOpen}, {"Signal Lab...", &App::signallabOpen}, {"Watchlists...", &App::watchlistOpen}, {"Integrations...", &App::integrationsOpen},
+    {"Messages...", &App::msgdbOpen}, {"Protocol lab...", &App::protolabOpen}, {"TX studio...", &App::txStudioOpen}, {"Mode Builder...", &App::modeBuilderOpen}, {"Signal Lab...", &App::signallabOpen}, {"Conversations...", &App::ssbConvOpen}, {"Watchlists...", &App::watchlistOpen}, {"Integrations...", &App::integrationsOpen},
     {"Automations...", &App::automationOpen}, {"Plugins...", &App::pluginsOpen}, {"Memory...", &App::memoryOpen},
     {"Datasets...", &App::datasetsOpen}, {"Data packs...", &App::packsOpen}, {"Frequencies...", &App::freqOpen}, {"Map", &App::mapOpen}, {"Propagation...", &App::propOpen},
-    {"Sweep scanner", &App::sweepOpen}, {"Station health", &App::stationHealthOpen}, {"Reception doctor", &App::doctorOpen}, {"Antenna rotator...", &App::rotatorOpen},
+    {"Sweep scanner", &App::sweepOpen}, {"Station health", &App::stationHealthOpen}, {"Reception doctor", &App::doctorOpen}, {"RF fingerprint", &App::rfFpOpen}, {"Antenna rotator...", &App::rotatorOpen},
     {"Antenna designer...", &App::antdOpen},
 };
 

@@ -298,6 +298,64 @@ int main() {
         CHECK(searchRetunes == 0 && !visitedOutside, "no search tour: %d retunes, outside %d", searchRetunes, (int)visitedOutside);
         CHECK(c.follower.state() == FollowState::ControlHold, "still holding at the end (%s)", followStateName(c.follower.state()));
     }
+    // ---- issue #348, control channel drop and re-acquire. Model: a retune costs 4 s of acquisition; only the frequency the system uses as its control
+    //      channel at that moment locks. The control channel drops for 40 s (same frequency), then the site moves it to its secondary channel.
+    {
+        const double base = 770031250;
+        auto hz = [&](int ch) { return base + ch * 12500.0; };
+        Controller c;
+        feed(c, gen::idenUp(1, base, 12500, 0, 12500), 0);
+        feed(c, gen::netSts(0xBEE00, 0x1A7, 0x1019, 0x70), 0);
+        feed(c, gen::rfssSts(0x1A7, 2, 14, 0x1019, 0x70), 0);
+        feed(c, gen::sccb(2, 14, 0x10DA, 0x114C), 0);
+        feed(c, gen::adjSts(0x1A7, 2, 15, 0x1BB8, 0x70), 0);
+        const double cc1 = hz(0x19), cc2 = hz(0xDA);
+        c.setCapture(cc1, 0);
+        FollowConfig fc; fc.allowRetune = true;
+        c.follower.setConfig(fc);
+        double radio = cc1, lockAt = 0, dropStart = 20, dropEnd = 60, movedAt = 80;
+        int retunes = 0, outside = 0;
+        double relockSec = -1, movedLockSec = -1;
+        for (double t = 0.2; t < 160; t += 0.1) {
+            const double live = t < movedAt ? cc1 : cc2;   // the control channel in use
+            const bool up = std::fabs(radio - live) < 1 && t >= lockAt && !(t > dropStart && t < dropEnd);
+            if (up && std::fmod(t, 0.2) < 0.1) {
+                feed(c, gen::rfssSts(0x1A7, 2, 14, t < movedAt ? 0x1019 : 0x10DA, 0x70), t);
+                if (t >= dropEnd && relockSec < 0 && t < movedAt) relockSec = t - dropEnd;
+                if (t >= movedAt && movedLockSec < 0 && std::fabs(radio - cc2) < 1) movedLockSec = t - movedAt;
+            }
+            c.tick(t);
+            for (const Action& a : c.takeActions()) {
+                if (a.kind != Action::Retune) continue;
+                retunes++;
+                if (std::fabs(a.freqHz - cc1) > 1 && std::fabs(a.freqHz - cc2) > 1 && std::fabs(a.freqHz - hz(0x14C)) > 1) outside++;
+                radio = a.freqHz; lockAt = t + 4.0;
+            }
+        }
+        CHECK(outside == 0, "recovery never leaves the site's own channels: %d", outside);
+        CHECK(relockSec >= 0 && relockSec < 20, "re-locked after the drop: %.1f s after it ended", relockSec);
+        CHECK(movedLockSec >= 0 && movedLockSec < 45, "found the moved control channel: %.1f s", movedLockSec);
+        CHECK(c.follower.state() == FollowState::ControlHold && std::fabs(radio - cc2) < 1, "holding the moved control channel (%s)", followStateName(c.follower.state()));
+        // the next loss starts with what was heard last
+        const auto l = c.follower.heardControlChannels();
+        CHECK(!l.empty() && std::fabs(l[0] - cc2) < 1, "last-good control channel is first in the hunt order");
+        (void)retunes;
+    }
+    // ---- a first step on the channel the radio is on, silent for the loss time: the next candidate comes after one more loss time, not a whole dwell
+    {
+        Controller c;
+        setupSite(c, 0);
+        feed(c, gen::sccb(1, 5, 0x1020, 0x1021), 0);
+        c.setCapture(chHz(0x1001), 0);
+        FollowConfig fc; fc.ccLossSec = 4; fc.ccDwellSec = 12; fc.allowRetune = true;
+        c.follower.setConfig(fc);
+        c.tick(4.5);
+        auto a = c.takeActions();
+        CHECK(c.follower.state() == FollowState::Searching, "lost after the loss time");
+        c.tick(9.0);
+        a = c.takeActions();
+        CHECK(count(a, Action::Retune) == 1 && std::fabs(a[0].freqHz - chHz(0x1020)) < 1, "second candidate after one more loss time (%d retunes)", count(a, Action::Retune));
+    }
     // ---- talkgroup CSV
     {
         TalkgroupList l;
@@ -691,6 +749,122 @@ int main() {
         feed(c, gen::grpVGrant(4, 0x1011, 6002, 2), 1.5);
         feed(c, gen::grpVGrant(0x40, 0x1012, 6003, 3), 1.5);
         CHECK(c.takeActions().empty() && c.follower.activeSlices() == 0, "not joined");
+    }
+    // ---- fix35-p25: single-radio hop gets a start grace; a hop that heard nothing backs off; late updates, emergency, unplaced types, status line
+    {   // H1: hop, no voice for 3 s: still hopped; then voice keeps it open
+        Controller c;
+        setupSite(c, 0);
+        FollowConfig fc; fc.allowRetune = true;
+        c.follower.setConfig(fc);
+        c.setCapture(851.1e6, 0);
+        feed(c, gen::idenUp(5, 856000000, 12500, 0, 12500), 0);
+        feed(c, gen::grpVGrant(4, 0x5010, 6001, 1), 1.0);
+        const uint64_t id = c.log.records().back().id;
+        CHECK(count(c.takeActions(), Action::Retune) == 1 && c.follower.state() == FollowState::Hopped, "hops");
+        c.tick(4.0);
+        CHECK(c.follower.state() == FollowState::Hopped && count(c.takeActions(), Action::Retune) == 0, "H1: still on the voice channel after 3 s without voice");
+        c.onVoice(id, 4.2);
+        c.tick(5.5);
+        CHECK(c.follower.state() == FollowState::Hopped, "H1: voice keeps the hop open past the start grace");
+        c.tick(7.0);
+        CHECK(c.follower.state() == FollowState::Returning && count(c.takeActions(), Action::Retune) == 1, "H1: hang time after voice, then home");
+    }
+    {   // H1: no voice ever: returns after the start timeout, and the same talkgroup does not re-hop at once
+        Controller c;
+        setupSite(c, 0);
+        FollowConfig fc; fc.allowRetune = true;
+        c.follower.setConfig(fc);
+        c.setCapture(851.1e6, 0);
+        feed(c, gen::idenUp(5, 856000000, 12500, 0, 12500), 0);
+        feed(c, gen::grpVGrant(4, 0x5010, 6001, 1), 1.0);
+        c.takeActions();
+        c.tick(8.0);
+        CHECK(c.follower.state() == FollowState::Returning && count(c.takeActions(), Action::Retune) == 1, "H1: heard nothing: back to the control channel");
+        c.follower.onControlSeen(8.5);
+        feed(c, gen::grpVGrant(4, 0x5010, 6001, 1), 9.0);
+        CHECK(count(c.takeActions(), Action::Retune) == 0, "H1: backed off after a hop that heard nothing");
+        feed(c, gen::grpVGrant(4, 0x5010, 6001, 1), 17.0);
+        CHECK(count(c.takeActions(), Action::Retune) == 1, "H1: tries again after the back-off");
+    }
+    {   // M7: an update for a call that has just ended opens nothing
+        Controller c;
+        setupSite(c, 0);
+        c.setCapture(851.1e6, 2.4e6);
+        feed(c, gen::grpVGrant(4, 0x1011, 6002, 2), 1.0);
+        const uint64_t id = c.log.records().back().id;
+        c.takeActions();
+        c.onTerminator(id, 1.5);
+        c.tick(1.6);
+        c.takeActions();
+        const size_t n = c.log.records().size();
+        feed(c, gen::grpVGrantUpd(0x1011, 6002, 0x1011, 6002), 1.9);
+        CHECK(c.log.records().size() == n && count(c.takeActions(), Action::OpenSlice) == 0, "M7: late update ignored");
+        feed(c, gen::grpVGrantUpd(0x1011, 6002, 0x1011, 6002), 12.0);
+        CHECK(count(c.takeActions(), Action::OpenSlice) == 1, "M7: a later update is a call joined late");
+    }
+    {   // M8: an emergency call pre-empts a running low priority one
+        Controller c;
+        setupSite(c, 0);
+        FollowConfig fc; fc.maxSlices = 1;
+        c.follower.setConfig(fc);
+        c.setCapture(851.1e6, 2.4e6);
+        feed(c, gen::grpVGrant(4, 0x1011, 6001, 1), 1.0);
+        c.takeActions();
+        feed(c, gen::grpVGrant(0x84, 0x1012, 6002, 2), 1.2);
+        auto a = c.takeActions();
+        CHECK(count(a, Action::CloseSlice) == 1 && count(a, Action::OpenSlice) == 1, "M8: emergency pre-empts");
+    }
+    {   // M10: a channel type this build cannot place says so
+        Controller c;
+        setupSite(c, 0);
+        c.setCapture(851.1e6, 2.4e6);
+        feed(c, gen::idenUpTdma(6, 5, 851006250, 12500, 0), 0);
+        feed(c, gen::grpVGrant(4, 0x6010, 6001, 1), 1.0);
+        const CallRecord& r = c.log.records().back();
+        CHECK(r.note.find("channel type 5") != std::string::npos, "M10: honest reason (%s)", r.note.c_str());
+    }
+    {   // M9: Phase 2 grant before NET_STS: a reason, no follow
+        Controller c;
+        feed(c, gen::idenUpTdma(1, 3, 851006250, 12500, 0), 0);
+        c.setCapture(851.1e6, 2.4e6);
+        feed(c, gen::grpVGrant(4, 0x1010, 6001, 1), 1.0);
+        CHECK(count(c.takeActions(), Action::OpenSlice) == 0 && c.log.records().back().note.find("waiting for the system broadcast") != std::string::npos, "M9");
+        feed(c, gen::netSts(0xBEE00, 0x3A1, 0x1001, 0x70), 1.2);
+        feed(c, gen::grpVGrant(4, 0x1010, 6001, 1), 1.5);
+        CHECK(count(c.takeActions(), Action::OpenSlice) == 1, "M9: once the seed is known");
+    }
+    {   // M6: a hunt does not adopt a control channel of another NAC
+        Follower f;
+        FollowConfig fc; fc.allowRetune = true; fc.ccLossSec = 2; fc.ccDwellSec = 3;
+        f.setConfig(fc);
+        CallLog log;
+        f.setCapture(851e6, 0);
+        f.setControlChannel(851.0e6, {851.0e6, 852.0e6});
+        f.onControlSeen(0.1, 0x293);
+        f.tick(0.2, log);
+        f.tick(5.0, log);   // lost, searching
+        CHECK(f.state() == FollowState::Searching, "searching (%s)", followStateName(f.state()));
+        f.onControlSeen(5.5, 0x111);
+        CHECK(f.state() == FollowState::Searching, "M6: other NAC not adopted");
+        f.onControlSeen(6.0, 0x293);
+        CHECK(f.state() == FollowState::ControlHold, "M6: own NAC adopted");
+    }
+    {   // status line
+        Controller c;
+        setupSite(c, 0);
+        c.setCapture(851.1e6, 2.4e6);
+        c.tick(0.5);
+        feed(c, gen::grpVGrant(4, 0x1011, 6002, 2), 1.0);
+        const std::string s = c.statusLine(1.0);
+        CHECK(s.find("Following TG 6002 on 851.") == 0, "status: %s", s.c_str());
+        Controller d;
+        setupSite(d, 0);
+        d.setCapture(851.1e6, 0);
+        feed(d, gen::grpVGrant(4, 0x5010, 6003, 2), 1.0);
+        feed(d, gen::idenUp(5, 856000000, 12500, 0, 12500), 1.0);
+        feed(d, gen::grpVGrant(4, 0x5010, 6003, 2), 1.1);
+        const std::string t = d.statusLine(1.1);
+        CHECK(t.find("Not following TG 6003") == 0 && t.find("second radio") != std::string::npos, "status reason: %s", t.c_str());
     }
     return testSummary("p25 trunk");
 }

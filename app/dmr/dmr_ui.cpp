@@ -1,4 +1,5 @@
 // DMR screens: the two time slots and the call log, the symbol plots, the receiver counters and the options of the test signal.
+#include "call_filter.h"
 #include "app.h"
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
@@ -6,6 +7,7 @@
 #include "dect2/dmr/dmr_ambe.h"
 #include "../codec/speech_codec_ui.h"
 #include "../voice/voice_monitor_ui.h"
+#include "../voice/radioid_ui.h"
 #include "dect2/codec/codec_registry.h"
 #include "dect2/dmr/dmr_proto.h"
 #include <algorithm>
@@ -29,6 +31,7 @@ const ImVec4 kDim(0.62f, 0.65f, 0.68f, 1);
 
 void tick(App& a) {
     const bool run = a.engine.running();
+    radioidui::tick(dect2::RadioIdKind::Dmr);
     if (live(a)) appcodec::voiceCodecTick("ambe2");   // the user's codec plug-in, loaded whichever tab is shown
     if (run) {
         a.engine.dmr().setVolume(a.volume);   // AMBE+2 through the codec plug-in or mbelib when present
@@ -63,7 +66,7 @@ const char* kindName(int k) {
 std::string idText(uint32_t id, bool known) {
     if (!known || id == 0) return "-";
     char b[16]; snprintf(b, sizeof b, "%u", id);
-    return b;
+    return radioidui::withName(dect2::RadioIdKind::Dmr, b, id);   // "1234567  W1ABC Joe Smith" when a radio ID list is loaded
 }
 
 // the target of a call: a talkgroup number for group calls
@@ -168,6 +171,16 @@ void slotCard(const App& a, int idx, float w, float h) {
 void callTable(App& a, float h) {
     const DmrTelemetry& t = a.rx.dmr;
     const bool on = live(a);
+    static int filter = 0;   // #389: which kinds of call the table lists (not saved)
+    {
+        ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("Show"); ImGui::SameLine();
+        ImGui::SetNextItemWidth(150 * gUi);
+        if (ImGui::BeginCombo("##dmrcallfilter", dmrfilter::name(filter))) {
+            for (int i = 0; i < 5; i++) if (ImGui::Selectable(dmrfilter::name(i), i == filter)) filter = i;
+            ImGui::EndCombo();
+        }
+        h = std::max(40.f * gUi, h - ImGui::GetFrameHeightWithSpacing());
+    }
     if (!ImGui::BeginTable("##dmrcalls", 10 + (wideActive(a) ? 1 : 0), ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingFixedFit, ImVec2(0, h))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     if (wideActive(a)) ImGui::TableSetupColumn("Carrier", ImGuiTableColumnFlags_WidthFixed, 66 * gUi);
@@ -185,6 +198,7 @@ void callTable(App& a, float h) {
     if (on) {
         for (const DmrCall* pc : sortedCalls(t)) {
             const DmrCall& c = *pc;
+            if (!dmrfilter::shown(filter, c.kind)) continue;
             ImGui::TableNextRow();
             if (c.active) ImGui::PushStyleColor(ImGuiCol_Text, pal::okGreen());
             else if (c.emergency) ImGui::PushStyleColor(ImGuiCol_Text, pal::badRed());
@@ -449,6 +463,7 @@ void spectrumPlotDmr(const DmrTelemetry& t, bool on, ImVec2 sz) {
 }
 
 void receiver(App& a) {
+    radioidui::section(dect2::RadioIdKind::Dmr);
     wideCarriersTable(a, 0);
     const DmrTelemetry& t = a.rx.dmr;
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }

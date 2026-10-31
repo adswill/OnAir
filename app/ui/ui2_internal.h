@@ -34,6 +34,7 @@ namespace ui2 {
 void accentMenu();
 void themeChoice(App& a, bool menu);
 void typographyChoice(bool menu);
+void dataFolderChoice();
 void timeDisplayChoice(bool menu);
 
 // ui2_widgets.cpp

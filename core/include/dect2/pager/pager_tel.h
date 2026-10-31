@@ -35,6 +35,8 @@ struct PagerMessage {
     std::string text;            // numeric digits or text; "secure, not shown" for secure pages
     int fixed = 0;               // bits that the BCH code corrected in the code words of this page
     bool damaged = false;        // a code word of the message could not be repaired: the text is incomplete
+    int copies = 1;              // transmissions of this message that were combined (multi-copy combining, #20); 1 = a single copy
+    bool combined = false;       // code words were rebuilt from other copies of the message
     // POCSAG pages with a message: both readings, so the UI can switch between them; empty for FLEX and tone pages
     std::string numText, alphaText;
     bool looksAlpha = false;     // the alphanumeric reading looks like real text (pager::pocsagLooksAlpha)

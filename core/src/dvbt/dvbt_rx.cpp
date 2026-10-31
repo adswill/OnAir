@@ -1,3 +1,4 @@
+#include "dect2/ofdm/csi_erase.h"
 #include "dect2/dvbt/dvbt_rx.h"
 #include "dect2/dvbt/dvbt_fec.h"
 #include "dect2/dsp/gpu_viterbi.h"
@@ -154,6 +155,8 @@ struct DvbtReceiver::Impl {
     // scratch of estimateAndDecode, kept between symbols (no allocation per symbol)
     std::vector<cf32> scrGrid, scrEq;
     std::vector<float> scrN0;
+    ofdm::CarrierInterference carrierErase;   // erases carriers hit by a narrowband interferer (core/include/dect2/ofdm/csi_erase.h)
+    const bool flatN0 = ofdm::envOn("DECT2_OFDM_FLAT_N0");   // A/B tests only: no channel-state weighting
     // the plots are read about 30 times a second: they are rebuilt every ~25 ms of signal, not every six symbols, and only copied into the telemetry when new
     uint64_t showSeq = 0, pubShowSeq = ~0ull;
     uint64_t lastShowSym = 0; bool showEver = false;
@@ -1133,6 +1136,7 @@ struct DvbtReceiver::Impl {
                 for (int k = 0; k < K && k < (int)roles.size(); k++) if (roles[k] == 0) dataIdx[l].push_back(k);
             }
             roleMode = mode;
+            carrierErase.reset(K);
         }
         const std::vector<int>& dk = dataIdx[symIdx % 4];
         const int Nd = dataCarriers(mode);
@@ -1150,13 +1154,15 @@ struct DvbtReceiver::Impl {
             float* __restrict np = n0.data();
             // one reciprocal per carrier for the cell and its noise (instead of two float and one double division; the values move in
             // the last bits, the decoded stream does not)
-            const float s2h = (float)(0.5 * sigma2);
+            float s2h = (float)(0.5 * sigma2);
+            if (flatN0) { double sr = 0; for (int i = 0; i < Nd; i++) sr += 1.0 / std::max(1e-9f, std::norm(hp[i])); s2h *= (float)(sr / Nd); }   // A/B: the mean noise variance for all
             for (int i = 0; i < Nd; i++) {
                 const float r = 1.f / std::max(1e-9f, std::norm(hp[i]));
                 ep[i] = yp[i] * std::conj(hp[i]) * r;
-                np[i] = s2h * r;
+                np[i] = flatN0 ? s2h : s2h * r;
             }
         }
+        carrierErase.apply(eq.data(), n0.data(), dk.data(), Nd, K);
         est.stop();
         fecPush(eq.data(), n0.data(), symIdx);
         streaming = true;

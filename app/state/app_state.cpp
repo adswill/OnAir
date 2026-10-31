@@ -1,7 +1,9 @@
 // application state: preferences, device list, bandwidth, ingesting spectrum and receiver telemetry, channel list
+#include "freq_remember.h"
 #include "rx_width.h"
 #include "../rooms/rooms.h"
 #include "../app.h"
+#include "dect2/common/verbose_log.h"
 #include "../clips/clips_ui.h"
 #include "../gfx/file_vfo.h"
 #include <cstring>
@@ -87,6 +89,8 @@ std::string slotKey(int slot) {   // the suffix of the per-mode settings: the fa
 
 void setFamily(App& a, int f) { setMode(a, f, firstSubOf(f)); }
 
+bool rememberedFreqOk(const ModeTuning* mt, double def, double fr) { return mt && freqrem::ok(mt->minMhz, mt->maxMhz, def, fr); }
+
 void setMode(App& a, int f, int sub) {
     {   // a protocol entry of another family, or none for a family that has them: the family's first
         int n = 0;
@@ -120,7 +124,7 @@ void setMode(App& a, int f, int sub) {
         const ModeTuning* mt = modeTuning(f + 2);
         const SubMode* sm = curSub(a);
         const double def = sm ? sm->defMhz : mt ? mt->defMhz : a.freqMhz;
-        a.freqMhz = mt && a.famFreq[to] >= mt->minMhz && a.famFreq[to] <= mt->maxMhz ? a.famFreq[to] : def;
+        a.freqMhz = rememberedFreqOk(mt, def, a.famFreq[to]) ? a.famFreq[to] : def;
         if (carryMhz > 0) a.freqMhz = carryMhz;
     }
     if (f == 0 && !(a.freqMhz >= 170 && a.freqMhz <= 870)) a.freqMhz = 522.0;       // a TV channel, not a leftover FM or DAB frequency
@@ -337,6 +341,8 @@ void applyBandwidth(App& a) {
             a.tune.bandwidthMhz = 18; a.tune.sampleRate = 20e6; a.tune.basebandFilterHz = 18e6;
         } else if (mt->stdMode == 10 && a.atvWide && !a.atvNbtv) {   // system E: a 14 MHz channel
             a.tune.bandwidthMhz = 14; a.tune.sampleRate = 20e6; a.tune.basebandFilterHz = 16e6;
+        } else if (mt->stdMode == 22 && meshRtlRate(a) > 0) {   // Mesh on an RTL-SDR: 1.024 Msps, no lost samples (#386)
+            a.tune.sampleRate = meshRtlRate(a); a.tune.basebandFilterHz = 0.45 * a.tune.sampleRate;
         } else if (mt->stdMode == 22 && meshSampleRate(a) > mt->sampleRate) {   // Mesh: 2.4 GHz LoRa (812.5 / 1625 kHz) needs more
             a.tune.sampleRate = meshSampleRate(a); a.tune.basebandFilterHz = 0.875 * a.tune.sampleRate;
         } else if (mt->stdMode == 61) {   // Meteor-M LRPT: a 2 Msps capture keeps the 150 kHz channel inside the window while the tracker moves the centre
@@ -403,7 +409,26 @@ std::string openFileDialog() { return plat::openFileDialog(); }
 std::string saveFileDialog(const char* name) { return plat::saveFileDialog(name); }
 
 // the spectrum settings the engine keeps: the FFT size (also the saved one at start) and the noise blanker
+// Verbose logging (View > Verbose logging): the switch for the whole process, and every 2 s the frame times of the window (average and worst
+// frame) and the number of threads of the process, into the same log as everything else
+static void verboseFrameLog(App& a) {
+    dect2::setVerboseLogging(a.verboseLog);
+    static bool sinkSet = false;
+    if (!sinkSet) { sinkSet = true; dect2::setDiagSink([&a](const std::string& s) { a.engine.log(s); }); }   // driver lines (radio lost / reopened, USB counts) in the Log panel
+    if (!a.verboseLog) return;
+    static double t0 = 0, worst = 0, sum = 0; static int n = 0;
+    const double now = ImGui::GetTime(), dt = (double)ImGui::GetIO().DeltaTime;
+    worst = std::max(worst, dt); sum += dt; n++;
+    if (t0 == 0) t0 = now;
+    if (now - t0 >= 2.0 && n > 0) {
+        dect2::verboseLog("ui: %d frames in %.1f s, average %.1f ms, worst %.1f ms; engine %s, radio %.3f Msps", n, now - t0, 1000 * sum / n, 1000 * worst,
+                          a.engine.running() ? "running" : "stopped", a.engine.radioRate() / 1e6);
+        t0 = now; worst = 0; sum = 0; n = 0;
+    }
+}
+
 static void syncSpectrumEngine(App& a) {
+    verboseFrameLog(a);
     if (a.engine.spectrumFft() != a.specFft) a.engine.setSpectrumFft(a.specFft);
     static bool on = false; static float thr = 0, wid = 0; static const Engine* who = nullptr;
     if (who != &a.engine || on != a.nbOn || thr != a.nbThr || wid != a.nbWidthUs) {

@@ -235,10 +235,10 @@ void sidebar(App& a) {
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Unified: the spectrum and waterfall stay on screen above the decoded views (F6 folds them)"));
         ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Look")); ImGui::SameLine(col); ImGui::SetNextItemWidth(std::min(150.f * gUi, ImGui::GetContentRegionAvail().x));
         {
-            static const char* lk[3] = {N_("Classic"), N_("Dev A"), N_("Dev B")};
-            const char* names[3] = {tr(lk[0]), tr(lk[1]), tr(lk[2])};
-            int cur = a.uiTheme == 3 ? 1 : a.uiTheme == 4 ? 2 : 0;
-            if (kit::combo("##looksel", &cur, names, 3)) { a.uiTheme = cur == 0 ? 1 : 2 + cur; savePrefs(a); }
+            static const char* lk[6] = {N_("Classic"), N_("Dev A"), N_("Dev B"), N_("Studio"), N_("Mono Pro"), N_("Daylight")};
+            const char* names[6] = {tr(lk[0]), tr(lk[1]), tr(lk[2]), tr(lk[3]), tr(lk[4]), tr(lk[5])};
+            int cur = a.uiTheme == 3 ? 1 : a.uiTheme == 4 ? 2 : a.uiTheme >= 5 ? a.uiTheme - 2 : 0;
+            if (kit::combo("##looksel", &cur, names, 6)) { a.uiTheme = cur == 0 ? 1 : 2 + cur; savePrefs(a); }
         }
         if (ImGui::SmallButton(tr("Reset spectrum"))) resetSpectrum(a);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Restore the default spectrum and waterfall levels and the usual half-and-half split (does not change panel layout)"));
@@ -286,6 +286,7 @@ void sidebar(App& a) {
         tool("TX studio...", a.txStudioOpen, N_("Make a transmit signal as a file: spectrum, waterfall, measurements and a decoder check. No radio, nothing is transmitted"));
         tool("Digital video generator...", a.videoGenOpen, N_("Encode a camera, a still picture or a video file with an overlay into an MPEG transport stream: a .ts file or a UDP / RTP stream (port 5000)"));
         tool("Integrations...", a.integrationsOpen, N_("Send decoded events (aircraft, ships, APRS, pagers, sondes ...) to an MQTT broker, Home Assistant, a webhook or a JSON-lines file. Off until you set it up"));
+        tool("Conversations...", a.ssbConvOpen, N_("Finds SSB voice on the span and organises it into conversations you can just listen to: auto-listen, record, timeline"));
         tool("Watchlists...", a.watchlistOpen, N_("Alerts when listed aircraft, ships, call signs, frequencies or words are heard: notification, sound, ntfy, Telegram or webhook"));
         tool("Automations...", a.automationOpen, N_("Rules and scripts: when something is decoded, notify, record, tune or call a webhook"));
         tool("Plugins...", a.pluginsOpen, N_("Add decoders and actions without rebuilding OnAir: install, enable and set up plugins"));
@@ -300,12 +301,14 @@ void sidebar(App& a) {
         tool("Antenna rotator...", a.rotatorOpen, "Connect a GS-232-compatible rotator (serial or TCP), set azimuth and elevation");
         tool("Sweep scanner", a.sweepOpen, N_("Fast wideband sweep with a noise-floor measurement, signal log and waterfall"));
         tool("Reception doctor", a.doctorOpen, N_("Why is nothing decoding? Checks overload, level, offset, bandwidth, interferers, drops and the mode from the live signal, with one-click fixes"));
+        tool("RF fingerprint", a.rfFpOpen, N_("Recognise an individual transmitter by its RF fingerprint (carrier offset, key-up transient, pilot, spurs), also when it sends only a carrier. Logs every transmission."));
         tool("Station health", a.stationHealthOpen, N_("Noise floor, ADC level and reference stations per band, with plain advice on gain, filters and antenna placement"));
         tool("Scanner (highly experimental)", a.scanViewOpen, "HIGHLY EXPERIMENTAL: memories, scan list and tones in one view; steps through them and stops on activity");
         ImGui::Separator();
         themeChoice(a, false);
         accentMenu();
         typographyChoice(false);
+        dataFolderChoice();
         timeDisplayChoice(false);
         int pct = (int)std::lround(a.uiTextScale * 100);
         ImGui::SetNextItemWidth(-1);
@@ -317,9 +320,18 @@ void sidebar(App& a) {
         ImGui::Spacing();
     }
     if (section(N_("Log"))) {
+        if (ImGui::Checkbox(tr("Verbose"), &a.verboseLog)) savePrefs(a);   // 3.5: the same switch as View > Verbose logging
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Adds USB transfer counts, bytes per second, stall restarts and frame times to the log."));
+        ImGui::SameLine();
+        size_t nl = 0;
+        const std::vector<std::string> all = a.engine.logSnapshot(nl);
+        if (ImGui::SmallButton(tr("Save log..."))) {   // the lines shown below, as a text file to send with a bug report
+            const std::string path = saveFileDialog("onair-log.txt");
+            if (!path.empty()) { if (FILE* f = fopen(path.c_str(), "wb")) { for (const std::string& l : all) { fputs(l.c_str(), f); fputc('\n', f); } fclose(f); } }
+        }
         ImGui::BeginChild("##logc", ImVec2(0, std::max(40.f * gUi, ImGui::GetContentRegionAvail().y - 4 * gUi)), ImGuiChildFlags_Borders);
         size_t n = 0;
-        const std::vector<std::string> lines = a.engine.logSnapshot(n);
+        const std::vector<std::string> lines = all;
         for (const std::string& l : lines) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", l.c_str()); ImGui::PopTextWrapPos(); }
         if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 2) ImGui::SetScrollHereY(1.f);
         ImGui::EndChild();
@@ -536,8 +548,11 @@ static void viewMenu(App& a) {
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu(tr("Look"))) {
-            const int cur = a.uiTheme == 3 ? 1 : a.uiTheme == 4 ? 2 : 0;
+            const int cur = a.uiTheme == 3 ? 1 : a.uiTheme == 4 ? 2 : a.uiTheme >= 5 ? a.uiTheme - 2 : 0;
             if (ImGui::MenuItem(tr("Classic"), nullptr, cur == 0)) { if (cur != 0) a.uiTheme = 1; savePrefs(a); }
+            if (ImGui::MenuItem(tr("Studio"), nullptr, cur == 3)) { a.uiTheme = 5; savePrefs(a); }
+            if (ImGui::MenuItem(tr("Mono Pro"), nullptr, cur == 4)) { a.uiTheme = 6; savePrefs(a); }
+            if (ImGui::MenuItem(tr("Daylight"), nullptr, cur == 5)) { a.uiTheme = 7; savePrefs(a); }
             if (ImGui::MenuItem(tr("Dev A"), nullptr, cur == 1)) { a.uiTheme = 3; savePrefs(a); }
             if (ImGui::MenuItem(tr("Dev B"), nullptr, cur == 2)) { a.uiTheme = 4; savePrefs(a); }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Try the new look: flat, dense, one accent colour"));
@@ -566,8 +581,8 @@ static void viewMenu(App& a) {
         if (ImGui::MenuItem(tr("Full screen"), "F11", gWindow && glfwGetWindowMonitor(gWindow))) toggleFullscreen();
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Fill the display, hiding the taskbar (F11 or Alt+Enter). The same shortcut leaves it."));
         ImGui::Separator();
-        static const char* names[5] = {N_("Terminal palette"), N_("Instrument palette"), N_("Mono palette"), N_("Dev A (graphite)"), N_("Dev B (terminal green)")};
-        for (int t = 0; t < 5; t++) if (ImGui::MenuItem(tr(names[t]), nullptr, a.uiTheme == t)) { a.uiTheme = t; savePrefs(a); }
+        static const char* names[8] = {N_("Terminal palette"), N_("Instrument palette"), N_("Mono palette"), N_("Dev A (graphite)"), N_("Dev B (terminal green)"), N_("Studio (slate, rounded)"), N_("Mono Pro (OLED, amber)"), N_("Daylight (light, blue)")};
+        for (int t = 0; t < 8; t++) if (ImGui::MenuItem(tr(names[t]), nullptr, a.uiTheme == t)) { a.uiTheme = t; savePrefs(a); }
         themeChoice(a, true);
         accentMenu();
         typographyChoice(true);
@@ -577,6 +592,8 @@ static void viewMenu(App& a) {
         if (ImGui::MenuItem(tr("Controls (keys and mouse) ..."), nullptr, &inputmap::windowOpen())) {}
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("What the mouse wheel, keys and extra mouse buttons do on the spectrum and waterfall: zoom, tune, pan, step size, shortcuts"));
         if (ImGui::MenuItem(tr("Performance overlay"), nullptr, &a.perfOverlay)) savePrefs(a);
+        if (ImGui::MenuItem(tr("Verbose logging"), nullptr, &a.verboseLog)) savePrefs(a);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Adds USB transfer counts, bytes per second, stall detections and restarts and frame times to the log. For bug reports: switch it on, reproduce the problem, then Save bug report (Diagnostics)."));
         if (ImGui::BeginMenu(tr("Power"))) {   // battery life: dect2/power/power.h (update rates, background work) and app/ui/frame_pace.h (redraws)
             static const char* lp[3] = {N_("Low power mode: off"), N_("Low power mode: automatic (on battery or hot)"), N_("Low power mode: always")};
             for (int i = 0; i < 3; i++) {
@@ -634,6 +651,7 @@ static void viewMenu(App& a) {
         if (ImGui::MenuItem(tr("Digital video generator..."), nullptr, &a.videoGenOpen)) savePrefs(a);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Encode a camera, a still picture or a video file with an overlay into an MPEG transport stream: a .ts file or a UDP / RTP stream (port 5000)"));
         ImGui::MenuItem(tr("Integrations..."), nullptr, &a.integrationsOpen);
+        ImGui::MenuItem(tr("Conversations..."), nullptr, &a.ssbConvOpen);
         ImGui::MenuItem(tr("Watchlists..."), nullptr, &a.watchlistOpen);
         ImGui::MenuItem(tr("Automations..."), nullptr, &a.automationOpen);
         ImGui::MenuItem(tr("Plugins..."), nullptr, &a.pluginsOpen);
@@ -649,6 +667,7 @@ static void viewMenu(App& a) {
         if (ImGui::MenuItem(tr("Sweep scanner"), nullptr, &a.sweepOpen)) {}
         if (ImGui::MenuItem(tr("Station health"), nullptr, &a.stationHealthOpen)) {}
         if (ImGui::MenuItem(tr("Reception doctor"), nullptr, &a.doctorOpen)) {}
+        if (ImGui::MenuItem(tr("RF fingerprint"), nullptr, &a.rfFpOpen)) {}
         if (ImGui::MenuItem(tr("Scanner (highly experimental)"), nullptr, &a.scanViewOpen)) {}
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("HIGHLY EXPERIMENTAL: step through a list of frequencies and modes, or a band, and stop on activity"));
         ImGui::MenuItem(tr("Propagation..."), nullptr, &a.propOpen);
@@ -738,6 +757,7 @@ float menuBar(App& a) {
                 }
             }
             ImGui::Separator();
+            if (ImGui::MenuItem(tr("Browse all modes..."), "M")) modePickerOpen(a);
             if (ImGui::MenuItem(tr("Modes shown..."))) a.modeVisOpen = true;
             ImGui::EndMenu();
         }
@@ -747,6 +767,7 @@ float menuBar(App& a) {
         const float mx1 = ImGui::GetCursorScreenPos().x;
         tourMark("memory", ImVec2(mx0, my0), ImVec2(mx1, my1));
         mapSendServerMenu(a);
+        if (ImGui::MenuItem(tr("Settings"))) settingsOpen() = !settingsOpen();   // a window of its own, not a submenu (Ctrl+,)
         const float sx1 = ImGui::GetCursorScreenPos().x;
         tourMark("server", ImVec2(mx1, my0), ImVec2(sx1, my1));
         const float hx0 = ImGui::GetCursorScreenPos().x;
@@ -796,6 +817,7 @@ float menuBar(App& a) {
     tx::windowPanel(a);
     reportProblemWindow(a);
     modeVisibilityWindow(a);
+    settingsWindow(a);
     backupWindow(a);
     tx::captionsWindow(a);
     return menuH;
@@ -817,8 +839,9 @@ void topBar(App& a, ImVec2 disp) {
         tourMark("freq", ImVec2(o.x - 4 * gUi, o.y), ImVec2(digitsEnd, o.y + 40 * gUi));   // the lessons point at the run button and the digits
         // a narrow window: the level meter and the volume give up width (the meter goes last), then the summary is cut short
         const float sumX = digitsEnd + 34 * gUi;
+        const float modesW = ImGui::CalcTextSize(tr("Modes")).x + 2 * ImGui::GetStyle().FramePadding.x + 12 * gUi;   // the Mode Browser button, left of the mode name
         float vw = 230 * gUi, mw = 260 * gUi;
-        const float spare = o.x + W - sumX - summaryWidth(a) - 40 * gUi;
+        const float spare = o.x + W - sumX - modesW - summaryWidth(a) - 40 * gUi;
         if (spare < vw + mw) {
             const float k = std::max(0.f, spare) / (vw + mw);
             vw = std::max(150.f * gUi, vw * k); mw = std::max(130.f * gUi, mw * k);
@@ -834,7 +857,9 @@ void topBar(App& a, ImVec2 disp) {
             if (mw > 0) sd->AddLine(ImVec2(meterX - 9 * gUi, y0), ImVec2(meterX - 9 * gUi, y1), sc);
             sd->AddLine(ImVec2(o.x + W - vw - 4 * gUi, y0), ImVec2(o.x + W - vw - 4 * gUi, y1), sc);
         }
-        summary(a, sumX, o.y + 6 * gUi, 1.f, (mw > 0 ? meterX : o.x + W - vw) - 16 * gUi - sumX);
+        ImGui::SetCursorScreenPos(ImVec2(sumX, o.y + 8 * gUi));
+        modePickerButton(a, "##modes_top");
+        summary(a, sumX + modesW, o.y + 6 * gUi, 1.f, (mw > 0 ? meterX : o.x + W - vw) - 16 * gUi - sumX - modesW);
         if (mw > 0) levelMeter(a, meterX, o.y, mw);
         ImGui::SetCursorScreenPos(ImVec2(o.x + W - vw + 4 * gUi, o.y + 8 * gUi));
         volumeControl(a, vw);
@@ -881,6 +906,8 @@ void modeCombo(App& a, float w) {
         }
         ImGui::EndCombo();
     }
+    ImGui::SameLine(0, 4 * gUi);
+    modePickerButton(a);   // the Mode Browser: every mode as a button (mode_picker.cpp)
 }
 
 void displayControls(App& a, bool wide) {

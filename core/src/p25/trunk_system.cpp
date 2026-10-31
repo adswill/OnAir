@@ -96,6 +96,8 @@ std::string SystemModel::onTsbk(const p25::Tsbk& t, int nac, double now, std::ve
     auto place = [&](int ch, Grant& g) {
         g.channel = ch;
         g.freqHz = channelFreq(ch, &g.slot, &g.tdma);
+        const IdenInfo& ii = idens_[(ch >> 12) & 15];
+        if (g.freqHz <= 0 && ii.valid && ii.tdma && ii.slots <= 0) g.unplacedType = ii.chanType;
     };
     auto emit = [&](const Grant& g) { nGrant_++; if (grants) grants->push_back(g); };
     switch (t.opcode) {
@@ -125,7 +127,9 @@ std::string SystemModel::onTsbk(const p25::Tsbk& t, int nac, double now, std::ve
         const int opts = (int)(a >> 56);
         g.group = true; g.tg = (int)(a & 0xFFFF); g.explicitUpdate = true;
         g.emergency = (opts & 0x80) != 0; g.encrypted = (opts & 0x40) != 0; g.priority = opts & 7 ? opts & 7 : 4;
-        place((int)((a >> 16) & 0xFFFF), g);   // channel (R): the one the subscriber receives on, the voice channel's downlink
+        // Channel (T), bits 32..47, is the voice channel's downlink (what a listener tunes to); channel (R) at bits 16..31 is the subscriber's uplink and is
+        // not followed. Same choice as OP25's tk_p25.py (opcode 0x03 standard branch: the first channel field gives the frequency, the second is debug only).
+        place((int)((a >> 32) & 0xFFFF), g);
         emit(g);
         return std::string();
     }

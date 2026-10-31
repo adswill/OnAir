@@ -222,6 +222,7 @@ struct P25p2Receiver::Impl {
     // the lock: bursts of 180 dibits from the sync word on (as XMC_SDR P25_P2_Decode)
     bool locked = false;
     int64_t nextDibitN = 0, syncEndPred = 0, pendingShift = 0;   // syncEndPred: a sample at which a sync word ends, modulo one burst
+    bool slotKnown = false;                                      // an I-ISCH has said where in the superframe the lock is; until then the descrambler's slot is a guess
     int slotIdx = 0, slotPos = 0, dibSinceSync = 0;              // slotIdx: the slot of the superframe (0..11) the burst being received is taken to be
     uint8_t buf[p25p2::kBurstDibits];
     double lastSync = -10, snrAvg = 0;
@@ -238,7 +239,7 @@ struct P25p2Receiver::Impl {
         for (auto& row : regH) for (auto& r : row) r = 0;
         specBuf.clear(); std::fill(specPow.begin(), specPow.end(), 0.f); specBlocks = 0; specReady = false; coarseHz = 0; coarseAt = coarseOffUntil = -1e9;
         winHyp = 0;
-        n = 0; win = false; locked = false; cfoStep = 0; slotIdx = slotPos = dibSinceSync = 0;
+        n = 0; win = false; locked = false; cfoStep = 0; slotIdx = slotPos = dibSinceSync = 0; slotKnown = false;
     }
 
     void sample(cf32 z) {
@@ -326,6 +327,7 @@ struct P25p2Receiver::Impl {
             // lock (a chance match in the payload is 2^-40 per position).
             if (winDist[bestN - winStart] != 0) return;
             tel.realigns++;
+            slotKnown = false;   // misframed: where in the superframe the bursts are is not known until the next I-ISCH
         } else { cfoStep = bestMean; recentre(); }
         locked = true; dibSinceSync = 0;
         slotPos = p25p2::kIschDibits;            // the slot counter runs on: the I-ISCH puts it right
@@ -345,7 +347,7 @@ struct P25p2Receiver::Impl {
         if (dibSinceSync > kLostDibits) unlock();
     }
 
-    void unlock() { locked = false; tel.unlocks++; slotPos = 0; }
+    void unlock() { locked = false; tel.unlocks++; slotPos = 0; slotKnown = false; }
 
     // ------------------------------------------------------------ events, tables
     void event(const std::string& s) {
@@ -386,6 +388,9 @@ struct P25p2Receiver::Impl {
 
     // ------------------------------------------------------------ calls
     double lastAct[2] = {-10, -10};
+    bool encNoted[2] = {false, false};      // the call's encryption has been logged once
+    uint32_t heldLost[2] = {0, 0};          // held voice frames pushed out of the ring before the ESS came
+    int64_t unkSince[2] = {-1, -1};         // voice frame count at which the call began to have no ESS (-1: not waiting)
     struct Grant { int tg, src, ch; bool group; double last; };
     std::vector<Grant> grants;
 
@@ -397,6 +402,7 @@ struct P25p2Receiver::Impl {
             endCall(ci, true);
         }
         c = P25p2Call();
+        encNoted[ci] = false; heldLost[ci] = 0; unkSince[ci] = -1;
         c.slot = ci + 1; c.active = true; c.wallTime = (int64_t)time(nullptr); c.startSec = sigSec();
         if (src < 0 && dst < 0 && hint[ci].dst >= 0) { src = hint[ci].src; dst = hint[ci].dst; group = hint[ci].group; }   // what the grant said
         c.src = src; c.dst = dst; c.group = group; c.lateEntry = late;
@@ -534,12 +540,19 @@ struct P25p2Receiver::Impl {
         switch (hd.opcode) {
         case p25p2::kMacPtt:
             if (len >= p25p2::kPttLen) {
-                const int alg = m[p25p2::kPttAlgOff];   // the message indicator and key ID next to it are never read
+                const int alg = m[p25p2::kPttAlgOff];
+                const int key = (int)p25p2::be16(m + p25p2::kPttKeyOff);   // MI 9 bytes at 1..9, algorithm 10, key ID 11..12 (OP25 p25p2_tdma.cc handle_mac_ptt)
                 P25p2Call& c = tel.now[ci];
                 const int src = (int)p25p2::be24(m + p25p2::kPttSrcOff), grp = (int)p25p2::be16(m + p25p2::kPttGrpOff);
-                if (c.active && !c.lateEntry && c.src == src && c.dst == grp) { lastAct[ci] = sigSec(); break; }
-                if (c.active && c.lateEntry) { c.src = src; c.dst = grp; c.group = true; c.lateEntry = false; c.algId = alg; c.cryptoKnown = true; c.encrypted = alg != p25p2::kAlgClear && alg != 0; lastAct[ci] = sigSec(); touchTg(grp, src, 0, c.encrypted, c.emergency, false, true); break; }
+                if (c.active && !c.lateEntry && c.src == src && c.dst == grp) { lastAct[ci] = sigSec(); keyed(ci, alg, key, m + p25p2::kPttMiOff); break; }
+                if (c.active && c.lateEntry) {
+                    c.src = src; c.dst = grp; c.group = true; c.lateEntry = false; c.algId = alg; c.cryptoKnown = true; c.encrypted = alg != p25p2::kAlgClear && alg != 0; lastAct[ci] = sigSec();
+                    touchTg(grp, src, 0, c.encrypted, c.emergency, false, true);
+                    keyed(ci, alg, key, m + p25p2::kPttMiOff);
+                    break;
+                }
                 startCall(ci, src, grp, true, true, alg, -1, false);
+                keyed(ci, alg, key, m + p25p2::kPttMiOff);
             }
             break;
         case p25p2::kMacEndPtt:
@@ -554,11 +567,16 @@ struct P25p2Receiver::Impl {
         case p25p2::kMacSignal: case p25p2::kMacActive: case p25p2::kMacHangtime: {
             int pos = 1;
             while (pos < len) {
-                const int op = m[pos], ml = (op >> 6) == 2 && pos + 2 < len && (m[pos + 2] & 0x3F) ? (m[pos + 2] & 0x3F) : p25p2::macMsgLen(op);   // a manufacturer's message carries its own length
+                const int op = m[pos], ml = p25p2::macMsgLenAt(m + pos, len - pos);   // the length rules of OP25 (null, avoid-zero-bias, variable lists, manufacturer)
                 if (op == p25p2::kMsgNull || ml == 0 || pos + ml > len) break;
+                if (op == 0x08 || op == 0x11 || op == 0x12) { pos += ml; continue; }   // length known, content not interpreted here (padding / paging)
                 if (op == p25p2::kMsgGrpVUser) userMsg(ci, m[pos + 1], (int)p25p2::be16(m + pos + 2), (int)p25p2::be24(m + pos + 4), true);
                 else if (op == p25p2::kMsgUuVUser) userMsg(ci, m[pos + 1], (int)p25p2::be24(m + pos + 2), (int)p25p2::be24(m + pos + 5), false);
-                else controlMsg(op, p25p2::be64(m + pos + 1));
+                else if (op == p25p2::kMsgGrpVGrantExt && ml >= 11) {   // service options, channel (T), channel (R), group, source: follow the downlink, channel (T)
+                    grant((int)p25p2::be16(m + pos + 6), (int)p25p2::be24(m + pos + 8), (int)p25p2::be16(m + pos + 2), true, m[pos + 1]);
+                } else if (op == p25p2::kMsgGrpVGrantUpdExt && ml >= 8) {
+                    touchTg((int)p25p2::be16(m + pos + 6), -1, freqOf((int)p25p2::be16(m + pos + 2)), false, false, false, false);
+                } else controlMsg(op, p25p2::be64(m + pos + 1));
                 pos += ml;
             }
             break;
@@ -574,6 +592,7 @@ struct P25p2Receiver::Impl {
     Up6 up;   // 8 -> 48 kHz (dsp/up6.h)
     std::unique_ptr<AudioOut> audioOut;
 
+    static constexpr int kEssWaitFrames = 54;   // three superframes of voice on one slot (18 frames each): an ESS comes every superframe
     struct Frame { char fr[4][24]; };
     // voice of a call whose encryption is not known yet (joined late, no ESS yet): played once the ESS says clear. The grant on the control channel
     // is no guide: the NSW PSN grants AES calls without the encryption bit in the service options.
@@ -595,29 +614,51 @@ struct P25p2Receiver::Impl {
         if (vtap) vtap(ci + 1, bits, clear);
         if (c.encrypted) { tel.encryptedSkipped++; offer(ci, true); return; }   // reported (and listed in the voice monitor), never decoded
         if (!c.cryptoKnown) {
-            if (held[ci].size() < 2 * 18) { Frame f; std::copy_n(&fr[0][0], 4 * 24, &f.fr[0][0]); held[ci].push_back(f); }
+            // B9: the newest frames are kept (a late ESS must not release stale audio); after kEssWaitFrames frames with no ESS the call is labelled
+            // "encryption unknown" and its voice is skipped, never played (a wrong guess is noise at best, an encrypted call's bits at worst)
+            if (unkSince[ci] < 0) unkSince[ci] = (int64_t)c.voiceFrames;
+            if (held[ci].size() >= 2 * 18) { held[ci].erase(held[ci].begin()); heldLost[ci]++; }
+            Frame f; std::copy_n(&fr[0][0], 4 * 24, &f.fr[0][0]); held[ci].push_back(f);
+            if (!c.essMissing && (int64_t)c.voiceFrames - unkSince[ci] >= kEssWaitFrames) {
+                c.essMissing = true;
+                char b[96];
+                snprintf(b, sizeof b, "slot %d: no encryption sync heard, voice skipped (encryption unknown)", ci + 1);
+                event(b);
+            }
+            if (c.essMissing) tel.unknownSkipped++;
             return;
         }
         play(ci, fr);
     }
 
+    // The PTT or the ESS names the algorithm, key ID and message indicator of the call. An encrypted call is labelled once (algorithm, key, MI) and its
+    // voice is never decoded; nothing here decrypts (decryption is only ever done with user-imported keys, and not in this receiver).
+    void noteEncrypted(int ci) {
+        P25p2Call& c = tel.now[ci];
+        if (!c.active || !c.encrypted || encNoted[ci]) return;
+        encNoted[ci] = true;
+        char b[160];
+        if (c.miValid) snprintf(b, sizeof b, "slot %d: encrypted, algorithm 0x%02X key %d MI %02X%02X%02X%02X%02X%02X%02X%02X%02X (not decoded)", ci + 1, c.algId, c.keyId, c.mi[0], c.mi[1], c.mi[2], c.mi[3], c.mi[4], c.mi[5], c.mi[6], c.mi[7], c.mi[8]);
+        else snprintf(b, sizeof b, "slot %d: encrypted, algorithm 0x%02X key %d (not decoded)", ci + 1, c.algId, c.keyId);
+        event(b);
+        touchTg(c.dst, c.src, 0, true, c.emergency, false, false);
+    }
+    void keyed(int ci, int alg, int key, const uint8_t* mi) {
+        P25p2Call& c = tel.now[ci];
+        if (!c.active) return;
+        c.algId = alg ? alg : p25p2::kAlgClear; c.keyId = key;
+        if (mi) { std::copy_n(mi, 9, c.mi); c.miValid = true; }
+        c.cryptoKnown = true; c.essMissing = false; unkSince[ci] = -1;
+        c.encrypted = c.algId != p25p2::kAlgClear;
+        if (c.encrypted) { tel.encryptedSkipped += held[ci].size(); held[ci].clear(); noteEncrypted(ci); }
+        else { for (const Frame& f : held[ci]) play(ci, f.fr); held[ci].clear(); }
+    }
+
     // the ESS of a slot has decoded: the call's encryption is known now
-    void essKnown(int ci, int alg, int key) {
+    void essKnown(int ci, int alg, int key, const uint8_t* mi) {
         lastAct[ci] = sigSec();
         if (!tel.now[ci].active) startCall(ci, -1, -1, true, true, alg, -1, true);
-        P25p2Call& c = tel.now[ci];
-        const bool was = c.cryptoKnown && c.encrypted;
-        c.cryptoKnown = true; c.algId = alg; c.keyId = key;
-        c.encrypted = alg != p25p2::kAlgClear;
-        if (c.encrypted && !was) {
-            char b[96];
-            snprintf(b, sizeof b, "slot %d: encrypted, algorithm 0x%02X key %d (not decoded)", ci + 1, alg, key);
-            event(b);
-            touchTg(c.dst, c.src, 0, true, c.emergency, false, false);
-        }
-        if (c.encrypted) tel.encryptedSkipped += held[ci].size();
-        else for (const Frame& f : held[ci]) play(ci, f.fr);
-        held[ci].clear();
+        keyed(ci, alg, key, mi);
     }
 
     struct Ess { uint8_t b[16] = {}, a[28] = {}; int nb = 0; };
@@ -634,12 +675,18 @@ struct P25p2Receiver::Impl {
         p25p2::hexbitsGet(d + p25p2::kEssA2Pos, 12, e.a + 16);
         const bool full = e.nb == 4;      // the four ESS-B parts of the four 4V bursts before
         e.nb = 0;
-        if (!full) return;
         int alg = 0, key = 0;
         uint8_t mi[9];
-        if (!p25p2::essDecode(e.b, e.a, alg, key, mi)) { tel.essBad++; return; }
+        // B8: a lost 4V burst or an ESS that does not correct is not "unknown": the algorithm and key of a call do not change inside it (OP25 reuses the
+        // previous ESS values on an FEC failure), so a call that already has them keeps them; the MI is then stale, which only the call log shows.
+        if (!full) { if (tel.now[ci].active && tel.now[ci].cryptoKnown) tel.essReused++; return; }   // a partial ESS (just locked, or a 4V burst lost): not an error
+        if (!p25p2::essDecode(e.b, e.a, alg, key, mi)) {
+            tel.essBad++;
+            if (tel.now[ci].active && tel.now[ci].cryptoKnown) tel.essReused++;
+            return;
+        }
         tel.essOk++;
-        essKnown(ci, alg, key);
+        essKnown(ci, alg, key, mi);
     }
 
     // The voice monitor (voice_monitor.h, the "p25" one: Phase 1 and Phase 2 calls are one list, one played at a time) lists the call and says
@@ -721,10 +768,13 @@ struct P25p2Receiver::Impl {
                 // I-ISCH in slots 0, 1 (location 0), 4, 5 (1) and 8, 9 (2), the channel bit giving the slot of the pair; the sync word in the others.
                 // (XMC_SDR sets slot 4 from channel 0 location 1; the rest is read off a recording of the NSW PSN.)
                 const int ch = (v >> 5) & 3, loc = (v >> 3) & 3;
-                if (loc < 3) slotIdx = 4 * loc + (ch & 1);
+                if (loc < 3) { slotIdx = 4 * loc + (ch & 1); slotKnown = true; }
                 ci = ch & 1;
             }
         }
+        // A2: the first burst(s) after a lock carry the sync word (slots 2, 3, 6, 7, 10, 11) or an I-ISCH not yet read; the descrambler and the logical
+        // channel depend on the slot, so a burst whose slot is a guess is dropped (at most two bursts, 60 ms) rather than read as garbage on a wrong slot.
+        if (!slotKnown) { tel.slotsSkipped++; return; }
         tel.slotNow = slotIdx;
         uint8_t d[p25p2::kBurstDibits];
         const uint8_t* sq = seq + (size_t)slotIdx * p25p2::kSlotDibits;

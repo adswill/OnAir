@@ -83,7 +83,8 @@ struct Settings {
     std::string recordDir;       // "" the default folder (setDefaultRecordDir)
     bool allowOnly = false;      // play only the calls on the allow list
     std::string allow, mute, priority, hold;   // IdList texts; hold: only this talkgroup is played
-    std::string labels;          // "91=Worldwide" per line: names shown for IDs
+    std::string labels;          // "91=Worldwide" per line: names shown for IDs; "RID 3120123=LY1ABC Jonas" names a source radio only
+    double holdSec = 0.0;        // a hold lets go by itself after this long (s) without a call on the held target (0: until released)
     double hangSec = 2.0;        // a call is over after this long without a frame; the played call keeps the sound this long
 };
 
@@ -100,10 +101,32 @@ struct CallEntry {
     bool active = true;
     bool priority = false;
     std::string label;           // the label of the target (labels)
+    std::string srcLabel;        // the name of the source radio (labels: "RID <id>=name", or the plain id / callsign)
     std::string file;            // the recording (empty: none)
     uint64_t sessionId = 0;      // the call's Session in the session store (core/include/dect2/session), 0 = none
     double seconds() const { return lastSec > firstSec ? lastSec - firstSec : 0.0; }
 };
+
+// One heard radio / callsign, summed over the history and the active calls (Monitor::heard): the "last heard" list.
+struct Heard {
+    std::string key;             // "id:3120123" or "txt:LY1ABC"
+    CallInfo last;               // the newest call's details
+    std::string name;            // srcLabel of the newest call
+    uint32_t calls = 0;
+    double seconds = 0;          // airtime
+    int64_t lastWall = 0;        // Unix time of the newest call's end (or last frame)
+    float errorRate = -1.f;      // mean of the calls' error rates (-1: not known)
+    bool emergency = false;      // any call was an emergency
+};
+
+enum class ListKind { Auto, Talkgroups, Radios };
+// Turn a name list exported from RadioID.net (user.csv: RADIO_ID,CALLSIGN,FIRST_NAME,LAST_NAME,...), BrandMeister / TGIF talkgroup lists or any
+// "id,name" / "id;name" / "id<TAB>name" / "id=name" lines into label lines ("91=Worldwide"; radios as "RID 3120123=LY1ABC Jonas").
+// Auto decides by the header (RADIO_ID / CALLSIGN: radios). Quotes are removed, '=' ';' and line breaks inside a name become spaces, a name is
+// cut at 64 bytes, lines with no usable ID are skipped. count gets the number of lines produced.
+std::string importLabels(const std::string& text, ListKind kind = ListKind::Auto, size_t* count = nullptr);
+// existing + added label lines; the same key in `added` replaces the old line. Keys compare without case.
+std::string mergeLabels(const std::string& existing, const std::string& added);
 
 class Monitor {
 public:
@@ -131,6 +154,8 @@ public:
     void muteToken(const std::string& token);   // add to the mute list
     void clearHistory();
     std::string label(const CallInfo& c) const;
+    std::string sourceLabel(const CallInfo& c) const;    // the name of the source radio
+    std::vector<Heard> heard(size_t max = 200) const;    // who was heard, newest first
     static std::string targetToken(const CallInfo& c);   // what holdCurrent / muteToken put in the list for this call
 
     // ---- the session store (docs/MODE-EXPERIENCE.md, 2.2a). Every call is also handed to the store as a Session when it opens, now and then
@@ -154,7 +179,8 @@ private:
     mutable std::mutex mu_;
     Settings set_;
     IdList allow_, mute_, prio_, hold_;
-    std::map<uint32_t, std::string> labelNum_;
+    double holdLast_ = 0;                // monitor clock of the last call on the held target (or of setting the hold)
+    std::map<uint32_t, std::string> labelNum_, labelSrc_;
     std::map<std::string, std::string> labelText_;
     uint64_t gen_ = 1, nextId_ = 1;
     std::map<std::string, Live> live_;
@@ -169,6 +195,7 @@ private:
     void finishLocked(Live& l);
     void applyLocked();
     std::string labelLocked(const CallInfo& c) const;
+    std::string srcLabelLocked(const CallInfo& c) const;
     void openRecLocked(Live& l, int channels, int rate);
     bool autoRecLocked(Live& l);                 // a record rule (session/record_rules.h) wants this call's audio
     uint16_t sessRx_ = 0;

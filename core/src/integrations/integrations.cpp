@@ -20,6 +20,11 @@ au::FamilyMask defaultFamilies() {
                                 au::familyBit(au::FSession) | au::familyBit(au::FPlugin));
 }
 
+automation::FamilyMask archiveFamilies() { return defaultFamilies(); }
+automation::FamilyMask Settings::hookFamilies() const {
+    return (anySink() ? families : au::FamilyMask(0)) | (archive.enabled && !archive.folder.empty() ? archiveFamilies() : au::FamilyMask(0));
+}
+
 namespace {
 std::string trim(const std::string& s) {
     size_t a = 0, b = s.size();
@@ -87,7 +92,7 @@ std::string checkTopicTemplate(const std::string& tpl) {
 }
 
 std::string eventIdent(const au::Event& ev) {
-    static const char* keys[] = {"icao", "hex", "mmsi", "callsign", "call", "id", "serial", "address", "src", "mac", "name", "flight", "ric", "tail"};
+    static const char* keys[] = {"source", "icao", "hex", "mmsi", "callsign", "call", "id", "serial", "address", "src", "mac", "name", "flight", "ric", "tail", "registration", "station"};
     for (const char* k : keys) {
         auto it = ev.f.find(k);
         if (it != ev.f.end() && !it->second.null()) {
@@ -210,6 +215,11 @@ std::string toJson(const Settings& s) {
     j.set("path", js::Value::string(s.jsonl.path));
     j.set("max_mb", js::Value::number(s.jsonl.maxMegabytes));
     root.set("jsonl", j);
+    js::Value a = js::Value::object();
+    a.set("enabled", js::Value::boolean(s.archive.enabled));
+    a.set("folder", js::Value::string(s.archive.folder));
+    a.set("format", js::Value::number((int)s.archive.format));
+    root.set("archive", a);
     return js::dump(root, true);
 }
 
@@ -238,6 +248,11 @@ bool fromJson(const std::string& text, Settings& s, std::string& err) {
     }
     if (const js::Value* w = root.get("webhook")) { n.webhook.enabled = w->flag("enabled"); n.webhook.url = trim(w->str("url")); n.webhook.token = w->str("token"); }
     if (const js::Value* j = root.get("jsonl")) { n.jsonl.enabled = j->flag("enabled"); n.jsonl.path = j->str("path"); n.jsonl.maxMegabytes = (int)std::max(0.0, std::min(100000.0, j->num("max_mb", 100))); }
+    if (const js::Value* a = root.get("archive")) {
+        n.archive.enabled = a->flag("enabled"); n.archive.folder = a->str("folder");
+        const int f = (int)a->num("format", 0);
+        n.archive.format = f == 1 ? ArchiveFormat::Json : f == 2 ? ArchiveFormat::Csv : ArchiveFormat::JsonLines;
+    }
     s = n;
     return true;
 }
@@ -270,7 +285,7 @@ struct Hub::Impl {
 
     void refresh() {   // mu held
         active.store(set.anyEnabled());
-        mask.store(set.anyEnabled() ? set.families : 0);
+        mask.store(set.hookFamilies());
     }
 
     std::string clientIdFor(const MqttSettings& m) {
@@ -380,11 +395,23 @@ struct Hub::Impl {
         if (ok) { st.webhookSent++; st.webhookStatus = "sent"; } else { st.webhookFailed++; st.webhookStatus = "failed"; }
     }
 
-    void deliver(const Settings& s, const au::Event& ev) {
-        const std::string json = eventJson(ev);
-        if (s.mqtt.enabled && !s.mqtt.host.empty()) mqttSend(s, ev, json);
-        if (s.jsonl.enabled && !s.jsonl.path.empty()) jsonlWrite(s.jsonl, json);
-        if (s.webhook.enabled && !s.webhook.url.empty()) webhookSend(s.webhook, json);
+    void archiveSave(const ArchiveSettings& a, const au::Event& ev) {
+        const std::string err = archiveWrite(a, ev);
+        std::lock_guard<std::mutex> lk(mu);
+        if (err.empty()) { st.archiveRecords++; st.archiveStatus = "saving to " + a.folder; }
+        else { st.archiveFailed++; st.archiveStatus = err; }
+    }
+
+    void deliver(const Settings& s, const au::Event& ev, bool isTest = false) {
+        const int fam = au::familyOf(ev.type);
+        const bool sinkFam = isTest || (fam >= 0 && (s.families >> fam & 1));
+        if (sinkFam && s.anySink()) {
+            const std::string json = eventJson(ev);
+            if (s.mqtt.enabled && !s.mqtt.host.empty()) mqttSend(s, ev, json);
+            if (s.jsonl.enabled && !s.jsonl.path.empty()) jsonlWrite(s.jsonl, json);
+            if (s.webhook.enabled && !s.webhook.url.empty()) webhookSend(s.webhook, json);
+        }
+        if (!isTest && s.archive.enabled && !s.archive.folder.empty() && fam >= 0 && (archiveFamilies() >> fam & 1)) archiveSave(s.archive, ev);
     }
 
     void run() {
@@ -422,7 +449,7 @@ struct Hub::Impl {
             if (test) {
                 au::Event t("signal.test");
                 t.at(clock(), "OnAir", 0).str("text", "Test message from OnAir Integrations");
-                deliver(s, t);
+                deliver(s, t, true);
             }
             if (have) deliver(s, ev);
         }
@@ -452,7 +479,9 @@ void Hub::submit(const au::Event& ev) {
     const int fam = au::familyOf(ev.type);
     if (fam < 0 || !(p_->mask.load(std::memory_order_relaxed) >> fam & 1)) return;
     int maxPerSec;
-    { std::lock_guard<std::mutex> lk(p_->mu); maxPerSec = p_->set.maxPerSecond; }
+    bool onlyArchive;   // saved messages are never rate-limited: the limit protects a broker, not a file
+    { std::lock_guard<std::mutex> lk(p_->mu); maxPerSec = p_->set.maxPerSecond; onlyArchive = !(p_->set.anySink() && (p_->set.families >> fam & 1)); }
+    if (onlyArchive) maxPerSec = 0;
     {
         std::lock_guard<std::mutex> lk(p_->qmu);
         if (maxPerSec > 0) {

@@ -513,7 +513,10 @@ struct TetrapolReceiver::Impl {
             afcAcc += 0.002 * (d - afcAcc);
             if (++afcCnt >= 64) {
                 afcCnt = 0;
-                afcW += 0.02 * afcAcc * adv;
+                // dead band: a small error stays with the symbol loop (it tracks it), only a skirt-sized one is steered out
+                const double db = 2 * kPi * 1000.0 / kWork;
+                const double e = afcAcc > db ? afcAcc - db : (afcAcc < -db ? afcAcc + db : 0.0);
+                afcW += 0.02 * e * adv;
                 const double lim = 2 * kPi * 7000.0 / std::max(fs, 1.0);
                 afcW = std::max(-lim, std::min(lim, afcW));
                 retune();

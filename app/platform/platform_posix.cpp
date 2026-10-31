@@ -2,6 +2,7 @@
 // Windows: the standard Open/Save dialogs, settings in %APPDATA%\\OnAir\\settings.conf.
 #include "platform.h"
 #include "prefs_text.h"
+#include "datadir_ptr.h"
 #include "dect2/common/png.h"
 #include <algorithm>
 #include <atomic>
@@ -285,14 +286,8 @@ std::string cacheDir() {
     return d;
 }
 // Windows: %LOCALAPPDATA%\OnAir; Linux: $XDG_DATA_HOME/onair or ~/.local/share/onair. Paths are UTF-8.
-std::string dataDir() {
+std::string defaultDataDir() {
     std::string d;
-    // DECT2_DATA_DIR: another folder for everything OnAir writes (test runs keep away from the user's own data)
-    if (const char* o = getenv("DECT2_DATA_DIR"); o && *o) {
-        std::error_code ec;
-        std::filesystem::create_directories(std::filesystem::path(reinterpret_cast<const char8_t*>(o)), ec);
-        return o;
-    }
 #ifdef _WIN32
     if (const wchar_t* la = _wgetenv(L"LOCALAPPDATA")) d = utf8(la) + "\\OnAir";
     else return cacheDir();
@@ -305,6 +300,18 @@ std::string dataDir() {
     std::filesystem::create_directories(std::filesystem::path(reinterpret_cast<const char8_t*>(d.c_str())), ec);
     return d;
 }
+std::string dataDir() {
+    // DECT2_DATA_DIR: another folder for everything OnAir writes (test runs keep away from the user's own data)
+    if (const char* o = getenv("DECT2_DATA_DIR"); o && *o) {
+        std::error_code ec;
+        std::filesystem::create_directories(std::filesystem::path(reinterpret_cast<const char8_t*>(o)), ec);
+        return o;
+    }
+    const std::string def = defaultDataDir();
+    const std::string chosen = readDataDirPointer(def);   // the folder picked in the settings (issue #383)
+    return chosen.empty() ? def : chosen;
+}
+bool setDataDir(const std::string& path) { return writeDataDirPointer(defaultDataDir(), path); }
 void locateStart() {}
 int locateState(double&, double&, double&, std::string& msg) { msg = "this system has no location service in OnAir yet: enter the position by hand"; return 3; }
 
@@ -449,8 +456,18 @@ struct FilePrefs : Prefs {
             for (auto& e : kv) f << e.first << "=" << prefstext::escape(e.second) << "\n";
             for (auto& c : channels) f << "channel=" << c.freqMhz << "|" << c.bwMhz << "|" << clean(c.name) << "|" << clean(c.mode) << "|" << c.snrDb << "|" << c.nServices << "|" << (c.favourite ? 1 : 0) << "\n";
         }
-        if (replaceFile(tmp, path)) dirty = false;
-        else fprintf(stderr, "settings: cannot replace %s (the changes are kept in memory and tried again)\n", path.c_str());
+        if (replaceFile(tmp, path)) { dirty = false; return; }
+        // the replace was refused (a virus scanner, a sync client or a locked-folder policy holds the file): write the file in place, so a
+        // setting is not silently lost at exit
+        std::ofstream f(fsPath(path), std::ios::trunc);
+        if (f) {
+            f << prefstext::kFormatKey << "=" << prefstext::kFormat << "\n";
+            for (auto& e : kv) f << e.first << "=" << prefstext::escape(e.second) << "\n";
+            for (auto& c : channels) f << "channel=" << c.freqMhz << "|" << c.bwMhz << "|" << clean(c.name) << "|" << clean(c.mode) << "|" << c.snrDb << "|" << c.nServices << "|" << (c.favourite ? 1 : 0) << "\n";
+            f.flush();
+            if (f) { dirty = false; return; }
+        }
+        fprintf(stderr, "settings: cannot replace or write %s (the changes are kept in memory and tried again)\n", path.c_str());
     }
     std::vector<dect2::backup::PrefItem> dumpAll() override {
         std::vector<dect2::backup::PrefItem> o;

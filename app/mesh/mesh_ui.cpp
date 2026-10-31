@@ -124,14 +124,27 @@ bool meshtasticShown(const App& a) { const int m = subMask(a); return !m || m ==
 
 }  // namespace meshui
 
-double meshSampleRate(App& a) {
+double meshBandwidthHz(App& a) {
     double bw = 0;
     if (customActive(a)) bw = customOf(a).bwHz;
     else if (meshtasticShown(a) && !S.mtRegion.empty()) {
         dect2::MeshLoraSettings s;
         if (dect2::meshtasticRegionPreset(S.mtRegion, S.mtPreset, s)) bw = s.bwHz;
     }
-    return bw > 500e3 ? 4e6 : 2e6;
+    return bw;
+}
+
+double meshSampleRate(App& a) { return meshBandwidthHz(a) > 500e3 ? 4e6 : 2e6; }
+
+// 0 = the usual rate. An RTL-SDR (USB or rtl_tcp) drops samples at 2.048 Msps, which breaks frames of a long LoRa symbol; a channel of up to
+// 500 kHz fits in 1.024 Msps, where it loses none (issue #386). Other radios keep 2 Msps, so more than one channel stays inside the window.
+double meshRtlRate(App& a) {
+    const double bw = meshBandwidthHz(a);
+    if (bw > 0 && bw <= 500e3 && a.devIdx >= 0 && a.devIdx < (int)a.devices.size()) {
+        const std::string& b = a.devices[a.devIdx].board;
+        if (b == "rtlsdr" || b == "rtltcp") return 1.024e6;
+    }
+    return 0;
 }
 
 namespace meshui {

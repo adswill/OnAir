@@ -15,8 +15,10 @@
 #pragma once
 #include "resampler.h"
 #include "dect2/common/ring.h"
+#include <algorithm>
 #include <complex>
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace dect2 {
@@ -81,6 +83,11 @@ public:
     void setMaxCarriers(int n) { cfg_.maxCarriers = n > 0 ? n : 1; }
     // Tuning that may change while running (the settings of the table); the raster and the rate stay
     void setThresholds(double onDb, double offDb, double minSnrDb, double debounceSec, double holdSec);
+    // Parts of the span that hold something wide (a TV channel): their cells are neither searched nor counted in the noise floor, and a tracked
+    // carrier inside one is dropped. {low Hz, high Hz} relative to the span centre. Empty: the whole span as before.
+    // Stop tracking this carrier (no removal report: the caller knows). Returns false when it is not tracked.
+    bool forget(int id) { for (size_t i = 0; i < trk_.size(); i++) if (trk_[i].reported && trk_[i].c.id == id) { trk_.erase(trk_.begin() + (long)i); cars_.erase(std::remove_if(cars_.begin(), cars_.end(), [id](const Carrier& c) { return c.id == id; }), cars_.end()); return true; } return false; }
+    void setExclusions(std::vector<std::pair<double, double>> zones) { excl_ = std::move(zones); }
 
 private:
     void update();
@@ -98,6 +105,7 @@ private:
     std::vector<int> removed_;
     std::vector<double> floorDb_;   // smoothed noise floor per raster cell (dB), indexed from kMin
     int floorKMin_ = 0;
+    std::vector<std::pair<double, double>> excl_;
     int nextId_ = 1, cap_ = 0, keep_ = 0;
     uint64_t updates_ = 0;
     bool noiseInit_ = false;

@@ -46,6 +46,16 @@ std::vector<EventInfo> build() {
         {"ship_type", 'n', "ship type code 0 to 99", "70"}, {"lat", 'n', "latitude", "55.1"}, {"lon", 'n', "longitude", "21.2"},
         {"sog_kt", 'n', "speed over ground", "12"}, {"cog_deg", 'n', "course over ground", "270"}, {"nav_status", 'n', "navigation status 0 to 15", "0"},
         {"class", 's', "A, B, base, aid ...", "A"}, {"destination", 's', "destination text", "KLAIPEDA"}}});
+    v.push_back({"ais.cpa", "Vessel on a close-approach course (CPA alert)", "AIS", "AIS", 162.0e6, {
+        {"mmsi", 'n', "MMSI number", "219012345"}, {"name", 's', "ship name", "NORDIC STAR"}, {"ship_type", 'n', "ship type code 0 to 99", "70"},
+        {"class", 's', "A, B, base, aid ...", "A"}, {"lat", 'n', "latitude", "55.1"}, {"lon", 'n', "longitude", "21.2"},
+        {"sog_kt", 'n', "speed over ground", "12"}, {"cog_deg", 'n', "course over ground", "270"}, {"distance_nm", 'n', "distance now, nautical miles", "3.2"},
+        {"cpa_nm", 'n', "distance at the closest approach", "0.3"}, {"tcpa_min", 'n', "minutes to the closest approach", "9"}}});
+    v.push_back({"ais.geofence", "Vessel entered or left a geofence", "AIS", "AIS", 162.0e6, {
+        {"mmsi", 'n', "MMSI number", "219012345"}, {"name", 's', "ship name", "NORDIC STAR"}, {"ship_type", 'n', "ship type code 0 to 99", "70"},
+        {"class", 's', "A, B, base, aid ...", "A"}, {"lat", 'n', "latitude", "55.1"}, {"lon", 'n', "longitude", "21.2"},
+        {"sog_kt", 'n', "speed over ground", "12"}, {"cog_deg", 'n', "course over ground", "270"}, {"distance_nm", 'n', "distance from the receiver position (0 when not set)", "3.2"},
+        {"fence", 's', "name of the geofence", "Harbour"}, {"transition", 's', "enter or exit", "enter"}}});
     v.push_back({"aprs.packet", "AX.25 / APRS packet", "APRS", "APRS", 144.8e6, {
         {"from", 's', "source call sign", "LY1ABC-9"}, {"to", 's', "destination", "APRS"}, {"path", 's', "digipeater path", "WIDE1-1"},
         {"info", 's', "information field", "!5441.40N/02517.00E>test"}, {"type", 's', "packet type", "position"}, {"summary", 's', "one-line reading", "position"},
@@ -73,6 +83,14 @@ std::vector<EventInfo> build() {
         {"lat", 'n', "latitude of the position in the call", "55.1"}, {"lon", 'n', "longitude of the position in the call", "11.2"}}});
     v.push_back({"signal.new", "New signal found by the sweep scanner", "Sweep scanner", "Sweep", 433.92e6, {
         {"bw_hz", 'n', "width", "12500"}, {"peak_db", 'n', "peak level dBFS", "-60"}, {"snr_db", 'n', "signal to noise ratio", "18"}}});
+    v.push_back({"signal.ssb_conversation_new", "New SSB conversation found", "Conversations window", "Conversations", 14.2e6, {
+        {"id", 'n', "conversation number", "3"}, {"freq_hz", 'n', "frequency of the suppressed carrier", "14220000"}, {"sideband", 's', "USB or LSB", "USB"}, {"band", 's', "band", "20 m"},
+        {"service", 's', "amateur, maritime SSB, aviation HF, CB or utility", "Amateur"}, {"overs", 'n', "overs so far", "1"}, {"speakers", 'n', "voices heard", "1"},
+        {"snr_db", 'n', "signal over the noise floor of the capture", "18"}, {"kind", 's', "single call, QSO, rag chew or net", "single call"}, {"talk_s", 'n', "seconds of voice", "4"}}});
+    v.push_back({"signal.ssb_conversation_ended", "SSB conversation ended", "Conversations window", "Conversations", 14.2e6, {
+        {"id", 'n', "conversation number", "3"}, {"freq_hz", 'n', "frequency of the suppressed carrier", "14220000"}, {"sideband", 's', "USB or LSB", "USB"}, {"band", 's', "band", "20 m"},
+        {"service", 's', "amateur, maritime SSB, aviation HF, CB or utility", "Amateur"}, {"overs", 'n', "overs", "9"}, {"speakers", 'n', "voices heard", "2"},
+        {"snr_db", 'n', "signal over the noise floor of the capture", "18"}, {"kind", 's', "single call, QSO, rag chew or net", "QSO"}, {"talk_s", 'n', "seconds of voice", "412"}}});
     v.push_back({"receiver.state", "Receiver state changed", "all", "", 0, {
         {"state", 's', "started, stopped, dropped, reconnected, overload", "dropped"}, {"detail", 's', "a few words", "radio stopped sending samples"}}});
     v.push_back({"satellite.aos", "Tracked satellite pass starts", "Passes window", "", 137.1e6, {

@@ -87,6 +87,15 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     setNote(offNote.empty() ? err : err.empty() ? offNote : err + "; " + offNote, false);
     srcRate_ = src_->sampleRate();
     rate_ = srcRate_;
+    {   // 3.5: what was asked of the radio and what it confirmed, so a rate that is not the chosen one is in the log with its reason
+        const double asked = hwTune(tune).sampleRate;
+        char b[200];
+        if (std::fabs(srcRate_ - tune.sampleRate) > tune.sampleRate * 1e-3 || std::fabs(asked - srcRate_) > srcRate_ * 1e-3) {
+            snprintf(b, sizeof b, "sample rate: the mode asks %.3f Msps, the radio was set to %.3f and confirmed %.3f Msps%s", tune.sampleRate / 1e6, asked / 1e6, srcRate_ / 1e6,
+                     offHz_ > 0 ? " (offset tuning)" : radioDecimation(tune) > 1 ? " (decimation in OnAir)" : std::fabs(asked - srcRate_) > srcRate_ * 1e-3 ? " (the driver rounded it)" : "");
+        } else snprintf(b, sizeof b, "sample rate: the radio runs at %.3f Msps as asked", srcRate_ / 1e6);
+        log(b);
+    }
     live_ = src_->realtimeHardware();
     if (tmSeconds_ > 0 && dev.kind != DeviceInfo::File) tm_.configure(tmSeconds_, srcRate_, tmDecim_, tmBudgetMB_);   // the time machine (time_machine.h)
     // FT8 / WSPR slots: a live radio follows the system clock; a recording or the test signal starts anywhere in a slot, so the
@@ -258,6 +267,9 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxEbi_.setSignalOffset(o);
         rxInmsat_.setSignalOffset(o);
         rxNrf_.setSignalOffset(o);
+        rxAtis_.setSignalOffset(o);
+        rxSw_.setSignalOffset(o);
+        rxSw_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxInmsat_.setCenterFrequency(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxPskd_.setSignalOffset(o);
         rxLs_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
@@ -276,6 +288,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxCq_.setSignalOffset(o);
         rxArd_.setSignalOffset(o);
         rxZw_.setDialHz(tune.centerHz);
+        rxSw_.setDialHz(tune.centerHz);
         rxZw_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxSb_.setSignalOffset(o);
         rxSb_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // for the CSV and the screen
@@ -569,7 +582,11 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxEbi_.configure(rate_);
     rxEbi_.setLogCallback([this](const std::string& s) { log(s); });
     rxNrf_.configure(rate_);
+    rxSw_.configure(rate_);
+    rxSw_.setLogCallback([this](const std::string& s) { log(s); });
     rxNrf_.setLogCallback([this](const std::string& s) { log(s); });
+    rxAtis_.configure(rate_);
+    rxAtis_.setLogCallback([this](const std::string& s) { log(s); });
     rxInmsat_.configure(rate_);
     rxInmsat_.setLogCallback([this](const std::string& s) { log(s); });
     rxEsg_.setLogCallback([this](const std::string& s) { log(s); });
@@ -683,7 +700,7 @@ void Engine::checkRateAndResetState(const DeviceInfo& dev, const TuneSettings& t
         lastT2Frame_ = -1;
         unpack_.setSink([this](const uint8_t* pkt) { demux_.feed(pkt); if (!playerExternal_) { ttx_.feedTs(pkt); dvbsub_.feedTs(pkt); } frameBuf_.insert(frameBuf_.end(), pkt, pkt + 188); });
     }
-    rx_.setPlpCallback([this](const PlpResult& r) { if (plpDump_) plpDump_(r); onPlp(r); });
+    rx_.setPlpCallback([this](const PlpResult& r) { if (plpDump_) plpDump_(r); { std::lock_guard<std::mutex> lk(t2ExportMu_); if (t2Export_) t2Export_->onPlp(r); } onPlp(r); });
     {   // DVB-T2 / DVB-T, ATSC and DAB at a rate their receiver cannot use (the telemetry test that stood here never fired: the receiver
         // publishes nothing before its first samples, so the user got no word at all, e.g. an RTL-SDR at 2.56 Msps on an 8 MHz channel)
         const int sm = stdMode_.load();

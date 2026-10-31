@@ -41,6 +41,7 @@ void startApp(App& app, int argc, char** argv) {
                   + (kept.empty() ? std::string("The old settings could not be kept.") : "The old settings are kept in " + kept + ".");
     }
     loadPrefs(app);
+    modeVisibilityLoad(app);   // Modes shown has a file of its own that settings.conf resets do not touch
     if (failedStarts == 1) {
         app.newUi = !app.newUi;
         guardNote = std::string("OnAir did not finish starting last time, so it opens with the ") + (app.newUi ? "new" : "classic")
@@ -141,6 +142,7 @@ void parseDevFlags(App& app, int argc, char** argv, DevOpts& o) {
         if (std::string(argv[i]) == "--audioclean") audioCleanupDevOpen(i + 1 < argc && std::string(argv[i + 1]) == "adv");   // dev: the Audio cleanup pop-up open (adv: Advanced)
         if (std::string(argv[i]) == "--fmscan") o.fmScanAuto = true;
         if (std::string(argv[i]) == "--vfo" && i + 1 < argc) o.fileVfoMhz = atof(argv[++i]);
+        if (std::string(argv[i]) == "--ssb-conversations") ssbConvDevOpen(app, i + 1 < argc && std::string(argv[i + 1]) == "demo");   // dev: open View > Conversations (demo: with the synthetic signals)
         if (std::string(argv[i]) == "--passes") app.passesOpen = true;
         if (std::string(argv[i]) == "--df") app.dfOpen = true;
         if (std::string(argv[i]) == "--passive-radar") app.passiveRadarOpen = true;

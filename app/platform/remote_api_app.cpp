@@ -169,7 +169,7 @@ struct Host : RemoteApiHost {
     }
     bool setBandwidthHz(double hz, std::string& err) override {
         return run([hz](App& a, std::string& e) {
-            if (a.family == 55) { e = "the General receiver has its own filter widths in the app"; return false; }
+            if (isGeneralFamily(a.family)) { e = "the General receiver has its own filter widths in the app"; return false; }
             a.engine.setBandwidthAuto(false);
             a.engine.setBandwidth(hz / 1e6);
             return true;
@@ -441,7 +441,7 @@ struct RigAdapter : apipol::RigctlRadio {
     bool setMode(const std::string& m, int) override {
         const int d = demodOf(m);
         std::string e;
-        return d >= 0 && host.run([d](App& a, std::string&) { return a.family == 55 && generalApiSetDemod(d); }, e);
+        return d >= 0 && host.run([d](App& a, std::string&) { return isGeneralFamily(a.family) && generalApiSetDemod(d); }, e);
     }
 };
 
@@ -575,7 +575,7 @@ void remoteApiSection(App& a) {
     ch2 |= ImGui::IsItemDeactivatedAfterEdit();
     ch2 |= ImGui::Checkbox(tr("rigctl: let other computers connect (changes need \\auth <token> first)"), &s.rigCfg.allowLan);
     if (s.rigCfg.on && !s.rigSrv.error().empty()) ImGui::TextColored(pal::badRed(), "%s", s.rigSrv.error().c_str());
-    ch2 |= ImGui::Checkbox(tr("Send decoded messages as UDP JSON lines"), &s.udpCfg.on);
+    ch2 |= ImGui::Checkbox(tr("Send decoded messages as UDP JSON lines (network only, no file; use View > Integrations > Save messages for files)"), &s.udpCfg.on);
     char hb[32];
     snprintf(hb, sizeof hb, "%s", s.udpCfg.host.c_str());
     ImGui::SetNextItemWidth(130 * gUi);

@@ -10,6 +10,7 @@
 #include "map/rangeplot_ui.h"
 #include "dect2/ais/ais_tel.h"
 #include "ais_sat_ui.h"
+#include "ais_alerts_ui.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -247,6 +248,7 @@ void mapView(App& a, ImVec2 size) {
     ImVec2 click; const bool clicked = adsbmap::clickedAt(click);
     if (on) {
         for (const auto& v : t.vessels) {   // tracks first, so the marks sit on top
+            if (!aisUiFilter().matches(v)) continue;
             if (!v.hasPos || v.track.size() < 2) continue;
             ImVec2 prev = adsbmap::project(v.track[0].lat, v.track[0].lon);
             for (size_t i = 1; i < v.track.size(); i++) {
@@ -257,7 +259,7 @@ void mapView(App& a, ImVec2 size) {
             dl->AddLine(prev, adsbmap::project(v.lat, v.lon), vesselColour(v, 0.45f), 1.5f);
         }
         for (const auto& v : t.vessels) {
-            if (!v.hasPos) continue;
+            if (!v.hasPos || !aisUiFilter().matches(v)) continue;
             const ImVec2 q = adsbmap::project(v.lat, v.lon);
             if (q.x < p0.x - 40 || q.y < p0.y - 40 || q.x > p0.x + size.x + 40 || q.y > p0.y + size.y + 40) continue;
             const bool sel = v.mmsi == S.sel;
@@ -313,6 +315,8 @@ void mapView(App& a, ImVec2 size) {
 
 void vesselTable(App& a, bool compact) {
     const dect2::AisTelemetry& t = a.rx.ais;
+    aisFilterBar(a);
+    if (aisUiFilter().active()) { ImGui::SameLine(); ImGui::TextDisabled("%s", tr("some stations are hidden")); }
     const int cols = compact ? 3 : 7;
     if (!compact) {
         static std::string note;
@@ -338,7 +342,8 @@ void vesselTable(App& a, bool compact) {
         if (sp->SpecsCount > 0) { S.sortCol = (int)sp->Specs[0].ColumnUserID; S.sortDir = sp->Specs[0].SortDirection == ImGuiSortDirection_Descending ? -1 : 1; }
     }
     std::vector<const AisVessel*> rows;
-    for (const auto& v : t.vessels) rows.push_back(&v);
+    const dect2::AisFilter& flt = aisUiFilter();
+    for (const auto& v : t.vessels) if (flt.matches(v)) rows.push_back(&v);
     auto key = [&](const AisVessel* x, const AisVessel* y) -> int {
         switch (S.sortCol) {
         case 0: return strcasecmp(nameOf(*x).c_str(), nameOf(*y).c_str());
@@ -457,7 +462,7 @@ void nmeaView(App& a) {
 void tab(App& a) {
     loadState();
     kit::modeHeader({14, "AIS", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("aisv", S.view, {{tr("Live"), 1}, {tr("Tracks"), 6}, {tr("Map"), 0}, {tr("Log"), 2, true}, {tr("NMEA"), 3, true}, {tr("Range"), 4, true}, {tr("Satellite"), 5, true}});
+    kit::modeNav("aisv", S.view, {{tr("Live"), 1}, {tr("Tracks"), 6}, {tr("Map"), 0}, {tr("Log"), 2, true}, {tr("NMEA"), 3, true}, {tr("Range"), 4, true}, {tr("Satellite"), 5, true}, {tr("Alerts"), 7, true}});
     const bool on = live(a);
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     if (S.view == 2) {
@@ -469,9 +474,14 @@ void tab(App& a) {
     if (S.view == 4) { rangeView(S.range, ImGui::GetContentRegionAvail(), 0.5399568, "nm", "ais", receiverLocationSet()); return; }
     if (S.view == 5) { aisSatPanel(a); return; }
     if (S.view == 6) { kit::sessionItems(14, 3, "ais"); return; }
+    if (S.view == 7) { aisAlertsPanel(a); return; }
     const float cw = std::min(320.f * gUi, W * 0.34f);
     ImGui::BeginChild("##ais_l", ImVec2(W - cw - 8 * gUi, H));
-    if (S.view == 0) mapView(a, ImGui::GetContentRegionAvail());
+    if (S.view == 0) {
+        aisFilterBar(a);
+        if (aisUiFilter().active()) { ImGui::SameLine(); ImGui::TextDisabled("%s", tr("some stations are hidden")); }
+        mapView(a, ImGui::GetContentRegionAvail());
+    }
     else vesselTable(a, false);
     ImGui::EndChild();
     ImGui::SameLine();
@@ -511,6 +521,7 @@ void receiver(App& a) {
 // every frame while AIS is selected: the positions heard, for the range plot (from the receiver position)
 void tick(App& a) {
     aisSatTick(a);
+    aisAlertsTick(a);
     if (!live(a) || a.rx.seq == S.rangeSeq) return;
     S.rangeSeq = a.rx.seq;
     double lat, lon;

@@ -5,6 +5,7 @@
 // (printed, not limited) and the channeliser must be faster than it.
 #include "dect2/hfdl/hfdl_rx.h"
 #include "dect2/hfdl/hfdl_proto.h"
+#include "../common/cpu_report.h"
 #include "../common/cpu_time.h"
 #include "../common/ci_slack.h"
 #include <chrono>
@@ -42,6 +43,7 @@ static double run(double rate, double secs, int mode = -1) {
     for (const auto& c : t.channels) inBand += c.inBand ? 1 : 0;
     printf("HFDL %5.1f MHz capture, %2zu channels (%2d in band), %-11s: %.3f s wall per s of input (%.3f s CPU per s)\n",
            rate / 1e6, list.size(), inBand, mode == 0 ? "per-channel" : mode == 1 ? "channeliser" : "auto", wall, cpu);
+    cpuCal("hfdl_speed", cpuCalMsps(rate) + (mode == 0 ? " per-channel" : mode == 1 ? " channeliser" : " auto"), wall, "wall-s/s", '<', 0.5 * ciSlack(), mode != 0);
     if (mode != 0) CHECK(wall < 0.5 * ciSlack(), "%.1f MHz capture: %.3f s per s of input, the limit is %.2f", rate / 1e6, wall, 0.5 * ciSlack());
     return wall;
 }

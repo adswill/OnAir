@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <cstdio>
+#include "../common/cpu_report.h"
 using namespace dect2;
 using namespace dect2::gnsstest;
 using dect2::testpar::CaseOut;
@@ -41,6 +42,7 @@ static void runCase(double rate, CaseOut& out) {
         CHECK(nr && std::sqrt(rmsSum / nr) < 5.0 && meanWorst < 5.0, "%.3f Msps: pseudorange error rms %.2f, mean %.2f", rate / 1e6, nr ? std::sqrt(rmsSum / nr) : 0.0, meanWorst);
         CHECK(std::fabs(cnErr / std::max(cnN, 1)) < 2.0, "%.3f Msps: C/N0 off by %.2f dB", rate / 1e6, cnErr / std::max(cnN, 1));
         CHECK(t.blocksBad == 0, "%.3f Msps: %llu bad subframes", rate / 1e6, (unsigned long long)t.blocksBad);
+        cpuCal("gnss_rates", cpuCalMsps(rate), o.secs / r.cpuSecs, "x-realtime", '>', 2.5, !GNSS_SANITIZED && ciSlack() == 1);
         if (!GNSS_SANITIZED && !std::getenv("CI")) CHECK(o.secs / r.cpuSecs > 2.5, "%.3f Msps: real-time factor %.1f", rate / 1e6, o.secs / r.cpuSecs);
     }
 }

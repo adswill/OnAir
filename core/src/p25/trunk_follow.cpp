@@ -30,9 +30,11 @@ void Follower::reset() {
     state_ = FollowState::NoControl;
     lastCcSec_ = -1e9;
     missed_ = 0;
-    noticed_.clear();
+    homeNac_ = -1;
+    noticed_.clear(); ended_.clear(); hopBlock_.clear();
     ccHz_ = 0; radioHz_ = 0; candIdx_ = 0;
     cands_.clear();
+    good_.clear();
 }
 
 void Follower::setControlChannel(double hz, const std::vector<double>& cands) {
@@ -87,6 +89,12 @@ void Follower::close(Slot& s, CallLog& log, double now, const char* why) {
         if (CallRecord* r = log.byId(s.callId)) { r->followed = false; r->missed = true; missed_++; }
     }
     if (CallRecord* r = log.byId(s.callId)) {
+        ended_.push_back({r->tg, r->channel, now});
+        if (ended_.size() > 64) ended_.erase(ended_.begin(), ended_.begin() + 32);
+        if (s.hopped && !s.voiced && !s.leave) {   // the single radio went there and heard nothing: this talkgroup is not hopped to again at once
+            hopBlock_.push_back({r->tg, now + cfg_.hopBackoffSec});
+            if (r->note.empty()) r->note = "radio heard nothing on the channel after the retune";
+        }
         if (!s.leave) {
             r->active = false;
             r->durSec = std::max(0.0, std::max(s.lastSec, r->lastSec) - r->startSec);
@@ -127,6 +135,23 @@ void Follower::leave(uint64_t callId, double now) {
 // Where the radio is now, as far as known: the last retune, else the capture centre of a single-channel capture
 double Follower::tunedHz() const { return radioHz_ > 0 ? radioHz_ : spanHz_ <= 0 ? centerHz_ : 0; }
 
+// The order of a control channel hunt: the frequencies a control message was really heard on, the most recent first (a site that moved its control
+// channel, or a neighbour list gone stale, does not send the hunt on a tour of guesses before it returns to what worked), then the system's own
+// candidates. The heard list is kept for the session (reset() clears it) and holds the last few only.
+std::vector<double> Follower::searchList() const {
+    std::vector<std::pair<double, double>> g = good_;
+    std::stable_sort(g.begin(), g.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
+    std::vector<double> v;
+    auto add = [&](double hz) {
+        if (hz <= 0) return;
+        for (double o : v) if (std::fabs(o - hz) < 1) return;
+        v.push_back(hz);
+    };
+    for (const auto& x : g) add(x.first);
+    for (double c : cands_) add(c);
+    return v;
+}
+
 // Start (or step) the control channel search at a frequency. Already tuned there: no retune (it would only restart the receiver's acquisition for nothing)
 void Follower::searchAt(double hz, double now) {
     const double cur = tunedHz();
@@ -149,8 +174,28 @@ void Follower::goHome(double now) {
     setState(FollowState::Returning, now);
 }
 
-void Follower::onControlSeen(double now) {
+void Follower::onControlSeen(double now, int nac) {
+    if (nac >= 0 && homeNac_ >= 0 && nac != homeNac_ && (state_ == FollowState::Searching || state_ == FollowState::Returning)) {
+        note("Control channel with another NAC (" + std::to_string(nac) + ") ignored: not this system");
+        return;   // keeps hunting; the dwell timer moves on to the next candidate
+    }
+    if (nac >= 0 && (state_ == FollowState::ControlHold || state_ == FollowState::NoControl)) homeNac_ = nac;
     lastCcSec_ = now;
+    if (state_ != FollowState::Hopped && state_ != FollowState::Following) {
+        const double f = radioHz_ > 0 ? radioHz_ : ccHz_ > 0 ? ccHz_ : centerHz_;
+        if (f > 0) {
+            bool found = false;
+            for (auto& x : good_) if (std::fabs(x.first - f) < 1) { x.second = now; found = true; }
+            if (!found) {
+                good_.push_back({f, now});
+                if (good_.size() > 4) {
+                    size_t old = 0;
+                    for (size_t i = 1; i < good_.size(); i++) if (good_[i].second < good_[old].second) old = i;
+                    good_.erase(good_.begin() + (long)old);
+                }
+            }
+        }
+    }
     switch (state_) {
     case FollowState::NoControl: setState(FollowState::ControlHold, now); break;
     case FollowState::Returning: setState(FollowState::ControlHold, now); break;
@@ -176,6 +221,7 @@ void Follower::onGrant(const Grant& g, const TalkgroupList::Decision& d, double 
         }
         r.lastSec = now;
         if (g.src >= 0 && r.src < 0) r.src = g.src;
+        if (r.freqHz <= 0 && g.freqHz > 0) { r.freqHz = g.freqHz; r.slot = g.slot; r.channel = g.channel; r.note.clear(); }   // the identifier update arrived since the grant
         if (g.emergency) r.emergency = true;
         bool owned = false;
         for (Slot& s : slots_) if (s.used && s.callId == r.id) { owned = true; if (!s.leave && !s.remote) s.lastSec = now; }   // the voice radio's call lives on what it hears, not on grant repeats
@@ -183,6 +229,10 @@ void Follower::onGrant(const Grant& g, const TalkgroupList::Decision& d, double 
         // ended, and the radio should go to the call that is still running rather than wait for a new grant)
         if (!owned && r.missed && !r.followed && !r.encrypted) follow(g, d, now, log, r.id);
         return;
+    }
+    if (g.explicitUpdate) {   // an update (carries no new service) for a call that just ended: control channel latency, not a new call
+        for (const Ended& e : ended_)
+            if (e.tg == g.tg && e.channel == g.channel && now - e.sec < cfg_.endedCooldownSec) return;
     }
     CallRecord rec;
     rec.wallTime = (int64_t)time(nullptr);
@@ -207,12 +257,16 @@ void Follower::follow(const Grant& g, const TalkgroupList::Decision& d, double n
         if (rp->missed) { rp->missed = false; if (missed_) missed_--; rp->note = "joined late: busy when it was granted"; }
     };
     if (g.encrypted) { skip("encrypted: not followed", false); return; }
-    if (!d.follow) { skip(d.reason, false); return; }
-    if (g.freqHz <= 0) { skip("channel frequency not known yet (no identifier update heard)", false); return; }
+    if (!d.follow) { skip(d.reason, d.retry); return; }
+    if (g.freqHz <= 0) {
+        if (g.unplacedType >= 0) skip("channel type " + std::to_string(g.unplacedType) + " of the identifier table is not supported (cannot place the channel)", false);
+        else skip("channel frequency not known yet (no identifier update heard)", true);   // a repeat after the identifier update is followed
+        return;
+    }
     const bool p2 = g.tdma && !g.dmr;
     const int p2Slot = p2 ? g.slot : -1;   // the Phase 2 time slot of the call (-1: Phase 1)
     if (p2 && !cfg_.followPhase2) { skip("P25 Phase 2 call: Phase 2 following is off", false); return; }
-    const int prio = d.priority;
+    const int prio = g.emergency ? 1 : d.priority;   // an emergency call ranks above everything
     auto lowest = [&](bool hoppedOnly, bool anyOnly) -> Slot* {
         Slot* v = nullptr;
         for (Slot& s : slots_) {
@@ -313,6 +367,7 @@ void Follower::follow(const Grant& g, const TalkgroupList::Decision& d, double n
         return;
     }
     if (state_ == FollowState::NoControl || state_ == FollowState::Searching) { skip("not on the control channel", true); return; }
+    for (const auto& hb : hopBlock_) if (hb.first == g.tg && now < hb.second) { skip("waiting after a retune that heard nothing", true); return; }
     bool block = false;
     for (const Slot& s : slots_) if (s.used && effPrio(s.prio) <= effPrio(prio)) block = true;   // a call of equal or higher priority is running
     if (block) {
@@ -358,7 +413,9 @@ void Follower::tick(double now, CallLog& log) {
     for (Slot& s : slots_) {
         if (!s.used) continue;
         // a voice radio call not heard yet is given time to retune and sync; after that the hang time counts from the last voice
-        const double limit = s.remote && !s.voiced && !s.leave ? std::max(cfg_.hangSec, cfg_.remoteStartSec) : cfg_.hangSec;
+        double limit = cfg_.hangSec;
+        if (s.remote && !s.voiced && !s.leave) limit = std::max(cfg_.hangSec, cfg_.remoteStartSec);
+        else if (s.hopped && !s.voiced && !s.leave) limit = std::max(cfg_.hangSec, cfg_.hopStartSec);   // retune restarts the receiver: settle, gain, sync
         if (now - s.lastSec > limit) {
             if (s.hopped) hoppedEnded = true;
             close(s, log, now, s.remote && !s.voiced ? "voice radio heard nothing on the channel" : "");
@@ -381,26 +438,35 @@ void Follower::tick(double now, CallLog& log) {
         break;
     case FollowState::ControlHold:
         if (activeSlices() > 0) { setState(FollowState::Following, now); break; }
-        if (cfg_.allowRetune && !cands_.empty() && now - lastCcSec_ > cfg_.ccLossSec) {
+        if (cfg_.allowRetune && now - lastCcSec_ > cfg_.ccLossSec) {
+            const std::vector<double> l = searchList();
+            if (l.empty()) break;
             candIdx_ = 0;
-            searchAt(cands_[0], now);
+            const double cur = tunedHz();
+            const bool here = cur > 0 && std::fabs(cur - l[0]) < 1;
+            searchAt(l[0], now);
+            // already on it and silent for ccLossSec: it has had its wait, the next step comes after one more loss time, not a whole dwell
+            if (here && l.size() > 1) dwellStart_ = now - std::max(0.0, cfg_.ccDwellSec - cfg_.ccLossSec);
             setState(FollowState::Searching, now);
             note("Control channel lost: looking for it");
         }
         break;
     case FollowState::Returning:
         if (now - stateSince_ > cfg_.returnTimeoutSec) {
-            if (cfg_.allowRetune && !cands_.empty()) {
+            const std::vector<double> l = searchList();
+            if (cfg_.allowRetune && !l.empty()) {
                 candIdx_ = 0;
-                searchAt(cands_[0], now);
+                searchAt(l[0], now);
                 setState(FollowState::Searching, now);
             } else setState(FollowState::NoControl, now);
         }
         break;
     case FollowState::Searching:
-        if (!cands_.empty() && now - dwellStart_ > cfg_.ccDwellSec) {
-            candIdx_ = (candIdx_ + 1) % cands_.size();
-            searchAt(cands_[candIdx_], now);
+        if (now - dwellStart_ > cfg_.ccDwellSec) {
+            const std::vector<double> l = searchList();
+            if (l.empty()) break;
+            candIdx_ = (candIdx_ + 1) % l.size();
+            searchAt(l[candIdx_], now);
         }
         break;
     default: break;
