@@ -918,6 +918,7 @@ GainSetting stagesFor(App& a, int totalDb);    // an overall gain as the radio's
 bool gainOptStatus(App& a);                    // the progress / result line; true when it drew something
 // autogain_ui.cpp: auto gain for every radio and mode (docs/AUTOGAIN.md). Auto is a.agcOn; Optimise once / Safe start run once with Undo.
 bool autogainStep(App& a);                     // every frame (gainControl): true when it changed a.tune (the caller retunes)
+void autogainSetTrace(const char* path);        // --autogain-trace file.csv: one line per second with the gain, the objective and the reason (bug reports)
 void autogainMeterOnly(App& a);                // every frame while it is off: the meters keep running
 void autogainControl(App& a, bool vertical, bool running);   // the "Auto gain" control (Off / Auto / Optimise once / Safe start), gear popup, Stop / Undo
 void autogainMeters(App& a);                   // the meter strip: ADC headroom bar + clip lamp, noise floor, warnings with advice

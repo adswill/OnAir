@@ -291,6 +291,18 @@ ModeTarget modeTargetFor(int std_, double bwHz, double rateHz, double freqHz) {
     }
     // a capture much wider than the channel holds more strong signals: keep more headroom
     if (rateHz > 0 && bwHz > 0 && rateHz / bwHz > 50 && t.kind != ModeKind::Pulsed) t.headroomDb += 2;
+    // Auto v2 constraints per kind (the climb maximises the objective; headroom is only a floor): see docs/AUTOGAIN.md
+    switch (t.kind) {
+    case ModeKind::BroadcastTv: t.minHeadroomDb = 4; t.improveDb = 0.5; t.comfortDb = 6; break;
+    case ModeKind::Ofdm: t.minHeadroomDb = 4; t.improveDb = 0.5; t.comfortDb = 6; break;
+    case ModeKind::FmBroadcast: t.minHeadroomDb = 5; t.improveDb = 0.8; t.comfortDb = 8; break;
+    case ModeKind::NarrowVoice: t.minHeadroomDb = 5; t.improveDb = 1.0; t.comfortDb = 6; break;
+    case ModeKind::NarrowData: t.minHeadroomDb = 5; t.improveDb = 1.0; t.comfortDb = 6; break;
+    case ModeKind::Pulsed: t.minHeadroomDb = 3; t.improveDb = 1.0; t.comfortDb = 1e9; t.usePeakHold = true; break;   // judged on the 2 s peak-hold: pulses are < 0.1 % of the samples
+    case ModeKind::Gnss: t.minHeadroomDb = 6; t.improveDb = 1.0; t.comfortDb = 1e9; break;
+    case ModeKind::WideSpan: t.minHeadroomDb = 6; t.improveDb = 1.5; t.comfortDb = 1e9; break;
+    default: t.minHeadroomDb = 5; t.improveDb = 1.0; t.comfortDb = 6; break;
+    }
     if (freqHz > 0) applyBandBias(t, freqHz);
     return t;
 }

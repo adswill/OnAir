@@ -58,6 +58,11 @@ void Engine::ingest(cf32* x, size_t n) {
     if (iqTapOn_.load(std::memory_order_relaxed)) { std::lock_guard<std::mutex> lk(iqTapMu_); if (iqTap_) iqTap_(x, n, srcRate_); }   // selfcal
     ShareServer::get().offer(x, n);   // "Share my radio": the same samples to the rtl_tcp clients (nothing while sharing is off)
     dropNonFinite(x, n);
+    {   // the auto gain's sensors see the radio's samples as delivered: every one of them, before the IQ correction
+        const double gr = srcRate_ > 0 ? srcRate_ : rate_.load();
+        if (gr != gmRate_) { gmRate_ = gr; gainMeter_.configure(gr, 8); }
+        gainMeter_.process(x, n);
+    }
     cleanSamples(iqFix_, offMix_, offsetDc_.load(), x, n, activeStd_.load());
     if (nbOn_.load(std::memory_order_relaxed)) {   // the noise blanker: clicks out before the spectrum and the decoders see them
         const double r = srcRate_ > 0 ? srcRate_ : rate_.load();   // the samples here are still at the radio's rate

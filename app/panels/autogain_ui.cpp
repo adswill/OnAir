@@ -9,6 +9,8 @@
 #include "../app.h"
 #include "../ui/panel_layout.h"
 #include "dect2/source/autogain.h"
+#include "dect2/source/gain_cal.h"
+#include <cstdio>
 #include <cmath>
 #include <ctime>
 
@@ -36,11 +38,20 @@ struct AgUi {
     double resultAt = -1e9;
     double lastClipAt = -1e9;
     bool popup = false;
+    // the engine thread's GainMeter feed (drained once per frame; the last one is reused between 50 ms windows)
+    ag::BlockStats mAdc; std::vector<float> mSpec; bool haveMeter = false;
+    // per-unit gain-step calibration (docs/AUTOGAIN.md): the store per serial, the running calibrator
+    ag::GainCalStore cals;
+    ag::GainCalibrator cal;
+    bool calRun = false; TuneSettings calUndo; bool calUndoAgc = false; std::string calText;
+    ag::StagePlan calStart;
+    FILE* trace = nullptr; double traceAt = -1e9;
 };
 AgUi& S() { static AgUi s; return s; }
 
 const char* kModeNames[] = {"Off", "Auto", "Optimise once", "Safe start"};
 
+std::string calKey(const DeviceInfo& d) { return d.serial.empty() ? d.name : d.serial; }
 bool radioOk(const App& a) { return a.devIdx >= 0 && a.devIdx < (int)a.devices.size() && a.devices[(size_t)a.devIdx].isRadio(); }
 
 void loadSettings() {
@@ -57,7 +68,9 @@ void loadSettings() {
     s.set.safeRiseDb = p.getD("ag.saferise", -1);
     s.set.metric = (ag::Metric)p.getI("ag.metric", 0);
     s.set.imdProbeAuto = p.getB("ag.imdprobe", false);
+    s.set.v2 = p.getB("ag.v2", true);
     s.mem.parse(p.getS("ag.mem", ""));
+    s.cals.parse(p.getS("ag.cal", ""));
 }
 void saveSettings() {
     AgUi& s = S();
@@ -71,7 +84,9 @@ void saveSettings() {
     p.setD("ag.saferise", s.set.safeRiseDb);
     p.setI("ag.metric", (long)s.set.metric);
     p.setB("ag.imdprobe", s.set.imdProbeAuto);
+    p.setB("ag.v2", s.set.v2);
     p.setS("ag.mem", s.mem.serialise());
+    p.setS("ag.cal", s.cals.serialise());
     p.flush();
 }
 std::string maskKey(const App& a) { return "ag.mask." + radioKeyOf(a.devices[(size_t)a.devIdx]); }
@@ -81,9 +96,20 @@ std::string memKey(const App& a) { return ag::GainMemory::key(radioKeyOf(a.devic
 ag::AgInput input(App& a) {
     ag::AgInput in;
     in.now = ImGui::GetTime();
-    in.adc = ag::fromSignalStats(a.spec.stats);
-    in.spectrum = &a.spec.dbfs;
-    in.rateHz = a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate;
+    AgUi& s = S();
+    // the engine thread's meter (every sample, the radio's own rate; works with the window hidden); the display analyser only before it has data
+    ag::BlockStats mb; std::vector<float> ms;
+    if (a.engine.running() && a.engine.gainMeter().take(mb, ms)) { s.mAdc = mb; if (!ms.empty()) s.mSpec = ms; s.haveMeter = true; }
+    if (s.haveMeter && !s.mSpec.empty()) {
+        in.adc = s.mAdc;
+        in.spectrum = &s.mSpec;
+        in.rateHz = a.engine.radioRate() > 0 ? a.engine.radioRate() : a.engine.sampleRate();
+    } else {
+        in.adc = ag::fromSignalStats(a.spec.stats);
+        in.spectrum = &a.spec.dbfs;
+        in.rateHz = a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate;
+    }
+    if (in.rateHz <= 0) in.rateHz = a.tune.sampleRate;
     in.chanBwHz = a.tune.bandwidthMhz * 1e6;
     in.offsetHz = (a.freqMhz - radioCenterMhz(a)) * 1e6;   // a mode tuned beside the DC spike listens off the centre
     in.q = ag::qualityFrom(a.rx);
@@ -102,6 +128,7 @@ void syncContext(App& a) {
     if (ctx == s.ctx) { s.c.setSettings([&] { ag::AgSettings x = s.set; x.mode = s.run; return x; }()); return; }
     s.ctx = ctx;
     s.prof = ag::radioProfileFor(d);
+    if (const ag::GainCal* gc = s.cals.find(calKey(d))) ag::applyCalibration(s.prof, *gc);   // this unit's measured steps instead of the table's
     ag::AgSettings x = s.set;
     x.mode = s.run;
     s.c.configure(s.prof, ag::modeTargetFor(engineStd(a), a.tune.bandwidthMhz * 1e6, fs, a.freqMhz * 1e6), x);
@@ -151,7 +178,7 @@ void drawHeadroomBar(float w) {
     const float y0 = p.y + (ImGui::GetFrameHeight() - h) * 0.5f;
     dl->AddRectFilled(ImVec2(p.x, y0), ImVec2(p.x + w, y0 + h), ImGui::GetColorU32(ImGuiCol_FrameBg), 3);
     // level: full scale at the right; 0..48 dB below it
-    const double tgt = s.c.headroomTarget();
+    const double tgt = s.set.v2 ? s.c.target().minHeadroomDb : s.c.headroomTarget();   // v2: the headroom floor
     const double head = m.valid ? std::max(0.0, std::min(48.0, m.headroomDb)) : 48;
     const float fill = (float)(1.0 - head / 48.0);
     const ImVec4 col = m.clipping ? pal::badRed() : head < tgt - 3 ? pal::warnAmber() : head > tgt + 18 ? ImVec4(0.45f, 0.6f, 0.85f, 1) : pal::okGreen();
@@ -247,6 +274,8 @@ void advancedPopup(App& a) {
         if (ImGui::Combo(tr("Quality metric"), &m, kMetrics, 8)) { s.set.metric = (ag::Metric)m; changed = true; }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip(tr("What Optimise once maximises. The mode's: %s. A decoder number (MER / SNR / BER / lock) is used only while it locks; else the channel SNR from the spectrum."), ag::metricName(s.c.target().metric));
     }
+    if (ImGui::Checkbox(tr("Auto v2: climb the measured SNR / decoder quality (off: the old headroom loop)"), &s.set.v2)) changed = true;
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Auto v2 tries a neighbouring gain now and then and keeps it when the decoder (or the SNR in the channel) gets better, with no clipping, headroom floor and no intermodulation. The old loop holds a fixed headroom."));
     if (ImGui::Checkbox(tr("Auto also checks for intermodulation (a short +3 dB step now and then)"), &s.set.imdProbeAuto)) changed = true;
     ImGui::Separator();
     // stages
@@ -297,6 +326,35 @@ void advancedPopup(App& a) {
         const double t = ImGui::GetTime();
         for (size_t i = lg.size(); i-- > 0 && lg.size() - i <= 60;) ImGui::Text("-%5.0fs  %5.1f > %5.1f dB  %s", t - lg[i].t, lg[i].fromDb, lg[i].toDb, lg[i].why.c_str());
         ImGui::EndChild();
+        ImGui::TreePop();
+    }
+    if (ImGui::TreeNode(trw("Gain steps of this unit"))) {
+        const std::string ck = calKey(a.devices[(size_t)a.devIdx]);
+        const ag::GainCal* gc = s.cals.find(ck);
+        ImGui::PushTextWrapPos(460 * gUi);
+        ImGui::TextDisabled("%s", tr("The tables hold typical gain steps; a real tuner differs by several dB from unit to unit. This steps through every gain once (about 30 s, antenna disconnected or any steady noise), measures the real steps and keeps them for this unit. It also tells you when the gain control does not work."));
+        ImGui::PopTextWrapPos();
+        if (s.calRun) {
+            ImGui::ProgressBar((float)s.cal.progress(), ImVec2(260 * gUi, 0));
+            ImGui::SameLine();
+            if (ImGui::SmallButton(tr("Cancel"))) { s.calRun = false; ag::AgCommand rc; rc.plan = s.calStart; applyCmd(a, rc); }
+        } else {
+            ImGui::BeginDisabled(!a.engine.running() || s.prof.singleControl() == false);
+            if (ImGui::Button(tr("Measure my gain steps"))) {
+                s.calStart = ag::planFromTune(s.prof, a.tune);
+                s.cal.begin(s.prof, ck, ImGui::GetTime(), a.freqMhz * 1e6);
+                s.calRun = !s.cal.done();
+                s.calText.clear();
+            }
+            ImGui::EndDisabled();
+            if (gc) {
+                ImGui::SameLine();
+                if (ImGui::SmallButton(tr("Forget"))) { s.cals.forget(ck); saveSettings(); s.ctx.clear(); }
+                ImGui::TextDisabled(tr("Calibrated: %d steps, largest difference from the table %.1f dB"), (int)gc->nominal.size(), gc->worstStepErrDb);
+                for (const auto& f : gc->flags) ImGui::TextColored(pal::warnAmber(), "(!) %s", f.c_str());
+            }
+            if (!s.calText.empty()) ImGui::TextWrapped("%s", s.calText.c_str());
+        }
         ImGui::TreePop();
     }
     if (ImGui::TreeNode(trw("Remembered gains"))) {
@@ -352,6 +410,14 @@ void gear() {
 } // namespace
 
 // ------------------------------------------------------------------------------------------------------------------------------ the API
+void autogainSetTrace(const char* path) {
+    AgUi& s = S();
+    if (s.trace) { fclose(s.trace); s.trace = nullptr; }
+    if (!path || !*path) return;
+    s.trace = fopen(path, "w");
+    if (s.trace) { fprintf(s.trace, "%s\n", ag::AutoGainController::traceHeader()); fflush(s.trace); }
+}
+
 bool autogainStep(App& a) {
     AgUi& s = S();
     bool forced = false;
@@ -361,7 +427,7 @@ bool autogainStep(App& a) {
     }
     // what should run: Auto follows a.agcOn (turned off by a manual gain change); a one-shot until it ends
     ag::AgMode want = s.oneShot != ag::AgMode::Off ? s.oneShot : a.agcOn ? ag::AgMode::Auto : ag::AgMode::Off;
-    if (a.dir.state() == DirectionFinder::State::Measuring || a.sweep.active() || a.gopt.opt.active()) want = ag::AgMode::Off;   // the gain must stay put
+    if (a.dir.state() == DirectionFinder::State::Measuring || a.sweep.active() || a.gopt.opt.active() || s.calRun) want = ag::AgMode::Off;   // the gain must stay put
     syncContext(a);
     if (want != s.run) {
         if (want == ag::AgMode::Off) { s.run = ag::AgMode::Off; s.c.stop(); }
@@ -377,12 +443,28 @@ bool autogainStep(App& a) {
                 applyCmd(a, rc);
                 const ag::StagePlan p = ag::planFromTune(s.prof, a.tune);
                 s.c.start(ImGui::GetTime(), p.totalDb, p.ampOn, &p);
-                s.c.skipQuickSearch();
+                s.c.setPrior(p);   // a prior, not a skip: another antenna, place or hour changes what is best (+/-9 dB search around it)
                 a.engine.log("auto gain: remembered gain for this band");
                 forced = true;
             } else { const ag::StagePlan p = ag::planFromTune(s.prof, a.tune); s.c.start(ImGui::GetTime(), p.totalDb, p.ampOn, &p); }
         }
         else if (s.oneShot != ag::AgMode::Off) { startMode(a, ag::AgMode::Off); a.agcOn = s.undoAgc; s.result = "stopped: the frequency changed"; s.resultAt = ImGui::GetTime(); }
+    }
+    if (s.calRun) {   // "Measure my gain steps": step through the radio's gains while the noise is steady, then put the gain back
+        ag::AgCommand cc;
+        if (s.cal.tick(input(a), cc)) { applyCmd(a, cc); return true; }
+        if (s.cal.done()) {
+            const ag::GainCal& r = s.cal.result();
+            s.calText = s.cal.text();
+            for (const auto& f : r.flags) s.calText += "\n(!) " + f;
+            if (r.valid()) { s.cals.put(r); saveSettings(); s.ctx.clear(); }   // the controller is configured afresh with the measured steps
+            ag::AgCommand rc; rc.plan = s.calStart; rc.why = "calibration done";
+            applyCmd(a, rc);
+            s.calRun = false;
+            a.engine.log("auto gain: gain-step calibration: " + s.cal.text());
+            return true;
+        }
+        return false;
     }
     ag::AgCommand cmd;
     const bool ch = s.c.tick(input(a), cmd);
@@ -409,7 +491,8 @@ bool autogainStep(App& a) {
         s.run = ag::AgMode::Off;
         a.agcOn = s.undoAgc;   // Auto goes on again if it was on (it starts from the result)
     }
-    if (ch && s.run == ag::AgMode::Auto) a.engine.log("auto gain: " + cmd.why);
+    if (ch && s.run == ag::AgMode::Auto && cmd.why.compare(0, 5, "probe") != 0) a.engine.log("auto gain: " + cmd.why);
+    if (s.trace && s.run == ag::AgMode::Auto && ImGui::GetTime() - s.traceAt >= 1.0) { s.traceAt = ImGui::GetTime(); fprintf(s.trace, "%s\n", s.c.traceLine(ImGui::GetTime()).c_str()); fflush(s.trace); }
     return ch || forced;
 }
 
@@ -517,6 +600,9 @@ void autogainMeters(App& a) {
         ImGui::SameLine(0, 6 * gUi);
         if (ImGui::SmallButton(tr("Re-optimise"))) s.c.reoptimise();
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Searches 4-6 gains again (about 3 s) and keeps the best one for this mode and band. Auto does this by itself at start, after a retune and in a new band."));
+    }
+    if (s.run == ag::AgMode::Auto && s.set.v2 && !s.c.status().empty()) {   // "why this gain": what it is, what limits it, what the loop is doing
+        ImGui::TextDisabled("%s", s.c.status().c_str());
     }
     const auto adv = s.c.advice();
     if (!adv.empty()) {

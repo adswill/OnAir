@@ -6,6 +6,7 @@
 #include "dect2/dsp/exact_resampler.h"
 #include "dect2/audio/audio_monitor.h"
 #include "dect2/source/delivery_check.h"
+#include "dect2/source/gain_meter.h"
 #include "dect2/source/source.h"
 #include "dect2/source/iq_record.h"
 #include "dect2/source/time_machine.h"
@@ -252,6 +253,8 @@ public:
     int standardMode() const { return stdMode_.load(); }
     int activeStandard() const { return activeStd_.load(); }  // 0 = DVB-T2, 1 = DVB-T, 2 = ATSC, 3 = DAB, 4 = ATSC 3.0, 5 = ISDB-T, 6 = FM, 7 = DVB-S/S2, 8 = DTMB, 9 = analog TV, 10 = DMR, 11 = DRM, 12 = ADS-B, 13 = GNSS, 14 to 27 = radiosonde, AIS, marine, ACARS, Inmarsat-C, Inmarsat Aero, Iridium, mesh, HD Radio, CDR, pagers, APRS / packet, HF digital, airband, VDL Mode 2, ISM sensors, VOR / ILS, M17, 34 = D-STAR, 35 = CW, 36 = HFDL, 37 = PSK31, 38 = JS8Call, 41 = DVB-C, 44 = Mode S uplink, 45 = Orbcomm, 46 = dPMR, 39 = NXDN, 47 = TETRA, 48 = MAC, 49 = radio astronomy, 50 = HF ALE, 51 = P25, 52 = Bluetooth LE, 53 = ionospheric sounders , 54 = QO-100, 55 = Wi-Fi networks, 56 = general receiver (always the standard code minus one)
     double sampleRate() const { return rate_; }
+    // The automatic gain's sensors (every sample of the radio's block, on the engine thread; take() from any thread): docs/AUTOGAIN.md
+    ag::GainMeter& gainMeter() { return gainMeter_; }
     double radioRate() const { return srcRate_; }   // the rate the radio (or file) runs at, as it confirmed it at the start
     // Channel bandwidth: with automatic detection on, the engine measures the width of the signal in the spectrum while nothing is
     // locked and reconfigures the receivers by itself. setBandwidth() forces a value (used by the scanner).
@@ -680,6 +683,8 @@ private:
     ExactResampler offRs_;
     bool offResample_ = false;
     std::vector<cf32> offBuf_;
+    ag::GainMeter gainMeter_;
+    double gmRate_ = 0;
     double srcRate_ = 0;   // the radio's rate (rate_ is what the receivers get: the same, or the mode's rate with offset tuning)
     bool offsetAllowed() const;
     // the steps of start() (engine_start.cpp), called in this order

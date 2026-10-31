@@ -53,6 +53,7 @@ struct GainStage {
     std::string settingKey;       // a stage reached through a radio setting (TuneSettings::radio[settingKey]); empty: a gain field of TuneSettings
     bool settingIsIndex = false;  // the setting holds the step index (SDRplay rfgr: state 0 = most gain), not dB
     std::string note;             // what this gain does, for the user
+    std::vector<double> actualDb; // measured real gain of each step (same size as steps; empty: the nominal steps are right), from GainCalibration
 
     double minDb() const { return steps.empty() ? 0 : steps.front(); }
     double maxDb() const { return steps.empty() ? 0 : steps.back(); }
@@ -78,6 +79,10 @@ struct RadioProfile {
     bool singleControl() const { return settableCount() <= 1; }
     double minTotal(bool ampOn) const;
     double maxTotal(bool ampOn) const;
+    // The real gain change of going from one overall setting to another: the measured steps of this unit when it was calibrated (GainCalibration),
+    // else the difference itself. Only a radio with one settable stage has measured steps.
+    double realDelta(double fromTotal, double toTotal) const;
+    bool calibrated() const;
 };
 
 // Every radio OnAir knows (listed in the advanced popup and docs/AUTOGAIN.md)
@@ -119,6 +124,7 @@ struct BlockStats {
     double crestDb = 0;           // 20 log10(p999) - rms (complex rms: a complex tone reads 0 dB, Gaussian noise about 7.4 dB)
     double clipFraction = 0;      // samples at full scale
     double headroomDb = 120;      // full scale over the robust peak
+    double holdHeadroomDb = 120;  // full scale over the 2 s peak-hold (GainMeter; 120: not measured, then headroomDb counts)
     size_t n = 0;
 };
 BlockStats measureBlock(const std::complex<float>* iq, size_t n, float clipLevel = 0.995f);
@@ -175,6 +181,11 @@ struct ModeTarget {
     double floorRiseDb = 6;      // Safe start stops when the floor has risen this much (the antenna's noise is then well above the ADC's)
     double lockSnrDb = 6;        // a decoder locked above this SNR freezes the loop (only overloads still act)
     double maxStepDb = 6;        // largest upward step of the loop
+    // Auto v2 (the hill climb on the measured objective): headroom is a floor, not a set-point
+    double minHeadroomDb = 4;    // the robust peak (the 2 s peak-hold for pulsed modes) stays at least this far under full scale
+    double improveDb = 0.8;      // a step must buy at least this much of the objective (and 1.5 sigma of its noise) to be kept
+    double comfortDb = 6;        // a decoder this far over its lock threshold lets the loop rest; under it the loop keeps optimising
+    bool usePeakHold = false;    // judge the headroom from the peak-hold (pulses), not the 99.99 % point
     const char* why = "";
     const char* bandNote = "";   // what the band the radio is tuned to changes (set by modeTargetFor when freqHz is given), for the user
     const char* bandName = "";
@@ -206,6 +217,8 @@ struct AgSettings {
     double measureSec = 1.2;     // Optimise once / Safe: how long each step is measured
     bool quickStart = true;      // Auto begins (and re-begins after a retune / Re-optimise) with a short bracketing search of 4-6 gains
     double bracketSec = 0.15;    // how long each gain of that search is measured (after the radio's own settling)
+    bool v2 = true;              // Auto v2: climb the measured objective (channel SNR / the decoder's MER) under constraints; false: the old headroom servo
+    double dwellSec = 1.0;       // v2: how long each gain is measured before a decision (after the settling)
 };
 
 struct AgInput {
@@ -219,6 +232,7 @@ struct AgInput {
 struct AgCommand {
     StagePlan plan;              // apply this (plan.totalDb, plan.db per stage, plan.ampOn)
     std::string why;
+    std::map<std::string, std::string> settings;   // radio settings to set with it (TuneSettings::radio[key]); empty for most
 };
 
 struct AgEvent { double t = 0; double fromDb = 0, toDb = 0; std::string why; };
@@ -231,6 +245,8 @@ struct AgMeters {
     double headroomDb = 0, peakDbfs = -120, rmsDbfs = -120, crestDb = 0, clipFraction = 0;
     bool floorValid = false; double floorDbfs = -200, adcMarginDb = 0, chanSnrDb = 0, oobDbfs = -200;
     bool clipping = false, overload = false, imd = false, compressed = false;
+    double holdHeadroomDb = 120, slopeDbPerDb = 1, objective = 0;
+    bool objectiveValid = false;
     int overloads = 0;
 };
 
@@ -281,6 +297,15 @@ public:
     void reoptimise() { if (mode_ == AgMode::Auto && phase_ != Phase::Idle) wantBracket_ = true; }
     // Auto: a gain taken from the memory needs no search at start
     void skipQuickSearch() { wantBracket_ = false; }
+    // v2: a remembered gain is a PRIOR: the quick search runs again, narrowed to about +/-6 dB around it (never a skip: another antenna, place, hour)
+    void setPrior(const StagePlan& p) { prior_ = p; havePrior_ = p.totalDb > -1e8; wantBracket_ = mode_ == AgMode::Auto && set_.quickStart; }
+    // v2: the tuned frequency / mode / rate changed a lot (retune > 5 % of the rate, another band, a new sample rate): search again from the present gain
+    void notifyRetune(const char* what) { if (mode_ == AgMode::Auto && phase_ != Phase::Idle) { wantBracket_ = true; settled_ = false; clTrial_ = false; retuneWhy_ = what ? what : "retune"; } }
+    // v2: the one line for the user: what the gain is, what limits it and what the loop is doing now
+    const std::string& status() const { return status_; }
+    // the gain/objective trace: one CSV line per call of takeTrace (t, gain, objective, headroom, floor, clip, state), for --autogain-trace and bug reports
+    static const char* traceHeader() { return "t,gain_db,objective,snr_db,headroom_db,floor_dbfs,clip,state,why"; }
+    std::string traceLine(double now) const;
     bool bracketing() const { return br_ != 0; }
     // true once after each finished bracketing search (the app stores the result in the memory)
     bool takeBracketDone() { const bool b = bracketDone_; bracketDone_ = false; return b; }
@@ -293,6 +318,7 @@ public:
 
 private:
     double maxGain() const;
+    double bracketHead() const;
     double minGain() const;
     double settleTime() const;
     void move(double now, double totalDb, Policy pol, const std::string& why, AgCommand& out);
@@ -337,6 +363,33 @@ private:
     int br_ = 0, brExtra_ = 0; bool wantBracket_ = false, bracketDone_ = false; double brFrom_ = 0;
     std::string expl_;
     std::vector<std::string> reasons_;
+    // Auto v2
+    struct Run { double n = 0, mean = 0, m2 = 0; void add(double x) { n += 1; const double d = x - mean; mean += d / n; m2 += d * (x - mean); } double var() const { return n > 1 ? m2 / (n - 1) : 1.0; } };
+    bool tickClimb(const AgInput& in, AgCommand& out);
+    bool objective(double& j) const;
+    bool comfortable() const;
+    void climbSample(const AgInput& in, double j);
+    void climbReset(double now);
+    bool startTrial(const AgInput& in, AgCommand& out);
+    bool evaluateTrial(const AgInput& in, AgCommand& out);
+    void setStatus(const std::string& lead);
+    StagePlan prior_; bool havePrior_ = false;
+    bool clTrial_ = false, settled_ = false;
+    int cand_ = 0, candKind_ = 0;            // next candidate in the cycle; the running one (1 up, 2 down, 3 split)
+    double trialAt_ = 0, settledAt_ = -1e9, settledJ_ = 0, clStep_ = 2, lockLostAt_ = -1;
+    bool wasLocked_ = false;
+    Run base_, tri_;
+    StagePlan basePlan_; Policy basePol_ = Policy::Balanced;
+    std::vector<double> specPow_; int specCnt_ = 0;     // mean power spectrum of this dwell (linear)
+    std::vector<float> specBase_;                        // ... of the baseline, dB
+    double clMark_ = -1, dwellFrom_ = 0, statusAt_ = -1e9;
+    int clDir_ = 1;
+    BlockStats adcLast_;
+    double floorBase_ = -200;
+    std::string status_, limit_, lastDecision_, retuneWhy_;
+    double slope_ = 1;
+    int rejectRun_ = 0;
+    double jRecent_ = 0; int jRecentN_ = 0;
     // Optimise once / Safe
     std::vector<AgTrial> trials_;
     std::vector<std::pair<double, Policy>> queue_;

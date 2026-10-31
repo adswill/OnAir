@@ -55,6 +55,26 @@ int RadioProfile::settableCount(bool incUser) const {
     for (const auto& s : stages) if (s.settable && (incUser || !s.userOnly)) n++;
     return n;
 }
+bool RadioProfile::calibrated() const {
+    for (const auto& s : stages) if (s.settable && !s.actualDb.empty() && s.actualDb.size() == s.steps.size()) return true;
+    return false;
+}
+// the real gain of an overall setting: linear interpolation in the measured table (the table is by step, ascending)
+static double realOf(const GainStage& s, double nominal) {
+    if (s.actualDb.empty() || s.actualDb.size() != s.steps.size() || s.steps.size() < 2) return nominal;
+    if (nominal <= s.steps.front()) return s.actualDb.front() + (nominal - s.steps.front());
+    if (nominal >= s.steps.back()) return s.actualDb.back() + (nominal - s.steps.back());
+    size_t i = 1;
+    while (i + 1 < s.steps.size() && s.steps[i] < nominal) i++;
+    const double span = s.steps[i] - s.steps[i - 1];
+    const double f = span > 1e-9 ? (nominal - s.steps[i - 1]) / span : 0;
+    return s.actualDb[i - 1] + f * (s.actualDb[i] - s.actualDb[i - 1]);
+}
+double RadioProfile::realDelta(double a, double b) const {
+    if (settableCount() != 1) return b - a;
+    for (const auto& s : stages) if (s.settable) return realOf(s, b) - realOf(s, a);
+    return b - a;
+}
 double RadioProfile::minTotal(bool ampOn) const {
     double t = 0;
     for (const auto& s : stages) {
