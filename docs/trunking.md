@@ -69,3 +69,6 @@ control number) x spacing, the radio retunes there (it does not follow inside a 
 quiet for 6 s (8 s if nothing was heard). A network with a duplex gap or a non-contiguous plan needs the right control channel number or will land on a wrong
 frequency. Voice: calls on French networks (and the Swiss ones) are normally encrypted, and encrypted calls are never followed, decoded or decrypted. A clear
 call needs the user-installed TETRAPOL codec plug-in (RP-CELP is patented and is not shipped, see CODECS.md).
+
+## Losing and finding the control channel again (3.5)
+With "retune the radio" on, a control channel that is silent for the loss time (4 s) starts a hunt. The hunt visits, in this order, the frequencies a control message was actually heard on (most recent first, the last four), then this site's own control channels (its announced channel and the secondary ones). Neighbouring sites are never visited: their channels are placed with this site's table and are not real frequencies here. Each step waits 12 s (a retune restarts the receiver); the first step, if the radio is already on that channel, waits only one more loss time. Nothing to configure.

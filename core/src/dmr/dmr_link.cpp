@@ -131,6 +131,13 @@ void Link::dropTracks() {
     globalCal_ = Cal();
 }
 
+void Link::rewind(uint64_t k) {
+    k = std::min<uint64_t>(k, n_);
+    n_ -= k;
+    for (auto& h : rho_) for (float& v : h) v = 0;
+    dropTracks();
+}
+
 void Link::shiftOffset(double hz) {
     nco_ += hz;
     for (Track& t : tr_) if (t.used && t.cal.valid) t.cal.off -= hz;
