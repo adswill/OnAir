@@ -738,6 +738,7 @@ float menuBar(App& a) {
                 }
             }
             ImGui::Separator();
+            if (ImGui::MenuItem(tr("Browse all modes..."), "M")) modePickerOpen(a);
             if (ImGui::MenuItem(tr("Modes shown..."))) a.modeVisOpen = true;
             ImGui::EndMenu();
         }
@@ -881,6 +882,8 @@ void modeCombo(App& a, float w) {
         }
         ImGui::EndCombo();
     }
+    ImGui::SameLine(0, 4 * gUi);
+    modePickerButton(a);   // the Mode Browser: every mode as a button (mode_picker.cpp)
 }
 
 void displayControls(App& a, bool wide) {

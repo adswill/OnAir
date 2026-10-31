@@ -297,6 +297,7 @@ struct App {
     struct FamGain { int lna = 32, vga = 34; bool amp = false, known = false; } famGain[kNumSlots];   // the radio gains remembered for each mode
     double famFreq[kNumSlots] = {};  // the frequency each of the modes added after FM was last tuned to (0 = never)
     std::string modeHidden, modeHiddenGroups, modeFavs;   // Mode > Modes shown...: the modes and groups left out of the lists, and the favourites, by name, separated by |
+    std::string modeRecent;      // the Mode Browser's Recent tab: names separated by |, most recent first
     bool modeFavsOnly = false;   // list only the favourites (and the active mode)
     bool modeVisOpen = false;    // the Modes shown window
     std::string modeGroupsOpen;   // the mode list groups left unfolded, by name, separated by |
@@ -1039,7 +1040,9 @@ void standardSwitch(App& a);
 extern float gSwitchWidth;
 // The receiver modes (mode_table.cpp). Adding a mode is one row there.
 // subId: one protocol of a shared receiver (dect2::subModes()), a mode of its own with its own settings, decoder and views
-struct ModeDef { int family; const char* name; int group; ImU32 col; const char* blurb; const char* tip; const char* sub; ImVec4 accent; const char* subId = nullptr; const char* keys = nullptr; };
+struct ModeDef { int family; const char* name; int group; ImU32 col; const char* blurb; const char* tip; const char* sub; ImVec4 accent; const char* subId = nullptr; const char* keys = nullptr;
+    // filled by modeInfoFill() (mode_info.cpp) for the Mode Browser; rows need not set them
+    uint32_t tags = 0; uint8_t needs = 0; float minRateMsps = 0; double bandMinMhz = 0, bandMaxMhz = 0; bool isNew = false; };
 constexpr int kModeCapacity = 400;   // the built-in rows and the plugins' (mode_table.cpp)
 extern ModeDef kModes[];
 extern int kNumModes;
@@ -1095,6 +1098,17 @@ void scannerControl(App& a, int what);                                  // 0 sto
 void scannerTuning(float squelchDb, double hangSec, double holdMaxSec, double prioritySec);
 void scanViewWindow(App& a);                                            // scan_view_ui.cpp: the merged Scanner view (a.scanViewOpen)
 void selectMode(App& a, int family, const char* subId = nullptr);
+// The Mode Browser (mode_picker.cpp, docs/MODE-PICKER.md): a large window with every mode as a button, grouped by family
+void modePickerOpen(App& a);       // open it (the "Modes" button, Mode > Browse all modes, the M key)
+void modePicker(App& a);           // once a frame: the M key and the window
+bool modePickerWantsKeys();        // the window is open and has the keyboard
+void modePickerButton(App& a, const char* id = "##modes");   // the "Modes" button of the top bars
+void modeInfoFill();               // mode_info.cpp: tags, needs and minimum rate of rows that have none (also plugin rows added later)
+struct ModeFit { bool ok = true; std::string reason; };
+ModeFit modeFit(const App& a, const ModeDef& m);              // does the selected radio fit the mode (grey + reason; never blocks)
+bool modeCodecMissing(const ModeDef& m);                      // a voice codec the user must install is missing (false until wired)
+extern bool (*gModeSignalHint)(const ModeDef&, float* conf);  // set by the identifier: a signal for this mode is on air now (null: none)
+void modeRecordRecent(App& a, int family, const char* subId); // selectMode(): the Recent tab
 // app/autodet/autodet_ui.cpp: the "TV (auto)" / "Digital voice (auto)" rows (subId "auto:tv" / "auto:voice")
 bool autodetRow(const char* subId, int* kind);   // true for such a row; kind: dect2::autodet::Capture::KindTv / KindVoice
 bool autodetActive(const App& a, int kind);

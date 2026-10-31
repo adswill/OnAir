@@ -117,6 +117,8 @@ static void classicTopBar(App& a, ImVec2 disp) {
         if (sourceOptionsOpen(a)) sourceOptions(a);
     a.tgMin[TgToolbar] = ImVec2(tb0.x - 4, tb0.y - 3); a.tgMax[TgToolbar] = ImVec2(tb0.x + ImGui::GetContentRegionAvail().x + 4, ImGui::GetCursorScreenPos().y);
     const ImVec2 sw0 = ImGui::GetCursorScreenPos();
+    modePickerButton(a);   // the Mode Browser (mode_picker.cpp)
+    ImGui::SameLine(0, 6 * gUi);
     standardSwitch(a);
     if (a.devices[a.devIdx].isRadio()) { ImGui::SameLine(disp.x - 64 - 410 * gUi); radioSettingsUi(a, false); }   // the top bar is full
     ImGui::SameLine(disp.x - 64 - 370 * gUi);
@@ -334,6 +336,7 @@ void drawUI(App& a, ImVec2 disp, bool draw) {
     }
     floatingWindows(a, disp);
     commandPalette(a);   // Ctrl+K (ui/command_palette.h)
+    modePicker(a);       // the Mode Browser: M key and the window (ui/mode_picker.cpp)
     crashNotePopup(disp);
     codecNotePopup(disp);
     hiddenPopOut(a);
