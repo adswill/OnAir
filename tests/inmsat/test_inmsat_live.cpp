@@ -30,6 +30,7 @@ static void* libOpen(const char* n) { return (void*)LoadLibraryA(n); }
 static void* libSym(void* l, const char* n) { return (void*)GetProcAddress((HMODULE)l, n); }
 static const char* libErr() { return "LoadLibrary failed"; }
 static const char* const kAirspyNames[] = {"libairspy.dll", "airspy.dll", nullptr};
+static const char* const kHydraNames[] = {"libhydrasdr.dll", "hydrasdr.dll", nullptr};
 #else
 #include <dlfcn.h>
 static void* libOpen(const char* n) { return dlopen(n, RTLD_NOW); }
@@ -37,8 +38,10 @@ static void* libSym(void* l, const char* n) { return dlsym(l, n); }
 static const char* libErr() { const char* e = dlerror(); return e ? e : "?"; }
 #ifdef __APPLE__
 static const char* const kAirspyNames[] = {"libairspy.dylib", "libairspy.0.dylib", nullptr};
+static const char* const kHydraNames[] = {"libhydrasdr.dylib", "libhydrasdr.1.dylib", nullptr};
 #else
 static const char* const kAirspyNames[] = {"libairspy.so.0", "libairspy.so", nullptr};
+static const char* const kHydraNames[] = {"libhydrasdr.so.1", "libhydrasdr.so", nullptr};
 #endif
 #endif
 
@@ -49,15 +52,18 @@ typedef int (*cb_fn)(Transfer*);
 struct Airspy {
     void* lib = nullptr; airspy_device* dev = nullptr;
     int (*open)(airspy_device**); int (*close)(airspy_device*); int (*setRate)(airspy_device*, uint32_t); int (*setType)(airspy_device*, int);
-    int (*setFreq)(airspy_device*, uint32_t); int (*setLin)(airspy_device*, uint8_t); int (*setBias)(airspy_device*, uint8_t); int (*setPacking)(airspy_device*, uint8_t);
+    int (*setFreq)(airspy_device*, uint64_t); int (*setLin)(airspy_device*, uint8_t); int (*setBias)(airspy_device*, uint8_t); int (*setPacking)(airspy_device*, uint8_t);   // 64-bit Hz: libhydrasdr's prototype; libairspy reads the low 32 bits
     int (*startRx)(airspy_device*, cb_fn, void*); int (*stopRx)(airspy_device*);
+    std::string prefix = "airspy";   // or "hydrasdr": the RFOne's library has the same functions under its own prefix (DECT2_LIVE_LIB)
     bool load() {
-        for (const char* const* n = kAirspyNames; *n && !lib; n++) lib = libOpen(*n);
-        if (!lib) { printf("libairspy not found: %s\n", libErr()); return false; }
-        auto g = [&](const char* n) { void* p = libSym(lib, n); if (!p) printf("missing %s\n", n); return p; };
-        *(void**)&open = g("airspy_open"); *(void**)&close = g("airspy_close"); *(void**)&setRate = g("airspy_set_samplerate");
-        *(void**)&setType = g("airspy_set_sample_type"); *(void**)&setFreq = g("airspy_set_freq"); *(void**)&setLin = g("airspy_set_linearity_gain");
-        *(void**)&setBias = g("airspy_set_rf_bias"); *(void**)&setPacking = g("airspy_set_packing"); *(void**)&startRx = g("airspy_start_rx"); *(void**)&stopRx = g("airspy_stop_rx");
+        const char* e = getenv("DECT2_LIVE_LIB"); if (e && *e) prefix = e;
+        const bool hydra = prefix == "hydrasdr";
+        for (const char* const* n = hydra ? kHydraNames : kAirspyNames; *n && !lib; n++) lib = libOpen(*n);
+        if (!lib) { printf("lib%s not found: %s\n", prefix.c_str(), libErr()); return false; }
+        auto g = [&](const char* n) { const std::string full = prefix + "_" + n; void* p = libSym(lib, full.c_str()); if (!p) printf("missing %s\n", full.c_str()); return p; };
+        *(void**)&open = g("open"); *(void**)&close = g("close"); *(void**)&setRate = g("set_samplerate");
+        *(void**)&setType = g("set_sample_type"); *(void**)&setFreq = g("set_freq"); *(void**)&setLin = g("set_linearity_gain");
+        *(void**)&setBias = g("set_rf_bias"); *(void**)&setPacking = g("set_packing"); *(void**)&startRx = g("start_rx"); *(void**)&stopRx = g("stop_rx");
         return open && close && setRate && setType && setFreq && setLin && setBias && startRx && stopRx;
     }
 };
