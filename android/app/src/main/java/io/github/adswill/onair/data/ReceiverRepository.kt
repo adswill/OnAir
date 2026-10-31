@@ -7,6 +7,7 @@ import android.provider.OpenableColumns
 import io.github.adswill.onair.ModeDef
 import io.github.adswill.onair.Modes
 import io.github.adswill.onair.R
+import io.github.adswill.onair.OnAirNative
 import io.github.adswill.onair.diag.AppLog
 import io.github.adswill.onair.diag.CrashLog
 import io.github.adswill.onair.engine.ReceiverEngine
@@ -135,6 +136,7 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
         val s = _settings.value
         engine.peakHold = s.peakHold
         engine.agc = s.agc
+        if (s.verboseLog) { if (OnAirNative.loaded) OnAirNative.nativeSetVerbose(true); io.github.adswill.onair.diag.FrameStats.set(true) }
         val loaded = engine.libraryLoaded
         _state.update { it.copy(libraryLoaded = loaded) }
         if (!loaded) {
@@ -349,6 +351,14 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
     private fun applyGeneral(s: Settings) {
         if (!engine.ready) return
         engine.post("general") { it.general(s.genDemod, 0.0, s.genSquelch, s.genSquelchAuto, s.genSquelchDb); it.setVolume(s.volume, s.muted) }
+    }
+
+    /** Verbose logging: the core writes the extra lines, this app logs the switch itself and the frame times of its own UI are in the same log. */
+    fun setVerbose(on: Boolean) {
+        if (OnAirNative.loaded) OnAirNative.nativeSetVerbose(on)
+        io.github.adswill.onair.diag.FrameStats.set(on)
+        AppLog.i("app", if (on) "verbose logging on" else "verbose logging off")
+        updateSettings { it.copy(verboseLog = on) }
     }
 
     fun setPeakHold(on: Boolean) { engine.peakHold = on; updateSettings { it.copy(peakHold = on) } }

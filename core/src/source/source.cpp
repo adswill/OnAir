@@ -1,3 +1,4 @@
+#include <functional>
 #include "dect2/common/thread_name.h"
 #include "dect2/dsp/sample_convert.h"
 #include "dect2/engine/mode_synth.h"
@@ -657,7 +658,11 @@ std::vector<DeviceInfo> listRadios(std::string& err) {
     return out;
 }
 
+static std::function<std::unique_ptr<IqSource>(const DeviceInfo&)> g_testSourceFactory;
+void setTestSourceFactory(std::function<std::unique_ptr<IqSource>(const DeviceInfo&)> f) { g_testSourceFactory = std::move(f); }
+
 std::unique_ptr<IqSource> makeSource(const DeviceInfo& d) {
+    if (g_testSourceFactory) if (auto t = g_testSourceFactory(d)) return t;   // tests: a fake radio that records what it is asked for
     switch (d.kind) {
     case DeviceInfo::HackRF: return std::make_unique<HackrfAuto>(d.serial);
 #ifdef DECT2_HAVE_SOAPY

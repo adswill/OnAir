@@ -318,9 +318,18 @@ void sidebar(App& a) {
         ImGui::Spacing();
     }
     if (section(N_("Log"))) {
+        if (ImGui::Checkbox(tr("Verbose"), &a.verboseLog)) savePrefs(a);   // 3.5: the same switch as View > Verbose logging
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Adds USB transfer counts, bytes per second, stall restarts and frame times to the log."));
+        ImGui::SameLine();
+        size_t nl = 0;
+        const std::vector<std::string> all = a.engine.logSnapshot(nl);
+        if (ImGui::SmallButton(tr("Save log..."))) {   // the lines shown below, as a text file to send with a bug report
+            const std::string path = saveFileDialog("onair-log.txt");
+            if (!path.empty()) { if (FILE* f = fopen(path.c_str(), "wb")) { for (const std::string& l : all) { fputs(l.c_str(), f); fputc('\n', f); } fclose(f); } }
+        }
         ImGui::BeginChild("##logc", ImVec2(0, std::max(40.f * gUi, ImGui::GetContentRegionAvail().y - 4 * gUi)), ImGuiChildFlags_Borders);
         size_t n = 0;
-        const std::vector<std::string> lines = a.engine.logSnapshot(n);
+        const std::vector<std::string> lines = all;
         for (const std::string& l : lines) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", l.c_str()); ImGui::PopTextWrapPos(); }
         if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 2) ImGui::SetScrollHereY(1.f);
         ImGui::EndChild();
@@ -578,6 +587,8 @@ static void viewMenu(App& a) {
         if (ImGui::MenuItem(tr("Controls (keys and mouse) ..."), nullptr, &inputmap::windowOpen())) {}
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("What the mouse wheel, keys and extra mouse buttons do on the spectrum and waterfall: zoom, tune, pan, step size, shortcuts"));
         if (ImGui::MenuItem(tr("Performance overlay"), nullptr, &a.perfOverlay)) savePrefs(a);
+        if (ImGui::MenuItem(tr("Verbose logging"), nullptr, &a.verboseLog)) savePrefs(a);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Adds USB transfer counts, bytes per second, stall detections and restarts and frame times to the log. For bug reports: switch it on, reproduce the problem, then Save bug report (Diagnostics)."));
         if (ImGui::BeginMenu(tr("Power"))) {   // battery life: dect2/power/power.h (update rates, background work) and app/ui/frame_pace.h (redraws)
             static const char* lp[3] = {N_("Low power mode: off"), N_("Low power mode: automatic (on battery or hot)"), N_("Low power mode: always")};
             for (int i = 0; i < 3; i++) {

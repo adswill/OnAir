@@ -48,6 +48,7 @@ fun LogScreen(vm: ReceiverViewModel, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
     val entries by vm.log.collectAsStateWithLifecycle()
     val st by vm.state.collectAsStateWithLifecycle()
+    val set by vm.settings.collectAsStateWithLifecycle()
     LogContent(
         entries = entries, error = st.error, crash = remember { CrashLog.hasUnseen(ctx) },
         onShare = {
@@ -55,13 +56,14 @@ fun LogScreen(vm: ReceiverViewModel, modifier: Modifier = Modifier) {
             catch (e: Exception) { AppLog.e("app", "share failed", e) }
         },
         onClear = vm::clearLog, onCrashSeen = { CrashLog.markSeen(ctx) }, modifier = modifier,
+        verbose = set.verboseLog, onVerbose = vm::setVerbose,
     )
 }
 
 @Composable
 fun LogContent(
     entries: List<AppLog.Entry>, error: String, crash: Boolean, onShare: () -> Unit, onClear: () -> Unit, onCrashSeen: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier, verbose: Boolean = false, onVerbose: ((Boolean) -> Unit)? = null,
 ) {
     val p = LocalPalette.current
     var minLevel by rememberSaveable { mutableStateOf(AppLog.Level.INFO) }
@@ -80,6 +82,7 @@ fun LogContent(
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             for (l in AppLog.Level.entries) Chip(l.name.lowercase(), color = levelColor(l), selected = l == minLevel) { minLevel = l }
             Chip(stringResource(R.string.log_follow), color = p.accent, selected = follow) { follow = !follow }
+            if (onVerbose != null) Chip(stringResource(R.string.log_verbose), color = p.warn, selected = verbose) { onVerbose(!verbose) }
             OnAirIconButton(OnAirIcons.Share, stringResource(R.string.log_share), framed = false, onClick = onShare)
             OnAirIconButton(OnAirIcons.Close, stringResource(R.string.log_clear), framed = false, onClick = onClear)
         }

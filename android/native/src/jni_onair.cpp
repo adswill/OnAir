@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "dect2/common/verbose_log.h"
 #include "dect2/engine/engine.h"
 #include "dect2/source/gain.h"
 #include "dect2/source/iq_file.h"
@@ -191,6 +192,7 @@ FN(jboolean, nativeInit)(JNIEnv* e, jobject, jstring resultsDir) {
     if (gB) return JNI_TRUE;
     gB = new Bridge();
     gB->eng.setSpectrumEnabled(true);
+    dect2::setDiagSink([](const std::string& s) { if (gB) gB->eng.log(s); });   // driver messages (radio lost, stream restarted, verbose lines) into the log the app shows: stderr goes nowhere on Android
     const std::string dir = jstr(e, resultsDir);
     if (!dir.empty()) gB->eng.setResultsDir(dir);
     return JNI_TRUE;
@@ -353,6 +355,9 @@ FN(jstring, nativeLog)(JNIEnv* e, jobject, jlong since) {
     return mk(e, s);
 }
 FN(void, nativeClearResults)(JNIEnv*, jobject) { gB->eng.clearResults(gB->std); }
+
+// Verbose logging (Settings): extra diagnostic lines (USB transfer counts, stall restarts ...) into the core log
+FN(void, nativeSetVerbose)(JNIEnv*, jobject, jboolean on) { dect2::setVerboseLogging(on); }
 
 // sound: volume 0..1 and mute, for the receivers that play it
 FN(void, nativeSetVolume)(JNIEnv*, jobject, jfloat v, jboolean mute) {

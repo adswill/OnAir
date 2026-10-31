@@ -51,7 +51,16 @@ void Engine::watchRadio() {
         }
         return;
     }
-    if (lastDev_.kind != DeviceInfo::HackRF) {
+    // 3.5 (Android): a USB radio that has been silent for 8 s although its own driver should have reopened it (a phone whose USB stream died and
+    // did not come back, a frozen spectrum) is stopped and started again from here, like a HackRF
+    bool restartHere = lastDev_.kind == DeviceInfo::HackRF;
+#ifdef __ANDROID__
+    if (lastDev_.kind == DeviceInfo::Native && !lastNetwork_.load() && now - lostSince_ > seconds(8)) {
+        if (!restartHere && now >= nextReconnect_) log("the radio has been silent for 8 s: restarting its stream");
+        restartHere = true;
+    }
+#endif
+    if (!restartHere || (lastDev_.kind != DeviceInfo::HackRF && now - lastSamples_ < milliseconds(500))) {
         // the source reopened the radio or its link by itself, or a stall shorter than the source's own timeout ended (rtl_tcp: 3 s)
         if (now - lastSamples_ < milliseconds(500)) {
             radioLost_ = false;

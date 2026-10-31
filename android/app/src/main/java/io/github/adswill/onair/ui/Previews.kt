@@ -142,7 +142,7 @@ fun PreviewAddNetworkRadio() = PreviewSurface { AddNetworkRadioDialog(discoveryO
 private object NoSettings : SettingsActions {
     override fun setDark(on: Boolean) {}; override fun setFollowSystemTheme(on: Boolean) {}; override fun setTypeLook(l: TypeLook) {}
     override fun setColormap(i: Int) {}; override fun setRange(lo: Float, hi: Float) {}; override fun autoRange() {}
-    override fun setPeakHold(on: Boolean) {}; override fun setCentreTuning(on: Boolean) {}; override fun setStepHz(hz: Double) {}
+    override fun setPeakHold(on: Boolean) {}; override fun setCentreTuning(on: Boolean) {}; override fun setStepHz(hz: Double) {}; override fun setVerbose(on: Boolean) {}
     override fun setHideUnused(on: Boolean) {}; override fun setOnlyCapable(on: Boolean) {}; override fun setSound(volume: Float, muted: Boolean) {}
     override fun setReduceMotion(on: Boolean) {}; override fun setDiscovery(on: Boolean) {}; override fun setMapConsent(v: Int) {}
 }

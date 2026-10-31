@@ -87,6 +87,15 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     setNote(offNote.empty() ? err : err.empty() ? offNote : err + "; " + offNote, false);
     srcRate_ = src_->sampleRate();
     rate_ = srcRate_;
+    {   // 3.5: what was asked of the radio and what it confirmed, so a rate that is not the chosen one is in the log with its reason
+        const double asked = hwTune(tune).sampleRate;
+        char b[200];
+        if (std::fabs(srcRate_ - tune.sampleRate) > tune.sampleRate * 1e-3 || std::fabs(asked - srcRate_) > srcRate_ * 1e-3) {
+            snprintf(b, sizeof b, "sample rate: the mode asks %.3f Msps, the radio was set to %.3f and confirmed %.3f Msps%s", tune.sampleRate / 1e6, asked / 1e6, srcRate_ / 1e6,
+                     offHz_ > 0 ? " (offset tuning)" : radioDecimation(tune) > 1 ? " (decimation in OnAir)" : std::fabs(asked - srcRate_) > srcRate_ * 1e-3 ? " (the driver rounded it)" : "");
+        } else snprintf(b, sizeof b, "sample rate: the radio runs at %.3f Msps as asked", srcRate_ / 1e6);
+        log(b);
+    }
     live_ = src_->realtimeHardware();
     if (tmSeconds_ > 0 && dev.kind != DeviceInfo::File) tm_.configure(tmSeconds_, srcRate_, tmDecim_, tmBudgetMB_);   // the time machine (time_machine.h)
     // FT8 / WSPR slots: a live radio follows the system clock; a recording or the test signal starts anywhere in a slot, so the

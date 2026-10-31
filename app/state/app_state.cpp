@@ -3,6 +3,7 @@
 #include "rx_width.h"
 #include "../rooms/rooms.h"
 #include "../app.h"
+#include "dect2/common/verbose_log.h"
 #include "../clips/clips_ui.h"
 #include "../gfx/file_vfo.h"
 #include <cstring>
@@ -408,7 +409,26 @@ std::string openFileDialog() { return plat::openFileDialog(); }
 std::string saveFileDialog(const char* name) { return plat::saveFileDialog(name); }
 
 // the spectrum settings the engine keeps: the FFT size (also the saved one at start) and the noise blanker
+// Verbose logging (View > Verbose logging): the switch for the whole process, and every 2 s the frame times of the window (average and worst
+// frame) and the number of threads of the process, into the same log as everything else
+static void verboseFrameLog(App& a) {
+    dect2::setVerboseLogging(a.verboseLog);
+    static bool sinkSet = false;
+    if (!sinkSet) { sinkSet = true; dect2::setDiagSink([&a](const std::string& s) { a.engine.log(s); }); }   // driver lines (radio lost / reopened, USB counts) in the Log panel
+    if (!a.verboseLog) return;
+    static double t0 = 0, worst = 0, sum = 0; static int n = 0;
+    const double now = ImGui::GetTime(), dt = (double)ImGui::GetIO().DeltaTime;
+    worst = std::max(worst, dt); sum += dt; n++;
+    if (t0 == 0) t0 = now;
+    if (now - t0 >= 2.0 && n > 0) {
+        dect2::verboseLog("ui: %d frames in %.1f s, average %.1f ms, worst %.1f ms; engine %s, radio %.3f Msps", n, now - t0, 1000 * sum / n, 1000 * worst,
+                          a.engine.running() ? "running" : "stopped", a.engine.radioRate() / 1e6);
+        t0 = now; worst = 0; sum = 0; n = 0;
+    }
+}
+
 static void syncSpectrumEngine(App& a) {
+    verboseFrameLog(a);
     if (a.engine.spectrumFft() != a.specFft) a.engine.setSpectrumFft(a.specFft);
     static bool on = false; static float thr = 0, wid = 0; static const Engine* who = nullptr;
     if (who != &a.engine || on != a.nbOn || thr != a.nbThr || wid != a.nbWidthUs) {

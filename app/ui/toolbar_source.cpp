@@ -204,10 +204,12 @@ void sampleRateControl(App& a) {
         }
         ImGui::PopTextWrapPos(); ImGui::EndTooltip();
     }
-    if (run && radio && a.tune.sampleRate > 0 && std::fabs(a.engine.sampleRate() - a.tune.sampleRate) > a.tune.sampleRate * 1e-3) {   // the radio rounded it
+    // 3.5: the rate the radio really runs at (what its driver confirmed), not the rate after OnAir's own resampling: a chosen rate that is not
+    // what the radio runs (a driver that rounds, offset tuning that runs the radio faster, "Decimate in OnAir") is said, with the reason
+    if (run && radio && a.tune.sampleRate > 0 && a.engine.radioRate() > 0 && std::fabs(a.engine.radioRate() - a.tune.sampleRate) > a.tune.sampleRate * 1e-3) {
         ImGui::SameLine(0, 6 * gUi);
-        ImGui::TextColored(ImVec4(0.9f, 0.7f, 0.28f, 1), tr("runs at %s"), mspsText(a.engine.sampleRate()).c_str());
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip(tr("The radio gave %s instead of the %s asked for."), mspsText(a.engine.sampleRate()).c_str(), mspsText(a.tune.sampleRate).c_str());
+        ImGui::TextColored(ImVec4(0.9f, 0.7f, 0.28f, 1), tr("radio runs at %s"), mspsText(a.engine.radioRate()).c_str());
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip(tr("The radio is running at %s; %s was asked for. The driver rounded the rate, or OnAir runs the radio faster on purpose (offset tuning away from the DC spike, Decimate in OnAir) and brings it back to the asked rate itself."), mspsText(a.engine.radioRate()).c_str(), mspsText(a.tune.sampleRate).c_str());
     }
     if (!a.rateRefusal.empty()) {   // the radio refused what was typed: its own message, the previous rate is back
         ImGui::SameLine(0, 6 * gUi);

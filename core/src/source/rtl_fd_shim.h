@@ -7,6 +7,8 @@
 #include "usb_fd_io.h"
 #include "dect2/rs/usb_rtl.hpp"
 #include "dect2/source/usb_fd.h"
+#include "dect2/source/stream_watchdog.h"
+#include "dect2/common/verbose_log.h"
 #include <atomic>
 #include <algorithm>
 #include <chrono>
@@ -107,36 +109,72 @@ inline int readSync(void* p, void* buf, int len, int* got) {
 }
 constexpr int kStreamUrbs = 64;
 constexpr size_t kStreamBlock = 65536;
+inline double nowSec() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+
+// Starts the queue of transfers; clearHalt first when the endpoint stopped (EPIPE leaves it halted: every new transfer would fail at once)
+inline int startQueue(Dev* d, bool clearHalt, void** st) {
+    if (clearHalt) sys().clearHalt(d->info.fd, 0x81);
+    return sys().streamStart(d->info.fd, 0x81, kStreamUrbs, UsbFdDevice::kBulkChunk, st);
+}
+
 inline int readAsync(void* p, void (*cb)(unsigned char*, uint32_t, void*), void* ctx, uint32_t, uint32_t bufLen) {
     Dev* d = D(p);
     d->cancel = false;
     // Like librtlsdr: many transfers in flight at once (64 x 16 KiB, about 1 MiB, 100 ms at 5 MB/s), the callback fed in blocks of about 64 KiB
     void* st = nullptr;
-    if (sys().streamStart(d->info.fd, 0x81, kStreamUrbs, UsbFdDevice::kBulkChunk, &st) == 0 && st) {
+    if (startQueue(d, false, &st) == 0 && st) {
         std::vector<unsigned char> acc;
         acc.reserve(kStreamBlock + UsbFdDevice::kBulkChunk);
-        int rc = 0, errs = 0, idle = 0;
+        StreamWatchdog wd;
+        wd.start(nowSec());
+        int rc = 0;
+        double lastReport = nowSec();
+        StreamStats rep;
+        // the transfers are restarted (3.5): a stalled stream or a run of failed transfers was a frozen spectrum on some phones. verboseLog() prints
+        // the counts every 2 s when "Verbose logging" is on
+        auto restart = [&](StreamWatchdog::Action act, const char* why) -> bool {
+            sys().streamStop(st); st = nullptr; acc.clear();
+            if (act == StreamWatchdog::Action::Reopen) return false;
+            diagLog("USB stream %s: %s the endpoint and restarting the transfers (restart %llu)", why, act == StreamWatchdog::Action::ResetRestart ? "resetting the device, clearing" : "clearing",
+                    (unsigned long long)wd.stats().restarts);
+            if (act == StreamWatchdog::Action::ResetRestart) d->usb.resetDevice();
+            const int r = startQueue(d, true, &st);
+            if (r != 0 || !st) { st = nullptr; diagLog("USB stream: the transfers could not be restarted (%d): the radio is opened again", r); return false; }
+            return true;
+        };
         while (!d->cancel) {
             uint8_t* data = nullptr; int n = 0;
             const int r = sys().streamRead(st, &data, &n, acc.empty() ? 100 : 5);
+            const double t = nowSec();
+            StreamWatchdog::Action act = StreamWatchdog::Action::None;
+            const char* why = "";
             if (r == 0) {
-                errs = 0; idle = 0;
+                wd.onData(t, (uint64_t)n);
                 acc.insert(acc.end(), data, data + n);
                 sys().streamRecycle(st, data);
             } else if (r == -ETIMEDOUT) {
-                if (acc.empty()) idle++;
+                act = wd.poll(t); why = "stalled (no samples for 2 s)";
             } else {
-                const int e = usbErrnoToLibusb(-r);
-                if (e == kUsbNoDevice || ++errs > 8) { rc = e; break; }   // unplugged, or the stream keeps failing: the caller reopens
+                act = wd.onError(t, usbErrnoToLibusb(-r)); why = "failed (broken pipe or transfer error)";
+                if (act == StreamWatchdog::Action::None) continue;   // a stray error: the next read goes on
+            }
+            if (act != StreamWatchdog::Action::None) {
+                if (!restart(act, why)) { rc = usbErrnoToLibusb(-r) < 0 && r != -ETIMEDOUT ? usbErrnoToLibusb(-r) : kUsbTimeout; break; }   // the caller closes and reopens the radio
                 continue;
             }
             if (!acc.empty() && (acc.size() >= kStreamBlock || r == -ETIMEDOUT) && !d->cancel) {
                 cb(acc.data(), (uint32_t)acc.size(), ctx);
                 acc.clear();
             }
-            if (idle > 100) { rc = kUsbTimeout; break; }   // 10 s of silence: the stream died
+            if (t - lastReport >= 2.0 && verboseLogging()) {
+                const StreamStats& s = wd.stats();
+                verboseLog("usb: %.1f MB/s, %llu transfers, %llu errors (last %d), %llu stalls, %llu restarts, %llu resets, %llu reopens",
+                           (double)(s.bytes - rep.bytes) / (t - lastReport) / 1e6, (unsigned long long)(s.transfers - rep.transfers), (unsigned long long)s.errors, s.lastError,
+                           (unsigned long long)s.stalls, (unsigned long long)s.restarts, (unsigned long long)s.resets, (unsigned long long)s.reopens);
+                rep = s; lastReport = t;
+            } else if (t - lastReport >= 2.0) { rep = wd.stats(); lastReport = t; }
         }
-        sys().streamStop(st);
+        if (st) sys().streamStop(st);
         return rc;
     }
     std::vector<unsigned char> buf(bufLen ? bufLen : 262144);

@@ -184,6 +184,7 @@ class ReceiverViewModel(app: Application) : AndroidViewModel(app) {
     fun setRange(lo: Float, hi: Float) = repo.updateSettings { it.copy(minDb = lo, maxDb = hi) }
     fun autoRange() = repo.autoRange()
     fun setPeakHold(on: Boolean) = repo.setPeakHold(on)
+    fun setVerbose(on: Boolean) = repo.setVerbose(on)
     fun setDark(on: Boolean) = repo.updateSettings { it.copy(dark = on) }
     fun setSheetFraction(f: Float) = repo.updateSettings { it.copy(sheetFraction = f) }
     fun setMapConsent(v: Int) = repo.updateSettings { it.copy(mapConsent = v) }
