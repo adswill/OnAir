@@ -3,6 +3,7 @@
 #include "dect2/automation/engine.h"
 #include "dect2/net/feeds.h"
 #include "dect2/acars/acars_proto.h"
+#include "dect2/acars/acars_reasm.h"
 #include "dect2/aero/aero_pos.h"
 #include "dect2/dsp/fftutil.h"
 #include "acars_chan.h"
@@ -74,6 +75,8 @@ struct AcarsReceiver::Impl {
     // published state (telMu)
     std::deque<AcarsMessage> msgs;
     std::unordered_map<std::string, AcarsAircraft> aircraft;
+    using Reasm = AcarsReassembler<AcarsMessage, &AcarsMessage::text>;
+    Reasm reasm;
     uint64_t okCount = 0, badCount = 0, fixedCount = 0, serial = 0, framesTotal = 0, posTotal = 0;
     std::atomic<bool> rdy{false};
     uint64_t seq = 0;
@@ -145,6 +148,7 @@ struct AcarsReceiver::Impl {
         std::lock_guard<std::mutex> lk(telMu);
         shiftTimes(-nowSec);               // the sample count starts again: the kept lists stay in the past of the new clock
         nowSec = 0;
+        reasm.clear();
         okCount = badCount = fixedCount = 0; framesTotal = 0; posTotal = 0;
         lastMsgSec = -1e9;
     }
@@ -304,6 +308,23 @@ struct AcarsReceiver::Impl {
         okCount++; c.msgs++; c.lastHeard = tSec;
         if (fixedBits) fixedCount++;
         lastMsgSec = tSec;
+        // multi-block messages: hold the ETB blocks, show one message when the ETX block (or the timeout) completes it
+        std::vector<Reasm::Done> cut;
+        Reasm::Done whole;
+        AcarsPiece pc;
+        pc.reg = m.reg; pc.label = m.label; pc.msgNum = m.msgNum; pc.downlink = m.downlink; pc.blockId = m.blockId; pc.msgSeq = m.msgSeq; pc.finalBlock = m.finalBlock;
+        const auto rr = reasm.feed(pc, AcarsMessage(m), tSec, whole, cut);
+        for (auto& d : cut) finishMessage(std::move(d.msg), d.blocks, d.incomplete);
+        if (rr == Reasm::Result::Held) return;
+        if (rr == Reasm::Result::Complete) { whole.msg.timeSec = tSec; finishMessage(std::move(whole.msg), whole.blocks, whole.incomplete); return; }
+        finishMessage(std::move(m), 1, false);
+    }
+
+    // Everything a finished message goes through: position, aircraft table, feeds, automations, the list. Called with telMu held.
+    void finishMessage(AcarsMessage&& m, int blocks, bool incomplete) {
+        const double tSec = m.timeSec;
+        m.blocks = blocks; m.incomplete = incomplete; m.finalBlock = true;
+        if (blocks > 1) m.serial = ++serial;
         // positions: the ARINC 622 ADS-C reports and the plain-text position reports (the code the Aero mode uses); only from aircraft
         AeroPosition pos;
         aeroPositionFromMessage(m.label, m.text, !m.downlink, pos, &m.adsc);
@@ -323,11 +344,11 @@ struct AcarsReceiver::Impl {
                 AcarsAircraft a; a.reg = m.reg;
                 it = aircraft.emplace(m.reg, a).first;
                 char b[96];
-                snprintf(b, sizeof b, "ACARS: new aircraft %s on %.3f MHz", m.reg.c_str(), c.freq / 1e6);
+                snprintf(b, sizeof b, "ACARS: new aircraft %s on %.3f MHz", m.reg.c_str(), m.freqHz / 1e6);
                 say(b);
             }
             AcarsAircraft& a = it->second;
-            a.messages++; a.freqHz = c.freq; a.lastHeardSec = tSec; a.lastLabel = m.label;
+            a.messages++; a.freqHz = m.freqHz; a.lastHeardSec = tSec; a.lastLabel = m.label;
             if (!m.flightId.empty()) a.flight = m.flightId;
             if (m.downlink) a.levelDb = m.levelDb;
             if (pos.valid) addPosition(a, pos, tSec, m.wallTime);
@@ -393,6 +414,7 @@ struct AcarsReceiver::Impl {
         t.centerHz = centerHz;
         t.nowSec = (double)wr / fs;
         nowSec = t.nowSec;
+        { std::vector<Reasm::Done> cut; reasm.flush(nowSec, cut); for (auto& d : cut) finishMessage(std::move(d.msg), d.blocks, d.incomplete); }
         t.blocksOk = okCount; t.blocksBad = badCount; t.parityFixed = fixedCount;
         t.framesStarted = framesTotal;
         t.positionsTotal = posTotal;
@@ -487,7 +509,7 @@ bool AcarsReceiver::telemetry(AcarsTelemetry& out, uint64_t lastSeq) {
 
 void AcarsReceiver::clearResults() {
     std::lock_guard<std::mutex> lk(p_->telMu);
-    p_->msgs.clear(); p_->aircraft.clear();
+    p_->msgs.clear(); p_->aircraft.clear(); p_->reasm.clear();
     p_->republish();
 }
 

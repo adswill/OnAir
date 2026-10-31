@@ -87,6 +87,7 @@ struct Feeds::Impl {
     std::condition_variable cv;
     std::deque<Item> q;
     FeedConfig cfg;
+    AprsGate gate;                // the APRS-IS iGate rules (its own lock)
     bool cfgDirty = false, quit = false;
     uint64_t qDropped[kNumFeeds] = {};
     FeedStatus pub[kNumFeeds];
@@ -236,6 +237,7 @@ struct Feeds::Impl {
         FeedStatus& S = st[kFeedAprsIs];
         if (!live.on[kFeedAprsIs]) { S.state = "off"; return; }
         if (live.aprsCall.empty()) { S.state = "needs a callsign"; return; }
+        if (!aprsValidCallsign(live.aprsCall)) { S.state = "needs a valid callsign (like LY1ABC or LY1ABC-10)"; return; }
         if (is == kBadSock) {
             if (now < isRetryAt) { S.state = "waiting to connect again"; return; }
             std::string err;
@@ -352,9 +354,10 @@ void Feeds::configure(const FeedConfig& c) {
     netInit();
     FeedTargets::get().configure(c.targets);
     Impl& I = *impl_;
+    I.gate.configure(c.aprsGate);
     bool any = false;
     for (int id = 0; id < kNumFeeds; id++) {
-        const bool on = c.on[id] && (id != kFeedAprsIs || !c.aprsCall.empty());
+        const bool on = c.on[id] && (id != kFeedAprsIs || aprsValidCallsign(c.aprsCall));
         want_[id].store(on, std::memory_order_relaxed);
         any = any || c.on[id];
     }
@@ -379,6 +382,7 @@ FeedStatus Feeds::status(int id) const {
     FeedStatus s = impl_->pub[id];
     if (!impl_->cfg.on[id]) { s = FeedStatus(); s.state = "off"; }
     s.dropped += impl_->qDropped[id];
+    if (id == kFeedAprsIs) s.detail = impl_->gate.summary();
     return s;
 }
 
@@ -440,8 +444,10 @@ void Feeds::aprs(const std::vector<uint8_t>& ax25, const std::string& from, cons
     if (want_[kFeedAprsIs].load(std::memory_order_relaxed)) {
         std::string call;
         { std::lock_guard<std::mutex> lk(impl_->mu); call = impl_->cfg.aprsCall; }
-        std::string l = feedfmt::aprsIsLine(from, to, path, info, call, uiF0);
-        if (!l.empty()) push(kFeedAprsIs, std::move(l));
+        // the iGate rules, duplicate window and rate limits (aprs_gate.h)
+        const double now = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+        std::string l;
+        if (impl_->gate.decide(from, to, path, info, call, uiF0, now, &l) == AprsGateVerdict::Gate && !l.empty()) push(kFeedAprsIs, std::move(l));
     }
 }
 

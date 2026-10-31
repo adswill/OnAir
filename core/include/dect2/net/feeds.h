@@ -6,6 +6,7 @@
 #include "dect2/acars/acars_tel.h"
 #include "dect2/adsb/adsb_msg.h"
 #include "dect2/gnss/gnss_tel.h"
+#include "dect2/net/aprs_gate.h"
 #include "dect2/net/feed_targets.h"
 #include "dect2/vdl2/vdl2_tel.h"
 #include <atomic>
@@ -34,6 +35,7 @@ struct FeedConfig {
     std::string loraHost = "127.0.0.1"; int loraPort = 5621;  // UDP JSON lines: LoRa / LoRaWAN / Meshtastic
     std::string aprsCall, aprsPass;                            // APRS-IS login; the feed stays idle without a callsign
     std::string aprsServer = "rotate.aprs2.net"; int aprsServerPort = 14580;
+    AprsGateConfig aprsGate;                                   // rate limits and the duplicate window of the iGate (aprs_gate.h)
     std::vector<FeedTarget> targets;                           // outbound aggregator targets (feed_targets.h), each off until enabled
     std::string stationId = "OnAir";                           // station_id in the ACARS / VDL2 JSON
 };
@@ -45,6 +47,7 @@ struct FeedStatus {
     uint64_t dropped = 0;        // messages thrown away (queue full, a slow client)
     std::string state;           // a few words: "listening on 30003", "connected, verified", ...
     std::string lastError;
+    std::string detail;          // APRS-IS: why packets were not gated ("gated 12, duplicates 3, ...")
 };
 
 // One ADS-B frame that passed the checks (adsb_track.cpp fills it)

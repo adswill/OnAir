@@ -110,35 +110,10 @@ void addLine(std::string& d, const char* fmt, ...) {
 }
 
 
-void readAcars(const uint8_t* p, size_t n, Vdl2Message& m) {
-    // p: from the SOH; mode .. suffix, check bytes, an optional DEL
-    m.proto = "ACARS";
-    m.acars = true;
-    size_t end = n;
-    if (end && p[end - 1] == 0x7F) end--;
-    if (end < 1 + 13 + 2) { m.summary = "ACARS: cut short"; addLine(m.detail, "ACARS: %zu octets, too short", n); return; }
-    const uint8_t* blk = p + 1;
-    const size_t bl = end - 1 - 2;                     // mode .. suffix
-    m.acarsCrcOk = acarsCrc(blk, bl + 2) == 0;
-    std::vector<uint8_t> t7(bl);
-    for (size_t i = 0; i < bl; i++) t7[i] = blk[i] & 0x7F;
-    AcarsMessage a;
-    if (!acarsParseBlock(t7.data(), (int)bl, a)) { m.summary = "ACARS: not a valid block"; addLine(m.detail, "ACARS: the block layout is not valid"); return; }
-    m.reg = a.reg; m.flight = a.flightId; m.label = a.label; m.labelText = a.labelText; m.msgNum = a.msgNum; m.acarsText = a.text; m.blockId = a.blockId;
-    std::string s = "ACARS " + a.label;
-    if (!a.labelText.empty()) s += " (" + a.labelText + ")";
-    if (!a.flightId.empty()) s += " " + a.flightId;
-    std::string one;
-    for (char c : a.text) one += (c == '\n' || c == '\r') ? ' ' : c;
-    if (!one.empty()) s += ": " + (one.size() > 80 ? one.substr(0, 80) + "..." : one);
-    m.summary = s;
-    addLine(m.detail, "ACARS: mode %c, registration %s, label %s%s%s, block id %c%s", a.mode ? a.mode : '-', a.reg.empty() ? "-" : a.reg.c_str(), a.label.c_str(),
-            a.labelText.empty() ? "" : " ", a.labelText.c_str(), a.blockId ? a.blockId : '-', m.acarsCrcOk ? "" : ", check sequence FAILED");
-    if (!a.msgNum.empty() || !a.flightId.empty()) addLine(m.detail, "  message %s, flight %s", a.msgNum.empty() ? "-" : a.msgNum.c_str(), a.flightId.empty() ? "-" : a.flightId.c_str());
-    if (!a.decoded.empty()) addLine(m.detail, "  reading: %s", a.decoded.c_str());
+void analyseAcarsText(Vdl2Message& m, const std::string& label, const std::string& text) {
     const bool uplink = !m.fromAir;
     AeroAdscMessage adsc;
-    if (aeroDecodeAdsc(a.text, uplink, adsc)) {
+    if (aeroDecodeAdsc(text, uplink, adsc)) {
         const std::string adscText = aeroDescribeAdsc(adsc);
         if (!adscText.empty()) {
             addLine(m.detail, "ADS-C (FANS-1/A):");
@@ -162,11 +137,11 @@ void readAcars(const uint8_t* p, size_t n, Vdl2Message& m) {
             }
             if (!adsc.flightId.empty() && m.flight.empty()) m.flight = adsc.flightId;
         }
-        if (adsc.found) m.summary = "ACARS " + a.label + " ADS-C" + (m.hasPos ? " position report" : m.hasKin ? " earth reference" : "");
+        if (adsc.found) m.summary = "ACARS " + label + " ADS-C" + (m.hasPos ? " position report" : m.hasKin ? " earth reference" : "");
     }
     if (!m.hasPos) {
         AeroPosition pos;
-        if (aeroParseTextPosition(a.label, a.text, pos) && pos.valid) {
+        if (aeroParseTextPosition(label, text, pos) && pos.valid) {
             m.hasPos = true;
             m.lat = pos.lat;
             m.lon = pos.lon;
@@ -183,28 +158,71 @@ void readAcars(const uint8_t* p, size_t n, Vdl2Message& m) {
     }
     // FANS-1/A CPDLC (ARINC 622 IMI AT1 / CR1 / CC1 / DR1): found and named, the ASN.1 PER body is not decoded
     for (const char* imi : {".AT1", ".CR1", ".CC1", ".DR1"}) {
-        const size_t at = a.text.find(imi);
+        const size_t at = text.find(imi);
         if (at != std::string::npos) {
             const std::string what = imi[1] == 'A' ? "CPDLC message" : imi[1] == 'C' && imi[2] == 'R' ? "CPDLC connect request" : imi[2] == 'C' ? "CPDLC connect confirm" : "CPDLC disconnect";
-            addLine(m.detail, "FANS-1/A %s (IMI %s), ground facility %s, %zu hex digits of ASN.1 PER (not decoded)", what.c_str(), imi + 1, a.text.substr(at > 7 ? at - 7 : 0, at > 7 ? 7 : at).c_str(),
-                    a.text.size() - at - 4);
-            m.summary = "ACARS " + a.label + " FANS-1/A " + what;
+            addLine(m.detail, "FANS-1/A %s (IMI %s), ground facility %s, %zu hex digits of ASN.1 PER (not decoded)", what.c_str(), imi + 1, text.substr(at > 7 ? at - 7 : 0, at > 7 ? 7 : at).c_str(),
+                    text.size() - at - 4);
+            m.summary = "ACARS " + label + " FANS-1/A " + what;
             break;
         }
     }
     if (m.hasPos) addLine(m.detail, "  position %.4f %.4f%s (%s)", m.lat, m.lon, m.hasAlt ? (" " + std::to_string(m.altFt) + " ft").c_str() : "", m.posKind.c_str());
 }
 
+void readAcars(const uint8_t* p, size_t n, Vdl2Message& m) {
+    // p: from the SOH; mode .. suffix, check bytes, an optional DEL
+    m.proto = "ACARS";
+    m.acars = true;
+    size_t end = n;
+    if (end && p[end - 1] == 0x7F) end--;
+    if (end < 1 + 13 + 2) { m.summary = "ACARS: cut short"; addLine(m.detail, "ACARS: %zu octets, too short", n); return; }
+    const uint8_t* blk = p + 1;
+    const size_t bl = end - 1 - 2;                     // mode .. suffix
+    m.acarsCrcOk = acarsCrc(blk, bl + 2) == 0;
+    std::vector<uint8_t> t7(bl);
+    for (size_t i = 0; i < bl; i++) t7[i] = blk[i] & 0x7F;
+    AcarsMessage a;
+    if (!acarsParseBlock(t7.data(), (int)bl, a)) { m.summary = "ACARS: not a valid block"; addLine(m.detail, "ACARS: the block layout is not valid"); return; }
+    m.acarsFinal = a.finalBlock; m.acarsSeq = a.msgSeq; m.downlinkBlock = a.downlink;
+    m.reg = a.reg; m.flight = a.flightId; m.label = a.label; m.labelText = a.labelText; m.msgNum = a.msgNum; m.acarsText = a.text; m.blockId = a.blockId;
+    std::string s = "ACARS " + a.label;
+    if (!a.labelText.empty()) s += " (" + a.labelText + ")";
+    if (!a.flightId.empty()) s += " " + a.flightId;
+    std::string one;
+    for (char c : a.text) one += (c == '\n' || c == '\r') ? ' ' : c;
+    if (!one.empty()) s += ": " + (one.size() > 80 ? one.substr(0, 80) + "..." : one);
+    m.summary = s;
+    addLine(m.detail, "ACARS: mode %c, registration %s, label %s%s%s, block id %c%s", a.mode ? a.mode : '-', a.reg.empty() ? "-" : a.reg.c_str(), a.label.c_str(),
+            a.labelText.empty() ? "" : " ", a.labelText.c_str(), a.blockId ? a.blockId : '-', m.acarsCrcOk ? "" : ", check sequence FAILED");
+    if (!a.msgNum.empty() || !a.flightId.empty()) addLine(m.detail, "  message %s, flight %s", a.msgNum.empty() ? "-" : a.msgNum.c_str(), a.flightId.empty() ? "-" : a.flightId.c_str());
+    if (!a.decoded.empty()) addLine(m.detail, "  reading: %s", a.decoded.c_str());
+    analyseAcarsText(m, a.label, a.text);
+}
+
 } // namespace
 
 // The ACARS reader (ARINC 618 block, ADS-C, position text) is not part of the Rust crate; the Rust-backed vdl2ParseFrame calls it through this.
+void vdl2ReanalyseJoined(Vdl2Message& m) {
+    m.hasPos = false; m.hasKin = false; m.hasAlt = false; m.posKind.clear();
+    addLine(m.detail, "Joined message of %d blocks%s:", m.acarsBlocks, m.acarsIncomplete ? " (the last block did not arrive)" : "");
+    std::string one;
+    for (char c : m.acarsText) one += (c == '\n' || c == '\r') ? ' ' : c;
+    std::string s = "ACARS " + m.label;
+    if (!m.labelText.empty()) s += " (" + m.labelText + ")";
+    if (!m.flight.empty()) s += " " + m.flight;
+    if (!one.empty()) s += ": " + (one.size() > 80 ? one.substr(0, 80) + "..." : one);
+    m.summary = s;
+    analyseAcarsText(m, m.label, m.acarsText);
+}
 void vdl2ReadAcars(const uint8_t* p, size_t n, Vdl2Message& m) { readAcars(p, n, m); }
 
 
 // ---------------------------------------------------------------- builders
 
-std::vector<uint8_t> vdl2AcarsInfo(const std::string& reg, const std::string& label, char blockId, const std::string& text, char ack, char mode) {
+std::vector<uint8_t> vdl2AcarsInfo(const std::string& reg, const std::string& label, char blockId, const std::string& text, char ack, char mode, bool lastBlock) {
     AcarsBlockSpec s;
+    s.lastBlock = lastBlock;
     s.mode = mode;
     s.reg = reg;
     s.ack = (uint8_t)ack;

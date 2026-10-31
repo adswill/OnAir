@@ -38,6 +38,7 @@ void statusLine(int id, bool server) {
         const ImVec4 col = !s.lastError.empty() ? pal::warnAmber() : s.active ? pal::okGreen() : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
         if (server) ImGui::TextColored(col, tr("%s, %d client%s, %llu sent, %llu dropped"), s.state.c_str(), s.clients, s.clients == 1 ? "" : "s", (unsigned long long)s.sent, (unsigned long long)s.dropped);
         else ImGui::TextColored(col, tr("%s, %llu sent, %llu dropped"), s.state.c_str(), (unsigned long long)s.sent, (unsigned long long)s.dropped);
+        if (!s.detail.empty()) ImGui::TextDisabled("%s", s.detail.c_str());
         if (!s.lastError.empty()) { ImGui::PushTextWrapPos(460 * gUi); ImGui::TextColored(pal::badRed(), "%s", s.lastError.c_str()); ImGui::PopTextWrapPos(); }
     }
     ImGui::Unindent();
@@ -102,6 +103,8 @@ void loadFeedPrefs(App& a) {
     c.loraHost = d.getS("feedLoraHost", c.loraHost); c.loraPort = (int)d.getI("feedLoraPort", c.loraPort);
     c.aprsCall = d.getS("feedAprsCall", ""); c.aprsPass = d.getS("feedAprsPass", "");
     c.aprsServer = d.getS("feedAprsServer", c.aprsServer); c.aprsServerPort = (int)d.getI("feedAprsServerPort", c.aprsServerPort);
+    c.aprsGate.maxPerMin = (int)d.getI("feedAprsMaxMin", c.aprsGate.maxPerMin); c.aprsGate.perStationPerMin = (int)d.getI("feedAprsStationMin", c.aprsGate.perStationPerMin);
+    c.aprsGate.dedupSec = (int)d.getI("feedAprsDedup", c.aprsGate.dedupSec);
     c.stationId = d.getS("feedStationId", c.stationId);
     dect2::PskReporterConfig& r = a.pskr;
     r.on = d.getB("pskrOn", false); r.call = d.getS("pskrCall", ""); r.locator = d.getS("pskrLocator", ""); r.antenna = d.getS("pskrAntenna", "");
@@ -154,6 +157,7 @@ void saveFeedPrefs(const App& a) {
     d.setS("feedLoraHost", c.loraHost); d.setI("feedLoraPort", c.loraPort);
     d.setS("feedAprsCall", c.aprsCall); d.setS("feedAprsPass", c.aprsPass);
     d.setS("feedAprsServer", c.aprsServer); d.setI("feedAprsServerPort", c.aprsServerPort);
+    d.setI("feedAprsMaxMin", c.aprsGate.maxPerMin); d.setI("feedAprsStationMin", c.aprsGate.perStationPerMin); d.setI("feedAprsDedup", c.aprsGate.dedupSec);
     d.setS("feedStationId", c.stationId);
     d.setI("feedTgtCount", (long)c.targets.size());
     for (size_t i = 0; i < c.targets.size(); i++) {
@@ -214,6 +218,14 @@ void feedsWindow(App& a) {
     changed |= textField(N_("Passcode"), c.aprsPass, ImGuiInputTextFlags_Password | ImGuiInputTextFlags_CharsDecimal, 120);
     changed |= textField("##server", c.aprsServer, 0, 160);
     ImGui::SameLine(); changed |= portField(N_("Server"), c.aprsServerPort);
+    ImGui::TextDisabled("%s", tr("Receive-only: packets heard on the air go to APRS-IS, nothing from the Internet is ever sent out on the air. Your passcode stays in your settings only."));
+    if (!c.aprsCall.empty() && !dect2::aprsValidCallsign(c.aprsCall)) ImGui::TextColored(pal::warnAmber(), "%s", tr("Not a valid callsign (like LY1ABC or LY1ABC-10)."));
+    if (ImGui::TreeNode(tr("Advanced##aprsgate"))) {
+        changed |= ImGui::SliderInt(tr("packets per minute, all"), &c.aprsGate.maxPerMin, 0, 600, c.aprsGate.maxPerMin ? "%d" : "no limit");
+        changed |= ImGui::SliderInt(tr("packets per minute, per station"), &c.aprsGate.perStationPerMin, 0, 60, c.aprsGate.perStationPerMin ? "%d" : "no limit");
+        changed |= ImGui::SliderInt(tr("same packet again after (s)"), &c.aprsGate.dedupSec, 0, 300, c.aprsGate.dedupSec ? "%d" : "off");
+        ImGui::TreePop();
+    }
     ImGui::Unindent();
     statusLine(dect2::kFeedAprsIs, false);
     ImGui::PopID();

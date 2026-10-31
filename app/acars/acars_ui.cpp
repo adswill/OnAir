@@ -166,7 +166,8 @@ void detailPane(const App& a, const dect2::AcarsMessage* m) {
     auto kv = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); kvColumn(110 * gUi); ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::Text(fmt, v...); ImGui::PopTextWrapPos(); ImGui::PopFont(); };
     kv("time", "%s%s  %.4f MHz  %.0f dB", clock(m->wallTime).c_str(), dect2::timefmt::sfx(), m->freqHz / 1e6, m->levelDb);
     kv("aircraft", "%s%s%s", m->reg.empty() ? "-" : m->reg.c_str(), m->flightId.empty() ? "" : "  flight ", m->flightId.c_str());
-    kv("direction", "%s, mode %c, block id %c, %s", m->downlink ? "downlink" : "uplink", m->mode ? m->mode : '-', m->blockId ? m->blockId : '-', m->finalBlock ? "last block" : "more blocks follow");
+    kv("direction", "%s, mode %c, block id %c, %s", m->downlink ? "downlink" : "uplink", m->mode ? m->mode : '-', m->blockId ? m->blockId : '-', m->incomplete ? "joined, last block missing" : m->blocks > 1 ? "joined from several blocks" : m->finalBlock ? "last block" : "more blocks follow");
+    if (m->blocks > 1) kv("blocks", "%d joined into this message%s", m->blocks, m->incomplete ? " (the end did not arrive)" : "");
     kv("label", "%s  %s", m->label.c_str(), m->labelText.empty() ? "(not in the table)" : m->labelText.c_str());
     if (!m->msgNum.empty() || m->msgSeq) kv("message", "%s%c", m->msgNum.c_str(), m->msgSeq ? m->msgSeq : ' ');
     if (!m->sublabel.empty() || !m->mfi.empty()) kv("prefix", "%s %s", m->sublabel.c_str(), m->mfi.c_str());

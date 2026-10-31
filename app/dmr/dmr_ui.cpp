@@ -7,6 +7,7 @@
 #include "dect2/dmr/dmr_ambe.h"
 #include "../codec/speech_codec_ui.h"
 #include "../voice/voice_monitor_ui.h"
+#include "../voice/radioid_ui.h"
 #include "dect2/codec/codec_registry.h"
 #include "dect2/dmr/dmr_proto.h"
 #include <algorithm>
@@ -30,6 +31,7 @@ const ImVec4 kDim(0.62f, 0.65f, 0.68f, 1);
 
 void tick(App& a) {
     const bool run = a.engine.running();
+    radioidui::tick(dect2::RadioIdKind::Dmr);
     if (live(a)) appcodec::voiceCodecTick("ambe2");   // the user's codec plug-in, loaded whichever tab is shown
     if (run) {
         a.engine.dmr().setVolume(a.volume);   // AMBE+2 through the codec plug-in or mbelib when present
@@ -64,7 +66,7 @@ const char* kindName(int k) {
 std::string idText(uint32_t id, bool known) {
     if (!known || id == 0) return "-";
     char b[16]; snprintf(b, sizeof b, "%u", id);
-    return b;
+    return radioidui::withName(dect2::RadioIdKind::Dmr, b, id);   // "1234567  W1ABC Joe Smith" when a radio ID list is loaded
 }
 
 // the target of a call: a talkgroup number for group calls
@@ -461,6 +463,7 @@ void spectrumPlotDmr(const DmrTelemetry& t, bool on, ImVec2 sz) {
 }
 
 void receiver(App& a) {
+    radioidui::section(dect2::RadioIdKind::Dmr);
     wideCarriersTable(a, 0);
     const DmrTelemetry& t = a.rx.dmr;
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }

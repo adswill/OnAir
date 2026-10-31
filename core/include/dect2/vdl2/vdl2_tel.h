@@ -40,6 +40,12 @@ struct Vdl2Message {
     bool acars = false;
     std::string reg, flight, label, labelText, msgNum, acarsText;
     char blockId = 0;
+    bool acarsFinal = true;      // ETX; false: ETB, more blocks follow
+    char acarsSeq = 0;           // downlink block sequence letter
+    bool downlinkBlock = false;  // the ACARS block id said downlink
+    bool part = false;           // an ETB block held back for a joined message: kept for the session log, hidden from the lists
+    int acarsBlocks = 1;         // blocks joined into this message
+    bool acarsIncomplete = false;// joined, but a block was missed or the end never came
     bool acarsCrcOk = false;
     // a position the message carried (ADS-C, ACARS text report, XID aircraft / ground station location)
     bool hasPos = false;

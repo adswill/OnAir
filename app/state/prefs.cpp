@@ -3,6 +3,7 @@
 // spectrum range, the FM station lists, the wide-capture mask) are written out below the table.
 #include "../app.h"
 #include "state_internal.h"
+#include "../ais/ais_alerts_ui.h"
 #include <algorithm>
 #include <climits>
 #include <cstring>
@@ -426,6 +427,7 @@ void loadPrefs(App& a) {
     if (d.has("fmSaved")) {   // the saved-stations library, separate from the band-scan list in fmStations
         for (const auto& r : fmSavedDecode(d.getS("fmSaved", ""))) a.fmSaved.push_back(r);
     }
+    aisAlertsLoadPrefs(a);   // the AIS alerts also run with the AIS tab closed
     if (a.rxId == 1) loadFeedPrefs(a);   // the feeds are shared by all receivers: RX 1 owns their settings
     a.channels = d.getChannels();
     tvHdLoad(a);
