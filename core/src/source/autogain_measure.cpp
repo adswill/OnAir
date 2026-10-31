@@ -163,6 +163,10 @@ ImdReport imdCompare(const std::vector<float>& lo, const std::vector<float>& hi,
 Quality qualityFrom(const RxTelemetry& rx) {
     Quality q;
     switch (rx.standard) {
+    case 12:   // ADS-B / Mode S: the receiver's message counters (the SNR of a pulse is not a quality the gain loop can climb)
+        q.locked = rx.adsb.dataValid;
+        q.pulseValid = true; q.pulseMsgs = rx.adsb.blocksOk; q.pulseLoud = rx.adsb.loudMsgs;
+        break;
     case 2: q.locked = rx.atsc.fieldSync; if (q.locked && std::isfinite(rx.atsc.snrDb)) { q.snrValid = true; q.snrDb = rx.atsc.snrDb; } break;
     case 3: q.locked = rx.dab.sync; if (q.locked && std::isfinite(rx.dab.snrDb)) { q.snrValid = true; q.snrDb = rx.dab.snrDb; } break;
     case 6: q.locked = rx.fm.carrier && rx.fm.state >= 1; if (q.locked && std::isfinite(rx.fm.snrDb)) { q.snrValid = true; q.snrDb = rx.fm.snrDb; } break;
@@ -298,7 +302,7 @@ ModeTarget modeTargetFor(int std_, double bwHz, double rateHz, double freqHz) {
     case ModeKind::FmBroadcast: t.minHeadroomDb = 5; t.improveDb = 0.8; t.comfortDb = 8; break;
     case ModeKind::NarrowVoice: t.minHeadroomDb = 5; t.improveDb = 1.0; t.comfortDb = 6; break;
     case ModeKind::NarrowData: t.minHeadroomDb = 5; t.improveDb = 1.0; t.comfortDb = 6; break;
-    case ModeKind::Pulsed: t.minHeadroomDb = 3; t.improveDb = 1.0; t.comfortDb = 1e9; t.usePeakHold = true; break;   // judged on the 2 s peak-hold: pulses are < 0.1 % of the samples
+    case ModeKind::Pulsed: t.minHeadroomDb = 3; t.improveDb = 0.5; t.comfortDb = 1e9; t.usePeakHold = true; break;   // judged on the 2 s peak-hold: pulses are < 0.1 % of the samples
     case ModeKind::Gnss: t.minHeadroomDb = 6; t.improveDb = 1.0; t.comfortDb = 1e9; break;
     case ModeKind::WideSpan: t.minHeadroomDb = 6; t.improveDb = 1.5; t.comfortDb = 1e9; break;
     default: t.minHeadroomDb = 5; t.improveDb = 1.0; t.comfortDb = 6; break;

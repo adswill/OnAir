@@ -18,6 +18,7 @@
 // (AgSettings::ampAllowed, default off); it only suggests "switch the amp on".
 #pragma once
 #include "dect2/dsp/spectrum.h"
+#include "dect2/source/pulse_gain.h"
 #include "dect2/source/source.h"
 #include "dect2/t2/t2rx.h"
 #include <atomic>
@@ -161,6 +162,8 @@ struct Quality {
     bool merValid = false; double merDb = 0;
     bool berValid = false; double ber = 0;     // pre-FEC bit error ratio
     double fecOk = -1;                         // fraction of FEC blocks decoded (-1 unknown)
+    bool pulseValid = false;                   // pulsed message modes (ADS-B): the cumulative counters below are the receiver's
+    uint64_t pulseMsgs = 0, pulseLoud = 0;     // good messages and the ones near full scale (see pulse_gain.h)
 };
 Quality qualityFrom(const RxTelemetry& rx);
 
@@ -370,6 +373,7 @@ private:
     bool tickClimb(const AgInput& in, AgCommand& out);
     bool objective(double& j) const;
     bool comfortable() const;
+    double effHeadroom(const AgInput& in) const;
     void climbSample(const AgInput& in, double j);
     void climbReset(double now);
     bool startTrial(const AgInput& in, AgCommand& out);
@@ -387,6 +391,8 @@ private:
     double clMark_ = -1, dwellFrom_ = 0, statusAt_ = -1e9;
     int clDir_ = 1;
     BlockStats adcLast_;
+    double pjMark_ = -1;
+    PulseJudge pj_;   // pulsed modes: messages per second and loud share at the present gain
     double floorBase_ = -200;
     std::string status_, limit_, lastDecision_, retuneWhy_;
     double slope_ = 1, unitScale_ = 1;     // unitScale_: the real dB per nominal dB of this unit, learned from the strongest line's rise on each step

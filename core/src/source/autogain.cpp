@@ -278,7 +278,7 @@ bool AutoGainController::tickAuto(const AgInput& in, AgCommand& out) {
     if (nAvg_ < 3 || now - measuredFrom_ < 0.3 / sp) { phase_ = Phase::Settling; return false; }
     if (wantBracket_ && set_.quickStart) { beginBracket(in); return tickBracket(in, out); }
     wantBracket_ = false;
-    if (set_.v2) { double j; if (objective(j)) return tickClimb(in, out); }   // the hill climb on the measured objective; no objective (a span with no channel): the headroom loop below
+    if (set_.v2) { double j; if ((tgt_.kind == ModeKind::Pulsed && q_.pulseValid) || objective(j)) return tickClimb(in, out); }   // the hill climb on the measured objective; no objective (a span with no channel): the headroom loop below
     // the policy: the mode's own, or linearity after an overload / near a strong neighbour
     const bool strongNb = fl_.valid && fl_.strongestDbfs > -25 && fl_.strongestDbfs > fl_.chanDbfs + 20;
     const Policy pol = (now < linearUntil_ || strongNb || imdSeen_) ? Policy::Linearity : tgt_.policy;

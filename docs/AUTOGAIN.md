@@ -235,5 +235,25 @@ by default. Pager / keying-heavy bands can select the old loop in the Auto gain 
 
 The tests run a simulated front end (ADC clipping, third-order products of strong carriers, compression, a decoder lock threshold, non-nominal steps).
 Not done / unknown: the thresholds on real tuners, the SDRplay LNA state (RFGR) is still chosen by the driver (its `lnastate` setting would confound the
-total gain), the RTL tuner AGC is not switched by the loop, ADS-B valid-message-rate objective (readsb style) needs the decoder to report it, and
+total gain), the RTL tuner AGC is not switched by the loop, and
 calibration at one frequency only (the R820T's steps vary with frequency).
+
+### ADS-B: the message-rate loop (3.5)
+
+For ADS-B / Mode S the loop no longer servos the headroom of the samples (a pulse is under 0.1 % of them, so no headroom number describes it). It reads the receiver's
+own counters instead, as readsb's adaptive gain does: `RxTelemetry::adsb.blocksOk` (good messages) and `loudMsgs` (good messages whose pulses are above -7 dBFS on the receiver's level scale (a peak within about 3 dB of full scale)).
+`core/include/dect2/source/pulse_gain.h` (`PulseJudge`) turns them into a rate and a loud share for the present gain; the hill climb of v2 maximises
+
+    objective = 10 log10(messages per second + 0.2)  -  60 dB * max(0, loud share - 3 %)
+
+so a step up is kept when it buys at least `improveDb` (0.5 dB: about 12 % more messages, and 1.5 sigma of the count noise), a step down when it buys the same, and a loud share above 10 % (with at
+least 40 messages) lowers the gain at once, 2 dB at a time, whatever the rate. A window needs 4 s and 30 messages (or 20 s of a quiet sky) before it decides;
+meanwhile the headroom and clipping guards still act. The headroom floor from the 2 s peak-hold (3 dB) stays as a clip guard, and the "objective fell 3 dB: search
+again" trigger is off for pulsed modes (the message rate follows the traffic of the hour). Tests: `adsb_autogain` (a simulated sky of 8 to 60 aircraft from -108 to
+-30 dBm through the simulated front end: far-only, mixed, strong aircraft close by, city noise +10 dB, a strong carrier, a quiet sky; from a low and a far too hot
+start; the loop must reach 80-85 % of the best fixed gain's message rate with at most 12-15 % loud), `adsb_loud` (Mode S bursts through the real receiver at
+-1, -6 and -20 dBFS, with carrier offsets and both sample rates, must count loud only at -1).
+
+Untested on real signals: the 3 % / 10 % thresholds and the -7 dBFS level line are readsb's order of magnitude, not tuned on a real sky; the message rate follows the
+traffic, so a change of traffic during a trial can fool one comparison (the next trial corrects it); the first search at start still uses the sensitivity floor
+score before the message loop takes over.

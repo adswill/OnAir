@@ -20,7 +20,7 @@ std::string f2(const char* f, double a, double b = 0, double c = 0, double d = 0
 
 void AutoGainController::climbReset(double now) {
     clTrial_ = false; settled_ = false; cand_ = 0; candKind_ = 0; clStep_ = 2; rejectRun_ = 0; clMark_ = -1;
-    base_ = Run(); tri_ = Run(); mBase_ = Run(); mTri_ = Run(); specPow_.clear(); specCnt_ = 0; specBase_.clear(); settledAt_ = -1e9; settledJ_ = 0;
+    pj_.clear(); pjMark_ = -1; base_ = Run(); tri_ = Run(); mBase_ = Run(); mTri_ = Run(); specPow_.clear(); specCnt_ = 0; specBase_.clear(); settledAt_ = -1e9; settledJ_ = 0;
     wasLocked_ = false; lockLostAt_ = -1; status_.clear(); limit_.clear(); lastDecision_.clear(); retuneWhy_.clear(); slope_ = 1;
     dwellFrom_ = now; jRecent_ = 0; jRecentN_ = 0; clDir_ = 1; statusAt_ = -1e9; rejUp_ = 0; idleCycles_ = 0; goodGain_ = -1e9;
 }
@@ -28,6 +28,13 @@ void AutoGainController::climbReset(double now) {
 bool AutoGainController::objective(double& j) const {
     const Metric m = resolvedMetric(q_);
     double v = 0;
+    // pulsed message modes (ADS-B): the messages per second at this gain, docked for a high share of loud ones (readsb's adaptive gain). The
+    // pulses are far under 0.1 % of the samples, so the floor/SNR numbers of the other modes do not describe them.
+    if (tgt_.kind == ModeKind::Pulsed && q_.pulseValid) {
+        if (!pj_.ready()) return false;
+        j = pj_.objective();
+        return true;
+    }
     // a decoder that reports its own quality is the ground truth the user cares about (and a product inside the channel reads as signal in the spectrum)
     if (q_.locked && (q_.merValid || q_.snrValid) && m != Metric::Sensitivity && m != Metric::Headroom) { j = 50.0 + (q_.merValid ? q_.merDb : q_.snrDb); return true; }
     switch (m) {
@@ -46,6 +53,16 @@ bool AutoGainController::objective(double& j) const {
 double AutoGainController::stepReal(double from, double to) const {
     if (radio_.calibrated()) return radio_.realDelta(from, to);
     return (to - from) * (radio_.driverSplits && radio_.singleControl() ? unitScale_ : 1.0);
+}
+
+// The headroom the climb keeps above its floor. Pulsed modes with message counters: the pulse peak (the 2 s peak-hold) alone, since a pulse is under
+// 0.1 % of the samples and the 99.99 % point only measures the noise; clipping is still caught by the clipped fraction. Else the lower of the two.
+double AutoGainController::effHeadroom(const AgInput& in) const {
+    const bool hold = in.adc.holdHeadroomDb < 119;
+    if (tgt_.kind == ModeKind::Pulsed && q_.pulseValid && hold) return in.adc.holdHeadroomDb;
+    double eff = headAvg_;
+    if (tgt_.usePeakHold && hold) eff = std::min(eff, in.adc.holdHeadroomDb);
+    return eff;
 }
 
 bool AutoGainController::comfortable() const {
@@ -77,8 +94,27 @@ bool AutoGainController::tickClimb(const AgInput& in, AgCommand& out) {
     const double now = in.now, sp = std::max(0.25, set_.loopSpeed);
     phase_ = Phase::Tracking;
     adcLast_ = in.adc;
+    if (tgt_.kind == ModeKind::Pulsed && q_.pulseValid) {
+        if (pjMark_ != changedAt_ || !pj_.started()) { pj_.restart(now, q_.pulseMsgs, q_.pulseLoud); pjMark_ = changedAt_; }   // a new gain: the counts start again
+        else pj_.update(now, q_.pulseMsgs, q_.pulseLoud);
+    }
+    // too many loud messages: the near aircraft overload the front end. Down at once, a step at a time, as readsb does
+    if (tgt_.kind == ModeKind::Pulsed && q_.pulseValid && pj_.tooLoud() && !clTrial_ && now - lastDown_ >= 2.0 / sp && now - lastUp_ >= 1.0 / sp) {
+        const double to = nextStep(cur_.totalDb, -2.0, pol_);
+        if (to < cur_.totalDb - 0.01) {
+            limit_ = "loud messages";
+            move(now, to, pol_, f2("%.0f %% of the messages are near full scale: gain down", 100.0 * pj_.loudShare()), out);
+            lastDecision_ = out.why; settled_ = false; cand_ = 0;
+            pj_.restart(now, q_.pulseMsgs, q_.pulseLoud); pjMark_ = changedAt_;
+            return true;
+        }
+    }
     double j = 0;
-    if (!objective(j)) return false;
+    bool pulseWait = false;   // pulsed: the message counts at this gain are not enough yet; the guards below still act, no decision is taken
+    if (!objective(j)) {
+        if (!(tgt_.kind == ModeKind::Pulsed && q_.pulseValid)) return false;
+        pulseWait = true; j = 0;
+    }
     // the world moved the gain under a trial (an overload cut): the trial is void
     if (clTrial_ && changedAt_ != trialAt_) { clTrial_ = false; settled_ = false; cand_ = 0; clMark_ = -1; }
     if (clMark_ != changedAt_) {   // a new gain: new statistics
@@ -86,15 +122,14 @@ bool AutoGainController::tickClimb(const AgInput& in, AgCommand& out) {
         (clTrial_ ? mTri_ : mBase_) = Run();
         specPow_.clear(); specCnt_ = 0; clMark_ = changedAt_; dwellFrom_ = now;
     }
-    climbSample(in, j);
+    if (!pulseWait) climbSample(in, j);
     // re-run triggers: the decoder lost for 10 s
     if (q_.locked) { wasLocked_ = true; lockLostAt_ = -1; }
     else if (wasLocked_) {
         if (lockLostAt_ < 0) lockLostAt_ = now;
         else if (now - lockLostAt_ > 10 / sp) { wasLocked_ = false; lockLostAt_ = -1; wantBracket_ = true; retuneWhy_ = "the decoder lost lock for 10 s"; settled_ = false; return false; }
     }
-    double eff = headAvg_;
-    if (tgt_.usePeakHold && in.adc.holdHeadroomDb < 119) eff = std::min(eff, in.adc.holdHeadroomDb);
+    double eff = effHeadroom(in);
     const double minHead = tgt_.minHeadroomDb;
     const double dwell = set_.dwellSec / sp;
     // after an overload: back up fast (up to 12 dB a step, 1.1 s apart) to just under the gain that clipped, as the old loop did; a burst must not cost minutes
@@ -127,12 +162,13 @@ bool AutoGainController::tickClimb(const AgInput& in, AgCommand& out) {
     }
     // a trial that has already run out of headroom does not wait for its dwell
     if (clTrial_ && tri_.n >= 2 && now >= changedAt_ + settleTime() && eff < minHead - 0.5) return evaluateTrial(in, out);
-    if (now - dwellFrom_ < dwell || (clTrial_ ? tri_.n : base_.n) < 3) return false;
+    if (pulseWait || now - dwellFrom_ < dwell || (clTrial_ ? tri_.n : base_.n) < 3) return false;
     if (clTrial_) return evaluateTrial(in, out);
     if (settled_) {
         const bool comf = comfortable();
         // a settled loop watches for the objective falling away (3 dB): the world changed, search again
-        if (base_.n >= 5 && base_.mean < settledJ_ - 3.0) {
+        // (not for pulsed modes: the message rate follows the traffic of the hour, a fall of 3 dB says nothing about the gain)
+        if (base_.n >= 5 && base_.mean < settledJ_ - 3.0 && !(tgt_.kind == ModeKind::Pulsed && q_.pulseValid)) {
             wantBracket_ = true; settled_ = false; retuneWhy_ = f2("the objective fell %.1f dB", settledJ_ - base_.mean);
             return false;
         }
@@ -154,8 +190,7 @@ bool AutoGainController::startTrial(const AgInput& in, AgCommand& out) {
     const bool strongNb = fl_.valid && fl_.strongestDbfs > -25 && fl_.strongestDbfs > fl_.chanDbfs + 20;
     (void)strongNb;
     const Policy pol = pol_;   // a split that bought objective stays; a product or an overload caps the gain (an overload cut itself moves to the linear split)
-    double eff = headAvg_;
-    if (tgt_.usePeakHold && in.adc.holdHeadroomDb < 119) eff = std::min(eff, in.adc.holdHeadroomDb);
+    double eff = effHeadroom(in);
     const double minHead = tgt_.minHeadroomDb;
     const double ceiling = std::min(maxGain(), ceilingDb(now));
     const bool wasted = fl_.valid && fl_.adcMarginDb > tgt_.marginGoalDb + 15;   // the antenna's noise is far above the ADC's: more gain buys nothing
@@ -242,8 +277,7 @@ bool AutoGainController::evaluateTrial(const AgInput& in, AgCommand& out) {
         }
     }
     const double dg = radio_.calibrated() ? radio_.realDelta(basePlan_.totalDb, cur_.totalDb) : dgNom * (radio_.driverSplits && radio_.singleControl() ? unitScale_ : 1.0);
-    double eff = headAvg_;
-    if (tgt_.usePeakHold && in.adc.holdHeadroomDb < 119) eff = std::min(eff, in.adc.holdHeadroomDb);
+    double eff = effHeadroom(in);
     // the gain-slope test, free on every step the loop makes: the spectrum before and after against the real gain change
     bool imd = false, comp = false;
     std::string slopeWhy;
@@ -266,7 +300,7 @@ bool AutoGainController::evaluateTrial(const AgInput& in, AgCommand& out) {
     }
     met_.slopeDbPerDb = slope_;
     const bool clip = in.adc.clipFraction > tgt_.clipLimit;
-    const bool tight = eff < tgt_.minHeadroomDb;
+    const bool tight = eff < tgt_.minHeadroomDb || (tgt_.kind == ModeKind::Pulsed && q_.pulseValid && pj_.tooLoud());
     bool accept = false, sensWhy = false;
     std::string why;
     if (candKind_ == 1) {
@@ -327,7 +361,8 @@ void AutoGainController::setStatus(const std::string& lead) {
     (void)lead;
     std::string s = f2("Gain %.0f dB", cur_.totalDb);
     double j = 0;
-    if (q_.locked && (q_.merValid || q_.snrValid)) s += f2(": decoder %.1f dB", q_.merValid ? q_.merDb : q_.snrDb);
+    if (tgt_.kind == ModeKind::Pulsed && q_.pulseValid && pj_.started()) s += f2(": %.1f messages/s", pj_.rate()) + f2(", %.0f %% loud", 100.0 * pj_.loudShare());
+    else if (q_.locked && (q_.merValid || q_.snrValid)) s += f2(": decoder %.1f dB", q_.merValid ? q_.merDb : q_.snrDb);
     else if (fl_.valid) s += f2(": channel SNR %.1f dB", fl_.snrDb);
     (void)j;
     s += f2(", headroom %.1f dB (min %.0f)", headAvg_, tgt_.minHeadroomDb);

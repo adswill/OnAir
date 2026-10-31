@@ -47,6 +47,9 @@ Decodes Mode S replies and ADS-B extended squitters from complex baseband around
 - Statistics: messages per second (last second), good and failed counts, repaired count, histogram by DF, noise floor, preamble candidates, maximum range,
   SNR and level of the good messages, the last 64 messages (hex, address, DF, type code, correction, level, one line of text).
 
+- Coverage plot (Statistics view): the farthest position per 10 degrees of bearing, for all heights, each altitude band (under 10000, 10000-20000, 20000-30000, 30000-40000, 40000 ft and above) or all bands overlaid in the map's height colours. A low band that stops short in one direction is a horizon problem (building, hills), a high band that does is the antenna or gain. "Save results" exports every band in the chosen units; "Copy coverage CSV" puts nautical miles and km on the clipboard. Needs the antenna position.
+- Automatic gain on the message rate and the share of loud messages (docs/AUTOGAIN.md, "ADS-B: the message-rate loop").
+
 ### Not supported
 
 - Mode A / C replies (20.3 us frames), MLAT, TCAS resolution advisories (DF0 / DF16 RI fields are not decoded), Comm-B formats other than the four above,

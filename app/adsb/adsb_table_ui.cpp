@@ -305,6 +305,9 @@ void statsView(App& a) {
         resexp::Table x; x.cols = {"kind", "index", "from", "to", "value"};
         const std::string u = au::distUnit(S.units);
         for (int i = 0; i < dect2::kAdsbSectors; i++) x.add({"sector_max_range_" + u, std::to_string(i), std::to_string(i * 10), std::to_string(i * 10 + 10), resexp::num(au::distOut(S.units, st.sectorMaxNm[i]), 1)});
+        for (int k = 0; k < dect2::kAdsbAltBands; k++)   // the coverage plot per altitude band (the height edges are in feet whatever the units)
+            for (int i = 0; i < dect2::kAdsbSectors; i++)
+                x.add({"sector_max_range_" + u + "_" + dect2::adsbAltBandName(k), std::to_string(i), std::to_string(i * 10), std::to_string(i * 10 + 10), resexp::num(au::distOut(S.units, st.sectorBandMaxNm[k][i]), 1)});
         for (int i = 0; i < dect2::kAdsbRangeBins; i++) x.add({"range_histogram_count_" + u, std::to_string(i), resexp::num(au::distOut(S.units, i * 10.0), 1), i == dect2::kAdsbRangeBins - 1 ? "" : resexp::num(au::distOut(S.units, i * 10.0 + 10), 1), std::to_string(st.rangeHist[i])});
         for (size_t i = 0; i < st.rateSeries.size(); i++) x.add({"messages_per_second", std::to_string(i), std::to_string(i * 10 + 10), "", resexp::num(st.rateSeries[i], 1)});
         for (size_t i = 0; i < st.countSeries.size(); i++) x.add({"aircraft_count", std::to_string(i), std::to_string(i * 10 + 10), "", std::to_string(st.countSeries[i])});
@@ -316,6 +319,9 @@ void statsView(App& a) {
     if (ImGui::Button("Reset##adsbst") && on) a.engine.adsb().resetStats();
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Empty the range statistics (the aircraft stay). They are saved with the session otherwise.");
     ImGui::SameLine();
+    if (ImGui::Button("Copy coverage CSV##adsbcov")) { ImGui::SetClipboardText(dect2::adsbCoverageCsv(st).c_str()); note = "coverage copied (nm and km, all heights and each altitude band)"; }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("The polar plot as CSV on the clipboard: the farthest position per 10 degrees of bearing, for all heights and for each altitude band, in nautical miles and km. \"Save results\" has the same numbers in the chosen units, with the histograms.");
+    ImGui::SameLine();
     unitsControls();
     if (!note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", note.c_str()); }
     if (on && !t.refValid) ImGui::TextColored(kWarn, "Set the antenna position (Tuner section): ranges need it.");
@@ -323,6 +329,21 @@ void statsView(App& a) {
     snprintf(b, sizeof b, "farthest %s %s   max altitude %s %s   %llu positions counted", uDist(st.maxRangeNm, 0).c_str(), au::distUnit(S.units),
              st.hasMaxAlt ? uAlt(st.maxAltFt).c_str() : "-", au::altUnit(S.units), (unsigned long long)st.positions);
     ImGui::TextUnformatted(b);
+    // coverage view: all heights, the bands overlaid (one colour each, as the map colours the altitude), or one band
+    static int cov = 0;   // 0 all heights, 1 bands overlaid, 2.. one band
+    {
+        ImGui::SetNextItemWidth(190 * gUi);
+        comboTr("##adsbcov", &cov, {N_("All heights"), N_("By height (overlaid)"), "under 10000 ft", "10000-20000 ft", "20000-30000 ft", "30000-40000 ft", "40000 ft and above"});
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("The coverage of the antenna and the gain by height: low aircraft show the radio horizon (trees, buildings, hills), high ones the real reach. Heights are barometric; a position with no altitude is only in \"All heights\".");
+        if (cov == 1) {
+            for (int k = 0; k < dect2::kAdsbAltBands; k++) {
+                const dect2::adsbd::Rgb c = dect2::adsbd::altRgb(true, k * 10000 + 5000, false);
+                ImGui::SameLine();
+                ImGui::TextColored(ImVec4(c.r / 255.f, c.g / 255.f, c.b / 255.f, 1), "%s", k == 0 ? "<10" : k == 4 ? "40+" : (std::to_string(k * 10) + "-" + std::to_string(k * 10 + 10)).c_str());
+            }
+            ImGui::SameLine(); ImGui::TextDisabled("(thousand ft)");
+        }
+    }
     const ImVec2 av = ImGui::GetContentRegionAvail();
     const float side = std::max(120.f, std::min(av.y, av.x * 0.5f));
     const ImVec2 p0 = ImGui::GetCursorScreenPos();
@@ -333,7 +354,7 @@ void statsView(App& a) {
         const ImVec2 c(p0.x + side * 0.5f, p0.y + side * 0.5f);
         const float R = side * 0.5f - 18 * gUi;
         float mx = 10.f;
-        for (float v : st.sectorMaxNm) mx = std::max(mx, v);
+        for (float v : st.sectorMaxNm) mx = std::max(mx, v);   // every band is inside the all-heights figure
         const double mxU = au::distOut(S.units, mx);
         const double nice[] = {5, 10, 20, 25, 50, 100, 200, 250, 500};
         double step = 1000;
@@ -350,25 +371,42 @@ void statsView(App& a) {
             dl->AddLine(c, ImVec2(c.x + std::sin(ang) * R, c.y - std::cos(ang) * R), IM_COL32(55, 60, 66, 255));
             if (d % 90 == 0) { const char* nm[] = {"N", "E", "S", "W"}; dl->AddText(ImVec2(c.x + std::sin(ang) * (R + 4 * gUi) - 4 * gUi, c.y - std::cos(ang) * (R + 4 * gUi) - 7 * gUi), IM_COL32(190, 195, 200, 255), nm[d / 90]); }
         }
-        const ImU32 fill = ImGui::ColorConvertFloat4ToU32(pal::accent(0.45f)), edge = ImGui::ColorConvertFloat4ToU32(pal::accent(0.95f));
-        for (int i = 0; i < dect2::kAdsbSectors; i++) {
-            const double nm = au::distOut(S.units, st.sectorMaxNm[i]);
-            if (nm <= 0) continue;
-            const float rr = (float)(nm / top) * R;
-            ImVec2 pts[8];
-            pts[0] = c;
-            for (int k = 0; k < 7; k++) {
-                const float ang = (float)((i * 10 + k * 10.0 / 6.0) * M_PI / 180.0);
-                pts[1 + k] = ImVec2(c.x + std::sin(ang) * rr, c.y - std::cos(ang) * rr);
+        auto sectors = [&](const float* v, ImU32 fill, ImU32 edge, bool filled) {
+            for (int i = 0; i < dect2::kAdsbSectors; i++) {
+                const double nm = au::distOut(S.units, v[i]);
+                if (nm <= 0) continue;
+                const float rr = (float)(nm / top) * R;
+                ImVec2 pts[8];
+                pts[0] = c;
+                for (int k = 0; k < 7; k++) {
+                    const float ang = (float)((i * 10 + k * 10.0 / 6.0) * M_PI / 180.0);
+                    pts[1 + k] = ImVec2(c.x + std::sin(ang) * rr, c.y - std::cos(ang) * rr);
+                }
+                if (filled) dl->AddConvexPolyFilled(pts, 8, fill);
+                dl->AddPolyline(pts + 1, 7, edge, 0, 1.5f);
             }
-            dl->AddConvexPolyFilled(pts, 8, fill);
-            dl->AddPolyline(pts + 1, 7, edge, 0, 1.5f);
+        };
+        if (cov == 1) {
+            for (int k = dect2::kAdsbAltBands - 1; k >= 0; k--) {
+                const dect2::adsbd::Rgb col = dect2::adsbd::altRgb(true, k * 10000 + 5000, false);
+                sectors(st.sectorBandMaxNm[k], IM_COL32(col.r, col.g, col.b, 40), IM_COL32(col.r, col.g, col.b, 230), true);
+            }
+        } else {
+            const float* v = cov >= 2 ? st.sectorBandMaxNm[cov - 2] : st.sectorMaxNm;
+            sectors(v, ImGui::ColorConvertFloat4ToU32(pal::accent(0.45f)), ImGui::ColorConvertFloat4ToU32(pal::accent(0.95f)), true);
         }
         if (ImGui::IsItemHovered()) {
             const ImVec2 m = ImGui::GetMousePos();
             const double brg = std::fmod(std::atan2(m.x - c.x, c.y - m.y) * 180.0 / M_PI + 360.0, 360.0);
             const int sec = std::min(dect2::kAdsbSectors - 1, (int)(brg / 10));
-            ImGui::SetTooltip("%d - %d deg: %s %s", sec * 10, sec * 10 + 10, uDist(st.sectorMaxNm[sec], 0).c_str(), au::distUnit(S.units));
+            if (cov == 1) {
+                std::string tip = std::to_string(sec * 10) + " - " + std::to_string(sec * 10 + 10) + " deg";
+                for (int k = 0; k < dect2::kAdsbAltBands; k++) tip += std::string("\n") + dect2::adsbAltBandName(k) + ": " + (st.sectorBandMaxNm[k][sec] > 0 ? uDist(st.sectorBandMaxNm[k][sec], 0) + " " + au::distUnit(S.units) : "-");
+                ImGui::SetTooltip("%s", tip.c_str());
+            } else {
+                const float v = cov >= 2 ? st.sectorBandMaxNm[cov - 2][sec] : st.sectorMaxNm[sec];
+                ImGui::SetTooltip("%d - %d deg: %s %s", sec * 10, sec * 10 + 10, uDist(v, 0).c_str(), au::distUnit(S.units));
+            }
         }
     }
     ImGui::SameLine();
