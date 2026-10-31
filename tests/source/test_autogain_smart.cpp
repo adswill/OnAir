@@ -44,7 +44,7 @@ static Out runScene(const RadioProfile& rp, const Scene& sc, double startDb, dou
     sim.rateHz = sc.rate; sim.chanBw = sc.bw; sim.chanOff = sc.off; sim.sigDbm = sc.sig; sim.blockers = sc.blockers;
     const ModeTarget tg = modeTargetFor(sc.std_, sc.bw, sc.rate, sc.freqHz);
     AutoGainController c;
-    AgSettings s; s.mode = AgMode::Auto;
+    AgSettings s; s.mode = AgMode::Auto; s.v2 = false;
     c.configure(rp, tg, s);
     double now = 0;
     c.start(now, sim.live.totalDb, false, &sim.live);
@@ -137,7 +137,7 @@ static void testDynamic() {
         SimRadio sim(rp, 30);
         sim.rateHz = 2.4e6; sim.chanBw = 12.5e3; sim.chanOff = 100e3; sim.sigDbm = -108;
         const ModeTarget tg = modeTargetFor(11, 12.5e3, 2.4e6, 446e6);
-        AutoGainController c; AgSettings s; s.mode = AgMode::Auto; c.configure(rp, tg, s);
+        AutoGainController c; AgSettings s; s.mode = AgMode::Auto; s.v2 = false; c.configure(rp, tg, s);
         double now = 0; c.start(now, sim.live.totalDb, false, &sim.live);
         run(c, sim, now, 30);
         if (getenv("AGLOG")) for (const auto& e : c.log()) printf("   B %.1f %.1f -> %.1f %s\n", e.t, e.fromDb, e.toDb, e.why.c_str());
@@ -157,7 +157,7 @@ static void testDynamic() {
         SimRadio sim(rp, 40);
         sim.rateHz = 2.4e6; sim.chanBw = 12.5e3; sim.chanOff = 100e3; sim.sigDbm = -115;
         const ModeTarget tg = modeTargetFor(11, 12.5e3, 2.4e6, 446e6);
-        AutoGainController c; AgSettings s; s.mode = AgMode::Auto; c.configure(rp, tg, s);
+        AutoGainController c; AgSettings s; s.mode = AgMode::Auto; s.v2 = false; c.configure(rp, tg, s);
         double now = 0; c.start(now, sim.live.totalDb, false, &sim.live);
         double clipSec = 0; int changes = 0, rev = 0, dir = 0; double prev = c.current().totalDb;
         run(c, sim, now, 120, [&](double t) {
@@ -177,7 +177,7 @@ static void testReoptimise() {
     SimRadio sim(rp, 20);
     sim.rateHz = 2.4e6; sim.chanBw = 12.5e3; sim.chanOff = 100e3; sim.sigDbm = -110;
     const ModeTarget tg = modeTargetFor(11, 12.5e3, 2.4e6, 446e6);
-    AutoGainController c; AgSettings s; s.mode = AgMode::Auto; c.configure(rp, tg, s);
+    AutoGainController c; AgSettings s; s.mode = AgMode::Auto; s.v2 = false; c.configure(rp, tg, s);
     double now = 0; c.start(now, sim.live.totalDb, false, &sim.live);
     bool sawBr = false;
     run(c, sim, now, 20, [&](double) { if (c.bracketing()) sawBr = true; });
@@ -193,7 +193,7 @@ static void testReoptimise() {
     bool none = false;
     run(c, sim, now, 15, [&](double) { if (c.bracketing()) none = true; });
     CHECK(!none, "a remembered gain skips the search");
-    AutoGainController c2; AgSettings s2; s2.mode = AgMode::Auto; s2.quickStart = false; c2.configure(rp, tg, s2);
+    AutoGainController c2; AgSettings s2; s2.mode = AgMode::Auto; s2.v2 = false; s2.quickStart = false; c2.configure(rp, tg, s2);
     c2.start(now, sim.live.totalDb, false, &sim.live);
     bool b2 = false;
     run(c2, sim, now, 15, [&](double) { if (c2.bracketing()) b2 = true; });
@@ -201,7 +201,7 @@ static void testReoptimise() {
     // the amp is never switched by the search
     SimRadio hot(rp, 40);
     hot.sigDbm = -130; hot.chanBw = 12.5e3; hot.rateHz = 2.4e6;
-    AutoGainController c3; AgSettings s3; s3.mode = AgMode::Auto; c3.configure(rp, tg, s3);
+    AutoGainController c3; AgSettings s3; s3.mode = AgMode::Auto; s3.v2 = false; c3.configure(rp, tg, s3);
     c3.start(now, hot.live.totalDb, false, &hot.live);
     bool amp = false;
     run(c3, hot, now, 30, [&](double) { if (hot.live.ampOn) amp = true; });

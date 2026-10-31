@@ -303,6 +303,8 @@ public:
     void notifyRetune(const char* what) { if (mode_ == AgMode::Auto && phase_ != Phase::Idle) { wantBracket_ = true; settled_ = false; clTrial_ = false; retuneWhy_ = what ? what : "retune"; } }
     // v2: the one line for the user: what the gain is, what limits it and what the loop is doing now
     const std::string& status() const { return status_; }
+    bool probing() const { return clTrial_; }          // a neighbouring gain is being tried right now
+    double unitScale() const { return unitScale_; }
     // the gain/objective trace: one CSV line per call of takeTrace (t, gain, objective, headroom, floor, clip, state), for --autogain-trace and bug reports
     static const char* traceHeader() { return "t,gain_db,objective,snr_db,headroom_db,floor_dbfs,clip,state,why"; }
     std::string traceLine(double now) const;
@@ -378,7 +380,7 @@ private:
     int cand_ = 0, candKind_ = 0;            // next candidate in the cycle; the running one (1 up, 2 down, 3 split)
     double trialAt_ = 0, settledAt_ = -1e9, settledJ_ = 0, clStep_ = 2, lockLostAt_ = -1;
     bool wasLocked_ = false;
-    Run base_, tri_;
+    Run base_, tri_, mBase_, mTri_;   // the objective and the noise floor over the ADC's own noise, at the baseline and at the trial
     StagePlan basePlan_; Policy basePol_ = Policy::Balanced;
     std::vector<double> specPow_; int specCnt_ = 0;     // mean power spectrum of this dwell (linear)
     std::vector<float> specBase_;                        // ... of the baseline, dB
@@ -387,8 +389,9 @@ private:
     BlockStats adcLast_;
     double floorBase_ = -200;
     std::string status_, limit_, lastDecision_, retuneWhy_;
-    double slope_ = 1;
-    int rejectRun_ = 0;
+    double slope_ = 1, unitScale_ = 1;     // unitScale_: the real dB per nominal dB of this unit, learned from the strongest line's rise on each step
+    int rejectRun_ = 0, rejUp_ = 0, idleCycles_ = 0;
+    double stepReal(double from, double to) const;
     double jRecent_ = 0; int jRecentN_ = 0;
     // Optimise once / Safe
     std::vector<AgTrial> trials_;

@@ -263,6 +263,7 @@ bool AutoGainController::tickAuto(const AgInput& in, AgCommand& out) {
         ceilUntil_ = now + (ovTimes_.size() >= 3 ? 90 : 20) / sp;
         linearUntil_ = now + 30;
         probe_ = 0; guard_ = false;
+        havePrior_ = false;   // a remembered gain that clips is stale: the search is the wide one
         if (cur_.ampOn && set_.ampAllowed) {   // the amp first: it is the most exposed stage
             const double t = cur_.totalDb;
             cur_.ampOn = false;
@@ -849,11 +850,12 @@ void AutoGainController::beginBracket(const AgInput& in) {
     const double tgtH = bracketHead();
     const double star = havePrior_ ? prior_.totalDb + 3.0 : cur_.totalDb + (headAvg_ - tgtH);
     const bool strongNb = fl_.valid && fl_.strongestDbfs > -25 && fl_.strongestDbfs > fl_.chanDbfs + 20;
-    const Policy pol = (in.now < linearUntil_ || strongNb || imdSeen_) ? Policy::Linearity : tgt_.policy;
+    const Policy pol = (in.now < linearUntil_ || (strongNb && !set_.v2) || (imdSeen_ && !set_.v2)) ? Policy::Linearity : (set_.v2 ? pol_ : tgt_.policy);
     const double hi = std::min(maxGain(), ceilingDb(in.now)), lo = minGain();
     double last = -1e9;
     const double top = std::clamp(star + 3.0, lo, std::max(lo, hi));   // when the estimate is beyond the range the window slides down to its end
     // a remembered gain is a prior: five gains within +/-6 dB of it (the world may have changed); else the wide search around the headroom estimate
+    const bool priorMode = havePrior_;
     const std::vector<double> offs = havePrior_ ? std::vector<double>{-9.0, -6.0, -3.0, 0.0, 3.0} : std::vector<double>{-14.0, -9.0, -5.0, -2.0, 0.0, 3.0};
     havePrior_ = false;
     for (double off : offs) {
@@ -862,7 +864,7 @@ void AutoGainController::beginBracket(const AgInput& in) {
         if (snapped > last + 0.4) { queue_.push_back({snapped, pol}); last = snapped; }
     }
     if (queue_.size() < 3) { queue_.clear(); return; }   // too coarse a radio to bracket: the loop does its normal work
-    br_ = 1; brExtra_ = 0;
+    br_ = 1; brExtra_ = priorMode ? 4 : 0;   // a prior: the search stays within a few dB of it (the climb goes on from there)
     phase_ = Phase::Sweeping;
     logEvent(in.now, cur_.totalDb, cur_.totalDb, fmt("quick search: %.0f gains around %.0f dB", (double)queue_.size(), star));
 }
@@ -941,6 +943,15 @@ bool AutoGainController::tickBracket(const AgInput& in, AgCommand& out) {
         }
     }
     if (b < 0 || used == Metric::Auto) b = chooseTrial(used);
+    // a search must never end on a gain that clipped hard: the highest clean one instead (v2)
+    if (set_.v2 && b >= 0 && trials_[(size_t)b].clipMax > tgt_.clipLimit * 3) {
+        int alt = -1;
+        for (size_t i = 0; i < trials_.size(); i++) if (trials_[i].done && trials_[i].clipMax <= tgt_.clipLimit * 3 && (alt < 0 || trials_[i].plan.totalDb > trials_[(size_t)alt].plan.totalDb)) alt = (int)i;
+        if (alt < 0) {   // every gain tried clipped: the lowest of them, and the loop goes on from there
+            for (size_t i = 0; i < trials_.size(); i++) if (trials_[i].done && (alt < 0 || trials_[i].plan.totalDb < trials_[(size_t)alt].plan.totalDb)) alt = (int)i;
+        }
+        b = alt;
+    }
     br_ = 0;
     phase_ = Phase::Tracking;
     bracketDone_ = true;

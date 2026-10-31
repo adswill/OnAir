@@ -159,7 +159,7 @@ struct Trace { int changes = 0, reversals = 0, clippedTicks = 0, lastDir = 0; do
 
 static AutoGainController makeCtl(const RadioProfile& r, const ModeTarget& t, AgMode m, bool ampAllowed = false) {
     AutoGainController c;
-    AgSettings s; s.mode = m; s.ampAllowed = ampAllowed;
+    AgSettings s; s.mode = m; s.v2 = false; s.ampAllowed = ampAllowed;
     c.configure(r, t, s);
     return c;
 }

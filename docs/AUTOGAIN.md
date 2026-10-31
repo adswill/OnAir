@@ -216,6 +216,15 @@ not trusted and keep the table). The result is stored per device serial (pref `a
 no effect (dead or stuck tuner, or its own AGC on), steps that lower the noise, a range far from the table, or a single step more than 3.5 dB off.
 Single-control radios only (RTL-SDR, Airspy, SDRplay, Pluto, Lime); HackRF's LNA / VGA steps are exact.
 
+### Measured against the old loop (simulated front end, `ctest autogain_v2`, `-v` prints the table)
+
+Final SNR in the channel of the settled gain (old headroom loop / Auto v2 / exhaustive best): weak signal beside two strong carriers (HackRF) 1.6 / 8.4 / 8.5 dB;
+RTL-SDR beside FM stations 8.4 / 15.2 / 15.3; two carriers whose product falls in the channel: HackRF 12.2 / 22.2 / 23.1, RTL-SDR 12.1 / 18.2 / 18.2, Airspy
+17.3 / 22.3 / 22.3; ADC clipping from the top gain 26.8 / 35.5 / 35.7; DVB-T2 beside a strong tower -19.3 / -9.5 / -5.1; pulsed ADS-B -19.6 / -14.4 / -1.6; a stale
+remembered gain 1.6 / 8.5 / 8.5. A quiet band with a weak signal is parity within a dB (the climb moves in steps of at least `improveDb`; Pluto 5.8 / 5.2 / 7.0).
+Cost: the loop spends 5-20 % of the time on a neighbouring gain while it is not comfortably locked (a probe lasts about 1.5 s, the interval grows 6 / 12 / 24 / 45 s).
+The existing suites (`autogain`, `autogain_smart`) now pin `AgSettings::v2 = false`: they count gain changes and reversals, which the probing of v2 does by design.
+
 ### Not verified on hardware
 
 The tests run a simulated front end (ADC clipping, third-order products of strong carriers, compression, a decoder lock threshold, non-nominal steps).

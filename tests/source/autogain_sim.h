@@ -104,7 +104,7 @@ struct SimRadio {
         double n = lin(noiseDbmHz() + dbv(chanBw) + g);
         n += lin(-(6.02 * prof.adcBits + 1.76)) * chanBw / rateHz;   // quantisation noise in the channel
         for (const auto& p : im3()) if (std::fabs(p.offHz - chanOff) < chanBw) n += lin(p.dbm + g);
-        n += lin(totalOutDbfs()) * lastClip * 30;                     // clipping spreads distortion over everything
+        n += lin(totalOutDbfs()) * lastClip * 30 * std::min(1.0, chanBw / rateHz);   // clipping spreads distortion over the whole span: this channel's share (3.5: was the whole of it)
         return dbv(sig / n);
     }
     double totalOutDbfs() const {
