@@ -138,6 +138,7 @@ double clickTuneMhz(const App& a, double mhz, bool snap) {
 }
 
 static void clickToTune(App& a, int plotId) {
+    if (generalAutoHovered()) return;   // the mouse is on a General / Auto label
     if (autoLabelsHovered()) return;   // the mouse is on a name: it tunes (autolabel.cpp)
     if (vfoPlotMouse(a, plotId)) return;   // multi-VFO: Add channel click, a channel's centre dragged
     if (fileBoxDrag(a, plotId)) return;
@@ -1702,6 +1703,7 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
         multiMarkers(a);
         markerLayer(a, true);
         autoLabelsDraw(a, 0, plotMin, plotSize, plt::GetPlotLimits().X.Min, plt::GetPlotLimits().X.Max);
+        generalAutoPlot(a, 0, plotMin, plotSize, plt::GetPlotLimits().X.Min, plt::GetPlotLimits().X.Max);
         clickToTune(a, 0);
         identifyPlotInput(a, 0);
         visLo = plt::GetPlotLimits().X.Min; visHi = plt::GetPlotLimits().X.Max;
@@ -1718,7 +1720,8 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
                                 tr("Spectrum: averaging, max hold, peak markers, fill, grid and the unit (dBFS or dBm)"), specDisplayPopup);
         const float idW = identifyButton(a, plotMin, plotSize, gBwBtnW + gWideBtnW + gSpecBtnW);
         const float alW = autoLabelsButton(a, plotMin, plotSize, gBwBtnW + gWideBtnW + gSpecBtnW + idW);
-        tuneStyleButtons(a, plotMin, plotSize, gBwBtnW + gWideBtnW + gSpecBtnW + idW + alW);
+        const float gaW = generalAutoButton(a, plotMin, plotSize, gBwBtnW + gWideBtnW + gSpecBtnW + idW + alW);
+        tuneStyleButtons(a, plotMin, plotSize, gBwBtnW + gWideBtnW + gSpecBtnW + idW + alW + gaW);
     }
     dragRetune(a);
     // right-click: what is this signal?
@@ -1907,6 +1910,7 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
         }
         wfScaleBar(a, plotMin, plotSize);
         autoLabelsDraw(a, 1, plotMin, plotSize, plt::GetPlotLimits().X.Min, plt::GetPlotLimits().X.Max);
+        generalAutoPlot(a, 1, plotMin, plotSize, plt::GetPlotLimits().X.Min, plt::GetPlotLimits().X.Max);
         clickToTune(a, 1);
         identifyPlotInput(a, 1);
         plt::EndPlot();

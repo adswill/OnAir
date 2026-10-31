@@ -48,6 +48,7 @@ const Known kKnown[] = {
 {"VDL Mode 2", "vdl2", "", "Aviation", MB(ModPsk8)|MB(ModQpsk)|MB(ModQam), ModPsk8, {10500}, {12.1e3}, 0, 2, 0, 0, SyncNone, {136.6f, 137}, "D8PSK 10.5 kBd, 25 kHz, bursts"},
 {"VDL Mode 4", "vdl4", "", "Aviation", MB(ModGmsk)|MB(ModFsk2)|MB(ModOfdm)|MB(ModPulse), ModGmsk, {19200}, {18.8e3}, 0, 2, 0, 0, SyncNone, {118, 137}, "GFSK 19.2 kBd, STDMA slots"},
 {"HFDL", "hfdl", "", "Aviation", MB(ModBpsk)|MB(ModQpsk)|MB(ModPsk8), ModBpsk, {1800}, {2.13e3}, 0, 0, 0, 0, SyncNone, {2.8f, 22}, "PSK 1800 Bd, 2.4 kHz SSB channel"},
+{"SSB voice", "general", "", "Analog voice", MB(ModPulse)|MB(ModAm)|MB(ModQam)|MB(ModFm)|MB(ModCarrier)|MB(ModUnknown)|MB(ModBpsk)|MB(ModFsk2)|MB(ModGmsk), ModAm, {}, {2.4e3}, 0, 0, 0, 0, SyncSsb, {1.8f, 30, 50, 54, 144, 148, 420, 450}, "single sideband speech: 2 to 3 kHz of one sideband, no carrier, syllabic envelope; the General receiver in USB / LSB"},
 {"NFM voice", "general", "", "Analog voice", MB(ModFm), ModFm, {}, {9e3, 5e3}, 0, 0, 0, 0, SyncNone, {30, 50, 136, 174, 400, 470}, "narrow FM speech, 12.5 / 25 kHz; the General receiver in NFM"},
 {"Airband voice", "airband", "", "Aviation", MB(ModAm)|MB(ModCarrier)|MB(ModPulse), ModAm, {}, {6.3e3}, 0, 0, 0, 0, SyncNone, {108, 137}, "AM voice, 8.33 / 25 kHz"},
 {"VOR", "vorils", "vor", "Aviation", MB(ModCarrier)|MB(ModAm), ModCarrier, {}, {250}, 0, 1, 0, 0, SyncNone, {108, 118}, "AM carrier with 30 Hz and 9960 Hz FM subcarrier"},

@@ -182,6 +182,9 @@ struct App {
     bool passiveRadarOpen = false;      // the passive radar window (View > Passive radar; app/radar)
     bool satnogsOpen = false;           // the SatNOGS DB transmitter list (View > SatNOGS transmitters)
     bool passesOpen = false;            // the satellite pass planner window (View > Passes)
+    bool genAutoOn = true;              // General / Auto: in the General receiver, signals are spotted in the background and labelled (app/specx/general_auto_ui.cpp; docs/GENERAL-AUTO.md)
+    bool genAutoDecode = false;         // General / Auto: decode by itself when the tuned frequency sits on a sure label (off by default)
+    int genAutoReleaseKhz = 0;          // General / Auto: keep decoding while the tuned frequency is within this of the signal; 0: automatic
     bool doctorOpen = false;            // the Reception Doctor window (View > Reception doctor; app/panels/doctor_ui.cpp)
     bool stationHealthOpen = false;     // the station health report window (View > Station health; app/panels/station_health_ui.cpp)
     bool sweepOpen = false;             // the sweep scanner window (View > Sweep scanner)
@@ -1183,8 +1186,16 @@ void identifyAt(App& a, double clickMhz);
 void identifyRegion(App& a, double loMhz, double hiMhz);   // a dragged region (MHz)
 void identifyAll(App& a);                                  // every signal in the capture, in a table
 void identifyTuned(App& a, double freqHz, double bwHz);    // tunes the radio to a signal found by the sweep and identifies it there
+bool identifyBusy();                                       // the Identify window is open (it owns the capture)
 bool identifyRegionMhz(double& loMhz, double& hiMhz);      // the region of the open card, to draw it on the plots
-void identifyWindow(App& a);   // every frame: the window while it is open
+void identifyWindow(App& a);
+// General / Auto (specx/general_auto_ui.cpp): generalAutoFrame every frame (background scan, Decode, return to General), generalAutoPlot draws the labels on a plot,
+// generalAutoButton is the corner button with the list of detected signals; generalAutoDecoding: a decoder it started is running
+void generalAutoFrame(App& a);
+void generalAutoPlot(App& a, int plotId, ImVec2 plotMin, ImVec2 plotSize, double loMhz, double hiMhz);
+float generalAutoButton(App& a, ImVec2 plotMin, ImVec2 plotSize, float rightUsed);
+bool generalAutoHovered();     // the mouse is on a label: the plot's click-to-tune stands back
+bool generalAutoDecoding();   // every frame: the window while it is open
 // general_ui.cpp: the general receiver's channel marker on the spectrum (plotId 0) and the waterfall (1): a click puts the channel
 // there (inside the band, without retuning the radio), its filter edges can be dragged
 // vfo_ui.cpp: multi-VFO (docs/MULTI-VFO.md): extra channels on the same capture. vfoPlotMouse: Add channel armed (or Alt held) and a click adds one, a band's

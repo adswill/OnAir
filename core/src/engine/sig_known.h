@@ -9,7 +9,7 @@
 namespace dect2 {
 namespace sigid {
 
-enum SyncKind { SyncNone = 0, SyncDmr, SyncP25, SyncNxdn, SyncDpmr, SyncPocsag, SyncAis, SyncRos, SyncCount };   // SyncRos: the ROS tone-grid check (dect2/ros/ros_detect.h), not a frame sync
+enum SyncKind { SyncNone = 0, SyncDmr, SyncP25, SyncNxdn, SyncDpmr, SyncPocsag, SyncAis, SyncRos, SyncSsb, SyncCount };   // SyncRos: the ROS tone-grid check (dect2/ros/ros_detect.h), SyncSsb: the speech-envelope check of single sideband voice (sig_ident.cpp), neither is a frame sync
 
 constexpr unsigned MB(int m) { return 1u << m; }   // a modulation class in a mask
 
