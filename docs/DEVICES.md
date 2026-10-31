@@ -27,3 +27,6 @@ as an ordinary RTL-SDR (the ids are in the RTL tables of the Linux udev rules, t
 list and work in every mode that takes raw samples; DVB-T and DVB-T2 are decoded by OnAir's own software demodulator. The stick's own hardware demodulator (the
 separate demodulator chip of the DVB-T2/C models) is **not** used. On Linux the kernel DVB driver may grab the stick first: blacklist `dvb_usb_rtl28xxu`.
 Sticks with another id: report the `lsusb` line. Needs a user test on the DVB-T2/C model.
+
+## HackRF baseband filter
+HackRF One / Pro: Advanced > Baseband filter. Auto (default) follows the sample rate (about half of it, wider for a wide channel, the mode's own narrow filter when running at the mode's rate); or pick one of 1.75, 2.5, 3.5, 5, 5.5, 6, 7, 8, 9, 10, 12, 14, 15, 20, 24, 28 MHz. The choice applies at once and is not limited by the sample rate.

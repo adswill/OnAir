@@ -21,6 +21,9 @@ namespace dect2::inmsat {
 enum class CarrierType { Unknown, AeroP, InmarsatC, AeroC };
 const char* carrierTypeName(CarrierType t);
 
+// the P channel rate a carrier of this width most likely is (a guess for the carrier list until a decoder holds sync)
+int rateGuessForWidth(double widthHz, CarrierClass cls);
+
 struct CarrierRow {
     int id = 0;
     double offsetHz = 0;          // against the centre of the capture
@@ -30,6 +33,7 @@ struct CarrierRow {
     CarrierClass cls = CarrierClass::Narrow;
     CarrierType type = CarrierType::Unknown;   // what actually decodes; Unknown while nothing is in sync
     int bitRate = 0;              // P channels: 600 / 1200 / 10500; Inmarsat-C: 1200 (symbols/s)
+    int rateGuess = 0;            // while bitRate is 0: the P channel rate the carrier's width suggests (600 narrow, 10500 wide), 0 = no guess
     int state = 0;                // 0 seen, 1 locked, 2 frames in sync, 3 data
     float ebn0Db = 0;
     uint64_t frames = 0;

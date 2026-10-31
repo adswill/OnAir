@@ -116,6 +116,11 @@ RadioSetting boolSetting(const std::string& key, const std::string& label, const
 RadioSetting choiceSetting(const std::string& key, const std::string& label, const std::string& help, std::vector<std::string> values,
                            std::vector<std::string> names, const std::string& def, bool restart = false);
 
+// HackRF baseband filter (3.5): the Advanced "Baseband filter" choice (Auto + the MAX2837 widths) and the width the driver sets for it.
+// Auto (key "bbfilter" unset or "auto") follows the sample rate / the mode (hackrfAutoFilterHz); a listed width in Hz is used as given.
+RadioSetting hackrfFilterSetting();
+uint32_t hackrfFilterFor(const TuneSettings& s);
+
 // How a sound-card source turns captured stereo audio into complex IQ (Audio source, source_audio.cpp).
 enum class AudioIqMode { StereoIq = 0, Usb = 1, Lsb = 2, MonoReal = 3 };
 

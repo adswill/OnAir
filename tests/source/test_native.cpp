@@ -255,7 +255,7 @@ static void nativeRobustChecks(const std::string& dir, const char* ext, const st
         const std::string root = dir + "/root";
         for (const char* d : {"", "/sys", "/sys/bus", "/sys/bus/usb", "/sys/bus/usb/devices", "/sys/module", "/sys/module/dvb_usb_rtl28xxu", "/dev", "/dev/bus", "/dev/bus/usb", "/dev/bus/usb/001",
                               "/sys/bus/usb/devices/1-1", "/sys/bus/usb/devices/1-2", "/sys/bus/usb/devices/1-2:1.0", "/sys/bus/usb/devices/1-3", "/sys/bus/usb/devices/usb1",
-                              "/sys/bus/usb/devices/1-4", "/sys/bus/usb/devices/1-4:1.0"})
+                              "/sys/bus/usb/devices/1-4", "/sys/bus/usb/devices/1-4:1.0", "/sys/bus/usb/devices/1-5"})
             mkdir((root + d).c_str(), 0755);
         auto dev = [&](const char* name, const char* vid, const char* pid, int devnum, int mode) {
             const std::string p = root + "/sys/bus/usb/devices/" + name;
@@ -269,6 +269,7 @@ static void nativeRobustChecks(const std::string& dir, const char* ext, const st
         dev("1-2", "0bda", "2838", 6, 0666);    // an RTL-SDR held by the TV driver
         dev("1-3", "046d", "c52b", 7, 0);       // a mouse
         dev("usb1", "1d6b", "0002", 1, 0);      // the root hub
+        dev("1-5", "08d0", "a001", 9, 0666);    // an AOR receiver's I/Q output
         dev("1-4", "1df7", "2500", 8, 0666);    // an RSP1 held by the kernel's Mirics driver (#17)
         symlink("../../../../bus/usb/drivers/dvb_usb_rtl28xxu", (root + "/sys/bus/usb/devices/1-2:1.0/driver").c_str());
         symlink("../../../../bus/usb/drivers/msi2500", (root + "/sys/bus/usb/devices/1-4:1.0/driver").c_str());
@@ -277,14 +278,15 @@ static void nativeRobustChecks(const std::string& dir, const char* ext, const st
         unsetenv("DECT2_SYSFS_ROOT");
         for (const auto& s : hints) printf("  hint: %s\n", s.c_str());
         const bool root0 = geteuid() == 0;   // root may open anything
-        CHECK(hints.size() == (root0 ? 2u : 3u), "%zu hints", hints.size());
-        bool hack = false, tv = false, miri = false;
+        CHECK(hints.size() == (root0 ? 3u : 4u), "%zu hints", hints.size());
+        bool hack = false, tv = false, miri = false, aor = false;
         for (const auto& s : hints) {
             if (s.find("HackRF is plugged in but this user may not open it: install OnAir's udev rules") == 0) hack = true;
             if (s.find("The Linux TV driver dvb_usb_rtl28xxu holds the RTL-SDR: run sudo modprobe -r dvb_usb_rtl28xxu") == 0) tv = true;
+            if (s.find("An AOR receiver's I/Q output is plugged in") == 0) aor = true;
             if (s.find("The Linux driver msi2500 holds the SDRplay RSP") == 0) miri = true;
         }
-        CHECK((hack || root0) && tv && miri, "hints: HackRF permission %d, RTL TV driver %d, SDRplay held by msi2500 %d", hack, tv, miri);
+        CHECK((hack || root0) && tv && miri && aor, "hints: HackRF permission %d, RTL TV driver %d, SDRplay held by msi2500 %d, AOR I/Q %d", hack, tv, miri, aor);
     }
 }
 // ---- end native-robust
@@ -587,6 +589,8 @@ static void radiosChecks(const char* dir, const char* ext) {
 namespace dect2 {
 uint32_t hackrfAutoFilterHz(double sampleRate, double channelMhz);   // hackrf_usb.cpp
 void hackrfBoardRange(int id, double& lo, double& hi);
+RadioSetting hackrfFilterSetting();
+uint32_t hackrfFilterFor(const TuneSettings& s);
 }
 static bool hasSetting(const DeviceInfo& d, const char* key) {
     for (const auto& r : d.settings) if (r.key == key) return true;
@@ -628,6 +632,23 @@ static void radioSettingsChecks(const char* dir, const char* ext) {
     CHECK(hackrfAutoFilterHz(10e6, 8) == 5000000 && hackrfAutoFilterHz(10e6, 7) == 5000000, "HackRF filter 8/7 MHz at 10 Msps: %u / %u", hackrfAutoFilterHz(10e6, 8), hackrfAutoFilterHz(10e6, 7));
     CHECK(hackrfAutoFilterHz(8e6, 6) == 5000000, "HackRF filter 6 MHz at 8 Msps: %u (5 MHz expected)", hackrfAutoFilterHz(8e6, 6));
     CHECK(hackrfAutoFilterHz(8e6, 5) == 3500000 && hackrfAutoFilterHz(8e6, 1.7) == 3500000 && hackrfAutoFilterHz(4e6, 0.25) == 1750000, "HackRF filter narrow channels: %u %u %u", hackrfAutoFilterHz(8e6, 5), hackrfAutoFilterHz(8e6, 1.7), hackrfAutoFilterHz(4e6, 0.25));
+    {   // 3.5: the Advanced baseband filter choice beats the mode's and the automatic width, for any rate
+        TuneSettings t; t.sampleRate = 10e6; t.bandwidthMhz = 8;
+        CHECK(hackrfFilterFor(t) == 5000000, "HackRF filter Auto at 10 Msps: %u", hackrfFilterFor(t));
+        t.basebandFilterHz = 1750000;
+        CHECK(hackrfFilterFor(t) == 1750000, "HackRF mode filter kept in Auto: %u", hackrfFilterFor(t));
+        t.radio["bbfilter"] = "auto";
+        CHECK(hackrfFilterFor(t) == 1750000, "HackRF bbfilter=auto keeps the mode's filter: %u", hackrfFilterFor(t));
+        const uint32_t widths[] = {1750000, 2500000, 3500000, 5000000, 5500000, 6000000, 7000000, 8000000, 9000000, 10000000, 12000000, 14000000, 15000000, 20000000, 24000000, 28000000};
+        const RadioSetting rs = hackrfFilterSetting();
+        CHECK(rs.key == "bbfilter" && rs.def == "auto" && rs.values.size() == 17 && rs.names.size() == 17, "HackRF filter setting lists Auto + 16 widths: %zu", rs.values.size());
+        for (size_t i = 0; i < 16; i++) {
+            t.radio["bbfilter"] = std::to_string(widths[i]);
+            CHECK(hackrfFilterFor(t) == widths[i] && rs.values[i + 1] == std::to_string(widths[i]), "HackRF chosen filter %u: %u", widths[i], hackrfFilterFor(t));
+        }
+        t.radio["bbfilter"] = "junk";
+        CHECK(hackrfFilterFor(t) == 1750000, "HackRF junk bbfilter falls back to Auto: %u", hackrfFilterFor(t));
+    }
     {
         double lo = 0, hi = 0;
         hackrfBoardRange(2, lo, hi);

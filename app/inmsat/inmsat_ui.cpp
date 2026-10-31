@@ -171,6 +171,11 @@ void carriersView(App& a) {
     strip(a, t);
     ImGui::Spacing();
     if (t.carriers.empty()) { ImGui::TextDisabled("%s", "no carriers yet: the search needs two seconds. Tune the radio to the middle of the satellite's L-band channels (about 1545.6 MHz) and use a sample rate of 6 Msps or more."); return; }
+    {   // how many P channels of each rate: the 10500 bit/s ones are easy to miss among the narrow carriers
+        int n600 = 0, n1200 = 0, n10500 = 0, g10500 = 0;
+        for (const auto& c : t.carriers) { n600 += c.bitRate == 600 && c.state >= 2; n1200 += c.type == dect2::inmsat::CarrierType::AeroP && c.bitRate == 1200 && c.state >= 2; n10500 += c.bitRate == 10500 && c.state >= 2; g10500 += !c.bitRate && c.rateGuess == 10500; }
+        ImGui::TextDisabled("P channels decoded:  600 bit/s x %d   1200 bit/s x %d   10500 bit/s x %d%s", n600, n1200, n10500, g10500 ? "   (wide carriers that may be 10500 bit/s are marked ~10500, still searching)" : "");
+    }
     if (!ImGui::BeginTable("##inmc", 11, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV,
                            ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
@@ -188,7 +193,7 @@ void carriersView(App& a) {
         if (ImGui::Selectable(f, c.id == S.focusId, ImGuiSelectableFlags_SpanAllColumns)) { S.focusId = c.id == S.focusId ? 0 : c.id; }
         ImGui::TableNextColumn(); ImGui::TextUnformatted(c.satellite.empty() ? "-" : c.satellite.c_str());
         ImGui::TableNextColumn(); ImGui::TextUnformatted(dect2::inmsat::carrierTypeName(c.type));
-        ImGui::TableNextColumn(); if (c.bitRate) ImGui::Text("%d", c.bitRate); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (c.bitRate) ImGui::Text("%d", c.bitRate); else if (c.rateGuess) ImGui::TextDisabled("~%d", c.rateGuess); else ImGui::TextDisabled("-");
         ImGui::TableNextColumn(); ImGui::Text("%.0f dB", c.snrDb);
         ImGui::TableNextColumn(); if (c.state >= 2) ImGui::Text("%.1f dB", c.ebn0Db); else ImGui::TextDisabled("-");
         ImGui::TableNextColumn(); ImGui::TextUnformatted(c.parked ? "parked: CPU" : stateName(c.state));

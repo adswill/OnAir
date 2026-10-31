@@ -189,7 +189,7 @@ private:
             if (!chk(hackrf_set_sample_rate(dev_, s.sampleRate), "set_sample_rate")) return false;
             rate_ = s.sampleRate;
         }
-        uint32_t bw = s.basebandFilterHz > 0 ? (uint32_t)s.basebandFilterHz : hackrfAutoFilterHz(s.sampleRate, s.bandwidthMhz);   // as hackrf_usb.cpp
+        uint32_t bw = hackrfFilterFor(s);   // as hackrf_usb.cpp
         if (!chk(hackrf_set_baseband_filter_bandwidth(dev_, bw), "set_baseband_filter")) return false;
         // the HackRF's library has no frequency correction: the clock error is taken out of the frequency asked for
         if (!sweep_ && !chk(hackrf_set_freq(dev_, (uint64_t)std::max(ppmCorrectedHz(s.centerHz, radioPpm(s)), 0.0)), "set_freq")) return false;
@@ -583,7 +583,7 @@ std::vector<DeviceInfo> listHackrfDevices(std::string& err) {
             }
             std::string tail = d.serial.size() > 8 ? d.serial.substr(d.serial.size() - 8) : d.serial;
             d.name = d.board + " (" + tail + ")";
-            d.settings = {ppmSetting(0.1)};
+            d.settings = {ppmSetting(0.1), hackrfFilterSetting()};
             out.push_back(d);
         }
         hackrf_device_list_free(l);
@@ -695,14 +695,23 @@ std::unique_ptr<TxSink> makeTxSink(const DeviceInfo& d) {
     }
 }
 
+// "iqdatIQ.bin": the file AOR's Linux recorder (ariq_rcv) writes for the AR5700D / AR2300 / AR5001D / AR6000 I/Q output: float32 I/Q pairs at 1.125 Msps
+static bool isAorIqName(const std::string& path) {
+    std::string n = path.substr(path.find_last_of("/\\") == std::string::npos ? 0 : path.find_last_of("/\\") + 1);
+    for (auto& c : n) c = (char)tolower((unsigned char)c);
+    return n.rfind("iqdatiq", 0) == 0 && n.size() > 4 && n.compare(n.size() - 4, 4, ".bin") == 0;
+}
+
 FileFormat guessFormat(const std::string& path) {
     auto ends = [&](const char* e) { size_t n = strlen(e); return path.size() >= n && path.compare(path.size() - n, n, e) == 0; };
     if (ends(".cu8") || ends(".u8")) return FileFormat::CU8;
     if (ends(".cf32") || ends(".fc32") || ends(".cfile")) return FileFormat::CF32;
+    if (isAorIqName(path)) return FileFormat::CF32;   // AOR's ariq_rcv writes float32 I/Q
     return FileFormat::CS8;
 }
 
 double guessSampleRate(const std::string& path) {
+    if (isAorIqName(path)) return 1.125e6;
     std::string n = path;
     for (auto& c : n) c = (char)tolower((unsigned char)c);
     size_t p = n.find("msps");

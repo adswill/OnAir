@@ -1,5 +1,6 @@
 #include "dect2/common/thread_name.h"
 #include "dect2/source/rotator.h"
+#include "dect2/source/mount_driver.h"
 #include "dect2/net/remote_api.h"
 #include "../net/netcompat.h"
 #include <algorithm>
@@ -337,6 +338,12 @@ struct Rotator::Impl {
     std::atomic<bool> quit{false};
     std::deque<std::string> cmds;
     double pollAt = 0;
+    std::unique_ptr<MountDriver> drv;   // rotctld / Alpaca; null for GS-232
+    double rateTargetAz = 0, rateTargetEl = 0, rateAz = 0, rateEl = 0;   // wanted mechanical aim and speeds of a track command
+    std::chrono::steady_clock::time_point rateUntil{};
+    bool ratesLive = false;
+    int pollFails = 0;
+    bool canRates = false;
 
     std::condition_variable wakeCv;   // wakes run() when a command is queued or the thread must stop (no 50 ms polling)
     void stopThread() {
@@ -346,6 +353,7 @@ struct Rotator::Impl {
         quit = false;
         std::lock_guard<std::mutex> lk(mu);
         io.closeAll();
+        if (drv) { drv->close(); drv.reset(); }
         st.connected = false;
     }
 
@@ -354,6 +362,8 @@ struct Rotator::Impl {
         st.lastError = e;
         st.connected = false;
         io.closeAll();
+        if (drv) { drv->close(); drv.reset(); }
+        ratesLive = false;
     }
 
     bool connectNow() {
@@ -361,13 +371,14 @@ struct Rotator::Impl {
         RotatorConfig c;
         { std::lock_guard<std::mutex> lk(mu); c = cfg; }
         bool ok = false;
-        if (c.link == RotatorLink::Serial) ok = openSerial(c.serialDevice, c.baud, io, err);
+        if ((drv = makeMountDriver(c)) != nullptr) { ok = drv->connect(err); canRates = ok && drv->supportsRates(); }
+        else if (c.link == RotatorLink::Serial) ok = openSerial(c.serialDevice, c.baud, io, err);
         else if (c.link == RotatorLink::Tcp) ok = openTcp(c.host, c.tcpPort, io, err);
         else { err = "no rotator configured"; }
         std::lock_guard<std::mutex> lk(mu);
         st.connected = ok;
         st.lastError = ok ? "" : err;
-        if (!ok) io.closeAll();
+        if (!ok) { io.closeAll(); if (drv) { drv->close(); drv.reset(); } }
         return ok;
     }
 
@@ -391,6 +402,25 @@ struct Rotator::Impl {
         {
             std::lock_guard<std::mutex> lk(mu);
             if (!st.connected) return;
+        }
+        if (drv) {
+            MountPos mp;
+            std::string err;
+            if (!drv->readPosition(mp, err)) {
+                std::lock_guard<std::mutex> lk(mu);
+                if (++pollFails >= 3) { st.lastError = err; st.connected = false; if (drv) { drv->close(); drv.reset(); } }
+                return;
+            }
+            pollFails = 0;
+            std::lock_guard<std::mutex> lk(mu);
+            st.azDeg = mp.azDeg; st.azValid = mp.azValid;
+            st.elDeg = mp.elDeg; st.elValid = mp.elValid;
+            applyStatusCorrection(st, cal);
+            if (mp.slewingValid && !ratesLive) {
+                st.moving = mp.slewing;
+                if (!mp.slewing) st.hasTarget = false;
+            } else updateMoving();
+            return;
         }
         if (!io.writeLine(";")) { setErr("write failed while polling"); return; }
         std::string line;
@@ -416,6 +446,38 @@ struct Rotator::Impl {
                 updateMoving();
             }
         }
+    }
+
+    bool sendGoto(double az, double el, std::string& err) {   // mechanical degrees
+        ratesLive = false;
+        if (drv) {
+            return drv->gotoAzEl(az, el, err);
+        }
+        char buf[32];
+        std::snprintf(buf, sizeof buf, "W%03d %03d", (int)std::lround(az) % 360, (int)std::lround(el));
+        if (!io.writeLine(buf)) { err = "move command failed"; return false; }
+        return true;
+    }
+
+    // One step of the rate loop of a tracking mount (speed per axis from the pointing error and the target's own speed).
+    void rateStep() {
+        using clock = std::chrono::steady_clock;
+        if (!ratesLive || !drv) return;
+        RotatorStatus s;
+        double tAz, tEl, fAz, fEl;
+        {
+            std::lock_guard<std::mutex> lk(mu);
+            s = st; tAz = rateTargetAz; tEl = rateTargetEl; fAz = rateAz; fEl = rateEl;
+        }
+        std::string err;
+        if (clock::now() > rateUntil || !s.azValid || !s.elValid) {
+            ratesLive = false;
+            drv->moveAxes(0, 0, err);   // the target stopped being refreshed (or position is unknown): stand still
+            return;
+        }
+        const double ra = mountRateForError(shortAzDelta(s.azDeg, tAz), fAz, 6.0);
+        const double re = mountRateForError(tEl - s.elDeg, fEl, 6.0);
+        if (!drv->moveAxes(ra, re, err)) { ratesLive = false; std::lock_guard<std::mutex> lk(mu); st.lastError = err; }
     }
 
     void run() {
@@ -450,7 +512,11 @@ struct Rotator::Impl {
                     continue;
                 }
                 if (cmd == "stop") {
-                    if (!io.writeLine("C")) setErr("stop command failed");
+                    std::string serr;
+                    bool sok = true;
+                    if (drv) { ratesLive = false; sok = drv->stop(serr); }
+                    else sok = io.writeLine("C");
+                    if (!sok) setErr(serr.empty() ? "stop command failed" : serr);
                     else {
                         std::lock_guard<std::mutex> lk(mu);
                         st.moving = false;
@@ -483,9 +549,8 @@ struct Rotator::Impl {
                             az = normAz(az);
                             el = clampEl(el);
                         }
-                        char buf[32];
-                        std::snprintf(buf, sizeof buf, "W%03d %03d", (int)std::lround(az) % 360, (int)std::lround(el));
-                        if (!io.writeLine(buf)) setErr("move command failed");
+                        std::string gerr;
+                        if (!sendGoto(az, el, gerr)) setErr(gerr);
                         else {
                             std::lock_guard<std::mutex> lk(mu);
                             st.targetAz = az;
@@ -494,6 +559,37 @@ struct Rotator::Impl {
                             st.moving = true;
                         }
                     }
+                }
+                if (cmd.rfind("track ", 0) == 0) {
+                    double az = 0, el = 0, ra = 0, re = 0;
+                    if (std::sscanf(cmd.c_str(), "track %lf %lf %lf %lf", &az, &el, &ra, &re) == 4) {
+                        RotatorCalibration cal;
+                        double curAz = 0;
+                        {
+                            std::lock_guard<std::mutex> lk(mu);
+                            cal = this->cal;
+                            if (st.azValid) curAz = st.azDeg;
+                        }
+                        const double mAz = mechanicalAzForCorrected(az, curAz, cal);
+                        const double mEl = mechanicalElForCorrected(el, cal);
+                        if (drv && drv->supportsRates()) {
+                            {
+                                std::lock_guard<std::mutex> lk(mu);
+                                rateTargetAz = mAz; rateTargetEl = mEl; rateAz = ra; rateEl = re;
+                                st.targetAz = mAz; st.targetEl = mEl; st.hasTarget = true; st.moving = true;
+                            }
+                            ratesLive = true;
+                            rateUntil = clock::now() + std::chrono::seconds(3);
+                        } else {
+                            std::string gerr;
+                            if (!sendGoto(mAz, mEl, gerr)) setErr(gerr);
+                            else {
+                                std::lock_guard<std::mutex> lk(mu);
+                                st.targetAz = mAz; st.targetEl = mEl; st.hasTarget = true; st.moving = true;
+                            }
+                        }
+                    }
+                    continue;
                 }
                 if (cmd == "park") {
                     RotatorCalibration cal;
@@ -505,9 +601,8 @@ struct Rotator::Impl {
                     }
                     const double az = mechanicalAzForCorrected(cal.parkAz, curAz, cal);
                     const double el = mechanicalElForCorrected(cal.parkEl, cal);
-                    char buf[32];
-                    std::snprintf(buf, sizeof buf, "W%03d %03d", (int)std::lround(az) % 360, (int)std::lround(el));
-                    if (!io.writeLine(buf)) setErr("park command failed");
+                    std::string gerr;
+                    if (!sendGoto(az, el, gerr)) setErr(gerr.empty() ? "park command failed" : gerr);
                     else {
                         std::lock_guard<std::mutex> lk(mu);
                         st.targetAz = az;
@@ -519,7 +614,8 @@ struct Rotator::Impl {
             }
             if (clock::now() >= nextPoll) {
                 pollPosition();
-                nextPoll = clock::now() + std::chrono::milliseconds(500);
+                nextPoll = clock::now() + std::chrono::milliseconds(ratesLive ? 250 : 500);
+                rateStep();
             }
             {   // until the next position poll, a queued command or stop
                 std::unique_lock<std::mutex> lk(mu);
@@ -571,6 +667,21 @@ void Rotator::requestPoll() { p_->enqueue("poll"); }
 
 void Rotator::park() { p_->enqueue("park"); }
 
+void Rotator::trackAzEl(double azDeg, double elDeg, double azRate, double elRate) {
+    char buf[120];
+    std::snprintf(buf, sizeof buf, "track %.3f %.3f %.5f %.5f", azDeg, elDeg, azRate, elRate);
+    {   // newest track order wins: do not let a queue of them build up behind a slow mount
+        std::lock_guard<std::mutex> lk(p_->mu);
+        for (auto it = p_->cmds.begin(); it != p_->cmds.end();) it = (it->rfind("track ", 0) == 0) ? p_->cmds.erase(it) : it + 1;
+    }
+    p_->enqueue(buf);
+}
+
+bool Rotator::supportsRates() const {
+    std::lock_guard<std::mutex> lk(p_->mu);
+    return p_->canRates && p_->st.connected;
+}
+
 void Rotator::setCalibration(const RotatorCalibration& c) {
     std::lock_guard<std::mutex> lk(p_->mu);
     p_->cal = c;
@@ -607,7 +718,7 @@ std::string Rotator::apiStatusJson() const {
     const RotatorCalibration cal = calibration();
     const char* link = "off";
     if (c.link == RotatorLink::Serial) link = "serial";
-    else if (c.link == RotatorLink::Tcp) link = "tcp";
+    else if (c.link == RotatorLink::Tcp) link = c.protocol == RotatorProtocol::Rotctld ? "rotctld" : c.protocol == RotatorProtocol::Alpaca ? "alpaca" : "tcp";
     char b[640];
     std::snprintf(b, sizeof b,
                   "{\"connected\":%s,\"moving\":%s,\"link\":\"%s\","

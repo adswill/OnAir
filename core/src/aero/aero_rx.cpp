@@ -20,7 +20,7 @@ namespace dect2 {
 
 namespace {
 using dect2::math::kPi;
-constexpr int kMaxChannels = 6;
+constexpr int kMaxChannels = 12;   // a busy P group (600 / 1200 bit/s) plus the 10500 bit/s carriers; a full table gives way to a wide carrier (below)
 constexpr size_t kMaxMessages = 200, kMaxLogons = 100, kMaxAircraft = 100, kMaxTypes = 64, kMaxTrack = 24;
 const int kRates[3] = {600, 1200, 10500};
 
@@ -88,7 +88,7 @@ struct AeroReceiver::Impl {
     std::function<void(const std::string&)> log;
     std::function<void(double, const AeroFrameEvent&)> frameCb;
 
-    double rate = 0, offsetHz = 0;
+    double rate = 0, offsetHz = 0, searchLimitHz = 0;
     uint64_t samples = 0;
     double sinceReport = 0;
     // band search
@@ -206,6 +206,19 @@ struct AeroReceiver::Impl {
         }
     }
 
+    // table full: a new wide carrier takes the place of the weakest channel that holds no sync (never one that decodes)
+    bool freeSlot() {
+        int worst = -1;
+        for (size_t i = 0; i < chans.size(); i++) {
+            const Channel& c = *chans[i];
+            if (synced(c) || now() - c.lastSync < 10) continue;
+            if (worst < 0 || c.levelDb < chans[(size_t)worst]->levelDb) worst = (int)i;
+        }
+        if (worst < 0) return false;
+        chans.erase(chans.begin() + worst);
+        return true;
+    }
+
     void searchEvaluate() {
         period++;
         std::vector<float> p(nfft);
@@ -226,6 +239,7 @@ struct AeroReceiver::Impl {
         for (int j = 0; j < nfft; j++) {
             const double f = fOf(j);
             if (std::fabs(f) > 0.45 * rate) continue;
+            if (searchLimitHz > 0 && std::fabs(f) > searchLimitHz) continue;   // a channelised window: outside its pass-band there is no noise to take a floor from
             if (offsetHz != 0 && std::fabs(f) < 2000) continue;   // the radio's DC spike (a radio is tuned away from the channels)
             ok[j] = 1;
             use.push_back(s[j]);
@@ -253,7 +267,10 @@ struct AeroReceiver::Impl {
             if (wsum > 0 && width < 40000) regs.push_back({fsum / wsum, width, 10 * std::log10(peak / floorP)});
             j = b + 1;
         }
-        std::sort(regs.begin(), regs.end(), [](const Region& x, const Region& y) { return x.peakDb > y.peakDb; });
+        // a wide (10500 bit/s) carrier spreads its power over about 10 kHz, so its peak is far below a 600 / 1200 bit/s carrier of the same power:
+        // it gets a bonus in the order, or the strong narrow carriers (and noise ghosts) would fill every slot first
+        auto score = [](const Region& x) { return x.peakDb + (x.width >= 6000 ? 8.0 : 0.0); };
+        std::sort(regs.begin(), regs.end(), [&](const Region& x, const Region& y) { return score(x) > score(y); });
         std::vector<std::pair<double, int>> newPending;
         for (const Region& r : regs) {
             Channel* m = nullptr;
@@ -267,12 +284,13 @@ struct AeroReceiver::Impl {
                 m->lastSeen = period;
                 m->levelDb = (float)r.peakDb;
                 if (!synced(*m) && now() - m->lastSync > 3 && std::fabs(r.freq - m->freq) > 400) retune(*m, r.freq);
-            } else if ((int)chans.size() < kMaxChannels) {
+            } else if ((int)chans.size() < kMaxChannels || r.width >= 6000) {
                 // a new carrier must show in two searches in a row: noise alone crosses the threshold now and then, never twice in one place
                 bool seen = false;
                 for (const auto& q : pending) seen |= q.second == period - 1 && std::fabs(q.first - r.freq) < std::max(1500.0, r.width / 2);
                 newPending.push_back({r.freq, period});
                 if (!seen) continue;
+                if ((int)chans.size() >= kMaxChannels && !freeSlot()) continue;
                 auto c = std::make_unique<Channel>();
                 c->id = nextId++;
                 c->created = c->lastSeen = period;
@@ -555,6 +573,10 @@ void AeroReceiver::configure(double inputRateHz) {
     std::lock_guard<std::mutex> lk(p_->mu);
     p_->rate = inputRateHz;
     p_->setup();
+}
+void AeroReceiver::setSearchLimit(double hz) {
+    std::lock_guard<std::mutex> lk(p_->mu);
+    p_->searchLimitHz = hz;
 }
 void AeroReceiver::setSignalOffset(double hz) {
     std::lock_guard<std::mutex> lk(p_->mu);
