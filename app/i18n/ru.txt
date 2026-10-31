@@ -364,8 +364,6 @@ The test signal is made at the mode's own rate (%s).	Тестовый сигна
 This mode needs at least %s.	Этому режиму нужно не менее %s.
 This radio: %s to %s.	Это радио: от %s до %s.
 The radio runs at %s.	Радио работает на %s.
-runs at %s	работает на %s
-The radio gave %s instead of the %s asked for.	Радио выдало %s вместо запрошенных %s.
 A higher rate shows more spectrum but needs more USB bandwidth and processor time: when the status bar reports samples lost on the radio side, choose a lower rate.	Более высокая частота показывает больше спектра, но требует большей пропускной способности USB и процессорного времени: когда в строке состояния сообщается о потерянных отсчётах на стороне радио, выберите частоту ниже.
 A recording plays at the rate it was made at: set it with the file.	Запись воспроизводится с той частотой, с которой была сделана: задаётся вместе с файлом.
 A scan is using the radio and sets its own rate.	Сканирование использует радио и задаёт собственную частоту.

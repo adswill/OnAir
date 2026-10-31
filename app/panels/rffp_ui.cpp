@@ -203,7 +203,7 @@ void rfFingerprintWindow(App& a) {
         }
     }
 
-    if (ImGui::CollapsingHeader(tr("Library"), ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ImGui::CollapsingHeader(trw("Library"), ImGuiTreeNodeFlags_DefaultOpen)) {
         if (S.lib.items.empty()) ImGui::TextDisabled("%s", tr("Nothing saved yet."));
         int del = -1;
         for (size_t i = 0; i < S.lib.items.size(); i++) {
@@ -217,7 +217,7 @@ void rfFingerprintWindow(App& a) {
         if (del >= 0) { S.lib.remove((size_t)del); saveLib(); }
     }
 
-    if (ImGui::CollapsingHeader(tr("Transmission log"), ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ImGui::CollapsingHeader(trw("Transmission log"), ImGuiTreeNodeFlags_DefaultOpen)) {
         if (ImGui::SmallButton(tr("Export CSV"))) exportCsv();
         ImGui::SameLine();
         if (ImGui::SmallButton(tr("Clear"))) S.log.clear();
@@ -245,7 +245,7 @@ void rfFingerprintWindow(App& a) {
         }
     }
 
-    if (ImGui::CollapsingHeader(tr("Advanced"))) {
+    if (ImGui::CollapsingHeader(trw("Advanced"))) {
         ImGui::SetNextItemWidth(120 * gUi);
         ImGui::DragFloat(tr("Offset allowance (Hz)"), &S.cfoTol, 0.1f, 0.05f, 100.f, "%.2f");
         ImGui::SetNextItemWidth(120 * gUi);

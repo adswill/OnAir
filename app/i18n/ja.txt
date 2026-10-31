@@ -370,8 +370,6 @@ The test signal is made at the mode's own rate (%s).	テスト信号はモード
 This mode needs at least %s.	このモードには少なくとも %s が必要です。
 This radio: %s to %s.	この無線機: %s ～ %s。
 The radio runs at %s.	無線機は %s で動作しています。
-runs at %s	%s で動作
-The radio gave %s instead of the %s asked for.	無線機は要求された %s ではなく %s を返しました。
 A higher rate shows more spectrum but needs more USB bandwidth and processor time: when the status bar reports samples lost on the radio side, choose a lower rate.	レートを上げるとより広いスペクトラムを表示できますが、USB 帯域とプロセッサー時間も多く必要になります。ステータスバーに無線機側でのサンプル欠落が表示される場合は、レートを下げてください。
 A recording plays at the rate it was made at: set it with the file.	録音は録音時のレートで再生されます。ファイルと一緒にレートを設定してください。
 A scan is using the radio and sets its own rate.	スキャンが無線機を使用中で、独自のレートを設定しています。

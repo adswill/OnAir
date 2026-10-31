@@ -220,7 +220,7 @@ void feedsWindow(App& a) {
     ImGui::SameLine(); changed |= portField(N_("Server"), c.aprsServerPort);
     ImGui::TextDisabled("%s", tr("Receive-only: packets heard on the air go to APRS-IS, nothing from the Internet is ever sent out on the air. Your passcode stays in your settings only."));
     if (!c.aprsCall.empty() && !dect2::aprsValidCallsign(c.aprsCall)) ImGui::TextColored(pal::warnAmber(), "%s", tr("Not a valid callsign (like LY1ABC or LY1ABC-10)."));
-    if (ImGui::TreeNode(tr("Advanced##aprsgate"))) {
+    if (ImGui::TreeNode(trw("Advanced##aprsgate"))) {
         changed |= ImGui::SliderInt(tr("packets per minute, all"), &c.aprsGate.maxPerMin, 0, 600, c.aprsGate.maxPerMin ? "%d" : "no limit");
         changed |= ImGui::SliderInt(tr("packets per minute, per station"), &c.aprsGate.perStationPerMin, 0, 60, c.aprsGate.perStationPerMin ? "%d" : "no limit");
         changed |= ImGui::SliderInt(tr("same packet again after (s)"), &c.aprsGate.dedupSec, 0, 300, c.aprsGate.dedupSec ? "%d" : "off");

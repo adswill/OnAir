@@ -198,11 +198,11 @@ void control(App& a, const Info& i) {
     ImGui::SetNextItemWidth(-FLT_MIN);
     if (i.kind == Kind::Bool) {
         bool v = cur.d != 0;
-        if (ImGui::Checkbox("##v", &v)) { cur.d = v; writeVal(a, i, cur); }
+        if (ImGui::Checkbox("##v1", &v)) { cur.d = v; writeVal(a, i, cur); }
     } else if (i.kind == Kind::Choice) {
         const std::vector<std::string> items = split(i.choices ? i.choices : "", '|');
         const int sel = std::max(0, std::min((int)items.size() - 1, choiceIndex(i, cur.d)));
-        if (ImGui::BeginCombo("##v", items.empty() ? "" : tr(items[(size_t)sel].c_str()))) {
+        if (ImGui::BeginCombo("##v2", items.empty() ? "" : tr(items[(size_t)sel].c_str()))) {
             for (int n = 0; n < (int)items.size(); n++)
                 if (ImGui::Selectable(tr(items[(size_t)n].c_str()), n == sel)) { cur.d = choiceValue(i, n); writeVal(a, i, cur); }
             ImGui::EndCombo();
@@ -210,9 +210,9 @@ void control(App& a, const Info& i) {
     } else if (i.kind == Kind::Int) {
         int v = (int)cur.d;
         if (i.hi >= i.lo && i.hi - i.lo <= 2000) {
-            if (ImGui::SliderInt("##v", &v, (int)i.lo, (int)i.hi)) { cur.d = v; writeVal(a, i, cur); }
+            if (ImGui::SliderInt("##v3", &v, (int)i.lo, (int)i.hi)) { cur.d = v; writeVal(a, i, cur); }
         } else {
-            if (ImGui::InputInt("##v", &v, 0, 0)) U.pendNum[k] = v;
+            if (ImGui::InputInt("##v4", &v, 0, 0)) U.pendNum[k] = v;
             if (ImGui::IsItemDeactivatedAfterEdit()) { cur.d = U.pendNum[k]; writeVal(a, i, cur); }
         }
     } else if (i.kind == Kind::Float) {
@@ -220,10 +220,10 @@ void control(App& a, const Info& i) {
         const char* fmt = typed ? i.fmt + 1 : i.fmt;
         if (!typed && i.hi > i.lo) {
             float v = (float)cur.d;
-            if (ImGui::SliderFloat("##v", &v, (float)i.lo, (float)i.hi, fmt)) { cur.d = v; writeVal(a, i, cur); }
+            if (ImGui::SliderFloat("##v5", &v, (float)i.lo, (float)i.hi, fmt)) { cur.d = v; writeVal(a, i, cur); }
         } else {
             double v = cur.d;
-            if (ImGui::InputDouble("##v", &v, 0, 0, fmt)) U.pendNum[k] = v;
+            if (ImGui::InputDouble("##v6", &v, 0, 0, fmt)) U.pendNum[k] = v;
             if (ImGui::IsItemDeactivatedAfterEdit()) { cur.d = U.pendNum[k]; writeVal(a, i, cur); }
         }
     } else if (i.kind == Kind::Text) {
@@ -232,7 +232,7 @@ void control(App& a, const Info& i) {
         if (!act) es = cur.s;
         char b[512];
         snprintf(b, sizeof b, "%s", es.c_str());
-        if (ImGui::InputText("##v", b, sizeof b)) es = b;
+        if (ImGui::InputText("##v7", b, sizeof b)) es = b;
         act = ImGui::IsItemActive();
         if (ImGui::IsItemDeactivatedAfterEdit()) { cur.s = es; writeVal(a, i, cur); }
     } else customRow(a, i);
@@ -325,7 +325,7 @@ void settingsWindow(App& a) {
         ImGui::Separator();
     }
     rows(a, plain, searching);
-    if (!adv.empty() && ImGui::CollapsingHeader(tr("Advanced##adv"))) rows(a, adv, false);
+    if (!adv.empty() && ImGui::CollapsingHeader(trw("Advanced##adv"))) rows(a, adv, false);
     ImGui::EndChild();
     ImGui::Separator();
     if (!U.status.empty()) ImGui::TextWrapped("%s", U.status.c_str());

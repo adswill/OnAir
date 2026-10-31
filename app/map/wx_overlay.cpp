@@ -172,7 +172,7 @@ void controls(App& a, float x, float y, float width) {
         if (ImGui::SliderFloat("##wxop", &S.opacity, 0.f, 1.f, tr("opacity %.2f"))) { plat::prefs().setD("wxOverlayOpacity", S.opacity); }
         if (ImGui::SmallButton(tr("Export GeoTIFF + KML"))) exportFiles();
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Writes the picture as a GeoTIFF (EPSG:4326), a KML ground overlay and the PNG into <data folder>/weather-overlay"));
-        if (ImGui::TreeNode(tr("Advanced##wxadv"))) {
+        if (ImGui::TreeNode(trw("Advanced##wxadv"))) {
             bool ch = false;
             if (S.kind == State::Swath) {
                 ch |= ImGui::SliderFloat(tr("swath km"), &S.swathKm, 1000.f, 3500.f, "%.0f");

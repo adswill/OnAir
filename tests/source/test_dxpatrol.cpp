@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
     // a generic dongle first: no DXpatrol, 24 MHz floor, manual option offered
     {
         const DeviceInfo g = rtl();
-        CHECK(!has(g.name, "DXpatrol") && g.minFreqHz == 24e6 && g.maxRateHz == 2.56e6, "generic: %s %.0f", g.name.c_str(), g.minFreqHz);
+        CHECK(!has(g.name, "DXpatrol") && g.minFreqHz == 24e6 && g.maxRateHz == 3.2e6, "generic: %s %.0f", g.name.c_str(), g.minFreqHz);   // (3.5: every RTL-SDR offers up to 3.2 Msps, c9e49a4f1)
         CHECK(hasSetting(g, "dxp"), "the manual 'Treat as DXpatrol SDR' option is missing");
     }
     set("rtl.dxp", 1);

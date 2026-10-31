@@ -126,7 +126,7 @@ Http viaCurl(const std::string& method, const std::string& url, const std::strin
         std::error_code ec;
         fs::create_directories(tmpDir, ec);
         bodyFile = (fs::path(tmpDir) / ("hb-" + std::to_string((unsigned long long)std::chrono::steady_clock::now().time_since_epoch().count() % 1000000007ULL) + ".json")).string();
-        { std::ofstream f(bodyFile, std::ios::binary | std::ios::trunc); f.write(body.data(), (std::streamsize)body.size()); if (!f) { h.errClass = "other"; h.err = "cannot write a temporary file in " + tmpDir; return h; } }
+        { std::string werr; if (!onair_server::writeHostFile(bodyFile, body, werr, false)) { h.errClass = "other"; h.err = "cannot write a temporary file in " + tmpDir; return h; } }
         a.push_back("-X"); a.push_back("POST");
         a.push_back("-H"); a.push_back("Content-Type: application/json");
         a.push_back("--data-binary"); a.push_back("@" + bodyFile);
@@ -134,7 +134,7 @@ Http viaCurl(const std::string& method, const std::string& url, const std::strin
     a.push_back(url);
     std::string out;
     const int rc = dect2::curlRun(a, &out, cancel);
-    if (!bodyFile.empty()) { std::error_code ec; fs::remove(bodyFile, ec); }
+    if (!bodyFile.empty()) onair_server::removeHostFile(bodyFile);
     h.ms = (long)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
     if (rc == -1) { h.errClass = "cancelled"; h.err = "cancelled"; return h; }
     if (rc != 0) { h.errClass = classOfCurl(rc); h.err = "curl error " + std::to_string(rc); return h; }
@@ -283,9 +283,8 @@ private:
         if (path.empty()) return;
         std::error_code ec;
         fs::create_directories(fs::path(path).parent_path(), ec);
-        const std::string tmp = path + ".tmp";
-        { std::ofstream f(tmp, std::ios::binary | std::ios::trunc); f << dirStatusJson(s); }
-        fs::rename(tmp, path, ec);
+        std::string werr;
+        onair_server::writeHostFile(path, dirStatusJson(s), werr, true);
     }
 
     void loop() {

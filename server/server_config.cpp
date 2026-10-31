@@ -72,6 +72,24 @@ bool ConfigFile::save(const std::string& path, std::string& err) const {
     return true;
 }
 
+bool writeHostFile(const std::string& path, const std::string& data, std::string& err, bool atomic) {
+    namespace fs = std::filesystem;
+    const std::string to = atomic ? path + ".tmp" : path;
+    {
+        std::ofstream f(fs::u8path(to), std::ios::binary | std::ios::trunc);
+        if (f) f.write(data.data(), (std::streamsize)data.size());
+        if (!f) { err = "cannot write " + to; return false; }
+    }
+    if (atomic) {
+        std::error_code ec;
+        fs::rename(fs::u8path(to), fs::u8path(path), ec);
+        if (ec) { err = "cannot replace " + path + ": " + ec.message(); fs::remove(fs::u8path(to), ec); return false; }
+    }
+    return true;
+}
+
+void removeHostFile(const std::string& path) { std::error_code ec; std::filesystem::remove(std::filesystem::u8path(path), ec); }
+
 std::string ConfigFile::get(const std::string& key, const std::string& def) const {
     for (size_t i = lines_.size(); i-- > 0;) if (lines_[i].kv && lines_[i].key == key) return lines_[i].value;
     return def;

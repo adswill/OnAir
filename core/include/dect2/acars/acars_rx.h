@@ -30,6 +30,7 @@ public:
     // UI and engine setters (any thread)
     void setCenterHz(double hz);                         // the frequency the radio is tuned to; channel frequencies and the 25 kHz grid are taken from it (default 131.5 MHz)
     void setChannels(const std::vector<double>& hz);     // watch exactly these channels (absolute Hz, e.g. 8.33 kHz ones); empty = find carriers on the 25 kHz grid
+    void setJoinBlocks(bool on);                         // hold ETB blocks and give one message at the ETX block (default on); off: every block is a message of its own
     void setThresholdDb(double db);                      // carrier-to-noise needed to start decoding a channel (default 8)
 
 private:

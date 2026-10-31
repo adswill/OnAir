@@ -29,4 +29,8 @@ private:
 // The default place of the file: $ONAIR_SERVER_CONFIG, else ~/.config/onair/server.conf (%APPDATA%\OnAir\server.conf on Windows)
 std::string defaultConfigPath();
 
+// Host-side file helpers for the web directory's temporary body and status files (the web sources themselves never touch the disk: web_safety).
+bool writeHostFile(const std::string& path, const std::string& data, std::string& err, bool atomic);   // atomic: write path.tmp then rename over path
+void removeHostFile(const std::string& path);
+
 } // namespace onair_server

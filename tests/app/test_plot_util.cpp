@@ -34,12 +34,13 @@ int main() {
         for (int i = 0; i <= 255; i++) {
             const uint32_t c = cmap::color(m, i / 255.f);
             opaque = opaque && (c >> 24) == 0xFF;
-            if (!cmap::hueRamp(m) && prev >= 0) worst = std::max(worst, prev - lum(c));   // Turbo, SDR++ classic, high contrast: rainbows, not monotone by design
+            const bool inv = m == cmap::Paper;   // Paper is the Daylight look: light floor, dark peaks, so its luminance falls by design
+            if (!cmap::hueRamp(m) && prev >= 0) worst = std::max(worst, inv ? lum(c) - prev : prev - lum(c));   // Turbo, SDR++ classic, high contrast: rainbows, not monotone by design
             prev = lum(c);
         }
         check(opaque, "colour map opaque");
         check(worst < 1.5f, "colour map luminance rises");
-        check(lum(cmap::color(m, 1.f)) > lum(cmap::color(m, 0.f)), "colour map end brighter than start");
+        check(m == cmap::Paper ? lum(cmap::color(m, 1.f)) < lum(cmap::color(m, 0.f)) : lum(cmap::color(m, 1.f)) > lum(cmap::color(m, 0.f)), "colour map end brighter than start (darker for Paper)");
         check(cmap::color(m, -3.f) == cmap::color(m, 0.f) && cmap::color(m, 9.f) == cmap::color(m, 1.f), "colour map clamps");
     }
     check(cmap::color(cmap::Viridis, 0.f) == (0xFF000000u | (84u << 16) | (1u << 8) | 68u), "viridis start colour");
