@@ -239,6 +239,7 @@ static void floatingWindows(App& a, ImVec2 disp) {
     pluginManagerWindow(a);
     msgdbWindow(a);
     watchlistWindow(a);
+    ssbConvWindow(a);
     integrationsWindow(a);
     txTick(a);
     autodetTick(a);
