@@ -123,6 +123,12 @@ struct MarineReceiver::Impl {
         for (auto& e : tel.navtex) {
             if (e.header == m.header && e.text == m.text && !e.textCut && e.complete == m.complete) { e.repeats++; e.rxSec = m.rxSec; e.rxTime = m.rxTime; return; }
         }
+        if (automation::wants(automation::FMsg)) {   // "Save decoded messages", Integrations, automations
+            automation::Event ex;
+            ex.str("header", m.header).str("subject", m.subjectName).num("number", m.number).flag("complete", m.complete).num("errors", m.errors).num("chars", m.chars);
+            std::string st(1, m.station);
+            automation::emitMessage("navtex", "NAVTEX", freqHz.load(), st, m.text, std::nan(""), std::move(ex));
+        }
         tel.navtex.push_back(m);
         if (tel.navtex.size() > 100) tel.navtex.erase(tel.navtex.begin());
         trimText();

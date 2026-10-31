@@ -2,6 +2,16 @@
 
 View > Integrations. Send what OnAir decodes to other programs. Everything is off until you tick a sink and type its address. There are no default servers, nothing is sent while a sink is off or its address is empty, and nothing goes to the OnAir map from here (the map guard that holds uploads while and after you transmit is untouched).
 
+## Save decoded messages (files)
+
+View > Integrations > Save messages. One tick, a folder, a format. Every message OnAir decodes is appended to a file in that folder: one file per day (UTC) per mode, named `onair-<mode>-<YYYY-MM-DD>.<jsonl|json|csv>`, for example `onair-Inmarsat-C-2026-10-31.jsonl`. Ticking it picks the folder `<data folder>/messages` when none is set.
+
+* JSON Lines (default): one object per line. JSON: one array per file, valid after every message. CSV: header `timestamp,mode,type,source,freq_hz,quality,text,fields_json`, opens in a spreadsheet.
+* Fields: `timestamp` (ISO-8601 UTC), `mode`, `type`, `source` (sender, aircraft, ship, station or id), `freq_hz`, `quality` and `quality_field` (SNR or similar when the decoder knows it), `text` (the message) and `fields` (every decoded value).
+* Covered: everything that raises an automation event: ADS-B, ACARS, VDL2, HFDL, pagers (POCSAG/FLEX), AIS, DSC, APRS, sondes, GNSS, LoRa and mesh, Bluetooth, Remote ID, signals, and the text messages of Inmarsat-C, Inmarsat Aero and NAVTEX (`msg.inmarsat_c`, `msg.aero`, `msg.navtex`, new family "msg"). Voice calls, plug-ins, sessions, satellite passes, time and receiver status are not saved here.
+* Saved messages are never rate-limited (the events-per-second limit protects a broker, not a file). It works with no other sink set up.
+* This is not the same as the UDP output (Settings > Server > "Send decoded messages as UDP JSON lines"): that one only sends datagrams to an address and port and writes no file, and the message database (View > Message database) is a separate store. Before this change Inmarsat-C and Aero raised no events at all, so neither the UDP output, the message database nor Integrations ever saw them; they do now.
+
 ## MQTT
 
 * Broker address, port (1883; 8883 with TLS), optional user and password, optional client id (random when empty).

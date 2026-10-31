@@ -5,6 +5,7 @@
 #include "dect2/automation/event.h"
 #include "dect2/automation/engine.h"
 #include "dect2/integrations/mqtt.h"
+#include "dect2/integrations/msg_archive.h"
 #include <atomic>
 #include <functional>
 #include <memory>
@@ -46,12 +47,19 @@ struct Settings {
     MqttSettings mqtt;
     WebhookSettings webhook;
     JsonlSettings jsonl;
-    bool anyEnabled() const { return (mqtt.enabled && !mqtt.host.empty()) || (webhook.enabled && !webhook.url.empty()) || (jsonl.enabled && !jsonl.path.empty()); }
+    ArchiveSettings archive;                  // "Save decoded messages": one file per day per mode in a folder; its own families (archiveFamilies())
+    bool anyEnabled() const { return (mqtt.enabled && !mqtt.host.empty()) || (webhook.enabled && !webhook.url.empty()) || (jsonl.enabled && !jsonl.path.empty()) || (archive.enabled && !archive.folder.empty()); }
+    bool anySink() const { return (mqtt.enabled && !mqtt.host.empty()) || (webhook.enabled && !webhook.url.empty()) || (jsonl.enabled && !jsonl.path.empty()); }
+    // what the engine hook must deliver to the hub: the sinks' families plus, when saving is on, all message families
+    automation::FamilyMask hookFamilies() const;
 };
 
 // The families that go out when the user switches Integrations on and has not chosen: the decoded-message ones, not voice calls, plug-ins, the session store,
 // receiver, satellite or time events.
 automation::FamilyMask defaultFamilies();
+
+// The families "Save decoded messages" writes: all decoded-message families (same as defaultFamilies()).
+automation::FamilyMask archiveFamilies();
 
 // ---- the parts, public for the tests ----
 // "onair/{family}/{sub}/{ident}": {family} adsb, {type} adsb.aircraft, {sub} aircraft, {mode}, {ident} (icao, mmsi, call sign, id ...), {freq_mhz}, {field:NAME}.
@@ -72,9 +80,9 @@ bool fromJson(const std::string& text, Settings& s, std::string& err);
 std::string httpUrlProblem(const std::string& url);   // empty when it is a usable http(s) address
 
 struct Stats {
-    uint64_t mqttSent = 0, mqttFailed = 0, webhookSent = 0, webhookFailed = 0, jsonlLines = 0, dropped = 0, rateDropped = 0;
+    uint64_t mqttSent = 0, mqttFailed = 0, webhookSent = 0, webhookFailed = 0, jsonlLines = 0, archiveRecords = 0, archiveFailed = 0, dropped = 0, rateDropped = 0;
     std::string mqttStatus;                   // "connected", "off", "waiting to retry: ..."; never holds the password
-    std::string webhookStatus, jsonlStatus;
+    std::string webhookStatus, jsonlStatus, archiveStatus;
 };
 
 // The web post of the webhook sink is the app's (it has the HTTP client); a function that returns true when the server accepted it.
