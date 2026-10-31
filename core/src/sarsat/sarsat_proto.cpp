@@ -163,6 +163,7 @@ std::string protocolName(bool user, int code, std::string* type) {
         case 6: n = "EPIRB, serial and location"; t = "EPIRB"; break;
         case 7: n = "PLB, serial and location"; t = "PLB"; break;
         case 8: n = "ELT, national location"; t = "ELT"; break;
+        case 9: n = "ELT-DT location"; t = "ELT-DT"; break;
         case 10: n = "EPIRB, national location"; t = "EPIRB"; break;
         case 11: n = "PLB, national location"; t = "PLB"; break;
         case 12: n = "Ship security (SSAS)"; t = "Ship security"; break;
@@ -223,6 +224,8 @@ bool decode(std::vector<uint8_t>& bits, Beacon& o) {
     {   // the 15 hex ID: bits 26-85, with the position of a standard location protocol at its default value (C/S T.001 3.3)
         std::vector<uint8_t> id(bits.begin(), bits.begin() + 85);
         if (!o.userProto && standardLocation((int)get(bits, 37, 40))) { put(id, 65, 85, 0); put(id, 66, 74, 511); put(id, 76, 85, 1023); }
+        // ELT-DT (protocol 9): the PDF-1 position (bits 67-85, 0.5 degree) changes while the aircraft moves; it is not part of the beacon identity
+        else if (!o.userProto && get(bits, 37, 40) == 9) { put(id, 67, 85, 0); put(id, 68, 75, 255); put(id, 77, 85, 511); }
         o.hexId = bitsToHex(id, 26, 85);
     }
     o.homing = bits[110] != 0;
@@ -276,6 +279,37 @@ bool decode(std::vector<uint8_t>& bits, Beacon& o) {
         snprintf(b, sizeof b, "aircraft address %06X", (unsigned)get(bits, 41, 64));
         o.idText = b;
         break;
+    case 9: {   // ELT-DT: bits 41-42 identification type, 43-66 aircraft address (type 0), 67-85 PDF-1 position, 107-132 status + offsets
+        const int idType = (int)get(bits, 41, 42);
+        if (idType == 0) snprintf(b, sizeof b, "aircraft address %06X", (unsigned)get(bits, 43, 66));
+        else snprintf(b, sizeof b, "identification not available");
+        o.idText = b;
+        const int latU = (int)get(bits, 68, 75), lonU = (int)get(bits, 77, 85);
+        if (latU <= 180 && lonU <= 360) {   // 255 / 511 is the "no position" default
+            o.hasPos = true;
+            o.lat = (bits[66] ? -1.0 : 1.0) * latU * 0.5;
+            o.lon = (bits[75] ? -1.0 : 1.0) * lonU * 0.5;
+            o.posPrecisionDeg = 0.25;
+            if (o.longMsg && o.bch2Ok) {
+                static const char* act[] = {"manual", "automatic (G-switch)", "automatic (external)", "spare"};
+                static const char* alt[] = {"<=400 m", ">400 m", ">800 m", ">1200 m", ">1600 m", ">2200 m", ">2800 m", ">3400 m", ">4000 m", ">4800 m", ">5600 m", ">6600 m", ">7600 m", ">8800 m", ">10000 m", "n/a"};
+                static const char* fresh[] = {"rotating field", ">60 s old", ">2 s <=60 s old", "<=2 s old"};
+                const int fr = (int)get(bits, 113, 114);
+                std::string extra = std::string(", ") + act[get(bits, 107, 108)] + " activation, altitude " + alt[get(bits, 109, 112)];
+                if (fr > 0) {
+                    const int lm = (int)get(bits, 116, 119), ls = (int)get(bits, 120, 123), om = (int)get(bits, 125, 128), os = (int)get(bits, 129, 132);
+                    const double dl = lm / 60.0 + ls * 4.0 / 3600.0, dn = om / 60.0 + os * 4.0 / 3600.0;
+                    o.lat += bits[114] ? dl : -dl;
+                    o.lon += bits[123] ? dn : -dn;
+                    o.fine = true;
+                    o.posPrecisionDeg = 2.0 / 3600.0;
+                }
+                extra += std::string(", location ") + fresh[fr];
+                o.idText += extra;
+            }
+        }
+        return true;
+    }
     default: o.idText = "identification field " + bitsToHex(bits, 41, 64); break;
     }
     if (standardLocation(o.protoCode)) {

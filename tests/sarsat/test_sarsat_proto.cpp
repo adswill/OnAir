@@ -132,5 +132,31 @@ int main() {
         Beacon o1, o2, o3;
         CHECK(decode(b1, o1) && decode(b2, o2) && decode(b3, o3) && o1.hexId == o2.hexId && o1.hexId == o3.hexId, "hex id %s %s %s", o1.hexId.c_str(), o2.hexId.c_str(), o3.hexId.c_str());
     }
+    {   // ELT-DT (protocol 9, issue #407): live France burst, PDF-1 43.5 N 1.5 E, offsets +3 min 36 s / -1 min 8 s
+        auto build = [&](double lat, double lon, bool offs) {
+            Spec s; s.protoCode = 9; s.mid = 226; s.hasPos = false; s.homing = false;
+            std::vector<uint8_t> b = encode(s);
+            auto put2 = [&](int f, int l, uint64_t v) { for (int i = l; i >= f; i--) { b[(size_t)i - 1] = v & 1; v >>= 1; } };
+            put2(41, 42, 3);
+            put2(43, 66, 0x006253);
+            b[66] = lat < 0; put2(68, 75, (uint64_t)std::lround(std::fabs(lat) * 2));
+            b[75] = lon < 0; put2(77, 85, (uint64_t)std::lround(std::fabs(lon) * 2));
+            put2(107, 108, 0); put2(109, 112, 14); put2(113, 114, offs ? 3 : 0);
+            if (offs) { b[114] = 1; put2(116, 119, 3); put2(120, 123, 9); b[123] = 0; put2(125, 128, 1); put2(129, 132, 2); }
+            else put2(115, 132, 0x3FFFF);
+            std::vector<uint8_t> w(b.begin(), b.begin() + 85); w.resize(106, 0);
+            put2(86, 106, bchRemainder(w, 25, 106, 0x26D9E3, 21));
+            std::vector<uint8_t> w2(b.begin(), b.begin() + 132); w2.resize(144, 0);
+            put2(133, 144, bchRemainder(w2, 107, 144, 0x1539, 12));
+            return b;
+        };
+        std::vector<uint8_t> b1 = build(43.5, 1.5, true), b2 = build(10.0, 20.0, false);
+        Beacon o1, o2;
+        CHECK(decode(b1, o1) && o1.valid && o1.bch2Ok && o1.corrected == 0, "ELT-DT decode");
+        CHECK(o1.protoCode == 9 && o1.beaconType == "ELT-DT" && o1.protoName == "ELT-DT location", "ELT-DT name %s / %s", o1.protoName.c_str(), o1.beaconType.c_str());
+        CHECK(o1.hasPos && std::fabs(o1.lat - 43.56) < 0.001 && std::fabs(o1.lon - 1.48111) < 0.001, "ELT-DT position %.5f %.5f", o1.lat, o1.lon);
+        CHECK(decode(b2, o2) && o2.hasPos && std::fabs(o2.lat - 10.0) < 0.01, "ELT-DT without offsets");
+        CHECK(o1.hexId == o2.hexId, "ELT-DT hex id must not follow the position: %s %s", o1.hexId.c_str(), o2.hexId.c_str());
+    }
     return testSummary("test_sarsat_proto");
 }

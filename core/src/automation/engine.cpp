@@ -502,7 +502,15 @@ void Engine::Impl::tickLocked(double now) {
     }
 }
 
-void Engine::Impl::processLocked(const Event& ev) {
+void Engine::Impl::processLocked(const Event& ev0) {
+    // an event with a position gets distance_km from the receiver, so conditions and {{distance_km}} in notifications work for every mode (issue #403)
+    Event withDist;
+    const Event* pe = &ev0;
+    if (stationSet && ev0.f.find("distance_km") == ev0.f.end()) {
+        double la, lo;
+        if (numField(ev0, "lat", la) && numField(ev0, "lon", lo)) { withDist = ev0; withDist.num("distance_km", geo::distanceKm(stLat, stLon, la, lo)); pe = &withDist; }
+    }
+    const Event& ev = *pe;
     double now;
     std::shared_ptr<const std::vector<Rule>> rs;
     {

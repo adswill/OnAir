@@ -572,6 +572,19 @@ void testEngine() {
         Rule bad = x; bad.when = "((";
         CHECK(r.eng.test(bad, hit, false).why.find("character") != std::string::npos, "syntax error shown");
     }
+    {   // {{distance_km}} works for an ADS-B aircraft in a notification (issue #403)
+        Rig r;
+        r.eng.setStation(true, 54.6872, 25.2797);
+        Rule x = simple("Near", "adsb.aircraft", "has('lat')", notify("{{callsign}} {{distance_km}} km"));
+        x.geo = Rule::GeoCircle; x.geoHome = true; x.geoRadiusKm = 20; x.geoEnterOnly = true;
+        r.eng.setRules({x});
+        Event a("adsb.aircraft");
+        a.str("hex", "ABC123").str("callsign", "TST1").num("lat", 54.7872).num("lon", 25.2797);
+        r.eng.process(a);
+        CHECK(r.sink.count("notify") == 1, "aircraft within 20 km notified");
+        const std::string body = r.sink.calls.back().second.at("body");
+        CHECK(body.find("TST1 11.") == 0 && body.find("km") != std::string::npos, "distance in the notification: %s", body.c_str());
+    }
     {   // time.minute and sonde landing
         Rig r;
         r.eng.setRules({simple("Tick", "time.minute", "hour() == 10 and minute() == 15 and weekday() == 6", notify("tick")), simple("Landed", "sonde.landed", "distance_km <= 50", notify("{{serial}} {{distance_km}}"))});
