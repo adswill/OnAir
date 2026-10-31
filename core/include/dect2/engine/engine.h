@@ -12,6 +12,7 @@
 #include "dect2/dsp/spectrum.h"
 #include "dect2/dsp/noise_blanker.h"
 #include "dect2/t2/t2rx.h"
+#include "dect2/t2/t2mi_out.h"
 #include "dect2/dvbt/dvbt_rx.h"
 #include "dect2/atsc/atsc_rx.h"
 #include "dect2/dab/dab.h"
@@ -343,6 +344,9 @@ public:
     bool setSecondaryDvbs(double freqHz, double symbolRate);
 
     void setPlpDump(std::function<void(const PlpResult&)> cb) { plpDump_ = std::move(cb); }
+    // DVB-T2: export the BB frames of the decoded PLP as raw frames or T2-MI, to a file and/or UDP (t2mi_out.h). Empty config: off. Returns "" or the reason it failed.
+    std::string setT2Export(const T2ExportConfig& c);
+    uint64_t t2ExportFrames() const { return t2Export_ ? t2Export_->frames() : 0; }
 
     // Multi-channel TV (DVB-T / DVB-T2, multitv.h): when the capture is wide enough for more than one channel of the chosen width, one receiver runs for
     // every occupied channel of the raster (up to maxChannels), each with its own telemetry and service list; one channel plays at a time while the others
@@ -640,6 +644,8 @@ private:
     void catchUp();
     void logRxEvents(const RxTelemetry& t);
     std::function<void(const PlpResult&)> plpDump_;
+    std::unique_ptr<T2Export> t2Export_;
+    std::mutex t2ExportMu_;
     void onPlp(const PlpResult& r);
     // multi-channel TV (setMultiChannel)
     std::shared_ptr<MultiTv> mtv_;

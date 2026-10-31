@@ -77,6 +77,7 @@ int main(int argc, char** argv) {
     std::vector<int16_t> wav;
     std::string record, iridiumBits;
     OutputConfig out;
+    T2ExportConfig t2x;
     int isdbtBw = 6, isdbtSynthBw = 0;
     for (int i = 1; i < argc; i++) {
         std::string a = argv[i];
@@ -146,6 +147,10 @@ int main(int argc, char** argv) {
         else if (a == "--rtp") out.rtp = true;
         else if (a == "--service") out.serviceId = atoi(next());
         else if (a == "--no-null") out.dropNull = true;
+        else if (a == "--t2-bbf") { t2x.format = T2ExportConfig::Bbf; t2x.file = next(); }                  // DVB-T2: raw BB frames of the PLP to a file
+        else if (a == "--t2-mi") { t2x.format = T2ExportConfig::T2mi; t2x.file = next(); }                  // DVB-T2: the PLP as T2-MI in TS packets to a file
+        else if (a == "--t2-udp") { std::string hp = next(); auto c = hp.find(':'); t2x.udpHost = hp.substr(0, c); if (c != std::string::npos) t2x.udpPort = atoi(hp.c_str() + c + 1); }   // ... and/or by UDP (T2-MI unless --t2-bbf)
+        else if (a == "--t2-pid") t2x.pid = atoi(next());
     }
     if (useFile) {   // .sigmf-meta / .sigmf-data / two-channel .wav: the file says its rate, frequency and format (the flags still win)
         IqFileInfo info; std::string perr;
@@ -205,6 +210,7 @@ int main(int argc, char** argv) {
         }
     }
     (void)haveDev;
+    if (!t2x.file.empty() || !t2x.udpHost.empty()) { const std::string err = e.setT2Export(t2x); if (!err.empty()) { fprintf(stderr, "T2 export: %s\n", err.c_str()); return 1; } }
     if (getenv("DECT2_PLPLOG")) e.setPlpDump([&e](const PlpResult& r) {   // one line per decoded T2 frame: where do blocks get lost?
         RxTelemetry t;
         e.latestRx(t, 0);
