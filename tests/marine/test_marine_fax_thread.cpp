@@ -4,6 +4,7 @@
 #include <atomic>
 #include <chrono>
 #include <thread>
+#include "../common/cpu_report.h"
 using namespace faxt;
 
 int main() {
@@ -59,6 +60,7 @@ int main() {
         const double el = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
         const double rtf = a.size() / rate / el;
         printf("%.0f Hz audio: %.0f s decoded in %.2f s, %.0f times real time on one core\n", rate, a.size() / rate, el, rtf);
+        cpuCal("marine_fax_thread", std::to_string((long long)rate) + " Hz audio", rtf, "x-realtime", '>', rate == 12000 ? 20 : 3);
         FCHECK(rtf > (rate == 12000 ? 20 : 3), "real-time factor %.1f at %.0f Hz", rtf, rate);
     }
     if (fails) { printf("%d failures\n", fails); return 1; }

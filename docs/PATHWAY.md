@@ -807,3 +807,6 @@ tetrapol_voice (all platforms, deterministic) was a real regression of the TETRA
 
 ## 2026-10-31 issues pass (fix35-issues2)
 Triage of all 136 open issues in docs/ISSUES-3.5-TRIAGE.md, draft replies in docs/ISSUE-REPLIES-3.5c.md (nothing posted). Fixed: #393 (settings saved by 3.3.0 no longer beat a mode default, test_freq_remember), #408/#371/#333 Tetrapol Ch column, #389 DMR Calls filter by type (test_dmr_call_filter), #390 HF fax image limit 8000 lines, #372 threads setting, #357 R8600 firmware check accepts FX2 scratch RAM, #405 Web-888 note. Not built locally (syntax-checked only); CI dispatched on the branch.
+
+## 2026-10-31: open PRs (feat35-prs)
+#366 (FM status readout layout jitter, UI-only, one file) cherry-picked with the author kept. #406 (tests pass again, CPUCAL speed lines, web_hub procMu_ hang fix, shorter mesh_rates with `--full`) merged; conflicts in mesh_rx.cpp (both comments kept), test_netradio.cpp and test_sarsat_rx.cpp (integ-35 already had the same fixes, kept ours). Reply drafts in docs/PR-REPLIES-3.5.md.

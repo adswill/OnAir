@@ -88,7 +88,8 @@ public:
 
     // The radio's thread: samples centred on centreHz at rateHz. Copies; drops (and counts) when the DSP thread is behind.
     void pushIq(const cf32* x, size_t n, double centreHz, double rateHz);
-    // For tests and the load tool: run the DSP of everything queued now on the calling thread (start() not called)
+    // For tests and the load tool: run the DSP of everything queued now on the calling thread (after start() it takes turns with the
+    // DSP thread)
     void processPending();
 
     // connections
@@ -144,6 +145,7 @@ private:
     std::deque<Chunk> inQ_;
     size_t inSamples_ = 0;
     std::atomic<uint64_t> inDropped_{0};
+    std::mutex procMu_;   // one processChunk() at a time: the pool runs one job, and the waterfall and stream clock are not shared
 
     std::thread dsp_;
     std::atomic<bool> run_{false};

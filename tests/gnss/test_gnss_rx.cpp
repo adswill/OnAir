@@ -7,6 +7,7 @@
 #include <cstdio>
 using namespace dect2;
 using namespace dect2::gnsstest;
+#include "../common/cpu_report.h"
 #include "../common/test_util.h"
 
 int main() {
@@ -129,6 +130,7 @@ int main() {
     CHECK(t.blocksOk > 40 && t.blocksBad == 0, "subframes %llu good, %llu bad", (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
     CHECK(t.snrDb > 40 && t.snrDb < 46, "best C/N0 %.1f", t.snrDb);
     CHECK(t.levelDbfs > -20 && t.levelDbfs < -14, "input level %.1f dBFS", t.levelDbfs);
+    cpuCal("gnss_rx", "8 satellites", o.secs / r.cpuSecs, "x-realtime", '>', 3.0, !GNSS_SANITIZED && ciSlack() == 1);
     if (!GNSS_SANITIZED && !std::getenv("CI")) CHECK(o.secs / r.cpuSecs > 3.0, "real-time factor %.1f", o.secs / r.cpuSecs);
     if (fails) { printf("%d failure(s)\n", fails); return 1; }
     printf("OK\n");

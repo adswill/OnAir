@@ -46,6 +46,9 @@ struct IonoReceiver::Impl {
             }
         seenEvents = t.timeline.size();
         std::lock_guard<std::mutex> lk(mu);
+        // a Clear or a loaded file that came in while this feed ran: t still holds the old sounders (the processor takes the request at
+        // the next feed), and publishing it would bring back what clearResults() just emptied
+        if (clearReq || loadReq) return;
         t.seq = pub.seq + 1;
         pub = std::move(t);
     }

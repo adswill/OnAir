@@ -18,6 +18,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include "../common/cpu_report.h"
 using namespace dect2;
 static int fails = 0;
 #define CHECK(c, ...) do { if (!(c)) { printf("FAIL: " __VA_ARGS__); printf("\n"); fails++; } } while (0)
@@ -154,6 +155,7 @@ int main(int argc, char** argv) {
         bool s1 = false, s2 = false;
         for (const DmrCall& c : t.callLog) { if (c.slot == 1) s1 = true; if (c.slot == 2) s2 = true; }
         CHECK(s1 && s2, "calls on both slots expected");
+        cpuCal("dmr_rx", "two-slot signal", r.cpu / s.secs, "cpu-s/s", '<', 1.0 / 5, !kSanitised);
         CHECK(kSanitised || r.cpu < s.secs / 5, "CPU %.2f s for %.0f s of signal (needs 5x real time)", r.cpu, s.secs);
         int err = 0;
         for (const DmrCall& c : t.callLog) err += c.fecErrors;
@@ -241,6 +243,7 @@ int main(int argc, char** argv) {
         CHECK(t.state == 0 && !t.dataValid && t.calls == 0 && t.callLog.empty() && t.slotsLocked == 0, "noise reported as a signal: state %d calls %llu", t.state, (unsigned long long)t.calls);
         printf("%-36s state %d, syncs accepted %llu, CPU %.2f s for 4 s of noise\n", "noise only", t.state, (unsigned long long)syncs, cpu);
         CHECK(t.blocksOk == 0 && syncs == 0, "noise decoded: %llu blocks, %llu syncs", (unsigned long long)t.blocksOk, (unsigned long long)syncs);
+        cpuCal("dmr_rx", "noise only", cpu / 4.0, "cpu-s/s", '<', 1.0 / 5, !kSanitised);
         CHECK(kSanitised || cpu < 4.0 / 5, "idle search costs %.2f s for 4 s", cpu);
     }
 

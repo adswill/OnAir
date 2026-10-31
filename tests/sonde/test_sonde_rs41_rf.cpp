@@ -1,6 +1,7 @@
 // RS41 through the whole receiver: generator -> IQ at several rates -> carrier search, channel, decoder. Rates, carrier offsets,
 // clock offsets, chunk sizes, 8-bit samples, DC offset, a gap, reset(), and the SNR at which frames start to fail.
 #include "dect2/sonde/sonde_testkit.h"
+#include "../common/cpu_report.h"
 #include "../common/impair.h"
 using namespace dect2;
 using namespace dect2::sondetest;
@@ -37,6 +38,7 @@ int main() {
         char w[64]; snprintf(w, sizeof w, "rate %.1f Msps", rate / 1e6);
         checkRs41(r, secs, 0.95, w);
         printf("%s: rtf %.0f, frames ok %llu bad %llu\n", w, r.rtf, (unsigned long long)r.tel.blocksOk, (unsigned long long)r.tel.blocksBad);
+        cpuCal("sonde_rs41_rf", w, r.rtf, "x-realtime", '>', 5.0, !kSanitized);
         if (!kSanitized) CHECK(r.rtf > 5.0, "%s: real-time factor %.1f", w, r.rtf);
         const SondeInfo* s = find(r.tel, "N4750123");
         if (s) CHECK(std::fabs(s->offsetHz) < 600.0, "%s: carrier at %.0f Hz", w, s->offsetHz);

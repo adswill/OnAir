@@ -2,6 +2,7 @@
 // follows is the costly part. It must not run on every block that comes in (that took ten times real time), and a DAB signal that starts after
 // them must still be found.
 #include "dect2/dab/dab.h"
+#include "../common/cpu_report.h"
 #include "../common/ci_slack.h"
 #include "dect2/common/stable_random.h"
 #include "dect2/dab/dab_gen.h"
@@ -31,10 +32,12 @@ int main() {
         rx.configure(rate);
         rx.audio().setSilent(true);
         const double zeros = feedAll(rx, x, rate);
+        cpuCal("dab_search", "silence", zeros, "%-load", '<', 60 * ciSlack());
         CHECK(zeros < 60 * ciSlack(), "silence: load %.0f %%", zeros);
         for (size_t period : {5000, 50000}) {
             for (size_t i = 0; i < N; i++) x[i] = cf32{nd(g), nd(g)} * (((i / period) & 1) ? 1.f : 0.001f);
             const double l = feedAll(rx, x, rate);
+            cpuCal("dab_search", "power dips every " + std::to_string(period) + " samples", l, "%-load", '<', 60 * ciSlack());
             CHECK(l < 60 * ciSlack(), "power dips every %zu samples: load %.0f %%", period, l);
         }
     }
