@@ -210,7 +210,7 @@ int main() {
     r.stopRx(r.dev);
     run = false; worker.join();
     if (snipFile) fclose(snipFile);
-    r.close(r.dev);
+    r.setBias(r.dev, 0); r.close(r.dev);
     const VoiceStatus vs = voice.status();
     printf("done: %.0f s; voice channels seen %zu; samples pushed %.1f s, dropped %.1f s\n", secs, vs.channels.size(), q.pushed / rate, q.dropped / rate);
     for (const auto& v : vs.channels) printf("  carrier %d at %.4f MHz: %llu frames, %llu decoded\n", v.id, v.freqHz / 1e6, (unsigned long long)v.frames, (unsigned long long)v.decoded);
