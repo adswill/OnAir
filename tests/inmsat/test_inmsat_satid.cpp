@@ -42,7 +42,7 @@ int main() {
     // 2. three sources agree: Alphasat's channels (with a 2 kHz offset and one carrier missing), 25E in the table, Lithuania
     {
         SatInput in; in.sys.push_back(sysLon(25.5)); in.haveLocation = true; in.latDeg = kLtLat; in.lonDeg = kLtLon;
-        in.carriers = {car(1545.115, 600, 2000), car(1546.0125, 10500, -2000)};      // 1545.130 and 1546.0275 not heard
+        in.carriers = {car(1545.115, 600, 2000), car(1545.315, 10500, -2000)};      // 1545.130 and 1545.3275 not heard
         const SatResult r = identifySatellite(in);
         dump("three agree", r);
         CHECK(r.valid && r.name == "Alphasat 25E" && r.confidence >= 0.85 && !r.ambiguous, "name '%s' conf %.2f", r.name.c_str(), r.confidence);
@@ -67,7 +67,7 @@ int main() {
     // 4. two satellites in one capture (Alphasat and 6F1 channels together): ambiguous, never a confident single answer from frequency alone
     {
         SatInput in; in.haveLocation = true; in.latDeg = kLtLat; in.lonDeg = kLtLon;
-        in.carriers = {car(1545.120, 600), car(1545.200, 600), car(1546.0125, 10500), car(1546.100, 10500)};
+        in.carriers = {car(1545.120, 600), car(1545.200, 600), car(1545.315, 10500), car(1546.100, 10500)};
         const SatResult r = identifySatellite(in);
         dump("two satellites", r);
         CHECK(r.confidence < 0.8, "two satellites: conf %.2f", r.confidence);
@@ -75,7 +75,7 @@ int main() {
     // 5. clues that disagree: the table says 83.5E, the channels are Alphasat's
     {
         SatInput in; in.sys.push_back(sysLon(83.0)); in.haveLocation = true; in.latDeg = kLtLat; in.lonDeg = kLtLon;
-        in.carriers = {car(1545.115, 600), car(1545.130, 600), car(1546.0125, 10500)};
+        in.carriers = {car(1545.115, 600), car(1545.130, 600), car(1545.315, 10500)};
         const SatResult r = identifySatellite(in);
         dump("disagree", r);
         CHECK(r.confidence < 0.85, "disagreement must lower the confidence: %.2f", r.confidence);

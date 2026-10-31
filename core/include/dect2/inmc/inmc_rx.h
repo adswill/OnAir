@@ -20,6 +20,7 @@ public:
     bool ready() const;                                  // false when the input rate is too low for this mode
     void reset();                                        // after a retune: forget the signal (the messages stay: clearResults)
     void setChannelSearch(bool on);                      // look for more channels in the band (default on); off drops the ones found
+    void setSearchSpan(double hz);                       // that search stays within +-hz of 0 Hz (0 = the whole input, the default)
     void feed(const cf32* x, size_t n);
     bool telemetry(InmcTelemetry& out, uint64_t lastSeq);
     // The message list stay through reset(), configure() and retunes: only clearResults() empties them
