@@ -150,7 +150,7 @@ void customRow(App& a, const Info& i) {
     else if (k == "dataFolder") {
         const std::string d = plat::dataDir();
         ImGui::TextWrapped("%s", d.c_str());
-        if (ImGui::Button(tr("Open folder"))) dect2::openUrl("file://" + d);
+        if (ImGui::Button(tr("Open folder"))) dect2::openUrl(d);
         ImGui::SameLine();
         if (ImGui::Button(tr("Copy path"))) ImGui::SetClipboardText(d.c_str());
     } else if (k == "privacyInfo") {
