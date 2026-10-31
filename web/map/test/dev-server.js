@@ -11,7 +11,7 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { TrackBook, sanitize } from "../src/track-book.js";
 
-const PUB = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public");
+const PUB = process.env.MAP_PUBLIC || path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public");   // MAP_PUBLIC: serve another copy of public/ (to compare versions)
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".svg": "image/svg+xml", ".json": "application/json" };
 
 /** The hub's ingest + /live logic without the Worker shell. `now` is injectable so tests can move the clock. */
