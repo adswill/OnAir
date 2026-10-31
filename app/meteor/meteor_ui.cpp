@@ -4,6 +4,7 @@
 #include "app.h"
 #include "panels/gallery.h"
 #include "gfx/gfx.h"
+#include "map/wx_overlay.h"
 #include "platform/platform.h"
 #include "dect2/meteor/meteor_rx.h"
 #include "dect2/meteor/meteor_tel.h"
@@ -191,6 +192,17 @@ void tab(App& a) {
     const MeteorTelemetry& t = a.rx.meteor;
     const bool on = live(a);
     if (on) update(t);
+    if (on && t.image && t.image->rows >= 2 && wxoverlay::wanted(a)) {   // the picture of the pass on the map (View > Map)
+        const MeteorImage& im = *t.image;
+        const std::array<int, 3> ch = channelsFor(&im, S.view);
+        const int h = im.rows * 8;
+        std::vector<uint32_t> px((size_t)h * kMeteorWidth);
+        for (int r = 0; r < im.rows; r++) {
+            composeRow(im, ch, r, &px[(size_t)r * 8 * kMeteorWidth]);
+            if (!stripOf(im, ch[0], r) && !stripOf(im, ch[1], r) && !stripOf(im, ch[2], r)) std::fill_n(&px[(size_t)r * 8 * kMeteorWidth], 8 * kMeteorWidth, 0u);   // a lost strip stays clear
+        }
+        wxoverlay::setSwath(im.id, "Meteor-M LRPT", kMeteorWidth, h, px, 6.0);
+    }
     if (on && t.image) {   // auto-save: the picture stopped growing
         const double now = ImGui::GetTime();
         if (t.image->rows != S.lastRows) { S.lastRows = t.image->rows; S.lastGrow = now; }
