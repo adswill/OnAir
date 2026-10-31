@@ -261,14 +261,17 @@ void fillCw(const CwTelemetry& t, SwDecoderStatus& st) {
     st.status = cwSummary(t);
 }
 void fillPsk(const PskTelemetry& t, SwDecoderStatus& st) {
-    std::string text;
-    uint64_t chars = 0;
+    // a loud neighbour (an RTTY tone) can get a decoder too and print noise: the cleanest decoding signal is the one shown
     const PskSignal* best = nullptr;
-    for (const auto& s : t.signals) if (!best || s.chars > best->chars) best = &s;
-    if (best) { text = best->text; chars = best->chars; }
-    st.text = clip(text); st.chars = chars;
+    for (const auto& s : t.signals) {
+        if (!s.dcd || s.chars < 4) continue;
+        if (!best || s.quality > best->quality) best = &s;
+    }
+    if (!best) for (const auto& s : t.signals) if (!best || s.chars > best->chars) best = &s;
+    st.text = best ? clip(best->text) : std::string();
+    st.chars = best ? best->chars : 0;
     st.state = t.state;
-    st.valid = best && best->dcd && chars >= 8;
+    st.valid = best && best->dcd && best->chars >= 8 && best->quality > 0.3f;
     st.quality = best ? best->quality : 0.f;
     st.status = pskSummary(t);
 }

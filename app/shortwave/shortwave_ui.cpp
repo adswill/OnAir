@@ -483,6 +483,11 @@ void devPress(App& a) {
 
 void tick(App& a) {
     load();
+    static bool entered = false;
+    if (!entered) {   // HF has no FM: the first visit of a run opens in AM when the shared demodulator is still an FM one
+        entered = true;
+        if (generalApiDemod() == dect2::GenNfm || generalApiDemod() == dect2::GenWfm) { generalApiSetDemod(dect2::GenAm); generalApiSetWidthHz(dect2::kSwAmWidthHz); }
+    }
     generalTick(a);
     devPress(a);   // the same push to the receiver as the General mode (demodulator, filter, squelch, channel marker, volume, recording)
     auto& r = rx(a);
