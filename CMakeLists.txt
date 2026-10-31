@@ -165,7 +165,7 @@ file(CONFIGURE OUTPUT ${_fdb_inc} CONTENT "${_fdb_out}" @ONLY)
 file(READ ${ONAIR_ROOT}/data/airports/airports.tsv _ap_txt)
 file(CONFIGURE OUTPUT ${CMAKE_BINARY_DIR}/generated/airports_data.inc CONTENT "static const char kAirportData[] = R\"OnAirAP(${_ap_txt})OnAirAP\";\n" @ONLY)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${ONAIR_ROOT}/data/airports/airports.tsv)
-target_sources(dect2core PRIVATE core/src/airports/airports.cpp)
+target_sources(dect2core PRIVATE core/src/airports/airports.cpp core/src/common/radioid_db.cpp)   # radioid_db: the DMR / NXDN radio ID name list (user-downloaded CSV)
 target_sources(dect2core PRIVATE core/src/doctor/reception_doctor.cpp)   # Reception Doctor: why a mode is not decoding (docs/RECEPTION-DOCTOR.md)
 target_sources(dect2core PRIVATE core/src/sweep/station_health.cpp core/src/source/agc.cpp)   # station and antenna health report (docs/STATION_HEALTH.md)
 target_sources(dect2core PRIVATE core/src/source/autogain.cpp core/src/source/autogain_radio.cpp core/src/source/autogain_measure.cpp)   # automatic gain for every radio and mode (docs/AUTOGAIN.md)
@@ -1810,6 +1810,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_freq_db tests/channels/test_freq_db.cpp)   # the frequency database: data validity, search and filters, import / export round trip
   target_link_libraries(test_freq_db PRIVATE dect2core)
   add_test(NAME freq_db COMMAND test_freq_db)
+  add_executable(test_radioid tests/radioid/test_radioid.cpp)   # DMR / NXDN radio ID name list: radioid.net CSV, header variants, quotes, damaged rows
+  target_link_libraries(test_radioid PRIVATE dect2core)
+  add_test(NAME radioid COMMAND test_radioid)
   add_executable(test_airports tests/airports/test_airports.cpp)   # airport table: built-in data, search, near, channels of an airport, OurAirports import
   target_link_libraries(test_airports PRIVATE dect2core)
   add_test(NAME airports COMMAND test_airports)
