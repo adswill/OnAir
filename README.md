@@ -310,6 +310,7 @@ No radio? Open an IQ recording through the *IQ recording file* source (cs8, cu8,
 - **KLW** end-of-train data (default 866.2375 MHz) and **TDCS** train dispatch data (default 457.550 MHz): 1200 bit/s FFSK with BCH and CRC checks, locomotive and tail IDs, pressure / commands or train number, speed, mileage and consist fields. LBJ also decodes the fixed-position extension, WGS-84 coordinates and time broadcasts. [Details and test coverage](docs/railway.md).
 - **EBICab / Eurobalise** (needs a user test, receive only: the Eurobalise balise up-link around 4.234 MHz decoded to its telegrams per UNISIG SUBSET-036; EBICab 700 / 900 telegram formats are not public and are only listed as bursts; [details](docs/ebicab.md)).
 - **nRF24L01** (needs a user test, receive only: Enhanced ShockBurst frames of nRF24L01(+) chips on one 2.4 GHz channel, 250 kbit/s, 1 and 2 Mbit/s, address found by CRC; needs a 2.4 GHz SDR such as HackRF, PlutoSDR or bladeRF; [details](docs/nrf24.md))
+- **ATIS** (needs a user test, receive only: the Automatic Transmitter Identification System of the European inland waterways, not AIS; the ten digit identity a ship radio sends after each transmission on a VHF channel, 1200 baud 1300 / 2100 Hz in the DSC code, shown with country, call sign and your ship name table, with the narrow FM audio of the channel; [details](docs/atis.md))
 
 ### Pagers
 

@@ -218,7 +218,9 @@ void Monitor::setSettings(const Settings& s) {
     set_.volume = std::min(1.f, std::max(0.f, set_.volume));
     set_.squelchPct = std::min(100.f, std::max(0.f, set_.squelchPct));
     set_.hangSec = std::min(30.0, std::max(0.2, set_.hangSec));
+    set_.holdSec = std::max(0.0, set_.holdSec);
     applyLocked();
+    holdLast_ = now();
     gen_++;
     if (stopRec) for (auto& kv : live_) if (kv.second.rec) {
         Rec& r = *kv.second.rec;
@@ -228,7 +230,7 @@ void Monitor::setSettings(const Settings& s) {
 
 void Monitor::applyLocked() {
     allow_.parse(set_.allow); mute_.parse(set_.mute); prio_.parse(set_.priority); hold_.parse(set_.hold);
-    labelNum_.clear(); labelText_.clear();
+    labelNum_.clear(); labelText_.clear(); labelSrc_.clear();
     std::string line;
     for (size_t i = 0; i <= set_.labels.size(); i++) {
         const char ch = i < set_.labels.size() ? set_.labels[i] : '\n';
@@ -237,9 +239,13 @@ void Monitor::applyLocked() {
         if (eq != std::string::npos) {
             std::string k = upper(trim(line.substr(0, eq)));
             const std::string v = trim(line.substr(eq + 1));
-            if (k.size() > 2 && k.compare(0, 2, "TG") == 0) k = trim(k.substr(2));
+            bool radio = false;   // "RID 3120123=name": names the source radio only (a radio ID and a talkgroup may share a number)
+            if (k.size() > 3 && k.compare(0, 3, "RID") == 0 && std::isspace((unsigned char)k[3])) { k = trim(k.substr(3)); radio = true; }
+            else if (k.size() > 2 && k.compare(0, 2, "TG") == 0) k = trim(k.substr(2));
             if (!k.empty() && !v.empty()) {
-                if (allDigits(k)) labelNum_[(uint32_t)std::strtoul(k.c_str(), nullptr, 10)] = v;
+                if (radio && allDigits(k)) labelSrc_[(uint32_t)std::strtoul(k.c_str(), nullptr, 10)] = v;
+                else if (radio) labelText_[k] = v;
+                else if (allDigits(k)) labelNum_[(uint32_t)std::strtoul(k.c_str(), nullptr, 10)] = v;
                 else labelText_[k] = v;
             }
         }
@@ -257,7 +263,19 @@ std::string Monitor::labelLocked(const CallInfo& c) const {
     return std::string();
 }
 
+std::string Monitor::srcLabelLocked(const CallInfo& c) const {
+    if (c.src) {
+        auto r = labelSrc_.find(c.src);
+        if (r != labelSrc_.end()) return r->second;
+        auto n = labelNum_.find(c.src);
+        if (n != labelNum_.end()) return n->second;
+    }
+    if (!c.srcText.empty()) { auto t = labelText_.find(upper(trim(c.srcText))); if (t != labelText_.end()) return t->second; }
+    return std::string();
+}
+
 std::string Monitor::label(const CallInfo& c) const { std::lock_guard<std::mutex> lk(mu_); return labelLocked(c); }
+std::string Monitor::sourceLabel(const CallInfo& c) const { std::lock_guard<std::mutex> lk(mu_); return srcLabelLocked(c); }
 
 std::string Monitor::targetToken(const CallInfo& c) {
     if (!c.dstText.empty()) return trim(c.dstText);
@@ -288,7 +306,7 @@ void Monitor::finishLocked(Live& l) {
         kv("group", c.group ? "true" : "false", false);
         kv("slot", std::to_string(c.slot), false);
         { char b[32]; snprintf(b, sizeof b, "%.0f", c.carrierHz); kv("carrier_hz", b, false); }
-        kv("access", c.access); kv("alias", c.alias); kv("label", l.e.label);
+        kv("access", c.access); kv("alias", c.alias); kv("label", l.e.label); kv("srcLabel", l.e.srcLabel);
         kv("emergency", c.emergency ? "true" : "false", false);
         kv("start_utc", isoUtc(l.e.wallStart)); kv("end_utc", isoUtc(l.e.wallEnd));
         { char b[32]; snprintf(b, sizeof b, "%.2f", l.rec->rate ? l.rec->bytes / 2.0 / l.rec->rate : 0.0); kv("audio_seconds", b, false); }
@@ -347,6 +365,7 @@ void Monitor::housekeepLocked(double t) {
         else ++it;
     }
     if (!cur_.empty() && (t - curLast_ > set_.hangSec || !live_.count(cur_))) { cur_.clear(); curPrio_ = false; }
+    if (!hold_.empty() && set_.holdSec > 0 && t - holdLast_ > set_.holdSec) { set_.hold.clear(); applyLocked(); gen_++; }
 }
 
 void Monitor::housekeep() { std::lock_guard<std::mutex> lk(mu_); housekeepLocked(now()); }
@@ -410,7 +429,12 @@ Verdict Monitor::offer(const CallInfo& c0) {
     e.frames++;
     if (c.errorRate >= 0) e.errorRate = e.errorRate < 0 ? c.errorRate : e.errorRate * 0.8f + c.errorRate * 0.2f;
     e.label = labelLocked(e.info);
+    e.srcLabel = srcLabelLocked(e.info);
     e.priority = prio_.match(e.info);
+    if (!hold_.empty()) {   // the hold lets go by itself when nothing is heard on the held target for holdSec
+        if (hold_.matchTarget(e.info)) holdLast_ = t;
+        else if (set_.holdSec > 0 && t - holdLast_ > set_.holdSec) { set_.hold.clear(); applyLocked(); gen_++; }
+    }
     const CallInfo& ci = e.info;
     Verdict v;
     if (ci.encrypted) v = Verdict::Encrypted;
@@ -539,7 +563,7 @@ std::vector<CallEntry> Monitor::history(const std::string& query, size_t max) co
     for (const auto& e : all) {
         if (out.size() >= max) break;
         if (!q.empty()) {
-            const std::string hay = upper(targetText(e.info) + " " + sourceText(e.info) + " " + e.label + " " + e.info.alias + " " + e.info.access + " " +
+            const std::string hay = upper(targetText(e.info) + " " + sourceText(e.info) + " " + e.label + " " + e.srcLabel + " " + e.info.alias + " " + e.info.access + " " +
                                           verdictText(e.verdict) + (e.info.emergency ? " EMERGENCY" : "") + (e.info.encrypted ? " ENCRYPTED" : ""));
             if (hay.find(q) == std::string::npos) continue;
         }
@@ -596,6 +620,7 @@ std::string Monitor::saveSettings() const {
     o << "mute=" << esc(set_.mute) << "\n";
     o << "priority=" << esc(set_.priority) << "\n";
     o << "hold=" << esc(set_.hold) << "\n";
+    { char hb[32]; snprintf(hb, sizeof hb, "%.1f", set_.holdSec); o << "holdSec=" << hb << "\n"; }
     o << "labels=" << esc(set_.labels) << "\n";
     return o.str();
 }
@@ -619,9 +644,146 @@ void Monitor::loadSettings(const std::string& text) {
         else if (k == "mute") s.mute = v;
         else if (k == "priority") s.priority = v;
         else if (k == "hold") s.hold = v;
+        else if (k == "holdSec") s.holdSec = std::atof(v.c_str());
         else if (k == "labels") s.labels = v;
     }
     setSettings(s);
+}
+
+
+// ---------------------------------------------------------------- last heard
+
+std::vector<Heard> Monitor::heard(size_t max) const {
+    std::lock_guard<std::mutex> lk(mu_);
+    std::map<std::string, Heard> by;
+    std::map<std::string, int> errN;
+    auto add = [&](const CallEntry& e) {
+        std::string key;
+        if (e.info.src) key = "id:" + num(e.info.src);
+        else if (!e.info.srcText.empty()) key = "txt:" + upper(e.info.srcText);
+        else return;   // a call with no known source
+        Heard& h = by[key];
+        h.key = key;
+        const int64_t w = e.wallEnd ? e.wallEnd : e.wallStart;
+        h.calls++;
+        h.seconds += e.seconds();
+        if (e.errorRate >= 0) { h.errorRate = (h.errorRate < 0 ? 0.f : h.errorRate * errN[key]) + e.errorRate; h.errorRate /= (float)++errN[key]; }
+        h.emergency = h.emergency || e.info.emergency;
+        if (w >= h.lastWall) { h.lastWall = w; h.last = e.info; h.name = e.srcLabel.empty() ? srcLabelLocked(e.info) : e.srcLabel; }
+    };
+    for (const auto& kv : live_) add(kv.second.e);
+    for (const auto& e : hist_) add(e);
+    std::vector<Heard> out;
+    for (auto& kv : by) out.push_back(kv.second);
+    std::sort(out.begin(), out.end(), [](const Heard& a, const Heard& b) { return a.lastWall != b.lastWall ? a.lastWall > b.lastWall : a.key < b.key; });
+    if (out.size() > max) out.resize(max);
+    return out;
+}
+
+// ---------------------------------------------------------------- name list import
+
+namespace {
+// one CSV record split on `d`; double quotes group, "" is a quote
+std::vector<std::string> splitRecord(const std::string& line, char d) {
+    std::vector<std::string> f;
+    std::string cur;
+    bool q = false;
+    for (size_t i = 0; i < line.size(); i++) {
+        const char ch = line[i];
+        if (q) {
+            if (ch == '"') { if (i + 1 < line.size() && line[i + 1] == '"') { cur += '"'; i++; } else q = false; }
+            else cur += ch;
+        } else if (ch == '"') q = true;
+        else if (ch == d) { f.push_back(trim(cur)); cur.clear(); }
+        else cur += ch;
+    }
+    f.push_back(trim(cur));
+    return f;
+}
+std::string cleanName(std::string v) {
+    for (char& ch : v) if (ch == '=' || ch == ';' || ch == '\r' || ch == '\n' || ch == '\t' || (unsigned char)ch < 0x20) ch = ' ';
+    std::string o;
+    bool sp = false;
+    for (char ch : trim(v)) { if (ch == ' ') { if (!sp) o += ch; sp = true; } else { o += ch; sp = false; } }
+    if (o.size() > 64) { o.resize(64); while (!o.empty() && ((unsigned char)o.back() & 0xC0) == 0x80) o.pop_back(); if (!o.empty() && (unsigned char)o.back() >= 0xC0) o.pop_back(); }
+    return trim(o);
+}
+}
+
+std::string importLabels(const std::string& text, ListKind kind, size_t* count) {
+    std::vector<std::string> lines;
+    { std::istringstream in(text); std::string l; while (std::getline(in, l)) { if (!l.empty() && l.back() == '\r') l.pop_back(); if (!trim(l).empty()) lines.push_back(l); } }
+    if (!lines.empty() && lines[0].size() >= 3 && (unsigned char)lines[0][0] == 0xEF && (unsigned char)lines[0][1] == 0xBB && (unsigned char)lines[0][2] == 0xBF) lines[0].erase(0, 3);
+    std::string out;
+    size_t n = 0;
+    if (lines.empty()) { if (count) *count = 0; return out; }
+    // the delimiter: the one that splits the first line into most fields
+    char d = ',';
+    size_t best = 0;
+    for (char c : {',', ';', '\t', '='}) { const size_t k = (size_t)std::count(lines[0].begin(), lines[0].end(), c); if (k > best) { best = k; d = c; } }
+    std::vector<std::string> head = splitRecord(lines[0], d);
+    int cCall = -1, cFirst = -1, cLast = -1, cName = -1;
+    bool header = !head.empty() && !allDigits(head[0]) && !(head[0].size() > 2 && upper(head[0]).compare(0, 2, "TG") == 0 && allDigits(trim(head[0].substr(2))));
+    bool radios = kind == ListKind::Radios;
+    if (header) {
+        for (size_t i = 0; i < head.size(); i++) {
+            const std::string h = upper(head[i]);
+            if (h == "CALLSIGN" || h == "CALL" || h == "CALL SIGN") cCall = (int)i;
+            else if (h == "FIRST_NAME" || h == "FIRST NAME" || h == "FIRSTNAME" || h == "NAME") { if (h == "NAME") cName = (int)i; else cFirst = (int)i; }
+            else if (h == "LAST_NAME" || h == "LAST NAME" || h == "LASTNAME") cLast = (int)i;
+            else if (cName < 0 && (h == "TALKGROUP" || h == "DESCRIPTION" || h == "LABEL" || h == "ALIAS")) cName = (int)i;
+        }
+        if (kind == ListKind::Auto) radios = cCall >= 0 || upper(head[0]) == "RADIO_ID" || upper(head[0]) == "RADIO ID" || upper(head[0]) == "DMR ID" || upper(head[0]) == "DMR_ID";
+    }
+    for (size_t li = header ? 1 : 0; li < lines.size(); li++) {
+        const std::vector<std::string> f = splitRecord(lines[li], d);
+        if (f.size() < 2) continue;
+        std::string id = f[0];
+        if (id.size() > 2 && upper(id).compare(0, 2, "TG") == 0) id = trim(id.substr(2));
+        if (!allDigits(id) || id.size() > 10) continue;
+        std::string name;
+        if (header && (cCall >= 0 || cFirst >= 0)) {
+            auto at = [&](int c) { return c >= 0 && (size_t)c < f.size() ? f[(size_t)c] : std::string(); };
+            name = at(cCall);
+            for (const std::string& part : {at(cFirst), at(cLast)}) if (!part.empty()) name += (name.empty() ? "" : " ") + part;
+        } else if (header && cName >= 0 && (size_t)cName < f.size()) name = f[(size_t)cName];
+        else name = f[1];
+        name = cleanName(name);
+        if (name.empty()) continue;
+        // a bare callsign column in a headerless radio list is kept as is
+        out += (radios ? "RID " : "") + std::to_string(std::strtoull(id.c_str(), nullptr, 10)) + "=" + name + "\n";
+        n++;
+    }
+    if (count) *count = n;
+    return out;
+}
+
+std::string mergeLabels(const std::string& existing, const std::string& added) {
+    auto keyOf = [](const std::string& line) {
+        const size_t eq = line.find('=');
+        return eq == std::string::npos ? std::string() : upper(trim(line.substr(0, eq)));
+    };
+    auto lines = [](const std::string& t) {
+        std::vector<std::string> v;
+        std::string l;
+        for (size_t i = 0; i <= t.size(); i++) {
+            const char ch = i < t.size() ? t[i] : '\n';
+            if (ch != '\n') { l += ch; continue; }
+            if (!trim(l).empty()) v.push_back(trim(l));
+            l.clear();
+        }
+        return v;
+    };
+    std::map<std::string, std::string> add;
+    for (const auto& l : lines(added)) { const std::string k = keyOf(l); if (!k.empty()) add[k] = l; }
+    std::string out;
+    for (const auto& l : lines(existing)) {
+        const std::string k = keyOf(l);
+        if (!k.empty() && add.count(k)) continue;   // replaced below
+        out += l + "\n";
+    }
+    for (const auto& l : lines(added)) { const std::string k = keyOf(l); if (!k.empty() && add[k] == l) { out += l + "\n"; add.erase(k); } }
+    return out;
 }
 
 // ---------------------------------------------------------------- the registry

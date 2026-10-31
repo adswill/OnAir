@@ -210,6 +210,116 @@ static void testSettingsText() {
     CHECK(m.label(tg(92, 1)) == "Europe", "labels after loading");
 }
 
+
+// ---- 3.5: source names, name-list import, hold that lets go, last heard ----
+
+static void testSourceNames() {
+    Monitor& m = fresh("t-rid");
+    Settings s;
+    s.labels = "91=Worldwide\nRID 3120123=LY1ABC Jonas\nRID 91=Radio ninety-one\nLY2XYZ=Kaunas relay";
+    m.setSettings(s);
+    gT = 10;
+    CallInfo c = tg(91, 3120123);
+    m.offer(c);
+    CallEntry e = m.calls()[0];
+    CHECK(e.label == "Worldwide" && e.srcLabel == "LY1ABC Jonas", "talkgroup and source radio each get their own name");
+    // a radio ID that equals a talkgroup number does not take the talkgroup's name
+    CHECK(m.sourceLabel(tg(5, 91)) == "Radio ninety-one" && m.label(tg(91, 7)) == "Worldwide", "RID names only sources");
+    CallInfo t; t.srcText = "ly2xyz"; t.dstText = "CQCQCQ";
+    CHECK(m.sourceLabel(t) == "Kaunas relay", "callsign source name");
+    CHECK(!m.history("jonas").empty() && m.history("nobody").empty(), "history search finds a source name");
+    const std::string saved = m.saveSettings();
+    m.setSettings(Settings());
+    m.loadSettings(saved);
+    CHECK(m.sourceLabel(tg(1, 3120123)) == "LY1ABC Jonas", "source names survive save and load");
+}
+
+static void testImportLabels() {
+    size_t n = 0;
+    // RadioID.net user.csv, with quotes, a BOM, CRLF and a name that tries to break the label syntax
+    const std::string ru = "\xEF\xBB\xBFRADIO_ID,CALLSIGN,FIRST_NAME,LAST_NAME,CITY,STATE,COUNTRY\r\n"
+                           "3120123,LY1ABC,Jonas,\"Petr, aitis\",Kaunas,,Lithuania\r\n"
+                           "2341001,M0XYZ,Tom;x=y,Smith,London,,UK\r\n"
+                           "abc,BAD,No,Id,,,\r\n"
+                           "5,,,,,,\r\n";
+    std::string r = importLabels(ru, ListKind::Auto, &n);
+    CHECK(n == 2 && r == "RID 3120123=LY1ABC Jonas Petr, aitis\nRID 2341001=M0XYZ Tom x y Smith\n", "radio list: callsign and name, bad lines skipped");
+    // talkgroup list, semicolon separated, header, "TG" prefix
+    n = 0;
+    r = importLabels("ID;Name;Country\n91;Worldwide;\nTG 2620;Poland;PL\n9;Local;\n", ListKind::Auto, &n);
+    CHECK(n == 3 && r == "91=Worldwide\n2620=Poland\n9=Local\n", "talkgroup list");
+    // headerless tab list forced to radios
+    r = importLabels("3100001\tAlpha\n3100002\tBravo\n", ListKind::Radios, &n);
+    CHECK(n == 2 && r == "RID 3100001=Alpha\nRID 3100002=Bravo\n", "headerless radios");
+    r = importLabels("", ListKind::Auto, &n);
+    CHECK(n == 0 && r.empty(), "empty input");
+    // a long name is cut, the result is valid UTF-8
+    r = importLabels("7," + std::string(40, '\xC3') + std::string(40, '\xA4') + "\n", ListKind::Auto, &n);
+    CHECK(n == 1 && r.size() < 80, "long name cut");
+    // merge: the new line replaces the old one with the same key, others stay
+    const std::string mg = mergeLabels("91=Old\nrid 5=Five\n7=Seven", "91=New\nRID 6=Six\n");
+    CHECK(mg == "rid 5=Five\n7=Seven\n91=New\nRID 6=Six\n", "merge replaces by key");
+    // imported names reach the monitor
+    Monitor& m = fresh("t-imp");
+    Settings s; s.labels = mergeLabels("", importLabels(ru));
+    m.setSettings(s);
+    CHECK(m.sourceLabel(tg(1, 2341001)) == "M0XYZ Tom x y Smith", "imported source name used");
+}
+
+static void testHoldRelease() {
+    Monitor& m = fresh("t-holdsec");
+    Settings s; s.hold = "91"; s.holdSec = 30;
+    gT = 1000;
+    m.setSettings(s);
+    CHECK(m.offer(tg(92, 5)) == Verdict::NotHeld, "another talkgroup is not played during the hold");
+    gT += 20;
+    CHECK(m.offer(tg(91, 6)) == Verdict::Play, "the held talkgroup plays and renews the hold");
+    gT += 20;   // 40 s since the hold was set but 20 s since the held talkgroup
+    CHECK(m.offer(tg(92, 5, 2)) == Verdict::NotHeld && m.settings().hold == "91", "hold still on");
+    gT += 31;   // quiet for longer than holdSec
+    const uint64_t g = m.settingsGen();
+    CHECK(m.offer(tg(92, 5, 2)) == Verdict::Play, "the hold let go by itself, the call plays");
+    CHECK(m.settings().hold.empty() && m.settingsGen() != g, "hold cleared and the settings generation changed");
+    // no calls at all: housekeeping lets go
+    s.hold = "93"; gT += 1; m.setSettings(s);
+    gT += 40; m.housekeep();
+    CHECK(m.settings().hold.empty(), "housekeeping releases an idle hold");
+    // holdSec 0: held until released
+    s.hold = "93"; s.holdSec = 0; m.setSettings(s);
+    gT += 5000; m.housekeep();
+    CHECK(m.settings().hold == "93", "no timeout when holdSec is 0");
+    s.holdSec = 12.5; m.setSettings(s);
+    const std::string t = m.saveSettings();
+    m.setSettings(Settings()); m.loadSettings(t);
+    CHECK(std::abs(m.settings().holdSec - 12.5) < 1e-6, "holdSec saved");
+}
+
+static void testHeard() {
+    Monitor& m = fresh("t-heard");
+    Settings s; s.labels = "RID 1001=Alice";
+    m.setSettings(s);
+    gT = 50; gWall = 1790000100;
+    CallInfo a = tg(91, 1001); a.errorRate = 0.02f;
+    m.offer(a); gT += 1.0; m.offer(a); gT += 4; gWall += 4;   // first call, over
+    CallInfo b = tg(91, 1002); b.emergency = true; b.errorRate = 0.04f;
+    m.offer(b); gT += 0.5; m.offer(b);                         // Bob, new talker on the talkgroup
+    gT += 5; gWall += 5; m.housekeep();
+    gT += 1; gWall += 1;
+    a.errorRate = 0.06f; m.offer(a); gT += 0.5; m.offer(a); gT += 5; gWall += 5; m.housekeep();   // Alice again, newest
+    CallInfo none; none.dst = 9; m.offer(none); gT += 5; m.housekeep();   // a call with no source is not listed
+    const auto h = m.heard();
+    CHECK(h.size() == 2, "two radios heard, the unknown source left out");
+    CHECK(h.size() == 2 && h[0].last.src == 1001 && h[0].calls == 2 && h[0].name == "Alice", "newest first, two calls, named");
+    CHECK(h.size() == 2 && h[0].errorRate > 0.039f && h[0].errorRate < 0.041f && !h[0].emergency, "mean error rate");
+    CHECK(h.size() == 2 && h[1].last.src == 1002 && h[1].emergency && h[1].calls == 1 && h[1].seconds > 0.4, "second radio with emergency flag and airtime");
+    CHECK(m.heard(1).size() == 1, "max");
+    CallInfo t; t.srcText = "M0XYZ"; t.dstText = "CQCQCQ"; t.group = true;
+    gT += 10; m.offer(t);
+    bool found = false;
+    for (auto& x : m.heard()) if (x.key == "txt:M0XYZ") found = true;
+    CHECK(found, "callsign sources are listed too");
+}
+
 int main() {
     testIdList();
     testOneAtATime();
@@ -219,5 +329,9 @@ int main() {
     testEncryptedSquelchLate();
     testRecording();
     testSettingsText();
+    testSourceNames();
+    testImportLabels();
+    testHoldRelease();
+    testHeard();
     return testSummary("voice_monitor");
 }

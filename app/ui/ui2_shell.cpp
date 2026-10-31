@@ -300,6 +300,7 @@ void sidebar(App& a) {
         tool("Antenna rotator...", a.rotatorOpen, "Connect a GS-232-compatible rotator (serial or TCP), set azimuth and elevation");
         tool("Sweep scanner", a.sweepOpen, N_("Fast wideband sweep with a noise-floor measurement, signal log and waterfall"));
         tool("Reception doctor", a.doctorOpen, N_("Why is nothing decoding? Checks overload, level, offset, bandwidth, interferers, drops and the mode from the live signal, with one-click fixes"));
+        tool("RF fingerprint", a.rfFpOpen, N_("Recognise an individual transmitter by its RF fingerprint (carrier offset, key-up transient, pilot, spurs), also when it sends only a carrier. Logs every transmission."));
         tool("Station health", a.stationHealthOpen, N_("Noise floor, ADC level and reference stations per band, with plain advice on gain, filters and antenna placement"));
         tool("Scanner (highly experimental)", a.scanViewOpen, "HIGHLY EXPERIMENTAL: memories, scan list and tones in one view; steps through them and stops on activity");
         ImGui::Separator();
@@ -661,6 +662,7 @@ static void viewMenu(App& a) {
         if (ImGui::MenuItem(tr("Sweep scanner"), nullptr, &a.sweepOpen)) {}
         if (ImGui::MenuItem(tr("Station health"), nullptr, &a.stationHealthOpen)) {}
         if (ImGui::MenuItem(tr("Reception doctor"), nullptr, &a.doctorOpen)) {}
+        if (ImGui::MenuItem(tr("RF fingerprint"), nullptr, &a.rfFpOpen)) {}
         if (ImGui::MenuItem(tr("Scanner (highly experimental)"), nullptr, &a.scanViewOpen)) {}
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("HIGHLY EXPERIMENTAL: step through a list of frequencies and modes, or a band, and stop on activity"));
         ImGui::MenuItem(tr("Propagation..."), nullptr, &a.propOpen);

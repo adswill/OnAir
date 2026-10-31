@@ -154,7 +154,7 @@ using SavedChannel = plat::Channel;
 // parts of the window the tour points at
 enum WizTarget { TgNone = 0, TgSwitch, TgToolbar, TgMain, TgRight, TgConst, TgCount };
 
-constexpr int kNumFamilies = 211;   // App::family runs from 0 to kNumFamilies - 1
+constexpr int kNumFamilies = 212;   // App::family runs from 0 to kNumFamilies - 1
 constexpr int kNumSubModes = 32;   // dect2::subModes(): the protocols of HF digital, mesh, pagers, marine and VOR / ILS listed as modes of their own
 constexpr int kNumSlots = kNumFamilies + kNumSubModes;   // what keeps its own frequency and gains: each family, and each protocol entry
 
@@ -182,6 +182,10 @@ struct App {
     bool passiveRadarOpen = false;      // the passive radar window (View > Passive radar; app/radar)
     bool satnogsOpen = false;           // the SatNOGS DB transmitter list (View > SatNOGS transmitters)
     bool passesOpen = false;            // the satellite pass planner window (View > Passes)
+    bool genAutoOn = true;              // General / Auto: in the General receiver, signals are spotted in the background and labelled (app/specx/general_auto_ui.cpp; docs/GENERAL-AUTO.md)
+    bool genAutoDecode = false;         // General / Auto: decode by itself when the tuned frequency sits on a sure label (off by default)
+    int genAutoReleaseKhz = 0;          // General / Auto: keep decoding while the tuned frequency is within this of the signal; 0: automatic
+    bool rfFpOpen = false;              // the RF fingerprint window (View > RF fingerprint; app/panels/rffp_ui.cpp; docs/RF-FINGERPRINT.md)
     bool doctorOpen = false;            // the Reception Doctor window (View > Reception doctor; app/panels/doctor_ui.cpp)
     bool stationHealthOpen = false;     // the station health report window (View > Station health; app/panels/station_health_ui.cpp)
     bool sweepOpen = false;             // the sweep scanner window (View > Sweep scanner)
@@ -778,6 +782,7 @@ void generalApiSquelch(bool on, bool autoLevel, double db);
 bool generalApiRecord(App& a, bool on, std::string& err);
 std::string tvRecJobsJson();                        // tvrec_ui.cpp, for the remote API: the recorder's scheduled jobs (read only)
 void generalRecallHz(App& a, double hz);          // general_ui.cpp: a memory's frequency: the dial on hz, the channel marker back on the dial              // general_ui.cpp: the general receiver's listening frequency (the dial plus its offset)
+void rfFingerprintWindow(App& a);                   // rffp_ui.cpp: RF fingerprint of a transmitter, carrier-only log (a.rfFpOpen; docs/RF-FINGERPRINT.md)
 void receptionDoctorWindow(App& a);                // doctor_ui.cpp: Reception Doctor, why a mode is not decoding, with one-click fixes (a.doctorOpen; docs/RECEPTION-DOCTOR.md)
 void chooseSampleRate(App& a, double hz);          // ui/toolbar_source.cpp: set and apply a sample rate for this mode and radio (0 = Auto)
 void stationHealthWindow(App& a);                  // station_health_ui.cpp: the station and antenna health report (a.stationHealthOpen)
@@ -1193,8 +1198,16 @@ void identifyAt(App& a, double clickMhz);
 void identifyRegion(App& a, double loMhz, double hiMhz);   // a dragged region (MHz)
 void identifyAll(App& a);                                  // every signal in the capture, in a table
 void identifyTuned(App& a, double freqHz, double bwHz);    // tunes the radio to a signal found by the sweep and identifies it there
+bool identifyBusy();                                       // the Identify window is open (it owns the capture)
 bool identifyRegionMhz(double& loMhz, double& hiMhz);      // the region of the open card, to draw it on the plots
-void identifyWindow(App& a);   // every frame: the window while it is open
+void identifyWindow(App& a);
+// General / Auto (specx/general_auto_ui.cpp): generalAutoFrame every frame (background scan, Decode, return to General), generalAutoPlot draws the labels on a plot,
+// generalAutoButton is the corner button with the list of detected signals; generalAutoDecoding: a decoder it started is running
+void generalAutoFrame(App& a);
+void generalAutoPlot(App& a, int plotId, ImVec2 plotMin, ImVec2 plotSize, double loMhz, double hiMhz);
+float generalAutoButton(App& a, ImVec2 plotMin, ImVec2 plotSize, float rightUsed);
+bool generalAutoHovered();     // the mouse is on a label: the plot's click-to-tune stands back
+bool generalAutoDecoding();   // every frame: the window while it is open
 // general_ui.cpp: the general receiver's channel marker on the spectrum (plotId 0) and the waterfall (1): a click puts the channel
 // there (inside the band, without retuning the radio), its filter edges can be dragged
 // vfo_ui.cpp: multi-VFO (docs/MULTI-VFO.md): extra channels on the same capture. vfoPlotMouse: Add channel armed (or Alt held) and a click adds one, a band's

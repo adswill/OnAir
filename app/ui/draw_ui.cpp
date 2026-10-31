@@ -204,6 +204,7 @@ static void floatingWindows(App& a, ImVec2 disp) {
     sweepWindow(a);
     stationHealthWindow(a);
     receptionDoctorWindow(a);
+    rfFingerprintWindow(a);
     calibrateFrequencyDraw(a);
     memoryWindow(a);
     freqdbWindow(a);
@@ -220,6 +221,7 @@ static void floatingWindows(App& a, ImVec2 disp) {
     lessonsUi(a, disp);
     if (gIdentifyDev && a.engine.running() && ImGui::GetFrameCount() > 120) { gIdentifyDev = false; identifyStart(a, radioCenterMhz(a) * 1e6, 0, 0, radioCenterMhz(a) * 1e6); }
     identifyWindow(a);
+    generalAutoFrame(a);
     vfoSync(a);
     vfoPanelWindow(a);
     dect2::PskReporter::get().setDialHz(a.freqMhz * 1e6);

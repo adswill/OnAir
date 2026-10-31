@@ -115,6 +115,7 @@ ssdv	--mode ssdv	Overview|SSDV|Receiver|History
 ebicab	--mode ebicab	Overview|Balise|Receiver|History
 inmsat	--mode inmsat	Overview|Inmarsat|Receiver|History
 nrf24	--mode nrf24	Overview|nRF24|Receiver|History
+atis	--mode atis	Overview|ATIS|Receiver|History
 pskd	--mode pskd	Overview|PSK|Receiver|History
 sigfox	--mode sigfox	Overview|Sigfox|Receiver|History
 mt63	--mode mt63	Overview|MT63|Receiver|History
