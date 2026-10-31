@@ -4,6 +4,7 @@
 // listener's address or what anyone listens to, only the number of users. The messages are signed with an Ed25519 key made on first start
 // (docs/ONAIR-DIRECTORY.md).
 #pragma once
+#include <atomic>
 #include <functional>
 #include <string>
 
@@ -25,6 +26,7 @@ struct DirectoryConfig {
     std::string ack;            // web_directory_ack: the code printed with the preview
     std::string version;        // software version (set by the server)
     std::string name;           // not a setting: filled from the live info when empty
+    int maxUsers = 8;           // not a setting: web_max_users, used for the stand-in info (the preview and the confirmation code are made without a running web server)
 };
 
 class DirectoryHeartbeat {
@@ -37,6 +39,19 @@ public:
     // Asks the directory to remove this server now (signed delete); called by `onair-server --directory-remove` (needs the directory URL and the key file, not the confirmation). Blocking.
     virtual bool removeNow(const DirectoryConfig& c, std::string& err) = 0;
 };
+
+// Where the heartbeat keeps its status file (web_directory_status.json beside the key file); the app and `onair-server --directory-test` read it.
+std::string directoryStatusPath(const DirectoryConfig& c);
+// The info JSON used when no web server is running yet (the preview, the confirmation check of the listing program): name, 0 users, the capacity.
+std::string directoryStandInInfo(const DirectoryConfig& c);
+// The preview and the confirmation code for these settings WITHOUT sending anything (and without needing a running web server): `info` is the
+// live info JSON (or a stand-in with name / max_users / capture). Makes the key file when it does not exist yet. False with err when a setting is not valid.
+bool directoryPreview(const DirectoryConfig& c, const std::string& infoJson, std::string& preview, std::string& ack, std::string& err);
+// "Test connection": checks the directory, the local web server (localPort > 0) and this server's public address one after the other, one JSON line
+// per step through emit (step, ok, ms, code, message, advice, skew_sec). Every request has a time limit; `cancel` ends it at once. Blocking: run it off the UI thread.
+void directoryCheck(const DirectoryConfig& c, int localPort, const std::function<void(const std::string&)>& emit, const std::atomic<bool>& cancel);
+// One plain GET of the local web server's /web/v1/info (127.0.0.1:port) with a short time limit: "" when it does not answer.
+std::string fetchLocalInfo(int port, const std::atomic<bool>& cancel);
 
 // The module's factory (always built in; start() says when the build has no TLS client)
 DirectoryHeartbeat* makeDirectoryHeartbeat();

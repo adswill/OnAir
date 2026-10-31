@@ -66,6 +66,8 @@ std::string sha256Bytes(const void* data, size_t n);
 // An https download to a file through curl (no shell, no console window on Windows); the exit code of curl (0 = ok, -1 = cancelled by `cancel`). tick() runs about every 100 ms.
 int curlDownloadFile(const std::string& url, const std::string& outFile, uint64_t maxBytes, int maxTime, const std::atomic<bool>& cancel, const std::function<void()>& tick);
 std::string curlDownloadError(int rc);
+// Runs curl with these arguments (no shell); its standard output is appended to *out when out is not null. The exit code of curl, -1 when cancelled, -2 when curl is missing.
+int curlRun(const std::vector<std::string>& args, std::string* out, const std::atomic<bool>& cancel);
 std::string executablePath();
 InstallKind detectInstallKind(const std::string& exePath);
 const char* installKindName(InstallKind k);

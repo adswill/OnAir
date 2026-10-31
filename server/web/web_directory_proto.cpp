@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 
 namespace onair_web {
 
@@ -128,6 +129,22 @@ bool dirNormalizeUrl(const std::string& in, std::string& out, std::string& err) 
     return true;
 }
 
+bool dirNormalizeEndpoint(const std::string& in, std::string& out, std::string& err) {
+    if (in.rfind("http://", 0) == 0 || in.rfind("HTTP://", 0) == 0) {
+        std::string rest = in.substr(7);
+        std::string host = rest.substr(0, rest.find_first_of("/:"));
+        std::transform(host.begin(), host.end(), host.begin(), [](unsigned char c) { return (char)tolower(c); });
+        if (host != "127.0.0.1" && host != "localhost" && host != "[::1]") { err = "the address must start with https:// (plain http is only accepted for this computer, for tests)"; return false; }
+        if (rest.find_first_of("?#@\\ ") != std::string::npos) { err = "the address must not have a user name, query, fragment or spaces"; return false; }
+        const size_t slash = rest.find('/');
+        std::string path = slash == std::string::npos ? "/" : rest.substr(slash);
+        if (path.back() != '/') path += '/';
+        out = "http://" + rest.substr(0, slash) + path;
+        return true;
+    }
+    return dirNormalizeUrl(in, out, err);
+}
+
 bool dirNormalizeLoc(const std::string& in, int decimals, std::string& out, std::string& err) {
     std::string s = dirClean(in, 64);
     out.clear();
@@ -236,6 +253,172 @@ std::string dirPreview(const DirRecord& r, const std::string& directoryUrl) {
     s += "Nothing else is sent: no listener addresses, names or what anyone listens to, only the number of users.\n";
     if (r.reach) s += "web_directory_reach=1: the directory may fetch " + r.url + "web/v1/info about once an hour to check that the server answers.\n";
     return s;
+}
+
+} // namespace onair_web
+
+namespace onair_web {
+
+static std::string lowerStr(std::string s) { for (char& c : s) c = (char)tolower((unsigned char)c); return s; }
+
+DirOutcome dirClassifyHttp(int status, const std::string& body, long long skewSec, bool haveSkew) {
+    DirOutcome o;
+    o.http = status;
+    Json j;
+    std::string e, why;
+    if (jsonParse(body.substr(0, 4000), j, e)) {
+        if (const Json* er = j.get("error")) if (er->kind == Json::Str) why = er->str;
+        if (const Json* d = j.get("details")) if (d->kind == Json::Arr) for (const Json& x : d->arr) if (x.kind == Json::Str) why += (why.empty() ? "" : "; ") + x.str;
+    }
+    const std::string lw = lowerStr(why);
+    const bool skewBig = haveSkew && (skewSec > 240 || skewSec < -240);
+    if (status == 200) { o.ok = true; o.code = "ok"; o.message = "The directory accepted the listing."; return o; }
+    if (status == 400 && (lw.find("ts is too far") != std::string::npos || skewBig)) {
+        o.code = "clock";
+        const long long m = (haveSkew ? (skewSec < 0 ? -skewSec : skewSec) : 0) / 60;
+        o.message = "The directory says this computer's clock is wrong" + (haveSkew ? std::string(" (about ") + std::to_string(m) + " min off)" : std::string()) + ".";
+        o.advice = "Turn on automatic date and time in your system settings (and the right time zone), then try again. The directory accepts a clock that is at most 5 minutes off.";
+    } else if (status == 400) {
+        o.code = "invalid";
+        o.message = "The directory refused the listing as not valid" + (why.empty() ? std::string(".") : ": " + why + ".");
+        o.advice = lw.find("url") != std::string::npos
+            ? "The public address is the problem: it must be a public https:// address (not a home-network or localhost address) on a normal port. Use the built-in tunnel, or check the address you typed."
+            : "Change the field named above (name, location, radio, description) and list again.";
+    } else if (status == 401) {
+        o.code = "key";
+        o.message = "The directory could not verify this server's signature.";
+        o.advice = "The key file in OnAir's webshare folder (web_directory.key) may be damaged. Use 'Remove from directory', delete that key file and list again.";
+    } else if (status == 403) {
+        o.code = "blocked";
+        o.message = "The directory refused this server" + (why.empty() ? std::string(".") : ": " + why + ".");
+        o.advice = lw.find("another key") != std::string::npos ? "This id is already listed with another key. Restore the old key file, or wait about 15 minutes for the old entry to expire and list again."
+                                                               : "This server or its address is on the directory's block list. If you think that is a mistake, ask on the OnAir Discord.";
+    } else if (status == 404) {
+        o.code = "not_found";
+        o.message = "The directory address answered 'not found'.";
+        o.advice = "Check the directory address (the default is https://web.on-air.dev). It must be the address of an OnAir directory.";
+    } else if (status == 409) {
+        o.code = "conflict";
+        o.message = "The directory refused a duplicate" + (why.empty() ? std::string(".") : ": " + why + ".");
+        o.retrySoon = lw.find("ts is not newer") != std::string::npos;
+        o.advice = o.retrySoon ? "Two copies of this server may be sending at once. OnAir tries again by itself." : "Another server is listed with this address. Stop the other one, or share again to get a new public address.";
+    } else if (status == 422) {
+        o.code = "resolving";
+        o.retrySoon = true;
+        o.message = "The directory cannot find your public address in DNS yet.";
+        o.advice = "A new tunnel address can take up to a minute to appear. OnAir keeps trying by itself; if it still fails after 5 minutes, stop sharing and share again.";
+    } else if (status == 429) {
+        o.code = "rate";
+        o.message = "The directory says there were too many tries" + (why.empty() ? std::string(".") : ": " + why + ".");
+        o.advice = "Wait a few minutes. OnAir will try again by itself; do not press the button repeatedly.";
+    } else if (status == 503 && lw.find("full") != std::string::npos) {
+        o.code = "full";
+        o.message = "The directory is full right now.";
+        o.advice = "Try again later. Your server keeps working without a listing.";
+    } else if (status >= 500) {
+        o.code = "server";
+        o.message = "The directory has a problem on its side (error " + std::to_string(status) + ").";
+        o.advice = "Nothing is wrong with your setup. OnAir tries again by itself.";
+    } else {
+        o.code = "other";
+        o.message = "The directory answered " + std::to_string(status) + (why.empty() ? std::string(".") : ": " + why + ".");
+        o.advice = "Try again; if it keeps happening, copy this message into a bug report.";
+    }
+    return o;
+}
+
+DirOutcome dirClassifyNet(const std::string& cls, const std::string& detail, const std::string& host) {
+    DirOutcome o;
+    o.code = cls;
+    const std::string d = detail.size() > 160 ? detail.substr(0, 160) : detail;
+    if (cls == "dns") { o.message = "This computer cannot look up " + host + " (DNS)."; o.advice = "Check that the internet works (open a web page). If it does, a VPN, firewall or DNS filter may block " + host + "; try another network."; o.retrySoon = true; }
+    else if (cls == "refused") { o.message = "The connection to " + host + " was refused."; o.advice = "A firewall or proxy is blocking outgoing HTTPS (port 443). Allow OnAir, or try another network."; }
+    else if (cls == "timeout") { o.message = "No answer from " + host + " in time."; o.advice = "The network is slow or blocks the connection. Check the internet; OnAir tries again by itself."; o.retrySoon = true; }
+    else if (cls == "tls_cert") { o.message = "The certificate of " + host + " is not trusted by this computer."; o.advice = "A proxy or antivirus that inspects HTTPS, a wrong system clock, or a wrong directory address can cause this. Check the date and time, and the directory address."; }
+    else if (cls == "tls") { o.message = "The secure (TLS) connection to " + host + " failed."; o.advice = "Try again. If it keeps failing, a proxy or firewall is interfering with HTTPS."; }
+    else if (cls == "no_curl") { o.message = "This build has no TLS library and the 'curl' program was not found."; o.advice = "Install curl (Windows 10 and later, macOS and most Linux systems have it), or use a OnAir build with TLS."; }
+    else if (cls == "no_tls") { o.message = "This build has no TLS support."; o.advice = "Install curl, or use an OnAir build with TLS."; }
+    else if (cls == "proto") { o.message = host + " did not answer like a web server."; o.advice = "Check the directory address."; }
+    else { o.code = "other"; o.message = "Could not reach " + host + (d.empty() ? std::string(".") : ": " + d + "."); o.advice = "Check the internet connection and try again."; }
+    return o;
+}
+
+DirOutcome dirClassifyPublic(int status, bool bodyOk, const std::string& cls, const std::string& url) {
+    DirOutcome o;
+    o.http = status;
+    if (status == 200 && bodyOk) { o.ok = true; o.code = "ok"; o.message = "Your public address " + url + " answers."; return o; }
+    o.code = "public";
+    if (status == 0) {
+        o.message = "Your public address " + url + " does not answer" + (cls.empty() ? std::string(".") : " (" + cls + ").");
+        o.advice = "If you use the built-in tunnel: stop sharing and share again to get a fresh address. If you use your own address: your router or firewall blocks the port. Use the built-in tunnel, UPnP, or forward the port by hand (docs/ONAIR-WEB.md, 'Port forwarding').";
+    } else if (status == 502 || status == 503 || status == 530 || status == 1033) {
+        o.message = "Your public address " + url + " is up, but the OnAir web server behind it does not answer (error " + std::to_string(status) + ").";
+        o.advice = "The web server may still be starting or has stopped. Wait a few seconds and test again; if it stays, stop sharing and start again.";
+    } else {
+        o.message = "Your public address " + url + " answered " + std::to_string(status) + (status == 200 ? ", but not like an OnAir Web server." : ".");
+        o.advice = "Check that this address leads to the OnAir web server, not to another program on the same port.";
+    }
+    return o;
+}
+
+std::string dirStatusJson(const DirStatus& s) {
+    auto q = [](const std::string& v) { return "\"" + jsonEsc(v) + "\""; };
+    std::string o = "{\"state\":" + q(s.state) + ",\"ok\":" + (s.last.ok ? "true" : "false") + ",\"http\":" + std::to_string(s.last.http) + ",\"code\":" + q(s.last.code) +
+                    ",\"message\":" + q(s.last.message) + ",\"advice\":" + q(s.last.advice) + ",\"retry_soon\":" + (s.last.retrySoon ? "true" : "false") +
+                    ",\"attempts\":" + std::to_string(s.attempts) + ",\"fails\":" + std::to_string(s.fails) + ",\"last_try\":" + std::to_string(s.lastTry) +
+                    ",\"last_ok\":" + std::to_string(s.lastOk) + ",\"next_try\":" + std::to_string(s.nextTry) + ",\"have_skew\":" + (s.haveSkew ? "true" : "false") +
+                    ",\"skew_sec\":" + std::to_string(s.skewSec) + ",\"id\":" + q(s.id) + ",\"url\":" + q(s.url) + ",\"directory\":" + q(s.directory) + "}";
+    return o;
+}
+
+bool dirStatusParse(const std::string& text, DirStatus& out) {
+    Json j;
+    std::string e;
+    if (!jsonParse(text, j, e) || j.kind != Json::Obj) return false;
+    auto str = [&](const char* k) { const Json* x = j.get(k); return x && x->kind == Json::Str ? x->str : std::string(); };
+    auto num = [&](const char* k) { const Json* x = j.get(k); return x && x->kind == Json::Num ? (long long)x->num : 0LL; };
+    auto flag = [&](const char* k) { const Json* x = j.get(k); return x && x->kind == Json::Bool && x->b; };
+    DirStatus s;
+    s.state = str("state");
+    if (s.state.empty()) return false;
+    s.last.ok = flag("ok"); s.last.http = (int)num("http"); s.last.code = str("code"); s.last.message = str("message"); s.last.advice = str("advice"); s.last.retrySoon = flag("retry_soon");
+    s.attempts = num("attempts"); s.fails = num("fails"); s.lastTry = num("last_try"); s.lastOk = num("last_ok"); s.nextTry = num("next_try");
+    s.haveSkew = flag("have_skew"); s.skewSec = num("skew_sec");
+    s.id = str("id"); s.url = str("url"); s.directory = str("directory");
+    out = s;
+    return true;
+}
+
+} // namespace onair_web
+
+namespace onair_web {
+
+int dirRetryDelay(int fails, bool soon, int intervalSec) {
+    static const int kSoon[] = {5, 10, 15, 20, 30, 45, 60};
+    static const int kSlow[] = {20, 40, 80, 160, 300};
+    const int i = std::max(0, fails - 1);
+    int d = soon ? kSoon[std::min(i, 6)] : kSlow[std::min(i, 4)];
+    d = std::min(d, std::max(5, intervalSec));
+    return std::max(5, d);
+}
+
+bool dirParseHttpDate(const std::string& s, long long& out) {
+    static const char* mon[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+    char wd[8] = {}, mo[8] = {};
+    int d = 0, y = 0, hh = 0, mm = 0, ss = 0;
+    if (sscanf(s.c_str(), "%3s, %d %3s %d %d:%d:%d", wd, &d, mo, &y, &hh, &mm, &ss) != 7) return false;
+    int m = -1;
+    for (int i = 0; i < 12; i++) if (strncmp(mo, mon[i], 3) == 0) m = i + 1;
+    if (m < 0 || d < 1 || d > 31 || y < 1970 || y > 2200 || hh > 23 || mm > 59 || ss > 60) return false;
+    // days from civil (H. Hinnant)
+    const int yy = y - (m <= 2 ? 1 : 0);
+    const long long era = (yy >= 0 ? yy : yy - 399) / 400;
+    const long long yoe = yy - era * 400;
+    const long long doy = (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1;
+    const long long doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    const long long days = era * 146097 + doe - 719468;
+    out = days * 86400 + hh * 3600 + mm * 60 + ss;
+    return true;
 }
 
 } // namespace onair_web

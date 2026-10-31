@@ -40,6 +40,7 @@ struct HubLimits {
     int publicMaxMin = 0;         // session time limit for open access (0: none)
     int memberMaxMin = 0;         // for password / invite users (an invite's own limit wins)
     int maxFps = 15, maxBins = 2048;
+    bool spectrum = true;         // web_spectrum=0: audio only, listeners get no spectrum / waterfall rows (the setup window's "audio only")
     int threads = 0;              // worker threads (0: automatic)
     size_t queueBytes = 384 * 1024;   // outgoing queue of one listener
 };
