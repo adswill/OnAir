@@ -2,6 +2,7 @@
 // and to read a clicked position's coordinates, locator, and distance and bearing from the receiver location.
 #include "../app.h"
 #include "../adsb/adsb_map.h"
+#include "wx_overlay.h"
 #include "dect2/geo/maidenhead.h"
 #include <algorithm>
 #include <cmath>
@@ -273,6 +274,7 @@ void mapView(App& a) {
     dl->PushClipRect(p0, ImVec2(p0.x + size.x, p0.y + size.y), true);
     double rl, ro; receiverLocation(rl, ro);
     const ImVec2 h = adsbmap::project(rl, ro);   // the receiver: a ringed dot
+    wxoverlay::draw(dl);   // a weather-satellite picture being received lies on the ground, under every marker
     drawLayers(dl, p0, size);
     if (S.layerOn[dect2::LayerCount]) {
         dl->AddCircleFilled(h, 4 * gUi, IM_COL32(110, 210, 230, 255));
@@ -300,6 +302,7 @@ void mapView(App& a) {
     ImGui::SameLine(0, 6 * gUi);
     adsbmap::tileControls("never the marker or your location");
     layerPanel(p0, size);
+    wxoverlay::controls(a, p0.x + 8 * gUi, p0.y + 8 * gUi + ImGui::GetFrameHeightWithSpacing() * 1.4f, std::min(300.f * gUi, size.x - 220 * gUi));
     infoPopup();
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + size.y - ImGui::GetTextLineHeight() - 6 * gUi));
     adsbmap::legend(size.x, "click a marker for details or the map to place the marker, drag to pan, wheel to zoom");

@@ -27,8 +27,9 @@ struct Params {
     int implicitLen = 0;
     double carrierHz = 0;        // cfoTrack > 0: the carrier frequency when known (a Doppler shift stretches the symbol clock by the same fraction)
     double cfoTrack = 0;         // 0: the carrier offset is measured once per frame (every plain LoRa link); > 0: followed through the frame at this loop gain (satellites: Doppler rate)
-    // A CRC-bad frame is searched for sample jumps of multiples of this many chips (recoverJumps); 0 turns the search off. An RTL-SDR at
-    // 2.048 Msps drops ~96 samples at a time, 11.7 chips at 250 kHz (#386); other losses or bandwidths simply find nothing.
+    // A CRC-bad frame is searched for sample jumps (recoverJumps); 0 turns the search off. First jumps of multiples of this many chips
+    // (an RTL-SDR at 2.048 Msps drops ~96 samples at a time, 11.7 chips at 250 kHz, #386), then, when that finds nothing, any shift
+    // (one or two jumps), because a link drops whatever count of samples it drops.
     double jumpChips = 11.7;
 };
 

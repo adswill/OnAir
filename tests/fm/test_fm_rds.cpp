@@ -313,10 +313,59 @@ static void testCharset() {
     }
 }
 
+// Voting over repeated groups (#15): random bit errors above what the burst and two-symbol correctors repair, soft values telling most of
+// the wrong bits apart. Voting must decode more where the correctors alone fall short, and never show a wrong text.
+static void testVoting() {
+    for (double ber : {0.03, 0.05, 0.08}) {
+        uint64_t groupsOff = 0, groupsOn = 0;
+        int wrongOff = 0, wrongOn = 0;
+        for (int vote = 0; vote < 2; vote++) {
+            std::mt19937 rng(21);
+            RdsDecoder d;
+            d.setVoting(vote != 0);
+            const auto gs = stationGroups();
+            std::vector<int> bits; std::vector<float> rel;
+            for (int k = 0; k < 1400; k++) {
+                const size_t at = bits.size();
+                groupBits(gs[(size_t)k % gs.size()].data(), bits);
+                rel.resize(bits.size(), 1.f);
+                for (size_t i = at; i < bits.size(); i++) rel[i] = 0.6f + (float)(rng() % 80) / 100.f;
+                if (k < 20) continue;
+                for (size_t i = at; i < bits.size(); i++)
+                    if ((double)(rng() % 100000) / 1e5 < ber) { bits[i] ^= 1; rel[i] = (rng() % 3) ? 0.05f + (float)(rng() % 40) / 100.f : 0.9f; }
+            }
+            int wrong = 0;
+            for (size_t i = 0; i < bits.size(); i++) {
+                d.pushBit(bits[i], rel[i]);
+                if (d.ps.find_first_not_of("TESTFM ") != std::string::npos || d.rt.find_first_not_of("Helo wrd?\r") != std::string::npos) wrong++;   // partial texts have gaps: only foreign characters are wrong
+            }
+            printf("voting BER %.2f %s: groups %llu voted blocks %llu bad %llu PS '%s' RT '%s'\n", ber, vote ? "on " : "off",
+                   (unsigned long long)d.groups, (unsigned long long)d.info.blocksVoted, (unsigned long long)d.info.blocksBad, d.ps.c_str(), d.rt.c_str());
+            // the correctors alone already let a wrong character through at these error rates (the baseline, counted per bit); voting must not add to it
+            (vote ? wrongOn : wrongOff) = wrong;
+            if (vote && ber <= 0.05) CHECK(d.ps == "TESTFM  " && d.rt == "Hello world", "voting BER %.2f: PS '%s' RT '%s'", ber, d.ps.c_str(), d.rt.c_str());
+            (vote ? groupsOn : groupsOff) = d.groups;
+            if (!vote) CHECK(d.info.blocksVoted == 0, "voting off but blocks voted");
+        }
+        printf("  wrong-text bit positions: off %d on %d\n", wrongOff, wrongOn);
+        CHECK(wrongOn <= wrongOff + wrongOff / 5 + 50, "BER %.2f: voting shows more wrong text (%d vs %d)", ber, wrongOn, wrongOff);
+        CHECK(groupsOn >= groupsOff, "BER %.2f: voting lost groups (%llu < %llu)", ber, (unsigned long long)groupsOn, (unsigned long long)groupsOff);
+        if (ber >= 0.05) CHECK(groupsOn > groupsOff + groupsOff / 20, "BER %.2f: voting gained too little (%llu vs %llu)", ber, (unsigned long long)groupsOn, (unsigned long long)groupsOff);
+    }
+    {   // noise: nothing is voted into existence
+        std::mt19937 rng(3);
+        RdsDecoder d;
+        for (int i = 0; i < 2000000; i++) d.pushBit((int)(rng() & 1), 0.2f + (float)(rng() % 100) / 100.f);
+        printf("voting on noise: synced %d voted %llu groups %llu\n", d.synced, (unsigned long long)d.info.blocksVoted, (unsigned long long)d.groups);
+        CHECK(d.info.blocksVoted <= 1 && d.ps.empty() && d.rt.empty(), "noise: %llu voted blocks, PS '%s'", (unsigned long long)d.info.blocksVoted, d.ps.c_str());
+    }
+}
+
 int main() {
     testCharset();
     testCorrection();
     testGroups();
+    testVoting();
     testReceiver();
     printf(fails ? "FAILED\n" : "ok\n");
     return fails ? 1 : 0;
