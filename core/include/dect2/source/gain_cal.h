@@ -5,6 +5,7 @@
 // in the controller (GainStage::actualDb), and flags units that are probably bad: a gain control with no effect, steps that go the wrong way, steps far from nominal.
 #pragma once
 #include "dect2/source/autogain.h"
+#include <algorithm>
 #include <map>
 #include <string>
 #include <vector>
