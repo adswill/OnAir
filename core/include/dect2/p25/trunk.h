@@ -324,6 +324,9 @@ public:
 
     // The live "now talking" view: calls that are active
     std::vector<const CallRecord*> nowTalking() const;
+    // The conversation log: one row per talkgroup (group calls, newest first) summed from the call log
+    struct TalkgroupRow { int tg = -1, calls = 0, followed = 0, encrypted = 0, missed = 0, lastSrc = -1; double airSec = 0, lastSec = 0; bool active = false, emergency = false; std::string lastNote; };
+    std::vector<TalkgroupRow> conversations() const;
 
 private:
     uint64_t good_ = 0, bad_ = 0;

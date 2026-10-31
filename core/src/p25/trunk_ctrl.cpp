@@ -108,6 +108,29 @@ std::vector<const CallRecord*> Controller::nowTalking() const {
     return v;
 }
 
+std::vector<Controller::TalkgroupRow> Controller::conversations() const {
+    std::vector<TalkgroupRow> rows;
+    const auto& v = log.records();
+    for (size_t i = v.size(); i-- > 0;) {   // newest first
+        const CallRecord& r = v[i];
+        if (!r.group || r.tg < 0) continue;
+        auto it = std::find_if(rows.begin(), rows.end(), [&](const TalkgroupRow& t) { return t.tg == r.tg; });
+        if (it == rows.end()) {
+            rows.emplace_back();
+            it = rows.end() - 1;
+            it->tg = r.tg; it->lastSec = r.lastSec; it->lastSrc = r.src; it->lastNote = r.note;
+        }
+        it->calls++;
+        it->followed += r.followed;
+        it->encrypted += r.encrypted;
+        it->missed += r.missed;
+        it->active = it->active || r.active;
+        it->emergency = it->emergency || r.emergency;
+        it->airSec += r.active ? r.lastSec - r.startSec : r.durSec;
+    }
+    return rows;
+}
+
 void Controller::clear() {
     sys.clear();
     log.clear();

@@ -267,10 +267,12 @@ void talkgroupView(App& a) {
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const auto& tg = a.rx.p25.talkgroups;
     if (tg.empty()) { ImGui::TextDisabled("no talkgroups heard yet"); return; }
-    if (!ImGui::BeginTable("##p25tg", 7, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    std::vector<dect2::trunk::Controller::TalkgroupRow> conv;
+    if (T.on) conv = T.ctl.conversations();   // followed calls and airtime per talkgroup (the call log of the follower)
+    if (!ImGui::BeginTable("##p25tg", 9, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("Talkgroup"); ImGui::TableSetupColumn("Grants"); ImGui::TableSetupColumn("Calls"); ImGui::TableSetupColumn("Last unit");
-    ImGui::TableSetupColumn("Last channel"); ImGui::TableSetupColumn("Last heard"); ImGui::TableSetupColumn("Notes", ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn("Last channel"); ImGui::TableSetupColumn("Last heard"); ImGui::TableSetupColumn("Followed"); ImGui::TableSetupColumn("Airtime"); ImGui::TableSetupColumn("Notes", ImGuiTableColumnFlags_WidthStretch);
     ImGui::TableHeadersRow();
     for (const auto& g : tg) {
         ImGui::TableNextRow();
@@ -281,7 +283,12 @@ void talkgroupView(App& a) {
         ImGui::TableNextColumn(); ImGui::TextUnformatted(dect2::p25Id(g.lastSrc).c_str());
         ImGui::TableNextColumn(); ImGui::TextUnformatted(mhz(g.lastFreqHz).c_str());
         ImGui::TableNextColumn(); ImGui::TextColored(c, "%s", g.active ? "active" : clock(g.lastWall).c_str());
+        const dect2::trunk::Controller::TalkgroupRow* cv = nullptr;
+        for (const auto& r : conv) if (r.tg == g.tg) { cv = &r; break; }
+        ImGui::TableNextColumn(); if (cv) ImGui::Text("%d of %d", cv->followed, cv->calls); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (cv) ImGui::Text("%.0f s", cv->airSec); else ImGui::TextDisabled("-");
         ImGui::TableNextColumn();
+        if (cv && !cv->lastNote.empty()) { ImGui::TextDisabled("%s", cv->lastNote.c_str()); ImGui::SameLine(); }
         if (g.emergency) { ImGui::TextColored(pal::warnAmber(), "emergency"); ImGui::SameLine(); }
         if (g.encrypted) ImGui::TextColored(pal::warnAmber(), "encrypted");
     }
