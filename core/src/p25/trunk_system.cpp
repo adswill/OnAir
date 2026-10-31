@@ -96,6 +96,8 @@ std::string SystemModel::onTsbk(const p25::Tsbk& t, int nac, double now, std::ve
     auto place = [&](int ch, Grant& g) {
         g.channel = ch;
         g.freqHz = channelFreq(ch, &g.slot, &g.tdma);
+        const IdenInfo& ii = idens_[(ch >> 12) & 15];
+        if (g.freqHz <= 0 && ii.valid && ii.tdma && ii.slots <= 0) g.unplacedType = ii.chanType;
     };
     auto emit = [&](const Grant& g) { nGrant_++; if (grants) grants->push_back(g); };
     switch (t.opcode) {

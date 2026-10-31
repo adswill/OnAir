@@ -35,6 +35,7 @@ struct Grant {
     int algId = -1;              // when known
     int priority = 4;            // service options priority (1 high ... 7 low; 4 default)
     bool explicitUpdate = false; // came from an update message (a repeat of a running call), not a new grant
+    int unplacedType = -1;       // freqHz is 0 because the identifier row has a channel type this build cannot place (not because no row was heard)
 };
 
 struct IdenInfo {
@@ -116,7 +117,7 @@ public:
     void enableList(const std::string& name, bool on);
     bool listEnabled(const std::string& name) const;
     std::vector<std::string> lists() const;
-    struct Decision { bool follow = true; int priority = 0; const char* reason = ""; };
+    struct Decision { bool follow = true; int priority = 0; const char* reason = ""; bool retry = false; };   // retry: not now, a repeat of the grant may be followed
     Decision decide(int tg) const;
 
 private:
@@ -173,6 +174,9 @@ struct FollowConfig {
     double hangSec = 2.0;        // a call with no grant repeat or voice for this long has ended
     double ccLossSec = 4.0;      // no control message for this long: the control channel is lost
     double ccDwellSec = 12.0;    // time spent on each candidate while looking for the control channel (a retune restarts the receiver: tuner settle, gain, sync)
+    double hopStartSec = 6.0;    // the single radio must be heard on a hopped call within this long of the retune (restart, settle, sync), else it goes home
+    double hopBackoffSec = 8.0;  // after a hop that heard nothing, the same talkgroup is not hopped to again for this long
+    double endedCooldownSec = 6.0; // an update for a call that ended this recently (control channel latency) does not open it again
     double returnTimeoutSec = 12.0;  // back on the control channel but nothing heard for this long: start looking
     double edgeGuardHz = 12500;  // a voice channel this close to the edge of the capture is not taken as inside
     double sliceBandwidthHz = 12500;
@@ -198,7 +202,8 @@ public:
     void setCapture(double centerHz, double spanHz, bool slices = true) { centerHz_ = centerHz; spanHz_ = spanHz; slices_ = slices; }
     void setControlChannel(double hz, const std::vector<double>& candidates);
     // A control channel message arrived (any good TSBK)
-    void onControlSeen(double now);
+    // nac: the NID's, -1 unknown. While searching, a control channel of another NAC than the system's is another system (or a co-channel one): not taken as home.
+    void onControlSeen(double now, int nac = -1);
     // A grant (new, or a repeat of a running call). decision comes from the talkgroup list.
     void onGrant(const Grant& g, const TalkgroupList::Decision& d, double now, CallLog& log);
     // The slice (or the hopped radio) hears voice from the call, or its terminator
@@ -238,6 +243,10 @@ private:
     double lastCcSec_ = -1e9, stateSince_ = 0, lastNow_ = 0, dwellStart_ = 0;
     std::vector<Action> out_;
     uint64_t missed_ = 0;
+    struct Ended { int tg; int channel; double sec; };
+    std::vector<Ended> ended_;         // calls that just ended: late updates for them are ignored
+    std::vector<std::pair<int, double>> hopBlock_;   // talkgroup -> no hop before this time (the last hop heard nothing)
+    int homeNac_ = -1;                 // the NAC of the control channel the follower was last on
     double remoteBlockUntil_ = -1e9;   // the voice radio heard nothing on its last call: not before this time
     std::vector<std::pair<double, double>> noticed_;   // out-of-span frequencies already announced
     void note(const std::string& s) { Action a; a.text = s; out_.push_back(a); }
@@ -308,6 +317,8 @@ public:
         follower.leave(callId, now);   // its grant repeats must not open it again
     }
     ControllerStatus status(double nowSec) const;
+    // One line for the UI: what the follower is doing now, or why it is not following ('Following TG 1234 on 851.2375 MHz, slot 2')
+    std::string statusLine(double nowSec) const;
     std::vector<std::string> messages;   // newest last, at most 200
     void clear();
 

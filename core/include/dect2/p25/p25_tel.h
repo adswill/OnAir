@@ -99,7 +99,7 @@ struct P25Telemetry {
 
 constexpr size_t kP25LogMax = 300;
 constexpr size_t kP25TgMax = 200;
-constexpr size_t kP25TsbkMax = 96;
+constexpr size_t kP25TsbkMax = 512;   // about 6 s of a busy control channel (40-80 TSBK/s): a stalled screen must not lose grants (the follower counts a gap if it still does)
 
 inline std::string p25Id(int v) { return v < 0 ? std::string("?") : std::to_string(v); }
 
