@@ -47,6 +47,34 @@ void loadTheme(int n) {
         auto u = [](const ImVec4& v, float m) { return IM_COL32((int)(v.x * 255 * m), (int)(v.y * 255 * m), (int)(v.z * 255 * m), 255); };
         T.tone[0] = u(T.accent, 0.85f); T.tone[1] = u(T.accent, 0.30f); T.tone[2] = u(T.accent, 0.50f); T.tone[3] = u(T.accent, 0.75f); T.tone[4] = u(T.accent, 1.0f);
         T.flair = false;
+    } else if (n >= 5 && n <= 7) {
+        // 3.5 designs. 5 Studio: soft slate-blue, rounded cards, one vivid violet accent. 6 Mono Pro: OLED black, hairlines, square corners,
+        // amber like a lab instrument. 7 Daylight: written in LIGHT colours (L() turns them into the dark source colours the Light pass
+        // of main.cpp turns back, so hard-coded greys elsewhere stay legible); the glyph colours are lifted to a legible contrast there.
+        auto c8 = [](int r, int g, int b) { return ImVec4(r / 255.f, g / 255.f, b / 255.f, 1); };
+        auto L = [&](int r, int g, int b) { const int m = std::max(r, std::max(g, b)), lo = std::min(r, std::min(g, b)); return c8(r + 255 - m - lo, g + 255 - m - lo, b + 255 - m - lo); };
+        if (n == 5) {
+            T.bg = c8(26, 30, 42); T.rail = c8(33, 38, 54); T.edge = c8(54, 62, 86);
+            T.text = c8(216, 222, 238); T.dim = c8(140, 150, 176); T.bright = c8(246, 248, 255); T.accent = c8(150, 112, 255);
+            T.frame = c8(20, 24, 35); T.button = c8(45, 52, 74); T.plotBg = c8(15, 18, 27);
+            const ImVec4 s[8] = {T.accent, c8(255, 168, 96), c8(255, 110, 130), c8(150, 160, 190), c8(100, 200, 240), c8(200, 140, 230), c8(110, 215, 170), c8(240, 240, 250)};
+            for (int k = 0; k < 8; k++) T.series[k] = s[k];
+        } else if (n == 6) {
+            T.bg = c8(3, 3, 3); T.rail = c8(0, 0, 0); T.edge = c8(52, 48, 40);
+            T.text = c8(208, 204, 194); T.dim = c8(128, 120, 102); T.bright = c8(255, 240, 210); T.accent = c8(255, 176, 0);
+            T.frame = c8(0, 0, 0); T.button = c8(16, 15, 12); T.plotBg = c8(0, 0, 0);
+            const ImVec4 s[8] = {T.accent, c8(220, 216, 204), c8(255, 110, 60), c8(150, 146, 134), c8(130, 200, 150), c8(210, 170, 110), c8(255, 214, 120), c8(90, 86, 76)};
+            for (int k = 0; k < 8; k++) T.series[k] = s[k];
+        } else {
+            T.bg = L(243, 245, 250); T.rail = L(255, 255, 255); T.edge = L(196, 205, 222);
+            T.text = L(24, 31, 46); T.dim = L(88, 99, 120); T.bright = L(0, 0, 0); T.accent = L(18, 92, 214);
+            T.frame = L(255, 255, 255); T.button = L(228, 233, 243); T.plotBg = L(252, 253, 255);
+            const ImVec4 s[8] = {T.accent, L(214, 98, 10), L(196, 40, 60), L(88, 99, 120), L(0, 130, 150), L(130, 60, 190), L(20, 130, 80), L(24, 31, 46)};
+            for (int k = 0; k < 8; k++) T.series[k] = s[k];
+        }
+        auto u = [](const ImVec4& v, float m) { return IM_COL32((int)(v.x * 255 * m), (int)(v.y * 255 * m), (int)(v.z * 255 * m), 255); };
+        T.tone[0] = u(T.accent, 0.85f); T.tone[1] = u(T.accent, 0.30f); T.tone[2] = u(T.accent, 0.50f); T.tone[3] = u(T.accent, 0.75f); T.tone[4] = u(T.accent, 1.0f);
+        T.flair = false;
     } else {
         T.bg = ImVec4(0.045f, 0.045f, 0.044f, 1); T.rail = ImVec4(0.037f, 0.037f, 0.036f, 1); T.edge = ImVec4(0.175f, 0.172f, 0.165f, 1);
         T.text = ImVec4(0.82f, 0.81f, 0.78f, 1); T.dim = ImVec4(0.46f, 0.45f, 0.42f, 1); T.bright = ImVec4(0.96f, 0.95f, 0.92f, 1); T.accent = ImVec4(0.86f, 0.65f, 0.30f, 1);
@@ -60,6 +88,7 @@ void loadTheme(int n) {
     for (int k = 0; k < 5; k++) pal::tones()[k] = T.tone[k];
     kit::syncTokens();
     kit::tokens().devLook = n >= 3;
+    kit::tokens().radius = n == 5 ? 7.f : n == 7 ? 5.f : 0.f;
 }
 
 }  // namespace ui2
@@ -201,6 +230,22 @@ void applyUiTheme(App& a) {
     applyUiThemeBase(a);
     applyUiThemeAccent(a);
     pal::tabColours(ImGui::GetStyle().Colors);   // the selected tab is blue in every palette, with no bar above it
+    if (a.newUi && a.uiTheme >= 5 && !a.highContrast) {   // the 3.5 designs have their own tab strips
+        ImVec4* c = ImGui::GetStyle().Colors;
+        auto mixc = [](const ImVec4& x, const ImVec4& y, float t) { return ImVec4(x.x + (y.x - x.x) * t, x.y + (y.y - x.y) * t, x.z + (y.z - x.z) * t, 1); };
+        auto fade = [](const ImVec4& v, float al) { return ImVec4(v.x, v.y, v.z, al); };
+        if (a.uiTheme == 5) {   // pills: the selected tab is a violet fill
+            c[ImGuiCol_Tab] = fade(T.button, 0.5f); c[ImGuiCol_TabDimmed] = c[ImGuiCol_Tab]; c[ImGuiCol_TabHovered] = mixc(T.button, T.accent, 0.4f);
+            c[ImGuiCol_TabSelected] = mixc(T.bg, T.accent, 0.78f); c[ImGuiCol_TabDimmedSelected] = mixc(T.bg, T.accent, 0.62f);
+        } else if (a.uiTheme == 6) {   // bare text with an amber bar above the selected one
+            c[ImGuiCol_Tab] = ImVec4(0, 0, 0, 0); c[ImGuiCol_TabDimmed] = c[ImGuiCol_Tab]; c[ImGuiCol_TabHovered] = fade(T.accent, 0.14f);
+            c[ImGuiCol_TabSelected] = fade(T.accent, 0.10f); c[ImGuiCol_TabDimmedSelected] = fade(T.accent, 0.08f);
+            c[ImGuiCol_TabSelectedOverline] = T.accent; c[ImGuiCol_TabDimmedSelectedOverline] = T.edge;
+        } else {   // Daylight: a white tab with a blue bar above it, the others tinted
+            c[ImGuiCol_Tab] = T.button; c[ImGuiCol_TabDimmed] = T.button; c[ImGuiCol_TabHovered] = mixc(T.button, T.accent, 0.25f);
+            c[ImGuiCol_TabSelected] = T.rail; c[ImGuiCol_TabDimmedSelected] = T.rail; c[ImGuiCol_TabSelectedOverline] = T.accent; c[ImGuiCol_TabDimmedSelectedOverline] = T.edge;
+        }
+    }
     touch::applyMetrics(ImGui::GetStyle());   // last, and only ever raises sizes, so it is safe to repeat every frame
 }
 static void applyUiThemeAccent(App& a) {
@@ -237,8 +282,12 @@ static void applyUiThemeBase(App& a) {
     pal::accentRef() = classicAccent;
     pal::dev() = a.newUi;
     if (a.newUi) loadTheme(a.uiTheme);
-    pal::wfMode() = !a.newUi ? 0 : a.uiTheme == 2 ? 1 : 2;
+    pal::wfMode() = !a.newUi ? 0 : a.uiTheme == 2 ? 1 : a.uiTheme == 5 ? 3 : a.uiTheme == 6 ? 4 : a.uiTheme == 7 ? 5 : 2;
+    pal::roundK() = a.newUi && a.uiTheme == 5 ? 1.f : a.newUi && a.uiTheme == 7 ? 0.5f : 0.f;
+    pal::headingRef() = ImVec4(0, 0, 0, 0);
     const bool devLook = a.newUi && a.uiTheme >= 3;
+    if (a.newUi && a.uiTheme >= 5 && a.wf.map == Waterfall::NavyHeat) a.wf.map = -1;   // the 3.5 designs bring their own colour map (-1: follow the theme) unless one was picked
+    else if ((!a.newUi || a.uiTheme < 5) && a.wf.map == -1) a.wf.map = Waterfall::NavyHeat;
     a.wf.palette();
     // the colour map needs a tighter range to show the noise floor as dark; the classic range comes back when switching back
     if (a.newUi && a.wf.minDb == -100 && a.wf.maxDb == -32) { a.wf.minDb = -88; a.wf.maxDb = -36; }
@@ -281,6 +330,34 @@ static void applyUiThemeBase(App& a) {
         c[ImGuiCol_TextSelectedBg] = fade(T.accent, 0.35f); c[ImGuiCol_TableRowBgAlt] = ImVec4(0, 0, 0, 0); c[ImGuiCol_TableHeaderBg] = T.rail;
         c[ImGuiCol_TableBorderLight] = fade(T.edge, 0.6f); c[ImGuiCol_TableBorderStrong] = T.edge;
         pal::accentRef() = T.accent;
+    }
+    if (a.uiTheme >= 5) {   // the 3.5 designs: shape, spacing and heading colour on top of the flat tool-window base
+        auto fade = [](const ImVec4& v, float al) { return ImVec4(v.x, v.y, v.z, al); };
+        auto mixc = [](const ImVec4& a, const ImVec4& b, float t) { return ImVec4(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t, 1); };
+        if (a.uiTheme == 5) {   // Studio
+            s.WindowRounding = 8 * gUi; s.ChildRounding = 10 * gUi; s.FrameRounding = 7 * gUi; s.PopupRounding = 10 * gUi; s.TabRounding = 8 * gUi; s.GrabRounding = 8 * gUi; s.ScrollbarRounding = 8 * gUi;
+            s.FramePadding = ImVec2(9 * gUi, 4.5f * gUi); s.ItemSpacing = ImVec2(9 * gUi, 6 * gUi); s.CellPadding = ImVec2(6 * gUi, 3 * gUi); s.WindowPadding = ImVec2(10 * gUi, 8 * gUi);
+            s.ScrollbarSize = 12 * gUi; s.GrabMinSize = 10 * gUi; s.FrameBorderSize = 0; s.ChildBorderSize = 1; s.TabBarOverlineSize = 0;
+            c[ImGuiCol_ChildBg] = fade(T.rail, 0.55f); c[ImGuiCol_Border] = fade(T.edge, 0.7f);
+            c[ImGuiCol_Button] = mixc(T.button, T.accent, 0.10f); c[ImGuiCol_ButtonHovered] = mixc(T.button, T.accent, 0.35f); c[ImGuiCol_ButtonActive] = T.accent;
+            c[ImGuiCol_FrameBg] = T.frame; c[ImGuiCol_FrameBgHovered] = mixc(T.frame, T.accent, 0.15f);
+            pal::headingRef() = mixc(T.bright, T.accent, 0.35f);
+        } else if (a.uiTheme == 6) {   // Mono Pro
+            s.WindowRounding = s.ChildRounding = s.FrameRounding = s.PopupRounding = s.TabRounding = s.GrabRounding = s.ScrollbarRounding = 0;
+            s.FramePadding = ImVec2(4 * gUi, 1 * gUi); s.ItemSpacing = ImVec2(5 * gUi, 2 * gUi); s.CellPadding = ImVec2(3 * gUi, 0.5f * gUi); s.WindowPadding = ImVec2(5 * gUi, 4 * gUi);
+            s.ScrollbarSize = 8 * gUi; s.GrabMinSize = 6 * gUi; s.FrameBorderSize = 1; s.ChildBorderSize = 1; s.TabBarOverlineSize = 2 * gUi;
+            c[ImGuiCol_Button] = T.button; c[ImGuiCol_ButtonHovered] = mixc(T.button, T.accent, 0.22f); c[ImGuiCol_ButtonActive] = mixc(T.button, T.accent, 0.55f);
+            c[ImGuiCol_Header] = fade(T.accent, 0.16f); c[ImGuiCol_HeaderHovered] = fade(T.accent, 0.10f); c[ImGuiCol_HeaderActive] = fade(T.accent, 0.30f);
+            pal::headingRef() = T.accent;
+        } else {   // Daylight (source colours; turned into the light look by the Light pass)
+            s.WindowRounding = 5 * gUi; s.ChildRounding = 6 * gUi; s.FrameRounding = 5 * gUi; s.PopupRounding = 6 * gUi; s.TabRounding = 5 * gUi; s.GrabRounding = 5 * gUi; s.ScrollbarRounding = 6 * gUi;
+            s.FramePadding = ImVec2(8 * gUi, 4 * gUi); s.ItemSpacing = ImVec2(8 * gUi, 5 * gUi); s.CellPadding = ImVec2(5 * gUi, 2.5f * gUi); s.WindowPadding = ImVec2(9 * gUi, 7 * gUi);
+            s.ScrollbarSize = 12 * gUi; s.FrameBorderSize = 1; s.ChildBorderSize = 1; s.TabBarOverlineSize = 2 * gUi;
+            c[ImGuiCol_ChildBg] = fade(T.rail, 0.7f);
+            c[ImGuiCol_Button] = T.button; c[ImGuiCol_ButtonHovered] = mixc(T.button, T.accent, 0.25f); c[ImGuiCol_ButtonActive] = mixc(T.button, T.accent, 0.5f);
+            c[ImGuiCol_Header] = fade(T.accent, 0.18f); c[ImGuiCol_HeaderHovered] = fade(T.accent, 0.12f); c[ImGuiCol_HeaderActive] = fade(T.accent, 0.32f);
+            pal::headingRef() = T.accent;
+        }
     }
     plt::Style& p = plt::GetStyle();
     for (int i = 0; i < 8; i++) p.AutoColors[i] = T.series[i];

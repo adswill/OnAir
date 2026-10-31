@@ -22,10 +22,12 @@ inline void tabColours(ImVec4* c) {
 }
 inline bool& dev() { static bool v = false; return v; }
 // heading text in panels: blue in the classic interface, soft white in the new one
-inline ImVec4 heading() { return dev() ? ImVec4(0.92f, 0.90f, 0.84f, 1) : ImVec4(0.45f, 0.75f, 1, 1); }
+inline ImVec4& headingRef() { static ImVec4 v(0, 0, 0, 0); return v; }   // a design's own heading colour (alpha 0 = none)
+inline ImVec4 heading() { if (dev() && headingRef().w > 0) return headingRef(); return dev() ? ImVec4(0.92f, 0.90f, 0.84f, 1) : ImVec4(0.45f, 0.75f, 1, 1); }
 inline bool& panel() { static bool v = false; return v; }   // the Panel layout: status lamps are round LEDs
-inline int& wfMode() { static int m = 0; return m; }   // waterfall colours: 0 classic blue-teal, 1 plain grey, 2 turbo (the dev palettes)
-inline float rnd(float r) { return dev() ? 0.f : r; }   // corner radius: none in the dev palette   // the new interface's palette: warm greys and one amber accent
+inline int& wfMode() { static int m = 0; return m; }   // waterfall colours: 0 classic blue-teal, 1 plain grey, 2 turbo (the dev palettes), 3 Magma (Studio), 4 Amber (Mono Pro), 5 Paper (Daylight)
+inline float& roundK() { static float v = 0; return v; }   // corner-radius factor of the dev looks (Studio rounded, the others square)
+inline float rnd(float r) { return dev() ? r * roundK() : r; }   // corner radius: none in the dev palette   // the new interface's palette: warm greys and one amber accent
 // the classic interface's blue and teal fills, mapped to the dev palette when it is on
 inline ImU32* tones() { static ImU32 t[5] = {IM_COL32(166, 122, 46, 255), IM_COL32(86, 68, 36, 255), IM_COL32(110, 84, 36, 255), IM_COL32(168, 146, 104, 255), IM_COL32(232, 190, 112, 255)}; return t; }
 inline ImU32 remap(ImU32 c) {

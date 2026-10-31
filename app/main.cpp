@@ -404,7 +404,7 @@ int main(int argc, char** argv) {
             if (minimisedFrame(window, app, o, w, h)) continue;
             static const float kClear[4] = {0.04f, 0.045f, 0.05f, 1.f}, kClearLight[4] = {0.955f, 0.95f, 0.96f, 1.f};
             static const float kClearHc[4] = {0.f, 0.f, 0.f, 1.f};
-            gfxBackend->newFrame(w, h, app.highContrast ? kClearHc : app.lightUi ? kClearLight : kClear);
+            gfxBackend->newFrame(w, h, app.highContrast ? kClearHc : (app.lightUi || (app.newUi && app.uiTheme == 7)) ? kClearLight : kClear);
             ImGui_ImplGlfw_NewFrame();
             applyDisplayScale(window, app, baseStyle);
             ImGui::NewFrame();
@@ -421,7 +421,7 @@ int main(int argc, char** argv) {
             keepWindowsReachable();
             ImGui::Render();
             if (app.highContrast) lightenDrawData(ImGui::GetDrawData(), false, true);   // High contrast wins over Light
-            else if (app.lightUi) lightenDrawData(ImGui::GetDrawData());
+            else if (app.lightUi || (app.newUi && app.uiTheme == 7)) lightenDrawData(ImGui::GetDrawData());
             perfLog(tUi0);
             perfFrame(glfwGetTime(), glfwGetTime() - tUi0, pi.interval, pi.battery, pi.occluded, app.perfOverlay);
             const bool shotNow = o.shotPath && (o.shotAfter > 0 ? glfwGetTime() > o.shotAfter : ++o.shotFrame == (o.hackrfStart ? (app.playReq >= 0 || app.engine.player().selected() >= 0 ? 2400 : 900) : 400));
