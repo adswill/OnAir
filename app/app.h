@@ -185,6 +185,7 @@ struct App {
     bool genAutoOn = true;              // General / Auto: in the General receiver, signals are spotted in the background and labelled (app/specx/general_auto_ui.cpp; docs/GENERAL-AUTO.md)
     bool genAutoDecode = false;         // General / Auto: decode by itself when the tuned frequency sits on a sure label (off by default)
     int genAutoReleaseKhz = 0;          // General / Auto: keep decoding while the tuned frequency is within this of the signal; 0: automatic
+    bool rfFpOpen = false;              // the RF fingerprint window (View > RF fingerprint; app/panels/rffp_ui.cpp; docs/RF-FINGERPRINT.md)
     bool doctorOpen = false;            // the Reception Doctor window (View > Reception doctor; app/panels/doctor_ui.cpp)
     bool stationHealthOpen = false;     // the station health report window (View > Station health; app/panels/station_health_ui.cpp)
     bool sweepOpen = false;             // the sweep scanner window (View > Sweep scanner)
@@ -780,6 +781,7 @@ void generalApiSquelch(bool on, bool autoLevel, double db);
 bool generalApiRecord(App& a, bool on, std::string& err);
 std::string tvRecJobsJson();                        // tvrec_ui.cpp, for the remote API: the recorder's scheduled jobs (read only)
 void generalRecallHz(App& a, double hz);          // general_ui.cpp: a memory's frequency: the dial on hz, the channel marker back on the dial              // general_ui.cpp: the general receiver's listening frequency (the dial plus its offset)
+void rfFingerprintWindow(App& a);                   // rffp_ui.cpp: RF fingerprint of a transmitter, carrier-only log (a.rfFpOpen; docs/RF-FINGERPRINT.md)
 void receptionDoctorWindow(App& a);                // doctor_ui.cpp: Reception Doctor, why a mode is not decoding, with one-click fixes (a.doctorOpen; docs/RECEPTION-DOCTOR.md)
 void chooseSampleRate(App& a, double hz);          // ui/toolbar_source.cpp: set and apply a sample rate for this mode and radio (0 = Auto)
 void stationHealthWindow(App& a);                  // station_health_ui.cpp: the station and antenna health report (a.stationHealthOpen)
