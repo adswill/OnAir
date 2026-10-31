@@ -157,6 +157,17 @@ std::vector<RadioProfile> buildProfiles() {
         v.push_back(r);
     }
     {
+        RadioProfile r;   // the Airspy R2's successor: the same tuner stages and gain tables (libhydrasdr)
+        r.id = "hydrasdr"; r.name = "HydraSDR RFOne"; r.adcBits = 12; r.hasBias = true; r.driverSplits = true; r.settleSec = 0.25;
+        r.stages.push_back(stage("overall", "Gain step", StageKind::Overall, range(0, 21, 1), 3.5, 7, -8, true,
+                                 "libhydrasdr's 22-step gain table (linearity or sensitivity, the radio's Gain mode setting): each step sets LNA, mixer and VGA together. Steps, not dB."));
+        r.stages.push_back(info(stage("alna", "LNA", StageKind::Lna, range(0, 15, 1), 3.5, 8, -10, true, "R820T2 LNA, 0-15.")));
+        r.stages.push_back(info(stage("amix", "Mixer", StageKind::Mixer, range(0, 15, 1), 9, 0, 0, true, "R820T2 mixer, 0-15.")));
+        r.stages.push_back(info(stage("avga", "VGA", StageKind::Vga, range(0, 15, 1), 15, 0, 10, false, "IF VGA after the filter, 0-15.")));
+        r.notes = "12-bit ADC. The Gain mode setting picks the table: Linearity (the default) for strong signals, Sensitivity for weak ones.";
+        v.push_back(r);
+    }
+    {
         RadioProfile r;
         r.id = "airspyhf"; r.name = "Airspy HF+"; r.adcBits = 16; r.hasAmp = true; r.driverSplits = true; r.settleSec = 0.25;
         r.stages.push_back(stage("overall", "Gain", StageKind::Overall, range(0, 48, 6), 6, 6, 10, true,

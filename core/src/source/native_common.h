@@ -612,6 +612,7 @@ inline std::string trimmed(const char* s, size_t max) {
 // one entry per radio: list the connected ones, and open one (the arguments come from the list)
 void listRtl(std::vector<DeviceInfo>& out);
 void listAirspy(std::vector<DeviceInfo>& out);
+void listHydra(std::vector<DeviceInfo>& out);    // source_hydrasdr.cpp: HydraSDR RFOne
 void listBlade(std::vector<DeviceInfo>& out);
 void listLime(std::vector<DeviceInfo>& out);
 void listPluto(std::vector<DeviceInfo>& out);
@@ -621,6 +622,7 @@ bool limeLibraryState(std::string* path, int* radios);   // LimeSuite: loaded or
 bool sdrplayApiInstalled();   // the SDRplay API library (sdrplay_api.dll / libsdrplay_api) was found
 std::unique_ptr<IqSource> makeRtl(const DeviceInfo& d);
 std::unique_ptr<IqSource> makeAirspy(const DeviceInfo& d);
+std::unique_ptr<IqSource> makeHydra(const DeviceInfo& d);
 std::unique_ptr<IqSource> makeBlade(const DeviceInfo& d);
 std::unique_ptr<IqSource> makeLime(const DeviceInfo& d);
 std::unique_ptr<IqSource> makePluto(const DeviceInfo& d);
