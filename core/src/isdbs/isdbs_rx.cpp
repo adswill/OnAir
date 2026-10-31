@@ -450,7 +450,7 @@ struct IsdbsReceiver::Impl {
         }
         {   // the next frame's W1: its first 6 bits, BPSK at F[39936 ...]
             Branch nb[kHeaderBits];
-            headerBranches(F.data() + kFrameSyms, nb);
+            headerBranches(F.data() + kFrameSyms, nb, 6);
             for (int i = 0; i < 6; i++) br[(size_t)L.totalSteps + (size_t)i] = nb[i];
         }
         std::vector<int8_t> forced((size_t)total, -1);

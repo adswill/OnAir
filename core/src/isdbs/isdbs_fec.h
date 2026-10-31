@@ -49,7 +49,7 @@ inline unsigned convNext(unsigned state, int in) { return ((state >> 1) | ((unsi
 unsigned w1State();
 
 // Branch metrics of a frame's steps from its symbols (carrier removed, unit power): the header, and the groups in `L`
-void headerBranches(const cf32* frame, Branch* out96);
+void headerBranches(const cf32* frame, Branch* out96, int nbits = kHeaderBits);   // nbits: only that many (the next frame's W1 has just 12 symbols in the buffer)
 void groupBranches(const Layout& L, int g, const cf32* frame, Branch* out);   // out has L.groups[g].steps entries
 // TC8PSK: the uncoded bit of each symbol once the coded path is known (states from viterbi())
 void tc8Uncoded(const Layout& L, int g, const cf32* frame, const uint8_t* states, const uint8_t* bits, int stepFrom, int stepTo, uint8_t* w);
