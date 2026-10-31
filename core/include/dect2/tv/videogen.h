@@ -17,14 +17,17 @@ namespace dect2::vgen {
 // Generator: a copy of the moving test picture of the transmitter's built-in test transport stream (demo_ts.cpp, the one the DVB-T2
 // T2Generator carries in its real PLP), drawn at the output resolution (drawTestCard); text goes on it with the overlay
 enum class Source { Camera, Picture, VideoFile, Generator };
-enum class AudioSource { Silence, Tone, FromFile, Microphone };
+enum class AudioSource { Silence, Tone, FromFile, Microphone, AudioFile };   // AudioFile: your own sound file (or folder), see audioPath
 enum class Output { File, Udp, Rtp };
 enum class Fit { Stretch, Letterbox, Crop };
 
 struct GenConfig {
     Source source = Source::Camera;
     std::string cameraId;              // empty = the default camera
-    std::string path;                  // Picture / VideoFile
+    std::string path;                  // Picture / VideoFile: a file, or a folder (pictures = slideshow, videos = played one after the other)
+    std::string audioPath;             // AudioSource::AudioFile: a sound file (or a video: its sound), or a folder of them played in order
+    bool loop = true;                  // start again at the end (a folder starts over from its first file); off: the stream ends with the last file
+    double slideSeconds = 10;          // a folder of pictures: how long each is shown
     int pattern = 0;                   // Generator: 0 test card, 1 colour bars, 2 grey ramp
     AudioSource audio = AudioSource::Tone;
     std::string micId;                 // empty = the default input
@@ -59,6 +62,15 @@ FitPlan fitPlan(int srcW, int srcH, int dstW, int dstH, Fit f);
 // The test generator's picture, frame n of a W x H YUV 4:2:0 picture (even sizes; ys / us / vs are the line strides): picture 0 test
 // card (colour bars, a sweep, a chequerboard with a bouncing ball), 1 colour bars, 2 grey ramp. A bar grows along the bottom once a second.
 void drawTestCard(uint8_t* y, int ys, uint8_t* u, int us, uint8_t* v, int vs, int W, int H, int n, double fps, int picture);
+
+// What a file is, by its extension (the drop zone uses it to put a dropped file in the right slot)
+enum class MediaKind { Unknown, Picture, Video, Audio };
+MediaKind mediaKind(const std::string& path);
+// The files of a folder of that kind, sorted by name (not case sensitive); a file gives just itself (any kind); empty when nothing fits
+std::vector<std::string> listMedia(const std::string& path, MediaKind kind);
+
+// What a dropped file or folder is: a file by its extension; a folder by what it holds (pictures first, then videos, then sound)
+MediaKind dropKind(const std::string& path);
 
 // "rtp://192.168.1.20:5000" / "udp://..."; empty for a file
 std::string streamUrl(Output o, const std::string& host, int port);

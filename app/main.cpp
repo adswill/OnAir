@@ -360,7 +360,7 @@ int main(int argc, char** argv) {
 
 
     ImGui_ImplGlfw_InitForOther(window, true);
-    glfwSetDropCallback(window, [](GLFWwindow*, int n, const char** paths) { if (n > 0) wbQueueDrop(paths[0]); });   // a recording dropped on the window: the Signal workbench opens it
+    glfwSetDropCallback(window, [](GLFWwindow*, int n, const char** paths) { if (n > 0 && !vgQueueDrop(n, paths)) wbQueueDrop(paths[0]); });   // a recording dropped on the window: the Signal workbench opens it
     watchMonitors();
     if (gWayland) ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;   // see chooseGlfwPlatform()
 
