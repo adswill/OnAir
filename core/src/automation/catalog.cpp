@@ -46,6 +46,16 @@ std::vector<EventInfo> build() {
         {"ship_type", 'n', "ship type code 0 to 99", "70"}, {"lat", 'n', "latitude", "55.1"}, {"lon", 'n', "longitude", "21.2"},
         {"sog_kt", 'n', "speed over ground", "12"}, {"cog_deg", 'n', "course over ground", "270"}, {"nav_status", 'n', "navigation status 0 to 15", "0"},
         {"class", 's', "A, B, base, aid ...", "A"}, {"destination", 's', "destination text", "KLAIPEDA"}}});
+    v.push_back({"ais.cpa", "Vessel on a close-approach course (CPA alert)", "AIS", "AIS", 162.0e6, {
+        {"mmsi", 'n', "MMSI number", "219012345"}, {"name", 's', "ship name", "NORDIC STAR"}, {"ship_type", 'n', "ship type code 0 to 99", "70"},
+        {"class", 's', "A, B, base, aid ...", "A"}, {"lat", 'n', "latitude", "55.1"}, {"lon", 'n', "longitude", "21.2"},
+        {"sog_kt", 'n', "speed over ground", "12"}, {"cog_deg", 'n', "course over ground", "270"}, {"distance_nm", 'n', "distance now, nautical miles", "3.2"},
+        {"cpa_nm", 'n', "distance at the closest approach", "0.3"}, {"tcpa_min", 'n', "minutes to the closest approach", "9"}}});
+    v.push_back({"ais.geofence", "Vessel entered or left a geofence", "AIS", "AIS", 162.0e6, {
+        {"mmsi", 'n', "MMSI number", "219012345"}, {"name", 's', "ship name", "NORDIC STAR"}, {"ship_type", 'n', "ship type code 0 to 99", "70"},
+        {"class", 's', "A, B, base, aid ...", "A"}, {"lat", 'n', "latitude", "55.1"}, {"lon", 'n', "longitude", "21.2"},
+        {"sog_kt", 'n', "speed over ground", "12"}, {"cog_deg", 'n', "course over ground", "270"}, {"distance_nm", 'n', "distance from the receiver position (0 when not set)", "3.2"},
+        {"fence", 's', "name of the geofence", "Harbour"}, {"transition", 's', "enter or exit", "enter"}}});
     v.push_back({"aprs.packet", "AX.25 / APRS packet", "APRS", "APRS", 144.8e6, {
         {"from", 's', "source call sign", "LY1ABC-9"}, {"to", 's', "destination", "APRS"}, {"path", 's', "digipeater path", "WIDE1-1"},
         {"info", 's', "information field", "!5441.40N/02517.00E>test"}, {"type", 's', "packet type", "position"}, {"summary", 's', "one-line reading", "position"},

@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include "ais_alertrec.h"
 
 namespace dect2 {
 
@@ -88,6 +89,8 @@ struct AisTelemetry {
     uint64_t cancelled = 0;              // satellite mode: messages found after cancelling a stronger burst on top of them
     uint32_t longRangeVessels = 0;       // stations that sent message 27
     std::vector<AisRxRecord> recent;     // the last 500 good messages, oldest first
+    std::vector<AisAlertRecord> alerts;  // the last 50 CPA and geofence alerts (ais_alerts.h), oldest first
+    uint64_t collisionRecovered = 0;     // coast mode: messages found under a stronger burst or on a slightly different frequency (collision cancellation, ais_rx.h)
     uint32_t vesselCount = 0;            // stations in the table (the list below holds at most 300, the most recently heard)
     std::vector<AisVessel> vessels;      // most recently heard first
     std::vector<std::string> nmea;       // the last 50 good messages as !AIVDM sentences, newest last

@@ -4,6 +4,7 @@
 #pragma once
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/geo/passes.h"
+#include "ais_alerts.h"
 #include "ais_phy.h"
 #include "ais_tel.h"
 #include "dect2/common/ring.h"
@@ -29,6 +30,13 @@ public:
     void setSatelliteMode(bool on);
     // The satellite the IQ comes from (satellite mode): the expected Doppler shift of every ship heard with a position becomes a frequency candidate.
     void setSatelliteTle(const Tle* tle);                // nullptr: none
+    // Coast mode: when a burst fails or leaves a strong remainder, decode again after cancelling the burst already decoded and with the carrier
+    // moved by the few hundred Hz two transmitters differ by (a weaker message under a stronger one in a busy port). Default on; the satellite mode
+    // always has its own, wider version of it.
+    void setCollisionCancel(bool on);
+    // CPA and geofence alerts (ais_alerts.h): off until the config has a limit or a fence. Alerts go to the automations (ais.cpa, ais.geofence)
+    // and to AisTelemetry::alerts. May be set at any time.
+    void setAlertConfig(const AisAlertConfig& c);
     void setTimeBase(double unixSec);                    // UNIX time of the first sample (0 = the computer's clock when the samples start)
     bool ready() const;                                  // false when the input rate is too low for this mode
     void reset();                                        // after a retune: forget the signal (the stations and sentences stay: clearResults)
