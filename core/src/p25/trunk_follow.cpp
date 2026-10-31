@@ -33,6 +33,7 @@ void Follower::reset() {
     noticed_.clear();
     ccHz_ = 0; radioHz_ = 0; candIdx_ = 0;
     cands_.clear();
+    good_.clear();
 }
 
 void Follower::setControlChannel(double hz, const std::vector<double>& cands) {
@@ -127,6 +128,23 @@ void Follower::leave(uint64_t callId, double now) {
 // Where the radio is now, as far as known: the last retune, else the capture centre of a single-channel capture
 double Follower::tunedHz() const { return radioHz_ > 0 ? radioHz_ : spanHz_ <= 0 ? centerHz_ : 0; }
 
+// The order of a control channel hunt: the frequencies a control message was really heard on, the most recent first (a site that moved its control
+// channel, or a neighbour list gone stale, does not send the hunt on a tour of guesses before it returns to what worked), then the system's own
+// candidates. The heard list is kept for the session (reset() clears it) and holds the last few only.
+std::vector<double> Follower::searchList() const {
+    std::vector<std::pair<double, double>> g = good_;
+    std::stable_sort(g.begin(), g.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
+    std::vector<double> v;
+    auto add = [&](double hz) {
+        if (hz <= 0) return;
+        for (double o : v) if (std::fabs(o - hz) < 1) return;
+        v.push_back(hz);
+    };
+    for (const auto& x : g) add(x.first);
+    for (double c : cands_) add(c);
+    return v;
+}
+
 // Start (or step) the control channel search at a frequency. Already tuned there: no retune (it would only restart the receiver's acquisition for nothing)
 void Follower::searchAt(double hz, double now) {
     const double cur = tunedHz();
@@ -151,6 +169,21 @@ void Follower::goHome(double now) {
 
 void Follower::onControlSeen(double now) {
     lastCcSec_ = now;
+    if (state_ != FollowState::Hopped && state_ != FollowState::Following) {
+        const double f = radioHz_ > 0 ? radioHz_ : ccHz_ > 0 ? ccHz_ : centerHz_;
+        if (f > 0) {
+            bool found = false;
+            for (auto& x : good_) if (std::fabs(x.first - f) < 1) { x.second = now; found = true; }
+            if (!found) {
+                good_.push_back({f, now});
+                if (good_.size() > 4) {
+                    size_t old = 0;
+                    for (size_t i = 1; i < good_.size(); i++) if (good_[i].second < good_[old].second) old = i;
+                    good_.erase(good_.begin() + (long)old);
+                }
+            }
+        }
+    }
     switch (state_) {
     case FollowState::NoControl: setState(FollowState::ControlHold, now); break;
     case FollowState::Returning: setState(FollowState::ControlHold, now); break;
@@ -381,26 +414,35 @@ void Follower::tick(double now, CallLog& log) {
         break;
     case FollowState::ControlHold:
         if (activeSlices() > 0) { setState(FollowState::Following, now); break; }
-        if (cfg_.allowRetune && !cands_.empty() && now - lastCcSec_ > cfg_.ccLossSec) {
+        if (cfg_.allowRetune && now - lastCcSec_ > cfg_.ccLossSec) {
+            const std::vector<double> l = searchList();
+            if (l.empty()) break;
             candIdx_ = 0;
-            searchAt(cands_[0], now);
+            const double cur = tunedHz();
+            const bool here = cur > 0 && std::fabs(cur - l[0]) < 1;
+            searchAt(l[0], now);
+            // already on it and silent for ccLossSec: it has had its wait, the next step comes after one more loss time, not a whole dwell
+            if (here && l.size() > 1) dwellStart_ = now - std::max(0.0, cfg_.ccDwellSec - cfg_.ccLossSec);
             setState(FollowState::Searching, now);
             note("Control channel lost: looking for it");
         }
         break;
     case FollowState::Returning:
         if (now - stateSince_ > cfg_.returnTimeoutSec) {
-            if (cfg_.allowRetune && !cands_.empty()) {
+            const std::vector<double> l = searchList();
+            if (cfg_.allowRetune && !l.empty()) {
                 candIdx_ = 0;
-                searchAt(cands_[0], now);
+                searchAt(l[0], now);
                 setState(FollowState::Searching, now);
             } else setState(FollowState::NoControl, now);
         }
         break;
     case FollowState::Searching:
-        if (!cands_.empty() && now - dwellStart_ > cfg_.ccDwellSec) {
-            candIdx_ = (candIdx_ + 1) % cands_.size();
-            searchAt(cands_[candIdx_], now);
+        if (now - dwellStart_ > cfg_.ccDwellSec) {
+            const std::vector<double> l = searchList();
+            if (l.empty()) break;
+            candIdx_ = (candIdx_ + 1) % l.size();
+            searchAt(l[candIdx_], now);
         }
         break;
     default: break;

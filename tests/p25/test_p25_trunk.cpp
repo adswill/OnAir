@@ -298,6 +298,64 @@ int main() {
         CHECK(searchRetunes == 0 && !visitedOutside, "no search tour: %d retunes, outside %d", searchRetunes, (int)visitedOutside);
         CHECK(c.follower.state() == FollowState::ControlHold, "still holding at the end (%s)", followStateName(c.follower.state()));
     }
+    // ---- issue #348, control channel drop and re-acquire. Model: a retune costs 4 s of acquisition; only the frequency the system uses as its control
+    //      channel at that moment locks. The control channel drops for 40 s (same frequency), then the site moves it to its secondary channel.
+    {
+        const double base = 770031250;
+        auto hz = [&](int ch) { return base + ch * 12500.0; };
+        Controller c;
+        feed(c, gen::idenUp(1, base, 12500, 0, 12500), 0);
+        feed(c, gen::netSts(0xBEE00, 0x1A7, 0x1019, 0x70), 0);
+        feed(c, gen::rfssSts(0x1A7, 2, 14, 0x1019, 0x70), 0);
+        feed(c, gen::sccb(2, 14, 0x10DA, 0x114C), 0);
+        feed(c, gen::adjSts(0x1A7, 2, 15, 0x1BB8, 0x70), 0);
+        const double cc1 = hz(0x19), cc2 = hz(0xDA);
+        c.setCapture(cc1, 0);
+        FollowConfig fc; fc.allowRetune = true;
+        c.follower.setConfig(fc);
+        double radio = cc1, lockAt = 0, dropStart = 20, dropEnd = 60, movedAt = 80;
+        int retunes = 0, outside = 0;
+        double relockSec = -1, movedLockSec = -1;
+        for (double t = 0.2; t < 160; t += 0.1) {
+            const double live = t < movedAt ? cc1 : cc2;   // the control channel in use
+            const bool up = std::fabs(radio - live) < 1 && t >= lockAt && !(t > dropStart && t < dropEnd);
+            if (up && std::fmod(t, 0.2) < 0.1) {
+                feed(c, gen::rfssSts(0x1A7, 2, 14, t < movedAt ? 0x1019 : 0x10DA, 0x70), t);
+                if (t >= dropEnd && relockSec < 0 && t < movedAt) relockSec = t - dropEnd;
+                if (t >= movedAt && movedLockSec < 0 && std::fabs(radio - cc2) < 1) movedLockSec = t - movedAt;
+            }
+            c.tick(t);
+            for (const Action& a : c.takeActions()) {
+                if (a.kind != Action::Retune) continue;
+                retunes++;
+                if (std::fabs(a.freqHz - cc1) > 1 && std::fabs(a.freqHz - cc2) > 1 && std::fabs(a.freqHz - hz(0x14C)) > 1) outside++;
+                radio = a.freqHz; lockAt = t + 4.0;
+            }
+        }
+        CHECK(outside == 0, "recovery never leaves the site's own channels: %d", outside);
+        CHECK(relockSec >= 0 && relockSec < 20, "re-locked after the drop: %.1f s after it ended", relockSec);
+        CHECK(movedLockSec >= 0 && movedLockSec < 45, "found the moved control channel: %.1f s", movedLockSec);
+        CHECK(c.follower.state() == FollowState::ControlHold && std::fabs(radio - cc2) < 1, "holding the moved control channel (%s)", followStateName(c.follower.state()));
+        // the next loss starts with what was heard last
+        const auto l = c.follower.heardControlChannels();
+        CHECK(!l.empty() && std::fabs(l[0] - cc2) < 1, "last-good control channel is first in the hunt order");
+        (void)retunes;
+    }
+    // ---- a first step on the channel the radio is on, silent for the loss time: the next candidate comes after one more loss time, not a whole dwell
+    {
+        Controller c;
+        setupSite(c, 0);
+        feed(c, gen::sccb(1, 5, 0x1020, 0x1021), 0);
+        c.setCapture(chHz(0x1001), 0);
+        FollowConfig fc; fc.ccLossSec = 4; fc.ccDwellSec = 12; fc.allowRetune = true;
+        c.follower.setConfig(fc);
+        c.tick(4.5);
+        auto a = c.takeActions();
+        CHECK(c.follower.state() == FollowState::Searching, "lost after the loss time");
+        c.tick(9.0);
+        a = c.takeActions();
+        CHECK(count(a, Action::Retune) == 1 && std::fabs(a[0].freqHz - chHz(0x1020)) < 1, "second candidate after one more loss time (%d retunes)", count(a, Action::Retune));
+    }
     // ---- talkgroup CSV
     {
         TalkgroupList l;
