@@ -146,7 +146,8 @@ int main() {
         }
         auto fin = dl("N1", "H1", '1', "M01", 'Z', "END", true);
         auto res = r2.feed(piece(fin), AcarsMessage(fin), 40, w, cut);
-        CHECK(res == AR::Result::Complete && w.msg.text.size() <= kAcarsReasmMaxText + 512,   // the cap is on the added text; the first block and the end come on top "long message bounded: %zu", w.msg.text.size());
+        // the cap is on the added text; the first block and the end come on top
+        CHECK(res == AR::Result::Complete && w.msg.text.size() <= kAcarsReasmMaxText + 512, "long message bounded: %zu", w.msg.text.size());
     }
     // ---- VDL2: real AVLC frames, ETB then ETX, joined and re-read
     {
