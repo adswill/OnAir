@@ -98,7 +98,14 @@ std::vector<uint8_t> p25p2Dibits(const P25p2GenConfig& c) {
                     continue;
                 }
                 const bool first = sf == call->startSf, last = sf == call->startSf + call->nSf - 1;
-                if (first && p == 0) { sig(true, p25p2::macPtt(nF, call->src, call->group, call->algId)); continue; }
+                auto callMi = [&](uint8_t m[9]) { for (int i = 0; i < 9; i++) m[i] = (uint8_t)(call->algId == p25p2::kAlgClear ? 0 : 0x11 * (i + 1)); };
+                if (first && p == 0) {
+                    uint8_t pm[9];
+                    callMi(pm);
+                    if (call->noPtt) sig(true, p25p2::macIdle(nF));
+                    else sig(true, call->pttInfo ? p25p2::macPtt(nF, call->src, call->group, call->algId, call->algId == p25p2::kAlgClear ? 0 : call->keyId, pm) : p25p2::macPtt(nF, call->src, call->group, call->algId));
+                    continue;
+                }
                 if (last && p == 5) { sig(true, p25p2::macEndPtt(nF, call->src, call->group, c.colorCode)); continue; }
                 if (p == 5) {
                     sig(false, call->unitToUnit ? p25p2::macActiveUu(nS, call->svcOpts, call->group, call->src)
@@ -108,7 +115,9 @@ std::vector<uint8_t> p25p2Dibits(const P25p2GenConfig& c) {
                 // voice: the frames, and the call's encryption sync (ESS-B a quarter at a time in the 4V bursts, ESS-A in the 2V)
                 uint8_t essB[16], essA[28], mi[9] = {};
                 for (int i = 0; i < 9; i++) mi[i] = (uint8_t)(call->algId == p25p2::kAlgClear ? 0 : 0x11 * (i + 1));
-                p25p2::essEncode(call->algId, call->algId == p25p2::kAlgClear ? 0 : 0x1234, mi, essB, essA);
+                p25p2::essEncode(call->algId, call->algId == p25p2::kAlgClear ? 0 : call->keyId, mi, essB, essA);
+                if (call->noEss) { for (auto& v : essB) v = (uint8_t)(rnd() | (rnd() << 2)); for (auto& v : essA) v = (uint8_t)(rnd() | (rnd() << 2)); }
+                else if (sf == call->essBadSf) for (auto& v : essA) v = (uint8_t)(rnd() | (rnd() << 2));
                 const bool v4 = kindOf(ch, p) == k4V;
                 for (int k = 0; k < (v4 ? 4 : 2); k++) {
                     uint8_t bits[72];
@@ -138,6 +147,7 @@ std::vector<uint8_t> p25p2Dibits(const P25p2GenConfig& c) {
             out.insert(out.end(), b, b + p25p2::kBurstDibits);
         }
     }
+    if (c.dropFirstSlots > 0) out.erase(out.begin() + c.leadDibits, out.begin() + c.leadDibits + (size_t)c.dropFirstSlots * p25p2::kBurstDibits);
     return out;
 }
 
