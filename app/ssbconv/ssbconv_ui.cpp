@@ -5,6 +5,7 @@
 #include "dect2/automation/engine.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/common/u8file.h"
+#include "dect2/engine/sig_ident.h"
 #include "dect2/ssbconv/ssbconv.h"
 #include <algorithm>
 #include <atomic>
@@ -117,8 +118,25 @@ void workerLoop() {
     }
 }
 
+// A second opinion on a band that is not confirmed as voice yet: the signal identifier. Only a clear (>= 75 %) HF data / utility mode vetoes it.
+bool digitalVeto(const sc::cf* x, size_t n, double rate, double centreOffsetHz) {
+    if (n < 8192) return false;
+    const size_t m = std::min(n, (size_t)rate);   // one second is plenty
+    std::vector<dect2::cf32> v(x, x + m);
+    dect2::sigid::Options o;
+    o.rfHz = S.lastCentre.load() + centreOffsetHz; o.verify = false;
+    const dect2::sigid::Result r = dect2::sigid::identify(v.data(), v.size(), rate, o);
+    return r.verdict == dect2::sigid::VerdictLikely && !r.cands.empty() && r.cands[0].family == "HF and utility" && r.cands[0].confidence >= 0.75;
+}
+
 void ensureStarted() {
     if (S.started.exchange(true)) return;
+    {
+        std::lock_guard<std::mutex> sl(S.smu);
+        sc::ScannerOptions so = S.scanner.options();
+        so.digitalVeto = digitalVeto;
+        S.scanner.setOptions(so);
+    }
     S.clipDir = plat::dataDir() + "/ssb-conversations";
     S.rec.reset(new sc::ClipRecorder(S.clipDir));
     S.worker = std::thread(workerLoop);
