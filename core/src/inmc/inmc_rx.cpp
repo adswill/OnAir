@@ -603,6 +603,7 @@ struct InmcReceiver::Impl {
     std::vector<int> ids;                      // number of each channel, for the log
     int nextId = 1;
     bool searchOn = true;
+    double searchSpan = 0;
     WideSearch ws;
     struct Black { double f, until; };
     std::vector<Black> black;
@@ -713,7 +714,8 @@ struct InmcReceiver::Impl {
     }
 
     void search() {
-        const std::vector<double> cands = ws.candidates();
+        std::vector<double> cands = ws.candidates();
+        if (searchSpan > 0) cands.erase(std::remove_if(cands.begin(), cands.end(), [this](double f) { return std::fabs(f) > searchSpan; }), cands.end());
         moveTuned(cands);
         std::vector<double> keep;
         for (double f : cands) {
@@ -788,6 +790,10 @@ void InmcReceiver::setSignalOffset(double hz) {
     std::lock_guard<std::mutex> lk(p_->mu);
     p_->offsetHz = hz;
     if (!p_->ch.empty()) { p_->ch[0]->offsetHz = hz; p_->ch[0]->setOffset(); }
+}
+void InmcReceiver::setSearchSpan(double hz) {
+    std::lock_guard<std::mutex> lk(p_->mu);
+    p_->searchSpan = hz;
 }
 void InmcReceiver::setChannelSearch(bool on) {
     std::lock_guard<std::mutex> lk(p_->mu);

@@ -1,10 +1,9 @@
 // Inmarsat all-carriers mode, stage 3: voice plumbing for the Aero C channels (circuit-mode voice, an AMBE-family vocoder).
 // What is here: a mixer with one channel per active C carrier (mute / solo per channel), a call recorder (a WAV per call, and the raw coded
-// frames in a .bits file so a capture is not wasted when the codec is missing), and the user-installed codec (plug-in id "ambe", codec_registry.h:
+// frames in a .bits file so a capture is not wasted when the codec is missing), and the user-installed codec (plug-in id "aeroambe", codec_registry.h:
 // OnAir ships no patented codec; docs/CODECS.md). Without the codec the output is silence and status() says what to install.
-// What is NOT here: the C-channel demodulator that turns the carrier into coded frames. Its modulation and framing are not in a public
-// specification OnAir may reproduce, so nothing feeds pushFrame() from the air yet (docs/INMARSAT-REVAMP.md, "open problem"). Unencrypted
-// traffic only; there is no key handling and no decryption here.
+// What feeds pushFrame(): the C-channel decoders of the manager (inmsat_manager.h, AeroDemod at 8400 bit/s: aero_demod.h, aero_phy.h), one per
+// wide carrier, 25 coded voice frames of 12 bytes per 0.5 s frame. Unencrypted traffic only; there is no key handling and no decryption here.
 // Thread-safe: pushFrame() comes from the receiver thread, mix() from the audio thread.
 #pragma once
 #include "dect2/codec/speech_codec.h"
@@ -40,7 +39,7 @@ public:
     using DecoderFactory = std::function<std::unique_ptr<codec::SpeechCodec>()>;
     VoiceMixer();
     ~VoiceMixer();
-    // factory: a decoder per channel; default pluginVocoder("ambe"). codecFolder is only used in the install message.
+    // factory: a decoder per channel; default pluginVocoder("aeroambe"). codecFolder is only used in the install message.
     void setDecoderFactory(DecoderFactory f);
     void setCodecFolder(const std::string& folder);
     void setRecording(const std::string& dir);          // "" = off. A call is written to dir/inmarsat_<kHz>_<n>.wav (and .bits)

@@ -105,9 +105,33 @@ struct AeroFramer::Impl {
 
     // unique word ending at bit `end` (absolute): errors after the best inversion; sets inv[] for the bits of that frame
     int uwErrors(uint64_t end, int inv[2]) const {
+        if (fmt.cChannel()) return uwErrorsC(end, inv);
         uint64_t w = 0;
         for (int k = fmt.uwBits - 1; k >= 0; k--) w = (w << 1) | (uint64_t)(at(end - (uint64_t)k) > 0);
         return uwErrorsWord(w, end, inv);
+    }
+    // C channel (aerol.cpp DecodeC, OQPSKPreambleDetectorAndAmbiguityCorrection): 52 bits on each arm, each arm takes either word,
+    // straight or inverted; the sync needs both arms, so the worse arm decides
+    static int armErrorsC(uint64_t w, int& inverted) {
+        const int eQ = __builtin_popcountll((w ^ kAeroCUwQ) & ((1ull << kAeroCUwBits) - 1));
+        const int eI = __builtin_popcountll((w ^ kAeroCUwI) & ((1ull << kAeroCUwBits) - 1));
+        int best = eQ; inverted = 0;
+        if (eI < best) { best = eI; }
+        if (kAeroCUwBits - eQ < best) { best = kAeroCUwBits - eQ; inverted = 1; }
+        if (kAeroCUwBits - eI < best) { best = kAeroCUwBits - eI; inverted = 1; }
+        return best;
+    }
+    int uwErrorsC(uint64_t end, int inv[2]) const {
+        uint64_t wB = 0, wA = 0;           // B: the arm of bit `end` (positions end, end-2, ..), A: the other arm
+        for (int k = kAeroCUwBits - 1; k >= 0; k--) {
+            wB = (wB << 1) | (uint64_t)(at(end - (uint64_t)(2 * k)) > 0);
+            wA = (wA << 1) | (uint64_t)(at(end - (uint64_t)(2 * k + 1)) > 0);
+        }
+        int iB = 0, iA = 0;
+        const int eB = armErrorsC(wB, iB), eA = armErrorsC(wA, iA);
+        inv[end & 1] = iB;
+        inv[(end + 1) & 1] = iA;
+        return std::max(eA, eB);
     }
     int uwErrorsWord(uint64_t w, uint64_t end, int inv[2]) const {
         if (!fmt.oqpsk()) {
@@ -134,16 +158,19 @@ struct AeroFramer::Impl {
         }
         if (st == Expect) {
             if (cur < nextUwEnd + 1) return;
-            // the word may end one bit early or late (timing slip): take the best of the three
+            // the word may end one bit early or late (timing slip): take the best of the three (the C channel: two either way)
+            const int reach = fmt.cChannel() ? 2 : 1;
+            if (cur < nextUwEnd + (uint64_t)reach) return;
             int best = 99, bi[2] = {0, 0};
             uint64_t bestEnd = nextUwEnd;
-            for (int d = -1; d <= 1; d++) {
+            for (int d = -reach; d <= reach; d++) {
                 int inv[2];
                 const uint64_t end = nextUwEnd + (uint64_t)(int64_t)d;
                 const int e = uwErrors(end, inv);
                 if (e < best || (e == best && d == 0)) { best = e; bestEnd = end; bi[0] = inv[0]; bi[1] = inv[1]; }
             }
-            if (best <= 7) {
+            // a 52-bit word on each arm: 12 errors on the worse arm is still far from a chance match
+            if (best <= (fmt.cChannel() ? 12 : 7)) {
                 invPar[0] = bi[0]; invPar[1] = bi[1];
                 lastUwErr = best;
                 nUwErr += (uint64_t)best;
@@ -153,7 +180,8 @@ struct AeroFramer::Impl {
                 lastUwErr = -1;
                 nMiss++;
                 frameStart = nextUwEnd + 1;
-                if (++misses > 3) { st = Search; return; }
+                // the C channel: a call fades and comes back; the bit count carries the frame grid for a few seconds (JAERO keeps counting too)
+                if (++misses > (fmt.cChannel() ? 6 : 3)) { st = Search; return; }
             }
             fromSearch = false;
             st = Collect;
@@ -171,9 +199,15 @@ struct AeroFramer::Impl {
     bool trySync(uint64_t cur) {
         if (cur + 1 < (uint64_t)fmt.uwBits) return false;
         int inv[2];
-        const uint64_t w = fmt.oqpsk() ? hard : (hard & 0xFFFFFFFFull);
-        const int e = uwErrorsWord(w, cur, inv);
-        if (e > 3) return false;
+        int e;
+        if (fmt.cChannel()) {
+            e = uwErrorsC(cur, inv);
+            if (e > 6) return false;       // both 52-bit arms within 6: a chance match is next to impossible
+        } else {
+            const uint64_t w = fmt.oqpsk() ? hard : (hard & 0xFFFFFFFFull);
+            e = uwErrorsWord(w, cur, inv);
+            if (e > 3) return false;
+        }
         invPar[0] = inv[0]; invPar[1] = inv[1];
         lastUwErr = e;
         frameStart = cur + 1;
@@ -193,7 +227,10 @@ struct AeroFramer::Impl {
         AeroDecodedFrame df;
         dec.decode(coded.data(), header, df);
         const int formatId = header >> 12;
-        if (fromSearch && formatId != 1 && df.susOk == 0) {    // a chance match of the word: look again
+        // a chance match of the word: look again. The C channel has no header, so only the SU checks can say; but its word is 104 bits,
+        // so one found with at most one error is real even when the frame's SUs all fail (a noisy frame)
+        const bool chance = fmt.cChannel() ? (lastUwErr > 1 && df.susOk == 0) : (formatId != 1 && df.susOk == 0);
+        if (fromSearch && chance) {
             nFalse++;
             st = Search;
             return;
@@ -205,13 +242,14 @@ struct AeroFramer::Impl {
         ev.bitRate = fmt.bitRate;
         ev.header = header;
         ev.bytes = std::move(df.bytes);
+        ev.voice = std::move(df.voice);
         ev.susOk = df.susOk; ev.susBad = df.susBad;
         ev.uwErrors = lastUwErr;
         ev.channelBer = df.channelBer;
         ev.bitIndex = frameStart;
         if (cb) cb(ev);
         nextUwEnd = frameStart + (uint64_t)need() - 1 + (uint64_t)fmt.uwBits;
-        st = badFrames >= 4 ? Search : Expect;
+        st = badFrames >= (fmt.cChannel() ? 8 : 4) ? Search : Expect;
     }
 };
 
@@ -252,6 +290,7 @@ struct AeroDemod::Impl {
     bool acq = false;
     float acqMetric = 0;
     uint64_t bitsSinceAcq = 0;
+    uint64_t bitsUnsynced = 0;         // bits since the framer last held a frame grid
     // timing
     static constexpr int kMfRing = 32;
     cf32 mfRing[kMfRing];
@@ -268,7 +307,7 @@ struct AeroDemod::Impl {
     AeroFramer framer;
     std::function<void(AeroFrameEvent&)> userCb;
 
-    Impl(int r, double fs, double sh) : rate(r), msk(r != 10500), fsIn(fs), searchHz(sh), framer(r) {
+    Impl(int r, double fs, double sh) : rate(r), msk(r != 10500 && r != 8400), fsIn(fs), searchHz(sh), framer(r) {
         if (msk) {
             decim = std::max(1, (int)std::floor(fsIn / (8.0 * rate)));
             fsD = fsIn / decim;
@@ -282,11 +321,16 @@ struct AeroDemod::Impl {
             }
             mf.setTaps(h);
         } else {
-            fsD = fsIn;
+            // the C channel (8400) is also brought down to about 8 samples per bit: the all-carriers mode runs one of these per wide
+            // carrier on a 160 kHz window, and the matched filter costs L taps per sample
+            decim = rate == 8400 ? std::max(1, (int)std::floor(fsIn / (8.0 * rate))) : 1;
+            fsD = fsIn / decim;
+            if (decim > 1) dfir.setTaps(lowpass(34 * decim + 1, 0.42 / decim));
             const double sps = 2.0 * fsD / rate;              // samples per arm symbol
             const int L = 2 * (int)std::floor(4 * sps) + 1;
             std::vector<float> h(L);
-            for (int n = 0; n < L; n++) h[n] = (float)aeroRrc((n - (L - 1) / 2.0) / sps, 1.0);
+            const double alpha = aeroFrameFormat(rate) ? aeroFrameFormat(rate)->rrcRollOff() : 1.0;   // 10500: 1.0; 8400 (C): 0.6
+            for (int n = 0; n < L; n++) h[n] = (float)aeroRrc((n - (L - 1) / 2.0) / sps, alpha);
             mf.setTaps(h);
         }
         step = fsD / rate;
@@ -333,7 +377,7 @@ struct AeroDemod::Impl {
         theta = 0; omega = 0; pendOmega = 0; pendBits = 0;
         r1 = r2 = 0; prevV = 0; k = 0;
         amp = 0; mu = 0; m2 = 0;
-        bitsSinceAcq = 0;
+        bitsSinceAcq = 0; bitsUnsynced = 0;
         for (auto& v : mfRing) v = 0;
     }
 
@@ -485,8 +529,12 @@ struct AeroDemod::Impl {
             mixMoved = true;
         }
         // no frame after a few frame lengths: search the carrier again
+        // no frame for a few frame lengths after the acquisition, or after the sync was lost: search the carrier again. The loops are
+        // kept while the framer merely waits (a lost sync used to restart the acquisition at once, which cost a second or two per fade)
         const AeroFrameFormat* f = aeroFrameFormat(rate);
-        if (!framer.synced() && bitsSinceAcq > (uint64_t)(4 * f->totalBits())) startAcq();
+        if (framer.synced()) bitsUnsynced = 0; else bitsUnsynced++;
+        const uint64_t patience = (uint64_t)((f->cChannel() ? 8 : 4) * f->totalBits());
+        if (!framer.synced() && bitsSinceAcq > patience && bitsUnsynced > patience) startAcq();
         return adv;
     }
 };
@@ -515,11 +563,12 @@ struct AeroModulator::Impl {
     uint64_t base = 0;
     int8_t lastA = 0;                  // MSK: differential state
     std::vector<float> rrcTab;         // 10500: pulse in steps of 1/64 bit over +-8 bits
-    Impl(int r, double f, double ppm) : rate(r), msk(r != 10500), fs(f) {
+    Impl(int r, double f, double ppm) : rate(r), msk(r != 10500 && r != 8400), fs(f) {
         du = rate * (1 + ppm * 1e-6) / fs;
         if (!msk) {
+            const double alpha = aeroFrameFormat(rate) ? aeroFrameFormat(rate)->rrcRollOff() : 1.0;
             rrcTab.resize(16 * 64 + 2);
-            for (size_t i = 0; i < rrcTab.size(); i++) rrcTab[i] = (float)(aeroRrc((i / 64.0 - 8) / 2.0, 1.0) / std::sqrt(2.0));
+            for (size_t i = 0; i < rrcTab.size(); i++) rrcTab[i] = (float)(aeroRrc((i / 64.0 - 8) / 2.0, alpha) / std::sqrt(2.0));
         }
     }
     int8_t s(int64_t i) const {

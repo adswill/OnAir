@@ -1,6 +1,6 @@
 // Stage 3 of the Inmarsat all-carriers mode: the voice mixer and recorder WITHOUT the codec (silence and the install message, the coded frames
 // are still saved) and with a fake test decoder (mute / solo, mixing, WAV recording). The real AMBE codec is never part of the tests; the C-channel
-// demodulator that would feed the mixer does not exist yet: needs a user test with a real capture.
+// decoder that feeds the mixer is tested in tests/aero/test_aero_cchannel.cpp and tests/inmsat/test_inmsat_cchannel.cpp.
 #include "dect2/inmsat/inmsat_voice.h"
 #include <chrono>
 #include <cstdio>
@@ -70,12 +70,12 @@ int main() {
     }
     // the message names the file to install (checked with the registry's real status line; the plug-in is not installed in the test)
     {
-        VoiceMixer m;      // default factory: pluginVocoder("ambe")
+        VoiceMixer m;      // default factory: pluginVocoder("aeroambe")
         m.setCodecFolder("/Users/test/codecs");
         m.pushFrame(1, 1545.5e6, frame(5), 0);
         const VoiceStatus s = m.status();
         printf("message: %s\n", s.message.c_str());
-        CHECK(s.message.find("AMBE") != std::string::npos && s.message.find("onair-codec-ambe") != std::string::npos && s.message.find("/Users/test/codecs") != std::string::npos,
+        CHECK(s.message.find("AMBE") != std::string::npos && s.message.find("onair-codec-aeroambe") != std::string::npos && s.message.find("/Users/test/codecs") != std::string::npos,
               "install message incomplete");
         int16_t out[160];
         m.mix(out, 160);

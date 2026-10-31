@@ -88,7 +88,7 @@ struct AeroReceiver::Impl {
     std::function<void(const std::string&)> log;
     std::function<void(double, const AeroFrameEvent&)> frameCb;
 
-    double rate = 0, offsetHz = 0;
+    double rate = 0, offsetHz = 0, searchSpan = 0;
     uint64_t samples = 0;
     double sinceReport = 0;
     // band search
@@ -226,6 +226,7 @@ struct AeroReceiver::Impl {
         for (int j = 0; j < nfft; j++) {
             const double f = fOf(j);
             if (std::fabs(f) > 0.45 * rate) continue;
+            if (searchSpan > 0 && std::fabs(f) > searchSpan) continue;   // a channelizer output: beyond the window's span only neighbours leak in
             if (offsetHz != 0 && std::fabs(f) < 2000) continue;   // the radio's DC spike (a radio is tuned away from the channels)
             ok[j] = 1;
             use.push_back(s[j]);
@@ -560,6 +561,10 @@ void AeroReceiver::setSignalOffset(double hz) {
     std::lock_guard<std::mutex> lk(p_->mu);
     p_->offsetHz = hz;
     p_->chans.clear();
+}
+void AeroReceiver::setSearchSpan(double hz) {
+    std::lock_guard<std::mutex> lk(p_->mu);
+    p_->searchSpan = hz;
 }
 bool AeroReceiver::ready() const {
     std::lock_guard<std::mutex> lk(p_->mu);

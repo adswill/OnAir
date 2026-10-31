@@ -33,7 +33,9 @@ public:
     void setFocus(int carrierId);
     void setBudget(double units);             // CPU budget (Advanced); an Aero window costs 1
     void setInmarsatC(bool on);
-    inmsat::VoiceMixer& voice();              // mute / solo / recording; the audio thread calls mix()
+    inmsat::VoiceMixer& voice();              // mute / solo / recording per call
+    void setVolume(float v);                  // the mode's sound: the mixed C-channel voice goes to the default output (like the other voice modes)
+    void setMuted(bool m);
 private:
     struct Impl;
     std::unique_ptr<Impl> p_;

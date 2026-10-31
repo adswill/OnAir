@@ -37,7 +37,8 @@ struct CarrierRow {
     std::string region;           // Inmarsat-C: ocean region from the bulletin board
     std::string station;          // Inmarsat-C: station name
     std::string satellite;        // from the satellite identification (inmsat_satid.h), "" while it is not sure
-    bool voiceCandidate = false;  // wide, old enough, and no data decoder holds sync: it may be an Aero C (voice) channel (not decodable yet, see inmsat_voice.h)
+    bool voiceCandidate = false;  // wide, old enough, and no data decoder holds sync: it may be an Aero C (voice) channel the C decoder has not synced on
+    uint64_t voiceFrames = 0;     // Aero C: coded voice frames handed to the voice mixer (inmsat_voice.h)
     bool parked = false;          // no window: the CPU budget is used up
     bool focus = false;
     int window = -1;              // index into Snapshot::windows, -1 parked
@@ -97,6 +98,10 @@ public:
     void setSatelliteOverride(const std::string& name);           // "" = automatic
     void setFocus(int carrierId);                // 0 none; a focused carrier's window is never parked
     void setLogCallback(std::function<void(const std::string&)> cb);
+    // Aero C channels: every wide carrier in a window gets a C-channel demodulator (aero_demod.h, 8400 bit/s); the coded voice frames of a
+    // carrier whose frames check go here (carrier id, absolute frequency, one 12-byte frame, stream seconds), from the feed() thread
+    using VoiceSink = std::function<void(int carrierId, double freqHz, const std::vector<uint8_t>& frame, double timeSec)>;
+    void setVoiceSink(VoiceSink sink);
 private:
     struct Impl;
     std::unique_ptr<Impl> p_;
