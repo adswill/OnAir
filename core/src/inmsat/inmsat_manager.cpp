@@ -57,6 +57,8 @@ struct Manager::Impl {
         uint64_t frames = 0, susOk = 0, susBad = 0, voiceFrames = 0;
         float ebn0Db = 0;
         double lastGood = -1;         // stream seconds of the last frame whose SUs checked
+        bool shadow = false;          // locked on the same channel as another decoder of this window: idle until the carrier changes shape
+        double shadowWidthHz = 0;     // the carrier's width when it was parked
         std::vector<cf32> tmp;
     };
     struct Window {
@@ -204,6 +206,7 @@ struct Manager::Impl {
             }
         }
         planCChannels(cars);
+        dedupeCChannels(cars);
     }
 
     // a C-channel (voice) decoder on every wide carrier a window covers, within the budget; gone carriers lose theirs
@@ -213,6 +216,8 @@ struct Manager::Impl {
                 const DetectedCarrier* c = nullptr;
                 for (const auto& d : cars) if (d.id == w->cchans[i]->carrierId && d.confirmed) c = &d;
                 if (!c || !covers(*w, c->offsetHz) || pSynced(*w, c->offsetHz)) { w->cchans.erase(w->cchans.begin() + (long)i); continue; }
+                if (w->cchans[i]->sub >= subCount(*c) && w->cchans[i]->shadow) { w->cchans.erase(w->cchans.begin() + (long)i); continue; }   // the region narrowed: one channel
+                if (w->cchans[i]->shadow && std::fabs(c->widthHz - w->cchans[i]->shadowWidthHz) > 1500) { w->cchans[i]->shadow = false; if (w->cchans[i]->demod) w->cchans[i]->demod->reset(); }
                 const double subHz = subPlace(*c, w->cchans[i]->sub);
                 if (std::fabs(c->offsetHz + subHz - (w->cchans[i]->offsetHz + w->cchans[i]->subHz)) > 1500) {   // the detector moved it: follow and start again
                     w->cchans[i]->offsetHz = c->offsetHz; w->cchans[i]->subHz = subHz;
@@ -247,6 +252,29 @@ struct Manager::Impl {
         }
     }
     size_t totalC() const { size_t n = 0; for (const auto& w : wins) n += w->cchans.size(); return n; }
+    // Two decoders of one window that hold sync within 2 kHz of each other are on the same C channel (a region planned as two
+    // neighbours that turned out to be one, or a neighbour that fell silent while both pulled onto the other): the weaker one is parked
+    // (not fed, no frames) until the carrier's width changes, so the call is decoded, recorded and heard once.
+    void dedupeCChannels(const std::vector<DetectedCarrier>& cars) {
+        for (auto& w : wins) {
+            for (size_t a = 0; a < w->cchans.size(); a++) {
+                CChan& x = *w->cchans[a];
+                if (x.shadow || !x.demod || !x.demod->synced()) continue;
+                for (size_t b = a + 1; b < w->cchans.size(); b++) {
+                    CChan& y = *w->cchans[b];
+                    if (y.shadow || !y.demod || !y.demod->synced()) continue;
+                    const double fx = x.offsetHz + x.subHz + x.demod->freqHz(), fy = y.offsetHz + y.subHz + y.demod->freqHz();
+                    if (std::fabs(fx - fy) > 2000) continue;
+                    CChan& loser = (y.demod->dataLock() && !x.demod->dataLock()) || (y.demod->dataLock() == x.demod->dataLock() && y.ebn0Db > x.ebn0Db + 1) ? x : y;
+                    loser.shadow = true; loser.shadowWidthHz = 0;
+                    for (const auto& c : cars) if (c.id == loser.carrierId) loser.shadowWidthHz = c.widthHz;
+                    loser.demod->reset();
+                    say("Inmarsat: C decoder at " + std::to_string((long)((cfg.centerHz + fx) / 1000)) + " kHz parked, a twin holds the same channel");
+                    if (&loser == &x) break;
+                }
+            }
+        }
+    }
     // a P-channel receiver of this window holds frames on a carrier near `off`
     static bool pSynced(const Window& w, double off) {
         for (const auto& ch : w.at.channels) if (ch.state >= 2 && std::fabs(w.centerHz + ch.offsetHz - off) < 6000) return true;
@@ -289,6 +317,7 @@ struct Manager::Impl {
                 if (w->aero) w->aero->feed(b.at(i), k);
                 if (w->inmc) w->inmc->feed(b.at(i), k);
                 for (auto& cc : w->cchans) {              // each C decoder sees its carrier at 0 Hz
+                    if (cc->shadow) continue;
                     cc->tmp.resize(k);
                     const cf32* src = b.at(i);
                     for (size_t j = 0; j < k; j++) {
