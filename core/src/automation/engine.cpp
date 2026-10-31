@@ -502,7 +502,16 @@ void Engine::Impl::tickLocked(double now) {
     }
 }
 
-void Engine::Impl::processLocked(const Event& ev) {
+void Engine::Impl::processLocked(const Event& evIn) {
+    // #403: an event with a position but no distance (an aircraft before the ADS-B window has a receiver position) gets the distance from the
+    // automation's receiver position, so {{distance_km}} and distance_km conditions work in every rule and recipe.
+    Event ev = evIn;
+    if (!ev.f.count("distance_km")) {
+        double la, lo, sla = 0, slo = 0;
+        bool set;
+        { std::lock_guard<std::mutex> lk(mu); set = stationSet; sla = stLat; slo = stLon; }
+        if (set && numField(ev, "lat", la) && numField(ev, "lon", lo)) ev.num("distance_km", geo::distanceKm(sla, slo, la, lo));
+    }
     double now;
     std::shared_ptr<const std::vector<Rule>> rs;
     {
