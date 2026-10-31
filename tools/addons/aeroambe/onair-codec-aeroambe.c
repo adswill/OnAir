@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "mbelib.h"
+#include "aeroambe_post.h"
 
 #ifdef _WIN32
 #define AEROAMBE_API __declspec(dllexport)
@@ -34,11 +35,12 @@ struct state {
     char ambe_fr[6][24];
     char ambe_d[72];
     char err[1024];
+    aeropost post;
 };
 
 AEROAMBE_API void* onair_speech_open(void) {
     struct state* s = (struct state*)calloc(1, sizeof(struct state));
-    if (s) mbe_initMbeParms(&s->cur, &s->prev, &s->prevEnh);
+    if (s) { mbe_initMbeParms(&s->cur, &s->prev, &s->prevEnh); aeropost_init(&s->post); }
     return s;
 }
 AEROAMBE_API void onair_speech_close(void* s) { free(s); }
@@ -53,10 +55,13 @@ AEROAMBE_API int onair_speech_decode(void* st, const uint8_t* coded, size_t n, i
     /* unvoiced-sound quality 3 (mbelib's default; 1 is the roughest). A frame with more than 3 corrected errors is one mbelib would
      * synthesise from the previous frame's parameters; silence sounds cleaner than that stretch (A/B on real calls, 2026-10-30).
      * Set ONAIR_AEROAMBE_UVQ (1..64) and ONAIR_AEROAMBE_MUTE (errors beyond which a frame is muted, -1 = mbelib's own rule) to try others. */
-    static int uvq = -1, mute = -2;
+    static int uvq = -1, mute = -2, post = -1;
     if (uvq < 0) { const char* e = getenv("ONAIR_AEROAMBE_UVQ"); uvq = e ? atoi(e) : 3; if (uvq < 1 || uvq > 64) uvq = 3; }
     if (mute < -1) { const char* e = getenv("ONAIR_AEROAMBE_MUTE"); mute = e ? atoi(e) : 3; }
+    /* post-filter (aeroambe_post.h: 250-3400 Hz band, slow AGC, soft limiter); ONAIR_AEROAMBE_POST=0 for the raw vocoder output */
+    if (post < 0) { const char* e = getenv("ONAIR_AEROAMBE_POST"); post = e ? atoi(e) != 0 : 1; }
     mbe_processAmbe4800x3600Frame((short*)pcm, &errs, &errs2, s->err, s->ambe_fr, s->ambe_d, &s->cur, &s->prev, &s->prevEnh, uvq);
     if (mute >= 0 && errs2 > mute) memset(pcm, 0, 160 * sizeof(int16_t));
+    if (post) aeropost_run(&s->post, pcm, 160);
     return 160;
 }
