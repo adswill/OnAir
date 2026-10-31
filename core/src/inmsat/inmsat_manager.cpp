@@ -176,6 +176,7 @@ struct Manager::Impl {
                 if (!w->aero) w->aero = std::make_unique<AeroReceiver>();
                 w->aero->configure(w->outRate);
                 w->aero->setSignalOffset(0);
+                w->aero->setSearchLimit(cfg.windowBwHz / 2 + 25000);   // the window's pass-band (the channelizer's margin); the empty rest of a fast window must not set the noise floor
                 if (w->inmc) {
                     w->inmc->configure(w->outRate);
                     w->inmc->setSignalOffset(w->inmcOffset);
