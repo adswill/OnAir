@@ -13,6 +13,10 @@ using namespace dect2;
 static int failures = 0;
 #define CHECK(c) do { if (!(c)) { printf("FAIL %s:%d %s\n", __FILE__, __LINE__, #c); failures++; } } while (0)
 
+#include <chrono>
+#include <thread>
+static double rtlfd_now() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+
 struct FakeSys : UsbFdSys {
     std::vector<int> bulkLens;           // sizes asked
     int bulkFail = 0;                    // -errno for the call number failAt (1 based), 0 = none
@@ -43,8 +47,11 @@ struct FakeSys : UsbFdSys {
     }
     int claim(int, unsigned) override { if (claimRet == 0) claimed++; return claimRet; }
     int release(int, unsigned) override { released++; return 0; }
-    int reset(int) override { return 0; }
-    int clearHalt(int, uint8_t) override { return 0; }
+    int resets = 0, clearHalts = 0;
+    bool halted = false, stuck = false;   // an endpoint that halted (EPIPE) until clearHalt; stuck: it stays halted whatever is done
+    double stallUntil = 0;                 // steady-clock seconds: streamRead times out until then
+    int reset(int) override { resets++; return 0; }
+    int clearHalt(int, uint8_t) override { clearHalts++; if (!stuck) halted = false; return 0; }
     int detachKernel(int, unsigned) override { detached++; return -ENODATA; }
     // a fake URB queue: a ring of buffers filled with a counter, ending with -streamEnd (an errno) after streamLimit buffers when set
     int streamLimit = 0, streamEnd = 0, streamStarts = 0, streamStops = 0, streamRecycled = 0, streamServed = 0, streamNoSys = 0, inQueue = 0;
@@ -55,6 +62,8 @@ struct FakeSys : UsbFdSys {
         streamStarts++; bufs.assign((size_t)n, std::vector<uint8_t>((size_t)len)); inQueue = n; *h = this; return 0;
     }
     int streamRead(void*, uint8_t** d, int* len, uint32_t) override {
+        if (halted) return -EPIPE;
+        if (stallUntil > 0 && rtlfd_now() < stallUntil) { std::this_thread::sleep_for(std::chrono::milliseconds(20)); return -ETIMEDOUT; }
         if (streamLimit && streamServed >= streamLimit) return streamEnd ? -streamEnd : -ETIMEDOUT;
         auto& b = bufs[(size_t)(streamServed % (int)bufs.size())];
         for (auto& x : b) x = (uint8_t)streamServed;
@@ -153,6 +162,33 @@ int main() {
         sys.streamLimit = sys.streamServed; sys.streamEnd = 0; sys.streamNoSys = 1; sys.calls = 0; sys.failAt = 0;   // no queue available: block-by-block reads
         cx.stopAt = cx.bytes + 100000;
         CHECK(rtlfd::readAsync(&dv, cb, &cx, 0, 65536) == 0 && sys.streamStarts == 2 && sys.calls > 0);
+        // 3.5: the stream recovers by itself (the Android freeze). A halted endpoint ("broken pipe") is cleared and the transfers restarted ...
+        {
+            sys.streamNoSys = 0; sys.streamLimit = 0; sys.streamEnd = 0; sys.halted = true; sys.stuck = false;
+            const int starts0 = sys.streamStarts, clears0 = sys.clearHalts;
+            cx.bytes = 0; cx.calls = 0; cx.stopAt = 200000;
+            CHECK(rtlfd::readAsync(&dv, cb, &cx, 0, 0) == 0 && cx.bytes >= 200000);
+            CHECK(sys.clearHalts == clears0 + 1 && sys.streamStarts == starts0 + 2 && !sys.halted);   // one clear, one queue restart (plus the first start)
+        }
+        // ... an endpoint that stays halted climbs the ladder (clear, clear, reset) and then gives the radio up for a reopen with the broken-pipe code
+        {
+            sys.halted = true; sys.stuck = true;
+            const int resets0 = sys.resets, clears0 = sys.clearHalts;
+            cx.bytes = 0; cx.calls = 0; cx.stopAt = 0;
+            CHECK(rtlfd::readAsync(&dv, cb, &cx, 0, 0) == kUsbPipe);
+            CHECK(sys.resets == resets0 + 1 && sys.clearHalts >= clears0 + 3);
+            sys.halted = false; sys.stuck = false;
+        }
+        // ... and a stream that goes silent for more than 2 s (no error at all) is restarted instead of waiting 10 s
+        {
+            sys.stallUntil = rtlfd_now() + 2.3;
+            const int starts0 = sys.streamStarts;
+            cx.bytes = 0; cx.calls = 0; cx.stopAt = 100000;
+            const double t0 = rtlfd_now();
+            CHECK(rtlfd::readAsync(&dv, cb, &cx, 0, 0) == 0 && cx.bytes >= 100000);
+            CHECK(sys.streamStarts >= starts0 + 2 && rtlfd_now() - t0 < 6.0);
+            sys.stallUntil = 0;
+        }
     }
 #endif
     printf(failures ? "usb_fd: %d FAILED\n" : "usb_fd: ok\n", failures);

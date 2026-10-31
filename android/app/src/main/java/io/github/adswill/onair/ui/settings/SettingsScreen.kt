@@ -74,7 +74,7 @@ interface SettingsActions {
     fun setDark(on: Boolean); fun setFollowSystemTheme(on: Boolean); fun setTypeLook(l: TypeLook); fun setColormap(i: Int)
     fun setRange(lo: Float, hi: Float); fun autoRange(); fun setPeakHold(on: Boolean); fun setCentreTuning(on: Boolean); fun setStepHz(hz: Double)
     fun setHideUnused(on: Boolean); fun setOnlyCapable(on: Boolean); fun setSound(volume: Float, muted: Boolean); fun setReduceMotion(on: Boolean)
-    fun setDiscovery(on: Boolean); fun setMapConsent(v: Int)
+    fun setDiscovery(on: Boolean); fun setMapConsent(v: Int); fun setVerbose(on: Boolean)
 }
 
 private fun vmSettingsActions(vm: ReceiverViewModel) = object : SettingsActions {
@@ -93,6 +93,7 @@ private fun vmSettingsActions(vm: ReceiverViewModel) = object : SettingsActions 
     override fun setReduceMotion(on: Boolean) = vm.setReduceMotion(on)
     override fun setDiscovery(on: Boolean) = vm.setDiscovery(on)
     override fun setMapConsent(v: Int) = vm.setMapConsent(v)
+    override fun setVerbose(on: Boolean) = vm.setVerbose(on)
 }
 
 @Composable
@@ -164,6 +165,9 @@ fun SettingsContent(
             Dropdown(consent, s.mapConsent.coerceIn(0, 2), { vm.setMapConsent(it) }, label = stringResource(R.string.map_tiles))
         },
         SettingItem(6, stringResource(R.string.run_setup), "setup wizard first run lessons help") { LinkRow(OnAirIcons.Glyph, stringResource(R.string.run_setup), onRunSetup) },
+        SettingItem(6, stringResource(R.string.verbose_log), "verbose logging debug usb diagnostics advanced") {
+            SwitchRow(stringResource(R.string.verbose_log), s.verboseLog, vm::setVerbose, help = stringResource(R.string.verbose_log_help))
+        },
         SettingItem(6, stringResource(R.string.log_title), "log crash debug share") { LinkRow(OnAirIcons.Log, stringResource(R.string.log_title), onOpenLog) },
         SettingItem(6, stringResource(R.string.about_title), "about credits licences supporters version") { LinkRow(OnAirIcons.Info, stringResource(R.string.about_title), onOpenAbout) },
     )

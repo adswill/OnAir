@@ -41,5 +41,6 @@ object OnAirNative {
     external fun nativeSetVolume(v: Float, mute: Boolean)
     external fun nativeGeneral(demod: Int, widthHz: Double, sqOn: Boolean, sqAuto: Boolean, sqDb: Float)
     external fun nativeFmDeemphasis(us: Double)
+    external fun nativeSetVerbose(on: Boolean)
     external fun nativeVersion(): String
 }

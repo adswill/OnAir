@@ -66,6 +66,8 @@ data class Settings(
     val netSelected: Int = 0,
     /** mDNS discovery of network radios: off unless the user turns it on (no network scans by default). */
     val netDiscovery: Boolean = false,
+    /** Verbose logging (3.5): USB transfer counts, bytes/s, stall restarts, frame times into the log. Off unless the user turns it on. */
+    val verboseLog: Boolean = false,
 ) {
     fun freqFor(modeIndex: Int, def: Double): Double = freqMhz[modeIndex]?.takeIf { it > 0 } ?: def
     fun radioFor(kind: Int): RadioOptions = radio[SourceKind.of(kind)] ?: RadioOptions("")
@@ -115,6 +117,7 @@ class SettingsStore(ctx: Context) {
         val netRadios = stringPreferencesKey("netRadios")
         val netSelected = intPreferencesKey("netSelected")
         val netDiscovery = booleanPreferencesKey("netDiscovery")
+        val verboseLog = booleanPreferencesKey("verboseLog")
         fun freq(mode: Int) = stringPreferencesKey("f.$mode")
         fun radio(kind: SourceKind) = stringPreferencesKey("radio.${kind.code}")
     }
@@ -164,6 +167,7 @@ class SettingsStore(ctx: Context) {
             netRadios = p[K.netRadios] ?: d.netRadios,
             netSelected = p[K.netSelected] ?: d.netSelected,
             netDiscovery = p[K.netDiscovery] ?: d.netDiscovery,
+            verboseLog = p[K.verboseLog] ?: d.verboseLog,
         )
     }
 
@@ -208,6 +212,7 @@ class SettingsStore(ctx: Context) {
         put(K.netRadios, s.netRadios, old.netRadios)
         put(K.netSelected, s.netSelected, old.netSelected)
         put(K.netDiscovery, s.netDiscovery, old.netDiscovery)
+        put(K.verboseLog, s.verboseLog, old.verboseLog)
         p[K.schema] = SCHEMA
         for ((m, f) in s.freqMhz) if (old.freqMhz[m] != f) p[K.freq(m)] = f.toString()
         for ((k, r) in s.radio) if (old.radio[k] != r) p[K.radio(k)] = r.encoded

@@ -1,5 +1,6 @@
 // IQ sample sources: HackRF, recorded file, built-in synthetic DVB-T2-like signal.
 #pragma once
+#include <functional>
 #include <cstdio>
 #include "dect2/common/ring.h"
 #include "dect2/t2/t2gen.h"
@@ -240,6 +241,8 @@ std::unique_ptr<IqSource> makeNativeSource(const DeviceInfo& d);
 // Every radio found: HackRF first, then the native ones, then the SoapySDR ones (a radio found natively is not listed again through SoapySDR).
 std::vector<DeviceInfo> listRadios(std::string& err);
 std::unique_ptr<IqSource> makeSource(const DeviceInfo& d);
+// Tests only: makeSource() asks this first and uses its source when it returns one (an empty function turns it off)
+void setTestSourceFactory(std::function<std::unique_ptr<IqSource>(const DeviceInfo&)> f);
 
 // File format helpers (sidecar-free for now): .cs8 interleaved signed 8-bit IQ, .cu8 unsigned, .cf32 float.
 enum class FileFormat { CS8, CU8, CF32, CI16, CU16 };   // CI16 / CU16 come from SigMF and WAV files only

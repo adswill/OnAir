@@ -338,6 +338,7 @@ struct App {
                               // spectrum / telemetry, input redraws at 30 fps, a receiver in the background at 10 (video keeps its rate)
     int powerHidden = 1;      // Save power when hidden: 0 off, 1 on battery, 2 always (slower spectrum updates, scanners wait)
     bool reduceCpuHidden = true;   // Reduce CPU when hidden: no drawing while the window is minimised or hidden (decoding goes on)
+    bool verboseLog = false;       // View > Verbose logging: USB transfer counts, bytes/s, stall restarts, frame times into the log (common/verbose_log.h)
     bool perfOverlay = false;      // View > Performance overlay: frame rate, CPU per thread, wake-ups (ui/perf_overlay.cpp)
     bool discordOn = false, discordFreq = true;   // View > Show in Discord (opt-in Rich Presence, discord_rpc.cpp) and its "Show the frequency"
     bool mapSend = false, mapConsent = false;     // Server > Send data to map server (opt-in; consent once)

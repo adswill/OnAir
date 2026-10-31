@@ -73,6 +73,8 @@
     <string name="range_min">min dB</string>
     <string name="range_max">max dB</string>
     <string name="peak_hold">Peak hold</string>
+    <string name="verbose_log">Verbose logging</string>
+    <string name="verbose_log_help">Adds USB transfer counts, bytes per second, stall restarts and frame times to the log. Switch it on, reproduce the problem, then Log &gt; share and send the file.</string>
     <string name="dark_theme">Dark theme</string>
     <string name="about_text">OnAir %1$s. Receive only: nothing is transmitted and nothing is sent to any server. The decoders are the ones of the OnAir desktop program.</string>
     <string name="settings_setting_on">On</string>
@@ -127,6 +129,7 @@
     <string name="engine_init_failed">Engine start-up failed: %1$s</string>
     <string name="engine_call_failed">Receiver call %1$s failed: %2$s</string>
     <string name="log_share">share</string>
+    <string name="log_verbose">verbose</string>
     <string name="log_clear">clear</string>
     <string name="log_follow">follow</string>
 
