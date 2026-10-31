@@ -476,3 +476,8 @@ Not yet rolled out (no Items tab, no adapter): Airband/Marine/General voice, ana
 
 ### 11.2 Remote API paging
 `GET /api/v1/sessions?mode=&kind=&offset=&limit=(max 200)&q=&active=1&since=` (`results/sessions_json.h`); the payload has ids, key, title, times and counts only. Telemetry JSON carries `sessions.gen`. msgdb already has the `sid` column and the `session_id` filter; the jump from View > Messages to the Items row is not built.
+
+## Voice monitor additions (3.5)
+* Names: `91=Worldwide` names a talkgroup, `RID 3120123=LY1ABC Jonas` names a source radio only. Filters > Import names reads a RadioID.net `user.csv`, a BrandMeister / TGIF talkgroup list or any file with an ID and a name per line and merges it into the list (same ID replaces).
+* Filters > Release after: a hold lets go by itself after this many seconds without a call on the held talkgroup (never: until released).
+* Last heard tab: every radio or callsign heard this session with its name, last talkgroup, calls, airtime and error rate; click a row to mute it, hold its talkgroup or copy its ID.
