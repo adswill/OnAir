@@ -41,6 +41,7 @@ void startApp(App& app, int argc, char** argv) {
                   + (kept.empty() ? std::string("The old settings could not be kept.") : "The old settings are kept in " + kept + ".");
     }
     loadPrefs(app);
+    modeVisibilityLoad(app);   // Modes shown has a file of its own that settings.conf resets do not touch
     if (failedStarts == 1) {
         app.newUi = !app.newUi;
         guardNote = std::string("OnAir did not finish starting last time, so it opens with the ") + (app.newUi ? "new" : "classic")

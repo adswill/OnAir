@@ -1112,6 +1112,9 @@ bool modeListed(const App& a, const ModeDef& m, const char* query = nullptr);   
 bool modeHiddenNow(const App& a, const ModeDef& m);                           // hidden by the user (a search still finds it: tag it "hidden")
 bool modeGroupListed(const App& a, int group, const char* query = nullptr);   // at least one mode of the group is listed
 void modeVisibilityWindow(App& a);
+void modeVisibilityLoad(App& a);                       // at start, after loadPrefs: modes-shown.txt (the data folder) wins over settings.conf
+std::string modeVisibilityText(const App& a);          // the rules as text, kept inside a workspace
+void modeVisibilityApplyText(App& a, const std::string& text);   // and put back (saved at once)
 void startReceiver(App& a);     // what the Start button does
 double audioViewOffsetHz(const App& a);   // a sound card in a Real mode with the audio-range view: where the spectrum's centre lies from the dial (else 0)
 void applyAudioSettings(App& a);   // the sound-card options into a.tune.radio (toolbar_source.cpp)

@@ -54,13 +54,15 @@ void workspaceMenu(App& a) {
         snprintf(gSave.name, sizeof gSave.name, "%s", nextDefaultName(list).c_str());
     }
     if (ImGui::BeginMenu(tr("Load workspace"), !list.empty())) {
-        if (running) ImGui::TextDisabled("%s", tr("Stop the receiver to load one"));
+        if (running) ImGui::TextDisabled("%s", tr("The receiver stops, loads it and starts again"));
         for (const Workspace& w : list) {
-            if (ImGui::MenuItem(w.name.c_str(), nullptr, false, !running)) {
+            if (ImGui::MenuItem(w.name.c_str())) {   // a running receiver is stopped for the load and started again (it used to grey the whole list out)
                 std::string why;
+                if (running) a.engine.stop();
                 if (!workspaceApply(a, w, why)) a.engine.log("Workspace not loaded: " + why);
                 else if (!why.empty()) a.engine.log("Workspace loaded with a note: " + why);
                 else a.engine.log("Workspace loaded: " + w.name);
+                if (running) startReceiver(a);
             }
         }
         ImGui::EndMenu();

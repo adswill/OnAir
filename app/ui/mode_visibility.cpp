@@ -3,8 +3,12 @@
 #include "../app.h"
 #include "../i18n/i18n.h"
 #include "mode_visibility.h"
+#include "../platform/platform.h"
+#include <cstdio>
 
 namespace {
+
+std::string filePath() { return plat::dataDir() + "/modes-shown.txt"; }
 
 // the rules parsed from the saved strings; reparsed only when they change
 const modevis::Rules& rulesOf(const App& a) {
@@ -23,7 +27,8 @@ void store(App& a, const modevis::Rules& r) {
     a.modeHiddenGroups = modevis::joinList(r.hiddenGroups);
     a.modeFavs = modevis::joinList(r.favs);
     a.modeFavsOnly = r.favsOnly;
-    savePrefs(a);
+    if (!modevis::writeFile(filePath(), r)) fprintf(stderr, "modes shown: cannot write %s\n", filePath().c_str());   // the copy that survives a reset of settings.conf
+    savePrefsSoon(a);   // and the settings file, a moment after the last tick (flushed at exit)
 }
 
 std::string groupName(int g) { return kGroupNames[g]; }
@@ -35,6 +40,27 @@ std::vector<std::string> groupModes(int g) {
 }
 
 }  // namespace
+
+void modeVisibilityLoad(App& a) {
+    modevis::Rules r;
+    if (modevis::readFile(filePath(), r)) {   // the file is written at every change, so it is the newer of the two
+        a.modeHidden = modevis::joinList(r.hiddenModes); a.modeHiddenGroups = modevis::joinList(r.hiddenGroups);
+        a.modeFavs = modevis::joinList(r.favs); a.modeFavsOnly = r.favsOnly;
+    } else if (!a.modeHidden.empty() || !a.modeHiddenGroups.empty() || !a.modeFavs.empty() || a.modeFavsOnly) {   // from settings.conf only (an older version): make the file
+        r.hiddenModes = modevis::parseList(a.modeHidden); r.hiddenGroups = modevis::parseList(a.modeHiddenGroups);
+        r.favs = modevis::parseList(a.modeFavs); r.favsOnly = a.modeFavsOnly;
+        modevis::writeFile(filePath(), r);
+    }
+}
+
+std::string modeVisibilityText(const App& a) { return rulesOf(a).hiddenModes.empty() && rulesOf(a).hiddenGroups.empty() && rulesOf(a).favs.empty() && !a.modeFavsOnly ? std::string("default\n") : modevis::toText(rulesOf(a)); }
+
+void modeVisibilityApplyText(App& a, const std::string& text) {
+    modevis::Rules r;
+    if (text == "default\n") { r = modevis::Rules(); }
+    else if (!modevis::fromText(text, r)) return;
+    store(a, r);
+}
 
 bool modeHiddenNow(const App& a, const ModeDef& m) {
     if (a.modeHidden.empty() && a.modeHiddenGroups.empty() && !a.modeFavsOnly) return false;

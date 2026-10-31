@@ -456,8 +456,18 @@ struct FilePrefs : Prefs {
             for (auto& e : kv) f << e.first << "=" << prefstext::escape(e.second) << "\n";
             for (auto& c : channels) f << "channel=" << c.freqMhz << "|" << c.bwMhz << "|" << clean(c.name) << "|" << clean(c.mode) << "|" << c.snrDb << "|" << c.nServices << "|" << (c.favourite ? 1 : 0) << "\n";
         }
-        if (replaceFile(tmp, path)) dirty = false;
-        else fprintf(stderr, "settings: cannot replace %s (the changes are kept in memory and tried again)\n", path.c_str());
+        if (replaceFile(tmp, path)) { dirty = false; return; }
+        // the replace was refused (a virus scanner, a sync client or a locked-folder policy holds the file): write the file in place, so a
+        // setting is not silently lost at exit
+        std::ofstream f(fsPath(path), std::ios::trunc);
+        if (f) {
+            f << prefstext::kFormatKey << "=" << prefstext::kFormat << "\n";
+            for (auto& e : kv) f << e.first << "=" << prefstext::escape(e.second) << "\n";
+            for (auto& c : channels) f << "channel=" << c.freqMhz << "|" << c.bwMhz << "|" << clean(c.name) << "|" << clean(c.mode) << "|" << c.snrDb << "|" << c.nServices << "|" << (c.favourite ? 1 : 0) << "\n";
+            f.flush();
+            if (f) { dirty = false; return; }
+        }
+        fprintf(stderr, "settings: cannot replace or write %s (the changes are kept in memory and tried again)\n", path.c_str());
     }
     std::vector<dect2::backup::PrefItem> dumpAll() override {
         std::vector<dect2::backup::PrefItem> o;
