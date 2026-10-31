@@ -20,6 +20,12 @@ const char* carrierTypeName(CarrierType t) {
     }
 }
 
+int rateGuessForWidth(double widthHz, CarrierClass cls) {
+    if (cls == CarrierClass::Wide) return widthHz >= 6000 && widthHz <= 16000 ? 10500 : 0;   // 10500 bit/s OQPSK is about 10 kHz wide; wider ones are C channels
+    if (cls == CarrierClass::Narrow) return 600;
+    return 0;                                                                              // medium: 1200 bit/s Aero or Inmarsat-C: only the decoder can tell
+}
+
 namespace {
 constexpr double kMargin = 20000;       // a carrier must sit this far inside a window's edge
 constexpr double kAeroCost = 1.0, kInmcCost = 0.6;
@@ -123,7 +129,9 @@ struct Manager::Impl {
         }
         std::stable_sort(un.begin(), un.end(), [&](const DetectedCarrier* a, const DetectedCarrier* b) {
             if ((a->id == focusId) != (b->id == focusId)) return a->id == focusId;
-            return a->snrDb > b->snrDb;
+            // a wide carrier's power is spread over ~10 kHz: its peak reads about 8 dB lower than a narrow carrier's of the same strength
+            auto score = [](const DetectedCarrier* c) { return c->snrDb + (c->cls == CarrierClass::Wide ? 8.0f : 0.0f); };
+            return score(a) > score(b);
         });
         const double limit = 0.5 * 0.9 * cfg.rate;      // windows stay inside the usable part of the capture
         std::vector<char> used(un.size(), 0);
@@ -287,6 +295,7 @@ struct Manager::Impl {
                 break;
             }
             r.parked = r.window < 0;
+            r.rateGuess = r.bitRate ? 0 : rateGuessForWidth(c.widthHz, c.cls);
             r.voiceCandidate = c.cls == CarrierClass::Wide && r.state < 2 && det.nowSec() - c.firstSeen > 20;
             s.carriers.push_back(r);
         }

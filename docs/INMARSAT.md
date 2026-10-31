@@ -50,3 +50,5 @@ The 34 MHz downlink (1525 to 1559 MHz) never fits in one capture. Retune to see 
 ## How it relates to other tools
 
 JAERO decodes one Aero channel at a time. InmarScope shows and decodes several channels. OnAir finds the carriers itself, decodes all of them in parallel and puts messages and aircraft from every channel in one place. Details and open questions: [INMARSAT-REVAMP.md](INMARSAT-REVAMP.md).
+
+Carriers view: the line above the table counts the decoded P channels per rate (600, 1200, 10500 bit/s). A wide carrier that no decoder holds yet shows `~10500` in the Rate column (a guess from its width); it turns into a plain `10500` when frames lock. 10500 bit/s carriers are wide (about 10 kHz) so they look weaker on the spectrum than the narrow ones: the receiver gives them priority when it picks carriers.
