@@ -285,7 +285,11 @@ std::string recordsProblem(const std::vector<FwRecord>& r) {
     for (size_t i = 1; i + 1 < r.size(); i++) {
         const auto& x = r[i];
         if (x.data.empty()) return "an empty write";
-        if ((size_t)x.wValue + x.data.size() > 0x4000) return "a write outside the 16 KiB of code RAM";
+        // the FX2's 16 KiB of code RAM, and its 512 bytes of scratch RAM at 0xE000 that the vendor package also loads (#357). The exact-hash check that follows is what
+        // tells the real firmware from any other file; this only throws out something that is not a firmware loader sequence at all.
+        const size_t end = (size_t)x.wValue + x.data.size();
+        const bool inCode = end <= 0x4000, inScratch = x.wValue >= 0xE000 && end <= 0xE200;
+        if (!inCode && !inScratch) { char b[96]; snprintf(b, sizeof b, "a write outside the FX2 RAM (0x%04X, %zu bytes)", (unsigned)x.wValue, x.data.size()); return b; }
     }
     return "";
 }

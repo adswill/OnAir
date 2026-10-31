@@ -187,7 +187,9 @@ static void firmware() {
     {   auto t = good; t.front().data = {0}; CHECK(!recordsProblem(t).empty()); }                          // does not hold the CPU first
     {   auto t = good; t.back().data = {1}; CHECK(!recordsProblem(t).empty()); }                           // does not release it last
     {   auto t = good; t[1].wValue = 0x3fff; CHECK(!recordsProblem(t).empty()); }                          // runs past the code RAM
-    {   auto t = good; t[1].wValue = 0xE000; CHECK(!recordsProblem(t).empty()); }                          // outside the code RAM
+    {   auto t = good; t[1].wValue = 0x8000; CHECK(!recordsProblem(t).empty()); }                          // outside the RAM
+    {   auto t = good; t[1].wValue = 0xE000; t[1].data.assign(16, 0x55); CHECK(recordsProblem(t).empty()); }   // the 512 bytes of scratch RAM at 0xE000 (#357)
+    {   auto t = good; t[1].wValue = 0xE1F0; t[1].data.assign(32, 0x55); CHECK(!recordsProblem(t).empty()); }  // past its end
     {   auto t = good; t[1].data.clear(); CHECK(!recordsProblem(t).empty()); }
     CHECK(!recordsProblem({}).empty());
     CHECK(recordsProblem(good).empty());

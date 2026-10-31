@@ -313,7 +313,7 @@ void loadModeAndGains(plat::Prefs& d, App& a) {
     if (const SubMode* sm = curSub(a)) {   // the protocol entry's own frequency
         const ModeTuning* mt = modeTuning(sm->stdMode);
         const double fr = a.famFreq[modeSlot(a)];
-        if (mt && !(a.freqMhz >= mt->minMhz && a.freqMhz <= mt->maxMhz && fr > 0)) a.freqMhz = fr >= mt->minMhz && fr <= mt->maxMhz ? fr : sm->defMhz;
+        if (mt && !(a.freqMhz >= mt->minMhz && a.freqMhz <= mt->maxMhz && fr > 0 && rememberedFreqOk(mt, sm->defMhz, a.freqMhz))) a.freqMhz = rememberedFreqOk(mt, sm->defMhz, fr) ? fr : sm->defMhz;
     }
 }
 

@@ -1,4 +1,5 @@
 // DMR screens: the two time slots and the call log, the symbol plots, the receiver counters and the options of the test signal.
+#include "call_filter.h"
 #include "app.h"
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
@@ -168,6 +169,16 @@ void slotCard(const App& a, int idx, float w, float h) {
 void callTable(App& a, float h) {
     const DmrTelemetry& t = a.rx.dmr;
     const bool on = live(a);
+    static int filter = 0;   // #389: which kinds of call the table lists (not saved)
+    {
+        ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("Show"); ImGui::SameLine();
+        ImGui::SetNextItemWidth(150 * gUi);
+        if (ImGui::BeginCombo("##dmrcallfilter", dmrfilter::name(filter))) {
+            for (int i = 0; i < 5; i++) if (ImGui::Selectable(dmrfilter::name(i), i == filter)) filter = i;
+            ImGui::EndCombo();
+        }
+        h = std::max(40.f * gUi, h - ImGui::GetFrameHeightWithSpacing());
+    }
     if (!ImGui::BeginTable("##dmrcalls", 10 + (wideActive(a) ? 1 : 0), ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingFixedFit, ImVec2(0, h))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     if (wideActive(a)) ImGui::TableSetupColumn("Carrier", ImGuiTableColumnFlags_WidthFixed, 66 * gUi);
@@ -185,6 +196,7 @@ void callTable(App& a, float h) {
     if (on) {
         for (const DmrCall* pc : sortedCalls(t)) {
             const DmrCall& c = *pc;
+            if (!dmrfilter::shown(filter, c.kind)) continue;
             ImGui::TableNextRow();
             if (c.active) ImGui::PushStyleColor(ImGuiCol_Text, pal::okGreen());
             else if (c.emergency) ImGui::PushStyleColor(ImGuiCol_Text, pal::badRed());

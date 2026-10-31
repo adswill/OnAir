@@ -338,6 +338,20 @@ int main(int argc, char** argv) {
         const long v = plat::prefs().getI("uiTypography", 0);
         typo::setVariant(v == 1 ? typo::Clean : v == 2 ? typo::Compact : typo::Classic);
     }
+    {   // #372: the number of decoding threads (0 = none beyond the caller, 1..64), saved as "threads" in the settings; automatic when absent. Read before the first pool use;
+        // DECT2_THREADS in the environment wins. Takes effect at the next start.
+        if (plat::prefs().has("threads") && !std::getenv("DECT2_THREADS")) {
+            const long n = plat::prefs().getI("threads", -1);
+            if (n >= 0 && n <= 64) {
+                const std::string v = std::to_string(n);
+#ifdef _WIN32
+                _putenv_s("DECT2_THREADS", v.c_str());
+#else
+                setenv("DECT2_THREADS", v.c_str(), 0);
+#endif
+            }
+        }
+    }
     {   // View > Time display: UTC (default) or the computer's local time, with an optional (UTC)/(local) label
         dect2::timefmt::setZone(plat::prefs().getB("timeLocal", false) ? dect2::timefmt::Zone::Local : dect2::timefmt::Zone::Utc);
         dect2::timefmt::setLabel(plat::prefs().getB("timeLabel", false));

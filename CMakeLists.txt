@@ -714,6 +714,10 @@ if(DECT2_BUILD_APP)
   target_link_libraries(spec_render PRIVATE dect2core imgui)
   add_executable(test_freq_model tests/app/test_freq_model.cpp)   # listening / centre / hardware frequency and the SDR++ VFO rule
   add_test(NAME freq_model COMMAND test_freq_model)
+  add_executable(test_freq_remember tests/app/test_freq_remember.cpp)   # #393 a saved satellite-carry frequency does not beat the mode default
+  add_test(NAME freq_remember COMMAND test_freq_remember)
+  add_executable(test_dmr_call_filter tests/app/test_dmr_call_filter.cpp)   # #389 Calls table filter by type
+  add_test(NAME dmr_call_filter COMMAND test_dmr_call_filter)
   add_executable(test_spec_look tests/app/test_spec_look.cpp)
   add_test(NAME spec_look COMMAND test_spec_look)
   add_executable(test_input_map tests/app/test_input_map.cpp)   # View > Controls: defaults = old behaviour, saved text, conflicts, wheel steps (app/ui/input_map.h)

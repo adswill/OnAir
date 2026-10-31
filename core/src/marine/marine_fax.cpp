@@ -42,7 +42,7 @@ int faxImageWidth(int ioc) { return ioc > 0 ? static_cast<int>(ioc * kPi) : 0; }
 
 struct FaxDecoder::State {
     // Settings written by other threads.
-    std::atomic<int> lpmSet{0}, iocSet{0}, maxLines{1500};
+    std::atomic<int> lpmSet{0}, iocSet{0}, maxLines{8000};
     std::atomic<double> manualPpm{0};
     std::atomic<bool> autoSlant{true};
 

@@ -192,9 +192,9 @@ void tab(App& a) {
     frameLine(t);
     voiceStrip(a);
     const float h = ImGui::GetContentRegionAvail().y;
-    if (ImGui::BeginTable("##tpolcells", 8, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable, ImVec2(0, h * 0.3f))) {
+    if (ImGui::BeginTable("##tpolcells", 9, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable, ImVec2(0, h * 0.3f))) {
         ImGui::TableSetupColumn("Country"); ImGui::TableSetupColumn("System"); ImGui::TableSetupColumn("Cell");
-        ImGui::TableSetupColumn("LA"); ImGui::TableSetupColumn("BN"); ImGui::TableSetupColumn("Scramble");
+        ImGui::TableSetupColumn("LA"); ImGui::TableSetupColumn("BN"); ImGui::TableSetupColumn("Ch"); ImGui::TableSetupColumn("Scramble");   // #408: the control channel number is back
         ImGui::TableSetupColumn("SNR"); ImGui::TableSetupColumn("Last");
         ImGui::TableHeadersRow();
         auto num = [](int v) { if (v >= 0) ImGui::Text("%d", v); else ImGui::TextUnformatted("-"); };
@@ -206,6 +206,7 @@ void tab(App& a) {
             ImGui::TableNextColumn(); num(c.cellId);
             ImGui::TableNextColumn(); num(c.locArea);
             ImGui::TableNextColumn(); num(c.bnId);
+            ImGui::TableNextColumn(); num(c.channelId);
             ImGui::TableNextColumn(); num(c.scramble);
             ImGui::TableNextColumn(); ImGui::Text("%.1f dB", c.snrDb);
             ImGui::TableNextColumn(); ImGui::TextUnformatted(ago(c.lastWall).c_str());
