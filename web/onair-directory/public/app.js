@@ -24,6 +24,7 @@ const SCALES = {
   hf: { lo: 0, hi: 30 * M, log: false, ticks: [[0, "0"], [10 * M, "10"], [20 * M, "20"], [30 * M, "30 MHz"]] },
   vu: { lo: 30 * M, hi: 1e9, log: false, ticks: [[30 * M, "30"], [250 * M, "250"], [500 * M, "500"], [750 * M, "750"], [1e9, "1 GHz"]] },
 };
+let sortDir = 1;
 let all = [], band = "", here = null, scaleKey = "log", region = "", sdr = "", view = "list", favOnly = false, selId = null;
 const FAVK = "onair.dir.fav";
 function favs() { try { return new Set(JSON.parse(localStorage.getItem(FAVK) || "[]")); } catch { return new Set(); } }
@@ -108,8 +109,10 @@ function visible() {
     seen: (a, b) => b.last_seen - a.last_seen,
     freq: (a, b) => ((a.freq[0] || [1e12])[0]) - ((b.freq[0] || [1e12])[0]),
     dist: (a, b) => (a.d ?? 1e9) - (b.d ?? 1e9),
+    radio: (a, b) => (a.radio || "").localeCompare(b.radio || "") || a.name.localeCompare(b.name),
   }[by];
-  return out.sort(cmp);
+  out.sort(cmp);
+  return sortDir < 0 ? out.reverse() : out;
 }
 
 function drawChips() {
@@ -171,6 +174,8 @@ function distText(s) { return s.d === undefined ? "n/a" : s.d < 10 ? s.d.toFixed
 
 function row(s) {
   const tr = document.createElement("tr");
+  if (s.id === selId) tr.className = "sel";
+  tr.addEventListener("click", (e) => { if (e.target.closest("a,button")) return; selId = selId === s.id ? null : s.id; for (const r of $("rows").children) r.classList.remove("sel"); if (selId) tr.classList.add("sel"); });
   const fv = el("td", "c-fav"); fv.append(favBtn(s));
   const nm = el("td", "c-name");
   const t = el("div", "nm"); t.append(statusDot(s), document.createTextNode(s.name));
@@ -294,6 +299,7 @@ function render() {
     const z = el("div", "zero"); z.append(el("h2", "", "Nothing matches these filters"), el("p", "", "Try another band or region, or clear the search."));
     const b = el("button", "btn", "Clear filters"); b.type = "button"; b.addEventListener("click", clearFilters); z.append(b); st.after(z);
   }
+  for (const th of document.querySelectorAll("#tbl th[data-sort]")) { const on = th.dataset.sort === $("sort").value; th.setAttribute("aria-sort", on ? (sortDir > 0 ? "ascending" : "descending") : "none"); }
   if (view === "list") $("rows").replaceChildren(...list.map(row));
   else if (view === "cards") $("cards").replaceChildren(...list.map(card));
   else if (list.length) drawMap(list);
@@ -364,8 +370,8 @@ $("repform").addEventListener("submit", async (e) => {
 // theme: follows the system until the visitor picks one
 function setTheme(t) {
   const th = t || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
-  document.documentElement.dataset.theme = th;
-  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = th === "light" ? "#eceef0" : "#121315";
+  document.documentElement.dataset.theme = th; { const tb = $("themeBtn"); if (tb) tb.textContent = "Theme: " + (th === "light" ? "Light" : "Dark"); }
+  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = th === "light" ? "#dadada" : "#252526";
   if (t) { try { localStorage.setItem("onair.dir.theme", t); } catch { /* ignore */ } }
 }
 let savedTheme = null; try { savedTheme = localStorage.getItem("onair.dir.theme"); } catch { /* ignore */ }
@@ -383,6 +389,7 @@ $("share").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText(location.href); b.textContent = "Link copied"; } catch { b.textContent = "Copy it from the address bar"; }
   setTimeout(() => { b.textContent = "Copy link"; }, 1800);
 });
+for (const th of document.querySelectorAll("#tbl th[data-sort]")) th.addEventListener("click", () => { const k = th.dataset.sort; if ($("sort").value === k) sortDir = -sortDir; else { $("sort").value = k; sortDir = k === "users" || k === "seen" ? 1 : 1; } render(); });
 window.__setServers = (a) => { all = a; loaded = true; failed = false; render(); }; // test harness hook, harmless in production
 readUrl();
 render();

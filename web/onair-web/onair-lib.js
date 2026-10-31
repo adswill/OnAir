@@ -238,7 +238,9 @@
   }
 
   // ---- palettes ----
+  // the app's default map (SDR++ "Navy heat", colormap.h): navy floor, blue, white, yellow, orange, red
   const PALETTES = {
+    navy: [[0, 0, 0, 32], [1 / 14, 0, 0, 48], [2 / 14, 0, 0, 80], [3 / 14, 0, 0, 145], [4 / 14, 30, 144, 255], [5 / 14, 255, 255, 255], [6 / 14, 255, 255, 0], [7 / 14, 254, 109, 22], [8 / 14, 254, 109, 22], [9 / 14, 255, 0, 0], [10 / 14, 255, 0, 0], [11 / 14, 198, 0, 0], [12 / 14, 159, 0, 0], [13 / 14, 117, 0, 0], [1, 74, 0, 0]],
     amber: [[0, 0x0a, 0x08, 0x06], [0.25, 0x3a, 0x22, 0x08], [0.55, 0xa0, 0x62, 0x14], [0.8, 0xdb, 0xa6, 0x4d], [1, 0xff, 0xf0, 0xc8]],
     classic: [[0, 0, 0, 0x20], [0.2, 0, 0x20, 0xa0], [0.4, 0, 0xc0, 0xe0], [0.6, 0x40, 0xe0, 0x40], [0.8, 0xf0, 0xe0, 0x20], [1, 0xff, 0x30, 0x20]],
     viridis: [[0, 0x44, 0x01, 0x54], [0.25, 0x3b, 0x52, 0x8b], [0.5, 0x21, 0x91, 0x8c], [0.75, 0x5d, 0xc8, 0x63], [1, 0xfd, 0xe7, 0x25]],
@@ -248,6 +250,7 @@
     ice: [[0, 0x05, 0x0a, 0x14], [0.3, 0x0e, 0x3a, 0x6b], [0.6, 0x3c, 0x9a, 0xc9], [0.85, 0xbf, 0xe6, 0xf2], [1, 0xff, 0xff, 0xff]],
   };
   const PALETTE_NAMES = Object.keys(PALETTES);
+  const PALETTE_LABELS = { navy: "Classic", amber: "Amber", classic: "Blue-green", viridis: "Viridis", grey: "Grey", turbo: "Turbo", magma: "Magma", ice: "Ice" };
   /** 256 x RGB bytes for the named palette (unknown name: amber). */
   function makePalette(name) {
     const stops = PALETTES[name] || PALETTES.amber, out = new Uint8Array(256 * 3);
@@ -416,7 +419,7 @@
   }
 
   return {
-    PROTO, SUBPROTOCOL, MODES, STEPS, STEP_TABLE, MODE_LIMITS, MODE_DEFAULT, MODE_BW_RANGE, PALETTE_NAMES, MIN_SPAN,
+    PROTO, SUBPROTOCOL, MODES, STEPS, STEP_TABLE, MODE_LIMITS, MODE_DEFAULT, MODE_BW_RANGE, PALETTE_NAMES, PALETTE_LABELS, MIN_SPAN,
     adpcmDecode, parseSpectrum, parseAudio, levelToDb, msg, parseServerText, closeAdvice, sanitizeText,
     formatFreq, parseFreq, stepLabel, snap, passband, bandwidthOf, captureBounds, fullBounds,
     hzToX, xToHz, normView, zoomView, panView, viewIsFull, bandSlice, freqToBin, binToFreq, rowToPixels,

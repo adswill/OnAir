@@ -18,7 +18,7 @@
     ws: null, info: null, welcome: null, ranges: null, cap: null, bounds: null, view: null, full: null,
     freq: 0, mode: "nfm", low: -6250, high: 6250, sq: -150, agc: "slow",
     audioOn: false, muted: false, volume: store.get("vol", 70), level: -150, peak: -150, peakAt: 0,
-    spectrumOn: false, subs: [], step: store.get("step", 5000), palette: store.get("palette", "amber"),
+    spectrumOn: false, subs: [], step: store.get("step", 5000), palette: store.get("palette2", "navy"),
     range: store.get("range", 70), floorAdj: store.get("floorAdj", 0),
     attempt: 0, retryTimer: 0, retryAt: 0, stopRetry: false, pendingTune: 0, lastTuneSent: 0, tuneTimer: 0,
     rows: [], rowSeq: -1, audioSeq: -1, lost: 0, decoders: {}, views: {}, decDirty: false, name: store.get("name", ""), invite: "", password: "",
@@ -39,14 +39,14 @@
   // ---------- theme ----------
   function setTheme(t, keep) {
     const th = t || (window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
-    document.documentElement.dataset.theme = th;
-    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = th === "light" ? "#eceef0" : "#121315";
+    document.documentElement.dataset.theme = th; { const tb = $("themeBtn"); if (tb) tb.textContent = "Theme: " + (th === "light" ? "Light" : "Dark"); }
+    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = th === "light" ? "#dadada" : "#252526";
     if (t && !keep) store.set("theme", t);
     readColors(); if (S.view) { drawSpectrum(); redrawWaterfall(); }
   }
 
   // ---------- small UI helpers ----------
-  function setConn(text, cls) { const c = $("conn"); $("connText").textContent = text; c.className = "pill " + (cls || ""); }
+  function setConn(text, cls) { const c = $("conn"); $("connText").textContent = text; c.className = "lamp " + (cls || ""); renderStatus(); }
   function banner(text) { const b = $("banner"); b.hidden = !text; b.textContent = text || ""; if (text && !S.welcome) emptyState(text, true); }
   function emptyState(text, err, title) { const e = $("empty"); e.hidden = false; e.classList.toggle("err", !!err); $("emptyTitle").textContent = title || (err ? "Not connected" : "Connecting to the receiver"); $("emptyText").textContent = err ? "" : (text || ""); if (err) { $("emptyText").textContent = "The notice above says why. This page retries by itself when it can."; } }
   function send(m) { if (S.ws && S.ws.readyState === 1) { S.ws.send(JSON.stringify(m)); return true; } return false; }
@@ -57,9 +57,9 @@
   const digitEls = [];
   function buildFreq() {
     const f = $("freq"); f.textContent = "";
-    for (let i = 9; i >= 0; i--) {
+    for (let i = 12; i >= 0; i--) {
       const d = el("span", "d", "0"); d.dataset.place = String(i); digitEls[i] = d; f.appendChild(d);
-      if (i === 9 || i === 6 || i === 3) f.appendChild(el("span", "p", "."));
+      if (i === 12 || i === 9 || i === 6 || i === 3) f.appendChild(el("span", "p", "."));
     }
     f.addEventListener("pointerdown", (e) => {
       const d = e.target.closest(".d"); if (!d) return;
@@ -80,20 +80,40 @@
     });
   }
   function renderFreq() {
-    const s = String(Math.max(0, Math.round(S.freq))).padStart(10, "0");
+    const s = String(Math.max(0, Math.round(S.freq))).padStart(13, "0");
     let lead = true;
-    for (let i = 9; i >= 0; i--) {
-      const ch = s[9 - i]; if (ch !== "0" || i < 3) lead = false;
+    for (let i = 12; i >= 0; i--) {
+      const ch = s[12 - i]; if (ch !== "0" || i < 3) lead = false;
       digitEls[i].textContent = ch; digitEls[i].className = "d" + (lead ? " z" : "");
     }
     const f = $("freq"); f.setAttribute("aria-valuenow", String(S.freq)); f.setAttribute("aria-valuetext", L.formatFreq(S.freq).replace(/\./g, " ") + " hertz");
     const s0 = $("viewText");
-    if (S.view) s0.textContent = fmtMHz(S.view.start) + " - " + fmtMHz(S.view.stop) + " MHz";
+    if (S.view) { s0.textContent = fmtMHz(S.view.start) + " - " + fmtMHz(S.view.stop) + " MHz"; syncZoom(); }
+    renderStatus();
   }
   function typeFreq() {
     if (!S.welcome) return;
     $("typeIn").value = (S.freq / 1e6).toFixed(6).replace(/0+$/, "").replace(/\.$/, ""); $("typeMsg").textContent = "";
     $("typeDlg").showModal(); $("typeIn").select();
+  }
+
+  // ---------- header info, status bar, zoom slider ----------
+  function renderStatus() {
+    const mhz = S.freq ? (S.freq / 1e6).toFixed(4) + " MHz" : "-", fa = $("infoA"); if (!fa) return;
+    fa.textContent = S.mode.toUpperCase() + " " + mhz;
+    const bw = S.high - S.low, lv = S.level > -149 ? ", " + S.level.toFixed(1) + " dBFS" : "";
+    $("infoB").textContent = S.mode.toUpperCase() + " " + (bw >= 1000 ? (bw / 1000).toFixed(bw % 1000 ? 1 : 0) + " kHz" : bw + " Hz") + lv + (S.sq > -150 ? ", squelch " + S.sq + " dB" : ", squelch open");
+    $("sbFreq").textContent = S.freq ? (S.freq / 1e6).toFixed(3) + " MHz" : "-"; $("sbMode").textContent = S.mode.toUpperCase();
+    $("sbUsers").textContent = S.info ? S.info.users + " / " + S.info.max_users : "-";
+    const on = !!S.welcome, led = $("sbLed");
+    $("sbState").textContent = !on ? ($("connText").textContent === "connecting" ? "Connecting" : "Offline") : S.audioOn ? (S.muted ? "Muted" : "Receiving") : "Idle";
+    led.className = "led " + (!on ? "bad" : S.audioOn ? "ok" : "warn");
+    { const mc = $("muteChk"); if (mc) mc.checked = S.muted; const ct = $("centreTxt"); if (ct && S.cap) ct.textContent = "centre " + (S.cap.centre_hz / 1e6).toFixed(3) + " MHz"; }
+  }
+  function syncZoom() {
+    const z = $("zoomSlider"); if (!z || !S.view || !S.full || z.matches(":active")) return;
+    const full = S.full.stop - S.full.start, sp = S.view.stop - S.view.start, mn = L.MIN_SPAN || 1000;
+    z.value = String(Math.round(L.clamp(Math.log(full / sp) / Math.log(full / mn), 0, 1) * 100));
   }
 
   // ---------- tuning ----------
@@ -176,7 +196,7 @@
   let pal = L.makePalette(S.palette), pix = null, C = {};
   function readColors() {
     const cs = getComputedStyle(document.documentElement), g = (n) => cs.getPropertyValue(n).trim();
-    C = { bg: g("--frame"), grid: g("--grid"), text: g("--gridtext"), trace: g("--trace"), accent: g("--accent"), edge: g("--edge2"), bad: g("--bad"), good: g("--good"), tint: g("--accent-t"), panel: g("--panel") };
+    C = { bg: g("--plotbg"), grid: g("--grid"), text: g("--axis"), trace: g("--trace"), accent: g("--accent"), edge: g("--edge"), bad: g("--bad"), good: g("--good"), panel: g("--rail"), bright: g("--bright"), tab: g("--tab"), light: document.documentElement.dataset.theme === "light" };
   }
   function fit(c) {
     const dpr = window.devicePixelRatio || 1, w = Math.max(50, Math.round(c.clientWidth * dpr)), h = Math.max(50, Math.round(c.clientHeight * dpr));
@@ -187,7 +207,7 @@
   function palBg() { return "rgb(" + pal[0] + "," + pal[1] + "," + pal[2] + ")"; }
   function fmtAxis(f, g) { return g >= 1e6 ? String(+(f / 1e6).toFixed(2)) : g >= 1e5 ? (f / 1e6).toFixed(1) : (f / 1e6).toFixed(3); }
   // layout of the spectrum canvas (device pixels): band strip on top, frequency labels below the plot
-  function specGeom() { const dpr = window.devicePixelRatio || 1; return { dpr, top: Math.round(17 * dpr), bot: Math.round(16 * dpr), left: Math.round(34 * dpr) }; }
+  function specGeom() { const dpr = window.devicePixelRatio || 1; return { dpr, top: Math.round(17 * dpr), bot: Math.round(20 * dpr), left: 0 }; }
   function edgeX(W, which) { // x of a passband edge in canvas pixels, or null
     if (!S.view) return null; return L.hzToX(S.view, S.freq + (which ? S.high : S.low), W);
   }
@@ -195,38 +215,36 @@
     fit(spec); const W = spec.width, H = spec.height, G = specGeom(), dpr = G.dpr;
     sctx.fillStyle = C.bg; sctx.fillRect(0, 0, W, H);
     if (!S.view) { updateWfMarks(); return; }
+    const FONT = '"JetBrains Mono", Menlo, ui-monospace, monospace';
     const v = S.view, span = v.stop - v.start, ph = H - G.top - G.bot;
     const row = S.rows[S.rows.length - 1];
     const lo = row ? rowLo(row) : -110, yOf = (db) => G.top + ph * (1 - L.clamp((db - lo) / S.range, 0, 1));
-    // horizontal dB grid
-    sctx.font = `${10 * dpr}px "JetBrains Mono", ui-monospace, Menlo, monospace`; sctx.textBaseline = "middle"; sctx.textAlign = "left";
+    // dB grid and labels (small, dim, on the left, as in the app)
+    sctx.font = `${11 * dpr}px ${FONT}`; sctx.textBaseline = "middle"; sctx.textAlign = "left";
     const dstep = S.range > 80 ? 20 : 10;
+    sctx.fillStyle = C.text; sctx.globalAlpha = 0.8; sctx.fillText("power (dBFS/Hz)", 5 * dpr, G.top + 8 * dpr); sctx.globalAlpha = 1;
     for (let db = Math.ceil(lo / dstep) * dstep; db <= lo + S.range; db += dstep) {
       const y = Math.round(yOf(db)) + 0.5;
       sctx.strokeStyle = C.grid; sctx.lineWidth = 1; sctx.beginPath(); sctx.moveTo(0, y); sctx.lineTo(W, y); sctx.stroke();
-      if (y < H - G.bot - 7 * dpr) { sctx.fillStyle = C.text; sctx.fillText(String(db), 4 * dpr, y - 1 * dpr); }
+      if (y > G.top + 20 * dpr && y < H - G.bot - 6 * dpr) { sctx.fillStyle = C.text; sctx.fillText(String(db), 5 * dpr, y); }
     }
-    // frequency grid and labels
+    // frequency grid; the labels sit in a strip below the trace in a larger size
     const cand = [1e3, 2e3, 5e3, 1e4, 2e4, 5e4, 1e5, 2e5, 5e5, 1e6, 2e6, 5e6, 1e7, 2e7, 5e7, 1e8];
     const g = cand.find((c) => span / c <= 9) || 1e8;
-    sctx.textBaseline = "alphabetic"; sctx.textAlign = "center";
+    sctx.font = `${14 * dpr}px ${FONT}`; sctx.textBaseline = "middle"; sctx.textAlign = "center";
     for (let f = Math.ceil(v.start / g) * g; f < v.stop; f += g) {
       const x = Math.round(L.hzToX(v, f, W)) + 0.5;
       sctx.strokeStyle = C.grid; sctx.beginPath(); sctx.moveTo(x, G.top); sctx.lineTo(x, H - G.bot); sctx.stroke();
-      sctx.strokeStyle = C.edge; sctx.beginPath(); sctx.moveTo(x, H - G.bot); sctx.lineTo(x, H - G.bot + 4 * dpr); sctx.stroke();
-      if (x > 30 * dpr && x < W - 24 * dpr) { sctx.fillStyle = C.text; sctx.fillText(fmtAxis(f, g), x, H - 3 * dpr); }
+      if (x > 24 * dpr && x < W - 24 * dpr) { sctx.fillStyle = C.bright; sctx.fillText(fmtAxis(f, g), x, H - G.bot / 2); }
     }
-    // band plan strip
-    sctx.textAlign = "left"; sctx.textBaseline = "middle";
-    sctx.fillStyle = C.panel; sctx.fillRect(0, 0, W, G.top - 1);
+    // band plan labels along the top: a filled bar with the band name, like the app's labels row
+    sctx.font = `${11 * dpr}px ${FONT}`; sctx.textAlign = "left";
     for (const b of bands) {
       if (b.e < v.start || b.s > v.stop) continue;
       const x0 = Math.max(0, L.hzToX(v, Math.max(b.s, v.start), W)), x1 = Math.min(W, L.hzToX(v, Math.min(b.e, v.stop), W));
-      sctx.fillStyle = C.tint; sctx.fillRect(x0, 2 * dpr, Math.max(1, x1 - x0), G.top - 5 * dpr);
-      sctx.fillStyle = C.accent; sctx.fillRect(x0, 2 * dpr, Math.max(1, x1 - x0), Math.max(1, dpr));
-      if (x1 - x0 > 46 * dpr) { sctx.save(); sctx.beginPath(); sctx.rect(x0, 0, x1 - x0, G.top); sctx.clip(); sctx.fillStyle = C.text; sctx.fillText(b.n, x0 + 4 * dpr, G.top / 2 + 1 * dpr); sctx.restore(); }
+      sctx.fillStyle = /^(160|80|40|20|10|6|2) m$|^70 cm$/.test(b.n) ? (C.light ? "rgba(52,92,150,.6)" : "rgba(52,92,150,.95)") : (C.light ? "rgba(166,122,46,.55)" : "rgba(160,118,50,.85)"); sctx.fillRect(x0, 0, Math.max(1, x1 - x0), G.top - 2 * dpr);
+      if (x1 - x0 > 40 * dpr) { sctx.save(); sctx.beginPath(); sctx.rect(x0, 0, x1 - x0, G.top); sctx.clip(); sctx.fillStyle = "#f4eddc"; sctx.fillText(b.n, x0 + 4 * dpr, G.top / 2 - 1 * dpr); sctx.restore(); }
     }
-    sctx.strokeStyle = C.edge; sctx.beginPath(); sctx.moveTo(0, G.top - 0.5); sctx.lineTo(W, G.top - 0.5); sctx.stroke();
     // the host's ranges: what is not visible is darkened, the allowed bands get a strip on top, blocked ones a red tint
     if (L.rangeActive(S.ranges)) {
       sctx.fillStyle = "rgba(0,0,0,0.55)";
@@ -238,43 +256,41 @@
       sctx.fillStyle = "rgba(220,70,60,0.22)";
       for (const b of S.ranges.block) { if (b.hi < v.start || b.lo > v.stop) continue; const x = L.hzToX(v, Math.max(b.lo, v.start), W), y = L.hzToX(v, Math.min(b.hi, v.stop), W); sctx.fillRect(x, G.top, Math.max(2, y - x), ph); }
     }
-    // passband with grab handles
+    // passband: a translucent red-brown column with a blue tag above it, as in the app
     const x0 = L.hzToX(v, S.freq + S.low, W), x1 = L.hzToX(v, S.freq + S.high, W), xc = L.hzToX(v, S.freq, W);
-    sctx.fillStyle = C.tint; sctx.fillRect(x0, G.top, Math.max(2, x1 - x0), ph);
-    // trace (filled), peak hold
+    sctx.fillStyle = "rgba(205,95,65,0.34)"; sctx.fillRect(x0, G.top, Math.max(2, x1 - x0), ph);
+    // trace: soft white, 1.2 px, filled faintly underneath
     if (row) {
       pix = L.rowToPixels(row, v, W, pix);
-      if (!S.peakHold || S.peakHold.length !== W) S.peakHold = new Float32Array(W).fill(-999);
       const ys = new Float32Array(W);
-      for (let x = 0; x < W; x++) {
-        if (!pix[x]) { ys[x] = NaN; S.peakHold[x] -= 0.4; continue; }
-        const db = L.levelToDb(row, pix[x]); ys[x] = yOf(db);
-        S.peakHold[x] = db > S.peakHold[x] ? db : S.peakHold[x] - 0.12;
-      }
+      for (let x = 0; x < W; x++) ys[x] = pix[x] ? yOf(L.levelToDb(row, pix[x])) : NaN;
       const segs = []; let sx = -1;
       for (let x = 0; x <= W; x++) { const ok = x < W && !isNaN(ys[x]); if (ok && sx < 0) sx = x; else if (!ok && sx >= 0) { segs.push([sx, x - 1]); sx = -1; } }
-      const gr = sctx.createLinearGradient(0, G.top, 0, H - G.bot); gr.addColorStop(0, C.tint.replace(/[\d.]+\)$/, ".42)")); gr.addColorStop(1, C.tint.replace(/[\d.]+\)$/, "0)"));
-      sctx.lineJoin = "round"; sctx.lineWidth = Math.max(1, dpr * 1.1);
+      sctx.lineJoin = "round"; sctx.lineWidth = Math.max(1, dpr * 1.2);
       for (const [a0, a1] of segs) {
         sctx.beginPath(); sctx.moveTo(a0, ys[a0]); for (let x = a0 + 1; x <= a1; x++) sctx.lineTo(x, ys[x]);
         sctx.strokeStyle = C.trace; sctx.stroke();
-        sctx.lineTo(a1, H - G.bot); sctx.lineTo(a0, H - G.bot); sctx.closePath(); sctx.fillStyle = gr; sctx.fill();
+        sctx.lineTo(a1, H - G.bot); sctx.lineTo(a0, H - G.bot); sctx.closePath(); sctx.fillStyle = C.light ? "rgba(38,40,43,0.05)" : "rgba(238,239,242,0.05)"; sctx.fill();
       }
-      let started = false;
-      sctx.beginPath();
-      for (let x = 0; x < W; x += 2) { if (!pix[x]) { started = false; continue; } const y = yOf(S.peakHold[x]); if (!started) { sctx.moveTo(x, y); started = true; } else sctx.lineTo(x, y); }
-      sctx.strokeStyle = C.text; sctx.globalAlpha = 0.35; sctx.lineWidth = Math.max(1, dpr * 0.8); sctx.stroke(); sctx.globalAlpha = 1;
     }
-    sctx.strokeStyle = C.accent; sctx.lineWidth = Math.max(1, dpr);
+    sctx.strokeStyle = "rgba(235,120,90,0.9)"; sctx.lineWidth = Math.max(1, dpr);
     sctx.beginPath(); sctx.moveTo(Math.round(xc) + 0.5, G.top); sctx.lineTo(Math.round(xc) + 0.5, H - G.bot); sctx.stroke();
-    sctx.lineWidth = Math.max(2, 2 * dpr); sctx.beginPath();
-    for (const x of [x0, x1]) { sctx.moveTo(Math.round(x), G.top); sctx.lineTo(Math.round(x), H - G.bot); }
-    sctx.globalAlpha = 0.9; sctx.stroke(); sctx.globalAlpha = 1;
-    sctx.fillStyle = C.accent;
-    for (const x of [x0, x1]) sctx.fillRect(Math.round(x) - 3 * dpr, G.top + ph / 2 - 9 * dpr, 6 * dpr, 18 * dpr);
-    if (S.hover != null) { const hx = Math.round(S.hover * W) + 0.5; sctx.strokeStyle = C.text; sctx.globalAlpha = 0.45; sctx.lineWidth = 1; sctx.setLineDash([3 * dpr, 3 * dpr]); sctx.beginPath(); sctx.moveTo(hx, G.top); sctx.lineTo(hx, H - G.bot); sctx.stroke(); sctx.setLineDash([]); sctx.globalAlpha = 1; }
-    updateWfMarks();
+    // passband edge handles (drag to change the bandwidth)
+    sctx.fillStyle = "rgba(235,120,90,0.95)";
+    for (const x of [x0, x1]) { sctx.fillRect(Math.round(x) - 1, G.top, Math.max(2, dpr * 1.5), ph); sctx.fillRect(Math.round(x) - 3 * dpr, G.top + ph / 2 - 9 * dpr, 6 * dpr, 18 * dpr); }
+    // the blue tag
+    const tag = modeTag(); sctx.font = `${11 * dpr}px ${FONT}`; sctx.textAlign = "center"; sctx.textBaseline = "middle";
+    const tw = sctx.measureText(tag).width + 12 * dpr, tx = Math.min(Math.max(xc - tw / 2, 2), W - tw - 2);
+    sctx.fillStyle = C.tab; sctx.fillRect(tx, G.top + 1, tw, 15 * dpr); sctx.fillStyle = "#ffffff"; sctx.fillText(tag, tx + tw / 2, G.top + 1 + 7.5 * dpr);
+    if (S.hover != null) { const hx = Math.round(S.hover * W) + 0.5; sctx.strokeStyle = C.bright; sctx.globalAlpha = 0.35; sctx.lineWidth = 1; sctx.setLineDash([3 * dpr, 3 * dpr]); sctx.beginPath(); sctx.moveTo(hx, G.top); sctx.lineTo(hx, H - G.bot); sctx.stroke(); sctx.setLineDash([]); sctx.globalAlpha = 1; }
+    updateWfMarks(); drawBar();
   }
+  function drawBar() {
+    const c = $("cbar"); if (!c) return; const g = c.getContext("2d"), row = S.rows[S.rows.length - 1]; if (!row) return;
+    for (let y = 0; y < 96; y++) { const i = Math.round((1 - y / 95) * 255) * 3; g.fillStyle = "rgb(" + pal[i] + "," + pal[i + 1] + "," + pal[i + 2] + ")"; g.fillRect(0, y, 10, 1); }
+    const lo = rowLo(row); $("cbTop").textContent = Math.round(lo + S.range); $("cbBot").textContent = Math.round(lo);
+  }
+  function modeTag() { const b = bands.find((x) => S.freq >= x.s && S.freq <= x.e); return (b ? b.n + " " : "") + S.mode.toUpperCase(); }
   // the waterfall is scrolled pixels; the tuned marker and passband sit in an overlay so they stay crisp
   function updateWfMarks() {
     let pb = $("wfPb"), cf = $("wfCf"); const wrap = wf.parentNode;
@@ -414,6 +430,8 @@
     const bt = $("bufText");
     if (S.audioOn && S.audioBuf && typeof S.audioBuf.buffered === "number") bt.textContent = "buf " + Math.round(S.audioBuf.buffered * 1000) + " ms" + (S.audioBuf.underruns ? " xr" + S.audioBuf.underruns : "");
     else bt.textContent = "buf --";
+    $("sbBuf").textContent = bt.textContent.replace("buf ", "");
+    if (now - (S.stAt || 0) > 250) { S.stAt = now; renderStatus(); }
     requestAnimationFrame(drawMeter);
   }
 
@@ -502,7 +520,7 @@
   function renderAudio() {
     const b = $("audioBtn"); b.setAttribute("aria-pressed", String(S.audioOn)); $("audioLbl").textContent = S.audioOn ? "Stop" : "Listen";
     $("audioIcon").setAttribute("d", S.audioOn ? "M7 6h10v12H7z" : "M7 5l12 7-12 7z");
-    const m = $("muteBtn"); m.setAttribute("aria-pressed", String(S.muted)); m.textContent = S.muted ? "Unmute" : "Mute";
+    const m = $("muteBtn"); m.setAttribute("aria-pressed", String(S.muted)); m.title = S.muted ? "Unmute (M)" : "Mute (M)"; m.setAttribute("aria-label", S.muted ? "Unmute" : "Mute"); { const w = $("spkWave"); if (w) w.style.display = S.muted ? "none" : ""; } renderStatus();
   }
   function onAudio(f) {
     if (!S.audioOn) return;
@@ -530,7 +548,7 @@
     $("srvName").textContent = i.name || "OnAir Web"; $("srvWhere").textContent = [i.location, i.antenna].filter(Boolean).join(", ");
     document.title = (i.name || "OnAir Web");
     $("usersText").textContent = i.users + " / " + i.max_users + " listeners";
-    $("users").className = "pill " + (i.users >= i.max_users ? "warn" : "");
+    $("users").className = "box" + (i.users >= i.max_users ? " full" : ""); renderStatus();
     const n = i.notice || i.legal_notice;
     showNotice(typeof n === "string" && n ? n : null);
     $("footInfo").textContent = i.capture ? "Capture " + fmtMHz(i.capture.centre_hz) + " MHz, " + (i.capture.rate_hz / 1e6).toFixed(2) + " Msps. Level scale is relative to full scale, not calibrated." : "";
@@ -670,7 +688,7 @@
 
   // ---------- squelch / volume ----------
   function renderSquelch() { $("sq").value = Math.max(-150, S.sq); $("sqOut").textContent = S.sq <= -150 ? "open" : S.sq + " dB"; }
-  function renderVolume() { $("vol").value = S.volume; $("volOut").textContent = String(S.volume); applyVolume(); }
+  function renderVolume() { $("vol").value = S.volume; $("volOut").textContent = S.volume + " %"; applyVolume(); }
 
   // ---------- bands and bookmarks ----------
   function buildBands() {
@@ -754,7 +772,7 @@
     if (!keys.includes(S.sel)) S.sel = keys[0] || "";
     const tabs = $("decTabs"); tabs.textContent = ""; tabs.hidden = keys.length < 2;
     for (const k of keys) {
-      const b = el("button", null, k.replace(/@(\d+)k$/, "")); b.type = "button"; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", String(k === S.sel));
+      const b = el("button", "tab", k.replace(/@(\d+)k$/, "")); b.type = "button"; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", String(k === S.sel));
       b.addEventListener("click", () => { S.sel = k; S.decDirty = true; renderDecoders(); });
       tabs.appendChild(b);
     }
@@ -785,8 +803,8 @@
     if (!L.STEPS.includes(S.step)) S.step = 5000; stepSel.value = String(S.step);
     stepSel.addEventListener("change", () => { S.step = +stepSel.value; store.set("step", S.step); });
     const pSel = $("palette");
-    for (const n of L.PALETTE_NAMES) { const o = el("option", null, n); o.value = n; pSel.appendChild(o); }
-    pSel.value = S.palette; pSel.addEventListener("change", () => { S.palette = pSel.value; pal = L.makePalette(S.palette); store.set("palette", S.palette); redrawWaterfall(); });
+    for (const n of L.PALETTE_NAMES) { const o = el("option", null, L.PALETTE_LABELS[n] || n); o.value = n; pSel.appendChild(o); }
+    pSel.value = S.palette; pSel.addEventListener("change", () => { S.palette = pSel.value; pal = L.makePalette(S.palette); store.set("palette2", S.palette); redrawWaterfall(); });
     $("range").value = S.range; $("floorAdj").value = S.floorAdj;
     $("range").addEventListener("input", (e) => { S.range = +e.target.value; store.set("range", S.range); redrawWaterfall(); drawSpectrum(); });
     $("floorAdj").addEventListener("input", (e) => { S.floorAdj = +e.target.value; store.set("floorAdj", S.floorAdj); redrawWaterfall(); drawSpectrum(); });
@@ -804,7 +822,7 @@
     $("markAdd").addEventListener("click", addMark);
     $("markName").addEventListener("keydown", (e) => { if (e.key === "Enter") addMark(); });
     for (const t of document.querySelectorAll(".tabs button")) t.addEventListener("click", () => {
-      for (const o of document.querySelectorAll(".tabs button")) { const on = o === t; o.setAttribute("aria-selected", String(on)); $("pane" + o.dataset.tab[0].toUpperCase() + o.dataset.tab.slice(1)).hidden = !on; }
+      for (const o of document.querySelectorAll(".tabs button")) { const on = o === t; o.setAttribute("aria-selected", String(on)); o.classList.toggle("sel", on); $("pane" + o.dataset.tab[0].toUpperCase() + o.dataset.tab.slice(1)).hidden = !on; }
       S.decDirty = true; renderDecoders();
     });
     attachScope(spec, true); attachScope(wf, false);
@@ -838,11 +856,20 @@
       else if (k === "PageDown" && !own) changeFreq(-S.step * 10);
     });
     $("recBtn").addEventListener("click", recToggle);
-    $("themeBtn").addEventListener("click", () => setTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light"));
+    $("muteChk").addEventListener("change", (e) => { S.muted = e.target.checked; renderAudio(); applyVolume(); });
+        $("themeBtn").addEventListener("click", () => setTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light"));
     $("helpBtn").addEventListener("click", () => $("help").showModal());
-    const side = $("side"), sheet = (on) => { side.classList.toggle("open", on); $("panelsBtn").setAttribute("aria-expanded", String(on)); $("sheetGrip").setAttribute("aria-expanded", String(on)); };
-    $("panelsBtn").addEventListener("click", () => sheet(!side.classList.contains("open")));
-    $("sheetGrip").addEventListener("click", () => sheet(false));
+    // menus (View, Help): small pop-ups like the app's menu bar
+    const menus = [["mView", "popView"], ["mHelp", "popHelp"]];
+    const closeMenus = () => { for (const [b, p] of menus) { $(p).hidden = true; $(b).setAttribute("aria-expanded", "false"); } };
+    for (const [b, p] of menus) $(b).addEventListener("click", (e) => { const open = $(p).hidden; closeMenus(); $(p).hidden = !open; $(b).setAttribute("aria-expanded", String(open)); e.stopPropagation(); });
+    document.addEventListener("click", closeMenus);
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenus(); });
+    $("mFull").addEventListener("click", () => { if (S.full) setView({ start: S.full.start, stop: S.full.stop }); });
+    $("zoomSlider").addEventListener("input", (e) => {
+      if (!S.view || !S.full) return; const full = S.full.stop - S.full.start, mn = L.MIN_SPAN || 1000, sp = full * Math.pow(mn / full, +e.target.value / 100), c = (S.view.start + S.view.stop) / 2;
+      setView({ start: c - sp / 2, stop: c + sp / 2 });
+    });
     $("typeForm").addEventListener("submit", (e) => {
       const hz = L.parseFreq($("typeIn").value);
       if (isNaN(hz)) { e.preventDefault(); $("typeMsg").textContent = "That is not a frequency. Try 145.5, 7074 kHz or 121.5 MHz."; return; }

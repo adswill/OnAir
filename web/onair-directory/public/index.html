@@ -4,38 +4,32 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="dark light">
-  <meta name="theme-color" content="#121315">
+  <meta name="theme-color" content="#252526">
   <meta name="description" content="Public OnAir Web receivers you can listen to in a browser. Receivers list themselves; nothing about listeners is collected.">
   <title>OnAir Receivers</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="preload" href="/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/JetBrainsMono-Regular.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header class="top">
-    <div class="wrap top-in">
-      <a class="brand" href="https://on-air.dev" aria-label="OnAir home">
-        <svg class="mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="1.5" y="1.5" width="21" height="21" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5 15.5h2.5l2-8 3 11 2.5-9 1.5 6H19" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>
-        <span class="wordmark">OnAir<span class="web">Receivers</span></span>
-      </a>
-      <nav class="tabs" id="tabs" role="tablist" aria-label="Sections">
-        <a role="tab" href="#receivers" data-t="receivers">Receivers</a>
-        <a role="tab" href="#listen" data-t="listen">Listen</a>
-        <a role="tab" href="#list" data-t="list">List your receiver</a>
-        <a role="tab" href="#run" data-t="run">Run your own</a>
-        <a role="tab" href="#faq" data-t="faq">FAQ</a>
-      </nav>
-      <div class="tools-r">
-        <a class="gh" href="https://github.com/adswill/OnAir">GitHub</a>
-        <button id="themeBtn" type="button" class="btn icon" aria-label="Switch colour theme" title="Theme">
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M5.3 18.7L7 17M17 7l1.7-1.7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-        </button>
-      </div>
-    </div>
+  <header class="menubar">
+    <a class="brand" href="https://on-air.dev" aria-label="OnAir home">OnAir</a>
+    <span class="rxname">Receivers</span>
+    <span class="grow"></span>
+    <a class="mi" href="https://github.com/adswill/OnAir">GitHub</a>
+    <button id="themeBtn" type="button" class="mi" aria-label="Switch colour theme">Theme: Dark</button>
   </header>
+  <div class="tabrow">
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Sections">
+      <a class="tab" role="tab" href="#receivers" data-t="receivers">Receivers</a>
+      <a class="tab" role="tab" href="#listen" data-t="listen">Listen</a>
+      <a class="tab" role="tab" href="#list" data-t="list">List your receiver</a>
+      <a class="tab" role="tab" href="#run" data-t="run">Run your own</a>
+      <a class="tab" role="tab" href="#faq" data-t="faq">FAQ</a>
+    </nav>
+  </div>
 
-  <main class="wrap">
+  <main>
   <div id="p-receivers" class="page">
     <div class="head">
       <div>
@@ -51,7 +45,6 @@
 
     <form class="tools" id="tools" role="search" onsubmit="return false">
       <label class="srch"><span class="vh">Search receivers</span>
-        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M15 15l5.5 5.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
         <input id="q" type="search" placeholder="Search name, radio, place, description" maxlength="60" autocomplete="off"></label>
       <label class="sel"><span class="vh">Region</span>
         <select id="region"><option value="">All regions</option></select></label>
@@ -62,6 +55,7 @@
           <option value="users">Most listeners</option>
           <option value="free">Most free slots</option>
           <option value="name">Name</option>
+          <option value="radio">Radio</option>
           <option value="seen">Last seen</option>
           <option value="freq">Lowest frequency</option>
           <option value="dist" disabled>Nearest</option>
@@ -92,7 +86,7 @@
 
     <table class="tbl" id="tbl" hidden>
       <thead>
-        <tr><th scope="col" class="c-fav"><span class="vh">Favourite</span></th><th scope="col" class="c-name">Receiver</th><th scope="col" class="c-radio">Radio</th><th scope="col" class="c-cov"><span id="axis-title">Coverage</span><div class="axis" id="axis" aria-hidden="true"></div></th><th scope="col" class="c-num">Listeners</th><th scope="col" class="c-num" id="th-dist" hidden>Distance</th><th scope="col" class="c-num">Seen</th><th scope="col" class="c-act"><span class="vh">Actions</span></th></tr>
+        <tr><th scope="col" class="c-fav"><span class="vh">Favourite</span></th><th scope="col" class="c-name" data-sort="name" aria-sort="none">Receiver</th><th scope="col" class="c-radio" data-sort="radio">Radio</th><th scope="col" class="c-cov" data-sort="freq"><span id="axis-title">Coverage</span><div class="axis" id="axis" aria-hidden="true"></div></th><th scope="col" class="c-num" data-sort="users">Listeners</th><th scope="col" class="c-num" id="th-dist" data-sort="dist" hidden>Distance</th><th scope="col" class="c-num" data-sort="seen">Seen</th><th scope="col" class="c-act"><span class="vh">Actions</span></th></tr>
       </thead>
       <tbody id="rows"></tbody>
     </table>
@@ -202,7 +196,7 @@ web_max_users=6</pre>
   </div>
   </main>
 
-  <footer class="wrap foot">
+  <footer class="foot">
     <span>Data: <a href="/api/v1/servers">/api/v1/servers</a> (JSON, open to any site). Your location, if you share it, stays in this browser.</span>
     <a href="https://github.com/adswill/OnAir">OnAir on GitHub</a>
   </footer>

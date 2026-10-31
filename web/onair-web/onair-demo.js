@@ -2,10 +2,11 @@
  * It replaces WebSocket and the info request with local fakes; nothing is sent over the network and nothing here runs unless the address has ?demo=1. */
 (function () {
   "use strict";
-  const CENTRE = 100e6, RATE = 2.4e6, FLOOR = -124, TOP = -22;
+  try { if (!localStorage.getItem("onair.last")) localStorage.setItem("onair.last", JSON.stringify({ f: 145500000, m: "nfm", lo: -6250, hi: 6250, sq: -150 })); } catch (e) { /* ignore */ }
+  const CENTRE = 145.75e6, RATE = 2.4e6, FLOOR = -116, TOP = -22;
   // fake FM stations: frequency, strength dB, deviation shape width
-  const STATIONS = [[99.0e6, -48, 1], [99.4e6, -71, 1], [99.8e6, -56, 1], [100.4e6, -39, 1], [100.8e6, -78, 1], [101.2e6, -63, 1], [98.6e6, -69, 1], [101.7e6, -83, 1]];
-  const NARROW = [[99.52e6, -74], [100.12e6, -81], [100.62e6, -77]];
+  const STATIONS = [[145.5e6, -56, 1], [145.8e6, -84, 1], [146.5125e6, -90, 1], [144.9e6, -94, 1]];
+  const NARROW = [[145.6e6, -80], [145.025e6, -88], [146.2e6, -85]];
   const CALLS = ["UAE441", "BAW107", "DLH9XK", "SWR82A", "RYR41NF", "FDB1180", "ETH3AB", "QTR8WC", "THY18R", "UAL918"];
 
   window.fetch = ((orig) => function (url, opts) {
@@ -41,7 +42,7 @@
         if (typeof m.low_hz === "number") { st.low = m.low_hz; st.high = m.high_hz; }
         this.pushState();
       } else if (m.type === "rx") { if (typeof m.squelch_db === "number") st.sq = m.squelch_db; this.pushState(); }
-      else if (m.type === "spectrum") { const first = !st.specOn && !!m.on; st.specOn = !!m.on; if (m.bins) st.bins = m.bins; if (m.fps) st.fps = m.fps; st.start = m.start_hz != null ? m.start_hz : CENTRE - RATE / 2; st.stop = m.stop_hz != null ? m.stop_hz : CENTRE + RATE / 2; if (first) { for (let i = 0; i < 140; i++) this.specTick(); } }
+      else if (m.type === "spectrum") { const first = !st.specOn && !!m.on; st.specOn = !!m.on; if (m.bins) st.bins = m.bins; if (m.fps) st.fps = m.fps; st.start = m.start_hz != null ? m.start_hz : CENTRE - RATE / 2; st.stop = m.stop_hz != null ? m.stop_hz : CENTRE + RATE / 2; if (first) { for (let i = 0; i < 420; i++) this.specTick(); } }
       else if (m.type === "audio") { st.audio = !!m.on; if (m.rate) st.rate = m.rate; this.pushState(); }
       else if (m.type === "subscribe") { st.subs.push(m.decoder + "@" + Math.round((m.freq_hz || 0) / 1000) + "k"); this.pushState(); this.decTick(true); }
       else if (m.type === "unsubscribe") { st.subs = st.subs.filter((k) => k.indexOf(m.decoder + "@") !== 0); this.pushState(); }
@@ -50,8 +51,8 @@
     pushState() { const s = this.st; this.reply({ type: "state", freq_hz: s.freq, mode: s.mode, low_hz: s.low, high_hz: s.high, squelch_db: s.sq, subscriptions: s.subs, degrade: 0 }); }
     // power in dB at a frequency, from the fake stations
     level(hz) {
-      let p = Math.pow(10, -110 / 10);
-      for (const [f, db, w] of STATIONS) { const d = Math.abs(hz - f); if (d < 105e3) p += Math.pow(10, (db + (d < 70e3 ? 0 : -(d - 70e3) / 3e3)) / 10) * (0.85 + 0.15 * Math.sin(this.t * 2.1 + f)); }
+      let p = Math.pow(10, -106 / 10);
+      for (const [f, db, w] of STATIONS) { const d = Math.abs(hz - f); if (d < 20e3) p += Math.pow(10, (db - d / 1500) / 10) * (0.85 + 0.15 * Math.sin(this.t * 2.1 + f)); }
       for (const [f, db] of NARROW) { const d = Math.abs(hz - f); if (d < 7e3) p += Math.pow(10, (db - d / 700) / 10) * (Math.sin(this.t * 7 + f) > -0.2 ? 1 : 0.05); }
       p += Math.pow(10, -104 / 10) * (hz % 1e5 < 1.2e3 ? 1 : 0);   // a faint spur near each 100 kHz
       return 10 * Math.log10(p) + gauss() * 1.6;
