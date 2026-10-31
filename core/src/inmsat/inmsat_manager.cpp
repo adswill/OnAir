@@ -59,6 +59,8 @@ struct Manager::Impl {
         double lastGood = -1;         // stream seconds of the last frame whose SUs checked
         bool shadow = false;          // locked on the same channel as another decoder of this window: idle until the carrier changes shape
         double shadowWidthHz = 0;     // the carrier's width when it was parked
+        double shadowUntil = 0;       // stream seconds before which it stays parked whatever the width does
+        bool wasShadow = false;       // parked once: its voice frames only count once the data lock holds (a few frames before the next park are not a call)
         std::vector<cf32> tmp;
     };
     struct Window {
@@ -217,7 +219,10 @@ struct Manager::Impl {
                 for (const auto& d : cars) if (d.id == w->cchans[i]->carrierId && d.confirmed) c = &d;
                 if (!c || !covers(*w, c->offsetHz) || pSynced(*w, c->offsetHz)) { w->cchans.erase(w->cchans.begin() + (long)i); continue; }
                 if (w->cchans[i]->sub >= subCount(*c) && w->cchans[i]->shadow) { w->cchans.erase(w->cchans.begin() + (long)i); continue; }   // the region narrowed: one channel
-                if (w->cchans[i]->shadow && std::fabs(c->widthHz - w->cchans[i]->shadowWidthHz) > 1500) { w->cchans[i]->shadow = false; if (w->cchans[i]->demod) w->cchans[i]->demod->reset(); }
+                if (w->cchans[i]->shadow && det.nowSec() > w->cchans[i]->shadowUntil && std::fabs(c->widthHz - w->cchans[i]->shadowWidthHz) > 1500) {
+                    w->cchans[i]->shadow = false;
+                    if (w->cchans[i]->demod) w->cchans[i]->demod->reset();
+                }
                 const double subHz = subPlace(*c, w->cchans[i]->sub);
                 if (std::fabs(c->offsetHz + subHz - (w->cchans[i]->offsetHz + w->cchans[i]->subHz)) > 1500) {   // the detector moved it: follow and start again
                     w->cchans[i]->offsetHz = c->offsetHz; w->cchans[i]->subHz = subHz;
@@ -266,7 +271,7 @@ struct Manager::Impl {
                     const double fx = x.offsetHz + x.subHz + x.demod->freqHz(), fy = y.offsetHz + y.subHz + y.demod->freqHz();
                     if (std::fabs(fx - fy) > 2000) continue;
                     CChan& loser = (y.demod->dataLock() && !x.demod->dataLock()) || (y.demod->dataLock() == x.demod->dataLock() && y.ebn0Db > x.ebn0Db + 1) ? x : y;
-                    loser.shadow = true; loser.shadowWidthHz = 0;
+                    loser.shadow = true; loser.wasShadow = true; loser.shadowWidthHz = 0; loser.shadowUntil = det.nowSec() + 60;
                     for (const auto& c : cars) if (c.id == loser.carrierId) loser.shadowWidthHz = c.widthHz;
                     loser.demod->reset();
                     say("Inmarsat: C decoder at " + std::to_string((long)((cfg.centerHz + fx) / 1000)) + " kHz parked, a twin holds the same channel");
@@ -294,6 +299,7 @@ struct Manager::Impl {
         if (e.susOk) cc.lastGood = t;
         // the voice goes on while the frames check (JAERO DecodeC: Voicesignal once the data carrier is detected)
         if (!(e.susOk || cc.demod->dataLock()) || e.voice.size() != (size_t)kAeroCVoiceBytes) return;
+        if (cc.wasShadow && !cc.demod->dataLock()) return;
         const double f = (cfg.centerHz != 0 ? cfg.centerHz : 0) + cc.offsetHz + cc.subHz + (cc.demod ? cc.demod->freqHz() : 0);
         std::vector<uint8_t> fr(12);
         for (int k = 0; k < kAeroCVoiceFrames; k++) {
