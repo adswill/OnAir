@@ -175,3 +175,85 @@ the floor rose by the mode's X dB, and stops early for a strong signal; the memo
 cancel (gain put back) and the JSON; a radio with one coarse gain (0/10/20/30 dB) in every mode kind.
 
 **Not verified on hardware.** The thresholds are tuned on the simulation; the stage figures are typical values, not calibrated per unit.
+
+
+## 8. Auto v2 (3.5): measure the objective, do not servo the headroom
+
+Why the old loop disappointed: it held the wideband headroom at a per-class constant (14 dB for narrowband modes), so a strong FM or pager neighbour
+decided the gain, the channel SNR was not part of the loop, a decoder that locked once froze the loop at that gain, the sensors were the display
+analyser (every fourth sample, per GUI frame) and the intermodulation probe was off by default. v2 keeps the shell (settings, bracket, overload cut,
+memory) and replaces the steady state:
+
+* **Sensors on the engine thread** (`core/src/source/gain_meter.cpp`, `Engine::gainMeter()`): every sample of the radio's block, before any correction:
+  exact peak, clipped-sample count, 99.99 % point, a 2 s peak-hold, and a 10 Hz spectrum from its own 2048-point FFT. One feed for Auto, Optimise once,
+  Safe start, the scanner and the wizard; it works with the window hidden, headless and on the remote API.
+* **Objective**: the decoder's MER / SNR while it locks (a locked decoder always beats an unlocked one), else the SNR in the channel against the flanks
+  (`estimateFloor`), Sensitivity for pulsed modes and GNSS. Modes with no channel (a wide span) keep the headroom loop.
+* **Constraints** per mode (`ModeTarget::minHeadroomDb`, `improveDb`, `comfortDb`, `usePeakHold`): no clipping, a headroom floor (3 dB from the peak-hold
+  for ADS-B, 4-6 dB otherwise instead of 14), no intermodulation or compression.
+* **Hill climb** (`autogain_v2.cpp`): after the quick search the loop tries the next gain up (the largest step that keeps the floor), then down, then
+  the other LNA/VGA split (HackRF), each for a dwell of 1 s after the radio's settling. A step is kept when the objective improves by more than
+  `improveDb` and 1.5 sigma of its noise; otherwise it is undone exactly. A rejected neighbour is not retried for 6 s (30 s when the decoder is
+  comfortably over its threshold). **No freeze while the margin is small**: only a decoder at least `comfortDb` over its lock threshold lets the
+  loop rest, and even then it re-probes every 30 s.
+* **Gain-slope test on every step** (no extra moves): the mean spectra before and after a step against the real gain change: a bin rising much more than
+  the gain is intermodulation, the wideband power rising less than 0.6 dB per dB is compression, a noise floor rising more than 1.3x the gain is
+  leakage. Either one undoes the step, caps the gain below it for 2 min and switches to the linear stage split.
+* **Memory is a prior**: a remembered gain starts the quick search narrowed to about +/-9 dB around it (`setPrior`), never a skip.
+* **Re-run triggers**: retune, mode / rate change (`notifyRetune`), the decoder unlocked for 10 s, the objective falling 3 dB below the settled value.
+* **Overload**: still immediate, but proportional: 6 dB first (9 / 14 dB for 1 % / 5 % clipping), the 30-40 dB cuts only with the ADC pinned (>20 %).
+* **"Why this gain" line** under the meter strip (`AutoGainController::status()`): the gain, the objective, the headroom, what limits it ("limited by
+  headroom / intermodulation / compression / overload / top of the gain range"), what the loop is doing (searching, trying a neighbour, settled) and its
+  last decision. `--autogain-trace file.csv` writes one line a second (gain, objective, SNR, headroom, floor, clip, state, last decision).
+* The old loop stays available: Auto gain settings > "Auto v2" checkbox (`AgSettings::v2`).
+
+### Calibrating a unit (`gain_cal.cpp`)
+
+Auto gain settings > "Gain steps of this unit" > "Measure my gain steps" steps through every setting of the radio's overall control (30 s) while the input
+is a steady noise, and derives the real gain of every step from the noise-floor differences (steps whose floor is within 6 dB of the ADC's own noise are
+not trusted and keep the table). The result is stored per device serial (pref `ag.cal`) and replaces the nominal steps in the controller
+(`GainStage::actualDb`, `RadioProfile::realDelta`): the slope test and the step arithmetic use the real dB. It flags a unit whose gain control has almost
+no effect (dead or stuck tuner, or its own AGC on), steps that lower the noise, a range far from the table, or a single step more than 3.5 dB off.
+Single-control radios only (RTL-SDR, Airspy, SDRplay, Pluto, Lime); HackRF's LNA / VGA steps are exact.
+
+### Measured against the old loop (simulated front end, `ctest autogain_v2`, `-v` prints the table)
+
+Final SNR in the channel of the settled gain (old headroom loop / Auto v2 / exhaustive best): weak signal beside two strong carriers (HackRF) 1.6 / 8.4 / 8.5 dB;
+RTL-SDR beside FM stations 8.4 / 15.2 / 15.3; two carriers whose product falls in the channel: HackRF 12.2 / 22.2 / 23.1, RTL-SDR 12.1 / 18.2 / 18.2, Airspy
+17.3 / 22.3 / 22.3; ADC clipping from the top gain 26.8 / 35.5 / 35.7; DVB-T2 beside a strong tower -19.3 / -9.5 / -5.1; pulsed ADS-B -19.6 / -14.4 / -1.6; a stale
+remembered gain 1.6 / 8.5 / 8.5. Pulsed ADS-B is parity (-19.6 / -19.6 / best -1.6 dB: the sensitivity objective grows with gain and cannot see the compression that costs the SNR; the earlier wins on this scene were luck of the random path). A quiet band with a weak signal is parity within a dB (the climb moves in steps of at least `improveDb`; Pluto 5.8 / 5.2 / 7.0).
+Cost: the loop spends 5-20 % of the time on a neighbouring gain while it is not comfortably locked (a probe lasts about 1.5 s, the interval grows 6 / 12 / 24 / 45 s).
+The existing suites (`autogain`, `autogain_smart`) now pin `AgSettings::v2 = false`: they count gain changes and reversals, which the probing of v2 does by design.
+
+### Known weaker than the old loop
+
+Bursts (`AGV2=1 test_agc_burst`): after a strong burst the v2 loop recovers to the last settled gain in up to 12 dB steps 1.1 s apart, but with a burst every few seconds it
+ends 22-24 dB under the settled gain and makes 4-10 gain moves per burst, where the old loop ends 5-16 dB under with 4 moves; `test_agc_burst` therefore pins the old loop
+by default. Pager / keying-heavy bands can select the old loop in the Auto gain settings. Pulsed (ADS-B) and quiet-band Auto are parity, not better.
+
+### Not verified on hardware
+
+The tests run a simulated front end (ADC clipping, third-order products of strong carriers, compression, a decoder lock threshold, non-nominal steps).
+Not done / unknown: the thresholds on real tuners, the SDRplay LNA state (RFGR) is still chosen by the driver (its `lnastate` setting would confound the
+total gain), the RTL tuner AGC is not switched by the loop, and
+calibration at one frequency only (the R820T's steps vary with frequency).
+
+### ADS-B: the message-rate loop (3.5)
+
+For ADS-B / Mode S the loop no longer servos the headroom of the samples (a pulse is under 0.1 % of them, so no headroom number describes it). It reads the receiver's
+own counters instead, as readsb's adaptive gain does: `RxTelemetry::adsb.blocksOk` (good messages) and `loudMsgs` (good messages whose pulses are above -7 dBFS on the receiver's level scale (a peak within about 3 dB of full scale)).
+`core/include/dect2/source/pulse_gain.h` (`PulseJudge`) turns them into a rate and a loud share for the present gain; the hill climb of v2 maximises
+
+    objective = 10 log10(messages per second + 0.2)  -  60 dB * max(0, loud share - 3 %)
+
+so a step up is kept when it buys at least `improveDb` (0.5 dB: about 12 % more messages, and 1.5 sigma of the count noise), a step down when it buys the same, and a loud share above 10 % (with at
+least 40 messages) lowers the gain at once, 2 dB at a time, whatever the rate. A window needs 4 s and 30 messages (or 20 s of a quiet sky) before it decides;
+meanwhile the headroom and clipping guards still act. The headroom floor from the 2 s peak-hold (3 dB) stays as a clip guard, and the "objective fell 3 dB: search
+again" trigger is off for pulsed modes (the message rate follows the traffic of the hour). Tests: `adsb_autogain` (a simulated sky of 8 to 60 aircraft from -108 to
+-30 dBm through the simulated front end: far-only, mixed, strong aircraft close by, city noise +10 dB, a strong carrier, a quiet sky; from a low and a far too hot
+start; the loop must reach 80-85 % of the best fixed gain's message rate with at most 12-15 % loud), `adsb_loud` (Mode S bursts through the real receiver at
+-1, -6 and -20 dBFS, with carrier offsets and both sample rates, must count loud only at -1).
+
+Untested on real signals: the 3 % / 10 % thresholds and the -7 dBFS level line are readsb's order of magnitude, not tuned on a real sky; the message rate follows the
+traffic, so a change of traffic during a trial can fool one comparison (the next trial corrects it); the first search at start still uses the sensitivity floor
+score before the message loop takes over.

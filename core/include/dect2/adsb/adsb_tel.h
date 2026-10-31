@@ -61,8 +61,22 @@ struct AdsbAircraft {
 // Range-ring statistics (per session; reset button; saved with the results). Ranges need a reference position and a confirmed (global) position.
 constexpr int kAdsbSectors = 36;            // 10 degree bearing sectors, sector 0 = 0 - 10 degrees
 constexpr int kAdsbRangeBins = 50;          // 10 nm per bin, the last one is "500 nm and more"
+// Coverage by altitude band: the farthest position per sector for each band of barometric altitude (a polar coverage plot per height).
+// Band 0 is under 10000 ft (the ground included), then 10000 - 20000, 20000 - 30000, 30000 - 40000, 40000 ft and above. A position with no known
+// altitude is in the all-heights figure only.
+constexpr int kAdsbAltBands = 5;
+inline int adsbAltBand(bool hasAlt, int altFt, bool ground) {
+    if (ground) return 0;
+    if (!hasAlt) return -1;
+    return altFt < 0 ? 0 : altFt >= 40000 ? kAdsbAltBands - 1 : altFt / 10000;
+}
+inline const char* adsbAltBandName(int b) {
+    static const char* n[kAdsbAltBands] = {"under 10000 ft", "10000-20000 ft", "20000-30000 ft", "30000-40000 ft", "40000 ft and above"};
+    return b >= 0 && b < kAdsbAltBands ? n[b] : "all heights";
+}
 struct AdsbRangeStats {
     float sectorMaxNm[kAdsbSectors] = {};   // farthest position per bearing sector
+    float sectorBandMaxNm[kAdsbAltBands][kAdsbSectors] = {};   // the same per altitude band (adsbAltBand)
     uint32_t rangeHist[kAdsbRangeBins] = {};
     uint64_t positions = 0;                 // positions counted
     float maxRangeNm = 0;
@@ -71,6 +85,21 @@ struct AdsbRangeStats {
     std::vector<uint16_t> countSeries;      // aircraft in the table, the same points
     double nextSample = 10;
 };
+
+// The coverage plot as CSV (band,from_deg,to_deg,max_range_nm,max_range_km): "all heights" first, then each altitude band. Unit-free, so a file means the same everywhere.
+inline std::string adsbCoverageCsv(const AdsbRangeStats& st) {
+    std::string o = "band,from_deg,to_deg,max_range_nm,max_range_km\n";
+    char b[160];
+    auto rows = [&](const char* name, const float* v) {
+        for (int i = 0; i < kAdsbSectors; i++) {
+            snprintf(b, sizeof b, "%s,%d,%d,%.1f,%.1f\n", name, i * 10, i * 10 + 10, v[i], v[i] * 1.852f);
+            o += b;
+        }
+    };
+    rows("all heights", st.sectorMaxNm);
+    for (int k = 0; k < kAdsbAltBands; k++) rows(adsbAltBandName(k), st.sectorBandMaxNm[k]);
+    return o;
+}
 
 // A source of aircraft: this receiver (always the first) and the feeds in from other receivers
 struct AdsbSourceInfo {
@@ -93,6 +122,9 @@ struct AdsbFrameInfo {               // one line of the message monitor
     std::string what;                // "Identification KLM1023", "Airborne position 38000 ft", ...
 };
 
+// A message whose level is above this (dBFS) is "loud" (the receiver is near the top of its range; readsb's adaptive gain counts these)
+constexpr float kAdsbLoudDbfs = -7.0f;   // levelDbfs is the mean power of the preamble pulses: it reads about 4 dB under the pulse peak, so this is a peak within about 3 dB of full scale
+
 struct AdsbTelemetry {
     // ---- the part every mode has: the engine copies it into RxTelemetry; keep these members and what they mean
     uint64_t seq = 0;            // grows with every report and never restarts (not even after reset())
@@ -108,6 +140,7 @@ struct AdsbTelemetry {
     float noiseDbfs = -120;              // noise floor (mean power per sample)
     float levelDbfs = -120;              // mean pulse level of the last good messages
     uint64_t preambles = 0;              // preamble candidates examined
+    uint64_t loudMsgs = 0;               // good messages louder than kAdsbLoudDbfs (cumulative, like blocksOk)
     uint64_t corrected = 0;              // messages repaired by the 1-bit (or 2-bit) correction
     uint64_t dfCount[32] = {};           // good messages by downlink format
     uint32_t aircraftCount = 0;          // aircraft in the table (the list below holds at most 128 of them, the most recent)

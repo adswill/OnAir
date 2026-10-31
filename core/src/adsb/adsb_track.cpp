@@ -245,6 +245,8 @@ void AdsbTracker::noteStats(const Rec& r) {
     b = std::fmod(std::fmod(b, 360.0) + 360.0, 360.0);
     const int sec = std::min(kAdsbSectors - 1, (int)(b / 10.0));
     stats_.sectorMaxNm[sec] = std::max(stats_.sectorMaxNm[sec], (float)d);
+    const int band = adsbAltBand(a.hasAlt, a.altFt, a.ground);
+    if (band >= 0) stats_.sectorBandMaxNm[band][sec] = std::max(stats_.sectorBandMaxNm[band][sec], (float)d);
     stats_.rangeHist[std::min(kAdsbRangeBins - 1, (int)(d / 10.0))]++;
     stats_.positions++;
     stats_.maxRangeNm = std::max(stats_.maxRangeNm, (float)d);
@@ -324,6 +326,7 @@ void AdsbTracker::apply(const AdsbFrame& f, uint8_t src) {
     good_++;
     window_++;
     if (f.corrected) corrected_++;
+    if (f.levelDbfs > kAdsbLoudDbfs) loud_++;
     dfCount_[f.df & 31]++;
     now_ = std::max(now_, f.timeSec);
     const double snr = f.snrDb;
@@ -580,6 +583,7 @@ void AdsbTracker::snapshot(AdsbTelemetry& t, double now) const {
     t.frames.assign(frames_.begin(), frames_.end());
     t.refValid = refValid_; t.refLat = refLat_; t.refLon = refLon_;
     t.maxRangeNm = maxRange_;
+    t.loudMsgs = loud_;
     t.stats = stats_;
     for (int i = 0; i < 32; i++) t.dfCount[i] = dfCount_[i];
     t.corrected = corrected_;

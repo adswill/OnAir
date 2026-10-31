@@ -231,6 +231,7 @@ void parseDevFlags(App& app, int argc, char** argv, DevOpts& o) {
         if (std::string(argv[i]) == "--nodeint") app.video.deint = false;
         if (std::string(argv[i]) == "--fakeepg") app.fakeEpg = true;
         if (std::string(argv[i]) == "--agc") app.agcOn = true;
+        if (std::string(argv[i]) == "--autogain-trace" && i + 1 < argc) autogainSetTrace(argv[i + 1]);
         if (std::string(argv[i]) == "--agcgear") app.agcGearOpen = true;   // dev: open the AGC settings popup (screenshots)
         if (std::string(argv[i]) == "--fakehackrf") {   // dev: list a HackRF that is not there and select it, to see the gain controls of a radio in a screenshot
             DeviceInfo d; d.kind = DeviceInfo::HackRF; d.board = "HackRF One"; d.name = "HackRF One (screenshot)"; d.serial = "screenshot";

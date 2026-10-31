@@ -89,6 +89,7 @@ public:
     uint64_t good() const { return good_; }
     uint64_t bad() const { return bad_; }
     uint64_t corrected() const { return corrected_; }
+    uint64_t loud() const { return loud_; }              // good messages whose pulses were louder than kAdsbLoudDbfs
     uint64_t dfCount(int df) const { return df >= 0 && df < 32 ? dfCount_[df] : 0; }
 
 private:
@@ -122,7 +123,7 @@ private:
     std::unordered_map<uint32_t, Rec> rec_;
     std::deque<AdsbFrameInfo> frames_;
     double refLat_ = 0, refLon_ = 0; bool refValid_ = false;
-    uint64_t good_ = 0, bad_ = 0, corrected_ = 0, dfCount_[32] = {};
+    uint64_t good_ = 0, bad_ = 0, corrected_ = 0, loud_ = 0, dfCount_[32] = {};
     uint32_t window_ = 0; uint32_t windows_[4] = {};       // good messages per 0.25 s, last four
     float maxRange_ = 0;
     AdsbRangeStats stats_;

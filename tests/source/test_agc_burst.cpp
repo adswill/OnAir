@@ -25,7 +25,7 @@ static Res runCase(const Case& k) {
     sim.rateHz = 2.4e6; sim.chanBw = 12.5e3; sim.chanOff = 100e3; sim.sigDbm = -108;
     const ModeTarget tg = modeTargetFor(11, 12.5e3, 2.4e6, 446e6);
     AutoGainController c;
-    AgSettings s; s.mode = AgMode::Auto;
+    AgSettings s; s.mode = AgMode::Auto; s.v2 = getenv("AGV2") != nullptr;   // the legacy loop by default (the checks below are its); AGV2=1 runs the same bursts through Auto v2
     c.configure(*rp, tg, s);
     double now = 0;
     c.start(now, sim.live.totalDb, false, &sim.live);

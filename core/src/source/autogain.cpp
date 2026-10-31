@@ -55,6 +55,7 @@ void AutoGainController::setSettings(const AgSettings& s) {
     if (modeChanged) { mode_ = s.mode; phase_ = Phase::Idle; }
 }
 
+double AutoGainController::bracketHead() const { return set_.v2 ? tgt_.minHeadroomDb + 2.0 : headroomTarget(); }
 double AutoGainController::headroomTarget() const { return set_.headroomDb >= 0 ? set_.headroomDb : tgt_.headroomDb; }
 double AutoGainController::settleTime() const { return radio_.settleSec + set_.settleSec / std::max(0.25, set_.loopSpeed); }
 
@@ -103,6 +104,7 @@ void AutoGainController::start(double now, double total, bool ampOn, const Stage
     br_ = 0; wantBracket_ = mode_ == AgMode::Auto && set_.quickStart; bracketDone_ = false; expl_.clear(); reasons_.clear();
     result_.clear(); used_ = Metric::Auto; bestMetric_ = 0; changes_ = 0; imdSeen_ = compSeen_ = false;
     met_ = AgMeters();
+    climbReset(now);
     if (mode_ == AgMode::Off) { phase_ = Phase::Idle; return; }
     phase_ = mode_ == AgMode::Auto ? Phase::Tracking : mode_ == AgMode::Once ? Phase::Sweeping : Phase::Ramping;
     if (mode_ == AgMode::Once) {
@@ -156,6 +158,8 @@ void AutoGainController::measure(const AgInput& in) {
     met_.crestDb = a.crestDb;
     met_.clipFraction = a.clipFraction;
     met_.headroomDb = a.headroomDb;
+    met_.holdHeadroomDb = a.holdHeadroomDb;
+    adcLast_ = a;
     met_.clipping = a.clipFraction > tgt_.clipLimit;
     q_ = in.q;
     if (in.spectrum && !in.spectrum->empty()) fl_ = estimateFloor(*in.spectrum, in.rateHz, in.chanBwHz, in.offsetHz, radio_.adcBits);
@@ -219,6 +223,7 @@ bool AutoGainController::tick(const AgInput& in, AgCommand& out) {
     else if (mode_ == AgMode::Auto) { changed = tickAuto(in, out); if (changed && !br_) explain(out.why); else if (expl_.empty() && nAvg_ >= 3 && !br_ && !wantBracket_) explain("holding"); }
     else if (mode_ == AgMode::Once) changed = tickOnce(in, out);
     else changed = tickSafe(in, out);
+    if (mode_ == AgMode::Auto && set_.v2 && in.now - statusAt_ >= 0.25) { statusAt_ = in.now; setStatus(""); }
     if (in.now - histAt_ >= 0.5) {
         histAt_ = in.now;
         AgPoint p;
@@ -242,7 +247,9 @@ bool AutoGainController::tickAuto(const AgInput& in, AgCommand& out) {
         const double c = in.adc.clipFraction;
         // at acquisition (start, retune) the start gain may be anywhere in the range: cut much harder while the ADC is hard against full scale
         const bool acq = now - startedAt_ < 6.0 / sp;
-        const double cut = c > 0.2 ? (acq ? 40 : 30) : c > 5e-2 ? (acq ? 28 : 20) : c > 1e-2 ? 14 : c > 2e-3 ? 10 : 6;
+        double cut = c > 0.2 ? (acq ? 40 : 30) : c > 5e-2 ? (acq ? 28 : 20) : c > 1e-2 ? 14 : c > 2e-3 ? 10 : 6;
+        // v2: proportional: 6 dB first and measure again; the big cuts only when the ADC is pinned at full scale (the cut is 100 ms away from the next look)
+        if (set_.v2 && c <= 0.2) cut = c > 5e-2 ? 14 : c > 1e-2 ? 9 : 6;
         // one burst takes several cuts: they are one overload episode (a new one after 3 s without clipping)
         const bool episode = ovTimes_.empty() || now - ovTimes_.back() > 3;
         // a burst that returns while the gain is still climbing back (well under the gain that clipped before) says nothing new about the gain
@@ -256,6 +263,7 @@ bool AutoGainController::tickAuto(const AgInput& in, AgCommand& out) {
         ceilUntil_ = now + (ovTimes_.size() >= 3 ? 90 : 20) / sp;
         linearUntil_ = now + 30;
         probe_ = 0; guard_ = false;
+        havePrior_ = false;   // a remembered gain that clips is stale: the search is the wide one
         if (cur_.ampOn && set_.ampAllowed) {   // the amp first: it is the most exposed stage
             const double t = cur_.totalDb;
             cur_.ampOn = false;
@@ -270,6 +278,7 @@ bool AutoGainController::tickAuto(const AgInput& in, AgCommand& out) {
     if (nAvg_ < 3 || now - measuredFrom_ < 0.3 / sp) { phase_ = Phase::Settling; return false; }
     if (wantBracket_ && set_.quickStart) { beginBracket(in); return tickBracket(in, out); }
     wantBracket_ = false;
+    if (set_.v2) { double j; if ((tgt_.kind == ModeKind::Pulsed && q_.pulseValid) || objective(j)) return tickClimb(in, out); }   // the hill climb on the measured objective; no objective (a span with no channel): the headroom loop below
     // the policy: the mode's own, or linearity after an overload / near a strong neighbour
     const bool strongNb = fl_.valid && fl_.strongestDbfs > -25 && fl_.strongestDbfs > fl_.chanDbfs + 20;
     const Policy pol = (now < linearUntil_ || strongNb || imdSeen_) ? Policy::Linearity : tgt_.policy;
@@ -766,15 +775,14 @@ bool EngineAgIo::apply(const AgCommand& c) {
     return e_.retune(tune_);
 }
 bool EngineAgIo::measure(AgInput& in) {
-    SpectrumFrame sf;
-    if (!e_.latestSpectrum(sf, specSeq_)) return false;
-    specSeq_ = sf.seq;
-    spec_ = std::move(sf.dbfs);
+    // the engine thread's GainMeter: every sample, the same feed as Auto (the display analyser's statistics are not used any more)
+    BlockStats a;
+    if (!e_.gainMeter().take(a, spec_)) return false;
     RxTelemetry t;
     if (e_.latestRx(t, rxSeq_)) { rxSeq_ = t.seq; rx_ = t; haveRx_ = true; }
-    in.adc = fromSignalStats(sf.stats);
+    in.adc = a;
     in.spectrum = &spec_;
-    in.rateHz = e_.sampleRate();
+    in.rateHz = e_.radioRate() > 0 ? e_.radioRate() : e_.sampleRate();
     in.chanBwHz = bw_;
     in.offsetHz = off_;
     if (haveRx_) in.q = qualityFrom(rx_);
@@ -839,20 +847,24 @@ namespace dect2::ag {
 void AutoGainController::beginBracket(const AgInput& in) {
     wantBracket_ = false;
     trials_.clear(); queue_.clear(); ti_ = -1; refined_ = false;
-    const double tgtH = headroomTarget();
-    const double star = cur_.totalDb + (headAvg_ - tgtH);
+    const double tgtH = bracketHead();
+    const double star = havePrior_ ? prior_.totalDb + 3.0 : cur_.totalDb + (headAvg_ - tgtH);
     const bool strongNb = fl_.valid && fl_.strongestDbfs > -25 && fl_.strongestDbfs > fl_.chanDbfs + 20;
-    const Policy pol = (in.now < linearUntil_ || strongNb || imdSeen_) ? Policy::Linearity : tgt_.policy;
+    const Policy pol = (in.now < linearUntil_ || (strongNb && !set_.v2) || (imdSeen_ && !set_.v2)) ? Policy::Linearity : (set_.v2 ? pol_ : tgt_.policy);
     const double hi = std::min(maxGain(), ceilingDb(in.now)), lo = minGain();
     double last = -1e9;
     const double top = std::clamp(star + 3.0, lo, std::max(lo, hi));   // when the estimate is beyond the range the window slides down to its end
-    for (double off : {-14.0, -9.0, -5.0, -2.0, 0.0, 3.0}) {
+    // a remembered gain is a prior: five gains within +/-6 dB of it (the world may have changed); else the wide search around the headroom estimate
+    const bool priorMode = havePrior_;
+    const std::vector<double> offs = havePrior_ ? std::vector<double>{-9.0, -6.0, -3.0, 0.0, 3.0} : std::vector<double>{-14.0, -9.0, -5.0, -2.0, 0.0, 3.0};
+    havePrior_ = false;
+    for (double off : offs) {
         const double g = std::clamp(top + off - 3.0, lo, std::max(lo, hi));
         const double snapped = planStages(radio_, g, pol, set_.stageMask, cur_.db, cur_.ampOn).totalDb;
         if (snapped > last + 0.4) { queue_.push_back({snapped, pol}); last = snapped; }
     }
     if (queue_.size() < 3) { queue_.clear(); return; }   // too coarse a radio to bracket: the loop does its normal work
-    br_ = 1; brExtra_ = 0;
+    br_ = 1; brExtra_ = priorMode ? 4 : 0;   // a prior: the search stays within a few dB of it (the climb goes on from there)
     phase_ = Phase::Sweeping;
     logEvent(in.now, cur_.totalDb, cur_.totalDb, fmt("quick search: %.0f gains around %.0f dB", (double)queue_.size(), star));
 }
@@ -887,10 +899,10 @@ bool AutoGainController::tickBracket(const AgInput& in, AgCommand& out) {
         const AgTrial& l = trials_[(size_t)ti_];
         const bool over = l.clipMax > tgt_.clipLimit || l.imd || l.headroomMin < 0.5;
         const double hi = std::min(maxGain(), ceilingDb(now));
-        if (!over && l.headroomMin > headroomTarget() + 1.5 && l.plan.totalDb < hi - 0.5) {
+        if (!over && l.headroomMin > bracketHead() + 1.5 && l.plan.totalDb < hi - 0.5) {
             brExtra_++;
             double g = l.plan.totalDb, lastQ = g;
-            const double jump = std::clamp(0.7 * (l.headroomMin - headroomTarget()), 2.0, 16.0);
+            const double jump = std::clamp(0.7 * (l.headroomMin - bracketHead()), 2.0, 16.0);
             for (int k = 1; k <= 3; k++) {
                 const double snapped = planStages(radio_, std::min(hi, l.plan.totalDb + jump * k), l.pol, set_.stageMask, cur_.db, cur_.ampOn).totalDb;
                 if (snapped > lastQ + 0.4) { queue_.push_back({snapped, l.pol}); lastQ = snapped; }
@@ -901,7 +913,7 @@ bool AutoGainController::tickBracket(const AgInput& in, AgCommand& out) {
     // a gain that would (1 dB per dB from the last one measured) leave less than the mode's headroom is not worth a clip: the search ends below it
     if (!queue_.empty() && ti_ >= 0) {
         const AgTrial& l = trials_[(size_t)ti_];
-        const double floorHead = std::max(1.0, headroomTarget() - tgt_.windowDb - 3.0);
+        const double floorHead = std::max(1.0, bracketHead() - tgt_.windowDb - 3.0);
         queue_.erase(std::remove_if(queue_.begin(), queue_.end(), [&](const std::pair<double, Policy>& q) {
             return q.second == l.pol && l.headroomMin - (q.first - l.plan.totalDb) < floorHead && q.first > l.plan.totalDb; }), queue_.end());
     }
@@ -914,7 +926,7 @@ bool AutoGainController::tickBracket(const AgInput& in, AgCommand& out) {
     Metric used;
     // Auto keeps the mode's headroom (within its dead band) wherever it can: raw SNR with the ADC near full scale is not the aim
     // and does not buy gain that only costs headroom (the floor already far above the ADC's own noise: the loop would take it down again)
-    const double minHead = std::max(0.5, headroomTarget() - tgt_.windowDb - 1.0);   // a dB of allowance for the short measurement
+    const double minHead = set_.v2 ? std::max(0.5, tgt_.minHeadroomDb - 1.0) : std::max(0.5, headroomTarget() - tgt_.windowDb - 1.0);   // a dB of allowance for the short measurement
     int b = chooseTrial(used, minHead, tgt_.marginGoalDb + 15);
     double wastedTo = -1;   // every gain tried was already "wasted": the floor sits that far above the ADC's own noise at the lowest one: go down by the excess
     if (b < 0 || used == Metric::Auto) {
@@ -931,6 +943,15 @@ bool AutoGainController::tickBracket(const AgInput& in, AgCommand& out) {
         }
     }
     if (b < 0 || used == Metric::Auto) b = chooseTrial(used);
+    // a search must never end on a gain that clipped hard: the highest clean one instead (v2)
+    if (set_.v2 && b >= 0 && trials_[(size_t)b].clipMax > tgt_.clipLimit * 3) {
+        int alt = -1;
+        for (size_t i = 0; i < trials_.size(); i++) if (trials_[i].done && trials_[i].clipMax <= tgt_.clipLimit * 3 && (alt < 0 || trials_[i].plan.totalDb > trials_[(size_t)alt].plan.totalDb)) alt = (int)i;
+        if (alt < 0) {   // every gain tried clipped: the lowest of them, and the loop goes on from there
+            for (size_t i = 0; i < trials_.size(); i++) if (trials_[i].done && (alt < 0 || trials_[i].plan.totalDb < trials_[(size_t)alt].plan.totalDb)) alt = (int)i;
+        }
+        b = alt;
+    }
     br_ = 0;
     phase_ = Phase::Tracking;
     bracketDone_ = true;
