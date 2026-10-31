@@ -86,7 +86,7 @@ void card(const App& a, const ModeDef& m, const ModeFit& fit, float conf, bool d
     ImGui::PushTextWrapPos(380 * gUi);
     ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(kGroupCols[m.group]), "%s", m.name);
     ImGui::SameLine(); ImGui::TextDisabled("%s", tr(kGroupNames[m.group]));
-    ImGui::TextUnformatted(m.blurb);
+    ImGui::TextUnformatted(m.blurb ? m.blurb : "");
     if (const dect2::ModeTuning* t = dect2::modeTuning(m.family + 2)) {
         ImGui::Spacing();
         ImGui::TextDisabled("%s %.4g MHz   %s %.3g Msps   %s %.3g MHz", tr("Starts at"), t->defMhz, tr("Rate"), t->sampleRate / 1e6, tr("Width"), t->bandwidthMhz);
@@ -169,7 +169,7 @@ void modePicker(App& a) {
     ImGui::SetNextWindowSize(sz, ImGuiCond_Always);
     ImGui::SetNextWindowPos(full ? ImVec2(0, 0) : ImVec2(disp.x * 0.5f, disp.y * 0.5f), ImGuiCond_Always, full ? ImVec2(0, 0) : ImVec2(0.5f, 0.5f));
     bool openFlag = true;
-    if (!ImGui::BeginPopupModal(title.c_str(), &openFlag, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings)) { S.open = false; return; }
+    if (!ImGui::BeginPopupModal(title.c_str(), &openFlag, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings)) { S.open = false; return; }
     if (!openFlag) { closeIt(); ImGui::EndPopup(); return; }
     {   // a click outside the window closes it
         const ImVec2 wp = ImGui::GetWindowPos(), ws = ImGui::GetWindowSize();
@@ -185,7 +185,8 @@ void modePicker(App& a) {
         baseText.assign((size_t)kNumModes, std::string());
         for (int i = 0; i < kNumModes; i++) {
             const ModeDef& m = kModes[i];
-            baseText[i] = lower(std::string(m.name) + " " + m.sub + " " + tr(m.sub) + " " + m.blurb + " " + (m.keys ? m.keys : "") + " " + kGroupNames[m.group]);
+            auto z = [](const char* t) { return std::string(t ? t : ""); };
+            baseText[i] = lower(z(m.name) + " " + z(m.sub) + " " + (m.sub ? z(tr(m.sub)) : std::string()) + " " + z(m.blurb) + " " + z(m.keys) + " " + z(kGroupNames[m.group]) + " " + squash(z(m.name) + z(m.sub)));   // "adsb" finds "ADS-B"
         }
         baseN = kNumModes;
     }
@@ -232,7 +233,7 @@ void modePicker(App& a) {
         for (int t = 0; t < kNumTags; t++) {
             const char* nm = tr(tagName(t));
             const float w = ImGui::CalcTextSize(nm).x + 16 * gUi;
-            if (t && ImGui::GetCursorScreenPos().x + w + 4 * gUi < right) ImGui::SameLine(0, 4 * gUi);
+            if (t && ImGui::GetItemRectMax().x + 4 * gUi + w < right) ImGui::SameLine(0, 4 * gUi);   // else the chip starts a new row
             const bool on = (S.tags >> t) & 1;
             const bool dim = !on && countWithTag(items, q, t) == 0;
             ImGui::PushStyleVar(ImGuiStyleVar_Alpha, dim ? 0.4f : 1.f);
@@ -259,7 +260,7 @@ void modePicker(App& a) {
     int total = 0;
     for (int c : groupCount) total += c;
     if (rail) {
-        ImGui::BeginChild("##mprail", ImVec2(200 * gUi, bodyH), ImGuiChildFlags_Borders);
+        ImGui::BeginChild("##mprail", ImVec2(250 * gUi, bodyH), ImGuiChildFlags_Borders);
         char lbl[96];
         snprintf(lbl, sizeof lbl, "%s (%d)##railall", tr("All modes"), total);
         if (ImGui::Selectable(lbl, S.group < 0)) { S.group = -1; S.scroll = 0; }
@@ -348,7 +349,7 @@ void modePicker(App& a) {
     if (S.scroll > 0 && ImGui::GetScrollY() == 0 && ImGui::IsWindowAppearing()) ImGui::SetScrollY(S.scroll);
     const bool touch = a.touchUi;
     const float gap = (touch ? 12.f : 8.f) * gUi;
-    const float tileH = std::max(touch ? 88.f : 62.f, 62.f) * gUi;
+    const float tileH = (touch ? 92.f : 74.f) * gUi;   // the name and two lines of subtitle
     const Cols cols = columns(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ScrollbarSize, gap, 150 * gUi, 220 * gUi);
     S.lastCols = cols.n;
     ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -390,7 +391,6 @@ void modePicker(App& a) {
             dl->PushClipRect(p, ImVec2(p.x + size.x, p.y + size.y), true);
             const std::string nm = trimTo(m.name, tw - (it.active ? 16 * gUi : 0));
             dl->AddText(ImVec2(tx, p.y + 6 * gUi), ImGui::ColorConvertFloat4ToU32(tc), nm.c_str());
-            dl->AddText(ImVec2(tx + 0.6f, p.y + 6 * gUi), ImGui::ColorConvertFloat4ToU32(tc), nm.c_str());   // a little heavier than the subtitle
             const float nw = ImGui::CalcTextSize(nm.c_str()).x;
             if (it.active) {   // a check mark after the name
                 const ImVec2 c(tx + nw + 8 * gUi, p.y + 6 * gUi + ImGui::GetTextLineHeight() * 0.55f);
@@ -403,11 +403,15 @@ void modePicker(App& a) {
                 const ImU32 lc = ImGui::ColorConvertFloat4ToU32(dc);
                 dl->AddRectFilled(ImVec2(tx, ly + 5 * gUi), ImVec2(tx + 8 * gUi, ly + 11 * gUi), lc, 1.5f * gUi);
                 dl->AddRect(ImVec2(tx + 1.5f * gUi, ly + 1 * gUi), ImVec2(tx + 6.5f * gUi, ly + 6 * gUi), lc, 2 * gUi, 0, 1.2f * gUi);
-                const std::string rs = trimTo(tr(fit.reason.c_str()), tw - 12 * gUi);
-                dl->AddText(ImVec2(tx + 12 * gUi, ly), ImGui::ColorConvertFloat4ToU32(dc), rs.c_str());
-            } else {
-                const std::string sb = trimTo(tr(m.sub), tw);
-                dl->AddText(ImVec2(tx, ly), ImGui::ColorConvertFloat4ToU32(dc), sb.c_str());
+                dl->PushClipRect(ImVec2(tx + 12 * gUi, ly), ImVec2(tx + tw, ly + 2 * ImGui::GetTextLineHeight() + 1 * gUi), true);
+                dl->AddText(ImGui::GetFont(), ImGui::GetFontSize(), ImVec2(tx + 12 * gUi, ly), ImGui::ColorConvertFloat4ToU32(dc), tr(fit.reason.c_str()), nullptr, tw - 12 * gUi);
+                dl->PopClipRect();
+            } else if (m.sub && *m.sub) {   // the subtitle wraps to two lines (clipped), narrower when badges sit at the bottom right
+                const bool badges = it.hidden || (m.needs & NPlugin) || m.isNew || detected[mi] || modeCodecMissing(m);
+                const float ww = tw - (badges ? 44 * gUi : 0);
+                dl->PushClipRect(ImVec2(tx, ly), ImVec2(tx + ww, ly + 2 * ImGui::GetTextLineHeight() + 1 * gUi), true);
+                dl->AddText(ImGui::GetFont(), ImGui::GetFontSize(), ImVec2(tx, ly), ImGui::ColorConvertFloat4ToU32(dc), tr(m.sub), nullptr, ww);
+                dl->PopClipRect();
             }
             ImVec2 br(p.x + size.x - 6 * gUi, p.y + size.y - 5 * gUi);
             if (it.hidden || (q.showHidden && modeHiddenNow(a, m))) badge(dl, br, br.y, tr("hidden"), IM_COL32(170, 170, 180, 255));
@@ -449,7 +453,7 @@ void modePicker(App& a) {
     const int shownFlat = hoveredFlat >= 0 ? hoveredFlat : (S.kbd ? S.focus : -1);
     if (shownFlat >= 0 && shownFlat < (int)flat.size()) {
         const ModeDef& m = kModes[flat[shownFlat]];
-        const std::string line = std::string(m.name) + ": " + m.tip;
+        const std::string line = std::string(m.name) + ": " + (m.tip ? m.tip : "");
         ImGui::TextUnformatted(trimTo(line.c_str(), ImGui::GetContentRegionAvail().x).c_str());
     } else ImGui::TextDisabled("%d %s", (int)flat.size(), tr("modes shown"));
     ImGui::EndPopup();

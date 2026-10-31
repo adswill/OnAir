@@ -818,8 +818,9 @@ void topBar(App& a, ImVec2 disp) {
         tourMark("freq", ImVec2(o.x - 4 * gUi, o.y), ImVec2(digitsEnd, o.y + 40 * gUi));   // the lessons point at the run button and the digits
         // a narrow window: the level meter and the volume give up width (the meter goes last), then the summary is cut short
         const float sumX = digitsEnd + 34 * gUi;
+        const float modesW = ImGui::CalcTextSize(tr("Modes")).x + 2 * ImGui::GetStyle().FramePadding.x + 12 * gUi;   // the Mode Browser button, left of the mode name
         float vw = 230 * gUi, mw = 260 * gUi;
-        const float spare = o.x + W - sumX - summaryWidth(a) - 40 * gUi;
+        const float spare = o.x + W - sumX - modesW - summaryWidth(a) - 40 * gUi;
         if (spare < vw + mw) {
             const float k = std::max(0.f, spare) / (vw + mw);
             vw = std::max(150.f * gUi, vw * k); mw = std::max(130.f * gUi, mw * k);
@@ -835,7 +836,9 @@ void topBar(App& a, ImVec2 disp) {
             if (mw > 0) sd->AddLine(ImVec2(meterX - 9 * gUi, y0), ImVec2(meterX - 9 * gUi, y1), sc);
             sd->AddLine(ImVec2(o.x + W - vw - 4 * gUi, y0), ImVec2(o.x + W - vw - 4 * gUi, y1), sc);
         }
-        summary(a, sumX, o.y + 6 * gUi, 1.f, (mw > 0 ? meterX : o.x + W - vw) - 16 * gUi - sumX);
+        ImGui::SetCursorScreenPos(ImVec2(sumX, o.y + 8 * gUi));
+        modePickerButton(a, "##modes_top");
+        summary(a, sumX + modesW, o.y + 6 * gUi, 1.f, (mw > 0 ? meterX : o.x + W - vw) - 16 * gUi - sumX - modesW);
         if (mw > 0) levelMeter(a, meterX, o.y, mw);
         ImGui::SetCursorScreenPos(ImVec2(o.x + W - vw + 4 * gUi, o.y + 8 * gUi));
         volumeControl(a, vw);

@@ -30,6 +30,7 @@ int main() {
     q = Query(); q.tab = TabFav; check(filter(v, q).size() == 1 && v[filter(v, q)[0]].name == "FT8", "favourites tab");
     q = Query(); q.group = 1; check(filter(v, q).size() == 2, "rail group");
     check(countWithTag(v, Query(), 1) == 1 && countWithTag(v, Query(), 3) == 1, "chip counts");
+    {   Item e = mk("ADS-B", 2, "aircraft"); e.text += " " + squash("ADS-B"); check(textMatches(e.text, "adsb") && textMatches(e.text, "ads-b"), "adsb finds ADS-B"); }
     // recent
     std::vector<std::string> r;
     for (int i = 0; i < 15; i++) recentPush(r, "m" + std::to_string(i));

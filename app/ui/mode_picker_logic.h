@@ -71,6 +71,8 @@ struct Item {
     bool active = false, hidden = false, fav = false, fits = true;
 };
 inline std::string lower(std::string s) { for (char& c : s) c = (char)std::tolower((unsigned char)c); return s; }
+// letters and digits only, lower case: "ADS-B" -> "adsb" (the search text carries this too, so "adsb" finds "ADS-B")
+inline std::string squash(const std::string& s) { std::string o; for (char c : s) if (std::isalnum((unsigned char)c)) o += (char)std::tolower((unsigned char)c); return o; }
 // the one matcher of the browser, shared with the lists: every word of the query must occur in the text
 inline bool textMatches(const std::string& lowerText, const std::string& query) {
     size_t b = 0;
