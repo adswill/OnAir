@@ -131,6 +131,10 @@ void ConversationBook::ignoreHz(double hz, bool on) {
     ignore_.erase(std::remove_if(ignore_.begin(), ignore_.end(), [&](double f) { return std::fabs(f - hz) <= o_.freqTolHz; }), ignore_.end());
     if (on) ignore_.push_back(hz);
 }
+void ConversationBook::favoriteHz(double hz, bool on) {
+    fav_.erase(std::remove_if(fav_.begin(), fav_.end(), [&](double f) { return std::fabs(f - hz) <= o_.freqTolHz; }), fav_.end());
+    if (on) fav_.push_back(hz);
+}
 void ConversationBook::setFavorite(uint32_t id, bool on) {
     for (Conversation& c : conv_) if (c.id == id) {
         c.favorite = on;

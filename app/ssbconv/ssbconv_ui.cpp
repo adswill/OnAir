@@ -138,6 +138,14 @@ void ensureStarted() {
         S.scanner.setOptions(so);
     }
     S.clipDir = plat::dataDir() + "/ssb-conversations";
+    {   // the stars and the ignored frequencies of the last run, and the settings
+        auto lst = [](const std::string& t) { std::vector<double> v; size_t i = 0; while (i < t.size()) { size_t j = t.find(',', i); if (j == std::string::npos) j = t.size(); if (j > i) v.push_back(atof(t.substr(i, j - i).c_str())); i = j + 1; } return v; };
+        std::lock_guard<std::mutex> lk(S.mu);
+        for (double f : lst(plat::prefs().getS("ssbFav", ""))) S.book.favoriteHz(f, true);
+        for (double f : lst(plat::prefs().getS("ssbIgnore", ""))) S.book.ignoreHz(f, true);
+        S.gapSec = (float)plat::prefs().getD("ssbGap", 30); S.overGap = (float)plat::prefs().getD("ssbOverGap", 2); S.tolHz = (float)plat::prefs().getD("ssbTol", 100);
+        S.autoRecord = plat::prefs().getD("ssbAutoRec", 0) != 0;
+    }
     S.rec.reset(new sc::ClipRecorder(S.clipDir));
     S.worker = std::thread(workerLoop);
     S.worker.detach();
@@ -153,6 +161,13 @@ void tapFn(const std::complex<float>* x, size_t n, double rate) {
     S.qSamples += n;
     S.q.push_back(std::move(b));
     S.qcv.notify_one();
+}
+
+void saveLists() {
+    std::string f, g;
+    { std::lock_guard<std::mutex> lk(S.mu); char b[40]; for (double x : S.book.favorites()) { snprintf(b, sizeof b, "%.0f,", x); f += b; } for (double x : S.book.ignored()) { snprintf(b, sizeof b, "%.0f,", x); g += b; } }
+    plat::prefs().setS("ssbFav", f); plat::prefs().setS("ssbIgnore", g);
+    plat::prefs().setD("ssbGap", S.gapSec); plat::prefs().setD("ssbOverGap", S.overGap); plat::prefs().setD("ssbTol", S.tolHz); plat::prefs().setD("ssbAutoRec", S.autoRecord ? 1 : 0);
 }
 
 void applyOptions() {
@@ -303,7 +318,7 @@ void listTab(App& a, double now) {
         ImGui::PushID((int)c.id);
         const bool live = c.active && !c.ended;
         ImGui::TableNextColumn();
-        if (ImGui::SmallButton(c.favorite ? "*" : "-")) { std::lock_guard<std::mutex> lk(S.mu); S.book.setFavorite(c.id, !c.favorite); }
+        if (ImGui::SmallButton(c.favorite ? "*" : "-")) { { std::lock_guard<std::mutex> lk(S.mu); S.book.setFavorite(c.id, !c.favorite); } saveLists(); }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Favourite: starred conversations are preferred by auto-listen"));
         ImGui::TableNextColumn();
         if (live) ImGui::TextColored(colGood(), "%s", tr("ACTIVE now"));
@@ -337,7 +352,7 @@ void listTab(App& a, double now) {
         if (ImGui::SmallButton(c.recording ? tr("Rec on") : tr("Rec"))) { std::lock_guard<std::mutex> lk(S.mu); S.book.setRecording(c.id, !c.recording); if (c.recording && S.rec) S.rec->finish(c, now); }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Record this conversation's audio to a WAV file with a JSON note in the data folder (off by default)"));
         ImGui::SameLine();
-        if (ImGui::SmallButton(c.muted ? tr("Unmute") : tr("Ignore"))) { std::lock_guard<std::mutex> lk(S.mu); S.book.setMuted(c.id, !c.muted); }
+        if (ImGui::SmallButton(c.muted ? tr("Unmute") : tr("Ignore"))) { { std::lock_guard<std::mutex> lk(S.mu); S.book.setMuted(c.id, !c.muted); } saveLists(); }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Ignore this frequency: later activity within the tolerance is not listed"));
         ImGui::PopID();
     }
@@ -395,9 +410,9 @@ void settingsTab(App& a) {
     if (ImGui::SliderFloat(tr("A new over starts after a pause of (s)"), &S.overGap, 0.5f, 6, "%.1f")) dirty = true;
     ImGui::SetNextItemWidth(160 * gUi);
     if (ImGui::SliderFloat(tr("Same frequency within (Hz)"), &S.tolHz, 30, 300, "%.0f")) dirty = true;
-    if (dirty) applyOptions();
+    if (dirty) { applyOptions(); saveLists(); }
     ImGui::Separator();
-    if (ImGui::Checkbox(tr("Record every new conversation automatically"), &S.autoRecord)) {}
+    if (ImGui::Checkbox(tr("Record every new conversation automatically"), &S.autoRecord)) saveLists();
     ImGui::TextDisabled("%s", (std::string(tr("Clips go to ")) + S.clipDir).c_str());
     ImGui::Separator();
     if (ImGui::Checkbox(tr("Scan bands (a radio that sees only a few kHz: step through the HF bands)"), &S.sweepOn)) S.sweep.reset();

@@ -229,6 +229,9 @@ public:
     bool isIgnoredHz(double hz) const;
     void ignoreHz(double hz, bool on);
     bool isFavoriteHz(double hz) const;
+    void favoriteHz(double hz, bool on);                  // the same by frequency (restoring the saved stars)
+    const std::vector<double>& favorites() const { return fav_; }
+    const std::vector<double>& ignored() const { return ignore_; }
     void addClue(uint32_t id, const std::string& text);   // text from the transcription (hook): callsigns in it are added
 
     // the best conversation to listen to: active now first, favourites, strength; `exclude` are skipped (the user pressed Skip)

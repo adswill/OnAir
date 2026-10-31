@@ -12,6 +12,7 @@ Finds single-sideband voice (USB and LSB) on the captured span by itself and org
 - **Rec** per conversation (WAV plus a JSON note in `<data folder>/ssb-conversations`), "Record every new conversation" in Settings; both off by default. **Ignore** a frequency, star a favourite.
 - Timeline tab: one row per frequency, a bar for every stretch of voice over the last 15 minutes to 24 hours. Settings tab: gap that ends a conversation (default 30 s), pause that starts a new over (2 s), same-frequency tolerance (+-100 Hz), export CSV / JSON, band scanner for narrow radios.
 - Demo button: the same panel on synthetic signals (nothing is received); `--ssb-conversations demo` opens it at start (screenshots).
+- The stars, the ignored frequencies and the settings are kept between runs; the list of conversations is not (export it to keep it).
 - Events for Automations / Integrations / Watchlists: `signal.ssb_conversation_new` and `signal.ssb_conversation_ended` (fields id, freq_hz, sideband, band, service, overs, speakers, snr_db, kind, talk_s).
 
 ## How it finds them (core/src/ssbconv)
