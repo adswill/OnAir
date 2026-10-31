@@ -36,6 +36,7 @@ AudioCleanupSettings loadProfile(int p) {
     auto& pr = plat::prefs();
     s.master = pr.getB(key(p, "on").c_str(), d.master);
     s.nr = pr.getB(key(p, "nr").c_str(), d.nr); s.nrStrength = (float)pr.getD(key(p, "nrs").c_str(), d.nrStrength);
+    s.neural = pr.getB(key(p, "nn").c_str(), d.neural); s.neuralStrength = (float)pr.getD(key(p, "nns").c_str(), d.neuralStrength);
     s.autoNotch = pr.getB(key(p, "an").c_str(), d.autoNotch);
     s.notch = pr.getB(key(p, "mn").c_str(), d.notch); s.notchHz = (float)pr.getD(key(p, "mnf").c_str(), d.notchHz); s.notchWidth = (float)pr.getD(key(p, "mnw").c_str(), d.notchWidth);
     s.level = pr.getB(key(p, "lv").c_str(), d.level); s.levelTargetDb = (float)pr.getD(key(p, "lvt").c_str(), d.levelTargetDb);
@@ -51,6 +52,7 @@ void saveProfile(int p) {
     auto& pr = plat::prefs();
     pr.setB(key(p, "on").c_str(), s.master);
     pr.setB(key(p, "nr").c_str(), s.nr); pr.setD(key(p, "nrs").c_str(), s.nrStrength);
+    pr.setB(key(p, "nn").c_str(), s.neural); pr.setD(key(p, "nns").c_str(), s.neuralStrength);
     pr.setB(key(p, "an").c_str(), s.autoNotch);
     pr.setB(key(p, "mn").c_str(), s.notch); pr.setD(key(p, "mnf").c_str(), s.notchHz); pr.setD(key(p, "mnw").c_str(), s.notchWidth);
     pr.setB(key(p, "lv").c_str(), s.level); pr.setD(key(p, "lvt").c_str(), s.levelTargetDb); pr.setD(key(p, "lva").c_str(), s.levelAmount); pr.setB(key(p, "lvh").c_str(), s.levelHold);
@@ -166,8 +168,14 @@ bool audioCleanupButton(App& a) {
             ImGui::EndDisabled();
             std::string on;
             auto add = [&](bool f, const char* t) { if (f) { if (!on.empty()) on += ", "; on += tr(t); } };
-            add(s.nr, N_("noise reduction")); add(s.autoNotch, N_("auto notch")); add(s.level, N_("leveller")); add(s.gate, N_("silence gate")); add(s.voice, N_("voice emphasis"));
+            add(s.nr, N_("noise reduction")); add(s.autoNotch, N_("auto notch")); add(s.level, N_("leveller")); add(s.gate, N_("silence gate")); add(s.voice, N_("voice emphasis")); add(s.neural, N_("voice noise remover"));
             ImGui::TextDisabled("%s", on.empty() ? tr("Nothing is on for this kind of mode. See Advanced.") : on.c_str());
+            // one click for speech modes (analog and digital voice): the neural noise remover; music and data modes do not get the button
+            if (cur == (int)AudioProfile::NFM || cur == (int)AudioProfile::AM || cur == (int)AudioProfile::SSB || cur == (int)AudioProfile::DigitalVoice || cur == (int)AudioProfile::Generic) {
+                ImGui::BeginDisabled(!s.master);
+                c |= sw(tr("Voice noise remover (neural)"), s.neural, tr("Removes steady background noise from speech with a small neural network (RNNoise). For voice only: it treats music and data tones as noise. Adds about 20 ms of delay."));
+                ImGui::EndDisabled();
+            }
         } else {
             ImGui::BeginDisabled(!s.master);
             // 1. noise reduction
@@ -178,6 +186,13 @@ bool audioCleanupButton(App& a) {
                 if (slider("##acnrs", st, 0, 100, "%.0f %%")) { s.nrStrength = st / 100.f; c = true; }
                 const float nd = AudioCleanupConfig::global().statNrDb.load();
                 if (s.master && nd < -0.5f) { ImGui::SameLine(0, 8 * gUi); ImGui::TextDisabled("%.0f dB", nd); }
+            }
+            // 1b. neural voice noise remover (RNNoise): every mode's audio goes through the same chain, so this covers every voice mode
+            c |= sw(tr("Voice noise remover (neural)"), s.neural, tr("Removes steady background noise from speech with a small neural network (RNNoise). For voice only: it treats music and data tones as noise, so leave it off for those. Adds about 20 ms of delay."));
+            if (s.neural) {
+                ImGui::SameLine(0, 10 * gUi);
+                float st = s.neuralStrength * 100.f;
+                if (slider("##acnns", st, 0, 100, "%.0f %%")) { s.neuralStrength = st / 100.f; c = true; }
             }
             // 2. notches
             c |= sw(tr("Auto notch"), s.autoNotch, tr("Finds a steady whistle, carrier or heterodyne in the sound and cuts it out narrowly, following it as it drifts. Lets go again when it stops."));

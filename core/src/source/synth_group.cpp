@@ -1,4 +1,5 @@
 #include "dect2/source/synth_group.h"
+#include "dect2/source/diversity_source.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -92,6 +93,7 @@ std::string synthGroupsToString(const std::vector<SynthGroupDef>& v) {
             if (i) o += "|";
             o += esc(g.members[i].board) + "," + esc(g.members[i].serial) + "," + esc(g.members[i].name);
         }
+        if (g.diversity) o += ";d" + std::to_string(g.diversityMode);   // optional 6th field, absent in groups saved before diversity pairs existed
         o += "\n";
     }
     return o;
@@ -111,6 +113,8 @@ std::vector<SynthGroupDef> synthGroupsFromString(const std::string& s) {
                 if (mf.size() != 3) continue;
                 g.members.push_back({unesc(mf[0]), unesc(mf[1]), unesc(mf[2])});
             }
+        if (f.size() >= 6 && f[5].size() >= 2 && f[5][0] == 'd') { g.diversity = true; g.diversityMode = atoi(f[5].c_str() + 1) == 0 ? 0 : 1; }
+        if (g.diversity) { if (g.members.size() == 2) v.push_back(g); continue; }
         if (g.members.size() >= 2 && g.members.size() <= (size_t)synthwide::kSynthMaxSlices && g.spanHz > 0) v.push_back(g);
     }
     return v;
@@ -154,6 +158,30 @@ std::vector<DeviceInfo> synthGroupDevices(const std::vector<DeviceInfo>& found) 
         gFound[g.name] = mem;
         DeviceInfo d;
         d.kind = DeviceInfo::Group;
+        if (g.diversity) {   // two radios on one frequency: the list entry runs at the members' common rate (diversity_source.h)
+            if (mem.size() != 2) continue;
+            const double fs = groupChildRate(mem, g.childRateHz);
+            if (!(fs > 0)) continue;
+            d.board = "diversitygroup";
+            d.serial = "group:" + g.name;
+            d.nativeArgs = g.name;
+            d.name = "Diversity: " + g.name + " (2 radios)";
+            double lo = 0;
+            for (const auto& m : mem) lo = std::max(lo, m.minRateHz);
+            if (lo <= 0) lo = 225e3;
+            d.minRateHz = std::min(lo, fs); d.maxRateHz = fs;   // any rate both radios reach: the mode asks for its own
+            d.rateRanges = {{d.minRateHz, d.maxRateHz}};
+            d.gainMinDb = 1e9; d.gainMaxDb = -1e9;
+            for (const auto& m : mem) {
+                d.gainMinDb = std::min(d.gainMinDb, m.gainMinDb); d.gainMaxDb = std::max(d.gainMaxDb, m.gainMaxDb);
+                d.minFreqHz = std::max(d.minFreqHz, m.minFreqHz);
+                d.maxFreqHz = d.maxFreqHz == 0 ? m.maxFreqHz : m.maxFreqHz == 0 ? d.maxFreqHz : std::min(d.maxFreqHz, m.maxFreqHz);
+            }
+            if (d.gainMinDb > d.gainMaxDb) d.gainMinDb = d.gainMaxDb = 0;
+            d.settings.push_back(ppmSetting(1.0));
+            out.push_back(d);
+            continue;
+        }
         d.board = "synthgroup";
         d.serial = "group:" + g.name;
         d.nativeArgs = g.name;
@@ -428,6 +456,7 @@ std::unique_ptr<IqSource> makeSynthGroupSource(const DeviceInfo& d) {
     if (!have) return nullptr;
     auto mem = synthGroupMembers(d);
     if (mem.size() < 2) return nullptr;
+    if (def.diversity) return makeDiversitySource(def, mem);
     return std::make_unique<SyntheticWideSource>(def, mem);
 }
 
