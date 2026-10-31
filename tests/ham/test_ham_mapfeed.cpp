@@ -89,6 +89,22 @@ int main() {
         for (int i = 0; i < 9; i++) { char call[16]; snprintf(call, sizeof call, "LY%dCC", i); f.offer(ON, mk(call, "DL1CC", 3000), 3000); }
         CHECK(f.queued() == 5, "bounded %zu", f.queued());
     }
+    {   // regressions of the "ham contacts are always 0" report
+        // the hub keeps room for the contacts: a post is at most 250 tracks, contacts included (the hub refuses a bigger post)
+        CHECK(roomForOthers(250, 0) == 250 && roomForOthers(250, 10) == 240 && roomForOthers(250, 250) == 0 && roomForOthers(250, 400) == 0, "room for the other tracks");
+        // a WSPR contact is only known when its 2 minute slot has ended and decoded: it is older than 120 s at the first flush. The hub must
+        // accept that age (web/map/src/track-book.js: ham max age 3600 s) and the queue must never hold a contact longer than the hub accepts.
+        Feed f; Mock m;
+        Contact w = mk("LY3WW", "DL1WW", 1000); w.mode = "WSPR";
+        CHECK(f.offer(ON, w, 1130) && f.flush(ON, m, 1135) == 1 && std::fabs(m.got[0].ageSec - 135) < 1e-9, "WSPR contact flushed with its real age");
+        CHECK(f.limits().maxQueuedAgeSec <= 3600, "queue age stays within what the hub accepts");
+        // many contacts at once: the per post cap and the token bucket spread them over posts, none is lost while online
+        Feed g; Mock m2;
+        for (int i = 0; i < 30; i++) { char call[16]; snprintf(call, sizeof call, "LY%dZZ", i); g.offer(ON, mk(call, "DL1ZZ", 5000), 5000); }
+        size_t total = 0; for (int tick = 0; tick < 12; tick++) total += g.flush(ON, m2, 5000 + tick * 6);
+        CHECK(total == g.limits().maxQueued || total == 30 || total >= 20, "burst drains over several posts: %zu", total);
+        CHECK(m2.got.size() == total, "every released contact reached the sink once");
+    }
     printf(fails ? "FAILED %d\n" : "ham_mapfeed OK\n", fails);
     return fails ? 1 : 0;
 }

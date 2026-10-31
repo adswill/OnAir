@@ -794,6 +794,7 @@ void voiceToggle(App& s, bool menu) {
 
 // ---- ham contacts (own choice, off until chosen; see core/include/dect2/ham/ham_mapfeed.h) ----
 dect2::ham::mapfeed::Feed gHamFeed;
+int64_t gLastPostMs = 0;                        // when the last ingest post was started (the minimum interval between posts)
 dect2::ham::mapfeed::Switches gHamSw;          // refreshed every tick from the settings
 std::map<std::string, std::string> gHamGrids;  // callsign -> locator heard (own station included); bounded
 bool gAskHamConsent = false;
@@ -803,7 +804,6 @@ struct TickSink : dect2::ham::mapfeed::Sink {   // adds the due contacts to this
     bool post(const std::vector<dect2::ham::mapfeed::Track>& v) override {
         if (!online || !out) return false;
         for (const auto& h : v) {
-            if (out->size() >= kMaxTracks) break;
             Track t; t.kind = "ham"; t.id = h.id; t.label = h.label; t.sub = h.sub; t.src = "ham"; t.extra = h.extra;
             t.lat = h.lat; t.lon = h.lon; t.age = h.ageSec;
             out->push_back(std::move(t));
@@ -1113,20 +1113,29 @@ void mapSendTick(App& a) {
         }
     }
     if (s.mapMsgs) attachMsgs(tracks);
-    {   // ham contacts: only with the master switch, its consent and the ham choice with its own consent; queued while the link is down
+    {   // ham contacts: only with the master switch, its consent and the ham choice with its own consent; queued while the link is down.
+        // They are one-shot (unlike the tracks collected again every tick), so they leave the queue only when this tick will really post:
+        // not inside the minimum interval after the last post (they used to be taken out of the queue and then thrown away there), and
+        // with room kept for them under the hub's 250 tracks per post (the hub refuses a bigger post, and the old sink dropped them when full).
         gHamSw = {s.mapSend, s.mapConsent, s.mapHam, s.mapHamConsent};
         gHamFeed.limits().gridChars = s.mapHam6 ? 6 : 4;
-        TickSink sink; sink.out = &tracks; sink.online = (ph != kRetry);
-        gHamFeed.flush(gHamSw, sink, (double)std::time(nullptr));
+        const bool throttled = !gPingNow && !needHb && gLastPostMs != 0 && (now - gLastPostMs) < (int64_t)(kMinInterval * 1000);
+        if (!throttled) {
+            std::vector<Track> hamTracks;
+            TickSink sink; sink.out = &hamTracks; sink.online = (ph != kRetry);
+            gHamFeed.flush(gHamSw, sink, (double)std::time(nullptr));
+            const size_t room = dect2::ham::mapfeed::roomForOthers(kMaxTracks, hamTracks.size());
+            if (tracks.size() > room) tracks.resize(room);
+            for (auto& h : hamTracks) tracks.push_back(std::move(h));
+        } else if (!dect2::ham::mapfeed::allowed(gHamSw)) gHamFeed.clear();
     }
     if (s.mapVoice) attachVoice(tracks);
     tracks.erase(std::remove_if(tracks.begin(), tracks.end(), [](const Track& t) { return dect2::mapguard::idBlockedNow(t.id) || dect2::mapguard::idBlockedNow(t.label); }), tracks.end());   // never what this app transmitted in the last 24 hours
     const bool ping = gPingNow || needHb || (tracks.empty() && (ph == kConnecting || ph == kRetry));
     if (!gPingNow && !needHb && !tracks.empty()) {
-        static int64_t lastSend = 0;
-        if (lastSend != 0 && (now - lastSend) < (int64_t)(kMinInterval * 1000)) return;
-        lastSend = now;
+        if (gLastPostMs != 0 && (now - gLastPostMs) < (int64_t)(kMinInterval * 1000)) return;
     } else if (!ping) return;
+    gLastPostMs = now;
     gPingNow = false;
     startPost(originOf(s) + "/ingest", buildJson(s.mapStationId, tracks, s.mapName), (int)tracks.size());
 }
