@@ -1,21 +1,36 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#0c0b0a">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#121315">
 <title>OnAir Web</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preload" href="fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/JetBrainsMono-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <a class="skip" href="#spectrum">Skip to spectrum</a>
 
 <header class="top">
-  <div class="brand"><span class="logo" aria-hidden="true">&#9679;</span> <span id="srvName">OnAir Web</span><span id="srvWhere" class="dim"></span></div>
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="1.5" y="1.5" width="21" height="21" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5 15.5h2.5l2-8 3 11 2.5-9 1.5 6H19" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <span class="wordmark">OnAir<span class="web">Web</span></span>
+  </div>
+  <div class="rx">
+    <span id="srvName" class="rxname">OnAir Web</span><span id="srvWhere" class="rxwhere"></span>
+  </div>
   <div class="status" role="status" aria-live="polite">
-    <span id="conn" class="pill">offline</span>
-    <span id="users" class="pill dim" title="Listeners on this server">- / -</span>
+    <span id="conn" class="pill"><i class="led" aria-hidden="true"></i><span id="connText">offline</span></span>
+    <span id="users" class="pill" title="Listeners on this server"><span id="usersText">- / -</span></span>
+  </div>
+  <div class="tools">
+    <button id="themeBtn" type="button" class="icon" aria-label="Switch colour theme" title="Theme (T)">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M5.3 18.7L7 17M17 7l1.7-1.7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+    <button id="helpBtn" type="button" class="icon" aria-label="Keyboard shortcuts" title="Shortcuts (?)">?</button>
   </div>
 </header>
 
@@ -26,92 +41,157 @@
 
 <div id="banner" class="banner" role="alert" hidden></div>
 
-<form id="login" class="panel login" hidden autocomplete="off">
+<form id="login" class="card login" hidden autocomplete="off">
   <h2>Join this receiver</h2>
-  <label>Your name (shown to the host only)<input id="loginName" maxlength="32" autocomplete="nickname"></label>
+  <p class="dim">This receiver asks who is listening. Your name is shown to the host only.</p>
+  <label>Your name<input id="loginName" maxlength="32" autocomplete="nickname"></label>
   <label id="loginPwRow">Password<input id="loginPw" type="password" maxlength="128" autocomplete="current-password"></label>
   <label id="loginInvRow">Invite code<input id="loginInv" maxlength="128" autocomplete="off"></label>
   <button id="loginGo" type="submit" class="primary">Connect</button>
 </form>
 
+<div id="empty" class="empty" role="status">
+  <div class="spin" aria-hidden="true"></div>
+  <h2 id="emptyTitle">Connecting to the receiver</h2>
+  <p id="emptyText" class="dim">Opening a listening session. This takes a moment.</p>
+</div>
+
 <main id="app" class="app" hidden>
-  <section class="panel tuner" aria-label="Receiver">
-    <div class="freqrow">
-      <div id="freq" class="freq" role="spinbutton" tabindex="0" aria-label="Frequency in hertz. Arrow keys tune by the step, Page Up and Page Down by ten steps, Enter to type a frequency" aria-valuemin="0" aria-valuenow="0"></div>
-      <div class="freqtools">
-        <label class="small">Step
-          <select id="step" aria-label="Tuning step"></select>
-        </label>
-        <button id="freqType" type="button" title="Type a frequency">Type</button>
+  <section class="console" aria-label="Receiver controls">
+    <div class="mod tune">
+      <h2 class="lbl">Tuning</h2>
+      <div class="freqrow">
+        <div id="freq" class="freq" role="spinbutton" tabindex="0" aria-label="Frequency in hertz. Arrow keys tune by the step, Page Up and Page Down by ten steps, Enter to type a frequency" aria-valuemin="0" aria-valuenow="0"></div>
+        <span class="unit">Hz</span>
+      </div>
+      <div class="subrow">
+        <div class="modes" id="modes" role="radiogroup" aria-label="Mode"></div>
+        <div class="tuneopts">
+          <label class="inl">Step <select id="step" aria-label="Tuning step"></select></label>
+          <button id="freqType" type="button" title="Type a frequency (Enter on the readout)">Enter</button>
+        </div>
       </div>
     </div>
 
-    <div class="row">
-      <div class="modes" id="modes" role="radiogroup" aria-label="Mode"></div>
-      <label class="slider bw">Bandwidth <output id="bwOut" class="mono">-</output>
-        <input id="bw" type="range" min="0" max="100" step="1" aria-label="Bandwidth">
-      </label>
-    </div>
-
-    <div class="row meters">
+    <div class="mod sig">
+      <h2 class="lbl">Signal</h2>
       <div class="smeter" aria-label="Signal strength">
-        <div class="sbar" role="meter" id="sbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Signal level"><i id="sfill"></i><b id="speak"></b></div>
-        <div class="sticks" aria-hidden="true"><span>1</span><span>3</span><span>5</span><span>7</span><span>9</span><span>+20</span><span>+40</span></div>
-        <div class="sread"><span id="stext" class="mono">S0</span> <span id="sdb" class="mono dim">-- dBFS</span></div>
+        <div class="sread"><span id="stext" class="mono big">S0</span><span id="sdb" class="mono dim">-- dBFS</span></div>
+        <div class="sbar" role="meter" id="sbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Signal level"><i id="sfill"></i><b id="speak"></b><u id="sqmark" hidden></u></div>
+        <div class="sticks" aria-hidden="true"><span>1</span><span>3</span><span>5</span><span>7</span><span>9</span><span>+20</span><span>+40</span><span>+60</span></div>
       </div>
-      <label class="slider">Squelch <output id="sqOut" class="mono">open</output>
-        <input id="sq" type="range" min="-150" max="-20" step="1" value="-150" aria-label="Squelch">
-      </label>
-      <label class="slider">Volume <output id="volOut" class="mono">70</output>
+      <div class="sliders">
+        <label class="slider">Bandwidth <output id="bwOut" class="mono">-</output>
+          <input id="bw" type="range" min="0" max="100" step="1" aria-label="Bandwidth">
+        </label>
+        <label class="slider">Squelch <output id="sqOut" class="mono">open</output>
+          <input id="sq" type="range" min="-150" max="-20" step="1" value="-150" aria-label="Squelch">
+        </label>
+      </div>
+    </div>
+
+    <div class="mod aud">
+      <h2 class="lbl">Audio</h2>
+      <div class="audrow">
+        <button id="audioBtn" type="button" class="primary listen" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path id="audioIcon" d="M7 5l12 7-12 7z" fill="currentColor"/></svg><span id="audioLbl">Listen</span></button>
+        <button id="muteBtn" type="button" class="icon wide" aria-pressed="false" title="Mute (M)">Mute</button>
+        <button id="recBtn" type="button" class="icon wide" aria-pressed="false" title="Record a clip of what you hear (R)"><i class="recdot" aria-hidden="true"></i><span id="recLbl">Rec</span></button>
+        <button id="panelsBtn" type="button" class="icon wide only-m" aria-expanded="false" aria-controls="side">Panels</button>
+      </div>
+      <label class="slider vol">Volume <output id="volOut" class="mono">70</output>
         <input id="vol" type="range" min="0" max="100" step="1" value="70" aria-label="Volume">
       </label>
-      <button id="audioBtn" type="button" class="primary" aria-pressed="false">Listen</button>
-      <button id="muteBtn" type="button" aria-pressed="false" title="Mute (M)">Mute</button>
+      <div class="lvl"><div class="lvlbar" id="outLevel" role="meter" aria-label="Audio output level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="outFill"></i></div><span id="bufText" class="mono dim" title="Audio buffered in this browser">buf --</span></div>
     </div>
   </section>
 
-  <section class="panel scope" aria-label="Spectrum and waterfall">
+  <section class="scope" aria-label="Spectrum and waterfall">
     <div class="scopebar">
-      <button id="zoomOut" type="button" aria-label="Zoom out" title="Zoom out (-)">&minus;</button>
-      <button id="zoomIn" type="button" aria-label="Zoom in" title="Zoom in (+)">+</button>
-      <button id="zoomFull" type="button" title="Show the whole capture">Full</button>
-      <button id="zoomSig" type="button" title="Zoom around the tuned frequency">Around</button>
-      <select id="palette" aria-label="Waterfall colours"></select>
-      <label class="small">Range <input id="range" type="range" min="20" max="120" step="1" value="70" aria-label="Spectrum range in dB"></label>
-      <label class="small">Floor <input id="floorAdj" type="range" min="-30" max="30" step="1" value="0" aria-label="Spectrum floor offset in dB"></label>
-      <span id="viewText" class="dim mono"></span>
+      <div class="grp">
+        <button id="zoomOut" type="button" class="icon" aria-label="Zoom out" title="Zoom out (-)">&minus;</button>
+        <button id="zoomIn" type="button" class="icon" aria-label="Zoom in" title="Zoom in (+)">+</button>
+        <button id="zoomFull" type="button" title="Show the whole capture (0)">Full</button>
+        <button id="zoomSig" type="button" title="Zoom around the tuned frequency">Around</button>
+      </div>
+      <div class="grp">
+        <label class="inl">Colours <select id="palette" aria-label="Waterfall colours"></select></label>
+        <label class="inl">Range <input id="range" type="range" min="20" max="120" step="1" value="70" aria-label="Spectrum range in dB"></label>
+        <label class="inl">Floor <input id="floorAdj" type="range" min="-30" max="30" step="1" value="0" aria-label="Spectrum floor offset in dB"></label>
+      </div>
+      <span id="viewText" class="mono dim"></span>
     </div>
     <div id="rangeInfo" class="rangeinfo" role="note" hidden></div>
-    <div id="spectrum" class="canvaswrap" tabindex="0" role="application" aria-label="Spectrum. Click to tune, drag to pan, scroll or pinch to zoom, arrow keys to tune">
+    <div id="spectrum" class="canvaswrap spec" tabindex="0" role="application" aria-label="Spectrum. Click to tune, drag to pan, scroll or pinch to zoom, arrow keys to tune">
       <canvas id="spec"></canvas>
+      <div id="tip" class="tip mono" hidden></div>
     </div>
     <div class="canvaswrap wf">
       <canvas id="wf" aria-label="Waterfall. Click to tune, drag to pan"></canvas>
     </div>
   </section>
 
-  <section class="panel side" aria-label="Bands and bookmarks">
+  <aside class="side card" id="side" aria-label="Bands, memories and decoders">
+    <button id="sheetGrip" type="button" class="grip" aria-expanded="false" aria-controls="side"><span class="bar" aria-hidden="true"></span><span class="vh">Hide panels</span></button>
     <div class="tabs" role="tablist">
       <button type="button" role="tab" aria-selected="true" data-tab="bands" id="tabBands">Bands</button>
-      <button type="button" role="tab" aria-selected="false" data-tab="marks" id="tabMarks">Bookmarks</button>
+      <button type="button" role="tab" aria-selected="false" data-tab="marks" id="tabMarks">Memories</button>
       <button type="button" role="tab" aria-selected="false" data-tab="dec" id="tabDec">Decoders</button>
     </div>
-    <div id="paneBands" role="tabpanel" aria-labelledby="tabBands"><div id="bandList" class="chips"></div></div>
-    <div id="paneMarks" role="tabpanel" aria-labelledby="tabMarks" hidden>
-      <div class="markadd">
-        <input id="markName" maxlength="40" placeholder="Name" aria-label="Bookmark name">
-        <button id="markAdd" type="button">Save current</button>
+    <div class="panes">
+      <div id="paneBands" role="tabpanel" aria-labelledby="tabBands"><div id="bandList" class="bandlist"></div></div>
+      <div id="paneMarks" role="tabpanel" aria-labelledby="tabMarks" hidden>
+        <div class="markadd">
+          <input id="markName" maxlength="40" placeholder="Name this frequency" aria-label="Memory name">
+          <button id="markAdd" type="button">Save</button>
+        </div>
+        <ul id="markList" class="marks"></ul>
       </div>
-      <ul id="markList" class="marks"></ul>
+      <div id="paneDec" role="tabpanel" aria-labelledby="tabDec" hidden>
+        <div id="decList" class="chips"></div>
+        <div id="decTabs" class="dtabs" role="tablist" aria-label="Running decoders" hidden></div>
+        <div id="decOut" class="decout" aria-live="off"></div>
+      </div>
     </div>
-    <div id="paneDec" role="tabpanel" aria-labelledby="tabDec" hidden>
-      <div id="decList" class="chips"></div>
-      <div id="decOut" class="decout" aria-live="off"></div>
-    </div>
-  </section>
+  </aside>
 </main>
 
-<footer class="foot dim">OnAir Web. Receive only: there is no transmit control. <span id="footInfo"></span></footer>
+<footer class="foot">
+  <span id="legal" class="dim">OnAir Web. Receive only: there is no transmit control.</span>
+  <span id="footInfo" class="dim"></span>
+  <span id="cursor" class="mono dim" aria-hidden="true"></span>
+</footer>
+
+<dialog id="typeDlg" aria-labelledby="typeH">
+  <form method="dialog" id="typeForm">
+    <h2 id="typeH">Tune to a frequency</h2>
+    <label class="dim small" for="typeIn">MHz, or add kHz / Hz. Examples: 145.5, 7074 kHz, 121.5 MHz</label>
+    <input id="typeIn" class="mono" inputmode="decimal" autocomplete="off" spellcheck="false" style="margin-top:6px">
+    <p id="typeMsg" class="small" style="color:var(--bad);min-height:1.4em;margin:6px 0 0" role="alert"></p>
+    <div class="row"><button type="button" id="typeCancel">Cancel</button>&nbsp;<button value="ok" class="primary">Tune</button></div>
+  </form>
+</dialog>
+
+<dialog id="help" aria-labelledby="helpH">
+  <form method="dialog">
+    <h2 id="helpH">Keyboard shortcuts</h2>
+    <dl class="keys">
+      <dt><kbd>Space</kbd></dt><dd>Start or stop listening</dd>
+      <dt><kbd>M</kbd></dt><dd>Mute</dd>
+      <dt><kbd>&larr;</kbd> <kbd>&rarr;</kbd></dt><dd>Tune by one step (<kbd>Shift</kbd> for ten)</dd>
+      <dt><kbd>PgUp</kbd> <kbd>PgDn</kbd></dt><dd>Tune by ten steps</dd>
+      <dt><kbd>[</kbd> <kbd>]</kbd></dt><dd>Smaller or larger step</dd>
+      <dt><kbd>1</kbd>&ndash;<kbd>6</kbd></dt><dd>Choose a mode</dd>
+      <dt><kbd>+</kbd> <kbd>&minus;</kbd> <kbd>0</kbd></dt><dd>Zoom in, zoom out, whole capture</dd>
+      <dt><kbd>F</kbd> or <kbd>Enter</kbd></dt><dd>Type a frequency</dd>
+      <dt><kbd>B</kbd></dt><dd>Save the frequency as a memory</dd>
+      <dt><kbd>R</kbd></dt><dd>Record or stop a clip</dd>
+      <dt><kbd>T</kbd></dt><dd>Light or dark theme</dd>
+      <dt><kbd>?</kbd></dt><dd>This list</dd>
+    </dl>
+    <p class="dim small">On the frequency readout: click the upper or lower half of a digit, or scroll over it, to tune by that digit. On the spectrum: click to tune, drag to pan, scroll or pinch to zoom, drag the edges of the shaded passband to set the bandwidth.</p>
+    <div class="row"><button value="close" class="primary">Close</button></div>
+  </form>
+</dialog>
 
 <script src="onair-lib.js"></script>
 <script src="onair-decoders.js"></script>

@@ -1,0 +1,2 @@
+Inter (c) The Inter Project Authors and JetBrains Mono (c) The JetBrains Mono Project Authors.
+Both are licensed under the SIL Open Font License 1.1 (https://openfontlicense.org). These files are Latin subsets in WOFF2 form.

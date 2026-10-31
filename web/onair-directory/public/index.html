@@ -1,18 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="color-scheme" content="dark">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#121315">
   <meta name="description" content="Public OnAir Web receivers you can listen to in a browser. Receivers list themselves; nothing about listeners is collected.">
   <title>OnAir Receivers</title>
-  <link rel="icon" href="data:,">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/JetBrainsMono-Regular.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <header class="top">
     <div class="wrap top-in">
-      <a class="brand" href="https://on-air.dev">OnAir</a>
+      <a class="brand" href="https://on-air.dev" aria-label="OnAir home">
+        <svg class="mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="1.5" y="1.5" width="21" height="21" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5 15.5h2.5l2-8 3 11 2.5-9 1.5 6H19" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        <span class="wordmark">OnAir<span class="web">Receivers</span></span>
+      </a>
       <nav class="tabs" id="tabs" role="tablist" aria-label="Sections">
         <a role="tab" href="#receivers" data-t="receivers">Receivers</a>
         <a role="tab" href="#listen" data-t="listen">Listen</a>
@@ -20,15 +26,37 @@
         <a role="tab" href="#run" data-t="run">Run your own</a>
         <a role="tab" href="#faq" data-t="faq">FAQ</a>
       </nav>
+      <div class="tools-r">
+        <a class="gh" href="https://github.com/adswill/OnAir">GitHub</a>
+        <button id="themeBtn" type="button" class="btn icon" aria-label="Switch colour theme" title="Theme">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M5.3 18.7L7 17M17 7l1.7-1.7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+      </div>
     </div>
   </header>
 
   <main class="wrap">
   <div id="p-receivers" class="page">
-    <p class="note">Anyone can list a receiver here. Entries are self-registered and not vetted: open them at your own risk, and use Report if something is wrong. The directory stores no listener data.</p>
+    <div class="head">
+      <div>
+        <h1>Receivers</h1>
+        <p class="note">Radios people share, playable in a browser. Entries are self-registered and not vetted: open them at your own risk, and use Report if something is wrong. The directory stores no listener data.</p>
+      </div>
+      <dl class="stats" id="stats" aria-label="Directory totals" hidden>
+        <div><dt>Receivers</dt><dd id="st-n" class="mono">0</dd></div>
+        <div><dt>Online</dt><dd id="st-on" class="mono">0</dd></div>
+        <div><dt>Listeners</dt><dd id="st-l" class="mono">0</dd></div>
+      </dl>
+    </div>
 
     <form class="tools" id="tools" role="search" onsubmit="return false">
-      <label class="srch"><span class="vh">Search receivers</span><input id="q" type="search" placeholder="Search name, radio, place, description" maxlength="60" autocomplete="off"></label>
+      <label class="srch"><span class="vh">Search receivers</span>
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M15 15l5.5 5.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <input id="q" type="search" placeholder="Search name, radio, place, description" maxlength="60" autocomplete="off"></label>
+      <label class="sel"><span class="vh">Region</span>
+        <select id="region"><option value="">All regions</option></select></label>
+      <label class="sel"><span class="vh">Radio type</span>
+        <select id="sdr"><option value="">All radios</option></select></label>
       <label class="sel"><span class="vh">Sort by</span>
         <select id="sort">
           <option value="users">Most listeners</option>
@@ -38,25 +66,41 @@
           <option value="freq">Lowest frequency</option>
           <option value="dist" disabled>Nearest</option>
         </select></label>
-      <label class="sel"><span class="vh">Frequency scale</span>
+      <label class="sel" id="scaleWrap"><span class="vh">Frequency scale</span>
         <select id="scale">
           <option value="log">Scale: 0.1 MHz to 6 GHz (log)</option>
           <option value="hf">Scale: 0 to 30 MHz</option>
           <option value="vu">Scale: 30 MHz to 1 GHz</option>
         </select></label>
-      <button type="button" id="loc" class="btn" aria-pressed="false">Show distance</button>
-      <label class="chk"><input id="free" type="checkbox"> Free slots only</label>
+      <div class="seg" id="view" role="radiogroup" aria-label="View">
+        <button type="button" role="radio" data-v="list" aria-checked="true">List</button>
+        <button type="button" role="radio" data-v="cards" aria-checked="false">Cards</button>
+        <button type="button" role="radio" data-v="map" aria-checked="false">Map</button>
+      </div>
     </form>
-    <div class="chips" id="chips" role="group" aria-label="Band"></div>
+    <div class="filters">
+      <div class="chips" id="chips" role="group" aria-label="Band"></div>
+      <div class="toggles">
+        <button type="button" id="favOnly" class="btn" aria-pressed="false" title="Only your favourites">&#9733; Favourites</button>
+        <label class="chk"><input id="free" type="checkbox"> Free slots only</label>
+        <button type="button" id="loc" class="btn" aria-pressed="false">Show distance</button>
+        <button type="button" id="share" class="btn" title="Copy a link to this exact view">Copy link</button>
+      </div>
+    </div>
 
     <div class="status" id="status" role="status" aria-live="polite">Loading receivers...</div>
 
     <table class="tbl" id="tbl" hidden>
       <thead>
-        <tr><th scope="col" class="c-name">Receiver</th><th scope="col" class="c-cov"><span id="axis-title">Coverage</span><div class="axis" id="axis" aria-hidden="true"></div></th><th scope="col" class="c-num">Listeners</th><th scope="col" class="c-num" id="th-dist" hidden>Distance</th><th scope="col" class="c-num">Seen</th><th scope="col" class="c-act"><span class="vh">Actions</span></th></tr>
+        <tr><th scope="col" class="c-fav"><span class="vh">Favourite</span></th><th scope="col" class="c-name">Receiver</th><th scope="col" class="c-radio">Radio</th><th scope="col" class="c-cov"><span id="axis-title">Coverage</span><div class="axis" id="axis" aria-hidden="true"></div></th><th scope="col" class="c-num">Listeners</th><th scope="col" class="c-num" id="th-dist" hidden>Distance</th><th scope="col" class="c-num">Seen</th><th scope="col" class="c-act"><span class="vh">Actions</span></th></tr>
       </thead>
       <tbody id="rows"></tbody>
     </table>
+    <div class="cards" id="cards" hidden></div>
+    <div class="mapview" id="mapview" hidden>
+      <div class="mapbox"><svg id="map" viewBox="0 0 720 300" role="img" aria-label="Receivers plotted by latitude and longitude"></svg><div id="maptip" class="maptip mono" hidden></div></div>
+      <p class="sub" id="mapnote"></p>
+    </div>
 
     <section id="empty" class="empty" hidden aria-labelledby="empty-h">
       <h2 id="empty-h">No receivers listed</h2>
