@@ -311,7 +311,7 @@ void listTab(App& a, double now) {
     ImGui::TableSetupColumn(tr("Voices"), ImGuiTableColumnFlags_WidthFixed, 50 * gUi);
     ImGui::TableSetupColumn(tr("Kind"), ImGuiTableColumnFlags_WidthFixed, 80 * gUi);
     ImGui::TableSetupColumn(tr("Heard"), ImGuiTableColumnFlags_WidthFixed, 90 * gUi);
-    ImGui::TableSetupColumn(tr("Actions"), ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn(tr("Actions"), ImGuiTableColumnFlags_WidthFixed, 200 * gUi);
     ImGui::TableHeadersRow();
     for (const sc::Conversation& c : rows) {
         ImGui::TableNextRow();
@@ -360,17 +360,23 @@ void listTab(App& a, double now) {
 }
 
 void timelineTab(double now) {
+    static const char* spans[] = {"Automatic", "Last 15 minutes", "Last hour", "Last 6 hours", "Last 24 hours"};
+    static const double fixedH[] = {0, 0.25, 1, 6, 24};
+    static int sel = 0;
+    ImGui::SetNextItemWidth(160 * gUi);
+    ImGui::Combo("##tlspan", &sel, spans, 5);
     std::vector<sc::ConversationBook::TimelineRow> rows;
+    double h = fixedH[sel];
     {
         std::lock_guard<std::mutex> lk(S.mu);
-        rows = S.book.timeline(now, S.timelineHours);
+        if (h == 0) {   // from the first stretch of voice to now, with a little room, between 2 minutes and 24 hours
+            rows = S.book.timeline(now, 24);
+            double first = now;
+            for (const auto& r : rows) for (const auto& b : r.bars) first = std::min(first, b.t0);
+            h = std::min(24.0, std::max(2.0 / 60.0, (now - first) * 1.08 / 3600.0));
+        }
+        rows = S.book.timeline(now, h);
     }
-    static const char* spans[] = {"Last 15 minutes", "Last hour", "Last 6 hours", "Last 24 hours"};
-    static const double hours[] = {0.25, 1, 6, 24};
-    static int sel = 1;
-    ImGui::SetNextItemWidth(160 * gUi);
-    if (ImGui::Combo("##tlspan", &sel, spans, 4)) S.timelineHours = hours[sel];
-    const double h = hours[sel];
     if (rows.empty()) { ImGui::TextDisabled("%s", tr("Nothing in this period yet.")); return; }
     const float labelW = 150 * gUi, rowH = 22 * gUi;
     ImVec2 p0 = ImGui::GetCursorScreenPos();
@@ -383,7 +389,7 @@ void timelineTab(double now) {
     for (int i = 0; i <= ticks; i++) {
         const float x = p0.x + labelW + w * (float)i / (float)ticks;
         dl->AddLine(ImVec2(x, p0.y + 16 * gUi), ImVec2(x, p0.y + 16 * gUi + rowH * (float)rows.size()), grid);
-        const std::string s = clockOf(t0 + (now - t0) * i / ticks).substr(0, 5);
+        const std::string s = clockOf(t0 + (now - t0) * i / ticks).substr(0, h <= 0.34 ? 8 : 5);
         dl->AddText(ImVec2(x - 12 * gUi, p0.y), dim, s.c_str());
     }
     float y = p0.y + 16 * gUi;
@@ -435,7 +441,7 @@ void settingsTab(App& a) {
 }
 
 void conversationsWindow(App& a) {
-    firstWindowSize(1080 * gUi, 560 * gUi);
+    firstWindowSize(1260 * gUi, 560 * gUi);
     if (!ImGui::Begin(trw("Conversations"), &a.ssbConvOpen)) { ImGui::End(); return; }
     const double now = nowT();
     // header: scan switch, status, auto-listen
@@ -463,6 +469,11 @@ void conversationsWindow(App& a) {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Leave this conversation and go to the next best one"));
     ImGui::SameLine();
     if (S.listening && ImGui::Button(tr("Stop listening"))) { stopListening(a); S.autoListen.select(0, now); }
+    {
+        size_t all = 0, act = 0;
+        { std::lock_guard<std::mutex> lk(S.mu); sc::Filter f; f.showMuted = true; for (const sc::Conversation& c : S.book.list(now, f)) { all++; if (c.active && !c.ended) act++; } }
+        ImGui::SameLine(); ImGui::TextDisabled(tr("%zu conversations, %zu active now"), all, act);
+    }
     if (!S.note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", S.note.c_str()); }
     ImGui::Separator();
     // filters
@@ -471,14 +482,23 @@ void conversationsWindow(App& a) {
     ImGui::SameLine(); ImGui::SetNextItemWidth(70 * gUi);
     static const char* sides[] = {"USB+LSB", "USB", "LSB"};
     ImGui::Combo("##side", &S.sideSel, sides, 3);
-    ImGui::SameLine(); ImGui::SetNextItemWidth(110 * gUi);
-    ImGui::SliderInt("##mins", &S.minS, 0, 9, S.minS ? "min S%d" : "any signal");
+    ImGui::SameLine(); ImGui::SetNextItemWidth(100 * gUi);
+    {
+        static const char* mins[] = {"Any signal", "S2 or more", "S4 or more", "S6 or more", "S8 or more"};
+        int sel = S.minS == 0 ? 0 : S.minS <= 2 ? 1 : S.minS <= 4 ? 2 : S.minS <= 6 ? 3 : 4;
+        if (ImGui::Combo("##mins", &sel, mins, 5)) S.minS = sel == 0 ? 0 : sel * 2;
+    }
     ImGui::SameLine(); ImGui::Checkbox(tr("Active only"), &S.activeOnly);
     ImGui::SameLine(); ImGui::Checkbox(tr("Hide ended"), &S.hideEnded);
     ImGui::SameLine(); ImGui::Checkbox(tr("Favourites"), &S.favOnly);
     ImGui::SameLine(); ImGui::Checkbox(tr("Show ignored"), &S.showMuted);
-    ImGui::SameLine(); ImGui::SetNextItemWidth(110 * gUi);
-    ImGui::SliderInt("##short", &S.hideShort, 0, 120, S.hideShort ? "hide < %d s" : "show all lengths");
+    ImGui::SameLine(); ImGui::SetNextItemWidth(120 * gUi);
+    {
+        static const char* sh[] = {"All lengths", "Over 10 s of talk", "Over 30 s of talk", "Over 2 min of talk"};
+        static const int shv[] = {0, 10, 30, 120};
+        int sel = S.hideShort <= 0 ? 0 : S.hideShort <= 10 ? 1 : S.hideShort <= 30 ? 2 : 3;
+        if (ImGui::Combo("##short", &sel, sh, 4)) S.hideShort = shv[sel];
+    }
     ImGui::SameLine(); ImGui::SetNextItemWidth(100 * gUi);
     ImGui::Combo("##sort", &S.sortBy, kSortNames, 4);
     ImGui::Separator();
