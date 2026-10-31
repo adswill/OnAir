@@ -30,7 +30,8 @@ void Follower::reset() {
     state_ = FollowState::NoControl;
     lastCcSec_ = -1e9;
     missed_ = 0;
-    noticed_.clear();
+    homeNac_ = -1;
+    noticed_.clear(); ended_.clear(); hopBlock_.clear();
     ccHz_ = 0; radioHz_ = 0; candIdx_ = 0;
     cands_.clear();
     good_.clear();
@@ -88,6 +89,12 @@ void Follower::close(Slot& s, CallLog& log, double now, const char* why) {
         if (CallRecord* r = log.byId(s.callId)) { r->followed = false; r->missed = true; missed_++; }
     }
     if (CallRecord* r = log.byId(s.callId)) {
+        ended_.push_back({r->tg, r->channel, now});
+        if (ended_.size() > 64) ended_.erase(ended_.begin(), ended_.begin() + 32);
+        if (s.hopped && !s.voiced && !s.leave) {   // the single radio went there and heard nothing: this talkgroup is not hopped to again at once
+            hopBlock_.push_back({r->tg, now + cfg_.hopBackoffSec});
+            if (r->note.empty()) r->note = "radio heard nothing on the channel after the retune";
+        }
         if (!s.leave) {
             r->active = false;
             r->durSec = std::max(0.0, std::max(s.lastSec, r->lastSec) - r->startSec);
@@ -167,7 +174,12 @@ void Follower::goHome(double now) {
     setState(FollowState::Returning, now);
 }
 
-void Follower::onControlSeen(double now) {
+void Follower::onControlSeen(double now, int nac) {
+    if (nac >= 0 && homeNac_ >= 0 && nac != homeNac_ && (state_ == FollowState::Searching || state_ == FollowState::Returning)) {
+        note("Control channel with another NAC (" + std::to_string(nac) + ") ignored: not this system");
+        return;   // keeps hunting; the dwell timer moves on to the next candidate
+    }
+    if (nac >= 0 && (state_ == FollowState::ControlHold || state_ == FollowState::NoControl)) homeNac_ = nac;
     lastCcSec_ = now;
     if (state_ != FollowState::Hopped && state_ != FollowState::Following) {
         const double f = radioHz_ > 0 ? radioHz_ : ccHz_ > 0 ? ccHz_ : centerHz_;
@@ -209,6 +221,7 @@ void Follower::onGrant(const Grant& g, const TalkgroupList::Decision& d, double 
         }
         r.lastSec = now;
         if (g.src >= 0 && r.src < 0) r.src = g.src;
+        if (r.freqHz <= 0 && g.freqHz > 0) { r.freqHz = g.freqHz; r.slot = g.slot; r.channel = g.channel; r.note.clear(); }   // the identifier update arrived since the grant
         if (g.emergency) r.emergency = true;
         bool owned = false;
         for (Slot& s : slots_) if (s.used && s.callId == r.id) { owned = true; if (!s.leave && !s.remote) s.lastSec = now; }   // the voice radio's call lives on what it hears, not on grant repeats
@@ -216,6 +229,10 @@ void Follower::onGrant(const Grant& g, const TalkgroupList::Decision& d, double 
         // ended, and the radio should go to the call that is still running rather than wait for a new grant)
         if (!owned && r.missed && !r.followed && !r.encrypted) follow(g, d, now, log, r.id);
         return;
+    }
+    if (g.explicitUpdate) {   // an update (carries no new service) for a call that just ended: control channel latency, not a new call
+        for (const Ended& e : ended_)
+            if (e.tg == g.tg && e.channel == g.channel && now - e.sec < cfg_.endedCooldownSec) return;
     }
     CallRecord rec;
     rec.wallTime = (int64_t)time(nullptr);
@@ -240,12 +257,16 @@ void Follower::follow(const Grant& g, const TalkgroupList::Decision& d, double n
         if (rp->missed) { rp->missed = false; if (missed_) missed_--; rp->note = "joined late: busy when it was granted"; }
     };
     if (g.encrypted) { skip("encrypted: not followed", false); return; }
-    if (!d.follow) { skip(d.reason, false); return; }
-    if (g.freqHz <= 0) { skip("channel frequency not known yet (no identifier update heard)", false); return; }
+    if (!d.follow) { skip(d.reason, d.retry); return; }
+    if (g.freqHz <= 0) {
+        if (g.unplacedType >= 0) skip("channel type " + std::to_string(g.unplacedType) + " of the identifier table is not supported (cannot place the channel)", false);
+        else skip("channel frequency not known yet (no identifier update heard)", true);   // a repeat after the identifier update is followed
+        return;
+    }
     const bool p2 = g.tdma && !g.dmr;
     const int p2Slot = p2 ? g.slot : -1;   // the Phase 2 time slot of the call (-1: Phase 1)
     if (p2 && !cfg_.followPhase2) { skip("P25 Phase 2 call: Phase 2 following is off", false); return; }
-    const int prio = d.priority;
+    const int prio = g.emergency ? 1 : d.priority;   // an emergency call ranks above everything
     auto lowest = [&](bool hoppedOnly, bool anyOnly) -> Slot* {
         Slot* v = nullptr;
         for (Slot& s : slots_) {
@@ -346,6 +367,7 @@ void Follower::follow(const Grant& g, const TalkgroupList::Decision& d, double n
         return;
     }
     if (state_ == FollowState::NoControl || state_ == FollowState::Searching) { skip("not on the control channel", true); return; }
+    for (const auto& hb : hopBlock_) if (hb.first == g.tg && now < hb.second) { skip("waiting after a retune that heard nothing", true); return; }
     bool block = false;
     for (const Slot& s : slots_) if (s.used && effPrio(s.prio) <= effPrio(prio)) block = true;   // a call of equal or higher priority is running
     if (block) {
@@ -391,7 +413,9 @@ void Follower::tick(double now, CallLog& log) {
     for (Slot& s : slots_) {
         if (!s.used) continue;
         // a voice radio call not heard yet is given time to retune and sync; after that the hang time counts from the last voice
-        const double limit = s.remote && !s.voiced && !s.leave ? std::max(cfg_.hangSec, cfg_.remoteStartSec) : cfg_.hangSec;
+        double limit = cfg_.hangSec;
+        if (s.remote && !s.voiced && !s.leave) limit = std::max(cfg_.hangSec, cfg_.remoteStartSec);
+        else if (s.hopped && !s.voiced && !s.leave) limit = std::max(cfg_.hangSec, cfg_.hopStartSec);   // retune restarts the receiver: settle, gain, sync
         if (now - s.lastSec > limit) {
             if (s.hopped) hoppedEnded = true;
             close(s, log, now, s.remote && !s.voiced ? "voice radio heard nothing on the channel" : "");

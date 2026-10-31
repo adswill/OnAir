@@ -47,14 +47,17 @@ State S;
 // ---------------------------------------------------------------- the trunking follower (core/src/p25/trunk_*.cpp, docs/trunking.md)
 struct Trunk {
     dect2::trunk::Controller ctl;
-    bool on = false, loaded = false, dirty = false;
-    uint64_t tsbkSeen = 0;
+    bool on = true, loaded = false, dirty = false;   // Follow is on by default (saved in the prefs); the one radio leaves the control channel when a call needs it
+    bool wasActive = false;              // the hopped radio heard a call on the last report (its end is the terminator)
+    std::string lastPrefs;
+    uint64_t tsbkSeen = 0, tsbkGap = 0;   // messages the screen never saw (the receiver's list rolled over before it polled)
     int forcedSel = 0;
     uint64_t recCall = 0;
     std::string status;
     char csvPath[300] = "";
     // the call the radio left the control channel for (Retune with a call): its voice keeps it open, the control channel cannot be heard
     uint64_t hopCall = 0;
+    double homeMhz = 0;                  // the control channel frequency while the radio is on a voice channel
     uint64_t hopSeq = 0;
     // a followed P25 Phase 2 call: the Phase 2 receiver on its carrier, as the first mode (the radio hopped) or as the second mode (inside the capture)
     uint64_t p2Call = 0;
@@ -264,10 +267,12 @@ void talkgroupView(App& a) {
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const auto& tg = a.rx.p25.talkgroups;
     if (tg.empty()) { ImGui::TextDisabled("no talkgroups heard yet"); return; }
-    if (!ImGui::BeginTable("##p25tg", 7, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    std::vector<dect2::trunk::Controller::TalkgroupRow> conv;
+    if (T.on) conv = T.ctl.conversations();   // followed calls and airtime per talkgroup (the call log of the follower)
+    if (!ImGui::BeginTable("##p25tg", 9, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("Talkgroup"); ImGui::TableSetupColumn("Grants"); ImGui::TableSetupColumn("Calls"); ImGui::TableSetupColumn("Last unit");
-    ImGui::TableSetupColumn("Last channel"); ImGui::TableSetupColumn("Last heard"); ImGui::TableSetupColumn("Notes", ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn("Last channel"); ImGui::TableSetupColumn("Last heard"); ImGui::TableSetupColumn("Followed"); ImGui::TableSetupColumn("Airtime"); ImGui::TableSetupColumn("Notes", ImGuiTableColumnFlags_WidthStretch);
     ImGui::TableHeadersRow();
     for (const auto& g : tg) {
         ImGui::TableNextRow();
@@ -278,7 +283,12 @@ void talkgroupView(App& a) {
         ImGui::TableNextColumn(); ImGui::TextUnformatted(dect2::p25Id(g.lastSrc).c_str());
         ImGui::TableNextColumn(); ImGui::TextUnformatted(mhz(g.lastFreqHz).c_str());
         ImGui::TableNextColumn(); ImGui::TextColored(c, "%s", g.active ? "active" : clock(g.lastWall).c_str());
+        const dect2::trunk::Controller::TalkgroupRow* cv = nullptr;
+        for (const auto& r : conv) if (r.tg == g.tg) { cv = &r; break; }
+        ImGui::TableNextColumn(); if (cv) ImGui::Text("%d of %d", cv->followed, cv->calls); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (cv) ImGui::Text("%.0f s", cv->airSec); else ImGui::TextDisabled("-");
         ImGui::TableNextColumn();
+        if (cv && !cv->lastNote.empty()) { ImGui::TextDisabled("%s", cv->lastNote.c_str()); ImGui::SameLine(); }
         if (g.emergency) { ImGui::TextColored(pal::warnAmber(), "emergency"); ImGui::SameLine(); }
         if (g.encrypted) ImGui::TextColored(pal::warnAmber(), "encrypted");
     }
@@ -415,7 +425,21 @@ void voiceOpen(App& ctl, const dect2::trunk::Action& ac, double now) {
 // ---------------------------------------------------------------- hooks
 
 void trunkTick(App& a) {
-    if (!T.loaded) { T.loaded = true; if (std::filesystem::exists(std::filesystem::u8path(tgFile()))) tgLoad(tgFile(), false); }
+    if (!T.loaded) {
+        T.loaded = true;
+        if (std::filesystem::exists(std::filesystem::u8path(tgFile()))) tgLoad(tgFile(), false);
+        plat::Prefs& pf = plat::basePrefs();
+        T.on = pf.getB("p25follow.on", true);
+        dect2::trunk::FollowConfig fc = T.ctl.follower.config();
+        fc.allowRetune = pf.getB("p25follow.retune", true);
+        fc.followPhase2 = pf.getB("p25follow.p2", true);
+        fc.maxSlices = (int)pf.getI("p25follow.slices", fc.maxSlices);
+        S.hang = (float)pf.getD("p25follow.hang", S.hang);
+        fc.hangSec = S.hang;
+        T.ctl.follower.setConfig(fc);
+        T.voicePick = (int)pf.getI("p25follow.voicepick", 0);
+    }
+    if (T.on && !T.owner && live(a) && p25Family(a)) T.owner = a.rxId;   // on by default: the first running P25 receiver owns the follower
     if (T.owner && a.rxId != T.owner) return;   // the follower belongs to another receiver; this one (the voice radio) only decodes
     // Following without whole-span decoding: the whole-span bank runs for the granted Phase 1 channels only (a decoder per call, none for the rest)
     const bool wantFollow = T.on && live(a) && !a.wideDecode;
@@ -428,6 +452,7 @@ void trunkTick(App& a) {
     const dect2::P25Telemetry& t = a.rx.p25;
     for (const auto& r : t.tsbks) {
         if (r.seq <= T.tsbkSeen) continue;
+        if (T.tsbkSeen && r.seq > T.tsbkSeen + 1 && &r == &t.tsbks.front()) T.tsbkGap += r.seq - T.tsbkSeen - 1;
         T.tsbkSeen = r.seq;
         // history: the receiver keeps the last 96 messages, and following may have been off (or the screen stalled) for a while. Site and identifier
         // messages are as good as new; an old grant is a call long over, and following it would hop the radio away for nothing
@@ -438,7 +463,7 @@ void trunkTick(App& a) {
     // the whole capture counts for Phase 2 calls (the second mode takes any channel in it); Phase 1 calls in it need whole-span decoding
     T.ctl.setCapture(a.engine.captureCentreHz(), a.engine.sampleRate(), wideActive(a));
     // the radio is on a voice channel: what it hears keeps the call open (no grant repeats reach it there)
-    if (T.hopCall && !T.p2Hop && live(a) && t.seq != T.hopSeq) { T.hopSeq = t.seq; if (t.now.active) { if (t.now.encrypted) T.ctl.onEncrypted(T.hopCall, now); else T.ctl.onVoice(T.hopCall, now); } }   // the voice channel says encrypted (a grant does not always): left at once, back to the control channel
+    if (T.hopCall && !T.p2Hop && live(a) && t.seq != T.hopSeq) { T.hopSeq = t.seq; if (t.now.active) { T.wasActive = true; if (t.now.encrypted) T.ctl.onEncrypted(T.hopCall, now); else T.ctl.onVoice(T.hopCall, now); } else if (T.wasActive) { T.wasActive = false; T.ctl.onTerminator(T.hopCall, now); } }   // the voice channel says encrypted (a grant does not always): left at once, back to the control channel
     if (T.p2Call) {
         const dect2::P25p2Telemetry& p = T.p2Second ? a.second.rx.p25p2 : a.rx.p25p2;
         if (p.seq != T.p2Seq && p.followTag == T.p2Call && (T.p2Second || a.rx.standard == kP25p2Std - 1)) {   // reports of this call only
@@ -496,8 +521,11 @@ void trunkTick(App& a) {
                 if (T.p2Hop) { a.engine.setStandard(engineStd(a)); T.p2Hop = false; }   // back to the Phase 1 receiver
                 T.p2Call = 0;
             }
-            T.hopCall = ac.callId; T.hopSeq = 0;
-            tuneFreq(a, ac.freqHz / 1e6);
+            T.hopCall = ac.callId; T.hopSeq = 0; T.wasActive = false;
+            if (ac.callId) {   // a hop to a voice channel: nothing is saved (a quit during the call must not reopen on it); the way home is the user's frequency
+                if (!T.homeMhz) T.homeMhz = a.freqMhz;
+                voiceTune(a, ac.freqHz / 1e6);
+            } else { T.homeMhz = 0; tuneFreq(a, ac.freqHz / 1e6); }
             break;
         case Action::OpenSlice:
             if (ac.tdma) {   // inside the capture: the Phase 2 receiver runs as the second mode, the control channel stays decoded
@@ -551,13 +579,26 @@ void trunkTick(App& a) {
         for (double f : T.ctl.follower.sliceFreqs(false)) v.push_back(f);
         if (v != T.wideList) { T.wideList = v; a.engine.setWideFollow(true, v); }
     }
+    if (wideActive(a)) {   // a Phase 1 call decoded inside the capture lives on its carrier, not on grant repeats (they come every few seconds on a busy site)
+        const double ctr0 = radioCenterMhz(a) * 1e6;
+        for (const CallRecord& cr : T.ctl.log.records()) {
+            if (!cr.active || !cr.followed || cr.dmr || cr.slot >= 0 || cr.id == T.hopCall || cr.id == T.rm.call || !T.ctl.follower.inSpan(cr.freqHz)) continue;
+            const dect2::WideCarrier* nearC = nullptr; double bd = 9000;
+            for (const auto& c : a.rx.wide) { const double d = std::fabs(ctr0 + c.hz - cr.freqHz); if (d < bd) { bd = d; nearC = &c; } }
+            if (!nearC) continue;
+            if (nearC->active) T.ctl.onVoice(cr.id, now);
+            else if (nearC->idleSec > 1.0) T.ctl.onTerminator(cr.id, now);
+        }
+    }
     if (wideActive(a)) {   // the sound follows the call that should be heard
         const uint64_t id = T.ctl.follower.audibleCall();
         const CallRecord* r = id ? T.ctl.log.byId(id) : nullptr;
         if (r) {
             const double ctr = radioCenterMhz(a) * 1e6;
+            // the carrier nearest to the granted frequency (a neighbour 12.5 kHz away must not win by level), within half a channel plus the dongle's offset
             const dect2::WideCarrier* best = nullptr;
-            for (const auto& c : a.rx.wide) if (std::fabs(ctr + c.hz - r->freqHz) < 7000 && (!best || c.levelDb > best->levelDb)) best = &c;
+            double bd = 1e18;
+            for (const auto& c : a.rx.wide) { const double d = std::fabs(ctr + c.hz - r->freqHz); if (d < 9000 && d < bd) { bd = d; best = &c; } }
             if (best) { a.wideSel = best->id; T.forcedSel = best->id; }
         } else if (T.forcedSel) { a.wideSel = 0; T.forcedSel = 0; }
     }
@@ -627,10 +668,12 @@ void followView(App& a) {
     if (!T.on) { ImGui::TextDisabled("%s", live(a) ? "off: the control channel is only decoded, nothing is followed" : "start the receiver first"); }
     const double now = nowSec();
     const ControllerStatus st = T.ctl.status(now);
+    kvRow(a, "status", "%s", T.on ? T.ctl.statusLine(now).c_str() : "Follow is off: tick Follow calls");
     kvRow(a, "state", "%s%s", followStateName(st.state), st.controlLocked ? "" : " (no control channel message lately)");
     kvRow(a, "control channel", "%llu good, %llu bad (%.0f %% ok), %u calls on air, %llu not followed",
           (unsigned long long)st.tsbkGood, (unsigned long long)st.tsbkBad, st.crcOkPct, (unsigned)st.activeCalls, (unsigned long long)st.missed);
     const SiteInfo& si = T.ctl.sys.site();
+    if (T.tsbkGap) kvRow(a, "missed", "%llu control messages were not read in time (the screen stalled)", (unsigned long long)T.tsbkGap);
     if (si.valid) kvRow(a, "site", "WACN %05X system %03X RFSS %d site %d NAC %03X", si.wacn < 0 ? 0 : si.wacn, si.sysId < 0 ? 0 : si.sysId, si.rfss, si.site, si.nac < 0 ? 0 : si.nac);
     if (T.p2Call) {
         const dect2::P25p2Telemetry& p = T.p2Second ? a.second.rx.p25p2 : a.rx.p25p2;
@@ -655,6 +698,17 @@ void followView(App& a) {
     if (ImGui::Checkbox("scan list only", &so)) T.ctl.tgs.setScanOnly(so);
     if (ch) T.ctl.follower.setConfig(fc);
     voicePicker(a);
+    {   // the settings are kept
+        plat::Prefs& pf = plat::basePrefs();
+        const std::string cur = std::to_string(T.on) + "," + std::to_string(fc.allowRetune) + "," + std::to_string(fc.followPhase2) + "," + std::to_string(fc.maxSlices) + "," + std::to_string(S.hang) + "," + std::to_string(T.voicePick);
+        if (cur != T.lastPrefs) {
+            if (!T.lastPrefs.empty()) {
+                pf.setB("p25follow.on", T.on); pf.setB("p25follow.retune", fc.allowRetune); pf.setB("p25follow.p2", fc.followPhase2);
+                pf.setI("p25follow.slices", fc.maxSlices); pf.setD("p25follow.hang", S.hang); pf.setI("p25follow.voicepick", T.voicePick);
+            }
+            T.lastPrefs = cur;
+        }
+    }
     ImGui::Spacing();
     ImGui::TextDisabled("Now talking");
     const auto nt = T.ctl.nowTalking();
@@ -790,6 +844,7 @@ void receiver(App& a) {
     wideCarriersTable(a, 0);
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const dect2::P25Telemetry& t = a.rx.p25;
+    kvRow(a, "follow", "%s", T.on ? T.ctl.statusLine(nowSec()).c_str() : "off: calls are shown but not followed (Follow tab)");
     kvRow(a, "state", "%s", dect2::p25Summary(t).c_str());
     kvRow(a, "signal", "C4FM, symbol SNR %.1f dB, +3 deviation %.0f Hz, offset %+.0f Hz%s", t.snrDb, t.deviationHz, t.cfoHz, t.inverted ? ", inverted" : "");
     kvRow(a, "NAC", "%03X", t.nac < 0 ? 0 : t.nac);
