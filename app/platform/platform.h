@@ -75,6 +75,8 @@ long spawnChild(const std::string& program, const std::vector<std::string>& args
 bool childAlive(long pid);
 std::string exePath();   // the running program's full path
 void stopChild(long pid);
+void killChild(long pid);   // ends it at once (a program that did not end after stopChild)
+std::string childName(long pid);   // the program name of a process id ("onair-server"), "" when it is not running or the system will not say (used to clean up leftovers after a crash)
 // A desktop notification (Notification Center on macOS, a toast on Windows, notify-send on Linux when installed). False when the system could not show one.
 bool notify(const std::string& title, const std::string& body);
 // The position from the system's location service (on macOS this is Wi-Fi positioning and needs the user's permission).

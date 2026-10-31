@@ -2,6 +2,7 @@
 // so every argument is passed to the program as one argument.
 #include "dect2/common/thread_name.h"
 #include "platform.h"
+#include <cstdio>
 #include <string>
 #include <vector>
 
@@ -115,6 +116,17 @@ void stopChild(long pid) {
     TerminateProcess(h, 0);
     CloseHandle(h);
 }
+void killChild(long pid) { stopChild(pid); }
+std::string childName(long pid) {
+    HANDLE h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, (DWORD)pid);
+    if (!h) return {};
+    char buf[MAX_PATH] = {0};
+    DWORD n = MAX_PATH;
+    std::string r;
+    if (QueryFullProcessImageNameA(h, 0, buf, &n)) { r = buf; const size_t c = r.find_last_of("\\/"); if (c != std::string::npos) r = r.substr(c + 1); }
+    CloseHandle(h);
+    return r;
+}
 
 bool notify(const std::string& title, const std::string& body) {
     SetEnvironmentVariableW(L"ONAIR_NOTE_T", wide(oneLine(title, 120)).c_str());
@@ -163,6 +175,16 @@ long spawnChild(const std::string& program, const std::vector<std::string>& args
 bool childAlive(long pid) { return pid > 0 && kill((pid_t)pid, 0) == 0; }
 
 void stopChild(long pid) { if (pid > 0) kill((pid_t)pid, SIGTERM); }
+void killChild(long pid) { if (pid > 0) kill((pid_t)pid, SIGKILL); }
+std::string childName(long pid) {
+    if (pid <= 1 || kill((pid_t)pid, 0) != 0) return {};
+    std::string r;
+    FILE* f = popen(("ps -p " + std::to_string(pid) + " -o comm= 2>/dev/null").c_str(), "r");   // the number is ours, no user text reaches the shell
+    if (f) { char b[256] = {0}; if (fgets(b, sizeof b, f)) r = b; pclose(f); }
+    while (!r.empty() && (r.back() == '\n' || r.back() == ' ')) r.pop_back();
+    const size_t c = r.find_last_of('/');
+    return c == std::string::npos ? r : r.substr(c + 1);
+}
 
 bool notify(const std::string& title, const std::string& body) {
     std::string err;

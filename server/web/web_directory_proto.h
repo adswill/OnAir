@@ -56,4 +56,41 @@ std::string dirAck(const DirRecord& r, const std::string& directoryUrl);
 // What the server prints before it will send anything: the exact JSON body (signature shown as a placeholder), where it goes, and the code.
 std::string dirPreview(const DirRecord& r, const std::string& directoryUrl);
 
+// The directory's own address (web_directory_url): https://host[:port]/path/ ; plain http is accepted only for this computer (127.0.0.1, localhost, [::1]),
+// which is how the tests talk to a fake directory. Anything else must be https.
+bool dirNormalizeEndpoint(const std::string& in, std::string& out, std::string& err);
+
+// ---- what happened, in words a person can act on (no network here, tested in tests/server/test_web_directory.cpp) ------------------------------
+struct DirOutcome {
+    bool ok = false;
+    int http = 0;               // the HTTP status when there was an answer
+    std::string code;           // short stable name: ok, dns, refused, timeout, tls_cert, tls, no_tls, no_curl, clock, invalid, key, blocked, not_found, conflict, resolving, rate, full, server, other
+    std::string message;        // what failed and why
+    std::string advice;         // what to do about it
+    bool retrySoon = false;     // the failure is probably temporary (a fresh address that is not in DNS yet): try again in seconds, not minutes
+};
+// An answer from the directory. skewSec = the directory's clock minus ours (from its Date header); haveSkew false when it sent none.
+DirOutcome dirClassifyHttp(int status, const std::string& body, long long skewSec, bool haveSkew);
+// No answer. errClass: dns, refused, timeout, tls_cert, tls, no_tls, no_curl, proto, other; detail: the raw text, kept short.
+DirOutcome dirClassifyNet(const std::string& errClass, const std::string& detail, const std::string& host);
+// The check of this server's own public address (what a listener's browser would do): status 0 = no answer (errClass as above).
+DirOutcome dirClassifyPublic(int status, bool bodyLooksRight, const std::string& errClass, const std::string& url);
+
+// Seconds to wait after the `fails`-th failure in a row (1 = the first): a failure that is probably temporary (a new address not in DNS yet) is retried in
+// seconds; others back off up to 5 minutes; never more than the beat interval, never under 5 s.
+int dirRetryDelay(int fails, bool soon, int intervalSec);
+// "Sat, 31 Oct 2026 10:00:00 GMT" to unix seconds; false when it is not that form.
+bool dirParseHttpDate(const std::string& s, long long& unixSec);
+
+// The status file the heartbeat keeps up to date (<key file folder>/web_directory_status.json); the app reads it, nothing blocks on it.
+struct DirStatus {
+    std::string state = "idle";   // idle, sending, ok, error
+    DirOutcome last;              // the last attempt
+    long long attempts = 0, fails = 0, lastTry = 0, lastOk = 0, nextTry = 0, skewSec = 0;
+    bool haveSkew = false;
+    std::string id, url, directory;
+};
+std::string dirStatusJson(const DirStatus& s);
+bool dirStatusParse(const std::string& json, DirStatus& out);
+
 } // namespace onair_web
