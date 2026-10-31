@@ -123,8 +123,8 @@ bool tiltOf(const std::vector<float>& x, double fs, double flo, double fhi, doub
 }
 
 // lag-1 (Kay) frequency estimate of z[a,b), Hz, and the summed lag product
-double kay(const cf32* z, size_t a, size_t b, double fs, std::complex<double>* rOut = nullptr) {
-    std::complex<double> r(0, 0);
+double kay(const cf32* z, size_t a, size_t b, double fs, std::complex<double>* rOut = nullptr, double corr = 0) {
+    std::complex<double> r(-corr * (double)(b > a + 1 ? b - a - 1 : 0), 0);   // corr: the noise's own lag-1 term, which pulls the angle towards 0
     for (size_t i = a; i + 1 < b; i++) {
         const std::complex<float> p = z[i + 1] * std::conj(z[i]);
         r += std::complex<double>(p.real(), p.imag());
@@ -140,7 +140,7 @@ const char* kindName(Kind k) { return k == Kind::NFM ? "NFM" : k == Kind::WFM ? 
 
 // ---------------------------------------------------------------- Channel
 
-Channel::Channel(double inRate, double off, Kind kind, double bw) : inRate_(inRate) {
+Channel::Channel(double inRate, double off, Kind kind, double bw) {
     double target = kind == Kind::WFM ? 300e3 : kind == Kind::NFM ? 50e3 : 24e3;
     if (bw > 0) target = std::max(target, 2.4 * bw);
     dec_ = std::max(1, (int)std::floor(inRate / target));
@@ -153,6 +153,13 @@ Channel::Channel(double inRate, double off, Kind kind, double bw) : inRate_(inRa
     L = std::clamp(L, 9, 4001);
     theta_ = 2 * kPi * off / inRate;
     taps_.resize((size_t)L);
+    {   // white noise through the taps, kept every dec_-th output: correlation of neighbouring outputs
+        double num = 0, den = 0;
+        std::vector<double> g((size_t)L);
+        for (int j = 0; j < L; j++) { const double t = j - (L - 1) / 2.0, a = 2 * kPi * fc / inRate * t; g[(size_t)j] = (std::fabs(a) < 1e-9 ? 1.0 : std::sin(a) / a) * (0.54 - 0.46 * std::cos(2 * kPi * j / (L - 1))); den += g[(size_t)j] * g[(size_t)j]; }
+        for (int j = 0; j + dec_ < L; j++) num += g[(size_t)j] * g[(size_t)(j + dec_)];
+        noiseLag1_ = den > 0 ? num / den : 0;
+    }
     std::vector<double> h((size_t)L);
     double sum = 0;
     for (int j = 0; j < L; j++) {
@@ -162,7 +169,7 @@ Channel::Channel(double inRate, double off, Kind kind, double bw) : inRate_(inRa
         sum += h[(size_t)j];
     }
     // reversed, so the inner loop reads the input forwards; modulated to move the carrier to 0 Hz
-    for (int j = 0; j < L; j++) taps_[(size_t)(L - 1 - j)] = (cf32)std::polar((float)(h[(size_t)j] / sum), (float)std::fmod(theta_ * j, 2 * kPi));
+    for (int j = 0; j < L; j++) { const double g = h[(size_t)j] / sum, ph = std::fmod(theta_ * j, 2 * kPi); taps_[(size_t)(L - 1 - j)] = cf32((float)(g * std::cos(ph)), (float)(g * std::sin(ph))); }
     hist_.assign((size_t)L - 1, cf32(0, 0));
 }
 
@@ -209,7 +216,6 @@ Features analyse(const cf32* z, size_t n, double fs, const Options& o) {
     const bool keyed = nb > 20 && hi > lo * 10.0 && lo > 0;
     size_t s0 = 0, e1 = n, onBlock = 0;
     double noise = o.noiseFloorPow;
-    size_t t50 = 0;
     if (keyed) {
         const double thr = std::sqrt(lo * hi);
         size_t b = 0;
@@ -259,11 +265,12 @@ Features analyse(const cf32* z, size_t n, double fs, const Options& o) {
 
     // 3. carrier offset, segments, drift
     std::complex<double> R;
-    const double fRes = kay(z, s0, e1, fs, &R);
+    const double nc = noise * o.noiseLag1;
+    const double fRes = kay(z, s0, e1, fs, &R, nc);
     f.cfoHz = fRes;
     {
         double v[4];
-        for (int k = 0; k < 4; k++) v[k] = kay(z, s0 + N * (size_t)k / 4, s0 + N * (size_t)(k + 1) / 4, fs);
+        for (int k = 0; k < 4; k++) v[k] = kay(z, s0 + N * (size_t)k / 4, s0 + N * (size_t)(k + 1) / 4, fs, nullptr, nc);
         double m = 0;
         for (double x : v) m += x;
         m /= 4;
@@ -273,15 +280,15 @@ Features analyse(const cf32* z, size_t n, double fs, const Options& o) {
         // unwrap against fRes (all within fs/2 of each other in practice)
     }
     if (N >= (size_t)(fs * 0.2)) {   // drift: slope of 10 ms estimates
-        const size_t seg = std::max<size_t>(8, (size_t)(fs * 0.01));
+        const size_t seg = std::max<size_t>(8, (size_t)(fs * 0.05));
         const size_t K = N / seg;
         double st = 0, sf = 0, stt = 0, stf = 0;
         for (size_t k = 0; k < K; k++) {
-            const double t = ((double)k + 0.5) * (double)seg / fs, ff = kay(z, s0 + k * seg, s0 + (k + 1) * seg, fs);
+            const double t = ((double)k + 0.5) * (double)seg / fs, ff = kay(z, s0 + k * seg, s0 + (k + 1) * seg, fs, nullptr, nc);
             st += t; sf += ff; stt += t * t; stf += t * ff;
         }
         const double d = (double)K * stt - st * st;
-        if (K >= 6 && d > 0) f.driftHzPerS = ((double)K * stf - st * sf) / d;
+        if (K >= 4 && d > 0) f.driftHzPerS = ((double)K * stf - st * sf) / d;
     }
 
     // 4. demodulation
@@ -416,24 +423,24 @@ Features analyse(const cf32* z, size_t n, double fs, const Options& o) {
                 }
                 f.overshootPct = std::max(0.0, (pk - A) / A * 100.0 - 3 * sigA / A * 100.0);
                 // frequency right after the carrier reached its level, in 1 ms windows
-                t50 = from + i50;
                 const size_t t90 = from + i90;
                 const size_t win = std::max<size_t>(4, (size_t)(fs * 0.001));
-                const double Fs = kay(z, s0, e1, fs);
+                const double Fs = fRes;
                 std::vector<double> dev;
-                for (size_t k = 0; k < 220 && t90 + (k + 1) * win < e1; k++) dev.push_back(kay(z, t90 + k * win, t90 + (k + 1) * win, fs) - Fs);
+                for (size_t k = 0; k < 220 && t90 + (k + 1) * win < e1; k++) dev.push_back(kay(z, t90 + k * win, t90 + (k + 1) * win, fs, nullptr, nc) - Fs);
                 // spread of 1 ms estimates in the steady part
                 std::vector<double> st;
-                for (size_t a = s0; a + win < e1 && st.size() < 100; a += win) st.push_back(kay(z, a, a + win, fs) - Fs);
+                for (size_t a = s0; a + win < e1 && st.size() < 100; a += win) st.push_back(kay(z, a, a + win, fs, nullptr, nc) - Fs);
                 double sd = 0;
                 for (double v : st) sd += v * v;
                 sd = st.empty() ? 0 : std::sqrt(sd / (double)st.size());
                 if (!dev.empty()) {
                     f.chirpHz = dev[0];
-                    const double tol = std::max(3 * sd, 2.0);
-                    size_t last = 0;
-                    for (size_t k = 0; k < dev.size(); k++) if (std::fabs(dev[k]) > tol) last = k + 1;
-                    f.settleMs = (double)last;
+                    const double tol = std::max(3 * sd, 0.15 * std::fabs(dev[0]));
+                    size_t first = std::min<size_t>(dev.size(), 60);
+                    for (size_t k = 0; k + 2 < std::min<size_t>(dev.size(), 60); k++)
+                        if (std::fabs(dev[k]) <= tol && std::fabs(dev[k + 1]) <= tol && std::fabs(dev[k + 2]) <= tol) { first = k; break; }
+                    f.settleMs = (double)first;   // ms until three 1 ms estimates in a row are within the tolerance of the steady offset
                     f.transient = true;
                 }
             }
@@ -462,10 +469,17 @@ void WidePsd::add(const cf32* x, size_t n) {
         acc_.insert(acc_.end(), x + i, x + i + take);
         i += take;
         if (acc_.size() == (size_t)kN) {
+            double pw = 0;
+            for (const cf32& v : acc_) pw += std::norm(v);
+            pw /= kN;
+            const bool jump = lastPow_ > 0 && std::fabs(pw - lastPow_) > 0.25 * lastPow_;   // a key-up or key-down inside: splatter, not a spur
+            lastPow_ = pw;
+            if (jump) { acc_.clear(); discard_ = (skipSeg_ - 1) * (size_t)kN; continue; }
             double wp = 0;
             for (int k = 0; k < kN; k++) { acc_[(size_t)k] *= win_[(size_t)k]; wp += (double)win_[(size_t)k] * win_[(size_t)k]; }
             fft_.forward(acc_.data());
-            const double a = segs_ == 0 ? 0.0 : alpha_;
+            const double a = alpha_;
+            norm_ = a * norm_ + (1 - a);
             for (int k = 0; k < kN; k++) {
                 const double v = std::norm(acc_[(size_t)k]) / wp;
                 double& d = p_[(size_t)((k + kN / 2) % kN)];
@@ -480,29 +494,31 @@ void WidePsd::add(const cf32* x, size_t n) {
 
 void WidePsd::spurs(double carrierOffsetHz, double occBwHz, Features& f) const {
     f.spurs.clear(); f.imageDbc = 99; f.spurValid = false; f.rxOffsetHz = carrierOffsetHz;
-    if (segs_ == 0) return;
+    if (segs_ == 0 || norm_ <= 0) return;
+    std::vector<double> P(p_);
+    for (auto& v : P) v /= norm_;
     const double bh = binHz();
     const int kc = (int)std::lround(carrierOffsetHz / bh) + kN / 2;
     const int occ = std::max(2, (int)std::ceil(occBwHz / 2 / bh));
     if (kc - occ < 2 || kc + occ >= kN - 2) return;
     double pc = 0;
-    for (int k = kc - occ; k <= kc + occ; k++) pc += p_[(size_t)k];
+    for (int k = kc - occ; k <= kc + occ; k++) pc += P[(size_t)k];
     if (pc <= 0) return;
     // local floor per 64-bin block (median), skipping the carrier's own band
     const int BL = 64, nbk = kN / BL;
     std::vector<double> fl((size_t)nbk, 0.0);
     for (int b = 0; b < nbk; b++) {
         std::vector<double> v;
-        for (int k = b * BL; k < (b + 1) * BL; k++) if (k < kc - occ - 4 || k > kc + occ + 4) v.push_back(p_[(size_t)k]);
+        for (int k = b * BL; k < (b + 1) * BL; k++) if (k < kc - occ - 4 || k > kc + occ + 4) v.push_back(P[(size_t)k]);
         fl[(size_t)b] = v.empty() ? 0 : pct(v, 50);
     }
     auto floorAt = [&](int k) { return fl[(size_t)std::clamp(k / BL, 0, nbk - 1)]; };
-    auto sum7 = [&](int k) { double s = 0; for (int j = -3; j <= 3; j++) s += p_[(size_t)std::clamp(k + j, 0, kN - 1)]; return s - 7 * floorAt(k); };
+    auto sum7 = [&](int k) { double s = 0; for (int j = -3; j <= 3; j++) s += P[(size_t)std::clamp(k + j, 0, kN - 1)]; return s - 7 * floorAt(k); };
     const int kimg = kN - kc;
     f.imageDbc = 99;
     if (std::abs(kimg - kc) > occ + 8) {
         int bestk = kimg;
-        for (int j = -2; j <= 2; j++) if (p_[(size_t)std::clamp(kimg + j, 0, kN - 1)] > p_[(size_t)bestk]) bestk = kimg + j;
+        for (int j = -2; j <= 2; j++) if (P[(size_t)std::clamp(kimg + j, 0, kN - 1)] > P[(size_t)bestk]) bestk = kimg + j;
         const double s = sum7(bestk);
         if (s > 7 * floorAt(bestk) * 3.0) f.imageDbc = 10 * std::log10(s / pc);
     }
@@ -513,8 +529,8 @@ void WidePsd::spurs(double carrierOffsetHz, double occBwHz, Features& f) const {
         if (std::abs(k - kN / 2) <= 4) continue;        // the receiver's DC spike
         if (std::abs(k - kimg) <= 3) continue;
         bool pk = true;
-        for (int j = -3; j <= 3; j++) if (p_[(size_t)(k + j)] > p_[(size_t)k]) { pk = false; break; }
-        if (!pk || p_[(size_t)k] < floorAt(k) * 15.8) continue;   // 12 dB above the local floor
+        for (int j = -3; j <= 3; j++) if (P[(size_t)(k + j)] > P[(size_t)k]) { pk = false; break; }
+        if (!pk || P[(size_t)k] < floorAt(k) * 10.0) continue;   // 10 dB above the local floor
         const double s = sum7(k);
         if (s <= 0) continue;
         const double dbc = 10 * std::log10(s / pc);
@@ -523,7 +539,7 @@ void WidePsd::spurs(double carrierOffsetHz, double occBwHz, Features& f) const {
     std::sort(cand.begin(), cand.end(), [](const C& a, const C& b) { return a.dbc > b.dbc; });
     for (size_t i = 0; i < cand.size() && f.spurs.size() < 6; i++) {
         const int k = cand[i].k;
-        const double l0 = std::log(p_[(size_t)k - 1] + 1e-30), l1 = std::log(p_[(size_t)k] + 1e-30), l2 = std::log(p_[(size_t)k + 1] + 1e-30);
+        const double l0 = std::log(P[(size_t)k - 1] + 1e-30), l1 = std::log(P[(size_t)k] + 1e-30), l2 = std::log(P[(size_t)k + 1] + 1e-30);
         const double den = l0 - 2 * l1 + l2;
         const double dk = std::fabs(den) > 1e-9 ? std::clamp(0.5 * (l0 - l2) / den, -0.5, 0.5) : 0.0;
         f.spurs.push_back({((double)(k - kc) + dk) * bh, cand[i].dbc});
@@ -554,7 +570,7 @@ Match compare(const Features& a, const Features& b, const MatchOptions& mo) {
         add("pilot jitter", a.pilotJitterDeg - b.pilotJitterDeg, 1.5 + 0.3 * std::max(a.pilotJitterDeg, b.pilotJitterDeg), 1.0);
     }
     if (a.carrierOnly && b.carrierOnly && std::min(a.durationS, b.durationS) > 0.3)
-        add("warm-up drift", a.driftHzPerS - b.driftHzPerS, 0.5 + 0.3 * std::max(std::fabs(a.driftHzPerS), std::fabs(b.driftHzPerS)), 1.5);
+        add("warm-up drift", a.driftHzPerS - b.driftHzPerS, 1.0 + 0.3 * std::max(std::fabs(a.driftHzPerS), std::fabs(b.driftHzPerS)), 1.5);
     if (!a.carrierOnly && !b.carrierOnly) {
         add("deviation", a.devP95Hz - b.devP95Hz, 0.5 * std::max(a.devP95Hz, b.devP95Hz) + 1.0, 0.5);
         if (a.tiltValid && b.tiltValid) add("pre-emphasis", a.tiltDbOct - b.tiltDbOct, 3.0, 0.5);
@@ -567,9 +583,9 @@ Match compare(const Features& a, const Features& b, const MatchOptions& mo) {
     }
     if (a.transient && b.transient) {
         add("rise time", std::log(std::max(a.riseUs, 1.0) / std::max(b.riseUs, 1.0)), 0.35, 2.0);
-        add("overshoot", a.overshootPct - b.overshootPct, 4.0, 1.0);
+        add("overshoot", a.overshootPct - b.overshootPct, 8.0, 0.7);
         add("start-up chirp", a.chirpHz - b.chirpHz, 25 + 0.25 * std::max(std::fabs(a.chirpHz), std::fabs(b.chirpHz)), 1.5);
-        add("settling", a.settleMs - b.settleMs, 1.0 + 0.35 * std::max(a.settleMs, b.settleMs), 1.5);
+        add("settling", a.settleMs - b.settleMs, 2.0 + 0.4 * std::max(a.settleMs, b.settleMs), 1.5);
     }
     if (a.spurValid && b.spurValid) {
         const double tolHz = 400.0;
@@ -588,7 +604,9 @@ Match compare(const Features& a, const Features& b, const MatchOptions& mo) {
         if (a.imageDbc < 90 && b.imageDbc < 90 && cdiff(a.rxOffsetHz, b.rxOffsetHz) < 25000) add("I/Q image", a.imageDbc - b.imageDbc, 3.0, 0.7);
     }
     m.weight = den;
-    m.score = 100.0 * std::exp(-0.5 * num / std::max(den, 1e-9));
+    double pen = 0;   // one feature far off is decisive whatever the others say
+    for (const Part& p : m.parts) if (p.d > 2.0) pen += (p.d - 2.0) * (p.d - 2.0);
+    m.score = 100.0 * std::exp(-0.5 * (num / std::max(den, 1e-9) + pen));
     return m;
 }
 
@@ -792,13 +810,11 @@ void Watcher::feed(const cf32* x, size_t n, int64_t wallNow) {
 }
 
 void Watcher::finish(double tEnd) {
-    Pending p;
-    p.ev.tStart = tOn_;
-    p.ev.durationS = std::max(0.0, tEnd - tOn_);
-    p.ev.wallStart = wallOn_;
-    p.z.swap(cur_);
-    p.psd = psd_;
-    p.noise = noise_;
+    Event ev;
+    ev.tStart = tOn_;
+    ev.durationS = std::max(0.0, tEnd - tOn_);
+    ev.wallStart = wallOn_;
+    Pending p{ev, std::move(cur_), psd_, noise_};
     pending_.push_back(std::move(p));
     cur_.clear();
     on_ = false; onRun_ = 0; offRun_ = 0;
@@ -808,7 +824,7 @@ std::vector<Event> Watcher::poll() {
     std::vector<Event> out;
     for (Pending& p : pending_) {
         Options o;
-        o.kind = kind_; o.tunedHz = tuned_; o.noiseFloorPow = p.noise;
+        o.kind = kind_; o.tunedHz = tuned_; o.noiseFloorPow = p.noise; o.noiseLag1 = ch_.noiseLag1();
         // trim the quiet tail the off-detector needed
         Event e = p.ev;
         e.f = analyse(p.z.data(), p.z.size(), ch_.outRate(), o);
@@ -830,7 +846,7 @@ std::vector<cf32> Watcher::recent(double sec) const {
 Features Watcher::captureNow(double sec) const {
     const std::vector<cf32> z = recent(sec);
     Options o;
-    o.kind = kind_; o.tunedHz = tuned_;
+    o.kind = kind_; o.tunedHz = tuned_; o.noiseLag1 = ch_.noiseLag1();
     Features f = analyse(z.data(), z.size(), ch_.outRate(), o);
     if (f.valid && psd_.ready()) psd_.spurs(off_, bw_ > 0 ? bw_ : (kind_ == Kind::WFM ? 200e3 : kind_ == Kind::NFM ? 25e3 : 10e3), f);
     return f;

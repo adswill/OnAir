@@ -28,12 +28,12 @@ public:
     Channel(double inRateHz, double carrierOffsetHz, Kind kind, double chanBwHz = 0);   // chanBwHz 0 = the kind's usual width
     double outRate() const { return outRate_; }
     int decimation() const { return dec_; }
+    double noiseLag1() const { return noiseLag1_; }   // lag-1 correlation of white noise after the channel filter (corrects the offset estimate)
     void push(const cf32* x, size_t n, std::vector<cf32>& out);   // appends the new channel samples to out
 private:
-    double inRate_, outRate_, theta_;
+    double outRate_, theta_, noiseLag1_ = 0;
     int dec_;
     std::vector<cf32> taps_, hist_;      // modulated low-pass taps; the last taps-1 input samples
-    int64_t phase_ = 0;                  // input samples consumed modulo nothing: only used to keep the decimation phase
     double ph_ = 0;                      // mixer phase at the next output sample
     size_t skip_ = 0;                    // input samples until the next output
 };
@@ -72,6 +72,7 @@ struct Options {
     Kind kind = Kind::NFM;
     double tunedHz = 0;
     double carrierOnlyDevHz = 0;         // 0 = default of the kind: NFM 300 Hz, WFM 500 Hz, AM 2 percent
+    double noiseLag1 = 0;                // Channel::noiseLag1()
     double noiseFloorPow = 0;            // channel noise power (mean |z|^2) when the caller tracked it; 0 = estimated from the capture
 };
 
@@ -94,6 +95,7 @@ private:
     std::vector<float> win_;
     std::vector<double> p_;
     size_t discard_ = 0, skipSeg_ = 1;
+    double lastPow_ = 0, norm_ = 0;
     std::vector<cf32> acc_;
     size_t segs_ = 0;
 };
