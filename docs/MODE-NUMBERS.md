@@ -48,6 +48,7 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | Internet TV (IPTV) | 209 | 211 | 210 | - | feat34-iptv | no radio, no receiver, no poll slot; 3.4 |
 | nRF24L01 | 210 | 212 | 211 | 186 | feat34-iqtcp-nrf24 | 3.4; needs a user test; numbers may need to move at merge |
 | ATIS (inland waterways) | 211 | 213 | 212 | 187 | feat35-lane-b | 3.5; needs a user test; numbers may need to move at merge |
+| Shortwave | 212 | 214 | 213 | 188 | feat35-shortwave | 3.5; the general receiver with one-click HF decoders; numbers may need to move at merge |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |
@@ -55,6 +56,6 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 Protocol entries (a row with a subId, such as FT8 in HF digital or POCSAG in pagers) share their family on purpose; the test checks
 that each (family, subId) pair is unique instead.
 
-`kNumFamilies` = 212, `kPollSeqSlots` = 188.
+`kNumFamilies` = 213, `kPollSeqSlots` = 189.
 
 A new mode takes the next free family above the highest one in this table and the next free poll slot, and adds its row here.

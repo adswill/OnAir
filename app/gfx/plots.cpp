@@ -73,7 +73,7 @@ static int gBoxPlot = -1;
 static double gBoxGrab = 0;   // MHz from the box centre to where it was grabbed
 static bool fileBoxDragging(int plotId) { return gBoxPlot >= 0 && gBoxPlot == plotId; }
 static bool fileBoxDrag(App& a, int plotId) {
-    if (!fileVfoActive(a) || a.family == 55 || a.second.drawing || a.touchUi || a.identifyTool || ImGui::GetIO().KeyShift) { gBoxPlot = -1; return false; }
+    if (!fileVfoActive(a) || isGeneralFamily(a.family) || a.second.drawing || a.touchUi || a.identifyTool || ImGui::GetIO().KeyShift) { gBoxPlot = -1; return false; }
     if (fileBoxDragging(plotId)) {
         ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
         if (ImGui::IsMouseDown(0)) { fileSetVfo(a, plt::GetPlotMousePos().x - gBoxGrab); return true; }
@@ -142,7 +142,7 @@ static void clickToTune(App& a, int plotId) {
     if (autoLabelsHovered()) return;   // the mouse is on a name: it tunes (autolabel.cpp)
     if (vfoPlotMouse(a, plotId)) return;   // multi-VFO: Add channel click, a channel's centre dragged
     if (fileBoxDrag(a, plotId)) return;
-    if (a.family == 55) { generalPlotMouse(a, plotId); return; }   // the general receiver: its channel marker, without retuning the radio
+    if (isGeneralFamily(a.family)) { generalPlotMouse(a, plotId); return; }   // the general receiver: its channel marker, without retuning the radio
     if (bandEdgeDrag(a, plotId)) return;
     if (!plt::IsPlotHovered() || a.fmScan.running) return;
     if (a.identifyTool || ImGui::GetIO().KeyShift) return;   // the Identify tool and Shift+drag select a signal instead of tuning (identifyPlotInput)
@@ -209,7 +209,7 @@ ChanWidth channelWidth(const App& a) {
     } else if (a.family == 7) { w.mhz = a.dtmbBwMhz; w.settable = w.manual = true; }
     else if (a.family == 40 && a.engine.running() && a.rx.standard == 41 && a.rx.dvbc.symbolRate > 0) w.mhz = a.rx.dvbc.symbolRate * (1 + a.rx.dvbc.rollOff) / 1e6;
     else if (a.family == 6 && a.engine.running() && a.rx.standard == 7 && a.rx.dvbs.symbolRate > 0) w.mhz = a.rx.dvbs.symbolRate * (1 + a.rx.dvbs.rollOff) / 1e6;
-    else if (a.family == 55) w.mhz = generalChannelWidthMhz(a);
+    else if (isGeneralFamily(a.family)) w.mhz = generalChannelWidthMhz(a);
     else if (const ModeTuning* mt = modeTuning(a.family + 2)) w.mhz = mt->bandwidthMhz;
     return w;
 }
@@ -263,7 +263,7 @@ void channelWidthPopup(App& a) {
         ImGui::SameLine();
         if (ImGui::RadioButton(tr("6 MHz (Cuba)"), a.dtmbBwMhz == 6) && a.dtmbBwMhz != 6) setDtmbBandwidth(a, 6);
         ImGui::TextDisabled("%s", tr("Set by the country: there is nothing to measure it from. A receiver set to the wrong width finds nothing."));
-    } else if (a.family == 55) {
+    } else if (isGeneralFamily(a.family)) {
         ImGui::TextUnformatted("Demodulator");
         generalDemodPicker();
         ImGui::TextDisabled("%s", "The width follows the filter preset in the receiver controls under the spectrum.");
@@ -318,7 +318,7 @@ static void tunerDraw(const App& a, bool spectrum) {
 }
 
 static void channelBandMain(const App& a, bool fill) {
-    if (a.family == 55) { generalChannelBand(a, fill); return; }
+    if (isGeneralFamily(a.family)) { generalChannelBand(a, fill); return; }
     if (a.tunerStyle > 0) { if (!fill) tunerDraw(a, false); return; }   // the spectrum draws it over the trace (below)
     const ChanWidth cw = channelWidth(a);
     if (lookOn(a)) { specLookBand(a, a.freqMhz - std::max(0.0, cw.mhz) / 2, a.freqMhz + std::max(0.0, cw.mhz) / 2, a.freqMhz, fill, bandEdgeDragging(fill ? 0 : 1)); return; }
@@ -340,7 +340,7 @@ void channelWidthButton(App& a, ImVec2 plotMin, ImVec2 plotSize, const char* yLa
     const ChanWidth cw = channelWidth(a);
     if (cw.mhz <= 0) return;
     char b[64], demodTag[16] = "";
-    if (a.family == 55) snprintf(demodTag, sizeof demodTag, "%s  ", generalDemodLabel());   // the general receiver's demodulator, before the width
+    if (isGeneralFamily(a.family)) snprintf(demodTag, sizeof demodTag, "%s  ", generalDemodLabel());   // the general receiver's demodulator, before the width
     snprintf(b, sizeof b, "%sBW %s%s###bwbtn", demodTag, widthText(cw.mhz).c_str(), cw.hasAuto ? (cw.manual ? " manual" : " auto") : "");
     const ImVec2 sz = ImGui::CalcTextSize(b, nullptr, true);
     const float w = sz.x + 2 * ImGui::GetStyle().FramePadding.x, m = 4 * gUi;
@@ -354,7 +354,7 @@ void channelWidthButton(App& a, ImVec2 plotMin, ImVec2 plotSize, const char* yLa
     if (ImGui::SmallButton(b)) ImGui::OpenPopup("##bwpop");
     ImGui::PopStyleColor(2);
     if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("%s\n\n%s", a.family == 55 ? "Demodulator (NFM, WFM, AM, USB, LSB, CW) and the width of the light band.\nClick to choose the demodulator."
+        ImGui::SetTooltip("%s\n\n%s", isGeneralFamily(a.family) ? "Demodulator (NFM, WFM, AM, USB, LSB, CW) and the width of the light band.\nClick to choose the demodulator."
                                       : tr(cw.settable ? "Channel width: the band the receiver works with (the light band).\nClick to choose automatic or a manual width."
                                       : "Channel width: the band the receiver works with (the light band), set by the standard."),
                           tr("Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: reset."));
@@ -1444,7 +1444,7 @@ static double gWfScrollLo = 0, gWfScrollHi = 0; static bool gWfScrollPending = f
 static double wheelStepHz(const App& a) { return inputmap::stepHzFor(inputmap::settings(), ownTuneGridMhz(a) * 1e6); }
 
 static void tuneBySteps(App& a, int n) {
-    if (!n || a.fmScan.running || a.family == 55) return;
+    if (!n || a.fmScan.running || isGeneralFamily(a.family)) return;
     const double step = wheelStepHz(a) * 1e-6;
     const double mhz = clickTuneMhz(a, a.freqMhz + n * step, inputmap::settings().stepHz == 0);
     if (!std::isnan(mhz) && std::fabs(mhz - a.freqMhz) > 1e-9) spectrumTune(a, mhz);
@@ -1553,7 +1553,7 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
     const slook::LookSet& L = curLook(a);
     plt::SetNextPlotLook(plotLook(a, true));
     wheelPolicy(a, inputmap::Area::Spectrum, size);
-    if (plt::BeginPlot("##spec", size, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_Overlay | (a.specSmoothZoom ? plt::Flags_SmoothZoom : 0) | extraFlags | ((a.family == 55 && generalDragging(0)) || bandEdgeDragging(0) || fileBoxDragging(0) ? plt::Flags_NoPan : 0) | (a.identifyTool ? plt::Flags_NoPan : 0) | (ImGui::GetIO().KeyShift ? plt::Flags_NoDrag : 0))) {
+    if (plt::BeginPlot("##spec", size, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_Overlay | (a.specSmoothZoom ? plt::Flags_SmoothZoom : 0) | extraFlags | ((isGeneralFamily(a.family) && generalDragging(0)) || bandEdgeDragging(0) || fileBoxDragging(0) ? plt::Flags_NoPan : 0) | (a.identifyTool ? plt::Flags_NoPan : 0) | (ImGui::GetIO().KeyShift ? plt::Flags_NoDrag : 0))) {
         drawn = true;
         plt::SetupAxes(nullptr, kYLabel, (a.specGrid ? 0 : plt::AxisFlags_NoGridLines), plt::AxisFlags_Inside | (a.specGrid ? 0 : plt::AxisFlags_NoGridLines));   // the frequencies along the bottom edge, inside, as in SDR++
         setupFreqAxis(a);
@@ -1697,7 +1697,7 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
             }
         }
         if (look) specLookCursor(a, 0, plotMin, plotSize);
-        if (a.tunerStyle > 0 && a.family != 55) tunerDraw(a, true);   // the lines over the trace
+        if (a.tunerStyle > 0 && !isGeneralFamily(a.family)) tunerDraw(a, true);   // the lines over the trace
         wideMarkers(a);
         fileSpikeAndEdges(a, 0, plotMin, plotSize);
         multiMarkers(a);
@@ -1849,7 +1849,7 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
     const bool look = lookOn(a);
     plt::SetNextPlotLook(plotLook(a, false));
     wheelPolicy(a, inputmap::Area::Waterfall, size);
-    if (plt::BeginPlot("##wf", size, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_Overlay | (a.specSmoothZoom ? plt::Flags_SmoothZoom : 0) | extraFlags | ((a.family == 55 && generalDragging(1)) || bandEdgeDragging(1) || fileBoxDragging(1) ? plt::Flags_NoPan : 0) | (a.identifyTool ? plt::Flags_NoPan : 0) | (ImGui::GetIO().KeyShift ? plt::Flags_NoDrag : 0))) {
+    if (plt::BeginPlot("##wf", size, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_Overlay | (a.specSmoothZoom ? plt::Flags_SmoothZoom : 0) | extraFlags | ((isGeneralFamily(a.family) && generalDragging(1)) || bandEdgeDragging(1) || fileBoxDragging(1) ? plt::Flags_NoPan : 0) | (a.identifyTool ? plt::Flags_NoPan : 0) | (ImGui::GetIO().KeyShift ? plt::Flags_NoDrag : 0))) {
         drawn = true;
         plt::SetupAxes(nullptr, a.wf.clockLabels ? tr("time of day") : tr("seconds ago"), plt::AxisFlags_NoTickLabels | (a.specGrid ? 0 : plt::AxisFlags_NoGridLines), plt::AxisFlags_Inside | (a.specGrid ? 0 : plt::AxisFlags_NoGridLines));   // the spectrum above shows the frequencies
         double fs = (a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate) / 1e6;

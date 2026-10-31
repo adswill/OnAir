@@ -539,7 +539,7 @@ double settingsRetuneCentreHz(const App& a) {
 }
 
 void spectrumTune(App& a, double absMhz) {
-    if (!a.second.drawing && a.family != 55 && fileVfoActive(a)) { fileSetVfo(a, absMhz); return; }   // a recording: the tune box moves, the spectrum stays
+    if (!a.second.drawing && !isGeneralFamily(a.family) && fileVfoActive(a)) { fileSetVfo(a, absMhz); return; }   // a recording: the tune box moves, the spectrum stays
     if (a.tuningMode == 1) {
         if (a.fmMode) { a.freqMhz = std::round(std::max(0.0, dialMhzFromAbs(a, absMhz)) * 10.0) / 10.0; tuneDecode(a, absMhz); }
         else tuneDecode(a, absMhz);
@@ -548,7 +548,7 @@ void spectrumTune(App& a, double absMhz) {
         // normal tuning (default): a click inside the captured band only moves the marker; the target button centres the radio on the click
         const bool file = !a.devices.empty() && a.devIdx >= 0 && a.devIdx < (int)a.devices.size() && (a.devices[a.devIdx].kind == DeviceInfo::File || a.devices[a.devIdx].isAudio());
         const double fs = (a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate) / 1e6;
-        if (a.engine.running() && !file && !a.second.drawing && a.family != 55 &&
+        if (a.engine.running() && !file && !a.second.drawing && !isGeneralFamily(a.family) &&
             !tunedrag::clickPlan(a.centreTuning, false, absMhz, a.engine.captureCentreHz() / 1e6, fs, 0.001, dect2::kMaxTuneMhz).retune) tuneDecode(a, absMhz);
         else tuneFreq(a, dialMhzFromAbs(a, absMhz));
     }
@@ -577,7 +577,7 @@ void tuneFreq(App& a, double mhz) {
 // past its edge the radio centre goes to it. FM keeps its station stepping; a file or a stopped radio simply takes the frequency.
 void tuneListen(App& a, double mhz) {
     mhz = std::min(dect2::kMaxTuneMhz, std::max(0.001, mhz));
-    if (a.family == 55) { generalSetListenHz(a, mhz * 1e6); return; }
+    if (isGeneralFamily(a.family)) { generalSetListenHz(a, mhz * 1e6); return; }
     const bool file = !a.devices.empty() && a.devIdx >= 0 && a.devIdx < (int)a.devices.size() && (a.devices[a.devIdx].kind == DeviceInfo::File || a.devices[a.devIdx].isAudio());
     if (a.engine.running() && !file && !a.fmMode && !a.second.drawing && !a.centreTuning) {
         const double fs = a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate;
