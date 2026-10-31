@@ -216,11 +216,13 @@ void MultiTv::evaluate() {
             s->absent = occ ? 0 : s->absent + 1;
         }
     }
-    // drop receivers whose channel has gone and that never locked
+    // drop receivers whose channel has gone and that never locked, or that are no longer allowed
     for (;;) {
         size_t victim = SIZE_MAX;
         {
             std::lock_guard<std::mutex> lk(mu_);
+            if (restrict_) for (size_t i = 0; i < live_.size(); i++) if (std::find(allowed_.begin(), allowed_.end(), live_[i]->pos.index) == allowed_.end()) { victim = i; break; }
+            if (victim == SIZE_MAX)
             for (size_t i = 0; i < live_.size(); i++)
                 if (live_[i]->absent >= kAbsentEvals && !(live_[i]->haveTel && live_[i]->tel.state >= 2)) { victim = i; break; }
         }
@@ -239,8 +241,9 @@ void MultiTv::evaluate() {
     for (const auto& p : want) {
         size_t cnt;
         bool have;
-        { std::lock_guard<std::mutex> lk(mu_); cnt = live_.size(); have = find(p.pos.index) != nullptr; }
-        if (have) continue;
+        bool allowed = true;
+        { std::lock_guard<std::mutex> lk(mu_); cnt = live_.size(); have = find(p.pos.index) != nullptr; if (restrict_) allowed = std::find(allowed_.begin(), allowed_.end(), p.pos.index) != allowed_.end(); }
+        if (have || !allowed) continue;
         if ((int)cnt >= std::max(1, o_.maxChannels)) break;
         startSlot(p);
     }
@@ -275,6 +278,9 @@ void MultiTv::wait() {
         s->qCv.wait(lk, [&] { return (s->q.empty() && !s->busy) || s->stop; });
     }
 }
+
+void MultiTv::setAllowedSlots(const std::vector<int>& slots) { std::lock_guard<std::mutex> lk(mu_); restrict_ = true; allowed_ = slots; }
+void MultiTv::clearAllowedSlots() { std::lock_guard<std::mutex> lk(mu_); restrict_ = false; allowed_.clear(); }
 
 void MultiTv::setSelected(int slot) {
     std::lock_guard<std::mutex> lk(mu_);

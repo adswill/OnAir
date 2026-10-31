@@ -97,7 +97,12 @@ void CarrierFinder::update() {
     }
     // noise floor: a low percentile of the cells (a busy band has many carriers; the quiet cells between them are the floor). One for the span,
     // and one per cell from the cells around it (a front end's slope or ripple), kept within -10 / +12 dB of the span's; both smoothed over time.
-    std::vector<double> srt = cell; std::sort(srt.begin(), srt.end());
+    std::vector<char> ex((size_t)nc, 0);
+    if (!excl_.empty()) for (int c = 0; c < nc; c++) for (const auto& z : excl_) if (cen[(size_t)c] >= z.first - step / 2 && cen[(size_t)c] <= z.second + step / 2) { ex[(size_t)c] = 1; break; }
+    std::vector<double> srt;
+    for (int c = 0; c < nc; c++) if (!ex[(size_t)c]) srt.push_back(cell[(size_t)c]);
+    if (srt.empty()) srt = cell;
+    std::sort(srt.begin(), srt.end());
     const double gDb = db(std::max(1e-20, srt[srt.size() / 4]) * 1.15);
     const double alpha = noiseInit_ ? std::min(1.0, dt / std::max(1e-3, cfg_.floorSec)) : 1.0;
     std::vector<double> raw((size_t)nc, gDb);
@@ -105,7 +110,9 @@ void CarrierFinder::update() {
         std::vector<double> win;
         for (int c = 0; c < nc; c++) {
             const int a = std::max(0, c - cfg_.localCells), b = std::min(nc - 1, c + cfg_.localCells);
-            win.assign(cell.begin() + a, cell.begin() + b + 1);
+            win.clear();
+            for (int j = a; j <= b; j++) if (!ex[(size_t)j]) win.push_back(cell[(size_t)j]);
+            if (win.empty()) { raw[(size_t)c] = gDb; continue; }
             const size_t q = win.size() / 5;
             std::nth_element(win.begin(), win.begin() + (long)q, win.end());
             raw[(size_t)c] = std::clamp(db(std::max(1e-20, win[q]) * 1.15), gDb - 10.0, gDb + 12.0);
@@ -128,6 +135,7 @@ void CarrierFinder::update() {
     for (auto& t : trk_) { const int c = cellOf(t); if (c >= 0 && c < nc) isTracked[(size_t)c] = 1; }
     auto perBin = [&](int c) { return lin(floorDb_[(size_t)c]) / nbins[(size_t)c]; };
     for (int c = 0; c < nc; c++) {
+        if (ex[(size_t)c]) continue;
         if (cfg_.priorOnly && !prior[(size_t)c] && !isTracked[(size_t)c]) continue;
         const double lvl = db(cell[(size_t)c]), snr = lvl - floorDb_[(size_t)c];
         const double bonus = prior[(size_t)c] ? cfg_.priorDb : 0.0;
