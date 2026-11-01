@@ -69,7 +69,7 @@ inline const Def* defs() {
         {Action::TuneDown, "tunedown", "Tune down by the step", "Tuning", key(ImGuiKey_LeftArrow), true},
         {Action::ZoomIn, "zoomin", "Zoom in (frequency)", "View", Binding(), true},
         {Action::ZoomOut, "zoomout", "Zoom out (frequency)", "View", Binding(), true},
-        {Action::ZoomReset, "zoomreset", "Show the whole band", "View", Binding(), true},
+        {Action::ZoomReset, "zoomreset", "Show the whole band", "View", key(ImGuiKey_Home), true},
         {Action::PanLeft, "panleft", "Pan the view left", "View", Binding(), true},
         {Action::PanRight, "panright", "Pan the view right", "View", Binding(), true},
         {Action::StepNext, "stepnext", "Larger tuning step", "Tuning", key(ImGuiKey_UpArrow), true},

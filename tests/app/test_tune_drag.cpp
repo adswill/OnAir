@@ -53,5 +53,25 @@ int main() {
     // P25 (50 kHz tune offset): the radio centre is 100.05 MHz, but the receiver mixes the offset out after the shift, so 100.1 is dial + 0.1
     t = tunerRetune(100e6, 100e6, 0.1e6, 100.1e6);
     check(t.dialHz == 100e6 && !t.clearShift, "a mode tune offset: the decoded frequency counts from the radio's dial, not its centre");
+        {   // zoom keeps the point under the pointer; clamps; marker snap; centring
+        View v = zoomAbout(100, 102, 100.5, 0.5, 99, 103, 0.001);
+        check(std::fabs(v.hi - v.lo - 1.0) < 1e-12 && std::fabs((100.5 - v.lo) / 1.0 - 0.25) < 1e-12, "zoom in keeps the anchor fraction");
+        v = zoomAbout(100, 102, 100.5, 1 / 0.5, 99, 103, 0.001);
+        check(std::fabs(v.hi - v.lo - 4.0) < 1e-12 && v.lo >= 99 && v.hi <= 103, "zoom out stays in the band");
+        v = zoomAbout(99, 100, 99, 0.001, 99, 103, 0.001);
+        check(std::fabs(v.hi - v.lo - 0.001) < 1e-12 && std::fabs(v.lo - 99) < 1e-12, "minimum span, edge anchor fixed");
+        v = zoomAbout(99.5, 100.5, 100, 100.0, 99, 103, 0.001);
+        check(v.lo == 99 && v.hi == 103, "full zoom out is the band");
+        check(zoomAnchor(100.01, 100.0, 99, 101, 1000, 8) == 100.0, "snaps to the marker");
+        check(zoomAnchor(100.2, 100.0, 99, 101, 1000, 8) == 100.2, "far from the marker: the pointer");
+        check(zoomAnchor(100.0, 105.0, 99, 101, 1000, 8) == 100.0, "marker off screen: the pointer");
+        v = centreView(100, 101, 100.9, 99, 103);
+        check(std::fabs((v.lo + v.hi) / 2 - 100.9) < 1e-12, "view centred on the signal");
+        v = centreView(100, 101, 102.9, 99, 103);
+        check(v.hi == 103 && std::fabs(v.hi - v.lo - 1) < 1e-12, "view centre stops at the band edge");
+        check(targetClickActs(100.0, 100.0, 99.0, true), "target click on the marker still centres");
+        check(!targetClickActs(100.0, 100.0, 100.0, true), "target click on the centre does nothing");
+        check(!targetClickActs(100.0, 100.0, 99.0, false), "plain click on the marker does nothing");
+    }
     return fails ? 1 : 0;
 }

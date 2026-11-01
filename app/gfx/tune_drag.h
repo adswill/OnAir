@@ -58,6 +58,36 @@ inline TunerRetune tunerRetune(double dialHz, double runDialHz, double shiftHz, 
     if (shiftHz != 0 && std::fabs(runDialHz + shiftHz - tunedHz) <= 1) return {dialHz, false};
     return {tunedHz, shiftHz != 0};
 }
+
+// ---- zoom, pan and the target (centre) click: pure maths, tested in tests/app/test_tune_drag.cpp ----
+// Zoom the view [lo,hi] by factor (<1 zooms in) so that `anchor` keeps its place on screen (its fraction of the width), like SDR++. The span stays in
+// [minSpan, band width] and the view inside [bLo,bHi]; the anchor only moves when the band edge forces it.
+inline View zoomAbout(double lo, double hi, double anchor, double factor, double bLo, double bHi, double minSpan) {
+    const double bw = bHi - bLo;
+    if (!(hi > lo) || !(bw > 0)) return {bLo, bHi};
+    const double r = hi - lo, m = std::min(1.0, std::max(0.0, (anchor - lo) / r));
+    const double ns = std::min(bw, std::max(std::min(minSpan, bw), r * factor));
+    double n0 = anchor - m * ns;
+    n0 = std::max(bLo, std::min(n0, bHi - ns));
+    return {n0, n0 + ns};
+}
+// The point a wheel zoom keeps still: the tuner marker when the pointer is within snapPx of it, else the pointer. The marker has to be on screen.
+inline double zoomAnchor(double pointerMhz, double markerMhz, double lo, double hi, double widthPx, double snapPx) {
+    if (!(hi > lo) || !(widthPx > 0) || markerMhz < lo || markerMhz > hi) return pointerMhz;
+    return std::fabs(pointerMhz - markerMhz) / (hi - lo) * widthPx <= snapPx ? markerMhz : pointerMhz;
+}
+// The same span centred on c, inside the band (the view after a target click: the signal sits in the middle of the screen)
+inline View centreView(double lo, double hi, double c, double bLo, double bHi) {
+    const double s = std::min(bHi - bLo, hi - lo);
+    const double n0 = std::max(bLo, std::min(c - s / 2, bHi - s));
+    return {n0, n0 + s};
+}
+// A click in target style must act unless it is already on the radio centre: comparing with the tuned frequency (marker) ignored a click on the
+// marker, and the grid snap made a click near it the same number, so a signal tuned off-centre could never be centred by clicking it.
+inline bool targetClickActs(double clickedMhz, double tunedMhz, double radioCentreMhz, bool centreStyle) {
+    if (centreStyle) return std::fabs(clickedMhz - radioCentreMhz) > 1e-6;
+    return std::fabs(clickedMhz - tunedMhz) > 1e-6;
+}
 struct Click { bool retune; double centreMhz; bool decodeOnly; };
 // What a click on absMhz does. centreStyle: the target button (centre the radio on the click); else the click only moves the marker
 // inside the captured band and retunes only when it lies outside it. noRetune: a file or a wide mode: the radio never moves.
