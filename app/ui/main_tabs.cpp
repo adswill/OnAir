@@ -136,15 +136,13 @@ static void mainTabsInner(App& a, bool unified) {
     if (const ModeUi* mu = modeUi(a.family); mu && modepanel::available(a)) {
         if (modepanel::simple(a)) {
             if (!unified) {   // the Overview tab (the spectrum) is not a tab here: the spectrum stays above the Command view
-                const float h = std::floor(std::min(300 * gUi, std::max(170 * gUi, ImGui::GetContentRegionAvail().y * 0.32f)));
+                const float h = std::floor(std::min(330 * gUi, std::max(210 * gUi, ImGui::GetContentRegionAvail().y * 0.32f)));
                 ImGui::BeginChild("##simpleSpec", ImVec2(0, h), 0, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
                 overviewTab(a);
                 ImGui::EndChild();
             }
-            ImGui::BeginChild("##simpleCmd", ImVec2(0, 0), 0);
             adsbmap::FullScope fs(&a, [&a, mu]{ modepanel::commandView(a, *mu); });
-            modepanel::commandView(a, *mu);
-            ImGui::EndChild();
+            modepanel::commandView(a, *mu);   // in the window of the tabs (it scrolls like a tab body), not in a child of its own
             return;
         }
         modepanel::levelBar(a);
