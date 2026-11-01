@@ -48,6 +48,7 @@ enum class InstallKind {
     MacApp,          // OnAir.app
     WindowsInstall,  // installed by the setup program (or unpacked from the zip)
     LinuxPortable,   // the .tar.gz: a directory with bin/onair in it
+    LinuxAppImage,   // the .AppImage file: replaced in place by the downloaded one (no root; the file's folder must be writable)
     LinuxDeb         // installed by the .deb: needs the administrator to change; OnAir downloads and checks the package and shows the command, it never runs it
 };
 
@@ -69,6 +70,10 @@ std::string curlDownloadError(int rc);
 // Runs curl with these arguments (no shell); its standard output is appended to *out when out is not null. The exit code of curl, -1 when cancelled, -2 when curl is missing.
 int curlRun(const std::vector<std::string>& args, std::string* out, const std::atomic<bool>& cancel);
 std::string executablePath();
+// The AppImage file this program was started from (the APPIMAGE variable the AppImage runtime sets); "" when it is not an AppImage.
+std::string appImagePath();
+// A file with the AppImage header (an ELF program with the type-2 marker 'AI' 0x02 at offset 8).
+bool looksLikeAppImage(const std::string& file);
 InstallKind detectInstallKind(const std::string& exePath);
 const char* installKindName(InstallKind k);
 // The newest release in a GitHub "list releases" answer that is newer than `current`, with the package for (kind, arch); valid = false if none.

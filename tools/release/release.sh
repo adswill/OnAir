@@ -95,7 +95,7 @@ gh run download "$AID" --repo $REPO --dir "$DL/android"
 gh run download "$PID" --repo $CI --dir "$DL/package"
 
 say "3. Collect"
-find "$DL" -type f \( -name '*.dmg' -o -name '*.deb' -o -name '*-portable.tar.gz' -o -name '*-windows-x64.zip' -o -name '*-windows-x64-setup.exe' -o -name '*-source.tar.gz' \) -exec cp {} "$DIST/" \;
+find "$DL" -type f \( -name '*.dmg' -o -name '*.deb' -o -name '*-portable.tar.gz' -o -name '*.AppImage' -o -name '*-windows-x64.zip' -o -name '*-windows-x64-setup.exe' -o -name '*-source.tar.gz' \) -exec cp {} "$DIST/" \;
 if [ -n "$APK" ]; then cp "$APK" "$DIST/OnAir-$V-android.apk"
 else
   f=$(find "$DL/android" -name '*.apk' | head -1)
@@ -105,7 +105,7 @@ else
     *) cp "$f" "$DIST/OnAir-$V-android.apk";;
   esac
 fi
-want="OnAir-$V-macos-arm64.dmg OnAir-$V-macos-x86_64.dmg onair_${V}_amd64.deb onair_${V}_arm64.deb onair-$V-linux-x86_64-portable.tar.gz onair-$V-linux-aarch64-portable.tar.gz OnAir-$V-windows-x64.zip OnAir-$V-windows-x64-setup.exe OnAir-$V-android.apk"
+want="OnAir-$V-macos-arm64.dmg OnAir-$V-macos-x86_64.dmg onair_${V}_amd64.deb onair_${V}_arm64.deb onair-$V-linux-x86_64-portable.tar.gz onair-$V-linux-aarch64-portable.tar.gz OnAir-$V-linux-x86_64.AppImage OnAir-$V-linux-aarch64.AppImage OnAir-$V-windows-x64.zip OnAir-$V-windows-x64-setup.exe OnAir-$V-android.apk"
 miss=""; for f in $want; do [ -f "$DIST/$f" ] || miss="$miss $f"; done
 [ -z "$miss" ] || die "missing assets:$miss (in $DIST)"
 (cd "$DIST" && shasum -a 256 $want > SHA256SUMS && ls -l $want SHA256SUMS | awk '{printf "%12d  %s\n",$5,$9}' | tee SIZES.txt)
@@ -116,10 +116,10 @@ echo "notes: $DIST/NOTES.md ($(wc -l < "$DIST/NOTES.md") lines)"
 [ $DRAFT = 1 ] || { say "Stopped before the release (--no-draft). Files: $DIST"; exit 0; }
 say "4. Draft release $TAG (not public, no tag yet)"
 if gh release view "$TAG" --repo $REPO >/dev/null 2>&1; then
-  gh release upload "$TAG" "$DIST"/*.dmg "$DIST"/*.deb "$DIST"/*-portable.tar.gz "$DIST"/*.zip "$DIST"/*-setup.exe "$DIST"/*.apk "$DIST/SHA256SUMS" --repo $REPO --clobber
+  gh release upload "$TAG" "$DIST"/*.dmg "$DIST"/*.deb "$DIST"/*-portable.tar.gz "$DIST"/*.AppImage "$DIST"/*.zip "$DIST"/*-setup.exe "$DIST"/*.apk "$DIST/SHA256SUMS" --repo $REPO --clobber
   gh release edit "$TAG" --repo $REPO --notes-file "$DIST/NOTES.md" --title "OnAir $V"
 else
-  gh release create "$TAG" "$DIST"/*.dmg "$DIST"/*.deb "$DIST"/*-portable.tar.gz "$DIST"/*.zip "$DIST"/*-setup.exe "$DIST"/*.apk "$DIST/SHA256SUMS" \
+  gh release create "$TAG" "$DIST"/*.dmg "$DIST"/*.deb "$DIST"/*-portable.tar.gz "$DIST"/*.AppImage "$DIST"/*.zip "$DIST"/*-setup.exe "$DIST"/*.apk "$DIST/SHA256SUMS" \
     --repo $REPO --draft --target "$SHA" --title "OnAir $V" --notes-file "$DIST/NOTES.md"
 fi
 n=$(gh release view "$TAG" --repo $REPO --json assets --jq '.assets|length')
