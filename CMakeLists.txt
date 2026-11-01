@@ -1429,6 +1429,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_pactor_mode PRIVATE dect2core)
     target_compile_definitions(test_pactor_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME pactor_mode COMMAND test_pactor_mode)
+    add_executable(test_pactorhf_mode tests/app/test_pactorhf_mode.cpp)   # PACTOR-II / -III / -IV: tunings, mode rows, engine / panel wiring, honesty strings
+    target_link_libraries(test_pactorhf_mode PRIVATE dect2core)
+    target_compile_definitions(test_pactorhf_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME pactorhf_mode COMMAND test_pactorhf_mode)
     add_executable(test_roshf_mode tests/app/test_roshf_mode.cpp)   # Roshf: tuning, mode row, engine / panel wiring, honesty strings
     target_link_libraries(test_roshf_mode PRIVATE dect2core)
     target_compile_definitions(test_roshf_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
@@ -2378,6 +2382,9 @@ if(DECT2_BUILD_TESTS)
       target_link_libraries(${m}tool PRIVATE dect2core)
     endif()
   endforeach()
+  if(TARGET test_pactorhf_real)   # reads the owner's recording from the source tree
+    target_compile_definitions(test_pactorhf_real PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+  endif()
   if(TARGET test_pskdsp_engine)   # reads the mode row and the help page from the source tree
     target_compile_definitions(test_pskdsp_engine PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
   endif()

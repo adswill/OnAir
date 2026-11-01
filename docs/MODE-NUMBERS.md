@@ -56,6 +56,9 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | GK-2A HRIT | 231 | 233 | 232 | 190 | feat36-gk2a | 3.6; QPSK 3 Msym/s; needs a user test (no live signal); numbers may need to move at merge |
 | FY-3 AHRPT | 235 | 237 | 236 | 195 | feat36-fy3 | 3.6; Fengyun-3 polar AHRPT (VIRR, MERSI pictures); no live signal tested; numbers may need to move at merge |
 | FY-3 MPT | 236 | 238 | 237 | 196 | feat36-fy3 | 3.6; Fengyun-3 A / B / C medium rate picture transmission (MERSI); no live signal tested; numbers may need to move at merge |
+| PACTOR-II | 237 | 239 | 238 | 197 | feat36-pactor | 3.6; physical layer only (carriers, clock, symbols, frame period); one real recording; numbers may need to move at merge |
+| PACTOR-III | 238 | 240 | 239 | 198 | feat36-pactor | 3.6; physical layer only; synthetic signals only; numbers may need to move at merge |
+| PACTOR-IV | 239 | 241 | 240 | 199 | feat36-pactor | 3.6; physical layer only (1800 baud single carrier and its constellation); synthetic signals only; numbers may need to move at merge |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |
@@ -63,6 +66,6 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 Protocol entries (a row with a subId, such as FT8 in HF digital or POCSAG in pagers) share their family on purpose; the test checks
 that each (family, subId) pair is unique instead.
 
-`kNumFamilies` = 237, `kPollSeqSlots` = 197 (families 213 to 234 and poll slots 189 to 194 are kept for the other 3.6 lanes).
+`kNumFamilies` = 240, `kPollSeqSlots` = 200 (families 213 to 234 and poll slots 189 to 194 are kept for the other 3.6 lanes).
 
 A new mode takes the next free family above the highest one in this table and the next free poll slot, and adds its row here.

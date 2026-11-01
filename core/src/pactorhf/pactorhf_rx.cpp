@@ -118,7 +118,7 @@ struct PactorHfReceiver::Impl {
                 if (stop) return;
                 a.swap(jobAudio); tt = jobTime; job = false; busy = true;
             }
-            pactorhf::Analysis r = pactorhf::analyse(a.data(), a.size(), wanted);
+            pactorhf::Analysis r = pactorhf::analyse(a.data(), a.size(), 0);
             {
                 std::lock_guard<std::mutex> lk(mu);
                 last = std::move(r); haveLast = true; analyses++;
@@ -133,7 +133,7 @@ struct PactorHfReceiver::Impl {
                         lastVariant = L.variant; lastCarriers = L.nCarriers;
                     }
                     lastSigTime = tt;
-                } else if (lastVariant != 0 && tt - lastSigTime > 12) {
+                } else if (lastVariant > 0 && tt - lastSigTime > 12) {
                     addEvent("signal gone", tt);
                     lastVariant = 0; lastCarriers = 0;
                 }
