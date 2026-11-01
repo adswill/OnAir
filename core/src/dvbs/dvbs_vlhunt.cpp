@@ -46,10 +46,10 @@ const std::vector<VlCand>& candidates() {
 
 } // namespace
 
-bool vlHunt(const cf32* z, size_t n, S2HuntResult& out) {
+bool vlHunt(const cf32* z, size_t n, S2HuntResult& out, bool force) {
     // the search is heavy (about 30 FFTs): every other attempt of the caller
     static std::atomic<unsigned> calls{0};
-    if ((calls.fetch_add(1) & 1) != 0) return false;
+    if ((calls.fetch_add(1) & 1) != 0 && !force) return false;
     if (n < 40000) return false;
     const std::vector<VlCand>& C = candidates();
     size_t N = 1;
@@ -59,6 +59,8 @@ bool vlHunt(const cf32* z, size_t n, S2HuntResult& out) {
     for (size_t i = 1; i < n; i++) d[i] = z[i] * std::conj(z[i - 1]);
 
     double bestZ = 0; int bestInv = 0; size_t bestC = 0, bestP = 0; int bestJ = 0;
+    struct Pk { double z; int inv; size_t c, p; };
+    std::vector<Pk> pk;
     for (int inv = 0; inv < 2; inv++) {
         if (inv) for (size_t i = 0; i < n; i++) d[i] = std::conj(d[i]);
         fd = d;
@@ -92,10 +94,17 @@ bool vlHunt(const cf32* z, size_t n, S2HuntResult& out) {
             size_t bp = 0;
             for (size_t p = 1; p < cnt; p++) if (S[p] > S[bp]) bp = p;
             const double zs = (S[bp] - mean) / sd;
+            if (zs >= 4.5 && Jv[bp] >= 2) pk.push_back({zs, inv, ci, bp});
             if (zs > bestZ && Jv[bp] >= 2) { bestZ = zs; bestInv = inv; bestC = ci; bestP = bp; bestJ = Jv[bp]; }
         }
     }
-    if (bestZ < 7.0) return false;
+    int weakAgree = 0;
+    for (const Pk& a : pk) if (a.inv == bestInv && a.c != bestC && C[a.c].set == C[bestC].set && (a.p > bestP ? a.p - bestP : bestP - a.p) <= 2) weakAgree++;
+    weakAgree++;
+    // 7 sd is clear of the noise (the largest of 600 000 values reaches 5); a signal at -5 dB over eight frames is only 5.4 to 6 when the symbol clock
+    // wanders a little, so from 5 up the peak is taken when the same position and three mode patterns agree (the patterns of one set share
+    // most of their symbols, a signal shows in several of them, noise in one)
+    if (bestZ < 7.0 && !(bestZ >= 5.0 && weakAgree >= 3)) return false;
 
     // ---- the carrier frequency and phase: the coherent sum over the known symbols at each trial frequency, around zero
     const VlCand& c = C[bestC];
