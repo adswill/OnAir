@@ -952,3 +952,6 @@ Wheel zoom now fixes the tuner marker when the pointer is near it; the target cl
 
 ## 2026-11-01 Target mode keeps the marker centred (feat36-spectrum)
 Switching to Centre/target mode, or tuning while in it, eases the view so the tuner marker sits in the middle (followMarker in tune_drag.h, unit-tested; a drag cancels it). The marker is the tuned frequency, so ModeTuning offsets do not move it.
+
+## 2026-11-01 Sensitivity harness for HFDL, NAVTEX, DSC, CDR, DVB-C, ATSC 3.0 and HFDL why-bad counters (feat36-fe)
+Added harness modes (hfdl per burst rate, navtex with 40 s trials, dsc VHF, cdr, dvbc, atsc3) to tools/sens/sens_modes.h and measured them against rough theory (docs/SENSITIVITY-3.6.md): HFDL at theory (300 bit/s about 1.3 dB off), DVB-C about 1 dB, ATSC 3.0 about 1.5 to 2 dB (LDPC itself is at 1.4 dB on an ideal channel; sync/estimate not touched), NAVTEX coarse. No receiver change for sensitivity (no clear gap above 1.5 dB with one transmitter). HFDL: why-bad counters (preamble not confirmed, short, SPDU FCS, MPDU header FCS, LPDU FCS, unknown LPDU) in HfdlTelemetry and the Receiver tab, test_hfdl_why checks the counters add up to blocksBad. Other skipped modes (hfdig, airband, ism, ndb, vorils, m17 etc.) not done in this pass.

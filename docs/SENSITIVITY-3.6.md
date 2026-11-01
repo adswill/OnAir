@@ -55,3 +55,33 @@ New one-transmitter harness modes (`adsb1`, `ais1`, `acars1`, `tools/sens/sens_m
 
 ACARS change (`core/src/acars/acars_chan.cpp`): bit-clock correction gain 0.04 -> 0.015 per bit and carrier-reference memory 0.9 -> 0.97 per bit. Steady-state timing jitter and reference noise fell, the cliff moved about 1 dB lower (at 4 dB: 42 % -> 83 to 100 % of trials). cfo20ppm, sro50ppm, tu6, combined unchanged or 0 to 1 dB better; echo scenario and `offcentre` (harness shifts the signal 105 kHz out of the channel the receiver is set to, a harness artefact for every narrowband mode) not affected. A timing gain of 0.007 gave no further gain.
 False decodes: the sweep's noise-only false-lock rate stays 0.000 for acars, acars1, ais1, adsb1; no AIS/ADS-B receiver code was changed, and no CRC-only bit repair was added to AIS (16-bit CRC, a one-bit repair would accept about 0.4 % of damaged 256-bit frames by chance; the ship already beats theory).
+
+## New harness modes, 3.6 third pass (feat36-fe)
+
+Added to `tools/sens/sens_modes.h`: `hfdl300 hfdl600 hfdl1200 hfdl1800` (one burst rate each, ACARS downlinks every 2.3 s, SNR = Es/N0 in the 1800 Hz symbol rate), `navtex`, `dsc` (VHF channel 70),
+`cdr`, `dvbc` (64-QAM 6.952 Msym/s, Es/N0), `atsc3` (QPSK 8/15, 64800 LDPC, the engine's synthetic signal; the SNR is taken in 5.83 MHz, ATSC counts 6.144 MHz, so subtract 0.2 dB to compare with A/322).
+AWGN, full tier, 8 to 12 trials, Mac, same criterion as above. Theory for the HFDL rows: K = 7 convolutional code, soft decisions, Eb/N0 about 3.5 dB for a 10 % burst loss,
+converted with the information bits per symbol (300/600/1200/1800 bit/s on 1800 Bd = 1/6, 1/3, 2/3, 1 bit per symbol); 8PSK is worse than that.
+
+| mode | floor (dB) | theory (dB) | gap | note |
+|---|---|---|---|---|
+| HFDL 300 bit/s | -3 | about -4.3 | about 1.3 | -4 dB: 42 % of bursts |
+| HFDL 600 bit/s | -1 | about -1.3 | about 0.3 | |
+| HFDL 1200 bit/s | 1 | about 1.7 | about -0.7 | |
+| HFDL 1800 bit/s | 4 | about 3.5 to 5 | within the theory error | 8PSK |
+| DVB-C 64-QAM | 22 (21 fails) | about 20.5 to 21 for half the RS packets valid (uncoded BER about 6e-3; RS(204,188)) | about 1 | QEF itself needs about 24 dB (BER 2e-4 before RS) |
+| ATSC 3.0 QPSK 8/15 | 4 (3 dB: 75 %) | about 2 to 2.5 (LDPC 1.4 to 1.6 on an ideal channel plus pilots and guard) | about 1.5 to 2 | the LDPC decoder alone is at 1.4 dB on an ideal channel (bicm.cpp comment); the rest is OFDM sync / channel estimate; not changed |
+| NAVTEX 100 Bd | 9 to 13 (3 dB steps in the noise bandwidth of 300 Hz) | about 7.5 (FSK non-coherent, message without a damaged character) | about 1.5 to 5 | one message a trial, so the 90 % point is coarse: needs a longer trial to claim anything |
+| DSC VHF ch 70 | 4 | - | - | 25 kHz noise bandwidth: below the usual FM threshold of the demodulator, the AFSK is robust |
+| CDR | -4 | - | - | 1 MHz noise bandwidth, LDPC; theory not worked out |
+
+NAVTEX needs 40 s trials: a trial that starts in the middle of a message must still hold a whole one (8 s message, 3 s idle), and the receiver lists a repeat only once.
+
+Nothing was changed in a receiver to close a gap in this pass: no mode was clearly more than 1.5 dB from theory with a one-transmitter signal (ATSC 3.0 and NAVTEX are the open candidates).
+
+## HFDL "why bad" counters
+
+`HfdlTelemetry::why*` (core/src/hfdl/hfdl_rx.cpp), shown in the Receiver tab as "why bad": `whyPreambleRejected` (the coarse search fired but the frequency/coherence/M1 check said it is
+no preamble), `whyShort` (fewer than 4 octets out of the decoder), `whySpduFcs` (a squitter whose check failed: FEC did not repair it), `whyMpduFcs` (data PDU header check failed),
+`whyLpduFcs` (an LPDU with a bad check inside a good MPDU), `whyUnknownLpdu` (good check, type not decoded). Bursts that failed = `whyShort + whySpduFcs + whyMpduFcs` = `blocksBad`
+(tests/hfdl/test_hfdl_why.cpp). Visual check of the Receiver tab: not done (needs an HFDL source in the GUI).
