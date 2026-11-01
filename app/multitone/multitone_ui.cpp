@@ -68,7 +68,7 @@ void burstDetail(const App& a, const dect2::MtBurst& b) {
         kvRow(a, "marker", "%d bits %s, %d times, one every %d bits", b.markerBits, b.marker.c_str(), b.markerCount, b.markerGap);
         std::string w;
         for (size_t i = 0; i < b.frameWords.size() && i < 12; i++) { if (i) w += "  "; w += b.frameWords[i]; }
-        kvRow(a, "words after it", "%s%s  (%d different, %d repeat the one before)", w.c_str(), b.frameWords.size() > 12 ? " ..." : "", b.distinctWords, b.doubledWords);
+        kvRow(a, "words after it", "%s%s  (%d different, %d repeat the one before, %d a first byte and a value sent twice)", w.c_str(), b.frameWords.size() > 12 ? " ..." : "", b.distinctWords, b.doubledWords, b.halfEqualWords);
     }
     kvRow(a, "BCH words", "%d valid of %d, longest run %d, bit offset %d", b.validWords, b.totalWords, b.bestRun, b.align);
     kvRow(a, "stream (hex)", "%s", b.bitsHex.c_str());

@@ -17,12 +17,16 @@ Recording: `Multitone_2015-12-31T01-37-17Z_27599.8kHz.mp3` (FM audio of 27.5998 
 the squelch noise of the carrier going away (1.4 s), then a tone sequence of about 3.4 s (a steady 470 Hz tone for 0.5 s, then a 234 Hz tone with its
 harmonics for about 1 s, then 234 / 250 Hz steps), noise, and the next cycle.
 
-The FFSK burst: the audio tones are 293 Hz (f) and 586 Hz (2f). The analysis slices it at 586 symbols per second; **every bit is sent twice** (the 586 baud
-stream is made of pairs of equal symbols), so the data rate is 293 baud, 850 bits in 2.9 s. In that stream a **12-bit marker** `001101010101` comes back
-every 24 bits (8 times in a row, then a second marker `110011000100`), each time followed by a 12-bit word. The words come in **pairs** (each word is
-repeated once) and only about ten different words occur in the burst (for example `011111111111`, `001010101111`, `000000000111`, `010101010111`). That is
-all that is measured: how the words map to pager addresses, tones or text is not known and is not guessed. The numbers above are tested on a 8.2 s
-excerpt of the recording (`tests/data/multitone/`, `test_multitone_real`).
+The FFSK burst: the audio tones are 292.8 Hz and 585.6 Hz (f and 2f; the existing slicer reads a 585.6 Hz cycle as 1 and a 292.8 Hz half cycle as 0), so the symbol
+rate is **585.6 baud** (1682 bits in 2.9 s). The stream is made of **48-bit frames**: a 24-bit marker `000000101101001001110110` (26 times, spaced exactly 48 bits)
+followed by a 24-bit word (the 16-bit word 0x605A of the older recordings is in the stream 12 times as well). The 26 words after the marker are all different. In
+the first ten the structure is a first byte (0x76 or 0x77) and then a value that is sent twice (the two bytes are equal within one bit: 54 / 55, DC / DD, DC / DC,
+54 / 54, 00 / 01, 88 / 89, AA / AB, 22 / 23, 76 / 77 ...), in the next sixteen the first byte is 0xFE or 0xFF and the two last bytes differ. That is all that is
+measured: how the words map to pager addresses, tones or text is not known and is not guessed. The numbers are tested on an 8.2 s excerpt of the recording
+(`tests/data/multitone/`, `test_multitone_real`).
+
+The same burst was first read at 293 baud (one cycle of 293 Hz or two cycles of 586 Hz per bit): there a 12-bit marker comes back every 24 bits and each word is
+repeated once. That is the same stream read with half the resolution; the 586 baud reading, with distinct words, is the one the receiver reports.
 
 Plan B for a real decoder: the format description (word table and the address field) or a recording with a known message sent to a known pager.
 

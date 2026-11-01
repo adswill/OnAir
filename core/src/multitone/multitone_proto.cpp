@@ -231,7 +231,7 @@ FskResult sliceFsk(const std::vector<float>& disc, double rate) {
 
 void analyseFraming(const std::vector<uint8_t>& bitsIn, MtBurst& b) {
     b.dupBits = 1; b.dataBaud = b.baud; b.markerBits = 0; b.marker.clear(); b.markerCount = 0; b.markerGap = 0;
-    b.frameWords.clear(); b.doubledWords = 0; b.distinctWords = 0;
+    b.frameWords.clear(); b.doubledWords = 0; b.distinctWords = 0; b.halfEqualWords = 0;
     if (bitsIn.size() < 96) return;
     // 1. every bit twice in a row? (the sliced audio FFSK has a pair of equal symbols for each bit)
     std::vector<uint8_t> bits = bitsIn;
@@ -289,6 +289,12 @@ void analyseFraming(const std::vector<uint8_t>& bitsIn, MtBurst& b) {
         const std::string w = s.substr(p + (size_t)best.P, gap - (size_t)best.P);
         if (b.frameWords.size() < 64) b.frameWords.push_back(w);
         if (w == prev) b.doubledWords++;
+        if (w.size() > 8 && (w.size() - 8) % 2 == 0) {   // a header byte, then a value sent twice?
+            const size_t h = (w.size() - 8) / 2;
+            int d = 0;
+            for (size_t i = 0; i < h; i++) d += w[8 + i] != w[8 + h + i];
+            if (d <= 1) b.halfEqualWords++;
+        }
         distinct.insert(w); prev = w;
     }
     b.distinctWords = (int)distinct.size();
@@ -421,7 +427,7 @@ void analyseBits(const std::vector<uint8_t>& bits, MtBurst& b) {
     if (b.markerBits > 0) {
         std::string t;
         if (b.dupBits > 1) { char d[96]; snprintf(d, sizeof d, " Every bit is sent twice (data rate %.1f baud).", b.dataBaud); t += d; }
-        char m[300]; snprintf(m, sizeof m, " Framing measured: a %d-bit marker %s %d times, one every %d bits, %d different words after it (%d repeat the one before). Their meaning is not worked out.", b.markerBits, b.marker.c_str(), b.markerCount, b.markerGap, b.distinctWords, b.doubledWords);
+        char m[300]; snprintf(m, sizeof m, " Framing measured: a %d-bit marker %s %d times, one every %d bits, %d different words after it (%d repeat the one before, %d are a first byte and a value sent twice). Their meaning is not worked out.", b.markerBits, b.marker.c_str(), b.markerCount, b.markerGap, b.distinctWords, b.doubledWords, b.halfEqualWords);
         b.verdict += t + m;
     }
 }

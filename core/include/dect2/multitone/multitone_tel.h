@@ -71,6 +71,7 @@ struct MtBurst {
     std::vector<std::string> frameWords;// the bits between a marker and the next position one gap on, up to 64, as 0 / 1 characters
     int doubledWords = 0;               // of those, how many equal the one before (the words come in repeated pairs)
     int distinctWords = 0;
+    int halfEqualWords = 0;             // of those, how many have their last two halves (after a first byte) equal within one bit: a value sent twice
 };
 
 struct MultitoneTelemetry {

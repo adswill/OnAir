@@ -1,6 +1,6 @@
 // Multitone on the real recording (Multitone_2015-12-31T01-37-17Z_27599.8kHz, the FM audio, first 8.2 s at 8 kHz, 8 bit): an FFSK burst with the tones
-// f and 2f (about 293 and 586 Hz), then a tone sequence. What is checked is what is measured: the FFSK is found, every bit is sent twice, a 12-bit marker
-// comes back every 24 bits and the words after it come in repeated pairs. No meaning is claimed for the words (the format is not public).
+// f and 2f (about 293 and 586 Hz), then a tone sequence. What is checked is what is measured: the FFSK is found, the stream is sliced at 586 baud, a 24-bit marker
+// comes back every 48 bits and the 24-bit words after it differ from one another (a first byte, then a value sent twice in the first ten). No meaning is claimed for the words (the format is not public).
 #include "dect2/multitone/multitone_rx.h"
 #include "dect2/multitone/multitone_tel.h"
 #include <cmath>
@@ -33,12 +33,14 @@ int main() {
     CHECK(r.found && r.ffsk && r.nBits > 400, "FFSK found %d ffsk %d bits %d", r.found, r.ffsk, r.nBits);
     CHECK(std::fabs(r.hiHz - 586) < 12 && std::fabs(r.loHz - 293) < 6, "tones %.1f / %.1f Hz", r.loHz, r.hiHz);
     MtBurst b;
-    b.baud = r.baud; b.ffsk = r.ffsk;
+    b.baud = r.baud; b.ffsk = r.ffsk; b.toneLoHz = (float)r.loHz; b.toneHiHz = (float)r.hiHz;
     multitone::analyseBits(r.bits, b);
-    CHECK(b.dupBits == 2 && std::fabs(b.dataBaud - 293) < 6, "bits sent %d times, data rate %.1f", b.dupBits, b.dataBaud);
-    CHECK(b.markerBits == 12 && b.markerGap == 24 && b.markerCount >= 8, "marker %d bits %s, %d times, every %d", b.markerBits, b.marker.c_str(), b.markerCount, b.markerGap);
-    CHECK(b.frameWords.size() >= 8 && b.doubledWords >= 3 && b.distinctWords >= 3 && b.distinctWords <= 12, "%zu words, %d doubled, %d distinct", b.frameWords.size(), b.doubledWords, b.distinctWords);
+    CHECK(b.dupBits == 1 && std::fabs(b.dataBaud - 585.6) < 8, "bits sent %d times, data rate %.1f", b.dupBits, b.dataBaud);
+    CHECK(b.markerBits == 24 && b.markerGap == 48 && b.markerCount >= 20, "marker %d bits %s, %d times, every %d", b.markerBits, b.marker.c_str(), b.markerCount, b.markerGap);
+    CHECK(b.frameWords.size() >= 20 && b.distinctWords >= 20 && b.halfEqualWords >= 8, "%zu words, %d distinct, %d with a value sent twice", b.frameWords.size(), b.distinctWords, b.halfEqualWords);
+    CHECK(b.syncCount >= 8, "0x605A %d times", b.syncCount);
     printf("  %s\n", b.verdict.c_str());
+    printf("  bits %d dup %d marker %d gap %d count %d\n", r.nBits, b.dupBits, b.markerBits, b.markerGap, b.markerCount);
     // the tone part (4.3 .. 5.8 s): no data in it
     const multitone::FskResult t = multitone::sliceFsk(disc(4.4, 5.8), 48000);
     CHECK(!t.found, "a steady tone is not data");
