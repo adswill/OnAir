@@ -1006,13 +1006,16 @@ void Player::threadMain() {
                 if (hw) {
                     // GPU decoding: start on a keyframe; if the GPU stays silent for seconds, switch this service to the CPU decoder
                     const bool irap = vctx->codec_id == AV_CODEC_ID_HEVC ? hevcHasIrap(pkt->data, pkt->size) : (pkt->flags & AV_PKT_FLAG_KEY) != 0;
-                    if (!hwGuard.feed(irap, hwNow())) { av_packet_unref(pkt); continue; }
+                    const bool feedIt = hwGuard.feed(irap, hwNow());
+                    // checked even for a packet held back: an H.264 stream with no flagged keyframe (I pictures with a recovery-point SEI) never
+                    // starts the GPU session, so audio plays and no picture ever comes (#410); the CPU decoder shows those
                     if (hwGuard.giveUp(hwNow())) {
                         fprintf(stderr, "player: hardware video decoding gave no picture after %.1f s (%d packets fed, %d held back before a random-access picture): switching to software decoding\n", hwNow(), hwGuard.fed(), hwGuard.skipped());
                         hwFallback_ = true; restart_ = true;
                         av_packet_unref(pkt);
                         continue;
                     }
+                    if (!feedIt) { av_packet_unref(pkt); continue; }
                 }
                 if (avcodec_send_packet(vctx, pkt) >= 0)
                     while (avcodec_receive_frame(vctx, frame) >= 0) {
