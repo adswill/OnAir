@@ -41,3 +41,17 @@ where physics (f^2 noise) costs most. None of them can be called a receiver defe
 * DRM MSC: already 4 soft iterations of level-by-level Viterbi with hard-decision feedback; the next step (BCJR soft feedback) is a 0.5 to 1 dB candidate for
   64-QAM, not done here.
 * Harness: modes `drm16` and `drmE` added to `tools/sens/sens_modes.h`; `--mode '^drm'` runs all three.
+
+## Fairness and receiver work, 3.6 second pass (feat36-sens2)
+
+New one-transmitter harness modes (`adsb1`, `ais1`, `acars1`, `tools/sens/sens_modes.h`), AWGN, 6 to 12 trials, same criterion. Their SNR is that of the only transmitter, so no level mix and no overlapping bursts.
+
+| mode | multi-transmitter floor (dB) | one-transmitter floor (dB) | theory | verdict |
+|---|---|---|---|---|
+| ADS-B | 14 | 2 | about 9.5 (pessimistic) | the 4.5 dB gap was the test mix: one aircraft is better than the theory figure. The receiver already has soft-guided 1 to 2 bit repair against the tracker's known ICAO list (adsb_track.cpp) |
+| AIS | 16 | 3 | about 7 | the 9 dB gap was the level mix (ships 0.1 to 1 amplitude): one ship is 4 dB better than theory |
+| ACARS | 7 (Mac 10) | 5 before, 4 after | about 2 | a real gap of about 3 dB for one aircraft; 1 dB closed (see below); 6 aircraft on the Mac 10 -> 6 |
+| APRS AFSK, FM RDS | 5, 16 | - | - | not changed: the packet receiver already runs 3 correlator sets x 6 slicers plus bit-fix; both sit at the FM discriminator threshold, no cheap gain found |
+
+ACARS change (`core/src/acars/acars_chan.cpp`): bit-clock correction gain 0.04 -> 0.015 per bit and carrier-reference memory 0.9 -> 0.97 per bit. Steady-state timing jitter and reference noise fell, the cliff moved about 1 dB lower (at 4 dB: 42 % -> 83 to 100 % of trials). cfo20ppm, sro50ppm, tu6, combined unchanged or 0 to 1 dB better; echo scenario and `offcentre` (harness shifts the signal 105 kHz out of the channel the receiver is set to, a harness artefact for every narrowband mode) not affected. A timing gain of 0.007 gave no further gain.
+False decodes: the sweep's noise-only false-lock rate stays 0.000 for acars, acars1, ais1, adsb1; no AIS/ADS-B receiver code was changed, and no CRC-only bit repair was added to AIS (16-bit CRC, a one-bit repair would accept about 0.4 % of damaged 256-bit frames by chance; the ship already beats theory).

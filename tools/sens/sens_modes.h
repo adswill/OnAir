@@ -384,6 +384,13 @@ inline std::vector<Mode> allModes() {
         m.make = factory<AdsbReceiver, AdsbTelemetry>([](AdsbReceiver& rx, double r) { rx.configure(r); }, blocks<AdsbTelemetry>);
         add(m);
     }
+    {   // ADS-B, one aircraft: no level mix, so the SNR is that of the only transmitter (fairness check for the 12 aircraft run)
+        Mode m = base("adsb1", "ADS-B (1 aircraft)", "burst", 13, 4e6, 6.0, 2e6, 1090);
+        m.echoUs = 0.3; m.snrHi = 30;
+        m.gen = [](size_t n) { SynthConfig c; c.modeOpt[0] = 1; c.modeOpt[1] = 1; return clean(13, c, 4e6, n); };
+        m.make = factory<AdsbReceiver, AdsbTelemetry>([](AdsbReceiver& rx, double r) { rx.configure(r); }, blocks<AdsbTelemetry>);
+        add(m);
+    }
     {   // radiosondes: an RS41 on the centre, a DFM-17 and an M10 elsewhere
         Mode m = base("sonde", "Radiosonde", "narrowband-data", 15, 8e6, 5.0, 10e3, 403);
         m.snrHi = 25; m.maxJobs = 4;
@@ -397,6 +404,20 @@ inline std::vector<Mode> allModes() {
         m.snrHi = 30; m.maxJobs = 4;
         m.gen = [](size_t n) { return clean(16, SynthConfig(), 2e6, n); };
         m.make = factory<AisReceiver, AisTelemetry>([](AisReceiver& rx, double r) { rx.setSignalOffset(0); rx.configure(r); }, blocks<AisTelemetry>);
+        add(m);
+    }
+    {   // AIS, one ship (class A, no extras): single transmitter, so no level mix
+        Mode m = base("ais1", "AIS (1 ship)", "narrowband-data", 16, 2e6, 24.0, 25e3, 162);
+        m.snrHi = 30; m.maxJobs = 4;
+        m.gen = [](size_t n) { SynthConfig c; c.modeOpt[0] = 1; c.modeOpt[3] = 1; return clean(16, c, 2e6, n); };
+        m.make = factory<AisReceiver, AisTelemetry>([](AisReceiver& rx, double r) { rx.setSignalOffset(0); rx.configure(r); }, blocks<AisTelemetry>);
+        add(m);
+    }
+    {   // ACARS, one aircraft on one channel
+        Mode m = base("acars1", "ACARS (1 aircraft)", "narrowband-data", 18, 2e6, 24.0, 25e3, 131.5);
+        m.snrHi = 30; m.maxJobs = 4;
+        m.gen = [](size_t n) { SynthConfig c; c.modeOpt[0] = 1; c.modeOpt[3] = 1; return clean(18, c, 2e6, n); };
+        m.make = factory<AcarsReceiver, AcarsTelemetry>([](AcarsReceiver& rx, double r) { rx.setSignalOffset(0); rx.setCenterHz(131.5e6); rx.configure(r); }, blocks<AcarsTelemetry>);
         add(m);
     }
     {   // ACARS: six aircraft on three channels
