@@ -44,7 +44,13 @@ struct PagerMessage {
     // whole-span decoding (wide_modes.h): the carrier that sent it; carrierId 0 = the single receiver. carrierHz: relative to the radio's centre.
     int carrierId = 0;
     double carrierHz = 0;
+    // a five-tone selective call (CCIR / ZVEI / EEA / EIA / DZVEI) heard on the same channel: text = the digits, selStd = the plan, address 0
+    bool selcall = false;
+    std::string selStd;
 };
+
+// The name of the Protocol column: the paging speed or the five-tone plan
+inline std::string pagerProtoName(const PagerMessage& m) { return m.selcall ? "Selcall " + m.selStd : std::string(pagerSpeedName(m.speed)); }
 
 // How a POCSAG message is read. Networks often ignore the standard (function 0 = numeric): Australian emergency paging sends text with function 0.
 enum PocsagReadMode { kPocsagReadAuto, kPocsagReadByFunction, kPocsagReadAlpha, kPocsagReadNumeric, kPocsagReadModes };
