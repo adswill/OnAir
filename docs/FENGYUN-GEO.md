@@ -25,7 +25,15 @@ One click: pick the mode, press Start. The receiver finds the carrier anywhere i
 
 Measured with `tools/sens` on the built-in test signals (AWGN, Es/N0 at the symbol rate; the threshold is the lowest Es/N0 at which at least 90 % of the trials gave at least half as many valid units as a clean run). The ideal figures are the quasi error free thresholds of ETSI EN 302 307-1 table 13 (normal frames, no pilots).
 
-SENSITIVITY_TABLE
+| Link | Threshold Es/N0 (dB) | Ideal (dB) | Lock time at threshold |
+|---|---|---|---|
+| FY-4A LRIT (QPSK 2/5, 90 ksym/s) | 0 | -0.3 | 2.3 s |
+| FY-4B LRIT (QPSK 8/9, 120 ksym/s) | 7 | 6.2 | 1.8 s |
+| FY-4A HRIT-II/III (QPSK 5/6, 1 Msym/s) | 6 | 5.2 | 0.8 s |
+| FY-2 S-VISSR, frame sync | -2 | (sync only) | 1.0 s |
+| FY-2 S-VISSR, bit error ratio under 2 % | 5 | 4.3 | 1.0 s |
+
+No false lock on noise only in any of the five (12 trials, 1 dB steps).
 
 S-VISSR has no code: the bit error ratio against Es/N0 matches coherent differential BPSK, `2 Q(sqrt(2 Es/N0)) (1 - Q(...))`, to within the noise of the measurement (6 dB: 4.7e-3 measured, 4.8e-3 theory; `tests/fygeo/test_fygeo_rx.cpp`).
 
