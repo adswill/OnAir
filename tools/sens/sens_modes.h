@@ -26,6 +26,7 @@
 #include "dect2/hrpt/hrpt_tel.h"
 #include "dect2/goes/goes_rx.h"
 #include "dect2/goes/goes_tel.h"
+#include "dect2/gk2a/gk2a_rx.h"
 #include "dect2/globalstar/globalstar_rx.h"
 #include "dect2/globalstar/globalstar_tel.h"
 #include "dect2/orbcomm/orbcomm_rx.h"
@@ -59,6 +60,10 @@
 
 namespace sens {
 using namespace dect2;
+
+// GK-2A receivers take their link in the constructor: LRIT (BPSK 128 ksym/s) and HRIT (QPSK 3 Msym/s)
+struct Gk2aLritRx : Gk2aReceiver { Gk2aLritRx() : Gk2aReceiver(0) {} };
+struct Gk2aHritRx : Gk2aReceiver { Gk2aHritRx() : Gk2aReceiver(1) {} };
 
 struct Metric { double good = 0, bad = 0; };   // cumulative: units with a good check, units that failed theirs
 
@@ -505,6 +510,9 @@ inline std::vector<Mode> allModes() {
     narrow.template operator()<MeteorReceiver, MeteorTelemetry>("meteor", "Meteor-M LRPT (OQPSK 72k)", "satellite-weather", 61, 1e6, 8.0, 72e3, 137.9, nullptr, 16);
     narrow.template operator()<HrptReceiver, HrptTelemetry>("hrpt", "MetOp AHRPT", "satellite-weather", 66, 8e6, 1.5, 2.33e6, 1701.3, nullptr, 16);
     narrow.template operator()<GoesReceiver, GoesTelemetry>("goes", "GOES HRIT", "satellite-weather", 62, 2.4e6, 4.0, 927e3, 1694.1, nullptr, 16);
+    // GK-2A: Es/N0 per symbol (the noise bandwidth is the symbol rate); BPSK/QPSK + K=7 r=1/2 + RS(255,223) x4, theory threshold -1.1 / +1.9 dB
+    narrow.template operator()<Gk2aLritRx, Gk2aTelemetry>("gk2alrit", "GK-2A LRIT (BPSK 128k)", "satellite-weather", 232, 2.4e6, 8.0, 128e3, 1692.14, nullptr, 14);
+    narrow.template operator()<Gk2aHritRx, Gk2aTelemetry>("gk2ahrit", "GK-2A HRIT (QPSK 3M)", "satellite-weather", 233, 10e6, 0.6, 3e6, 1695.4, nullptr, 14);
     return v;
 }
 

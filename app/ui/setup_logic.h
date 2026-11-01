@@ -280,7 +280,7 @@ inline const InterestDef* interests() {
         {N_("Ham radio"), N_("FT8 and other amateur data modes on the short-wave bands."), "ft8", {"ft8", "ft4", "wspr", "js8", "packet", "cw"},
          {{"FT8 20 m", "ft8", 14.074}, {"WSPR 20 m", "wspr", 14.0956}, {"APRS (Europe)", "packet", 144.8}, {nullptr, nullptr, 0}}},
         {N_("Satellites"), N_("Satellite passes, amateur and weather satellites."), "cubesat", {"cubesat", "meteor", "hrpt", "goes", "qo100", nullptr},
-         {{"Weather satellites (METEOR)", "meteor", 137.9}, {"APT 137 MHz", "meteor", 137.62}, {nullptr, nullptr, 0}}},
+         {{"Weather satellites (METEOR)", "meteor", 137.9}, {"APT 137 MHz", "meteor", 137.62}, {"GK-2A LRIT (Asia)", "gk2alrit", 1692.14}, {nullptr, nullptr, 0}}},
         {N_("Weather pictures"), N_("Cloud pictures from weather satellites and weather balloons."), "meteor", {"meteor", "hrpt", "goes", "sonde", "wefax", nullptr},
          {{"METEOR-M LRPT", "meteor", 137.1}, {"Radiosondes 403 MHz", "sonde", 403.0}, {"GOES HRIT", "goes", 1694.1}, {nullptr, nullptr, 0}}},
         {N_("Trunking and voice"), N_("Digital voice and the control channels of radio systems (listening to open traffic only)."), "dmr", {"dmr", "p25", "tetra", "nxdn", "dstar", "dpmr"},

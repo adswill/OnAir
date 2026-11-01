@@ -69,7 +69,7 @@ bool parseHeaders(const uint8_t* p, size_t n, Headers& h, int dialect) {
     return true;
 }
 
-std::vector<uint8_t> buildHeaders(const Headers& h) {
+std::vector<uint8_t> buildHeaders(const Headers& h, int dialect) {
     std::vector<uint8_t> s;
     auto rec = [&](int type, const std::vector<uint8_t>& body) { s.push_back((uint8_t)type); put16(s, (uint32_t)(body.size() + 3)); s.insert(s.end(), body.begin(), body.end()); };
     auto str = [](const std::string& t, size_t pad = 0) { std::vector<uint8_t> b(t.begin(), t.end()); if (pad) b.resize(pad, ' '); return b; };
@@ -78,7 +78,10 @@ std::vector<uint8_t> buildHeaders(const Headers& h) {
     if (!h.annotation.empty()) rec(4, str(h.annotation));
     if (h.hasTime) { std::vector<uint8_t> b{0x40}; put16(b, (uint32_t)h.days); put32(b, h.msOfDay); rec(5, b); }
     if (!h.ancillary.empty()) rec(6, str(h.ancillary));
-    if (h.hasSeg) { std::vector<uint8_t> b; for (int v : {h.imageId, h.segSeq, h.startCol, h.startLine, h.maxSeg, h.maxCol, h.maxRow}) put16(b, (uint32_t)v); rec(128, b); }
+    if (dialect == 1) {
+        if (h.hasImage || h.keyNo) { std::vector<uint8_t> b; put32(b, (uint32_t)h.keyNo); rec(7, b); }
+        if (h.hasSeg) { std::vector<uint8_t> b{(uint8_t)h.segSeq, (uint8_t)h.maxSeg}; put16(b, (uint32_t)h.startLine); rec(128, b); }
+    } else if (h.hasSeg) { std::vector<uint8_t> b; for (int v : {h.imageId, h.segSeq, h.startCol, h.startLine, h.maxSeg, h.maxCol, h.maxRow}) put16(b, (uint32_t)v); rec(128, b); }
     if (h.hasNoaa) { std::vector<uint8_t> b{'N', 'O', 'A', 'A'}; put16(b, (uint32_t)h.productId); put16(b, (uint32_t)h.subId); put16(b, (uint32_t)h.parameter); b.push_back((uint8_t)h.noaaCompression); rec(129, b); }
     if (!h.headerText.empty()) rec(130, str(h.headerText));
     if (h.hasRice) { std::vector<uint8_t> b; put16(b, (uint32_t)h.riceFlags); b.push_back((uint8_t)h.ricePpb); b.push_back((uint8_t)h.riceLines); rec(131, b); }
@@ -611,9 +614,9 @@ void Assembler::adopt(std::vector<std::shared_ptr<Product>> v) {
 void Assembler::setMaxProducts(size_t n) { std::lock_guard<std::mutex> lk(p_->listMu); p_->maxProducts = std::max<size_t>(1, n); }
 
 // ---------------------------------------------------------------- mux (test signals)
-std::vector<uint8_t> makeFile(Headers h, const std::vector<uint8_t>& data) {
+std::vector<uint8_t> makeFile(Headers h, const std::vector<uint8_t>& data, int dialect) {
     h.dataBits = (uint64_t)data.size() * 8;
-    std::vector<uint8_t> f = buildHeaders(h);
+    std::vector<uint8_t> f = buildHeaders(h, dialect);
     f.insert(f.end(), data.begin(), data.end());
     return f;
 }

@@ -182,6 +182,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES roshf ssdv ebicab nrf24 atis)   # ROS (HF) detector (family 205), SSDV pictures (206), EBICab / Eurobalise up-link (207): core/src/<mode>, app/<mode>, tests/<mode>
   list(APPEND DECT2_MODES esubghz)   # Flipper Zero Sub-GHz chat, receive and send (family 204): core/src/esubghz, app/esubghz, tests/esubghz
   list(APPEND DECT2_MODES inmsat)   # Inmarsat all-carriers mode (3.3, docs/INMARSAT-REVAMP.md): core/src/inmsat, tests/inmsat
+  list(APPEND DECT2_MODES gk2a)   # GK-2A LRIT (family 230) and HRIT (231): core/src/gk2a, app/gk2a, tests/gk2a, docs/GK2A.md
   list(APPEND DECT2_MODES shortwave)   # Shortwave: the general receiver with one-click HF decoders (family 212, docs/SHORTWAVE-MODE.md): core/src/shortwave, app/shortwave, tests/shortwave
   list(APPEND DECT2_MODES pskdsp)   # PSK demodulator and analyser (family 202, #282): core/src/pskdsp, app/pskdsp, tests/pskdsp
 target_sources(dect2core PRIVATE core/src/tv/mheg_render.cpp core/src/tv/ts_proto_rs.cpp core/src/common/text_charset_rs.cpp core/src/tv/dvb_text.cpp core/src/tv/dvb_text_rs.cpp core/src/tv/teletext_rs.cpp core/src/tv/dvbsub_rs.cpp core/src/tv/epg.cpp core/src/tv/subtitle_export.cpp core/src/tv/recorder.cpp core/src/tv/timeshift.cpp core/src/tv/playback.cpp core/src/tv/dsmcc.cpp core/src/tv/mheg.cpp core/src/tv/mheg_engine.cpp core/src/tv/rcs.cpp core/src/tv/si_tables.cpp core/src/tv/ts_data.cpp core/src/tv/hd_pair.cpp) # MPEG-TS parsing layer (C++ or the Rust crate onair_ts) and the TV recorder (guide, schedule, timeshift, playback) (C++ or the Rust crate onair_ts)
@@ -200,7 +201,7 @@ endif()
 onair_rust_use(dect2core)   # links the Rust library onair_rs
 target_sources(dect2core PRIVATE core/src/engine/modes.cpp core/src/engine/rate_choice.cpp core/src/geo/passes.cpp core/src/dsp/imgproc.cpp core/src/dsp/wxstudio.cpp core/src/dsp/wx_vectors.cpp core/src/engine/sig_ident.cpp core/src/geo/maidenhead.cpp core/src/geo/maplayers.cpp core/src/geo/tilecache.cpp core/src/mesh/mesh_report.cpp core/src/df/df.cpp core/src/df/source.cpp core/src/df/position.cpp core/src/df/rfcam.cpp core/src/df/group.cpp core/src/df/rtl_group.cpp core/src/geo/pass_sched.cpp core/src/geo/doppler_fit.cpp core/src/geo/wx_overlay.cpp core/src/engine/sig_known.cpp core/src/engine/sig_known_gen.cpp core/src/radar/passive.cpp core/src/rfi/rfi.cpp core/src/map/contact_graph.cpp)
 target_sources(dect2core PRIVATE core/src/engine/modes.cpp core/src/engine/rate_choice.cpp core/src/geo/passes.cpp core/src/dsp/imgproc.cpp core/src/dsp/wxstudio.cpp core/src/dsp/wx_vectors.cpp core/src/engine/sig_ident.cpp core/src/geo/maidenhead.cpp core/src/geo/maplayers.cpp core/src/geo/tilecache.cpp core/src/mesh/mesh_report.cpp core/src/df/df.cpp core/src/df/source.cpp core/src/df/position.cpp core/src/df/rfcam.cpp core/src/df/group.cpp core/src/df/rtl_group.cpp core/src/geo/pass_sched.cpp core/src/geo/doppler_fit.cpp core/src/geo/wx_overlay.cpp core/src/engine/sig_known.cpp core/src/radar/passive.cpp core/src/rfi/rfi.cpp core/src/map/contact_graph.cpp)
-target_sources(dect2core PRIVATE core/src/image/enhance.cpp core/src/image/enhance_geom.cpp core/src/image/enhance_filter.cpp core/src/image/enhance_tone.cpp)   # shared image enhancement of every picture mode (docs/IMAGE-ENHANCE.md)
+target_sources(dect2core PRIVATE core/src/image/j2k.cpp core/src/common/des.cpp core/src/image/enhance.cpp core/src/image/enhance_geom.cpp core/src/image/enhance_filter.cpp core/src/image/enhance_tone.cpp)   # shared image enhancement of every picture mode (docs/IMAGE-ENHANCE.md)
 target_sources(dect2core PRIVATE core/src/df/beam.cpp)
 target_sources(dect2core PRIVATE core/src/net/remote_api.cpp core/src/net/satnogs.cpp core/src/results/rx_json.cpp core/src/source/gain_opt.cpp core/src/mesh/mesh_report.cpp core/src/source/rotator.cpp)   # remote-control API server, telemetry JSON, gain optimiser, mesh report text, antenna rotator
 target_sources(dect2core PRIVATE core/src/net/remote_api.cpp core/src/results/rx_json.cpp core/src/source/gain_opt.cpp core/src/mesh/mesh_report.cpp core/src/source/rotator.cpp)   # remote-control API server, telemetry JSON, gain optimiser, mesh report text, antenna rotator
@@ -990,6 +991,8 @@ if(DECT2_BUILD_TESTS)
   add_executable(sens_sweep tools/sens/sens_sweep.cpp)
   target_include_directories(sens_sweep PRIVATE tools/sens)
   target_link_libraries(sens_sweep PRIVATE dect2core)
+  add_executable(sens_gk2a_gap tools/sens/sens_gk2a_gap.cpp)   # GK-2A: receiver against an ideal one (docs/GK2A.md)
+  target_link_libraries(sens_gk2a_gap PRIVATE dect2core)
   # run by the build workers (ctest -R sens_quick / sens_full, or -L sens-quick / sens-full); results land in <build>/sens-out/*.json
   add_test(NAME sens_quick COMMAND sens_sweep --quick --mode "dvbt$|dab|fm" --out ${CMAKE_BINARY_DIR}/sens-out)
   add_test(NAME sens_full COMMAND sens_sweep --full --trials 8 --out ${CMAKE_BINARY_DIR}/sens-out)
@@ -1432,6 +1435,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_nrf24_mode PRIVATE dect2core)
     target_compile_definitions(test_nrf24_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME nrf24_mode COMMAND test_nrf24_mode)
+    add_executable(test_gk2a_mode tests/app/test_gk2a_mode.cpp)   # GK-2A: tunings, mode rows, engine / panel wiring, the doc page, credits
+    target_link_libraries(test_gk2a_mode PRIVATE dect2core)
+    target_compile_definitions(test_gk2a_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME gk2a_mode COMMAND test_gk2a_mode)
     add_executable(test_atis_mode tests/app/test_atis_mode.cpp)   # ATIS: tuning, mode row, engine / panel wiring, the doc page
     target_link_libraries(test_atis_mode PRIVATE dect2core)
     target_compile_definitions(test_atis_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")

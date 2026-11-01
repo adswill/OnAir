@@ -54,7 +54,7 @@ struct Headers {
 // segment (sequence, total, first line), 129 .. 132 text
 bool parseHeaders(const uint8_t* p, size_t n, Headers& h, int dialect = 0);
 // the header records of h (the primary header's lengths filled in from dataBits and the records)
-std::vector<uint8_t> buildHeaders(const Headers& h);
+std::vector<uint8_t> buildHeaders(const Headers& h, int dialect = 0);
 // unix seconds of the time stamp
 double headerTime(const Headers& h);
 
@@ -155,6 +155,6 @@ private:
     uint32_t fillCounter_ = 0;
 };
 // A whole file as the generator makes it: headers (h's lengths filled in) and the data field.
-std::vector<uint8_t> makeFile(Headers h, const std::vector<uint8_t>& dataField);
+std::vector<uint8_t> makeFile(Headers h, const std::vector<uint8_t>& dataField, int dialect = 0);
 
 } // namespace dect2::goes

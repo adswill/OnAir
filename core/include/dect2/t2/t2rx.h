@@ -135,6 +135,7 @@
 #include "dect2/meteor/meteor_tel.h"
 #include "dect2/nr/nr_tel.h"
 #include "dect2/goes/goes_tel.h"
+#include "dect2/gk2a/gk2a_tel.h"
 #include "dect2/elektro/elektro_tel.h"
 #include "dect2/uat/uat_tel.h"
 #include "dect2/hrpt/hrpt_tel.h"
@@ -275,6 +276,7 @@ struct RxTelemetry {
     MeteorTelemetry meteor;   // valid when standard == 60 (Meteor-M LRPT)
     NrTelemetry nr;           // valid when standard == 58 (5G NR cells)
     GoesTelemetry goes;       // valid when standard == 61 (GOES HRIT)
+    Gk2aTelemetry gk2a;       // valid when standard == 231 (GK-2A LRIT, family 230, engine standard 232) or 232 (GK-2A HRIT, family 231, engine standard 233)
     ElektroTelemetry elektro; // valid when standard == 81 (Elektro-L)
     UatTelemetry uat;         // valid when standard == 84 (UAT 978 MHz)
     HrptTelemetry hrpt;       // valid when standard == 65 (HRPT / AHRPT)

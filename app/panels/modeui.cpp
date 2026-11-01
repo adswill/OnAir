@@ -136,6 +136,8 @@ extern const ModeUi kIptvUi;
 extern const ModeUi kNrf24Ui;
 extern const ModeUi kAtisUi;
 extern const ModeUi kShortwaveUi;
+extern const ModeUi kGk2aLritUi;
+extern const ModeUi kGk2aHritUi;
 extern const ModeUi kPskdUi;
 
 // ---- whole-span decoding ("wide decode"): the families whose receivers can decode everything in the visible span (widespan.h) ----
@@ -241,6 +243,8 @@ const ModeUi* modeUi(int family) {
     case 210: return &kNrf24Ui;
     case 211: return &kAtisUi;
     case 212: return &kShortwaveUi;
+    case 230: return &kGk2aLritUi;
+    case 231: return &kGk2aHritUi;
     case 202: return &kPskdUi;
     case 83: return &kUatUi;
     case 75: return &kMultitoneUi;

@@ -366,6 +366,8 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxNr_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the sync raster points searched
         rxGoes_.setSignalOffset(o);
         rxEl_.setSignalOffset(o);
+        rxGkL_.setSignalOffset(o);
+        rxGkH_.setSignalOffset(o);
         rxVdl4_.setSignalOffset(o);
         rxHrpt_.setSignalOffset(o);
         rxWifi_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the channel noted with each network
@@ -660,10 +662,14 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxMeteor_.setLogCallback([this](const std::string& s) { log(s); });
     rxGoes_.configure(rate_);
     rxEl_.configure(rate_);
+    rxGkL_.configure(rate_);
+    rxGkH_.configure(rate_);
     rxHrpt_.configure(rate_);
     rxHrpt_.setLogCallback([this](const std::string& s) { log(s); });
     rxGoes_.setLogCallback([this](const std::string& s) { log(s); });
     rxEl_.setLogCallback([this](const std::string& s) { log(s); });
+    rxGkL_.setLogCallback([this](const std::string& s) { log(s); });
+    rxGkH_.setLogCallback([this](const std::string& s) { log(s); });
     rxUat_.configure(rate_);
     rxUat_.setLogCallback([this](const std::string& s) { log(s); });
     rxVdl4_.configure(rate_);

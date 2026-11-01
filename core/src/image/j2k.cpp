@@ -388,7 +388,7 @@ public:
                 c.xt = (int)u32(p + 18); c.yt = (int)u32(p + 22); c.xto = (int)u32(p + 26); c.yto = (int)u32(p + 30);
                 c.ncomp = (int)u16(p + 34);
                 if (c.ncomp < 1 || c.ncomp > 16 || len < 36 + (size_t)c.ncomp * 3) return fail("bad SIZ");
-                if (c.xsiz <= c.xo || c.ysiz <= c.yo || c.xt <= 0 || c.yt <= 0 || (int64_t)(c.xsiz - c.xo) * (c.ysiz - c.yo) > (int64_t)40000 * 40000) return fail("bad image size");
+                if (c.xsiz <= c.xo || c.ysiz <= c.yo || c.xt <= 0 || c.yt <= 0 || (int64_t)(c.xsiz - c.xo) * (c.ysiz - c.yo) > (int64_t)64 << 20) return fail("bad image size");
                 c.cp.assign((size_t)c.ncomp, CompParams());
                 for (int i = 0; i < c.ncomp; i++) {
                     const uint8_t s = p[36 + 3 * i];
@@ -776,8 +776,9 @@ public:
         size_t pos = 0;
         if (!mainHeader(d, n, pos)) return img;
         const int W = c.xsiz - c.xo, H = c.ysiz - c.yo;
+        if (c.xto > c.xo || c.yto > c.yo || (int64_t)c.xto + c.xt <= c.xo || (int64_t)c.yto + c.yt <= c.yo || c.xto < 0 || c.yto < 0) { fail("bad tile grid"); return img; }
         ntx = ceilDiv(c.xsiz - c.xto, c.xt); nty = ceilDiv(c.ysiz - c.yto, c.yt);
-        if ((int64_t)ntx * nty > 65535) { fail("too many tiles"); return img; }
+        if (ntx < 1 || nty < 1 || (int64_t)ntx * nty > 65535) { fail("too many tiles"); return img; }
         tiles.assign((size_t)ntx * nty, Tile());
         for (int i = 0; i < ntx * nty; i++) {
             Tile& t = tiles[(size_t)i];
