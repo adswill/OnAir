@@ -26,4 +26,8 @@ bool findCodestream(const uint8_t* d, size_t n, size_t& off);
 // Decodes component 0. A damaged stream returns whatever was decodable (ok false, pix filled where possible when the headers were fine).
 Image decode(const uint8_t* d, size_t n);
 
+// A lossless codestream (one tile, one component, reversible 5/3 with `levels` decomposition levels, 64 x 64 code-blocks, one layer, LRCP):
+// the test signals of the GK-2A mode send their pictures with it. Empty when the arguments are out of range.
+std::vector<uint8_t> encodeLossless(const uint16_t* pix, int width, int height, int precision, int levels);
+
 } // namespace dect2::j2k

@@ -50,6 +50,7 @@ struct Mq {
         bytein();
         c <<= 7; ct -= 7; a = 0x8000;
     }
+    int code(int cx, int /*actual*/) { return decode(cx); }
     int decode(int cx) {
         const QeRow& q = kQe[st[cx]];
         int bit;
@@ -176,11 +177,13 @@ struct Ctx {
 };
 
 // ------------------------------------------------------------------------------------------------ bit-plane decoder
+template <class C>
 struct T1 {
+    C mq;
+    const int32_t* src = nullptr;     // encoder: the signed coefficients, w x h (the passes then code what is there instead of reading it)
     int w = 0, h = 0, s = 0;
     std::vector<uint8_t> fl;   // bit0 significant, bit1 negative, bit2 refined, bit3 visited
     std::vector<int32_t> mag;
-    Mq mq;
     int orient = 0; bool vcausal = false;
 
     uint8_t& F(int x, int y) { return fl[(size_t)((y + 1) * s + x + 1)]; }
@@ -221,6 +224,8 @@ struct T1 {
         xr = (hc < 0 || (hc == 0 && vc < 0)) ? 1 : 0;
         (void)txr;
     }
+    int absAt(int x, int y) const { return std::abs(src[(size_t)(y * w + x)]); }
+    int bitAt(int x, int y, int bp) const { return src ? (absAt(x, y) >> bp) & 1 : 0; }
     void setSig(int x, int y, int bp) {
         const int neg = decodeSign(x, y);
         F(x, y) |= (uint8_t)(1 | (neg ? 2 : 0));
@@ -229,7 +234,8 @@ struct T1 {
     int decodeSign(int x, int y) {
         int cx, xr;
         signCtx(x, y, cx, xr);
-        return mq.decode(cx) ^ xr;
+        const int act = src ? ((src[(size_t)(y * w + x)] < 0 ? 1 : 0) ^ xr) : 0;
+        return mq.code(cx, act) ^ xr;
     }
 
     void sigProp(int bp) {
@@ -242,7 +248,7 @@ struct T1 {
                     nb(x, y, hh, vv, dd);
                     if (hh + vv + dd == 0) continue;
                     f |= 8;
-                    if (mq.decode(zc(hh, vv, dd))) setSig(x, y, bp);
+                    if (mq.code(zc(hh, vv, dd), bitAt(x, y, bp))) setSig(x, y, bp);
                 }
     }
     void magRef(int bp) {
@@ -253,7 +259,7 @@ struct T1 {
                     if ((f & 1) == 0 || (f & 8)) continue;
                     int cx = 16;
                     if (!(f & 4)) { int hh, vv, dd; nb(x, y, hh, vv, dd); cx = hh + vv + dd > 0 ? 15 : 14; }
-                    const int b = mq.decode(cx);
+                    const int b = mq.code(cx, bitAt(x, y, bp));
                     mag[(size_t)(y * w + x)] |= b << bp;
                     f |= 4;
                 }
@@ -272,8 +278,11 @@ struct T1 {
                         if (hh + vv + dd) allQuiet = false;
                     }
                     if (allQuiet) {
-                        if (!mq.decode(17)) continue;
-                        const int r = mq.decode(18) << 1 | mq.decode(18);
+                        int firstAct = -1;
+                        if (src) for (int k = 0; k < 4; k++) if (bitAt(x, y0 + k, bp)) { firstAct = k; break; }
+                        if (!mq.code(17, firstAct >= 0)) continue;
+                        const int hi = mq.code(18, firstAct >> 1 & 1);
+                        const int r = hi << 1 | mq.code(18, firstAct & 1);
                         y = y0 + r;
                         setSig(x, y, bp);
                         y++;
@@ -284,11 +293,11 @@ struct T1 {
                     if (f & 9) continue;
                     int hh, vv, dd;
                     nb(x, y, hh, vv, dd);
-                    if (mq.decode(zc(hh, vv, dd))) setSig(x, y, bp);
+                    if (mq.code(zc(hh, vv, dd), bitAt(x, y, bp))) setSig(x, y, bp);
                 }
             }
         for (auto& f : fl) f &= (uint8_t)~8;
-        if (segsym) { for (int i = 0; i < 4; i++) mq.decode(18); }
+        if (segsym) { static const int sym[4] = {1, 0, 1, 0}; for (int i = 0; i < 4; i++) mq.code(18, sym[i]); }
     }
 };
 
@@ -634,7 +643,7 @@ public:
     }
 
     // ---- code-blocks to wavelet coefficients, then the inverse transform
-    void decodeBlock(const CodeBlock& cb, const Band& B, const CompParams& q, std::vector<float>& arr, int stride, T1& t1) {
+    void decodeBlock(const CodeBlock& cb, const Band& B, const CompParams& q, std::vector<float>& arr, int stride, T1<Mq>& t1) {
         const int w = cb.x1 - cb.x0, h = cb.y1 - cb.y0;
         if (w <= 0 || h <= 0 || cb.passes == 0) return;
         const int nbps = B.mb - cb.zbp;
@@ -709,7 +718,7 @@ public:
     void reconstruct(Tile& t, int ci) {
         const CompParams& q = t.cp[(size_t)ci];
         TileComp& tc = t.tc[(size_t)ci];
-        T1 t1;
+        T1<Mq> t1;
         std::vector<float> cur;              // the LL image of the resolution below
         int cw = 0, ch = 0;
         for (int r = 0; r <= q.levels; r++) {
@@ -849,6 +858,227 @@ Image decode(const uint8_t* d, size_t n) {
     if (!findCodestream(d, n, off)) { bad.error = "no JPEG 2000 codestream"; return bad; }
     auto dec = std::make_unique<Decoder>();
     return dec->run(d + off, n - off);
+}
+
+
+// ================================================================================================ encoder (test signals)
+namespace {
+
+struct MqEnc {
+    std::vector<uint8_t> out;       // out[0] is a dummy byte before the stream
+    size_t bp = 0;
+    uint32_t a = 0x8000, c = 0;
+    int ct = 12;
+    uint8_t st[19], mps[19];
+    MqEnc() { out.assign(1, 0); resetCtx(); }
+    void resetCtx() { memset(st, 0, sizeof st); memset(mps, 0, sizeof mps); st[0] = 4; st[17] = 3; st[18] = 46; }
+    void byteout() {
+        auto put = [&](uint8_t v) { bp++; if (bp >= out.size()) out.resize(bp + 1); out[bp] = v; };
+        if (out[bp] == 0xFF) { put((uint8_t)(c >> 20)); c &= 0xFFFFF; ct = 7; }
+        else if ((c & 0x8000000) == 0) { put((uint8_t)(c >> 19)); c &= 0x7FFFF; ct = 8; }
+        else {
+            out[bp]++;
+            if (out[bp] == 0xFF) { c &= 0x7FFFFFF; put((uint8_t)(c >> 20)); c &= 0xFFFFF; ct = 7; }
+            else { put((uint8_t)(c >> 19)); c &= 0x7FFFF; ct = 8; }
+        }
+    }
+    void renorm() { do { a <<= 1; c <<= 1; ct--; if (ct == 0) byteout(); } while ((a & 0x8000) == 0); }
+    int code(int cx, int d) {
+        const QeRow& q = kQe[st[cx]];
+        if (d == mps[cx]) {
+            a -= q.qe;
+            if ((a & 0x8000) == 0) { if (a < q.qe) a = q.qe; else c += q.qe; st[cx] = q.nmps; renorm(); }
+            else c += q.qe;
+        } else {
+            a -= q.qe;
+            if (a < q.qe) c += q.qe; else a = q.qe;
+            if (q.sw) mps[cx] ^= 1;
+            st[cx] = q.nlps;
+            renorm();
+        }
+        return d;
+    }
+    // ends the codeword and returns its bytes
+    std::vector<uint8_t> flush() {
+        const uint32_t tempc = c + a;
+        c |= 0xFFFF;
+        if (c >= tempc) c -= 0x8000;
+        c <<= ct; byteout();
+        c <<= ct; byteout();
+        std::vector<uint8_t> r(out.begin() + 1, out.begin() + (std::ptrdiff_t)(out[bp] == 0xFF ? bp : bp + 1));
+        return r;
+    }
+};
+
+struct BitWriter {
+    std::vector<uint8_t> out;
+    int cur = 0, nbits = 0, limit = 8;
+    void bit(int b) {
+        cur = cur << 1 | (b & 1);
+        if (++nbits == limit) { out.push_back((uint8_t)cur); limit = cur == 0xFF ? 7 : 8; cur = 0; nbits = 0; }
+    }
+    void bits(uint32_t v, int n) { for (int i = n - 1; i >= 0; i--) bit((int)(v >> i) & 1); }
+    void flush() {
+        if (nbits) { cur <<= (limit - nbits); out.push_back((uint8_t)cur); limit = cur == 0xFF ? 7 : 8; cur = 0; nbits = 0; }
+        if (!out.empty() && out.back() == 0xFF) out.push_back(0);
+    }
+};
+
+struct TagEnc {
+    struct Node { int value = 0x7fffffff, low = 0, parent = -1; bool known = false; };
+    std::vector<Node> n;
+    int w = 0, h = 0;
+    void init(int W, int H) {
+        w = W; h = H;
+        std::vector<int> lw{W}, lh{H}, off{0};
+        while (lw.back() > 1 || lh.back() > 1) { lw.push_back((lw.back() + 1) / 2); lh.push_back((lh.back() + 1) / 2); }
+        int tot = 0;
+        off.assign(lw.size(), 0);
+        for (size_t i = 0; i < lw.size(); i++) { off[i] = tot; tot += lw[i] * lh[i]; }
+        n.assign((size_t)tot, Node());
+        for (size_t l = 0; l + 1 < lw.size(); l++)
+            for (int y = 0; y < lh[l]; y++) for (int x = 0; x < lw[l]; x++) n[(size_t)(off[l] + y * lw[l] + x)].parent = off[l + 1] + (y / 2) * lw[l + 1] + x / 2;
+    }
+    void setValue(int leaf, int v) { for (int i = leaf; i >= 0 && n[(size_t)i].value > v; i = n[(size_t)i].parent) n[(size_t)i].value = v; }
+    void encode(BitWriter& bw, int leaf, int threshold) {
+        int stk[32], k = 0;
+        for (int i = leaf; i >= 0 && k < 32; i = n[(size_t)i].parent) stk[k++] = i;
+        int low = 0;
+        while (k > 0) {
+            Node& nd = n[(size_t)stk[--k]];
+            if (low > nd.low) nd.low = low; else low = nd.low;
+            while (low < threshold) {
+                if (low >= nd.value) { if (!nd.known) { bw.bit(1); nd.known = true; } break; }
+                bw.bit(0); low++;
+            }
+            nd.low = low;
+        }
+    }
+};
+
+void fwd53(float* a, int n) {          // forward 5/3 of a row that starts at coordinate 0 (low samples first in the interleaved array)
+    if (n == 1) return;
+    auto at = [&](int i) { if (i < 0) i = -i; if (i >= n) i = 2 * (n - 1) - i; return a[i]; };
+    for (int i = 1; i < n; i += 2) a[i] -= std::floor((at(i - 1) + at(i + 1)) / 2.f);
+    for (int i = 0; i < n; i += 2) a[i] += std::floor((at(i - 1) + at(i + 1) + 2.f) / 4.f);
+}
+
+} // namespace
+
+std::vector<uint8_t> encodeLossless(const uint16_t* pix, int W, int H, int prec, int levels) {
+    std::vector<uint8_t> out;
+    if (W <= 0 || H <= 0 || prec < 1 || prec > 16 || levels < 0 || levels > 8) return out;
+    const int NL = levels;
+    // forward transform in a float array; level l works on the top left (cw x ch)
+    std::vector<float> img((size_t)W * H);
+    const int shift = 1 << (prec - 1);
+    for (size_t i = 0; i < img.size(); i++) img[i] = (float)((int)pix[i] - shift);
+    struct Sb { int orient, x0, y0, w, h; std::vector<int32_t> v; };
+    std::vector<std::vector<Sb>> res((size_t)NL + 1);
+    int cw = W, ch = H;
+    std::vector<float> col((size_t)std::max(W, H));
+    for (int l = 0; l < NL; l++) {
+        for (int x = 0; x < cw; x++) { for (int y = 0; y < ch; y++) col[(size_t)y] = img[(size_t)y * W + x]; fwd53(col.data(), ch); for (int y = 0; y < ch; y++) img[(size_t)y * W + x] = col[(size_t)y]; }
+        for (int y = 0; y < ch; y++) fwd53(img.data() + (size_t)y * W, cw);
+        const int lw = (cw + 1) / 2, lh = (ch + 1) / 2, hw = cw / 2, hh = ch / 2;
+        std::vector<float> tmp((size_t)cw * ch);
+        for (int y = 0; y < ch; y++) for (int x = 0; x < cw; x++) tmp[(size_t)y * cw + x] = img[(size_t)y * W + x];
+        // bands of this level (resolution NL - l)
+        std::vector<Sb>& bands = res[(size_t)(NL - l)];
+        bands.assign(3, Sb());
+        const int dims[3][2] = {{hw, lh}, {lw, hh}, {hw, hh}};
+        for (int b = 0; b < 3; b++) { bands[(size_t)b].orient = b + 1; bands[(size_t)b].w = dims[b][0]; bands[(size_t)b].h = dims[b][1]; bands[(size_t)b].v.assign((size_t)dims[b][0] * dims[b][1], 0); }
+        for (int y = 0; y < ch; y++)
+            for (int x = 0; x < cw; x++) {
+                const int v = (int)tmp[(size_t)y * cw + x];
+                const bool xo = x & 1, yo = y & 1;
+                if (!xo && !yo) img[(size_t)(y / 2) * W + x / 2] = (float)v;     // LL, kept for the next level (written into the top left)
+                else { const int b = xo && !yo ? 0 : !xo && yo ? 1 : 2; bands[(size_t)b].v[(size_t)((yo ? (y - 1) / 2 : y / 2) * bands[(size_t)b].w + (xo ? (x - 1) / 2 : x / 2))] = v; }
+            }
+        cw = lw; ch = lh;
+    }
+    {
+        Sb ll; ll.orient = 0; ll.w = cw; ll.h = ch; ll.v.resize((size_t)cw * ch);
+        for (int y = 0; y < ch; y++) for (int x = 0; x < cw; x++) ll.v[(size_t)y * cw + x] = (int)img[(size_t)y * W + x];
+        res[0].assign(1, std::move(ll));
+    }
+    const int guard = 2;
+    auto expOf = [&](int orient) { return prec + (orient == 0 ? 0 : orient == 3 ? 2 : 1); };
+    // packets, one per resolution (one precinct, one layer)
+    std::vector<uint8_t> body;
+    for (int r = 0; r <= NL; r++) {
+        BitWriter bw;
+        std::vector<uint8_t> data;
+        bw.bit(1);
+        for (Sb& sb : res[(size_t)r]) {
+            const int mb = guard + expOf(sb.orient) - 1;
+            const int ncw = (sb.w + 63) / 64, nch = (sb.h + 63) / 64;
+            if (ncw == 0 || nch == 0) continue;
+            struct Blk { int x0, y0, x1, y1, nbps, passes; std::vector<uint8_t> bytes; };
+            std::vector<Blk> blks((size_t)ncw * nch);
+            TagEnc inc, zb;
+            inc.init(ncw, nch); zb.init(ncw, nch);
+            for (int by = 0; by < nch; by++)
+                for (int bx = 0; bx < ncw; bx++) {
+                    Blk& b = blks[(size_t)(by * ncw + bx)];
+                    b.x0 = bx * 64; b.y0 = by * 64; b.x1 = std::min(sb.w, b.x0 + 64); b.y1 = std::min(sb.h, b.y0 + 64);
+                    const int bw2 = b.x1 - b.x0, bh = b.y1 - b.y0;
+                    std::vector<int32_t> blk((size_t)bw2 * bh);
+                    int mx = 0;
+                    for (int y = 0; y < bh; y++) for (int x = 0; x < bw2; x++) { const int v = sb.v[(size_t)(b.y0 + y) * sb.w + b.x0 + x]; blk[(size_t)y * bw2 + x] = v; mx = std::max(mx, std::abs(v)); }
+                    b.nbps = 0; while ((mx >> b.nbps) != 0) b.nbps++;
+                    if (b.nbps > mb) return {};      // does not fit the guard bits
+                    if (b.nbps == 0) { inc.setValue(by * ncw + bx, 1); b.passes = 0; continue; }
+                    inc.setValue(by * ncw + bx, 0);
+                    zb.setValue(by * ncw + bx, mb - b.nbps);
+                    T1<MqEnc> t1;
+                    t1.w = bw2; t1.h = bh; t1.s = bw2 + 2; t1.orient = sb.orient; t1.vcausal = false; t1.src = blk.data();
+                    t1.fl.assign((size_t)(bw2 + 2) * (bh + 2), 0);
+                    t1.mag.assign((size_t)bw2 * bh, 0);
+                    t1.cleanup(b.nbps - 1, false);
+                    for (int bp = b.nbps - 2; bp >= 0; bp--) { t1.sigProp(bp); t1.magRef(bp); t1.cleanup(bp, false); }
+                    b.passes = 3 * b.nbps - 2;
+                    b.bytes = t1.mq.flush();
+                }
+            for (int by = 0; by < nch; by++)
+                for (int bx = 0; bx < ncw; bx++) {
+                    Blk& b = blks[(size_t)(by * ncw + bx)];
+                    const int k = by * ncw + bx;
+                    inc.encode(bw, k, 1);
+                    if (b.passes == 0) continue;
+                    zb.encode(bw, k, 999);
+                    const int np = b.passes;
+                    if (np == 1) bw.bit(0);
+                    else if (np == 2) bw.bits(2, 2);
+                    else if (np <= 5) { bw.bits(3, 2); bw.bits((uint32_t)(np - 3), 2); }
+                    else if (np <= 36) { bw.bits(15, 4); bw.bits((uint32_t)(np - 6), 5); }
+                    else { bw.bits(0x1FF, 9); bw.bits((uint32_t)(np - 37), 7); }
+                    int lg = 0; while ((2 << lg) <= np) lg++;
+                    int need = 0; while (((uint32_t)b.bytes.size() >> need) != 0) need++;
+                    int lblock = 3;
+                    while (lblock + lg < need) { bw.bit(1); lblock++; }
+                    bw.bit(0);
+                    bw.bits((uint32_t)b.bytes.size(), lblock + lg);
+                    data.insert(data.end(), b.bytes.begin(), b.bytes.end());
+                }
+        }
+        bw.flush();
+        body.insert(body.end(), bw.out.begin(), bw.out.end());
+        body.insert(body.end(), data.begin(), data.end());
+    }
+    auto p16 = [&](std::vector<uint8_t>& v, uint32_t x) { v.push_back((uint8_t)(x >> 8)); v.push_back((uint8_t)x); };
+    auto p32 = [&](std::vector<uint8_t>& v, uint32_t x) { p16(v, x >> 16); p16(v, x & 0xFFFF); };
+    p16(out, 0xFF4F);
+    p16(out, 0xFF51); p16(out, 38 + 3); p16(out, 0); p32(out, (uint32_t)W); p32(out, (uint32_t)H); p32(out, 0); p32(out, 0); p32(out, (uint32_t)W); p32(out, (uint32_t)H); p32(out, 0); p32(out, 0);
+    p16(out, 1); out.push_back((uint8_t)(prec - 1)); out.push_back(1); out.push_back(1);
+    p16(out, 0xFF52); p16(out, 12); out.push_back(0); out.push_back(0); p16(out, 1); out.push_back(0); out.push_back((uint8_t)NL); out.push_back(4); out.push_back(4); out.push_back(0); out.push_back(1);
+    p16(out, 0xFF5C); p16(out, 3 + 3 * NL + 1); out.push_back((uint8_t)(guard << 5));
+    for (int r = 0; r <= NL; r++) for (const Sb& sb : res[(size_t)r]) out.push_back((uint8_t)(expOf(sb.orient) << 3));
+    p16(out, 0xFF90); p16(out, 10); p16(out, 0); p32(out, (uint32_t)(12 + 2 + body.size())); out.push_back(0); out.push_back(1);
+    p16(out, 0xFF93);
+    out.insert(out.end(), body.begin(), body.end());
+    p16(out, 0xFFD9);
+    return out;
 }
 
 } // namespace dect2::j2k

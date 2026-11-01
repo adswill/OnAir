@@ -13,6 +13,7 @@
 #pragma once
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/common/ring.h"
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -33,6 +34,10 @@ public:
     void setSymbolRate(double hz);          // default 927 ksym/s (GOES-R HRIT); Elektro-L HRIT is 665.4 ksym/s
     double symbolRate() const;
     void setSignalOffset(double hz);
+    void setQpsk(bool on);                  // GK-2A HRIT: QPSK (G1 on I, G2 on Q) instead of BPSK
+    // 1: the KMA (GK-2A) xRIT files; `tag` heads the log lines ("GK-2A HRIT")
+    void setDialect(int dialect, const std::string& tag);
+    void setKeys(const std::vector<std::pair<int, std::array<uint8_t, 8>>>& keys);   // DES keys for encrypted GK-2A files
     bool ready() const;
     void reset();                               // the demodulator and partial files; the products stay
     void clearProducts();
