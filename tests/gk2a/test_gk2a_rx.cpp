@@ -4,13 +4,20 @@
 #include "dect2/gk2a/gk2a_gen.h"
 #include "dect2/gk2a/gk2a_rx.h"
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <random>
 #include <thread>
 using namespace dect2;
 #include "../common/test_util.h"
 
-static void runCase(const char* name, int link, double rate, double snr, double cfo, double ppm, double seconds, uint32_t seed, bool encrypt = false) {
+struct Imp {
+    float dc = 0;            // the radio's DC spike (added to I, 0.3 x to Q)
+    double qGain = 1, qSkewDeg = 0;   // IQ imbalance: gain of the Q arm and its phase error
+    double driftHzPerS = 0;  // slow carrier drift (a warming oscillator)
+};
+
+static void runCase(const char* name, int link, double rate, double snr, double cfo, double ppm, double seconds, uint32_t seed, bool encrypt = false, Imp imp = Imp()) {
     GoesGenConfig g;
     g.rate = rate; g.symbolRate = gk2aSymbolRate(link); g.qpsk = link == 1; g.snrDb = snr; g.cfoHz = cfo; g.sroPpm = ppm; g.seed = seed; g.scid = 0x68;
     g.fillFrames = link ? 300 : 12;
@@ -27,6 +34,20 @@ static void runCase(const char* name, int link, double rate, double snr, double 
     double cpu = 0;
     for (double done = 0; done < seconds * rate; done += (double)buf.size()) {
         gen.generate(buf.data(), buf.size());
+        if (imp.dc != 0 || imp.qGain != 1 || imp.qSkewDeg != 0 || imp.driftHzPerS != 0) {
+            const double sk = imp.qSkewDeg * M_PI / 180;
+            for (size_t i = 0; i < buf.size(); i++) {
+                cf32 v = buf[i];
+                if (imp.driftHzPerS != 0) {       // phase of a linear frequency ramp
+                    const double tt = (done + (double)i) / rate;
+                    const double ph = M_PI * imp.driftHzPerS * tt * tt;
+                    v *= cf32((float)std::cos(ph), (float)std::sin(ph));
+                }
+                if (imp.qGain != 1 || imp.qSkewDeg != 0) v = cf32(v.real(), (float)(imp.qGain * (v.imag() * std::cos(sk) + v.real() * std::sin(sk))));
+                v += cf32(imp.dc, 0.3f * imp.dc);
+                buf[i] = v;
+            }
+        }
         const auto t0 = std::chrono::steady_clock::now();
         rx.feed(buf.data(), buf.size());
         cpu += std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
@@ -38,7 +59,7 @@ static void runCase(const char* name, int link, double rate, double snr, double 
            name, gk2aSummary(t).c_str(), t.cfoHz, cfo, t.symbolRate / 1e3, t.snrDb, t.lockMetric, (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad,
            (unsigned long long)t.files, cpu, seconds, cpu / seconds);
     CHECK(t.state == 3 && t.carrierLock, "%s: state %d", name, t.state);
-    CHECK(std::fabs(t.cfoHz - cfo) < (link ? 2000 : 300), "%s: carrier %.0f", name, t.cfoHz);
+    CHECK(std::fabs(t.cfoHz - (cfo + imp.driftHzPerS * seconds)) < (link ? 2000 : 300), "%s: carrier %.0f", name, t.cfoHz);   // a drifting carrier ends at the end of its ramp
     CHECK(t.qpsk == (link == 1), "%s: modulation", name);
     const std::vector<GoesTestFile> tf = gk2aTestFiles(encrypt);
     size_t exact = 0;
@@ -65,6 +86,12 @@ int main() {
     runCase("LRIT 1.0 Msps, Es/N0 3 dB, -9 kHz", 0, 1.0e6, 3, -9e3, -10, 12, 2);
     runCase("LRIT 20 Msps, Es/N0 5 dB, +60 kHz", 0, 20e6, 5, 60e3, 0, 12, 3);
     runCase("LRIT 2.4 Msps, Es/N0 5 dB, encrypted visible channel with the key", 0, 2.4e6, 5, 5e3, 0, 12, 4, true);
+    runCase("LRIT 2.4 Msps, Es/N0 6 dB, +25 kHz, a strong DC spike", 0, 2.4e6, 6, 25e3, 0, 12, 9, false, Imp{0.15f, 1, 0, 0});
+    runCase("LRIT 2.4 Msps, Es/N0 6 dB, IQ imbalance 1.5 dB and 8 degrees", 0, 2.4e6, 6, -30e3, 0, 12, 10, false, Imp{0, 1.19, 8, 0});
+    runCase("LRIT 2.4 Msps, Es/N0 6 dB, carrier drifting 300 Hz/s", 0, 2.4e6, 6, 10e3, 0, 12, 11, false, Imp{0, 1, 0, 300});
+    runCase("HRIT 10 Msps, Es/N0 8 dB, IQ imbalance 1.5 dB and 8 degrees, DC spike", 1, 10e6, 8, 60e3, 0, 1.5, 12, false, Imp{0.1f, 1.19, 8, 0});
+    runCase("HRIT 10 Msps, Es/N0 8 dB, carrier drifting 20 kHz/s", 1, 10e6, 8, 30e3, 0, 1.5, 13, false, Imp{0, 1, 0, 20000});
+    runCase("HRIT 6.5 Msps (the lowest), Es/N0 8 dB, +100 kHz", 1, 6.5e6, 8, 100e3, 5, 1.5, 14);
     runCase("HRIT 10 Msps, Es/N0 8 dB, +80 kHz, +15 ppm", 1, 10e6, 8, 80e3, 15, 1.5, 5);
     runCase("HRIT 10 Msps, Es/N0 5 dB, -150 kHz", 1, 10e6, 5, -150e3, -10, 1.5, 6);
     runCase("HRIT 8 Msps, Es/N0 6 dB, +40 kHz, seed 7", 1, 8e6, 6, 40e3, 0, 1.5, 7);

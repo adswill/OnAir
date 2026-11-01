@@ -422,9 +422,9 @@ void tuner(App& a, bool& retune) {
 
 void meters(const App& a, std::vector<ModeMeter>& out) {
     const Gk2aTelemetry& t = telOf(a);
-    out.push_back({"Es/N0  dB", "%.1f", t.snrDb, -5, 15, t.snrDb >= (t.link ? 5 : 2) ? 1 : t.snrDb >= (t.link ? 2 : -1) ? 2 : 3});
+    out.push_back({"Es/N0  dB", "%.1f", t.snrDb, -5.0, 15.0, t.snrDb >= (t.link ? 5 : 2) ? 1 : t.snrDb >= (t.link ? 2 : -1) ? 2 : 3});
     const double fps = t.rateHist.empty() ? 0.0 : t.rateHist.back();
-    out.push_back({"FRAMES/s", "%.0f", fps, 0, t.link ? 400 : 8, t.state >= 3 ? 1 : 0});
+    out.push_back({"FRAMES/s", "%.0f", fps, 0.0, t.link ? 400.0 : 8.0, t.state >= 3 ? 1 : 0});
 }
 
 } // namespace

@@ -118,6 +118,14 @@ struct GoesReceiver::Impl {
     float meanErr2 = 0.1f;
     std::string tag = "GOES HRIT";
     int dialect = 0;
+    // coarse location of the signal in a capture much wider than it (decimation > 1): an averaged power spectrum of the raw samples
+    bool coarseDone = false, useCoarse = false;
+    int nWide = 0, wideBlocks = 0;
+    std::unique_ptr<Fft> fftWide;
+    std::vector<cf32> wideBuf;
+    std::vector<float> widePsd;
+    std::vector<double> coarseRej;        // absolute offsets (Hz) the coarse search sent the fine search to and that did not lock
+    double coarseAbs = 0;
     uint64_t asmPattern = 0, asmPatternNrz = 0;   // the sync word through the convolutional encoder, as sent plainly / NRZ-M coded
     bool nrzm = false;                    // the frame bits are differentially coded (GOES-19 HRIT): the decoded bit is the change of the code bit
     uint8_t nrzPrev = 0;
@@ -169,6 +177,7 @@ struct GoesReceiver::Impl {
 
     void setup(double r) {
         rate = r;
+        useCoarse = r > 3.0 * symbolRate;      // the signal leaves room in the capture: locate it first
         D = std::max(1, (int)std::floor(r / (2.3 * symbolRate)));
         fs2 = r / D;
         sps = fs2 / symbolRate;
@@ -217,12 +226,65 @@ struct GoesReceiver::Impl {
         lpf.clear(); mf.clear(); decPhase = 0;
         y.clear(); pos = 2 + sps; spsEst = sps; yprev = 0; agc = 1;
         resetCarrier();
-        rejected.clear();
+        rejected.clear(); coarseRej.clear(); coarseDone = false; nWide = 0; wideBuf.clear();
         acq = true; carrierLock = false; acqBuf.clear(); acqSpec.assign(kAcqFft, 0.f); acqBlocks = 0; sinceAcq = 0; lowLock = 0;
         meanAbs = 0.5f; meanIm2 = 0.1f; meanErr2 = 0.1f; swapIQ = false;
         resetFec();
         asmb.reset();
         frameLockReported = carrierReported = false;
+    }
+
+    // ---- coarse location: the strongest band as wide as the signal in the averaged spectrum of the raw samples (energy detection: a weak
+    // signal shows in the average long before the squared signal's line does), spurs clipped; the mixer is moved onto it and the fine search
+    // below finishes the job
+    void coarseFeed(cf32 v) {
+        if (nWide == 0) {
+            nWide = 4096;
+            while (nWide < 65536 && rate / nWide > 0.12 * symbolRate) nWide *= 2;   // bins of at most an eighth of the symbol rate
+            fftWide = std::make_unique<Fft>(nWide);
+            widePsd.assign((size_t)nWide, 0.f);
+            wideBlocks = 0;
+        }
+        wideBuf.push_back(v);
+        if ((int)wideBuf.size() < nWide) return;
+        for (int i = 0; i < nWide; i++) wideBuf[(size_t)i] *= (float)(0.5 - 0.5 * std::cos(2 * kPi * (i + 0.5) / nWide));
+        fftWide->forward(wideBuf.data());
+        for (int i = 0; i < nWide; i++) widePsd[(size_t)i] += std::norm(wideBuf[(size_t)i]);
+        wideBuf.clear();
+        wideBlocks++;
+        const double binHz = rate / nWide;
+        // enough blocks that the average over the window is good to under 1 % (blocks x window bins >= 20000), at most a quarter second
+        if ((double)wideBlocks * std::max(3.0, std::ceil(1.5 * symbolRate / binHz)) < 20000 && (double)wideBlocks * nWide < 0.25 * rate && wideBlocks < 400) return;
+        std::vector<float> srt(widePsd);
+        std::nth_element(srt.begin(), srt.begin() + nWide / 2, srt.end());
+        const double med = std::max(1e-30f, srt[(size_t)nWide / 2]);
+        const int W = std::max(3, (int)std::ceil(1.5 * symbolRate / binHz));
+        std::vector<double> c((size_t)nWide + 1, 0.0);
+        for (int i = 0; i < nWide; i++) c[(size_t)i + 1] = c[(size_t)i] + std::min((double)widePsd[(size_t)i], 4 * med);   // a spur counts as at most 4 x the floor
+        double best = 0; int bi = -1;
+        for (int i = 0; i < nWide; i++) {
+            double sum = 0;
+            const int e = i + W;
+            sum = e <= nWide ? c[(size_t)e] - c[(size_t)i] : (c[(size_t)nWide] - c[(size_t)i]) + c[(size_t)(e - nWide)];
+            const double ctr = i + W / 2.0, f = (ctr < nWide / 2.0 ? ctr : ctr - nWide) * binHz;
+            bool skip = false;
+            for (double r : coarseRej) skip |= std::fabs(appliedOffset + cfo + f - r) < 0.4 * symbolRate;
+            if (!skip && sum > best) { best = sum; bi = i; }
+        }
+        coarseDone = true;
+        const double ratio = best / (W * med);
+        if (bi >= 0 && ratio > std::max(1.12, 1.0 + 6.0 / std::sqrt((double)wideBlocks * W))) {
+            const double ctr = bi + W / 2.0, f = (ctr < nWide / 2.0 ? ctr : ctr - nWide) * binHz;
+            if (std::fabs(f) > 0.15 * symbolRate) {            // only a signal clearly off the centre of the band needs the mixer moved
+                cfo += f;
+                setRot();
+                lpf.clear(); mf.clear(); decPhase = 0; y.clear(); pos = 2 + sps; yprev = 0; agc = 1;
+                acqBuf.clear(); std::fill(acqSpec.begin(), acqSpec.end(), 0.f); acqBlocks = 0;
+            }
+            coarseAbs = appliedOffset + cfo;
+        } else coarseAbs = 1e30;
+        std::fill(widePsd.begin(), widePsd.end(), 0.f);
+        wideBlocks = 0;
     }
 
     // ---- coarse carrier from the squared signal
@@ -232,35 +294,48 @@ struct GoesReceiver::Impl {
             acqBuf.push_back(qpsk ? v2 * v2 : v2);          // BPSK: the squared signal has a line at twice the offset; QPSK: the fourth power at four times
         }
         if ((int)acqBuf.size() < kAcqFft) return;
+        // Hann window: the radio's DC spike (a line in the squared signal too) must not leak into the bins of a weak real line
+        for (int i = 0; i < kAcqFft; i++) acqBuf[(size_t)i] *= (float)(0.5 - 0.5 * std::cos(2 * kPi * (i + 0.5) / kAcqFft));
         fft->forward(acqBuf.data());
         for (int i = 0; i < kAcqFft; i++) acqSpec[(size_t)i] += std::norm(acqBuf[(size_t)i]);
         acqBuf.clear();
         if (++acqBlocks < kAcqBlocks || (acqBlocks & (kAcqBlocks - 1)) != 0) return;   // look after 8, 16, 32 and 64 blocks: a weak line gets longer to show
-        // the strongest line, leaving out offsets that were tried and did not lock (the radio's DC spike, the lines a symbol rate
-        // either side of the carrier's)
+        // the strongest line (or the strongest group of bins: an oscillator with phase noise smears the line over several bins, a quarter of
+        // the symbol rate in a bad case), leaving out offsets that were tried and did not lock (the radio's DC spike, the lines a symbol
+        // rate either side of the carrier's)
         if (rejected.size() > 6) rejected.clear();
         const double mult = qpsk ? 4.0 : 2.0;
         const double binHz = fs2 / kAcqFft / mult;
-        int best = -1;
-        float bv = 0;
         double mean = 0;
-        for (int i = 0; i < kAcqFft; i++) {
-            mean += acqSpec[(size_t)i];
-            const double cand = cfo + (i < kAcqFft / 2 ? i : i - kAcqFft) * binHz;
-            bool skip = false;
-            for (double r : rejected) skip |= std::fabs(cand - r) < 4 * binHz;
-            if (skip) continue;
-            if (acqSpec[(size_t)i] > bv) { bv = acqSpec[(size_t)i]; best = i; }
-        }
+        for (int i = 0; i < kAcqFft; i++) mean += acqSpec[(size_t)i];
         mean /= kAcqFft;
-        // noise bins of a sum of K blocks are Gamma(K): the line must stand 7 sigma above the mean (sigma = mean / sqrt(K)), and at least 3 times
-        const double thr = std::max(3.0, 1.0 + 7.0 / std::sqrt((double)acqBlocks));
-        if (best >= 0 && bv > thr * mean) {
-            const float l = acqSpec[(size_t)((best + kAcqFft - 1) % kAcqFft)], c = acqSpec[(size_t)best], r = acqSpec[(size_t)((best + 1) % kAcqFft)];
-            const float den = l - 2 * c + r;
-            const double frac = std::fabs(den) > 1e-20f ? 0.5 * (l - r) / den : 0;
-            const double k = (best < kAcqFft / 2 ? best : best - kAcqFft) + frac;
-            cfo += k * fs2 / kAcqFft / mult;
+        auto binFreq = [&](double k) { return cfo + (k < kAcqFft / 2.0 ? k : k - kAcqFft) * binHz; };
+        auto isRejected = [&](double f) { for (double r : rejected) if (std::fabs(f - r) < 4 * binHz) return true; return false; };
+        double bestMargin = 1.0, bestK = 0;
+        bool found = false;
+        static const int kWidths[] = {1, 5, 13, 33};
+        for (int W : kWidths) {
+            if (W > 1 && W * binHz > 0.4 * symbolRate) break;
+            double run = 0;
+            for (int i = 0; i < W; i++) run += acqSpec[(size_t)((kAcqFft - W / 2 + i) % kAcqFft)];
+            // run holds the window centred on bin 0; slide it round the circle
+            for (int c = 0; c < kAcqFft; c++) {
+                if (c > 0) { run += acqSpec[(size_t)((c + (W - 1) / 2) % kAcqFft)] - acqSpec[(size_t)(((c - 1 - W / 2) % kAcqFft + kAcqFft) % kAcqFft)]; }
+                const double thr = W == 1 ? std::max(3.0, 1.0 + 7.0 / std::sqrt((double)acqBlocks)) : 1.0 + 7.0 / std::sqrt((double)acqBlocks * W) + 0.15;
+                const double margin = run / (W * mean) / thr;
+                if (margin > bestMargin && !isRejected(binFreq(c))) {
+                    bestMargin = margin; bestK = c; found = true;
+                    if (W == 1) {
+                        const float l = acqSpec[(size_t)((c + kAcqFft - 1) % kAcqFft)], cc = acqSpec[(size_t)c], r = acqSpec[(size_t)((c + 1) % kAcqFft)];
+                        const float den = l - 2 * cc + r;
+                        if (std::fabs(den) > 1e-20f) bestK = c + 0.5 * (l - r) / den;
+                    }
+                }
+            }
+        }
+        if (found) {
+            const double k = bestK < kAcqFft / 2.0 ? bestK : bestK - kAcqFft;
+            cfo += k * binHz;
             setRot();
             resetCarrier();
             acq = false; sinceAcq = 0; okAtAcq = ok;
@@ -299,7 +374,7 @@ struct GoesReceiver::Impl {
         if (constel.size() > 512) constel.pop_front();
         if (!acq) {
             sinceAcq++;
-            if (sinceAcq == 20000) { double a, b; loopGains(0.004, 0.707, a, b); cAlpha = a; cBeta = b; }
+            if (sinceAcq == 20000) { double a, b; loopGains(qpsk ? 0.004 : 0.008, 0.707, a, b); cAlpha = a; cBeta = b; }
             if (sinceAcq > 30000) {
                 const float onT = qpsk ? 0.2f : 0.35f, offT = qpsk ? 0.1f : 0.2f;
                 const bool l = lockM > onT;
@@ -308,9 +383,9 @@ struct GoesReceiver::Impl {
                     if (l && !carrierReported) { carrierReported = true; char b[96]; snprintf(b, sizeof b, "%s: carrier locked, offset %.1f kHz", tag.c_str(), carrierHz() / 1000); addLog(b, true); }
                 }
                 lowLock = lockM < offT ? lowLock + 1 : 0;
-                if (lowLock > 60000) { acq = true; carrierLock = false; lowLock = 0; resetFec(); }
+                if (lowLock > 60000) { acq = true; coarseDone = false; carrierLock = false; lowLock = 0; resetFec(); }
                 // never locked to this one: try another line
-                if (!carrierLock && ok == okAtAcq && sinceAcq > 120000) { rejected.push_back(cfo); acq = true; resetFec(); }
+                if (!carrierLock && ok == okAtAcq && sinceAcq > 120000) { rejected.push_back(cfo); if (coarseAbs < 1e29) coarseRej.push_back(coarseAbs); if (coarseRej.size() > 8) coarseRej.erase(coarseRej.begin()); acq = true; coarseDone = false; resetFec(); }
             }
         }
         // soft code bits: BPSK +1 is code bit 0; QPSK sends G1 on I and G2 on Q
@@ -535,6 +610,7 @@ struct GoesReceiver::Impl {
             const cf32 v = x[i] * cf32((float)nco.real(), (float)nco.imag());
             levelAcc += std::norm(x[i]); levelN++;
             cf32 d = v;
+            if (acq && useCoarse && !coarseDone) { coarseFeed(v); continue; }
             if (D > 1) {
                 lpf.push(v);
                 if (++decPhase < D) continue;
@@ -544,7 +620,8 @@ struct GoesReceiver::Impl {
             mf.push(d);
             const cf32 o = mf.out();
             y.push_back(o);
-            if (acq) acquire(o * (1.f / std::sqrt(std::max(1e-12f, agc))));
+            if (acq) acquire(o);
+            
         }
         timing();
     }

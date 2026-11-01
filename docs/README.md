@@ -135,6 +135,7 @@ The user guides and notes that live in the repository. The same text is on the [
 | [goes-dcs.md](goes-dcs.md) | GOES / Meteosat DCS |
 | [ifkp.md](ifkp.md) | IFKP (Incremental Frequency Keying Plus) |
 | [marine-vhf.md](marine-vhf.md) | Marine VHF (channels 1 to 88, 156 to 162 MHz) |
+| [GK2A.md](GK2A.md) | GK-2A (Korea, 128.2 E) LRIT 1692.14 MHz BPSK and HRIT 1695.4 MHz QPSK: xRIT files, JPEG 2000 pictures, KMA DES keys, sensitivity |
 | [atis.md](atis.md) | ATIS, the transmitter identification of the European inland waterways (Rhine, Danube) |
 | [modeac.md](modeac.md) | Mode A/C |
 | [propagation.md](propagation.md) | Propagation (Tools > Propagation) |
