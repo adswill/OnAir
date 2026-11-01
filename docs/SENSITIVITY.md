@@ -83,7 +83,7 @@ and uploads the JSON as the artifact `sens-results`. Start it with `gh workflow 
 ## Coverage
 
 In the harness (generator + receiver wired like `tests/engine/test_iq_modes.cpp`): `dvbt2 dvbt atsc dab isdbt fm fm-rds dvbs2 dtmb atv dmr drm
-adsb sonde ais acars aero iridium mesh(heavy) pager packet vdl2 dstar nxdn dpmr tetra p25`. A mode whose clean reference run gives no valid
+adsb sonde ais acars aero iridium mesh(heavy) pager packet vdl2 dstar nxdn dpmr tetra p25 hfdl300 hfdl600 hfdl1200 hfdl1800 navtex dsc cdr dvbc atsc3` (3.6; see SENSITIVITY-3.6.md). A mode whose clean reference run gives no valid
 output is reported as "skipped" (receiver wiring in the harness needs a look) instead of producing numbers.
 
 **Gap list** (`sens_sweep --gaps` prints the current state):

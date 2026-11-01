@@ -102,6 +102,9 @@ public:
     void reset();                         // everything partial is dropped; the products stay
     void clear();                         // the products too
     void push(const uint8_t* vcdu, double nowSec = 0);
+    // Other xRIT downlinks (FengYun-4): the packet zone of a VCDU is zoneBytes long (the VCDU 8 + zoneBytes), CRC-16 checking is optional, and with
+    // raw set no products are made here: every whole file (transport header removed, headers of the caller's dialect and data) goes to onFile.
+    void setRawFiles(bool raw, int zoneBytes = kZoneBytes, bool checkCrc = true);
     std::function<void(const std::string&)> onLog;
     std::function<void(const std::vector<uint8_t>& file, int vcid, int apid)> onFile;   // every whole LRIT file (headers and data)
     // products, newest first (at most maxProducts are kept)
@@ -141,7 +144,7 @@ struct FileOut {
 // Builds the packet stream of a virtual channel into VCDUs: whole files at a time, the last zone padded with an idle packet.
 class Mux {
 public:
-    explicit Mux(int scid = 0) : scid_(scid) {}
+    explicit Mux(int scid = 0, int zoneBytes = kZoneBytes) : scid_(scid), zone_(zoneBytes) {}   // zoneBytes: the packet zone of a VCDU (FengYun-4: 1012)
     void addFile(int vcid, const FileOut& f);
     bool next(uint8_t vcdu[kVcduBytes]);            // false when no data are waiting (then send fill)
     void fill(uint8_t vcdu[kVcduBytes]);            // a fill VCDU (virtual channel 63)
@@ -149,6 +152,7 @@ private:
     struct Vc { std::vector<uint8_t> q; std::vector<size_t> starts; uint32_t counter = 0; };
     void flushVc(Vc& v);
     int scid_;
+    int zone_;
     Vc vc_[64];
     int seq_[2048] = {};
     std::vector<int> order_;                          // virtual channels with data, in the order they were filled

@@ -41,6 +41,7 @@ The built files are yours: they are never committed to the OnAir repository and 
 | CDR (China Digital Radio) | DRA+ (patent and licence status not verified) | the **DRA+ add-on** (`libonair_dra`) that you build yourself (see [DRA+ (CDR sound)](#dra-cdr-sound)); sound is silent until you do |
 | FreeDV 700D / 700E / 1600, M17 | codec2 (open, LGPL) | **codec2**: comes with OnAir (the library `libcodec2` next to the program) |
 | FreeDV RADE | RADE neural modem (open, BSD) | **librade** (not codec2): optional; without it the RADE slot stays dark |
+| Inmarsat Aero C channel voice (Inmarsat > Voice) | AMBE 4800x3600 (patented) | a **speech codec plug-in** `onair-codec-aeroambe` that you build yourself from `tools/addons/aeroambe` and libaeroambe's mbelib (see [AMBE (Inmarsat Aero voice)](#ambe-inmarsat-aero-voice)); calls, aircraft and ground station are shown without it |
 | Yaesu System Fusion (WIP) | AMBE+2 class (proprietary, DVSI) | a speech codec **plug-in with the id `ysf`** that you install yourself (see [Speech codec plug-ins](#speech-codec-plug-ins-voice-modes)); callsigns and data are shown without it, no sound |
 | TETRA | its own speech codec | nothing from you: it is not mbelib and not codec2 |
 | TETRA voice (unencrypted calls only) | TETRA ACELP | a **speech codec plug-in** `onair-codec-tetra` that you build yourself, for example around **mbelib-neo** (see [Speech codec plug-ins](#speech-codec-plug-ins-voice-modes)); the cell, network and call information work without it |
@@ -369,8 +370,18 @@ its streams in the clear is not shown as scrambled: OnAir goes by the scrambling
 
 ## AMBE (Inmarsat Aero voice)
 
-Aero C channel voice uses an AMBE vocoder. OnAir decodes the P channel data only and does not tune voice channels. Separate programs,
-for example JAERO (<https://github.com/jontio/JAERO>), work on C channels.
+OnAir demodulates and decodes Aero C channels (8400 bit/s, circuit-mode voice; Inmarsat > Voice tab) after JAERO. The vocoder is AMBE 4800x3600 (the "mini-M" frame: 96 bits per 20 ms), patented, so OnAir ships none and loads yours as the plug-in **`onair-codec-aeroambe`** (id `aeroambe`, the usual `onair_speech_*` ABI, 8 kHz PCM, 160 samples per call). Each call gets **12 bytes**: one voice frame exactly as JAERO hands it to libaeroambe, bits packed least significant bit first, in transmission order. Without the plug-in the calls are listed and the coded frames are saved to `.bits` files (12 bytes per frame).
+
+Build it (the source of the plug-in is `tools/addons/aeroambe` and contains no vocoder; the vocoder is the mbelib copy inside libaeroambe, MIT licence with mbelib's patent notice):
+
+```
+git clone https://github.com/jontio/libaeroambe
+cd OnAir/tools/addons/aeroambe
+cmake -S . -B build -DMBELIB_DIR=/path/to/libaeroambe/mbelib-master
+cmake --build build
+```
+
+Copy `onair-codec-aeroambe.dylib` / `.so` / `onair-codec-aeroambe.dll` into the OnAir codecs folder (see "File names and search order") and accept the notice once. The plug-in unpacks the 12 bytes, moves bit i to `ambe_fr[rW[i]][rX[i]]` (libaeroambe's tables) and calls `mbe_processAmbe4800x3600Frame`. It was run on a real C-channel recording (JAERO's 8400bps sample): zero Golay/Hamming errors in the frames and speech-like bursts at the output. It does not decode encrypted traffic and there is no key handling. The old mention of the `ambe` id for Inmarsat is gone: `ambe` stays D-STAR's.
 
 ## AMBE variant (Iridium voice)
 
@@ -489,6 +500,7 @@ Three more plug-in ids, one registry (`core/include/dect2/codec/codec_registry.h
 |---|---|---|
 | `ambe2` | DMR, NXDN, dPMR (AMBE+2 3600x2450) | 12: the four de-interleaved code words C0..C3 of mbelib, 24 bits each, row by row, most significant bit first |
 | `ambe` | D-STAR (AMBE 3600x2400) | 12, the same layout |
+| `aeroambe` | Inmarsat Aero C channel (AMBE 4800x3600) | 12, one JAERO voice frame, bits packed LSB first (see above) |
 | `imbe` | P25 phase 1 (IMBE 7200x4400) | 23: the eight code words c0..c7, 23 bits each, row by row, MSB first (184 bits) |
 
 OnAir does the de-interleaving; the plug-in only has to expand the bits back into mbelib's `char fr[4][24]` (or `fr[8][23]`) and call `mbe_processAmbe3600x2450Frame` / `mbe_processAmbe3600x2400Frame` / `mbe_processImbe7200x4400Frame`, then return the 160 samples. A small reference wrapper is in `tools/codec-plugin-example/mbelib_wrapper.c` (compile it yourself against your own mbelib; no codec code is in this repository).

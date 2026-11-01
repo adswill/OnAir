@@ -180,11 +180,13 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   set(DECT2_MODES autodet fsq ifkp cquam selfcal dvbs dtmb atv dmr drm adsb gnss dab sonde ais marine acars inmc aero iridium mesh hdr cdr pager packet hfdig airband vdl2 ism vor ils m17 cell cw dstar hfdl nxdn gsmr psk js8 specx wb specan dvbc dpmr orbcomm uplink tetra tetrapol ale mac astro p25 ble iono qo100 wifi general time rid meteor nr cubesat ccsds goes globalstar vdes hrpt zigbee flarm hfbeacon dji nbiot halow codar datawell same multitone loraraw ant dect elektro ndb lbj railway horus eczas vdl4 uat wisun fpv wmbus tones sarsat mt63 zwave mscatter dgps dme sitor kris kavb kapp kaft eloran mpt1327 fusion ardop goesdcs modeac bletrk ltr edacs p25p2 kait satbeacon kaws milhf nfc kaal ham prop antd lorawan lorasat isdbs marinevhf argos sigfox sbas asterix voice)
   list(APPEND DECT2_MODES pactor)   # PACTOR-I monitor (family 203): core/src/pactor, app/pactor, tests/pactor
   list(APPEND DECT2_MODES roshf ssdv ebicab nrf24 atis)   # ROS (HF) detector (family 205), SSDV pictures (206), EBICab / Eurobalise up-link (207): core/src/<mode>, app/<mode>, tests/<mode>
+  list(APPEND DECT2_MODES fy3)   # FY-3 AHRPT (family 235) and FY-3 MPT (236): core/src/fy3, app/fy3, tests/fy3 (docs/fy3.md)
   list(APPEND DECT2_MODES esubghz)   # Flipper Zero Sub-GHz chat, receive and send (family 204): core/src/esubghz, app/esubghz, tests/esubghz
   list(APPEND DECT2_MODES inmsat)   # Inmarsat all-carriers mode (3.3, docs/INMARSAT-REVAMP.md): core/src/inmsat, tests/inmsat
   list(APPEND DECT2_MODES gk2a)   # GK-2A LRIT (family 230) and HRIT (231): core/src/gk2a, app/gk2a, tests/gk2a, docs/GK2A.md
   list(APPEND DECT2_MODES shortwave)   # Shortwave: the general receiver with one-click HF decoders (family 212, docs/SHORTWAVE-MODE.md): core/src/shortwave, app/shortwave, tests/shortwave
   list(APPEND DECT2_MODES pskdsp)   # PSK demodulator and analyser (family 202, #282): core/src/pskdsp, app/pskdsp, tests/pskdsp
+  list(APPEND DECT2_MODES fygeo)   # FengYun geostationary: FY-4A / FY-4B LRIT, FY-4A HRIT (DVB-S2) and FY-2 S-VISSR (families 232 - 235, docs/FENGYUN-GEO.md): core/src/fygeo, app/fygeo, tests/fygeo
 target_sources(dect2core PRIVATE core/src/tv/mheg_render.cpp core/src/tv/ts_proto_rs.cpp core/src/common/text_charset_rs.cpp core/src/tv/dvb_text.cpp core/src/tv/dvb_text_rs.cpp core/src/tv/teletext_rs.cpp core/src/tv/dvbsub_rs.cpp core/src/tv/epg.cpp core/src/tv/subtitle_export.cpp core/src/tv/recorder.cpp core/src/tv/timeshift.cpp core/src/tv/playback.cpp core/src/tv/dsmcc.cpp core/src/tv/mheg.cpp core/src/tv/mheg_engine.cpp core/src/tv/rcs.cpp core/src/tv/si_tables.cpp core/src/tv/ts_data.cpp core/src/tv/hd_pair.cpp) # MPEG-TS parsing layer (C++ or the Rust crate onair_ts) and the TV recorder (guide, schedule, timeshift, playback) (C++ or the Rust crate onair_ts)
 target_sources(dect2core PRIVATE core/src/tv/mheg_render.cpp core/src/tv/ts_proto_rs.cpp core/src/common/text_charset_rs.cpp core/src/tv/dvb_text.cpp core/src/tv/dvb_text_rs.cpp core/src/tv/teletext_rs.cpp core/src/tv/dvbsub_rs.cpp core/src/tv/epg.cpp core/src/tv/subtitle_export.cpp core/src/tv/recorder.cpp core/src/tv/timeshift.cpp core/src/tv/playback.cpp core/src/tv/dsmcc.cpp core/src/tv/mheg.cpp core/src/tv/rcs.cpp core/src/tv/si_tables.cpp core/src/tv/ts_data.cpp core/src/tv/hd_pair.cpp) # MPEG-TS parsing layer (C++ or the Rust crate onair_ts) and the TV recorder (guide, schedule, timeshift, playback) (C++ or the Rust crate onair_ts)
 target_sources(dect2core PRIVATE core/src/tv/iptv_parse.cpp core/src/tv/iptv_http.cpp core/src/tv/iptv_stream.cpp core/src/tv/iptv_mode.cpp)   # Internet TV (IPTV): playlists, guide, HTTP(S)/HLS/UDP reader (docs/IPTV.md)
@@ -213,6 +215,15 @@ target_sources(dect2core PRIVATE core/src/net/remote_api.cpp core/src/net/api_po
 target_sources(dect2core PRIVATE core/src/source/mount_driver.cpp core/src/source/mount_track.cpp)   # antenna mount drivers: Hamlib rotctld, ASCOM Alpaca; pass-driven mount plan
 target_sources(dect2core PRIVATE core/src/results/sessions_json.cpp)   # the sessions as paged JSON for the remote API
 target_sources(dect2core PRIVATE core/src/packs/packs.cpp)   # offline data packs: catalog, download with resume, checksums, disk guard, delete
+# OpenJPEG 2.5.3 (BSD-2-Clause, third_party/openjpeg): the JPEG 2000 pictures of the FengYun-4 downlinks and their test signals, see THIRD_PARTY.md
+file(GLOB ONAIR_OPJ_SRC CONFIGURE_DEPENDS third_party/openjpeg/*.c)
+target_sources(dect2core PRIVATE ${ONAIR_OPJ_SRC})
+set_source_files_properties(${ONAIR_OPJ_SRC} PROPERTIES LANGUAGE C COMPILE_DEFINITIONS "OPJ_STATIC")
+if(NOT MSVC)
+  set_source_files_properties(${ONAIR_OPJ_SRC} PROPERTIES COMPILE_OPTIONS "-w")
+endif()
+target_include_directories(dect2core PRIVATE third_party/openjpeg)
+set_source_files_properties(core/src/fygeo/fygeo_proto.cpp PROPERTIES COMPILE_DEFINITIONS "OPJ_STATIC")   # openjpeg.h without dllimport on Windows
 target_sources(dect2core PRIVATE third_party/ssdv/ssdv.c third_party/ssdv/rs8.c)   # SSDV packet decoder / encoder (fsphil/ssdv, GPL-3.0-or-later; rs8.c Phil Karn LGPL), see THIRD_PARTY.md
 target_include_directories(dect2core PRIVATE third_party/ssdv)
 set_source_files_properties(third_party/ssdv/ssdv.c third_party/ssdv/rs8.c PROPERTIES LANGUAGE C)
@@ -582,7 +593,7 @@ if(DECT2_BUILD_APP)
   set(IMGUI_SOURCES
     third_party/imgui/imgui.cpp third_party/imgui/imgui_draw.cpp third_party/imgui/imgui_tables.cpp third_party/imgui/imgui_widgets.cpp
     third_party/imgui/backends/imgui_impl_glfw.cpp)
-  set(APP_SOURCES app/panels/carousel_view.cpp app/main.cpp app/main_window.cpp app/main_start.cpp app/ui/draw_ui.cpp app/ui/touch.cpp app/ui/touch_sheets.cpp app/ui/touch_shell.cpp app/ui/main_tabs.cpp app/ui/light_theme.cpp app/state/app_state.cpp app/state/presets_app.cpp app/state/prefs.cpp app/ui/widgets.cpp app/ui/toolbar.cpp app/ui/toolbar_source.cpp app/ui/toolbar_rig.cpp app/ui/statusbar.cpp app/ui/mode_table.cpp app/ui/mode_select.cpp app/ui/mode_visibility.cpp app/ui/ui_common.cpp app/panels/radio_ui.cpp app/gfx/plots.cpp app/panels/analysis_tabs.cpp app/panels/tv.cpp app/panels/tv_hd.cpp app/panels/subs_ui.cpp app/scan/scan_outputs.cpp app/panels/antenna.cpp app/fm/fm_ui.cpp app/ui/ui2.cpp app/ui/ui2_theme.cpp app/ui/ui2_widgets.cpp app/ui/ui2_shell.cpp app/ui/command_palette.cpp app/ui/ui2_faces.cpp app/panels/modeui.cpp app/atsc3/atsc3_ui.cpp app/isdbt/isdbt_ui.cpp app/panels/update_ui.cpp app/scan/scan_db_ui.cpp app/panels/diag_ui.cpp app/panels/doctor_ui.cpp app/ui/wizard.cpp app/gfx/plot.cpp app/gfx/gfx_png.cpp app/ui/popout.cpp app/panels/codec_help.cpp app/platform/discord_rpc.cpp app/panels/passes_ui.cpp app/panels/satnogs_ui.cpp app/df/df_ui.cpp app/panels/feeds_ui.cpp app/scan/scanner_ui.cpp app/scan/scan_view_ui.cpp app/memory/memory_options.cpp app/memory/memory_ui.cpp app/memory/memory_lists_ui.cpp app/memory/memory_edit.cpp app/memory/memory_selftest.cpp app/map/map_ui.cpp app/map/wx_overlay.cpp app/map/map_send.cpp app/webshare/webshare.cpp app/webshare/webshare_text.cpp app/panels/rotator_ui.cpp app/panels/results_ui.cpp app/state/rx_prefs.cpp app/state/receivers.cpp app/panels/fixit.cpp app/panels/gallery_ui.cpp app/panels/enhance_ui.cpp app/state/results_export.cpp app/state/results_export_ui.cpp app/vdl2/vdl2_log.cpp app/state/rx_width.cpp app/panels/credits_ui.cpp app/bandplan/bandplan_ui.cpp app/sweep/sweep_ui.cpp app/freqdb/freqdb_ui.cpp app/ui/tour.cpp app/ui/learn.cpp app/ui/autogain_firstrun.cpp app/clips/clips_core.cpp app/clips/clips_gen.cpp app/clips/clips_ui.cpp app/transcribe/transcribe_app.cpp app/panels/automation_ui.cpp app/panels/automation_sink.cpp app/panels/protolab_ui.cpp app/panels/modebuilder_ui.cpp app/panels/signallab_ui.cpp app/panels/msgdb_ui.cpp app/platform/spawn.cpp app/plugin/plugin_app.cpp app/panels/tvrec_ui.cpp app/panels/timemachine_ui.cpp app/panels/audio_cleanup_ui.cpp app/panels/audio_control_ui.cpp app/panels/voice_inversion_ui.cpp app/radar/passive_ui.cpp app/rfi/rfi_ui.cpp app/watchlist/watchlist_ui.cpp app/integrations/integrations_ui.cpp app/df/rfcam_ui.cpp app/rooms/rooms_send.cpp app/rooms/rooms_net.cpp app/panels/report_problem.cpp app/ui/listen_wizard.cpp app/ui/typography.cpp app/ui/meter_ui.cpp app/platform/proc_cpu.cpp app/state/workspace.cpp app/state/layout.cpp app/state/workspace_ui.cpp app/panels/recording_library_ui.cpp app/panels/backup_ui.cpp app/panels/scheduler_ui.cpp app/panels/recmgr_ui.cpp app/ui/dock_tree.cpp app/ui/ui2_dock.cpp app/ui/kit/kit.cpp app/ui/kit/kit_gallery.cpp app/panels/swarm_ui.cpp app/bandplan/tvchan_ui.cpp app/vfo/vfo_ui.cpp app/ui/kit/session_list.cpp app/ui/kit/record_rules_ui.cpp app/ui/kit/mode_frame.cpp app/ssbconv/ssbconv_ui.cpp app/ui/mode_picker.cpp app/ui/mode_info.cpp app/ui/settings_window.cpp app/webshare/webshare_core.cpp app/webshare/webshare_net.cpp app/webshare/qr.cpp )
+  set(APP_SOURCES app/panels/carousel_view.cpp app/main.cpp app/main_window.cpp app/main_start.cpp app/ui/draw_ui.cpp app/ui/touch.cpp app/ui/touch_sheets.cpp app/ui/touch_shell.cpp app/ui/main_tabs.cpp app/ui/light_theme.cpp app/state/app_state.cpp app/state/presets_app.cpp app/state/prefs.cpp app/ui/widgets.cpp app/ui/toolbar.cpp app/ui/toolbar_source.cpp app/ui/toolbar_rig.cpp app/ui/statusbar.cpp app/ui/mode_table.cpp app/ui/mode_select.cpp app/ui/mode_visibility.cpp app/ui/ui_common.cpp app/panels/radio_ui.cpp app/gfx/plots.cpp app/panels/analysis_tabs.cpp app/panels/tv.cpp app/panels/tv_hd.cpp app/panels/subs_ui.cpp app/scan/scan_outputs.cpp app/panels/antenna.cpp app/fm/fm_ui.cpp app/ui/ui2.cpp app/ui/ui2_theme.cpp app/ui/ui2_widgets.cpp app/ui/ui2_shell.cpp app/ui/command_palette.cpp app/ui/ui2_faces.cpp app/panels/modeui.cpp app/atsc3/atsc3_ui.cpp app/isdbt/isdbt_ui.cpp app/panels/update_ui.cpp app/scan/scan_db_ui.cpp app/panels/diag_ui.cpp app/panels/doctor_ui.cpp app/ui/wizard.cpp app/gfx/plot.cpp app/gfx/gfx_png.cpp app/ui/popout.cpp app/panels/codec_help.cpp app/platform/discord_rpc.cpp app/panels/passes_ui.cpp app/panels/satnogs_ui.cpp app/df/df_ui.cpp app/panels/feeds_ui.cpp app/scan/scanner_ui.cpp app/scan/scan_view_ui.cpp app/memory/memory_options.cpp app/memory/memory_ui.cpp app/memory/memory_lists_ui.cpp app/memory/memory_edit.cpp app/memory/memory_selftest.cpp app/map/map_ui.cpp app/map/wx_overlay.cpp app/map/map_send.cpp app/webshare/webshare.cpp app/webshare/webshare_text.cpp app/panels/rotator_ui.cpp app/panels/results_ui.cpp app/state/rx_prefs.cpp app/state/receivers.cpp app/panels/fixit.cpp app/panels/gallery_ui.cpp app/panels/enhance_ui.cpp app/state/results_export.cpp app/state/results_export_ui.cpp app/vdl2/vdl2_log.cpp app/state/rx_width.cpp app/panels/credits_ui.cpp app/bandplan/bandplan_ui.cpp app/sweep/sweep_ui.cpp app/freqdb/freqdb_ui.cpp app/ui/tour.cpp app/ui/learn.cpp app/ui/autogain_firstrun.cpp app/clips/clips_core.cpp app/clips/clips_gen.cpp app/clips/clips_ui.cpp app/transcribe/transcribe_app.cpp app/panels/automation_ui.cpp app/panels/automation_sink.cpp app/panels/protolab_ui.cpp app/panels/modebuilder_ui.cpp app/panels/signallab_ui.cpp app/panels/msgdb_ui.cpp app/platform/spawn.cpp app/plugin/plugin_app.cpp app/panels/tvrec_ui.cpp app/panels/timemachine_ui.cpp app/panels/audio_cleanup_ui.cpp app/panels/audio_control_ui.cpp app/panels/voice_inversion_ui.cpp app/radar/passive_ui.cpp app/rfi/rfi_ui.cpp app/watchlist/watchlist_ui.cpp app/integrations/integrations_ui.cpp app/df/rfcam_ui.cpp app/rooms/rooms_send.cpp app/rooms/rooms_net.cpp app/panels/report_problem.cpp app/ui/listen_wizard.cpp app/ui/typography.cpp app/ui/meter_ui.cpp app/platform/proc_cpu.cpp app/state/workspace.cpp app/state/layout.cpp app/state/workspace_ui.cpp app/panels/recording_library_ui.cpp app/panels/backup_ui.cpp app/panels/scheduler_ui.cpp app/panels/recmgr_ui.cpp app/ui/dock_tree.cpp app/ui/ui2_dock.cpp app/ui/kit/kit.cpp app/ui/kit/kit_gallery.cpp app/panels/swarm_ui.cpp app/bandplan/tvchan_ui.cpp app/vfo/vfo_ui.cpp app/ui/kit/session_list.cpp app/ui/kit/record_rules_ui.cpp app/ui/kit/mode_frame.cpp app/ui/kit/mode_panel.cpp app/ssbconv/ssbconv_ui.cpp app/ui/mode_picker.cpp app/ui/mode_info.cpp app/ui/settings_window.cpp app/webshare/webshare_core.cpp app/webshare/webshare_net.cpp app/webshare/qr.cpp )
   list(APPEND APP_SOURCES app/ui/synth_group_ui.cpp)
   list(APPEND APP_SOURCES app/state/tune_worker.cpp)   # the radio retune off the UI thread, newest request wins
   list(APPEND APP_SOURCES app/scan/fast_scan_ui.cpp app/ui/input_map.cpp)
@@ -1365,6 +1376,8 @@ if(DECT2_BUILD_TESTS)
     add_test(NAME map_colours COMMAND test_map_colours)
     add_executable(test_touch tests/app/test_touch.cpp)   # the touch interface's keypad, gestures and kinetic scroll (app/ui/touch_logic.h)
     add_test(NAME touch_logic COMMAND test_touch)
+    add_executable(test_mode_panel tests/app/test_mode_panel.cpp)   # the per-mode Simple / Advanced view: preference key, default, pane layout (app/ui/kit/mode_panel_logic.h)
+    add_test(NAME mode_panel_logic COMMAND test_mode_panel)
     add_executable(test_time_source tests/app/test_time_source.cpp)   # one clock for all modes (#218): computer clock or signal time, ISO 8601 with ms
     target_include_directories(test_time_source PRIVATE core/include)
     add_test(NAME time_source COMMAND test_time_source)
@@ -1443,6 +1456,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_atis_mode PRIVATE dect2core)
     target_compile_definitions(test_atis_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME atis_mode COMMAND test_atis_mode)
+    add_executable(test_fy3_mode tests/app/test_fy3_mode.cpp)   # FY-3 AHRPT / MPT: tuning, mode rows, engine / panel wiring, the doc page
+    target_link_libraries(test_fy3_mode PRIVATE dect2core)
+    target_compile_definitions(test_fy3_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME fy3_mode COMMAND test_fy3_mode)
     add_executable(test_shortwave_mode tests/app/test_shortwave_mode.cpp)   # Shortwave: tuning, mode row, engine / panel wiring, the decoder strip
     target_link_libraries(test_shortwave_mode PRIVATE dect2core)
     target_compile_definitions(test_shortwave_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
@@ -1475,6 +1492,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_argos_sigfox_mode PRIVATE dect2core)
     target_compile_definitions(test_argos_sigfox_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME argos_sigfox_mode COMMAND test_argos_sigfox_mode)
+    add_executable(test_fygeo_mode tests/app/test_fygeo_mode.cpp)   # the four FengYun modes (families 232 - 235): registered tunings, mode rows, engine wiring, poll slots, panel notes
+    target_link_libraries(test_fygeo_mode PRIVATE dect2core)
+    target_compile_definitions(test_fygeo_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME fygeo_mode COMMAND test_fygeo_mode)
     add_executable(test_ltr_edacs_mode tests/app/test_ltr_edacs_mode.cpp)   # LTR and EDACS trunking modes: registered tunings, mode rows, family count and panel strings
     target_link_libraries(test_ltr_edacs_mode PRIVATE dect2core)
     target_compile_definitions(test_ltr_edacs_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
@@ -2360,7 +2381,7 @@ if(DECT2_BUILD_TESTS)
     target_compile_definitions(test_pskdsp_engine PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
   endif()
   # read a file of the source tree (a recording, a font): __FILE__ does not lead there (-ffile-prefix-map, Windows separators)
-  foreach(t test_sarsat_rx test_hfdig_kbd)
+  foreach(t test_sarsat_rx test_hfdig_kbd test_aero_cchan_real)
     if(TARGET ${t})
       target_compile_definitions(${t} PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     endif()
@@ -2548,6 +2569,8 @@ if(DECT2_BUILD_APP AND NOT APPLE)
   endif()
   install(FILES third_party/rnnoise/COPYING DESTINATION ${CMAKE_INSTALL_DOCDIR}/rnnoise)   # RNNoise (BSD-3-Clause) is linked in: its licence text travels with the binaries
   install(FILES third_party/rnnoise/README-OnAir.md DESTINATION ${CMAKE_INSTALL_DOCDIR}/rnnoise RENAME NOTICE.md)
+  install(FILES third_party/openjpeg/LICENSE DESTINATION ${CMAKE_INSTALL_DOCDIR}/openjpeg)   # OpenJPEG (BSD-2-Clause) is linked in: its licence text travels with the binaries
+  install(FILES third_party/openjpeg/README-OnAir.md DESTINATION ${CMAKE_INSTALL_DOCDIR}/openjpeg RENAME NOTICE.md)
   if(TARGET dect2_whisper)   # whisper.cpp / ggml (MIT) is linked in: its licence text travels with the binaries
     install(FILES third_party/whisper/LICENSE DESTINATION ${CMAKE_INSTALL_DOCDIR}/whisper)
     install(FILES third_party/whisper/README-OnAir.md DESTINATION ${CMAKE_INSTALL_DOCDIR}/whisper RENAME NOTICE.md)

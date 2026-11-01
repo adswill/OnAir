@@ -220,6 +220,9 @@ struct Assembler::Impl {
     std::vector<std::string> pendingLogs;
     std::thread worker;
     bool stopWorker = false;
+    int zone = kZoneBytes;            // bytes of packet zone in a VCDU (884 GOES; 1012 FengYun-4)
+    bool raw = false;                 // whole files only (their own headers are the caller's: FengYun-4), no products here
+    bool chkCrc = true;
 
     void log(const std::string& s) { if (self->onLog) self->onLog(s); }
     ~Impl() {
@@ -484,6 +487,13 @@ struct Assembler::Impl {
         if (self->onFile) self->onFile(f.file, vcid, apid);
     }
 
+    void finishRaw(FileState& f, int vcid, int apid) {
+        f.active = false;
+        self->files++;
+        if (f.errors) self->fileErrors++;
+        if (self->onFile) self->onFile(f.file, vcid, apid);
+    }
+
     void packet(int vcid, const uint8_t* pk, size_t len) {
         self->packets++;
         const int apid = (int)((pk[0] & 7) << 8 | pk[1]);
@@ -492,7 +502,7 @@ struct Assembler::Impl {
         if (len < 8) return;
         const uint8_t* u = pk + 6;
         const size_t ulen = len - 6 - 2;
-        const bool crcOk = ccsds::crc16(u, ulen) == be16(u + ulen);
+        const bool crcOk = !chkCrc || ccsds::crc16(u, ulen) == be16(u + ulen);
         if (!crcOk) self->crcErrors++;
         FileState& f = files[vcid * 2048 + apid];
         if (flags == 1 || flags == 3) {
@@ -515,6 +525,10 @@ struct Assembler::Impl {
                 f.file.insert(f.file.end(), u, u + ulen);
                 if (f.headersDone && f.rice) riceLine(f, u, ulen);
             }
+        }
+        if (raw) {
+            if (f.active && (flags == 2 || flags == 3)) finishRaw(f, vcid, apid);
+            return;
         }
         if (!f.headersDone && f.file.size() >= 16) {
             Headers h;
@@ -556,15 +570,15 @@ struct Assembler::Impl {
         const int fhp = (int)((d[6] & 7) << 8 | d[7]);
         const uint8_t* z = d + 8;
         if (fhp == 2047) {
-            if (v.have) { v.buf.insert(v.buf.end(), z, z + kZoneBytes); take(vcid, v); }
+            if (v.have) { v.buf.insert(v.buf.end(), z, z + zone); take(vcid, v); }
             return;
         }
-        if (fhp >= kZoneBytes) { v.buf.clear(); v.have = false; return; }
+        if (fhp >= zone) { v.buf.clear(); v.have = false; return; }
         if (v.have) {
             v.buf.insert(v.buf.end(), z, z + fhp);
             take(vcid, v);
         }
-        v.buf.assign(z + fhp, z + kZoneBytes);
+        v.buf.assign(z + fhp, z + zone);
         v.have = true;
         take(vcid, v);
     }
@@ -604,6 +618,7 @@ void Assembler::setKeys(const std::vector<std::pair<int, std::array<uint8_t, 8>>
     }
     p_->waiting.swap(keep);
 }
+void Assembler::setRawFiles(bool raw, int zoneBytes, bool checkCrc) { p_->raw = raw; p_->zone = std::max(16, std::min(zoneBytes, 4096)); p_->chkCrc = checkCrc; }
 std::vector<std::shared_ptr<Product>> Assembler::products() const { std::lock_guard<std::mutex> lk(p_->listMu); return p_->list; }
 void Assembler::adopt(std::vector<std::shared_ptr<Product>> v) {
     std::lock_guard<std::mutex> lk(p_->listMu);
@@ -643,9 +658,9 @@ void Mux::addFile(int vcid, const FileOut& f) {
 }
 
 void Mux::flushVc(Vc& v) {
-    size_t rem = (kZoneBytes - v.q.size() % kZoneBytes) % kZoneBytes;
+    size_t rem = (zone_ - v.q.size() % zone_) % zone_;
     if (rem == 0) return;
-    if (rem < 7) rem += kZoneBytes;
+    if (rem < 7) rem += zone_;
     v.starts.push_back(v.q.size());
     v.q.push_back((uint8_t)((kIdleApid >> 8) & 7));
     v.q.push_back((uint8_t)kIdleApid);
@@ -671,13 +686,13 @@ bool Mux::next(uint8_t* d) {
     const int id = order_.front();
     Vc& v = vc_[id];
     int fhp = 2047;
-    for (size_t s : v.starts) if (s < (size_t)kZoneBytes) { fhp = (int)s; break; }
+    for (size_t s : v.starts) if (s < (size_t)zone_) { fhp = (int)s; break; }
     header(d, scid_, id, v.counter, fhp);
     v.counter = (v.counter + 1) & 0xFFFFFF;
-    memcpy(d + 8, v.q.data(), kZoneBytes);
-    v.q.erase(v.q.begin(), v.q.begin() + kZoneBytes);
+    memcpy(d + 8, v.q.data(), zone_);
+    v.q.erase(v.q.begin(), v.q.begin() + zone_);
     std::vector<size_t> ns;
-    for (size_t s : v.starts) if (s >= (size_t)kZoneBytes) ns.push_back(s - kZoneBytes);
+    for (size_t s : v.starts) if (s >= (size_t)zone_) ns.push_back(s - zone_);
     v.starts.swap(ns);
     if (v.q.empty()) order_.erase(order_.begin());
     return true;
@@ -686,7 +701,7 @@ bool Mux::next(uint8_t* d) {
 void Mux::fill(uint8_t* d) {
     header(d, scid_, kFillVcid, fillCounter_, 2047);
     fillCounter_ = (fillCounter_ + 1) & 0xFFFFFF;
-    memset(d + 8, 0, kZoneBytes);
+    memset(d + 8, 0, zone_);
 }
 
 } // namespace dect2::goes

@@ -12,6 +12,7 @@
 #include "dect2/dmr/dmr_dsp.h"
 #include "dect2/dsp/exact_resampler.h"
 #include "dect2/pager/pager_proto.h"
+#include "dect2/tones/seq_decoder.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -156,6 +157,14 @@ struct PagerReceiver::Impl {
     std::deque<double> afcBlocks;
     std::vector<cf32> afcBuf;
 
+    // five-tone selective calls on the discriminator audio (setSelcall)
+    std::atomic<bool> selOn{false};
+    SeqToneDecoder selDec;
+    dmr::Fir<float> sel8;
+    std::vector<float> selIn, selOut;
+    double selPrevPhase = 0;
+    bool selWasOn = false;
+
     // discriminator
     cf32 prev = cf32(0, 0);
     double phase = 0;
@@ -256,7 +265,7 @@ struct PagerReceiver::Impl {
             design();
         }
         (void)off;
-        prev = cf32(0, 0); phase = 0; cur = -1;
+        prev = cf32(0, 0); phase = 0; cur = -1; selPrevPhase = 0; selWasOn = false;
         std::fill(ring.begin(), ring.end(), 0.0);
         blkPow = 0; blkN = 0; noiseFloor = 0; snrEma = 0; sigHold = 0; haveFloor = false;
         peakH = -1; locked = false; lockH = -1; hold = 0;
@@ -357,6 +366,8 @@ struct PagerReceiver::Impl {
         prev = z;
         cur++;
         ring[(size_t)cur & kMask] = phase;
+        if (selOn.load(std::memory_order_relaxed)) selIn.push_back((float)((phase - selPrevPhase) * (kWork / (2 * kPi))));
+        selPrevPhase = phase;
         step();
     }
 
@@ -693,6 +704,44 @@ struct PagerReceiver::Impl {
     }
 
     // ---- the chain
+    // ---- five-tone selective calls: the discriminator at 48 kHz, down to 8 kHz, into the sequential decoder
+    void runSelcall() {
+        const bool on = selOn.load();
+        if (on != selWasOn) {
+            selWasOn = on;
+            sel8.reset(); selDec.reset();
+            if (on) {
+                sel8.design(dmr::lowpassTaps(3200.0, 4600.0, kWork, 50, 9), 6);
+                selDec.setCallback([this](const SeqCall& c) { emitSelcall(c); });
+            }
+        }
+        if (!on || selIn.empty()) return;
+        selOut.clear();
+        sel8.process(selIn.data(), selIn.size(), selOut);
+        if (!selOut.empty()) selDec.feed(selOut.data(), selOut.size());
+    }
+    void emitSelcall(const SeqCall& c) {
+        PagerMessage pm;
+        pm.selcall = true;
+        pm.selStd = c.standard;
+        pm.text = c.digits;
+        pm.type = kPagerNumeric;
+        pm.address = 0;
+        pm.function = -1;
+        pm.wallTime = (int64_t)std::time(nullptr);
+        {
+            std::lock_guard<std::mutex> lk(mu);
+            pm.serial = ++serial;
+            pm.timeSec = nowSec();
+            list.push_front(pm);
+            if (list.size() > kMaxMessages) list.pop_back();
+            listDirty = true;
+        }
+        tel.messagesTotal++;
+        tel.dataValid = true;
+        say("Pagers: " + c.standard + " selective call " + c.digits);
+    }
+
     void feed(const cf32* x, size_t n) {
         if (!built || n == 0) return;
         for (size_t i = 0; i < n; i++) power += (double)std::norm(x[i]);
@@ -741,7 +790,9 @@ struct PagerReceiver::Impl {
         fin.process(c, cn, finOut);
         // the report instants are in input samples; the decoding runs a little ahead of them
         nIn += (int64_t)n;
+        selIn.clear();
         for (const cf32& z : finOut) onSample(z);
+        runSelcall();
         while ((double)nIn >= nextReport) {
             nextReport += 0.25 * curRate;
             report();
@@ -828,6 +879,8 @@ void PagerReceiver::setNarrowChannel(bool on) {
 bool PagerReceiver::narrowChannel() const { return p_->narrow; }
 void PagerReceiver::setCombineCopies(bool on) { p_->combineOn = on; }
 bool PagerReceiver::combineCopies() const { return p_->combineOn; }
+void PagerReceiver::setSelcall(bool on) { p_->selOn = on; }
+bool PagerReceiver::selcall() const { return p_->selOn; }
 void PagerReceiver::setPocsagBauds(int mask) { p_->pocsagBaudMask = mask & 7; }
 void PagerReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }
 

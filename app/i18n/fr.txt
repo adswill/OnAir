@@ -39,7 +39,6 @@ Dial frequency the decoder should assume (the sound card is not tuned)	Fréquenc
 DVB standard	Norme DVB
 Empty: the demo 802.15.4 scene.	Vide : la scène 802.15.4 de démonstration.
 Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	Vide : la scène FLARM de démonstration. Cet ID n'est pas encodé dans le nouveau protocole non publié.
-Empty: the demo LoRa / mesh scene.	Vide : la scène LoRa / mesh de démonstration.
 Empty: the demo Mode S uplink scene.	Vide : la scène de liaison montante Mode S de démonstration.
 Empty: the demo VDES scene.	Vide : la scène VDES de démonstration.
 File	Fichier
@@ -621,7 +620,6 @@ Checking and preparing the new version…	Vérification et préparation de la no
 Downloaded and checked. It is installed when you close OnAir.	Téléchargée et vérifiée. Elle sera installée à la fermeture d'OnAir.
 Restart now and update	Redémarrer maintenant et mettre à jour
 Windows asks for permission to run the installer.	Windows demande l'autorisation de lancer l'installateur.
-The system asks for your password to install the package.	Le système demande votre mot de passe pour installer le paquet.
 This copy of OnAir cannot replace itself.	Cette copie d'OnAir ne peut pas se remplacer elle-même.
 The update to v%s did not install (setup exit code %d).	La mise à jour vers v%s ne s'est pas installée (code de sortie %d).
 Only github.com is contacted. Downloads are checked against the SHA-256 GitHub lists for the file.	Seul github.com est contacté. Les téléchargements sont vérifiés avec le SHA-256 que GitHub indique pour le fichier.
@@ -891,7 +889,7 @@ Weather pictures, 1.7 GHz	Images météo, 1,7 GHz
 What to add to a level in dBFS to get dBm for this radio (its calibration: a known signal into the antenna port shows it). Also in the radio's settings.	Ce qu'il faut ajouter à un niveau en dBFS pour obtenir des dBm pour cette radio (son étalonnage : un signal connu sur la prise antenne le révèle). Aussi dans les réglages de la radio.
 Your callsign	Votre indicatif
 Your locator	Votre locator
-Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: reset.	Zoom : molette (les deux axes), Ctrl+molette (fréquence), Maj+molette (niveau).\nCtrl+Page préc. / suiv. : décaler la vue d'un écran en fréquence. Double clic : réinitialiser.
+Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: tune. Home: show the whole band.	Zoom : molette (les deux axes), Ctrl+molette (fréquence), Maj+molette (niveau).\nCtrl+Page préc. / suiv. : décaler la vue d'un écran en fréquence. Double clic : accorder. Début : afficher toute la bande.
 antenna %.6g MHz -> %s LO %.6g -> radio %.6g MHz%s	antenne %.6g MHz -> %s LO %.6g -> radio %.6g MHz%s
 channel scan has the radio	le balayage des canaux utilise la radio
 dBm offset	Décalage dBm

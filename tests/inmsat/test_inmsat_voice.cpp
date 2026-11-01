@@ -75,7 +75,7 @@ int main() {
         m.pushFrame(1, 1545.5e6, frame(5), 0);
         const VoiceStatus s = m.status();
         printf("message: %s\n", s.message.c_str());
-        CHECK(s.message.find("AMBE") != std::string::npos && s.message.find("onair-codec-ambe") != std::string::npos && s.message.find("/Users/test/codecs") != std::string::npos,
+        CHECK(s.message.find("AMBE") != std::string::npos && s.message.find("onair-codec-aeroambe") != std::string::npos && s.message.find("/Users/test/codecs") != std::string::npos,
               "install message incomplete");
         int16_t out[160];
         m.mix(out, 160);

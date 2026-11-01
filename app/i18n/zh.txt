@@ -39,7 +39,6 @@ Dial frequency the decoder should assume (the sound card is not tuned)	解码器
 DVB standard	DVB 标准
 Empty: the demo 802.15.4 scene.	留空：演示 802.15.4 场景。
 Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	留空：演示 FLARM 场景。此 ID 不会被打包进未公开的新版协议。
-Empty: the demo LoRa / mesh scene.	留空：演示 LoRa / mesh 场景。
 Empty: the demo Mode S uplink scene.	留空：演示 Mode S 上行场景。
 Empty: the demo VDES scene.	留空：演示 VDES 场景。
 File	文件
@@ -621,7 +620,6 @@ Checking and preparing the new version…	正在校验并准备新版本…
 Downloaded and checked. It is installed when you close OnAir.	已下载并校验。关闭 OnAir 时将安装。
 Restart now and update	立即重启并更新
 Windows asks for permission to run the installer.	Windows 会请求运行安装程序的权限。
-The system asks for your password to install the package.	系统会要求输入密码以安装软件包。
 This copy of OnAir cannot replace itself.	此 OnAir 副本无法自行替换。
 The update to v%s did not install (setup exit code %d).	更新到 v%s 未能安装（安装程序退出代码 %d）。
 Only github.com is contacted. Downloads are checked against the SHA-256 GitHub lists for the file.	只连接 github.com。下载文件会按 GitHub 给出的 SHA-256 校验。
@@ -891,7 +889,7 @@ Weather pictures, 1.7 GHz	气象图像，1.7 GHz
 What to add to a level in dBFS to get dBm for this radio (its calibration: a known signal into the antenna port shows it). Also in the radio's settings.	要加到 dBFS 电平上才能得到这台电台 dBm 的数值（即其校准值：向天线口输入已知信号即可得出）。也可在电台设置中修改。
 Your callsign	您的呼号
 Your locator	您的网格定位符
-Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: reset.	缩放：鼠标滚轮（两个轴）、Ctrl+滚轮（频率）、Shift+滚轮（电平）。\nCtrl+PageUp / PageDown：按一屏频率步进视图。双击：重置。
+Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: tune. Home: show the whole band.	缩放：鼠标滚轮（两个轴）、Ctrl+滚轮（频率）、Shift+滚轮（电平）。\nCtrl+PageUp / PageDown：按一屏频率步进视图。双击：调谐。Home：显示整个频段。
 antenna %.6g MHz -> %s LO %.6g -> radio %.6g MHz%s	天线 %.6g MHz -> %s LO %.6g -> 电台 %.6g MHz%s
 channel scan has the radio	信道扫描正在使用电台
 dBm offset	dBm 偏移

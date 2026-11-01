@@ -10,6 +10,7 @@ struct InmsatTelemetry : inmsat::Snapshot {
     std::string voiceMessage;                        // what to show on the Voice tab ("" when the codec works)
     int activeCalls = 0;
     std::vector<inmsat::VoiceChannelInfo> voice;
+    std::vector<inmsat::CallRecord> callHistory;      // finished calls, newest last
     double inputRate = 0;
 };
 

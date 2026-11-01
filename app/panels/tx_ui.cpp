@@ -116,6 +116,15 @@ void loadPayloadPrefs(TxUi& s) {
     snprintf(s.callsign, sizeof s.callsign, "%s", p.getS("tx.callsign", "").c_str());
     snprintf(s.grid, sizeof s.grid, "%s", p.getS("tx.grid", "").c_str());
     snprintf(s.text, sizeof s.text, "%s", p.getS("tx.text", "").c_str());
+    snprintf(s.meshLong, sizeof s.meshLong, "%s", p.getS("tx.meshLong", "OnAir").c_str());
+    snprintf(s.meshShort, sizeof s.meshShort, "%s", p.getS("tx.meshShort", "ONAR").c_str());
+    snprintf(s.meshNode, sizeof s.meshNode, "%s", p.getS("tx.meshNode", "").c_str());
+    snprintf(s.meshChan, sizeof s.meshChan, "%s", p.getS("tx.meshChan", "LongFast").c_str());
+    snprintf(s.meshPsk, sizeof s.meshPsk, "%s", p.getS("tx.meshPsk", "default").c_str());
+    snprintf(s.meshPreset, sizeof s.meshPreset, "%s", p.getS("tx.meshPreset", "LongFast").c_str());
+    s.meshHop = (int)std::max(0L, std::min(7L, (long)p.getI("tx.meshHop", 3)));
+    s.meshCallInMsg = p.getB("tx.meshCallInMsg", false);
+    s.meshNodeInfo = p.getB("tx.meshNodeInfo", true);
     s.offsetMhz = p.getD("tx.offsetMhz", 0);
     s.dryRun = p.getB("tx.dryRun", false);
     s.destKind = p.getI("tx.destKind", 0) == 1 ? 1 : 0;
@@ -178,6 +187,11 @@ TxRequest makeReq(const TxUi& s, const TxModeSpec& mode, bool carrier) {
     r.callsign = s.callsign;
     r.grid = s.grid;
     r.text = s.text[0] ? s.text : s.rdsRt;
+    if (std::string(mode.id) == "mesh") {
+        r.mesh.longName = s.meshLong; r.mesh.shortName = s.meshShort; r.mesh.nodeId = s.meshNode; r.mesh.channelName = s.meshChan;
+        r.mesh.psk = s.meshPsk; r.mesh.preset = s.meshPreset; r.mesh.hopLimit = s.meshHop;
+        r.mesh.callsign = s.callsign; r.mesh.callsignInMessage = s.meshCallInMsg; r.mesh.sendNodeInfo = s.meshNodeInfo;
+    }
     if (std::string(mode.id) == "kaal") {
         r.text = r.text.substr(0, 100);
         r.opt["kaal.powerDbm"] = s.kaalPower;

@@ -605,6 +605,12 @@ std::string batchValue(const std::string& v, bool path) {
 std::string trim(const std::string& s) { return dect2::str::trimSpace(s); }
 }
 
+std::string debInstallCommand(const std::string& debFile) {
+    std::string q = "'";
+    for (char c : debFile) { if (c == '\'') q += "'\\''"; else q += c; }
+    return "sudo apt install " + q + "'";
+}
+
 std::string windowsApplyScript(int pid, const std::string& setupExe, const std::string& installedExe, const std::string& resultFile, const std::string& version, bool restart) {
     std::ostringstream o;
     o << "@echo off\r\n"
@@ -685,6 +691,7 @@ void Updater::setExecutable(const std::string& p, int kindOverride) {
     std::lock_guard<std::mutex> lk(mu_);
     st_.kind = kind_;
     st_.autoInstallable = kind_ == InstallKind::MacApp || kind_ == InstallKind::WindowsInstall || kind_ == InstallKind::LinuxPortable;
+    st_.manualInstall = kind_ == InstallKind::LinuxDeb;
 }
 
 Updater::Status Updater::status() const { std::lock_guard<std::mutex> lk(mu_); return st_; }
@@ -981,8 +988,11 @@ bool Updater::prepare(const std::string& file, std::string& err) {
         staged_ = stage + "/" + top;
         return true;
     }
-    case InstallKind::WindowsInstall:
     case InstallKind::LinuxDeb:
+        staged_ = file;
+        { std::lock_guard<std::mutex> lk(mu_); st_.manualCommand = debInstallCommand(file); }
+        return true;
+    case InstallKind::WindowsInstall:
         staged_ = file;
         return true;
     default:
@@ -1077,14 +1087,12 @@ bool Updater::apply(bool restart, std::string* err) {
         return true;
     }
     if (kind_ == InstallKind::LinuxDeb) {
-        // the package manager needs the administrator: polkit asks for the password in a window
-        const std::string script = dir + "/apply.sh";
-        std::ofstream o(script);
-        o << "#!/bin/sh\npkexec dpkg -i " << shq(staged_) << " && { if [ \"$1\" = 1 ]; then onair >/dev/null 2>&1 & fi; }\n";
-        o.close();
-        chmod(script.c_str(), 0755);
-        spawnDetached(script, {restart ? "1" : "0"});
-        return true;
+        // Installing a .deb needs the administrator. Nothing is run as root from here, not even through a password prompt: the package is
+        // downloaded and checked, and the user gets the exact command to run themselves.
+        std::string ver;
+        { std::lock_guard<std::mutex> lk(mu_); ver = st_.release.version; }
+        if (err) *err = "Update " + ver + " is downloaded and checked. Install it with: " + debInstallCommand(staged_);
+        return false;
     }
 #endif
     if (err) *err = "this copy of OnAir cannot replace itself";

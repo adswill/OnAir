@@ -48,7 +48,7 @@ enum class InstallKind {
     MacApp,          // OnAir.app
     WindowsInstall,  // installed by the setup program (or unpacked from the zip)
     LinuxPortable,   // the .tar.gz: a directory with bin/onair in it
-    LinuxDeb         // installed by the .deb: needs the administrator to change
+    LinuxDeb         // installed by the .deb: needs the administrator to change; OnAir downloads and checks the package and shows the command, it never runs it
 };
 
 int compareVersions(const std::string& a, const std::string& b);   // numeric, dot separated; > 0 if a is newer
@@ -87,6 +87,8 @@ struct UpdateResult {
 UpdateResult parseUpdateResult(const std::string& text);
 // Where the helper writes it. A fixed place: the program that reads it is a new process (another PID than the one that started the update).
 std::string updateResultPath();
+// The command a .deb user runs to install the downloaded package (quoted for a POSIX shell): sudo apt install '<file>'
+std::string debInstallCommand(const std::string& debFile);
 // The text of the script that runs, elevated, once the program has ended (Windows): waits for `pid`, runs the setup program silently, records
 // its exit code in `resultFile`, then starts the program again without administrator rights. The paths are put in the script as values
 // (not on a command line), so spaces, apostrophes, ampersands and percent signs in them are safe. Callable on every system, for tests.
@@ -104,6 +106,8 @@ public:
         std::string error;
         InstallKind kind = InstallKind::Unknown;
         bool autoInstallable = false;      // the program can replace itself (not for a development build or a .deb)
+        bool manualInstall = false;        // a .deb: the package is downloaded and verified, the user runs the command (manualCommand) themselves
+        std::string manualCommand;         // phase Ready and manualInstall: e.g. sudo apt install "/home/me/.cache/onair/update/onair_3.6.0_amd64.deb"
         double checkedAt = 0;              // seconds since 1970 of the last successful check
         std::string applyError;            // why the last apply() did not start the installation (the update stays Ready)
         UpdateResult lastResult;           // what the helper of an earlier start recorded (see loadResult)

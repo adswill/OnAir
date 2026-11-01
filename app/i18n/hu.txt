@@ -39,7 +39,6 @@ Dial frequency the decoder should assume (the sound card is not tuned)	A dekóde
 DVB standard	DVB szabvány
 Empty: the demo 802.15.4 scene.	Üresen: a demó 802.15.4 jelenet.
 Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	Üresen: a demó FLARM jelenet. Ez az azonosító nem kerül be a nem publikált újabb protokollba.
-Empty: the demo LoRa / mesh scene.	Üresen: a demó LoRa / mesh jelenet.
 Empty: the demo Mode S uplink scene.	Üresen: a demó Mode S felfelé irányú jelenet.
 Empty: the demo VDES scene.	Üresen: a demó VDES jelenet.
 File	Fájl
@@ -608,7 +607,6 @@ Checking and preparing the new version…	Az új verzió ellenőrzése és elők
 Downloaded and checked. It is installed when you close OnAir.	Letöltve és ellenőrizve. Az OnAir bezárásakor települ.
 Restart now and update	Újraindítás és frissítés most
 Windows asks for permission to run the installer.	A Windows engedélyt kér a telepítő futtatásához.
-The system asks for your password to install the package.	A rendszer a jelszavadat kéri a csomag telepítéséhez.
 This copy of OnAir cannot replace itself.	Ez az OnAir-példány nem tudja lecserélni önmagát.
 The update to v%s did not install (setup exit code %d).	A v%s verzióra frissítés nem települt (telepítő kilépési kódja: %d).
 Only github.com is contacted. Downloads are checked against the SHA-256 GitHub lists for the file.	Csak a github.com-mal létesít kapcsolatot. A letöltéseket a GitHub által a fájlhoz megadott SHA-256 ellenőrzi.
@@ -877,7 +875,7 @@ Weather pictures, 1.7 GHz	Időjárási képek, 1,7 GHz
 What to add to a level in dBFS to get dBm for this radio (its calibration: a known signal into the antenna port shows it). Also in the radio's settings.	Mit kell hozzáadni a dBFS szinthez, hogy ennek a rádiónak dBm értéket kapjunk (a kalibrációja: egy ismert jel az antennacsatlakozón megmutatja). A rádió beállításaiban is megtalálható.
 Your callsign	Az Ön hívójele
 Your locator	Az Ön lokátora
-Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: reset.	Nagyítás: egérgörgő (mindkét tengely), Ctrl+görgő (frekvencia), Shift+görgő (szint).\nCtrl+PageUp / PageDown: a nézet léptetése egy képernyőnyivel frekvenciában. Dupla kattintás: visszaállítás.
+Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: tune. Home: show the whole band.	Nagyítás: egérgörgő (mindkét tengely), Ctrl+görgő (frekvencia), Shift+görgő (szint).\nCtrl+PageUp / PageDown: a nézet léptetése egy képernyőnyivel frekvenciában. Dupla kattintás: hangolás. Home: a teljes sáv mutatása.
 antenna %.6g MHz -> %s LO %.6g -> radio %.6g MHz%s	antenna %.6g MHz -> %s LO %.6g -> rádió %.6g MHz%s
 channel scan has the radio	a csatornakeresés használja a rádiót
 dBm offset	dBm-eltolás

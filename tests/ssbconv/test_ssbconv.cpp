@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 
@@ -224,7 +225,7 @@ static void testSweep() {
 }
 
 static void testClips() {
-    ClipRecorder r("/tmp");
+    ClipRecorder r(std::filesystem::temp_directory_path().string());   // no /tmp on Windows
     Conversation c; c.id = 777; c.dialHz = 7.143e6; c.side = Side::Lsb; c.band = "40 m"; c.service = "Amateur"; c.clues = {"DL1XYZ"};
     std::vector<float> a(8000, 0.1f);
     r.append(c, a.data(), a.size(), 8000, 1.7e9);

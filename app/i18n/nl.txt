@@ -34,7 +34,6 @@ Dial frequency the decoder should assume (the sound card is not tuned)	Kiesfrequ
 DVB standard	DVB-standaard
 Empty: the demo 802.15.4 scene.	Leeg: de demoscène voor 802.15.4.
 Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	Leeg: de FLARM-demoscène. Dit ID wordt niet verpakt in het niet-gepubliceerde nieuwere protocol.
-Empty: the demo LoRa / mesh scene.	Leeg: de LoRa- / mesh-demoscène.
 Empty: the demo Mode S uplink scene.	Leeg: de Mode S-uplink-demoscène.
 Empty: the demo VDES scene.	Leeg: de VDES-demoscène.
 File	Bestand
@@ -614,7 +613,6 @@ Checking and preparing the new version…	De nieuwe versie controleren en voorbe
 Downloaded and checked. It is installed when you close OnAir.	Gedownload en gecontroleerd. Wordt geïnstalleerd zodra je OnAir sluit.
 Restart now and update	Nu herstarten en bijwerken
 Windows asks for permission to run the installer.	Windows vraagt toestemming om het installatieprogramma uit te voeren.
-The system asks for your password to install the package.	Het systeem vraagt om je wachtwoord om het pakket te installeren.
 This copy of OnAir cannot replace itself.	Deze kopie van OnAir kan zichzelf niet vervangen.
 The update to v%s did not install (setup exit code %d).	De update naar v%s is niet geïnstalleerd (afsluitcode van de setup %d).
 Only github.com is contacted. Downloads are checked against the SHA-256 GitHub lists for the file.	Er wordt alleen contact gemaakt met github.com. Downloads worden gecontroleerd aan de hand van de SHA-256 die GitHub voor het bestand vermeldt.
@@ -882,7 +880,7 @@ Weather pictures, 1.7 GHz	Weerbeelden, 1.7 GHz
 What to add to a level in dBFS to get dBm for this radio (its calibration: a known signal into the antenna port shows it). Also in the radio's settings.	Wat je bij een niveau in dBFS optelt om dBm voor deze radio te krijgen (zijn kalibratie: een bekend signaal in de antenne-aansluiting toont het). Ook in de radio-instellingen.
 Your callsign	Je roepletters
 Your locator	Je locator
-Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: reset.	Zoom: muiswiel (beide assen), Ctrl+wiel (frequentie), Shift+wiel (niveau).\nCtrl+PageUp / PageDown: beeld een scherm opschuiven in frequentie. Dubbelklik: herstellen.
+Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: tune. Home: show the whole band.	Zoom: muiswiel (beide assen), Ctrl+wiel (frequentie), Shift+wiel (niveau).\nCtrl+PageUp / PageDown: beeld een scherm opschuiven in frequentie. Dubbelklik: afstemmen. Home: de hele band tonen.
 antenna %.6g MHz -> %s LO %.6g -> radio %.6g MHz%s	antenne %.6g MHz -> %s LO %.6g -> radio %.6g MHz%s
 channel scan has the radio	kanaalscan gebruikt de radio
 dBm offset	dBm-offset

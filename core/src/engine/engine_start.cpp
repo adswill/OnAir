@@ -268,6 +268,8 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxInmsat_.setSignalOffset(o);
         rxNrf_.setSignalOffset(o);
         rxAtis_.setSignalOffset(o);
+        rxFy3a_.setSignalOffset(o);
+        rxFy3m_.setSignalOffset(o);
         rxSw_.setSignalOffset(o);
         rxSw_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxInmsat_.setCenterFrequency(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
@@ -368,6 +370,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxEl_.setSignalOffset(o);
         rxGkL_.setSignalOffset(o);
         rxGkH_.setSignalOffset(o);
+        rxFy_.setSignalOffset(o);
         rxVdl4_.setSignalOffset(o);
         rxHrpt_.setSignalOffset(o);
         rxWifi_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the channel noted with each network
@@ -589,6 +592,10 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxNrf_.setLogCallback([this](const std::string& s) { log(s); });
     rxAtis_.configure(rate_);
     rxAtis_.setLogCallback([this](const std::string& s) { log(s); });
+    rxFy3a_.configure(rate_);
+    rxFy3a_.setLogCallback([this](const std::string& s) { log(s); });
+    rxFy3m_.configure(rate_);
+    rxFy3m_.setLogCallback([this](const std::string& s) { log(s); });
     rxInmsat_.configure(rate_);
     rxInmsat_.setLogCallback([this](const std::string& s) { log(s); });
     rxEsg_.setLogCallback([this](const std::string& s) { log(s); });
@@ -670,6 +677,8 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxEl_.setLogCallback([this](const std::string& s) { log(s); });
     rxGkL_.setLogCallback([this](const std::string& s) { log(s); });
     rxGkH_.setLogCallback([this](const std::string& s) { log(s); });
+    rxFy_.setLogCallback([this](const std::string& s) { log(s); });
+    if (const int fl = fygeoLinkOfActive(activeStdFor(stdMode_.load()), rxFy_.lritSatellite()); fl >= 0) { rxFy_.setLink(fl); rxFy_.configure(rate_); }   // FengYun: only when it is the mode (the DVB-S2 receiver inside is heavy)
     rxUat_.configure(rate_);
     rxUat_.setLogCallback([this](const std::string& s) { log(s); });
     rxVdl4_.configure(rate_);

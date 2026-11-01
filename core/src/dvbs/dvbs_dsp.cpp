@@ -276,7 +276,7 @@ void SymbolTimer::process(SplitBuf& in, std::vector<cf32>& out) {
             invPow = power_ > 0 ? 1.f / power_ : 1.f; gain = std::sqrt(invPow);
         } else {
             power_ += (pw - power_) * (1.f / 4096.f);
-            if ((count_ & 15) == 0) { invPow = 1.f / power_; gain = std::sqrt(invPow); }
+            if ((count_ & 15) == 0) { invPow = 1.f / std::max(power_, 1e-12f); gain = std::sqrt(invPow); }   // exact silence (a stopped file, a dropout) must not give 1/0
         }
         if (havePrev_) {
             // Gardner: positive when the sampling instant is late
@@ -284,6 +284,7 @@ void SymbolTimer::process(SplitBuf& in, std::vector<cf32>& out) {
             e = std::max(-2.f, std::min(2.f, e));
             integ_ += ki_ * e;
             corrPrev = kp_ * e + integ_;
+            if (!(std::fabs(corrPrev) < 0.5)) { corrPrev = 0; integ_ = 0; }   // never a NaN or a wild value into the timing instants
             errMs_ += (e * e - errMs_) * 0.002f;
         }
         prevRe_ = yr; prevIm_ = yi; havePrev_ = true;

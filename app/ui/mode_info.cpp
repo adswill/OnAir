@@ -26,7 +26,7 @@ void modeInfoFill() {
             m.minRateMsps = (float)(t->minSampleRate / 1e6);
             m.bandMinMhz = m.bandMaxMhz = t->defMhz;
         }
-        if (inList(m.name, {"GOES HRIT", "Elektro-L", "GK-2A LRIT", "GK-2A HRIT", "DVB-S/S2"})) m.needs |= modepick::NDish;
+        if (inList(m.name, {"GOES HRIT", "Elektro-L", "GK-2A LRIT", "GK-2A HRIT", "DVB-S/S2", "FY-4 LRIT", "FY-4A HRIT-II/III", "FY-2 S-VISSR"})) m.needs |= modepick::NDish;
         if (inList(m.name, {"GNSS", "Inmarsat-C", "Inmarsat Aero", "Iridium"})) m.needs |= modepick::NActiveAnt;
         if (inList(m.name, {"DVB-C"})) m.needs |= modepick::NCable;
         if (m.minRateMsps >= 8) m.needs |= modepick::NWideRadio;

@@ -112,6 +112,13 @@ struct HfdlTelemetry {
     double inputRate = 0;
     uint64_t squitters = 0, lpdus = 0, acarsMsgs = 0, positionsTotal = 0;
     uint64_t byRate[4] = {};     // good bursts at 300, 600, 1200, 1800 bit/s
+    // why a burst did not give a PDU ("why isn't it decoding"), totals over the channels
+    uint64_t whyPreambleRejected = 0;   // the coarse search fired, the fine check (frequency, A1+A2 coherence, M1) said no preamble
+    uint64_t whyShort = 0;              // preamble ok, the decoder gave fewer than 4 octets
+    uint64_t whySpduFcs = 0;            // a squitter (SPDU) whose check sequence failed: the FEC did not repair the burst
+    uint64_t whyMpduFcs = 0;            // a data PDU whose header check sequence failed
+    uint64_t whyLpduFcs = 0;            // an LPDU inside a good MPDU with a bad check sequence
+    uint64_t whyUnknownLpdu = 0;        // an LPDU with a good check but a type OnAir does not decode
     std::vector<HfdlMessage> messages;          // newest first, at most kHfdlMsgMax
     std::vector<HfdlAircraft> aircraft;         // most recently heard first, at most 200
     std::vector<HfdlGroundStation> stations;    // by id

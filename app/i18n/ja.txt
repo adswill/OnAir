@@ -34,7 +34,6 @@ Dial frequency the decoder should assume (the sound card is not tuned)	デコー
 DVB standard	DVB 規格
 Empty: the demo 802.15.4 scene.	空の場合: デモ 802.15.4 シーン。
 Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	空の場合: デモ FLARM シーン。この ID は非公開の新しいプロトコルには組み込まれません。
-Empty: the demo LoRa / mesh scene.	空の場合: デモ LoRa / メッシュシーン。
 Empty: the demo Mode S uplink scene.	空の場合: デモ Mode S アップリンクシーン。
 Empty: the demo VDES scene.	空の場合: デモ VDES シーン。
 File	ファイル
@@ -614,7 +613,6 @@ Checking and preparing the new version…	新しいバージョンを確認し�
 Downloaded and checked. It is installed when you close OnAir.	ダウンロードと確認が完了しました。OnAir を閉じるときにインストールされます。
 Restart now and update	今すぐ再起動して更新
 Windows asks for permission to run the installer.	Windows がインストーラーの実行の許可を求めます。
-The system asks for your password to install the package.	パッケージをインストールするため、システムがパスワードを求めます。
 This copy of OnAir cannot replace itself.	この OnAir は自分自身を置き換えられません。
 The update to v%s did not install (setup exit code %d).	v%s へのアップデートはインストールされませんでした (セットアップの終了コード %d)。
 Only github.com is contacted. Downloads are checked against the SHA-256 GitHub lists for the file.	通信先は github.com のみです。ダウンロードは、GitHub がファイルに記載している SHA-256 と照合されます。
@@ -882,7 +880,7 @@ Weather pictures, 1.7 GHz	気象画像、1.7 GHz
 What to add to a level in dBFS to get dBm for this radio (its calibration: a known signal into the antenna port shows it). Also in the radio's settings.	この無線機の dBm を得るために dBFS のレベルに加算する値です (校正値で、既知の信号をアンテナ端子に入力すると求められます)。無線機の設定にもあります。
 Your callsign	あなたのコールサイン
 Your locator	あなたのロケーター
-Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: reset.	ズーム: マウスホイール (両軸)、Ctrl+ホイール (周波数)、Shift+ホイール (レベル)。\nCtrl+PageUp / PageDown: 表示を周波数方向に 1 画面分ずらします。ダブルクリック: リセット。
+Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: tune. Home: show the whole band.	ズーム: マウスホイール (両軸)、Ctrl+ホイール (周波数)、Shift+ホイール (レベル)。\nCtrl+PageUp / PageDown: 表示を周波数方向に 1 画面分ずらします。ダブルクリック: 同調。Home: 帯域全体を表示。
 antenna %.6g MHz -> %s LO %.6g -> radio %.6g MHz%s	アンテナ %.6g MHz -> %s LO %.6g -> 無線機 %.6g MHz%s
 channel scan has the radio	チャンネルスキャンが無線機を使用中です
 dBm offset	dBm オフセット

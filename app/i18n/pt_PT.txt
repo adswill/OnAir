@@ -33,7 +33,6 @@ Dial frequency the decoder should assume (the sound card is not tuned)	Frequênc
 DVB standard	DVB standard
 Empty: the demo 802.15.4 scene.	Empty: the demo 802.15.4 scene.
 Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.
-Empty: the demo LoRa / mesh scene.	Empty: the demo LoRa / mesh scene.
 Empty: the demo Mode S uplink scene.	Empty: the demo Mode S uplink scene.
 Empty: the demo VDES scene.	Empty: the demo VDES scene.
 File	Arquivo
@@ -598,7 +597,6 @@ Checking and preparing the new version…	Verificando e preparando a nova versã
 Downloaded and checked. It is installed when you close OnAir.	Baixada e verificada. Será instalada ao fechar o OnAir.
 Restart now and update	Reiniciar agora e atualizar
 Windows asks for permission to run the installer.	O Windows pede permissão para executar o instalador.
-The system asks for your password to install the package.	O sistema pede sua senha para instalar o pacote.
 This copy of OnAir cannot replace itself.	Esta cópia do OnAir não consegue se substituir.
 The update to v%s did not install (setup exit code %d).	A atualização para a v%s não foi instalada (código de saída do instalador %d).
 Only github.com is contacted. Downloads are checked against the SHA-256 GitHub lists for the file.	Apenas o github.com é contatado. Os downloads são verificados com o SHA-256 que o GitHub informa para o arquivo.
@@ -865,7 +863,7 @@ Weather pictures, 1.7 GHz	Imagens meteorológicas, 1,7 GHz
 What to add to a level in dBFS to get dBm for this radio (its calibration: a known signal into the antenna port shows it). Also in the radio's settings.	O que somar a um nível em dBFS para obter dBm para este rádio (a sua calibração: um sinal conhecido na porta da antena mostra-o). Também nas definições do rádio.
 Your callsign	O seu indicativo
 Your locator	O seu localizador
-Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: reset.	Zoom: roda do rato (ambos os eixos), Ctrl+roda (frequência), Shift+roda (nível).\nCtrl+PageUp / PageDown: avança a vista um ecrã em frequência. Duplo clique: repor.
+Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: tune. Home: show the whole band.	Zoom: roda do rato (ambos os eixos), Ctrl+roda (frequência), Shift+roda (nível).\nCtrl+PageUp / PageDown: avança a vista um ecrã em frequência. Duplo clique: sintonizar. Home: mostrar toda a banda.
 antenna %.6g MHz -> %s LO %.6g -> radio %.6g MHz%s	antena %.6g MHz -> %s LO %.6g -> rádio %.6g MHz%s
 channel scan has the radio	a pesquisa de canais tem o rádio
 dBm offset	Desvio dBm

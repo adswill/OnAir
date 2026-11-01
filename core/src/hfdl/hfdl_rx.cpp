@@ -492,7 +492,7 @@ struct HfdlReceiver::Impl {
         if (std::fabs(df) < 6) bf += df;
         const cf32 Call = corrAt(y, bf, 0, kSearchSyms);
         const cf32 h = Call / (float)kSearchSyms;
-        { double se = 0; for (const auto& v : y) se += std::norm(v); if (std::norm(Call) < 0.3 * kSearchSyms * se || std::norm(h) < 1e-12) { k.searchAt = std::max(k.searchAt, s0) + 2; return 0; } }   // not A1 + A2 coherently
+        { double se = 0; for (const auto& v : y) se += std::norm(v); if (std::norm(Call) < 0.3 * kSearchSyms * se || std::norm(h) < 1e-12) { k.searchAt = std::max(k.searchAt, s0) + 2; k.pend.push_back([this] { tel.whyPreambleRejected++; }); return 0; } }   // not A1 + A2 coherently
         // M1
         const cf32 rot = std::polar(1.f, (float)(-2 * M_PI * bf / kHfdlBaud));
         auto sym = [&](int i) { return cubicAt(k.x, t0 + i * kSps - (double)k.xBase) * std::polar(1.f, (float)(-2 * M_PI * bf * i / kHfdlBaud)); };
@@ -509,7 +509,7 @@ struct HfdlReceiver::Impl {
         lastBurst = nowSec();
         double me = 0; for (const auto& v : ms) me += std::norm(v);
         const double score = bs / std::sqrt(kHfdlM1Len * me + 1e-30);
-        if (score < 0.3) { k.searchAt = std::max(k.searchAt + 2, s0 + kSearchSyms * kSps); k.info.bursts--; return 0; }   // not a preamble after all
+        if (score < 0.3) { k.searchAt = std::max(k.searchAt + 2, s0 + kSearchSyms * kSps); k.info.bursts--; k.pend.push_back([this] { tel.whyPreambleRejected++; }); return 0; }   // not a preamble after all
         const int nsym = hfdlBurstSyms(m1);
         if ((int64_t)std::ceil(t0) + (int64_t)(nsym + kL + 8) * kSps >= end) { k.info.bursts--; k.waitUntil = (int64_t)std::ceil(t0) + (int64_t)(nsym + kL + 8) * kSps + 1; return -1; }
         // half-symbol samples, derotated
@@ -530,6 +530,7 @@ struct HfdlReceiver::Impl {
         hfdlScramblerSigns(R.blocks * kHfdlDataLen, scr);
         // equaliser; a burst the equaliser cannot decode (weak signal: 25 taps adapt to the noise) is tried again with the gain and phase tracker alone
         std::vector<HfdlMessage> msgs;
+        std::vector<uint8_t> pduLast;   // the octets of the last attempt, for the "why bad" counters
         bool ok = false;
         double sig2 = 1, preErr = 0;
         for (int mode = 0; mode < 3 && !ok; mode++) {   // 0: equaliser, 1: gain / phase tracker with decisions, no equaliser, 2: known symbols only (weak signals)
@@ -663,6 +664,7 @@ struct HfdlReceiver::Impl {
             hfdlSoftBits(R.bitsPerSym, dataSym[s], (float)(1.0 / e), &soft[s * (size_t)R.bitsPerSym]);
         }
         const std::vector<uint8_t> pdu = hfdlDecodeSoft(m1, soft);
+        pduLast = pdu;
         msgs.clear();
         ok = hfdlParsePdu(pdu.data(), pdu.size(), msgs);
         }
@@ -671,6 +673,17 @@ struct HfdlReceiver::Impl {
         const float lvl = (float)(10 * std::log10(pw + 1e-20));
         k.searchAt = (int64_t)t0 + (int64_t)(nsym - 40) * kSps;
         k.info.levelDb = lvl; k.info.snrDb = snr; k.info.lastCfoHz = (float)bf;
+        // why a burst failed, for the Receiver tab: the decoded octets are too few, the SPDU check failed, or the MPDU header check failed
+        const int why = !ok ? (pduLast.size() < 4 ? 1 : (pduLast[0] & 1) == 0 ? 2 : 3) : 0;
+        int lpduBad = 0, lpduUnknown = 0;
+        for (const auto& m : msgs) {
+            if (m.summary.rfind("LPDU with a bad check", 0) == 0) lpduBad++;
+            else if (m.kind == "LPDU" && m.summary.rfind("LPDU type 0x", 0) == 0) lpduUnknown++;
+        }
+        k.pend.push_back([this, why, lpduBad, lpduUnknown] {
+            tel.whyShort += why == 1; tel.whySpduFcs += why == 2; tel.whyMpduFcs += why == 3;
+            tel.whyLpduFcs += (uint64_t)lpduBad; tel.whyUnknownLpdu += (uint64_t)lpduUnknown;
+        });
         if (!ok) { k.info.bad++; k.pend.push_back([this] { tel.blocksBad++; }); k.searchAt = s0 + kSearchSyms * kSps; return 0; }
         k.info.good++; k.info.lastHeardSec = nowSec(); k.info.lastBps = R.bps;
         // the shared lists change in feed(), under mu, one channel after the other: the same order as a sequential run

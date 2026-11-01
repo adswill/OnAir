@@ -1,6 +1,8 @@
 // The signal's own options in step 2 of the transmit panel: what to say (callsign, text, IDs), where the audio / video / file comes from, and the standard's
 // own choices, one block per kind of signal (TxPayloadKind). Empty fields fall back to the mode's demo signal; nothing here limits what is typed.
 #include "tx_state.h"
+#include "dect2/mesh/mesh_tx.h"
+#include "platform/platform.h"
 #include "../ui/typography.h"
 #include "dect2/hfdig/hfdig_sstv.h"
 #include "dect2/hfdig/hfdig_kbd.h"
@@ -28,6 +30,53 @@ bool isKbdId(const std::string& id) {
 bool isTvId(const std::string& id) {
     return id == "dvbt2" || id == "dvbt" || id == "atsc" || id == "atsc3" || id == "dab" ||
            id == "isdbt" || id == "dvbs" || id == "dtmb" || id == "dvbc";
+}
+
+// Mesh (LoRa) transmit: who the message comes from. Nothing here refuses a transmission: problems are listed as warnings.
+void meshTxPanel(TxUi& s, bool running) {
+    plat::Prefs& pf = plat::basePrefs();
+    ImGui::BeginDisabled(running);
+    ImGui::SetNextItemWidth(260 * gUi);
+    if (ImGui::InputText(tr("Text"), s.text, sizeof s.text)) saveStr("tx.text", s.text);
+    ImGui::TextDisabled("%s", tr("Empty: the demo LoRa / mesh scene. With a text: your own Meshtastic node sends it, with the identity below."));
+    ImGui::SeparatorText(tr("Your node"));
+    ImGui::SetNextItemWidth(220 * gUi);
+    if (ImGui::InputText(tr("Long name"), s.meshLong, sizeof s.meshLong)) saveStr("tx.meshLong", s.meshLong);
+    ImGui::SetNextItemWidth(80 * gUi);
+    if (ImGui::InputText(tr("Short name (4)"), s.meshShort, sizeof s.meshShort)) saveStr("tx.meshShort", s.meshShort);
+    ImGui::SetNextItemWidth(140 * gUi);
+    if (ImGui::InputText(tr("Node ID"), s.meshNode, sizeof s.meshNode)) saveStr("tx.meshNode", s.meshNode);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Like !1a2b3c4d (8 hex digits). Empty: a stable number is made from your callsign, or the long name."));
+    ImGui::SetNextItemWidth(160 * gUi);
+    if (ImGui::InputText(tr("Callsign (ham)"), s.callsign, sizeof s.callsign)) saveStr("tx.callsign", s.callsign);
+    ImGui::SameLine();
+    if (ImGui::Checkbox(tr("Callsign in the message"), &s.meshCallInMsg)) pf.setB("tx.meshCallInMsg", s.meshCallInMsg);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Puts \"CALLSIGN: \" in front of the text, so every message identifies you."));
+    if (ImGui::Checkbox(tr("Send my node info first"), &s.meshNodeInfo)) pf.setB("tx.meshNodeInfo", s.meshNodeInfo);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Other nodes learn your names from the node info packet, which goes out just before the text."));
+    ImGui::SeparatorText(tr("Channel"));
+    ImGui::SetNextItemWidth(160 * gUi);
+    if (ImGui::InputText(tr("Preset"), s.meshPreset, sizeof s.meshPreset)) saveStr("tx.meshPreset", s.meshPreset);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The modem preset: LongFast, LongSlow, MediumFast, ShortFast, ... (the receiver must use the same)."));
+    ImGui::SetNextItemWidth(160 * gUi);
+    if (ImGui::InputText(tr("Channel name"), s.meshChan, sizeof s.meshChan)) saveStr("tx.meshChan", s.meshChan);
+    ImGui::SetNextItemWidth(300 * gUi);
+    if (ImGui::InputText(tr("PSK"), s.meshPsk, sizeof s.meshPsk)) saveStr("tx.meshPsk", s.meshPsk);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("default (the public key), none, or the key as base64 / 32 or 64 hex digits."));
+    ImGui::SetNextItemWidth(80 * gUi);
+    if (ImGui::SliderInt(tr("Hop limit"), &s.meshHop, 0, 7)) pf.setI("tx.meshHop", s.meshHop);
+    ImGui::EndDisabled();
+    dect2::MeshTxIdentity id;
+    id.longName = s.meshLong; id.shortName = s.meshShort; id.nodeId = s.meshNode; id.channelName = s.meshChan; id.psk = s.meshPsk;
+    id.preset = s.meshPreset; id.hopLimit = s.meshHop; id.callsign = s.callsign; id.callsignInMessage = s.meshCallInMsg;
+    char nid[16];
+    snprintf(nid, sizeof nid, "!%08x", (unsigned)dect2::meshTxNodeNum(id));
+    ImGui::TextDisabled("%s %s", tr("Sending as node"), nid);
+    for (const std::string& w : dect2::meshTxWarnings(id, s.text)) {
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.25f, 1.f), "%s", tr(w.c_str()));
+        ImGui::PopTextWrapPos();
+    }
 }
 
 void audioSourceRow(TxUi& s, bool running) {
@@ -567,8 +616,7 @@ void payloadPanel(TxUi& s, const TxModeSpec& mode, bool running) {
         analogNfmBox(s, running);
         break;
     case TxPayloadKind::Mesh:
-        if (ImGui::InputText(tr("Text"), s.text, sizeof s.text)) saveStr("tx.text", s.text);
-        ImGui::TextDisabled("%s", tr("Empty: the demo LoRa / mesh scene."));
+        meshTxPanel(s, running);
         analogNfmBox(s, running);
         break;
     case TxPayloadKind::Kaal:

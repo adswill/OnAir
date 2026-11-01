@@ -38,6 +38,8 @@ struct State {
     double pushedLat = -999, pushedLon = -999;
     bool record = false;
     int pushedRecord = -1;
+    bool voiceOn = true;
+    int pushedVoice = -1;
     char filter[24] = "";
     adsbmap::View map;
     bool mapFollow = true;
@@ -55,6 +57,7 @@ void load() {
     S.budget = (double)std::max(2L, std::min(24L, plat::prefs().getI("inmsatBudget", 10)));
     S.inmcOn = plat::prefs().getI("inmsatInmc", 1) != 0;
     S.record = plat::prefs().getI("inmsatRecord", 0) != 0;
+    S.voiceOn = plat::prefs().getI("inmsatVoice", 1) != 0;
     snprintf(S.satChoice, sizeof S.satChoice, "%s", plat::prefs().getS("inmsatSat", "").c_str());
 }
 
@@ -203,7 +206,8 @@ void carriersView(App& a) {
         ImGui::TableNextColumn();
         std::string note = c.region;
         if (!c.station.empty()) note += (note.empty() ? "" : ", ") + c.station;
-        if (c.voiceCandidate) note += std::string(note.empty() ? "" : ", ") + "may be a voice (C) channel: not decoded";
+        if (c.type == dect2::inmsat::CarrierType::AeroC && c.callAes) { char ab[48]; snprintf(ab, sizeof ab, "aircraft %06X, GES %02X", (unsigned)c.callAes, (unsigned)c.callGes); note += std::string(note.empty() ? "" : ", ") + ab; }
+        else if (c.voiceCandidate) note += std::string(note.empty() ? "" : ", ") + "may be a voice (C) channel: no frame lock";
         if (c.type == dect2::inmsat::CarrierType::Unknown && !c.voiceCandidate && !c.parked && c.state < 1) note += std::string(note.empty() ? "" : ", ") + dect2::inmsat::carrierClassName(c.cls);
         ImGui::TextDisabled("%s", note.c_str());
     }
@@ -522,49 +526,84 @@ void aircraftView(App& a) {
 void voiceView(App& a) {
     const dect2::InmsatTelemetry& t = a.rx.inmsat;
     ImGui::PushTextWrapPos(0);
-    ImGui::TextDisabled("%s", "Aero C channels carry circuit-mode voice from the ground station to the aircraft. OnAir finds and lists these carriers, but it cannot demodulate them yet: "
-                              "the C-channel modulation and framing are not in a public specification we may reproduce. The mixer, the per-call recorder and the codec hook below are built and tested "
-                              "without a real C-channel signal, and need a user test with a real capture. Voice also needs the AMBE codec, which you install yourself (docs/CODECS.md). Unencrypted traffic only.");
+    ImGui::TextDisabled("%s", "Aero C channels carry circuit-mode voice (8400 bit/s OQPSK) from the ground station to the aircraft. OnAir finds the wide carriers that no data decoder holds, "
+                              "demodulates them, descrambles and decodes the frames (framing as in JAERO, credited under Help > Credits) and gives the coded voice frames to the AMBE codec. "
+                              "The codec is never shipped: you build the plug-in yourself (press ? for the steps). Without it the calls are still listed and their coded frames are saved. "
+                              "Unencrypted traffic only. Needs a user test with a real capture: the framing was checked on a recorded call from JAERO's sample set and on synthetic signals.");
     ImGui::PopTextWrapPos();
     ImGui::Spacing();
     codecHelpButton(CodecHelp::AeroAmbe);
     ImGui::SameLine();
-    if (!t.codecReady) ImGui::TextDisabled("%s", "No AMBE codec installed: press ? for how to install it and Open codecs folder.");
-    else ImGui::TextDisabled("%s", "AMBE codec installed.");
+    if (!t.codecReady) ImGui::TextDisabled("%s", "No AMBE codec plug-in installed: press ? for how to build it and Open codecs folder.");
+    else ImGui::TextDisabled("%s", "AMBE codec plug-in loaded.");
     if (!t.voiceMessage.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.35f, 1), "%s", t.voiceMessage.c_str()); ImGui::PopTextWrapPos(); }
-    else if (t.codecReady) ImGui::TextDisabled("%s", "Codec loaded.");
     if (ImGui::Checkbox("Record calls##inmrec", &S.record)) plat::prefs().setI("inmsatRecord", S.record ? 1 : 0);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Writes each call to <Save pictures to>/Inmarsat as a WAV (with the codec) and always as the raw coded frames (.bits), so a capture is not wasted.");
     ImGui::Spacing();
     int cand = 0;
     for (const auto& c : t.carriers) cand += c.voiceCandidate;
-    ImGui::TextDisabled("%d carrier%s may be voice channels (wide, no data decoder in sync).", cand, cand == 1 ? "" : "s");
-    if (t.voice.empty()) { ImGui::TextDisabled("%s", "no calls"); return; }
-    if (!ImGui::BeginTable("##inmv", 7, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) return;
-    ImGui::TableSetupColumn("Carrier"); ImGui::TableSetupColumn("State"); ImGui::TableSetupColumn("Frames"); ImGui::TableSetupColumn("Level"); ImGui::TableSetupColumn("Mute");
-    ImGui::TableSetupColumn("Solo"); ImGui::TableSetupColumn("Recording", ImGuiTableColumnFlags_WidthStretch);
-    ImGui::TableHeadersRow();
-    for (const auto& v : t.voice) {
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn(); ImGui::Text("%.4f MHz", v.freqHz / 1e6);
-        ImGui::TableNextColumn(); ImGui::TextUnformatted(v.active ? "call" : "idle");
-        ImGui::TableNextColumn(); ImGui::Text("%llu / %llu", (unsigned long long)v.decoded, (unsigned long long)v.frames);
-        ImGui::TableNextColumn(); ImGui::ProgressBar(v.level, ImVec2(60 * gUi, 8 * gUi), "");
-        ImGui::TableNextColumn(); bool m = v.mute; char id[24]; snprintf(id, sizeof id, "##vm%d", v.id);
-        if (ImGui::Checkbox(id, &m)) a.engine.inmsat().voice().setMute(v.id, m);
-        ImGui::TableNextColumn(); bool s = v.solo; snprintf(id, sizeof id, "##vs%d", v.id);
-        if (ImGui::Checkbox(id, &s)) a.engine.inmsat().voice().setSolo(v.id, s);
-        ImGui::TableNextColumn(); ImGui::TextDisabled("%s", v.recording.empty() ? v.rawFile.c_str() : v.recording.c_str());
+    ImGui::TextDisabled("%d voice receiver%s running, %d locked on a frame; %d wide carrier%s without a lock.", t.cChannels, t.cChannels == 1 ? "" : "s", t.cLocked, cand, cand == 1 ? "" : "s");
+    if (t.voice.empty()) { ImGui::TextDisabled("%s", "no calls yet (a C channel only transmits while a call is up)"); return; }
+    if (ImGui::BeginTable("##inmv", 11, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) {
+        ImGui::TableSetupColumn("Carrier"); ImGui::TableSetupColumn("State"); ImGui::TableSetupColumn("Aircraft"); ImGui::TableSetupColumn("GES");
+        ImGui::TableSetupColumn("Eb/N0"); ImGui::TableSetupColumn("Frames"); ImGui::TableSetupColumn("Level"); ImGui::TableSetupColumn("Mute");
+        ImGui::TableSetupColumn("Solo"); ImGui::TableSetupColumn("Recording", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableHeadersRow();
+        for (const auto& v : t.voice) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn(); ImGui::Text("%.4f MHz", v.freqHz / 1e6);
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(v.active ? "call" : "idle");
+            ImGui::TableNextColumn(); if (v.aesId) ImGui::Text("%06X", (unsigned)v.aesId); else ImGui::TextDisabled("-");
+            ImGui::TableNextColumn(); if (v.aesId) ImGui::Text("%02X", (unsigned)v.gesId); else ImGui::TextDisabled("-");
+            ImGui::TableNextColumn(); if (v.active) ImGui::Text("%.1f dB", v.ebn0Db); else ImGui::TextDisabled("-");
+            ImGui::TableNextColumn(); ImGui::Text("%llu / %llu", (unsigned long long)v.decoded, (unsigned long long)v.frames);
+            ImGui::TableNextColumn(); ImGui::ProgressBar(v.level, ImVec2(60 * gUi, 8 * gUi), "");
+            ImGui::TableNextColumn(); bool m = v.mute; char id[24]; snprintf(id, sizeof id, "##vm%d", v.id);
+            if (ImGui::Checkbox(id, &m)) a.engine.inmsat().voice().setMute(v.id, m);
+            ImGui::TableNextColumn(); bool s = v.solo; snprintf(id, sizeof id, "##vs%d", v.id);
+            if (ImGui::Checkbox(id, &s)) a.engine.inmsat().voice().setSolo(v.id, s);
+            ImGui::TableNextColumn(); ImGui::TextDisabled("%s", v.recording.empty() ? v.rawFile.c_str() : v.recording.c_str());
+        }
+        ImGui::EndTable();
     }
-    ImGui::EndTable();
+    if (!t.callHistory.empty()) {
+        ImGui::Spacing();
+        ImGui::TextDisabled("%s", "Finished calls");
+        if (ImGui::BeginTable("##inmvh", 7, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_ScrollY, ImVec2(0, 140 * gUi))) {
+            ImGui::TableSetupColumn("Start"); ImGui::TableSetupColumn("Carrier"); ImGui::TableSetupColumn("Aircraft"); ImGui::TableSetupColumn("GES");
+            ImGui::TableSetupColumn("Length"); ImGui::TableSetupColumn("Bit errors"); ImGui::TableSetupColumn("File", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableHeadersRow();
+            for (auto it = t.callHistory.rbegin(); it != t.callHistory.rend(); ++it) {
+                ImGui::TableNextRow();
+                char tm[32] = "";
+                const std::time_t w = (std::time_t)it->startWall;
+                if (w > 0) { std::tm lt{}; 
+#ifdef _WIN32
+                    localtime_s(&lt, &w);
+#else
+                    localtime_r(&w, &lt);
+#endif
+                    std::strftime(tm, sizeof tm, "%H:%M:%S", &lt); }
+                ImGui::TableNextColumn(); ImGui::TextUnformatted(tm);
+                ImGui::TableNextColumn(); ImGui::Text("%.4f MHz", it->freqHz / 1e6);
+                ImGui::TableNextColumn(); if (it->aesId) ImGui::Text("%06X", (unsigned)it->aesId); else ImGui::TextDisabled("-");
+                ImGui::TableNextColumn(); if (it->aesId) ImGui::Text("%02X", (unsigned)it->gesId); else ImGui::TextDisabled("-");
+                ImGui::TableNextColumn(); ImGui::Text("%.0f s", (double)it->frames * 0.02);
+                ImGui::TableNextColumn(); ImGui::Text("%.1f %%", 100.0 * it->avgBer);
+                ImGui::TableNextColumn(); ImGui::TextDisabled("%s", it->recording.empty() ? it->rawFile.c_str() : it->recording.c_str());
+            }
+            ImGui::EndTable();
+        }
+    }
 }
 
 void tick(App& a) {
     load();
-    if (!a.engine.running()) { S.pushedFocus = -1; S.pushedBudget = -1; S.pushedInmc = -1; S.pushedRecord = -1; return; }
+    if (!a.engine.running()) { S.pushedFocus = -1; S.pushedBudget = -1; S.pushedInmc = -1; S.pushedRecord = -1; S.pushedVoice = -1; return; }
     dect2::InmsatReceiver& r = a.engine.inmsat();
     if (S.focusId != S.pushedFocus) { r.setFocus(S.focusId); S.pushedFocus = S.focusId; }
     if (S.budget != S.pushedBudget) { r.setBudget(S.budget); S.pushedBudget = S.budget; }
+    if ((int)S.voiceOn != S.pushedVoice) { r.setVoice(S.voiceOn); S.pushedVoice = (int)S.voiceOn; }
     if ((int)S.inmcOn != S.pushedInmc) { r.setInmarsatC(S.inmcOn); S.pushedInmc = (int)S.inmcOn; }
     if (S.pushedSat != S.satChoice) { r.setSatelliteOverride(S.satChoice); S.pushedSat = S.satChoice; }
     { double la = 0, lo = 0; const bool known = receiverLocationSet(); if (known) receiverLocation(la, lo);
@@ -587,6 +626,8 @@ void tuner(App&, bool&) {
             ImGui::EndCombo();
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Normally found automatically from the decoded system table, the carrier frequencies and where the satellite stands in your sky (set your location under View > Map). Choose one here to override it.");
+        if (ImGui::Checkbox("Voice (Aero C)##inmvoice", &S.voiceOn)) plat::prefs().setI("inmsatVoice", S.voiceOn ? 1 : 0);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Try the wide carriers that no data decoder holds as Aero C voice channels (costs 0.5 CPU units each).");
         if (ImGui::Checkbox("Inmarsat-C##inmc", &S.inmcOn)) plat::prefs().setI("inmsatInmc", S.inmcOn ? 1 : 0);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Also decode the 2 kHz Inmarsat-C channels (EGC safety and news broadcasts) found in the capture.");
     }
@@ -649,7 +690,7 @@ void receiver(App& a) {
     kv("signal time", "%.1f s", t.timeSec);
     ImGui::Spacing();
     ImGui::PushTextWrapPos(0);
-    ImGui::TextDisabled("Decoded: Aero P channels (600, 1200, 10500 bit/s) and Inmarsat-C, all carriers of the capture at once. Not decoded: Aero C (voice) channels, R and T channels (aircraft to satellite, 1626 to 1660 MHz).");
+    ImGui::TextDisabled("Decoded: Aero P channels (600, 1200, 10500 bit/s) and Inmarsat-C, all carriers of the capture at once. Aero C (voice) channels: framing and decoding, sound through the codec plug-in you install. Not decoded: R and T channels (aircraft to satellite, 1626 to 1660 MHz).");
     ImGui::PopTextWrapPos();
 }
 

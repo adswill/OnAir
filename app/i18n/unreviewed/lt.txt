@@ -206,3 +206,7 @@ test NCDXF-style beacon scene
 test downlink scene (this generator does not take a custom message)
 test weather-fax chart (custom image not wired)
 this mode has no transmit generator
+Ground stations
+Band and channels
+Simple: the spectrum and one view with the summary, the live data and the key controls of this mode
+Advanced: every tab of this mode with all the detail

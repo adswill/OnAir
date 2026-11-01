@@ -15,7 +15,10 @@ struct InmsatReceiver::Impl {
     bool have = false;
 };
 
-InmsatReceiver::InmsatReceiver() : p_(std::make_unique<Impl>()) {}
+InmsatReceiver::InmsatReceiver() : p_(std::make_unique<Impl>()) {
+    Impl* im = p_.get();
+    p_->mgr.setVoiceSink([im](const inmsat::CFrameInfo& f, const uint8_t* v) { im->voice.pushCFrame(f, v); });
+}
 InmsatReceiver::~InmsatReceiver() = default;
 
 void InmsatReceiver::configure(double r) {
@@ -37,6 +40,7 @@ void InmsatReceiver::setSatelliteOverride(const std::string& n) { p_->mgr.setSat
 void InmsatReceiver::setFocus(int id) { p_->mgr.setFocus(id); }
 void InmsatReceiver::setBudget(double u) { p_->mgr.setBudget(u); }
 void InmsatReceiver::setInmarsatC(bool on) { p_->mgr.setInmcOn(on); }
+void InmsatReceiver::setVoice(bool on) { p_->mgr.setVoiceOn(on); }
 inmsat::VoiceMixer& InmsatReceiver::voice() { return p_->voice; }
 
 void InmsatReceiver::feed(const cf32* x, size_t n) {
@@ -53,6 +57,7 @@ void InmsatReceiver::feed(const cf32* x, size_t n) {
     p_->cache.voiceMessage = vs.message;
     p_->cache.activeCalls = vs.activeCalls;
     p_->cache.voice = vs.channels;
+    p_->cache.callHistory = vs.history;
     p_->cache.inputRate = p_->rate;
     p_->have = true;
 }

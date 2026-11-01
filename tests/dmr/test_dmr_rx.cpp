@@ -76,6 +76,9 @@ static void testThreads() {
         rx.configure(2.4e6);
         std::atomic<bool> stop{false};
         std::atomic<uint64_t> voiceCalls{0}, logLines{0}, polls{0}, newer{0};
+        // the callbacks are in place before the feed starts (the thread then replaces them over and over): a late-starting thread cannot make the count depend on its first turn
+        rx.setVoiceCallback([&](int, int, const uint8_t*) { voiceCalls++; });
+        rx.setLogCallback([&](const std::string&) { logLines++; });
         std::thread ui([&]() {
             uint64_t seq = 0;
             for (int k = 0; !stop; k++) {
@@ -93,7 +96,8 @@ static void testThreads() {
         });
         DmrSignal sig(base(25));
         std::vector<cf32> g(65536);
-        for (int blk = 0; blk < 110; blk++) { sig.generate(g.data(), g.size()); rx.feed(g.data(), g.size()); }      // 3 s
+        // 3 s of signal at least, and on until the thread has had its turns (a Windows runner sleeps in steps of 15 ms and the feed was over after one poll)
+        for (int blk = 0; blk < 110 || (polls < 50 && blk < 2000); blk++) { sig.generate(g.data(), g.size()); rx.feed(g.data(), g.size()); }
         stop = true;
         ui.join();
         DmrTelemetry t;
