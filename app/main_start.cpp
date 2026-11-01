@@ -4,6 +4,7 @@
 #include "dect2/packs/datasets.h"
 #include "dect2/session/session_store.h"
 #include "ui/input_map.h"
+#include "ui/kit/mode_panel.h"
 #include "dect2/source/device_pick.h"
 #ifdef __linux__
 #include <unistd.h>
@@ -56,6 +57,9 @@ void startApp(App& app, int argc, char** argv) {
     {
         std::vector<std::string> keys;
         for (const auto& it : plat::basePrefs().dumpAll()) keys.push_back(it.key);
+        bool fresh = !plat::prefs().getB("setupDone", false);   // no settings of any earlier use (the wizard's own and the system's keys do not count)
+        for (const std::string& k : keys) if (!setup::isOwnOrSystemKey(k) && k != "apiToken") fresh = false;   // the API token is made at the first start
+        modepanel::startup(fresh);   // Simple / Advanced default (ui/kit/mode_panel.h)
         setupPending = setup::wizardPending(argc == 1, plat::prefs().getB("setupDone", false), keys, failedStarts >= 2, plat::prefs().has("setupStep"));
     }
     app.wizOpen = tour::autoStart(argc == 1, plat::prefs().getB(tour::prefKey(), false), setupPending);   // the tour runs on the very first start only

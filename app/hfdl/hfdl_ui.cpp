@@ -4,6 +4,8 @@
 #include "dect2/common/time_fmt.h"
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
+#include "ui/kit/kit.h"
+#include "ui/kit/mode_panel.h"
 #include "../adsb/adsb_map.h"
 #include "app.h"
 #include "map/pos_predict.h"
@@ -672,6 +674,17 @@ bool hfdlEstimatedPosition(uint32_t key, double now, double& lat, double& lon, d
 // For the map upload (app/map/map_send.cpp)
 derivedkin::Info hfdlKinematics(const dect2::HfdlAircraft& c, double now) { return kinOf(c, now); }
 
+// ---------------------------------------------------------------- the Simple view (ui/kit/mode_panel.h)
+
+// the live messages and the ground stations side by side (the aircraft are the list on the right), the band and channel controls above them (closed: they are in the Tuner panel too)
+static void command(App& a) {
+    loadState();
+    kit::modeHeader({35, "HFDL", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    if (kit::collapsingSection(tr("Band and channels"), false)) { bool retune = false; tuner(a, retune); }
+    modepanel::panes({{"##hfdlmsgs", tr("Messages"), [&a] { messageView(a); }, 1.7f, 240.f},
+                      {"##hfdlgs", tr("Ground stations"), [&a] { stationView(a); }, 1.f, 200.f}}, 360.f);
+}
+
 extern const ModeUi kHfdlUi;
 const ModeUi kHfdlUi = {
     .sideTitle = "AIRCRAFT",
@@ -686,4 +699,5 @@ const ModeUi kHfdlUi = {
     .synth = synth,
     .tick = tick,
     .meters = meters,
+    .command = command,
 };

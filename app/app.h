@@ -1100,6 +1100,8 @@ struct ModeUi {
     void (*scan)(App&) = nullptr;                       // the Scan tab (null: a note)
     void (*tick)(App&) = nullptr;                       // every frame while the mode is selected: push volume and mute to the receiver, run scans, collect histories
     void (*meters)(const App&, std::vector<ModeMeter>& out) = nullptr;   // the meter bank of the Scope: Meters layout
+    void (*command)(App&) = nullptr;                    // Simple view (app/ui/kit/mode_panel.h): the merged body under the shared summary strip; null: the generic Command view (the mode's tab on its first view, its controls, its meters)
+    bool noSimple = false;                              // no Simple view for this mode (the Advanced tabs only)
 };
 bool modeSupportsWideHf(int family);                    // modeui.cpp: the HF families that decode the visible span inside the receiver (CW, PSK, HF digital)
 bool modeSupportsWideChannels(int family);               // modeui.cpp: VDL2, HFDL (Whole span = every channel of the capture, set on the receiver)
