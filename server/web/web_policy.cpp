@@ -80,6 +80,8 @@ const std::set<std::string>& restrictedKnownKinds() {
     "iptv", "atis",   // (esubghz was never classified: web_safety failed on integ-32)
     // 3.5 modes: blocked likewise (shortwave is a broadcast receiver like "general", but the web allow-list is the owner's call)
     "shortwave",
+    // 3.6 modes: blocked likewise
+    "fy3ahrpt", "fy3mpt",
     };
     return s;
 }

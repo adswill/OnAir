@@ -180,6 +180,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   set(DECT2_MODES autodet fsq ifkp cquam selfcal dvbs dtmb atv dmr drm adsb gnss dab sonde ais marine acars inmc aero iridium mesh hdr cdr pager packet hfdig airband vdl2 ism vor ils m17 cell cw dstar hfdl nxdn gsmr psk js8 specx wb specan dvbc dpmr orbcomm uplink tetra tetrapol ale mac astro p25 ble iono qo100 wifi general time rid meteor nr cubesat ccsds goes globalstar vdes hrpt zigbee flarm hfbeacon dji nbiot halow codar datawell same multitone loraraw ant dect elektro ndb lbj railway horus eczas vdl4 uat wisun fpv wmbus tones sarsat mt63 zwave mscatter dgps dme sitor kris kavb kapp kaft eloran mpt1327 fusion ardop goesdcs modeac bletrk ltr edacs p25p2 kait satbeacon kaws milhf nfc kaal ham prop antd lorawan lorasat isdbs marinevhf argos sigfox sbas asterix voice)
   list(APPEND DECT2_MODES pactor)   # PACTOR-I monitor (family 203): core/src/pactor, app/pactor, tests/pactor
   list(APPEND DECT2_MODES roshf ssdv ebicab nrf24 atis)   # ROS (HF) detector (family 205), SSDV pictures (206), EBICab / Eurobalise up-link (207): core/src/<mode>, app/<mode>, tests/<mode>
+  list(APPEND DECT2_MODES fy3)   # FY-3 AHRPT (family 235) and FY-3 MPT (236): core/src/fy3, app/fy3, tests/fy3 (docs/fy3.md)
   list(APPEND DECT2_MODES esubghz)   # Flipper Zero Sub-GHz chat, receive and send (family 204): core/src/esubghz, app/esubghz, tests/esubghz
   list(APPEND DECT2_MODES inmsat)   # Inmarsat all-carriers mode (3.3, docs/INMARSAT-REVAMP.md): core/src/inmsat, tests/inmsat
   list(APPEND DECT2_MODES shortwave)   # Shortwave: the general receiver with one-click HF decoders (family 212, docs/SHORTWAVE-MODE.md): core/src/shortwave, app/shortwave, tests/shortwave
@@ -1436,6 +1437,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_atis_mode PRIVATE dect2core)
     target_compile_definitions(test_atis_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME atis_mode COMMAND test_atis_mode)
+    add_executable(test_fy3_mode tests/app/test_fy3_mode.cpp)   # FY-3 AHRPT / MPT: tuning, mode rows, engine / panel wiring, the doc page
+    target_link_libraries(test_fy3_mode PRIVATE dect2core)
+    target_compile_definitions(test_fy3_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME fy3_mode COMMAND test_fy3_mode)
     add_executable(test_shortwave_mode tests/app/test_shortwave_mode.cpp)   # Shortwave: tuning, mode row, engine / panel wiring, the decoder strip
     target_link_libraries(test_shortwave_mode PRIVATE dect2core)
     target_compile_definitions(test_shortwave_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")

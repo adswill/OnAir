@@ -305,6 +305,8 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 213: return pollStd(rxSw_, 213, t, seqs[188], &RxTelemetry::shortwave);   // Shortwave (slot 188)
     case 211: return pollStd(rxNrf_, 211, t, seqs[186], &RxTelemetry::nrf24);   // nRF24L01 (slot 186)
     case 212: return pollStd(rxAtis_, 212, t, seqs[187], &RxTelemetry::atis);   // ATIS inland waterways (slot 187)
+    case 236: return pollStd(rxFy3a_, 236, t, seqs[195], &RxTelemetry::fy3a);   // FY-3 AHRPT (slot 195)
+    case 237: return pollStd(rxFy3m_, 237, t, seqs[196], &RxTelemetry::fy3m);   // FY-3 MPT (slot 196)
     case 205: return pollStd(rxEsg_, 205, t, seqs[165], &RxTelemetry::esubghz);   // Flipper Zero Sub-GHz chat (slot 165)
     case 203: return pollStd(rxPskd_, 203, t, seqs[163], &RxTelemetry::pskd);   // PSK demodulator (slot 163)
     case 99: return pollStd(rxZw_, 99, t, seqs[90], &RxTelemetry::zwave);
