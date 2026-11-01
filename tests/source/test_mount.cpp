@@ -400,8 +400,8 @@ int main() {
         CHECK(!ps.empty(), "passes found");
         if (!ps.empty()) {
             const Pass& p = ps[ps.size() > 1 ? 1 : 0];   // a whole pass: the first may be under way at the epoch
-            MountPlan far = planMountForPass(s, o, p, p.aos - 3600);
-            CHECK(far.phase == MountPhase::Idle && far.minutesToAos > 59, "idle an hour before");
+            MountPlan farPlan = planMountForPass(s, o, p, p.aos - 3600);
+            CHECK(farPlan.phase == MountPhase::Idle && far.minutesToAos > 59, "idle an hour before");
             MountPlan pre = planMountForPass(s, o, p, p.aos - 30);
             CHECK(pre.phase == MountPhase::Preposition && std::fabs(pre.azDeg - p.aosAzDeg) < 1e-9 && pre.elDeg == 0, "preposition at rise az");
             MountPlan mid = planMountForPass(s, o, p, p.tca);
