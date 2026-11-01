@@ -349,6 +349,7 @@ void Engine::applyReset() {
     rxNr_.reset();
     rxGoes_.reset();
     rxEl_.reset();
+    rxFy_.reset();
     rxUat_.reset();
     rxVdl4_.reset();
     rxHrpt_.reset();
@@ -548,6 +549,7 @@ void Engine::resetReceiver(int a) {
     case 211: rxNrf_.reset(); break;
     case 212: rxAtis_.reset(); break;
     case 213: rxSw_.reset(); break;
+    case 233: case 234: case 235: case 236: rxFy_.reset(); break;
     case 203: rxPskd_.reset(); break;
     case 85: rxWs_.reset(); break;
     case 99: rxZw_.reset(); break;

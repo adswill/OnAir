@@ -136,6 +136,7 @@
 #include "dect2/nr/nr_tel.h"
 #include "dect2/goes/goes_tel.h"
 #include "dect2/elektro/elektro_tel.h"
+#include "dect2/fygeo/fygeo_tel.h"
 #include "dect2/uat/uat_tel.h"
 #include "dect2/hrpt/hrpt_tel.h"
 #include "t2.h"
@@ -276,6 +277,7 @@ struct RxTelemetry {
     NrTelemetry nr;           // valid when standard == 58 (5G NR cells)
     GoesTelemetry goes;       // valid when standard == 61 (GOES HRIT)
     ElektroTelemetry elektro; // valid when standard == 81 (Elektro-L)
+    FygeoTelemetry fygeo;     // valid when standard == 233 .. 236 (FY-4A LRIT, FY-4B LRIT, FY-4A HRIT, FY-2 S-VISSR; families 232 - 235)
     UatTelemetry uat;         // valid when standard == 84 (UAT 978 MHz)
     HrptTelemetry hrpt;       // valid when standard == 65 (HRPT / AHRPT)
     PskTelemetry psk;      // valid when standard == 37

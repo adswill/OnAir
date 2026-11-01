@@ -366,6 +366,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxNr_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the sync raster points searched
         rxGoes_.setSignalOffset(o);
         rxEl_.setSignalOffset(o);
+        rxFy_.setSignalOffset(o);
         rxVdl4_.setSignalOffset(o);
         rxHrpt_.setSignalOffset(o);
         rxWifi_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the channel noted with each network
@@ -664,6 +665,8 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxHrpt_.setLogCallback([this](const std::string& s) { log(s); });
     rxGoes_.setLogCallback([this](const std::string& s) { log(s); });
     rxEl_.setLogCallback([this](const std::string& s) { log(s); });
+    rxFy_.setLogCallback([this](const std::string& s) { log(s); });
+    if (const int fl = activeStdFor(stdMode_.load()) - 233; fl >= 0 && fl < 4) { rxFy_.setLink(fl); rxFy_.configure(rate_); }   // FengYun: only when it is the mode (the DVB-S2 receiver inside is heavy)
     rxUat_.configure(rate_);
     rxUat_.setLogCallback([this](const std::string& s) { log(s); });
     rxVdl4_.configure(rate_);

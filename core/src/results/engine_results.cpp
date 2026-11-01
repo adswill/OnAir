@@ -115,6 +115,10 @@ std::vector<Engine::ResultSlot> Engine::resultSlots() {
         DECT2_RESULT_SLOT("lorawanwide", 201, rxLw_),
         DECT2_RESULT_SLOT("lorasat", 202, rxLs_),
         DECT2_RESULT_SLOT("wisun", 85, rxWs_),
+        DECT2_RESULT_SLOT("fy4alrit", 233, rxFy_),
+        DECT2_RESULT_SLOT("fy4blrit", 234, rxFy_),
+        DECT2_RESULT_SLOT("fy4ahrit", 235, rxFy_),
+        DECT2_RESULT_SLOT("fy2svissr", 236, rxFy_),
     };
 }
 

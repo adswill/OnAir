@@ -184,6 +184,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES inmsat)   # Inmarsat all-carriers mode (3.3, docs/INMARSAT-REVAMP.md): core/src/inmsat, tests/inmsat
   list(APPEND DECT2_MODES shortwave)   # Shortwave: the general receiver with one-click HF decoders (family 212, docs/SHORTWAVE-MODE.md): core/src/shortwave, app/shortwave, tests/shortwave
   list(APPEND DECT2_MODES pskdsp)   # PSK demodulator and analyser (family 202, #282): core/src/pskdsp, app/pskdsp, tests/pskdsp
+  list(APPEND DECT2_MODES fygeo)   # FengYun geostationary: FY-4A / FY-4B LRIT, FY-4A HRIT (DVB-S2) and FY-2 S-VISSR (families 232 - 235, docs/FENGYUN-GEO.md): core/src/fygeo, app/fygeo, tests/fygeo
 target_sources(dect2core PRIVATE core/src/tv/mheg_render.cpp core/src/tv/ts_proto_rs.cpp core/src/common/text_charset_rs.cpp core/src/tv/dvb_text.cpp core/src/tv/dvb_text_rs.cpp core/src/tv/teletext_rs.cpp core/src/tv/dvbsub_rs.cpp core/src/tv/epg.cpp core/src/tv/subtitle_export.cpp core/src/tv/recorder.cpp core/src/tv/timeshift.cpp core/src/tv/playback.cpp core/src/tv/dsmcc.cpp core/src/tv/mheg.cpp core/src/tv/mheg_engine.cpp core/src/tv/rcs.cpp core/src/tv/si_tables.cpp core/src/tv/ts_data.cpp core/src/tv/hd_pair.cpp) # MPEG-TS parsing layer (C++ or the Rust crate onair_ts) and the TV recorder (guide, schedule, timeshift, playback) (C++ or the Rust crate onair_ts)
 target_sources(dect2core PRIVATE core/src/tv/mheg_render.cpp core/src/tv/ts_proto_rs.cpp core/src/common/text_charset_rs.cpp core/src/tv/dvb_text.cpp core/src/tv/dvb_text_rs.cpp core/src/tv/teletext_rs.cpp core/src/tv/dvbsub_rs.cpp core/src/tv/epg.cpp core/src/tv/subtitle_export.cpp core/src/tv/recorder.cpp core/src/tv/timeshift.cpp core/src/tv/playback.cpp core/src/tv/dsmcc.cpp core/src/tv/mheg.cpp core/src/tv/rcs.cpp core/src/tv/si_tables.cpp core/src/tv/ts_data.cpp core/src/tv/hd_pair.cpp) # MPEG-TS parsing layer (C++ or the Rust crate onair_ts) and the TV recorder (guide, schedule, timeshift, playback) (C++ or the Rust crate onair_ts)
 target_sources(dect2core PRIVATE core/src/tv/iptv_parse.cpp core/src/tv/iptv_http.cpp core/src/tv/iptv_stream.cpp core/src/tv/iptv_mode.cpp)   # Internet TV (IPTV): playlists, guide, HTTP(S)/HLS/UDP reader (docs/IPTV.md)
@@ -212,6 +213,14 @@ target_sources(dect2core PRIVATE core/src/net/remote_api.cpp core/src/net/api_po
 target_sources(dect2core PRIVATE core/src/source/mount_driver.cpp core/src/source/mount_track.cpp)   # antenna mount drivers: Hamlib rotctld, ASCOM Alpaca; pass-driven mount plan
 target_sources(dect2core PRIVATE core/src/results/sessions_json.cpp)   # the sessions as paged JSON for the remote API
 target_sources(dect2core PRIVATE core/src/packs/packs.cpp)   # offline data packs: catalog, download with resume, checksums, disk guard, delete
+# OpenJPEG 2.5.3 (BSD-2-Clause, third_party/openjpeg): the JPEG 2000 pictures of the FengYun-4 downlinks and their test signals, see THIRD_PARTY.md
+file(GLOB ONAIR_OPJ_SRC CONFIGURE_DEPENDS third_party/openjpeg/*.c)
+target_sources(dect2core PRIVATE ${ONAIR_OPJ_SRC})
+set_source_files_properties(${ONAIR_OPJ_SRC} PROPERTIES LANGUAGE C COMPILE_DEFINITIONS "OPJ_STATIC")
+if(NOT MSVC)
+  set_source_files_properties(${ONAIR_OPJ_SRC} PROPERTIES COMPILE_OPTIONS "-w")
+endif()
+target_include_directories(dect2core PRIVATE third_party/openjpeg)
 target_sources(dect2core PRIVATE third_party/ssdv/ssdv.c third_party/ssdv/rs8.c)   # SSDV packet decoder / encoder (fsphil/ssdv, GPL-3.0-or-later; rs8.c Phil Karn LGPL), see THIRD_PARTY.md
 target_include_directories(dect2core PRIVATE third_party/ssdv)
 set_source_files_properties(third_party/ssdv/ssdv.c third_party/ssdv/rs8.c PROPERTIES LANGUAGE C)
