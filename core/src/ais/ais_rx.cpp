@@ -518,6 +518,9 @@ struct AisReceiver::Impl {
         }
         for (const auto& f : cr.frames) {
             const double s = f.power > 0 && C.nfKnown && n48 > 0 ? 10 * std::log10(f.power / n48) : snr;   // a burst that was fitted: its own power
+            // coast mode: a frame found only by the extra cancel/frequency tries must stand clearly above the noise (a few more tries on a noise burst
+            // would otherwise let a chance FCS match through)
+            if (!sat && f.layer >= 1 && s < 6.0) continue;
             onFrame(c, f.payload, s, f.cfoHz, startSec, f.layer);
         }
     }

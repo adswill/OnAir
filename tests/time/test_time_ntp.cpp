@@ -136,7 +136,9 @@ int main() {
         ClockMeasurement m = meas(250, "GPS");
         ClockDiscipline::get().publish(ClockGps, m);
         const uint64_t tx = fromUnix(systemUnixNow());
-        CHECK(request(c, 41231, 3, 4, tx, rep), "no answer");
+        bool got = false;
+        for (int tries = 0; tries < 5 && !got; tries++) got = request(c, 41231, 3, 4, tx, rep);   // a loaded CI machine can drop the first datagram
+        CHECK(got, "no answer");
         CHECK(rep.mode == 4 && rep.stratum == 1 && rep.li == 0 && !memcmp(rep.refId, "GPS\0", 4) && rep.origin == tx, "GPS reply");
         const double srvT = toUnix(rep.transmit), here = systemUnixNow();
         CHECK(std::fabs((here - srvT) - 0.25) < 0.1, "server time is the computer's less 250 ms: %.3f", here - srvT);

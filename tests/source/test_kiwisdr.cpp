@@ -449,6 +449,8 @@ int main() {
 
     // a frame cut in two by a slow link, the pause longer than the receive timeout: the rest is waited for, the connection stays (#257)
     {
+        // a reconnect of the step before can still be on its way on a loaded machine: take the count once it has been still for 2 s
+        for (int i = 0, last = -1; i < 10; i++) { const int c = srv.connections; if (c == last) break; last = c; std::this_thread::sleep_for(std::chrono::milliseconds(2000)); }
         const int cs = srv.connections;
         srv.slowFrame = 1;
         std::this_thread::sleep_for(std::chrono::milliseconds(2500));

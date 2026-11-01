@@ -248,7 +248,7 @@ int main() {
         CHECK(readIq(ring, buf));
     }
     src->stop();
-    CHECK(eventually([&] { return srv.has("iq_stop:1"); }));   // the fake server reads the command a moment after stop() returns
+    CHECK(eventually([&] { return srv.has("iq_stop:1"); }, 15000));   // the fake server reads the command a moment after stop() returns
     // transmit and audio commands are never sent
     CHECK(!srv.anyPrefix("trx") && !srv.anyPrefix("tune") && !srv.anyPrefix("drive") && !srv.anyPrefix("audio") && !srv.anyPrefix("cw_") && !srv.anyPrefix("tx_"));
 

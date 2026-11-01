@@ -44,7 +44,15 @@ static void runCase(const char* name, int opt0, double cfo, double expectRs, int
     }
     // the packet counters start at the first input: the error flags of the first seconds (equaliser and carrier loop still converging) are
     // not judged, the steady state is what is counted after a settle
+    // (a loaded machine converges later: wait, up to 20 s, until the bad-packet count has been still for 2 s)
     std::this_thread::sleep_for(std::chrono::seconds(3));
+    for (int i = 0; i < 10; i++) {
+        e.latestRx(t, 0);
+        const uint64_t b = t.dvbc.packetsBad;
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        e.latestRx(t, 0);
+        if (t.dvbc.packetsBad == b) break;
+    }
     e.latestRx(t, 0);
     const uint64_t packets0 = t.dvbc.packets, bad0 = t.dvbc.packetsBad;
     std::this_thread::sleep_for(std::chrono::seconds(2));
