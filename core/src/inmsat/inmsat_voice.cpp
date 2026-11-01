@@ -56,21 +56,49 @@ struct VoiceMixer::Impl {
         std::deque<int16_t> fifo;
         Wav wav;
         std::FILE* raw = nullptr;
+        double berSum = 0;
+        uint64_t berN = 0;
     };
+    std::vector<CallRecord> history;
     std::map<int, Ch> chans;
     bool codecReady = false;
 
     DecoderFactory fac() const { return factory ? factory : DecoderFactory([] { return codec::pluginVocoder("ambe"); }); }
 
     void closeCall(Ch& c) {
+        if (c.info.active && c.info.frames > 0) {
+            CallRecord r;
+            r.id = c.info.id; r.freqHz = c.info.freqHz; r.startWall = c.info.callWall;
+            r.endWall = c.info.callWall + (c.info.lastFrame - c.info.callStart);
+            r.aesId = c.info.aesId; r.gesId = c.info.gesId; r.frames = c.info.frames; r.decoded = c.info.decoded;
+            r.avgBer = c.berN ? (float)(c.berSum / (double)c.berN) : 0.f;
+            r.recording = c.info.recording; r.rawFile = c.info.rawFile;
+            history.push_back(r);
+            if (history.size() > 100) history.erase(history.begin());
+        }
         c.wav.close();
         if (c.raw) { std::fclose(c.raw); c.raw = nullptr; }
         c.info.active = false;
         c.info.recording.clear(); c.info.rawFile.clear();
     }
+    void pushTo(Ch& c, const std::vector<uint8_t>& coded, double timeSec) {
+        if (!c.info.active) openCall(c, timeSec);
+        c.info.frames++;
+        c.info.lastFrame = timeSec;
+        if (c.raw) std::fwrite(coded.data(), 1, coded.size(), c.raw);
+        if (!c.dec) return;
+        const std::vector<int16_t> pcm = c.dec->decode(coded);
+        if (pcm.empty()) return;
+        c.info.decoded++;
+        codecReady = true;
+        if (c.fifo.size() + pcm.size() <= kFifoMax) c.fifo.insert(c.fifo.end(), pcm.begin(), pcm.end());
+        c.wav.write(pcm.data(), pcm.size());
+    }
     void openCall(Ch& c, double timeSec) {
         c.info.active = true;
         c.info.callStart = timeSec;
+        c.info.frames = 0; c.info.decoded = 0; c.info.cFrames = 0; c.info.aesId = 0; c.info.gesId = 0;
+        c.berSum = 0; c.berN = 0;
         if (recDir.empty()) return;
         char nm[96];
         std::snprintf(nm, sizeof nm, "inmarsat_%ld_%d", (long)std::lround(c.info.freqHz / 1000), ++callCounter);
@@ -97,17 +125,24 @@ void VoiceMixer::pushFrame(int id, double freqHz, const std::vector<uint8_t>& co
         c.triedDec = true;
         c.dec = p_->fac()();
     }
-    if (!c.info.active) p_->openCall(c, timeSec);
-    c.info.frames++;
-    c.info.lastFrame = timeSec;
-    if (c.raw) std::fwrite(coded.data(), 1, coded.size(), c.raw);
-    if (!c.dec) return;
-    const std::vector<int16_t> pcm = c.dec->decode(coded);
-    if (pcm.empty()) return;
-    c.info.decoded++;
-    p_->codecReady = true;
-    if (c.fifo.size() + pcm.size() <= kFifoMax) c.fifo.insert(c.fifo.end(), pcm.begin(), pcm.end());
-    c.wav.write(pcm.data(), pcm.size());
+    p_->pushTo(c, coded, timeSec);
+}
+
+void VoiceMixer::pushCFrame(const CFrameInfo& f, const uint8_t* voice300) {
+    std::lock_guard<std::mutex> lk(p_->mu);
+    auto& c = p_->chans[f.id];
+    c.info.id = f.id; c.info.freqHz = f.freqHz;
+    if (!c.triedDec) { c.triedDec = true; c.dec = p_->fac()(); }
+    if (!c.info.active) p_->openCall(c, f.timeSec);
+    if (c.info.callWall == 0 || c.info.cFrames == 0) c.info.callWall = f.wallUnix;
+    c.info.cFrames++;
+    c.info.ber = f.ber; c.info.ebn0Db = f.ebn0Db;
+    c.berSum += f.ber; c.berN++;
+    if (f.haveCall) { c.info.aesId = f.aesId; c.info.gesId = f.gesId; }
+    for (int i = 0; i < 25; i++) {
+        std::vector<uint8_t> fr(voice300 + i * 12, voice300 + i * 12 + 12);
+        p_->pushTo(c, fr, f.timeSec + 0.02 * i);
+    }
 }
 
 void VoiceMixer::endIdle(double timeSec) {
@@ -139,6 +174,7 @@ VoiceStatus VoiceMixer::status() const {
     std::lock_guard<std::mutex> lk(p_->mu);
     VoiceStatus s;
     s.codecReady = p_->codecReady;
+    s.history = p_->history;
     for (const auto& kv : p_->chans) {
         s.channels.push_back(kv.second.info);
         s.activeCalls += kv.second.info.active;
