@@ -4,6 +4,7 @@
 #include "dect2/image/j2k.h"
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <random>
 #include "j2k_fixtures.inc"
 #include "../common/test_util.h"
