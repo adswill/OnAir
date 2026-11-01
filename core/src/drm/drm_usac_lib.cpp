@@ -122,12 +122,13 @@ uint64_t UsacLib::generation() { return gGen.load(); }
 
 bool UsacSession::open(const std::vector<uint8_t>& asc) {
     close();
+    err_ = 0; step_ = "";
     if (!lib_.ok() || asc.empty()) return false;
     h_ = lib_.open(0 /* TT_MP4_RAW */, 1);
-    if (!h_) return false;
+    if (!h_) { step_ = "aacDecoder_Open"; err_ = -1; return false; }
     uint8_t* conf[1] = {const_cast<uint8_t*>(asc.data())};
     const unsigned len[1] = {(unsigned)asc.size()};
-    if (lib_.configRaw(h_, conf, len) != 0) { close(); return false; }
+    if (const int e = lib_.configRaw(h_, conf, len); e != 0) { step_ = "aacDecoder_ConfigRaw"; err_ = e; close(); return false; }
     return true;
 }
 
@@ -139,11 +140,11 @@ bool UsacSession::decode(const std::vector<uint8_t>& au, std::vector<int16_t>& p
     uint8_t* buf[1] = {const_cast<uint8_t*>(au.data())};
     const unsigned size[1] = {(unsigned)au.size()};
     unsigned valid = (unsigned)au.size();
-    if (lib_.fill(h_, buf, size, &valid) != 0) return false;
+    if (const int e = lib_.fill(h_, buf, size, &valid); e != 0) { step_ = "aacDecoder_Fill"; err_ = e; return false; }
     std::vector<int16_t> tmp(8 * 4096);
-    if (lib_.decode(h_, tmp.data(), (int)tmp.size(), 0) != 0) return false;
+    if (const int e = lib_.decode(h_, tmp.data(), (int)tmp.size(), 0); e != 0) { step_ = "aacDecoder_DecodeFrame"; err_ = e; return false; }
     const int* si = lib_.info(h_);
-    if (!si) return false;
+    if (!si) { step_ = "aacDecoder_GetStreamInfo"; err_ = -1; return false; }
     rate = si[0]; channels = si[2];
     const int frame = si[1];
     if (rate <= 0 || channels <= 0 || frame <= 0 || (size_t)frame * (size_t)channels > tmp.size()) return false;
