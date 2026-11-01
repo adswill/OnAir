@@ -172,23 +172,23 @@ int main(int argc, char** argv) {
     testJudge();
     testLoudRule();
     struct Case { const char* name; const char* radio; Sky sky; double start; std::vector<Tone> blockers; double noiseRise; double minFrac; double maxLoud; bool noHold = false; };
-    Sky far; far.n = 40; far.loDbm = -108; far.hiDbm = -80;       // only distant aircraft
+    Sky farSky; farSky.n = 40; farSky.loDbm = -108; farSky.hiDbm = -80;       // only distant aircraft
     Sky mixed;                                                      // -105 .. -45 dBm
-    Sky near; near.n = 50; near.loDbm = -95; near.hiDbm = -30;     // very strong aircraft close by
+    Sky nearSky; nearSky.n = 50; nearSky.loDbm = -95; nearSky.hiDbm = -30;     // very strong aircraft close by
     Sky sparse; sparse.n = 8; sparse.loDbm = -100; sparse.hiDbm = -60; sparse.msgPerAc = 2;   // a quiet sky
     const std::vector<Case> cases = {
-        {"hackrf, far aircraft only, start low", "hackrf", far, 10, {}, 0, 0.80, 0.12},
-        {"hackrf, far aircraft only, start high", "hackrf", far, 90, {}, 0, 0.78, 0.12},
+        {"hackrf, far aircraft only, start low", "hackrf", farSky, 10, {}, 0, 0.80, 0.12},
+        {"hackrf, far aircraft only, start high", "hackrf", farSky, 90, {}, 0, 0.78, 0.12},
         {"hackrf, mixed sky, start low", "hackrf", mixed, 10, {}, 0, 0.80, 0.12},
         {"hackrf, mixed sky, start far too hot", "hackrf", mixed, 100, {}, 0, 0.80, 0.12},
-        {"hackrf, strong aircraft close by, start hot", "hackrf", near, 95, {}, 0, 0.80, 0.12},
-        {"hackrf, strong aircraft close by, start low", "hackrf", near, 5, {}, 0, 0.80, 0.12},
+        {"hackrf, strong aircraft close by, start hot", "hackrf", nearSky, 95, {}, 0, 0.80, 0.12},
+        {"hackrf, strong aircraft close by, start low", "hackrf", nearSky, 5, {}, 0, 0.80, 0.12},
         {"hackrf, mixed sky, city noise +10 dB", "hackrf", mixed, 40, {}, 10, 0.80, 0.12},
         {"hackrf, mixed sky, strong 940 MHz carrier", "hackrf", mixed, 60, {{-20e6 / 2.4e6 * 1e5, -35}}, 0, 0.80, 0.12},
         {"airspy, mixed sky, start low", "airspy", mixed, 5, {}, 0, 0.80, 0.12},
         {"hackrf, quiet sky (8 aircraft)", "hackrf", sparse, 50, {}, 0, 0.55, 0.15},
-        {"hackrf, near aircraft, no peak-hold, start hot", "hackrf", near, 100, {}, 0, 0.75, 0.12, true},
-        {"hackrf, near aircraft, no peak-hold, start low", "hackrf", near, 5, {}, 0, 0.75, 0.12, true},
+        {"hackrf, near aircraft, no peak-hold, start hot", "hackrf", nearSky, 100, {}, 0, 0.75, 0.12, true},
+        {"hackrf, near aircraft, no peak-hold, start low", "hackrf", nearSky, 5, {}, 0, 0.75, 0.12, true},
     };
     for (const Case& c : cases) {
         const Result o = runSky(c.radio, c.sky, c.start, true, 240, c.blockers, c.noiseRise, c.noHold);
