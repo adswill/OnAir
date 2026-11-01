@@ -37,9 +37,10 @@ public:
     void clearProducts();
     void feed(const cf32* x, size_t n);
     bool telemetry(FygeoTelemetry& out, uint64_t lastSeq);
-    void clearResults();
-    std::string saveResults() const;
-    bool loadResults(const std::string& blob);
+    // the products of each link are kept apart (the four modes share this receiver); link -1 = the current one
+    void clearResults(int link = -1);
+    std::string saveResults(int link = -1) const;
+    bool loadResults(const std::string& blob, int link = -1);
     void setLogCallback(std::function<void(const std::string&)> cb);
     // every whole xRIT file (FY-4, transport header removed: its headers and data) from the receiver's thread
     void setFileCallback(std::function<void(const std::vector<uint8_t>&, int vcid, int apid)> cb);

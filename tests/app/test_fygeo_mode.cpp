@@ -42,11 +42,12 @@ int main() {
         CHECK(has(tel, "case " + std::to_string(act) + ": return pollStd(rxFy_, " + std::to_string(act) + ", t, seqs[" + std::to_string(m.fam) + "], &RxTelemetry::fygeo)"), "telemetry case %d missing", act);
         { const size_t q = appH.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && atoi(appH.c_str() + q + 29) > m.fam, "kNumFamilies does not cover family %d", m.fam); }
         { const size_t q = engH.find("kPollSeqSlots = "); CHECK(q != std::string::npos && atoi(engH.c_str() + q + 16) > m.fam, "kPollSeqSlots does not cover slot %d", m.fam); }
-        CHECK(has(res, std::string("\"") + m.id + "\", " + std::to_string(act) + ", rxFy_"), "results slot for %d", act);
+        CHECK(has(res, std::string("ResultSlot{\"") + m.id + "\", " + std::to_string(act) + ", [this] { return rxFy_.saveResults("), "results slot for %d", act);
         CHECK(has(ui, m.ui), "%s not defined", m.ui);
         CHECK(t && t->minSampleRate > 0 && t->sampleRate >= t->minSampleRate && t->defMhz > 1600 && t->defMhz < 1720, "%s: tuning numbers", m.id);
     }
     CHECK(has(eng, "case 233: case 234: case 235: case 236: rxFy_.reset(); break;"), "engine reset");
+    CHECK(has(eng, "else if (a >= 233 && a <= 236) rxFy_.feed(x, n);"), "engine feed");
     CHECK(has(place, "case 233: case 234: case 235: case 236: rxFy_.setLink(a - 233); rxFy_.configure(r); break;"), "engine configure");
     CHECK(has(place, "case 233: case 234: case 235: case 236: rxFy_.setLink(a - 233); rxFy_.setSignalOffset(o); break;"), "engine place");
     CHECK(has(ui, "Receive only") && has(ui, "dish"), "the screens say receive only and name the dish");

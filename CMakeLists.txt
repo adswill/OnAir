@@ -221,6 +221,7 @@ if(NOT MSVC)
   set_source_files_properties(${ONAIR_OPJ_SRC} PROPERTIES COMPILE_OPTIONS "-w")
 endif()
 target_include_directories(dect2core PRIVATE third_party/openjpeg)
+set_source_files_properties(core/src/fygeo/fygeo_proto.cpp PROPERTIES COMPILE_DEFINITIONS "OPJ_STATIC")   # openjpeg.h without dllimport on Windows
 target_sources(dect2core PRIVATE third_party/ssdv/ssdv.c third_party/ssdv/rs8.c)   # SSDV packet decoder / encoder (fsphil/ssdv, GPL-3.0-or-later; rs8.c Phil Karn LGPL), see THIRD_PARTY.md
 target_include_directories(dect2core PRIVATE third_party/ssdv)
 set_source_files_properties(third_party/ssdv/ssdv.c third_party/ssdv/rs8.c PROPERTIES LANGUAGE C)

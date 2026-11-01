@@ -509,9 +509,9 @@ inline std::vector<Mode> allModes() {
     narrow.template operator()<GoesReceiver, GoesTelemetry>("goes", "GOES HRIT", "satellite-weather", 62, 2.4e6, 4.0, 927e3, 1694.1, nullptr, 16);
     {   // FengYun geostationary: FY-4 over the DVB-S2 receiver (LDPC/BCH frames that passed), FY-2 S-VISSR (uncoded BPSK: frames synced, and frames with a bit error ratio under 2 %)
         struct Fy { const char* id; const char* name; int link; double rate, secs, bw, snrHi; bool quality; };
-        for (const Fy f : {Fy{"fy4a-lrit", "FY-4A LRIT (DVB-S2 QPSK 2/5)", 0, 2e6, 8.0, 90e3, 8, false}, Fy{"fy4b-lrit", "FY-4B LRIT (DVB-S2 QPSK 8/9)", 1, 2e6, 6.0, 120e3, 16, false},
-                           Fy{"fy4a-hrit", "FY-4A HRIT-II/III (DVB-S2 QPSK 5/6)", 2, 4e6, 3.0, 1e6, 16, false}, Fy{"fy2-svissr", "FY-2 S-VISSR (sync)", 3, 2.4e6, 8.0, 660e3, 16, false},
-                           Fy{"fy2-svissr-q", "FY-2 S-VISSR (BER under 2 %)", 3, 2.4e6, 8.0, 660e3, 16, true}}) {
+        for (const Fy f : {Fy{"fy4a-lrit", "FY-4A LRIT (DVB-S2 QPSK 2/5)", 0, 2e6, 12.0, 90e3, 8, false}, Fy{"fy4b-lrit", "FY-4B LRIT (DVB-S2 QPSK 8/9)", 1, 2e6, 10.0, 120e3, 16, false},
+                           Fy{"fy4a-hrit", "FY-4A HRIT-II/III (DVB-S2 QPSK 5/6)", 2, 4e6, 8.0, 1e6, 16, false}, Fy{"fy2-svissr", "FY-2 S-VISSR (sync)", 3, 2.4e6, 12.0, 660e3, 16, false},
+                           Fy{"fy2-svissr-q", "FY-2 S-VISSR (BER under 2 %)", 3, 2.4e6, 12.0, 660e3, 16, true}}) {
             Mode m = base(f.id, f.name, "satellite-weather", 234 + f.link, f.rate, f.secs, f.bw, fygeoMhz(f.link));
             m.snrHi = f.snrHi; m.maxJobs = 2;
             const int link = f.link; const double rate = f.rate;

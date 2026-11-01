@@ -95,7 +95,7 @@ struct FygeoReceiver::Impl {
     std::atomic<int> link{kFy4aLrit};
     std::atomic<double> symOverride{0};
     std::atomic<double> offset{0};
-    std::atomic<bool> resetReq{false};
+    std::atomic<bool> resetReq{false}, clearCur{false};
     double rate = 0, rateSet = 0;
     int64_t nIn = 0;
     double nextReport = 0;
@@ -104,10 +104,14 @@ struct FygeoReceiver::Impl {
 
     // ---- products
     mutable std::mutex bookMu;
-    std::vector<std::shared_ptr<goes::Product>> list;      // newest first
-    uint64_t nextId = 1;
+    struct Book {                                          // the products of one link (the four modes share this receiver, not their pictures)
+        std::vector<std::shared_ptr<goes::Product>> list;  // newest first
+        uint64_t nextId = 1;
+        std::map<std::string, std::weak_ptr<goes::Product>> groups;
+    };
+    Book books[kFygeoLinks];
+    Book& bk() { return books[link.load()]; }
     size_t maxProducts = 60;
-    std::map<std::string, std::weak_ptr<goes::Product>> groups;
     std::mutex cm;                        // the chains below (receiver thread callbacks and the analysis thread)
 
     // ---- FY-4 chain (the DVB-S2 receiver itself is the last member: its threads call back into everything above, so it must be destroyed first)
@@ -193,16 +197,17 @@ struct FygeoReceiver::Impl {
     // ------------------------------------------------------------ products
     void addProduct(const std::shared_ptr<goes::Product>& p) {
         std::lock_guard<std::mutex> lk(bookMu);
-        list.insert(list.begin(), p);
-        if (list.size() > maxProducts) list.resize(maxProducts);
+        Book& b = bk();
+        b.list.insert(b.list.begin(), p);
+        if (b.list.size() > maxProducts) b.list.resize(maxProducts);
     }
-    std::vector<std::shared_ptr<goes::Product>> products() const { std::lock_guard<std::mutex> lk(bookMu); return list; }
+    std::vector<std::shared_ptr<goes::Product>> products(int l = -1) const { std::lock_guard<std::mutex> lk(bookMu); return books[l < 0 ? link.load() : l].list; }
 
     std::shared_ptr<goes::Product> newImage(const std::string& name, int w, int h, int bpp, int kind, int segsTotal, double t) {
         auto p = std::make_shared<goes::Product>();
         {
             std::lock_guard<std::mutex> lk(bookMu);
-            p->id = nextId++;
+            p->id = bk().nextId++;
         }
         p->kind = kind;
         p->name = name;
@@ -279,9 +284,12 @@ struct FygeoReceiver::Impl {
         const int segW = ok ? dw : h.columns, segH = ok ? dh : h.lines;
         std::shared_ptr<goes::Product> prod;
         {
-            auto it = groups.find(key);
-            if (it != groups.end()) {
-                prod = it->second.lock();
+            {
+                std::lock_guard<std::mutex> bl(bookMu);
+                auto it = bk().groups.find(key);
+                if (it != bk().groups.end()) prod = it->second.lock();
+            }
+            {
                 if (prod) {
                     std::lock_guard<std::mutex> lk(prod->mu);
                     // a segment that is already in: this is the next picture of the series
@@ -306,10 +314,11 @@ struct FygeoReceiver::Impl {
                      rn ? " " : "", rn ? rn : "", t);
             const int kind = fn.ok && fn.region == "DISK" ? goes::KFullDisk : fn.ok && (fn.region == "REGC" || fn.region == "REGE") ? goes::KMeso : goes::KImage;
             prod = newImage(nm, segW, segH * segs, bpp ? bpp : h.bpp, kind, segs, now);
-            prod->vcid = vcid; prod->apid = apid;
-            prod->hdr.hasNav = h.hasNav; prod->hdr.projection = h.projection;
-            groups[key] = prod;
-            if (groups.size() > 64) { for (auto i = groups.begin(); i != groups.end();) i = i->second.expired() ? groups.erase(i) : std::next(i); }
+            { std::lock_guard<std::mutex> pl(prod->mu); prod->vcid = vcid; prod->apid = apid; prod->hdr.hasNav = h.hasNav; prod->hdr.projection = h.projection; }
+            std::lock_guard<std::mutex> bl(bookMu);
+            auto& gr = bk().groups;
+            gr[key] = prod;
+            if (gr.size() > 64) { for (auto i = gr.begin(); i != gr.end();) i = i->second.expired() ? gr.erase(i) : std::next(i); }
         }
         std::lock_guard<std::mutex> lk(prod->mu);
         prod->bytes += fileBytes;
@@ -474,7 +483,7 @@ struct FygeoReceiver::Impl {
             cfo += k * fs2 / kAcqFft / 2;
             setRot();
             resetCarrier();
-            acq = false; sinceAcq = 0; okAtAcq = svOk;
+            acq = false; sinceAcq = 0; okAtAcq = svSyncs;
         }
         std::fill(acqSpec.begin(), acqSpec.end(), 0.f);
         acqBlocks = 0;
@@ -483,7 +492,11 @@ struct FygeoReceiver::Impl {
     void svSymbol(cf32 v) {
         const cf32 z = v * cf32((float)std::cos(-cPhase), (float)std::sin(-cPhase));
         const float re = z.real(), im = z.imag();
-        const float e = (re >= 0 ? im : -im);
+        // phase error: the maximum-likelihood detector for BPSK, tanh(A re / sigma^2) im: a hard decision at high Es/N0, soft when the symbols are noisy
+        // (a hard decision loses about 1.5 dB of carrier loop SNR at Es/N0 = 0 dB, which is where the pulled-in loop used to let go)
+        const float a2 = std::max(1e-3f, meanRe2 - meanIm2), s2 = std::max(1e-3f, meanIm2);
+        const float kk = std::min(40.f, std::sqrt(a2) / s2);
+        const float e = std::tanh(kk * re) * im;
         cPhase += cAlpha * e + cFreq;
         cFreq += cBeta * e;
         if (cPhase > kPi) cPhase -= 2 * kPi; else if (cPhase < -kPi) cPhase += 2 * kPi;
@@ -497,14 +510,15 @@ struct FygeoReceiver::Impl {
             sinceAcq++;
             if (sinceAcq == 20000) { double a, b; loopGains(0.004, 0.707, a, b); cAlpha = a; cBeta = b; }
             if (sinceAcq > 30000) {
-                const bool l = lockM > 0.35f;
+                const bool l = lockM > 0.15f;
                 if (l != carrierLock) {
                     carrierLock = l;
                     if (l && !carrierReported) { carrierReported = true; char b[96]; snprintf(b, sizeof b, "S-VISSR: carrier locked, offset %.1f kHz", carrierHz() / 1000); addLog(b, true); }
                 }
-                lowLock = lockM < 0.2f ? lowLock + 1 : 0;
-                if (lowLock > 60000) { acq = true; carrierLock = false; lowLock = 0; resetBits(); }
-                if (!carrierLock && svOk == okAtAcq && sinceAcq > 160000) { rejected.push_back(cfo); acq = true; resetBits(); }
+                lowLock = lockM < 0.05f ? lowLock + 1 : 0;
+                if (lowLock > 150000) { acq = true; carrierLock = false; lowLock = 0; resetBits(); }
+                // never found a frame behind this line: try another (a DC spike or a symbol rate line)
+                if (!carrierLock && svSyncs == okAtAcq && sinceAcq > 600000) { rejected.push_back(cfo); acq = true; resetBits(); }
             }
         }
         // NRZ-M: a bit is 1 when the level changed
@@ -522,14 +536,14 @@ struct FygeoReceiver::Impl {
         rawSh = rawSh << 1 | bit;
         const uint8_t pb = (uint8_t)(((pn >> 14) ^ (pn >> 13)) & 1);
         pn = pn << 1 | pb;
-        if (bit == pb) { if (pnCount < 5000) pnCount++; }
-        else { pnCount -= 2; if (pnCount <= 0) { pnCount = 1; pn = rawSh; } }
+        if (bit == pb) { if (pnCount < 25000) pnCount += 5; }
+        else { pnCount -= 6; if (pnCount <= 0) { pnCount = 5; pn = rawSh; } }   // a follower in step stays in step up to a channel bit error ratio of 45 %; noise alone (50 %) loses it
         if (collecting) {
             frame[(size_t)(collected >> 3)] = (uint8_t)((frame[(size_t)(collected >> 3)] << 1) | bit);
             if (++collected == fygeo::kSvissrFrameBits) { collecting = false; collected = 0; svFrame(frame.data(), false); }
             return;
         }
-        if (pn != fygeo::kSvissrMarker || pnCount <= 1000) return;
+        if (pn != fygeo::kSvissrMarker || pnCount <= 4000) return;
         // a candidate: compare the 10000 bits behind it with the known preamble
         // (only the bits since the carrier loop had settled count: a frame that starts while it was still pulling in must not count its first bits)
         const size_t nb = std::min<size_t>(hist.size(), (size_t)std::max<int64_t>(0, bitsLocked));
@@ -539,7 +553,7 @@ struct FygeoReceiver::Impl {
         const double ber = (double)mism / (double)nb;
         pnCount = 0;
         svSyncs++;
-        if (ber > 0.3) { svRej++; svBad++; return; }
+        if (ber > 0.42) { svRej++; svBad++; return; }
         berPre = berPre < 0 ? ber : 0.7 * berPre + 0.3 * ber;
         lastPreBer = ber;
         collecting = true; collected = 0;
@@ -561,11 +575,11 @@ struct FygeoReceiver::Impl {
         const int se = fygeo::svissrSpareErrors(f, &tot);
         const double dber = (double)se / std::max(1, tot);
         berData = berData < 0 ? dber : 0.8 * berData + 0.2 * dber;
-        if (c >= fygeo::kSvissrMaxLines || (descrambled ? false : lastPreBer > 0.3)) { svBad++; return; }
+        if (c >= fygeo::kSvissrMaxLines || (descrambled ? false : lastPreBer > 0.42)) { svBad++; return; }
         svOk++;
         if (descrambled || lastPreBer < 0.02) svUsable++;
         svLine = c;
-        svLine2(f, c);
+        if (descrambled || lastPreBer < 0.25) svLine2(f, c);   // above that the line counter is noise and the picture would get lines at random places
     }
 
     void svLine2(const uint8_t* f, int c) {
@@ -614,7 +628,7 @@ struct FygeoReceiver::Impl {
 #endif
         strftime(t, sizeof t, "%Y-%m-%d %H:%MZ", &g);
         svImages++;
-        for (int k = 0; k < 5; k++) {
+        for (int k = 4; k >= 0; k--) {   // the visible picture first: the list shows the newest on top, so IR1 comes first
             const bool vis = k == 4;
             const int w = vis ? fygeo::kSvissrVisWidth / 2 : fygeo::kSvissrIrWidth, h = vis ? fygeo::kSvissrMaxLines * 2 : fygeo::kSvissrMaxLines;
             char nm[160];
@@ -778,6 +792,7 @@ struct FygeoReceiver::Impl {
     void feed(const cf32* x, size_t n) {
         if (rateSet <= 0 || n == 0) return;
         if (resetReq.exchange(false)) doReset();
+        if (clearCur.exchange(false)) cur = SvImage();
         drainInbox();
         const int l = link.load();
         if (l == kFy2Svissr) svFeed(x, n);
@@ -841,15 +856,17 @@ bool FygeoReceiver::ready() const {
     return p_->s2 ? p_->s2->ready() : p_->rateSet > 0;
 }
 void FygeoReceiver::reset() { p_->resetReq = true; }
-void FygeoReceiver::clearProducts() {
+void FygeoReceiver::clearResults(int link) {
+    const int l = link < 0 ? p_->link.load() : std::max(0, std::min(kFygeoLinks - 1, link));
     {
         std::lock_guard<std::mutex> lk(p_->bookMu);
-        p_->list.clear();
-        p_->groups.clear();
+        p_->books[l].list.clear();
+        p_->books[l].groups.clear();
     }
-    p_->cur = Impl::SvImage();
-    { std::lock_guard<std::mutex> lk(p_->mu); p_->logLines.clear(); p_->pub.products.clear(); p_->pub.log.clear(); p_->pub.seq++; p_->seq = p_->pub.seq; }
+    if (l == kFy2Svissr) p_->clearCur = true;
+    if (l == p_->link.load()) { std::lock_guard<std::mutex> lk(p_->mu); p_->logLines.clear(); p_->pub.products.clear(); p_->pub.log.clear(); p_->pub.seq++; p_->seq = p_->pub.seq; }
 }
+void FygeoReceiver::clearProducts() { clearResults(-1); }
 void FygeoReceiver::feed(const cf32* x, size_t n) { p_->feed(x, n); }
 bool FygeoReceiver::telemetry(FygeoTelemetry& out, uint64_t lastSeq) {
     std::lock_guard<std::mutex> lk(p_->mu);
@@ -857,11 +874,10 @@ bool FygeoReceiver::telemetry(FygeoTelemetry& out, uint64_t lastSeq) {
     out = p_->pub;
     return true;
 }
-void FygeoReceiver::clearResults() { clearProducts(); }
-std::string FygeoReceiver::saveResults() const {
+std::string FygeoReceiver::saveResults(int link) const {
     std::vector<ProductRec> v;
     size_t total = 0;
-    for (const auto& q : p_->products()) {
+    for (const auto& q : p_->products(link)) {
         if (!q) continue;
         ProductRec r;
         r.id = q->id; r.kind = q->kind; r.vcid = q->vcid; r.apid = q->apid; r.hdr = q->hdr; r.name = q->name; r.startSec = q->startSec;
@@ -876,7 +892,8 @@ std::string FygeoReceiver::saveResults() const {
     }
     return results::pack(v);
 }
-bool FygeoReceiver::loadResults(const std::string& blob) {
+bool FygeoReceiver::loadResults(const std::string& blob, int link) {
+    const int l = link < 0 ? p_->link.load() : std::max(0, std::min(kFygeoLinks - 1, link));
     std::vector<ProductRec> v;
     if (!results::unpack(blob, v)) return false;
     std::vector<std::shared_ptr<goes::Product>> list;
@@ -891,14 +908,15 @@ bool FygeoReceiver::loadResults(const std::string& blob) {
     }
     {
         std::lock_guard<std::mutex> lk(p_->bookMu);
-        p_->list = std::move(list);
-        p_->nextId = std::max(p_->nextId, mx + 1);
-        p_->groups.clear();
+        p_->books[l].list = std::move(list);
+        p_->books[l].nextId = std::max(p_->books[l].nextId, mx + 1);
+        p_->books[l].groups.clear();
     }
+    if (l == kFy2Svissr) p_->clearCur = true;
     std::lock_guard<std::mutex> lk(p_->mu);
     p_->pub.seq++;
     p_->seq = p_->pub.seq;
-    p_->pub.products = p_->products();
+    if (l == p_->link.load()) p_->pub.products = p_->products();
     return true;
 }
 void FygeoReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->logCb = std::move(cb); }

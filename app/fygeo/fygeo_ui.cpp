@@ -154,8 +154,16 @@ void upload(const Product& p) {
     {
         std::lock_guard<std::mutex> lk(p.mu);
         if (p.w > 0 && p.h > 0) {
-            step = std::max(1, (std::max(p.w, p.h) + 4095) / 4096);
-            w = p.w / step; h = p.h / step;
+            // a picture that is still arriving (S-VISSR grows a line at a time over 25 minutes): only the lines received so far
+            int last = p.h;
+            if (!p.complete && p.rowsDone > 0) {
+                last = 0;
+                for (int y = p.h - 1; y >= 0; y--) if (p.rowDone[(size_t)y]) { last = y + 1; break; }
+                last = std::min(p.h, std::max(last, 8));
+            }
+            step = std::max(1, (std::max(p.w, last) + 4095) / 4096);
+            w = p.w / step; h = last / step;
+            if (h < 1) h = 1;
             px.resize((size_t)w * h);
             for (int y = 0; y < h; y++) {
                 const uint8_t* r = p.pix.data() + (size_t)y * step * p.w;
@@ -395,7 +403,8 @@ template <int L> void tuner(App& a, bool& retune) {
     sameLineIf(90 * gUi, 5 * gUi);
     ImGui::SetNextItemWidth(130 * gUi);
     char fmt[48];
-    snprintf(fmt, sizeof fmt, S.symKsym[L] > 0 ? "%%.3f ksym/s" : "auto (%.0f ksym/s)", dect2::fygeoSymbolRate(L) / 1e3);
+    if (S.symKsym[L] > 0) snprintf(fmt, sizeof fmt, "%%.3f ksym/s");
+    else snprintf(fmt, sizeof fmt, "auto (%.0f ksym/s)", dect2::fygeoSymbolRate(L) / 1e3);
     if (ImGui::InputFloat("##fysym", &S.symKsym[L], 0.f, 0.f, fmt)) {
         S.symKsym[L] = std::max(0.f, S.symKsym[L]);
         plat::prefs().setD(("fygeoSym" + std::to_string(L)).c_str(), S.symKsym[L]); plat::prefs().flush();
