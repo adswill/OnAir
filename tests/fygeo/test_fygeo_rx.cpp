@@ -21,7 +21,8 @@ static FygeoTelemetry run(int link, const SynthConfig& cfg, double rate, double 
     rx.setBlocking(true);
     rx.configure(rate);
     rx.setSignalOffset(offset);
-    std::unique_ptr<ModeSynth> syn = link == kFy2Svissr ? makeFy2SvissrSynth(cfg, rate) : link == kFy4bLrit ? makeFy4bLritSynth(cfg, rate) : link == kFy4aHrit ? makeFy4aHritSynth(cfg, rate) : makeFy4aLritSynth(cfg, rate);
+    SynthConfig sc2 = cfg; sc2.modeOpt[0] = link == kFy4bLrit ? 1 : 0;
+    std::unique_ptr<ModeSynth> syn = link == kFy2Svissr ? makeFy2SvissrSynth(cfg, rate) : link == kFy4bLrit ? makeFy4LritSynth(sc2, rate) : link == kFy4aHrit ? makeFy4aHritSynth(cfg, rate) : makeFy4LritSynth(sc2, rate);
     std::vector<cf32> buf(16384);
     unsigned s = 99;
     for (double done = 0; done < seconds * rate; done += (double)buf.size()) {

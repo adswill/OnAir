@@ -81,7 +81,7 @@ const std::set<std::string>& restrictedKnownKinds() {
     // 3.5 modes: blocked likewise (shortwave is a broadcast receiver like "general", but the web allow-list is the owner's call)
     "shortwave",
     // 3.6 modes: blocked likewise
-    "fy4alrit", "fy4blrit", "fy4ahrit", "fy2svissr",
+    "fy4lrit", "fy4ahrit", "fy2svissr",
     };
     return s;
 }

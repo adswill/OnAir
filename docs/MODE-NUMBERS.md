@@ -38,10 +38,9 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | LoRaWAN (all channels) | 200 | 202 | 201 | 160 | mode-lora-030 | |
 | LoRa satellites | 201 | 203 | 202 | 161 | mode-lora-030 | |
 | DME | 121 | 123 | 122 | 162 | (0.2.9) | poll slot was 110, shared with DGPS: moved in 3.0 |
-| FY-4A LRIT | 232 | 234 | 233 | 232 | feat36-fygeo | FengYun geostationary, one receiver (`rxFy_`) for the four entries, told apart by the active standard |
-| FY-4B LRIT | 233 | 235 | 234 | 233 | feat36-fygeo | |
-| FY-4A HRIT-II/III | 234 | 236 | 235 | 234 | feat36-fygeo | |
-| FY-2 S-VISSR | 235 | 237 | 236 | 235 | feat36-fygeo | |
+| FY-4 LRIT | 232 | 234 | 233 | 232 | feat36-fygeo | FengYun-4 LRIT, FY-4A (90 ksym/s) or FY-4B (120 ksym/s) as a choice; one receiver (`rxFy_`) for the three entries, told apart by the active standard |
+| FY-4A HRIT-II/III | 233 | 235 | 234 | 233 | feat36-fygeo | |
+| FY-2 S-VISSR | 234 | 236 | 235 | 234 | feat36-fygeo | |
 | PSK demodulator (BPSK / QPSK analyser) | 202 | 204 | 203 | 163 | issue-modes-030 | #282 |
 | PACTOR-I (monitor) | 203 | 205 | 204 | 164 | issue-modes-030 | #216 |
 | Flipper Zero Sub-GHz chat | 204 | 206 | 205 | 165 | (3.1) | row added with the 3.2 modes below |
@@ -60,6 +59,6 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 Protocol entries (a row with a subId, such as FT8 in HF digital or POCSAG in pagers) share their family on purpose; the test checks
 that each (family, subId) pair is unique instead.
 
-`kNumFamilies` = 236, `kPollSeqSlots` = 240.
+`kNumFamilies` = 235, `kPollSeqSlots` = 235.
 
 A new mode takes the next free family above the highest one in this table and the next free poll slot, and adds its row here.

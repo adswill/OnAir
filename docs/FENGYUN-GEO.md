@@ -4,10 +4,10 @@ Receive only. Four modes in "Satellite and navigation", one receiver (`FygeoRece
 
 | Mode | Family | Frequency | Signal | Needs |
 |---|---|---|---|---|
-| FY-4A LRIT | 232 | 1697 MHz | DVB-S2, QPSK 2/5, 90 ksym/s, roll-off 0.25 | dish about 1 m, LNA, 1.7 GHz filter |
-| FY-4B LRIT | 233 | 1697 MHz | DVB-S2, QPSK 8/9, 120 ksym/s | dish about 1 m, LNA, filter |
-| FY-4A HRIT-II/III | 234 | 1679 MHz | DVB-S2, QPSK 5/6, 1 Msym/s | dish 1.2 m or more, LNA, filter |
-| FY-2 S-VISSR | 235 | 1687.5 MHz | BPSK (NRZ-M, no error correction), 660 ksym/s, roll-off 0.5 | dish about 1.2 m, LNA, filter |
+| FY-4 LRIT, FY-4A | 232 (satellite choice) | 1697 MHz | DVB-S2, QPSK 2/5, 90 ksym/s, roll-off 0.25 | dish about 1 m, LNA, 1.7 GHz filter |
+| FY-4 LRIT, FY-4B | 232 (satellite choice) | 1697 MHz | DVB-S2, QPSK 8/9, 120 ksym/s | dish about 1 m, LNA, filter |
+| FY-4A HRIT-II/III | 233 | 1679 MHz | DVB-S2, QPSK 5/6, 1 Msym/s | dish 1.2 m or more, LNA, filter |
+| FY-2 S-VISSR | 234 | 1687.5 MHz | BPSK (NRZ-M, no error correction), 660 ksym/s, roll-off 0.5 | dish about 1.2 m, LNA, filter |
 
 FY-4A sits at 104.7 °E, FY-2G at 105 °E and FY-2H at 79 °E; the screens do not claim more (FY-4B drifts; check where it is). Everything is received, nothing is sent.
 
@@ -35,7 +35,7 @@ S-VISSR has no code: the bit error ratio against Es/N0 matches coherent differen
 
 ## Test signals
 
-`makeFy4aLritSynth`, `makeFy4bLritSynth`, `makeFy4aHritSynth`, `makeFy2SvissrSynth` (`fygeo_gen.h`), SynthConfig: snrDb (Es/N0), cfoHz, sroPpm, modeVal[0] (symbol rate). FY-4: two AGRI channels (C02, C12) of a full disk picture in two 12 bit JPEG 2000 segments each, a text message, a new picture every round, through the real layers into the DVB-S2 transmitter chain of the DVB-S/S2 mode. FY-2: a test picture on eight scan lines, each behind its PN preamble, scrambled, NRZ-M coded, BPSK. `--mode fy4alrit` (also `fy4blrit`, `fy4ahrit`, `fy2svissr`) with the synthetic source plays them.
+`makeFy4LritSynth` (SynthConfig::modeOpt[0]: 0 FY-4A, 1 FY-4B), `makeFy4aHritSynth`, `makeFy2SvissrSynth` (`fygeo_gen.h`), SynthConfig: snrDb (Es/N0), cfoHz, sroPpm, modeVal[0] (symbol rate). FY-4: two AGRI channels (C02, C12) of a full disk picture in two 12 bit JPEG 2000 segments each, a text message, a new picture every round, through the real layers into the DVB-S2 transmitter chain of the DVB-S/S2 mode. FY-2: a test picture on eight scan lines, each behind its PN preamble, scrambled, NRZ-M coded, BPSK. `--mode fy4alrit` (also `fy4blrit`, `fy4ahrit`, `fy2svissr`) with the synthetic source plays them.
 
 ## Not verified
 
