@@ -940,3 +940,6 @@ Eleven tests failed on integ-35 after the merges. automation::familyOf had no "m
 
 ## 2026-11-01: Sensitivity against theory (feat36-sens)
 Owner goal for 3.6: much more decoder sensitivity. Step 1: swept 13 modes with the existing sens_sweep harness (AWGN, full tier) and wrote docs/SENSITIVITY-3.6.md with floor, rough theory and gap; added harness modes drm16 (DRM30 16-QAM level 0, floor 9 dB) and drmE (DRM+ 4-QAM, floor 2 to 3 dB). Single-transmitter modes are within about 1 dB of theory; big gaps are multi-transmitter test mixes (AIS, ACARS, ADS-B). Step 2 attempt: DRM common phase error from the frequency pilots (phase noise scenario): no gain, inter-carrier interference dominates, reverted. No receiver code changed.
+
+## 2026-11-01 sensitivity second pass
+One-transmitter harness modes adsb1/ais1/acars1 show the ADS-B and AIS gaps were the test mix. ACARS bit-clock gain 0.04 -> 0.015 and reference memory 0.97 gained about 1 dB (1 aircraft), see docs/SENSITIVITY-3.6.md. APRS and FM RDS unchanged.
