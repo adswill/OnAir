@@ -2,6 +2,7 @@
 #include "wefax_gallery.h"
 #include "platform/platform.h"
 #include "dect2/marine/wefax_archive.h"
+#include "dect2/marine/wefax_rotate.h"
 #include "dect2/marine/marine_wefax_stations.h"
 #include "dect2/engine/updater.h"
 #include <algorithm>
@@ -152,6 +153,29 @@ void makeThumb(const std::string& base) {
     t.w = tw; t.h = th;
 }
 
+// Turns a saved chart on disk by `turns` quarter turns clockwise: the PNG is rewritten, the side-car gets the new size, the thumbnail goes
+void rotateSaved(const std::string& base, int turns) {
+    int w = 0, h = 0; std::vector<uint32_t> px;
+    const fs::path png = P(folder()) / P(base + ".png");
+    if (!plat::decodeImage(U(png), w, h, px) || w <= 0 || h <= 0) { g.msg = "could not read the picture"; return; }
+    FaxImage grey;
+    grey.pix.resize(px.size());
+    for (size_t i = 0; i < px.size(); i++) grey.pix[i] = (uint8_t)(px[i] & 0xFF);
+    FaxImage o;
+    wefaxRotate(grey.pix.data(), w, h, turns, o.pix, o.width, o.height);
+    const fs::path tmp = P(folder()) / P(base + ".rot.png");
+    if (!writeGreyPng(tmp, o)) { g.msg = "could not write the rotated picture"; return; }
+    std::error_code ec;
+    fs::rename(tmp, png, ec);
+    if (ec) { fs::remove(tmp, ec); g.msg = "could not replace the picture"; return; }
+    auto mi = g.meta.find(base);
+    if (mi != g.meta.end()) { mi->second.width = o.width; mi->second.height = o.height; writeMeta(base); }
+    g.thumbs.erase(base);
+    g.bigBase.clear();                  // reloaded by the big view
+    g.msg = "rotated";
+    g.dirty = true;
+}
+
 std::string when(long long t) {
     char b[40]; const time_t tt = (time_t)t; struct tm tmv;
 #ifdef _WIN32
@@ -187,6 +211,13 @@ void bigView(App&) {
             g.msg = ec ? "could not write " + out : "saved " + out;
         }
     }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Rotate right")) { rotateSaved(g.sel, 1); return; }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Turn this saved chart 90 degrees clockwise. The PNG on disk is rewritten.");
+    ImGui::SameLine();
+    if (ImGui::SmallButton("left")) { rotateSaved(g.sel, 3); return; }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("180")) { rotateSaved(g.sel, 2); return; }
     ImGui::SameLine();
     if (ImGui::SmallButton("Copy path")) ImGui::SetClipboardText(U(P(folder()) / P(g.sel + ".png")).c_str());
     ImGui::SameLine();
