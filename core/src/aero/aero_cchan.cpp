@@ -1,4 +1,4 @@
-// Inmarsat Aero C channel framing and coding (aero_cchan.h). Follows JAERO's AeroL::DecodeC (GPL-3, Jonti Olds, see THIRD_PARTY.md).
+// Inmarsat Aero C channel framing and coding (aero_cchan.h). Follows JAERO's AeroL::DecodeC (MIT, Jonti Olds, see THIRD_PARTY.md).
 #include "dect2/aero/aero_cchan.h"
 #include <algorithm>
 #include <cmath>

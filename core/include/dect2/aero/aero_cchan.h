@@ -1,5 +1,5 @@
 // Inmarsat Aero C channel (circuit-mode voice, ground station to aircraft): the layer between the 8400 bit/s OQPSK soft bits and the
-// coded voice frames. Every constant and every step follows JAERO (github.com/jontio/JAERO, GPL-3, Jonti Olds): AeroL::DecodeC and
+// coded voice frames. Every constant and every step follows JAERO (github.com/jontio/JAERO, MIT, Jonti Olds): AeroL::DecodeC and
 // AeroL::setSettings in aerol.cpp, AeroLScrambler in aerol.h, PuncturedCode::depunture_soft_block, the 8400 settings of
 // oqpskdemodulator.cpp (root raised cosine, roll-off 0.6). The signal-unit types come from the same file (AEROTypeC).
 //

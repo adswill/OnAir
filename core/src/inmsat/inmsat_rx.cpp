@@ -57,6 +57,7 @@ void InmsatReceiver::feed(const cf32* x, size_t n) {
     p_->cache.voiceMessage = vs.message;
     p_->cache.activeCalls = vs.activeCalls;
     p_->cache.voice = vs.channels;
+    p_->cache.callHistory = vs.history;
     p_->cache.inputRate = p_->rate;
     p_->have = true;
 }
