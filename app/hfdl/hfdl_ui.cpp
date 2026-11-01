@@ -565,6 +565,9 @@ void receiver(App& a) {
     kv("centre", "%.4f MHz, %d of %zu channels in the band, %d active", t.centerHz / 1e6, inBand, t.channels.size(), act);
     kv("rates", "%.0f kS/s in, 7.2 kS/s per channel (4 samples per symbol, 1800 baud)", t.inputRate / 1e3);
     kv("bursts", "%llu preambles, %llu failed", (unsigned long long)bursts, (unsigned long long)t.blocksBad);
+    kv("why bad", "preamble not confirmed %llu, burst FEC/check failed %llu (squitter %llu, MPDU header %llu, short %llu), LPDU check %llu, LPDU type unknown %llu",
+       (unsigned long long)t.whyPreambleRejected, (unsigned long long)(t.whySpduFcs + t.whyMpduFcs + t.whyShort), (unsigned long long)t.whySpduFcs,
+       (unsigned long long)t.whyMpduFcs, (unsigned long long)t.whyShort, (unsigned long long)t.whyLpduFcs, (unsigned long long)t.whyUnknownLpdu);
     kv("PDUs", "%llu good: %llu squitters, %llu LPDUs, %llu ACARS", (unsigned long long)t.blocksOk, (unsigned long long)t.squitters, (unsigned long long)t.lpdus, (unsigned long long)t.acarsMsgs);
     kv("by rate", "300: %llu  600: %llu  1200: %llu  1800: %llu", (unsigned long long)t.byRate[0], (unsigned long long)t.byRate[1], (unsigned long long)t.byRate[2], (unsigned long long)t.byRate[3]);
     kv("last burst", "%+.1f Hz from the channel, SNR %.1f dB", t.cfoHz, t.snrDb);
