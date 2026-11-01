@@ -34,7 +34,9 @@ struct State {
     int filter = 0;
     bool follow = true;
     uint64_t selId = 0;
-    int appliedRate[4] = {-1, -1, -1, -1};
+    int appliedRate[3] = {-1, -1, -1};
+    int sat = 0;                               // the LRIT mode's satellite: 0 FY-4A, 1 FY-4B
+    bool satApplied = false;
     float symKsym[4] = {0, 0, 0, 0};          // custom symbol rate (ksym/s) a link; 0 = the link's own
     gfx::Image* tex = nullptr;
     uint64_t texId = 0, texVersion = 0;
@@ -51,10 +53,13 @@ void loadState() {
     S.loaded = true;
     S.autoSave = plat::prefs().getB("fygeoAutoSave", true);
     S.filter = std::clamp((int)plat::prefs().getI("fygeoFilter", 0), 0, 2);
+    S.sat = std::clamp((int)plat::prefs().getI("fygeoSat", 0), 0, 1);
     for (int l = 0; l < 4; l++) S.symKsym[l] = (float)plat::prefs().getD(("fygeoSym" + std::to_string(l)).c_str(), 0.0);
 }
 
-template <int L> bool live(const App& a) { return a.rx.standard == 233 + L; }   // family 232 + L, active standard family + 1
+// F: the mode (0 FY-4 LRIT, 1 FY-4A HRIT-II/III, 2 FY-2 S-VISSR; family 232 + F, active standard 233 + F). The link (the satellite of the LRIT mode) comes from the receiver.
+template <int F> bool live(const App& a) { return a.rx.standard == 233 + F; }
+template <int F> int linkNow(const App& a) { return F == 0 ? (live<F>(a) ? a.rx.fygeo.link : S.sat) : F == 1 ? dect2::kFy4aHrit : dect2::kFy2Svissr; }
 
 double nowSec() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
 
@@ -227,10 +232,11 @@ const char* const kDish[4] = {
 };
 const char* const kSat[4] = {"FY-4A, 104.7°E", "FY-4B", "FY-4A, 104.7°E", "FY-2G 105°E / FY-2H 79°E"};
 
-template <int L> void tab(App& a) {
+template <int F> void tab(App& a) {
     loadState();
     const FygeoTelemetry& t = a.rx.fygeo;
-    const bool on = live<L>(a);
+    const bool on = live<F>(a);
+    const int L = linkNow<F>(a);
     if (on) autoSave(t);
     ImGui::SetNextItemWidth(std::min(150 * gUi, ImGui::GetContentRegionAvail().x));
     if (ImGui::Combo("##fyf", &S.filter, kFilters, 3)) { plat::prefs().setI("fygeoFilter", S.filter); plat::prefs().flush(); }
@@ -264,9 +270,9 @@ template <int L> void tab(App& a) {
     showProduct(a, *sel);
 }
 
-template <int L> void list(App& a) {
+template <int F> void list(App& a) {
     loadState();
-    if (!live<L>(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
+    if (!live<F>(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const FygeoTelemetry& t = a.rx.fygeo;
     if (t.products.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("no products yet"); ImGui::PopTextWrapPos(); return; }
     if (!ImGui::BeginTable("##fyl", 3, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY)) return;
@@ -294,9 +300,10 @@ template <int L> void list(App& a) {
     ImGui::EndTable();
 }
 
-template <int L> void receiver(App& a) {
-    if (!live<L>(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
+template <int F> void receiver(App& a) {
+    if (!live<F>(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const FygeoTelemetry& t = a.rx.fygeo;
+    const int L = t.link;
     kvRow(a, "state", "%s", dect2::fygeoSummary(t).c_str());
     if (!t.hint.empty()) {
         ImGui::TextDisabled("Why nothing decodes yet"); kvColumn(130 * gUi);
@@ -304,7 +311,7 @@ template <int L> void receiver(App& a) {
     }
     kvRow(a, "satellite", "%s", kSat[L]);
     kvRow(a, "link", "%s, %.4g MHz, %s", dect2::fygeoLinkName(L), dect2::fygeoMhz(L), dect2::fygeoModcodName(L));
-    kvRow(a, "carrier", "offset %+.2f kHz, %s, Es/N0 %.1f dB (ideal threshold %.1f dB)", t.cfoHz / 1e3, t.carrierLock ? "locked" : "searching", t.snrDb, dect2::fygeoIsS2(L) ? dect2::fygeoIdealEsN0(L) : dect2::fygeoIdealEsN0(L));
+    kvRow(a, "carrier", "offset %+.2f kHz, %s, Es/N0 %.1f dB (ideal threshold %.1f dB)", t.cfoHz / 1e3, t.carrierLock ? "locked" : "searching", t.snrDb, dect2::fygeoIdealEsN0(L));
     if (dect2::fygeoIsS2(L)) {
         kvRow(a, "DVB-S2", "%s", t.signalInfo.c_str());
         kvRow(a, "lock stages", "spectrum %s, timing %s, carrier %s, frames %s, LDPC/BCH %s, TS %s", t.s2Spectrum ? "yes" : "no", t.s2Timing ? "yes" : "no", t.s2Carrier ? "yes" : "no",
@@ -329,9 +336,9 @@ template <int L> void receiver(App& a) {
     }
 }
 
-template <int L> void panels(App& a) {
+template <int F> void panels(App& a) {
     std::vector<cf32> pts;
-    if (live<L>(a)) pts = a.rx.fygeo.constellation;
+    if (live<F>(a)) pts = a.rx.fygeo.constellation;
     const float H = ImGui::GetContentRegionAvail().y;
     const float sz = std::max(50.f, H - ImGui::GetTextLineHeightWithSpacing() - 6);
     ImGui::BeginGroup();
@@ -340,14 +347,14 @@ template <int L> void panels(App& a) {
     ImGui::EndGroup();
 }
 
-template <int L> void status(App& a) {
-    const bool run = a.engine.running(), on = live<L>(a);
+template <int F> void status(App& a) {
+    const bool run = a.engine.running(), on = live<F>(a);
     const SignalStats& st = a.spec.stats;
     const AdcStatus adc = classifyAdc(st.rmsDbfs, st.peak, st.clipFraction);
     const FygeoTelemetry& t = a.rx.fygeo;
     lamp("IQ", run ? (adc == AdcStatus::Overload ? 3 : (adc == AdcStatus::Good ? 1 : 2)) : 0, (int)Ic::Wave); flowNext(12 * gUi);
     lamp("Carrier", !on ? 0 : t.state >= 1 ? 1 : 0); flowNext(10 * gUi);
-    lamp(dect2::fygeoIsS2(L) ? "DVB-S2" : "Sync", !on ? 0 : t.state >= 2 ? 1 : 0); flowNext(10 * gUi);
+    lamp(F < 2 ? "DVB-S2" : "Sync", !on ? 0 : t.state >= 2 ? 1 : 0); flowNext(10 * gUi);
     lamp("Data", !on ? 0 : t.state >= 3 ? 1 : t.state == 2 ? 2 : 0); flowNext(10 * gUi);
     ImGui::TextDisabled("|"); flowNext(10 * gUi);
     ImGui::AlignTextToFramePadding();
@@ -355,9 +362,9 @@ template <int L> void status(App& a) {
     ImGui::PushFont(a.mono, 0); ImGui::TextUnformatted(!on ? (run ? "starting" : "stopped") : dect2::fygeoSummary(t).c_str()); ImGui::PopFont();
 }
 
-template <int L> void summary(const App& a, std::string& l1, std::string& l2) {
-    l1 = dect2::fygeoLinkName(L);
-    if (live<L>(a)) l2 = dect2::fygeoSummary(a.rx.fygeo);
+template <int F> void summary(const App& a, std::string& l1, std::string& l2) {
+    l1 = dect2::fygeoLinkName(linkNow<F>(a));
+    if (live<F>(a)) l2 = dect2::fygeoSummary(a.rx.fygeo);
 }
 
 void galleryPublish(const FygeoTelemetry& t) {
@@ -376,26 +383,43 @@ void galleryPublish(const FygeoTelemetry& t) {
     }
 }
 
-template <int L> void tick(App& a) {
+template <int F> void tick(App& a) {
     loadState();
-    if (S.appliedRate[L] != (int)S.symKsym[L] * 1000 + 1) {
+    if (F == 0 && !S.satApplied) { a.engine.fygeo().setLritSatellite(S.sat); a.tune.synth.modeOpt[0] = S.sat; S.satApplied = true; }
+    const int L = linkNow<F>(a);
+    if (S.appliedRate[F] != L * 1000000 + (int)(S.symKsym[L] * 10) + 1) {
         a.engine.fygeo().setSymbolRate((double)S.symKsym[L] * 1e3);
-        S.appliedRate[L] = (int)S.symKsym[L] * 1000 + 1;
+        S.appliedRate[F] = L * 1000000 + (int)(S.symKsym[L] * 10) + 1;
     }
-    if (live<L>(a)) { autoSave(a.rx.fygeo); galleryPublish(a.rx.fygeo); }
+    if (live<F>(a)) { autoSave(a.rx.fygeo); galleryPublish(a.rx.fygeo); }
 }
 
-template <int L> void tuner(App& a, bool& retune) {
+template <int F> void tuner(App& a, bool& retune) {
     loadState();
+    if (F == 0) {
+        ImGui::TextDisabled("Satellite");
+        sameLineIf(90 * gUi, 5 * gUi);
+        ImGui::SetNextItemWidth(250 * gUi);
+        const char* const sats[] = {"FY-4A (90 ksym/s, QPSK 2/5)", "FY-4B (120 ksym/s, QPSK 8/9)"};
+        if (ImGui::Combo("##fysat", &S.sat, sats, 2)) {
+            plat::prefs().setI("fygeoSat", S.sat); plat::prefs().flush();
+            a.engine.fygeo().setLritSatellite(S.sat);
+            a.tune.synth.modeOpt[0] = S.sat;       // the built-in test signal follows
+            retune = true;
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("FY-4A sends LRIT as DVB-S2 QPSK 2/5 at 90 ksym/s, FY-4B as QPSK 8/9 at 120 ksym/s (both around 1697 MHz). The symbol rate follows the choice.");
+        flowNext(12 * gUi);
+    }
+    const int L = linkNow<F>(a);
     ImGui::TextDisabled("Frequency");
     sameLineIf(90 * gUi, 5 * gUi);
     char lab[32];
     snprintf(lab, sizeof lab, "%.4g MHz", dect2::fygeoMhz(L));
     if (ImGui::Button(lab)) { tuneFreq(a, dect2::fygeoMhz(L)); retune = true; }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", kDish[L]);
-    if (L < 3) {
+    if (F < 2) {
         flowNext(8 * gUi);
-        if (ImGui::Button(L == 2 ? "1697 MHz (LRIT)" : "1679 MHz (HRIT)")) { tuneFreq(a, L == 2 ? 1697.0 : 1679.0); retune = true; }
+        if (ImGui::Button(F == 1 ? "1697 MHz (LRIT)" : "1679 MHz (HRIT)")) { tuneFreq(a, F == 1 ? 1697.0 : 1679.0); retune = true; }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("FengYun-4 sends LRIT around 1697 MHz and HRIT around 1679 MHz");
     }
     flowNext(12 * gUi);
@@ -408,14 +432,15 @@ template <int L> void tuner(App& a, bool& retune) {
     if (ImGui::InputFloat("##fysym", &S.symKsym[L], 0.f, 0.f, fmt)) {
         S.symKsym[L] = std::max(0.f, S.symKsym[L]);
         plat::prefs().setD(("fygeoSym" + std::to_string(L)).c_str(), S.symKsym[L]); plat::prefs().flush();
-        a.engine.fygeo().setSymbolRate((double)S.symKsym[L] * 1e3); S.appliedRate[L] = (int)S.symKsym[L] * 1000 + 1;
+        a.engine.fygeo().setSymbolRate((double)S.symKsym[L] * 1e3); S.appliedRate[F] = L * 1000000 + (int)(S.symKsym[L] * 10) + 1;
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("0 = the link's own rate, found automatically. Type a rate in ksym/s only when a satellite changes it; there is no limit.");
     flowEnd();
 }
 
-template <int L> void meters(const App& a, std::vector<ModeMeter>& out) {
+template <int F> void meters(const App& a, std::vector<ModeMeter>& out) {
     const FygeoTelemetry& t = a.rx.fygeo;
+    const int L = linkNow<F>(a);
     const double ideal = dect2::fygeoIdealEsN0(L);
     out.push_back({"Es/N0  dB", "%.1f", t.snrDb, -5, 20, t.snrDb >= ideal + 3 ? 1 : t.snrDb >= ideal ? 2 : 3});
     if (dect2::fygeoIsS2(L)) {
@@ -428,23 +453,22 @@ template <int L> void meters(const App& a, std::vector<ModeMeter>& out) {
 
 } // namespace
 
-#define FY_UI(NAME, L, TITLE) \
+#define FY_UI(NAME, F) \
     extern const ModeUi NAME; \
     const ModeUi NAME = { \
         .sideTitle = "PRODUCTS", \
         .tabName = "Products", \
         .tabIcon = Ic::Camera, \
-        .tab = tab<L>, \
-        .receiver = receiver<L>, \
-        .list = list<L>, \
-        .panels = panels<L>, \
-        .status = status<L>, \
-        .summary = summary<L>, \
-        .tuner = tuner<L>, \
-        .tick = tick<L>, \
-        .meters = meters<L>, \
+        .tab = tab<F>, \
+        .receiver = receiver<F>, \
+        .list = list<F>, \
+        .panels = panels<F>, \
+        .status = status<F>, \
+        .summary = summary<F>, \
+        .tuner = tuner<F>, \
+        .tick = tick<F>, \
+        .meters = meters<F>, \
     }
-FY_UI(kFy4aLritUi, 0, "FY-4A LRIT");
-FY_UI(kFy4bLritUi, 1, "FY-4B LRIT");
-FY_UI(kFy4aHritUi, 2, "FY-4A HRIT-II/III");
-FY_UI(kFy2SvissrUi, 3, "FY-2 S-VISSR");
+FY_UI(kFy4LritUi, 0);
+FY_UI(kFy4aHritUi, 1);
+FY_UI(kFy2SvissrUi, 2);

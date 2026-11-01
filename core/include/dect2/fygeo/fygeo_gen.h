@@ -1,6 +1,6 @@
 // FengYun geostationary test signals. Nothing is transmitted: the samples only exist in memory or in a file.
 //
-// FY-4A LRIT / FY-4B LRIT / FY-4A HRIT-II/III (makeFy4aLritSynth ...): xRIT files in FY-4's header dialect (two AGRI channels of a full disk picture in two
+// FY-4 LRIT (FY-4A, FY-4B: modeOpt[0]) / FY-4A HRIT-II/III (makeFy4LritSynth ...): xRIT files in FY-4's header dialect (two AGRI channels of a full disk picture in two
 // JPEG 2000 segments each, a second picture round after the first with a later time, and a text message) -> LRIT transport files -> CP_PDUs -> M_PDUs ->
 // VCDUs of 1020 bytes (fill VCDUs between rounds) -> CADUs with the sync word -> transport stream packets on a PID -> the DVB-S2 transmitter
 // chain of the DVB-S/S2 mode (QPSK 2/5 at 90 ksym/s, QPSK 8/9 at 120 ksym/s, QPSK 5/6 at 1 Msym/s; roll-off 0.25) with the noise, carrier and clock offsets of
@@ -9,7 +9,7 @@
 // FY-2 S-VISSR (makeFy2SvissrSynth): scan lines of IR1 - IR4 and VIS (a test picture) in S-VISSR frames, each behind its PN preamble, scrambled,
 // NRZ-M coded, BPSK at 660 ksym/s with a root raised cosine pulse (roll-off 0.5).
 //
-// SynthConfig: snrDb (Es/N0), cfoHz, sroPpm.
+// SynthConfig: snrDb (Es/N0), cfoHz, sroPpm, modeOpt[0] (LRIT: 0 FY-4A, 1 FY-4B), modeVal[0] (symbol rate).
 #pragma once
 #include "dect2/engine/mode_synth.h"
 #include "dect2/fygeo/fygeo_proto.h"
@@ -87,8 +87,7 @@ private:
     std::unique_ptr<Impl> p_;
 };
 
-std::unique_ptr<ModeSynth> makeFy4aLritSynth(const SynthConfig& cfg, double sampleRate);
-std::unique_ptr<ModeSynth> makeFy4bLritSynth(const SynthConfig& cfg, double sampleRate);
+std::unique_ptr<ModeSynth> makeFy4LritSynth(const SynthConfig& cfg, double sampleRate);    // SynthConfig::modeOpt[0]: 0 FY-4A, 1 FY-4B
 std::unique_ptr<ModeSynth> makeFy4aHritSynth(const SynthConfig& cfg, double sampleRate);
 std::unique_ptr<ModeSynth> makeFy2SvissrSynth(const SynthConfig& cfg, double sampleRate);
 

@@ -29,6 +29,8 @@ public:
     void configure(double inputRateHz);
     void setLink(int link);                 // 0 FY-4A LRIT, 1 FY-4B LRIT, 2 FY-4A HRIT-II/III, 3 FY-2 S-VISSR
     int link() const;
+    void setLritSatellite(int sat);         // the satellite of the LRIT mode: 0 FY-4A (90 ksym/s), 1 FY-4B (120 ksym/s); a running LRIT receiver switches at once
+    int lritSatellite() const;
     void setSymbolRate(double hz);          // 0 = the link's own (90 / 120 / 1000 / 660 ksym/s); anything else is used as given
     double symbolRate() const;
     void setSignalOffset(double hz);        // S-VISSR: where the carrier is expected; the FY-4 DVB-S2 receiver finds its own carrier
@@ -58,8 +60,7 @@ private:
     std::unique_ptr<Impl> p_;
 };
 
-ModeTuning fy4aLritTuning();
-ModeTuning fy4bLritTuning();
+ModeTuning fy4LritTuning();
 ModeTuning fy4aHritTuning();
 ModeTuning fy2SvissrTuning();
 

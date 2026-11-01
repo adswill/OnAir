@@ -293,8 +293,7 @@ private:
 };
 } // namespace
 
-std::unique_ptr<ModeSynth> makeFy4aLritSynth(const SynthConfig& cfg, double sampleRate) { return sampleRate > 0 ? std::make_unique<Fy4Synth>(cfg, sampleRate, kFy4aLrit) : nullptr; }
-std::unique_ptr<ModeSynth> makeFy4bLritSynth(const SynthConfig& cfg, double sampleRate) { return sampleRate > 0 ? std::make_unique<Fy4Synth>(cfg, sampleRate, kFy4bLrit) : nullptr; }
+std::unique_ptr<ModeSynth> makeFy4LritSynth(const SynthConfig& cfg, double sampleRate) { return sampleRate > 0 ? std::make_unique<Fy4Synth>(cfg, sampleRate, cfg.modeOpt[0] ? kFy4bLrit : kFy4aLrit) : nullptr; }
 std::unique_ptr<ModeSynth> makeFy4aHritSynth(const SynthConfig& cfg, double sampleRate) { return sampleRate > 0 ? std::make_unique<Fy4Synth>(cfg, sampleRate, kFy4aHrit) : nullptr; }
 std::unique_ptr<ModeSynth> makeFy2SvissrSynth(const SynthConfig& cfg, double sampleRate) { return sampleRate > 0 ? std::make_unique<SvissrSynth>(cfg, sampleRate) : nullptr; }
 

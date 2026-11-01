@@ -11,8 +11,11 @@
 
 namespace dect2 {
 
-// The links, in the order of the mode list (families 232 - 235)
+// The four links. The mode list has three entries (families 232 FY-4 LRIT, 233 FY-4A HRIT-II/III, 234 FY-2 S-VISSR; active standards 233 - 235): the LRIT entry
+// has a satellite choice, FY-4A (90 ksym/s) or FY-4B (120 ksym/s)
 enum FygeoLink { kFy4aLrit = 0, kFy4bLrit = 1, kFy4aHrit = 2, kFy2Svissr = 3, kFygeoLinks = 4 };
+// the link of an active standard (233 - 235), -1 for any other; lritSat 0 FY-4A, 1 FY-4B
+inline int fygeoLinkOfActive(int active, int lritSat) { return active == 233 ? (lritSat ? kFy4bLrit : kFy4aLrit) : active == 234 ? kFy4aHrit : active == 235 ? kFy2Svissr : -1; }
 
 inline const char* fygeoLinkName(int link) {
     switch (link) {

@@ -93,6 +93,7 @@ struct FygeoReceiver::Impl {
     std::function<void(const uint8_t*)> caduCb, frameCb;
     std::deque<std::vector<uint8_t>> inbox;
     std::atomic<int> link{kFy4aLrit};
+    std::atomic<int> lritSat{0};
     std::atomic<double> symOverride{0};
     std::atomic<double> offset{0};
     std::atomic<bool> resetReq{false}, clearCur{false};
@@ -840,6 +841,12 @@ void FygeoReceiver::setLink(int link) {
     if (r > 0) configure(r);
 }
 int FygeoReceiver::link() const { return p_->link.load(); }
+void FygeoReceiver::setLritSatellite(int sat) {
+    sat = sat ? 1 : 0;
+    p_->lritSat = sat;
+    if (p_->link.load() == kFy4aLrit || p_->link.load() == kFy4bLrit) setLink(sat ? kFy4bLrit : kFy4aLrit);
+}
+int FygeoReceiver::lritSatellite() const { return p_->lritSat.load(); }
 void FygeoReceiver::setSymbolRate(double hz) {
     p_->symOverride = hz > 1000 ? hz : 0;
     const double r = p_->rateSet;
@@ -941,9 +948,8 @@ ModeTuning fyTuning(int stdMode, const char* id, const char* name, double mhz, d
     return t;
 }
 } // namespace
-ModeTuning fy4aLritTuning() { return fyTuning(234, "fy4alrit", "FY-4A LRIT", 1697.0, 2000000, 0.3, 250000); }       // family 232 + 2
-ModeTuning fy4bLritTuning() { return fyTuning(235, "fy4blrit", "FY-4B LRIT", 1697.0, 2000000, 0.3, 250000); }       // family 233 + 2
-ModeTuning fy4aHritTuning() { return fyTuning(236, "fy4ahrit", "FY-4A HRIT-II/III", 1679.0, 4000000, 1.5, 1500000); }   // family 234 + 2
-ModeTuning fy2SvissrTuning() { return fyTuning(237, "fy2svissr", "FY-2 S-VISSR", 1687.5, 2400000, 1.0, 1000000); }   // family 235 + 2
+ModeTuning fy4LritTuning() { return fyTuning(234, "fy4lrit", "FY-4 LRIT", 1697.0, 2000000, 0.3, 250000); }            // family 232 + 2: FY-4A or FY-4B
+ModeTuning fy4aHritTuning() { return fyTuning(235, "fy4ahrit", "FY-4A HRIT-II/III", 1679.0, 4000000, 1.5, 1500000); }   // family 233 + 2
+ModeTuning fy2SvissrTuning() { return fyTuning(236, "fy2svissr", "FY-2 S-VISSR", 1687.5, 2400000, 1.0, 1000000); }   // family 234 + 2
 
 } // namespace dect2

@@ -54,7 +54,7 @@ static void svissrChecks(const FygeoTelemetry& t, const char* what, int minFrame
     if (t.svFrames < 2) return;
     int checked = 0, bad = 0;
     for (int k = 0; k < 5; k++) {
-        const char* nm[5] = {"IR1", "IR2", "IR3", "IR4", "VIS"};
+        const char* nm[5] = {"IR1 10.8", "IR2 12", "IR3 6.75", "IR4 3.75", "VIS 0.725"};
         auto p = find(t, nm[k]);
         CHECK(p != nullptr, "%s: %s picture missing", what, nm[k]);
         if (!p) continue;
@@ -67,7 +67,7 @@ static void svissrChecks(const FygeoTelemetry& t, const char* what, int minFrame
                 svissrTestLine(line, ir[0].data(), ir[1].data(), ir[2].data(), ir[3].data(), vis.data());
                 int diff = 0;
                 for (int x = 0; x < fygeo::kSvissrIrWidth; x++) diff += p->pix[(size_t)line * p->w + (size_t)x] != ir[k][(size_t)x];
-                checked++; if (diff > (exact ? 0 : fygeo::kSvissrIrWidth / 4)) bad++;
+                checked++; if (diff > (exact ? 0 : fygeo::kSvissrIrWidth / 4)) { bad++; printf("    %s: %s line %d differs in %d of %d pixels\n", what, nm[k], line, diff, fygeo::kSvissrIrWidth); }
             } else {
                 if (!p->rowDone[(size_t)(2 * line)]) continue;
                 svissrTestLine(line, ir[0].data(), ir[1].data(), ir[2].data(), ir[3].data(), vis.data());
@@ -76,7 +76,7 @@ static void svissrChecks(const FygeoTelemetry& t, const char* what, int minFrame
                     const int e = (((vis[(size_t)(2 * x)] & 0xFC | 2) + (vis[(size_t)(2 * x + 1)] & 0xFC | 2) + (vis[(size_t)fygeo::kSvissrVisWidth + (size_t)(2 * x)] & 0xFC | 2) + (vis[(size_t)fygeo::kSvissrVisWidth + (size_t)(2 * x + 1)] & 0xFC | 2) + 2) >> 2);
                     diff += p->pix[(size_t)(2 * line) * p->w + (size_t)x] != e;
                 }
-                checked++; if (diff > (exact ? 0 : p->w / 28)) bad++;
+                checked++; if (diff > (exact ? 0 : p->w / 28)) { bad++; printf("    %s: VIS line %d differs in %d samples\n", what, line, diff); }
             }
         }
     }
