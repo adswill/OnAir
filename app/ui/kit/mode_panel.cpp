@@ -10,12 +10,17 @@
 #include <cstdlib>
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace modepanel {
 namespace {
 
 bool gInCommand = false;
+int gPane = -1;
+int gFamily = 0;
+std::vector<std::pair<int*, int>> gRestore;   // the views kit::modeNav forced this frame, with what the user had chosen
+std::map<int, bool> gHasMap;                  // per family, from the last frame: the mode's tab has a Map view
 
 std::map<std::string, Level>& cache() { static auto* m = new std::map<std::string, Level>; return *m; }
 
@@ -60,6 +65,15 @@ void setSimple(App& a, bool s) {
 }
 
 bool inCommandView() { return gInCommand; }
+int commandPane() { return gInCommand ? gPane : -1; }
+
+void navPicked(int* cur, int view, bool hasMap) {
+    bool seen = false;
+    for (auto& r : gRestore) if (r.first == cur) seen = true;
+    if (!seen) gRestore.push_back({cur, *cur});
+    *cur = view;
+    if (hasMap) gHasMap[gFamily] = true;
+}
 
 void levelBar(App& a) {
     const bool s = simple(a);
@@ -127,8 +141,20 @@ void commandView(App& a, const ModeUi& mu) {
     gForceTab.clear();   // a forced tab (--tab) has no tab in this view
     levelBar(a);
     strip(a, mu);
+    gFamily = a.family;
+    gRestore.clear();
     if (mu.command) mu.command(a);
-    else if (mu.tab) mu.tab(a);
+    else if (mu.tab) {
+        // a mode with a Map view (kit::modeNav tells): the live view and the map side by side when the window is wide
+        auto it = gHasMap.find(a.family);
+        if (it != gHasMap.end() && it->second && ImGui::GetContentRegionAvail().x >= 900 * gUi) {
+            panes({{"##cmdlive", nullptr, [&a, &mu] { gPane = 0; mu.tab(a); }, 1.15f, 300.f},
+                   {"##cmdmap", nullptr, [&a, &mu] { gPane = 1; mu.tab(a); }, 1.f, 300.f}}, 420.f);
+        } else { gPane = 0; mu.tab(a); }
+    }
+    for (size_t i = gRestore.size(); i-- > 0;) *gRestore[i].first = gRestore[i].second;   // the view the user chose in Advanced stays
+    gRestore.clear();
+    gPane = -1;
     gInCommand = false;
 }
 

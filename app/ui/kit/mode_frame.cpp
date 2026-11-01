@@ -66,7 +66,11 @@ int modeNav(const char* id, int& cur, std::initializer_list<NavItem> items) {
         if (e && !done[key]) { done[key] = true; const std::string v = e; const size_t q = v.find('='); if (q != std::string::npos && v.substr(0, q) == key) cur = atoi(v.c_str() + q + 1); }
     }
     if (modepanel::inCommandView()) {   // the Simple view shows the first view (Live) and no tab strip
-        for (const NavItem& n : items) if (!n.more) { cur = n.view; break; }
+        const NavItem* first = nullptr;
+        const NavItem* map = nullptr;
+        for (const NavItem& n : items) { if (!n.more && !first) first = &n; if (!map && std::string(n.label) == tr("Map")) map = &n; }
+        const NavItem* pick = modepanel::commandPane() == 1 && map ? map : first;
+        if (pick) modepanel::navPicked(&cur, pick->view, map != nullptr);
         return cur;
     }
     ImGui::PushID(id);
@@ -93,6 +97,7 @@ int modeNav(const char* id, int& cur, std::initializer_list<NavItem> items) {
 }
 
 void modeHeader(const HeaderInfo& h) {
+    if (modepanel::commandPane() == 1) return;   // the Command view draws it once, above its first pane
     const float u = gUi;
     const Counts& c = countsFor(h.mode);
     RecordRules& rr = rules();
