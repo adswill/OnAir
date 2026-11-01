@@ -39,7 +39,6 @@ Dial frequency the decoder should assume (the sound card is not tuned)	Rinkimo d
 DVB standard	DVB standartas
 Empty: the demo 802.15.4 scene.	Tuščia: demonstracinė 802.15.4 scena.
 Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	Tuščia: demonstracinė FLARM scena. Šis ID nepakuojamas į nepaskelbtą naujesnį protokolą.
-Empty: the demo LoRa / mesh scene.	Tuščia: demonstracinė LoRa / mesh scena.
 Empty: the demo Mode S uplink scene.	Tuščia: demonstracinė Mode S uplink scena.
 Empty: the demo VDES scene.	Tuščia: demonstracinė VDES scena.
 File	Failas
@@ -621,7 +620,6 @@ Checking and preparing the new version…	Tikrinama ir ruošiama nauja versija�
 Downloaded and checked. It is installed when you close OnAir.	Atsisiųsta ir patikrinta. Bus įdiegta uždarius OnAir.
 Restart now and update	Paleisti iš naujo ir atnaujinti
 Windows asks for permission to run the installer.	Windows paprašys leidimo paleisti diegimo programą.
-The system asks for your password to install the package.	Sistema paprašys slaptažodžio paketui įdiegti.
 This copy of OnAir cannot replace itself.	Ši OnAir kopija negali pati savęs pakeisti.
 The update to v%s did not install (setup exit code %d).	Atnaujinimas į v%s neįdiegtas (diegimo išėjimo kodas %d).
 Only github.com is contacted. Downloads are checked against the SHA-256 GitHub lists for the file.	Jungiamasi tik prie github.com. Atsisiuntimai tikrinami pagal GitHub nurodytą failo SHA-256.
@@ -3471,3 +3469,7 @@ Next tab	Next tab
 Previous tab	Previous tab
 The radio runs this many times faster than the mode asks, and OnAir filters the samples down to the mode's rate itself.\nFor radios that are poor at low sample rates (images, a weak anti-alias filter). Costs CPU and USB bandwidth;\nthe radio's highest rate still applies. Off: the radio runs at the mode's rate.	The radio runs this many times faster than the mode asks, and OnAir filters the samples down to the mode's rate itself.\nFor radios that are poor at low sample rates (images, a weak anti-alias filter). Costs CPU and USB bandwidth;\nthe radio's highest rate still applies. Off: the radio runs at the mode's rate.
 At a set speed each row is the highest level of the frames in between, so a short burst is never missed.\nAverage: the mean level instead, which calms the noise and shows steady weak signals better.	At a set speed each row is the highest level of the frames in between, so a short burst is never missed.\nAverage: the mean level instead, which calms the noise and shows steady weak signals better.
+Ground stations	Antžeminės stotys
+Band and channels	Juosta ir kanalai
+Simple: the spectrum and one view with the summary, the live data and the key controls of this mode	Paprastas: spektras ir vienas langas su santrauka, gyvais duomenimis ir pagrindiniais šio režimo valdikliais
+Advanced: every tab of this mode with all the detail	Išplėstinis: visi šio režimo skirtukai su visomis detalėmis

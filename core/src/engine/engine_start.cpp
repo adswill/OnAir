@@ -268,6 +268,8 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxInmsat_.setSignalOffset(o);
         rxNrf_.setSignalOffset(o);
         rxAtis_.setSignalOffset(o);
+        rxFy3a_.setSignalOffset(o);
+        rxFy3m_.setSignalOffset(o);
         rxSw_.setSignalOffset(o);
         rxSw_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxInmsat_.setCenterFrequency(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
@@ -588,6 +590,10 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxNrf_.setLogCallback([this](const std::string& s) { log(s); });
     rxAtis_.configure(rate_);
     rxAtis_.setLogCallback([this](const std::string& s) { log(s); });
+    rxFy3a_.configure(rate_);
+    rxFy3a_.setLogCallback([this](const std::string& s) { log(s); });
+    rxFy3m_.configure(rate_);
+    rxFy3m_.setLogCallback([this](const std::string& s) { log(s); });
     rxInmsat_.configure(rate_);
     rxInmsat_.setLogCallback([this](const std::string& s) { log(s); });
     rxEsg_.setLogCallback([this](const std::string& s) { log(s); });

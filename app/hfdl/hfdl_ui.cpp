@@ -4,6 +4,8 @@
 #include "dect2/common/time_fmt.h"
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
+#include "ui/kit/kit.h"
+#include "ui/kit/mode_panel.h"
 #include "../adsb/adsb_map.h"
 #include "app.h"
 #include "map/pos_predict.h"
@@ -565,6 +567,9 @@ void receiver(App& a) {
     kv("centre", "%.4f MHz, %d of %zu channels in the band, %d active", t.centerHz / 1e6, inBand, t.channels.size(), act);
     kv("rates", "%.0f kS/s in, 7.2 kS/s per channel (4 samples per symbol, 1800 baud)", t.inputRate / 1e3);
     kv("bursts", "%llu preambles, %llu failed", (unsigned long long)bursts, (unsigned long long)t.blocksBad);
+    kv("why bad", "preamble not confirmed %llu, burst FEC/check failed %llu (squitter %llu, MPDU header %llu, short %llu), LPDU check %llu, LPDU type unknown %llu",
+       (unsigned long long)t.whyPreambleRejected, (unsigned long long)(t.whySpduFcs + t.whyMpduFcs + t.whyShort), (unsigned long long)t.whySpduFcs,
+       (unsigned long long)t.whyMpduFcs, (unsigned long long)t.whyShort, (unsigned long long)t.whyLpduFcs, (unsigned long long)t.whyUnknownLpdu);
     kv("PDUs", "%llu good: %llu squitters, %llu LPDUs, %llu ACARS", (unsigned long long)t.blocksOk, (unsigned long long)t.squitters, (unsigned long long)t.lpdus, (unsigned long long)t.acarsMsgs);
     kv("by rate", "300: %llu  600: %llu  1200: %llu  1800: %llu", (unsigned long long)t.byRate[0], (unsigned long long)t.byRate[1], (unsigned long long)t.byRate[2], (unsigned long long)t.byRate[3]);
     kv("last burst", "%+.1f Hz from the channel, SNR %.1f dB", t.cfoHz, t.snrDb);
@@ -669,6 +674,17 @@ bool hfdlEstimatedPosition(uint32_t key, double now, double& lat, double& lon, d
 // For the map upload (app/map/map_send.cpp)
 derivedkin::Info hfdlKinematics(const dect2::HfdlAircraft& c, double now) { return kinOf(c, now); }
 
+// ---------------------------------------------------------------- the Simple view (ui/kit/mode_panel.h)
+
+// the live messages and the ground stations side by side (the aircraft are the list on the right), the band and channel controls above them (closed: they are in the Tuner panel too)
+static void command(App& a) {
+    loadState();
+    kit::modeHeader({35, "HFDL", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    if (kit::collapsingSection(tr("Band and channels"), false)) { bool retune = false; tuner(a, retune); }
+    modepanel::panes({{"##hfdlmsgs", tr("Messages"), [&a] { messageView(a); }, 1.7f, 240.f},
+                      {"##hfdlgs", tr("Ground stations"), [&a] { stationView(a); }, 1.f, 200.f}}, 360.f);
+}
+
 extern const ModeUi kHfdlUi;
 const ModeUi kHfdlUi = {
     .sideTitle = "AIRCRAFT",
@@ -683,4 +699,5 @@ const ModeUi kHfdlUi = {
     .synth = synth,
     .tick = tick,
     .meters = meters,
+    .command = command,
 };

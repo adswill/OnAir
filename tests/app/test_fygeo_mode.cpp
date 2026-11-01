@@ -1,5 +1,5 @@
 // FengYun geostationary modes: FY-4 LRIT (family 232, FY-4A / FY-4B choice), FY-4A HRIT-II/III (233), FY-2 S-VISSR (234). Active standard = family + 1,
-// engine standard = family + 2, poll slot = family. The tunings are registered with a test signal each, the mode rows and the family count agree,
+// engine standard = family + 2, poll slot = family - 41 (191 - 193). The tunings are registered with a test signal each, the mode rows and the family count agree,
 // the engine resets / configures / polls them, the poll slots are not shared, the screens carry their receive-only notes and the dish hint.
 #include <cstdlib>
 #include "dect2/fygeo/fygeo_rx.h"
@@ -39,9 +39,9 @@ int main() {
         CHECK(dect2::makeModeSynth(std, sc, m.fam == 233 ? 4000000 : 2400000) != nullptr, "%s: no test signal", m.id);
         CHECK(has(table, "{" + std::to_string(m.fam) + ", \"" + m.name + "\","), "mode row for family %d missing", m.fam);
         CHECK(has(modeUi, "case " + std::to_string(m.fam) + ": return &" + m.ui + ";"), "family %d not mapped to %s", m.fam, m.ui);
-        CHECK(has(tel, "case " + std::to_string(act) + ": return pollStd(rxFy_, " + std::to_string(act) + ", t, seqs[" + std::to_string(m.fam) + "], &RxTelemetry::fygeo)"), "telemetry case %d missing", act);
+        CHECK(has(tel, "case " + std::to_string(act) + ": return pollStd(rxFy_, " + std::to_string(act) + ", t, seqs[" + std::to_string(m.fam - 41) + "], &RxTelemetry::fygeo)"), "telemetry case %d missing", act);
         { const size_t q = appH.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && atoi(appH.c_str() + q + 29) > m.fam, "kNumFamilies does not cover family %d", m.fam); }
-        { const size_t q = engH.find("kPollSeqSlots = "); CHECK(q != std::string::npos && atoi(engH.c_str() + q + 16) > m.fam, "kPollSeqSlots does not cover slot %d", m.fam); }
+        { const size_t q = engH.find("kPollSeqSlots = "); CHECK(q != std::string::npos && atoi(engH.c_str() + q + 16) > m.fam - 41, "kPollSeqSlots does not cover slot %d", m.fam - 41); }
         CHECK(has(res, ", " + std::to_string(act) + ", [this] { return rxFy_.saveResults("), "results slot for %d", act);
         CHECK(has(ui, m.ui), "%s not defined", m.ui);
         CHECK(t && t->minSampleRate > 0 && t->sampleRate >= t->minSampleRate && t->defMhz > 1600 && t->defMhz < 1720, "%s: tuning numbers", m.id);

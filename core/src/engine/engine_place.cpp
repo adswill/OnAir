@@ -203,6 +203,8 @@ void Engine::configureReceiver(int a, double r) {
     case 209: rxInmsat_.configure(r); break;
     case 211: rxNrf_.configure(r); break;
     case 212: rxAtis_.configure(r); break;
+    case 236: rxFy3a_.configure(r); break;
+    case 237: rxFy3m_.configure(r); break;
     case 213: rxSw_.configure(r); break;
     case 233: case 234: case 235: rxFy_.setLink(fygeoLinkOfActive(a, rxFy_.lritSatellite())); rxFy_.configure(r); break;
     case 203: rxPskd_.configure(r); break;
@@ -358,6 +360,8 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 209: rxInmsat_.setSignalOffset(o); rxInmsat_.setCenterFrequency(centreHz); break;
     case 211: rxNrf_.setSignalOffset(o); break;
     case 212: rxAtis_.setSignalOffset(o); break;
+    case 236: rxFy3a_.setSignalOffset(o); break;
+    case 237: rxFy3m_.setSignalOffset(o); break;
     case 213: rxSw_.setSignalOffset(o); rxSw_.setCenterHz(centreHz); rxSw_.setDialHz(dialHz); break;
     case 233: case 234: case 235: rxFy_.setLink(fygeoLinkOfActive(a, rxFy_.lritSatellite())); rxFy_.setSignalOffset(o); break;
     case 203: rxPskd_.setSignalOffset(o); break;

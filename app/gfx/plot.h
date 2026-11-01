@@ -21,7 +21,7 @@ enum Cond { Cond_Always, Cond_Once };
 enum Flags { Flags_None = 0, Flags_NoTitle = 1, Flags_NoLegend = 2, Flags_Equal = 4, Flags_NoMouseText = 8,
              Flags_Overlay = 16, Flags_NoPan = 32,
              Flags_Flush = 64, Flags_OpenTop = 128, Flags_OpenBottom = 256,
-             Flags_SmoothZoom = 512, Flags_NoDrag = 1024 };   // SmoothZoom: the wheel eases the view towards its new range over a few frames   // Flush: no margin around the plot area (axes Inside or without labels); OpenTop/OpenBottom: no border on that edge (two plots stacked into one panel)   // Overlay: controls drawn over the plot after EndPlot() get the mouse (a button in a corner); NoPan: no drag or wheel (something in the plot holds the mouse)   // NoDrag: no drag pan, and the wheel only when SetNextWheelAxes asks for it (Shift held: Shift+drag selects a signal)
+             Flags_SmoothZoom = 512, Flags_NoDrag = 1024, Flags_NoDoubleReset = 2048 };   // SmoothZoom: the wheel eases the view towards its new range over a few frames   // Flush: no margin around the plot area (axes Inside or without labels); OpenTop/OpenBottom: no border on that edge (two plots stacked into one panel)   // Overlay: controls drawn over the plot after EndPlot() get the mouse (a button in a corner); NoPan: no drag or wheel (something in the plot holds the mouse)   // NoDrag: no drag pan, and the wheel only when SetNextWheelAxes asks for it (Shift held: Shift+drag selects a signal)
 enum AxisFlags { AxisFlags_None = 0, AxisFlags_NoTickLabels = 1, AxisFlags_NoGridLines = 2, AxisFlags_AutoFit = 4,
                  AxisFlags_Inside = 8 };   // Inside: small, faint tick labels inside the plot area (x along the bottom, y on the left) instead of a margin
 enum Scale { Scale_Linear, Scale_Log10 };
@@ -78,6 +78,7 @@ struct Look {
     double ref = 0;                       // the tuned frequency, for offset labels
 };
 void SetNextPlotLook(const Look& l);
+void SetNextZoomMarker(double x, float snapPx);   // the next plot: a wheel zoom with the pointer within snapPx of x keeps x still (the tuner marker)
 void SetNextWheelAxes(int mask);   // the next plot: the wheel zooms these axes (bit 0 x, bit 1 y; 0: it does not zoom). Not called: the built-in rule (Ctrl x, Shift y, else both)
 float LookStripHeight(const Look& l);     // the strip's height for these fonts
 

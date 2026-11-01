@@ -157,7 +157,7 @@ static const char* const kRestoreSafe[] = {
     "djiDecode", "dpmrScan", "dstarZoom", "dtmbThreads", "dvbcAnnexC", "dvbcQam", "dvbcSr", "dvbsLnbPol", "dvbsSr", "dvbsStd", "dvbsTxPol", "dwFmt",
     "eczasAudio", "eczasTone", "elektroAutoSave", "elektroCraft", "elektroFilter", "elektroLink", "family", "faxListen", "flarmZoom", "fmSaved",
     "fmScanFullRds", "fmScanHiMhz", "fmScanLoMhz", "fmStations", "fpvDeint", "fpvSub", "freqFav", "freqTab", "ftxLineColour", "ftxLineDone",
-    "ftxLineFade", "ftxLineLabels", "ftxLineMin", "ftxLineSel", "ftxLines", "ftxZoom", "galleryCapMb", "genAfHp", "genAfLp", "genAfNotch", "genAgc", "genAmAuto", "genAmDet", "genAmEnh", "genAmNr",
+    "ftxLineFade", "ftxLineLabels", "ftxLineMin", "ftxLineSel", "ftxLines", "ftxZoom", "fy3aPre", "fy3aRs", "fy3aView", "fy3mPre", "fy3mRs", "fy3mView", "galleryCapMb", "genAfHp", "genAfLp", "genAfNotch", "genAgc", "genAmAuto", "genAmDet", "genAmEnh", "genAmNr",
     "genDeNfm", "genDeWfm", "genDemod", "genFlac", "genGain", "genMp3", "genNb", "genNbDb", "genOffset", "genPitch", "genPreRoll", "genSqAuto", "genSqDb", "genSqOn",
     "genTxHang", "genTxIq", "gnssElMask", "gnssZoom", "goesAutoSave", "goesFilter", "goesSaveCadu", "ham.audioOut", "ham.call", "ham.cwWpm",
     "ham.grid", "ham.licence", "ham.name", "ham.qth", "ham.rig", "ham.txHz", "hdrAm9k", "hdrLastAm", "hdrLastFm", "hfbClock", "hfbDwell", "hfbHop",

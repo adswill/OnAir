@@ -1,7 +1,7 @@
 // Inmarsat Aero P channel demodulation: one carrier at a time, already moved near 0 Hz.
 //   600 / 1200 bit/s: MSK seen as offset QPSK with half-sine pulses; the bits are the changes between successive arm decisions
 //                     (JAERO mskdemodulator.cpp: DiffDecode of imag as is, of real negated, i.e. the signs of consecutive arm values compared with (-1)^k)
-//   10500 bit/s:      offset QPSK, root raised cosine with roll-off 1 (JAERO oqpskdemodulator.cpp rrc.design(1, .., 10500/2));
+//   10500 bit/s:      offset QPSK, root raised cosine with roll-off 1 (8400 bit/s, the C channel: roll-off 0.6, oqpskdemodulator.cpp) (JAERO oqpskdemodulator.cpp rrc.design(1, .., 10500/2));
 //                     the Q arm leads, bits alternate Q, I (pushed imag then real)
 // Carrier: the squared signal has two lines at 2 df +- Rb/2; they give the offset (and confirm the bit rate) before the loops start.
 #pragma once
@@ -51,6 +51,10 @@ public:
     void reset();
     void feed(const cf32* x, size_t n);
     void setCallback(std::function<void(AeroFrameEvent&)> cb);
+    // 8400 bit/s (Aero C channel, aero_cchan.h): the soft bits (even positions on the Q arm, positive = 1) go to `sink`; `synced` tells the
+    // demodulator that the caller's framer holds a frame start (it searches the carrier again when none does for a while)
+    void setBitSink(std::function<void(float)> sink, std::function<bool()> synced);
+    float ampLevel() const;            // mean arm amplitude of the decisions (0 before the loops run)
     int bitRate() const;
     bool acquired() const;             // the two lines were found: the loops run
     bool synced() const;

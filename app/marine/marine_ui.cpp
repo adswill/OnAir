@@ -18,6 +18,7 @@
 #include <map>
 #include <sstream>
 #include "dect2/marine/marine_wefax_stations.h"
+#include "dect2/marine/wefax_rotate.h"
 #include "wefax_gallery.h"
 #include "../panels/picsave_ui.h"
 #include "../state/picsave.h"
@@ -92,6 +93,7 @@ struct State {
     uint64_t imgSeq = 0, telImgSeq = ~0ull;
     dect2::FaxImage last;            // the copy kept for saving
     enhui::LiveTex enh;              // the Enhance control on the fax picture
+    int rot = 0;                     // fax picture: quarter turns clockwise (0..3), saved as faxRotate; applies to the shown and the saved pictures
     bool faxShown = false;           // the Fax view was drawn this frame (the top "clear" button also clears the picture then)
     float zoom = 0;                  // 0 = fit the width
     ImVec2 pan{0, 0};
@@ -116,6 +118,7 @@ void loadState() {
     S.listen = d.getB("faxListen", false);
     S.iocIdx = std::max(0, std::min(2, (int)d.getI("marineIoc", 0)));
     S.autoSlant = d.getB("marineAutoSlant", true);
+    S.rot = dect2::wefaxTurns((int)d.getI("faxRotate", 0));
     S.slant = (float)d.getD("marineSlant", 0.0);
     S.saveNav = d.getB("marineSaveNavtex", true);
     S.map.zoom = 5;
@@ -495,6 +498,40 @@ void dscView(App& a) {
 
 // ---------------------------------------------------------------- fax
 
+// The picture as the user wants it: S.last (the decoder's) turned by the Rotate setting. Used for the screen, PNG saves and the gallery.
+dect2::FaxImage rotatedFax(const dect2::FaxImage& im, int turns) {
+    if (dect2::wefaxTurns(turns) == 0 || im.width <= 0 || im.height <= 0 || im.pix.size() < (size_t)im.width * im.height) return im;
+    dect2::FaxImage o;
+    dect2::wefaxRotate(im.pix.data(), im.width, im.height, turns, o.pix, o.width, o.height);
+    return o;
+}
+
+// Puts S.last (rotated) on the screen texture
+void presentLast(bool finished) {
+    if (!gGfx || S.last.width <= 0 || S.last.height <= 0) return;
+    const dect2::FaxImage im = rotatedFax(S.last, S.rot);
+    const int th = std::max(1500, im.height);
+    if (!S.img || S.texW != im.width || S.texH < im.height) {
+        delete S.img;
+        S.img = gGfx->createImage(im.width, th, 0xFFFFFFFFu);
+        S.texW = im.width; S.texH = th;
+    }
+    if (!S.img) return;
+    std::vector<uint32_t> px((size_t)im.width * im.height);
+    for (size_t i = 0; i < px.size(); i++) { const uint32_t g = im.pix[i]; px[i] = 0xFF000000u | (g << 16) | (g << 8) | g; }
+    S.img->update(0, 0, im.width, im.height, px.data());
+    S.enh.e.setSource("Weather fax");
+    S.enh.feed(px.data(), im.width, im.height, finished);   // still arriving: the cheap preview path
+    S.imgW = im.width; S.imgH = im.height;
+}
+
+void setRotation(int turns) {
+    S.rot = dect2::wefaxTurns(turns);
+    plat::prefs().setI("faxRotate", S.rot);
+    S.zoom = 0; S.pan = ImVec2(0, 0);
+    presentLast(true);
+}
+
 void uploadFax(App& a) {
     if (!live(a) || !gGfx) return;
     if (a.rx.marine.fax.imageSeq == S.telImgSeq) return;     // ask for a copy only when the report says the picture changed
@@ -507,19 +544,8 @@ void uploadFax(App& a) {
         S.imgW = S.imgH = 0; S.last = dect2::FaxImage();      // the decoder started a new picture (cleared): drop the old one too
         return;
     }
-    const int th = std::max(1500, im.height);
-    if (!S.img || S.texW != im.width || S.texH < im.height) {
-        delete S.img;
-        S.img = gGfx->createImage(im.width, th, 0xFFFFFFFFu);
-        S.texW = im.width; S.texH = th;
-    }
-    std::vector<uint32_t> px((size_t)im.width * im.height);
-    for (size_t i = 0; i < px.size(); i++) { const uint32_t g = im.pix[i]; px[i] = 0xFF000000u | (g << 16) | (g << 8) | g; }
-    S.img->update(0, 0, im.width, im.height, px.data());
-    S.enh.e.setSource("Weather fax");
-    S.enh.feed(px.data(), im.width, im.height, false);   // still arriving: the cheap preview path
-    S.imgW = im.width; S.imgH = im.height;
     S.last = std::move(im);
+    presentLast(false);
 }
 
 // a picture as PNG, where the user picks
@@ -539,12 +565,13 @@ void saveFax() {
     if (S.last.width <= 0 || S.last.height <= 0) return;
     const std::string path = saveFileDialog("weather-fax.png");
     if (path.empty()) return;
-    std::vector<uint8_t> rgba((size_t)S.last.width * S.last.height * 4);
-    for (size_t i = 0; i < S.last.pix.size() && i * 4 + 3 < rgba.size(); i++) {
-        rgba[i * 4] = rgba[i * 4 + 1] = rgba[i * 4 + 2] = S.last.pix[i];
+    const dect2::FaxImage im = rotatedFax(S.last, S.rot);   // saved the way it is shown
+    std::vector<uint8_t> rgba((size_t)im.width * im.height * 4);
+    for (size_t i = 0; i < im.pix.size() && i * 4 + 3 < rgba.size(); i++) {
+        rgba[i * 4] = rgba[i * 4 + 1] = rgba[i * 4 + 2] = im.pix[i];
         rgba[i * 4 + 3] = 255;
     }
-    S.saveMsg = gfx::writePng(path.c_str(), rgba.data(), S.last.width, S.last.height) ? "saved " + path : "could not write " + path;
+    S.saveMsg = gfx::writePng(path.c_str(), rgba.data(), im.width, im.height) ? "saved " + path : "could not write " + path;
 }
 
 void faxView(App& a) {
@@ -578,6 +605,23 @@ void faxView(App& a) {
     ImGui::SameLine();
     if (ImGui::SmallButton(tr("clear picture##faxclr"))) { a.engine.marine().clearFax(); marineFaxClearUi(); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Clears the picture and the lines the decoder has collected, and starts a new picture at the next start tone or phasing. Pictures already in the list on the right stay."));
+    flowNext(14 * gUi);
+    ImGui::TextDisabled("%s", tr("rotate"));
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("90 right##faxrr"))) setRotation(S.rot + 1);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Turn the picture 90 degrees clockwise (key ]). Applies to the picture on the screen and to the PNGs saved from now on; the setting is remembered."));
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("90 left##faxrl"))) setRotation(S.rot - 1);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Turn the picture 90 degrees counter-clockwise (key [)."));
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("180##faxr2"))) setRotation(S.rot + 2);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Turn the picture upside down (key \\). Many stations are received with the picture the wrong way up."));
+    if (S.rot != 0) { ImGui::SameLine(); ImGui::TextDisabled("%d", S.rot * 90); }
+    if (!ImGui::GetIO().WantTextInput && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)) {
+        if (ImGui::IsKeyPressed(ImGuiKey_RightBracket, false)) setRotation(S.rot + 1);
+        else if (ImGui::IsKeyPressed(ImGuiKey_LeftBracket, false)) setRotation(S.rot - 1);
+        else if (ImGui::IsKeyPressed(ImGuiKey_Backslash, false)) setRotation(S.rot + 2);
+    }
     flowEnd();
     S.enh.e.setSource("Weather fax");
     S.enh.controls("faxenh");
@@ -836,14 +880,15 @@ void tick(App& a) {
     const int fs = a.rx.marine.fax.state;
     if (live(a) && fs == 2 && S.prevFaxState != 2) S.faxStartUtc = (long long)time(nullptr);
     if (live(a) && S.prevFaxState == 2 && fs != 2 && S.last.height >= 50) {
-        S.faxes.insert(S.faxes.begin(), State::Fax{(int64_t)time(nullptr), a.freqMhz * 1e3, S.last});
+        S.faxes.insert(S.faxes.begin(), State::Fax{(int64_t)time(nullptr), a.freqMhz * 1e3, rotatedFax(S.last, S.rot)});
         {
             gallery::Meta gm; gm.detail = std::to_string((int)std::lround(a.freqMhz * 1e3)) + " kHz, IOC " + std::to_string(a.rx.marine.fax.ioc) + ", " + std::to_string(a.rx.marine.fax.lpm) + " lpm";
-            gallery::publishGray("fax-" + std::to_string((long long)time(nullptr)), "Weather fax", (double)time(nullptr), S.last.width, S.last.height, S.last.pix.data(), gm);
+            const dect2::FaxImage ri = rotatedFax(S.last, S.rot);
+            gallery::publishGray("fax-" + std::to_string((long long)time(nullptr)), "Weather fax", (double)time(nullptr), ri.width, ri.height, ri.pix.data(), gm);
         }
         {   // the autosave: PNG + JSON side-car in the WEFAX folder (settings and gallery in wefax_gallery.cpp)
             wefaxgal::Capture c;
-            c.im = S.last; c.dialKhz = a.freqMhz * 1e3; c.ioc = a.rx.marine.fax.ioc; c.lpm = a.rx.marine.fax.lpm;
+            c.im = rotatedFax(S.last, S.rot); c.dialKhz = a.freqMhz * 1e3; c.ioc = a.rx.marine.fax.ioc; c.lpm = a.rx.marine.fax.lpm;
             c.stopUtc = (long long)time(nullptr); c.startUtc = S.faxStartUtc > 0 ? S.faxStartUtc : c.stopUtc;
             c.snrDb = a.rx.marine.fax.snrDb; c.phasingLines = a.rx.marine.fax.phasingLines;
             c.reason = fs == 3 ? "stop tone" : fs == 1 ? "new start" : "timeout";
@@ -1472,14 +1517,5 @@ bool marineFaxLoad(const std::string& blob) {
 }
 void marineFaxTexture() {
     if (!gGfx || S.last.width <= 0 || S.img) return;
-    const int th = std::max(1500, S.last.height);
-    S.img = gGfx->createImage(S.last.width, th, 0xFFFFFFFFu);
-    if (!S.img) return;
-    S.texW = S.last.width; S.texH = th;
-    std::vector<uint32_t> px((size_t)S.last.width * S.last.height);
-    for (size_t i = 0; i < px.size(); i++) { const uint32_t g = S.last.pix[i]; px[i] = 0xFF000000u | (g << 16) | (g << 8) | g; }
-    S.img->update(0, 0, S.last.width, S.last.height, px.data());
-    S.enh.e.setSource("Weather fax");
-    S.enh.feed(px.data(), S.last.width, S.last.height, true);
-    S.imgW = S.last.width; S.imgH = S.last.height;
+    presentLast(true);
 }

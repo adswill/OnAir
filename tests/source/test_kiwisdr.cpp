@@ -315,7 +315,7 @@ int main() {
     pureTests();
     listTests();
     native::kiwiSetBackoffForTest(80, 400);
-    native::kiwiSetStallForTest(1500);
+    native::kiwiSetStallForTest(3000);   // the cut frame of the slow-link step pauses 1.4 s (past the 1 s receive timeout): the stall limit needs a wide margin over it on a loaded runner
 
     // network radio list: the type, its default port, the password in the list text (and nowhere else)
     NetRadio nr;

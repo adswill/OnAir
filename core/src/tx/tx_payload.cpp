@@ -34,6 +34,9 @@
 #include "dect2/js8/js8_proto.h"
 #include "dect2/js8/js8_rx.h"
 #include "dect2/loraraw/loraraw_gen.h"
+#include "dect2/mesh/mesh_proto.h"
+#include "dect2/mesh/mesh_rx.h"
+#include "dect2/mesh/mesh_tx.h"
 #include "dect2/loraraw/loraraw_rx.h"
 #include "dect2/m17/m17_gen.h"
 #include "dect2/m17/m17_rx.h"
@@ -699,6 +702,25 @@ std::unique_ptr<ModeSynth> makeTxPayloadSynth(const TxModeSpec& m, const TxReque
         c.ident = upper(r.callsign).substr(0, 4);
         c.voice = false;
         return std::make_unique<WrapGen<VorGenerator>>(std::make_unique<VorGenerator>(c), rate);
+    }
+
+    if (m.stdMode == 22 && !r.text.empty()) {   // Meshtastic text from the user's own node identity (mesh_tx.h); warnings only, never a refusal
+        MeshLoraSettings ls;
+        if (!meshtasticPreset(r.mesh.preset.empty() ? "LongFast" : r.mesh.preset, ls)) meshtasticPreset("LongFast", ls);
+        LoraRawGenConfig c;
+        c.rate = rate;
+        c.dialOffsetHz = -meshTuning().tuneOffsetHz;
+        c.snrDb = 99;
+        c.loop = true;
+        for (const MeshTxFrame& f : meshTxPackets(r.mesh, r.text, (uint32_t)std::chrono::system_clock::now().time_since_epoch().count() | 1u)) {
+            LoraRawGenFrame g;
+            g.p.sf = ls.sf; g.p.bwHz = ls.bwHz; g.p.cr = ls.cr; g.p.preamble = ls.preamble; g.p.syncWord = ls.syncWord; g.p.ldro = ls.ldro;
+            g.p.crc = true;
+            g.payload = f.bytes;
+            g.gapSec = 2.0;
+            c.frames.push_back(std::move(g));
+        }
+        if (!c.frames.empty()) return std::make_unique<WrapGen<LoraRawGenerator>>(std::make_unique<LoraRawGenerator>(c), rate);
     }
 
     if (m.stdMode == 73 && !r.text.empty()) {

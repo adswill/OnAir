@@ -34,7 +34,6 @@ Dial frequency the decoder should assume (the sound card is not tuned)	Frequenza
 DVB standard	Standard DVB
 Empty: the demo 802.15.4 scene.	Vuoto: la scena dimostrativa 802.15.4.
 Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	Vuoto: la scena dimostrativa FLARM. Questo ID non è inserito nel protocollo più recente non pubblicato.
-Empty: the demo LoRa / mesh scene.	Vuoto: la scena dimostrativa LoRa / mesh.
 Empty: the demo Mode S uplink scene.	Vuoto: la scena dimostrativa dell'uplink Mode S.
 Empty: the demo VDES scene.	Vuoto: la scena dimostrativa VDES.
 File	File
@@ -599,7 +598,6 @@ Checking and preparing the new version…	Controllo e preparazione della nuova v
 Downloaded and checked. It is installed when you close OnAir.	Scaricata e verificata. Viene installata quando chiudi OnAir.
 Restart now and update	Riavvia ora e aggiorna
 Windows asks for permission to run the installer.	Windows chiede il permesso di eseguire il programma di installazione.
-The system asks for your password to install the package.	Il sistema chiede la tua password per installare il pacchetto.
 This copy of OnAir cannot replace itself.	Questa copia di OnAir non può sostituire se stessa.
 The update to v%s did not install (setup exit code %d).	L'aggiornamento a v%s non è stato installato (codice di uscita dell'installazione %d).
 Only github.com is contacted. Downloads are checked against the SHA-256 GitHub lists for the file.	Viene contattato solo github.com. I download sono verificati con lo SHA-256 che GitHub elenca per il file.

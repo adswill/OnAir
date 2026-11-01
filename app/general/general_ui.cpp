@@ -876,6 +876,13 @@ void generalPlotMouse(App& a, int plotId) {
     }
 }
 
+// The mouse wheel (View > Controls: Tune by step) in the general receiver: moves the listening channel by n steps (#409)
+void generalWheelTune(App& a, int n, double stepHzOverride) {
+    load();
+    const double st = stepHzOverride > 0 ? stepHzOverride : stepHz();
+    setListen(a, std::round(listenHz(a) / st) * st + n * st, a.centreTuning);
+}
+
 extern const ModeUi kGeneralUi;
 const ModeUi kGeneralUi = {
     .sideTitle = "CHANNEL",

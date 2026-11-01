@@ -130,11 +130,26 @@ Text textOf(CodecHelp c) {
 #endif
                 true};
     case CodecHelp::AeroAmbe:
-        return {"AMBE (Inmarsat Aero voice)",
-                "Aero C channel voice uses an AMBE vocoder, which is patented. OnAir decodes the P channel data only; it does not tune voice "
-                "channels and cannot load an AMBE library.",
-                "There is nothing to install for OnAir. Some separate programs (for example JAERO, github.com/jontio/JAERO) work on C channels.",
-                false};
+        return {"AMBE 4800x3600 (Inmarsat Aero voice)",
+                "Aero C channel voice uses an AMBE vocoder, which is patented, so OnAir ships none. OnAir finds the C channels, demodulates them and decodes the "
+                "frames (framing and coding as in JAERO), and hands each 12 byte voice frame, as JAERO hands it to libaeroambe, to a codec plug-in you build "
+                "yourself. Without it the calls are listed and the coded frames saved (.bits). Unencrypted traffic only. Using the codec may need a patent "
+                "licence: check the rules where you live first.",
+#if defined(_WIN32)
+                "Build the plug-in yourself (full steps in docs/CODECS.md; the OnAir source has tools/addons/aeroambe). In MSYS2 MINGW64:\n"
+                "  pacman -S --needed git mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake make\n"
+                "  git clone https://github.com/jontio/libaeroambe\n"
+                "  git clone https://github.com/adswill/OnAir && cd OnAir/tools/addons/aeroambe\n"
+                "  cmake -S . -B build -G \"MSYS Makefiles\" -DMBELIB_DIR=../../../../libaeroambe/mbelib-master && cmake --build build\n"
+                "Copy onair-codec-aeroambe.dll into the codecs folder below. Use 64-bit if OnAir is 64-bit.",
+#else
+                "Build the plug-in yourself (full steps in docs/CODECS.md; the OnAir source has tools/addons/aeroambe):\n"
+                "  git clone https://github.com/jontio/libaeroambe\n"
+                "  git clone https://github.com/adswill/OnAir && cd OnAir/tools/addons/aeroambe\n"
+                "  cmake -S . -B build -DMBELIB_DIR=../../../../libaeroambe/mbelib-master && cmake --build build\n"
+                "Copy the library the build made (onair-codec-aeroambe.dylib or .so) into the codecs folder below, then accept the notice once.",
+#endif
+                true};
     case CodecHelp::IridiumAmbe:
         return {"AMBE (Iridium voice)",
                 "Iridium voice uses an AMBE-family vocoder, which is patented, so OnAir ships none. It lists the voice calls and hands each "

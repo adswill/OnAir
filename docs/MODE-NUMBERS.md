@@ -38,9 +38,9 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | LoRaWAN (all channels) | 200 | 202 | 201 | 160 | mode-lora-030 | |
 | LoRa satellites | 201 | 203 | 202 | 161 | mode-lora-030 | |
 | DME | 121 | 123 | 122 | 162 | (0.2.9) | poll slot was 110, shared with DGPS: moved in 3.0 |
-| FY-4 LRIT | 232 | 234 | 233 | 232 | feat36-fygeo | FengYun-4 LRIT, FY-4A (90 ksym/s) or FY-4B (120 ksym/s) as a choice; one receiver (`rxFy_`) for the three entries, told apart by the active standard |
-| FY-4A HRIT-II/III | 233 | 235 | 234 | 233 | feat36-fygeo | |
-| FY-2 S-VISSR | 234 | 236 | 235 | 234 | feat36-fygeo | |
+| FY-4 LRIT | 232 | 234 | 233 | 191 | feat36-fygeo | FengYun-4 LRIT, FY-4A (90 ksym/s) or FY-4B (120 ksym/s) as a choice; one receiver (`rxFy_`) for the three entries, told apart by the active standard |
+| FY-4A HRIT-II/III | 233 | 235 | 234 | 192 | feat36-fygeo | |
+| FY-2 S-VISSR | 234 | 236 | 235 | 193 | feat36-fygeo | |
 | PSK demodulator (BPSK / QPSK analyser) | 202 | 204 | 203 | 163 | issue-modes-030 | #282 |
 | PACTOR-I (monitor) | 203 | 205 | 204 | 164 | issue-modes-030 | #216 |
 | Flipper Zero Sub-GHz chat | 204 | 206 | 205 | 165 | (3.1) | row added with the 3.2 modes below |
@@ -52,6 +52,8 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | nRF24L01 | 210 | 212 | 211 | 186 | feat34-iqtcp-nrf24 | 3.4; needs a user test; numbers may need to move at merge |
 | ATIS (inland waterways) | 211 | 213 | 212 | 187 | feat35-lane-b | 3.5; needs a user test; numbers may need to move at merge |
 | Shortwave | 212 | 214 | 213 | 188 | feat35-shortwave | 3.5; the general receiver with one-click HF decoders; numbers may need to move at merge |
+| FY-3 AHRPT | 235 | 237 | 236 | 195 | feat36-fy3 | 3.6; Fengyun-3 polar AHRPT (VIRR, MERSI pictures); no live signal tested; numbers may need to move at merge |
+| FY-3 MPT | 236 | 238 | 237 | 196 | feat36-fy3 | 3.6; Fengyun-3 A / B / C medium rate picture transmission (MERSI); no live signal tested; numbers may need to move at merge |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |
@@ -59,6 +61,6 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 Protocol entries (a row with a subId, such as FT8 in HF digital or POCSAG in pagers) share their family on purpose; the test checks
 that each (family, subId) pair is unique instead.
 
-`kNumFamilies` = 235, `kPollSeqSlots` = 235.
+`kNumFamilies` = 237, `kPollSeqSlots` = 197 (families 213 to 234 and poll slots 189 to 194 are kept for the other 3.6 lanes).
 
 A new mode takes the next free family above the highest one in this table and the next free poll slot, and adds its row here.

@@ -209,17 +209,18 @@ int main() {
     // ---- the text log and the saved text
     {
         const std::string dir = (std::filesystem::temp_directory_path() / "onair_sw_log_test").string();
-        std::filesystem::remove_all(dir);
+        std::error_code ec;
+        std::filesystem::remove_all(dir, ec);
         std::filesystem::create_directories(dir);
+        {   // the receiver is gone (its worker joined, the log closed) before the directory is deleted: Windows refuses to delete a file that is still open
         Rig r(cfg(2, 30));
         r.rx.startDecoder(Dec::Rtty);
         r.rx.setDecoderLog(Dec::Rtty, true, dir);
         r.run(20);
         const std::string path = r.rx.decoderLogPath(Dec::Rtty);
         CHECK(!path.empty() && std::filesystem::exists(path), "log file made: '%s'", path.c_str());
-        std::ifstream f(path);
         std::stringstream ss;
-        ss << f.rdbuf();
+        { std::ifstream f(path); ss << f.rdbuf(); }   // closed again at once: Windows will not delete a file that is still open
         CHECK(has(ss.str(), "CQ CQ DE ONAIR"), "the log holds the text: '%.80s'", ss.str().c_str());
         const std::string out = dir + "/saved.txt";
         std::string err;
@@ -228,7 +229,8 @@ int main() {
         r.rx.clearDecoder(Dec::Rtty);
         r.run(0.5);
         CHECK(r.dec(Dec::Rtty).text.size() < 40, "clear empties the pane");
-        std::filesystem::remove_all(dir);
+        }
+        std::filesystem::remove_all(dir, ec);
     }
 
     // ---- the listening side: the AM station is heard by the general receiver while decoders run

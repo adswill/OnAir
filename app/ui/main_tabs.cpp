@@ -7,6 +7,7 @@
 #include "app.h"
 #include "imgui_internal.h"
 #include "ui/kit/kit.h"
+#include "ui/kit/mode_panel.h"
 #include "adsb/adsb_map.h"
 #include "ui/contrast.h"
 #include "dect2/source/iq_file.h"
@@ -131,6 +132,21 @@ static void mainTabsInner(App& a, bool unified) {
     if (unified && gForceTab == "Overview") gForceTab.clear();
     // a narrow pane: the tabs get less padding (the bar takes it from the style when it begins, each tab when it is added), so that they keep
     // their whole names instead of being cut short or scrolled out of view
+    // a mode with a Simple view: the switch above, then either the one Command view (Simple) or the tabs below (Advanced)
+    if (const ModeUi* mu = modeUi(a.family); mu && modepanel::available(a)) {
+        if (modepanel::simple(a)) {
+            if (!unified) {   // the Overview tab (the spectrum) is not a tab here: the spectrum stays above the Command view
+                const float h = std::floor(std::min(330 * gUi, std::max(210 * gUi, ImGui::GetContentRegionAvail().y * 0.32f)));
+                ImGui::BeginChild("##simpleSpec", ImVec2(0, h), 0, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+                overviewTab(a);
+                ImGui::EndChild();
+            }
+            adsbmap::FullScope fs(&a, [&a, mu]{ modepanel::commandView(a, *mu); });
+            modepanel::commandView(a, *mu);   // in the window of the tabs (it scrolls like a tab body), not in a child of its own
+            return;
+        }
+        modepanel::levelBar(a);
+    }
     gTightTabs = ImGui::GetContentRegionAvail().x < 760 * gUi;
     if (gTightTabs) ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(3 * gUi, ImGui::GetStyle().FramePadding.y));
     const bool bar = pal::dev() ? kit::beginTabs("tabs") : ImGui::BeginTabBar("tabs", 0);
