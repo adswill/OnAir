@@ -947,3 +947,8 @@ Owner goal for 3.6: much more decoder sensitivity. Step 1: swept 13 modes with t
 
 ## 2026-11-01 sensitivity second pass
 One-transmitter harness modes adsb1/ais1/acars1 show the ADS-B and AIS gaps were the test mix. ACARS bit-clock gain 0.04 -> 0.015 and reference memory 0.97 gained about 1 dB (1 aircraft), see docs/SENSITIVITY-3.6.md. APRS and FM RDS unchanged.
+## 2026-11-01 Spectrum zoom and target click (feat36-spectrum)
+Wheel zoom now fixes the tuner marker when the pointer is near it; the target click acts on the radio centre (not the marker), recentres the zoomed view on the signal; double click tunes instead of resetting the zoom; Home shows the whole band. Pure maths and tests in tune_drag.h. Ideas in docs/SPECTRUM-3.6.md.
+
+## 2026-11-01 Target mode keeps the marker centred (feat36-spectrum)
+Switching to Centre/target mode, or tuning while in it, eases the view so the tuner marker sits in the middle (followMarker in tune_drag.h, unit-tested; a drag cancels it). The marker is the tuned frequency, so ModeTuning offsets do not move it.

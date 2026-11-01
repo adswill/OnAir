@@ -5,6 +5,7 @@
 #include "spec_axis.h"
 #include "spec_look.h"
 #include "../ui/touch.h"
+#include "tune_drag.h"
 #include "imgui_internal.h"
 #include <algorithm>
 #include <chrono>
@@ -70,11 +71,13 @@ struct Ctx {
     bool noXLabel = false;   // too short for the x axis label: it is left out
     bool noYTicks = false;   // too narrow for the y tick labels: left out
     Look look;               // SetNextPlotLook (off: the usual look)
+    double zoomMarker = std::numeric_limits<double>::quiet_NaN(); float zoomMarkerPx = 0;   // the tuner marker the wheel zoom keeps still when the pointer is near it
     int wheelAxes = -1;      // SetNextWheelAxes (-1: the usual rule)
     bool lookStrip = false;  // the x labels are on the look's strip
 };
 Look gNextLook;
 int gNextWheel = -1;
+double gNextMarker = std::numeric_limits<double>::quiet_NaN(); float gNextMarkerPx = 0;   // SetNextZoomMarker
 Ctx C;
 Subplots S;
 Style gStyle;
@@ -271,8 +274,13 @@ void finishSetup() {
                 if (!((a == 0 ? zx : zy) && movable[a] && C.ax[a].scale == Scale_Linear)) continue;
                 const double m = a == 0 ? mx : my;
                 const double b0 = smooth && C.st->hasTgt[a] ? C.st->tgt[a][0] : C.st->lim[a][0], b1 = smooth && C.st->hasTgt[a] ? C.st->tgt[a][1] : C.st->lim[a][1];
-                const double r = b1 - b0, p = b0 + m * r;   // the point under the mouse stays under it (of the view the zoom is heading for)
-                double n0 = p - m * r * f, n1 = p + (1 - m) * r * f;
+                const double r = b1 - b0;
+                double p = b0 + m * r, mm = m;   // the point under the mouse stays under it (of the view the zoom is heading for)
+                if (a == 0 && std::isfinite(C.zoomMarker) && C.zoomMarkerPx > 0) {   // near the tuner marker: the marker stays still instead
+                    p = tunedrag::zoomAnchor(p, C.zoomMarker, b0, b1, C.plot.GetWidth(), C.zoomMarkerPx);
+                    mm = (p - b0) / r;
+                }
+                double n0 = p - mm * r * f, n1 = p + (1 - mm) * r * f;
                 clampAxis(a, n0, n1);
                 if (smooth) { C.st->tgt[a][0] = n0; C.st->tgt[a][1] = n1; C.st->hasTgt[a] = true; }
                 else { C.st->lim[a][0] = n0; C.st->lim[a][1] = n1; }
@@ -305,7 +313,7 @@ void finishSetup() {
             C.st->last[a][0] = C.st->lim[a][0]; C.st->last[a][1] = C.st->lim[a][1];
         }
         if (draggedX) gPanOverflowX = intendedLo - C.st->lim[0][0];   // how far the drag went past the constraint (the caller may retune)
-        if (hov && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) C.st->init = false;
+        if (hov && !(C.flags & Flags_NoDoubleReset) && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) C.st->init = false;
         // draw this frame with the new limits (a plot sharing the axis reads them at once, so both must show the same range)
         for (int a = 0; a < 2; a++) if (movable[a] && C.ax[a].scale == Scale_Linear && C.st->init && C.st->lim[a][1] > C.st->lim[a][0]) {
             C.lo[a] = C.tlo[a] = C.st->lim[a][0]; C.hi[a] = C.thi[a] = C.st->lim[a][1];
@@ -395,18 +403,20 @@ Style& GetStyle() { return gStyle; }
 
 void SetNextPlotLook(const Look& l) { gNextLook = l; }
 void SetNextWheelAxes(int mask) { gNextWheel = mask; }
+void SetNextZoomMarker(double x, float snapPx) { gNextMarker = x; gNextMarkerPx = snapPx; }
 float LookStripHeight(const Look& l) {
     const float fs = l.fontSize > 0 ? l.fontSize : ImGui::GetFontSize();
     return std::ceil(fs * 1.75f);
 }
 
 bool BeginPlot(const char* id, ImVec2 size, int flags) {
-    if (C.active) { gNextLook.on = false; gNextWheel = -1; return false; }
+    if (C.active) { gNextLook.on = false; gNextWheel = -1; gNextMarker = std::numeric_limits<double>::quiet_NaN(); return false; }
     ImGuiWindow* w = ImGui::GetCurrentWindow();
-    if (w->SkipItems) { gNextLook.on = false; gNextWheel = -1; return false; }
+    if (w->SkipItems) { gNextLook.on = false; gNextWheel = -1; gNextMarker = std::numeric_limits<double>::quiet_NaN(); return false; }
     C = Ctx();
     C.look = gNextLook; gNextLook.on = false;
     C.wheelAxes = gNextWheel; gNextWheel = -1;
+    C.zoomMarker = gNextMarker; C.zoomMarkerPx = gNextMarkerPx; gNextMarker = std::numeric_limits<double>::quiet_NaN();
     C.id = ImGui::GetID(id);
     C.flags = flags;
     C.dl = ImGui::GetWindowDrawList();
