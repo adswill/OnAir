@@ -46,6 +46,8 @@ struct State {
     bool aliasDirty = false;                 // names edited in the table, written to the file when the field is left
     bool combine = true;                     // multi-copy combining (#20), saved as pagerCombine
     int pushedCombine = -1;
+    bool selcall = false;                // also decode five-tone selective calls on the channel audio (saved as pagerSelcall)
+    int pushedSelcall = -1;
     std::map<uint32_t, int> byAddress;       // POCSAG address -> kPocsagReadAlpha or kPocsagReadNumeric, saved as "pocsagReadAddr" ("ric:a ric:n ...")
 };
 State S;
@@ -77,6 +79,7 @@ void loadRead() {
     { const long cs = d.getI("pagerCharset", 0); S.charset = cs >= 0 && cs < dect2::kPagerCharsets ? (int)cs : 0; }
     S.decodedOnly = d.getI("pagerDecodedOnly", 0) != 0;
     S.combine = d.getI("pagerCombine", 1) != 0;
+    S.selcall = d.getI("pagerSelcall", 0) != 0;
     {
         std::ifstream f(aliasPath(), std::ios::binary);
         if (f) { std::string t((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>()); S.aliases.importCsv(t); }
@@ -149,6 +152,7 @@ std::string oneLine(const std::string& s) {
 }
 
 bool passes(const dect2::PagerMessage& m) {   // m: resolved
+    if (m.selcall) return !S.filter[0] || lower(m.text + " " + m.selStd).find(lower(S.filter)) != std::string::npos;   // no address: the ignore and watch lists do not apply
     if (m.flex ? !S.flex : !S.pocsag) return false;
     if (!S.ignored.empty() && S.ignored.has(m.address) && !S.showIgnored) { S.ignoredHidden++; return false; }
     if (S.watchOnly && !S.watched.empty() && !S.watched.has(m.address)) return false;
@@ -209,6 +213,9 @@ void messageView(App& a) {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("POCSAG is the ITU-R M.584 / CCIR Radiopaging Code No. 1 (RPC1): the same signal, so CCIR paging on the pager bands is decoded here at 512, 1200 and 2400 baud. The CCIR 5-tone selective calls are in the Tones mode."));
     flowNext(10 * gUi);
     ImGui::Checkbox("FLEX", &S.flex);
+    flowNext(10 * gUi);
+    if (ImGui::Checkbox(tr("Selective call tones (CCIR / ZVEI / EEA / EIA / DZVEI...)"), &S.selcall)) { plat::prefs().setI("pagerSelcall", S.selcall ? 1 : 0); savePrefs(a); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Also decode five-tone sequential calls (CCIR, ZVEI1/2, EEA, EIA, DZVEI) on the same channel audio, alongside POCSAG and FLEX. They appear in the table with the standard in the Protocol column and the digits as the message."));
     flowNext(12 * gUi);
     if (ImGui::Checkbox(tr("Decoded only"), &S.decodedOnly)) { plat::prefs().setI("pagerDecodedOnly", S.decodedOnly ? 1 : 0); savePrefs(a); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Hides tone-only pages and pages whose text could not be decoded."));
@@ -272,7 +279,7 @@ void messageView(App& a) {
             const dect2::PagerMessage m = resolved(raw);
             if (!shows(m)) continue;
             if (wide && m.carrierId > 0) { char fb[24]; snprintf(fb, sizeof fb, "%.4f\t", radioCenterMhz(a) + m.carrierHz / 1e6); txt += fb; }
-            txt += clock(m.wallTime) + "\t" + dect2::pagerSpeedName(m.speed) + "\t" + std::to_string(m.address) + "\t" + aliasOf(m) + "\t" + fnText(m) + "\t" + typeText(m) + "\t" + oneLine(m.text) + "\n";
+            txt += clock(m.wallTime) + "\t" + dect2::pagerProtoName(m) + "\t" + std::to_string(m.address) + "\t" + aliasOf(m) + "\t" + fnText(m) + "\t" + typeText(m) + "\t" + oneLine(m.text) + "\n";
         }
         ImGui::SetClipboardText(txt.c_str());
     }
@@ -283,7 +290,7 @@ void messageView(App& a) {
             if (!shows(m)) continue;
             dect2::msglog::Row r;
             r.epoch = m.wallTime;
-            r.mode = dect2::pagerSpeedName(m.speed);
+            r.mode = dect2::pagerProtoName(m);
             r.freqHz = (m.carrierId > 0 ? radioCenterMhz(a) + m.carrierHz / 1e6 : a.freqMhz) * 1e6;
             r.address = std::to_string(m.address);
             if (const std::string nm = aliasOf(m); !nm.empty()) r.address += " " + nm;
@@ -313,11 +320,11 @@ void messageView(App& a) {
                 ImGui::TableNextRow();
                 if (wide) { ImGui::TableNextColumn(); wideCarrierCell(a, m.carrierId, m.carrierHz); }
                 ImGui::TableNextColumn(); ImGui::TextUnformatted(clock(m.wallTime).c_str());
-                ImGui::TableNextColumn(); ImGui::PushStyleColor(ImGuiCol_Text, pal::accent()); ImGui::TextUnformatted(dect2::pagerSpeedName(m.speed)); ImGui::PopStyleColor();
+                ImGui::TableNextColumn(); ImGui::PushStyleColor(ImGuiCol_Text, pal::accent()); ImGui::TextUnformatted(dect2::pagerProtoName(m).c_str()); ImGui::PopStyleColor();
                 ImGui::TableNextColumn();
                 ImGui::PushID((int)(m.serial * 31u + (unsigned)(int)std::lround(m.carrierHz / 100.0)));   // serials restart per carrier
-                ImGui::Text("%u", (unsigned)m.address);
-                if (ImGui::BeginPopupContextItem("##pgadr", ImGuiPopupFlags_MouseButtonRight)) {
+                if (m.selcall) ImGui::TextDisabled("-"); else ImGui::Text("%u", (unsigned)m.address);
+                if (!m.selcall && ImGui::BeginPopupContextItem("##pgadr", ImGuiPopupFlags_MouseButtonRight)) {
                     ImGui::TextDisabled("Address %u", (unsigned)m.address);
                     {   // a name for this capcode (#5): Enter keeps it, empty removes it
                         if (ImGui::IsWindowAppearing()) { snprintf(S.nameEdit, sizeof S.nameEdit, "%s", aliasOf(m).c_str()); }
@@ -538,6 +545,7 @@ void tick(App& a) {
     const int m = baudMask();
     if ((int)a.pagerNarrow != S.pushedNarrow) { a.engine.pager().setNarrowChannel(a.pagerNarrow); S.pushedNarrow = a.pagerNarrow; }
     if (m != S.pushedBaud) { a.engine.pager().setPocsagBauds(m); S.pushedBaud = m; }
+    if ((int)S.selcall != S.pushedSelcall) { a.engine.pager().setSelcall(S.selcall); S.pushedSelcall = S.selcall; }
     if ((int)S.combine != S.pushedCombine) { a.engine.pager().setCombineCopies(S.combine); S.pushedCombine = S.combine; }
 }
 

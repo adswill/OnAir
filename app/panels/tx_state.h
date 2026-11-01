@@ -95,6 +95,10 @@ struct TxUi {
     std::string ifPathUsed;                  // the data file of the running or last session
     std::shared_ptr<IqFileTxCounters> ifCounters;   // bytes and samples written, kept by the sink
     // KAAL: the identity beacon and the power written in it (callsign, grid, latitude and longitude, bio text are the shared fields above)
+    // Mesh (LoRa) transmit: the sender's own node identity (mesh_tx.h), saved as tx.mesh*
+    char meshLong[48] = "OnAir", meshShort[8] = "ONAR", meshNode[16] = {}, meshChan[40] = "LongFast", meshPsk[96] = "default", meshPreset[24] = "LongFast";
+    int meshHop = 3;
+    bool meshCallInMsg = false, meshNodeInfo = true;
     bool kaalBeacon = true;
     double kaalPower = 10;
     int kaalBitrate = 16;                    // voice codec 12 / 16 / 24 / 32 kbit/s

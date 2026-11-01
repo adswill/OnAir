@@ -33,6 +33,7 @@ struct PagerHeard {
 inline std::vector<PagerHeard> pagerHeardTable(const std::vector<PagerMessage>& msgs) {
     std::vector<PagerHeard> rows;
     for (const PagerMessage& m : msgs) {
+        if (m.selcall) continue;   // five-tone calls have no capcode
         auto it = std::find_if(rows.begin(), rows.end(), [&](const PagerHeard& r) { return r.address == m.address && r.flex == m.flex; });
         if (it == rows.end()) { rows.emplace_back(); it = rows.end() - 1; it->address = m.address; it->flex = m.flex; }
         it->count++;
