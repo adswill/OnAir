@@ -234,6 +234,16 @@ const std::vector<FreqEntry>& airportRows() {
     return rows;
 }
 
+// The rows the table shows now (airport channels first, then the matches of the search and filters), for "Export results CSV..."
+std::vector<FreqEntry> resultsNow() {
+    FreqQuery q;
+    q.text = u.query; q.mode = u.mode; q.region = u.region; q.category = u.category; q.favouritesOnly = u.favOnly; q.userOnly = u.userOnly;
+    std::vector<FreqEntry> out;
+    if ((u.mode.empty() || u.mode == "airband") && !u.favOnly && !u.userOnly) for (const FreqEntry& e : airportRows()) out.push_back(e);
+    for (size_t i : dect2::freqSearch(u.all, q, &u.fav)) out.push_back(u.all[i]);
+    return out;
+}
+
 void table(App& a, float h) {
     FreqQuery q;
     q.text = u.query; q.mode = u.mode; q.region = u.region; q.category = u.category; q.favouritesOnly = u.favOnly; q.userOnly = u.userOnly;
@@ -387,6 +397,14 @@ void panelBody(App& a) {
     }
     ImGui::EndDisabled();
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Exports your own entries (not the built-in ones)"));
+    ImGui::SameLine();
+    if (ImGui::Button(tr("Export results CSV..."))) {
+        const std::vector<FreqEntry> rows = resultsNow();
+        const std::string p = rows.empty() ? std::string() : saveFileDialog("onair-search-results.csv");
+        if (rows.empty()) say(tr("Nothing to export: no row matches the search."), true);
+        else if (!p.empty()) { std::ofstream f(dect2::u8file(p), std::ios::binary); f << dect2::freqExportCsv(rows); say(f ? std::string(tr("Exported to ")) + p : std::string(tr("Could not save ")) + p, !f); }
+    }
+    if (ImGui::IsItemHovered()) wrapTooltip(380 * gUi, tr("Saves the rows now in the table (with the search and the filters applied, built-in and yours) as a CSV file. Import and the Memory panel read it back."));
     ImGui::SameLine(0, 12 * gUi); ImGui::TextDisabled(tr("%zu built in, %zu yours"), u.nBuiltin, u.user.size());
     if (!u.msg.empty() && ImGui::GetTime() - u.msgT < 12) { ImGui::PushTextWrapPos(0); ImGui::TextColored(u.msgBad ? pal::badRed() : pal::okGreen(), "%s", u.msg.c_str()); ImGui::PopTextWrapPos(); }
     addDialog();

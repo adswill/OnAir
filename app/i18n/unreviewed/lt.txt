@@ -210,3 +210,6 @@ Ground stations
 Band and channels
 Simple: the spectrum and one view with the summary, the live data and the key controls of this mode
 Advanced: every tab of this mode with all the detail
+Export results CSV...
+Nothing to export: no row matches the search.
+Saves the rows now in the table (with the search and the filters applied, built-in and yours) as a CSV file. Import and the Memory panel read it back.
