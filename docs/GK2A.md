@@ -67,10 +67,10 @@ bits; Reed-Solomon (255,223) on a K = 7 r = 1/2 code works from Eb/N0 of about 1
 
 | Link | frames pass at 50 % | at 90 % | ideal chain at 50 % | gap |
 |---|---|---|---|---|
-| LRIT (BPSK) | see the table in docs/SENSITIVITY.md | | | |
-| HRIT (QPSK) | | | | |
+| LRIT (BPSK, 128 ksym/s, 2.4 Msps, 20 kHz offset) | -1.58 dB Es/N0 | -1.32 dB | -1.71 dB | 0.13 dB |
+| HRIT (QPSK, 3 Msym/s, 10 Msps, 120 kHz offset) | 1.47 dB | 1.73 dB | 1.30 dB | 0.17 dB |
 
-(The numbers are filled in from `sens_gk2a_gap` in the dated entry of docs/PATHWAY.md.)
+(600 frames a point, 0.25 dB steps, `sens_gk2a_gap --link 0|1`, 2026-11-01. The 90 % columns for the ideal chain are -1.45 dB and 1.57 dB: the receiver stays 0.13 to 0.16 dB behind it.)
 
 Real-world impairments are swept by `tools/sens/run.sh --mode 'gk2a'`: a carrier error of a 2 and a 20 ppm radio, a channel off the centre of the capture,
 a 50 ppm sample clock error, a static echo, Rayleigh and Rician fading, phase noise, and all of them together.
