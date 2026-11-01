@@ -8,7 +8,8 @@
 #   environment: JOBS=4 (runs at the same time), QUICK=1 (the three smallest sizes, fewer tabs), SIZES="1366x660@1.25 ..." (WxH@scale),
 #                MODES="dvb fm adsb ..." (only these), VARIANT=n (layout of the new interface, 0-7), CLASSIC=1 (the classic interface),
 #                SHOTS=1 (also a screenshot of each run), RADIO=1 (a fake radio, tests/source/native_fakes.cpp, selected and stopped instead of the
-#                running test signal: the radio's gain, bias-tee and settings controls show)
+#                running test signal: the radio's gain, bias-tee and settings controls show), UILEVEL=simple (the Simple view of every mode;
+#                the default is advanced, the tabs)
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD="${1:-$ROOT/build-ui}"
@@ -162,6 +163,7 @@ for size in $SIZES; do
     while IFS=$'\t' read -r id args tabs; do
         [ -n "${MODES:-}" ] && ! echo " $MODES " | grep -q " $id " && continue
         IFS='|' read -r -a tl <<< "$tabs"
+        [ "${UILEVEL:-advanced}" = simple ] && tl=("${tl[0]}")   # the Simple view has no tabs: one run per mode
         [ "${QUICK:-0}" = 1 ] && tl=("${tl[@]:0:3}")   # quick: the overview, the main tab and the next one
         for t in "${tl[@]}"; do printf '%s\t%s\t%s\t%s\n' "$size" "$id" "$args" "$t" >> "$JOBLIST"; done
     done <<< "$MODELIST"
@@ -185,7 +187,7 @@ worker() {   # worker n: every JOBS-th line of the job list, with its own copy o
         [ "${SHOTS:-0}" = 1 ] && extra=(DECT2_LAYOUT_AT=1000)   # the report at frame 390, the screenshot at 400
         # shellcheck disable=SC2086
         env HOME="$( [ "$(uname)" = Darwin ] && echo "$HOME" || echo "$OUT/home$n")" XDG_CONFIG_HOME="$OUT/home$n" \
-            DECT2_WINSIZE="$wh" DECT2_UISCALE="$sc" DECT2_LAYOUT_REPORT="$rep" DECT2_LAYOUT_TAG="$tag" "${extra[@]}" \
+            DECT2_UILEVEL="${UILEVEL:-advanced}" DECT2_WINSIZE="$wh" DECT2_UISCALE="$sc" DECT2_LAYOUT_REPORT="$rep" DECT2_LAYOUT_TAG="$tag" "${extra[@]}" \
             perl -e 'alarm shift; exec @ARGV' 90 "$OUT/bin/$name" --hidden --mute $args --tab "$tab" ${VARIANT:+--variant $VARIANT} ${CLASSIC:+--classic} $START --shot "$OUT/shots/$tag.png" \
             > "$OUT/reports/$tag.log" 2>&1
         [ -s "$rep" ] || echo "no report: $tag (see $OUT/reports/$tag.log)" >&2

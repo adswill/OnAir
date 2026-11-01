@@ -1,5 +1,6 @@
 #include "mode_frame.h"
 #include "app.h"
+#include "mode_panel.h"
 #include "dect2/session/record_rules.h"
 #include "dect2/session/session_store.h"
 #include "dect2/session/track_book.h"
@@ -63,6 +64,10 @@ int modeNav(const char* id, int& cur, std::initializer_list<NavItem> items) {
         const char* e = getenv("DECT2_SUBNAV");
         const std::string key = id;
         if (e && !done[key]) { done[key] = true; const std::string v = e; const size_t q = v.find('='); if (q != std::string::npos && v.substr(0, q) == key) cur = atoi(v.c_str() + q + 1); }
+    }
+    if (modepanel::inCommandView()) {   // the Simple view shows the first view (Live) and no tab strip
+        for (const NavItem& n : items) if (!n.more) { cur = n.view; break; }
+        return cur;
     }
     ImGui::PushID(id);
     bool first = true, anyMore = false;

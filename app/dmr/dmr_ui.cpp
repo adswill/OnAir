@@ -3,6 +3,7 @@
 #include "app.h"
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
+#include "ui/kit/mode_panel.h"
 #include "dmr_map.h"
 #include "dect2/dmr/dmr_ambe.h"
 #include "../codec/speech_codec_ui.h"
@@ -639,6 +640,30 @@ void meters(const App& a, std::vector<ModeMeter>& out) {
 
 } // namespace
 
+// ---------------------------------------------------------------- the Simple view (ui/kit/mode_panel.h)
+
+// the signal beside the calls: the channel spectrum and the few numbers a listener looks at
+static void signalPane(App& a) {
+    const DmrTelemetry& t = a.rx.dmr;
+    const bool on = live(a);
+    spectrumPlotDmr(t, on, ImVec2(ImGui::GetContentRegionAvail().x, std::max(120.f * gUi, ImGui::GetContentRegionAvail().y * 0.5f)));
+    if (!on) { ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("stopped")); return; }
+    static const char* st[5] = {"-", "voice", "data", "idle", "control"};
+    auto kv = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); ImGui::SameLine(110 * gUi); ImGui::PushFont(a.mono, 0); ImGui::Text(fmt, v...); ImGui::PopFont(); };
+    kv("link", "%s", t.state == 0 ? "searching" : t.link.empty() ? "locked" : t.link.c_str());
+    kv("colour code", "%d", t.cc);
+    for (int i = 0; i < 2; i++) kv(i ? "slot 2" : "slot 1", "%s", t.slot[i].active ? st[t.slot[i].state % 5] : "-");
+    kv("deviation", "%.0f Hz", t.devHz);
+    kv("bit errors", "%.2f %%", t.ber * 100.0);
+    kv("calls", "%llu", (unsigned long long)t.calls);
+}
+
+static void command(App& a) {
+    kit::modeHeader({9, "DMR", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    modepanel::panes({{"##dmrcalls", nullptr, [&a] { callsView(a); }, 1.8f, 420.f},
+           {"##dmrsignal", tr("Signal"), [&a] { signalPane(a); }, 1.f, 260.f}}, 360.f);
+}
+
 extern const ModeUi kDmrUi;
 const ModeUi kDmrUi = {
     .sideTitle = "CALLS",
@@ -654,4 +679,5 @@ const ModeUi kDmrUi = {
     .synth = synth,
     .tick = tick,
     .meters = meters,
+    .command = command,
 };
