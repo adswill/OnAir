@@ -49,7 +49,7 @@ struct Fy3Generator::Impl {
         if (c.inst) inst = c.inst;
         else if (scid >= 49 && scid <= 51) inst = c.product ? fy3::Mersi1 : fy3::Virr;   // FY-3A / B / C: VIRR on the AHRPT, MERSI on the MPT
         else inst = scid == 52 ? fy3::Mersi2 : scid == 56 ? fy3::MersiLL : scid == 64 ? fy3::MersiRM : fy3::Mersi3;
-        vcid = inst == fy3::Virr ? 5 : (inst == fy3::MersiRM ? 35 : 3);
+        vcid = inst == fy3::Virr ? 5 : inst == fy3::MersiRM ? 35 : inst == fy3::Mwri ? 10 : inst == fy3::Mwri2 ? 42 : 3;
         tab.resize((size_t)(2 * kSpan * kTabRes + 1));
         double e = 0;
         for (size_t i = 0; i < tab.size(); i++) {
@@ -75,6 +75,17 @@ struct Fy3Generator::Impl {
             std::vector<uint8_t> f(fy3::kVirrFrameBytes + 8);
             fy3::encodeVirrFrame(l, f.data());
             stream.insert(stream.end(), f.begin(), f.begin() + fy3::kVirrFrameBytes);
+            line++;
+        } else if (inst == fy3::Mwri || inst == fy3::Mwri2) {
+            const fy3::MwriCfg& mc = fy3::mwriCfg(inst);
+            fy3::MwriLine l;
+            l.time = 1.7e9 + 36000.0 + (double)line * mc.periodSec;
+            l.px.resize((size_t)mc.channels * (size_t)mc.width);
+            for (int ch = 0; ch < mc.channels; ch++)
+                for (int x = 0; x < mc.width; x++) l.px[(size_t)ch * (size_t)mc.width + (size_t)x] = (uint16_t)(fy3::testPixel(ch, x * 4, (int)line) << 6);
+            std::vector<uint8_t> f;
+            fy3::encodeMwriFrame(inst, l, f);
+            stream.insert(stream.end(), f.begin(), f.end());
             line++;
         } else {
             fy3::BitWriter bw;

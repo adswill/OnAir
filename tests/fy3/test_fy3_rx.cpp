@@ -134,5 +134,29 @@ int main() {
             CHECK(seen >= 8 && bad == 0, "MERSI rows %d, %d wrong pixels", seen, bad);
         }
     }
+    {   // MWRI (FY-3D, virtual channel 10): the 16-bit values come back as the top eight bits
+        Fy3GenConfig g;
+        g.rate = 8e6; g.product = 0; g.symbolRate = 2.6e6; g.snrDb = 20; g.sat = 3; g.inst = fy3::Mwri; g.duty = 1.0; g.seed = 5;
+        Fy3Generator gen(g);
+        Fy3Receiver rx(0); rx.configure(8e6); rx.setSymbolRate(2.6e6);
+        std::vector<cf32> buf(65536);
+        Fy3Telemetry t; uint64_t seq = 0;
+        for (double done = 0; done < 3.0 * 8e6; done += (double)buf.size()) { gen.generate(buf.data(), buf.size()); rx.feed(buf.data(), buf.size()); if (rx.telemetry(t, seq)) seq = t.seq; }
+        const Fy3Image* im = nullptr;
+        for (const auto& i : t.images) if (i->inst == fy3::Mwri) im = i.get();
+        printf("  MWRI: %s, %llu rows, %zu pictures\n", fy3Summary(t).c_str(), (unsigned long long)t.lines, t.images.size());
+        CHECK(im != nullptr && im->rows >= 20 && im->width == 266 && im->channels == 10, "MWRI picture");
+        if (im) {
+            int bad = 0, seen = 0;
+            for (const auto& l : im->row) {
+                if (!l) continue;
+                seen++;
+                const int n = (int)std::lround(((double)l->ms - std::fmod(1.7e9 + 36000.0, 86400.0) * 1000.0) / 1700.0);   // the generator's line number from the time of the row
+                for (int ch = 0; ch < 10; ch += 3) for (int x = 0; x < 266; x += 13) if (l->px[(size_t)ch * 266 + (size_t)x] != (uint8_t)((fy3::testPixel(ch, x * 4, n) << 6) >> 8)) bad++;
+            }
+            CHECK(seen >= 20 && bad == 0, "MWRI rows %d, %d wrong pixels", seen, bad);
+        }
+        CHECK(t.sat == 3, "satellite %d", t.sat);
+    }
     return testSummary("fy3 rx");
 }

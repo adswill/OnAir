@@ -44,6 +44,9 @@ struct State {
     std::vector<const Fy3Row*> drawn;
     bool follow = true;
     std::string msg;
+    // contrast of the microwave instruments (their 16-bit counts do not fill the eight bits): the 2nd and 98th percentile of each channel
+    std::vector<uint8_t> lo, hi;
+    int stretchRows = 0, stretchInst = -1;
     // the next pass
     double passAt = -1000;
     std::string passText;
@@ -104,7 +107,31 @@ Views viewsFor(const Fy3Image& im) {
     return v;
 }
 
-void composeRow(const Fy3Image& im, const Fy3Row* l, int view, uint32_t* px) {
+bool microwave(int inst) { return inst == dect2::fy3::Mwri || inst == dect2::fy3::Mwri2; }
+
+void computeStretch(const Fy3Image& im, State& s) {
+    s.stretchInst = im.inst; s.stretchRows = im.rows;
+    s.lo.assign((size_t)im.channels, 0); s.hi.assign((size_t)im.channels, 255);
+    if (!microwave(im.inst)) return;
+    for (int c = 0; c < im.channels; c++) {
+        uint32_t h[256] = {};
+        uint32_t n = 0;
+        for (int r = 0; r < im.rows; r += 3) {
+            const Fy3Row* l = (size_t)r < im.row.size() ? im.row[(size_t)r].get() : nullptr;
+            if (!l) continue;
+            for (int x = 0; x < im.width; x += 2) { h[l->px[(size_t)c * (size_t)im.width + (size_t)x]]++; n++; }
+        }
+        if (n < 50) continue;
+        uint32_t acc = 0; int lo = 0, hi = 255;
+        for (int v = 0; v < 256; v++) { acc += h[v]; if (acc >= n * 2 / 100) { lo = v; break; } }
+        acc = 0;
+        for (int v = 255; v >= 0; v--) { acc += h[v]; if (acc >= n * 2 / 100) { hi = v; break; } }
+        if (hi - lo < 4) hi = std::min(255, lo + 4);
+        s.lo[(size_t)c] = (uint8_t)lo; s.hi[(size_t)c] = (uint8_t)hi;
+    }
+}
+
+void composeRow(const Fy3Image& im, const Fy3Row* l, int view, uint32_t* px, const State* st = nullptr) {
     const int w = im.width;
     if (!l) { for (int i = 0; i < w; i++) px[i] = 0xFF000000u; return; }
     const uint8_t* p = l->px.data();
@@ -120,6 +147,7 @@ void composeRow(const Fy3Image& im, const Fy3Row* l, int view, uint32_t* px) {
         else {
             const int c = std::clamp(idx, 0, im.channels - 1);
             uint32_t g8 = p[(size_t)c * (size_t)w + (size_t)i];
+            if (st && microwave(im.inst) && (size_t)c < st->lo.size()) { const int lo = st->lo[(size_t)c], hi = st->hi[(size_t)c]; g8 = (uint32_t)std::clamp((int)(g8 - lo) * 255 / std::max(1, hi - lo), 0, 255); }
             if (thermal(im.inst, c)) g8 = 255 - g8;
             r = g = b = g8;
         }
@@ -147,12 +175,13 @@ void update(const Fy3Telemetry& t, State& s) {
         s.drawn.clear();
     }
     if (!s.tex) return;
+    if (microwave(im->inst) && (s.stretchInst != im->inst || im->rows >= 2 * std::max(8, s.stretchRows))) { computeStretch(*im, s); s.drawn.clear(); }
     s.drawn.resize((size_t)im->rows, nullptr);
     std::vector<uint32_t> px((size_t)w);
     for (int r = 0; r < im->rows; r++) {
         const Fy3Row* cur = (size_t)r < im->row.size() ? im->row[(size_t)r].get() : nullptr;
         if (cur == s.drawn[(size_t)r]) continue;
-        composeRow(*im, cur, s.view, px.data());
+        composeRow(*im, cur, s.view, px.data(), &s);
         s.tex->update(0, r, w, 1, px.data());
         s.drawn[(size_t)r] = cur;
     }
@@ -163,7 +192,7 @@ void savePng(const Fy3Telemetry& t, State& s, int p) {
     if (!im || im->rows <= 0) { s.msg = "nothing to save yet"; return; }
     const int w = im->width;
     std::vector<uint32_t> px((size_t)im->rows * (size_t)w);
-    for (int r = 0; r < im->rows; r++) composeRow(*im, (size_t)r < im->row.size() ? im->row[(size_t)r].get() : nullptr, s.view, &px[(size_t)r * (size_t)w]);
+    for (int r = 0; r < im->rows; r++) composeRow(*im, (size_t)r < im->row.size() ? im->row[(size_t)r].get() : nullptr, s.view, &px[(size_t)r * (size_t)w], &s);
     char ts[32];
     const time_t tt = time(nullptr);
     struct tm lt;

@@ -166,6 +166,29 @@ static void testMersi() {
     }
 }
 
+static void testMwri() {
+    for (int inst : {fy3::Mwri, fy3::Mwri2}) {
+        const fy3::MwriCfg& c = fy3::mwriCfg(inst);
+        fy3::MwriLine l;
+        l.time = 1.7e9 + 12345.0 + 0.016 * 7;
+        l.px.resize((size_t)c.channels * (size_t)c.width);
+        for (size_t i = 0; i < l.px.size(); i++) l.px[i] = (uint16_t)(i * 2654435761u >> 13);
+        std::vector<uint8_t> f;
+        fy3::encodeMwriFrame(inst, l, f);
+        fy3::MwriLine o;
+        CHECK(fy3::decodeMwriFrame(inst, f.data(), f.size(), o), "mwri decode");
+        CHECK(o.px == l.px, "mwri %d pixels", inst);
+        CHECK(std::fabs(o.time - l.time) < 0.02, "mwri %d time %.3f vs %.3f", inst, o.time - 1.7e9, l.time - 1.7e9);
+        // through the framer: two frames back to back, in 882 byte pieces
+        std::vector<uint8_t> s = f;
+        s.insert(s.end(), f.begin(), f.end());
+        fy3::FrameSync fs(c.sync, c.syncBits, c.frameBytes * 8);
+        int frames = 0;
+        for (size_t at = 0; at < s.size(); at += 882) fs.push(&s[at], std::min<size_t>(882, s.size() - at), [&](const std::vector<uint8_t>& fr) { fy3::MwriLine q; if (fy3::decodeMwriFrame(inst, fr.data(), fr.size(), q) && q.px == l.px) frames++; });
+        CHECK(frames >= 1, "mwri %d framer %d", inst, frames);
+    }
+}
+
 static void testTables() {
     int n; const fy3::Sat* s = fy3::sats(n);
     CHECK(n == 8 && s[2].scid == 51 && s[2].norad == 39260, "sats");
@@ -180,6 +203,7 @@ int main() {
     testCadu();
     testVirr();
     testMersi();
+    testMwri();
     testTables();
     return testSummary("fy3 proto");
 }

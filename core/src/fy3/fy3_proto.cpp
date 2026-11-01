@@ -28,7 +28,7 @@ const char* instName(int i) {
                                              "GAS", "WAAI", "X-EUVI", "WindRad", "PMR"};
     return i >= 0 && i < InstCount ? n[i] : "-";
 }
-bool instIsImage(int i) { return i == Virr || i == Mersi1 || i == Mersi2 || i == MersiLL || i == Mersi3 || i == MersiRM; }
+bool instIsImage(int i) { return i == Virr || i == Mersi1 || i == Mersi2 || i == MersiLL || i == Mersi3 || i == MersiRM || i == Mwri || i == Mwri2; }
 
 int instForVcid(int scid, int vcid, int product) {
     switch (scid) {
@@ -65,6 +65,7 @@ const MersiCfg& mersiCfg(int inst) {
 
 int instChannels(int inst) {
     if (inst == Virr) return kVirrChannels;
+    if (inst == Mwri || inst == Mwri2) return mwriCfg(inst).channels;
     if (inst == Mersi1 || inst == Mersi2 || inst == Mersi3 || inst == MersiLL || inst == MersiRM) {
         const MersiCfg& c = mersiCfg(inst);
         return c.ch250 + c.ch1000;
@@ -73,6 +74,7 @@ int instChannels(int inst) {
 }
 int instWidth(int inst) {
     if (inst == Virr) return kVirrWidth;
+    if (inst == Mwri || inst == Mwri2) return mwriCfg(inst).width;
     if (inst == Mersi1 || inst == Mersi2 || inst == Mersi3 || inst == MersiLL || inst == MersiRM) return mersiCfg(inst).width250 / 4;
     return 0;
 }
@@ -86,6 +88,7 @@ const char* instChannelName(int inst, int ch) {
                                                       "9 (0.555 um green)", "10 (1.36 um)"};
         return ch >= 0 && ch < kVirrChannels ? n[ch] : "?";
     }
+    if (inst == Mwri || inst == Mwri2) { snprintf(b, 32, "%d (microwave)", ch + 1); return b; }
     const MersiCfg& c = mersiCfg(inst);
     if (ch < 0 || ch >= c.ch250 + c.ch1000) return "?";
     if (inst == Mersi1) {
@@ -253,6 +256,63 @@ void encodeVirrFrame(const VirrLine& l, uint8_t* f) {
     const uint8_t t[7] = {0, (uint8_t)(l.days >> 10 & 3), (uint8_t)(l.days >> 2), (uint8_t)((l.days & 3) << 6 | (l.ms >> 24 & 3)), (uint8_t)(l.ms >> 16), (uint8_t)(l.ms >> 8), (uint8_t)l.ms};
     // t[3] must carry days&3 in its top two bits and ms bits 25..24 in the bottom two: as the decoder reads it
     for (int k = 1; k < 7; k++) putBits(f, kVirrTime + (size_t)k * 8, 8, t[k]);
+}
+
+// --- MWRI ---------------------------------------------------------------------------------------------------------------------------------
+const MwriCfg& mwriCfg(int inst) {
+    static const MwriCfg a{10, 266, 0xEB901ACFFC1Dull, 48, 7546, 200, 727, true, 1.7};
+    static const MwriCfg b{26, 492, 0xA7F8AAAAEB90352Eull, 64, 43000, 1008, 1604, false, 1.8};
+    return inst == Mwri2 ? b : a;
+}
+
+bool decodeMwriFrame(int inst, const uint8_t* f, size_t n, MwriLine& o) {
+    const MwriCfg& c = mwriCfg(inst);
+    if (n < (size_t)c.frameBytes) return false;
+    o.px.assign((size_t)c.channels * (size_t)c.width, 0);
+    for (int ch = 0; ch < c.channels; ch++)
+        for (int i = 0; i < c.width; i++) {
+            const uint8_t* p = f + c.dataByte + ch * c.chStride + i * 2;
+            const uint16_t v = c.littleEndian ? (uint16_t)(p[1] << 8 | p[0]) : (uint16_t)(p[0] << 8 | p[1]);
+            o.px[(size_t)ch * (size_t)c.width + (size_t)(c.width - 1 - i)] = v;
+        }
+    double t;
+    if (inst == Mwri2) {
+        const uint32_t days = (uint32_t)f[18] << 8 | f[19];
+        const uint64_t ms = (uint64_t)f[20] << 24 | (uint64_t)f[21] << 16 | (uint64_t)f[22] << 8 | (f[23] & 0xF0);
+        t = (10957.0 + days) * 86400.0 + (double)ms / 1e4 + 12 * 3600.0;
+    } else {
+        const uint32_t days = (uint32_t)f[14] << 8 | f[15];
+        const uint64_t ms = (uint64_t)f[16] << 24 | (uint64_t)f[17] << 16 | (uint64_t)f[18] << 8 | (f[19] & 0xF0);
+        const uint32_t sub = (uint32_t)(f[20] & 3) << 8 | f[21];
+        t = (10957.0 + days) * 86400.0 + (double)ms / 1e3 + sub / 512.0 + 12 * 3600.0;
+    }
+    o.time = t > 1.1e9 && t < 3.0e9 ? t : 0;
+    return true;
+}
+
+void encodeMwriFrame(int inst, const MwriLine& l, std::vector<uint8_t>& out) {
+    const MwriCfg& c = mwriCfg(inst);
+    out.assign((size_t)c.frameBytes, 0);
+    for (int i = 0; i < c.syncBits / 8; i++) out[(size_t)i] = (uint8_t)(c.sync >> (c.syncBits - 8 - 8 * i));
+    for (int i = c.syncBits / 8; i < 200; i++) out[(size_t)i] = (uint8_t)(0x3C + i * 11);
+    for (int ch = 0; ch < c.channels; ch++)
+        for (int i = 0; i < c.width; i++) {
+            uint8_t* p = &out[(size_t)(c.dataByte + ch * c.chStride + i * 2)];
+            const uint16_t v = l.px[(size_t)ch * (size_t)c.width + (size_t)(c.width - 1 - i)];
+            if (c.littleEndian) { p[0] = (uint8_t)v; p[1] = (uint8_t)(v >> 8); } else { p[0] = (uint8_t)(v >> 8); p[1] = (uint8_t)v; }
+        }
+    const double tt = l.time - 12 * 3600.0 - 10957.0 * 86400.0;
+    const uint32_t days = (uint32_t)std::floor(tt / 86400.0);
+    const double rem = tt - days * 86400.0;
+    if (inst == Mwri2) {
+        const uint64_t ms = (uint64_t)std::llround(rem * 1e4) & ~0xFull;
+        out[18] = (uint8_t)(days >> 8); out[19] = (uint8_t)days;
+        out[20] = (uint8_t)(ms >> 24); out[21] = (uint8_t)(ms >> 16); out[22] = (uint8_t)(ms >> 8); out[23] = (uint8_t)ms;
+    } else {
+        const uint64_t ms = (uint64_t)std::floor(rem * 1e3) & ~0xFull;   // the low four bits of the field are not part of the time (16 ms steps)
+        out[14] = (uint8_t)(days >> 8); out[15] = (uint8_t)days; out[20] = out[21] = 0;   // no fraction of a second
+        out[16] = (uint8_t)(ms >> 24); out[17] = (uint8_t)(ms >> 16); out[18] = (uint8_t)(ms >> 8); out[19] = (uint8_t)ms;
+    }
 }
 
 // --- FrameSync ----------------------------------------------------------------------------------------------------------------------------

@@ -29,7 +29,7 @@ int satIndexByScid(int scid);             // -1 unknown
 // --- instruments -----------------------------------------------------------------------------------------------------------------------
 enum Inst { InstNone = 0, Virr, Mersi1, Mersi2, MersiLL, Mersi3, MersiRM, Mwri, Mwri2, MwriRM, Mwhs, Mwts, Erm, Gas, Waai, Xeuvi, WindRad, Pmr, InstCount };
 const char* instName(int inst);           // "VIRR", "MERSI-II", ...
-bool instIsImage(int inst);               // a picture is built for it
+bool instIsImage(int inst);               // a picture is built for it (VIRR, MERSI, MWRI)
 // The instrument a virtual channel carries on a satellite (scid), InstNone when not known. vcid 12 carries several (by APID).
 int instForVcid(int scid, int vcid, int product);
 int instChannels(int inst);               // channels of the picture
@@ -112,6 +112,15 @@ struct VirrLine {
 };
 bool decodeVirrFrame(const uint8_t* f, size_t n, VirrLine& out);
 void encodeVirrFrame(const VirrLine& l, uint8_t* f);   // kVirrFrameBytes bytes
+
+// --- MWRI (microwave radiation imager: FY-3D virtual channel 10; MWRI-2 of FY-3F / FY-3H virtual channel 42) -----------------------------------------------
+// Frames on a sync word (48 bits 0xEB901ACFFC1D, 7546 bytes; MWRI-2: 64 bits 0xA7F8AAAAEB90352E, 43000 bytes), 10 (26) channels of 266 (492) pixels of 16 bits, scanned
+// right to left, a time stamp. The picture takes the top eight bits of a value (the screen stretches the contrast).
+struct MwriCfg { int channels, width; uint64_t sync; int syncBits, frameBytes, dataByte, chStride; bool littleEndian; double periodSec; };
+const MwriCfg& mwriCfg(int inst);
+struct MwriLine { double time = 0; std::vector<uint16_t> px; };   // channels * width, channel major, left to right
+bool decodeMwriFrame(int inst, const uint8_t* f, size_t n, MwriLine& out);
+void encodeMwriFrame(int inst, const MwriLine& l, std::vector<uint8_t>& out);
 
 // --- a bit stream cut into frames (a sync word, then a fixed length) ---------------------------------------------------------------------
 class FrameSync {

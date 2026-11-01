@@ -27,6 +27,7 @@ constexpr double kPubSec = 0.25;
 constexpr int kHist = 4096;             // decimated samples kept (power of two)
 constexpr int kAcqLog2 = 10, kAcqN = 1 << kAcqLog2, kAcqBlocks = 48;
 constexpr int kRateLog2 = 14, kRateN = 1 << kRateLog2, kRateBlocks = 96;
+constexpr int kWideLog2 = 13, kWideN = 1 << kWideLog2, kWideBlocks = 40;
 constexpr int kSearchSyms = 40000;      // symbols the code search looks at
 constexpr double kSearchHzLband = 75000; // coarse carrier search range (L-band Doppler is up to about +-40 kHz)
 
@@ -197,6 +198,10 @@ struct Fy3Receiver::Impl {
     float lockAvg = 0, m2 = 0, m4 = 0, snrLin = 1;
     float iqZr = 0, iqZi = 0, iqPf = 0, iqWr = 0, iqWi = 0, iqInv = 1;   // blind IQ correction: E[y^2] / E[|y|^2]
     uint32_t iqN = 0;
+    // wide carrier search: where in the whole capture the signal sits (the capture may be much wider than the signal, and the signal anywhere in it)
+    bool wideOn = false;
+    std::vector<float> wRe, wIm, wpsd;
+    int wFill = 0, wBlocks = 0;
     // rate estimate and coarse carrier
     std::vector<float> acqRe, acqIm, psd;
     int acqFill = 0, acqBlocks = 0;
@@ -353,7 +358,13 @@ struct Fy3Receiver::Impl {
         acqRe.assign(kAcqN, 0); acqIm.assign(kAcqN, 0); psd.assign(kAcqN, 0);
         step = std::polar(1.0, -2 * kPi * (offset + coarseHz) / rate);
         resetChain();
+        // when the capture is wider than the signal by more than the coarse search reaches, the signal is first looked for in the whole of it
+        const double width = (rsDesignWide > 0 ? rsDesignWide : rs) * (1 + alpha);
+        wideOn = rate > width + 0.5e6 && stage <= 1 && !wideDone;
+        if (wideOn) { wRe.assign(kWideN, 0); wIm.assign(kWideN, 0); wpsd.assign(kWideN, 0); wFill = 0; wBlocks = 0; }
     }
+    bool wideDone = false, wideUsed = false;
+    double rsDesignWide = 0;
 
     void loopGains(double bn) {
         const double z = 0.707, th = bn / (z + 1 / (4 * z)), d = 1 + 2 * z * th + th * th;
@@ -375,7 +386,7 @@ struct Fy3Receiver::Impl {
         autoIdx = 0; rsMeasured = 0;
         stage = 0;
         pickRate();
-        coarseHz = 0;
+        coarseHz = 0; wideDone = false; wideUsed = false; rsDesignWide = 0;
         rot = cd(1, 0);
         dcRe = dcIm = 0; iqZr = iqZi = iqPf = iqWr = iqWi = 0; iqInv = 1;
         initDemod();
@@ -452,8 +463,7 @@ struct Fy3Receiver::Impl {
             say("no symbol rate line found; trying " + std::to_string(rs / 1e6) + " Msym/s");
         }
         stage = 1;
-        coarseHz = 0;
-        initDemod();
+        initDemod();   // (the carrier the wide search found stays)
         startSec = nowSec();
     }
 
@@ -469,7 +479,8 @@ struct Fy3Receiver::Impl {
         acqBlocks = 0;
         const double bin = fd / kAcqN;
         const double f1 = rs * (1 - alpha) / 2, f2 = rs * (1 + alpha) / 2;
-        const double searchHz = std::max(kSearchHzLband, 0.04 * rs);
+        // after the wide search only a rough place is known (the spectrum is flat over most of the signal's width): look within a third of the symbol rate
+        const double searchHz = wideUsed ? 0.35 * rs : std::max(kSearchHzLband, 0.04 * rs);
         const int maxShift = std::max(1, (int)std::min(searchHz / bin, (fd / 2 - f2) / bin));
         std::vector<double> c((size_t)(2 * maxShift + 1));
         for (int s = -maxShift; s <= maxShift; s++) {
@@ -496,6 +507,60 @@ struct Fy3Receiver::Impl {
         step = std::polar(1.0, -2 * kPi * (offset + coarseHz) / rate);
         coarseDone = true;
         theta = 0; omega = 0; nSym = 0; loopStage = 0; loopGains(0.02);
+    }
+
+    // --- wide carrier search: the raised-cosine shape fitted to the power spectrum of the whole capture ----------------------------------------
+    void wideSample(cf32 x) {
+        wRe[(size_t)wFill] = x.real(); wIm[(size_t)wFill] = x.imag();
+        if (++wFill < kWideN) return;
+        wFill = 0;
+        for (int i = 0; i < kWideN; i++) { const float w = (float)(0.5 - 0.5 * std::cos(2 * kPi * i / kWideN)); wRe[(size_t)i] *= w; wIm[(size_t)i] *= w; }
+        fftSplit(wRe.data(), wIm.data(), kWideLog2, false);
+        for (int i = 0; i < kWideN; i++) wpsd[(size_t)i] += wRe[(size_t)i] * wRe[(size_t)i] + wIm[(size_t)i] * wIm[(size_t)i];
+        if (++wBlocks < kWideBlocks) return;
+        wideOn = false; wideDone = true;
+        const double bin = rate / kWideN;
+        // the template of the signal that is wanted: the symbol rate in use, or in the automatic mode the first candidate (2.6 and 2.8 Msym/s differ by 7%:
+        // the centre is the same; the coarse search that follows has the measured rate)
+        double tr = rs, ta = alpha;
+        { double r[8], a[8]; const int n = fy3Candidates(prod, rate, r, a, 8); if (rsUser <= 0 && presetRun == 0 && n > 0) { tr = r[0]; ta = a[0]; } }
+        const double f1 = tr * (1 - ta) / 2, f2 = tr * (1 + ta) / 2;
+        const int maxShift = std::max(1, (int)std::min((rate / 2 - f2) / bin, (double)kWideN / 2 - 2));
+        // a smoothed spectrum first: the sum over the template at each shift, by running over the bins it covers
+        std::vector<double> c((size_t)(2 * maxShift + 1), 0.0);
+        const int kf = (int)std::ceil(f2 / bin);
+        std::vector<double> tpl((size_t)(2 * kf + 1));
+        for (int k = -kf; k <= kf; k++) { const double f = std::fabs(k * bin); tpl[(size_t)(k + kf)] = f >= f2 ? 0.0 : f <= f1 ? 1.0 : 0.5 * (1 + std::cos(kPi * (f - f1) / (tr * ta))); }
+        double mean = 0;
+        for (int i = 0; i < kWideN; i++) mean += wpsd[(size_t)i];
+        mean /= kWideN;
+        for (int s = -maxShift; s <= maxShift; s++) {
+            double acc = 0;
+            for (int k = -kf; k <= kf; k++) acc += tpl[(size_t)(k + kf)] * wpsd[(size_t)(((k + s) % kWideN + kWideN) % kWideN)];
+            c[(size_t)(s + maxShift)] = acc;
+        }
+        int bi = 0;
+        double tsum = 0;
+        for (double v : tpl) tsum += v;
+        for (int i = 1; i < (int)c.size(); i++) if (c[(size_t)i] > c[(size_t)bi]) bi = i;
+        double frac = 0;
+        if (bi > 0 && bi + 1 < (int)c.size()) {
+            const double a = c[(size_t)bi - 1], b = c[(size_t)bi], d = c[(size_t)bi + 1];
+            const double den = a - 2 * b + d;
+            if (den < 0) frac = 0.5 * (a - d) / den;
+        }
+        const double ratio = c[(size_t)bi] / std::max(1e-30, mean * tsum);
+        const double est = (bi - maxShift + frac) * bin;
+        std::fill(wpsd.begin(), wpsd.end(), 0.f);
+        if (getenv("FY3_DEBUG")) fprintf(stderr, "wide: tr %.3g ta %.2f maxShift %d bin %.1f est %.1f kHz ratio %.2f offset %.1f\n", tr, ta, maxShift, bin, est / 1e3, ratio, offset);
+        wideUsed = ratio > 1.15;
+        if (ratio > 1.15) {
+            coarseHz = est - offset;
+            step = std::polar(1.0, -2 * kPi * (offset + coarseHz) / rate);
+            char b[120];
+            snprintf(b, sizeof b, "signal found %+.1f kHz from the centre of the capture", est / 1e3);
+            say(b);
+        }
     }
 
     // --- symbols ----------------------------------------------------------------------------------------------------------------------
@@ -806,7 +871,7 @@ struct Fy3Receiver::Impl {
         I.img.inst = inst;
         I.img.width = fy3::instWidth(inst);
         const int nch = fy3::instChannels(inst);
-        if (inst == fy3::Virr) I.keep = nch;
+        if (inst == fy3::Virr || inst == fy3::Mwri || inst == fy3::Mwri2) I.keep = nch;
         else { const fy3::MersiCfg& m = fy3::mersiCfg(inst); I.keep = std::min(nch, m.ch250 ? m.ch250 + 6 : 8); }
         I.img.channels = I.keep;
         return I;
@@ -863,6 +928,26 @@ struct Fy3Receiver::Impl {
         }
     }
 
+    void placeMwri(int inst, const fy3::MwriLine& L) {
+        ImgState& I = image(inst);
+        const fy3::MwriCfg& mc = fy3::mwriCfg(inst);
+        int idx;
+        if (L.time > 0 && I.haveT) {
+            idx = (int)std::lround((L.time - I.t0) / mc.periodSec);
+            if (idx <= I.lastSeg || idx > I.lastSeg + 400) idx = I.lastSeg + 1;
+        } else {
+            if (L.time > 0) { I.haveT = true; I.t0 = L.time; }
+            idx = I.lastSeg + 1;
+        }
+        I.lastSeg = idx;
+        const uint32_t ms = L.time > 0 ? (uint32_t)(std::fmod(L.time, 86400.0) * 1000.0) : 0;
+        if (L.time > 0) tel.onboardMs = ms;
+        tel.lines++; instStat[inst].units++;
+        std::vector<uint8_t> px(L.px.size());
+        for (size_t i = 0; i < px.size(); i++) px[i] = (uint8_t)(L.px[i] >> 8);
+        putRow(I, idx, ms, std::move(px));
+    }
+
     void onCadu(const fy3::Cadu& c) {
         tel.vcdus++; tel.scid = c.scid; tel.vcid = c.vcid; tel.vcduCounter = c.counter;
         tel.vcidFrames[c.vcid & 63]++;
@@ -892,6 +977,13 @@ struct Fy3Receiver::Impl {
                 S.mersi->onSegment = [this, inst](const fy3::MersiSegment& s) { placeMersi(inst, s); };
             }
             S.mersi->push(c.data, 882);
+        } else if (inst == fy3::Mwri || inst == fy3::Mwri2) {
+            const fy3::MwriCfg& mc = fy3::mwriCfg(inst);
+            if (!S.sync) S.sync = std::make_unique<fy3::FrameSync>(mc.sync, mc.syncBits, mc.frameBytes * 8);
+            S.sync->push(c.data, 882, [this, inst](const std::vector<uint8_t>& f) {
+                fy3::MwriLine L;
+                if (fy3::decodeMwriFrame(inst, f.data(), f.size(), L)) placeMwri(inst, L);
+            });
         } else if (c.vcid == 12) {
             if (!S.demux.onPacket) S.demux.onPacket = [this](const meteor::Packet& p) {
                 const int ins = p.apid == 16 ? fy3::Mwhs : (p.apid == 2 || p.apid == 7) ? fy3::Mwts : p.apid == 5 ? fy3::Erm : 0;
@@ -924,7 +1016,7 @@ struct Fy3Receiver::Impl {
             lockLostSec = now;
             autoIdx++;
             stage = 0;
-            coarseHz = 0;
+            coarseHz = 0; wideDone = false; wideUsed = false;
             if (presetRun == 0 && rsUser <= 0) pickRate();
             initDemod();
             startSec = now;
@@ -980,6 +1072,7 @@ struct Fy3Receiver::Impl {
     void input(cf32 x) {
         // DC spike of the radio: a slow mean taken off
         dcRe += 1.5e-5 * (x.real() - dcRe); dcIm += 1.5e-5 * (x.imag() - dcIm);
+        if (wideOn) { wideSample(cf32((float)(x.real() - dcRe), (float)(x.imag() - dcIm))); nIn++; return; }
         const cd v = cd(x.real() - dcRe, x.imag() - dcIm) * rot;
         rot *= step;
         if ((nIn & 1023) == 0) rot /= std::abs(rot);

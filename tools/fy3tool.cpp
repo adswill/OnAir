@@ -112,6 +112,7 @@ RxResult rxRun(double snrDb, double rate, double rs, int product, double secs, c
     Fy3Generator gen(g);
     Fy3Receiver rx(product);
     rx.configure(rate);
+    if (getenv("FY3_LOG")) rx.setLogCallback([](const std::string& s) { fprintf(stderr, "  log: %s\n", s.c_str()); });
     rx.setPreset(preset);
     if (product == 1 && rs > 0) rx.setSymbolRate(rs);
     std::mt19937 rng(seed * 7 + 1);
@@ -244,6 +245,10 @@ int main(int argc, char** argv) {
         { Imp i; i.conj = true; add("spectrum inverted (Q negated)", i); }
         { Imp i; i.swapIq = true; add("I and Q exchanged", i); }
         { Imp i; i.conj = true; i.swapIq = true; i.cfo = 25000; i.phase = 77; add("both, +25 kHz", i); }
+        { Imp i; i.cfo = 1.8e6; add("off-centre +1.8 MHz at 8 Msps (the whole span)", i); }
+        { Imp i; i.cfo = -1.8e6; add("off-centre -1.8 MHz at 8 Msps", i); }
+        { Imp i; i.cfo = 6.0e6; add("off-centre +6 MHz at 20 Msps", i, 20e6); }
+        { Imp i; i.cfo = -7.5e6; i.drift = 100; add("off-centre -7.5 MHz at 20 Msps, Doppler ramp", i, 20e6); }
         for (double r : {4e6, 5e6, 6e6, 8e6, 10e6, 12.5e6, 16e6, 20e6}) { Imp i; i.cfo = 15000; char* nm = new char[40]; snprintf(nm, 40, "sample rate %.1f Msps", r / 1e6); add(nm, i, r); }
         std::vector<RxResult> res(sc.size());
         parallel((int)sc.size(), threads, [&](int i) { res[(size_t)i] = rxRun(snr + sc[(size_t)i].im.snrAdd, sc[(size_t)i].rate, rs, product, secs, sc[(size_t)i].im, 50 + (uint32_t)i); });
