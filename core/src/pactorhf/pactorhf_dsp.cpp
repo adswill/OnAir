@@ -262,9 +262,6 @@ void demod100(const float* x, size_t n, const std::vector<double>& fcs, Analysis
     for (size_t c = 0; c < fcs.size(); c++) envelopeOf(x, n, fcs[c], baud, envs[c]);
     Timing tm = findTiming(envs, baud);
     a.clockPpm = tm.ppm;
-    if (getenv("PHF_SPS")) { tm.sps = atof(getenv("PHF_SPS")); }
-    if (getenv("PHF_T0")) { tm.t0 = atof(getenv("PHF_T0")); }
-    if (getenv("PHF_DBG")) fprintf(stderr, "timing t0 %.2f sps %.4f ppm %.1f K\n", tm.t0, tm.sps, tm.ppm);
     a.baud = baud * (kFs / baud / tm.sps);
     const size_t K = (size_t)std::max(0.0, std::floor(((double)n - 40 - tm.t0) / tm.sps)) ;
     a.car.clear();
@@ -384,7 +381,6 @@ void findFrames(Analysis& a) {
     double top = 0;
     for (auto& c : cands) top = std::max(top, c.score);
     const double chance = 1.0 / order;
-    if (getenv("PHF_DBG")) { int bl = 0; for (auto& c : cands) if (c.score >= top * 0.97) { bl = c.lag; break; } fprintf(stderr, "frame top z %.2f lag %d cands %zu\n", top, bl, cands.size()); }
     if (top < 9.0) { a.frame = fi; return; }   // a window of 24 symbols that agrees far beyond chance (z of 9 over ~1500 lags and ~1500 positions is below 1e-9 for noise)
     int lag = 0;
     for (auto& c : cands) if (c.score >= top * 0.97) { lag = c.lag; break; }   // smallest lag that is as good as the best
