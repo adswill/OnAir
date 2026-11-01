@@ -99,6 +99,7 @@
 #include "dect2/lorawan/lorawan_tel.h"
 #include "dect2/lorasat/lorasat_tel.h"
 #include "dect2/pactor/pactor_tel.h"
+#include "dect2/pactorhf/pactorhf_tel.h"
 #include "dect2/esubghz/esubghz_tel.h"
 #include "dect2/roshf/roshf_tel.h"
 #include "dect2/ssdv/ssdv_tel.h"
@@ -235,6 +236,7 @@ struct RxTelemetry {
     SsdvTelemetry ssdv;       // valid when standard == 207 (SSDV pictures, family 206, engine standard 208)
     Fy3Telemetry fy3a;        // valid when standard == 236 (FY-3 AHRPT, family 235, engine standard 237)
     Fy3Telemetry fy3m;        // valid when standard == 237 (FY-3 MPT, family 236, engine standard 238)
+    PactorHfTelemetry pactorhf;   // valid when standard == 238, 239 or 240 (PACTOR-II / -III / -IV, families 237 .. 239, engine standards 239 .. 241)
     AtisTelemetry atis;       // valid when standard == 212 (ATIS inland waterways, family 211, engine standard 213)
     ShortwaveTelemetry shortwave;   // valid when standard == 213 (Shortwave, family 212, engine standard 214)
     Nrf24Telemetry nrf24;     // valid when standard == 211 (nRF24L01, family 210, engine standard 212)

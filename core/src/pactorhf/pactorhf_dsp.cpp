@@ -582,6 +582,26 @@ void baseband1500(const float* x, size_t n, double fc, std::vector<cd>& z) {
     }
 }
 
+// The clock line over blocks of 2 s added as powers: a sender clock that is off by 50 ppm moves the symbols by a third of a symbol in 2 s (coherent
+// over 10 s it would smear the line)
+double blockLine(const std::vector<double>& e, double baud, size_t from, size_t to) {
+    const size_t B = (size_t)(2 * kFs);
+    double num = 0, den = 0;
+    for (size_t b0 = from; b0 + B <= to; b0 += B) {
+        cd c;
+        const double r = lineStat(e, baud, &c, b0, b0 + B);
+        if (r <= 0) continue;
+        // lineStat returns |c|^2 / var: add |c|^2 and var separately
+        double mean = 0;
+        for (size_t i = b0; i < b0 + B; i++) mean += e[i];
+        mean /= (double)B;
+        double var = 0;
+        for (size_t i = b0; i < b0 + B; i++) var += (e[i] - mean) * (e[i] - mean);
+        num += r * var; den += var;
+    }
+    return den > 0 ? num / den : 0;
+}
+
 bool analyse1800(const float* x, size_t n, Analysis& out) {
     const size_t N = std::min<size_t>(n, (size_t)(10 * kFs));
     const float* xs = x + (n - N);
@@ -592,15 +612,17 @@ bool analyse1800(const float* x, size_t n, Analysis& out) {
     for (double fc = 1220; fc <= 1780; fc += 20) {
         baseband1500(xs, N, fc, z);
         for (size_t i = 0; i < N; i++) e[i] = std::norm(z[i]);
-        const double db = toDb(lineStat(e, baud, nullptr, 64, N - 64));
+        const double db = toDb(blockLine(e, baud, 64, N - 64));
         if (db > bestDb) { bestDb = db; bestF = fc; }
     }
-    if (bestDb < 16) return false;
+    if (bestDb < 9) return false;   // 2 s blocks added as powers: noise alone stays below about 5 dB
     // refine the centre: maximize the 4th/2nd order spectral purity later; the clock line is flat in fc, so use 1500 +- offset from the band edges
     // measure the power spectrum edges of the band around bestF
     baseband1500(xs, N, bestF, z);
     for (size_t i = 0; i < N; i++) e[i] = std::norm(z[i]);
     cd ph;
+    const double lineBest = blockLine(e, baud, 64, N - 64);
+    (void)lineBest;
     lineStat(e, baud, &ph, 64, N - 64);
     const double tau = -std::arg(ph) / (2 * kPi) * (kFs / baud);   // envelope maximum
     const double sps = kFs / baud;
@@ -664,7 +686,7 @@ Analysis analyse(const float* x, size_t n, int variant) {
     if (variant == 4) { analyse1800(x, n, res); return res; }
     if (variant == 0) {   // the 1800 baud single carrier has a clock line that the 100 baud signals do not: try it first
         Analysis a4;
-        if (analyse1800(x, n, a4) && a4.lineDb > 18) return a4;
+        if (analyse1800(x, n, a4) && a4.lineDb > 12) return a4;
     }
     Analysis a;
     if (analyse100(x, n, variant, a)) res = std::move(a);

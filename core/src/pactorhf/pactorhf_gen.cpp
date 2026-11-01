@@ -32,16 +32,19 @@ struct PactorHfGenerator::Impl {
     std::normal_distribution<double> nd{0.0, 1.0};
     std::vector<double> carriers;
     std::vector<std::vector<uint8_t>> symbols;     // PACTOR-II / III: phase step indices
+    std::vector<std::vector<double>> cum;          // their cumulative phase
     std::vector<uint8_t> sync;                     // the fixed pattern
-    std::vector<cd> psk4;                          // PACTOR-IV symbols
+    std::vector<cd> iv;                            // PACTOR-IV symbols
+    std::vector<double> rrc;
     size_t n = 0;
     double sigma = 0;
-    // PACTOR-IV pulse
-    std::vector<double> rrc;
-    std::vector<cd> iv;
-    // fading
     double fph[4] = {0, 1.3, 2.9, 4.1}, ffr[4] = {0, 0, 0, 0};
-    size_t cache = 0;
+    // The slowly changing amplitude of every carrier is computed at kCtl samples per second and interpolated per output sample
+    static constexpr double kCtl = 8000.0;
+    static constexpr long kBlock = 2000, kMargin = 16;
+    long blockStart = -1000000;
+    std::vector<std::vector<cd>> amps;             // [carrier][m - blockStart + kMargin]
+    std::vector<cd> rot, step, delayRot;
 
     explicit Impl(const PactorHfGenConfig& c) : cfg(c), rng(c.seed) {
         if (c.variant == 2) carriers = {c.audioCentreHz - 100, c.audioCentreHz + 100};
@@ -49,87 +52,80 @@ struct PactorHfGenerator::Impl {
         else carriers = {1500.0};
         sync.resize((size_t)c.syncSyms);
         std::mt19937 sr(12345);
-        for (auto& s : sync) s = (uint8_t)(sr() % (unsigned)std::max(2, c.order));
         const size_t order = (size_t)std::max(2, c.order);
+        for (auto& s : sync) s = (uint8_t)(sr() % (unsigned)order);
         if (c.variant != 4) {
-            const size_t total = (size_t)(c.rate > 0 ? 400 * 100 : 0);   // 400 s of symbols, then they wrap
+            const size_t total = 100 * 400;   // 400 s of symbols, then they wrap
             symbols.assign(carriers.size(), std::vector<uint8_t>(total));
+            cum.assign(carriers.size(), std::vector<double>(total + 2));
+            const double stp = 2 * kPi / (double)order;
             for (size_t k = 0; k < carriers.size(); k++) {
+                double p = 0;
                 for (size_t i = 0; i < total; i++) {
                     const size_t pos = i % (size_t)c.frameSyms;
                     symbols[k][i] = pos < (size_t)c.syncSyms ? (uint8_t)((sync[pos] + k) % order) : (uint8_t)(rng() % order);
+                    p += (double)symbols[k][i] * stp;
+                    cum[k][i] = p;
                 }
+                cum[k][total] = p; cum[k][total + 1] = p;
             }
         } else {
-            const size_t total = 1800 * 60;
+            const size_t total = 1800 * 120;
             iv.resize(total);
+            const double a4[4] = {-3, -1, 1, 3};
             for (size_t i = 0; i < total; i++) {
                 const size_t pos = i % (size_t)c.frameSyms;
                 const unsigned r = pos < (size_t)c.syncSyms ? sync[pos] : (unsigned)(rng() % order);
-                if (c.order <= 8) iv[i] = std::polar(1.0, 2 * kPi * (double)r / (double)std::max(2, c.order) + (c.order == 2 ? 0 : kPi / (double)c.order));
-                else {   // 16-QAM
-                    const double a[4] = {-3, -1, 1, 3};
-                    iv[i] = cd(a[(r >> 2) & 3] / std::sqrt(10.0), a[r & 3] / std::sqrt(10.0));
-                    if (pos >= (size_t)c.syncSyms) { const unsigned q = (unsigned)(rng() % 16); iv[i] = cd(a[(q >> 2) & 3] / std::sqrt(10.0), a[q & 3] / std::sqrt(10.0)); }
-                }
+                if (c.order <= 8) iv[i] = std::polar(1.0, 2 * kPi * (double)r / (double)order + (c.order == 2 ? 0 : kPi / (double)order));
+                else iv[i] = cd(a4[(r >> 2) & 3] / std::sqrt(10.0), a4[r & 3] / std::sqrt(10.0));
             }
-            const int span = 8; const double alpha = 0.35, T = 1.0, ts = 1.0 / 4.0;   // 4 samples per symbol grid for the table, interpolated
+            const int span = 8; const double alpha = 0.35;
             rrc.assign((size_t)(2 * span * 16 + 1), 0);
             for (size_t i = 0; i < rrc.size(); i++) {
-                const double t = ((double)i - span * 16.0) / 16.0 * T;
+                const double t = ((double)i - span * 16.0) / 16.0;
                 double v;
                 if (std::abs(t) < 1e-9) v = 1 - alpha + 4 * alpha / kPi;
                 else if (std::abs(std::abs(4 * alpha * t) - 1) < 1e-6) v = alpha / std::sqrt(2.0) * ((1 + 2 / kPi) * std::sin(kPi / (4 * alpha)) + (1 - 2 / kPi) * std::cos(kPi / (4 * alpha)));
                 else v = (std::sin(kPi * t * (1 - alpha)) + 4 * alpha * t * std::cos(kPi * t * (1 + alpha))) / (kPi * t * (1 - std::pow(4 * alpha * t, 2)));
                 rrc[i] = v;
             }
-            (void)ts;
         }
-        // noise from the signal power
         if (c.snrDb < 99) {
-            const double pSig = c.variant == 4 ? c.amp * c.amp : (double)carriers.size() * c.amp * c.amp * 0.75;
+            const double pSig = c.variant == 4 ? c.amp * c.amp * 0.2 : (double)carriers.size() * c.amp * c.amp * 0.75;
             const double snr = std::pow(10.0, c.snrDb / 10);
             sigma = std::sqrt(pSig / snr * c.rate / 2500.0 / 2.0);   // per component (I and Q)
         }
         for (int i = 0; i < 4; i++) ffr[i] = c.fadeHz * (0.6 + 0.35 * i) * 0.5;
+        const size_t K = carriers.size();
+        amps.assign(K, std::vector<cd>((size_t)(kBlock + 2 * kMargin + 2)));
+        rot.assign(K, cd(1, 0)); step.resize(K); delayRot.resize(K);
+        for (size_t k = 0; k < K; k++) {
+            const double f = (carriers[k] + c.cfoHz) * (1.0 + c.clockPpm * 1e-6) + c.dialOffsetHz;
+            step[k] = std::polar(1.0, 2 * kPi * f / c.rate);
+            delayRot[k] = std::polar(1.0, -2 * kPi * (carriers[k] + c.cfoHz) * 0.0015);
+        }
     }
 
-    // complex amplitude of carrier k at time t (seconds, signal time): raised-cosine pulses, phase accumulated from the symbol steps
+    // the baseband amplitude of PACTOR-II / III carrier k at time t: pulses, phase accumulated from the symbol steps
     cd carrierAt(size_t k, double t) {
         const double x = t * 100.0;
         const long i = (long)std::floor(x);
         const double f = x - (double)i;   // 0 .. 1 inside symbol i (its centre at 0.5, its boundaries at 0 and 1)
-        // PACTOR-II: raised-cosine pulses of width two symbols (cross-fade over the whole symbol). PACTOR-III: flat top with a cross-fade of +-h around the
-        // boundaries (the carriers are only 120 Hz apart, the receiver nulls the neighbours with a rectangular window of 1 / 120 s)
+        // PACTOR-II: raised-cosine pulses (cross-fade over the whole symbol). PACTOR-III: flat top with a cross-fade of +-h around the boundaries
+        // (the carriers are only 120 Hz apart; the receiver nulls the neighbours with a rectangular window of 1 / 120 s)
         const double h = cfg.variant == 3 ? 0.18 : 0.5;
-        auto fade = [&](double d) { return d <= -h ? 0.0 : d >= h ? 1.0 : std::pow(std::sin(kPi * (d + h) / (4 * h)), 2); };   // rises 0 -> 1 across the boundary
-        const cd c0 = std::polar(1.0, cumPhase(k, i));
-        if (f < h) {            // cross-fade with the previous symbol
-            const double w = fade(f);
-            return std::polar(1.0, cumPhase(k, i - 1)) * (1 - w) + c0 * w;
-        }
-        if (f > 1 - h) {        // cross-fade with the next symbol
-            const double w = fade(f - 1);
-            return c0 * (1 - w) + std::polar(1.0, cumPhase(k, i + 1)) * w;
-        }
+        auto fade = [&](double d) { return d <= -h ? 0.0 : d >= h ? 1.0 : std::pow(std::sin(kPi * (d + h) / (4 * h)), 2); };
+        const cd c0 = std::polar(1.0, cp(k, i));
+        if (f < h) { const double w = fade(f); return std::polar(1.0, cp(k, i - 1)) * (1 - w) + c0 * w; }
+        if (f > 1 - h) { const double w = fade(f - 1); return c0 * (1 - w) + std::polar(1.0, cp(k, i + 1)) * w; }
         return c0;
     }
-    std::vector<std::vector<double>> cum;
-    double cumPhase(size_t k, long j) {
-        if (cum.empty()) cum.assign(carriers.size(), {});
+    double cp(size_t k, long j) const {
+        const size_t N = cum[k].size() - 2;
         if (j < 0) j = 0;
-        const size_t N = symbols[k].size();
-        auto& c = cum[k];
-        if (c.empty()) {
-            c.resize(N + 2);
-            double p = 0;
-            const double step = 2 * kPi / (double)std::max(2, cfg.order);
-            for (size_t i = 0; i < N + 2; i++) { p += (double)symbols[k][i % N] * step; c[i] = p; }
-        }
-        return c[(size_t)j % (N + 2)];
+        return cum[k][(size_t)j % N];
     }
-
-    cd pulseIV(double tSym) {   // PACTOR-IV baseband at symbol time tSym (symbols)
+    cd pulseIV(double tSym) const {
         const int span = 8;
         const long i0 = (long)std::floor(tSym);
         cd acc(0, 0);
@@ -138,39 +134,44 @@ struct PactorHfGenerator::Impl {
             if (x < 0 || x >= (double)rrc.size() - 1) continue;
             const size_t xi = (size_t)x; const double fr = x - (double)xi;
             const double h = rrc[xi] * (1 - fr) + rrc[xi + 1] * fr;
-            acc += iv[(size_t)((j % (long)iv.size()) + (long)iv.size()) % iv.size()] * h;
+            acc += iv[(size_t)(((j % (long)iv.size()) + (long)iv.size()) % (long)iv.size())] * h;
         }
         return acc;
     }
-
-    cd baseSample(double t) {
-        cd out(0, 0);
-        if (cfg.variant == 4) {
-            const double tSym = t * 1800.0;
-            const cd b = pulseIV(tSym) * 0.45;
-            out = b * std::polar(cfg.amp, 2 * kPi * (carriers[0] + cfg.cfoHz) * t);
-        } else {
-            for (size_t k = 0; k < carriers.size(); k++)
-                out += carrierAt(k, t) * std::polar(cfg.amp, 2 * kPi * (carriers[k] + cfg.cfoHz) * t);
-        }
-        return out;
-    }
-
-    cd fade(double t) {
+    cd fade(double t) const {
         if (cfg.fadeHz <= 0) return cd(1, 0);
         cd g(0, 0);
         for (int i = 0; i < 4; i++) g += std::polar(0.5, 2 * kPi * ffr[i] * t * (i % 2 ? 1 : -1) + fph[i]);
         return g;
     }
+    void fillBlock(long bs) {
+        blockStart = bs;
+        for (size_t k = 0; k < carriers.size(); k++)
+            for (long m = -kMargin; m <= kBlock + kMargin; m++) {
+                const double t = (double)(bs + m) / kCtl;
+                cd b = cfg.variant == 4 ? pulseIV(t * 1800.0) * 0.45 : carrierAt(k, t);
+                amps[k][(size_t)(m + kMargin)] = b * fade(t) * cfg.amp;
+            }
+    }
 
     cd next() {
         const double t = (double)n / cfg.rate * (1.0 + cfg.clockPpm * 1e-6);
         n++;
-        cd s = baseSample(t);
-        if (cfg.twoPath) s += 0.5 * baseSample(t - 0.0015);
-        s *= fade(t);
-        const double ph = 2 * kPi * cfg.dialOffsetHz * (double)(n - 1) / cfg.rate;
-        s *= std::polar(1.0, ph);
+        const double x = t * kCtl;
+        long m = (long)std::floor(x);
+        const double fr = x - (double)m;
+        if (m < blockStart || m >= blockStart + kBlock) fillBlock((m / kBlock) * kBlock);
+        const size_t mi = (size_t)(m - blockStart + kMargin);
+        cd s(0, 0);
+        const long dly = (long)std::lround(0.0015 * kCtl);
+        for (size_t k = 0; k < carriers.size(); k++) {
+            const cd a = amps[k][mi] * (1 - fr) + amps[k][mi + 1] * fr;
+            cd v = a;
+            if (cfg.twoPath) { const cd d = amps[k][(size_t)((long)mi - dly)] * (1 - fr) + amps[k][(size_t)((long)mi - dly + 1)] * fr; v += 0.5 * d * delayRot[k]; }
+            s += v * rot[k];
+            rot[k] *= step[k];
+            if ((n & 1023) == 0) rot[k] /= std::abs(rot[k]);
+        }
         if (sigma > 0) s += cd(sigma * nd(rng), sigma * nd(rng));
         return s;
     }
