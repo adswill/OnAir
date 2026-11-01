@@ -177,6 +177,38 @@ int main() {
         for (int i = 0; i < 100 && slurp(inst + "/bin/onair") != "#!/bin/sh\necho new\n"; i++) std::this_thread::sleep_for(std::chrono::milliseconds(100));
         CHECK(slurp(inst + "/bin/onair") == "#!/bin/sh\necho new\n" && fs::exists(inst + "/lib/libnew.so") && !fs::exists(inst + "/lib/libold.so"), "the installation was replaced");
     }
+    // a .deb: downloaded and checked, then the user is told the exact command; nothing is run (no pkexec, no dpkg) and the program is not replaced
+    {
+        const std::string deb = (base / "onair_9.9.9_amd64.deb").string();
+        put(deb, "!<arch>\nnot a real package, only bytes\n");
+        const std::string dsum = sha256File(deb);
+        auto asset = [&](const std::string& n, const std::string& digest) { return "{\"name\":\"" + n + "\",\"size\":" + std::to_string(fs::file_size(deb)) + ",\"browser_download_url\":\"file://" + deb + "\",\"digest\":\"sha256:" + digest + "\"}"; };
+        put((base / "apideb.json").string(), "[{\"tag_name\":\"v9.9.9\",\"draft\":false,\"prerelease\":false,\"assets\":[" + asset("onair_9.9.9_amd64.deb", dsum) + "," + asset("onair_9.9.9_arm64.deb", dsum) + "]}]");
+        Updater u("0.0.1");
+        u.setApiUrl("file://" + (base / "apideb.json").string());
+        u.setExecutable("/usr/bin/onair", (int)InstallKind::LinuxDeb);
+        CHECK(u.status().manualInstall && !u.status().autoInstallable, "deb: manual install, not self-replacing");
+        u.check(true);
+        CHECK(waitFor(u, Updater::Phase::Available, 10) == Updater::Phase::Available, "deb: found the update");
+        const std::string wantDeb = thisArch() == "arm64" ? "onair_9.9.9_arm64.deb" : "onair_9.9.9_amd64.deb";
+        CHECK(u.status().release.assetName == wantDeb, "deb: the package for this arch: %s", u.status().release.assetName.c_str());
+        u.download();
+        CHECK(waitFor(u, Updater::Phase::Ready, 20) == Updater::Phase::Ready, "deb: downloaded and checked: %s", u.status().error.c_str());
+        const std::string cmd = u.status().manualCommand;
+        CHECK(cmd.compare(0, 19, "sudo apt install '/") == 0 && has(cmd, wantDeb + "'"), "deb: the command: %s", cmd.c_str());
+        std::string err;
+        CHECK(!u.apply(true, &err) && has(err, "sudo apt install"), "deb: apply runs nothing and names the command: %s", err.c_str());
+        CHECK(debInstallCommand("/tmp/it's a.deb") == "sudo apt install '/tmp/it'\\''s a.deb'", "deb: quoting: %s", debInstallCommand("/tmp/it's a.deb").c_str());
+        // a wrong checksum is refused for a .deb too
+        put((base / "apideb.json").string(), "[{\"tag_name\":\"v9.9.9\",\"draft\":false,\"prerelease\":false,\"assets\":[" + asset("onair_9.9.9_amd64.deb", std::string(64, 'a')) + "," + asset("onair_9.9.9_arm64.deb", std::string(64, 'a')) + "]}]");
+        Updater v("0.0.1");
+        v.setApiUrl("file://" + (base / "apideb.json").string());
+        v.setExecutable("/usr/bin/onair", (int)InstallKind::LinuxDeb);
+        v.check(true);
+        CHECK(waitFor(v, Updater::Phase::Available, 10) == Updater::Phase::Available, "deb: found the update (bad sum)");
+        v.download();
+        CHECK(waitFor(v, Updater::Phase::Ready, 20) == Updater::Phase::Failed && has(v.status().error, "checksum") && v.status().manualCommand.empty(), "deb: a wrong checksum is refused");
+    }
 #ifdef __APPLE__
     // the macOS app: the new version comes in a disk image and is copied next to the installed app, then swapped for it
     {

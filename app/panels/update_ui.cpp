@@ -60,7 +60,10 @@ void updateTick(App& a) {
             a.engine.log("update available: OnAir " + st.release.version + (st.release.prerelease ? tr(" (beta)") : ""));
             if (a.updAuto && st.autoInstallable && !st.mirrorUnverified && !skipped(a, st.release) && !failedBefore(st, st.release)) { U(a).download(); a.engine.log("downloading OnAir " + st.release.version + " in the background"); }
             break;
-        case Updater::Phase::Ready: a.engine.log("OnAir " + st.release.version + " is ready: it is installed when you close the program"); break;
+        case Updater::Phase::Ready:
+            if (st.manualInstall) a.engine.log("OnAir " + st.release.version + " is downloaded and checked. Install it with: " + st.manualCommand);
+            else a.engine.log("OnAir " + st.release.version + " is ready: it is installed when you close the program");
+            break;
         case Updater::Phase::Failed: a.engine.log("update: " + st.error); break;
         default: break;
         }
@@ -127,7 +130,13 @@ void updateButton(App& a) {
         switch (st.phase) {
         case Updater::Phase::Checking: ImGui::TextUnformatted(tr("Asking GitHub for the newest version…")); break;
         case Updater::Phase::UpToDate: ImGui::TextColored(ImVec4(0.35f, 0.9f, 0.45f, 1), "%s", tr("You have the newest version.")); break;
-        case Updater::Phase::Failed: ImGui::TextColored(ImVec4(0.95f, 0.5f, 0.35f, 1), "%s", st.error.c_str()); break;
+        case Updater::Phase::Failed:
+            ImGui::PushTextWrapPos(0);
+            ImGui::TextColored(ImVec4(0.95f, 0.5f, 0.35f, 1), "%s", st.error.c_str());
+            ImGui::PopTextWrapPos();
+            ImGui::TextDisabled("%s", tr("Nothing was changed. You can try again, or take the package from the release page."));
+            if (ImGui::SmallButton(tr("Release page##updfail"))) u.openReleasePage();
+            break;
         case Updater::Phase::Available:
         case Updater::Phase::Downloading:
         case Updater::Phase::Preparing:
@@ -140,8 +149,24 @@ void updateButton(App& a) {
                 ImGui::PopTextWrapPos();
                 ImGui::EndChild();
             }
-            if (st.phase == Updater::Phase::Downloading) ImGui::ProgressBar(st.total ? (float)((double)st.done / (double)st.total) : 0.f, ImVec2(-1, 0));
+            if (st.phase == Updater::Phase::Downloading) {
+                ImGui::ProgressBar(st.total ? (float)((double)st.done / (double)st.total) : 0.f, ImVec2(-1, 0),
+                                   st.total ? (std::to_string(st.done >> 20) + " of " + std::to_string(st.total >> 20) + " MB").c_str() : nullptr);
+            }
             else if (st.phase == Updater::Phase::Preparing) ImGui::TextUnformatted(tr("Checking and preparing the new version…"));
+            else if (st.phase == Updater::Phase::Ready && st.manualInstall) {   // a .deb: checked and waiting, the user runs the command
+                ImGui::PushTextWrapPos(0);
+                ImGui::TextColored(ImVec4(0.35f, 0.9f, 0.45f, 1), "%s", tr("Downloaded and checked against its SHA-256. OnAir does not install packages by itself: run this in a terminal."));
+                ImGui::PopTextWrapPos();
+                char cmd[1100];
+                snprintf(cmd, sizeof cmd, "%s", st.manualCommand.c_str());
+                ImGui::SetNextItemWidth(-1);
+                ImGui::InputText("##debcmd", cmd, sizeof cmd, ImGuiInputTextFlags_ReadOnly);
+                if (ImGui::Button(tr("Copy command"))) ImGui::SetClipboardText(st.manualCommand.c_str());
+                ImGui::SameLine();
+                if (ImGui::Button(tr("Release page"))) u.openReleasePage();
+                ImGui::TextDisabled("%s", tr("Then start OnAir again."));
+            }
             else if (st.phase == Updater::Phase::Ready) {
                 ImGui::TextColored(ImVec4(0.35f, 0.9f, 0.45f, 1), "%s", tr("Downloaded and checked. It is installed when you close OnAir."));
                 if (ImGui::Button(tr("Restart now and update"))) {
@@ -150,7 +175,6 @@ void updateButton(App& a) {
                 }
                 if (!st.applyError.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.5f, 0.35f, 1), "%s", st.applyError.c_str()); ImGui::PopTextWrapPos(); }
                 if (st.kind == InstallKind::WindowsInstall) ImGui::TextDisabled("%s", tr("Windows asks for permission to run the installer."));
-                if (st.kind == InstallKind::LinuxDeb) ImGui::TextDisabled("%s", tr("The system asks for your password to install the package."));
             } else {
                 if (st.release.fromMirror) {
                     ImGui::PushTextWrapPos(0);
@@ -158,10 +182,10 @@ void updateButton(App& a) {
                     else ImGui::TextDisabled("%s", tr("The list came through the mirror; the checksum was confirmed by GitHub."));
                     ImGui::PopTextWrapPos();
                 }
-                if (st.mirrorUnverified && st.autoInstallable) ImGui::Checkbox(tr("I understand, download it anyway"), &a.updConfirm);
-                if (st.autoInstallable) {
+                if (st.mirrorUnverified && (st.autoInstallable || st.manualInstall)) ImGui::Checkbox(tr("I understand, download it anyway"), &a.updConfirm);
+                if (st.autoInstallable || st.manualInstall) {
                     ImGui::BeginDisabled(st.mirrorUnverified && !a.updConfirm);
-                    if (ImGui::Button(tr("Download and install"))) u.download(st.mirrorUnverified && a.updConfirm);
+                    if (ImGui::Button(st.manualInstall ? tr("Download and check") : tr("Download and install"))) u.download(st.mirrorUnverified && a.updConfirm);
                     ImGui::EndDisabled();
                 }
                 else { ImGui::TextDisabled("%s", tr("This copy of OnAir cannot replace itself.")); }
