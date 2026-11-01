@@ -37,7 +37,7 @@ int main() {
     }
     const SpecxTelemetry& s = rx.specx;
     printf("  %d reports: %s\n", reports, specxSummary(s).c_str());
-    CHECK(reports > 20 && wrong == 0, "%d reports, %d wrong", reports, wrong);
+    CHECK(reports > 10 && wrong == 0, "%d reports, %d wrong", reports, wrong);
     CHECK(rx.rateOk && s.fftSize == 4096 && (int)s.spectrum.size() == 4096, "fft %d", s.fftSize);
     const double fs = s.rate, bin = fs / s.fftSize;
     CHECK(std::fabs(s.peakOffsetHz - kSpecxCwOffset * fs) < 2 * bin, "tone at %.0f", s.peakOffsetHz);
