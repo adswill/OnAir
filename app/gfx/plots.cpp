@@ -1444,7 +1444,8 @@ static double gWfScrollLo = 0, gWfScrollHi = 0; static bool gWfScrollPending = f
 static double wheelStepHz(const App& a) { return inputmap::stepHzFor(inputmap::settings(), ownTuneGridMhz(a) * 1e6); }
 
 static void tuneBySteps(App& a, int n) {
-    if (!n || a.fmScan.running || isGeneralFamily(a.family)) return;
+    if (!n || a.fmScan.running) return;
+    if (isGeneralFamily(a.family)) { generalWheelTune(a, n, inputmap::settings().stepHz > 0 ? inputmap::settings().stepHz : 0); return; }
     const double step = wheelStepHz(a) * 1e-6;
     const double mhz = clickTuneMhz(a, a.freqMhz + n * step, inputmap::settings().stepHz == 0);
     if (!std::isnan(mhz) && std::fabs(mhz - a.freqMhz) > 1e-9) spectrumTune(a, mhz);

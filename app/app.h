@@ -1249,6 +1249,7 @@ void vfoPanelWindow(App& a);
 void vfoPopupSection(App& a);
 void vfoAddAt(App& a, double mhz);
 void generalPlotMouse(App& a, int plotId);
+void generalWheelTune(App& a, int n, double stepHzOverride);   // wheel tuning in the general receiver (#409)
 void generalChannelBand(const App& a, bool fill);
 bool generalDragging(int plotId);
 double generalChannelWidthMhz(const App& a);
