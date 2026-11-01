@@ -363,6 +363,20 @@ inline std::vector<Mode> allModes() {
         m.make = factory<DrmReceiver, DrmTelemetry>([](DrmReceiver& rx, double r) { rx.setSilent(true); rx.configure(r); }, blocks<DrmTelemetry>);
         add(m);
     }
+    {   // DRM mode B, 10 kHz, 16-QAM at the strongest protection (level 0): the most robust audio setting of DRM30
+        Mode m = base("drm16", "DRM 16-QAM prot 0", "ofdm-radio", 12, 2e6, 8.0, 10e3, 10);
+        m.echoUs = 1000; m.fdHz = 2; m.snrHi = 24; m.maxJobs = 4; m.pnHz = 1;
+        m.gen = [](size_t n) { SynthConfig c; c.modeOpt[2] = 1; c.modeOpt[3] = 1; c.modeOpt[4] = 1; c.modeOpt[5] = 1; return clean(12, c, 2e6, n); };
+        m.make = factory<DrmReceiver, DrmTelemetry>([](DrmReceiver& rx, double r) { rx.setSilent(true); rx.configure(r); }, blocks<DrmTelemetry>);
+        add(m);
+    }
+    {   // DRM+ (mode E), 100 kHz, 4-QAM MSC: the lowest-order DRM audio setting
+        Mode m = base("drmE", "DRM+ 4-QAM", "ofdm-radio", 12, 2e6, 8.0, 100e3, 90);
+        m.echoUs = 20; m.fdHz = 2; m.snrHi = 20; m.maxJobs = 4; m.pnHz = 1;
+        m.gen = [](size_t n) { SynthConfig c; c.modeOpt[0] = 5; c.modeOpt[2] = 1; c.modeOpt[5] = 1; return clean(12, c, 2e6, n); };
+        m.make = factory<DrmReceiver, DrmTelemetry>([](DrmReceiver& rx, double r) { rx.setSilent(true); rx.configure(r); }, blocks<DrmTelemetry>);
+        add(m);
+    }
     {   // ADS-B: 12 aircraft
         Mode m = base("adsb", "ADS-B", "burst", 13, 4e6, 3.0, 2e6, 1090);
         m.echoUs = 0.3; m.snrHi = 30;
