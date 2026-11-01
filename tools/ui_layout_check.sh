@@ -113,6 +113,9 @@ fy4lrit	--mode fy4lrit	Overview|Products|Receiver|History
 fy4ahrit	--mode fy4ahrit	Overview|Products|Receiver|History
 fy2svissr	--mode fy2svissr	Overview|Products|Receiver|History
 pactor	--mode pactor	Overview|PACTOR-I|Receiver|History
+pactor2	--mode pactor2	Overview|PACTOR-II|Receiver|History
+pactor3	--mode pactor3	Overview|PACTOR-III|Receiver|History
+pactor4	--mode pactor4	Overview|PACTOR-IV|Receiver|History
 esubghz	--mode esubghz	Overview|Flipper chat|Receiver|History
 roshf	--mode roshf	Overview|ROS|Receiver|History
 ssdv	--mode ssdv	Overview|SSDV|Receiver|History

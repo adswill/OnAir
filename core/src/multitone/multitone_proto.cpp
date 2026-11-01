@@ -5,6 +5,8 @@
 #include "dect2/multitone/multitone_tel.h"
 #include "dect2/pager/pager_proto.h"
 #include <algorithm>
+#include <map>
+#include <set>
 #include <cmath>
 #include <complex>
 #include <cstdio>
@@ -227,6 +229,71 @@ FskResult sliceFsk(const std::vector<float>& disc, double rate) {
     return r;
 }
 
+void analyseFraming(const std::vector<uint8_t>& bitsIn, MtBurst& b) {
+    b.dupBits = 1; b.dataBaud = b.baud; b.markerBits = 0; b.marker.clear(); b.markerCount = 0; b.markerGap = 0;
+    b.frameWords.clear(); b.doubledWords = 0; b.distinctWords = 0;
+    if (bitsIn.size() < 96) return;
+    // 1. every bit twice in a row? (the sliced audio FFSK has a pair of equal symbols for each bit)
+    std::vector<uint8_t> bits = bitsIn;
+    for (int par = 0; par < 2 && b.dupBits == 1; par++) {
+        size_t same = 0, tot = 0;
+        for (size_t i = (size_t)par; i + 1 < bitsIn.size(); i += 2) { same += bitsIn[i] == bitsIn[i + 1]; tot++; }
+        if (tot >= 48 && (double)same >= 0.95 * (double)tot) {
+            b.dupBits = 2;
+            bits.clear();
+            for (size_t i = (size_t)par; i + 1 < bitsIn.size(); i += 2) bits.push_back(bitsIn[i]);
+        }
+    }
+    b.dataBaud = b.baud / b.dupBits;
+    const size_t n = bits.size();
+    if (n < 64) return;
+    // 2. a pattern of P bits that comes back at distances that are whole multiples of P
+    std::string s(n, '0');
+    for (size_t i = 0; i < n; i++) s[i] = bits[i] ? '1' : '0';
+    struct Best { int P = 0; std::string pat; std::vector<size_t> pos; double score = 0; } best;
+    for (int P = 8; P <= 32; P++) {
+        std::map<std::string, std::vector<size_t>> m;
+        for (size_t i = 0; i + (size_t)P <= n; i++) m[s.substr(i, (size_t)P)].push_back(i);
+        for (auto& kv : m) {
+            const auto& pos = kv.second;
+            if (pos.size() < 4) continue;
+            int changes = 0;
+            for (size_t i = 1; i < kv.first.size(); i++) changes += kv.first[i] != kv.first[i - 1];
+            if (changes < 5) continue;            // a run of one value is an idle pattern, not a marker
+            size_t fit = 0, gaps = 0;
+            std::vector<size_t> keep{pos[0]};
+            for (size_t i = 1; i < pos.size(); i++) {
+                const size_t g = pos[i] - keep.back();
+                if (g < (size_t)P) continue;      // overlapping copy of the same occurrence
+                gaps++;
+                if (g % (size_t)P == 0) fit++;
+                keep.push_back(pos[i]);
+            }
+            if (keep.size() < 4 || gaps == 0 || (double)fit < 0.8 * (double)gaps) continue;
+            const double sc = (double)keep.size() * (double)P;
+            if (sc > best.score + 1e-9) { best.P = P; best.pat = kv.first; best.pos = keep; best.score = sc; }
+        }
+    }
+    if (best.P == 0) return;
+    b.markerBits = best.P; b.marker = best.pat; b.markerCount = (int)best.pos.size();
+    std::map<size_t, int> gc;
+    for (size_t i = 1; i < best.pos.size(); i++) gc[best.pos[i] - best.pos[i - 1]]++;
+    size_t gap = (size_t)best.P; int gn = 0;
+    for (auto& kv : gc) if (kv.second > gn) { gn = kv.second; gap = kv.first; }
+    b.markerGap = (int)gap;
+    // 3. the words between the marker and the next place one gap on
+    std::string prev;
+    std::set<std::string> distinct;
+    for (size_t p : best.pos) {
+        if (p + gap > n || gap <= (size_t)best.P) continue;
+        const std::string w = s.substr(p + (size_t)best.P, gap - (size_t)best.P);
+        if (b.frameWords.size() < 64) b.frameWords.push_back(w);
+        if (w == prev) b.doubledWords++;
+        distinct.insert(w); prev = w;
+    }
+    b.distinctWords = (int)distinct.size();
+}
+
 void analyseBits(const std::vector<uint8_t>& bits, MtBurst& b) {
     b.nBits = (int)bits.size();
     // hex of the stream as sliced
@@ -350,6 +417,13 @@ void analyseBits(const std::vector<uint8_t>& bits, MtBurst& b) {
     }
     if (b.manchester && bestRun >= 2) b.verdict += " (Manchester decoded.)";
     if (b.repeatBits > 0) { char r[96]; snprintf(r, sizeof r, " The bit pattern repeats every %d bits.", b.repeatBits); b.verdict += r; }
+    analyseFraming(bits, b);
+    if (b.markerBits > 0) {
+        std::string t;
+        if (b.dupBits > 1) { char d[96]; snprintf(d, sizeof d, " Every bit is sent twice (data rate %.1f baud).", b.dataBaud); t += d; }
+        char m[300]; snprintf(m, sizeof m, " Framing measured: a %d-bit marker %s %d times, one every %d bits, %d different words after it (%d repeat the one before). Their meaning is not worked out.", b.markerBits, b.marker.c_str(), b.markerCount, b.markerGap, b.distinctWords, b.doubledWords);
+        b.verdict += t + m;
+    }
 }
 
 } // namespace multitone

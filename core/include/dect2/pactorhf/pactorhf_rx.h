@@ -22,7 +22,7 @@ struct PactorHfTelemetry;   // pactorhf_tel.h
 
 class PactorHfReceiver {
 public:
-    explicit PactorHfReceiver(int variant);
+    explicit PactorHfReceiver(int variant = 2);
     ~PactorHfReceiver();
 
     void configure(double inputRateHz);

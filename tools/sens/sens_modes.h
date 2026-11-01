@@ -54,6 +54,10 @@
 #include "dect2/inmc/inmc_rx.h"
 #include "dect2/inmc/inmc_tel.h"
 #include "dect2/hfdl/hfdl_gen.h"
+#include "dect2/pactorhf/pactorhf_rx.h"
+#include "dect2/pactorhf/pactorhf_tel.h"
+#include "dect2/pactorhf/pactorhf_rx.h"
+#include "dect2/pactorhf/pactorhf_tel.h"
 #include "dect2/hfdl/hfdl_rx.h"
 #include "dect2/hfdl/hfdl_tel.h"
 #include "dect2/marine/marine_gen.h"
@@ -598,6 +602,23 @@ inline std::vector<Mode> allModes() {
             m.make = factory<HdrReceiver, HdrTelemetry>([](HdrReceiver& rx, double r) { rx.setSilent(true); rx.configure(r); }, blocks<HdrTelemetry>);
             add(m);
         }
+    }
+    {   // PACTOR-II / -III / -IV (physical layer only): "valid output" = analyses that found the wanted signal and, for II / III, its repeating frame; SNR in 2.5 kHz of
+        // the whole signal. 250 ksps, 45 s trials (the analysis runs every 4 s on the last 40 s)
+        struct Pa : PactorHfReceiver { Pa() : PactorHfReceiver(2) {} };
+        struct Pb : PactorHfReceiver { Pb() : PactorHfReceiver(3) {} };
+        struct Pc : PactorHfReceiver { Pc() : PactorHfReceiver(4) {} };
+        auto pac = [&]<class Rx>(const char* id, const char* name, int var, int std_, double secs, double bw) {
+            Mode m = base(id, name, "hf-data", std_, 250e3, secs, bw, 14.072);
+            m.snrHi = 35; m.maxJobs = 2;
+            m.gen = [std_](size_t n) { SynthConfig c; c.modeOpt[0] = 4; c.snrDb = 200; return clean(std_, c, 250e3, n); };
+            m.make = factory<Rx, PactorHfTelemetry>([std_](Rx& rx, double r) { prepGeneric(rx, r, std_); rx.setAnalysisInterval(4); },
+                                                    [var](const PactorHfTelemetry& t) { const bool ok = t.variant == var && (var == 4 || t.dataValid); return Metric{ok ? (double)t.detections : 0.0, 0.0}; }, true);
+            add(m);
+        };
+        pac.template operator()<Pa>("pactor2", "PACTOR-II (D-QPSK, physical layer)", 2, 239, 45.0, 450);
+        pac.template operator()<Pb>("pactor3", "PACTOR-III level 4 (14 carriers, D-QPSK, physical layer)", 3, 240, 45.0, 2000);
+        pac.template operator()<Pc>("pactor4", "PACTOR-IV (QPSK 1800 baud, physical layer)", 4, 241, 30.0, 2400);
     }
     narrow.template operator()<PagerReceiver, PagerTelemetry>("pager", "POCSAG / FLEX pagers", "narrowband-data", 25, 1.2e6, 8.0, 25e3, 466, nullptr, 25);
     narrow.template operator()<PacketReceiver, PacketTelemetry>("packet", "APRS / AX.25 packet", "narrowband-data", 26, 1.2e6, 6.0, 25e3, 144.8, [](SynthConfig& c) { c.modeOpt[0] = 0; }, 25);

@@ -19,7 +19,7 @@ namespace {
 struct State { int view = 0; };
 State S[3];
 
-template <int V> int active() { return 237 + V; }   // the engine reports its standard code minus one: 238, 239, 240 for V = 0, 1, 2
+template <int V> int active() { return 238 + V; }   // the engine reports its standard code minus one: 238, 239, 240 for V = 0, 1, 2
 template <int V> bool live(const App& a) { return a.rx.standard == active<V>(); }
 template <int V> int variant() { return V + 2; }
 
