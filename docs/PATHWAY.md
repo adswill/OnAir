@@ -940,3 +940,6 @@ Eleven tests failed on integ-35 after the merges. automation::familyOf had no "m
 
 ## 2026-11-01 Spectrum zoom and target click (feat36-spectrum)
 Wheel zoom now fixes the tuner marker when the pointer is near it; the target click acts on the radio centre (not the marker), recentres the zoomed view on the signal; double click tunes instead of resetting the zoom; Home shows the whole band. Pure maths and tests in tune_drag.h. Ideas in docs/SPECTRUM-3.6.md.
+
+## 2026-11-01 Target mode keeps the marker centred (feat36-spectrum)
+Switching to Centre/target mode, or tuning while in it, eases the view so the tuner marker sits in the middle (followMarker in tune_drag.h, unit-tested; a drag cancels it). The marker is the tuned frequency, so ModeTuning offsets do not move it.

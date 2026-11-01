@@ -72,6 +72,13 @@ int main() {
         check(targetClickActs(100.0, 100.0, 99.0, true), "target click on the marker still centres");
         check(!targetClickActs(100.0, 100.0, 100.0, true), "target click on the centre does nothing");
         check(!targetClickActs(100.0, 100.0, 99.0, false), "plain click on the marker does nothing");
+        bool dn = false;
+        v = followMarker(99, 100, 99.1, 98, 103, 1.0, dn);
+        check(dn && std::fabs((v.lo + v.hi) / 2 - 99.1) < 1e-12 && v.lo >= 98, "marker at the left lands in the centre");
+        v = followMarker(99, 100, 99.1, 98, 103, 0.5, dn);
+        check(!dn && v.lo < 99 && v.lo > 98.6, "an eased step moves part of the way");
+        v = followMarker(98, 99, 98.1, 98, 103, 1.0, dn);
+        check(v.lo == 98 && dn, "at the band edge the view stops");
     }
     return fails ? 1 : 0;
 }

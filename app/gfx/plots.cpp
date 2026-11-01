@@ -625,7 +625,24 @@ static void syncSpecZoomFromFreqView(App& a) {
 
 static bool gFreqZoomSliderActive = false;
 
+// Target mode: the view keeps the tuner marker in its middle. Switching to it, or tuning in it, eases the view over (a drag or a pinned view stops it).
+static void followTunerMarker(App& a) {
+    static bool lastCentre = false, follow = false; static double lastMarker = 0;
+    const bool centre = a.centreTuning && a.tuningMode != 1 && !a.fmMode;
+    if (centre && (!lastCentre || std::fabs(a.freqMhz - lastMarker) > 1e-9)) follow = true;
+    lastCentre = centre; lastMarker = a.freqMhz;
+    if (!centre || !follow || !(gXHi > gXLo)) { if (!centre) follow = false; return; }
+    if (ImGui::IsMouseDown(0)) { follow = false; return; }   // the user took the view
+    const double fs = sampleRateMhz(a), rc = radioCenterMhz(a);
+    const double k = a.specSmoothZoom ? 1.0 - std::exp(-std::min(0.1, (double)ImGui::GetIO().DeltaTime) * 18.0) : 1.0;
+    bool done = false;
+    const tunedrag::View v = tunedrag::followMarker(gXLo, gXHi, a.freqMhz, rc - fs / 2, rc + fs / 2, k, done);
+    gXLo = v.lo; gXHi = v.hi;
+    if (done) follow = false;
+}
+
 static void specFreqZoomBeforePlots(App& a) {
+    followTunerMarker(a);
     if (gFreqZoomSliderActive) applyFreqZoomSlider(a, a.specZoom);
     else syncSpecZoomFromFreqView(a);
 }

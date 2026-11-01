@@ -82,6 +82,15 @@ inline View centreView(double lo, double hi, double c, double bLo, double bHi) {
     const double n0 = std::max(bLo, std::min(c - s / 2, bHi - s));
     return {n0, n0 + s};
 }
+// One easing step of the view towards having the marker in the middle (same span, inside the band). k in (0,1]: 1 jumps. done: the marker is centred.
+inline View followMarker(double lo, double hi, double marker, double bLo, double bHi, double k, bool& done) {
+    const View t = centreView(lo, hi, marker, bLo, bHi);
+    const double span = hi - lo;
+    View v{lo + (t.lo - lo) * k, hi + (t.hi - hi) * k};
+    done = std::fabs(t.lo - v.lo) + std::fabs(t.hi - v.hi) < span * 1e-4 || k >= 1;
+    if (done) v = t;
+    return v;
+}
 // A click in target style must act unless it is already on the radio centre: comparing with the tuned frequency (marker) ignored a click on the
 // marker, and the grid snap made a click near it the same number, so a signal tuned off-centre could never be centred by clicking it.
 inline bool targetClickActs(double clickedMhz, double tunedMhz, double radioCentreMhz, bool centreStyle) {
