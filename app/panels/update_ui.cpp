@@ -164,7 +164,7 @@ void updateButton(App& a) {
                 ImGui::InputText("##debcmd", cmd, sizeof cmd, ImGuiInputTextFlags_ReadOnly);
                 if (ImGui::Button(tr("Copy command"))) ImGui::SetClipboardText(st.manualCommand.c_str());
                 ImGui::SameLine();
-                if (ImGui::Button(tr("Release page"))) u.openReleasePage();
+                if (ImGui::Button(tr("Release page##manual"))) u.openReleasePage();
                 ImGui::TextDisabled("%s", tr("Then start OnAir again."));
             }
             else if (st.phase == Updater::Phase::Ready) {
@@ -190,7 +190,7 @@ void updateButton(App& a) {
                 }
                 else { ImGui::TextDisabled("%s", tr("This copy of OnAir cannot replace itself.")); }
                 ImGui::SameLine();
-                if (ImGui::Button(tr("Release page"))) u.openReleasePage();
+                if (ImGui::Button(tr("Release page##avail"))) u.openReleasePage();
                 ImGui::SameLine();
                 if (ImGui::Button(tr("Skip this version"))) { a.updSkip = st.release.version; savePrefs(a); }
             }

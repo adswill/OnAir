@@ -39,7 +39,6 @@ Dial frequency the decoder should assume (the sound card is not tuned)	解码器
 DVB standard	DVB 标准
 Empty: the demo 802.15.4 scene.	留空：演示 802.15.4 场景。
 Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	留空：演示 FLARM 场景。此 ID 不会被打包进未公开的新版协议。
-Empty: the demo LoRa / mesh scene.	留空：演示 LoRa / mesh 场景。
 Empty: the demo Mode S uplink scene.	留空：演示 Mode S 上行场景。
 Empty: the demo VDES scene.	留空：演示 VDES 场景。
 File	文件
@@ -621,7 +620,6 @@ Checking and preparing the new version…	正在校验并准备新版本…
 Downloaded and checked. It is installed when you close OnAir.	已下载并校验。关闭 OnAir 时将安装。
 Restart now and update	立即重启并更新
 Windows asks for permission to run the installer.	Windows 会请求运行安装程序的权限。
-The system asks for your password to install the package.	系统会要求输入密码以安装软件包。
 This copy of OnAir cannot replace itself.	此 OnAir 副本无法自行替换。
 The update to v%s did not install (setup exit code %d).	更新到 v%s 未能安装（安装程序退出代码 %d）。
 Only github.com is contacted. Downloads are checked against the SHA-256 GitHub lists for the file.	只连接 github.com。下载文件会按 GitHub 给出的 SHA-256 校验。
