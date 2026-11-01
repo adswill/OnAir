@@ -24,6 +24,8 @@
 #include "dect2/meteor/meteor_tel.h"
 #include "dect2/hrpt/hrpt_rx.h"
 #include "dect2/hrpt/hrpt_tel.h"
+#include "dect2/fy3/fy3_rx.h"
+#include "dect2/fy3/fy3_tel.h"
 #include "dect2/goes/goes_rx.h"
 #include "dect2/goes/goes_tel.h"
 #include "dect2/globalstar/globalstar_rx.h"
@@ -607,6 +609,7 @@ inline std::vector<Mode> allModes() {
     // weather satellites: the SNR is Es/N0 (the noise bandwidth is the symbol rate); frames whose Reed-Solomon codewords all passed
     narrow.template operator()<MeteorReceiver, MeteorTelemetry>("meteor", "Meteor-M LRPT (OQPSK 72k)", "satellite-weather", 61, 1e6, 8.0, 72e3, 137.9, nullptr, 16);
     narrow.template operator()<HrptReceiver, HrptTelemetry>("hrpt", "MetOp AHRPT", "satellite-weather", 66, 8e6, 1.5, 2.33e6, 1701.3, nullptr, 16);
+    narrow.template operator()<Fy3AhrptReceiver, Fy3Telemetry>("fy3ahrpt", "FY-3 AHRPT (FY-3C)", "satellite-weather", 237, 6e6, 4.0, 2.6e6, 1701.4, nullptr, 14);
     narrow.template operator()<GoesReceiver, GoesTelemetry>("goes", "GOES HRIT", "satellite-weather", 62, 2.4e6, 4.0, 927e3, 1694.1, nullptr, 16);
     return v;
 }
