@@ -2,6 +2,7 @@
 #include "dect2/fygeo/fygeo_rx.h"
 #include "dect2/dsp/rrc.h"
 #include "dect2/dsp/fftutil.h"
+#include "dect2/dsp/resampler.h"
 #include "dect2/dvbs/dvbs_rx.h"
 #include "dect2/dvbs/dvbs_tel.h"
 #include "dect2/fygeo/fygeo_proto.h"
@@ -112,6 +113,9 @@ struct FygeoReceiver::Impl {
     // ---- FY-4 chain (the DVB-S2 receiver itself is the last member: its threads call back into everything above, so it must be destroyed first)
     int s2Link = -1;
     double s2Rate = 0;
+    RationalResampler up;                 // the DVB-S2 receiver wants 2 Msps or more: slower captures are interpolated by a whole factor
+    bool useUp = false;
+    std::vector<cf32> upOut;
     bool blocking = false;
     goes::Assembler asmb;
     fygeo::TsCaduExtractor ts;
@@ -154,7 +158,7 @@ struct FygeoReceiver::Impl {
     int collected = 0;
     std::vector<uint8_t> frame = std::vector<uint8_t>((size_t)fygeo::kSvissrFrameBytes + 8, 0);
     std::vector<uint8_t> preamble;
-    uint64_t svOk = 0, svBad = 0, svSyncs = 0, svRej = 0, lastOk = 0;
+    uint64_t svOk = 0, svBad = 0, svSyncs = 0, svRej = 0, lastOk = 0, svUsable = 0;
     double berPre = -1, berData = -1;
     int svLine = -1, svImages = 0;
     double lastFrameSec = -1;
@@ -346,7 +350,17 @@ struct FygeoReceiver::Impl {
         }
         const double sr = symOverride.load() > 0 ? symOverride.load() : fygeoSymbolRate(l);
         s2->setSymbolRate(sr);
-        if (s2Rate != rateSet || s2Link != l) { s2->configure(rateSet); s2Rate = rateSet; s2Link = l; }
+        if (s2Rate != rateSet || s2Link != l) {
+            double r = rateSet;
+            useUp = false;
+            if (r < 2e6 - 1) {
+                const int f = (int)std::ceil(2e6 / r);
+                useUp = up.configure(r, r * f);
+                if (useUp) r *= f;
+            }
+            s2->configure(r);
+            s2Rate = rateSet; s2Link = l;
+        }
     }
     void onTs(const uint8_t* p, size_t n) {
         std::lock_guard<std::mutex> lk(cm);
@@ -382,7 +396,7 @@ struct FygeoReceiver::Impl {
     }
 
     // ------------------------------------------------------------ S-VISSR front end
-    double minInputRate() const { return std::max(200000.0, 2.1 * symbolRate); }
+    double minInputRate() const { return std::max(200000.0, 1.4 * symbolRate); }
     double carrierHz() const { return cfo + cFreq / (2 * kPi) * symbolRate; }
     void setRot() { const double w = -2 * kPi * (appliedOffset + cfo) / rate; rot = std::complex<double>(std::cos(w), std::sin(w)); }
     void resetCarrier() { cPhase = 0; cFreq = 0; lockM = 0; double a, b; loopGains(0.01, 0.707, a, b); cAlpha = a; cBeta = b; }
@@ -549,6 +563,7 @@ struct FygeoReceiver::Impl {
         berData = berData < 0 ? dber : 0.8 * berData + 0.2 * dber;
         if (c >= fygeo::kSvissrMaxLines || (descrambled ? false : lastPreBer > 0.3)) { svBad++; return; }
         svOk++;
+        if (descrambled || lastPreBer < 0.02) svUsable++;
         svLine = c;
         svLine2(f, c);
     }
@@ -699,7 +714,7 @@ struct FygeoReceiver::Impl {
             t.lockMetric = std::max(0.f, lockM);
             t.frames = svOk + svBad;
             t.constellation.assign(constel.begin(), constel.end());
-            t.svFrames = svOk; t.svSyncs = svSyncs; t.svRejected = svRej;
+            t.svFrames = svOk; t.svSyncs = svSyncs; t.svRejected = svRej; t.svUsable = svUsable;
             t.svPreambleBer = berPre; t.svDataBer = berData; t.svLine = svLine; t.svImages = svImages;
             t.signalInfo = "BPSK NRZ-M " + std::to_string((int)std::lround(symbolRate / 1e3)) + " ksym/s";
             rateOk = rateSet >= minInputRate() - 1;
@@ -768,7 +783,10 @@ struct FygeoReceiver::Impl {
         if (l == kFy2Svissr) svFeed(x, n);
         else {
             ensureS2();
-            if (s2) s2->feed(x, n);
+            if (s2) {
+                if (useUp) { upOut.clear(); up.process(x, n, upOut); if (!upOut.empty()) s2->feed(upOut.data(), upOut.size()); }
+                else s2->feed(x, n);
+            }
         }
         nIn += (int64_t)n;
         if ((double)nIn >= nextReport) { nextReport += 0.25 * rate; report(); }
@@ -776,7 +794,7 @@ struct FygeoReceiver::Impl {
     void doReset() {
         const int l = link.load();
         if (l == kFy2Svissr) svReset();
-        else if (s2) s2->reset();
+        else if (s2) { s2->reset(); up.reset(); }
         std::lock_guard<std::mutex> lk(cm);
         asmb.reset();
         ts = fygeo::TsCaduExtractor();
@@ -907,7 +925,7 @@ ModeTuning fyTuning(int stdMode, const char* id, const char* name, double mhz, d
 } // namespace
 ModeTuning fy4aLritTuning() { return fyTuning(234, "fy4alrit", "FY-4A LRIT", 1697.0, 2000000, 0.3, 250000); }       // family 232 + 2
 ModeTuning fy4bLritTuning() { return fyTuning(235, "fy4blrit", "FY-4B LRIT", 1697.0, 2000000, 0.3, 250000); }       // family 233 + 2
-ModeTuning fy4aHritTuning() { return fyTuning(236, "fy4ahrit", "FY-4A HRIT-II/III", 1679.0, 4000000, 1.5, 2000000); }   // family 234 + 2
-ModeTuning fy2SvissrTuning() { return fyTuning(237, "fy2svissr", "FY-2 S-VISSR", 1687.5, 2400000, 1.0, 1500000); }   // family 235 + 2
+ModeTuning fy4aHritTuning() { return fyTuning(236, "fy4ahrit", "FY-4A HRIT-II/III", 1679.0, 4000000, 1.5, 1500000); }   // family 234 + 2
+ModeTuning fy2SvissrTuning() { return fyTuning(237, "fy2svissr", "FY-2 S-VISSR", 1687.5, 2400000, 1.0, 1000000); }   // family 235 + 2
 
 } // namespace dect2

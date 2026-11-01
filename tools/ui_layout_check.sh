@@ -108,6 +108,10 @@ wmbus	--mode wmbus	Overview|Meters|Receiver|History
 tones	--mode tones	Overview|Tones|Receiver|History
 sarsat	--mode sarsat	Overview|Beacons|Receiver|History
 argos	--mode argos	Overview|Argos|Receiver|History
+fy4alrit	--mode fy4alrit	Overview|Products|Receiver|History
+fy4blrit	--mode fy4blrit	Overview|Products|Receiver|History
+fy4ahrit	--mode fy4ahrit	Overview|Products|Receiver|History
+fy2svissr	--mode fy2svissr	Overview|Products|Receiver|History
 pactor	--mode pactor	Overview|PACTOR-I|Receiver|History
 esubghz	--mode esubghz	Overview|Flipper chat|Receiver|History
 roshf	--mode roshf	Overview|ROS|Receiver|History

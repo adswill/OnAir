@@ -68,6 +68,7 @@ struct FygeoTelemetry : GoesTelemetry {
     std::vector<std::pair<int, uint64_t>> pids;      // transport stream PIDs and their packet counts
     // S-VISSR (uncoded BPSK)
     uint64_t svFrames = 0, svSyncs = 0, svRejected = 0;
+    uint64_t svUsable = 0;             // frames whose preamble bit error ratio was under 2 % (pictures that are worth looking at)
     double svPreambleBer = -1;         // bit error ratio over the 10000 known preamble bits of the last frame (-1: none yet)
     double svDataBer = -1;             // from the zero spare field of the frames (-1: none yet)
     int svLine = -1;                   // line counter of the last frame

@@ -1477,6 +1477,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_argos_sigfox_mode PRIVATE dect2core)
     target_compile_definitions(test_argos_sigfox_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME argos_sigfox_mode COMMAND test_argos_sigfox_mode)
+    add_executable(test_fygeo_mode tests/app/test_fygeo_mode.cpp)   # the four FengYun modes (families 232 - 235): registered tunings, mode rows, engine wiring, poll slots, panel notes
+    target_link_libraries(test_fygeo_mode PRIVATE dect2core)
+    target_compile_definitions(test_fygeo_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME fygeo_mode COMMAND test_fygeo_mode)
     add_executable(test_ltr_edacs_mode tests/app/test_ltr_edacs_mode.cpp)   # LTR and EDACS trunking modes: registered tunings, mode rows, family count and panel strings
     target_link_libraries(test_ltr_edacs_mode PRIVATE dect2core)
     target_compile_definitions(test_ltr_edacs_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
@@ -2550,6 +2554,8 @@ if(DECT2_BUILD_APP AND NOT APPLE)
   endif()
   install(FILES third_party/rnnoise/COPYING DESTINATION ${CMAKE_INSTALL_DOCDIR}/rnnoise)   # RNNoise (BSD-3-Clause) is linked in: its licence text travels with the binaries
   install(FILES third_party/rnnoise/README-OnAir.md DESTINATION ${CMAKE_INSTALL_DOCDIR}/rnnoise RENAME NOTICE.md)
+  install(FILES third_party/openjpeg/LICENSE DESTINATION ${CMAKE_INSTALL_DOCDIR}/openjpeg)   # OpenJPEG (BSD-2-Clause) is linked in: its licence text travels with the binaries
+  install(FILES third_party/openjpeg/README-OnAir.md DESTINATION ${CMAKE_INSTALL_DOCDIR}/openjpeg RENAME NOTICE.md)
   if(TARGET dect2_whisper)   # whisper.cpp / ggml (MIT) is linked in: its licence text travels with the binaries
     install(FILES third_party/whisper/LICENSE DESTINATION ${CMAKE_INSTALL_DOCDIR}/whisper)
     install(FILES third_party/whisper/README-OnAir.md DESTINATION ${CMAKE_INSTALL_DOCDIR}/whisper RENAME NOTICE.md)

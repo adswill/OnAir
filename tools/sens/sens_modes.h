@@ -26,6 +26,8 @@
 #include "dect2/hrpt/hrpt_tel.h"
 #include "dect2/goes/goes_rx.h"
 #include "dect2/goes/goes_tel.h"
+#include "dect2/fygeo/fygeo_rx.h"
+#include "dect2/fygeo/fygeo_tel.h"
 #include "dect2/globalstar/globalstar_rx.h"
 #include "dect2/globalstar/globalstar_tel.h"
 #include "dect2/orbcomm/orbcomm_rx.h"
@@ -505,6 +507,22 @@ inline std::vector<Mode> allModes() {
     narrow.template operator()<MeteorReceiver, MeteorTelemetry>("meteor", "Meteor-M LRPT (OQPSK 72k)", "satellite-weather", 61, 1e6, 8.0, 72e3, 137.9, nullptr, 16);
     narrow.template operator()<HrptReceiver, HrptTelemetry>("hrpt", "MetOp AHRPT", "satellite-weather", 66, 8e6, 1.5, 2.33e6, 1701.3, nullptr, 16);
     narrow.template operator()<GoesReceiver, GoesTelemetry>("goes", "GOES HRIT", "satellite-weather", 62, 2.4e6, 4.0, 927e3, 1694.1, nullptr, 16);
+    {   // FengYun geostationary: FY-4 over the DVB-S2 receiver (LDPC/BCH frames that passed), FY-2 S-VISSR (uncoded BPSK: frames synced, and frames with a bit error ratio under 2 %)
+        struct Fy { const char* id; const char* name; int link; double rate, secs, bw, snrHi; bool quality; };
+        for (const Fy f : {Fy{"fy4a-lrit", "FY-4A LRIT (DVB-S2 QPSK 2/5)", 0, 2e6, 8.0, 90e3, 8, false}, Fy{"fy4b-lrit", "FY-4B LRIT (DVB-S2 QPSK 8/9)", 1, 2e6, 6.0, 120e3, 16, false},
+                           Fy{"fy4a-hrit", "FY-4A HRIT-II/III (DVB-S2 QPSK 5/6)", 2, 4e6, 3.0, 1e6, 16, false}, Fy{"fy2-svissr", "FY-2 S-VISSR (sync)", 3, 2.4e6, 8.0, 660e3, 16, false},
+                           Fy{"fy2-svissr-q", "FY-2 S-VISSR (BER under 2 %)", 3, 2.4e6, 8.0, 660e3, 16, true}}) {
+            Mode m = base(f.id, f.name, "satellite-weather", 234 + f.link, f.rate, f.secs, f.bw, fygeoMhz(f.link));
+            m.snrHi = f.snrHi; m.maxJobs = 2;
+            const int link = f.link; const double rate = f.rate;
+            m.gen = [link, rate](size_t n) { return clean(234 + link, SynthConfig(), rate, n); };
+            const bool q = f.quality;
+            m.make = factory<FygeoReceiver, FygeoTelemetry>([link](FygeoReceiver& rx, double r) { rx.setLink(link); rx.setBlocking(true); rx.configure(r); },
+                                                            [q](const FygeoTelemetry& t) { return q ? Metric{(double)t.svUsable, (double)(t.svFrames - t.svUsable)} : Metric{(double)t.blocksOk, (double)t.blocksBad}; },
+                                                            link != 3);
+            add(m);
+        }
+    }
     return v;
 }
 
