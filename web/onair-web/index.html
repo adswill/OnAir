@@ -15,15 +15,16 @@
 
 <header class="menubar">
   <nav class="menus" aria-label="Menu">
-    <div class="menu"><button type="button" class="mi" id="mView" aria-haspopup="true" aria-expanded="false">View</button>
+    <div class="menu"><button type="button" class="mi" id="mView" data-i18n="menu.view" aria-haspopup="true" aria-expanded="false">View</button>
       <div class="pop" id="popView" role="menu" hidden>
+        <button type="button" role="menuitem" id="mSettings" data-i18n="menu.settings">Settings...</button>
         <button type="button" role="menuitem" id="themeBtn">Theme: Dark</button>
-        <button type="button" role="menuitem" id="mFull">Whole span</button>
+        <button type="button" role="menuitem" id="mFull" data-i18n="menu.wholeSpan">Whole span</button>
       </div>
     </div>
-    <div class="menu"><button type="button" class="mi" id="mHelp" aria-haspopup="true" aria-expanded="false">Help</button>
+    <div class="menu"><button type="button" class="mi" id="mHelp" data-i18n="menu.help" aria-haspopup="true" aria-expanded="false">Help</button>
       <div class="pop" id="popHelp" role="menu" hidden>
-        <button type="button" role="menuitem" id="helpBtn">Keyboard shortcuts</button>
+        <button type="button" role="menuitem" id="helpBtn" data-i18n="menu.shortcuts">Keyboard shortcuts</button>
         <a role="menuitem" href="https://github.com/adswill/OnAir" rel="noopener">OnAir on GitHub</a>
       </div>
     </div>
@@ -32,7 +33,8 @@
   <div class="status" role="status" aria-live="polite">
     <span id="conn" class="lamp"><i class="led" aria-hidden="true"></i><span id="connText">offline</span></span>
     <span id="users" class="box" title="Listeners on this server"><span id="usersText">- / -</span></span>
-    <span class="box dimbox">Receive only</span>
+    <span class="box dimbox" data-i18n="head.receiveOnly">Receive only</span>
+    <button type="button" id="gearBtn" class="gear" data-i18n-title="menu.settings" data-i18n-aria="menu.settings" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 000-2l2-1.6-2-3.4-2.4 1a7.5 7.5 0 00-1.7-1L15 3.4h-4l-.4 2.6a7.5 7.5 0 00-1.7 1l-2.4-1-2 3.4 2 1.6a7.6 7.6 0 000 2l-2 1.6 2 3.4 2.4-1a7.5 7.5 0 001.7 1l.4 2.6h4l.4-2.6a7.5 7.5 0 001.7-1l2.4 1 2-3.4zM13 15.5a3.5 3.5 0 110-7 3.5 3.5 0 010 7z"/></svg></button>
   </div>
 </header>
 
@@ -40,23 +42,23 @@
 
 <div id="notice" class="notice" role="note" hidden>
   <p id="noticeText"></p>
-  <button id="noticeOk" type="button">Understood</button>
+  <button id="noticeOk" type="button" data-i18n="notice.ok">Understood</button>
 </div>
 <div id="banner" class="banner" role="alert" hidden></div>
 
 <form id="login" class="loginbox" hidden autocomplete="off">
-  <h2>Join this receiver</h2>
+  <h2 data-i18n="login.title">Join this receiver</h2>
   <p class="dim">This receiver asks who is listening. Your name is shown to the host only.</p>
   <label>Your name<input id="loginName" maxlength="32" autocomplete="nickname"></label>
   <label id="loginPwRow">Password<input id="loginPw" type="password" maxlength="128" autocomplete="current-password"></label>
   <label id="loginInvRow">Invite code<input id="loginInv" maxlength="128" autocomplete="off"></label>
-  <button id="loginGo" type="submit" class="active">Connect</button>
+  <button id="loginGo" type="submit" class="active" data-i18n="login.go">Connect</button>
 </form>
 
 <div id="empty" class="empty" role="status">
   <div class="spin" aria-hidden="true"></div>
-  <h2 id="emptyTitle">Connecting to the receiver</h2>
-  <p id="emptyText" class="dim">Opening a listening session.</p>
+  <h2 id="emptyTitle" data-i18n="load.title">Connecting to the receiver</h2>
+  <p id="emptyText" class="dim" data-i18n="load.text">Opening a listening session.</p>
 </div>
 
 <main id="app" class="app" hidden>
@@ -89,43 +91,50 @@
   </section>
 
   <aside class="left" aria-label="Receiver settings">
-    <details open class="sec"><summary>Receiver</summary>
+    <details open class="sec"><summary data-i18n="sec.receiver">Receiver</summary>
       <div class="secb">
-        <div class="cap">Mode</div>
+        <div class="cap" data-i18n="mode">Mode</div>
         <div class="modes" id="modes" role="radiogroup" aria-label="Mode"></div>
-        <div class="cap">Tuning</div>
-        <div class="row2"><label for="step">Step</label><select id="step" aria-label="Tuning step"></select></div>
-        <button id="freqType" type="button" class="wide" title="Type a frequency (F)">Enter frequency...</button>
+        <div class="cap" data-i18n="tuning">Tuning</div>
+        <div class="row2"><label for="step" data-i18n="step">Step</label><select id="step" aria-label="Tuning step"></select></div>
+        <button id="freqType" type="button" class="wide" title="Type a frequency (F)" data-i18n="enterFreq">Enter frequency...</button>
       </div>
     </details>
-    <details open class="sec"><summary>Listen</summary>
+    <details open class="sec"><summary data-i18n="sec.listen">Listen</summary>
       <div class="secb">
-        <label class="slider"><span>Bandwidth</span><output id="bwOut" class="mono">-</output>
+        <label class="slider"><span data-i18n="bandwidth">Bandwidth</span><output id="bwOut" class="mono">-</output>
           <input id="bw" type="range" min="0" max="100" step="1" aria-label="Bandwidth">
         </label>
-        <label class="slider"><span>Squelch</span><output id="sqOut" class="mono">open</output>
+        <label class="slider"><span data-i18n="squelch">Squelch</span><output id="sqOut" class="mono">open</output>
           <input id="sq" type="range" min="-150" max="-20" step="1" value="-150" aria-label="Squelch">
         </label>
-        <label class="chk"><input type="checkbox" id="muteChk"><span>Mute audio</span></label>
+        <div class="cap" data-i18n="filter">Filter</div>
+        <div class="btnrow" id="filterBtns"><button type="button" data-w="0.5" data-i18n="filter.narrow">Narrow</button><button type="button" data-w="1" data-i18n="filter.normal">Normal</button><button type="button" data-w="2" data-i18n="filter.wide">Wide</button></div>
+        <div class="row2"><label for="agc" data-i18n="agc">AGC</label><select id="agc"><option value="off" data-i18n="agc.off">Off</option><option value="slow" data-i18n="agc.slow">Slow</option><option value="fast" data-i18n="agc.fast">Fast</option></select></div>
+        <label class="slider" id="gainRow"><span data-i18n="gain">Gain</span><output id="gainOut" class="mono">30 dB</output>
+          <input id="gain" type="range" min="-20" max="60" step="1" value="30" aria-label="Gain">
+        </label>
+        <div class="row2" id="deRow"><label for="deemph" data-i18n="deemph">De-emphasis</label><select id="deemph"><option value="0" data-i18n="deemph.off">Off</option><option value="50">50 us</option><option value="75">75 us</option></select></div>
+        <label class="chk"><input type="checkbox" id="muteChk"><span data-i18n="muteAudio">Mute audio</span></label>
         <div class="btnrow">
-          <button id="recBtn" type="button" aria-pressed="false" title="Record a clip of what you hear (R)"><i class="recdot" aria-hidden="true"></i><span id="recLbl">Record audio</span></button>
+          <button id="recBtn" type="button" aria-pressed="false" title="Record a clip of what you hear (R)"><i class="recdot" aria-hidden="true"></i><span id="recLbl" data-i18n="record">Record audio</span></button>
         </div>
-        <div class="cap">Audio buffer</div>
+        <div class="cap" data-i18n="buffer">Audio buffer</div>
         <div id="bufText" class="mono dim" title="Audio buffered in this browser">buf --</div>
       </div>
     </details>
-    <details open class="sec"><summary>Display</summary>
+    <details open class="sec"><summary data-i18n="sec.display">Display</summary>
       <div class="secb">
-        <div class="row2"><label for="palette">Colours</label><select id="palette" aria-label="Waterfall colours"></select></div>
-        <label class="slider"><span>Range</span><input id="range" type="range" min="20" max="120" step="1" value="70" aria-label="Spectrum range in dB"></label>
-        <label class="slider"><span>Floor</span><input id="floorAdj" type="range" min="-30" max="30" step="1" value="0" aria-label="Spectrum floor offset in dB"></label>
-        <div class="btnrow"><button id="zoomOut" type="button" aria-label="Zoom out" title="Zoom out (-)">&minus;</button><button id="zoomIn" type="button" aria-label="Zoom in" title="Zoom in (+)">+</button><button id="zoomFull" type="button" title="Show the whole capture (0)">Whole span</button><button id="zoomSig" type="button" title="Zoom around the tuned frequency">Around</button></div>
+        <div class="row2"><label for="palette" data-i18n="colours">Colours</label><select id="palette" aria-label="Waterfall colours"></select></div>
+        <label class="slider"><span data-i18n="range">Range</span><input id="range" type="range" min="20" max="120" step="1" value="70" aria-label="Spectrum range in dB"></label>
+        <label class="slider"><span data-i18n="floor">Floor</span><input id="floorAdj" type="range" min="-30" max="30" step="1" value="0" aria-label="Spectrum floor offset in dB"></label>
+        <div class="btnrow"><button id="zoomOut" type="button" aria-label="Zoom out" title="Zoom out (-)">&minus;</button><button id="zoomIn" type="button" aria-label="Zoom in" title="Zoom in (+)">+</button><button id="zoomFull" type="button" title="Show the whole capture (0)" data-i18n="wholeSpan">Whole span</button><button id="autoRange" type="button" data-i18n="autoRange" title="Fit the colours to the signals now">Auto-range</button><button id="zoomSig" type="button" title="Zoom around the tuned frequency" data-i18n="around">Around</button></div>
       </div>
     </details>
   </aside>
 
   <section class="center" aria-label="Spectrum and waterfall">
-    <div class="tabs plot-tabs" role="tablist"><span class="tab sel" role="tab" aria-selected="true">Overview</span><span id="viewText" class="mono dim"></span></div>
+    <div class="tabs plot-tabs" role="tablist"><span class="tab sel" role="tab" aria-selected="true" data-i18n="tab.overview">Overview</span><span id="viewText" class="mono dim"></span></div>
     <div id="rangeInfo" class="rangeinfo" role="note" hidden></div>
     <div class="plotbox">
       <div class="plots">
@@ -135,12 +144,12 @@
         </div>
         <div class="canvaswrap wf">
           <canvas id="wf" aria-label="Waterfall. Click to tune, drag to pan"></canvas>
-          <span class="wflabel">seconds ago</span><span class="wfname">Waterfall</span>
+          <span class="wflabel" data-i18n="secondsAgo">seconds ago</span><span class="wfname" data-i18n="waterfall">Waterfall</span>
           <canvas id="cbar" class="cbar" width="10" height="96" aria-hidden="true"></canvas><span id="cbTop" class="cbl"></span><span id="cbBot" class="cbl"></span>
         </div>
       </div>
       <div class="zoomcol" aria-hidden="false">
-        <div class="zl">Zoom</div>
+        <div class="zl" data-i18n="zoom">Zoom</div>
         <input id="zoomSlider" class="vslider" type="range" min="0" max="100" step="1" value="0" aria-label="Zoom">
         <div class="zl">Out</div>
       </div>
@@ -149,18 +158,26 @@
 
   <aside class="side" id="side" aria-label="Bands, memory and decoders">
     <div class="tabs" role="tablist">
-      <button type="button" class="tab sel" role="tab" aria-selected="true" data-tab="bands" id="tabBands">Bands</button>
-      <button type="button" class="tab" role="tab" aria-selected="false" data-tab="marks" id="tabMarks">Memory</button>
-      <button type="button" class="tab" role="tab" aria-selected="false" data-tab="dec" id="tabDec">Decoders</button>
+      <button type="button" class="tab sel" role="tab" aria-selected="true" data-tab="bands" id="tabBands" data-i18n="tab.bands">Bands</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" data-tab="marks" id="tabMarks" data-i18n="tab.memory">Memory</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" data-tab="dec" id="tabDec" data-i18n="tab.decoders">Decoders</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" data-tab="map" id="tabMap" data-i18n="tab.map">Map</button>
     </div>
     <div class="panes">
       <div id="paneBands" role="tabpanel" aria-labelledby="tabBands"><div id="bandList" class="bandlist"></div></div>
       <div id="paneMarks" role="tabpanel" aria-labelledby="tabMarks" hidden>
         <div class="markadd">
           <input id="markName" maxlength="40" placeholder="Name" aria-label="Memory name">
-          <button id="markAdd" type="button">Save</button>
+          <button id="markAdd" type="button" data-i18n="marks.save">Save</button>
         </div>
         <ul id="markList" class="marks"></ul>
+        <div class="btnrow"><button id="markExport" type="button" data-i18n="marks.export">Export</button><button id="markImport" type="button" data-i18n="marks.import">Import</button><input id="markFile" type="file" accept="application/json,.json" hidden></div>
+      </div>
+      <div id="paneMap" role="tabpanel" aria-labelledby="tabMap" hidden>
+        <div class="maptools"><button id="mapFit" type="button" data-i18n="map.fit">Fit</button><button id="mapWide" type="button" class="widebtn" aria-pressed="false" data-i18n="map.wide">Expand</button><button id="mapIn" type="button" aria-label="Zoom in">+</button><button id="mapOut" type="button" aria-label="Zoom out">&minus;</button><span id="mapCount" class="mono dim"></span></div>
+        <canvas id="mapCanvas" class="mapcanvas" tabindex="0" role="application" aria-label="Map of aircraft, vessels and stations. Drag to pan, scroll or pinch to zoom, arrow keys to move"></canvas>
+        <p id="mapInfo" class="mapinfo mono" role="status"></p>
+        <p id="mapNone" class="dim" data-i18n="map.none">Nothing with a position yet. Start the ADS-B, AIS or APRS decoder.</p>
       </div>
       <div id="paneDec" role="tabpanel" aria-labelledby="tabDec" hidden>
         <div id="decList" class="chips"></div>
@@ -172,28 +189,28 @@
 </main>
 
 <footer class="statusbar">
-  <div class="sb"><span class="sl">Frequency</span><span class="sv mono" id="sbFreq">-</span></div>
-  <div class="sb"><span class="sl">Mode</span><span class="sv mono" id="sbMode">-</span></div>
-  <div class="sb"><span class="sl">Listeners</span><span class="sv mono" id="sbUsers">-</span></div>
-  <div class="sb"><span class="sl">State</span><span class="sv"><i class="led" id="sbLed" aria-hidden="true"></i><span id="sbState">Offline</span></span></div>
-  <div class="sb"><span class="sl">Buffer</span><span class="sv mono" id="sbBuf">--</span></div>
-  <div class="sbtext"><span id="footInfo" class="dim"></span><span id="legal" class="dim">OnAir Web. Receive only: there is no transmit control.</span></div>
+  <div class="sb"><span class="sl" data-i18n="sb.frequency">Frequency</span><span class="sv mono" id="sbFreq">-</span></div>
+  <div class="sb"><span class="sl" data-i18n="sb.mode">Mode</span><span class="sv mono" id="sbMode">-</span></div>
+  <div class="sb"><span class="sl" data-i18n="sb.listeners">Listeners</span><span class="sv mono" id="sbUsers">-</span></div>
+  <div class="sb"><span class="sl" data-i18n="sb.state">State</span><span class="sv"><i class="led" id="sbLed" aria-hidden="true"></i><span id="sbState">Offline</span></span></div>
+  <div class="sb"><span class="sl" data-i18n="sb.buffer">Buffer</span><span class="sv mono" id="sbBuf">--</span></div>
+  <div class="sbtext"><span id="footInfo" class="dim"></span><span id="legal" class="dim" data-i18n="foot.legal">OnAir Web. Receive only: there is no transmit control.</span></div>
   <span id="cursor" class="mono dim" aria-hidden="true"></span>
 </footer>
 
 <dialog id="typeDlg" aria-labelledby="typeH">
   <form method="dialog" id="typeForm">
-    <h2 id="typeH">Tune to a frequency</h2>
+    <h2 id="typeH" data-i18n="type.title">Tune to a frequency</h2>
     <label class="dim" for="typeIn">MHz, or add kHz / Hz. Examples: 145.5, 7074 kHz, 121.5 MHz</label>
     <input id="typeIn" class="mono" inputmode="decimal" autocomplete="off" spellcheck="false">
     <p id="typeMsg" class="err" role="alert"></p>
-    <div class="row"><button type="button" id="typeCancel">Cancel</button><button value="ok" class="active">Tune</button></div>
+    <div class="row"><button type="button" id="typeCancel" data-i18n="type.cancel">Cancel</button><button value="ok" class="active" data-i18n="type.go">Tune</button></div>
   </form>
 </dialog>
 
 <dialog id="help" aria-labelledby="helpH">
   <form method="dialog">
-    <h2 id="helpH">Keyboard shortcuts</h2>
+    <h2 id="helpH" data-i18n="help.title">Keyboard shortcuts</h2>
     <dl class="keys">
       <dt><kbd>Space</kbd></dt><dd>Start or stop listening</dd>
       <dt><kbd>M</kbd></dt><dd>Mute</dd>
@@ -209,11 +226,26 @@
       <dt><kbd>?</kbd></dt><dd>This list</dd>
     </dl>
     <p class="dim">On the frequency: click the upper or lower half of a digit, or scroll over it, to tune by that digit. On the spectrum: click to tune, drag to pan, scroll or pinch to zoom, drag the edges of the shaded passband to set the bandwidth.</p>
-    <div class="row"><button value="close" class="active">Close</button></div>
+    <div class="row"><button value="close" class="active" data-i18n="help.close">Close</button></div>
   </form>
 </dialog>
 
+<dialog id="settingsDlg" class="settings" aria-labelledby="setH">
+  <form method="dialog" id="setForm">
+    <div class="sethead"><h2 id="setH" data-i18n="set.title">Settings</h2><button value="close" class="x" data-i18n-aria="set.close" aria-label="Close">&times;</button></div>
+    <div class="tabs settabs" role="tablist" id="setTabs"></div>
+    <div id="setBody" class="setbody" role="tabpanel"></div>
+    <p class="dim small" data-i18n="set.saved">Settings are kept in this browser only.</p>
+    <div class="row setfoot"><button type="button" id="setReset" data-i18n="set.reset">Reset to defaults</button><button type="button" id="setExport" data-i18n="set.export">Export settings</button><button type="button" id="setImport" data-i18n="set.import">Import settings</button><input id="setFile" type="file" accept="application/json,.json" hidden><button value="close" class="active" data-i18n="set.close">Close</button></div>
+    <p id="setMsg" class="small" role="status"></p>
+  </form>
+</dialog>
+
+<script src="onair-i18n.js"></script>
+<script src="onair-settings.js"></script>
 <script src="onair-lib.js"></script>
+<script src="onair-world.js"></script>
+<script src="onair-map.js"></script>
 <script src="onair-decoders.js"></script>
 <script src="onair-worklet.js"></script>
 <script src="app.js"></script>

@@ -4,6 +4,8 @@
   "use strict";
   const L = window.OnAirLib;
   const D = window.OnAirDecoders;
+  const Cfg = window.OnAirSettings, I18N = window.OnAirI18n, MAP = window.OnAirMap;
+  const t = (k, v) => I18N.t(k, v);
   const $ = (id) => document.getElementById(id);
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
@@ -13,16 +15,30 @@
     set(k, v) { try { localStorage.setItem("onair." + k, JSON.stringify(v)); } catch (e) { /* ignore */ } },
   };
 
+  // ---------- settings (docs/ONAIR-WEB.md, "Settings"): one validated object kept in localStorage ----------
+  let ST;
+  (function loadSettings() {
+    let raw = null; try { raw = localStorage.getItem(Cfg.KEY); } catch (e) { /* private window */ }
+    ST = Cfg.load(localStorage);
+    if (!raw) {   // first run of this version: carry over what older versions of the page stored
+      const o = {}; const pick = (k, name) => { const v = store.get(name, undefined); if (v !== undefined && v !== null) o[k] = v; };
+      pick("step", "step"); pick("palette", "palette2"); pick("range", "range"); pick("floorAdj", "floorAdj"); pick("theme", "theme");
+      ST = Cfg.sanitize(Object.assign(Cfg.defaults(), o));
+    }
+    I18N.setLang(I18N.pickLang(ST.lang, navigator.languages || [navigator.language]));
+  })();
+  const saveSettings = () => Cfg.save(localStorage, ST);
+
   // ---------- state ----------
   const S = {
     ws: null, info: null, welcome: null, ranges: null, cap: null, bounds: null, view: null, full: null,
-    freq: 0, mode: "nfm", low: -6250, high: 6250, sq: -150, agc: "slow",
+    freq: 0, mode: "nfm", low: -6250, high: 6250, sq: -150, agc: ST.agc,
     audioOn: false, muted: false, volume: store.get("vol", 70), level: -150, peak: -150, peakAt: 0,
-    spectrumOn: false, subs: [], step: store.get("step", 5000), palette: store.get("palette2", "navy"),
-    range: store.get("range", 70), floorAdj: store.get("floorAdj", 0),
+    spectrumOn: false, subs: [], step: ST.step, palette: ST.palette,
+    range: ST.range, floorAdj: ST.floorAdj, adapt: null, trace: null, peakDb: null, mapMarks: [], mapSel: "",
     attempt: 0, retryTimer: 0, retryAt: 0, stopRetry: false, pendingTune: 0, lastTuneSent: 0, tuneTimer: 0,
     rows: [], rowSeq: -1, audioSeq: -1, lost: 0, decoders: {}, views: {}, decDirty: false, name: store.get("name", ""), invite: "", password: "",
-    bw: 0, theme: store.get("theme", null), peakHold: null, hover: null, rec: null, outLvl: 0, sel: "",
+    bw: 0, theme: ST.theme === "auto" ? null : ST.theme, peakHold: null, hover: null, rec: null, outLvl: 0, sel: "",
   };
   const bands = [
     { n: "LW broadcast", s: 148500, e: 283500, f: 189000, m: "am" }, { n: "MW broadcast", s: 526500, e: 1606500, f: 1000000, m: "am" },
@@ -37,18 +53,18 @@
   ];
 
   // ---------- theme ----------
-  function setTheme(t, keep) {
-    const th = t || (window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
-    document.documentElement.dataset.theme = th; { const tb = $("themeBtn"); if (tb) tb.textContent = "Theme: " + (th === "light" ? "Light" : "Dark"); }
+  function setTheme(tt, keep) {
+    const th = tt || (window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    document.documentElement.dataset.theme = th; { const tb = $("themeBtn"); if (tb) tb.textContent = t("menu.theme", { v: t(th === "light" ? "theme.light" : "theme.dark") }); }
     const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = th === "light" ? "#dadada" : "#252526";
-    if (t && !keep) store.set("theme", t);
-    readColors(); if (S.view) { drawSpectrum(); redrawWaterfall(); }
+    if (tt && !keep) { ST.theme = tt; saveSettings(); }
+    readColors(); if (S.view) { drawSpectrum(); redrawWaterfall(); } if (mapView) mapView.refreshColours();
   }
 
   // ---------- small UI helpers ----------
-  function setConn(text, cls) { const c = $("conn"); $("connText").textContent = text; c.className = "lamp " + (cls || ""); renderStatus(); }
+  function setConn(text, cls) { const c = $("conn"); S.connKey = text; $("connText").textContent = I18N.CAT.en["conn." + text.replace(/ /g, "")] ? t("conn." + text.replace(/ /g, "")) : text; c.className = "lamp " + (cls || ""); renderStatus(); }
   function banner(text) { const b = $("banner"); b.hidden = !text; b.textContent = text || ""; if (text && !S.welcome) emptyState(text, true); }
-  function emptyState(text, err, title) { const e = $("empty"); e.hidden = false; e.classList.toggle("err", !!err); $("emptyTitle").textContent = title || (err ? "Not connected" : "Connecting to the receiver"); $("emptyText").textContent = err ? "" : (text || ""); if (err) { $("emptyText").textContent = "The notice above says why. This page retries by itself when it can."; } }
+  function emptyState(text, err, title) { const e = $("empty"); e.hidden = false; e.classList.toggle("err", !!err); $("emptyTitle").textContent = title || (err ? t("load.notconn") : t("load.title")); $("emptyText").textContent = err ? "" : (text || ""); if (err) { $("emptyText").textContent = t("load.why"); } }
   function send(m) { if (S.ws && S.ws.readyState === 1) { S.ws.send(JSON.stringify(m)); return true; } return false; }
   const fmtMHz = (hz) => (hz / 1e6).toFixed(hz % 1e6 === 0 ? 1 : 3);
   function schedule(fn, ms) { let t = 0; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; }
@@ -106,7 +122,7 @@
     $("sbFreq").textContent = S.freq ? (S.freq / 1e6).toFixed(3) + " MHz" : "-"; $("sbMode").textContent = S.mode.toUpperCase();
     $("sbUsers").textContent = S.info ? S.info.users + " / " + S.info.max_users : "-";
     const on = !!S.welcome, led = $("sbLed");
-    $("sbState").textContent = !on ? ($("connText").textContent === "connecting" ? "Connecting" : "Offline") : S.audioOn ? (S.muted ? "Muted" : "Receiving") : "Idle";
+    $("sbState").textContent = !on ? (S.connKey === "connecting" ? t("state.connecting") : t("state.offline")) : S.audioOn ? (S.muted ? t("state.muted") : t("state.receiving")) : t("state.idle");
     led.className = "led " + (!on ? "bad" : S.audioOn ? "ok" : "warn");
     { const mc = $("muteChk"); if (mc) mc.checked = S.muted; const ct = $("centreTxt"); if (ct && S.cap) ct.textContent = "centre " + (S.cap.centre_hz / 1e6).toFixed(3) + " MHz"; }
   }
@@ -148,6 +164,7 @@
     const d = L.MODE_DEFAULT[mode]; S.low = d[0]; S.high = d[1];
     if (L.rangeActive(S.ranges)) S.freq = Math.round(clampFreq(S.freq));   // the new passband must fit too
     renderMode(); renderFreq(); drawSpectrum(); sendTune({ mode });
+    if (mode === "wfm") send(L.msg.rx({ deemph_us: ST.deemphUs }));
     if (S.audioOn) sendAudio();
     persist();
   }
@@ -171,6 +188,7 @@
     s.min = r[0]; s.max = r[1]; s.step = r[1] > 30000 ? 1000 : 50; s.value = bw;
     $("bwOut").textContent = bw >= 1000 ? (bw / 1000).toFixed(bw % 1000 ? 2 : 0) + " kHz" : bw + " Hz";
     S.bw = bw; $("freq").setAttribute("data-mode", S.mode);
+    { const dr = $("deRow"); if (dr) dr.hidden = S.mode !== "wfm"; const gr = $("gainRow"); if (gr) gr.classList.toggle("off", ST.agc !== "off" && S.mode !== "nfm" && S.mode !== "wfm"); }
   }
 
   // ---------- persistence of the last tuning ----------
@@ -179,14 +197,14 @@
   // ---------- view (zoom / pan) and the spectrum request ----------
   const requestSpan = schedule(() => {
     if (!S.welcome || !S.view) return;
-    const canvas = $("spec"), want = Math.max(256, Math.min(S.welcome.limits.max_bins, 2048, 1 << Math.ceil(Math.log2(Math.max(256, canvas.clientWidth * (window.devicePixelRatio || 1))))));
+    const canvas = $("spec"), want = Cfg.binsFor(ST, canvas.clientWidth * (window.devicePixelRatio || 1), S.welcome.limits.max_bins);
     const full = L.viewIsFull(S.view, S.full);
-    send(L.msg.spectrum(true, want, Math.min(S.welcome.limits.max_fps, 12), full ? null : S.view.start, full ? null : S.view.stop));
+    send(L.msg.spectrum(true, want, Cfg.fpsFor(ST, S.welcome.limits.max_fps), full ? null : S.view.start, full ? null : S.view.stop));
     S.spectrumOn = true;
   }, 120);
   function setView(v) {
     if (!S.bounds) return;
-    S.view = L.normView(v, S.full); S.peakHold = null; renderFreq(); drawSpectrum(); redrawWaterfall(); requestSpan();
+    S.view = L.normView(v, S.full); S.peakDb = null; S.trace = null; renderFreq(); drawSpectrum(); redrawWaterfall(); requestSpan();
   }
   function zoom(f, anchor) { setView(L.zoomView(S.view, S.full, f, anchor == null ? S.freq : anchor)); }
 
@@ -203,7 +221,8 @@
     if (c.width !== w || c.height !== h) { c.width = w; c.height = h; return true; }
     return false;
   }
-  function rowLo(row) { return row.floorDb + S.floorAdj; }
+  function lv(row) { return Cfg.levels(ST, row, S.adapt); }   // {lo, span} for the colours and the trace
+  function rowLo(row) { return lv(row).lo; }
   function palBg() { return "rgb(" + pal[0] + "," + pal[1] + "," + pal[2] + ")"; }
   function fmtAxis(f, g) { return g >= 1e6 ? String(+(f / 1e6).toFixed(2)) : g >= 1e5 ? (f / 1e6).toFixed(1) : (f / 1e6).toFixed(3); }
   // layout of the spectrum canvas (device pixels): band strip on top, frequency labels below the plot
@@ -218,14 +237,14 @@
     const FONT = '"JetBrains Mono", Menlo, ui-monospace, monospace';
     const v = S.view, span = v.stop - v.start, ph = H - G.top - G.bot;
     const row = S.rows[S.rows.length - 1];
-    const lo = row ? rowLo(row) : -110, yOf = (db) => G.top + ph * (1 - L.clamp((db - lo) / S.range, 0, 1));
+    const LV = row ? lv(row) : { lo: -110, span: ST.range }, lo = LV.lo, RG = LV.span, yOf = (db) => G.top + ph * (1 - L.clamp((db - lo) / RG, 0, 1));
     // dB grid and labels (small, dim, on the left, as in the app)
     sctx.font = `${11 * dpr}px ${FONT}`; sctx.textBaseline = "middle"; sctx.textAlign = "left";
-    const dstep = S.range > 80 ? 20 : 10;
+    const dstep = RG > 80 ? 20 : 10;
     sctx.fillStyle = C.text; sctx.globalAlpha = 0.8; sctx.fillText("power (dBFS/Hz)", 5 * dpr, G.top + 8 * dpr); sctx.globalAlpha = 1;
-    for (let db = Math.ceil(lo / dstep) * dstep; db <= lo + S.range; db += dstep) {
+    for (let db = Math.ceil(lo / dstep) * dstep; db <= lo + RG; db += dstep) {
       const y = Math.round(yOf(db)) + 0.5;
-      sctx.strokeStyle = C.grid; sctx.lineWidth = 1; sctx.beginPath(); sctx.moveTo(0, y); sctx.lineTo(W, y); sctx.stroke();
+      if (ST.showGrid) { sctx.strokeStyle = C.grid; sctx.lineWidth = 1; sctx.beginPath(); sctx.moveTo(0, y); sctx.lineTo(W, y); sctx.stroke(); }
       if (y > G.top + 20 * dpr && y < H - G.bot - 6 * dpr) { sctx.fillStyle = C.text; sctx.fillText(String(db), 5 * dpr, y); }
     }
     // frequency grid; the labels sit in a strip below the trace in a larger size
@@ -234,16 +253,28 @@
     sctx.font = `${14 * dpr}px ${FONT}`; sctx.textBaseline = "middle"; sctx.textAlign = "center";
     for (let f = Math.ceil(v.start / g) * g; f < v.stop; f += g) {
       const x = Math.round(L.hzToX(v, f, W)) + 0.5;
-      sctx.strokeStyle = C.grid; sctx.beginPath(); sctx.moveTo(x, G.top); sctx.lineTo(x, H - G.bot); sctx.stroke();
+      if (ST.showGrid) { sctx.strokeStyle = C.grid; sctx.beginPath(); sctx.moveTo(x, G.top); sctx.lineTo(x, H - G.bot); sctx.stroke(); }
       if (x > 24 * dpr && x < W - 24 * dpr) { sctx.fillStyle = C.bright; sctx.fillText(fmtAxis(f, g), x, H - G.bot / 2); }
     }
     // band plan labels along the top: a filled bar with the band name, like the app's labels row
     sctx.font = `${11 * dpr}px ${FONT}`; sctx.textAlign = "left";
-    for (const b of bands) {
+    for (const b of (ST.showBands ? bands : [])) {
       if (b.e < v.start || b.s > v.stop) continue;
       const x0 = Math.max(0, L.hzToX(v, Math.max(b.s, v.start), W)), x1 = Math.min(W, L.hzToX(v, Math.min(b.e, v.stop), W));
       sctx.fillStyle = /^(160|80|40|20|10|6|2) m$|^70 cm$/.test(b.n) ? (C.light ? "rgba(52,92,150,.6)" : "rgba(52,92,150,.95)") : (C.light ? "rgba(166,122,46,.55)" : "rgba(160,118,50,.85)"); sctx.fillRect(x0, 0, Math.max(1, x1 - x0), G.top - 2 * dpr);
       if (x1 - x0 > 40 * dpr) { sctx.save(); sctx.beginPath(); sctx.rect(x0, 0, x1 - x0, G.top); sctx.clip(); sctx.fillStyle = "#f4eddc"; sctx.fillText(b.n, x0 + 4 * dpr, G.top / 2 - 1 * dpr); sctx.restore(); }
+    }
+    // memories: small flags under the band strip, with the name when there is room; a tap on one tunes to it
+    S.flags = [];
+    if (ST.showMarks) {
+      sctx.font = `${10 * dpr}px ${FONT}`; sctx.textAlign = "left"; sctx.textBaseline = "middle"; let lastEnd = -1e9;
+      for (const m of marks().slice().sort((a, b) => a.f - b.f)) {
+        if (m.f < v.start || m.f > v.stop) continue;
+        const x = L.hzToX(v, m.f, W); S.flags.push({ x: x / dpr, m });
+        sctx.fillStyle = C.accent; sctx.beginPath(); sctx.moveTo(x - 4 * dpr, G.top); sctx.lineTo(x + 4 * dpr, G.top); sctx.lineTo(x, G.top + 8 * dpr); sctx.closePath(); sctx.fill();
+        sctx.fillRect(Math.round(x), G.top, Math.max(1, dpr), 14 * dpr);
+        if (x > lastEnd + 4 * dpr) { const tw = sctx.measureText(m.name).width; if (x + tw + 10 * dpr < W) { sctx.fillStyle = C.bright; sctx.globalAlpha = 0.85; sctx.fillText(m.name, x + 5 * dpr, G.top + 20 * dpr); sctx.globalAlpha = 1; lastEnd = x + tw + 10 * dpr; } }
+      }
     }
     // the host's ranges: what is not visible is darkened, the allowed bands get a strip on top, blocked ones a red tint
     if (L.rangeActive(S.ranges)) {
@@ -262,8 +293,13 @@
     // trace: soft white, 1.2 px, filled faintly underneath
     if (row) {
       pix = L.rowToPixels(row, v, W, pix);
+      let dbs = new Float32Array(W);
+      for (let x = 0; x < W; x++) dbs[x] = pix[x] ? L.levelToDb(row, pix[x]) : NaN;
+      if (row !== S.traceRow) { S.trace = Cfg.smoothTrace(S.trace, dbs, ST.smooth); S.traceRow = row; if (ST.peakHold) { if (!S.peakDb || S.peakDb.length !== W) S.peakDb = dbs.slice(); else for (let x = 0; x < W; x++) S.peakDb[x] = isNaN(dbs[x]) ? NaN : Math.max(dbs[x], isNaN(S.peakDb[x]) ? -999 : S.peakDb[x] - 0.15); } }
+      if (S.trace && S.trace.length === W) dbs = S.trace;
       const ys = new Float32Array(W);
-      for (let x = 0; x < W; x++) ys[x] = pix[x] ? yOf(L.levelToDb(row, pix[x])) : NaN;
+      for (let x = 0; x < W; x++) ys[x] = isNaN(dbs[x]) ? NaN : yOf(dbs[x]);
+      if (ST.peakHold && S.peakDb && S.peakDb.length === W) { sctx.strokeStyle = "rgba(235,180,90,.7)"; sctx.lineWidth = Math.max(1, dpr); sctx.beginPath(); let pen = false; for (let x = 0; x < W; x++) { if (isNaN(S.peakDb[x])) { pen = false; continue; } const y = yOf(S.peakDb[x]); if (pen) sctx.lineTo(x, y); else { sctx.moveTo(x, y); pen = true; } } sctx.stroke(); }
       const segs = []; let sx = -1;
       for (let x = 0; x <= W; x++) { const ok = x < W && !isNaN(ys[x]); if (ok && sx < 0) sx = x; else if (!ok && sx >= 0) { segs.push([sx, x - 1]); sx = -1; } }
       sctx.lineJoin = "round"; sctx.lineWidth = Math.max(1, dpr * 1.2);
@@ -288,7 +324,7 @@
   function drawBar() {
     const c = $("cbar"); if (!c) return; const g = c.getContext("2d"), row = S.rows[S.rows.length - 1]; if (!row) return;
     for (let y = 0; y < 96; y++) { const i = Math.round((1 - y / 95) * 255) * 3; g.fillStyle = "rgb(" + pal[i] + "," + pal[i + 1] + "," + pal[i + 2] + ")"; g.fillRect(0, y, 10, 1); }
-    const lo = rowLo(row); $("cbTop").textContent = Math.round(lo + S.range); $("cbBot").textContent = Math.round(lo);
+    const q = lv(row); $("cbTop").textContent = Math.round(q.lo + q.span); $("cbBot").textContent = Math.round(q.lo);
   }
   function modeTag() { const b = bands.find((x) => S.freq >= x.s && S.freq <= x.e); return (b ? b.n + " " : "") + S.mode.toUpperCase(); }
   // the waterfall is scrolled pixels; the tuned marker and passband sit in an overlay so they stay crisp
@@ -303,11 +339,11 @@
   }
   function paintWfRow(img, y, row) {
     const W = img.width, px = img.data; pix = L.rowToPixels(row, S.view, W, pix);
-    const lo = rowLo(row);
+    const Q = lv(row), lo = Q.lo, span = Q.span;
     for (let x = 0; x < W; x++) {
       const o = (y * W + x) * 4;
       if (!pix[x]) { px[o] = pal[0]; px[o + 1] = pal[1]; px[o + 2] = pal[2]; px[o + 3] = 255; continue; }
-      const db = L.levelToDb(row, pix[x]), i = Math.round(L.clamp((db - lo) / S.range, 0, 1) * 255) * 3;
+      const db = L.levelToDb(row, pix[x]), i = Math.round(L.clamp((db - lo) / span, 0, 1) * 255) * 3;
       px[o] = pal[i]; px[o + 1] = pal[i + 1]; px[o + 2] = pal[i + 2]; px[o + 3] = 255;
     }
   }
@@ -329,6 +365,7 @@
       let m = -1; for (let b = b0; b <= b1; b++) if (row.levels[b] > m) m = row.levels[b];
       if (m >= 0) S.level = L.levelToDb(row, m);
     }
+    if (ST.rangeMode === "adaptive") { const e = Cfg.autoRange(row); if (e) S.adapt = Cfg.followRange(S.adapt, e, 0.04); }
     S.rows.push(row); if (S.rows.length > 1200) S.rows.splice(0, S.rows.length - 1000);
     if (!S.view) return;
     if (fit(wf)) { redrawWaterfall(); } else {
@@ -395,7 +432,10 @@
     const up = (e) => {
       if (!ptrs.has(e.pointerId)) return;
       const wasMoved = moved; ptrs.delete(e.pointerId); edge = null;
-      if (ptrs.size === 0 && !wasMoved && S.view && e.type === "pointerup") setFreq(L.snap(L.xToHz(S.view, wpos(e), 1), S.step));
+      if (ptrs.size === 0 && !wasMoved && S.view && e.type === "pointerup") {
+        const fl = isSpec && S.flags && (e.clientY - c.getBoundingClientRect().top) < 40 ? S.flags.find((q) => Math.abs(q.x - (e.clientX - c.getBoundingClientRect().left)) <= (e.pointerType === "touch" ? 14 : 7)) : null;
+        if (fl) gotoMark(fl.m); else setFreq(L.snap(L.xToHz(S.view, wpos(e), 1), S.step));
+      }
       if (ptrs.size < 2) pinchView = null;
       if (ptrs.size === 1) { const r = [...ptrs.values()][0]; startView = S.view; startX = r.clientX; moved = true; }
     };
@@ -440,7 +480,7 @@
   async function ensureAudio() {
     if (A.ctx) { if (A.ctx.state === "suspended") await A.ctx.resume(); return true; }
     const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) { banner("This browser cannot play audio."); return false; }
+    if (!AC) { banner(t("audio.unsupported")); return false; }
     A.ctx = new AC({ latencyHint: "interactive" });
     A.gain = A.ctx.createGain(); A.gain.connect(A.ctx.destination); applyVolume();
     if (A.ctx.audioWorklet && window.AudioWorkletNode) {
@@ -473,9 +513,9 @@
   }
   async function recToggle() {
     if (S.rec) { recStop(); return; }
-    if (!window.MediaRecorder) { banner("This browser cannot record audio."); return; }
+    if (!window.MediaRecorder) { banner(t("rec.unsupported")); return; }
     if (!S.audioOn) { if (!S.welcome) return; await toggleAudio(); }
-    if (!A.dest) { banner("Recording is not available in this browser."); return; }
+    if (!A.dest) { banner(t("rec.na")); return; }
     const types = ["audio/webm;codecs=opus", "audio/mp4", "audio/ogg;codecs=opus", "audio/webm"];
     const mime = types.find((t) => MediaRecorder.isTypeSupported(t)) || "";
     const mr = new MediaRecorder(A.dest.stream, mime ? { mimeType: mime } : undefined), chunks = [];
@@ -495,7 +535,7 @@
   function renderRec() {
     const b = $("recBtn"), on = !!S.rec; b.setAttribute("aria-pressed", String(on));
     const s = on ? Math.floor((Date.now() - S.rec.t0) / 1000) : 0;
-    $("recLbl").textContent = on ? Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") : "Rec";
+    $("recLbl").textContent = on ? Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") : t("rec");
     b.title = on ? "Stop and save the clip (R)" : "Record a clip of what you hear (R)";
   }
   function applyVolume() {
@@ -503,8 +543,7 @@
     const v = S.muted ? 0 : Math.pow(S.volume / 100, 2) * 1.5;
     A.gain.gain.setTargetAtTime(v, A.ctx.currentTime, 0.02);
   }
-  function audioRate() { return S.mode === "wfm" ? 48000 : 12000; }
-  function sendAudio() { send(L.msg.audio(true, "adpcm", audioRate())); }
+  function sendAudio() { const a = Cfg.audioParams(ST, S.mode); send(L.msg.audio(true, a.codec, a.rate)); }
   function playFrame(f) {
     const f32 = new Float32Array(f.samples.length);
     for (let i = 0; i < f32.length; i++) f32[i] = f.samples[i] / 32768;
@@ -518,9 +557,9 @@
     renderAudio();
   }
   function renderAudio() {
-    const b = $("audioBtn"); b.setAttribute("aria-pressed", String(S.audioOn)); $("audioLbl").textContent = S.audioOn ? "Stop" : "Listen";
+    const b = $("audioBtn"); b.setAttribute("aria-pressed", String(S.audioOn)); $("audioLbl").textContent = S.audioOn ? t("audio.stop") : t("audio.listen");
     $("audioIcon").setAttribute("d", S.audioOn ? "M7 6h10v12H7z" : "M7 5l12 7-12 7z");
-    const m = $("muteBtn"); m.setAttribute("aria-pressed", String(S.muted)); m.title = S.muted ? "Unmute (M)" : "Mute (M)"; m.setAttribute("aria-label", S.muted ? "Unmute" : "Mute"); { const w = $("spkWave"); if (w) w.style.display = S.muted ? "none" : ""; } renderStatus();
+    const m = $("muteBtn"); m.setAttribute("aria-pressed", String(S.muted)); m.title = S.muted ? "Unmute (M)" : "Mute (M)"; m.setAttribute("aria-label", S.muted ? t("audio.unmute") : t("audio.mute")); { const w = $("spkWave"); if (w) w.style.display = S.muted ? "none" : ""; } renderStatus();
   }
   function onAudio(f) {
     if (!S.audioOn) return;
@@ -547,7 +586,7 @@
     const i = S.info; if (!i) return;
     $("srvName").textContent = i.name || "OnAir Web"; $("srvWhere").textContent = [i.location, i.antenna].filter(Boolean).join(", ");
     document.title = (i.name || "OnAir Web");
-    $("usersText").textContent = i.users + " / " + i.max_users + " listeners";
+    $("usersText").textContent = t("head.listeners", { n: i.users, max: i.max_users });
     $("users").className = "box" + (i.users >= i.max_users ? " full" : ""); renderStatus();
     const n = i.notice || i.legal_notice;
     showNotice(typeof n === "string" && n ? n : null);
@@ -602,7 +641,7 @@
     S.retryAt = performance.now() + adv.delayMs;
     const tick = () => {
       const s = Math.max(0, Math.ceil((S.retryAt - performance.now()) / 1000));
-      banner(adv.text + (s ? " Retrying in " + s + " s." : ""));
+      banner(adv.text + (s ? " " + t("retry.in", { s }) : ""));
       if (s > 0) S.retryTimer = setTimeout(tick, 500); else { fetchInfo().then(connect); }
     };
     tick();
@@ -643,7 +682,7 @@
     renderRangeInfo(); buildBands();
     renderMode(); renderFreq(); renderSquelch();
     send(L.msg.tune({ freq_hz: S.freq, mode: S.mode, low_hz: S.low, high_hz: S.high }));
-    send(L.msg.rx({ squelch_db: S.sq }));
+    send(L.msg.rx(Object.assign({ squelch_db: S.sq }, Cfg.rxFields(ST, S.mode))));
     requestSpan();
     if (S.audioOn) { S.audioSeq = -1; sendAudio(); }
     S.pinger = setInterval(() => send(L.msg.ping(Date.now())), 20000);
@@ -687,7 +726,7 @@
   }
 
   // ---------- squelch / volume ----------
-  function renderSquelch() { $("sq").value = Math.max(-150, S.sq); $("sqOut").textContent = S.sq <= -150 ? "open" : S.sq + " dB"; }
+  function renderSquelch() { $("sq").value = Math.max(-150, S.sq); $("sqOut").textContent = S.sq <= -150 ? t("open") : S.sq + " dB"; }
   function renderVolume() { $("vol").value = S.volume; $("volOut").textContent = S.volume + " %"; applyVolume(); }
 
   // ---------- bands and bookmarks ----------
@@ -699,7 +738,7 @@
       btn.dataset.s = b.s; btn.dataset.e = b.e; btn.appendChild(el("span", "f", fmtMHz(b.s) + " - " + fmtMHz(b.e) + " MHz"));
       btn.addEventListener("click", () => {
         const f = L.clamp(b.f, slice.start, slice.stop); setView(slice);
-        if (S.welcome && S.welcome.demods.includes(b.m)) { S.mode = b.m; const d = L.MODE_DEFAULT[b.m]; S.low = d[0]; S.high = d[1]; renderMode(); sendTune({ mode: b.m }); }
+        if (ST.autoMode && S.welcome && S.welcome.demods.includes(b.m)) { S.mode = b.m; const d = L.MODE_DEFAULT[b.m]; S.low = d[0]; S.high = d[1]; renderMode(); sendTune({ mode: b.m }); }
         setFreq(f, true);
       });
       box.appendChild(btn);
@@ -711,33 +750,47 @@
   function renderMarks() {
     const ul = $("markList"); ul.textContent = "";
     const list = marks();
-    if (!list.length) ul.appendChild(el("li", "dim", "No memories yet. Tune somewhere and press Save."));
+    if (!list.length) ul.appendChild(el("li", "dim", t("marks.none")));
     list.forEach((m, i) => {
       const li = el("li"); const go = el("button", "go", m.name); go.type = "button";
       go.appendChild(el("span", null, L.formatFreq(m.f).replace(/^0+(?=\d)/, "") + " " + m.m.toUpperCase()));
-      go.addEventListener("click", () => {
-        if (S.bounds && (m.f < S.bounds.start || m.f > S.bounds.stop)) { banner("That memory is outside this server's capture."); return; }
-        banner(""); if (m.m !== S.mode) { S.mode = m.m; S.low = m.lo; S.high = m.hi; renderMode(); sendTune({ mode: m.m, low_hz: m.lo, high_hz: m.hi }); }
-        setFreq(m.f, true);
-      });
-      const del = el("button", "del", "\u00d7"); del.type = "button"; del.setAttribute("aria-label", "Delete memory " + m.name);
-      del.addEventListener("click", () => { const l = marks(); l.splice(i, 1); store.set("marks", l); renderMarks(); });
+      go.addEventListener("click", () => gotoMark(m));
+      const del = el("button", "del", "\u00d7"); del.type = "button"; del.setAttribute("aria-label", t("marks.delete", { n: m.name }));
+      del.addEventListener("click", () => { const l = marks(); l.splice(i, 1); store.set("marks", l); renderMarks(); drawSpectrum(); });
       li.append(go, del); ul.appendChild(li);
     });
+  }
+  function gotoMark(m) {
+    if (S.bounds && (m.f < S.bounds.start || m.f > S.bounds.stop)) { banner(t("marks.outside")); return; }
+    banner(""); if (m.m !== S.mode && ST.autoMode && S.welcome && S.welcome.demods.includes(m.m)) { S.mode = m.m; S.low = m.lo; S.high = m.hi; renderMode(); sendTune({ mode: m.m, low_hz: m.lo, high_hz: m.hi }); }
+    setFreq(m.f, true);
+  }
+  function exportMarks() {
+    const blob = new Blob([JSON.stringify({ onair_web_memories: 1, marks: marks() }, null, 2)], { type: "application/json" }), a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "onair-memories.json"; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  }
+  function importMarks(text) {
+    let o = null; try { o = JSON.parse(text); } catch (e) { /* bad file */ }
+    const list = o && o.onair_web_memories === 1 && Array.isArray(o.marks) ? o.marks : null;
+    if (!list) { banner(t("marks.bad")); return; }
+    const ok = list.filter((m) => m && typeof m === "object" && isFinite(m.f) && m.f >= 0 && m.f < 1e11 && L.MODES.includes(m.m) && isFinite(m.lo) && isFinite(m.hi))
+      .map((m) => ({ name: L.sanitizeText(m.name, 40) || L.formatFreq(m.f).replace(/^0+(?=\d)/, ""), f: Math.round(m.f), m: m.m, lo: Math.round(m.lo), hi: Math.round(m.hi) }));
+    const cur = marks(); for (const m of ok) if (!cur.some((c) => c.f === m.f && c.m === m.m && c.name === m.name)) cur.push(m);
+    store.set("marks", cur.slice(-200)); renderMarks(); banner("");
   }
   function addMark() {
     const name = L.sanitizeText($("markName").value, 40) || L.formatFreq(S.freq).replace(/^0+(?=\d)/, "");
     const l = marks(); l.push({ name, f: S.freq, m: S.mode, lo: S.low, hi: S.high }); store.set("marks", l.slice(-200));
-    $("markName").value = ""; renderMarks();
+    $("markName").value = ""; renderMarks(); drawSpectrum();
   }
 
   // ---------- decoders ----------
   function buildDecoders(list) {
     const box = $("decList"); box.textContent = "";
-    if (!list || !list.length) box.appendChild(el("span", "dim", "This server offers no decoders."));
+    if (!list || !list.length) box.appendChild(el("span", "dim", t("dec.none")));
     for (const d of list || []) {
       const b = el("button", null, d.name || d.kind); b.type = "button"; b.dataset.kind = d.kind; b.dataset.needs = d.needs_freq ? "1" : "";
-      b.title = d.needs_freq ? "Decodes at the tuned frequency" : "";
+      b.title = d.needs_freq ? t("dec.at") : "";
       b.setAttribute("aria-pressed", "false");
       b.addEventListener("click", () => toggleDecoder(d));
       box.appendChild(b);
@@ -752,7 +805,7 @@
   function renderDecoderButtons() {
     for (const b of $("decList").querySelectorAll("button")) b.setAttribute("aria-pressed", String(S.subs.some((s) => s.decoder === b.dataset.kind)));
   }
-  function dropViews(kind) { for (const k of Object.keys(S.views)) if (k === kind || k.startsWith(kind + "@")) { const v = S.views[k]; if (v.node.parentNode) v.node.parentNode.removeChild(v.node); delete S.views[k]; } for (const k of Object.keys(S.decoders)) if (k === kind || k.startsWith(kind + "@")) delete S.decoders[k]; }
+  function dropViews(kind) { mapDirty = true; for (const k of Object.keys(S.views)) if (k === kind || k.startsWith(kind + "@")) { const v = S.views[k]; if (v.node.parentNode) v.node.parentNode.removeChild(v.node); delete S.views[k]; } for (const k of Object.keys(S.decoders)) if (k === kind || k.startsWith(kind + "@")) delete S.decoders[k]; }
   function onEvent(m) {
     if (typeof m.decoder !== "string") return;
     const key = m.decoder.slice(0, 64);
@@ -760,7 +813,7 @@
       const sub = S.subs.find((x) => key === x.decoder || key.startsWith(x.decoder + "@"));
       if (!sub) return;
       const v = S.views[key] || (S.views[key] = new D.DecoderView(document, key, m.data.kind));
-      v.ingest(m.data); S.decDirty = true; return;
+      v.ingest(m.data); S.decDirty = true; mapDirty = true; return;
     }
     S.decoders[key] = m.data; S.decDirty = true;
   }
@@ -791,7 +844,138 @@
       }
       out.appendChild(sec);
     }
-    if (!out.children.length) out.appendChild(el("p", "dim", S.subs.length ? "Waiting for results." : "Pick a decoder above. Some need the receiver tuned near their usual frequency."));
+    if (!out.children.length) out.appendChild(el("p", "dim", S.subs.length ? t("dec.wait") : t("dec.pick")));
+  }
+
+  // ---------- layout and look from the settings ----------
+  function applyLook() {
+    const h = document.documentElement, w = window.innerWidth;
+    h.classList.toggle("compact", ST.layout === "compact" || (ST.layout === "auto" && w <= 820));
+    h.classList.toggle("reduce-motion", !!ST.reduceMotion);
+    h.style.setProperty("--ui-scale", String(ST.scale / 100));
+    const app = $("app"); app.classList.toggle("no-left", !ST.panelLeft); app.classList.toggle("no-right", !ST.panelRight);
+  }
+
+  // ---------- the Settings panel: built from the schema in onair-settings.js ----------
+  const LANG_NAMES = { en: "English", lt: "Lietuvių", de: "Deutsch" };
+  const SET_ORDER = {
+    receiver: ["agc", "gainDb", "deemphUs", "audioCodec", "audioRate", "step", "autoMode"],
+    display: ["palette", "rangeMode", "range", "floorAdj", "minDb", "maxDb", "wfFps", "fftBins", "smooth", "peakHold", "showBands", "showMarks", "showGrid"],
+    layout: ["theme", "lang", "layout", "panelLeft", "panelRight", "scale", "keys", "reduceMotion"],
+  };
+  let setTab = "receiver";
+  function optLabel(k, v) {
+    if (k === "step") return L.stepLabel(v);
+    const key = "set." + k + "." + v;
+    if (I18N.CAT.en[key]) return t(key);
+    if (k === "palette") return t("pal." + v);
+    if (k === "theme") return t("theme." + v);
+    if (k === "agc") return t("agc." + v);
+    if (k === "lang") return v === "auto" ? t("set.lang.auto") : LANG_NAMES[v] || v;
+    if (k === "audioRate") return v / 1000 + " kHz";
+    if (k === "deemphUs") return v ? v + " µs" : t("deemph.off");
+    return String(v);
+  }
+  function setVisible(k) {
+    if (k === "range") return ST.rangeMode !== "manual";
+    if (k === "floorAdj") return ST.rangeMode === "server";
+    if (k === "minDb" || k === "maxDb") return ST.rangeMode === "manual";
+    if (k === "gainDb") return ST.agc === "off";
+    return true;
+  }
+  function renderSettings() {
+    const tabs = $("setTabs"); tabs.textContent = "";
+    for (const g of Object.keys(SET_ORDER)) {
+      const b = el("button", "tab", t("set.tab." + g)); b.type = "button"; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", String(g === setTab));
+      b.addEventListener("click", () => { setTab = g; renderSettings(); }); tabs.appendChild(b);
+    }
+    const body = $("setBody"); body.textContent = "";
+    for (const k of SET_ORDER[setTab]) {
+      const sc = Cfg.SCHEMA[k]; if (!setVisible(k)) continue;
+      const row = el("div", "setrow"), id = "set_" + k, lab = el("label", null, t("set." + k)); lab.htmlFor = id; let inp;
+      if (sc.type === "bool") {
+        inp = el("input"); inp.type = "checkbox"; inp.checked = !!ST[k]; inp.id = id;
+        inp.addEventListener("change", () => setSetting(k, inp.checked));
+        row.classList.add("chk"); row.append(inp, lab);
+      } else if (sc.type === "enum" || k === "step") {
+        inp = el("select"); inp.id = id;
+        const vals = k === "step" ? (L.STEPS.includes(ST.step) ? L.STEPS : L.STEPS.concat([ST.step]).sort((a, b) => a - b)) : sc.values;
+        for (const v of vals) { const o = el("option", null, optLabel(k, v)); o.value = String(v); inp.appendChild(o); }
+        inp.value = String(ST[k]); inp.addEventListener("change", () => setSetting(k, k === "step" || typeof sc.values[0] === "number" ? +inp.value : inp.value));
+        row.append(lab, inp);
+      } else {
+        inp = el("input"); inp.type = "range"; inp.id = id; inp.min = sc.min; inp.max = sc.max; inp.step = 1; inp.value = ST[k];
+        const out = el("output", "mono", String(ST[k])); inp.addEventListener("input", () => { out.textContent = inp.value; setSetting(k, +inp.value, true); });
+        row.append(lab, out, inp);
+      }
+      body.appendChild(row);
+    }
+  }
+  // one place that changes a setting: validate, store, and apply it
+  function setSetting(k, v, noRebuild) {
+    const nv = Cfg.coerce(k, v); ST[k] = nv; saveSettings(); applySetting(k);
+    if (!noRebuild && (k === "rangeMode" || k === "agc" || k === "lang")) renderSettings();
+  }
+  function applySetting(k) {
+    switch (k) {
+      case "agc": S.agc = ST.agc; send(L.msg.rx({ agc: ST.agc, gain_db: ST.gainDb })); syncControls(); break;
+      case "gainDb": send(L.msg.rx({ gain_db: ST.gainDb })); syncControls(); break;
+      case "deemphUs": send(L.msg.rx({ deemph_us: ST.deemphUs })); syncControls(); break;
+      case "audioCodec": case "audioRate": if (S.audioOn) sendAudio(); break;
+      case "step": S.step = ST.step; syncControls(); break;
+      case "palette": S.palette = ST.palette; pal = L.makePalette(S.palette); syncControls(); redrawWaterfall(); drawSpectrum(); break;
+      case "range": S.range = ST.range; syncControls(); redrawWaterfall(); drawSpectrum(); break;
+      case "floorAdj": S.floorAdj = ST.floorAdj; syncControls(); redrawWaterfall(); drawSpectrum(); break;
+      case "rangeMode": S.adapt = null; redrawWaterfall(); drawSpectrum(); break;
+      case "minDb": case "maxDb": if (ST.maxDb - ST.minDb < 10) { if (k === "minDb") ST.minDb = ST.maxDb - 10; else ST.maxDb = ST.minDb + 10; } redrawWaterfall(); drawSpectrum(); break;
+      case "wfFps": case "fftBins": requestSpan(); break;
+      case "smooth": case "peakHold": S.trace = null; S.peakDb = null; S.traceRow = null; drawSpectrum(); break;
+      case "showBands": case "showMarks": case "showGrid": drawSpectrum(); break;
+      case "theme": setTheme(ST.theme === "auto" ? null : ST.theme, true); break;
+      case "lang": I18N.setLang(I18N.pickLang(ST.lang, navigator.languages || [navigator.language])); relabel(); break;
+      case "layout": case "panelLeft": case "panelRight": case "scale": case "reduceMotion": applyLook(); setTimeout(() => { redrawWaterfall(); drawSpectrum(); }, 50); break;
+      default: break;
+    }
+  }
+  // controls in the side panels that mirror a setting
+  function syncControls() {
+    const set = (id, v) => { const e = $(id); if (e && e.value !== String(v)) e.value = String(v); };
+    set("agc", ST.agc); set("gain", ST.gainDb); set("deemph", ST.deemphUs); set("step", ST.step); set("palette", ST.palette); set("range", ST.range); set("floorAdj", ST.floorAdj);
+    $("gainOut").textContent = ST.gainDb + " dB";
+    const gr = $("gainRow"); if (gr) { gr.classList.toggle("off", ST.agc !== "off"); $("gain").disabled = ST.agc !== "off"; }
+  }
+  // the language changed: static text from the data-i18n attributes, then the pieces built by code
+  function relabel() {
+    document.documentElement.lang = I18N.lang(); I18N.apply(document);
+    setTheme(S.theme, true); setConn(S.connKey || "offline", $("conn").className.replace("lamp ", "")); renderAudio(); renderRec(); renderMarks(); renderSquelch(); renderStatus();
+    if ($("settingsDlg").open) renderSettings();
+    if (S.info) renderInfo(); buildDecoders(S.welcome && S.welcome.decoders); renderMap();
+  }
+  function openSettings() { renderSettings(); const d = $("settingsDlg"); if (!d.open) d.showModal(); }
+
+  // ---------- the map tab (ADS-B aircraft, AIS vessels, APRS stations from the decoders you started) ----------
+  let mapView = null, mapDirty = false;
+  function collectMarks() {
+    const out = [];
+    for (const k of Object.keys(S.views)) {
+      const v = S.views[k]; if (!v || !v.data) continue;
+      try {
+        const tb = v.kind === "adsb" ? D.aircraftTable(v.data) : v.kind === "ais" ? D.vesselTable(v.data) : v.kind === "aprs" ? D.aprsTables(v.data) : null;
+        if (tb) for (const m of tb.marks) out.push(m);
+      } catch (e) { /* a bad event never breaks the page */ }
+    }
+    return out;
+  }
+  function renderMap() {
+    const pane = $("paneMap"); if (pane.hidden) return;
+    if (!mapView) mapView = MAP.create($("mapCanvas"), { onSelect: (m) => { S.mapSel = m ? m.id : ""; renderMapInfo(); } });
+    S.mapMarks = collectMarks(); mapView.setMarks(S.mapMarks);
+    const n = S.mapMarks.length; $("mapNone").hidden = n > 0; $("mapCount").textContent = n ? t("map.count", { n }) : "";
+    renderMapInfo();
+  }
+  function renderMapInfo() {
+    const m = S.mapMarks.find((x) => x.id === S.mapSel), box = $("mapInfo");
+    box.textContent = m ? m.label + (m.info ? ", " + m.info : "") + "  " + m.lat.toFixed(4) + ", " + m.lon.toFixed(4) : "";
   }
 
   // ---------- wiring ----------
@@ -801,13 +985,28 @@
     const stepSel = $("step");
     for (const s of L.STEPS) { const o = el("option", null, L.stepLabel(s)); o.value = String(s); stepSel.appendChild(o); }
     if (!L.STEPS.includes(S.step)) S.step = 5000; stepSel.value = String(S.step);
-    stepSel.addEventListener("change", () => { S.step = +stepSel.value; store.set("step", S.step); });
+    stepSel.addEventListener("change", () => { setSetting("step", +stepSel.value, true); });
     const pSel = $("palette");
     for (const n of L.PALETTE_NAMES) { const o = el("option", null, L.PALETTE_LABELS[n] || n); o.value = n; pSel.appendChild(o); }
-    pSel.value = S.palette; pSel.addEventListener("change", () => { S.palette = pSel.value; pal = L.makePalette(S.palette); store.set("palette2", S.palette); redrawWaterfall(); });
+    pSel.value = S.palette; pSel.addEventListener("change", () => setSetting("palette", pSel.value, true));
     $("range").value = S.range; $("floorAdj").value = S.floorAdj;
-    $("range").addEventListener("input", (e) => { S.range = +e.target.value; store.set("range", S.range); redrawWaterfall(); drawSpectrum(); });
-    $("floorAdj").addEventListener("input", (e) => { S.floorAdj = +e.target.value; store.set("floorAdj", S.floorAdj); redrawWaterfall(); drawSpectrum(); });
+    $("range").addEventListener("input", (e) => setSetting("range", +e.target.value, true));
+    $("floorAdj").addEventListener("input", (e) => setSetting("floorAdj", +e.target.value, true));
+    $("agc").addEventListener("change", (e) => setSetting("agc", e.target.value, true));
+    $("gain").addEventListener("input", (e) => setSetting("gainDb", +e.target.value, true));
+    $("deemph").addEventListener("change", (e) => setSetting("deemphUs", +e.target.value, true));
+    for (const b of $("filterBtns").children) b.addEventListener("click", () => { const r = L.MODE_BW_RANGE[S.mode], d = L.MODE_DEFAULT[S.mode]; setBandwidth(L.clamp(Math.round((d[1] - d[0]) * +b.dataset.w), r[0], r[1])); });
+    $("autoRange").addEventListener("click", () => { const row = S.rows[S.rows.length - 1]; if (!row) return; const e = Cfg.autoRange(row); if (!e) return; S.adapt = { min: e.min, max: e.max }; if (ST.rangeMode === "server") ST.rangeMode = "adaptive"; saveSettings(); redrawWaterfall(); drawSpectrum(); });
+    $("mSettings").addEventListener("click", openSettings); $("gearBtn").addEventListener("click", openSettings);
+    $("setReset").addEventListener("click", () => { ST = Cfg.defaults(); saveSettings(); for (const k of Cfg.KEYS) applySetting(k); renderSettings(); $("setMsg").textContent = ""; });
+    $("setExport").addEventListener("click", () => { const blob = new Blob([Cfg.exportJson(ST)], { type: "application/json" }), a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "onair-web-settings.json"; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); });
+    $("setImport").addEventListener("click", () => $("setFile").click());
+    $("setFile").addEventListener("change", (e) => { const f = e.target.files[0]; if (!f || f.size > 20000) return; f.text().then((tx) => { const o = Cfg.importJson(tx); if (!o) { $("setMsg").textContent = t("set.badfile"); return; } ST = o; saveSettings(); for (const k of Cfg.KEYS) applySetting(k); renderSettings(); $("setMsg").textContent = t("set.imported"); }); e.target.value = ""; });
+    $("markExport").addEventListener("click", exportMarks); $("markImport").addEventListener("click", () => $("markFile").click());
+    $("markFile").addEventListener("change", (e) => { const f = e.target.files[0]; if (!f || f.size > 200000) return; f.text().then(importMarks); e.target.value = ""; });
+    $("mapWide").addEventListener("click", () => { const on = !$("app").classList.contains("mapwide"); $("app").classList.toggle("mapwide", on); $("mapWide").setAttribute("aria-pressed", String(on)); setTimeout(() => { if (mapView) mapView.draw(); redrawWaterfall(); drawSpectrum(); }, 30); });
+    $("mapFit").addEventListener("click", () => { if (mapView) mapView.fit(); }); $("mapIn").addEventListener("click", () => { if (mapView) mapView.zoom(1); }); $("mapOut").addEventListener("click", () => { if (mapView) mapView.zoom(-1); });
+    I18N.apply(document); applyLook(); syncControls();
     pal = L.makePalette(S.palette);
     $("freqType").addEventListener("click", typeFreq);
     $("bw").addEventListener("input", (e) => setBandwidth(+e.target.value));
@@ -823,7 +1022,7 @@
     $("markName").addEventListener("keydown", (e) => { if (e.key === "Enter") addMark(); });
     for (const t of document.querySelectorAll(".tabs button")) t.addEventListener("click", () => {
       for (const o of document.querySelectorAll(".tabs button")) { const on = o === t; o.setAttribute("aria-selected", String(on)); o.classList.toggle("sel", on); $("pane" + o.dataset.tab[0].toUpperCase() + o.dataset.tab.slice(1)).hidden = !on; }
-      S.decDirty = true; renderDecoders();
+      S.decDirty = true; renderDecoders(); renderMap();
     });
     attachScope(spec, true); attachScope(wf, false);
     $("spectrum").addEventListener("keydown", (e) => {
@@ -837,6 +1036,9 @@
       if (document.querySelector("dialog[open]")) return;
       const k = e.key;
       if (k === "?") { $("help").showModal(); e.preventDefault(); return; }
+      if (!ST.keys) return;
+      if (k === "s" || k === "S") { openSettings(); e.preventDefault(); return; }
+      if (k === "a" || k === "A") { $("autoRange").click(); return; }
       if (k === "t" || k === "T") { setTheme((document.documentElement.dataset.theme === "light") ? "dark" : "light"); return; }
       if (!S.welcome) return;
       const own = t && (t.id === "freq" || t.id === "spectrum");
@@ -872,7 +1074,7 @@
     });
     $("typeForm").addEventListener("submit", (e) => {
       const hz = L.parseFreq($("typeIn").value);
-      if (isNaN(hz)) { e.preventDefault(); $("typeMsg").textContent = "That is not a frequency. Try 145.5, 7074 kHz or 121.5 MHz."; return; }
+      if (isNaN(hz)) { e.preventDefault(); $("typeMsg").textContent = t("type.bad"); return; }
       banner(""); setFreq(hz, true);
     });
     $("typeCancel").addEventListener("click", () => $("typeDlg").close());
@@ -881,10 +1083,10 @@
       S.password = $("loginPw").value; if ($("loginInv").value.trim()) S.invite = $("loginInv").value.trim();
       $("loginPw").value = ""; $("login").hidden = true; banner(""); connect();
     });
-    window.addEventListener("resize", schedule(() => { redrawWaterfall(); drawSpectrum(); requestSpan(); }, 150));
+    window.addEventListener("resize", schedule(() => { applyLook(); redrawWaterfall(); drawSpectrum(); requestSpan(); if (mapView) mapView.draw(); }, 150));
     document.addEventListener("visibilitychange", () => { if (!document.hidden && S.ws && S.ws.readyState > 1 && !S.stopRetry) { clearTimeout(S.retryTimer); fetchInfo().then(connect); } });
     renderVolume(); renderAudio(); renderMarks(); renderSquelch(); renderFreq(); drawMeter();
-    setInterval(renderDecoders, 500);
+    setInterval(renderDecoders, 500); setInterval(() => { if (mapDirty) { mapDirty = false; renderMap(); } }, 1000);
     setInterval(() => { if (S.info || S.welcome === null) fetchInfo(); }, 10000);
 
     // an invite arrives as #invite=TOKEN (kept out of the server's logs); remove it from the address bar
