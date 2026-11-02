@@ -3505,3 +3505,21 @@ frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the 
 frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	找到了帧同步,但负载未通过 FEC / CRC:信号弱、衰落或采样时钟误差
 decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	正在解码,但超过三分之一的数据块丢失:更强的信号或更好的天线会有帮助
 decoding well	解码良好
+Base stations	基站
+Calls	呼叫
+Channel options	信道选项
+Chat	聊天
+Devices	设备
+Ground stations	地面站
+Neighbours	相邻小区
+Nodes	节点
+On air	正在发射
+Selected	已选
+Site	站点
+Table	表格
+Trunking	集群
+Vessels	船舶
+some stations are hidden	部分电台已隐藏
+File...	文件...
+Auto-save to file	自动保存到文件
+Activity	活动

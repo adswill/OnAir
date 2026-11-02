@@ -3468,3 +3468,20 @@ frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the 
 frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	keretszinkron van, de az adatok megbuknak az FEC / CRC-n: gyenge jel, fading vagy mintavételi órahiba
 decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	dekódol, de a blokkok több mint harmada elvész: erősebb jel vagy jobb antenna segítene
 decoding well	jól dekódol
+Base stations	Bázisállomások
+Calls	Hívások
+Channel options	Csatornabeállítások
+Chat	Csevegés
+Devices	Eszközök
+Ground stations	Földi állomások
+Neighbours	Szomszédok
+Nodes	Csomópontok
+On air	Adásban
+Selected	Kiválasztott
+Site	Hely
+Table	Táblázat
+Vessels	Hajók
+some stations are hidden	néhány állomás el van rejtve
+File...	Fájl...
+Auto-save to file	Automatikus mentés fájlba
+Activity	Aktivitás

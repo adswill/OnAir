@@ -1,6 +1,7 @@
 // VDL Mode 2 screens: the message log with a filter and a detail pane, a map of the positions the messages carry, the aircraft and
 // ground stations, and the channel list with its activity.
 #include "dect2/common/time_fmt.h"
+#include "ui/kit/mode_panel.h"
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
 #include "../adsb/adsb_map.h"
@@ -742,6 +743,15 @@ bool vdl2EstimatedPosition(uint32_t icao, double now, double& lat, double& lon, 
 // For the map upload (app/map/map_send.cpp)
 derivedkin::Info vdl2Kinematics(const dect2::Vdl2Aircraft& c, double now) { return kinOf(c, now); }
 
+// Simple view: the live messages, the aircraft and the ground stations side by side
+static void command(App& a) {
+    loadState();
+    kit::modeHeader({27, "VDL2", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    modepanel::panes({{"##vdmsgs", tr("Messages"), [&a] { messageView(a); }, 1.7f, 260.f},
+                      {"##vdair", tr("Aircraft"), [&a] { aircraftView(a); }, 1.f, 220.f},
+                      {"##vdgs", tr("Ground stations"), [&a] { stationView(a); }, 0.9f, 200.f}}, 320.f);
+}
+
 extern const ModeUi kVdl2Ui;
 const ModeUi kVdl2Ui = {
     .sideTitle = "AIRCRAFT",
@@ -756,4 +766,5 @@ const ModeUi kVdl2Ui = {
     .synth = synth,
     .tick = tick,
     .meters = meters,
+    .command = command,
 };

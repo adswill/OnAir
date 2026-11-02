@@ -663,6 +663,7 @@ static void signalPane(App& a) {
 
 static void command(App& a) {
     kit::modeHeader({9, "DMR", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    if (live(a)) voiceWhyRow(a, dect2::dmrWhy(a.rx.dmr));
     modepanel::panes({{"##dmrcalls", nullptr, [&a] { callsView(a); }, 1.8f, 420.f},
            {"##dmrsignal", tr("Signal"), [&a] { signalPane(a); }, 1.f, 260.f}}, 360.f);
 }

@@ -97,9 +97,9 @@ void aircraftTable(App& a, bool compact) {
                    ac.nacp >= 0 ? std::to_string(ac.nacp) : "", ac.adsbVersion >= 0 ? std::to_string(ac.adsbVersion) : "", ac.tisb ? "1" : "", ac.ground ? "1" : "",
                    std::to_string(ac.messages), resexp::num(ac.ageSec, 0), ac.hasPos ? resexp::num(ac.posAgeSec, 0) : "", resexp::num(ac.levelDbfs, 0)});
         resexp::saveButton(x, "adsb", note, "svadsb");
-        ImGui::SameLine();
+        sameLineIf(200 * gUi, -1.f);   // wraps in a narrow pane (the Simple view)
         unitsControls();
-        ImGui::SameLine(); displayControls();
+        sameLineIf(70 * gUi, -1.f); displayControls();
         if (!note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", note.c_str()); }
     }
     if (!ImGui::BeginTable(compact ? "##acs" : "##acf", cols, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;

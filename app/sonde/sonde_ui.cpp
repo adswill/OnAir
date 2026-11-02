@@ -1,6 +1,7 @@
 // Radiosonde screens: the map with every sonde's track and a balloon marker, the table of sondes heard, the detail of the selected one
 // (all fields, altitude and temperature plots, calibration progress), the carriers the search found in the band, and the test signal options.
 #include "app.h"
+#include "ui/kit/mode_panel.h"
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
 #include "dect2/sonde/sonde_land.h"
@@ -515,6 +516,14 @@ void meters(const App& a, std::vector<ModeMeter>& out) {
 
 } // namespace
 
+// Simple view: the map, the sonde table and the readout of the picked sonde side by side
+static void command(App& a) {
+    kit::modeHeader({13, "Radiosondes", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    modepanel::panes({{"##sdcmap", tr("Map"), [&a] { mapView(a, ImGui::GetContentRegionAvail()); }, 1.3f, 260.f},
+                      {"##sdctab", tr("Table"), [&a] { sondeTable(a, false); }, 1.f, 220.f},
+                      {"##sdcsel", tr("Selected"), [&a] { detailCard(a); }, 0.8f, 200.f}}, 300.f);
+}
+
 extern const ModeUi kSondeUi;
 const ModeUi kSondeUi = {
     .sideTitle = "SONDES",
@@ -531,4 +540,5 @@ const ModeUi kSondeUi = {
     .synth = synth,
     .tick = tick,
     .meters = meters,
+    .command = command,
 };

@@ -1,5 +1,6 @@
 // Pagers screens: lamps for the signal, the sync and the two protocols; the message list with a filter; the statistics per speed.
 #include "dect2/common/time_fmt.h"
+#include "ui/kit/mode_panel.h"
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
 #include "app.h"
@@ -636,6 +637,17 @@ void summary(const App& a, std::string& l1, std::string& l2) {
 
 } // namespace
 
+// Simple view: the messages, the capcodes and the statistics side by side
+static void command(App& a) {
+    loadRead();
+    lampRow(a);
+    ImGui::Spacing();
+    kit::modeHeader({23, "Pagers", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    modepanel::panes({{"##pgmsgs", tr("Messages"), [&a] { messageView(a); }, 1.8f, 260.f},
+                      {"##pgcap", tr("Capcodes"), [&a] { capcodeView(a); }, 1.f, 220.f},
+                      {"##pgstat", tr("Statistics"), [&a] { statsView(a); }, 0.8f, 200.f}}, 320.f);
+}
+
 extern const ModeUi kPagerUi;
 const ModeUi kPagerUi = {
     .sideTitle = "MESSAGES",
@@ -647,4 +659,5 @@ const ModeUi kPagerUi = {
     .status = status,
     .summary = summary,
     .tick = tick,
+    .command = command,
 };

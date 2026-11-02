@@ -4,6 +4,8 @@
 #include "app.h"
 #include "ui/voice_why_ui.h"
 #include "dect2/voice/voice_why_modes.h"
+#include "ui/kit/mode_panel.h"
+#include "ui/kit/kit.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/session_list.h"
 #include "voice/voice_monitor_ui.h"
@@ -514,7 +516,7 @@ void tab(App& a) {
     ImGui::TextDisabled("Receive only: the public information every TETRA base station broadcasts to all terminals (network code, location area, services, encryption advertised). Nothing is decrypted; no messages or identities are decoded. Clear (unencrypted) voice can be played only with a speech codec you install yourself; encrypted calls are never decoded.");
     ImGui::PopTextWrapPos();
     voiceStrip(a);
-    slotPanel(a);
+    if (kit::collapsingSection(tr("Listen"), false)) slotPanel(a);
     kit::modeHeader({46, "TETRA", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
     kit::modeNav("tetrav", S.view, {{tr("Live"), 0}, {tr("Calls"), 4}, {tr("Neighbours"), 1, true}, {tr("Carriers"), 2, true}, {tr("Log"), 3, true}});
     if (S.view == 4) { kit::sessionItems(46, 1, "tetra"); return; }
@@ -584,6 +586,24 @@ void synthOptions(App& a, bool& changed) {
 
 } // namespace
 
+// Simple view: the scan bar and the voice strip, the base stations with the readout of the picked one, the neighbours and the log side by side
+static void command(App& a) {
+    scanBar(a);
+    voiceStrip(a);
+    slotPanel(a);
+    kit::modeHeader({46, "TETRA", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "start the receiver to find the TETRA base stations around you"); return; }
+    voiceWhyRow(a, dect2::tetraWhy(a.rx.tetra));
+    modepanel::panes({{"##tecells", tr("Base stations"), [&a] {
+                           const float h = ImGui::GetContentRegionAvail().y;
+                           if (ImGui::BeginChild("##tcct", ImVec2(0, h * 0.55f))) cellTable(a);
+                           ImGui::EndChild();
+                           detail(a);
+                       }, 1.5f, 300.f},
+                      {"##tecar", tr("Neighbours"), [&a] { neighbourView(a); }, 1.f, 220.f},
+                      {"##telog", tr("Log"), [&a] { logView(a); }, 1.f, 220.f}}, 320.f);
+}
+
 extern const ModeUi kTetraUi;
 const ModeUi kTetraUi = {
     .sideTitle = "CELLS",
@@ -596,4 +616,5 @@ const ModeUi kTetraUi = {
     .summary = summary,
     .synth = synthOptions,
     .tick = tick,
+    .command = command,
 };

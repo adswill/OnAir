@@ -1,4 +1,5 @@
 // Elektro-L N3 / N4 / N5 HRIT / LRIT screens: the same xRIT product list as GOES, with satellite and link presets.
+#include "ui/kit/mode_panel.h"
 #include "app.h"
 #include "panels/gallery.h"
 #include "gfx/gfx.h"
@@ -448,6 +449,12 @@ void meters(const App& a, std::vector<ModeMeter>& out) {
 
 } // namespace
 
+// Simple view: the picture with its controls, and the signal and the products / channels beside it
+static void command(App& a) {
+    modepanel::panes({{"##elkcpic", nullptr, [&a] { tab(a); }, 2.2f, 300.f},
+                      {"##elkcsig", tr("Signal"), [&a] { receiver(a); ImGui::Spacing(); list(a); }, 1.f, 240.f}}, 340.f);
+}
+
 extern const ModeUi kElektroUi;
 const ModeUi kElektroUi = {
     .sideTitle = "PRODUCTS",
@@ -462,4 +469,5 @@ const ModeUi kElektroUi = {
     .tuner = tuner,
     .tick = tick,
     .meters = meters,
+    .command = command,
 };

@@ -77,3 +77,7 @@ WSJT, 14.078 MHz
 WSJT, 14.080 MHz
 WSJT, 14.084 MHz
 WSJT, 14.100 MHz
+Chat
+Trunking
+Site
+Capcodes

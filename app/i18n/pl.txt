@@ -3482,3 +3482,20 @@ frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the 
 frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	znaleziono synchronizacje ramek, ale dane nie przechodzą FEC / CRC: słaby sygnał, zaniki lub błąd zegara próbkowania
 decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	dekoduje, ale ponad jedna trzecia bloków jest tracona: pomógłby silniejszy sygnał lub lepsza antena
 decoding well	dekoduje dobrze
+Base stations	Stacje bazowe
+Calls	Połączenia
+Channel options	Opcje kanału
+Chat	Czat
+Devices	Urządzenia
+Ground stations	Stacje naziemne
+Neighbours	Sąsiednie
+Nodes	Węzły
+On air	Na antenie
+Selected	Wybrane
+Site	Stanowisko
+Table	Tabela
+Vessels	Statki
+some stations are hidden	niektóre stacje są ukryte
+File...	Plik...
+Auto-save to file	Zapisuj automatycznie do pliku
+Activity	Aktywność

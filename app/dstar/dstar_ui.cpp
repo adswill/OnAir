@@ -2,6 +2,7 @@
 // positions on a map (the ADS-B map underneath, as for APRS and M17), the calling-channel presets, and a "?" about the mbelib library the
 // voice needs (docs/CODECS.md).
 #include "app.h"
+#include "ui/kit/mode_panel.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/session_list.h"
 #include "voice/voice_monitor_ui.h"
@@ -212,8 +213,7 @@ void tick(App& a) {
     S.wasRunning = true;
 }
 
-void tab(App& a) {
-    load();
+void voiceBar(App& a) {
     {   // the voice monitor's strip, the same in every voice mode
         const dect2::DstarTelemetry& t = a.rx.dstar;
         voiceui::Link l;
@@ -222,6 +222,11 @@ void tab(App& a) {
         l.errorRate = l.locked ? t.berPct / 100.f : -1.f;
         voiceui::strip(a, "dstar", "D-STAR", l);
     }
+}
+
+void tab(App& a) {
+    load();
+    voiceBar(a);
     kit::modeHeader({33, "D-STAR", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
     kit::modeNav("dstarv", S.view, {{tr("Live"), 0}, {tr("Calls"), 4}, {tr("Map"), 3}, {tr("Call list"), 1, true}, {tr("Messages"), 2, true}});
     if (S.view == 4) { kit::sessionItems(33, 1, "dstar"); return; }
@@ -285,6 +290,17 @@ void summary(const App& a, std::string& l1, std::string& l2) {
 
 } // namespace
 
+// Simple view: the voice strip, then what is on air, the call list and the map side by side
+static void command(App& a) {
+    load();
+    voiceBar(a);
+    kit::modeHeader({33, "D-STAR", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    if (live(a)) voiceWhyRow(a, dect2::dstarWhy(a.rx.dstar));
+    modepanel::panes({{"##dscnow", tr("On air"), [&a] { nowView(a); }, 0.9f, 220.f},
+                      {"##dsccalls", tr("Calls"), [&a] { callsView(a); }, 1.4f, 240.f},
+                      {"##dscmap", tr("Map"), [&a] { mapView(a); }, 1.2f, 260.f}}, 300.f);
+}
+
 extern const ModeUi kDstarUi;
 const ModeUi kDstarUi = {
     .sideTitle = "STATIONS",
@@ -296,4 +312,5 @@ const ModeUi kDstarUi = {
     .status = status,
     .summary = summary,
     .tick = tick,
+    .command = command,
 };
