@@ -3461,3 +3461,20 @@ Saves the rows now in the table (with the search and the filters applied, built-
 Clean the input: DC spike, IQ imbalance and the radio's own spurs	Bemenet tisztítása: DC-tüske, IQ-kiegyensúlyozatlanság és a rádió saját zavarvonalai
 Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Magából a jelből mérve, a kívánt csatornát soha nem érinti: a DC-tüskét és az IQ-tükörképet kihagyja azokban a módokban, ahol ártana, a csatornán belüli zavarvonalat pedig csak akkor vágja ki, ha áthangolás után is ugyanazon a helyen marad az alapsávban (a valódi jel együtt mozog a hangolóval).
 %d spur(s) cut	%d zavarvonal kivágva
+Base stations	Bázisállomások
+Calls	Hívások
+Channel options	Csatornabeállítások
+Chat	Csevegés
+Devices	Eszközök
+Ground stations	Földi állomások
+Neighbours	Szomszédok
+Nodes	Csomópontok
+On air	Adásban
+Selected	Kiválasztott
+Site	Hely
+Table	Táblázat
+Vessels	Hajók
+some stations are hidden	néhány állomás el van rejtve
+File...	Fájl...
+Auto-save to file	Automatikus mentés fájlba
+Activity	Aktivitás

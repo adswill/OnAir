@@ -3458,3 +3458,21 @@ Saves the rows now in the table (with the search and the filters applied, built-
 Clean the input: DC spike, IQ imbalance and the radio's own spurs	Очистить вход: пик постоянной составляющей, дисбаланс IQ и собственные помехи приёмника
 Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Измеряется по самому сигналу и никогда не затрагивает нужный канал: пик постоянной составляющей и зеркальное изображение IQ пропускаются в режимах, которым они навредили бы, а помеха внутри канала вырезается, только если после перестройки остаётся на том же месте полосы (настоящий сигнал движется вместе с тюнером).
 %d spur(s) cut	Вырезано помех: %d
+Base stations	Базовые станции
+Calls	Вызовы
+Channel options	Параметры канала
+Chat	Чат
+Devices	Устройства
+Ground stations	Наземные станции
+Neighbours	Соседние
+Nodes	Узлы
+On air	В эфире
+Selected	Выбрано
+Site	Площадка
+Table	Таблица
+Trunking	Транкинг
+Vessels	Суда
+some stations are hidden	некоторые станции скрыты
+File...	Файл...
+Auto-save to file	Автосохранение в файл
+Activity	Активность

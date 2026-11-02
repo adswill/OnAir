@@ -3498,3 +3498,21 @@ Saves the rows now in the table (with the search and the filters applied, built-
 Clean the input: DC spike, IQ imbalance and the radio's own spurs	清理输入:直流尖峰、IQ 不平衡和接收机自身的杂散
 Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	根据信号本身测量,绝不影响所需信道:在会受其损害的模式中会跳过直流尖峰和 IQ 镜像,信道内的杂散只有在换频后仍停留在基带同一位置时才会被切除(真实信号会随调谐器移动)。
 %d spur(s) cut	已切除 %d 条杂散
+Base stations	基站
+Calls	呼叫
+Channel options	信道选项
+Chat	聊天
+Devices	设备
+Ground stations	地面站
+Neighbours	相邻小区
+Nodes	节点
+On air	正在发射
+Selected	已选
+Site	站点
+Table	表格
+Trunking	集群
+Vessels	船舶
+some stations are hidden	部分电台已隐藏
+File...	文件...
+Auto-save to file	自动保存到文件
+Activity	活动

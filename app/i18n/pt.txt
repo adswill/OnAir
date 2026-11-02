@@ -3457,3 +3457,19 @@ Saves the rows now in the table (with the search and the filters applied, built-
 Clean the input: DC spike, IQ imbalance and the radio's own spurs	Limpar a entrada: pico DC, desequilíbrio IQ e espúrios do próprio rádio
 Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Medido a partir do próprio sinal, nunca no canal pretendido: o pico DC e a imagem IQ são ignorados nos modos que prejudicariam, e um espúrio dentro do canal só é cortado se ficar no mesmo sítio da banda base depois de mudar de frequência (um sinal real move-se com o sintonizador).
 %d spur(s) cut	%d espúrio(s) cortado(s)
+Base stations	Estações base
+Calls	Chamadas
+Channel options	Opções do canal
+Chat	Bate-papo
+Devices	Dispositivos
+Ground stations	Estações terrestres
+Neighbours	Vizinhas
+Nodes	Nós
+On air	No ar
+Selected	Selecionado
+Table	Tabela
+Vessels	Embarcações
+some stations are hidden	algumas estações estão ocultas
+File...	Arquivo...
+Auto-save to file	Salvar automaticamente em arquivo
+Activity	Atividade

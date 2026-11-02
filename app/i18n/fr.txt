@@ -3475,3 +3475,18 @@ Saves the rows now in the table (with the search and the filters applied, built-
 Clean the input: DC spike, IQ imbalance and the radio's own spurs	Nettoyer l'entrée : pic continu, déséquilibre IQ et raies parasites de la radio
 Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Mesuré sur le signal lui-même, sans jamais toucher le canal voulu : le pic continu et l'image IQ sont ignorés dans les modes qu'ils gêneraient, et une raie dans le canal n'est coupée que si elle reste au même endroit de la bande de base après un changement de fréquence (un vrai signal suit le syntoniseur).
 %d spur(s) cut	%d raie(s) coupée(s)
+Base stations	Stations de base
+Calls	Appels
+Channel options	Options du canal
+Devices	Appareils
+Ground stations	Stations au sol
+Neighbours	Voisines
+Nodes	Nœuds
+On air	À l'antenne
+Selected	Sélection
+Table	Tableau
+Vessels	Navires
+some stations are hidden	certaines stations sont masquées
+File...	Fichier...
+Auto-save to file	Enregistrer automatiquement dans un fichier
+Activity	Activité

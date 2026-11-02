@@ -220,3 +220,21 @@ video
 Export results CSV...
 Nothing to export: no row matches the search.
 Saves the rows now in the table (with the search and the filters applied, built-in and yours) as a CSV file. Import and the Memory panel read it back.
+Base stations
+Calls
+Channel options
+Chat
+Devices
+Ground stations
+Neighbours
+Nodes
+On air
+Selected
+Site
+Table
+Trunking
+Vessels
+some stations are hidden
+File...
+Auto-save to file
+Activity

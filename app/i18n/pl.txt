@@ -3475,3 +3475,20 @@ Saves the rows now in the table (with the search and the filters applied, built-
 Clean the input: DC spike, IQ imbalance and the radio's own spurs	Oczyść wejście: pik DC, niezrównoważenie IQ i własne prążki zakłóceń radia
 Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Mierzone z samego sygnału, nigdy nie dotyka wybranego kanału: pik DC i lustrzany obraz IQ są pomijane w trybach, którym by zaszkodziły, a prążek w kanale jest wycinany tylko wtedy, gdy po zmianie częstotliwości zostaje w tym samym miejscu pasma podstawowego (prawdziwy sygnał przesuwa się razem z tunerem).
 %d spur(s) cut	Wycięto prążków: %d
+Base stations	Stacje bazowe
+Calls	Połączenia
+Channel options	Opcje kanału
+Chat	Czat
+Devices	Urządzenia
+Ground stations	Stacje naziemne
+Neighbours	Sąsiednie
+Nodes	Węzły
+On air	Na antenie
+Selected	Wybrane
+Site	Stanowisko
+Table	Tabela
+Vessels	Statki
+some stations are hidden	niektóre stacje są ukryte
+File...	Plik...
+Auto-save to file	Zapisuj automatycznie do pliku
+Activity	Aktywność

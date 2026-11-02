@@ -3479,3 +3479,19 @@ Saves the rows now in the table (with the search and the filters applied, built-
 Clean the input: DC spike, IQ imbalance and the radio's own spurs	Išvalyti įvestį: nuolatinės srovės smaigalį, IQ nesubalansuotumą ir paties radijo trukdžių linijas
 Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Matuojama iš paties signalo ir niekada neliečia norimo kanalo: nuolatinės srovės smaigalys ir IQ veidrodinis vaizdas praleidžiami režimuose, kuriems jie pakenktų, o kanale esanti trukdžių linija pašalinama tik tada, kai pakeitus dažnį ji lieka toje pačioje bazinės juostos vietoje (tikras signalas juda kartu su imtuvu).
 %d spur(s) cut	Pašalinta trukdžių linijų: %d
+Base stations	Bazinės stotys
+Calls	Skambučiai
+Channel options	Kanalo parinktys
+Chat	Pokalbis
+Devices	Įrenginiai
+Neighbours	Kaimynės
+Nodes	Mazgai
+On air	Eteryje
+Selected	Pasirinkta
+Site	Vieta
+Table	Lentelė
+Vessels	Laivai
+some stations are hidden	kai kurios stotys paslėptos
+File...	Failas...
+Auto-save to file	Automatiškai įrašyti į failą
+Activity	Veikla

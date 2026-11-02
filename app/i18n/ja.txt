@@ -3475,3 +3475,21 @@ Saves the rows now in the table (with the search and the filters applied, built-
 Clean the input: DC spike, IQ imbalance and the radio's own spurs	入力をきれいにする: DC スパイク、IQ 不均衡、無線機自身のスプリアス
 Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	信号そのものから測定し、目的のチャンネルには手を付けません。DC スパイクと IQ のミラー像は悪影響が出るモードでは省かれ、チャンネル内のスプリアスは、周波数を変えてもベースバンド上の同じ位置に残る場合にだけ除去します(本物の信号はチューナーと一緒に動きます)。
 %d spur(s) cut	%d 本のスプリアスを除去
+Base stations	基地局
+Calls	通話
+Channel options	チャンネルオプション
+Chat	チャット
+Devices	デバイス
+Ground stations	地上局
+Neighbours	隣接局
+Nodes	ノード
+On air	送信中
+Selected	選択中
+Site	サイト
+Table	表
+Trunking	トランキング
+Vessels	船舶
+some stations are hidden	一部の局は非表示です
+File...	ファイル...
+Auto-save to file	ファイルに自動保存
+Activity	アクティビティ
