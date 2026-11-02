@@ -3533,3 +3533,35 @@ some stations are hidden	alcune stazioni sono nascoste
 File...	File...
 Auto-save to file	Salva automaticamente su file
 Activity	Attività
+# Everything in view (wide multi-signal decode)
+identifying	identificazione
+running	attivo
+no decoder	nessun decoder
+paused (CPU)	in pausa (CPU)
+CPU	CPU
+CPU limit %	Limite CPU %
+What	Cosa
+dB	dB
+Pin	Fissa
+Everything in view	Tutto in vista
+Everything in view: on	Tutto in vista: sì
+Decode everything in view	Decodifica tutto
+Add as	Aggiungi come
+Identify automatically	Identifica in automatico
+Add selected region	Aggiungi selezione
+Add tuned signal	Aggiungi segnale sintonizzato
+Looking for signals...	Ricerca segnali...
+Start the receiver to begin.	Avvia il ricevitore per iniziare.
+The decoders' share of one processor core, against the limit. Above the limit the lowest ranked signals are paused.	La quota di un core del processore usata dai decoder, rispetto al limite. Oltre il limite i segnali di rango più basso vengono messi in pausa.
+Find every signal in the whole capture (digital voice, TETRA, pagers, packet radio, air band, Inmarsat, TV) and decode all of them at once.	Trova ogni segnale nell'intera acquisizione (voce digitale, TETRA, cercapersone, packet radio, banda aerea, Inmarsat, TV) e li decodifica tutti insieme.
+One capture, every signal in it. OnAir finds the signals, says what each one is and starts the right decoder for it. Switch one off, pin the ones that must never be paused, or give an unknown signal its mode by hand.	Una acquisizione, tutti i segnali al suo interno. OnAir li trova, dice cos'è ciascuno e avvia il decoder giusto. Disattivane uno, fissa quelli che non devono mai essere messi in pausa, oppure assegna a mano la modalità a un segnale sconosciuto.
+When the decoders take longer than this share of one core, the lowest ranked signal is paused (never a pinned one or the one you listen to) and comes back when there is room. 0: no limit.	Se i decoder superano questa quota di un core, il segnale di rango più basso viene messo in pausa (mai uno fissato o quello che ascolti) e torna quando c'è spazio. 0: nessun limite.
+This computer cannot keep up: %d signals are paused to save CPU. Pin the ones you need, or raise the limit.	Questo computer non riesce a stare al passo: %d segnali sono in pausa per risparmiare CPU. Fissa quelli che ti servono o alza il limite.
+TV channels in the capture: %.0f MHz wide	Canali TV nell'acquisizione: larghi %.0f MHz
+Turn the Identify tool on (key I) and drag across a signal on the spectrum, then add it here.	Attiva lo strumento Identifica (tasto I), trascina su un segnale dello spettro e aggiungilo qui.
+Add the signal at the tuner marker (12.5 kHz wide).	Aggiunge il segnale al marcatore del sintonizzatore (largo 12,5 kHz).
+Off. Press the button to decode everything in the capture.	Disattivato. Premi il pulsante per decodificare tutto nell'acquisizione.
+%+.1f kHz from the capture centre, %.1f kHz wide	%+.1f kHz dal centro dell'acquisizione, largo %.1f kHz
+Pinned: never paused by the CPU limit	Fissato: mai messo in pausa dal limite CPU
+Follow this signal's sound; it is never paused by the CPU limit	Segui l'audio di questo segnale; non viene mai messo in pausa dal limite CPU
+Remove: a signal you added is taken away, a found one is switched off	Rimuovi: un segnale aggiunto viene tolto, uno trovato viene disattivato

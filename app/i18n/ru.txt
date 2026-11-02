@@ -3535,3 +3535,35 @@ some stations are hidden	некоторые станции скрыты
 File...	Файл...
 Auto-save to file	Автосохранение в файл
 Activity	Активность
+# Everything in view (wide multi-signal decode)
+identifying	определяется
+running	работает
+no decoder	нет декодера
+paused (CPU)	пауза (ЦП)
+CPU	ЦП
+CPU limit %	Лимит ЦП %
+What	Что
+dB	дБ
+Pin	Закр.
+Everything in view	Всё в обзоре
+Everything in view: on	Всё в обзоре: вкл
+Decode everything in view	Декодировать всё
+Add as	Добавить как
+Identify automatically	Определять автоматически
+Add selected region	Добавить выделение
+Add tuned signal	Добавить сигнал настройки
+Looking for signals...	Поиск сигналов...
+Start the receiver to begin.	Запустите приёмник, чтобы начать.
+The decoders' share of one processor core, against the limit. Above the limit the lowest ranked signals are paused.	Доля одного ядра процессора, занятая декодерами, относительно лимита. Выше лимита сигналы с низшим рангом ставятся на паузу.
+Find every signal in the whole capture (digital voice, TETRA, pagers, packet radio, air band, Inmarsat, TV) and decode all of them at once.	Находит все сигналы во всей записи (цифровая речь, TETRA, пейджеры, пакетное радио, авиадиапазон, Inmarsat, ТВ) и декодирует их одновременно.
+One capture, every signal in it. OnAir finds the signals, says what each one is and starts the right decoder for it. Switch one off, pin the ones that must never be paused, or give an unknown signal its mode by hand.	Одна запись, все сигналы в ней. OnAir находит сигналы, определяет, что это, и запускает нужный декодер. Отключите лишний, закрепите те, что нельзя ставить на паузу, или задайте режим неизвестного сигнала вручную.
+When the decoders take longer than this share of one core, the lowest ranked signal is paused (never a pinned one or the one you listen to) and comes back when there is room. 0: no limit.	Если декодеры занимают больше этой доли ядра, сигнал с низшим рангом ставится на паузу (никогда закреплённый или тот, что вы слушаете) и возвращается, когда есть запас. 0: без лимита.
+This computer cannot keep up: %d signals are paused to save CPU. Pin the ones you need, or raise the limit.	Компьютер не справляется: %d сигналов на паузе для экономии ЦП. Закрепите нужные или повысьте лимит.
+TV channels in the capture: %.0f MHz wide	ТВ-каналы в записи: ширина %.0f МГц
+Turn the Identify tool on (key I) and drag across a signal on the spectrum, then add it here.	Включите инструмент «Определить» (клавиша I), протяните по сигналу на спектре и добавьте его здесь.
+Add the signal at the tuner marker (12.5 kHz wide).	Добавляет сигнал у маркера настройки (ширина 12,5 кГц).
+Off. Press the button to decode everything in the capture.	Выключено. Нажмите кнопку, чтобы декодировать всё в записи.
+%+.1f kHz from the capture centre, %.1f kHz wide	%+.1f кГц от центра записи, ширина %.1f кГц
+Pinned: never paused by the CPU limit	Закреплён: лимит ЦП его не приостанавливает
+Follow this signal's sound; it is never paused by the CPU limit	Следить за звуком этого сигнала; лимит ЦП его не приостанавливает
+Remove: a signal you added is taken away, a found one is switched off	Удалить: добавленный сигнал убирается, найденный отключается
