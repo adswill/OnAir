@@ -348,6 +348,9 @@ add_executable(onair-plugin-host tools/onair_plugin_host.cpp)
 add_executable(kris_samples tools/kris_samples.cpp)   # sample IQ files of the KAAL, KAPP and KAFT transmitters (tools/kris_samples.cpp)
 target_link_libraries(kris_samples PRIVATE dect2core)
 target_link_libraries(onair-plugin-host PRIVATE dect2_plugin)
+# MCP (Model Context Protocol) server: an AI assistant drives the radio (docs/MCP.md)
+target_sources(dect2core PRIVATE core/src/mcp/mcp_json.cpp core/src/mcp/mcp_server.cpp core/src/mcp/mcp_tools.cpp)
+
 # onair-server: OnAir with no window (a Raspberry Pi, a Linux box, a Windows PC without a screen), controlled from a browser; docs/headless-server.md
 # OnAir Web: many listeners, each with an own receiver inside the host's capture (server/web, docs/ONAIR-WEB.md). Every web source is built with
 # the host setting web_allow_tx=0 (the default; 1 lets listeners transmit through the host's radio, see docs/ONAIR-WEB.md).

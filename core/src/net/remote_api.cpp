@@ -79,7 +79,7 @@ std::string hostOnly(const std::string& h) { return netp::hostOnly(h); }
 bool loopbackName(const std::string& n) { return netp::loopbackName(n); }
 std::string urlDecode(const std::string& s) { return netp::urlDecode(s); }
 std::string queryParam(const std::string& q, const std::string& key) { return netp::queryParam(q, key); }
-std::string statusText(int c) { return netp::statusText(c); }
+std::string statusText(int c) { return c == 202 ? std::string("Accepted") : netp::statusText(c); }
 struct Request {
     std::string method, path, query, body;
     std::map<std::string, std::string> h;   // lower-case names
@@ -196,6 +196,19 @@ struct RemoteApiServer::Impl {
     void route(sock_t s, const Request& rq) {
         const std::string& p = rq.path;
         const bool isGet = rq.method == "GET", isPost = rq.method == "POST";
+        if (p == "/mcp" || p == "/mcp/") {   // the MCP endpoint (docs/MCP.md): the raw JSON-RPC body goes to the host
+            if (rq.method != "POST" && rq.method != "GET" && rq.method != "DELETE") { sendErr(s, 405, "method not allowed", "Allow: POST, GET, DELETE\r\n"); return; }
+            if (rq.method == "POST" && !needJson(rq)) { sendErr(s, 415, "Content-Type: application/json required"); return; }
+            std::string out;
+            int code;
+            { std::lock_guard<std::mutex> lk(hostMu); code = host.handleMcp(rq.method, rq.body, out); }
+            if (code == 0) { sendErr(s, 404, "no MCP server in this program"); return; }
+            if (code == 405) { sendErr(s, 405, out.empty() ? "use POST" : out, "Allow: POST\r\n"); return; }
+            if (code >= 400 && out.empty()) { sendErr(s, code, "failed"); return; }
+            send(s, code, out);
+            return;
+        }
+        if (host.mcpOnly()) { sendErr(s, 404, "this port carries only /mcp"); return; }
         if (!isGet && !isPost) { sendErr(s, 405, "method not allowed", "Allow: GET, POST\r\n"); return; }
         const apipol::Route pr = apipol::parseRoute(rq.method, p);   // malformed paths, the refusal list, unknown API versions, wrong verbs
         if (pr.status == 405) { sendErr(s, 405, pr.msg, "Allow: " + pr.allow + "\r\n"); return; }
