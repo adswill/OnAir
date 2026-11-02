@@ -3575,3 +3575,50 @@ some stations are hidden	部分电台已隐藏
 File...	文件...
 Auto-save to file	自动保存到文件
 Activity	活动
+# Share on web: relay, listeners, server settings
+Share my radio	分享我的电台
+Connecting to the relay ...	正在连接中继 ...
+Anyone with the link	任何拥有链接的人
+Invite links only	仅限邀请链接
+Limits that protect your computer	保护电脑的限制
+Antenna (shown to listeners, optional)	天线（对听众可见，可选）
+Listener limits	听众限制
+While sharing	分享期间
+Listeners and invites	听众与邀请
+Nobody is listening right now.	目前没有人在收听。
+Kick##wsKick	踢出##wsKick
+Block 24 h##wsBlock	封禁24小时##wsBlock
+Allow again##wsUnban	重新允许##wsUnban
+Make an invite link	生成邀请链接
+Copy invite link	复制邀请链接
+Server settings	服务器设置
+Connected to the OnAir relay.	已连接到 OnAir 中继。
+Connecting to the OnAir relay ...	正在连接 OnAir 中继 ...
+The relay link dropped (%s). Trying again in %d s.	中继连接已断开（%s）。%d 秒后重试。
+The OnAir relay refuses or cannot be reached: %s	OnAir 中继拒绝连接或无法访问：%s
+Blocked: %s (%d min left)	已封禁：%s（还剩 %d 分钟）
+Processor %.0f%% of the %.0f%% limit	处理器 %.0f%%（上限 %.0f%%）
+Upload %.0f of %.0f kbit/s	上传 %.0f / %.0f kbit/s
+Port on this computer (0 = the first free one from 8073)	本机端口（0 = 从 8073 起第一个空闲端口）
+Listeners from one address at once	同一地址的同时听众数
+Longest session of one listener in minutes (0 = no limit)	单个听众的最长时长（分钟，0 = 不限）
+Most spectrum rows per second (0 = the default)	每秒最多频谱行数（0 = 默认）
+Key file for that certificate	该证书的密钥文件
+A certificate needs both files.	证书需要两个文件。
+Relay service address (only if you run your own relay)	中继服务地址（仅在使用自己的中继时）
+OnAir relay (recommended: no setup, no open ports)	OnAir 中继（推荐：无需设置，无需开放端口）
+Free Cloudflare tunnel (needs a small helper program, downloaded once)	免费 Cloudflare 隧道（需要一个小型辅助程序，仅下载一次）
+Only my network (a phone on the same Wi-Fi)	仅限本地网络（同一 Wi-Fi 下的手机）
+Password (8 characters or more)	密码（8 个字符或更多）
+Apply changes	应用更改
+What to do:	解决办法：
+Will share: %s, %s MHz, up to %d listeners, %s, %s.	将分享：%s，%s MHz，最多 %d 位听众，%s，%s。
+through the OnAir relay (no router settings needed)	通过 OnAir 中继（无需路由器设置）
+through a Cloudflare tunnel	通过 Cloudflare 隧道
+at your own address	使用您自己的地址
+on this network only	仅限本网络
+invite links only	仅限邀请链接
+open to anyone with the link	任何拥有链接的人都可收听
+with a password	需要密码
+no radio found	未找到电台
+No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	未找到电台。请连接电台并在“电台与范围”选项卡中点击刷新，或选择测试信号。

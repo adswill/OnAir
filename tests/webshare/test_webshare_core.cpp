@@ -324,14 +324,14 @@ static void testQr() {
 static void testListeners() {
     // 16 users: more than jsonParse's 4 KB / 96 nodes, so the admin list needs its own reader
     std::string j = "{\"users\":[";
-    for (int i = 1; i <= 16; i++) {
+    for (int i = 1; i <= 30; i++) {
         j += std::string(i > 1 ? "," : "") + "{\"id\":" + std::to_string(i) + ",\"name\":\"Ana \\\"" + std::to_string(i) + "\\\" {x}\",\"class\":\"public\",\"label\":\"\",\"address\":\"#00a" + std::to_string(i) + "\",\"seconds\":" + std::to_string(i * 10) +
              ",\"idle_seconds\":1,\"freq_hz\":97500000,\"mode\":\"wfm\",\"audio\":true,\"spectrum\":true,\"kbps\":" + std::to_string(30 + i) + ",\"cpu_pct\":1.5,\"degrade\":0,\"dropped\":0,\"decoders\":0}";
     }
     j += "]}";
     CHK(j.size() > 4096);
     const auto u = parseUsers(j);
-    CHK(u.size() == 16 && u[0].id == 1 && u[11].id == 12 && u[11].mode == "wfm" && u[11].freqHz == 97500000 && u[5].kbps == 36 && u[2].address == "#00a3" && u[3].seconds == 40);
+    CHK(u.size() == 30 && u[0].id == 1 && u[11].id == 12 && u[11].mode == "wfm" && u[11].freqHz == 97500000 && u[5].kbps == 36 && u[2].address == "#00a3" && u[3].seconds == 40);
     CHK(u[0].name.find("{x}") != std::string::npos);   // braces and quotes inside a name do not confuse the scanner
     CHK(parseUsers("{\"users\":[]}").empty() && parseUsers("garbage").empty() && parseUsers("{\"users\":[{\"id\":1").empty());
     const auto b = parseBans("{\"bans\":[{\"address\":\"#1f2e3d\",\"minutes_left\":59}]}");

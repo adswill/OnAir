@@ -3554,3 +3554,50 @@ some stations are hidden	kai kurios stotys paslėptos
 File...	Failas...
 Auto-save to file	Automatiškai įrašyti į failą
 Activity	Veikla
+# Share on web: relay, listeners, server settings
+Share my radio	Dalintis mano radiju
+Connecting to the relay ...	Jungiamasi prie relės ...
+Anyone with the link	Bet kas su nuoroda
+Invite links only	Tik kvietimo nuorodos
+Limits that protect your computer	Kompiuterį saugantys apribojimai
+Antenna (shown to listeners, optional)	Antena (rodoma klausytojams, nebūtina)
+Listener limits	Klausytojų apribojimai
+While sharing	Dalijantis
+Listeners and invites	Klausytojai ir kvietimai
+Nobody is listening right now.	Šiuo metu niekas neklauso.
+Kick##wsKick	Išmesti##wsKick
+Block 24 h##wsBlock	Blokuoti 24 val.##wsBlock
+Allow again##wsUnban	Vėl leisti##wsUnban
+Make an invite link	Sukurti kvietimo nuorodą
+Copy invite link	Kopijuoti kvietimo nuorodą
+Server settings	Serverio nustatymai
+Connected to the OnAir relay.	Prisijungta prie „OnAir“ relės.
+Connecting to the OnAir relay ...	Jungiamasi prie „OnAir“ relės ...
+The relay link dropped (%s). Trying again in %d s.	Ryšys su relė nutrūko (%s). Bandoma iš naujo po %d s.
+The OnAir relay refuses or cannot be reached: %s	„OnAir“ relė atsisako arba nepasiekiama: %s
+Blocked: %s (%d min left)	Užblokuota: %s (liko %d min.)
+Processor %.0f%% of the %.0f%% limit	Procesorius %.0f%% iš %.0f%% ribos
+Upload %.0f of %.0f kbit/s	Siuntimas %.0f iš %.0f kbit/s
+Port on this computer (0 = the first free one from 8073)	Šio kompiuterio prievadas (0 = pirmas laisvas nuo 8073)
+Listeners from one address at once	Vienu metu klausytojų iš vieno adreso
+Longest session of one listener in minutes (0 = no limit)	Ilgiausia vieno klausytojo sesija minutėmis (0 = be ribos)
+Most spectrum rows per second (0 = the default)	Daugiausia spektro eilučių per sekundę (0 = numatytoji)
+Key file for that certificate	Šio sertifikato rakto failas
+A certificate needs both files.	Sertifikatui reikia abiejų failų.
+Relay service address (only if you run your own relay)	Relės paslaugos adresas (tik jei naudojate savo relę)
+OnAir relay (recommended: no setup, no open ports)	„OnAir“ relė (rekomenduojama: be nustatymų, be atvirų prievadų)
+Free Cloudflare tunnel (needs a small helper program, downloaded once)	Nemokamas „Cloudflare“ tunelis (reikia nedidelės pagalbinės programos, atsisiunčiama vieną kartą)
+Only my network (a phone on the same Wi-Fi)	Tik mano tinklas (telefonas tame pačiame „Wi-Fi“)
+Password (8 characters or more)	Slaptažodis (8 ar daugiau simbolių)
+Apply changes	Taikyti pakeitimus
+What to do:	Ką daryti:
+Will share: %s, %s MHz, up to %d listeners, %s, %s.	Bus dalijama: %s, %s MHz, iki %d klausytojų, %s, %s.
+through the OnAir relay (no router settings needed)	per „OnAir“ relę (be maršrutizatoriaus nustatymų)
+through a Cloudflare tunnel	per „Cloudflare“ tunelį
+at your own address	jūsų pačių adresu
+on this network only	tik šiame tinkle
+invite links only	tik su kvietimo nuorodomis
+open to anyone with the link	atvira visiems su nuoroda
+with a password	su slaptažodžiu
+no radio found	radijas nerastas
+No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Radijas nerastas. Prijunkite radiją ir kortelėje „Radijas ir diapazonas“ spustelėkite Atnaujinti arba pasirinkite bandomąjį signalą.

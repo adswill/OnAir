@@ -3533,3 +3533,50 @@ some stations are hidden	alcune stazioni sono nascoste
 File...	File...
 Auto-save to file	Salva automaticamente su file
 Activity	Attività
+# Share on web: relay, listeners, server settings
+Share my radio	Condividi la mia radio
+Connecting to the relay ...	Connessione al relay ...
+Anyone with the link	Chiunque abbia il link
+Invite links only	Solo link di invito
+Limits that protect your computer	Limiti che proteggono il computer
+Antenna (shown to listeners, optional)	Antenna (visibile agli ascoltatori, facoltativo)
+Listener limits	Limiti degli ascoltatori
+While sharing	Durante la condivisione
+Listeners and invites	Ascoltatori e inviti
+Nobody is listening right now.	Al momento nessuno sta ascoltando.
+Kick##wsKick	Espelli##wsKick
+Block 24 h##wsBlock	Blocca 24 h##wsBlock
+Allow again##wsUnban	Consenti di nuovo##wsUnban
+Make an invite link	Crea un link di invito
+Copy invite link	Copia il link di invito
+Server settings	Impostazioni del server
+Connected to the OnAir relay.	Connesso al relay OnAir.
+Connecting to the OnAir relay ...	Connessione al relay OnAir ...
+The relay link dropped (%s). Trying again in %d s.	Il collegamento al relay è caduto (%s). Nuovo tentativo tra %d s.
+The OnAir relay refuses or cannot be reached: %s	Il relay OnAir rifiuta o non è raggiungibile: %s
+Blocked: %s (%d min left)	Bloccato: %s (ancora %d min)
+Processor %.0f%% of the %.0f%% limit	Processore %.0f%% del limite %.0f%%
+Upload %.0f of %.0f kbit/s	Upload %.0f di %.0f kbit/s
+Port on this computer (0 = the first free one from 8073)	Porta su questo computer (0 = la prima libera da 8073)
+Listeners from one address at once	Ascoltatori simultanei per indirizzo
+Longest session of one listener in minutes (0 = no limit)	Sessione più lunga di un ascoltatore in minuti (0 = senza limite)
+Most spectrum rows per second (0 = the default)	Massimo di righe di spettro al secondo (0 = predefinito)
+Key file for that certificate	File della chiave per quel certificato
+A certificate needs both files.	Un certificato richiede entrambi i file.
+Relay service address (only if you run your own relay)	Indirizzo del servizio relay (solo con un relay proprio)
+OnAir relay (recommended: no setup, no open ports)	Relay OnAir (consigliato: nessuna configurazione, nessuna porta aperta)
+Free Cloudflare tunnel (needs a small helper program, downloaded once)	Tunnel Cloudflare gratuito (serve un piccolo programma, scaricato una volta)
+Only my network (a phone on the same Wi-Fi)	Solo la mia rete (un telefono sullo stesso Wi-Fi)
+Password (8 characters or more)	Password (8 caratteri o più)
+Apply changes	Applica le modifiche
+What to do:	Cosa fare:
+Will share: %s, %s MHz, up to %d listeners, %s, %s.	Verrà condiviso: %s, %s MHz, fino a %d ascoltatori, %s, %s.
+through the OnAir relay (no router settings needed)	tramite il relay OnAir (nessuna impostazione del router)
+through a Cloudflare tunnel	tramite un tunnel Cloudflare
+at your own address	al tuo indirizzo
+on this network only	solo su questa rete
+invite links only	solo con link di invito
+open to anyone with the link	aperto a chiunque abbia il link
+with a password	con password
+no radio found	nessuna radio trovata
+No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Nessuna radio trovata. Collega una radio e premi Aggiorna nella scheda Radio e intervallo, oppure scegli il segnale di prova.

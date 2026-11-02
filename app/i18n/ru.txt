@@ -3535,3 +3535,50 @@ some stations are hidden	некоторые станции скрыты
 File...	Файл...
 Auto-save to file	Автосохранение в файл
 Activity	Активность
+# Share on web: relay, listeners, server settings
+Share my radio	Поделиться радио
+Connecting to the relay ...	Подключение к ретранслятору ...
+Anyone with the link	Все, у кого есть ссылка
+Invite links only	Только пригласительные ссылки
+Limits that protect your computer	Ограничения для защиты компьютера
+Antenna (shown to listeners, optional)	Антенна (видна слушателям, необязательно)
+Listener limits	Ограничения слушателей
+While sharing	Во время трансляции
+Listeners and invites	Слушатели и приглашения
+Nobody is listening right now.	Сейчас никто не слушает.
+Kick##wsKick	Отключить##wsKick
+Block 24 h##wsBlock	Блок на 24 ч##wsBlock
+Allow again##wsUnban	Разрешить снова##wsUnban
+Make an invite link	Создать пригласительную ссылку
+Copy invite link	Копировать пригласительную ссылку
+Server settings	Настройки сервера
+Connected to the OnAir relay.	Подключено к ретранслятору OnAir.
+Connecting to the OnAir relay ...	Подключение к ретранслятору OnAir ...
+The relay link dropped (%s). Trying again in %d s.	Связь с ретранслятором прервалась (%s). Повтор через %d с.
+The OnAir relay refuses or cannot be reached: %s	Ретранслятор OnAir отказывает или недоступен: %s
+Blocked: %s (%d min left)	Заблокирован: %s (осталось %d мин)
+Processor %.0f%% of the %.0f%% limit	Процессор %.0f%% из лимита %.0f%%
+Upload %.0f of %.0f kbit/s	Отдача %.0f из %.0f кбит/с
+Port on this computer (0 = the first free one from 8073)	Порт на этом компьютере (0 = первый свободный от 8073)
+Listeners from one address at once	Слушателей с одного адреса одновременно
+Longest session of one listener in minutes (0 = no limit)	Самый долгий сеанс слушателя в минутах (0 = без ограничения)
+Most spectrum rows per second (0 = the default)	Макс. строк спектра в секунду (0 = по умолчанию)
+Key file for that certificate	Файл ключа этого сертификата
+A certificate needs both files.	Для сертификата нужны оба файла.
+Relay service address (only if you run your own relay)	Адрес ретранслятора (только для собственного)
+OnAir relay (recommended: no setup, no open ports)	Ретранслятор OnAir (рекомендуется: без настройки и открытых портов)
+Free Cloudflare tunnel (needs a small helper program, downloaded once)	Бесплатный туннель Cloudflare (нужна небольшая программа, скачивается один раз)
+Only my network (a phone on the same Wi-Fi)	Только моя сеть (телефон в том же Wi-Fi)
+Password (8 characters or more)	Пароль (8 символов или больше)
+Apply changes	Применить изменения
+What to do:	Что делать:
+Will share: %s, %s MHz, up to %d listeners, %s, %s.	Будет доступно: %s, %s МГц, до %d слушателей, %s, %s.
+through the OnAir relay (no router settings needed)	через ретранслятор OnAir (без настройки роутера)
+through a Cloudflare tunnel	через туннель Cloudflare
+at your own address	по вашему собственному адресу
+on this network only	только в этой сети
+invite links only	только по пригласительным ссылкам
+open to anyone with the link	открыто для всех, у кого есть ссылка
+with a password	с паролем
+no radio found	радио не найдено
+No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Радио не найдено. Подключите радио и нажмите «Обновить» на вкладке «Радио и диапазон» или выберите тестовый сигнал.

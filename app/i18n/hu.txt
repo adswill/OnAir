@@ -3537,3 +3537,50 @@ some stations are hidden	néhány állomás el van rejtve
 File...	Fájl...
 Auto-save to file	Automatikus mentés fájlba
 Activity	Aktivitás
+# Share on web: relay, listeners, server settings
+Share my radio	Rádióm megosztása
+Connecting to the relay ...	Csatlakozás a relére ...
+Anyone with the link	Bárki, akinek megvan a link
+Invite links only	Csak meghívó linkek
+Limits that protect your computer	Az Ön számítógépét védő korlátok
+Antenna (shown to listeners, optional)	Antenna (a hallgatók látják, nem kötelező)
+Listener limits	Hallgatói korlátok
+While sharing	Megosztás közben
+Listeners and invites	Hallgatók és meghívók
+Nobody is listening right now.	Jelenleg senki sem hallgat.
+Kick##wsKick	Kidobás##wsKick
+Block 24 h##wsBlock	Tiltás 24 óra##wsBlock
+Allow again##wsUnban	Újra engedélyez##wsUnban
+Make an invite link	Meghívó link készítése
+Copy invite link	Meghívó link másolása
+Server settings	Szerverbeállítások
+Connected to the OnAir relay.	Csatlakozva az OnAir relére.
+Connecting to the OnAir relay ...	Csatlakozás az OnAir relére ...
+The relay link dropped (%s). Trying again in %d s.	A relé kapcsolat megszakadt (%s). Új próba %d s múlva.
+The OnAir relay refuses or cannot be reached: %s	Az OnAir relé elutasít vagy nem érhető el: %s
+Blocked: %s (%d min left)	Tiltva: %s (még %d perc)
+Processor %.0f%% of the %.0f%% limit	Processzor %.0f%% a %.0f%%-os korlátból
+Upload %.0f of %.0f kbit/s	Feltöltés %.0f / %.0f kbit/s
+Port on this computer (0 = the first free one from 8073)	Port ezen a gépen (0 = az első szabad 8073-tól)
+Listeners from one address at once	Hallgatók egyidejűleg egy címről
+Longest session of one listener in minutes (0 = no limit)	Egy hallgató leghosszabb munkamenete percben (0 = korlátlan)
+Most spectrum rows per second (0 = the default)	Legtöbb spektrumsor másodpercenként (0 = alapértelmezett)
+Key file for that certificate	A tanúsítvány kulcsfájlja
+A certificate needs both files.	A tanúsítványhoz mindkét fájl kell.
+Relay service address (only if you run your own relay)	Relé szolgáltatás címe (csak saját relé esetén)
+OnAir relay (recommended: no setup, no open ports)	OnAir relé (ajánlott: beállítás és nyitott port nélkül)
+Free Cloudflare tunnel (needs a small helper program, downloaded once)	Ingyenes Cloudflare-alagút (kis segédprogram kell, egyszer letöltődik)
+Only my network (a phone on the same Wi-Fi)	Csak a saját hálózatom (telefon ugyanazon a Wi-Fin)
+Password (8 characters or more)	Jelszó (legalább 8 karakter)
+Apply changes	Módosítások alkalmazása
+What to do:	Teendő:
+Will share: %s, %s MHz, up to %d listeners, %s, %s.	Megosztás: %s, %s MHz, legfeljebb %d hallgató, %s, %s.
+through the OnAir relay (no router settings needed)	az OnAir relén át (router-beállítás nélkül)
+through a Cloudflare tunnel	Cloudflare-alagúton át
+at your own address	a saját címén
+on this network only	csak ezen a hálózaton
+invite links only	csak meghívó linkkel
+open to anyone with the link	bárki számára, akinek megvan a link
+with a password	jelszóval
+no radio found	nem található rádió
+No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Nem található rádió. Csatlakoztasson egyet, és nyomja meg a Frissítés gombot a Rádió és tartomány lapon, vagy válassza a tesztjelet.

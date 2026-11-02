@@ -3550,3 +3550,50 @@ some stations are hidden	sommige stations zijn verborgen
 File...	Bestand...
 Auto-save to file	Automatisch opslaan in bestand
 Activity	Activiteit
+# Share on web: relay, listeners, server settings
+Share my radio	Mijn radio delen
+Connecting to the relay ...	Verbinden met de relay ...
+Anyone with the link	Iedereen met de link
+Invite links only	Alleen uitnodigingslinks
+Limits that protect your computer	Limieten die uw computer beschermen
+Antenna (shown to listeners, optional)	Antenne (zichtbaar voor luisteraars, optioneel)
+Listener limits	Luisteraarslimieten
+While sharing	Tijdens het delen
+Listeners and invites	Luisteraars en uitnodigingen
+Nobody is listening right now.	Er luistert nu niemand.
+Kick##wsKick	Verwijderen##wsKick
+Block 24 h##wsBlock	24 u blokkeren##wsBlock
+Allow again##wsUnban	Weer toestaan##wsUnban
+Make an invite link	Uitnodigingslink maken
+Copy invite link	Uitnodigingslink kopiëren
+Server settings	Serverinstellingen
+Connected to the OnAir relay.	Verbonden met de OnAir-relay.
+Connecting to the OnAir relay ...	Verbinden met de OnAir-relay ...
+The relay link dropped (%s). Trying again in %d s.	De relayverbinding is verbroken (%s). Opnieuw proberen over %d s.
+The OnAir relay refuses or cannot be reached: %s	De OnAir-relay weigert of is onbereikbaar: %s
+Blocked: %s (%d min left)	Geblokkeerd: %s (nog %d min)
+Processor %.0f%% of the %.0f%% limit	Processor %.0f%% van de limiet van %.0f%%
+Upload %.0f of %.0f kbit/s	Upload %.0f van %.0f kbit/s
+Port on this computer (0 = the first free one from 8073)	Poort op deze computer (0 = de eerste vrije vanaf 8073)
+Listeners from one address at once	Gelijktijdige luisteraars per adres
+Longest session of one listener in minutes (0 = no limit)	Langste sessie van één luisteraar in minuten (0 = geen limiet)
+Most spectrum rows per second (0 = the default)	Meeste spectrumrijen per seconde (0 = standaard)
+Key file for that certificate	Sleutelbestand voor dat certificaat
+A certificate needs both files.	Een certificaat heeft beide bestanden nodig.
+Relay service address (only if you run your own relay)	Relayservice-adres (alleen bij eigen relay)
+OnAir relay (recommended: no setup, no open ports)	OnAir-relay (aanbevolen: geen instellingen, geen open poorten)
+Free Cloudflare tunnel (needs a small helper program, downloaded once)	Gratis Cloudflare-tunnel (heeft een klein hulpprogramma nodig, eenmalig gedownload)
+Only my network (a phone on the same Wi-Fi)	Alleen mijn netwerk (een telefoon op dezelfde wifi)
+Password (8 characters or more)	Wachtwoord (8 tekens of meer)
+Apply changes	Wijzigingen toepassen
+What to do:	Wat te doen:
+Will share: %s, %s MHz, up to %d listeners, %s, %s.	Wordt gedeeld: %s, %s MHz, tot %d luisteraars, %s, %s.
+through the OnAir relay (no router settings needed)	via de OnAir-relay (geen routerinstellingen nodig)
+through a Cloudflare tunnel	via een Cloudflare-tunnel
+at your own address	op uw eigen adres
+on this network only	alleen op dit netwerk
+invite links only	alleen met uitnodigingslinks
+open to anyone with the link	open voor iedereen met de link
+with a password	met wachtwoord
+no radio found	geen radio gevonden
+No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Geen radio gevonden. Sluit een radio aan en druk op het tabblad Radio en bereik op Vernieuwen, of kies het testsignaal.

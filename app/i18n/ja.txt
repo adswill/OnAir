@@ -3552,3 +3552,50 @@ some stations are hidden	一部の局は非表示です
 File...	ファイル...
 Auto-save to file	ファイルに自動保存
 Activity	アクティビティ
+# Share on web: relay, listeners, server settings
+Share my radio	ラジオを共有する
+Connecting to the relay ...	リレーに接続中 ...
+Anyone with the link	リンクを知っている人なら誰でも
+Invite links only	招待リンクのみ
+Limits that protect your computer	コンピューターを守る制限
+Antenna (shown to listeners, optional)	アンテナ（リスナーに表示、任意）
+Listener limits	リスナーの制限
+While sharing	共有中
+Listeners and invites	リスナーと招待
+Nobody is listening right now.	現在、誰も聴いていません。
+Kick##wsKick	切断##wsKick
+Block 24 h##wsBlock	24時間ブロック##wsBlock
+Allow again##wsUnban	再び許可##wsUnban
+Make an invite link	招待リンクを作成
+Copy invite link	招待リンクをコピー
+Server settings	サーバー設定
+Connected to the OnAir relay.	OnAirリレーに接続しました。
+Connecting to the OnAir relay ...	OnAirリレーに接続中 ...
+The relay link dropped (%s). Trying again in %d s.	リレーとの接続が切れました（%s）。%d 秒後に再試行します。
+The OnAir relay refuses or cannot be reached: %s	OnAirリレーが拒否したか、到達できません: %s
+Blocked: %s (%d min left)	ブロック中: %s（残り %d 分）
+Processor %.0f%% of the %.0f%% limit	プロセッサ %.0f%%（上限 %.0f%%）
+Upload %.0f of %.0f kbit/s	アップロード %.0f / %.0f kbit/s
+Port on this computer (0 = the first free one from 8073)	このコンピューターのポート（0 = 8073以降の最初の空き）
+Listeners from one address at once	1つのアドレスからの同時リスナー数
+Longest session of one listener in minutes (0 = no limit)	リスナー1人の最長セッション（分、0 = 無制限）
+Most spectrum rows per second (0 = the default)	1秒あたりの最大スペクトル行数（0 = 既定）
+Key file for that certificate	その証明書の鍵ファイル
+A certificate needs both files.	証明書には両方のファイルが必要です。
+Relay service address (only if you run your own relay)	リレーサービスのアドレス（自分のリレーを使う場合のみ）
+OnAir relay (recommended: no setup, no open ports)	OnAirリレー（推奨: 設定不要、ポート開放不要）
+Free Cloudflare tunnel (needs a small helper program, downloaded once)	無料のCloudflareトンネル（小さな補助プログラムが必要、初回のみダウンロード）
+Only my network (a phone on the same Wi-Fi)	自分のネットワークのみ（同じWi-Fiのスマートフォン）
+Password (8 characters or more)	パスワード（8文字以上）
+Apply changes	変更を適用
+What to do:	対処方法:
+Will share: %s, %s MHz, up to %d listeners, %s, %s.	共有する内容: %s、%s MHz、最大 %d 人のリスナー、%s、%s。
+through the OnAir relay (no router settings needed)	OnAirリレー経由（ルーター設定不要）
+through a Cloudflare tunnel	Cloudflareトンネル経由
+at your own address	自分のアドレスで
+on this network only	このネットワークのみ
+invite links only	招待リンクのみ
+open to anyone with the link	リンクを知っている人なら誰でも
+with a password	パスワード付き
+no radio found	ラジオが見つかりません
+No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	ラジオが見つかりません。ラジオを接続し、「ラジオと範囲」タブで更新を押すか、テスト信号を選んでください。
