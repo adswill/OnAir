@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <ctime>
 #include <filesystem>
+#include "dect2/common/u8file.h"
 
 namespace dect2 {
 namespace tpool {
@@ -74,10 +75,10 @@ bool CallRecorder::begin(const std::string& dir, const CallMeta& m, std::string*
     finish(nullptr);
     if (dir.empty()) { if (err) *err = "no recording folder"; return false; }
     std::error_code ec;
-    std::filesystem::create_directories(std::filesystem::u8path(dir), ec);
+    std::filesystem::create_directories(dect2::u8file(dir), ec);
     meta_ = m;
-    path_ = (std::filesystem::u8path(dir) / (fileStem(m) + ".wav")).u8string();
-    f_ = std::fopen(path_.c_str(), "wb+");
+    path_ = (dect2::u8file(dir) / (fileStem(m) + ".wav")).string();
+    f_ = dect2::u8fopen(path_, "wb+");
     if (!f_) { if (err) *err = "cannot open " + path_; path_.clear(); return false; }
     frames_ = 0; rate_ = 0;
     return true;
@@ -102,10 +103,10 @@ void CallRecorder::feed(const float* mono, int frames, int rate) {
 
 void CallRecorder::finishMetaOnly(const std::string& dir, const CallMeta& m) {
     std::error_code ec;
-    std::filesystem::create_directories(std::filesystem::u8path(dir), ec);
-    const std::string side = (std::filesystem::u8path(dir) / (fileStem(m) + ".json")).u8string();
+    std::filesystem::create_directories(dect2::u8file(dir), ec);
+    const std::string side = (dect2::u8file(dir) / (fileStem(m) + ".json")).string();
     const std::string json = metaJson(m, "");
-    if (FILE* j = std::fopen(side.c_str(), "wb")) { std::fwrite(json.data(), 1, json.size(), j); std::fclose(j); }
+    if (FILE* j = dect2::u8fopen(side, "wb")) { std::fwrite(json.data(), 1, json.size(), j); std::fclose(j); }
 }
 
 std::string CallRecorder::finish(const CallMeta* final) {
@@ -117,12 +118,12 @@ std::string CallRecorder::finish(const CallMeta* final) {
     std::fclose(f);
     f_ = nullptr;
     std::error_code ec;
-    if (empty) { std::filesystem::remove(std::filesystem::u8path(wav), ec); path_.clear(); return ""; }
+    if (empty) { std::filesystem::remove(dect2::u8file(wav), ec); path_.clear(); return ""; }
     CallMeta m = final ? *final : meta_;
     m.audioSec = seconds();
     const std::string json = metaJson(m, wav);
     std::string side = wav.substr(0, wav.size() - 4) + ".json";
-    if (FILE* j = std::fopen(side.c_str(), "wb")) { std::fwrite(json.data(), 1, json.size(), j); std::fclose(j); }
+    if (FILE* j = dect2::u8fopen(side, "wb")) { std::fwrite(json.data(), 1, json.size(), j); std::fclose(j); }
     path_.clear();
     return wav;
 }

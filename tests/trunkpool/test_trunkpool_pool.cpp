@@ -97,6 +97,7 @@ int main() {
         CHECK(s.pool.device(1).role == Role::Voice && s.pool.device(1).tg == 1001, "device table: voice on TG 1001");
         for (int i = 0; i < 20; i++) { s.run(0.1); s.grant(1001, F + 1.0e6); }   // repeats keep it
         CHECK(s.active() == 1 && s.pool.calls().size() == 1, "repeats keep one call, %zu rows", s.pool.calls().size());
+        v1->voice = false;
         s.run(2.5);
         CHECK(s.active() == 0 && s.last()->endReason == "hang time over" && v1->releases == 1 && s.pool.device(1).role == Role::Idle, "hang time ends it: %s", s.last()->endReason.c_str());
         s.grant(1001, F + 1.0e6);   // a late repeat right after the end
@@ -199,7 +200,7 @@ int main() {
     {
         Sim s;
         FakeRx* c = s.add("ctl", F);
-        FakeRx* v = s.add("v1", 0, 0, 0, false);
+        FakeRx* v = s.add("v1", 0, 0, 0, true);
         s.pool.setControlChannel(F);
         s.pool.onControlSeen(0);
         s.run(0.2);
@@ -227,6 +228,7 @@ int main() {
         const size_t n = s.pool.messages.size();
         s.grant(71, F + 5e6);
         CHECK(s.pool.messages.size() == n, "one notice per channel");
+        c->voice = false;
         s.run(3.0);
         CHECK(s.active() == 0 && c->sliceUsed[0] == 0, "slices freed");
         // a narrow single radio
@@ -328,7 +330,6 @@ int main() {
         q.rx[1]->voice = false;
         q.grant(1, F + 1e6);
         q.run(0.5);
-        q.rx[1]->voice = true;
         q.pool.clear();
         CHECK(!fs::exists(dir) || fs::is_empty(dir), "no sound, no files");
         fs::remove_all(dir);
@@ -401,6 +402,7 @@ int main() {
             if (countRole(s.pool, Role::Control) > 1) { CHECK(false, "two control radios at step %d", step); break; }
         }
         CHECK(true, "random run done");
+        for (auto* r : s.rx) { r->voice = false; r->here = true; r->failTune = false; }
         s.run(10);
         CHECK(s.active() == 0, "everything ends");
         for (const DeviceInfo& d : s.pool.devices()) CHECK(d.call == 0 && d.slices == 0, "device %s left a call", d.name.c_str());

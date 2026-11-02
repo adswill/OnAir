@@ -399,7 +399,7 @@ void TrunkPool::endCall(Live& l, const char* why, double now, bool cooldown) {
         if (l.recorder && l.recorder->open()) {
             const std::string p = l.recorder->finish(&m);
             if (!p.empty()) { rp->audioPath = p; st_.recordings++; }
-            rp->audioSec = m.audioSec;
+            rp->audioSec = l.recorder->seconds();
         } else if (cfg_.recordMetaOnly && !cfg_.recordDir.empty() && cfg_.record) {   // no sound (no vocoder): the call's data is still kept
             CallRecorder::finishMetaOnly(cfg_.recordDir, m);
         }
@@ -550,6 +550,7 @@ std::string TrunkPool::statusLine(double now) const {
     const CallRecord* first = nullptr;
     for (const CallRecord& r : log_) if (r.active()) { calls++; if (!first) first = &r; }
     for (int i = 0; i < (int)dev_.size(); i++) if (i != ctl_ && dev_[(size_t)i].rx && dev_[(size_t)i].enabled && dev_[(size_t)i].role != Role::Lost) voice++;
+    if (!why_.empty()) return calls ? why_ + " (following " + std::to_string(calls) + ")" : why_;
     if (calls) {
         char b[200];
         snprintf(b, sizeof b, "Following %d call%s: TG %d on %s%s", calls, calls == 1 ? "" : "s", first->tg, mhz(first->freqHz).c_str(), calls > 1 ? " and more" : "");
