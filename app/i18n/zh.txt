@@ -3591,3 +3591,82 @@ Claude Desktop: put this in its config file (Settings > Developer > Edit config)
 What the AI did	AI 做了什么
 Clear log	清除日志
 Nothing yet.	暂无。
+# Everything in view (wide multi-signal decode)
+identifying	识别中
+running	运行中
+no decoder	无解码器
+paused (CPU)	已暂停 (CPU)
+CPU	CPU
+CPU limit %	CPU上限 %
+What	内容
+dB	dB
+Pin	固定
+Everything in view	视野内全部
+Everything in view: on	全部解码: 开
+Decode everything in view	解码视野内全部
+Add as	添加为
+Identify automatically	自动识别
+Add selected region	添加所选区域
+Add tuned signal	添加已调谐信号
+Looking for signals...	正在查找信号...
+Start the receiver to begin.	请先启动接收机。
+The decoders' share of one processor core, against the limit. Above the limit the lowest ranked signals are paused.	解码器占用单个处理器核心的比例与上限的对比。超过上限时，排名最低的信号会被暂停。
+Find every signal in the whole capture (digital voice, TETRA, pagers, packet radio, air band, Inmarsat, TV) and decode all of them at once.	查找整个捕获中的所有信号（数字语音、TETRA、寻呼机、分组无线电、航空频段、Inmarsat、电视），并同时解码。
+One capture, every signal in it. OnAir finds the signals, says what each one is and starts the right decoder for it. Switch one off, pin the ones that must never be paused, or give an unknown signal its mode by hand.	一次捕获，其中所有信号。OnAir 会找到信号、识别其类型并启动合适的解码器。可关闭某个信号、固定不可暂停的信号，或手动为未知信号指定模式。
+When the decoders take longer than this share of one core, the lowest ranked signal is paused (never a pinned one or the one you listen to) and comes back when there is room. 0: no limit.	当解码器占用超过单个核心的这一比例时，排名最低的信号会被暂停（固定的信号和正在收听的信号除外），有余量时恢复。0：不限制。
+This computer cannot keep up: %d signals are paused to save CPU. Pin the ones you need, or raise the limit.	这台电脑跟不上：为节省 CPU，已暂停 %d 个信号。请固定需要的信号，或提高上限。
+TV channels in the capture: %.0f MHz wide	捕获中的电视频道：带宽 %.0f MHz
+Turn the Identify tool on (key I) and drag across a signal on the spectrum, then add it here.	打开“识别”工具（按键 I），在频谱上拖过一个信号，然后在此添加。
+Add the signal at the tuner marker (12.5 kHz wide).	在调谐标记处添加信号（宽 12.5 kHz）。
+Off. Press the button to decode everything in the capture.	已关闭。按下按钮即可解码捕获中的全部内容。
+%+.1f kHz from the capture centre, %.1f kHz wide	距捕获中心 %+.1f kHz，带宽 %.1f kHz
+Pinned: never paused by the CPU limit	已固定：CPU 上限不会将其暂停
+Follow this signal's sound; it is never paused by the CPU limit	跟随此信号的声音；CPU 上限不会将其暂停
+Remove: a signal you added is taken away, a found one is switched off	移除：手动添加的信号将被删除，自动发现的信号将被关闭
+# Share on web: relay, listeners, server settings
+Share my radio	分享我的电台
+Connecting to the relay ...	正在连接中继 ...
+Anyone with the link	任何拥有链接的人
+Invite links only	仅限邀请链接
+Limits that protect your computer	保护电脑的限制
+Antenna (shown to listeners, optional)	天线（对听众可见，可选）
+Listener limits	听众限制
+While sharing	分享期间
+Listeners and invites	听众与邀请
+Nobody is listening right now.	目前没有人在收听。
+Kick##wsKick	踢出##wsKick
+Block 24 h##wsBlock	封禁24小时##wsBlock
+Allow again##wsUnban	重新允许##wsUnban
+Make an invite link	生成邀请链接
+Copy invite link	复制邀请链接
+Server settings	服务器设置
+Connected to the OnAir relay.	已连接到 OnAir 中继。
+Connecting to the OnAir relay ...	正在连接 OnAir 中继 ...
+The relay link dropped (%s). Trying again in %d s.	中继连接已断开（%s）。%d 秒后重试。
+The OnAir relay refuses or cannot be reached: %s	OnAir 中继拒绝连接或无法访问：%s
+Blocked: %s (%d min left)	已封禁：%s（还剩 %d 分钟）
+Processor %.0f%% of the %.0f%% limit	处理器 %.0f%%（上限 %.0f%%）
+Upload %.0f of %.0f kbit/s	上传 %.0f / %.0f kbit/s
+Port on this computer (0 = the first free one from 8073)	本机端口（0 = 从 8073 起第一个空闲端口）
+Listeners from one address at once	同一地址的同时听众数
+Longest session of one listener in minutes (0 = no limit)	单个听众的最长时长（分钟，0 = 不限）
+Most spectrum rows per second (0 = the default)	每秒最多频谱行数（0 = 默认）
+Key file for that certificate	该证书的密钥文件
+A certificate needs both files.	证书需要两个文件。
+Relay service address (only if you run your own relay)	中继服务地址（仅在使用自己的中继时）
+OnAir relay (recommended: no setup, no open ports)	OnAir 中继（推荐：无需设置，无需开放端口）
+Free Cloudflare tunnel (needs a small helper program, downloaded once)	免费 Cloudflare 隧道（需要一个小型辅助程序，仅下载一次）
+Only my network (a phone on the same Wi-Fi)	仅限本地网络（同一 Wi-Fi 下的手机）
+Password (8 characters or more)	密码（8 个字符或更多）
+Apply changes	应用更改
+What to do:	解决办法：
+Will share: %s, %s MHz, up to %d listeners, %s, %s.	将分享：%s，%s MHz，最多 %d 位听众，%s，%s。
+through the OnAir relay (no router settings needed)	通过 OnAir 中继（无需路由器设置）
+through a Cloudflare tunnel	通过 Cloudflare 隧道
+at your own address	使用您自己的地址
+on this network only	仅限本网络
+invite links only	仅限邀请链接
+open to anyone with the link	任何拥有链接的人都可收听
+with a password	需要密码
+no radio found	未找到电台
+No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	未找到电台。请连接电台并在“电台与范围”选项卡中点击刷新，或选择测试信号。

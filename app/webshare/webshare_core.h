@@ -46,7 +46,22 @@ struct ShareSettings {
     bool audioOnly = false;
     bool limitToRange = false;        // listeners may tune only inside the shared range (web_allow_range)
     std::string password;             // empty: open to everyone who has the link
-    std::string link = "tunnel";      // tunnel: a public address through the free Cloudflare quick tunnel; own: an https address you set up (a reverse proxy on this computer); lan: this network only
+    std::string link = "relay";       // relay: a public address through the OnAir relay service (an outbound connection, no helper program, no port forwarding); tunnel: the free Cloudflare quick tunnel; own: an https address you set up (a reverse proxy on this computer); lan: this network only
+    std::string relayUrl = "wss://relay.on-air.dev/relay/v1/host";   // link == "relay": the relay service (a different one can be set under Advanced)
+    // access and safety
+    bool inviteOnly = false;          // listeners need an invite link made in this window (overrides password)
+    int maxPerIp = 2;                 // listeners from one address
+    int cpuCapPct = 75;               // new listeners are refused above this share of the computer's processor
+    int maxKbpsTotal = 0;             // all listeners together, kbit/s (0: the server's default, 8000)
+    int idleMin = 0;                  // minutes without action before a listener is dropped (0: the server's default, 30)
+    int sessionMin = 0;               // longest session of one listener in minutes (0: no limit)
+    // the server
+    int port = 0;                     // the web server's port on this computer (0: the first free from 8073)
+    std::string tlsCert, tlsKey;      // link == "own" or "lan": the server's own certificate (files); empty: none
+    int maxBins = 0;                  // the biggest spectrum row a listener may ask for (0: the server's default, 1024)
+    int maxFps = 0;                   // the most spectrum rows per second (0: the server's default)
+    bool autoApply = true;            // changes made while sharing are applied by themselves after a moment
+    std::string antenna;              // shown to listeners (the page header)
     std::string ownUrl;               // link == "own"
     // step 2
     bool listPublic = false;
@@ -114,6 +129,24 @@ const char* step2Name(Step2 s);
 struct TestStep { std::string step, code, message, advice; bool ok = false; long ms = 0; bool done = false; };
 bool parseTestLine(const std::string& line, TestStep& out);
 const char* testStepTitle(const std::string& step);             // "Directory", "Web server on this computer", "Your public address"
+
+// ---------------------------------------------------------------- listeners (admin API) and the relay's status
+struct UserRow { int id = 0; std::string name, cls, address, mode; double freqHz = 0, kbps = 0, cpuPct = 0; long long seconds = 0; };
+std::vector<UserRow> parseUsers(const std::string& json);        // GET /web/v1/admin/users (not limited to 4 KB like jsonParse; at most 200 rows)
+struct BanRow { std::string address; int minutesLeft = 0; };
+std::vector<BanRow> parseBans(const std::string& json);          // GET /web/v1/admin/bans
+std::string kickBody(int id, const std::string& reason);         // POST admin/kick
+std::string banBody(int id, int minutes, const std::string& reason);   // POST admin/ban
+std::string unbanBody(const std::string& address);               // POST admin/unban
+std::string inviteBody(const std::string& label, int maxMinutes);    // POST admin/invite
+std::string inviteLink(const std::string& url, const std::string& token);   // the link a listener opens: <url>/#invite=TOKEN (the token never reaches the server's logs)
+bool parseInviteToken(const std::string& json, std::string& token);  // the answer of admin/invite
+// What the "Share my radio" button will do, in plain words ("HackRF Pro, 88.0-108.0 MHz, up to 8 listeners, through the OnAir relay, open to anyone with the link")
+std::string easySummary(const ShareSettings& s, const RigCaps& rig, const Plan& plan);
+// The relay's status as one plain sentence for the window (state, retry, problem); empty when there is no relay.
+struct RelayView { std::string state, url, code, message, advice; int conns = 0; long long retryIn = 0, bytesIn = 0, bytesOut = 0; };
+bool parseRelayStatus(const std::string& json, RelayView& out);
+std::string relayLine(const RelayView& r);
 
 // ---------------------------------------------------------------- small helpers shared with the window
 std::string linkQrText(const std::string& url);                  // the text the QR code encodes (the link as it is)

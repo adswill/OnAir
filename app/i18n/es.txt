@@ -3566,3 +3566,82 @@ Claude Desktop: put this in its config file (Settings > Developer > Edit config)
 What the AI did	Lo que hizo la IA
 Clear log	Borrar registro
 Nothing yet.	Nada todavía.
+# Everything in view (wide multi-signal decode)
+identifying	identificando
+running	activo
+no decoder	sin decodificador
+paused (CPU)	en pausa (CPU)
+CPU	CPU
+CPU limit %	Límite de CPU %
+What	Qué
+dB	dB
+Pin	Fijar
+Everything in view	Todo en pantalla
+Everything in view: on	Todo en pantalla: sí
+Decode everything in view	Decodificar todo
+Add as	Añadir como
+Identify automatically	Identificar automáticamente
+Add selected region	Añadir selección
+Add tuned signal	Añadir señal sintonizada
+Looking for signals...	Buscando señales...
+Start the receiver to begin.	Inicie el receptor para empezar.
+The decoders' share of one processor core, against the limit. Above the limit the lowest ranked signals are paused.	La parte de un núcleo de procesador que usan los decodificadores, frente al límite. Por encima del límite se pausan las señales de menor rango.
+Find every signal in the whole capture (digital voice, TETRA, pagers, packet radio, air band, Inmarsat, TV) and decode all of them at once.	Encuentra todas las señales de la captura completa (voz digital, TETRA, buscapersonas, packet radio, banda aérea, Inmarsat, TV) y las decodifica todas a la vez.
+One capture, every signal in it. OnAir finds the signals, says what each one is and starts the right decoder for it. Switch one off, pin the ones that must never be paused, or give an unknown signal its mode by hand.	Una captura, todas sus señales. OnAir las encuentra, dice qué es cada una e inicia el decodificador adecuado. Apague una, fije las que nunca deben pausarse o asigne el modo a mano a una señal desconocida.
+When the decoders take longer than this share of one core, the lowest ranked signal is paused (never a pinned one or the one you listen to) and comes back when there is room. 0: no limit.	Si los decodificadores superan esta parte de un núcleo, se pausa la señal de menor rango (nunca una fijada ni la que escucha) y vuelve cuando hay margen. 0: sin límite.
+This computer cannot keep up: %d signals are paused to save CPU. Pin the ones you need, or raise the limit.	Este equipo no puede seguir el ritmo: %d señales están en pausa para ahorrar CPU. Fije las que necesite o suba el límite.
+TV channels in the capture: %.0f MHz wide	Canales de TV en la captura: %.0f MHz de ancho
+Turn the Identify tool on (key I) and drag across a signal on the spectrum, then add it here.	Active la herramienta Identificar (tecla I), arrastre sobre una señal del espectro y añádala aquí.
+Add the signal at the tuner marker (12.5 kHz wide).	Añade la señal en el marcador del sintonizador (12,5 kHz de ancho).
+Off. Press the button to decode everything in the capture.	Desactivado. Pulse el botón para decodificar todo lo de la captura.
+%+.1f kHz from the capture centre, %.1f kHz wide	%+.1f kHz del centro de la captura, %.1f kHz de ancho
+Pinned: never paused by the CPU limit	Fijada: el límite de CPU nunca la pausa
+Follow this signal's sound; it is never paused by the CPU limit	Seguir el sonido de esta señal; el límite de CPU nunca la pausa
+Remove: a signal you added is taken away, a found one is switched off	Quitar: una señal añadida se elimina; una encontrada se desactiva
+# Share on web: relay, listeners, server settings
+Share my radio	Compartir mi radio
+Connecting to the relay ...	Conectando con el relé ...
+Anyone with the link	Cualquiera con el enlace
+Invite links only	Solo enlaces de invitación
+Limits that protect your computer	Límites que protegen su equipo
+Antenna (shown to listeners, optional)	Antena (visible para los oyentes, opcional)
+Listener limits	Límites de oyentes
+While sharing	Mientras se comparte
+Listeners and invites	Oyentes e invitaciones
+Nobody is listening right now.	Ahora mismo no escucha nadie.
+Kick##wsKick	Expulsar##wsKick
+Block 24 h##wsBlock	Bloquear 24 h##wsBlock
+Allow again##wsUnban	Permitir de nuevo##wsUnban
+Make an invite link	Crear un enlace de invitación
+Copy invite link	Copiar enlace de invitación
+Server settings	Ajustes del servidor
+Connected to the OnAir relay.	Conectado al relé de OnAir.
+Connecting to the OnAir relay ...	Conectando con el relé de OnAir ...
+The relay link dropped (%s). Trying again in %d s.	Se perdió el enlace con el relé (%s). Reintentando en %d s.
+The OnAir relay refuses or cannot be reached: %s	El relé de OnAir rechaza o no se puede alcanzar: %s
+Blocked: %s (%d min left)	Bloqueado: %s (faltan %d min)
+Processor %.0f%% of the %.0f%% limit	Procesador %.0f%% del límite de %.0f%%
+Upload %.0f of %.0f kbit/s	Subida %.0f de %.0f kbit/s
+Port on this computer (0 = the first free one from 8073)	Puerto en este equipo (0 = el primero libre desde 8073)
+Listeners from one address at once	Oyentes simultáneos por dirección
+Longest session of one listener in minutes (0 = no limit)	Sesión más larga de un oyente en minutos (0 = sin límite)
+Most spectrum rows per second (0 = the default)	Máximo de filas de espectro por segundo (0 = el valor por defecto)
+Key file for that certificate	Archivo de clave de ese certificado
+A certificate needs both files.	Un certificado necesita ambos archivos.
+Relay service address (only if you run your own relay)	Dirección del servicio de relé (solo si usa su propio relé)
+OnAir relay (recommended: no setup, no open ports)	Relé de OnAir (recomendado: sin configurar, sin puertos abiertos)
+Free Cloudflare tunnel (needs a small helper program, downloaded once)	Túnel gratuito de Cloudflare (necesita un pequeño programa auxiliar, se descarga una vez)
+Only my network (a phone on the same Wi-Fi)	Solo mi red (un teléfono en el mismo Wi-Fi)
+Password (8 characters or more)	Contraseña (8 caracteres o más)
+Apply changes	Aplicar cambios
+What to do:	Qué hacer:
+Will share: %s, %s MHz, up to %d listeners, %s, %s.	Se compartirá: %s, %s MHz, hasta %d oyentes, %s, %s.
+through the OnAir relay (no router settings needed)	a través del relé de OnAir (sin ajustes del router)
+through a Cloudflare tunnel	a través de un túnel de Cloudflare
+at your own address	en su propia dirección
+on this network only	solo en esta red
+invite links only	solo con enlaces de invitación
+open to anyone with the link	abierto a cualquiera con el enlace
+with a password	con contraseña
+no radio found	no se encontró ninguna radio
+No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	No se encontró ninguna radio. Conecte una y pulse Actualizar en la pestaña Radio y rango, o elija la señal de prueba.

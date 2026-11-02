@@ -3568,3 +3568,82 @@ Claude Desktop: put this in its config file (Settings > Developer > Edit config)
 What the AI did	AIの操作履歴
 Clear log	ログを消去
 Nothing yet.	まだありません。
+# Everything in view (wide multi-signal decode)
+identifying	識別中
+running	動作中
+no decoder	デコーダなし
+paused (CPU)	一時停止 (CPU)
+CPU	CPU
+CPU limit %	CPU上限 %
+What	内容
+dB	dB
+Pin	固定
+Everything in view	表示中のすべて
+Everything in view: on	すべて表示: オン
+Decode everything in view	すべてデコード
+Add as	種類を指定して追加
+Identify automatically	自動で識別
+Add selected region	選択範囲を追加
+Add tuned signal	同調中の信号を追加
+Looking for signals...	信号を探しています...
+Start the receiver to begin.	開始するには受信機を起動してください。
+The decoders' share of one processor core, against the limit. Above the limit the lowest ranked signals are paused.	デコーダが使うCPUコア1つ分の割合と上限の比較。上限を超えると、順位の低い信号から一時停止します。
+Find every signal in the whole capture (digital voice, TETRA, pagers, packet radio, air band, Inmarsat, TV) and decode all of them at once.	キャプチャ全体からすべての信号（デジタル音声、TETRA、ポケベル、パケット無線、航空無線、Inmarsat、TV）を見つけ、同時にデコードします。
+One capture, every signal in it. OnAir finds the signals, says what each one is and starts the right decoder for it. Switch one off, pin the ones that must never be paused, or give an unknown signal its mode by hand.	1回のキャプチャ内のすべての信号。OnAirが信号を見つけ、種類を判定し、適切なデコーダを起動します。個別にオフにしたり、一時停止させたくない信号を固定したり、不明な信号に手動でモードを指定できます。
+When the decoders take longer than this share of one core, the lowest ranked signal is paused (never a pinned one or the one you listen to) and comes back when there is room. 0: no limit.	デコーダがコア1つ分のこの割合を超えると、順位の最も低い信号が一時停止され（固定した信号や聴いている信号は対象外）、余裕ができると復帰します。0: 上限なし。
+This computer cannot keep up: %d signals are paused to save CPU. Pin the ones you need, or raise the limit.	このコンピューターでは処理が追いつきません。CPU節約のため%d個の信号を一時停止しています。必要な信号を固定するか、上限を上げてください。
+TV channels in the capture: %.0f MHz wide	キャプチャ内のTVチャンネル: 幅 %.0f MHz
+Turn the Identify tool on (key I) and drag across a signal on the spectrum, then add it here.	識別ツールをオンにして（キー I）スペクトル上の信号をドラッグし、ここで追加します。
+Add the signal at the tuner marker (12.5 kHz wide).	チューナーマーカー位置の信号（幅12.5 kHz）を追加します。
+Off. Press the button to decode everything in the capture.	オフ。ボタンを押すとキャプチャ内のすべてをデコードします。
+%+.1f kHz from the capture centre, %.1f kHz wide	キャプチャ中心から %+.1f kHz、幅 %.1f kHz
+Pinned: never paused by the CPU limit	固定: CPU上限では一時停止されません
+Follow this signal's sound; it is never paused by the CPU limit	この信号の音声を追いかけます。CPU上限では一時停止されません
+Remove: a signal you added is taken away, a found one is switched off	削除: 追加した信号は取り除かれ、検出された信号はオフになります
+# Share on web: relay, listeners, server settings
+Share my radio	ラジオを共有する
+Connecting to the relay ...	リレーに接続中 ...
+Anyone with the link	リンクを知っている人なら誰でも
+Invite links only	招待リンクのみ
+Limits that protect your computer	コンピューターを守る制限
+Antenna (shown to listeners, optional)	アンテナ（リスナーに表示、任意）
+Listener limits	リスナーの制限
+While sharing	共有中
+Listeners and invites	リスナーと招待
+Nobody is listening right now.	現在、誰も聴いていません。
+Kick##wsKick	切断##wsKick
+Block 24 h##wsBlock	24時間ブロック##wsBlock
+Allow again##wsUnban	再び許可##wsUnban
+Make an invite link	招待リンクを作成
+Copy invite link	招待リンクをコピー
+Server settings	サーバー設定
+Connected to the OnAir relay.	OnAirリレーに接続しました。
+Connecting to the OnAir relay ...	OnAirリレーに接続中 ...
+The relay link dropped (%s). Trying again in %d s.	リレーとの接続が切れました（%s）。%d 秒後に再試行します。
+The OnAir relay refuses or cannot be reached: %s	OnAirリレーが拒否したか、到達できません: %s
+Blocked: %s (%d min left)	ブロック中: %s（残り %d 分）
+Processor %.0f%% of the %.0f%% limit	プロセッサ %.0f%%（上限 %.0f%%）
+Upload %.0f of %.0f kbit/s	アップロード %.0f / %.0f kbit/s
+Port on this computer (0 = the first free one from 8073)	このコンピューターのポート（0 = 8073以降の最初の空き）
+Listeners from one address at once	1つのアドレスからの同時リスナー数
+Longest session of one listener in minutes (0 = no limit)	リスナー1人の最長セッション（分、0 = 無制限）
+Most spectrum rows per second (0 = the default)	1秒あたりの最大スペクトル行数（0 = 既定）
+Key file for that certificate	その証明書の鍵ファイル
+A certificate needs both files.	証明書には両方のファイルが必要です。
+Relay service address (only if you run your own relay)	リレーサービスのアドレス（自分のリレーを使う場合のみ）
+OnAir relay (recommended: no setup, no open ports)	OnAirリレー（推奨: 設定不要、ポート開放不要）
+Free Cloudflare tunnel (needs a small helper program, downloaded once)	無料のCloudflareトンネル（小さな補助プログラムが必要、初回のみダウンロード）
+Only my network (a phone on the same Wi-Fi)	自分のネットワークのみ（同じWi-Fiのスマートフォン）
+Password (8 characters or more)	パスワード（8文字以上）
+Apply changes	変更を適用
+What to do:	対処方法:
+Will share: %s, %s MHz, up to %d listeners, %s, %s.	共有する内容: %s、%s MHz、最大 %d 人のリスナー、%s、%s。
+through the OnAir relay (no router settings needed)	OnAirリレー経由（ルーター設定不要）
+through a Cloudflare tunnel	Cloudflareトンネル経由
+at your own address	自分のアドレスで
+on this network only	このネットワークのみ
+invite links only	招待リンクのみ
+open to anyone with the link	リンクを知っている人なら誰でも
+with a password	パスワード付き
+no radio found	ラジオが見つかりません
+No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	ラジオが見つかりません。ラジオを接続し、「ラジオと範囲」タブで更新を押すか、テスト信号を選んでください。

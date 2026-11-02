@@ -107,6 +107,11 @@ public:
     // admin
     std::string usersJson() const;
     bool kick(int id, const std::string& reason);
+    // Blocks the listener's address for `minutes` (0: until the server restarts is NOT meant: 0 means 24 hours at most; the maximum is 7 days) and kicks its sessions.
+    // False: no such session. Bans are in memory only (they end when the server stops).
+    bool ban(int id, int minutes, const std::string& reason);
+    bool unban(const std::string& tag);            // the "address" shown in bansJson (the same tag as in usersJson)
+    std::string bansJson() const;                  // {"bans":[{"address":..., "minutes_left":n}]}
     std::string statsJson() const;
     int userCount() const;
     void setServerInfo(const std::string& name, const std::string& location, const std::string& antenna);
@@ -117,6 +122,7 @@ private:
     struct Pool;
     mutable std::mutex mu_;              // sessions_, decs_, capture config
     std::map<int, std::shared_ptr<Session>> sessions_;
+    std::map<std::string, double> bans_;   // ip -> unix time the ban ends (under mu_)
     std::map<std::string, std::shared_ptr<SharedDec>> decs_;
     std::map<std::string, DecoderFactory> factories_;
     HubLimits lim_;

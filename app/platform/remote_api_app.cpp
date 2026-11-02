@@ -688,7 +688,7 @@ void mcpSection(App& a) {
         else ImGui::TextDisabled("%s", tr("No AI has connected yet."));
     }
     // how to connect: the snippets for the common clients, with a copy button
-    if (ImGui::TreeNode(tr("How to connect your AI##mcp"))) {
+    if (ImGui::TreeNode(trw("How to connect your AI"))) {
         const std::string url = std::string("http://127.0.0.1:") + std::to_string(m.port) + "/mcp";
         const std::string tok = m.lan || m.localAuth ? m.token : std::string();
         std::string exe = dect2::codec::programDir();

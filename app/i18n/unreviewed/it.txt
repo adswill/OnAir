@@ -299,3 +299,78 @@ Claude Desktop: put this in its config file (Settings > Developer > Edit config)
 What the AI did
 Clear log
 Nothing yet.
+identifying
+running
+no decoder
+paused (CPU)
+CPU limit %
+What
+Pin
+Everything in view
+Everything in view: on
+Decode everything in view
+Add as
+Identify automatically
+Add selected region
+Add tuned signal
+Looking for signals...
+Start the receiver to begin.
+The decoders' share of one processor core, against the limit. Above the limit the lowest ranked signals are paused.
+Find every signal in the whole capture (digital voice, TETRA, pagers, packet radio, air band, Inmarsat, TV) and decode all of them at once.
+One capture, every signal in it. OnAir finds the signals, says what each one is and starts the right decoder for it. Switch one off, pin the ones that must never be paused, or give an unknown signal its mode by hand.
+When the decoders take longer than this share of one core, the lowest ranked signal is paused (never a pinned one or the one you listen to) and comes back when there is room. 0: no limit.
+This computer cannot keep up: %d signals are paused to save CPU. Pin the ones you need, or raise the limit.
+TV channels in the capture: %.0f MHz wide
+Turn the Identify tool on (key I) and drag across a signal on the spectrum, then add it here.
+Add the signal at the tuner marker (12.5 kHz wide).
+Off. Press the button to decode everything in the capture.
+%+.1f kHz from the capture centre, %.1f kHz wide
+Pinned: never paused by the CPU limit
+Follow this signal's sound; it is never paused by the CPU limit
+Remove: a signal you added is taken away, a found one is switched off
+Share my radio
+Connecting to the relay ...
+Anyone with the link
+Invite links only
+Limits that protect your computer
+Antenna (shown to listeners, optional)
+Listener limits
+While sharing
+Listeners and invites
+Nobody is listening right now.
+Kick##wsKick
+Block 24 h##wsBlock
+Allow again##wsUnban
+Make an invite link
+Copy invite link
+Server settings
+Connected to the OnAir relay.
+Connecting to the OnAir relay ...
+The relay link dropped (%s). Trying again in %d s.
+The OnAir relay refuses or cannot be reached: %s
+Blocked: %s (%d min left)
+Processor %.0f%% of the %.0f%% limit
+Upload %.0f of %.0f kbit/s
+Port on this computer (0 = the first free one from 8073)
+Listeners from one address at once
+Longest session of one listener in minutes (0 = no limit)
+Most spectrum rows per second (0 = the default)
+Key file for that certificate
+A certificate needs both files.
+Relay service address (only if you run your own relay)
+OnAir relay (recommended: no setup, no open ports)
+Free Cloudflare tunnel (needs a small helper program, downloaded once)
+Only my network (a phone on the same Wi-Fi)
+Password (8 characters or more)
+Apply changes
+What to do:
+Will share: %s, %s MHz, up to %d listeners, %s, %s.
+through the OnAir relay (no router settings needed)
+through a Cloudflare tunnel
+at your own address
+on this network only
+invite links only
+open to anyone with the link
+with a password
+no radio found
+No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.

@@ -83,6 +83,7 @@ const std::set<std::string>& restrictedKnownKinds() {
     // 3.6 modes: blocked likewise
     "fy4lrit", "fy4ahrit", "fy2svissr",
     "fy3ahrpt", "fy3mpt",
+    "sitor", "pactor2", "pactor3", "pactor4",
     };
     return s;
 }

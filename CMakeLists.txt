@@ -355,7 +355,7 @@ target_sources(dect2core PRIVATE core/src/mcp/mcp_json.cpp core/src/mcp/mcp_serv
 # OnAir Web: many listeners, each with an own receiver inside the host's capture (server/web, docs/ONAIR-WEB.md). Every web source is built with
 # the host setting web_allow_tx=0 (the default; 1 lets listeners transmit through the host's radio, see docs/ONAIR-WEB.md).
 set(ONAIR_WEB_SOURCES server/web/web_json.cpp server/web/web_proto.cpp server/web/web_dsp.cpp server/web/web_policy.cpp server/web/web_ranges.cpp server/web/web_hub.cpp
-    server/web/web_server.cpp server/web/web_config.cpp server/web/web_directory_proto.cpp server/web/web_directory.cpp)
+    server/web/web_server.cpp server/web/web_config.cpp server/web/web_directory_proto.cpp server/web/web_directory.cpp server/web/web_relay.cpp)
 list(APPEND ONAIR_WEB_SOURCES server/web/web_decoders.cpp)   # the receivers as web decoders
 add_library(onair_web STATIC ${ONAIR_WEB_SOURCES})
 target_include_directories(onair_web PUBLIC server)
@@ -773,6 +773,7 @@ if(DECT2_BUILD_APP)
     target_compile_options(dect2 PRIVATE -fobjc-arc)
   endif()
   target_link_libraries(dect2 PRIVATE dect2core imgui)
+  target_sources(dect2 PRIVATE app/panels/wide_all_ui.cpp)   # Everything in view: wide multi-signal decode window
   target_sources(dect2 PRIVATE app/panels/rffp_ui.cpp)   # RF fingerprint window (docs/RF-FINGERPRINT.md)
   target_link_libraries(dect2 PRIVATE dect2core imgui onair_web)
   target_include_directories(dect2 PRIVATE server)
@@ -1788,7 +1789,7 @@ if(DECT2_BUILD_TESTS)
     add_test(NAME mcp_stdio COMMAND ${ONAIR_PYTHON3_MCP} -I ${CMAKE_SOURCE_DIR}/tests/mcp/test_mcp_stdio.py $<TARGET_FILE:onair-server>)
     set_tests_properties(mcp_stdio PROPERTIES TIMEOUT 300)
   endif()
-  foreach(t web_proto web_dsp web_hub web_server web_safety web_tx_guard web_ranges web_directory)
+  foreach(t web_proto web_dsp web_hub web_server web_safety web_tx_guard web_ranges web_directory web_relay)
 
     add_executable(test_${t} tests/server/test_${t}.cpp server/server_config.cpp)
     target_link_libraries(test_${t} PRIVATE onair_web)
@@ -2151,6 +2152,12 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_wide_session_tv tests/engine/test_wide_session_tv.cpp)   # the same with a DVB-T2 and a DVB-T channel in the capture
   target_link_libraries(test_wide_session_tv PRIVATE dect2core)
   add_test(NAME wide_session_tv COMMAND test_wide_session_tv)
+  add_executable(test_wide_multi tests/engine/test_wide_multi.cpp)   # wide session: TETRA span decoder, signals marked by hand, impairment sweep (edges, DC, off-raster, 2 rates)
+  target_link_libraries(test_wide_multi PRIVATE dect2core)
+  add_test(NAME wide_multi COMMAND test_wide_multi)
+  add_executable(test_wide_multi_tv tests/engine/test_wide_multi_tv.cpp)   # three TV channels (T2 + T + T2), off the grid, in one 28 Msps capture
+  target_link_libraries(test_wide_multi_tv PRIVATE dect2core)
+  add_test(NAME wide_multi_tv COMMAND test_wide_multi_tv)
 
   add_executable(test_multitv tests/engine/test_multitv.cpp)   # several adjacent TV channels from one wide capture (core)
   target_link_libraries(test_multitv PRIVATE dect2core)
@@ -2417,6 +2424,13 @@ if(DECT2_BUILD_TESTS)
       target_compile_definitions(${t} PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     endif()
   endforeach()
+  # real recordings (docs/REAL-SIGNALS.md): tests/real/test_real_<mode>.cpp reads a short excerpt from tests/data and runs the real receiver (each a second or two)
+  foreach(m adsb dtmb dsc)
+    add_executable(test_real_${m} tests/real/test_real_${m}.cpp)
+    target_link_libraries(test_real_${m} PRIVATE dect2core)
+    target_compile_definitions(test_real_${m} PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME real_${m} COMMAND test_real_${m})
+  endforeach()
   # the signal identifier (docs/IDENTIFIER.md): specx_ideval (about thirty modes made from their parameters, impaired, a confusion matrix; a few
   # seconds), specx_idfeatures and specx_ident run with the rest. The matrix over every mode's own test signal renders each mode's generator
   # and takes minutes: the whole one and its quick form (20 dB, no frequency) are in the slow tier (nightly and release tags).
@@ -2680,4 +2694,9 @@ if(MINGW)
       endif()
     endforeach()
   endif()
+endif()
+
+# kaws_synth waits for a decode in the UTC slots of the computer clock: about 2 min on a Mac, but over 4 min on a loaded Windows runner
+if(TEST kaws_synth)
+  set_tests_properties(kaws_synth PROPERTIES TIMEOUT 1500)
 endif()

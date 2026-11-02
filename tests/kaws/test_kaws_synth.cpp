@@ -59,7 +59,7 @@ static bool run(int opt, double maxSec) {
 int main() {
     const ModeTuning mt = kawsTuning();
     CHECK(mt.stdMode == 135 && modeTuningById("kaws") && modeTuningById("kaws")->stdMode == 135, "tuning table");
-    run(0, 200);
-    run(5, 120);   // modeOpt[0] = 5: profile 4 (15 s slots)
+    run(0, 450);   // returns as soon as the first message is decoded (about 60 s on a Mac); the Windows CI runner is several times slower
+    run(5, 300);   // modeOpt[0] = 5: profile 4 (15 s slots)
     return testSummary("kaws synth");
 }

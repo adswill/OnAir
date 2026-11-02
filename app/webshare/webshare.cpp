@@ -14,7 +14,9 @@
 #include "dect2/common/thread_name.h"
 #include "dect2/engine/updater.h"
 #include "web/web_json.h"
+#include "web/web_relay.h"
 #include "web/web_policy.h"
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdio>
@@ -62,6 +64,12 @@ struct G {
     std::mutex jm;
     std::vector<Job> jobs;
     bool open = false, demo = false;
+    RelayView relay;                    // the relay client's status file (web_relay_status.json)
+    bool relayFallback = false;         // the relay did not come up in time: the Cloudflare tunnel carries the link meanwhile
+    std::vector<UserRow> users;         // the listeners (admin API), refreshed every 2 s while sharing
+    std::vector<BanRow> bans;
+    std::string inviteNote, inviteLinkText;
+    long restartTimes[4] = {0, 0, 0, 0};   // when the web server was restarted after it stopped by itself (at most 3 in 10 minutes)
     int tab = 0, selectTab = -1;
     int lastDrawFrame = -1;
 } g;
@@ -304,12 +312,16 @@ void shareWorker(ShareSettings S, RigCaps rig, Plan plan) {
     g.shareRunning = true;
     g.cancel = false;
     auto bail = [](const std::string& why, const std::string& adv) { fail(why, adv); endChild(g.tunnelPid); endChild(g.dirPid); endChild(g.serverPid); g.shareRunning = false; };
-    { std::lock_guard<std::mutex> l(g.m); g.url.clear(); g.error.clear(); g.advice.clear(); g.stats = ShareStats{}; g.publicState = -1; g.publicNote.clear(); g.applyNote.clear(); }
+    { std::lock_guard<std::mutex> l(g.m); g.url.clear(); g.error.clear(); g.advice.clear(); g.stats = ShareStats{}; g.publicState = -1; g.publicNote.clear(); g.applyNote.clear(); g.relay = RelayView{}; g.relayFallback = false; g.users.clear(); g.bans.clear(); g.inviteNote.clear(); g.inviteLinkText.clear(); }
+    { std::error_code ec; fs::remove(dir() / "web_relay_status.json", ec); }
     g.phase = Phase::Starting;
     setStage(tr("Cleaning up an earlier run ..."));
     endLeftovers();
-    g.port = freeLocalPort(8073);
-    g.apiPort = freeLocalPort(g.port + 1 > 8765 ? g.port + 1 : 8765);
+    if (S.port > 0) {
+        g.port = freeLocalPort(S.port) == S.port ? S.port : 0;
+        if (!g.port) { bail(tr("The port you chose is already in use."), tr("Another program (or another copy of OnAir) uses it. Choose another port under Server settings, or set it to 0 for automatic.")); return; }
+    } else g.port = freeLocalPort(8073);
+    g.apiPort = freeLocalPort((g.port ? g.port : 8073) + 1 > 8765 ? (g.port ? g.port : 8073) + 1 : 8765);
     if (!g.port || !g.apiPort) { bail(tr("No free port on this computer."), tr("Close the programs that use ports 8073 to 8112, or restart the computer, and try again.")); return; }
     g.adminToken = newToken();
     writeAdminHeader();
@@ -322,10 +334,45 @@ void shareWorker(ShareSettings S, RigCaps rig, Plan plan) {
         return;
     }
     std::string url;
-    if (S.link == "tunnel") {
+    std::string mode = S.link;
+    if (mode == "relay") {
+        setStage(tr("Connecting to the relay ..."));
+        RelayView rv;
+        for (int i = 0; i < 250 && !g.cancel; i++) {   // 25 s: the relay answers in a second or two when it is reachable
+            if (parseRelayStatus(slurp(dir() / "web_relay_status.json", 4096), rv)) {
+                if (rv.state == "online" && !rv.url.empty()) { url = rv.url; break; }
+                if (rv.state == "failed") break;
+            }
+            if (!plat::childAlive(g.serverPid)) break;
+            if (slurp(dir() / "server.log", 8192).find("web_relay_error=") != std::string::npos) break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        if (g.cancel) { g.shareRunning = false; return; }
+        if (url.empty()) {
+            const std::string why = rv.message.empty() ? lastLines(slurp(dir() / "server.log", 8192), 2) : rv.message;
+            const std::string adv = rv.advice.empty() ? std::string(tr("Check the internet connection.")) : rv.advice;
+            if (!findHelper().empty()) {   // the Cloudflare helper is there: it carries the link until the relay answers (the server keeps trying)
+                { std::lock_guard<std::mutex> l(g.m); g.relayFallback = true; g.applyNote = std::string(tr("The OnAir relay did not answer, so a Cloudflare tunnel is used for now. The link switches to the relay by itself when it answers.")) + " [" + why + "]"; }
+                mode = "tunnel";
+            } else { bail(tr("The OnAir relay did not answer."), adv + "  [" + why + "]  " + tr("You can also choose the Cloudflare tunnel under Access and listing > How listeners reach you.")); return; }
+        } else {
+            setStage(tr("Waiting until the public address answers ..."));
+            bool up = false;
+            for (int i = 0; i < 12 && !g.cancel && !up; i++) {
+                int st = 0;
+                const std::string body = curlGet(url + "/web/v1/info", 6, &st);
+                up = st == 200 && body.find("\"proto\"") != std::string::npos;
+                if (!up && !sleepOrCancel(1000)) break;
+            }
+            std::lock_guard<std::mutex> l(g.m);
+            g.publicState = up ? 1 : 0;
+            g.publicNote = up ? "" : tr("The public address does not answer yet. Press Test connection.");
+        }
+    }
+    if (mode == "tunnel") {
         setStage(tr("Asking Cloudflare for a public address ..."));
         std::string helper = findHelper();
-        if (helper.empty()) { bail(tr("The tunnel helper is missing."), tr("Press Start sharing again and allow the download, or use Access > Link > Only my network.")); return; }
+        if (helper.empty()) { bail(tr("The tunnel helper is missing."), tr("Press Share my radio again and allow the download, or use Access and listing > How listeners reach you > Only my network.")); return; }
         std::string e2;
         const long tp = plat::spawnChild(helper, {"tunnel", "--no-autoupdate", "--url", "http://127.0.0.1:" + std::to_string(g.port)}, (dir() / "tunnel.log").string(), e2);
         if (!tp) { bail(tr("The tunnel helper could not be started."), e2); return; }
@@ -355,10 +402,10 @@ void shareWorker(ShareSettings S, RigCaps rig, Plan plan) {
         std::lock_guard<std::mutex> l(g.m);
         g.publicState = up ? 1 : 0;
         g.publicNote = up ? "" : tr("The public address does not answer yet. It can take a minute; press Test connection.");
-    } else if (S.link == "own") {
+    } else if (mode == "own") {
         url = S.ownUrl;
         while (!url.empty() && url.back() == '/') url.pop_back();
-    } else {
+    } else if (mode == "lan") {
         const std::string ip = lanAddress();
         url = "http://" + (ip.empty() ? std::string("<this computer's address>") : ip) + ":" + std::to_string(g.port);
     }
@@ -419,6 +466,7 @@ void stopWorker() {
     {
         std::lock_guard<std::mutex> l(g.m);
         g.url.clear(); g.stage.clear(); g.stats = ShareStats{}; g.publicState = -1;
+        g.relay = RelayView{}; g.relayFallback = false; g.users.clear(); g.bans.clear(); g.inviteLinkText.clear(); g.inviteNote.clear();
         g.s2 = Step2State{};
     }
     g.phase = Phase::Idle;
@@ -574,9 +622,30 @@ void statsWorker(std::string url, bool checkPublic) {
         const std::string pb = curlGet(url + "/web/v1/info", 8, &ps);
         pub = ps == 200 && pb.find("\"proto\"") != std::string::npos ? 1 : 0;
     }
+    std::vector<UserRow> users;
+    std::vector<BanRow> bans;
+    if (ok) {
+        int us = 0;
+        const std::string ub = curlGet("http://127.0.0.1:" + std::to_string(g.port) + "/web/v1/admin/users", 3, &us, (dir() / "admin.hdr").string());
+        if (us == 200) users = parseUsers(ub);
+        const std::string bb = curlGet("http://127.0.0.1:" + std::to_string(g.port) + "/web/v1/admin/bans", 3, &us, (dir() / "admin.hdr").string());
+        if (us == 200) bans = parseBans(bb);
+    }
     std::lock_guard<std::mutex> l(g.m);
-    if (ok) g.stats = s;
+    if (ok) { g.stats = s; g.users = users; g.bans = bans; }
     if (pub >= 0) { g.publicState = pub; g.publicNote = pub ? "" : tr("The public address does not answer right now."); }
+}
+
+// One admin call from a button (kick, block, allow again, invite), with the answer's status; the list refreshes on the next round (2 s)
+void adminPostWorker(std::string sub, std::string body, bool invite) {
+    int st = 0;
+    const std::string ans = curlPostJson("http://127.0.0.1:" + std::to_string(g.port) + "/web/v1/admin/" + sub, body, (dir() / "admin.hdr").string(), &st);
+    std::lock_guard<std::mutex> l(g.m);
+    if (invite) {
+        std::string token;
+        if (st == 200 && parseInviteToken(ans, token)) { g.inviteLinkText = inviteLink(g.url, token); g.inviteNote.clear(); }
+        else g.inviteNote = tr("The invite could not be made. Is the server still running?");
+    } else if (st != 200) g.applyNote = tr("That did not work: the web server did not accept the request (it may have just stopped).");
 }
 
 // ---------------------------------------------------------------- demo (screenshots of the window: DECT2_WEBSHARE_DEMO=step1|dropdown|decoders|preview|error)
@@ -606,6 +675,18 @@ void setupDemo(const char* mode) {
     g.tab = 0;
     if (m == "decoders") g.tab = 1;
     if (m == "preview" || m == "error") g.tab = 2;
+    if (m == "server") g.tab = 3;
+    if (m == "listeners") {
+        g.phase = Phase::Sharing;
+        g.url = "https://x7k2m9qa4c.relay.on-air.dev/";
+        g.stats.ok = true; g.stats.users = 3; g.stats.maxUsers = 8; g.stats.kbps = 1210; g.stats.maxKbps = 8000; g.stats.cpuPct = 41; g.stats.centreHz = 97.75e6; g.stats.rateHz = 20e6;
+        g.publicState = 1;
+        g.relay.state = "online";
+        auto u = [](int id, const char* nm, const char* ad, double f, const char* mo, double k, long long sec) { UserRow r; r.id = id; r.name = nm; r.address = ad; r.freqHz = f; r.mode = mo; r.kbps = k; r.seconds = sec; return r; };
+        g.users = {u(1, "Ana", "#4f2a10", 98.3e6, "wfm", 96, 412), u(2, "", "#09c1e7", 121.5e6, "am", 41, 95), u(3, "Jonas", "#7b3d22", 7.074e6, "usb", 64, 1800)};
+        g.bans = {BanRow{"#c0ffee", 1380}};
+        g.inviteLinkText = "https://x7k2m9qa4c.relay.on-air.dev/#invite=3fa9c1d20b7e4a5c9d816f0e2b3a7c44";
+    }
     if (m == "decoders") { g.S.wholeSpan = false; g.S.centreMHz = 127.5; g.S.spanMHz = 19; g.S.dataOff.insert("ft8"); }
     if (m == "preview" || m == "error") {
         g.phase = Phase::Sharing;
@@ -700,6 +781,32 @@ void problemBlock(const Problem& p, const char* headline) {
 }
 
 std::string currentUrl() { std::lock_guard<std::mutex> l(g.m); return g.url; }
+
+// The sentence above the big button: what pressing it will do
+std::string easyText(const ShareSettings& S, const RigCaps& rig, const Plan& plan) {
+    const char* via = S.link == "relay" ? tr("through the OnAir relay (no router settings needed)") : S.link == "tunnel" ? tr("through a Cloudflare tunnel") : S.link == "own" ? tr("at your own address") : tr("on this network only");
+    const char* who = S.inviteOnly ? tr("invite links only") : S.password.empty() ? tr("open to anyone with the link") : tr("with a password");
+    char b[700];
+    snprintf(b, sizeof b, tr("Will share: %s, %s MHz, up to %d listeners, %s, %s."), rig.name.empty() ? tr("no radio found") : rig.name.c_str(), rangeSpecMHz(plan.loHz, plan.hiHz).c_str(), S.maxUsers, via, who);
+    return b;
+}
+
+// auto-apply fires at most once in 8 seconds (the apply itself takes a moment to show as done)
+bool autoGate() {
+    static double last = -100;
+    const double now = ImGui::GetTime();
+    if (now - last < 8.0) return false;
+    last = now;
+    return true;
+}
+
+bool intField(const char* label, const char* id, int& v, int lo, int hi, int step, float width = 120) {
+    if (label && *label) ImGui::TextUnformatted(label);
+    ImGui::SetNextItemWidth(width * gUi);
+    int x = v;
+    if (ImGui::InputInt(id, &x, step, step * 10)) { v = std::clamp(x, lo, hi); markDirty(); return true; }
+    return false;
+}
 
 // ---- tab 1: radio and range
 void tabRadio(App& a, const std::vector<RigCaps>& rigs, const RigCaps& rig, const Plan& plan, bool running) {
@@ -861,20 +968,32 @@ void tabAccess(App& a, const Plan& plan, bool running) {
     ShareSettings& S = g.S;
     const std::string url = currentUrl();
     ImGui::SeparatorText(tr("Who can listen"));
-    textField(tr("Password (optional, 8 characters or more; empty = anyone with the link)"), "##wsPw", S.password, 64, 260, nullptr, ImGuiInputTextFlags_Password);
-    if (!S.password.empty() && S.password.size() < 8) wrapped(warnCol(), tr("The password is too short: the server would not start with it."));
+    {
+        int who = S.inviteOnly ? 2 : S.password.empty() ? 0 : 1;
+        if (ImGui::RadioButton(tr("Anyone with the link"), who == 0)) { S.inviteOnly = false; S.password.clear(); markDirty(); }
+        ImGui::SameLine();
+        if (ImGui::RadioButton(tr("Password"), who == 1)) { S.inviteOnly = false; if (S.password.empty()) S.password = "change-me-please"; markDirty(); }
+        ImGui::SameLine();
+        if (ImGui::RadioButton(tr("Invite links only"), who == 2)) { S.inviteOnly = true; markDirty(); }
+        if (who == 1) textField(tr("Password (8 characters or more)"), "##wsPw", S.password, 64, 260, nullptr, ImGuiInputTextFlags_Password);
+        if (!S.password.empty() && S.password.size() < 8 && !S.inviteOnly) wrapped(warnCol(), tr("The password is too short: the server would not start with it."));
+        if (who == 2) ImGui::TextDisabled("%s", tr("After you start sharing, make one invite link per person under Listeners and invites."));
+    }
+    ImGui::SeparatorText(tr("Limits that protect your computer"));
+    ImGui::TextDisabled("%s", tr("The number of listeners, the bit rate per listener, audio only and the decoders are on the Decoders and limits tab."));
+    textField(tr("Antenna (shown to listeners, optional)"), "##wsAntenna", S.antenna, 60, 260);
     if (ImGui::TreeNode(trw("Advanced: how listeners reach you"))) {
         if (running) ImGui::BeginDisabled();
-        int mode = S.link == "own" ? 1 : S.link == "lan" ? 2 : 0;
-        if (ImGui::RadioButton(tr("Free public address (Cloudflare tunnel, nothing to set up)"), mode == 0)) { S.link = "tunnel"; markDirty(); }
-        if (ImGui::RadioButton(tr("My own https address (a reverse proxy on this computer, for example Caddy or nginx)"), mode == 1)) { S.link = "own"; markDirty(); }
-        if (ImGui::RadioButton(tr("Only my network (a phone on the same Wi-Fi)"), mode == 2)) { S.link = "lan"; markDirty(); }
+        int mode = S.link == "own" ? 2 : S.link == "lan" ? 3 : S.link == "tunnel" ? 1 : 0;
+        if (ImGui::RadioButton(tr("OnAir relay (recommended: no setup, no open ports)"), mode == 0)) { S.link = "relay"; markDirty(); }
+        if (ImGui::RadioButton(tr("Free Cloudflare tunnel (needs a small helper program, downloaded once)"), mode == 1)) { S.link = "tunnel"; markDirty(); }
+        if (ImGui::RadioButton(tr("My own https address (a reverse proxy on this computer, for example Caddy or nginx)"), mode == 2)) { S.link = "own"; markDirty(); }
         if (S.link == "own") textField(nullptr, "##wsOwn", S.ownUrl, 190, 340, "https://radio.example.com");
+        if (ImGui::RadioButton(tr("Only my network (a phone on the same Wi-Fi)"), mode == 3)) { S.link = "lan"; markDirty(); }
         if (running) ImGui::EndDisabled();
-        ImGui::TextDisabled("%s", tr("Behind a router that blocks incoming connections, use the free public address: it needs no open port."));
+        ImGui::TextDisabled("%s", tr("Behind a router that blocks incoming connections (most home and mobile networks), use the relay or the tunnel: neither needs an open port."));
         ImGui::TreePop();
     }
-
     ImGui::Spacing();
     ImGui::SeparatorText(tr("Step 2: list it on the public directory (optional)"));
     ImGui::TextWrapped("%s", tr("The directory (web.on-air.dev) is a public list of OnAir Web servers. Nothing is sent until you have seen exactly what will be sent and pressed List it."));
@@ -900,7 +1019,7 @@ void tabAccess(App& a, const Plan& plan, bool running) {
     const bool sharing = !url.empty() && g.phase == Phase::Sharing;
     const bool stale = (s2.s == Step2::PreviewReady || s2.s == Step2::Listing || s2.s == Step2::Listed) && !sig.empty() && !g.demo && sig != dirSigOf(S, plan, url);
     ImGui::Spacing();
-    if (!sharing) ImGui::TextDisabled("%s", tr("Start sharing (step 1) first: the directory lists the public address."));
+    if (!sharing) ImGui::TextDisabled("%s", tr("Share your radio first (the big button above): the directory lists the public address."));
     const bool previewing = g.previewRunning > 0;
     if (!sharing || !valid || previewing) ImGui::BeginDisabled();
     if (s2.s == Step2::Off || s2.s == Step2::PreviewFailed || s2.s == Step2::ListFailed || stale) {
@@ -954,6 +1073,35 @@ void tabAccess(App& a, const Plan& plan, bool running) {
     testBlock(S, plan, url, sharing);
 }
 
+// ---- the server's own settings: everything onair-server supports that makes sense in a window (the same keys as docs/ONAIR-WEB.md)
+void tabServer(const Plan& plan, bool running) {
+    struct IdG { explicit IdG(const char* s) { ImGui::PushID(s); } ~IdG() { ImGui::PopID(); } } idg("wsServer");
+    (void)plan;
+    ShareSettings& S = g.S;
+    if (running) ImGui::BeginDisabled();
+    ImGui::SeparatorText(tr("Network"));
+    intField(tr("Port on this computer (0 = the first free one from 8073)"), "##wsPort", S.port, 0, 65535, 1, 130);
+    if (S.port != 0 && S.port < 1024) wrapped(warnCol(), tr("Ports below 1024 need administrator rights; use 1024 or higher."));
+    textField(tr("Certificate file (optional: the server's own https)"), "##wsTlsCert", S.tlsCert, 200, 380);
+    textField(tr("Key file for that certificate"), "##wsTlsKey", S.tlsKey, 200, 380);
+    if (S.tlsCert.empty() != S.tlsKey.empty()) wrapped(warnCol(), tr("A certificate needs both files."));
+    textField(tr("Relay service address (only if you run your own relay)"), "##wsRelayUrl", S.relayUrl, 190, 380);
+    if (S.relayUrl != "wss://relay.on-air.dev/relay/v1/host" && ImGui::SmallButton(tr("Use the standard relay##wsRelayDefault"))) { S.relayUrl = "wss://relay.on-air.dev/relay/v1/host"; markDirty(); }
+    ImGui::SeparatorText(tr("Listener limits"));
+    intField(tr("Listeners from one address at once"), "##wsPerIp", S.maxPerIp, 1, 100, 1);
+    intField(tr("Stop new listeners above this processor load (percent of the whole computer)"), "##wsCpuCap", S.cpuCapPct, 5, 100, 5);
+    intField(tr("All listeners together, kbit/s (0 = the default, 8000)"), "##wsKbpsTotal", S.maxKbpsTotal, 0, 10000000, 500, 140);
+    intField(tr("Drop a listener who does nothing for this many minutes (0 = the default, 30)"), "##wsIdle", S.idleMin, 0, 100000, 5);
+    intField(tr("Longest session of one listener in minutes (0 = no limit)"), "##wsSession", S.sessionMin, 0, 100000, 10);
+    ImGui::SeparatorText(tr("Spectrum"));
+    intField(tr("Biggest spectrum row a listener may ask for (0 = the default, 1024 bins)"), "##wsBins", S.maxBins, 0, 4096, 128);
+    intField(tr("Most spectrum rows per second (0 = the default)"), "##wsFps", S.maxFps, 0, 30, 1);
+    if (running) ImGui::EndDisabled();
+    ImGui::SeparatorText(tr("While sharing"));
+    if (ImGui::Checkbox(tr("Apply changes by themselves and restart the web server if it stops"), &S.autoApply)) markDirty();
+    wrapped(ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled), tr("Most of these settings are applied when you press Apply changes (or by themselves after a moment); the public link stays the same."));
+}
+
 // ---- the status block (always at the top)
 void statusBlock(App& a, const std::vector<RigCaps>& rigs, const RigCaps& rig, const Plan& plan) {
     struct IdG { explicit IdG(const char* s) { ImGui::PushID(s); } ~IdG() { ImGui::PopID(); } } idg("wsStatus");
@@ -970,8 +1118,12 @@ void statusBlock(App& a, const std::vector<RigCaps>& rigs, const RigCaps& rig, c
             ImGui::PushStyleColor(ImGuiCol_Text, badCol()); ImGui::TextWrapped("%s", error.c_str()); ImGui::PopStyleColor();
             if (!advice.empty()) { ImGui::Indent(12 * gUi); ImGui::TextWrapped("%s %s", tr("What to do:"), advice.c_str()); ImGui::Unindent(12 * gUi); }
         } else ImGui::TextDisabled("%s", tr("Not sharing."));
-        if (!valid) ImGui::BeginDisabled();
-        if (ImGui::Button(tr("Start sharing"), ImVec2(180 * gUi, 0))) {
+        // the one-button way: what it will do, in a sentence
+        ImGui::TextWrapped("%s", easyText(S, rig, plan).c_str());
+        const bool noRadio = rigs.empty() && !g.demo;
+        if (noRadio) wrapped(warnCol(), tr("No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal."));
+        if (!valid || noRadio) ImGui::BeginDisabled();
+        if (ImGui::Button(tr("Share my radio"), ImVec2(220 * gUi, 34 * gUi))) {
             const ShareSettings Sc = S;
             const RigCaps rc = rig;
             const Plan pl = plan;
@@ -979,13 +1131,12 @@ void statusBlock(App& a, const std::vector<RigCaps>& rigs, const RigCaps& rig, c
             else {
                 const bool sameRadio = a.engine.running() && a.devIdx >= 0 && a.devIdx < (int)a.devices.size() && (rc.test ? a.devices[(size_t)a.devIdx].kind == dect2::DeviceInfo::Synthetic : a.devices[(size_t)a.devIdx].name == rc.name);
                 if (sameRadio) a.engine.stop();   // one radio, one user: only when OnAir's own receiver is on this very radio
-                if (S.link == "tunnel" && findHelper().empty()) g.phase = Phase::NeedHelper;
+                if (S.link == "tunnel" && findHelper().empty()) g.phase = Phase::NeedHelper;   // the relay needs no helper; if it does not answer and a helper is missing, the start says so
                 else spawnJob([Sc, rc, pl] { shareWorker(Sc, rc, pl); });
             }
         }
-        if (!valid) ImGui::EndDisabled();
+        if (!valid || noRadio) ImGui::EndDisabled();
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", valid ? tr("Starts a web page for your radio and gives it a public address. Choose the radio, range and decoders in the tabs below first, or just press this for the defaults.") : why.c_str());
-        (void)rigs;
         return;
     }
     if (ph == Phase::Downloading || ph == Phase::Starting || ph == Phase::Stopping) {
@@ -994,6 +1145,12 @@ void statusBlock(App& a, const std::vector<RigCaps>& rigs, const RigCaps& rig, c
         return;
     }
     // sharing
+    RelayView rv;
+    bool fallback;
+    std::vector<UserRow> users;
+    std::vector<BanRow> bans;
+    std::string inviteText, inviteNote;
+    { std::lock_guard<std::mutex> l(g.m); rv = g.relay; fallback = g.relayFallback; users = g.users; bans = g.bans; inviteText = g.inviteLinkText; inviteNote = g.inviteNote; }
     ImGui::TextColored(okCol(), "%s", tr("Sharing on the web"));
     ImGui::SameLine();
     if (ImGui::Button(tr("Stop sharing"))) { g.phase = Phase::Stopping; if (!g.demo) spawnJob([] { stopWorker(); }); else { g.phase = Phase::Idle; g.url.clear(); } }
@@ -1004,12 +1161,61 @@ void statusBlock(App& a, const std::vector<RigCaps>& rigs, const RigCaps& rig, c
     ImGui::SameLine();
     ImGui::Checkbox(tr("QR code"), &showQr);
     if (showQr && !url.empty()) { drawQr(linkQrText(url), 128 * gUi); }
+    // health: the radio, the link, the public address, the budgets
     if (st.ok) {
         ImGui::Text(tr("Listeners: %d of %d    Sending to listeners: %.0f of %.0f kbit/s    CPU: %.0f%%"), st.users, st.maxUsers, st.kbps, st.maxKbps, st.cpuPct);
         ImGui::TextDisabled(tr("Radio input: %.2f Msps around %.4f MHz%s"), st.rateHz / 1e6, st.centreHz / 1e6, st.iqDropped > 0 ? tr(" (the computer dropped samples: lower the sample rate)") : "");
+        {   // budget bars: processor against the cap that stops new listeners, bandwidth against the total cap
+            char ov[64];
+            const float capCpu = (float)std::max(5, S.cpuCapPct);
+            snprintf(ov, sizeof ov, tr("Processor %.0f%% of the %.0f%% limit"), st.cpuPct, (double)capCpu);
+            ImGui::ProgressBar((float)std::min(1.0, st.cpuPct / capCpu), ImVec2(260 * gUi, 0), ov);
+            ImGui::SameLine();
+            snprintf(ov, sizeof ov, tr("Upload %.0f of %.0f kbit/s"), st.kbps, st.maxKbps);
+            ImGui::ProgressBar(st.maxKbps > 0 ? (float)std::min(1.0, st.kbps / st.maxKbps) : 0.f, ImVec2(260 * gUi, 0), ov);
+        }
     } else ImGui::TextDisabled("%s", tr("Waiting for the first numbers ..."));
+    if (!rv.state.empty() && S.link == "relay") {
+        const ImVec4 col = rv.state == "online" ? okCol() : rv.state == "failed" ? badCol() : warnCol();
+        if (rv.state == "online") ImGui::TextColored(col, "%s", tr("Connected to the OnAir relay."));
+        else if (rv.state == "connecting") ImGui::TextColored(col, "%s", tr("Connecting to the OnAir relay ..."));
+        else if (rv.state == "retrying") ImGui::TextColored(col, tr("The relay link dropped (%s). Trying again in %d s."), rv.message.c_str(), (int)rv.retryIn);
+        else if (rv.state == "failed") ImGui::TextColored(col, tr("The OnAir relay refuses or cannot be reached: %s"), rv.message.c_str());
+        if (!rv.advice.empty() && rv.state != "online") { ImGui::Indent(12 * gUi); ImGui::TextWrapped("%s %s", tr("What to do:"), rv.advice.c_str()); ImGui::Unindent(12 * gUi); }
+    }
+    if (fallback) wrapped(warnCol(), tr("The relay has not answered yet; the link above is a temporary Cloudflare address."));
     if (pub == 1) ImGui::TextColored(okCol(), "%s", tr("The public address answers."));
     else if (pub == 0) { wrapped(warnCol(), publicNote.empty() ? tr("The public address does not answer.") : publicNote); }
+    // listeners: who is on, with kick and block
+    if (ImGui::CollapsingHeader(trw("Listeners and invites"), ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (users.empty()) ImGui::TextDisabled("%s", tr("Nobody is listening right now."));
+        for (const auto& u : users) {
+            ImGui::PushID(u.id);
+            ImGui::Text("%s  %s  %.4f MHz  %s  %.0f kbit/s  %lld s", u.name.empty() ? tr("(no name)") : u.name.c_str(), u.address.c_str(), u.freqHz / 1e6, u.mode.c_str(), u.kbps, u.seconds);
+            ImGui::SameLine();
+            if (ImGui::SmallButton(tr("Kick##wsKick"))) { if (!g.demo) { const std::string b = kickBody(u.id, "removed by the host"); spawnJob([b] { adminPostWorker("kick", b, false); }); } }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Disconnects this listener. They can come back."));
+            ImGui::SameLine();
+            if (ImGui::SmallButton(tr("Block 24 h##wsBlock"))) { if (!g.demo) { const std::string b = banBody(u.id, 1440, "blocked by the host"); spawnJob([b] { adminPostWorker("ban", b, false); }); } }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Disconnects this listener and refuses their address for 24 hours (until you stop sharing at the latest)."));
+            ImGui::PopID();
+        }
+        for (const auto& b : bans) {
+            ImGui::PushID(b.address.c_str());
+            ImGui::TextDisabled(tr("Blocked: %s (%d min left)"), b.address.c_str(), b.minutesLeft);
+            ImGui::SameLine();
+            if (ImGui::SmallButton(tr("Allow again##wsUnban"))) { if (!g.demo) { const std::string body = unbanBody(b.address); spawnJob([body] { adminPostWorker("unban", body, false); }); } }
+            ImGui::PopID();
+        }
+        if (ImGui::Button(tr("Make an invite link"))) { if (!g.demo) spawnJob([] { adminPostWorker("invite", inviteBody("invite", 0), true); }); }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", S.inviteOnly ? tr("Makes a link for one person. Only people with an invite link can listen.") : tr("Makes a link for one person. It only matters when you choose 'Invite links only' under Access and listing."));
+        if (!inviteText.empty()) {
+            ImGui::SameLine();
+            if (ImGui::SmallButton(tr("Copy invite link"))) ImGui::SetClipboardText(inviteText.c_str());
+            ImGui::TextDisabled("%s", inviteText.c_str());
+        }
+        if (!inviteNote.empty()) wrapped(warnCol(), inviteNote);
+    }
     // pending changes
     const std::string now = serverConfText(S, plan);
     std::string applied;
@@ -1017,7 +1223,8 @@ void statusBlock(App& a, const std::vector<RigCaps>& rigs, const RigCaps& rig, c
     if (!g.demo && !applied.empty() && now != applied) {
         const bool onlyPolicy = stripPolicy(now) == stripPolicy(applied);
         wrapped(warnCol(), onlyPolicy ? tr("Decoder changes are not applied yet.") : tr("Changes are not applied yet. Applying restarts the web server for a few seconds; the public link stays the same."));
-        if (ImGui::Button(tr("Apply changes"))) {
+        const bool idleNow = !g.shareRunning && !g.dirty && ImGui::GetTime() - g.dirtyAt > 2.5 && valid;
+        if (ImGui::Button(tr("Apply changes")) || (S.autoApply && idleNow && autoGate())) {
             const ShareSettings Sc = S; const Plan pl = plan;
             if (onlyPolicy) {
                 // the old settings are what the applied conf says; rebuild them from the text of the last apply
@@ -1045,7 +1252,8 @@ void statusBlock(App& a, const std::vector<RigCaps>& rigs, const RigCaps& rig, c
 // ---------------------------------------------------------------- tick and window
 namespace {
 
-void tickState(const std::vector<RigCaps>&, const RigCaps&, const Plan&) {
+void tickState(const std::vector<RigCaps>& rigs, const RigCaps& rig, const Plan& plan) {
+    (void)rigs; (void)rig;
     reapJobs();
     saveSettingsIfDue();
     if (g.demo) return;
@@ -1060,8 +1268,35 @@ void tickState(const std::vector<RigCaps>&, const RigCaps&, const Plan&) {
             if (pub) g.publicAt = now;
             spawnJob([url, pub] { statsWorker(url, pub); });
         }
-        if (!plat::childAlive(g.serverPid)) {
-            if (g.serverPid) { g.serverPid = 0; fail(tr("The web server stopped."), lastLines(slurp(dir() / "server.log", 8192), 4) + "  " + tr("Press Start sharing to try again.")); endChild(g.tunnelPid); endChild(g.dirPid); }
+        // the relay's own status file (small): health line, and the switch from the tunnel to the relay when the relay answers after all
+        RelayView rv;
+        if (parseRelayStatus(slurp(dir() / "web_relay_status.json", 4096), rv)) {
+            std::lock_guard<std::mutex> l(g.m);
+            g.relay = rv;
+            if (g.relayFallback && rv.state == "online" && !rv.url.empty()) {
+                g.url = rv.url;
+                g.relayFallback = false;
+                g.applyNote = tr("The link now goes through the OnAir relay. The earlier Cloudflare address no longer works.");
+                g.publicState = -1;
+                const long tp = g.tunnelPid.exchange(0);
+                if (tp > 0) plat::stopChild(tp);
+            }
+        }
+        if (!plat::childAlive(g.serverPid) && g.serverPid) {
+            // the web server stopped by itself (a crash, the radio unplugged): start it again up to 3 times in 10 minutes, then say what happened
+            const long nowT = (long)std::time(nullptr);
+            int recent = 0;
+            for (long t : g.restartTimes) if (t && nowT - t < 600) recent++;
+            if (recent < 3 && !g.shareRunning && g.S.autoApply) {
+                for (long& t : g.restartTimes) if (!t || nowT - t >= 600) { t = nowT; break; }
+                const ShareSettings Sc = g.S; const Plan pl = plan;
+                { std::lock_guard<std::mutex> l(g.m); g.applyNote = tr("The web server stopped by itself and was started again."); }
+                spawnJob([Sc, pl] { restartServerWorker(Sc, pl); });
+            } else if (recent >= 3 || !g.S.autoApply) {
+                g.serverPid = 0;
+                fail(tr("The web server stopped."), lastLines(slurp(dir() / "server.log", 8192), 4) + "  " + tr("Press Share my radio to try again."));
+                endChild(g.tunnelPid); endChild(g.dirPid);
+            }
         }
     }
     // step 2: read the listing program's status file (small, quick)
@@ -1150,6 +1385,7 @@ void drawPopups(App& a) {
             if (ImGui::BeginTabItem(trw("Radio and range"), nullptr, g.tab == 0 ? ImGuiTabItemFlags_SetSelected : 0)) { if (ImGui::IsItemVisible()) {} tabRadio(a, rigs, rig, plan, running); ImGui::EndTabItem(); }
             if (ImGui::BeginTabItem(trw("Decoders and limits"), nullptr, g.tab == 1 ? ImGuiTabItemFlags_SetSelected : 0)) { tabDecoders(plan); ImGui::EndTabItem(); }
             if (ImGui::BeginTabItem(trw("Access and listing"), nullptr, g.tab == 2 ? ImGuiTabItemFlags_SetSelected : 0)) { tabAccess(a, plan, running); ImGui::EndTabItem(); }
+            if (ImGui::BeginTabItem(trw("Server settings"), nullptr, g.tab == 3 ? ImGuiTabItemFlags_SetSelected : 0)) { tabServer(plan, running); ImGui::EndTabItem(); }
             ImGui::EndTabBar();
         }
         g.tab = -1;   // the demo / first-open selection applies once

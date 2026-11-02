@@ -25,6 +25,7 @@
 #include "dect2/atv/atv_rx.h"
 #include "dect2/dmr/dmr_rx.h"
 #include "wide_modes.h"
+#include "wide_session.h"
 #include "vfo.h"
 #include "dect2/audio/audioout.h"
 #include "dect2/drm/drm_rx.h"
@@ -598,6 +599,12 @@ public:
     // Takes effect at once; the single-channel receiver is untouched while it is on. Needs a restart-free toggle: the carriers appear within a second.
     void setWideVoice(bool on) { wideOn_.store(on); for (auto& v : wideSeq_) v = 0; }
     bool wideVoice() const { return wideOn_.load(); }
+    // "Decode everything in view": one wide capture, every signal in it found, identified and decoded at once (wide_session.h). While on it takes
+    // the capture before the mode's own receiver (the mode's receiver is idle); off: nothing here runs.
+    void setWideAll(bool on) { wideAllOn_.store(on); }
+    bool wideAll() const { return wideAllOn_.load(); }
+    WideSession& wideAllSession() { return wideAll_; }   // entries(), status() and the controls (any thread)
+    void setWideAllBudget(double frac) { wideAllBudget_.store(frac); }   // CPU limit as a share of one core (0: none); default 0.8
     void setWideMuted(bool m) { wide_.setMuted(m); }
     void setWideVolume(float v) { wide_.setVolume(v); }   // the volume slider reaches every carrier receiver of the whole-span modes
     void setWideSelected(int carrierId) { wide_.setSelected(carrierId); }   // the carrier whose sound plays and whose detail shows (0: the best locked)
@@ -777,6 +784,11 @@ private:
     AtvReceiver rxAtv_;
     DmrReceiver rxDmr_;
     WideModes wide_;
+    WideSession wideAll_;
+    std::atomic<bool> wideAllOn_{false};
+    std::atomic<double> wideAllCentre_{0}, wideAllBudget_{0.8};
+    double wideAllKeyRate_ = 0, wideAllKeyCentre_ = -1; bool wideAllKeyOn_ = false;
+    void syncWideAll();
     VfoBank vfo_;
     std::atomic<int> vfoN_{0};
     std::atomic<bool> vfoSoundOn_{true};

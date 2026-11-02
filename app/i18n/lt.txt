@@ -3570,3 +3570,82 @@ Claude Desktop: put this in its config file (Settings > Developer > Edit config)
 What the AI did	Ką padarė DI
 Clear log	Išvalyti žurnalą
 Nothing yet.	Kol kas nieko.
+# Everything in view (wide multi-signal decode)
+identifying	atpažįstama
+running	veikia
+no decoder	nėra dekoderio
+paused (CPU)	pristabdyta (CPU)
+CPU	CPU
+CPU limit %	CPU riba %
+What	Kas
+dB	dB
+Pin	Fiks.
+Everything in view	Viskas vaizde
+Everything in view: on	Viskas vaizde: įj.
+Decode everything in view	Dekoduoti viską
+Add as	Pridėti kaip
+Identify automatically	Atpažinti automatiškai
+Add selected region	Pridėti pasirinktą
+Add tuned signal	Pridėti derinamą signalą
+Looking for signals...	Ieškoma signalų...
+Start the receiver to begin.	Pradėkite paleisdami imtuvą.
+The decoders' share of one processor core, against the limit. Above the limit the lowest ranked signals are paused.	Dekoderių naudojama vieno procesoriaus branduolio dalis, palyginti su riba. Viršijus ribą, žemiausio rango signalai pristabdomi.
+Find every signal in the whole capture (digital voice, TETRA, pagers, packet radio, air band, Inmarsat, TV) and decode all of them at once.	Suranda visus viso įrašo signalus (skaitmeninis balsas, TETRA, pranešimų gaviklis, paketinis radijas, aviacijos diapazonas, Inmarsat, TV) ir dekoduoja juos visus kartu.
+One capture, every signal in it. OnAir finds the signals, says what each one is and starts the right decoder for it. Switch one off, pin the ones that must never be paused, or give an unknown signal its mode by hand.	Vienas įrašas, visi jame esantys signalai. OnAir suranda signalus, pasako, kas kuris yra, ir paleidžia tinkamą dekoderį. Vieną išjunkite, svarbius užfiksuokite, kad niekada nebūtų pristabdyti, arba nežinomam signalui nurodykite režimą ranka.
+When the decoders take longer than this share of one core, the lowest ranked signal is paused (never a pinned one or the one you listen to) and comes back when there is room. 0: no limit.	Jei dekoderiai naudoja daugiau nei ši vieno branduolio dalis, žemiausio rango signalas pristabdomas (niekada ne užfiksuotas ar klausomas) ir sugrįžta atsiradus vietos. 0: be ribos.
+This computer cannot keep up: %d signals are paused to save CPU. Pin the ones you need, or raise the limit.	Šis kompiuteris nespėja: %d signalų pristabdyta, kad būtų taupomas procesorius. Užfiksuokite reikalingus arba padidinkite ribą.
+TV channels in the capture: %.0f MHz wide	TV kanalai įraše: %.0f MHz pločio
+Turn the Identify tool on (key I) and drag across a signal on the spectrum, then add it here.	Įjunkite atpažinimo įrankį (klavišas I), nutempkite per signalą spektre ir pridėkite jį čia.
+Add the signal at the tuner marker (12.5 kHz wide).	Prideda signalą ties imtuvo žymekliu (12,5 kHz pločio).
+Off. Press the button to decode everything in the capture.	Išjungta. Paspauskite mygtuką, kad būtų dekoduojama viskas įraše.
+%+.1f kHz from the capture centre, %.1f kHz wide	%+.1f kHz nuo įrašo centro, %.1f kHz pločio
+Pinned: never paused by the CPU limit	Užfiksuota: CPU riba jos niekada nepristabdo
+Follow this signal's sound; it is never paused by the CPU limit	Sekti šio signalo garsą; CPU riba jo niekada nepristabdo
+Remove: a signal you added is taken away, a found one is switched off	Pašalinti: pridėtas signalas pašalinamas, rastas išjungiamas
+# Share on web: relay, listeners, server settings
+Share my radio	Dalintis mano radiju
+Connecting to the relay ...	Jungiamasi prie relės ...
+Anyone with the link	Bet kas su nuoroda
+Invite links only	Tik kvietimo nuorodos
+Limits that protect your computer	Kompiuterį saugantys apribojimai
+Antenna (shown to listeners, optional)	Antena (rodoma klausytojams, nebūtina)
+Listener limits	Klausytojų apribojimai
+While sharing	Dalijantis
+Listeners and invites	Klausytojai ir kvietimai
+Nobody is listening right now.	Šiuo metu niekas neklauso.
+Kick##wsKick	Išmesti##wsKick
+Block 24 h##wsBlock	Blokuoti 24 val.##wsBlock
+Allow again##wsUnban	Vėl leisti##wsUnban
+Make an invite link	Sukurti kvietimo nuorodą
+Copy invite link	Kopijuoti kvietimo nuorodą
+Server settings	Serverio nustatymai
+Connected to the OnAir relay.	Prisijungta prie „OnAir“ relės.
+Connecting to the OnAir relay ...	Jungiamasi prie „OnAir“ relės ...
+The relay link dropped (%s). Trying again in %d s.	Ryšys su relė nutrūko (%s). Bandoma iš naujo po %d s.
+The OnAir relay refuses or cannot be reached: %s	„OnAir“ relė atsisako arba nepasiekiama: %s
+Blocked: %s (%d min left)	Užblokuota: %s (liko %d min.)
+Processor %.0f%% of the %.0f%% limit	Procesorius %.0f%% iš %.0f%% ribos
+Upload %.0f of %.0f kbit/s	Siuntimas %.0f iš %.0f kbit/s
+Port on this computer (0 = the first free one from 8073)	Šio kompiuterio prievadas (0 = pirmas laisvas nuo 8073)
+Listeners from one address at once	Vienu metu klausytojų iš vieno adreso
+Longest session of one listener in minutes (0 = no limit)	Ilgiausia vieno klausytojo sesija minutėmis (0 = be ribos)
+Most spectrum rows per second (0 = the default)	Daugiausia spektro eilučių per sekundę (0 = numatytoji)
+Key file for that certificate	Šio sertifikato rakto failas
+A certificate needs both files.	Sertifikatui reikia abiejų failų.
+Relay service address (only if you run your own relay)	Relės paslaugos adresas (tik jei naudojate savo relę)
+OnAir relay (recommended: no setup, no open ports)	„OnAir“ relė (rekomenduojama: be nustatymų, be atvirų prievadų)
+Free Cloudflare tunnel (needs a small helper program, downloaded once)	Nemokamas „Cloudflare“ tunelis (reikia nedidelės pagalbinės programos, atsisiunčiama vieną kartą)
+Only my network (a phone on the same Wi-Fi)	Tik mano tinklas (telefonas tame pačiame „Wi-Fi“)
+Password (8 characters or more)	Slaptažodis (8 ar daugiau simbolių)
+Apply changes	Taikyti pakeitimus
+What to do:	Ką daryti:
+Will share: %s, %s MHz, up to %d listeners, %s, %s.	Bus dalijama: %s, %s MHz, iki %d klausytojų, %s, %s.
+through the OnAir relay (no router settings needed)	per „OnAir“ relę (be maršrutizatoriaus nustatymų)
+through a Cloudflare tunnel	per „Cloudflare“ tunelį
+at your own address	jūsų pačių adresu
+on this network only	tik šiame tinkle
+invite links only	tik su kvietimo nuorodomis
+open to anyone with the link	atvira visiems su nuoroda
+with a password	su slaptažodžiu
+no radio found	radijas nerastas
+No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Radijas nerastas. Prijunkite radiją ir kortelėje „Radijas ir diapazonas“ spustelėkite Atnaujinti arba pasirinkite bandomąjį signalą.

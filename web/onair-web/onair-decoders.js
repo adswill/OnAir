@@ -38,7 +38,7 @@
     const rows = list.map((a) => [s(a.icao, 8), s(a.callsign, 16), isNum(a.alt_ft) ? String(a.alt_ft) : a.ground ? "ground" : "", isNum(a.speed_kt) ? String(a.speed_kt) : "",
       isNum(a.track_deg) ? String(a.track_deg) : "", isNum(a.vrate_fpm) ? String(a.vrate_fpm) : "", pos(a.lat, a.lon) ? n(a.lat).toFixed(3) + ", " + n(a.lon).toFixed(3) : "",
       s(a.squawk, 4), fmtAge(a.age_s)]);
-    const marks = list.filter((a) => pos(a.lat, a.lon)).map((a) => ({ id: s(a.icao, 8), label: s(a.callsign, 16) || s(a.icao, 8), lat: n(a.lat), lon: n(a.lon), heading: isNum(a.track_deg) ? a.track_deg : null,
+    const marks = list.filter((a) => pos(a.lat, a.lon)).map((a) => ({ kind: "adsb", info: (isNum(a.alt_ft) ? a.alt_ft + " ft " : a.ground ? "ground " : "") + (isNum(a.speed_kt) ? a.speed_kt + " kt" : ""), id: s(a.icao, 8), label: s(a.callsign, 16) || s(a.icao, 8), lat: n(a.lat), lon: n(a.lon), heading: isNum(a.track_deg) ? a.track_deg : null,
       alert: n(a.emergency) > 0 || a.squawk === "7700" || a.squawk === "7600" || a.squawk === "7500",
       trail: arr(a.trail, 12).filter((p) => Array.isArray(p) && pos(p[0], p[1])).map((p) => [p[0], p[1]]) }));
     return { columns: ["ICAO", "Call", "Alt ft", "kt", "Trk", "ft/min", "Position", "Sq", "Age"], rows, marks,
@@ -49,7 +49,7 @@
     list.sort((a, b) => n(a.age_s) - n(b.age_s));
     const rows = list.map((v) => [String(n(v.mmsi)), s(v.name, 40), s(v.callsign, 16), s(v.ship_type_text, 40), s(v.nav_status_text, 40), isNum(v.sog_kt) ? v.sog_kt.toFixed(1) : "",
       isNum(v.cog_deg) ? String(v.cog_deg) : "", pos(v.lat, v.lon) ? n(v.lat).toFixed(3) + ", " + n(v.lon).toFixed(3) : "", s(v.destination, 40), fmtAge(v.age_s)]);
-    const marks = list.filter((v) => pos(v.lat, v.lon)).map((v) => ({ id: String(n(v.mmsi)), label: s(v.name, 40) || String(n(v.mmsi)), lat: n(v.lat), lon: n(v.lon),
+    const marks = list.filter((v) => pos(v.lat, v.lon)).map((v) => ({ kind: "ais", info: s(v.ship_type_text, 40) + (isNum(v.sog_kt) ? " " + v.sog_kt.toFixed(1) + " kt" : "") + (v.destination ? " to " + s(v.destination, 40) : ""), id: String(n(v.mmsi)), label: s(v.name, 40) || String(n(v.mmsi)), lat: n(v.lat), lon: n(v.lon),
       heading: isNum(v.heading_deg) ? v.heading_deg : isNum(v.cog_deg) ? v.cog_deg : null, alert: false, trail: [] }));
     return { columns: ["MMSI", "Name", "Call", "Type", "Status", "kt", "Cog", "Position", "Destination", "Age"], rows, marks,
       summary: n(d.vessel_count) + " vessels, " + n(d.messages_ok) + " messages" };
@@ -59,7 +59,7 @@
     const rows = st.map((x) => [s(x.call, 16), s(x.symbol, 4), pos(x.lat, x.lon) ? n(x.lat).toFixed(3) + ", " + n(x.lon).toFixed(3) : "", isNum(x.alt_m) ? String(x.alt_m) : "", isNum(x.speed_kt) ? String(x.speed_kt) : "",
       s(x.comment, 100), String(n(x.count))]);
     const frames = arr(d.frames, 60).filter((x) => x && typeof x === "object").map((f) => [s(f.from, 16) + ">" + s(f.to, 16) + (f.path ? "," + s(f.path, 80) : ""), s(f.type, 32), s(f.summary, 200)]);
-    const marks = st.filter((x) => pos(x.lat, x.lon)).map((x) => ({ id: s(x.call, 16), label: s(x.call, 16), lat: n(x.lat), lon: n(x.lon), heading: isNum(x.course_deg) ? x.course_deg : null, alert: false, trail: [] }));
+    const marks = st.filter((x) => pos(x.lat, x.lon)).map((x) => ({ kind: "aprs", info: s(x.comment, 100), id: s(x.call, 16), label: s(x.call, 16), lat: n(x.lat), lon: n(x.lon), heading: isNum(x.course_deg) ? x.course_deg : null, alert: false, trail: [] }));
     return { columns: ["Station", "Sym", "Position", "Alt m", "kt", "Comment", "Frames"], rows, frames, frameColumns: ["Frame", "Type", "Says"], marks,
       summary: n(d.frames_ok) + " frames (" + n(d.frames_bad) + " failed the check), " + st.length + " stations" };
   }

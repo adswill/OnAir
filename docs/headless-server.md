@@ -1,6 +1,6 @@
 # Headless server (onair-server)
 
-`onair-server` is OnAir without a window. The SDR is plugged into the computer that runs it (a Raspberry Pi in the attic, a Linux box, a Windows PC with no screen); you control it from a web browser on any other device, or from the desktop app or a script through the network. There is no cloud and no relay: the browser connects straight to the server. Nothing leaves your network unless you forward a port yourself.
+`onair-server` is OnAir without a window. The SDR is plugged into the computer that runs it (a Raspberry Pi in the attic, a Linux box, a Windows PC with no screen); you control it from a web browser on any other device, or from the desktop app or a script through the network. There is no cloud: the browser connects straight to the server. Nothing leaves your network unless you forward a port yourself, or turn on the optional OnAir Web relay (`web_relay=1`, docs/ONAIR-WEB-RELAY.md), which gives the web page a public address through one outbound connection.
 
 Status: built and tested with the synthetic test signal and fake clients only. **Not tried with a real radio, a real Raspberry Pi, a real browser on a phone or on a real Windows service.**
 

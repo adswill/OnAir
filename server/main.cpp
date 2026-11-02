@@ -156,6 +156,7 @@ int main(int argc, char** argv) {
     if (madeAdmin) { saveCfg = true; fprintf(stderr, "onair-server: OnAir Web admin token made (web_admin_token in %s)\n", path.c_str()); }
     if (webCfg.directory.keyFile.empty()) webCfg.directory.keyFile = (std::filesystem::path(path).parent_path() / "web_directory.key").string();
     webCfg.directory.version = ONAIR_SERVER_VERSION;
+    if (webCfg.relay.keyFile.empty()) webCfg.relay.keyFile = webCfg.directory.keyFile;
     if (dirRemove) {
         std::unique_ptr<onair_web::DirectoryHeartbeat> d(onair_web::makeDirectoryHeartbeat());
         std::string err;
@@ -279,6 +280,7 @@ int main(int argc, char** argv) {
     std::unique_ptr<onair_web::WebHub> hub;
     std::unique_ptr<onair_web::WebServer> web;
     std::unique_ptr<onair_web::DirectoryHeartbeat> directory;   // OnAir Web directory (off unless web_directory=1 and confirmed)
+    std::unique_ptr<onair_web::RelayClient> relay;              // OnAir Web relay (off unless web_relay=1): a public address with no port forwarding
     if (webCfg.on && webCfg.server.webRoot.empty()) {
         // the browser UI's files: beside the program (web/onair-web), or where a package puts them (../share/onair/web/onair-web; macOS app: ../Resources/web/onair-web)
         std::error_code ec;
@@ -314,6 +316,18 @@ int main(int argc, char** argv) {
             const auto st = web->status();
             printf("onair-server: OnAir Web on %s://%s:%d/ (%s access, at most %d listeners)\n", st.tls ? "https" : "http", webCfg.server.bind.c_str(), st.port,
                    onair_web::authModeName(webCfg.server.auth.mode), webCfg.limits.maxUsers);
+            if (webCfg.relay.on) {
+                webCfg.relay.localPort = st.port;
+                webCfg.relay.version = ONAIR_SERVER_VERSION;
+                webCfg.relay.statusFile = (std::filesystem::path(path).parent_path() / "web_relay_status.json").string();
+                relay.reset(onair_web::makeRelayClient());
+                std::string rerr;
+                if (!relay->start(webCfg.relay, rerr)) {
+                    fprintf(stderr, "onair-server: relay: %s\n", rerr.c_str());
+                    printf("web_relay_error=%s\n", rerr.c_str());
+                    relay.reset();
+                } else printf("onair-server: relay: connecting to %s (status in web_relay_status.json)\n", webCfg.relay.url.c_str());
+            }
             if (webCfg.directory.on) {
                 directory.reset(onair_web::makeDirectoryHeartbeat());
                 std::string derr;
@@ -338,6 +352,7 @@ int main(int argc, char** argv) {
     }
     printf("onair-server: stopping\n");
     mcpApi.configure(dect2::RemoteApiConfig{});
+    if (relay) relay->stop();
     if (directory) directory->stop();
     if (web) web->stop();
     host.setWebHub(nullptr);
