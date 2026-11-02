@@ -3645,3 +3645,42 @@ with a password	avec mot de passe
 no radio found	aucune radio trouvée
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Aucune radio trouvée. Branchez une radio et appuyez sur Actualiser dans l'onglet Radio et plage, ou choisissez le signal de test.
 Join the OnAir Discord	Rejoindre le Discord OnAir
+
+# Multi-radio trunking (trunk pool)
+tuning	accord
+hold	maintien
+ended	terminé
+control	contrôle
+voice	voix
+lost	perdu
+Role	Rôle
+TG	TG
+not followed	non suivi
+Hang time (s)	Temps de maintien (s)
+Retune wait (s)	Attente d'accord (s)
+Priority talkgroups take a radio	Les groupes prioritaires prennent une radio
+Keep a record of every call	Garder une trace de chaque appel
+Follow talkgroups that are not listed	Suivre les groupes non listés
+Calls are saved in the recordings folder, trunk. Sound needs the vocoder add-on.	Les appels sont enregistrés dans le dossier d'enregistrements, trunk. Le son demande l'extension vocodeur.
+Talkgroup and radio rules	Règles des groupes et radios
+Deny	Refuser
+Import rules	Importer règles
+rules read	règles lues
+skipped	ignorées
+Import plan	Importer plan
+rows read	lignes lues
+Identifiers	Identifiants
+Call log	Journal des appels
+Channel plan	Plan de canaux
+Export log	Exporter journal
+Multi-radio trunking	Trunking multi-radio
+Follow calls with several radios	Suivre les appels avec plusieurs radios
+Auto-assign devices	Attribuer les appareils
+One radio listens to the control channel of a trunked system. When it announces a call, another radio is tuned to the voice channel, and the call is logged. With one radio, calls inside its capture are followed and the rest are not.	Une radio écoute le canal de contrôle d'un système à ressources partagées. Quand il annonce un appel, une autre radio est accordée sur le canal de voix et l'appel est journalisé. Avec une seule radio, les appels dans sa capture sont suivis, pas les autres.
+The radio on the control channel stays there; every other open receiver becomes a voice radio. Open more receivers with + at the bottom.	La radio sur le canal de contrôle y reste ; chaque autre récepteur ouvert devient radio de voix. Ouvrez d'autres récepteurs avec + en bas.
+Start a P25 receiver on the control channel, then press Auto-assign devices.	Démarrez un récepteur P25 sur le canal de contrôle, puis appuyez sur Attribuer les appareils.
+Calls %llu, followed %llu, retune %.2f s (max %.2f s)	Appels %llu, suivis %llu, accord %.2f s (max %.2f s)
+Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	Priorité 1 (la plus haute) à 10, 0 aucune. Un groupe plus prioritaire prend la radio d'un moins prioritaire.
+From, to (the same number for one), action, priority	De, à (même nombre pour un seul), action, priorité
+System, identifier table (iden_up) and channel numbers from a CSV file	Système, table d'identifiants (iden_up) et numéros de canal depuis un CSV
+%s: %zu, %s: %zu	%s: %zu, %s: %zu

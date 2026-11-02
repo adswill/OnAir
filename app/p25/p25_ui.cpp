@@ -892,6 +892,14 @@ void summary(const App& a, std::string& l1, std::string& l2) {
 
 } // namespace
 
+// For the multi-radio trunk pool (app/trunkpool): its grant feed, and the P25 follower's own voice radio handed over to it
+dect2::trunk::Controller& p25TrunkController() { return T.ctl; }
+void p25VoiceRadioOff(bool off) {
+    static int saved = 0;
+    if (off && T.voicePick >= 0) { saved = T.voicePick; T.voicePick = -1; }
+    else if (!off && T.voicePick < 0) T.voicePick = saved;
+}
+
 // Simple view: the voice strip, then what is on air, the call list and the trunking state side by side
 static void command(App& a) {
     voiceBar(a);

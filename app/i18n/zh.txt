@@ -3671,3 +3671,42 @@ with a password	需要密码
 no radio found	未找到电台
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	未找到电台。请连接电台并在“电台与范围”选项卡中点击刷新，或选择测试信号。
 Join the OnAir Discord	加入 OnAir Discord
+
+# Multi-radio trunking (trunk pool)
+tuning	调谐中
+hold	保持
+ended	已结束
+control	控制
+voice	语音
+lost	丢失
+Role	角色
+TG	TG
+not followed	未跟踪
+Hang time (s)	保持时间 (秒)
+Retune wait (s)	调谐等待 (秒)
+Priority talkgroups take a radio	优先通话组可抢占接收机
+Keep a record of every call	记录每次通话
+Follow talkgroups that are not listed	跟踪未列出的通话组
+Calls are saved in the recordings folder, trunk. Sound needs the vocoder add-on.	通话保存在录音文件夹 trunk 中。声音需要声码器附加组件。
+Talkgroup and radio rules	通话组和电台规则
+Deny	拒绝
+Import rules	导入规则
+rules read	条规则已读取
+skipped	已跳过
+Import plan	导入方案
+rows read	行已读取
+Identifiers	标识符
+Call log	通话记录
+Channel plan	信道方案
+Export log	导出记录
+Multi-radio trunking	多接收机集群
+Follow calls with several radios	用多台接收机跟踪通话
+Auto-assign devices	自动分配设备
+One radio listens to the control channel of a trunked system. When it announces a call, another radio is tuned to the voice channel, and the call is logged. With one radio, calls inside its capture are followed and the rest are not.	一台接收机监听集群系统的控制信道。有通话通知时，另一台接收机调谐到语音信道并记录通话。只有一台时，仅跟踪其采集带宽内的通话。
+The radio on the control channel stays there; every other open receiver becomes a voice radio. Open more receivers with + at the bottom.	控制信道上的接收机保持不变；其他已打开的接收机成为语音接收机。可用底部的 + 打开更多接收机。
+Start a P25 receiver on the control channel, then press Auto-assign devices.	在控制信道上启动 P25 接收机，然后点击“自动分配设备”。
+Calls %llu, followed %llu, retune %.2f s (max %.2f s)	通话 %llu，跟踪 %llu，调谐 %.2f 秒（最大 %.2f 秒）
+Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	优先级 1（最高）到 10，0 为无。优先级高的通话组会从低的那里抢占接收机。
+From, to (the same number for one), action, priority	起、止（单个填同一数字）、动作、优先级
+System, identifier table (iden_up) and channel numbers from a CSV file	从 CSV 文件导入系统、标识符表 (iden_up) 和信道号
+%s: %zu, %s: %zu	%s: %zu, %s: %zu

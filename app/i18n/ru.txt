@@ -3631,3 +3631,42 @@ with a password	с паролем
 no radio found	радио не найдено
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Радио не найдено. Подключите радио и нажмите «Обновить» на вкладке «Радио и диапазон» или выберите тестовый сигнал.
 Join the OnAir Discord	Присоединиться к Discord OnAir
+
+# Multi-radio trunking (trunk pool)
+tuning	настройка
+hold	удержание
+ended	окончен
+control	управление
+voice	голос
+lost	потерян
+Role	Роль
+TG	TG
+not followed	не ведётся
+Hang time (s)	Время удержания (с)
+Retune wait (s)	Ожидание настройки (с)
+Priority talkgroups take a radio	Приоритетные группы забирают радио
+Keep a record of every call	Записывать каждый вызов
+Follow talkgroups that are not listed	Вести группы, которых нет в списке
+Calls are saved in the recordings folder, trunk. Sound needs the vocoder add-on.	Вызовы сохраняются в папке записей trunk. Для звука нужен вокодер-дополнение.
+Talkgroup and radio rules	Правила групп и радиостанций
+Deny	Запретить
+Import rules	Импорт правил
+rules read	правил прочитано
+skipped	пропущено
+Import plan	Импорт плана
+rows read	строк прочитано
+Identifiers	Идентификаторы
+Call log	Журнал вызовов
+Channel plan	План каналов
+Export log	Экспорт журнала
+Multi-radio trunking	Транкинг на нескольких радио
+Follow calls with several radios	Вести вызовы несколькими радио
+Auto-assign devices	Назначить устройства
+One radio listens to the control channel of a trunked system. When it announces a call, another radio is tuned to the voice channel, and the call is logged. With one radio, calls inside its capture are followed and the rest are not.	Одно радио слушает канал управления транкинговой системы. Когда объявлен вызов, другое радио настраивается на голосовой канал, вызов записывается в журнал. С одним радио ведутся только вызовы внутри его полосы.
+The radio on the control channel stays there; every other open receiver becomes a voice radio. Open more receivers with + at the bottom.	Радио на канале управления остаётся там; каждый другой открытый приёмник становится голосовым. Новые приёмники открываются кнопкой + внизу.
+Start a P25 receiver on the control channel, then press Auto-assign devices.	Запустите приёмник P25 на канале управления и нажмите «Назначить устройства».
+Calls %llu, followed %llu, retune %.2f s (max %.2f s)	Вызовов %llu, ведётся %llu, настройка %.2f с (макс. %.2f с)
+Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	Приоритет от 1 (высший) до 10, 0 нет. Группа с более высоким приоритетом забирает радио у низшей.
+From, to (the same number for one), action, priority	От, до (одно число для одной), действие, приоритет
+System, identifier table (iden_up) and channel numbers from a CSV file	Система, таблица идентификаторов (iden_up) и номера каналов из CSV
+%s: %zu, %s: %zu	%s: %zu, %s: %zu
