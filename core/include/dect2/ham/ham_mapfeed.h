@@ -45,6 +45,9 @@ bool buildTrack(const Contact& c, int gridChars, double nowUtc, Track& out);
 std::string extraJson(const std::string& mode, double freqHz, const std::string& to, bool hasPos, double tlat, double tlon);
 std::string dedupeKey(const Contact& c);
 
+// How many of the other tracks of a post may stay when `hamCount` contact tracks must go in, under the hub's limit of `cap` tracks per post.
+inline size_t roomForOthers(size_t cap, size_t hamCount) { return hamCount >= cap ? 0 : cap - hamCount; }
+
 struct Sink { virtual ~Sink() = default; virtual bool post(const std::vector<Track>& tracks) = 0; };   // false: not delivered (offline); kept queued
 
 class Feed {

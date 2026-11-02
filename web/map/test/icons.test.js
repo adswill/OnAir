@@ -35,3 +35,13 @@ test("legend gradient names every stop", () => {
   for (const [, c] of ALT_STOPS) assert.ok(css.includes(c));
   assert.match(css, /^linear-gradient\(90deg,/);
 });
+
+test("icon ids carry an optional state (hover, stale) and stay backward compatible", async () => {
+  const { parseIconIdFull, STATES } = await import("../public/icons.js");
+  assert.equal(iconId("narrow", "#e6e8ea", "d", "h"), "narrow|e6e8ea|d|h");
+  assert.equal(iconId("narrow", "#e6e8ea", "d"), "narrow|e6e8ea|d");
+  assert.deepEqual(parseIconIdFull("narrow|e6e8ea|l|x"), ["narrow", "#e6e8ea", "l", "x"]);
+  assert.deepEqual(parseIconIdFull("narrow|e6e8ea|l|zzz"), ["narrow", "#e6e8ea", "l", ""]);
+  assert.deepEqual(parseIconId("narrow|e6e8ea|l|x"), ["narrow", "#e6e8ea", "l"]);
+  assert.deepEqual(STATES, ["", "h", "x"]);
+});

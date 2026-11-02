@@ -61,7 +61,7 @@ const MAX_INGEST_AGE_SEC = {
   flarm: { default: 30 },
   drone: { default: 45 },
   aprs: { default: 120 },
-  ham: { default: 120 },
+  ham: { default: 3600 },   // a contact is an event, not a live position: WSPR is known only after its 2 min slot, a logged QSO can be older still
   sonde: { default: 900 },
   sat: { default: 180 },
   gnss: { default: 120 },
