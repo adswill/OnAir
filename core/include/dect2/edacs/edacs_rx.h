@@ -24,7 +24,7 @@ public:
     void configure(double inputRateHz);
     void setSignalOffset(double hz);
     void setCenterHz(double hz);
-    void setInverted(bool inv);   // the data polarity is not established: flip it when the words look inverted
+    void setInverted(bool inv);   // no effect: the polarity is found from the sync word and the check bits (kept for the callers)
     bool ready() const;
     void reset();
     void clearMessages();
@@ -33,7 +33,7 @@ public:
     void setLogCallback(std::function<void(const std::string&)> cb);
     // ---- voice channels. The table lists the frequency of LCN 1, 2, 3 ... in Hz (absolute); the capture must contain them (the radio's centre is setCenterHz)
     void setLcnTable(const std::vector<double>& freqHz);
-    void setLayout(const edacs::Layout& l);              // the control message field positions (the default is an assumption)
+    void setLayout(const edacs::Layout& l);              // Standard / Networked or Extended Addressing, ESK mask
     void setFollow(bool on);                              // listen to the voice channel of an announced call
     void setFollowActivity(bool on);                      // ... also to a carrier on a channel of the table that no message announced
     void setFollowGroups(const std::vector<int>& gids);   // only these groups (empty: every call)

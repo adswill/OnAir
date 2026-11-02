@@ -1,7 +1,7 @@
-// EDACS trunking screens (work in progress): lock, good / bad frame counts, the frame list and a table of the most frequent data words, then the calls, talkgroups and
+// EDACS trunking screens: lock, good / bad frame counts, the frame list and a table of the most frequent data words, then the calls, talkgroups and
 // site information read from the control channel, the voice channel table with its activity, and the following of one analog voice channel.
-// Control data and analog voice only; ProVoice (digital) voice is not decoded and nothing encrypted is handled. The data words are shown raw next to what the ASSUMED
-// message layout makes of them: the BCH check, the Barker word and the field layout are not in public non-code sources (core/include/dect2/edacs/edacs_msg.h).
+// Control data and analog voice only; ProVoice (digital) voice is not decoded and nothing encrypted is handled. The data words are shown raw next to what the
+// published message layout makes of them (core/include/dect2/edacs/edacs_msg.h); only frames whose first message passes its BCH check are listed.
 #include "app.h"
 #include "dect2/edacs/edacs_rx.h"
 #include "dect2/edacs/edacs_tel.h"
@@ -28,6 +28,7 @@ struct State {
     std::string status;
     float pushedVol = -1; bool pushedMute = false;
     int pushedTableHash = 0;
+    bool ea = false, esk = false;
     bool dirty = true;
 };
 State S;
@@ -98,6 +99,7 @@ void tick(App& a) {
     if (S.dirty) {
         applyTable(a);
         r.setFollow(S.follow); r.setFollowActivity(S.followAct); r.setFollowGroups(parseGroups(S.groups));
+        dect2::edacs::Layout lay; lay.extended = S.ea; lay.esk = S.esk ? 0xA0 : 0; r.setLayout(lay);
         S.dirty = false;
     }
     if (a.volume != S.pushedVol || a.muted != S.pushedMute) { r.setVolume(a.volume); r.setMuted(a.muted); S.pushedVol = a.volume; S.pushedMute = a.muted; }
@@ -145,9 +147,9 @@ void voiceSection(App& a, const dect2::EdacsTelemetry& t) {
 void messageSection(App& a, const dect2::EdacsTelemetry& t) {
     (void)a;
     ImGui::Spacing();
-    ImGui::SeparatorText("Control channel messages (assumed layout)");
-    ImGui::TextColored(pal::warnAmber(), "The meaning of the bits is this program's assumption, not a verified EDACS layout: a real system may show wrong or no fields here.");
-    if (t.siteValid) ImGui::Text("Site %s, system %s, control channel LCN %s, %s channels", idOf(t.siteId).c_str(), idOf(t.systemId).c_str(), idOf(t.controlLcn).c_str(), idOf(t.nChannels).c_str());
+    ImGui::SeparatorText("Control channel messages");
+    ImGui::TextDisabled("Read as the published Standard / Networked layout (TSB-69.3), or Extended Addressing; check bits verified (BCH 40,28).");
+    if (t.siteValid) ImGui::Text("Site %s, area %s, control channel LCN %s, highest LCN seen %s", idOf(t.siteId).c_str(), idOf(t.systemId).c_str(), idOf(t.controlLcn).c_str(), idOf(t.nChannels).c_str());
     else ImGui::TextDisabled("Site: not heard");
     ImGui::TextDisabled("%llu words, %llu of them read as a known message type", (unsigned long long)t.messages, (unsigned long long)t.messagesKnown);
     if (ImGui::BeginTable("edcall", 7, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, 150 * gUi))) {
@@ -189,16 +191,17 @@ void tab(App& a) {
         return;
     }
     const dect2::EdacsTelemetry& t = a.rx.edacs;
-    ImGui::TextUnformatted("EDACS trunking (WIP): 9600 bit/s control channel, analog voice following");
+    ImGui::TextUnformatted("EDACS trunking: 9600 bit/s control channel, analog voice following");
     ImGui::Spacing();
     ImGui::Text("Lock: %s", t.locked ? "yes" : "no");
     ImGui::Text("Good frames: %llu   Bad frames: %llu", (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
-    ImGui::TextDisabled("System ID: read under the assumed layout below (field layout not established from public sources)");
     ImGui::Text("Level: %.0f dBFS, data swing %.0f Hz", t.levelDb, t.deviationHz);
-    bool inv = t.inverted;
-    if (ImGui::Checkbox("Invert data", &inv)) a.engine.edacs().setInverted(inv);
+    ImGui::TextDisabled("Data polarity: %s (found from the sync word and the check bits)", t.inverted ? "inverted" : "normal");
+    if (ImGui::Checkbox("Extended Addressing", &S.ea)) S.dirty = true;
     ImGui::SameLine();
-    ImGui::TextDisabled("(polarity is not established: flip it when the words look inverted)");
+    if (ImGui::Checkbox("ESK mask (0xA0)", &S.esk)) S.dirty = true;
+    ImGui::SameLine();
+    ImGui::TextDisabled("(Standard / Networked is the default; EA and ESK only when the system uses them)");
     messageSection(a, t);
     voiceSection(a, t);
     ImGui::Spacing();
@@ -233,7 +236,7 @@ void list(App& a) {
         ImGui::TableSetupColumn("Message B");
         ImGui::TableSetupColumn("Copy errors");
         ImGui::TableSetupColumn("Time (s)");
-        ImGui::TableSetupColumn("Read as (assumed layout)", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Read as", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableHeadersRow();
         for (const dect2::EdacsFrame& f : t.frames) {
             ImGui::TableNextRow();
@@ -255,7 +258,7 @@ void status(App& a) {
 }
 
 void summary(const App& a, std::string& l1, std::string& l2) {
-    l1 = "EDACS trunking (WIP)";
+    l1 = "EDACS trunking";
     if (live(a)) l2 = dect2::edacsSummary(a.rx.edacs);
 }
 

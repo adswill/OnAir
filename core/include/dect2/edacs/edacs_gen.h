@@ -1,5 +1,4 @@
-// EDACS test signal of a whole system as one wide capture: the control channel (the frames of edacs_proto.h carrying the messages of edacs_msg.h, whose layout is an
-// assumption) and analog FM voice channels with a tone, at the offsets their LCNs have in the frequency table, plus a carrier offset and noise.
+// EDACS test signal of a whole system as one wide capture: the control channel (the frames of edacs_proto.h carrying the messages of edacs_msg.h) and analog FM voice channels with a tone, at the offsets their LCNs have in the frequency table, plus a carrier offset and noise.
 // The receiver is tested against this, not against a real system.
 #pragma once
 #include "dect2/common/ring.h"

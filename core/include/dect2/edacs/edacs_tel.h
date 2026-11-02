@@ -1,5 +1,5 @@
 // EDACS control channel telemetry. RxTelemetry::edacs, engine standard 132, active standard 131 (family 130).
-// Control data, the call and talkgroup tables built from it (the message layout is an assumption: edacs_msg.h), the voice channel activity of a frequency table and the
+// Control data, the call and talkgroup tables built from it (published layout: edacs_msg.h), the voice channel activity of a frequency table and the
 // following of one analog voice channel. ProVoice (digital) voice is not decoded; nothing encrypted is handled. Receive only.
 #pragma once
 #include <cstdint>
@@ -13,7 +13,7 @@ struct EdacsFrame {
     int64_t wallTime = 0;
     double timeSec = 0;
     uint32_t msgA = 0, msgB = 0;      // the 28 data bits of the two messages of the frame, after majority voting over the three copies
-    std::string text;                 // what the two words mean under the assumed layout (edacs_msg.h)
+    std::string text;                 // what the frame means (edacs_msg.h)
     int errA = 0, errB = 0;           // bits (of 40) on which the three copies of each message disagreed
     bool good = false;
     int carrierId = 0;          // whole-span decoding: 1 when the row came from a carrier of the span (carrierHz: its offset from the centre)
@@ -63,17 +63,16 @@ struct EdacsTelemetry {
     double cfoHz = 0;              // not measured (0)
     float snrDb = 0, levelDb = -200, deviationHz = 0;
     bool dataValid = false;
-    uint64_t blocksOk = 0, blocksBad = 0;   // frames whose copies agree / frames framed by the dotting whose copies disagree
+    uint64_t blocksOk = 0, blocksBad = 0;   // frames whose first message passes the BCH check / frames framed by the sync word that do not
     uint64_t syncs = 0;                     // dotting patterns found
-    bool inverted = false;                  // the data polarity setting
+    bool inverted = false;                  // the data polarity found from the sync word and the check bits
     double timeSec = 0, inputRate = 0, centerHz = 0;
     std::vector<EdacsFrame> frames;         // newest first
     std::vector<EdacsWordCount> words;      // the most frequent data words, descending
     // message layer and voice channels
-    bool layoutAssumed = true;              // always: the field positions are this program's assumption (edacs_msg.h)
-    uint64_t messages = 0, messagesKnown = 0;   // words seen, and of them the ones the assumed layout gave a meaning
+    uint64_t messages = 0, messagesKnown = 0;   // words seen, and of them the ones the layout gave a meaning
     bool siteValid = false;
-    int siteId = -1, systemId = -1, controlLcn = -1, nChannels = -1;
+    int siteId = -1, systemId = -1 /* area (EA only) */, controlLcn = -1, nChannels = -1 /* highest LCN seen */;
     std::vector<EdacsCall> calls;           // active ones first, then the finished, newest first
     std::vector<EdacsTalkgroup> talkgroups; // most recently active first
     std::vector<EdacsChannelActivity> channels;   // one per entry of the frequency table
