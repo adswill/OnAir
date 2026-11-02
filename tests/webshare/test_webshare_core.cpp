@@ -31,8 +31,29 @@ static void testPrefsRoundTrip() {
     CHK(b.radioLabel == "HackRF Pro" && b.locDecimals == 1 && b.reach);
     // garbage lines and bad numbers keep the defaults
     const ShareSettings d = settingsFromText("centre_mhz=abc\nmax_users=-5\nlink=evil\nwhat\n=x\nloc_decimals=99\n");
-    CHK(d.centreMHz == 98.0 && d.maxUsers == 1 && d.link == "tunnel" && d.locDecimals == 5);
+    CHK(d.centreMHz == 98.0 && d.maxUsers == 1 && d.link == "relay" && d.locDecimals == 5);
     CHK(settingsToText(ShareSettings{}) == settingsToText(settingsFromText("")));
+    // the 3.6 settings
+    ShareSettings n;
+    n.link = "relay"; n.relayUrl = "wss://relay.example.org/relay/v1/host"; n.inviteOnly = true; n.maxPerIp = 4; n.cpuCapPct = 50; n.maxKbpsTotal = 3000; n.idleMin = 10; n.sessionMin = 90; n.port = 9100;
+    n.tlsCert = "/c/cert.pem"; n.tlsKey = "/c/key.pem"; n.maxBins = 2048; n.maxFps = 10; n.autoApply = false; n.antenna = "Discone on the roof";
+    const ShareSettings m = settingsFromText(settingsToText(n));
+    CHK(m.link == "relay" && m.relayUrl == n.relayUrl && m.inviteOnly && m.maxPerIp == 4 && m.cpuCapPct == 50 && m.maxKbpsTotal == 3000 && m.idleMin == 10 && m.sessionMin == 90 && m.port == 9100);
+    CHK(m.tlsCert == "/c/cert.pem" && m.tlsKey == "/c/key.pem" && m.maxBins == 2048 && m.maxFps == 10 && !m.autoApply && m.antenna == n.antenna);
+    CHK(settingsFromText("link=tunnel\n").link == "tunnel" && settingsFromText("link=own\n").link == "own" && settingsFromText("link=lan\n").link == "lan");
+    CHK(settingsFromText("max_per_ip=0\ncpu_cap_pct=1\nport=99999\nmax_fps=99\n").maxPerIp == 1 && settingsFromText("cpu_cap_pct=1\n").cpuCapPct == 5 && settingsFromText("port=99999\n").port == 65535 && settingsFromText("max_fps=99\n").maxFps == 30);
+}
+
+static void testSettingsValid3() {
+    ShareSettings s; std::string why;
+    CHK(settingsValid(s, why));   // the defaults are valid
+    s.relayUrl = "ws://relay.example.org/"; CHK(!settingsValid(s, why) && why.find("relay") != std::string::npos);
+    s.relayUrl = "not a url"; CHK(!settingsValid(s, why));
+    s = ShareSettings{}; s.port = 80; CHK(!settingsValid(s, why) && why.find("port") != std::string::npos);
+    s = ShareSettings{}; s.port = 9000; CHK(settingsValid(s, why));
+    s = ShareSettings{}; s.tlsCert = "/a"; CHK(!settingsValid(s, why)); s.tlsKey = "/b"; CHK(settingsValid(s, why));
+    s = ShareSettings{}; s.antenna = std::string(80, 'x'); CHK(!settingsValid(s, why));
+    s = ShareSettings{}; s.link = "lan"; s.relayUrl = "garbage"; CHK(settingsValid(s, why));   // the relay address only matters when the relay is used
 }
 
 static void testPlan() {
@@ -147,6 +168,24 @@ static void testServerConf() {
     onair_server::ConfigFile c2; c2.parse(buildServerConf(n, p, 8075, 8766, "", ""));
     onair_web::WebPolicy pol2; pol2.load(c2);
     CHK(!pol2.decoderAllowed("pocsag") && c2.get("web_decoders_on").empty() && c2.get("web_admin_token").empty());
+    // the relay link (the default): the server asks the relay for the address, trusts the local proxy header, and takes the new limits
+    ShareSettings rl; rl.maxPerIp = 3; rl.cpuCapPct = 60; rl.maxKbpsTotal = 4000; rl.idleMin = 15; rl.sessionMin = 60; rl.maxBins = 2048; rl.maxFps = 12; rl.antenna = "Loop";
+    onair_server::ConfigFile c4; c4.parse(buildServerConf(rl, resolvePlan(rl, rtl()), 8073, 8765, "", ""));
+    CHK(c4.flag("web_relay", false) && c4.get("web_relay_url") == "wss://relay.on-air.dev/relay/v1/host" && c4.flag("web_trust_proxy", false) && c4.get("web_bind") == "127.0.0.1");
+    CHK(c4.get("web_max_per_ip") == "3" && c4.get("web_cpu_cap_pct") == "60" && c4.get("web_max_kbps") == "4000" && c4.get("web_idle_min") == "15" && c4.get("web_public_max_min") == "60");
+    CHK(c4.get("web_max_bins") == "2048" && c4.get("web_max_fps") == "12" && c4.get("web_antenna") == "Loop");
+    ShareSettings iv; iv.inviteOnly = true; iv.password = "secret-password";
+    onair_server::ConfigFile c5; c5.parse(buildServerConf(iv, resolvePlan(iv, rtl()), 8073, 8765, "", ""));
+    CHK(c5.get("web_auth") == "invite" && c5.get("web_password").empty());
+    ShareSettings tl; tl.link = "tunnel"; tl.tlsCert = "/c.pem"; tl.tlsKey = "/k.pem";
+    onair_server::ConfigFile c6; c6.parse(buildServerConf(tl, resolvePlan(tl, rtl()), 8073, 8765, "", ""));
+    CHK(!c6.flag("web_relay", false) && c6.get("web_tls_cert") == "/c.pem" && c6.get("web_tls_key") == "/k.pem");
+    // the conf loads in the server's own reader with the relay switched on
+    {
+        bool made = false;
+        onair_web::WebSettings w = onair_web::loadWebSettings(c4, made);
+        CHK(w.relay.on && w.relay.url == "wss://relay.on-air.dev/relay/v1/host" && w.server.trustProxy && w.limits.maxPerIp == 3 && w.limits.maxBins == 2048);
+    }
     // open access, LAN link, defaults
     ShareSettings o; o.link = "lan";
     onair_server::ConfigFile c3; c3.parse(buildServerConf(o, resolvePlan(o, rtl()), 8073, 8765, "", ""));
@@ -282,7 +321,38 @@ static void testQr() {
     CHK(qrEncode("a", tiny) && tiny.size == 21);
 }
 
+static void testListeners() {
+    // 16 users: more than jsonParse's 4 KB / 96 nodes, so the admin list needs its own reader
+    std::string j = "{\"users\":[";
+    for (int i = 1; i <= 16; i++) {
+        j += std::string(i > 1 ? "," : "") + "{\"id\":" + std::to_string(i) + ",\"name\":\"Ana \\\"" + std::to_string(i) + "\\\" {x}\",\"class\":\"public\",\"label\":\"\",\"address\":\"#00a" + std::to_string(i) + "\",\"seconds\":" + std::to_string(i * 10) +
+             ",\"idle_seconds\":1,\"freq_hz\":97500000,\"mode\":\"wfm\",\"audio\":true,\"spectrum\":true,\"kbps\":" + std::to_string(30 + i) + ",\"cpu_pct\":1.5,\"degrade\":0,\"dropped\":0,\"decoders\":0}";
+    }
+    j += "]}";
+    CHK(j.size() > 4096);
+    const auto u = parseUsers(j);
+    CHK(u.size() == 16 && u[0].id == 1 && u[11].id == 12 && u[11].mode == "wfm" && u[11].freqHz == 97500000 && u[5].kbps == 36 && u[2].address == "#00a3" && u[3].seconds == 40);
+    CHK(u[0].name.find("{x}") != std::string::npos);   // braces and quotes inside a name do not confuse the scanner
+    CHK(parseUsers("{\"users\":[]}").empty() && parseUsers("garbage").empty() && parseUsers("{\"users\":[{\"id\":1").empty());
+    const auto b = parseBans("{\"bans\":[{\"address\":\"#1f2e3d\",\"minutes_left\":59}]}");
+    CHK(b.size() == 1 && b[0].address == "#1f2e3d" && b[0].minutesLeft == 59 && parseBans("{}").empty());
+    CHK(kickBody(7, "a\"b") == "{\"id\":7,\"reason\":\"a\\\"b\"}" && banBody(7, 60, "x") == "{\"id\":7,\"minutes\":60,\"reason\":\"x\"}" && unbanBody("#1") == "{\"address\":\"#1\"}");
+    CHK(inviteBody("Ana", 120) == "{\"label\":\"Ana\",\"max_minutes\":120}");
+    CHK(inviteLink("https://x.relay.on-air.dev/", "abcd") == "https://x.relay.on-air.dev/#invite=abcd");
+    std::string t;
+    CHK(parseInviteToken("{\"token\":\"0123456789abcdef0123456789abcdef\",\"label\":\"x\"}", t) && t.size() == 32 && !parseInviteToken("{\"token\":\"short\"}", t) && !parseInviteToken("x", t));
+    RelayView r;
+    CHK(parseRelayStatus("{\"state\":\"retrying\",\"url\":\"\",\"code\":\"dns\",\"message\":\"cannot find\",\"advice\":\"a\",\"conns\":0,\"retry_in\":5}", r) && r.state == "retrying" && r.retryIn == 5 && r.code == "dns");
+    CHK(relayLine(r).find("5 s") != std::string::npos && relayLine(RelayView{}).empty() && !parseRelayStatus("nope", r));
+    ShareSettings s;
+    RigCaps rig = hackrf();
+    const std::string e = easySummary(s, rig, resolvePlan(s, rig));
+    CHK(e.find("relay") != std::string::npos && e.find("anyone") != std::string::npos);
+}
+
 int main() {
+    testSettingsValid3();
+    testListeners();
     testPrefsRoundTrip();
     testPlan();
     testRigs();

@@ -2,6 +2,7 @@
 #include "web/web_json.h"
 #include "web/web_policy.h"
 #include "web/web_directory_proto.h"
+#include "web/web_relay.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -159,6 +160,13 @@ bool settingsValid(const ShareSettings& s, std::string& why) {
     if (!(s.centreMHz > 0) || !std::isfinite(s.centreMHz)) { why = "The centre frequency must be a number above 0 MHz."; return false; }
     if (!s.wholeSpan && !(s.spanMHz > 0)) { why = "The span must be above 0 MHz."; return false; }
     if (!s.rateAuto && !(s.rateMsps > 0)) { why = "The sample rate must be above 0 Msps."; return false; }
+    if (!cleanText(s.antenna, 60)) { why = "The antenna description is too long (60 characters at most) or has line breaks."; return false; }
+    if (s.port != 0 && (s.port < 1024 || s.port > 65535)) { why = "The port must be 0 (automatic) or between 1024 and 65535."; return false; }
+    if (s.tlsCert.empty() != s.tlsKey.empty()) { why = "A certificate needs both files: the certificate and its key (or leave both empty)."; return false; }
+    if (s.link == "relay") {
+        onair_web::RelayUrl u; std::string e;
+        if (!onair_web::relayParseUrl(s.relayUrl, u, e)) { why = "The relay address: " + e; return false; }
+    }
     if (s.link == "own") {
         std::string out, e;
         if (!onair_web::dirNormalizeUrl(s.ownUrl, out, e)) { why = "Your own address: " + e; return false; }
@@ -179,7 +187,9 @@ std::string settingsToText(const ShareSettings& s) {
       << "\nrestricted_on=" << joinSet(s.restrictedOn) << "\nlegal_ack=" << b(s.legalAck) << "\ndemods=" << s.demods << "\nmax_users=" << s.maxUsers << "\nuser_kbps=" << s.userKbps
       << "\naudio_only=" << b(s.audioOnly) << "\nlimit_to_range=" << b(s.limitToRange) << "\npassword=" << s.password << "\nlink=" << s.link << "\nown_url=" << s.ownUrl << "\nlist_public=" << b(s.listPublic)
       << "\nname=" << s.name << "\ndesc=" << s.desc << "\nloc=" << s.loc << "\ncontact=" << s.contact << "\nradio_label=" << s.radioLabel << "\ndir_url=" << s.dirUrl
-      << "\nloc_decimals=" << s.locDecimals << "\nreach=" << b(s.reach) << "\n";
+      << "\nloc_decimals=" << s.locDecimals << "\nreach=" << b(s.reach) << "\nrelay_url=" << s.relayUrl << "\ninvite_only=" << b(s.inviteOnly) << "\nmax_per_ip=" << s.maxPerIp
+      << "\ncpu_cap_pct=" << s.cpuCapPct << "\nmax_kbps_total=" << s.maxKbpsTotal << "\nidle_min=" << s.idleMin << "\nsession_min=" << s.sessionMin << "\nport=" << s.port
+      << "\ntls_cert=" << s.tlsCert << "\ntls_key=" << s.tlsKey << "\nmax_bins=" << s.maxBins << "\nmax_fps=" << s.maxFps << "\nauto_apply=" << b(s.autoApply) << "\nantenna=" << s.antenna << "\n";
     return o.str();
 }
 
@@ -213,7 +223,21 @@ ShareSettings settingsFromText(const std::string& text) {
         else if (k == "audio_only") s.audioOnly = flag(v, false);
         else if (k == "limit_to_range") s.limitToRange = flag(v, false);
         else if (k == "password") s.password = v;
-        else if (k == "link") s.link = (v == "own" || v == "lan") ? v : "tunnel";
+        else if (k == "link") s.link = (v == "own" || v == "lan" || v == "tunnel") ? v : "relay";
+        else if (k == "relay_url") s.relayUrl = v;
+        else if (k == "invite_only") s.inviteOnly = flag(v, false);
+        else if (k == "max_per_ip") s.maxPerIp = std::clamp(atoi(v.c_str()), 1, 100);
+        else if (k == "cpu_cap_pct") s.cpuCapPct = std::clamp(atoi(v.c_str()), 5, 100);
+        else if (k == "max_kbps_total") s.maxKbpsTotal = std::clamp(atoi(v.c_str()), 0, 10000000);
+        else if (k == "idle_min") s.idleMin = std::clamp(atoi(v.c_str()), 0, 100000);
+        else if (k == "session_min") s.sessionMin = std::clamp(atoi(v.c_str()), 0, 100000);
+        else if (k == "port") s.port = std::clamp(atoi(v.c_str()), 0, 65535);
+        else if (k == "tls_cert") s.tlsCert = v;
+        else if (k == "tls_key") s.tlsKey = v;
+        else if (k == "max_bins") s.maxBins = std::clamp(atoi(v.c_str()), 0, 4096);
+        else if (k == "max_fps") s.maxFps = std::clamp(atoi(v.c_str()), 0, 30);
+        else if (k == "auto_apply") s.autoApply = flag(v, true);
+        else if (k == "antenna") s.antenna = v;
         else if (k == "own_url") s.ownUrl = v;
         else if (k == "list_public") s.listPublic = flag(v, false);
         else if (k == "name") s.name = v;
@@ -308,7 +332,16 @@ std::string buildServerConf(const ShareSettings& s, const Plan& plan, int port, 
     std::ostringstream c;
     c << "# written by OnAir (Server > Share on web); changes made here are overwritten\n"
       << "web=1\nweb_port=" << port << "\nweb_bind=" << (s.link == "lan" ? "0.0.0.0" : "127.0.0.1") << "\nweb_name=" << s.name << "\n"
-      << "port=" << apiPort << "\nlan=0\nweb_trust_proxy=1\n";   // the tunnel program is on this computer and ends TLS: without this the browser's Origin (https://...) is refused and every listener looks like 127.0.0.1
+      << "port=" << apiPort << "\nlan=0\nweb_trust_proxy=" << (s.link == "lan" || s.link == "relay" || s.link == "tunnel" || s.link == "own" ? 1 : 0) << "\n";
+    if (s.link == "relay") c << "web_relay=1\nweb_relay_url=" << s.relayUrl << "\n";
+    if (!s.antenna.empty()) c << "web_antenna=" << s.antenna << "\n";
+    if (!s.tlsCert.empty()) c << "web_tls_cert=" << s.tlsCert << "\nweb_tls_key=" << s.tlsKey << "\n";
+    c << "web_max_per_ip=" << std::clamp(s.maxPerIp, 1, 100) << "\nweb_cpu_cap_pct=" << std::clamp(s.cpuCapPct, 5, 100) << "\n";
+    if (s.maxKbpsTotal > 0) c << "web_max_kbps=" << std::max(64, s.maxKbpsTotal) << "\n";
+    if (s.idleMin > 0) c << "web_idle_min=" << s.idleMin << "\n";
+    if (s.sessionMin > 0) c << "web_public_max_min=" << s.sessionMin << "\n";
+    if (s.maxBins > 0) c << "web_max_bins=" << std::clamp(s.maxBins, 64, 4096) << "\n";
+    if (s.maxFps > 0) c << "web_max_fps=" << std::clamp(s.maxFps, 1, 30) << "\n";   // the tunnel program is on this computer and ends TLS: without this the browser's Origin (https://...) is refused and every listener looks like 127.0.0.1
     if (!publicUrl.empty()) c << "web_public_url=" << publicUrl << "\n";
     if (!adminToken.empty()) c << "web_admin_token=" << adminToken << "\n";
     c << "device=" << plan.device << "\nmode=fm\nfreq_mhz=" << num(plan.centreHz / 1e6) << "\nrate_msps=" << num(plan.rateHz / 1e6) << "\nautostart=1\n";
@@ -316,7 +349,8 @@ std::string buildServerConf(const ShareSettings& s, const Plan& plan, int port, 
     c << "web_max_users=" << std::clamp(s.maxUsers, 1, 1000) << "\n";
     if (s.userKbps > 0) c << "web_user_kbps=" << std::max(32, s.userKbps) << "\n";
     c << "web_spectrum=" << (s.audioOnly ? 0 : 1) << "\n";
-    if (!s.password.empty()) c << "web_auth=password\nweb_password=" << s.password << "\n";
+    if (s.inviteOnly) c << "web_auth=invite\n";
+    else if (!s.password.empty()) c << "web_auth=password\nweb_password=" << s.password << "\n";
     else c << "web_auth=open\n";
     c << "web_demods=" << s.demods << "\n";
     std::string off, on;
@@ -451,6 +485,103 @@ bool parseStats(const std::string& json, ShareStats& out) {
     s.ok = true;
     out = s;
     return true;
+}
+
+// ---------------------------------------------------------------- listeners and relay
+
+std::vector<UserRow> parseUsers(const std::string& json) {
+    std::vector<UserRow> rows;
+    size_t at = json.find("\"users\":[");
+    if (at == std::string::npos) return rows;
+    at += 9;
+    while (at < json.size() && rows.size() < 200) {
+        while (at < json.size() && (json[at] == ',' || json[at] == ' ')) at++;
+        if (at >= json.size() || json[at] != '{') break;
+        size_t e = at;
+        int depth = 0;
+        bool str = false;
+        for (; e < json.size(); e++) {
+            const char c = json[e];
+            if (str) { if (c == '\\') e++; else if (c == '"') str = false; continue; }
+            if (c == '"') str = true;
+            else if (c == '{') depth++;
+            else if (c == '}' && --depth == 0) break;
+        }
+        if (e >= json.size()) break;
+        onair_web::Json j;
+        std::string err;
+        if (onair_web::jsonParse(json.substr(at, e - at + 1), j, err) && j.kind == onair_web::Json::Obj) {
+            UserRow u;
+            auto n = [&](const char* k) { const auto* x = j.get(k); return x && x->kind == onair_web::Json::Num ? x->num : 0.0; };
+            auto t = [&](const char* k) { const auto* x = j.get(k); return x && x->kind == onair_web::Json::Str ? x->str : std::string(); };
+            u.id = (int)n("id"); u.name = t("name"); u.cls = t("class"); u.address = t("address"); u.mode = t("mode");
+            u.freqHz = n("freq_hz"); u.kbps = n("kbps"); u.cpuPct = n("cpu_pct"); u.seconds = (long long)n("seconds");
+            if (u.id > 0) rows.push_back(u);
+        }
+        at = e + 1;
+    }
+    return rows;
+}
+
+std::vector<BanRow> parseBans(const std::string& json) {
+    std::vector<BanRow> rows;
+    onair_web::Json j;
+    std::string err;
+    if (!onair_web::jsonParse(json.substr(0, onair_web::kJsonMaxInput), j, err) || j.kind != onair_web::Json::Obj) return rows;
+    const auto* a = j.get("bans");
+    if (!a || a->kind != onair_web::Json::Arr) return rows;
+    for (const auto& b : a->arr) {
+        const auto* ad = b.get("address");
+        const auto* m = b.get("minutes_left");
+        if (ad && ad->kind == onair_web::Json::Str) rows.push_back({ad->str, m && m->kind == onair_web::Json::Num ? (int)m->num : 0});
+    }
+    return rows;
+}
+
+std::string kickBody(int id, const std::string& reason) { return "{\"id\":" + std::to_string(id) + ",\"reason\":\"" + onair_web::jsonEsc(reason.substr(0, 60)) + "\"}"; }
+std::string banBody(int id, int minutes, const std::string& reason) { return "{\"id\":" + std::to_string(id) + ",\"minutes\":" + std::to_string(minutes) + ",\"reason\":\"" + onair_web::jsonEsc(reason.substr(0, 60)) + "\"}"; }
+std::string unbanBody(const std::string& address) { return "{\"address\":\"" + onair_web::jsonEsc(address.substr(0, 60)) + "\"}"; }
+std::string inviteBody(const std::string& label, int maxMinutes) { return "{\"label\":\"" + onair_web::jsonEsc(label.substr(0, 40)) + "\",\"max_minutes\":" + std::to_string(std::max(0, maxMinutes)) + "}"; }
+
+std::string inviteLink(const std::string& url, const std::string& token) {
+    std::string u = url;
+    while (!u.empty() && u.back() == '/') u.pop_back();
+    return u + "/#invite=" + token;
+}
+
+bool parseInviteToken(const std::string& json, std::string& token) {
+    onair_web::Json j;
+    std::string err;
+    if (!onair_web::jsonParse(json.substr(0, onair_web::kJsonMaxInput), j, err) || j.kind != onair_web::Json::Obj) return false;
+    const auto* t = j.get("token");
+    if (!t || t->kind != onair_web::Json::Str || t->str.size() < 16) return false;
+    token = t->str;
+    return true;
+}
+
+std::string easySummary(const ShareSettings& s, const RigCaps& rig, const Plan& plan) {
+    std::ostringstream o;
+    o << (rig.name.empty() ? std::string("no radio found") : rig.name) << ", " << rangeSpecMHz(plan.loHz, plan.hiHz) << " MHz, up to " << s.maxUsers << " listeners, ";
+    o << (s.link == "relay" ? "through the OnAir relay" : s.link == "tunnel" ? "through a Cloudflare tunnel" : s.link == "own" ? "at your own address" : "on this network only") << ", ";
+    o << (s.inviteOnly ? "invite links only" : s.password.empty() ? "open to anyone with the link" : "with a password");
+    if (s.audioOnly) o << ", audio only";
+    return o.str();
+}
+
+bool parseRelayStatus(const std::string& json, RelayView& out) {
+    onair_web::RelayStatus r;
+    if (!onair_web::relayParseStatus(json, r)) return false;
+    out.state = r.state; out.url = r.url; out.code = r.code; out.message = r.message; out.advice = r.advice;
+    out.conns = r.conns; out.retryIn = r.retryIn; out.bytesIn = r.bytesIn; out.bytesOut = r.bytesOut;
+    return true;
+}
+
+std::string relayLine(const RelayView& r) {
+    if (r.state == "online") return "Connected to the relay.";
+    if (r.state == "connecting") return "Connecting to the relay ...";
+    if (r.state == "retrying") return "The relay link dropped: " + r.message + (r.retryIn > 0 ? " Trying again in " + std::to_string(r.retryIn) + " s." : std::string(" Trying again."));
+    if (r.state == "failed") return "The relay refused or cannot be reached: " + r.message;
+    return std::string();
 }
 
 } // namespace webshare
