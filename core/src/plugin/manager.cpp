@@ -92,6 +92,7 @@ struct Manager::Impl {
     bool markerWritten = false;
     bool automationAttached = false;
     std::map<std::string, std::string> inUse;   // ids of plugins that have run since the marker (for the reason)
+    std::shared_ptr<const Manager::AudioSink> audioSink;   // read with std::atomic_load: plugin threads call it without p.mu
 };
 
 Manager::Manager(ManagerConfig c) : p_(std::make_shared<Impl>()), cfg_(std::move(c)) {}
@@ -368,8 +369,11 @@ Runner* Manager::start(const std::string& id, const std::string& modeId, std::st
         if (automation::wants(automation::FPlugin)) automation::emit(std::move(ev));
         return 0;
     };
-    // audio out: the app connects it (Manager::setAudioSink would go here); without a sink the audio is dropped
-    o.services.audioOut = [](const float*, size_t, double) { return 0; };
+    // audio out: to the app's sink (setAudioSink); without a sink the audio is dropped
+    o.services.audioOut = [p, id](const float* pcm, size_t n, double rate) {
+        auto sink = std::atomic_load(&p->audioSink);
+        return sink ? (*sink)(id, pcm, n, rate) : 0;
+    };
     std::unique_ptr<Runner> r;
     if (outOfProcess(id)) r = startProcess(o, err);
     else r = startInProcess(o, err);
@@ -460,6 +464,10 @@ bool Manager::wantedIq(const std::string& id, double& hz, double& sr) const {
     std::lock_guard<std::mutex> lk(p_->mu);
     for (auto& kv : p_->slots) if (kv.second->pluginId == id && (kv.second->want->hz > 0 || kv.second->want->rate > 0)) { hz = kv.second->want->hz; sr = kv.second->want->rate; return true; }
     return false;
+}
+
+void Manager::setAudioSink(AudioSink s) {
+    std::atomic_store(&p_->audioSink, s ? std::make_shared<const AudioSink>(std::move(s)) : std::shared_ptr<const AudioSink>());
 }
 
 // ---- install / remove ----
