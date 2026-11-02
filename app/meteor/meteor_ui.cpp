@@ -1,6 +1,7 @@
 // Meteor-M LRPT screens: the picture of the pass growing line by line (a colour composite, 123 by day or 125 with the infrared channel
 // at night, chosen from the channels sent, or one channel in grey), Save PNG and New picture; the frequency (137.900 / 137.100) and
 // the modulation; the receiver's state, the channels heard and the symbol constellation.
+#include "ui/kit/mode_panel.h"
 #include "app.h"
 #include "panels/gallery.h"
 #include "gfx/gfx.h"
@@ -421,6 +422,12 @@ void meters(const App& a, std::vector<ModeMeter>& out) {
 
 } // namespace
 
+// Simple view: the picture with its controls, and the signal and the products / channels beside it
+static void command(App& a) {
+    modepanel::panes({{"##metcpic", nullptr, [&a] { tab(a); }, 2.2f, 300.f},
+                      {"##metcsig", tr("Signal"), [&a] { receiver(a); ImGui::Spacing(); list(a); }, 1.f, 240.f}}, 340.f);
+}
+
 extern const ModeUi kMeteorUi;
 const ModeUi kMeteorUi = {
     .sideTitle = "CHANNELS",
@@ -436,4 +443,5 @@ const ModeUi kMeteorUi = {
     .synth = synth,
     .tick = tick,
     .meters = meters,
+    .command = command,
 };

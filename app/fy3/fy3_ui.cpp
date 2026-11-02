@@ -3,6 +3,7 @@
 // the receiver's state with a "why it does not decode yet" line, the margin over the Es/N0 the decoder needs, the next pass of the satellite when a TLE
 // file is in the data folder (the Satellites tab downloads them), and the instruments heard.
 // Both modes use the same code; the template argument is the product (0 AHRPT, 1 MPT).
+#include "ui/kit/mode_panel.h"
 #include "app.h"
 #include "gfx/gfx.h"
 #include "platform/platform.h"
@@ -488,6 +489,12 @@ template <int P> void meters(const App& a, std::vector<ModeMeter>& out) {
     out.push_back({"ROWS", "%.0f", (double)t.lines, 0, 4000, t.state >= 3 ? 1 : 0});
 }
 
+// Simple view: the picture with its controls, and the signal and the instruments beside it
+template <int P> void command(App& a) {
+    modepanel::panes({{"##fy3cpic", nullptr, [&a] { tab<P>(a); }, 2.2f, 300.f},
+                      {"##fy3csig", tr("Signal"), [&a] { receiver<P>(a); ImGui::Spacing(); list<P>(a); }, 1.f, 240.f}}, 340.f);
+}
+
 } // namespace
 
 extern const ModeUi kFy3AhrptUi;
@@ -506,6 +513,7 @@ const ModeUi kFy3AhrptUi = {
     .synth = synth<0>,
     .tick = tick<0>,
     .meters = meters<0>,
+    .command = command<0>,
 };
 const ModeUi kFy3MptUi = {
     .sideTitle = "INSTRUMENTS",
@@ -521,4 +529,5 @@ const ModeUi kFy3MptUi = {
     .synth = synth<1>,
     .tick = tick<1>,
     .meters = meters<1>,
+    .command = command<1>,
 };
