@@ -3564,3 +3564,50 @@ Off. Press the button to decode everything in the capture.	Desligado. Pressione 
 Pinned: never paused by the CPU limit	Fixado: o limite de CPU nunca o pausa
 Follow this signal's sound; it is never paused by the CPU limit	Acompanha o som deste sinal; o limite de CPU nunca o pausa
 Remove: a signal you added is taken away, a found one is switched off	Remover: um sinal adicionado é retirado, um encontrado é desligado
+# Share on web: relay, listeners, server settings
+Share my radio	Compartilhar meu rádio
+Connecting to the relay ...	Conectando ao relay ...
+Anyone with the link	Qualquer pessoa com o link
+Invite links only	Somente links de convite
+Limits that protect your computer	Limites que protegem o computador
+Antenna (shown to listeners, optional)	Antena (visível aos ouvintes, opcional)
+Listener limits	Limites de ouvintes
+While sharing	Durante o compartilhamento
+Listeners and invites	Ouvintes e convites
+Nobody is listening right now.	Ninguém está ouvindo agora.
+Kick##wsKick	Expulsar##wsKick
+Block 24 h##wsBlock	Bloquear 24 h##wsBlock
+Allow again##wsUnban	Permitir novamente##wsUnban
+Make an invite link	Criar um link de convite
+Copy invite link	Copiar link de convite
+Server settings	Configurações do servidor
+Connected to the OnAir relay.	Conectado ao relay do OnAir.
+Connecting to the OnAir relay ...	Conectando ao relay do OnAir ...
+The relay link dropped (%s). Trying again in %d s.	A conexão com o relay caiu (%s). Tentando de novo em %d s.
+The OnAir relay refuses or cannot be reached: %s	O relay do OnAir recusa ou está inacessível: %s
+Blocked: %s (%d min left)	Bloqueado: %s (faltam %d min)
+Processor %.0f%% of the %.0f%% limit	Processador %.0f%% do limite de %.0f%%
+Upload %.0f of %.0f kbit/s	Envio %.0f de %.0f kbit/s
+Port on this computer (0 = the first free one from 8073)	Porta neste computador (0 = a primeira livre a partir de 8073)
+Listeners from one address at once	Ouvintes simultâneos por endereço
+Longest session of one listener in minutes (0 = no limit)	Sessão mais longa de um ouvinte em minutos (0 = sem limite)
+Most spectrum rows per second (0 = the default)	Máximo de linhas de espectro por segundo (0 = padrão)
+Key file for that certificate	Arquivo de chave desse certificado
+A certificate needs both files.	Um certificado precisa dos dois arquivos.
+Relay service address (only if you run your own relay)	Endereço do serviço de relay (só se usar o seu próprio)
+OnAir relay (recommended: no setup, no open ports)	Relay do OnAir (recomendado: sem configuração, sem portas abertas)
+Free Cloudflare tunnel (needs a small helper program, downloaded once)	Túnel gratuito da Cloudflare (precisa de um pequeno programa auxiliar, baixado uma vez)
+Only my network (a phone on the same Wi-Fi)	Somente minha rede (um celular no mesmo Wi-Fi)
+Password (8 characters or more)	Senha (8 caracteres ou mais)
+Apply changes	Aplicar alterações
+What to do:	O que fazer:
+Will share: %s, %s MHz, up to %d listeners, %s, %s.	Será compartilhado: %s, %s MHz, até %d ouvintes, %s, %s.
+through the OnAir relay (no router settings needed)	pelo relay do OnAir (sem configurar o roteador)
+through a Cloudflare tunnel	por um túnel da Cloudflare
+at your own address	no seu próprio endereço
+on this network only	somente nesta rede
+invite links only	somente com links de convite
+open to anyone with the link	aberto a qualquer pessoa com o link
+with a password	com senha
+no radio found	nenhum rádio encontrado
+No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Nenhum rádio encontrado. Conecte um rádio e clique em Atualizar na guia Rádio e faixa, ou escolha o sinal de teste.

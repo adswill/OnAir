@@ -328,3 +328,49 @@ Off. Press the button to decode everything in the capture.
 Pinned: never paused by the CPU limit
 Follow this signal's sound; it is never paused by the CPU limit
 Remove: a signal you added is taken away, a found one is switched off
+Share my radio
+Connecting to the relay ...
+Anyone with the link
+Invite links only
+Limits that protect your computer
+Antenna (shown to listeners, optional)
+Listener limits
+While sharing
+Listeners and invites
+Nobody is listening right now.
+Kick##wsKick
+Block 24 h##wsBlock
+Allow again##wsUnban
+Make an invite link
+Copy invite link
+Server settings
+Connected to the OnAir relay.
+Connecting to the OnAir relay ...
+The relay link dropped (%s). Trying again in %d s.
+The OnAir relay refuses or cannot be reached: %s
+Blocked: %s (%d min left)
+Processor %.0f%% of the %.0f%% limit
+Upload %.0f of %.0f kbit/s
+Port on this computer (0 = the first free one from 8073)
+Listeners from one address at once
+Longest session of one listener in minutes (0 = no limit)
+Most spectrum rows per second (0 = the default)
+Key file for that certificate
+A certificate needs both files.
+Relay service address (only if you run your own relay)
+OnAir relay (recommended: no setup, no open ports)
+Free Cloudflare tunnel (needs a small helper program, downloaded once)
+Only my network (a phone on the same Wi-Fi)
+Password (8 characters or more)
+Apply changes
+What to do:
+Will share: %s, %s MHz, up to %d listeners, %s, %s.
+through the OnAir relay (no router settings needed)
+through a Cloudflare tunnel
+at your own address
+on this network only
+invite links only
+open to anyone with the link
+with a password
+no radio found
+No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.

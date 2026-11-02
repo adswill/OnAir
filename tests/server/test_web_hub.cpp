@@ -243,6 +243,25 @@ static void testKickIdleQueue() {
     Drained d = drainAll(h, u);
     CHECK(!d.alive && d.kick == "test", "kicked: %s", d.kick.c_str());
     CHECK(!h.kick(9999, ""), "no such session");
+    {   // ban: the address is blocked and its sessions are kicked; others are not touched; unban lets it back
+        AdmitRequest ba; ba.ip = "198.51.100.7"; ba.cls = UserClass::Public;
+        std::string bc, bw;
+        const int b1 = h.admit(ba, bc, bw);
+        CHECK(b1 > 0, "admitted before the ban: %s", bw.c_str());
+        CHECK(!h.ban(424242, 10, ""), "ban of an unknown session");
+        CHECK(h.ban(b1, 10, "spam"), "ban");
+        Drained bd = drainAll(h, b1);
+        CHECK(!bd.alive && bd.kick.find("spam") != std::string::npos, "banned session kicked: %s", bd.kick.c_str());
+        CHECK(h.admit(ba, bc, bw) == 0 && bc == err::Forbidden, "banned address refused: %s", bc.c_str());
+        const std::string bj = h.bansJson();
+        CHECK(bj.find("\"address\"") != std::string::npos && bj.find("minutes_left") != std::string::npos, "bans listed: %s", bj.c_str());
+        const size_t at = bj.find("\"address\":\"") + 11;
+        const std::string tag = bj.substr(at, bj.find('"', at) - at);
+        CHECK(h.unban(tag) && h.bansJson().find("\"address\"") == std::string::npos, "unban");
+        const int b2 = h.admit(ba, bc, bw);
+        CHECK(b2 > 0, "admitted after unban: %s", bw.c_str());
+        h.leave(b2);
+    }
     // idle
     L.idleMin = 1;
     h.setLimits(L);
