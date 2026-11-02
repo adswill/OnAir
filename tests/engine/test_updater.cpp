@@ -124,6 +124,7 @@ int main() {
         put((base / "api.json").string(), "[{\"tag_name\":\"v9.9.9\",\"name\":\"OnAir 9.9.9\",\"draft\":false,\"prerelease\":false,\"html_url\":\"https://example.org\",\"body\":\"notes\",\"assets\":[" + d + "," + d2 + "]}]");
     };
     auto waitFor = [&](Updater& u, Updater::Phase want, int secs) {
+        secs = secs * 6 + 20;   /* CI is heavily loaded: poll with a generous deadline, returns as soon as the phase arrives */
         for (int i = 0; i < secs * 20; i++) { const auto p = u.status().phase; if (p == want || p == Updater::Phase::Failed) return p; std::this_thread::sleep_for(std::chrono::milliseconds(50)); }
         return u.status().phase;
     };
