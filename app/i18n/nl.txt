@@ -3472,3 +3472,6 @@ At a set speed each row is the highest level of the frames in between, so a shor
 Export results CSV...	Resultaten exporteren naar CSV...
 Nothing to export: no row matches the search.	Niets te exporteren: geen enkele rij komt overeen met de zoekopdracht.
 Saves the rows now in the table (with the search and the filters applied, built-in and yours) as a CSV file. Import and the Memory panel read it back.	Slaat de rijen in de tabel op (met zoekopdracht en filters toegepast, ingebouwd en eigen) als CSV-bestand. Importeren en het paneel Geheugen lezen het weer in.
+Clean the input: DC spike, IQ imbalance and the radio's own spurs	Ingang opschonen: DC-piek, IQ-onbalans en eigen stoorlijnen van de radio
+Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Gemeten uit het signaal zelf en raakt nooit het gewenste kanaal: de DC-piek en het IQ-spiegelbeeld worden overgeslagen in modi waar ze zouden schaden, en een stoorlijn in het kanaal wordt alleen weggehaald als hij na het hertunen op dezelfde plek in de basisband blijft (een echt signaal beweegt mee met de tuner).
+%d spur(s) cut	%d stoorlijn(en) weggehaald

@@ -277,6 +277,15 @@ void advancedPopup(App& a) {
     if (ImGui::Checkbox(tr("Auto v2: climb the measured SNR / decoder quality (off: the old headroom loop)"), &s.set.v2)) changed = true;
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Auto v2 tries a neighbouring gain now and then and keeps it when the decoder (or the SNR in the channel) gets better, with no clipping, headroom floor and no intermodulation. The old loop holds a fixed headroom."));
     if (ImGui::Checkbox(tr("Auto also checks for intermodulation (a short +3 dB step now and then)"), &s.set.imdProbeAuto)) changed = true;
+    {   // one switch for the three clean-ups that go with a good gain: the DC spike, IQ imbalance and the radio's own spurs (each is also its own switch)
+        bool on = a.engine.iqFix().dc.load() && a.engine.iqFix().iq.load() && a.engine.spurNotch();
+        if (ImGui::Checkbox(tr("Clean the input: DC spike, IQ imbalance and the radio's own spurs"), &on)) {
+            a.engine.iqFix().dc = on; a.engine.iqFix().iq = on; a.engine.setSpurNotch(on); savePrefs(a);
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner)."));
+        const int lines = a.engine.spurNotchLines();
+        if (a.engine.spurNotch() && lines > 0) { char b[96]; snprintf(b, sizeof b, tr("%d spur(s) cut"), lines); ImGui::SameLine(); ImGui::TextDisabled("%s", b); }
+    }
     ImGui::Separator();
     // stages
     ImGui::TextDisabled("%s", tr("Stages it may adjust"));

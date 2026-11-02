@@ -3458,3 +3458,6 @@ At a set speed each row is the highest level of the frames in between, so a shor
 Export results CSV...	Találatok exportálása CSV-be...
 Nothing to export: no row matches the search.	Nincs mit exportálni: egyetlen sor sem felel meg a keresésnek.
 Saves the rows now in the table (with the search and the filters applied, built-in and yours) as a CSV file. Import and the Memory panel read it back.	A táblázat sorait (a keresés és a szűrők alkalmazásával, beépített és saját) CSV-fájlba menti. Az Importálás és a Memória panel visszaolvassa.
+Clean the input: DC spike, IQ imbalance and the radio's own spurs	Bemenet tisztítása: DC-tüske, IQ-kiegyensúlyozatlanság és a rádió saját zavarvonalai
+Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Magából a jelből mérve, a kívánt csatornát soha nem érinti: a DC-tüskét és az IQ-tükörképet kihagyja azokban a módokban, ahol ártana, a csatornán belüli zavarvonalat pedig csak akkor vágja ki, ha áthangolás után is ugyanazon a helyen marad az alapsávban (a valódi jel együtt mozog a hangolóval).
+%d spur(s) cut	%d zavarvonal kivágva

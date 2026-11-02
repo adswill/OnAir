@@ -273,6 +273,7 @@ bool AutoGainController::evaluateTrial(const AgInput& in, AgCommand& out) {
             if (mx > fl + 20 && hi0[kk] < -3.0) {
                 const double sc = std::clamp((double)(hi0[kk] - specBase_[kk]) / dgNom, 0.5, 3.0);
                 unitScale_ = rejUp_ == 0 && unitScale_ == 1.0 ? sc : 0.5 * unitScale_ + 0.5 * sc;
+                unitLearned_ = true;
             }
         }
     }
@@ -282,7 +283,8 @@ bool AutoGainController::evaluateTrial(const AgInput& in, AgCommand& out) {
     bool imd = false, comp = false;
     std::string slopeWhy;
     slope_ = 1;
-    if (std::fabs(dg) >= 1.5 && specCnt_ > 2 && !specBase_.empty()) {
+    const bool slopeKnown = !radio_.stepsUncertain || radio_.calibrated() || unitLearned_;   // an index of an unknown radio: its real dB per step first
+    if (slopeKnown && std::fabs(dg) >= 1.5 && specCnt_ > 2 && !specBase_.empty()) {
         const std::vector<float> hi = meanDb(specPow_, specCnt_);
         if (hi.size() == specBase_.size()) {
             const std::vector<float>& a = dg > 0 ? specBase_ : hi;
@@ -311,6 +313,10 @@ bool AutoGainController::evaluateTrial(const AgInput& in, AgCommand& out) {
         const double mGain = mTri_.mean - mBase_.mean;
         const bool floorLow = mBase_.n >= 3 && mBase_.mean < tgt_.marginGoalDb - 2.0;
         if (!accept && !bad && floorLow && mTri_.n >= 3 && mGain > 1.0 && dJ > -thr) { accept = true; sensWhy = true; }
+        // the floor sits AT the ADC's own noise (within 1.5 dB): the antenna's noise is still under it and the wanted signal may be too, so neither the floor nor the SNR
+        // moves with a step (a radio with a coarse gain table, or a network radio, gets there from the bottom: SpyServer, an RTL-SDR at index 0). More gain can only help
+        // until the antenna's noise shows (the margin rises), whatever the objective says
+        if (!accept && !bad && mBase_.n >= 3 && mBase_.mean < 1.5 && mTri_.n >= 3 && dJ > -thr) { accept = true; sensWhy = true; }
         if (accept) rejUp_ = 0;
         if (bad) {
             // the gain above is refused for 2 min, 3 min after a product, longer each time it fails again (up to 8 min)

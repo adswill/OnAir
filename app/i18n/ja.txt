@@ -3472,3 +3472,6 @@ At a set speed each row is the highest level of the frames in between, so a shor
 Export results CSV...	検索結果をCSVにエクスポート...
 Nothing to export: no row matches the search.	エクスポートするものがありません。検索に一致する行がありません。
 Saves the rows now in the table (with the search and the filters applied, built-in and yours) as a CSV file. Import and the Memory panel read it back.	表に表示されている行(検索とフィルターを適用、内蔵と自分の分)をCSVファイルとして保存します。インポートとメモリパネルで読み込めます。
+Clean the input: DC spike, IQ imbalance and the radio's own spurs	入力をきれいにする: DC スパイク、IQ 不均衡、無線機自身のスプリアス
+Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	信号そのものから測定し、目的のチャンネルには手を付けません。DC スパイクと IQ のミラー像は悪影響が出るモードでは省かれ、チャンネル内のスプリアスは、周波数を変えてもベースバンド上の同じ位置に残る場合にだけ除去します(本物の信号はチューナーと一緒に動きます)。
+%d spur(s) cut	%d 本のスプリアスを除去
