@@ -3461,3 +3461,10 @@ Saves the rows now in the table (with the search and the filters applied, built-
 Clean the input: DC spike, IQ imbalance and the radio's own spurs	Bemenet tisztítása: DC-tüske, IQ-kiegyensúlyozatlanság és a rádió saját zavarvonalai
 Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Magából a jelből mérve, a kívánt csatornát soha nem érinti: a DC-tüskét és az IQ-tükörképet kihagyja azokban a módokban, ahol ártana, a csatornán belüli zavarvonalat pedig csak akkor vágja ki, ha áthangolás után is ugyanazon a helyen marad az alapsávban (a valódi jel együtt mozog a hangolóval).
 %d spur(s) cut	%d zavarvonal kivágva
+Why	Miért
+no signal at the channel: check the tuning, the antenna and the gain	nincs jel a csatornán: ellenőrizd a hangolást, az antennát és az erősítést
+signal, but no frame sync found: check the tuning (offset, polarity), the bandwidth and the signal-to-noise ratio	van jel, de nincs keretszinkron: ellenőrizd a hangolást (eltolás, polaritás), a sávszélességet és a jel-zaj viszonyt
+frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the signal is too noisy or distorted	keretszinkron van, de az azonosítójuk (NID, LICH, időrés típusa) olvashatatlan: a jel túl zajos vagy torz
+frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	keretszinkron van, de az adatok megbuknak az FEC / CRC-n: gyenge jel, fading vagy mintavételi órahiba
+decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	dekódol, de a blokkok több mint harmada elvész: erősebb jel vagy jobb antenna segítene
+decoding well	jól dekódol

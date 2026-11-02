@@ -19,5 +19,10 @@ int main() {
     CHECK(a.blocksOk * 100 >= ref.blocksOk * 85, "7 dB: %llu of %llu blocks", (unsigned long long)a.blocksOk, (unsigned long long)ref.blocksOk);
     CHECK(b.blocksOk * 100 >= ref.blocksOk * 40, "5 dB: %llu of %llu blocks", (unsigned long long)b.blocksOk, (unsigned long long)ref.blocksOk);
     CHECK(n.blocksOk <= 1 && n.log.empty(), "noise: %llu blocks, %zu calls", (unsigned long long)n.blocksOk, n.log.size());
+    // a carrier 4 kHz off the channel (a cheap oscillator or a mistuned dial) is captured by the frequency capture (MeanAfc): before it, the narrow filters cut the signal
+    for (double cfo : {4000.0, -4000.0}) {
+        const NxdnTelemetry o = voicesens::run<NxdnReceiver, NxdnTelemetry>(40, 250000, off, 20, 14, cfo);
+        CHECK(o.blocksOk * 100 >= ref.blocksOk * 70, "%+.0f Hz off, 14 dB: %llu of %llu", cfo, (unsigned long long)o.blocksOk, (unsigned long long)ref.blocksOk);
+    }
     return testSummary("nxdn sens");
 }

@@ -3458,3 +3458,10 @@ Saves the rows now in the table (with the search and the filters applied, built-
 Clean the input: DC spike, IQ imbalance and the radio's own spurs	Pulisci l'ingresso: picco DC, squilibrio IQ e spurie della radio
 Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Misurato dal segnale stesso, mai sul canale voluto: il picco DC e l'immagine IQ vengono saltati nei modi che ne soffrirebbero, e una spuria dentro il canale viene tagliata solo se resta nello stesso punto della banda base dopo un cambio di frequenza (un segnale vero si muove con il sintonizzatore).
 %d spur(s) cut	%d spuria/e tagliata/e
+Why	Perché
+no signal at the channel: check the tuning, the antenna and the gain	nessun segnale sul canale: controlla la sintonia, l'antenna e il guadagno
+signal, but no frame sync found: check the tuning (offset, polarity), the bandwidth and the signal-to-noise ratio	segnale presente, ma nessun sincronismo di trama trovato: controlla la sintonia (scostamento, polarità), la larghezza di banda e il rapporto segnale/rumore
+frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the signal is too noisy or distorted	sincronismi di trama trovati, ma la loro identità (NID, LICH, tipo di slot) è illeggibile: il segnale è troppo rumoroso o distorto
+frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	sincronismi di trama trovati, ma i dati falliscono FEC / CRC: segnale debole, fading o errore del clock di campionamento
+decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	decodifica in corso, ma oltre un terzo dei blocchi va perso: un segnale più forte o un'antenna migliore aiuterebbe
+decoding well	decodifica bene

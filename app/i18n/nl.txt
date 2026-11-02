@@ -3475,3 +3475,10 @@ Saves the rows now in the table (with the search and the filters applied, built-
 Clean the input: DC spike, IQ imbalance and the radio's own spurs	Ingang opschonen: DC-piek, IQ-onbalans en eigen stoorlijnen van de radio
 Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Gemeten uit het signaal zelf en raakt nooit het gewenste kanaal: de DC-piek en het IQ-spiegelbeeld worden overgeslagen in modi waar ze zouden schaden, en een stoorlijn in het kanaal wordt alleen weggehaald als hij na het hertunen op dezelfde plek in de basisband blijft (een echt signaal beweegt mee met de tuner).
 %d spur(s) cut	%d stoorlijn(en) weggehaald
+Why	Waarom
+no signal at the channel: check the tuning, the antenna and the gain	geen signaal op het kanaal: controleer de afstemming, de antenne en de versterking
+signal, but no frame sync found: check the tuning (offset, polarity), the bandwidth and the signal-to-noise ratio	signaal aanwezig, maar geen framesync gevonden: controleer de afstemming (offset, polariteit), de bandbreedte en de signaal-ruisverhouding
+frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the signal is too noisy or distorted	framesyncs gevonden, maar hun identiteit (NID, LICH, slottype) is onleesbaar: het signaal is te ruisig of vervormd
+frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	framesyncs gevonden, maar de data falen op FEC / CRC: zwak signaal, fading of een fout in de samplekloks
+decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	decodeert, maar meer dan een derde van de blokken gaat verloren: een sterker signaal of een betere antenne zou helpen
+decoding well	decodeert goed

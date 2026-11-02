@@ -9,6 +9,8 @@
 #include "dect2/codec/codec_registry.h"
 #include "../codec/speech_codec_ui.h"
 #include "ui/ui_common.h"
+#include "ui/voice_why_ui.h"
+#include "dect2/voice/voice_why_modes.h"
 #include "../adsb/adsb_map.h"
 #include "dect2/dstar/dstar_ambe.h"
 #include "dect2/dstar/dstar_rx.h"
@@ -253,6 +255,7 @@ void receiver(App& a) {
     wideCarriersTable(a, 0);
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const dect2::DstarTelemetry& t = a.rx.dstar;
+    voiceWhyRow(a, dect2::dstarWhy(t));
     kvRow(a, "state", "%s", dect2::dstarSummary(t).c_str());
     kvRow(a, "signal", "bit SNR %.1f dB, bit sync level %.0f Hz, offset %+.0f Hz%s", t.snrDb, t.deviationHz, t.cfoHz, t.inverted ? ", spectrum mirrored" : "");
     kvRow(a, "bit errors", "%.2f %% (header before its FEC, data syncs)", t.berPct);

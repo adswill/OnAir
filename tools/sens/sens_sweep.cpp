@@ -43,6 +43,10 @@ std::vector<Scenario> scenariosFor(const Mode& m) {
     snprintf(b, sizeof b, "carrier error of a 20 ppm radio (%.0f Hz, capped at a quarter of the channel)", ppm2); add("cfo20ppm", b, ppm2, 0, 0, "");
     snprintf(b, sizeof b, "channel off the centre by %.0f Hz", offc); add("offcentre", b, offc, 0, 0, "");
     add("sro50ppm", "sample clock 50 ppm fast", 0, 50, 0, "");
+    if (m.bwHz <= 25e3) {   // narrowband voice and data: a cheap oscillator (or a wrong tuning) puts the signal several kHz off; the AFC's capture range
+        snprintf(b, sizeof b, "carrier %.0f Hz above the channel centre (capture range of the AFC)", std::min(4000.0, lim)); add("cfop4k", b, std::min(4000.0, lim), 0, 0, "");
+        snprintf(b, sizeof b, "carrier %.0f Hz below the channel centre", std::min(4000.0, lim)); add("cfom4k", b, -std::min(4000.0, lim), 0, 0, "");
+    }
     snprintf(b, sizeof b, "static echo -6 dB at %.1f us", m.echoUs); add("echo", b, 0, 0, 0, "echo");
     snprintf(b, sizeof b, "Rayleigh fading, 6 tap TU6, Doppler %.0f Hz", m.fdHz); add("tu6", b, 0, 0, 0, "tu6");
     snprintf(b, sizeof b, "Rician (K = 10 dB) over TU6, Doppler %.0f Hz", m.fdHz); add("rician", b, 0, 0, 0, "rician");
@@ -307,7 +311,7 @@ int main(int argc, char** argv) {
         std::vector<std::string> sj;
         for (const auto& sc : scenariosFor(m)) {
             if (!std::regex_search(sc.name, sre)) continue;
-            if (cfg.quick && sc.name != "awgn" && sc.name != "combined" && sc.name != "tu6" && sc.name != "cfo20ppm") continue;
+            if (cfg.quick && sc.name != "awgn" && sc.name != "combined" && sc.name != "tu6" && sc.name != "cfo20ppm" && sc.name != "cfop4k" && sc.name != "cfom4k") continue;
             ScenResult r = sweep(m, P, sc, need, cfg, nth, hi, cfg.snrLo);
             printf("   %-11s %9s %10s %10s %9s  %s\n", sc.name.c_str(), r.hasThreshold ? jnum(r.threshold).c_str() : "-", r.hasThreshold ? jnum(r.lockMed).c_str() : "-",
                    r.hasThreshold ? jnum(r.lockP90).c_str() : "-", r.perAtThr >= 0 ? jnum(r.perAtThr).c_str() : "-", r.note.c_str());

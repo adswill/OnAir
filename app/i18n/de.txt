@@ -3475,3 +3475,10 @@ Saves the rows now in the table (with the search and the filters applied, built-
 Clean the input: DC spike, IQ imbalance and the radio's own spurs	Eingang bereinigen: DC-Spitze, IQ-Ungleichheit und Störlinien des Funkgeräts
 Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Aus dem Signal selbst gemessen, nie der gewünschte Kanal: DC-Spitze und IQ-Spiegelbild werden in Modi übersprungen, denen sie schaden würden, und eine Störlinie im Kanal wird nur entfernt, wenn sie nach einem Wechsel der Frequenz an derselben Stelle des Basisbands bleibt (ein echtes Signal wandert mit dem Tuner).
 %d spur(s) cut	%d Störlinie(n) entfernt
+Why	Warum
+no signal at the channel: check the tuning, the antenna and the gain	kein Signal im Kanal: Abstimmung, Antenne und Verstärkung prüfen
+signal, but no frame sync found: check the tuning (offset, polarity), the bandwidth and the signal-to-noise ratio	Signal da, aber kein Rahmen-Sync gefunden: Abstimmung (Offset, Polarität), Bandbreite und Signal-Rausch-Abstand prüfen
+frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the signal is too noisy or distorted	Rahmen-Syncs gefunden, aber ihre Kennung (NID, LICH, Slot-Typ) ist unlesbar: das Signal ist zu verrauscht oder verzerrt
+frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	Rahmen-Syncs gefunden, aber die Nutzdaten scheitern an FEC / CRC: schwaches Signal, Schwund oder Abtasttaktfehler
+decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	dekodiert, aber über ein Drittel der Blöcke geht verloren: ein stärkeres Signal oder eine bessere Antenne würde helfen
+decoding well	dekodiert gut

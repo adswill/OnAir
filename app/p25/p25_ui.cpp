@@ -3,6 +3,8 @@
 // messages, and a "?" about the mbelib library the voice needs (docs/CODECS.md). Receive only; encrypted calls are only reported.
 #include "dect2/common/time_fmt.h"
 #include "app.h"
+#include "ui/voice_why_ui.h"
+#include "dect2/voice/voice_why_modes.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/session_list.h"
 #include "voice/voice_monitor_ui.h"
@@ -844,6 +846,7 @@ void receiver(App& a) {
     wideCarriersTable(a, 0);
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const dect2::P25Telemetry& t = a.rx.p25;
+    voiceWhyRow(a, dect2::p25Why(t));
     kvRow(a, "follow", "%s", T.on ? T.ctl.statusLine(nowSec()).c_str() : "off: calls are shown but not followed (Follow tab)");
     kvRow(a, "state", "%s", dect2::p25Summary(t).c_str());
     kvRow(a, "signal", "C4FM, symbol SNR %.1f dB, +3 deviation %.0f Hz, offset %+.0f Hz%s", t.snrDb, t.deviationHz, t.cfoHz, t.inverted ? ", inverted" : "");

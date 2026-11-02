@@ -1,6 +1,8 @@
 // DMR screens: the two time slots and the call log, the symbol plots, the receiver counters and the options of the test signal.
 #include "call_filter.h"
 #include "app.h"
+#include "ui/voice_why_ui.h"
+#include "dect2/voice/voice_why_modes.h"
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/mode_panel.h"
@@ -468,6 +470,7 @@ void receiver(App& a) {
     wideCarriersTable(a, 0);
     const DmrTelemetry& t = a.rx.dmr;
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
+    voiceWhyRow(a, dect2::dmrWhy(t));
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     const float gap = 10 * gUi, cw = (W - 2 * gap) / 3.f;
     const bool stack = cw < 260 * gUi;   // a narrow tab: the three blocks one under the other (the tab scrolls)

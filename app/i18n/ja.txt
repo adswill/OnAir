@@ -3475,3 +3475,10 @@ Saves the rows now in the table (with the search and the filters applied, built-
 Clean the input: DC spike, IQ imbalance and the radio's own spurs	入力をきれいにする: DC スパイク、IQ 不均衡、無線機自身のスプリアス
 Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	信号そのものから測定し、目的のチャンネルには手を付けません。DC スパイクと IQ のミラー像は悪影響が出るモードでは省かれ、チャンネル内のスプリアスは、周波数を変えてもベースバンド上の同じ位置に残る場合にだけ除去します(本物の信号はチューナーと一緒に動きます)。
 %d spur(s) cut	%d 本のスプリアスを除去
+Why	理由
+no signal at the channel: check the tuning, the antenna and the gain	チャンネルに信号がありません: 同調、アンテナ、ゲインを確認してください
+signal, but no frame sync found: check the tuning (offset, polarity), the bandwidth and the signal-to-noise ratio	信号はありますが、フレーム同期が見つかりません: 同調(オフセット、極性)、帯域幅、S/N比を確認してください
+frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the signal is too noisy or distorted	フレーム同期は見つかりましたが、識別情報(NID、LICH、スロット種別)を読み取れません: 信号のノイズまたは歪みが大きすぎます
+frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	フレーム同期は見つかりましたが、ペイロードがFEC / CRCで失敗します: 信号が弱い、フェージング、またはサンプルクロック誤差
+decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	デコードできていますが、ブロックの3分の1以上が失われています: より強い信号か良いアンテナが有効です
+decoding well	良好にデコードしています

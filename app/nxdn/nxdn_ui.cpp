@@ -2,6 +2,8 @@
 // decoded control messages, the site information, and a "?" about the mbelib library the voice needs (docs/CODECS.md).
 #include "dect2/common/time_fmt.h"
 #include "app.h"
+#include "ui/voice_why_ui.h"
+#include "dect2/voice/voice_why_modes.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/session_list.h"
 #include "voice/voice_monitor_ui.h"
@@ -197,6 +199,7 @@ void receiver(App& a) {
     wideCarriersTable(a, 0);
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const dect2::NxdnTelemetry& t = a.rx.nxdn;
+    voiceWhyRow(a, dect2::nxdnWhy(t));
     kvRow(a, "state", "%s", dect2::nxdnSummary(t).c_str());
     kvRow(a, "signal", "NXDN%d, symbol SNR %.1f dB, +3 deviation %.0f Hz, offset %+.0f Hz%s", t.baud == 4800 ? 96 : 48, t.snrDb, t.deviationHz, t.cfoHz, t.inverted ? ", inverted" : "");
     kvRow(a, "bit errors", "%.2f %% (control channels before their FEC)", t.berPct);
