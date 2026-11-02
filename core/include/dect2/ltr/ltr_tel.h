@@ -12,7 +12,8 @@ struct LtrMessage {
     int64_t wallTime = 0;
     double timeSec = 0;
     int area = 0, gotoCh = 0, home = 0, id = 0, freeCh = 0;   // the 24 information bits
-    int chk = 0;                                               // the 7 check bits as received (the algorithm is not public, so not verified)
+    int chk = 0;                                               // the 7 check bits as received (a word is only listed when they verify)
+    bool chkOk = false;                                        // the check bits matched (always true for listed rows)
     bool plausible = false;                                    // the fields are in their documented ranges
     std::string talkgroup;                                     // A-HH-GGG
     std::string kind;                                          // idle, callsign ID, busy, token, or empty
@@ -33,7 +34,7 @@ struct LtrTelemetry {
     double cfoHz = 0;              // not measured (0)
     float snrDb = 0, levelDb = -200, deviationHz = 0;   // deviationHz: peak-to-peak size of the subaudible data
     bool dataValid = false;
-    uint64_t blocksOk = 0, blocksBad = 0;   // words with the sync and plausible fields / sync found but fields out of range
+    uint64_t blocksOk = 0, blocksBad = 0;   // words with the sync, matching check bits and plausible fields / sync found but check bits or fields wrong
     uint64_t syncs = 0;
     int area = -1;                 // area bit of the last good word
     double timeSec = 0, inputRate = 0, centerHz = 0;

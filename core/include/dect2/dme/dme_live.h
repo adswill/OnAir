@@ -22,6 +22,7 @@ class DmeLiveReceiver {
 public:
     void configure(double inputRateHz);
     void setSignalOffset(double hz);            // not used: the beacon's pulses are found on the envelope of the channel
+    void setCenterHz(double hz);                // the tuned frequency: gives the channel number
     bool ready() const;
     void reset();                               // the pulse detector and the ident; the engine calls it on a new start
     void feed(const cf32* x, size_t n);
@@ -34,6 +35,7 @@ private:
     double rate_ = 0.0;
     bool ready_ = false;
     uint64_t seq_ = 0;
+    double centerHz_ = 0.0;
     std::vector<float> env_;
     DmeTelemetry snap_;
     std::string lastIdent_;

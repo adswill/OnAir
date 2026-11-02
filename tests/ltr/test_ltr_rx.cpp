@@ -1,5 +1,5 @@
-// LTR: word round trip, bit errors, and the full chain (generated FM signal with voice and noise -> receiver). Everything here is generated
-// signal only: no real LTR recording was available, and the check bits are not verified (the algorithm is not in public non-code sources).
+// LTR: word round trip, check bits (table cross-checked from an independent bit-matrix construction), bit errors, and the full chain
+// (generated FM signal with voice and noise -> receiver), with impairment sweeps. Generated signal only: no real LTR recording was available.
 #include "dect2/ltr/ltr_proto.h"
 #include "dect2/ltr/ltr_rx.h"
 #include "dect2/ltr/ltr_tel.h"
@@ -19,7 +19,7 @@ static float gauss() { float s = 0; for (int i = 0; i < 6; i++) { rngState = rng
 
 static std::vector<ltr::Word> sentWords() {
     std::vector<ltr::Word> w;
-    auto add = [&](int area, int gt, int home, int id, int fr, int chk) { ltr::Word x; x.area = area; x.gotoCh = gt; x.home = home; x.id = id; x.freeCh = fr; x.chk = chk; w.push_back(x); };
+    auto add = [&](int area, int gt, int home, int id, int fr, int chk) { ltr::Word x; x.area = area; x.gotoCh = gt; x.home = home; x.id = id; x.freeCh = fr; x.chk = chk; if (chk >= 0) x.chk = ltr::checksum(x); w.push_back(x); };
     add(0, 3, 3, 17, 5, 0x2A);
     add(0, 5, 1, 101, 7, 0x11);
     add(1, 12, 12, 254, 2, 0x5C);
@@ -86,7 +86,28 @@ int main() {
             CHECK(ltr::plausible(r), "plausible failed for %s", ltr::talkgroup(w).c_str());
         }
         CHECK(ltr::kindOf(255) == "idle" && ltr::kindOf(254) == "callsign ID" && ltr::kindOf(17).empty(), "kinds");
-        // a bit error in the sync is rejected; one in a field is not caught (the check bits are not verified)
+        // every single-bit error in the 24 information bits or the check bits is caught; syndromes are distinct and non-zero
+        {
+            std::set<int> syn;
+            for (int i = 0; i < 24; i++) {
+                ltr::Word z; z.area = z.gotoCh = z.home = z.id = z.freeCh = 0; z.chk = 0;
+                int* f[5] = {&z.area, &z.gotoCh, &z.home, &z.id, &z.freeCh};
+                const int w[5] = {1, 5, 5, 8, 5};
+                int b = i;
+                for (int k = 0; k < 5; k++) { if (b < w[k]) { *f[k] = 1 << (w[k] - 1 - b); break; } b -= w[k]; }
+                const int c = ltr::checksum(z);
+                CHECK(c != 0 && syn.insert(c).second, "info bit %d syndrome %02X not unique", i, c);
+            }
+            for (int i = 0; i < 7; i++) CHECK(syn.insert(1 << i).second, "check bit %d collides with an info bit", i);
+            for (const auto& w : sent) {
+                ltr::Word r = w;
+                CHECK(ltr::checkOk(r, false), "good word fails its check");
+                for (int bit = 0; bit < 7; bit++) { r.chk = w.chk ^ (1 << bit); CHECK(!ltr::checkOk(r, false), "check bit flip accepted"); }
+                r = w; r.id ^= 0x10; CHECK(!ltr::checkOk(r, false), "info bit flip accepted");
+                r = w; r.chk ^= 127; CHECK(!ltr::checkOk(r, false) && ltr::checkOk(r, true), "inverted check handling");
+            }
+        }
+        // a bit error in the sync is rejected
         auto b = ltr::encodeWord(sent[0]);
         ltr::Word r;
         b[3] ^= 1;
@@ -122,6 +143,45 @@ int main() {
         const int n = found(t, sent, stray);
         CHECK(n >= (int)sent.size() - 1 && stray == 0, "noise: found %d of %zu, stray %d", n, sent.size(), stray);
         std::printf("noise: found %d of %zu, stray %d, good %llu bad %llu\n", n, sent.size(), stray, (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
+    }
+    {   // sweep: carrier offset, deviation, polarity, sample rate, baud clock error +-0.3 %, amplitude
+        int cases = 0, bad = 0;
+        for (double fsw : {240000.0, 480000.0, 960000.0})
+            for (double o : {-60000.0, 0.0, 45000.0})
+                for (double dev : {300.0, 600.0, 1000.0})
+                    for (int inv = 0; inv < 2; inv++)
+                        for (double ce : {-0.003, 0.0, 0.003}) {
+                            const double carrier = o + 900.0;                      // 900 Hz off the tuned offset
+                            const auto sig = ltr::modulate(bits, fsw * (1.0 + ce), carrier, dev, 0.4f, 0, 0, inv != 0);
+                            const LtrTelemetry t = run(sig, fsw, o, 0.03);
+                            int stray = 0;
+                            const int n = found(t, sent, stray);
+                            cases++;
+                            if (n != (int)sent.size() || stray) { bad++; std::printf("sweep miss fs %.0f off %.0f dev %.0f inv %d clk %+.3f: found %d stray %d\n", fsw, o, dev, inv, ce, n, stray); }
+                        }
+        CHECK(bad == 0, "sweep: %d of %d cases failed", bad, cases);
+        std::printf("sweep: %d cases, %d failed\n", cases, bad);
+    }
+    {   // corrupted words (one information bit flipped, check bits left) are counted bad and never listed; ISW-style inverted check accepted
+        std::vector<ltr::Word> w2 = sent;
+        std::vector<uint8_t> b;
+        for (int i = 0; i < 40; i++) b.push_back((uint8_t)(i & 1));
+        for (int r = 0; r < 3; r++)
+            for (size_t k = 0; k < w2.size(); k++) {
+                ltr::Word x = w2[k];
+                if (k % 2) x.id ^= 0x04; // corrupt every second word
+                else if (r == 2) x.chk ^= 127; // inbound style inverted check
+                const auto e = ltr::encodeWord(x);
+                b.insert(b.end(), e.begin(), e.end());
+                for (int i = 0; i < 12; i++) b.push_back((uint8_t)((i * 7 + r) & 1));
+            }
+        const LtrTelemetry t = run(ltr::modulate(b, fs, off, 600.0, 0.5f), fs, off, 0);
+        std::set<std::string> got; for (const auto& m : t.messages) got.insert(m.talkgroup);
+        for (size_t k = 0; k < w2.size(); k++) {
+            const bool shouldList = (k % 2 == 0);
+            CHECK(got.count(ltr::talkgroup(w2[k])) == (shouldList ? 1u : 0u), "corrupted-word handling for %s", ltr::talkgroup(w2[k]).c_str());
+        }
+        CHECK(t.blocksBad >= 3, "corrupted words not counted bad (%llu)", (unsigned long long)t.blocksBad);
     }
     {   // noise only: no word is accepted as good
         const LtrTelemetry t = run({}, fs, off, 0.1, true);

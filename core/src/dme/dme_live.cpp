@@ -17,6 +17,12 @@ void DmeLiveReceiver::configure(double inputRateHz) {
 
 void DmeLiveReceiver::setSignalOffset(double) {}
 
+void DmeLiveReceiver::setCenterHz(double hz) {
+    std::lock_guard<std::mutex> lk(mu_);
+    centerHz_ = hz;
+    seq_++;
+}
+
 bool DmeLiveReceiver::ready() const {
     std::lock_guard<std::mutex> lk(mu_);
     return ready_;
@@ -47,6 +53,14 @@ void DmeLiveReceiver::publish() {
     snap_.pairRatePps = t.pairRatePps;
     snap_.pairsX = t.pairsX;
     snap_.pairsY = t.pairsY;
+    snap_.pairsYInterrogation = t.pairsYInterrogation;
+    snap_.identIntervalUs = t.identIntervalUs;
+    snap_.centerHz = centerHz_;
+    {
+        bool y = false;
+        snap_.channelNumber = centerHz_ > 0 ? dme::channelFromReplyMHz(centerHz_ / 1e6, y) : 0;
+        snap_.channelIsY = y;
+    }
     snap_.levelDb = static_cast<float>(t.levelDb);
     snap_.identKeyed = t.identKeyed;
     snap_.ident = t.ident;
@@ -76,7 +90,7 @@ void DmeLiveReceiver::setLogCallback(std::function<void(const std::string&)> cb)
 
 ModeTuning dmeTuning() {
     ModeTuning t;
-    t.stdMode = 123; t.id = "dme"; t.name = "DME (WIP)";
+    t.stdMode = 123; t.id = "dme"; t.name = "DME";
     t.minMhz = 0.962; t.maxMhz = 1.213; t.defMhz = 1.104;   // the DME reply band (ICAO Annex 10); modeTuning() opens the range
     t.sampleRate = 2.4e6;                    // 3.5 us pulses need 2 Msps or more: the sample rate asked of the radio
     t.basebandHz = 0;

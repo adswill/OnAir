@@ -32,6 +32,24 @@ bool parseWord(const uint8_t* b, Word& w) {
     return true;
 }
 
+// One 7-bit value per information bit, MSB (AREA) first: area, go-to 4..0, home 4..0, id 7..0, free 4..0 (table from sdrtrunk CRCLTR, GPL-3).
+static const uint8_t kChk[24] = {
+    0x38, 0x1C, 0x0E, 0x46, 0x23, 0x51, 0x68, 0x75, 0x7A, 0x3D, 0x1F, 0x4F,
+    0x26, 0x52, 0x29, 0x15, 0x0B, 0x45, 0x62, 0x31, 0x19, 0x0D, 0x07, 0x43};
+
+int checksum(const Word& w) {
+    const uint32_t info = ((uint32_t)(w.area & 1) << 23) | ((uint32_t)(w.gotoCh & 31) << 18) | ((uint32_t)(w.home & 31) << 13) |
+                          ((uint32_t)(w.id & 255) << 5) | (uint32_t)(w.freeCh & 31);
+    int c = 0;
+    for (int i = 0; i < 24; i++) if ((info >> (23 - i)) & 1) c ^= kChk[i];
+    return c;
+}
+
+bool checkOk(const Word& w, bool inverted) {
+    const int c = checksum(w);
+    return w.chk == c || (inverted && w.chk == (c ^ 127));
+}
+
 bool plausible(const Word& w) {
     return w.home >= 1 && w.home <= 20 && (w.gotoCh <= 20 || w.gotoCh >= 29) && (w.freeCh <= 20 || w.freeCh == 31);
 }

@@ -1,7 +1,7 @@
 // EDACS system capture (edacs_gen.h): the control channel and analog voice channels in one wide capture. Checks the call table, talkgroup table and site information
-// built from the control channel (assumed message layout), the power scan of the voice channels from a frequency table, and the following of one voice channel
+// built from the control channel (published Standard / Networked layout and Extended Addressing), the power scan of the voice channels from a frequency table, and the following of one voice channel
 // (the tone comes out of the sound; the group filter; the carrier-only follow; no table; a channel outside the capture), with noise and a carrier offset.
-// Generated signals only: the message layout is an assumption (edacs_msg.h), no real EDACS / ProVoice system was heard.
+// Generated signals only: no real EDACS / ProVoice system was heard.
 #include "dect2/edacs/edacs_gen.h"
 #include "dect2/edacs/edacs_rx.h"
 #include "dect2/edacs/edacs_tel.h"
@@ -47,6 +47,7 @@ static Result run(const EdacsGenConfig& c, bool table_, bool follow, bool follow
     rx.configure(c.rate);
     rx.setSignalOffset(c.controlHz - c.centreHz + c.cfoHz);
     rx.setCenterHz(c.centreHz);
+    rx.setLayout(c.layout);
     if (table_) rx.setLcnTable(tableOverride ? *tableOverride : c.lcnFreqHz);
     rx.setFollow(follow);
     rx.setFollowActivity(followAct);
@@ -71,13 +72,21 @@ static const EdacsCall* find(const EdacsTelemetry& t, int lcn, int gid) {
 }
 
 int main() {
+    {   // Extended Addressing: the same system, read with the EA layout (area instead of the LCN of the control channel)
+        EdacsGenConfig c = baseConfig();
+        c.layout.extended = true; c.systemId = 99;
+        const Result r = run(c, true, false, false);
+        const EdacsCall* a = find(r.t, 3, 777);
+        CHECK(r.t.siteValid && r.t.siteId == 5 && r.t.systemId == 99, "EA site: %d %d", r.t.siteId, r.t.systemId);
+        CHECK(a && a->group && a->lid == 4321, "EA call 1 missing or wrong");
+        CHECK(find(r.t, 6, 888) != nullptr, "EA call 2 missing");
+    }
     // ---- the message layer, the scan and following, clean
     {
         EdacsGenConfig c = baseConfig();
         const Result r = run(c, true, true, true);
         const EdacsTelemetry& t = r.t;
-        CHECK(t.siteValid && t.siteId == 5 && t.systemId == 1234 && t.controlLcn == 1 && t.nChannels == 8, "site: %d %d %d %d", t.siteId, t.systemId, t.controlLcn, t.nChannels);
-        CHECK(t.layoutAssumed, "the layout is not flagged as an assumption");
+        CHECK(t.siteValid && t.siteId == 5 && t.systemId == -1 && t.controlLcn == 1 && t.nChannels == 6, "site: %d %d %d %d", t.siteId, t.systemId, t.controlLcn, t.nChannels);
         CHECK(t.messagesKnown > 20 && t.messagesKnown < t.messages, "messages %llu known of %llu", (unsigned long long)t.messagesKnown, (unsigned long long)t.messages);
         const EdacsCall* a = find(t, 3, 777);
         const EdacsCall* b = find(t, 6, 888);

@@ -218,6 +218,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxAirband_.setSignalOffset(o);
         rxVdl2_.setSignalOffset(o);
         rxVdl2_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
+        rxDme_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the channel number of the tuned reply frequency
         rxAirband_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the channels are placed from it
         rxIsm_.setSignalOffset(o);
         rxIsm_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the devices' frequencies

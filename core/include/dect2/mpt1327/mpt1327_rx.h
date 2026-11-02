@@ -26,6 +26,7 @@ struct Event {
 
 struct Stats {
     uint64_t good = 0;       // codewords with good check bits (control channel system codewords and address / data codewords after a SYNC)
+    uint64_t corrected = 0;  // single-bit errors repaired (counted in good as well)
     uint64_t bad = 0;        // codewords after a SYNC whose check bits fail
     uint64_t ccsc = 0;       // control channel system codewords seen
     uint64_t messages = 0;   // address codewords decoded
