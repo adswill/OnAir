@@ -5,6 +5,7 @@
 #include "dect2/inmsat/inmsat_planes.h"
 #include "dect2/inmc/inmc_rx.h"
 #include "dect2/mesh/mesh_lora.h"
+#include "dect2/common/threadpool.h"
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -196,6 +197,7 @@ struct Manager::Impl {
                     w->inmc->configure(w->outRate);
                     w->inmc->setSignalOffset(w->inmcOffset);
                     w->inmc->setChannelSearch(true);
+                    w->inmc->setSearchSpan(cfg.windowBwHz / 2);
                 }
                 for (auto& c : w->cch) c->rx->configure(w->outRate, c->offsetHz, 2800);
             }
@@ -207,7 +209,10 @@ struct Manager::Impl {
         std::vector<lora::ChanBuf*> outs;
         for (auto& w : wins) outs.push_back(&w->buf);
         chz->process(x, n, outs);
-        for (auto& w : wins) {
+        // the windows are independent (each receiver owns its state and its locks; the log callback takes its own): one window per
+        // worker of the shared pool, the calling thread helps, so a capture of many windows uses the cores the machine has
+        ThreadPool::shared().parallelFor(wins.size(), [&](size_t wi) {
+            Window* w = wins[wi].get();
             lora::ChanBuf& b = w->buf;
             const int64_t e = b.end();
             int64_t i = b.begin();
@@ -219,7 +224,7 @@ struct Manager::Impl {
                 i += (int64_t)k;
             }
             b.trim(e);
-        }
+        });
     }
 
     void feed(const cf32* x, size_t n) {
@@ -347,11 +352,13 @@ struct Manager::Impl {
             r.id = c.id; r.offsetHz = c.offsetHz; r.widthHz = c.widthHz; r.snrDb = c.snrDb; r.cls = c.cls;
             r.freqHz = cfg.centerHz != 0 ? cfg.centerHz + c.offsetHz : 0;
             r.focus = c.id == focusId;
+            // the window that owns the carrier is the first one covering it, but the receivers' channels are matched across all windows:
+            // the Aero and Inmarsat-C receivers report channels over their whole channelizer output, so a carrier is often decoded by a
+            // window whose declared span does not cover it, and the C-channel decoders sit in whichever window had room
+            const double reach = std::max(3000.0, c.widthHz / 2 + 1500);
             for (size_t wi = 0; wi < wins.size(); wi++) {
                 const Window& w = *wins[wi];
-                if (!covers(w, c.offsetHz)) continue;
-                r.window = (int)wi;
-                const double reach = std::max(3000.0, c.widthHz / 2 + 1500);
+                if (r.window < 0 && covers(w, c.offsetHz)) r.window = (int)wi;
                 if (w.aero) {
                     for (const auto& ch : w.at.channels) {
                         if (std::fabs(w.centerHz + ch.offsetHz - c.offsetHz) > reach) continue;
@@ -383,7 +390,6 @@ struct Manager::Impl {
                         }
                     }
                 }
-                break;
             }
             r.parked = r.window < 0;
             r.rateGuess = r.bitRate ? 0 : rateGuessForWidth(c.widthHz, c.cls);

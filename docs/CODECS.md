@@ -376,10 +376,14 @@ Build it (the source of the plug-in is `tools/addons/aeroambe` and contains no v
 
 ```
 git clone https://github.com/jontio/libaeroambe
+cmake -S libaeroambe/mbelib-master -B libaeroambe/mbelib-master/build -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+cmake --build libaeroambe/mbelib-master/build
 cd OnAir/tools/addons/aeroambe
-cmake -S . -B build -DMBELIB_DIR=/path/to/libaeroambe/mbelib-master
+cmake -S . -B build -DAEROAMBE_MBELIB=/path/to/libaeroambe/mbelib-master
 cmake --build build
 ```
+
+Copy `libmbe` (from the mbelib build folder) next to the plug-in or install it. The plug-in sets the unvoiced-sound quality to 3 and silences a frame with more than 3 corrected errors (mbelib would otherwise repeat the previous frame's parameters; chosen by ear on real calls). `ONAIR_AEROAMBE_UVQ`, `ONAIR_AEROAMBE_MUTE` and `ONAIR_AEROAMBE_POST=1` (a 250-3400 Hz band-pass with a slow AGC, off by default) change that for tests. `decode_bits` (built beside the plug-in) turns a call's `.bits` file into a WAV with the same options, to compare them by ear.
 
 Copy `onair-codec-aeroambe.dylib` / `.so` / `onair-codec-aeroambe.dll` into the OnAir codecs folder (see "File names and search order") and accept the notice once. The plug-in unpacks the 12 bytes, moves bit i to `ambe_fr[rW[i]][rX[i]]` (libaeroambe's tables) and calls `mbe_processAmbe4800x3600Frame`. It was run on a real C-channel recording (JAERO's 8400bps sample): zero Golay/Hamming errors in the frames and speech-like bursts at the output. It does not decode encrypted traffic and there is no key handling. The old mention of the `ambe` id for Inmarsat is gone: `ambe` stays D-STAR's.
 

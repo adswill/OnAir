@@ -137,7 +137,16 @@ void VoiceMixer::pushCFrame(const CFrameInfo& f, const uint8_t* voice300) {
     std::lock_guard<std::mutex> lk(p_->mu);
     auto& c = p_->chans[f.id];
     c.info.id = f.id; c.info.freqHz = f.freqHz;
-    if (!c.triedDec) { c.triedDec = true; c.dec = p_->fac()(); }
+    // the factory returns nullptr while the codec is not installed (or not loaded yet: the app loads the plug-in a moment after the start):
+    // a channel without a decoder asks again at every new call and every 5 s of frames
+    if (!c.dec && (!c.triedDec || !c.info.active || c.info.cFrames % 10 == 0)) {
+        c.triedDec = true;
+        c.dec = p_->fac()();
+        if (c.dec && c.info.active && !p_->recDir.empty() && c.info.recording.empty() && c.info.rawFile.size() > 5) {   // a call that began without the codec: start its WAV now
+            const std::string base = c.info.rawFile.substr(0, c.info.rawFile.size() - 5);
+            if (c.wav.open(base + ".wav", c.dec->sampleRate())) c.info.recording = base + ".wav";
+        }
+    }
     if (!c.info.active) p_->openCall(c, f.timeSec);
     if (c.info.callWall == 0 || c.info.cFrames == 0) c.info.callWall = f.wallUnix;
     c.info.cFrames++;
