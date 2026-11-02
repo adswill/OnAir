@@ -77,7 +77,7 @@ int main() {
     CHECK(rr.list()[0].match == "TG 91" && rr.list()[0].field == sess::RecField::Any, "the rule matches the entry");
     w.syncRecord(rr);
     CHECK(rr.list().size() == 1, "syncing again adds nothing");
-    WatchEntry foreign; foreign.name = "mine"; foreign.match = "5555"; rr.add(foreign);
+    sess::RecordRule foreign; foreign.name = "mine"; foreign.match = "5555"; rr.add(foreign);
     r1 = w.list()[0]; r1.record = false; w.update(r1);
     w.syncRecord(rr);
     CHECK(rr.list().size() == 1 && rr.list()[0].match == "5555", "unticking removed only the watch rule");

@@ -2,6 +2,7 @@
 // and a table of every position received, with CSV export. See dmr_map.cpp.
 #pragma once
 
+#include <cstdint>
 struct App;
 
 void dmrMap(App& a);

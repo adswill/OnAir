@@ -63,6 +63,7 @@ struct State {
     std::map<uint32_t, int> byAddress;       // POCSAG address -> kPocsagReadAlpha or kPocsagReadNumeric, saved as "pocsagReadAddr" ("ric:a ric:n ...")
 };
 State S;
+void saveKeywords();
 
 int baudMask() {
     int m = 0;
