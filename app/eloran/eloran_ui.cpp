@@ -1,4 +1,4 @@
-// eLoran / Loran-C screens (work in progress): the GRI, the stations with their arrival times relative to the master,
+// eLoran / Loran-C screens: the GRI, the stations with their arrival times relative to the master,
 // level and phase code, and the averaged pulse envelope. Loran-C only; the eLoran data channel is not decoded.
 #include "app.h"
 #include "dect2/eloran/eloran_engine.h"
@@ -16,8 +16,8 @@ const char* stateName(int s) {
 
 void tab(App& a) {
     ImGui::PushTextWrapPos(0);
-    ImGui::TextDisabled("Work in progress. Loran-C at 100 kHz: pulse groups of 8 pulses (9 for the master) 1 ms apart, repeating every GRI, "
-                        "with the phase codes A and B. Needs a radio or downconverter that tunes to 100 kHz. The eLoran data channel is not decoded. Receive only.");
+    ImGui::TextDisabled("Loran-C at 100 kHz: pulse groups of 8 pulses (9 for the master) 1 ms apart, repeating every GRI, "
+                        "with the phase codes A and B. Needs a radio or downconverter that tunes to 100 kHz. The eLoran data channel (9th pulse, Eurofix) is not decoded. Receive only.");
     ImGui::PopTextWrapPos();
     ImGui::Spacing();
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "tune to 100 kHz (90 - 110 kHz) and start the receiver"); return; }
@@ -33,6 +33,7 @@ void tab(App& a) {
     if (t.dataValid) snprintf(b, sizeof b, "%d  (%d us)", t.griUs / 10, t.griUs);
     else snprintf(b, sizeof b, "-");
     row("GRI", b);
+    if (!t.chain.empty()) row("chain", t.chain.c_str());
     row("lock", t.locked ? "yes" : "no");
     snprintf(b, sizeof b, "%.1f", t.zScore);
     row("repetition strength", b);
@@ -100,7 +101,7 @@ void status(App& a) {
 }
 
 void summary(const App& a, std::string& l1, std::string& l2) {
-    l1 = "eLoran / Loran-C (WIP)";
+    l1 = "eLoran / Loran-C";
     if (live(a)) l2 = dect2::elLoranSummary(a.rx.eloran);
 }
 
