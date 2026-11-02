@@ -16,7 +16,7 @@ const char* trw(const char* english);
 namespace i18n {
 struct Language { const char* code; const char* name; };   // name: in the language itself
 const Language* languages(int& count);                     // English first
-// Choose the language by code ("de", "fr", "es", "zh", "lt", "hu", "pt", "it", "ru" ... "en"); an unknown code or one with a region ("de-AT", "zh_CN.UTF-8",
+// Choose the language by code ("de", "fr", "es", "zh", "lt", "hu", "pt", "it", "ru", "tr" ... "en"); an unknown code or one with a region ("de-AT", "zh_CN.UTF-8",
 // "zh-Hans") is matched by its first letters. Returns the code actually chosen.
 const char* set(const std::string& code);
 const char* current();                                     // "en" when nothing is chosen
