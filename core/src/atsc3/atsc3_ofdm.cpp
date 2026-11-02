@@ -3,6 +3,7 @@
 #include "dect2/dsp/fftutil.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -233,6 +234,59 @@ std::vector<cf32> modulatePreambleSymbol(const PreambleParams& p, int cred, int 
     return out;
 }
 
+// Channel estimate from the pilots of a regular comb (carrier k0 + D m): the impulse response is taken from the comb (white noise, no interpolation
+// error), the taps under a noise threshold are dropped, and the response goes back to every carrier. Delays are taken from -N/(4D) to 3N/(4D) samples
+// (one comb period, a quarter of it before the first path; the guard interval is 1/16 to 1/4 of N), so an echo up to 0.75 of a comb period is kept.
+// The loss it removes: with linear interpolation between noisy pilots every cell carries the pilot noise of two pilots on top of its own (a constant
+// 0.5 to 1.5 dB at any SNR for the usual pilot boost).
+bool cirDenoiseChannel(int N, int noc, int D, int k0, const std::vector<cf32>& est, const std::vector<uint8_t>& ok, std::vector<cf32>& hch) {
+    if (D < 1 || noc < 16 || (int)est.size() < noc) return false;
+    const int mid = (noc - 1) / 2;
+    std::vector<int> ks;
+    std::vector<cf32> hv;
+    std::vector<uint8_t> have;
+    for (int k = k0; k < noc; k += D) { ks.push_back(k); hv.push_back(ok[k] ? est[k] : cf32(0, 0)); have.push_back(ok[k]); }
+    const int M = (int)ks.size();
+    if (M < 16) return false;
+    int nHave = 0;
+    for (auto v : have) nHave += v;
+    if (nHave < M * 3 / 4) return false;
+    for (int i = 0; i < M; i++) {   // holes (the middle carriers): between the neighbours that exist
+        if (have[i]) continue;
+        int a = i - 1, b = i + 1;
+        while (a >= 0 && !have[a]) a--;
+        while (b < M && !have[b]) b++;
+        if (a >= 0 && b < M) { const float t = (float)(i - a) / (float)(b - a); hv[i] = hv[a] * (1 - t) + hv[b] * t; }
+        else hv[i] = a >= 0 ? hv[a] : hv[b];
+    }
+    auto bin = [&](int k) { return ((k - mid) % N + N) % N; };
+    std::vector<cf32> b(N, cf32(0, 0));
+    for (int i = 0; i < M; i++) b[bin(ks[i])] = hv[i];
+    Fft fft(N);
+    fft.inverse(b.data());
+    const int W = std::min(N, (int)std::lround((double)N / D)), pre = W / 4;
+    std::vector<float> pw((size_t)W);
+    float pmax = 0;
+    for (int j = 0; j < W; j++) { pw[(size_t)j] = std::norm(b[((j - pre) % N + N) % N]); pmax = std::max(pmax, pw[(size_t)j]); }
+    std::vector<float> srt(pw);
+    std::nth_element(srt.begin(), srt.begin() + W / 4, srt.end());
+    const float meanNoise = srt[(size_t)(W / 4)] / 0.288f;           // 25th percentile of an exponential distribution
+    const float thr = std::max(4.f * meanNoise, 1e-4f * pmax);       // 6 dB over the noise, and never more than 40 dB under the strongest tap
+    std::vector<cf32> c(N, cf32(0, 0));
+    int kept = 0;
+    for (int j = 0; j < W; j++) {
+        if (pw[(size_t)j] < thr) continue;
+        const int n = ((j - pre) % N + N) % N;
+        c[n] = b[n]; kept++;
+    }
+    if (kept == 0 || kept > W * 3 / 4) return false;
+    fft.forward(c.data());
+    hch.resize(noc);
+    const float g = 1.f / (float)M;
+    for (int k = 0; k < noc; k++) hch[k] = c[bin(k)] * g;
+    return true;
+}
+
 bool demodulatePreambleSymbol(const PreambleParams& p, int cred, int l, const cf32* x, std::vector<cf32>& cells, float* noiseVar) {
     Plan pl;
     makePlan(p, cred, pl);
@@ -256,6 +310,20 @@ bool demodulatePreambleSymbol(const PreambleParams& p, int cred, int l, const cf
         while (seg + 2 < pk.size() && pk[seg + 1] < k) seg++;
         float t = (float)(k - pk[seg]) / (float)(pk[seg + 1] - pk[seg]);
         hch[k] = ph[seg] * (1 - t) + ph[seg + 1] * t;
+    }
+    {   // below about 25 dB the pilot noise of the interpolation is the larger part of the loss: response from the pilot comb, noise taps dropped
+        double nv0 = 0, hm0 = 0; int nn0 = 0;
+        for (size_t i = 0; i + 1 < pk.size(); i++) { nv0 += std::norm(ph[i + 1] - ph[i]) / 2.0; nn0++; }
+        for (auto& c : hch) hm0 += std::norm(c);
+        hm0 /= pl.noc;
+        const double ap0 = preamblePilotAmplitude(p);
+        if (nn0 && hm0 > 0 && nv0 / nn0 * ap0 * ap0 / hm0 > 3e-3 && !getenv("ATSC3_NOCIR")) {
+            std::vector<cf32> est((size_t)pl.noc);
+            std::vector<uint8_t> okp((size_t)pl.noc, 0);
+            for (int k = 0; k < pl.noc; k += p.dx) if (pl.kind[k] != 0) { est[(size_t)k] = y[k] / pl.pilotVal[k]; okp[(size_t)k] = 1; }
+            std::vector<cf32> hc;
+            if (cirDenoiseChannel(N, pl.noc, p.dx, 0, est, okp, hc)) hch = hc;
+        }
     }
     double nv = 0; int nn = 0;
     std::vector<cf32> a;   // equalised data cells in carrier order

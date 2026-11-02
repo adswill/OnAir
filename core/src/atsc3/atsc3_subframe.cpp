@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <complex>
+#include <cstdlib>
 
 namespace dect2 {
 namespace atsc3 {
@@ -190,6 +191,23 @@ bool receiveSymbol(const SubframeParams& s, int l, const cf32* x, SymbolRx& rx) 
     for (auto& c : hch) hm += std::norm(c);
     hm /= noc;
     rx.nv = (nn && hm > 0) ? (float)(nv / nn * asp * asp / hm) : 0.f;
+    // below about 25 dB the pilot noise of the interpolation is the larger part of the loss: take the response from the pilot comb and drop its noise taps
+    if (rx.nv > 3e-3f && !getenv("ATSC3_NOCIR")) {
+        const int dx = spDx(s.spPattern), dy = spDy(s.spPattern);
+        const bool bnd = isBoundarySymbol(s, l);
+        const int D = bnd ? dx : dx * dy, k0 = bnd ? 0 : dx * (l % dy);
+        std::vector<cf32> est((size_t)noc);
+        std::vector<uint8_t> okp((size_t)noc, 0);
+        for (int k = k0; k < noc; k += D) {
+            if (kind[k] != 1 && kind[k] != 2) continue;
+            if (std::abs(k - mid) <= 1 && noc > 64) continue;
+            const double a = kind[k] == 2 ? acp : asp;
+            est[(size_t)k] = y[k] / (float)(2 * a * (0.5 - r[k]));
+            okp[(size_t)k] = 1;
+        }
+        std::vector<cf32> hc;
+        if (cirDenoiseChannel(N, noc, D, k0, est, okp, hc)) hch = hc;
+    }
     return true;
 }
 
