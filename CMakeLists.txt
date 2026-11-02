@@ -2404,6 +2404,13 @@ if(DECT2_BUILD_TESTS)
       target_compile_definitions(${t} PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     endif()
   endforeach()
+  # real recordings (docs/REAL-SIGNALS.md): tests/real/test_real_<mode>.cpp reads a short excerpt from tests/data and runs the real receiver (each a second or two)
+  foreach(m adsb dtmb dsc)
+    add_executable(test_real_${m} tests/real/test_real_${m}.cpp)
+    target_link_libraries(test_real_${m} PRIVATE dect2core)
+    target_compile_definitions(test_real_${m} PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME real_${m} COMMAND test_real_${m})
+  endforeach()
   # the signal identifier (docs/IDENTIFIER.md): specx_ideval (about thirty modes made from their parameters, impaired, a confusion matrix; a few
   # seconds), specx_idfeatures and specx_ident run with the rest. The matrix over every mode's own test signal renders each mode's generator
   # and takes minutes: the whole one and its quick form (20 dB, no frequency) are in the slow tier (nightly and release tags).
