@@ -12,6 +12,7 @@ Transmit is only possible through the Arm + licence confirmation + band-plan che
 | SoapySDR radios with a TX channel | yes | Soapy TX stream | yes |
 | SDRplay RSP* | no | the hardware is receive-only | no |
 | Airspy R2/Mini, Airspy HF+ | no | the hardware is receive-only | no |
+| HydraSDR RFOne (native, libhydrasdr) | no | receive-only; three RF inputs (ANT with the bias tee, CABLE1, CABLE2, the radio's "RF input" setting). USB id 1d50:60a1 with firmware before 1.0.2, 38af:0001 since; Windows binds WinUSB by itself | no |
 | RTL-SDR (also rtl_tcp) | no | "RTL-SDR dongles can only receive" | no |
 | KiwiSDR, SpyServer, RX888, Fobos | no | receive-only | no |
 | Hamlib rigs | CAT only | handled by the Hamlib sink | yes |

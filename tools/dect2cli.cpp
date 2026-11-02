@@ -103,6 +103,7 @@ int main(int argc, char** argv) {
         else if (a == "--lna") tune.lnaDb = atoi(next());
         else if (a == "--vga") tune.vgaDb = atoi(next());
         else if (a == "--amp") tune.ampOn = true;
+        else if (a == "--bias") tune.biasTee = true;   // antenna power (bias tee) on the radios that have one
         else if (a == "--bw") tune.bandwidthMhz = atof(next());
         else if (a == "--autobw") autoBw = true;
         else if (a == "--secs") secs = atof(next());

@@ -1,5 +1,5 @@
-// Native radios (RTL-SDR, Airspy, BladeRF, LimeSDR, PlutoSDR, USRP, SDRplay, Fobos SDR, RFNM): the list of connected ones and the way to open one.
-// The drivers are in source_rtlsdr.cpp, source_airspy.cpp, source_bladerf.cpp, source_limesdr.cpp, source_plutosdr.cpp, source_usrp.cpp,
+// Native radios (RTL-SDR, Airspy, HydraSDR, BladeRF, LimeSDR, PlutoSDR, USRP, SDRplay, Fobos SDR, RFNM): the list of connected ones and the way to open one.
+// The drivers are in source_rtlsdr.cpp, source_airspy.cpp, source_hydrasdr.cpp, source_bladerf.cpp, source_limesdr.cpp, source_plutosdr.cpp, source_usrp.cpp,
 // source_sdrplay.cpp, source_airspyhf.cpp, source_fobos.cpp and source_rx888.cpp;
 // each loads the radio's own library at run time (native_common.h), so nothing here depends on those libraries being installed.
 // The exception is the RFNM (source_rfnm.cpp): librfnm has a C++ interface only, so it is linked, and only when CMake found it (DECT2_HAVE_RFNM).
@@ -33,6 +33,7 @@ std::vector<DeviceInfo> listNativeDevices(std::string& err) {
     try {
         native::listRtl(out);
         native::listAirspy(out);
+        native::listHydra(out);
         native::listBlade(out);
         native::listLime(out);
         native::listPluto(out);
@@ -51,6 +52,14 @@ std::vector<DeviceInfo> listNativeDevices(std::string& err) {
     // An RX888 MkII is a Cypress FX3 (04b4:00f1), the USB ID LimeSuite also takes for a LimeSDR-USB, and it reports the same serial. The RX888
     // driver names that radio, so the LimeSDR entries with its serial are dropped: otherwise the first radio in the list (the Lime) is the
     // one started, and its "initialisation failed" is what the user sees for an RX888.
+    // A HydraSDR RFOne carries the Airspy's USB id (1d50:60a1): on systems where libairspy lists it, its own driver names it and the
+    // Airspy entry with the same serial is dropped
+    std::vector<std::string> hydraSerials;
+    for (const auto& d : out) if (d.board == "hydrasdr" && !d.serial.empty()) hydraSerials.push_back(d.serial);
+    if (!hydraSerials.empty())
+        out.erase(std::remove_if(out.begin(), out.end(), [&](const DeviceInfo& d) {
+            return d.board == "airspy" && std::find(hydraSerials.begin(), hydraSerials.end(), d.serial) != hydraSerials.end();
+        }), out.end());
     std::vector<std::string> rx888Serials;
     for (const auto& d : out) if (d.board == "rx888" && !d.serial.empty()) rx888Serials.push_back(d.serial);
     if (!rx888Serials.empty())
@@ -71,6 +80,7 @@ std::unique_ptr<TxSink> makeNativeTxSink(const DeviceInfo& d) {
 std::unique_ptr<IqSource> makeNativeSource(const DeviceInfo& d) {
     if (d.board == "rtlsdr") return native::makeRtl(d);
     if (d.board == "airspy") return native::makeAirspy(d);
+    if (d.board == "hydrasdr") return native::makeHydra(d);
     if (d.board == "bladerf") return native::makeBlade(d);
     if (d.board == "lime") return native::makeLime(d);
     if (d.board == "pluto") return native::makePluto(d);

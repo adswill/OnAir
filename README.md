@@ -97,7 +97,7 @@ OnAir is a receiver first. It can also send test signals through a transmit-capa
 | **KA family (own modes)** | 6 | KAAL, KAPP, KAFT, KAVB, KAIT, KAWS: digital modes designed for OnAir, in development (see below) |
 <!-- modes-table:end -->
 
-**Many radios:** HackRF, RTL-SDR, Airspy, SDRplay, BladeRF, LimeSDR, USRP, Pluto, Fobos, RX888, RFNM, network radios, sound cards and Hamlib rigs. The mode counts are generated from the mode list in the app (`tools/release/gen_changelog.py`; the numbering rules are in [docs/MODE-NUMBERS.md](docs/MODE-NUMBERS.md)). Details per mode are under [Modes](#modes).
+**Many radios:** HackRF, RTL-SDR, Airspy, HydraSDR, SDRplay, BladeRF, LimeSDR, USRP, Pluto, Fobos, RX888, RFNM, network radios, sound cards and Hamlib rigs. The mode counts are generated from the mode list in the app (`tools/release/gen_changelog.py`; the numbering rules are in [docs/MODE-NUMBERS.md](docs/MODE-NUMBERS.md)). Details per mode are under [Modes](#modes).
 
 ## What is new in 3.0
 
