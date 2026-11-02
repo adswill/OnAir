@@ -8,6 +8,7 @@
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/session_list.h"
 #include "voice/voice_monitor_ui.h"
+#include "voice/watch_ui.h"
 #include "voice/radioid_ui.h"
 #include "dect2/codec/codec_registry.h"
 #include "../codec/speech_codec_ui.h"
@@ -146,6 +147,7 @@ void siteView(App& a) {
 // ---------------------------------------------------------------- hooks
 
 void tick(App& a) {
+    watchui::tick(a);
     radioidui::tick(dect2::RadioIdKind::Nxdn);
     if (live(a)) appcodec::voiceCodecTick("ambe2");   // the user's codec plug-in (docs/CODECS.md), loaded whichever tab is shown
     if (!a.engine.running()) { S.wasRunning = false; return; }
@@ -171,7 +173,8 @@ void voiceBar(App& a) {
 void tab(App& a) {
     voiceBar(a);
     kit::modeHeader({38, "NXDN", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("nxdnv", S.view, {{tr("Live"), 0}, {tr("Calls"), 4}, {tr("Call list"), 1, true}, {tr("Messages"), 2, true}, {tr("Site"), 3, true}});
+    kit::modeNav("nxdnv", S.view, {{tr("Live"), 0}, {tr("Calls"), 4}, {tr("Call list"), 1, true}, {tr("Messages"), 2, true}, {tr("Site"), 3, true}, {tr("Watch"), 90, true}});
+    if (S.view == 90) { watchui::watchView(a, "nxdn"); return; }
     if (S.view == 4) { kit::sessionItems(38, 1, "nxdn"); return; }
     if (S.view == 0) nowView(a); else if (S.view == 1) callsView(a); else if (S.view == 2) messageView(a); else siteView(a);
 }

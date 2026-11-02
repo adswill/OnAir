@@ -3684,3 +3684,34 @@ Calls %llu, followed %llu, retune %.2f s (max %.2f s)	Gesprekken %llu, gevolgd %
 Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	Prioriteit 1 (hoogste) tot 10, 0 geen. Een groep met hogere prioriteit neemt een radio van een lagere over.
 From, to (the same number for one), action, priority	Van, tot (zelfde getal voor één), actie, prioriteit
 System, identifier table (iden_up) and channel numbers from a CSV file	Systeem, identifiertabel (iden_up) en kanaalnummers uit een CSV
+EMERGENCY	NOODGEVAL
+encrypted	versleuteld
+Follow talkgroups, radio IDs or callsigns. Alerts and recording are off until you tick them for an entry. Encrypted calls are listed but never recorded.	Volg gespreksgroepen, radio-ID's of roepnamen. Meldingen en opname staan uit tot u ze voor een item aanvinkt. Versleutelde gesprekken worden vermeld maar nooit opgenomen.
+TG 91, 3120123, 100-199, LY1ABC, LY*	TG 91, 3120123, 100-199, LY1ABC, LY*
+Name (optional)	Naam (optioneel)
+All voice modes	Alle spraakmodi
+Nothing watched yet.	Nog niets gevolgd.
+Watching	Gevolgd
+Notify	Melden
+Beep	Piep
+A desktop notification when a call starts (off by default)	Een bureaubladmelding wanneer een gesprek begint (standaard uit)
+Save the audio of its calls to the recordings folder through the auto-record rules (this also switches auto-record on). Encrypted calls are never recorded. You are responsible for the law of your country.	Slaat de audio van de gesprekken op in de opnamemap via de regels voor automatisch opnemen (zet automatisch opnemen ook aan). Versleutelde gesprekken worden nooit opgenomen. U bent zelf verantwoordelijk voor de wet van uw land.
+Copy as CSV	Kopiëren als CSV
+No calls of the watched entries heard yet.	Nog geen gesprekken van de gevolgde items gehoord.
+Sec	Sec
+Flags	Vlaggen
+EMERG	NOOD
+ENC	VERS
+Keywords on: no match yet	Trefwoorden aan: nog geen treffer
+Keywords	Trefwoorden
+One keyword per line, any case. It is looked for in the message text and in the capcode name. Start a line with re: for a regular expression, for example re:structure fire|MVA. Matching pages are highlighted in Messages and shown in the ticker.	Eén trefwoord per regel, hoofdletterongevoelig. Er wordt gezocht in de berichttekst en in de naam van de capcode. Begin een regel met re: voor een reguliere expressie, bijvoorbeeld re:structure fire|MVA. Overeenkomende berichten worden gemarkeerd in Berichten en getoond in de ticker.
+Notify on a keyword match	Melden bij een trefwoord
+A desktop notification for each matching new page (off by default)	Een bureaubladmelding voor elke nieuwe overeenkomende pagina (standaard uit)
+lines are not valid and were skipped	regels zijn ongeldig en overgeslagen
+Pager keyword	Pager-trefwoord
+more matching pages	meer overeenkomende pagina's
+No GPS position heard yet (needs LRRP data)	Nog geen GPS-positie gehoord (LRRP-gegevens nodig)
+Last position	Laatste positie
+just now	zojuist
+min ago	min geleden
+Show on map	Tonen op kaart

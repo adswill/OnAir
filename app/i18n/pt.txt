@@ -3666,3 +3666,34 @@ Calls %llu, followed %llu, retune %.2f s (max %.2f s)	Chamadas %llu, seguidas %l
 Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	Prioridade 1 (máxima) a 10, 0 nenhuma. Um grupo de maior prioridade tira o rádio a um menor.
 From, to (the same number for one), action, priority	De, até (o mesmo número para um), ação, prioridade
 System, identifier table (iden_up) and channel numbers from a CSV file	Sistema, tabela de identificadores (iden_up) e números de canal de um CSV
+EMERGENCY	EMERGÊNCIA
+encrypted	cifrado
+Follow talkgroups, radio IDs or callsigns. Alerts and recording are off until you tick them for an entry. Encrypted calls are listed but never recorded.	Acompanhe grupos de conversa, IDs de rádio ou indicativos. Os alertas e a gravação ficam desligados até você marcá-los em uma entrada. Chamadas cifradas são listadas, mas nunca gravadas.
+TG 91, 3120123, 100-199, LY1ABC, LY*	TG 91, 3120123, 100-199, LY1ABC, LY*
+Name (optional)	Nome (opcional)
+All voice modes	Todos os modos de voz
+Nothing watched yet.	Nada monitorado ainda.
+Watching	Monitorando
+Notify	Avisar
+Beep	Bipe
+A desktop notification when a call starts (off by default)	Uma notificação na área de trabalho quando uma chamada começa (desligada por padrão)
+Save the audio of its calls to the recordings folder through the auto-record rules (this also switches auto-record on). Encrypted calls are never recorded. You are responsible for the law of your country.	Salva o áudio das chamadas na pasta de gravações pelas regras de gravação automática (também liga a gravação automática). Chamadas cifradas nunca são gravadas. Você é responsável pela lei do seu país.
+Copy as CSV	Copiar como CSV
+No calls of the watched entries heard yet.	Nenhuma chamada das entradas monitoradas foi ouvida ainda.
+Sec	Seg
+Flags	Indicadores
+EMERG	EMERG
+ENC	CIF
+Keywords on: no match yet	Palavras-chave ativas: nenhuma correspondência ainda
+Keywords	Palavras-chave
+One keyword per line, any case. It is looked for in the message text and in the capcode name. Start a line with re: for a regular expression, for example re:structure fire|MVA. Matching pages are highlighted in Messages and shown in the ticker.	Uma palavra-chave por linha, sem distinguir maiúsculas. Ela é procurada no texto da mensagem e no nome do capcode. Comece uma linha com re: para uma expressão regular, por exemplo re:structure fire|MVA. As páginas correspondentes são destacadas em Mensagens e mostradas no ticker.
+Notify on a keyword match	Avisar em uma palavra-chave
+A desktop notification for each matching new page (off by default)	Uma notificação na área de trabalho para cada nova página correspondente (desligada por padrão)
+lines are not valid and were skipped	linhas não são válidas e foram ignoradas
+Pager keyword	Palavra-chave do pager
+more matching pages	mais páginas correspondentes
+No GPS position heard yet (needs LRRP data)	Nenhuma posição GPS ouvida ainda (precisa de dados LRRP)
+Last position	Última posição
+just now	agora mesmo
+min ago	min atrás
+Show on map	Mostrar no mapa

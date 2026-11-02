@@ -3667,3 +3667,34 @@ Calls %llu, followed %llu, retune %.2f s (max %.2f s)	Chiamate %llu, seguite %ll
 Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	Priorità da 1 (massima) a 10, 0 nessuna. Un gruppo più prioritario toglie la radio a uno meno prioritario.
 From, to (the same number for one), action, priority	Da, a (stesso numero per uno), azione, priorità
 System, identifier table (iden_up) and channel numbers from a CSV file	Sistema, tabella identificatori (iden_up) e numeri di canale da un CSV
+EMERGENCY	EMERGENZA
+encrypted	cifrato
+Follow talkgroups, radio IDs or callsigns. Alerts and recording are off until you tick them for an entry. Encrypted calls are listed but never recorded.	Segui gruppi di conversazione, ID radio o nominativi. Avvisi e registrazione restano disattivati finché non li spunti per una voce. Le chiamate cifrate sono elencate ma mai registrate.
+TG 91, 3120123, 100-199, LY1ABC, LY*	TG 91, 3120123, 100-199, LY1ABC, LY*
+Name (optional)	Nome (facoltativo)
+All voice modes	Tutte le modalità voce
+Nothing watched yet.	Ancora nulla in osservazione.
+Watching	Osservato
+Notify	Avvisa
+Beep	Segnale acustico
+A desktop notification when a call starts (off by default)	Una notifica sul desktop quando inizia una chiamata (disattivata per impostazione predefinita)
+Save the audio of its calls to the recordings folder through the auto-record rules (this also switches auto-record on). Encrypted calls are never recorded. You are responsible for the law of your country.	Salva l'audio delle sue chiamate nella cartella delle registrazioni tramite le regole di registrazione automatica (attiva anche la registrazione automatica). Le chiamate cifrate non vengono mai registrate. Sei responsabile della legge del tuo paese.
+Copy as CSV	Copia come CSV
+No calls of the watched entries heard yet.	Nessuna chiamata delle voci osservate ancora sentita.
+Sec	Sec
+Flags	Indicatori
+EMERG	EMERG
+ENC	CIF
+Keywords on: no match yet	Parole chiave attive: ancora nessuna corrispondenza
+Keywords	Parole chiave
+One keyword per line, any case. It is looked for in the message text and in the capcode name. Start a line with re: for a regular expression, for example re:structure fire|MVA. Matching pages are highlighted in Messages and shown in the ticker.	Una parola chiave per riga, senza distinzione tra maiuscole e minuscole. Viene cercata nel testo del messaggio e nel nome del capcode. Inizia una riga con re: per un'espressione regolare, ad esempio re:structure fire|MVA. Le pagine corrispondenti sono evidenziate in Messaggi e mostrate nel ticker.
+Notify on a keyword match	Avvisa su una parola chiave
+A desktop notification for each matching new page (off by default)	Una notifica sul desktop per ogni nuova pagina corrispondente (disattivata per impostazione predefinita)
+lines are not valid and were skipped	righe non valide, saltate
+Pager keyword	Parola chiave del pager
+more matching pages	altre pagine corrispondenti
+No GPS position heard yet (needs LRRP data)	Nessuna posizione GPS ancora sentita (servono dati LRRP)
+Last position	Ultima posizione
+just now	proprio ora
+min ago	min fa
+Show on map	Mostra sulla mappa

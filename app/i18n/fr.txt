@@ -3683,3 +3683,34 @@ Calls %llu, followed %llu, retune %.2f s (max %.2f s)	Appels %llu, suivis %llu, 
 Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	Priorité 1 (la plus haute) à 10, 0 aucune. Un groupe plus prioritaire prend la radio d'un moins prioritaire.
 From, to (the same number for one), action, priority	De, à (même nombre pour un seul), action, priorité
 System, identifier table (iden_up) and channel numbers from a CSV file	Système, table d'identifiants (iden_up) et numéros de canal depuis un CSV
+EMERGENCY	URGENCE
+encrypted	chiffré
+Follow talkgroups, radio IDs or callsigns. Alerts and recording are off until you tick them for an entry. Encrypted calls are listed but never recorded.	Suivez des groupes de conversation, des ID radio ou des indicatifs. Les alertes et l'enregistrement sont désactivés tant que vous ne les cochez pas pour une entrée. Les appels chiffrés sont listés mais jamais enregistrés.
+TG 91, 3120123, 100-199, LY1ABC, LY*	TG 91, 3120123, 100-199, LY1ABC, LY*
+Name (optional)	Nom (facultatif)
+All voice modes	Tous les modes voix
+Nothing watched yet.	Rien de surveillé pour l'instant.
+Watching	Surveillé
+Notify	Alerter
+Beep	Bip
+A desktop notification when a call starts (off by default)	Une notification de bureau au début d'un appel (désactivée par défaut)
+Save the audio of its calls to the recordings folder through the auto-record rules (this also switches auto-record on). Encrypted calls are never recorded. You are responsible for the law of your country.	Enregistre l'audio de ses appels dans le dossier des enregistrements via les règles d'enregistrement automatique (active aussi l'enregistrement automatique). Les appels chiffrés ne sont jamais enregistrés. Vous êtes responsable de la loi de votre pays.
+Copy as CSV	Copier en CSV
+No calls of the watched entries heard yet.	Aucun appel des entrées surveillées entendu pour l'instant.
+Sec	Sec
+Flags	Indicateurs
+EMERG	URG
+ENC	CHIF
+Keywords on: no match yet	Mots-clés actifs : aucune correspondance
+Keywords	Mots-clés
+One keyword per line, any case. It is looked for in the message text and in the capcode name. Start a line with re: for a regular expression, for example re:structure fire|MVA. Matching pages are highlighted in Messages and shown in the ticker.	Un mot-clé par ligne, sans tenir compte de la casse. Il est cherché dans le texte du message et dans le nom du capcode. Commencez une ligne par re: pour une expression régulière, par exemple re:structure fire|MVA. Les pages correspondantes sont surlignées dans Messages et affichées dans le bandeau.
+Notify on a keyword match	Alerter sur un mot-clé
+A desktop notification for each matching new page (off by default)	Une notification de bureau pour chaque nouvelle page correspondante (désactivée par défaut)
+lines are not valid and were skipped	lignes ne sont pas valides et ont été ignorées
+Pager keyword	Mot-clé du pager
+more matching pages	autres pages correspondantes
+No GPS position heard yet (needs LRRP data)	Aucune position GPS entendue (données LRRP requises)
+Last position	Dernière position
+just now	à l'instant
+min ago	min
+Show on map	Afficher sur la carte

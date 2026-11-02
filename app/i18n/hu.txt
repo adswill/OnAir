@@ -3671,3 +3671,34 @@ Calls %llu, followed %llu, retune %.2f s (max %.2f s)	Hívás %llu, követett %l
 Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	Prioritás 1 (legmagasabb) és 10 között, 0 nincs. A magasabb prioritású csoport elveszi a rádiót az alacsonyabbtól.
 From, to (the same number for one), action, priority	Tól, ig (egynél ugyanaz a szám), művelet, prioritás
 System, identifier table (iden_up) and channel numbers from a CSV file	Rendszer, azonosítótábla (iden_up) és csatornaszámok CSV fájlból
+EMERGENCY	VÉSZHELYZET
+encrypted	titkosított
+Follow talkgroups, radio IDs or callsigns. Alerts and recording are off until you tick them for an entry. Encrypted calls are listed but never recorded.	Kövessen beszélgetési csoportokat, rádióazonosítókat vagy hívójeleket. A riasztások és a felvétel kikapcsolva maradnak, amíg be nem jelöli őket egy bejegyzéshez. A titkosított hívások megjelennek a listában, de sosem kerülnek rögzítésre.
+TG 91, 3120123, 100-199, LY1ABC, LY*	TG 91, 3120123, 100-199, LY1ABC, LY*
+Name (optional)	Név (nem kötelező)
+All voice modes	Minden beszédmód
+Nothing watched yet.	Még nincs figyelt elem.
+Watching	Figyelt
+Notify	Értesítés
+Beep	Sípszó
+A desktop notification when a call starts (off by default)	Asztali értesítés a hívás kezdetekor (alapból ki)
+Save the audio of its calls to the recordings folder through the auto-record rules (this also switches auto-record on). Encrypted calls are never recorded. You are responsible for the law of your country.	A hívások hangját az automatikus felvétel szabályain keresztül a felvételek mappájába menti (az automatikus felvételt is bekapcsolja). A titkosított hívásokat sosem rögzíti. Az Ön országának jogáért Ön felel.
+Copy as CSV	Másolás CSV-ként
+No calls of the watched entries heard yet.	A figyelt elemek hívásai még nem hallhatók.
+Sec	mp
+Flags	Jelzők
+EMERG	VÉSZ
+ENC	TITK
+Keywords on: no match yet	Kulcsszavak bekapcsolva: még nincs találat
+Keywords	Kulcsszavak
+One keyword per line, any case. It is looked for in the message text and in the capcode name. Start a line with re: for a regular expression, for example re:structure fire|MVA. Matching pages are highlighted in Messages and shown in the ticker.	Soronként egy kulcsszó, kis- és nagybetűre nem érzékeny. Az üzenet szövegében és a capcode nevében keres. A sor elejére írt re: reguláris kifejezést jelent, például re:structure fire|MVA. A találatok kiemelve jelennek meg az Üzenetekben és a hírsávban.
+Notify on a keyword match	Értesítés kulcsszó-találatnál
+A desktop notification for each matching new page (off by default)	Asztali értesítés minden új, egyező oldalról (alapból ki)
+lines are not valid and were skipped	sor érvénytelen, kihagyva
+Pager keyword	Pager kulcsszó
+more matching pages	további egyező oldal
+No GPS position heard yet (needs LRRP data)	Még nincs GPS-pozíció (LRRP-adat kell)
+Last position	Utolsó pozíció
+just now	épp most
+min ago	perce
+Show on map	Megjelenítés a térképen

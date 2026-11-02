@@ -3685,3 +3685,34 @@ Calls %llu, followed %llu, retune %.2f s (max %.2f s)	Połączeń %llu, śledzon
 Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	Priorytet od 1 (najwyższy) do 10, 0 brak. Grupa o wyższym priorytecie zabiera radio niższej.
 From, to (the same number for one), action, priority	Od, do (ten sam numer dla jednej), akcja, priorytet
 System, identifier table (iden_up) and channel numbers from a CSV file	System, tabela identyfikatorów (iden_up) i numery kanałów z pliku CSV
+EMERGENCY	ALARM
+encrypted	szyfrowane
+Follow talkgroups, radio IDs or callsigns. Alerts and recording are off until you tick them for an entry. Encrypted calls are listed but never recorded.	Śledź grupy rozmówne, identyfikatory radiowe lub znaki wywoławcze. Powiadomienia i nagrywanie są wyłączone, dopóki nie zaznaczysz ich przy wpisie. Rozmowy szyfrowane są wyświetlane, ale nigdy nagrywane.
+TG 91, 3120123, 100-199, LY1ABC, LY*	TG 91, 3120123, 100-199, LY1ABC, LY*
+Name (optional)	Nazwa (opcjonalnie)
+All voice modes	Wszystkie tryby głosowe
+Nothing watched yet.	Nic jeszcze nie jest obserwowane.
+Watching	Obserwowane
+Notify	Powiadom
+Beep	Sygnał
+A desktop notification when a call starts (off by default)	Powiadomienie na pulpicie, gdy zaczyna się rozmowa (domyślnie wyłączone)
+Save the audio of its calls to the recordings folder through the auto-record rules (this also switches auto-record on). Encrypted calls are never recorded. You are responsible for the law of your country.	Zapisuje dźwięk rozmów w folderze nagrań przez reguły automatycznego nagrywania (włącza też automatyczne nagrywanie). Rozmowy szyfrowane nigdy nie są nagrywane. Za prawo swojego kraju odpowiadasz sam.
+Copy as CSV	Kopiuj jako CSV
+No calls of the watched entries heard yet.	Nie słyszano jeszcze rozmów obserwowanych wpisów.
+Sec	Sek.
+Flags	Flagi
+EMERG	ALARM
+ENC	SZYFR
+Keywords on: no match yet	Słowa kluczowe włączone: brak dopasowań
+Keywords	Słowa kluczowe
+One keyword per line, any case. It is looked for in the message text and in the capcode name. Start a line with re: for a regular expression, for example re:structure fire|MVA. Matching pages are highlighted in Messages and shown in the ticker.	Jedno słowo kluczowe w wierszu, wielkość liter bez znaczenia. Szukane w treści wiadomości i w nazwie capcode. Zacznij wiersz od re: dla wyrażenia regularnego, na przykład re:structure fire|MVA. Pasujące strony są podświetlane w Wiadomościach i pokazywane na pasku.
+Notify on a keyword match	Powiadom o dopasowaniu słowa
+A desktop notification for each matching new page (off by default)	Powiadomienie na pulpicie dla każdej nowej pasującej strony (domyślnie wyłączone)
+lines are not valid and were skipped	wierszy jest nieprawidłowych i pominięto je
+Pager keyword	Słowo kluczowe pagera
+more matching pages	więcej pasujących stron
+No GPS position heard yet (needs LRRP data)	Nie słyszano jeszcze pozycji GPS (potrzebne dane LRRP)
+Last position	Ostatnia pozycja
+just now	przed chwilą
+min ago	min temu
+Show on map	Pokaż na mapie

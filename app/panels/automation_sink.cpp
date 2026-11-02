@@ -255,6 +255,15 @@ public:
 };
 }  // namespace
 
+void alertNow(App& a, const std::string& title, const std::string& body, bool sound) {
+    {
+        std::lock_guard<std::mutex> lk(gMu);
+        gBanner = {title, body, nowS() + 10};
+    }
+    plat::notify(title, body);
+    if (sound) { std::string note; playSound(a, "", note); }
+}
+
 ActionSink& sink() {
     static AppSink s;
     return s;

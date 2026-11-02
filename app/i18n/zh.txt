@@ -3709,3 +3709,34 @@ Calls %llu, followed %llu, retune %.2f s (max %.2f s)	通话 %llu，跟踪 %llu�
 Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	优先级 1（最高）到 10，0 为无。优先级高的通话组会从低的那里抢占接收机。
 From, to (the same number for one), action, priority	起、止（单个填同一数字）、动作、优先级
 System, identifier table (iden_up) and channel numbers from a CSV file	从 CSV 文件导入系统、标识符表 (iden_up) 和信道号
+EMERGENCY	紧急
+encrypted	已加密
+Follow talkgroups, radio IDs or callsigns. Alerts and recording are off until you tick them for an entry. Encrypted calls are listed but never recorded.	跟踪通话组、电台ID或呼号。通知和录音默认关闭,需要为条目勾选后才会启用。加密通话会被列出,但绝不会被录音。
+TG 91, 3120123, 100-199, LY1ABC, LY*	TG 91, 3120123, 100-199, LY1ABC, LY*
+Name (optional)	名称(可选)
+All voice modes	所有语音模式
+Nothing watched yet.	尚未关注任何条目。
+Watching	关注中
+Notify	通知
+Beep	蜂鸣
+A desktop notification when a call starts (off by default)	通话开始时显示桌面通知(默认关闭)
+Save the audio of its calls to the recordings folder through the auto-record rules (this also switches auto-record on). Encrypted calls are never recorded. You are responsible for the law of your country.	通过自动录音规则将其通话音频保存到录音文件夹(同时会开启自动录音)。加密通话绝不录音。您需自行遵守所在国家的法律。
+Copy as CSV	复制为CSV
+No calls of the watched entries heard yet.	尚未听到所关注条目的通话。
+Sec	秒
+Flags	标志
+EMERG	紧急
+ENC	加密
+Keywords on: no match yet	关键词已开启:暂无匹配
+Keywords	关键词
+One keyword per line, any case. It is looked for in the message text and in the capcode name. Start a line with re: for a regular expression, for example re:structure fire|MVA. Matching pages are highlighted in Messages and shown in the ticker.	每行一个关键词,不区分大小写。在消息文本和capcode名称中查找。行首加 re: 表示正则表达式,例如 re:structure fire|MVA。匹配的页面在消息中高亮并显示在滚动条中。
+Notify on a keyword match	关键词匹配时通知
+A desktop notification for each matching new page (off by default)	每个匹配的新页面显示一条桌面通知(默认关闭)
+lines are not valid and were skipped	行无效,已跳过
+Pager keyword	寻呼关键词
+more matching pages	条更多匹配页面
+No GPS position heard yet (needs LRRP data)	尚未听到GPS位置(需要LRRP数据)
+Last position	最后位置
+just now	刚刚
+min ago	分钟前
+Show on map	在地图上显示

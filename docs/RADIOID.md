@@ -35,3 +35,7 @@ The names are looked up when the screen is drawn and are not written to recordin
 Call logs of the DMR location (LRRP) map are not annotated.
 
 Code: `core/include/dect2/common/radioid_db.h`, `app/voice/radioid_ui.cpp`, test `tests/radioid/test_radioid.cpp`.
+
+## Watch list and Watch view (all voice modes)
+
+DMR, P25, NXDN and TETRA have a **Watch** sub-view (Advanced). Type a talkgroup (`TG 91`), a radio ID (`3120123`), a range (`100-199`), a callsign or a prefix (`LY*`) and press **Watch**; the entry follows the target in this mode or, with **All voice modes**, in every voice mode. Per entry: **Notify** (desktop notification and banner when a call starts, off by default), **Beep** (with Notify, never when muted) and **Record** (keeps an auto-record rule for it and switches auto-record on; encrypted calls are never recorded). Names from the radio-ID list and talkgroup labels show in the history. The History table lists the active and ended calls the monitors still hold (time, mode, from, to, seconds, flags, recording file) and copies as CSV. In DMR each entry also shows the last LRRP GPS position of the radio (or of a radio that sent to the talkgroup) with **Show on map**. Core: `core/include/dect2/voice/watch.h` (test `voice_watch`); window: `app/voice/watch_ui.cpp`. The list is saved in the preference `voiceWatch`. Trunk-controller code is not touched.

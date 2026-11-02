@@ -7,10 +7,12 @@
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/mode_panel.h"
 #include "dmr_map.h"
+#include <ctime>
 #include "dect2/dmr/dmr_ambe.h"
 #include "../codec/speech_codec_ui.h"
 #include "../voice/voice_monitor_ui.h"
 #include "../voice/radioid_ui.h"
+#include "../voice/watch_ui.h"
 #include "dect2/codec/codec_registry.h"
 #include "dect2/dmr/dmr_proto.h"
 #include <algorithm>
@@ -33,6 +35,7 @@ bool live(const App& a) { return a.rx.standard == 10; }
 const ImVec4 kDim(0.62f, 0.65f, 0.68f, 1);
 
 void tick(App& a) {
+    watchui::tick(a);
     const bool run = a.engine.running();
     radioidui::tick(dect2::RadioIdKind::Dmr);
     if (live(a)) appcodec::voiceCodecTick("ambe2");   // the user's codec plug-in, loaded whichever tab is shown
@@ -309,9 +312,24 @@ void callsView(App& a) {
     messageTable(a, std::max(40.f * gUi, ImGui::GetContentRegionAvail().y));
 }
 
+// under a watched entry: the last GPS position (LRRP) of the radio, or of any radio that sent to the talkgroup, and a button for the map
+void watchPosition(App& a, const dect2::voice::WatchEntry& e) {
+    if (!e.mode.empty() && e.mode != "dmr") return;
+    const dect2::voice::IdList ids(e.match);
+    const DmrLocation* best = nullptr;
+    for (const auto& l : a.rx.dmr.locations)
+        if (l.hasFix && (ids.matchId(l.src) || ids.matchId(l.dst)) && (!best || l.unixSec >= best->unixSec)) best = &l;
+    if (!best) { ImGui::TextDisabled("%s", tr("No GPS position heard yet (needs LRRP data)")); return; }
+    const double age = std::max(0.0, (double)std::time(nullptr) - best->unixSec);
+    ImGui::Text("%s %.5f, %.5f  (radio %u, %s)", tr("Last position"), best->lat, best->lon, best->src, age < 90 ? tr("just now") : (std::to_string((int)(age / 60)) + " " + tr("min ago")).c_str());
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("Show on map##wlmap"))) { dmrMapFocus(best->src, best->lat, best->lon); S.view = 1; }
+}
+
 void tab(App& a) {
     kit::modeHeader({9, "DMR", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("dmrv", S.view, {{tr("Live"), 0}, {tr("Calls"), 3}, {tr("Map"), 1}, {tr("Table"), 2, true}});
+    kit::modeNav("dmrv", S.view, {{tr("Live"), 0}, {tr("Calls"), 3}, {tr("Map"), 1}, {tr("Table"), 2, true}, {tr("Watch"), 90, true}});
+    if (S.view == 90) { watchui::watchView(a, "dmr", [&a](const dect2::voice::WatchEntry& e) { watchPosition(a, e); }); return; }
     if (S.view == 3) { kit::sessionItems(9, 1, "dmr"); return; }
     if (S.view == 1) { dmrMap(a); return; }
     if (S.view == 2) { dmrTable(a); return; }

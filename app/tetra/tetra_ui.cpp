@@ -9,6 +9,7 @@
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/session_list.h"
 #include "voice/voice_monitor_ui.h"
+#include "voice/watch_ui.h"
 #include "dect2/voice/voice_monitor.h"
 #include "codec/speech_codec_ui.h"
 #include "dect2/audio/audioout.h"
@@ -487,6 +488,7 @@ void logView(App& a) {
 }
 
 void tick(App& a) {
+    watchui::tick(a);
     // Load the voice codec while the mode runs, whichever tab is drawn (the strip only shows the state).
     if (live(a) && a.engine.running() && !gVoice.hasCodec()) {
         wireVoice(a);
@@ -518,7 +520,8 @@ void tab(App& a) {
     voiceStrip(a);
     if (kit::collapsingSection(tr("Listen"), false)) slotPanel(a);
     kit::modeHeader({46, "TETRA", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("tetrav", S.view, {{tr("Live"), 0}, {tr("Calls"), 4}, {tr("Neighbours"), 1, true}, {tr("Carriers"), 2, true}, {tr("Log"), 3, true}});
+    kit::modeNav("tetrav", S.view, {{tr("Live"), 0}, {tr("Calls"), 4}, {tr("Neighbours"), 1, true}, {tr("Carriers"), 2, true}, {tr("Log"), 3, true}, {tr("Watch"), 90, true}});
+    if (S.view == 90) { watchui::watchView(a, "tetra"); return; }
     if (S.view == 4) { kit::sessionItems(46, 1, "tetra"); return; }
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "start the receiver to find the TETRA base stations around you"); return; }
     if (S.view == 0) {
