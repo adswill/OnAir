@@ -2,6 +2,7 @@
 // counters and burst rates, the ring alert list, the pager messages with a text panel, the Iridium time, and a burst scatter
 // (time against frequency) of the last 2 s.
 #include "app.h"
+#include "ui/kit/mode_panel.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/session_list.h"
 #include "../adsb/adsb_map.h"
@@ -742,6 +743,16 @@ void meters(const App& a, std::vector<ModeMeter>& out) {
 
 } // namespace
 
+// Simple view: the map, the messages, the calls and the time / satellite readouts side by side
+static void command(App& a) {
+    loadState();
+    kit::modeHeader({19, "Iridium", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    modepanel::panes({{"##iricmap", tr("Map"), [&a] { mapView(a, ImGui::GetContentRegionAvail()); }, 1.f, 260.f},
+                      {"##iricmsg", tr("Messages"), [&a] { const ImVec2 v = ImGui::GetContentRegionAvail(); messages(a, v.x, v.y); }, 2.2f, 300.f},
+                      {"##iriccall", tr("Calls"), [&a] { callsView(a); }, 1.f, 220.f},
+                      {"##iricsat", tr("Satellites"), [&a] { timeBox(a); ImGui::Spacing(); satDetail(a); ImGui::Spacing(); counters(a); }, 0.9f, 220.f}}, 280.f);
+}
+
 extern const ModeUi kIridiumUi;
 const ModeUi kIridiumUi = {
     .sideTitle = "SATELLITES",
@@ -757,4 +768,5 @@ const ModeUi kIridiumUi = {
     .synth = synth,
     .tick = tick,
     .meters = meters,
+    .command = command,
 };
