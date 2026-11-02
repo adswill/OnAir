@@ -3628,3 +3628,4 @@ open to anyone with the link	ouvert à toute personne avec le lien
 with a password	avec mot de passe
 no radio found	aucune radio trouvée
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Aucune radio trouvée. Branchez une radio et appuyez sur Actualiser dans l'onglet Radio et plage, ou choisissez le signal de test.
+Join the OnAir Discord	Rejoindre le Discord OnAir

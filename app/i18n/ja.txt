@@ -3631,3 +3631,4 @@ open to anyone with the link	リンクを知っている人なら誰でも
 with a password	パスワード付き
 no radio found	ラジオが見つかりません
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	ラジオが見つかりません。ラジオを接続し、「ラジオと範囲」タブで更新を押すか、テスト信号を選んでください。
+Join the OnAir Discord	OnAir の Discord に参加

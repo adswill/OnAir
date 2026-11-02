@@ -687,6 +687,23 @@ static void viewMenu(App& a) {
 // the right end of the menu bar: credit, Credits, Support, the update button and Clear all. One row of chips: the same height, border and
 // background, one gap between them, centred in the bar. Placed from the width the row had last frame (it follows the update button's label).
 static float gBarRestW = 0;
+static const char* const kDiscordInviteUrl = "https://discord.gg/Kky9c6atm";   // the one place the app holds the invite
+// Discord icon chip for the menu bar; true when clicked
+static bool discordButton() {
+    ImGui::PushID("discord_invite");
+    const float h = ImGui::GetFrameHeight();
+    const ImVec2 sz(h * 1.3f, h);
+    const ImVec2 p = ImGui::GetCursorScreenPos();
+    const bool clicked = ImGui::InvisibleButton("##dc", sz);
+    const bool hov = ImGui::IsItemHovered();
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    dl->AddRectFilled(p, ImVec2(p.x + sz.x, p.y + sz.y), hov ? IM_COL32(88, 101, 242, 255) : IM_COL32(255, 255, 255, 10), ImGui::GetStyle().FrameRounding);
+    dl->AddRect(p, ImVec2(p.x + sz.x, p.y + sz.y), IM_COL32(255, 255, 255, 31), ImGui::GetStyle().FrameRounding);
+    icons::draw(Ic::Discord, ImVec2(p.x + sz.x * 0.5f, p.y + sz.y * 0.5f), h * 0.62f, hov ? IM_COL32(255, 255, 255, 255) : IM_COL32(150, 165, 245, 255), dl);
+    if (hov) ImGui::SetTooltip("%s", tr("Join the OnAir Discord"));
+    ImGui::PopID();
+    return clicked;
+}
 static void menuBarRight(App& a) {
     const ImGuiStyle& ist = ImGui::GetStyle();
     const float g = 6.f * gUi, margin = 12.f * gUi, W = ImGui::GetWindowWidth();
@@ -721,6 +738,8 @@ static void menuBarRight(App& a) {
     ImGui::PushStyleColor(ImGuiCol_Text, dimText);
     supportButton();
     ImGui::PopStyleColor();
+    ImGui::SameLine(0, g); ImGui::SetCursorPosY(y);
+    if (discordButton()) dect2::openUrl(kDiscordInviteUrl);
     ImGui::SameLine(0, g); ImGui::SetCursorPosY(y);
     updateButton(a);
     ImGui::SameLine(0, g); ImGui::SetCursorPosY(y);
@@ -799,6 +818,7 @@ float menuBar(App& a) {
             if (ImGui::MenuItem(tr("Voice codecs"))) a.voiceCodecsOpen = true;
             if (ImGui::MenuItem(tr("Voice monitor"))) voiceui::open();
             if (ImGui::MenuItem(tr("Website"))) dect2::openUrl("https://on-air.dev/");
+            if (ImGui::MenuItem(tr("Join the OnAir Discord"))) dect2::openUrl(kDiscordInviteUrl);
             if (ImGui::MenuItem(tr("Credits and licences"))) { a.creditsOpen = true; a.creditsTab = 1; }
             ImGui::Separator();
             if (ImGui::MenuItem(tr("Report a problem"))) a.reportOpen = true;

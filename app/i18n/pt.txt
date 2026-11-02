@@ -3611,3 +3611,4 @@ open to anyone with the link	aberto a qualquer pessoa com o link
 with a password	com senha
 no radio found	nenhum rádio encontrado
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Nenhum rádio encontrado. Conecte um rádio e clique em Atualizar na guia Rádio e faixa, ou escolha o sinal de teste.
+Join the OnAir Discord	Entrar no Discord do OnAir

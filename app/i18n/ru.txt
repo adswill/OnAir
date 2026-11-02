@@ -3614,3 +3614,4 @@ open to anyone with the link	открыто для всех, у кого ест�
 with a password	с паролем
 no radio found	радио не найдено
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Радио не найдено. Подключите радио и нажмите «Обновить» на вкладке «Радио и диапазон» или выберите тестовый сигнал.
+Join the OnAir Discord	Присоединиться к Discord OnAir

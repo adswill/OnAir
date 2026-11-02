@@ -3629,3 +3629,4 @@ open to anyone with the link	abierto a cualquiera con el enlace
 with a password	con contraseña
 no radio found	no se encontró ninguna radio
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	No se encontró ninguna radio. Conecte una y pulse Actualizar en la pestaña Radio y rango, o elija la señal de prueba.
+Join the OnAir Discord	Unirse al Discord de OnAir

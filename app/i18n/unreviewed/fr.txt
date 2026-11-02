@@ -351,3 +351,4 @@ open to anyone with the link
 with a password
 no radio found
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.
+Join the OnAir Discord

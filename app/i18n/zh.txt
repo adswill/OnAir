@@ -3654,3 +3654,4 @@ open to anyone with the link	任何拥有链接的人都可收听
 with a password	需要密码
 no radio found	未找到电台
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	未找到电台。请连接电台并在“电台与范围”选项卡中点击刷新，或选择测试信号。
+Join the OnAir Discord	加入 OnAir Discord

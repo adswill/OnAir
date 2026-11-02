@@ -1019,3 +1019,6 @@ Goal: sharing a radio on the web from inside the app in one button. Findings: th
 
 ## 2026-11-02 second CI pass on feat36-cifix (run 41368592246)
 tx_quality_b: the time-signal generator starts at the wall clock, so its keying sidebands (far power) vary with the minute the test runs in (-41 .. -38.9 dBc), limit for timesig -35 like uat's special case. dvbc_engine: the 256-QAM lock was lost for a moment at the measurement; the steady-state window now also needs a TS lock. ham_sdr: Halt bound 100 ms -> 750 ms (a block is 10 ms). kaws_synth (Windows): waits up to 450 s / 300 s (returns at the first decode), ctest TIMEOUT 1500.
+
+## 2026-11-02 Discord button (feat36-discord)
+Menu bar chip with a drawn Discord icon (Ic::Discord, tooltip "Join the OnAir Discord", unique ID discord_invite) opens the invite in the default browser; Help > Join the OnAir Discord; header icon link in onair-web. One URL constant (kDiscordInviteUrl) in the app; i18n in 13 languages, unreviewed lists updated. test_i18n and test_gui_rules pass; ui2_shell.cpp compiles. No GUI shot: a cold full build was too heavy for the lagging Mac. README already links Discord.

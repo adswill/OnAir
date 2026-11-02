@@ -3616,3 +3616,4 @@ open to anyone with the link	bárki számára, akinek megvan a link
 with a password	jelszóval
 no radio found	nem található rádió
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Nem található rádió. Csatlakoztasson egyet, és nyomja meg a Frissítés gombot a Rádió és tartomány lapon, vagy válassza a tesztjelet.
+Join the OnAir Discord	Csatlakozz az OnAir Discordhoz

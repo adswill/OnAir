@@ -3630,3 +3630,4 @@ open to anyone with the link	otwarte dla każdego, kto ma link
 with a password	z hasłem
 no radio found	nie znaleziono radia
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Nie znaleziono radia. Podłącz radio i naciśnij Odśwież na karcie Radio i zakres albo wybierz sygnał testowy.
+Join the OnAir Discord	Dołącz do Discorda OnAir
