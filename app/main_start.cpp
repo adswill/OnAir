@@ -149,6 +149,7 @@ void parseDevFlags(App& app, int argc, char** argv, DevOpts& o) {
         if (std::string(argv[i]) == "--fmscan") o.fmScanAuto = true;
         if (std::string(argv[i]) == "--vfo" && i + 1 < argc) o.fileVfoMhz = atof(argv[++i]);
         if (std::string(argv[i]) == "--ssb-conversations") ssbConvDevOpen(app, i + 1 < argc && std::string(argv[i + 1]) == "demo");   // dev: open View > Conversations (demo: with the synthetic signals)
+        if (std::string(argv[i]) == "--mcp") mcpDevOpen(app);   // dev: View > Data feeds on the AI assistant (MCP) section, switched on
         if (std::string(argv[i]) == "--wide-all") { app.wideAllOpen = true; app.engine.setWideAll(true); }   // dev: Everything in view open and on (screenshots)
         if (std::string(argv[i]) == "--passes") app.passesOpen = true;
         if (std::string(argv[i]) == "--df") app.dfOpen = true;

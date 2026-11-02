@@ -3550,6 +3550,22 @@ some stations are hidden	algunas estaciones están ocultas
 File...	Archivo...
 Auto-save to file	Guardar automáticamente en archivo
 Activity	Actividad
+#  AI assistant (MCP), docs/MCP.md
+AI assistant (MCP)	Asistente de IA (MCP)
+Let an AI assistant control this receiver (MCP)	Permitir que un asistente de IA controle este receptor (MCP)
+An AI assistant (Claude, ChatGPT-style clients, a local model) that you connect can tune, scan bands, identify signals and start decoders for you, and read what was decoded. It cannot read files, run programs, change settings or decrypt anything, and it cannot transmit unless you allow that below. Every action is listed in the log.	Un asistente de IA (Claude, clientes tipo ChatGPT, un modelo local) que usted conecte puede sintonizar, explorar bandas, identificar señales, iniciar decodificadores y leer lo decodificado. No puede leer archivos, ejecutar programas, cambiar ajustes ni descifrar nada, y no puede transmitir salvo que lo permita abajo. Cada acción queda en el registro.
+Programs on this computer need the token too	Los programas de este equipo también necesitan el token
+Allow the AI to transmit (off by default; this is your decision, it is forgotten at restart)	Permitir que la IA transmita (desactivado por defecto; es decisión suya, se olvida al reiniciar)
+The AI can now start transmissions. You are responsible for the law where you are and for your hardware.	La IA ya puede iniciar transmisiones. Usted es responsable de la ley de donde esté y de su equipo.
+listening on %s port %d, %d requests, %d refused	escuchando en %s, puerto %d, %d solicitudes, %d rechazadas
+An AI is connected: %s	Hay una IA conectada: %s
+No AI has connected yet.	Todavía no se ha conectado ninguna IA.
+How to connect your AI	Cómo conectar su IA
+Other client	Otro cliente
+Claude Desktop: put this in its config file (Settings > Developer > Edit config) and restart it; it needs Node.js for the bridge. Claude Code: run the command in a terminal. Other clients: use the address (streamable HTTP) or start onair-server --mcp-stdio. Then ask, for example: there is some DRM around 15 MHz, find it and decode it.	Claude Desktop: ponga esto en su archivo de configuración (Ajustes > Desarrollador > Editar configuración) y reinícielo; necesita Node.js para el puente. Claude Code: ejecute el comando en un terminal. Otros clientes: use la dirección (HTTP en streaming) o inicie onair-server --mcp-stdio. Luego pida, por ejemplo: hay algo de DRM sobre los 15 MHz, encuéntralo y decodifícalo.
+What the AI did	Lo que hizo la IA
+Clear log	Borrar registro
+Nothing yet.	Nada todavía.
 # Everything in view (wide multi-signal decode)
 identifying	identificando
 running	activo

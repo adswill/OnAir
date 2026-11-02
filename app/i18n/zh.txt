@@ -3575,6 +3575,22 @@ some stations are hidden	部分电台已隐藏
 File...	文件...
 Auto-save to file	自动保存到文件
 Activity	活动
+#  AI assistant (MCP), docs/MCP.md
+AI assistant (MCP)	AI 助手 (MCP)
+Let an AI assistant control this receiver (MCP)	允许 AI 助手控制此接收机 (MCP)
+An AI assistant (Claude, ChatGPT-style clients, a local model) that you connect can tune, scan bands, identify signals and start decoders for you, and read what was decoded. It cannot read files, run programs, change settings or decrypt anything, and it cannot transmit unless you allow that below. Every action is listed in the log.	您连接的 AI 助手 (Claude、类 ChatGPT 客户端、本地模型) 可以为您调谐、扫描频段、识别信号、启动解码器并读取解码结果。它不能读取文件、运行程序、更改设置或解密任何内容，除非您在下面允许，否则也不能发射。每个操作都会记录在日志中。
+Programs on this computer need the token too	此电脑上的程序也需要令牌
+Allow the AI to transmit (off by default; this is your decision, it is forgotten at restart)	允许 AI 发射 (默认关闭；由您决定，重启后会忘记)
+The AI can now start transmissions. You are responsible for the law where you are and for your hardware.	AI 现在可以开始发射。您须对所在地的法律和您的设备负责。
+listening on %s port %d, %d requests, %d refused	正在 %s 的端口 %d 上监听，%d 个请求，%d 个被拒绝
+An AI is connected: %s	已连接 AI：%s
+No AI has connected yet.	尚无 AI 连接。
+How to connect your AI	如何连接您的 AI
+Other client	其他客户端
+Claude Desktop: put this in its config file (Settings > Developer > Edit config) and restart it; it needs Node.js for the bridge. Claude Code: run the command in a terminal. Other clients: use the address (streamable HTTP) or start onair-server --mcp-stdio. Then ask, for example: there is some DRM around 15 MHz, find it and decode it.	Claude Desktop：把它放入其配置文件 (设置 > 开发者 > 编辑配置) 并重启；桥接需要 Node.js。Claude Code：在终端中运行该命令。其他客户端：使用该地址 (可流式 HTTP) 或启动 onair-server --mcp-stdio。然后可以这样问：15 MHz 附近有 DRM，找到并解码它。
+What the AI did	AI 做了什么
+Clear log	清除日志
+Nothing yet.	暂无。
 # Everything in view (wide multi-signal decode)
 identifying	识别中
 running	运行中

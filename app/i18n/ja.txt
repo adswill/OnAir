@@ -3552,6 +3552,22 @@ some stations are hidden	一部の局は非表示です
 File...	ファイル...
 Auto-save to file	ファイルに自動保存
 Activity	アクティビティ
+#  AI assistant (MCP), docs/MCP.md
+AI assistant (MCP)	AIアシスタント (MCP)
+Let an AI assistant control this receiver (MCP)	AIアシスタントにこの受信機の操作を許可する (MCP)
+An AI assistant (Claude, ChatGPT-style clients, a local model) that you connect can tune, scan bands, identify signals and start decoders for you, and read what was decoded. It cannot read files, run programs, change settings or decrypt anything, and it cannot transmit unless you allow that below. Every action is listed in the log.	接続したAIアシスタント (Claude、ChatGPT系クライアント、ローカルモデル) は、選局、バンドのスキャン、信号の識別、デコーダの起動、デコード結果の読み取りができます。ファイルの読み取り、プログラムの実行、設定の変更、復号はできず、下で許可しない限り送信もできません。すべての操作はログに記録されます。
+Programs on this computer need the token too	このコンピュータ上のプログラムにもトークンが必要
+Allow the AI to transmit (off by default; this is your decision, it is forgotten at restart)	AIに送信を許可する (既定ではオフ。あなたの判断で、再起動すると忘れられます)
+The AI can now start transmissions. You are responsible for the law where you are and for your hardware.	AIが送信を開始できる状態です。現地の法律と機器については、あなたの責任となります。
+listening on %s port %d, %d requests, %d refused	%s のポート %d で待機中、リクエスト %d 件、拒否 %d 件
+An AI is connected: %s	AIが接続中: %s
+No AI has connected yet.	まだAIは接続していません。
+How to connect your AI	AIの接続方法
+Other client	その他のクライアント
+Claude Desktop: put this in its config file (Settings > Developer > Edit config) and restart it; it needs Node.js for the bridge. Claude Code: run the command in a terminal. Other clients: use the address (streamable HTTP) or start onair-server --mcp-stdio. Then ask, for example: there is some DRM around 15 MHz, find it and decode it.	Claude Desktop: これを設定ファイル (設定 > 開発者 > 設定を編集) に記入して再起動してください。ブリッジにはNode.jsが必要です。Claude Code: コマンドをターミナルで実行します。その他のクライアント: アドレス (ストリーマブルHTTP) を使うか onair-server --mcp-stdio を起動します。そのあと、例えば「15 MHz付近にDRMがある。見つけてデコードして」と頼んでください。
+What the AI did	AIの操作履歴
+Clear log	ログを消去
+Nothing yet.	まだありません。
 # Everything in view (wide multi-signal decode)
 identifying	識別中
 running	動作中

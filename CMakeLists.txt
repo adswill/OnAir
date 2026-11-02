@@ -348,6 +348,9 @@ add_executable(onair-plugin-host tools/onair_plugin_host.cpp)
 add_executable(kris_samples tools/kris_samples.cpp)   # sample IQ files of the KAAL, KAPP and KAFT transmitters (tools/kris_samples.cpp)
 target_link_libraries(kris_samples PRIVATE dect2core)
 target_link_libraries(onair-plugin-host PRIVATE dect2_plugin)
+# MCP (Model Context Protocol) server: an AI assistant drives the radio (docs/MCP.md)
+target_sources(dect2core PRIVATE core/src/mcp/mcp_json.cpp core/src/mcp/mcp_server.cpp core/src/mcp/mcp_tools.cpp)
+
 # onair-server: OnAir with no window (a Raspberry Pi, a Linux box, a Windows PC without a screen), controlled from a browser; docs/headless-server.md
 # OnAir Web: many listeners, each with an own receiver inside the host's capture (server/web, docs/ONAIR-WEB.md). Every web source is built with
 # the host setting web_allow_tx=0 (the default; 1 lets listeners transmit through the host's radio, see docs/ONAIR-WEB.md).
@@ -1776,6 +1779,16 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_server_host PRIVATE onair_web dect2core)
   target_compile_definitions(test_server_host PRIVATE ONAIR_SERVER_VERSION="${PROJECT_VERSION}")
   add_test(NAME server_host COMMAND test_server_host)
+  add_executable(test_mcp tests/mcp/test_mcp.cpp server/server_config.cpp server/server_host.cpp)   # MCP server: protocol, every tool on the test signal, stdio + HTTP transports (docs/MCP.md)
+  target_link_libraries(test_mcp PRIVATE onair_web dect2core)
+  target_compile_definitions(test_mcp PRIVATE ONAIR_SERVER_VERSION="${PROJECT_VERSION}")
+  add_test(NAME mcp COMMAND test_mcp)
+  set_tests_properties(mcp PROPERTIES TIMEOUT 300)
+  find_program(ONAIR_PYTHON3_MCP python3)
+  if(ONAIR_PYTHON3_MCP)   # a real MCP client in a child process against onair-server --mcp-stdio and --mcp-http
+    add_test(NAME mcp_stdio COMMAND ${ONAIR_PYTHON3_MCP} -I ${CMAKE_SOURCE_DIR}/tests/mcp/test_mcp_stdio.py $<TARGET_FILE:onair-server>)
+    set_tests_properties(mcp_stdio PROPERTIES TIMEOUT 300)
+  endif()
   foreach(t web_proto web_dsp web_hub web_server web_safety web_tx_guard web_ranges web_directory web_relay)
 
     add_executable(test_${t} tests/server/test_${t}.cpp server/server_config.cpp)

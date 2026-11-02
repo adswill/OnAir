@@ -3537,6 +3537,22 @@ some stations are hidden	néhány állomás el van rejtve
 File...	Fájl...
 Auto-save to file	Automatikus mentés fájlba
 Activity	Aktivitás
+#  AI assistant (MCP), docs/MCP.md
+AI assistant (MCP)	MI-asszisztens (MCP)
+Let an AI assistant control this receiver (MCP)	Egy MI-asszisztens vezérelheti ezt a vevőt (MCP)
+An AI assistant (Claude, ChatGPT-style clients, a local model) that you connect can tune, scan bands, identify signals and start decoders for you, and read what was decoded. It cannot read files, run programs, change settings or decrypt anything, and it cannot transmit unless you allow that below. Every action is listed in the log.	Egy MI-asszisztens (Claude, ChatGPT-szerű kliensek, helyi modell), amelyet Ön csatlakoztat, hangolhat, sávokat vizsgálhat, jeleket azonosíthat, dekódereket indíthat és olvashatja a dekódolt tartalmat. Nem olvashat fájlokat, nem futtathat programokat, nem módosíthat beállításokat és semmit sem fejthet vissza, és nem adhat, hacsak lent nem engedélyezi. Minden művelet szerepel a naplóban.
+Programs on this computer need the token too	A ezen a számítógépen futó programoknak is kell a token
+Allow the AI to transmit (off by default; this is your decision, it is forgotten at restart)	Az MI adhat (alapból kikapcsolva; az Ön döntése, újraindításkor elfelejtődik)
+The AI can now start transmissions. You are responsible for the law where you are and for your hardware.	Az MI most már indíthat adást. Ön felel a helyi jogszabályokért és a berendezéséért.
+listening on %s port %d, %d requests, %d refused	figyel itt: %s, port %d, %d kérés, %d elutasítva
+An AI is connected: %s	Egy MI csatlakozva van: %s
+No AI has connected yet.	Még nem csatlakozott MI.
+How to connect your AI	Így csatlakoztassa az MI-jét
+Other client	Másik kliens
+Claude Desktop: put this in its config file (Settings > Developer > Edit config) and restart it; it needs Node.js for the bridge. Claude Code: run the command in a terminal. Other clients: use the address (streamable HTTP) or start onair-server --mcp-stdio. Then ask, for example: there is some DRM around 15 MHz, find it and decode it.	Claude Desktop: tegye ezt a konfigurációs fájljába (Beállítások > Fejlesztő > Konfiguráció szerkesztése), majd indítsa újra; a hídhoz Node.js kell. Claude Code: futtassa a parancsot terminálban. Más kliensek: használja a címet (streamable HTTP) vagy indítsa az onair-server --mcp-stdio parancsot. Utána kérdezze például: 15 MHz körül van valami DRM, keresd meg és dekódold.
+What the AI did	Mit tett az MI
+Clear log	Napló törlése
+Nothing yet.	Még semmi.
 # Everything in view (wide multi-signal decode)
 identifying	azonosítás
 running	fut

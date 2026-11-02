@@ -957,6 +957,8 @@ void remoteApiLoadPrefs(App& a);    // remote_api_app.cpp: the remote-control AP
 void remoteApiSavePrefs(const App& a);
 void remoteApiTick(App& a);          // every frame: runs the commands the API queued for the main thread, publishes the telemetry
 void remoteApiSection(App& a);       // the settings panel (in the Data feeds window)
+void mcpDevOpen(App& a);             // dev flag --mcp: Data feeds open on the AI assistant section, switched on (not saved)
+void mcpSection(App& a);             // remote_api_app.cpp: the AI assistant (MCP) panel: switch, token, connection snippets, activity log (docs/MCP.md)
 void shareTick(App& a);             // feeds_ui.cpp: carries out the frequency / gain commands of the clients of "Share my radio" (when allowed)
 void integrationsWindow(App& a);   // app/integrations/integrations_ui.cpp: the Integrations window (View > Integrations); also starts the publisher
 void ssbConvWindow(App& a);   // app/ssbconv/ssbconv_ui.cpp: the Conversations window (View > Conversations); also feeds the finder while it is open and drives auto-listen
