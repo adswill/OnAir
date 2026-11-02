@@ -129,6 +129,42 @@ int main() {
         CHECK(tapped[1] == 4 * 960, "sound after choosing call 1: %zu", tapped[1]);
         CHECK(v.calls().size() == 1 && v.calls()[0].decoded == 8, "Listen off must still decode");
     }
+    // mixer: solo beats Listen, mute silences but still decodes; silence frames are counted and not sent
+    {
+        IridiumVoice v;
+        v.setSilent(true);
+        std::map<int, size_t> tapped;
+        v.setAudioTap([&](int id, const float*, size_t n) { tapped[id] += n; });
+        v.setListenCall(1);
+        feedCall(v, 3, 1.0, 1.6200e9, true, 700);      // call 1
+        feedCall(v, 3, 1.0, 1.6263e9, false, 800);     // call 2
+        CHECK(tapped[1] == 3 * 960 && tapped.count(2) == 0, "listen call 1 only");
+        v.setSolo(2, true);
+        feedCall(v, 3, 1.3, 1.6200e9, true, 710);
+        feedCall(v, 3, 1.3, 1.6263e9, false, 810);
+        CHECK(tapped[1] == 3 * 960 && tapped[2] == 3 * 960, "solo 2 heard alone: %zu %zu", tapped[1], tapped[2]);
+        v.setMute(2, true);
+        feedCall(v, 3, 1.6, 1.6263e9, false, 820);
+        CHECK(tapped[2] == 3 * 960, "muted call still played");
+        const auto c = v.calls();
+        CHECK(c.size() == 2 && c[1].decoded == 9 && c[1].mute && c[1].solo, "muted call must still decode");
+        // silence frames: LCW 001111 / 100000000000000000000
+        for (int i = 0; i < 3; i++) {
+            const IridiumBurstBits b = burst(iridiumBuildVoice(payloadOf(900 + uint32_t(i)), 15, 0x100000), 2.0 + 0.09 * i, 1.6200e9 + 5, true);
+            const IridiumFrame f = decodeIridiumBurst(b);
+            CHECK(f.lcw2 == 15 && f.lcw3 == 0x100000, "lcw fields %d %lld", f.lcw2, (long long)f.lcw3);
+            v.feed(b, f);
+        }
+        CHECK(v.calls()[0].silent == 3 && v.calls()[0].decoded == 6, "silence frames: %u silent, %u decoded", v.calls()[0].silent, v.calls()[0].decoded);
+    }
+    // byte order of the voice field = iridium-toolkit bits_to_dfs.py: first bit received is the least significant bit of the byte
+    {
+        std::vector<uint8_t> raw(312, 0);
+        raw[0] = 1; raw[9] = 1;
+        const IridiumBurstBits b = burst(iridiumBuildLcwFrame(0, 0, 0, raw), 0, 1.6e9);
+        std::vector<uint8_t> q;
+        CHECK(iridiumVoicePayload(b, q) && q[0] == 0x01 && q[1] == 0x02, "bit order: %02x %02x", q.empty() ? 0 : q[0], q.size() < 2 ? 0 : q[1]);
+    }
     fs::remove_all(rec, ec);
     printf(fails ? "%d failure(s)\n" : "all passed\n", fails);
     return fails ? 1 : 0;

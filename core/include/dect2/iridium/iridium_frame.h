@@ -41,6 +41,8 @@ struct IridiumFrame {
     std::string msgText;                // MSG: text of this part (control characters shown as '?', ETX padding removed)
     std::string hex;                    // payload as hex for data/unknown frames (empty for voice); MSG: the toolkit's "msg:" field
     // added by the frame layer
+    int lcw2 = -1;                      // LCW second field (6 bits) when the word was read, -1 otherwise
+    int64_t lcw3 = -1;                  // LCW third field (21 bits)
     int lcwFt = -1;                     // frame type of the link control word (0 voice, 1 IP, 2 data, 3.., 7 sync), -1 without LCW
     bool crcOk = false;                 // IDA/IIP: the frame check sequence matches
     int idaCtr = -1, idaLen = -1;       // IDA: counter and number of payload bytes

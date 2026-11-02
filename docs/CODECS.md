@@ -386,13 +386,20 @@ Copy `onair-codec-aeroambe.dylib` / `.so` / `onair-codec-aeroambe.dll` into the 
 ## AMBE variant (Iridium voice)
 
 OnAir ships no Iridium vocoder. Voice slots are grouped into calls (Iridium > Calls: time, frequency, direction, length, satellite and
-beam when a broadcast frame on that frequency named them, status) with a Listen selector and one WAV recording per call in the recordings
-folder. Sound needs a plug-in `onair-codec-iridium` (id `iridium`, ABI in `core/include/dect2/codec/speech_codec.h`) that you install
-yourself. Each call to `onair_speech_decode` gets the 39 bytes (312 bits) of the voice field exactly as received (over-the-air bit order,
-MSB first; no de-scrambling or de-interleaving by OnAir) and returns PCM. **Unverified:** this has only been tested with synthetic
-bursts and a stub plug-in, never a real Iridium recording; whether the voice field needs further de-interleaving or FEC before the vocoder
-is for the plug-in. **The Iridium voice plug-in is not distributed with OnAir.** Without one the voice stays silent; use **Save for iridium-toolkit** below. No public description defines an "encrypted" marker, so none is shown: frames that fail their checks or that the
-plug-in refuses are listed as "not readable" and stay silent, and OnAir never decodes encrypted traffic or works on keys.
+beam when a broadcast frame on that frequency named them, a level meter, **Mute** and **Solo** per call, status) with a Listen selector and, with **Record calls** on, one WAV
+recording per call in the recordings folder (written when the call ends). A soloed call is heard alone (several soloed calls are mixed) and
+the Listen choice is ignored while any call is soloed; a muted call is still decoded and recorded. Frames that the network marks as silence
+(link control word 001111 / 100000000000000000000, the toolkit's "silent") are counted and not sent to the codec.
+
+Sound needs a plug-in `onair-codec-iridium` (id `iridium`, ABI in `core/include/dect2/codec/speech_codec.h`) that you install yourself. Each call
+to `onair_speech_decode` gets the **39 bytes (312 bits) of the voice field** of one voice frame, in the byte order of iridium-toolkit's
+`bits_to_dfs.py` (the file its `ir77_ambe_decode` reads): the first bit received is the least significant bit of each byte. OnAir does no
+de-scrambling, de-interleaving or error correction of its own; a plug-in that wraps osmo-ir77's decoder (or a decoder extracted from firmware,
+see the toolkit's `ambe_emu`) therefore gets exactly what the toolkit would give it, and returns 8 kHz PCM. **Unverified:** this has been tested
+with synthetic bursts through the whole receiver (offsets, Doppler, clock error, noise) and a stub plug-in, never a real Iridium recording.
+**The Iridium voice plug-in is not distributed with OnAir.** Without one the voice stays silent; use **Save for iridium-toolkit** below. No public
+description defines an "encrypted" marker, so none is shown: frames that fail their checks or that the plug-in refuses are listed as "not
+readable" and stay silent. OnAir never decodes encrypted traffic itself; a key handed to your own plug-in is your own business and OnAir has no key handling.
 
 Alternatively, **Save for iridium-toolkit** writes a `.bits` file. Then:
 
@@ -501,6 +508,7 @@ Three more plug-in ids, one registry (`core/include/dect2/codec/codec_registry.h
 | `ambe2` | DMR, NXDN, dPMR (AMBE+2 3600x2450) | 12: the four de-interleaved code words C0..C3 of mbelib, 24 bits each, row by row, most significant bit first |
 | `ambe` | D-STAR (AMBE 3600x2400) | 12, the same layout |
 | `aeroambe` | Inmarsat Aero C channel (AMBE 4800x3600) | 12, one JAERO voice frame, bits packed LSB first (see above) |
+| `iridium` | Iridium voice (AMBE family) | 39, the 312 bit voice field, first bit received = least significant bit of the byte (toolkit `.dfs` order) |
 | `imbe` | P25 phase 1 (IMBE 7200x4400) | 23: the eight code words c0..c7, 23 bits each, row by row, MSB first (184 bits) |
 
 OnAir does the de-interleaving; the plug-in only has to expand the bits back into mbelib's `char fr[4][24]` (or `fr[8][23]`) and call `mbe_processAmbe3600x2450Frame` / `mbe_processAmbe3600x2400Frame` / `mbe_processImbe7200x4400Frame`, then return the 160 samples. A small reference wrapper is in `tools/codec-plugin-example/mbelib_wrapper.c` (compile it yourself against your own mbelib; no codec code is in this repository).

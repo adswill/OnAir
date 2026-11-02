@@ -158,6 +158,10 @@ struct IridiumCall {                 // a voice call: the traffic frames on one 
     double audioSec = 0;             // length of the sound
     std::string status;              // "decoded", "codec needed", "not readable"
     std::string file;                // the recording, when saved
+    uint32_t silent = 0;             // frames the network marks as silence (link control word 'silent'): never sent to the codec
+    float level = 0;                 // peak of the last decoded frame, 0..1
+    bool mute = false, solo = false; // mixer: a soloed call is heard alone; a muted call is recorded but not played
+    bool audible = false;            // played now (listen choice, mute and solo applied)
 };
 
 struct IridiumTelemetry {

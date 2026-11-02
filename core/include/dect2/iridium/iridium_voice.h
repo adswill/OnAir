@@ -2,9 +2,11 @@
 // (codec_registry.h) and played / recorded. OnAir ships no vocoder; without the plug-in the calls are listed and stay silent.
 //
 // WHAT IS KNOWN (public iridium-toolkit descriptions): a burst whose link control word has frame type 0 is a voice slot; 312 bits follow the
-// 46 bit LCW. WHAT IS NOT VERIFIED: the FEC / interleaving of those 312 bits inside the voice vocoder and the layout of its AMBE-family
-// frames. OnAir therefore hands the plug-in the 39 bytes of the voice field exactly as received (over-the-air bit order, most significant
-// bit of each byte first, no de-scrambling, no de-interleaving of our own); a plug-in built for it does the vocoder-specific part. No public
+// 46 bit LCW. The toolkit's bits_to_dfs.py hands its AMBE decoder (ir77_ambe_decode) those 312 bits as 39 bytes with the first bit received as
+// the LEAST significant bit of each byte; OnAir hands the plug-in the same bytes. Link control word 'silent' (type 001111, third field 100..0)
+// marks silence frames: counted, not sent.
+// WHAT IS NOT VERIFIED: the FEC / interleaving of those 312 bits inside the vocoder and the layout of its AMBE-family frames. OnAir does no
+// de-scrambling or de-interleaving of its own; a plug-in built for it does the vocoder-specific part. No public
 // description known to us defines an "encrypted" flag, so none is invented: a frame whose link control word fails its check, or a call whose
 // frames the plug-in refuses, is shown as not readable and stays silent. Nothing here is checked against a real Iridium recording.
 #pragma once
@@ -38,6 +40,10 @@ public:
 
     // Listen: 0 = the first call with audio, -1 = nothing, otherwise the call id. Sound as in the other voice modes.
     void setListenCall(int id);
+    // Mixer, as in the Inmarsat voice tab: any soloed call is heard (several together) and the Listen choice is ignored; a muted call is
+    // recorded but not played. Unknown ids are ignored.
+    void setMute(int id, bool on);
+    void setSolo(int id, bool on);
     void setVolume(float v);
     void setMuted(bool m);
     void setSilent(bool s);               // decode but do not open the sound device (tests)
