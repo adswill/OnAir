@@ -227,6 +227,7 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 28: return pollStd(rxVdl2_, 28, t, seqs[21], &RxTelemetry::vdl2);
     case 29: return pollStd(rxIsm_, 29, t, seqs[22], &RxTelemetry::ism);
     case 30: return pollStd(rxNdb_, 30, t, seqs[23], &RxTelemetry::ndb);
+    case 120: return pollStd(rxSitor_, 120, t, seqs[194], &RxTelemetry::sitor);   // SITOR (slot 194)
     case 122: return pollStd(rxDme_, 122, t, seqs[162], &RxTelemetry::dme);   // DME (slot 162: 110 is DGPS, docs/MODE-NUMBERS.md)
     case 31: return pollStd(rxVor_, 31, t, seqs[24], &RxTelemetry::vor);
     case 32: return pollStd(rxM17_, 32, t, seqs[25], &RxTelemetry::m17);

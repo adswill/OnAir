@@ -145,6 +145,7 @@ void Engine::configureReceiver(int a, double r) {
     case 29: rxIsm_.configure(r); break;
     case 30: rxNdb_.configure(r); break;
     case 122: rxDme_.configure(r); break;
+    case 120: rxSitor_.configure(r); break;
     case 31: rxVor_.configure(r); break;
     case 32: rxM17_.configure(r); break;
     case 34: rxDstar_.configure(r); break;
@@ -298,6 +299,7 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 14: rxSonde_.setSignalOffset(o); break;
     case 15: rxAis_.setSignalOffset(o); if (lastDev_.isRadio() && centreHz > 0) rxAis_.setCenterHz(centreHz); break;
     case 16: rxMarine_.setSignalOffset(o); break;
+    case 120: rxSitor_.setSignalOffset(o); break;
     case 17: rxAcars_.setSignalOffset(o); if (centreHz > 0) rxAcars_.setCenterHz(centreHz); break;
     case 18: rxInmc_.setSignalOffset(o); break;
     case 19: rxAero_.setSignalOffset(o); break;

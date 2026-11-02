@@ -63,6 +63,7 @@
 #include "dect2/marine/marine_gen.h"
 #include "dect2/marine/marine_rx.h"
 #include "dect2/marine/marine_tel.h"
+#include "dect2/sitor/sitor_live.h"
 #include "dect2/cdr/cdr_rx.h"
 #include "dect2/cdr/cdr_tel.h"
 #include "dect2/dvbc/dvbc.h"
@@ -567,6 +568,20 @@ inline std::vector<Mode> allModes() {
             return v;
         };
         m.make = factory<MarineReceiver, MarineTelemetry>([](MarineReceiver& rx, double r) { prepGeneric(rx, r, 17); rx.setService(1); rx.setFrequencyHz(518e3); }, blocks<MarineTelemetry>);
+        add(m);
+    }
+    {   // SITOR-B (family 119): the NAVTEX test signal read as plain FEC text; a trial counts when the decoder locks and prints characters
+        Mode m = base("sitor", "SITOR-B (FEC, 100 Bd)", "marine", 121, 2e6, 40.0, 300, 0.518);
+        m.snrHi = 25; m.maxJobs = 4;
+        m.gen = [](size_t n) {
+            SynthConfig c; c.modeOpt[0] = 1; c.modeOpt[2] = 4; c.modeVal[1] = 3;
+            c.snrDb = 25;
+            auto s = makeModeSynth(17, c, 2e6);
+            Sig v(n);
+            if (s) for (size_t o = 0; o < n; o += 65536) s->generate(v.data() + o, std::min<size_t>(65536, n - o));
+            return v;
+        };
+        m.make = factory<SitorLiveReceiver, SitorTelemetry>([](SitorLiveReceiver& rx, double r) { prepGeneric(rx, r, 121); }, blocks<SitorTelemetry>);
         add(m);
     }
     // The table driven narrowband modes: the same set-up for all (see prepGeneric); the synthetic option in the lambda is the test signal the

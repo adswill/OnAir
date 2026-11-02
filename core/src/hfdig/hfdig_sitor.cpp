@@ -1,5 +1,6 @@
 // SITOR teleprinter decoder (see hfdig_sitor.h).
 #include "dect2/hfdig/hfdig_sitor.h"
+#include "dect2/marine/marine_navtex.h"
 #include <array>
 
 namespace dect2 {
@@ -13,31 +14,33 @@ constexpr char kFigures[32] = {0,   '3', '\n', '-', ' ', '\'', '8', '7', '\r', '
 constexpr int kLtrs = 31;
 constexpr int kFigs = 27;
 
-constexpr int popcount7(unsigned w) {
+[[maybe_unused]] constexpr int popcount7(unsigned w) {
     int n = 0;
     for (unsigned b = 0; b < 7; b++) n += (w >> b) & 1;
     return n;
 }
 
-// The 32 smallest four-of-seven words, in order: code5 -> word.
+// ITU-R M.476 words: the word of an ITA2 position is the CCIR 476 word of its letter (the table of marine_navtex.cpp, taken from
+// fldigi); the shifts and the null have words of their own.
 struct FecBTables {
     std::array<uint8_t, 32> encode{};
     std::array<int8_t, 128> decode{};
 };
-constexpr FecBTables buildFecB() {
+FecBTables buildFecB() {
     FecBTables t{};
     for (auto& d : t.decode) d = -1;
-    int n = 0;
-    for (unsigned w = 0; w < 128 && n < 32; w++) {
-        if (popcount7(w) != 4) continue;
-        t.encode[n] = static_cast<uint8_t>(w);
-        t.decode[w] = static_cast<int8_t>(n);
-        n++;
+    for (int c = 0; c < 32; c++) {
+        uint8_t w = 0;
+        if (c == kLtrs) w = marine::kLtrs;
+        else if (c == kFigs) w = marine::kFigs;
+        else if (kLetters[c] == 0) w = marine::kAlpha;
+        else if (!marine::ccir476Code(kLetters[c], false, w)) continue;
+        t.encode[c] = w;
+        t.decode[w] = static_cast<int8_t>(c);
     }
     return t;
 }
-constexpr FecBTables kFecB = buildFecB();
-
+const FecBTables& fecB() { static const FecBTables t = buildFecB(); return t; }
 }  // namespace
 
 char sitorIta2Char(uint8_t code5, bool figures) {
@@ -47,10 +50,10 @@ char sitorIta2Char(uint8_t code5, bool figures) {
 
 int sitorFecBDecode(uint8_t word7) {
     if (word7 > 127) return -1;
-    return kFecB.decode[word7];
+    return fecB().decode[word7];
 }
 
-uint8_t sitorFecBEncode(uint8_t code5) { return kFecB.encode[code5 & 31]; }
+uint8_t sitorFecBEncode(uint8_t code5) { return fecB().encode[code5 & 31]; }
 
 SitorDecoder::SitorDecoder(Mode mode, int lag) : mode_(mode), lag_(lag < 1 ? 1 : lag) { history_.assign(lag_, -1); }
 
@@ -79,6 +82,10 @@ void SitorDecoder::emit(uint8_t code5) {
 
 void SitorDecoder::push(uint8_t word7) {
     int code = sitorFecBDecode(word7);
+    if (code < 0 && (word7 == marine::kAlpha || word7 == marine::kBeta || word7 == marine::kRep || word7 == marine::kSpare)) {
+        if (mode_ == Mode::FecA) { history_[static_cast<size_t>(pushes_++ % static_cast<uint64_t>(lag_))] = -1; }
+        return;   // idle and repeat words are valid, they print nothing
+    }
     if (mode_ == Mode::FecB) {
         if (code < 0) { errors_++; return; }
         emit(static_cast<uint8_t>(code));

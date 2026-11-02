@@ -204,6 +204,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxAis_.setSignalOffset(o);
         rxAis_.setCenterHz(dev.isRadio() ? radioTune(tune).centerHz : dev.kind == DeviceInfo::File && rate_ >= 5e6 ? fileCentreHz_.load() : 0.0);   // a wide capture holds the long-range channels too
         rxMarine_.setSignalOffset(o);
+        rxSitor_.setSignalOffset(o);
         rxAcars_.setSignalOffset(o);
         if (dev.kind != DeviceInfo::File) rxAcars_.setCenterHz(radioTune(tune).centerHz);   // channel frequencies and the 25 kHz grid come from it
         rxInmc_.setSignalOffset(o);
@@ -418,6 +419,8 @@ void Engine::configureDecoderReceivers(const DeviceInfo& dev, const TuneSettings
     rxVor_.setLogCallback([this](const std::string& s) { log(s); });
     rxNdb_.configure(rate_);
     rxNdb_.setLogCallback([this](const std::string& s) { log(s); });
+    rxSitor_.configure(rate_);
+    rxSitor_.setLogCallback([this](const std::string& s) { log(s); });
     rxDme_.configure(rate_);
     rxDme_.setLogCallback([this](const std::string& s) { log(s); });
     rxM17_.configure(rate_);

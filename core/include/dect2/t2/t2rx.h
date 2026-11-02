@@ -35,6 +35,7 @@
 #include "dect2/vor/vor_tel.h"
 #include "dect2/ndb/ndb_tel.h"
 #include "dect2/dme/dme_tel.h"
+#include "dect2/sitor/sitor_tel.h"
 #include "dect2/m17/m17_tel.h"
 #include "dect2/hfdl/hfdl_tel.h"
 #include "dect2/cell/cell_tel.h"
@@ -264,6 +265,7 @@ struct RxTelemetry {
     ModeAcTelemetry modeac;   // valid when standard == 143 (Mode A/C, family 142)
     EczasTelemetry eczas;     // valid when standard == 86 (e-Czas, 225 kHz Poland)
     MsTelemetry mscatter;     // valid when standard == 105 (meteor scatter)
+    SitorTelemetry sitor;     // valid when standard == 120 (SITOR, engine standard 121)
     DmeTelemetry dme;         // valid when standard == 123 (DME, engine standard 123)
     DcsTelemetry goesdcs;     // valid when standard == 142 (GOES DCS, family 141)
     BletrkTelemetry bletrk;   // valid when standard == 144 (BLE tracker detector, family 143)
