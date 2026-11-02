@@ -363,10 +363,8 @@ private:
     }
     void writeStatus(const RelayStatus& s) {
         if (c_.statusFile.empty()) return;
-        std::error_code ec;
-        const std::string tmp = c_.statusFile + ".tmp";
-        { std::ofstream o(tmp, std::ios::binary | std::ios::trunc); if (!o) return; o << relayStatusJson(s); }
-        fs::rename(tmp, c_.statusFile, ec);
+        std::string werr;
+        onair_server::writeHostFile(c_.statusFile, relayStatusJson(s), werr, true);
     }
     long long now() const { return c_.nowOverride ? c_.nowOverride : wall(); }
 

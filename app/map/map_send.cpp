@@ -977,7 +977,7 @@ void sendToggle(App& a, bool menu) {
 } // namespace
 
 void mapSendServerMenu(App& a) {
-    if (!ImGui::BeginMenu(tr("Server"))) { mapPopups(a); return; }
+    if (!ImGui::BeginMenu(tr("Server"))) { mapPopups(a); webshare::drawPopups(a); return; }   // the Share on web window stays up after the menu closes
     sendToggle(a, true);
     if (rootApp(a).mapSend) msgsToggle(rootApp(a), true);
     if (rootApp(a).mapSend) voiceToggle(rootApp(a), true);

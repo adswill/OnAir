@@ -223,6 +223,36 @@ int main() {
         CHECK(status(r) == 200, "kick: %s", r.c_str());
         f = w.recv(500);
         CHECK(anyText(f, "\"type\":\"kicked\"") && closeCode(f) == 4040, "kicked (%d)", closeCode(f));
+        {   // block: the address is refused at once, the list shows it, unblock lets it back (the tests all come from 127.0.0.1)
+            const std::string auth = "Authorization: Bearer 0123456789abcdef0123456789abcdef\r\nContent-Type: application/json\r\n";
+            auto post = [&](const std::string& path, const std::string& b) { return http(port, "POST " + path + " HTTP/1.1\r\nHost: x\r\n" + auth + "Content-Length: " + std::to_string(b.size()) + "\r\n\r\n" + b); };
+            Ws w2;
+            w2.open(port);
+            w2.send("{\"type\":\"hello\",\"proto\":1,\"password\":\"correct horse\",\"name\":\"bad\"}");
+            w2.recv(400);
+            std::string ur = get(port, "/web/v1/admin/users", "Authorization: Bearer 0123456789abcdef0123456789abcdef\r\n");
+            const size_t ip2 = ur.find("\"id\":");
+            const int id2 = ip2 == std::string::npos ? 0 : atoi(ur.c_str() + ip2 + 5);
+            CHECK(id2 > 0, "second session: %s", ur.c_str());
+            r = post("/web/v1/admin/ban", "{\"id\":" + std::to_string(id2) + ",\"minutes\":5,\"reason\":\"spam\"}");
+            CHECK(status(r) == 200, "ban: %s", r.c_str());
+            auto f2 = w2.recv(500);
+            CHECK(anyText(f2, "\"type\":\"kicked\"") && anyText(f2, "spam"), "the banned session is kicked");
+            Ws w3;
+            w3.open(port);
+            w3.send("{\"type\":\"hello\",\"proto\":1,\"password\":\"correct horse\",\"name\":\"again\"}");
+            CHECK(anyText(w3.recv(500), "\"code\":\"forbidden\""), "the blocked address is refused");
+            r = get(port, "/web/v1/admin/bans", "Authorization: Bearer 0123456789abcdef0123456789abcdef\r\n");
+            CHECK(status(r) == 200 && r.find("\"minutes_left\":") != std::string::npos, "bans: %s", r.c_str());
+            const size_t bt = r.find("\"address\":\"");
+            const std::string tag = bt == std::string::npos ? "" : r.substr(bt + 11, r.find('"', bt + 11) - bt - 11);
+            r = post("/web/v1/admin/unban", "{\"address\":\"" + tag + "\"}");
+            CHECK(status(r) == 200, "unban: %s", r.c_str());
+            r = post("/web/v1/admin/unban", "{\"address\":\"" + tag + "\"}");
+            CHECK(status(r) == 404, "unban twice: %s", r.c_str());
+            r = post("/web/v1/admin/ban", "{\"id\":999999}");
+            CHECK(status(r) == 404, "ban unknown: %s", r.c_str());
+        }
     }
     {
         // the admin policy needs the legal notice for voice / pagers

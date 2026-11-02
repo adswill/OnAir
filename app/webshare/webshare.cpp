@@ -675,6 +675,18 @@ void setupDemo(const char* mode) {
     g.tab = 0;
     if (m == "decoders") g.tab = 1;
     if (m == "preview" || m == "error") g.tab = 2;
+    if (m == "server") g.tab = 3;
+    if (m == "listeners") {
+        g.phase = Phase::Sharing;
+        g.url = "https://x7k2m9qa4c.relay.on-air.dev/";
+        g.stats.ok = true; g.stats.users = 3; g.stats.maxUsers = 8; g.stats.kbps = 1210; g.stats.maxKbps = 8000; g.stats.cpuPct = 41; g.stats.centreHz = 97.75e6; g.stats.rateHz = 20e6;
+        g.publicState = 1;
+        g.relay.state = "online";
+        auto u = [](int id, const char* nm, const char* ad, double f, const char* mo, double k, long long sec) { UserRow r; r.id = id; r.name = nm; r.address = ad; r.freqHz = f; r.mode = mo; r.kbps = k; r.seconds = sec; return r; };
+        g.users = {u(1, "Ana", "#4f2a10", 98.3e6, "wfm", 96, 412), u(2, "", "#09c1e7", 121.5e6, "am", 41, 95), u(3, "Jonas", "#7b3d22", 7.074e6, "usb", 64, 1800)};
+        g.bans = {BanRow{"#c0ffee", 1380}};
+        g.inviteLinkText = "https://x7k2m9qa4c.relay.on-air.dev/#invite=3fa9c1d20b7e4a5c9d816f0e2b3a7c44";
+    }
     if (m == "decoders") { g.S.wholeSpan = false; g.S.centreMHz = 127.5; g.S.spanMHz = 19; g.S.dataOff.insert("ft8"); }
     if (m == "preview" || m == "error") {
         g.phase = Phase::Sharing;
@@ -1070,7 +1082,7 @@ void tabServer(const Plan& plan, bool running) {
     ImGui::SeparatorText(tr("Network"));
     intField(tr("Port on this computer (0 = the first free one from 8073)"), "##wsPort", S.port, 0, 65535, 1, 130);
     if (S.port != 0 && S.port < 1024) wrapped(warnCol(), tr("Ports below 1024 need administrator rights; use 1024 or higher."));
-    textField(tr("Certificate file (optional: the server's own https; empty when the relay, the tunnel or your proxy does it)"), "##wsTlsCert", S.tlsCert, 200, 380);
+    textField(tr("Certificate file (optional: the server's own https)"), "##wsTlsCert", S.tlsCert, 200, 380);
     textField(tr("Key file for that certificate"), "##wsTlsKey", S.tlsKey, 200, 380);
     if (S.tlsCert.empty() != S.tlsKey.empty()) wrapped(warnCol(), tr("A certificate needs both files."));
     textField(tr("Relay service address (only if you run your own relay)"), "##wsRelayUrl", S.relayUrl, 190, 380);
@@ -1087,7 +1099,7 @@ void tabServer(const Plan& plan, bool running) {
     if (running) ImGui::EndDisabled();
     ImGui::SeparatorText(tr("While sharing"));
     if (ImGui::Checkbox(tr("Apply changes by themselves and restart the web server if it stops"), &S.autoApply)) markDirty();
-    ImGui::TextDisabled("%s", tr("Most of these settings are applied when you press Apply changes (or by themselves after a moment); the public link stays the same."));
+    wrapped(ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled), tr("Most of these settings are applied when you press Apply changes (or by themselves after a moment); the public link stays the same."));
 }
 
 // ---- the status block (always at the top)
