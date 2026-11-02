@@ -73,6 +73,7 @@
 #include "dect2/vor/vor_tel.h"
 #include "dect2/hfdig/hfdig_rx.h"
 #include "dect2/hfdig/hfdig_tel.h"
+#include "dect2/airband/airband_gen.h"
 #include "dect2/airband/airband_rx.h"
 #include "dect2/airband/airband_tel.h"
 #include "dect2/marine/marine_gen.h"
@@ -616,10 +617,58 @@ inline std::vector<Mode> allModes() {
     narrow.template operator()<NdbReceiver, NdbTelemetry>("ndb", "NDB (400 Hz AM ident)", "beacon", 31, 2e6, 40.0, 300, 0.4, nullptr, 25);
     narrow.template operator()<CwReceiver, CwTelemetry>("cw", "CW skimmer", "hf-narrow", 36, 2e6, 12.0, 500, 7.03, nullptr, 25);
     narrow.template operator()<IsmReceiver, IsmTelemetry>("ism", "ISM sensors (433 MHz)", "ism", 30, 2e6, 8.0, 100e3, 433.92, nullptr, 25);
-    narrow.template operator()<CellReceiver, CellTelemetry>("cell", "Cell towers (LTE SIB)", "cell", 34, 2e6, 4.0, 1.08e6, 800, nullptr, 25);
     narrow.template operator()<VorReceiver, VorTelemetry>("vorils", "VOR / ILS", "nav", 32, 2e6, 12.0, 25e3, 113, nullptr, 40);
-    narrow.template operator()<HfdigReceiver, HfdigTelemetry>("hfdig", "HF digital (RTTY)", "hf-narrow", 27, 2e6, 12.0, 3e3, 7.04, nullptr, 25);
-    narrow.template operator()<AirbandReceiver, AirbandTelemetry>("airband", "Airband AM", "voice", 28, 1e6, 12.0, 8e3, 118.7, nullptr, 40);
+    {   // HF digital, RTTY 45.45 Bd / 170 Hz (the RTTY decoder only): characters decoded; SNR in 3 kHz (SSB passband)
+        Mode m = base("hfdig", "HF digital (RTTY 45.45/170)", "hf-narrow", 27, 2e6, 40.0, 3e3, 7.04);
+        m.snrHi = 25; m.maxJobs = 4;
+        m.gen = [](size_t n) { SynthConfig c; c.mode = 27; c.modeOpt[0] = 0; return clean(27, c, 2e6, n); };
+        m.make = factory<HfdigReceiver, HfdigTelemetry>([](HfdigReceiver& rx, double r) { rx.setSilent(true); rx.setDecoders(1); rx.configure(r); rx.setSignalOffset(-hfdigTuning().tuneOffsetHz); },
+            [](const HfdigTelemetry& t) {   // whole words of the known test text received without a damaged character (chars alone count garbage too)
+                static const char* const known[] = {"RYRYRY", "ONAIR", "TEST", "0123456789", "QUICK", "BROWN"};
+                double good = 0, all = 0;
+                std::string w;
+                auto flush = [&] { if (w.size() >= 4) { all++; for (const char* k : known) if (w == k) { good++; break; } } w.clear(); };
+                for (char c : t.rtty.text) { if (c == ' ' || c == '\n' || c == '\r') flush(); else w += c; }
+                return Metric{good, all - good};
+            });
+        add(m);
+    }
+    {   // Airband AM, one 25 kHz channel keyed 2 s in 6: a unit is a transmission the squelch opened for (squelch at its lowest, -5 dB, so the receiver and not the
+        // squelch setting is measured; the default is 6 dB); SNR = carrier to noise in 8 kHz (the AM audio band, twice 4 kHz)
+        Mode m = base("airband", "Airband AM (one channel)", "voice", 28, 1e6, 18.0, 8e3, 118.7);
+        m.snrHi = 30; m.maxJobs = 4;
+        m.gen = [](size_t n) {
+            AirbandGenConfig g; g.rate = 1e6; g.dialOffsetHz = -airbandTuning().tuneOffsetHz; g.snrDb = 120;
+            AirbandGenChannel c; c.offsetHz = 0; c.audio = 0; c.period = 6; c.on = 2; c.phase = 0.5; g.chans = {c};
+            AirbandGenerator gen(g);
+            Sig v(n);
+            for (size_t o = 0; o < n; o += 65536) gen.generate(v.data() + o, std::min<size_t>(65536, n - o));
+            return v;
+        };
+        m.make = factory<AirbandReceiver, AirbandTelemetry>([](AirbandReceiver& rx, double r) {
+            rx.setSilent(true); rx.configure(r); rx.setCenterHz(118.7e6 + airbandTuning().tuneOffsetHz); rx.setSquelchDb(-5);
+            AirbandChannel c; c.freqHz = 118.7e6; rx.setChannels({c});
+        }, [](const AirbandTelemetry& t) { return Metric{(double)t.activity.size(), 0.0}; });
+        add(m);
+    }
+    {   // LTE: 5 MHz test cell at 20 Msps (cell_gen), system information blocks decoded (a capture block each, so short and memory heavy); SNR in the 4.5 MHz of the carrier
+        Mode m = base("cell", "Cell towers (LTE 5 MHz, SIB)", "cell", 34, 20e6, 0.8, 4.5e6, 806);
+        m.snrHi = 25; m.maxJobs = 2;
+        m.gen = [](size_t n) { return clean(34, SynthConfig(), 20e6, n); };
+        struct CellSess : Session {   // the receiver searches one captured block at a time and drops what arrives meanwhile: feed only as fast as it searches (as the tools do)
+            CellReceiver rx;
+            Metric poll() override { CellTelemetry t; rx.telemetry(t, 0); return {(double)t.blocksOk, (double)t.blocksBad}; }
+            void feed(const cf32* x, size_t n) override {
+                for (size_t o = 0; o < n; o += 200000) {
+                    rx.feed(x + o, std::min<size_t>(200000, n - o));
+                    while (rx.busy()) std::this_thread::sleep_for(std::chrono::milliseconds(2));
+                }
+            }
+            void finish() override { while (rx.busy()) std::this_thread::sleep_for(std::chrono::milliseconds(5)); }
+        };
+        m.make = [](double r) -> std::unique_ptr<Session> { auto s = std::make_unique<CellSess>(); s->rx.configure(r); s->rx.setCenterHz(806e6); return s; };
+        add(m);
+    }
     {   // NAVTEX, several messages a trial: the receiver merges repeats of one message, a unit here is every complete message without a damaged character
         // (entry count x repeats), so a 150 s trial holds about 13 and the 90 % point is no longer one message wide
         Mode m = base("navtexl", "NAVTEX (518 kHz FSK), 150 s trials", "marine", 17, 2e6, 150.0, 300, 0.518);

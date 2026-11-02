@@ -3,7 +3,6 @@
 #include "dect2/dsp/fftutil.h"
 #include <algorithm>
 #include <cmath>
-#include <cstdlib>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -317,7 +316,7 @@ bool demodulatePreambleSymbol(const PreambleParams& p, int cred, int l, const cf
         for (auto& c : hch) hm0 += std::norm(c);
         hm0 /= pl.noc;
         const double ap0 = preamblePilotAmplitude(p);
-        if (nn0 && hm0 > 0 && nv0 / nn0 * ap0 * ap0 / hm0 > 3e-3 && !getenv("ATSC3_NOCIR")) {
+        if (nn0 && hm0 > 0 && nv0 / nn0 * ap0 * ap0 / hm0 > 3e-3) {
             std::vector<cf32> est((size_t)pl.noc);
             std::vector<uint8_t> okp((size_t)pl.noc, 0);
             for (int k = 0; k < pl.noc; k += p.dx) if (pl.kind[k] != 0) { est[(size_t)k] = y[k] / pl.pilotVal[k]; okp[(size_t)k] = 1; }

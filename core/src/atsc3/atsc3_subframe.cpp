@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <cmath>
 #include <complex>
-#include <cstdlib>
 
 namespace dect2 {
 namespace atsc3 {
@@ -192,7 +191,7 @@ bool receiveSymbol(const SubframeParams& s, int l, const cf32* x, SymbolRx& rx) 
     hm /= noc;
     rx.nv = (nn && hm > 0) ? (float)(nv / nn * asp * asp / hm) : 0.f;
     // below about 25 dB the pilot noise of the interpolation is the larger part of the loss: take the response from the pilot comb and drop its noise taps
-    if (rx.nv > 3e-3f && !getenv("ATSC3_NOCIR")) {
+    if (rx.nv > 3e-3f) {
         const int dx = spDx(s.spPattern), dy = spDy(s.spPattern);
         const bool bnd = isBoundarySymbol(s, l);
         const int D = bnd ? dx : dx * dy, k0 = bnd ? 0 : dx * (l % dy);
