@@ -5,6 +5,7 @@
 #include "dect2/inmsat/inmsat_planes.h"
 #include "dect2/inmc/inmc_rx.h"
 #include "dect2/mesh/mesh_lora.h"
+#include "dect2/common/threadpool.h"
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -208,7 +209,10 @@ struct Manager::Impl {
         std::vector<lora::ChanBuf*> outs;
         for (auto& w : wins) outs.push_back(&w->buf);
         chz->process(x, n, outs);
-        for (auto& w : wins) {
+        // the windows are independent (each receiver owns its state and its locks; the log callback takes its own): one window per
+        // worker of the shared pool, the calling thread helps, so a capture of many windows uses the cores the machine has
+        ThreadPool::shared().parallelFor(wins.size(), [&](size_t wi) {
+            Window* w = wins[wi].get();
             lora::ChanBuf& b = w->buf;
             const int64_t e = b.end();
             int64_t i = b.begin();
@@ -220,7 +224,7 @@ struct Manager::Impl {
                 i += (int64_t)k;
             }
             b.trim(e);
-        }
+        });
     }
 
     void feed(const cf32* x, size_t n) {
