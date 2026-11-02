@@ -128,6 +128,7 @@ int main() {
     };
     for (const Rx& x : rxs) {
         Scenario o;
+        o.threads = 0;   // decode inside feed(): no codeword is dropped for lack of time on a busy machine
         o.sc = c1Signal(x.m, x.r, x.mode2, x.snr);
         o.sc.cfoHz = x.cfo;
         if (x.echoDb) o.sc.echoes.push_back({(double)x.echoDb, x.echoDelay});
@@ -148,6 +149,7 @@ int main() {
     // ---- carrier mode decision: the same header, two bodies
     {
         Scenario o;
+        o.threads = 0;   // decode inside feed(): no codeword is dropped for lack of time on a busy machine
         o.sc = makeSignal(Header::Pn595, Mapping::Qam16, Rate::R06, false, 10e6, 30);   // multi-carrier
         o.seconds = 1.2;
         Result r = run(o);

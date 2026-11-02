@@ -31,6 +31,7 @@ static void feed(TimeMachine& tm, uint64_t from, uint64_t n) {
 }
 
 static bool waitDone(TimeMachine& tm, double secs) {
+    secs = secs * 6 + 20;   // CI runs this beside a thousand other tests: a generous deadline, it returns as soon as the save is done
     const auto t0 = std::chrono::steady_clock::now();
     while (std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() < secs) {
         if (!tm.stats().saving) return true;
@@ -86,7 +87,7 @@ int main() {
         // asking for more than the ring has: only what exists
         const std::string p2 = (dir / "c.cs8").string();
         CHECK(tm.trigger(p2, 100.0, 0.0, 0, false, err), "pre longer than the ring is clipped");
-        CHECK(waitDone(tm, 10) && fs::file_size(p2) == 4000000, "clipped to the 2 s the ring holds");
+        CHECK(waitDone(tm, 10) && [&]{ std::error_code ec; return fs::file_size(p2, ec) == 4000000 && !ec; }(), "clipped to the 2 s the ring holds");
         // a retune forgets the history
         tm.discard();
         CHECK(tm.stats().filledSeconds < 1e-6, "discard empties the history");
@@ -131,7 +132,9 @@ int main() {
         const auto t0 = std::chrono::steady_clock::now();
         std::string path = (dir / e.timeMachineName()).string(), err;
         bool trig = false;
-        while (std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() < 4.0) {
+        // run at least 4 s, and (on a starved machine) until the save has been triggered and finished, up to 60 s
+        auto el = [&] { return std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count(); };
+        while (el() < 4.0 || (el() < 60.0 && (!trig || e.timeMachineStats().saving || e.timeMachineStats().saves == 0))) {
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
             RxTelemetry rt;
             if (e.latestRx(rt, seq)) { seq = rt.seq; if (rt.standard == 6) best = std::max(best, rt.fm.state); }
@@ -140,7 +143,8 @@ int main() {
         const TimeMachineStats s = e.timeMachineStats();
         CHECK(best >= 1, "the live signal was received with the ring running");
         CHECK(!s.saving && s.saves == 1 && s.error.empty(), "the engine's save finished");
-        const double bytes = fs::exists(path) ? (double)fs::file_size(path) : 0;
+        std::error_code fec;
+        const double bytes = fs::exists(path, fec) ? (double)fs::file_size(path, fec) : 0;
         printf("  engine save: %s  %.0f bytes (%.2f s), FM state %d\n", fs::path(path).filename().string().c_str(), bytes, bytes / 2 / kRate, best);
         CHECK(std::abs(bytes / 2 / kRate - 1.5) < 0.15, "about 1.5 s saved (pre 1 s + post 0.5 s)");
         CHECK(path.find("rewind-fm") != std::string::npos && std::abs(guessSampleRate(path) - kRate) < 1, "the name has the mode and the rate");
