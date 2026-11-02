@@ -3554,3 +3554,19 @@ some stations are hidden	kai kurios stotys paslėptos
 File...	Failas...
 Auto-save to file	Automatiškai įrašyti į failą
 Activity	Veikla
+#  AI assistant (MCP), docs/MCP.md
+AI assistant (MCP)	DI asistentas (MCP)
+Let an AI assistant control this receiver (MCP)	Leisti DI asistentui valdyti šį imtuvą (MCP)
+An AI assistant (Claude, ChatGPT-style clients, a local model) that you connect can tune, scan bands, identify signals and start decoders for you, and read what was decoded. It cannot read files, run programs, change settings or decrypt anything, and it cannot transmit unless you allow that below. Every action is listed in the log.	Prijungtas DI asistentas (Claude, ChatGPT tipo klientai, vietinis modelis) gali derinti dažnį, skenuoti juostas, atpažinti signalus, paleisti dekoderius ir skaityti dekoduotą turinį. Jis negali skaityti failų, vykdyti programų, keisti nustatymų ar kažko iššifruoti, taip pat negali siųsti, nebent leisite žemiau. Kiekvienas veiksmas įrašomas į žurnalą.
+Programs on this computer need the token too	Šio kompiuterio programoms taip pat reikia rakto
+Allow the AI to transmit (off by default; this is your decision, it is forgotten at restart)	Leisti DI siųsti (pagal numatymą išjungta; tai jūsų sprendimas, paleidus iš naujo pamirštama)
+The AI can now start transmissions. You are responsible for the law where you are and for your hardware.	DI dabar gali pradėti siųsti. Esate atsakingi už savo vietos įstatymus ir savo įrangą.
+listening on %s port %d, %d requests, %d refused	klausosi %s, prievadas %d, %d užklausų, %d atmesta
+An AI is connected: %s	Prijungtas DI: %s
+No AI has connected yet.	Dar nė vienas DI neprisijungė.
+How to connect your AI	Kaip prijungti savo DI
+Other client	Kitas klientas
+Claude Desktop: put this in its config file (Settings > Developer > Edit config) and restart it; it needs Node.js for the bridge. Claude Code: run the command in a terminal. Other clients: use the address (streamable HTTP) or start onair-server --mcp-stdio. Then ask, for example: there is some DRM around 15 MHz, find it and decode it.	Claude Desktop: įrašykite tai į jo konfigūracijos failą (Nustatymai > Kūrėjas > Redaguoti konfigūraciją) ir paleiskite iš naujo; tiltui reikia Node.js. Claude Code: paleiskite komandą terminale. Kiti klientai: naudokite adresą (srautinis HTTP) arba paleiskite onair-server --mcp-stdio. Tada paprašykite, pavyzdžiui: ties 15 MHz yra DRM, suraskite ir dekoduokite.
+What the AI did	Ką padarė DI
+Clear log	Išvalyti žurnalą
+Nothing yet.	Kol kas nieko.
