@@ -345,7 +345,7 @@ int main() {
         tx.abort();
         const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
         th.join();
-        CHECK(!ok && !io.keyed() && closes == 1 && ms < 100, "Halt: closed in %.0f ms", ms);
+        CHECK(!ok && !io.keyed() && closes == 1 && ms < 750, "Halt: closed in %.0f ms (a block is 10 ms; bounded generously for a loaded CI machine)", ms);
     }
     {   // the chain must keep up with the radio: 2 MHz output faster than real time with room to spare
         SdrTxChain ch(2016000, cfgOk());

@@ -63,7 +63,7 @@ static void runCase(const char* name, int opt0, double cfo, double expectRs, int
         std::this_thread::sleep_for(std::chrono::seconds(2));
         e.latestRx(t, 0);
         d = t.dvbc;
-        if (t.rateOk && d.packets - packets0 > 1000 && d.packetsBad == bad0) break;
+        if (t.rateOk && d.tsLock && d.qam != 0 && d.packets - packets0 > 1000 && d.packetsBad == bad0) break;   // also locked: a loaded machine can lose the lock for a moment
     }
     printf("  %s: %s\n", name, dvbcSummary(d).c_str());
     CHECK(locked && d.tsLock, "%s: transport stream lock", name);
