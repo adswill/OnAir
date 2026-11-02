@@ -947,7 +947,7 @@
   // the language changed: static text from the data-i18n attributes, then the pieces built by code
   function relabel() {
     document.documentElement.lang = I18N.lang(); I18N.apply(document);
-    setTheme(S.theme, true); setConn(S.connKey || "offline", $("conn").className.replace("lamp ", "")); renderAudio(); renderRec(); renderMarks(); renderSquelch(); renderStatus();
+    setTheme(ST.theme === "auto" ? null : ST.theme, true); setConn(S.connKey || "offline", $("conn").className.replace("lamp ", "")); renderAudio(); renderRec(); renderMarks(); renderSquelch(); renderStatus();
     if ($("settingsDlg").open) renderSettings();
     if (S.info) renderInfo(); buildDecoders(S.welcome && S.welcome.decoders); renderMap();
   }

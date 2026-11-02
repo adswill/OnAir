@@ -313,3 +313,5 @@ html.compact body { height: auto; }
 html.compact .widebtn { display: none; }
 html.compact .side { order: 2; } html.compact .left { order: 3; }
 html.compact .center .plotbox { height: min(48vh, 400px); min-height: 280px; }
+@media (max-width: 1100px) { html:not(.compact) .info, html:not(.compact) .centre { display: none; } }
+.maptools { flex-wrap: wrap; }
