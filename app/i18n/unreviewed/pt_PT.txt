@@ -1,0 +1,3 @@
+Export results CSV...
+Nothing to export: no row matches the search.
+Saves the rows now in the table (with the search and the filters applied, built-in and yours) as a CSV file. Import and the Memory panel read it back.

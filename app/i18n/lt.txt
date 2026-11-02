@@ -3473,3 +3473,6 @@ Ground stations	Antžeminės stotys
 Band and channels	Juosta ir kanalai
 Simple: the spectrum and one view with the summary, the live data and the key controls of this mode	Paprastas: spektras ir vienas langas su santrauka, gyvais duomenimis ir pagrindiniais šio režimo valdikliais
 Advanced: every tab of this mode with all the detail	Išplėstinis: visi šio režimo skirtukai su visomis detalėmis
+Export results CSV...	Eksportuoti rezultatus į CSV...
+Nothing to export: no row matches the search.	Nėra ką eksportuoti: nė viena eilutė neatitinka paieškos.
+Saves the rows now in the table (with the search and the filters applied, built-in and yours) as a CSV file. Import and the Memory panel read it back.	Išsaugo lentelės eilutes (pritaikius paiešką ir filtrus, įtaisytas ir jūsų) kaip CSV failą. Importas ir Atminties skydelis jį perskaito.

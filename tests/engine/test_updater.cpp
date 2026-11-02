@@ -9,6 +9,7 @@
 #include <fstream>
 #include <thread>
 #ifndef _WIN32
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #endif
@@ -208,6 +209,74 @@ int main() {
         CHECK(waitFor(v, Updater::Phase::Available, 10) == Updater::Phase::Available, "deb: found the update (bad sum)");
         v.download();
         CHECK(waitFor(v, Updater::Phase::Ready, 20) == Updater::Phase::Failed && has(v.status().error, "checksum") && v.status().manualCommand.empty(), "deb: a wrong checksum is refused");
+    }
+    // an AppImage: found by its header, checked against SHA256SUMS (also when GitHub lists no digest), replaced in place without root
+    {
+        const std::string ar = thisArch() == "arm64" ? "aarch64" : "x86_64";
+        auto fakeAi = [](const std::string& tail) { std::string h("\x7f" "ELF", 4); h += std::string(4, '\0'); h += "AI"; h += '\x02'; return h + tail; };
+        const std::string old = (base / "apps" / ("OnAir-0.0.1-linux-" + ar + ".AppImage")).string();
+        put(old, fakeAi("OLD"));
+        chmod(old.c_str(), 0755);
+        CHECK(looksLikeAppImage(old) && !looksLikeAppImage(tgz), "appimage: recognised by its header");
+#ifdef __linux__
+        CHECK(detectInstallKind(old) == InstallKind::LinuxAppImage, "appimage: install kind");
+#endif
+        const std::string nu = (base / "rel" / ("OnAir-9.9.9-linux-" + ar + ".AppImage")).string();
+        put(nu, fakeAi("NEW VERSION"));
+        const std::string nsum = sha256File(nu);
+        const std::string an = "OnAir-9.9.9-linux-" + ar + ".AppImage";
+        auto api = [&](const std::string& digest) {
+            put((base / "apiai.json").string(), "[{\"tag_name\":\"v9.9.9\",\"draft\":false,\"prerelease\":false,\"assets\":[{\"name\":\"" + an + "\",\"size\":" + std::to_string(fs::file_size(nu)) + ",\"browser_download_url\":\"file://" + nu + "\"" + (digest.empty() ? "" : ",\"digest\":\"sha256:" + digest + "\"") + "}]}]");
+        };
+        auto sums = [&](const std::string& h) { put((base / "dl" / "v9.9.9" / "SHA256SUMS").string(), h + "  " + an + "\n" + std::string(64, 'e') + "  other.deb\n"); };
+        auto mk = [&](Updater& u) { u.setApiUrl("file://" + (base / "apiai.json").string()); u.setReleaseBase("file://" + (base / "dl").string() + "/"); u.setExecutable(old, (int)InstallKind::LinuxAppImage); };
+        {   // a wrong SHA256SUMS line is refused even though GitHub's digest is right
+            api(nsum); sums(std::string(64, 'a'));
+            Updater u("0.0.1"); mk(u);
+            CHECK(u.status().autoInstallable && !u.status().manualInstall, "appimage: self-replacing");
+            u.check(true);
+            CHECK(waitFor(u, Updater::Phase::Available, 10) == Updater::Phase::Failed && has(u.status().error, "SHA256SUMS"), "appimage: digest and SHA256SUMS must agree: %s", u.status().error.c_str());
+        }
+        {   // a wrong checksum in SHA256SUMS alone (no digest) is caught when the download is checked
+            api(""); sums(std::string(64, 'b'));
+            Updater u("0.0.1"); mk(u);
+            u.check(true);
+            CHECK(waitFor(u, Updater::Phase::Available, 10) == Updater::Phase::Available, "appimage: found (no digest)");
+            u.download();
+            CHECK(waitFor(u, Updater::Phase::Ready, 20) == Updater::Phase::Failed && has(u.status().error, "checksum") && slurp(old) == fakeAi("OLD"), "appimage: wrong sum refused, file untouched");
+        }
+        {   // something that is no AppImage is refused even with a matching checksum
+            const std::string bad = (base / "rel2" / an).string();
+            put(bad, "just text, not an AppImage");
+            put((base / "apiai.json").string(), "[{\"tag_name\":\"v9.9.9\",\"draft\":false,\"prerelease\":false,\"assets\":[{\"name\":\"" + an + "\",\"size\":" + std::to_string(fs::file_size(bad)) + ",\"browser_download_url\":\"file://" + bad + "\",\"digest\":\"sha256:" + sha256File(bad) + "\"}]}]");
+            sums(sha256File(bad));
+            Updater u("0.0.1"); mk(u);
+            u.check(true);
+            CHECK(waitFor(u, Updater::Phase::Available, 10) == Updater::Phase::Available, "appimage: found (bad file)");
+            u.download();
+            CHECK(waitFor(u, Updater::Phase::Ready, 20) == Updater::Phase::Failed && has(u.status().error, "not an AppImage") && slurp(old) == fakeAi("OLD"), "appimage: not an AppImage refused");
+        }
+        {   // the right one: checked against SHA256SUMS, staged next to the old file, swapped once the program has ended
+            api(""); sums(nsum);
+            Updater u("0.0.1"); mk(u);
+            u.check(true);
+            CHECK(waitFor(u, Updater::Phase::Available, 10) == Updater::Phase::Available, "appimage: found");
+            CHECK(u.status().release.assetName == an && u.status().release.sha256 == nsum, "appimage: asset and checksum from SHA256SUMS");
+            u.download();
+            CHECK(waitFor(u, Updater::Phase::Ready, 30) == Updater::Phase::Ready, "appimage: ready: %s", u.status().error.c_str());
+            CHECK(slurp(old) == fakeAi("OLD"), "appimage: old file kept until the swap");
+            const pid_t child = fork();
+            if (child == 0) { sleep(2); _exit(0); }
+            u.setWaitPid((int)child);
+            std::string err;
+            CHECK(u.apply(false, &err), "appimage: apply: %s", err.c_str());
+            int stt = 0;
+            waitpid(child, &stt, 0);
+            for (int i = 0; i < 100 && slurp(old) != fakeAi("NEW VERSION"); i++) std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            CHECK(slurp(old) == fakeAi("NEW VERSION") && !fs::exists(old + ".new") && (fs::status(old).permissions() & fs::perms::owner_exec) != fs::perms::none, "appimage: replaced in place and still executable");
+            const auto r = pickRelease("[{\"tag_name\":\"v9.9.9\",\"assets\":[{\"name\":\"OnAir-9.9.9-linux-aarch64.AppImage\",\"size\":1},{\"name\":\"OnAir-9.9.9-linux-x86_64.AppImage\",\"size\":2}]}]", "1.0", false, InstallKind::LinuxAppImage, "aarch64");
+            CHECK(r.valid && r.assetName == "OnAir-9.9.9-linux-aarch64.AppImage", "appimage: the package for the architecture");
+        }
     }
 #ifdef __APPLE__
     // the macOS app: the new version comes in a disk image and is copied next to the installed app, then swapped for it

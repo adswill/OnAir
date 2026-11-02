@@ -187,6 +187,14 @@ jobs:
         run: |
           cd build && cpack -G DEB
           SRC="$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/tools/package/make_portable_linux.sh" "$PWD" "$PWD"
+      - name: "AppImage (one file; OnAir updates it in place without root)"
+        run: |
+          set -eu
+          case "$(uname -m)" in x86_64) AT=x86_64 ;; aarch64) AT=aarch64 ;; *) echo "no appimagetool for $(uname -m)"; exit 1 ;; esac
+          curl -fsSL -o /tmp/appimagetool "https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-$AT.AppImage"
+          chmod +x /tmp/appimagetool
+          printf '#!/bin/sh\nexec /tmp/appimagetool --appimage-extract-and-run "$@"\n' > /tmp/appimagetool-run; chmod +x /tmp/appimagetool-run
+          cd build && APPIMAGETOOL=/tmp/appimagetool-run "$GITHUB_WORKSPACE/tools/package/make_appimage.sh" "$PWD"/onair-*-portable.tar.gz "$PWD"
       - name: Smoke test (the portable package starts, draws one frame and exits) and size report
         run: |
           set -eu
@@ -197,9 +205,9 @@ jobs:
           timeout 180 xvfb-run -a -s "-screen 0 1280x800x24" "$D/bin/onair" --hidden --mute --no-first-run --shot "$PWD/smoke/shot.png"
           test "$(stat -c %s smoke/shot.png)" -gt 10000
           dpkg-deb -I build/onair_*.deb | head -12
-          { echo "### Linux ${{ matrix.arch }} sizes"; echo '```'; ls -l build/onair_*.deb build/onair-*-portable.tar.gz; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo "### Linux ${{ matrix.arch }} sizes"; echo '```'; ls -l build/onair_*.deb build/onair-*-portable.tar.gz build/OnAir-*.AppImage; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7
-        with: { name: "linux-${{ matrix.arch }}", path: "build/onair_*.deb\nbuild/onair-*-portable.tar.gz" }
+        with: { name: "linux-${{ matrix.arch }}", path: "build/onair_*.deb\nbuild/onair-*-portable.tar.gz\nbuild/OnAir-*.AppImage" }
 
   # Windows: built on a Mac with tools/package/make_windows_cross.sh, which ships the RTL-SDR, Airspy, BladeRF and PlutoSDR
   # libraries and the SoapySDR drivers (MSYS2 has no packages for most of them, so a build here only had HackRF), then
