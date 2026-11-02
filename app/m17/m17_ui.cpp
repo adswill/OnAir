@@ -3,6 +3,7 @@
 // about the Codec 2 library the voice needs.
 #include "dect2/common/time_fmt.h"
 #include "app.h"
+#include "ui/kit/mode_panel.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/session_list.h"
 #include "voice/voice_monitor_ui.h"
@@ -239,8 +240,7 @@ void tick(App& a) {
     S.wasRunning = true;
 }
 
-void tab(App& a) {
-    load();
+void voiceBar(App& a) {
     {   // the voice monitor's strip, the same in every voice mode
         const dect2::M17Telemetry& t = a.rx.m17;
         voiceui::Link l;
@@ -249,6 +249,11 @@ void tab(App& a) {
         l.errorRate = l.locked ? t.berPct / 100.f : -1.f;
         voiceui::strip(a, "m17", "M17", l);
     }
+}
+
+void tab(App& a) {
+    load();
+    voiceBar(a);
     kit::modeHeader({31, "M17", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
     kit::modeNav("m17v", S.view, {{tr("Live"), 0}, {tr("Calls"), 4}, {tr("Map"), 3}, {tr("Activity"), 1, true}, {tr("Messages"), 2, true}});
     if (S.view == 4) { kit::sessionItems(31, 1, "m17"); return; }
@@ -316,6 +321,16 @@ void summary(const App& a, std::string& l1, std::string& l2) {
 
 } // namespace
 
+// Simple view: the voice strip, then what is on air, the activity and the map side by side
+static void command(App& a) {
+    load();
+    voiceBar(a);
+    kit::modeHeader({31, "M17", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    modepanel::panes({{"##m1cnow", tr("On air"), [&a] { nowView(a); }, 0.9f, 220.f},
+                      {"##m1cact", tr("Activity"), [&a] { activityView(a); }, 1.4f, 240.f},
+                      {"##m1cmap", tr("Map"), [&a] { mapView(a); }, 1.2f, 260.f}}, 300.f);
+}
+
 extern const ModeUi kM17Ui;
 const ModeUi kM17Ui = {
     .sideTitle = "STATIONS",
@@ -327,4 +342,5 @@ const ModeUi kM17Ui = {
     .status = status,
     .summary = summary,
     .tick = tick,
+    .command = command,
 };
