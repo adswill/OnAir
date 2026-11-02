@@ -211,6 +211,8 @@ struct App {
     int setupStep = 0, setupRegion = 0;
     unsigned setupGoals = 0;            // bit per learn::Goal (app/ui/learn_logic.h)
     int setupAntenna = 0;               // learn::Antenna
+    int setupUnits = 0;                 // setup wizard: 0 follow the region, 1 metric, 2 imperial
+    bool setupEasy = true;              // setup wizard: Easy mode (every mode opens its Simple view)
     char setupLoc[48] = "";             // a Maidenhead locator or coordinates
     unsigned setupInterests = 0;        // bit per setup::Interest (app/ui/setup_logic.h): the interests ticked in the setup wizard
     char setupQuery[48] = "";           // the city or country typed in the wizard's location step
@@ -1415,6 +1417,7 @@ void tourStartTour(App& a, int which);                 // tour.cpp: start one of
 void tourMark(const char* id, ImVec2 lo, ImVec2 hi);   // tour.cpp: report where a part of the window is this frame (the tour points at it)
 void wizEnter(App& a, int step);
 void setupWizardOpen(App& a);                        // wizard.cpp: (re)start the setup wizard
+void setupApplyPreset(App& a, const std::string& presetId, int units);   // wizard.cpp: a regional preset (Settings > Region preset), no wizard
 void setupWizard(App& a, ImVec2 disp);               // wizard.cpp: the window, each frame
 void lessonsStart(App& a, int planPos = -1);         // learn.cpp: the hands-on lessons for the setup's goals (resumes where they were left when planPos < 0)
 void lessonsUi(App& a, ImVec2 disp);                 // learn.cpp: the running lesson (spotlight + card), the Lessons list, the glossary and the checkup windows, each frame

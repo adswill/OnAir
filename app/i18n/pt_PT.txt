@@ -3458,3 +3458,55 @@ Saves the rows now in the table (with the search and the filters applied, built-
 Clean the input: DC spike, IQ imbalance and the radio's own spurs	Limpar a entrada: pico DC, desequilíbrio IQ e espúrios do próprio rádio
 Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Medido a partir do próprio sinal, nunca no canal pretendido: o pico DC e a imagem IQ são ignorados nos modos que prejudicariam, e um espúrio dentro do canal só é cortado se ficar no mesmo sítio da banda base depois de mudar de frequência (um sinal real move-se com o sintonizador).
 %d spur(s) cut	%d espúrio(s) cortado(s)
+working	a funcionar
+installed	instalado
+wrong processor	processador errado
+missing	em falta
+Copy build command	Copiar o comando de compilação
+How to install (this computer):	Como instalar (este computador):
+rtl_tcp: an RTL-SDR shared by another computer over the network.	rtl_tcp: um RTL-SDR partilhado por outro computador na rede.
+Airspy HF+: a very sensitive receiver for long, medium and short wave and FM, up to 260 MHz.	Airspy HF+: um recetor muito sensível para ondas longas, médias e curtas e FM, até 260 MHz.
+Fobos SDR: a wideband receiver, 100 kHz to 6 GHz. Needs the radio's own library, see the ? in Radio settings.	Fobos SDR: um recetor de banda larga, de 100 kHz a 6 GHz. Precisa da biblioteca própria do rádio, veja o ? nas definições do rádio.
+RFNM: a wideband radio board with one or two daughter boards, on USB or the network.	RFNM: uma placa de rádio de banda larga com uma ou duas placas-filhas, por USB ou rede.
+SDRplay nRSP-ST: a network radio, used through SDRconnect running on a computer.	SDRplay nRSP-ST: um rádio de rede, usado através do SDRconnect num computador.
+TCI: a radio of the ExpertSDR family (SunSDR and others) on the network. Receive only.	TCI: um rádio da família ExpertSDR (SunSDR e outros) na rede. Só receção.
+SDR++ server: a radio shared by another computer running SDR++.	Servidor SDR++: um rádio partilhado por outro computador com SDR++.
+A sound card or a web radio used as the input.	Uma placa de som ou um rádio web como entrada.
+Run setup again...	Executar a configuração de novo...
+Easy mode	Modo fácil
+European Union (generic)	União Europeia (genérico)
+Lithuania	Lituânia
+United Kingdom	Reino Unido
+Germany	Alemanha
+Poland	Polónia
+United States	Estados Unidos
+Canada	Canadá
+Australia	Austrália
+Quick pick: a region preset sets the band plan, the TV channels, the FM band, the default frequencies and the units	Escolha rápida: uma predefinição de região define o plano de bandas, os canais de TV, a banda FM, as frequências predefinidas e as unidades
+Or search for a city or country	Ou procure uma cidade ou um país
+imperial (miles, feet)	imperiais (milhas, pés)
+metric (km, metres)	métricas (km, metros)
+Defaults: FM %.1f MHz, APRS %.3f MHz, units %s.	Predefinições: FM %.1f MHz, APRS %.3f MHz, unidades: %s.
+A preset has no exact position: type a city or coordinates above if you want the aircraft map and satellite passes centred on you.	Uma predefinição não tem posição exata: escreva acima uma cidade ou coordenadas se quiser o mapa de aviões e as passagens de satélites centrados em si.
+Units	Unidades
+Follow the region	Seguir a região
+Metric	Métricas
+Imperial	Imperiais
+Which antenna will you use? It matters more than the radio. OnAir uses the answer for hints only; nothing is changed in the radio.	Que antena vai usar? Importa mais do que o rádio. O OnAir usa a resposta só para sugestões; nada muda no rádio.
+What this means for you	O que isto significa para si
+Digital voice (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) is silent until you install its codec plug-in. The calls, IDs and data work without it.	A voz digital (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) fica muda até instalar o plug-in do codec. As chamadas, os ID e os dados funcionam sem ele.
+Only digital voice modes need a codec. You can skip this screen and come back from Help > Voice codecs.	Só os modos de voz digital precisam de um codec. Pode saltar este ecrã e voltar através de Ajuda > Codecs de voz.
+OnAir does not include or download these codecs (they are patented). You build or install them on your own computer; whether you may use them is your own responsibility. FreeDV, M17, DAB, DRM and TV need nothing.	O OnAir não inclui nem descarrega estes codecs (estão patenteados). Compila-os ou instala-os no seu próprio computador; se os pode usar é responsabilidade sua. FreeDV, M17, DAB, DRM e TV não precisam de nada.
+Antenna: %s	Antena: %s
+Easy mode (recommended)	Modo fácil (recomendado)
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. The detailed tabs are one click away (Simple | Advanced above them).	Cada modo abre na vista Simples: o espetro e um ecrã com um botão Iniciar e os controlos principais. Os separadores detalhados estão a um clique (Simples | Avançado por cima).
+Change any of this at any time: Help > Setup and lessons > Run setup again, Mode > Modes shown, View > Language, Settings > Appearance > Font look.	Pode mudar tudo isto quando quiser: Ajuda > Configuração e lições > Executar a configuração de novo, Modo > Modos mostrados, Ver > Idioma, Definições > Aparência > Estilo do tipo de letra.
+The setup has six short screens and every one can be skipped. Nothing is forced.\n\nRadio: OnAir looks for radios on USB and on the network and picks one. "?" beside a radio opens its help page. Without a radio, the test signal lets you try OnAir.\n\nLocation: one click on a region preset (Lithuania, the EU, ...) or a city, a locator or coordinates give your country, the band plan, the TV channels, the FM band and step, the default frequencies and the units.\n\nAntenna: hints for what you can hear with the antenna you have.\n\nInterests: decide which modes are starred and listed first, where OnAir starts and a few starter presets. Everything stays available.\n\nCodecs: digital voice needs a codec plug-in that you install yourself; Look again checks the folder.\n\nEasy mode on the last screen opens every mode in its Simple view. Run the setup again any time from Help > Setup and lessons > Run setup again, or from Settings.	A configuração tem seis ecrãs curtos e cada um pode ser saltado. Nada é obrigatório.\n\nRádio: o OnAir procura rádios por USB e na rede e escolhe um. O «?» junto a um rádio abre a sua página de ajuda. Sem rádio, o sinal de teste permite experimentar o OnAir.\n\nLocalização: um clique numa predefinição de região (Lituânia, UE, ...) ou uma cidade, um localizador ou coordenadas definem o país, o plano de bandas, os canais de TV, a banda FM e o passo, as frequências predefinidas e as unidades.\n\nAntena: sugestões sobre o que pode ouvir com a sua antena.\n\nInteresses: decidem que modos ficam marcados e listados primeiro, onde o OnAir começa e algumas predefinições iniciais. Tudo continua disponível.\n\nCodecs: a voz digital precisa de um plug-in de codec que instala você; Procurar de novo verifica a pasta.\n\nO modo fácil no último ecrã abre cada modo na vista Simples. Execute a configuração de novo quando quiser em Ajuda > Configuração e lições > Executar a configuração de novo, ou nas Definições.
+Interests	Interesses
+Codecs	Codecs
+Done	Concluído
+Region preset	Predefinição de região
+First-run setup	Primeira configuração
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.	Cada modo abre na vista Simples: o espetro e um ecrã com um botão Iniciar e os controlos principais. Desligado: os separadores detalhados.
+One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).	Um clique define o plano de bandas, os canais de TV, a banda FM e o passo, as frequências predefinidas e as unidades de uma região (Lituânia, UE, ...).
+Open the setup again: radio, region, antenna, interests, voice codecs.	Abrir a configuração de novo: rádio, região, antena, interesses, codecs de voz.

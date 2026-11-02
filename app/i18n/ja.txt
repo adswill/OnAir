@@ -3475,3 +3475,55 @@ Saves the rows now in the table (with the search and the filters applied, built-
 Clean the input: DC spike, IQ imbalance and the radio's own spurs	入力をきれいにする: DC スパイク、IQ 不均衡、無線機自身のスプリアス
 Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	信号そのものから測定し、目的のチャンネルには手を付けません。DC スパイクと IQ のミラー像は悪影響が出るモードでは省かれ、チャンネル内のスプリアスは、周波数を変えてもベースバンド上の同じ位置に残る場合にだけ除去します(本物の信号はチューナーと一緒に動きます)。
 %d spur(s) cut	%d 本のスプリアスを除去
+working	動作中
+installed	インストール済み
+wrong processor	プロセッサが違います
+missing	なし
+Copy build command	ビルドコマンドをコピー
+How to install (this computer):	インストール方法(このコンピューター):
+rtl_tcp: an RTL-SDR shared by another computer over the network.	rtl_tcp: 別のコンピューターがネットワークで共有する RTL-SDR。
+Airspy HF+: a very sensitive receiver for long, medium and short wave and FM, up to 260 MHz.	Airspy HF+: 長波・中波・短波と FM(260 MHz まで)向けの高感度受信機。
+Fobos SDR: a wideband receiver, 100 kHz to 6 GHz. Needs the radio's own library, see the ? in Radio settings.	Fobos SDR: 100 kHz〜6 GHz の広帯域受信機。無線機専用ライブラリが必要です。無線機設定の ? を参照してください。
+RFNM: a wideband radio board with one or two daughter boards, on USB or the network.	RFNM: 1〜2枚のドーターボードを持つ広帯域無線ボード。USB またはネットワーク接続。
+SDRplay nRSP-ST: a network radio, used through SDRconnect running on a computer.	SDRplay nRSP-ST: コンピューター上の SDRconnect 経由で使うネットワーク無線機。
+TCI: a radio of the ExpertSDR family (SunSDR and others) on the network. Receive only.	TCI: ネットワーク上の ExpertSDR ファミリー(SunSDR など)の無線機。受信専用。
+SDR++ server: a radio shared by another computer running SDR++.	SDR++ サーバー: SDR++ を実行する別のコンピューターが共有する無線機。
+A sound card or a web radio used as the input.	サウンドカードまたはウェブラジオを入力として使用。
+Run setup again...	セットアップをもう一度実行...
+Easy mode	かんたんモード
+European Union (generic)	欧州連合(汎用)
+Lithuania	リトアニア
+United Kingdom	英国
+Germany	ドイツ
+Poland	ポーランド
+United States	米国
+Canada	カナダ
+Australia	オーストラリア
+Quick pick: a region preset sets the band plan, the TV channels, the FM band, the default frequencies and the units	クイック選択: 地域プリセットはバンドプラン、TV チャンネル、FM 帯、既定の周波数、単位を設定します
+Or search for a city or country	または都市や国を検索
+imperial (miles, feet)	ヤード・ポンド法(マイル、フィート)
+metric (km, metres)	メートル法(km、m)
+Defaults: FM %.1f MHz, APRS %.3f MHz, units %s.	既定値: FM %.1f MHz、APRS %.3f MHz、単位: %s。
+A preset has no exact position: type a city or coordinates above if you want the aircraft map and satellite passes centred on you.	プリセットには正確な位置がありません。航空機マップや衛星の通過をあなたの場所に合わせたい場合は、上に都市または座標を入力してください。
+Units	単位
+Follow the region	地域に合わせる
+Metric	メートル法
+Imperial	ヤード・ポンド法
+Which antenna will you use? It matters more than the radio. OnAir uses the answer for hints only; nothing is changed in the radio.	どのアンテナを使いますか? 無線機よりも重要です。OnAir は回答をヒントにのみ使い、無線機の設定は変更しません。
+What this means for you	あなたにとっての意味
+Digital voice (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) is silent until you install its codec plug-in. The calls, IDs and data work without it.	デジタル音声(DMR、P25、NXDN、dPMR、D-STAR、Yaesu、TETRA)は、コーデックのプラグインをインストールするまで無音です。通話、ID、データはなくても動作します。
+Only digital voice modes need a codec. You can skip this screen and come back from Help > Voice codecs.	コーデックが必要なのはデジタル音声モードだけです。この画面はスキップして、後でヘルプ > 音声コーデックから戻れます。
+OnAir does not include or download these codecs (they are patented). You build or install them on your own computer; whether you may use them is your own responsibility. FreeDV, M17, DAB, DRM and TV need nothing.	OnAir はこれらのコーデック(特許あり)を含まず、ダウンロードもしません。お使いのコンピューターでビルドまたはインストールしてください。使用してよいかは自己責任です。FreeDV、M17、DAB、DRM、TV は何も必要ありません。
+Antenna: %s	アンテナ: %s
+Easy mode (recommended)	かんたんモード(推奨)
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. The detailed tabs are one click away (Simple | Advanced above them).	各モードはシンプル表示で開きます。スペクトラムと、スタートボタンと主要な操作がある1つの画面です。詳細タブは1クリックで開けます(上の シンプル | 詳細)。
+Change any of this at any time: Help > Setup and lessons > Run setup again, Mode > Modes shown, View > Language, Settings > Appearance > Font look.	これらはいつでも変更できます: ヘルプ > セットアップとレッスン > セットアップをもう一度実行、モード > 表示するモード、表示 > 言語、設定 > 外観 > フォントの見た目。
+The setup has six short screens and every one can be skipped. Nothing is forced.\n\nRadio: OnAir looks for radios on USB and on the network and picks one. "?" beside a radio opens its help page. Without a radio, the test signal lets you try OnAir.\n\nLocation: one click on a region preset (Lithuania, the EU, ...) or a city, a locator or coordinates give your country, the band plan, the TV channels, the FM band and step, the default frequencies and the units.\n\nAntenna: hints for what you can hear with the antenna you have.\n\nInterests: decide which modes are starred and listed first, where OnAir starts and a few starter presets. Everything stays available.\n\nCodecs: digital voice needs a codec plug-in that you install yourself; Look again checks the folder.\n\nEasy mode on the last screen opens every mode in its Simple view. Run the setup again any time from Help > Setup and lessons > Run setup again, or from Settings.	セットアップは短い6つの画面で、どれもスキップできます。強制されるものはありません。\n\n無線機: OnAir は USB とネットワークの無線機を探し、1つを選びます。無線機の横の「?」でヘルプページを開きます。無線機がなくてもテスト信号で OnAir を試せます。\n\n場所: 地域プリセット(リトアニア、EU など)をクリックするか、都市・ロケーター・座標で、国、バンドプラン、TV チャンネル、FM 帯とステップ、既定の周波数、単位が設定されます。\n\nアンテナ: お持ちのアンテナで何が聞けるかのヒント。\n\n興味: 星印を付けて先頭に並べるモード、OnAir の開始場所、いくつかの開始プリセットを決めます。すべて引き続き利用できます。\n\nコーデック: デジタル音声にはご自身でインストールするコーデックのプラグインが必要です。もう一度探すでフォルダーを確認します。\n\n最後の画面のかんたんモードで、すべてのモードがシンプル表示で開きます。セットアップはいつでも ヘルプ > セットアップとレッスン > セットアップをもう一度実行、または設定から再実行できます。
+Interests	興味
+Codecs	コーデック
+Done	完了
+Region preset	地域プリセット
+First-run setup	初回セットアップ
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.	各モードはシンプル表示で開きます。スペクトラムと、スタートボタンと主要な操作がある1つの画面です。オフ: 詳細タブ。
+One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).	1クリックで地域のバンドプラン、TV チャンネル、FM 帯とステップ、既定の周波数、単位を設定します(リトアニア、EU など)。
+Open the setup again: radio, region, antenna, interests, voice codecs.	セットアップをもう一度開く: 無線機、地域、アンテナ、興味、音声コーデック。

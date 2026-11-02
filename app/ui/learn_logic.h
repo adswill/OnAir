@@ -92,6 +92,15 @@ inline const char* radioBlurb(const std::string& board, const std::string& name)
     const std::string b = lower(board + " " + name);
     struct R { const char* key; const char* text; };
     static const R k[] = {
+        {"rtl_tcp", N_("rtl_tcp: an RTL-SDR shared by another computer over the network.")},
+        {"rtltcp", N_("rtl_tcp: an RTL-SDR shared by another computer over the network.")},
+        {"airspyhf", N_("Airspy HF+: a very sensitive receiver for long, medium and short wave and FM, up to 260 MHz.")},
+        {"fobos", N_("Fobos SDR: a wideband receiver, 100 kHz to 6 GHz. Needs the radio's own library, see the ? in Radio settings.")},
+        {"rfnm", N_("RFNM: a wideband radio board with one or two daughter boards, on USB or the network.")},
+        {"nrspst", N_("SDRplay nRSP-ST: a network radio, used through SDRconnect running on a computer.")},
+        {"tci", N_("TCI: a radio of the ExpertSDR family (SunSDR and others) on the network. Receive only.")},
+        {"sdrpp", N_("SDR++ server: a radio shared by another computer running SDR++.")},
+        {"audio", N_("A sound card or a web radio used as the input.")},
         {"hackrf", N_("HackRF: covers 1 MHz to 6 GHz with a wide view, and can transmit. Less sensitive than an RTL-SDR.")},
         {"rtl", N_("RTL-SDR: the cheap and popular USB stick, about 24 MHz to 1.7 GHz. Good for FM, airband, ADS-B and AIS.")},
         {"airspy", N_("Airspy: a sensitive receiver with low noise, good for weak signals.")},
@@ -106,7 +115,6 @@ inline const char* radioBlurb(const std::string& board, const std::string& name)
         {"hermes", N_("Hermes Lite 2: a short-wave transceiver on the network.")},
         {"kiwi", N_("KiwiSDR: a short-wave receiver somewhere on the internet, shared by its owner.")},
         {"spyserver", N_("SpyServer: a radio shared by another computer over the network.")},
-        {"rtl_tcp", N_("rtl_tcp: an RTL-SDR shared by another computer over the network.")},
         {"hamlib", N_("A transceiver controlled over CAT, with its sound card for audio.")},
     };
     for (const R& r : k) if (b.find(r.key) != std::string::npos) return r.text;

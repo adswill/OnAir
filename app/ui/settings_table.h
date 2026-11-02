@@ -2,6 +2,9 @@
 // The key is the stored name: for a field of App it is the key of app/state/prefs.cpp, so Settings and the old menus read and write the same value.
 #pragma once
 #include "settings_logic.h"
+#ifndef N_
+#define N_(s) s   // marks a text for the translation catalogs (app/i18n); tr() runs when it is shown
+#endif
 
 namespace settings {
 
@@ -23,6 +26,9 @@ inline const std::vector<Info>& table() {
     static const std::vector<Info> t = {
         // ---- General
         {"uiLang", kGeneral, "Language", "The interface language. Same as the system follows the computer.", "translate locale", K::Custom},
+        {"easyMode", kGeneral, N_("Easy mode"), N_("Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs."), "simple advanced beginner one button start easy", K::Custom},
+        {"regionPreset", kGeneral, N_("Region preset"), N_("One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...)."), "region country lithuania eu europe units metric imperial band plan fm", K::Custom},
+        {"setupRun", kGeneral, N_("First-run setup"), N_("Open the setup again: radio, region, antenna, interests, voice codecs."), "wizard first run setup codecs antenna", K::Link},
         {"modeVisLink", kGeneral, "Modes shown", "Choose which modes the mode lists, picker and keys 1-9 show.", "hide favourites groups", K::Link},
         {"powerLowMode", kGeneral, "Low power mode", "Slower redraws and background work to save battery.", "battery energy laptop", K::Choice, 1, 0, 0, "Off|Automatic (on battery or hot)|Always"},
         {"powerHidden", kGeneral, "Save power when hidden", "Slower spectrum updates while the window is hidden or minimised.", "battery minimised", K::Choice, 1, 0, 0, "Off|On battery|Always"},

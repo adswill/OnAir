@@ -3475,3 +3475,55 @@ Saves the rows now in the table (with the search and the filters applied, built-
 Clean the input: DC spike, IQ imbalance and the radio's own spurs	Ingang opschonen: DC-piek, IQ-onbalans en eigen stoorlijnen van de radio
 Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Gemeten uit het signaal zelf en raakt nooit het gewenste kanaal: de DC-piek en het IQ-spiegelbeeld worden overgeslagen in modi waar ze zouden schaden, en een stoorlijn in het kanaal wordt alleen weggehaald als hij na het hertunen op dezelfde plek in de basisband blijft (een echt signaal beweegt mee met de tuner).
 %d spur(s) cut	%d stoorlijn(en) weggehaald
+working	werkt
+installed	geïnstalleerd
+wrong processor	verkeerde processor
+missing	ontbreekt
+Copy build command	Bouwcommando kopiëren
+How to install (this computer):	Zo installeert u (deze computer):
+rtl_tcp: an RTL-SDR shared by another computer over the network.	rtl_tcp: een RTL-SDR die een andere computer via het netwerk deelt.
+Airspy HF+: a very sensitive receiver for long, medium and short wave and FM, up to 260 MHz.	Airspy HF+: een zeer gevoelige ontvanger voor lange, middel- en korte golf en FM, tot 260 MHz.
+Fobos SDR: a wideband receiver, 100 kHz to 6 GHz. Needs the radio's own library, see the ? in Radio settings.	Fobos SDR: een breedbandontvanger, 100 kHz tot 6 GHz. Heeft de eigen bibliotheek van de radio nodig, zie het ? in de radio-instellingen.
+RFNM: a wideband radio board with one or two daughter boards, on USB or the network.	RFNM: een breedband radiobord met een of twee dochterborden, via USB of netwerk.
+SDRplay nRSP-ST: a network radio, used through SDRconnect running on a computer.	SDRplay nRSP-ST: een netwerkradio, gebruikt via SDRconnect op een computer.
+TCI: a radio of the ExpertSDR family (SunSDR and others) on the network. Receive only.	TCI: een radio uit de ExpertSDR-familie (SunSDR en andere) op het netwerk. Alleen ontvangst.
+SDR++ server: a radio shared by another computer running SDR++.	SDR++-server: een radio die een andere computer met SDR++ deelt.
+A sound card or a web radio used as the input.	Een geluidskaart of webradio als ingang.
+Run setup again...	Installatie opnieuw uitvoeren...
+Easy mode	Eenvoudige modus
+European Union (generic)	Europese Unie (algemeen)
+Lithuania	Litouwen
+United Kingdom	Verenigd Koninkrijk
+Germany	Duitsland
+Poland	Polen
+United States	Verenigde Staten
+Canada	Canada
+Australia	Australië
+Quick pick: a region preset sets the band plan, the TV channels, the FM band, the default frequencies and the units	Snelkeuze: een regiovoorinstelling stelt het bandplan, de tv-kanalen, de FM-band, de standaardfrequenties en de eenheden in
+Or search for a city or country	Of zoek een stad of land
+imperial (miles, feet)	imperiaal (mijlen, voet)
+metric (km, metres)	metrisch (km, meter)
+Defaults: FM %.1f MHz, APRS %.3f MHz, units %s.	Standaard: FM %.1f MHz, APRS %.3f MHz, eenheden: %s.
+A preset has no exact position: type a city or coordinates above if you want the aircraft map and satellite passes centred on you.	Een voorinstelling heeft geen exacte positie: typ hierboven een stad of coördinaten als u de vliegtuigkaart en satellietovervluchten op uzelf wilt centreren.
+Units	Eenheden
+Follow the region	Volg de regio
+Metric	Metrisch
+Imperial	Imperiaal
+Which antenna will you use? It matters more than the radio. OnAir uses the answer for hints only; nothing is changed in the radio.	Welke antenne gebruikt u? Ze is belangrijker dan de radio. OnAir gebruikt het antwoord alleen voor tips; aan de radio verandert niets.
+What this means for you	Wat dit voor u betekent
+Digital voice (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) is silent until you install its codec plug-in. The calls, IDs and data work without it.	Digitale spraak (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) blijft stil tot u de codec-plug-in installeert. Gesprekken, ID's en gegevens werken ook zonder.
+Only digital voice modes need a codec. You can skip this screen and come back from Help > Voice codecs.	Alleen digitale spraakmodi hebben een codec nodig. U kunt dit scherm overslaan en terugkomen via Help > Spraakcodecs.
+OnAir does not include or download these codecs (they are patented). You build or install them on your own computer; whether you may use them is your own responsibility. FreeDV, M17, DAB, DRM and TV need nothing.	OnAir bevat deze codecs niet en downloadt ze niet (ze zijn gepatenteerd). U bouwt of installeert ze op uw eigen computer; of u ze mag gebruiken is uw eigen verantwoordelijkheid. FreeDV, M17, DAB, DRM en tv hebben niets nodig.
+Antenna: %s	Antenne: %s
+Easy mode (recommended)	Eenvoudige modus (aanbevolen)
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. The detailed tabs are one click away (Simple | Advanced above them).	Elke modus opent in de eenvoudige weergave: het spectrum en één scherm met een Start-knop en de belangrijkste bediening. De gedetailleerde tabs zijn één klik weg (Eenvoudig | Geavanceerd erboven).
+Change any of this at any time: Help > Setup and lessons > Run setup again, Mode > Modes shown, View > Language, Settings > Appearance > Font look.	Dit alles is op elk moment te wijzigen: Help > Installatie en lessen > Installatie opnieuw uitvoeren, Modus > Getoonde modi, Beeld > Taal, Instellingen > Uiterlijk > Lettertype.
+The setup has six short screens and every one can be skipped. Nothing is forced.\n\nRadio: OnAir looks for radios on USB and on the network and picks one. "?" beside a radio opens its help page. Without a radio, the test signal lets you try OnAir.\n\nLocation: one click on a region preset (Lithuania, the EU, ...) or a city, a locator or coordinates give your country, the band plan, the TV channels, the FM band and step, the default frequencies and the units.\n\nAntenna: hints for what you can hear with the antenna you have.\n\nInterests: decide which modes are starred and listed first, where OnAir starts and a few starter presets. Everything stays available.\n\nCodecs: digital voice needs a codec plug-in that you install yourself; Look again checks the folder.\n\nEasy mode on the last screen opens every mode in its Simple view. Run the setup again any time from Help > Setup and lessons > Run setup again, or from Settings.	De installatie heeft zes korte schermen en elk kan worden overgeslagen. Niets is verplicht.\n\nRadio: OnAir zoekt radio's via USB en het netwerk en kiest er een. Het „?” naast een radio opent de helppagina. Zonder radio laat het testsignaal u OnAir uitproberen.\n\nLocatie: een klik op een regiovoorinstelling (Litouwen, EU, ...) of een stad, locator of coördinaten stellen het land, het bandplan, de tv-kanalen, de FM-band en stap, de standaardfrequenties en de eenheden in.\n\nAntenne: tips over wat u met uw antenne kunt horen.\n\nInteresses: bepalen welke modi een ster krijgen en bovenaan staan, waar OnAir start en enkele startvoorinstellingen. Alles blijft beschikbaar.\n\nCodecs: digitale spraak heeft een codec-plug-in nodig die u zelf installeert; Opnieuw zoeken controleert de map.\n\nDe eenvoudige modus op het laatste scherm opent elke modus in de eenvoudige weergave. Voer de installatie op elk moment opnieuw uit via Help > Installatie en lessen > Installatie opnieuw uitvoeren, of via Instellingen.
+Interests	Interesses
+Codecs	Codecs
+Done	Klaar
+Region preset	Regiovoorinstelling
+First-run setup	Eerste installatie
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.	Elke modus opent in de eenvoudige weergave: het spectrum en één scherm met een Start-knop en de belangrijkste bediening. Uit: de gedetailleerde tabs.
+One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).	Eén klik stelt het bandplan, de tv-kanalen, de FM-band en stap, de standaardfrequenties en de eenheden van een regio in (Litouwen, EU, ...).
+Open the setup again: radio, region, antenna, interests, voice codecs.	De installatie opnieuw openen: radio, regio, antenne, interesses, spraakcodecs.

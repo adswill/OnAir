@@ -3458,3 +3458,55 @@ Saves the rows now in the table (with the search and the filters applied, built-
 Clean the input: DC spike, IQ imbalance and the radio's own spurs	Очистить вход: пик постоянной составляющей, дисбаланс IQ и собственные помехи приёмника
 Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Измеряется по самому сигналу и никогда не затрагивает нужный канал: пик постоянной составляющей и зеркальное изображение IQ пропускаются в режимах, которым они навредили бы, а помеха внутри канала вырезается, только если после перестройки остаётся на том же месте полосы (настоящий сигнал движется вместе с тюнером).
 %d spur(s) cut	Вырезано помех: %d
+working	работает
+installed	установлен
+wrong processor	не тот процессор
+missing	отсутствует
+Copy build command	Копировать команду сборки
+How to install (this computer):	Как установить (этот компьютер):
+rtl_tcp: an RTL-SDR shared by another computer over the network.	rtl_tcp: RTL-SDR, который другой компьютер предоставляет по сети.
+Airspy HF+: a very sensitive receiver for long, medium and short wave and FM, up to 260 MHz.	Airspy HF+: очень чувствительный приёмник для длинных, средних и коротких волн и FM, до 260 МГц.
+Fobos SDR: a wideband receiver, 100 kHz to 6 GHz. Needs the radio's own library, see the ? in Radio settings.	Fobos SDR: широкополосный приёмник, от 100 кГц до 6 ГГц. Нужна собственная библиотека радио, см. значок ? в настройках радио.
+RFNM: a wideband radio board with one or two daughter boards, on USB or the network.	RFNM: широкополосная радиоплата с одной или двумя дочерними платами, по USB или сети.
+SDRplay nRSP-ST: a network radio, used through SDRconnect running on a computer.	SDRplay nRSP-ST: сетевое радио, используется через SDRconnect на компьютере.
+TCI: a radio of the ExpertSDR family (SunSDR and others) on the network. Receive only.	TCI: радио семейства ExpertSDR (SunSDR и другие) в сети. Только приём.
+SDR++ server: a radio shared by another computer running SDR++.	Сервер SDR++: радио, которое предоставляет другой компьютер с SDR++.
+A sound card or a web radio used as the input.	Звуковая карта или веб-радио в качестве входа.
+Run setup again...	Запустить настройку заново...
+Easy mode	Простой режим
+European Union (generic)	Европейский союз (общий)
+Lithuania	Литва
+United Kingdom	Великобритания
+Germany	Германия
+Poland	Польша
+United States	США
+Canada	Канада
+Australia	Австралия
+Quick pick: a region preset sets the band plan, the TV channels, the FM band, the default frequencies and the units	Быстрый выбор: пресет региона задаёт план диапазонов, каналы ТВ, диапазон FM, частоты по умолчанию и единицы
+Or search for a city or country	Или найдите город или страну
+imperial (miles, feet)	имперские (мили, футы)
+metric (km, metres)	метрические (км, метры)
+Defaults: FM %.1f MHz, APRS %.3f MHz, units %s.	По умолчанию: FM %.1f МГц, APRS %.3f МГц, единицы: %s.
+A preset has no exact position: type a city or coordinates above if you want the aircraft map and satellite passes centred on you.	У пресета нет точной позиции: введите выше город или координаты, если хотите, чтобы карта самолётов и пролёты спутников были центрированы на вас.
+Units	Единицы
+Follow the region	Как в регионе
+Metric	Метрические
+Imperial	Имперские
+Which antenna will you use? It matters more than the radio. OnAir uses the answer for hints only; nothing is changed in the radio.	Какую антенну вы будете использовать? Она важнее радио. OnAir использует ответ только для подсказок; в радио ничего не меняется.
+What this means for you	Что это значит для вас
+Digital voice (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) is silent until you install its codec plug-in. The calls, IDs and data work without it.	Цифровой голос (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) молчит, пока вы не установите плагин кодека. Вызовы, ID и данные работают и без него.
+Only digital voice modes need a codec. You can skip this screen and come back from Help > Voice codecs.	Кодек нужен только цифровым голосовым режимам. Этот экран можно пропустить и вернуться через Справка > Голосовые кодеки.
+OnAir does not include or download these codecs (they are patented). You build or install them on your own computer; whether you may use them is your own responsibility. FreeDV, M17, DAB, DRM and TV need nothing.	OnAir не включает и не скачивает эти кодеки (они запатентованы). Вы собираете или устанавливаете их на своём компьютере; можно ли их использовать, решаете вы сами. FreeDV, M17, DAB, DRM и ТВ ничего не требуют.
+Antenna: %s	Антенна: %s
+Easy mode (recommended)	Простой режим (рекомендуется)
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. The detailed tabs are one click away (Simple | Advanced above them).	Каждый режим открывается в простом виде: спектр и один экран с кнопкой Старт и основными элементами управления. Подробные вкладки доступны одним щелчком (Простой | Расширенный над ними).
+Change any of this at any time: Help > Setup and lessons > Run setup again, Mode > Modes shown, View > Language, Settings > Appearance > Font look.	Всё это можно изменить в любое время: Справка > Настройка и уроки > Запустить настройку заново, Режим > Показываемые режимы, Вид > Язык, Настройки > Внешний вид > Вид шрифта.
+The setup has six short screens and every one can be skipped. Nothing is forced.\n\nRadio: OnAir looks for radios on USB and on the network and picks one. "?" beside a radio opens its help page. Without a radio, the test signal lets you try OnAir.\n\nLocation: one click on a region preset (Lithuania, the EU, ...) or a city, a locator or coordinates give your country, the band plan, the TV channels, the FM band and step, the default frequencies and the units.\n\nAntenna: hints for what you can hear with the antenna you have.\n\nInterests: decide which modes are starred and listed first, where OnAir starts and a few starter presets. Everything stays available.\n\nCodecs: digital voice needs a codec plug-in that you install yourself; Look again checks the folder.\n\nEasy mode on the last screen opens every mode in its Simple view. Run the setup again any time from Help > Setup and lessons > Run setup again, or from Settings.	В настройке шесть коротких экранов, любой можно пропустить. Ничего не навязывается.\n\nРадио: OnAir ищет радио по USB и в сети и выбирает одно. Значок «?» рядом с радио открывает его страницу справки. Без радио тестовый сигнал позволяет попробовать OnAir.\n\nМесто: один щелчок по пресету региона (Литва, ЕС, ...) или город, локатор или координаты задают страну, план диапазонов, каналы ТВ, диапазон и шаг FM, частоты по умолчанию и единицы.\n\nАнтенна: подсказки, что можно услышать с вашей антенной.\n\nИнтересы: определяют, какие режимы отмечены и идут первыми, где стартует OnAir и несколько стартовых пресетов. Всё остаётся доступным.\n\nКодеки: цифровому голосу нужен плагин кодека, который вы устанавливаете сами; Искать снова проверяет папку.\n\nПростой режим на последнем экране открывает каждый режим в простом виде. Запустить настройку заново можно в любое время: Справка > Настройка и уроки > Запустить настройку заново или из Настроек.
+Interests	Интересы
+Codecs	Кодеки
+Done	Готово
+Region preset	Пресет региона
+First-run setup	Первая настройка
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.	Каждый режим открывается в простом виде: спектр и один экран с кнопкой Старт и основными элементами управления. Выключено: подробные вкладки.
+One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).	Один щелчок задаёт план диапазонов, каналы ТВ, диапазон и шаг FM, частоты по умолчанию и единицы региона (Литва, ЕС, ...).
+Open the setup again: radio, region, antenna, interests, voice codecs.	Открыть настройку заново: радио, регион, антенна, интересы, голосовые кодеки.

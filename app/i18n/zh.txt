@@ -3498,3 +3498,55 @@ Saves the rows now in the table (with the search and the filters applied, built-
 Clean the input: DC spike, IQ imbalance and the radio's own spurs	清理输入:直流尖峰、IQ 不平衡和接收机自身的杂散
 Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	根据信号本身测量,绝不影响所需信道:在会受其损害的模式中会跳过直流尖峰和 IQ 镜像,信道内的杂散只有在换频后仍停留在基带同一位置时才会被切除(真实信号会随调谐器移动)。
 %d spur(s) cut	已切除 %d 条杂散
+working	正常工作
+installed	已安装
+wrong processor	处理器不符
+missing	缺失
+Copy build command	复制构建命令
+How to install (this computer):	安装方法(这台电脑):
+rtl_tcp: an RTL-SDR shared by another computer over the network.	rtl_tcp:由另一台电脑通过网络共享的 RTL-SDR。
+Airspy HF+: a very sensitive receiver for long, medium and short wave and FM, up to 260 MHz.	Airspy HF+:高灵敏度接收机,适用于长波、中波、短波和调频,最高 260 MHz。
+Fobos SDR: a wideband receiver, 100 kHz to 6 GHz. Needs the radio's own library, see the ? in Radio settings.	Fobos SDR:宽带接收机,100 kHz 至 6 GHz。需要该电台自己的库,见电台设置中的 ?。
+RFNM: a wideband radio board with one or two daughter boards, on USB or the network.	RFNM:带一块或两块子板的宽带无线电板,通过 USB 或网络连接。
+SDRplay nRSP-ST: a network radio, used through SDRconnect running on a computer.	SDRplay nRSP-ST:网络电台,通过电脑上的 SDRconnect 使用。
+TCI: a radio of the ExpertSDR family (SunSDR and others) on the network. Receive only.	TCI:网络上的 ExpertSDR 系列电台(SunSDR 等)。仅接收。
+SDR++ server: a radio shared by another computer running SDR++.	SDR++ 服务器:由另一台运行 SDR++ 的电脑共享的电台。
+A sound card or a web radio used as the input.	用声卡或网络电台作为输入。
+Run setup again...	重新运行设置...
+Easy mode	简易模式
+European Union (generic)	欧盟(通用)
+Lithuania	立陶宛
+United Kingdom	英国
+Germany	德国
+Poland	波兰
+United States	美国
+Canada	加拿大
+Australia	澳大利亚
+Quick pick: a region preset sets the band plan, the TV channels, the FM band, the default frequencies and the units	快速选择:地区预设会设置频段规划、电视频道、调频频段、默认频率和单位
+Or search for a city or country	或搜索城市或国家
+imperial (miles, feet)	英制(英里、英尺)
+metric (km, metres)	公制(公里、米)
+Defaults: FM %.1f MHz, APRS %.3f MHz, units %s.	默认:调频 %.1f MHz,APRS %.3f MHz,单位:%s。
+A preset has no exact position: type a city or coordinates above if you want the aircraft map and satellite passes centred on you.	预设没有确切位置:如果希望飞机地图和卫星过境以你为中心,请在上方输入城市或坐标。
+Units	单位
+Follow the region	跟随地区
+Metric	公制
+Imperial	英制
+Which antenna will you use? It matters more than the radio. OnAir uses the answer for hints only; nothing is changed in the radio.	你会使用哪种天线?它比电台更重要。OnAir 只把答案用于提示,不会更改电台的任何设置。
+What this means for you	这对你意味着什么
+Digital voice (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) is silent until you install its codec plug-in. The calls, IDs and data work without it.	数字语音(DMR、P25、NXDN、dPMR、D-STAR、Yaesu、TETRA)在安装其编解码器插件之前是静音的。通话、ID 和数据无需它也能工作。
+Only digital voice modes need a codec. You can skip this screen and come back from Help > Voice codecs.	只有数字语音模式需要编解码器。你可以跳过此屏幕,之后从 帮助 > 语音编解码器 回来。
+OnAir does not include or download these codecs (they are patented). You build or install them on your own computer; whether you may use them is your own responsibility. FreeDV, M17, DAB, DRM and TV need nothing.	OnAir 不包含也不下载这些编解码器(它们受专利保护)。你在自己的电脑上构建或安装;能否使用由你自己负责。FreeDV、M17、DAB、DRM 和电视无需任何东西。
+Antenna: %s	天线:%s
+Easy mode (recommended)	简易模式(推荐)
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. The detailed tabs are one click away (Simple | Advanced above them).	每个模式都以简易视图打开:频谱,加一个带开始按钮和主要控件的屏幕。详细标签页一键可达(上方的 简易 | 高级)。
+Change any of this at any time: Help > Setup and lessons > Run setup again, Mode > Modes shown, View > Language, Settings > Appearance > Font look.	以上内容随时可改:帮助 > 设置与课程 > 重新运行设置,模式 > 显示的模式,视图 > 语言,设置 > 外观 > 字体外观。
+The setup has six short screens and every one can be skipped. Nothing is forced.\n\nRadio: OnAir looks for radios on USB and on the network and picks one. "?" beside a radio opens its help page. Without a radio, the test signal lets you try OnAir.\n\nLocation: one click on a region preset (Lithuania, the EU, ...) or a city, a locator or coordinates give your country, the band plan, the TV channels, the FM band and step, the default frequencies and the units.\n\nAntenna: hints for what you can hear with the antenna you have.\n\nInterests: decide which modes are starred and listed first, where OnAir starts and a few starter presets. Everything stays available.\n\nCodecs: digital voice needs a codec plug-in that you install yourself; Look again checks the folder.\n\nEasy mode on the last screen opens every mode in its Simple view. Run the setup again any time from Help > Setup and lessons > Run setup again, or from Settings.	设置共有六个简短的屏幕,每一个都可以跳过。没有任何强制项。\n\n电台:OnAir 通过 USB 和网络查找电台并选择一个。电台旁的“?”打开其帮助页面。没有电台时,测试信号可让你试用 OnAir。\n\n位置:点击一个地区预设(立陶宛、欧盟等),或输入城市、定位码或坐标,即可设置国家、频段规划、电视频道、调频频段和步进、默认频率和单位。\n\n天线:根据你的天线说明能听到什么。\n\n兴趣:决定哪些模式加星并排在前面、OnAir 从哪里开始,以及一些起始预设。所有内容仍然可用。\n\n编解码器:数字语音需要你自己安装的编解码器插件;再找一次会检查文件夹。\n\n最后一屏的简易模式会让每个模式都以简易视图打开。随时可从 帮助 > 设置与课程 > 重新运行设置 或设置中再次运行。
+Interests	兴趣
+Codecs	编解码器
+Done	完成
+Region preset	地区预设
+First-run setup	首次设置
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.	每个模式都以简易视图打开:频谱,加一个带开始按钮和主要控件的屏幕。关闭:详细标签页。
+One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).	一键设置某个地区的频段规划、电视频道、调频频段和步进、默认频率和单位(立陶宛、欧盟等)。
+Open the setup again: radio, region, antenna, interests, voice codecs.	重新打开设置:电台、地区、天线、兴趣、语音编解码器。

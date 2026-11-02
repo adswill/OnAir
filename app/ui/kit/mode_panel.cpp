@@ -50,6 +50,16 @@ void startup(bool freshProfile) {
     if (!p.has("setupUiLevelProfile")) p.setS("setupUiLevelProfile", levelText(profileDefault(!freshProfile)));
 }
 
+bool easyModeOn() { return profileLevel() == Level::Simple; }
+
+void setEasyMode(bool on) {
+    plat::Prefs& p = plat::prefs();
+    const char* v = levelText(on ? Level::Simple : Level::Advanced);
+    p.setS("setupUiLevelProfile", v);
+    for (const auto& it : p.dumpAll()) if (it.key.rfind("uiLevel.", 0) == 0) p.setS(it.key.c_str(), v);   // the modes the user already switched follow it
+    cache().clear();
+}
+
 bool available(const App& a) {
     const ModeUi* mu = modeUi(a.family);
     return mu && mu->tab && !mu->noSimple;

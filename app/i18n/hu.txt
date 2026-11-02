@@ -3461,3 +3461,55 @@ Saves the rows now in the table (with the search and the filters applied, built-
 Clean the input: DC spike, IQ imbalance and the radio's own spurs	Bemenet tisztítása: DC-tüske, IQ-kiegyensúlyozatlanság és a rádió saját zavarvonalai
 Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Magából a jelből mérve, a kívánt csatornát soha nem érinti: a DC-tüskét és az IQ-tükörképet kihagyja azokban a módokban, ahol ártana, a csatornán belüli zavarvonalat pedig csak akkor vágja ki, ha áthangolás után is ugyanazon a helyen marad az alapsávban (a valódi jel együtt mozog a hangolóval).
 %d spur(s) cut	%d zavarvonal kivágva
+working	működik
+installed	telepítve
+wrong processor	rossz processzor
+missing	hiányzik
+Copy build command	Fordítási parancs másolása
+How to install (this computer):	Telepítés menete (ez a számítógép):
+rtl_tcp: an RTL-SDR shared by another computer over the network.	rtl_tcp: egy másik számítógép által hálózaton megosztott RTL-SDR.
+Airspy HF+: a very sensitive receiver for long, medium and short wave and FM, up to 260 MHz.	Airspy HF+: nagyon érzékeny vevő hosszú-, közép- és rövidhullámra, valamint URH-FM-re, 260 MHz-ig.
+Fobos SDR: a wideband receiver, 100 kHz to 6 GHz. Needs the radio's own library, see the ? in Radio settings.	Fobos SDR: szélessávú vevő, 100 kHz-től 6 GHz-ig. A rádió saját könyvtára kell hozzá, lásd a ? jelet a rádióbeállításokban.
+RFNM: a wideband radio board with one or two daughter boards, on USB or the network.	RFNM: szélessávú rádiópanel egy vagy két leányáramkörrel, USB-n vagy hálózaton.
+SDRplay nRSP-ST: a network radio, used through SDRconnect running on a computer.	SDRplay nRSP-ST: hálózati rádió, egy számítógépen futó SDRconnecten át használva.
+TCI: a radio of the ExpertSDR family (SunSDR and others) on the network. Receive only.	TCI: az ExpertSDR család (SunSDR és mások) hálózati rádiója. Csak vétel.
+SDR++ server: a radio shared by another computer running SDR++.	SDR++ szerver: egy másik, SDR++-t futtató számítógép által megosztott rádió.
+A sound card or a web radio used as the input.	Hangkártya vagy webrádió bemenetként.
+Run setup again...	Beállítás újraindítása...
+Easy mode	Egyszerű mód
+European Union (generic)	Európai Unió (általános)
+Lithuania	Litvánia
+United Kingdom	Egyesült Királyság
+Germany	Németország
+Poland	Lengyelország
+United States	Egyesült Államok
+Canada	Kanada
+Australia	Ausztrália
+Quick pick: a region preset sets the band plan, the TV channels, the FM band, the default frequencies and the units	Gyorsválasztás: a régióbeállítás megadja a sávtervet, a TV-csatornákat, az FM-sávot, az alapértelmezett frekvenciákat és a mértékegységeket
+Or search for a city or country	Vagy keressen várost vagy országot
+imperial (miles, feet)	angolszász (mérföld, láb)
+metric (km, metres)	metrikus (km, méter)
+Defaults: FM %.1f MHz, APRS %.3f MHz, units %s.	Alapértelmezések: FM %.1f MHz, APRS %.3f MHz, mértékegység: %s.
+A preset has no exact position: type a city or coordinates above if you want the aircraft map and satellite passes centred on you.	A régióbeállításnak nincs pontos helye: ha a repülőgép-térképet és a műholdátvonulásokat önre szeretné igazítani, adjon meg fent várost vagy koordinátákat.
+Units	Mértékegységek
+Follow the region	A régió szerint
+Metric	Metrikus
+Imperial	Angolszász
+Which antenna will you use? It matters more than the radio. OnAir uses the answer for hints only; nothing is changed in the radio.	Milyen antennát fog használni? Fontosabb, mint a rádió. Az OnAir a választ csak tanácsokhoz használja; a rádión semmi sem változik.
+What this means for you	Mit jelent ez Önnek
+Digital voice (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) is silent until you install its codec plug-in. The calls, IDs and data work without it.	A digitális hang (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) addig néma, amíg nem telepíti a kodek bővítményét. A hívások, az azonosítók és az adatok enélkül is működnek.
+Only digital voice modes need a codec. You can skip this screen and come back from Help > Voice codecs.	Csak a digitális hangmódokhoz kell kodek. Átugorhatja ezt a képernyőt, és később visszatérhet a Súgó > Hangkodekek menüből.
+OnAir does not include or download these codecs (they are patented). You build or install them on your own computer; whether you may use them is your own responsibility. FreeDV, M17, DAB, DRM and TV need nothing.	Az OnAir nem tartalmazza és nem tölti le ezeket a kodekeket (szabadalmazottak). Ön készíti vagy telepíti őket a saját számítógépén; hogy használhatja-e őket, az az Ön felelőssége. A FreeDV, M17, DAB, DRM és TV nem igényel semmit.
+Antenna: %s	Antenna: %s
+Easy mode (recommended)	Egyszerű mód (ajánlott)
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. The detailed tabs are one click away (Simple | Advanced above them).	Minden mód az Egyszerű nézetében nyílik meg: a színkép és egy képernyő Indítás gombbal és a fő vezérlőkkel. A részletes lapok egy kattintásra vannak (Egyszerű | Haladó fölöttük).
+Change any of this at any time: Help > Setup and lessons > Run setup again, Mode > Modes shown, View > Language, Settings > Appearance > Font look.	Mindez bármikor módosítható: Súgó > Beállítás és leckék > Beállítás újraindítása, Mód > Megjelenített módok, Nézet > Nyelv, Beállítások > Megjelenés > Betűstílus.
+The setup has six short screens and every one can be skipped. Nothing is forced.\n\nRadio: OnAir looks for radios on USB and on the network and picks one. "?" beside a radio opens its help page. Without a radio, the test signal lets you try OnAir.\n\nLocation: one click on a region preset (Lithuania, the EU, ...) or a city, a locator or coordinates give your country, the band plan, the TV channels, the FM band and step, the default frequencies and the units.\n\nAntenna: hints for what you can hear with the antenna you have.\n\nInterests: decide which modes are starred and listed first, where OnAir starts and a few starter presets. Everything stays available.\n\nCodecs: digital voice needs a codec plug-in that you install yourself; Look again checks the folder.\n\nEasy mode on the last screen opens every mode in its Simple view. Run the setup again any time from Help > Setup and lessons > Run setup again, or from Settings.	A beállításnak hat rövid képernyője van, és mindegyik átugorható. Semmi sem kötelező.\n\nRádió: az OnAir USB-n és hálózaton keres rádiókat, és választ egyet. A rádió melletti „?” megnyitja a súgóoldalát. Rádió nélkül a tesztjel lehetővé teszi az OnAir kipróbálását.\n\nHely: egy kattintás egy régióbeállításra (Litvánia, EU, ...) vagy egy város, lokátor vagy koordináták megadják az országot, a sávtervet, a TV-csatornákat, az FM-sávot és lépést, az alapértelmezett frekvenciákat és a mértékegységeket.\n\nAntenna: tanácsok arról, mit hallhat a meglévő antennával.\n\nÉrdeklődés: eldönti, mely módok kapnak csillagot és szerepelnek elöl, hol indul az OnAir, és néhány kezdő beállítást. Minden elérhető marad.\n\nKodekek: a digitális hanghoz kodek-bővítmény kell, amelyet Ön telepít; az Újra keresés ellenőrzi a mappát.\n\nAz utolsó képernyő egyszerű módja minden módot Egyszerű nézetben nyit meg. A beállítást bármikor újraindíthatja: Súgó > Beállítás és leckék > Beállítás újraindítása, vagy a Beállításokból.
+Interests	Érdeklődés
+Codecs	Kodekek
+Done	Kész
+Region preset	Régióbeállítás
+First-run setup	Első indítás beállítása
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.	Minden mód az Egyszerű nézetében nyílik meg: a színkép és egy képernyő Indítás gombbal és a fő vezérlőkkel. Kikapcsolva: a részletes lapok.
+One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).	Egy kattintás megadja egy régió sávtervét, TV-csatornáit, FM-sávját és lépését, alapértelmezett frekvenciáit és mértékegységeit (Litvánia, EU, ...).
+Open the setup again: radio, region, antenna, interests, voice codecs.	A beállítás újbóli megnyitása: rádió, régió, antenna, érdeklődés, hangkodekek.

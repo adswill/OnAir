@@ -3479,3 +3479,55 @@ Saves the rows now in the table (with the search and the filters applied, built-
 Clean the input: DC spike, IQ imbalance and the radio's own spurs	Išvalyti įvestį: nuolatinės srovės smaigalį, IQ nesubalansuotumą ir paties radijo trukdžių linijas
 Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Matuojama iš paties signalo ir niekada neliečia norimo kanalo: nuolatinės srovės smaigalys ir IQ veidrodinis vaizdas praleidžiami režimuose, kuriems jie pakenktų, o kanale esanti trukdžių linija pašalinama tik tada, kai pakeitus dažnį ji lieka toje pačioje bazinės juostos vietoje (tikras signalas juda kartu su imtuvu).
 %d spur(s) cut	Pašalinta trukdžių linijų: %d
+working	veikia
+installed	įdiegta
+wrong processor	netinkamas procesorius
+missing	nėra
+Copy build command	Kopijuoti kūrimo komandą
+How to install (this computer):	Kaip įdiegti (šiame kompiuteryje):
+rtl_tcp: an RTL-SDR shared by another computer over the network.	rtl_tcp: RTL-SDR, kurį tinklu teikia kitas kompiuteris.
+Airspy HF+: a very sensitive receiver for long, medium and short wave and FM, up to 260 MHz.	Airspy HF+: labai jautrus imtuvas ilgosioms, vidutinėms ir trumposioms bangoms bei FM, iki 260 MHz.
+Fobos SDR: a wideband receiver, 100 kHz to 6 GHz. Needs the radio's own library, see the ? in Radio settings.	Fobos SDR: plačiajuostis imtuvas, nuo 100 kHz iki 6 GHz. Reikia paties radijo bibliotekos, žr. ? radijo nustatymuose.
+RFNM: a wideband radio board with one or two daughter boards, on USB or the network.	RFNM: plačiajuostė radijo plokštė su viena ar dviem dukterinėmis plokštėmis, per USB arba tinklą.
+SDRplay nRSP-ST: a network radio, used through SDRconnect running on a computer.	SDRplay nRSP-ST: tinklo radijas, naudojamas per kompiuteryje veikiantį SDRconnect.
+TCI: a radio of the ExpertSDR family (SunSDR and others) on the network. Receive only.	TCI: ExpertSDR šeimos radijas (SunSDR ir kiti) tinkle. Tik priėmimui.
+SDR++ server: a radio shared by another computer running SDR++.	SDR++ serveris: radijas, kurį teikia kitas kompiuteris su SDR++.
+A sound card or a web radio used as the input.	Garso plokštė arba interneto radijas kaip įvestis.
+Run setup again...	Paleisti sąranką iš naujo...
+Easy mode	Paprastas režimas
+European Union (generic)	Europos Sąjunga (bendra)
+Lithuania	Lietuva
+United Kingdom	Jungtinė Karalystė
+Germany	Vokietija
+Poland	Lenkija
+United States	Jungtinės Valstijos
+Canada	Kanada
+Australia	Australija
+Quick pick: a region preset sets the band plan, the TV channels, the FM band, the default frequencies and the units	Greitas pasirinkimas: regiono šablonas nustato dažnių planą, TV kanalus, FM juostą, numatytuosius dažnius ir vienetus
+Or search for a city or country	Arba ieškokite miesto ar šalies
+imperial (miles, feet)	imperiniai (mylios, pėdos)
+metric (km, metres)	metriniai (km, metrai)
+Defaults: FM %.1f MHz, APRS %.3f MHz, units %s.	Numatyta: FM %.1f MHz, APRS %.3f MHz, vienetai: %s.
+A preset has no exact position: type a city or coordinates above if you want the aircraft map and satellite passes centred on you.	Šablonas neturi tikslios vietos: įveskite miestą ar koordinates aukščiau, jei norite, kad orlaivių žemėlapis ir palydovų praskridimai būtų centruoti jūsų vietoje.
+Units	Vienetai
+Follow the region	Pagal regioną
+Metric	Metriniai
+Imperial	Imperiniai
+Which antenna will you use? It matters more than the radio. OnAir uses the answer for hints only; nothing is changed in the radio.	Kokią anteną naudosite? Ji svarbesnė už radiją. OnAir atsakymą naudoja tik patarimams; radijo nustatymai nekeičiami.
+What this means for you	Ką tai reiškia jums
+Digital voice (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) is silent until you install its codec plug-in. The calls, IDs and data work without it.	Skaitmeninis balsas (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) tylus, kol neįdiegsite jo kodeko papildinio. Skambučiai, ID ir duomenys veikia be jo.
+Only digital voice modes need a codec. You can skip this screen and come back from Help > Voice codecs.	Kodeko reikia tik skaitmeninio balso režimams. Šį ekraną galite praleisti ir grįžti per Žinynas > Balso kodekai.
+OnAir does not include or download these codecs (they are patented). You build or install them on your own computer; whether you may use them is your own responsibility. FreeDV, M17, DAB, DRM and TV need nothing.	OnAir šių kodekų neįtraukia ir neparsisiunčia (jie patentuoti). Jūs patys kuriate ar diegiate juos savo kompiuteryje; ar galite juos naudoti, yra jūsų pačių atsakomybė. FreeDV, M17, DAB, DRM ir TV nieko nereikalauja.
+Antenna: %s	Antena: %s
+Easy mode (recommended)	Paprastas režimas (rekomenduojama)
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. The detailed tabs are one click away (Simple | Advanced above them).	Kiekvienas režimas atsidaro Paprastu rodiniu: spektras ir vienas ekranas su Pradėti mygtuku bei pagrindiniais valdikliais. Išsamūs skirtukai yra per vieną paspaudimą (Paprastas | Išplėstinis virš jų).
+Change any of this at any time: Help > Setup and lessons > Run setup again, Mode > Modes shown, View > Language, Settings > Appearance > Font look.	Visa tai galite keisti bet kada: Žinynas > Sąranka ir pamokos > Paleisti sąranką iš naujo, Režimas > Rodomi režimai, Rodymas > Kalba, Nustatymai > Išvaizda > Šrifto stilius.
+The setup has six short screens and every one can be skipped. Nothing is forced.\n\nRadio: OnAir looks for radios on USB and on the network and picks one. "?" beside a radio opens its help page. Without a radio, the test signal lets you try OnAir.\n\nLocation: one click on a region preset (Lithuania, the EU, ...) or a city, a locator or coordinates give your country, the band plan, the TV channels, the FM band and step, the default frequencies and the units.\n\nAntenna: hints for what you can hear with the antenna you have.\n\nInterests: decide which modes are starred and listed first, where OnAir starts and a few starter presets. Everything stays available.\n\nCodecs: digital voice needs a codec plug-in that you install yourself; Look again checks the folder.\n\nEasy mode on the last screen opens every mode in its Simple view. Run the setup again any time from Help > Setup and lessons > Run setup again, or from Settings.	Sąranka turi šešis trumpus ekranus ir kiekvieną galima praleisti. Nieko neprivaloma.\n\nRadijas: OnAir ieško radijų USB ir tinkle bei vieną parenka. „?“ prie radijo atveria jo žinyno puslapį. Be radijo bandomasis signalas leidžia išbandyti OnAir.\n\nVieta: vienas paspaudimas ant regiono šablono (Lietuva, ES, ...) arba miestas, lokatorius ar koordinatės nustato šalį, dažnių planą, TV kanalus, FM juostą ir žingsnį, numatytuosius dažnius ir vienetus.\n\nAntena: patarimai, ką girdėsite su turima antena.\n\nPomėgiai: nusprendžia, kurie režimai pažymimi ir rodomi pirmi, kur OnAir prasideda ir keli pradiniai šablonai. Viskas lieka prieinama.\n\nKodekai: skaitmeniniam balsui reikia kodeko papildinio, kurį įdiegiate patys; Ieškoti dar kartą patikrina aplanką.\n\nPaprastas režimas paskutiniame ekrane atidaro kiekvieną režimą Paprastu rodiniu. Sąranką galite paleisti iš naujo bet kada: Žinynas > Sąranka ir pamokos > Paleisti sąranką iš naujo arba per Nustatymus.
+Interests	Pomėgiai
+Codecs	Kodekai
+Done	Baigta
+Region preset	Regiono šablonas
+First-run setup	Pirmoji sąranka
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.	Kiekvienas režimas atsidaro Paprastu rodiniu: spektras ir vienas ekranas su Pradėti mygtuku bei pagrindiniais valdikliais. Išjungta: išsamūs skirtukai.
+One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).	Vienu paspaudimu nustato regiono dažnių planą, TV kanalus, FM juostą ir žingsnį, numatytuosius dažnius ir vienetus (Lietuva, ES, ...).
+Open the setup again: radio, region, antenna, interests, voice codecs.	Atverkite sąranką iš naujo: radijas, regionas, antena, pomėgiai, balso kodekai.

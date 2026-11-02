@@ -7,6 +7,8 @@
 #include "../platform/platform.h"
 #include "../ui/scale.h"
 #include "settings_table.h"
+#include "setup_logic.h"
+#include "kit/mode_panel.h"
 #include "ui2_internal.h"
 #include "dect2/common/u8file.h"
 #include "dect2/engine/updater.h"
@@ -142,6 +144,24 @@ Ui U;
 void customRow(App& a, const Info& i) {
     const std::string k = i.key;
     if (k == "uiLang") languageButton(a);
+    else if (k == "setupRun") { if (ImGui::Button(tr("Run setup again..."))) setupWizardOpen(a); }
+    else if (k == "easyMode") {
+        bool on = modepanel::easyModeOn();
+        if (ImGui::Checkbox(tr("Easy mode"), &on)) modepanel::setEasyMode(on);
+    } else if (k == "regionPreset") {
+        const std::string cur = setup::presetOfCountry(plat::prefs().getS("locCountry", ""));
+        int np = 0;
+        const setup::RegionPreset* P = setup::regionPresets(&np);
+        for (int p = 0; p < np; p++) {
+            if (p) ImGui::SameLine();
+            ImGui::PushID(P[p].id);
+            const bool on = cur == P[p].id;
+            if (on) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.34f, 0.40f, 1));
+            if (ImGui::Button(tr(P[p].label))) setupApplyPreset(a, P[p].id, (int)plat::prefs().getI("setupUnits", 0));
+            if (on) ImGui::PopStyleColor();
+            ImGui::PopID();
+        }
+    }
     else if (k == "modeVisLink") { if (ImGui::Button(tr("Open Modes shown..."))) a.modeVisOpen = true; }
     else if (k == "themeMode") ui2::themeChoice(a, false);
     else if (k == "accent") ui2::accentMenu();

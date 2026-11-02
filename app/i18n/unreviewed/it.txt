@@ -210,3 +210,55 @@ this mode has no transmit generator
 Export results CSV...
 Nothing to export: no row matches the search.
 Saves the rows now in the table (with the search and the filters applied, built-in and yours) as a CSV file. Import and the Memory panel read it back.
+working
+installed
+wrong processor
+missing
+Copy build command
+How to install (this computer):
+rtl_tcp: an RTL-SDR shared by another computer over the network.
+Airspy HF+: a very sensitive receiver for long, medium and short wave and FM, up to 260 MHz.
+Fobos SDR: a wideband receiver, 100 kHz to 6 GHz. Needs the radio's own library, see the ? in Radio settings.
+RFNM: a wideband radio board with one or two daughter boards, on USB or the network.
+SDRplay nRSP-ST: a network radio, used through SDRconnect running on a computer.
+TCI: a radio of the ExpertSDR family (SunSDR and others) on the network. Receive only.
+SDR++ server: a radio shared by another computer running SDR++.
+A sound card or a web radio used as the input.
+Run setup again...
+Easy mode
+European Union (generic)
+Lithuania
+United Kingdom
+Germany
+Poland
+United States
+Canada
+Australia
+Quick pick: a region preset sets the band plan, the TV channels, the FM band, the default frequencies and the units
+Or search for a city or country
+imperial (miles, feet)
+metric (km, metres)
+Defaults: FM %.1f MHz, APRS %.3f MHz, units %s.
+A preset has no exact position: type a city or coordinates above if you want the aircraft map and satellite passes centred on you.
+Units
+Follow the region
+Metric
+Imperial
+Which antenna will you use? It matters more than the radio. OnAir uses the answer for hints only; nothing is changed in the radio.
+What this means for you
+Digital voice (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) is silent until you install its codec plug-in. The calls, IDs and data work without it.
+Only digital voice modes need a codec. You can skip this screen and come back from Help > Voice codecs.
+OnAir does not include or download these codecs (they are patented). You build or install them on your own computer; whether you may use them is your own responsibility. FreeDV, M17, DAB, DRM and TV need nothing.
+Antenna: %s
+Easy mode (recommended)
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. The detailed tabs are one click away (Simple | Advanced above them).
+Change any of this at any time: Help > Setup and lessons > Run setup again, Mode > Modes shown, View > Language, Settings > Appearance > Font look.
+The setup has six short screens and every one can be skipped. Nothing is forced.\n\nRadio: OnAir looks for radios on USB and on the network and picks one. "?" beside a radio opens its help page. Without a radio, the test signal lets you try OnAir.\n\nLocation: one click on a region preset (Lithuania, the EU, ...) or a city, a locator or coordinates give your country, the band plan, the TV channels, the FM band and step, the default frequencies and the units.\n\nAntenna: hints for what you can hear with the antenna you have.\n\nInterests: decide which modes are starred and listed first, where OnAir starts and a few starter presets. Everything stays available.\n\nCodecs: digital voice needs a codec plug-in that you install yourself; Look again checks the folder.\n\nEasy mode on the last screen opens every mode in its Simple view. Run the setup again any time from Help > Setup and lessons > Run setup again, or from Settings.
+Interests
+Codecs
+Done
+Region preset
+First-run setup
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.
+One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).
+Open the setup again: radio, region, antenna, interests, voice codecs.

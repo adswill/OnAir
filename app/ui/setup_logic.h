@@ -114,6 +114,44 @@ inline const Country* countryByCode(const std::string& code) {
     return nullptr;
 }
 
+
+// ---- regional presets: one click sets the whole bundle of a region (band plan, TV channel raster, FM band and step, default frequencies, units) ----
+// A preset is a country (or the generic EU entry) with no position: the capital only stands in for the time zone. A city or coordinates
+// typed afterwards replace it. Lithuania and the EU come first.
+inline const Country* euGeneric() {
+    static const Country k = {"EU", N_("European Union (generic)"), 1, 0, "eu", "Europe/Brussels", 50.85, 4.35, 8, true};
+    return &k;
+}
+struct RegionPreset { const char* id; const char* label; const char* country; };   // label N_(); country "EU" is euGeneric()
+inline const RegionPreset* regionPresets(int* n) {
+    static const RegionPreset k[] = {
+        {"lt", N_("Lithuania"), "LT"},
+        {"eu", N_("European Union (generic)"), "EU"},
+        {"gb", N_("United Kingdom"), "GB"},
+        {"de", N_("Germany"), "DE"},
+        {"pl", N_("Poland"), "PL"},
+        {"us", N_("United States"), "US"},
+        {"ca", N_("Canada"), "CA"},
+        {"au", N_("Australia"), "AU"},
+    };
+    if (n) *n = (int)(sizeof k / sizeof *k);
+    return k;
+}
+inline const Country* countryOrEu(const std::string& code) { return code == "EU" ? euGeneric() : countryByCode(code); }
+inline const RegionPreset* regionPresetById(const std::string& id) {
+    int n = 0;
+    const RegionPreset* p = regionPresets(&n);
+    for (int i = 0; i < n; i++) if (id == p[i].id) return &p[i];
+    return nullptr;
+}
+// the preset the country code belongs to ("" when none)
+inline std::string presetOfCountry(const std::string& code) {
+    int n = 0;
+    const RegionPreset* p = regionPresets(&n);
+    for (int i = 0; i < n; i++) if (code == p[i].country) return p[i].id;
+    return "";
+}
+
 // ---- places: a city, or a country as a whole ----
 struct City { const char* name; const char* country; double lat, lon; };
 inline const City* cities(int* n) {
@@ -228,6 +266,7 @@ struct Derived {
     std::string tvPlan;               // the TV channel plan of the country for that standard (core/include/dect2/channels/tvplan.h), "" when none
     double lat = 0, lon = 0;          // the receiver position (ADS-B, maps, satellite passes)
     bool havePosition = false;
+    bool approx = false;              // set by a region preset: the capital stands in for the position, so the receiver position is not saved
 };
 inline Derived derive(const Country* c, double lat, double lon, bool havePosition) {
     Derived d;
@@ -256,6 +295,31 @@ inline Derived derive(const Country* c, double lat, double lon, bool havePositio
 inline Derived deriveFromPlace(const Place& p) { return derive(countryByCode(p.country), p.lat, p.lon, true); }
 inline Derived deriveFromPosition(double lat, double lon) { return derive(countryAt(lat, lon), lat, lon, true); }
 inline Derived deriveSkipped() { return derive(nullptr, 0, 0, false); }
+
+// ---- the frequencies and units a place sets ----
+struct RegionDefaults {
+    double fmMhz = 100;        // the FM station the starter preset tunes
+    double aprsMhz = 144.8;    // APRS on 2 m
+    double aisA = 161.975, aisB = 162.025;
+    double airGuardMhz = 121.5;
+    int fmStepKhz = 100;
+    bool imperial = false;
+};
+inline RegionDefaults regionDefaults(const Derived& d) {
+    RegionDefaults r;
+    const learn::Region& g = learn::regions(nullptr)[learn::clampRegion(d.region)];
+    r.fmMhz = g.fmMhz;
+    r.fmStepKhz = d.fmStepKhz;
+    r.imperial = g.imperial;
+    r.aprsMhz = d.itu == 2 ? 144.39 : d.itu == 3 ? 144.64 : 144.8;
+    return r;
+}
+// the units choice of the setup: 0 follow the region, 1 metric, 2 imperial
+inline bool useImperial(int choice, const Derived& d) {
+    if (choice == 1) return false;
+    if (choice == 2) return true;
+    return regionDefaults(d).imperial;
+}
 
 // ---- interests ----
 enum Interest { IntFm, IntTv, IntAircraft, IntShips, IntHam, IntSats, IntWeather, IntVoice, IntEverything, IntCount };
@@ -345,6 +409,23 @@ inline unsigned goalBitsFor(unsigned bits) {
     return g;
 }
 
+// ---- the antenna screen: what the chosen antenna means for the ticked interests (the lines of the checkup, without the radio and gain lines) ----
+struct AntennaTip { learn::Level level; const char* text; };   // text is N_()
+inline std::vector<AntennaTip> antennaTips(int antenna, unsigned interestBits) {
+    learn::CheckupIn in;
+    in.radio = true; in.radioOpened = true; in.agcOn = true; in.location = true;
+    in.antenna = std::max(0, std::min((int)learn::AntCount - 1, antenna));
+    in.goals = goalBitsFor(interestBits);
+    std::vector<AntennaTip> v;
+    const std::vector<learn::CheckItem> all = learn::checkup(in);
+    for (size_t i = 1; i < all.size(); i++) v.push_back({all[i].level, all[i].text});   // item 0 is the radio line
+    return v;
+}
+
+// ---- the codec screen: shown with weight when the interests include digital voice (or everything); always reachable ----
+inline bool codecsMatter(unsigned interestBits) { return (interestBits & ((1u << IntVoice) | (1u << IntEverything))) != 0; }
+
+
 // ---- the help page of a radio: the maker's or the project's page for the kind; the OnAir list of radios when the kind is not known ----
 inline const char* radioHelpUrl(const std::string& board, const std::string& name) {
     const std::string b = learn::lower(board + " " + name);
@@ -360,6 +441,10 @@ inline const char* radioHelpUrl(const std::string& board, const std::string& nam
         {"lime", "https://wiki.myriadrf.org/Lime_Suite"},
         {"blade", "https://www.nuand.com/bladerf-1/"},
         {"kiwi", "http://kiwisdr.com/quickstart/"},
+        {"fobos", "https://rigexpert.com/software-defined-radio/"},
+        {"rfnm", "https://rfnm.com/"},
+        {"sdrpp", "https://www.sdrpp.org/"},
+        {"nrsp", "https://www.sdrplay.com/nrsp-st/"},
     };
     for (const R& r : k) if (b.find(r.key) != std::string::npos) return r.url;
     return "https://github.com/adswill/OnAir/blob/main/DEVICES.md";

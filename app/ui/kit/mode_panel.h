@@ -9,6 +9,10 @@ struct ModeUi;
 namespace modepanel {
 
 void startup(bool freshProfile);        // main_start.cpp, once: a profile with no settings yet gets Simple as its default, an existing one Advanced
+// Easy mode: every mode opens in its Simple view (the spectrum and one Command view with the Start button). On: the default of the profile and every
+// mode choice saved so far become Simple; off: Advanced. Used by the setup and by Settings > Easy mode. easyModeOn() is the profile default.
+void setEasyMode(bool on);
+bool easyModeOn();
 bool available(const App& a);           // the mode on screen has a Simple view (a mode with its own screens, not marked noSimple)
 bool simple(const App& a);              // available and the user chose Simple for this mode
 void setSimple(App& a, bool simple);    // saves the choice for this mode

@@ -2,7 +2,9 @@
 // plan, FM step, DAB band III, TV plan and time zone for several countries, the interests, and who gets the wizard.
 #include "../../app/ui/setup_logic.h"
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
+#include <regex>
 #include <set>
 #include <sstream>
 
@@ -150,6 +152,64 @@ int main() {
     CHECK(!wizardPending(true, true, {}, false), "setup finished: no wizard");
     CHECK(!wizardPending(false, false, {}, false), "a start with arguments: no wizard");
     CHECK(!wizardPending(true, false, {}, true), "settings set aside after crashes: no wizard");
+
+    // ---- v3: regional presets, defaults, units ----
+    {
+        int np = 0;
+        const RegionPreset* P = regionPresets(&np);
+        CHECK(np >= 6 && !std::strcmp(P[0].id, "lt") && !std::strcmp(P[1].id, "eu"), "Lithuania and the EU come first");
+        std::set<std::string> ids;
+        for (int i = 0; i < np; i++) {
+            CHECK(ids.insert(P[i].id).second, "duplicate preset %s", P[i].id);
+            const Country* c = countryOrEu(P[i].country);
+            CHECK(c != nullptr, "preset %s: country %s", P[i].id, P[i].country);
+            if (!c) continue;
+            CHECK(regionPresetById(P[i].id) == &P[i] && presetOfCountry(P[i].country) == P[i].id, "preset %s lookup", P[i].id);
+            const Derived d = derive(c, c->lat, c->lon, true);
+            CHECK(!d.tvPlan.empty() && dect2::tvplan::find(d.tvPlan), "preset %s: TV channel plan '%s'", P[i].id, d.tvPlan.c_str());
+            CHECK(*c->bandPlan == 0 || plans.find(std::string("\"id\":\"") + c->bandPlan + "\"") != std::string::npos, "preset %s: band plan exists", P[i].id);
+            const RegionDefaults rd = regionDefaults(d);
+            CHECK(rd.fmMhz >= 76 && rd.fmMhz <= 108 && (rd.fmStepKhz == 100 || rd.fmStepKhz == 200), "preset %s: FM default %.1f step %d", P[i].id, rd.fmMhz, rd.fmStepKhz);
+        }
+        const Derived lt = derive(countryOrEu("LT"), 0, 0, true), eu = derive(countryOrEu("EU"), 0, 0, true), us = derive(countryOrEu("US"), 0, 0, true), gb = derive(countryOrEu("GB"), 0, 0, true);
+        CHECK(lt.itu == 1 && lt.tz == "Europe/Vilnius" && lt.bandPlan == "lt" && lt.tvMhz == 8 && lt.dab3, "Lithuania preset");
+        CHECK(eu.itu == 1 && eu.bandPlan == "eu" && eu.tvMhz == 8 && eu.fmStepKhz == 100, "EU preset");
+        CHECK(regionDefaults(lt).aprsMhz == 144.8 && regionDefaults(us).aprsMhz == 144.39 && regionDefaults(us).fmStepKhz == 200, "defaults: APRS and FM step by ITU region");
+        CHECK(!regionDefaults(lt).imperial && regionDefaults(us).imperial && regionDefaults(gb).imperial, "units follow the region");
+        CHECK(!useImperial(0, lt) && useImperial(0, us) && !useImperial(1, us) && useImperial(2, lt), "the units choice: follow, metric, imperial");
+        CHECK(presetOfCountry("FR") == "" && regionPresetById("zz") == nullptr, "unknown preset and country");
+    }
+    // ---- v3: the antenna hints and the codec screen ----
+    {
+        for (int a = 0; a < learn::AntCount; a++) {
+            CHECK(!antennaTips(a, 0).empty(), "antenna %d has a hint", a);
+            for (const AntennaTip& t : antennaTips(a, ~0u)) CHECK(t.text && *t.text, "antenna %d: empty hint", a);
+        }
+        bool warn = false;
+        for (const AntennaTip& t : antennaTips(learn::AntWhip, 1u << IntHam)) warn = warn || t.level == learn::Warn;
+        CHECK(warn, "a whip for ham radio is warned about");
+        CHECK(antennaTips(-5, 0).size() == antennaTips(0, 0).size() && antennaTips(99, 0).size() == antennaTips(learn::AntNone, 0).size(), "an antenna out of range is clamped");
+        CHECK(codecsMatter(1u << IntVoice) && codecsMatter(1u << IntEverything) && !codecsMatter(1u << IntFm) && !codecsMatter(0), "the codec screen matters for voice and everything");
+    }
+    // ---- v3: radio detection covers every board a driver reports (each has its own plain line, not the generic one) ----
+    {
+        const std::string generic = learn::radioBlurb("zzz-unknown", "");
+        std::set<std::string> boards;
+        const std::regex re("board = \"([^\"]+)\"");
+        for (const auto& e : std::filesystem::recursive_directory_iterator(std::string(DECT2_SOURCE_DIR) + "/core/src/source")) {
+            if (e.path().extension() != ".cpp") continue;
+            std::ifstream f(e.path());
+            std::stringstream b; b << f.rdbuf();
+            const std::string t = b.str();
+            for (std::sregex_iterator it(t.begin(), t.end(), re), end; it != end; ++it) boards.insert((*it)[1]);
+        }
+        CHECK(boards.size() >= 15, "found the boards in the sources (%zu)", boards.size());
+        for (const std::string& bd : boards) {
+            if (bd == "synthgroup" || bd == "diversitygroup" || bd == "HackRF (") continue;   // groups of radios and a name prefix
+            CHECK(generic != learn::radioBlurb(bd, ""), "board '%s' has no radio line", bd.c_str());
+        }
+        CHECK(std::string(learn::radioBlurb("rtltcp", "")).find("rtl_tcp") == 0 && std::string(learn::radioBlurb("airspyhf", "")).find("Airspy HF+") == 0, "rtl_tcp and Airspy HF+ are not taken for an RTL-SDR or an Airspy");
+    }
 
     if (failures) { std::printf("%d failures\n", failures); return 1; }
     std::printf("setup tests ok\n");
