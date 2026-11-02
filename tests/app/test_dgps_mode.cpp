@@ -24,11 +24,11 @@ int main() {
     CHECK(t.stdMode == 122, "stdMode %d, want 122", t.stdMode);
     const dect2::ModeTuning* reg = dect2::modeTuning(122);
     CHECK(reg != nullptr, "modeTuning(122) not registered");
-    if (reg) CHECK(std::string(reg->name) == "DGPS beacon (WIP)", "registered name '%s'", reg->name);
+    if (reg) CHECK(std::string(reg->name) == "DGPS beacon", "registered name '%s'", reg->name);
 
     // the mode row, the family count and the screen mapping in the app source
     const std::string table = readFile("app/ui/mode_table.cpp");
-    CHECK(table.find("{120, \"DGPS beacon (WIP)\", 4,") != std::string::npos, "mode row for family 120 missing");
+    CHECK(table.find("{120, \"DGPS beacon\", 4,") != std::string::npos, "mode row for family 120 missing");
     const std::string appH = readFile("app/app.h");
     { const size_t q = appH.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && atoi(appH.c_str() + q + 29) >= 121, "kNumFamilies does not cover family 120"); }
     const std::string modeUi = readFile("app/panels/modeui.cpp");
@@ -36,7 +36,7 @@ int main() {
 
     // the panel strings
     const std::string ui = readFile("app/dgps/dgps_ui.cpp");
-    const char* strings[] = {"DGPS beacon (WIP)", "Station ID: %d", "Carrier offset: %+.1f Hz", "Level: %.0f dBFS",
+    const char* strings[] = {"DGPS beacon", "Station ID: %d", "Carrier offset: %+.1f Hz", "Level: %.0f dBFS",
                              "Frames: %llu", "Message types seen: %s", "tune to about 300 kHz (283.5 - 325 kHz) and start the receiver"};
     for (const char* s : strings)
         CHECK(ui.find(s) != std::string::npos, "panel string missing: %s", s);
