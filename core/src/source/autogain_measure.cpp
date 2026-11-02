@@ -253,6 +253,27 @@ static void applyBandBias(ModeTarget& t, double f) {
     }
 }
 
+// Per mode, over the class's numbers (3.6; tests/source/test_autogain_modes.cpp lists every mode that changes). The classes are right for most modes; these have
+// a property the class does not know:
+//  - keyed bursts (ACARS, AIS, VDL2, HFDL, Iridium, Orbcomm, pagers, APRS, ISM sensors, BLE, Zigbee): a burst is well under 0.01 % of the samples, so the 99.99 %
+//    point sees only the noise between them; the headroom floor also reads the 2 s peak-hold, so a transmitter that keys up nearby cannot clip the next burst
+//  - below the noise (LoRa raw 73, mesh 22): the channel SNR reads about 0 dB at every gain, so a hill climb on it is random; they take the GNSS class
+//    (the floor above the ADC's own noise, headroom only as a floor)
+void applyModeRefinement(ModeTarget& t, int std_) {
+    switch (std_) {
+    case 16: case 18: case 21: case 25: case 26: case 29: case 30: case 37: case 46: case 53: case 67:
+        t.usePeakHold = true; t.minHeadroomDb = std::max(t.minHeadroomDb, 5.0);
+        break;
+    case 22: case 73:
+        t.kind = ModeKind::Gnss; t.metric = Metric::Sensitivity; t.policy = Policy::Sensitivity;
+        t.headroomDb = 12; t.marginGoalDb = 10; t.floorRiseDb = 10; t.lockSnrDb = 1e9;
+        t.minHeadroomDb = 6; t.improveDb = 1.0; t.comfortDb = 1e9;
+        t.why = "LoRa / mesh: the signals are below the noise; the noise floor must sit well above the ADC's own noise";
+        break;
+    default: break;
+    }
+}
+
 ModeTarget modeTargetFor(int std_, double bwHz, double rateHz, double freqHz) {
     ModeTarget t;
     auto in = [&](std::initializer_list<int> l) { for (int x : l) if (x == std_) return true; return false; };
@@ -307,6 +328,7 @@ ModeTarget modeTargetFor(int std_, double bwHz, double rateHz, double freqHz) {
     case ModeKind::WideSpan: t.minHeadroomDb = 6; t.improveDb = 1.5; t.comfortDb = 1e9; break;
     default: t.minHeadroomDb = 5; t.improveDb = 1.0; t.comfortDb = 6; break;
     }
+    applyModeRefinement(t, std_);
     if (freqHz > 0) applyBandBias(t, freqHz);
     return t;
 }

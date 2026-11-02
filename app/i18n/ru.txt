@@ -3455,3 +3455,6 @@ At a set speed each row is the highest level of the frames in between, so a shor
 Export results CSV...	Экспорт результатов в CSV...
 Nothing to export: no row matches the search.	Нечего экспортировать: ни одна строка не соответствует поиску.
 Saves the rows now in the table (with the search and the filters applied, built-in and yours) as a CSV file. Import and the Memory panel read it back.	Сохраняет строки таблицы (с учётом поиска и фильтров, встроенные и ваши) в файл CSV. Импорт и панель «Память» читают его обратно.
+Clean the input: DC spike, IQ imbalance and the radio's own spurs	Очистить вход: пик постоянной составляющей, дисбаланс IQ и собственные помехи приёмника
+Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Измеряется по самому сигналу и никогда не затрагивает нужный канал: пик постоянной составляющей и зеркальное изображение IQ пропускаются в режимах, которым они навредили бы, а помеха внутри канала вырезается, только если после перестройки остаётся на том же месте полосы (настоящий сигнал движется вместе с тюнером).
+%d spur(s) cut	Вырезано помех: %d

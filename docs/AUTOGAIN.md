@@ -257,3 +257,34 @@ start; the loop must reach 80-85 % of the best fixed gain's message rate with at
 Untested on real signals: the 3 % / 10 % thresholds and the -7 dBFS level line are readsb's order of magnitude, not tuned on a real sky; the message rate follows the
 traffic, so a change of traffic during a trial can fool one comparison (the next trial corrects it); the first search at start still uses the sensitivity floor
 score before the message loop takes over.
+
+## 9. 3.6: what changed after "still sucks" (issue #8), and what is still unverified
+
+Most of the diagnosis of 2026-10-31 (engine-side meter, objective-driven climb, slope test, per-unit calibration) was already in v2. 3.6 adds what the audit found missing,
+each with its own test, and checks every radio profile and every mode:
+
+* **Radios whose "dB" are an index** (SpyServer, KiwiSDR, generic): `RadioProfile::stepsUncertain`. A step of "1 dB" can be 3 real dB; the slope test then saw the wanted signal
+  coming out of the noise as an intermodulation product and capped the gain (SpyServer: -27 dB final SNR beside strong carriers, 6.6 dB in a quiet band, the old loop 5.7 / 15.2).
+  The slope test (loop and quick search) now waits until `unitScale_` is measured on that unit. After the fix: 8.2 / 15.2 dB (best 8.7 / 15.2). `unitScale_` no longer carries over to
+  another radio.
+* **ADC-limited start**: when the noise floor sits within 1.5 dB of the ADC's own noise, neither the floor nor the SNR moves with a step (the antenna's noise is still under
+  it), so a step up is accepted whatever the objective says, until the antenna's noise shows. Fixes a loop that stopped at the bottom of a coarse gain table.
+* **SDRplay LNA / IF split by policy** (`RadioProfile::splitKey`, driver setting `gainsplit`): Auto now chooses between the two splits of one overall gain that the driver can make: sensitivity (the LNA
+  keeps its gain, the IF takes the reduction first; the old behaviour and still the default) and linearity (the LNA takes the reduction first: a strong signal reaches the mixer and the ADC through less
+  gain). `StagePlan` carries the policy, so a policy change at the same gain is a real re-split. Tested on every RSP model, four bands and 15 gains: same total reduction, LNA reduction never smaller.
+* **Per-mode refinements** over the class numbers (`applyModeRefinement`): keyed-burst modes (ACARS, AIS, VDL2, HFDL, Iridium, Orbcomm, pagers, APRS, ISM, BLE, Zigbee) judge the headroom floor
+  on the 2 s peak-hold as well as the 99.99 % point (a burst is far under 0.01 % of the samples); LoRa raw and mesh take the GNSS class (below the noise, the SNR reads 0 dB at every gain, so a
+  climb on it is random). All other modes keep exactly their class numbers (tests/source/test_autogain_models.cpp walks the whole registry).
+* **Clean the input** (Auto gain settings, one switch): the DC removal, the IQ correction (both existing, skipped per mode where they harm, tests/engine/test_iq_modes.cpp) and the new
+  **adaptive spur notch** (`dsp/spur_notch.h`, `Engine::setSpurNotch`). All off by default. The spur notch is deliberately conservative: it cuts a narrow pure line (14 dB over its surroundings, 10 dB
+  down two FFT bins away) only when the same baseband frequency was a line under another radio centre frequency (a signal of the air moves with the tuner; a spur of the radio does not). Persistence
+  alone cut Inmarsat Aero's other P channels in the first version, so nothing is cut before the first retune. A wide channel and the whole-span receivers are skipped. Known weakness: a comb of fixed
+  carriers retuned by exactly its spacing (FM stations on a 100 kHz raster) puts a real carrier at the same baseband place twice.
+* Tests: `autogain_models` (every radio profile x 4 scenes through the simulated front end, old loop / new loop / exhaustive best, no clip, within 4 dB of the best at SNRs under 20 dB;
+  SDRplay split; per-mode table), `spur_notch` (cut depth, wanted carrier untouched, moving signal never cut, clean capture bit for bit, every registry mode's own channel width / rate / tune offset),
+  and `iq_modes` now also plays a spur outside the channel through each mode's own receiver with the notch on and off (13 modes have room for one; none gets worse).
+  `./test_autogain_models trace <radio> <scene 0-3> [old]` prints the controller's status every 5 s.
+
+Not verified on hardware: the SDRplay linearity split on a real RSP (the LNA tables are the API's, the effect on a real strong-signal band is untested); the 1.5 dB ADC-limited rule on a real RTL-SDR
+(the modelled ADC noise could be off by a dB or two: ENOB, not bits); the spur notch on a real radio's spurs; the SpyServer step size. Not done: calibration at more than one frequency, satellite-pass
+modes with no memory, a gain trace corpus recorded from real units.

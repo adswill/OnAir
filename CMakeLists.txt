@@ -174,7 +174,7 @@ target_sources(dect2core PRIVATE core/src/fingerprint/rf_fingerprint.cpp)   # RF
 target_sources(dect2core PRIVATE core/src/airports/airports.cpp core/src/common/radioid_db.cpp)   # radioid_db: the DMR / NXDN radio ID name list (user-downloaded CSV)
 target_sources(dect2core PRIVATE core/src/doctor/reception_doctor.cpp)   # Reception Doctor: why a mode is not decoding (docs/RECEPTION-DOCTOR.md)
 target_sources(dect2core PRIVATE core/src/sweep/station_health.cpp core/src/source/agc.cpp)   # station and antenna health report (docs/STATION_HEALTH.md)
-target_sources(dect2core PRIVATE core/src/source/autogain.cpp core/src/source/autogain_radio.cpp core/src/source/autogain_measure.cpp core/src/source/autogain_v2.cpp core/src/source/gain_meter.cpp core/src/source/gain_cal.cpp)   # automatic gain for every radio and mode (docs/AUTOGAIN.md)
+target_sources(dect2core PRIVATE core/src/source/autogain.cpp core/src/source/autogain_radio.cpp core/src/source/autogain_measure.cpp core/src/source/autogain_v2.cpp core/src/source/gain_meter.cpp core/src/source/gain_cal.cpp core/src/dsp/spur_notch.cpp)   # automatic gain for every radio and mode (docs/AUTOGAIN.md)
 target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup and restore (docs/BACKUP.md)
 # The modes added after FM (DVB-S/S2, DTMB, analog TV, DMR, DRM, ADS-B): every core/src/<mode>/*.cpp belongs to its mode, so a mode can add files without editing this list
   set(DECT2_MODES autodet fsq ifkp cquam selfcal dvbs dtmb atv dmr drm adsb gnss dab sonde ais marine acars inmc aero iridium mesh hdr cdr pager packet hfdig airband vdl2 ism vor ils m17 cell cw dstar hfdl nxdn gsmr psk js8 specx wb specan dvbc dpmr orbcomm uplink tetra tetrapol ale mac astro p25 ble iono qo100 wifi general time rid meteor nr cubesat ccsds goes globalstar vdes hrpt zigbee flarm hfbeacon dji nbiot halow codar datawell same multitone loraraw ant dect elektro ndb lbj railway horus eczas vdl4 uat wisun fpv wmbus tones sarsat mt63 zwave mscatter dgps dme sitor kris kavb kapp kaft eloran mpt1327 fusion ardop goesdcs modeac bletrk ltr edacs p25p2 kait satbeacon kaws milhf nfc kaal ham prop antd lorawan lorasat isdbs marinevhf argos sigfox sbas asterix voice)
@@ -1730,6 +1730,12 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_autogain_v2 tests/source/test_autogain_v2.cpp)
   target_link_libraries(test_autogain_v2 PRIVATE dect2core)
   add_test(NAME autogain_v2 COMMAND test_autogain_v2)   # Auto v2 (hill climb on the measured objective) against the old loop on simulated front ends; GainMeter; unit calibration (docs/AUTOGAIN.md section 8)
+  add_executable(test_autogain_models tests/source/test_autogain_models.cpp)
+  target_link_libraries(test_autogain_models PRIVATE dect2core)
+  add_test(NAME autogain_models COMMAND test_autogain_models)   # 3.6: every radio model through the simulated front end, the SDRplay LNA / IF split by policy, the per-mode targets
+  add_executable(test_spur_notch tests/dsp/test_spur_notch.cpp)
+  target_link_libraries(test_spur_notch PRIVATE dect2core)
+  add_test(NAME spur_notch COMMAND test_spur_notch)   # 3.6: the adaptive spur notch: out-of-channel lines, proved in-channel lines, wide channels, every mode's channel
   add_executable(test_agc_burst tests/source/test_agc_burst.cpp)
   target_link_libraries(test_agc_burst PRIVATE dect2core)
   add_test(NAME agc_burst COMMAND test_agc_burst)   # bursty strong signals: clipping, pumping and recovery of the automatic gain

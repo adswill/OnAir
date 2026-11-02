@@ -187,7 +187,7 @@ std::vector<RadioProfile> buildProfiles() {
     }
     {
         RadioProfile r;
-        r.id = "sdrplay"; r.name = "SDRplay RSP (1A / 1B / 2 / dx / duo)"; r.adcBits = 14; r.hasBias = true; r.driverSplits = true; r.settleSec = 0.3;
+        r.id = "sdrplay"; r.name = "SDRplay RSP (1A / 1B / 2 / dx / duo)"; r.adcBits = 14; r.hasBias = true; r.driverSplits = true; r.settleSec = 0.3; r.splitKey = "gainsplit";
         r.stages.push_back(stage("overall", "Gain", StageKind::Overall, range(0, 100, 1), 4, 10, -10, true,
                                  "One gain for OnAir: the driver turns it into an LNA state (RFGR) and an IF gain reduction (IFGR 20-59 dB). Reductions: more reduction = less gain."));
         GainStage rf = stage("rfgr", "RF gain reduction (LNA state)", StageKind::Lna, range(0, 9, 1), 4, 12, -10, true,
@@ -234,6 +234,7 @@ std::vector<RadioProfile> buildProfiles() {
     overallRadio("kiwisdr", "KiwiSDR (network)", 14, 0, 120, 1, 1.0, false, "The Kiwi's manual gain (its own AGC when 'Gain control' is automatic).", {}, "Shared by many listeners.");
     overallRadio("generic", "Other radio (one overall gain)", 12, 0, 60, 1, 0.3, false, "The driver's overall gain; the driver spreads it over its stages.", {}, "");
     for (auto& r : v) if (r.remote || r.id == "spyserver" || r.id == "kiwisdr") r.remote = true;
+    for (auto& r : v) if (r.id == "spyserver" || r.id == "kiwisdr" || r.id == "generic") r.stepsUncertain = true;
     return v;
 }
 
@@ -345,6 +346,7 @@ StagePlan planStages(const RadioProfile& r, double totalDb, Policy pol, uint32_t
     StagePlan p;
     p.db.assign(r.stages.size(), 0.0);
     p.ampOn = ampOn;
+    p.pol = pol; p.polMatters = !r.splitKey.empty();
     std::vector<int> movable;
     double fixedSum = 0;
     for (size_t i = 0; i < r.stages.size(); i++) {

@@ -185,6 +185,7 @@
 #include <memory>
 #include "dect2/power/power.h"
 #include "dect2/dsp/dc_notch.h"
+#include "dect2/dsp/spur_notch.h"
 #include <map>
 #include <utility>
 
@@ -412,6 +413,11 @@ public:
     // "Ignore DC spike": a notch at the capture's centre in front of the receiver (the spectrum still shows the spike)
     void setDcNotch(bool on) { dcNotch_ = on; }
     bool dcNotch() const { return dcNotch_.load(); }
+    // "Clean the input" (auto gain, 3.6): an adaptive notch for the radio's own spurs (dsp/spur_notch.h), off by default. Cuts persistent narrow lines
+    // outside the wanted channel, and inside it only when the same baseband line was seen under another radio centre (instrumental, not a signal).
+    void setSpurNotch(bool on) { spurNotch_ = on; }
+    bool spurNotch() const { return spurNotch_.load(); }
+    int spurNotchLines() const { return spurLines_.load(); }
     // DAB / DAB+: the ensemble found on the channel, and the station to play (a sub-channel id, -1 = none)
     DabEnsemble dabEnsemble() const { return rxD_.ensemble(); }
     DabFicAnalysis dabFic() const { return rxD_.ficAnalysis(); }
@@ -696,6 +702,10 @@ private:
     std::atomic<double> fileCentreHz_{0};
     std::atomic<bool> dcNotch_{false};
     DcNotch dcn_;
+    std::atomic<bool> spurNotch_{false};
+    std::atomic<int> spurLines_{0};
+    SpurNotch spurn_;
+    double spurRate_ = 0;
     void fileFollowVfo(const TuneSettings& t);
     OffsetMixer decodeMix_;
     // with offset tuning the radio runs faster than the mode needs; right after the shift the samples go back to the mode's own rate, so the

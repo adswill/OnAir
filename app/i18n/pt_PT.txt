@@ -3455,3 +3455,6 @@ At a set speed each row is the highest level of the frames in between, so a shor
 Export results CSV...	Exportar resultados para CSV...
 Nothing to export: no row matches the search.	Nada para exportar: nenhuma linha corresponde à pesquisa.
 Saves the rows now in the table (with the search and the filters applied, built-in and yours) as a CSV file. Import and the Memory panel read it back.	Guarda as linhas da tabela (com a pesquisa e os filtros aplicados, integradas e suas) como ficheiro CSV. Importar e o painel Memória leem-no de volta.
+Clean the input: DC spike, IQ imbalance and the radio's own spurs	Limpar a entrada: pico DC, desequilíbrio IQ e espúrios do próprio rádio
+Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Medido a partir do próprio sinal, nunca no canal pretendido: o pico DC e a imagem IQ são ignorados nos modos que prejudicariam, e um espúrio dentro do canal só é cortado se ficar no mesmo sítio da banda base depois de mudar de frequência (um sinal real move-se com o sintonizador).
+%d spur(s) cut	%d espúrio(s) cortado(s)

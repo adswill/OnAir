@@ -3476,3 +3476,6 @@ Advanced: every tab of this mode with all the detail	Išplėstinis: visi šio re
 Export results CSV...	Eksportuoti rezultatus į CSV...
 Nothing to export: no row matches the search.	Nėra ką eksportuoti: nė viena eilutė neatitinka paieškos.
 Saves the rows now in the table (with the search and the filters applied, built-in and yours) as a CSV file. Import and the Memory panel read it back.	Išsaugo lentelės eilutes (pritaikius paiešką ir filtrus, įtaisytas ir jūsų) kaip CSV failą. Importas ir Atminties skydelis jį perskaito.
+Clean the input: DC spike, IQ imbalance and the radio's own spurs	Išvalyti įvestį: nuolatinės srovės smaigalį, IQ nesubalansuotumą ir paties radijo trukdžių linijas
+Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Matuojama iš paties signalo ir niekada neliečia norimo kanalo: nuolatinės srovės smaigalys ir IQ veidrodinis vaizdas praleidžiami režimuose, kuriems jie pakenktų, o kanale esanti trukdžių linija pašalinama tik tada, kai pakeitus dažnį ji lieka toje pačioje bazinės juostos vietoje (tikras signalas juda kartu su imtuvu).
+%d spur(s) cut	Pašalinta trukdžių linijų: %d

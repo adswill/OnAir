@@ -95,6 +95,18 @@ void Engine::ingest(cf32* x, size_t n) {
     // spectrum analysers) keeps the capture as it is; the tune box is then only a marker for it
     const int act = activeStd_.load();
     const bool wholeSpan = fileCentreHz_.load() > 0 && ((mtvActive_.load(std::memory_order_relaxed) && (mtvSat_.load(std::memory_order_relaxed) ? act == 7 : act <= 1)) || (wideOn_.load(std::memory_order_relaxed) && WideModes::supports(act)) || act == 42 || act == 43);
+    if (spurNotch_.load(std::memory_order_relaxed) && !wholeSpan) {   // "Clean the input": the radio's own spurs, never the wanted channel
+        const double r = rate_.load();
+        if (r != spurRate_) { spurRate_ = r; spurn_.configure(r); }
+        double bw = 0, rf = captureCentreHz(), tuneOff = 0;
+        if (const ModeTuning* mt = modeTuning(act + 1)) { bw = mt->bandwidthMhz * 1e6; tuneOff = mt->tuneOffsetHz; }
+        { std::lock_guard<std::mutex> lk(tuneMu_); bw = std::max(bw, lastTune_.bandwidthMhz * 1e6); }
+        // a wide channel (more than a third of the capture) protects all of it; a mode that tunes off its channel has it on either side of the centre
+        if (bw > r / 3) bw = r;
+        spurn_.setChannel(decodeShiftHz_.load() + (tuneOff != 0 ? -tuneOff : 0), bw, rf, tuneOff != 0 ? tuneOff : 0);
+        spurn_.process(x, n);
+        spurLines_ = spurn_.activeCount();
+    } else if (spurLines_.load(std::memory_order_relaxed) != 0 || spurRate_ != 0) { spurLines_ = 0; spurRate_ = 0; spurn_.reset(); }
     {
         cpu::Scope cs(cpuDec_.load(std::memory_order_relaxed));   // the receiver's CPU (and its pool jobs) to the decoder account
         if (!wholeSpan) decodeMix_.mix(x, n);

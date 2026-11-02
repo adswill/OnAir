@@ -14,6 +14,7 @@
 #include "dect2/engine/engine.h"
 #include "dect2/engine/engine_testkit.h"
 #include "dect2/dsp/iq_correct.h"
+#include "dect2/dsp/spur_notch.h"
 #include "dect2/engine/mode_synth.h"
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/acars/acars_gen.h"
@@ -28,6 +29,7 @@
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <random>
 #include <condition_variable>
 #include <cstdint>
 #include <cstdio>
@@ -122,6 +124,10 @@ struct Setup {
     bool dc = false, iq = false;
     bool impaired = false;  // DC offset and IQ imbalance added before the corrections
     bool imbalance = true;  // with impaired: the IQ imbalance too (the spectrum check adds the DC alone)
+    // a spur of the radio outside the wanted channel (3.6, dsp/spur_notch.h): a tone spurDb under the signal at spurHz, with the spur notch on or off
+    double spurHz = 0, spurDb = -25;
+    bool notch = false;
+    double chBw = 0, chOff = 0, tuneOff = 0;
 };
 
 struct Residual {           // the impairment before and after the corrections, dB against the signal power
@@ -148,6 +154,24 @@ static void playThrough(const Base& base, double rate, const Setup& s, bool keep
     const double dph = 2 * M_PI * s.f0 / rate;
     const size_t tail = base.size() * 3 / 4;
     std::vector<cf32> x(kBlock), y(kBlock), yin(kBlock);
+    SpurNotch sn;
+    if (s.notch) {
+        sn.frameSec = 0.04; sn.framesToAct = 3; sn.configure(rate);
+        // the radio's spur was seen for a while under another centre frequency (the lines of the mode's own signal were not: they move with the tuner)
+        sn.setChannel(s.chOff, s.chBw, 100e6, s.tuneOff != 0 ? s.tuneOff : 0.0);
+        std::vector<cf32> pre(kBlock);
+        std::mt19937 rng(5); std::normal_distribution<float> nd(0.f, (float)(base.rms * 0.05));
+        std::complex<double> ph = 1.0; const std::complex<double> st = std::polar(1.0, 2 * M_PI * s.spurHz / rate);
+        const float a = (float)(base.rms * std::pow(10.0, s.spurDb / 20));
+        for (int b = 0; b < (int)(1.5 * rate / kBlock) + 2; b++) {
+            for (size_t i = 0; i < kBlock; i++) { pre[i] = cf32(nd(rng), nd(rng)) + a * cf32((float)ph.real(), (float)ph.imag()); ph *= st; if ((i & 1023) == 1023) ph /= std::abs(ph); }
+            sn.process(pre.data(), kBlock);
+        }
+        sn.setChannel(s.chOff, s.chBw, 100.0371e6, s.tuneOff != 0 ? s.tuneOff : 0.0);
+    }
+    const float spurA = (float)(base.rms * std::pow(10.0, s.spurDb / 20));
+    std::complex<double> spurPh = 1.0;
+    const std::complex<double> spurSt = s.spurHz != 0 ? std::polar(1.0, 2 * M_PI * s.spurHz / rate) : std::complex<double>(1.0);
     // over the tail: sums for a least-squares complex gain c (z = c x + e): a change of gain or phase is not an impairment
     struct Fit { std::complex<double> zx = 0, z = 0, x = 0; double zz = 0, xx = 0; };
     Fit fIn, fOut;
@@ -164,8 +188,13 @@ static void playThrough(const Base& base, double rate, const Setup& s, bool keep
         if (s.impaired && s.imbalance) for (size_t i = 0; i < n; i++) y[i] = cf32(x[i].real() + dc.real(), g * (x[i].imag() * cph + x[i].real() * sph) + dc.imag());
         else if (s.impaired) for (size_t i = 0; i < n; i++) y[i] = x[i] + dc;
         else std::copy(x.begin(), x.begin() + (long)n, y.begin());
+        if (s.spurHz != 0) for (size_t i = 0; i < n; i++) { y[i] += spurA * cf32((float)spurPh.real(), (float)spurPh.imag()); spurPh *= spurSt; if ((i & 1023) == 1023) spurPh /= std::abs(spurPh); }
         if (res) std::copy(y.begin(), y.begin() + (long)n, yin.begin());
         cor.process(y.data(), n, keepDc, keepIq);
+        if (s.notch) {
+            sn.process(y.data(), n);
+            if (getenv("IQ_MODES_VERBOSE")) { static thread_local int lastN = -1; if (sn.activeCount() != lastN) { lastN = sn.activeCount(); printf("      t=%.2fs notch cuts %d line(s):", (double)(o + n) / rate, lastN); for (const auto& sp : sn.spurs()) if (sp.active) printf(" %+.0f Hz(%.0f dB)", sp.hz, sp.dB); printf("\n"); } }
+        }
         if (res) {
             ref.process(x.data(), n, keepDc, keepIq);   // the clean signal through the DC removal alone
             if (o + n > tail) {
@@ -182,6 +211,7 @@ static void playThrough(const Base& base, double rate, const Setup& s, bool keep
         }
         sink(y.data(), n);
     }
+    if (s.notch && getenv("IQ_MODES_VERBOSE")) for (const auto& sp : sn.spurs()) printf("      notch line %+.0f Hz %.1f dB%s%s\n", sp.hz, sp.dB, sp.inChannel ? " in-channel" : "", sp.active ? " CUT" : "");
     if (res && nt && fIn.xx > 0) {
         auto db = [](double v) { return 10 * std::log10(std::max(v, 1e-15)); };
         const double N = (double)nt, P = fIn.xx / N;
@@ -222,7 +252,8 @@ struct Mode {
     bool radio = true;                                      // the representative of its mode in the engine's spectrum check
     // results
     Metric clean[4][3];
-    Metric impOff, impOn;
+    Metric impOff, impOn, spurOff, spurOn;
+    double spurHz = 0, chBw = 0, chOff = 0, tuneOff = 0;   // the spur check: where the spur sits (0: the channel fills the capture, no spur check)
     Residual res;
     double cpu = 0;
     int maxJobs = 14;                                       // receiver runs of this mode at once (the big receivers hold a lot of memory)
@@ -806,6 +837,7 @@ int main(int argc, char** argv) {
                 Setup s;
                 Residual res;
                 if (j.kind == 0) { s.f0 = kOffsets[j.fi]; s.dc = j.ci >= 1; s.iq = j.ci >= 2; }
+                else if (j.kind >= 3) { s.spurHz = m.spurHz; s.notch = j.kind == 4; s.chBw = m.chBw; s.chOff = m.chOff; s.tuneOff = m.tuneOff; }
                 else { s.impaired = true; s.dc = s.iq = j.kind == 2; }
                 const double c0 = wallNow();
                 Play play = [&](const Sink& sink) { playThrough(base, m.rate, s, keepDc, keepIq, sink, j.kind == 2 ? &res : nullptr); };
@@ -819,6 +851,8 @@ int main(int argc, char** argv) {
                 m.cpu += wallNow() - c0;
                 if (j.kind == 0) m.clean[j.fi][j.ci] = r;
                 else if (j.kind == 1) m.impOff = r;
+                else if (j.kind == 3) m.spurOff = r;
+                else if (j.kind == 4) m.spurOn = r;
                 else { m.impOn = r; m.res = res; }
                 m.running--;
                 if (--m.pending == 0) live--;   // the last run of this signal
@@ -844,6 +878,20 @@ int main(int argc, char** argv) {
         for (int fi = 0; fi < 4; fi++) for (int ci = 0; ci < 3; ci++) queue.push_back({Job{m, 0, fi, ci}, base});
         queue.push_back({Job{m, 1, 0, 0}, base});
         queue.push_back({Job{m, 2, 0, 0}, base});
+        {   // the spur notch check: a spur of the radio outside the channel, the engine's channel rule (dsp/spur_notch.h)
+            const ModeTuning* mt = modeTuning(m->stdMode);
+            double bw = mt ? mt->bandwidthMhz * 1e6 : 0;
+            const double off = mt ? mt->tuneOffsetHz : 0;
+            if (bw > m->rate / 3) bw = m->rate;
+            const double chOff = off != 0 ? -off : 0.0, half = bw / 2 + 3 * m->rate / SpurNotch::kFft;
+            m->spurHz = 0;
+            for (double f : {0.43, -0.43, 0.31, -0.31, 0.17, -0.17}) {
+                const double h = f * m->rate;
+                if (bw > 0 && std::fabs(h - chOff) > half + 0.02 * m->rate && (off == 0 || std::fabs(h - off) > half + 0.02 * m->rate) && std::fabs(h) > 0.05 * m->rate) { m->spurHz = h; break; }
+            }
+            m->chBw = bw; m->chOff = chOff; m->tuneOff = off;
+            if (m->spurHz != 0) { m->pending += 2; queue.push_back({Job{m, 3, 0, 0}, base}); queue.push_back({Job{m, 4, 0, 0}, base}); }
+        }
         cv.notify_all();
     }
     { std::lock_guard<std::mutex> lk(mu); doneAdding = true; }
@@ -880,6 +928,15 @@ int main(int argc, char** argv) {
         if (std::isfinite(m.clean[0][0].snr) && m.clean[0][0].snr < refImp.snr) refImp.snr = m.clean[0][0].snr;
         if (std::isfinite(m.clean[0][0].aux) && m.clean[0][0].aux < refImp.aux) refImp.aux = m.clean[0][0].aux;
         if (worse(m, refImp, m.impOn, why)) FAILF("%s, DC offset and IQ imbalance: the corrections make it worse: %s", m.name.c_str(), why.c_str());
+        // a spur of the radio outside the channel: the notch must not make the mode worse than the clean signal (it engages, test_spur_notch measures the cut)
+        if (m.spurHz != 0) {
+            printf("    %-26s spur at %+.0f Hz (-25 dB): notch off %s  on %s\n", m.name.c_str(), m.spurHz, fmt(m.spurOff, m.qIsDb).c_str(), fmt(m.spurOn, m.qIsDb).c_str());
+            Metric refS = m.spurOff;
+            if (m.clean[0][0].q < refS.q) refS.q = m.clean[0][0].q;
+            if (std::isfinite(m.clean[0][0].snr) && m.clean[0][0].snr < refS.snr) refS.snr = m.clean[0][0].snr;
+            if (std::isfinite(m.clean[0][0].aux) && m.clean[0][0].aux < refS.aux) refS.aux = m.clean[0][0].aux;
+            if (worse(m, refS, m.spurOn, why)) FAILF("%s, a spur outside the channel: the spur notch makes it worse: %s", m.name.c_str(), why.c_str());
+        }
         // the impairment comes out of the samples, except the part the mode keeps
         if (!keepDc && m.res.dcOut > m.res.dcIn - 20) FAILF("%s: DC %.1f dB before, %.1f dB after the correction", m.name.c_str(), m.res.dcIn, m.res.dcOut);
         if (keepDc && std::fabs(m.res.dcOut - m.res.dcIn) > 1.5) FAILF("%s: the DC is kept for this mode, but it went from %.1f to %.1f dB", m.name.c_str(), m.res.dcIn, m.res.dcOut);
