@@ -1,0 +1,2 @@
+JetBrains Mono (c) The JetBrains Mono Project Authors.
+It is licensed under the SIL Open Font License 1.1 (https://openfontlicense.org). This file is Latin subsets in WOFF2 form.
