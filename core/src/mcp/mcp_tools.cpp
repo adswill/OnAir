@@ -887,6 +887,7 @@ std::vector<Tool> makeTools() {
         t.fn = [](ToolCtx& c, const Json& a) {
             const int bins = (int)std::max(16.0, std::min(4096.0, a.numOr("bins", 512)));
             SpecInfo s = spectrum(c, bins);
+            if (!s.ok && isRunning(c)) needSpectrumWait(c, s, bins, 4);
             if (!s.ok) throw ToolError("no spectrum: the receiver is not running or has not delivered samples (call start_receiver)");
             std::vector<float> sorted = s.db;
             std::sort(sorted.begin(), sorted.end());

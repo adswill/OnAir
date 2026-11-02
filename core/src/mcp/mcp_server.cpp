@@ -131,12 +131,10 @@ struct Server::Impl {
         try {
             Json out = tool->fn(ctx, args.isNull() ? Json::object() : args);
             std::string txt = out.dump();
-            bool cut = false;
-            if (txt.size() > o.maxResultBytes) { txt = txt.substr(0, o.maxResultBytes) + "... [result cut at " + std::to_string(o.maxResultBytes) + " bytes; ask for less, e.g. a smaller limit]"; cut = true; }
+            if (txt.size() > o.maxResultBytes) { txt = txt.substr(0, o.maxResultBytes) + "... [result cut at " + std::to_string(o.maxResultBytes) + " bytes; ask for less, e.g. a smaller limit]"; }
             Json arr = Json::array();
             arr.push(textContent(txt));
             res.set("content", arr);
-            if (!cut && out.isObj()) res.set("structuredContent", out);
             res.setBool("isError", false);
             record(name, args, true, "ok");
         } catch (const ToolError& e) {
