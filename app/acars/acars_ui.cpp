@@ -1,5 +1,6 @@
 // ACARS screens: the message list with a detail pane, the aircraft table and the channel bars.
 #include "dect2/common/time_fmt.h"
+#include "ui/kit/mode_panel.h"
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
 #include "../panels/photo_links_ui.h"
@@ -672,6 +673,15 @@ void meters(const App& a, std::vector<ModeMeter>& out) {
 // For the map upload (app/map/map_send.cpp)
 derivedkin::Info acarsKinematics(const dect2::AcarsAircraft& c, double now) { return kinOf(c, now); }
 
+// Simple view: the live messages, the aircraft and the channels side by side
+static void command(App& a) {
+    loadState();
+    kit::modeHeader({16, "ACARS", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    modepanel::panes({{"##acmsgs", tr("Messages"), [&a] { messageView(a); }, 1.7f, 260.f},
+                      {"##acair", tr("Aircraft"), [&a] { aircraftView(a); }, 1.f, 220.f},
+                      {"##acchan", tr("Channels"), [&a] { channelView(a); }, 0.9f, 200.f}}, 320.f);
+}
+
 extern const ModeUi kAcarsUi;
 const ModeUi kAcarsUi = {
     .sideTitle = "AIRCRAFT",
@@ -687,4 +697,5 @@ const ModeUi kAcarsUi = {
     .synth = synth,
     .tick = tick,
     .meters = meters,
+    .command = command,
 };
