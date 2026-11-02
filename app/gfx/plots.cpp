@@ -21,6 +21,15 @@ static void identifyPlotInput(App& a, int plotId) {
     const bool hov = plt::IsPlotHovered();
     const bool select = a.identifyTool || io.KeyShift;
     double rlo = 0, rhi = 0;
+    if (plotId == 0 && a.engine.wideAll()) {   // Everything in view: each signal found, as a band (green decoding, amber identifying, grey off / paused)
+        const double rc = radioCenterMhz(a);
+        for (const dect2::WsEntry& e : a.engine.wideAllSession().entries()) {
+            const double c = rc + e.offsetHz / 1e6, hw = std::max(e.bandwidthHz, 8000.0) * 0.5e-6;
+            plt::Spec ws; ws.FillColor = e.state == dect2::WsState::Running ? ImVec4(0.25f, 0.85f, 0.35f, 0.16f) : e.state == dect2::WsState::Identifying ? ImVec4(0.95f, 0.8f, 0.3f, 0.16f) : ImVec4(0.6f, 0.6f, 0.6f, 0.12f);
+            char nm[32]; snprintf(nm, sizeof nm, "##wab%d", e.id);
+            plt::PlotVBand(nm, c - hw, c + hw, ws);
+        }
+    }
     if (plotId == 0 && identifyRegionMhz(rlo, rhi)) { plt::Spec rs; rs.FillColor = ImVec4(0.30f, 0.65f, 1.0f, 0.12f); plt::PlotVBand("##idregion", rlo, rhi, rs); }
     if (hov && select && ImGui::IsMouseClicked(0) && a.engine.running()) { dragPlot = plotId; x0 = plt::GetPlotMousePos().x; }
     if (dragPlot == plotId) {

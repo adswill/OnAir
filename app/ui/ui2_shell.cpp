@@ -668,6 +668,7 @@ static void viewMenu(App& a) {
         if (ImGui::MenuItem(tr("Station health"), nullptr, &a.stationHealthOpen)) {}
         if (ImGui::MenuItem(tr("Reception doctor"), nullptr, &a.doctorOpen)) {}
         if (ImGui::MenuItem(tr("RF fingerprint"), nullptr, &a.rfFpOpen)) {}
+        if (ImGui::MenuItem(tr("Everything in view"), nullptr, &a.wideAllOpen)) {}
         if (ImGui::MenuItem(tr("Scanner (highly experimental)"), nullptr, &a.scanViewOpen)) {}
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("HIGHLY EXPERIMENTAL: step through a list of frequencies and modes, or a band, and stop on activity"));
         ImGui::MenuItem(tr("Propagation..."), nullptr, &a.propOpen);
