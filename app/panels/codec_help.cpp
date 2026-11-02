@@ -139,14 +139,16 @@ Text textOf(CodecHelp c) {
                 "Build the plug-in yourself (full steps in docs/CODECS.md; the OnAir source has tools/addons/aeroambe). In MSYS2 MINGW64:\n"
                 "  pacman -S --needed git mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake make\n"
                 "  git clone https://github.com/jontio/libaeroambe\n"
+                "  cmake -S libaeroambe/mbelib-master -B libaeroambe/mbelib-master/build -DCMAKE_POLICY_VERSION_MINIMUM=3.5 && cmake --build libaeroambe/mbelib-master/build\n"
                 "  git clone https://github.com/adswill/OnAir && cd OnAir/tools/addons/aeroambe\n"
-                "  cmake -S . -B build -G \"MSYS Makefiles\" -DMBELIB_DIR=../../../../libaeroambe/mbelib-master && cmake --build build\n"
+                "  cmake -S . -B build -G \"MSYS Makefiles\" -DAEROAMBE_MBELIB=../../../../libaeroambe/mbelib-master && cmake --build build\n"
                 "Copy onair-codec-aeroambe.dll into the codecs folder below. Use 64-bit if OnAir is 64-bit.",
 #else
                 "Build the plug-in yourself (full steps in docs/CODECS.md; the OnAir source has tools/addons/aeroambe):\n"
                 "  git clone https://github.com/jontio/libaeroambe\n"
+                "  cmake -S libaeroambe/mbelib-master -B libaeroambe/mbelib-master/build -DCMAKE_POLICY_VERSION_MINIMUM=3.5 && cmake --build libaeroambe/mbelib-master/build\n"
                 "  git clone https://github.com/adswill/OnAir && cd OnAir/tools/addons/aeroambe\n"
-                "  cmake -S . -B build -DMBELIB_DIR=../../../../libaeroambe/mbelib-master && cmake --build build\n"
+                "  cmake -S . -B build -DAEROAMBE_MBELIB=../../../../libaeroambe/mbelib-master && cmake --build build\n"
                 "Copy the library the build made (onair-codec-aeroambe.dylib or .so) into the codecs folder below, then accept the notice once.",
 #endif
                 true};
