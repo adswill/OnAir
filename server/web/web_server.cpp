@@ -466,6 +466,22 @@ struct WebServer::Impl {
             reply(io, 200, "{\"ok\":true}", "application/json");
             return;
         }
+        if (r.method == "POST" && sub == "ban") {
+            const double id = num("id", -1);
+            if (id < 1 || id > 2e9) { replyErr(io, 400, "id"); return; }
+            std::string why = str("reason");
+            if (why.size() > 64) why.resize(64);
+            if (!hub.ban((int)id, (int)num("minutes", 1440), why)) { replyErr(io, 404, "no such session"); return; }
+            reply(io, 200, "{\"ok\":true}", "application/json");
+            return;
+        }
+        if (r.method == "GET" && sub == "bans") { reply(io, 200, hub.bansJson(), "application/json"); return; }
+        if (r.method == "POST" && sub == "unban") {
+            const std::string tag = str("address");
+            if (tag.empty() || !hub.unban(tag)) { replyErr(io, 404, "no such ban"); return; }
+            reply(io, 200, "{\"ok\":true}", "application/json");
+            return;
+        }
         if (r.method == "POST" && sub == "policy") {
             std::string e;
             bool on = false;

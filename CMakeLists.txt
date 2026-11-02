@@ -352,7 +352,7 @@ target_link_libraries(onair-plugin-host PRIVATE dect2_plugin)
 # OnAir Web: many listeners, each with an own receiver inside the host's capture (server/web, docs/ONAIR-WEB.md). Every web source is built with
 # the host setting web_allow_tx=0 (the default; 1 lets listeners transmit through the host's radio, see docs/ONAIR-WEB.md).
 set(ONAIR_WEB_SOURCES server/web/web_json.cpp server/web/web_proto.cpp server/web/web_dsp.cpp server/web/web_policy.cpp server/web/web_ranges.cpp server/web/web_hub.cpp
-    server/web/web_server.cpp server/web/web_config.cpp server/web/web_directory_proto.cpp server/web/web_directory.cpp)
+    server/web/web_server.cpp server/web/web_config.cpp server/web/web_directory_proto.cpp server/web/web_directory.cpp server/web/web_relay.cpp)
 list(APPEND ONAIR_WEB_SOURCES server/web/web_decoders.cpp)   # the receivers as web decoders
 add_library(onair_web STATIC ${ONAIR_WEB_SOURCES})
 target_include_directories(onair_web PUBLIC server)
@@ -1775,7 +1775,7 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_server_host PRIVATE onair_web dect2core)
   target_compile_definitions(test_server_host PRIVATE ONAIR_SERVER_VERSION="${PROJECT_VERSION}")
   add_test(NAME server_host COMMAND test_server_host)
-  foreach(t web_proto web_dsp web_hub web_server web_safety web_tx_guard web_ranges web_directory)
+  foreach(t web_proto web_dsp web_hub web_server web_safety web_tx_guard web_ranges web_directory web_relay)
 
     add_executable(test_${t} tests/server/test_${t}.cpp server/server_config.cpp)
     target_link_libraries(test_${t} PRIVATE onair_web)
