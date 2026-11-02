@@ -2675,3 +2675,8 @@ if(MINGW)
     endforeach()
   endif()
 endif()
+
+# kaws_synth waits for a decode in the UTC slots of the computer clock: about 2 min on a Mac, but over 4 min on a loaded Windows runner
+if(TEST kaws_synth)
+  set_tests_properties(kaws_synth PROPERTIES TIMEOUT 1500)
+endif()
