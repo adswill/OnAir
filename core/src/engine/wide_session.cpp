@@ -7,6 +7,10 @@
 #include "dect2/engine/channelizer.h"
 #include "dect2/engine/multitv.h"
 #include "dect2/t2/t2rx.h"
+#include "dect2/tetra/tetra_rx.h"
+#include "dect2/tetra/tetra_tel.h"
+#include "dect2/inmsat/inmsat_rx.h"
+#include "dect2/inmsat/inmsat_tel.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -21,7 +25,7 @@
 namespace dect2 {
 
 const char* wsKindName(WsKind k) {
-    static const char* const n[] = {"unknown", "DMR", "P25", "NXDN", "dPMR", "D-STAR", "Fusion", "M17", "Pager", "APRS", "AM", "NFM", "DVB-T", "DVB-T2", "no decoder"};
+    static const char* const n[] = {"unknown", "DMR", "P25", "NXDN", "dPMR", "D-STAR", "Fusion", "M17", "Pager", "APRS", "AM", "NFM", "DVB-T", "DVB-T2", "TETRA", "Inmarsat", "no decoder"};
     return (int)k >= 0 && (int)k < (int)WsKind::Count ? n[(int)k] : "unknown";
 }
 int wsKindStdMode(WsKind k) {
@@ -49,12 +53,15 @@ constexpr double kIdRate = 96000.0;
 constexpr double kTickSec = 0.25;
 constexpr int kTvIdBase = 1000000;
 constexpr int kMaxIdentifying = 6;
+constexpr double kTvZoneMarginHz = 500000.0;   // narrow carriers are not searched this close to a TV slot
 constexpr double kKnownTolHz = 7000.0;
 
 double nowSec() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
 
 bool bankKind(WsKind k) { return wsKindStdMode(k) != 0; }
 bool vfoKind(WsKind k) { return k == WsKind::Am || k == WsKind::Nfm; }
+bool spanKind(WsKind k) { return k == WsKind::Tetra || k == WsKind::Inmarsat; }
+int spanIdx(WsKind k) { return k == WsKind::Tetra ? 0 : 1; }
 
 WsKind kindOfDbMode(const std::string& m) {
     if (m == "dmr") return WsKind::Dmr;
@@ -161,6 +168,7 @@ struct WideSession::Impl {
         double nextTry = 0;
         bool pending = false;
         double vfoOff = 1e18;
+        bool hidden = false;   // a second finder carrier of the same wide signal (a 25 kHz TETRA carrier shows as two): kept so the finder does not find it again, not listed
     };
     std::vector<std::unique_ptr<N>> nar;
     struct T {
@@ -179,6 +187,22 @@ struct WideSession::Impl {
     double tvWidthMhz = 0, tvGrid = 0;
     std::vector<ChannelSlotPos> tvSlots;
     double tvEmptySince = -1;
+
+    // span decoders (TETRA, Inmarsat): fed the whole capture while an entry of that kind runs
+    TetraReceiver tetra;
+    InmsatReceiver inm;
+    bool spanConf[2] = {false, false}, spanOk[2] = {true, true}, spanFeed[2] = {false, false};
+    double winSpan[2] = {0, 0}, spanLoad[2] = {0, 0};
+    uint64_t tetraSeq = 0, inmSeq = 0;
+    std::string spanInfo[2];
+    bool spanLocked[2] = {false, false};
+    uint64_t spanItems[2] = {0, 0};
+
+    // signals marked by the user
+    struct Add { int id; double off, bw; WsKind kind; };
+    std::vector<Add> adds;
+    std::vector<int> removes;
+    int nextManual = 500000;
 
     std::set<int> dropped;
     double lastChange = -100;
@@ -282,7 +306,9 @@ struct WideSession::Impl {
     VfoBank::Sink sink;
 
     void clearState() {
-        nar.clear(); tvs.clear(); tvSlots.clear(); tvWidthMhz = 0; tvGrid = 0; tvEmptySince = -1;
+        nar.clear(); tvs.clear(); spanConf[0] = spanConf[1] = false; spanOk[0] = spanOk[1] = true; spanFeed[0] = spanFeed[1] = false; spanLoad[0] = spanLoad[1] = winSpan[0] = winSpan[1] = 0; tetraSeq = inmSeq = 0; spanInfo[0].clear(); spanInfo[1].clear(); spanLocked[0] = spanLocked[1] = false; spanItems[0] = spanItems[1] = 0; tetra.reset(); inm.reset();
+        { std::lock_guard<std::mutex> lk(ctlMu); adds.clear(); removes.clear(); }
+ tvSlots.clear(); tvWidthMhz = 0; tvGrid = 0; tvEmptySince = -1;
         dropped.clear(); followNow.clear(); vfoNow.clear();
         for (int i = 0; i < 2; i++) { mtv[i].reset(); allowedNow[i].clear(); allowedSet[i] = false; }
         for (auto& m : followNow) (void)m;
@@ -320,10 +346,11 @@ struct WideSession::Impl {
         WsKind k = kindOfVoice(v.sys);
         const bool sure = v.verdict >= autodet::VerdictLikely;
         if (k != WsKind::Unknown && sure) { n.e.kind = k; n.e.identity = std::string(autodet::voiceSysName(v.sys)) + " (" + autodet::verdictName(v.verdict) + ")"; return; }
-        if (v.sys == autodet::VoiceTetra && sure) { n.e.kind = WsKind::NoDecoder; n.e.identity = "TETRA"; n.e.why = "TETRA is identified; the wide session has no decoder for it (use the TETRA mode on this channel)"; return; }
+        if (v.sys == autodet::VoiceTetra && sure) { n.e.kind = WsKind::Tetra; n.e.identity = std::string("TETRA (") + autodet::verdictName(v.verdict) + ")"; return; }
         std::string why;
         const WsKind kn = knownKind(abs, why);
         if (kn != WsKind::Unknown) { n.e.kind = kn; n.e.identity = why; return; }
+        if (center > 0 && abs >= 1525e6 && abs <= 1559e6) { n.e.kind = WsKind::Inmarsat; n.e.identity = "Inmarsat downlink band (L band)"; return; }
         if (v.sys == autodet::VoiceAnalogFm) {
             n.e.kind = cfg.airband && center > 0 && airBand(abs) ? WsKind::Am : WsKind::Nfm;
             n.e.identity = n.e.kind == WsKind::Am ? "analogue voice, air band (AM)" : "analogue FM";
@@ -355,7 +382,7 @@ struct WideSession::Impl {
     // ------------------------------------------------------------------------------------------------ the entries
     double rankOf(const WsEntry& e) const {
         double b = 30;
-        if (wsIsTv(e.kind)) b = 60; else if (bankKind(e.kind) && e.kind != WsKind::Pager && e.kind != WsKind::Packet) b = 50; else if (e.kind == WsKind::Pager || e.kind == WsKind::Packet) b = 40;
+        if (wsIsTv(e.kind)) b = 60; else if (spanKind(e.kind)) b = 45; else if (bankKind(e.kind) && e.kind != WsKind::Pager && e.kind != WsKind::Packet) b = 50; else if (e.kind == WsKind::Pager || e.kind == WsKind::Packet) b = 40;
         b += (e.locked ? 20 : 0) + (e.active ? 10 : 0) + std::max(0.0, std::min(30.0, e.snrDb)) / 3.0 + 10.0 * e.priority;
         if (e.pinned || e.id == listen) b += 1000;
         return b;
@@ -370,6 +397,7 @@ struct WideSession::Impl {
         if (e.state == WsState::Unidentified && e.kind == WsKind::Unknown) return;
         if (e.kind == WsKind::Unknown) { e.state = WsState::Identifying; return; }
         if (e.kind == WsKind::NoDecoder) { e.state = WsState::NoDecoder; return; }
+        if (spanKind(e.kind) && !spanOk[spanIdx(e.kind)]) { e.state = WsState::NoDecoder; e.why = "the capture rate is too low for this decoder"; return; }
         if (!e.enabled) { e.state = WsState::Off; e.why = "switched off"; return; }
         if (dropped.count(e.id)) { e.state = WsState::Dropped; e.why = "dropped: the CPU budget was exceeded and this had the lowest rank"; return; }
         e.state = WsState::Running; e.why.clear();
@@ -395,7 +423,21 @@ struct WideSession::Impl {
         }
     }
 
+    void mergeSpanDups() {
+        for (auto& n : nar) n->hidden = false;
+        for (auto& a : nar) {
+            if (a->e.kind != WsKind::Tetra || a->hidden) continue;
+            for (auto& b : nar) {
+                if (b.get() == a.get() || b->hidden || b->e.kind != WsKind::Tetra) continue;
+                if (std::fabs(a->e.offsetHz - b->e.offsetHz) > 30000) continue;
+                N* lose = (a->e.levelDb >= b->e.levelDb) ? b.get() : a.get();
+                lose->hidden = true;
+                if (lose == a.get()) break;
+            }
+        }
+    }
     void syncKinds() {
+        mergeSpanDups();
         for (auto& n : nar) {
             bool forced; WsKind fk;
             applyCtl(n->e, forced, fk);
@@ -416,7 +458,7 @@ struct WideSession::Impl {
     // ------------------------------------------------------------------------------------------------ the TV side
     std::vector<std::pair<double, double>> zones() const {
         std::vector<std::pair<double, double>> z;
-        for (auto& t : tvs) if (t->occ) z.push_back({t->e.offsetHz - tvWidthMhz * 0.5e6, t->e.offsetHz + tvWidthMhz * 0.5e6});
+        for (auto& t : tvs) if (t->occ) z.push_back({t->e.offsetHz - tvWidthMhz * 0.5e6 - kTvZoneMarginHz, t->e.offsetHz + tvWidthMhz * 0.5e6 + kTvZoneMarginHz});   // the margin: a channel off the slot grid (a real one often is) sticks out of its slot
         return z;
     }
     void tvScanTick() {
@@ -568,7 +610,7 @@ struct WideSession::Impl {
         if (b <= 0) { dropped.clear(); return; }
         const double load = loadNow();
         std::vector<WsEntry*> all;
-        for (auto& n : nar) all.push_back(&n->e);
+        for (auto& n : nar) if (!n->hidden) all.push_back(&n->e);
         for (auto& t : tvs) all.push_back(&t->e);
         if (load > b && clock - lastChange >= 1.5) {
             WsEntry* v = nullptr;
@@ -620,7 +662,57 @@ struct WideSession::Impl {
         }
     }
 
+    void takeAdds() {
+        std::vector<Add> a; std::vector<int> r;
+        { std::lock_guard<std::mutex> lk(ctlMu); a.swap(adds); r.swap(removes); }
+        for (int id : r) for (size_t i = 0; i < nar.size(); i++) if (nar[i]->e.id == id && nar[i]->fid < 0) { dropped.erase(id); nar.erase(nar.begin() + (long)i); break; }
+        for (const Add& d : a) {
+            nar.emplace_back(new N());
+            N* n = nar.back().get();
+            n->fid = -1; n->e.id = d.id; n->nextTry = clock;
+            n->e.offsetHz = d.off; n->e.absHz = center + d.off; n->e.bandwidthHz = d.bw; n->e.active = true; n->e.info = "marked by hand";
+            if (d.kind != WsKind::Unknown) { std::lock_guard<std::mutex> lk(ctlMu); ctl[d.id].forced = d.kind; }
+        }
+    }
+
+    // the span decoders: configured when the first entry of the kind runs, fed the whole capture while one does
+    void spanPlace() {
+        int cnt[2] = {0, 0};
+        for (auto& n : nar) if (!n->hidden && spanKind(n->e.kind) && n->e.state == WsState::Running) cnt[spanIdx(n->e.kind)]++;
+        for (int g = 0; g < 2; g++) {
+            if (!spanConf[g] && cnt[g] > 0 && cfg.spanRate > 0) {
+                if (g == 0) { tetra.configure(cfg.spanRate); tetra.setCenterHz(center); spanOk[0] = tetra.ready(); }
+                else { inm.configure(cfg.spanRate); inm.setCenterFrequency(center); spanOk[1] = inm.ready(); }
+                spanConf[g] = true;
+            }
+            spanFeed[g] = cnt[g] > 0 && spanOk[g];
+        }
+    }
+    void spanRows() {
+        TetraTelemetry tt; InmsatTelemetry it;
+        if (spanFeed[0] && tetra.telemetry(tt, tetraSeq)) {
+            tetraSeq = tt.seq;
+            char b[120]; snprintf(b, sizeof b, "%zu cells, %llu blocks ok", tt.cells.size(), (unsigned long long)tt.blocksOk);
+            spanInfo[0] = b; spanLocked[0] = tt.state == 2; spanItems[0] = tt.blocksOk;
+        }
+        if (spanFeed[1] && inm.telemetry(it, inmSeq)) {
+            inmSeq = it.seq;
+            int dec = 0; for (const auto& c : it.carriers) dec += c.state >= 2;
+            char b[120]; snprintf(b, sizeof b, "%zu carriers, %d decoding, %llu messages", it.carriers.size(), dec, (unsigned long long)it.messagesTotal);
+            spanInfo[1] = b; spanLocked[1] = dec > 0; spanItems[1] = it.messagesTotal;
+        }
+        int cnt[2] = {0, 0};
+        for (auto& n : nar) if (!n->hidden && spanKind(n->e.kind) && n->e.state == WsState::Running) cnt[spanIdx(n->e.kind)]++;
+        for (auto& n : nar) {
+            if (!spanKind(n->e.kind)) continue;
+            const int g = spanIdx(n->e.kind);
+            if (n->e.state == WsState::Running) { n->e.info = spanInfo[g].empty() ? "searching" : spanInfo[g]; n->e.locked = spanLocked[g]; n->e.items = spanItems[g]; n->e.cost = cnt[g] ? spanLoad[g] / cnt[g] : 0; }
+            else if (n->e.state == WsState::Off || n->e.state == WsState::Dropped) n->e.info.clear();
+        }
+    }
+
     void tick() {
+        takeAdds();
         takeResults();
         if (tvPossible) tvScanTick();
         const auto z = zones();
@@ -630,8 +722,10 @@ struct WideSession::Impl {
         if (clock >= 1.0) guard();   // wait for the first measurement window
         syncKinds();
         bankPlace();
+        spanPlace();
         tvPlace();
         bankRowsMerge();
+        spanRows();
         tvRows();
         syncKinds();
         publish();
@@ -639,7 +733,7 @@ struct WideSession::Impl {
 
     void publish() {
         std::vector<WsEntry> v;
-        for (auto& n : nar) v.push_back(n->e);
+        for (auto& n : nar) if (!n->hidden) v.push_back(n->e);
         for (auto& t : tvs) v.push_back(t->e);
         std::sort(v.begin(), v.end(), [](const WsEntry& a, const WsEntry& b) { return a.rank > b.rank; });
         WsStatus st;
@@ -665,12 +759,15 @@ struct WideSession::Impl {
             winBank[m] += nowSec() - b0;
         }
         if (!vfoNow.empty()) { const double b0 = nowSec(); vfo.feed(x, n); winVfo += nowSec() - b0; }
+        if (spanFeed[0]) { const double b0 = nowSec(); tetra.feed(x, n); winSpan[0] += nowSec() - b0; }
+        if (spanFeed[1]) { const double b0 = nowSec(); inm.feed(x, n); winSpan[1] += nowSec() - b0; }
         for (int g = 0; g < 2; g++) if (mtv[g] && !allowedNow[g].empty()) mtv[g]->feed(x, n);
         winWork += nowSec() - t0; winData += dt;
         if (winData >= 1.0) {
             loadAnalysis = winWork / winData; vfoLoad = winVfo / winData;
             for (int i = 0; i < 200; i++) { bankLoad[i] = winBank[i] / winData; winBank[i] = 0; }
             loadMeasured = loadAnalysis + tvLoad;
+            for (int g = 0; g < 2; g++) { spanLoad[g] = winSpan[g] / winData; winSpan[g] = 0; }
             winWork = winData = winVfo = 0;
         }
         if (clock >= nextTick) { nextTick = clock + kTickSec; tick(); }
@@ -687,6 +784,7 @@ void WideSession::feed(const cf32* x, size_t n) { p_->feed(x, n); }
 void WideSession::wait() {
     for (int i = 0; i < 4000 && !p_->jobsIdle(); i++) std::this_thread::sleep_for(std::chrono::milliseconds(5));
     for (int g = 0; g < 2; g++) if (p_->mtv[g]) p_->mtv[g]->wait();
+    for (int i = 0; i < 4000 && p_->tetra.busy(); i++) std::this_thread::sleep_for(std::chrono::milliseconds(5));
 }
 std::vector<WsEntry> WideSession::entries() const { std::lock_guard<std::mutex> lk(p_->snapMu); return p_->snap; }
 WsStatus WideSession::status() const { std::lock_guard<std::mutex> lk(p_->snapMu); return p_->snapSt; }
@@ -694,6 +792,16 @@ WsStatus WideSession::status() const { std::lock_guard<std::mutex> lk(p_->snapMu
 void WideSession::setEnabled(int id, bool on) { std::lock_guard<std::mutex> lk(p_->ctlMu); p_->ctl[id].enabled = on; }
 void WideSession::setPinned(int id, bool on) { std::lock_guard<std::mutex> lk(p_->ctlMu); p_->ctl[id].pinned = on; }
 void WideSession::setPriority(int id, int adj) { std::lock_guard<std::mutex> lk(p_->ctlMu); p_->ctl[id].priority = adj; }
+int WideSession::addManual(double offsetHz, double bandwidthHz, WsKind k) {
+    std::lock_guard<std::mutex> lk(p_->ctlMu);
+    const int id = p_->nextManual++;
+    p_->adds.push_back({id, offsetHz, bandwidthHz, k});
+    return id;
+}
+void WideSession::remove(int id) {
+    std::lock_guard<std::mutex> lk(p_->ctlMu);
+    if (id >= 500000 && id < 1000000) p_->removes.push_back(id); else p_->ctl[id].enabled = false;
+}
 void WideSession::setKind(int id, WsKind k) { std::lock_guard<std::mutex> lk(p_->ctlMu); p_->ctl[id].forced = k; }
 void WideSession::setListen(int id) { p_->listen = id; }
 void WideSession::setBudget(double frac) { std::lock_guard<std::mutex> lk(p_->ctlMu); p_->budget = std::max(0.0, frac); }

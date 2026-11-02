@@ -199,7 +199,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         const ModeTuning* mto = modeTuning(stdMode_.load());
         const double o = mto && dev.kind != DeviceInfo::File && dev.kind != DeviceInfo::Audio ? -mto->tuneOffsetHz : 0.0;
         for (int wm : WideModes::modes()) wide_.configure(wm, rate_, o);
-        wide_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : fileCentreHz_.load());   // the logs of a whole-span decoder keep their rows' frequencies over a retune
+        { const double wc_ = dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : fileCentreHz_.load(); wide_.setCenterHz(wc_); wideAllCentre_.store(wc_); }   // the logs of a whole-span decoder keep their rows' frequencies over a retune
         rxSonde_.setSignalOffset(o);
         rxAis_.setSignalOffset(o);
         rxAis_.setCenterHz(dev.isRadio() ? radioTune(tune).centerHz : dev.kind == DeviceInfo::File && rate_ >= 5e6 ? fileCentreHz_.load() : 0.0);   // a wide capture holds the long-range channels too

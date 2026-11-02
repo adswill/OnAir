@@ -770,6 +770,7 @@ if(DECT2_BUILD_APP)
     target_compile_options(dect2 PRIVATE -fobjc-arc)
   endif()
   target_link_libraries(dect2 PRIVATE dect2core imgui)
+  target_sources(dect2 PRIVATE app/panels/wide_all_ui.cpp)   # Everything in view: wide multi-signal decode window
   target_sources(dect2 PRIVATE app/panels/rffp_ui.cpp)   # RF fingerprint window (docs/RF-FINGERPRINT.md)
   target_link_libraries(dect2 PRIVATE dect2core imgui onair_web)
   target_include_directories(dect2 PRIVATE server)
@@ -2138,6 +2139,12 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_wide_session_tv tests/engine/test_wide_session_tv.cpp)   # the same with a DVB-T2 and a DVB-T channel in the capture
   target_link_libraries(test_wide_session_tv PRIVATE dect2core)
   add_test(NAME wide_session_tv COMMAND test_wide_session_tv)
+  add_executable(test_wide_multi tests/engine/test_wide_multi.cpp)   # wide session: TETRA span decoder, signals marked by hand, impairment sweep (edges, DC, off-raster, 2 rates)
+  target_link_libraries(test_wide_multi PRIVATE dect2core)
+  add_test(NAME wide_multi COMMAND test_wide_multi)
+  add_executable(test_wide_multi_tv tests/engine/test_wide_multi_tv.cpp)   # three TV channels (T2 + T + T2), off the grid, in one 28 Msps capture
+  target_link_libraries(test_wide_multi_tv PRIVATE dect2core)
+  add_test(NAME wide_multi_tv COMMAND test_wide_multi_tv)
 
   add_executable(test_multitv tests/engine/test_multitv.cpp)   # several adjacent TV channels from one wide capture (core)
   target_link_libraries(test_multitv PRIVATE dect2core)

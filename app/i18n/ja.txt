@@ -3552,3 +3552,35 @@ some stations are hidden	一部の局は非表示です
 File...	ファイル...
 Auto-save to file	ファイルに自動保存
 Activity	アクティビティ
+# Everything in view (wide multi-signal decode)
+identifying	識別中
+running	動作中
+no decoder	デコーダなし
+paused (CPU)	一時停止 (CPU)
+CPU	CPU
+CPU limit %	CPU上限 %
+What	内容
+dB	dB
+Pin	固定
+Everything in view	表示中のすべて
+Everything in view: on	すべて表示: オン
+Decode everything in view	すべてデコード
+Add as	種類を指定して追加
+Identify automatically	自動で識別
+Add selected region	選択範囲を追加
+Add tuned signal	同調中の信号を追加
+Looking for signals...	信号を探しています...
+Start the receiver to begin.	開始するには受信機を起動してください。
+The decoders' share of one processor core, against the limit. Above the limit the lowest ranked signals are paused.	デコーダが使うCPUコア1つ分の割合と上限の比較。上限を超えると、順位の低い信号から一時停止します。
+Find every signal in the whole capture (digital voice, TETRA, pagers, packet radio, air band, Inmarsat, TV) and decode all of them at once.	キャプチャ全体からすべての信号（デジタル音声、TETRA、ポケベル、パケット無線、航空無線、Inmarsat、TV）を見つけ、同時にデコードします。
+One capture, every signal in it. OnAir finds the signals, says what each one is and starts the right decoder for it. Switch one off, pin the ones that must never be paused, or give an unknown signal its mode by hand.	1回のキャプチャ内のすべての信号。OnAirが信号を見つけ、種類を判定し、適切なデコーダを起動します。個別にオフにしたり、一時停止させたくない信号を固定したり、不明な信号に手動でモードを指定できます。
+When the decoders take longer than this share of one core, the lowest ranked signal is paused (never a pinned one or the one you listen to) and comes back when there is room. 0: no limit.	デコーダがコア1つ分のこの割合を超えると、順位の最も低い信号が一時停止され（固定した信号や聴いている信号は対象外）、余裕ができると復帰します。0: 上限なし。
+This computer cannot keep up: %d signals are paused to save CPU. Pin the ones you need, or raise the limit.	このコンピューターでは処理が追いつきません。CPU節約のため%d個の信号を一時停止しています。必要な信号を固定するか、上限を上げてください。
+TV channels in the capture: %.0f MHz wide	キャプチャ内のTVチャンネル: 幅 %.0f MHz
+Turn the Identify tool on (key I) and drag across a signal on the spectrum, then add it here.	識別ツールをオンにして（キー I）スペクトル上の信号をドラッグし、ここで追加します。
+Add the signal at the tuner marker (12.5 kHz wide).	チューナーマーカー位置の信号（幅12.5 kHz）を追加します。
+Off. Press the button to decode everything in the capture.	オフ。ボタンを押すとキャプチャ内のすべてをデコードします。
+%+.1f kHz from the capture centre, %.1f kHz wide	キャプチャ中心から %+.1f kHz、幅 %.1f kHz
+Pinned: never paused by the CPU limit	固定: CPU上限では一時停止されません
+Follow this signal's sound; it is never paused by the CPU limit	この信号の音声を追いかけます。CPU上限では一時停止されません
+Remove: a signal you added is taken away, a found one is switched off	削除: 追加した信号は取り除かれ、検出された信号はオフになります
