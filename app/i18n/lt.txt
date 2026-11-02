@@ -3531,3 +3531,26 @@ First-run setup	Pirmoji sąranka
 Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.	Kiekvienas režimas atsidaro Paprastu rodiniu: spektras ir vienas ekranas su Pradėti mygtuku bei pagrindiniais valdikliais. Išjungta: išsamūs skirtukai.
 One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).	Vienu paspaudimu nustato regiono dažnių planą, TV kanalus, FM juostą ir žingsnį, numatytuosius dažnius ir vienetus (Lietuva, ES, ...).
 Open the setup again: radio, region, antenna, interests, voice codecs.	Atverkite sąranką iš naujo: radijas, regionas, antena, pomėgiai, balso kodekai.
+Why	Kodėl
+no signal at the channel: check the tuning, the antenna and the gain	kanale signalo nėra: patikrinkite derinimą, anteną ir stiprinimą
+signal, but no frame sync found: check the tuning (offset, polarity), the bandwidth and the signal-to-noise ratio	signalas yra, bet kadro sinchronizacijos nerasta: patikrinkite derinimą (poslinkį, poliškumą), juostos plotį ir signalo ir triukšmo santykį
+frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the signal is too noisy or distorted	kadrų sinchronizacijų rasta, bet jų tapatybė (NID, LICH, laiko tarpo tipas) neįskaitoma: signalas per triukšmingas arba iškraipytas
+frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	kadrų sinchronizacijų rasta, bet duomenys nepraeina FEC / CRC: silpnas signalas, silpimas arba mėginių taktinio dažnio klaida
+decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	dekoduoja, bet prarandama daugiau nei trečdalis blokų: padėtų stipresnis signalas arba geresnė antena
+decoding well	dekoduoja gerai
+Base stations	Bazinės stotys
+Calls	Skambučiai
+Channel options	Kanalo parinktys
+Chat	Pokalbis
+Devices	Įrenginiai
+Neighbours	Kaimynės
+Nodes	Mazgai
+On air	Eteryje
+Selected	Pasirinkta
+Site	Vieta
+Table	Lentelė
+Vessels	Laivai
+some stations are hidden	kai kurios stotys paslėptos
+File...	Failas...
+Auto-save to file	Automatiškai įrašyti į failą
+Activity	Veikla

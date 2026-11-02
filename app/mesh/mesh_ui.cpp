@@ -1,6 +1,7 @@
 // Mesh (LoRa) mode entry: the screen state, the mode's tick, and the entry points the shell calls (tab, list, receiver,
 // panels, status, summary, tuner, decoder, synth, meters). The tables, views, LoRaWAN screens and settings are in the other mesh_*.cpp.
 #include "mesh_internal.h"
+#include "ui/kit/mode_panel.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/session_list.h"
 #include <algorithm>
@@ -484,6 +485,30 @@ void meters(const App& a, std::vector<ModeMeter>& out) {
 
 extern const ModeUi kMeshUi;
 
+// Simple view: by protocol entry, the stations / nodes / devices, the map and the chat / packets / frames side by side
+static void command(App& a) {
+    loadState();
+    kit::modeHeader({20, "LoRa mesh", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    const int m = subMask(a);
+    const auto map = [&a] { mapView(a, ImGui::GetContentRegionAvail()); };
+    if (m == 16)
+        modepanel::panes({{"##mscdev", tr("Devices"), [&a] { lorawanDevices(a, false); }, 1.2f, 240.f},
+                          {"##mscfr", tr("Frames"), [&a] { lorawanFrames(a); }, 1.f, 240.f}}, 340.f);
+    else if (m == 4)
+        modepanel::panes({{"##mscst", tr("Stations"), [&a] { aprsTable(a); }, 1.2f, 240.f},
+                          {"##mscmap", tr("Map"), map, 1.2f, 260.f},
+                          {"##mscpk", tr("Packets"), [&a] { packetTable(a); }, 1.f, 220.f}}, 320.f);
+    else if (m == 8)
+        modepanel::panes({{"##mscst", tr("Stations"), [&a] { aprsTable(a); }, 1.2f, 240.f},
+                          {"##mscmap", tr("Map"), map, 1.f, 260.f},
+                          {"##mscchat", tr("Chat"), [&a] { chatView(a); }, 1.f, 240.f}}, 320.f);
+    else
+        modepanel::panes({{"##mscnodes", tr("Nodes"), [&a] { nodeTable(a, false); }, 1.2f, 240.f},
+                          {"##mscmap", tr("Map"), map, 1.2f, 260.f},
+                          {"##mscchat", tr("Chat"), [&a] { chatView(a); }, 1.f, 240.f},
+                          {"##mscsel", tr("Selected"), [&a] { nodeCard(a); }, 0.8f, 200.f}}, 280.f);
+}
+
 const ModeUi kMeshUi = {
     .sideTitle = "NODES",
     .tabName = "Mesh",
@@ -499,4 +524,5 @@ const ModeUi kMeshUi = {
     .synth = synth,
     .tick = tick,
     .meters = meters,
+    .command = command,
 };

@@ -20,5 +20,10 @@ int main() {
     CHECK(b.blocksOk * 100 >= ref.blocksOk * 75 && c.blocksOk * 100 >= ref.blocksOk * 75, "8 dB, +-3 kHz: %llu and %llu of %llu blocks",
           (unsigned long long)b.blocksOk, (unsigned long long)c.blocksOk, (unsigned long long)ref.blocksOk);
     CHECK(n.blocksOk == 0 && n.log.empty(), "noise: %llu blocks", (unsigned long long)n.blocksOk);
+    // a carrier 4 kHz off the channel (a cheap oscillator or a mistuned dial) is captured by the frequency capture (MeanAfc): before it, the narrow filters cut the signal
+    for (double cfo : {4000.0, -4000.0}) {
+        const P25Telemetry o = voicesens::run<P25Receiver, P25Telemetry>(52, 250000, off, 20, 14, cfo);
+        CHECK(o.blocksOk * 100 >= ref.blocksOk * 70, "%+.0f Hz off, 14 dB: %llu of %llu", cfo, (unsigned long long)o.blocksOk, (unsigned long long)ref.blocksOk);
+    }
     return testSummary("p25 sens");
 }

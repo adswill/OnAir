@@ -3513,3 +3513,27 @@ First-run setup	Első indítás beállítása
 Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.	Minden mód az Egyszerű nézetében nyílik meg: a színkép és egy képernyő Indítás gombbal és a fő vezérlőkkel. Kikapcsolva: a részletes lapok.
 One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).	Egy kattintás megadja egy régió sávtervét, TV-csatornáit, FM-sávját és lépését, alapértelmezett frekvenciáit és mértékegységeit (Litvánia, EU, ...).
 Open the setup again: radio, region, antenna, interests, voice codecs.	A beállítás újbóli megnyitása: rádió, régió, antenna, érdeklődés, hangkodekek.
+Why	Miért
+no signal at the channel: check the tuning, the antenna and the gain	nincs jel a csatornán: ellenőrizd a hangolást, az antennát és az erősítést
+signal, but no frame sync found: check the tuning (offset, polarity), the bandwidth and the signal-to-noise ratio	van jel, de nincs keretszinkron: ellenőrizd a hangolást (eltolás, polaritás), a sávszélességet és a jel-zaj viszonyt
+frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the signal is too noisy or distorted	keretszinkron van, de az azonosítójuk (NID, LICH, időrés típusa) olvashatatlan: a jel túl zajos vagy torz
+frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	keretszinkron van, de az adatok megbuknak az FEC / CRC-n: gyenge jel, fading vagy mintavételi órahiba
+decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	dekódol, de a blokkok több mint harmada elvész: erősebb jel vagy jobb antenna segítene
+decoding well	jól dekódol
+Base stations	Bázisállomások
+Calls	Hívások
+Channel options	Csatornabeállítások
+Chat	Csevegés
+Devices	Eszközök
+Ground stations	Földi állomások
+Neighbours	Szomszédok
+Nodes	Csomópontok
+On air	Adásban
+Selected	Kiválasztott
+Site	Hely
+Table	Táblázat
+Vessels	Hajók
+some stations are hidden	néhány állomás el van rejtve
+File...	Fájl...
+Auto-save to file	Automatikus mentés fájlba
+Activity	Aktivitás

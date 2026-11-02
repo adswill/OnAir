@@ -3527,3 +3527,26 @@ First-run setup	Configuración inicial
 Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.	Cada modo se abre en su vista Simple: el espectro y una pantalla con un botón Iniciar y los controles clave. Desactivado: las pestañas detalladas.
 One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).	Un clic fija el plan de bandas, los canales de TV, la banda FM y el paso, las frecuencias por defecto y las unidades de una región (Lituania, UE, ...).
 Open the setup again: radio, region, antenna, interests, voice codecs.	Abrir de nuevo la configuración: radio, región, antena, intereses, códecs de voz.
+Why	Por qué
+no signal at the channel: check the tuning, the antenna and the gain	no hay señal en el canal: revisa la sintonía, la antena y la ganancia
+signal, but no frame sync found: check the tuning (offset, polarity), the bandwidth and the signal-to-noise ratio	hay señal, pero no se encuentra sincronismo de trama: revisa la sintonía (desvío, polaridad), el ancho de banda y la relación señal/ruido
+frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the signal is too noisy or distorted	se encuentran sincronismos de trama, pero su identidad (NID, LICH, tipo de ranura) es ilegible: la señal tiene demasiado ruido o distorsión
+frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	se encuentran sincronismos de trama, pero los datos fallan en FEC / CRC: señal débil, desvanecimiento o error del reloj de muestreo
+decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	decodifica, pero se pierde más de un tercio de los bloques: una señal más fuerte o una mejor antena ayudaría
+decoding well	decodifica bien
+Base stations	Estaciones base
+Calls	Llamadas
+Channel options	Opciones del canal
+Devices	Dispositivos
+Ground stations	Estaciones terrestres
+Neighbours	Vecinos
+Nodes	Nodos
+On air	En el aire
+Selected	Seleccionado
+Site	Sitio
+Table	Tabla
+Vessels	Buques
+some stations are hidden	algunas estaciones están ocultas
+File...	Archivo...
+Auto-save to file	Guardar automáticamente en archivo
+Activity	Actividad

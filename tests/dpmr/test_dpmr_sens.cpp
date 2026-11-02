@@ -18,5 +18,10 @@ int main() {
     CHECK(a.blocksOk * 100 >= ref.blocksOk * 90, "9 dB: %llu of %llu blocks", (unsigned long long)a.blocksOk, (unsigned long long)ref.blocksOk);
     CHECK(b.blocksOk * 100 >= ref.blocksOk * 75, "8 dB, +1 kHz: %llu of %llu blocks", (unsigned long long)b.blocksOk, (unsigned long long)ref.blocksOk);
     CHECK(n.blocksOk == 0, "noise: %llu blocks", (unsigned long long)n.blocksOk);
+    // a carrier 4 kHz off the channel (a cheap oscillator or a mistuned dial) is captured by the frequency capture (MeanAfc): before it, the narrow filters cut the signal
+    for (double cfo : {4000.0, -4000.0}) {
+        const DpmrTelemetry o = voicesens::run<DpmrReceiver, DpmrTelemetry>(47, 250000, off, 20, 14, cfo);
+        CHECK(o.blocksOk * 100 >= ref.blocksOk * 70, "%+.0f Hz off, 14 dB: %llu of %llu", cfo, (unsigned long long)o.blocksOk, (unsigned long long)ref.blocksOk);
+    }
     return testSummary("dpmr sens");
 }

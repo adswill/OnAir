@@ -2,6 +2,9 @@
 // decoded control messages, the site information, and a "?" about the mbelib library the voice needs (docs/CODECS.md).
 #include "dect2/common/time_fmt.h"
 #include "app.h"
+#include "ui/voice_why_ui.h"
+#include "dect2/voice/voice_why_modes.h"
+#include "ui/kit/mode_panel.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/session_list.h"
 #include "voice/voice_monitor_ui.h"
@@ -154,7 +157,7 @@ void tick(App& a) {
     S.wasRunning = true;
 }
 
-void tab(App& a) {
+void voiceBar(App& a) {
     {   // the voice monitor's strip, the same in every voice mode
         const dect2::NxdnTelemetry& t = a.rx.nxdn;
         voiceui::Link l;
@@ -163,6 +166,10 @@ void tab(App& a) {
         l.errorRate = l.locked ? t.berPct / 100.f : -1.f;
         voiceui::strip(a, "nxdn", "NXDN", l);
     }
+}
+
+void tab(App& a) {
+    voiceBar(a);
     kit::modeHeader({38, "NXDN", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
     kit::modeNav("nxdnv", S.view, {{tr("Live"), 0}, {tr("Calls"), 4}, {tr("Call list"), 1, true}, {tr("Messages"), 2, true}, {tr("Site"), 3, true}});
     if (S.view == 4) { kit::sessionItems(38, 1, "nxdn"); return; }
@@ -197,6 +204,7 @@ void receiver(App& a) {
     wideCarriersTable(a, 0);
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const dect2::NxdnTelemetry& t = a.rx.nxdn;
+    voiceWhyRow(a, dect2::nxdnWhy(t));
     kvRow(a, "state", "%s", dect2::nxdnSummary(t).c_str());
     kvRow(a, "signal", "NXDN%d, symbol SNR %.1f dB, +3 deviation %.0f Hz, offset %+.0f Hz%s", t.baud == 4800 ? 96 : 48, t.snrDb, t.deviationHz, t.cfoHz, t.inverted ? ", inverted" : "");
     kvRow(a, "bit errors", "%.2f %% (control channels before their FEC)", t.berPct);
@@ -232,6 +240,16 @@ void summary(const App& a, std::string& l1, std::string& l2) {
 
 } // namespace
 
+// Simple view: the voice strip, then what is on air, the call list and the site side by side
+static void command(App& a) {
+    voiceBar(a);
+    kit::modeHeader({38, "NXDN", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    if (live(a)) voiceWhyRow(a, dect2::nxdnWhy(a.rx.nxdn));
+    modepanel::panes({{"##nxcnow", tr("On air"), [&a] { nowView(a); }, 0.9f, 220.f},
+                      {"##nxccalls", tr("Calls"), [&a] { callsView(a); }, 1.5f, 240.f},
+                      {"##nxcsite", tr("Site"), [&a] { siteView(a); }, 0.9f, 200.f}}, 300.f);
+}
+
 extern const ModeUi kNxdnUi;
 const ModeUi kNxdnUi = {
     .sideTitle = "UNITS",
@@ -243,4 +261,5 @@ const ModeUi kNxdnUi = {
     .status = status,
     .summary = summary,
     .tick = tick,
+    .command = command,
 };

@@ -3510,3 +3510,28 @@ First-run setup	Первая настройка
 Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.	Каждый режим открывается в простом виде: спектр и один экран с кнопкой Старт и основными элементами управления. Выключено: подробные вкладки.
 One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).	Один щелчок задаёт план диапазонов, каналы ТВ, диапазон и шаг FM, частоты по умолчанию и единицы региона (Литва, ЕС, ...).
 Open the setup again: radio, region, antenna, interests, voice codecs.	Открыть настройку заново: радио, регион, антенна, интересы, голосовые кодеки.
+Why	Почему
+no signal at the channel: check the tuning, the antenna and the gain	в канале нет сигнала: проверьте настройку, антенну и усиление
+signal, but no frame sync found: check the tuning (offset, polarity), the bandwidth and the signal-to-noise ratio	сигнал есть, но кадровая синхронизация не найдена: проверьте настройку (смещение, полярность), полосу и отношение сигнал/шум
+frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the signal is too noisy or distorted	кадровая синхронизация найдена, но идентификатор кадра (NID, LICH, тип слота) не читается: сигнал слишком шумный или искажённый
+frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	кадровая синхронизация найдена, но данные не проходят FEC / CRC: слабый сигнал, замирания или ошибка частоты дискретизации
+decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	декодирует, но потеряно более трети блоков: поможет более сильный сигнал или лучшая антенна
+decoding well	декодирует хорошо
+Base stations	Базовые станции
+Calls	Вызовы
+Channel options	Параметры канала
+Chat	Чат
+Devices	Устройства
+Ground stations	Наземные станции
+Neighbours	Соседние
+Nodes	Узлы
+On air	В эфире
+Selected	Выбрано
+Site	Площадка
+Table	Таблица
+Trunking	Транкинг
+Vessels	Суда
+some stations are hidden	некоторые станции скрыты
+File...	Файл...
+Auto-save to file	Автосохранение в файл
+Activity	Активность

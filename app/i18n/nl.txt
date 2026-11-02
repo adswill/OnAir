@@ -3527,3 +3527,26 @@ First-run setup	Eerste installatie
 Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.	Elke modus opent in de eenvoudige weergave: het spectrum en één scherm met een Start-knop en de belangrijkste bediening. Uit: de gedetailleerde tabs.
 One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).	Eén klik stelt het bandplan, de tv-kanalen, de FM-band en stap, de standaardfrequenties en de eenheden van een regio in (Litouwen, EU, ...).
 Open the setup again: radio, region, antenna, interests, voice codecs.	De installatie opnieuw openen: radio, regio, antenne, interesses, spraakcodecs.
+Why	Waarom
+no signal at the channel: check the tuning, the antenna and the gain	geen signaal op het kanaal: controleer de afstemming, de antenne en de versterking
+signal, but no frame sync found: check the tuning (offset, polarity), the bandwidth and the signal-to-noise ratio	signaal aanwezig, maar geen framesync gevonden: controleer de afstemming (offset, polariteit), de bandbreedte en de signaal-ruisverhouding
+frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the signal is too noisy or distorted	framesyncs gevonden, maar hun identiteit (NID, LICH, slottype) is onleesbaar: het signaal is te ruisig of vervormd
+frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	framesyncs gevonden, maar de data falen op FEC / CRC: zwak signaal, fading of een fout in de samplekloks
+decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	decodeert, maar meer dan een derde van de blokken gaat verloren: een sterker signaal of een betere antenne zou helpen
+decoding well	decodeert goed
+Base stations	Basisstations
+Calls	Gesprekken
+Channel options	Kanaalopties
+Devices	Apparaten
+Ground stations	Grondstations
+Neighbours	Buren
+Nodes	Knooppunten
+On air	In de lucht
+Selected	Geselecteerd
+Site	Locatie
+Table	Tabel
+Vessels	Schepen
+some stations are hidden	sommige stations zijn verborgen
+File...	Bestand...
+Auto-save to file	Automatisch opslaan in bestand
+Activity	Activiteit

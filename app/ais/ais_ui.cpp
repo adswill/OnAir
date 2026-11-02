@@ -2,6 +2,7 @@
 // with the rates of the channels (AIS 1, AIS 2, and the long-range channels 75 and 76 when the capture holds them), the raw NMEA log, and the
 // Satellite AIS panel (ais_sat_ui.cpp).
 #include "../panels/photo_links_ui.h"
+#include "ui/kit/mode_panel.h"
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
 #include "app.h"
@@ -539,6 +540,15 @@ void summary(const App& a, std::string& l1, std::string& l2) {
 
 } // namespace
 
+// Simple view: the map with the filter bar and the vessel table side by side; the readout of a picked vessel as a third pane
+static void command(App& a) {
+    loadState();
+    kit::modeHeader({14, "AIS", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    modepanel::panes({{"##aiscmdm", tr("Map"), [&a] { mapView(a, ImGui::GetContentRegionAvail()); }, 1.4f, 280.f},
+                      {"##aiscmdt", tr("Vessels"), [&a] { vesselTable(a, ImGui::GetContentRegionAvail().x < 560 * gUi); }, 1.f, 240.f},
+                      {"##aiscmdd", tr("Selected"), [&a] { detail(a); }, 0.8f, 200.f}}, 300.f);
+}
+
 extern const ModeUi kAisUi;
 const ModeUi kAisUi = {
     .sideTitle = "VESSELS",
@@ -550,4 +560,5 @@ const ModeUi kAisUi = {
     .summary = summary,
     .tuner = tuner,
     .tick = tick,
+    .command = command,
 };

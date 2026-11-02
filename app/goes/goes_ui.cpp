@@ -2,6 +2,7 @@
 // selected product in the Products tab: an image that grows as its lines arrive (Rice and plain images; JPEG / GIF once complete) or
 // its text (EMWIN ZIP files unpacked); Save, and Save automatically into <data folder>/goes/. The receiver's state and the constellation.
 // A dish (about 1 m, or a grid) with an LNA at the feed is needed: a note says so while nothing is received.
+#include "ui/kit/mode_panel.h"
 #include "app.h"
 #include "panels/gallery.h"
 #include "gfx/gfx.h"
@@ -437,6 +438,12 @@ void meters(const App& a, std::vector<ModeMeter>& out) {
 
 } // namespace
 
+// Simple view: the picture with its controls, and the signal and the products / channels beside it
+static void command(App& a) {
+    modepanel::panes({{"##goescpic", nullptr, [&a] { tab(a); }, 2.2f, 300.f},
+                      {"##goescsig", tr("Signal"), [&a] { receiver(a); ImGui::Spacing(); list(a); }, 1.f, 240.f}}, 340.f);
+}
+
 extern const ModeUi kGoesUi;
 const ModeUi kGoesUi = {
     .sideTitle = "PRODUCTS",
@@ -451,4 +458,5 @@ const ModeUi kGoesUi = {
     .tuner = tuner,
     .tick = tick,
     .meters = meters,
+    .command = command,
 };

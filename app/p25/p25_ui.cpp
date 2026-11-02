@@ -3,6 +3,9 @@
 // messages, and a "?" about the mbelib library the voice needs (docs/CODECS.md). Receive only; encrypted calls are only reported.
 #include "dect2/common/time_fmt.h"
 #include "app.h"
+#include "ui/voice_why_ui.h"
+#include "dect2/voice/voice_why_modes.h"
+#include "ui/kit/mode_panel.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/session_list.h"
 #include "voice/voice_monitor_ui.h"
@@ -795,7 +798,7 @@ void tick(App& a) {
     ps.was = true;
 }
 
-void tab(App& a) {
+void voiceBar(App& a) {
     {   // the voice monitor's strip, the same in every voice mode
         const dect2::P25Telemetry& t = a.rx.p25;
         voiceui::Link l;
@@ -804,6 +807,10 @@ void tab(App& a) {
         l.errorRate = l.locked ? t.berPct / 100.f : -1.f;
         voiceui::strip(a, "p25", "P25", l);
     }
+}
+
+void tab(App& a) {
+    voiceBar(a);
     kit::modeHeader({50, "P25", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
     kit::modeNav("p25v", S.view, {{tr("Live"), 0}, {tr("Calls"), 6}, {tr("Call list"), 1, true}, {tr("Trunking"), 2, true}, {tr("Talkgroups"), 3, true}, {tr("Messages"), 4, true}, {tr("Follow"), 5, true}});
     if (S.view == 6) { kit::sessionItems(50, 1, "p25"); return; }
@@ -844,6 +851,7 @@ void receiver(App& a) {
     wideCarriersTable(a, 0);
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const dect2::P25Telemetry& t = a.rx.p25;
+    voiceWhyRow(a, dect2::p25Why(t));
     kvRow(a, "follow", "%s", T.on ? T.ctl.statusLine(nowSec()).c_str() : "off: calls are shown but not followed (Follow tab)");
     kvRow(a, "state", "%s", dect2::p25Summary(t).c_str());
     kvRow(a, "signal", "C4FM, symbol SNR %.1f dB, +3 deviation %.0f Hz, offset %+.0f Hz%s", t.snrDb, t.deviationHz, t.cfoHz, t.inverted ? ", inverted" : "");
@@ -884,6 +892,16 @@ void summary(const App& a, std::string& l1, std::string& l2) {
 
 } // namespace
 
+// Simple view: the voice strip, then what is on air, the call list and the trunking state side by side
+static void command(App& a) {
+    voiceBar(a);
+    kit::modeHeader({50, "P25", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    if (live(a)) voiceWhyRow(a, dect2::p25Why(a.rx.p25));
+    modepanel::panes({{"##p25cnow", tr("On air"), [&a] { nowView(a); }, 0.9f, 220.f},
+                      {"##p25ccalls", tr("Calls"), [&a] { callsView(a); }, 1.5f, 240.f},
+                      {"##p25ctrunk", tr("Trunking"), [&a] { trunkingView(a); }, 1.f, 220.f}}, 300.f);
+}
+
 extern const ModeUi kP25Ui;
 const ModeUi kP25Ui = {
     .sideTitle = "TALKGROUPS",
@@ -895,4 +913,5 @@ const ModeUi kP25Ui = {
     .status = status,
     .summary = summary,
     .tick = tick,
+    .command = command,
 };

@@ -3527,3 +3527,27 @@ First-run setup	Pierwsza konfiguracja
 Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.	Każdy tryb otwiera się w widoku Prostym: widmo i jeden ekran z przyciskiem Start i głównymi elementami sterowania. Wyłączone: szczegółowe karty.
 One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).	Jedno kliknięcie ustawia plan pasm, kanały TV, pasmo FM i krok, domyślne częstotliwości i jednostki regionu (Litwa, UE, ...).
 Open the setup again: radio, region, antenna, interests, voice codecs.	Otwórz konfigurację ponownie: radio, region, antena, zainteresowania, kodeki głosu.
+Why	Dlaczego
+no signal at the channel: check the tuning, the antenna and the gain	brak sygnału w kanale: sprawdź dostrojenie, antenę i wzmocnienie
+signal, but no frame sync found: check the tuning (offset, polarity), the bandwidth and the signal-to-noise ratio	jest sygnał, ale nie znaleziono synchronizacji ramki: sprawdź dostrojenie (przesunięcie, polaryzację), szerokość pasma i stosunek sygnału do szumu
+frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the signal is too noisy or distorted	znaleziono synchronizacje ramek, ale ich tożsamość (NID, LICH, typ szczeliny) jest nieczytelna: sygnał jest zbyt zaszumiony lub zniekształcony
+frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	znaleziono synchronizacje ramek, ale dane nie przechodzą FEC / CRC: słaby sygnał, zaniki lub błąd zegara próbkowania
+decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	dekoduje, ale ponad jedna trzecia bloków jest tracona: pomógłby silniejszy sygnał lub lepsza antena
+decoding well	dekoduje dobrze
+Base stations	Stacje bazowe
+Calls	Połączenia
+Channel options	Opcje kanału
+Chat	Czat
+Devices	Urządzenia
+Ground stations	Stacje naziemne
+Neighbours	Sąsiednie
+Nodes	Węzły
+On air	Na antenie
+Selected	Wybrane
+Site	Stanowisko
+Table	Tabela
+Vessels	Statki
+some stations are hidden	niektóre stacje są ukryte
+File...	Plik...
+Auto-save to file	Zapisuj automatycznie do pliku
+Activity	Aktywność

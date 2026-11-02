@@ -3527,3 +3527,27 @@ First-run setup	Ersteinrichtung
 Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.	Jeder Modus öffnet sich in der einfachen Ansicht: das Spektrum und ein Bildschirm mit Start-Taste und den wichtigsten Reglern. Aus: die detaillierten Tabs.
 One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).	Ein Klick setzt Bandplan, TV-Kanäle, UKW-Band und -Raster, Standardfrequenzen und Einheiten einer Region (Litauen, EU, ...).
 Open the setup again: radio, region, antenna, interests, voice codecs.	Die Einrichtung erneut öffnen: Radio, Region, Antenne, Interessen, Sprach-Codecs.
+Why	Warum
+no signal at the channel: check the tuning, the antenna and the gain	kein Signal im Kanal: Abstimmung, Antenne und Verstärkung prüfen
+signal, but no frame sync found: check the tuning (offset, polarity), the bandwidth and the signal-to-noise ratio	Signal da, aber kein Rahmen-Sync gefunden: Abstimmung (Offset, Polarität), Bandbreite und Signal-Rausch-Abstand prüfen
+frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the signal is too noisy or distorted	Rahmen-Syncs gefunden, aber ihre Kennung (NID, LICH, Slot-Typ) ist unlesbar: das Signal ist zu verrauscht oder verzerrt
+frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	Rahmen-Syncs gefunden, aber die Nutzdaten scheitern an FEC / CRC: schwaches Signal, Schwund oder Abtasttaktfehler
+decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	dekodiert, aber über ein Drittel der Blöcke geht verloren: ein stärkeres Signal oder eine bessere Antenne würde helfen
+decoding well	dekodiert gut
+Base stations	Basisstationen
+Calls	Anrufe
+Channel options	Kanaloptionen
+Devices	Geräte
+Ground stations	Bodenstationen
+Neighbours	Nachbarn
+Nodes	Knoten
+On air	Auf Sendung
+Selected	Ausgewählt
+Site	Standort
+Table	Tabelle
+Trunking	Bündelfunk
+Vessels	Schiffe
+some stations are hidden	einige Stationen sind ausgeblendet
+File...	Datei...
+Auto-save to file	Automatisch in Datei speichern
+Activity	Aktivität

@@ -19,15 +19,32 @@ public:
         if (++n_ < (int)(0.02 * rate)) return 0;
         const double m = s_ / n_, var = q_ / n_ - m * m;
         n_ = 0; s_ = q_ = 0;
-        if (var > kMaxSpreadHz * kMaxSpreadHz || std::fabs(m) < kMinHz) return 0;
+        if (var > kMaxSpreadHz * kMaxSpreadHz) { fn_ = 0; fs_ = 0; return 0; }
+        if (std::fabs(m) < kMinHz) {
+            // the narrow-channel modes (6.25 kHz NXDN, D-STAR): an error of 1 to 4.5 kHz already cuts into the channel filter and costs several dB,
+            // so a mean that holds over four windows (80 ms) is followed too
+            if (!fine_) return 0;
+            fs_ += m;
+            if (++fn_ < 4) return 0;
+            const double M = fs_ / fn_;
+            fn_ = 0; fs_ = 0;
+            if (std::fabs(M) < fineMin_) return 0;
+            hold_ = (int)(0.012 * rate);
+            return M;
+        }
+        fn_ = 0; fs_ = 0;
         hold_ = (int)(0.008 * rate);        // the channel filter's delay: the next window sees the moved signal
         return m;
     }
-    void reset() { n_ = 0; s_ = q_ = 0; hold_ = 0; }
-    static constexpr double kMaxSpreadHz = 3500.0, kMinHz = 4700.0, kMaxTotalHz = 7500.0;
+    void reset() { n_ = 0; s_ = q_ = 0; hold_ = 0; fn_ = 0; fs_ = 0; }
+    // minHz: the smallest mean error that is followed (receivers that move only while searching can use a small one)
+    void enableFine(bool on = true, double minHz = kFineHz) { fine_ = on; fineMin_ = minHz; }
+    static constexpr double kMaxSpreadHz = 3500.0, kMinHz = 4700.0, kFineHz = 2500.0, kMaxTotalHz = 7500.0;
 private:
-    int n_ = 0, hold_ = 0;
-    double s_ = 0, q_ = 0;
+    int n_ = 0, hold_ = 0, fn_ = 0;
+    double s_ = 0, q_ = 0, fs_ = 0;
+    bool fine_ = false;
+    double fineMin_ = kFineHz;
 };
 
 } // namespace dect2

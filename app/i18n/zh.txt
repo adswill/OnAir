@@ -3550,3 +3550,28 @@ First-run setup	首次设置
 Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.	每个模式都以简易视图打开:频谱,加一个带开始按钮和主要控件的屏幕。关闭:详细标签页。
 One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).	一键设置某个地区的频段规划、电视频道、调频频段和步进、默认频率和单位(立陶宛、欧盟等)。
 Open the setup again: radio, region, antenna, interests, voice codecs.	重新打开设置:电台、地区、天线、兴趣、语音编解码器。
+Why	原因
+no signal at the channel: check the tuning, the antenna and the gain	信道中没有信号:请检查调谐、天线和增益
+signal, but no frame sync found: check the tuning (offset, polarity), the bandwidth and the signal-to-noise ratio	有信号,但未找到帧同步:请检查调谐(偏移、极性)、带宽和信噪比
+frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the signal is too noisy or distorted	找到了帧同步,但其标识(NID、LICH、时隙类型)无法读取:信号噪声或失真过大
+frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	找到了帧同步,但负载未通过 FEC / CRC:信号弱、衰落或采样时钟误差
+decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	正在解码,但超过三分之一的数据块丢失:更强的信号或更好的天线会有帮助
+decoding well	解码良好
+Base stations	基站
+Calls	呼叫
+Channel options	信道选项
+Chat	聊天
+Devices	设备
+Ground stations	地面站
+Neighbours	相邻小区
+Nodes	节点
+On air	正在发射
+Selected	已选
+Site	站点
+Table	表格
+Trunking	集群
+Vessels	船舶
+some stations are hidden	部分电台已隐藏
+File...	文件...
+Auto-save to file	自动保存到文件
+Activity	活动

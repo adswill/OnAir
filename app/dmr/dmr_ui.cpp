@@ -1,6 +1,8 @@
 // DMR screens: the two time slots and the call log, the symbol plots, the receiver counters and the options of the test signal.
 #include "call_filter.h"
 #include "app.h"
+#include "ui/voice_why_ui.h"
+#include "dect2/voice/voice_why_modes.h"
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/mode_panel.h"
@@ -468,6 +470,7 @@ void receiver(App& a) {
     wideCarriersTable(a, 0);
     const DmrTelemetry& t = a.rx.dmr;
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
+    voiceWhyRow(a, dect2::dmrWhy(t));
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     const float gap = 10 * gUi, cw = (W - 2 * gap) / 3.f;
     const bool stack = cw < 260 * gUi;   // a narrow tab: the three blocks one under the other (the tab scrolls)
@@ -660,6 +663,7 @@ static void signalPane(App& a) {
 
 static void command(App& a) {
     kit::modeHeader({9, "DMR", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    if (live(a)) voiceWhyRow(a, dect2::dmrWhy(a.rx.dmr));
     modepanel::panes({{"##dmrcalls", nullptr, [&a] { callsView(a); }, 1.8f, 420.f},
            {"##dmrsignal", tr("Signal"), [&a] { signalPane(a); }, 1.f, 260.f}}, 360.f);
 }

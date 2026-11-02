@@ -1,5 +1,6 @@
 // GK-2A LRIT (family 230) and HRIT (family 231) screens: the xRIT product list (full-disk pictures per channel put together from their
 // segments, schedule and additional-data text), the receiver details, a "why not decoding" line, and the KMA decryption keys.
+#include "ui/kit/mode_panel.h"
 #include "app.h"
 #include "panels/gallery.h"
 #include "gfx/gfx.h"
@@ -429,6 +430,12 @@ void meters(const App& a, std::vector<ModeMeter>& out) {
 
 } // namespace
 
+// Simple view: the picture with its controls, and the signal and the products / channels beside it
+static void command(App& a) {
+    modepanel::panes({{"##gk2acpic", nullptr, [&a] { tab(a); }, 2.2f, 300.f},
+                      {"##gk2acsig", tr("Signal"), [&a] { receiver(a); ImGui::Spacing(); list(a); }, 1.f, 240.f}}, 340.f);
+}
+
 extern const ModeUi kGk2aLritUi;
 const ModeUi kGk2aLritUi = {
     .sideTitle = "PRODUCTS",
@@ -443,6 +450,7 @@ const ModeUi kGk2aLritUi = {
     .tuner = tuner,
     .tick = tick,
     .meters = meters,
+    .command = command,
 };
 extern const ModeUi kGk2aHritUi;
 const ModeUi kGk2aHritUi = kGk2aLritUi;

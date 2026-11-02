@@ -85,3 +85,40 @@ Nothing was changed in a receiver to close a gap in this pass: no mode was clear
 no preamble), `whyShort` (fewer than 4 octets out of the decoder), `whySpduFcs` (a squitter whose check failed: FEC did not repair it), `whyMpduFcs` (data PDU header check failed),
 `whyLpduFcs` (an LPDU with a bad check inside a good MPDU), `whyUnknownLpdu` (good check, type not decoded). Bursts that failed = `whyShort + whySpduFcs + whyMpduFcs` = `blocksBad`
 (tests/hfdl/test_hfdl_why.cpp). Visual check of the Receiver tab: not done (needs an HFDL source in the GUI).
+
+## Digital voice modes: capture range and "why isn't it decoding" (feat36-voiceq, 2026-11-02)
+
+New harness scenarios for every narrowband mode (noise bandwidth up to 25 kHz): `cfop4k` / `cfom4k`, the carrier 4 kHz above / below the channel centre (a cheap
+oscillator, or a mistuned dial: 20 ppm at 446 MHz is 9 kHz). Quick tier (2 dB steps, 4 trials), threshold SNR in dB, before -> after:
+
+| mode | awgn | cfo20ppm | +4 kHz | -4 kHz | what changed |
+|---|---|---|---|---|---|
+| D-STAR (6.25 kHz) | 7 -> 7 | 9 -> 7 | 19 -> 9 | 19 -> 11 | frequency capture while searching (the fixed +-4.5 kHz filter cut the GMSK signal) |
+| NXDN (6.25 kHz) | 9 -> 9 | 9 -> 9 | 13 -> 9 | 13 -> 9 | MeanAfc follows a mean error of 2.5 kHz or more (was 4.7 kHz) |
+| dPMR (6.25 kHz) | 7 -> 7 | 7 -> 7 | none -> 9 | none -> 7 | frequency capture while searching |
+| P25 phase 1 | 9 -> 9 | 9 -> 7 | 11 -> 5 | 13 -> 7 | MeanAfc follows a mean error of 2.5 kHz or more |
+| DMR | 5 | 5 | 5 | 5 | already fine (no change) |
+| TETRA | 10 | 10 | 10 | 10 | harness wired now (see below) |
+
+`MeanAfc` (core/include/dect2/dsp/mean_afc.h) has a fine regime: the discriminator mean over four 20 ms windows with a modulation-sized spread is followed when it
+exceeds `fineMin` (2.5 kHz default; D-STAR and dPMR use 1.2 kHz because they move the oscillator only while searching, never mid-call: a move in a call upsets the level
+tracking and cost frames in tests/dstar/test_dstar_rx.cpp). The first attempt with 1 kHz everywhere lost 3 frames of a +-1 kHz NXDN call and a lot of D-STAR voice:
+that is why the threshold is 2.5 kHz for the modes that move in a call.
+Guards: tests/{dstar,nxdn,dpmr,p25}/test_*_sens.cpp now check a carrier +-4 kHz off at 14 dB (at least 70 % of the clean blocks).
+
+**TETRA in the harness** (it was "no valid output"): the test signal is made for the centre 392.5 MHz (`kTetraTestCentreHz`) and the receiver is a capture-block
+decoder, so it needs `setCenterHz(kTetraTestCentreHz)` and the threaded session. AWGN 10 dB in 25 kHz (= Es/N0 about 11.4 dB, the figure of differential pi/4-DQPSK
+before the channel code), lock 3.3 s (it is two capture blocks, not the demodulator), TU6 14, combined 16, static echo 15 (9 with a -6 dB echo at 5 us is the flat
+fade of the echo: the mean power is the same, a worst-phase static echo takes 6 dB off the channel; nothing to fix in the receiver). Capture-bound lock time is not changed.
+
+Gaps left (measured, not changed): D-STAR TU6 17 dB (7 AWGN; GMSK with no interleaving, FEC only on the header: about 9 dB of Rayleigh fading is the usual cost of
+non-coherent FSK without coding), D-STAR lock 0.8 s (the late entry waits for two data syncs 420 ms apart; one strong sync would halve it but a single 24 bit match
+false-locks on noise about once in 30 s), NXDN / dPMR / P25 AWGN 7 to 9 dB against DMR 5 (not comparable: the units counted differ; the earlier campaigns already moved
+them by 5 dB). Not measured: soft-decision FEC gains, symbol-timing error sweeps beyond the 50 ppm clock scenario.
+
+### Why isn't it decoding (Receiver tab)
+
+`voiceWhy()` (core/include/dect2/voice/voice_why.h, per-mode adapters in voice_why_modes.h) reads each receiver's own counters and names the stage that stops the
+signal: no power at the channel, no frame sync, syncs but the frame identity (NID, LICH, slot type) unreadable, identity fine but FEC / CRC fails, decoding with over a
+third of the blocks lost, decoding well. DMR, P25, NXDN, D-STAR and TETRA show it as the first line of the Receiver tab, in 13 languages (tests/voice/test_voice_why.cpp).
+The visual check of the tab was not done (the app was not built here; CI compiles it).

@@ -3527,3 +3527,28 @@ First-run setup	初回セットアップ
 Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.	各モードはシンプル表示で開きます。スペクトラムと、スタートボタンと主要な操作がある1つの画面です。オフ: 詳細タブ。
 One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).	1クリックで地域のバンドプラン、TV チャンネル、FM 帯とステップ、既定の周波数、単位を設定します(リトアニア、EU など)。
 Open the setup again: radio, region, antenna, interests, voice codecs.	セットアップをもう一度開く: 無線機、地域、アンテナ、興味、音声コーデック。
+Why	理由
+no signal at the channel: check the tuning, the antenna and the gain	チャンネルに信号がありません: 同調、アンテナ、ゲインを確認してください
+signal, but no frame sync found: check the tuning (offset, polarity), the bandwidth and the signal-to-noise ratio	信号はありますが、フレーム同期が見つかりません: 同調(オフセット、極性)、帯域幅、S/N比を確認してください
+frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the signal is too noisy or distorted	フレーム同期は見つかりましたが、識別情報(NID、LICH、スロット種別)を読み取れません: 信号のノイズまたは歪みが大きすぎます
+frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	フレーム同期は見つかりましたが、ペイロードがFEC / CRCで失敗します: 信号が弱い、フェージング、またはサンプルクロック誤差
+decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	デコードできていますが、ブロックの3分の1以上が失われています: より強い信号か良いアンテナが有効です
+decoding well	良好にデコードしています
+Base stations	基地局
+Calls	通話
+Channel options	チャンネルオプション
+Chat	チャット
+Devices	デバイス
+Ground stations	地上局
+Neighbours	隣接局
+Nodes	ノード
+On air	送信中
+Selected	選択中
+Site	サイト
+Table	表
+Trunking	トランキング
+Vessels	船舶
+some stations are hidden	一部の局は非表示です
+File...	ファイル...
+Auto-save to file	ファイルに自動保存
+Activity	アクティビティ

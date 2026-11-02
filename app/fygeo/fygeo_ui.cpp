@@ -1,5 +1,6 @@
 // FengYun geostationary screens (FY-4A / FY-4B LRIT, FY-4A HRIT-II/III, FY-2 S-VISSR): the same product list and picture viewer as GOES and Elektro-L,
 // the DVB-S2 / BPSK lock stages of the link, the bit error ratio of S-VISSR and a plain-text hint when nothing decodes.
+#include "ui/kit/mode_panel.h"
 #include "app.h"
 #include "panels/gallery.h"
 #include "gfx/gfx.h"
@@ -451,6 +452,12 @@ template <int F> void meters(const App& a, std::vector<ModeMeter>& out) {
     }
 }
 
+// Simple view: the picture / products with their controls, and the signal and the product list beside them
+template <int F> void command(App& a) {
+    modepanel::panes({{"##fygcpic", nullptr, [&a] { tab<F>(a); }, 2.2f, 300.f},
+                      {"##fygcsig", tr("Signal"), [&a] { receiver<F>(a); ImGui::Spacing(); list<F>(a); }, 1.f, 240.f}}, 340.f);
+}
+
 } // namespace
 
 #define FY_UI(NAME, F) \
@@ -468,6 +475,7 @@ template <int F> void meters(const App& a, std::vector<ModeMeter>& out) {
         .tuner = tuner<F>, \
         .tick = tick<F>, \
         .meters = meters<F>, \
+        .command = command<F>, \
     }
 FY_UI(kFy4LritUi, 0);
 FY_UI(kFy4aHritUi, 1);
