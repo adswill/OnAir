@@ -6,6 +6,8 @@
 #include "app.h"
 #include "pager_filter.h"
 #include "pager_alias.h"
+#include "pager_keywords.h"
+#include "../panels/automation_internal.h"
 #include "../ui/msglog_ui.h"
 #include "dect2/pager/pager_rx.h"
 #include "dect2/pager/pager_tel.h"
@@ -15,6 +17,7 @@
 #include <cstdio>
 #include <fstream>
 #include <cmath>
+#include <deque>
 #include <ctime>
 #include <map>
 #include <sstream>
@@ -49,6 +52,14 @@ struct State {
     int pushedCombine = -1;
     bool selcall = false;                // also decode five-tone selective calls on the channel audio (saved as pagerSelcall)
     int pushedSelcall = -1;
+    dect2::PagerKeywords kw;                 // keyword alerts: matched against the text and the capcode name, saved as pagerKeywords
+    char kwText[2000] = "";                  // the list as typed, one keyword per line, "re:" starts a regular expression
+    int kwBad = 0;                           // lines of the list that could not be used
+    bool kwNotify = false, kwSound = false;  // desktop notification / beeps on a match (both off by default; saved as pagerKwNotify, pagerKwSound)
+    struct KwHit { int64_t wall = 0; std::string kw, addr, text; };
+    std::deque<KwHit> kwHits;                // the live ticker: the newest matches, newest last
+    std::map<int, uint64_t> kwSeen;          // carrier -> highest serial looked at (serials restart per carrier)
+    bool kwPrimed = false;                   // pages that were there when the list was set are not alerts
     std::map<uint32_t, int> byAddress;       // POCSAG address -> kPocsagReadAlpha or kPocsagReadNumeric, saved as "pocsagReadAddr" ("ric:a ric:n ...")
 };
 State S;
@@ -81,6 +92,14 @@ void loadRead() {
     S.decodedOnly = d.getI("pagerDecodedOnly", 0) != 0;
     S.combine = d.getI("pagerCombine", 1) != 0;
     S.selcall = d.getI("pagerSelcall", 0) != 0;
+    {
+        std::string k = d.getS("pagerKeywords", "");
+        for (auto& c : k) if (c == '\x1e') c = '\n';
+        snprintf(S.kwText, sizeof S.kwText, "%s", k.c_str());
+        S.kwBad = S.kw.parse(S.kwText);
+        S.kwNotify = d.getI("pagerKwNotify", 0) != 0;
+        S.kwSound = d.getI("pagerKwSound", 0) != 0;
+    }
     {
         std::ifstream f(aliasPath(), std::ios::binary);
         if (f) { std::string t((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>()); S.aliases.importCsv(t); }
@@ -200,6 +219,16 @@ void messageView(App& a) {
     const dect2::PagerTelemetry& t = a.rx.pager;
     const bool on = live(a);
     const std::vector<dect2::PagerMessage>& all = messagesOf(t);
+    if (!S.kw.empty()) {   // the live keyword ticker: the last three matches
+        if (S.kwHits.empty()) ImGui::TextDisabled("%s", tr("Keywords on: no match yet"));
+        const size_t from = S.kwHits.size() > 3 ? S.kwHits.size() - 3 : 0;
+        for (size_t i = from; i < S.kwHits.size(); i++) {
+            const auto& h = S.kwHits[i];
+            ImGui::TextColored(pal::warnAmber(), "%s", h.kw.c_str()); ImGui::SameLine(0, 8 * gUi);
+            ImGui::TextDisabled("%s", clock(h.wall).c_str()); ImGui::SameLine(0, 8 * gUi);
+            ImGui::TextUnformatted((h.addr + "  " + h.text.substr(0, 120)).c_str());
+        }
+    }
     ImGui::TextDisabled("Filter"); ImGui::SameLine(0, 5 * gUi);
     ImGui::SetNextItemWidth(150 * gUi);
     ImGui::InputText("##pgf", S.filter, sizeof S.filter);
@@ -319,6 +348,7 @@ void messageView(App& a) {
                 if (shown >= kShown) continue;
                 shown++;
                 ImGui::TableNextRow();
+                if (!S.kw.empty() && S.kw.match(m.text, aliasOf(m))) ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, IM_COL32(150, 110, 20, 90));   // a keyword match
                 if (wide) { ImGui::TableNextColumn(); wideCarrierCell(a, m.carrierId, m.carrierHz); }
                 ImGui::TableNextColumn(); ImGui::TextUnformatted(clock(m.wallTime).c_str());
                 ImGui::TableNextColumn(); ImGui::PushStyleColor(ImGuiCol_Text, pal::accent()); ImGui::TextUnformatted(dect2::pagerProtoName(m).c_str()); ImGui::PopStyleColor();
@@ -454,6 +484,19 @@ void capcodeView(App& a) {
         plat::prefs().setS("pagerIgnore", S.ignore); plat::prefs().flush();
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Capcodes (RICs) whose pages are hidden from Messages, separated by spaces or commas; a range like 2000-2099. Works for POCSAG and FLEX. The pages are still received."));
+    {   // keyword alerts: one keyword per line, "re:" for a regular expression
+        ImGui::TextDisabled("%s", tr("Keywords"));
+        ImGui::SetNextItemWidth(-1);
+        if (ImGui::InputTextMultiline("##pgkw", S.kwText, sizeof S.kwText, ImVec2(0, 70 * gUi))) saveKeywords();
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("One keyword per line, any case. It is looked for in the message text and in the capcode name. Start a line with re: for a regular expression, for example re:structure fire|MVA. Matching pages are highlighted in Messages and shown in the ticker."));
+        if (ImGui::Checkbox(tr("Notify on a keyword match"), &S.kwNotify)) saveKeywords();
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("A desktop notification for each matching new page (off by default)"));
+        ImGui::SameLine(0, 12 * gUi);
+        ImGui::BeginDisabled(!S.kwNotify);
+        if (ImGui::Checkbox(tr("Beep"), &S.kwSound)) saveKeywords();
+        ImGui::EndDisabled();
+        if (S.kwBad) { ImGui::SameLine(0, 12 * gUi); ImGui::TextColored(pal::badRed(), "%d %s", S.kwBad, tr("lines are not valid and were skipped")); }
+    }
     {   // capcode names (#5): a CSV with the columns capcode (or a range), name, category, protocol
         if (ImGui::Button(tr("Import names..."))) {
             const std::string p = openFileDialog();
@@ -541,8 +584,46 @@ void capcodeView(App& a) {
 
 // ---------------------------------------------------------------- hooks
 
+void saveKeywords() {
+    S.kwBad = S.kw.parse(S.kwText);
+    std::string k = S.kwText;
+    for (auto& c : k) if (c == '\n') c = '\x1e';
+    plat::prefs().setS("pagerKeywords", k);
+    plat::prefs().setI("pagerKwNotify", S.kwNotify ? 1 : 0);
+    plat::prefs().setI("pagerKwSound", S.kwSound ? 1 : 0);
+    plat::prefs().flush();
+    S.kwPrimed = false;   // what is on the screen now is not new
+}
+
+// New pages that match a keyword: the ticker, and a notification when asked. At most three alerts a pass (a flood of pages is one more line).
+void keywordScan(App& a) {
+    if (S.kw.empty() || !live(a)) return;
+    const std::vector<dect2::PagerMessage>& all = messagesOf(a.rx.pager);
+    int alerts = 0, extra = 0;
+    for (const auto& raw : all) {
+        uint64_t& seen = S.kwSeen[raw.carrierId];
+        if (raw.serial <= seen) continue;
+        seen = raw.serial;
+        if (!S.kwPrimed) continue;
+        const dect2::PagerMessage m = resolved(raw);
+        const std::string nm = aliasOf(m);
+        const std::string* k = S.kw.match(m.text, nm);
+        if (!k) continue;
+        State::KwHit h; h.wall = m.wallTime; h.kw = *k; h.addr = std::to_string(m.address) + (nm.empty() ? "" : " " + nm); h.text = oneLine(m.text);
+        S.kwHits.push_back(h);
+        while (S.kwHits.size() > 50) S.kwHits.pop_front();
+        if (S.kwNotify) {
+            if (alerts < 3) { alerts++; automationapp::alertNow(a, std::string(tr("Pager keyword")) + ": " + h.kw, h.addr + "  " + h.text.substr(0, 160), S.kwSound && alerts == 1); }
+            else extra++;
+        }
+    }
+    S.kwPrimed = true;
+    if (extra) automationapp::alertNow(a, tr("Pager keyword"), std::to_string(extra) + " " + tr("more matching pages"), false);
+}
+
 void tick(App& a) {
     loadRead();
+    keywordScan(a);
     const int m = baudMask();
     if ((int)a.pagerNarrow != S.pushedNarrow) { a.engine.pager().setNarrowChannel(a.pagerNarrow); S.pushedNarrow = a.pagerNarrow; }
     if (m != S.pushedBaud) { a.engine.pager().setPocsagBauds(m); S.pushedBaud = m; }

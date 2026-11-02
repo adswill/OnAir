@@ -372,3 +372,34 @@ open to anyone with the link
 with a password
 no radio found
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.
+EMERGENCY
+encrypted
+Follow talkgroups, radio IDs or callsigns. Alerts and recording are off until you tick them for an entry. Encrypted calls are listed but never recorded.
+TG 91, 3120123, 100-199, LY1ABC, LY*
+Name (optional)
+All voice modes
+Nothing watched yet.
+Watching
+Notify
+Beep
+A desktop notification when a call starts (off by default)
+Save the audio of its calls to the recordings folder through the auto-record rules (this also switches auto-record on). Encrypted calls are never recorded. You are responsible for the law of your country.
+Copy as CSV
+No calls of the watched entries heard yet.
+Sec
+Flags
+EMERG
+ENC
+Keywords on: no match yet
+Keywords
+One keyword per line, any case. It is looked for in the message text and in the capcode name. Start a line with re: for a regular expression, for example re:structure fire|MVA. Matching pages are highlighted in Messages and shown in the ticker.
+Notify on a keyword match
+A desktop notification for each matching new page (off by default)
+lines are not valid and were skipped
+Pager keyword
+more matching pages
+No GPS position heard yet (needs LRRP data)
+Last position
+just now
+min ago
+Show on map

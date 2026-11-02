@@ -199,6 +199,10 @@ void drawBadge(ImDrawList* dl, const ImVec2& q, uint32_t src, ImU32 col, double 
     }
 }
 
+void dmrMapFocus(uint32_t src, double lat, double lon) {
+    S.selSrc = src; S.selValid = true; S.map.lat = lat; S.map.lon = lon; S.map.zoom = std::max(S.map.zoom, 13);
+}
+
 const DmrLocation* latestFix(const DmrTelemetry& t, uint32_t src) {
     for (size_t i = t.locations.size(); i-- > 0;)
         if (t.locations[i].src == src && t.locations[i].hasFix) return &t.locations[i];

@@ -3633,3 +3633,34 @@ open to anyone with the link	atvira visiems su nuoroda
 with a password	su slaptažodžiu
 no radio found	radijas nerastas
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Radijas nerastas. Prijunkite radiją ir kortelėje „Radijas ir diapazonas“ spustelėkite Atnaujinti arba pasirinkite bandomąjį signalą.
+EMERGENCY	AVARINIS
+encrypted	užšifruota
+Follow talkgroups, radio IDs or callsigns. Alerts and recording are off until you tick them for an entry. Encrypted calls are listed but never recorded.	Sekite pokalbių grupes, radijo ID arba šaukinius. Perspėjimai ir įrašymas išjungti, kol jų nepažymėsite prie įrašo. Užšifruoti skambučiai išvardijami, bet niekada neįrašomi.
+TG 91, 3120123, 100-199, LY1ABC, LY*	TG 91, 3120123, 100-199, LY1ABC, LY*
+Name (optional)	Pavadinimas (nebūtina)
+All voice modes	Visi balso režimai
+Nothing watched yet.	Kol kas nieko nestebima.
+Watching	Stebima
+Notify	Pranešti
+Beep	Pyptelėjimas
+A desktop notification when a call starts (off by default)	Darbalaukio pranešimas, kai prasideda skambutis (pagal numatytuosius nustatymus išjungta)
+Save the audio of its calls to the recordings folder through the auto-record rules (this also switches auto-record on). Encrypted calls are never recorded. You are responsible for the law of your country.	Išsaugo skambučių garsą įrašų aplanke pagal automatinio įrašymo taisykles (taip pat įjungia automatinį įrašymą). Užšifruoti skambučiai niekada neįrašomi. Už savo šalies teisę atsakote patys.
+Copy as CSV	Kopijuoti kaip CSV
+No calls of the watched entries heard yet.	Stebimų įrašų skambučių dar negirdėta.
+Sec	Sek.
+Flags	Žymos
+EMERG	AVAR
+ENC	UŽŠ
+Keywords on: no match yet	Raktažodžiai įjungti: atitikmenų dar nėra
+Keywords	Raktažodžiai
+One keyword per line, any case. It is looked for in the message text and in the capcode name. Start a line with re: for a regular expression, for example re:structure fire|MVA. Matching pages are highlighted in Messages and shown in the ticker.	Vienas raktažodis eilutėje, didžiosios ir mažosios raidės nesvarbios. Ieškoma pranešimo tekste ir capcode pavadinime. Eilutę pradėkite re: reguliariajai išraiškai, pavyzdžiui re:structure fire|MVA. Atitinkantys puslapiai paryškinami Pranešimuose ir rodomi eilutėje.
+Notify on a keyword match	Pranešti apie raktažodžio atitikmenį
+A desktop notification for each matching new page (off by default)	Darbalaukio pranešimas apie kiekvieną atitinkantį naują puslapį (pagal numatytuosius nustatymus išjungta)
+lines are not valid and were skipped	eilučių neteisingos ir praleistos
+Pager keyword	Pejerio raktažodis
+more matching pages	daugiau atitinkančių puslapių
+No GPS position heard yet (needs LRRP data)	GPS pozicijos dar negirdėta (reikia LRRP duomenų)
+Last position	Paskutinė pozicija
+just now	ką tik
+min ago	min. prieš
+Show on map	Rodyti žemėlapyje

@@ -15,6 +15,8 @@ void uiTick(App& a);
 void autoRecordInstall();   // the record rules' IQ clips and non-voice audio (session/record_rules.h)
 // the banner in the window's top edge that notify shows (and a short log of webhook results)
 void drawBanner();
+// a watch-list or keyword alert: the banner, a desktop notification and (when asked, and not muted) three short beeps. Interface thread.
+void alertNow(App& a, const std::string& title, const std::string& body, bool sound);
 std::string webhookStatus();
 
 }  // namespace automationapp

@@ -37,3 +37,5 @@ Other layouts (classic, touch, the dock faces) call `mainTabs()` too, so they ge
 Own `command` view (summary header, key controls, live tables side by side; Advanced unchanged): HFDL, DMR (pilots), then ADS-B, AIS, ACARS, VDL2, pagers, APRS / packet, LoRa mesh (Meshtastic, MeshCom, LoRa APRS, LoRaWAN by entry), TETRA, P25, NXDN, D-STAR, dPMR, M17, radiosondes, Inmarsat-C, Inmarsat Aero, Iridium, Orbcomm, and the picture modes (Meteor LRPT, GOES, HRPT, GK-2A, Elektro, FY-3 AHRPT / MPT, FY-4 and FY-2): picture with its controls beside the signal readout and the product list.
 
 Not converted: the TV and radio modes without a `ModeUi` (DVB-T/T2, DVB-S/S2, DAB, FM, ATSC, ISDB-T keep their screens; they have no Simple view), DRM and Fusion (their first view is already one merged screen), and the small single-view modes, which use the generic Command view. A narrow pane wraps its toolbars (`sameLineIf`), so a mode's `command` can use any table function of its tab.
+
+The pager keyword ticker is in the Messages view, which the Simple view shows; the voice **Watch** views (DMR, P25, NXDN, TETRA) are Advanced-only sub-views because they need a typed entry.

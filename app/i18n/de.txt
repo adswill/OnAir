@@ -3630,3 +3630,34 @@ open to anyone with the link	offen für jeden mit dem Link
 with a password	mit Passwort
 no radio found	kein Radio gefunden
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Kein Radio gefunden. Schließen Sie ein Radio an und drücken Sie auf dem Reiter Radio und Bereich auf Aktualisieren, oder wählen Sie das Testsignal.
+EMERGENCY	NOTFALL
+encrypted	verschlüsselt
+Follow talkgroups, radio IDs or callsigns. Alerts and recording are off until you tick them for an entry. Encrypted calls are listed but never recorded.	Talkgroups, Funk-IDs oder Rufzeichen verfolgen. Meldungen und Aufnahme sind aus, bis Sie sie für einen Eintrag ankreuzen. Verschlüsselte Gespräche werden aufgelistet, aber nie aufgenommen.
+TG 91, 3120123, 100-199, LY1ABC, LY*	TG 91, 3120123, 100-199, LY1ABC, LY*
+Name (optional)	Name (optional)
+All voice modes	Alle Sprachmodi
+Nothing watched yet.	Noch nichts beobachtet.
+Watching	Beobachtet
+Notify	Melden
+Beep	Signalton
+A desktop notification when a call starts (off by default)	Eine Desktop-Benachrichtigung, wenn ein Gespräch beginnt (standardmäßig aus)
+Save the audio of its calls to the recordings folder through the auto-record rules (this also switches auto-record on). Encrypted calls are never recorded. You are responsible for the law of your country.	Das Audio seiner Gespräche über die Auto-Aufnahme-Regeln im Aufnahmeordner speichern (schaltet auch die Auto-Aufnahme ein). Verschlüsselte Gespräche werden nie aufgenommen. Sie sind für das Recht Ihres Landes selbst verantwortlich.
+Copy as CSV	Als CSV kopieren
+No calls of the watched entries heard yet.	Noch keine Gespräche der beobachteten Einträge gehört.
+Sec	Sek
+Flags	Merkmale
+EMERG	NOTF
+ENC	VERSCHL
+Keywords on: no match yet	Stichwörter an: noch kein Treffer
+Keywords	Stichwörter
+One keyword per line, any case. It is looked for in the message text and in the capcode name. Start a line with re: for a regular expression, for example re:structure fire|MVA. Matching pages are highlighted in Messages and shown in the ticker.	Ein Stichwort pro Zeile, Groß-/Kleinschreibung egal. Gesucht wird im Nachrichtentext und im Namen des Capcodes. Mit re: am Zeilenanfang ist es ein regulärer Ausdruck, zum Beispiel re:structure fire|MVA. Treffer werden in Nachrichten hervorgehoben und im Ticker gezeigt.
+Notify on a keyword match	Bei Stichwort-Treffer melden
+A desktop notification for each matching new page (off by default)	Eine Desktop-Benachrichtigung für jede passende neue Nachricht (standardmäßig aus)
+lines are not valid and were skipped	Zeilen sind ungültig und wurden übersprungen
+Pager keyword	Pager-Stichwort
+more matching pages	weitere passende Nachrichten
+No GPS position heard yet (needs LRRP data)	Noch keine GPS-Position gehört (braucht LRRP-Daten)
+Last position	Letzte Position
+just now	gerade eben
+min ago	Min. her
+Show on map	Auf Karte zeigen

@@ -3631,3 +3631,34 @@ open to anyone with the link	リンクを知っている人なら誰でも
 with a password	パスワード付き
 no radio found	ラジオが見つかりません
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	ラジオが見つかりません。ラジオを接続し、「ラジオと範囲」タブで更新を押すか、テスト信号を選んでください。
+EMERGENCY	緊急
+encrypted	暗号化
+Follow talkgroups, radio IDs or callsigns. Alerts and recording are off until you tick them for an entry. Encrypted calls are listed but never recorded.	通話グループ、無線ID、コールサインを追跡します。通知と録音は、項目ごとにチェックを入れるまでオフです。暗号化された通話は一覧に表示されますが、録音されません。
+TG 91, 3120123, 100-199, LY1ABC, LY*	TG 91, 3120123, 100-199, LY1ABC, LY*
+Name (optional)	名前(任意)
+All voice modes	すべての音声モード
+Nothing watched yet.	監視中の項目はまだありません。
+Watching	監視中
+Notify	通知
+Beep	ビープ
+A desktop notification when a call starts (off by default)	通話の開始時にデスクトップ通知を出します(既定はオフ)
+Save the audio of its calls to the recordings folder through the auto-record rules (this also switches auto-record on). Encrypted calls are never recorded. You are responsible for the law of your country.	自動録音ルールを通じて、通話の音声を録音フォルダーに保存します(自動録音もオンになります)。暗号化された通話は録音されません。お住まいの国の法律はご自身の責任です。
+Copy as CSV	CSVとしてコピー
+No calls of the watched entries heard yet.	監視項目の通話はまだ受信されていません。
+Sec	秒
+Flags	フラグ
+EMERG	緊急
+ENC	暗号
+Keywords on: no match yet	キーワード有効: 一致はまだありません
+Keywords	キーワード
+One keyword per line, any case. It is looked for in the message text and in the capcode name. Start a line with re: for a regular expression, for example re:structure fire|MVA. Matching pages are highlighted in Messages and shown in the ticker.	1行に1つのキーワード、大文字小文字は区別しません。メッセージ本文とキャップコード名から探します。行頭に re: を付けると正規表現になります(例: re:structure fire|MVA)。一致したページはメッセージでハイライトされ、ティッカーに表示されます。
+Notify on a keyword match	キーワード一致時に通知
+A desktop notification for each matching new page (off by default)	一致する新しいページごとにデスクトップ通知を出します(既定はオフ)
+lines are not valid and were skipped	行が無効のためスキップしました
+Pager keyword	ページャーのキーワード
+more matching pages	件の一致するページ
+No GPS position heard yet (needs LRRP data)	GPS位置はまだ受信されていません(LRRPデータが必要)
+Last position	最後の位置
+just now	たった今
+min ago	分前
+Show on map	地図で表示

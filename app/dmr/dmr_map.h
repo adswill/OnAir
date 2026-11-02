@@ -6,3 +6,5 @@ struct App;
 
 void dmrMap(App& a);
 void dmrTable(App& a);
+// select a radio on the map and centre on its last position (the Watch view's "Show on map")
+void dmrMapFocus(uint32_t src, double lat, double lon);
