@@ -942,6 +942,7 @@ void startupQuestion(App& a) {
     App& s = rootApp(a);
     if (s.mapDeclined && s.mapDeclinedVersion != ONAIR_VERSION) { s.mapDeclined = false; s.mapDeclinedVersion.clear(); savePrefs(s); }   // an update: ask again
     if (!mapShouldAsk(s.mapConsent, s.mapDeclined, s.mapDeclinedVersion, ONAIR_VERSION, dect2::mapguard::holdingNow())) { asked = true; return; }
+    if (s.setupOpen) return;   // the first-run setup is on screen: ask when it is done (it covered the setup screens)
     if (ImGui::GetFrameCount() < 90) return;   // after the first frames: the window is up and the layout is settled
     asked = true;
     gAskConsent = true;

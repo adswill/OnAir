@@ -1417,6 +1417,7 @@ void tourStartTour(App& a, int which);                 // tour.cpp: start one of
 void tourMark(const char* id, ImVec2 lo, ImVec2 hi);   // tour.cpp: report where a part of the window is this frame (the tour points at it)
 void wizEnter(App& a, int step);
 void setupWizardOpen(App& a);                        // wizard.cpp: (re)start the setup wizard
+bool regionPresetRow(const std::string& current, std::string& picked);   // wizard.cpp: the buttons of the regional presets, wrapped; true on a click (id in picked)
 void setupApplyPreset(App& a, const std::string& presetId, int units);   // wizard.cpp: a regional preset (Settings > Region preset), no wizard
 void setupWizard(App& a, ImVec2 disp);               // wizard.cpp: the window, each frame
 void lessonsStart(App& a, int planPos = -1);         // learn.cpp: the hands-on lessons for the setup's goals (resumes where they were left when planPos < 0)

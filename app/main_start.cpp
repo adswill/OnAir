@@ -67,7 +67,9 @@ void startApp(App& app, int argc, char** argv) {
     if (getenv("DECT2_WIZARD")) app.wizOpen = true;   // test hook: open the tour at start-up (DECT2_WIZSTEP picks the step)
     if (getenv("DECT2_SETUP")) { app.wizOpen = false; setupWizardOpen(app); if (const char* ss = getenv("DECT2_SETUPSTEP")) app.setupStep = atoi(ss);
         if (const char* sl = getenv("DECT2_SETUPLOC")) snprintf(app.setupLoc, sizeof app.setupLoc, "%s", sl);   // test hooks: a position and the ticked interests (bits)
-        if (const char* si = getenv("DECT2_SETUPINT")) app.setupInterests = (unsigned)atoi(si); }
+        if (const char* si = getenv("DECT2_SETUPINT")) app.setupInterests = (unsigned)atoi(si);
+        if (const char* sc = getenv("DECT2_SETUPCOUNTRY")) { app.setupLoc[0] = 0; snprintf(app.setupCountry, sizeof app.setupCountry, "%s", sc); }   // test hook: a regional preset by country code
+        if (const char* sa = getenv("DECT2_SETUPANT")) app.setupAntenna = atoi(sa); }
     app.wizStepT = ImGui::GetTime();
     app.engine.player().setHardwareDecode(plat::prefs().getB("hwVideo", true));
     app.tune.synth.demoTv = true;   // the synthetic DVB-T / ATSC signal carries a test-card programme

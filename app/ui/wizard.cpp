@@ -141,17 +141,10 @@ void locationStep(App& a) {
     ImGui::Spacing();
     {   // regional presets: one click sets the whole bundle of a region
         ImGui::TextUnformatted(tr("Quick pick: a region preset sets the band plan, the TV channels, the FM band, the default frequencies and the units"));
-        int np = 0;
-        const setup::RegionPreset* P = setup::regionPresets(&np);
         const std::string cur = a.setupLoc[0] ? std::string() : setup::presetOfCountry(a.setupCountry);
-        for (int i = 0; i < np; i++) {
-            if (i) ImGui::SameLine();
-            ImGui::PushID(P[i].id);
-            const bool on = cur == P[i].id;
-            if (on) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.34f, 0.40f, 1));
-            if (ImGui::Button(tr(P[i].label))) { snprintf(a.setupCountry, sizeof a.setupCountry, "%s", P[i].country); a.setupLoc[0] = 0; a.setupQuery[0] = 0; }
-            if (on) ImGui::PopStyleColor();
-            ImGui::PopID();
+        std::string picked;
+        if (regionPresetRow(cur, picked)) {
+            if (const setup::RegionPreset* p = setup::regionPresetById(picked)) { snprintf(a.setupCountry, sizeof a.setupCountry, "%s", p->country); a.setupLoc[0] = 0; a.setupQuery[0] = 0; }
         }
         ImGui::Spacing();
     }
@@ -190,7 +183,7 @@ void locationStep(App& a) {
         ImGui::Spacing();
         ImGui::TextColored(pal::accent(), "%s", d.known ? tr(d.countryName.c_str()) : tr("Country not recognised"));
         ImGui::SameLine();
-        ImGui::TextDisabled("%.3f, %.3f  (%s)", lat, lon, dect2::toMaidenhead(lat, lon, 6).c_str());
+        if (!d.approx) ImGui::TextDisabled("%.3f, %.3f  (%s)", lat, lon, dect2::toMaidenhead(lat, lon, 6).c_str());
         ImGui::TextDisabled(tr("ITU / IARU region %d.  FM %.1f to %.1f MHz, %d kHz step, %d us de-emphasis.  DAB in band III: %s."), d.itu, r.fmLoMhz, r.fmHiMhz, d.fmStepKhz, r.fmDeemphUs, tr(d.dab3 ? "yes" : "no"));
         {
             const setup::RegionDefaults rd = setup::regionDefaults(d);
@@ -344,6 +337,27 @@ static void applyInterests(App& a, const setup::Derived& d) {
         if (!id.empty()) { st.setFavourite(id, true); added = true; }
     }
     if (added) presetsapp::save();
+}
+
+// the row of regional preset buttons (wraps to the next line when the window is narrow); true when one was clicked, its id in `picked`
+bool regionPresetRow(const std::string& current, std::string& picked) {
+    int np = 0;
+    const setup::RegionPreset* P = setup::regionPresets(&np);
+    bool hit = false;
+    const float right = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;   // the right edge of the column or window this row is in
+    for (int i = 0; i < np; i++) {
+        if (i) {
+            const float w = ImGui::CalcTextSize(tr(P[i].label)).x + ImGui::GetStyle().FramePadding.x * 2;
+            if (ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x + w < right) ImGui::SameLine();
+        }
+        ImGui::PushID(P[i].id);
+        const bool on = current == P[i].id;
+        if (on) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.34f, 0.40f, 1));
+        if (ImGui::Button(tr(P[i].label))) { picked = P[i].id; hit = true; }
+        if (on) ImGui::PopStyleColor();
+        ImGui::PopID();
+    }
+    return hit;
 }
 
 // everything a place or a regional preset sets (the same for the wizard and Settings > Region preset)

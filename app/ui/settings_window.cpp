@@ -150,17 +150,8 @@ void customRow(App& a, const Info& i) {
         if (ImGui::Checkbox(tr("Easy mode"), &on)) modepanel::setEasyMode(on);
     } else if (k == "regionPreset") {
         const std::string cur = setup::presetOfCountry(plat::prefs().getS("locCountry", ""));
-        int np = 0;
-        const setup::RegionPreset* P = setup::regionPresets(&np);
-        for (int p = 0; p < np; p++) {
-            if (p) ImGui::SameLine();
-            ImGui::PushID(P[p].id);
-            const bool on = cur == P[p].id;
-            if (on) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.34f, 0.40f, 1));
-            if (ImGui::Button(tr(P[p].label))) setupApplyPreset(a, P[p].id, (int)plat::prefs().getI("setupUnits", 0));
-            if (on) ImGui::PopStyleColor();
-            ImGui::PopID();
-        }
+        std::string picked;
+        if (regionPresetRow(cur, picked)) setupApplyPreset(a, picked, (int)plat::prefs().getI("setupUnits", 0));
     }
     else if (k == "modeVisLink") { if (ImGui::Button(tr("Open Modes shown..."))) a.modeVisOpen = true; }
     else if (k == "themeMode") ui2::themeChoice(a, false);
