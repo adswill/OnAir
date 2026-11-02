@@ -3,8 +3,10 @@
 //    AREA 1, GO-TO 5, HOME 5, ID 8, FREE 5, then 7 check bits (US 6,529,486 B1 describes this word for an LTR-compatible system).
 //  - 300 bit/s subaudible NRZ below 150 Hz (same patent's background section).
 //  - Talkgroup text A-HH-GGG, special ids 240-247 tokens, 253 busy, 254 callsign ID, 255 idle (RadioReference wiki).
-// NOT established from non-code public sources, so left out: the check-bit algorithm (the received check bits are shown, never verified),
-// and the meaning of the GO-TO / FREE codes beyond the 1 - 20 repeater numbers. Polarity of the FM data is not known: both are accepted.
+//  - Check bits: 7-bit parity code, the XOR of one fixed 7-bit value per set information bit (a CRC-7 with polynomial 0xFD, initial fill 0).
+//    The table and the inbound (bit-flipped word, optionally inverted check) behaviour are from DSheirer/sdrtrunk (GPL-3, CRCLTR.java,
+//    Copyright Dennis Sheirer); credit in THIRD_PARTY.md. A word is accepted only when its check bits match.
+// The meaning of the GO-TO / FREE codes beyond the 1 - 20 repeater numbers is not needed. Polarity of the FM data is not known: both are accepted.
 #pragma once
 #include "dect2/common/ring.h"
 #include <cstdint>
@@ -24,6 +26,8 @@ struct Word {
 std::vector<uint8_t> encodeWord(const Word& w);                       // 40 bits, MSB first; chk is written as given
 bool parseWord(const uint8_t* bits40, Word& w);                        // false when the sync is not 0x158
 bool plausible(const Word& w);                                         // home 1-20, go-to 0-20 or 29-31, free 0-20 or 31
+int checksum(const Word& w);                                           // the 7 check bits for the 24 information bits
+bool checkOk(const Word& w, bool inverted);                            // chk == checksum, or (inverted words only) chk == ~checksum
 std::string talkgroup(const Word& w);                                  // "A-HH-GGG"
 std::string kindOf(int id);                                            // "idle", "callsign ID", "busy", "token" or ""
 
