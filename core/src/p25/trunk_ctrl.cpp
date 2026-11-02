@@ -43,6 +43,7 @@ void Controller::dispatch(const std::vector<Grant>& gs, double now) {
         if (const TgEntry* e = g.group ? tgs.find(g.tg) : nullptr) if (e->encryptedMode()) gg.encrypted = true;
         // Phase 2 is scrambled with the site's WACN / system ID / NAC: without the system broadcast nothing would be heard, so it is not followed yet
         if (gg.tdma && !gg.dmr && d.follow && (sys.site().wacn < 0 || sys.site().sysId < 0)) { d.follow = false; d.retry = true; d.reason = "Phase 2 call: waiting for the system broadcast (WACN / system ID) to descramble it"; }
+        if (grantTap) grantTap(gg, now);
         follower.onGrant(gg, d, now, log);
     }
 }

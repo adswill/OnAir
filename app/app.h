@@ -188,6 +188,7 @@ struct App {
     bool genAutoOn = true;              // General / Auto: in the General receiver, signals are spotted in the background and labelled (app/specx/general_auto_ui.cpp; docs/GENERAL-AUTO.md)
     bool genAutoDecode = false;         // General / Auto: decode by itself when the tuned frequency sits on a sure label (off by default)
     int genAutoReleaseKhz = 0;          // General / Auto: keep decoding while the tuned frequency is within this of the signal; 0: automatic
+    bool trunkPoolOpen = false;         // the multi-radio trunking window (View > Multi-radio trunking; app/trunkpool/trunkpool_ui.cpp)
     bool wideAllOpen = false;           // the Everything in view window (View > Everything in view; app/panels/wide_all_ui.cpp)
     double wideAllCpu = 0.8;            // its CPU limit as a share of one core (0: none)
     int wideAllListen = 0;              // the entry whose sound is followed there
@@ -797,6 +798,8 @@ void generalApiSquelch(bool on, bool autoLevel, double db);
 bool generalApiRecord(App& a, bool on, std::string& err);
 std::string tvRecJobsJson();                        // tvrec_ui.cpp, for the remote API: the recorder's scheduled jobs (read only)
 void generalRecallHz(App& a, double hz);          // general_ui.cpp: a memory's frequency: the dial on hz, the channel marker back on the dial              // general_ui.cpp: the general receiver's listening frequency (the dial plus its offset)
+void trunkPoolWindow(App& a);                        // trunkpool_ui.cpp: control radio + voice radios, call log, access list, channel plan (docs/TRUNKING.md)
+void trunkPoolTick(App& a);                          // every frame, window shut or not: feeds grants, drives the pool
 void wideAllWindow(App& a);                          // wide_all_ui.cpp: every signal of the capture found, identified and decoded at once (wide_session.h)
 bool wideAllWorthIt(const App& a);                   // the capture is wide enough to hold several signals (or it is on already)
 void wideAllButton(App& a);                          // the one button of it (Simple views and the window)

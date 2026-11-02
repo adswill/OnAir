@@ -3646,3 +3646,41 @@ with a password	con contraseña
 no radio found	no se encontró ninguna radio
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	No se encontró ninguna radio. Conecte una y pulse Actualizar en la pestaña Radio y rango, o elija la señal de prueba.
 Join the OnAir Discord	Unirse al Discord de OnAir
+
+# Multi-radio trunking (trunk pool)
+tuning	sintonizando
+hold	espera
+ended	terminada
+control	control
+voice	voz
+lost	perdido
+Role	Función
+TG	TG
+not followed	no seguida
+Hang time (s)	Tiempo de espera (s)
+Retune wait (s)	Espera de sintonía (s)
+Priority talkgroups take a radio	Los grupos prioritarios toman una radio
+Keep a record of every call	Guardar un registro de cada llamada
+Follow talkgroups that are not listed	Seguir grupos que no están en la lista
+Calls are saved in the recordings folder, trunk. Sound needs the vocoder add-on.	Las llamadas se guardan en la carpeta de grabaciones, trunk. El sonido necesita el complemento del vocoder.
+Talkgroup and radio rules	Reglas de grupos y radios
+Deny	Denegar
+Import rules	Importar reglas
+rules read	reglas leídas
+skipped	omitidas
+Import plan	Importar plan
+rows read	filas leídas
+Identifiers	Identificadores
+Call log	Registro de llamadas
+Channel plan	Plan de canales
+Export log	Exportar registro
+Multi-radio trunking	Trunking con varias radios
+Follow calls with several radios	Seguir llamadas con varias radios
+Auto-assign devices	Asignar dispositivos
+One radio listens to the control channel of a trunked system. When it announces a call, another radio is tuned to the voice channel, and the call is logged. With one radio, calls inside its capture are followed and the rest are not.	Una radio escucha el canal de control de un sistema troncal. Cuando anuncia una llamada, otra radio se sintoniza al canal de voz y se registra la llamada. Con una sola radio se siguen las llamadas dentro de su captura y las demás no.
+The radio on the control channel stays there; every other open receiver becomes a voice radio. Open more receivers with + at the bottom.	La radio del canal de control se queda ahí; cada otro receptor abierto pasa a radio de voz. Abra más receptores con + abajo.
+Start a P25 receiver on the control channel, then press Auto-assign devices.	Inicie un receptor P25 en el canal de control y pulse Asignar dispositivos.
+Calls %llu, followed %llu, retune %.2f s (max %.2f s)	Llamadas %llu, seguidas %llu, sintonía %.2f s (máx. %.2f s)
+Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	Prioridad 1 (máxima) a 10, 0 ninguna. Un grupo de mayor prioridad quita la radio a uno menor.
+From, to (the same number for one), action, priority	Desde, hasta (el mismo número para uno), acción, prioridad
+System, identifier table (iden_up) and channel numbers from a CSV file	Sistema, tabla de identificadores (iden_up) y números de canal desde un CSV

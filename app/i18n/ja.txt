@@ -3648,3 +3648,41 @@ with a password	パスワード付き
 no radio found	ラジオが見つかりません
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	ラジオが見つかりません。ラジオを接続し、「ラジオと範囲」タブで更新を押すか、テスト信号を選んでください。
 Join the OnAir Discord	OnAir の Discord に参加
+
+# Multi-radio trunking (trunk pool)
+tuning	同調中
+hold	保持
+ended	終了
+control	制御
+voice	音声
+lost	喪失
+Role	役割
+TG	TG
+not followed	未追跡
+Hang time (s)	保持時間 (秒)
+Retune wait (s)	再同調待ち (秒)
+Priority talkgroups take a radio	優先トークグループが無線機を奪う
+Keep a record of every call	すべての通話を記録する
+Follow talkgroups that are not listed	一覧にないトークグループも追跡
+Calls are saved in the recordings folder, trunk. Sound needs the vocoder add-on.	通話は録音フォルダの trunk に保存されます。音声にはボコーダーのアドオンが必要です。
+Talkgroup and radio rules	トークグループと無線機のルール
+Deny	拒否
+Import rules	ルール取込
+rules read	件のルールを読込
+skipped	件スキップ
+Import plan	プラン取込
+rows read	行を読込
+Identifiers	識別子
+Call log	通話ログ
+Channel plan	チャンネルプラン
+Export log	ログ出力
+Multi-radio trunking	複数無線機のトランキング
+Follow calls with several radios	複数の無線機で通話を追跡
+Auto-assign devices	デバイスを自動割当
+One radio listens to the control channel of a trunked system. When it announces a call, another radio is tuned to the voice channel, and the call is logged. With one radio, calls inside its capture are followed and the rest are not.	1台の無線機がトランキングシステムの制御チャンネルを聴きます。通話が通知されると別の無線機が音声チャンネルに同調し、通話が記録されます。1台のときは、受信帯域内の通話だけを追跡します。
+The radio on the control channel stays there; every other open receiver becomes a voice radio. Open more receivers with + at the bottom.	制御チャンネルの無線機はそのまま、他の開いている受信機は音声用になります。下の + で受信機を追加できます。
+Start a P25 receiver on the control channel, then press Auto-assign devices.	制御チャンネルでP25受信機を開始し、「デバイスを自動割当」を押してください。
+Calls %llu, followed %llu, retune %.2f s (max %.2f s)	通話 %llu、追跡 %llu、再同調 %.2f 秒 (最大 %.2f 秒)
+Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	優先度は1（最高）から10、0は無し。優先度の高いトークグループは低いものから無線機を奪います。
+From, to (the same number for one), action, priority	開始、終了（1つなら同じ番号）、動作、優先度
+System, identifier table (iden_up) and channel numbers from a CSV file	システム、識別子テーブル (iden_up)、チャンネル番号をCSVから

@@ -3633,3 +3633,41 @@ with a password	jelszóval
 no radio found	nem található rádió
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Nem található rádió. Csatlakoztasson egyet, és nyomja meg a Frissítés gombot a Rádió és tartomány lapon, vagy válassza a tesztjelet.
 Join the OnAir Discord	Csatlakozz az OnAir Discordhoz
+
+# Multi-radio trunking (trunk pool)
+tuning	hangolás
+hold	tartás
+ended	vége
+control	vezérlő
+voice	hang
+lost	elveszett
+Role	Szerep
+TG	TG
+not followed	nem követett
+Hang time (s)	Tartási idő (s)
+Retune wait (s)	Hangolási várakozás (s)
+Priority talkgroups take a radio	A prioritású beszélgetőcsoportok elvesznek egy rádiót
+Keep a record of every call	Minden hívásról napló készül
+Follow talkgroups that are not listed	A nem listázott csoportokat is követi
+Calls are saved in the recordings folder, trunk. Sound needs the vocoder add-on.	A hívások a felvételek mappa trunk részében vannak. A hanghoz a vokóder-bővítmény kell.
+Talkgroup and radio rules	Beszélgetőcsoport- és rádiószabályok
+Deny	Tiltás
+Import rules	Szabályok betöltése
+rules read	szabály beolvasva
+skipped	kihagyva
+Import plan	Terv betöltése
+rows read	sor beolvasva
+Identifiers	Azonosítók
+Call log	Hívásnapló
+Channel plan	Csatornaterv
+Export log	Napló mentése
+Multi-radio trunking	Többrádiós trunking
+Follow calls with several radios	Hívások követése több rádióval
+Auto-assign devices	Eszközök automatikus kiosztása
+One radio listens to the control channel of a trunked system. When it announces a call, another radio is tuned to the voice channel, and the call is logged. With one radio, calls inside its capture are followed and the rest are not.	Egy rádió a trunkolt rendszer vezérlőcsatornáját hallgatja. Hívás bejelentésekor egy másik rádió a beszédcsatornára hangolódik, és a hívás naplózódik. Egy rádióval csak a felvételi sávon belüli hívások követhetők.
+The radio on the control channel stays there; every other open receiver becomes a voice radio. Open more receivers with + at the bottom.	A vezérlőcsatornán lévő rádió ott marad; minden más nyitott vevő beszédrádió lesz. Több vevőt a lent lévő + gombbal nyithat.
+Start a P25 receiver on the control channel, then press Auto-assign devices.	Indítson egy P25 vevőt a vezérlőcsatornán, majd nyomja meg az Eszközök automatikus kiosztása gombot.
+Calls %llu, followed %llu, retune %.2f s (max %.2f s)	Hívás %llu, követett %llu, hangolás %.2f s (max. %.2f s)
+Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	Prioritás 1 (legmagasabb) és 10 között, 0 nincs. A magasabb prioritású csoport elveszi a rádiót az alacsonyabbtól.
+From, to (the same number for one), action, priority	Tól, ig (egynél ugyanaz a szám), művelet, prioritás
+System, identifier table (iden_up) and channel numbers from a CSV file	Rendszer, azonosítótábla (iden_up) és csatornaszámok CSV fájlból

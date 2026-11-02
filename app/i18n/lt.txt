@@ -3650,3 +3650,41 @@ with a password	su slaptažodžiu
 no radio found	radijas nerastas
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Radijas nerastas. Prijunkite radiją ir kortelėje „Radijas ir diapazonas“ spustelėkite Atnaujinti arba pasirinkite bandomąjį signalą.
 Join the OnAir Discord	Prisijunkite prie OnAir Discord
+
+# Multi-radio trunking (trunk pool)
+tuning	derinama
+hold	laikoma
+ended	baigta
+control	valdymo
+voice	balsas
+lost	dingo
+Role	Vaidmuo
+TG	TG
+not followed	nesekta
+Hang time (s)	Laikymo trukmė (s)
+Retune wait (s)	Derinimo laukimas (s)
+Priority talkgroups take a radio	Prioritetinės grupės pasiima imtuvą
+Keep a record of every call	Įrašyti kiekvieną skambutį
+Follow talkgroups that are not listed	Sekti ir nesančias sąraše grupes
+Calls are saved in the recordings folder, trunk. Sound needs the vocoder add-on.	Skambučiai saugomi įrašų aplanke trunk. Garsui reikia vokoderio priedo.
+Talkgroup and radio rules	Grupių ir radijų taisyklės
+Deny	Drausti
+Import rules	Importuoti
+rules read	taisyklių perskaityta
+skipped	praleista
+Import plan	Importuoti planą
+rows read	eilučių perskaityta
+Identifiers	Identifikatoriai
+Call log	Skambučių žurnalas
+Channel plan	Kanalų planas
+Export log	Eksportuoti
+Multi-radio trunking	Trunking keliais imtuvais
+Follow calls with several radios	Sekti skambučius keliais imtuvais
+Auto-assign devices	Priskirti įrenginius
+One radio listens to the control channel of a trunked system. When it announces a call, another radio is tuned to the voice channel, and the call is logged. With one radio, calls inside its capture are followed and the rest are not.	Vienas imtuvas klauso trunkingo sistemos valdymo kanalo. Kai paskelbiamas skambutis, kitas imtuvas derinamas į balso kanalą ir skambutis įrašomas žurnale. Su vienu imtuvu sekami tik skambučiai jo juostoje.
+The radio on the control channel stays there; every other open receiver becomes a voice radio. Open more receivers with + at the bottom.	Valdymo kanale esantis imtuvas lieka; kiti atidaryti imtuvai tampa balso imtuvais. Daugiau imtuvų atidarykite apačioje esančiu +.
+Start a P25 receiver on the control channel, then press Auto-assign devices.	Paleiskite P25 imtuvą valdymo kanale ir spauskite Priskirti įrenginius.
+Calls %llu, followed %llu, retune %.2f s (max %.2f s)	Skambučių %llu, sekta %llu, derinimas %.2f s (maks. %.2f s)
+Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	Prioritetas nuo 1 (aukščiausias) iki 10, 0 nėra. Aukštesnio prioriteto grupė pasiima imtuvą iš žemesnio.
+From, to (the same number for one), action, priority	Nuo, iki (vienam tas pats skaičius), veiksmas, prioritetas
+System, identifier table (iden_up) and channel numbers from a CSV file	Sistema, identifikatorių lentelė (iden_up) ir kanalų numeriai iš CSV

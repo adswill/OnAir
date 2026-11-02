@@ -3646,3 +3646,41 @@ with a password	met wachtwoord
 no radio found	geen radio gevonden
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Geen radio gevonden. Sluit een radio aan en druk op het tabblad Radio en bereik op Vernieuwen, of kies het testsignaal.
 Join the OnAir Discord	Word lid van de OnAir Discord
+
+# Multi-radio trunking (trunk pool)
+tuning	afstemmen
+hold	wacht
+ended	beëindigd
+control	besturing
+voice	spraak
+lost	verloren
+Role	Rol
+TG	TG
+not followed	niet gevolgd
+Hang time (s)	Nalooptijd (s)
+Retune wait (s)	Wachttijd afstemmen (s)
+Priority talkgroups take a radio	Prioriteitsgroepen nemen een radio over
+Keep a record of every call	Elk gesprek vastleggen
+Follow talkgroups that are not listed	Niet-vermelde groepen volgen
+Calls are saved in the recordings folder, trunk. Sound needs the vocoder add-on.	Gesprekken staan in de opnamemap trunk. Geluid vraagt de vocoder-add-on.
+Talkgroup and radio rules	Regels voor groepen en radio's
+Deny	Weigeren
+Import rules	Regels laden
+rules read	regels gelezen
+skipped	overgeslagen
+Import plan	Plan laden
+rows read	regels gelezen
+Identifiers	Identifiers
+Call log	Gesprekslogboek
+Channel plan	Kanaalplan
+Export log	Log opslaan
+Multi-radio trunking	Trunking met meer radio's
+Follow calls with several radios	Gesprekken met meer radio's volgen
+Auto-assign devices	Apparaten toewijzen
+One radio listens to the control channel of a trunked system. When it announces a call, another radio is tuned to the voice channel, and the call is logged. With one radio, calls inside its capture are followed and the rest are not.	Eén radio luistert naar het stuurkanaal van een trunkingsysteem. Meldt het een gesprek, dan wordt een andere radio op het spraakkanaal afgestemd en het gesprek vastgelegd. Met één radio worden alleen gesprekken binnen de opname gevolgd.
+The radio on the control channel stays there; every other open receiver becomes a voice radio. Open more receivers with + at the bottom.	De radio op het stuurkanaal blijft daar; elke andere open ontvanger wordt spraakradio. Open meer ontvangers met + onderaan.
+Start a P25 receiver on the control channel, then press Auto-assign devices.	Start een P25-ontvanger op het stuurkanaal en druk op Apparaten toewijzen.
+Calls %llu, followed %llu, retune %.2f s (max %.2f s)	Gesprekken %llu, gevolgd %llu, afstemmen %.2f s (max %.2f s)
+Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	Prioriteit 1 (hoogste) tot 10, 0 geen. Een groep met hogere prioriteit neemt een radio van een lagere over.
+From, to (the same number for one), action, priority	Van, tot (zelfde getal voor één), actie, prioriteit
+System, identifier table (iden_up) and channel numbers from a CSV file	Systeem, identifiertabel (iden_up) en kanaalnummers uit een CSV
