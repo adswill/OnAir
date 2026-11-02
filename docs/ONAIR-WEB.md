@@ -274,9 +274,19 @@ CPU: a decoder counts as one of the `web_max_decoders` instances (8) and its sli
 
 ## Browser client (web/onair-web/)
 
-Files: `index.html`, `style.css`, `app.js` (UI and WebSocket), `onair-lib.js` (pure helpers: ADPCM decode, frame parsing, messages, frequency and bin mapping, zoom and pan, palettes, S-meter, result tables), `onair-decoders.js` (the Decoders tab: tables, the map, FT8 history, picture strips; pure helpers plus the DOM views) and `onair-worklet.js` (audio jitter buffer, run in an AudioWorklet). Everything is served from the same origin (the server's content security policy allows nothing else). Tune by clicking a digit half, scrolling on the digits, arrow keys (Shift or Page Up/Down for 10 steps), or by clicking the spectrum; drag to pan, wheel or pinch to zoom (the zoomed slice is requested from the server as a finer spectrum span). Keys: 1 to 6 modes, M mute, + and - zoom. An invite link is `http://host:8073/#invite=TOKEN` (the token never reaches the server's logs). The notice banner shows the server's `notice` text from `/web/v1/info` when it sends one, else a generic one. The S-meter scale is relative to full scale (S9 = -66 dBFS), not calibrated.
+Vanilla JavaScript, no build step, no network use except the server that served the page (no CDN, no tiles, no web fonts from elsewhere). Files:
 
-Tests for the pure code (node built-ins only, not part of CMake): `node tests/web/run.js`.
+* `index.html`, `style.css`, `app.js`: the page (UI, WebSocket, drawing, settings panel, map tab).
+* `onair-lib.js`: pure helpers (ADPCM, frames, messages, frequency and bin mapping, zoom and pan, palettes, S-meter, ranges). `onair-decoders.js`: decoder tables, FT8 history, picture strips.
+* `onair-settings.js`: the settings schema with validation, persistence, auto-range and the spectrum request. `onair-i18n.js`: strings (English master, Lithuanian and German partial; missing keys fall back to English).
+* `onair-map.js` + `onair-world.js`: the offline map (Web Mercator, drag / wheel / pinch, coarse world outline from `core/include/dect2/geo/worldlow.h`).
+* `onair-worklet.js`: audio playback (AudioWorklet, with a ScriptProcessor fallback). `onair-demo.js`: `?demo=1` simulated receiver for previews.
+
+What a listener gets: zoomable, pannable spectrum and waterfall (click to tune, drag to pan, wheel or pinch to zoom, drag the passband edges for the bandwidth, zoom slider), band plan strip and memories drawn on the spectrum (tap a flag to tune), frequency display with digit scrolling, typed frequency entry, modes AM / NFM / WFM / USB / LSB / CW, bandwidth slider and Narrow / Normal / Wide presets, squelch, AGC (off / slow / fast), gain, FM de-emphasis, volume, mute, S-meter with peak hold and an output level meter, audio recording to a file in the browser, memories with JSON export and import, per-listener decoder panels (tables, pictures) and a map tab for ADS-B, AIS and APRS positions, dark and light themes, phone / tablet / desktop layouts, keyboard shortcuts (`?` lists them), connection status with automatic reconnect, loading and error states, and ARIA labels and roles.
+
+**Settings** (gear button, View menu or `S`): receiver (AGC, gain, de-emphasis, audio codec and rate, step, bands set the mode), display (waterfall palette, level range: follow the noise floor / auto-range / manual min and max, range, floor offset, waterfall speed in rows a second, FFT size, trace smoothing, peak hold, band plan, memories and grid on or off), layout and look (theme, language, layout auto / wide / compact, show or hide the side panels, text size, keyboard shortcuts, reduce motion). Everything is validated on load and kept in `localStorage` under `onair.settings.v1` (every access is in try / catch; a private window just uses the defaults). Settings can be exported to and imported from a JSON file. Nothing is sent to the server except the normal protocol messages (`rx`, `audio`, `spectrum`).
+
+Tests for the pure code (node built-ins only): `node tests/web/run.js` (CTest `web_client` when node is installed).
 
 ## NEEDS BUILD/TEST (frequency ranges, branch webonair-ranges-030)
 
