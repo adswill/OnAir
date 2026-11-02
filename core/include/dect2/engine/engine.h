@@ -544,7 +544,7 @@ public:
     Gk2aReceiver& gk2aHrit() { return rxGkH_; }   // GK-2A HRIT (family 231)
     FygeoReceiver& fygeo() { return rxFy_; }   // FengYun geostationary: FY-4A / FY-4B LRIT, FY-4A HRIT, FY-2 S-VISSR (telemetry through latestRx)
     ElektroReceiver& elektro() { return rxEl_; }   // Elektro-L HRIT / LRIT / GGAK (telemetry through latestRx)
-    ElLoranReceiver& eloran() { return rxEloran_; }   // eLoran / Loran-C (WIP): GRI, stations, arrival times (telemetry through latestRx)
+    ElLoranReceiver& eloran() { return rxEloran_; }   // eLoran / Loran-C: GRI, stations, arrival times (telemetry through latestRx)
     NfcReceiver& nfc() { return rxNfc_; }   // NFC / RFID 13.56 MHz: frame log, tag table, NDEF (telemetry through latestRx)
     IsdbsReceiver& isdbs() { return rxIsdbs_; }   // ISDB-S (BS satellite TV): stream selection (telemetry through latestRx; the packets go to the TV player like DVB-S)
     MptReceiver& mpt1327() { return rxMpt_; }   // MPT1327 trunking control channel: messages and channel table (telemetry through latestRx)
@@ -577,7 +577,7 @@ public:
     AirbandReceiver& airband() { return rxAirband_; }   // Airband: the receiver's own controls and results (the interface reads telemetry through latestRx)
     VorReceiver& vor() { return rxVor_; }   // VOR / ILS: the receiver's own controls and results (the interface reads telemetry through latestRx)
     SitorLiveReceiver& sitor() { return rxSitor_; }   // SITOR-B (FEC) text from NAVTEX and HF coast stations (telemetry through latestRx)
-    DmeLiveReceiver& dme() { return rxDme_; }   // DME (WIP): channel X or Y, pair rate, the Morse ident (telemetry through latestRx)
+    DmeLiveReceiver& dme() { return rxDme_; }   // DME: channel X or Y, pair rate, the Morse ident (telemetry through latestRx)
     NdbReceiver& ndb() { return rxNdb_; }   // NDB: long-wave non-directional beacons, the Morse ident (telemetry through latestRx)
     TeletextDecoder& teletext() { return ttx_; }
     DvbSubDecoder& dvbSubtitles() { return dvbsub_; }
