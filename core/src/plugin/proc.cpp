@@ -201,7 +201,7 @@ public:
                 // the same limits as cAudio (loader.cpp): the helper runs the plugin's code, so its messages are not trusted
                 if (r.ok && (o.granted & PermAudioOut) && n > 0 && n <= (1u << 20) && rate >= 1000 && rate <= 400000 && r.pos + (size_t)n * 4 <= b.size() && o.services.audioOut) {
                     std::vector<float> pcm(n);
-                    memcpy(pcm.data(), b.data() + r.pos, (size_t)n * 4);
+                    if (n) memcpy(pcm.data(), b.data() + r.pos, (size_t)n * 4);
                     o.services.audioOut(pcm.data(), n, rate);
                 }
                 break;
