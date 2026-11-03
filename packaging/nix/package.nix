@@ -5,6 +5,7 @@
   stdenv,
   cmake,
   pkg-config,
+  python3,
   cargo,
   rustc,
   makeWrapper,
@@ -72,7 +73,7 @@ stdenv.mkDerivation {
     cargo # the Rust workspace rust/ is mandatory (cmake/OnairRust.cmake): `cargo build --offline`; Cargo.lock has no external crates
     rustc
     makeWrapper
-  ];
+  ] ++ lib.optionals (!server) [ python3 ];
 
   buildInputs =
     [
