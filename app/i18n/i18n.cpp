@@ -13,6 +13,7 @@ const i18n::Language kLanguages[] = {
     {"zh", "\xE4\xB8\xAD\xE6\x96\x87 (\xE7\xAE\x80\xE4\xBD\x93)"}, {"lt", "Lietuvi\xC5\xB3"}, {"hu", "Magyar"},
     {"ja", "\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E"}, {"pl", "Polski"}, {"nl", "Nederlands"},
     {"pt", "Portugu\xC3\xAA" "s (Brasil)"}, {"pt_PT", "Portugu\xC3\xAA" "s (Portugal)"}, {"it", "Italiano"}, {"ru", "\xD0\xA0\xD1\x83\xD1\x81\xD1\x81\xD0\xBA\xD0\xB8\xD0\xB9"},
+    {"tr", "T\xC3\xBCrk\xC3\xA7" "e"},
 };
 constexpr int kNumLanguages = (int)(sizeof kLanguages / sizeof *kLanguages);
 
