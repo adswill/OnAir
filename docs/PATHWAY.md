@@ -1054,3 +1054,5 @@ P25 short-call sweep row "no header, 12 dB, cfo -3 kHz" fell to 67% after 67df49
 
 ## 2026-11-03 3.6 changelog, release text, credits audit (feat36-docs)
 Wrote docs/CHANGELOG-3.6.md and docs/RELEASE-NOTES-3.6.md from the log since v3.5.0 (175 commits) and the PATHWAY entries. README mode table and count regenerated with tools/release/gen_changelog.py --base v3.5.0 --worktree-modes (158 -> 178). Credits audit: tools/gen_credits.py output is unchanged (THIRD_PARTY.md, docs/credits-for-website.md and app/panels/credits_data.h agree); the new third-party code (OpenJPEG, aeroambe, libhydrasdr, SatDump FY-3, MMDVMHost, PR 414) is listed. No commit since v3.5.0 carries Co-Authored-By Arclamp and none touches the DecSAT-derived files (core/src/satbeacon). check_spdx still reports 9 LicenseRef-Unknown files (not judged here).
+## 2026-11-03: mode audit (feat36-audit)
+Added docs/MODE-AUDIT-3.6.md: 27 mode families vs rival tools, grep-verified gaps, top-30 improvements ranked by size, real-signal items flagged. Read-only, no code changed.
