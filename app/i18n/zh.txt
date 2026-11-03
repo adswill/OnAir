@@ -3759,3 +3759,12 @@ Save every picture	保存每张图片
 Clear pictures	清除图片
 grey	灰度
 Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.	MFSK 信号中传送的图片（Shortwave Radiogram）会在收到时显示在这里。
+Open recordings folder	打开录音文件夹
+Where recordings are saved. Change it in Settings > Files.	录音的保存位置。可在 设置 > 文件 中更改。
+Recordings folder	录音文件夹
+Where recordings (IQ, audio, images, logs) are saved. Choose your own folder; default is inside the data folder.	录音(IQ、音频、图像、日志)的保存位置。可选择自己的文件夹;默认在数据文件夹内。
+Free disk space:	可用磁盘空间:
+Default (inside the data folder)	默认(在数据文件夹内)
+Choose...	选择...
+Use typed path	使用输入的路径
+That folder cannot be written: the default is used.	无法写入该文件夹:改用默认文件夹。

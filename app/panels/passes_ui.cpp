@@ -481,7 +481,7 @@ void trackTick(App& a) {
     if (autoRecord && !S.recTried && a.engine.running() && !a.engine.recordingStats().active && a.devices[a.devIdx].isRadio()) {
         S.recTried = true;
         const FileFormat f = (FileFormat)recFileFormatOf(a.recFormat);
-        const std::string path = plat::dataDir() + "/recordings/" + (a.recFormat == 2 ? blueRecordingName(a.engine.recordingName(f)) : a.engine.recordingName(f));
+        const std::string path = recordingsDir() + "/" + (a.recFormat == 2 ? blueRecordingName(a.engine.recordingName(f)) : a.engine.recordingName(f));
         std::string err;
         if (a.engine.startRecording(path, f, err)) { S.weRecord = true; a.recDonePath.clear(); a.engine.log("pass of " + sat.name + ": recording IQ to " + path); }
         else a.engine.log("recording failed: " + err);

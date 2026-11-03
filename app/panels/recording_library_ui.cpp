@@ -114,7 +114,7 @@ bool recordingOpenPath(App& a, const std::string& path, uint64_t firstSample, ui
 
 // The button in the diagnostics row, and its window while it is open.
 void recordingLibraryUi(App& a) {
-    const std::string dir = plat::dataDir() + "/recordings";
+    const std::string dir = recordingsDir();
     if (ImGui::SmallButton("Library")) {
         gLib.open = !gLib.open;
         if (gLib.open) reload(dir);

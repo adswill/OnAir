@@ -171,7 +171,7 @@ std::vector<std::string> recTags(const App& a, double hz) {
 
 void startRecording(App& a) {
     std::error_code ec;
-    const std::string dir = plat::dataDir() + "/audio-recordings";
+    const std::string dir = recordingsSub("audio-recordings");
     std::filesystem::create_directories(dir, ec);
     const std::time_t now = std::time(nullptr);
     char ts[32];
@@ -448,6 +448,7 @@ void controls(App& a) {
         ImGui::EndDisabled();
         tip("Record what you hear (after the squelch, before the volume) to a 16-bit 48 kHz WAV file in the audio-recordings folder");
     } else if (ImGui::SmallButton("Stop recording")) grx(a).stopRecording();
+    ImGui::SameLine(); kit::recordingsButton("gen", "audio-recordings");
     ImGui::SameLine(0, 6 * gUi);
     if (ImGui::Checkbox("FLAC", &S.flac)) { plat::prefs().setB("genFlac", S.flac); grx(a).setRecordFormat(S.flac, recTags(a, listenHz(a))); grx(a).setRecordMp3(S.mp3); }
     tip("Save recordings as FLAC (lossless, about half the size of WAV, with the frequency and date as tags) instead of WAV");
@@ -460,7 +461,7 @@ void controls(App& a) {
         ImGui::SameLine(0, 8 * gUi);
         if (ImGui::Checkbox("One file per transmission", &S.txRec)) {
             std::error_code ec;
-            const std::string dir = plat::dataDir() + "/audio-recordings";
+            const std::string dir = recordingsSub("audio-recordings");
             std::filesystem::create_directories(dir, ec);
             auto& r = grx(a);
             r.setRecordFormat(S.flac, recTags(a, listenHz(a))); r.setRecordMp3(S.mp3);
@@ -582,7 +583,7 @@ void extraChannelsUi(App& a) {
         ImGui::SameLine(0, 8 * gUi);
         if (ImGui::Checkbox("Rec", &S.exRec[i])) {
             std::error_code ec;
-            const std::string dir = plat::dataDir() + "/audio-recordings";
+            const std::string dir = recordingsSub("audio-recordings");
             std::filesystem::create_directories(dir, ec);
             auto& x = a.engine.generalExtra(i);
             const double hz = a.freqMhz * 1e6 + S.exOff[i];

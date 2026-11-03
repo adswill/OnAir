@@ -3736,3 +3736,12 @@ Save every picture	すべての画像を保存
 Clear pictures	画像を消去
 grey	グレー
 Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.	MFSKの信号内で送られる画像（Shortwave Radiogram）は、受信するとここに表示されます。
+Open recordings folder	録音フォルダを開く
+Where recordings are saved. Change it in Settings > Files.	録音の保存先です。設定 > ファイルで変更できます。
+Recordings folder	録音フォルダ
+Where recordings (IQ, audio, images, logs) are saved. Choose your own folder; default is inside the data folder.	録音(IQ、音声、画像、ログ)の保存先。好きなフォルダを選べます。既定はデータフォルダ内です。
+Free disk space:	ディスクの空き容量:
+Default (inside the data folder)	既定(データフォルダ内)
+Choose...	選択...
+Use typed path	入力したパスを使う
+That folder cannot be written: the default is used.	このフォルダには書き込めません。既定のフォルダを使います。

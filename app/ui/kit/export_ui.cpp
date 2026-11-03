@@ -18,3 +18,20 @@ void exportBar(const resexp::Table& t, const char* kind, std::string& note, cons
 }
 
 }  // namespace kit
+
+#include "../../state/recdir.h"
+namespace kit {
+void folderButton(const char* id, const std::string& dir) {
+    ImGui::PushID(id);
+    if (ImGui::SmallButton(tr("Open recordings folder"))) revealFolder(dir);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s\n%s", dir.c_str(), tr("Where recordings are saved. Change it in Settings > Files."));
+    ImGui::PopID();
+}
+void recordingsButton(const char* id, const char* sub) {
+    ImGui::PushID(id);
+    const std::string dir = sub ? recordingsSub(sub) : recordingsDir();
+    if (ImGui::SmallButton(tr("Open recordings folder"))) revealFolder(dir);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s\n%s", dir.c_str(), tr("Where recordings are saved. Change it in Settings > Files."));
+    ImGui::PopID();
+}
+}  // namespace kit

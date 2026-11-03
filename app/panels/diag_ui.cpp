@@ -187,7 +187,7 @@ void recordUi(App& a, int part = 0) {
         ImGui::BeginDisabled(!can);
         if (panel::dotButton(tr("Record IQ"), can)) {
             const FileFormat f = (FileFormat)recFileFormatOf(a.recFormat);
-            const std::string path = plat::dataDir() + "/recordings/" + (a.recFormat == 2 ? blueRecordingName(a.engine.recordingName(f)) : a.engine.recordingName(f));
+            const std::string path = recordingsDir() + "/" + (a.recFormat == 2 ? blueRecordingName(a.engine.recordingName(f)) : a.engine.recordingName(f));
             std::string err;
             if (a.engine.startRecording(path, f, err)) a.recDonePath.clear();
             else a.engine.log("recording failed: " + err);
@@ -261,7 +261,7 @@ void audioRecordUi(App& a, int part = 0) {
             const double hz = a.freqMhz * 1e6;
             char tag[96]; snprintf(tag, sizeof tag, "OnAir %s %.3f MHz", dect2::recordingModeId(m).c_str(), a.freqMhz);
             o.tag = tag;
-            const std::string path = plat::dataDir() + "/recordings/" + dect2::AudioRecorder::fileName(dect2::recordingModeId(m), hz, o.format);
+            const std::string path = recordingsDir() + "/" + dect2::AudioRecorder::fileName(dect2::recordingModeId(m), hz, o.format);
             std::string err;
             if (rec.start(path, o, err)) { tx::captionsRecordStart(); a.audioRecDonePath.clear(); a.audioRecMode = m; a.audioRecFreq = a.freqMhz; }
             else a.engine.log("audio recording failed: " + err);

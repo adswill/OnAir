@@ -479,3 +479,12 @@ Save every picture
 Clear pictures
 grey
 Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.
+Open recordings folder
+Where recordings are saved. Change it in Settings > Files.
+Recordings folder
+Where recordings (IQ, audio, images, logs) are saved. Choose your own folder; default is inside the data folder.
+Free disk space:
+Default (inside the data folder)
+Choose...
+Use typed path
+That folder cannot be written: the default is used.

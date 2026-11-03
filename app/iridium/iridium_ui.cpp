@@ -294,6 +294,7 @@ void callsView(App& a) {
     ImGui::TextWrapped("Each call is saved as a WAV file in the recordings folder when it ends and the plug-in produced sound. Frames that fail their checks, or that the plug-in refuses, are listed as not readable and stay silent. Encrypted or scrambled traffic is never decoded.");
     if (ImGui::Checkbox("Record calls##irrec", &S.record)) plat::prefs().setI("iridiumRecord", S.record ? 1 : 0);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("One WAV per call, written when the call ends (needs the codec plug-in).");
+    ImGui::SameLine(); kit::recordingsButton("iri");
     if (!ImGui::BeginTable("##iri_calls", 12, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("#"); ImGui::TableSetupColumn("Time"); ImGui::TableSetupColumn("MHz"); ImGui::TableSetupColumn("Dir");
@@ -620,7 +621,7 @@ void tick(App& a) {
     if (live(a)) appcodec::voiceCodecTick("iridium");   // the user's codec plug-in (docs/CODECS.md), loaded whichever tab is shown
     {
         static bool dirMade = false;
-        const std::string rec = plat::dataDir() + "/recordings";
+        const std::string rec = recordingsDir();
         if (!dirMade) { std::error_code ec; std::filesystem::create_directories(rec, ec); dirMade = true; }
         dect2::IridiumVoice& v = r.voice();
         v.setVolume(a.volume); v.setMuted(a.muted); v.setListenCall(S.listen); v.setRecordFolder(S.record ? rec : std::string());
@@ -651,7 +652,7 @@ void toolkitSave(App& a) {
     auto bitsPathFor = [&]() {
         const std::string name = S.bitsName[0] ? S.bitsName : "output.bits";
         const bool full = name.find_first_of("/\\") != std::string::npos;
-        return full ? name : plat::dataDir() + "/recordings/" + name;
+        return full ? name : recordingsDir() + "/" + name;
     };
     auto startFile = [&]() { S.bitsErr.clear(); if (!r.startBitsFile(bitsPathFor(), &S.bitsErr) && S.bitsErr.empty()) S.bitsErr = "cannot write the file"; };
     auto startNet = [&]() { S.netErr.clear(); if (!r.startBitsStream(S.netTcp, S.netHost, S.netPort, &S.netErr)) S.netOn = false; };

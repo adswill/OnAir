@@ -186,7 +186,7 @@ void worker(DeviceInfo dev, TuneSettings t, FastScanConfig cfg, ScanProfile prof
     RunHooks hk;
     if (prof.record) {
         RecSettings rs;
-        rs.dir = plat::dataDir() + "/scan-recordings";
+        rs.dir = recordingsSub("scan-recordings");
         rs.budgetBytes = (uint64_t)(prof.budgetMb * 1048576.0);
         rs.chanBwHz = prof.recordKhz * 1e3; rs.iqSlice = prof.recordIq; rs.maxChannels = prof.maxRecordings;
         if (S.rec.configure(S.sc->plan().rateHz, S.sc->plan().hops[0].centerHz, rs)) hk.rec = &S.rec;
@@ -397,6 +397,7 @@ void controls(App& a) {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Saves the noise floor of the band when the scan stops and starts from it next time."));
     ImGui::SameLine(); ImGui::SetNextItemWidth(100 * gUi); ch |= ImGui::SliderFloat("##fsgain", &S.gainDb, 0, 60, tr("gain %.0f dB"));
     ch |= ImGui::Checkbox(tr("record hits"), &S.prof.record);
+    ImGui::SameLine(); kit::recordingsButton("fs", "scan-recordings");
     ImGui::EndDisabled();
     if (S.prof.record) {
         ImGui::SameLine(); ImGui::BeginDisabled(run); ch |= ImGui::Checkbox(tr("IQ instead of audio"), &S.prof.recordIq);

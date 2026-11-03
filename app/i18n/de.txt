@@ -3753,3 +3753,12 @@ Save every picture	Jedes Bild speichern
 Clear pictures	Bilder leeren
 grey	grau
 Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.	Bilder im MFSK-Strom (Shortwave Radiogram) erscheinen hier, sobald sie ankommen.
+Open recordings folder	Aufnahmeordner öffnen
+Where recordings are saved. Change it in Settings > Files.	Hier werden Aufnahmen gespeichert. Ändern unter Einstellungen > Dateien.
+Recordings folder	Aufnahmeordner
+Where recordings (IQ, audio, images, logs) are saved. Choose your own folder; default is inside the data folder.	Wo Aufnahmen (IQ, Audio, Bilder, Protokolle) gespeichert werden. Eigenen Ordner wählen; Standard ist im Datenordner.
+Free disk space:	Freier Speicherplatz:
+Default (inside the data folder)	Standard (im Datenordner)
+Choose...	Auswählen...
+Use typed path	Eingegebenen Pfad verwenden
+That folder cannot be written: the default is used.	In diesen Ordner kann nicht geschrieben werden: der Standard wird verwendet.

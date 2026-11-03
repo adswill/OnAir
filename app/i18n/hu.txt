@@ -3721,3 +3721,12 @@ Save every picture	Minden kép mentése
 Clear pictures	Képek törlése
 grey	szürke
 Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.	Az MFSK adásban küldött képek (Shortwave Radiogram) itt jelennek meg, ahogy megérkeznek.
+Open recordings folder	Felvételek mappájának megnyitása
+Where recordings are saved. Change it in Settings > Files.	Itt tárolódnak a felvételek. Módosítás: Beállítások > Fájlok.
+Recordings folder	Felvételek mappája
+Where recordings (IQ, audio, images, logs) are saved. Choose your own folder; default is inside the data folder.	Itt tárolódnak a felvételek (IQ, hang, képek, naplók). Választhat saját mappát; alapértelmezés: az adatmappában.
+Free disk space:	Szabad lemezterület:
+Default (inside the data folder)	Alapértelmezett (az adatmappában)
+Choose...	Választás...
+Use typed path	A beírt útvonal használata
+That folder cannot be written: the default is used.	Ebbe a mappába nem lehet írni: az alapértelmezettet használjuk.

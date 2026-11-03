@@ -48,7 +48,7 @@ std::string timeText(double s) {
 
 bool saveNow(App& a, double post, std::string& note) {
     if (!S.on) { note = "the rewind memory is off"; return false; }
-    const std::string path = plat::dataDir() + "/recordings/" + a.engine.timeMachineName();
+    const std::string path = recordingsDir() + "/" + a.engine.timeMachineName();
     if (!a.engine.timeMachineSaveTo(path, S.pre, post, note)) return false;
     gLastTrigger = ImGui::GetTime();
     note = "saving " + timeText(S.pre) + " before and " + timeText(post) + " after now";

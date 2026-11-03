@@ -3740,3 +3740,12 @@ Save every picture	Enregistrer chaque image
 Clear pictures	Effacer les images
 grey	gris
 Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.	Les images envoyées dans le flux MFSK (Shortwave Radiogram) apparaissent ici à mesure qu'elles arrivent.
+Open recordings folder	Ouvrir le dossier des enregistrements
+Where recordings are saved. Change it in Settings > Files.	Où les enregistrements sont sauvegardés. À modifier dans Réglages > Fichiers.
+Recordings folder	Dossier des enregistrements
+Where recordings (IQ, audio, images, logs) are saved. Choose your own folder; default is inside the data folder.	Où les enregistrements (IQ, audio, images, journaux) sont sauvegardés. Choisissez votre dossier ; par défaut, dans le dossier de données.
+Free disk space:	Espace disque libre :
+Default (inside the data folder)	Par défaut (dans le dossier de données)
+Choose...	Choisir...
+Use typed path	Utiliser le chemin saisi
+That folder cannot be written: the default is used.	Impossible d'écrire dans ce dossier : le dossier par défaut est utilisé.

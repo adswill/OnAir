@@ -186,7 +186,7 @@ void init(App& a) {
     std::error_code ec;
     std::filesystem::create_directories(u8file(s.dir), ec);
     auto& p = plat::prefs();
-    s.cfg.dir = p.getS("tvrec_dir", plat::dataDir() + "/recordings");
+    s.cfg.dir = p.getS("tvrec_dir", recordingsDir());
     s.cfg.nameTemplate = p.getS("tvrec_tpl", "{title}_{date}_{time}");
     s.padPre = (int)p.getI("tvrec_pre", 60); s.padPost = (int)p.getI("tvrec_post", 300);
     s.cfg.tuners = (int)std::max(1L, p.getI("tvrec_tuners", 1)); s.minFreeGb = (int)p.getI("tvrec_minfree", 2);

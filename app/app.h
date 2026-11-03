@@ -13,6 +13,7 @@
 #include "gfx/autolabel_logic.h"
 #include "i18n/i18n.h"
 #include "state/fm_saved.h"
+#include "state/recdir.h"
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>

@@ -555,7 +555,7 @@ void saveTab(App& a, Studio& s) {
     if (ImGui::Button(tr("Save"))) startSave(s, (StudioFormat)s.fmt, s.folder, imp && s.saveImpaired, false);
     ImGui::SameLine();
     if (ImGui::Button(tr("Open in decoder"))) {
-        const std::string rec = plat::dataDir() + "/recordings";
+        const std::string rec = recordingsDir();
         startSave(s, StudioFormat::SigMF, rec, imp && s.saveImpaired, true);
     }
     ImGui::EndDisabled();

@@ -585,9 +585,9 @@ void trunkTick(App& a) {
             localtime_r(&tt, &g);
 #endif
             char ts[32]; strftime(ts, sizeof ts, "%Y%m%d-%H%M%S", &g);
-            snprintf(nm, sizeof nm, "/recordings/trunk_%s_%s.wav", ac.text.c_str(), ts);
+            snprintf(nm, sizeof nm, "/trunk_%s_%s.wav", ac.text.c_str(), ts);
             std::string err;
-            if (rec.start(plat::dataDir() + nm, o, err)) { T.recCall = ac.callId; if (auto* r = T.ctl.log.byId(ac.callId)) r->audioPath = plat::dataDir() + nm; }
+            if (rec.start(recordingsDir() + nm, o, err)) { T.recCall = ac.callId; if (auto* r = T.ctl.log.byId(ac.callId)) r->audioPath = recordingsDir() + nm; }
             break;
         }
         case Action::RecordStop:

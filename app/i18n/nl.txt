@@ -3741,3 +3741,12 @@ Save every picture	Elke afbeelding opslaan
 Clear pictures	Afbeeldingen wissen
 grey	grijs
 Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.	Afbeeldingen in de MFSK-stroom (Shortwave Radiogram) verschijnen hier zodra ze binnenkomen.
+Open recordings folder	Opnamemap openen
+Where recordings are saved. Change it in Settings > Files.	Hier worden opnamen opgeslagen. Wijzigen via Instellingen > Bestanden.
+Recordings folder	Opnamemap
+Where recordings (IQ, audio, images, logs) are saved. Choose your own folder; default is inside the data folder.	Waar opnamen (IQ, audio, beelden, logs) worden opgeslagen. Kies een eigen map; standaard staat die in de gegevensmap.
+Free disk space:	Vrije schijfruimte:
+Default (inside the data folder)	Standaard (in de gegevensmap)
+Choose...	Kiezen...
+Use typed path	Getypt pad gebruiken
+That folder cannot be written: the default is used.	In die map kan niet worden geschreven: de standaardmap wordt gebruikt.
