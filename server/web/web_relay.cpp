@@ -69,7 +69,7 @@ std::string relayCanonical(const std::string& id, const std::string& pub, long l
 
 std::string relayHelloJson(const RelayConfig& c, const std::string& id, const std::string& pub, long long ts, const std::string& nonce, const std::string& sigHex) {
     return "{\"type\":\"hello\",\"v\":1,\"id\":\"" + id + "\",\"pub\":\"" + pub + "\",\"ts\":" + std::to_string(ts) + ",\"nonce\":\"" + jsonEsc(nonce) + "\",\"name\":\"" +
-           jsonEsc(dirClean(c.name, 60)) + "\",\"max_conns\":" + std::to_string(c.maxConns) + ",\"client\":\"onair-server " + jsonEsc(dirClean(c.version, 20)) + "\",\"sig\":\"" + sigHex + "\"}";
+           jsonEsc(dirClean(c.name, 60)) + "\",\"max_conns\":" + std::to_string(c.maxConns) + ",\"client\":\"onair-server " + jsonEsc(dirClean(c.version, 20)) + "\"" + (c.listed ? ",\"public\":true" : "") + ",\"sig\":\"" + sigHex + "\"}";
 }
 
 std::string relayFrame(uint8_t type, uint32_t id, const void* payload, size_t n) {

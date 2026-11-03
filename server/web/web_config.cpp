@@ -88,6 +88,7 @@ WebSettings loadWebSettings(onair_server::ConfigFile& c, bool& madeAdminToken) {
     w.directory.ack = c.get("web_directory_ack");
     w.relay.on = c.flag("web_relay", false);
     w.relay.url = c.get("web_relay_url", w.relay.url);
+    w.relay.listed = c.flag("web_relay_public", false);
     w.relay.keyFile = w.directory.keyFile;   // set by the server beside the config file when empty
     w.relay.name = w.name;
     w.relay.localPort = s.port;

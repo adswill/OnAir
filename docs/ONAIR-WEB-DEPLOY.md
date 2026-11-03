@@ -2,7 +2,7 @@
 
 Nothing here is deployed by any script or CI job. Each step needs the owner. Commands are written for a Mac or Linux shell with `node` 20+ and `wrangler` (`npx wrangler`) logged in to the Cloudflare account that owns on-air.dev.
 
-There are three separate things:
+There are four separate things (the relay service is section 5):
 
 | What | Where it lives | Where it runs |
 | --- | --- | --- |
@@ -53,7 +53,48 @@ cd web/map && npm install && npm test
 npx wrangler deploy        # routes: map.on-air.dev custom domain (wrangler.jsonc)
 ```
 
-## 5. After deploying
+## 5. Deploy the relay (relay.on-air.dev, *.relay.on-air.dev)
+
+Needs a small Linux VPS (1 vCPU, 512 MB is plenty to start) with a public IPv4, Node 20+, and the domain on Cloudflare. Not deployed by any script. Run `cd relay && npm test` first.
+
+1. DNS (Cloudflare): `A relay` -> the VPS address, `A *.relay` -> the same address. Orange cloud (proxied) is fine for both and gives TLS for free; the wildcard `*.relay.on-air.dev` is NOT covered by the free universal certificate (it covers only one label), so either buy Advanced Certificate Manager for `*.relay.on-air.dev`, or use grey cloud (DNS only) and let Caddy issue the wildcard (step 3).
+2. On the VPS: `sudo useradd -r -m onair-relay`, copy `relay/relay.js` to `/opt/onair-relay/relay.js`, and make `/etc/onair-relay.env`:
+   ```
+   RELAY_DOMAIN=relay.on-air.dev
+   RELAY_PORT=8080
+   RELAY_BIND=127.0.0.1
+   RELAY_ADMIN_TOKEN=<openssl rand -hex 16>
+   # only when Cloudflare proxies (orange cloud): the real listener address
+   RELAY_CLIENT_IP_HEADER=CF-Connecting-IP
+   ```
+   Do not set `RELAY_CLIENT_IP_HEADER` with grey cloud: anyone could forge it. `/etc/systemd/system/onair-relay.service`:
+   ```
+   [Service]
+   User=onair-relay
+   EnvironmentFile=/etc/onair-relay.env
+   ExecStart=/usr/bin/node /opt/onair-relay/relay.js
+   Restart=always
+   LimitNOFILE=65536
+   NoNewPrivileges=true
+   ProtectSystem=strict
+   [Install]
+   WantedBy=multi-user.target
+   ```
+   `sudo systemctl enable --now onair-relay`.
+3. TLS in front: Caddy with the Cloudflare DNS plugin (`xcaddy build --with github.com/caddy-dns/cloudflare`), `CLOUDFLARE_API_TOKEN` limited to DNS edit on on-air.dev, Caddyfile:
+   ```
+   relay.on-air.dev, *.relay.on-air.dev {
+       tls { dns cloudflare {env.CLOUDFLARE_API_TOKEN} }
+       reverse_proxy 127.0.0.1:8080 { flush_interval -1 }
+   }
+   ```
+   (With the orange cloud and a Cloudflare origin certificate, use that certificate in Caddy instead of the `tls` block.) Behind Caddy the socket address is Caddy's, so set `RELAY_CLIENT_IP_HEADER=X-Forwarded-For` only if Caddy is the sole way in (firewall port 8080 to 127.0.0.1, which `RELAY_BIND` already does); Caddy replaces that header with the real address when it is not given trusted proxies.
+4. Check: `curl -s https://relay.on-air.dev/relay/v1/status` gives `{"v":1,"ok":true}`; `curl -s https://relay.on-air.dev/api/v1/servers` gives an empty list; `curl -s https://nothing.relay.on-air.dev/` shows "This radio is offline".
+5. Real test: on a computer, `onair-server --web --device test` with `web_relay=1`; the Share window (or `web_relay_status.json`) must say online with an `https://<label>.relay.on-air.dev/` address; open it from a phone on mobile data.
+6. Ban: `curl -X POST -H "Authorization: Bearer $RELAY_ADMIN_TOKEN" -d '{"id":"onair-..."}' https://relay.on-air.dev/relay/v1/admin/ban` (in memory; put permanent bans in `RELAY_BAN_IDS` / `RELAY_BAN_IPS`). Update: copy the new `relay.js`, `sudo systemctl restart onair-relay` (hosts reconnect by themselves within seconds). Logs: `journalctl -u onair-relay` (server ids only, no traffic).
+7. Public list on web.on-air.dev (optional, later): the directory page can read `https://relay.on-air.dev/api/v1/servers` (CORS open); not wired into the directory Worker yet.
+
+## 6. After deploying
 
 1. Open the directory page in a private window, check the list, a favourite, the FAQ and the theme switch; open a listed receiver with "Listen" and confirm the client loads, connects and shows the waterfall.
 2. Check the browser console for errors on both pages (the CSP in `public/_headers` blocks anything external, so any console error is real).
