@@ -7,7 +7,13 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <atomic>
+#include <chrono>
+#include <filesystem>
 #include <fstream>
+#include <memory>
+#include <mutex>
+#include <thread>
 #include <sstream>
 
 using namespace dect2;
@@ -133,6 +139,124 @@ size_t gGen = 0;   // grows with every change of the book: the filter is redone
 
 HamOps& hamOps() { static HamOps o; return o; }
 
+// ---- the country file (cty.dat / wl_cty.dat): load, reset, download, the settings block ----
+namespace {
+constexpr size_t kCtyMax = 16u << 20;   // a real cty.dat is about 0.5 MB; more than 16 MB is not one
+std::string readCapped(const std::string& p, bool& ok, std::string& err) {
+    std::error_code ec;
+    const auto sz = std::filesystem::file_size(std::filesystem::u8path(p), ec);
+    if (ec) { ok = false; err = "cannot read it"; return ""; }
+    if (sz > kCtyMax) { ok = false; err = "the file is too large for a country file"; return ""; }
+    return readFile(p, ok);
+}
+// reads path into hamOps().dxcc (the table is replaced only when the file parses); sets ctyInfo (the date / version line)
+bool ctyApply(const std::string& path, std::string& err) {
+    HamOps& o = hamOps();
+    bool ok;
+    const std::string t = readCapped(path, ok, err);
+    if (!ok) return false;
+    ham::DxccDb u;
+    if (!u.loadCty(t, err)) return false;
+    o.dxcc = u; o.ctyPath = path;
+    const std::string& v = o.dxcc.version();
+    if (v.size() == 8) o.ctyInfo = "version " + v.substr(0, 4) + "-" + v.substr(4, 2) + "-" + v.substr(6, 2);
+    else {
+        std::error_code ec;
+        const auto ft = std::filesystem::last_write_time(std::filesystem::u8path(path), ec);
+        if (ec) o.ctyInfo.clear();
+        else {
+            const std::time_t tt = std::chrono::system_clock::to_time_t(std::chrono::time_point_cast<std::chrono::system_clock::duration>(ft - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now()));
+            char b[32];
+            std::strftime(b, sizeof b, "file dated %Y-%m-%d", std::gmtime(&tt));
+            o.ctyInfo = b;
+        }
+    }
+    return true;
+}
+struct CtyDl { std::mutex m; bool running = false, done = false, ok = false; std::string msg, file; };
+std::shared_ptr<CtyDl>& ctyDl() { static std::shared_ptr<CtyDl> d = std::make_shared<CtyDl>(); return d; }
+}  // namespace
+
+bool hamCountryLoadFile(const std::string& path, std::string& err) {
+    HamOps& o = hamOps();
+    if (!ctyApply(path, err)) return false;
+    plat::basePrefs().setS("ham.ctyPath", path); plat::basePrefs().flush();
+    std::string e2;
+    o.log.load(o.logPath, e2);   // fills in the countries the log did not have yet
+    gGen++; o.workedDirty = true;
+    return true;
+}
+void hamCountryReset() {
+    HamOps& o = hamOps();
+    o.dxcc = ham::DxccDb::builtin(); o.ctyPath.clear(); o.ctyInfo.clear();
+    plat::basePrefs().setS("ham.ctyPath", ""); plat::basePrefs().flush();
+    gGen++; o.workedDirty = true;
+}
+// "Germany, CQ 14, ITU 28" for a callsign: the country and zones shown next to a decoded message; "" when the call is not known
+std::string hamCountryTag(const std::string& call) {
+    if (call.empty()) return "";
+    const ham::DxccHit h = hamOps().dxcc.lookup(call);
+    if (!h.e) return "";
+    return h.e->name + ", CQ " + std::to_string(h.cqz) + ", ITU " + std::to_string(h.ituz);
+}
+bool hamCountryInMessages() { return hamOps().ctyInMsg; }
+
+void hamCountryUi() {
+    HamOps& o = hamOps();
+    ImGui::TextUnformatted(o.ctyPath.empty() ? tr("Built-in country table (about 200 entities)") : o.ctyPath.c_str());
+    ImGui::TextDisabled("%zu %s, %zu %s%s%s", o.dxcc.entities().size(), tr("entities"), o.dxcc.prefixCount(), tr("prefixes"), o.ctyInfo.empty() ? "" : ", ", o.ctyPath.empty() ? "" : o.ctyInfo.c_str());
+    ImGui::TextWrapped("%s", tr("A country file (cty.dat, wl_cty.dat) from country-files.com gives every DXCC entity with its CQ and ITU zone. Thanks to Jim Reisert AD1C and the country-files.com team. OnAir does not bundle it: load one you have, or press Download (only on your click)."));
+    if (ImGui::Checkbox(tr("Show country and zone in decoded messages"), &o.ctyInMsg)) { plat::basePrefs().setB("ham.ctyInMsg", o.ctyInMsg); plat::basePrefs().flush(); }
+    std::string err;
+    if (ImGui::Button(tr("Load file..."))) {
+        const std::string p = plat::openFileDialog();
+        if (!p.empty()) {
+            if (hamCountryLoadFile(p, err)) hamToast("Country file loaded: " + std::to_string(o.dxcc.entities().size()) + " entities");
+            else hamToast("Not a country file: " + err);
+        }
+    }
+    ImGui::SameLine();
+    auto dl = ctyDl();
+    bool running, done = false, dok = false;
+    std::string msg;
+    { std::lock_guard<std::mutex> lk(dl->m); running = dl->running; done = dl->done; dok = dl->ok; msg = dl->msg; }
+    ImGui::BeginDisabled(running);
+    if (ImGui::Button(running ? tr("Downloading...") : tr("Download from country-files.com"))) {
+        const std::string file = plat::dataDir() + "/cty.dat";
+        { std::lock_guard<std::mutex> lk(dl->m); dl->running = true; dl->done = false; dl->msg.clear(); dl->file = file; }
+        std::thread([dl, file] {
+            const std::string tmp = file + ".part";
+            bool ok = plat::fetchUrl("https://www.country-files.com/cty/cty.dat", tmp, "OnAir");
+            std::string m;
+            if (ok) {
+                std::error_code ec;
+                const auto sz = std::filesystem::file_size(std::filesystem::u8path(tmp), ec);
+                if (ec || sz > kCtyMax || sz < 1000) { ok = false; m = "the download is not a country file (size)"; }
+                else {
+                    bool rd; std::string err;
+                    const std::string t = readCapped(tmp, rd, err);
+                    ham::DxccDb probe;
+                    if (!rd || !probe.loadCty(t, m)) { ok = false; if (m.empty()) m = "the download is not a country file"; }
+                    else { std::filesystem::rename(std::filesystem::u8path(tmp), std::filesystem::u8path(file), ec); if (ec) { ok = false; m = "cannot save the file"; } }
+                }
+            } else m = "the download did not work (no network?)";
+            if (!ok) { std::error_code ec; std::filesystem::remove(std::filesystem::u8path(tmp), ec); }
+            std::lock_guard<std::mutex> lk(dl->m);
+            dl->running = false; dl->done = true; dl->ok = ok; dl->msg = m;
+        }).detach();
+    }
+    ImGui::EndDisabled();
+    if (done) {   // the download finished: apply it on this (UI) thread
+        std::string file;
+        { std::lock_guard<std::mutex> lk(dl->m); dl->done = false; file = dl->file; }
+        if (dok && hamCountryLoadFile(file, err)) hamToast("Country file downloaded: " + std::to_string(o.dxcc.entities().size()) + " entities");
+        else hamToast("Country file: " + (dok ? err : msg));
+    }
+    if (!o.ctyPath.empty()) { ImGui::SameLine(); if (ImGui::Button(tr("Reset to built-in"))) hamCountryReset(); }
+    if (!o.ctyInfo.empty() && o.ctyInfo.rfind("could not", 0) == 0) ImGui::TextColored(ImVec4(1, 0.7f, 0.3f, 1), "%s", o.ctyInfo.c_str());
+}
+
+
 void hamToast(const std::string& s) { hamOps().toast = s; hamOps().toastAt = (double)time(nullptr); }
 
 std::string hamCountry(const std::string& call) { const ham::DxccHit h = hamOps().dxcc.lookup(call); return h.e ? h.e->name : ""; }
@@ -166,13 +290,8 @@ void hamOpsLoad() {
     }
     o.dxcc = ham::DxccDb::builtin();
     o.ctyPath = p.getS("ham.ctyPath", "");
-    if (!o.ctyPath.empty()) {
-        bool ok;
-        const std::string t = readFile(o.ctyPath, ok);
-        std::string err;
-        ham::DxccDb u;
-        if (ok && u.loadCty(t, err)) { o.dxcc = u; o.ctyInfo = o.ctyPath; } else o.ctyInfo = "could not read " + o.ctyPath + (err.empty() ? "" : ": " + err);
-    }
+    o.ctyInMsg = p.getB("ham.ctyInMsg", true);
+    if (!o.ctyPath.empty()) { std::string err; if (!ctyApply(o.ctyPath, err)) o.ctyInfo = "could not read " + o.ctyPath + (err.empty() ? "" : ": " + err); }
     o.log.enrich = [](ham::LogQso& q) {
         if (q.dxcc > 0 && !q.country.empty()) return;
         const ham::DxccHit h = hamOps().dxcc.lookup(q.call);
@@ -274,31 +393,7 @@ void hamLogTab(App& a) {
     ImGui::SameLine();
     if (ImGui::Button(tr("Country file"))) ImGui::OpenPopup("##cty");
     if (ImGui::BeginPopup("##cty")) {
-        ImGui::TextUnformatted(o.ctyPath.empty() ? tr("Built-in country table (about 200 entities)") : o.ctyPath.c_str());
-        ImGui::TextDisabled("%zu %s, %zu %s", o.dxcc.entities().size(), tr("entities"), o.dxcc.prefixCount(), tr("prefixes"));
-        if (!o.ctyInfo.empty() && o.ctyInfo != o.ctyPath) ImGui::TextColored(ImVec4(1, 0.7f, 0.3f, 1), "%s", o.ctyInfo.c_str());
-        ImGui::TextWrapped("%s", tr("For every entity, load a country file in the cty.dat format (as contest loggers use) that you have on this computer. OnAir does not download it."));
-        if (ImGui::Button(tr("Load cty.dat file..."))) {
-            const std::string p = plat::openFileDialog();
-            if (!p.empty()) {
-                bool ok;
-                const std::string t = readFile(p, ok);
-                ham::DxccDb u;
-                std::string err;
-                if (ok && u.loadCty(t, err)) {
-                    o.dxcc = u; o.ctyPath = o.ctyInfo = p;
-                    plat::basePrefs().setS("ham.ctyPath", p); plat::basePrefs().flush();
-                    o.log.load(o.logPath, err);   // fills in the countries the log did not have yet
-                    gGen++; o.workedDirty = true;
-                    hamToast("Country file loaded: " + std::to_string(u.entities().size()) + " entities");
-                } else hamToast("Not a cty.dat file: " + (ok ? err : "cannot read it"));
-            }
-        }
-        if (!o.ctyPath.empty() && ImGui::Button(tr("Use the built-in table"))) {
-            o.dxcc = ham::DxccDb::builtin(); o.ctyPath.clear(); o.ctyInfo.clear();
-            plat::basePrefs().setS("ham.ctyPath", ""); plat::basePrefs().flush();
-            gGen++; o.workedDirty = true;
-        }
+        hamCountryUi();
         ImGui::EndPopup();
     }
 

@@ -27,7 +27,8 @@ const DxccDb& DxccDb::builtin() {
 
 bool DxccDb::loadCty(const std::string& text, std::string& err) {
     DxccDb out;
-    size_t p = 0;
+    if (text.size() > (32u << 20)) { err = "the file is too large for a country file"; return false; }
+    size_t p = (text.size() >= 3 && (unsigned char)text[0] == 0xEF && (unsigned char)text[1] == 0xBB && (unsigned char)text[2] == 0xBF) ? 3 : 0;
     while (p < text.size()) {
         // the header: 8 fields ending with ':'
         std::string f[8];
@@ -46,8 +47,10 @@ bool DxccDb::loadCty(const std::string& text, std::string& err) {
         DxccEntity e;
         e.name = f[0]; e.cqz = std::atoi(f[1].c_str()); e.ituz = std::atoi(f[2].c_str()); e.cont = upper(f[3]);
         e.lat = std::atof(f[4].c_str()); e.lon = -std::atof(f[5].c_str());   // cty.dat: west positive
+        e.tz = std::atof(f[6].c_str());
         e.primary = upper(f[7]);
-        if (!e.primary.empty() && e.primary[0] == '*') e.primary.erase(0, 1);
+        if (!e.primary.empty() && e.primary[0] == '*') { e.primary.erase(0, 1); e.wae = true; }
+        if (e.primary.empty()) { err = "the country " + f[0] + " has no primary prefix"; return false; }
         const int idx = (int)out.ents_.size();
         out.ents_.push_back(e);
         // the primary prefix always counts
@@ -63,8 +66,9 @@ bool DxccDb::loadCty(const std::string& text, std::string& err) {
             }
         }
         for (std::string t : toks) {
+            if (t.size() == 11 && t.compare(0, 3, "VER") == 0 && t.find_first_not_of("0123456789", 3) == std::string::npos) { out.version_ = t.substr(3); continue; }
             if (t[0] == '#') { out.ents_[(size_t)idx].adif = std::atoi(t.c_str() + 1); continue; }
-            Rule r; r.ent = idx; r.cqz = e.cqz; r.ituz = e.ituz;
+            Rule r; r.ent = idx; r.cqz = e.cqz; r.ituz = e.ituz; r.cont = e.cont;
             // the overrides after the prefix: (cq) [itu] <lat/lon> {cont} ~utc~
             std::string base;
             for (size_t i = 0; i < t.size(); i++) {
@@ -72,17 +76,25 @@ bool DxccDb::loadCty(const std::string& text, std::string& err) {
                 auto closeOf = [&](char cl) { const size_t e2 = t.find(cl, i + 1); return e2 == std::string::npos ? t.size() : e2; };
                 if (ch == '(') { const size_t e2 = closeOf(')'); r.cqz = std::atoi(t.substr(i + 1, e2 - i - 1).c_str()); i = e2; }
                 else if (ch == '[') { const size_t e2 = closeOf(']'); r.ituz = std::atoi(t.substr(i + 1, e2 - i - 1).c_str()); i = e2; }
-                else if (ch == '<') i = closeOf('>');
-                else if (ch == '{') i = closeOf('}');
+                else if (ch == '<') {
+                    const size_t e2 = closeOf('>');
+                    const std::string v = t.substr(i + 1, e2 - i - 1);
+                    const size_t sl = v.find('/');
+                    if (sl != std::string::npos) { r.hasPos = true; r.lat = std::atof(v.c_str()); r.lon = -std::atof(v.c_str() + sl + 1); }
+                    i = e2;
+                }
+                else if (ch == '{') { const size_t e2 = closeOf('}'); r.cont = upper(t.substr(i + 1, e2 - i - 1)); i = e2; }
                 else if (ch == '~') i = closeOf('~');
                 else base += (char)std::toupper((unsigned char)ch);
             }
             if (base.empty()) continue;
             if (base[0] == '=') { out.exact_[base.substr(1)] = r; continue; }
-            // '?': any letter
+            // '?': any letter (at most two per prefix, so that a garbage file cannot blow up the table)
             std::vector<std::string> ex = {base};
+            int qm = 0;
             for (size_t k = 0; k < base.size(); k++) {
                 if (base[k] != '?') continue;
+                if (++qm > 2) { ex.clear(); break; }
                 std::vector<std::string> nx;
                 for (const auto& s : ex) for (char L = 'A'; L <= 'Z'; L++) { std::string s2 = s; s2[k] = L; nx.push_back(s2); }
                 ex.swap(nx);
@@ -94,6 +106,11 @@ bool DxccDb::loadCty(const std::string& text, std::string& err) {
     *this = std::move(out);
     err.clear();
     return true;
+}
+
+void DxccDb::fill(DxccHit& h, const Rule& r) const {
+    h.e = &ents_[(size_t)r.ent]; h.cqz = r.cqz; h.ituz = r.ituz; h.cont = r.cont;
+    h.lat = r.hasPos ? r.lat : h.e->lat; h.lon = r.hasPos ? r.lon : h.e->lon;
 }
 
 const DxccEntity* DxccDb::byAdif(int adif) const {
@@ -142,13 +159,17 @@ DxccHit DxccDb::lookup(const std::string& call) const {
     const std::string c = upper(trim(call));
     if (c.empty()) return h;
     auto ex = exact_.find(c);
-    if (ex != exact_.end()) { h.e = &ents_[(size_t)ex->second.ent]; h.cqz = ex->second.cqz; h.ituz = ex->second.ituz; h.prefix = "=" + c; return h; }
+    if (ex != exact_.end()) { fill(h, ex->second); h.prefix = "=" + c; return h; }
     const std::string part = prefixPart(c);
     if (part.empty()) return h;
+    if (part != c) {   // W1AW/P: the exact entry of the plain call still counts
+        auto ex2 = exact_.find(part);
+        if (ex2 != exact_.end()) { fill(h, ex2->second); h.prefix = "=" + part; return h; }
+    }
     for (size_t n = std::min(part.size(), maxLen_); n > 0; n--) {
         auto it = pre_.find(part.substr(0, n));
         if (it == pre_.end()) continue;
-        h.e = &ents_[(size_t)it->second.ent]; h.cqz = it->second.cqz; h.ituz = it->second.ituz; h.prefix = it->first;
+        fill(h, it->second); h.prefix = it->first;
         return h;
     }
     return h;

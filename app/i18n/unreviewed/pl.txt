@@ -535,3 +535,9 @@ Downloading orbits from CelesTrak (the built-in set is used meanwhile).
 Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.
 Press the button: it does the rest.
 BPSK
+A country file (cty.dat, wl_cty.dat) from country-files.com gives every DXCC entity with its CQ and ITU zone. Thanks to Jim Reisert AD1C and the country-files.com team. OnAir does not bundle it: load one you have, or press Download (only on your click).
+Show country and zone in decoded messages
+Load file...
+Download from country-files.com
+Downloading...
+Reset to built-in

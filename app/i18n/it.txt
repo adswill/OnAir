@@ -3781,3 +3781,8 @@ Downloading orbits from CelesTrak (the built-in set is used meanwhile).	Scarico 
 Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.	Scrive i pacchetti nella cartella dati come file pronto per SatNOGS (un record di telemetria per riga), CSV e file KISS. Non viene caricato nulla.
 Press the button: it does the rest.	Premi il pulsante: fa tutto il resto.
 BPSK	BPSK
+A country file (cty.dat, wl_cty.dat) from country-files.com gives every DXCC entity with its CQ and ITU zone. Thanks to Jim Reisert AD1C and the country-files.com team. OnAir does not bundle it: load one you have, or press Download (only on your click).	Un file dei paesi (cty.dat, wl_cty.dat) da country-files.com fornisce ogni entità DXCC con le zone CQ e ITU. Grazie a Jim Reisert AD1C e al team di country-files.com. OnAir non lo include: carica un file che hai o premi Scarica (solo con un tuo clic).
+Show country and zone in decoded messages	Mostra paese e zona nei messaggi decodificati
+Load file...	Carica file...
+Download from country-files.com	Scarica da country-files.com
+Reset to built-in	Ripristina la tabella integrata

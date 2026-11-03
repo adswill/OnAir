@@ -703,6 +703,10 @@ void hamPanel(App& a) {
                 else if (m.workedCallBand && !m.newDxccBand) ImGui::TextDisabled("%s", d.msg.c_str());
                 else if (d.cq) ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.4f, 1), "%s", d.msg.c_str());
                 else ImGui::TextUnformatted(d.msg.c_str());
+                if (!d.call.empty() && hamCountryInMessages()) {   // the country and zones beside the message (setting)
+                    const std::string tag = hamCountryTag(d.call);
+                    if (!tag.empty()) { ImGui::SameLine(0, 8 * gUi); ImGui::TextDisabled("(%s)", tag.c_str()); }
+                }
                 ImGui::TableNextColumn(); ImGui::TextDisabled("%s", country.c_str());
                 ImGui::TableNextColumn();
                 if (dupe) ImGui::TextColored(ImVec4(1, 0.4f, 0.3f, 1), "DUPE");

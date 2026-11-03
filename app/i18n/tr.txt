@@ -3492,3 +3492,8 @@ Test frame	Test çerçevesi
 Train dispatch, FFSK	Tren sevkıyatı, FFSK
 Unpaired detail	Eşleştirilmemiş ayrıntı
 Weight %u t, length %.1f	Ağırlık %u t, uzunluk %.1f
+A country file (cty.dat, wl_cty.dat) from country-files.com gives every DXCC entity with its CQ and ITU zone. Thanks to Jim Reisert AD1C and the country-files.com team. OnAir does not bundle it: load one you have, or press Download (only on your click).	country-files.com'dan alınan bir ülke dosyası (cty.dat, wl_cty.dat) her DXCC varlığını CQ ve ITU bölgesiyle verir. Jim Reisert AD1C ve country-files.com ekibine teşekkürler. OnAir bunu içermez: elinizdeki bir dosyayı yükleyin veya İndir'e basın (yalnızca sizin tıklamanızla).
+Show country and zone in decoded messages	Çözülen mesajlarda ülke ve bölgeyi göster
+Load file...	Dosya yükle...
+Download from country-files.com	country-files.com'dan indir
+Reset to built-in	Yerleşik tabloya dön
