@@ -17,6 +17,8 @@
 #include <string>
 #include <vector>
 
+void cubesatSmartView(App& a);   // cubesat_smart_ui.cpp
+
 namespace {
 
 using namespace dect2::cubesat;
@@ -203,8 +205,8 @@ void tick(App& a) {
 
 void tab(App& a) {
     loadState();
-    subNav("cbv", S.view, {"Frames", "Satellites"});
-    if (S.view == 0) framesView(a); else satsView(a);
+    subNav("cbv", S.view, {"Smart", "Frames", "Satellites"});
+    if (S.view == 0) cubesatSmartView(a); else if (S.view == 1) framesView(a); else satsView(a);
 }
 
 void list(App& a) {

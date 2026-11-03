@@ -802,6 +802,7 @@ void generalRecallHz(App& a, double hz);          // general_ui.cpp: a memory's 
 void trunkPoolWindow(App& a);                        // trunkpool_ui.cpp: control radio + voice radios, call log, access list, channel plan (docs/TRUNKING.md)
 void trunkPoolTick(App& a);                          // every frame, window shut or not: feeds grants, drives the pool
 void wideAllWindow(App& a);                          // wide_all_ui.cpp: every signal of the capture found, identified and decoded at once (wide_session.h)
+void passesDownloadTles();                          // passes_ui.cpp: fetch the TLE sets (CelesTrak) in the background
 bool wideAllWorthIt(const App& a);                   // the capture is wide enough to hold several signals (or it is on already)
 void wideAllButton(App& a);                          // the one button of it (Simple views and the window)
 void rfFingerprintWindow(App& a);                   // rffp_ui.cpp: RF fingerprint of a transmitter, carrier-only log (a.rfFpOpen; docs/RF-FINGERPRINT.md)

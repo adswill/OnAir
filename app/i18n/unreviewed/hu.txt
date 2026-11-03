@@ -474,3 +474,50 @@ Default (inside the data folder)
 Choose...
 Use typed path
 That folder cannot be written: the default is used.
+Tuned for
+No satellite is expected soon: scanning this span for any carrier.
+Nothing was uploaded.
+carrier found
+decoding
+carrier only
+no known signal
+Next passes
+working out the passes ...
+no pass of a satellite in the table in the next hours (set your location, refresh the orbits)
+In
+Carriers
+none yet
+Tried on
+valid
+failed their checks
+satellite
+framing
+validated by
+byte errors put right
+received
+telemetry
+Field
+Decoded packets
+Framing
+Follow satellites from the table (passes and Doppler)
+Look for carriers the table does not explain
+Minimum SNR (dB)
+Carriers followed at once
+Lowest elevation (deg)
+Search window around the predicted carrier (Hz)
+Modulation of unknown carriers
+Baud rate (0: automatic, any value)
+Channel width (Hz, 0: automatic, any value)
+Scan resolution (Hz, 0: automatic)
+Add a transmitter to the table
+NORAD number
+Baud rate
+orbits for %zu satellites, %zu table entries
+Auto decode: on (click to stop)
+Auto decode cubesats
+Tunes a span that holds the satellites about to pass, follows their Doppler shift, finds every narrow carrier, works out its modulation and baud rate, and decodes it with every framing that fits. Nothing to set up.
+Refresh orbits
+Downloading orbits from CelesTrak (the built-in set is used meanwhile).
+Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.
+Press the button: it does the rest.
+BPSK

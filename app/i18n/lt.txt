@@ -3765,3 +3765,51 @@ Default (inside the data folder)	Numatytasis (duomenų aplanke)
 Choose...	Pasirinkti...
 Use typed path	Naudoti įvestą kelią
 That folder cannot be written: the default is used.	Į šį aplanką rašyti negalima: naudojamas numatytasis.
+# Smart CubeSat (docs/CUBESAT-SMART.md)
+Tuned for	Sureguliuota
+No satellite is expected soon: scanning this span for any carrier.	Netrukus palydovų nesitikima: ieškoma bet kokių nešlių šioje juostoje.
+Nothing was uploaded.	Nieko neįkelta.
+carrier found	rasta nešlė
+decoding	dekoduojama
+carrier only	tik nešlė
+no known signal	nėra žinomo signalo
+Next passes	Artimiausi praskridimai
+working out the passes ...	skaičiuojami praskridimai ...
+no pass of a satellite in the table in the next hours (set your location, refresh the orbits)	artimiausiomis valandomis nėra lentelės palydovų praskridimų (nustatykite vietą, atnaujinkite orbitas)
+In	Po
+Carriers	Nešlės
+none yet	kol kas nėra
+Tried on	Bandyta ties
+valid	galiojančių
+failed their checks	neišlaikė patikros
+satellite	palydovas
+framing	kadravimas
+validated by	patvirtinta
+byte errors put right	baitų klaidų ištaisyta
+received	gauta
+telemetry	telemetrija
+Field	Laukas
+Decoded packets	Dekoduoti paketai
+Framing	Kadravimas
+Follow satellites from the table (passes and Doppler)	Sekti lentelės palydovus (praskridimai ir Doplerio efektas)
+Look for carriers the table does not explain	Ieškoti nešlių, kurių lentelė nepaaiškina
+Minimum SNR (dB)	Minimalus SNR (dB)
+Carriers followed at once	Vienu metu sekamos nešlės
+Lowest elevation (deg)	Mažiausias aukščio kampas (laipsniai)
+Search window around the predicted carrier (Hz)	Paieškos langas aplink numatytą nešlę (Hz)
+Modulation of unknown carriers	Nežinomų nešlių moduliacija
+Baud rate (0: automatic, any value)	Baudų sparta (0: automatinė, bet kokia reikšmė)
+Channel width (Hz, 0: automatic, any value)	Kanalo plotis (Hz, 0: automatinis, bet kokia reikšmė)
+Scan resolution (Hz, 0: automatic)	Skenavimo skyra (Hz, 0: automatinė)
+Add a transmitter to the table	Pridėti siųstuvą į lentelę
+NORAD number	NORAD numeris
+Baud rate	Baudų sparta
+orbits for %zu satellites, %zu table entries	%zu palydovų orbitos, %zu lentelės įrašai
+Auto decode: on (click to stop)	Automatinis dekodavimas: įjungta (spustelėkite sustabdyti)
+Auto decode cubesats	Automatiškai dekoduoti kubo palydovus
+Tunes a span that holds the satellites about to pass, follows their Doppler shift, finds every narrow carrier, works out its modulation and baud rate, and decodes it with every framing that fits. Nothing to set up.	Suderina juostą, kurioje bus netrukus praskrendantys palydovai, seka jų Doplerio poslinkį, randa kiekvieną siaurą nešlę, nustato moduliaciją ir baudų spartą ir dekoduoja visais tinkamais kadravimais. Nieko nereikia nustatyti.
+Refresh orbits	Atnaujinti orbitas
+Downloading orbits from CelesTrak (the built-in set is used meanwhile).	Atsisiunčiamos orbitos iš CelesTrak (kol kas naudojamas įmontuotas rinkinys).
+Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.	Įrašo paketus į duomenų aplanką kaip SatNOGS paruoštą failą (viena telemetrijos įrašų eilutė), CSV ir KISS failą. Nieko neįkelia.
+Press the button: it does the rest.	Paspauskite mygtuką – likusį padarys pati programa.
+BPSK	BPSK

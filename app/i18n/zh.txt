@@ -3768,3 +3768,51 @@ Default (inside the data folder)	默认(在数据文件夹内)
 Choose...	选择...
 Use typed path	使用输入的路径
 That folder cannot be written: the default is used.	无法写入该文件夹:改用默认文件夹。
+# Smart CubeSat (docs/CUBESAT-SMART.md)
+Tuned for	已调谐到
+No satellite is expected soon: scanning this span for any carrier.	近期没有卫星过境：正在此频段内搜索任意载波。
+Nothing was uploaded.	未上传任何内容。
+carrier found	发现载波
+decoding	解码中
+carrier only	仅有载波
+no known signal	无已知信号
+Next passes	接下来的过境
+working out the passes ...	正在计算过境 ...
+no pass of a satellite in the table in the next hours (set your location, refresh the orbits)	未来几小时内表中没有卫星过境（请设置位置并刷新轨道）
+In	倒计时
+Carriers	载波
+none yet	暂无
+Tried on	已尝试于
+valid	有效
+failed their checks	校验失败
+satellite	卫星
+framing	帧格式
+validated by	验证方式
+byte errors put right	已纠正字节错误
+received	接收
+telemetry	遥测
+Field	字段
+Decoded packets	已解码的数据包
+Framing	帧格式
+Follow satellites from the table (passes and Doppler)	跟踪表中的卫星（过境与多普勒）
+Look for carriers the table does not explain	搜索表中没有的载波
+Minimum SNR (dB)	最小信噪比 (dB)
+Carriers followed at once	同时跟踪的载波数
+Lowest elevation (deg)	最低仰角（度）
+Search window around the predicted carrier (Hz)	预测载波周围的搜索窗口 (Hz)
+Modulation of unknown carriers	未知载波的调制
+Baud rate (0: automatic, any value)	波特率（0：自动，可填任意值）
+Channel width (Hz, 0: automatic, any value)	信道宽度（Hz，0：自动，可填任意值）
+Scan resolution (Hz, 0: automatic)	扫描分辨率（Hz，0：自动）
+Add a transmitter to the table	向表中添加发射机
+NORAD number	NORAD编号
+Baud rate	波特率
+orbits for %zu satellites, %zu table entries	%zu 颗卫星的轨道，表中 %zu 项
+Auto decode: on (click to stop)	自动解码：开（点击停止）
+Auto decode cubesats	自动解码立方星
+Tunes a span that holds the satellites about to pass, follows their Doppler shift, finds every narrow carrier, works out its modulation and baud rate, and decodes it with every framing that fits. Nothing to set up.	调谐到包含即将过境卫星的频段，跟踪多普勒频移，找出每个窄带载波，判断其调制方式和波特率，并用所有可能的帧格式解码。无需任何设置。
+Refresh orbits	刷新轨道
+Downloading orbits from CelesTrak (the built-in set is used meanwhile).	正在从 CelesTrak 下载轨道（期间使用内置数据）。
+Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.	将数据包以 SatNOGS 可用文件（每行一条遥测记录）、CSV 和 KISS 文件写入数据文件夹。不会上传任何内容。
+Press the button: it does the rest.	按下按钮，其余全部自动完成。
+BPSK	BPSK

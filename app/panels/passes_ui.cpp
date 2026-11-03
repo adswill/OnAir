@@ -1020,6 +1020,8 @@ void drawWindow(App& a) {
 
 }  // namespace
 
+void passesDownloadTles() { loadState(); startDownload(); }
+
 // dev: --tle <file> loads TLEs from a file as pasted ones would (tests without the network)
 void passesDevTle(const std::string& path) {
     loadState();

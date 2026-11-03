@@ -3727,3 +3727,51 @@ Default (inside the data folder)	Predefinida (dentro da pasta de dados)
 Choose...	Escolher...
 Use typed path	Usar o caminho escrito
 That folder cannot be written: the default is used.	Não é possível escrever nessa pasta: é usada a predefinida.
+# Smart CubeSat (docs/CUBESAT-SMART.md)
+Tuned for	Sintonizado para
+No satellite is expected soon: scanning this span for any carrier.	Nenhum satélite é esperado em breve: a procurar qualquer portadora neste intervalo.
+Nothing was uploaded.	Nada foi enviado.
+carrier found	portadora encontrada
+decoding	a descodificar
+carrier only	só portadora
+no known signal	nenhum sinal conhecido
+Next passes	Próximas passagens
+working out the passes ...	a calcular as passagens ...
+no pass of a satellite in the table in the next hours (set your location, refresh the orbits)	nenhuma passagem de satélite da tabela nas próximas horas (defina a localização, atualize as órbitas)
+In	Em
+Carriers	Portadoras
+none yet	ainda nenhuma
+Tried on	Tentado em
+valid	válidos
+failed their checks	falharam nas verificações
+satellite	satélite
+framing	enquadramento
+validated by	validado por
+byte errors put right	erros de byte corrigidos
+received	recebido
+telemetry	telemetria
+Field	Campo
+Decoded packets	Pacotes descodificados
+Framing	Enquadramento
+Follow satellites from the table (passes and Doppler)	Seguir os satélites da tabela (passagens e Doppler)
+Look for carriers the table does not explain	Procurar portadoras que a tabela não explica
+Minimum SNR (dB)	SNR mínima (dB)
+Carriers followed at once	Portadoras seguidas em simultâneo
+Lowest elevation (deg)	Elevação mínima (graus)
+Search window around the predicted carrier (Hz)	Janela de procura em torno da portadora prevista (Hz)
+Modulation of unknown carriers	Modulação das portadoras desconhecidas
+Baud rate (0: automatic, any value)	Taxa de baud (0: automática, qualquer valor)
+Channel width (Hz, 0: automatic, any value)	Largura do canal (Hz, 0: automática, qualquer valor)
+Scan resolution (Hz, 0: automatic)	Resolução da varrimento (Hz, 0: automática)
+Add a transmitter to the table	Adicionar um emissor à tabela
+NORAD number	Número NORAD
+Baud rate	Taxa de baud
+orbits for %zu satellites, %zu table entries	órbitas de %zu satélites, %zu entradas na tabela
+Auto decode: on (click to stop)	Descodificação automática: ligada (clique para parar)
+Auto decode cubesats	Descodificar cubesats automaticamente
+Tunes a span that holds the satellites about to pass, follows their Doppler shift, finds every narrow carrier, works out its modulation and baud rate, and decodes it with every framing that fits. Nothing to set up.	Sintoniza um intervalo com os satélites prestes a passar, acompanha o desvio Doppler, encontra cada portadora estreita, descobre a modulação e o débito e descodifica com cada enquadramento possível. Nada para configurar.
+Refresh orbits	Atualizar órbitas
+Downloading orbits from CelesTrak (the built-in set is used meanwhile).	A transferir órbitas do CelesTrak (entretanto usa-se o conjunto incluído).
+Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.	Grava os pacotes na pasta de dados como ficheiro pronto para o SatNOGS (um registo de telemetria por linha), CSV e ficheiro KISS. Nada é enviado.
+Press the button: it does the rest.	Prima o botão: ele faz o resto.
+BPSK	BPSK
