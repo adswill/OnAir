@@ -299,7 +299,7 @@ int main() {
     {
         namespace fs = std::filesystem;
         const fs::path dir = fs::temp_directory_path() / "onair_trunkpool_test";
-        fs::remove_all(dir);
+        { std::error_code ec; fs::remove_all(dir, ec); }
         PoolConfig c; c.recordDir = dir.string(); c.systemName = "NSW PSN";
         Sim s(c);
         s.pool.wallBase = 1700000000;
@@ -324,7 +324,7 @@ int main() {
               t.find("hang time over") != std::string::npos && t.find("NSW PSN") != std::string::npos, "sidecar: %s", t.c_str());
         CHECK(s.last()->audioPath.find("NSW_PSN_tg4242_") != std::string::npos, "file name");
         // a call with no sound leaves no wav
-        fs::remove_all(dir);
+        { std::error_code ec; fs::remove_all(dir, ec); }
         Sim q(c);
         q.add("ctl", F); q.add("v1", 0, 0, 0, false);
         q.rx[1]->voice = false;
@@ -332,7 +332,7 @@ int main() {
         q.run(0.5);
         q.pool.clear();
         CHECK(!fs::exists(dir) || fs::is_empty(dir), "no sound, no files");
-        fs::remove_all(dir);
+        { std::error_code ec; fs::remove_all(dir, ec); }
     }
     // 11. channel plan CSV
     {
