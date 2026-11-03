@@ -42,5 +42,7 @@ private:
 std::vector<cf32> toneSceneFm(const ToneScene& s, double rate, double offsetHz, double snrDb, uint32_t seed = 3);
 
 std::unique_ptr<ModeSynth> makeTonesSynth(const SynthConfig& cfg, double sampleRate);
+// The SELCAL mode's demonstration: voice, then the calls AM-CP, DH-KS, AM-CP in a loop of 22 s (same SynthConfig as makeTonesSynth)
+std::unique_ptr<ModeSynth> makeSelcalSynth(const SynthConfig& cfg, double sampleRate);
 
 } // namespace dect2

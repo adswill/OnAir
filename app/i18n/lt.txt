@@ -3738,3 +3738,10 @@ Scripts and rules	Scenarijai ir taisyklės
 Running programs is allowed.	Programų paleidimas leidžiamas.
 Running programs is off.	Programų paleidimas išjungtas.
 Plug-ins and scripts	Įskiepiai ir scenarijai
+Tones (Hz)	Tonai (Hz)
+Frequency (kHz)	Dažnis (kHz)
+no calls yet	skambučių dar nėra
+no codes yet	kodų dar nėra
+calls	skambučiai
+strongest tone	stipriausias tonas
+Play the channel audio; decoding is the same either way	Groti kanalo garsą; dekodavimas toks pats

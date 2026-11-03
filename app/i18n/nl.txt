@@ -3723,3 +3723,10 @@ Back to this mode's own bandwidth and sample rate. Your custom values stay saved
 16-bit	16-bit
 Share##rec	Share##rec
 Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.	Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.
+Tones (Hz)	Tonen (Hz)
+Frequency (kHz)	Frequentie (kHz)
+no calls yet	nog geen oproepen
+no codes yet	nog geen codes
+calls	oproepen
+strongest tone	sterkste toon
+Play the channel audio; decoding is the same either way	Kanaalgeluid afspelen; decoderen blijft hetzelfde

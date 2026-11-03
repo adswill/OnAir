@@ -108,6 +108,7 @@
 #include "dect2/inmsat/inmsat_tel.h"
 #include "dect2/nrf24/nrf24_tel.h"
 #include "dect2/atis/atis_tel.h"
+#include "dect2/selcal/selcal_tel.h"
 #include "dect2/fy3/fy3_tel.h"
 #include "dect2/shortwave/shortwave_tel.h"
 #include "dect2/pskdsp/pskdsp_tel.h"
@@ -238,6 +239,7 @@ struct RxTelemetry {
     Fy3Telemetry fy3a;        // valid when standard == 236 (FY-3 AHRPT, family 235, engine standard 237)
     Fy3Telemetry fy3m;        // valid when standard == 237 (FY-3 MPT, family 236, engine standard 238)
     PactorHfTelemetry pactorhf;   // valid when standard == 238, 239 or 240 (PACTOR-II / -III / -IV, families 237 .. 239, engine standards 239 .. 241)
+    SelcalTelemetry selcal;   // valid when standard == 241 (SELCAL, family 240, engine standard 242)
     AtisTelemetry atis;       // valid when standard == 212 (ATIS inland waterways, family 211, engine standard 213)
     ShortwaveTelemetry shortwave;   // valid when standard == 213 (Shortwave, family 212, engine standard 214)
     Nrf24Telemetry nrf24;     // valid when standard == 211 (nRF24L01, family 210, engine standard 212)

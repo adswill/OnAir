@@ -3735,3 +3735,10 @@ Scripts and rules	Skripte und Regeln
 Running programs is allowed.	Das Ausführen von Programmen ist erlaubt.
 Running programs is off.	Das Ausführen von Programmen ist aus.
 Plug-ins and scripts	Plug-ins und Skripte
+Tones (Hz)	Töne (Hz)
+Frequency (kHz)	Frequenz (kHz)
+no calls yet	noch keine Rufe
+no codes yet	noch keine Codes
+calls	Rufe
+strongest tone	stärkster Ton
+Play the channel audio; decoding is the same either way	Kanal-Audio abspielen; die Dekodierung ist in beiden Fällen gleich

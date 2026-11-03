@@ -437,3 +437,10 @@ custom
 default
 How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.
 Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.
+Tones (Hz)
+Frequency (kHz)
+no calls yet
+no codes yet
+calls
+strongest tone
+Play the channel audio; decoding is the same either way
