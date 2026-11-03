@@ -3721,3 +3721,7 @@ custom	eigene
 default	Standard
 How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	Wie viel Spektrum das Radio erfasst. Standard ist die eigene Breite des Modus; klicken Sie, um eine beliebige Breite einzustellen.
 Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	Zurück zur eigenen Bandbreite und Abtastrate dieses Modus. Ihre eigenen Werte bleiben für das nächste Anhaken von Eigene gespeichert.
+Identify	Identifizieren
+Start the receiver to scan.	Starte den Empfänger zum Scannen.
+Look for every signal in what the radio sees, find out what each one is and offer to open it. One click.	Sucht jedes Signal im Bild des Funkgeräts, findet heraus, was es ist, und bietet an, es zu öffnen. Ein Klick.
+I don't know what this is: measure the strongest signal (or the region you dragged on the spectrum) and show the most likely modes with how sure OnAir is.	Ich weiß nicht, was das ist: misst das stärkste Signal (oder den im Spektrum gezogenen Bereich) und zeigt die wahrscheinlichsten Modi mit der Sicherheit von OnAir.

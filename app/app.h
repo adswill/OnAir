@@ -1243,6 +1243,7 @@ void specxDrawBookmarks(ImDrawList* dl, double loHz, double hiHz, float x0, floa
 void identifyStart(App& a, double sampleCentreRadioHz, double offHz, double widthHz, double rfOfCentreHz);
 void identifyAt(App& a, double clickMhz);
 void identifyRegion(App& a, double loMhz, double hiMhz);   // a dragged region (MHz)
+void scanIdentifyBar(App& a);                              // Simple view: the Scan and Identify buttons (app/specx/scan_identify_bar.cpp)
 void identifyAll(App& a);                                  // every signal in the capture, in a table
 void identifyTuned(App& a, double freqHz, double bwHz);    // tunes the radio to a signal found by the sweep and identifies it there
 bool identifyBusy();                                       // the Identify window is open (it owns the capture)

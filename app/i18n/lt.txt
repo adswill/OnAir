@@ -3724,3 +3724,7 @@ custom	pasirinktinis
 default	numatytasis
 How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	Kiek spektro užfiksuoja radijas. Numatytasis yra paties režimo plotis; spustelėkite, kad nustatytumėte bet kokį plotį.
 Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	Grįžti prie šio režimo savo juostos pločio ir diskretizavimo dažnio. Jūsų pasirinktinės reikšmės lieka išsaugotos kitam kartui, kai pažymėsite Pasirinktinis.
+Identify	Atpažinti
+Start the receiver to scan.	Norėdami tikrinti, paleiskite imtuvą.
+Look for every signal in what the radio sees, find out what each one is and offer to open it. One click.	Ieško visų signalų, kuriuos mato radijas, išsiaiškina, kas jie yra, ir pasiūlo atidaryti. Vienu spustelėjimu.
+I don't know what this is: measure the strongest signal (or the region you dragged on the spectrum) and show the most likely modes with how sure OnAir is.	Aš nežinau, kas tai: išmatuoja stipriausią signalą (arba spektre pažymėtą sritį) ir parodo labiausiai tikėtinus režimus bei kiek OnAir tuo tikras.
