@@ -48,7 +48,7 @@ const std::vector<KbdPreset>& kbdPresets() {
         {"contestia-8-500","Contestia 8/500",KbdKind::Hfdig,0, 0,   KbdContestia,  8,  500,  0, "CONTESTI", "CONTESTI 8/500",  25, "contestia", 0, 1500},
         {"contestia-16-1000","Contestia 16/1000",KbdKind::Hfdig,0,0,KbdContestia,  16, 1000, 0, "CONTESTI", "CONTESTI 16/1000",25, "contestia", 0, 1500},
         {"contestia-32-1000","Contestia 32/1000",KbdKind::Hfdig,0,0,KbdContestia,  32, 1000, 0, "CONTESTI", "CONTESTI 32/1000",25, "contestia", 0, 1500},
-        // MFSK4 .. MFSK64 (kMfskNames order), THOR 4 .. THOR 100, DominoEX 4 .. 22, the Hell variants; submodes from the ADIF 3.1 list
+        // MFSK4 .. MFSK128 (kMfskNames order; the L modes are in the HF digital decoder only), THOR 4 .. THOR 100, DominoEX 4 .. 22, the Hell variants; submodes from the ADIF 3.1 list
         {"mfsk4", "MFSK4", KbdKind::Hfdig, 0, 0, KbdMfsk, 0, 0, 0, "MFSK", "MFSK4", 25, "mfsk", 0, 1500},
         {"mfsk8", "MFSK8", KbdKind::Hfdig, 0, 0, KbdMfsk, 0, 0, 1, "MFSK", "MFSK8", 25, "mfsk", 0, 1500},
         {"mfsk11", "MFSK11", KbdKind::Hfdig, 0, 0, KbdMfsk, 0, 0, 2, "MFSK", "MFSK11", 25, "mfsk", 0, 1500},
@@ -57,6 +57,7 @@ const std::vector<KbdPreset>& kbdPresets() {
         {"mfsk31", "MFSK31", KbdKind::Hfdig, 0, 0, KbdMfsk, 0, 0, 5, "MFSK", "MFSK31", 25, "mfsk", 0, 1500},
         {"mfsk32", "MFSK32", KbdKind::Hfdig, 0, 0, KbdMfsk, 0, 0, 6, "MFSK", "MFSK32", 25, "mfsk", 0, 1500},
         {"mfsk64", "MFSK64", KbdKind::Hfdig, 0, 0, KbdMfsk, 0, 0, 7, "MFSK", "MFSK64", 25, "mfsk", 0, 1500},
+        {"mfsk128", "MFSK128", KbdKind::Hfdig, 0, 0, KbdMfsk, 0, 0, 8, "MFSK", "MFSK128", 25, "mfsk", 0, 1500},
         {"thor4", "THOR 4", KbdKind::Hfdig, 0, 0, KbdThor, 0, 0, 0, "THOR", "THOR4", 25, "thor", 0, 1500},
         {"thor5", "THOR 5", KbdKind::Hfdig, 0, 0, KbdThor, 0, 0, 1, "THOR", "THOR5", 25, "thor", 0, 1500},
         {"thor8", "THOR 8", KbdKind::Hfdig, 0, 0, KbdThor, 0, 0, 2, "THOR", "THOR8", 25, "thor", 0, 1500},

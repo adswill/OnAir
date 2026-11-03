@@ -4,8 +4,8 @@
 //   Olivia     MFSK of 2^n tones (4 .. 256) in 125 .. 2000 Hz; each block of n seven-bit characters is Walsh-Hadamard coded (64 symbols),
 //              scrambled with a fixed code, spread over the tones; the receiver searches time and frequency (Jalocha's code)
 //   Contestia  the same with six-bit characters (32 symbols per block), another scrambling code, upper case only
-//   MFSK       MFSK4 .. MFSK64: 32 (MFSK4 and MFSK8: 64 / 32 .. see mfskVariants) tones, differential Gray coded, K = 7 convolutional
-//              code with a 10 symbol diagonal interleaver, varicode text
+//   MFSK       MFSK4 .. MFSK128 and the long interleaver modes MFSK64L / MFSK128L: 8, 16 or 32 tones, Gray coded, K = 7 convolutional code with a diagonal
+//              interleaver (10, 20, 400 or 800 symbols), varicode text; MFSK16 / 32 / 64 / 128 also receive fldigi's pictures (Shortwave Radiogram), see KbdPicture
 //   DominoEX   18 tones, incremental frequency keying (the tone changes by 2 + symbol), no FEC, the DominoEX varicode
 //   THOR       as DominoEX with the K = 7 and K = 15 convolutional codes, the interleaver and the THOR varicode
 //   Hell       Feld Hell, Slow Hell, Hell 80, HellX5 and HellX9: the characters as 7 x 14 pixel columns, on and off keying of one tone,
@@ -51,6 +51,22 @@ struct KbdConfig {
     bool autoCentre = true;             // look for the signal in the audio while none is locked
 };
 
+// A picture sent inside an MFSK stream (fldigi's picture mode, as Shortwave Radiogram sends them): the text says "Pic:WxH[C][pN];", then every pixel is
+// one short burst of a tone whose frequency across the signal's bandwidth is its brightness. Grey pictures are W x H samples, colour pictures
+// three planes (red, green, blue) per row.
+struct KbdPicture {
+    uint64_t id = 0;                    // 1, 2, 3 ...: a new number for every picture started
+    int width = 0, height = 0;
+    bool colour = false;
+    int spp = 8;                        // samples per pixel at 8 kHz: 8 normal (X1), 4 (X2), 2 (X4)
+    int samplesDone = 0;                // pixel samples received (grey W*H, colour 3*W*H when complete)
+    int samplesTotal = 0;
+    bool done = false;                  // the last pixel arrived
+    double unixTime = 0;                // when it started
+    std::vector<uint8_t> rgb;           // width * height * 3, row 0 on top
+};
+constexpr int kKbdPicHistory = 8;       // finished pictures kept
+
 struct HfdigKbdTelemetry {
     int state = 0;                      // 0 searching, 1 locked (signal found and decoding)
     uint64_t audioSamples = 0;
@@ -65,6 +81,10 @@ struct HfdigKbdTelemetry {
     int hellCols = 0;
     uint64_t hellTotal = 0;             // columns received so far
     std::vector<uint8_t> hell;          // hellCols * kKbdHellRows
+    // MFSK pictures: the one being received (or the last one, until the next starts) and the finished ones, newest first
+    std::shared_ptr<const KbdPicture> picLive;
+    std::vector<std::shared_ptr<const KbdPicture>> picHistory;
+    uint64_t picSerial = 0;             // changes whenever picLive got more pixels
 };
 
 class HfdigKbd : public HfdigDecoder {
@@ -77,6 +97,7 @@ public:
     void setConfig(const KbdConfig& c);               // any thread; takes effect at the next feedAudio (the text stays)
     KbdConfig config() const;
     void clearText();
+    void clearPictures();                             // the picture being received and the finished ones
     void setLogCallback(std::function<void(const std::string&)> cb);
 private:
     struct Impl;
@@ -96,6 +117,9 @@ struct KbdTxConfig {
     double amp = 0.5;                   // peak
     double pauseSec = 0;                // silence after each pass of the text
     double leadSec = 0.3;
+    // MFSK: a picture sent once, after `pictureAfterChars` characters of the text (fldigi's transmitter: header, flush, prologue, pixels, flush)
+    std::shared_ptr<const KbdPicture> picture;     // rgb, width, height, colour, spp are used
+    int pictureAfterChars = 40;
 };
 std::unique_ptr<HfdigTestAudio> makeKbdTx(const KbdTxConfig& cfg);
 std::unique_ptr<HfdigTestAudio> makeKbdTestAudio(const SynthConfig& cfg);   // hfdig_kbd_gen.cpp: modeOpt[0] 26 .. 31

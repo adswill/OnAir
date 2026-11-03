@@ -3730,3 +3730,9 @@ copied	コピーしました
 rows	行
 Copy the table as CSV to the clipboard (positions included)	表をCSVとしてクリップボードにコピー(位置を含む)
 Copy the table as CSV to the clipboard	表をCSVとしてクリップボードにコピー
+# MFSK pictures (Shortwave Radiogram)
+Save PNG	PNGを保存
+Save every picture	すべての画像を保存
+Clear pictures	画像を消去
+grey	グレー
+Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.	MFSKの信号内で送られる画像（Shortwave Radiogram）は、受信するとここに表示されます。

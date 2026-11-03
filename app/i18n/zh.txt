@@ -3753,3 +3753,9 @@ copied	已复制
 rows	行
 Copy the table as CSV to the clipboard (positions included)	将表格以CSV复制到剪贴板(含位置)
 Copy the table as CSV to the clipboard	将表格以CSV复制到剪贴板
+# MFSK pictures (Shortwave Radiogram)
+Save PNG	保存 PNG
+Save every picture	保存每张图片
+Clear pictures	清除图片
+grey	灰度
+Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.	MFSK 信号中传送的图片（Shortwave Radiogram）会在收到时显示在这里。

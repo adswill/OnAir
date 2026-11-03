@@ -3735,3 +3735,9 @@ copied	gekopieerd
 rows	rijen
 Copy the table as CSV to the clipboard (positions included)	Kopieer de tabel als CSV naar het klembord (met posities)
 Copy the table as CSV to the clipboard	Kopieer de tabel als CSV naar het klembord
+# MFSK pictures (Shortwave Radiogram)
+Save PNG	PNG opslaan
+Save every picture	Elke afbeelding opslaan
+Clear pictures	Afbeeldingen wissen
+grey	grijs
+Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.	Afbeeldingen in de MFSK-stroom (Shortwave Radiogram) verschijnen hier zodra ze binnenkomen.

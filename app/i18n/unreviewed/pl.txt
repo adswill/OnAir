@@ -474,3 +474,8 @@ no codes yet
 calls
 strongest tone
 Play the channel audio; decoding is the same either way
+Save PNG
+Save every picture
+Clear pictures
+grey
+Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.
