@@ -36,6 +36,7 @@ static void tickReceiver(App& a) {
     if (const ModeUi* mu = modeUi(a.family)) if (mu->tick) mu->tick(a);
     syncAdsbReference(a);
     wideSync(a);
+    a.engine.monitor().setMuted(a.muted);   // every frame: the Source panel that configures the monitor is not always drawn
     secondModeTick(a);
     dabScanStep(a);
     fmScanStep(a);

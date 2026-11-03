@@ -89,6 +89,13 @@ int main() {
         out.clear();
         m.processBlock(x.data(), x.size(), kRate, 0);
         CHECK(!out.empty(), "a muted mode silenced the monitor");
+        m.setMuted(true);   // the app's mute reaches the monitor's speaker too
+        out.clear();
+        m.processBlock(x.data(), x.size(), kRate, 0);
+        CHECK(out.empty(), "the monitor played while the app was muted");
+        m.setMuted(false);
+        m.processBlock(x.data(), x.size(), kRate, 0);
+        CHECK(!out.empty(), "the monitor stayed silent after unmuting");
     }
     {   // the TCP stream: WAV header, then 16-bit stereo; bound to the loopback address
         const int port = 17300 + (int)(std::chrono::steady_clock::now().time_since_epoch().count() % 500);

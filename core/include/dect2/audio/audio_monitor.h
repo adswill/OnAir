@@ -47,6 +47,9 @@ public:
     ~AudioMonitor();
     void configure(const MonitorConfig& c);
     MonitorConfig config() const;
+    // The app's mute: the speaker (output 1) goes silent. The second device and the TCP stream carry on, they feed other programs.
+    // Without it the monitor took over when the mode was muted (a muted mode does not count as playing) and the station stayed audible.
+    void setMuted(bool m);
     bool enabled() const;          // cheap: for the radio's thread
     // The radio's thread: a block of samples at `rate`, the wanted channel at shiftHz from their centre (negative: below). Never waits.
     void push(const cf32* x, size_t n, double rate, double shiftHz);
