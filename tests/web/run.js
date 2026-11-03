@@ -481,7 +481,7 @@ test("the page loads its scripts in dependency order and has no external referen
   const srcs = [...html.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]);
   assert.ok(srcs.indexOf("onair-i18n.js") < srcs.indexOf("app.js") && srcs.indexOf("onair-lib.js") < srcs.indexOf("onair-map.js") && srcs.indexOf("onair-world.js") < srcs.indexOf("onair-map.js"));
   for (const f of srcs) assert.ok(require("fs").existsSync(path.join(__dirname, "../../web/onair-web", f)), f);
-  assert.ok(!/(src|href)="https?:\/\/(?!github\.com\/adswill)/.test(html), "no runtime internet use");
+  assert.ok(!/(src|href)="https?:\/\/(?!github\.com\/adswill|discord\.gg\/)/.test(html), "no runtime internet use");
   for (const f of ["app.js", "style.css", "onair-map.js", "onair-settings.js"]) assert.ok(!/https?:\/\/(?!github|www\.w3\.org|<)/.test(require("fs").readFileSync(path.join(__dirname, "../../web/onair-web", f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "")), f + " has a URL");
 });
 

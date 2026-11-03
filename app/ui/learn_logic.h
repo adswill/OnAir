@@ -103,6 +103,7 @@ inline const char* radioBlurb(const std::string& board, const std::string& name)
         {"audio", N_("A sound card or a web radio used as the input.")},
         {"hackrf", N_("HackRF: covers 1 MHz to 6 GHz with a wide view, and can transmit. Less sensitive than an RTL-SDR.")},
         {"rtl", N_("RTL-SDR: the cheap and popular USB stick, about 24 MHz to 1.7 GHz. Good for FM, airband, ADS-B and AIS.")},
+        {"hydrasdr", N_("HydraSDR RFOne: a sensitive receive-only radio with three antenna inputs.")},
         {"airspy", N_("Airspy: a sensitive receiver with low noise, good for weak signals.")},
         {"sdrplay", N_("SDRplay RSP: covers long wave to 2 GHz, very good on short wave. Needs the SDRplay API.")},
         {"rsp", N_("SDRplay RSP: covers long wave to 2 GHz, very good on short wave. Needs the SDRplay API.")},

@@ -915,9 +915,9 @@ std::vector<Tool> makeTools() {
             Json arr = Json::array();
             const size_t mp = (size_t)std::max(1.0, std::min(40.0, a.numOr("max_peaks", 12)));
             for (const auto& p : pk) {
-                bool near = false;
-                for (size_t t2 : taken) if ((p.second > t2 ? p.second - t2 : t2 - p.second) < 3) near = true;
-                if (near) continue;
+                bool closeTo = false;
+                for (size_t t2 : taken) if ((p.second > t2 ? p.second - t2 : t2 - p.second) < 3) closeTo = true;
+                if (closeTo) continue;
                 taken.push_back(p.second);
                 size_t l = p.second, r = p.second;
                 while (l > 0 && s.db[l] > p.first - 6) l--;
