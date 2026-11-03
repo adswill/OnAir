@@ -3631,3 +3631,8 @@ with a password	с паролем
 no radio found	радио не найдено
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Радио не найдено. Подключите радио и нажмите «Обновить» на вкладке «Радио и диапазон» или выберите тестовый сигнал.
 Join the OnAir Discord	Присоединиться к Discord OnAir
+# custom bandwidth chip and reset (3.6)
+custom	своя
+default	по умолчанию
+How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	Какую часть спектра захватывает приёмник. По умолчанию это собственная ширина режима; нажмите, чтобы задать любую ширину.
+Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	Возврат к собственной полосе и частоте дискретизации этого режима. Ваши значения сохраняются до следующего включения «Своя».

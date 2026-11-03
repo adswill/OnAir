@@ -302,7 +302,7 @@ struct RemoteApiServer::Impl {
             return;
         }
         const bool known = p == "/api/v1/start" || p == "/api/v1/stop" || p == "/api/v1/mode" || p == "/api/v1/frequency" || p == "/api/v1/samplerate" || p == "/api/v1/gain"
-                         || p == "/api/v1/autogain" || p == "/api/v1/bandwidth" || p == "/api/v1/squelch" || p == "/api/v1/volume" || p == "/api/v1/mute"
+                         || p == "/api/v1/autogain" || p == "/api/v1/bandwidth" || p == "/api/v1/capture_bandwidth" || p == "/api/v1/squelch" || p == "/api/v1/volume" || p == "/api/v1/mute"
                          || p == "/api/v1/recording/start" || p == "/api/v1/recording/stop" || p == "/api/v1/tx/start" || p == "/api/v1/tx/stop"
                          || p == "/api/v1/rotator/goto" || p == "/api/v1/rotator/stop" || p == "/api/v1/rotator/park";
         if (!known) { sendErr(s, 404, "no such endpoint"); return; }
@@ -332,7 +332,7 @@ struct RemoteApiServer::Impl {
         } else if (p == "/api/v1/samplerate") {
             double hz = 0;
             if (num("hz", v)) hz = v; else if (num("msps", v)) hz = v * 1e6; else { fail("give hz or msps (0 = automatic)"); return; }
-            if (hz < 0 || hz > 1e9) { fail("sample rate out of range"); return; }
+            if (!(hz >= 0) || !std::isfinite(hz)) { fail("not a sample rate"); return; }   // any positive rate goes to the driver; it says if it cannot
             if (host.setSampleRateHz(hz, err)) okJson(); else fail(err);
         } else if (p == "/api/v1/rotator/stop") {
             Rotator::get().stop();
@@ -357,8 +357,13 @@ struct RemoteApiServer::Impl {
         } else if (p == "/api/v1/bandwidth") {
             double hz = 0;
             if (num("hz", v)) hz = v; else if (num("khz", v)) hz = v * 1e3; else { fail("give hz or khz"); return; }
-            if (!(hz > 0) || hz > 1e9) { fail("bandwidth out of range"); return; }
+            if (!(hz > 0) || !std::isfinite(hz)) { fail("not a bandwidth"); return; }
             if (host.setBandwidthHz(hz, err)) okJson(); else fail(err);
+        } else if (p == "/api/v1/capture_bandwidth") {   // the custom capture bandwidth of the mode (0 = the mode's own); any positive width
+            double hz = 0;
+            if (num("hz", v)) hz = v; else if (num("khz", v)) hz = v * 1e3; else if (num("mhz", v)) hz = v * 1e6; else { fail("give hz, khz or mhz (0 = the mode's own bandwidth)"); return; }
+            if (!(hz >= 0) || !std::isfinite(hz)) { fail("not a bandwidth"); return; }
+            if (host.setCaptureBandwidthHz(hz, err)) okJson(); else fail(err);
         } else if (p == "/api/v1/squelch") {
             auto on = j.find("on"), au = j.find("auto");
             double db = -100;

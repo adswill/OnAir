@@ -3648,3 +3648,8 @@ with a password	パスワード付き
 no radio found	ラジオが見つかりません
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	ラジオが見つかりません。ラジオを接続し、「ラジオと範囲」タブで更新を押すか、テスト信号を選んでください。
 Join the OnAir Discord	OnAir の Discord に参加
+# custom bandwidth chip and reset (3.6)
+custom	カスタム
+default	標準
+How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	ラジオが取り込むスペクトルの幅です。標準はモード固有の幅です。クリックして任意の幅を設定できます。
+Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	このモード固有の帯域幅とサンプルレートに戻します。カスタム値は、次にカスタムをオンにするときのために保存されたままです。

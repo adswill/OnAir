@@ -3633,3 +3633,8 @@ with a password	jelszóval
 no radio found	nem található rádió
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Nem található rádió. Csatlakoztasson egyet, és nyomja meg a Frissítés gombot a Rádió és tartomány lapon, vagy válassza a tesztjelet.
 Join the OnAir Discord	Csatlakozz az OnAir Discordhoz
+# custom bandwidth chip and reset (3.6)
+custom	egyéni
+default	alapértelmezett
+How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	Mennyi spektrumot rögzít a rádió. Az alapértelmezett a mód saját szélessége; kattintson tetszőleges szélesség beállításához.
+Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	Vissza a mód saját sávszélességéhez és mintavételi sebességéhez. Az egyéni értékek mentve maradnak, amikor legközelebb bejelöli az Egyénit.

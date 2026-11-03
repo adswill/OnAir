@@ -34,9 +34,11 @@ struct SynthConfig {
 };
 
 struct TuneSettings {
-    double bandwidthMhz = 8;
+    double bandwidthMhz = 8;           // the mode's channel width, or the custom capture bandwidth the user typed (Advanced > Custom): the radio's filter and the rate follow it
+    double channelBwMhz = 0;           // the signal's own channel width when a custom capture bandwidth replaced bandwidthMhz (DVB-T2 / DVB-T / DTMB decode with it); 0 = bandwidthMhz is both
     int isdbtBwMhz = 6;                // ISDB-T channel width: 6 (Japan, the Americas), 7, 8 MHz (the Maldives); 0 = automatic (6, 7 and 8 tried)
     SynthConfig synth;
+    double signalBwMhz() const { return channelBwMhz > 0 ? channelBwMhz : bandwidthMhz; }   // the signal's own width (SNR in the channel, gain, the decoders that need it), not the custom capture width
     double centerHz = 522e6;
     double sampleRate = 18285714.2857; // 2x native rate for an 8 MHz channel
     double basebandFilterHz = 0;       // 0 = auto

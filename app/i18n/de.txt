@@ -3647,3 +3647,8 @@ with a password	mit Passwort
 no radio found	kein Radio gefunden
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Kein Radio gefunden. Schließen Sie ein Radio an und drücken Sie auf dem Reiter Radio und Bereich auf Aktualisieren, oder wählen Sie das Testsignal.
 Join the OnAir Discord	Dem OnAir-Discord beitreten
+# custom bandwidth chip and reset (3.6)
+custom	eigene
+default	Standard
+How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	Wie viel Spektrum das Radio erfasst. Standard ist die eigene Breite des Modus; klicken Sie, um eine beliebige Breite einzustellen.
+Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	Zurück zur eigenen Bandbreite und Abtastrate dieses Modus. Ihre eigenen Werte bleiben für das nächste Anhaken von Eigene gespeichert.

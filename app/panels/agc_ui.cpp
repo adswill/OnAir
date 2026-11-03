@@ -82,7 +82,7 @@ bool agcStep(App& a, GainSetting& g) {
     const int bits = adcBits();
     const GainModel m = gainModelFor(d, bits);
     const double fs = a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate;
-    const double bw = a.tune.bandwidthMhz * 1e6;
+    const double bw = a.tune.signalBwMhz() * 1e6;
     const int std_ = engineStd(a);
     const std::string ctx = radioKeyOf(d) + "|" + std::to_string(std_) + "|" + std::to_string((long)bw) + "|" + std::to_string((long)fs) + "|" + std::to_string(bits);
     const int curTotal = generic ? (int)std::lround(a.tune.gainDb) : a.tune.lnaDb + a.tune.vgaDb + (a.tune.ampOn ? 14 : 0);

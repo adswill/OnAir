@@ -97,7 +97,7 @@ static void bandwidthNow(App& a) {
     applyBandwidth(a);
     a.engine.setBandwidthAuto(false);
     if (a.devices[a.devIdx].isRadio() && a.tune.sampleRate != oldRate) startReceiver(a);   // 8 vs 10 Msps: the radio is opened again
-    else a.engine.setBandwidth(a.tune.bandwidthMhz);
+    else a.engine.setBandwidth(a.tune.channelBwMhz > 0 ? a.tune.channelBwMhz : a.tune.bandwidthMhz);   // (a custom capture bandwidth is not the channel width)
 }
 
 // ---- the sample rate of the radio for this mode: Auto (the mode's own rate), one of the rates that suit the radio and the mode, or a typed one

@@ -177,6 +177,14 @@ struct Host : RemoteApiHost {
             return true;
         }, err);
     }
+    bool setCaptureBandwidthHz(double hz, std::string& err) override {
+        return run([hz](App& a, std::string& e) {
+            if (!captureRowShown(a)) { e = "this source has its own bandwidth (a recording or a sound card)"; return false; }
+            rxWidthSetFromApi(a, hz / 1e6);   // 0 = the mode's own; the driver's refusal is logged and the previous width comes back
+            if (!a.rateRefusal.empty()) { e = a.rateRefusal; return false; }
+            return true;
+        }, err);
+    }
     bool setAutoGain(bool on, std::string& err) override {
         return run([on](App& a, std::string& e) {
             if (!a.devices[(size_t)a.devIdx].isRadio()) { e = "this source has no gain control"; return false; }

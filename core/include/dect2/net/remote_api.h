@@ -71,6 +71,8 @@ public:
     virtual bool setMute(bool /*on*/, std::string& err) { err = "not supported"; return false; }
     virtual bool setSquelch(bool /*on*/, bool /*autoLevel*/, double /*levelDb*/, std::string& err) { err = "not supported"; return false; }
     virtual bool setBandwidthHz(double /*hz*/, std::string& err) { err = "not supported"; return false; }
+    // The custom capture bandwidth of the mode on screen (the "Custom" bandwidth of the Advanced row): any positive width; 0 = the mode's own bandwidth again
+    virtual bool setCaptureBandwidthHz(double /*hz*/, std::string& err) { err = "not supported"; return false; }
     virtual bool setAutoGain(bool /*on*/, std::string& err) { err = "not supported"; return false; }
     virtual bool recordStart(const std::string& /*kind: "iq" or "audio"*/, std::string& err) { err = "not supported"; return false; }
     virtual bool recordStop(std::string& err) { err = "not supported"; return false; }

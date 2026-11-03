@@ -3671,3 +3671,8 @@ with a password	需要密码
 no radio found	未找到电台
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	未找到电台。请连接电台并在“电台与范围”选项卡中点击刷新，或选择测试信号。
 Join the OnAir Discord	加入 OnAir Discord
+# custom bandwidth chip and reset (3.6)
+custom	自定义
+default	默认
+How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	无线电捕获的频谱宽度。默认是该模式自身的宽度；点击可设置任意宽度。
+Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	恢复该模式自身的带宽和采样率。您的自定义值会保留，下次勾选“自定义”时可再次使用。

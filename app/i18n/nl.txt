@@ -3646,3 +3646,8 @@ with a password	met wachtwoord
 no radio found	geen radio gevonden
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Geen radio gevonden. Sluit een radio aan en druk op het tabblad Radio en bereik op Vernieuwen, of kies het testsignaal.
 Join the OnAir Discord	Word lid van de OnAir Discord
+# custom bandwidth chip and reset (3.6)
+custom	aangepast
+default	standaard
+How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	Hoeveel spectrum de radio vastlegt. Standaard is de eigen breedte van de modus; klik om elke gewenste breedte in te stellen.
+Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	Terug naar de eigen bandbreedte en samplefrequentie van deze modus. Uw aangepaste waarden blijven bewaard voor de volgende keer dat u Aangepast aanvinkt.

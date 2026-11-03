@@ -794,7 +794,7 @@ bool EngineAgIo::measure(AgInput& in) {
 
 AgRunResult autogainRun(Engine& e, TuneSettings& tune, const DeviceInfo& radio, int stdMode, AgMode how, AgSettings s, double timeoutSec, const std::atomic<bool>* cancel) {
     const RadioProfile r = radioProfileFor(radio);
-    const double bw = tune.bandwidthMhz * 1e6;
+    const double bw = tune.signalBwMhz() * 1e6;
     const ModeTarget t = modeTargetFor(stdMode, bw, e.sampleRate() > 0 ? e.sampleRate() : tune.sampleRate);
     s.mode = how == AgMode::Safe ? AgMode::Safe : AgMode::Once;
     EngineAgIo io(e, tune, r, bw);

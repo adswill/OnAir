@@ -375,3 +375,7 @@ with a password
 no radio found
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.
 Join the OnAir Discord
+custom
+default
+How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.
+Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.

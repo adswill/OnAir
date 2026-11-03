@@ -152,6 +152,7 @@ void commandView(App& a, const ModeUi& mu) {
     levelBar(a);
     if (a.engine.running() && wideAllWorthIt(a)) wideAllButton(a);   // Easy mode: one button for everything in the capture
     strip(a, mu);
+    rxWidthChip(a);   // 3.6: the bandwidth of every mode, default or custom, in the Simple view too
     gFamily = a.family;
     gRestore.clear();
     if (mu.command) mu.command(a);

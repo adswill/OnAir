@@ -897,6 +897,8 @@ std::string rateModeId(const App& a);
 std::string rateContext(const App& a);
 double rxWidthMhz(const App& a);              // state/rx_width.cpp: the custom bandwidth of this mode in MHz (0 = the mode's own standard width)
 void rxWidthControl(App& a, bool& retune);    // and its Advanced row (custom bandwidth + custom sample rate), shown for every mode
+void rxWidthSetFromApi(App& a, double widthMhz);   // the remote API / MCP: set the custom bandwidth of this mode in MHz (0 = the mode's own), as the row does
+void rxWidthChip(App& a);                     // the compact "Bandwidth: default / custom" chip of the Simple view (state/rx_width.cpp)
 bool captureRowShown(const App& a);           // the Advanced row is drawn for a radio or the test signal (not a recording or a sound card)
 bool sampleRateAdvanced(App& a);              // ui/toolbar_source.cpp: the sample-rate half of that row (true when it changed the rate)
 double savedSampleRate(const App& a);

@@ -496,6 +496,7 @@ std::vector<Tool> makeTools() {
                        .add("gain_db", prop("number", "Total gain in dB (turns the AGC off)."))
                        .add("auto_gain", prop("boolean", "Turn automatic gain on or off."))
                        .add("bandwidth_khz", prop("number", "Channel bandwidth in kHz (where the mode supports it)."))
+                       .add("capture_bandwidth_khz", prop("number", "Custom capture bandwidth of the current mode in kHz: any positive width (the radio's sample rate and filter follow it); 0 = the mode's own bandwidth."))
                        .add("frequency_mhz", prop("number", "Centre frequency in MHz."))
                        .done();
         t.idempotent = true;
@@ -525,6 +526,12 @@ std::vector<Tool> makeTools() {
             if (a.has("bandwidth_khz")) {
                 if (!c.host.setBandwidthHz(needNum(a, "bandwidth_khz") * 1e3, err)) throw ToolError("bandwidth: " + err);
                 done.push(Json::string("bandwidth"));
+            }
+            if (a.has("capture_bandwidth_khz")) {
+                const double kb = needNum(a, "capture_bandwidth_khz");
+                if (!(kb >= 0) || !std::isfinite(kb)) throw ToolError("capture_bandwidth_khz must be 0 or more");
+                if (!c.host.setCaptureBandwidthHz(kb * 1e3, err)) throw ToolError("capture bandwidth: " + err);
+                done.push(Json::string("capture_bandwidth"));
             }
             double hz = 0;
             if (freqArg(a, hz, "frequency_mhz", "frequency_hz", false)) {

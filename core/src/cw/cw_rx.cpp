@@ -611,7 +611,7 @@ void CwReceiver::Impl::reportWide() {
 }
 
 void CwReceiver::setWide(bool on, double spanHz) {
-    p_->wideSpanReq = std::max(1000.0, std::min(kWideMaxSpanHz, spanHz));
+    p_->wideSpanReq = std::max(1000.0, std::min(wideSpanCapHz(), spanHz));
     if (p_->wideReq.exchange(on) != on) p_->wideChanged = true;
 }
 bool CwReceiver::wide() const { return p_->wideReq.load(); }

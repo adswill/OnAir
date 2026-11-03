@@ -3647,3 +3647,8 @@ with a password	z hasłem
 no radio found	nie znaleziono radia
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Nie znaleziono radia. Podłącz radio i naciśnij Odśwież na karcie Radio i zakres albo wybierz sygnał testowy.
 Join the OnAir Discord	Dołącz do Discorda OnAir
+# custom bandwidth chip and reset (3.6)
+custom	własna
+default	domyślna
+How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	Ile widma przechwytuje radio. Domyślna jest szerokość własna trybu; kliknij, aby ustawić dowolną szerokość.
+Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	Powrót do własnej szerokości pasma i częstotliwości próbkowania tego trybu. Twoje własne wartości pozostają zapisane na następny raz, gdy zaznaczysz Własne.

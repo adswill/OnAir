@@ -3629,3 +3629,8 @@ with a password	con password
 no radio found	nessuna radio trovata
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Nessuna radio trovata. Collega una radio e premi Aggiorna nella scheda Radio e intervallo, oppure scegli il segnale di prova.
 Join the OnAir Discord	Unisciti al Discord di OnAir
+# custom bandwidth chip and reset (3.6)
+custom	personalizzata
+default	predefinita
+How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	Quanto spettro cattura la radio. Il valore predefinito è la larghezza propria della modalità; fai clic per impostare una larghezza qualsiasi.
+Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	Torna alla larghezza di banda e alla frequenza di campionamento proprie di questa modalità. I valori personalizzati restano salvati per la prossima volta che selezioni Personalizzato.
