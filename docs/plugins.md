@@ -111,7 +111,7 @@ number when refused (bad argument, limit reached, permission missing).
 | `image(id, format, w, h, data, size)` | up to 4 images, 4 MiB, 4096 pixels per side |
 | `map_point(id, label, lat, lon)` | up to 2000 points |
 | `emit_event(type, n, fields)` | automation event `plugin.<type>` (100 a second per plugin) |
-| `audio_out(pcm, n, rate)` | mono float PCM; needs `audio-out` |
+| `audio_out(pcm, n, rate)` | mono float PCM, 1 kHz to 400 kHz; played on the default output device (resampled to 48 kHz) at the app's volume and mute; needs `audio-out` |
 | `data_dir(out, cap)` | the plugin's own data folder; needs `filesystem` |
 
 Text longer than the limits is cut, non-finite numbers are replaced, control characters become spaces. Memory passed to any call is copied.
