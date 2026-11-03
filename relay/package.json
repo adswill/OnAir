@@ -1,0 +1,1 @@
+{ "name": "onair-relay", "private": true, "version": "1.0.0", "description": "OnAir relay service (docs/ONAIR-WEB-RELAY.md)", "main": "relay.js", "bin": { "onair-relay": "relay.js" }, "engines": { "node": ">=18" }, "scripts": { "start": "node relay.js", "test": "node --test test/" } }

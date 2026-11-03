@@ -22,6 +22,7 @@ struct RelayConfig {
     std::string keyFile;              // web_directory_key: the Ed25519 seed (made on first start, shared with the directory listing)
     std::string name;                 // shown to the relay in its logs (the server's name); not needed for the address
     std::string version;              // software version
+    bool listed = false;              // web_relay_public: ask the relay to show this server in its public list (off by default)
     int maxConns = 64;                // virtual connections at once (the server sets 2 * max users + 8)
     std::string statusFile;           // where the status JSON is kept (empty: not written)
     long long nowOverride = 0;        // tests: the clock

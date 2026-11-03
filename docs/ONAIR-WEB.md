@@ -118,7 +118,7 @@ Failed logins (wrong password or invite, wrong admin token) from one address: af
 
 ## Relay (public address without port forwarding)
 
-`web_relay=1` makes the server open one outbound WebSocket to a relay service (`web_relay_url`, default `wss://relay.on-air.dev/relay/v1/host`) and get a public https address; listeners are carried to the server through that connection (it also sets `web_trust_proxy=1`). Needs a build with TLS. Status in `web_relay_status.json` beside the settings file. The wire format and what the relay service must do: docs/ONAIR-WEB-RELAY.md.
+`web_relay=1` makes the server open one outbound WebSocket to a relay service (`web_relay_url`, default `wss://relay.on-air.dev/relay/v1/host`) and get a public https address; listeners are carried to the server through that connection (it also sets `web_trust_proxy=1`). `web_relay_public=1` (default 0) asks the relay to list the server in its public list (`GET /api/v1/servers`). Needs a build with TLS. Status in `web_relay_status.json` beside the settings file. The wire format and what the relay service must do: docs/ONAIR-WEB-RELAY.md.
 
 ## Admin API
 

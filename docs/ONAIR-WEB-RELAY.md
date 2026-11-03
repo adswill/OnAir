@@ -1,6 +1,6 @@
 # OnAir Web relay: a public address with no port forwarding
 
-Status: the client (`server/web/web_relay.*`, started by `onair-server` when `web_relay=1`) is built and tested against a fake relay on this computer (`tests/server/test_web_relay.cpp`). **The relay service itself is not built or deployed yet**, so nothing in OnAir has ever contacted `relay.on-air.dev`. Until it exists the Share window falls back to the Cloudflare tunnel (see "What the window does" below). This file is the specification the relay service has to meet.
+Status: the client (`server/web/web_relay.*`, started by `onair-server` when `web_relay=1`) is built and tested against a fake relay on this computer (`tests/server/test_web_relay.cpp`). The relay service is built (`relay/`, one file, Node 18+, no dependencies; tested end to end on this computer) but **not deployed yet**, so nothing in OnAir has ever contacted `relay.on-air.dev`. Until it exists the Share window falls back to the Cloudflare tunnel (see "What the window does" below). This file is the specification the relay service has to meet.
 
 ## Why a relay
 
@@ -74,3 +74,14 @@ While sharing, the window shows the relay state in plain words (connected, conne
 ## Tests
 
 `build/test_web_relay` (ctest `web_relay`): address parsing, the signing text, the frame format, the header rewrite, then the real client against a fake relay and a fake web server on 127.0.0.1: handshake, challenge, signed hello (the fake relay verifies the signature), the address, a virtual connection with a forged `X-Forwarded-For`, the web server's answer carried back, close, reconnect after the link is cut, a refusal ending in the failed state, and stop. Not tested: a real `wss://` connection (needs a TLS build and a real relay), long-running traffic, many connections at once.
+
+## The service in this repo (`relay/`)
+
+`relay/relay.js` is the whole service: it speaks plain TCP/HTTP and does the WebSocket framing itself (TLS comes from the proxy in front, see docs/ONAIR-WEB-DEPLOY.md section 5). Settings are environment variables: `RELAY_DOMAIN` (default `relay.on-air.dev`), `RELAY_PORT`, `RELAY_BIND`, `RELAY_ADMIN_TOKEN` (24+ characters, enables `POST /relay/v1/admin/ban|unban` with `{"id":...}` or `{"ip":...}`), `RELAY_BAN_IDS`, `RELAY_BAN_IPS`, `RELAY_CLIENT_IP_HEADER` (only behind a proxy you control, e.g. `CF-Connecting-IP`; otherwise the socket address is used), `RELAY_MAX_BPS`, `RELAY_MAX_CONNS_PER_HOST`.
+
+* Address of a server: `https://<10 characters of base32(SHA-256 of the key)>.<RELAY_DOMAIN>/`; one live link per id, a new one replaces the old.
+* Limits: 16 KB request head, 2 minutes idle, connections per server (`min(max_conns, 64)`), per client address (24) and in total, 8 MB/s per server (a connection over the budget is closed), 6 host-link attempts per minute per address and per id, hello within 15 s, 70 s of silence ends a link, ban lists by id and address.
+* `GET /relay/v1/status` returns `{"v":1,"ok":true}`.
+* Public list: `GET /api/v1/servers` returns `{"v":1,"servers":[{id,name,url,listeners,since}]}` for servers whose hello carries `"public":true` (setting `web_relay_public=1`, off by default). The relay never stores traffic; the list lives in memory only and vanishes with the link.
+* The web policy (docs/ONAIR-WEB.md, `server/web/web_policy.cpp`: the decoder allow-list, no transmit, no keys) is enforced by the host's own web server, which the relay cannot see into by design; the relay only makes sure nothing reaches the host faster or in larger numbers than the host announced.
+* Tests: `cd relay && npm test` (9 end-to-end tests with a fake host that signs the hello and a fake browser, all on 127.0.0.1).
