@@ -3748,3 +3748,8 @@ Back to this mode's own bandwidth and sample rate. Your custom values stay saved
 16-bit	16-bit
 Share##rec	Share##rec
 Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.	Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.
+Copy CSV	复制CSV
+copied	已复制
+rows	行
+Copy the table as CSV to the clipboard (positions included)	将表格以CSV复制到剪贴板(含位置)
+Copy the table as CSV to the clipboard	将表格以CSV复制到剪贴板

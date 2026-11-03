@@ -3730,3 +3730,8 @@ no codes yet	nog geen codes
 calls	oproepen
 strongest tone	sterkste toon
 Play the channel audio; decoding is the same either way	Kanaalgeluid afspelen; decoderen blijft hetzelfde
+Copy CSV	CSV kopiëren
+copied	gekopieerd
+rows	rijen
+Copy the table as CSV to the clipboard (positions included)	Kopieer de tabel als CSV naar het klembord (met posities)
+Copy the table as CSV to the clipboard	Kopieer de tabel als CSV naar het klembord

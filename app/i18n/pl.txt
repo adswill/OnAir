@@ -3731,3 +3731,8 @@ no codes yet	brak kodów
 calls	wywołania
 strongest tone	najsilniejszy ton
 Play the channel audio; decoding is the same either way	Odtwarzaj dźwięk kanału; dekodowanie jest takie samo
+Copy CSV	Kopiuj CSV
+copied	skopiowano
+rows	wierszy
+Copy the table as CSV to the clipboard (positions included)	Skopiuj tabelę jako CSV do schowka (z pozycjami)
+Copy the table as CSV to the clipboard	Skopiuj tabelę jako CSV do schowka

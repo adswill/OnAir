@@ -3715,3 +3715,8 @@ no codes yet	кодов пока нет
 calls	вызовы
 strongest tone	самый сильный тон
 Play the channel audio; decoding is the same either way	Воспроизводить звук канала; декодирование то же
+Copy CSV	Копировать CSV
+copied	скопировано
+rows	строк
+Copy the table as CSV to the clipboard (positions included)	Скопировать таблицу как CSV в буфер обмена (с позициями)
+Copy the table as CSV to the clipboard	Скопировать таблицу как CSV в буфер обмена

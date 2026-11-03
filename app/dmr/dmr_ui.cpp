@@ -1,5 +1,6 @@
 // DMR screens: the two time slots and the call log, the symbol plots, the receiver counters and the options of the test signal.
 #include "call_filter.h"
+#include "ui/kit/export.h"
 #include "app.h"
 #include "ui/voice_why_ui.h"
 #include "dect2/voice/voice_why_modes.h"
@@ -187,6 +188,20 @@ void callTable(App& a, float h) {
         }
         h = std::max(40.f * gUi, h - ImGui::GetFrameHeightWithSpacing());
     }
+    {
+        static std::string note;
+        resexp::Table x; x.cols = {"start_s", "slot", "type", "source", "target", "duration_s", "voice_frames", "fec_errors", "alias", "flags"};
+        if (on) for (const DmrCall* pc : sortedCalls(t)) {
+            const DmrCall& c = *pc;
+            if (!dmrfilter::shown(filter, c.kind)) continue;
+            x.add({resexp::num(c.startSec, 1), c.slot ? std::to_string(c.slot) : "", kindName(c.kind), idText(c.src, c.idsKnown), targetText(c),
+                   c.kind <= 2 || c.endSec > c.startSec ? resexp::num(duration(c), 1) : "", c.kind <= 2 ? std::to_string(c.voiceFrames) : "", std::to_string(c.fecErrors),
+                   !c.alias.empty() ? c.alias : c.note, flagsText(c)});
+        }
+        ImGui::SameLine();
+        kit::exportBar(x, "dmr_calls", note, "dmrxc");
+        h = std::max(40.f * gUi, h - ImGui::GetFrameHeightWithSpacing());
+    }
     if (!ImGui::BeginTable("##dmrcalls", 10 + (wideActive(a) ? 1 : 0), ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingFixedFit, ImVec2(0, h))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     if (wideActive(a)) ImGui::TableSetupColumn("Carrier", ImGuiTableColumnFlags_WidthFixed, 66 * gUi);
@@ -228,6 +243,16 @@ void callTable(App& a, float h) {
 void messageTable(App& a, float h) {
     const DmrTelemetry& t = a.rx.dmr;
     const bool on = live(a);
+    {
+        static std::string note;
+        resexp::Table x; x.cols = {"time_s", "slot", "from", "to", "format", "crc_ok", "text"};
+        if (on) for (size_t i = t.messages.size(); i-- > 0;) {
+            const DmrMessage& m = t.messages[i];
+            x.add({resexp::num(m.sec, 1), m.slot ? std::to_string(m.slot) : "", idText(m.src, true), (m.group ? "TG " : "") + std::to_string(m.dst), m.format, m.crcOk ? "1" : "0", m.text});
+        }
+        kit::exportBar(x, "dmr_msgs", note, "dmrxm");
+        h = std::max(40.f * gUi, h - ImGui::GetFrameHeightWithSpacing());
+    }
     if (!ImGui::BeginTable("##dmrmsg", 7 + (wideActive(a) ? 1 : 0), ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingFixedFit, ImVec2(0, h))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     if (wideActive(a)) ImGui::TableSetupColumn("Carrier", ImGuiTableColumnFlags_WidthFixed, 66 * gUi);

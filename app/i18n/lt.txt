@@ -3745,3 +3745,8 @@ no codes yet	kodų dar nėra
 calls	skambučiai
 strongest tone	stipriausias tonas
 Play the channel audio; decoding is the same either way	Groti kanalo garsą; dekodavimas toks pats
+Copy CSV	Kopijuoti CSV
+copied	nukopijuota
+rows	eilučių
+Copy the table as CSV to the clipboard (positions included)	Nukopijuoti lentelę kaip CSV į iškarpinę (su pozicijomis)
+Copy the table as CSV to the clipboard	Nukopijuoti lentelę kaip CSV į iškarpinę

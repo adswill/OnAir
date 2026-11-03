@@ -3742,3 +3742,8 @@ no codes yet	noch keine Codes
 calls	Rufe
 strongest tone	stärkster Ton
 Play the channel audio; decoding is the same either way	Kanal-Audio abspielen; die Dekodierung ist in beiden Fällen gleich
+Copy CSV	CSV kopieren
+copied	kopiert
+rows	Zeilen
+Copy the table as CSV to the clipboard (positions included)	Tabelle als CSV in die Zwischenablage kopieren (mit Positionen)
+Copy the table as CSV to the clipboard	Tabelle als CSV in die Zwischenablage kopieren

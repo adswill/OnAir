@@ -3730,3 +3730,8 @@ no codes yet	aún no hay códigos
 calls	llamadas
 strongest tone	tono más fuerte
 Play the channel audio; decoding is the same either way	Reproducir el audio del canal; la decodificación es la misma
+Copy CSV	Copiar CSV
+copied	copiadas
+rows	filas
+Copy the table as CSV to the clipboard (positions included)	Copiar la tabla como CSV al portapapeles (con posiciones)
+Copy the table as CSV to the clipboard	Copiar la tabla como CSV al portapapeles

@@ -2,6 +2,7 @@
 // packets), the trunking system (site, adjacent sites, channel identifiers), the talkgroups with their activity, the decoded control
 // messages, and a "?" about the mbelib library the voice needs (docs/CODECS.md). Receive only; encrypted calls are only reported.
 #include "dect2/common/time_fmt.h"
+#include "ui/kit/export.h"
 #include "app.h"
 #include "ui/voice_why_ui.h"
 #include "dect2/voice/voice_why_modes.h"
@@ -188,6 +189,15 @@ void callsView(App& a) {
         }
         ImGui::SetClipboardText(txt.c_str());
     }
+    {
+        static std::string note;
+        resexp::Table x; x.cols = {"time", "kind", "from", "to", "channel", "frequency_mhz", "encryption", "details", "duration_s"};
+        for (const auto& e : log)
+            x.add({clock(e.wallTime), kindOf(e), dect2::p25Id(e.src), dstOf(e), e.kind == 1 ? dect2::p25::channelText(e.channel) : "", e.kind == 1 ? resexp::num(e.freqHz / 1e6, 5) : "",
+                   e.encrypted ? cryptoOf(e) : "clear", e.text, resexp::num(e.durSec, 1)}, (double)e.wallTime);
+        ImGui::SameLine();
+        kit::exportBar(x, "p25_calls", note, "p25xc");
+    }
     if (!ImGui::BeginTable("##p25log", 7 + (wideActive(a) ? 1 : 0), ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_ScrollX, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     if (wideActive(a)) ImGui::TableSetupColumn("Carrier"); ImGui::TableSetupColumn(dect2::timefmt::headTime()); ImGui::TableSetupColumn("Kind"); ImGui::TableSetupColumn("From"); ImGui::TableSetupColumn("To");
@@ -273,6 +283,17 @@ void talkgroupView(App& a) {
     if (tg.empty()) { ImGui::TextDisabled("no talkgroups heard yet"); return; }
     std::vector<dect2::trunk::Controller::TalkgroupRow> conv;
     if (T.on) conv = T.ctl.conversations();   // followed calls and airtime per talkgroup (the call log of the follower)
+    {
+        static std::string note;
+        resexp::Table x; x.cols = {"talkgroup", "grants", "calls", "last_unit", "last_frequency_mhz", "emergency", "encrypted", "followed_calls", "airtime_s"};
+        for (const auto& g : tg) {
+            const dect2::trunk::Controller::TalkgroupRow* cv = nullptr;
+            for (const auto& r : conv) if (r.tg == g.tg) { cv = &r; break; }
+            x.add({std::to_string(g.tg), std::to_string(g.grants), std::to_string(g.calls), dect2::p25Id(g.lastSrc), resexp::num(g.lastFreqHz / 1e6, 5), g.emergency ? "1" : "0", g.encrypted ? "1" : "0",
+                   cv ? std::to_string(cv->followed) : "", cv ? resexp::num(cv->airSec, 0) : ""}, (double)g.lastWall);
+        }
+        kit::exportBar(x, "p25_talkgroups", note, "p25xt");
+    }
     if (!ImGui::BeginTable("##p25tg", 9, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("Talkgroup"); ImGui::TableSetupColumn("Grants"); ImGui::TableSetupColumn("Calls"); ImGui::TableSetupColumn("Last unit");
