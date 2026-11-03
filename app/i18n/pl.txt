@@ -3685,3 +3685,10 @@ Calls %llu, followed %llu, retune %.2f s (max %.2f s)	Połączeń %llu, śledzon
 Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	Priorytet od 1 (najwyższy) do 10, 0 brak. Grupa o wyższym priorytecie zabiera radio niższej.
 From, to (the same number for one), action, priority	Od, do (ten sam numer dla jednej), akcja, priorytet
 System, identifier table (iden_up) and channel numbers from a CSV file	System, tabela identyfikatorów (iden_up) i numery kanałów z pliku CSV
+Tones (Hz)	Tony (Hz)
+Frequency (kHz)	Częstotliwość (kHz)
+no calls yet	brak wywołań
+no codes yet	brak kodów
+calls	wywołania
+strongest tone	najsilniejszy ton
+Play the channel audio; decoding is the same either way	Odtwarzaj dźwięk kanału; dekodowanie jest takie samo

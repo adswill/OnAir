@@ -35,6 +35,7 @@ public:
     void configure(double inputRateHz);
     void setSignalOffset(double hz);
     void setAudioInput(bool on);                          // real audio, not FM IQ (call before or after configure())
+    void setSelcalOnly(bool on);                          // only the SELCAL detector runs (the SELCAL mode)
     void setDemod(int d);                                 // TonesDemod for a radio's IQ (default FM); a change restarts the chain
     bool ready() const;
     void reset();                                         // the signal only: the detections stay

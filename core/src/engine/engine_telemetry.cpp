@@ -310,6 +310,7 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 234: return pollStd(rxFy_, 234, t, seqs[192], &RxTelemetry::fygeo);   // FengYun FY-4A HRIT-II/III (slot 192)
     case 235: return pollStd(rxFy_, 235, t, seqs[193], &RxTelemetry::fygeo);   // FengYun FY-2 S-VISSR (slot 193)
     case 211: return pollStd(rxNrf_, 211, t, seqs[186], &RxTelemetry::nrf24);   // nRF24L01 (slot 186)
+    case 241: return pollStd(rxSelcal_, 241, t, seqs[200], &RxTelemetry::selcal);   // SELCAL (slot 200)
     case 212: return pollStd(rxAtis_, 212, t, seqs[187], &RxTelemetry::atis);   // ATIS inland waterways (slot 187)
     case 236: return pollStd(rxFy3a_, 236, t, seqs[195], &RxTelemetry::fy3a);   // FY-3 AHRPT (slot 195)
     case 237: return pollStd(rxFy3m_, 237, t, seqs[196], &RxTelemetry::fy3m);   // FY-3 MPT (slot 196)

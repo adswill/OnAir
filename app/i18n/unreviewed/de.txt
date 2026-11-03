@@ -425,3 +425,10 @@ Calls %llu, followed %llu, retune %.2f s (max %.2f s)
 Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.
 From, to (the same number for one), action, priority
 System, identifier table (iden_up) and channel numbers from a CSV file
+Tones (Hz)
+Frequency (kHz)
+no calls yet
+no codes yet
+calls
+strongest tone
+Play the channel audio; decoding is the same either way
