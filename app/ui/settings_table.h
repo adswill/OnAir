@@ -19,7 +19,7 @@ inline const char* const kDecoding = "Decoding";
 inline const char* const kLocation = "Location";
 inline const char* const kNetwork = "Network and updates";
 inline const char* const kPrivacy = "Privacy";
-inline const char* const kPlugins = "Plug-ins and scripts";
+inline const char* const kPlugins = N_("Plug-ins and scripts");
 inline const char* const kAdvanced = "Advanced";
 
 inline const std::vector<Info>& table() {
