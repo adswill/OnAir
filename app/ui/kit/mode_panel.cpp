@@ -150,6 +150,7 @@ void commandView(App& a, const ModeUi& mu) {
     gInCommand = true;
     gForceTab.clear();   // a forced tab (--tab) has no tab in this view
     levelBar(a);
+    scanIdentifyBar(a);   // 3.6: one-button Scan and Identify for beginners
     if (a.engine.running() && wideAllWorthIt(a)) wideAllButton(a);   // Easy mode: one button for everything in the capture
     strip(a, mu);
     rxWidthChip(a);   // 3.6: the bandwidth of every mode, default or custom, in the Simple view too

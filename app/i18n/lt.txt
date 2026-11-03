@@ -3727,3 +3727,7 @@ Back to this mode's own bandwidth and sample rate. Your custom values stay saved
 16-bit	16 bitų
 Share##rec	Dalintis##rec
 Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.	Atidaro aplanką su šiuo įrašu ir nukopijuoja kelią. Siųskite failą (SigMF atveju kartu .sigmf-meta ir .sigmf-data): jis atkuriamas su savo dažniu, sparta ir režimu.
+Identify	Atpažinti
+Start the receiver to scan.	Norėdami tikrinti, paleiskite imtuvą.
+Look for every signal in what the radio sees, find out what each one is and offer to open it. One click.	Ieško visų signalų, kuriuos mato radijas, išsiaiškina, kas jie yra, ir pasiūlo atidaryti. Vienu spustelėjimu.
+I don't know what this is: measure the strongest signal (or the region you dragged on the spectrum) and show the most likely modes with how sure OnAir is.	Aš nežinau, kas tai: išmatuoja stipriausią signalą (arba spektre pažymėtą sritį) ir parodo labiausiai tikėtinus režimus bei kiek OnAir tuo tikras.
