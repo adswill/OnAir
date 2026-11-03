@@ -3731,3 +3731,10 @@ Identify	Atpažinti
 Start the receiver to scan.	Norėdami tikrinti, paleiskite imtuvą.
 Look for every signal in what the radio sees, find out what each one is and offer to open it. One click.	Ieško visų signalų, kuriuos mato radijas, išsiaiškina, kas jie yra, ir pasiūlo atidaryti. Vienu spustelėjimu.
 I don't know what this is: measure the strongest signal (or the region you dragged on the spectrum) and show the most likely modes with how sure OnAir is.	Aš nežinau, kas tai: išmatuoja stipriausią signalą (arba spektre pažymėtą sritį) ir parodo labiausiai tikėtinus režimus bei kiek OnAir tuo tikras.
+Plug-ins	Įskiepiai
+Open Plug-ins...	Atidaryti įskiepius...
+Open Automations...	Atidaryti automatizavimus...
+Scripts and rules	Scenarijai ir taisyklės
+Running programs is allowed.	Programų paleidimas leidžiamas.
+Running programs is off.	Programų paleidimas išjungtas.
+Plug-ins and scripts	Įskiepiai ir scenarijai

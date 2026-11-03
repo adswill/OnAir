@@ -3728,3 +3728,10 @@ Identify	Identifizieren
 Start the receiver to scan.	Starte den Empfänger zum Scannen.
 Look for every signal in what the radio sees, find out what each one is and offer to open it. One click.	Sucht jedes Signal im Bild des Funkgeräts, findet heraus, was es ist, und bietet an, es zu öffnen. Ein Klick.
 I don't know what this is: measure the strongest signal (or the region you dragged on the spectrum) and show the most likely modes with how sure OnAir is.	Ich weiß nicht, was das ist: misst das stärkste Signal (oder den im Spektrum gezogenen Bereich) und zeigt die wahrscheinlichsten Modi mit der Sicherheit von OnAir.
+Plug-ins	Plug-ins
+Open Plug-ins...	Plug-ins öffnen...
+Open Automations...	Automatisierungen öffnen...
+Scripts and rules	Skripte und Regeln
+Running programs is allowed.	Das Ausführen von Programmen ist erlaubt.
+Running programs is off.	Das Ausführen von Programmen ist aus.
+Plug-ins and scripts	Plug-ins und Skripte
