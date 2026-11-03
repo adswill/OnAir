@@ -36,7 +36,6 @@ Dial frequency the decoder should assume (the sound card is not tuned)
 DVB standard
 Empty: the demo 802.15.4 scene.
 Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.
-Empty: the demo LoRa / mesh scene.
 Empty: the demo Mode S uplink scene.
 Empty: the demo VDES scene.
 File
@@ -605,7 +604,6 @@ Checking and preparing the new version…
 Downloaded and checked. It is installed when you close OnAir.
 Restart now and update
 Windows asks for permission to run the installer.
-The system asks for your password to install the package.
 This copy of OnAir cannot replace itself.
 The update to v%s did not install (setup exit code %d).
 Only github.com is contacted. Downloads are checked against the SHA-256 GitHub lists for the file.
@@ -873,7 +871,6 @@ Weather pictures, 1.7 GHz
 What to add to a level in dBFS to get dBm for this radio (its calibration: a known signal into the antenna port shows it). Also in the radio's settings.
 Your callsign
 Your locator
-Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: reset.
 antenna %.6g MHz -> %s LO %.6g -> radio %.6g MHz%s
 channel scan has the radio
 dBm offset

@@ -40,7 +40,6 @@ Dial frequency the decoder should assume (the sound card is not tuned)	Çözüc�
 DVB standard	DVB standardı
 Empty: the demo 802.15.4 scene.	Boş: demo 802.15.4 sahnesi.
 Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	Boş: demo FLARM sahnesi. Bu kimlik, yayımlanmamış daha yeni protokole paketlenmez.
-Empty: the demo LoRa / mesh scene.	Boş: demo LoRa / mesh sahnesi.
 Empty: the demo Mode S uplink scene.	Boş: demo Mode S uplink sahnesi.
 Empty: the demo VDES scene.	Boş: demo VDES sahnesi.
 File	Dosya
@@ -622,7 +621,6 @@ Checking and preparing the new version…	Yeni sürüm denetleniyor ve hazırlan
 Downloaded and checked. It is installed when you close OnAir.	İndirildi ve denetlendi. OnAir'i kapattığınızda kurulur.
 Restart now and update	Şimdi yeniden başlat ve güncelle
 Windows asks for permission to run the installer.	Windows, yükleyiciyi çalıştırmak için izin ister.
-The system asks for your password to install the package.	Sistem, paketi kurmak için parolanızı ister.
 This copy of OnAir cannot replace itself.	OnAir'in bu kopyası kendini değiştiremez.
 The update to v%s did not install (setup exit code %d).	v%s güncellemesi kurulmadı (kurulum çıkış kodu %d).
 Only github.com is contacted. Downloads are checked against the SHA-256 GitHub lists for the file.	Yalnızca github.com ile iletişim kurulur. İndirmeler, dosya için GitHub'ın SHA-256 listelerine göre denetlenir.
@@ -892,7 +890,6 @@ Weather pictures, 1.7 GHz	Hava görüntüleri, 1.7 GHz
 What to add to a level in dBFS to get dBm for this radio (its calibration: a known signal into the antenna port shows it). Also in the radio's settings.	Bu radyo için dBFS cinsinden bir seviyeye dBm elde etmek üzere ne ekleneceği (kalibrasyonu: anten portuna verilen bilinen bir sinyal bunu gösterir). Radyonun ayarlarında da bulunur.
 Your callsign	Çağrı işaretiniz
 Your locator	Konum kodunuz
-Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: reset.	Yakınlaştırma: fare tekerleği (her iki eksen), Ctrl+tekerlek (frekans), Shift+tekerlek (seviye).\nCtrl+PageUp / PageDown: görünümü frekansta bir ekran adımlayın. Çift tıklama: sıfırla.
 antenna %.6g MHz -> %s LO %.6g -> radio %.6g MHz%s	anten %.6g MHz -> %s LO %.6g -> radyo %.6g MHz%s
 channel scan has the radio	kanal taraması radyoyu kullanıyor
 dBm offset	dBm kayması

@@ -301,6 +301,7 @@ int main() {
         const fs::path dir = fs::temp_directory_path() / "onair_trunkpool_test";
         { std::error_code ec; fs::remove_all(dir, ec); }
         PoolConfig c; c.recordDir = dir.string(); c.systemName = "NSW PSN";
+        {   // scoped: the pool closes its files before the folder is removed (Windows cannot remove an open file)
         Sim s(c);
         s.pool.wallBase = 1700000000;
         s.add("ctl", F);
@@ -323,6 +324,7 @@ int main() {
         CHECK(t.find("\"talkgroup\": 4242") != std::string::npos && t.find("\"source\": 987") != std::string::npos && t.find("\"frequency_hz\": 852000000") != std::string::npos &&
               t.find("hang time over") != std::string::npos && t.find("NSW PSN") != std::string::npos, "sidecar: %s", t.c_str());
         CHECK(s.last()->audioPath.find("NSW_PSN_tg4242_") != std::string::npos, "file name");
+        }
         // a call with no sound leaves no wav
         { std::error_code ec; fs::remove_all(dir, ec); }
         Sim q(c);
