@@ -112,7 +112,7 @@ int main() {
     const std::string key = "LY0AIR TEST 73";
 
     {   // names, counts and bandwidths
-        CHECK(kbdVariantCount(KbdMfsk) == 8 && kbdVariantCount(KbdThor) == 10 && kbdVariantCount(KbdDominoex) == 6 && kbdVariantCount(KbdHell) == 7, "variant counts");
+        CHECK(kbdVariantCount(KbdMfsk) == 11 && kbdVariantCount(KbdThor) == 10 && kbdVariantCount(KbdDominoex) == 6 && kbdVariantCount(KbdHell) == 7, "variant counts");
         KbdConfig c;
         c.family = KbdOlivia; c.tones = 32; c.bandwidth = 1000;
         CHECK(std::fabs(kbdBandwidthHz(c) - 1000) < 1, "Olivia 32/1000 bandwidth %.1f", kbdBandwidthHz(c));

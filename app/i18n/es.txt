@@ -3735,3 +3735,9 @@ copied	copiadas
 rows	filas
 Copy the table as CSV to the clipboard (positions included)	Copiar la tabla como CSV al portapapeles (con posiciones)
 Copy the table as CSV to the clipboard	Copiar la tabla como CSV al portapapeles
+# MFSK pictures (Shortwave Radiogram)
+Save PNG	Guardar PNG
+Save every picture	Guardar cada imagen
+Clear pictures	Borrar imágenes
+grey	gris
+Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.	Las imágenes enviadas dentro de la señal MFSK (Shortwave Radiogram) aparecen aquí al recibirse.

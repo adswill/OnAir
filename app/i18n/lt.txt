@@ -3750,3 +3750,9 @@ copied	nukopijuota
 rows	eilučių
 Copy the table as CSV to the clipboard (positions included)	Nukopijuoti lentelę kaip CSV į iškarpinę (su pozicijomis)
 Copy the table as CSV to the clipboard	Nukopijuoti lentelę kaip CSV į iškarpinę
+# MFSK pictures (Shortwave Radiogram)
+Save PNG	Išsaugoti PNG
+Save every picture	Išsaugoti kiekvieną paveikslėlį
+Clear pictures	Išvalyti paveikslėlius
+grey	pilka
+Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.	MFSK sraute siunčiami paveikslėliai (Shortwave Radiogram) čia rodomi jiems atkeliaujant.

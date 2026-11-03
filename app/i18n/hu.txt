@@ -3715,3 +3715,9 @@ copied	másolva
 rows	sor
 Copy the table as CSV to the clipboard (positions included)	A táblázat másolása CSV-ként a vágólapra (pozíciókkal)
 Copy the table as CSV to the clipboard	A táblázat másolása CSV-ként a vágólapra
+# MFSK pictures (Shortwave Radiogram)
+Save PNG	PNG mentése
+Save every picture	Minden kép mentése
+Clear pictures	Képek törlése
+grey	szürke
+Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.	Az MFSK adásban küldött képek (Shortwave Radiogram) itt jelennek meg, ahogy megérkeznek.

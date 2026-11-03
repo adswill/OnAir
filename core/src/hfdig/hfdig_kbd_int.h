@@ -32,6 +32,10 @@ struct Engine {
     bool locked = false;
     float snrDb = 0;
     double offsetHz = 0;                            // tuning error found
+    // MFSK pictures: the engine owns the picture being received; the caller copies it when `picDirty` (and clears the flags)
+    std::shared_ptr<KbdPicture> pic;
+    bool picDirty = false, picDone = false;
+    bool busy = false;                              // a picture is coming: leave the centre alone
 };
 std::unique_ptr<Engine> makeOliviaEngine(const KbdConfig& c);   // also Contestia
 std::unique_ptr<Engine> makeMfskEngine(const KbdConfig& c);
@@ -115,7 +119,7 @@ struct Modulator {
     virtual void next(std::vector<float>& out, TextSrc& src) = 0;   // append audio (the amplitude about +-1)
 };
 std::unique_ptr<Modulator> makeOliviaMod(const KbdConfig& c, double centreHz);
-std::unique_ptr<Modulator> makeMfskMod(const KbdConfig& c, double centreHz);
+std::unique_ptr<Modulator> makeMfskMod(const KbdConfig& c, double centreHz, std::shared_ptr<const KbdPicture> pic = nullptr, int picAfterChars = 40);
 std::unique_ptr<Modulator> makeIfkMod(const KbdConfig& c, double centreHz);
 std::unique_ptr<Modulator> makeHellMod(const KbdConfig& c, double centreHz);
 
