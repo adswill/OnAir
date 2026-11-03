@@ -3716,3 +3716,8 @@ Last position	Ostatnia pozycja
 just now	przed chwilą
 min ago	min temu
 Show on map	Pokaż na mapie
+# custom bandwidth chip and reset (3.6)
+custom	własna
+default	domyślna
+How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	Ile widma przechwytuje radio. Domyślna jest szerokość własna trybu; kliknij, aby ustawić dowolną szerokość.
+Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	Powrót do własnej szerokości pasma i częstotliwości próbkowania tego trybu. Twoje własne wartości pozostają zapisane na następny raz, gdy zaznaczysz Własne.

@@ -48,7 +48,7 @@ void analyse(App& a) {
     }
     const DeviceInfo& d = a.devices[(size_t)a.devIdx];
     c.live = d.isRadio();
-    c.modeBwHz = a.tune.bandwidthMhz * 1e6;
+    c.modeBwHz = a.tune.signalBwMhz() * 1e6;
     c.modeOffsetHz = (a.freqMhz - radioCenterMhz(a)) * 1e6;
     if (d.isGeneric()) { c.gainDb = a.tune.gainDb; c.gainMaxDb = d.gainMaxDb; }
     else { c.gainDb = a.tune.lnaDb + a.tune.vgaDb + (a.tune.ampOn ? 14 : 0); c.gainMaxDb = 104; }

@@ -159,7 +159,7 @@ void tick(App& a) {
     const bool specFresh = a.spec.seq != S.specSeq0 && !a.spec.dbfs.empty();
     const bool rxFresh = a.rx.seq != S.rxSeq0;
     const bool ready = a.engine.running() && (specFresh || rxFresh);
-    S.level = specFresh ? (float)occupancyDb(a.spec.dbfs, a.tune.sampleRate / 1e6, a.tune.bandwidthMhz) : 0;
+    S.level = specFresh ? (float)occupancyDb(a.spec.dbfs, a.tune.sampleRate / 1e6, a.tune.signalBwMhz()) : 0;
     Decode d;
     if (rxFresh) {
         const int want = engineStd(a) - 1;

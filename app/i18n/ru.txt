@@ -3700,3 +3700,8 @@ Last position	Последняя позиция
 just now	только что
 min ago	мин назад
 Show on map	Показать на карте
+# custom bandwidth chip and reset (3.6)
+custom	своя
+default	по умолчанию
+How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	Какую часть спектра захватывает приёмник. По умолчанию это собственная ширина режима; нажмите, чтобы задать любую ширину.
+Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	Возврат к собственной полосе и частоте дискретизации этого режима. Ваши значения сохраняются до следующего включения «Своя».

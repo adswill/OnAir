@@ -110,7 +110,7 @@ ag::AgInput input(App& a) {
         in.rateHz = a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate;
     }
     if (in.rateHz <= 0) in.rateHz = a.tune.sampleRate;
-    in.chanBwHz = a.tune.bandwidthMhz * 1e6;
+    in.chanBwHz = a.tune.signalBwMhz() * 1e6;
     in.offsetHz = (a.freqMhz - radioCenterMhz(a)) * 1e6;   // a mode tuned beside the DC spike listens off the centre
     in.q = ag::qualityFrom(a.rx);
     return in;
@@ -122,7 +122,7 @@ void syncContext(App& a) {
     loadSettings();
     const DeviceInfo& d = a.devices[(size_t)a.devIdx];
     const double fs = a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate;
-    const std::string ctx = radioKeyOf(d) + "|" + std::to_string(engineStd(a)) + "|" + std::to_string((long)(a.tune.bandwidthMhz * 1e6)) + "|" + std::to_string((long)fs) + "|" + ag::bandIdFor(a.freqMhz * 1e6);
+    const std::string ctx = radioKeyOf(d) + "|" + std::to_string(engineStd(a)) + "|" + std::to_string((long)(a.tune.signalBwMhz() * 1e6)) + "|" + std::to_string((long)fs) + "|" + ag::bandIdFor(a.freqMhz * 1e6);
     s.set.ampAllowed = agcAmpAllowed(a);
     s.set.stageMask = (uint32_t)plat::prefs().getI(maskKey(a).c_str(), (long)0xffffffffL);
     if (ctx == s.ctx) { s.c.setSettings([&] { ag::AgSettings x = s.set; x.mode = s.run; return x; }()); return; }
@@ -131,7 +131,7 @@ void syncContext(App& a) {
     if (const ag::GainCal* gc = s.cals.find(calKey(d))) ag::applyCalibration(s.prof, *gc);   // this unit's measured steps instead of the table's
     ag::AgSettings x = s.set;
     x.mode = s.run;
-    s.c.configure(s.prof, ag::modeTargetFor(engineStd(a), a.tune.bandwidthMhz * 1e6, fs, a.freqMhz * 1e6), x);
+    s.c.configure(s.prof, ag::modeTargetFor(engineStd(a), a.tune.signalBwMhz() * 1e6, fs, a.freqMhz * 1e6), x);
     if (s.run != ag::AgMode::Off) {
         const ag::StagePlan p = ag::planFromTune(s.prof, a.tune);
         s.c.start(ImGui::GetTime(), p.totalDb, p.ampOn, &p);

@@ -3740,3 +3740,8 @@ Last position	最后位置
 just now	刚刚
 min ago	分钟前
 Show on map	在地图上显示
+# custom bandwidth chip and reset (3.6)
+custom	自定义
+default	默认
+How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	无线电捕获的频谱宽度。默认是该模式自身的宽度；点击可设置任意宽度。
+Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	恢复该模式自身的带宽和采样率。您的自定义值会保留，下次勾选“自定义”时可再次使用。

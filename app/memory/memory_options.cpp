@@ -55,7 +55,7 @@ dect2::Memory memoryCapture(const App& a) {
     if (const dect2::SubMode* s = curSub(a)) m.subId = s->id;
     m.stdMode = engineStd(a);
     m.sampleRateHz = savedSampleRate(a);
-    m.bandwidthHz = a.tune.bandwidthMhz * 1e6;
+    m.bandwidthHz = a.tune.signalBwMhz() * 1e6;
     if (a.devIdx >= 0 && a.devIdx < (int)a.devices.size()) m.radio = a.devices[a.devIdx].name;
     m.hasGain = true; m.lna = a.tune.lnaDb; m.vga = a.tune.vgaDb; m.amp = a.tune.ampOn; m.gainDb = a.tune.gainDb;
     for (const MemoryOption& o : memoryOptions()) if (o.applies(a)) m.options[o.key] = o.get(a);

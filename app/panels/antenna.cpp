@@ -13,7 +13,7 @@ void feedDirection(App& a) {
     s.lossPct = q.valid ? 100.0 * (1.0 - q.fecOk) : 100.0;
     s.multipath = a.mpd.report().level;
     s.clipFraction = a.spec.stats.clipFraction;
-    s.occupancyDb = occupancyDb(a.spec.dbfs, a.tune.sampleRate / 1e6, a.tune.bandwidthMhz);
+    s.occupancyDb = occupancyDb(a.spec.dbfs, a.tune.sampleRate / 1e6, a.tune.signalBwMhz());
     d.addSample(ImGui::GetTime(), s);
 }
 

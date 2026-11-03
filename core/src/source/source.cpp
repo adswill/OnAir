@@ -428,7 +428,7 @@ public:
 
 protected:
     double pace() override { std::lock_guard<std::mutex> lk(mu_); return cfg_.pace > 0.01 ? cfg_.pace : 1.0; }
-    double effectiveRate(const TuneSettings& s) override { if (s.synth.mode >= 4) return s.sampleRate > 0 ? s.sampleRate : 2e6; return s.synth.atsc ? (s.sampleRate > 0 && s.sampleRate < 12e6 ? s.sampleRate : 8e6) : nativeRateHz(s.bandwidthMhz); }
+    double effectiveRate(const TuneSettings& s) override { if (s.synth.mode >= 4) return s.sampleRate > 0 ? s.sampleRate : 2e6; return s.synth.atsc ? (s.sampleRate > 0 && s.sampleRate < 12e6 ? s.sampleRate : 8e6) : nativeRateHz(s.signalBwMhz()); }   // (the test signal of DVB-T2 / DVB-T is made at the channel's native rate; a custom capture width is the radio's)
     bool prepare(const TuneSettings& s, std::string&) override {
         cfg_ = s.synth;
         gainDb_ = s.lnaDb + s.vgaDb + (s.ampOn ? 14 : 0);

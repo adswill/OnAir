@@ -3719,3 +3719,8 @@ Last position	Paskutinė pozicija
 just now	ką tik
 min ago	min. prieš
 Show on map	Rodyti žemėlapyje
+# custom bandwidth chip and reset (3.6)
+custom	pasirinktinis
+default	numatytasis
+How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	Kiek spektro užfiksuoja radijas. Numatytasis yra paties režimo plotis; spustelėkite, kad nustatytumėte bet kokį plotį.
+Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	Grįžti prie šio režimo savo juostos pločio ir diskretizavimo dažnio. Jūsų pasirinktinės reikšmės lieka išsaugotos kitam kartui, kai pažymėsite Pasirinktinis.

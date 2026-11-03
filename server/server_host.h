@@ -49,6 +49,7 @@ public:
     bool setMode(int family, const std::string& subId, std::string& err) override;
     bool setFrequencyHz(double hz, std::string& err) override;
     bool setSampleRateHz(double hz, std::string& err) override;
+    bool setCaptureBandwidthHz(double hz, std::string& err) override;
     bool setGainDb(double db, std::string& err) override;
     std::string indexHtml() override;
     bool spectrumBinary(int bins, uint64_t& seq, std::string& frame) override;
@@ -73,7 +74,7 @@ private:
     double devicesAt_ = -1e9;
     std::vector<ModeEntry> modes_;
     int devIdx_ = 0, modeIdx_ = 0;
-    double freqHz_ = 100e6, rateHz_ = 0, gainDb_ = 30;
+    double freqHz_ = 100e6, rateHz_ = 0, gainDb_ = 30, captureBwMhz_ = 0;   // captureBwMhz_: the custom capture bandwidth (0 = the mode's own)
     int demod_ = 4;                         // HfDemod: 0 USB, 1 LSB, 2 NFM, 3 AM, 4 automatic
     dect2::TuneSettings tune_;
     std::atomic<bool> wantRun_{false}, dirty_{false};

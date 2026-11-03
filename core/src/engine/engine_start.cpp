@@ -132,7 +132,7 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     radioLost_ = false; lastSamples_ = std::chrono::steady_clock::now(); reconnectErr_.clear();
     automation::receiverState("started", "receiver started");
     logP1Count_ = 0; logGi_ = -2; logState_ = -1; logFrameSyms_ = 0;
-    bwMhz_ = tune.bandwidthMhz; bwActive_ = bwMhz_;
+    bwMhz_ = tune.channelBwMhz > 0 ? tune.channelBwMhz : tune.bandwidthMhz; bwActive_ = bwMhz_;   // (a custom capture bandwidth does not change the width of the signal)
     bwDetected_ = 0; bwReset_ = true; bwReq_ = false;
     configureTvReceivers(dev, tune);
     placeNarrowReceivers(dev, tune);
@@ -145,7 +145,8 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
 
 // Configures the TV, DAB, FM, DVB-S, DTMB, analog TV and first group of receivers for the current sample rate
 void Engine::configureTvReceivers(const DeviceInfo& dev, const TuneSettings& tune) {
-    rx_.configure(rate_, tune.bandwidthMhz);
+    const double chanBw = tune.channelBwMhz > 0 ? tune.channelBwMhz : tune.bandwidthMhz;   // the signal's channel; a custom capture bandwidth is the radio's, not the channel's
+    rx_.configure(rate_, chanBw);
     {   // the resampler on its own thread: live radios on Windows by default (not yet tried elsewhere); DECT2_PIPELINE=0/1 forces it off/on
 #ifdef _WIN32
         bool pipe = src_->realtimeHardware();
@@ -155,7 +156,7 @@ void Engine::configureTvReceivers(const DeviceInfo& dev, const TuneSettings& tun
         if (const char* e = getenv("DECT2_PIPELINE")) pipe = atoi(e) != 0;
         rx_.setPipelined(pipe);
     }
-    rxT_.configure(rate_, tune.bandwidthMhz);
+    rxT_.configure(rate_, chanBw);
     {   // DVB-T: the error correction on its own thread for a live radio, so the analysis thread only demodulates (DECT2_PIPELINE=0/1 forces it)
         bool pipe = src_->realtimeHardware();
         if (const char* e = getenv("DECT2_PIPELINE")) pipe = atoi(e) != 0;
@@ -175,7 +176,7 @@ void Engine::configureTvReceivers(const DeviceInfo& dev, const TuneSettings& tun
     rxDvbs_.configure(rate_);
     rxDvbs_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { rxDvbs_.feedTs(pk, n); onTsPackets(pk, n, secs); });   // runs on the receiver thread
     rxDvbs_.setLogCallback([this](const std::string& s) { log(s); });
-    rxDtmb_.configure(rate_, tune.bandwidthMhz);
+    rxDtmb_.configure(rate_, chanBw);
     rxDtmb_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the receiver thread
     rxDtmb_.setLogCallback([this](const std::string& s) { log(s); });
     rxAtv_.configure(rate_);
@@ -732,12 +733,13 @@ void Engine::checkRateAndResetState(const DeviceInfo& dev, const TuneSettings& t
     {   // DVB-T2 / DVB-T, ATSC and DAB at a rate their receiver cannot use (the telemetry test that stood here never fired: the receiver
         // publishes nothing before its first samples, so the user got no word at all, e.g. an RTL-SDR at 2.56 Msps on an 8 MHz channel)
         const int sm = stdMode_.load();
-        const double need = sm <= 4 ? minSampleRateFor(sm, tune.bandwidthMhz) : 0;
+        const double chanW = tune.channelBwMhz > 0 ? tune.channelBwMhz : tune.bandwidthMhz;
+        const double need = sm <= 4 ? minSampleRateFor(sm, chanW) : 0;
         if (need > 0 && rate_.load() < need - 1) {
             char what[64], m[240];
             if (sm == 3) snprintf(what, sizeof what, "an ATSC channel");
             else if (sm == 4) snprintf(what, sizeof what, "a DAB ensemble");
-            else snprintf(what, sizeof what, "the %g MHz %s channel", tune.bandwidthMhz, sm == 1 ? "DVB-T2" : sm == 2 ? "DVB-T" : "DVB-T2 / DVB-T");
+            else snprintf(what, sizeof what, "the %g MHz %s channel", chanW, sm == 1 ? "DVB-T2" : sm == 2 ? "DVB-T" : "DVB-T2 / DVB-T");
             snprintf(m, sizeof m, "sample rate %.2f Msps is too low for %s (at least %.2f Msps is needed) - %s", rate_.load() / 1e6, what, need / 1e6,
                      sm <= 2 ? "only the spectrum is shown" : "the receiver cannot lock with this radio");
             log(m);

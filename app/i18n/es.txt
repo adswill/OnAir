@@ -3715,3 +3715,8 @@ Last position	Última posición
 just now	ahora mismo
 min ago	min atrás
 Show on map	Mostrar en el mapa
+# custom bandwidth chip and reset (3.6)
+custom	personalizado
+default	predeterminado
+How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	Cuánto espectro captura la radio. Lo predeterminado es el ancho propio del modo; haga clic para fijar cualquier ancho.
+Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	Vuelve al ancho de banda y la frecuencia de muestreo propios de este modo. Sus valores personalizados quedan guardados para la próxima vez que marque Personalizado.

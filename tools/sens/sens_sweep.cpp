@@ -55,6 +55,25 @@ std::vector<Scenario> scenariosFor(const Mode& m) {
     return s;
 }
 
+// The signal captured k times wider: zero-stuffing and a windowed-sinc low-pass (gain k), so the receiver sees the same signal at k times the rate
+Sig interpolate(const Sig& in, int k) {
+    const int half = 6 * k, taps = 2 * half + 1;
+    std::vector<float> h((size_t)taps);
+    for (int i = 0; i < taps; i++) {
+        const double x = (double)(i - half) / k, w = 0.5 + 0.5 * std::cos(M_PI * (double)(i - half) / (half + 1));
+        h[(size_t)i] = (float)((x == 0 ? 1.0 : std::sin(M_PI * x) / (M_PI * x)) * w);
+    }
+    Sig out(in.size() * (size_t)k, cf32(0, 0));
+    for (size_t n = 0; n < in.size(); n++) {
+        const cf32 v = in[n];
+        for (int j = 0; j < taps; j++) {
+            const long idx = (long)(n * (size_t)k) + j - half;
+            if (idx >= 0 && (size_t)idx < out.size()) out[(size_t)idx] += v * h[(size_t)j];
+        }
+    }
+    return out;
+}
+
 struct Prepared {
     Sig base;           // clean, noise free: secs * 1.5 long
     double power = 0;   // active power of base
@@ -116,6 +135,7 @@ double pct(std::vector<double> v, double p) {
 
 struct Cfg {
     bool quick = false, heavy = false;
+    int wide = 1;   // --wide K: the same test signal captured K times wider (3.6: a custom bandwidth / rate must not break a decoder)
     int trials = 12, threads = 0;
     uint64_t seed = 1;
     double snrHi = NAN, snrLo = -8;
@@ -244,6 +264,7 @@ int main(int argc, char** argv) {
         else if (a == "--quick") cfg.quick = true;
         else if (a == "--full") cfg.quick = false;
         else if (a == "--heavy") cfg.heavy = true;
+        else if (a == "--wide") cfg.wide = std::max(1, atoi(val()));
         else if (a == "--trials") { cfg.trials = atoi(val()); trialsSet = true; }
         else if (a == "--threads") cfg.threads = atoi(val());
         else if (a == "--out") cfg.out = val();
@@ -280,14 +301,19 @@ int main(int argc, char** argv) {
     }
     std::filesystem::create_directories(cfg.out);
     std::vector<std::string> modeJson;
-    for (const auto& m : modes) {
-        if (!std::regex_search(m.id, mre) && !std::regex_search(m.name, mre)) continue;
-        if (m.heavy && !cfg.heavy) { printf("%s: skipped (heavy: needs --heavy)\n", m.id.c_str()); continue; }
+    for (const auto& m0 : modes) {
+        if (!std::regex_search(m0.id, mre) && !std::regex_search(m0.name, mre)) continue;
+        if (m0.heavy && !cfg.heavy) { printf("%s: skipped (heavy: needs --heavy)\n", m0.id.c_str()); continue; }
+        Mode m = m0;   // --wide K: the receiver runs K times faster on the same signal, which sits in the middle of the wider capture
+        m.rate = m0.rate * cfg.wide;
         const auto t0 = std::chrono::steady_clock::now();
         Prepared P;
         P.trialN = (size_t)(m.secs * m.rate);
         P.maxOff = (size_t)(0.5 * m.secs * m.rate);
-        P.base = m.gen(P.trialN + P.maxOff + (size_t)(m.rate * 0.01) + 64);
+        if (cfg.wide > 1) {
+            const size_t nat = (size_t)(m0.secs * m0.rate), natOff = (size_t)(0.5 * m0.secs * m0.rate);
+            P.base = interpolate(m0.gen(nat + natOff + (size_t)(m0.rate * 0.01) + 64), cfg.wide);
+        } else P.base = m.gen(P.trialN + P.maxOff + (size_t)(m.rate * 0.01) + 64);
         scaleTo(P.base, 0.2);
         P.power = activePower(P.base);
         const int nth = std::max(1, std::min(cfg.threads, m.maxJobs));

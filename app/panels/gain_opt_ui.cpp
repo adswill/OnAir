@@ -104,7 +104,7 @@ void gainOptTick(App& a) {
     sm.snrValid = rxSnrDb(a.rx, v); sm.snrDb = v;
     const double fs = a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate;
     // the channel the mode listens to: its width, and where it sits in the capture (a mode with a tuning offset is not on the centre)
-    sm.altValid = spectrumSnrDb(a.spec.dbfs, fs, a.tune.bandwidthMhz * 1e6, v, (a.freqMhz - radioCenterMhz(a)) * 1e6); sm.altDb = v;
+    sm.altValid = spectrumSnrDb(a.spec.dbfs, fs, a.tune.signalBwMhz() * 1e6, v, (a.freqMhz - radioCenterMhz(a)) * 1e6); sm.altDb = v;
     sm.clip = a.spec.stats.clipFraction; sm.rms = a.spec.stats.rmsDbfs; sm.peak = a.spec.stats.peak;
     int g = 0;
     if (s.opt.update(ImGui::GetTime(), sm, g)) {

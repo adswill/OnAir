@@ -128,7 +128,7 @@ struct PskReceiver::Impl {
         auto w = std::make_unique<Wide>();
         double off;
         { std::lock_guard<std::mutex> lk(mu); off = offsetHz; }
-        w->dec.configure(curRate, std::min(wideSpanReq.load(), kWideSpanMaxPsk));
+        w->dec.configure(curRate, std::min(wideSpanReq.load(), kWideSpanMaxPsk * wideSpanCapHz() / kWideMaxSpanHz));   // (the default 100 kHz scales with the span cap)
         w->dec.setOffsetHz(off);
         const double half = w->dec.spanHz() / 2;
         const int k0 = (int)std::floor((-half - kSliceLo) / kSliceStep), k1 = (int)std::ceil((half - kSliceLo) / kSliceStep);
@@ -721,7 +721,7 @@ void PskReceiver::Impl::reportWide() {
 }
 
 void PskReceiver::setWide(bool on, double spanHz) {
-    p_->wideSpanReq = std::max(1000.0, std::min(kWideMaxSpanHz, spanHz));
+    p_->wideSpanReq = std::max(1000.0, std::min(wideSpanCapHz(), spanHz));
     if (p_->wideReq.exchange(on) != on) p_->wideChanged = true;
 }
 bool PskReceiver::wide() const { return p_->wideReq.load(); }
