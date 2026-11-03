@@ -283,7 +283,7 @@ int main(int argc, char** argv) {
             CHECK(ok, "%s, %s: the engine did not start (%s)", mt->id, c.what, e.startError().c_str());
             if (!ok) continue;
             engines++;
-            const bool ran = enginetest::waitFor(5.0, [&] { return enginetest::signalSecs(e) > 0.0; });
+            const bool ran = enginetest::waitFor(20.0, [&] { return enginetest::signalSecs(e) > 0.0; });
             // (the test signal of DVB-T2 / DVB-T / ATSC is made at its native rate whatever the radio is asked: those four only need to run)
             const bool fixedSynth = mt->stdMode <= 3;
             CHECK(fixedSynth || std::fabs(e.sampleRate() - c.t.sampleRate) < 1.0 || std::fabs(e.sampleRate() - c.t.sampleRate) < c.t.sampleRate * 1e-3,

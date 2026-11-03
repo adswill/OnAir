@@ -34,7 +34,7 @@ public:
             Row r; r.shown = line;
             if (line.compare(0, 3, "re:") == 0) {
                 const std::string p = line.substr(3);
-                if (p.empty() || p.size() > kMaxPattern) { bad++; continue; }
+                if (p.empty() || p.size() > kMaxPattern || nestedQuantifier(p)) { bad++; continue; }
                 try { r.re = std::regex(p, std::regex::ECMAScript | std::regex::icase | std::regex::optimize); r.isRegex = true; }
                 catch (const std::regex_error&) { bad++; continue; }
             } else {
@@ -66,6 +66,23 @@ public:
 private:
     struct Row { std::string shown, lower; std::regex re; bool isRegex = false; };
     static std::string lower(std::string s) { for (auto& c : s) c = (char)std::tolower((unsigned char)c); return s; }
+    // A quantified group that holds a quantifier, like (a+)+, can take forever on a long text: refuse it.
+    static bool nestedQuantifier(const std::string& p) {
+        std::vector<bool> inner;
+        for (size_t i = 0; i < p.size(); i++) {
+            const char c = p[i];
+            if (c == '\\') { i++; continue; }
+            if (c == '(') inner.push_back(false);
+            else if (c == '*' || c == '+' || c == '{') { if (!inner.empty()) inner.back() = true; }
+            else if (c == ')' && !inner.empty()) {
+                const bool had = inner.back();
+                inner.pop_back();
+                if (had && i + 1 < p.size() && (p[i + 1] == '*' || p[i + 1] == '+' || p[i + 1] == '{')) return true;
+                if (had && !inner.empty()) inner.back() = true;
+            }
+        }
+        return false;
+    }
     static bool safeSearch(const std::regex& re, const std::string& s) {
         try { return std::regex_search(s, re); } catch (const std::regex_error&) { return false; }
     }
