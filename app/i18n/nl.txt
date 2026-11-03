@@ -3720,3 +3720,6 @@ custom	aangepast
 default	standaard
 How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	Hoeveel spectrum de radio vastlegt. Standaard is de eigen breedte van de modus; klik om elke gewenste breedte in te stellen.
 Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	Terug naar de eigen bandbreedte en samplefrequentie van deze modus. Uw aangepaste waarden blijven bewaard voor de volgende keer dat u Aangepast aanvinkt.
+16-bit	16-bit
+Share##rec	Share##rec
+Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.	Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.

@@ -3,6 +3,8 @@
 // chosen mode (by default the one the recording was made in). Opened from the "Library" button in the diagnostics row. Lists only the
 // sidecars and file headers, never the samples; deletes and moves nothing.
 #include "../app.h"
+#include "../i18n/i18n.h"
+#include "dect2/engine/updater.h"
 #include "dect2/source/iq_file.h"
 #include "dect2/source/source.h"
 #include <cstdio>
@@ -70,6 +72,7 @@ bool openAsSource(App& a, const RecordingListing& r) {
         a.file.path = info.dataPath; a.file.format = info.format; a.file.bigEndian = info.bigEndian;
         a.file.offsetBytes = info.offsetBytes; a.file.endBytes = info.endBytes;
         if (info.sampleRate > 0) a.file.sampleRate = info.sampleRate;
+        restoreRecordingMode(a, info.description, r.path);
         if (info.centerHz > 0) a.freqMhz = info.centerHz / 1e6;
     } else if (!err.empty()) { a.engine.log(err); return false; }
     else {   // a raw file without a sidecar: the rate and the format its name says
@@ -169,6 +172,12 @@ void recordingLibraryUi(App& a) {
             ImGui::TableSetColumnIndex(8);
             if (ImGui::SmallButton("Re-analyse")) reanalyse(a, r, pickFor(r));
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Opens this recording as the source in the chosen mode (press Start to analyse it)");
+            ImGui::SameLine();
+            if (ImGui::SmallButton(tr("Share##rec"))) {   // the folder opens with the file, and the path of the file to send goes to the clipboard (a SigMF recording: the .sigmf-meta and its data go together)
+                ImGui::SetClipboardText(r.path.c_str());
+                dect2::openUrl(r.path.substr(0, r.path.find_last_of("/\\")));
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode."));
             ImGui::PopID();
         }
         ImGui::EndTable();

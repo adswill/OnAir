@@ -3707,3 +3707,6 @@ custom	egyéni
 default	alapértelmezett
 How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	Mennyi spektrumot rögzít a rádió. Az alapértelmezett a mód saját szélessége; kattintson tetszőleges szélesség beállításához.
 Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	Vissza a mód saját sávszélességéhez és mintavételi sebességéhez. Az egyéni értékek mentve maradnak, amikor legközelebb bejelöli az Egyénit.
+16-bit	16-bit
+Share##rec	Share##rec
+Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.	Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.

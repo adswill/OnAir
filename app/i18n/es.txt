@@ -3720,3 +3720,6 @@ custom	personalizado
 default	predeterminado
 How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	Cuánto espectro captura la radio. Lo predeterminado es el ancho propio del modo; haga clic para fijar cualquier ancho.
 Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	Vuelve al ancho de banda y la frecuencia de muestreo propios de este modo. Sus valores personalizados quedan guardados para la próxima vez que marque Personalizado.
+16-bit	16-bit
+Share##rec	Share##rec
+Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.	Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.

@@ -34,7 +34,7 @@ std::string recordingFileName(const std::string& modeId, double centerHz, double
     std::string id = modeId.empty() ? "iq" : modeId;
     for (auto& c : id) if (!isalnum((unsigned char)c)) c = '-';
     char b[160];
-    snprintf(b, sizeof b, "onair_%s_%.3fMHz_%.9gMsps_%s.%s", id.c_str(), centerHz / 1e6, rateHz / 1e6, stamp, fmt == FileFormat::CF32 ? "cf32" : "cs8");
+    snprintf(b, sizeof b, "onair_%s_%.3fMHz_%.9gMsps_%s.%s", id.c_str(), centerHz / 1e6, rateHz / 1e6, stamp, fmt == FileFormat::CF32 ? "cf32" : fmt == FileFormat::CI16 ? "cs16" : "cs8");
     return b;
 }
 
@@ -43,7 +43,15 @@ std::string blueRecordingName(const std::string& name) {
     return (d == std::string::npos ? name : name.substr(0, d)) + ".tmp";
 }
 
-const char* sigmfDatatype(FileFormat fmt) { return fmt == FileFormat::CF32 ? "cf32_le" : fmt == FileFormat::CU8 ? "cu8" : "ci8_le"; }
+const char* sigmfDatatype(FileFormat fmt) { return fmt == FileFormat::CF32 ? "cf32_le" : fmt == FileFormat::CI16 ? "ci16_le" : fmt == FileFormat::CU8 ? "cu8" : "ci8_le"; }
+
+int recordingStdMode(const std::string& id) {
+    if (id.empty() || id == "iq" || id == "dvb") return -1;   // "dvb" is DVB-T and T2 both: the mode already chosen stays
+    static const struct { const char* id; int std; } base[] = {{"atsc", 3}, {"dab", 4}, {"atsc3", 5}, {"isdbt", 6}, {"fm", 7}};
+    for (auto& b : base) if (id == b.id) return b.std;
+    if (const ModeTuning* mt = modeTuningById(id)) return mt->stdMode;
+    return -1;
+}
 
 std::string sigmfUtcNow() {
     const std::time_t t = std::time(nullptr);
@@ -79,12 +87,12 @@ void IqRecorder::writeSigmf(bool final) {
 
 bool IqRecorder::start(const std::string& path, FileFormat fmt, double rateHz, std::string& err) {
     stop();
-    if (fmt != FileFormat::CS8 && fmt != FileFormat::CF32) { err = "only 8-bit signed and float files can be recorded"; return false; }
+    if (fmt != FileFormat::CS8 && fmt != FileFormat::CF32 && fmt != FileFormat::CI16) { err = "only 8-bit, 16-bit and float files can be recorded"; return false; }
     if (rateHz <= 0) { err = "the radio has no sample rate yet"; return false; }
     const bool asBlue = blue::isBlueExtension(path);
     if (asBlue) {
         blue::WriteSpec ws;
-        ws.complex = true; ws.kind = fmt == FileFormat::CF32 ? 'F' : 'B'; ws.sampleRate = rateHz; ws.centerHz = centerHz_; ws.description = sigmfDesc_;
+        ws.complex = true; ws.kind = fmt == FileFormat::CF32 ? 'F' : fmt == FileFormat::CI16 ? 'I' : 'B'; ws.sampleRate = rateHz; ws.centerHz = centerHz_; ws.description = sigmfDesc_;
         auto* w = new blue::Writer;
         if (!w->open(path, ws, err)) { delete w; return false; }
         blue_ = w;
@@ -133,10 +141,13 @@ bool IqRecorder::start(const std::string& path, FileFormat fmt, double rateHz, s
 
 void IqRecorder::push(const cf32* x, size_t n) {
     if (!active_.load(std::memory_order_relaxed) || !n) return;
-    const size_t bps = fmt_ == FileFormat::CF32 ? 8 : 2;
+    const size_t bps = fmt_ == FileFormat::CF32 ? 8 : fmt_ == FileFormat::CI16 ? 4 : 2;
     std::vector<uint8_t> blk(n * bps);   // converted here: the queue holds the (smaller) file bytes
     if (fmt_ == FileFormat::CF32) memcpy(blk.data(), x, n * sizeof(cf32));
-    else {
+    else if (fmt_ == FileFormat::CI16) {
+        auto q = [](float v) { return (int16_t)std::max(-32767L, std::min(32767L, lrintf(v * 32767.f))); };
+        for (size_t i = 0; i < n; i++) { const int16_t a = q(x[i].real()), b = q(x[i].imag()); memcpy(&blk[4 * i], &a, 2); memcpy(&blk[4 * i + 2], &b, 2); }   // little-endian hosts
+    } else {
         auto q = [](float v) { return (uint8_t)(int8_t)std::max(-127L, std::min(127L, lrintf(v * 127.f))); };
         for (size_t i = 0; i < n; i++) { blk[2 * i] = q(x[i].real()); blk[2 * i + 1] = q(x[i].imag()); }
     }

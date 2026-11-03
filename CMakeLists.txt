@@ -2204,6 +2204,10 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_iq_record PRIVATE dect2core)
   add_test(NAME iq_record COMMAND test_iq_record)
 
+  add_executable(test_replay tests/source/test_replay.cpp)
+  target_link_libraries(test_replay PRIVATE dect2core)
+  add_test(NAME replay COMMAND test_replay)
+
   add_executable(test_time_machine tests/source/test_time_machine.cpp)
   target_link_libraries(test_time_machine PRIVATE dect2core)
   add_test(NAME time_machine COMMAND test_time_machine)

@@ -135,7 +135,7 @@ struct AppHost : sd::Host {
             started.push_back({path, "audio"});
         }
         if (r.iq) {
-            const FileFormat f = a->recFormat == 1 ? FileFormat::CF32 : FileFormat::CS8;
+            const FileFormat f = (FileFormat)recFileFormatOf(a->recFormat);
             const std::string path = base + (f == FileFormat::CF32 ? ".cf32" : ".cs8");
             if (!a->engine.startRecording(path, f, err)) {
                 if (r.audio) dect2::AudioRecorder::instance().stop();

@@ -3745,3 +3745,6 @@ custom	自定义
 default	默认
 How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	无线电捕获的频谱宽度。默认是该模式自身的宽度；点击可设置任意宽度。
 Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	恢复该模式自身的带宽和采样率。您的自定义值会保留，下次勾选“自定义”时可再次使用。
+16-bit	16-bit
+Share##rec	Share##rec
+Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.	Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.

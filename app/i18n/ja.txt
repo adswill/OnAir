@@ -3722,3 +3722,6 @@ custom	カスタム
 default	標準
 How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	ラジオが取り込むスペクトルの幅です。標準はモード固有の幅です。クリックして任意の幅を設定できます。
 Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	このモード固有の帯域幅とサンプルレートに戻します。カスタム値は、次にカスタムをオンにするときのために保存されたままです。
+16-bit	16-bit
+Share##rec	Share##rec
+Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.	Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.

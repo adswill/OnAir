@@ -186,7 +186,7 @@ void recordUi(App& a, int part = 0) {
         const bool can = a.engine.running() && !isFile;
         ImGui::BeginDisabled(!can);
         if (panel::dotButton(tr("Record IQ"), can)) {
-            const FileFormat f = a.recFormat >= 1 ? FileFormat::CF32 : FileFormat::CS8;
+            const FileFormat f = (FileFormat)recFileFormatOf(a.recFormat);
             const std::string path = plat::dataDir() + "/recordings/" + (a.recFormat == 2 ? blueRecordingName(a.engine.recordingName(f)) : a.engine.recordingName(f));
             std::string err;
             if (a.engine.startRecording(path, f, err)) a.recDonePath.clear();
@@ -199,8 +199,9 @@ void recordUi(App& a, int part = 0) {
     toRecordCol(rowX0);
     ImGui::BeginDisabled(rs.active);
     ImGui::SetNextItemWidth(std::min(ImGui::CalcTextSize("X-Midas BLUE").x + ImGui::GetFrameHeight() + 2 * ImGui::GetStyle().FramePadding.x + 4 * gUi, std::max(60.f * gUi, ImGui::GetContentRegionAvail().x)));   // never wider than the panel
-    if (ImGui::BeginCombo("##recfmt", a.recFormat == 2 ? "X-Midas BLUE" : a.recFormat == 1 ? "float" : "8-bit")) {
+    if (ImGui::BeginCombo("##recfmt", a.recFormat == 2 ? "X-Midas BLUE" : a.recFormat == 1 ? "float" : a.recFormat == 3 ? tr("16-bit") : "8-bit")) {
         if (ImGui::Selectable("8-bit", a.recFormat == 0)) { a.recFormat = 0; plat::prefs().setI("recFormat", 0); }
+        if (ImGui::Selectable(tr("16-bit"), a.recFormat == 3)) { a.recFormat = 3; plat::prefs().setI("recFormat", 3); }
         if (ImGui::Selectable("float", a.recFormat == 1)) { a.recFormat = 1; plat::prefs().setI("recFormat", 1); }
         if (ImGui::Selectable("X-Midas BLUE (.tmp)", a.recFormat == 2)) { a.recFormat = 2; plat::prefs().setI("recFormat", 2); }
         ImGui::EndCombo();

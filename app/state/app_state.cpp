@@ -9,6 +9,7 @@
 #include "../gfx/file_vfo.h"
 #include <cstring>
 #include "dect2/source/usb_diag.h"
+#include "dect2/source/iq_record.h"
 #include "dect2/engine/rate_choice.h"
 #include "dect2/hdr/hdr_rx.h"
 #include "dect2/sonde/sonde_rx.h"
@@ -142,6 +143,24 @@ void setMode(App& a, int f, int sub) {
 }
 
 // what to tell the engine: 0 auto, 1 DVB-T2, 2 DVB-T, 3 ATSC, 4 DAB, 5 ATSC 3.0, 6 ISDB-T, 7 FM, 8 DVB-S/S2, 9 DTMB, 10 analog TV, 11 DMR, 12 DRM, 13 ADS-B, 14 GNSS, 15 radiosonde, 16 AIS, 17 marine, 18 ACARS, 19 Inmarsat-C, 20 Inmarsat Aero, 21 Iridium, 22 mesh, 23 HD Radio, 24 CDR, 25 pagers, 26 APRS / packet, 27 HF digital, 28 airband, 29 VDL Mode 2, 30 ISM sensors, 32 VOR / ILS, 33 M17, 35 D-STAR, 36 CW, 37 HFDL, 38 PSK31, 39 JS8Call, 44 spectrum analyser, 40 NXDN, 42 DVB-C, 47 dPMR, 46 Orbcomm, 45 Mode S uplink, 48 TETRA, 51 HF ALE, 49 MAC, 50 radio astronomy, 52 P25, 53 Bluetooth LE, 54 ionospheric sounders, 55 QO-100, 56 Wi-Fi networks, 57 general receiver, 63 CubeSat telemetry, 69 HF beacons (Engine::start maps these to activeStandard())
+std::string restoreRecordingMode(App& a, const std::string& description, const std::string& path) {
+    if (a.engine.running()) return "";
+    std::string id = description;
+    if (recordingStdMode(id) < 0) {   // not a bare mode id: the name "onair_<id>_<MHz>_..." says it
+        id.clear();
+        const size_t sl = path.find_last_of("/\\");
+        const std::string n = sl == std::string::npos ? path : path.substr(sl + 1);
+        if (n.rfind("onair_", 0) == 0) { const size_t e = n.find('_', 6); if (e != std::string::npos) id = n.substr(6, e - 6); }
+    }
+    const int std_ = recordingStdMode(id);
+    if (std_ < 3) return "";
+    const int f = std_ - 2;
+    if (a.family == f) return id;
+    setFamily(a, f);
+    a.engine.log("recording was made in " + id + ": mode restored");
+    return id;
+}
+int recFileFormatOf(int r) { return (int)(r == 3 ? dect2::FileFormat::CI16 : r >= 1 ? dect2::FileFormat::CF32 : dect2::FileFormat::CS8); }
 int engineStd(const App& a) { return a.family >= 6 ? a.family + 2 : a.family == 1 ? 3 : a.family == 2 ? 4 : a.family == 3 ? 5 : a.family == 4 ? 6 : a.family == 5 ? 7 : a.stdMode; }
 
 void refreshDevices(App& a) {

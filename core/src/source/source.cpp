@@ -705,6 +705,7 @@ static bool isAorIqName(const std::string& path) {
 FileFormat guessFormat(const std::string& path) {
     auto ends = [&](const char* e) { size_t n = strlen(e); return path.size() >= n && path.compare(path.size() - n, n, e) == 0; };
     if (ends(".cu8") || ends(".u8")) return FileFormat::CU8;
+    if (ends(".cs16") || ends(".ci16") || ends(".s16")) return FileFormat::CI16;
     if (ends(".cf32") || ends(".fc32") || ends(".cfile")) return FileFormat::CF32;
     if (isAorIqName(path)) return FileFormat::CF32;   // AOR's ariq_rcv writes float32 I/Q
     return FileFormat::CS8;
