@@ -139,7 +139,7 @@ static TuneSettings ownTune(const ModeTuning& mt) {
     return t;
 }
 
-static bool near(double a, double b) { return std::fabs(a - b) <= 1e-9 * std::max(1.0, std::fabs(b)); }
+static bool nearEq(double a, double b) { return std::fabs(a - b) <= 1e-9 * std::max(1.0, std::fabs(b)); }
 
 int main(int argc, char** argv) {
     const bool csv = argc > 1 && !std::strcmp(argv[1], "--csv");
@@ -230,7 +230,7 @@ int main(int argc, char** argv) {
             rxApplyWidth(t, w.mhz, mt->minSampleRate);
             CHECK(t.bandwidthMhz == w.mhz, "%s, %s: the bandwidth became %g MHz (clamped)", mt->id, w.what, t.bandwidthMhz);
             CHECK(t.sampleRate >= w.mhz / 0.9 * 1e6 - 1 && t.sampleRate >= mt->minSampleRate && t.rateChosen, "%s, %s: the rate %.4f Msps does not carry the width", mt->id, w.what, t.sampleRate / 1e6);
-            CHECK(near(t.basebandFilterHz, 0.9 * t.sampleRate), "%s, %s: the radio filter %.0f Hz did not follow", mt->id, w.what, t.basebandFilterHz);
+            CHECK(nearEq(t.basebandFilterHz, 0.9 * t.sampleRate), "%s, %s: the radio filter %.0f Hz did not follow", mt->id, w.what, t.basebandFilterHz);
             CHECK(std::isfinite(t.sampleRate) && t.sampleRate > 0, "%s, %s: no usable rate", mt->id, w.what);
             CHECK(t.channelBwMhz == mt->bandwidthMhz, "%s, %s: the signal's own channel width became %g MHz (a custom capture bandwidth must not change it)", mt->id, w.what, t.channelBwMhz);
             if (w.mhz == 6.0) { rate6 = t.sampleRate; bbf6 = t.basebandFilterHz; }
