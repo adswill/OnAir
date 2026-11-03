@@ -3727,3 +3727,8 @@ Back to this mode's own bandwidth and sample rate. Your custom values stay saved
 16-bit	16 bitų
 Share##rec	Dalintis##rec
 Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.	Atidaro aplanką su šiuo įrašu ir nukopijuoja kelią. Siųskite failą (SigMF atveju kartu .sigmf-meta ir .sigmf-data): jis atkuriamas su savo dažniu, sparta ir režimu.
+Copy CSV	Kopijuoti CSV
+copied	nukopijuota
+rows	eilučių
+Copy the table as CSV to the clipboard (positions included)	Nukopijuoti lentelę kaip CSV į iškarpinę (su pozicijomis)
+Copy the table as CSV to the clipboard	Nukopijuoti lentelę kaip CSV į iškarpinę

@@ -1,6 +1,7 @@
 // Radiosonde screens: the map with every sonde's track and a balloon marker, the table of sondes heard, the detail of the selected one
 // (all fields, altitude and temperature plots, calibration progress), the carriers the search found in the band, and the test signal options.
 #include "app.h"
+#include "ui/kit/export.h"
 #include "ui/kit/mode_panel.h"
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
@@ -163,6 +164,16 @@ void sondeTable(App& a, bool compact) {
     const SondeTelemetry& t = a.rx.sonde;
     const bool on = live(a);
     const int cols = compact ? 5 : 11;
+    {
+        static std::string note;
+        resexp::Table x; x.cols = {"serial", "type", "frequency_mhz", "lat", "lon", "alt_m", "vspeed_ms", "hspeed_ms", "heading_deg", "temp_c", "humidity", "pressure_hpa", "sats", "snr_db", "frames_ok", "frames_bad"};
+        if (on) for (const auto& s : t.sondes)
+            x.add({s.serial, s.type, s.freqHz > 0 ? resexp::num(s.freqHz / 1e6, 4) : "", s.hasPos ? resexp::num(s.lat, 6) : "", s.hasPos ? resexp::num(s.lon, 6) : "",
+                   s.hasPos ? resexp::num(s.altM, 0) : "", s.hasVel ? resexp::num(s.vSpeed, 1) : "", s.hasVel ? resexp::num(s.hSpeed, 1) : "", s.hasVel ? resexp::num(s.headingDeg, 0) : "",
+                   s.hasTemp ? resexp::num(s.tempC, 1) : "", s.hasHumidity ? resexp::num(s.humidity, 0) : "", s.hasPressure ? resexp::num(s.pressureHpa, 1) : "",
+                   s.sats >= 0 ? std::to_string(s.sats) : "", resexp::num(s.snrDb, 0), std::to_string(s.framesOk), std::to_string(s.framesBad)});
+        kit::exportBar(x, "sonde", note, compact ? "sdxs" : "sdxf");
+    }
     if (!ImGui::BeginTable(compact ? "##sd_s" : "##sd_f", cols, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("Type"); ImGui::TableSetupColumn("Serial"); ImGui::TableSetupColumn("Alt m");

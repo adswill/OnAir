@@ -1,5 +1,6 @@
 // APRS / Packet screens: the stations heard (table and map, the ADS-B map underneath, as for AIS), the log of raw packets, the state lamps.
 #include "app.h"
+#include "ui/kit/export.h"
 #include "ui/kit/mode_panel.h"
 #include "ui/kit/kit.h"
 #include "ui/kit/session_list.h"
@@ -136,6 +137,15 @@ void stationTable(App& a, bool compact) {
     const dect2::PacketTelemetry& t = a.rx.packet;
     const bool wide = wideActive(a);
     const int cols = (compact ? 2 : 5) + (wide && !compact ? 1 : 0);
+    {
+        static std::string note;
+        resexp::Table x; x.cols = {"callsign", "type", "symbol", "lat", "lon", "alt_m", "course_deg", "speed_kt", "via", "frames", "comment"};
+        for (const PacketStation& s : t.stations)
+            x.add({s.call, s.isObject ? "object" : "station", std::string(1, s.symTable ? s.symTable : ' ') + std::string(1, s.symCode ? s.symCode : ' '),
+                   s.hasPos ? resexp::num(s.lat, 6) : "", s.hasPos ? resexp::num(s.lon, 6) : "", s.hasAlt ? resexp::num(s.altM, 0) : "",
+                   s.hasCourse ? std::to_string(s.courseDeg) : "", s.hasSpeed ? resexp::num(s.speedKnots, 0) : "", s.via, std::to_string(s.count), s.comment});
+        kit::exportBar(x, "aprs", note, compact ? "pkxs" : "pkxf");
+    }
     ImGuiTableFlags fl = ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit;
     if (!ImGui::BeginTable(compact ? "##pk_s" : "##pk_f", cols, fl, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
