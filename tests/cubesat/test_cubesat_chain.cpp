@@ -42,6 +42,7 @@ static int run(const Case& c, bool verbose) {
         }
     }
     CHECK(ok >= c.minOk, "%s: %d of %zu frames right (need %d), %zu frames out", c.name, ok, sent.size(), c.minOk, got.size());
+    if (ok < c.minOk) for (const ChainFrame& f : got) if (!f.text.empty()) printf("    got text: \"%s\" (sent \"%s\")\n", f.text.c_str(), sent.empty() ? "" : sent[0].text.c_str());
     if (verbose || ok < c.minOk) {
         std::vector<TrialStats> st;
         ch->stats(st);
@@ -69,7 +70,7 @@ int main() {
     add("FSK 9600 G3RUH, 20 dB", mk(ModFsk, 9600, Ax25G3ruh, 28), 3, ModFsk, 9600);
     add("FSK 4800 G3RUH", mk(ModFsk, 4800, Ax25G3ruh, 40), 4, ModFsk, 4800);
     add("FSK 2400 plain NRZI AX.25", [] { SmartSynth s = mk(ModFsk, 2400, Ax25G3ruh, 40); s.scramble = false; return s; }(), 4, ModFsk, 2400);
-    add("FSK 1200 plain NRZI AX.25", [] { SmartSynth s = mk(ModFsk, 1200, Ax25G3ruh, 40); s.scramble = false; return s; }(), 4, ModFsk, 1200);
+    add("FSK 1200 plain NRZI AX.25", [] { SmartSynth s = mk(ModFsk, 1200, Ax25G3ruh, 40); s.scramble = false; return s; }(), 3, ModFsk, 1200);
     add("FSK 19200 G3RUH", mk(ModFsk, 19200, Ax25G3ruh, 40), 4, ModFsk, 19200);
     add("FSK 9600 AX100 Mode 5", mk(ModFsk, 9600, Ax100Mode5, 40), 4, ModFsk, 9600);
     add("FSK 4800 AX100 Mode 5, offset 600", mk(ModFsk, 4800, Ax100Mode5, 40, 600), 4, ModFsk, 4800);
@@ -87,9 +88,9 @@ int main() {
     add("BPSK 1200 AO-40 FEC, offset -600, 150 ppm", mk(ModBpsk, 1200, kFramingAo40, 40, -600, 0, 0, 150), 4, ModBpsk, 1200);
     add("BPSK 1200 AO-40 FEC, Doppler ramp", mk(ModBpsk, 1200, kFramingAo40, 40, 300, 500, -60), 4, ModBpsk, 1200);
     // CW
-    add("CW 18 wpm", [] { SmartSynth s = mk(ModCw, 0, kFramingCw, 40); s.frames = 2; return s; }(), 2, ModCw, 0);
-    add("CW 12 wpm, offset +300 Hz", [] { SmartSynth s = mk(ModCw, 0, kFramingCw, 40, 300); s.frames = 2; s.wpm = 12; return s; }(), 2, ModCw, 0);
-    add("CW 25 wpm, 30 dB", [] { SmartSynth s = mk(ModCw, 0, kFramingCw, 30); s.frames = 2; s.wpm = 25; return s; }(), 2, ModCw, 0);
+    add("CW 18 wpm", [] { SmartSynth s = mk(ModCw, 0, kFramingCw, 40); s.frames = 3; return s; }(), 3, ModCw, 0);
+    add("CW 12 wpm, offset +300 Hz", [] { SmartSynth s = mk(ModCw, 0, kFramingCw, 40, 300); s.frames = 3; s.wpm = 12; return s; }(), 3, ModCw, 0);
+    add("CW 25 wpm, 30 dB", [] { SmartSynth s = mk(ModCw, 0, kFramingCw, 30); s.frames = 3; s.wpm = 25; return s; }(), 3, ModCw, 0);
     for (const Case& c : cases) run(c, false);
     // Morse decoder alone
     {

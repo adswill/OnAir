@@ -3697,7 +3697,4 @@ Refresh orbits	Atnaujinti orbitas
 Downloading orbits from CelesTrak (the built-in set is used meanwhile).	Atsisiunčiamos orbitos iš CelesTrak (kol kas naudojamas įmontuotas rinkinys).
 Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.	Įrašo paketus į duomenų aplanką kaip SatNOGS paruoštą failą (viena telemetrijos įrašų eilutė), CSV ir KISS failą. Nieko neįkelia.
 Press the button: it does the rest.	Paspauskite mygtuką – likusį padarys pati programa.
-CW / OOK	CW / OOK
-AFSK	AFSK
-FSK / GMSK	FSK / GMSK
 BPSK	BPSK

@@ -14,6 +14,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <cstdio>
+#include <cstdlib>
 
 namespace dect2 {
 namespace cubesat {
@@ -324,6 +326,7 @@ public:
             sink(f);
         };
         ao40_.reset();
+        next_ = sps_ * 2;
     }
     int mod() const override { return ModBpsk; }
     int baud() const override { return baud_; }
@@ -467,7 +470,7 @@ public:
     int mod() const override { return ModCw; }
     int baud() const override { return 0; }
     double snrDb() const override { return snr_; }
-    void reset() override { lp_.reset(); buf_.clear(); runs_.clear(); ph_ = 0; f0_ = 0; env_ = 0; on_ = false; runLen_ = 0; pk_ = 0; nf_ = 0; state_ = 0; }
+    void reset() override { lp_.reset(); buf_.clear(); runs_.clear(); ph_ = 0; f0_ = 0; env_ = 0; on_ = false; runLen_ = 0; pk_ = 0; nf_ = 0; state_ = 0; warm_ = 0; }
     void process(const cf32* y, size_t n) override {
         dec_.clear();
         lp_.process(y, n, dec_);
@@ -490,11 +493,11 @@ private:
             for (int k = 0; k < 1024; k++) { m[(size_t)k] = std::norm(v[(size_t)k]); if (m[(size_t)k] > best) { best = m[(size_t)k]; bk = k; } }
             std::vector<float> s(m);
             std::nth_element(s.begin(), s.begin() + 512, s.end());
-            if (best > 12.f * (s[512] + 1e-20f)) {
+            if (best > 60.f * (s[512] + 1e-20f)) {
                 double cyc = (double)bk / 1024.0;
                 if (cyc >= 0.5) cyc -= 1.0;
                 const double f = cyc * kEnvRate;
-                f0_ = f0_ == 0 ? f : f0_ + 0.5 * (f - f0_);
+                f0_ = f0_ == 0 ? f : f0_ + 0.7 * (f - f0_);
             }
         }
         ph_ -= 2 * kPi * f0_ / kEnvRate;
@@ -504,11 +507,12 @@ private:
         zi_ += 0.2f * (z.imag() - zi_);
         const float e = std::sqrt(zr_ * zr_ + zi_ * zi_);
         env_ = e;
-        if (e > pk_) pk_ += 0.1f * (e - pk_); else pk_ -= 0.0004f * (pk_ - e);
-        if (e < nf_ || nf_ == 0) nf_ += 0.05f * (e - nf_); else nf_ += 0.0004f * (e - nf_);
+        if (e > pk_) pk_ += 0.1f * (e - pk_); else pk_ -= 0.00008f * (pk_ - e);
+        if (e < nf_ || nf_ == 0) nf_ += 0.05f * (e - nf_); else nf_ += 0.00003f * (e - nf_);
         const float thr = nf_ + 0.5f * (pk_ - nf_);
         snr_ = 20.0 * std::log10((pk_ + 1e-12) / (nf_ + 1e-12));
-        const bool keyed = pk_ > 4.f * nf_ && snr_ > 12;
+        if (warm_ < 1000) warm_++;
+        const bool keyed = warm_ >= 1000 && pk_ > 6.f * nf_ && snr_ > 15;
         if (!keyed) {
             if (!runs_.empty() && ++idle_ > (int)(3 * kEnvRate)) flush();
             if (runs_.empty()) { on_ = false; runLen_ = 0; }
@@ -532,6 +536,7 @@ private:
         runLen_ = 0; on_ = false; idle_ = 0;
         if (r.size() < 8) return;
         double unit = 0;
+        if (getenv("DECT2_CW_DEBUG")) { for (auto& q : r) fprintf(stderr, "%c%.3f ", q.first ? '#' : '_', q.second); fprintf(stderr, "\n"); }
         const std::string t = morseDecode(r, &unit);
         if (t.empty()) { heard_++; return; }
         valid_++;
@@ -548,14 +553,23 @@ private:
     double ph_ = 0, f0_ = 0, snr_ = 0;
     float zr_ = 0, zi_ = 0, env_ = 0, pk_ = 0, nf_ = 0;
     bool on_ = false;
-    int runLen_ = 0, idle_ = 0, state_ = 0;
+    int runLen_ = 0, idle_ = 0, state_ = 0, warm_ = 0;
     int64_t pos_ = 0;
     uint64_t heard_ = 0, valid_ = 0;
 };
 
 } // namespace
 
-std::string morseDecode(const std::vector<std::pair<bool, double>>& runs, double* unitOut) {
+std::string morseDecode(const std::vector<std::pair<bool, double>>& runsIn, double* unitOut) {
+    // an unkeyed carrier in front of the message is no dash: leading and trailing key-down runs of more than 1.5 s are dropped
+    std::vector<std::pair<bool, double>> runs;
+    for (const auto& r : runsIn) {          // key-down glitches under 15 ms are noise: they join the key-up time around them
+        const bool on = r.first && r.second >= 0.015;
+        if (!runs.empty() && runs.back().first == on) runs.back().second += r.second; else runs.emplace_back(on, r.second);
+    }
+    while (!runs.empty() && !runs.front().first) runs.erase(runs.begin());
+    while (!runs.empty() && runs.front().first && runs.front().second > 1.0) runs.erase(runs.begin());
+    while (!runs.empty() && runs.back().first && runs.back().second > 1.0) runs.pop_back();
     std::vector<double> on;
     for (const auto& r : runs) if (r.first) on.push_back(r.second);
     if (on.size() < 4) return "";

@@ -3718,7 +3718,4 @@ Refresh orbits	刷新轨道
 Downloading orbits from CelesTrak (the built-in set is used meanwhile).	正在从 CelesTrak 下载轨道（期间使用内置数据）。
 Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.	将数据包以 SatNOGS 可用文件（每行一条遥测记录）、CSV 和 KISS 文件写入数据文件夹。不会上传任何内容。
 Press the button: it does the rest.	按下按钮，其余全部自动完成。
-CW / OOK	CW / OOK
-AFSK	AFSK
-FSK / GMSK	FSK / GMSK
 BPSK	BPSK

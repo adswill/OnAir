@@ -3680,7 +3680,4 @@ Refresh orbits	Pályák frissítése
 Downloading orbits from CelesTrak (the built-in set is used meanwhile).	Pályák letöltése a CelesTrakról (addig a beépített készlet él).
 Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.	A csomagokat SatNOGS-kész fájlként (soronként egy telemetriarekord), CSV-ként és KISS-fájlként írja az adatmappába. Semmi nem kerül feltöltésre.
 Press the button: it does the rest.	Nyomja meg a gombot: a többit elintézi.
-CW / OOK	CW / OOK
-AFSK	AFSK
-FSK / GMSK	FSK / GMSK
 BPSK	BPSK

@@ -362,7 +362,7 @@ void advanced(App& a) {
     ch |= ImGui::InputDouble(tr("Lowest elevation (deg)##csm_el"), &S.cfg.minElDeg, 0, 0, "%.0f");
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.3f);
     ch |= ImGui::InputDouble(tr("Search window around the predicted carrier (Hz)##csm_sw"), &S.cfg.searchHz, 0, 0, "%.0f");
-    static const char* const kMods[] = {"automatic", "CW / OOK", "AFSK", "FSK / GMSK", "BPSK"};
+    static const char* const kMods[] = {N_("automatic"), "CW / OOK", "AFSK", "FSK / GMSK", "BPSK"};
     int m = S.cfg.forceMod >= 0 && S.cfg.forceMod <= ModBpsk ? S.cfg.forceMod : 0;
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.4f);
     if (ImGui::BeginCombo(tr("Modulation of unknown carriers##csm_mod"), tr(kMods[m]))) {

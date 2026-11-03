@@ -4,7 +4,9 @@
 // of the table overhead at a given time, its carrier found at the predicted place, named after the table.
 #include "dect2/cubesat/cubesat_smart.h"
 #include "dect2/cubesat/cubesat_smartgen.h"
+#include "../../core/src/cubesat/cubesat_blind.h"
 #include <cmath>
+#include <cstdlib>
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -35,7 +37,17 @@ int main() {
     addNoise(iq, (float)std::sqrt(kRate / 10e3 / std::pow(10.0, 3.0) / 2.0 / 3.0), 99);
     printf("%zu samples (%.1f s)\n", iq.size(), (double)iq.size() / kRate);
 
+    if (getenv("DECT2_SMART_DEBUG")) {
+        CarrierScan sc;
+        sc.minSnrDb = 8;
+        sc.configure(kRate);
+        for (size_t i = 0; i < iq.size(); i += 16384) {
+            sc.feed(iq.data() + i, std::min<size_t>(16384, iq.size() - i));
+            if ((i / 16384) % 400 == 399) { printf("t=%.1f noise %.1f:", (double)i / kRate, sc.noiseDb()); for (const ScanCarrier& c : sc.carriers()) printf(" [%.1f kHz w %.1f snr %.1f hits %d]", c.hz / 1e3, c.widthHz / 1e3, c.snrDb, c.hits); printf("\n"); }
+        }
+    }
     SmartCubesat sm;
+    sm.setLogCallback([](const std::string& s) { printf("  log: %s\n", s.c_str()); });
     SmartSettings cfg; cfg.usePasses = false; cfg.blind = true;
     sm.setSettings(cfg);
     sm.configure(kRate);

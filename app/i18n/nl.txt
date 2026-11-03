@@ -3693,7 +3693,4 @@ Refresh orbits	Banen verversen
 Downloading orbits from CelesTrak (the built-in set is used meanwhile).	Banen worden van CelesTrak gedownload (intussen wordt de ingebouwde set gebruikt).
 Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.	Schrijft de pakketten naar de gegevensmap als SatNOGS-klaar bestand (één telemetrierecord per regel), CSV en KISS-bestand. Er wordt niets geüpload.
 Press the button: it does the rest.	Druk op de knop: de rest gaat vanzelf.
-CW / OOK	CW / OOK
-AFSK	AFSK
-FSK / GMSK	FSK / GMSK
 BPSK	BPSK

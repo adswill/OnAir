@@ -226,7 +226,7 @@ struct SmartCubesat::Impl {
         } else {
             int n = 0;
             for (const Hyp& h : t.pr.hyps) {
-                if (h.score < t.pr.hyps.front().score - 40 || n >= 4) break;
+                if (h.score < t.pr.hyps.front().score - 70 || n >= 6) break;
                 addChainFor(t, h.mod, h.baud);
                 n++;
             }

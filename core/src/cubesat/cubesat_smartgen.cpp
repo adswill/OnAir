@@ -149,7 +149,7 @@ std::vector<cf32> smartSynth(const SmartSynth& s, std::vector<SynthSent>* sent) 
             std::string m = s.text.empty() ? "DE " + s.callsign + " " + std::to_string(100 + fi) : s.text;
             ss.framing = kFramingCw; ss.text = m;
             ss.data.assign(m.begin(), m.end());
-            carrier(s, 0.5, true, out, phase, t);                    // an unkeyed carrier first
+            carrier(s, 1.0, false, out, phase, t);
             burstCw(s, morseRuns(m, s.wpm), out, phase, t);
             carrier(s, 3.0, false, out, phase, t);
             if (sent) sent->push_back(ss);

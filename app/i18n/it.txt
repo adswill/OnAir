@@ -3676,7 +3676,4 @@ Refresh orbits	Aggiorna orbite
 Downloading orbits from CelesTrak (the built-in set is used meanwhile).	Scarico delle orbite da CelesTrak (nel frattempo si usa il set incorporato).
 Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.	Scrive i pacchetti nella cartella dati come file pronto per SatNOGS (un record di telemetria per riga), CSV e file KISS. Non viene caricato nulla.
 Press the button: it does the rest.	Premi il pulsante: fa tutto il resto.
-CW / OOK	CW / OOK
-AFSK	AFSK
-FSK / GMSK	FSK / GMSK
 BPSK	BPSK

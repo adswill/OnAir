@@ -50,10 +50,12 @@ modulation and baud rate override for unknown carriers (any value), channel widt
 | AO-40 FEC | the real FUNcube recording of the gr-satellites tests (`tests/data/ao40`): symbols, frame window, frame; also encode/decode, noise, hunter in both polarities | passes |
 | FUNcube telemetry | the frame decoded from that recording: AO-73, WO10, battery 8140 mV | passes |
 | table and passes | 850 passes above 10 degrees in 12 h for Vilnius, Doppler +-10 kHz at 436 MHz | passes |
-| chains | `test_cubesat_chain`: synthetic bursts at 96 kHz with offset, Doppler ramp, clock error, noise, one case per modulation and framing | see PATHWAY entry for the run on CI |
-| controller | `test_cubesat_smart`: three carriers in a 960 kHz capture, blind | see PATHWAY |
-| sensitivity | `test_cubesat_sens` prints the floor of each chain | see PATHWAY |
+| chains | `test_cubesat_chain`, 24 cases: synthetic bursts at 96 kHz (FSK 1200 to 19200, AFSK, BPSK 1200 / 9600 with AX.25 / AO-40, CW 12 to 25 wpm; Mode 5, Mode 6, CCSDS, text) with offsets up to 1.5 kHz, Doppler ramps, 300 ppm clock error, noise | all pass (macOS arm64 local, 2026-11-03) |
+| controller | `test_cubesat_smart`: FSK 9600 with a Doppler ramp, BPSK 1200 AO-40 with 100 ppm and CW in one 960 kHz capture, blind: scan, classifier, chains, telemetry | passes (local); the classifier names the BPSK 1200 carrier "BPSK 2400" first, the AO-40 chain that runs beside it still decodes |
+| sensitivity | `test_cubesat_sens`, carrier to noise in 10 kHz where 2 of 3 trials decode 3 of 4 frames, 2 dB steps: AFSK 1200 16 dB, FSK 9600 G3RUH 20, FSK 4800 G3RUH 22, GMSK 9600 AX100 Mode 5 16, BPSK 1200 AX.25 0, BPSK 1200 AO-40 FEC -2 (lowest tested), CW 18 wpm 0 | measured on the synthetic generator only |
 | real satellites | **never**: no pass has been recorded; every signal above is synthetic | not verified |
+
+Known weaknesses: the CW keying detector needs about 0.5 s to warm up and loses the first characters of a message that starts right then; the classifier's baud estimate is coarse (the demodulators are run for several candidates, the framing check decides); the FSK chains have no AFC (a carrier offset above about 1.5 kHz is lost); no LoRa, no CCSDS concatenated framing.
 
 The synthetic generator (`cubesat_smartgen.*`) shapes pulses with a Gaussian filter and mixes in offsets and noise; a real transmitter's pulse shape,
 phase noise and Doppler rate will differ. Treat the sensitivity numbers as properties of this receiver on this generator.

@@ -401,7 +401,7 @@ ProbeResult classifyCarrier(const std::vector<cf32>& y, int forceMod, int forceB
         if (bestd > 0.08) mskBaud = 0;
     }
     if (mskBaud) add(ModFsk, mskBaud, 55 + r.mskDb * 0.4);
-    for (size_t i = 0; i < std::min<size_t>(3, fskR.size()); i++) if (fskR[i].second > 3.5 && !(bpsk && r.bpskDb > 25.0)) {
+    for (size_t i = 0; i < std::min<size_t>(3, fskR.size()); i++) if (fskR[i].second > 3.0) {
         bool dup = false;
         for (const Hyp& h : r.hyps) if (h.mod == ModFsk && h.baud == fskR[i].first) dup = true;
         if (!dup) add(ModFsk, fskR[i].first, 20 + fskR[i].second - (double)i * 6);

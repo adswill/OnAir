@@ -3695,7 +3695,4 @@ Refresh orbits	軌道を更新
 Downloading orbits from CelesTrak (the built-in set is used meanwhile).	CelesTrakから軌道をダウンロード中（それまで内蔵データを使用）。
 Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.	パケットを SatNOGS 用ファイル（1行に1件のテレメトリ）、CSV、KISS ファイルとしてデータフォルダーに書き出します。アップロードはされません。
 Press the button: it does the rest.	ボタンを押すだけで、あとは自動です。
-CW / OOK	CW / OOK
-AFSK	AFSK
-FSK / GMSK	FSK / GMSK
 BPSK	BPSK
