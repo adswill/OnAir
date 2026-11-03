@@ -19,6 +19,7 @@ inline const char* const kDecoding = "Decoding";
 inline const char* const kLocation = "Location";
 inline const char* const kNetwork = "Network and updates";
 inline const char* const kPrivacy = "Privacy";
+inline const char* const kPlugins = "Plug-ins and scripts";
 inline const char* const kAdvanced = "Advanced";
 
 inline const std::vector<Info>& table() {
@@ -103,6 +104,9 @@ inline const std::vector<Info>& table() {
         // ---- Privacy
         {"privacyInfo", kPrivacy, "What leaves this computer", "The update check (when on) sends one HTTPS request to api.github.com, or to your mirror, with the header User-Agent: OnAir/<version>. GitHub therefore sees your IP address and the app version, nothing else. Sending your station to the map server and the Discord status are opt-in and off until you turn them on.", "telemetry network data sent", K::Custom},
         // ---- Advanced
+        // ---- Plug-ins and scripts
+        {"pluginsLink", kPlugins, N_("Plug-ins"), N_("Add your own decoders as plug-ins (a native library plus a manifest). Plug-ins are listed in the mode list under PLUGINS. They run native code with this program's rights: install only ones you trust."), "plugin sdk decoder extension safe mode", K::Link},
+        {"automationLink", kPlugins, N_("Scripts and rules"), N_("Run a program or script when something is decoded, with the decoded fields in its arguments. Off until you tick Allow running programs in Automations."), "automation script hook run command webhook rules", K::Link},
         {"saveLog", kAdvanced, "Save the log", "Write the log lines of this run to a text file in the data folder.", "verbose debug crash report", K::Custom},
         {"exportImport", kAdvanced, "Export or import settings", "Write all these settings to a file, or read them back.", "backup config", K::Custom},
         {"resetAll", kAdvanced, "Reset every setting", "Put every setting of this window back to its default.", "factory", K::Custom},
