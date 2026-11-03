@@ -43,6 +43,7 @@ static void applyIqFileInfo(App& a, const std::string& path) {
     a.file.offsetBytes = info.offsetBytes; a.file.endBytes = info.endBytes;
     if (info.sampleRate > 0) a.file.sampleRate = info.sampleRate;
     const double nameCentre = info.centerHz > 0 ? 0.0 : filevfo::guessCentreHz(path);   // a header without a frequency: the name may carry it
+    restoreRecordingMode(a, info.description, path);   // the mode it was made in (before the centre: a mode change resets the frequency)
     if (info.centerHz > 0) a.freqMhz = info.centerHz / 1e6;
     else if (nameCentre > 0) a.freqMhz = nameCentre / 1e6;
     a.engine.log("IQ file: " + std::to_string(info.sampleRate / 1e6) + " Msps, " + std::to_string(info.centerHz / 1e6) + " MHz" + (info.description.empty() ? "" : ", " + info.description));

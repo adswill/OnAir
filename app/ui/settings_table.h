@@ -77,7 +77,7 @@ inline const std::vector<Info>& table() {
         {"popTop", kAudioC, "Video pop-out stays on top", "The pop-out video window stays above other windows.", "window", K::Bool, 1},
         {"subsOn", kAudioC, "Show subtitles", "Subtitles of the video modes, when the station sends them.", "teletext captions", K::Bool, 1},
         // ---- Recording and files
-        {"recFormat", kFiles, "IQ recording format", "8-bit (small), float (exact) or X-Midas BLUE .tmp with float samples.", "iq record file", K::Choice, 0, 0, 0, "8-bit|Float|X-Midas BLUE (.tmp)"},
+        {"recFormat", kFiles, "IQ recording format", "8-bit (small), float (exact) or X-Midas BLUE .tmp with float samples.", "iq record file", K::Choice, 0, 0, 0, "8-bit|Float|X-Midas BLUE (.tmp)|16-bit"},
         {"dataFolder", kFiles, "Data folder", "Where recordings, layouts and settings live.", "folder directory path open", K::Custom},
         // ---- Decoding
         {"fmMono", kDecoding, "FM: force mono", "A weak station is quieter in mono.", "stereo", K::Bool, 0},

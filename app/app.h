@@ -500,7 +500,7 @@ struct App {
     std::string monDev, monDev2; bool monOut2 = false; float monVol2 = 1.f; double monOffset = 0;
     bool monNet = false; int monPort = 7355; bool monBindAll = false, monWav = true;
     bool audioRecWasActive = false; int audioRecMode = 0; double audioRecFreq = 0; std::string audioRecDonePath;
-    int recFormat = 0;                  // IQ recording format: 0 = 8-bit, 1 = float, 2 = X-Midas BLUE .tmp with float samples (pref "recFormat")
+    int recFormat = 0;                  // IQ recording format: 0 = 8-bit, 1 = float, 2 = X-Midas BLUE .tmp with float samples, 3 = 16-bit (pref "recFormat")
     int tvBufMb = 256;                  // TV live buffer for Pause (pref "tvBufMb")
     // HD / SD simulcast (core/src/tv/hd_pair.h): the services of the scanned multiplexes (prefs "tvCatalog"), the user's pairing table ("tvHdPairs"), the per-programme
     // choice ("tvHdChoice": programme key -> 1 HD, 0 SD) and "always prefer HD" ("tvHdAlways")
@@ -881,6 +881,10 @@ const char* fmtKbps(char* b, size_t n, double k);
 void qualityBar(App& a, float width);
 // app_state.cpp
 void setFamily(App& a, int f);                 // a family with protocol entries opens on its first one
+// A replayed recording puts the receiver back in the mode it was made in: the mode id in the SigMF description (or the "onair_<id>_" file name).
+// Returns the id restored, "" when it names no mode (or DVB, which is T or T2) and the mode stays as it is. Never while the receiver runs.
+std::string restoreRecordingMode(App& a, const std::string& description, const std::string& path);
+int recFileFormatOf(int recFormat);             // IQ recording choice -> dect2::FileFormat as int (8-bit CS8, 16-bit CI16, float CF32; BLUE is float)
 void setMode(App& a, int f, int sub);          // a mode-list entry: family and protocol entry (0 none, or the family's first)
 const dect2::SubMode* curSub(const App& a);    // the protocol entry selected, nullptr for a mode without them
 int subIndexOf(const char* id);                // 1 .. kNumSubModes, 0 when not one

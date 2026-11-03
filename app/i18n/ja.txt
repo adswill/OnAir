@@ -3686,3 +3686,6 @@ Calls %llu, followed %llu, retune %.2f s (max %.2f s)	通話 %llu、追跡 %llu�
 Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	優先度は1（最高）から10、0は無し。優先度の高いトークグループは低いものから無線機を奪います。
 From, to (the same number for one), action, priority	開始、終了（1つなら同じ番号）、動作、優先度
 System, identifier table (iden_up) and channel numbers from a CSV file	システム、識別子テーブル (iden_up)、チャンネル番号をCSVから
+16-bit	16-bit
+Share##rec	Share##rec
+Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.	Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.

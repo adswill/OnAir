@@ -72,7 +72,7 @@ PrefKey rx1(PrefKey p) { p.rx1Load = true; return p; }
 
 int fixDtmbBw(int v) { return v == 6 ? 6 : 8; }
 int fixIsdbtBw(int v) { return v == 0 || v == 7 || v == 8 ? v : 6; }
-int fixRegion(int v) { return v == 1 || v == 2 ? v : 0; }
+int fixRegion(int v) { return v >= 1 && v <= 3 ? v : 0; }
 int fixDeemph(int v) { return v == 75 ? 75 : v == 0 ? 0 : 50; }   // 0: off
 int fixAudioBw(int v) { return v == 12000 || v == 8000 || v == 5000 ? v : 0; }
 int fixChanKhz(int v) { return v > 0 ? std::max(10, v) : 0; }   // (3.4: any manual width; the slider runs 100 - 300 kHz, a typed one goes beyond)

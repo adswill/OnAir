@@ -3685,3 +3685,6 @@ Calls %llu, followed %llu, retune %.2f s (max %.2f s)	Połączeń %llu, śledzon
 Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	Priorytet od 1 (najwyższy) do 10, 0 brak. Grupa o wyższym priorytecie zabiera radio niższej.
 From, to (the same number for one), action, priority	Od, do (ten sam numer dla jednej), akcja, priorytet
 System, identifier table (iden_up) and channel numbers from a CSV file	System, tabela identyfikatorów (iden_up) i numery kanałów z pliku CSV
+16-bit	16-bit
+Share##rec	Share##rec
+Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.	Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.

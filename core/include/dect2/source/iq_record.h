@@ -26,6 +26,8 @@ struct RecordingStats {
 
 // "onair_dvb_554.000MHz_10Msps_20261009-071530.cs8": guessSampleRate() and guessFormat() read the rate and the format back from it
 std::string recordingFileName(const std::string& modeId, double centerHz, double rateHz, FileFormat fmt);
+// The engine standard a recording's mode id names ("fm" 7, "ale" ...), -1 for "dvb" (T or T2), "iq" and unknown ids: replay restores the mode from it
+int recordingStdMode(const std::string& modeId);
 // The short name of an engine standard as used in recording names ("dvb", "fm", "dab", ...)
 std::string recordingModeId(int stdMode);
 // The same name with the BLUE extension ("...Msps_<stamp>.tmp"): the recorder writes an X-Midas BLUE file for it
@@ -51,7 +53,7 @@ public:
     // SigMF metadata (<name>.sigmf-meta next to the recording, and <name>.sigmf-data as a hard link to the same data so that IQEngine pairs them) for the next start()
     // description: the sidecar's description (the mode id the recording was made in, read back by the recording library)
     void setSigmf(bool on, double centerHz = 0, std::string description = "") { sigmf_ = on; centerHz_ = centerHz; sigmfDesc_ = std::move(description); }
-    // Opens the file (creating its folder) and starts the writer thread. Only CS8 and CF32 can be recorded.
+    // Opens the file (creating its folder) and starts the writer thread. CS8, CI16 (16-bit) and CF32 can be recorded.
     // A path ending .tmp / .blue / .prm is written as an X-Midas BLUE file (bluefile.h: complex int8 / float32, rate and centre in the header
     // and keywords); no SigMF files are made for it.
     bool start(const std::string& path, FileFormat fmt, double rateHz, std::string& err);
