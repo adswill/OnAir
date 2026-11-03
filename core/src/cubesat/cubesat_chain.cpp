@@ -304,7 +304,8 @@ public:
         lp_.design(dmr::lowpassTaps(pass, std::min(stop, fsd_ * 0.49), kFs, 45, 9), D_);
         const double th = 0.02, z = 0.707, d = 1.0 + 2 * z * th + th * th;
         alpha_ = (float)(4 * z * th / d); beta_ = (float)(4 * th * th / d);
-        sq_.reserve(kAfc);
+        kAfc = fsd_ >= 40000 ? 2048 : 4096;     // 43 ms at 9600 baud, 85 ms at 1200
+        sq_.reserve((size_t)kAfc);
         fft_ = std::make_unique<Fft>(kAfc);
         hdlcN_.setCallback([this](const std::vector<uint8_t>& d, bool ok) { outN_.onHdlc(d, ok, pos_, "AX.25 NRZI (BPSK)", Ax25G3ruh); });
         hdlcG_.setCallback([this](const std::vector<uint8_t>& d, bool ok) { outG_.onHdlc(d, ok, pos_, "AX.25 G3RUH (BPSK)", Ax25G3ruh); });
@@ -352,7 +353,7 @@ public:
         out.push_back({b + "ASCII text", ModBpsk, baud_, 0, texts_});
     }
 private:
-    static constexpr int kAfc = 4096;
+    int kAfc = 4096;
     void one(const cf32& x) {
         // coarse carrier: the square of a BPSK signal is a line at twice the offset
         sq_.push_back(x * x);
@@ -511,8 +512,8 @@ private:
         if (e < nf_ || nf_ == 0) nf_ += 0.05f * (e - nf_); else nf_ += 0.00003f * (e - nf_);
         const float thr = nf_ + 0.5f * (pk_ - nf_);
         snr_ = 20.0 * std::log10((pk_ + 1e-12) / (nf_ + 1e-12));
-        if (warm_ < 1000) warm_++;
-        const bool keyed = warm_ >= 1000 && pk_ > 6.f * nf_ && snr_ > 15;
+        if (warm_ < 500) warm_++;
+        const bool keyed = warm_ >= 500 && pk_ > 6.f * nf_ && snr_ > 15;
         if (!keyed) {
             if (!runs_.empty() && ++idle_ > (int)(3 * kEnvRate)) flush();
             if (runs_.empty()) { on_ = false; runLen_ = 0; }

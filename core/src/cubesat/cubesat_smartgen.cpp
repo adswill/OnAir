@@ -149,7 +149,7 @@ std::vector<cf32> smartSynth(const SmartSynth& s, std::vector<SynthSent>* sent) 
             std::string m = s.text.empty() ? "DE " + s.callsign + " " + std::to_string(100 + fi) : s.text;
             ss.framing = kFramingCw; ss.text = m;
             ss.data.assign(m.begin(), m.end());
-            carrier(s, 1.0, false, out, phase, t);
+            carrier(s, 1.5, false, out, phase, t);
             burstCw(s, morseRuns(m, s.wpm), out, phase, t);
             carrier(s, 3.0, false, out, phase, t);
             if (sent) sent->push_back(ss);
@@ -174,7 +174,7 @@ std::vector<cf32> smartSynth(const SmartSynth& s, std::vector<SynthSent>* sent) 
             std::vector<uint8_t> bytes;
             if (s.framing == Ax100Mode6) { ss.data = csp("mode 6 telemetry " + std::to_string(fi) + " " + s.callsign); bytes = ax100Mode6Encode(ss.data); }
             else { bytes = ax25bytes(">" + txt); ss.data.assign(bytes.begin(), bytes.end() - 2); ss.text = txt; }
-            const int pre = baud >= 4800 ? 60 : s.mod == ModBpsk ? 80 : 40;
+            const int pre = s.mod == ModBpsk ? (baud >= 4800 ? 150 : 80) : baud >= 4800 ? 60 : 40;
             std::vector<uint8_t> nrzi = ax25::nrziEncode(ax25::hdlcBits(bytes, pre, 6));
             levels = s.scramble || s.framing == Ax100Mode6 ? ax25::scramble(nrzi, scr) : nrzi;
             break;
