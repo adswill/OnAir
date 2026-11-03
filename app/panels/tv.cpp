@@ -67,7 +67,7 @@ std::string tvRecordingPath(const std::string& service) {
     char ts[32];
     std::strftime(ts, sizeof ts, "%Y%m%d_%H%M%S", std::localtime(&now));
     std::error_code ec;
-    const std::string dir = plat::dataDir() + "/recordings";
+    const std::string dir = recordingsDir();
     std::filesystem::create_directories(dect2::u8file(dir), ec);
     return dir + "/" + name + "_" + ts + ".ts";
 }

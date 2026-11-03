@@ -3747,3 +3747,12 @@ copied	kopiert
 rows	Zeilen
 Copy the table as CSV to the clipboard (positions included)	Tabelle als CSV in die Zwischenablage kopieren (mit Positionen)
 Copy the table as CSV to the clipboard	Tabelle als CSV in die Zwischenablage kopieren
+Open recordings folder	Aufnahmeordner öffnen
+Where recordings are saved. Change it in Settings > Files.	Hier werden Aufnahmen gespeichert. Ändern unter Einstellungen > Dateien.
+Recordings folder	Aufnahmeordner
+Where recordings (IQ, audio, images, logs) are saved. Choose your own folder; default is inside the data folder.	Wo Aufnahmen (IQ, Audio, Bilder, Protokolle) gespeichert werden. Eigenen Ordner wählen; Standard ist im Datenordner.
+Free disk space:	Freier Speicherplatz:
+Default (inside the data folder)	Standard (im Datenordner)
+Choose...	Auswählen...
+Use typed path	Eingegebenen Pfad verwenden
+That folder cannot be written: the default is used.	In diesen Ordner kann nicht geschrieben werden: der Standard wird verwendet.

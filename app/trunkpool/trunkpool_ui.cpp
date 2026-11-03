@@ -121,7 +121,7 @@ State S;
 
 std::string accessFile() { return plat::dataDir() + "/trunkpool_access.csv"; }
 std::string planFile() { return plat::dataDir() + "/trunkpool_plan.csv"; }
-std::string recordDir() { return plat::dataDir() + "/recordings/trunk"; }
+std::string recordDir() { return recordingsDir() + "/trunk"; }
 
 std::string readAll(const std::string& p) {
     std::ifstream f(std::filesystem::u8path(p), std::ios::binary);
@@ -309,6 +309,7 @@ void drawAdvanced(App& a) {
     if (ImGui::SliderFloat(tr("Retune wait (s)##tp_setup"), &setup, 0.5f, 10.f, "%.1f")) { c.maxSetupSec = setup; changed = true; }
     if (ImGui::Checkbox(tr("Priority talkgroups take a radio##tp_pre"), &c.preempt)) changed = true;
     if (ImGui::Checkbox(tr("Keep a record of every call##tp_rec"), &c.record)) changed = true;
+    ImGui::SameLine(); kit::folderButton("tprec", recordDir());
     bool all = p.access.allowByDefault;
     if (ImGui::Checkbox(tr("Follow talkgroups that are not listed##tp_all"), &all)) { p.access.allowByDefault = all; changed = true; }
     if (changed) { p.setConfig(c); saveCfg(); }

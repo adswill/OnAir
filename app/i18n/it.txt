@@ -3718,3 +3718,12 @@ copied	copiate
 rows	righe
 Copy the table as CSV to the clipboard (positions included)	Copia la tabella come CSV negli appunti (posizioni incluse)
 Copy the table as CSV to the clipboard	Copia la tabella come CSV negli appunti
+Open recordings folder	Apri la cartella delle registrazioni
+Where recordings are saved. Change it in Settings > Files.	Dove vengono salvate le registrazioni. Si cambia in Impostazioni > File.
+Recordings folder	Cartella delle registrazioni
+Where recordings (IQ, audio, images, logs) are saved. Choose your own folder; default is inside the data folder.	Dove vengono salvate le registrazioni (IQ, audio, immagini, log). Scegli la tua cartella; di default è nella cartella dei dati.
+Free disk space:	Spazio libero su disco:
+Default (inside the data folder)	Predefinita (nella cartella dei dati)
+Choose...	Scegli...
+Use typed path	Usa il percorso digitato
+That folder cannot be written: the default is used.	Impossibile scrivere in quella cartella: viene usata quella predefinita.

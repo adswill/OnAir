@@ -3730,3 +3730,12 @@ copied	コピーしました
 rows	行
 Copy the table as CSV to the clipboard (positions included)	表をCSVとしてクリップボードにコピー(位置を含む)
 Copy the table as CSV to the clipboard	表をCSVとしてクリップボードにコピー
+Open recordings folder	録音フォルダを開く
+Where recordings are saved. Change it in Settings > Files.	録音の保存先です。設定 > ファイルで変更できます。
+Recordings folder	録音フォルダ
+Where recordings (IQ, audio, images, logs) are saved. Choose your own folder; default is inside the data folder.	録音(IQ、音声、画像、ログ)の保存先。好きなフォルダを選べます。既定はデータフォルダ内です。
+Free disk space:	ディスクの空き容量:
+Default (inside the data folder)	既定(データフォルダ内)
+Choose...	選択...
+Use typed path	入力したパスを使う
+That folder cannot be written: the default is used.	このフォルダには書き込めません。既定のフォルダを使います。

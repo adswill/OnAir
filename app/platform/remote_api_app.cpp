@@ -203,8 +203,8 @@ struct Host : RemoteApiHost {
             if (a.engine.recordingStats().active) { e = "already recording"; return false; }
             const dect2::FileFormat f = (dect2::FileFormat)recFileFormatOf(a.recFormat);
             std::error_code ec;
-            std::filesystem::create_directories(plat::dataDir() + "/recordings", ec);
-            if (!a.engine.startRecording(plat::dataDir() + "/recordings/" + a.engine.recordingName(f), f, e)) return false;
+            std::filesystem::create_directories(recordingsDir(), ec);
+            if (!a.engine.startRecording(recordingsDir() + "/" + a.engine.recordingName(f), f, e)) return false;
             a.recDonePath.clear();
             return true;
         }, err);

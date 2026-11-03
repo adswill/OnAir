@@ -3736,3 +3736,12 @@ copied	skopiowano
 rows	wierszy
 Copy the table as CSV to the clipboard (positions included)	Skopiuj tabelę jako CSV do schowka (z pozycjami)
 Copy the table as CSV to the clipboard	Skopiuj tabelę jako CSV do schowka
+Open recordings folder	Otwórz folder nagrań
+Where recordings are saved. Change it in Settings > Files.	Tutaj zapisywane są nagrania. Zmiana: Ustawienia > Pliki.
+Recordings folder	Folder nagrań
+Where recordings (IQ, audio, images, logs) are saved. Choose your own folder; default is inside the data folder.	Gdzie zapisywane są nagrania (IQ, dźwięk, obrazy, logi). Wybierz własny folder; domyślnie jest w folderze danych.
+Free disk space:	Wolne miejsce na dysku:
+Default (inside the data folder)	Domyślny (w folderze danych)
+Choose...	Wybierz...
+Use typed path	Użyj wpisanej ścieżki
+That folder cannot be written: the default is used.	Nie można zapisać w tym folderze: używany jest domyślny.

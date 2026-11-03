@@ -3720,3 +3720,12 @@ copied	скопировано
 rows	строк
 Copy the table as CSV to the clipboard (positions included)	Скопировать таблицу как CSV в буфер обмена (с позициями)
 Copy the table as CSV to the clipboard	Скопировать таблицу как CSV в буфер обмена
+Open recordings folder	Открыть папку записей
+Where recordings are saved. Change it in Settings > Files.	Здесь сохраняются записи. Изменить: Настройки > Файлы.
+Recordings folder	Папка записей
+Where recordings (IQ, audio, images, logs) are saved. Choose your own folder; default is inside the data folder.	Куда сохраняются записи (IQ, звук, изображения, журналы). Выберите свою папку; по умолчанию она внутри папки данных.
+Free disk space:	Свободно на диске:
+Default (inside the data folder)	По умолчанию (внутри папки данных)
+Choose...	Выбрать...
+Use typed path	Использовать введённый путь
+That folder cannot be written: the default is used.	В эту папку нельзя писать: используется папка по умолчанию.

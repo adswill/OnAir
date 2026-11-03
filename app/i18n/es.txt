@@ -3735,3 +3735,12 @@ copied	copiadas
 rows	filas
 Copy the table as CSV to the clipboard (positions included)	Copiar la tabla como CSV al portapapeles (con posiciones)
 Copy the table as CSV to the clipboard	Copiar la tabla como CSV al portapapeles
+Open recordings folder	Abrir la carpeta de grabaciones
+Where recordings are saved. Change it in Settings > Files.	Dónde se guardan las grabaciones. Cámbielo en Ajustes > Archivos.
+Recordings folder	Carpeta de grabaciones
+Where recordings (IQ, audio, images, logs) are saved. Choose your own folder; default is inside the data folder.	Dónde se guardan las grabaciones (IQ, audio, imágenes, registros). Elija su propia carpeta; por defecto está dentro de la carpeta de datos.
+Free disk space:	Espacio libre en disco:
+Default (inside the data folder)	Predeterminada (dentro de la carpeta de datos)
+Choose...	Elegir...
+Use typed path	Usar la ruta escrita
+That folder cannot be written: the default is used.	No se puede escribir en esa carpeta: se usa la predeterminada.

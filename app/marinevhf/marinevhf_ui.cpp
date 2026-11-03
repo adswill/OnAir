@@ -69,7 +69,7 @@ void load() {
     S.dwell = (float)d.getD("mvDwell", 0.4); S.hang = (float)d.getD("mvHang", 2.0);
     S.scanList = d.getS("mvScanList", "16,6,9,12,13,14,67,68,69,71,72,73,74,77");
     S.listen = d.getS("mvListen", "");
-    const std::string dir = d.getS("mvRecDir", plat::dataDir() + "/audio-recordings/marine-vhf");
+    const std::string dir = d.getS("mvRecDir", recordingsSub("audio-recordings") + "/marine-vhf");
     snprintf(S.recDir, sizeof S.recDir, "%s", dir.c_str());
 }
 
@@ -242,6 +242,7 @@ void controls(App& a) {
     }
     flowNext(10 * gUi);
     if (ImGui::Checkbox("Record##mvrec", &S.rec)) save();
+    ImGui::SameLine(); kit::recordingsButton("mv", "audio-recordings/marine-vhf");
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "One WAV file per transmission, for every channel of the span: time, channel and frequency in the name.");
     if (S.rec) {
         ImGui::SameLine(0, 5 * gUi);

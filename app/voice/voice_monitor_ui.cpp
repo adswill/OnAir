@@ -129,7 +129,7 @@ std::string recordFolder(const vm::Monitor& m) {
 void load() {
     if (S.loaded) return;
     S.loaded = true;
-    vm::setDefaultRecordDir(plat::dataDir() + "/voice-recordings");
+    vm::setDefaultRecordDir(recordingsSub("voice-recordings"));
     std::ifstream f(settingsPath(), std::ios::binary);
     if (!f) return;
     std::stringstream ss; ss << f.rdbuf();

@@ -3712,3 +3712,12 @@ copied	copiadas
 rows	linhas
 Copy the table as CSV to the clipboard (positions included)	Copiar a tabela como CSV para a área de transferência (com posições)
 Copy the table as CSV to the clipboard	Copiar a tabela como CSV para a área de transferência
+Open recordings folder	Abrir a pasta de gravações
+Where recordings are saved. Change it in Settings > Files.	Onde as gravações são guardadas. Altere em Definições > Ficheiros.
+Recordings folder	Pasta de gravações
+Where recordings (IQ, audio, images, logs) are saved. Choose your own folder; default is inside the data folder.	Onde as gravações (IQ, áudio, imagens, registos) são guardadas. Escolha a sua pasta; por defeito fica na pasta de dados.
+Free disk space:	Espaço livre no disco:
+Default (inside the data folder)	Predefinida (dentro da pasta de dados)
+Choose...	Escolher...
+Use typed path	Usar o caminho escrito
+That folder cannot be written: the default is used.	Não é possível escrever nessa pasta: é usada a predefinida.

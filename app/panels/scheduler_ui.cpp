@@ -83,7 +83,7 @@ std::string modeNameOf(const std::string& key) {
     const int i = key.empty() ? -1 : scanModeIndex(key);
     return i >= 0 ? kModes[i].name : key;
 }
-std::string recordingsDir() { return plat::dataDir() + "/recordings"; }
+// recordingsDir(): app/state/recdir.h
 
 // The App as the scheduler's radio.
 struct AppHost : sd::Host {

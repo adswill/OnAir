@@ -117,7 +117,7 @@ void apply(App& a) {
     if (S.appliedRec != (int)S.record) {
         std::string folder;
         if (S.record) {
-            folder = plat::dataDir() + "/recordings";
+            folder = recordingsDir();
             std::error_code ec;
             std::filesystem::create_directories(std::filesystem::path(folder), ec);
         }
@@ -156,6 +156,7 @@ void voiceStrip(App& a) {
     ImGui::SameLine();
     ImGui::Checkbox("Record calls##tpol", &S.record);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("One WAV per clear call in the recordings folder (date and time in the name, no numbers)");
+    ImGui::SameLine(); kit::recordingsButton("tpol");
     if (!t.wavPath.empty()) { ImGui::SameLine(); ImGui::TextDisabled("recording %s", t.wavPath.c_str()); }
     ImGui::TextDisabled("%s", t.voiceStatus.empty() ? "no call" : t.voiceStatus.c_str());
 }

@@ -461,3 +461,12 @@ custom
 default
 How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.
 Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.
+Open recordings folder
+Where recordings are saved. Change it in Settings > Files.
+Recordings folder
+Where recordings (IQ, audio, images, logs) are saved. Choose your own folder; default is inside the data folder.
+Free disk space:
+Default (inside the data folder)
+Choose...
+Use typed path
+That folder cannot be written: the default is used.
