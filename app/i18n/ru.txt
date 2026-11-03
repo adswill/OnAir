@@ -3728,8 +3728,6 @@ grey	серый
 Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.	Изображения, переданные в потоке MFSK (Shortwave Radiogram), появляются здесь по мере приёма.
 Open recordings folder	Открыть папку записей
 Where recordings are saved. Change it in Settings > Files.	Здесь сохраняются записи. Изменить: Настройки > Файлы.
-Recordings folder	Папка записей
-Where recordings (IQ, audio, images, logs) are saved. Choose your own folder; default is inside the data folder.	Куда сохраняются записи (IQ, звук, изображения, журналы). Выберите свою папку; по умолчанию она внутри папки данных.
 Free disk space:	Свободно на диске:
 Default (inside the data folder)	По умолчанию (внутри папки данных)
 Choose...	Выбрать...

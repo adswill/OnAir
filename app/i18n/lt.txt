@@ -3758,8 +3758,6 @@ grey	pilka
 Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.	MFSK sraute siunčiami paveikslėliai (Shortwave Radiogram) čia rodomi jiems atkeliaujant.
 Open recordings folder	Atidaryti įrašų aplanką
 Where recordings are saved. Change it in Settings > Files.	Čia saugomi įrašai. Keisti: Nustatymai > Failai.
-Recordings folder	Įrašų aplankas
-Where recordings (IQ, audio, images, logs) are saved. Choose your own folder; default is inside the data folder.	Kur saugomi įrašai (IQ, garsas, vaizdai, žurnalai). Pasirinkite savo aplanką; numatytasis yra duomenų aplanke.
 Free disk space:	Laisva vieta diske:
 Default (inside the data folder)	Numatytasis (duomenų aplanke)
 Choose...	Pasirinkti...

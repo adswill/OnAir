@@ -87,7 +87,7 @@ void hamSetupWizard(App& a, char* call, size_t callN, char* grid, size_t gridN, 
         ImGui::TextWrapped("%s", tr("Written into the log (TX_PWR) and shown to you; OnAir does not set the rig's power."));
         ImGui::SetNextItemWidth(80 * gUi); ImGui::InputText(tr("Power W"), pwr, sizeof pwr, ImGuiInputTextFlags_CharsDecimal);
         ImGui::SetNextItemWidth(320 * gUi); ImGui::InputText(tr("Antenna"), ant, sizeof ant);
-        if (ImGui::CollapsingHeader(tr("Country file"))) hamCountryUi();
+        if (ImGui::CollapsingHeader(trw("Country file"))) hamCountryUi();
         break;
     case 3:
         ImGui::TextWrapped("%s", tr("PTT: a Hamlib rig keys the transmitter over CAT; none means VOX (the rig keys on the audio). Audio out is the sound card that feeds the rig. Receive audio comes from the radio source chosen in the toolbar (an SDR, or the rig's sound card as an audio source)."));

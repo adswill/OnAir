@@ -3726,8 +3726,6 @@ grey	grigio
 Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.	Le immagini inviate nel flusso MFSK (Shortwave Radiogram) compaiono qui man mano che arrivano.
 Open recordings folder	Apri la cartella delle registrazioni
 Where recordings are saved. Change it in Settings > Files.	Dove vengono salvate le registrazioni. Si cambia in Impostazioni > File.
-Recordings folder	Cartella delle registrazioni
-Where recordings (IQ, audio, images, logs) are saved. Choose your own folder; default is inside the data folder.	Dove vengono salvate le registrazioni (IQ, audio, immagini, log). Scegli la tua cartella; di default è nella cartella dei dati.
 Free disk space:	Spazio libero su disco:
 Default (inside the data folder)	Predefinita (nella cartella dei dati)
 Choose...	Scegli...
