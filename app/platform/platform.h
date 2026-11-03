@@ -86,7 +86,8 @@ int locateState(double& lat, double& lon, double& accuracyM, std::string& msg);
 
 // Paths of fonts to try, best first (proportional UI font, monospaced font)
 std::vector<std::string> uiFontCandidates();
-std::vector<std::string> cjkFontCandidates();   // system CJK font merged into the UI fonts for Chinese/Japanese/Korean service names
+// system CJK fonts merged into the UI fonts for Chinese/Japanese/Korean text; those of the interface language lang first (cjk_order.h)
+std::vector<std::string> cjkFontCandidates(const std::string& lang);
 std::vector<std::string> monoFontCandidates();
 
 // The language the user reads the system in, as a code such as "de", "zh-Hans" or "lt_LT.UTF-8" (i18n::set() takes the first letters)

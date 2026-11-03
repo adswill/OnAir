@@ -779,6 +779,8 @@ if(DECT2_BUILD_APP)
   add_test(NAME tex_shrink COMMAND test_tex_shrink)
   add_executable(test_prefs_text tests/app/test_prefs_text.cpp)   # settings.conf values with line breaks on Linux and Windows (app/platform/prefs_text.h, #360)
   add_test(NAME prefs_text COMMAND test_prefs_text)
+  add_executable(test_cjk_order tests/app/test_cjk_order.cpp)   # the CJK fonts of the interface language merged first (app/platform/cjk_order.h)
+  add_test(NAME cjk_order COMMAND test_cjk_order)
   if(NOT WIN32)   # thread CPU clocks (POSIX)
     add_executable(bench_ui_power tests/bench/bench_ui_power.cpp app/i18n/i18n.cpp)   # docs/PERFORMANCE.md: frame pacing, ring wake-ups, tr(), RF camera
     target_include_directories(bench_ui_power PRIVATE app ${CMAKE_BINARY_DIR}/generated)
