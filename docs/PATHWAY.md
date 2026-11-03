@@ -1051,3 +1051,6 @@ DSC: radio-level sweep (tests/marine/test_marine_dsc_sweep.cpp, 92 cases per run
 Audit in docs/EXPORT-AUDIT.md (generated from the code): a shared exporter already existed (resexp: CSV/JSON/ADIF/KML/GPX/GeoJSON, "Save results..."), used by about 20 modes. Added app/ui/kit/export (kit::exportBar = Save results + Copy CSV to clipboard, hasPositions, clipboardCsv) and wired it into sonde, APRS stations, DMR calls and messages, P25 calls and talkgroups, LoRaWAN devices and GNSS channels. New test kit_export (quoting, unicode, coordinates, empty list), 5 strings in 13 languages. Not done: the remaining mode folders listed in the audit; no GUI screenshot check yet.
 ## 2026-11-03 P25 fine frequency capture threshold (feat36-p25fix)
 P25 short-call sweep row "no header, 12 dB, cfo -3 kHz" fell to 67% after 67df49a90 enabled the fine MeanAfc regime (minHz 2.5 kHz): a 3 kHz error was moved on noisy 80 ms means and disturbed the call. P25 now uses fineMin 3.6 kHz (still catches the 4, 4.5, 5, 6 kHz rows at 100%); the row is 97%. NXDN was already passing (89%), D-STAR/dPMR unchanged.
+
+## 2026-11-03: mode audit (feat36-audit)
+Added docs/MODE-AUDIT-3.6.md: 27 mode families vs rival tools, grep-verified gaps, top-30 improvements ranked by size, real-signal items flagged. Read-only, no code changed.
