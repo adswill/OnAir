@@ -41,7 +41,7 @@ bool loadFonts(ImGuiIO& io, void (*merge)(ImGuiIO&, ImFont*)) {
     Fonts f;
     const float s = baseSize();
     f.regular = add(io, 0, kFont_Inter_Regular, sizeof kFont_Inter_Regular, s, merge);
-    f.medium = add(io, 1, kFont_Inter_Medium, sizeof kFont_Inter_Medium, s, merge, cjk::Medium);
+    f.medium = add(io, 1, kFont_Inter_Medium, sizeof kFont_Inter_Medium, s, merge);   // share the Regular Chinese subset with the Inter Medium role
     f.semibold = add(io, 2, kFont_Inter_SemiBold, sizeof kFont_Inter_SemiBold, s, merge, cjk::Bold);
     f.mono = add(io, 3, kFont_JetBrainsMono_Regular, sizeof kFont_JetBrainsMono_Regular, s - 0.5f, merge);
     f.monoBold = add(io, 4, kFont_JetBrainsMono_Bold, sizeof kFont_JetBrainsMono_Bold, s - 0.5f, merge, cjk::Bold);

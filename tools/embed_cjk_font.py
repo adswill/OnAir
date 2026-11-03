@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a C++ resource from an unmodified OFL font; called by CMake."""
+"""Generate a C++ resource from an OFL font; called by CMake."""
 import pathlib
 import sys
 import zlib

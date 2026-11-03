@@ -10,4 +10,4 @@ The Inter and JetBrains Mono families are licensed under the SIL Open Font Licen
 The files are subsets (Latin, Latin Extended, Greek, Cyrillic, punctuation, arrows, maths, box and block characters; hinting removed) made with fontTools `pyftsubset`, to keep the program small. A modified copy is allowed by the OFL.
 `tools/gen_typo_fonts.py` turns them into `app/ui/typo_fonts.inc` (deflate-compressed arrays, inflated at start-up).
 
-Noto Sans CJK SC supplies Chinese text on every desktop platform; the unmodified full fonts, provenance, checksums and OFL license are in `noto-cjk/`. They are embedded at build time (Python 3 required); generated C++ stays in the build folder.
+Noto Sans CJK SC supplies Chinese text on every desktop platform; the GB2312/interface subsets, provenance, reproduction steps, checksums and OFL license are in `noto-cjk/`. They are embedded at build time (Python 3 required); generated C++ stays in the build folder.

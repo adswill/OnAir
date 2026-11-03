@@ -744,10 +744,10 @@ if(DECT2_BUILD_APP)
   add_executable(test_wf_fast tests/app/test_wf_fast.cpp)   # the waterfall's fast rows (CW preset): rate threshold, exact row time, order, no averaging down the rows
   target_link_libraries(test_wf_fast PRIVATE imgui)
   add_test(NAME wf_fast COMMAND test_wf_fast)
-  # Embed full, unmodified CJK fonts: relocatable packages and identical character selection on every desktop OS.
+  # Embed OFL Chinese subsets: GB2312 + the interface catalog, with system fallbacks for other characters.
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
   set(_cjk_sources "")
-  foreach(_weight Regular Medium Bold)
+  foreach(_weight Regular Bold)
     string(TOLOWER "${_weight}" _symbol)
     set(_font "${ONAIR_ROOT}/third_party/fonts/noto-cjk/NotoSansCJKsc-${_weight}.otf")
     set(_source "${CMAKE_CURRENT_BINARY_DIR}/generated/cjk_${_symbol}.cpp")

@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstring>
 #include <fstream>
+#include <filesystem>
 #include <initializer_list>
 #include <set>
 #include <string>
@@ -58,6 +59,25 @@ int main() {
         }
     }
     CHECK(!catalog.empty());
+    // A fixed GB2312 fixture also covers dynamic Chinese text outside the UI catalog.
+    std::ifstream gb(DECT2_SOURCE_DIR "/third_party/fonts/noto-cjk/gb2312.txt");
+    CHECK(gb.good());
+    std::string gbText((std::istreambuf_iterator<char>(gb)), {});
+    size_t gbCount = 0;
+    for (const char* p = gbText.c_str(); *p;) {
+        unsigned c = 0;
+        const int n = ImTextCharFromUtf8(&c, p, nullptr);
+        if (!n) break;
+        p += n;
+        catalog.insert((ImWchar)c);
+        gbCount++;
+    }
+    CHECK(gbCount == 7445);
+    size_t fontBytes = 0;
+    for (const auto& entry : std::filesystem::directory_iterator(DECT2_SOURCE_DIR "/third_party/fonts/noto-cjk"))
+        if (entry.path().extension() == ".otf") fontBytes += entry.file_size();
+    CHECK(fontBytes <= 10u * 1024u * 1024u);
+    printf("CJK resources: %zu bytes\n", fontBytes);
     for (typo::Variant variant : {typo::Classic, typo::Clean, typo::Compact}) {
         typo::setVariant(variant);
         ImGui::CreateContext();

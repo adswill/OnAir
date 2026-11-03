@@ -6,8 +6,8 @@
 
 namespace cjk {
 namespace data {
-extern const unsigned char regular[], medium[], bold[];
-extern const size_t regularSize, mediumSize, boldSize;
+extern const unsigned char regular[], bold[];
+extern const size_t regularSize, boldSize;
 }
 
 void configureBase(ImFontConfig& config) {
@@ -16,11 +16,11 @@ void configureBase(ImFontConfig& config) {
 }
 
 void merge(ImGuiIO& io, ImFont* font, Weight weight) {
-    static std::vector<uint8_t> fonts[3];
+    static std::vector<uint8_t> fonts[2];
     auto& raw = fonts[weight];
     if (raw.empty()) {
-        const unsigned char* bytes[] = {data::regular, data::medium, data::bold};
-        const size_t sizes[] = {data::regularSize, data::mediumSize, data::boldSize};
+        const unsigned char* bytes[] = {data::regular, data::bold};
+        const size_t sizes[] = {data::regularSize, data::boldSize};
         if (!dect2::inflateRaw(bytes[weight], sizes[weight], raw) || raw.empty()) {
             std::fprintf(stderr, "Could not load the bundled Chinese font\n");
             std::abort();   // a corrupt embedded resource must not silently change the font family
@@ -30,7 +30,7 @@ void merge(ImGuiIO& io, ImFont* font, Weight weight) {
     config.MergeMode = true;
     config.DstFont = font;
     config.FontDataOwnedByAtlas = false;   // shared across font roles, sizes and contexts
-    const char* names[] = {"Noto Sans CJK SC Regular", "Noto Sans CJK SC Medium", "Noto Sans CJK SC Bold"};
+    const char* names[] = {"Noto Sans CJK SC Regular subset", "Noto Sans CJK SC Bold subset"};
     std::snprintf(config.Name, sizeof config.Name, "%s", names[weight]);
     // Noto 2.004 has a 1000-unit em in a 1448-unit ascender/descender box.
     // stb scales by that larger box; normalize to a 0.9-line em so Chinese remains
