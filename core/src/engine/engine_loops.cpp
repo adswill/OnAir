@@ -97,6 +97,7 @@ void Engine::analysisLoop() {
         checkDelivery();
         syncMultiTv();
         syncWideAll();
+        syncSmartCube();
         if (const uint64_t d = ring_.dropped(); d != ringDroppedSeen_.load()) { ringDroppedSeen_ = d; cpuDropEvents_++; lastCpuDropNs_ = steadyNs(); }
         {   // the receiver's load: its time on this thread against the signal time it handled, over about two seconds
             const double now = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();

@@ -3631,3 +3631,54 @@ with a password	с паролем
 no radio found	радио не найдено
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Радио не найдено. Подключите радио и нажмите «Обновить» на вкладке «Радио и диапазон» или выберите тестовый сигнал.
 Join the OnAir Discord	Присоединиться к Discord OnAir
+# Smart CubeSat (docs/CUBESAT-SMART.md)
+Tuned for	Настроено на
+No satellite is expected soon: scanning this span for any carrier.	Спутников в ближайшее время не ожидается: ищу любые несущие в этой полосе.
+Nothing was uploaded.	Ничего не загружено.
+carrier found	несущая найдена
+decoding	декодирование
+carrier only	только несущая
+no known signal	нет известного сигнала
+Next passes	Ближайшие пролёты
+working out the passes ...	расчёт пролётов ...
+no pass of a satellite in the table in the next hours (set your location, refresh the orbits)	в ближайшие часы нет пролётов спутников из таблицы (задайте местоположение, обновите орбиты)
+In	Через
+Carriers	Несущие
+none yet	пока нет
+Tried on	Проверено на
+valid	верных
+failed their checks	не прошли проверку
+satellite	спутник
+framing	кадрирование
+validated by	подтверждено
+byte errors put right	ошибок байтов исправлено
+received	принято
+telemetry	телеметрия
+Field	Поле
+Decoded packets	Декодированные пакеты
+Framing	Кадрирование
+Follow satellites from the table (passes and Doppler)	Следить за спутниками из таблицы (пролёты и Доплер)
+Look for carriers the table does not explain	Искать несущие, которых нет в таблице
+Minimum SNR (dB)	Минимальное ОСШ (дБ)
+Carriers followed at once	Одновременно отслеживаемые несущие
+Lowest elevation (deg)	Минимальный угол места (град.)
+Search window around the predicted carrier (Hz)	Окно поиска вокруг ожидаемой несущей (Гц)
+Modulation of unknown carriers	Модуляция неизвестных несущих
+Baud rate (0: automatic, any value)	Скорость в бодах (0: авто, любое значение)
+Channel width (Hz, 0: automatic, any value)	Ширина канала (Гц, 0: авто, любое значение)
+Scan resolution (Hz, 0: automatic)	Разрешение сканирования (Гц, 0: авто)
+Add a transmitter to the table	Добавить передатчик в таблицу
+NORAD number	Номер NORAD
+Baud rate	Скорость в бодах
+orbits for %zu satellites, %zu table entries	орбиты %zu спутников, %zu записей в таблице
+Auto decode: on (click to stop)	Автодекодирование: вкл. (нажмите, чтобы остановить)
+Auto decode cubesats	Автодекодирование кубсатов
+Tunes a span that holds the satellites about to pass, follows their Doppler shift, finds every narrow carrier, works out its modulation and baud rate, and decodes it with every framing that fits. Nothing to set up.	Настраивается на полосу со спутниками, которые скоро пролетят, следует за их доплеровским сдвигом, находит каждую узкую несущую, определяет модуляцию и скорость и декодирует всеми подходящими форматами кадров. Ничего настраивать не нужно.
+Refresh orbits	Обновить орбиты
+Downloading orbits from CelesTrak (the built-in set is used meanwhile).	Загрузка орбит с CelesTrak (пока используется встроенный набор).
+Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.	Записывает пакеты в папку данных как файл для SatNOGS (одна запись телеметрии в строке), CSV и файл KISS. Ничего не загружается.
+Press the button: it does the rest.	Нажмите кнопку – остальное выполнится само.
+CW / OOK	CW / OOK
+AFSK	AFSK
+FSK / GMSK	FSK / GMSK
+BPSK	BPSK

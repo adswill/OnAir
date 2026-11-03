@@ -3633,3 +3633,54 @@ with a password	jelszóval
 no radio found	nem található rádió
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Nem található rádió. Csatlakoztasson egyet, és nyomja meg a Frissítés gombot a Rádió és tartomány lapon, vagy válassza a tesztjelet.
 Join the OnAir Discord	Csatlakozz az OnAir Discordhoz
+# Smart CubeSat (docs/CUBESAT-SMART.md)
+Tuned for	Hangolva erre:
+No satellite is expected soon: scanning this span for any carrier.	Hamarosan nem várható műhold: a sávban bármilyen vivőt keresünk.
+Nothing was uploaded.	Semmi nem lett feltöltve.
+carrier found	vivő megtalálva
+decoding	dekódolás
+carrier only	csak vivő
+no known signal	nincs ismert jel
+Next passes	Következő átvonulások
+working out the passes ...	átvonulások számítása ...
+no pass of a satellite in the table in the next hours (set your location, refresh the orbits)	a táblázat egyik műholdja sem vonul át a következő órákban (állítsa be a helyét, frissítse a pályákat)
+In	Mikor
+Carriers	Vivők
+none yet	még nincs
+Tried on	Kipróbálva:
+valid	érvényes
+failed their checks	nem felelt meg az ellenőrzésnek
+satellite	műhold
+framing	keretezés
+validated by	ellenőrizte:
+byte errors put right	bájthiba javítva
+received	vétel
+telemetry	telemetria
+Field	Mező
+Decoded packets	Dekódolt csomagok
+Framing	Keretezés
+Follow satellites from the table (passes and Doppler)	A táblázat műholdjainak követése (átvonulás és Doppler)
+Look for carriers the table does not explain	Olyan vivők keresése, amelyeket a táblázat nem magyaráz
+Minimum SNR (dB)	Minimális SNR (dB)
+Carriers followed at once	Egyszerre követett vivők
+Lowest elevation (deg)	Legalacsonyabb elevációs szög (fok)
+Search window around the predicted carrier (Hz)	Keresési ablak a várt vivő körül (Hz)
+Modulation of unknown carriers	Ismeretlen vivők modulációja
+Baud rate (0: automatic, any value)	Baudsebesség (0: automatikus, bármilyen érték)
+Channel width (Hz, 0: automatic, any value)	Csatornaszélesség (Hz, 0: automatikus, bármilyen érték)
+Scan resolution (Hz, 0: automatic)	Pásztázási felbontás (Hz, 0: automatikus)
+Add a transmitter to the table	Adó hozzáadása a táblázathoz
+NORAD number	NORAD-szám
+Baud rate	Baudsebesség
+orbits for %zu satellites, %zu table entries	%zu műhold pályája, %zu táblázatsor
+Auto decode: on (click to stop)	Automatikus dekódolás: be (kattintson a leállításhoz)
+Auto decode cubesats	Cubesatok automatikus dekódolása
+Tunes a span that holds the satellites about to pass, follows their Doppler shift, finds every narrow carrier, works out its modulation and baud rate, and decodes it with every framing that fits. Nothing to set up.	Olyan sávra hangol, amely a hamarosan átvonuló műholdakat tartalmazza, követi a Doppler-eltolódásukat, megtalál minden keskeny vivőt, meghatározza a modulációját és a baudsebességét, és minden szóba jöhető keretezéssel dekódolja. Semmit nem kell beállítani.
+Refresh orbits	Pályák frissítése
+Downloading orbits from CelesTrak (the built-in set is used meanwhile).	Pályák letöltése a CelesTrakról (addig a beépített készlet él).
+Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.	A csomagokat SatNOGS-kész fájlként (soronként egy telemetriarekord), CSV-ként és KISS-fájlként írja az adatmappába. Semmi nem kerül feltöltésre.
+Press the button: it does the rest.	Nyomja meg a gombot: a többit elintézi.
+CW / OOK	CW / OOK
+AFSK	AFSK
+FSK / GMSK	FSK / GMSK
+BPSK	BPSK

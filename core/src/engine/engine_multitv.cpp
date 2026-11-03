@@ -140,4 +140,20 @@ void Engine::syncWideAll() {
     log(b);
 }
 
+// Smart CubeSat: configured on the analysis thread for the capture; a new rate or centre starts the search again
+void Engine::syncSmartCube() {
+    const bool on = smartCubeOn_.load();
+    const double rate = rate_.load(), centre = wideAllCentre_.load();
+    if (on == smartKeyOn_ && (!on || (rate == smartKeyRate_ && centre == smartKeyCentre_))) return;
+    smartKeyOn_ = on; smartKeyRate_ = rate; smartKeyCentre_ = centre;
+    if (!on) { smartCube_.reset(); return; }
+    smartCube_.configure(rate);
+    smartCube_.setCenterHz(lastDev_.kind != DeviceInfo::File ? centre : 0.0);
+    smartCube_.setWallClock(lastDev_.kind != DeviceInfo::File);
+    smartCube_.setLogCallback([this](const std::string& s) { log(s); });
+    char b[160];
+    snprintf(b, sizeof b, "Smart CubeSat: %.2f Msps capture, centre %.4f MHz", rate / 1e6, centre / 1e6);
+    log(b);
+}
+
 } // namespace dect2

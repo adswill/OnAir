@@ -3629,3 +3629,54 @@ with a password	con password
 no radio found	nessuna radio trovata
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Nessuna radio trovata. Collega una radio e premi Aggiorna nella scheda Radio e intervallo, oppure scegli il segnale di prova.
 Join the OnAir Discord	Unisciti al Discord di OnAir
+# Smart CubeSat (docs/CUBESAT-SMART.md)
+Tuned for	Sintonizzato per
+No satellite is expected soon: scanning this span for any carrier.	Nessun satellite previsto a breve: si cercano portanti in questa banda.
+Nothing was uploaded.	Non è stato caricato nulla.
+carrier found	portante trovata
+decoding	decodifica
+carrier only	solo portante
+no known signal	nessun segnale noto
+Next passes	Prossimi passaggi
+working out the passes ...	calcolo dei passaggi ...
+no pass of a satellite in the table in the next hours (set your location, refresh the orbits)	nessun passaggio di un satellite della tabella nelle prossime ore (imposta la posizione, aggiorna le orbite)
+In	Tra
+Carriers	Portanti
+none yet	ancora nessuna
+Tried on	Provato su
+valid	validi
+failed their checks	hanno fallito i controlli
+satellite	satellite
+framing	framing
+validated by	validato da
+byte errors put right	errori di byte corretti
+received	ricevuto
+telemetry	telemetria
+Field	Campo
+Decoded packets	Pacchetti decodificati
+Framing	Framing
+Follow satellites from the table (passes and Doppler)	Segui i satelliti della tabella (passaggi e Doppler)
+Look for carriers the table does not explain	Cerca portanti che la tabella non spiega
+Minimum SNR (dB)	SNR minimo (dB)
+Carriers followed at once	Portanti seguite insieme
+Lowest elevation (deg)	Elevazione minima (gradi)
+Search window around the predicted carrier (Hz)	Finestra di ricerca intorno alla portante prevista (Hz)
+Modulation of unknown carriers	Modulazione delle portanti sconosciute
+Baud rate (0: automatic, any value)	Baud rate (0: automatico, qualsiasi valore)
+Channel width (Hz, 0: automatic, any value)	Larghezza di canale (Hz, 0: automatica, qualsiasi valore)
+Scan resolution (Hz, 0: automatic)	Risoluzione della scansione (Hz, 0: automatica)
+Add a transmitter to the table	Aggiungi un trasmettitore alla tabella
+NORAD number	Numero NORAD
+Baud rate	Baud rate
+orbits for %zu satellites, %zu table entries	orbite di %zu satelliti, %zu voci in tabella
+Auto decode: on (click to stop)	Decodifica automatica: attiva (clic per fermare)
+Auto decode cubesats	Decodifica automatica dei cubesat
+Tunes a span that holds the satellites about to pass, follows their Doppler shift, finds every narrow carrier, works out its modulation and baud rate, and decodes it with every framing that fits. Nothing to set up.	Sintonizza una banda con i satelliti in arrivo, segue il loro spostamento Doppler, trova ogni portante stretta, ne ricava modulazione e baud rate e la decodifica con ogni framing possibile. Nulla da configurare.
+Refresh orbits	Aggiorna orbite
+Downloading orbits from CelesTrak (the built-in set is used meanwhile).	Scarico delle orbite da CelesTrak (nel frattempo si usa il set incorporato).
+Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.	Scrive i pacchetti nella cartella dati come file pronto per SatNOGS (un record di telemetria per riga), CSV e file KISS. Non viene caricato nulla.
+Press the button: it does the rest.	Premi il pulsante: fa tutto il resto.
+CW / OOK	CW / OOK
+AFSK	AFSK
+FSK / GMSK	FSK / GMSK
+BPSK	BPSK

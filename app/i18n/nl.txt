@@ -3646,3 +3646,54 @@ with a password	met wachtwoord
 no radio found	geen radio gevonden
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Geen radio gevonden. Sluit een radio aan en druk op het tabblad Radio en bereik op Vernieuwen, of kies het testsignaal.
 Join the OnAir Discord	Word lid van de OnAir Discord
+# Smart CubeSat (docs/CUBESAT-SMART.md)
+Tuned for	Afgestemd op
+No satellite is expected soon: scanning this span for any carrier.	Binnenkort wordt geen satelliet verwacht: dit bereik wordt op elke draaggolf afgezocht.
+Nothing was uploaded.	Er is niets geüpload.
+carrier found	draaggolf gevonden
+decoding	decoderen
+carrier only	alleen draaggolf
+no known signal	geen bekend signaal
+Next passes	Volgende passages
+working out the passes ...	passages worden berekend ...
+no pass of a satellite in the table in the next hours (set your location, refresh the orbits)	geen passage van een satelliet uit de tabel in de komende uren (stel je locatie in, ververs de banen)
+In	Over
+Carriers	Draaggolven
+none yet	nog geen
+Tried on	Geprobeerd op
+valid	geldig
+failed their checks	faalden bij de controle
+satellite	satelliet
+framing	framing
+validated by	gevalideerd door
+byte errors put right	bytefouten hersteld
+received	ontvangen
+telemetry	telemetrie
+Field	Veld
+Decoded packets	Gedecodeerde pakketten
+Framing	Framing
+Follow satellites from the table (passes and Doppler)	Satellieten uit de tabel volgen (passages en Doppler)
+Look for carriers the table does not explain	Zoek draaggolven die de tabel niet verklaart
+Minimum SNR (dB)	Minimale SNR (dB)
+Carriers followed at once	Gelijktijdig gevolgde draaggolven
+Lowest elevation (deg)	Laagste elevatie (graden)
+Search window around the predicted carrier (Hz)	Zoekvenster rond de voorspelde draaggolf (Hz)
+Modulation of unknown carriers	Modulatie van onbekende draaggolven
+Baud rate (0: automatic, any value)	Baudrate (0: automatisch, elke waarde)
+Channel width (Hz, 0: automatic, any value)	Kanaalbreedte (Hz, 0: automatisch, elke waarde)
+Scan resolution (Hz, 0: automatic)	Scanresolutie (Hz, 0: automatisch)
+Add a transmitter to the table	Zender aan de tabel toevoegen
+NORAD number	NORAD-nummer
+Baud rate	Baudrate
+orbits for %zu satellites, %zu table entries	banen voor %zu satellieten, %zu tabelregels
+Auto decode: on (click to stop)	Automatisch decoderen: aan (klik om te stoppen)
+Auto decode cubesats	Cubesats automatisch decoderen
+Tunes a span that holds the satellites about to pass, follows their Doppler shift, finds every narrow carrier, works out its modulation and baud rate, and decodes it with every framing that fits. Nothing to set up.	Stemt af op een bereik met de satellieten die zo passeren, volgt hun dopplerverschuiving, vindt elke smalle draaggolf, bepaalt modulatie en baudrate en decodeert met elke passende framing. Niets in te stellen.
+Refresh orbits	Banen verversen
+Downloading orbits from CelesTrak (the built-in set is used meanwhile).	Banen worden van CelesTrak gedownload (intussen wordt de ingebouwde set gebruikt).
+Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.	Schrijft de pakketten naar de gegevensmap als SatNOGS-klaar bestand (één telemetrierecord per regel), CSV en KISS-bestand. Er wordt niets geüpload.
+Press the button: it does the rest.	Druk op de knop: de rest gaat vanzelf.
+CW / OOK	CW / OOK
+AFSK	AFSK
+FSK / GMSK	FSK / GMSK
+BPSK	BPSK

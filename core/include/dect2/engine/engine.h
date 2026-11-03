@@ -83,6 +83,7 @@
 #include "dect2/general/general_rx.h"
 #include "dect2/time/time_rx.h"
 #include "dect2/cubesat/cubesat_rx.h"
+#include "dect2/cubesat/cubesat_smart.h"
 #include "dect2/globalstar/globalstar_rx.h"
 #include "dect2/vdes/vdes_rx.h"
 #include "dect2/zigbee/zigbee_rx.h"
@@ -601,6 +602,10 @@ public:
     bool wideVoice() const { return wideOn_.load(); }
     // "Decode everything in view": one wide capture, every signal in it found, identified and decoded at once (wide_session.h). While on it takes
     // the capture before the mode's own receiver (the mode's receiver is idle); off: nothing here runs.
+    // Smart CubeSat (docs/CUBESAT-SMART.md): in the CubeSat mode the whole capture goes to the smart decoder (any thread to switch and read)
+    void setSmartCube(bool on) { smartCubeOn_.store(on); }
+    bool smartCube() const { return smartCubeOn_.load(); }
+    cubesat::SmartCubesat& smartCubeDecoder() { return smartCube_; }
     void setWideAll(bool on) { wideAllOn_.store(on); }
     bool wideAll() const { return wideAllOn_.load(); }
     WideSession& wideAllSession() { return wideAll_; }   // entries(), status() and the controls (any thread)
@@ -789,6 +794,10 @@ private:
     std::atomic<double> wideAllCentre_{0}, wideAllBudget_{0.8};
     double wideAllKeyRate_ = 0, wideAllKeyCentre_ = -1; bool wideAllKeyOn_ = false;
     void syncWideAll();
+    cubesat::SmartCubesat smartCube_;
+    std::atomic<bool> smartCubeOn_{false};
+    double smartKeyRate_ = 0, smartKeyCentre_ = -1; bool smartKeyOn_ = false;
+    void syncSmartCube();
     VfoBank vfo_;
     std::atomic<int> vfoN_{0};
     std::atomic<bool> vfoSoundOn_{true};

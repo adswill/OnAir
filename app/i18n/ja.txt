@@ -3648,3 +3648,54 @@ with a password	パスワード付き
 no radio found	ラジオが見つかりません
 No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	ラジオが見つかりません。ラジオを接続し、「ラジオと範囲」タブで更新を押すか、テスト信号を選んでください。
 Join the OnAir Discord	OnAir の Discord に参加
+# Smart CubeSat (docs/CUBESAT-SMART.md)
+Tuned for	対象
+No satellite is expected soon: scanning this span for any carrier.	まもなく通過する衛星はありません。この範囲で搬送波を探します。
+Nothing was uploaded.	何もアップロードされていません。
+carrier found	搬送波検出
+decoding	デコード中
+carrier only	搬送波のみ
+no known signal	既知の信号なし
+Next passes	次の通過
+working out the passes ...	通過を計算中 ...
+no pass of a satellite in the table in the next hours (set your location, refresh the orbits)	今後数時間、表の衛星の通過はありません（位置を設定し、軌道を更新してください）
+In	まで
+Carriers	搬送波
+none yet	まだありません
+Tried on	試行先
+valid	有効
+failed their checks	検査に失敗
+satellite	衛星
+framing	フレーミング
+validated by	検証方法
+byte errors put right	バイト誤りを訂正
+received	受信
+telemetry	テレメトリ
+Field	項目
+Decoded packets	デコードしたパケット
+Framing	フレーミング
+Follow satellites from the table (passes and Doppler)	表の衛星を追跡（通過とドップラー）
+Look for carriers the table does not explain	表にない搬送波を探す
+Minimum SNR (dB)	最小SNR (dB)
+Carriers followed at once	同時に追跡する搬送波
+Lowest elevation (deg)	最低仰角 (度)
+Search window around the predicted carrier (Hz)	予測した搬送波の周囲の探索幅 (Hz)
+Modulation of unknown carriers	未知の搬送波の変調
+Baud rate (0: automatic, any value)	ボーレート (0: 自動、任意の値)
+Channel width (Hz, 0: automatic, any value)	チャンネル幅 (Hz、0: 自動、任意の値)
+Scan resolution (Hz, 0: automatic)	スキャン分解能 (Hz、0: 自動)
+Add a transmitter to the table	送信機を表に追加
+NORAD number	NORAD番号
+Baud rate	ボーレート
+orbits for %zu satellites, %zu table entries	%zu 機の衛星の軌道、表の %zu 件
+Auto decode: on (click to stop)	自動デコード: オン（クリックで停止）
+Auto decode cubesats	キューブサットを自動デコード
+Tunes a span that holds the satellites about to pass, follows their Doppler shift, finds every narrow carrier, works out its modulation and baud rate, and decodes it with every framing that fits. Nothing to set up.	通過予定の衛星を含む範囲に同調し、ドップラーシフトを追い、狭い搬送波をすべて見つけ、変調とボーレートを判定して、可能なすべてのフレーム形式でデコードします。設定は不要です。
+Refresh orbits	軌道を更新
+Downloading orbits from CelesTrak (the built-in set is used meanwhile).	CelesTrakから軌道をダウンロード中（それまで内蔵データを使用）。
+Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.	パケットを SatNOGS 用ファイル（1行に1件のテレメトリ）、CSV、KISS ファイルとしてデータフォルダーに書き出します。アップロードはされません。
+Press the button: it does the rest.	ボタンを押すだけで、あとは自動です。
+CW / OOK	CW / OOK
+AFSK	AFSK
+FSK / GMSK	FSK / GMSK
+BPSK	BPSK

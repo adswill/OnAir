@@ -443,6 +443,7 @@ void Engine::feedReceiver(int a, const cf32* x, size_t n) {
         if (auto sink = std::atomic_load(&pluginSink_)) (*sink)(reinterpret_cast<const float*>(x), n, rate_.load());
         return;
     }
+    if (smartCubeOn_.load(std::memory_order_relaxed) && a == 62) { smartCube_.feed(x, n); return; }   // Smart CubeSat takes the capture
     if (wideAllOn_.load(std::memory_order_relaxed)) { wideAll_.feed(x, n); return; }   // decode everything in view: the session takes the capture
     if (vfoN_.load(std::memory_order_relaxed)) vfoFeed(x, n);   // multi-VFO: the extra channels on the same capture (the mode's own receiver still gets the samples below)
     if (mtvActive_.load(std::memory_order_relaxed) && (mtvSat_.load(std::memory_order_relaxed) ? a == 7 : a <= 1)) { if (auto m = mtvGet()) { m->feed(x, n); return; } }   // multi-channel TV: one receiver per channel of the span

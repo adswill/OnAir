@@ -798,6 +798,7 @@ bool generalApiRecord(App& a, bool on, std::string& err);
 std::string tvRecJobsJson();                        // tvrec_ui.cpp, for the remote API: the recorder's scheduled jobs (read only)
 void generalRecallHz(App& a, double hz);          // general_ui.cpp: a memory's frequency: the dial on hz, the channel marker back on the dial              // general_ui.cpp: the general receiver's listening frequency (the dial plus its offset)
 void wideAllWindow(App& a);                          // wide_all_ui.cpp: every signal of the capture found, identified and decoded at once (wide_session.h)
+void passesDownloadTles();                          // passes_ui.cpp: fetch the TLE sets (CelesTrak) in the background
 bool wideAllWorthIt(const App& a);                   // the capture is wide enough to hold several signals (or it is on already)
 void wideAllButton(App& a);                          // the one button of it (Simple views and the window)
 void rfFingerprintWindow(App& a);                   // rffp_ui.cpp: RF fingerprint of a transmitter, carrier-only log (a.rfFpOpen; docs/RF-FINGERPRINT.md)
