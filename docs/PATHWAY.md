@@ -1070,3 +1070,8 @@ Discord request (suguslly): cty.dat / wl_cty.dat country file. The reader (DxccD
 ## 2026-11-04 Tracker caps removed (feat37-caps)
 Users hit walls at 200 VDL2 aircraft and 64 ground stations. Added core/include/dect2/limits.h and raised every busy-receiver table (VDL2, HFDL, ACARS, Inmarsat, AIS, ADS-B, UAT, Aero, Iridium ACARS, ASTERIX; docs/LIMITS-AUDIT.md) to 10000 aircraft/vessels, 4096 ground stations, 2000-line message lists, with 6 h age expiry for VDL2/ACARS/HFDL. HFDL's per-message full sort became move-to-front. VDL2 tables use a list clipper. Tests: vdl2_caps (300 aircraft, 90 ground stations), ais_caps (450 stations).
 Also: Settings > Decoding "Remove after" per family (VDL2, ACARS, HFDL, ADS-B, AIS, UAT, Inmarsat; Default/1 min .. 24 h/Never/Custom), 14 catalogs + unreviewed lists, expiry frees memory; vdl2_caps and ais_caps check it on the sample clock.
+
+## 2026-11-04 - feat37-ease: next-step line and friendlier radio errors
+- `app/ui/next_step_logic.h` (pure, tested by `next_step`): one plain line about the reception (stopped / starting / weak / no signal / overload / too little level / lost samples / slow computer) with at most one click fix (Start, Auto gain). Modes whose lock the app cannot read only get the hints based on measured things, never "no signal". Shown in the Radio panel (`nextStepUi`, diag_ui.cpp) when there is no error message.
+- `fixit` table: four generic USB entries (busy, resource busy, access denied, wrong driver) matched on libusb / OS error text; test cases added.
+- Not done: per-mode "Reset this mode", new auto-setup buttons, tooltip sweep (the mode picker with favourites / recents, first-run wizard with regions and auto gain, and the Settings per-item reset already existed).

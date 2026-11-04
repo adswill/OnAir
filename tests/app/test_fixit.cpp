@@ -38,6 +38,10 @@ int main() {
     CHECK(fixit::lookup("Could not start the radio: open: HackRF not found") == fixit::byId("hackrf_not_found"), "hackrf not found");
     CHECK(fixit::lookup("Could not start the radio: rtl_tcp: 1.2.3.4:1234 is not an rtl_tcp server") == fixit::byId("rtltcp"), "rtl_tcp");
     CHECK(fixit::lookup("Could not start the radio: something new") == fixit::byId("start_failed"), "generic start failure");
+    CHECK(fixit::lookup("Could not start the radio: libusb: LIBUSB_ERROR_BUSY") == fixit::byId("radio_busy"), "busy (libusb)");
+    CHECK(fixit::lookup("open failed: Device or resource busy") == fixit::byId("radio_busy2"), "busy (os)");
+    CHECK(fixit::lookup("Could not start the radio: LIBUSB_ERROR_ACCESS") == fixit::byId("radio_access"), "access denied");
+    CHECK(fixit::lookup("Could not start the radio: LIBUSB_ERROR_NOT_SUPPORTED") == fixit::byId("radio_driver"), "wrong driver");
     CHECK(fixit::lookup("everything is fine") == nullptr, "no match");
     if (!failures) std::printf("fixit: %d entries OK\n", n);
     return failures ? 1 : 0;
