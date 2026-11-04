@@ -718,7 +718,7 @@ void tuner(App& a, bool& retune) {
 #else
                               "Direct3D 11 compute (Windows)",
 #endif
-                              gpuOk ? GpuLdpc::instance().deviceName() : "none usable");
+                              gpuOk ? GpuLdpc::instance().deviceName() : "none usable");        ImGui::SameLine(0, 8 * gUi); gpuModeTick(a, "DVB-S/S2");
     }
     if (ch) saveState(a);
 }

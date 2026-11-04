@@ -316,6 +316,7 @@ void decoder(App& a, bool&) {
                               "not available for DTMB on this platform yet (Metal on macOS only); the CPU decodes",
 #endif
                               gpuOk ? GpuLdpc::instance().deviceName() : "none usable for DTMB");
+        ImGui::SameLine(0, 8 * gUi); gpuModeTick(a, "DTMB");
         if (gpuOk && live(a) && t.gpuWords) { ImGui::TextDisabled("%llu codewords decoded on the GPU", (unsigned long long)t.gpuWords); }
     }
 }

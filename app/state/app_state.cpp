@@ -824,7 +824,7 @@ void tuneToChannel(App& a, const SavedChannel& c) {
     } else {
         if (a.engine.running()) a.engine.stop();
         a.devIdx = hw;
-        a.engine.setComputeMode(a.computeMode); a.engine.setStandard(engineStd(a));
+        applyGpuPolicy(a); a.engine.setComputeMode(a.computeMode); a.engine.setStandard(engineStd(a));
         a.engine.start(a.devices[hw], a.tune, a.file);
     }
     a.smooth.clear(); a.peak.clear(); a.lastSeq = 0;
@@ -849,7 +849,7 @@ void followBandwidth(App& a) {
     if (hw && a.tune.sampleRate != oldRate) {
         a.engine.log(a.tune.sampleRate > oldRate ? "restarting at 10 Msps" : "restarting at 8 Msps");
         a.engine.stop();
-        a.engine.setComputeMode(a.computeMode); a.engine.setStandard(engineStd(a));
+        applyGpuPolicy(a); a.engine.setComputeMode(a.computeMode); a.engine.setStandard(engineStd(a));
         a.engine.start(a.devices[a.devIdx], a.tune, a.file);
         a.smooth.clear(); a.peak.clear(); a.lastSeq = 0;
         a.mpd.reset(); a.quality.reset();

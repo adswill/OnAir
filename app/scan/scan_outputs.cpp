@@ -167,7 +167,7 @@ void scanTabCommon(App& a) {
                 a.freqMhz = r.freqMHz; a.bwIdx = r.bwMhz >= 7.5 ? 0 : 1;
                 for (int k = 0; k < (int)(sizeof(kBw) / sizeof(kBw[0])); k++) if (kBw[k].mhz == r.bwMhz) a.bwIdx = k;
                 a.tune.centerHz = a.freqMhz * 1e6; applyBandwidth(a);
-                a.engine.setComputeMode(a.computeMode); a.engine.setStandard(engineStd(a));
+                applyGpuPolicy(a); a.engine.setComputeMode(a.computeMode); a.engine.setStandard(engineStd(a));
                 a.engine.start(a.devices[hw], a.tune, a.file);
                 a.devIdx = hw; a.smooth.clear(); a.peak.clear(); a.lastSeq = 0; savePrefs(a);
             }
