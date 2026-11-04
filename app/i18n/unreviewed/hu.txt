@@ -525,3 +525,13 @@ Load file...
 Download from country-files.com
 Downloading...
 Reset to built-in
+Remove after: VDL2
+Remove after: ACARS
+Remove after: HFDL
+Remove after: ADS-B
+Remove after: AIS
+Remove after: UAT
+Remove after: Inmarsat
+How long after it was last heard an entry stays in the list and on the map. Default is the rule of the mode; Never keeps everything.
+Custom remove-after time (minutes)
+Used by every Remove after row set to Custom.

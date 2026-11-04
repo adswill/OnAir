@@ -146,6 +146,7 @@ struct Vdl2GroundStation {
     uint32_t messages = 0;
     double freqHz = 0;
     double lastHeardSec = 0;
+    double lastSeenSec = 0;      // the last frame from or to it (the "remove after" time counts from here; not saved in the results file)
     float levelDb = -120;
     bool hasPos = false;         // from its GSIF / XID ground station location parameter
     double lat = 0, lon = 0;
@@ -184,12 +185,12 @@ struct Vdl2Telemetry {
     uint64_t fcsBad = 0;         // frames that failed their check sequence
     uint64_t positionsTotal = 0;
     std::vector<Vdl2Message> messages;          // newest first, at most kVdl2MsgMax
-    std::vector<Vdl2Aircraft> aircraft;         // most recently heard first, at most 200
-    std::vector<Vdl2GroundStation> stations;    // most recently heard first, at most 64
+    std::vector<Vdl2Aircraft> aircraft;         // most recently heard first, expired after 6 h, at most dect2::limits::kAircraft
+    std::vector<Vdl2GroundStation> stations;    // most recently heard first, expired after 6 h, at most dect2::limits::kGroundStations
     std::vector<Vdl2ChannelInfo> channels;      // the channel list, by frequency
 };
 
-constexpr size_t kVdl2MsgMax = 400;
+constexpr size_t kVdl2MsgMax = 2000;
 
 inline std::string vdl2Summary(const Vdl2Telemetry& t) {
     int inBand = 0, act = 0;

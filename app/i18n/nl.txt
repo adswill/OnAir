@@ -3801,3 +3801,15 @@ Show country and zone in decoded messages	Land en zone tonen in gedecodeerde ber
 Load file...	Bestand laden...
 Download from country-files.com	Downloaden van country-files.com
 Reset to built-in	Terug naar de ingebouwde tabel
+Remove after: VDL2	Verwijderen na: VDL2
+Remove after: ACARS	Verwijderen na: ACARS
+Remove after: HFDL	Verwijderen na: HFDL
+Remove after: ADS-B	Verwijderen na: ADS-B
+Remove after: AIS	Verwijderen na: AIS
+Remove after: UAT	Verwijderen na: UAT
+Remove after: Inmarsat	Verwijderen na: Inmarsat
+How long after it was last heard an entry stays in the list and on the map. Default is the rule of the mode; Never keeps everything.	Hoe lang een item na het laatste ontvangen in de lijst en op de kaart blijft. Standaard is de regel van de modus; Nooit bewaart alles.
+Custom remove-after time (minutes)	Eigen verwijdertijd (minuten)
+Used by every Remove after row set to Custom.	Gebruikt door elke rij Verwijderen na die op Eigen staat.
+Default	Standaard
+Custom	Eigen

@@ -3802,3 +3802,15 @@ Show country and zone in decoded messages	Pokazuj kraj i strefę w zdekodowanych
 Load file...	Wczytaj plik...
 Download from country-files.com	Pobierz z country-files.com
 Reset to built-in	Przywróć wbudowaną tabelę
+Remove after: VDL2	Usuń po: VDL2
+Remove after: ACARS	Usuń po: ACARS
+Remove after: HFDL	Usuń po: HFDL
+Remove after: ADS-B	Usuń po: ADS-B
+Remove after: AIS	Usuń po: AIS
+Remove after: UAT	Usuń po: UAT
+Remove after: Inmarsat	Usuń po: Inmarsat
+How long after it was last heard an entry stays in the list and on the map. Default is the rule of the mode; Never keeps everything.	Jak długo wpis pozostaje na liście i mapie po ostatnim odbiorze. Domyślnie obowiązuje reguła trybu; Nigdy zachowuje wszystko.
+Custom remove-after time (minutes)	Własny czas usuwania (minuty)
+Used by every Remove after row set to Custom.	Używane przez każdy wiersz Usuń po ustawiony na Własny.
+Default	Domyślnie
+Custom	Własny

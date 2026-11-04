@@ -1,4 +1,5 @@
 // VDL Mode 2 receiver: see vdl2_rx.h.
+#include "dect2/limits.h"
 #include "dect2/session/mode_adapters.h"
 #include "dect2/vdl2/vdl2_rx.h"
 #include "dect2/dsp/baseband_filter.h"
@@ -152,7 +153,7 @@ struct Vdl2Receiver::Impl {
             if (a.hasKin) a.kinTime += dt;
             for (auto& p : a.track) p.time += dt;
         }
-        for (auto& g : tel.stations) if (g.lastHeardSec != 0) g.lastHeardSec += dt;
+        for (auto& g : tel.stations) { if (g.lastHeardSec != 0) g.lastHeardSec += dt; if (g.lastSeenSec != 0) g.lastSeenSec += dt; }
         tel.nowSec += dt;
         reasm.clear();
     }
@@ -502,6 +503,18 @@ struct Vdl2Receiver::Impl {
         finishMessage(std::move(m), 1, false);
     }
 
+    // entries not heard for the user's "remove after" time leave the tables (newest first, so the back is the oldest); the memory is given back. mu held.
+    void expire(double now) {
+        const double lim = limits::staleSec(limits::Family::Vdl2, limits::kAeroStaleSec);
+        while (!tel.aircraft.empty() && now - tel.aircraft.back().lastHeardSec > lim) tel.aircraft.pop_back();
+        while (!tel.stations.empty()) {
+            const double seen = std::max(tel.stations.back().lastHeardSec, tel.stations.back().lastSeenSec);
+            if (seen <= 0 || now - seen <= lim) break;
+            tel.stations.pop_back();
+        }
+        if (tel.aircraft.capacity() > 4 * tel.aircraft.size() + 256) tel.aircraft.shrink_to_fit();
+        if (tel.stations.capacity() > 4 * tel.stations.size() + 64) tel.stations.shrink_to_fit();
+    }
     // the rest of a finished message: aircraft and ground station tables, feeds, automations, the list. mu held.
     void finishMessage(Vdl2Message&& m, int blocks, bool incomplete) {
         if (blocks > 1 || incomplete) {
@@ -556,7 +569,8 @@ struct Vdl2Receiver::Impl {
                 }
             }
             tel.aircraft.insert(tel.aircraft.begin(), std::move(c));
-            if (tel.aircraft.size() > 200) tel.aircraft.pop_back();
+            while (tel.aircraft.size() > limits::kAircraft) tel.aircraft.pop_back();   // newest first: the back is the oldest
+            expire(m.timeSec);
         }
         if (m.srcType == 4 || m.srcType == 5 || m.dstType == 4 || m.dstType == 5) {
             const bool src = m.srcType == 4 || m.srcType == 5;
@@ -564,7 +578,7 @@ struct Vdl2Receiver::Impl {
             auto it = std::find_if(tel.stations.begin(), tel.stations.end(), [&](const Vdl2GroundStation& x) { return x.addr == a; });
             Vdl2GroundStation g;
             if (it != tel.stations.end()) { g = *it; tel.stations.erase(it); }
-            g.addr = a; g.type = src ? m.srcType : m.dstType;
+            g.addr = a; g.type = src ? m.srcType : m.dstType; g.lastSeenSec = m.timeSec;
             if (src) {
                 g.messages++; g.freqHz = m.freqHz; g.lastHeardSec = m.timeSec; g.levelDb = m.levelDb;
                 if (m.hasPos && m.posKind == "XID ground station location") { g.hasPos = true; g.lat = m.lat; g.lon = m.lon; }
@@ -572,7 +586,8 @@ struct Vdl2Receiver::Impl {
                 if (at != std::string::npos) g.airports = m.detail.substr(at + 17, m.detail.find('\n', at) - at - 17);
             }
             tel.stations.insert(tel.stations.begin(), std::move(g));
-            if (tel.stations.size() > 64) tel.stations.pop_back();
+            while (tel.stations.size() > limits::kGroundStations) tel.stations.pop_back();
+            expire(m.timeSec);
         }
         if (Feeds::get().wantVdl2()) Feeds::get().vdl2(m);   // the data feed out (feeds.h)
         if (automation::wants(automation::FVdl2)) {   // the automations (automation/engine.h)
@@ -646,6 +661,7 @@ void Vdl2Receiver::feed(const cf32* x, size_t n) {
     std::lock_guard<std::mutex> lk(I.mu);
     const double now = (double)I.nIn / I.rate;
     I.tel.nowSec = now;
+    I.expire(now);
     { std::vector<Vdl2Receiver::Impl::Reasm::Done> cut; I.reasm.flush(now, cut); for (auto& d : cut) I.finishMessage(std::move(d.msg), d.blocks, d.incomplete); }
     I.tel.inputRate = I.rate; I.tel.channelRate = I.fs1;
     I.tel.centerHz = I.effCenter();

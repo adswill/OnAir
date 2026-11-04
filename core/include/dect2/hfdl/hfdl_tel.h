@@ -125,7 +125,7 @@ struct HfdlTelemetry {
     std::vector<HfdlChannelInfo> channels;      // by frequency
 };
 
-constexpr size_t kHfdlMsgMax = 400;
+constexpr size_t kHfdlMsgMax = 2000;
 
 inline std::string hfdlSummary(const HfdlTelemetry& t) {
     int inBand = 0, act = 0;

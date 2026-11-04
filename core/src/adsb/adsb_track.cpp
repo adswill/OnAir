@@ -1,4 +1,5 @@
 // ADS-B frame validation and the aircraft table.
+#include "dect2/limits.h"
 #include "dect2/adsb/adsb_track.h"
 #include "dect2/results/results_io.h"
 #include "dect2/net/feeds.h"
@@ -13,8 +14,8 @@ namespace dect2 {
 
 using namespace adsb;
 
-static const size_t kMaxRecords = 2000;     // bound on the table, whatever the band carries
-static const size_t kMaxListed = 128;       // aircraft in one telemetry report
+static const size_t kMaxRecords = limits::kAircraft;     // bound on the table, whatever the band carries
+static const size_t kMaxListed = limits::kAircraft;       // aircraft in one telemetry report
 static const size_t kMaxFrames = 64;
 static const size_t kMaxTrack = 80;   // a few minutes of 5 s samples: enough of a trail to read the path on the map
 static const double kMaxSpeedKt = 1800;     // faster than this between two positions is a jump, not a flight
@@ -542,7 +543,7 @@ void AdsbTracker::tick(double now) {
     }
     if (now >= stats_.nextSample) stats_.nextSample = now + 10;
     for (auto it = rec_.begin(); it != rec_.end();) {
-        if (now - it->second.lastSeen > (opt_.dropSec > 0 ? opt_.dropSec : opt_.expirySec)) it = rec_.erase(it);
+        if (now - it->second.lastSeen > limits::staleSec(limits::Family::Adsb, opt_.dropSec > 0 ? opt_.dropSec : opt_.expirySec)) it = rec_.erase(it);
         else ++it;
     }
 }

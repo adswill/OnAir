@@ -546,7 +546,11 @@ void stationView(const App& a) {
     ImGui::TableSetupColumn("Last heard"); ImGui::TableSetupColumn("Airports"); ImGui::TableSetupColumn("Location");
     ImGui::TableHeadersRow();
     if (live(a))
-        for (const auto& g : t.stations) {
+    {
+        ImGuiListClipper clip;
+        clip.Begin((int)t.stations.size());
+        while (clip.Step()) for (int gi = clip.DisplayStart; gi < clip.DisplayEnd; gi++) {
+            const auto& g = t.stations[(size_t)gi];
             ImGui::TableNextRow();
             ImGui::TableNextColumn(); ImGui::TextUnformatted(hex6(g.addr).c_str());
             ImGui::TableNextColumn(); ImGui::TextUnformatted(g.type == 5 ? "DEL" : "ADM");
@@ -556,6 +560,7 @@ void stationView(const App& a) {
             ImGui::TableNextColumn(); ImGui::TextUnformatted(g.airports.empty() ? "-" : g.airports.c_str());
             ImGui::TableNextColumn(); if (g.hasPos) ImGui::Text("%.1f %.1f", g.lat, g.lon); else ImGui::TextUnformatted("-");
         }
+    }
     ImGui::EndTable();
 }
 
@@ -617,7 +622,10 @@ void list(App& a) {
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("ICAO"); ImGui::TableSetupColumn("Reg / flight"); ImGui::TableSetupColumn("Frames");
     ImGui::TableHeadersRow();
-    for (const auto& c : t.aircraft) {
+    ImGuiListClipper clip;   // 10000 aircraft are one scroll away: only the visible rows are drawn
+    clip.Begin((int)t.aircraft.size());
+    while (clip.Step()) for (int ci = clip.DisplayStart; ci < clip.DisplayEnd; ci++) {
+        const auto& c = t.aircraft[(size_t)ci];
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         if (ImGui::Selectable((hex6(c.icao) + "##vl" + hex6(c.icao)).c_str(), S.selAir == c.icao, ImGuiSelectableFlags_SpanAllColumns)) { S.selAir = c.icao; snprintf(S.fAir, sizeof S.fAir, "%s", hex6(c.icao).c_str()); }

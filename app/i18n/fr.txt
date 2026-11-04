@@ -3800,3 +3800,15 @@ Show country and zone in decoded messages	Afficher le pays et la zone dans les m
 Load file...	Charger un fichier...
 Download from country-files.com	Télécharger depuis country-files.com
 Reset to built-in	Revenir à la table intégrée
+Remove after: VDL2	Retirer après: VDL2
+Remove after: ACARS	Retirer après: ACARS
+Remove after: HFDL	Retirer après: HFDL
+Remove after: ADS-B	Retirer après: ADS-B
+Remove after: AIS	Retirer après: AIS
+Remove after: UAT	Retirer après: UAT
+Remove after: Inmarsat	Retirer après: Inmarsat
+How long after it was last heard an entry stays in the list and on the map. Default is the rule of the mode; Never keeps everything.	Durée pendant laquelle une entrée reste dans la liste et sur la carte après sa dernière réception. Défaut : la règle du mode ; Jamais garde tout.
+Custom remove-after time (minutes)	Délai de retrait personnalisé (minutes)
+Used by every Remove after row set to Custom.	Utilisé par chaque ligne Retirer après réglée sur Personnalisé.
+Default	Défaut
+Custom	Personnalisé

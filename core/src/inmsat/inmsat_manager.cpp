@@ -1,4 +1,5 @@
 // Manager of the Inmarsat all-carriers mode (inmsat_manager.h).
+#include "dect2/limits.h"
 #include "dect2/inmsat/inmsat_manager.h"
 #include "dect2/aero/aero_rx.h"
 #include "dect2/aero/aero_crx.h"
@@ -335,16 +336,18 @@ struct Manager::Impl {
             s.messagesTotal += a->messagesTotal; s.positionsTotal += a->positionsTotal; s.susOk += a->blocksOk; s.susBad += a->blocksBad;
         }
         std::stable_sort(s.messages.begin(), s.messages.end(), [](const AeroMessage& a, const AeroMessage& b) { return a.wallTime < b.wallTime; });
-        if (s.messages.size() > 300) s.messages.erase(s.messages.begin(), s.messages.end() - 300);
+        if (s.messages.size() > limits::kMessages) s.messages.erase(s.messages.begin(), s.messages.end() - (long)limits::kMessages);
         std::stable_sort(s.logons.begin(), s.logons.end(), [](const AeroLogonEntry& a, const AeroLogonEntry& b) { return a.wallTime < b.wallTime; });
-        if (s.logons.size() > 200) s.logons.erase(s.logons.begin(), s.logons.end() - 200);
-        for (auto& kv : air) s.aircraft.push_back(kv.second);
+        if (s.logons.size() > limits::kLogons) s.logons.erase(s.logons.begin(), s.logons.end() - (long)limits::kLogons);
+        const double staleLim = limits::staleSec(limits::Family::Inmsat, 0);   // the user's "remove after" time (default: keep)
+        const int64_t wallNow = (int64_t)time(nullptr);
+        for (auto& kv : air) if (staleLim > 1e17 || (double)(wallNow - kv.second.lastWall) <= staleLim) s.aircraft.push_back(kv.second);
         std::sort(s.aircraft.begin(), s.aircraft.end(), [](const AeroAircraft& a, const AeroAircraft& b) { return a.lastWall > b.lastWall; });
-        if (s.aircraft.size() > 200) s.aircraft.resize(200);
+        if (s.aircraft.size() > limits::kAircraft) s.aircraft.resize(limits::kAircraft);
         for (const auto& w : wins) if (w->inmc) for (const auto& m : w->it.messages) s.egc.push_back(m);
         for (const auto& r : retiredI) for (const auto& m : r.messages) s.egc.push_back(m);
         std::stable_sort(s.egc.begin(), s.egc.end(), [](const InmcMessage& a, const InmcMessage& b) { return a.rxUnix > b.rxUnix; });
-        if (s.egc.size() > 150) s.egc.resize(150);
+        if (s.egc.size() > limits::kMessages) s.egc.resize(limits::kMessages);
         // carrier table: the detector's carriers, with what the receivers made of them
         for (const auto& c : det.carriers()) {
             if (!c.confirmed) continue;

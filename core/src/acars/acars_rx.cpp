@@ -1,3 +1,4 @@
+#include "dect2/limits.h"
 #include "dect2/session/mode_adapters.h"
 #include "dect2/acars/acars_rx.h"
 #include "dect2/automation/engine.h"
@@ -76,6 +77,7 @@ struct AcarsReceiver::Impl {
     // published state (telMu)
     std::deque<AcarsMessage> msgs;
     std::unordered_map<std::string, AcarsAircraft> aircraft;
+    uint32_t expireTick = 0;
     using Reasm = AcarsReassembler<AcarsMessage, &AcarsMessage::text>;
     Reasm reasm;
     uint64_t okCount = 0, badCount = 0, fixedCount = 0, serial = 0, framesTotal = 0, posTotal = 0;
@@ -173,7 +175,12 @@ struct AcarsReceiver::Impl {
         std::sort(al.begin(), al.end(), [](const AcarsAircraft& a, const AcarsAircraft& b) { return a.lastHeardSec > b.lastHeardSec; });
         t.aircraft = std::move(al);
     }
-    void republish() { fillLists(pub); pub.seq = ++seq; }
+    void expire(double now) {   // telMu held
+        const double lim = limits::staleSec(limits::Family::Acars, limits::kAeroStaleSec);
+        for (auto j = aircraft.begin(); j != aircraft.end();) { if (now - j->second.lastHeardSec > lim) j = aircraft.erase(j); else ++j; }
+        if (aircraft.empty()) aircraft = decltype(aircraft)();
+    }
+    void republish() { expire(nowSec); fillLists(pub); pub.seq = ++seq; }
 
     const cf32* at(int64_t abs) const { return &ring[(size_t)(abs % rsz)]; }
 
@@ -353,10 +360,15 @@ struct AcarsReceiver::Impl {
             if (!m.flightId.empty()) a.flight = m.flightId;
             if (m.downlink) a.levelDb = m.levelDb;
             if (pos.valid) addPosition(a, pos, tSec, m.wallTime);
-            if (aircraft.size() > 100) {                      // drop the one heard longest ago
-                auto old = aircraft.begin();
-                for (auto j = aircraft.begin(); j != aircraft.end(); ++j) if (j->second.lastHeardSec < old->second.lastHeardSec) old = j;
-                aircraft.erase(old);
+            if (aircraft.size() > limits::kAircraft || (++expireTick % 256 == 0 && aircraft.size() > 1)) {   // expire by age; at the safety cap drop the one heard longest ago
+                for (auto j = aircraft.begin(); j != aircraft.end();) {
+                    if (j->first != m.reg && tSec - j->second.lastHeardSec > limits::staleSec(limits::Family::Acars, limits::kAeroStaleSec)) j = aircraft.erase(j); else ++j;
+                }
+                while (aircraft.size() > limits::kAircraft) {
+                    auto old = aircraft.begin();
+                    for (auto j = aircraft.begin(); j != aircraft.end(); ++j) if (j->second.lastHeardSec < old->second.lastHeardSec) old = j;
+                    aircraft.erase(old);
+                }
             }
         }
         if (Feeds::get().wantAcars()) Feeds::get().acars(m);   // the data feed out (feeds.h), off unless the user turned it on
@@ -368,7 +380,7 @@ struct AcarsReceiver::Impl {
             automation::emit(std::move(ev));
         }
         msgs.push_front(std::move(m));
-        if (msgs.size() > 200) msgs.pop_back();
+        if (msgs.size() > limits::kMessages) msgs.pop_back();
     }
 
     void addPosition(AcarsAircraft& a, const AeroPosition& p, double tSec, int64_t wall) {

@@ -3796,3 +3796,15 @@ Show country and zone in decoded messages	デコードしたメッセージに�
 Load file...	ファイルを読み込む...
 Download from country-files.com	country-files.com からダウンロード
 Reset to built-in	内蔵テーブルに戻す
+Remove after: VDL2	削除までの時間: VDL2
+Remove after: ACARS	削除までの時間: ACARS
+Remove after: HFDL	削除までの時間: HFDL
+Remove after: ADS-B	削除までの時間: ADS-B
+Remove after: AIS	削除までの時間: AIS
+Remove after: UAT	削除までの時間: UAT
+Remove after: Inmarsat	削除までの時間: Inmarsat
+How long after it was last heard an entry stays in the list and on the map. Default is the rule of the mode; Never keeps everything.	最後に受信してから一覧と地図に残る時間。既定はモード自身の規則、なしはすべて保持します。
+Custom remove-after time (minutes)	カスタム削除時間(分)
+Used by every Remove after row set to Custom.	「カスタム」にした削除時間の行すべてで使います。
+Default	既定
+Custom	カスタム

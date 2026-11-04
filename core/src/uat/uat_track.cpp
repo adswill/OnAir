@@ -1,3 +1,4 @@
+#include "dect2/limits.h"
 #include "dect2/uat/uat_track.h"
 #include "dect2/adsb/adsb_msg.h"
 #include "dect2/results/results_io.h"
@@ -79,7 +80,7 @@ void UatTracker::apply(const UatDecoded& d, float levelDbfs, double timeSec) {
 void UatTracker::tick(double now) {
     for (auto it = ac_.begin(); it != ac_.end();) {
         it->second.ac.ageSec = (float)(now - it->second.last);
-        if (now - it->second.last > expirySec_) it = ac_.erase(it);
+        if (now - it->second.last > limits::staleSec(limits::Family::Uat, expirySec_)) it = ac_.erase(it);
         else ++it;
     }
     if (now - windowT0_ > 1.0) { goodWindow_ = 0; windowT0_ = now; }
@@ -105,7 +106,7 @@ void UatTracker::snapshot(UatTelemetry& out, double now) {
     for (auto& r : rows) {
         if (r.second.hasPos) out.withPosition++;
         out.aircraft.push_back(r.second);
-        if (out.aircraft.size() >= 128) break;
+        if (out.aircraft.size() >= limits::kAircraft) break;
     }
     out.refValid = refValid_;
     out.refLat = refLat_;

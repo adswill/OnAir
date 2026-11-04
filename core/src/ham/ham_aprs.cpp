@@ -1,4 +1,5 @@
 // Ham APRS / AX.25 packet: frame and information field builders, the AFSK and G3RUH audio, the message session and the beacon (ham_aprs.h).
+#include "dect2/limits.h"
 #include "dect2/ham/ham_aprs.h"
 #include <algorithm>
 #include <cctype>
@@ -336,7 +337,7 @@ std::vector<std::string> AprsMessenger::onReceive(const std::string& fromIn, con
     const std::string key = from + "|" + (no.empty() ? body : no);
     if (std::find(seen_.begin(), seen_.end(), key) == seen_.end()) {
         seen_.push_back(key);
-        if (seen_.size() > 500) seen_.erase(seen_.begin());
+        if (seen_.size() > 5000) seen_.erase(seen_.begin());
         in_.push_back({from, body, no, now});
     }
     return r;

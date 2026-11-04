@@ -1,5 +1,6 @@
 // Inmarsat Aero receiver: a band search finds P-channel carriers (up to 6), each gets a front end (mixer + CIC decimator to about 48 kHz)
 // and demodulators for 600, 1200 and 10500 bit/s until one of them holds frame sync; the frames go to the SU layer (aero_su.h).
+#include "dect2/limits.h"
 #include "dect2/session/mode_adapters.h"
 #include "dect2/aero/aero_rx.h"
 #include "dect2/automation/engine.h"
@@ -23,7 +24,7 @@ namespace dect2 {
 namespace {
 using dect2::math::kPi;
 constexpr int kMaxChannels = 12;   // a busy P group (600 / 1200 bit/s) plus the 10500 bit/s carriers; a full table gives way to a wide carrier (below)
-constexpr size_t kMaxMessages = 200, kMaxLogons = 100, kMaxAircraft = 100, kMaxTypes = 64, kMaxTrack = 24;
+constexpr size_t kMaxMessages = limits::kMessages, kMaxLogons = limits::kLogons, kMaxAircraft = limits::kAircraft, kMaxTypes = 64, kMaxTrack = 24;
 const int kRates[3] = {600, 1200, 10500};
 
 using Front = AeroFront;

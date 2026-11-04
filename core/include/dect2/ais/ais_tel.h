@@ -91,7 +91,7 @@ struct AisTelemetry {
     std::vector<AisRxRecord> recent;     // the last 500 good messages, oldest first
     std::vector<AisAlertRecord> alerts;  // the last 50 CPA and geofence alerts (ais_alerts.h), oldest first
     uint64_t collisionRecovered = 0;     // coast mode: messages found under a stronger burst or on a slightly different frequency (collision cancellation, ais_rx.h)
-    uint32_t vesselCount = 0;            // stations in the table (the list below holds at most 300, the most recently heard)
+    uint32_t vesselCount = 0;            // stations in the table (the list below holds them all, up to dect2::limits::kVessels)
     std::vector<AisVessel> vessels;      // most recently heard first
     std::vector<std::string> nmea;       // the last 50 good messages as !AIVDM sentences, newest last
 };
