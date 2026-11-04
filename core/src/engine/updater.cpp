@@ -1024,7 +1024,9 @@ bool Updater::prepare(const std::string& file, std::string& err) {
         const std::string stage = exe_ + ".new";
         std::remove(stage.c_str());
         if (runCommand("cp " + shq(file) + " " + shq(stage)) != 0 || !fileExists(stage)) { err = "the new version could not be written next to the installed one (no permission to write in " + dirOf(exe_) + "?)"; std::remove(stage.c_str()); return false; }
+#ifndef _WIN32
         chmod(stage.c_str(), 0755);
+#endif
         staged_ = stage;
         return true;
     }
