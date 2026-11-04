@@ -28,6 +28,9 @@ void banner(App& a) {
     flowNext(10 * gUi);
     char cl[40]; snprintf(cl, sizeof cl, "%s##nrf", tr("Clear"));
     if (ImGui::Button(cl)) a.engine.nrf24().clearResults();
+    flowNext(10 * gUi);
+    if (ImGui::Button(trw("ESP32 radio..."))) a.esp32Open = true;
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Use an ESP32 board with an nRF24L01+ module on USB instead of an SDR: receive and send nRF24 packets, Bluetooth LE and WiFi networks"));
     flowEnd();
 }
 

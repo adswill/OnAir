@@ -281,6 +281,7 @@ void sidebar(App& a) {
         tool("LAN swarm...", a.swarmOpen, "See and cooperate with other OnAir programs on this network (opt-in)");
         tool("Messages...", a.msgdbOpen, N_("Every decoded message in one searchable database, with filters and export"));
         tool("Protocol lab...", a.protolabOpen, N_("Work out an unknown digital signal: modulation, baud rate, sync word, CRC and fields, with an export"));
+        tool("nRF24 / ESP32 radio...", a.esp32Open, N_("An ESP32 board (with an nRF24L01+ module) on USB: receive nRF24 packets, Bluetooth LE and WiFi networks; transmit behind the Arm switch"));
         tool("Signal Lab...", a.signallabOpen, N_("Blind analysis of an unknown digital signal from the spectrum or a recording, stage by stage with confidences, a bit viewer and a Mode Builder export"));
         tool("Mode Builder...", a.modeBuilderOpen, N_("Build a decoder without code: describe the modulation, sync word, frame, FEC, CRC and fields, test it on a recording, add it to the mode list"));
         tool("TX studio...", a.txStudioOpen, N_("Make a transmit signal as a file: spectrum, waterfall, measurements and a decoder check. No radio, nothing is transmitted"));
@@ -643,6 +644,7 @@ static void viewMenu(App& a) {
         ImGui::MenuItem(tr("LAN swarm..."), nullptr, &a.swarmOpen);
         ImGui::MenuItem(tr("Messages..."), nullptr, &a.msgdbOpen);
         ImGui::MenuItem(tr("Protocol lab..."), nullptr, &a.protolabOpen);
+        ImGui::MenuItem(tr("nRF24 / ESP32 radio..."), nullptr, &a.esp32Open);
         ImGui::MenuItem(tr("Signal Lab..."), nullptr, &a.signallabOpen);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Blind analysis of an unknown digital signal: select it on the spectrum (Identify or Shift+drag) or load a recording"));
         ImGui::MenuItem(tr("Mode Builder..."), nullptr, &a.modeBuilderOpen);

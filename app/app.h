@@ -373,6 +373,7 @@ struct App {
     bool watchlistOpen = false;    // View > Watchlists: alerts when listed aircraft, ships, call signs, frequencies or words are heard (watchlist_ui.cpp)
     bool msgdbOpen = false;        // View > Messages: the decoded-message database (msgdb_ui.cpp)
     bool protolabOpen = false;     // View > Protocol lab: reverse-engineering workbench for unknown signals (protolab_ui.cpp)
+    bool esp32Open = false;        // Tools > nRF24 / ESP32 radio (esp32_ui.cpp)
     bool signallabOpen = false;    // Tools > Signal Lab: blind analysis of an unknown digital signal, stage by stage, with a bit viewer (signallab_ui.cpp)
     bool modeBuilderOpen = false;  // Tools > Mode Builder: decoders built from a JSON definition (modebuilder_ui.cpp)
     bool txStudioOpen = false;     // Tools > TX studio: make, measure, decode-check and save a transmit signal without a radio (tx_studio.cpp)
@@ -980,6 +981,7 @@ void msgdbSearchFor(App& a, const std::string& text);   // opens the Messages wi
 std::vector<std::pair<std::string, std::string>> msgdbQuickSearch(const std::string& text, size_t n);   // best n matches: {label, text}
 void msgdbWindow(App& a);   // msgdb_ui.cpp: the Messages window (View > Messages); also starts the database and its feed
 void protolabWindow(App& a);   // protolab_ui.cpp: the Protocol lab window (View > Protocol lab)
+void esp32Window(App& a);       // app/esp32/esp32_ui.cpp: the nRF24 / ESP32 radio window (Tools menu, nRF24 mode)
 void signallabWindow(App& a);  // signallab_ui.cpp: the Signal Lab window (Tools > Signal Lab)
 void modeBuilderWindow(App& a);   // modebuilder_ui.cpp: the Mode Builder window (Tools > Mode Builder)
 void modeBuilderFrame(App& a);    // modebuilder_ui.cpp, every frame: lists the registered custom modes, runs the selected one on receiver 1

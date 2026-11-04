@@ -35,6 +35,16 @@ overlaps a little: tune to the channel of the transmitter.
 * The old nRF2401 and the Chinese clones with a different frame layout (for example Si24R1 in non-ESB mode, XN297) are not decoded.
 * Tested only with a synthetic generator (all rates, CRC-8 and CRC-16, carrier offsets of +-100 kHz, noise); no real recording was available. Needs a user test.
 
+## Parameter coverage (checked 2026-11-04, synthetic signal)
+
+`test_nrf24_matrix` runs every combination the chip allows: 250 k / 1 M / 2 M x address 3 / 4 / 5 bytes x CRC-8 / CRC-16 x payload 0 / 1 / 32 bytes x carrier offset +-100 kHz, with PID and NO_ACK varied: 108 of 108 decoded at 22 dB Eb/N0. Gaps that remain (not fixed, not cheap):
+* frames without the 9-bit control field (nRF2401, nRF24L01 non-plus in static mode, XN297 and other clones) are not decoded;
+* a 2 Mbit/s signal on the neighbouring channel overlaps (channels are 1 MHz apart, a 2 Mbit/s signal is 2 MHz wide): not tested with two transmitters;
+* ESB acknowledge packets with a payload (ACK payload) are decoded like any frame but not linked to the data frame they answer;
+* no real recording yet.
+
+An ESP32 board with an nRF24 module can be used instead of an SDR: Tools > nRF24 / ESP32 radio (docs/ESP32-NRF24-DESIGN.md).
+
 ## Test signal
 
 The signal simulator makes ESB frames of four devices with addresses of 3, 4 and 5 bytes, in noise, at 250 kbit/s, 1 Mbit/s, 2 Mbit/s or all three in turn.

@@ -238,6 +238,7 @@ static void floatingWindows(App& a, ImVec2 disp) {
     automationWindow(a);
     protolabWindow(a);
     signallabWindow(a);
+    esp32Window(a);
     modeBuilderFrame(a);
     modeBuilderWindow(a);
     txStudioWindow(a);
