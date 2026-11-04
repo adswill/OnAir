@@ -24,7 +24,8 @@ def gb2312_characters():
                 result.add(ord(bytes((lead, trail)).decode("gb2312")))
             except UnicodeDecodeError:
                 pass
-    assert len(result) == 7445
+    if len(result) != 7445:
+        raise ValueError(f"Expected 7445 GB2312 characters, got {len(result)}")
     return result
 
 
@@ -67,18 +68,24 @@ def verify(original, output, characters):
         raise ValueError(f"Missing requested characters: {sorted(missing)}")
     # Subsetting must not alter the line box, advances or retained glyph designs.
     for key in ("ascent", "descent", "lineGap"):
-        assert getattr(font["hhea"], key) == getattr(original["hhea"], key)
-    assert font["head"].unitsPerEm == original["head"].unitsPerEm
+        if getattr(font["hhea"], key) != getattr(original["hhea"], key):
+            raise ValueError(f"Line metric changed: {key}")
+    if font["head"].unitsPerEm != original["head"].unitsPerEm:
+        raise ValueError("Units per em changed")
     old_glyphs, new_glyphs = original.getGlyphSet(), font.getGlyphSet()
     for cp in sorted(characters):
         old_name, new_name = old_map[cp], new_map[cp]
-        assert original["hmtx"][old_name] == font["hmtx"][new_name]
+        if original["hmtx"][old_name] != font["hmtx"][new_name]:
+            raise ValueError(f"Glyph metrics changed: U+{cp:04X}")
         before, after = RecordingPen(), RecordingPen()
         old_glyphs[old_name].draw(before)
         new_glyphs[new_name].draw(after)
-        assert before.value == after.value, f"Glyph outline changed: U+{cp:04X}"
-    assert any(n.nameID == 0 for n in font["name"].names)  # copyright
-    assert any(n.nameID == 13 for n in font["name"].names)  # OFL notice
+        if before.value != after.value:
+            raise ValueError(f"Glyph outline changed: U+{cp:04X}")
+    if not any(n.nameID == 0 for n in font["name"].names):
+        raise ValueError("Missing copyright notice")
+    if not any(n.nameID == 13 for n in font["name"].names):
+        raise ValueError("Missing OFL notice")
 
 
 def main():
@@ -95,10 +102,12 @@ def main():
         source, output = args.upstream_dir / name, args.output_dir / name
         if source.resolve() == output.resolve():
             raise ValueError("Keep originals outside the output directory")
-        assert hashlib.sha256(source.read_bytes()).hexdigest() == expected_hash, f"Wrong upstream version: {source}"
+        if hashlib.sha256(source.read_bytes()).hexdigest() != expected_hash:
+            raise ValueError(f"Wrong upstream version: {source}")
         original = TTFont(source, recalcTimestamp=False)
         cmap = original.getBestCmap()
-        assert not (gb - cmap.keys())
+        if gb - cmap.keys():
+            raise ValueError(f"Upstream font lacks GB2312 characters: {source}")
         kept = wanted & cmap.keys()
         print(f"{weight}: {len(kept)} characters; unavailable upstream symbols left to base/system fonts: "
               + ", ".join(f"U+{cp:04X}" for cp in sorted(wanted - cmap.keys())), flush=True)
@@ -119,7 +128,8 @@ def main():
         total += len(raw)
         compressed += len(packed)
         print(f"{name}: {len(raw)} bytes, deflate {len(packed)} bytes, sha256 {hashlib.sha256(raw).hexdigest()}", flush=True)
-    assert total <= 10 * 1024 * 1024, "CJK fonts exceed the 10 MiB budget"
+    if total > 10 * 1024 * 1024:
+        raise ValueError("CJK fonts exceed the 10 MiB budget")
     (args.output_dir / "gb2312.txt").write_text("".join(chr(cp) for cp in sorted(gb)), encoding="utf-8")
     print(f"Total: {total / 1048576:.2f} MiB fonts, {compressed / 1048576:.2f} MiB embedded resources")
 
