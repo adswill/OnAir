@@ -3813,3 +3813,15 @@ Show country and zone in decoded messages	Land und Zone in dekodierten Nachricht
 Load file...	Datei laden...
 Download from country-files.com	Von country-files.com herunterladen
 Reset to built-in	Auf integrierte Tabelle zurücksetzen
+Remove after: VDL2	Entfernen nach: VDL2
+Remove after: ACARS	Entfernen nach: ACARS
+Remove after: HFDL	Entfernen nach: HFDL
+Remove after: ADS-B	Entfernen nach: ADS-B
+Remove after: AIS	Entfernen nach: AIS
+Remove after: UAT	Entfernen nach: UAT
+Remove after: Inmarsat	Entfernen nach: Inmarsat
+How long after it was last heard an entry stays in the list and on the map. Default is the rule of the mode; Never keeps everything.	Wie lange ein Eintrag nach dem letzten Empfang in Liste und Karte bleibt. Standard ist die Regel des Modus; Nie behält alles.
+Custom remove-after time (minutes)	Eigene Entfernungszeit (Minuten)
+Used by every Remove after row set to Custom.	Gilt für jede Zeile Entfernen nach mit Eigene.
+Default	Standard
+Custom	Eigene

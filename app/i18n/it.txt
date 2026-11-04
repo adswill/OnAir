@@ -3784,3 +3784,15 @@ Show country and zone in decoded messages	Mostra paese e zona nei messaggi decod
 Load file...	Carica file...
 Download from country-files.com	Scarica da country-files.com
 Reset to built-in	Ripristina la tabella integrata
+Remove after: VDL2	Rimuovi dopo: VDL2
+Remove after: ACARS	Rimuovi dopo: ACARS
+Remove after: HFDL	Rimuovi dopo: HFDL
+Remove after: ADS-B	Rimuovi dopo: ADS-B
+Remove after: AIS	Rimuovi dopo: AIS
+Remove after: UAT	Rimuovi dopo: UAT
+Remove after: Inmarsat	Rimuovi dopo: Inmarsat
+How long after it was last heard an entry stays in the list and on the map. Default is the rule of the mode; Never keeps everything.	Quanto resta una voce nell'elenco e sulla mappa dopo l'ultima ricezione. Predefinito è la regola della modalità; Mai conserva tutto.
+Custom remove-after time (minutes)	Tempo di rimozione personalizzato (minuti)
+Used by every Remove after row set to Custom.	Usato da ogni riga Rimuovi dopo impostata su Personalizzato.
+Default	Predefinito
+Custom	Personalizzato

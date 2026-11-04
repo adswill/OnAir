@@ -12,6 +12,7 @@
 #include "ui2_internal.h"
 #include "dect2/common/u8file.h"
 #include "dect2/engine/updater.h"
+#include "dect2/limits.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -36,6 +37,10 @@ struct Bind {
 #define SB(k, expr) m[k] = Bind{nullptr, nullptr, [](App& a) -> std::string { return (expr); }, [](App& a, const std::string& v) { (expr) = v; }}
 #define PD(k) m[k] = Bind{[](App&) -> double { return plat::prefs().getD(k, 0); }, [](App&, double v) { plat::prefs().setD(k, v); }, nullptr, nullptr}
 
+// the "remove after" times (Settings > Decoding) go to the trackers in core (dect2/limits.h)
+void applyStaleNow() { applyStaleFromPrefs(); }
+#define PS(k, def) m[k] = Bind{[](App&) -> double { return plat::prefs().getD(k, def); }, [](App&, double v) { plat::prefs().setD(k, v); applyStaleNow(); }, nullptr, nullptr}
+
 const std::map<std::string, Bind>& binds() {
     static const std::map<std::string, Bind> mm = [] {
         std::map<std::string, Bind> m;
@@ -57,6 +62,7 @@ const std::map<std::string, Bind>& binds() {
         PD("adsbLat"); PD("adsbLon");
         NB("updCheck", a.updCheck); NB("updBeta", a.updPre); NB("updAuto", a.updAuto); NB("updSrc", a.updSrc);
         NB("updMirrorOn", a.updMirrorOn); SB("updMirror", a.updMirror);
+        PS("staleVdl2", -1); PS("staleAcars", -1); PS("staleHfdl", -1); PS("staleAdsb", -1); PS("staleAis", -1); PS("staleUat", -1); PS("staleInmsat", -1); PS("staleCustomMin", 120);
         SB("udpHost", std::string(a.udpHost)); NB("udpPort", a.out.port); NB("udpRtp", a.out.rtp);
         return m;
     }();

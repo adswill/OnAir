@@ -1,4 +1,5 @@
 // ASTERIX receiver: UDP and file input, track table, demo traffic. See asterix_engine.h.
+#include "dect2/limits.h"
 #include "dect2/asterix/asterix_engine.h"
 #include "../net/netcompat.h"
 #ifndef _WIN32
@@ -23,7 +24,7 @@ namespace dect2 {
 namespace {
 constexpr double kPi = 3.14159265358979323846;
 constexpr double kEarthR = 6371008.8;
-constexpr size_t kMaxTracks = 3000;
+constexpr size_t kMaxTracks = limits::kAircraft;
 constexpr size_t kTrail = 40;
 
 double steadyS() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }

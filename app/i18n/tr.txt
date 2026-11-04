@@ -3494,3 +3494,15 @@ Show country and zone in decoded messages	Çözülen mesajlarda ülke ve bölgey
 Load file...	Dosya yükle...
 Download from country-files.com	country-files.com'dan indir
 Reset to built-in	Yerleşik tabloya dön
+Remove after: VDL2	Şundan sonra kaldır: VDL2
+Remove after: ACARS	Şundan sonra kaldır: ACARS
+Remove after: HFDL	Şundan sonra kaldır: HFDL
+Remove after: ADS-B	Şundan sonra kaldır: ADS-B
+Remove after: AIS	Şundan sonra kaldır: AIS
+Remove after: UAT	Şundan sonra kaldır: UAT
+Remove after: Inmarsat	Şundan sonra kaldır: Inmarsat
+How long after it was last heard an entry stays in the list and on the map. Default is the rule of the mode; Never keeps everything.	Bir kaydın son alınışından sonra listede ve haritada ne kadar kalacağı. Varsayılan modun kendi kuralıdır; Asla her şeyi tutar.
+Custom remove-after time (minutes)	Özel kaldırma süresi (dakika)
+Used by every Remove after row set to Custom.	Özel olarak ayarlanmış her Şundan sonra kaldır satırı bunu kullanır.
+Default	Varsayılan
+Custom	Özel

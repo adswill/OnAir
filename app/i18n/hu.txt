@@ -3781,3 +3781,15 @@ Show country and zone in decoded messages	Ország és zóna megjelenítése a de
 Load file...	Fájl betöltése...
 Download from country-files.com	Letöltés a country-files.com-ról
 Reset to built-in	Visszaállítás a beépített táblára
+Remove after: VDL2	Eltávolítás ennyi után: VDL2
+Remove after: ACARS	Eltávolítás ennyi után: ACARS
+Remove after: HFDL	Eltávolítás ennyi után: HFDL
+Remove after: ADS-B	Eltávolítás ennyi után: ADS-B
+Remove after: AIS	Eltávolítás ennyi után: AIS
+Remove after: UAT	Eltávolítás ennyi után: UAT
+Remove after: Inmarsat	Eltávolítás ennyi után: Inmarsat
+How long after it was last heard an entry stays in the list and on the map. Default is the rule of the mode; Never keeps everything.	Mennyi ideig marad egy elem a listában és a térképen az utolsó vétel után. Alapértelmezett: a mód szabálya; Soha mindent megtart.
+Custom remove-after time (minutes)	Egyéni eltávolítási idő (perc)
+Used by every Remove after row set to Custom.	Minden Egyéni értékű Eltávolítás sor ezt használja.
+Default	Alapértelmezett
+Custom	Egyéni

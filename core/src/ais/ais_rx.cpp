@@ -4,6 +4,7 @@
 // Front end, per pair: mix the pair's middle to 0 Hz, decimate to about 100 kHz, resample to exactly 96 kHz; each channel is mixed to zero, filtered
 // and decimated to 48 kHz (5 samples per bit). A power detector finds the bursts (they are short and stand alone), each one is cut out of a ring of samples
 // and decoded offline by aisDecodeBurst (ais_phy.cpp). The message layer and the station table are here.
+#include "dect2/limits.h"
 #include "dect2/session/mode_adapters.h"
 #include "dect2/marine/marine_mmsi.h"
 #include "dect2/ais/ais_rx.h"
@@ -41,7 +42,7 @@ constexpr size_t kBlock = 960;              // noise blocks of 20 ms
 constexpr size_t kBlocks = 64;              // the noise floor is a low percentile of the last 1.3 s
 constexpr double kOn = 2.0;                 // burst starts at 3 dB above the noise
 constexpr double kEndAbs = 1.5, kEndRel = 0.08;
-constexpr size_t kMaxVessels = 300, kTrackCap = 100, kTrackShown = 25, kNmeaCap = 50;
+constexpr size_t kMaxVessels = limits::kVessels, kTrackCap = 100, kTrackShown = 25, kNmeaCap = 50;
 constexpr size_t kPublishSamples = 12000;   // 0.25 s at 48 kHz
 
 int pickDecimation(double fs) {
@@ -267,6 +268,13 @@ struct AisReceiver::Impl {
     }
 
     // the lists of a report: the stations most recently heard first, the sentences
+    // stations not heard for the user\'s "remove after" time leave the table (the default is to keep them: the old behaviour). telMu not needed: the analysis thread owns vessels.
+    void expire(double tnow) {
+        const double lim = limits::staleSec(limits::Family::Ais, 0);
+        if (lim > 1e17) return;
+        for (auto it = vessels.begin(); it != vessels.end();) { if (tnow - it->second.lastHeard > lim) it = vessels.erase(it); else ++it; }
+        if (vessels.empty()) vessels = decltype(vessels)();
+    }
     void fillLists(AisTelemetry& o, double tnow) const {
         std::vector<const Rec*> order;
         order.reserve(vessels.size());
@@ -601,6 +609,8 @@ struct AisReceiver::Impl {
             logLine(t.state == 2 ? "AIS: decoding messages" : t.state == 1 ? "AIS: signal, no good message" : "AIS: lost the signal");
             lastState = t.state;
         }
+        expire(tnow);
+        t.vesselCount = (uint32_t)vessels.size();
         AisTelemetry o = t;
         fillLists(o, tnow);
         o.alerts.assign(alertLog.begin(), alertLog.end());

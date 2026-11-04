@@ -1,6 +1,7 @@
 // Saved settings: loadPrefs() and savePrefs(). The plain keys (a flag, a number with limits, a text) are one table, kKeys,
 // that both directions walk, so a key is spelled once; the keys that need real logic (the mode and its gains, the
 // spectrum range, the FM station lists, the wide-capture mask) are written out below the table.
+#include "dect2/limits.h"
 #include "../app.h"
 #include "state_internal.h"
 #include "../ais/ais_alerts_ui.h"
@@ -373,8 +374,21 @@ void syncNetRadios(App& a) {
     a.netRadiosSeen = a.netRadios;
 }
 
+void applyStaleFromPrefs() {
+    plat::Prefs& d = plat::prefs();
+    const double custom = d.getD("staleCustomMin", 120) * 60.0;
+    auto one = [&](const char* key, dect2::limits::Family f) {
+        const double m = d.getD(key, -1);   // minutes; -1 the mode's rule, 0 never, -2 custom
+        dect2::limits::setStale(f, m == -2 ? custom : m < 0 ? -1 : m * 60.0);
+    };
+    using F = dect2::limits::Family;
+    one("staleVdl2", F::Vdl2); one("staleAcars", F::Acars); one("staleHfdl", F::Hfdl); one("staleAdsb", F::Adsb);
+    one("staleAis", F::Ais); one("staleUat", F::Uat); one("staleInmsat", F::Inmsat);
+}
+
 void loadPrefs(App& a) {
     plat::Prefs& d = plat::prefs();
+    applyStaleFromPrefs();
     a.netRadios = netRadiosFromString(d.getS("netRadios", ""));
     a.vfoRows = vfoRowsFromString(d.getS("vfoRows", ""));   // multi-VFO channels
     a.netRadiosSeen = a.netRadios;

@@ -3786,3 +3786,15 @@ Show country and zone in decoded messages	Показывать страну и �
 Load file...	Загрузить файл...
 Download from country-files.com	Скачать с country-files.com
 Reset to built-in	Вернуть встроенную таблицу
+Remove after: VDL2	Удалять через: VDL2
+Remove after: ACARS	Удалять через: ACARS
+Remove after: HFDL	Удалять через: HFDL
+Remove after: ADS-B	Удалять через: ADS-B
+Remove after: AIS	Удалять через: AIS
+Remove after: UAT	Удалять через: UAT
+Remove after: Inmarsat	Удалять через: Inmarsat
+How long after it was last heard an entry stays in the list and on the map. Default is the rule of the mode; Never keeps everything.	Как долго запись остаётся в списке и на карте после последнего приёма. По умолчанию — правило режима; Никогда сохраняет всё.
+Custom remove-after time (minutes)	Своё время удаления (минуты)
+Used by every Remove after row set to Custom.	Используется каждой строкой «Удалять через» со значением «Своё».
+Default	По умолчанию
+Custom	Своё

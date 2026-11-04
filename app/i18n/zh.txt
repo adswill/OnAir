@@ -3819,3 +3819,15 @@ Show country and zone in decoded messages	在解码消息中显示国家和分�
 Load file...	加载文件...
 Download from country-files.com	从 country-files.com 下载
 Reset to built-in	恢复为内置表
+Remove after: VDL2	移除时间: VDL2
+Remove after: ACARS	移除时间: ACARS
+Remove after: HFDL	移除时间: HFDL
+Remove after: ADS-B	移除时间: ADS-B
+Remove after: AIS	移除时间: AIS
+Remove after: UAT	移除时间: UAT
+Remove after: Inmarsat	移除时间: Inmarsat
+How long after it was last heard an entry stays in the list and on the map. Default is the rule of the mode; Never keeps everything.	条目最后一次收到后在列表和地图上保留多久。默认为该模式自身的规则;永不则全部保留。
+Custom remove-after time (minutes)	自定义移除时间(分钟)
+Used by every Remove after row set to Custom.	每个设为自定义的移除时间行都使用它。
+Default	默认
+Custom	自定义

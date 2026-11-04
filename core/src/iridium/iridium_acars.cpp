@@ -1,4 +1,5 @@
 // Iridium ACARS messages from short burst data (see iridium_acars.h).
+#include "dect2/limits.h"
 #include "dect2/iridium/iridium_acars.h"
 #include "dect2/acars/acars_proto.h"
 #include "dect2/aero/aero_pos.h"
@@ -10,7 +11,7 @@
 namespace dect2 {
 
 namespace {
-constexpr size_t kMaxMsgs = 200, kMaxAircraft = 100;
+constexpr size_t kMaxMsgs = limits::kMessages, kMaxAircraft = limits::kAircraft;
 constexpr double kRepeatWindow = 180, kJoinWindow = 60;
 
 bool isHex(char c) { return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F'); }

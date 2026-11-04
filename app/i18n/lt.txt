@@ -3816,3 +3816,15 @@ Show country and zone in decoded messages	Rodyti šalį ir zoną dekoduotuose pr
 Load file...	Įkelti failą...
 Download from country-files.com	Atsisiųsti iš country-files.com
 Reset to built-in	Grįžti prie įmontuotos lentelės
+Remove after: VDL2	Pašalinti po: VDL2
+Remove after: ACARS	Pašalinti po: ACARS
+Remove after: HFDL	Pašalinti po: HFDL
+Remove after: ADS-B	Pašalinti po: ADS-B
+Remove after: AIS	Pašalinti po: AIS
+Remove after: UAT	Pašalinti po: UAT
+Remove after: Inmarsat	Pašalinti po: Inmarsat
+How long after it was last heard an entry stays in the list and on the map. Default is the rule of the mode; Never keeps everything.	Kiek laiko įrašas lieka sąraše ir žemėlapyje po paskutinio priėmimo. Numatytasis – režimo taisyklė; Niekada palieka viską.
+Custom remove-after time (minutes)	Pasirinktinis pašalinimo laikas (minutėmis)
+Used by every Remove after row set to Custom.	Naudoja kiekviena eilutė Pašalinti po, nustatyta į Pasirinktinį.
+Default	Numatytasis
+Custom	Pasirinktinis
