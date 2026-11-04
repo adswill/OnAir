@@ -82,6 +82,8 @@ inline const std::vector<Info>& table() {
         {"recordingsFolder", kFiles, "Recordings folder", "Where recordings (IQ, audio, images, logs) are saved. Choose your own folder; default is inside the data folder.", "folder directory path open recordings", K::Custom},
         {"dataFolder", kFiles, "Data folder", "Where recordings, layouts and settings live.", "folder directory path open", K::Custom},
         // ---- Decoding
+        {"gpuGlobal", kDecoding, N_("Use GPU where available"), N_("Error correction (LDPC, Viterbi) runs on the graphics card for the modes that have a GPU stage. Off: the CPU does it all. The decoded result is the same."), "gpu graphics metal vulkan direct3d compute", K::Bool, 1},
+        {"gpuModes", kDecoding, N_("GPU per mode"), N_("Override the tick above for one mode. Modes without a GPU stage show a disabled tick and the reason."), "gpu graphics per mode override", K::Custom},
         {"fmMono", kDecoding, "FM: force mono", "A weak station is quieter in mono.", "stereo", K::Bool, 0},
         {"fmStereo", kDecoding, "FM stereo", "Auto, mono, or stereo whenever a pilot is there.", "", K::Choice, 0, 0, 0, "Auto|Mono|Stereo"},
         {"fmDeemph", kDecoding, "FM de-emphasis", "50 us (Europe, most of the world) or 75 us (Americas); Off for a flat response.", "tone", K::Choice, 50, 0, 0, "Off|50 us|75 us", "0,50,75"},

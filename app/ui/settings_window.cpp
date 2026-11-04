@@ -54,7 +54,7 @@ const std::map<std::string, Bind>& binds() {
         NB("specGrid", a.specGrid); NB("specPeaks", a.specPeaks); NB("specReadout", a.specReadout); NB("specLine", a.specLine);
         NB("specAvgSec", a.specAvgSec); NB("holdDecay", a.holdDecay);
         NB("tuningMode", a.tuningMode); NB("centreTuning", a.centreTuning); NB("dragMovesTuned", a.dragMovesTuned);
-        NB("specSnapHz", a.specSnapHz); NB("bwAuto", a.bwAuto);
+        NB("specSnapHz", a.specSnapHz); NB("bwAuto", a.bwAuto); NB("gpuGlobal", a.gpuGlobal);
         NB("popTop", a.popTop); NB("subsOn", a.subsOn);
         m["recFormat"] = Bind{[](App& a) -> double { return a.recFormat; }, [](App& a, double v) { a.recFormat = (int)v; plat::prefs().setI("recFormat", (long)v); }, nullptr, nullptr};
         NB("fmMono", a.fmMono); NB("fmStereo", a.fmStereo); NB("fmDeemph", a.fmDeemph); NB("fmRegion", a.fmRegion);
@@ -92,6 +92,7 @@ void writeVal(App& a, const Info& i, const Val& v) {
         if (!strcmp(i.key, "udpHost")) putUdpHost(a, v.s);
         else if (b->ss) b->ss(a, v.s);
     } else if (b->sn) b->sn(a, clampTo(i, v.d));
+    if (!strcmp(i.key, "gpuGlobal")) applyGpuPolicy(a);
     savePrefsSoon(a);
 }
 
@@ -164,6 +165,7 @@ void customRow(App& a, const Info& i) {
         if (ImGui::Button(tr("Open Automations..."))) a.automationOpen = true;
         ImGui::TextDisabled("%s", plat::prefs().getB("automationAllowRun", false) ? tr("Running programs is allowed.") : tr("Running programs is off."));
     }
+    else if (k == "gpuModes") gpuSettingsRow(a);
     else if (k == "modeVisLink") { if (ImGui::Button(tr("Open Modes shown..."))) a.modeVisOpen = true; }
     else if (k == "themeMode") ui2::themeChoice(a, false);
     else if (k == "accent") ui2::accentMenu();

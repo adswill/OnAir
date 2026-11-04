@@ -1,5 +1,6 @@
 // Engine: owns the source, the sample ring and the analysis thread. UI talks only to this.
 #pragma once
+#include "dect2/dsp/gpu_policy.h"
 #include "dect2/common/cpu_meter.h"
 #include "dect2/dsp/iq_correct.h"
 #include "dect2/source/offset_tune.h"
@@ -254,7 +255,11 @@ public:
     std::string sourceNote() const { std::lock_guard<std::mutex> lk(noteMu_); return retuneNote_.empty() ? note_ : retuneNote_; }
     // A live radio that has stopped delivering samples (unplugged, or its USB connection broke). A HackRF is reopened when it comes back.
     bool radioLost() const { return radioLost_; }
-    void setComputeMode(int m) { rx_.setComputeMode(m); rxT_.setComputeMode(m); rxDvbs_.setComputeMode(m); rxDtmb_.setComputeMode(m); }
+    void setComputeMode(int m) { computeMode_ = m; applyCompute(); }
+    // GPU on / off per decoder family (dect2/dsp/gpu_policy.h Domain): off forces that decoder's CPU path
+    void setGpuAllowed(int domain, bool on) { if (domain >= 0 && domain < gpupol::kDomains && gpu_.allowed[domain].exchange(on) != on) applyCompute(); }
+    bool gpuAllowed(int domain) const { return domain >= 0 && domain < gpupol::kDomains && gpu_.allowed[domain].load(); }
+    int computeMode() const { return computeMode_; }
     void selectPlp(int id) { rx_.selectPlp(id); }
     // Which standard to decode: 0 = automatic (alternates between DVB-T2 and DVB-T until one locks), 1 = DVB-T2, 2 = DVB-T, 3 = ATSC, 4 = DAB, 5 = ATSC 3.0, 6 = ISDB-T, 7 = FM,
     // 8 = DVB-S/S2, 9 = DTMB, 10 = analog TV, 11 = DMR, 12 = DRM, 13 = ADS-B, 14 = GNSS,
@@ -747,6 +752,14 @@ private:
     int lastT2Frame_ = -1;
     std::atomic<bool> resetReq_{false};
     std::atomic<uint64_t> resets_{0};
+    int computeMode_ = 2;
+    gpupol::Policy gpu_;
+    void applyCompute() {
+        rx_.setComputeMode(gpupol::effectiveMode(computeMode_, gpu_.allowed[gpupol::T2]));
+        rxT_.setComputeMode(gpupol::effectiveMode(computeMode_, gpu_.allowed[gpupol::T]));
+        rxDvbs_.setComputeMode(gpupol::effectiveMode(computeMode_, gpu_.allowed[gpupol::DvbS]));
+        rxDtmb_.setComputeMode(gpupol::effectiveMode(computeMode_, gpu_.allowed[gpupol::Dtmb]));
+    }
     void applyReset();
     std::vector<uint8_t> frameBuf_;
     double tSpec_ = 0, tRx_ = 0;

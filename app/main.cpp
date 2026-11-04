@@ -202,7 +202,7 @@ static void devAutomation(App& app, DevOpts& o) {
         }
         if (found) {
             app.tune.centerHz = app.freqMhz * 1e6; fileStartPrep(app); applyBandwidth(app);
-            app.engine.setComputeMode(app.computeMode); app.engine.setStandard(engineStd(app));
+            applyGpuPolicy(app); app.engine.setComputeMode(app.computeMode); app.engine.setStandard(engineStd(app));
             app.engine.start(app.devices[app.devIdx], app.tune, app.file);
         }
     }

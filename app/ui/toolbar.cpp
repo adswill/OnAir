@@ -353,6 +353,7 @@ static void toolbarCompute(App& a, bool vertical, bool running) {
                 if (ImGui::Selectable(modes[i], a.computeMode == i)) { a.computeMode = i; a.engine.setComputeMode(i); savePrefs(a); }
                 if (dis) ImGui::EndDisabled();
             }
+            ImGui::Separator(); gpuModeTick(a, "DVB");
             ImGui::EndCombo();
         }
         if (ImGui::IsItemHovered()) {

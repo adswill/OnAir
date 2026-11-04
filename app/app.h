@@ -546,6 +546,8 @@ struct App {
     uint64_t histOk = 0, histBad = 0;
     bool rxSeen = false;
     int computeMode = 2; // 0 CPU, 1 GPU, 2 auto
+    bool gpuGlobal = true;     // Settings > Decoding > Use GPU where available (app/ui/gpu_logic.h)
+    std::string gpuModes;      // per-mode overrides "DVB=0;DTMB=1"
     int stdMode = 0;     // 0 auto, 1 DVB-T2, 2 DVB-T
     bool popOut = false, videoOnly = false;
     bool popTop = true;      // the pop-out video window stays above other windows
@@ -1022,6 +1024,10 @@ void iptvShutdown();               // iptv_ui.cpp: stops the stream (the program
 void txShutdown();                 // stops a running transmission (the radio goes quiet before it returns); the program's end
 bool txActive();
 void savePrefs(const App& a);
+void applyGpuPolicy(App& a);       // app/ui/gpu_ui.cpp: the global tick and the per-mode overrides to the engine
+void gpuModeTick(App& a, const char* mode);
+bool gulogic_allowed(const App& a, const char* mode);   // global tick + the mode's override
+void gpuSettingsRow(App& a);   // the per-mode tick (drawn in the mode's own compute row)
 void syncNetRadios(App& a);         // takes the shared list of added network radios (saved by any receiver) into this receiver, keeping its own changes
 void savePrefsSoon(const App& a);   // a tuning event: the save follows 0.6 s after the last one, not on the UI thread's mouse path
 void savePrefsTick();               // each frame
