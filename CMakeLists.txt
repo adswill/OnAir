@@ -530,10 +530,13 @@ else()
   target_link_directories(dect2core PUBLIC ${LIBUSB_LIBRARY_DIRS})
   target_link_libraries(dect2core PUBLIC ${HACKRF_LIBRARIES} ${LIBUSB_LIBRARIES} PkgConfig::FFMPEG)
 endif()
+if(NOT APPLE)
+  target_sources(dect2core PRIVATE core/src/dsp/gpu_fft_stub.cpp)   # no GPU FFT outside macOS yet
+endif()
 if(APPLE)
   # Metal LDPC decoder and CoreAudio output
-  target_sources(dect2core PRIVATE core/src/dsp/gpu_ldpc.mm core/src/dsp/gpu_viterbi.mm core/src/audio/audioout_coreaudio.mm core/src/audio/audioin_coreaudio.mm core/src/audio/videoin_avfoundation.mm core/src/tv/conceal_apple.mm core/src/tv/iptv_http_cocoa.mm core/src/power/power_apple.mm)
-  set_source_files_properties(core/src/dsp/gpu_ldpc.mm core/src/dsp/gpu_viterbi.mm core/src/tv/conceal_apple.mm core/src/audio/videoin_avfoundation.mm core/src/tv/iptv_http_cocoa.mm core/src/power/power_apple.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
+  target_sources(dect2core PRIVATE core/src/dsp/gpu_ldpc.mm core/src/dsp/gpu_viterbi.mm core/src/dsp/gpu_fft.mm core/src/audio/audioout_coreaudio.mm core/src/audio/audioin_coreaudio.mm core/src/audio/videoin_avfoundation.mm core/src/tv/conceal_apple.mm core/src/tv/iptv_http_cocoa.mm core/src/power/power_apple.mm)
+  set_source_files_properties(core/src/dsp/gpu_ldpc.mm core/src/dsp/gpu_viterbi.mm core/src/dsp/gpu_fft.mm core/src/tv/conceal_apple.mm core/src/audio/videoin_avfoundation.mm core/src/tv/iptv_http_cocoa.mm core/src/power/power_apple.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
   if(DECT2_WIN_AVX2 AND (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64" OR CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64"))
     # Intel Mac, opt-in: the whole receiver built for AVX2 (the program checks for it at start and says so if missing); off by default, see dect2/dsp/simd.h
     target_compile_options(dect2core PRIVATE -mavx2 -mfma)
@@ -1134,6 +1137,12 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_gpu_ldpc_exact tests/dsp/test_gpu_ldpc_exact.cpp)
   target_link_libraries(test_gpu_ldpc_exact PRIVATE dect2core)
   add_test(NAME gpu_ldpc_exact COMMAND test_gpu_ldpc_exact)
+  add_executable(test_gpu_atsc3 tests/dsp/test_gpu_atsc3.cpp)   # ATSC 3.0 Type B LDPC on the GPU against the CPU decoder + timing
+  target_link_libraries(test_gpu_atsc3 PRIVATE dect2core)
+  add_test(NAME gpu_atsc3 COMMAND test_gpu_atsc3)
+  add_executable(test_gpu_fft tests/dsp/test_gpu_fft.cpp)   # GPU FFT / power spectrum / FIR decimator against the CPU code + timing
+  target_link_libraries(test_gpu_fft PRIVATE dect2core)
+  add_test(NAME gpu_fft COMMAND test_gpu_fft)
 
   # network radios: the rtl_tcp client against a fake server on localhost, user-added Pluto addresses
   add_executable(test_netradio tests/net/test_netradio.cpp)

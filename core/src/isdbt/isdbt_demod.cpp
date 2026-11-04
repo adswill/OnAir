@@ -1,3 +1,6 @@
+#include "dect2/dsp/gpu_viterbi.h"
+#include "dect2/dsp/gpu_policy.h"
+#include <cstdlib>
 #include "dect2/common/thread_name.h"
 #include "dect2/ofdm/csi_erase.h"
 #include "dect2/isdbt/isdbt_demod.h"
@@ -143,7 +146,12 @@ struct LayerDecoder {
         const size_t steps = window.size() / 2;
         std::vector<uint8_t> dec;
         long metric = 0;
-        dvbt::Viterbi::decode(window, dec, 4, &metric);
+        // the GPU Viterbi gives the exact CPU decoder's bits and metric (viterbi_gpu test); Auto stays on the CPU (measured 5 to 15 times slower on the GPU, GPU-AUDIT-3.7.md): only when GPU is chosen
+        static const bool noGpu = getenv("DECT2_NOGPU") != nullptr;
+        const int gm = gpupol::liveMode(gpupol::IsdbT);
+        const bool gpu = !noGpu && gm != 0 && gm == 1 && GpuViterbi::instance().available() && GpuViterbi::instance().decode(window, dec, &metric);
+        gpupol::reportGpu(gpupol::IsdbT, gpu);
+        if (!gpu) dvbt::Viterbi::decode(window, dec, 4, &metric);
         st.viterbiMargin = steps ? (double)metric / (double)(steps * 2 * 22) : 0;
         const size_t fromStep = carry.empty() ? 0 : L;
         const size_t toStep = steps > L ? steps - L : 0;

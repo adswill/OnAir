@@ -3,12 +3,13 @@
 #include "gpu_logic.h"
 #include "dect2/dsp/gpu_ldpc.h"
 #include "dect2/dsp/gpu_viterbi.h"
+#include "dect2/dsp/gpu_fft.h"
 #include <string>
 
 using namespace dect2;
 
 static bool domainAllowed(const App& a, int d) {
-    const char* mode = d == gpupol::DvbS ? "DVB-S/S2" : d == gpupol::Dtmb ? "DTMB" : "DVB";
+    const char* mode = d == gpupol::DvbS ? "DVB-S/S2" : d == gpupol::Dtmb ? "DTMB" : d == gpupol::Atsc3 ? "ATSC 3.0" : d == gpupol::IsdbT ? "ISDB-T" : d == gpupol::Dsp ? "Spectrum" : "DVB";
     return gulogic_allowed(a, mode);
 }
 
@@ -44,13 +45,14 @@ void gpuSettingsRow(App& a) {
         for (int k = 0; k < 2; k++) {
             const int d = rows[i].domains[k];
             if (d < 0) continue;
-            const bool gpuOk = d == gpupol::Dtmb ? GpuLdpc::instance().qcAvailable() : d == gpupol::T ? GpuViterbi::instance().available() : GpuLdpc::instance().available();
+            const bool gpuOk = d == gpupol::Dtmb ? GpuLdpc::instance().qcAvailable() : d == gpupol::Dsp ? GpuFft::instance().available() : (d == gpupol::T || d == gpupol::IsdbT) ? GpuViterbi::instance().available() : GpuLdpc::instance().available();
             int onGpu = -1;
             const int st = a.rx.standard;
             if (d == gpupol::T2 && a.engine.running() && st == 0) onGpu = a.rx.plpOnGpu;
             else if (d == gpupol::T && a.engine.running() && st == 1) onGpu = a.rx.dvbt.viterbiOnGpu;
             else if (d == gpupol::DvbS && a.engine.running() && st == 7) onGpu = a.rx.dvbs.onGpu;
             else if (d == gpupol::Dtmb && a.engine.running() && st == 8) onGpu = a.rx.dtmb.onGpu;
+            else if ((d == gpupol::Atsc3 || d == gpupol::IsdbT || d == gpupol::Dsp) && a.engine.running()) onGpu = gpupol::live().onGpu[d].load();
             ImGui::TextDisabled("    %s", gpupol::diagLine(d, a.engine.gpuAllowed(d), gpuOk, a.computeMode, onGpu).c_str());
         }
     }

@@ -1080,3 +1080,9 @@ Also: Settings > Decoding "Remove after" per family (VDL2, ACARS, HFDL, ADS-B, A
 - Not done: per-mode "Reset this mode", new auto-setup buttons, tooltip sweep (the mode picker with favourites / recents, first-run wizard with regions and auto gain, and the Settings per-item reset already existed).
 ## 2026-11-04 - GPU for every mode, phase 1 (feat37-gpu)
 Audit of every mode's FEC / FFT / FIR stages in docs/GPU-AUDIT-3.7.md. Settings > Decoding: "Use GPU where available" plus a per-mode override (gpuGlobal / gpuModes, default on, no behaviour change); off forces the CPU path of DVB-T2, DVB-T, DVB-S/S2 and DTMB via Engine::setGpuAllowed. Modes without a GPU stage get a disabled tick and a reason. The ATSC 3.0 / ISDB-T / DAB / DRM FEC is CPU only (no kernel yet). Phase 2 (FIR / FFT kernel) not started.
+
+## 2026-11-04 GPU phase 2 (feat37-gpu2)
+- ATSC 3.0 Type B LDPC now runs on the GPU in batches (Auto from 12 words; 16-word batches measured 2 to 5 times faster per word than the CPU on an M2 Pro, small batches slower), CPU fallback per word; stale toolbar tooltip fixed.
+- ISDB-T Viterbi can use GpuViterbi (bit-exact) but is 5 to 14 times slower than the CPU, so only when GPU is chosen.
+- New GpuFft (Metal): FFT, windowed power spectrum, FIR decimator. Slower than the CPU at every spectrum size, so the "Spectrum" tick only matters when COMPUTE = GPU; FIR not wired. Vulkan / D3D11 not written.
+- Numbers and the modes left on the CPU: docs/GPU-AUDIT-3.7.md.

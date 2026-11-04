@@ -1,3 +1,5 @@
+#include "dect2/dsp/gpu_fft.h"
+#include "dect2/dsp/gpu_policy.h"
 #include "dect2/dsp/spectrum.h"
 #include "dect2/dsp/dsp_compat.h"
 #include <algorithm>
@@ -334,6 +336,30 @@ void SpectrumAnalyzer::feed(const cf32* x, size_t n) {
         if (w.pending.size() < N) return;
         block(w.pending.data());
         w.pending.clear();
+    }
+    // GPU (gpu_fft.h): whole blocks go to the GPU in one batch (window, FFT and power sum on it) when the "Spectrum" GPU tick and compute mode allow
+    // it. Auto only from `kGpuAutoMin` points: below that the CPU transform finishes before a GPU round trip does (docs/GPU-AUDIT-3.7.md).
+    {
+        const int gm = gpupol::liveMode(gpupol::Dsp);
+        static constexpr size_t kGpuAutoMin = 1u << 30;   // set from the measurement in docs/GPU-AUDIT-3.7.md: no size beat the CPU, so Auto stays on the CPU
+        const bool want = gm != 0 && (gm == 1 || N >= kGpuAutoMin) && GpuFft::instance().available();
+        if (want && left >= N && !full()) {
+            size_t room; { std::lock_guard<std::mutex> lk(s.mu); room = w.gen != s.gen || s.blocks >= maxBlocks ? 0 : maxBlocks - s.blocks; }
+            const size_t k = std::min(left / N, room);
+            if (k > 0) {
+                std::vector<float> part(N, 0.f);
+                if (GpuFft::instance().powerAccumulate(src, (int)k, N, w.window.data(), part.data())) {
+                    std::lock_guard<std::mutex> lk(s.mu);
+                    if (w.gen == s.gen && s.blocks < maxBlocks) {
+                        float* acc = s.accum.data();
+                        for (size_t i = 0; i < N; i++) acc[i] += part[i];
+                        s.blocks += k;
+                    }
+                    gpupol::reportGpu(gpupol::Dsp, true);
+                    src += k * N; left -= k * N;
+                }
+            }
+        } else gpupol::reportGpu(gpupol::Dsp, false);
     }
     while (left >= N && !full()) { block(src); src += N; left -= N; }
     if (left && left < N && !full()) w.pending.assign(src, src + left);

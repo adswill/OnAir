@@ -2,6 +2,7 @@
 // classic bar and the side panels, and the tuning helpers (tuneFreq, spectrumTune, the second-mode control) live here.
 // The source, rig windows, status bar and mode selection are in toolbar_source.cpp, toolbar_rig.cpp, statusbar.cpp and mode_select.cpp.
 #include "../app.h"
+#include "dect2/dsp/gpu_policy.h"
 #include "touch.h"
 #include "panel_layout.h"
 #include "../state/presets_app.h"
@@ -336,13 +337,15 @@ static void toolbarStartStop(App& a, bool running) {
     memoryQuickBar(a);        // the starred memories in one row
 }
 
-// the decoding backend: CPU, GPU or Auto (the DVB-T2 / ATSC 3.0 LDPC and the DVB-T Viterbi)
+// the decoding backend: CPU, GPU or Auto (the DVB-T2 and ATSC 3.0 LDPC, the DVB-T and ISDB-T Viterbi)
 static void toolbarCompute(App& a, bool vertical, bool running) {
     if (!vertical) vSeparator();
     {
         static const char* modes[] = {"CPU", "GPU", "Auto"};
         char lbl[48];
-        const bool gpuNow = a.rx.plpOnGpu;
+        const bool gpuNow = a.family == 3 ? gpupol::live().onGpu[gpupol::Atsc3].load() == 1 : a.family == 4 ? gpupol::live().onGpu[gpupol::IsdbT].load() == 1 : a.rx.plpOnGpu;
+        const char* tickMode = a.family == 3 ? "ATSC 3.0" : a.family == 4 ? "ISDB-T" : "DVB";
+        const char* stageName = a.family == 3 ? "the LDPC (ATSC 3.0, Type B codes)" : a.family == 4 ? "the Viterbi (ISDB-T)" : a.rx.standard == 1 ? "the Viterbi (DVB-T)" : "the LDPC (DVB-T2)";
         snprintf(lbl, sizeof lbl, "%s", a.computeMode == 2 ? (gpuNow ? "Auto (GPU)" : "Auto (CPU)") : modes[a.computeMode]);
         ImGui::TextDisabled("%s", tr("COMPUTE")); ImGui::SameLine(0, 5 * gUi);
         ImGui::SetNextItemWidth(104 * gUi);
@@ -353,12 +356,12 @@ static void toolbarCompute(App& a, bool vertical, bool running) {
                 if (ImGui::Selectable(modes[i], a.computeMode == i)) { a.computeMode = i; a.engine.setComputeMode(i); savePrefs(a); }
                 if (dis) ImGui::EndDisabled();
             }
-            ImGui::Separator(); gpuModeTick(a, "DVB");
+            ImGui::Separator(); gpuModeTick(a, tickMode);
             ImGui::EndCombo();
         }
         if (ImGui::IsItemHovered()) {
             const char* gpuName = GpuLdpc::instance().deviceName();
-            ImGui::SetTooltip("Use the GPU for decoding (Auto, recommended): the DVB-T2 / ATSC 3.0 LDPC; the DVB-T Viterbi only with GPU (experimental).\n"
+            ImGui::SetTooltip("Use the GPU for decoding (Auto, recommended): the DVB-T2 and ATSC 3.0 LDPC and the ISDB-T Viterbi; the DVB-T Viterbi only with GPU (experimental).\n"
                 "Now: %s on the %s.\n"
 #ifdef __APPLE__
                 "CPU: NEON on all cores. GPU: Metal compute.\n"
@@ -368,7 +371,7 @@ static void toolbarCompute(App& a, bool vertical, bool running) {
                 "Auto: the GPU when a discrete graphics card is found, otherwise the CPU\n"
                 "first and the GPU if it falls behind real time.\n"
 #endif
-                "Graphics: %s", a.rx.standard == 1 ? "the Viterbi (DVB-T)" : "the LDPC (DVB-T2)", gpuNow ? "GPU" : "CPU", a.rx.gpuAvailable ? gpuName : "none usable");
+                "Graphics: %s", stageName, gpuNow ? "GPU" : "CPU", a.rx.gpuAvailable ? gpuName : "none usable");
         }
     }
 }
@@ -483,7 +486,7 @@ void toolbarParts(App& a, int mask, bool vertical) {
 
     if (!a.newUi) toolbarStartStop(a, running);   // the new interface has its Start button in the side rail
 
-    if ((mask & TbDecoder) && (a.family == 0 || a.family == 3)) toolbarCompute(a, vertical, running);   // DVB-T2 / ATSC 3.0 (LDPC) and DVB-T (Viterbi)
+    if ((mask & TbDecoder) && (a.family == 0 || a.family == 3 || a.family == 4)) toolbarCompute(a, vertical, running);   // DVB-T2 / ATSC 3.0 (LDPC), DVB-T / ISDB-T (Viterbi)
     if ((mask & TbDecoder) && a.family == 0) toolbarStandard(a, vertical);   // the other families have one standard each: nothing to choose
 
     if ((mask & TbDecoder) && mu && mu->decoder) {
