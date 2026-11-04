@@ -156,7 +156,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential file cmake pkg-config ccache nasm patchelf curl xz-utils libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libglfw3-dev libairspy0 libbladerf2 libiio0 liblimesuite20.10-1 libuhd4.1.0 libhamlib-dev libssl-dev
+          sudo apt-get install -y build-essential file desktop-file-utils cmake pkg-config ccache nasm patchelf curl xz-utils libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libglfw3-dev libairspy0 libbladerf2 libiio0 liblimesuite20.10-1 libuhd4.1.0 libhamlib-dev libssl-dev
       - name: Cache the static FFmpeg
         id: ffmpeg
         uses: actions/cache@v6
