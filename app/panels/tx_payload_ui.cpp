@@ -88,12 +88,12 @@ void audioSourceRow(TxUi& s, bool running) {
     }
     if (s.audioSrc == 0) {
         const auto devs = listAudioInputs();
-        const char* cur = s.audioDevice[0] ? s.audioDevice : tr("Default input");
+        const char* cur = s.audioDevice.empty() ? tr("Default input") : s.audioDevice.c_str();
         ImGui::SetNextItemWidth(280 * gUi);
         if (ImGui::BeginCombo(tr("Input device"), cur)) {
             for (const auto& d : devs) {
-                const bool sel = std::string(s.audioDevice) == d.id;
-                if (ImGui::Selectable(d.name.c_str(), sel)) snprintf(s.audioDevice, sizeof s.audioDevice, "%s", d.id.c_str());
+                const bool sel = s.audioDevice == d.id;
+                if (ImGui::Selectable(d.name.c_str(), sel)) s.audioDevice = d.id;
             }
             ImGui::EndCombo();
         }
