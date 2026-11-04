@@ -1,6 +1,7 @@
 // Digital video generator engine (videogen.h). One thread, "onair-videogen": source picture -> fit to the output size -> overlay ->
 // video encoder, the sound -> one encoder per audio track, both into FFmpeg's MPEG-TS muxer (mux rate, service, PIDs), whose packets
-// go to a .ts file (as fast as the encoder runs) or to tsout's paced UDP / RTP sender (in real time).
+// go to a .ts file (as fast as the encoder runs) or to tsout's paced UDP / RTP sender (in real time). A preview (previewOnly) makes
+// the pictures in real time for the window and encodes nothing.
 // The camera comes from VideoIn (listVideoInputs / start / copyYuv420), the microphone from AudioIn. Pictures and video files are
 // decoded here, frame by frame, so a file is encoded faster than real time with its picture and sound in step. The test generator
 // draws its test picture (drawTestCard) straight into the output frame.
@@ -412,13 +413,13 @@ void VideoGenerator::Impl::run(GenConfig c) {
     const int W = s.width & ~1, H = s.height & ~1;
     const AVRational fr = av_d2q(std::clamp(s.fps, 0.5, 120.0), 1001);
     const double fps = av_q2d(fr);
-    const bool live = c.source == Source::Camera || c.output != Output::File;
-    const int64_t totalFrames = c.output == Output::File ? std::max<int64_t>(1, (int64_t)std::llround(c.seconds * fps)) : INT64_MAX;
+    const bool live = c.source == Source::Camera || c.output != Output::File || c.previewOnly;
+    const int64_t totalFrames = c.output == Output::File && !c.previewOnly ? std::max<int64_t>(1, (int64_t)std::llround(c.seconds * fps)) : INT64_MAX;
     const Budget bud = estimate(s);
 
     // encoders
     const std::string venc = pickVideoEncoder(s.videoEncoder, videoEncoders());
-    const int tracks = audioTrackCount(s);
+    const int tracks = c.previewOnly ? 0 : audioTrackCount(s);   // a preview has no sound (and opens no microphone)
     std::string aenc;
     if (tracks > 0) {
         // the chosen encoder, else the first this FFmpeg has (st.audioEncoder tells the window which); none at all is an error, not a
@@ -471,13 +472,13 @@ void VideoGenerator::Impl::run(GenConfig c) {
         if (!mic.start(AudioIn::Mic, s.sampleRate, c.micId, 0, err)) { fail(err.empty() ? "cannot open the microphone" : err); return; }
     }
 
-    // output
+    // output (a preview's sink goes nowhere)
     Sink sink;
     OutputManager net;
-    if (c.output == Output::File) {
+    if (!c.previewOnly && c.output == Output::File) {
         sink.file = u8fopen(c.tsPath, "wb");
         if (!sink.file) { fail("cannot write " + c.tsPath + ": " + strerror(errno)); return; }
-    } else {
+    } else if (!c.previewOnly) {
         OutputConfig oc;
         oc.udp = true; oc.host = c.host; oc.port = c.port; oc.ttl = c.ttl; oc.rtp = c.output == Output::Rtp;
         net.configure(oc);
@@ -735,20 +736,22 @@ void VideoGenerator::Impl::run(GenConfig c) {
                 if (!ovlStatic || rolling) { ovr.render(lay, s, t, W, H, ovl); ovlStatic = true; ovlEmpty = false; }
                 if (!ovlEmpty) OverlayRenderer::blendYuv420(ovl.data(), W, H, out.y.data(), W, out.u.data(), W / 2, out.v.data(), W / 2);
             }
-            // encode the picture
-            if (av_frame_make_writable(vf) < 0) { fail("out of memory"); break; }
-            if (vx->pix_fmt == AV_PIX_FMT_NV12 && toNv12) {
-                const uint8_t* sp[3] = {out.y.data(), out.u.data(), out.v.data()};
-                const int ss[3] = {W, W / 2, W / 2};
-                sws_scale(toNv12, sp, ss, 0, H, vf->data, vf->linesize);
-            } else {
-                av_image_copy_plane(vf->data[0], vf->linesize[0], out.y.data(), W, W, H);
-                av_image_copy_plane(vf->data[1], vf->linesize[1], out.u.data(), W / 2, W / 2, H / 2);
-                av_image_copy_plane(vf->data[2], vf->linesize[2], out.v.data(), W / 2, W / 2, H / 2);
+            // encode the picture (not for a preview: it only shows the picture)
+            if (!c.previewOnly) {
+                if (av_frame_make_writable(vf) < 0) { fail("out of memory"); break; }
+                if (vx->pix_fmt == AV_PIX_FMT_NV12 && toNv12) {
+                    const uint8_t* sp[3] = {out.y.data(), out.u.data(), out.v.data()};
+                    const int ss[3] = {W, W / 2, W / 2};
+                    sws_scale(toNv12, sp, ss, 0, H, vf->data, vf->linesize);
+                } else {
+                    av_image_copy_plane(vf->data[0], vf->linesize[0], out.y.data(), W, W, H);
+                    av_image_copy_plane(vf->data[1], vf->linesize[1], out.u.data(), W / 2, W / 2, H / 2);
+                    av_image_copy_plane(vf->data[2], vf->linesize[2], out.v.data(), W / 2, W / 2, H / 2);
+                }
+                vf->pts = n;
+                if (avcodec_send_frame(vx, vf) < 0) { fail("the video encoder stopped"); break; }
+                drain(vx, vs);
             }
-            vf->pts = n;
-            if (avcodec_send_frame(vx, vf) < 0) { fail("the video encoder stopped"); break; }
-            drain(vx, vs);
             // the sound up to the end of this picture
             if (tracks > 0 && ax[0]) {
                 const int fs = af->nb_samples;
@@ -847,12 +850,12 @@ VideoGenerator::~VideoGenerator() { stop(); }
 bool VideoGenerator::start(const GenConfig& c, std::string& err) {
     if (running()) { err = "already running"; return false; }
     if (p_->th.joinable()) p_->th.join();
-    if (c.output == Output::File && c.tsPath.empty()) { err = "choose a .ts file to write"; return false; }
+    if (c.output == Output::File && !c.previewOnly && c.tsPath.empty()) { err = "choose a .ts file to write"; return false; }
     if ((c.source == Source::Picture || c.source == Source::VideoFile) && c.path.empty()) { err = "choose a picture or video file (or a folder)"; return false; }
     if (c.source != Source::Generator && c.source != Source::Camera && listMedia(c.path, c.source == Source::Picture ? MediaKind::Picture : MediaKind::Video).empty()) { err = "there is nothing to play in " + c.path; return false; }
-    if (c.audio == AudioSource::AudioFile && listMedia(c.audioPath, MediaKind::Audio).empty()) { err = "choose a sound file (or a folder of them)"; return false; }
+    if (c.audio == AudioSource::AudioFile && !c.previewOnly && listMedia(c.audioPath, MediaKind::Audio).empty()) { err = "choose a sound file (or a folder of them)"; return false; }
     if (c.source == Source::Generator && (c.pattern < 0 || c.pattern > 2)) { err = "the test pattern must be 0 to 2"; return false; }
-    if (c.output != Output::File && (c.port <= 0 || c.port > 65535)) { err = "the port must be 1 to 65535"; return false; }
+    if (c.output != Output::File && !c.previewOnly && (c.port <= 0 || c.port > 65535)) { err = "the port must be 1 to 65535"; return false; }
     if (c.enc.width < 16 || c.enc.height < 16) { err = "the picture is too small"; return false; }
     {
         std::lock_guard<std::mutex> lk(p_->mu);
@@ -861,6 +864,7 @@ bool VideoGenerator::start(const GenConfig& c, std::string& err) {
         p_->active = true;
         p_->overlay = c.overlay;
         p_->overlaySerial++;
+        p_->prev.clear();   // the last run's picture: preview() would hand it out with a 0 x 0 size (a crash in the window)
         p_->prevW = p_->prevH = 0;
     }
     p_->stopFlag = false;
