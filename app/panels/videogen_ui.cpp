@@ -287,6 +287,7 @@ void loadOnce(State& s) {
     s.init = true;
     s.cfg.tsPath = plat::dataDir() + "/onair_video.ts";
     s.cfg.port = 5000;
+    s.cfg.output = Output::Udp;   // a new user streams (to this PC, 127.0.0.1:5000); a saved choice replaces it
     const std::string c = readText(cfgPath());
     if (!c.empty()) { loadCfg(c, s.cfg, s.advanced); s.lengthEdited = true; }
     const std::string l = readText(layoutPath());

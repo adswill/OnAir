@@ -22,7 +22,7 @@ Every setting in the window has a (?) with a short version of what is written he
 1. Open Tools > Digital video generator.
 2. On **Sources and encoding**, choose the input (Camera, Still picture, Video file or Test generator), the resolution and the frame rate.
    That is all the tab shows at first. Tick **Advanced** for the output (MPEG-TS file, UDP or RTP stream), the sound and every encoding
-   setting; settings you do not see keep their values (the first time: a one-minute `.ts` file, `onair_video.ts` in the data folder).
+   setting; settings you do not see keep their values (the first time: a UDP stream to this PC, `udp://127.0.0.1:5000`, to watch in VLC).
 3. Leave the encoding settings at their defaults, or change them: the **Estimated bitrate** panel on the right follows every change.
 4. Press **Start preview** to see the moving picture on the **Preview** tab (nothing is encoded or sent; **Stop preview** brings back
    the grey card), and optionally place an overlay there, and check on **Digital Television Mode Selector** which DVB modes carry the stream.
