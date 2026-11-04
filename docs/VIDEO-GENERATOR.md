@@ -20,9 +20,12 @@ Every setting in the window has a (?) with a short version of what is written he
 ## Quick start
 
 1. Open Tools > Digital video generator.
-2. On **Sources and encoding**, choose the input (Camera, Still picture, Video file or Test generator) and the output (MPEG-TS file, UDP or RTP stream).
+2. On **Sources and encoding**, choose the input (Camera, Still picture, Video file or Test generator), the resolution and the frame rate.
+   That is all the tab shows at first. Tick **Advanced** for the output (MPEG-TS file, UDP or RTP stream), the sound and every encoding
+   setting; settings you do not see keep their values (the first time: a UDP stream to this PC, `udp://127.0.0.1:5000`, to watch in VLC).
 3. Leave the encoding settings at their defaults, or change them: the **Estimated bitrate** panel on the right follows every change.
-4. Optionally place an overlay on the **Overlay** tab, and check on **Digital Television Mode Selector** which DVB modes carry the stream.
+4. Press **Start preview** to see the moving picture on the **Preview** tab (nothing is encoded or sent; **Stop preview** brings back
+   the grey card), and optionally place an overlay there, and check on **Digital Television Mode Selector** which DVB modes carry the stream.
 5. Press **Start encoding** (file) or **Start streaming** (UDP / RTP). Stop ends a stream; a file stops by itself at its length.
 
 ## Sources
@@ -32,7 +35,7 @@ Every setting in the window has a (?) with a short version of what is written he
 | Camera | A webcam, or an HDMI / SDI capture card. The list is made when the window opens (Refresh after plugging one in); the camera itself is opened only when you press Start. A camera is always encoded in real time. |
 | Still picture | One picture (PNG, JPEG, BMP, ...) sent as a continuous stream at the chosen frame rate: a test card, a slide, a station logo. Length one minute unless you change it. |
 | Video file | Any file FFmpeg can read. The length follows the file when you choose it. When the length is longer than the file, the file starts again. Picture and sound are decoded in step, so writing a `.ts` file goes faster than real time. |
-| Test generator | A copy of the transmitter's own moving test picture: the one in the test transport stream that the TX studio's generators carry (for DVB-T2, the T2Generator's real PLP), drawn at the output resolution. **Pattern**: Test card (colour bars, a moving sweep, a chequerboard with a bouncing ball), Colour bars or Grey ramp; a white bar grows along the bottom once a second. Put a callsign, a CQ call or other text on it with the **Overlay** tab. Length one minute unless you change it; a `.ts` file is written faster than real time. Picture fit does not apply. |
+| Test generator | A copy of the transmitter's own moving test picture: the one in the test transport stream that the TX studio's generators carry (for DVB-T2, the T2Generator's real PLP), drawn at the output resolution. **Pattern**: Test card (colour bars, a moving sweep, a chequerboard with a bouncing ball), Colour bars or Grey ramp; a white bar grows along the bottom once a second. Put a callsign, a CQ call or other text on it with the **Preview** tab. Length one minute unless you change it; a `.ts` file is written faster than real time. Picture fit does not apply. |
 
 ### Your own picture, video and sound
 
@@ -168,9 +171,16 @@ always there and is used when the chosen encoder is missing.
   has them and the hardware is there. Preset, latency tuning and CRF are x264 / x265 options; they are greyed out for other encoders.
   VAAPI encoders are not offered: they need the pictures on the GPU.
 
-## Overlay
+## Preview and overlay
 
-The **Overlay** tab places things on the picture before it is encoded.
+The **Preview** tab shows the picture and places things on it before it is encoded. Stopped, it is a grey card with the overlay.
+**Start preview** (at the top, beside Start streaming) runs the input with the overlay in real time, without encoding, writing or
+sending anything; the settings stay open and the preview restarts when the input, resolution or frame rate changes. **Stop preview**
+brings back the grey card. Start streaming or Start encoding stops the preview and starts the real run.
+
+Whenever nothing is streamed or encoded, also during a preview, the picture has a red cross and the line under it says "Not streaming"
+(or "Not encoding" for a file). The cross goes away only while the stream or the file is being made, so it is always clear whether
+anything goes out.
 
 - **Blocks**: **Logo** (a PNG file, transparency kept, scaled into its box keeping its shape; other picture formats work when the FFmpeg in the build decodes them), **Free text** (more lines allowed), **Rolling text** (a band with
   text running through it), and every **parameter** of the first tab, grouped as there (Video, Audio, Transport stream). A parameter

@@ -968,6 +968,45 @@ static void testStream(const fs::path& pic, bool rtp) {
 }
 #endif
 
+// Start preview in the window: the moving picture in real time, but no file, no stream and no encoded bytes, until it is stopped
+static void testPreviewOnly(const fs::path& dir) {
+    GenConfig c;
+    c.source = Source::Generator;
+    c.pattern = 1;
+    c.output = Output::File;
+    c.tsPath = (dir / "preview_never_written.ts").string();
+    c.seconds = 1;   // a file length does not end a preview
+    c.enc.width = 320; c.enc.height = 240; c.enc.fps = 25;
+    c.enc.videoEncoder = "mpeg2video";
+    c.previewOnly = true;
+    VideoGenerator g;
+    std::string err;
+    CHECK(g.start(c, err), "start a preview: %s", err.c_str());
+    std::vector<uint8_t> rgba;
+    int w = 0, h = 0, pictures = 0;
+    uint64_t serial = 0;
+    for (auto end = std::chrono::steady_clock::now() + std::chrono::seconds(3); std::chrono::steady_clock::now() < end;) {
+        if (g.preview(rgba, w, h, serial)) pictures++;
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+    const GenStats st = g.stats();
+    CHECK(g.running(), "a preview runs on past the file length");
+    CHECK(pictures >= 3 && w == 320 && h == 240, "preview pictures keep coming (%d, %dx%d)", pictures, w, h);
+    CHECK(st.frames >= 25 && st.frames < 150, "a preview runs in real time (%llu frames in 3 s)", (unsigned long long)st.frames);
+    g.stop();
+    CHECK(!fs::exists(c.tsPath), "a preview writes no file");
+    CHECK(g.stats().error.empty(), "a preview ends without an error: %s", g.stats().error.c_str());
+    // Start encoding right after the preview, on the same generator (the window does this)
+    c.previewOnly = false;
+    CHECK(g.start(c, err), "a file after the preview: %s", err.c_str());
+    serial = 0;
+    w = h = -1;
+    CHECK(!g.preview(rgba, w, h, serial) || (w > 0 && h > 0), "no picture of the last run with a 0 x 0 size (%dx%d)", w, h);
+    CHECK(g.wait(30), "the file after the preview ends");
+    CHECK(g.stats().finished && fs::exists(c.tsPath), "the file after the preview is written: %s", g.stats().error.c_str());
+    std::printf("preview only: %d pictures, %llu frames in 3 s, no file\n", pictures, (unsigned long long)st.frames);
+}
+
 int main() {
     const fs::path dir = fs::temp_directory_path() / ("onair_videogen_" + std::to_string((long long)std::chrono::steady_clock::now().time_since_epoch().count()));
     fs::create_directories(dir);
@@ -985,6 +1024,7 @@ int main() {
     testOwnContent(dir, pic);
     testFailures(dir, pic);
     testStopAndOverlayChanges(dir, pic);
+    testPreviewOnly(dir);
 #ifndef _WIN32
     testStream(pic, false);
     testStream(pic, true);

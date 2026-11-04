@@ -1,7 +1,7 @@
 // Tools > Digital video generator: a camera, a still picture or a video file encoded into an MPEG transport stream, written to a .ts
-// file or sent over UDP / RTP (port 5000 unless changed). Three tabs: "Sources and encoding" (inputs, output, every encoder parameter and
-// the bitrate estimate, which follows each change), "Overlay" (a logo, parameter blocks, free text and rolling text, placed on the
-// picture by drag and drop, magnetic) and "Digital Television Mode Selector" (the DVB modes that carry the stream on a link,
+// file or sent over UDP / RTP (port 5000 unless changed). Three tabs: "Sources and encoding" (the input, resolution and frame rate; with
+// Advanced ticked also the output and every encoder parameter; the bitrate estimate follows each change), "Preview" (the picture, with
+// a red cross while nothing is sent, and the overlay: a logo, parameter blocks, free text and rolling text, placed by drag and drop) and "Digital Television Mode Selector" (the DVB modes that carry the stream on a link,
 // videogen_modes_ui.cpp). A standalone tool: it does not touch the receiver or the transmitter; a .ts file it writes can be given to the
 // transmitter as its "MPEG-TS / video file". The engine is core/src/tv/videogen*.cpp.
 #include "../app.h"
@@ -12,6 +12,7 @@
 #include "dect2/common/u8file.h"
 #include "dect2/tv/videogen.h"
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <mutex>
 #include <chrono>
@@ -55,7 +56,7 @@ const ParamGroup kGroups[] = {
 // The "(?)" text of each settings row, by its English label (docs/VIDEO-GENERATOR.md says the same at more length)
 struct RowHelp { const char* label; const char* help; };
 const RowHelp kRowHelp[] = {
-    {N_("Input"), N_("What is encoded. Camera: a webcam or an HDMI / SDI capture card, opened only when you press Start. Still picture: one image sent as a continuous stream (a test card, a slide). Video file: any file FFmpeg can read, played from the start and looped when the length is longer. Test generator: a copy of the transmitter's own moving test picture (the test transport stream the DVB-T2 T2Generator carries in its real PLP). Put a callsign or other text on it with the Overlay tab.")},
+    {N_("Input"), N_("What is encoded. Camera: a webcam or an HDMI / SDI capture card, opened only when you press Start. Still picture: one image sent as a continuous stream (a test card, a slide). Video file: any file FFmpeg can read, played from the start and looped when the length is longer. Test generator: a copy of the transmitter's own moving test picture (the test transport stream the DVB-T2 T2Generator carries in its real PLP). Put a callsign or other text on it with the Preview tab.")},
     {N_("Camera"), N_("The cameras and capture cards found when this window opened. Press Refresh after plugging one in.")},
     {N_("Picture"), N_("A PNG, JPEG, BMP or other picture. It is scaled to the resolution below with the picture fit you choose.")},
     {N_("Video file"), N_("The length below follows the file when you choose it. Picture and sound are decoded in step, so a file is encoded faster than real time when the output is a .ts file.")},
@@ -104,11 +105,14 @@ struct State {
     bool init = false;
     GenConfig cfg;
     bool lengthEdited = false;
+    bool advanced = false;   // the first tab shows every setting; off: only the input, resolution and frame rate
     std::future<void> probe;   // encoders, cameras and microphones, looked up when the window first opens
     bool probed = false;
     std::vector<dect2::VideoInputDevice> cams, camsFound;
     std::vector<dect2::AudioInputDevice> mics, micsFound;
     VideoGenerator gen;
+    bool previewing = false;   // the run going (or the last one) is a preview: the picture only, nothing encoded or sent
+    std::string previewKey;    // what the preview picture was started with (pictureKey)
     std::string msg, note;   // msg: a problem (red); note: what a drop just set
     std::string savedCfg, savedLayout, sentLayout;
     double lastSave = 0;
@@ -155,7 +159,7 @@ void writeText(const std::string& p, const std::string& t) {
 }
 
 // the sources and output, below the encoder settings in the same file ("g." keys, which loadSettings skips)
-std::string saveCfg(const GenConfig& c) {
+std::string saveCfg(const GenConfig& c, bool advanced) {
     char b[64];
     std::string o = saveSettings(c.enc);
     o += "g.src=" + std::to_string((int)c.source) + "\n" + "g.cam=" + c.cameraId + "\n" + "g.path=" + c.path + "\n" + "g.apath=" + c.audioPath + "\n" + "g.loop=" + (c.loop ? "1" : "0") + "\n";
@@ -166,10 +170,11 @@ std::string saveCfg(const GenConfig& c) {
     o += std::string("g.slide=") + b + "\n";
     snprintf(b, sizeof b, "%.3f", c.seconds);
     o += std::string("g.secs=") + b + "\n" + "g.fit=" + std::to_string((int)c.fit) + "\n";
+    o += "g.adv=" + std::to_string(advanced ? 1 : 0) + "\n";
     return o;
 }
 
-void loadCfg(const std::string& text, GenConfig& c) {
+void loadCfg(const std::string& text, GenConfig& c, bool& advanced) {
     loadSettings(text, c.enc);
     size_t pos = 0;
     while (pos < text.size()) {
@@ -197,6 +202,7 @@ void loadCfg(const std::string& text, GenConfig& c) {
         else if (k == "ttl") c.ttl = std::clamp(i, 1, 255);
         else if (k == "secs") c.seconds = std::clamp(atof(v.c_str()), 1.0, 86400.0);
         else if (k == "fit") c.fit = (Fit)std::clamp(i, 0, 2);
+        else if (k == "adv") advanced = i != 0;
     }
 }
 
@@ -281,11 +287,12 @@ void loadOnce(State& s) {
     s.init = true;
     s.cfg.tsPath = plat::dataDir() + "/onair_video.ts";
     s.cfg.port = 5000;
+    s.cfg.output = Output::Udp;   // a new user streams (to this PC, 127.0.0.1:5000); a saved choice replaces it
     const std::string c = readText(cfgPath());
-    if (!c.empty()) { loadCfg(c, s.cfg); s.lengthEdited = true; }
+    if (!c.empty()) { loadCfg(c, s.cfg, s.advanced); s.lengthEdited = true; }
     const std::string l = readText(layoutPath());
     if (!l.empty()) s.cfg.overlay = loadLayout(l);
-    s.savedCfg = saveCfg(s.cfg);
+    s.savedCfg = saveCfg(s.cfg, s.advanced);
     s.savedLayout = saveLayout(s.cfg.overlay);
     s.font = atlasFont();
     s.ovr.setFont(s.font);
@@ -296,9 +303,39 @@ void saveSoon(State& s) {
     const double now = ImGui::GetTime();
     if (now - s.lastSave < 1.0) return;
     s.lastSave = now;
-    const std::string c = saveCfg(s.cfg), l = saveLayout(s.cfg.overlay);
+    const std::string c = saveCfg(s.cfg, s.advanced), l = saveLayout(s.cfg.overlay);
     if (c != s.savedCfg) { writeText(cfgPath(), c); s.savedCfg = c; }
     if (l != s.savedLayout) { writeText(layoutPath(), l); s.savedLayout = l; }
+}
+
+// a stream or a file is being made (not a preview)
+bool sending(const State& s) { return s.gen.running() && !s.previewing; }
+bool previewRunning(const State& s) { return s.gen.running() && s.previewing; }
+
+// the settings that change the preview picture: a change restarts a running preview
+std::string pictureKey(const GenConfig& c) {
+    return std::to_string((int)c.source) + "|" + c.cameraId + "|" + c.path + "|" + std::to_string(c.pattern) + "|" + std::to_string((int)c.fit) +
+           "|" + std::to_string(c.enc.width) + "x" + std::to_string(c.enc.height) + "|" + std::to_string(c.enc.fps) + "|" + (c.loop ? "1" : "0") +
+           "|" + std::to_string(c.slideSeconds);
+}
+
+// starts the stream or the file, or (preview) only the picture for the Preview tab; a preview going is stopped first
+void startRun(State& s, bool preview) {
+    if (s.gen.running()) s.gen.stop();
+    GenConfig run = s.cfg;
+    run.previewOnly = preview;
+    run.enc.videoEncoder = pickVideoEncoder(s.cfg.enc.videoEncoder, videoEncoders());
+    run.font = s.font;
+    std::string err;
+    if (s.gen.start(run, err)) {
+        s.msg.clear();
+        s.note.clear();
+        s.sentLayout = saveLayout(s.cfg.overlay);
+        s.startedAt = ImGui::GetTime();
+        s.prevSerial = 0;
+        s.previewing = preview;
+        s.previewKey = pictureKey(s.cfg);
+    } else s.msg = err;
 }
 
 // ---- the first tab: sources, output, encoding ----
@@ -327,7 +364,7 @@ std::atomic<bool> gWantDrops{false};
 void applyDrops(State& s) {
     std::vector<std::string> d;
     { std::lock_guard<std::mutex> lk(gDropMu); d.swap(gDrops); }
-    if (d.empty() || s.gen.running()) return;
+    if (d.empty() || sending(s)) return;   // a preview follows the dropped file (pictureKey)
     GenConfig& c = s.cfg;
     for (const std::string& p : d) {
         const MediaKind k = dropKind(p);
@@ -396,6 +433,7 @@ void sourceSection(State& s, float col, float w) {
         }
         ImGui::TextDisabled("%s", tr("Tip: drag a picture, video, sound file or folder onto this window."));
     }
+    if (!s.advanced) return;
     rowLabel(N_("Picture fit"), col);
     int fit = (int)c.fit;
     ImGui::BeginDisabled(c.source == Source::Generator);   // drawn at the output size
@@ -474,6 +512,29 @@ void outputSection(State& s, float col, float w) {
     }
 }
 
+// frame rate and resolution: in the Video section, and the only encoder rows when the Advanced box is off
+std::string fpsText(double f) {
+    std::array<char, 32> b{};
+    snprintf(b.data(), b.size(), "%.*f fps", f == std::floor(f) ? 0 : 1, f);
+    return b.data();
+}
+
+void frameRows(Settings& e, float col, float w) {
+    rowLabel(N_("Frame rate"), col);
+    ImGui::SetNextItemWidth(w);
+    if (ImGui::BeginCombo("##vgfps", fpsText(e.fps).c_str())) {
+        for (double f : kFps) if (ImGui::Selectable(fpsText(f).c_str(), e.fps == f)) e.fps = f;
+        ImGui::EndCombo();
+    }
+    rowLabel(N_("Resolution"), col);
+    auto resText = [](int rw, int rh) { return std::to_string(rw) + "x" + std::to_string(rh); };
+    ImGui::SetNextItemWidth(w);
+    if (ImGui::BeginCombo("##vgres", resText(e.width, e.height).c_str())) {
+        for (const Res& r : kRes) if (ImGui::Selectable(resText(r.w, r.h).c_str(), e.width == r.w && e.height == r.h)) { e.width = r.w; e.height = r.h; }
+        ImGui::EndCombo();
+    }
+}
+
 void encodingSection(State& s, float col, float w) {
     Settings& e = s.cfg.enc;
     const auto& venc = videoEncoders();
@@ -544,28 +605,7 @@ void encodingSection(State& s, float col, float w) {
         ImGui::SliderInt("##vgcrf", &e.crf, 15, 40);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Lower is better quality and more bits. The rate is capped at twice the bitrate above."));
     }
-    rowLabel(N_("Frame rate"), col);
-    char fl[32];
-    snprintf(fl, sizeof fl, "%.*f fps", e.fps == std::floor(e.fps) ? 0 : 1, e.fps);
-    ImGui::SetNextItemWidth(w);
-    if (ImGui::BeginCombo("##vgfps", fl)) {
-        for (double f : kFps) {
-            snprintf(fl, sizeof fl, "%.*f fps", f == std::floor(f) ? 0 : 1, f);
-            if (ImGui::Selectable(fl, e.fps == f)) e.fps = f;
-        }
-        ImGui::EndCombo();
-    }
-    rowLabel(N_("Resolution"), col);
-    char rl[32];
-    snprintf(rl, sizeof rl, "%dx%d", e.width, e.height);
-    ImGui::SetNextItemWidth(w);
-    if (ImGui::BeginCombo("##vgres", rl)) {
-        for (const Res& r : kRes) {
-            snprintf(rl, sizeof rl, "%dx%d", r.w, r.h);
-            if (ImGui::Selectable(rl, e.width == r.w && e.height == r.h)) { e.width = r.w; e.height = r.h; }
-        }
-        ImGui::EndCombo();
-    }
+    frameRows(e, col, w);
     rowLabel(N_("Frame types"), col);
     int ft = (int)e.frames;
     std::vector<bool> ftOn = {caps.bFrames, true, true};
@@ -725,14 +765,21 @@ void estimatePanel(const Settings& e) {
 }
 
 void sourcesTab(State& s) {
-    const bool running = s.gen.running();
+    const bool running = sending(s);   // a preview leaves the settings open: it restarts with them
     const float right = std::min(340 * gUi, ImGui::GetContentRegionAvail().x * 0.4f);
     ImGui::BeginChild("##vgsettings", ImVec2(ImGui::GetContentRegionAvail().x - right - ImGui::GetStyle().ItemSpacing.x, 0));
+    ImGui::Checkbox(tr("Advanced"), &s.advanced);
+    helpMark(N_("Off: only the input, the resolution and the frame rate; every other setting keeps its value. On: the output (file or stream), the sound and every encoder and transport stream setting."));
     ImGui::BeginDisabled(running);
     const float col = 175 * gUi, w = std::max(160 * gUi, std::min(360 * gUi, ImGui::GetContentRegionAvail().x - col - 8 * gUi));
     sourceSection(s, col, w);
-    outputSection(s, col, w);
-    encodingSection(s, col, w);
+    if (s.advanced) {
+        outputSection(s, col, w);
+        encodingSection(s, col, w);
+    } else {
+        ImGui::SeparatorText(tr("Video"));
+        frameRows(s.cfg.enc, col, w);
+    }
     ImGui::EndDisabled();
     ImGui::EndChild();
     ImGui::SameLine();
@@ -741,7 +788,7 @@ void sourcesTab(State& s) {
     ImGui::EndChild();
 }
 
-// ---- the second tab: overlay editor ----
+// ---- the second tab, Preview: the picture and the overlay editor ----
 
 Block newBlock(BlockKind k, Param p) {
     Block b;
@@ -877,7 +924,7 @@ void canvas(State& s) {
     const int W = e.width, H = e.height;
     std::vector<Block>& bl = s.cfg.overlay.blocks;
     const ImVec2 avail = ImGui::GetContentRegionAvail();
-    const float sc = std::max(0.05f, std::min(avail.x / (float)W, (avail.y - ImGui::GetTextLineHeightWithSpacing()) / (float)H));
+    const float sc = std::max(0.05f, std::min(avail.x / (float)W, (avail.y - 2 * ImGui::GetTextLineHeightWithSpacing()) / (float)H));
     const ImVec2 size((float)W * sc, (float)H * sc);
     const ImVec2 p0 = ImGui::GetCursorScreenPos(), p1(p0.x + size.x, p0.y + size.y);
     ImGui::InvisibleButton("##vgcanvas", size);
@@ -885,7 +932,8 @@ void canvas(State& s) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
     const bool running = s.gen.running();
 
-    // the picture: the encoder's own frame while it runs (overlay included), else a grey card with the overlay drawn by the same renderer
+    // the picture: the engine's own frame while it runs, streaming or preview (overlay included), else a grey card with the overlay
+    // drawn by the same renderer
     if (running) {
         int pw = 0, ph = 0;
         if (s.gen.preview(s.prevRgba, pw, ph, s.prevSerial)) {
@@ -996,7 +1044,19 @@ void canvas(State& s) {
         if (snappedX) { dl->AddLine(ImVec2(a.x, p0.y), ImVec2(a.x, p1.y), g); dl->AddLine(ImVec2(z.x, p0.y), ImVec2(z.x, p1.y), g); }
         if (snappedY) { dl->AddLine(ImVec2(p0.x, a.y), ImVec2(p1.x, a.y), g); dl->AddLine(ImVec2(p0.x, z.y), ImVec2(p1.x, z.y), g); }
     }
+    // not streaming (stopped or a preview): a red cross over the picture and a line under it, so it is clear nothing goes out
+    if (!sending(s)) {
+        const ImU32 red = IM_COL32(230, 50, 50, 200);
+        const float t = std::max(3.f, 0.012f * std::min(size.x, size.y));
+        dl->AddLine(p0, p1, red, t);
+        dl->AddLine(ImVec2(p1.x, p0.y), ImVec2(p0.x, p1.y), red, t);
+    }
     dl->PopClipRect();
+    if (!sending(s)) {
+        const bool file = s.cfg.output == Output::File;
+        ImGui::TextColored(ImVec4(0.95f, 0.4f, 0.35f, 1), "%s", file ? tr("Not encoding: this is only a preview. Press Start encoding to write the file.")
+                                                                      : tr("Not streaming: this is only a preview. Press Start streaming to send it."));
+    }
     if (!s.ovr.hasFont()) ImGui::TextDisabled("%s", tr("No font for the overlay text was found: text blocks are not drawn."));
     else ImGui::TextDisabled("%dx%d. %s", W, H, tr("Drag to move, the corner to resize (logo, rolling text), Delete removes the selected block."));
 }
@@ -1024,19 +1084,17 @@ void overlayTab(State& s) {
 // ---- above both tabs: start / stop, progress, the address to open ----
 
 void controlBar(State& s) {
-    const bool running = s.gen.running();
+    const bool running = sending(s);
     const GenStats st = s.gen.stats();
     const GenConfig& c = s.cfg;
     if (!running) {
         ImGui::BeginDisabled(!s.probed);
-        if (ImGui::Button(c.output == Output::File ? tr("Start encoding") : tr("Start streaming"))) {
-            GenConfig run = c;
-            run.enc.videoEncoder = pickVideoEncoder(c.enc.videoEncoder, videoEncoders());
-            run.font = s.font;
-            std::string err;
-            if (s.gen.start(run, err)) { s.msg.clear(); s.note.clear(); s.sentLayout = saveLayout(c.overlay); s.startedAt = ImGui::GetTime(); s.prevSerial = 0; }
-            else s.msg = err;
-        }
+        if (ImGui::Button(c.output == Output::File ? tr("Start encoding") : tr("Start streaming"))) startRun(s, false);
+        ImGui::SameLine();
+        if (previewRunning(s)) {
+            if (ImGui::Button(tr("Stop preview"))) s.gen.stop();
+        } else if (ImGui::Button(tr("Start preview"))) startRun(s, true);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Shows the moving picture with its overlay on the Preview tab. Nothing is encoded, written or sent: the red cross stays until you start streaming or encoding."));
         ImGui::EndDisabled();
         helpMark(kToolHelp);
         if (!s.probed) { ImGui::SameLine(); ImGui::TextDisabled("%s", tr("Looking for encoders and cameras...")); }
@@ -1060,13 +1118,15 @@ void controlBar(State& s) {
         ImGui::SameLine();
         ImGui::TextDisabled("%s%s%s", st.videoEncoder.c_str(), st.audioEncoder.empty() ? "" : " + ", st.audioEncoder.c_str());
         if (st.lateFrames > 0) { ImGui::SameLine(); ImGui::TextColored(ImVec4(0.95f, 0.65f, 0.2f, 1), tr("%d frames late: the encoder is too slow for real time"), st.lateFrames); }
+    } else if (previewRunning(s)) {
+        ImGui::TextDisabled("%s", tr("Preview: nothing is encoded or sent"));
     } else if (!st.error.empty()) {
         ImGui::TextColored(ImVec4(0.95f, 0.4f, 0.35f, 1), "%s", st.error.c_str());
     } else if (!s.msg.empty()) {
         ImGui::TextColored(ImVec4(0.95f, 0.4f, 0.35f, 1), "%s", tr(s.msg.c_str()));
     } else if (!s.note.empty()) {
         ImGui::TextDisabled("%s", s.note.c_str());
-    } else if (st.finished && c.output == Output::File && st.frames > 0) {
+    } else if (st.finished && !s.previewing && c.output == Output::File && st.frames > 0) {
         ImGui::TextDisabled("%s: %s (%.1f s, %.1f MB). %s", tr("Written"), c.tsPath.c_str(), st.seconds, st.bytes / 1e6, tr("The transmitter takes it as its \"MPEG-TS / video file\"."));
     } else ImGui::NewLine();
 
@@ -1104,6 +1164,7 @@ void videoGenWindow(App& a) {
     loadOnce(s);
     gWantDrops = true;
     applyDrops(s);
+    if (previewRunning(s) && pictureKey(s.cfg) != s.previewKey) startRun(s, true);   // a new input, size or rate: the preview follows
     if (!s.probed && s.probe.valid() && s.probe.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
         s.probe.get();
         s.cams = s.camsFound;
@@ -1120,7 +1181,7 @@ void videoGenWindow(App& a) {
     ImGui::Separator();
     if (ImGui::BeginTabBar("##vgtabs")) {
         if (ImGui::BeginTabItem(trw("Sources and encoding"))) { sourcesTab(s); ImGui::EndTabItem(); }
-        if (ImGui::BeginTabItem(trw("Overlay"))) { overlayTab(s); ImGui::EndTabItem(); }
+        if (ImGui::BeginTabItem(trw("Preview"))) { overlayTab(s); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem(trw("Digital Television Mode Selector"))) { dvbModeSelectorTab(estimate(s.cfg.enc).mux); ImGui::EndTabItem(); }
         ImGui::EndTabBar();
     }
