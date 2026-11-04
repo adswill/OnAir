@@ -1,5 +1,6 @@
 // Analog TV picture decoder: turning a line into pixels (extractPicture), publishing fields and capturing lines.
 #include "atv_video_impl.h"
+#include "dect2/atv/atv_blend.h"
 
 namespace dect2 {
 
@@ -236,14 +237,7 @@ void AtvVideo::Impl::temporalFilter(AtvFrame& f) {
         return;
     }
     const double T = 5.0 * sig * 255.0 + 8.0;
-    for (size_t i = 0; i < f.rgba.size(); i++) {
-        if ((i & 3) == 3) continue;
-        const int c = f.rgba[i], p = tfPrev[i];
-        const double d = std::abs(c - p);
-        const double w = d <= T ? k : std::min(1.0, k + (d - T) / T);
-        const int o = (int)std::lround(p + (c - p) * w);
-        f.rgba[i] = (uint8_t)o;
-    }
+    atvTemporalBlend(f.rgba.data(), tfPrev.data(), f.rgba.size() & ~(size_t)3, k, T);
     tfPrev = f.rgba;
 }
 
