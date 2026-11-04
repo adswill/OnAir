@@ -264,18 +264,6 @@ int writePacket(void* op, uint8_t* buf, int n) {
     return s->failed ? AVERROR(EIO) : n;
 }
 
-bool encoderTakes(const AVCodec* c, AVPixelFormat want) {
-    const AVPixelFormat* f = nullptr;
-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(61, 13, 100)
-    if (avcodec_get_supported_config(nullptr, c, AV_CODEC_CONFIG_PIX_FORMAT, 0, (const void**)&f, nullptr) < 0) return false;
-#else
-    f = c->pix_fmts;
-#endif
-    if (!f) return true;
-    for (; *f != AV_PIX_FMT_NONE; f++) if (*f == want) return true;
-    return false;
-}
-
 AVSampleFormat firstSampleFmt(const AVCodec* c) {
     const AVSampleFormat* f = nullptr;
 #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(61, 13, 100)
@@ -507,53 +495,34 @@ void VideoGenerator::Impl::run(GenConfig c) {
     bool ok = vx != nullptr;
     if (!ok) fail("no video encoder " + venc);
     if (ok) {
-        const EncoderCaps caps = capsOf(venc);
-        vx->width = W; vx->height = H;
-        vx->pix_fmt = encoderTakes(vc, AV_PIX_FMT_YUV420P) ? AV_PIX_FMT_YUV420P : AV_PIX_FMT_NV12;
-        vx->time_base = av_inv_q(fr); vx->framerate = fr;
-        vx->sample_aspect_ratio = AVRational{1, 1};
-        const int gop = s.frames == FrameTypes::IOnly ? 1 : std::max(1, (int)std::lround(s.gopSeconds * fps));
-        vx->gop_size = gop;
-        int bf = s.frames == FrameTypes::IPB && caps.bFrames ? 2 : 0;
-        if (caps.profile && s.profile == 0) bf = 0;   // Baseline has no B-frames
-        vx->max_b_frames = std::min(bf, gop - 1);
-        const int64_t rate = (int64_t)effectiveVideoKbps(s) * 1000;
-        const bool mpeg2 = codecOf(venc) == Codec::Mpeg2;
-        const int64_t vbvCap = mpeg2 ? (W <= 720 && H <= 576 ? 1835008 : 9781248) : INT64_MAX;   // MPEG-2 Main Level / High Level
-        AVDictionary* o = nullptr;
-        RateControl rc = s.rc;
-        if (rc == RateControl::Crf && !caps.crf) rc = RateControl::ConstrainedVbr;
-        if (rc == RateControl::Cbr) {
-            vx->bit_rate = vx->rc_min_rate = vx->rc_max_rate = rate;
-            vx->rc_buffer_size = (int)std::min<int64_t>(rate, vbvCap);
-            if (venc == "libx264") av_dict_set(&o, "nal-hrd", "cbr", 0);   // filler data keeps the rate even on a still picture
-            if (venc.find("_nvenc") != std::string::npos) av_dict_set(&o, "rc", "cbr", 0);
-        } else if (rc == RateControl::ConstrainedVbr) {
-            vx->bit_rate = rate;
-            vx->rc_max_rate = rate * 3 / 2;
-            vx->rc_buffer_size = (int)std::min<int64_t>(rate * 3 / 2, vbvCap);
-            if (venc.find("_nvenc") != std::string::npos) av_dict_set(&o, "rc", "vbr", 0);
-        } else {
-            av_dict_set_int(&o, "crf", s.crf, 0);
-            vx->rc_max_rate = rate * 2;   // capped, so the mux rate the estimate gives is enough
-            vx->rc_buffer_size = (int)(rate * 2);
+        // as asked first; an encoder that refuses that (a profile or B-frames this card lacks, its own rate-control mode) a second time
+        // without them, and the window says so
+        const bool hwMode = encoderHardware(venc);
+        std::string firstErr;
+        for (int attempt = 0; attempt < 2 && ok; attempt++) {
+            const bool full = attempt == 0;
+            if (!full) {
+                avcodec_free_context(&vx);
+                if (!(vx = avcodec_alloc_context3(vc))) { fail("out of memory"); ok = false; break; }
+            }
+            AVDictionary* o = nullptr;
+            if (!setupVideoEncoder(vx, &o, vc, venc, hwMode, s, W, H, fr.num, fr.den, full)) {
+                av_dict_free(&o);
+                fail("the video encoder " + venc + " takes no YUV 4:2:0 or NV12 pictures");
+                ok = false;
+                break;
+            }
+            const int r = avcodec_open2(vx, vc, &o);
+            av_dict_free(&o);
+            if (r >= 0) {
+                if (!full) { std::lock_guard<std::mutex> lk(mu); st.notice = venc + " refused the profile, B-frames or its rate-control mode (" + firstErr + "): opened without them"; }
+                break;
+            }
+            if (full) { firstErr = averr(r); continue; }
+            const std::string second = averr(r);
+            fail("cannot open the video encoder " + venc + ": " + firstErr + (second != firstErr ? "; without the profile and B-frames: " + second : ""));
+            ok = false;
         }
-        if (mpeg2) {
-            // vbv_delay is 16 bits of 90 kHz: a buffer longer than about 0.7 s of the rate makes the stream VBR in the headers
-            vx->rc_buffer_size = (int)std::min<int64_t>(vx->rc_buffer_size, vx->rc_max_rate * 7 / 10);
-            vx->rc_initial_buffer_occupancy = vx->rc_buffer_size * 3 / 4;
-            // a busy picture (camera noise) can still take longer than vbv_delay holds, and FFmpeg aborts on it in CBR: VBR headers
-            // then (vbv_delay 0xFFFF); the rate control keeps the set rate, the muxer pads the rest with null packets
-            if (vx->rc_min_rate && !mpeg2CbrHeaders(W, H, vx->rc_min_rate)) vx->rc_min_rate = 0;
-        }
-        if (caps.preset) av_dict_set(&o, "preset", kPresets[std::clamp(s.preset, 0, kNumPresets - 1)], 0);
-        if (caps.zeroLatency && s.zeroLatency) av_dict_set(&o, "tune", "zerolatency", 0);
-        if (caps.profile) av_dict_set(&o, "profile", kProfiles[std::clamp(s.profile, 0, kNumProfiles - 1)], 0);
-        if (venc == "libx264") av_dict_set(&o, "x264-params", "scenecut=0", 0);   // the GOP the user set, not one the scene cuts choose
-        if (venc == "libx265") av_dict_set(&o, "x265-params", rc == RateControl::Cbr ? "log-level=error:scenecut=0:strict-cbr=1" : "log-level=error:scenecut=0", 0);
-        const int r = avcodec_open2(vx, vc, &o);
-        av_dict_free(&o);
-        if (r < 0) { fail("cannot open the video encoder " + venc + ": " + averr(r)); ok = false; }
     }
     if (ok) {
         vs = avformat_new_stream(oc, nullptr);
@@ -607,12 +576,13 @@ void VideoGenerator::Impl::run(GenConfig c) {
     }
 
     if (ok) {
-        auto drain = [&](AVCodecContext* cx, AVStream* stream) {
-            while (avcodec_receive_packet(cx, pk) >= 0) {
-                av_packet_rescale_ts(pk, cx->time_base, stream->time_base);
-                pk->stream_index = stream->index;
-                if (av_interleaved_write_frame(oc, pk) < 0) sink.failed = true;
-            }
+        // a frame (nullptr: the end) into an encoder and its packets into the muxer; a busy hardware encoder is waited for
+        auto encode = [&](AVCodecContext* cx, AVStream* stream, const AVFrame* frame) {
+            return sendToEncoder(cx, frame, pk, [&](AVPacket* p) {
+                av_packet_rescale_ts(p, cx->time_base, stream->time_base);
+                p->stream_index = stream->index;
+                if (av_interleaved_write_frame(oc, p) < 0) sink.failed = true;
+            });
         };
         auto noError = [&] { std::lock_guard<std::mutex> lk(mu); return st.error.empty(); };
         OverlayRenderer ovr;
@@ -747,8 +717,7 @@ void VideoGenerator::Impl::run(GenConfig c) {
                 av_image_copy_plane(vf->data[2], vf->linesize[2], out.v.data(), W / 2, W / 2, H / 2);
             }
             vf->pts = n;
-            if (avcodec_send_frame(vx, vf) < 0) { fail("the video encoder stopped"); break; }
-            drain(vx, vs);
+            if (const int r = encode(vx, vs, vf); r < 0) { fail("the video encoder " + venc + " stopped: " + averr(r)); break; }
             // the sound up to the end of this picture
             if (tracks > 0 && ax[0]) {
                 const int fs = af->nb_samples;
@@ -775,8 +744,7 @@ void VideoGenerator::Impl::run(GenConfig c) {
                     for (int k = 0; k < tracks; k++) {
                         if (av_frame_make_writable(af) < 0 || !fillAudio(af, abuf.data(), fs, ax[(size_t)k]->ch_layout.nb_channels)) { fail("the sound format is not supported"); break; }
                         af->pts = aPts;
-                        avcodec_send_frame(ax[(size_t)k], af);
-                        drain(ax[(size_t)k], as[(size_t)k]);
+                        if (const int r = encode(ax[(size_t)k], as[(size_t)k], af); r < 0) { fail("the audio encoder " + aenc + " stopped: " + averr(r)); break; }
                     }
                     aPts += fs;
                 }
@@ -813,9 +781,8 @@ void VideoGenerator::Impl::run(GenConfig c) {
         }
         sws_freeContext(prevSws);
         // flush the encoders and close the stream
-        avcodec_send_frame(vx, nullptr);
-        drain(vx, vs);
-        for (int k = 0; k < tracks; k++) if (ax[(size_t)k]) { avcodec_send_frame(ax[(size_t)k], nullptr); drain(ax[(size_t)k], as[(size_t)k]); }
+        if (const int r = encode(vx, vs, nullptr); r < 0) fail("the video encoder " + venc + " did not finish: " + averr(r));
+        for (int k = 0; k < tracks; k++) if (ax[(size_t)k]) encode(ax[(size_t)k], as[(size_t)k], nullptr);
         av_write_trailer(oc);
     }
     avio_flush(oc->pb);

@@ -498,9 +498,18 @@ void encodingSection(State& s, float col, float w) {
             if (ImGui::Selectable(i.label.c_str(), i.name == e.videoEncoder)) e.videoEncoder = i.name;
             if (i.hardware && ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Hardware encoder: preset, tuning and CRF do not apply"));
         }
-        // the codecs this FFmpeg cannot make, shown so it is clear why they are missing
+        // the encoders this FFmpeg has that did not work on this computer, with the reason (no such card, a driver too old ...)
+        const auto& problems = videoEncoderProblems();
+        for (const EncoderProblem& pr : problems) {
+            ImGui::BeginDisabled();
+            ImGui::Selectable((pr.name + " - " + tr("does not work here")).c_str(), false);
+            ImGui::EndDisabled();
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s: %s", pr.name.c_str(), pr.reason.c_str());
+        }
+        // the codecs this FFmpeg cannot make at all, shown so it is clear why they are missing
         for (Codec cd : {Codec::H264, Codec::Hevc}) {
             if (std::any_of(venc.begin(), venc.end(), [cd](const EncoderInfo& i) { return i.codec == cd; })) continue;
+            if (std::any_of(problems.begin(), problems.end(), [cd](const EncoderProblem& pr) { return codecOf(pr.name) == cd; })) continue;
             ImGui::BeginDisabled();
             ImGui::Selectable((std::string(codecName(cd)) + " - " + tr("not in this FFmpeg")).c_str(), false);
             ImGui::EndDisabled();
@@ -1059,6 +1068,11 @@ void controlBar(State& s) {
         ImGui::TextUnformatted(t);
         ImGui::SameLine();
         ImGui::TextDisabled("%s%s%s", st.videoEncoder.c_str(), st.audioEncoder.empty() ? "" : " + ", st.audioEncoder.c_str());
+        if (!st.notice.empty()) {
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(0.95f, 0.65f, 0.2f, 1), "%s", tr("(simplified)"));
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", st.notice.c_str());
+        }
         if (st.lateFrames > 0) { ImGui::SameLine(); ImGui::TextColored(ImVec4(0.95f, 0.65f, 0.2f, 1), tr("%d frames late: the encoder is too slow for real time"), st.lateFrames); }
     } else if (!st.error.empty()) {
         ImGui::TextColored(ImVec4(0.95f, 0.4f, 0.35f, 1), "%s", st.error.c_str());
