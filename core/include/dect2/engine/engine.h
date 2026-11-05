@@ -755,6 +755,8 @@ private:
     int computeMode_ = 2;
     gpupol::Policy gpu_;
     void applyCompute() {
+        gpupol::live().compute = computeMode_;
+        for (int d = 0; d < gpupol::kDomains; d++) gpupol::live().allowed[d] = gpu_.allowed[d].load();
         rx_.setComputeMode(gpupol::effectiveMode(computeMode_, gpu_.allowed[gpupol::T2]));
         rxT_.setComputeMode(gpupol::effectiveMode(computeMode_, gpu_.allowed[gpupol::T]));
         rxDvbs_.setComputeMode(gpupol::effectiveMode(computeMode_, gpu_.allowed[gpupol::DvbS]));

@@ -65,8 +65,60 @@ build really calls. "Tick" says what Settings shows: **active** = the tick works
 - Diagnostics: each GPU mode shows `<mode> <stage>: GPU|CPU (reason)` in Settings, taken from the decoder's own report of where the last
   block ran.
 
-## Phase 2 candidates (not started)
+## Phase 2 (measured on this Mac: Apple M2 Pro, Metal)
 
-A generic FIR decimator / channelizer plus FFT kernel is the one piece that would reach most modes (DVB-T/T2, DAB, ATSC 3.0, ISDB-T, wideband
-FM, spectrum). It only counts if it is bit-exact within float tolerance and faster than the NEON CPU path on this Mac, measured. The ATSC 3.0
-LDPC could reuse the dense T2 kernel only if its tables map onto it, which needs checking.
+Timings come from `test_gpu_atsc3`, `test_gpu_fft`, `test_viterbi_gpu` (ms per call on this machine, one run, not a benchmark suite). The CPU
+column is one thread, the way that decoder runs inside its mode today.
+
+### ATSC 3.0 LDPC (Type B codes, rates 6/15 to 13/15) on the GPU
+
+`Bicm::decodeBatch` sends a batch of words to `GpuLdpc::decode` (the `atsc3::qcCode` graph, normalised min-sum with the two-minimum correction), and
+every word the GPU does not converge on goes through the CPU decoder, so the output is never worse than the CPU path. Type A codes (rates 2/15 to
+5/15) have no `LdpcCode` graph and stay on the CPU. Convergence matched the CPU on every code tested (the table counts words that decode to the sent word).
+
+| code | CPU ms/word | GPU 1 word | GPU 4 words | GPU 16 words |
+|---|---|---|---|---|
+| 16200, 6/15 | 1.25 | 10.13 | 2.89 | 0.83 |
+| 16200, 8/15 | 0.66 | 3.79 | 0.92 | 0.24 |
+| 16200, 10/15 | 0.65 | 3.75 | 1.07 | 0.36 |
+| 16200, 11/15 | 1.19 | 9.31 | 2.28 | 0.54 |
+| 64800, 6/15 | 5.65 | 11.09 | 4.02 | 2.43 |
+| 64800, 8/15 | 2.61 | 6.61 | 2.38 | 0.70 |
+| 64800, 10/15 | 3.45 | 8.56 | 2.91 | 0.89 |
+| 64800, 11/15 | 4.91 | 13.94 | 4.63 | 1.23 |
+
+GPU wins only in batches of about 16 words (2 to 5 times faster per word here); at 1 to 4 words it is slower. So **Auto uses the GPU from 12 words
+per batch, forced GPU always, CPU below that**. Rates 12/15 and 13/15 did not decode on either side at the noise level used (no comparison made for them).
+Not measured: the whole ATSC 3.0 receiver with the GPU on, on a real capture.
+
+### ISDB-T Viterbi
+
+`isdbt_demod.cpp` can call `GpuViterbi` (same K=7 exact decoder as the CPU path: identical bits and path metric on every block, `viterbi_gpu` test),
+and a failed GPU call falls back to the CPU decoder. Measured on a 387072-step block: CPU 1.8 to 2.7 ms (4 threads, NEON), GPU 12.5 to 18 ms; on 129919
+steps CPU 0.78 ms, GPU 10.7 ms. **The GPU is 5 to 14 times slower here, so Auto stays on the CPU and the GPU runs only when COMPUTE is forced to GPU.**
+The same holds for the DVB-T Viterbi (already experimental, GPU-only-when-chosen). Not measured: a full ISDB-T frame in the receiver.
+
+### Generic FFT / FIR kernel (Metal only)
+
+`GpuFft` (`core/src/dsp/gpu_fft.mm`): batched radix-2 Stockham FFT, windowed power accumulate, FIR decimator. Vulkan and Direct3D 11 versions are **not
+written**; elsewhere `GpuFft::available()` is false and the Spectrum row shows "no usable GPU". Max error against the CPU `fftSplit`: below 1e-6 of the peak bin.
+
+| power spectrum | CPU ms | GPU ms |
+|---|---|---|
+| 4096 x 2 blocks | 0.027 | 0.399 |
+| 8192 x 2 | 0.048 | 0.438 |
+| 32768 x 2 | 0.312 | 0.700 |
+| 65536 x 2 | 0.391 | 0.964 |
+| 65536 x 8 | 1.079 | 4.927 |
+
+The CPU transform (NEON) is faster at every size, because a GPU round trip costs about 0.3 ms and the analyser averages only 2 blocks a frame. **Auto
+stays on the CPU for the spectrum; the GPU is used only when COMPUTE is forced to GPU** (the "Spectrum" tick), and only for non-overlapped frames. No speedup
+is claimed. The FIR decimator beat a scalar loop (decimate by 8, 120000 outputs: 8.7 ms vs 4.5 ms; by 50: 6.2 vs 3.8) but was not compared with the NEON
+`GroupDecimator` and is **not wired** into the channelizer or any demodulator.
+
+### Still on the CPU (no GPU stage), and why
+
+ATSC 1.0 (12-state trellis kernel does not exist), ISDB-S (no LDPC code in the tree), DVB-C (RS only), DAB / DRM / HD Radio / Wi-Fi HaLow / hdr / meteor / HRPT
+(different codes or punctured short blocks, not the K=7 rate 1/2 kernel contract; not attempted), Turbo modes (no kernel), WSJT-family and voice modes
+(blocks of a few hundred bits), LoRa dechirp FFT, GNSS acquisition and wideband FM FFT (would need the FFT kernel wired in, and the table above says it loses at
+these sizes). Their ticks stay disabled with the one-line reason.
