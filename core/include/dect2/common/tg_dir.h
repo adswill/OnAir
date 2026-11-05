@@ -19,7 +19,7 @@ namespace dect2 {
 enum class TgKind { Dmr = 0, Tetra = 1, P25 = 2 };
 const char* tgKindName(TgKind k);   // "DMR" "TETRA" "P25"
 
-struct TgEntry { TgKind kind = TgKind::Dmr; uint32_t id = 0; std::string name, group, note; };
+struct TgDirEntry { TgKind kind = TgKind::Dmr; uint32_t id = 0; std::string name, group, note; };
 
 class TgDir {
 public:
@@ -27,16 +27,16 @@ public:
     // usable id or name are counted in *skipped.
     size_t import(const std::string& csv, TgKind panelKind, size_t* skipped = nullptr);
     std::string exportCsv(bool allKinds, TgKind only = TgKind::Dmr) const;
-    bool find(TgKind k, uint32_t id, TgEntry& out) const;
+    bool find(TgKind k, uint32_t id, TgDirEntry& out) const;
     std::string label(TgKind k, uint32_t id) const;   // "" when unknown
-    void set(const TgEntry& e);                       // adds or replaces; an empty name removes
+    void set(const TgDirEntry& e);                       // adds or replaces; an empty name removes
     bool erase(TgKind k, uint32_t id);
     size_t size() const { return m_.size(); }
     size_t count(TgKind k) const;
-    std::vector<TgEntry> entries(TgKind k, const std::string& filter = "") const;   // sorted by id; the filter matches id, name, group or note (case-insensitive words)
+    std::vector<TgDirEntry> entries(TgKind k, const std::string& filter = "") const;   // sorted by id; the filter matches id, name, group or note (case-insensitive words)
     void clear() { m_.clear(); }
 private:
-    std::map<std::pair<int, uint32_t>, TgEntry> m_;
+    std::map<std::pair<int, uint32_t>, TgDirEntry> m_;
 };
 
 // The directory of the app, safe to use from the UI and loaders. The file is <dataDir>/talkgroups.csv (kept by the app).

@@ -108,7 +108,7 @@ size_t TgDir::import(const std::string& csvIn, TgKind panelKind, size_t* skipped
             }
         }
         auto at = [&](int i) { return i >= 0 && (size_t)i < f.size() ? trim(f[(size_t)i]) : std::string(); };
-        TgEntry e; e.kind = panelKind;
+        TgDirEntry e; e.kind = panelKind;
         if (cKind >= 0) {
             bool any = false; TgKind k = panelKind;
             if (!kindFromText(at(cKind), k, any)) { skip++; continue; }
@@ -129,29 +129,29 @@ std::string TgDir::exportCsv(bool allKinds, TgKind only) const {
     std::string o = "Kind,Id,Name,Group,Note\n";
     for (const auto& kv : m_) {
         if (!allKinds && kv.second.kind != only) continue;
-        const TgEntry& e = kv.second;
+        const TgDirEntry& e = kv.second;
         o += std::string(tgKindName(e.kind)) + "," + std::to_string(e.id) + "," + csvField(e.name) + "," + csvField(e.group) + "," + csvField(e.note) + "\n";
     }
     return o;
 }
 
-bool TgDir::find(TgKind k, uint32_t id, TgEntry& out) const {
+bool TgDir::find(TgKind k, uint32_t id, TgDirEntry& out) const {
     auto it = m_.find({(int)k, id});
     if (it == m_.end()) return false;
     out = it->second; return true;
 }
-std::string TgDir::label(TgKind k, uint32_t id) const { TgEntry e; return find(k, id, e) ? e.name : std::string(); }
-void TgDir::set(const TgEntry& e) { if (trim(e.name).empty()) m_.erase({(int)e.kind, e.id}); else m_[{(int)e.kind, e.id}] = e; }
+std::string TgDir::label(TgKind k, uint32_t id) const { TgDirEntry e; return find(k, id, e) ? e.name : std::string(); }
+void TgDir::set(const TgDirEntry& e) { if (trim(e.name).empty()) m_.erase({(int)e.kind, e.id}); else m_[{(int)e.kind, e.id}] = e; }
 bool TgDir::erase(TgKind k, uint32_t id) { return m_.erase({(int)k, id}) > 0; }
 size_t TgDir::count(TgKind k) const { size_t n = 0; for (const auto& kv : m_) if (kv.second.kind == k) n++; return n; }
 
-std::vector<TgEntry> TgDir::entries(TgKind k, const std::string& filter) const {
+std::vector<TgDirEntry> TgDir::entries(TgKind k, const std::string& filter) const {
     std::vector<std::string> words;
     { std::istringstream ws(lower(filter)); std::string w; while (ws >> w) words.push_back(w); }
-    std::vector<TgEntry> v;
+    std::vector<TgDirEntry> v;
     for (const auto& kv : m_) {
         if (kv.second.kind != k) continue;
-        const TgEntry& e = kv.second;
+        const TgDirEntry& e = kv.second;
         const std::string hay = std::to_string(e.id) + " " + lower(e.name) + " " + lower(e.group) + " " + lower(e.note);
         bool ok = true;
         for (const auto& w : words) if (hay.find(w) == std::string::npos) { ok = false; break; }

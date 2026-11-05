@@ -16,7 +16,7 @@ int main() {
                            "1003,3EB,,D,Fire Dispatch only description,Fire Dispatch,Fire\r\n";
     CHECK(d.import(rr, TgKind::P25, &sk) == 3 && sk == 1);
     CHECK(d.label(TgKind::P25, 1001) == "PD Dispatch" && d.label(TgKind::Dmr, 1001).empty());   // the kind of the panel only
-    TgEntry e; CHECK(d.find(TgKind::P25, 1001, e) && e.group == "Law Dispatch" && e.note == "Police, main dispatch");
+    TgDirEntry e; CHECK(d.find(TgKind::P25, 1001, e) && e.group == "Law Dispatch" && e.note == "Police, main dispatch");
     CHECK(d.label(TgKind::P25, 1003) == "Fire Dispatch only description");   // no Alpha Tag: the description
     // own format round trip with all kinds, quotes and commas in names
     TgDir t;

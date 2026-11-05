@@ -119,6 +119,8 @@ bool recordingOpenPath(App& a, const std::string& path, uint64_t firstSample, ui
     return true;
 }
 
+void recordingLibraryDevOpen() { gLib.open = true; reload(recordingsDir()); }
+
 // The button in the diagnostics row, and its window while it is open.
 void recordingLibraryUi(App& a) {
     const std::string dir = recordingsDir();
@@ -133,7 +135,7 @@ void recordingLibraryUi(App& a) {
     if (ImGui::Button("Refresh")) reload(dir);
     ImGui::SameLine();
     ImGui::TextDisabled("%s", dir.c_str());
-    ImGui::SetNextItemWidth(260 * gUi);
+    ImGui::SetNextItemWidth(340 * gUi);
     ImGui::InputTextWithHint("##libsearch", tr("Search name, tag or note (#tag = exact tag)"), gLib.search, sizeof gLib.search);
     if (ImGui::CollapsingHeader(trw("Advanced##libadv"))) {   // the tags in use as one-click filters
         const auto counts = rectags::tagCounts(gLib.tags);
@@ -154,17 +156,18 @@ void recordingLibraryUi(App& a) {
     if (gLib.rows.empty()) {
         ImGui::TextDisabled("%s", "No recordings in this folder yet. Record IQ from the diagnostics row, or put a SigMF or WAV file here.");
     } else if (ImGui::BeginTable("##reclib", 11, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) {
-        ImGui::TableSetupColumn("File", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn("Date");
-        ImGui::TableSetupColumn("Length");
-        ImGui::TableSetupColumn("Rate");
-        ImGui::TableSetupColumn("Centre");
-        ImGui::TableSetupColumn("Recorded in");
-        ImGui::TableSetupColumn(tr("Tags"));
-        ImGui::TableSetupColumn(tr("Note"));
-        ImGui::TableSetupColumn("Re-analyse in");
-        ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);
-        ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);
+        const auto fx = ImGuiTableColumnFlags_WidthFixed;
+        ImGui::TableSetupColumn("File", fx, 210 * gUi);
+        ImGui::TableSetupColumn("Date", fx, 120 * gUi);
+        ImGui::TableSetupColumn("Length", fx, 55 * gUi);
+        ImGui::TableSetupColumn("Rate", fx, 80 * gUi);
+        ImGui::TableSetupColumn("Centre", fx, 90 * gUi);
+        ImGui::TableSetupColumn("Recorded in", fx, 90 * gUi);
+        ImGui::TableSetupColumn(tr("Tags"), fx, 130 * gUi);
+        ImGui::TableSetupColumn(tr("Note"), fx, 200 * gUi);
+        ImGui::TableSetupColumn("Re-analyse in", fx, 170 * gUi);
+        ImGui::TableSetupColumn("", fx, 50 * gUi);
+        ImGui::TableSetupColumn("", fx, 150 * gUi);
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableHeadersRow();
         for (size_t i : shown) {

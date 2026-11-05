@@ -34,6 +34,9 @@ bool readFile(const std::string& p, std::string& out) {
 
 namespace tgdirui {
 
+static bool gDevOpen = false;
+void devOpen() { gDevOpen = true; }
+
 void tick() {
     if (!gLoaded) {
         gLoaded = true;
@@ -61,6 +64,7 @@ void section(TgKind k) {
     tick();
     Ed& e = gEd[(int)k];
     ImGui::PushID(dect2::tgKindName(k));
+    if (gDevOpen) ImGui::SetNextItemOpen(true, ImGuiCond_Always);
     if (ImGui::CollapsingHeader(trw("Talkgroup names"))) {
         const dect2::TgDir snap = dect2::tgSnapshot();
         ImGui::TextDisabled(tr("%d names for this system type (%d in all). They are shown beside the talkgroup numbers."), (int)snap.count(k), (int)snap.size());
@@ -74,7 +78,7 @@ void section(TgKind k) {
         if (ImGui::Button(e.editId >= 0 ? tr("Update##tg") : tr("Add##tg"))) {
             const unsigned long long id = strtoull(e.id, nullptr, 10);
             if (e.id[0] && id <= 0xFFFFFFFFull && e.name[0]) {
-                dect2::TgEntry x; x.kind = k; x.id = (uint32_t)id; x.name = e.name; x.group = e.group; x.note = e.note;
+                dect2::TgDirEntry x; x.kind = k; x.id = (uint32_t)id; x.name = e.name; x.group = e.group; x.note = e.note;
                 dect2::tgEdit([&](dect2::TgDir& d) { d.set(x); });
                 e.id[0] = e.name[0] = e.group[0] = e.note[0] = 0; e.editId = -1; gMsg.clear();
             } else gMsg = tr("Give a number and a name.");

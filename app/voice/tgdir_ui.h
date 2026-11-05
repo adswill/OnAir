@@ -7,6 +7,7 @@
 
 namespace tgdirui {
 
+void devOpen();                                // dev flag --tgdir: the blocks start open
 void tick();                                   // loads <dataDir>/talkgroups.csv once; saves it after an edit (call every frame, cheap)
 void section(dect2::TgKind k);                 // the "Talkgroup names" block (collapsed): list, edit, import, export
 // "TG 91" -> "TG 91  World-wide" (the text alone when the directory has no name for it)
