@@ -65,14 +65,20 @@ bool isHold(Why w) { return w == Why::Busy || w == Why::TimeLimit || w == Why::M
 
 // What a MSG name=value means for us (the names are kiwiclient's; the time-limit and kick names are ASSUMED from the Kiwi's own page)
 Why classify(const std::string& name, const std::string& value, std::string& text) {
-    if (name == "too_busy") { text = "all of the KiwiSDR's user slots are in use (" + value + " users)"; return Why::Busy; }
-    if (name == "badp") {
-        if (value == "1") text = "the KiwiSDR refused the connection: wrong password, or all its channels are busy";
-        else if (value == "2") text = "the KiwiSDR is still starting up: try again in a moment";
+    if (name == "too_busy") {
+        text = "all of this KiwiSDR's " + (value.empty() || value == "0" ? std::string("receiver") : value) + " listener slots are in use: pick another station or try later";
+        return Why::Busy;
+    }
+    if (name == "badp") {   // badp=0 is the "password accepted" answer every Kiwi sends after sample_rate; the others are refusals (KiwiSDR source, rx_server)
+        if (value == "0") return Why::None;
+        if (value == "1") text = "the KiwiSDR asks for a password (or the one given is wrong): set it in the station's password field";
+        else if (value == "2" || value == "3") { text = "the KiwiSDR could not yet tell whether this address is on its local network: try again in a moment"; return Why::Busy; }
+        else if (value == "4") text = "this KiwiSDR does not allow admin connections from this address";
         else if (value == "5") { text = "this KiwiSDR allows only one connection from an address (another one from this network is open)"; return Why::Multi; }
         else if (value == "6") { text = "the KiwiSDR is updating its database: try again in about a minute"; return Why::Busy; }
+        else if (value == "7") { text = "another admin session is open on this KiwiSDR"; return Why::Busy; }
         else text = "the KiwiSDR refused the connection (badp=" + value + ")";
-        return value == "2" ? Why::Busy : Why::BadPassword;
+        return Why::BadPassword;
     }
     if (name == "down") { text = "the KiwiSDR is down (maintenance or restarting)"; return Why::Down; }
     if (name == "redirect") { text = "the KiwiSDR asks to use another address"; return Why::Redirect; }
@@ -94,7 +100,7 @@ bool splitHostPort(const std::string& a, std::string& host, int& port) {
 }
 
 // the whole SND/MSG session set-up on an attached, handshaken socket; what the server said about itself goes to info
-struct KiwiInfo { std::string version; double maxHz = kMaxFreq; double sampleRate = 0; bool gotRate = false; };
+struct KiwiInfo { std::string version; double maxHz = kMaxFreq; double sampleRate = 0; bool gotRate = false, gotAuth = false; };
 
 // connection, upgrade, auth, then the server's first messages up to sample_rate. why/err say what went wrong.
 bool connectAndAuth(WsClient& ws, const std::string& host, int port, const std::string& pw, int timeoutMs, KiwiInfo& info, Why& why, std::string& err) {
@@ -111,8 +117,9 @@ bool connectAndAuth(WsClient& ws, const std::string& host, int port, const std::
     std::vector<unsigned char> m;
     std::vector<std::pair<std::string, std::string>> kv;
     const auto t0 = std::chrono::steady_clock::now();
-    while (!info.gotRate) {
-        if (std::chrono::steady_clock::now() - t0 > std::chrono::milliseconds(std::max(timeoutMs, 3000) * 2)) { err = addr + " did not finish the KiwiSDR hand-shake (no sample_rate)"; why = Why::Other; return false; }
+    auto tAuth = std::chrono::steady_clock::time_point{};
+    while (!(info.gotRate && info.gotAuth && (!info.version.empty() || (tAuth.time_since_epoch().count() != 0 && std::chrono::steady_clock::now() - tAuth > std::chrono::milliseconds(1500))))) {   // a real Kiwi says sample_rate first and badp=0 (accepted) / badp=N / too_busy after it
+        if (std::chrono::steady_clock::now() - t0 > std::chrono::milliseconds(std::max(timeoutMs, 3000) * 2)) { err = addr + (info.gotRate ? " did not answer the password step (no badp): the station may be overloaded or not a KiwiSDR" : " did not finish the KiwiSDR hand-shake (no sample_rate): too slow, or not a KiwiSDR"); why = Why::Other; return false; }
         const auto kind = ws.readMessage(m, kMaxMessage);
         if (kind == WsClient::Kind::Timeout) continue;
         if (kind == WsClient::Kind::Closed || kind == WsClient::Kind::Bad) { err = addr + " closed the connection or sent bad data during the hand-shake"; why = Why::Closed; return false; }
@@ -121,7 +128,8 @@ bool connectAndAuth(WsClient& ws, const std::string& host, int port, const std::
             std::string text;
             const Why w = classify(p.first, p.second, text);
             if (w != Why::None) { why = w; err = text; return false; }
-            if (p.first == "sample_rate") { info.sampleRate = atof(p.second.c_str()); info.gotRate = true; }
+            if (p.first == "badp") { info.gotAuth = true; tAuth = std::chrono::steady_clock::now(); }
+            else if (p.first == "sample_rate") { info.sampleRate = atof(p.second.c_str()); info.gotRate = true; }
             else if (p.first == "audio_rate") ws.sendText("SET AR OK in=" + std::to_string(atoi(p.second.c_str())) + " out=44100");
             else if (p.first == "version_maj") info.version = p.second + info.version;
             else if (p.first == "version_min") info.version += "." + p.second;

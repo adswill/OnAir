@@ -59,7 +59,7 @@ struct Fake {
     std::mutex mu;
     std::vector<std::string> log;   // each text command of the client
     std::string path;
-    bool streaming = false;
+    bool streaming = false, gotMod = false, gotAgc = false;
     std::atomic<uint32_t> seq{100};
 
     bool has(const std::string& l) { std::lock_guard<std::mutex> lk(mu); for (auto& x : log) if (x == l) return true; return false; }
@@ -124,7 +124,7 @@ struct Fake {
         const std::string key = head.substr(k + 19, head.find("\r\n", k) - k - 19);
         const std::string r = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " + wsAcceptKey(key) + "\r\n\r\n";
         sockSendAll(c, r.data(), r.size());
-        { std::lock_guard<std::mutex> lk(mu); streaming = false; }
+        { std::lock_guard<std::mutex> lk(mu); streaming = false; gotMod = gotAgc = false; }
         int tick = 0;
         while (run) {
             if (dropNow.exchange(0)) return;
@@ -173,16 +173,21 @@ struct Fake {
             if (op != 1) continue;
             { std::lock_guard<std::mutex> lk(mu); log.push_back(p); }
             if (p.compare(0, 8, "SET auth") == 0) {
-                if (mode == Busy) { wsSend(c, 2, msgFrame("too_busy=4")); continue; }
-                if (mode == BadPw) { wsSend(c, 2, msgFrame("badp=1")); continue; }
+                if (mode == Busy) { wsSend(c, 2, msgFrame("sample_rate=11998.9")); wsSend(c, 2, msgFrame("too_busy=4")); continue; }
+                if (mode == BadPw) { wsSend(c, 2, msgFrame("sample_rate=11998.9")); wsSend(c, 2, msgFrame("badp=1")); continue; }
                 if (mode == Down) { wsSend(c, 2, msgFrame("down=0")); continue; }
+                // the order of a real KiwiSDR v1.8xx: sample_rate first, then badp=0 (accepted), version, audio_rate
+                wsSend(c, 2, msgFrame("sample_rate=11998.939594"));
+                wsSend(c, 2, msgFrame("client_public_ip=127.0.0.1"));
+                wsSend(c, 2, msgFrame("rx_chans=8 firmware_sel=5"));
+                wsSend(c, 2, msgFrame("badp=0"));
                 wsSend(c, 2, msgFrame("version_maj=1 version_min=800"));
-                wsSend(c, 2, msgFrame("bandwidth=30000000 freq_offset=0.000"));
-                wsSend(c, 2, msgFrame("audio_rate=12000"));
-                wsSend(c, 2, msgFrame("sample_rate=12000.123"));
-            } else if (p.compare(0, 7, "SET mod") == 0) {
+                wsSend(c, 2, msgFrame("center_freq=15000000 bandwidth=30000000 adc_clk_nom=66666600"));
+                wsSend(c, 2, msgFrame("audio_init=0 audio_rate=12000"));
+            } else if (p.compare(0, 7, "SET mod") == 0 || p.compare(0, 7, "SET agc") == 0) {   // a real Kiwi streams only after both
                 std::lock_guard<std::mutex> lk(mu);
-                streaming = true;
+                if (p[4] == 'm') gotMod = true; else gotAgc = true;
+                if (gotMod && gotAgc) streaming = true;
             }
         }
     }
