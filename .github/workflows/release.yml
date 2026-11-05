@@ -127,14 +127,14 @@ jobs:
       - uses: actions/checkout@v7
       - name: Install dependencies
         run: brew install cmake pkg-config nasm hackrf soapysdr soapyremote libusb glfw librtlsdr airspy airspyhf libbladerf limesuite uhd hamlib openssl@3   # radio libraries and Hamlib go into the app (tools/package/bundle_macos.py)
-      # No Homebrew FFmpeg (it is --enable-gpl): the LGPL static build of tools/package/build_ffmpeg_static.sh, cached per architecture and script version
-      - name: Cache the static FFmpeg
+      # No Homebrew FFmpeg (it is --enable-gpl): the LGPL shared build of tools/package/build_ffmpeg.sh, cached per architecture and script version
+      - name: Cache the shared FFmpeg
         id: ffmpeg
         uses: actions/cache@v6
-        with: { path: ~/ffmpeg, key: "ffmpeg-8.0-static-macos-${{ matrix.arch }}-${{ hashFiles('tools/package/build_ffmpeg_static.sh') }}" }
-      - name: Build FFmpeg (LGPL, static, only what OnAir uses)
+        with: { path: ~/ffmpeg, key: "ffmpeg-8.0-shared-macos-${{ matrix.arch }}-${{ hashFiles('tools/package/build_ffmpeg.sh') }}" }
+      - name: Build FFmpeg (LGPL, shared, only what OnAir uses)
         if: steps.ffmpeg.outputs.cache-hit != 'true'
-        run: tools/package/build_ffmpeg_static.sh "$HOME/ffmpeg"
+        run: tools/package/build_ffmpeg.sh "$HOME/ffmpeg"
       - name: Build the app and the .dmg
         run: FFMPEG_PREFIX="$HOME/ffmpeg" tools/package/make_dmg.sh "${{ needs.version.outputs.ver }}"
       - uses: actions/upload-artifact@v7
@@ -157,13 +157,13 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential file desktop-file-utils cmake pkg-config ccache nasm patchelf curl xz-utils libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libglfw3-dev libairspy0 libbladerf2 libiio0 liblimesuite20.10-1 libuhd4.1.0 libhamlib-dev libssl-dev
-      - name: Cache the static FFmpeg
+      - name: Cache the shared FFmpeg
         id: ffmpeg
         uses: actions/cache@v6
-        with: { path: ~/ffmpeg, key: "ffmpeg-8.0-static-${{ matrix.arch }}-${{ hashFiles('tools/package/build_ffmpeg_static.sh') }}" }
-      - name: "Build FFmpeg (static, only what OnAir uses, so that the packages do not depend on the FFmpeg of the system they are installed on)"
+        with: { path: ~/ffmpeg, key: "ffmpeg-8.0-shared-${{ matrix.arch }}-${{ hashFiles('tools/package/build_ffmpeg.sh') }}" }
+      - name: "Build FFmpeg (shared, shipped in the packages, only what OnAir uses, so that the packages do not depend on the FFmpeg of the system they are installed on)"
         if: steps.ffmpeg.outputs.cache-hit != 'true'
-        run: tools/package/build_ffmpeg_static.sh "$HOME/ffmpeg"
+        run: tools/package/build_ffmpeg.sh "$HOME/ffmpeg"
       - name: "Gather the radio libraries (RTL-SDR is built here from the RTL-SDR Blog source: the distribution's librtlsdr0 cannot drive the V4)"
         run: tools/package/collect_radio_libs_linux.sh "$GITHUB_WORKSPACE/build/radiolibs"
       - uses: actions/cache@v6   # ccache, same scheme as ci.yml; separate cache per architecture

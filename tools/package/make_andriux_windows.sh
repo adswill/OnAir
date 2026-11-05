@@ -69,6 +69,13 @@ for name in librtlsdr libairspy libairspyhf libbladeRF libLimeSuite libiio libuh
     collect "$OUT/$name.dll"
   fi
 done
+# FFmpeg is delay-loaded (ldd does not list it): its DLLs from the FFmpeg the build used (DECT2_FFMPEG_PREFIX, or MSYS2's), next to OnAir.exe
+FFP=$(sed -n 's/^DECT2_FFMPEG_PREFIX:PATH=//p' "$SRC/CMakeCache.txt" 2>/dev/null); [ -n "$FFP" ] || FFP=$PREFIX
+for n in avutil swresample swscale avcodec avformat; do
+  found=0
+  for f in "$FFP"/bin/$n-*.dll; do [ -f "$f" ] && { cp "$f" "$OUT/"; collect "$OUT/$(basename "$f")"; found=1; }; done
+  [ $found = 1 ] || { echo "ERROR: no $n-*.dll in $FFP/bin (FFmpeg must be the shared build)" >&2; exit 1; }
+done
 cp LICENSE "$OUT/LICENSE.txt"
 tools/package/add_license_files.sh "$OUT"   # THIRD_PARTY.md, LICENSES/, LICENSE-NOTICES-BINARIES.md (licence of every bundled DLL, source offer)
 cat > "$OUT/README-LT.txt" <<'TXT'

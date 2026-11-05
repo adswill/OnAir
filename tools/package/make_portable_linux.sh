@@ -20,6 +20,10 @@ collect() {
   done
 }
 [ -x "$D/bin/onair-server" ] || { echo "error: onair-server is missing from the portable package"; exit 1; }
+# FFmpeg: the shared LGPL build the programs were linked with (DECT2_FFMPEG_PREFIX); in the build folder the programs' RUNPATH ($ORIGIN/../lib/<arch>/onair) finds nothing, so ldd
+# is told where it is. A user can choose another FFmpeg in Settings > Advanced > FFmpeg libraries.
+FF=$(sed -n 's/^DECT2_FFMPEG_PREFIX:PATH=//p' "$B/CMakeCache.txt" 2>/dev/null)
+if [ -n "$FF" ]; then cp -a "$FF"/lib/lib*.so.* "$D/lib/"; export LD_LIBRARY_PATH="$FF/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"; fi
 for p in "$D"/bin/*; do collect "$p"; done
 # the radio libraries (RTL-SDR, Airspy, BladeRF, LimeSDR, PlutoSDR, USRP), found by name next to the program
 # codec2 (FreeDV and M17 speech, LGPL-2.1, third_party/codec2): its own shared library, next to the radio libraries (OnAir looks in ../lib of its program)

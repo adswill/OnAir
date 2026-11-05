@@ -1,11 +1,12 @@
 #!/bin/bash
-# Builds a small static FFmpeg with only what OnAir uses, so that the Linux packages need no FFmpeg from the system (system FFmpeg
-# versions change with every Linux release and a package built against one does not install on the next).
-#   tools/package/build_ffmpeg_static.sh <prefix> [ffmpeg-8.0.tar.xz]
+# Builds a small shared FFmpeg with only what OnAir uses, shipped next to the program, so that the Linux packages need no FFmpeg from the system
+# (system FFmpeg versions change with every Linux release and a package built against one does not install on the next).
+# Shared, not static: a user can point OnAir at another FFmpeg build (Settings > Advanced > FFmpeg libraries, docs/ffmpeg-libraries.md).
+#   tools/package/build_ffmpeg.sh <prefix> [ffmpeg-8.0.tar.xz]
 # Used for the Linux packages and the macOS app; LGPL-2.1-or-later only: no --enable-gpl, --enable-version3 or --enable-nonfree, no external libraries
 # (the script stops if the finished configuration says otherwise). Then build OnAir with -DDECT2_FFMPEG_PREFIX=<prefix>. Needs a C compiler, make and nasm (on x86-64); downloads the source when no tarball is given.
 set -e
-PREFIX=${1:?usage: build_ffmpeg_static.sh <prefix> [tarball]}
+PREFIX=${1:?usage: build_ffmpeg.sh <prefix> [tarball]}
 VER=8.0
 TARBALL=${2:-}
 WORK=$(mktemp -d)
@@ -16,13 +17,17 @@ if [ -z "$TARBALL" ]; then
 fi
 tar -xf "$TARBALL" -C "$WORK"
 mkdir "$WORK/build" && cd "$WORK/build"
+# Linux: no RUNPATH needed, the program names all five libraries itself and finds them through its own RUNPATH (or LD_LIBRARY_PATH).
+# macOS: @rpath install names, found through the app's rpath (Contents/Frameworks) or DYLD_LIBRARY_PATH.
 EXTRA=
 if [ "$(uname -s)" = "Darwin" ]; then
   # hardware decoding through Apple's VideoToolbox (the system framework, no extra library); the deployment target is the app's
-  EXTRA="--enable-videotoolbox --enable-hwaccel=h264_videotoolbox,hevc_videotoolbox,mpeg2_videotoolbox --extra-cflags=-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-15.0} --extra-ldflags=-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-15.0}"
+  EXTRA="--install-name-dir=@rpath --enable-videotoolbox --enable-hwaccel=h264_videotoolbox,hevc_videotoolbox,mpeg2_videotoolbox --extra-cflags=-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-15.0} --extra-ldflags=-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-15.0}"
 fi
-[ "$(uname -m)" = "x86_64" ] && ! command -v nasm >/dev/null && { echo "nasm is needed for the fast x86-64 code"; exit 1; }
-"$WORK"/ffmpeg-$VER/configure --prefix="$PREFIX" --enable-static --disable-shared --enable-pic \
+# FFMPEG_DISABLE_ASM=1: no assembly (slower; only for a quick local test on a machine without nasm, never for a release)
+[ -n "${FFMPEG_DISABLE_ASM:-}" ] && EXTRA="$EXTRA --disable-x86asm"
+[ -z "${FFMPEG_DISABLE_ASM:-}" ] && [ "$(uname -m)" = "x86_64" ] && ! command -v nasm >/dev/null && { echo "nasm is needed for the fast x86-64 code"; exit 1; }
+"$WORK"/ffmpeg-$VER/configure --prefix="$PREFIX" --enable-shared --disable-static --enable-pic \
   --disable-programs --disable-doc --disable-debug --disable-network --disable-autodetect \
   --disable-avdevice --disable-avfilter \
   --disable-everything \

@@ -24,6 +24,8 @@
 #endif
 #include <windows.h>
 #include <commdlg.h>
+#include <shobjidl.h>
+#include <thread>
 #include <direct.h>
 #else
 #include <unistd.h>
@@ -497,7 +499,45 @@ void showFatalError(const char* title, const char* text) {
 #ifdef _WIN32
 std::string openFileDialog() { return fileDialog(false, nullptr); }
 std::string saveFileDialog(const char* name) { return fileDialog(true, name); }
-std::string openFolderDialog() { return {}; }   // Windows: the path is typed in the export dialog
+// the Windows folder picker (IFileOpenDialog with FOS_PICKFOLDERS). It needs a single-threaded COM apartment: it runs on the calling (UI)
+// thread, as the file dialogs do, owned by the app's window. Only when that thread is in a multi-threaded apartment does it run on a thread
+// of its own, then without an owner: an owner on a waiting thread would deadlock (the dialog sends it messages it cannot answer).
+namespace {
+std::string pickFolder(HWND owner) {
+    std::string out;
+    IFileOpenDialog* d = nullptr;
+    if (FAILED(CoCreateInstance(__uuidof(FileOpenDialog), nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&d)))) return out;
+    FILEOPENDIALOGOPTIONS o = 0;
+    d->GetOptions(&o);
+    d->SetOptions(o | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST);
+    d->SetTitle(L"Choose a folder");
+    if (SUCCEEDED(d->Show(owner))) {
+        IShellItem* it = nullptr;
+        if (SUCCEEDED(d->GetResult(&it))) {
+            PWSTR w = nullptr;
+            if (SUCCEEDED(it->GetDisplayName(SIGDN_FILESYSPATH, &w)) && w) { out = utf8(w); CoTaskMemFree(w); }
+            it->Release();
+        }
+    }
+    d->Release();
+    return out;
+}
+}   // namespace
+std::string openFolderDialog() {
+    const HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    if (SUCCEEDED(hr)) {   // S_OK, or S_FALSE: already single-threaded here
+        const std::string out = pickFolder(GetActiveWindow());
+        CoUninitialize();
+        return out;
+    }
+    std::string out;
+    std::thread([&out] {
+        if (FAILED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE))) return;
+        out = pickFolder(nullptr);
+        CoUninitialize();
+    }).join();
+    return out;
+}
 #else
 std::string openFolderDialog() {
     if (haveProgram("zenity")) return capture("zenity --file-selection --directory --title='Choose a folder' 2>/dev/null");

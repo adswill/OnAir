@@ -23,7 +23,7 @@ Menu bar > **Settings** (or Ctrl+, / Cmd+,) opens one window with the preference
 | Location | Station latitude and longitude (used by the maps, passes, ADS-B, distances) |
 | Network and updates | Update check, beta versions, automatic download, update source and mirror, UDP output |
 | Privacy | Exactly what leaves the computer |
-| Advanced | Save log, export / import settings, reset every setting |
+| Advanced | FFmpeg libraries (another FFmpeg build, after a restart: [ffmpeg-libraries.md](ffmpeg-libraries.md)), save log, export / import settings, reset every setting |
 
 The table of rows is `app/ui/settings_table.h` (no ImGui, tested); the binding of each row to the field that holds it is in `app/ui/settings_window.cpp`. A row with no field behind it is not shown, and `settings: no field for <key>` is printed on stderr, so there are no dead toggles.
 
