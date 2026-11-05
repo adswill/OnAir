@@ -153,6 +153,8 @@ EncoderCaps capsOf(const std::string& e) {
     else if (e == "libx265") { c.preset = c.zeroLatency = c.bFrames = c.crf = true; }   // x265's profiles are main / main10, not the H.264 ones
     else if (e == "mpeg2video") { c.bFrames = true; }
     else if (e == "libopenh264") { c.profile = true; }
+    // Media Foundation (Windows' own H.264 encoder) gives B-frames with pts < dts, which the MPEG-TS muxer refuses
+    else if (isMf(e)) { c.profile = codecOf(e) == Codec::H264; }
     else if (codecOf(e) == Codec::H264) { c.profile = c.bFrames = true; }
     // hardware HEVC: no B-frames. NVIDIA before Turing (GTX 10xx) and AMD before RDNA 3 refuse them, and the encoder does not open.
     else if (codecOf(e) == Codec::Hevc) { c.bFrames = false; }
@@ -174,12 +176,15 @@ std::string profileName(const std::string& e, int p) {
 
 bool setupVideoEncoder(AVCodecContext* vx, AVDictionary** o, const AVCodec* vc, const std::string& venc, bool hwMode, const Settings& s,
                        int W, int H, int fpsNum, int fpsDen, bool full) {
-    const AVPixelFormat pf = hasPixFmt(vc, AV_PIX_FMT_YUV420P) ? AV_PIX_FMT_YUV420P : hasPixFmt(vc, AV_PIX_FMT_NV12) ? AV_PIX_FMT_NV12 : AV_PIX_FMT_NONE;
+    const bool nvenc = venc.find("_nvenc") != std::string::npos, amf = venc.find("_amf") != std::string::npos, mf = isMf(venc);
+    // a hardware encoder works in NV12: Intel's encoder behind Media Foundation lists YUV 4:2:0 too, but gives no pictures out with it
+    const bool hw = (mf && hwMode) || nvenc || amf || venc.find("_qsv") != std::string::npos || venc.find("_videotoolbox") != std::string::npos;
+    const AVPixelFormat first = hw ? AV_PIX_FMT_NV12 : AV_PIX_FMT_YUV420P, second = hw ? AV_PIX_FMT_YUV420P : AV_PIX_FMT_NV12;
+    const AVPixelFormat pf = hasPixFmt(vc, first) ? first : hasPixFmt(vc, second) ? second : AV_PIX_FMT_NONE;
     if (pf == AV_PIX_FMT_NONE) return false;
     const AVRational fr{fpsNum, fpsDen};
     const double fps = av_q2d(fr);
     const EncoderCaps caps = capsOf(venc);
-    const bool nvenc = venc.find("_nvenc") != std::string::npos, amf = venc.find("_amf") != std::string::npos, mf = isMf(venc);
     vx->width = W; vx->height = H;
     vx->pix_fmt = pf;
     vx->time_base = av_inv_q(fr); vx->framerate = fr;

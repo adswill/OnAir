@@ -142,6 +142,7 @@ static void testEncoders() {
     CHECK(!m2.preset && !m2.crf && !m2.profile && m2.bFrames, "MPEG-2: B-frames only");
     CHECK(!hw.preset && !hw.crf && hw.profile, "hardware H.264: profile, no x264 preset or CRF");
     CHECK(!capsOf("hevc_nvenc").bFrames && !capsOf("hevc_amf").bFrames, "hardware HEVC: no B-frames (older cards refuse them)");
+    CHECK(!capsOf("h264_mf").bFrames && capsOf("h264_mf").profile && !capsOf("hevc_mf").bFrames, "Media Foundation: profile, no B-frames (pts < dts)");
     // the profile as each encoder takes it: FFmpeg's generic "profile" option knows no names, an encoder without its own takes the number
     CHECK(profileName("libx264", 2) == "high" && profileName("h264_nvenc", 0) == "baseline" && profileName("h264_qsv", 1) == "main", "profile names");
     CHECK(profileName("h264_amf", 0) == "constrained_baseline" && profileName("h264_amf", 2) == "high", "AMF calls Baseline constrained_baseline");

@@ -577,11 +577,12 @@ void VideoGenerator::Impl::run(GenConfig c) {
 
     if (ok) {
         // a frame (nullptr: the end) into an encoder and its packets into the muxer; a busy hardware encoder is waited for
+        int muxErr = 0;   // the muxer refused a packet (time stamps out of order ...): not the file or the network
         auto encode = [&](AVCodecContext* cx, AVStream* stream, const AVFrame* frame) {
             return sendToEncoder(cx, frame, pk, [&](AVPacket* p) {
                 av_packet_rescale_ts(p, cx->time_base, stream->time_base);
                 p->stream_index = stream->index;
-                if (av_interleaved_write_frame(oc, p) < 0) sink.failed = true;
+                if (const int r = av_interleaved_write_frame(oc, p); r < 0) { if (!sink.failed && !muxErr) muxErr = r; sink.failed = true; }
             });
         };
         auto noError = [&] { std::lock_guard<std::mutex> lk(mu); return st.error.empty(); };
@@ -751,6 +752,7 @@ void VideoGenerator::Impl::run(GenConfig c) {
             }
             if (!noError()) break;   // an audio encoder failed
             if (sink.net) net.burstDone(1.0 / fps);
+            if (muxErr) { fail("the MPEG-TS muxer refused a packet of " + venc + ": " + averr(muxErr)); break; }
             if (sink.failed) { fail(c.output == Output::File ? "cannot write " + c.tsPath : "cannot send the stream"); break; }
             // the preview for the window, about 8 times a second
             const auto now = std::chrono::steady_clock::now();
