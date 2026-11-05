@@ -431,7 +431,7 @@ void wideSync(App& a) {
 
 void wideCarrierCell(const App& a, int carrierId, double relHz) {
     if (carrierId <= 0) { ImGui::TextDisabled("-"); return; }
-    ImGui::Text("%.4f", radioCenterMhz(a) + relHz / 1e6);
+    ImGui::Text("%.5f", radioCenterMhz(a) + relHz / 1e6);   // 10 Hz: a 6.25 / 12.5 kHz channel centre is not a round 100 Hz
 }
 
 namespace {

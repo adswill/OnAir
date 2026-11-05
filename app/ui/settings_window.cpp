@@ -169,6 +169,7 @@ void customRow(App& a, const Info& i) {
     else if (k == "modeVisLink") { if (ImGui::Button(tr("Open Modes shown..."))) a.modeVisOpen = true; }
     else if (k == "themeMode") ui2::themeChoice(a, false);
     else if (k == "accent") ui2::accentMenu();
+    else if (k == "restoreView") { if (ImGui::Button(tr("Restore the default view"))) ui2::restoreDefaultView(a); }
     else if (k == "uiTypography") ui2::typographyChoice(false);   // its own heading says it applies after a restart
     else if (k == "timeDisplay") ui2::timeDisplayChoice(false);
     else if (k == "recordingsFolder") {

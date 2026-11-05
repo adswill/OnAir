@@ -197,7 +197,44 @@ static void testSnap() {
     CHECK(wm.ready(10), "bank not ready after going back to automatic");
 }
 
+// the raster through a tuned channel that is not on the span centre (a radio centre 4.3 kHz from the dial, PMR446-style 6.25 kHz offsets) and the
+// other steps: every carrier (offset +-0.8 kHz from its channel) is reported on its own channel centre, in the table and in the call log
+static void testDmrGrid(double stepKhz, double originHz) {
+    const double step = std::max(stepKhz * 1000.0, 12500.0);   // a DMR carrier is 12.5 kHz wide: a finer raster still uses 12.5 kHz cells (no phantom second row)
+    struct C { int k; double off; int seed; };
+    const std::vector<C> cs = {{-6, +700, 11}, {5, -800, 22}};
+    std::vector<std::unique_ptr<DmrSignal>> sig;
+    for (auto& c : cs) {
+        DmrGenConfig g; g.rate = kFs; g.cc = 1 + c.seed % 5; g.seed = (uint32_t)c.seed; g.cfoHz = originHz + c.k * step + c.off; g.rms = 0.08; g.snrDb = 35; g.traffic = 2;
+        sig.emplace_back(new DmrSignal(g));
+    }
+    WideModes wm;
+    WideTuning wt; wt.rasterKhz = stepKhz; wm.setTuning(wt);
+    wm.configure(10, kFs, originHz);
+    std::vector<cf32> sum, tmp;
+    const size_t blk = (size_t)(kFs * 0.1);
+    uint64_t seq = 0; RxTelemetry t;
+    for (double s = 0; s < 10.0; s += 0.1) {
+        sum.assign(blk, cf32(0, 0)); tmp.resize(blk);
+        for (auto& sg : sig) { sg->generate(tmp.data(), blk); for (size_t i = 0; i < blk; i++) sum[i] += tmp[i]; }
+        wm.feed(10, sum.data(), blk);
+        wm.telemetry(10, t, seq);
+    }
+    printf("DMR grid step %.2f kHz origin %.0f Hz: %zu rows\n", stepKhz, originHz, t.wide.size());
+    for (auto& r : t.wide) printf("  row %+9.1f Hz\n", r.hz);
+    for (auto& c : cs) {
+        const double chan = originHz + c.k * step;
+        bool row = false; for (auto& r : t.wide) if (std::fabs(r.hz - chan) < 1.0) row = true;
+        CHECK(row, "step %.2f origin %.0f: no row on the channel centre %.1f Hz", stepKhz, originHz, chan);
+        int calls = 0, bad = 0;
+        for (auto& cl : t.dmr.callLog) if (cl.carrierId && std::fabs(cl.carrierHz - chan) < step / 2) { calls++; if (std::fabs(cl.carrierHz - chan) > 1.0) bad++; }
+        CHECK(bad == 0, "step %.2f origin %.0f: %d calls carry a frequency off the channel centre %.1f", stepKhz, originHz, bad, chan);
+    }
+    CHECK(t.wide.size() == cs.size(), "step %.2f origin %.0f: %zu rows, expected %zu", stepKhz, originHz, t.wide.size(), cs.size());
+}
+
 int main() {
+    for (double st : {12.5, 6.25, 25.0}) for (double o : {0.0, 6250.0, -4300.0}) testDmrGrid(st, o);
     testDmrTalking();
     testSnap();
     testFinder();

@@ -262,7 +262,7 @@ bool AutoGainController::tickAuto(const AgInput& in, AgCommand& out) {
         // a soft ceiling under the gain that clipped: 20 s, 90 s when it keeps happening (three episodes in a minute)
         if (episode && !returning) { ceil_ = cur_.totalDb - 3; preOvDb_ = cur_.totalDb; }
         ceilUntil_ = now + (ovTimes_.size() >= 3 ? 90 : 20) / sp;
-        linearUntil_ = now + 30;
+        linearUntil_ = now + (set_.v2 ? 300 : 30);   // v2: the sensitivity split probe overloaded a strong signal again every minute (HackRF, strong DVB-T2): the linear split stays 5 minutes
         probe_ = 0; guard_ = false;
         havePrior_ = false;   // a remembered gain that clips is stale: the search is the wide one
         if (cur_.ampOn && set_.ampAllowed) {   // the amp first: it is the most exposed stage

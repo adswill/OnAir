@@ -31,7 +31,8 @@ static void toolbarSource(App& a, bool vertical, bool running) {
     const float srcW = vertical ? std::max(90.f * gUi, ImGui::GetContentRegionAvail().x - ImGui::GetFrameHeight() - 2 * ImGui::GetStyle().ItemSpacing.x) : 190 * gUi;
     const std::string srcName = ellipsize(a.devices[a.devIdx].name, srcW - ImGui::GetFrameHeight() - 2 * ImGui::GetStyle().FramePadding.x);
     ImGui::SetNextItemWidth(srcW);
-    ImGui::BeginDisabled(running);
+    ImGui::BeginDisabled(a.scanner.progress().running);   // a running receiver can be switched to another radio: stopped, then the new one opened (below)
+    bool switchRadio = false;
     if (ImGui::BeginCombo("##src", srcName.c_str())) {
         for (int i = 0; i < (int)a.devices.size(); i++)
         {
@@ -42,12 +43,13 @@ static void toolbarSource(App& a, bool vertical, bool running) {
             if (ImGui::Selectable(nm.c_str(), i == a.devIdx) && i != a.devIdx) {
                 a.devIdx = i;
                 a.tune.biasTee = false;   // antenna power set for another radio (and its antenna) is never carried over
+                switchRadio = true;
             }
             ImGui::EndDisabled();
             if (a.devices[i].isRadio() && ImGui::BeginPopupContextItem(("##hide" + std::to_string(i)).c_str())) {
                 if (ImGui::MenuItem(tr("Hide this radio"))) {
                     auto h = hiddenRadios(); h.push_back(a.devices[i].name); setHiddenRadios(h);
-                    a.hiddenRadios = h; a.devIdx = 0; a.devicesDirty = true;
+                    a.hiddenRadios = h; a.devIdx = 0; a.devicesDirty = true; switchRadio = running;
                 }
                 ImGui::EndPopup();
             }
@@ -71,6 +73,7 @@ static void toolbarSource(App& a, bool vertical, bool running) {
         if (hamlibSupported() && ImGui::Selectable(tr("Add Hamlib rig…"))) a.hamlibAddOpen = true;
         ImGui::EndCombo();
     }
+    if (switchRadio && running) { a.engine.stop(); startReceiver(a); }   // the settings (frequency, mode, gain) stay in a.tune / a.freqMhz
     if (a.devicesDirty) { a.devicesDirty = false; refreshDevices(a); a.devIdx = std::min(a.devIdx, (int)a.devices.size() - 1); }
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
         if (a.devices[a.devIdx].isAudio())
@@ -101,7 +104,7 @@ static void toolbarSource(App& a, bool vertical, bool running) {
     }
     ImGui::SameLine();
     // not while a scan has the radio open: a radio in use may not be listed (or its limits not be readable), and the choice would move to another one
-    ImGui::BeginDisabled(a.scanner.progress().running);
+    ImGui::BeginDisabled(a.scanner.progress().running || running);
     if (iconFlat(Ic::Refresh, tr("Rescan for devices"))) refreshDevices(a), a.devIdx = std::min(a.devIdx, (int)a.devices.size() - 1);
     ImGui::EndDisabled();
     ImGui::EndDisabled();

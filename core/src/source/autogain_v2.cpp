@@ -174,8 +174,8 @@ bool AutoGainController::tickClimb(const AgInput& in, AgCommand& out) {
         }
         phase_ = comf ? Phase::Frozen : Phase::Tracking;
         // comfortable: rest 30 s; a decoder barely locked (or none) keeps optimising: look again after 6 s
-        // a fruitless cycle makes the next look later: 6 s, 12 s, 24 s ... up to 45 s (30 s while the decoder is comfortable)
-        const double every = comf ? 30.0 : std::min(45.0, 6.0 * std::pow(2.0, (double)std::min(idleCycles_, 3)));
+        // a fruitless cycle makes the next look later: 6 s, 12 s, 24 s ... up to 120 s (30 s while the decoder is comfortable)
+        const double every = comf ? 30.0 : std::min(120.0, 6.0 * std::pow(2.0, (double)std::min(idleCycles_, 5)));   // 6, 12, 24, 48, 96, 120 s: a settled loop probes (and glitches the stream, most on a HackRF's LNA step) ever more rarely
         if (now - settledAt_ < every / sp) {
             if (now - dwellFrom_ > 12 / sp) { base_ = Run(); specPow_.clear(); specCnt_ = 0; dwellFrom_ = now; }   // a fresh baseline for the next probe
             return false;

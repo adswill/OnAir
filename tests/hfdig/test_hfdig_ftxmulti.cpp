@@ -25,7 +25,7 @@ int main() {
     const int slots = (int)env("FTXMULTI_SLOTS", 2), K = (int)env("FTXMULTI_K", 40), mode = (int)env("FTXMULTI_MODE", 0);
     const double lo = env("FTXMULTI_LO", -25), hi = env("FTXMULTI_HI", 0);
     const int nb = 5;   // bins of the SNR range
-    int ok[nb] = {}, all[nb] = {}, wrong = 0, total = 0;
+    int ok[nb] = {}, all[nb] = {}, wrong = 0, total = 0, lost = 0, overlapped = 0;
     double cpuSum = 0, msSum = 0;
     for (int t = 0; t < slots; t++) {
         ftxtest::Gauss g(900 + t * 17);
@@ -45,6 +45,10 @@ int main() {
         for (const auto& s : st) {
             const int b = std::min(nb - 1, (int)((s.snrDb - lo) / (hi - lo) * nb));
             all[b]++; ok[b] += wsjttest::find(d, s.msg) != nullptr;
+            if (!wsjttest::find(d, s.msg)) {   // a lost signal: is another transmission on top of it (within one tone spacing x 3 and half a slot of DT)?
+                lost++;
+                for (const auto& o : st) if (&o != &s && std::fabs(o.hz - s.hz) < (mode == 0 ? 20.0 : 60.0) && std::fabs(o.dt - s.dt) < 0.8) { overlapped++; break; }
+            }
         }
         for (const auto& x : d) { bool sent = false; for (const auto& s : st) sent |= x.msg == s.msg; if (!sent) { wrong++; printf("  false \"%s\" %.1f dB\n", x.msg.c_str(), x.snrDb); } }
         total += (int)d.size();
@@ -55,5 +59,6 @@ int main() {
         O += ok[b]; A += all[b];
     }
     printf("TOTAL %d of %d decoded, %d false, cpu %.2f s/slot, decodeMs %.0f\n", O, A, wrong, cpuSum / slots, msSum / slots);
+    printf("lost %d, of them %d within 20 Hz (FT8; 60 Hz FT4/FT2) and 0.8 s of another signal (hopeless collisions), %d clear\n", lost, overlapped, lost - overlapped);
     return 0;
 }

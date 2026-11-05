@@ -371,7 +371,7 @@ Layout layoutOf(int mode) {
     l.nt = s.tones;
     l.nsym = s.nn;
     if (mode == kFt8) {
-        l.nsps = 1024; l.ndown = 32; l.bits = 3; l.maxCand = 150; l.passes = 3;
+        l.nsps = 1024; l.ndown = 32; l.bits = 3; l.maxCand = 150; l.passes = (int)envOr("HFDIG_FTX_PASSES", 3);
         for (int g : {0, 36, 72}) for (int k = 0; k < 7; k++) l.sync.push_back({g + k, kFt8Costas[k]});
         for (int k = 7; k < 36; k++) l.data.push_back(k);
         for (int k = 43; k < 72; k++) l.data.push_back(k);

@@ -45,6 +45,7 @@ inline const std::vector<Info>& table() {
         {"uiTextScale", kAppearance, "Text size", "Scale of all text and controls (also Ctrl+ and Ctrl-).", "ui scale zoom font size", K::Float, 1, 0.8, 2, nullptr, nullptr, "", false, false, "%.2f"},
         {"uiTypography", kAppearance, "Font look", "Current (default), Clean or Compact.", "typography fonts cjk", K::Custom, 0, 0, 0, nullptr, nullptr, "", false, true},
         {"timeDisplay", kAppearance, "Time display", "Show times in UTC or in this computer's local time, with or without the zone label.", "utc local clock 24h date", K::Custom},
+        {"restoreView", kAppearance, "Restore the default view", "Back to the new interface, Sidebar layout, no touch mode, no docking. Also Ctrl+Shift+M and View > Restore the default view.", "reset layout menu bar hidden compact classic", K::Custom},
         {"touchUi", kAppearance, "Touch interface", "Big buttons, an on-screen keypad and a full-screen mode picker for tablets.", "tablet android large rows", K::Bool, 0},
         {"touchScale", kAppearance, "Touch text size", "Extra text scale of the touch interface.", "touch large", K::Float, 1.35, 1, 2, nullptr, nullptr, "", true},
         {"perfOverlay", kAppearance, "Performance overlay", "Frame rate, CPU per thread and wake-ups in a corner.", "fps cpu debug", K::Bool, 0, 0, 0, nullptr, nullptr, "", true},

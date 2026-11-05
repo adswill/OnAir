@@ -13,6 +13,17 @@ inline void wefaxRotatedSize(int w, int h, int turns, int& ow, int& oh) {
     if (wefaxTurns(turns) & 1) { ow = h; oh = w; } else { ow = w; oh = h; }
 }
 
+// The "fit" zoom of the fax view for a picture w x h (as displayed, already turned) in a box bx x by. A picture as received (0 or 180 degrees) is
+// fitted by its width and scrolls by lines (the newest lines stay in view); a picture turned 90 degrees is a long strip the other way
+// round: fitted by its width it was scaled up many times and only a corner showed, so it is fitted whole.
+inline float wefaxFitZoom(float bx, float by, int w, int h, int turns) {
+    if (w <= 0 || h <= 0 || bx <= 0 || by <= 0) return 1.f;
+    const float byW = bx / (float)w;
+    if (!(wefaxTurns(turns) & 1)) return byW;
+    const float byH = by / (float)h;
+    return byW < byH ? byW : byH;
+}
+
 // Rotates src (w x h) by `turns` quarter turns clockwise into out (resized); ow / oh get the new size. src and out must be different buffers.
 template <class T>
 void wefaxRotate(const T* src, int w, int h, int turns, std::vector<T>& out, int& ow, int& oh) {
