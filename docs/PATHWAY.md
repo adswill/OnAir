@@ -1088,3 +1088,7 @@ Measured the per-mode CPU cost of 31 modes with bench_modes (Release, synthetic 
 - ISDB-T Viterbi can use GpuViterbi (bit-exact) but is 5 to 14 times slower than the CPU, so only when GPU is chosen.
 - New GpuFft (Metal): FFT, windowed power spectrum, FIR decimator. Slower than the CPU at every spectrum size, so the "Spectrum" tick only matters when COMPUTE = GPU; FIR not wired. Vulkan / D3D11 not written.
 - Numbers and the modes left on the CPU: docs/GPU-AUDIT-3.7.md.
+## 2026-11-04 - Live RDS control and TS network output (feat37-rdsts)
+Discord request from ItsOktawian. (A) core/include/dect2/fm/rds_live.h: FmGenerator takes PS, RT, PI, PTY, TP, TA, M/S and the clock group (4A) from a shared RdsLive state at the start of each five-group cycle, RT flips the A/B flag; changed by the panel (tx_payload_ui), UDP/TCP text commands (PS=, RT=, PI= ...), REST /api/v1/x/rds, MCP tool rds_set, and a watched text file. Warn only. docs/RDS-LIVE.md. Test rds_live (RDS decoded back by FmReceiver).
+(B) OutputManager already did paced UDP/RTP/multicast and the service filter; added an HTTP /stream.ts server, the multicast adapter, parseStreamUrl and a simple "Send the stream over the network" address + tick in the Stream tab (advanced hidden). RTP header now put on at send time. docs/STREAM-OUT.md. Test tsout_net (loopback UDP/RTP/HTTP, continuity, pacing).
+Not done: real-radio / real-OBS checks, i18n catalogs beyond en.

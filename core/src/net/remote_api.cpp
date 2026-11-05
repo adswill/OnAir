@@ -2,6 +2,7 @@
 // silent client never holds up another one. Blocking sockets with select() for the waits, on top of the helpers of tcp_client.h.
 #include "dect2/common/thread_name.h"
 #include "dect2/net/remote_api.h"
+#include "dect2/fm/rds_live.h"
 #include "dect2/net/api_policy.h"
 #include "dect2/common/str.h"
 #include "dect2/net/net_proto.h"
@@ -296,6 +297,19 @@ struct RemoteApiServer::Impl {
             }
             std::string out;
             int code;
+            if (p == "/api/v1/x/rds") {   // live RDS (fm/rds_live.h): GET the state; POST {"ps":..,"rt":..,"pi":"4A21","pty":..,"tp":..,"ta":..,"ms":"M","ct":..}. Warnings only: nothing is refused.
+                if (isPost) {
+                    std::string err;
+                    for (const auto& kv : jb) {
+                        std::string v = kv.second.kind == JsonVal::Str ? kv.second.str : kv.second.kind == JsonVal::Bool ? (kv.second.b ? "1" : "0") : jsonNum(kv.second.num);
+                        if (kv.second.kind == JsonVal::Num && kv.second.num == (long long)kv.second.num) v = std::to_string((long long)kv.second.num);
+                        if (kv.first == "pi" && kv.second.kind == JsonVal::Num) { char hb[16]; snprintf(hb, sizeof hb, "%llX", (long long)kv.second.num); v = hb; }
+                        if (!RdsLive::global().apply(kv.first, v, err)) { sendErr(s, 400, kv.first + ": " + err); return; }
+                    }
+                }
+                send(s, 200, RdsLive::global().json());
+                return;
+            }
             { std::lock_guard<std::mutex> lk(hostMu); code = host.handleExtra(rq.method, p, jb, out); }
             if (code == 0) { sendErr(s, 404, "no such endpoint"); return; }
             if (code >= 400) sendErr(s, code, out); else send(s, code, out);

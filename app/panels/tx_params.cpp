@@ -116,6 +116,7 @@ std::vector<P> build(const TxModeSpec& m, bool analog, int variant) {
             I("bfm.pty", Sec::Modulation, N_("Programme type"), N_("The RDS programme type code (0 to 31; 10 is pop music)."), 10, 0, 31, "bfm.rds=1"),
             B("bfm.tp", Sec::Modulation, N_("Traffic programme"), N_("The RDS flag for a station that carries traffic announcements."), true, "bfm.rds=1"),
             B("bfm.ta", Sec::Modulation, N_("Traffic announcement now"), N_("The RDS flag that a traffic announcement is on the air."), false, "bfm.rds=1"),
+            B("bfm.ct", Sec::Modulation, N_("Send the clock time"), N_("Sends the computer's UTC time in the RDS clock group so radios set their clock."), false, "bfm.rds=1"),
             B("bfm.music", Sec::Modulation, N_("Music (not speech)"), N_("The RDS flag for music instead of speech."), true, "bfm.rds=1"),
             F("audio.tone", Sec::Audio, N_("Left test tone"), N_("The pitch on the left channel, used when the audio input is the test tone."), 1000, 100, 15000, "%.0f Hz", nullptr, Bind::ToneHz),
             F("bfm.rightHz", Sec::Audio, N_("Right test tone"), N_("The pitch on the right channel (0 = three times the left)."), 0, 0, 15000, "%.0f Hz"),

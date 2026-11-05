@@ -1,6 +1,7 @@
 // The MCP tools. Each one is a thin layer over the remote-control host (RemoteApiHost) and the engine's signal identifier; no tool touches the
 // file system, a shell, keys, credentials or settings, and the transmit tools exist only when Options::allowTx is on.
 #include "dect2/bandplan/bandplan.h"
+#include "dect2/fm/rds_live.h"
 #include "dect2/channels/freq_db.h"
 #include "dect2/codec/codec_paths.h"
 #include "dect2/codec/speech_codec.h"
@@ -1139,6 +1140,35 @@ std::vector<Tool> makeTools() {
             std::string out, err;
             if (!c.host.txStart(body, out, err)) throw ToolError("transmit: " + err);
             return hostJson(out);
+        };
+        add(t);
+    }
+    {
+        Tool t;
+        t.name = "rds_set"; t.title = "Change the FM RDS data live";
+        t.description = "Change the RDS data of the FM transmitter while it transmits (takes effect at the next group, no restart), or read it when no field is given. (Exists only because the user enabled AI transmit control.)";
+        t.schema = Schema()
+                       .add("ps", prop("string", "Station name, 8 characters."))
+                       .add("rt", prop("string", "Radio text, up to 64 characters."))
+                       .add("pi", prop("string", "PI code, 4 hex digits."))
+                       .add("pty", prop("number", "Programme type 0 to 31."))
+                       .add("tp", prop("boolean", "Traffic programme flag."))
+                       .add("ta", prop("boolean", "Traffic announcement flag."))
+                       .add("music", prop("boolean", "Music (true) or speech (false)."))
+                       .add("ct", prop("boolean", "Send the clock time."))
+                       .done();
+        t.needsTx = true; t.idempotent = true;
+        t.fn = [](ToolCtx&, const Json& a) {
+            std::string err;
+            for (const auto& kv : a.obj) {
+                std::string v;
+                if (kv.second.isStr()) v = kv.second.str;
+                else if (kv.second.isBool()) v = kv.second.b ? "1" : "0";
+                else if (kv.second.isNum()) v = std::to_string((long long)kv.second.num);
+                else continue;
+                if (!RdsLive::global().apply(kv.first, v, err)) throw ToolError(kv.first + ": " + err);
+            }
+            return hostJson(RdsLive::global().json());
         };
         add(t);
     }

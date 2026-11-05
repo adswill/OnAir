@@ -1,5 +1,6 @@
 // FM broadcast transmitter for tests (see fm_gen.h).
 #include "dect2/fm/fm_gen.h"
+#include <ctime>
 #include "fm_noise.h"
 #include <algorithm>
 #include <cmath>
@@ -52,25 +53,43 @@ void FmGenerator::pullLive() {
 
 void FmGenerator::nextGroup() {
     const int k = groupNo_++;
+    if (!curInit_) {
+        curInit_ = true;
+        cur_.ps = c_.ps; cur_.ps.resize(8, ' '); cur_.rt = c_.rt; cur_.pi = c_.pi; cur_.pty = c_.pty;
+        cur_.tp = c_.tp; cur_.ta = c_.ta; cur_.music = c_.music;
+        if (c_.live) { cur_ = c_.live->get(); }
+        rtCur_ = cur_.rt; rtAb_ = cur_.abFlag;
+    }
+    // a cycle is five groups (four of the name, one of text): the live state is read at its start. The text changes at the start of its own cycle.
+    if (c_.live && k % 5 == 0) {
+        const std::string keepRt = rtCur_; const int keepAb = rtAb_; const int keepSeg = rtSeg_;
+        cur_ = c_.live->get();
+        rtCur_ = keepRt; rtAb_ = keepAb; rtSeg_ = keepSeg;
+        if (rtSeg_ == 0) { rtCur_ = cur_.rt; rtAb_ = cur_.abFlag; }
+    }
     const bool rtGroup = k % 5 == 4;
     uint16_t b[4];
-    b[0] = (uint16_t)c_.pi;
-    uint16_t common = (uint16_t)((c_.tp ? 1 : 0) << 10 | (c_.pty & 31) << 5);
-    if (!c_.extraGroups.empty() && k % 6 == 5) {   // a group of the test's own
+    b[0] = (uint16_t)cur_.pi;
+    uint16_t common = (uint16_t)((cur_.tp ? 1 : 0) << 10 | (cur_.pty & 31) << 5);
+    if (cur_.ct && rtGroup && ++ctGroups_ % 12 == 0) {   // the clock group in place of a text group, about every five seconds
+        rdsClockWords((int64_t)::time(nullptr), cur_.ctOffsetHalfHours, cur_.tp, cur_.pty, b[1], b[2], b[3]);
+    } else if (!c_.extraGroups.empty() && k % 6 == 5) {   // a group of the test's own
         const auto& g = c_.extraGroups[extraNo_++ % c_.extraGroups.size()];
         b[1] = g[0]; b[2] = g[1]; b[3] = g[2];
     } else if (!rtGroup) {   // group 0A: station name, two characters per group
         const int seg = k % 5;
-        b[1] = (uint16_t)(0x0000 | common | (c_.ta ? 16 : 0) | (c_.music ? 8 : 0) | 4 | seg);
+        b[1] = (uint16_t)(0x0000 | common | (cur_.ta ? 16 : 0) | (cur_.music ? 8 : 0) | 4 | seg);
         b[2] = 0xCDCD;
-        b[3] = (uint16_t)((uint8_t)c_.ps[seg * 2] << 8 | (uint8_t)c_.ps[seg * 2 + 1]);
+        b[3] = (uint16_t)((uint8_t)cur_.ps[seg * 2] << 8 | (uint8_t)cur_.ps[seg * 2 + 1]);
     } else {          // group 2A: radio text, four characters per group
-        std::string rt = c_.rt;
+        std::string rt = rtCur_;
         if (rt.size() < 64) rt += '\r';
         rt.resize(((rt.size() + 3) / 4) * 4, ' ');
         const int nseg = (int)rt.size() / 4;
-        const int seg = (k / 5) % nseg;
-        b[1] = (uint16_t)(0x2000 | common | seg);   // text A/B flag 0
+        if (rtSeg_ >= nseg) rtSeg_ = 0;
+        const int seg = rtSeg_;
+        rtSeg_ = (rtSeg_ + 1) % nseg;
+        b[1] = (uint16_t)(0x2000 | common | (rtAb_ ? 16 : 0) | seg);   // text A/B flag: flips when the text changes
         b[2] = (uint16_t)((uint8_t)rt[seg * 4] << 8 | (uint8_t)rt[seg * 4 + 1]);
         b[3] = (uint16_t)((uint8_t)rt[seg * 4 + 2] << 8 | (uint8_t)rt[seg * 4 + 3]);
     }

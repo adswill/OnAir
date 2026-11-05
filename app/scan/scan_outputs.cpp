@@ -191,6 +191,33 @@ void scanTabCommon(App& a) {
 
 void outputsTab(App& a) {
     bool ch = false;
+    {   // the simple way: one tick and an address (OBS, VLC and ffmpeg read udp://127.0.0.1:1234 or the http:// address)
+        bool on = a.out.udp || a.out.http;
+        ImGui::SetNextItemWidth(std::min(300 * gUi, ImGui::GetContentRegionAvail().x));
+        const bool edited = ImGui::InputText(tr("Address##netaddr"), a.netAddr, sizeof a.netAddr);
+        flowNext();
+        const bool ticked = ImGui::Checkbox(tr("Send the stream over the network"), &on);
+        flowEnd();
+        static std::string netErr;
+        if (ticked || (edited && on)) {
+            if (on) {
+                OutputConfig t = a.out;
+                if (parseStreamUrl(a.netAddr, t, netErr)) {
+                    a.out = t; netErr.clear();
+                    if (a.out.udp) snprintf(a.udpHost, sizeof a.udpHost, "%s", a.out.host.c_str());
+                } else on = false;
+            }
+            if (!on) { a.out.udp = false; a.out.http = false; }
+            ch = true;
+        }
+        ImGui::PushTextWrapPos(0);
+        if (!netErr.empty()) ImGui::TextColored(ImVec4(0.95f, 0.4f, 0.3f, 1), "%s", tr(netErr.c_str()));
+        ImGui::TextDisabled("%s", tr("Choose a service below to send one programme, or the whole multiplex. Examples: udp://127.0.0.1:1234 (OBS, VLC, ffmpeg), udp://239.1.1.1:5000 (multicast), rtp://192.168.1.20:5004, http://:8080 (the stream is then at http://this-computer:8080/stream.ts)."));
+        ImGui::PopTextWrapPos();
+        const OutputStats hs = a.engine.outputStats();
+        if (hs.httpOpen) ImGui::TextDisabled(tr("HTTP server on port %d, %d viewer(s)"), hs.httpPortInUse, hs.httpClients);
+    }
+    ImGui::Spacing();
     ImGui::TextColored(pal::heading(), "What to send");
     {
         // Two programmes often share a name and a type (two "W8RZ-DT (TV)" rows). The visible text can match; the id after ## cannot, or ImGui reports a conflicting ID.
@@ -219,7 +246,7 @@ void outputsTab(App& a) {
     if (ImGui::Checkbox("remove null packets", &a.out.dropNull)) ch = true;
     flowNext(); ImGui::TextDisabled("(a single service is always rewritten with its own PAT)"); flowEnd();
     ImGui::Spacing();
-    ImGui::TextColored(pal::heading(), "File (.ts)");
+    ImGui::TextColored(pal::heading(), "%s", tr("File (.ts)"));
     ImGui::SetNextItemWidth(std::min(520 * gUi, ImGui::GetContentRegionAvail().x));
     ImGui::InputText("##fp", a.filePath, sizeof a.filePath);
     flowNext();
@@ -228,6 +255,8 @@ void outputsTab(App& a) {
     if (ImGui::Checkbox("record", &a.out.file)) ch = true;
     flowEnd();
     ImGui::Spacing();
+    const bool advNet = ImGui::TreeNode(trw("Advanced network output (address, port, TTL, RTP, HTTP server, multicast adapter)"));
+    if (advNet) {
     ImGui::TextColored(pal::heading(), "UDP");
     ImGui::SetNextItemWidth(200 * gUi);
     if (ImGui::InputText("address", a.udpHost, sizeof a.udpHost)) {}
@@ -241,8 +270,20 @@ void outputsTab(App& a) {
     if (ImGui::Checkbox("stream", &a.out.udp)) ch = true;
     flowEnd();
     { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Unicast or multicast (e.g. 239.1.1.1). Datagrams carry 7 packets and are paced evenly. Play with: ffplay udp://@:%d", a.out.port); ImGui::PopTextWrapPos(); }
+    ImGui::TextColored(pal::heading(), "%s", tr("HTTP server (.ts)"));
+    ImGui::SetNextItemWidth(90 * gUi);
+    ImGui::InputInt(tr("port##http"), &a.out.httpPort, 0, 0);
+    flowNext(); ImGui::Checkbox(tr("reachable from the network"), &a.out.httpLan);
+    flowNext(); ImGui::SetNextItemWidth(130 * gUi); ImGui::InputText(tr("key (optional)##httpkey"), a.httpKey, sizeof a.httpKey);
+    flowNext();
+    if (ImGui::Checkbox(tr("serve"), &a.out.http)) ch = true;
+    flowEnd();
+    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", tr("Open http://this-computer:port/stream.ts in VLC, OBS (media source) or ffplay. Without a key, anyone who can reach the port can watch while it is on.")); ImGui::PopTextWrapPos(); }
     if (ch || ImGui::IsItemDeactivatedAfterEdit()) applyOutputs(a);
-    if (ImGui::Button("Apply address / port / TTL")) applyOutputs(a);
+    if (ImGui::Button(tr("Apply address / port / TTL"))) applyOutputs(a);
+    ImGui::TreePop();
+    }
+    if (ch) applyOutputs(a);
     ImGui::Spacing();
     OutputStats os = a.engine.outputStats();
     ImGui::PushFont(a.mono, 0);

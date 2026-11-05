@@ -95,3 +95,6 @@ curl -s -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8765/api/v1/status
 curl -s -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"mhz":162.55}' http://127.0.0.1:8765/api/v1/frequency
 echo "f" | nc 127.0.0.1 4532
 ```
+
+## Live RDS (FM transmitter)
+`GET` / `POST /api/v1/x/rds` change the station name, radio text, PI, PTY and flags while the FM transmitter is on the air. See [RDS-LIVE.md](RDS-LIVE.md).

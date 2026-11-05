@@ -538,6 +538,8 @@ struct App {
     OutputConfig out;
     int selService = -1;     // service id used for outputs (-1 = whole multiplex)
     char udpHost[64] = "127.0.0.1";
+    char netAddr[96] = "udp://127.0.0.1:1234";   // the simple "Send the stream over the network" address (udp://, rtp:// or http://:port)
+    char httpKey[48] = "";                        // optional key of the HTTP .ts server (?key=)
     char filePath[512] = "";
     std::deque<float> hCfo, hSnr, hTiming;
     struct HistSample { float t, snr, mer, loss, cfo, sro, level, clip, quality, aux; };   // aux: FM, the share of RDS blocks received intact
