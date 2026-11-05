@@ -782,6 +782,13 @@ std::unique_ptr<ModeSynth> makeTxPayloadSynth(const TxModeSpec& m, const TxReque
             auto pull = r.pullAudio;
             g.pull48k = [pull](float* st, int n) { if (pull) pull(st, n); else memset(st, 0, (size_t)n * 2 * sizeof(float)); };
         }
+        {   // live RDS (rds_live.h): the request's values start it; the panel, the REST / MCP / text port and a watched file change it while on the air
+            RdsState rs;
+            rs.ps = g.ps; rs.ps.resize(8, ' '); rs.rt = g.rt; rs.pi = g.pi; rs.pty = g.pty; rs.tp = g.tp; rs.ta = g.ta; rs.music = g.music;
+            rs.ct = r.o("bfm.ct", 0) > 0.5;
+            RdsLive::global().seed(rs);
+            g.live = std::shared_ptr<RdsLive>(&RdsLive::global(), [](RdsLive*) {});
+        }
         return std::make_unique<FmWrap>(g, rate, fmOutLevel);
     }
 

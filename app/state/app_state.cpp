@@ -743,6 +743,7 @@ void applyOutputs(App& a) {
     a.out.host = a.udpHost;
     a.out.path = a.filePath;
     a.out.serviceId = a.selService;
+    a.out.httpKey = a.httpKey;
     a.engine.setOutputs(a.out);
     savePrefs(a);
 }

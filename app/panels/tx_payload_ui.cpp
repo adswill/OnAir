@@ -2,6 +2,7 @@
 // own choices, one block per kind of signal (TxPayloadKind). Empty fields fall back to the mode's demo signal; nothing here limits what is typed.
 #include "tx_state.h"
 #include "dect2/mesh/mesh_tx.h"
+#include "dect2/fm/rds_live.h"
 #include "platform/platform.h"
 #include "../ui/typography.h"
 #include "dect2/hfdig/hfdig_sstv.h"
@@ -488,9 +489,39 @@ void payloadPanel(TxUi& s, const TxModeSpec& mode, bool running) {
         ImGui::PopStyleColor();
         break;
     case TxPayloadKind::VoiceFm:
-        ImGui::InputText(tr("Station name (PS)"), s.name, sizeof s.name);
-        ImGui::InputText(tr("Radio text (RT)"), s.text, sizeof s.text);
-        ImGui::InputInt(tr("RDS PI"), &s.rdsPi, 1, 16, ImGuiInputTextFlags_CharsHexadecimal);
+        {   // while on the air every edit goes to the encoder at once (RdsLive); the next group carries it
+            auto& L = RdsLive::global();
+            if (ImGui::InputText(tr("Station name (PS)"), s.name, sizeof s.name) && running) { std::string e; L.apply("PS", s.name, e); }
+            if (ImGui::InputText(tr("Radio text (RT)"), s.text, sizeof s.text) && running) { std::string e; L.apply("RT", s.text, e); }
+            if (ImGui::InputInt(tr("RDS PI"), &s.rdsPi, 1, 16, ImGuiInputTextFlags_CharsHexadecimal) && running) { char b[16]; snprintf(b, sizeof b, "%X", s.rdsPi & 0xFFFF); std::string e; L.apply("PI", b, e); }
+            if (running) ImGui::TextDisabled("%s", tr("On the air: changes to the name, text and PI are sent with the next RDS group."));
+            if (ImGui::CollapsingHeader(trw("Live RDS control (programme type, flags, clock, network commands)"))) {
+                RdsState st = L.get();
+                bool ch = false;
+                if (ImGui::SliderInt(tr("Programme type (PTY)"), &st.pty, 0, 31)) { std::string e; L.apply("PTY", std::to_string(st.pty), e); }
+                if (ImGui::Checkbox(tr("Traffic programme (TP)"), &st.tp)) { std::string e; L.apply("TP", st.tp ? "1" : "0", e); }
+                ImGui::SameLine();
+                if (ImGui::Checkbox(tr("Traffic announcement (TA)"), &st.ta)) { std::string e; L.apply("TA", st.ta ? "1" : "0", e); }
+                if (ImGui::Checkbox(tr("Music (not speech)"), &st.music)) { std::string e; L.apply("MS", st.music ? "M" : "S", e); }
+                ImGui::SameLine();
+                if (ImGui::Checkbox(tr("Send the clock time"), &st.ct)) { std::string e; L.apply("CT", st.ct ? "1" : "0", e); }
+                (void)ch;
+                static int port = 9101;
+                static bool on = false;
+                static char tok[64] = {}, wfile[512] = {};
+                static std::string msg;
+                ImGui::SetNextItemWidth(100);
+                ImGui::InputInt(tr("Command port (UDP and TCP)"), &port, 0, 0);
+                ImGui::InputText(tr("Token (optional on this computer)"), tok, sizeof tok);
+                if (ImGui::Checkbox(tr("Listen for RDS commands (PS=NAME, RT=text, PI=4A21 ...)"), &on)) {
+                    std::string e;
+                    if (!L.listen(on ? port : 0, false, tok, e)) { on = false; msg = e; } else msg.clear();
+                }
+                if (!msg.empty()) ImGui::TextColored(kRed, "%s", msg.c_str());
+                ImGui::TextDisabled("%s", tr("This computer only. For other computers use the headless server or the remote API (it has the token)."));
+                if (ImGui::InputText(tr("Radio text from a file (first line, for a now-playing script)"), wfile, sizeof wfile)) L.watchFile(wfile);
+            }
+        }
         audioSourceRow(s, running);
         break;
     case TxPayloadKind::VoiceAir:

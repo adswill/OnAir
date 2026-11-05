@@ -138,3 +138,6 @@ An AI should say "ambiguous" or "unknown" when the identifier says so, not guess
 ## Tests
 
 `tests/mcp/test_mcp.cpp` (a fake client against the real engine on the test signal: protocol errors, schemas, every tool, the end-to-end "find DRM near 15 MHz", stdio, HTTP with its guards, the rate limit, the activity log) and `tests/mcp/test_mcp_stdio.py` (a real MCP client in a child process against `onair-server --mcp-stdio` and `--mcp-http`). ctest names: `mcp`, `mcp_stdio`.
+
+## RDS tool
+`rds_set` (transmit tools only) changes or reads the FM RDS data live: see [RDS-LIVE.md](RDS-LIVE.md).

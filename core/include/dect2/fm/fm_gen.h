@@ -1,8 +1,10 @@
 // FM broadcast transmitter for tests: stereo multiplex with pilot, RDS (station name, radio text) and noise, as complex baseband.
 #pragma once
 #include "dect2/common/ring.h"
+#include "dect2/fm/rds_live.h"
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <random>
 #include <array>
 #include <string>
@@ -27,6 +29,8 @@ struct FmGenConfig {
     bool tp = true, ta = false, music = true;
     // extra RDS groups sent round the station groups (blocks B, C, D; B complete with type, TP and PTY); a test can send TMC (3A, 8A) with them
     std::vector<std::array<uint16_t, 3>> extraGroups;
+    // Live RDS: when set, the encoder takes the station name, text, PI, PTY and flags from it at the start of each cycle of groups (a change needs no restart)
+    std::shared_ptr<RdsLive> live;
     double preemphUs = 50;
     double deviationHz = 75000;   // 75 kHz broadcast; NFM uses a separate generator
     uint32_t seed = 1;
@@ -43,6 +47,12 @@ public:
 private:
     void nextGroup();
     size_t extraNo_ = 0;
+    RdsState cur_;                 // what the groups carry now (a copy of the live state, refreshed at the start of a cycle)
+    bool curInit_ = false;
+    int rtSeg_ = 0;                // next radio text segment
+    int rtAb_ = 0;
+    std::string rtCur_;
+    int ctGroups_ = 0;
     FmGenConfig c_;
     std::mt19937 rng_;
     double t_ = 0;                 // seconds
