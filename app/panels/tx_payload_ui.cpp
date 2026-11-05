@@ -510,7 +510,7 @@ void payloadPanel(TxUi& s, const TxModeSpec& mode, bool running) {
                 static bool on = false;
                 static char tok[64] = {}, wfile[512] = {};
                 static std::string msg;
-                ImGui::SetNextItemWidth(100);
+                ImGui::SetNextItemWidth(100 * gUi);
                 ImGui::InputInt(tr("Command port (UDP and TCP)"), &port, 0, 0);
                 ImGui::InputText(tr("Token (optional on this computer)"), tok, sizeof tok);
                 if (ImGui::Checkbox(tr("Listen for RDS commands (PS=NAME, RT=text, PI=4A21 ...)"), &on)) {

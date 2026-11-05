@@ -1,5 +1,6 @@
 // ADS-B frame checks and the aircraft table: published messages go in as sliced frames, the table must come out as the documents say.
 // Messages and positions: "The 1090 Megahertz Riddle" (see test_adsb_msg.cpp). Everything else is built here with the encoders and checked against what was put in.
+#include "dect2/limits.h"
 #include "dect2/adsb/adsb_encode.h"
 #include "dect2/adsb/adsb_track.h"
 #include <cmath>
@@ -329,11 +330,11 @@ static void testExpiryAndLimits() {
     // a flood of addresses: the table and the report stay bounded
     AdsbTracker many;
     for (uint32_t i = 0; i < 3000; i++) feed(many, raw(adsb::encodeAllCall(0x500000 + i, 5, 0), 1.0 + i * 0.001));
-    CHECK(many.aircraftCount() <= 2000, "table grew to %zu", many.aircraftCount());
+    CHECK(many.aircraftCount() <= limits::kAircraft, "table grew to %zu", many.aircraftCount());
     AdsbTelemetry t = snap(many, 5.0);
-    CHECK(t.aircraft.size() <= 128 && t.frames.size() <= 64, "report: %zu aircraft, %zu frames", t.aircraft.size(), t.frames.size());
-    CHECK(t.aircraft.size() == 128 && t.aircraft[0].ageSec <= t.aircraft[1].ageSec + 1e-6f, "the report lists the most recent first");
-    // size of the full report: 128 aircraft with the longest callsign and a full track each, and the frame list (about 100 kB is the limit)
+    CHECK(t.aircraft.size() <= limits::kAircraft && t.frames.size() <= 64, "report: %zu aircraft, %zu frames", t.aircraft.size(), t.frames.size());
+    CHECK(t.aircraft.size() == 3000 && t.aircraft[0].ageSec <= t.aircraft[1].ageSec + 1e-6f, "the report lists the most recent first");
+    // size of the full report: 128 aircraft with the longest callsign and a full track each, and the frame list (no 128 wall since the limits audit: every tracked aircraft is listed, about 1 kB each)
     AdsbTracker full;
     for (uint32_t i = 0; i < 200; i++) {
         const uint32_t a = 0x500000 + i;
@@ -348,7 +349,7 @@ static void testExpiryAndLimits() {
     for (auto& f : big.frames) bytes += f.hex.capacity() + f.what.capacity();
     for (auto& a : big.aircraft) bytes += sizeof(AdsbAircraft) + a.callsign.capacity() + a.category.capacity() + a.track.capacity() * sizeof(AdsbTrackPoint);
     printf("  a full report is about %zu bytes (%zu aircraft, longest track %zu points)\n", bytes, big.aircraft.size(), big.aircraft.empty() ? 0 : big.aircraft[0].track.size());
-    CHECK(bytes < 130000 && big.aircraft.size() == 128 && big.aircraft[0].track.size() == 40, "report size %zu", bytes);
+    CHECK(bytes < 1100 * 200 && big.aircraft.size() == 200 && big.aircraft[0].track.size() == 40, "report size %zu", bytes);
     // messages per second over the last second
     AdsbTracker rate;
     for (int w = 0; w < 8; w++) {

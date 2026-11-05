@@ -276,7 +276,7 @@ void outputsTab(App& a) {
     flowNext(); ImGui::Checkbox(tr("reachable from the network"), &a.out.httpLan);
     flowNext(); ImGui::SetNextItemWidth(130 * gUi); ImGui::InputText(tr("key (optional)##httpkey"), a.httpKey, sizeof a.httpKey);
     flowNext();
-    if (ImGui::Checkbox(tr("serve"), &a.out.http)) ch = true;
+    ImGui::PushID("advhttp"); if (ImGui::Checkbox(tr("serve"), &a.out.http)) ch = true; ImGui::PopID();
     flowEnd();
     { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", tr("Open http://this-computer:port/stream.ts in VLC, OBS (media source) or ffplay. Without a key, anyone who can reach the port can watch while it is on.")); ImGui::PopTextWrapPos(); }
     if (ch || ImGui::IsItemDeactivatedAfterEdit()) applyOutputs(a);
