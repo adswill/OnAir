@@ -437,6 +437,12 @@ not loaded* with the reason: on Windows "a DLL it needs is missing" (an MSYS2/Mi
 Check the licence and your local patent situation before installing it. Status: the frames and the stream configuration follow ETSI ES 201 980;
 the decoding with a real libfdk-aac against a real DRM xHE-AAC recording has not been verified yet.
 
+## Your own FFmpeg (Settings > Advanced > FFmpeg libraries)
+
+Default **Bundled**: OnAir uses the FFmpeg inside it. Choose **External folder** and pick a folder with shared `libavcodec` / `libavutil` (for example
+an official FFmpeg build) and the optional add-ons that load FFmpeg at run time (AC-4, AVS+) search that folder first. OnAir ships and downloads
+nothing for this. The TV, DAB and DRM decoders are linked to the bundled FFmpeg and do not switch to the external one.
+
 ## AC-4 (ATSC 3.0 sound)
 
 ATSC 3.0 broadcasts in the US and South Korea (and a few DVB services) carry their sound as Dolby AC-4. FFmpeg, including the one inside

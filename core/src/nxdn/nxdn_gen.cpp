@@ -108,9 +108,12 @@ void nxdnTxSymbols(const NxdnGenTx& tx, std::vector<int8_t>& sym) {
     nxdn::buildMsg(m, sf, 72);
     const int n = std::max(4, (int)std::lround(tx.durSec / frameSec / 4) * 4);
     uint32_t vfn = 0;
+    uint8_t sfBad[72];
+    if (tx.sacchGlitchCipher) { nxdn::Msg g = m; g.cipher = tx.sacchGlitchCipher; g.keyId = 5; nxdn::buildMsg(g, sfBad, 72); }
     for (int f = 0; f < n; f++) {
         std::vector<uint8_t> p;
-        fb.sacch(3 - (f % 4), sf + 18 * (f % 4), p);
+        const uint8_t* use = (tx.sacchGlitchCipher && f / 4 == 2) ? sfBad : sf;
+        fb.sacch(3 - (f % 4), use + 18 * (f % 4), p);
         for (int v = 0; v < 4; v++) { uint8_t vb[72]; nxdnKnownVoice(vfn++, vb); p.insert(p.end(), vb, vb + 72); }
         fb.frame({nxdn::kRtch, nxdn::kFctSacchSf, 3, 1}, p);
     }

@@ -175,6 +175,8 @@ bool connectAndAsk(WsClient& ws, const std::string& host, int port, int timeoutM
     const sock_t s = tcpConnect(host, port, timeoutMs, err);
     if (s == kBadSock) { err = "cannot connect to SDRconnect at " + addr + ": " + err + " (is SDRconnect running with its WebSocket server on?)"; return false; }
     ws.attach(s);
+    ws.setTrace(true);
+    wstrace::line("--", "connected to " + addr);
     sockRecvTimeout(s, timeoutMs);
     std::string e;
     if (!ws.handshake(host, port, kPath, e)) { err = addr + ": " + e; return false; }
@@ -204,7 +206,7 @@ bool nrspStProbe(const std::string& host, int port, int timeoutMs, std::string& 
     NrspInfo info;
     const bool ok = connectAndAsk(ws, host, port, timeoutMs, info, err);
     if (ok) noteInfo((host.find(':') != std::string::npos ? "[" + host + "]" : host) + ":" + std::to_string(port), info);
-    if (ws.sock() != kBadSock) { ws.sendClose(); sockShutdown(ws.sock()); sockClose(ws.sock()); }
+    if (ws.sock() != kBadSock) { ws.sendClose(); sockShutdown(ws.sock()); sockClose(ws.sock()); ws.attach(kBadSock); }
     return ok;
 }
 
@@ -282,6 +284,7 @@ protected:
     }
     void closeDevice() override {
         if (ws_.sock() != kBadSock) {
+            wstrace::line("--", "OnAir stops: closing the connection");
             ws_.sendClose();
             sockShutdown(ws_.sock());
             sockClose(ws_.sock());

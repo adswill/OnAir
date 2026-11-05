@@ -12,11 +12,11 @@ using namespace dect2;
 
 struct R { int frames = 0, plug = 0, bad = 0; size_t samples = 0; uint64_t decoded = 0; NxdnTelemetry t; };
 
-static R run(int cipher) {
+static R run(int cipher, int glitch = 0) {
     plugtest::gFrames = 0; plugtest::gBadSize = 0;
     NxdnGenConfig c;
     c.rate = 500000; c.snrDb = 40; c.loop = false; c.seed = 3;
-    NxdnGenTx tx; tx.kind = NxdnGenTx::Voice; tx.baud = 2400; tx.cipher = cipher; tx.durSec = 2;
+    NxdnGenTx tx; tx.kind = NxdnGenTx::Voice; tx.baud = 2400; tx.cipher = cipher; tx.sacchGlitchCipher = glitch; tx.durSec = 2;
     c.txs.push_back(tx);
     NxdnGenerator g(c);
     NxdnReceiver rx;
@@ -44,6 +44,10 @@ int main() {
     printf("encrypted: %d voice frames, %d to the plug-in, %zu samples\n", e.frames, e.plug, e.samples);
     CHECK(e.frames > 20, "encrypted call not received");
     CHECK(e.plug == 0 && e.samples == 0 && e.decoded == 0, "an encrypted call reached the codec (%d frames)", e.plug);
+    // one SACCH superframe with a valid CRC but a cipher flag (not repeated) must not turn a clear call into "encrypted"; audio must go on to the end
+    const R g = run(0, 1);
+    printf("clear + one glitched SACCH: %d voice frames, %d to the plug-in\n", g.frames, g.plug);
+    CHECK(g.plug >= g.frames * 9 / 10 && g.t.log.empty() == false && g.t.log[0].cipher == 0, "a single flipped cipher flag silenced a clear call (%d of %d)", g.plug, g.frames);
     printf(fails ? "%d failure(s)\n" : "all passed\n", fails);
     return fails ? 1 : 0;
 }
