@@ -156,9 +156,12 @@
 123.400|Gliding (Europe)|25||airband|EU|
 118.000|Airband start|25|VHF comm band 118.000-136.975 MHz, AM
 136.975|Airband end|25|Top channel of the VHF comm band
-243.000|Military distress (UHF guard)|25|AM; NATO UHF emergency|airband|GLOBAL|public-safety
-225.000|Military UHF air band start|25|225-400 MHz, AM|airband|GLOBAL|aviation
-400.000|Military UHF air band end|25||airband|GLOBAL|aviation
+243.000|Military distress (UHF guard)|25|AM; NATO UHF emergency|general|GLOBAL|public-safety
+225.000|Military UHF air band start|25|225-400 MHz, AM, 25 kHz channels (scan the whole band)|general|GLOBAL|aviation
+400.000|Military UHF air band end|25|Top of the military UHF air band|general|GLOBAL|aviation
+138.000|Military VHF air band start|25|138-144 MHz, AM (military air-to-air and ground; Europe and NATO), 25 kHz channels|general|GLOBAL|aviation
+144.000|Military VHF air band end|25|Top of the 138-144 MHz military VHF piece (2 m amateur starts here)|general|GLOBAL|aviation
+282.800|Military air-to-air (common)|25|AM; widely used NATO / US UHF air-to-air calling channel|general|GLOBAL|aviation
 @mode general
 406.025|COSPAS-SARSAT distress beacons (406 MHz)|3|EPIRB/ELT/PLB bursts at 406.025-406.076; not decoded|general|GLOBAL|satellite
 @mode general
