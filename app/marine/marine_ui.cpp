@@ -645,7 +645,7 @@ void faxView(App& a) {
         dl->AddText(ImVec2(p0.x + (box.x - ts.x) * 0.5f, p0.y + box.y * 0.5f), IM_COL32(150, 154, 158, 255), msg);
         return;
     }
-    const float fit = box.x / (float)S.imgW;
+    const float fit = dect2::wefaxFitZoom(box.x, box.y, S.imgW, S.imgH, S.rot);
     float z = S.zoom > 0 ? S.zoom : fit;
     if (hov && ImGui::GetIO().MouseWheel != 0) {     // zoom around the pointer
         const ImVec2 m = ImGui::GetIO().MousePos;
@@ -661,10 +661,11 @@ void faxView(App& a) {
     const float w = S.imgW * z, h = S.imgH * z;
     if (S.zoom <= 0) {
         S.pan.x = 0;
-        if (h > box.y) S.pan.y = box.y - h;       // fitted: keep the newest lines in view
+        if (h > box.y) S.pan.y = S.rot == 2 ? 0.f : box.y - h;   // fitted: keep the newest lines in view (upside down they are at the top)
         else S.pan.y = 0;
+        if (w < box.x) S.pan.x = (box.x - w) * 0.5f;   // a whole turned picture narrower than the box: centred
     }
-    S.pan.x = std::min(0.f, std::max(S.pan.x, std::min(0.f, box.x - w)));
+    if (S.zoom > 0 || w >= box.x) S.pan.x = std::min(0.f, std::max(S.pan.x, std::min(0.f, box.x - w)));
     S.pan.y = std::min(0.f, std::max(S.pan.y, std::min(0.f, box.y - h)));
     const ImVec2 q0(p0.x + S.pan.x, p0.y + S.pan.y), q1(q0.x + w, q0.y + h);
     dl->PushClipRect(p0, ImVec2(p0.x + box.x, p0.y + box.y), true);

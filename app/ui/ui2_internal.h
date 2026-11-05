@@ -63,6 +63,7 @@ void summary(App& a, float x, float y, float scale = 1.f, float maxW = FLT_MAX);
 void modeList(App& a);
 void sidebar(App& a);
 float menuBar(App& a);
+void restoreDefaultView(App& a);   // the new interface, desktop (not touch), Sidebar layout, no docking: always reachable (Ctrl+Shift+M, View, Settings)
 void topBar(App& a, ImVec2 disp);
 void bottomBar(App& a, ImVec2 disp);
 void tgRect(App& a, int id);

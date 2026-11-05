@@ -194,6 +194,8 @@ struct WideModes::Impl {
     CarrierCfg cfgTuned(int m, double origin) const {
         CarrierCfg c = cfgFor(m);
         if (tuning.rasterKhz > 0.5) c.stepHz = tuning.rasterKhz * 1000.0;
+        // a 12.5 kHz wide signal (DMR and its kin) on a finer raster fell into two cells: a phantom second row beside every carrier. The cells stay 12.5 kHz.
+        if (cfgFor(m).stepHz >= 12500.0 && c.stepHz < 12500.0) c.stepHz = 12500.0;
         c.snapReported = tuning.snapFreq;
         c.gridOriginHz = origin;
         return c;

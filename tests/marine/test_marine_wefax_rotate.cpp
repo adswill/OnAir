@@ -1,6 +1,7 @@
 // Weather fax picture rotation: each turn on a small asymmetric picture, four turns = identity, opposite turns cancel, sizes, odd shapes.
 #include "dect2/marine/wefax_rotate.h"
 #include <cstdint>
+#include <cmath>
 #include <cstdio>
 #include <vector>
 using namespace dect2;
@@ -48,6 +49,15 @@ int main() {
     std::vector<uint32_t> px = {0xFF000001u, 0xFF000002u}, po;
     wefaxRotate(px.data(), 2, 1, 1, po, ow, oh);
     CHECK(ow == 1 && oh == 2 && po[0] == 0xFF000001u && po[1] == 0xFF000002u, "32-bit");
+    // the fit zoom: a 1809 x 165 strip and a tall 1809 x 3000 picture in an 800 x 600 box, all four turns: turned 90 degrees the whole picture is inside the box
+    for (int turns = 0; turns < 4; turns++) for (int hh : {165, 3000}) {
+        int ow, oh;
+        wefaxRotatedSize(1809, hh, turns, ow, oh);
+        const float z = wefaxFitZoom(800, 600, ow, oh, turns);
+        if (turns & 1) CHECK(ow * z <= 800.01f && oh * z <= 600.01f && (ow * z > 799.f || oh * z > 599.f), "turn %d 1809x%d: fit %.3f shows %.0f x %.0f of 800 x 600", turns, hh, z, ow * z, oh * z);
+        else CHECK(std::fabs(z - 800.f / ow) < 1e-6, "turn %d 1809x%d: as received it is fitted by width (%.3f)", turns, hh, z);
+    }
+    CHECK(wefaxFitZoom(0, 0, 0, 0, 1) == 1.f, "degenerate box");
     wefaxRotate<uint8_t>(nullptr, 0, 0, 1, a, ow, oh);
     CHECK(a.empty(), "empty");
     return testSummary("marine_wefax_rotate");

@@ -210,6 +210,28 @@ void sMeter(const App& a) {
     } else ImGui::TextDisabled("%s", a.engine.running() ? "no level yet" : "stopped");
 }
 
+// the squelch: Off / Level / Auto in one combo, with the live level and the threshold; the same block in the controls, the receiver tab and the
+// "squelch closed" popup of the Listen list, so it is the same for every mode (NFM, WFM, AM, USB, LSB, CW)
+void squelchUi(App& a) {
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted(tr("Squelch"));
+    ImGui::SameLine(0, 6 * gUi);
+    int sm = !S.sqOn ? 0 : S.sqAuto ? 2 : 1;
+    ImGui::SetNextItemWidth(90 * gUi);
+    if (comboTr("##gsqm", &sm, {N_("Off"), N_("Level"), N_("Auto")})) { S.sqOn = sm != 0; S.sqAuto = sm == 2; save(); }
+    tip("Off: everything is heard, no muting. Level: opens at the threshold in dBFS (drag the slider, or Set). Auto: USB and LSB open when the voice passband is 6 dB over its own noise (speech, no carrier needed). NFM, WFM, AM and CW open 6 dB over the noise beside the channel. CW holds the squelch open for a second so keyed signals and beacons do not chatter.");
+    if (S.sqOn && !S.sqAuto) {
+        ImGui::SameLine(0, 6 * gUi);
+        ImGui::SetNextItemWidth(140 * gUi);
+        ImGui::SliderFloat("##gsql", &S.sqDb, -130, 0, "%.0f dBFS");
+        if (ImGui::IsItemDeactivatedAfterEdit()) save();
+        ImGui::SameLine(0, 4 * gUi);
+        if (ImGui::SmallButton("Set") && live(a) && T(a).levelDb > -199) { S.sqDb = std::round(T(a).levelDb + 3); save(); }
+        tip("Threshold 3 dB over the level now (set it while no one transmits)");
+    }
+    sMeter(a);
+}
+
 void extraChannelsUi(App& a);
 bool amBroadcast(const App& a);
 void audioFiltersUi(App& a);
@@ -354,24 +376,7 @@ void controls(App& a) {
     hamVoiceUi(a);
 
     // squelch, AGC, de-emphasis, pitch
-    if (ImGui::Checkbox("Squelch", &S.sqOn)) save();
-    tip("Mute the noise between transmissions");
-    flowNext(6 * gUi);
-    ImGui::BeginDisabled(!S.sqOn);
-    ImGui::SetNextItemWidth(80 * gUi);
-    int sm = S.sqAuto ? 0 : 1;
-    if (comboTr("##gsqm", &sm, {N_("Auto"), N_("Level")})) { S.sqAuto = sm == 0; save(); }
-    tip("Auto: USB and LSB open when the voice passband is 6 dB over its own noise (speech, no carrier needed). NFM, AM and the others open 6 dB over the noise beside the channel. Level: opens at the threshold in dBFS.");
-    if (!S.sqAuto) {
-        ImGui::SameLine(0, 4 * gUi);
-        ImGui::SetNextItemWidth(140 * gUi);
-        ImGui::SliderFloat("##gsql", &S.sqDb, -130, 0, "%.0f dBFS");
-        if (ImGui::IsItemDeactivatedAfterEdit()) save();
-        ImGui::SameLine(0, 4 * gUi);
-        if (ImGui::SmallButton("Set") && live(a) && T(a).levelDb > -199) { S.sqDb = std::round(T(a).levelDb + 3); save(); }
-        tip("Threshold 3 dB over the level now (set it while no one transmits)");
-    }
-    ImGui::EndDisabled();
+    squelchUi(a);
     const bool fm = S.demod == dect2::GenNfm || S.demod == dect2::GenWfm;
     flowNext(14 * gUi);
     if (fm) {
@@ -659,6 +664,7 @@ void receiver(App& a) {
     const auto& t = T(a);
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     ImGui::TextWrapped("%s", dect2::generalSummary(t).c_str());
+    squelchUi(a);
     ImGui::Text("Listening on %.6f MHz (%+.3f kHz from the dial)", listenHz(a) / 1e6, t.chanOffsetHz / 1e3);
     ImGui::Text("Input %.3f Msps, demodulated at %.0f kHz", t.rate / 1e6, t.demodRate / 1e3);
     ImGui::Text("Filter %+.2f to %+.2f kHz around the channel", t.filterLoHz / 1e3, t.filterHiHz / 1e3);
@@ -672,7 +678,14 @@ void list(App& a) {
     load();
     ImGui::TextDisabled("%s %.4g kHz", dect2::generalDemodName(S.demod), S.width[S.demod] / 1e3);
     ImGui::Text("%.4f MHz", listenHz(a) / 1e6);
-    if (live(a)) ImGui::TextDisabled("%s", T(a).squelchOpen ? "squelch open" : "squelch closed");
+    if (live(a)) {   // clickable: opens the squelch control (also in the receiver controls)
+        const char* txt = !S.sqOn ? "squelch off" : T(a).squelchOpen ? "squelch open" : "squelch closed";
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+        if (ImGui::Selectable(txt, false, 0, ImVec2(ImGui::CalcTextSize(txt).x, 0))) ImGui::OpenPopup("##gsqpop");
+        ImGui::PopStyleColor();
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Click to change the squelch");
+    }
+    if (ImGui::BeginPopup("##gsqpop")) { squelchUi(a); ImGui::EndPopup(); }
 }
 
 void status(App& a) {

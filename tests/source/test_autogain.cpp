@@ -488,6 +488,47 @@ static void testSingleControl() {
     }
 }
 
+// HackRF (separate LNA / VGA / amp), the default Auto (v2) on many modes and signal levels: no hunting at the end, never pinned at the top or bottom
+// of the range by accident, the LNA only in its 8 dB steps and the VGA in 2 dB steps, the amp never switched without permission
+static void testHackrfSweep() {
+    struct M { int std_; double bw, rate; };
+    const std::vector<M> modes = {{11, 12.5e3, 2.4e6}, {13, 2e6, 2.4e6}, {7, 200e3, 2.4e6}, {26, 12.5e3, 2.4e6}, {1, 8e6, 9.14e6}, {0, 8e6, 10e6}, {44, 10e6, 10e6}};
+    const RadioProfile rp = prof("hackrf");
+    for (const M& m : modes) for (double sig : {-115.0, -95.0, -75.0, -50.0}) for (double start : {10.0, 60.0}) {
+        SimRadio sim(rp, start, false);
+        sim.rateHz = m.rate; sim.chanBw = m.bw; sim.sigDbm = sig; if (m.bw < 1e6) sim.chanOff = 100e3;
+        const ModeTarget tg = modeTargetFor(m.std_, m.bw, m.rate);
+        AutoGainController c;
+        AgSettings st; st.mode = AgMode::Auto; c.configure(rp, tg, st);   // the defaults: v2, amp not allowed
+        double now = 0;
+        c.start(now, sim.live.totalDb, false, &sim.live);
+        double prev = sim.live.totalDb, lo = 1e9, hi = -1e9; int changes = 0, late = 0, reversals = 0, dir = 0; bool ampSeen = false, badStep = false;
+        run(c, sim, now, 240, [&](double t) {
+            const StagePlan& p = c.current();
+            if (std::fabs(p.totalDb - prev) > 0.01) {
+                const int d = p.totalDb > prev ? 1 : -1;
+                changes++; if (t > 150) late++;
+                if (t > 150 && dir && d != dir) reversals++;
+                dir = d; prev = p.totalDb;
+            }
+            if (t > 150) { lo = std::min(lo, p.totalDb); hi = std::max(hi, p.totalDb); }
+            ampSeen |= p.ampOn;
+            for (size_t i = 0; i < rp.stages.size(); i++) {
+                if (rp.stages[i].id == "lna" && std::fmod(std::round(p.db[i]), 8.0) != 0) badStep = true;
+                if (rp.stages[i].id == "vga" && std::fmod(std::round(p.db[i]), 2.0) != 0) badStep = true;
+            }
+        });
+        if (verbose) printf("  hackrf std %2d sig %6.1f start %4.0f -> %5.1f dB, %d changes (%d after 150 s, %d reversals), headroom %.1f clip %.3f snr %.1f\n",
+                            m.std_, sig, start, c.current().totalDb, changes, late, reversals, c.meters().headroomDb, sim.lastClip, sim.snrDb());
+        if (verbose && getenv("AGLOG2") && m.std_ == atoi(getenv("AGLOG2")) && sig == atof(getenv("AGSIG")) && start == 60) for (const auto& e : c.log()) if (e.t > 150) printf("     %.1f %.1f -> %.1f %s\n", e.t, e.fromDb, e.toDb, e.why.c_str());
+        CHECK(hi - lo <= 4.01, "hackrf std %d sig %.0f start %.0f: still moving after 150 s (%d changes, range %.0f dB)", m.std_, sig, start, late, hi - lo);
+        CHECK(!ampSeen && !badStep, "hackrf std %d sig %.0f: amp %d, a step off the hardware grid %d", m.std_, sig, (int)ampSeen, (int)badStep);
+        CHECK(sim.lastClip <= tg.clipLimit * 3 + 1e-9, "hackrf std %d sig %.0f start %.0f: clipping %.3f at the end", m.std_, sig, start, sim.lastClip);
+        if (sig <= -95) CHECK(c.current().totalDb > rp.minTotal(false) + 10 || m.std_ == 44, "hackrf std %d sig %.0f: weak signal but the gain is only %.0f dB", m.std_, sig, c.current().totalDb);
+        if (sig >= -50 && m.std_ != 44) CHECK(c.current().totalDb < rp.maxTotal(false) - 10, "hackrf std %d sig %.0f: strong signal but the gain is %.0f dB", m.std_, sig, c.current().totalDb);
+    }
+}
+
 int main(int argc, char** argv) {
     verbose = argc > 1 && !strcmp(argv[1], "-v");
     testProfiles();
@@ -503,6 +544,7 @@ int main(int argc, char** argv) {
     testMemory();
     testRunner();
     testSingleControl();
+    testHackrfSweep();
     if (fails) { printf("%d FAILED\n", fails); return 1; }
     printf("autogain: all tests passed\n");
     return 0;

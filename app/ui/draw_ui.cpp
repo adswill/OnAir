@@ -5,6 +5,7 @@
 #include <unistd.h>
 #endif
 #include "app.h"
+#include "ui/ui2_internal.h"
 #include "adsb/adsb_map.h"
 #include "ui/contrast.h"
 #include "ui/touch.h"
@@ -183,8 +184,9 @@ static void classicRx(App& a, ImVec2 disp) {
 
 // the classic interface's root window
 static void classicShell(App& a, ImVec2 disp) {
-    ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(disp);
+    const float menuH = ui2::menuBar(a);   // File / Mode / View ... stay on screen in the classic interface too: the menu cannot be lost
+    ImGui::SetNextWindowPos(ImVec2(0, menuH));
+    ImGui::SetNextWindowSize(ImVec2(disp.x, disp.y - menuH));
     ImGui::Begin("##root", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoSavedSettings);
     txViewSwitch(a);   // RX / TX, top left
     if (hamViewFlag()) { ImGui::BeginChild("##hambody", ImVec2(0, 0)); hamPanel(a); ImGui::EndChild(); }
@@ -326,6 +328,10 @@ void drawUI(App& a, ImVec2 disp, bool draw) {
     applyUiTheme(a);
     if (modeacFullMap(a, disp) || adsbFullMap(a, disp)) return;   // the ADS-B map popped out over the whole window (in Mode A/C too, #235)
     if (adsbmap::fullDraw(&a, a.family, disp)) return;   // any other map screen: the tab it is on over the whole window (the "full screen" button on the map)
+    {   // Ctrl+Shift+M (Cmd+Shift+M): the default view back, from any interface (also Settings > Appearance > Restore the default view)
+        ImGuiIO& io = ImGui::GetIO();
+        if ((io.KeyCtrl || io.KeySuper) && io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_M, false)) ui2::restoreDefaultView(a);
+    }
     if (a.touchUi) touch::shell(a, disp);   // the touch interface (ui/touch_shell.cpp) over either interface's panels
     else if (a.newUi) drawShell2(a, disp);
     else classicShell(a, disp);

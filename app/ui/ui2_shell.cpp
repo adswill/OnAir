@@ -574,6 +574,7 @@ static void viewMenu(App& a) {
         if (ImGui::MenuItem(tr("Touch interface"), nullptr, &a.touchUi)) savePrefs(a);   // the same flag as the side panel: big targets, bottom dock (ui/touch.h)
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("For tablets and touch screens: big buttons, an on-screen keypad for the frequency, a full-screen mode picker."));
         dockMenu(a);   // View > Docking (ui2_dock.cpp)
+        if (ImGui::MenuItem(tr("Restore the default view"), "Ctrl+Shift+M")) restoreDefaultView(a);
         if (ImGui::MenuItem(tr("Reset layout"))) { if (!a.touchUi) layoutReset();   // forgets the saved window positions of every mode
             a.splitSide = a.splitRight = a.splitBottom = a.splitDock = a.splitBot2 = 0; savePrefs(a); }
         if (ImGui::MenuItem(tr("Reset spectrum"))) resetSpectrum(a);
@@ -623,7 +624,7 @@ static void viewMenu(App& a) {
                 ImGui::SetTooltip("%s", tr(have ? "Shows on your Discord profile that you are using OnAir, the mode and the frequency. Needs the Discord desktop app running." : "Discord application ID not set in this build"));
         }
         ImGui::Separator();
-        if (ImGui::MenuItem(tr("Classic interface"))) { a.newUi = false; savePrefs(a); }
+        if (ImGui::MenuItem(tr("Classic interface"))) { a.newUi = false; savePrefs(a); }   // keeps this menu bar; Ctrl+Shift+M or View > Restore the default view comes back
         ImGui::EndMenu();
     }
     if (ImGui::BeginMenu(tr("Tools"))) {
@@ -748,6 +749,11 @@ static void menuBarRight(App& a) {
     gBarRestW = ImGui::GetItemRectMax().x - x0;
     ImGui::PopStyleVar();
     ImGui::PopStyleColor(4);
+}
+
+void restoreDefaultView(App& a) {
+    a.newUi = true; a.touchUi = false; a.layoutUnified = false; a.uiVariant = 0; a.dockOn = false;
+    savePrefs(a);
 }
 
 float menuBar(App& a) {

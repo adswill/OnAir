@@ -34,6 +34,7 @@ namespace {
 using dect2::math::kPi;
 constexpr double kOutLevel = 0.5;          // full deviation / full AM depth / an SSB tone under the AGC: this peak
 constexpr double kBlockSec = 0.01;         // squelch decisions
+constexpr double kHangCwSec = 1.0;      // CW and beacons (NDBs) key on and off: a longer mute hang so the squelch does not chatter on every dot and gap
 constexpr double kHangSec = 0.15;      // the mute: long enough that a click does not get through. The file hang is separate (setTransmissionGate).
 constexpr int kNoiseN = 512;               // noise spectrum of the decimated stream
 constexpr int kNoiseAvg = 8;
@@ -517,7 +518,7 @@ struct GeneralReceiver::Impl {
             const double thr = std::pow(10.0, cfg.sqDb / 10.0);
             want = lvl >= (open ? thr / 1.26 : thr);
         }
-        if (want) { open = true; hang = kHangSec; }
+        if (want) { open = true; hang = cfg.demod == GenCw ? kHangCwSec : kHangSec; }
         else if (open) { hang -= kBlockSec; if (hang <= 0) open = false; }
         (open ? blkOpen : blkShut)++;
     }

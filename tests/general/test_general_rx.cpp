@@ -148,6 +148,32 @@ int main() {
         CHECK(!r.startRecording("/nonexistent-dir/x.wav") && !r.recording(), "a bad path fails");
     }
 
+    // keyed signal (a beacon or CW: 0.5 s on, 1.0 s off, five times): the CW squelch holds through the gaps (no chatter), the others follow them
+    {
+        SynthConfig on, off;
+        on.mode = 57; on.snrDb = 30; off.mode = 57; off.snrDb = 30; off.modeOpt[1] = 1;
+        for (int d : {(int)GenCw, (int)GenNfm}) {
+            auto sOn = makeGeneralSynth(on, kRate), sOff = makeGeneralSynth(off, kRate);
+            GeneralReceiver r;
+            r.configure(kRate); r.setSignalOffset(-generalTuning().tuneOffsetHz); r.setSilent(true);
+            r.setDemod(d); r.setWidthHz(generalDefaultWidth(d)); r.setSquelch(true, true, -60);
+            std::vector<cf32> buf(20000);
+            uint64_t seq = 0; bool was = false; int closes = 0;
+            auto feedSecs = [&](std::unique_ptr<ModeSynth>& syn, double secs) {
+                for (double t = 0; t < secs; t += buf.size() / kRate) {
+                    syn->generate(buf.data(), buf.size()); r.feed(buf.data(), buf.size());
+                    GeneralTelemetry g;
+                    if (r.telemetry(g, seq)) { seq = g.seq; if (getenv("SQDBG")) printf("[%d %.0f %.0f]", (int)g.squelchOpen, g.levelDb, g.noiseDb); if (was && !g.squelchOpen) closes++; was = g.squelchOpen; }
+                }
+            };
+            feedSecs(sOff, 1.0);
+            for (int k = 0; k < 5; k++) { feedSecs(sOn, 0.5); feedSecs(sOff, 1.0); }
+            printf("  keyed signal %s: squelch closed %d times\n", generalDemodName(d), closes);
+            if (d == GenCw) CHECK(closes <= 1, "CW squelch chatters on a keyed signal: %d closes", closes);
+            else CHECK(closes >= 3, "%s squelch should follow a keyed signal (%d closes)", generalDemodName(d), closes);
+        }
+    }
+
     // one WAV per transmission: station 2 s, nothing 2 s, station 2 s, nothing: two files (a 0.1 s blip would be dropped)
     {
         SynthConfig on, off;
