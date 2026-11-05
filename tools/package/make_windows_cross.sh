@@ -38,6 +38,10 @@ $S -o "$OUT/onair-scan.exe" $BUILD/dect2scan.exe
 $S -o "$OUT/onair-server.exe" $BUILD/onair-server.exe   # the headless server (OnAir Web)
 [ -f "$OUT/onair-server.exe" ] || { echo "error: onair-server.exe is missing from $OUT"; exit 1; }
 mkdir -p "$OUT/web"; cp -R web/onair-web "$OUT/web/"   # the OnAir Web browser page (onair-server.exe looks in web\\onair-web next to it)
+# FFmpeg (LGPL, shared): its DLLs next to the program (delay-loaded; Settings > Advanced > FFmpeg libraries can choose another build)
+for f in "$P"/bin/avutil-*.dll "$P"/bin/swresample-*.dll "$P"/bin/swscale-*.dll "$P"/bin/avcodec-*.dll "$P"/bin/avformat-*.dll; do
+  if [ -f "$f" ]; then cp "$f" "$OUT/"; else echo "error: no FFmpeg DLLs in $P/bin (run cross_deps_windows.sh: FFmpeg is now the shared build)"; exit 1; fi
+done
 # generic radios: SoapySDR (a DLL). Its RTL-SDR and Airspy modules are not shipped: the native drivers of the same name always win and hide them.
 cp "$P/bin/libSoapySDR.dll" "$OUT/"
 # the radios OnAir drives by itself: their libraries next to the program (nothing to install). FTD3XX.dll is FTDI's USB 3 driver library that the
@@ -84,7 +88,7 @@ done
 python3 tools/package/scrub_paths.py "$OUT"   # no build-machine paths in the shipped files
 tools/package/check_win_dlls.sh "$OUT" || { echo "error: the DLLs of $OUT do not fit together (see above)"; exit 1; }
 cp LICENSE "$OUT/LICENSE.txt"
-tools/package/check_lgpl_bundle.sh "$OUT/OnAir.exe" || exit 1   # fails if FFmpeg inside is a GPL build
+tools/package/check_lgpl_bundle.sh "$OUT/OnAir.exe" || exit 1   # fails if the FFmpeg DLLs are a GPL build
 tools/package/check_lgpl_bundle.sh "$OUT/onair-server.exe" || exit 1
 tools/package/add_license_files.sh "$OUT"   # THIRD_PARTY.md, LICENSES/, LICENSE-NOTICES-BINARIES.md (licence of every bundled DLL, source offer)
 cat > "$OUT/README.txt" <<'TXT'

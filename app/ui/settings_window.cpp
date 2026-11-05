@@ -2,9 +2,11 @@
 // setting and per category, a marker for what differs from the default, and an Advanced foldout per category. The rows are in
 // settings_table.h; here each row is bound to the field that holds its value (the same fields the old menus use, saved by
 // app/state/prefs.cpp), so a row without a field is not shown. Docs: docs/SETTINGS.md.
+#include <algorithm>
 #include "../app.h"
 #include "../i18n/i18n.h"
 #include "../platform/platform.h"
+#include "../platform/ffmpeg_libs.h"
 #include "../ui/scale.h"
 #include "settings_table.h"
 #include "setup_logic.h"
@@ -94,12 +96,90 @@ bool customChanged(const App& a, const Info& i) {
     if (!strcmp(i.key, "themeMode")) return a.lightUi || a.highContrast;
     if (!strcmp(i.key, "uiLang")) return !a.uiLang.empty();
     if (!strcmp(i.key, "uiTypography")) return plat::prefs().getI("uiTypography", 0) != 0;
+    if (!strcmp(i.key, ffmpeglibs::kPrefKey)) return !plat::basePrefs().getS(ffmpeglibs::kPrefKey, "").empty();
     return false;
 }
+// Advanced > FFmpeg libraries: the last folder tried in this run (ffmpegRow); a reset of the row or of every setting forgets it
+ffmpeglibs::Check gFfTried;
+bool gFfHasTried = false;
+void ffmpegForget() { gFfTried = ffmpeglibs::Check(); gFfHasTried = false; }
+// the FFmpeg choice saved differs from the FFmpeg in use: it applies at the next start
+bool ffmpegPending() {
+    const ffmpeglibs::Status& st = ffmpeglibs::status();
+    return plat::basePrefs().getS(ffmpeglibs::kPrefKey, "") != (st.external ? st.chosen : std::string());
+}
+// the restart request: the notice and a button that closes OnAir normally and starts it again
+void ffmpegRestartButton() {
+    if (ImGui::Button(tr("Restart OnAir"))) { ffmpeglibs::requestRestart(); glfwSetWindowShouldClose(gWindow, 1); }
+}
+
 void customReset(App& a, const Info& i) {
     if (!strcmp(i.key, "themeMode")) { a.lightUi = false; a.highContrast = false; savePrefs(a); }
     else if (!strcmp(i.key, "uiLang")) setUiLanguage(a, "");
     else if (!strcmp(i.key, "uiTypography")) plat::prefs().setI("uiTypography", 0);
+    else if (!strcmp(i.key, ffmpeglibs::kPrefKey)) { plat::basePrefs().setS(ffmpeglibs::kPrefKey, ""); plat::basePrefs().flush(); ffmpegForget(); }
+}
+
+// text that wraps to the width left in the cell, also inside a long word such as a folder path (ImGui's TextWrapped breaks only at
+// spaces): a line ends at the last space, else after the last / or \\, else at the last character that fits
+void wrapAny(const std::string& text, const ImVec4* col = nullptr) {
+    const float w = std::max(40.f, ImGui::GetContentRegionAvail().x);
+    if (col) ImGui::PushStyleColor(ImGuiCol_Text, *col);
+    size_t at = 0;
+    while (at < text.size()) {
+        size_t end = at, brk = std::string::npos, slash = std::string::npos;
+        while (end < text.size()) {
+            size_t n = end + 1;
+            while (n < text.size() && ((unsigned char)text[n] & 0xC0) == 0x80) n++;   // whole UTF-8 characters
+            if (end > at && ImGui::CalcTextSize(text.data() + at, text.data() + n).x > w) break;
+            if (text[end] == ' ') brk = end;
+            if (text[end] == '/' || text[end] == '\\') slash = n;
+            end = n;
+        }
+        size_t cut = end, next = end;
+        if (end < text.size()) {
+            if (brk != std::string::npos && brk > at) { cut = brk; next = brk + 1; }
+            else if (slash != std::string::npos && slash > at) cut = next = slash;
+        }
+        ImGui::TextUnformatted(text.data() + at, text.data() + cut);
+        at = next;
+    }
+    if (text.empty()) ImGui::NewLine();
+    if (col) ImGui::PopStyleColor();
+}
+
+// Advanced > FFmpeg libraries: the folder and version of the FFmpeg in use, and another FFmpeg installation for the next start
+// (platform/ffmpeg_libs.h). A chosen folder is tried at once; when it does not work, the row says why and what to do, and OnAir keeps its own.
+void ffmpegRow() {
+    static const ffmpeglibs::Info now = ffmpeglibs::info();
+    ffmpeglibs::Check& tried = gFfTried;
+    bool& hasTried = gFfHasTried;
+    const ffmpeglibs::Status& st = ffmpeglibs::status();
+    const ImVec4 warn(1.f, 0.75f, 0.3f, 1);
+    const std::string saved = plat::basePrefs().getS(ffmpeglibs::kPrefKey, "");
+    // back to OnAir's own FFmpeg (Reset) while another one is still loaded: show OnAir's own, which the restart brings back
+    static const ffmpeglibs::Info ownFf = ffmpeglibs::own();
+    const ffmpeglibs::Info& shown = (saved.empty() && st.external) ? ownFf : now;
+    wrapAny(std::string(tr("Folder:")) + " " + (shown.folder.empty() ? std::string(tr("OnAir's own FFmpeg")) : shown.folder));
+    wrapAny(std::string(tr("Version:")) + " " + shown.version);
+    if (!saved.empty())   // only with another FFmpeg chosen
+        wrapAny(tr("OnAir cannot guarantee stability when another FFmpeg library is used."), &warn);
+    if (ImGui::Button(tr("Choose FFmpeg folder..."))) {
+        const std::string d = plat::openFolderDialog();
+        if (!d.empty()) {
+            tried = ffmpeglibs::check(d);
+            hasTried = true;
+            plat::basePrefs().setS(ffmpeglibs::kPrefKey, tried.ok ? d : "");   // a folder that does not work: back to OnAir's own FFmpeg
+            plat::basePrefs().flush();
+        }
+    }
+    const std::string problem = hasTried ? tried.problem : st.problem, solution = hasTried ? tried.solution : st.solution;
+    if (!problem.empty()) {
+        wrapAny(problem, &warn);
+        wrapAny(std::string(tr("Possible solution:")) + " " + solution);
+        wrapAny(tr("OnAir uses its own FFmpeg."));
+    }
+    if (ffmpegPending()) wrapAny(tr("Restart OnAir to use this choice."), &warn);   // the Restart button is under "Reset every setting"
 }
 
 bool changedNow(App& a, const Info& i) {
@@ -181,6 +261,7 @@ void customRow(App& a, const Info& i) {
         if (ImGui::Button(tr("Open"))) revealFolder(recordingsDir());
         if (!chosenRecordingsDir().empty() && recdir::normalise(chosenRecordingsDir()) != cur) ImGui::TextColored(ImVec4(1.f, 0.75f, 0.3f, 1), "%s", tr("That folder cannot be written: the default is used."));
     }
+    else if (k == ffmpeglibs::kPrefKey) ffmpegRow();
     else if (k == "dataFolder") {
         const std::string d = plat::dataDir();
         ImGui::TextWrapped("%s", d.c_str());
@@ -218,10 +299,12 @@ void customRow(App& a, const Info& i) {
         if (!sure) { if (ImGui::Button(tr("Reset every setting..."))) sure = true; }
         else {
             ImGui::TextWrapped("%s", tr("Every setting in this window goes back to its default. Continue?"));
-            if (ImGui::Button(tr("Yes, reset all"))) { for (const Info& x : table()) resetOne(a, x); savePrefs(a); sure = false; U.status = tr("All settings reset"); }
+            if (ImGui::Button(tr("Yes, reset all"))) { for (const Info& x : table()) resetOne(a, x); savePrefs(a); sure = false; U.status = tr("All settings reset");
+                if (ffmpegPending()) U.status += std::string(" ") + tr("Restart OnAir to use its own FFmpeg."); }
             ImGui::SameLine();
             if (ImGui::Button(tr("Cancel"))) sure = false;
         }
+        if (!sure && ffmpegPending()) ffmpegRestartButton();   // an FFmpeg choice (or its reset) applies after a restart
     }
 }
 
@@ -289,12 +372,33 @@ void rows(App& a, const std::vector<size_t>& idx, bool showCat) {
         if (ch) { ImGui::TextColored(ImVec4(0.95f, 0.72f, 0.25f, 1), "*"); ImGui::SameLine(0, 4 * gUi); }
         ImGui::TextWrapped("%s", tr(i.label));
         if (i.tip[0] && i.kind != Kind::Custom) { if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr(i.tip)); }
+        if (!strcmp(i.key, ffmpeglibs::kPrefKey)) {   // FFmpeg libraries: what it does, in a (?)
+            ImGui::SameLine(0, 4 * gUi);
+            ImGui::TextDisabled("(?)");
+            if (ImGui::IsItemHovered()) {
+                ImGui::BeginTooltip();
+                ImGui::PushTextWrapPos(ImGui::GetFontSize() * 30.f);
+                ImGui::TextUnformatted(tr("Use the FFmpeg libraries of another FFmpeg installation instead of the FFmpeg that comes with OnAir, "
+                                          "for example one with the H.264 and H.265 encoders (libx264, libx265)."));
+                ImGui::Spacing();
+                ImGui::TextUnformatted(tr("Choose the folder of that installation: OnAir finds the libraries in it or in its bin or lib folder. "
+                                          "It must be a shared FFmpeg build with the same major version as OnAir's FFmpeg and not older."));
+                ImGui::Spacing();
+                ImGui::TextUnformatted(tr("OnAir tries the libraries before it uses them. When they do not work, it says why, "
+                                          "gives a possible solution and keeps its own FFmpeg."));
+                ImGui::Spacing();
+                ImGui::TextUnformatted(tr("FFmpeg is loaded when OnAir starts: a new choice applies after Restart OnAir (under Reset every setting). "
+                                          "Reset goes back to OnAir's own FFmpeg."));
+                ImGui::PopTextWrapPos();
+                ImGui::EndTooltip();
+            }
+        }
         if (showCat) ImGui::TextDisabled("%s%s", tr(i.cat), i.advanced ? " / Advanced" : "");
         if (i.restart) ImGui::TextDisabled("%s", tr("restart needed"));
         ImGui::TableSetColumnIndex(1);
         control(a, i);
         ImGui::TableSetColumnIndex(2);
-        if (ch && (!isCustom(i) || !strcmp(i.key, "themeMode") || !strcmp(i.key, "uiLang") || !strcmp(i.key, "uiTypography")))
+        if (ch && (!isCustom(i) || !strcmp(i.key, "themeMode") || !strcmp(i.key, "uiLang") || !strcmp(i.key, "uiTypography") || !strcmp(i.key, ffmpeglibs::kPrefKey)))
             if (ImGui::SmallButton(tr("Reset"))) resetOne(a, i);
         ImGui::PopID();
     }

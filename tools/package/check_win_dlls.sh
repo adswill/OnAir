@@ -83,5 +83,15 @@ while read -r f; do
     done
 done < "$FILES"
 
+# FFmpeg is delay-loaded (cmake/FfmpegDelayLoad.cmake): objdump shows only a "Delay Import Directory", not its DLLs. Their names (with the
+# major version, e.g. avcodec-62.dll) are in the program as text: each one must be in the top folder.
+while read -r f; do
+    case "$(basename "$f" | tr 'A-Z' 'a-z')" in *.exe) ;; *) continue;; esac
+    "$OBJDUMP" -p "$f" | grep -q 'Delay Import Directory' || continue
+    for d in $(LC_ALL=C grep -a -o -E '(avutil|swresample|swscale|avcodec|avformat)-[0-9]+\.dll' "$f" | sort -u); do
+        [ -n "$(locate "$DIR" "$(echo "$d" | tr 'A-Z' 'a-z')")" ] || problem "${f#$DIR/} delay-loads $d (FFmpeg), which is not in $DIR"
+    done
+done < "$FILES"
+
 if [ $bad -gt 0 ]; then echo "$bad problem(s) in $n files of $DIR"; exit 1; fi
 echo "OK: $n .exe/.dll files in $DIR, all imported DLLs are present or part of Windows, all imported functions from the shipped DLLs exist"

@@ -48,6 +48,10 @@ def resolve(dep, owner):
         raise SystemExit("cannot resolve " + dep + " for " + owner)
     return os.path.realpath(dep)
 
+# FFmpeg keeps its major-version name (libavcodec.62.dylib, not libavcodec.62.11.100.dylib): a user's FFmpeg chosen in Settings > Advanced is
+# found through DYLD_LIBRARY_PATH by that leaf name (app/platform/ffmpeg_libs.h)
+FFMPEG_NAME = re.compile(r"^lib(avcodec|avformat|avutil|swscale|swresample)\.\d+\.dylib$")
+
 def is_system(dep):
     return dep.startswith("/usr/lib/") or dep.startswith("/System/")
 
@@ -115,7 +119,7 @@ while queue:
     for dep in deps(cur):
         if is_system(dep) or os.path.basename(dep) == os.path.basename(cur): continue
         real = resolve(dep, cur)
-        name = os.path.basename(real)
+        name = os.path.basename(dep) if FFMPEG_NAME.match(os.path.basename(dep)) else os.path.basename(real)
         if real not in done:
             done[real] = name
             dst = os.path.join(fw, name)

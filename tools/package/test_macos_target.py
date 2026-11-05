@@ -101,7 +101,7 @@ class BundleTests(unittest.TestCase):
         cmake.chmod(0o755)
         ffmpeg = self.root / "ffmpeg"
         (ffmpeg / "lib").mkdir(parents=True)
-        (ffmpeg / "lib/libavcodec.a").write_text("")
+        (ffmpeg / "lib/libavcodec.dylib").write_text("")
         result = subprocess.run(["bash", str(script), "0.0.0"], capture_output=True, text=True,
                                 env={**os.environ, "PATH": str(fake_bin) + ":" + os.environ["PATH"], "FFMPEG_PREFIX": str(ffmpeg)})
         self.assertEqual(result.returncode, 42, result.stdout + result.stderr)

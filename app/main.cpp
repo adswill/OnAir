@@ -18,6 +18,7 @@
 #include "panels/gallery.h"
 #include "dect2/engine/crash_report.h"
 #include "platform/discord_rpc.h"
+#include "platform/ffmpeg_libs.h"
 #include <chrono>
 #include <cstdlib>
 #if defined(__linux__)
@@ -293,6 +294,13 @@ extern int gOnAirIdConflicts;
 static bool gIdCheckFailed = false;
 
 int main(int argc, char** argv) {
+    {   // before anything that calls FFmpeg (and before the crash report is read: on Linux and macOS this may restart the program).
+        // Settings > Advanced > FFmpeg libraries; ONAIR_FFMPEG_DIR overrides it (tests, a one-off run). platform/ffmpeg_libs.h
+        const char* e = std::getenv("ONAIR_FFMPEG_DIR");
+        ffmpeglibs::apply(e ? std::string(e) : plat::basePrefs().getS(ffmpeglibs::kPrefKey, ""), argc, argv);
+        // a chosen folder that does not work: back to OnAir's own FFmpeg (Settings shows what was wrong and what to do)
+        if (!e && !ffmpeglibs::status().problem.empty()) { plat::basePrefs().setS(ffmpeglibs::kPrefKey, ""); plat::basePrefs().flush(); }
+    }
     dect2::crash::install();   // first: a crash from here on leaves a report
 #ifdef __linux__
     if (geteuid() == 0) fprintf(stderr, "OnAir: running as root is not needed; see docs for udev rules\n");
@@ -440,5 +448,6 @@ int main(int argc, char** argv) {
         }
     }
     shutdownApp(app, gfxBackend, window);
+    ffmpeglibs::restartIfRequested(argv);   // Settings > Advanced > FFmpeg libraries: Restart OnAir (after the normal shutdown)
     return gIdCheckFailed ? 3 : 0;
 }

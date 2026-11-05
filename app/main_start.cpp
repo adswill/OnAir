@@ -24,6 +24,7 @@
 #include <dlfcn.h>
 #endif
 #include "main_internal.h"
+#include "platform/ffmpeg_libs.h"
 #include "state/workspace.h"
 #include "gfx/render_caps.h"
 
@@ -75,6 +76,8 @@ void startApp(App& app, int argc, char** argv) {
     app.tune.synth.demoTv = true;   // the synthetic DVB-T / ATSC signal carries a test-card programme
     if (const char* ws = getenv("DECT2_WIZSTEP")) wizEnter(app, atoi(ws));
     app.engine.log("OnAir started");
+    if (!ffmpeglibs::status().problem.empty())   // the chosen FFmpeg folder did not work: OnAir uses its own (Settings > Advanced > FFmpeg libraries)
+        app.engine.log("FFmpeg libraries: " + ffmpeglibs::status().problem + " " + ffmpeglibs::status().solution + " OnAir uses its own FFmpeg.");
     if (!gCrashNote.empty()) app.engine.log(gCrashNote);
     refreshDevices(app);
     bool safeStart = false;   // --safe-start: do not pick or open a radio by itself (a saved network radio that hangs the start-up)

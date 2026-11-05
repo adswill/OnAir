@@ -108,6 +108,7 @@ inline const std::vector<Info>& table() {
         // ---- Plug-ins and scripts
         {"pluginsLink", kPlugins, N_("Plug-ins"), N_("Add your own decoders as plug-ins (a native library plus a manifest). Plug-ins are listed in the mode list under PLUGINS. They run native code with this program's rights: install only ones you trust."), "plugin sdk decoder extension safe mode", K::Link},
         {"automationLink", kPlugins, N_("Scripts and rules"), N_("Run a program or script when something is decoded, with the decoded fields in its arguments. Off until you tick Allow running programs in Automations."), "automation script hook run command webhook rules", K::Link},
+        {"ffmpegDir", kAdvanced, N_("FFmpeg libraries"), N_("Load the FFmpeg libraries of another FFmpeg installation of a similar version, after a restart. OnAir cannot guarantee stability when another FFmpeg library is used."), "ffmpeg codec h264 h265 hevc x264 x265 encoder decoder library dll so dylib", K::Custom},   // its (?) explains the restart (settings_window.cpp)
         {"saveLog", kAdvanced, "Save the log", "Write the log lines of this run to a text file in the data folder.", "verbose debug crash report", K::Custom},
         {"exportImport", kAdvanced, "Export or import settings", "Write all these settings to a file, or read them back.", "backup config", K::Custom},
         {"resetAll", kAdvanced, "Reset every setting", "Put every setting of this window back to its default.", "factory", K::Custom},

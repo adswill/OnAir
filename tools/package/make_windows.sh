@@ -11,7 +11,7 @@ VERSION=${1:-$(grep -m1 'project(' CMakeLists.txt | sed -E 's/.*VERSION ([0-9.]+
 BUILD=build-windows
 OUT=$BUILD/OnAir-$VERSION-windows-x64
 PREFIX=${MSYSTEM_PREFIX:-/ucrt64}
-cmake -S . -B $BUILD -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=ON
+cmake -S . -B $BUILD -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=ON ${FFMPEG_PREFIX:+-DDECT2_FFMPEG_PREFIX=$FFMPEG_PREFIX}   # FFMPEG_PREFIX: the LGPL shared build of build_ffmpeg.sh (default: MSYS2's FFmpeg)
 cmake --build $BUILD -j"$(nproc)" --target dect2 dect2cli dect2scan
 
 rm -rf "$OUT" && mkdir -p "$OUT"
@@ -25,6 +25,9 @@ collect() {
   done
 }
 collect "$OUT/OnAir.exe"; collect "$OUT/onair-cli.exe"; collect "$OUT/onair-scan.exe"
+# FFmpeg is delay-loaded (ldd does not list it): its DLLs from the FFmpeg the build used (DECT2_FFMPEG_PREFIX, or MSYS2's)
+FFP=$(sed -n 's/^DECT2_FFMPEG_PREFIX:PATH=//p' $BUILD/CMakeCache.txt); [ -n "$FFP" ] || FFP=$PREFIX
+for n in avutil swresample swscale avcodec avformat; do for f in "$FFP"/bin/$n-*.dll; do [ -f "$f" ] && { cp "$f" "$OUT/"; collect "$f"; }; done; done
 # the radios OnAir drives by itself load their libraries at run time (nothing links them), so they are copied here
 for d in librtlsdr libairspy libairspyhf libbladeRF libLimeSuite libiio libuhd; do
   [ -f "$PREFIX/bin/$d.dll" ] && { cp "$PREFIX/bin/$d.dll" "$OUT/"; collect "$OUT/$d.dll"; }
@@ -42,7 +45,7 @@ done
 tools/package/check_win_dlls.sh "$OUT" || { echo "error: the DLLs of $OUT do not fit together (see above)"; exit 1; }
 cp LICENSE "$OUT/LICENSE.txt"
 # MSYS2's mingw-w64-ffmpeg is built with --enable-gpl (x264, x265 ...): this check fails for it. The release zip comes from make_windows_cross.sh (LGPL FFmpeg).
-tools/package/for f in "$OUT"/OnAir.exe "$OUT"/avcodec-*.dll; do [ -f "$f" ] && { tools/package/check_lgpl_bundle.sh "$f" || FFBAD=1; }; done; [ -z "${FFBAD:-}" ] || { echo "Do not publish this build: use tools/package/make_windows_cross.sh"; exit 1; }
+for f in "$OUT"/OnAir.exe "$OUT"/avcodec-*.dll; do [ -f "$f" ] && { tools/package/check_lgpl_bundle.sh "$f" || FFBAD=1; }; done; [ -z "${FFBAD:-}" ] || { echo "Do not publish this build: use tools/package/make_windows_cross.sh"; exit 1; }
 tools/package/add_license_files.sh "$OUT"   # THIRD_PARTY.md, LICENSES/, LICENSE-NOTICES-BINARIES.md (licence of every bundled DLL, source offer)
 cat > "$OUT/README.txt" <<'TXT'
 OnAir - DVB-T2 / DVB-T / ATSC / DAB receiver (Windows x64)
