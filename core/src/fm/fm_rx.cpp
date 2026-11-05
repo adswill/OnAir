@@ -455,7 +455,9 @@ struct FmReceiver::Impl {
         const float floorP = all[all.size() / 2];
         const float centre = score(0);
         double hz = 0;
-        if (best > 10 * floorP && centre < 10 * floorP) {
+        // (3x the median floor is enough: the score is a median over ~300 bins of a 16-frame average, so noise alone stays within 10 % of the floor;
+        // a threshold of 10x lost an off-centre station below about 11 dB SNR)
+        if (best > 1.6 * floorP && best > 1.6 * centre && centre < 10 * floorP) {
             // the centre of the station: the power centroid over +-100 kHz around the best window
             double sp = 0, sf = 0;
             const int w = (int)(100e3 / binHz);
