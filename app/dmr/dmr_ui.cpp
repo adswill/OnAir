@@ -13,6 +13,7 @@
 #include "../codec/speech_codec_ui.h"
 #include "../voice/voice_monitor_ui.h"
 #include "../voice/radioid_ui.h"
+#include "../voice/tgdir_ui.h"
 #include "../voice/watch_ui.h"
 #include "dect2/codec/codec_registry.h"
 #include "dect2/dmr/dmr_proto.h"
@@ -81,7 +82,7 @@ std::string targetText(const DmrCall& c) {
     if (!c.idsKnown || c.dst == 0) return "-";
     if (c.kind == 2 || c.dst == 0xFFFFFF) return "all";
     char b[24]; snprintf(b, sizeof b, c.kind == 0 ? "TG %u" : "%u", c.dst);
-    return b;
+    return c.kind == 0 ? tgdirui::withName(dect2::TgKind::Dmr, b, c.dst) : std::string(b);   // the talkgroup directory's name beside the number
 }
 
 // Voice frames come three to a 60 ms burst, so one is 20 ms: the length of a call that is still going on
@@ -510,6 +511,7 @@ void spectrumPlotDmr(const DmrTelemetry& t, bool on, ImVec2 sz) {
 
 void receiver(App& a) {
     radioidui::section(dect2::RadioIdKind::Dmr);
+    tgdirui::section(dect2::TgKind::Dmr);
     wideCarriersTable(a, 0);
     const DmrTelemetry& t = a.rx.dmr;
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }

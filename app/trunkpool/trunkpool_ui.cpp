@@ -12,6 +12,7 @@
 #include "dect2/p25/p25_tel.h"
 #include "dect2/p25p2/p25p2_tel.h"
 #include "dect2/trunkpool/trunkpool.h"
+#include "voice/tgdir_ui.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -231,6 +232,17 @@ const char* roleWord(tp::Role r) {
     }
 }
 
+// the directory's name for a talkgroup of a protocol the directory covers (P25, DMR, TETRA); "" for the others or an unknown number
+std::string tgName(tp::Proto pr, int tg) {
+    if (tg < 0) return "";
+    switch (pr) {
+        case tp::Proto::P25p1: case tp::Proto::P25p2: return tgdirui::nameOf(dect2::TgKind::P25, (uint32_t)tg);
+        case tp::Proto::DmrTier3: case tp::Proto::DmrCapPlus: case tp::Proto::DmrConnectPlus: return tgdirui::nameOf(dect2::TgKind::Dmr, (uint32_t)tg);
+        case tp::Proto::Tetra: return tgdirui::nameOf(dect2::TgKind::Tetra, (uint32_t)tg);
+        default: return "";
+    }
+}
+
 void drawDevices() {
     tp::TrunkPool& p = pool();
     if (ImGui::BeginTable("##tp_dev", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_BordersInnerV)) {
@@ -254,7 +266,10 @@ void drawDevices() {
             ImGui::TextUnformatted(roleWord(d.role));
             if (d.slices > 0) { ImGui::SameLine(); ImGui::TextDisabled("+%d", d.slices); }
             ImGui::TableNextColumn();
-            if (d.tg >= 0) ImGui::Text("%d", d.tg); else ImGui::TextDisabled("-");
+            if (d.tg >= 0) {
+                ImGui::Text("%d", d.tg);
+                for (const tp::CallRecord& cr : p.calls()) if (cr.id == d.call) { const std::string nm = tgName(cr.proto, d.tg); if (!nm.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", nm.c_str()); } break; }
+            } else ImGui::TextDisabled("-");
             ImGui::TableNextColumn();
             if (d.freqHz > 0) ImGui::Text("%.4f", d.freqHz / 1e6); else ImGui::TextDisabled("-");
             ImGui::TableNextColumn();
@@ -283,6 +298,7 @@ void drawCalls() {
             ImGui::PushID((int)r.id);
             ImGui::TableNextRow();
             ImGui::TableNextColumn(); ImGui::Text("%d%s", r.tg, r.emergency ? " !" : "");
+            { const std::string nm = tgName(r.proto, r.tg); if (!nm.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", nm.c_str()); } }
             ImGui::TableNextColumn(); if (r.src >= 0) ImGui::Text("%d", r.src); else ImGui::TextDisabled("-");
             ImGui::TableNextColumn(); ImGui::Text("%.4f", r.freqHz / 1e6);
             ImGui::TableNextColumn(); ImGui::TextUnformatted(r.deviceName.empty() ? "-" : r.deviceName.c_str());
@@ -298,6 +314,7 @@ void drawCalls() {
 
 void drawAdvanced(App& a) {
     (void)a;
+    tgdirui::section(dect2::TgKind::P25); tgdirui::section(dect2::TgKind::Dmr); tgdirui::section(dect2::TgKind::Tetra);   // the names shown beside the talkgroups above
     tp::TrunkPool& p = pool();
     tp::PoolConfig c = p.config();
     bool changed = false;

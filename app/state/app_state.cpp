@@ -496,6 +496,7 @@ static void fastRowsIngest(App& a) {
 
 void ingestSpectrum(App& a) {
     syncSpectrumEngine(a);
+    ghostTick(a);
     Waterfall::themeMode() = pal::wfMode();
     static const bool legacy = getenv("DECT2_SPEC_LEGACY") != nullptr;   // the pre-3.0 pipeline, for CPU comparisons (core spectrum.cpp too)
     if (legacy) { a.wf.detail = 0; a.wf.rowTau = 0; }

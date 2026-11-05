@@ -480,6 +480,13 @@ struct App {
     int specAxisLabels = -1;   // the frequency labels: -1 as the look has them, 0 frequencies, 1 offsets from the tuned frequency
     float specLabelSize = 1.f; // the axis label size, times the look's
     int specSmoothTrace = -1;  // mild smoothing passes over the trace: -1 as the look has it, else 0..4
+    bool specGhost = false;    // the ghost overlay: an earlier spectrum behind the live trace, new signals highlighted (gfx/spec_ghost_ui.cpp; docs/SPECTRUM-GHOST.md)
+    int ghostWhich = 0;        // what it compares with: 0 yesterday, 1 last week, 2 the latest snapshot, 3 the one picked from the list
+    int64_t ghostPick = 0;     // the picked snapshot's time (ghostWhich 3)
+    bool ghostNew = true;      // highlight the signals that are new
+    float ghostThr = 6.f;      // dB above the ghost that counts as new
+    int ghostAutoH = 6;        // a rolling snapshot every this many hours while receiving (0 = off)
+    int ghostKeep = 28;        // how many snapshots the rolling set keeps
     bool specNfMarker = false; // the noise-floor line with its level on the spectrum
     bool specSmoothZoom = true;// the wheel zoom eases in over a few frames
     int specSnapHz = 0;        // a click tunes to a multiple of this (0: the mode's own step)
@@ -1255,6 +1262,11 @@ void waterfall3dPopup(App& a);                   // gfx/wf3d_plot.cpp: its setti
 float bandPlanStripHeight();         // plots.cpp: one text line plus padding; follows the font and resize
 void drawBandPlanStrip(ImDrawList* dl, float x0, float x1, float y, float h, double loMhz, double hiMhz);   // saAllocations in view
 // gfx/autolabel.cpp: the names of the stations in view, drawn on the spectrum (plotId 0) and the waterfall (1); a click on a name tunes and opens its mode
+// gfx/spec_ghost_ui.cpp: the ghost overlay. Draw: inside the spectrum plot, before the live line (the live trace as bins from loMhz to hiMhz, the
+// view and the plot width in pixels). Menu: the controls in the spectrum's menu. Tick: once a frame, takes the rolling auto-snapshot when due.
+void ghostDraw(App& a, const std::vector<float>& live, double loMhz, double hiMhz, double vLo, double vHi, int npx);
+void ghostMenu(App& a, bool& save);
+void ghostTick(App& a);
 void autoLabelsDraw(App& a, int plotId, ImVec2 plotMin, ImVec2 plotSize, double loMhz, double hiMhz);
 bool autoLabelsHovered();                 // the mouse is on a name: the plot's own click-to-tune stands back
 float autoLabelsButton(App& a, ImVec2 plotMin, ImVec2 plotSize, float rightUsed);   // the "Labels" corner button with the source toggles; returns its width

@@ -26,6 +26,8 @@
 #include "main_internal.h"
 #include "state/workspace.h"
 #include "gfx/render_caps.h"
+#include "voice/tgdir_ui.h"
+void recordingLibraryDevOpen();   // panels/recording_library_ui.cpp
 
 // the startup guard (a start that keeps crashing), the first-start tour and setup, the radio list and the results of the last run
 void startApp(App& app, int argc, char** argv) {
@@ -171,6 +173,9 @@ void parseDevFlags(App& app, int argc, char** argv, DevOpts& o) {
         if (std::string(argv[i]) == "--tour") { app.wizOpen = true; app.wizStep = i + 1 < argc && argv[i + 1][0] != '-' ? atoi(argv[++i]) : -1; }   // dev: open the tour (at this step)
         if (std::string(argv[i]) == "--controls") inputmap::windowOpen() = true;   // dev: the View > Controls window open (screenshots)
         if (std::string(argv[i]) == "--credits") app.creditsOpen = true;   // dev: the Credits window open (screenshots)
+        if (std::string(argv[i]) == "--ghost") app.specGhost = true;   // dev: the spectrum ghost overlay on (screenshots)
+        if (std::string(argv[i]) == "--reclib") recordingLibraryDevOpen();   // dev: the Recording library window open (screenshots)
+        if (std::string(argv[i]) == "--tgdir") tgdirui::devOpen();   // dev: the Talkgroup names blocks open (screenshots)
         if (std::string(argv[i]) == "--mute") { app.muted = true; app.volume = 0; }
         if (std::string(argv[i]) == "--specdemo") app.specDemo = true;   // dev: a synthetic spectrum (FM, OFDM, SSB) without a radio, for screenshots of the looks
         if (std::string(argv[i]) == "--tunerstyle" && i + 1 < argc) app.tunerStyle = std::max(0, std::min(1, atoi(argv[++i])));   // dev: the tuner look (0 Classic, 1 Simple), not saved

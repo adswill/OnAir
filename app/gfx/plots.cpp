@@ -1221,6 +1221,7 @@ void specDisplayPopup(App& a) {
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Colour of the hold lines"));
     }
+    ghostMenu(a, save);
     if (ImGui::Checkbox(tr("Peak markers"), &a.specPeaks)) save = true;
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Frequency and level of the strongest peaks in view"));
     if (ImGui::Checkbox(tr("Level at the cursor"), &a.specReadout)) save = true;
@@ -1654,6 +1655,7 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
                 traceLine(a.spec.dbfs, false, passes);
                 plt::PlotLine("live", ex.data(), ey.data(), (int)ex.size(), ls);
             }
+            ghostDraw(a, a.smooth, x0, x0 + fsMhz, vis.X.Min, vis.X.Max, wpx);
             traceLine(a.smooth, false, passes);
             if (look) spaint::trace(ex, ey, trc, a.specLine, a.specFill, L.fill ? L.fillTop : 0.30f, L.fill ? L.fillBottom : 0.06f, vis.Y.Min);
             else {

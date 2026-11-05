@@ -117,6 +117,8 @@ const std::vector<PrefKey>& keyTable() {
         flagB("nbOn", AT(a.nbOn), false, false, true), real("nbThr", AT(a.nbThr), 2, 40), real("nbWidthUs", AT(a.nbWidthUs), 2, 2000),
         real("specZoom", AT(a.specZoom), 0, 1, true),
         flagB("genAutoOn", AT(a.genAutoOn), true, false, true), flagB("genAutoDecode", AT(a.genAutoDecode), false, false, true), num("genAutoReleaseKhz", AT(a.genAutoReleaseKhz), 0, 0, 100000000, true),
+        flagB("specGhost", AT(a.specGhost), false, false, true), num("ghostWhich", AT(a.ghostWhich), 0, 0, 3, true, true), flagB("ghostNew", AT(a.ghostNew), true, false, true),
+        real("ghostThr", AT(a.ghostThr), 1, 40), num("ghostAutoH", AT(a.ghostAutoH), 6, 0, 720, true, true), num("ghostKeep", AT(a.ghostKeep), 28, 1, 500, true, true),
         flagB("specHold", AT(a.peakHold), false, false, true),
         real("holdDecay", AT(a.holdDecay), 0, 60),
         real("specAvg", AT(a.specAvgSec), 0, 5), num("specFft", AT(a.specFft), 0, 0, 262144, true), real("specLine", AT(a.specLine), 0.6, 3),
