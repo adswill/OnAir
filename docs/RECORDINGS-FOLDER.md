@@ -16,3 +16,5 @@ Recording library, Time machine ("Show recording"), TV recorder / scheduler, voi
 
 ## Skipped
 The ~100 mode folders of docs/EXPORT-AUDIT.md write no recordings; modes that only export tables use "Save results..." (a file dialog). Gallery/WeFax/clips keep their own folder buttons.
+
+Tags and notes for the recordings in the folder: `.onair-tags.tsv`, see RECORDING-TAGS.md.

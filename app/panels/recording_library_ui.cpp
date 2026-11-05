@@ -7,6 +7,7 @@
 #include "dect2/engine/updater.h"
 #include "dect2/source/iq_file.h"
 #include "dect2/source/source.h"
+#include "../state/rec_tags.h"
 #include <cstdio>
 #include <ctime>
 #include <map>
@@ -19,6 +20,11 @@ struct LibState {
     bool open = false;
     std::string dir;
     std::vector<RecordingListing> rows;   // read from the folder when the window opens and on Refresh
+    rectags::Store tags;                  // tags and notes by file name (the folder's .onair-tags.tsv)
+    char search[128] = "";                // the filter: words of the file name, a tag or the note, "#tag" for an exact tag
+    std::string editFile;                 // the recording whose tags and note are being edited
+    char editTags[256] = "", editNote[1024] = "";
+    bool openEdit = false;
     std::map<std::string, int> pick;      // per recording (by path): the mode index for Re-analyse; -1 = the mode in use
 };
 LibState gLib;
@@ -26,6 +32,7 @@ LibState gLib;
 void reload(const std::string& dir) {
     gLib.dir = dir;
     gLib.rows = listRecordingFiles(dir);
+    rectags::load(dir, gLib.tags);
 }
 
 // the mode a recording names in its sidecar, as an index into kModes; -1 when there is none or this build has no such mode
@@ -126,21 +133,41 @@ void recordingLibraryUi(App& a) {
     if (ImGui::Button("Refresh")) reload(dir);
     ImGui::SameLine();
     ImGui::TextDisabled("%s", dir.c_str());
+    ImGui::SetNextItemWidth(260 * gUi);
+    ImGui::InputTextWithHint("##libsearch", tr("Search name, tag or note (#tag = exact tag)"), gLib.search, sizeof gLib.search);
+    if (ImGui::CollapsingHeader(trw("Advanced##libadv"))) {   // the tags in use as one-click filters
+        const auto counts = rectags::tagCounts(gLib.tags);
+        if (counts.empty()) ImGui::TextDisabled("%s", tr("No tags yet: use Edit on a recording to add tags and a note."));
+        for (const auto& tc : counts) {
+            char b[96]; snprintf(b, sizeof b, "#%s (%d)##tagchip", tc.first.c_str(), tc.second);
+            if (ImGui::SmallButton(b)) snprintf(gLib.search, sizeof gLib.search, "#%s", tc.first.c_str());
+            ImGui::SameLine();
+        }
+        ImGui::NewLine();
+        if (ImGui::SmallButton(tr("Clear filter"))) gLib.search[0] = 0;
+    }
+    std::vector<size_t> shown;
+    for (size_t i = 0; i < gLib.rows.size(); i++) {
+        auto it = gLib.tags.find(gLib.rows[i].fileName);
+        if (rectags::matches(gLib.rows[i].fileName, it == gLib.tags.end() ? nullptr : &it->second, gLib.search)) shown.push_back(i);
+    }
     if (gLib.rows.empty()) {
         ImGui::TextDisabled("%s", "No recordings in this folder yet. Record IQ from the diagnostics row, or put a SigMF or WAV file here.");
-    } else if (ImGui::BeginTable("##reclib", 9, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) {
+    } else if (ImGui::BeginTable("##reclib", 11, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) {
         ImGui::TableSetupColumn("File", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableSetupColumn("Date");
         ImGui::TableSetupColumn("Length");
         ImGui::TableSetupColumn("Rate");
         ImGui::TableSetupColumn("Centre");
         ImGui::TableSetupColumn("Recorded in");
+        ImGui::TableSetupColumn(tr("Tags"));
+        ImGui::TableSetupColumn(tr("Note"));
         ImGui::TableSetupColumn("Re-analyse in");
         ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableHeadersRow();
-        for (size_t i = 0; i < gLib.rows.size(); i++) {
+        for (size_t i : shown) {
             const RecordingListing& r = gLib.rows[i];
             ImGui::TableNextRow();
             ImGui::PushID((int)i);
@@ -158,6 +185,22 @@ void recordingLibraryUi(App& a) {
             ImGui::TableSetColumnIndex(5);
             ImGui::TextUnformatted(r.mode.c_str());
             ImGui::TableSetColumnIndex(6);
+            {
+                auto tg = gLib.tags.find(r.fileName);
+                const rectags::Entry* te = tg == gLib.tags.end() ? nullptr : &tg->second;
+                ImGui::TextUnformatted(te ? rectags::joinTags(te->tags).c_str() : "");
+                ImGui::TableSetColumnIndex(7);
+                ImGui::TextUnformatted(te ? te->note.c_str() : "");
+                if (te && !te->note.empty() && ImGui::IsItemHovered()) ImGui::SetTooltip("%s", te->note.c_str());
+                ImGui::SameLine();
+                if (ImGui::SmallButton(tr("Edit##rectag"))) {
+                    gLib.editFile = r.fileName; gLib.openEdit = true;
+                    snprintf(gLib.editTags, sizeof gLib.editTags, "%s", te ? rectags::joinTags(te->tags).c_str() : "");
+                    snprintf(gLib.editNote, sizeof gLib.editNote, "%s", te ? te->note.c_str() : "");
+                }
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Tags and a note for this recording"));
+            }
+            ImGui::TableSetColumnIndex(8);
             const int pick = pickFor(r);
             ImGui::SetNextItemWidth(160 * gUi);
             const std::string label = pick >= 0 && pick < kNumModes ? kModes[pick].name : "(mode in use)";
@@ -166,10 +209,10 @@ void recordingLibraryUi(App& a) {
                 for (int m = 0; m < kNumModes; m++) if (ImGui::Selectable(kModes[m].name, m == pick)) gLib.pick[r.path] = m;
                 ImGui::EndCombo();
             }
-            ImGui::TableSetColumnIndex(7);
+            ImGui::TableSetColumnIndex(9);
             if (ImGui::SmallButton("Open")) openAsSource(a, r);
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Makes this recording the IQ file source (press Start to play it)");
-            ImGui::TableSetColumnIndex(8);
+            ImGui::TableSetColumnIndex(10);
             if (ImGui::SmallButton("Re-analyse")) reanalyse(a, r, pickFor(r));
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Opens this recording as the source in the chosen mode (press Start to analyse it)");
             ImGui::SameLine();
@@ -181,6 +224,21 @@ void recordingLibraryUi(App& a) {
             ImGui::PopID();
         }
         ImGui::EndTable();
+    }
+    if (gLib.openEdit) { ImGui::OpenPopup("###rectagedit"); gLib.openEdit = false; }
+    if (ImGui::BeginPopupModal("###rectagedit", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::TextDisabled("%s", gLib.editFile.c_str());
+        ImGui::SetNextItemWidth(380 * gUi);
+        ImGui::InputTextWithHint("##edtags", tr("Tags, separated by commas"), gLib.editTags, sizeof gLib.editTags);
+        ImGui::InputTextMultiline("##ednote", gLib.editNote, sizeof gLib.editNote, ImVec2(380 * gUi, 80 * gUi));
+        if (ImGui::Button(tr("Save##rectag"))) {
+            rectags::set(gLib.tags, gLib.editFile, gLib.editTags, gLib.editNote);
+            if (!rectags::save(dir, gLib.tags)) a.engine.log("could not write the tags file in the recordings folder");
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button(tr("Cancel##rectag"))) ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
     }
     ImGui::End();
 }
