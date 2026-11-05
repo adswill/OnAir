@@ -1,6 +1,7 @@
 // eLoran / Loran-C in the engine: the detector of eloran_rx.h behind the engine's interface (configure, offset, feed, telemetry).
-// Engine stdMode 128, active standard 127 (family 126, "eLoran / Loran-C (WIP)"). Receive only; nothing is transmitted.
-// Loran-C only: the eLoran data channel (Eurofix style pulse position modulation) is not decoded, its tables are not in the public text used.
+// Engine stdMode 128, active standard 127 (family 126, "eLoran / Loran-C"). Receive only; nothing is transmitted.
+// Loran-C: GRI, chain, master and secondaries with their arrival times. The eLoran data channel (9th pulse, Eurofix) is not decoded: the Reed-Solomon constants and message
+// layouts of the Loran Data Channel standard are not public text (see eloran_rx.h).
 #pragma once
 #include "dect2/eloran/eloran_rx.h"
 #include "dect2/engine/mode_tuning.h"
@@ -23,6 +24,7 @@ struct ElLoranTelemetry {
     bool dataValid = false;         // a GRI is found
     uint64_t blocksOk = 0;          // analyses that found a GRI
     uint64_t blocksBad = 0;         // analyses that found none
+    std::string chain;              // the chain that uses this GRI, empty when unknown
     int griUs = 0;                  // group repetition interval, microseconds (9960 is written GRI 9960 = 99600 us)
     double zScore = 0;
     bool locked = false;

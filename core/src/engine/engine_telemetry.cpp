@@ -227,6 +227,7 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 28: return pollStd(rxVdl2_, 28, t, seqs[21], &RxTelemetry::vdl2);
     case 29: return pollStd(rxIsm_, 29, t, seqs[22], &RxTelemetry::ism);
     case 30: return pollStd(rxNdb_, 30, t, seqs[23], &RxTelemetry::ndb);
+    case 120: return pollStd(rxSitor_, 120, t, seqs[194], &RxTelemetry::sitor);   // SITOR (slot 194)
     case 122: return pollStd(rxDme_, 122, t, seqs[162], &RxTelemetry::dme);   // DME (slot 162: 110 is DGPS, docs/MODE-NUMBERS.md)
     case 31: return pollStd(rxVor_, 31, t, seqs[24], &RxTelemetry::vor);
     case 32: return pollStd(rxM17_, 32, t, seqs[25], &RxTelemetry::m17);
@@ -302,9 +303,20 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 207: return pollStd(rxSsdv_, 207, t, seqs[183], &RxTelemetry::ssdv);   // Ssdv (slot 183)
     case 208: return pollStd(rxEbi_, 208, t, seqs[184], &RxTelemetry::ebicab);   // Ebicab (slot 184)
     case 209: return pollStd(rxInmsat_, 209, t, seqs[185], &RxTelemetry::inmsat);   // Inmsat (slot 185)
+    case 231: return pollStd(rxGkL_, 231, t, seqs[189], &RxTelemetry::gk2a);   // GK-2A LRIT (slot 189)
+    case 232: return pollStd(rxGkH_, 232, t, seqs[190], &RxTelemetry::gk2a);   // GK-2A HRIT (slot 190)
     case 213: return pollStd(rxSw_, 213, t, seqs[188], &RxTelemetry::shortwave);   // Shortwave (slot 188)
+    case 233: return pollStd(rxFy_, 233, t, seqs[191], &RxTelemetry::fygeo);   // FengYun FY-4 LRIT, FY-4A or FY-4B (slot 191)
+    case 234: return pollStd(rxFy_, 234, t, seqs[192], &RxTelemetry::fygeo);   // FengYun FY-4A HRIT-II/III (slot 192)
+    case 235: return pollStd(rxFy_, 235, t, seqs[193], &RxTelemetry::fygeo);   // FengYun FY-2 S-VISSR (slot 193)
     case 211: return pollStd(rxNrf_, 211, t, seqs[186], &RxTelemetry::nrf24);   // nRF24L01 (slot 186)
+    case 241: return pollStd(rxSelcal_, 241, t, seqs[200], &RxTelemetry::selcal);   // SELCAL (slot 200)
     case 212: return pollStd(rxAtis_, 212, t, seqs[187], &RxTelemetry::atis);   // ATIS inland waterways (slot 187)
+    case 236: return pollStd(rxFy3a_, 236, t, seqs[195], &RxTelemetry::fy3a);   // FY-3 AHRPT (slot 195)
+    case 237: return pollStd(rxFy3m_, 237, t, seqs[196], &RxTelemetry::fy3m);   // FY-3 MPT (slot 196)
+    case 238: return pollStd(rxPh2_, 238, t, seqs[197], &RxTelemetry::pactorhf);   // PACTOR-II (slot 197)
+    case 239: return pollStd(rxPh3_, 239, t, seqs[198], &RxTelemetry::pactorhf);   // PACTOR-III (slot 198)
+    case 240: return pollStd(rxPh4_, 240, t, seqs[199], &RxTelemetry::pactorhf);   // PACTOR-IV (slot 199)
     case 205: return pollStd(rxEsg_, 205, t, seqs[165], &RxTelemetry::esubghz);   // Flipper Zero Sub-GHz chat (slot 165)
     case 203: return pollStd(rxPskd_, 203, t, seqs[163], &RxTelemetry::pskd);   // PSK demodulator (slot 163)
     case 99: return pollStd(rxZw_, 99, t, seqs[90], &RxTelemetry::zwave);

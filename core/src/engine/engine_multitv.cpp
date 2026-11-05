@@ -118,4 +118,42 @@ void Engine::syncMultiTv() {
     log(b);
 }
 
+// "Decode everything in view" (setWideAll): configures the session for the capture on the analysis thread; a new rate or centre starts the search again
+void Engine::syncWideAll() {
+    const bool on = wideAllOn_.load();
+    const double rate = rate_.load(), centre = wideAllCentre_.load();
+    if (on == wideAllKeyOn_ && (!on || (rate == wideAllKeyRate_ && centre == wideAllKeyCentre_))) { if (on) wideAll_.setBudget(wideAllBudget_.load()); return; }
+    wideAllKeyOn_ = on; wideAllKeyRate_ = rate; wideAllKeyCentre_ = centre;
+    if (!on) { wideAll_.reset(); return; }
+    WsConfig c;
+    c.spanRate = rate; c.centerHz = centre; c.cpuBudget = wideAllBudget_.load();
+    c.blockingTv = !(src_ && src_->realtimeHardware());
+    wideAll_.configure(c);
+    wideAll_.setAudioSink([this](const float* st, size_t frames) {
+        if (!vfoSoundOn_.load()) return;
+        std::lock_guard<std::mutex> lk(vfoOutMu_);
+        if (!vfoOut_) { vfoOut_.reset(new AudioOut()); if (!vfoOut_->start(VfoBank::kAudioRate)) { vfoOut_.reset(); return; } }
+        vfoOut_->write(st, (int)frames);
+    });
+    char b[160];
+    snprintf(b, sizeof b, "decode everything in view: %.2f Msps capture, centre %.4f MHz", rate / 1e6, centre / 1e6);
+    log(b);
+}
+
+// Smart CubeSat: configured on the analysis thread for the capture; a new rate or centre starts the search again
+void Engine::syncSmartCube() {
+    const bool on = smartCubeOn_.load();
+    const double rate = rate_.load(), centre = wideAllCentre_.load();
+    if (on == smartKeyOn_ && (!on || (rate == smartKeyRate_ && centre == smartKeyCentre_))) return;
+    smartKeyOn_ = on; smartKeyRate_ = rate; smartKeyCentre_ = centre;
+    if (!on) { smartCube_.reset(); return; }
+    smartCube_.configure(rate);
+    smartCube_.setCenterHz(lastDev_.kind != DeviceInfo::File ? centre : 0.0);
+    smartCube_.setWallClock(lastDev_.kind != DeviceInfo::File);
+    smartCube_.setLogCallback([this](const std::string& s) { log(s); });
+    char b[160];
+    snprintf(b, sizeof b, "Smart CubeSat: %.2f Msps capture, centre %.4f MHz", rate / 1e6, centre / 1e6);
+    log(b);
+}
+
 } // namespace dect2

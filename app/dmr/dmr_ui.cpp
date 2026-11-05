@@ -1,13 +1,19 @@
 // DMR screens: the two time slots and the call log, the symbol plots, the receiver counters and the options of the test signal.
 #include "call_filter.h"
+#include "ui/kit/export.h"
 #include "app.h"
+#include "ui/voice_why_ui.h"
+#include "dect2/voice/voice_why_modes.h"
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
+#include "ui/kit/mode_panel.h"
 #include "dmr_map.h"
+#include <ctime>
 #include "dect2/dmr/dmr_ambe.h"
 #include "../codec/speech_codec_ui.h"
 #include "../voice/voice_monitor_ui.h"
 #include "../voice/radioid_ui.h"
+#include "../voice/watch_ui.h"
 #include "dect2/codec/codec_registry.h"
 #include "dect2/dmr/dmr_proto.h"
 #include <algorithm>
@@ -30,6 +36,7 @@ bool live(const App& a) { return a.rx.standard == 10; }
 const ImVec4 kDim(0.62f, 0.65f, 0.68f, 1);
 
 void tick(App& a) {
+    watchui::tick(a);
     const bool run = a.engine.running();
     radioidui::tick(dect2::RadioIdKind::Dmr);
     if (live(a)) appcodec::voiceCodecTick("ambe2");   // the user's codec plug-in, loaded whichever tab is shown
@@ -181,6 +188,20 @@ void callTable(App& a, float h) {
         }
         h = std::max(40.f * gUi, h - ImGui::GetFrameHeightWithSpacing());
     }
+    {
+        static std::string note;
+        resexp::Table x; x.cols = {"start_s", "slot", "type", "source", "target", "duration_s", "voice_frames", "fec_errors", "alias", "flags"};
+        if (on) for (const DmrCall* pc : sortedCalls(t)) {
+            const DmrCall& c = *pc;
+            if (!dmrfilter::shown(filter, c.kind)) continue;
+            x.add({resexp::num(c.startSec, 1), c.slot ? std::to_string(c.slot) : "", kindName(c.kind), idText(c.src, c.idsKnown), targetText(c),
+                   c.kind <= 2 || c.endSec > c.startSec ? resexp::num(duration(c), 1) : "", c.kind <= 2 ? std::to_string(c.voiceFrames) : "", std::to_string(c.fecErrors),
+                   !c.alias.empty() ? c.alias : c.note, flagsText(c)});
+        }
+        ImGui::SameLine();
+        kit::exportBar(x, "dmr_calls", note, "dmrxc");
+        h = std::max(40.f * gUi, h - ImGui::GetFrameHeightWithSpacing());
+    }
     if (!ImGui::BeginTable("##dmrcalls", 10 + (wideActive(a) ? 1 : 0), ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingFixedFit, ImVec2(0, h))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     if (wideActive(a)) ImGui::TableSetupColumn("Carrier", ImGuiTableColumnFlags_WidthFixed, 66 * gUi);
@@ -222,6 +243,16 @@ void callTable(App& a, float h) {
 void messageTable(App& a, float h) {
     const DmrTelemetry& t = a.rx.dmr;
     const bool on = live(a);
+    {
+        static std::string note;
+        resexp::Table x; x.cols = {"time_s", "slot", "from", "to", "format", "crc_ok", "text"};
+        if (on) for (size_t i = t.messages.size(); i-- > 0;) {
+            const DmrMessage& m = t.messages[i];
+            x.add({resexp::num(m.sec, 1), m.slot ? std::to_string(m.slot) : "", idText(m.src, true), (m.group ? "TG " : "") + std::to_string(m.dst), m.format, m.crcOk ? "1" : "0", m.text});
+        }
+        kit::exportBar(x, "dmr_msgs", note, "dmrxm");
+        h = std::max(40.f * gUi, h - ImGui::GetFrameHeightWithSpacing());
+    }
     if (!ImGui::BeginTable("##dmrmsg", 7 + (wideActive(a) ? 1 : 0), ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingFixedFit, ImVec2(0, h))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     if (wideActive(a)) ImGui::TableSetupColumn("Carrier", ImGuiTableColumnFlags_WidthFixed, 66 * gUi);
@@ -306,9 +337,24 @@ void callsView(App& a) {
     messageTable(a, std::max(40.f * gUi, ImGui::GetContentRegionAvail().y));
 }
 
+// under a watched entry: the last GPS position (LRRP) of the radio, or of any radio that sent to the talkgroup, and a button for the map
+void watchPosition(App& a, const dect2::voice::WatchEntry& e) {
+    if (!e.mode.empty() && e.mode != "dmr") return;
+    const dect2::voice::IdList ids(e.match);
+    const DmrLocation* best = nullptr;
+    for (const auto& l : a.rx.dmr.locations)
+        if (l.hasFix && (ids.matchId(l.src) || ids.matchId(l.dst)) && (!best || l.unixSec >= best->unixSec)) best = &l;
+    if (!best) { ImGui::TextDisabled("%s", tr("No GPS position heard yet (needs LRRP data)")); return; }
+    const double age = std::max(0.0, (double)std::time(nullptr) - best->unixSec);
+    ImGui::Text("%s %.5f, %.5f  (radio %u, %s)", tr("Last position"), best->lat, best->lon, best->src, age < 90 ? tr("just now") : (std::to_string((int)(age / 60)) + " " + tr("min ago")).c_str());
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("Show on map##wlmap"))) { dmrMapFocus(best->src, best->lat, best->lon); S.view = 1; }
+}
+
 void tab(App& a) {
     kit::modeHeader({9, "DMR", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("dmrv", S.view, {{tr("Live"), 0}, {tr("Calls"), 3}, {tr("Map"), 1}, {tr("Table"), 2, true}});
+    kit::modeNav("dmrv", S.view, {{tr("Live"), 0}, {tr("Calls"), 3}, {tr("Map"), 1}, {tr("Table"), 2, true}, {tr("Watch"), 90, true}});
+    if (S.view == 90) { watchui::watchView(a, "dmr", [&a](const dect2::voice::WatchEntry& e) { watchPosition(a, e); }); return; }
     if (S.view == 3) { kit::sessionItems(9, 1, "dmr"); return; }
     if (S.view == 1) { dmrMap(a); return; }
     if (S.view == 2) { dmrTable(a); return; }
@@ -467,6 +513,7 @@ void receiver(App& a) {
     wideCarriersTable(a, 0);
     const DmrTelemetry& t = a.rx.dmr;
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
+    voiceWhyRow(a, dect2::dmrWhy(t));
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     const float gap = 10 * gUi, cw = (W - 2 * gap) / 3.f;
     const bool stack = cw < 260 * gUi;   // a narrow tab: the three blocks one under the other (the tab scrolls)
@@ -639,6 +686,31 @@ void meters(const App& a, std::vector<ModeMeter>& out) {
 
 } // namespace
 
+// ---------------------------------------------------------------- the Simple view (ui/kit/mode_panel.h)
+
+// the signal beside the calls: the channel spectrum and the few numbers a listener looks at
+static void signalPane(App& a) {
+    const DmrTelemetry& t = a.rx.dmr;
+    const bool on = live(a);
+    spectrumPlotDmr(t, on, ImVec2(ImGui::GetContentRegionAvail().x, std::max(120.f * gUi, ImGui::GetContentRegionAvail().y * 0.5f)));
+    if (!on) { ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("stopped")); return; }
+    static const char* st[5] = {"-", "voice", "data", "idle", "control"};
+    auto kv = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); ImGui::SameLine(110 * gUi); ImGui::PushFont(a.mono, 0); ImGui::Text(fmt, v...); ImGui::PopFont(); };
+    kv("link", "%s", t.state == 0 ? "searching" : t.link.empty() ? "locked" : t.link.c_str());
+    kv("colour code", "%d", t.cc);
+    for (int i = 0; i < 2; i++) kv(i ? "slot 2" : "slot 1", "%s", t.slot[i].active ? st[t.slot[i].state % 5] : "-");
+    kv("deviation", "%.0f Hz", t.devHz);
+    kv("bit errors", "%.2f %%", t.ber * 100.0);
+    kv("calls", "%llu", (unsigned long long)t.calls);
+}
+
+static void command(App& a) {
+    kit::modeHeader({9, "DMR", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    if (live(a)) voiceWhyRow(a, dect2::dmrWhy(a.rx.dmr));
+    modepanel::panes({{"##dmrcalls", nullptr, [&a] { callsView(a); }, 1.8f, 420.f},
+           {"##dmrsignal", tr("Signal"), [&a] { signalPane(a); }, 1.f, 260.f}}, 360.f);
+}
+
 extern const ModeUi kDmrUi;
 const ModeUi kDmrUi = {
     .sideTitle = "CALLS",
@@ -654,4 +726,5 @@ const ModeUi kDmrUi = {
     .synth = synth,
     .tick = tick,
     .meters = meters,
+    .command = command,
 };

@@ -152,7 +152,7 @@ std::vector<uint8_t> xheAscFromSdc(const SdcAudio& a) {
         for (int i = 0; i < mps.n; i++) out.put((mps.b[(size_t)i / 8] >> (7 - i % 8)) & 1, 1);
     }
     for (const Ext& e : ext) {
-        out.put(2, 2);                                              // ID_USAC_EXT
+        out.put(3, 2);                                              // ID_USAC_EXT (usacElementType: SCE 0, CPE 1, LFE 2, EXT 3)
         out.escaped(e.type, 4, 8, 16);
         out.escaped(e.cfgLen, 4, 8, 16);
         out.put(e.defLenPresent ? 1 : 0, 1);
@@ -238,7 +238,7 @@ struct AudioDecoder::Impl {
     std::unique_ptr<UsacSession> fdk;      // the optional libfdk-aac decoder (loaded at run time), used before FFmpeg when it is there
     bool started = false;                  // the decoder has seen an independent frame since it was (re)opened
     int decFails = 0;                      // frames in a row that the decoder refused
-    std::string lastErr, baseInfo;
+    std::string lastErr, baseInfo, fdkWhy;
     // AAC
     AacCoreDecoder aac;
     bool aacOk = false;
@@ -270,6 +270,7 @@ struct AudioDecoder::Impl {
 
     bool openXhe() {
         closeCodec();
+        fdkWhy.clear();
         const std::vector<uint8_t> asc = xheAscFromSdc(cfg);
         if (asc.empty()) { info = "xHE-AAC: the configuration in the SDC cannot be read"; return false; }
         char nb[160];
@@ -278,9 +279,17 @@ struct AudioDecoder::Impl {
         if (const UsacLib lib = usacLib(); lib.ok()) {
             fdk.reset(new UsacSession(lib));
             if (fdk->open(asc)) { open = true; info = std::string(nb) + " (libfdk-aac)"; baseInfo = info; return true; }
+            char eb[120];
+            snprintf(eb, sizeof eb, "libfdk-aac refused the stream configuration (%s returned 0x%x, config %zu bytes: ", fdk->lastStep(), (unsigned)fdk->lastError(), asc.size());
+            fdkWhy = eb;
+            for (size_t i = 0; i < asc.size() && i < 24; i++) { snprintf(eb, sizeof eb, "%02x", asc[i]); fdkWhy += eb; }
+            fdkWhy += ")";
             fdk.reset();
+        } else {
+            const UsacLib::Report rep = UsacLib::lastReport();
+            fdkWhy = rep.failed.empty() ? "libfdk-aac not found in the codecs folders" : "libfdk-aac did not load: " + rep.failed.front();
         }
-        const std::string hint = std::string("; to play it install ") + UsacLib::libraryHint() + " (see docs/CODECS.md, section AAC, xHE-AAC)";
+        const std::string hint = (fdkWhy.empty() ? std::string() : "; " + fdkWhy) + std::string("; to play it install ") + UsacLib::libraryHint() + " (see docs/CODECS.md, section AAC, xHE-AAC)";
         const AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_AAC);
         if (!codec) { info = "xHE-AAC: no AAC decoder in this build"; return false; }
         ctx = avcodec_alloc_context3(codec);
@@ -351,7 +360,7 @@ struct AudioDecoder::Impl {
         }
         if (fdk) {
             std::vector<int16_t> pcm; int rate = 0, ch = 0;
-            if (!fdk->decode(au, pcm, rate, ch)) { decFails++; lastErr = "libfdk-aac returned no audio"; gap(out, auOut); return false; }
+            if (!fdk->decode(au, pcm, rate, ch)) { decFails++; char eb[100]; snprintf(eb, sizeof eb, "libfdk-aac returned no audio (%s returned 0x%x)", fdk->lastStep(), (unsigned)fdk->lastError()); lastErr = eb; gap(out, auOut); return false; }
             const size_t n = pcm.size() / (size_t)ch;
             rin.resize(n);
             for (size_t i = 0; i < n; i++) rin[i] = cf32(pcm[i * (size_t)ch] / 32768.f, pcm[i * (size_t)ch + (size_t)(ch > 1 ? 1 : 0)] / 32768.f);

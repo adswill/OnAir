@@ -109,7 +109,30 @@ static void testCodecFolder() {
 #endif
 }
 
+// The ASC built from a DRM static config with extension elements (the real streams have them): the extension element is usacElementType 3 (EXT),
+// not 2 (LFE). With a real libfdk-aac (DECT2_FDKAAC_LIB, or one in the codecs folder) every config below must also be accepted by aacDecoder_ConfigRaw.
+struct CfgBits { std::vector<uint8_t> b; int n = 0; void put(unsigned v, int k) { for (int i = k - 1; i >= 0; i--) { if ((n & 7) == 0) b.push_back(0); if ((v >> i) & 1) b.back() |= (uint8_t)(0x80 >> (n & 7)); n++; } } };
+static void testAscExtension() {
+    SdcAudio a; a.coding = 3; a.mode = 0; a.rateCode = 6;   // 38.4 kHz mono
+    CfgBits c;
+    c.put(2, 2); c.put(1, 1); c.put(0, 3); c.put(5, 4); c.put(9, 4); c.put(0, 2);   // 2:1 SBR, default header
+    c.put(1, 2); c.put(3, 4); c.put(0, 4); c.put(0, 1); c.put(0, 1);                // one extension element: audio pre-roll, no config
+    a.config = c.b;
+    const std::vector<uint8_t> asc = xheAscFromSdc(a);
+    CHECK(!asc.empty(), "ASC built");
+    // ASC header 5+6+4+24+4 bits, UsacConfig rate 5 + frame 3 + channels 5 + numElements 4 + SCE type 2 + tw 1 + nf 1 + sbr 13 bits = 43+..: the next 2 bits are the element type
+    const int pos = 43 + 5 + 3 + 5 + 4 + 2 + 1 + 1 + 13;
+    const int t = ((asc[(size_t)pos / 8] << 8 | asc[(size_t)pos / 8 + 1]) >> (16 - 2 - pos % 8)) & 3;
+    CHECK(t == 3, "extension element type is 3 (EXT), got %d", t);
+    const UsacLib l = UsacLib::load();
+    if (l.ok()) {
+        UsacSession s(l);
+        CHECK(s.open(asc), "real libfdk-aac accepts the config (%s 0x%x)", s.lastStep(), (unsigned)s.lastError());
+    }
+}
+
 int main() {
+    testAscExtension();
     testLoader();
     testCodecFolder();
     testParser();

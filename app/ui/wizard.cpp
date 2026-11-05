@@ -1,7 +1,9 @@
-// The setup wizard (v2, four screens, every one skippable): 1 the radio (found and explained with a help link each, or no radio / the test
+// The setup wizard (v3, six screens, every one skippable): 1 the radio (found and explained with a help link each, or no radio / the test
 // signal), 2 the location (a city search, a locator or coordinates, or skipped) which sets the country, ITU region, band plans, FM step,
 // DAB band III, TV channels, the ADS-B position and the time zone, 3 the interests (which modes come first, the starting mode and a
-// starter preset list), 4 a summary with the tour on offer. Re-run from Help > Setup and lessons > Run setup again.
+// starter preset list), 4 a summary with the tour on offer.
+// v3 adds regional presets (Lithuania, EU, ... one click sets band plan, TV raster, FM band, default frequencies and units), an antenna screen with
+// hints for the chosen interests, a codec screen (user-installed voice codecs, "Look again") and Easy mode (every mode opens its Simple view). Re-run from Help > Setup and lessons > Run setup again.
 // The step is saved, so a setup closed halfway resumes there. The place tables, the mappings and the interests are in setup_logic.h
 // (tested by tests/app/test_setup.cpp); the lesson goals and the radio notes are in learn_logic.h.
 #include "../app.h"
@@ -15,12 +17,15 @@
 #include "mode_visibility.h"
 #include <set>
 #include "../state/presets_app.h"
+#include "../codec/speech_codec_ui.h"
+#include "kit/mode_panel.h"
 
 // The first-run tour is in tour.cpp; the lessons, the glossary and the checkup in learn.cpp.
 
 namespace {
 
-constexpr int kSteps = 4;   // radio, location, interests, done
+constexpr int kSteps = 6;   // radio, location, antenna, interests, codecs, done
+constexpr int kStepLocation = 1, kStepAntenna = 2, kStepInterests = 3, kStepCodecs = 4;
 
 // the name of a mode by id as the mode list shows it; "" when the id is unknown to this build
 std::string modeNameById(const std::string& id, const learn::Region& r) {
@@ -42,8 +47,11 @@ bool parseLoc(const char* text, double& lat, double& lon) {
 // what the place typed or chosen sets; recomputed each frame (the tables are small)
 setup::Derived derived(const App& a) {
     double lat, lon;
+    if (!a.setupLoc[0] && a.setupCountry[0]) {   // a regional preset: the country only, the capital stands in for the time zone
+        if (const setup::Country* c = setup::countryOrEu(a.setupCountry)) { setup::Derived d = setup::derive(c, c->lat, c->lon, true); d.approx = true; return d; }
+    }
     if (!a.setupLoc[0] || !parseLoc(a.setupLoc, lat, lon)) return setup::deriveSkipped();
-    if (a.setupCountry[0]) return setup::derive(setup::countryByCode(a.setupCountry), lat, lon, true);
+    if (a.setupCountry[0]) return setup::derive(setup::countryOrEu(a.setupCountry), lat, lon, true);
     return setup::deriveFromPosition(lat, lon);
 }
 
@@ -131,7 +139,16 @@ void locationStep(App& a) {
     const float u = gUi;
     ImGui::TextUnformatted(tr("Where are you? This sets your country and radio region, the band plans, the FM step, the TV channels, the aircraft map position and the time zone. You can skip it."));
     ImGui::Spacing();
-    ImGui::TextUnformatted(tr("Search for a city or country"));
+    {   // regional presets: one click sets the whole bundle of a region
+        ImGui::TextUnformatted(tr("Quick pick: a region preset sets the band plan, the TV channels, the FM band, the default frequencies and the units"));
+        const std::string cur = a.setupLoc[0] ? std::string() : setup::presetOfCountry(a.setupCountry);
+        std::string picked;
+        if (regionPresetRow(cur, picked)) {
+            if (const setup::RegionPreset* p = setup::regionPresetById(picked)) { snprintf(a.setupCountry, sizeof a.setupCountry, "%s", p->country); a.setupLoc[0] = 0; a.setupQuery[0] = 0; }
+        }
+        ImGui::Spacing();
+    }
+    ImGui::TextUnformatted(tr("Or search for a city or country"));
     ImGui::SetNextItemWidth(280 * u);
     ImGui::InputTextWithHint("##city", tr("for example Vilnius"), a.setupQuery, sizeof a.setupQuery);
     if (a.setupQuery[0]) {
@@ -158,20 +175,69 @@ void locationStep(App& a) {
     if (memcmp(before, a.setupLoc, sizeof before)) a.setupCountry[0] = 0;   // typed by hand: the position decides the country
     ImGui::TextDisabled("%s", tr("Privacy: the location stays on this computer unless you turn on sending to a public map yourself."));
     double lat, lon;
-    if (a.setupLoc[0]) {
-        if (!parseLoc(a.setupLoc, lat, lon)) { ImGui::TextColored(pal::warnAmber(), "%s", tr("Not a locator or coordinates")); return; }
+    if (a.setupLoc[0] && !parseLoc(a.setupLoc, lat, lon)) { ImGui::TextColored(pal::warnAmber(), "%s", tr("Not a locator or coordinates")); return; }
+    if (a.setupLoc[0] || a.setupCountry[0]) {
         const setup::Derived d = derived(a);
+        lat = d.lat; lon = d.lon;
         const learn::Region& r = learn::regions(nullptr)[learn::clampRegion(d.region)];
         ImGui::Spacing();
         ImGui::TextColored(pal::accent(), "%s", d.known ? tr(d.countryName.c_str()) : tr("Country not recognised"));
         ImGui::SameLine();
-        ImGui::TextDisabled("%.3f, %.3f  (%s)", lat, lon, dect2::toMaidenhead(lat, lon, 6).c_str());
+        if (!d.approx) ImGui::TextDisabled("%.3f, %.3f  (%s)", lat, lon, dect2::toMaidenhead(lat, lon, 6).c_str());
         ImGui::TextDisabled(tr("ITU / IARU region %d.  FM %.1f to %.1f MHz, %d kHz step, %d us de-emphasis.  DAB in band III: %s."), d.itu, r.fmLoMhz, r.fmHiMhz, d.fmStepKhz, r.fmDeemphUs, tr(d.dab3 ? "yes" : "no"));
+        {
+            const setup::RegionDefaults rd = setup::regionDefaults(d);
+            const char* un = setup::useImperial(a.setupUnits, d) ? tr("imperial (miles, feet)") : tr("metric (km, metres)");
+            ImGui::TextDisabled(tr("Defaults: FM %.1f MHz, APRS %.3f MHz, units %s."), rd.fmMhz, rd.aprsMhz, un);
+            if (d.approx) ImGui::TextDisabled("%s", tr("A preset has no exact position: type a city or coordinates above if you want the aircraft map and satellite passes centred on you."));
+            ImGui::TextUnformatted(tr("Units"));
+            ImGui::SameLine();
+            if (ImGui::RadioButton(tr("Follow the region"), a.setupUnits == 0)) a.setupUnits = 0;
+            ImGui::SameLine();
+            if (ImGui::RadioButton(tr("Metric"), a.setupUnits == 1)) a.setupUnits = 1;
+            ImGui::SameLine();
+            if (ImGui::RadioButton(tr("Imperial"), a.setupUnits == 2)) a.setupUnits = 2;
+        }
         ImGui::TextDisabled(tr("TV: %s, %d MHz channels.  Band plan: %s.  Time zone: %s."), d.tv.c_str(), d.tvMhz, d.bandPlan.empty() ? tr("automatic") : d.bandPlan.c_str(), d.tz.empty() ? tr("the computer's") : d.tz.c_str());
     } else {
         ImGui::Spacing();
         ImGui::TextDisabled("%s", tr("Skipped: nothing is changed. OnAir keeps its automatic choices from the system language."));
     }
+}
+
+// the antenna: what you connect decides what you hear; hints follow the interests ticked on the next screen (or the ones saved)
+void antennaStep(App& a) {
+    ImGui::TextUnformatted(tr("Which antenna will you use? It matters more than the radio. OnAir uses the answer for hints only; nothing is changed in the radio."));
+    ImGui::Spacing();
+    const learn::AntennaDef* A = learn::antennas();
+    for (int i = 0; i < learn::AntCount; i++) {
+        ImGui::PushID(i);
+        if (ImGui::RadioButton(tr(A[i].label), a.setupAntenna == i)) a.setupAntenna = i;
+        ImGui::Indent(ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x);
+        ImGui::TextDisabled("%s", tr(A[i].blurb));
+        ImGui::Unindent(ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x);
+        ImGui::PopID();
+    }
+    ImGui::Spacing();
+    ImGui::TextUnformatted(tr("What this means for you"));
+    const unsigned bits = a.setupInterests ? a.setupInterests : (1u << setup::IntFm);
+    for (const setup::AntennaTip& t : setup::antennaTips(a.setupAntenna, bits)) {
+        ImGui::Bullet();
+        if (t.level == learn::Warn) ImGui::TextColored(pal::warnAmber(), "%s", tr(t.text));
+        else ImGui::TextUnformatted(tr(t.text));
+    }
+}
+
+// the voice codecs are installed by the user, never shipped: the status of each plug-in and "Look again"
+void codecStep(App& a) {
+    if (setup::codecsMatter(a.setupInterests))
+        ImGui::TextUnformatted(tr("Digital voice (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) is silent until you install its codec plug-in. The calls, IDs and data work without it."));
+    else
+        ImGui::TextUnformatted(tr("Only digital voice modes need a codec. You can skip this screen and come back from Help > Voice codecs."));
+    ImGui::Spacing();
+    ImGui::TextDisabled("%s", tr("OnAir does not include or download these codecs (they are patented). You build or install them on your own computer; whether you may use them is your own responsibility. FreeDV, M17, DAB, DRM and TV need nothing."));
+    ImGui::Spacing();
+    appcodec::wizardCodecPanel();
 }
 
 void interestStep(App& a) {
@@ -202,12 +268,18 @@ void doneStep(App& a) {
     const setup::InterestDef* I = setup::interests();
     for (int i = 0; i < setup::IntCount; i++) if ((a.setupInterests >> i) & 1u) { if (!list.empty()) list += ", "; list += tr(I[i].label); }
     ImGui::TextDisabled(tr("Interests: %s"), list.empty() ? tr("none ticked") : list.c_str());
+    ImGui::TextDisabled(tr("Antenna: %s"), tr(learn::antennas()[std::max(0, std::min((int)learn::AntCount - 1, a.setupAntenna))].label));
     const std::string startName = a.setupInterests ? modeNameById(setup::startModeFor(a.setupInterests), r) : std::string();
     ImGui::Spacing();
     if (!startName.empty()) { ImGui::TextUnformatted(tr("OnAir will start in:")); ImGui::SameLine(); ImGui::TextColored(pal::accent(), "%s", startName.c_str()); }
     else ImGui::TextUnformatted(tr("OnAir keeps the mode it has."));
     ImGui::Spacing();
-    ImGui::TextDisabled("%s", tr("Change any of this at any time: Help > Setup and lessons > Run setup again, Mode > Modes shown, View > Language."));
+    ImGui::Checkbox(tr("Easy mode (recommended)"), &a.setupEasy);
+    ImGui::Indent(ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x);
+    ImGui::TextDisabled("%s", tr("Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. The detailed tabs are one click away (Simple | Advanced above them)."));
+    ImGui::Unindent(ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x);
+    ImGui::Spacing();
+    ImGui::TextDisabled("%s", tr("Change any of this at any time: Help > Setup and lessons > Run setup again, Mode > Modes shown, View > Language, Settings > Appearance > Font look."));
     ImGui::Spacing();
     ImGui::TextUnformatted(tr("Want a guided tour? The lessons show the real controls one at a time (tuning, gain, the waterfall, modes, sound, recording). Each takes under a minute and can be skipped."));
 }
@@ -218,7 +290,7 @@ void helpButton() {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("What the setup does"));
     if (ImGui::BeginPopup("##setuphelppop")) {
         ImGui::PushTextWrapPos(ImGui::GetFontSize() * 34);
-        ImGui::TextUnformatted(tr("The setup has four short screens and every one can be skipped. Nothing is forced.\n\nRadio: OnAir looks for radios on USB and picks one. \"?\" beside a radio opens its help page. Without a radio, the test signal lets you try OnAir.\n\nLocation: a city, a locator or coordinates give your country, the ITU region (1 Europe and Africa, 2 the Americas, 3 Asia and the Pacific), the band plan, the FM step, DAB, the TV channels, the aircraft map position and the time zone. The position never leaves this computer.\n\nInterests: decide which modes are starred and listed first, where OnAir starts and a few starter presets. Everything stays available.\n\nRun it again any time from Help > Setup and lessons > Run setup again."));
+        ImGui::TextUnformatted(tr("The setup has six short screens and every one can be skipped. Nothing is forced.\n\nRadio: OnAir looks for radios on USB and on the network and picks one. \"?\" beside a radio opens its help page. Without a radio, the test signal lets you try OnAir.\n\nLocation: one click on a region preset (Lithuania, the EU, ...) or a city, a locator or coordinates give your country, the band plan, the TV channels, the FM band and step, the default frequencies and the units.\n\nAntenna: hints for what you can hear with the antenna you have.\n\nInterests: decide which modes are starred and listed first, where OnAir starts and a few starter presets. Everything stays available.\n\nCodecs: digital voice needs a codec plug-in that you install yourself; Look again checks the folder.\n\nEasy mode on the last screen opens every mode in its Simple view. Run the setup again any time from Help > Setup and lessons > Run setup again, or from Settings."));
         ImGui::PopTextWrapPos();
         ImGui::EndPopup();
     }
@@ -237,6 +309,8 @@ void setupWizardOpen(App& a) {
     snprintf(a.setupLoc, sizeof a.setupLoc, "%s", plat::prefs().getS("setupLoc", "").c_str());
     snprintf(a.setupCountry, sizeof a.setupCountry, "%s", plat::prefs().getS("setupCountry", "").c_str());
     a.setupQuery[0] = 0;
+    a.setupUnits = (int)std::max(0L, std::min(2L, plat::prefs().getI("setupUnits", 0)));
+    a.setupEasy = modepanel::easyModeOn();
     if (!plat::prefs().getB("setupDone", false)) saveStep(a);   // the step key marks an unfinished setup, so it resumes even when the settings are saved at exit
 }
 
@@ -265,32 +339,80 @@ static void applyInterests(App& a, const setup::Derived& d) {
     if (added) presetsapp::save();
 }
 
+// the row of regional preset buttons (wraps to the next line when the window is narrow); true when one was clicked, its id in `picked`
+bool regionPresetRow(const std::string& current, std::string& picked) {
+    int np = 0;
+    const setup::RegionPreset* P = setup::regionPresets(&np);
+    bool hit = false;
+    const float right = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;   // the right edge of the column or window this row is in
+    for (int i = 0; i < np; i++) {
+        if (i) {
+            const float w = ImGui::CalcTextSize(tr(P[i].label)).x + ImGui::GetStyle().FramePadding.x * 2;
+            if (ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x + w < right) ImGui::SameLine();
+        }
+        ImGui::PushID(P[i].id);
+        const bool on = current == P[i].id;
+        if (on) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.34f, 0.40f, 1));
+        if (ImGui::Button(tr(P[i].label))) { picked = P[i].id; hit = true; }
+        if (on) ImGui::PopStyleColor();
+        ImGui::PopID();
+    }
+    return hit;
+}
+
+// everything a place or a regional preset sets (the same for the wizard and Settings > Region preset)
+static void setupApplyRegion(App& a, const setup::Derived& d, int units) {
+    if (!d.havePosition) return;
+    a.setupRegion = d.region;
+    const learn::Region& r = learn::regions(nullptr)[a.setupRegion];
+    const setup::RegionDefaults rd = setup::regionDefaults(d);
+    a.fmDeemph = r.fmDeemphUs;
+    if (!d.bandPlan.empty()) a.bandPlan = d.bandPlan;
+    plat::prefs().setB("unitsImperial", setup::useImperial(units, d));
+    plat::prefs().setI("setupUnits", units);
+    plat::prefs().setI("fmStepKhz", d.fmStepKhz);
+    plat::prefs().setI("ituRegion", d.itu);
+    plat::prefs().setS("locCountry", d.country);
+    tvPlanFollowLocation();   // the TV channel plans (tvplan.h) start from this country
+    plat::prefs().setS("locTimeZone", d.tz);
+    plat::prefs().setB("dabBand3", d.dab3);
+    plat::prefs().setD("defaultFmMhz", rd.fmMhz);
+    plat::prefs().setD("defaultAprsMhz", rd.aprsMhz);
+    if (!d.approx) {   // a real position (a city or coordinates); a preset keeps the position the user has
+        plat::prefs().setD("adsbLat", d.lat);
+        plat::prefs().setD("adsbLon", d.lon);
+    }
+    plat::prefs().setI("setupRegion", a.setupRegion);
+}
+
+void setupApplyPreset(App& a, const std::string& presetId, int units) {
+    const setup::RegionPreset* p = setup::regionPresetById(presetId);
+    if (!p) return;
+    const setup::Country* c = setup::countryOrEu(p->country);
+    if (!c) return;
+    setup::Derived d = setup::derive(c, c->lat, c->lon, true);
+    d.approx = true;
+    setupApplyRegion(a, d, units);
+    plat::prefs().setS("setupCountry", p->country);
+    plat::prefs().setS("setupLoc", "");
+    savePrefs(a);
+    plat::prefs().flush();
+}
+
 // how = 0 skip (change nothing), 1 finish and start the lessons, 2 finish only, 3 finish and take the window tour
 static void setupFinish(App& a, int how) {
     a.setupOpen = false;
     if (how) {
         const setup::Derived d = derived(a);
-        if (d.havePosition) {
-            a.setupRegion = d.region;
-            const learn::Region& r = learn::regions(nullptr)[a.setupRegion];
-            a.fmDeemph = r.fmDeemphUs;
-            if (!d.bandPlan.empty()) a.bandPlan = d.bandPlan;
-            plat::prefs().setB("unitsImperial", r.imperial);
-            plat::prefs().setI("fmStepKhz", d.fmStepKhz);
-            plat::prefs().setI("ituRegion", d.itu);
-            plat::prefs().setS("locCountry", d.country);
-            tvPlanFollowLocation();   // the TV channel plans (tvplan.h) start from this country
-            plat::prefs().setS("locTimeZone", d.tz);
-            plat::prefs().setB("dabBand3", d.dab3);
-            plat::prefs().setD("adsbLat", d.lat);
-            plat::prefs().setD("adsbLon", d.lon);
-        }
+        setupApplyRegion(a, d, a.setupUnits);
         a.setupGoals = setup::goalBitsFor(a.setupInterests);
         plat::prefs().setI("setupRegion", a.setupRegion);
         plat::prefs().setI("setupGoals", (long)a.setupGoals);
         plat::prefs().setI("setupInterests", (long)a.setupInterests);
         plat::prefs().setS("setupLoc", a.setupLoc);
         plat::prefs().setS("setupCountry", a.setupCountry);
+        plat::prefs().setI(learn::prefAntenna(), a.setupAntenna);
+        modepanel::setEasyMode(a.setupEasy);
         if (a.setupInterests) {
             applyInterests(a, d);
             selectModeById(a, setup::startModeFor(a.setupInterests));
@@ -315,7 +437,7 @@ void setupWizard(App& a, ImVec2 disp) {
     ImGui::Begin("##setup", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize);
     ImGui::PopStyleVar();
     ImGui::PopStyleColor();
-    static const char* const kNames[kSteps] = {N_("Radio"), N_("Location"), N_("Interests"), N_("Done")};
+    static const char* const kNames[kSteps] = {N_("Radio"), N_("Location"), N_("Antenna"), N_("Interests"), N_("Codecs"), N_("Done")};
     a.setupStep = std::max(0, std::min(kSteps - 1, a.setupStep));
     ImGui::TextColored(pal::accent(), "%s  (%d / %d)", tr(kNames[a.setupStep]), a.setupStep + 1, kSteps);
     {   // the steps as dots
@@ -336,8 +458,10 @@ void setupWizard(App& a, ImVec2 disp) {
     ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + std::min(600.f * u, disp.x - 60 * u));
     switch (a.setupStep) {
     case 0: radioStep(a); break;
-    case 1: locationStep(a); break;
-    case 2: interestStep(a); break;
+    case kStepLocation: locationStep(a); break;
+    case kStepAntenna: antennaStep(a); break;
+    case kStepInterests: interestStep(a); break;
+    case kStepCodecs: codecStep(a); break;
     default: doneStep(a); break;
     }
     ImGui::PopTextWrapPos();
@@ -363,8 +487,8 @@ void setupWizard(App& a, ImVec2 disp) {
         ImGui::SameLine();
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
         if (ImGui::Button(tr("Skip this step"), ImVec2(0, bh))) {
-            if (before == 1) { a.setupLoc[0] = 0; a.setupCountry[0] = 0; a.setupQuery[0] = 0; }
-            if (before == 2) a.setupInterests = 0;
+            if (before == kStepLocation) { a.setupLoc[0] = 0; a.setupCountry[0] = 0; a.setupQuery[0] = 0; }
+            if (before == kStepInterests) a.setupInterests = 0;
             a.setupStep++;
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Leave this step as it is and go on. Nothing is changed for it."));

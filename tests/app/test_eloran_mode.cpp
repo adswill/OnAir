@@ -1,4 +1,4 @@
-// eLoran / Loran-C mode (work in progress): the engine tuning is registered under its number, the mode row and the family
+// eLoran / Loran-C mode : the engine tuning is registered under its number, the mode row and the family
 // count agree with it, and the panel's strings are in the screen source.
 #include "dect2/eloran/eloran_engine.h"
 #include "dect2/engine/mode_tuning.h"
@@ -23,10 +23,10 @@ int main() {
     CHECK(t.minMhz < 0.1 && t.maxMhz > 0.1 && t.minSampleRate >= 250000, "tuning range or sample rate");
     const dect2::ModeTuning* reg = dect2::modeTuning(128);
     CHECK(reg != nullptr, "modeTuning(128) not registered");
-    if (reg) CHECK(std::string(reg->name) == "eLoran / Loran-C (WIP)", "registered name '%s'", reg->name);
+    if (reg) CHECK(std::string(reg->name) == "eLoran / Loran-C", "registered name '%s'", reg->name);
 
     const std::string table = readFile("app/ui/mode_table.cpp");
-    CHECK(table.find("{126, \"eLoran / Loran-C (WIP)\", 2,") != std::string::npos, "mode row for family 126 missing");
+    CHECK(table.find("{126, \"eLoran / Loran-C\", 2,") != std::string::npos, "mode row for family 126 missing");
     const std::string appH = readFile("app/app.h");
     CHECK(appH.find("constexpr int kNumFamilies = ") != std::string::npos, "kNumFamilies missing");
     const std::string modeUi = readFile("app/panels/modeui.cpp");
@@ -41,7 +41,7 @@ int main() {
     CHECK(eng.find("case 127: return pollStd(rxEloran_, 127,") != std::string::npos, "telemetry case 127 missing");
 
     const std::string ui = readFile("app/eloran/eloran_ui.cpp");
-    const char* strings[] = {"eLoran / Loran-C (WIP)", "ToA offset (us)", "Level (dBFS)", "Phase code", "Averaged pulse",
+    const char* strings[] = {"eLoran / Loran-C", "ToA offset (us)", "Level (dBFS)", "Phase code", "Averaged pulse",
                              "tune to 100 kHz (90 - 110 kHz) and start the receiver"};
     for (const char* s : strings) CHECK(ui.find(s) != std::string::npos, "panel string missing: %s", s);
 

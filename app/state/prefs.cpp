@@ -72,7 +72,7 @@ PrefKey rx1(PrefKey p) { p.rx1Load = true; return p; }
 
 int fixDtmbBw(int v) { return v == 6 ? 6 : 8; }
 int fixIsdbtBw(int v) { return v == 0 || v == 7 || v == 8 ? v : 6; }
-int fixRegion(int v) { return v == 1 || v == 2 ? v : 0; }
+int fixRegion(int v) { return v >= 1 && v <= 3 ? v : 0; }
 int fixDeemph(int v) { return v == 75 ? 75 : v == 0 ? 0 : 50; }   // 0: off
 int fixAudioBw(int v) { return v == 12000 || v == 8000 || v == 5000 ? v : 0; }
 int fixChanKhz(int v) { return v > 0 ? std::max(10, v) : 0; }   // (3.4: any manual width; the slider runs 100 - 300 kHz, a typed one goes beyond)
@@ -184,6 +184,7 @@ const std::vector<PrefKey>& keyTable() {
         shared(flagFn("iqCorrect", [](const App& a) { return (bool)a.engine.iqFix().iq.load(); }, [](App& a, bool v) { a.engine.iqFix().iq = v; })),
         shared(text("filePath", AT(a.file.path), true)),
         shared(dbl("fileCentreHz", AT(a.file.centreHz), 0)),
+        shared(flagFn("spurNotch", [](const App& a) { return a.engine.spurNotch(); }, [](App& a, bool v) { a.engine.setSpurNotch(v); })),
         shared(flagFn("fileDcNotch", [](const App& a) { return a.engine.dcNotch(); }, [](App& a, bool v) { a.engine.setDcNotch(v); })),
         shared(chars("outPath", AT(a.filePath[0]), sizeof(App::filePath), true)),
         shared(chars("udpHost", AT(a.udpHost[0]), sizeof(App::udpHost), true)),

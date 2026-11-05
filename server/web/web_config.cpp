@@ -86,6 +86,14 @@ WebSettings loadWebSettings(onair_server::ConfigFile& c, bool& madeAdminToken) {
     w.directory.desc = c.get("web_directory_desc");
     w.directory.reach = c.flag("web_directory_reach", false);
     w.directory.ack = c.get("web_directory_ack");
+    w.relay.on = c.flag("web_relay", false);
+    w.relay.url = c.get("web_relay_url", w.relay.url);
+    w.relay.listed = c.flag("web_relay_public", false);
+    w.relay.keyFile = w.directory.keyFile;   // set by the server beside the config file when empty
+    w.relay.name = w.name;
+    w.relay.localPort = s.port;
+    w.relay.maxConns = std::max(16, L.maxUsers * 3 + 8);
+    if (w.relay.on) s.trustProxy = true;     // the relay's connections arrive from 127.0.0.1 with the listener's address in X-Forwarded-For
     const bool network = s.bind != "127.0.0.1";
     if (network && s.tlsCert.empty()) {
         w.warnings.push_back(s.plainInternet ? "web: plain HTTP for everyone, also from the internet (web_plain_internet=1): passwords and invites travel unencrypted"

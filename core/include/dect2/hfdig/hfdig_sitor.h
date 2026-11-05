@@ -4,7 +4,7 @@
 //   FEC-B: each word is one character, valid only with exactly four marks; a word that is not valid is counted as an error.
 //   FEC-A: time diversity. A word is accepted only when the same valid word arrives again `lag` words later; a single corrupted
 //          copy is dropped instead of printed.
-// The FEC-B word table is NOT the ITU-R M.476 table: it is the 32 smallest four-of-seven words, pending a check against M.476.
+// The word table is the ITU-R M.476 / M.625 one (shared with NAVTEX, marine_navtex.cpp); the idle and repeat words print nothing.
 #pragma once
 #include <cstdint>
 #include <string>

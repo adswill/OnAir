@@ -198,7 +198,8 @@ public:
             case Wire::Audio: {
                 WireReader r(b.data(), b.size());
                 const double rate = r.f64(); const uint32_t n = r.u32();
-                if (r.ok && (o.granted & PermAudioOut) && n <= (1u << 20) && r.pos + (size_t)n * 4 <= b.size() && o.services.audioOut) {
+                // the same limits as cAudio (loader.cpp): the helper runs the plugin's code, so its messages are not trusted
+                if (r.ok && (o.granted & PermAudioOut) && n > 0 && n <= (1u << 20) && rate >= 1000 && rate <= 400000 && r.pos + (size_t)n * 4 <= b.size() && o.services.audioOut) {
                     std::vector<float> pcm(n);
                     if (n) memcpy(pcm.data(), b.data() + r.pos, (size_t)n * 4);
                     o.services.audioOut(pcm.data(), n, rate);

@@ -7,11 +7,13 @@ Mode list: **HF UTILITY > PACTOR-I (experimental)**.
 **Experimental.** It was written from the public descriptions only (listed below). No real PACTOR recording was available, so it has been checked
 against its own test signal and nothing else. If you hear PACTOR-I, a short IQ or audio recording would help a lot: please send one.
 
-## PACTOR-II, -III and -IV are not supported
+## PACTOR-II, -III and -IV: the physical layer only
 
-PACTOR-II, -III and -IV are proprietary protocols of SCS (Special Communications Systems). Their modulation, framing and compression are not
-published, and OnAir does not reverse engineer proprietary protocols. The only way to read them is the SCS modems; the HF waveform identifier
-(mode **HF waveform ID**) can still tell you that a signal looks like PACTOR, and then names this mode for PACTOR-I-like FSK.
+PACTOR-II, -III and -IV are proprietary protocols of SCS (Special Communications Systems). Their channel coding, framing and compression are not
+published, and OnAir does not reverse engineer proprietary protocols. They have their own modes (**PACTOR-II**, **PACTOR-III**, **PACTOR-IV**,
+docs/pactorhf.md) that measure what the signal itself shows (carriers, symbol clock, phase steps, repeating frame structure) and produce no text.
+The HF waveform identifier (mode **HF waveform ID**) can still tell you that a signal looks like PACTOR.
+
 
 ## What it decodes
 

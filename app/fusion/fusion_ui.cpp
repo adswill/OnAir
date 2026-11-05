@@ -85,7 +85,7 @@ void tab(App& a) {
         return;
     }
     const dect2::FusionTelemetry& t = a.rx.fusion;
-    ImGui::TextUnformatted("Yaesu System Fusion (WIP): C4FM 4800 symbols/s, 12.5 kHz");
+    ImGui::TextUnformatted("Yaesu System Fusion: C4FM 4800 symbols/s, 12.5 kHz");
     ImGui::Spacing();
     ImGui::Text("Lock: %s", t.dataValid ? "receiving" : t.blocksOk ? "idle (last transmission below)" : "listening");
     ImGui::Text("Frames: %llu good, %llu bad (headers %llu, communication %llu, terminators %llu)", (unsigned long long)t.blocksOk,
@@ -130,7 +130,7 @@ void status(App& a) {
 }
 
 void summary(const App& a, std::string& l1, std::string& l2) {
-    l1 = "Yaesu Fusion (WIP)";
+    l1 = "Yaesu Fusion";
     if (live(a)) l2 = dect2::fusionSummary(a.rx.fusion);
 }
 

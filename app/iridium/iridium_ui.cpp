@@ -2,6 +2,7 @@
 // counters and burst rates, the ring alert list, the pager messages with a text panel, the Iridium time, and a burst scatter
 // (time against frequency) of the last 2 s.
 #include "app.h"
+#include "ui/kit/mode_panel.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/session_list.h"
 #include "../adsb/adsb_map.h"
@@ -24,6 +25,7 @@ using dect2::IridiumTelemetry;
 struct State {
     bool loaded = false;
     int view = 0;                    // 0 map, 1 messages, 2 ring alerts, 3 bursts, 4 calls, 5 ACARS, 6 packets, 7 pager (iridium_extra_ui.cpp)
+    bool record = true;              // save each ended call as a WAV
     int listen = 0;                  // voice: -1 off, 0 first call with sound, else the call id
     int selSat = -1;                 // the selected satellite, -1 = none
     int selMsg = -1;                 // index into messages, newest = 0
@@ -51,6 +53,7 @@ void loadState() {
     S.thrDb = (float)d.getD("iridiumThr", 13.0);
     const std::string bn = d.getS("iridiumBitsName", "output.bits");
     snprintf(S.bitsName, sizeof S.bitsName, "%s", bn.empty() ? "output.bits" : bn.c_str());
+    S.record = d.getI("iridiumRecord", 1) != 0;
     S.netOn = d.getI("iridiumNetOn", 0) != 0;
     S.netTcp = d.getI("iridiumNetTcp", 0) != 0;
     S.fileAuto = d.getI("iridiumBitsOn", 0) != 0;
@@ -289,11 +292,15 @@ void callsView(App& a) {
         ImGui::EndCombo();
     }
     ImGui::TextWrapped("Each call is saved as a WAV file in the recordings folder when it ends and the plug-in produced sound. Frames that fail their checks, or that the plug-in refuses, are listed as not readable and stay silent. Encrypted or scrambled traffic is never decoded.");
-    if (!ImGui::BeginTable("##iri_calls", 9, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    if (ImGui::Checkbox("Record calls##irrec", &S.record)) plat::prefs().setI("iridiumRecord", S.record ? 1 : 0);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("One WAV per call, written when the call ends (needs the codec plug-in).");
+    ImGui::SameLine(); kit::recordingsButton("iri");
+    if (!ImGui::BeginTable("##iri_calls", 12, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("#"); ImGui::TableSetupColumn("Time"); ImGui::TableSetupColumn("MHz"); ImGui::TableSetupColumn("Dir");
     ImGui::TableSetupColumn("Length"); ImGui::TableSetupColumn("Sat"); ImGui::TableSetupColumn("Beam");
-    ImGui::TableSetupColumn("Frames"); ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn("Frames"); ImGui::TableSetupColumn("Level"); ImGui::TableSetupColumn("Mute"); ImGui::TableSetupColumn("Solo");
+    ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthStretch);
     ImGui::TableHeadersRow();
     for (auto it = t.calls.rbegin(); it != t.calls.rend(); ++it) {
         ImGui::TableNextRow();
@@ -306,6 +313,14 @@ void callsView(App& a) {
         ImGui::TableNextColumn(); if (it->sat >= 0) ImGui::Text("%d", it->sat); else ImGui::TextDisabled("-");
         ImGui::TableNextColumn(); if (it->beam >= 0) ImGui::Text("%d", it->beam); else ImGui::TextDisabled("-");
         ImGui::TableNextColumn(); ImGui::Text("%u/%u", it->readable, it->frames);
+        ImGui::TableNextColumn(); ImGui::ProgressBar(it->audible ? it->level : 0.f, ImVec2(50 * gUi, 0), "");
+        {
+            char id[24]; bool m = it->mute, so = it->solo;
+            ImGui::TableNextColumn(); snprintf(id, sizeof id, "##irm%d", it->id);
+            if (ImGui::Checkbox(id, &m)) a.engine.iridium().voice().setMute(it->id, m);
+            ImGui::TableNextColumn(); snprintf(id, sizeof id, "##irs%d", it->id);
+            if (ImGui::Checkbox(id, &so)) a.engine.iridium().voice().setSolo(it->id, so);
+        }
         ImGui::TableNextColumn();
         ImGui::Text("%s%s", it->active ? "live, " : "", it->status.c_str());
         if (!it->file.empty()) { ImGui::SameLine(); ImGui::TextDisabled("(saved)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", it->file.c_str()); }
@@ -606,10 +621,10 @@ void tick(App& a) {
     if (live(a)) appcodec::voiceCodecTick("iridium");   // the user's codec plug-in (docs/CODECS.md), loaded whichever tab is shown
     {
         static bool dirMade = false;
-        const std::string rec = plat::dataDir() + "/recordings";
+        const std::string rec = recordingsDir();
         if (!dirMade) { std::error_code ec; std::filesystem::create_directories(rec, ec); dirMade = true; }
         dect2::IridiumVoice& v = r.voice();
-        v.setVolume(a.volume); v.setMuted(a.muted); v.setListenCall(S.listen); v.setRecordFolder(rec);
+        v.setVolume(a.volume); v.setMuted(a.muted); v.setListenCall(S.listen); v.setRecordFolder(S.record ? rec : std::string());
     }
     if (S.pushedCenter != a.freqMhz) { r.setCenterMhz(a.freqMhz); S.pushedCenter = a.freqMhz; }
     if (S.pushedThr != S.thrDb) { r.setThresholdDb(S.thrDb); S.pushedThr = S.thrDb; }
@@ -637,7 +652,7 @@ void toolkitSave(App& a) {
     auto bitsPathFor = [&]() {
         const std::string name = S.bitsName[0] ? S.bitsName : "output.bits";
         const bool full = name.find_first_of("/\\") != std::string::npos;
-        return full ? name : plat::dataDir() + "/recordings/" + name;
+        return full ? name : recordingsDir() + "/" + name;
     };
     auto startFile = [&]() { S.bitsErr.clear(); if (!r.startBitsFile(bitsPathFor(), &S.bitsErr) && S.bitsErr.empty()) S.bitsErr = "cannot write the file"; };
     auto startNet = [&]() { S.netErr.clear(); if (!r.startBitsStream(S.netTcp, S.netHost, S.netPort, &S.netErr)) S.netOn = false; };
@@ -729,6 +744,16 @@ void meters(const App& a, std::vector<ModeMeter>& out) {
 
 } // namespace
 
+// Simple view: the map, the messages, the calls and the time / satellite readouts side by side
+static void command(App& a) {
+    loadState();
+    kit::modeHeader({19, "Iridium", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    modepanel::panes({{"##iricmap", tr("Map"), [&a] { mapView(a, ImGui::GetContentRegionAvail()); }, 1.f, 260.f},
+                      {"##iricmsg", tr("Messages"), [&a] { const ImVec2 v = ImGui::GetContentRegionAvail(); messages(a, v.x, v.y); }, 2.2f, 300.f},
+                      {"##iriccall", tr("Calls"), [&a] { callsView(a); }, 1.f, 220.f},
+                      {"##iricsat", tr("Satellites"), [&a] { timeBox(a); ImGui::Spacing(); satDetail(a); ImGui::Spacing(); counters(a); }, 0.9f, 220.f}}, 280.f);
+}
+
 extern const ModeUi kIridiumUi;
 const ModeUi kIridiumUi = {
     .sideTitle = "SATELLITES",
@@ -744,4 +769,5 @@ const ModeUi kIridiumUi = {
     .synth = synth,
     .tick = tick,
     .meters = meters,
+    .command = command,
 };

@@ -34,7 +34,8 @@ struct S2HuntResult {
 S2HuntResult s2Hunt(const cf32* z, size_t n, bool sfPilots = false);
 // The search for DVB-S2X VL-SNR frames (PLHEADER + VL-SNR header, 990 known symbols; dvbs_vlhunt.cpp): s2Hunt falls back to it when it finds no ordinary header.
 // The result has modcod 64 (set 1) or 65 (set 2), pilots on, and the frequency and phase of the coherent fit.
-bool vlHunt(const cf32* z, size_t n, S2HuntResult& out);
+// force: run now (the search is otherwise made on every other call only)
+bool vlHunt(const cf32* z, size_t n, S2HuntResult& out, bool force = false);
 
 } // namespace dvbs
 } // namespace dect2

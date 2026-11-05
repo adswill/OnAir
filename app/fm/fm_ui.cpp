@@ -850,13 +850,16 @@ void fmScanStep(App& a) {
 
     if (s.phase == 0) {
         if (s.idx < 0) { fmScanBeginRange(s); s.idx = 0; tuneTo(fmSurveyCentre(s.scanLoMhz, 0)); return; }
-        if (now - s.t0 < 0.7 || a.lastSeq == s.seq0) return;
+        const bool newFrame = a.lastSeq != s.seq0;
+        if (now - s.t0 < 0.7 || (!newFrame && now - s.t0 < 4.0)) return;
+        // no spectrum frame 4 s after the retune (a slow driver, a stalled USB read): skip this hop instead of waiting for ever (#418, the scan stood at 18%)
         const double centre = fmSurveyCentre(s.scanLoMhz, s.idx), fs = a.engine.sampleRate();
         double db[20];
         for (int j = 0; j < 20; j++) db[j] = fmChannelDb(a.spec, fs, (-1.0 + 0.1 * j) * 1e6);
         double sorted[20]; std::copy(db, db + 20, sorted); std::sort(sorted, sorted + 20);
         const double floorDb = sorted[4];
-        for (int j = 0; j < 20; j++) {
+        if (!newFrame) a.engine.log("FM scan: no spectrum from the radio around " + std::to_string(centre) + " MHz, skipped");
+        for (int j = 0; j < 20 && newFrame; j++) {
             const double mhz = std::round((centre - 1.0 + 0.1 * j) * 10) / 10;
             if (mhz < s.scanLoMhz - 0.01 || mhz > s.scanHiMhz + 0.01) continue;
             const bool peak = (j == 0 || db[j] >= db[j - 1]) && (j == 19 || db[j] >= db[j + 1]);

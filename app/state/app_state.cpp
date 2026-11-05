@@ -1,6 +1,7 @@
 // application state: preferences, device list, bandwidth, ingesting spectrum and receiver telemetry, channel list
 #include "freq_remember.h"
 #include "rx_width.h"
+#include "dect2/engine/widespan.h"
 #include "../rooms/rooms.h"
 #include "../app.h"
 #include "dect2/common/verbose_log.h"
@@ -8,6 +9,7 @@
 #include "../gfx/file_vfo.h"
 #include <cstring>
 #include "dect2/source/usb_diag.h"
+#include "dect2/source/iq_record.h"
 #include "dect2/engine/rate_choice.h"
 #include "dect2/hdr/hdr_rx.h"
 #include "dect2/sonde/sonde_rx.h"
@@ -141,6 +143,24 @@ void setMode(App& a, int f, int sub) {
 }
 
 // what to tell the engine: 0 auto, 1 DVB-T2, 2 DVB-T, 3 ATSC, 4 DAB, 5 ATSC 3.0, 6 ISDB-T, 7 FM, 8 DVB-S/S2, 9 DTMB, 10 analog TV, 11 DMR, 12 DRM, 13 ADS-B, 14 GNSS, 15 radiosonde, 16 AIS, 17 marine, 18 ACARS, 19 Inmarsat-C, 20 Inmarsat Aero, 21 Iridium, 22 mesh, 23 HD Radio, 24 CDR, 25 pagers, 26 APRS / packet, 27 HF digital, 28 airband, 29 VDL Mode 2, 30 ISM sensors, 32 VOR / ILS, 33 M17, 35 D-STAR, 36 CW, 37 HFDL, 38 PSK31, 39 JS8Call, 44 spectrum analyser, 40 NXDN, 42 DVB-C, 47 dPMR, 46 Orbcomm, 45 Mode S uplink, 48 TETRA, 51 HF ALE, 49 MAC, 50 radio astronomy, 52 P25, 53 Bluetooth LE, 54 ionospheric sounders, 55 QO-100, 56 Wi-Fi networks, 57 general receiver, 63 CubeSat telemetry, 69 HF beacons (Engine::start maps these to activeStandard())
+std::string restoreRecordingMode(App& a, const std::string& description, const std::string& path) {
+    if (a.engine.running()) return "";
+    std::string id = description;
+    if (recordingStdMode(id) < 0) {   // not a bare mode id: the name "onair_<id>_<MHz>_..." says it
+        id.clear();
+        const size_t sl = path.find_last_of("/\\");
+        const std::string n = sl == std::string::npos ? path : path.substr(sl + 1);
+        if (n.rfind("onair_", 0) == 0) { const size_t e = n.find('_', 6); if (e != std::string::npos) id = n.substr(6, e - 6); }
+    }
+    const int std_ = recordingStdMode(id);
+    if (std_ < 3) return "";
+    const int f = std_ - 2;
+    if (a.family == f) return id;
+    setFamily(a, f);
+    a.engine.log("recording was made in " + id + ": mode restored");
+    return id;
+}
+int recFileFormatOf(int r) { return (int)(r == 3 ? dect2::FileFormat::CI16 : r >= 1 ? dect2::FileFormat::CF32 : dect2::FileFormat::CS8); }
 int engineStd(const App& a) { return a.family >= 6 ? a.family + 2 : a.family == 1 ? 3 : a.family == 2 ? 4 : a.family == 3 ? 5 : a.family == 4 ? 6 : a.family == 5 ? 7 : a.stdMode; }
 
 void refreshDevices(App& a) {
@@ -297,7 +317,8 @@ void saveBiasTee(const App& a) {
 }
 double modeMinSampleRate(const App& a) {
     if (engineStd(a) == 23) return hdrMinSampleRate(a.freqMhz);   // HD Radio: AM needs far less than FM
-    return minSampleRateFor(engineStd(a), a.tune.bandwidthMhz > 0 ? a.tune.bandwidthMhz : kBw[a.bwIdx].mhz);
+    const double chan = a.tune.channelBwMhz > 0 ? a.tune.channelBwMhz : a.tune.bandwidthMhz;   // the signal's channel (a custom capture bandwidth is not it)
+    return minSampleRateFor(engineStd(a), chan > 0 ? chan : kBw[a.bwIdx].mhz);
 }
 
 void applyBandwidth(App& a) {
@@ -328,6 +349,7 @@ void applyBandwidth(App& a) {
         if (dv.isGeneric() && a.tune.gainDb < dv.gainMinDb && dv.gainMaxDb > dv.gainMinDb) a.tune.gainDb = dv.gainMinDb;   // a gain left by another radio
     }
     a.tune.basebandFilterHz = 0;
+    a.tune.channelBwMhz = 0;   // set again below when a custom capture bandwidth replaces the width
     a.tune.bandwidthMhz = kBw[a.bwIdx].mhz;
     a.tune.synth.atsc = a.family == 1;
     a.tune.synth.dab = a.dabMode;
@@ -381,8 +403,7 @@ void applyBandwidth(App& a) {
     a.autoBwMhz = a.tune.bandwidthMhz;
     if (const double w = rxWidthMhz(a); w > 0) {
         const ModeTuning* mt = a.family >= 6 ? modeTuning(a.family + 2) : nullptr;
-        const RxWidthPlan rw = rxWidthPlan(w, a.tune.bandwidthMhz, a.tune.sampleRate, a.tune.basebandFilterHz, mt ? mt->minSampleRate : 0);
-        a.tune.bandwidthMhz = rw.bandwidthMhz; a.tune.sampleRate = rw.sampleRate; a.tune.basebandFilterHz = rw.basebandHz;
+        rxApplyWidth(a.tune, w, mt ? mt->minSampleRate : minSampleRateFor(engineStd(a), a.tune.bandwidthMhz));   // the shared receive path (rx_width.h): the same call the all-modes test makes
         const DeviceInfo& dv = a.devices[a.devIdx];
         if (dv.isGeneric()) a.tune.sampleRate = linkRateFor(dv, a.tune, a.tune.sampleRate, a.tune.sampleRate);   // a link that is too slow: some samples lost, the width kept
     }
@@ -392,8 +413,8 @@ void applyBandwidth(App& a) {
     a.chosenRateHz = 0;
     a.rateCtx = rateContext(a);
     if (const double want = savedSampleRate(a); want > 0 && (a.devices[a.devIdx].isRadio() || a.devices[a.devIdx].kind == DeviceInfo::Synthetic)) {   // (3.4: any saved rate is used; the driver decides)
-        const RateCheck c = checkManualRate(rateLimitsOf(a.devices[a.devIdx]), modeMinSampleRate(a), want);
-        if (c.ok) { a.tune.sampleRate = want; a.chosenRateHz = want; }
+        const RateCheck c = rxApplyRate(a.tune, want, rateLimitsOf(a.devices[a.devIdx]), modeMinSampleRate(a));
+        if (c.ok) a.chosenRateHz = want;
     }
     // the rate was lowered to the radio's top: a filter meant for the faster rate lets everything up to its edge fold into the band (the
     // 8-9 MHz filters of DTMB, analog TV, DVB-S and Iridium on a PlutoSDR's 4 Msps over USB); a rate the user raised: the mode's narrow filter
@@ -401,6 +422,7 @@ void applyBandwidth(App& a) {
     // width the user typed (Advanced > Custom bandwidth) is the user's filter and is kept as planned: the user decides, never the heuristic (3.4).
     if (rxWidthMhz(a) > 0) { if (a.tune.basebandFilterHz > a.tune.sampleRate) a.tune.basebandFilterHz = 0; }
     else a.tune.basebandFilterHz = basebandFilterFor(a.tune.basebandFilterHz, a.autoRateHz, a.tune.sampleRate);
+    dect2::setWideSpanCapHz(rxWidthMhz(a) > 0 ? 1e12 : 0);   // a custom bandwidth lifts the default cap on the span of whole-span decoding (CPU is the only cost)
     a.tune.rateChosen = a.chosenRateHz > 0 || rxWidthMhz(a) > 0;   // a rate or width the user chose is not held down by a driver's own cap (3.4)
 }
 
@@ -816,7 +838,7 @@ void followBandwidth(App& a) {
     if (!a.bwAuto || a.atscMode || !a.engine.running()) return;
     const bool hw = a.devices[a.devIdx].isRadio();
     const double want = a.engine.activeBandwidth();
-    if (want == a.tune.bandwidthMhz) return;
+    if (want == (a.tune.channelBwMhz > 0 ? a.tune.channelBwMhz : a.tune.bandwidthMhz)) return;   // (a custom capture bandwidth is the radio's, not the channel's)
     int idx = -1;
     for (int k = 0; k < (int)(sizeof kBw / sizeof *kBw); k++) if (kBw[k].mhz == want) idx = k;
     if (idx < 0) return;

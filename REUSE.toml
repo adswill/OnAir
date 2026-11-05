@@ -178,6 +178,23 @@ SPDX-FileCopyrightText = [
 ]
 SPDX-License-Identifier = "BSD-3-Clause"
 
+[[annotations]]
+path = "third_party/openjpeg/**"
+precedence = "closest"
+SPDX-FileCopyrightText = [
+  "Copyright (c) 2002-2014 Universite catholique de Louvain (UCL), Belgium",
+  "Copyright (c) 2002-2014 Professor Benoit Macq",
+  "Copyright (c) 2003-2014 Antonin Descampe",
+  "Copyright (c) 2003-2009 Francois-Olivier Devaux",
+  "Copyright (c) 2005 Herve Drolon, FreeImage Team",
+  "Copyright (c) 2002-2003 Yannick Verschueren",
+  "Copyright (c) 2001-2003 David Janssens",
+  "Copyright (c) 2011-2012 Centre National d'Etudes Spatiales (CNES), France",
+  "Copyright (c) 2012 CS Systemes d'Information, France",
+  "Copyright (c) 2017 IntoPix SA",
+]
+SPDX-License-Identifier = "BSD-2-Clause"
+
 # codec2: the directory COPYING is LGPL-2.1; the files say "version 2.1, as published by the FSF" (no "or later").
 [[annotations]]
 path = "third_party/codec2/**"

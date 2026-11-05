@@ -175,7 +175,7 @@ ModeTuning mpt1327Tuning() {
     ModeTuning t;
     t.stdMode = 129;
     t.id = "mpt1327";
-    t.name = "MPT1327 trunking (WIP)";
+    t.name = "MPT1327 trunking";
     t.minMhz = 30;
     t.maxMhz = 520;
     t.defMhz = 170;

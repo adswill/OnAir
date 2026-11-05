@@ -5,6 +5,7 @@
 #include "dect2/audio/audioout.h"
 #include "dect2/voice/voice_monitor.h"
 #include "dect2/common/mathconst.h"
+#include "dect2/nxdn/nxdn_ambe.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -55,6 +56,15 @@ struct FusionReceiver::Impl {
     bool codecChanged = true;
     std::atomic<float> volume{1.f};
     std::atomic<bool> muted{false}, silent{false};
+    // V/D mode 1 voice is the same 72 bit AMBE+2 frame as DMR and NXDN (the bit positions were checked against MMDVMHost's tables), so the user's own mbelib
+    // (the one DMR and NXDN use) decodes it without the 'ysf' plug-in; not while silent (tests, hidden mode)
+    std::unique_ptr<NxdnAmbe> ambe;
+    bool ambeTried = false;
+    NxdnAmbe* ambeFor(const fusion::VoiceUnit& v) {
+        if (v.kind != 1 || v.bytes.size() != 9 || silent.load()) return nullptr;
+        if (!ambeTried) { ambeTried = true; auto a = std::make_unique<NxdnAmbe>(); if (a->ok()) ambe = std::move(a); }
+        return ambe.get();
+    }
     voice::Monitor* monSet = nullptr;   // setVoiceMonitor; else voice::monitor("ysf") while not silent
     voice::CallInfo playing;            // the call being played
     voice::Monitor* activeMonitor() { return monSet ? monSet : silent.load() ? nullptr : &voice::monitor("ysf"); }
@@ -366,7 +376,7 @@ struct FusionReceiver::Impl {
         if (mon) {   // the voice monitor (voice_monitor.h) lists the call and says whether it is played
             voice::CallInfo ci;
             ci.srcText = tel.src; ci.dstText = tel.dest; ci.group = tel.callMode != 3;
-            { std::lock_guard<std::mutex> lk(codecMu); ci.codecMissing = !codec; }
+            { std::lock_guard<std::mutex> lk(codecMu); ci.codecMissing = !codec && !ambeFor(v); }
             if (tel.squelch >= 0 && tel.squelch < 127) ci.access = tel.squelch ? "SQL " + std::to_string(tel.squelch) : std::string("SQL off");
             if (!tel.down.empty()) ci.access += (ci.access.empty() ? "" : ", ") + std::string("via ") + tel.down;
             if (mon->offer(ci) != voice::Verdict::Play) return;
@@ -374,7 +384,13 @@ struct FusionReceiver::Impl {
         }
         std::vector<int16_t> pcm;
         int sr = 8000;
-        {
+        if (NxdnAmbe* a = ambeFor(v)) {
+            uint8_t bits[72];
+            for (int i = 0; i < 72; i++) bits[i] = (uint8_t)((v.bytes[(size_t)(i / 8)] >> (7 - i % 8)) & 1);
+            int16_t p[160];
+            a->decode(bits, p);
+            pcm.assign(p, p + 160);
+        } else {
             std::lock_guard<std::mutex> lk(codecMu);
             if (!codec) return;
             pcm = codec->decode(v.bytes);
@@ -408,8 +424,9 @@ struct FusionReceiver::Impl {
         tel.state = txOn ? 2 : (nIn > 0 ? 1 : 0);
         {
             std::lock_guard<std::mutex> lk(codecMu);
-            tel.codecReady = codec != nullptr;
-            tel.codecText = codec ? std::string() : codecText;
+            const bool ambeReady = ambe != nullptr;   // V/D mode 1 voice through mbelib
+            tel.codecReady = codec != nullptr || ambeReady;
+            tel.codecText = (codec || ambeReady) ? std::string() : codecText;
         }
         std::lock_guard<std::mutex> lk(mu);
         tel.centerHz = centerHz;
@@ -464,7 +481,7 @@ ModeTuning fusionTuning() {
     ModeTuning t;
     t.stdMode = 130;
     t.id = "fusion";
-    t.name = "Yaesu Fusion (WIP)";
+    t.name = "Yaesu Fusion";
     t.minMhz = 28; t.maxMhz = 1300; t.defMhz = 145.000;
     t.sampleRate = 2000000;
     t.basebandHz = 1750000;

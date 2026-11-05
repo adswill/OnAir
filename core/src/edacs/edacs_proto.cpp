@@ -1,4 +1,4 @@
-// EDACS frame encode / vote and the test-signal modulator (see edacs_proto.h for the sources and what is not established).
+// EDACS frame encode / vote, the BCH check bits and the test-signal modulator (see edacs_proto.h for the sources).
 #include "dect2/edacs/edacs_proto.h"
 #include <cmath>
 
@@ -13,14 +13,21 @@ static void putMessage(std::vector<uint8_t>& b, uint32_t data28, uint32_t check1
     put(b, m, 40);
 }
 
-std::vector<uint8_t> encodeFrame(uint32_t msgA, uint32_t msgB, uint32_t checkA, uint32_t checkB) {
+uint32_t bch(uint32_t data28) {
+    constexpr uint32_t kG = 0x1539;   // x^12 + x^10 + x^8 + x^5 + x^4 + x^3 + 1
+    uint64_t r = (uint64_t)(data28 & 0xFFFFFFF) << 12;
+    for (int i = 39; i >= 12; i--)
+        if ((r >> i) & 1) r ^= (uint64_t)kG << (i - 12);
+    return (uint32_t)(r & 0xFFF);
+}
+
+bool bchOk(uint64_t v) { return bch((uint32_t)((v >> 12) & 0xFFFFFFF)) == (uint32_t)(v & 0xFFF); }
+
+std::vector<uint8_t> encodeFrame(uint32_t msgA, uint32_t msgB, int checkA, int checkB) {
     std::vector<uint8_t> b;
-    for (int i = 0; i < 16; i++) b.push_back((uint8_t)((i & 1) ^ 1));   // dotting 1010...
-    static const uint8_t kPlaceholder[16] = {1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1};   // stands for the 11-bit Barker word + 5 dotting bits (the real word is not public)
-    for (uint8_t v : kPlaceholder) b.push_back(v);
-    for (int i = 0; i < 16; i++) b.push_back((uint8_t)((i & 1) ^ 1));
-    putMessage(b, msgA, checkA);
-    putMessage(b, msgB, checkB);
+    put(b, kSyncPattern, kSyncBits);
+    putMessage(b, msgA, checkA < 0 ? bch(msgA) : (uint32_t)checkA);
+    putMessage(b, msgB, checkB < 0 ? bch(msgB) : (uint32_t)checkB);
     return b;
 }
 

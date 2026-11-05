@@ -28,7 +28,8 @@ bool iridiumVoicePayload(const IridiumBurstBits& b, std::vector<uint8_t>& out) {
     auto bit = [&](size_t i) { return b.bits[i ^ 1] & 1; };
     for (size_t k = 0; k < kIridiumVoiceBytes; k++) {
         uint8_t v = 0;
-        for (int i = 0; i < 8; i++) v = uint8_t((v << 1) | bit(kLcwBits + 8 * k + i));
+        // as iridium-toolkit's bits_to_dfs.py writes the .dfs file the AMBE decoder reads: the first bit received is the LEAST significant
+        for (int i = 0; i < 8; i++) v = uint8_t(v | (bit(kLcwBits + 8 * k + i) << i));
         out.push_back(v);
     }
     return true;
@@ -37,7 +38,7 @@ bool iridiumVoicePayload(const IridiumBurstBits& b, std::vector<uint8_t>& out) {
 std::vector<uint8_t> iridiumBuildVoice(const std::vector<uint8_t>& payload, int lcw2, int lcw3) {
     std::vector<uint8_t> p(kVoiceBits, 0);
     for (size_t k = 0; k < kIridiumVoiceBytes && k < payload.size(); k++)
-        for (int i = 0; i < 8; i++) p[8 * k + i] = (payload[k] >> (7 - i)) & 1;
+        for (int i = 0; i < 8; i++) p[8 * k + i] = (payload[k] >> i) & 1;
     return iridiumBuildLcwFrame(0, lcw2, lcw3, p);
 }
 
@@ -50,6 +51,7 @@ struct IridiumVoice::Impl {
         int rate = 8000;
         float upPrev = 0;
         bool saved = false;
+        bool mute = false, solo = false;
     };
     struct Ctx { double t, f; int sat, beam; };
 
@@ -68,6 +70,7 @@ struct IridiumVoice::Impl {
 
     static const char* statusOf(const Call& k, bool codecThere) {
         if (k.c.decoded) return "decoded";
+        if (k.c.frames > 0 && k.c.silent == k.c.frames) return "silence";
         if (!k.c.readable) return "not readable";
         return codecThere ? "not readable" : "codec needed";   // with the plug-in loaded, every frame was refused
     }
@@ -97,6 +100,14 @@ struct IridiumVoice::Impl {
         k.c.active = false;
         save(k);
         k.codec.reset();
+    }
+
+    bool anySolo() const { for (const auto& k : calls) if (k.solo) return true; return false; }
+    // is this call played: soloed calls alone, else the Listen choice; a muted call never
+    bool isAudible(const Call& k, bool soloAny) {
+        if (k.mute) return false;
+        if (soloAny) return k.solo;
+        return listen > 0 ? listen == k.c.id : listen == 0 ? (autoId < 0 ? (autoId = k.c.id, true) : autoId == k.c.id) : false;
     }
 
     void play(Call& k, const std::vector<int16_t>& pcm) {
@@ -174,7 +185,9 @@ void IridiumVoice::feed(const IridiumBurstBits& b, const IridiumFrame& f) {
     k->c.freqHz = b.freqHz;
     k->c.frames++;
     const bool uniform = have && std::all_of(pay.begin(), pay.end(), [&](uint8_t v) { return v == pay[0]; });
-    const bool readable = f.ok && have && !uniform;   // the link control word checked out and the field is not a fill pattern
+    const bool silentFrame = f.lcw2 == 15 && f.lcw3 == 0x100000;   // iridium-toolkit: LCW(0,001111,100000000000000000000) is silence
+    if (silentFrame) k->c.silent++;
+    const bool readable = f.ok && have && !uniform && !silentFrame;   // the link control word checked out and the field is not a fill pattern
     if (readable) k->c.readable++;
     if (readable && !k->codec && b.timeSec - k->lastTry >= 1.0) {
         k->lastTry = b.timeSec;
@@ -188,10 +201,14 @@ void IridiumVoice::feed(const IridiumBurstBits& b, const IridiumFrame& f) {
             k->c.decoded++;
             k->c.audioSec += double(pcm.size()) / k->rate;
             if (k->pcm.size() < kMaxPcm) k->pcm.insert(k->pcm.end(), pcm.begin(), pcm.end());
-            const bool mine = s.listen > 0 ? s.listen == k->c.id : s.listen == 0 ? (s.autoId < 0 ? (s.autoId = k->c.id, true) : s.autoId == k->c.id) : false;
-            if (mine) s.play(*k, pcm);
+            int pk = 0;
+            for (int16_t x : pcm) pk = std::max(pk, std::abs(int(x)));
+            k->c.level = float(pk) / 32768.f;
+            k->c.audible = s.isAudible(*k, s.anySolo());
+            if (k->c.audible) s.play(*k, pcm);
         }
     }
+    k->c.mute = k->mute; k->c.solo = k->solo;
     k->c.status = Impl::statusOf(*k, codec::pluginLoaded("iridium"));
 }
 
@@ -220,6 +237,8 @@ std::vector<IridiumCall> IridiumVoice::calls() const {
 
 uint64_t IridiumVoice::framesToCodec() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->toCodec; }
 void IridiumVoice::setListenCall(int id) { std::lock_guard<std::mutex> lk(p_->mu); p_->listen = id; if (id == 0) p_->autoId = -1; }
+void IridiumVoice::setMute(int id, bool on) { std::lock_guard<std::mutex> lk(p_->mu); for (auto& k : p_->calls) if (k.c.id == id) k.mute = k.c.mute = on; }
+void IridiumVoice::setSolo(int id, bool on) { std::lock_guard<std::mutex> lk(p_->mu); for (auto& k : p_->calls) if (k.c.id == id) k.solo = k.c.solo = on; }
 void IridiumVoice::setVolume(float v) { p_->volume = std::max(0.f, std::min(1.f, v)); }
 void IridiumVoice::setMuted(bool m) { p_->muted = m; }
 void IridiumVoice::setSilent(bool s) { p_->silent = s; }

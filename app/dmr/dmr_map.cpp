@@ -232,7 +232,13 @@ void cardRow(const char* k, const char* v) {
     ImGui::TextUnformatted(v);
 }
 
+static void focusImpl(uint32_t src, double lat, double lon) {
+    S.selSrc = src; S.selValid = true; S.map.lat = lat; S.map.lon = lon; S.map.zoom = std::max(S.map.zoom, 13);
+}
+
 } // namespace
+
+void dmrMapFocus(uint32_t src, double lat, double lon) { focusImpl(src, lat, lon); }
 
 void dmrMap(App& a) {
     load();

@@ -1,5 +1,8 @@
 // APRS / Packet screens: the stations heard (table and map, the ADS-B map underneath, as for AIS), the log of raw packets, the state lamps.
 #include "app.h"
+#include "ui/kit/export.h"
+#include "ui/kit/mode_panel.h"
+#include "ui/kit/kit.h"
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
 #include "../adsb/adsb_map.h"
@@ -134,6 +137,15 @@ void stationTable(App& a, bool compact) {
     const dect2::PacketTelemetry& t = a.rx.packet;
     const bool wide = wideActive(a);
     const int cols = (compact ? 2 : 5) + (wide && !compact ? 1 : 0);
+    {
+        static std::string note;
+        resexp::Table x; x.cols = {"callsign", "type", "symbol", "lat", "lon", "alt_m", "course_deg", "speed_kt", "via", "frames", "comment"};
+        for (const PacketStation& s : t.stations)
+            x.add({s.call, s.isObject ? "object" : "station", std::string(1, s.symTable ? s.symTable : ' ') + std::string(1, s.symCode ? s.symCode : ' '),
+                   s.hasPos ? resexp::num(s.lat, 6) : "", s.hasPos ? resexp::num(s.lon, 6) : "", s.hasAlt ? resexp::num(s.altM, 0) : "",
+                   s.hasCourse ? std::to_string(s.courseDeg) : "", s.hasSpeed ? resexp::num(s.speedKnots, 0) : "", s.via, std::to_string(s.count), s.comment});
+        kit::exportBar(x, "aprs", note, compact ? "pkxs" : "pkxf");
+    }
     ImGuiTableFlags fl = ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit;
     if (!ImGui::BeginTable(compact ? "##pk_s" : "##pk_f", cols, fl, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
@@ -337,10 +349,7 @@ void tick(App& a) {
     }
 }
 
-void tab(App& a) {
-    loadState();
-    lamps(a);
-    flowNext(10 * gUi);
+void controls(App& a) {
     listenControls(a, S.listen, "packetListen", "pkt", "Hear the channel: the demodulated audio, the AFSK tones of 1200 baud packet (1200 / 2200 Hz); decoding is the same either way");
     ImGui::TextDisabled("%s", tr("Channel")); ImGui::SameLine(0, 5 * gUi);
     ImGui::SetNextItemWidth(80 * gUi);
@@ -389,6 +398,13 @@ void tab(App& a) {
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Radio IQ: an SDR (or a sound card carrying IQ). FM audio: a sound card on a radio's discriminator (9600 baud too) or speaker output (1200 baud), with the sound card chosen as the radio."));
         flowNext(10 * gUi);
     }
+}
+
+void tab(App& a) {
+    loadState();
+    lamps(a);
+    flowNext(10 * gUi);
+    controls(a);
     kit::modeHeader({24, "APRS / Packet", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
     kit::modeNav("pktv", S.view, {{tr("Live"), 0}, {tr("Tracks"), 3}, {tr("Map"), 1}, {tr("Log"), 2, true}});
     if (S.view == 2) { packetLog(a); return; }
@@ -447,6 +463,18 @@ void summary(const App& a, std::string& l1, std::string& l2) {
 
 } // namespace
 
+// Simple view: the stations, the map and the frame log side by side; the channel options in a closed section above them
+static void command(App& a) {
+    loadState();
+    lamps(a);
+    flowNext(10 * gUi);
+    kit::modeHeader({24, "APRS / Packet", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    if (kit::collapsingSection(tr("Channel options"), false)) controls(a);
+    modepanel::panes({{"##pktcst", tr("Stations"), [&a] { if (live(a)) stationTable(a, false); else ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "start the receiver"); }, 1.2f, 240.f},
+                      {"##pktcmap", tr("Map"), [&a] { mapView(a, ImGui::GetContentRegionAvail()); }, 1.2f, 260.f},
+                      {"##pktclog", tr("Log"), [&a] { packetLog(a); }, 1.f, 220.f}}, 320.f);
+}
+
 extern const ModeUi kPacketUi;
 const ModeUi kPacketUi = {
     .sideTitle = "STATIONS",
@@ -458,4 +486,5 @@ const ModeUi kPacketUi = {
     .status = status,
     .summary = summary,
     .tick = tick,
+    .command = command,
 };

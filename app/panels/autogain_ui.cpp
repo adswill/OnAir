@@ -110,7 +110,7 @@ ag::AgInput input(App& a) {
         in.rateHz = a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate;
     }
     if (in.rateHz <= 0) in.rateHz = a.tune.sampleRate;
-    in.chanBwHz = a.tune.bandwidthMhz * 1e6;
+    in.chanBwHz = a.tune.signalBwMhz() * 1e6;
     in.offsetHz = (a.freqMhz - radioCenterMhz(a)) * 1e6;   // a mode tuned beside the DC spike listens off the centre
     in.q = ag::qualityFrom(a.rx);
     return in;
@@ -122,7 +122,7 @@ void syncContext(App& a) {
     loadSettings();
     const DeviceInfo& d = a.devices[(size_t)a.devIdx];
     const double fs = a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate;
-    const std::string ctx = radioKeyOf(d) + "|" + std::to_string(engineStd(a)) + "|" + std::to_string((long)(a.tune.bandwidthMhz * 1e6)) + "|" + std::to_string((long)fs) + "|" + ag::bandIdFor(a.freqMhz * 1e6);
+    const std::string ctx = radioKeyOf(d) + "|" + std::to_string(engineStd(a)) + "|" + std::to_string((long)(a.tune.signalBwMhz() * 1e6)) + "|" + std::to_string((long)fs) + "|" + ag::bandIdFor(a.freqMhz * 1e6);
     s.set.ampAllowed = agcAmpAllowed(a);
     s.set.stageMask = (uint32_t)plat::prefs().getI(maskKey(a).c_str(), (long)0xffffffffL);
     if (ctx == s.ctx) { s.c.setSettings([&] { ag::AgSettings x = s.set; x.mode = s.run; return x; }()); return; }
@@ -131,7 +131,7 @@ void syncContext(App& a) {
     if (const ag::GainCal* gc = s.cals.find(calKey(d))) ag::applyCalibration(s.prof, *gc);   // this unit's measured steps instead of the table's
     ag::AgSettings x = s.set;
     x.mode = s.run;
-    s.c.configure(s.prof, ag::modeTargetFor(engineStd(a), a.tune.bandwidthMhz * 1e6, fs, a.freqMhz * 1e6), x);
+    s.c.configure(s.prof, ag::modeTargetFor(engineStd(a), a.tune.signalBwMhz() * 1e6, fs, a.freqMhz * 1e6), x);
     if (s.run != ag::AgMode::Off) {
         const ag::StagePlan p = ag::planFromTune(s.prof, a.tune);
         s.c.start(ImGui::GetTime(), p.totalDb, p.ampOn, &p);
@@ -277,6 +277,15 @@ void advancedPopup(App& a) {
     if (ImGui::Checkbox(tr("Auto v2: climb the measured SNR / decoder quality (off: the old headroom loop)"), &s.set.v2)) changed = true;
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Auto v2 tries a neighbouring gain now and then and keeps it when the decoder (or the SNR in the channel) gets better, with no clipping, headroom floor and no intermodulation. The old loop holds a fixed headroom."));
     if (ImGui::Checkbox(tr("Auto also checks for intermodulation (a short +3 dB step now and then)"), &s.set.imdProbeAuto)) changed = true;
+    {   // one switch for the three clean-ups that go with a good gain: the DC spike, IQ imbalance and the radio's own spurs (each is also its own switch)
+        bool on = a.engine.iqFix().dc.load() && a.engine.iqFix().iq.load() && a.engine.spurNotch();
+        if (ImGui::Checkbox(tr("Clean the input: DC spike, IQ imbalance and the radio's own spurs"), &on)) {
+            a.engine.iqFix().dc = on; a.engine.iqFix().iq = on; a.engine.setSpurNotch(on); savePrefs(a);
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner)."));
+        const int lines = a.engine.spurNotchLines();
+        if (a.engine.spurNotch() && lines > 0) { char b[96]; snprintf(b, sizeof b, tr("%d spur(s) cut"), lines); ImGui::SameLine(); ImGui::TextDisabled("%s", b); }
+    }
     ImGui::Separator();
     // stages
     ImGui::TextDisabled("%s", tr("Stages it may adjust"));

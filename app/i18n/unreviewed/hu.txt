@@ -220,3 +220,308 @@ test downlink scene (this generator does not take a custom message)
 test weather-fax chart (custom image not wired)
 this mode has no transmit generator
 video
+Export results CSV...
+Nothing to export: no row matches the search.
+Saves the rows now in the table (with the search and the filters applied, built-in and yours) as a CSV file. Import and the Memory panel read it back.
+working
+installed
+wrong processor
+missing
+Copy build command
+How to install (this computer):
+rtl_tcp: an RTL-SDR shared by another computer over the network.
+Airspy HF+: a very sensitive receiver for long, medium and short wave and FM, up to 260 MHz.
+Fobos SDR: a wideband receiver, 100 kHz to 6 GHz. Needs the radio's own library, see the ? in Radio settings.
+RFNM: a wideband radio board with one or two daughter boards, on USB or the network.
+SDRplay nRSP-ST: a network radio, used through SDRconnect running on a computer.
+TCI: a radio of the ExpertSDR family (SunSDR and others) on the network. Receive only.
+SDR++ server: a radio shared by another computer running SDR++.
+A sound card or a web radio used as the input.
+Run setup again...
+Easy mode
+European Union (generic)
+Lithuania
+United Kingdom
+Germany
+Poland
+United States
+Canada
+Australia
+Quick pick: a region preset sets the band plan, the TV channels, the FM band, the default frequencies and the units
+Or search for a city or country
+imperial (miles, feet)
+metric (km, metres)
+Defaults: FM %.1f MHz, APRS %.3f MHz, units %s.
+A preset has no exact position: type a city or coordinates above if you want the aircraft map and satellite passes centred on you.
+Units
+Follow the region
+Metric
+Imperial
+Which antenna will you use? It matters more than the radio. OnAir uses the answer for hints only; nothing is changed in the radio.
+What this means for you
+Digital voice (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) is silent until you install its codec plug-in. The calls, IDs and data work without it.
+Only digital voice modes need a codec. You can skip this screen and come back from Help > Voice codecs.
+OnAir does not include or download these codecs (they are patented). You build or install them on your own computer; whether you may use them is your own responsibility. FreeDV, M17, DAB, DRM and TV need nothing.
+Antenna: %s
+Easy mode (recommended)
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. The detailed tabs are one click away (Simple | Advanced above them).
+Change any of this at any time: Help > Setup and lessons > Run setup again, Mode > Modes shown, View > Language, Settings > Appearance > Font look.
+The setup has six short screens and every one can be skipped. Nothing is forced.\n\nRadio: OnAir looks for radios on USB and on the network and picks one. "?" beside a radio opens its help page. Without a radio, the test signal lets you try OnAir.\n\nLocation: one click on a region preset (Lithuania, the EU, ...) or a city, a locator or coordinates give your country, the band plan, the TV channels, the FM band and step, the default frequencies and the units.\n\nAntenna: hints for what you can hear with the antenna you have.\n\nInterests: decide which modes are starred and listed first, where OnAir starts and a few starter presets. Everything stays available.\n\nCodecs: digital voice needs a codec plug-in that you install yourself; Look again checks the folder.\n\nEasy mode on the last screen opens every mode in its Simple view. Run the setup again any time from Help > Setup and lessons > Run setup again, or from Settings.
+Interests
+Codecs
+Done
+Region preset
+First-run setup
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.
+One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).
+Open the setup again: radio, region, antenna, interests, voice codecs.
+Why
+no signal at the channel: check the tuning, the antenna and the gain
+signal, but no frame sync found: check the tuning (offset, polarity), the bandwidth and the signal-to-noise ratio
+frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the signal is too noisy or distorted
+frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error
+decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help
+decoding well
+Base stations
+Calls
+Channel options
+Chat
+Devices
+Ground stations
+Neighbours
+Nodes
+On air
+Selected
+Site
+Table
+Vessels
+some stations are hidden
+File...
+Auto-save to file
+Activity
+AI assistant (MCP)
+Let an AI assistant control this receiver (MCP)
+An AI assistant (Claude, ChatGPT-style clients, a local model) that you connect can tune, scan bands, identify signals and start decoders for you, and read what was decoded. It cannot read files, run programs, change settings or decrypt anything, and it cannot transmit unless you allow that below. Every action is listed in the log.
+Programs on this computer need the token too
+Allow the AI to transmit (off by default; this is your decision, it is forgotten at restart)
+The AI can now start transmissions. You are responsible for the law where you are and for your hardware.
+listening on %s port %d, %d requests, %d refused
+An AI is connected: %s
+No AI has connected yet.
+How to connect your AI
+Other client
+Claude Desktop: put this in its config file (Settings > Developer > Edit config) and restart it; it needs Node.js for the bridge. Claude Code: run the command in a terminal. Other clients: use the address (streamable HTTP) or start onair-server --mcp-stdio. Then ask, for example: there is some DRM around 15 MHz, find it and decode it.
+What the AI did
+Clear log
+Nothing yet.
+identifying
+running
+no decoder
+paused (CPU)
+CPU limit %
+What
+Pin
+Everything in view
+Everything in view: on
+Decode everything in view
+Add as
+Identify automatically
+Add selected region
+Add tuned signal
+Looking for signals...
+Start the receiver to begin.
+The decoders' share of one processor core, against the limit. Above the limit the lowest ranked signals are paused.
+Find every signal in the whole capture (digital voice, TETRA, pagers, packet radio, air band, Inmarsat, TV) and decode all of them at once.
+One capture, every signal in it. OnAir finds the signals, says what each one is and starts the right decoder for it. Switch one off, pin the ones that must never be paused, or give an unknown signal its mode by hand.
+When the decoders take longer than this share of one core, the lowest ranked signal is paused (never a pinned one or the one you listen to) and comes back when there is room. 0: no limit.
+This computer cannot keep up: %d signals are paused to save CPU. Pin the ones you need, or raise the limit.
+TV channels in the capture: %.0f MHz wide
+Turn the Identify tool on (key I) and drag across a signal on the spectrum, then add it here.
+Add the signal at the tuner marker (12.5 kHz wide).
+Off. Press the button to decode everything in the capture.
+%+.1f kHz from the capture centre, %.1f kHz wide
+Pinned: never paused by the CPU limit
+Follow this signal's sound; it is never paused by the CPU limit
+Remove: a signal you added is taken away, a found one is switched off
+Share my radio
+Connecting to the relay ...
+Anyone with the link
+Invite links only
+Limits that protect your computer
+Antenna (shown to listeners, optional)
+Listener limits
+While sharing
+Listeners and invites
+Nobody is listening right now.
+Kick##wsKick
+Block 24 h##wsBlock
+Allow again##wsUnban
+Make an invite link
+Copy invite link
+Server settings
+Connected to the OnAir relay.
+Connecting to the OnAir relay ...
+The relay link dropped (%s). Trying again in %d s.
+The OnAir relay refuses or cannot be reached: %s
+Blocked: %s (%d min left)
+Processor %.0f%% of the %.0f%% limit
+Upload %.0f of %.0f kbit/s
+Port on this computer (0 = the first free one from 8073)
+Listeners from one address at once
+Longest session of one listener in minutes (0 = no limit)
+Most spectrum rows per second (0 = the default)
+Key file for that certificate
+A certificate needs both files.
+Relay service address (only if you run your own relay)
+OnAir relay (recommended: no setup, no open ports)
+Free Cloudflare tunnel (needs a small helper program, downloaded once)
+Only my network (a phone on the same Wi-Fi)
+Password (8 characters or more)
+Apply changes
+What to do:
+Will share: %s, %s MHz, up to %d listeners, %s, %s.
+through the OnAir relay (no router settings needed)
+through a Cloudflare tunnel
+at your own address
+on this network only
+invite links only
+open to anyone with the link
+with a password
+no radio found
+No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.
+Join the OnAir Discord
+tuning
+hold
+ended
+control
+voice
+lost
+Role
+not followed
+Hang time (s)
+Retune wait (s)
+Priority talkgroups take a radio
+Keep a record of every call
+Follow talkgroups that are not listed
+Calls are saved in the recordings folder, trunk. Sound needs the vocoder add-on.
+Talkgroup and radio rules
+Deny
+Import rules
+rules read
+skipped
+Import plan
+rows read
+Identifiers
+Call log
+Channel plan
+Export log
+Multi-radio trunking
+Follow calls with several radios
+Auto-assign devices
+One radio listens to the control channel of a trunked system. When it announces a call, another radio is tuned to the voice channel, and the call is logged. With one radio, calls inside its capture are followed and the rest are not.
+The radio on the control channel stays there; every other open receiver becomes a voice radio. Open more receivers with + at the bottom.
+Start a P25 receiver on the control channel, then press Auto-assign devices.
+Calls %llu, followed %llu, retune %.2f s (max %.2f s)
+Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.
+From, to (the same number for one), action, priority
+System, identifier table (iden_up) and channel numbers from a CSV file
+EMERGENCY
+encrypted
+Follow talkgroups, radio IDs or callsigns. Alerts and recording are off until you tick them for an entry. Encrypted calls are listed but never recorded.
+TG 91, 3120123, 100-199, LY1ABC, LY*
+Name (optional)
+All voice modes
+Nothing watched yet.
+Watching
+Notify
+Beep
+A desktop notification when a call starts (off by default)
+Save the audio of its calls to the recordings folder through the auto-record rules (this also switches auto-record on). Encrypted calls are never recorded. You are responsible for the law of your country.
+Copy as CSV
+No calls of the watched entries heard yet.
+Sec
+Flags
+EMERG
+ENC
+Keywords on: no match yet
+Keywords
+One keyword per line, any case. It is looked for in the message text and in the capcode name. Start a line with re: for a regular expression, for example re:structure fire|MVA. Matching pages are highlighted in Messages and shown in the ticker.
+Notify on a keyword match
+A desktop notification for each matching new page (off by default)
+lines are not valid and were skipped
+Pager keyword
+more matching pages
+No GPS position heard yet (needs LRRP data)
+Last position
+just now
+min ago
+Show on map
+custom
+default
+How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.
+Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.
+Save PNG
+Save every picture
+Clear pictures
+grey
+Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.
+Open recordings folder
+Where recordings are saved. Change it in Settings > Files.
+Free disk space:
+Default (inside the data folder)
+Choose...
+Use typed path
+That folder cannot be written: the default is used.
+Tuned for
+No satellite is expected soon: scanning this span for any carrier.
+Nothing was uploaded.
+carrier found
+decoding
+carrier only
+no known signal
+Next passes
+working out the passes ...
+no pass of a satellite in the table in the next hours (set your location, refresh the orbits)
+In
+Carriers
+none yet
+Tried on
+valid
+failed their checks
+satellite
+framing
+validated by
+byte errors put right
+received
+telemetry
+Field
+Decoded packets
+Framing
+Follow satellites from the table (passes and Doppler)
+Look for carriers the table does not explain
+Minimum SNR (dB)
+Carriers followed at once
+Lowest elevation (deg)
+Search window around the predicted carrier (Hz)
+Modulation of unknown carriers
+Baud rate (0: automatic, any value)
+Channel width (Hz, 0: automatic, any value)
+Scan resolution (Hz, 0: automatic)
+Add a transmitter to the table
+NORAD number
+Baud rate
+orbits for %zu satellites, %zu table entries
+Auto decode: on (click to stop)
+Auto decode cubesats
+Tunes a span that holds the satellites about to pass, follows their Doppler shift, finds every narrow carrier, works out its modulation and baud rate, and decodes it with every framing that fits. Nothing to set up.
+Refresh orbits
+Downloading orbits from CelesTrak (the built-in set is used meanwhile).
+Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.
+Press the button: it does the rest.
+BPSK
+A country file (cty.dat, wl_cty.dat) from country-files.com gives every DXCC entity with its CQ and ITU zone. Thanks to Jim Reisert AD1C and the country-files.com team. OnAir does not bundle it: load one you have, or press Download (only on your click).
+Show country and zone in decoded messages
+Load file...
+Download from country-files.com
+Downloading...
+Reset to built-in

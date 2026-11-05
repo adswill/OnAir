@@ -550,6 +550,7 @@ void decodeIda(const Bits& d, IridiumFrame& f) {
 void decodeLw(const Bits& d, IridiumFrame& f) {
     Lcw l = readLcw(d);
     f.lcwFt = l.ft;
+    f.lcw2 = int(l.l2); f.lcw3 = int64_t(l.l3);
     f.corrected = l.err < 0 ? 0 : l.err;
     f.ok = l.ok;
     bool full = d.size() >= 46 + 312;

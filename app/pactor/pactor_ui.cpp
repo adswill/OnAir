@@ -1,6 +1,6 @@
 // PACTOR-I screens (experimental, monitor only): the band presets, Listen, then three views: the packets and control signals heard (UTC,
 // kind, speed, packet number, flags, level, text), the text of both stations, and the call signs (connect packets, calls named in the
-// text). PACTOR-II, -III and -IV are proprietary and not supported (docs/pactor.md).
+// text). PACTOR-II, -III and -IV are separate modes that show the physical layer only (docs/pactorhf.md).
 #include "dect2/common/time_fmt.h"
 #include "app.h"
 #include "gfx/gfx.h"
@@ -52,7 +52,7 @@ ImVec4 kindColour(const std::string& k) {
 void presets(App& a) {
     ImGui::AlignTextToFramePadding();
     ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.35f, 1), "%s", tr("Experimental"));
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("PACTOR-I is decoded from its public description only; no real recording was available. PACTOR-II, -III and -IV are proprietary and not supported."));
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("PACTOR-I is decoded from its public description only; no real recording was available. PACTOR-II, -III and -IV have their own modes (physical layer only: their coding is proprietary and not decoded)."));
     flowNext(8 * gUi);
     ImGui::TextDisabled("%s", tr("Band"));
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("PACTOR has no calling frequency: these buttons only jump to the digital part of each band."));

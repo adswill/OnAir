@@ -6,6 +6,7 @@
 #include "dect2/goes/goes_proto.h"
 #include "dect2/goes/goes_tel.h"
 #include "dect2/meteor/meteor_proto.h"
+#include "dect2/hrpt/hrpt_proto.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -22,7 +23,7 @@ constexpr double kRolloff = 0.5;
 constexpr double kGoesSymbolRate = 927000.0;
 constexpr int kFrameSyms = 2 * 8 * meteor::kCaduBytes;    // 16384 code symbols a frame
 constexpr int kSyncFrames = 3;                             // frames the sync search looks over
-constexpr int kAcqFft = 4096, kAcqBlocks = 8;
+constexpr int kAcqFft = 4096, kAcqBlocks = 8, kAcqMaxBlocks = 64;
 
 using dect2::dsp::rrc;
 
@@ -110,7 +111,21 @@ struct GoesReceiver::Impl {
     bool symSync = false, g2inv = true;
     int alignParity = 0;
     float firstOfPair = 0;
-    meteor::Viterbi27 vit;
+    hrpt::Viterbi vit;                    // fast 16 bit butterflies: 3 Msym/s QPSK (GK-2A HRIT) needs it
+    bool qpsk = false;                    // GK-2A HRIT: QPSK, G1 on I and G2 on Q; the receiver turns the serial order and polarity up in the sync search
+    bool swapIQ = false;
+    std::vector<float> syncBuf2;          // the same symbols with I and Q swapped (QPSK: a quarter turn swaps them)
+    float meanErr2 = 0.1f;
+    std::string tag = "GOES HRIT";
+    int dialect = 0;
+    // coarse location of the signal in a capture much wider than it (decimation > 1): an averaged power spectrum of the raw samples
+    bool coarseDone = false, useCoarse = false;
+    int nWide = 0, wideBlocks = 0;
+    std::unique_ptr<Fft> fftWide;
+    std::vector<cf32> wideBuf;
+    std::vector<float> widePsd;
+    std::vector<double> coarseRej;        // absolute offsets (Hz) the coarse search sent the fine search to and that did not lock
+    double coarseAbs = 0;
     uint64_t asmPattern = 0, asmPatternNrz = 0;   // the sync word through the convolutional encoder, as sent plainly / NRZ-M coded
     bool nrzm = false;                    // the frame bits are differentially coded (GOES-19 HRIT): the decoded bit is the change of the code bit
     uint8_t nrzPrev = 0;
@@ -162,16 +177,20 @@ struct GoesReceiver::Impl {
 
     void setup(double r) {
         rate = r;
+        useCoarse = r > 3.0 * symbolRate;      // the signal leaves room in the capture: locate it first
         D = std::max(1, (int)std::floor(r / (2.3 * symbolRate)));
         fs2 = r / D;
         sps = fs2 / symbolRate;
         if (D > 1) {
-            const int n = 8 * D + 1;
+            // pass the whole root raised cosine band (0.75 of the symbol rate, flat), stop what would alias onto it after the decimation
+            // (fs2 - 0.75 Rs): the middle of that gap is the cutoff, the gap sets the length
+            const double passE = 0.8 * symbolRate, stopE = fs2 - 0.8 * symbolRate;
+            const int n = 2 * (int)std::ceil(1.8 * r / std::max(1.0, stopE - passE)) * 1 + 1 + 4 * D;
             std::vector<float> h((size_t)n);
-            const double fc = 0.85 * symbolRate / r;
+            const double fc = 0.5 * (passE + stopE) / r;
             double sum = 0;
             for (int i = 0; i < n; i++) {
-                const double m = i - (n - 1) / 2.0, w = 0.54 - 0.46 * std::cos(2 * kPi * i / (n - 1));
+                const double m = i - (n - 1) / 2.0, w = 0.42 - 0.5 * std::cos(2 * kPi * i / (n - 1)) + 0.08 * std::cos(4 * kPi * i / (n - 1));   // Blackman
                 h[(size_t)i] = (float)(w * (std::fabs(m) < 1e-9 ? 2 * fc : std::sin(2 * kPi * fc * m) / (kPi * m)));
                 sum += h[(size_t)i];
             }
@@ -199,7 +218,7 @@ struct GoesReceiver::Impl {
     void resetFec() {
         symSync = false; vit.reset(); vit.out().clear();
         fstate = 0; reg = 0; regBits = 0; collected = 0; misses = 0;
-        syncBuf.clear(); syncBase = symIdx; nextSearch = symIdx + (int64_t)kSyncFrames * kFrameSyms + 64;
+        syncBuf.clear(); syncBuf2.clear(); syncBase = symIdx; nextSearch = symIdx + (int64_t)kSyncFrames * kFrameSyms + 64;
     }
 
     void resetState() {
@@ -207,48 +226,121 @@ struct GoesReceiver::Impl {
         lpf.clear(); mf.clear(); decPhase = 0;
         y.clear(); pos = 2 + sps; spsEst = sps; yprev = 0; agc = 1;
         resetCarrier();
-        rejected.clear();
+        rejected.clear(); coarseRej.clear(); coarseDone = false; nWide = 0; wideBuf.clear();
         acq = true; carrierLock = false; acqBuf.clear(); acqSpec.assign(kAcqFft, 0.f); acqBlocks = 0; sinceAcq = 0; lowLock = 0;
-        meanAbs = 0.5f; meanIm2 = 0.1f;
+        meanAbs = 0.5f; meanIm2 = 0.1f; meanErr2 = 0.1f; swapIQ = false;
         resetFec();
         asmb.reset();
         frameLockReported = carrierReported = false;
     }
 
+    // ---- coarse location: the strongest band as wide as the signal in the averaged spectrum of the raw samples (energy detection: a weak
+    // signal shows in the average long before the squared signal's line does), spurs clipped; the mixer is moved onto it and the fine search
+    // below finishes the job
+    void coarseFeed(cf32 v) {
+        if (nWide == 0) {
+            nWide = 4096;
+            while (nWide < 65536 && rate / nWide > 0.12 * symbolRate) nWide *= 2;   // bins of at most an eighth of the symbol rate
+            fftWide = std::make_unique<Fft>(nWide);
+            widePsd.assign((size_t)nWide, 0.f);
+            wideBlocks = 0;
+        }
+        wideBuf.push_back(v);
+        if ((int)wideBuf.size() < nWide) return;
+        for (int i = 0; i < nWide; i++) wideBuf[(size_t)i] *= (float)(0.5 - 0.5 * std::cos(2 * kPi * (i + 0.5) / nWide));
+        fftWide->forward(wideBuf.data());
+        for (int i = 0; i < nWide; i++) widePsd[(size_t)i] += std::norm(wideBuf[(size_t)i]);
+        wideBuf.clear();
+        wideBlocks++;
+        const double binHz = rate / nWide;
+        // enough blocks that the average over the window is good to under 1 % (blocks x window bins >= 20000), at most a quarter second
+        if ((double)wideBlocks * std::max(3.0, std::ceil(1.5 * symbolRate / binHz)) < 20000 && (double)wideBlocks * nWide < 0.25 * rate && wideBlocks < 400) return;
+        std::vector<float> srt(widePsd);
+        std::nth_element(srt.begin(), srt.begin() + nWide / 2, srt.end());
+        const double med = std::max(1e-30f, srt[(size_t)nWide / 2]);
+        const int W = std::max(3, (int)std::ceil(1.5 * symbolRate / binHz));
+        std::vector<double> c((size_t)nWide + 1, 0.0);
+        for (int i = 0; i < nWide; i++) c[(size_t)i + 1] = c[(size_t)i] + std::min((double)widePsd[(size_t)i], 4 * med);   // a spur counts as at most 4 x the floor
+        double best = 0; int bi = -1;
+        for (int i = 0; i < nWide; i++) {
+            double sum = 0;
+            const int e = i + W;
+            sum = e <= nWide ? c[(size_t)e] - c[(size_t)i] : (c[(size_t)nWide] - c[(size_t)i]) + c[(size_t)(e - nWide)];
+            const double ctr = i + W / 2.0, f = (ctr < nWide / 2.0 ? ctr : ctr - nWide) * binHz;
+            bool skip = false;
+            for (double r : coarseRej) skip |= std::fabs(appliedOffset + cfo + f - r) < 0.4 * symbolRate;
+            if (!skip && sum > best) { best = sum; bi = i; }
+        }
+        coarseDone = true;
+        const double ratio = best / (W * med);
+        if (bi >= 0 && ratio > std::max(1.12, 1.0 + 6.0 / std::sqrt((double)wideBlocks * W))) {
+            const double ctr = bi + W / 2.0, f = (ctr < nWide / 2.0 ? ctr : ctr - nWide) * binHz;
+            if (std::fabs(f) > 0.15 * symbolRate) {            // only a signal clearly off the centre of the band needs the mixer moved
+                cfo += f;
+                setRot();
+                lpf.clear(); mf.clear(); decPhase = 0; y.clear(); pos = 2 + sps; yprev = 0; agc = 1;
+                acqBuf.clear(); std::fill(acqSpec.begin(), acqSpec.end(), 0.f); acqBlocks = 0;
+            }
+            coarseAbs = appliedOffset + cfo;
+        } else coarseAbs = 1e30;
+        std::fill(widePsd.begin(), widePsd.end(), 0.f);
+        wideBlocks = 0;
+    }
+
     // ---- coarse carrier from the squared signal
     void acquire(cf32 v) {
-        acqBuf.push_back(v * v);
+        {
+            const cf32 v2 = v * v;
+            acqBuf.push_back(qpsk ? v2 * v2 : v2);          // BPSK: the squared signal has a line at twice the offset; QPSK: the fourth power at four times
+        }
         if ((int)acqBuf.size() < kAcqFft) return;
+        // Hann window: the radio's DC spike (a line in the squared signal too) must not leak into the bins of a weak real line
+        for (int i = 0; i < kAcqFft; i++) acqBuf[(size_t)i] *= (float)(0.5 - 0.5 * std::cos(2 * kPi * (i + 0.5) / kAcqFft));
         fft->forward(acqBuf.data());
         for (int i = 0; i < kAcqFft; i++) acqSpec[(size_t)i] += std::norm(acqBuf[(size_t)i]);
         acqBuf.clear();
-        if (++acqBlocks < kAcqBlocks) return;
-        // the strongest line, leaving out offsets that were tried and did not lock (the radio's DC spike, the lines a symbol rate
-        // either side of the carrier's)
+        if (++acqBlocks < kAcqBlocks || (acqBlocks & (kAcqBlocks - 1)) != 0) return;   // look after 8, 16, 32 and 64 blocks: a weak line gets longer to show
+        // the strongest line (or the strongest group of bins: an oscillator with phase noise smears the line over several bins, a quarter of
+        // the symbol rate in a bad case), leaving out offsets that were tried and did not lock (the radio's DC spike, the lines a symbol
+        // rate either side of the carrier's)
         if (rejected.size() > 6) rejected.clear();
-        const double binHz = fs2 / kAcqFft / 2;
-        int best = -1;
-        float bv = 0;
+        const double mult = qpsk ? 4.0 : 2.0;
+        const double binHz = fs2 / kAcqFft / mult;
         double mean = 0;
-        for (int i = 0; i < kAcqFft; i++) {
-            mean += acqSpec[(size_t)i];
-            const double cand = cfo + (i < kAcqFft / 2 ? i : i - kAcqFft) * binHz;
-            bool skip = false;
-            for (double r : rejected) skip |= std::fabs(cand - r) < 4 * binHz;
-            if (skip) continue;
-            if (acqSpec[(size_t)i] > bv) { bv = acqSpec[(size_t)i]; best = i; }
-        }
+        for (int i = 0; i < kAcqFft; i++) mean += acqSpec[(size_t)i];
         mean /= kAcqFft;
-        if (best >= 0 && bv > 12 * mean) {
-            const float l = acqSpec[(size_t)((best + kAcqFft - 1) % kAcqFft)], c = acqSpec[(size_t)best], r = acqSpec[(size_t)((best + 1) % kAcqFft)];
-            const float den = l - 2 * c + r;
-            const double frac = std::fabs(den) > 1e-20f ? 0.5 * (l - r) / den : 0;
-            const double k = (best < kAcqFft / 2 ? best : best - kAcqFft) + frac;
-            cfo += k * fs2 / kAcqFft / 2;
+        auto binFreq = [&](double k) { return cfo + (k < kAcqFft / 2.0 ? k : k - kAcqFft) * binHz; };
+        auto isRejected = [&](double f) { for (double r : rejected) if (std::fabs(f - r) < 4 * binHz) return true; return false; };
+        double bestMargin = 1.0, bestK = 0;
+        bool found = false;
+        static const int kWidths[] = {1, 5, 13, 33};
+        for (int W : kWidths) {
+            if (W > 1 && W * binHz > 0.4 * symbolRate) break;
+            double run = 0;
+            for (int i = 0; i < W; i++) run += acqSpec[(size_t)((kAcqFft - W / 2 + i) % kAcqFft)];
+            // run holds the window centred on bin 0; slide it round the circle
+            for (int c = 0; c < kAcqFft; c++) {
+                if (c > 0) { run += acqSpec[(size_t)((c + (W - 1) / 2) % kAcqFft)] - acqSpec[(size_t)(((c - 1 - W / 2) % kAcqFft + kAcqFft) % kAcqFft)]; }
+                const double thr = W == 1 ? std::max(3.0, 1.0 + 7.0 / std::sqrt((double)acqBlocks)) : 1.0 + 7.0 / std::sqrt((double)acqBlocks * W) + 0.15;
+                const double margin = run / (W * mean) / thr;
+                if (margin > bestMargin && !isRejected(binFreq(c))) {
+                    bestMargin = margin; bestK = c; found = true;
+                    if (W == 1) {
+                        const float l = acqSpec[(size_t)((c + kAcqFft - 1) % kAcqFft)], cc = acqSpec[(size_t)c], r = acqSpec[(size_t)((c + 1) % kAcqFft)];
+                        const float den = l - 2 * cc + r;
+                        if (std::fabs(den) > 1e-20f) bestK = c + 0.5 * (l - r) / den;
+                    }
+                }
+            }
+        }
+        if (found) {
+            const double k = bestK < kAcqFft / 2.0 ? bestK : bestK - kAcqFft;
+            cfo += k * binHz;
             setRot();
             resetCarrier();
             acq = false; sinceAcq = 0; okAtAcq = ok;
         }
+        if (acqBlocks < kAcqMaxBlocks && acq) return;     // keep adding blocks
         std::fill(acqSpec.begin(), acqSpec.end(), 0.f);
         acqBlocks = 0;
     }
@@ -257,49 +349,69 @@ struct GoesReceiver::Impl {
     void symbol(cf32 v) {
         const cf32 z = v * cf32((float)std::cos(-cPhase), (float)std::sin(-cPhase));
         const float re = z.real(), im = z.imag();
-        // carrier loop
-        const float e = (re >= 0 ? im : -im);
+        // carrier loop (BPSK: the quadrature part against the sign of I; QPSK: decision directed with the points on the diagonals)
+        float e, lockNow;
+        const float p = re * re + im * im + 1e-12f;
+        if (!qpsk) {
+            e = (re >= 0 ? im : -im);
+            lockNow = (re * re - im * im) / p;
+            meanAbs += 0.002f * (std::fabs(re) - meanAbs);
+            meanIm2 += 0.002f * (im * im - meanIm2);
+        } else {
+            e = 0.70710678f * ((re >= 0 ? im : -im) - (im >= 0 ? re : -re));
+            const float r2 = re * re - im * im, i2 = 2 * re * im;
+            lockNow = -(r2 * r2 - i2 * i2) / (p * p);                // -Re(z^4) / |z|^4
+            const float ma = 0.5f * (std::fabs(re) + std::fabs(im));
+            meanAbs += 0.002f * (ma - meanAbs);
+            const float er = std::fabs(re) - meanAbs, ei = std::fabs(im) - meanAbs;
+            meanErr2 += 0.002f * (er * er + ei * ei - meanErr2);
+        }
         cPhase += cAlpha * e + cFreq;
         cFreq += cBeta * e;
         if (cPhase > kPi) cPhase -= 2 * kPi; else if (cPhase < -kPi) cPhase += 2 * kPi;
-        const float p = re * re + im * im + 1e-12f;
-        lockM += 0.002f * ((re * re - im * im) / p - lockM);
-        meanAbs += 0.002f * (std::fabs(re) - meanAbs);
-        meanIm2 += 0.002f * (im * im - meanIm2);
+        lockM += 0.002f * (lockNow - lockM);
         constel.push_back(z);
         if (constel.size() > 512) constel.pop_front();
         if (!acq) {
             sinceAcq++;
-            if (sinceAcq == 20000) { double a, b; loopGains(0.004, 0.707, a, b); cAlpha = a; cBeta = b; }
+            if (sinceAcq == 20000) { double a, b; loopGains(qpsk ? 0.004 : 0.008, 0.707, a, b); cAlpha = a; cBeta = b; }
             if (sinceAcq > 30000) {
-                const bool l = lockM > 0.35f;
+                const float onT = qpsk ? 0.2f : 0.35f, offT = qpsk ? 0.1f : 0.2f;
+                const bool l = lockM > onT;
                 if (l != carrierLock) {
                     carrierLock = l;
-                    if (l && !carrierReported) { carrierReported = true; char b[96]; snprintf(b, sizeof b, "GOES HRIT: carrier locked, offset %.1f kHz", carrierHz() / 1000); addLog(b, true); }
+                    if (l && !carrierReported) { carrierReported = true; char b[96]; snprintf(b, sizeof b, "%s: carrier locked, offset %.1f kHz", tag.c_str(), carrierHz() / 1000); addLog(b, true); }
                 }
-                lowLock = lockM < 0.2f ? lowLock + 1 : 0;
-                if (lowLock > 60000) { acq = true; carrierLock = false; lowLock = 0; resetFec(); }
+                lowLock = lockM < offT ? lowLock + 1 : 0;
+                if (lowLock > 60000) { acq = true; coarseDone = false; carrierLock = false; lowLock = 0; resetFec(); }
                 // never locked to this one: try another line
-                if (!carrierLock && ok == okAtAcq && sinceAcq > 120000) { rejected.push_back(cfo); acq = true; resetFec(); }
+                if (!carrierLock && ok == okAtAcq && sinceAcq > 120000) { rejected.push_back(cfo); if (coarseAbs < 1e29) coarseRej.push_back(coarseAbs); if (coarseRej.size() > 8) coarseRej.erase(coarseRej.begin()); acq = true; coarseDone = false; resetFec(); }
             }
         }
-        // soft code bit: BPSK +1 is code bit 0
-        const float s = -re;
+        // soft code bits: BPSK +1 is code bit 0; QPSK sends G1 on I and G2 on Q
+        if (!qpsk) codeSym(-re, 0);
+        else { codeSym(-re, -im); codeSym(-im, -re); }
+        if (symIdx >= nextSearch) syncSearch();
+    }
+
+    // one soft code symbol; `other` is what the I/Q-swapped stream has at this place (QPSK)
+    void codeSym(float s, float other) {
         syncBuf.push_back(s);
+        if (qpsk) syncBuf2.push_back(other);
         const int64_t k = symIdx++;
         if (symSync) {
-            if (((k - alignParity) & 1) == 0) firstOfPair = s;
+            const float live = swapIQ ? other : s;
+            if (((k - alignParity) & 1) == 0) firstOfPair = live;
             else {
                 const float sc = 40.f / std::max(0.05f, meanAbs);
                 const int a = (int)std::max(-127.f, std::min(127.f, firstOfPair * sc));
-                int b = (int)std::max(-127.f, std::min(127.f, s * sc));
+                int b = (int)std::max(-127.f, std::min(127.f, live * sc));
                 if (g2inv) b = -b;
                 vit.push(a, b);
                 auto& o = vit.out();
                 if (!o.empty()) { for (uint8_t bit : o) frameBit(bit); o.clear(); }
             }
         }
-        if (symIdx >= nextSearch) syncSearch();
     }
 
     double minInputRate() const { return std::max(200000.0, 2.1 * symbolRate); }
@@ -308,7 +420,11 @@ struct GoesReceiver::Impl {
     // ---- where the frames start in the code symbols, the pairing and the G2 polarity
     void syncSearch() {
         const int64_t need = (int64_t)kSyncFrames * kFrameSyms + 64;
-        if ((int64_t)syncBuf.size() > need) { syncBuf.erase(syncBuf.begin(), syncBuf.end() - need); syncBase = symIdx - need; }
+        if ((int64_t)syncBuf.size() > need) {
+            syncBuf.erase(syncBuf.begin(), syncBuf.end() - need);
+            if (qpsk) syncBuf2.erase(syncBuf2.begin(), syncBuf2.end() - need);
+            syncBase = symIdx - need;
+        }
         nextSearch = symIdx + (int64_t)kFrameSyms * (fstate == 0 ? 2 : 4);
         if (fstate != 0 || (int64_t)syncBuf.size() < need || acq) return;
         // the 52 code bits of the sync word that do not depend on the encoder state, as +-1 for each G2 polarity
@@ -324,24 +440,31 @@ struct GoesReceiver::Impl {
         for (float v : syncBuf) norm += std::fabs(v);
         norm /= (double)syncBuf.size();
         double best = 0;
-        int bo = 0, bg = 0;
-        for (int o = 0; o < kFrameSyms; o++)
-            for (int g = 0; g < 4; g++) {
-                double sc = 0;
-                for (int m = 0; m < kSyncFrames; m++) {
-                    const float* s = syncBuf.data() + o + (size_t)m * kFrameSyms;
-                    float c = 0;
-                    for (int j = 12; j < 64; j++) c += s[j] * pat[g][j];
-                    sc += std::fabs(c);
+        int bo = 0, bg = 0, bb = 0;
+        // QPSK: the stream in the order I, Q and with I and Q swapped (a quarter turn of the carrier loop's lock point swaps them), only
+        // at whole symbols (even offsets)
+        for (int buf = 0; buf < (qpsk ? 2 : 1); buf++) {
+            const std::vector<float>& sb = buf ? syncBuf2 : syncBuf;
+            for (int o = 0; o < kFrameSyms; o += qpsk ? 2 : 1)
+                for (int g = 0; g < 4; g++) {
+                    double sc = 0;
+                    for (int m = 0; m < kSyncFrames; m++) {
+                        const float* sp = sb.data() + o + (size_t)m * kFrameSyms;
+                        float c = 0;
+                        for (int j = 12; j < 64; j++) c += sp[j] * pat[g][j];
+                        sc += std::fabs(c);
+                    }
+                    if (sc > best) { best = sc; bo = o; bg = g; bb = buf; }
                 }
-                if (sc > best) { best = sc; bo = o; bg = g; }
-            }
+        }
         const double q = best / (kSyncFrames * 52.0 * std::max(1e-9, norm));
         if (q < 0.45) return;
+        const std::vector<float>& sb = bb ? syncBuf2 : syncBuf;
         const int64_t start = syncBase + bo;
         symSync = true;
+        swapIQ = bb == 1;
         g2inv = (bg & 1) == 1;
-        if (nrzm != (bg >= 2)) { nrzm = bg >= 2; addLog(nrzm ? "GOES HRIT: differential (NRZ-M) coded frames" : "GOES HRIT: frames coded without NRZ-M", true); }
+        if (nrzm != (bg >= 2)) { nrzm = bg >= 2; addLog(nrzm ? (tag + ": differential (NRZ-M) coded frames") : (tag + ": frames coded without NRZ-M"), true); }
         nrzPrev = 0;
         alignParity = (int)(start & 1);
         vit.reset(); vit.out().clear();
@@ -352,12 +475,12 @@ struct GoesReceiver::Impl {
         int64_t k = from;
         if (((k - alignParity) & 1) != 0) k++;
         for (; k + 1 < symIdx; k += 2) {
-            const float a = syncBuf[(size_t)(k - syncBase)], b = syncBuf[(size_t)(k + 1 - syncBase)];
+            const float a = sb[(size_t)(k - syncBase)], b = sb[(size_t)(k + 1 - syncBase)];
             int ia = (int)std::max(-127.f, std::min(127.f, a * sc)), ib = (int)std::max(-127.f, std::min(127.f, b * sc));
             if (g2inv) ib = -ib;
             vit.push(ia, ib);
         }
-        if (k < symIdx) firstOfPair = syncBuf[(size_t)(k - syncBase)];
+        if (k < symIdx) firstOfPair = sb[(size_t)(k - syncBase)];
         auto& o = vit.out();
         for (uint8_t bit : o) frameBit(bit);
         o.clear();
@@ -398,7 +521,7 @@ struct GoesReceiver::Impl {
             const int r2 = meteor::decodeCadu(frame, v, !rsDual);
             if (r2 < 0) { bad++; return; }
             rsDual = !rsDual; rsSwitches++;
-            char b[96]; snprintf(b, sizeof b, "GOES HRIT: Reed-Solomon symbols are in the %s basis", rsDual ? "dual (CCSDS)" : "conventional");
+            char b[96]; snprintf(b, sizeof b, "%s: Reed-Solomon symbols are in the %s basis", tag.c_str(), rsDual ? "dual (CCSDS)" : "conventional");
             addLog(b, true);
             r = r2;
         }
@@ -410,7 +533,7 @@ struct GoesReceiver::Impl {
         ok++;
         corrected += (uint64_t)r;
         lastGoodSym = symIdx;
-        if (!frameLockReported) { frameLockReported = true; addLog("GOES HRIT: frames found, decoding", true); }
+        if (!frameLockReported) { frameLockReported = true; addLog(tag + ": frames found, decoding", true); }
         asmb.push(v, (double)nIn / std::max(1.0, rate));
     }
 
@@ -451,7 +574,7 @@ struct GoesReceiver::Impl {
                 ok++; good++; corrected += (uint64_t)r;
                 asmb.push(v, 0.0);
             }
-            char b[96]; snprintf(b, sizeof b, "GOES HRIT: CADU file, %llu frames decoded, %llu failed", (unsigned long long)good, (unsigned long long)badN);
+            char b[96]; snprintf(b, sizeof b, "%s: CADU file, %llu frames decoded, %llu failed", tag.c_str(), (unsigned long long)good, (unsigned long long)badN);
             addLog(b, true);
         }
     }
@@ -487,6 +610,7 @@ struct GoesReceiver::Impl {
             const cf32 v = x[i] * cf32((float)nco.real(), (float)nco.imag());
             levelAcc += std::norm(x[i]); levelN++;
             cf32 d = v;
+            if (acq && useCoarse && !coarseDone) { coarseFeed(v); continue; }
             if (D > 1) {
                 lpf.push(v);
                 if (++decPhase < D) continue;
@@ -496,7 +620,8 @@ struct GoesReceiver::Impl {
             mf.push(d);
             const cf32 o = mf.out();
             y.push_back(o);
-            if (acq) acquire(o * (1.f / std::sqrt(std::max(1e-12f, agc))));
+            if (acq) acquire(o);
+            
         }
         timing();
     }
@@ -507,7 +632,10 @@ struct GoesReceiver::Impl {
         t.state = decoding ? 3 : fstate != 0 ? 2 : carrierLock ? 1 : 0;
         t.cfoHz = carrierHz();
         const float n2 = std::max(1e-9f, 2 * meanIm2);
-        t.snrDb = (float)(10 * std::log10(std::max(1e-6f, meanAbs * meanAbs / n2)));
+        // Es/N0 of a symbol: BPSK A^2 / (2 sigma^2); QPSK 2 a^2 / E|error|^2 (a: the amplitude of each component)
+        t.snrDb = qpsk ? (float)(10 * std::log10(std::max(1e-6f, 2 * meanAbs * meanAbs / std::max(1e-9f, meanErr2))))
+                       : (float)(10 * std::log10(std::max(1e-6f, meanAbs * meanAbs / n2)));
+        t.qpsk = qpsk;
         t.levelDb = levelN ? (float)(10 * std::log10(std::max(1e-20, levelAcc / levelN))) : -200.f;
         levelAcc = 0; levelN = 0;
         t.dataValid = t.state >= 3;
@@ -559,6 +687,18 @@ void GoesReceiver::setSymbolRate(double hz) {
 }
 double GoesReceiver::symbolRate() const { return p_->symbolRate; }
 void GoesReceiver::setSignalOffset(double hz) { p_->offset = hz; }
+void GoesReceiver::setQpsk(bool on) {
+    if (p_->qpsk == on) return;
+    p_->qpsk = on;
+    const double r = p_->rateSet;
+    if (r > 0) configure(r);
+}
+void GoesReceiver::setDialect(int d, const std::string& tag) {
+    p_->dialect = d;
+    p_->tag = tag;
+    p_->asmb.setDialect(d);
+}
+void GoesReceiver::setKeys(const std::vector<std::pair<int, std::array<uint8_t, 8>>>& keys) { p_->asmb.setKeys(keys); }
 bool GoesReceiver::ready() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->rateSet >= p_->minInputRate() - 1; }
 void GoesReceiver::reset() { p_->resetReq = true; }
 void GoesReceiver::clearProducts() {

@@ -1,6 +1,6 @@
 // EDACS receiver: FM front end at 76.8 kHz (8 samples per bit), dotting search at every phase, then the 240 payload bits are sliced for
-// the three alignments the dotting leaves open (one bit earlier, exact, one later) and the one whose three copies agree best is voted.
-// On top: the message layer (assumed layout, edacs_msg.h) with the call and talkgroup tables, a power scan of the voice channels of a frequency table (one FFT
+// the alignments the dotting leaves open (both polarities) and the one that matches the sync word 0x555557125555 and passes the BCH check is voted.
+// On top: the message layer (edacs_msg.h) with the call and talkgroup tables, a power scan of the voice channels of a frequency table (one FFT
 // of the capture), and the following of one analog voice channel through a second FM front end.
 #include "dect2/edacs/edacs_rx.h"
 #include "dect2/audio/audioout.h"
@@ -10,6 +10,7 @@
 #include "dect2/edacs/edacs_proto.h"
 #include "dect2/edacs/edacs_tel.h"
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <memory>
 #include <vector>
@@ -24,7 +25,7 @@ ModeTuning edacsTuning() {
     ModeTuning t;
     t.stdMode = 132;
     t.id = "edacs";
-    t.name = "EDACS trunking (WIP)";
+    t.name = "EDACS trunking";
     t.minMhz = 29.7;
     t.maxMhz = 960.0;
     t.defMhz = 856.0;
@@ -192,32 +193,25 @@ struct EdacsReceiver::Impl {
             return;
         }
         if (c) endCall(*c);
-        const int lid = t - pendingLidT < 0.1 ? pendingLid : -1;
-        newCall(m.lcn, m.gid, lid, group, m.emergency, m.digital, false, t);
+        newCall(m.lcn, m.gid, m.lid >= 0 ? m.lid : m.source, group, m.emergency, m.digital, false, t);
     }
-    void handleWord(uint32_t word, double t) {
-        const edacs::Msg m = edacs::parse(word, layout);
+    void handleFrame(uint32_t w1, uint32_t w2, double t) {
+        const edacs::Msg m = edacs::parse(w1, w2, layout);
         tel.messages++;
         if (m.type != edacs::MsgType::Unknown) tel.messagesKnown++;
+        if (m.lcn >= 1 && m.lcn <= 25 && m.lcn > tel.nChannels) tel.nChannels = m.lcn;   // the highest LCN seen so far
         switch (m.type) {
-        case edacs::MsgType::SiteId: tel.siteValid = true; tel.siteId = m.site; tel.systemId = m.system; break;
-        case edacs::MsgType::ControlChannel: tel.controlLcn = m.lcn; tel.nChannels = m.nChannels; break;
-        case edacs::MsgType::GroupAssign: case edacs::MsgType::IndividualAssign: assignment(m, t); break;
-        case edacs::MsgType::LidInfo:
-            pendingLid = m.lid; pendingLidT = t;
-            for (auto& c : tel.calls)
-                if (c.active && c.lid < 0 && t - c.lastSec < 0.3) {
-                    c.lid = m.lid;
-                    if (c.group) for (auto& g : tel.talkgroups) if (g.gid == c.gid) g.lastLid = m.lid;
-                    break;
-                }
+        case edacs::MsgType::SiteId:
+            tel.siteValid = true; tel.siteId = m.site; tel.systemId = m.area;
+            if (m.lcn >= 1 && m.lcn <= 25) tel.controlLcn = m.lcn;
             break;
+        case edacs::MsgType::GroupAssign: case edacs::MsgType::IndividualAssign: assignment(m, t); break;
         case edacs::MsgType::CallEnd: { EdacsCall* c = activeCall(m.lcn); if (c && !c->fromActivity) { c->lastSec = t; endCall(*c); } break; }
         default: break;
         }
     }
     std::string frameText(uint32_t a, uint32_t b) {
-        return edacs::describe(edacs::parse(a, layout)) + "  |  " + edacs::describe(edacs::parse(b, layout));
+        return edacs::describe(edacs::parse(a, b, layout));
     }
 
     // ---- housekeeping (every report): channel activity into calls, call timeouts, the choice of the followed channel
@@ -315,51 +309,55 @@ struct EdacsReceiver::Impl {
         // centre: sample index (1-based count) of the median dotting hit; the last sync bit was sampled at centre - 1
         const double thr = env.mid();
         // Frames follow each other every 288 bits, so after a good frame the next one is looked for where the clock says (predicted). The dotting alone
-        // cannot tell neighbouring bit alignments apart (the three copies agree under a shift) and the Barker word is not public.
+        // cannot tell neighbouring bit alignments apart (the three copies agree under a shift) and 
         const bool predicted = predictedMode;
-        struct Cand { int off, score, ea, eb; uint32_t a, b; };
-        Cand c[6];
+        struct Cand { int off, sub, pol, score, ea, eb; bool okA, okB; uint32_t a, b; };
+        Cand c[64];
         const int order[6] = {0, -1, 1, 2, -2, 3};   // the dotting looks the same two bits later or earlier, so these alignments are tried
         const int nOrd = predicted ? 3 : 6;
-        for (int oi = 0; oi < nOrd; oi++) {
-            const int off = order[oi];
-            const int64_t last = (int64_t)centre - 1 + (int64_t)off * kSps;
-            uint8_t bits[kPayloadBits];
-            for (int i = 0; i < kPayloadBits; i++) {
-                const bool one = soft((uint64_t)(last + (int64_t)(i + 1) * kSps)) > thr;
-                bits[i] = (uint8_t)(one != inverted);
-            }
-            // the 48 bits in front of the payload should be dotting at both ends: count the breaks in the first and last 16 of them
+        int nc = 0;
+        // after a good frame the bit clock is followed to the sample (a sender / radio clock difference moves the frame start a little every frame)
+        for (int oi = 0; oi < nOrd * (predicted ? 5 : 1); oi++) {
+            const int off = order[oi % nOrd];
+            const int sub = predicted ? std::array<int, 5>{0, -1, 1, -2, 2}[(size_t)(oi / nOrd)] : 0;
+            const int64_t last = (int64_t)centre - 1 + (int64_t)off * kSps + sub;
+            uint8_t raw[kPayloadBits];
+            for (int i = 0; i < kPayloadBits; i++) raw[i] = soft((uint64_t)(last + (int64_t)(i + 1) * kSps)) > thr ? 1 : 0;
             uint8_t pre[edacs::kSyncBits];
             for (int j = 0; j < edacs::kSyncBits; j++) pre[edacs::kSyncBits - 1 - j] = soft((uint64_t)(last - (int64_t)j * kSps)) > thr ? 1 : 0;
-            int dot = 0;
-            for (int j = 1; j < 16; j++) dot += pre[j] == pre[j - 1];
-            for (int j = edacs::kSyncBits - 15; j < edacs::kSyncBits; j++) dot += pre[j] == pre[j - 1];
-            int ea, eb;
-            const uint64_t va = edacs::vote(bits, ea), vb = edacs::vote(bits + 120, eb);
-            c[oi] = {off, dot + ea + eb, ea, eb, (uint32_t)(va >> 12) & 0xFFFFFFF, (uint32_t)(vb >> 12) & 0xFFFFFFF};
+            for (int pol = 0; pol < 2; pol++) {   // the polarity is found from the sync pattern and the check bits
+                uint8_t bits[kPayloadBits];
+                for (int i = 0; i < kPayloadBits; i++) bits[i] = (uint8_t)(raw[i] ^ pol);
+                // the 48 sync bits: dotting at both ends and the 16-bit Barker field 0x5712 in the middle; count the bits that differ from the pattern
+                int mism = 0;
+                for (int j = 0; j < edacs::kSyncBits; j++) mism += ((pre[j] ^ pol) != (int)((edacs::kSyncPattern >> (edacs::kSyncBits - 1 - j)) & 1));
+                int ea, eb;
+                const uint64_t va = edacs::vote(bits, ea), vb = edacs::vote(bits + 120, eb);
+                const bool okA = edacs::bchOk(va), okB = edacs::bchOk(vb);
+                c[nc++] = {off, sub, pol, mism + ea + eb + (okA ? 0 : 12) + (okB ? 0 : 12), ea, eb, okA, okB, (uint32_t)(va >> 12) & 0xFFFFFFF, (uint32_t)(vb >> 12) & 0xFFFFFFF};
+            }
         }
         int best = 0;
-        for (int i = 1; i < nOrd; i++) if (c[i].score < c[best].score) best = i;
-        if (predicted && c[0].score <= c[best].score + 1) best = 0;
-        const uint32_t bestA = c[best].a, bestB = c[best].b;
+        for (int i = 1; i < nc; i++) if (c[i].score < c[best].score) best = i;
+                const uint32_t bestA = c[best].a, bestB = c[best].b;
         const int bestEa = c[best].ea, bestEb = c[best].eb;
-        const uint64_t chosenStart = centre + (uint64_t)((int64_t)c[best].off * kSps);
+        const bool okA = c[best].okA, okB = c[best].okB;
+        const uint64_t chosenStart = centre + (uint64_t)((int64_t)c[best].off * kSps + c[best].sub);
         tel.syncs++;
         if (env.range() < kMinRangeHz) return;
-        const bool good = bestEa <= kMaxDisagree && bestEb <= kMaxDisagree;
+        const bool good = okA && bestEa <= kMaxDisagree;   // the first message is the command: its check bits must verify
         if (!good) { tel.blocksBad++; haveStart = false; return; }
+        inverted = c[best].pol != 0; tel.inverted = inverted;
         lastStart = chosenStart; haveStart = true;
         EdacsFrame f;
         f.wallTime = (int64_t)std::time(nullptr);
         f.timeSec = timeSec();
-        f.msgA = bestA; f.msgB = bestB; f.errA = bestEa; f.errB = bestEb; f.good = true;
-        f.text = frameText(bestA, bestB);
-        handleWord(bestA, f.timeSec);
-        handleWord(bestB, f.timeSec);
+        f.msgA = bestA; f.msgB = okB ? bestB : 0; f.errA = bestEa; f.errB = bestEb; f.good = true;
+        f.text = frameText(bestA, okB ? bestB : 0);
+        handleFrame(bestA, okB ? bestB : 0, f.timeSec);
         if (tel.frames.size() >= kEdacsLogMax) tel.frames.pop_back();
         tel.frames.insert(tel.frames.begin(), f);
-        wordCount[bestA]++; wordCount[bestB]++;
+        wordCount[bestA]++; if (okB) wordCount[bestB]++;
         std::vector<EdacsWordCount> w;
         for (auto& kv : wordCount) w.push_back({kv.first, kv.second});
         std::sort(w.begin(), w.end(), [](const EdacsWordCount& a, const EdacsWordCount& b) { return a.count > b.count; });

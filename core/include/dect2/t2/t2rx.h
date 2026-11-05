@@ -35,6 +35,7 @@
 #include "dect2/vor/vor_tel.h"
 #include "dect2/ndb/ndb_tel.h"
 #include "dect2/dme/dme_tel.h"
+#include "dect2/sitor/sitor_tel.h"
 #include "dect2/m17/m17_tel.h"
 #include "dect2/hfdl/hfdl_tel.h"
 #include "dect2/cell/cell_tel.h"
@@ -99,6 +100,7 @@
 #include "dect2/lorawan/lorawan_tel.h"
 #include "dect2/lorasat/lorasat_tel.h"
 #include "dect2/pactor/pactor_tel.h"
+#include "dect2/pactorhf/pactorhf_tel.h"
 #include "dect2/esubghz/esubghz_tel.h"
 #include "dect2/roshf/roshf_tel.h"
 #include "dect2/ssdv/ssdv_tel.h"
@@ -106,6 +108,8 @@
 #include "dect2/inmsat/inmsat_tel.h"
 #include "dect2/nrf24/nrf24_tel.h"
 #include "dect2/atis/atis_tel.h"
+#include "dect2/selcal/selcal_tel.h"
+#include "dect2/fy3/fy3_tel.h"
 #include "dect2/shortwave/shortwave_tel.h"
 #include "dect2/pskdsp/pskdsp_tel.h"
 #include "dect2/wisun/wisun_tel.h"
@@ -135,7 +139,9 @@
 #include "dect2/meteor/meteor_tel.h"
 #include "dect2/nr/nr_tel.h"
 #include "dect2/goes/goes_tel.h"
+#include "dect2/gk2a/gk2a_tel.h"
 #include "dect2/elektro/elektro_tel.h"
+#include "dect2/fygeo/fygeo_tel.h"
 #include "dect2/uat/uat_tel.h"
 #include "dect2/hrpt/hrpt_tel.h"
 #include "t2.h"
@@ -230,6 +236,10 @@ struct RxTelemetry {
     PactorTelemetry pactor;   // valid when standard == 204 (PACTOR-I monitor, family 203, engine standard 205)
     RoshfTelemetry roshf;     // valid when standard == 206 (ROS (HF) detector, family 205, engine standard 207)
     SsdvTelemetry ssdv;       // valid when standard == 207 (SSDV pictures, family 206, engine standard 208)
+    Fy3Telemetry fy3a;        // valid when standard == 236 (FY-3 AHRPT, family 235, engine standard 237)
+    Fy3Telemetry fy3m;        // valid when standard == 237 (FY-3 MPT, family 236, engine standard 238)
+    PactorHfTelemetry pactorhf;   // valid when standard == 238, 239 or 240 (PACTOR-II / -III / -IV, families 237 .. 239, engine standards 239 .. 241)
+    SelcalTelemetry selcal;   // valid when standard == 241 (SELCAL, family 240, engine standard 242)
     AtisTelemetry atis;       // valid when standard == 212 (ATIS inland waterways, family 211, engine standard 213)
     ShortwaveTelemetry shortwave;   // valid when standard == 213 (Shortwave, family 212, engine standard 214)
     Nrf24Telemetry nrf24;     // valid when standard == 211 (nRF24L01, family 210, engine standard 212)
@@ -257,6 +267,7 @@ struct RxTelemetry {
     ModeAcTelemetry modeac;   // valid when standard == 143 (Mode A/C, family 142)
     EczasTelemetry eczas;     // valid when standard == 86 (e-Czas, 225 kHz Poland)
     MsTelemetry mscatter;     // valid when standard == 105 (meteor scatter)
+    SitorTelemetry sitor;     // valid when standard == 120 (SITOR, engine standard 121)
     DmeTelemetry dme;         // valid when standard == 123 (DME, engine standard 123)
     DcsTelemetry goesdcs;     // valid when standard == 142 (GOES DCS, family 141)
     BletrkTelemetry bletrk;   // valid when standard == 144 (BLE tracker detector, family 143)
@@ -275,7 +286,9 @@ struct RxTelemetry {
     MeteorTelemetry meteor;   // valid when standard == 60 (Meteor-M LRPT)
     NrTelemetry nr;           // valid when standard == 58 (5G NR cells)
     GoesTelemetry goes;       // valid when standard == 61 (GOES HRIT)
+    Gk2aTelemetry gk2a;       // valid when standard == 231 (GK-2A LRIT, family 230, engine standard 232) or 232 (GK-2A HRIT, family 231, engine standard 233)
     ElektroTelemetry elektro; // valid when standard == 81 (Elektro-L)
+    FygeoTelemetry fygeo;     // valid when standard == 233 .. 235 (FY-4 LRIT, FY-4A HRIT, FY-2 S-VISSR; families 232 - 234)
     UatTelemetry uat;         // valid when standard == 84 (UAT 978 MHz)
     HrptTelemetry hrpt;       // valid when standard == 65 (HRPT / AHRPT)
     PskTelemetry psk;      // valid when standard == 37

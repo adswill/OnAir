@@ -28,6 +28,6 @@ bool genTransmissionBits(const GenParams& p, std::vector<uint8_t>& bits, std::ve
 
 // C4FM: dibits (two bits each) -> raised-cosine shaped 4-level FSK at +-900 / +-2700 Hz, as complex baseband at `fs`
 // (shift moves it by cfoHz). idleSymbols of silence-level carrier go before and after.
-std::vector<std::complex<float>> modulateC4fm(const std::vector<uint8_t>& bits, double fs, double cfoHz = 0, float amp = 1.f, int idleSymbols = 40);
+std::vector<std::complex<float>> modulateC4fm(const std::vector<uint8_t>& bits, double fs, double cfoHz = 0, float amp = 1.f, int idleSymbols = 40, double devScale = 1.0, double rateScale = 1.0);   // devScale: deviation error, rateScale: symbol clock error
 
 } // namespace dect2::fusion

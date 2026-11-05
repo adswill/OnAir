@@ -2,10 +2,15 @@
 // packets), the trunking system (site, adjacent sites, channel identifiers), the talkgroups with their activity, the decoded control
 // messages, and a "?" about the mbelib library the voice needs (docs/CODECS.md). Receive only; encrypted calls are only reported.
 #include "dect2/common/time_fmt.h"
+#include "ui/kit/export.h"
 #include "app.h"
+#include "ui/voice_why_ui.h"
+#include "dect2/voice/voice_why_modes.h"
+#include "ui/kit/mode_panel.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/session_list.h"
 #include "voice/voice_monitor_ui.h"
+#include "voice/watch_ui.h"
 #include "dect2/codec/codec_registry.h"
 #include "dect2/codec/codec_registry.h"
 #include "../codec/speech_codec_ui.h"
@@ -184,6 +189,15 @@ void callsView(App& a) {
         }
         ImGui::SetClipboardText(txt.c_str());
     }
+    {
+        static std::string note;
+        resexp::Table x; x.cols = {"time", "kind", "from", "to", "channel", "frequency_mhz", "encryption", "details", "duration_s"};
+        for (const auto& e : log)
+            x.add({clock(e.wallTime), kindOf(e), dect2::p25Id(e.src), dstOf(e), e.kind == 1 ? dect2::p25::channelText(e.channel) : "", e.kind == 1 ? resexp::num(e.freqHz / 1e6, 5) : "",
+                   e.encrypted ? cryptoOf(e) : "clear", e.text, resexp::num(e.durSec, 1)}, (double)e.wallTime);
+        ImGui::SameLine();
+        kit::exportBar(x, "p25_calls", note, "p25xc");
+    }
     if (!ImGui::BeginTable("##p25log", 7 + (wideActive(a) ? 1 : 0), ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_ScrollX, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     if (wideActive(a)) ImGui::TableSetupColumn("Carrier"); ImGui::TableSetupColumn(dect2::timefmt::headTime()); ImGui::TableSetupColumn("Kind"); ImGui::TableSetupColumn("From"); ImGui::TableSetupColumn("To");
@@ -269,6 +283,17 @@ void talkgroupView(App& a) {
     if (tg.empty()) { ImGui::TextDisabled("no talkgroups heard yet"); return; }
     std::vector<dect2::trunk::Controller::TalkgroupRow> conv;
     if (T.on) conv = T.ctl.conversations();   // followed calls and airtime per talkgroup (the call log of the follower)
+    {
+        static std::string note;
+        resexp::Table x; x.cols = {"talkgroup", "grants", "calls", "last_unit", "last_frequency_mhz", "emergency", "encrypted", "followed_calls", "airtime_s"};
+        for (const auto& g : tg) {
+            const dect2::trunk::Controller::TalkgroupRow* cv = nullptr;
+            for (const auto& r : conv) if (r.tg == g.tg) { cv = &r; break; }
+            x.add({std::to_string(g.tg), std::to_string(g.grants), std::to_string(g.calls), dect2::p25Id(g.lastSrc), resexp::num(g.lastFreqHz / 1e6, 5), g.emergency ? "1" : "0", g.encrypted ? "1" : "0",
+                   cv ? std::to_string(cv->followed) : "", cv ? resexp::num(cv->airSec, 0) : ""}, (double)g.lastWall);
+        }
+        kit::exportBar(x, "p25_talkgroups", note, "p25xt");
+    }
     if (!ImGui::BeginTable("##p25tg", 9, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("Talkgroup"); ImGui::TableSetupColumn("Grants"); ImGui::TableSetupColumn("Calls"); ImGui::TableSetupColumn("Last unit");
@@ -560,9 +585,9 @@ void trunkTick(App& a) {
             localtime_r(&tt, &g);
 #endif
             char ts[32]; strftime(ts, sizeof ts, "%Y%m%d-%H%M%S", &g);
-            snprintf(nm, sizeof nm, "/recordings/trunk_%s_%s.wav", ac.text.c_str(), ts);
+            snprintf(nm, sizeof nm, "/trunk_%s_%s.wav", ac.text.c_str(), ts);
             std::string err;
-            if (rec.start(plat::dataDir() + nm, o, err)) { T.recCall = ac.callId; if (auto* r = T.ctl.log.byId(ac.callId)) r->audioPath = plat::dataDir() + nm; }
+            if (rec.start(recordingsDir() + nm, o, err)) { T.recCall = ac.callId; if (auto* r = T.ctl.log.byId(ac.callId)) r->audioPath = recordingsDir() + nm; }
             break;
         }
         case Action::RecordStop:
@@ -782,6 +807,7 @@ void followView(App& a) {
 }
 
 void tick(App& a) {
+    watchui::tick(a);
     if (live(a)) appcodec::voiceCodecTick("imbe");   // the user's codec plug-in (docs/CODECS.md), loaded whichever tab is shown
     trunkTick(a);
     Pushed& ps = S.pushed[a.rxId];
@@ -795,7 +821,7 @@ void tick(App& a) {
     ps.was = true;
 }
 
-void tab(App& a) {
+void voiceBar(App& a) {
     {   // the voice monitor's strip, the same in every voice mode
         const dect2::P25Telemetry& t = a.rx.p25;
         voiceui::Link l;
@@ -804,8 +830,13 @@ void tab(App& a) {
         l.errorRate = l.locked ? t.berPct / 100.f : -1.f;
         voiceui::strip(a, "p25", "P25", l);
     }
+}
+
+void tab(App& a) {
+    voiceBar(a);
     kit::modeHeader({50, "P25", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("p25v", S.view, {{tr("Live"), 0}, {tr("Calls"), 6}, {tr("Call list"), 1, true}, {tr("Trunking"), 2, true}, {tr("Talkgroups"), 3, true}, {tr("Messages"), 4, true}, {tr("Follow"), 5, true}});
+    kit::modeNav("p25v", S.view, {{tr("Live"), 0}, {tr("Calls"), 6}, {tr("Call list"), 1, true}, {tr("Trunking"), 2, true}, {tr("Talkgroups"), 3, true}, {tr("Messages"), 4, true}, {tr("Follow"), 5, true}, {tr("Watch"), 90, true}});
+    if (S.view == 90) { watchui::watchView(a, "p25"); return; }
     if (S.view == 6) { kit::sessionItems(50, 1, "p25"); return; }
     if (S.view == 0) nowView(a); else if (S.view == 1) callsView(a); else if (S.view == 2) trunkingView(a); else if (S.view == 3) talkgroupView(a); else if (S.view == 4) messageView(a); else followView(a);
 }
@@ -844,6 +875,7 @@ void receiver(App& a) {
     wideCarriersTable(a, 0);
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const dect2::P25Telemetry& t = a.rx.p25;
+    voiceWhyRow(a, dect2::p25Why(t));
     kvRow(a, "follow", "%s", T.on ? T.ctl.statusLine(nowSec()).c_str() : "off: calls are shown but not followed (Follow tab)");
     kvRow(a, "state", "%s", dect2::p25Summary(t).c_str());
     kvRow(a, "signal", "C4FM, symbol SNR %.1f dB, +3 deviation %.0f Hz, offset %+.0f Hz%s", t.snrDb, t.deviationHz, t.cfoHz, t.inverted ? ", inverted" : "");
@@ -884,6 +916,24 @@ void summary(const App& a, std::string& l1, std::string& l2) {
 
 } // namespace
 
+// For the multi-radio trunk pool (app/trunkpool): its grant feed, and the P25 follower's own voice radio handed over to it
+dect2::trunk::Controller& p25TrunkController() { return T.ctl; }
+void p25VoiceRadioOff(bool off) {
+    static int saved = 0;
+    if (off && T.voicePick >= 0) { saved = T.voicePick; T.voicePick = -1; }
+    else if (!off && T.voicePick < 0) T.voicePick = saved;
+}
+
+// Simple view: the voice strip, then what is on air, the call list and the trunking state side by side
+static void command(App& a) {
+    voiceBar(a);
+    kit::modeHeader({50, "P25", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    if (live(a)) voiceWhyRow(a, dect2::p25Why(a.rx.p25));
+    modepanel::panes({{"##p25cnow", tr("On air"), [&a] { nowView(a); }, 0.9f, 220.f},
+                      {"##p25ccalls", tr("Calls"), [&a] { callsView(a); }, 1.5f, 240.f},
+                      {"##p25ctrunk", tr("Trunking"), [&a] { trunkingView(a); }, 1.f, 220.f}}, 300.f);
+}
+
 extern const ModeUi kP25Ui;
 const ModeUi kP25Ui = {
     .sideTitle = "TALKGROUPS",
@@ -895,4 +945,5 @@ const ModeUi kP25Ui = {
     .status = status,
     .summary = summary,
     .tick = tick,
+    .command = command,
 };

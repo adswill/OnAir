@@ -174,7 +174,7 @@ goes::FileOut goesFileOut(const GoesTestFile& f, uint16_t counter) {
     first.push_back((uint8_t)(counter >> 8)); first.push_back((uint8_t)counter);
     const uint64_t bits = (uint64_t)f.file.size() * 8;
     for (int i = 7; i >= 0; i--) first.push_back((uint8_t)(bits >> (8 * i)));
-    const std::vector<uint8_t> hdr = goes::buildHeaders(f.h);
+    const std::vector<uint8_t> hdr = goes::buildHeaders(f.h, f.dialect);
     first.insert(first.end(), hdr.begin(), hdr.end());
     o.chunks.push_back(first);
     for (const auto& c : f.dataChunks) o.chunks.push_back(c);
@@ -191,7 +191,7 @@ struct GoesGenerator::Impl {
     bool once = false;
     meteor::ConvEncoder enc;
     uint8_t nrzPrev = 0;
-    std::vector<float> sym;       // BPSK symbols from index symBase
+    std::vector<float> sym, symQ; // BPSK symbols (QPSK: the I part, symQ the Q part) from index symBase
     int64_t symBase = 0, symNext = 0;
     uint64_t frames = 0;
     std::vector<float> table;     // the pulse, kOver points a symbol over +-kSpan symbols
@@ -203,12 +203,12 @@ struct GoesGenerator::Impl {
     float sigma = 0;
 
     explicit Impl(const GoesGenConfig& cfg) : c(cfg), mux(cfg.scid), rng(cfg.seed) {
-        files = goesTestFiles();
+        files = c.files.empty() ? goesTestFiles() : c.files;
         table.resize((size_t)(2 * kSpan * kOver + 2));
         for (size_t i = 0; i < table.size(); i++) table[i] = (float)rrc((double)i / kOver - kSpan, c.rolloff);
         sigma = c.snrDb >= 99 ? 0.f : (float)std::sqrt(c.amplitude * c.amplitude * (c.rate / c.symbolRate) / std::pow(10.0, c.snrDb / 10) / 2);
         phase0 = dect2::uniform_real_distribution<double>(0, 2 * kPi)(rng);
-        sym.assign(kSpan, 0.f); symBase = -kSpan;    // silence before the first symbol
+        sym.assign(kSpan, 0.f); symBase = -kSpan; if (c.qpsk) symQ.assign(kSpan, 0.f);    // silence before the first symbol
         addRound();
         fillLeft = std::max(0, c.fillFrames);
     }
@@ -229,10 +229,10 @@ struct GoesGenerator::Impl {
                 if (c.nrzm) { in ^= nrzPrev; nrzPrev = in; }     // NRZ-M: a 1 is a change of level
                 enc.push(in, s0, s1);
                 if (c.invertG2) s1 ^= 1;                       // CCSDS sends G2 inverted
-                sym.push_back(s0 ? -1.f : 1.f);
-                sym.push_back(s1 ? -1.f : 1.f);
+                if (c.qpsk) { sym.push_back(s0 ? -0.70710678f : 0.70710678f); symQ.push_back(s1 ? -0.70710678f : 0.70710678f); }
+                else { sym.push_back(s0 ? -1.f : 1.f); sym.push_back(s1 ? -1.f : 1.f); }
             }
-        symNext += 2 * 8 * meteor::kCaduBytes;
+        symNext += (c.qpsk ? 1 : 2) * 8 * meteor::kCaduBytes;
         frames++;
     }
     void generate(cf32* out, size_t cnt) {
@@ -247,17 +247,24 @@ struct GoesGenerator::Impl {
             const int j0 = (int)d0;
             const float f = (float)(d0 - j0);
             const float* sp = &sym[(size_t)(k0 - kSpan + 1 - symBase)];
-            float acc = 0;
+            const float* sq = c.qpsk ? &symQ[(size_t)(k0 - kSpan + 1 - symBase)] : nullptr;
+            float acc = 0, accQ = 0;
             for (int t = 0, j = j0; t < 2 * kSpan; t++, j -= kOver)
-                if (j >= 0 && j + 1 < (int)table.size()) acc += sp[t] * (table[(size_t)j] + f * (table[(size_t)j + 1] - table[(size_t)j]));
+                if (j >= 0 && j + 1 < (int)table.size()) {
+                    const float pv = table[(size_t)j] + f * (table[(size_t)j + 1] - table[(size_t)j]);
+                    acc += sp[t] * pv;
+                    if (sq) accQ += sq[t] * pv;
+                }
             const double ph = phase0 + w * (double)n;
-            cf32 s = cf32((float)(c.amplitude * acc * std::cos(ph)), (float)(c.amplitude * acc * std::sin(ph)));
+            const double cs = std::cos(ph), sn = std::sin(ph);
+            // carrier: (acc + j accQ) * e^{j ph}
+            cf32 s = cf32((float)(c.amplitude * (acc * cs - accQ * sn)), (float)(c.amplitude * (acc * sn + accQ * cs)));
             if (sigma > 0) s += cf32{sigma * gauss(rng), sigma * gauss(rng)};
             out[i] = s;
         }
         // drop the symbols no longer needed
         const int64_t keep = (int64_t)std::floor((double)n / c.rate * rs) - kSpan - 4;
-        if (keep - symBase > 65536) { sym.erase(sym.begin(), sym.begin() + (keep - symBase)); symBase = keep; }
+        if (keep - symBase > 65536) { sym.erase(sym.begin(), sym.begin() + (keep - symBase)); if (c.qpsk) symQ.erase(symQ.begin(), symQ.begin() + (keep - symBase)); symBase = keep; }
     }
 };
 

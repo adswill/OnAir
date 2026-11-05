@@ -39,7 +39,6 @@ Dial frequency the decoder should assume (the sound card is not tuned)	Wählfreq
 DVB standard	DVB-Standard
 Empty: the demo 802.15.4 scene.	Leer: die 802.15.4-Demoszene.
 Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	Leer: die FLARM-Demoszene. Diese ID ist im unveröffentlichten neueren Protokoll nicht enthalten.
-Empty: the demo LoRa / mesh scene.	Leer: die LoRa-/Mesh-Demoszene.
 Empty: the demo Mode S uplink scene.	Leer: die Mode-S-Uplink-Demoszene.
 Empty: the demo VDES scene.	Leer: die VDES-Demoszene.
 File	Datei
@@ -621,7 +620,6 @@ Checking and preparing the new version…	Prüfe und bereite die neue Version vo
 Downloaded and checked. It is installed when you close OnAir.	Heruntergeladen und geprüft. Sie wird installiert, wenn du OnAir schließt.
 Restart now and update	Jetzt neu starten und aktualisieren
 Windows asks for permission to run the installer.	Windows fragt nach der Erlaubnis, das Installationsprogramm auszuführen.
-The system asks for your password to install the package.	Das System fragt nach deinem Passwort, um das Paket zu installieren.
 This copy of OnAir cannot replace itself.	Diese OnAir-Kopie kann sich nicht selbst ersetzen.
 The update to v%s did not install (setup exit code %d).	Das Update auf v%s wurde nicht installiert (Setup-Exitcode %d).
 Only github.com is contacted. Downloads are checked against the SHA-256 GitHub lists for the file.	Es wird nur github.com kontaktiert. Downloads werden mit der SHA-256 geprüft, die GitHub für die Datei angibt.
@@ -891,7 +889,7 @@ Weather pictures, 1.7 GHz	Wetterbilder, 1,7 GHz
 What to add to a level in dBFS to get dBm for this radio (its calibration: a known signal into the antenna port shows it). Also in the radio's settings.	Was zu einem Pegel in dBFS addiert wird, um dBm für dieses Radio zu erhalten (seine Kalibrierung: ein bekanntes Signal am Antennenanschluss zeigt sie). Auch in den Radioeinstellungen.
 Your callsign	Dein Rufzeichen
 Your locator	Dein Locator
-Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: reset.	Zoom: Mausrad (beide Achsen), Strg+Rad (Frequenz), Umschalt+Rad (Pegel).\nStrg+Bild auf / ab: Ansicht um eine Bildschirmbreite in der Frequenz verschieben. Doppelklick: zurücksetzen.
+Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: tune. Home: show the whole band.	Zoom: Mausrad (beide Achsen), Strg+Rad (Frequenz), Umschalt+Rad (Pegel).\nStrg+Bild auf / ab: Ansicht um eine Bildschirmbreite in der Frequenz verschieben. Doppelklick: abstimmen. Pos1: das ganze Band zeigen.
 antenna %.6g MHz -> %s LO %.6g -> radio %.6g MHz%s	Antenne %.6g MHz -> %s LO %.6g -> Radio %.6g MHz%s
 channel scan has the radio	Die Kanalsuche belegt das Radio
 dBm offset	dBm-Offset
@@ -3471,3 +3469,347 @@ Next tab	Next tab
 Previous tab	Previous tab
 The radio runs this many times faster than the mode asks, and OnAir filters the samples down to the mode's rate itself.\nFor radios that are poor at low sample rates (images, a weak anti-alias filter). Costs CPU and USB bandwidth;\nthe radio's highest rate still applies. Off: the radio runs at the mode's rate.	The radio runs this many times faster than the mode asks, and OnAir filters the samples down to the mode's rate itself.\nFor radios that are poor at low sample rates (images, a weak anti-alias filter). Costs CPU and USB bandwidth;\nthe radio's highest rate still applies. Off: the radio runs at the mode's rate.
 At a set speed each row is the highest level of the frames in between, so a short burst is never missed.\nAverage: the mean level instead, which calms the noise and shows steady weak signals better.	At a set speed each row is the highest level of the frames in between, so a short burst is never missed.\nAverage: the mean level instead, which calms the noise and shows steady weak signals better.
+Export results CSV...	Ergebnisse als CSV exportieren...
+Nothing to export: no row matches the search.	Nichts zu exportieren: keine Zeile passt zur Suche.
+Saves the rows now in the table (with the search and the filters applied, built-in and yours) as a CSV file. Import and the Memory panel read it back.	Speichert die Zeilen der Tabelle (mit Suche und Filtern, eingebaute und eigene) als CSV-Datei. Import und das Memory-Panel lesen sie wieder ein.
+Clean the input: DC spike, IQ imbalance and the radio's own spurs	Eingang bereinigen: DC-Spitze, IQ-Ungleichheit und Störlinien des Funkgeräts
+Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Aus dem Signal selbst gemessen, nie der gewünschte Kanal: DC-Spitze und IQ-Spiegelbild werden in Modi übersprungen, denen sie schaden würden, und eine Störlinie im Kanal wird nur entfernt, wenn sie nach einem Wechsel der Frequenz an derselben Stelle des Basisbands bleibt (ein echtes Signal wandert mit dem Tuner).
+%d spur(s) cut	%d Störlinie(n) entfernt
+working	funktioniert
+installed	installiert
+wrong processor	falscher Prozessor
+missing	fehlt
+Copy build command	Build-Befehl kopieren
+How to install (this computer):	So installieren Sie (dieser Computer):
+rtl_tcp: an RTL-SDR shared by another computer over the network.	rtl_tcp: ein RTL-SDR, das ein anderer Computer über das Netzwerk bereitstellt.
+Airspy HF+: a very sensitive receiver for long, medium and short wave and FM, up to 260 MHz.	Airspy HF+: ein sehr empfindlicher Empfänger für Lang-, Mittel- und Kurzwelle sowie UKW bis 260 MHz.
+Fobos SDR: a wideband receiver, 100 kHz to 6 GHz. Needs the radio's own library, see the ? in Radio settings.	Fobos SDR: ein Breitbandempfänger, 100 kHz bis 6 GHz. Braucht die eigene Bibliothek des Radios, siehe das ? in den Radio-Einstellungen.
+RFNM: a wideband radio board with one or two daughter boards, on USB or the network.	RFNM: eine Breitband-Funkplatine mit einer oder zwei Tochterplatinen, über USB oder Netzwerk.
+SDRplay nRSP-ST: a network radio, used through SDRconnect running on a computer.	SDRplay nRSP-ST: ein Netzwerkradio, genutzt über SDRconnect auf einem Computer.
+TCI: a radio of the ExpertSDR family (SunSDR and others) on the network. Receive only.	TCI: ein Radio der ExpertSDR-Familie (SunSDR u. a.) im Netzwerk. Nur Empfang.
+SDR++ server: a radio shared by another computer running SDR++.	SDR++-Server: ein Radio, das ein anderer Computer mit SDR++ bereitstellt.
+A sound card or a web radio used as the input.	Eine Soundkarte oder ein Webradio als Eingang.
+Run setup again...	Einrichtung erneut starten...
+Easy mode	Einfacher Modus
+European Union (generic)	Europäische Union (allgemein)
+Lithuania	Litauen
+United Kingdom	Vereinigtes Königreich
+Germany	Deutschland
+Poland	Polen
+United States	Vereinigte Staaten
+Canada	Kanada
+Australia	Australien
+Quick pick: a region preset sets the band plan, the TV channels, the FM band, the default frequencies and the units	Schnellwahl: Eine Regionsvorgabe setzt Bandplan, TV-Kanäle, UKW-Band, Standardfrequenzen und Einheiten
+Or search for a city or country	Oder nach Stadt oder Land suchen
+imperial (miles, feet)	imperial (Meilen, Fuß)
+metric (km, metres)	metrisch (km, Meter)
+Defaults: FM %.1f MHz, APRS %.3f MHz, units %s.	Standard: UKW %.1f MHz, APRS %.3f MHz, Einheiten: %s.
+A preset has no exact position: type a city or coordinates above if you want the aircraft map and satellite passes centred on you.	Eine Vorgabe hat keine genaue Position: Geben Sie oben eine Stadt oder Koordinaten ein, wenn die Flugzeugkarte und Satellitenüberflüge auf Sie zentriert sein sollen.
+Units	Einheiten
+Follow the region	Der Region folgen
+Metric	Metrisch
+Imperial	Imperial
+Which antenna will you use? It matters more than the radio. OnAir uses the answer for hints only; nothing is changed in the radio.	Welche Antenne nutzen Sie? Sie ist wichtiger als das Radio. OnAir nutzt die Antwort nur für Hinweise; am Radio wird nichts geändert.
+What this means for you	Was das für Sie bedeutet
+Digital voice (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) is silent until you install its codec plug-in. The calls, IDs and data work without it.	Digitaler Sprechfunk (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) bleibt stumm, bis Sie das Codec-Plug-in installieren. Anrufe, IDs und Daten funktionieren auch ohne.
+Only digital voice modes need a codec. You can skip this screen and come back from Help > Voice codecs.	Nur digitale Sprachmodi brauchen einen Codec. Sie können diesen Schritt überspringen und über Hilfe > Sprach-Codecs zurückkehren.
+OnAir does not include or download these codecs (they are patented). You build or install them on your own computer; whether you may use them is your own responsibility. FreeDV, M17, DAB, DRM and TV need nothing.	OnAir enthält diese Codecs nicht und lädt sie nicht herunter (sie sind patentiert). Sie bauen oder installieren sie auf Ihrem eigenen Computer; ob Sie sie nutzen dürfen, liegt in Ihrer Verantwortung. FreeDV, M17, DAB, DRM und TV brauchen nichts.
+Antenna: %s	Antenne: %s
+Easy mode (recommended)	Einfacher Modus (empfohlen)
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. The detailed tabs are one click away (Simple | Advanced above them).	Jeder Modus öffnet sich in der einfachen Ansicht: das Spektrum und ein Bildschirm mit Start-Taste und den wichtigsten Reglern. Die detaillierten Tabs sind einen Klick entfernt (Einfach | Erweitert darüber).
+Change any of this at any time: Help > Setup and lessons > Run setup again, Mode > Modes shown, View > Language, Settings > Appearance > Font look.	Alles lässt sich jederzeit ändern: Hilfe > Einrichtung und Lektionen > Einrichtung erneut starten, Modus > Angezeigte Modi, Ansicht > Sprache, Einstellungen > Erscheinungsbild > Schriftbild.
+The setup has six short screens and every one can be skipped. Nothing is forced.\n\nRadio: OnAir looks for radios on USB and on the network and picks one. "?" beside a radio opens its help page. Without a radio, the test signal lets you try OnAir.\n\nLocation: one click on a region preset (Lithuania, the EU, ...) or a city, a locator or coordinates give your country, the band plan, the TV channels, the FM band and step, the default frequencies and the units.\n\nAntenna: hints for what you can hear with the antenna you have.\n\nInterests: decide which modes are starred and listed first, where OnAir starts and a few starter presets. Everything stays available.\n\nCodecs: digital voice needs a codec plug-in that you install yourself; Look again checks the folder.\n\nEasy mode on the last screen opens every mode in its Simple view. Run the setup again any time from Help > Setup and lessons > Run setup again, or from Settings.	Die Einrichtung hat sechs kurze Schritte, jeder lässt sich überspringen. Nichts ist Pflicht.\n\nRadio: OnAir sucht Radios an USB und im Netzwerk und wählt eines. „?“ neben einem Radio öffnet dessen Hilfeseite. Ohne Radio lässt Sie das Testsignal OnAir ausprobieren.\n\nStandort: ein Klick auf eine Regionsvorgabe (Litauen, EU, ...) oder eine Stadt, ein Locator oder Koordinaten setzen Land, Bandplan, TV-Kanäle, UKW-Band und -Raster, Standardfrequenzen und Einheiten.\n\nAntenne: Hinweise, was Sie mit Ihrer Antenne hören können.\n\nInteressen: bestimmen, welche Modi markiert und zuerst gelistet werden, wo OnAir startet und einige Startvorgaben. Alles bleibt verfügbar.\n\nCodecs: Digitale Sprache braucht ein Codec-Plug-in, das Sie selbst installieren; Erneut suchen prüft den Ordner.\n\nDer einfache Modus auf dem letzten Bildschirm öffnet jeden Modus in der einfachen Ansicht. Starten Sie die Einrichtung jederzeit neu über Hilfe > Einrichtung und Lektionen > Einrichtung erneut starten oder über die Einstellungen.
+Interests	Interessen
+Codecs	Codecs
+Done	Fertig
+Region preset	Regionsvorgabe
+First-run setup	Ersteinrichtung
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.	Jeder Modus öffnet sich in der einfachen Ansicht: das Spektrum und ein Bildschirm mit Start-Taste und den wichtigsten Reglern. Aus: die detaillierten Tabs.
+One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).	Ein Klick setzt Bandplan, TV-Kanäle, UKW-Band und -Raster, Standardfrequenzen und Einheiten einer Region (Litauen, EU, ...).
+Open the setup again: radio, region, antenna, interests, voice codecs.	Die Einrichtung erneut öffnen: Radio, Region, Antenne, Interessen, Sprach-Codecs.
+Why	Warum
+no signal at the channel: check the tuning, the antenna and the gain	kein Signal im Kanal: Abstimmung, Antenne und Verstärkung prüfen
+signal, but no frame sync found: check the tuning (offset, polarity), the bandwidth and the signal-to-noise ratio	Signal da, aber kein Rahmen-Sync gefunden: Abstimmung (Offset, Polarität), Bandbreite und Signal-Rausch-Abstand prüfen
+frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the signal is too noisy or distorted	Rahmen-Syncs gefunden, aber ihre Kennung (NID, LICH, Slot-Typ) ist unlesbar: das Signal ist zu verrauscht oder verzerrt
+frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	Rahmen-Syncs gefunden, aber die Nutzdaten scheitern an FEC / CRC: schwaches Signal, Schwund oder Abtasttaktfehler
+decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	dekodiert, aber über ein Drittel der Blöcke geht verloren: ein stärkeres Signal oder eine bessere Antenne würde helfen
+decoding well	dekodiert gut
+Base stations	Basisstationen
+Calls	Anrufe
+Channel options	Kanaloptionen
+Devices	Geräte
+Ground stations	Bodenstationen
+Neighbours	Nachbarn
+Nodes	Knoten
+On air	Auf Sendung
+Selected	Ausgewählt
+Site	Standort
+Table	Tabelle
+Trunking	Bündelfunk
+Vessels	Schiffe
+some stations are hidden	einige Stationen sind ausgeblendet
+File...	Datei...
+Auto-save to file	Automatisch in Datei speichern
+Activity	Aktivität
+#  AI assistant (MCP), docs/MCP.md
+AI assistant (MCP)	KI-Assistent (MCP)
+Let an AI assistant control this receiver (MCP)	Einem KI-Assistenten die Steuerung dieses Empfängers erlauben (MCP)
+An AI assistant (Claude, ChatGPT-style clients, a local model) that you connect can tune, scan bands, identify signals and start decoders for you, and read what was decoded. It cannot read files, run programs, change settings or decrypt anything, and it cannot transmit unless you allow that below. Every action is listed in the log.	Ein KI-Assistent (Claude, ChatGPT-ähnliche Clients, ein lokales Modell), den Sie verbinden, kann für Sie abstimmen, Bänder durchsuchen, Signale erkennen, Decoder starten und das Dekodierte lesen. Er kann keine Dateien lesen, keine Programme starten, keine Einstellungen ändern und nichts entschlüsseln, und er kann nicht senden, solange Sie das unten nicht erlauben. Jede Aktion steht im Protokoll.
+Programs on this computer need the token too	Programme auf diesem Computer brauchen ebenfalls das Token
+Allow the AI to transmit (off by default; this is your decision, it is forgotten at restart)	Der KI das Senden erlauben (standardmäßig aus; Ihre Entscheidung, wird beim Neustart vergessen)
+The AI can now start transmissions. You are responsible for the law where you are and for your hardware.	Die KI kann jetzt Sendungen starten. Sie sind für das Recht an Ihrem Ort und für Ihre Hardware verantwortlich.
+listening on %s port %d, %d requests, %d refused	hört auf %s, Port %d, %d Anfragen, %d abgewiesen
+An AI is connected: %s	Eine KI ist verbunden: %s
+No AI has connected yet.	Noch keine KI hat sich verbunden.
+How to connect your AI	So verbinden Sie Ihre KI
+Other client	Anderer Client
+Claude Desktop: put this in its config file (Settings > Developer > Edit config) and restart it; it needs Node.js for the bridge. Claude Code: run the command in a terminal. Other clients: use the address (streamable HTTP) or start onair-server --mcp-stdio. Then ask, for example: there is some DRM around 15 MHz, find it and decode it.	Claude Desktop: Dies in die Konfigurationsdatei eintragen (Einstellungen > Entwickler > Konfiguration bearbeiten) und neu starten; für die Brücke wird Node.js gebraucht. Claude Code: den Befehl im Terminal ausführen. Andere Clients: die Adresse (Streamable HTTP) verwenden oder onair-server --mcp-stdio starten. Dann zum Beispiel fragen: Um 15 MHz gibt es etwas DRM, finde es und dekodiere es.
+What the AI did	Was die KI getan hat
+Clear log	Protokoll leeren
+Nothing yet.	Noch nichts.
+# Everything in view (wide multi-signal decode)
+identifying	wird erkannt
+running	läuft
+no decoder	kein Decoder
+paused (CPU)	pausiert (CPU)
+CPU	CPU
+CPU limit %	CPU-Limit %
+What	Was
+dB	dB
+Pin	Fix
+Everything in view	Alles im Bild
+Everything in view: on	Alles im Bild: an
+Decode everything in view	Alles im Bild dekodieren
+Add as	Hinzufügen als
+Identify automatically	Automatisch erkennen
+Add selected region	Auswahl hinzufügen
+Add tuned signal	Signal am Tuner hinzufügen
+Looking for signals...	Suche Signale ...
+Start the receiver to begin.	Zum Beginnen den Empfänger starten.
+The decoders' share of one processor core, against the limit. Above the limit the lowest ranked signals are paused.	Der Anteil der Decoder an einem Prozessorkern im Vergleich zum Limit. Über dem Limit werden die Signale mit dem niedrigsten Rang pausiert.
+Find every signal in the whole capture (digital voice, TETRA, pagers, packet radio, air band, Inmarsat, TV) and decode all of them at once.	Findet jedes Signal im gesamten Mitschnitt (digitaler Sprechfunk, TETRA, Pager, Packet Radio, Flugfunk, Inmarsat, TV) und dekodiert alle gleichzeitig.
+One capture, every signal in it. OnAir finds the signals, says what each one is and starts the right decoder for it. Switch one off, pin the ones that must never be paused, or give an unknown signal its mode by hand.	Ein Mitschnitt, alle Signale darin. OnAir findet die Signale, sagt, was jedes ist, und startet den passenden Decoder. Einzelne abschalten, wichtige fixieren, damit sie nie pausiert werden, oder einem unbekannten Signal den Modus von Hand geben.
+When the decoders take longer than this share of one core, the lowest ranked signal is paused (never a pinned one or the one you listen to) and comes back when there is room. 0: no limit.	Brauchen die Decoder mehr als diesen Anteil eines Kerns, wird das Signal mit dem niedrigsten Rang pausiert (nie ein fixiertes oder das gehörte) und kommt zurück, sobald Platz ist. 0: kein Limit.
+This computer cannot keep up: %d signals are paused to save CPU. Pin the ones you need, or raise the limit.	Dieser Computer kommt nicht mehr mit: %d Signale sind pausiert, um CPU zu sparen. Wichtige Signale fixieren oder das Limit erhöhen.
+TV channels in the capture: %.0f MHz wide	TV-Kanäle im Mitschnitt: %.0f MHz breit
+Turn the Identify tool on (key I) and drag across a signal on the spectrum, then add it here.	Das Werkzeug Erkennen einschalten (Taste I), über ein Signal im Spektrum ziehen und es hier hinzufügen.
+Add the signal at the tuner marker (12.5 kHz wide).	Das Signal an der Tuner-Marke hinzufügen (12,5 kHz breit).
+Off. Press the button to decode everything in the capture.	Aus. Mit der Taste alles im Mitschnitt dekodieren.
+%+.1f kHz from the capture centre, %.1f kHz wide	%+.1f kHz vom Mitschnittzentrum, %.1f kHz breit
+Pinned: never paused by the CPU limit	Fixiert: wird vom CPU-Limit nie pausiert
+Follow this signal's sound; it is never paused by the CPU limit	Dem Ton dieses Signals folgen; es wird vom CPU-Limit nie pausiert
+Remove: a signal you added is taken away, a found one is switched off	Entfernen: ein hinzugefügtes Signal wird gelöscht, ein gefundenes abgeschaltet
+# Share on web: relay, listeners, server settings
+Share my radio	Mein Radio teilen
+Connecting to the relay ...	Verbindung zum Relay wird aufgebaut ...
+Anyone with the link	Jeder mit dem Link
+Invite links only	Nur Einladungslinks
+Limits that protect your computer	Grenzen zum Schutz Ihres Computers
+Antenna (shown to listeners, optional)	Antenne (für Hörer sichtbar, optional)
+Listener limits	Hörer-Grenzen
+While sharing	Beim Teilen
+Listeners and invites	Hörer und Einladungen
+Nobody is listening right now.	Im Moment hört niemand zu.
+Kick##wsKick	Rauswerfen##wsKick
+Block 24 h##wsBlock	24 h sperren##wsBlock
+Allow again##wsUnban	Wieder zulassen##wsUnban
+Make an invite link	Einladungslink erstellen
+Copy invite link	Einladungslink kopieren
+Server settings	Servereinstellungen
+Connected to the OnAir relay.	Mit dem OnAir-Relay verbunden.
+Connecting to the OnAir relay ...	Verbindung zum OnAir-Relay wird aufgebaut ...
+The relay link dropped (%s). Trying again in %d s.	Die Relay-Verbindung ist abgebrochen (%s). Neuer Versuch in %d s.
+The OnAir relay refuses or cannot be reached: %s	Das OnAir-Relay lehnt ab oder ist nicht erreichbar: %s
+Blocked: %s (%d min left)	Gesperrt: %s (noch %d Min.)
+Processor %.0f%% of the %.0f%% limit	Prozessor %.0f%% von %.0f%% Grenze
+Upload %.0f of %.0f kbit/s	Upload %.0f von %.0f kbit/s
+Port on this computer (0 = the first free one from 8073)	Port auf diesem Computer (0 = der erste freie ab 8073)
+Listeners from one address at once	Hörer pro Adresse gleichzeitig
+Longest session of one listener in minutes (0 = no limit)	Längste Sitzung eines Hörers in Minuten (0 = unbegrenzt)
+Most spectrum rows per second (0 = the default)	Meiste Spektrumzeilen pro Sekunde (0 = Standard)
+Key file for that certificate	Schlüsseldatei für dieses Zertifikat
+A certificate needs both files.	Ein Zertifikat braucht beide Dateien.
+Relay service address (only if you run your own relay)	Relay-Adresse (nur bei eigenem Relay)
+OnAir relay (recommended: no setup, no open ports)	OnAir-Relay (empfohlen: ohne Einrichtung, ohne offene Ports)
+Free Cloudflare tunnel (needs a small helper program, downloaded once)	Kostenloser Cloudflare-Tunnel (braucht ein kleines Hilfsprogramm, einmal geladen)
+Only my network (a phone on the same Wi-Fi)	Nur mein Netzwerk (ein Handy im selben WLAN)
+Password (8 characters or more)	Passwort (8 Zeichen oder mehr)
+Apply changes	Änderungen anwenden
+What to do:	Was tun:
+Will share: %s, %s MHz, up to %d listeners, %s, %s.	Wird geteilt: %s, %s MHz, bis zu %d Hörer, %s, %s.
+through the OnAir relay (no router settings needed)	über das OnAir-Relay (keine Router-Einstellungen nötig)
+through a Cloudflare tunnel	über einen Cloudflare-Tunnel
+at your own address	unter Ihrer eigenen Adresse
+on this network only	nur in diesem Netzwerk
+invite links only	nur per Einladungslink
+open to anyone with the link	offen für jeden mit dem Link
+with a password	mit Passwort
+no radio found	kein Radio gefunden
+No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Kein Radio gefunden. Schließen Sie ein Radio an und drücken Sie auf dem Reiter Radio und Bereich auf Aktualisieren, oder wählen Sie das Testsignal.
+Join the OnAir Discord	Dem OnAir-Discord beitreten
+
+# Multi-radio trunking (trunk pool)
+tuning	Abstimmung
+hold	Halten
+ended	beendet
+control	Steuerung
+voice	Sprache
+lost	verloren
+Role	Rolle
+TG	TG
+not followed	nicht verfolgt
+Hang time (s)	Nachlaufzeit (s)
+Retune wait (s)	Wartezeit Umstimmen (s)
+Priority talkgroups take a radio	Prioritäts-Sprechgruppen nehmen ein Radio
+Keep a record of every call	Jeden Anruf protokollieren
+Follow talkgroups that are not listed	Nicht gelistete Sprechgruppen verfolgen
+Calls are saved in the recordings folder, trunk. Sound needs the vocoder add-on.	Anrufe werden im Aufnahmeordner trunk gespeichert. Ton braucht das Vocoder-Add-on.
+Talkgroup and radio rules	Regeln für Sprechgruppen und Funkgeräte
+Deny	Sperren
+Import rules	Regeln laden
+rules read	Regeln gelesen
+skipped	übersprungen
+Import plan	Plan laden
+rows read	Zeilen gelesen
+Identifiers	Kennungen
+Call log	Anrufliste
+Channel plan	Kanalplan
+Export log	Liste speichern
+Multi-radio trunking	Trunking mit mehreren Radios
+Follow calls with several radios	Anrufe mit mehreren Radios verfolgen
+Auto-assign devices	Geräte automatisch zuweisen
+One radio listens to the control channel of a trunked system. When it announces a call, another radio is tuned to the voice channel, and the call is logged. With one radio, calls inside its capture are followed and the rest are not.	Ein Radio hört den Steuerkanal eines Bündelfunksystems. Meldet er einen Anruf, wird ein anderes Radio auf den Sprachkanal gestimmt und der Anruf protokolliert. Mit nur einem Radio werden Anrufe im Erfassungsbereich verfolgt, die übrigen nicht.
+The radio on the control channel stays there; every other open receiver becomes a voice radio. Open more receivers with + at the bottom.	Das Radio auf dem Steuerkanal bleibt dort; jeder andere offene Empfänger wird Sprachradio. Weitere Empfänger öffnen Sie mit + unten.
+Start a P25 receiver on the control channel, then press Auto-assign devices.	Starten Sie einen P25-Empfänger auf dem Steuerkanal und drücken Sie dann Geräte automatisch zuweisen.
+Calls %llu, followed %llu, retune %.2f s (max %.2f s)	Anrufe %llu, verfolgt %llu, Umstimmen %.2f s (max. %.2f s)
+Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	Priorität 1 (höchste) bis 10, 0 keine. Eine höher priorisierte Sprechgruppe nimmt einer niedrigeren das Radio weg.
+From, to (the same number for one), action, priority	Von, bis (gleiche Zahl für eine), Aktion, Priorität
+System, identifier table (iden_up) and channel numbers from a CSV file	System, Kennungstabelle (iden_up) und Kanalnummern aus einer CSV-Datei
+EMERGENCY	NOTFALL
+encrypted	verschlüsselt
+Follow talkgroups, radio IDs or callsigns. Alerts and recording are off until you tick them for an entry. Encrypted calls are listed but never recorded.	Talkgroups, Funk-IDs oder Rufzeichen verfolgen. Meldungen und Aufnahme sind aus, bis Sie sie für einen Eintrag ankreuzen. Verschlüsselte Gespräche werden aufgelistet, aber nie aufgenommen.
+TG 91, 3120123, 100-199, LY1ABC, LY*	TG 91, 3120123, 100-199, LY1ABC, LY*
+Name (optional)	Name (optional)
+All voice modes	Alle Sprachmodi
+Nothing watched yet.	Noch nichts beobachtet.
+Watching	Beobachtet
+Notify	Melden
+Beep	Signalton
+A desktop notification when a call starts (off by default)	Eine Desktop-Benachrichtigung, wenn ein Gespräch beginnt (standardmäßig aus)
+Save the audio of its calls to the recordings folder through the auto-record rules (this also switches auto-record on). Encrypted calls are never recorded. You are responsible for the law of your country.	Das Audio seiner Gespräche über die Auto-Aufnahme-Regeln im Aufnahmeordner speichern (schaltet auch die Auto-Aufnahme ein). Verschlüsselte Gespräche werden nie aufgenommen. Sie sind für das Recht Ihres Landes selbst verantwortlich.
+Copy as CSV	Als CSV kopieren
+No calls of the watched entries heard yet.	Noch keine Gespräche der beobachteten Einträge gehört.
+Sec	Sek
+Flags	Merkmale
+EMERG	NOTF
+ENC	VERSCHL
+Keywords on: no match yet	Stichwörter an: noch kein Treffer
+Keywords	Stichwörter
+One keyword per line, any case. It is looked for in the message text and in the capcode name. Start a line with re: for a regular expression, for example re:structure fire|MVA. Matching pages are highlighted in Messages and shown in the ticker.	Ein Stichwort pro Zeile, Groß-/Kleinschreibung egal. Gesucht wird im Nachrichtentext und im Namen des Capcodes. Mit re: am Zeilenanfang ist es ein regulärer Ausdruck, zum Beispiel re:structure fire|MVA. Treffer werden in Nachrichten hervorgehoben und im Ticker gezeigt.
+Notify on a keyword match	Bei Stichwort-Treffer melden
+A desktop notification for each matching new page (off by default)	Eine Desktop-Benachrichtigung für jede passende neue Nachricht (standardmäßig aus)
+lines are not valid and were skipped	Zeilen sind ungültig und wurden übersprungen
+Pager keyword	Pager-Stichwort
+more matching pages	weitere passende Nachrichten
+No GPS position heard yet (needs LRRP data)	Noch keine GPS-Position gehört (braucht LRRP-Daten)
+Last position	Letzte Position
+just now	gerade eben
+min ago	Min. her
+Show on map	Auf Karte zeigen
+# custom bandwidth chip and reset (3.6)
+custom	eigene
+default	Standard
+How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	Wie viel Spektrum das Radio erfasst. Standard ist die eigene Breite des Modus; klicken Sie, um eine beliebige Breite einzustellen.
+Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	Zurück zur eigenen Bandbreite und Abtastrate dieses Modus. Ihre eigenen Werte bleiben für das nächste Anhaken von Eigene gespeichert.
+16-bit	16 Bit
+Share##rec	Teilen##rec
+Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.	Öffnet den Ordner mit dieser Aufnahme und kopiert ihren Pfad. Die Datei senden (bei SigMF .sigmf-meta und .sigmf-data zusammen): Sie wird mit eigener Frequenz, Rate und Betriebsart abgespielt.
+Identify	Identifizieren
+Start the receiver to scan.	Starte den Empfänger zum Scannen.
+Look for every signal in what the radio sees, find out what each one is and offer to open it. One click.	Sucht jedes Signal im Bild des Funkgeräts, findet heraus, was es ist, und bietet an, es zu öffnen. Ein Klick.
+I don't know what this is: measure the strongest signal (or the region you dragged on the spectrum) and show the most likely modes with how sure OnAir is.	Ich weiß nicht, was das ist: misst das stärkste Signal (oder den im Spektrum gezogenen Bereich) und zeigt die wahrscheinlichsten Modi mit der Sicherheit von OnAir.
+Plug-ins	Plug-ins
+Open Plug-ins...	Plug-ins öffnen...
+Open Automations...	Automatisierungen öffnen...
+Scripts and rules	Skripte und Regeln
+Running programs is allowed.	Das Ausführen von Programmen ist erlaubt.
+Running programs is off.	Das Ausführen von Programmen ist aus.
+Plug-ins and scripts	Plug-ins und Skripte
+Tones (Hz)	Töne (Hz)
+Frequency (kHz)	Frequenz (kHz)
+no calls yet	noch keine Rufe
+no codes yet	noch keine Codes
+calls	Rufe
+strongest tone	stärkster Ton
+Play the channel audio; decoding is the same either way	Kanal-Audio abspielen; die Dekodierung ist in beiden Fällen gleich
+Copy CSV	CSV kopieren
+copied	kopiert
+rows	Zeilen
+Copy the table as CSV to the clipboard (positions included)	Tabelle als CSV in die Zwischenablage kopieren (mit Positionen)
+Copy the table as CSV to the clipboard	Tabelle als CSV in die Zwischenablage kopieren
+# MFSK pictures (Shortwave Radiogram)
+Save PNG	PNG speichern
+Save every picture	Jedes Bild speichern
+Clear pictures	Bilder leeren
+grey	grau
+Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.	Bilder im MFSK-Strom (Shortwave Radiogram) erscheinen hier, sobald sie ankommen.
+Open recordings folder	Aufnahmeordner öffnen
+Where recordings are saved. Change it in Settings > Files.	Hier werden Aufnahmen gespeichert. Ändern unter Einstellungen > Dateien.
+Free disk space:	Freier Speicherplatz:
+Default (inside the data folder)	Standard (im Datenordner)
+Choose...	Auswählen...
+Use typed path	Eingegebenen Pfad verwenden
+That folder cannot be written: the default is used.	In diesen Ordner kann nicht geschrieben werden: der Standard wird verwendet.
+# Smart CubeSat (docs/CUBESAT-SMART.md)
+Tuned for	Abgestimmt auf
+No satellite is expected soon: scanning this span for any carrier.	Bald wird kein Satellit erwartet: Der Bereich wird nach beliebigen Trägern abgesucht.
+Nothing was uploaded.	Es wurde nichts hochgeladen.
+carrier found	Träger gefunden
+decoding	dekodiere
+carrier only	nur Träger
+no known signal	kein bekanntes Signal
+Next passes	Nächste Überflüge
+working out the passes ...	Überflüge werden berechnet ...
+no pass of a satellite in the table in the next hours (set your location, refresh the orbits)	In den nächsten Stunden kein Überflug eines Satelliten der Tabelle (Standort einstellen, Bahnen aktualisieren)
+In	In
+Carriers	Träger
+none yet	noch keine
+Tried on	Versucht auf
+valid	gültig
+failed their checks	Prüfung nicht bestanden
+satellite	Satellit
+framing	Rahmen
+validated by	bestätigt durch
+byte errors put right	Byte-Fehler korrigiert
+received	empfangen
+telemetry	Telemetrie
+Field	Feld
+Decoded packets	Dekodierte Pakete
+Framing	Rahmen
+Follow satellites from the table (passes and Doppler)	Satelliten der Tabelle verfolgen (Überflüge und Doppler)
+Look for carriers the table does not explain	Nach Trägern suchen, die die Tabelle nicht erklärt
+Minimum SNR (dB)	Minimaler SNR (dB)
+Carriers followed at once	Gleichzeitig verfolgte Träger
+Lowest elevation (deg)	Niedrigste Elevation (Grad)
+Search window around the predicted carrier (Hz)	Suchfenster um den vorhergesagten Träger (Hz)
+Modulation of unknown carriers	Modulation unbekannter Träger
+Baud rate (0: automatic, any value)	Baudrate (0: automatisch, beliebiger Wert)
+Channel width (Hz, 0: automatic, any value)	Kanalbreite (Hz, 0: automatisch, beliebiger Wert)
+Scan resolution (Hz, 0: automatic)	Scan-Auflösung (Hz, 0: automatisch)
+Add a transmitter to the table	Sender zur Tabelle hinzufügen
+NORAD number	NORAD-Nummer
+Baud rate	Baudrate
+orbits for %zu satellites, %zu table entries	Bahnen für %zu Satelliten, %zu Tabelleneinträge
+Auto decode: on (click to stop)	Auto-Dekodierung: an (zum Beenden klicken)
+Auto decode cubesats	Cubesats automatisch dekodieren
+Tunes a span that holds the satellites about to pass, follows their Doppler shift, finds every narrow carrier, works out its modulation and baud rate, and decodes it with every framing that fits. Nothing to set up.	Stimmt einen Bereich ab, der die bald überfliegenden Satelliten enthält, folgt ihrer Doppler-Verschiebung, findet jeden schmalen Träger, bestimmt Modulation und Baudrate und dekodiert mit jedem passenden Rahmenformat. Nichts einzustellen.
+Refresh orbits	Bahnen aktualisieren
+Downloading orbits from CelesTrak (the built-in set is used meanwhile).	Bahnen werden von CelesTrak geladen (bis dahin gilt der eingebaute Satz).
+Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.	Schreibt die Pakete als SatNOGS-fertige Datei (ein Telemetrie-Datensatz pro Zeile), als CSV und als KISS-Datei in den Datenordner. Es wird nichts hochgeladen.
+Press the button: it does the rest.	Taste drücken: der Rest geschieht von selbst.
+BPSK	BPSK
+A country file (cty.dat, wl_cty.dat) from country-files.com gives every DXCC entity with its CQ and ITU zone. Thanks to Jim Reisert AD1C and the country-files.com team. OnAir does not bundle it: load one you have, or press Download (only on your click).	Eine Länderdatei (cty.dat, wl_cty.dat) von country-files.com liefert jede DXCC-Entität mit CQ- und ITU-Zone. Dank an Jim Reisert AD1C und das country-files.com-Team. OnAir liefert sie nicht mit: lade eine vorhandene Datei oder drücke Download (nur auf deinen Klick).
+Show country and zone in decoded messages	Land und Zone in dekodierten Nachrichten anzeigen
+Load file...	Datei laden...
+Download from country-files.com	Von country-files.com herunterladen
+Reset to built-in	Auf integrierte Tabelle zurücksetzen

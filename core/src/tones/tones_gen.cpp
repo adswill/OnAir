@@ -156,9 +156,20 @@ std::vector<cf32> toneSceneFm(const ToneScene& s, double rate, double offsetHz, 
 
 namespace {
 
-ToneScene demoScene(bool noiseOnly) {
+ToneScene demoScene(int variant) {
     ToneScene s(48000, 5);
+    const bool noiseOnly = variant == 1;
     if (noiseOnly) { s.pad(4); return s; }
+    if (variant == 2) {   // SELCAL mode: voice, then three calls (a code heard twice) with voice between
+        s.speech(0.5, 3.0, 0.4);
+        s.selcal("AMCP", 4.0, 0.5);
+        s.speech(8.0, 2.0, 0.4);
+        s.selcal("DHKS", 10.5, 0.5);
+        s.speech(14.5, 2.0, 0.4);
+        s.selcal("AMCP", 17.0, 0.5);
+        s.pad(22);
+        return s;
+    }
     // 0 - 10 s: CTCSS 123.0 Hz (12% of the deviation) under speech from 2 s on
     s.ctcss(123.0, 0, 10, 0.12);
     s.speech(2.0, 2.2, 0.4); s.speech(5.0, 3.0, 0.4);
@@ -176,7 +187,7 @@ ToneScene demoScene(bool noiseOnly) {
 class TonesSynth : public ModeSynth {
 public:
     TonesSynth(const SynthConfig& c, double rate) : rate_(rate), cfg_(c) {
-        const ToneScene s = demoScene(c.modeOpt[0] == 1);
+        const ToneScene s = demoScene(c.modeOpt[0]);
         audio_ = s.audio();
         const double pn = rate / 25000.0 / std::pow(10.0, c.snrDb / 10.0);
         sigma_ = c.snrDb < -100 ? 0.f : (float)std::sqrt(pn / 2);
@@ -218,3 +229,10 @@ std::unique_ptr<ModeSynth> makeTonesSynth(const SynthConfig& cfg, double sampleR
 }
 
 } // namespace dect2
+
+namespace dect2 {
+std::unique_ptr<ModeSynth> makeSelcalSynth(const SynthConfig& cfg, double sampleRate) {
+    SynthConfig c = cfg; c.modeOpt[0] = 2;
+    return makeTonesSynth(c, sampleRate);
+}
+}

@@ -43,6 +43,7 @@ std::string fmt(const char* f, double a, double b = 0, double c = 0) {
 
 // ------------------------------------------------------------------------------------------------------------------------------ setup
 void AutoGainController::configure(const RadioProfile& r, const ModeTarget& t, const AgSettings& s) {
+    if (radio_.id != r.id) { unitScale_ = 1; unitLearned_ = false; }   // another radio: what was learned of the last one does not carry over
     radio_ = r; tgt_ = t; set_ = s;
     mode_ = s.mode;
     pol_ = t.policy;
@@ -509,7 +510,7 @@ bool AutoGainController::tickOnce(const AgInput& in, AgCommand& out) {
         const AgTrial& p = trials_[(size_t)k];
         if (!p.done || p.pol != t.pol || p.plan.totalDb >= t.plan.totalDb - 0.5 || p.spec.size() != t.spec.size() || p.spec.empty()) continue;
         const ImdReport r = imdCompare(p.spec, t.spec, t.plan.totalDb - p.plan.totalDb);
-        if (r.valid && r.overload && p.headroomMin > 1) { t.imd = true; imdSeen_ = imdSeen_ || r.spurs > 0; compSeen_ = compSeen_ || r.compressed; }
+        if (r.valid && r.overload && p.headroomMin > 1 && (!radio_.stepsUncertain || radio_.calibrated() || unitLearned_)) { t.imd = true; imdSeen_ = imdSeen_ || r.spurs > 0; compSeen_ = compSeen_ || r.compressed; }
         break;
     }
     const bool over = t.clipMax > tgt_.clipLimit || t.imd || t.headroomMin < 0.5;
@@ -569,7 +570,7 @@ bool AutoGainController::tickSafe(const AgInput& in, AgCommand& out) {
         const AgTrial& p = trials_[(size_t)ti_ - 1];
         if (!p.spec.empty() && p.spec.size() == t.spec.size() && t.plan.totalDb > p.plan.totalDb + 0.5) {
             const ImdReport r = imdCompare(p.spec, t.spec, t.plan.totalDb - p.plan.totalDb);
-            if (r.valid && r.overload && p.headroomMin > 1) { t.imd = true; imdSeen_ = imdSeen_ || r.spurs > 0; compSeen_ = compSeen_ || r.compressed; }
+            if (r.valid && r.overload && p.headroomMin > 1 && (!radio_.stepsUncertain || radio_.calibrated() || unitLearned_)) { t.imd = true; imdSeen_ = imdSeen_ || r.spurs > 0; compSeen_ = compSeen_ || r.compressed; }
         }
     }
     bool ch = false;
@@ -730,6 +731,8 @@ AgRunResult autogainRun(AgRadioIo& io, const RadioProfile& r, const ModeTarget& 
 }
 
 void applyPlan(const RadioProfile& r, const StagePlan& p, TuneSettings& tune) {
+    // a driver that spreads one gain over its stages by policy (SDRplay): the LNA state is what separates sensitivity from linearity
+    if (!r.splitKey.empty()) tune.radio[r.splitKey] = p.pol == Policy::Linearity ? "linearity" : "sensitivity";
     for (size_t i = 0; i < r.stages.size() && i < p.db.size(); i++) {
         const GainStage& s = r.stages[i];
         if (!s.settable) continue;
@@ -791,7 +794,7 @@ bool EngineAgIo::measure(AgInput& in) {
 
 AgRunResult autogainRun(Engine& e, TuneSettings& tune, const DeviceInfo& radio, int stdMode, AgMode how, AgSettings s, double timeoutSec, const std::atomic<bool>* cancel) {
     const RadioProfile r = radioProfileFor(radio);
-    const double bw = tune.bandwidthMhz * 1e6;
+    const double bw = tune.signalBwMhz() * 1e6;
     const ModeTarget t = modeTargetFor(stdMode, bw, e.sampleRate() > 0 ? e.sampleRate() : tune.sampleRate);
     s.mode = how == AgMode::Safe ? AgMode::Safe : AgMode::Once;
     EngineAgIo io(e, tune, r, bw);
@@ -885,7 +888,7 @@ bool AutoGainController::tickBracket(const AgInput& in, AgCommand& out) {
             const AgTrial& p = trials_[(size_t)k];
             if (!p.done || p.pol != t.pol || p.plan.totalDb >= t.plan.totalDb - 0.5 || p.spec.size() != t.spec.size() || p.spec.empty()) continue;
             const ImdReport r = imdCompare(p.spec, t.spec, t.plan.totalDb - p.plan.totalDb);
-            if (r.valid && r.overload && p.headroomMin > 1) { t.imd = true; imdSeen_ = imdSeen_ || r.spurs > 0; compSeen_ = compSeen_ || r.compressed; }
+            if (r.valid && r.overload && p.headroomMin > 1 && (!radio_.stepsUncertain || radio_.calibrated() || unitLearned_)) { t.imd = true; imdSeen_ = imdSeen_ || r.spurs > 0; compSeen_ = compSeen_ || r.compressed; }
             break;
         }
         if (t.clipMax > tgt_.clipLimit || t.imd || t.headroomMin < 0.5) {   // the gains above it are worse still

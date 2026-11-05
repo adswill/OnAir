@@ -74,7 +74,7 @@ New to this? docs/HOST-A-RECEIVER.md walks through it for complete beginners (Ta
 
 ## Easy setup inside OnAir (Server > Share on web)
 
-In the app open **Server > Share on web ...**. The window has a **Start sharing** button that works with the defaults (the first radio, the whole span of the radio, all safe decoders, a free public address from a Cloudflare quick tunnel), and tabs to choose the radio from a dropdown, the centre frequency and span (with presets), which decoders and listening modes are offered, the limits, a password, and the optional listing on the public directory (a preview of exactly what is sent, then **List it**), plus **Test connection** and a status block with the link, a QR code, listeners and bit rates. Everything is described in docs/ONAIR-WEB-SHARING.md.
+In the app open **Server > Share on web ...** and press **Share my radio**. It works with the defaults (the first radio, the whole span of the radio, all safe decoders, a public address through the OnAir relay: docs/ONAIR-WEB-RELAY.md, nothing to open on the router, no helper program) and shows the link, a QR code and a copy button. While sharing the window shows the relay's state, the processor and upload budgets, the listeners (with **Kick** and **Block 24 h**), blocked addresses (**Allow again**), invite links, and changes you make are applied by themselves after a moment (the link stays the same); a web server that stops by itself is started again (three times in ten minutes). The tabs hold the choices: the radio and range (with presets), which decoders and listening modes are offered, the limits, who may listen (anyone with the link, a password, or invite links only), how listeners reach you (relay, Cloudflare tunnel, your own address, this network only), the **Server settings** tab (port, certificate, relay address, listeners per address, processor and bandwidth caps, idle and session limits, spectrum row size and rate), the optional listing on the public directory (a preview of exactly what is sent, then **List it**: name, description, location rounded to 100 km / 10 km / 1 km ..., radio, antenna, contact), plus **Test connection**. If the relay service does not answer, the window uses the Cloudflare quick tunnel for the link when its helper is on the computer and switches to the relay when it answers. Everything is described in docs/ONAIR-WEB-SHARING.md.
 
 **Stop sharing** (or closing OnAir) ends the server, the tunnel and the listing program; the listing expires by itself after a few minutes. Files and logs are in the `webshare` folder of OnAir's data folder.
 
@@ -116,6 +116,10 @@ In the app open **Server > Share on web ...**. The window has a **Start sharing*
 
 Failed logins (wrong password or invite, wrong admin token) from one address: after 5 within a minute that address is refused for a minute. Every wrong answer comes after 300 ms.
 
+## Relay (public address without port forwarding)
+
+`web_relay=1` makes the server open one outbound WebSocket to a relay service (`web_relay_url`, default `wss://relay.on-air.dev/relay/v1/host`) and get a public https address; listeners are carried to the server through that connection (it also sets `web_trust_proxy=1`). `web_relay_public=1` (default 0) asks the relay to list the server in its public list (`GET /api/v1/servers`). Needs a build with TLS. Status in `web_relay_status.json` beside the settings file. The wire format and what the relay service must do: docs/ONAIR-WEB-RELAY.md.
+
 ## Admin API
 
 Same port, `Authorization: Bearer <web_admin_token>`, from this computer unless `web_admin_lan=1`. POST bodies are JSON (`Content-Type: application/json`, at most 4 KB).
@@ -135,6 +139,7 @@ curl -s -H "Authorization: Bearer $T" -H 'Content-Type: application/json' -d '{"
 | `GET users` | the sessions: id, name, class, address (or its tag), seconds, idle seconds, frequency, mode, audio / spectrum on, kbit/s, CPU %, degrade level, dropped frames, decoders |
 | `GET stats` | users, CPU % (of the machine) and its cap, kbit/s and its cap, admitted / rejected / kicked counts, samples dropped because the DSP fell behind, the capture, the shared decoders and their listener counts |
 | `POST kick` | `{"id":n,"reason":"..."}` |
+| `POST ban`, `GET bans`, `POST unban` | `{"id":n,"minutes":1440,"reason":"..."}` blocks the address of session n (1 minute to 7 days, default 24 hours; kept in memory only) and kicks its sessions; a blocked address gets `forbidden` at once; `GET bans` lists the blocks (the address as the same tag as in `users`, minutes left); `{"address":"<tag>"}` lifts one |
 | `GET policy`, `POST policy` | the demodulators and decoders listeners may use; `{"demod":"am","on":true}` or `{"decoder":"adsb","on":false}` |
 | `GET legal` | the legal notice text and its version |
 | `GET ranges`, `POST ranges` | the frequency ranges (see Frequency ranges): `{"allow":["144-146MHz,nfm"],"block":["..."],"presets":["ham_hf@open"],"action":"refuse"}`; a key you leave out stays as it is, `{"clear":true}` removes all; nothing changes when a line is bad (400 with the reason); listeners are told at once |
@@ -274,9 +279,19 @@ CPU: a decoder counts as one of the `web_max_decoders` instances (8) and its sli
 
 ## Browser client (web/onair-web/)
 
-Files: `index.html`, `style.css`, `app.js` (UI and WebSocket), `onair-lib.js` (pure helpers: ADPCM decode, frame parsing, messages, frequency and bin mapping, zoom and pan, palettes, S-meter, result tables), `onair-decoders.js` (the Decoders tab: tables, the map, FT8 history, picture strips; pure helpers plus the DOM views) and `onair-worklet.js` (audio jitter buffer, run in an AudioWorklet). Everything is served from the same origin (the server's content security policy allows nothing else). Tune by clicking a digit half, scrolling on the digits, arrow keys (Shift or Page Up/Down for 10 steps), or by clicking the spectrum; drag to pan, wheel or pinch to zoom (the zoomed slice is requested from the server as a finer spectrum span). Keys: 1 to 6 modes, M mute, + and - zoom. An invite link is `http://host:8073/#invite=TOKEN` (the token never reaches the server's logs). The notice banner shows the server's `notice` text from `/web/v1/info` when it sends one, else a generic one. The S-meter scale is relative to full scale (S9 = -66 dBFS), not calibrated.
+Vanilla JavaScript, no build step, no network use except the server that served the page (no CDN, no tiles, no web fonts from elsewhere). Files:
 
-Tests for the pure code (node built-ins only, not part of CMake): `node tests/web/run.js`.
+* `index.html`, `style.css`, `app.js`: the page (UI, WebSocket, drawing, settings panel, map tab).
+* `onair-lib.js`: pure helpers (ADPCM, frames, messages, frequency and bin mapping, zoom and pan, palettes, S-meter, ranges). `onair-decoders.js`: decoder tables, FT8 history, picture strips.
+* `onair-settings.js`: the settings schema with validation, persistence, auto-range and the spectrum request. `onair-i18n.js`: strings (English master, Lithuanian and German partial; missing keys fall back to English).
+* `onair-map.js` + `onair-world.js`: the offline map (Web Mercator, drag / wheel / pinch, coarse world outline from `core/include/dect2/geo/worldlow.h`).
+* `onair-worklet.js`: audio playback (AudioWorklet, with a ScriptProcessor fallback). `onair-demo.js`: `?demo=1` simulated receiver for previews.
+
+What a listener gets: zoomable, pannable spectrum and waterfall (click to tune, drag to pan, wheel or pinch to zoom, drag the passband edges for the bandwidth, zoom slider), band plan strip and memories drawn on the spectrum (tap a flag to tune), frequency display with digit scrolling, typed frequency entry, modes AM / NFM / WFM / USB / LSB / CW, bandwidth slider and Narrow / Normal / Wide presets, squelch, AGC (off / slow / fast), gain, FM de-emphasis, volume, mute, S-meter with peak hold and an output level meter, audio recording to a file in the browser, memories with JSON export and import, per-listener decoder panels (tables, pictures) and a map tab for ADS-B, AIS and APRS positions, dark and light themes, phone / tablet / desktop layouts, keyboard shortcuts (`?` lists them), connection status with automatic reconnect, loading and error states, and ARIA labels and roles.
+
+**Settings** (gear button, View menu or `S`): receiver (AGC, gain, de-emphasis, audio codec and rate, step, bands set the mode), display (waterfall palette, level range: follow the noise floor / auto-range / manual min and max, range, floor offset, waterfall speed in rows a second, FFT size, trace smoothing, peak hold, band plan, memories and grid on or off), layout and look (theme, language, layout auto / wide / compact, show or hide the side panels, text size, keyboard shortcuts, reduce motion). Everything is validated on load and kept in `localStorage` under `onair.settings.v1` (every access is in try / catch; a private window just uses the defaults). Settings can be exported to and imported from a JSON file. Nothing is sent to the server except the normal protocol messages (`rx`, `audio`, `spectrum`).
+
+Tests for the pure code (node built-ins only): `node tests/web/run.js` (CTest `web_client` when node is installed).
 
 ## NEEDS BUILD/TEST (frequency ranges, branch webonair-ranges-030)
 

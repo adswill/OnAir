@@ -11,6 +11,8 @@
 #include "dect2/net/api_policy.h"
 #include "dect2/net/api_servers.h"
 #include "dect2/net/remote_api.h"
+#include "dect2/mcp/mcp.h"
+#include "dect2/codec/codec_paths.h"
 #include "../memory/memory_options.h"
 #include <cmath>
 #include <filesystem>
@@ -175,6 +177,14 @@ struct Host : RemoteApiHost {
             return true;
         }, err);
     }
+    bool setCaptureBandwidthHz(double hz, std::string& err) override {
+        return run([hz](App& a, std::string& e) {
+            if (!captureRowShown(a)) { e = "this source has its own bandwidth (a recording or a sound card)"; return false; }
+            rxWidthSetFromApi(a, hz / 1e6);   // 0 = the mode's own; the driver's refusal is logged and the previous width comes back
+            if (!a.rateRefusal.empty()) { e = a.rateRefusal; return false; }
+            return true;
+        }, err);
+    }
     bool setAutoGain(bool on, std::string& err) override {
         return run([on](App& a, std::string& e) {
             if (!a.devices[(size_t)a.devIdx].isRadio()) { e = "this source has no gain control"; return false; }
@@ -191,10 +201,10 @@ struct Host : RemoteApiHost {
                 return generalApiRecord(a, true, e);
             }
             if (a.engine.recordingStats().active) { e = "already recording"; return false; }
-            const dect2::FileFormat f = a.recFormat == 1 ? dect2::FileFormat::CF32 : dect2::FileFormat::CS8;
+            const dect2::FileFormat f = (dect2::FileFormat)recFileFormatOf(a.recFormat);
             std::error_code ec;
-            std::filesystem::create_directories(plat::dataDir() + "/recordings", ec);
-            if (!a.engine.startRecording(plat::dataDir() + "/recordings/" + a.engine.recordingName(f), f, e)) return false;
+            std::filesystem::create_directories(recordingsDir(), ec);
+            if (!a.engine.startRecording(recordingsDir() + "/" + a.engine.recordingName(f), f, e)) return false;
             a.recDonePath.clear();
             return true;
         }, err);
@@ -445,6 +455,8 @@ struct RigAdapter : apipol::RigctlRadio {
     }
 };
 
+bool gDevMcp = false;   // --mcp (dev, screenshots): the Data feeds window open on the AI assistant section with it switched on (not saved)
+
 struct State {
     Host host;
     RemoteApiServer srv{host};   // after the host: stopped first
@@ -454,6 +466,17 @@ struct State {
     RigctlConfig rigCfg;
     UdpOut udp;
     UdpOutConfig udpCfg;
+    // AI assistant (MCP, docs/MCP.md): its own listener on its own port, off by default; the transmit tools only while the user ticks the separate TX box (never remembered)
+    struct Mcp {
+        bool on = false, lan = false, localAuth = false, tx = false;
+        int port = 8766;
+        std::string token;
+        std::unique_ptr<dect2::mcp::Server> srv;
+        std::unique_ptr<dect2::mcp::McpHttpHost> hh;
+        std::unique_ptr<RemoteApiServer> http;
+        int snippetTab = 0;
+        bool showHow = false;
+    } mcp;
     ~State() {
         dect2::automation::global().setStreamer(nullptr, 0);
         host.abort();   // connection threads waiting for the (gone) main thread are released before the server joins them
@@ -465,11 +488,11 @@ State& st() { static State s; return s; }
 // formats a line, pushes it into the ring and sends one datagram.
 void applyStreamer() {
     State& s = st();
-    if (!s.cfg.on && !s.udpCfg.on) { dect2::automation::global().setStreamer(nullptr, 0); return; }
+    if (!s.cfg.on && !s.udpCfg.on && !s.mcp.on) { dect2::automation::global().setStreamer(nullptr, 0); return; }
     dect2::automation::global().setStreamer([](const dect2::automation::Event& e) {
         State& t = st();
         const std::string line = apipol::eventLine(e, 0, apipol::kMaxUdpLine - 1);
-        if (t.cfg.on) t.host.ring.push(line);
+        if (t.cfg.on || t.mcp.on) t.host.ring.push(line);
         if (t.udpCfg.on) t.udp.send(line);
     }, dect2::automation::kAllFamilies);
 }
@@ -480,6 +503,31 @@ void applyAll() {
     s.rigSrv.configure(s.rigCfg);
     s.udp.configure(s.udpCfg);
     applyStreamer();
+}
+
+// The AI assistant listener (MCP over streamable HTTP, docs/MCP.md): created on first use, started / stopped / restarted as the settings say.
+void mcpApply(App& a) {
+    State::Mcp& m = st().mcp;
+    State& s = st();
+    if (!m.srv) {
+        dect2::mcp::Options o;
+        o.serverVersion = ONAIR_VERSION;
+        m.srv.reset(new dect2::mcp::Server(s.host, &a.engine, o));
+        m.hh.reset(new dect2::mcp::McpHttpHost(*m.srv));
+        m.http.reset(new RemoteApiServer(*m.hh));
+    }
+    dect2::mcp::Options o = m.srv->options();
+    o.allowTx = m.on && m.tx;
+    m.srv->setOptions(o);
+    RemoteApiConfig c;
+    c.on = m.on;
+    c.port = m.port;
+    c.lan = m.lan;
+    c.token = m.token;
+    c.requireTokenLocal = m.localAuth || m.lan;   // a computer on the network always needs the token
+    c.ratePerSec = 10; c.rateBurst = 20;
+    m.http->configure(c);
+    applyStreamer();   // the message stream (get_messages) runs while the AI assistant is on
 }
 
 } // namespace
@@ -495,7 +543,12 @@ void remoteApiLoadPrefs(App& a) {
     if (!apipol::tokenUsable(c.token)) { c.token = remoteApiNewToken(); d.setS("apiToken", c.token); }   // stored in the preferences only; never logged
     s.rigCfg.on = d.getB("rigctlOn", false); s.rigCfg.port = (int)d.getI("rigctlPort", 4532); s.rigCfg.allowLan = d.getI("rigctlLan", 0) != 0; s.rigCfg.token = c.token;
     s.udpCfg.on = d.getB("udpOn", false); s.udpCfg.host = d.getS("udpHost", "255.255.255.255"); s.udpCfg.port = (int)d.getI("udpPort", 0);
+    s.mcp.on = d.getB("mcpOn", false); s.mcp.port = (int)d.getI("mcpPort", 8766); s.mcp.lan = d.getI("mcpLan", 0) != 0; s.mcp.token = d.getS("mcpToken", "");
+    s.mcp.localAuth = d.getB("mcpLocalAuth", false);   // the transmit switch is not remembered: it is off at every start
+    if (!apipol::tokenUsable(s.mcp.token)) { s.mcp.token = remoteApiNewToken(); d.setS("mcpToken", s.mcp.token); }
+    if (gDevMcp) s.mcp.on = true;
     if (c.on || s.rigCfg.on || s.udpCfg.on) applyAll();
+    if (s.mcp.on) mcpApply(a);
 }
 
 void remoteApiSavePrefs(const App& a) {
@@ -506,12 +559,13 @@ void remoteApiSavePrefs(const App& a) {
     d.setB("apiOn", c.on); d.setI("apiPort", c.port); d.setI("apiLan", c.lan ? 1 : 0); d.setS("apiToken", c.token); d.setB("apiLocalAuth", c.requireTokenLocal);
     d.setB("rigctlOn", s.rigCfg.on); d.setI("rigctlPort", s.rigCfg.port); d.setI("rigctlLan", s.rigCfg.allowLan ? 1 : 0);
     d.setB("udpOn", s.udpCfg.on); d.setS("udpHost", s.udpCfg.host); d.setI("udpPort", s.udpCfg.port);
+    d.setB("mcpOn", s.mcp.on); d.setI("mcpPort", s.mcp.port); d.setI("mcpLan", s.mcp.lan ? 1 : 0); d.setS("mcpToken", s.mcp.token); d.setB("mcpLocalAuth", s.mcp.localAuth);
 }
 
 void remoteApiTick(App& a) {
     if (a.rxId != 1) return;
     State& s = st();
-    s.host.tick(a, s.cfg.on);
+    s.host.tick(a, s.cfg.on || s.mcp.on);
 }
 
 void remoteApiSection(App& a) {
@@ -590,3 +644,114 @@ void remoteApiSection(App& a) {
     if (s.udpCfg.on && !s.udp.error().empty()) ImGui::TextColored(pal::badRed(), "%s", s.udp.error().c_str());
     if (ch || ch2) { s.srv.configure(c); s.rigCfg.token = c.token; s.rigSrv.configure(s.rigCfg); s.udp.configure(s.udpCfg); applyStreamer(); remoteApiSavePrefs(a); savePrefs(a); }
 }
+
+// ---- AI assistant (MCP): Data feeds window, under the remote control API. Off by default; every action the AI takes is listed.
+void mcpSection(App& a) {
+    if (a.rxId != 1) return;
+    State& s = st();
+    State::Mcp& m = s.mcp;
+    typo::separatorText(tr("AI assistant (MCP)"));
+    if (gDevMcp) { ImGui::SetScrollHereY(0.0f); gDevMcp = false; if (!m.on) { m.on = true; mcpApply(a); } }
+    bool ch = false;
+    ch |= ImGui::Checkbox(tr("Let an AI assistant control this receiver (MCP)"), &m.on);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(90 * gUi);
+    int port = m.port;
+    ImGui::InputInt(tr("Port##mcp"), &port, 0, 0);
+    m.port = std::max(1, std::min(65535, port));
+    ch |= ImGui::IsItemDeactivatedAfterEdit();
+    ImGui::Indent();
+    ImGui::PushTextWrapPos(460 * gUi);
+    ImGui::TextDisabled("%s", tr("An AI assistant (Claude, ChatGPT-style clients, a local model) that you connect can tune, scan bands, identify signals and start decoders for you, and read what was decoded. "
+                                 "It cannot read files, run programs, change settings or decrypt anything, and it cannot transmit unless you allow that below. Every action is listed in the log."));
+    ImGui::PopTextWrapPos();
+    if (ImGui::Checkbox(tr("Let other computers connect (LAN, needs the token)##mcp"), &m.lan)) { ch = true; if (m.lan && m.token.size() < 16) m.token = remoteApiNewToken(); }
+    ch |= ImGui::Checkbox(tr("Programs on this computer need the token too##mcp"), &m.localAuth);
+    if (m.lan || m.localAuth) {
+        char b[96];
+        snprintf(b, sizeof b, "%s", m.token.c_str());
+        ImGui::SetNextItemWidth(260 * gUi);
+        if (ImGui::InputText(tr("Token##mcp"), b, sizeof b)) m.token = b;
+        ch |= ImGui::IsItemDeactivatedAfterEdit();
+        ImGui::SameLine();
+        if (ImGui::SmallButton(tr("New token##mcp"))) { m.token = remoteApiNewToken(); ch = true; }
+        ImGui::SameLine();
+        if (ImGui::SmallButton(tr("Copy token##mcp"))) ImGui::SetClipboardText(m.token.c_str());
+    }
+    if (ImGui::Checkbox(tr("Allow the AI to transmit (off by default; this is your decision, it is forgotten at restart)"), &m.tx)) ch = true;
+    if (m.tx) ImGui::TextColored(pal::badRed(), "%s", tr("The AI can now start transmissions. You are responsible for the law where you are and for your hardware."));
+    if (ch) {
+        if (m.on && m.token.size() < 16) m.token = remoteApiNewToken();
+        mcpApply(a);
+        remoteApiSavePrefs(a);
+        savePrefs(a);
+    }
+    if (!m.on) ImGui::TextDisabled("%s", tr("off"));
+    else if (!m.http || !m.http->status().listening) ImGui::TextColored(pal::badRed(), "%s", m.http && !m.http->status().lastError.empty() ? m.http->status().lastError.c_str() : tr("starting"));
+    else {
+        const RemoteApiStatus ss = m.http->status();
+        ImGui::TextColored(pal::okGreen(), tr("listening on %s port %d, %d requests, %d refused"), m.lan ? "all addresses" : "127.0.0.1", m.http->config().port, (int)ss.requests, (int)ss.rejected);
+        std::string who;
+        if (m.srv && m.srv->clientSeen(&who)) ImGui::TextColored(pal::okGreen(), tr("An AI is connected: %s"), who.empty() ? "?" : who.c_str());
+        else ImGui::TextDisabled("%s", tr("No AI has connected yet."));
+    }
+    // how to connect: the snippets for the common clients, with a copy button
+    if (ImGui::TreeNode(trw("How to connect your AI"))) {
+        const std::string url = std::string("http://127.0.0.1:") + std::to_string(m.port) + "/mcp";
+        const std::string tok = m.lan || m.localAuth ? m.token : std::string();
+        std::string exe = dect2::codec::programDir();
+        if (!exe.empty()) exe += (exe.back() == '/' || exe.back() == '\\' ? "" : "/") + std::string("onair-server");
+#ifdef _WIN32
+        if (!exe.empty()) exe += ".exe";
+#endif
+        static const char* tabs[3] = {"Claude Desktop", "Claude Code", "Other"};
+        for (int i = 0; i < 3; i++) {
+            if (i) ImGui::SameLine();
+            const bool sel = m.snippetTab == i;
+            if (sel) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+            if (ImGui::SmallButton((std::string(i == 2 ? tr("Other client") : tabs[i]) + "##mcptab" + std::to_string(i)).c_str())) m.snippetTab = i;
+            if (sel) ImGui::PopStyleColor();
+        }
+        std::string text;
+        if (m.snippetTab == 0) text = dect2::mcp::snippetClaudeDesktop("", url, tok);
+        else if (m.snippetTab == 1) text = dect2::mcp::snippetClaudeCode(url, tok);
+        else text = dect2::mcp::snippetGeneric(url, tok, exe);
+        ImGui::InputTextMultiline("##mcpsnippet", (char*)text.c_str(), text.size() + 1, ImVec2(-1, 110 * gUi), ImGuiInputTextFlags_ReadOnly);
+        if (ImGui::SmallButton(tr("Copy##mcpcopy"))) ImGui::SetClipboardText(text.c_str());
+        ImGui::PushTextWrapPos(460 * gUi);
+        ImGui::TextDisabled("%s", tr("Claude Desktop: put this in its config file (Settings > Developer > Edit config) and restart it; it needs Node.js for the bridge. "
+                                     "Claude Code: run the command in a terminal. Other clients: use the address (streamable HTTP) or start onair-server --mcp-stdio. Then ask, for example: there is some DRM around 15 MHz, find it and decode it."));
+        ImGui::PopTextWrapPos();
+        ImGui::TreePop();
+    }
+    // the activity log: everything the AI did
+    if (m.srv) {
+        const std::vector<dect2::mcp::Activity> act = m.srv->activity();
+        ImGui::TextUnformatted(tr("What the AI did"));
+        ImGui::SameLine();
+        if (ImGui::SmallButton(tr("Clear log##mcp"))) m.srv->clearActivity();
+        if (ImGui::BeginChild("##mcplog", ImVec2(-1, 130 * gUi), true)) {
+            if (act.empty()) ImGui::TextDisabled("%s", tr("Nothing yet."));
+            for (size_t i = act.size() > 60 ? act.size() - 60 : 0; i < act.size(); i++) {
+                const dect2::mcp::Activity& x = act[i];
+                const time_t t = (time_t)x.time;
+                char tb[16];
+                struct tm tmv;
+#ifdef _WIN32
+                localtime_s(&tmv, &t);
+#else
+                localtime_r(&t, &tmv);
+#endif
+                strftime(tb, sizeof tb, "%H:%M:%S", &tmv);
+                ImGui::PushStyleColor(ImGuiCol_Text, x.ok ? ImGui::GetStyleColorVec4(ImGuiCol_Text) : ImVec4(pal::badRed()));
+                ImGui::TextWrapped("%s  %s %s  %s", tb, x.tool.c_str(), x.args.c_str(), x.ok ? "" : x.outcome.c_str());
+                ImGui::PopStyleColor();
+            }
+            if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 4) ImGui::SetScrollHereY(1.0f);
+        }
+        ImGui::EndChild();
+    }
+    ImGui::Unindent();
+}
+
+void mcpDevOpen(App& a) { gDevMcp = true; a.feedsOpen = true; }

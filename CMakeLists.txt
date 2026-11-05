@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
 set(ONAIR_ROOT ${CMAKE_CURRENT_SOURCE_DIR})   # the repository root (CMAKE_SOURCE_DIR is the bridge's folder when this is built as a subproject, as the Android app does)
 if(APPLE AND NOT DEFINED ANDROID_ABI)
-  project(OnAir VERSION 3.5.0 LANGUAGES C CXX OBJCXX)
+  project(OnAir VERSION 3.6.0 LANGUAGES C CXX OBJCXX)
   set(CMAKE_OBJCXX_STANDARD 20)
 else()
-  project(OnAir VERSION 3.5.0 LANGUAGES C CXX)
+  project(OnAir VERSION 3.6.0 LANGUAGES C CXX)
 endif()
 
 # A compiler cache, when one is installed, makes repeat builds take seconds (-DDECT2_CCACHE=OFF turns it off).
@@ -130,7 +130,7 @@ endif()
 list(APPEND CMAKE_MODULE_PATH ${ONAIR_ROOT}/cmake)
 include(OnairRust)   # the Rust workspace rust/ is mandatory (cmake/OnairRust.cmake): sets ONAIR_RUST_<MODULE>, onair_rust_use(); DECT2_RUST_RING / DECT2_RUST_USB are the opt-in ones
 
-add_library(dect2core STATIC core/src/source/source.cpp core/src/source/source_tci.cpp core/src/source/source_audio.cpp core/src/source/audio_if.cpp core/src/source/hamlib_rig.cpp core/src/source/rig_setup.cpp core/src/source/rig_control.cpp core/src/dsp/spectrum.cpp core/src/engine/engine.cpp core/src/engine/engine_log.cpp core/src/engine/engine_output.cpp core/src/engine/engine_tune.cpp core/src/engine/engine_watch.cpp core/src/engine/engine_loops.cpp core/src/engine/engine_start.cpp core/src/engine/engine_place.cpp core/src/engine/engine_secondary.cpp core/src/engine/engine_telemetry.cpp core/src/results/engine_results.cpp core/src/t2/t2_tables.cpp core/src/t2/t2gen.cpp core/src/t2/t2rx.cpp core/src/t2/t2rx_sync.cpp core/src/t2/t2rx_symbols.cpp core/src/t2/t2rx_l1.cpp core/src/t2/t2rx_data.cpp core/src/t2/t2pilots.cpp core/src/t2/t2ofdm.cpp core/src/dsp/ldpc.cpp core/src/t2/t2l1.cpp core/src/t2/t2interleave.cpp core/src/t2/t2fec_tables.cpp core/src/t2/t2fec.cpp core/src/t2/t2plp.cpp core/src/dsp/resampler.cpp core/src/dsp/clock_correct.cpp core/src/tv/bbunpack.cpp core/src/tv/ts.cpp core/src/tv/tsout.cpp core/src/engine/scanner.cpp core/src/source/gain.cpp core/src/channels/channel.cpp core/src/dsp/direction.cpp core/src/dsp/dsp_compat.cpp core/src/dsp/bandwidth.cpp core/src/atsc/atsc.cpp core/src/atsc/atsc_gen.cpp core/src/atsc/atsc_rx.cpp core/src/atsc3/atsc3_bootstrap.cpp core/src/atsc3/atsc3_ofdm.cpp core/src/atsc3/atsc3_tables.cpp core/src/atsc3/atsc3_ldpc.cpp core/src/atsc3/atsc3_ldpc_tables.cpp core/src/atsc3/atsc3_ldpc_tables64.cpp core/src/atsc3/atsc3_data_tables.cpp core/src/atsc3/atsc3_l1.cpp core/src/atsc3/atsc3_sync.cpp core/src/atsc3/atsc3_rx.cpp core/src/atsc3/atsc3_receiver.cpp core/src/atsc3/atsc3_frame.cpp core/src/atsc3/atsc3_remux.cpp core/src/audio/ac4_dec.cpp core/src/audio/ac4_xcode.cpp core/src/atsc3/atsc3_route.cpp core/src/atsc3/atsc3_ip.cpp core/src/common/inflate.cpp core/src/common/xmlmini.cpp core/src/atsc3/atsc3_alp.cpp core/src/atsc3/atsc3_ti.cpp core/src/atsc3/atsc3_subframe.cpp core/src/atsc3/atsc3_cellmux.cpp core/src/atsc3/atsc3_bb.cpp core/src/atsc3/atsc3_bicm.cpp core/src/atsc3/atsc3_preamble.cpp core/src/atsc3/atsc3_constellations.cpp core/src/isdbt/isdbt.cpp core/src/isdbt/isdbt_tables_data.cpp core/src/isdbt/isdbt_gen.cpp core/src/isdbt/isdbt_demod.cpp core/src/isdbt/isdbt_rx.cpp core/src/dsp/exact_resampler.cpp core/src/engine/updater.cpp core/src/channels/channel_db.cpp core/src/engine/quality.cpp core/src/tv/teletext.cpp core/src/tv/dvbsub.cpp core/src/dvbt/dvbt.cpp core/src/dvbt/dvbt_fec.cpp core/src/dvbt/dvbt_gen.cpp core/src/dvbt/dvbt_rx.cpp core/src/tv/player.cpp core/src/tv/es_save.cpp core/src/audio/audioout.cpp core/src/t2/t2_pilot_tables.cpp core/src/fm/fm_rx.cpp core/src/fm/fm_rds.cpp core/src/fm/fm_tmc.cpp core/src/fm/fm_rbds.cpp core/src/fm/fm_tone.cpp core/src/fm/fm_gen.cpp core/src/tv/conceal.cpp core/src/net/nettuner.cpp core/src/tv/hls.cpp core/src/source/hackrf_usb.cpp core/src/tv/demo_ts.cpp core/src/engine/crash_report.cpp core/src/source/source_native.cpp core/src/source/source_rtlsdr.cpp core/src/source/source_airspy.cpp core/src/source/source_bladerf.cpp core/src/source/source_limesdr.cpp core/src/source/source_plutosdr.cpp core/src/source/source_usrp.cpp core/src/source/source_sdrplay.cpp core/src/source/source_airspyhf.cpp core/src/source/source_rtltcp.cpp core/src/source/source_spyserver.cpp core/src/source/source_sdrpp.cpp core/src/source/source_hermeslite2.cpp core/src/net/netradio.cpp core/src/net/share_server.cpp core/src/source/usb_diag.cpp core/src/common/png.cpp core/src/common/threadpool.cpp core/src/power/power.cpp core/src/source/iq_record.cpp core/src/source/time_machine.cpp core/src/common/text_charset.cpp core/src/channels/channel_find.cpp core/src/channels/tvplan.cpp core/src/channels/memory_bank.cpp core/src/channels/memory_io.cpp core/src/channels/memory_json.cpp core/src/channels/memory_formats.cpp core/src/net/feeds.cpp core/src/net/feed_targets.cpp core/src/net/feeds_fmt.cpp core/src/net/aprs_gate.cpp core/src/net/pskreporter.cpp core/src/net/wsprnet.cpp core/src/source/iq_file.cpp core/src/source/bluefile.cpp core/src/dsp/carrierfind.cpp core/src/engine/wide_modes.cpp core/src/engine/widespan.cpp core/src/engine/device_claims.cpp core/src/source/source_fobos.cpp core/src/source/source_rx888.cpp core/src/source/source_icom.cpp core/src/source/icom_r8600.cpp core/src/engine/engine_multitv.cpp core/src/engine/channelizer.cpp core/src/engine/multitv.cpp core/src/engine/transponders.cpp core/src/tv/ts_record.cpp core/src/sweep/sweep.cpp core/src/sweep/sweep_io.cpp core/src/audio/audio_rec.cpp core/src/channels/freq_db.cpp core/src/source/source_nrspst.cpp core/src/audio/audio_monitor.cpp core/src/audio/clip_ring.cpp core/src/export/exporters.cpp core/src/source/source_kiwisdr.cpp core/src/net/kiwi_list.cpp core/src/sweep/survey.cpp core/src/engine/vfo.cpp core/src/engine/wide_session.cpp)
+add_library(dect2core STATIC core/src/source/source.cpp core/src/source/source_tci.cpp core/src/source/source_audio.cpp core/src/source/audio_if.cpp core/src/source/hamlib_rig.cpp core/src/source/rig_setup.cpp core/src/source/rig_control.cpp core/src/dsp/spectrum.cpp core/src/engine/engine.cpp core/src/engine/engine_log.cpp core/src/engine/engine_output.cpp core/src/engine/engine_tune.cpp core/src/engine/engine_watch.cpp core/src/engine/engine_loops.cpp core/src/engine/engine_start.cpp core/src/engine/engine_place.cpp core/src/engine/engine_secondary.cpp core/src/engine/engine_telemetry.cpp core/src/results/engine_results.cpp core/src/t2/t2_tables.cpp core/src/t2/t2gen.cpp core/src/t2/t2rx.cpp core/src/t2/t2rx_sync.cpp core/src/t2/t2rx_symbols.cpp core/src/t2/t2rx_l1.cpp core/src/t2/t2rx_data.cpp core/src/t2/t2pilots.cpp core/src/t2/t2ofdm.cpp core/src/dsp/ldpc.cpp core/src/t2/t2l1.cpp core/src/t2/t2interleave.cpp core/src/t2/t2fec_tables.cpp core/src/t2/t2fec.cpp core/src/t2/t2plp.cpp core/src/dsp/resampler.cpp core/src/dsp/clock_correct.cpp core/src/tv/bbunpack.cpp core/src/tv/ts.cpp core/src/tv/tsout.cpp core/src/engine/scanner.cpp core/src/source/gain.cpp core/src/channels/channel.cpp core/src/dsp/direction.cpp core/src/dsp/dsp_compat.cpp core/src/dsp/bandwidth.cpp core/src/atsc/atsc.cpp core/src/atsc/atsc_gen.cpp core/src/atsc/atsc_rx.cpp core/src/atsc3/atsc3_bootstrap.cpp core/src/atsc3/atsc3_ofdm.cpp core/src/atsc3/atsc3_tables.cpp core/src/atsc3/atsc3_ldpc.cpp core/src/atsc3/atsc3_ldpc_tables.cpp core/src/atsc3/atsc3_ldpc_tables64.cpp core/src/atsc3/atsc3_data_tables.cpp core/src/atsc3/atsc3_l1.cpp core/src/atsc3/atsc3_sync.cpp core/src/atsc3/atsc3_rx.cpp core/src/atsc3/atsc3_receiver.cpp core/src/atsc3/atsc3_frame.cpp core/src/atsc3/atsc3_remux.cpp core/src/audio/ac4_dec.cpp core/src/audio/ac4_xcode.cpp core/src/atsc3/atsc3_route.cpp core/src/atsc3/atsc3_ip.cpp core/src/common/inflate.cpp core/src/common/xmlmini.cpp core/src/atsc3/atsc3_alp.cpp core/src/atsc3/atsc3_ti.cpp core/src/atsc3/atsc3_subframe.cpp core/src/atsc3/atsc3_cellmux.cpp core/src/atsc3/atsc3_bb.cpp core/src/atsc3/atsc3_bicm.cpp core/src/atsc3/atsc3_preamble.cpp core/src/atsc3/atsc3_constellations.cpp core/src/isdbt/isdbt.cpp core/src/isdbt/isdbt_tables_data.cpp core/src/isdbt/isdbt_gen.cpp core/src/isdbt/isdbt_demod.cpp core/src/isdbt/isdbt_rx.cpp core/src/dsp/exact_resampler.cpp core/src/engine/updater.cpp core/src/channels/channel_db.cpp core/src/engine/quality.cpp core/src/tv/teletext.cpp core/src/tv/dvbsub.cpp core/src/dvbt/dvbt.cpp core/src/dvbt/dvbt_fec.cpp core/src/dvbt/dvbt_gen.cpp core/src/dvbt/dvbt_rx.cpp core/src/tv/player.cpp core/src/tv/es_save.cpp core/src/audio/audioout.cpp core/src/t2/t2_pilot_tables.cpp core/src/fm/fm_rx.cpp core/src/fm/fm_rds.cpp core/src/fm/fm_tmc.cpp core/src/fm/fm_rbds.cpp core/src/fm/fm_tone.cpp core/src/fm/fm_gen.cpp core/src/tv/conceal.cpp core/src/net/nettuner.cpp core/src/tv/hls.cpp core/src/source/hackrf_usb.cpp core/src/tv/demo_ts.cpp core/src/engine/crash_report.cpp core/src/source/source_native.cpp core/src/source/source_hydrasdr.cpp core/src/source/source_rtlsdr.cpp core/src/source/source_airspy.cpp core/src/source/source_bladerf.cpp core/src/source/source_limesdr.cpp core/src/source/source_plutosdr.cpp core/src/source/source_usrp.cpp core/src/source/source_sdrplay.cpp core/src/source/source_airspyhf.cpp core/src/source/source_rtltcp.cpp core/src/source/source_spyserver.cpp core/src/source/source_sdrpp.cpp core/src/source/source_hermeslite2.cpp core/src/net/netradio.cpp core/src/net/share_server.cpp core/src/source/usb_diag.cpp core/src/common/png.cpp core/src/common/threadpool.cpp core/src/power/power.cpp core/src/source/iq_record.cpp core/src/source/time_machine.cpp core/src/common/text_charset.cpp core/src/channels/channel_find.cpp core/src/channels/tvplan.cpp core/src/channels/memory_bank.cpp core/src/channels/memory_io.cpp core/src/channels/memory_json.cpp core/src/channels/memory_formats.cpp core/src/net/feeds.cpp core/src/net/feed_targets.cpp core/src/net/feeds_fmt.cpp core/src/net/aprs_gate.cpp core/src/net/pskreporter.cpp core/src/net/wsprnet.cpp core/src/source/iq_file.cpp core/src/source/bluefile.cpp core/src/dsp/carrierfind.cpp core/src/engine/wide_modes.cpp core/src/engine/widespan.cpp core/src/engine/device_claims.cpp core/src/source/source_fobos.cpp core/src/source/source_rx888.cpp core/src/source/source_icom.cpp core/src/source/icom_r8600.cpp core/src/engine/engine_multitv.cpp core/src/engine/channelizer.cpp core/src/engine/multitv.cpp core/src/engine/transponders.cpp core/src/tv/ts_record.cpp core/src/sweep/sweep.cpp core/src/sweep/sweep_io.cpp core/src/audio/audio_rec.cpp core/src/channels/freq_db.cpp core/src/source/source_nrspst.cpp core/src/audio/audio_monitor.cpp core/src/audio/clip_ring.cpp core/src/export/exporters.cpp core/src/source/source_kiwisdr.cpp core/src/net/kiwi_list.cpp core/src/sweep/survey.cpp core/src/engine/vfo.cpp core/src/engine/wide_session.cpp)
 target_sources(dect2core PRIVATE core/src/dsp/synth_wide.cpp)
 target_sources(dect2core PRIVATE core/src/source/synth_group.cpp)
 target_sources(dect2core PRIVATE core/src/t2/t2ldpc.cpp core/src/t2/t2mi_out.cpp)
@@ -174,16 +174,20 @@ target_sources(dect2core PRIVATE core/src/fingerprint/rf_fingerprint.cpp)   # RF
 target_sources(dect2core PRIVATE core/src/airports/airports.cpp core/src/common/radioid_db.cpp)   # radioid_db: the DMR / NXDN radio ID name list (user-downloaded CSV)
 target_sources(dect2core PRIVATE core/src/doctor/reception_doctor.cpp)   # Reception Doctor: why a mode is not decoding (docs/RECEPTION-DOCTOR.md)
 target_sources(dect2core PRIVATE core/src/sweep/station_health.cpp core/src/source/agc.cpp)   # station and antenna health report (docs/STATION_HEALTH.md)
-target_sources(dect2core PRIVATE core/src/source/autogain.cpp core/src/source/autogain_radio.cpp core/src/source/autogain_measure.cpp core/src/source/autogain_v2.cpp core/src/source/gain_meter.cpp core/src/source/gain_cal.cpp)   # automatic gain for every radio and mode (docs/AUTOGAIN.md)
+target_sources(dect2core PRIVATE core/src/source/autogain.cpp core/src/source/autogain_radio.cpp core/src/source/autogain_measure.cpp core/src/source/autogain_v2.cpp core/src/source/gain_meter.cpp core/src/source/gain_cal.cpp core/src/dsp/spur_notch.cpp)   # automatic gain for every radio and mode (docs/AUTOGAIN.md)
 target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup and restore (docs/BACKUP.md)
 # The modes added after FM (DVB-S/S2, DTMB, analog TV, DMR, DRM, ADS-B): every core/src/<mode>/*.cpp belongs to its mode, so a mode can add files without editing this list
-  set(DECT2_MODES autodet fsq ifkp cquam selfcal dvbs dtmb atv dmr drm adsb gnss dab sonde ais marine acars inmc aero iridium mesh hdr cdr pager packet hfdig airband vdl2 ism vor ils m17 cell cw dstar hfdl nxdn gsmr psk js8 specx wb specan dvbc dpmr orbcomm uplink tetra tetrapol ale mac astro p25 ble iono qo100 wifi general time rid meteor nr cubesat ccsds goes globalstar vdes hrpt zigbee flarm hfbeacon dji nbiot halow codar datawell same multitone loraraw ant dect elektro ndb lbj railway horus eczas vdl4 uat wisun fpv wmbus tones sarsat mt63 zwave mscatter dgps dme sitor kris kavb kapp kaft eloran mpt1327 fusion ardop goesdcs modeac bletrk ltr edacs p25p2 kait satbeacon kaws milhf nfc kaal ham prop antd lorawan lorasat isdbs marinevhf argos sigfox sbas asterix voice)
+  set(DECT2_MODES autodet fsq ifkp cquam selfcal dvbs dtmb atv dmr drm adsb gnss dab sonde ais marine acars inmc aero iridium mesh hdr cdr pager packet hfdig airband vdl2 ism vor ils m17 cell cw dstar hfdl nxdn gsmr psk js8 specx wb specan dvbc dpmr orbcomm uplink tetra tetrapol ale mac astro p25 ble iono qo100 wifi general time rid meteor nr cubesat ccsds goes globalstar vdes hrpt zigbee flarm hfbeacon dji nbiot halow codar datawell same multitone loraraw ant dect elektro ndb lbj railway horus eczas vdl4 uat wisun fpv wmbus tones sarsat mt63 zwave mscatter dgps dme sitor kris kavb kapp kaft eloran mpt1327 trunkpool fusion ardop goesdcs modeac bletrk ltr edacs p25p2 kait satbeacon kaws milhf nfc kaal ham prop antd lorawan lorasat isdbs marinevhf argos sigfox sbas asterix voice)
   list(APPEND DECT2_MODES pactor)   # PACTOR-I monitor (family 203): core/src/pactor, app/pactor, tests/pactor
-  list(APPEND DECT2_MODES roshf ssdv ebicab nrf24 atis)   # ROS (HF) detector (family 205), SSDV pictures (206), EBICab / Eurobalise up-link (207): core/src/<mode>, app/<mode>, tests/<mode>
+  list(APPEND DECT2_MODES roshf ssdv ebicab nrf24 atis selcal)   # ROS (HF) detector (family 205), SSDV pictures (206), EBICab / Eurobalise up-link (207): core/src/<mode>, app/<mode>, tests/<mode>
+  list(APPEND DECT2_MODES fy3)   # FY-3 AHRPT (family 235) and FY-3 MPT (236): core/src/fy3, app/fy3, tests/fy3 (docs/fy3.md)
   list(APPEND DECT2_MODES esubghz)   # Flipper Zero Sub-GHz chat, receive and send (family 204): core/src/esubghz, app/esubghz, tests/esubghz
   list(APPEND DECT2_MODES inmsat)   # Inmarsat all-carriers mode (3.3, docs/INMARSAT-REVAMP.md): core/src/inmsat, tests/inmsat
+  list(APPEND DECT2_MODES gk2a)   # GK-2A LRIT (family 230) and HRIT (231): core/src/gk2a, app/gk2a, tests/gk2a, docs/GK2A.md
   list(APPEND DECT2_MODES shortwave)   # Shortwave: the general receiver with one-click HF decoders (family 212, docs/SHORTWAVE-MODE.md): core/src/shortwave, app/shortwave, tests/shortwave
   list(APPEND DECT2_MODES pskdsp)   # PSK demodulator and analyser (family 202, #282): core/src/pskdsp, app/pskdsp, tests/pskdsp
+  list(APPEND DECT2_MODES pactorhf)   # PACTOR-II (family 237), -III (238) and -IV (239), physical layer only: core/src/pactorhf, app/pactorhf, tests/pactorhf (docs/pactorhf.md)
+  list(APPEND DECT2_MODES fygeo)   # FengYun geostationary: FY-4A / FY-4B LRIT, FY-4A HRIT (DVB-S2) and FY-2 S-VISSR (families 232 - 235, docs/FENGYUN-GEO.md): core/src/fygeo, app/fygeo, tests/fygeo
 target_sources(dect2core PRIVATE core/src/tv/mheg_render.cpp core/src/tv/ts_proto_rs.cpp core/src/common/text_charset_rs.cpp core/src/tv/dvb_text.cpp core/src/tv/dvb_text_rs.cpp core/src/tv/teletext_rs.cpp core/src/tv/dvbsub_rs.cpp core/src/tv/epg.cpp core/src/tv/subtitle_export.cpp core/src/tv/recorder.cpp core/src/tv/timeshift.cpp core/src/tv/playback.cpp core/src/tv/dsmcc.cpp core/src/tv/mheg.cpp core/src/tv/mheg_engine.cpp core/src/tv/rcs.cpp core/src/tv/si_tables.cpp core/src/tv/ts_data.cpp core/src/tv/hd_pair.cpp) # MPEG-TS parsing layer (C++ or the Rust crate onair_ts) and the TV recorder (guide, schedule, timeshift, playback) (C++ or the Rust crate onair_ts)
 target_sources(dect2core PRIVATE core/src/tv/mheg_render.cpp core/src/tv/ts_proto_rs.cpp core/src/common/text_charset_rs.cpp core/src/tv/dvb_text.cpp core/src/tv/dvb_text_rs.cpp core/src/tv/teletext_rs.cpp core/src/tv/dvbsub_rs.cpp core/src/tv/epg.cpp core/src/tv/subtitle_export.cpp core/src/tv/recorder.cpp core/src/tv/timeshift.cpp core/src/tv/playback.cpp core/src/tv/dsmcc.cpp core/src/tv/mheg.cpp core/src/tv/rcs.cpp core/src/tv/si_tables.cpp core/src/tv/ts_data.cpp core/src/tv/hd_pair.cpp) # MPEG-TS parsing layer (C++ or the Rust crate onair_ts) and the TV recorder (guide, schedule, timeshift, playback) (C++ or the Rust crate onair_ts)
 target_sources(dect2core PRIVATE core/src/tv/iptv_parse.cpp core/src/tv/iptv_http.cpp core/src/tv/iptv_stream.cpp core/src/tv/iptv_mode.cpp)   # Internet TV (IPTV): playlists, guide, HTTP(S)/HLS/UDP reader (docs/IPTV.md)
@@ -200,7 +204,7 @@ endif()
 onair_rust_use(dect2core)   # links the Rust library onair_rs
 target_sources(dect2core PRIVATE core/src/engine/modes.cpp core/src/engine/rate_choice.cpp core/src/geo/passes.cpp core/src/dsp/imgproc.cpp core/src/dsp/wxstudio.cpp core/src/dsp/wx_vectors.cpp core/src/engine/sig_ident.cpp core/src/geo/maidenhead.cpp core/src/geo/maplayers.cpp core/src/geo/tilecache.cpp core/src/mesh/mesh_report.cpp core/src/df/df.cpp core/src/df/source.cpp core/src/df/position.cpp core/src/df/rfcam.cpp core/src/df/group.cpp core/src/df/rtl_group.cpp core/src/geo/pass_sched.cpp core/src/geo/doppler_fit.cpp core/src/geo/wx_overlay.cpp core/src/engine/sig_known.cpp core/src/engine/sig_known_gen.cpp core/src/radar/passive.cpp core/src/rfi/rfi.cpp core/src/map/contact_graph.cpp)
 target_sources(dect2core PRIVATE core/src/engine/modes.cpp core/src/engine/rate_choice.cpp core/src/geo/passes.cpp core/src/dsp/imgproc.cpp core/src/dsp/wxstudio.cpp core/src/dsp/wx_vectors.cpp core/src/engine/sig_ident.cpp core/src/geo/maidenhead.cpp core/src/geo/maplayers.cpp core/src/geo/tilecache.cpp core/src/mesh/mesh_report.cpp core/src/df/df.cpp core/src/df/source.cpp core/src/df/position.cpp core/src/df/rfcam.cpp core/src/df/group.cpp core/src/df/rtl_group.cpp core/src/geo/pass_sched.cpp core/src/geo/doppler_fit.cpp core/src/geo/wx_overlay.cpp core/src/engine/sig_known.cpp core/src/radar/passive.cpp core/src/rfi/rfi.cpp core/src/map/contact_graph.cpp)
-target_sources(dect2core PRIVATE core/src/image/enhance.cpp core/src/image/enhance_geom.cpp core/src/image/enhance_filter.cpp core/src/image/enhance_tone.cpp)   # shared image enhancement of every picture mode (docs/IMAGE-ENHANCE.md)
+target_sources(dect2core PRIVATE core/src/image/j2k.cpp core/src/common/des.cpp core/src/image/enhance.cpp core/src/image/enhance_geom.cpp core/src/image/enhance_filter.cpp core/src/image/enhance_tone.cpp)   # shared image enhancement of every picture mode (docs/IMAGE-ENHANCE.md)
 target_sources(dect2core PRIVATE core/src/df/beam.cpp)
 target_sources(dect2core PRIVATE core/src/net/remote_api.cpp core/src/net/satnogs.cpp core/src/results/rx_json.cpp core/src/source/gain_opt.cpp core/src/mesh/mesh_report.cpp core/src/source/rotator.cpp)   # remote-control API server, telemetry JSON, gain optimiser, mesh report text, antenna rotator
 target_sources(dect2core PRIVATE core/src/net/remote_api.cpp core/src/results/rx_json.cpp core/src/source/gain_opt.cpp core/src/mesh/mesh_report.cpp core/src/source/rotator.cpp)   # remote-control API server, telemetry JSON, gain optimiser, mesh report text, antenna rotator
@@ -212,6 +216,15 @@ target_sources(dect2core PRIVATE core/src/net/remote_api.cpp core/src/net/api_po
 target_sources(dect2core PRIVATE core/src/source/mount_driver.cpp core/src/source/mount_track.cpp)   # antenna mount drivers: Hamlib rotctld, ASCOM Alpaca; pass-driven mount plan
 target_sources(dect2core PRIVATE core/src/results/sessions_json.cpp)   # the sessions as paged JSON for the remote API
 target_sources(dect2core PRIVATE core/src/packs/packs.cpp)   # offline data packs: catalog, download with resume, checksums, disk guard, delete
+# OpenJPEG 2.5.3 (BSD-2-Clause, third_party/openjpeg): the JPEG 2000 pictures of the FengYun-4 downlinks and their test signals, see THIRD_PARTY.md
+file(GLOB ONAIR_OPJ_SRC CONFIGURE_DEPENDS third_party/openjpeg/*.c)
+target_sources(dect2core PRIVATE ${ONAIR_OPJ_SRC})
+set_source_files_properties(${ONAIR_OPJ_SRC} PROPERTIES LANGUAGE C COMPILE_DEFINITIONS "OPJ_STATIC")
+if(NOT MSVC)
+  set_source_files_properties(${ONAIR_OPJ_SRC} PROPERTIES COMPILE_OPTIONS "-w")
+endif()
+target_include_directories(dect2core PRIVATE third_party/openjpeg)
+set_source_files_properties(core/src/fygeo/fygeo_proto.cpp PROPERTIES COMPILE_DEFINITIONS "OPJ_STATIC")   # openjpeg.h without dllimport on Windows
 target_sources(dect2core PRIVATE third_party/ssdv/ssdv.c third_party/ssdv/rs8.c)   # SSDV packet decoder / encoder (fsphil/ssdv, GPL-3.0-or-later; rs8.c Phil Karn LGPL), see THIRD_PARTY.md
 target_include_directories(dect2core PRIVATE third_party/ssdv)
 set_source_files_properties(third_party/ssdv/ssdv.c third_party/ssdv/rs8.c PROPERTIES LANGUAGE C)
@@ -335,11 +348,14 @@ add_executable(onair-plugin-host tools/onair_plugin_host.cpp)
 add_executable(kris_samples tools/kris_samples.cpp)   # sample IQ files of the KAAL, KAPP and KAFT transmitters (tools/kris_samples.cpp)
 target_link_libraries(kris_samples PRIVATE dect2core)
 target_link_libraries(onair-plugin-host PRIVATE dect2_plugin)
+# MCP (Model Context Protocol) server: an AI assistant drives the radio (docs/MCP.md)
+target_sources(dect2core PRIVATE core/src/mcp/mcp_json.cpp core/src/mcp/mcp_server.cpp core/src/mcp/mcp_tools.cpp)
+
 # onair-server: OnAir with no window (a Raspberry Pi, a Linux box, a Windows PC without a screen), controlled from a browser; docs/headless-server.md
 # OnAir Web: many listeners, each with an own receiver inside the host's capture (server/web, docs/ONAIR-WEB.md). Every web source is built with
 # the host setting web_allow_tx=0 (the default; 1 lets listeners transmit through the host's radio, see docs/ONAIR-WEB.md).
 set(ONAIR_WEB_SOURCES server/web/web_json.cpp server/web/web_proto.cpp server/web/web_dsp.cpp server/web/web_policy.cpp server/web/web_ranges.cpp server/web/web_hub.cpp
-    server/web/web_server.cpp server/web/web_config.cpp server/web/web_directory_proto.cpp server/web/web_directory.cpp)
+    server/web/web_server.cpp server/web/web_config.cpp server/web/web_directory_proto.cpp server/web/web_directory.cpp server/web/web_relay.cpp)
 list(APPEND ONAIR_WEB_SOURCES server/web/web_decoders.cpp)   # the receivers as web decoders
 add_library(onair_web STATIC ${ONAIR_WEB_SOURCES})
 target_include_directories(onair_web PUBLIC server)
@@ -581,7 +597,7 @@ if(DECT2_BUILD_APP)
   set(IMGUI_SOURCES
     third_party/imgui/imgui.cpp third_party/imgui/imgui_draw.cpp third_party/imgui/imgui_tables.cpp third_party/imgui/imgui_widgets.cpp
     third_party/imgui/backends/imgui_impl_glfw.cpp)
-  set(APP_SOURCES app/panels/carousel_view.cpp app/main.cpp app/main_window.cpp app/main_start.cpp app/ui/draw_ui.cpp app/ui/touch.cpp app/ui/touch_sheets.cpp app/ui/touch_shell.cpp app/ui/main_tabs.cpp app/ui/light_theme.cpp app/state/app_state.cpp app/state/presets_app.cpp app/state/prefs.cpp app/ui/widgets.cpp app/ui/toolbar.cpp app/ui/toolbar_source.cpp app/ui/toolbar_rig.cpp app/ui/statusbar.cpp app/ui/mode_table.cpp app/ui/mode_select.cpp app/ui/mode_visibility.cpp app/ui/ui_common.cpp app/panels/radio_ui.cpp app/gfx/plots.cpp app/panels/analysis_tabs.cpp app/panels/tv.cpp app/panels/tv_hd.cpp app/panels/subs_ui.cpp app/scan/scan_outputs.cpp app/panels/antenna.cpp app/fm/fm_ui.cpp app/ui/ui2.cpp app/ui/ui2_theme.cpp app/ui/ui2_widgets.cpp app/ui/ui2_shell.cpp app/ui/command_palette.cpp app/ui/ui2_faces.cpp app/panels/modeui.cpp app/atsc3/atsc3_ui.cpp app/isdbt/isdbt_ui.cpp app/panels/update_ui.cpp app/scan/scan_db_ui.cpp app/panels/diag_ui.cpp app/panels/doctor_ui.cpp app/ui/wizard.cpp app/gfx/plot.cpp app/gfx/gfx_png.cpp app/ui/popout.cpp app/panels/codec_help.cpp app/platform/discord_rpc.cpp app/panels/passes_ui.cpp app/panels/satnogs_ui.cpp app/df/df_ui.cpp app/panels/feeds_ui.cpp app/scan/scanner_ui.cpp app/scan/scan_view_ui.cpp app/memory/memory_options.cpp app/memory/memory_ui.cpp app/memory/memory_lists_ui.cpp app/memory/memory_edit.cpp app/memory/memory_selftest.cpp app/map/map_ui.cpp app/map/wx_overlay.cpp app/map/map_send.cpp app/webshare/webshare.cpp app/webshare/webshare_text.cpp app/panels/rotator_ui.cpp app/panels/results_ui.cpp app/state/rx_prefs.cpp app/state/receivers.cpp app/panels/fixit.cpp app/panels/gallery_ui.cpp app/panels/enhance_ui.cpp app/state/results_export.cpp app/state/results_export_ui.cpp app/vdl2/vdl2_log.cpp app/state/rx_width.cpp app/panels/credits_ui.cpp app/bandplan/bandplan_ui.cpp app/sweep/sweep_ui.cpp app/freqdb/freqdb_ui.cpp app/ui/tour.cpp app/ui/learn.cpp app/ui/autogain_firstrun.cpp app/clips/clips_core.cpp app/clips/clips_gen.cpp app/clips/clips_ui.cpp app/transcribe/transcribe_app.cpp app/panels/automation_ui.cpp app/panels/automation_sink.cpp app/panels/protolab_ui.cpp app/panels/modebuilder_ui.cpp app/panels/signallab_ui.cpp app/panels/msgdb_ui.cpp app/platform/spawn.cpp app/plugin/plugin_app.cpp app/panels/tvrec_ui.cpp app/panels/timemachine_ui.cpp app/panels/audio_cleanup_ui.cpp app/panels/audio_control_ui.cpp app/panels/voice_inversion_ui.cpp app/radar/passive_ui.cpp app/rfi/rfi_ui.cpp app/watchlist/watchlist_ui.cpp app/integrations/integrations_ui.cpp app/df/rfcam_ui.cpp app/rooms/rooms_send.cpp app/rooms/rooms_net.cpp app/panels/report_problem.cpp app/ui/listen_wizard.cpp app/ui/typography.cpp app/ui/meter_ui.cpp app/platform/proc_cpu.cpp app/state/workspace.cpp app/state/layout.cpp app/state/workspace_ui.cpp app/panels/recording_library_ui.cpp app/panels/backup_ui.cpp app/panels/scheduler_ui.cpp app/panels/recmgr_ui.cpp app/ui/dock_tree.cpp app/ui/ui2_dock.cpp app/ui/kit/kit.cpp app/ui/kit/kit_gallery.cpp app/panels/swarm_ui.cpp app/bandplan/tvchan_ui.cpp app/vfo/vfo_ui.cpp app/ui/kit/session_list.cpp app/ui/kit/record_rules_ui.cpp app/ui/kit/mode_frame.cpp app/ssbconv/ssbconv_ui.cpp app/ui/mode_picker.cpp app/ui/mode_info.cpp app/ui/settings_window.cpp app/webshare/webshare_core.cpp app/webshare/webshare_net.cpp app/webshare/qr.cpp )
+  set(APP_SOURCES app/panels/carousel_view.cpp app/main.cpp app/main_window.cpp app/main_start.cpp app/ui/draw_ui.cpp app/ui/touch.cpp app/ui/touch_sheets.cpp app/ui/touch_shell.cpp app/ui/main_tabs.cpp app/ui/light_theme.cpp app/state/app_state.cpp app/state/presets_app.cpp app/state/prefs.cpp app/ui/widgets.cpp app/ui/toolbar.cpp app/ui/toolbar_source.cpp app/ui/toolbar_rig.cpp app/ui/statusbar.cpp app/ui/mode_table.cpp app/ui/mode_select.cpp app/ui/mode_visibility.cpp app/ui/ui_common.cpp app/panels/radio_ui.cpp app/gfx/plots.cpp app/panels/analysis_tabs.cpp app/panels/tv.cpp app/panels/tv_hd.cpp app/panels/subs_ui.cpp app/scan/scan_outputs.cpp app/panels/antenna.cpp app/fm/fm_ui.cpp app/ui/ui2.cpp app/ui/ui2_theme.cpp app/ui/ui2_widgets.cpp app/ui/ui2_shell.cpp app/ui/command_palette.cpp app/ui/ui2_faces.cpp app/panels/modeui.cpp app/atsc3/atsc3_ui.cpp app/isdbt/isdbt_ui.cpp app/panels/update_ui.cpp app/scan/scan_db_ui.cpp app/panels/diag_ui.cpp app/panels/doctor_ui.cpp app/ui/wizard.cpp app/gfx/plot.cpp app/gfx/gfx_png.cpp app/ui/popout.cpp app/panels/codec_help.cpp app/platform/discord_rpc.cpp app/panels/passes_ui.cpp app/panels/satnogs_ui.cpp app/df/df_ui.cpp app/panels/feeds_ui.cpp app/scan/scanner_ui.cpp app/scan/scan_view_ui.cpp app/memory/memory_options.cpp app/memory/memory_ui.cpp app/memory/memory_lists_ui.cpp app/memory/memory_edit.cpp app/memory/memory_selftest.cpp app/map/map_ui.cpp app/map/wx_overlay.cpp app/map/map_send.cpp app/webshare/webshare.cpp app/webshare/webshare_text.cpp app/panels/rotator_ui.cpp app/panels/results_ui.cpp app/state/rx_prefs.cpp app/state/receivers.cpp app/panels/fixit.cpp app/panels/gallery_ui.cpp app/panels/enhance_ui.cpp app/state/results_export.cpp app/state/results_export_ui.cpp app/vdl2/vdl2_log.cpp app/state/rx_width.cpp app/panels/credits_ui.cpp app/bandplan/bandplan_ui.cpp app/sweep/sweep_ui.cpp app/freqdb/freqdb_ui.cpp app/ui/tour.cpp app/ui/learn.cpp app/ui/autogain_firstrun.cpp app/clips/clips_core.cpp app/clips/clips_gen.cpp app/clips/clips_ui.cpp app/transcribe/transcribe_app.cpp app/panels/automation_ui.cpp app/panels/automation_sink.cpp app/panels/protolab_ui.cpp app/panels/modebuilder_ui.cpp app/panels/signallab_ui.cpp app/panels/msgdb_ui.cpp app/platform/spawn.cpp app/plugin/plugin_app.cpp app/panels/tvrec_ui.cpp app/panels/timemachine_ui.cpp app/panels/audio_cleanup_ui.cpp app/panels/audio_control_ui.cpp app/panels/voice_inversion_ui.cpp app/radar/passive_ui.cpp app/rfi/rfi_ui.cpp app/watchlist/watchlist_ui.cpp app/integrations/integrations_ui.cpp app/df/rfcam_ui.cpp app/rooms/rooms_send.cpp app/rooms/rooms_net.cpp app/panels/report_problem.cpp app/ui/listen_wizard.cpp app/ui/typography.cpp app/ui/meter_ui.cpp app/platform/proc_cpu.cpp app/state/workspace.cpp app/state/layout.cpp app/state/workspace_ui.cpp app/panels/recording_library_ui.cpp app/panels/backup_ui.cpp app/panels/scheduler_ui.cpp app/panels/recmgr_ui.cpp app/ui/dock_tree.cpp app/ui/ui2_dock.cpp app/ui/kit/kit.cpp app/ui/kit/kit_gallery.cpp app/panels/swarm_ui.cpp app/bandplan/tvchan_ui.cpp app/vfo/vfo_ui.cpp app/ui/kit/session_list.cpp app/ui/kit/export.cpp app/ui/kit/export_ui.cpp app/state/recdir.cpp app/state/recdir_core.cpp app/ui/kit/record_rules_ui.cpp app/ui/kit/mode_frame.cpp app/ui/kit/mode_panel.cpp app/ssbconv/ssbconv_ui.cpp app/ui/mode_picker.cpp app/ui/mode_info.cpp app/ui/settings_window.cpp app/webshare/webshare_core.cpp app/webshare/webshare_net.cpp app/webshare/qr.cpp )
   list(APPEND APP_SOURCES app/ui/synth_group_ui.cpp)
   list(APPEND APP_SOURCES app/state/tune_worker.cpp)   # the radio retune off the UI thread, newest request wins
   list(APPEND APP_SOURCES app/scan/fast_scan_ui.cpp app/ui/input_map.cpp)
@@ -696,6 +712,8 @@ if(DECT2_BUILD_APP)
   add_executable(test_setpos_guard tests/app/test_setpos_guard.cpp)   # #104: a pane ending on SetCursorPos grows instead of asserting
   target_link_libraries(test_setpos_guard PRIVATE imgui)
   add_test(NAME setpos_guard COMMAND test_setpos_guard)
+  add_executable(test_recdir tests/app/test_recdir.cpp app/state/recdir_core.cpp)   # the recordings folder: default, chosen, unwritable fallback, odd paths (docs/RECORDINGS-FOLDER.md)
+  add_test(NAME recdir COMMAND test_recdir)
   add_executable(test_settings tests/app/test_settings.cpp)   # the Settings window's table, search, reset, export / import (app/ui/settings_logic.h)
   add_test(NAME settings COMMAND test_settings)
   add_executable(test_mode_visibility tests/app/test_mode_visibility.cpp)
@@ -775,6 +793,7 @@ if(DECT2_BUILD_APP)
     target_compile_options(dect2 PRIVATE -fobjc-arc)
   endif()
   target_link_libraries(dect2 PRIVATE dect2core imgui)
+  target_sources(dect2 PRIVATE app/panels/wide_all_ui.cpp)   # Everything in view: wide multi-signal decode window
   target_sources(dect2 PRIVATE app/panels/rffp_ui.cpp)   # RF fingerprint window (docs/RF-FINGERPRINT.md)
   target_link_libraries(dect2 PRIVATE dect2core imgui onair_web)
   target_include_directories(dect2 PRIVATE server)
@@ -839,7 +858,11 @@ if(DECT2_BUILD_TESTS)
   target_include_directories(test_exporters PRIVATE core/include)
   add_test(NAME exporters COMMAND test_exporters)
   add_test(NAME results_export COMMAND test_results_export)
+  add_executable(test_kit_export tests/kit/test_export.cpp app/ui/kit/export.cpp app/state/results_export.cpp core/src/export/exporters.cpp)
+  target_include_directories(test_kit_export PRIVATE core/include)
+  add_test(NAME kit_export COMMAND test_kit_export)
   add_executable(test_rx_width tests/state/test_rx_width.cpp)
+  target_link_libraries(test_rx_width PRIVATE dect2core)   # rx_width.h takes the radio limits of the core
   add_test(NAME rx_width COMMAND test_rx_width)
   add_executable(test_custom_capture tests/engine/test_custom_capture.cpp)   # custom bandwidth and sample rate of every family of modes: saved, planned, reaching the engine (3.4)
   target_link_libraries(test_custom_capture PRIVATE dect2core)
@@ -1008,6 +1031,8 @@ if(DECT2_BUILD_TESTS)
   add_executable(sens_sweep tools/sens/sens_sweep.cpp)
   target_include_directories(sens_sweep PRIVATE tools/sens)
   target_link_libraries(sens_sweep PRIVATE dect2core)
+  add_executable(sens_gk2a_gap tools/sens/sens_gk2a_gap.cpp)   # GK-2A: receiver against an ideal one (docs/GK2A.md)
+  target_link_libraries(sens_gk2a_gap PRIVATE dect2core)
   # run by the build workers (ctest -R sens_quick / sens_full, or -L sens-quick / sens-full); results land in <build>/sens-out/*.json
   add_test(NAME sens_quick COMMAND sens_sweep --quick --mode "dvbt$|dab|fm" --out ${CMAKE_BINARY_DIR}/sens-out)
   add_test(NAME sens_full COMMAND sens_sweep --full --trials 8 --out ${CMAKE_BINARY_DIR}/sens-out)
@@ -1215,6 +1240,7 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_audio_engine tests/audio/test_audio_engine.cpp)
   target_link_libraries(test_audio_engine PRIVATE dect2core)
   add_test(NAME audio_engine COMMAND test_audio_engine)
+  set_tests_properties(audio_engine PROPERTIES TIMEOUT 1800)   # about 80 s on a Mac, but several times that on a loaded Windows runner (it timed out at 600 s there)
   add_executable(test_audio_control tests/audio/test_audio_control.cpp)
   target_link_libraries(test_audio_control PRIVATE dect2core)
   add_test(NAME audio_control COMMAND test_audio_control)
@@ -1380,6 +1406,8 @@ if(DECT2_BUILD_TESTS)
     add_test(NAME map_colours COMMAND test_map_colours)
     add_executable(test_touch tests/app/test_touch.cpp)   # the touch interface's keypad, gestures and kinetic scroll (app/ui/touch_logic.h)
     add_test(NAME touch_logic COMMAND test_touch)
+    add_executable(test_mode_panel tests/app/test_mode_panel.cpp)   # the per-mode Simple / Advanced view: preference key, default, pane layout (app/ui/kit/mode_panel_logic.h)
+    add_test(NAME mode_panel_logic COMMAND test_mode_panel)
     add_executable(test_time_source tests/app/test_time_source.cpp)   # one clock for all modes (#218): computer clock or signal time, ISO 8601 with ms
     target_include_directories(test_time_source PRIVATE core/include)
     add_test(NAME time_source COMMAND test_time_source)
@@ -1430,6 +1458,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_pactor_mode PRIVATE dect2core)
     target_compile_definitions(test_pactor_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME pactor_mode COMMAND test_pactor_mode)
+    add_executable(test_pactorhf_mode tests/app/test_pactorhf_mode.cpp)   # PACTOR-II / -III / -IV: tunings, mode rows, engine / panel wiring, honesty strings
+    target_link_libraries(test_pactorhf_mode PRIVATE dect2core)
+    target_compile_definitions(test_pactorhf_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME pactorhf_mode COMMAND test_pactorhf_mode)
     add_executable(test_roshf_mode tests/app/test_roshf_mode.cpp)   # Roshf: tuning, mode row, engine / panel wiring, honesty strings
     target_link_libraries(test_roshf_mode PRIVATE dect2core)
     target_compile_definitions(test_roshf_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
@@ -1450,10 +1482,22 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_nrf24_mode PRIVATE dect2core)
     target_compile_definitions(test_nrf24_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME nrf24_mode COMMAND test_nrf24_mode)
+    add_executable(test_gk2a_mode tests/app/test_gk2a_mode.cpp)   # GK-2A: tunings, mode rows, engine / panel wiring, the doc page, credits
+    target_link_libraries(test_gk2a_mode PRIVATE dect2core)
+    target_compile_definitions(test_gk2a_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME gk2a_mode COMMAND test_gk2a_mode)
+    add_executable(test_selcal_mode tests/app/test_selcal_mode.cpp)   # SELCAL: tuning, mode row, engine / panel wiring, the doc page
+    target_link_libraries(test_selcal_mode PRIVATE dect2core)
+    target_compile_definitions(test_selcal_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME selcal_mode COMMAND test_selcal_mode)
     add_executable(test_atis_mode tests/app/test_atis_mode.cpp)   # ATIS: tuning, mode row, engine / panel wiring, the doc page
     target_link_libraries(test_atis_mode PRIVATE dect2core)
     target_compile_definitions(test_atis_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME atis_mode COMMAND test_atis_mode)
+    add_executable(test_fy3_mode tests/app/test_fy3_mode.cpp)   # FY-3 AHRPT / MPT: tuning, mode rows, engine / panel wiring, the doc page
+    target_link_libraries(test_fy3_mode PRIVATE dect2core)
+    target_compile_definitions(test_fy3_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME fy3_mode COMMAND test_fy3_mode)
     add_executable(test_shortwave_mode tests/app/test_shortwave_mode.cpp)   # Shortwave: tuning, mode row, engine / panel wiring, the decoder strip
     target_link_libraries(test_shortwave_mode PRIVATE dect2core)
     target_compile_definitions(test_shortwave_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
@@ -1466,6 +1510,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_milhf_mode PRIVATE dect2core)
     target_compile_definitions(test_milhf_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME milhf_mode COMMAND test_milhf_mode)
+    add_executable(test_custom_bandwidth_all tests/app/test_custom_bandwidth_all.cpp)   # custom bandwidth and rate in every registered mode: default untouched, reaches the receiver, no clamp, persists, control in every layout (docs/BANDWIDTH-AUDIT.md)
+    target_link_libraries(test_custom_bandwidth_all PRIVATE dect2core)
+    target_compile_definitions(test_custom_bandwidth_all PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME custom_bandwidth_all COMMAND test_custom_bandwidth_all)
     add_executable(test_mode_numbers tests/app/test_mode_numbers.cpp)   # every family, engine standard and poll slot is unique (docs/MODE-NUMBERS.md)
     target_link_libraries(test_mode_numbers PRIVATE dect2core)
     target_compile_definitions(test_mode_numbers PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
@@ -1486,6 +1534,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_argos_sigfox_mode PRIVATE dect2core)
     target_compile_definitions(test_argos_sigfox_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME argos_sigfox_mode COMMAND test_argos_sigfox_mode)
+    add_executable(test_fygeo_mode tests/app/test_fygeo_mode.cpp)   # the four FengYun modes (families 232 - 235): registered tunings, mode rows, engine wiring, poll slots, panel notes
+    target_link_libraries(test_fygeo_mode PRIVATE dect2core)
+    target_compile_definitions(test_fygeo_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME fygeo_mode COMMAND test_fygeo_mode)
     add_executable(test_ltr_edacs_mode tests/app/test_ltr_edacs_mode.cpp)   # LTR and EDACS trunking modes: registered tunings, mode rows, family count and panel strings
     target_link_libraries(test_ltr_edacs_mode PRIVATE dect2core)
     target_compile_definitions(test_ltr_edacs_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
@@ -1715,6 +1767,12 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_autogain_v2 tests/source/test_autogain_v2.cpp)
   target_link_libraries(test_autogain_v2 PRIVATE dect2core)
   add_test(NAME autogain_v2 COMMAND test_autogain_v2)   # Auto v2 (hill climb on the measured objective) against the old loop on simulated front ends; GainMeter; unit calibration (docs/AUTOGAIN.md section 8)
+  add_executable(test_autogain_models tests/source/test_autogain_models.cpp)
+  target_link_libraries(test_autogain_models PRIVATE dect2core)
+  add_test(NAME autogain_models COMMAND test_autogain_models)   # 3.6: every radio model through the simulated front end, the SDRplay LNA / IF split by policy, the per-mode targets
+  add_executable(test_spur_notch tests/dsp/test_spur_notch.cpp)
+  target_link_libraries(test_spur_notch PRIVATE dect2core)
+  add_test(NAME spur_notch COMMAND test_spur_notch)   # 3.6: the adaptive spur notch: out-of-channel lines, proved in-channel lines, wide channels, every mode's channel
   add_executable(test_agc_burst tests/source/test_agc_burst.cpp)
   target_link_libraries(test_agc_burst PRIVATE dect2core)
   add_test(NAME agc_burst COMMAND test_agc_burst)   # bursty strong signals: clipping, pumping and recovery of the automatic gain
@@ -1753,7 +1811,17 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_server_host PRIVATE onair_web dect2core)
   target_compile_definitions(test_server_host PRIVATE ONAIR_SERVER_VERSION="${PROJECT_VERSION}")
   add_test(NAME server_host COMMAND test_server_host)
-  foreach(t web_proto web_dsp web_hub web_server web_safety web_tx_guard web_ranges web_directory)
+  add_executable(test_mcp tests/mcp/test_mcp.cpp server/server_config.cpp server/server_host.cpp)   # MCP server: protocol, every tool on the test signal, stdio + HTTP transports (docs/MCP.md)
+  target_link_libraries(test_mcp PRIVATE onair_web dect2core)
+  target_compile_definitions(test_mcp PRIVATE ONAIR_SERVER_VERSION="${PROJECT_VERSION}")
+  add_test(NAME mcp COMMAND test_mcp)
+  set_tests_properties(mcp PROPERTIES TIMEOUT 300)
+  find_program(ONAIR_PYTHON3_MCP python3)
+  if(ONAIR_PYTHON3_MCP)   # a real MCP client in a child process against onair-server --mcp-stdio and --mcp-http
+    add_test(NAME mcp_stdio COMMAND ${ONAIR_PYTHON3_MCP} -I ${CMAKE_SOURCE_DIR}/tests/mcp/test_mcp_stdio.py $<TARGET_FILE:onair-server>)
+    set_tests_properties(mcp_stdio PROPERTIES TIMEOUT 300)
+  endif()
+  foreach(t web_proto web_dsp web_hub web_server web_safety web_tx_guard web_ranges web_directory web_relay)
 
     add_executable(test_${t} tests/server/test_${t}.cpp server/server_config.cpp)
     target_link_libraries(test_${t} PRIVATE onair_web)
@@ -2116,6 +2184,12 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_wide_session_tv tests/engine/test_wide_session_tv.cpp)   # the same with a DVB-T2 and a DVB-T channel in the capture
   target_link_libraries(test_wide_session_tv PRIVATE dect2core)
   add_test(NAME wide_session_tv COMMAND test_wide_session_tv)
+  add_executable(test_wide_multi tests/engine/test_wide_multi.cpp)   # wide session: TETRA span decoder, signals marked by hand, impairment sweep (edges, DC, off-raster, 2 rates)
+  target_link_libraries(test_wide_multi PRIVATE dect2core)
+  add_test(NAME wide_multi COMMAND test_wide_multi)
+  add_executable(test_wide_multi_tv tests/engine/test_wide_multi_tv.cpp)   # three TV channels (T2 + T + T2), off the grid, in one 28 Msps capture
+  target_link_libraries(test_wide_multi_tv PRIVATE dect2core)
+  add_test(NAME wide_multi_tv COMMAND test_wide_multi_tv)
 
   add_executable(test_multitv tests/engine/test_multitv.cpp)   # several adjacent TV channels from one wide capture (core)
   target_link_libraries(test_multitv PRIVATE dect2core)
@@ -2156,6 +2230,10 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_iq_record tests/source/test_iq_record.cpp)
   target_link_libraries(test_iq_record PRIVATE dect2core)
   add_test(NAME iq_record COMMAND test_iq_record)
+
+  add_executable(test_replay tests/source/test_replay.cpp)
+  target_link_libraries(test_replay PRIVATE dect2core)
+  add_test(NAME replay COMMAND test_replay)
 
   add_executable(test_time_machine tests/source/test_time_machine.cpp)
   target_link_libraries(test_time_machine PRIVATE dect2core)
@@ -2367,14 +2445,27 @@ if(DECT2_BUILD_TESTS)
       target_link_libraries(${m}tool PRIVATE dect2core)
     endif()
   endforeach()
+  if(TARGET test_multitone_real)
+    target_compile_definitions(test_multitone_real PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+  endif()
+  if(TARGET test_pactorhf_real)   # reads the owner's recording from the source tree
+    target_compile_definitions(test_pactorhf_real PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+  endif()
   if(TARGET test_pskdsp_engine)   # reads the mode row and the help page from the source tree
     target_compile_definitions(test_pskdsp_engine PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
   endif()
   # read a file of the source tree (a recording, a font): __FILE__ does not lead there (-ffile-prefix-map, Windows separators)
-  foreach(t test_sarsat_rx test_hfdig_kbd)
+  foreach(t test_sarsat_rx test_hfdig_kbd test_aero_cchan_real test_cubesat_ao40 test_cubesat_telem)
     if(TARGET ${t})
       target_compile_definitions(${t} PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     endif()
+  endforeach()
+  # real recordings (docs/REAL-SIGNALS.md): tests/real/test_real_<mode>.cpp reads a short excerpt from tests/data and runs the real receiver (each a second or two)
+  foreach(m adsb dtmb dsc)
+    add_executable(test_real_${m} tests/real/test_real_${m}.cpp)
+    target_link_libraries(test_real_${m} PRIVATE dect2core)
+    target_compile_definitions(test_real_${m} PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME real_${m} COMMAND test_real_${m})
   endforeach()
   # the signal identifier (docs/IDENTIFIER.md): specx_ideval (about thirty modes made from their parameters, impaired, a confusion matrix; a few
   # seconds), specx_idfeatures and specx_ident run with the rest. The matrix over every mode's own test signal renders each mode's generator
@@ -2559,6 +2650,8 @@ if(DECT2_BUILD_APP AND NOT APPLE)
   endif()
   install(FILES third_party/rnnoise/COPYING DESTINATION ${CMAKE_INSTALL_DOCDIR}/rnnoise)   # RNNoise (BSD-3-Clause) is linked in: its licence text travels with the binaries
   install(FILES third_party/rnnoise/README-OnAir.md DESTINATION ${CMAKE_INSTALL_DOCDIR}/rnnoise RENAME NOTICE.md)
+  install(FILES third_party/openjpeg/LICENSE DESTINATION ${CMAKE_INSTALL_DOCDIR}/openjpeg)   # OpenJPEG (BSD-2-Clause) is linked in: its licence text travels with the binaries
+  install(FILES third_party/openjpeg/README-OnAir.md DESTINATION ${CMAKE_INSTALL_DOCDIR}/openjpeg RENAME NOTICE.md)
   if(TARGET dect2_whisper)   # whisper.cpp / ggml (MIT) is linked in: its licence text travels with the binaries
     install(FILES third_party/whisper/LICENSE DESTINATION ${CMAKE_INSTALL_DOCDIR}/whisper)
     install(FILES third_party/whisper/README-OnAir.md DESTINATION ${CMAKE_INSTALL_DOCDIR}/whisper RENAME NOTICE.md)
@@ -2637,4 +2730,9 @@ if(MINGW)
       endif()
     endforeach()
   endif()
+endif()
+
+# kaws_synth waits for a decode in the UTC slots of the computer clock: about 2 min on a Mac, but over 4 min on a loaded Windows runner
+if(TEST kaws_synth)
+  set_tests_properties(kaws_synth PROPERTIES TIMEOUT 1500)
 endif()

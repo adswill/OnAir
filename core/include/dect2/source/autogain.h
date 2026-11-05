@@ -70,6 +70,10 @@ struct RadioProfile {
     std::vector<GainStage> stages;   // in signal order: antenna first
     bool hasAmp = false, hasBias = false;
     bool driverSplits = false;    // one overall gain for OnAir; the driver spreads it over its stages itself
+    std::string splitKey;         // a driver setting (TuneSettings::radio[splitKey]) that takes the policy ("linearity" / "sensitivity") where the driver
+                                  // spreads one overall gain over LNA and IF itself (SDRplay: the LNA state vs the IF gain reduction); empty: none
+    bool stepsUncertain = false;  // the step table is an index of an unknown radio behind the driver (SpyServer, a Kiwi, a generic radio): a "dB" can be 3 real dB;
+                                  // the slope test (products / compression) waits until the controller has measured the real step (unitScale_)
     bool remote = false;          // a radio over the network (rtl_tcp, SpyServer): each change takes a round trip, settle longer
     double settleSec = 0.25;      // how long a gain change takes to reach the samples (USB buffers, the tuner's own settling)
     double postIip3Dbm = 10;      // IIP3 of what follows the front stages (mixer, filter, ADC driver), at their output: front gain costs linearity
@@ -103,7 +107,9 @@ struct StagePlan {
     double nfDb = 0;              // cascaded noise figure (Friis) of the plan
     double iip3Dbm = 0;           // cascaded input IP3 of the front stages
     bool ampOn = false;
-    bool operator==(const StagePlan& o) const { return db == o.db && ampOn == o.ampOn; }
+    Policy pol = Policy::Balanced;   // the policy the plan was made for
+    bool polMatters = false;         // a radio whose driver splits one overall gain by policy (RadioProfile::splitKey): two plans of one gain differ
+    bool operator==(const StagePlan& o) const { return db == o.db && ampOn == o.ampOn && (!polMatters || pol == o.pol); }
 };
 
 // Spreads totalDb over the stages. mask: bit i set = stage i may move (the rest stay at fixed[i], or their lowest step when fixed is short).
@@ -196,6 +202,8 @@ struct ModeTarget {
 // freqHz > 0 adds the band's bias: HF and the strong broadcast / mobile bands want headroom and a linear front end, quiet microwave bands
 // want sensitivity (bandBiasNote in the target says so in one line)
 ModeTarget modeTargetFor(int stdMode, double chanBwHz, double rateHz, double freqHz = 0);
+// The per-mode refinement over the class numbers (inside modeTargetFor); exposed so the tests can tell which modes it changes
+void applyModeRefinement(ModeTarget& t, int stdMode);
 // A short id of the band a frequency is in ("hf", "fm", "tv-uhf", "cell", "microwave" ...): gain memory and the app re-optimise when it changes
 const char* bandIdFor(double freqHz);
 
@@ -395,6 +403,7 @@ private:
     PulseJudge pj_;   // pulsed modes: messages per second and loud share at the present gain
     double floorBase_ = -200;
     std::string status_, limit_, lastDecision_, retuneWhy_;
+    bool unitLearned_ = false;             // unitScale_ was measured on this unit (a radio with RadioProfile::stepsUncertain is not judged by the slope test before)
     double slope_ = 1, unitScale_ = 1;     // unitScale_: the real dB per nominal dB of this unit, learned from the strongest line's rise on each step
     int rejectRun_ = 0, rejUp_ = 0, idleCycles_ = 0;
     double goodGain_ = -1e9;     // the gain the loop last settled at without clipping (a burst is recovered to this, not to the gain that clipped)

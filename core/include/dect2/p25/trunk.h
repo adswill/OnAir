@@ -320,6 +320,8 @@ public:
     // One line for the UI: what the follower is doing now, or why it is not following ('Following TG 1234 on 851.2375 MHz, slot 2')
     std::string statusLine(double nowSec) const;
     std::vector<std::string> messages;   // newest last, at most 200
+    // Every grant the control channel makes, after the encrypted-list check (the multi-radio trunk pool listens here, dect2/trunkpool)
+    std::function<void(const Grant&, double nowSec)> grantTap;
     void clear();
 
     // The live "now talking" view: calls that are active

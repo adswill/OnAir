@@ -1,4 +1,4 @@
-// MPT1327 trunking screens (work in progress): lock, good and bad codewords, the system identity, the control message list
+// MPT1327 trunking screens: lock, good and bad codewords, the system identity, the control message list
 // and the channel table.
 #include "app.h"
 #include "dect2/mpt1327/mpt1327_chan.h"
@@ -75,7 +75,7 @@ void tab(App& a) {
         return;
     }
     const dect2::MptTelemetry& t = a.rx.mpt1327;
-    ImGui::TextUnformatted("MPT1327 trunking (WIP): 1200 bit/s FFSK control channel, control messages only");
+    ImGui::TextUnformatted("MPT1327 trunking: 1200 bit/s FFSK control channel, control messages only");
     ImGui::Spacing();
     {
         const char* items[] = {"Standard sync word", "Ignore sync word (French networks)", "Automatic"};
@@ -124,7 +124,7 @@ void status(App& a) {
 }
 
 void summary(const App& a, std::string& l1, std::string& l2) {
-    l1 = "MPT1327 trunking (WIP)";
+    l1 = "MPT1327 trunking";
     if (live(a)) l2 = dect2::mpt1327Summary(a.rx.mpt1327);
 }
 

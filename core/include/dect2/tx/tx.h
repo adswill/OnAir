@@ -28,6 +28,7 @@
 //
 // No frequency and no power limit is applied here: see TxTune in source.h.
 #pragma once
+#include "dect2/mesh/mesh_tx.h"
 #include "dect2/engine/mode_synth.h"
 #include "dect2/source/source.h"
 #include "dect2/audio/audioin.h"
@@ -141,6 +142,7 @@ struct TxRequest {
     std::string callsign;          // FT8, APRS, D-STAR, M17, …
     std::string grid;              // Maidenhead (FT8 / WSPR)
     std::string text;              // RTTY / CW / PSK / pager / APRS comment / free-text
+    MeshTxIdentity mesh;           // Mesh (LoRa): the sender's own node identity, channel and hop limit (used when text is not empty)
     std::string payload;           // a message prepared as it goes on the air (the Flipper chat screen: the encrypted octets); empty: built from the fields
     std::string dest;              // APRS destination, D-STAR UR, M17 dst, FT8 report target
     std::string path;              // APRS digipeater path, e.g. WIDE1-1,WIDE2-1

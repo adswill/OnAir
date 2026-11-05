@@ -33,6 +33,8 @@ public:
     using MsgCb = std::function<void(const NavtexMessage&)>;
     explicit NavtexDecoder(bool invert = false);
     void setCallback(MsgCb cb) { cb_ = std::move(cb); }
+    // Every character as it is accepted (ch '*' with err set for an unreadable one): the SITOR-B mode reads the FEC text without ZCZC framing.
+    void setCharCallback(std::function<void(int, bool)> cb) { charCb_ = std::move(cb); }
     void reset();
     // One received bit. soft > 0: the 'B' (1) state of the code, |soft| 0..1 = how sure. With invert the sense is swapped.
     void pushBit(float soft);
@@ -52,6 +54,7 @@ private:
 
     bool invert_;
     MsgCb cb_;
+    std::function<void(int, bool)> charCb_;
     uint8_t reg_[7] = {}; float regConf_[7] = {};
     uint64_t bitCount_ = 0;
     int validRun_[7] = {};

@@ -9,6 +9,7 @@
 #include <fstream>
 #include <thread>
 #ifndef _WIN32
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #endif
@@ -123,6 +124,7 @@ int main() {
         put((base / "api.json").string(), "[{\"tag_name\":\"v9.9.9\",\"name\":\"OnAir 9.9.9\",\"draft\":false,\"prerelease\":false,\"html_url\":\"https://example.org\",\"body\":\"notes\",\"assets\":[" + d + "," + d2 + "]}]");
     };
     auto waitFor = [&](Updater& u, Updater::Phase want, int secs) {
+        secs = secs * 6 + 20;   /* CI is heavily loaded: poll with a generous deadline, returns as soon as the phase arrives */
         for (int i = 0; i < secs * 20; i++) { const auto p = u.status().phase; if (p == want || p == Updater::Phase::Failed) return p; std::this_thread::sleep_for(std::chrono::milliseconds(50)); }
         return u.status().phase;
     };
@@ -176,6 +178,106 @@ int main() {
         waitpid(child, &stt, 0);
         for (int i = 0; i < 100 && slurp(inst + "/bin/onair") != "#!/bin/sh\necho new\n"; i++) std::this_thread::sleep_for(std::chrono::milliseconds(100));
         CHECK(slurp(inst + "/bin/onair") == "#!/bin/sh\necho new\n" && fs::exists(inst + "/lib/libnew.so") && !fs::exists(inst + "/lib/libold.so"), "the installation was replaced");
+    }
+    // a .deb: downloaded and checked, then the user is told the exact command; nothing is run (no pkexec, no dpkg) and the program is not replaced
+    {
+        const std::string deb = (base / "onair_9.9.9_amd64.deb").string();
+        put(deb, "!<arch>\nnot a real package, only bytes\n");
+        const std::string dsum = sha256File(deb);
+        auto asset = [&](const std::string& n, const std::string& digest) { return "{\"name\":\"" + n + "\",\"size\":" + std::to_string(fs::file_size(deb)) + ",\"browser_download_url\":\"file://" + deb + "\",\"digest\":\"sha256:" + digest + "\"}"; };
+        put((base / "apideb.json").string(), "[{\"tag_name\":\"v9.9.9\",\"draft\":false,\"prerelease\":false,\"assets\":[" + asset("onair_9.9.9_amd64.deb", dsum) + "," + asset("onair_9.9.9_arm64.deb", dsum) + "]}]");
+        Updater u("0.0.1");
+        u.setApiUrl("file://" + (base / "apideb.json").string());
+        u.setExecutable("/usr/bin/onair", (int)InstallKind::LinuxDeb);
+        CHECK(u.status().manualInstall && !u.status().autoInstallable, "deb: manual install, not self-replacing");
+        u.check(true);
+        CHECK(waitFor(u, Updater::Phase::Available, 10) == Updater::Phase::Available, "deb: found the update");
+        const std::string wantDeb = thisArch() == "arm64" ? "onair_9.9.9_arm64.deb" : "onair_9.9.9_amd64.deb";
+        CHECK(u.status().release.assetName == wantDeb, "deb: the package for this arch: %s", u.status().release.assetName.c_str());
+        u.download();
+        CHECK(waitFor(u, Updater::Phase::Ready, 20) == Updater::Phase::Ready, "deb: downloaded and checked: %s", u.status().error.c_str());
+        const std::string cmd = u.status().manualCommand;
+        CHECK(cmd.compare(0, 19, "sudo apt install '/") == 0 && has(cmd, wantDeb + "'"), "deb: the command: %s", cmd.c_str());
+        std::string err;
+        CHECK(!u.apply(true, &err) && has(err, "sudo apt install"), "deb: apply runs nothing and names the command: %s", err.c_str());
+        CHECK(debInstallCommand("/tmp/it's a.deb") == "sudo apt install '/tmp/it'\\''s a.deb'", "deb: quoting: %s", debInstallCommand("/tmp/it's a.deb").c_str());
+        // a wrong checksum is refused for a .deb too
+        put((base / "apideb.json").string(), "[{\"tag_name\":\"v9.9.9\",\"draft\":false,\"prerelease\":false,\"assets\":[" + asset("onair_9.9.9_amd64.deb", std::string(64, 'a')) + "," + asset("onair_9.9.9_arm64.deb", std::string(64, 'a')) + "]}]");
+        Updater v("0.0.1");
+        v.setApiUrl("file://" + (base / "apideb.json").string());
+        v.setExecutable("/usr/bin/onair", (int)InstallKind::LinuxDeb);
+        v.check(true);
+        CHECK(waitFor(v, Updater::Phase::Available, 10) == Updater::Phase::Available, "deb: found the update (bad sum)");
+        v.download();
+        CHECK(waitFor(v, Updater::Phase::Ready, 20) == Updater::Phase::Failed && has(v.status().error, "checksum") && v.status().manualCommand.empty(), "deb: a wrong checksum is refused");
+    }
+    // an AppImage: found by its header, checked against SHA256SUMS (also when GitHub lists no digest), replaced in place without root
+    {
+        const std::string ar = thisArch() == "arm64" ? "aarch64" : "x86_64";
+        auto fakeAi = [](const std::string& tail) { std::string h("\x7f" "ELF", 4); h += std::string(4, '\0'); h += "AI"; h += '\x02'; return h + tail; };
+        const std::string old = (base / "apps" / ("OnAir-0.0.1-linux-" + ar + ".AppImage")).string();
+        put(old, fakeAi("OLD"));
+        chmod(old.c_str(), 0755);
+        CHECK(looksLikeAppImage(old) && !looksLikeAppImage(tgz), "appimage: recognised by its header");
+#ifdef __linux__
+        CHECK(detectInstallKind(old) == InstallKind::LinuxAppImage, "appimage: install kind");
+#endif
+        const std::string nu = (base / "rel" / ("OnAir-9.9.9-linux-" + ar + ".AppImage")).string();
+        put(nu, fakeAi("NEW VERSION"));
+        const std::string nsum = sha256File(nu);
+        const std::string an = "OnAir-9.9.9-linux-" + ar + ".AppImage";
+        auto api = [&](const std::string& digest) {
+            put((base / "apiai.json").string(), "[{\"tag_name\":\"v9.9.9\",\"draft\":false,\"prerelease\":false,\"assets\":[{\"name\":\"" + an + "\",\"size\":" + std::to_string(fs::file_size(nu)) + ",\"browser_download_url\":\"file://" + nu + "\"" + (digest.empty() ? "" : ",\"digest\":\"sha256:" + digest + "\"") + "}]}]");
+        };
+        auto sums = [&](const std::string& h) { put((base / "dl" / "v9.9.9" / "SHA256SUMS").string(), h + "  " + an + "\n" + std::string(64, 'e') + "  other.deb\n"); };
+        auto mk = [&](Updater& u) { u.setApiUrl("file://" + (base / "apiai.json").string()); u.setReleaseBase("file://" + (base / "dl").string() + "/"); u.setExecutable(old, (int)InstallKind::LinuxAppImage); };
+        {   // a wrong SHA256SUMS line is refused even though GitHub's digest is right
+            api(nsum); sums(std::string(64, 'a'));
+            Updater u("0.0.1"); mk(u);
+            CHECK(u.status().autoInstallable && !u.status().manualInstall, "appimage: self-replacing");
+            u.check(true);
+            CHECK(waitFor(u, Updater::Phase::Available, 10) == Updater::Phase::Failed && has(u.status().error, "SHA256SUMS"), "appimage: digest and SHA256SUMS must agree: %s", u.status().error.c_str());
+        }
+        {   // a wrong checksum in SHA256SUMS alone (no digest) is caught when the download is checked
+            api(""); sums(std::string(64, 'b'));
+            Updater u("0.0.1"); mk(u);
+            u.check(true);
+            CHECK(waitFor(u, Updater::Phase::Available, 10) == Updater::Phase::Available, "appimage: found (no digest)");
+            u.download();
+            CHECK(waitFor(u, Updater::Phase::Ready, 20) == Updater::Phase::Failed && has(u.status().error, "checksum") && slurp(old) == fakeAi("OLD"), "appimage: wrong sum refused, file untouched");
+        }
+        {   // something that is no AppImage is refused even with a matching checksum
+            const std::string bad = (base / "rel2" / an).string();
+            put(bad, "just text, not an AppImage");
+            put((base / "apiai.json").string(), "[{\"tag_name\":\"v9.9.9\",\"draft\":false,\"prerelease\":false,\"assets\":[{\"name\":\"" + an + "\",\"size\":" + std::to_string(fs::file_size(bad)) + ",\"browser_download_url\":\"file://" + bad + "\",\"digest\":\"sha256:" + sha256File(bad) + "\"}]}]");
+            sums(sha256File(bad));
+            Updater u("0.0.1"); mk(u);
+            u.check(true);
+            CHECK(waitFor(u, Updater::Phase::Available, 10) == Updater::Phase::Available, "appimage: found (bad file)");
+            u.download();
+            CHECK(waitFor(u, Updater::Phase::Ready, 20) == Updater::Phase::Failed && has(u.status().error, "not an AppImage") && slurp(old) == fakeAi("OLD"), "appimage: not an AppImage refused");
+        }
+        {   // the right one: checked against SHA256SUMS, staged next to the old file, swapped once the program has ended
+            api(""); sums(nsum);
+            Updater u("0.0.1"); mk(u);
+            u.check(true);
+            CHECK(waitFor(u, Updater::Phase::Available, 10) == Updater::Phase::Available, "appimage: found");
+            CHECK(u.status().release.assetName == an && u.status().release.sha256 == nsum, "appimage: asset and checksum from SHA256SUMS");
+            u.download();
+            CHECK(waitFor(u, Updater::Phase::Ready, 30) == Updater::Phase::Ready, "appimage: ready: %s", u.status().error.c_str());
+            CHECK(slurp(old) == fakeAi("OLD"), "appimage: old file kept until the swap");
+            const pid_t child = fork();
+            if (child == 0) { sleep(2); _exit(0); }
+            u.setWaitPid((int)child);
+            std::string err;
+            CHECK(u.apply(false, &err), "appimage: apply: %s", err.c_str());
+            int stt = 0;
+            waitpid(child, &stt, 0);
+            for (int i = 0; i < 100 && slurp(old) != fakeAi("NEW VERSION"); i++) std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            CHECK(slurp(old) == fakeAi("NEW VERSION") && !fs::exists(old + ".new") && (fs::status(old).permissions() & fs::perms::owner_exec) != fs::perms::none, "appimage: replaced in place and still executable");
+            const auto r = pickRelease("[{\"tag_name\":\"v9.9.9\",\"assets\":[{\"name\":\"OnAir-9.9.9-linux-aarch64.AppImage\",\"size\":1},{\"name\":\"OnAir-9.9.9-linux-x86_64.AppImage\",\"size\":2}]}]", "1.0", false, InstallKind::LinuxAppImage, "aarch64");
+            CHECK(r.valid && r.assetName == "OnAir-9.9.9-linux-aarch64.AppImage", "appimage: the package for the architecture");
+        }
     }
 #ifdef __APPLE__
     // the macOS app: the new version comes in a disk image and is copied next to the installed app, then swapped for it

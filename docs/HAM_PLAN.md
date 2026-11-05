@@ -43,7 +43,7 @@ New in phase 1: `core/include/dect2/ham/ham.h` (+ `core/src/ham/ham.cpp`, test `
 | PSK31 / PSK63 | yes | yes | DONE (0.2.9): `core/src/ham/ham_kbd.cpp` renders the text as one burst (48 kHz), `app/ham/ham_kbd_ui.cpp` is the panel: received text, type-ahead buffer, macros (CQ, Answer, RST, QTH, Name, 73) filled from the station settings, call-sign pick from the decoded text, Log QSO to ADIF; same Arm / licence / band gate (`HamSlotTx::sendAudio`), 600 characters and 180 s per burst, 50 % of 10 minutes on air; test tests/ham/test_ham_kbd.cpp. Verified with a differential detector and the varicode decoder, not with the full PskReceiver |
 | RTTY | yes | yes | DONE: 45.45 Bd / 170 Hz, same panel; contest exchange not done |
 | CW | yes | yes | DONE: text to Morse (prosigns as <AR>), 5 to 40 WPM, macros as memories; no paddle keyer input |
-| Olivia / Contestia / MFSK / THOR / DominoEX | yes | yes | DONE: Olivia and Contestia 8/250, 16/500, 32/1000, MFSK16 / 32, THOR 16 / 22, DominoEX 11. The repo MFSK decoder prints the first characters wrong in noise |
+| Olivia / Contestia / MFSK / THOR / DominoEX | yes | yes | DONE: Olivia and Contestia 8/250, 16/500, 32/1000, MFSK4 .. MFSK128 (+ 64L / 128L in the HF digital decoder), THOR 16 / 22, DominoEX 11. MFSK text and fldigi's pictures (Shortwave Radiogram) decode continuously under tuning error, clock error, noise and fading in the tests; see docs/MFSK-IMAGES.md |
 | Hellschreiber | yes | yes | DONE: Feld Hell; the received picture is in the Hellschreiber view |
 | MT63 / FSQ / IFKP | yes | no | modulators, keyboard/selcall panel |
 | SSTV | yes | yes | picture send/receive panel |

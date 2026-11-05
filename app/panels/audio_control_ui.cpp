@@ -166,13 +166,14 @@ bool recordButton(App& a, AudioControlSettings& s) {
         ImGui::PopStyleColor();
     } else {
         ImGui::BeginDisabled(!a.engine.running());
+        kit::recordingsButton("ac"); ImGui::SameLine();
         if (ImGui::SmallButton(tr("Record audio (WAV)"))) {
             dect2::AudioRecOptions o;
             o.format = dect2::AudioRecFormat::Wav;
             const int m = a.engine.standardMode();
             char tag[96]; snprintf(tag, sizeof tag, "OnAir %s %.3f MHz", dect2::recordingModeId(m).c_str(), a.freqMhz);
             o.tag = tag;
-            const std::string path = plat::dataDir() + "/recordings/" + dect2::AudioRecorder::fileName(dect2::recordingModeId(m), a.freqMhz * 1e6, o.format);
+            const std::string path = recordingsDir() + "/" + dect2::AudioRecorder::fileName(dect2::recordingModeId(m), a.freqMhz * 1e6, o.format);
             std::string err;
             if (!rec.start(path, o, err)) a.engine.log("audio recording failed: " + err);
         }

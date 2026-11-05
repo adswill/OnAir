@@ -23,7 +23,7 @@ Without network access (or with the online map off) the map shows coastlines and
 
 ## Which satellite
 
-The mode names the satellite by itself, from three independent clues that are scored together: the **decoded content** (the Aero P channel system table gives the satellite id, its longitude and spot or global beam; the Inmarsat-C bulletin board gives the ocean region), the **frequency fingerprint** (the set of P carriers against the published channel list of each satellite), and the **geometry** (where each geostationary slot stands in your sky from your location; a satellite below your horizon cannot be the one you hear). The Carriers tab shows the satellite, its longitude, the beam type, a confidence and the evidence behind it; every Aero carrier row gets the satellite name. Choose one under Advanced to override. Set your location under View > Map. The satellite tables are unverified: they come from public channel lists (credit: github.com/alphafox02/inmarsat-sniffer) and nominal ocean-region slots, and the system-table reading is JAERO's, so this **needs a user test with a real capture**. A TLE is not used (geostationary slots only); the beam's own name is not in the signal we decode.
+The mode names the satellite by itself, from three independent clues that are scored together: the **decoded content** (the Aero P channel system table gives the satellite id, its longitude and spot or global beam; the Inmarsat-C bulletin board gives the ocean region), the **frequency fingerprint** (the set of P carriers against the published channel list of each satellite), and the **geometry** (where each geostationary slot stands in your sky from your location; a satellite below your horizon cannot be the one you hear). The Carriers tab shows the satellite, its longitude, the beam type, a confidence and the evidence behind it; every Aero carrier row gets the satellite name. Choose one under Advanced to override. Set your location under View > Map. The satellite tables come from public channel lists (credit: github.com/alphafox02/inmarsat-sniffer) and nominal ocean-region slots, and the system-table reading is JAERO's. Checked on Alphasat 25E with a real capture (2026-10-30: system table, 600/1200 and 10500 bit/s P carriers, 87% confidence); its 10500 bit/s P pair was found at 1545.315 / 1545.3275 MHz, not where the list said, so the other satellites' lists remain to be confirmed. A TLE is not used (geostationary slots only); the beam's own name is not in the signal we decode.
 
 ## What radios do
 
@@ -41,11 +41,17 @@ The 34 MHz downlink (1525 to 1559 MHz) never fits in one capture. Retune to see 
 - **Inmarsat-C** (EGC safety and news broadcasts) on the 2 kHz channels, with the ocean region and station from the bulletin board.
 - A **CPU budget** (Advanced) limits the windows. Carriers that do not fit are listed as *parked: CPU*.
 
+## Voice (Aero C channels)
+
+C channels carry circuit-mode voice from the ground station to the aircraft: 8400 bit/s offset QPSK, 500 ms frames. The mode starts a C-channel receiver on every wide carrier (about 7 kHz) that no P-channel decoder holds. It finds the unique word on both arms, undoes the interleaving, puncturing, convolutional code and scrambler, and gets 25 coded AMBE voice frames of 12 bytes and 3 signal units per frame. The signal units carry the call: a call-progress unit names the aircraft (24-bit address) and the ground station. The **Voice** tab lists the calls (carrier, aircraft, ground station, Eb/N0, frames), has mute and solo per call, records each call (a WAV, and always the raw coded frames in a `.bits` file) and keeps a list of finished calls. The framing and coding are those of JAERO (Jonti Olds, MIT, credited in THIRD_PARTY.md and under Help > Credits).
+
+What was verified: a real recording of a C channel (14 s of the 8400 bit/s sample in JAERO's repository; all signal units pass their CRC-16, the call-progress unit names aircraft 7812E7 and ground station 90), synthetic signals with offsets, clock errors, drift, level steps, noise (down to about 2.5 dB Eb/N0 per channel bit, within about 1 dB of an ideal soft decoder), two simultaneous calls in one 2.4 Msps capture. **Needs a user test with a real capture** from your own antenna: nothing has been played live yet, and sound needs the codec.
+
+Sound: the AMBE vocoder is patented and **never shipped**. You build the plug-in `onair-codec-aeroambe` yourself from `tools/addons/aeroambe` and libaeroambe's copy of mbelib ([CODECS.md](CODECS.md)); without it the calls are listed and the coded frames saved. Only unencrypted traffic is ever played.
+
 ## What is not decoded
 
-- **Aero C channels (voice).** They are listed ("may be a voice (C) channel") but cannot be demodulated yet: the C-channel modulation and framing are not in a public specification OnAir may reproduce. The voice mixer (per-carrier mute and solo), the call recorder and the codec hook are built and tested with test frames, but nothing feeds them from the air. This needs a user test with a real C-channel capture.
 - **R and T channels** are aircraft-to-satellite signals on 1626.5 to 1660.5 MHz. A ground receiver sees them only from nearby aircraft; they are not decoded.
-- **Voice codec.** Aero voice uses an AMBE-family codec. The codec is never shipped: OnAir never includes, downloads or links it: you build or install the plug-in yourself (`onair-codec-ambe`, see [CODECS.md](CODECS.md)). Until then the voice stays silent; calls are counted and their coded frames are saved. Only unencrypted traffic is ever played.
 
 ## How it relates to other tools
 

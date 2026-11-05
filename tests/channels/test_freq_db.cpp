@@ -189,7 +189,22 @@ static void testIo() {
     CHECK(b.hz == a.hz && b.mode == a.mode && b.category == a.category, "freqFromMemory");
 }
 
+// Issue #411: the rows of a search can be exported as CSV and read back
+static void testExportResults() {
+    std::vector<FreqEntry> all = {mk("VDES ASM 1", 161950000, "vdes"), mk("VDES ASM 2", 162050000, "vdes"), mk("Tower, \"north\"", 118100000, "airband"), mk("Noor", 93900000, "fm")};
+    FreqQuery q; q.text = "asm";
+    std::vector<FreqEntry> rows;
+    for (size_t i : freqSearch(all, q)) rows.push_back(all[i]);
+    CHECK(rows.size() == 2, "search asm finds two rows");
+    const std::string csv = freqExportCsv(rows);
+    CHECK(csv.find("VDES ASM 1") != std::string::npos && csv.find("VDES ASM 2") != std::string::npos && csv.find("Noor") == std::string::npos && csv.find("Tower") == std::string::npos, "only the searched rows are in the CSV");
+    std::vector<FreqEntry> back;
+    freqImportText(csv, back);
+    CHECK(back.size() == 2 && back[0].hz + back[1].hz == 161950000ull + 162050000ull, "the exported results import again");
+}
+
 int main() {
+    testExportResults();
     testData();
     testSearch();
     testParser();

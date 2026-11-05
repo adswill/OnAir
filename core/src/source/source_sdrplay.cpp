@@ -204,17 +204,30 @@ static int sdrplayMaxGain(unsigned char hw, bool hiZ = false) {
     for (size_t i = 0; i < n; i++) for (int k = 0; k < t[i].n; k++) top = std::max(top, t[i].gr[k]);
     return top + (kGrIfMax - kGrIfMin);
 }
-static void sdrplayGain(unsigned char hw, double hz, double gainDb, int& lnaState, int& gRdB, bool hiZ = false) {
+// linearity: the same total, but the LNA takes the reduction first (the largest LNA reduction that leaves the IF stage at its minimum reduction or
+// more): a strong signal reaches the mixer and the ADC through less gain. Auto gain asks for it near strong neighbours / after an overload.
+static void sdrplayGain(unsigned char hw, double hz, double gainDb, int& lnaState, int& gRdB, bool hiZ = false, bool linearity = false) {
     const int gMax = sdrplayMaxGain(hw, hiZ);
     const int g = (int)std::lround(std::min<double>(gMax, std::max(0.0, gainDb)));
     const int reduce = gMax - g + kGrIfMin;   // total gain reduction wanted
     const LnaBand& b = lnaBand(hw, hz, hiZ);
     int pick = -1;
+    if (linearity) {
+        for (int k = 0; k < b.n; k++)
+            if (b.gr[k] <= reduce - kGrIfMin && (pick < 0 || b.gr[k] > b.gr[pick])) pick = k;
+        if (pick >= 0) { lnaState = pick; gRdB = std::min(kGrIfMax, std::max(kGrIfMin, reduce - b.gr[pick])); return; }
+    }
     for (int k = 0; k < b.n; k++)   // the smallest LNA reduction that leaves the IF stage at kGrIfSoft or below (the tables are not all sorted)
         if (b.gr[k] >= reduce - kGrIfSoft && (pick < 0 || b.gr[k] < b.gr[pick])) pick = k;
     if (pick < 0) for (int k = 0; k < b.n; k++) if (pick < 0 || b.gr[k] > b.gr[pick]) pick = k;   // past the end: the most the LNA can do
     lnaState = pick;
     gRdB = std::min(kGrIfMax, std::max(kGrIfMin, reduce - b.gr[pick]));
+}
+
+// Tests (tests/source/test_autogain_split.cpp): the LNA state and IF gain reduction of an overall gain, and the total reduction they make
+void sdrplayGainSplitForTest(unsigned char hw, double hz, double gainDb, bool linearity, int& lnaState, int& gRdB, int& lnaGrDb) {
+    sdrplayGain(hw, hz, gainDb, lnaState, gRdB, false, linearity);
+    lnaGrDb = lnaBand(hw, hz).gr[lnaState];
 }
 
 // A gain stage the user set by hand ("lnastate" = the LNA state, "ifgr" = the IF gain reduction, -1 or absent: follow the gain slider)
@@ -391,7 +404,7 @@ protected:
         if (f < fMin || f > 2e9) addNote(err, std::string(dev_.hwVer == sp::kRsp1 ? "the SDRplay RSP1 is" : "SDRplay RSPs are") + " specified for " + (dev_.hwVer == sp::kRsp1 ? "10 kHz" : "1 kHz") + " to 2 GHz; the driver may not reach " + std::to_string((long long)std::llround(f / 1e3)) + " kHz or the signal may be weak or absent");
         if (std::fabs(f - ch.tunerParams.rfFreq.rfHz) > 0.5) { ch.tunerParams.rfFreq.rfHz = f; why |= sp::Update_Tuner_Frf; }
         int lna = 0, gr = 40;
-        sdrplayGain(dev_.hwVer, f, s.gainDb, lna, gr, port_ == 2);
+        sdrplayGain(dev_.hwVer, f, s.gainDb, lna, gr, port_ == 2, radioOption(s, "gainsplit", "sensitivity") == "linearity");
         sdrplayStageOverride(dev_.hwVer, f, s, lna, gr, port_ == 2);
         if (lna != ch.tunerParams.gain.LNAstate || gr != ch.tunerParams.gain.gRdB) {
             ch.tunerParams.gain.LNAstate = (unsigned char)lna;

@@ -7,6 +7,8 @@
 #include "../platform/platform.h"
 #include "../ui/scale.h"
 #include "settings_table.h"
+#include "setup_logic.h"
+#include "kit/mode_panel.h"
 #include "ui2_internal.h"
 #include "dect2/common/u8file.h"
 #include "dect2/engine/updater.h"
@@ -142,11 +144,43 @@ Ui U;
 void customRow(App& a, const Info& i) {
     const std::string k = i.key;
     if (k == "uiLang") languageButton(a);
+    else if (k == "setupRun") { if (ImGui::Button(tr("Run setup again..."))) setupWizardOpen(a); }
+    else if (k == "easyMode") {
+        bool on = modepanel::easyModeOn();
+        if (ImGui::Checkbox(tr("Easy mode"), &on)) modepanel::setEasyMode(on);
+    } else if (k == "regionPreset") {
+        const std::string cur = setup::presetOfCountry(plat::prefs().getS("locCountry", ""));
+        std::string picked;
+        if (regionPresetRow(cur, picked)) setupApplyPreset(a, picked, (int)plat::prefs().getI("setupUnits", 0));
+    }
+    else if (k == "pluginsLink") { if (ImGui::Button(tr("Open Plug-ins..."))) a.pluginsOpen = true; }
+    else if (k == "automationLink") {
+        if (ImGui::Button(tr("Open Automations..."))) a.automationOpen = true;
+        ImGui::TextDisabled("%s", plat::prefs().getB("automationAllowRun", false) ? tr("Running programs is allowed.") : tr("Running programs is off."));
+    }
     else if (k == "modeVisLink") { if (ImGui::Button(tr("Open Modes shown..."))) a.modeVisOpen = true; }
     else if (k == "themeMode") ui2::themeChoice(a, false);
     else if (k == "accent") ui2::accentMenu();
     else if (k == "uiTypography") ui2::typographyChoice(false);   // its own heading says it applies after a restart
     else if (k == "timeDisplay") ui2::timeDisplayChoice(false);
+    else if (k == "recordingsFolder") {
+        static char buf[1024]; static bool init = false;
+        if (!init) { init = true; snprintf(buf, sizeof buf, "%s", chosenRecordingsDir().c_str()); }
+        const std::string cur = recordingsDir();
+        ImGui::TextWrapped("%s", cur.c_str());
+        const unsigned long long fb = recdir::freeBytes(cur);
+        if (fb != UINT64_MAX) ImGui::TextDisabled("%s %.1f GB", tr("Free disk space:"), (double)fb / 1e9);
+        ImGui::SetNextItemWidth(-1);
+        ImGui::InputTextWithHint("##recdir", tr("Default (inside the data folder)"), buf, sizeof buf);
+        if (ImGui::Button(tr("Choose..."))) { const std::string d = plat::openFolderDialog(); if (!d.empty()) { snprintf(buf, sizeof buf, "%s", d.c_str()); setRecordingsDir(d); } }
+        ImGui::SameLine();
+        if (ImGui::Button(tr("Use typed path"))) setRecordingsDir(buf);
+        ImGui::SameLine();
+        if (ImGui::Button(tr("Reset to default"))) { buf[0] = 0; setRecordingsDir(""); }
+        ImGui::SameLine();
+        if (ImGui::Button(tr("Open"))) revealFolder(recordingsDir());
+        if (!chosenRecordingsDir().empty() && recdir::normalise(chosenRecordingsDir()) != cur) ImGui::TextColored(ImVec4(1.f, 0.75f, 0.3f, 1), "%s", tr("That folder cannot be written: the default is used."));
+    }
     else if (k == "dataFolder") {
         const std::string d = plat::dataDir();
         ImGui::TextWrapped("%s", d.c_str());

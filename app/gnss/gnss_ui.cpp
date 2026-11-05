@@ -1,6 +1,7 @@
 // GNSS screens: the sky plot, the signal strength of every satellite, the position (card and map), the channel table, the search,
 // the correlator plots and the options of the test signal.
 #include "app.h"
+#include "ui/kit/export.h"
 #include "drive_nav.h"
 #include "panels/clocksync_ui.h"
 #include "../adsb/adsb_map.h"
@@ -397,6 +398,15 @@ void channelTable(const App& a, bool compact) {
     const GnssTelemetry& t = a.rx.gnss;
     const bool on = live(a);
     const int cols = compact ? 4 : 13;
+    {
+        static std::string note;
+        resexp::Table x; x.cols = {"system", "prn", "state", "cn0_dbhz", "doppler_hz", "code_chips", "az_deg", "el_deg", "lock_s", "frames_ok", "frames_bad", "residual_m", "health", "in_fix"};
+        if (on) for (const auto& c : t.channels)
+            x.add({gnssSystemName(c.sys), std::to_string(c.prn), gnssChStateName(c.state), resexp::num(c.cn0, 1), resexp::num(c.dopplerHz, 0), resexp::num(c.codePhase, 2),
+                   c.hasAzEl ? resexp::num(c.azDeg, 0) : "", c.hasAzEl ? resexp::num(c.elDeg, 0) : "", resexp::num(c.lockSecs, 0), std::to_string(c.framesOk), std::to_string(c.framesBad),
+                   c.used ? resexp::num(c.residualM, 1) : "", c.health < 0 ? "" : c.health == 0 ? "ok" : "bad", c.used ? "yes" : ""});
+        kit::exportBar(x, "gnss_channels", note, compact ? "gxs" : "gxf");
+    }
     if (!ImGui::BeginTable(compact ? "##gch_s" : "##gch_f", cols, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("Sat");

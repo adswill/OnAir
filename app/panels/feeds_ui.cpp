@@ -369,6 +369,7 @@ void feedsWindow(App& a) {
         if (sch) { dect2::ShareServer::get().configure(sc); savePrefs(a); }
     }
     remoteApiSection(a);
+    mcpSection(a);
 
     if (changed) apply(a);
     ImGui::End();

@@ -315,7 +315,7 @@ void HfdigWide::configure(double rate, double spanHz, double dialHz, double offs
         }
     }
     if (rtty) {
-        const double half = std::min(m.span, kRttyWideMaxSpanHz) / 2;
+        const double half = std::min(m.span, kRttyWideMaxSpanHz * wideSpanCapHz() / kWideMaxSpanHz) / 2;
         for (int k = (int)std::floor(-half / kRttyStep); k <= (int)std::ceil(half / kRttyStep); k++) {
             auto c = std::make_unique<Chain>();
             c->init(r2, k * kRttyStep);

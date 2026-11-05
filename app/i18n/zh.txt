@@ -39,7 +39,6 @@ Dial frequency the decoder should assume (the sound card is not tuned)	解码器
 DVB standard	DVB 标准
 Empty: the demo 802.15.4 scene.	留空：演示 802.15.4 场景。
 Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	留空：演示 FLARM 场景。此 ID 不会被打包进未公开的新版协议。
-Empty: the demo LoRa / mesh scene.	留空：演示 LoRa / mesh 场景。
 Empty: the demo Mode S uplink scene.	留空：演示 Mode S 上行场景。
 Empty: the demo VDES scene.	留空：演示 VDES 场景。
 File	文件
@@ -621,7 +620,6 @@ Checking and preparing the new version…	正在校验并准备新版本…
 Downloaded and checked. It is installed when you close OnAir.	已下载并校验。关闭 OnAir 时将安装。
 Restart now and update	立即重启并更新
 Windows asks for permission to run the installer.	Windows 会请求运行安装程序的权限。
-The system asks for your password to install the package.	系统会要求输入密码以安装软件包。
 This copy of OnAir cannot replace itself.	此 OnAir 副本无法自行替换。
 The update to v%s did not install (setup exit code %d).	更新到 v%s 未能安装（安装程序退出代码 %d）。
 Only github.com is contacted. Downloads are checked against the SHA-256 GitHub lists for the file.	只连接 github.com。下载文件会按 GitHub 给出的 SHA-256 校验。
@@ -891,7 +889,7 @@ Weather pictures, 1.7 GHz	气象图像，1.7 GHz
 What to add to a level in dBFS to get dBm for this radio (its calibration: a known signal into the antenna port shows it). Also in the radio's settings.	要加到 dBFS 电平上才能得到这台电台 dBm 的数值（即其校准值：向天线口输入已知信号即可得出）。也可在电台设置中修改。
 Your callsign	您的呼号
 Your locator	您的网格定位符
-Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: reset.	缩放：鼠标滚轮（两个轴）、Ctrl+滚轮（频率）、Shift+滚轮（电平）。\nCtrl+PageUp / PageDown：按一屏频率步进视图。双击：重置。
+Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: tune. Home: show the whole band.	缩放：鼠标滚轮（两个轴）、Ctrl+滚轮（频率）、Shift+滚轮（电平）。\nCtrl+PageUp / PageDown：按一屏频率步进视图。双击：调谐。Home：显示整个频段。
 antenna %.6g MHz -> %s LO %.6g -> radio %.6g MHz%s	天线 %.6g MHz -> %s LO %.6g -> 电台 %.6g MHz%s
 channel scan has the radio	信道扫描正在使用电台
 dBm offset	dBm 偏移
@@ -3494,3 +3492,330 @@ Next tab	Next tab
 Previous tab	Previous tab
 The radio runs this many times faster than the mode asks, and OnAir filters the samples down to the mode's rate itself.\nFor radios that are poor at low sample rates (images, a weak anti-alias filter). Costs CPU and USB bandwidth;\nthe radio's highest rate still applies. Off: the radio runs at the mode's rate.	The radio runs this many times faster than the mode asks, and OnAir filters the samples down to the mode's rate itself.\nFor radios that are poor at low sample rates (images, a weak anti-alias filter). Costs CPU and USB bandwidth;\nthe radio's highest rate still applies. Off: the radio runs at the mode's rate.
 At a set speed each row is the highest level of the frames in between, so a short burst is never missed.\nAverage: the mean level instead, which calms the noise and shows steady weak signals better.	At a set speed each row is the highest level of the frames in between, so a short burst is never missed.\nAverage: the mean level instead, which calms the noise and shows steady weak signals better.
+Export results CSV...	将结果导出为 CSV...
+Nothing to export: no row matches the search.	没有可导出的内容:没有符合搜索的行。
+Saves the rows now in the table (with the search and the filters applied, built-in and yours) as a CSV file. Import and the Memory panel read it back.	将表中当前的行(应用搜索和筛选,内置和自己的)保存为 CSV 文件。导入和“记忆”面板可以读回。
+Clean the input: DC spike, IQ imbalance and the radio's own spurs	清理输入:直流尖峰、IQ 不平衡和接收机自身的杂散
+Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	根据信号本身测量,绝不影响所需信道:在会受其损害的模式中会跳过直流尖峰和 IQ 镜像,信道内的杂散只有在换频后仍停留在基带同一位置时才会被切除(真实信号会随调谐器移动)。
+%d spur(s) cut	已切除 %d 条杂散
+working	正常工作
+installed	已安装
+wrong processor	处理器不符
+missing	缺失
+Copy build command	复制构建命令
+How to install (this computer):	安装方法(这台电脑):
+rtl_tcp: an RTL-SDR shared by another computer over the network.	rtl_tcp:由另一台电脑通过网络共享的 RTL-SDR。
+Airspy HF+: a very sensitive receiver for long, medium and short wave and FM, up to 260 MHz.	Airspy HF+:高灵敏度接收机,适用于长波、中波、短波和调频,最高 260 MHz。
+Fobos SDR: a wideband receiver, 100 kHz to 6 GHz. Needs the radio's own library, see the ? in Radio settings.	Fobos SDR:宽带接收机,100 kHz 至 6 GHz。需要该电台自己的库,见电台设置中的 ?。
+RFNM: a wideband radio board with one or two daughter boards, on USB or the network.	RFNM:带一块或两块子板的宽带无线电板,通过 USB 或网络连接。
+SDRplay nRSP-ST: a network radio, used through SDRconnect running on a computer.	SDRplay nRSP-ST:网络电台,通过电脑上的 SDRconnect 使用。
+TCI: a radio of the ExpertSDR family (SunSDR and others) on the network. Receive only.	TCI:网络上的 ExpertSDR 系列电台(SunSDR 等)。仅接收。
+SDR++ server: a radio shared by another computer running SDR++.	SDR++ 服务器:由另一台运行 SDR++ 的电脑共享的电台。
+A sound card or a web radio used as the input.	用声卡或网络电台作为输入。
+Run setup again...	重新运行设置...
+Easy mode	简易模式
+European Union (generic)	欧盟(通用)
+Lithuania	立陶宛
+United Kingdom	英国
+Germany	德国
+Poland	波兰
+United States	美国
+Canada	加拿大
+Australia	澳大利亚
+Quick pick: a region preset sets the band plan, the TV channels, the FM band, the default frequencies and the units	快速选择:地区预设会设置频段规划、电视频道、调频频段、默认频率和单位
+Or search for a city or country	或搜索城市或国家
+imperial (miles, feet)	英制(英里、英尺)
+metric (km, metres)	公制(公里、米)
+Defaults: FM %.1f MHz, APRS %.3f MHz, units %s.	默认:调频 %.1f MHz,APRS %.3f MHz,单位:%s。
+A preset has no exact position: type a city or coordinates above if you want the aircraft map and satellite passes centred on you.	预设没有确切位置:如果希望飞机地图和卫星过境以你为中心,请在上方输入城市或坐标。
+Units	单位
+Follow the region	跟随地区
+Metric	公制
+Imperial	英制
+Which antenna will you use? It matters more than the radio. OnAir uses the answer for hints only; nothing is changed in the radio.	你会使用哪种天线?它比电台更重要。OnAir 只把答案用于提示,不会更改电台的任何设置。
+What this means for you	这对你意味着什么
+Digital voice (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) is silent until you install its codec plug-in. The calls, IDs and data work without it.	数字语音(DMR、P25、NXDN、dPMR、D-STAR、Yaesu、TETRA)在安装其编解码器插件之前是静音的。通话、ID 和数据无需它也能工作。
+Only digital voice modes need a codec. You can skip this screen and come back from Help > Voice codecs.	只有数字语音模式需要编解码器。你可以跳过此屏幕,之后从 帮助 > 语音编解码器 回来。
+OnAir does not include or download these codecs (they are patented). You build or install them on your own computer; whether you may use them is your own responsibility. FreeDV, M17, DAB, DRM and TV need nothing.	OnAir 不包含也不下载这些编解码器(它们受专利保护)。你在自己的电脑上构建或安装;能否使用由你自己负责。FreeDV、M17、DAB、DRM 和电视无需任何东西。
+Antenna: %s	天线:%s
+Easy mode (recommended)	简易模式(推荐)
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. The detailed tabs are one click away (Simple | Advanced above them).	每个模式都以简易视图打开:频谱,加一个带开始按钮和主要控件的屏幕。详细标签页一键可达(上方的 简易 | 高级)。
+Change any of this at any time: Help > Setup and lessons > Run setup again, Mode > Modes shown, View > Language, Settings > Appearance > Font look.	以上内容随时可改:帮助 > 设置与课程 > 重新运行设置,模式 > 显示的模式,视图 > 语言,设置 > 外观 > 字体外观。
+The setup has six short screens and every one can be skipped. Nothing is forced.\n\nRadio: OnAir looks for radios on USB and on the network and picks one. "?" beside a radio opens its help page. Without a radio, the test signal lets you try OnAir.\n\nLocation: one click on a region preset (Lithuania, the EU, ...) or a city, a locator or coordinates give your country, the band plan, the TV channels, the FM band and step, the default frequencies and the units.\n\nAntenna: hints for what you can hear with the antenna you have.\n\nInterests: decide which modes are starred and listed first, where OnAir starts and a few starter presets. Everything stays available.\n\nCodecs: digital voice needs a codec plug-in that you install yourself; Look again checks the folder.\n\nEasy mode on the last screen opens every mode in its Simple view. Run the setup again any time from Help > Setup and lessons > Run setup again, or from Settings.	设置共有六个简短的屏幕,每一个都可以跳过。没有任何强制项。\n\n电台:OnAir 通过 USB 和网络查找电台并选择一个。电台旁的“?”打开其帮助页面。没有电台时,测试信号可让你试用 OnAir。\n\n位置:点击一个地区预设(立陶宛、欧盟等),或输入城市、定位码或坐标,即可设置国家、频段规划、电视频道、调频频段和步进、默认频率和单位。\n\n天线:根据你的天线说明能听到什么。\n\n兴趣:决定哪些模式加星并排在前面、OnAir 从哪里开始,以及一些起始预设。所有内容仍然可用。\n\n编解码器:数字语音需要你自己安装的编解码器插件;再找一次会检查文件夹。\n\n最后一屏的简易模式会让每个模式都以简易视图打开。随时可从 帮助 > 设置与课程 > 重新运行设置 或设置中再次运行。
+Interests	兴趣
+Codecs	编解码器
+Done	完成
+Region preset	地区预设
+First-run setup	首次设置
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.	每个模式都以简易视图打开:频谱,加一个带开始按钮和主要控件的屏幕。关闭:详细标签页。
+One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).	一键设置某个地区的频段规划、电视频道、调频频段和步进、默认频率和单位(立陶宛、欧盟等)。
+Open the setup again: radio, region, antenna, interests, voice codecs.	重新打开设置:电台、地区、天线、兴趣、语音编解码器。
+Why	原因
+no signal at the channel: check the tuning, the antenna and the gain	信道中没有信号:请检查调谐、天线和增益
+signal, but no frame sync found: check the tuning (offset, polarity), the bandwidth and the signal-to-noise ratio	有信号,但未找到帧同步:请检查调谐(偏移、极性)、带宽和信噪比
+frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the signal is too noisy or distorted	找到了帧同步,但其标识(NID、LICH、时隙类型)无法读取:信号噪声或失真过大
+frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	找到了帧同步,但负载未通过 FEC / CRC:信号弱、衰落或采样时钟误差
+decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	正在解码,但超过三分之一的数据块丢失:更强的信号或更好的天线会有帮助
+decoding well	解码良好
+Base stations	基站
+Calls	呼叫
+Channel options	信道选项
+Chat	聊天
+Devices	设备
+Ground stations	地面站
+Neighbours	相邻小区
+Nodes	节点
+On air	正在发射
+Selected	已选
+Site	站点
+Table	表格
+Trunking	集群
+Vessels	船舶
+some stations are hidden	部分电台已隐藏
+File...	文件...
+Auto-save to file	自动保存到文件
+Activity	活动
+#  AI assistant (MCP), docs/MCP.md
+AI assistant (MCP)	AI 助手 (MCP)
+Let an AI assistant control this receiver (MCP)	允许 AI 助手控制此接收机 (MCP)
+An AI assistant (Claude, ChatGPT-style clients, a local model) that you connect can tune, scan bands, identify signals and start decoders for you, and read what was decoded. It cannot read files, run programs, change settings or decrypt anything, and it cannot transmit unless you allow that below. Every action is listed in the log.	您连接的 AI 助手 (Claude、类 ChatGPT 客户端、本地模型) 可以为您调谐、扫描频段、识别信号、启动解码器并读取解码结果。它不能读取文件、运行程序、更改设置或解密任何内容，除非您在下面允许，否则也不能发射。每个操作都会记录在日志中。
+Programs on this computer need the token too	此电脑上的程序也需要令牌
+Allow the AI to transmit (off by default; this is your decision, it is forgotten at restart)	允许 AI 发射 (默认关闭；由您决定，重启后会忘记)
+The AI can now start transmissions. You are responsible for the law where you are and for your hardware.	AI 现在可以开始发射。您须对所在地的法律和您的设备负责。
+listening on %s port %d, %d requests, %d refused	正在 %s 的端口 %d 上监听，%d 个请求，%d 个被拒绝
+An AI is connected: %s	已连接 AI：%s
+No AI has connected yet.	尚无 AI 连接。
+How to connect your AI	如何连接您的 AI
+Other client	其他客户端
+Claude Desktop: put this in its config file (Settings > Developer > Edit config) and restart it; it needs Node.js for the bridge. Claude Code: run the command in a terminal. Other clients: use the address (streamable HTTP) or start onair-server --mcp-stdio. Then ask, for example: there is some DRM around 15 MHz, find it and decode it.	Claude Desktop：把它放入其配置文件 (设置 > 开发者 > 编辑配置) 并重启；桥接需要 Node.js。Claude Code：在终端中运行该命令。其他客户端：使用该地址 (可流式 HTTP) 或启动 onair-server --mcp-stdio。然后可以这样问：15 MHz 附近有 DRM，找到并解码它。
+What the AI did	AI 做了什么
+Clear log	清除日志
+Nothing yet.	暂无。
+# Everything in view (wide multi-signal decode)
+identifying	识别中
+running	运行中
+no decoder	无解码器
+paused (CPU)	已暂停 (CPU)
+CPU	CPU
+CPU limit %	CPU上限 %
+What	内容
+dB	dB
+Pin	固定
+Everything in view	视野内全部
+Everything in view: on	全部解码: 开
+Decode everything in view	解码视野内全部
+Add as	添加为
+Identify automatically	自动识别
+Add selected region	添加所选区域
+Add tuned signal	添加已调谐信号
+Looking for signals...	正在查找信号...
+Start the receiver to begin.	请先启动接收机。
+The decoders' share of one processor core, against the limit. Above the limit the lowest ranked signals are paused.	解码器占用单个处理器核心的比例与上限的对比。超过上限时，排名最低的信号会被暂停。
+Find every signal in the whole capture (digital voice, TETRA, pagers, packet radio, air band, Inmarsat, TV) and decode all of them at once.	查找整个捕获中的所有信号（数字语音、TETRA、寻呼机、分组无线电、航空频段、Inmarsat、电视），并同时解码。
+One capture, every signal in it. OnAir finds the signals, says what each one is and starts the right decoder for it. Switch one off, pin the ones that must never be paused, or give an unknown signal its mode by hand.	一次捕获，其中所有信号。OnAir 会找到信号、识别其类型并启动合适的解码器。可关闭某个信号、固定不可暂停的信号，或手动为未知信号指定模式。
+When the decoders take longer than this share of one core, the lowest ranked signal is paused (never a pinned one or the one you listen to) and comes back when there is room. 0: no limit.	当解码器占用超过单个核心的这一比例时，排名最低的信号会被暂停（固定的信号和正在收听的信号除外），有余量时恢复。0：不限制。
+This computer cannot keep up: %d signals are paused to save CPU. Pin the ones you need, or raise the limit.	这台电脑跟不上：为节省 CPU，已暂停 %d 个信号。请固定需要的信号，或提高上限。
+TV channels in the capture: %.0f MHz wide	捕获中的电视频道：带宽 %.0f MHz
+Turn the Identify tool on (key I) and drag across a signal on the spectrum, then add it here.	打开“识别”工具（按键 I），在频谱上拖过一个信号，然后在此添加。
+Add the signal at the tuner marker (12.5 kHz wide).	在调谐标记处添加信号（宽 12.5 kHz）。
+Off. Press the button to decode everything in the capture.	已关闭。按下按钮即可解码捕获中的全部内容。
+%+.1f kHz from the capture centre, %.1f kHz wide	距捕获中心 %+.1f kHz，带宽 %.1f kHz
+Pinned: never paused by the CPU limit	已固定：CPU 上限不会将其暂停
+Follow this signal's sound; it is never paused by the CPU limit	跟随此信号的声音；CPU 上限不会将其暂停
+Remove: a signal you added is taken away, a found one is switched off	移除：手动添加的信号将被删除，自动发现的信号将被关闭
+# Share on web: relay, listeners, server settings
+Share my radio	分享我的电台
+Connecting to the relay ...	正在连接中继 ...
+Anyone with the link	任何拥有链接的人
+Invite links only	仅限邀请链接
+Limits that protect your computer	保护电脑的限制
+Antenna (shown to listeners, optional)	天线（对听众可见，可选）
+Listener limits	听众限制
+While sharing	分享期间
+Listeners and invites	听众与邀请
+Nobody is listening right now.	目前没有人在收听。
+Kick##wsKick	踢出##wsKick
+Block 24 h##wsBlock	封禁24小时##wsBlock
+Allow again##wsUnban	重新允许##wsUnban
+Make an invite link	生成邀请链接
+Copy invite link	复制邀请链接
+Server settings	服务器设置
+Connected to the OnAir relay.	已连接到 OnAir 中继。
+Connecting to the OnAir relay ...	正在连接 OnAir 中继 ...
+The relay link dropped (%s). Trying again in %d s.	中继连接已断开（%s）。%d 秒后重试。
+The OnAir relay refuses or cannot be reached: %s	OnAir 中继拒绝连接或无法访问：%s
+Blocked: %s (%d min left)	已封禁：%s（还剩 %d 分钟）
+Processor %.0f%% of the %.0f%% limit	处理器 %.0f%%（上限 %.0f%%）
+Upload %.0f of %.0f kbit/s	上传 %.0f / %.0f kbit/s
+Port on this computer (0 = the first free one from 8073)	本机端口（0 = 从 8073 起第一个空闲端口）
+Listeners from one address at once	同一地址的同时听众数
+Longest session of one listener in minutes (0 = no limit)	单个听众的最长时长（分钟，0 = 不限）
+Most spectrum rows per second (0 = the default)	每秒最多频谱行数（0 = 默认）
+Key file for that certificate	该证书的密钥文件
+A certificate needs both files.	证书需要两个文件。
+Relay service address (only if you run your own relay)	中继服务地址（仅在使用自己的中继时）
+OnAir relay (recommended: no setup, no open ports)	OnAir 中继（推荐：无需设置，无需开放端口）
+Free Cloudflare tunnel (needs a small helper program, downloaded once)	免费 Cloudflare 隧道（需要一个小型辅助程序，仅下载一次）
+Only my network (a phone on the same Wi-Fi)	仅限本地网络（同一 Wi-Fi 下的手机）
+Password (8 characters or more)	密码（8 个字符或更多）
+Apply changes	应用更改
+What to do:	解决办法：
+Will share: %s, %s MHz, up to %d listeners, %s, %s.	将分享：%s，%s MHz，最多 %d 位听众，%s，%s。
+through the OnAir relay (no router settings needed)	通过 OnAir 中继（无需路由器设置）
+through a Cloudflare tunnel	通过 Cloudflare 隧道
+at your own address	使用您自己的地址
+on this network only	仅限本网络
+invite links only	仅限邀请链接
+open to anyone with the link	任何拥有链接的人都可收听
+with a password	需要密码
+no radio found	未找到电台
+No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	未找到电台。请连接电台并在“电台与范围”选项卡中点击刷新，或选择测试信号。
+Join the OnAir Discord	加入 OnAir Discord
+
+# Multi-radio trunking (trunk pool)
+tuning	调谐中
+hold	保持
+ended	已结束
+control	控制
+voice	语音
+lost	丢失
+Role	角色
+TG	TG
+not followed	未跟踪
+Hang time (s)	保持时间 (秒)
+Retune wait (s)	调谐等待 (秒)
+Priority talkgroups take a radio	优先通话组可抢占接收机
+Keep a record of every call	记录每次通话
+Follow talkgroups that are not listed	跟踪未列出的通话组
+Calls are saved in the recordings folder, trunk. Sound needs the vocoder add-on.	通话保存在录音文件夹 trunk 中。声音需要声码器附加组件。
+Talkgroup and radio rules	通话组和电台规则
+Deny	拒绝
+Import rules	导入规则
+rules read	条规则已读取
+skipped	已跳过
+Import plan	导入方案
+rows read	行已读取
+Identifiers	标识符
+Call log	通话记录
+Channel plan	信道方案
+Export log	导出记录
+Multi-radio trunking	多接收机集群
+Follow calls with several radios	用多台接收机跟踪通话
+Auto-assign devices	自动分配设备
+One radio listens to the control channel of a trunked system. When it announces a call, another radio is tuned to the voice channel, and the call is logged. With one radio, calls inside its capture are followed and the rest are not.	一台接收机监听集群系统的控制信道。有通话通知时，另一台接收机调谐到语音信道并记录通话。只有一台时，仅跟踪其采集带宽内的通话。
+The radio on the control channel stays there; every other open receiver becomes a voice radio. Open more receivers with + at the bottom.	控制信道上的接收机保持不变；其他已打开的接收机成为语音接收机。可用底部的 + 打开更多接收机。
+Start a P25 receiver on the control channel, then press Auto-assign devices.	在控制信道上启动 P25 接收机，然后点击“自动分配设备”。
+Calls %llu, followed %llu, retune %.2f s (max %.2f s)	通话 %llu，跟踪 %llu，调谐 %.2f 秒（最大 %.2f 秒）
+Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	优先级 1（最高）到 10，0 为无。优先级高的通话组会从低的那里抢占接收机。
+From, to (the same number for one), action, priority	起、止（单个填同一数字）、动作、优先级
+System, identifier table (iden_up) and channel numbers from a CSV file	从 CSV 文件导入系统、标识符表 (iden_up) 和信道号
+EMERGENCY	紧急
+encrypted	已加密
+Follow talkgroups, radio IDs or callsigns. Alerts and recording are off until you tick them for an entry. Encrypted calls are listed but never recorded.	跟踪通话组、电台ID或呼号。通知和录音默认关闭,需要为条目勾选后才会启用。加密通话会被列出,但绝不会被录音。
+TG 91, 3120123, 100-199, LY1ABC, LY*	TG 91, 3120123, 100-199, LY1ABC, LY*
+Name (optional)	名称(可选)
+All voice modes	所有语音模式
+Nothing watched yet.	尚未关注任何条目。
+Watching	关注中
+Notify	通知
+Beep	蜂鸣
+A desktop notification when a call starts (off by default)	通话开始时显示桌面通知(默认关闭)
+Save the audio of its calls to the recordings folder through the auto-record rules (this also switches auto-record on). Encrypted calls are never recorded. You are responsible for the law of your country.	通过自动录音规则将其通话音频保存到录音文件夹(同时会开启自动录音)。加密通话绝不录音。您需自行遵守所在国家的法律。
+Copy as CSV	复制为CSV
+No calls of the watched entries heard yet.	尚未听到所关注条目的通话。
+Sec	秒
+Flags	标志
+EMERG	紧急
+ENC	加密
+Keywords on: no match yet	关键词已开启:暂无匹配
+Keywords	关键词
+One keyword per line, any case. It is looked for in the message text and in the capcode name. Start a line with re: for a regular expression, for example re:structure fire|MVA. Matching pages are highlighted in Messages and shown in the ticker.	每行一个关键词,不区分大小写。在消息文本和capcode名称中查找。行首加 re: 表示正则表达式,例如 re:structure fire|MVA。匹配的页面在消息中高亮并显示在滚动条中。
+Notify on a keyword match	关键词匹配时通知
+A desktop notification for each matching new page (off by default)	每个匹配的新页面显示一条桌面通知(默认关闭)
+lines are not valid and were skipped	行无效,已跳过
+Pager keyword	寻呼关键词
+more matching pages	条更多匹配页面
+No GPS position heard yet (needs LRRP data)	尚未听到GPS位置(需要LRRP数据)
+Last position	最后位置
+just now	刚刚
+min ago	分钟前
+Show on map	在地图上显示
+# custom bandwidth chip and reset (3.6)
+custom	自定义
+default	默认
+How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	无线电捕获的频谱宽度。默认是该模式自身的宽度；点击可设置任意宽度。
+Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	恢复该模式自身的带宽和采样率。您的自定义值会保留，下次勾选“自定义”时可再次使用。
+16-bit	16-bit
+Share##rec	Share##rec
+Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.	Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.
+Copy CSV	复制CSV
+copied	已复制
+rows	行
+Copy the table as CSV to the clipboard (positions included)	将表格以CSV复制到剪贴板(含位置)
+Copy the table as CSV to the clipboard	将表格以CSV复制到剪贴板
+# MFSK pictures (Shortwave Radiogram)
+Save PNG	保存 PNG
+Save every picture	保存每张图片
+Clear pictures	清除图片
+grey	灰度
+Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.	MFSK 信号中传送的图片（Shortwave Radiogram）会在收到时显示在这里。
+Open recordings folder	打开录音文件夹
+Where recordings are saved. Change it in Settings > Files.	录音的保存位置。可在 设置 > 文件 中更改。
+Free disk space:	可用磁盘空间:
+Default (inside the data folder)	默认(在数据文件夹内)
+Choose...	选择...
+Use typed path	使用输入的路径
+That folder cannot be written: the default is used.	无法写入该文件夹:改用默认文件夹。
+# Smart CubeSat (docs/CUBESAT-SMART.md)
+Tuned for	已调谐到
+No satellite is expected soon: scanning this span for any carrier.	近期没有卫星过境：正在此频段内搜索任意载波。
+Nothing was uploaded.	未上传任何内容。
+carrier found	发现载波
+decoding	解码中
+carrier only	仅有载波
+no known signal	无已知信号
+Next passes	接下来的过境
+working out the passes ...	正在计算过境 ...
+no pass of a satellite in the table in the next hours (set your location, refresh the orbits)	未来几小时内表中没有卫星过境（请设置位置并刷新轨道）
+In	倒计时
+Carriers	载波
+none yet	暂无
+Tried on	已尝试于
+valid	有效
+failed their checks	校验失败
+satellite	卫星
+framing	帧格式
+validated by	验证方式
+byte errors put right	已纠正字节错误
+received	接收
+telemetry	遥测
+Field	字段
+Decoded packets	已解码的数据包
+Framing	帧格式
+Follow satellites from the table (passes and Doppler)	跟踪表中的卫星（过境与多普勒）
+Look for carriers the table does not explain	搜索表中没有的载波
+Minimum SNR (dB)	最小信噪比 (dB)
+Carriers followed at once	同时跟踪的载波数
+Lowest elevation (deg)	最低仰角（度）
+Search window around the predicted carrier (Hz)	预测载波周围的搜索窗口 (Hz)
+Modulation of unknown carriers	未知载波的调制
+Baud rate (0: automatic, any value)	波特率（0：自动，可填任意值）
+Channel width (Hz, 0: automatic, any value)	信道宽度（Hz，0：自动，可填任意值）
+Scan resolution (Hz, 0: automatic)	扫描分辨率（Hz，0：自动）
+Add a transmitter to the table	向表中添加发射机
+NORAD number	NORAD编号
+Baud rate	波特率
+orbits for %zu satellites, %zu table entries	%zu 颗卫星的轨道，表中 %zu 项
+Auto decode: on (click to stop)	自动解码：开（点击停止）
+Auto decode cubesats	自动解码立方星
+Tunes a span that holds the satellites about to pass, follows their Doppler shift, finds every narrow carrier, works out its modulation and baud rate, and decodes it with every framing that fits. Nothing to set up.	调谐到包含即将过境卫星的频段，跟踪多普勒频移，找出每个窄带载波，判断其调制方式和波特率，并用所有可能的帧格式解码。无需任何设置。
+Refresh orbits	刷新轨道
+Downloading orbits from CelesTrak (the built-in set is used meanwhile).	正在从 CelesTrak 下载轨道（期间使用内置数据）。
+Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.	将数据包以 SatNOGS 可用文件（每行一条遥测记录）、CSV 和 KISS 文件写入数据文件夹。不会上传任何内容。
+Press the button: it does the rest.	按下按钮，其余全部自动完成。
+BPSK	BPSK
+A country file (cty.dat, wl_cty.dat) from country-files.com gives every DXCC entity with its CQ and ITU zone. Thanks to Jim Reisert AD1C and the country-files.com team. OnAir does not bundle it: load one you have, or press Download (only on your click).	来自 country-files.com 的国家文件 (cty.dat, wl_cty.dat) 提供每个 DXCC 实体及其 CQ 和 ITU 分区。感谢 Jim Reisert AD1C 和 country-files.com 团队。OnAir 不附带该文件：请加载你已有的文件，或点击下载（仅在你点击时才会下载）。
+Show country and zone in decoded messages	在解码消息中显示国家和分区
+Load file...	加载文件...
+Download from country-files.com	从 country-files.com 下载
+Reset to built-in	恢复为内置表

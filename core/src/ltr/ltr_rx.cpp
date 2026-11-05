@@ -16,7 +16,7 @@ ModeTuning ltrTuning() {
     ModeTuning t;
     t.stdMode = 131;
     t.id = "ltr";
-    t.name = "LTR trunking (WIP)";
+    t.name = "LTR trunking";
     t.minMhz = 29.7;
     t.maxMhz = 960.0;
     t.defMhz = 460.0;
@@ -86,12 +86,12 @@ struct LtrReceiver::Impl {
                 if (std::fabs(sum / kSps - thr) < 0.15 * half) return;
             }
         }
-        if (!ltr::plausible(word)) { tel.blocksBad++; return; }
+        if (!ltr::checkOk(word, h.inv) || !ltr::plausible(word)) { tel.blocksBad++; return; }
         LtrMessage m;
         m.wallTime = (int64_t)std::time(nullptr);
         m.timeSec = timeSec();
         m.area = word.area; m.gotoCh = word.gotoCh; m.home = word.home; m.id = word.id; m.freeCh = word.freeCh; m.chk = word.chk;
-        m.plausible = true;
+        m.plausible = true; m.chkOk = true;
         m.talkgroup = ltr::talkgroup(word);
         m.kind = ltr::kindOf(word.id);
         auto touch = [&](int ch, int which) {

@@ -20,5 +20,10 @@ int main() {
     CHECK(b.blocksOk * 100 >= ref.blocksOk * 70, "7 dB: %llu of %llu frames", (unsigned long long)b.blocksOk, (unsigned long long)ref.blocksOk);
     CHECK(c.blocksOk * 100 >= ref.blocksOk * 85, "9 dB, +2 kHz: %llu of %llu frames", (unsigned long long)c.blocksOk, (unsigned long long)ref.blocksOk);
     CHECK(n.blocksOk == 0 && n.log.empty(), "noise: %llu frames", (unsigned long long)n.blocksOk);
+    // a carrier 4 kHz off the channel (a cheap oscillator or a mistuned dial) is captured by the frequency capture (MeanAfc): before it, the narrow filters cut the signal
+    for (double cfo : {4000.0, -4000.0}) {
+        const DstarTelemetry o = voicesens::run<DstarReceiver, DstarTelemetry>(35, 250000, off, 20, 14, cfo);
+        CHECK(o.blocksOk * 100 >= ref.blocksOk * 70, "%+.0f Hz off, 14 dB: %llu of %llu", cfo, (unsigned long long)o.blocksOk, (unsigned long long)ref.blocksOk);
+    }
     return testSummary("dstar sens");
 }

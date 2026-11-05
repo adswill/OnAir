@@ -39,7 +39,6 @@ Dial frequency the decoder should assume (the sound card is not tuned)	Rinkimo d
 DVB standard	DVB standartas
 Empty: the demo 802.15.4 scene.	Tuščia: demonstracinė 802.15.4 scena.
 Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	Tuščia: demonstracinė FLARM scena. Šis ID nepakuojamas į nepaskelbtą naujesnį protokolą.
-Empty: the demo LoRa / mesh scene.	Tuščia: demonstracinė LoRa / mesh scena.
 Empty: the demo Mode S uplink scene.	Tuščia: demonstracinė Mode S uplink scena.
 Empty: the demo VDES scene.	Tuščia: demonstracinė VDES scena.
 File	Failas
@@ -621,7 +620,6 @@ Checking and preparing the new version…	Tikrinama ir ruošiama nauja versija�
 Downloaded and checked. It is installed when you close OnAir.	Atsisiųsta ir patikrinta. Bus įdiegta uždarius OnAir.
 Restart now and update	Paleisti iš naujo ir atnaujinti
 Windows asks for permission to run the installer.	Windows paprašys leidimo paleisti diegimo programą.
-The system asks for your password to install the package.	Sistema paprašys slaptažodžio paketui įdiegti.
 This copy of OnAir cannot replace itself.	Ši OnAir kopija negali pati savęs pakeisti.
 The update to v%s did not install (setup exit code %d).	Atnaujinimas į v%s neįdiegtas (diegimo išėjimo kodas %d).
 Only github.com is contacted. Downloads are checked against the SHA-256 GitHub lists for the file.	Jungiamasi tik prie github.com. Atsisiuntimai tikrinami pagal GitHub nurodytą failo SHA-256.
@@ -891,7 +889,7 @@ Weather pictures, 1.7 GHz	Orų paveikslėliai, 1,7 GHz
 What to add to a level in dBFS to get dBm for this radio (its calibration: a known signal into the antenna port shows it). Also in the radio's settings.	Ką pridėti prie dBFS lygio, kad gautumėte šio radijo dBm (jo kalibravimas: žinomas signalas antenos lizde jį parodo). Taip pat radijo nustatymuose.
 Your callsign	Jūsų šaukinys
 Your locator	Jūsų lokatorius
-Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: reset.	Mastelis: pelės ratukas (abi ašys), Ctrl+ratukas (dažnis), Shift+ratukas (lygis).\nCtrl+PageUp / PageDown: perstumti vaizdą per vieną ekraną dažniu. Dukart spustelėkite: atstatyti.
+Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: tune. Home: show the whole band.	Mastelis: pelės ratukas (abi ašys), Ctrl+ratukas (dažnis), Shift+ratukas (lygis).\nCtrl+PageUp / PageDown: perstumti vaizdą per vieną ekraną dažniu. Dukart spustelėkite: sureguliuoti. Home: rodyti visą juostą.
 antenna %.6g MHz -> %s LO %.6g -> radio %.6g MHz%s	antena %.6g MHz -> %s LO %.6g -> radijas %.6g MHz%s
 channel scan has the radio	kanalų skenavimas naudoja radiją
 dBm offset	dBm poslinkis
@@ -3471,3 +3469,350 @@ Next tab	Next tab
 Previous tab	Previous tab
 The radio runs this many times faster than the mode asks, and OnAir filters the samples down to the mode's rate itself.\nFor radios that are poor at low sample rates (images, a weak anti-alias filter). Costs CPU and USB bandwidth;\nthe radio's highest rate still applies. Off: the radio runs at the mode's rate.	The radio runs this many times faster than the mode asks, and OnAir filters the samples down to the mode's rate itself.\nFor radios that are poor at low sample rates (images, a weak anti-alias filter). Costs CPU and USB bandwidth;\nthe radio's highest rate still applies. Off: the radio runs at the mode's rate.
 At a set speed each row is the highest level of the frames in between, so a short burst is never missed.\nAverage: the mean level instead, which calms the noise and shows steady weak signals better.	At a set speed each row is the highest level of the frames in between, so a short burst is never missed.\nAverage: the mean level instead, which calms the noise and shows steady weak signals better.
+Ground stations	Antžeminės stotys
+Band and channels	Juosta ir kanalai
+Simple: the spectrum and one view with the summary, the live data and the key controls of this mode	Paprastas: spektras ir vienas langas su santrauka, gyvais duomenimis ir pagrindiniais šio režimo valdikliais
+Advanced: every tab of this mode with all the detail	Išplėstinis: visi šio režimo skirtukai su visomis detalėmis
+Export results CSV...	Eksportuoti rezultatus į CSV...
+Nothing to export: no row matches the search.	Nėra ką eksportuoti: nė viena eilutė neatitinka paieškos.
+Saves the rows now in the table (with the search and the filters applied, built-in and yours) as a CSV file. Import and the Memory panel read it back.	Išsaugo lentelės eilutes (pritaikius paiešką ir filtrus, įtaisytas ir jūsų) kaip CSV failą. Importas ir Atminties skydelis jį perskaito.
+Clean the input: DC spike, IQ imbalance and the radio's own spurs	Išvalyti įvestį: nuolatinės srovės smaigalį, IQ nesubalansuotumą ir paties radijo trukdžių linijas
+Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	Matuojama iš paties signalo ir niekada neliečia norimo kanalo: nuolatinės srovės smaigalys ir IQ veidrodinis vaizdas praleidžiami režimuose, kuriems jie pakenktų, o kanale esanti trukdžių linija pašalinama tik tada, kai pakeitus dažnį ji lieka toje pačioje bazinės juostos vietoje (tikras signalas juda kartu su imtuvu).
+%d spur(s) cut	Pašalinta trukdžių linijų: %d
+working	veikia
+installed	įdiegta
+wrong processor	netinkamas procesorius
+missing	nėra
+Copy build command	Kopijuoti kūrimo komandą
+How to install (this computer):	Kaip įdiegti (šiame kompiuteryje):
+rtl_tcp: an RTL-SDR shared by another computer over the network.	rtl_tcp: RTL-SDR, kurį tinklu teikia kitas kompiuteris.
+Airspy HF+: a very sensitive receiver for long, medium and short wave and FM, up to 260 MHz.	Airspy HF+: labai jautrus imtuvas ilgosioms, vidutinėms ir trumposioms bangoms bei FM, iki 260 MHz.
+Fobos SDR: a wideband receiver, 100 kHz to 6 GHz. Needs the radio's own library, see the ? in Radio settings.	Fobos SDR: plačiajuostis imtuvas, nuo 100 kHz iki 6 GHz. Reikia paties radijo bibliotekos, žr. ? radijo nustatymuose.
+RFNM: a wideband radio board with one or two daughter boards, on USB or the network.	RFNM: plačiajuostė radijo plokštė su viena ar dviem dukterinėmis plokštėmis, per USB arba tinklą.
+SDRplay nRSP-ST: a network radio, used through SDRconnect running on a computer.	SDRplay nRSP-ST: tinklo radijas, naudojamas per kompiuteryje veikiantį SDRconnect.
+TCI: a radio of the ExpertSDR family (SunSDR and others) on the network. Receive only.	TCI: ExpertSDR šeimos radijas (SunSDR ir kiti) tinkle. Tik priėmimui.
+SDR++ server: a radio shared by another computer running SDR++.	SDR++ serveris: radijas, kurį teikia kitas kompiuteris su SDR++.
+A sound card or a web radio used as the input.	Garso plokštė arba interneto radijas kaip įvestis.
+Run setup again...	Paleisti sąranką iš naujo...
+Easy mode	Paprastas režimas
+European Union (generic)	Europos Sąjunga (bendra)
+Lithuania	Lietuva
+United Kingdom	Jungtinė Karalystė
+Germany	Vokietija
+Poland	Lenkija
+United States	Jungtinės Valstijos
+Canada	Kanada
+Australia	Australija
+Quick pick: a region preset sets the band plan, the TV channels, the FM band, the default frequencies and the units	Greitas pasirinkimas: regiono šablonas nustato dažnių planą, TV kanalus, FM juostą, numatytuosius dažnius ir vienetus
+Or search for a city or country	Arba ieškokite miesto ar šalies
+imperial (miles, feet)	imperiniai (mylios, pėdos)
+metric (km, metres)	metriniai (km, metrai)
+Defaults: FM %.1f MHz, APRS %.3f MHz, units %s.	Numatyta: FM %.1f MHz, APRS %.3f MHz, vienetai: %s.
+A preset has no exact position: type a city or coordinates above if you want the aircraft map and satellite passes centred on you.	Šablonas neturi tikslios vietos: įveskite miestą ar koordinates aukščiau, jei norite, kad orlaivių žemėlapis ir palydovų praskridimai būtų centruoti jūsų vietoje.
+Units	Vienetai
+Follow the region	Pagal regioną
+Metric	Metriniai
+Imperial	Imperiniai
+Which antenna will you use? It matters more than the radio. OnAir uses the answer for hints only; nothing is changed in the radio.	Kokią anteną naudosite? Ji svarbesnė už radiją. OnAir atsakymą naudoja tik patarimams; radijo nustatymai nekeičiami.
+What this means for you	Ką tai reiškia jums
+Digital voice (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) is silent until you install its codec plug-in. The calls, IDs and data work without it.	Skaitmeninis balsas (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) tylus, kol neįdiegsite jo kodeko papildinio. Skambučiai, ID ir duomenys veikia be jo.
+Only digital voice modes need a codec. You can skip this screen and come back from Help > Voice codecs.	Kodeko reikia tik skaitmeninio balso režimams. Šį ekraną galite praleisti ir grįžti per Žinynas > Balso kodekai.
+OnAir does not include or download these codecs (they are patented). You build or install them on your own computer; whether you may use them is your own responsibility. FreeDV, M17, DAB, DRM and TV need nothing.	OnAir šių kodekų neįtraukia ir neparsisiunčia (jie patentuoti). Jūs patys kuriate ar diegiate juos savo kompiuteryje; ar galite juos naudoti, yra jūsų pačių atsakomybė. FreeDV, M17, DAB, DRM ir TV nieko nereikalauja.
+Antenna: %s	Antena: %s
+Easy mode (recommended)	Paprastas režimas (rekomenduojama)
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. The detailed tabs are one click away (Simple | Advanced above them).	Kiekvienas režimas atsidaro Paprastu rodiniu: spektras ir vienas ekranas su Pradėti mygtuku bei pagrindiniais valdikliais. Išsamūs skirtukai yra per vieną paspaudimą (Paprastas | Išplėstinis virš jų).
+Change any of this at any time: Help > Setup and lessons > Run setup again, Mode > Modes shown, View > Language, Settings > Appearance > Font look.	Visa tai galite keisti bet kada: Žinynas > Sąranka ir pamokos > Paleisti sąranką iš naujo, Režimas > Rodomi režimai, Rodymas > Kalba, Nustatymai > Išvaizda > Šrifto stilius.
+The setup has six short screens and every one can be skipped. Nothing is forced.\n\nRadio: OnAir looks for radios on USB and on the network and picks one. "?" beside a radio opens its help page. Without a radio, the test signal lets you try OnAir.\n\nLocation: one click on a region preset (Lithuania, the EU, ...) or a city, a locator or coordinates give your country, the band plan, the TV channels, the FM band and step, the default frequencies and the units.\n\nAntenna: hints for what you can hear with the antenna you have.\n\nInterests: decide which modes are starred and listed first, where OnAir starts and a few starter presets. Everything stays available.\n\nCodecs: digital voice needs a codec plug-in that you install yourself; Look again checks the folder.\n\nEasy mode on the last screen opens every mode in its Simple view. Run the setup again any time from Help > Setup and lessons > Run setup again, or from Settings.	Sąranka turi šešis trumpus ekranus ir kiekvieną galima praleisti. Nieko neprivaloma.\n\nRadijas: OnAir ieško radijų USB ir tinkle bei vieną parenka. „?“ prie radijo atveria jo žinyno puslapį. Be radijo bandomasis signalas leidžia išbandyti OnAir.\n\nVieta: vienas paspaudimas ant regiono šablono (Lietuva, ES, ...) arba miestas, lokatorius ar koordinatės nustato šalį, dažnių planą, TV kanalus, FM juostą ir žingsnį, numatytuosius dažnius ir vienetus.\n\nAntena: patarimai, ką girdėsite su turima antena.\n\nPomėgiai: nusprendžia, kurie režimai pažymimi ir rodomi pirmi, kur OnAir prasideda ir keli pradiniai šablonai. Viskas lieka prieinama.\n\nKodekai: skaitmeniniam balsui reikia kodeko papildinio, kurį įdiegiate patys; Ieškoti dar kartą patikrina aplanką.\n\nPaprastas režimas paskutiniame ekrane atidaro kiekvieną režimą Paprastu rodiniu. Sąranką galite paleisti iš naujo bet kada: Žinynas > Sąranka ir pamokos > Paleisti sąranką iš naujo arba per Nustatymus.
+Interests	Pomėgiai
+Codecs	Kodekai
+Done	Baigta
+Region preset	Regiono šablonas
+First-run setup	Pirmoji sąranka
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.	Kiekvienas režimas atsidaro Paprastu rodiniu: spektras ir vienas ekranas su Pradėti mygtuku bei pagrindiniais valdikliais. Išjungta: išsamūs skirtukai.
+One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).	Vienu paspaudimu nustato regiono dažnių planą, TV kanalus, FM juostą ir žingsnį, numatytuosius dažnius ir vienetus (Lietuva, ES, ...).
+Open the setup again: radio, region, antenna, interests, voice codecs.	Atverkite sąranką iš naujo: radijas, regionas, antena, pomėgiai, balso kodekai.
+Why	Kodėl
+no signal at the channel: check the tuning, the antenna and the gain	kanale signalo nėra: patikrinkite derinimą, anteną ir stiprinimą
+signal, but no frame sync found: check the tuning (offset, polarity), the bandwidth and the signal-to-noise ratio	signalas yra, bet kadro sinchronizacijos nerasta: patikrinkite derinimą (poslinkį, poliškumą), juostos plotį ir signalo ir triukšmo santykį
+frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the signal is too noisy or distorted	kadrų sinchronizacijų rasta, bet jų tapatybė (NID, LICH, laiko tarpo tipas) neįskaitoma: signalas per triukšmingas arba iškraipytas
+frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	kadrų sinchronizacijų rasta, bet duomenys nepraeina FEC / CRC: silpnas signalas, silpimas arba mėginių taktinio dažnio klaida
+decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	dekoduoja, bet prarandama daugiau nei trečdalis blokų: padėtų stipresnis signalas arba geresnė antena
+decoding well	dekoduoja gerai
+Base stations	Bazinės stotys
+Calls	Skambučiai
+Channel options	Kanalo parinktys
+Chat	Pokalbis
+Devices	Įrenginiai
+Neighbours	Kaimynės
+Nodes	Mazgai
+On air	Eteryje
+Selected	Pasirinkta
+Site	Vieta
+Table	Lentelė
+Vessels	Laivai
+some stations are hidden	kai kurios stotys paslėptos
+File...	Failas...
+Auto-save to file	Automatiškai įrašyti į failą
+Activity	Veikla
+#  AI assistant (MCP), docs/MCP.md
+AI assistant (MCP)	DI asistentas (MCP)
+Let an AI assistant control this receiver (MCP)	Leisti DI asistentui valdyti šį imtuvą (MCP)
+An AI assistant (Claude, ChatGPT-style clients, a local model) that you connect can tune, scan bands, identify signals and start decoders for you, and read what was decoded. It cannot read files, run programs, change settings or decrypt anything, and it cannot transmit unless you allow that below. Every action is listed in the log.	Prijungtas DI asistentas (Claude, ChatGPT tipo klientai, vietinis modelis) gali derinti dažnį, skenuoti juostas, atpažinti signalus, paleisti dekoderius ir skaityti dekoduotą turinį. Jis negali skaityti failų, vykdyti programų, keisti nustatymų ar kažko iššifruoti, taip pat negali siųsti, nebent leisite žemiau. Kiekvienas veiksmas įrašomas į žurnalą.
+Programs on this computer need the token too	Šio kompiuterio programoms taip pat reikia rakto
+Allow the AI to transmit (off by default; this is your decision, it is forgotten at restart)	Leisti DI siųsti (pagal numatymą išjungta; tai jūsų sprendimas, paleidus iš naujo pamirštama)
+The AI can now start transmissions. You are responsible for the law where you are and for your hardware.	DI dabar gali pradėti siųsti. Esate atsakingi už savo vietos įstatymus ir savo įrangą.
+listening on %s port %d, %d requests, %d refused	klausosi %s, prievadas %d, %d užklausų, %d atmesta
+An AI is connected: %s	Prijungtas DI: %s
+No AI has connected yet.	Dar nė vienas DI neprisijungė.
+How to connect your AI	Kaip prijungti savo DI
+Other client	Kitas klientas
+Claude Desktop: put this in its config file (Settings > Developer > Edit config) and restart it; it needs Node.js for the bridge. Claude Code: run the command in a terminal. Other clients: use the address (streamable HTTP) or start onair-server --mcp-stdio. Then ask, for example: there is some DRM around 15 MHz, find it and decode it.	Claude Desktop: įrašykite tai į jo konfigūracijos failą (Nustatymai > Kūrėjas > Redaguoti konfigūraciją) ir paleiskite iš naujo; tiltui reikia Node.js. Claude Code: paleiskite komandą terminale. Kiti klientai: naudokite adresą (srautinis HTTP) arba paleiskite onair-server --mcp-stdio. Tada paprašykite, pavyzdžiui: ties 15 MHz yra DRM, suraskite ir dekoduokite.
+What the AI did	Ką padarė DI
+Clear log	Išvalyti žurnalą
+Nothing yet.	Kol kas nieko.
+# Everything in view (wide multi-signal decode)
+identifying	atpažįstama
+running	veikia
+no decoder	nėra dekoderio
+paused (CPU)	pristabdyta (CPU)
+CPU	CPU
+CPU limit %	CPU riba %
+What	Kas
+dB	dB
+Pin	Fiks.
+Everything in view	Viskas vaizde
+Everything in view: on	Viskas vaizde: įj.
+Decode everything in view	Dekoduoti viską
+Add as	Pridėti kaip
+Identify automatically	Atpažinti automatiškai
+Add selected region	Pridėti pasirinktą
+Add tuned signal	Pridėti derinamą signalą
+Looking for signals...	Ieškoma signalų...
+Start the receiver to begin.	Pradėkite paleisdami imtuvą.
+The decoders' share of one processor core, against the limit. Above the limit the lowest ranked signals are paused.	Dekoderių naudojama vieno procesoriaus branduolio dalis, palyginti su riba. Viršijus ribą, žemiausio rango signalai pristabdomi.
+Find every signal in the whole capture (digital voice, TETRA, pagers, packet radio, air band, Inmarsat, TV) and decode all of them at once.	Suranda visus viso įrašo signalus (skaitmeninis balsas, TETRA, pranešimų gaviklis, paketinis radijas, aviacijos diapazonas, Inmarsat, TV) ir dekoduoja juos visus kartu.
+One capture, every signal in it. OnAir finds the signals, says what each one is and starts the right decoder for it. Switch one off, pin the ones that must never be paused, or give an unknown signal its mode by hand.	Vienas įrašas, visi jame esantys signalai. OnAir suranda signalus, pasako, kas kuris yra, ir paleidžia tinkamą dekoderį. Vieną išjunkite, svarbius užfiksuokite, kad niekada nebūtų pristabdyti, arba nežinomam signalui nurodykite režimą ranka.
+When the decoders take longer than this share of one core, the lowest ranked signal is paused (never a pinned one or the one you listen to) and comes back when there is room. 0: no limit.	Jei dekoderiai naudoja daugiau nei ši vieno branduolio dalis, žemiausio rango signalas pristabdomas (niekada ne užfiksuotas ar klausomas) ir sugrįžta atsiradus vietos. 0: be ribos.
+This computer cannot keep up: %d signals are paused to save CPU. Pin the ones you need, or raise the limit.	Šis kompiuteris nespėja: %d signalų pristabdyta, kad būtų taupomas procesorius. Užfiksuokite reikalingus arba padidinkite ribą.
+TV channels in the capture: %.0f MHz wide	TV kanalai įraše: %.0f MHz pločio
+Turn the Identify tool on (key I) and drag across a signal on the spectrum, then add it here.	Įjunkite atpažinimo įrankį (klavišas I), nutempkite per signalą spektre ir pridėkite jį čia.
+Add the signal at the tuner marker (12.5 kHz wide).	Prideda signalą ties imtuvo žymekliu (12,5 kHz pločio).
+Off. Press the button to decode everything in the capture.	Išjungta. Paspauskite mygtuką, kad būtų dekoduojama viskas įraše.
+%+.1f kHz from the capture centre, %.1f kHz wide	%+.1f kHz nuo įrašo centro, %.1f kHz pločio
+Pinned: never paused by the CPU limit	Užfiksuota: CPU riba jos niekada nepristabdo
+Follow this signal's sound; it is never paused by the CPU limit	Sekti šio signalo garsą; CPU riba jo niekada nepristabdo
+Remove: a signal you added is taken away, a found one is switched off	Pašalinti: pridėtas signalas pašalinamas, rastas išjungiamas
+# Share on web: relay, listeners, server settings
+Share my radio	Dalintis mano radiju
+Connecting to the relay ...	Jungiamasi prie relės ...
+Anyone with the link	Bet kas su nuoroda
+Invite links only	Tik kvietimo nuorodos
+Limits that protect your computer	Kompiuterį saugantys apribojimai
+Antenna (shown to listeners, optional)	Antena (rodoma klausytojams, nebūtina)
+Listener limits	Klausytojų apribojimai
+While sharing	Dalijantis
+Listeners and invites	Klausytojai ir kvietimai
+Nobody is listening right now.	Šiuo metu niekas neklauso.
+Kick##wsKick	Išmesti##wsKick
+Block 24 h##wsBlock	Blokuoti 24 val.##wsBlock
+Allow again##wsUnban	Vėl leisti##wsUnban
+Make an invite link	Sukurti kvietimo nuorodą
+Copy invite link	Kopijuoti kvietimo nuorodą
+Server settings	Serverio nustatymai
+Connected to the OnAir relay.	Prisijungta prie „OnAir“ relės.
+Connecting to the OnAir relay ...	Jungiamasi prie „OnAir“ relės ...
+The relay link dropped (%s). Trying again in %d s.	Ryšys su relė nutrūko (%s). Bandoma iš naujo po %d s.
+The OnAir relay refuses or cannot be reached: %s	„OnAir“ relė atsisako arba nepasiekiama: %s
+Blocked: %s (%d min left)	Užblokuota: %s (liko %d min.)
+Processor %.0f%% of the %.0f%% limit	Procesorius %.0f%% iš %.0f%% ribos
+Upload %.0f of %.0f kbit/s	Siuntimas %.0f iš %.0f kbit/s
+Port on this computer (0 = the first free one from 8073)	Šio kompiuterio prievadas (0 = pirmas laisvas nuo 8073)
+Listeners from one address at once	Vienu metu klausytojų iš vieno adreso
+Longest session of one listener in minutes (0 = no limit)	Ilgiausia vieno klausytojo sesija minutėmis (0 = be ribos)
+Most spectrum rows per second (0 = the default)	Daugiausia spektro eilučių per sekundę (0 = numatytoji)
+Key file for that certificate	Šio sertifikato rakto failas
+A certificate needs both files.	Sertifikatui reikia abiejų failų.
+Relay service address (only if you run your own relay)	Relės paslaugos adresas (tik jei naudojate savo relę)
+OnAir relay (recommended: no setup, no open ports)	„OnAir“ relė (rekomenduojama: be nustatymų, be atvirų prievadų)
+Free Cloudflare tunnel (needs a small helper program, downloaded once)	Nemokamas „Cloudflare“ tunelis (reikia nedidelės pagalbinės programos, atsisiunčiama vieną kartą)
+Only my network (a phone on the same Wi-Fi)	Tik mano tinklas (telefonas tame pačiame „Wi-Fi“)
+Password (8 characters or more)	Slaptažodis (8 ar daugiau simbolių)
+Apply changes	Taikyti pakeitimus
+What to do:	Ką daryti:
+Will share: %s, %s MHz, up to %d listeners, %s, %s.	Bus dalijama: %s, %s MHz, iki %d klausytojų, %s, %s.
+through the OnAir relay (no router settings needed)	per „OnAir“ relę (be maršrutizatoriaus nustatymų)
+through a Cloudflare tunnel	per „Cloudflare“ tunelį
+at your own address	jūsų pačių adresu
+on this network only	tik šiame tinkle
+invite links only	tik su kvietimo nuorodomis
+open to anyone with the link	atvira visiems su nuoroda
+with a password	su slaptažodžiu
+no radio found	radijas nerastas
+No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Radijas nerastas. Prijunkite radiją ir kortelėje „Radijas ir diapazonas“ spustelėkite Atnaujinti arba pasirinkite bandomąjį signalą.
+Join the OnAir Discord	Prisijunkite prie OnAir Discord
+
+# Multi-radio trunking (trunk pool)
+tuning	derinama
+hold	laikoma
+ended	baigta
+control	valdymo
+voice	balsas
+lost	dingo
+Role	Vaidmuo
+TG	TG
+not followed	nesekta
+Hang time (s)	Laikymo trukmė (s)
+Retune wait (s)	Derinimo laukimas (s)
+Priority talkgroups take a radio	Prioritetinės grupės pasiima imtuvą
+Keep a record of every call	Įrašyti kiekvieną skambutį
+Follow talkgroups that are not listed	Sekti ir nesančias sąraše grupes
+Calls are saved in the recordings folder, trunk. Sound needs the vocoder add-on.	Skambučiai saugomi įrašų aplanke trunk. Garsui reikia vokoderio priedo.
+Talkgroup and radio rules	Grupių ir radijų taisyklės
+Deny	Drausti
+Import rules	Importuoti
+rules read	taisyklių perskaityta
+skipped	praleista
+Import plan	Importuoti planą
+rows read	eilučių perskaityta
+Identifiers	Identifikatoriai
+Call log	Skambučių žurnalas
+Channel plan	Kanalų planas
+Export log	Eksportuoti
+Multi-radio trunking	Trunking keliais imtuvais
+Follow calls with several radios	Sekti skambučius keliais imtuvais
+Auto-assign devices	Priskirti įrenginius
+One radio listens to the control channel of a trunked system. When it announces a call, another radio is tuned to the voice channel, and the call is logged. With one radio, calls inside its capture are followed and the rest are not.	Vienas imtuvas klauso trunkingo sistemos valdymo kanalo. Kai paskelbiamas skambutis, kitas imtuvas derinamas į balso kanalą ir skambutis įrašomas žurnale. Su vienu imtuvu sekami tik skambučiai jo juostoje.
+The radio on the control channel stays there; every other open receiver becomes a voice radio. Open more receivers with + at the bottom.	Valdymo kanale esantis imtuvas lieka; kiti atidaryti imtuvai tampa balso imtuvais. Daugiau imtuvų atidarykite apačioje esančiu +.
+Start a P25 receiver on the control channel, then press Auto-assign devices.	Paleiskite P25 imtuvą valdymo kanale ir spauskite Priskirti įrenginius.
+Calls %llu, followed %llu, retune %.2f s (max %.2f s)	Skambučių %llu, sekta %llu, derinimas %.2f s (maks. %.2f s)
+Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	Prioritetas nuo 1 (aukščiausias) iki 10, 0 nėra. Aukštesnio prioriteto grupė pasiima imtuvą iš žemesnio.
+From, to (the same number for one), action, priority	Nuo, iki (vienam tas pats skaičius), veiksmas, prioritetas
+System, identifier table (iden_up) and channel numbers from a CSV file	Sistema, identifikatorių lentelė (iden_up) ir kanalų numeriai iš CSV
+EMERGENCY	AVARINIS
+encrypted	užšifruota
+Follow talkgroups, radio IDs or callsigns. Alerts and recording are off until you tick them for an entry. Encrypted calls are listed but never recorded.	Sekite pokalbių grupes, radijo ID arba šaukinius. Perspėjimai ir įrašymas išjungti, kol jų nepažymėsite prie įrašo. Užšifruoti skambučiai išvardijami, bet niekada neįrašomi.
+TG 91, 3120123, 100-199, LY1ABC, LY*	TG 91, 3120123, 100-199, LY1ABC, LY*
+Name (optional)	Pavadinimas (nebūtina)
+All voice modes	Visi balso režimai
+Nothing watched yet.	Kol kas nieko nestebima.
+Watching	Stebima
+Notify	Pranešti
+Beep	Pyptelėjimas
+A desktop notification when a call starts (off by default)	Darbalaukio pranešimas, kai prasideda skambutis (pagal numatytuosius nustatymus išjungta)
+Save the audio of its calls to the recordings folder through the auto-record rules (this also switches auto-record on). Encrypted calls are never recorded. You are responsible for the law of your country.	Išsaugo skambučių garsą įrašų aplanke pagal automatinio įrašymo taisykles (taip pat įjungia automatinį įrašymą). Užšifruoti skambučiai niekada neįrašomi. Už savo šalies teisę atsakote patys.
+Copy as CSV	Kopijuoti kaip CSV
+No calls of the watched entries heard yet.	Stebimų įrašų skambučių dar negirdėta.
+Sec	Sek.
+Flags	Žymos
+EMERG	AVAR
+ENC	UŽŠ
+Keywords on: no match yet	Raktažodžiai įjungti: atitikmenų dar nėra
+Keywords	Raktažodžiai
+One keyword per line, any case. It is looked for in the message text and in the capcode name. Start a line with re: for a regular expression, for example re:structure fire|MVA. Matching pages are highlighted in Messages and shown in the ticker.	Vienas raktažodis eilutėje, didžiosios ir mažosios raidės nesvarbios. Ieškoma pranešimo tekste ir capcode pavadinime. Eilutę pradėkite re: reguliariajai išraiškai, pavyzdžiui re:structure fire|MVA. Atitinkantys puslapiai paryškinami Pranešimuose ir rodomi eilutėje.
+Notify on a keyword match	Pranešti apie raktažodžio atitikmenį
+A desktop notification for each matching new page (off by default)	Darbalaukio pranešimas apie kiekvieną atitinkantį naują puslapį (pagal numatytuosius nustatymus išjungta)
+lines are not valid and were skipped	eilučių neteisingos ir praleistos
+Pager keyword	Pejerio raktažodis
+more matching pages	daugiau atitinkančių puslapių
+No GPS position heard yet (needs LRRP data)	GPS pozicijos dar negirdėta (reikia LRRP duomenų)
+Last position	Paskutinė pozicija
+just now	ką tik
+min ago	min. prieš
+Show on map	Rodyti žemėlapyje
+# custom bandwidth chip and reset (3.6)
+custom	pasirinktinis
+default	numatytasis
+How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	Kiek spektro užfiksuoja radijas. Numatytasis yra paties režimo plotis; spustelėkite, kad nustatytumėte bet kokį plotį.
+Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	Grįžti prie šio režimo savo juostos pločio ir diskretizavimo dažnio. Jūsų pasirinktinės reikšmės lieka išsaugotos kitam kartui, kai pažymėsite Pasirinktinis.
+16-bit	16 bitų
+Share##rec	Dalintis##rec
+Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.	Atidaro aplanką su šiuo įrašu ir nukopijuoja kelią. Siųskite failą (SigMF atveju kartu .sigmf-meta ir .sigmf-data): jis atkuriamas su savo dažniu, sparta ir režimu.
+Identify	Atpažinti
+Start the receiver to scan.	Norėdami tikrinti, paleiskite imtuvą.
+Look for every signal in what the radio sees, find out what each one is and offer to open it. One click.	Ieško visų signalų, kuriuos mato radijas, išsiaiškina, kas jie yra, ir pasiūlo atidaryti. Vienu spustelėjimu.
+I don't know what this is: measure the strongest signal (or the region you dragged on the spectrum) and show the most likely modes with how sure OnAir is.	Aš nežinau, kas tai: išmatuoja stipriausią signalą (arba spektre pažymėtą sritį) ir parodo labiausiai tikėtinus režimus bei kiek OnAir tuo tikras.
+Plug-ins	Įskiepiai
+Open Plug-ins...	Atidaryti įskiepius...
+Open Automations...	Atidaryti automatizavimus...
+Scripts and rules	Scenarijai ir taisyklės
+Running programs is allowed.	Programų paleidimas leidžiamas.
+Running programs is off.	Programų paleidimas išjungtas.
+Plug-ins and scripts	Įskiepiai ir scenarijai
+Tones (Hz)	Tonai (Hz)
+Frequency (kHz)	Dažnis (kHz)
+no calls yet	skambučių dar nėra
+no codes yet	kodų dar nėra
+calls	skambučiai
+strongest tone	stipriausias tonas
+Play the channel audio; decoding is the same either way	Groti kanalo garsą; dekodavimas toks pats
+Copy CSV	Kopijuoti CSV
+copied	nukopijuota
+rows	eilučių
+Copy the table as CSV to the clipboard (positions included)	Nukopijuoti lentelę kaip CSV į iškarpinę (su pozicijomis)
+Copy the table as CSV to the clipboard	Nukopijuoti lentelę kaip CSV į iškarpinę
+# MFSK pictures (Shortwave Radiogram)
+Save PNG	Išsaugoti PNG
+Save every picture	Išsaugoti kiekvieną paveikslėlį
+Clear pictures	Išvalyti paveikslėlius
+grey	pilka
+Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.	MFSK sraute siunčiami paveikslėliai (Shortwave Radiogram) čia rodomi jiems atkeliaujant.
+Open recordings folder	Atidaryti įrašų aplanką
+Where recordings are saved. Change it in Settings > Files.	Čia saugomi įrašai. Keisti: Nustatymai > Failai.
+Free disk space:	Laisva vieta diske:
+Default (inside the data folder)	Numatytasis (duomenų aplanke)
+Choose...	Pasirinkti...
+Use typed path	Naudoti įvestą kelią
+That folder cannot be written: the default is used.	Į šį aplanką rašyti negalima: naudojamas numatytasis.
+# Smart CubeSat (docs/CUBESAT-SMART.md)
+Tuned for	Sureguliuota
+No satellite is expected soon: scanning this span for any carrier.	Netrukus palydovų nesitikima: ieškoma bet kokių nešlių šioje juostoje.
+Nothing was uploaded.	Nieko neįkelta.
+carrier found	rasta nešlė
+decoding	dekoduojama
+carrier only	tik nešlė
+no known signal	nėra žinomo signalo
+Next passes	Artimiausi praskridimai
+working out the passes ...	skaičiuojami praskridimai ...
+no pass of a satellite in the table in the next hours (set your location, refresh the orbits)	artimiausiomis valandomis nėra lentelės palydovų praskridimų (nustatykite vietą, atnaujinkite orbitas)
+In	Po
+Carriers	Nešlės
+none yet	kol kas nėra
+Tried on	Bandyta ties
+valid	galiojančių
+failed their checks	neišlaikė patikros
+satellite	palydovas
+framing	kadravimas
+validated by	patvirtinta
+byte errors put right	baitų klaidų ištaisyta
+received	gauta
+telemetry	telemetrija
+Field	Laukas
+Decoded packets	Dekoduoti paketai
+Framing	Kadravimas
+Follow satellites from the table (passes and Doppler)	Sekti lentelės palydovus (praskridimai ir Doplerio efektas)
+Look for carriers the table does not explain	Ieškoti nešlių, kurių lentelė nepaaiškina
+Minimum SNR (dB)	Minimalus SNR (dB)
+Carriers followed at once	Vienu metu sekamos nešlės
+Lowest elevation (deg)	Mažiausias aukščio kampas (laipsniai)
+Search window around the predicted carrier (Hz)	Paieškos langas aplink numatytą nešlę (Hz)
+Modulation of unknown carriers	Nežinomų nešlių moduliacija
+Baud rate (0: automatic, any value)	Baudų sparta (0: automatinė, bet kokia reikšmė)
+Channel width (Hz, 0: automatic, any value)	Kanalo plotis (Hz, 0: automatinis, bet kokia reikšmė)
+Scan resolution (Hz, 0: automatic)	Skenavimo skyra (Hz, 0: automatinė)
+Add a transmitter to the table	Pridėti siųstuvą į lentelę
+NORAD number	NORAD numeris
+Baud rate	Baudų sparta
+orbits for %zu satellites, %zu table entries	%zu palydovų orbitos, %zu lentelės įrašai
+Auto decode: on (click to stop)	Automatinis dekodavimas: įjungta (spustelėkite sustabdyti)
+Auto decode cubesats	Automatiškai dekoduoti kubo palydovus
+Tunes a span that holds the satellites about to pass, follows their Doppler shift, finds every narrow carrier, works out its modulation and baud rate, and decodes it with every framing that fits. Nothing to set up.	Suderina juostą, kurioje bus netrukus praskrendantys palydovai, seka jų Doplerio poslinkį, randa kiekvieną siaurą nešlę, nustato moduliaciją ir baudų spartą ir dekoduoja visais tinkamais kadravimais. Nieko nereikia nustatyti.
+Refresh orbits	Atnaujinti orbitas
+Downloading orbits from CelesTrak (the built-in set is used meanwhile).	Atsisiunčiamos orbitos iš CelesTrak (kol kas naudojamas įmontuotas rinkinys).
+Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.	Įrašo paketus į duomenų aplanką kaip SatNOGS paruoštą failą (viena telemetrijos įrašų eilutė), CSV ir KISS failą. Nieko neįkelia.
+Press the button: it does the rest.	Paspauskite mygtuką – likusį padarys pati programa.
+BPSK	BPSK
+A country file (cty.dat, wl_cty.dat) from country-files.com gives every DXCC entity with its CQ and ITU zone. Thanks to Jim Reisert AD1C and the country-files.com team. OnAir does not bundle it: load one you have, or press Download (only on your click).	Šalių failas (cty.dat, wl_cty.dat) iš country-files.com pateikia kiekvieną DXCC subjektą su CQ ir ITU zonomis. Ačiū Jim Reisert AD1C ir country-files.com komandai. OnAir jo neįtraukia: įkelkite turimą arba spauskite Atsisiųsti (tik jums spustelėjus).
+Show country and zone in decoded messages	Rodyti šalį ir zoną dekoduotuose pranešimuose
+Load file...	Įkelti failą...
+Download from country-files.com	Atsisiųsti iš country-files.com
+Reset to built-in	Grįžti prie įmontuotos lentelės

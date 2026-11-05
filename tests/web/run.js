@@ -364,4 +364,125 @@ test("picture strips: placement, new picture, end, bad input", () => {
   assert.strictEqual(D.planStrip(null, null).state, null);
 });
 
+// ---- settings, i18n, map (web/onair-web/onair-settings.js, onair-i18n.js, onair-map.js, onair-world.js) ----
+const CFG = require(path.join(__dirname, "../../web/onair-web/onair-settings.js"));
+const I18N = require(path.join(__dirname, "../../web/onair-web/onair-i18n.js"));
+const MAP = require(path.join(__dirname, "../../web/onair-web/onair-map.js"));
+const memStore = (init) => { const m = new Map(init ? [[CFG.KEY, init]] : []); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, v) }; };
+
+test("settings: defaults are valid and stable through sanitize", () => {
+  const d = CFG.defaults();
+  assert.deepStrictEqual(CFG.sanitize(d), d);
+  for (const k of CFG.KEYS) assert.strictEqual(CFG.coerce(k, d[k]), d[k], k);
+});
+test("settings: bad values fall back, numbers clamp, unknown keys drop", () => {
+  const o = CFG.sanitize({ agc: "loud", gainDb: 999, range: -4, wfFps: NaN, palette: 7, theme: "light", evil: 1, __proto__: { x: 1 }, scale: 50, fftBins: 300 });
+  assert.strictEqual(o.agc, "slow"); assert.strictEqual(o.gainDb, 60); assert.strictEqual(o.range, 20); assert.strictEqual(o.wfFps, 12);
+  assert.strictEqual(o.palette, "navy"); assert.strictEqual(o.theme, "light"); assert.strictEqual(o.scale, 85); assert.strictEqual(o.fftBins, 0);
+  assert.ok(!("evil" in o) && !("x" in o));
+  assert.deepStrictEqual(CFG.sanitize(null), CFG.defaults()); assert.deepStrictEqual(CFG.sanitize([1, 2]), CFG.defaults());
+  const m = CFG.sanitize({ minDb: -50, maxDb: -55 }); assert.ok(m.maxDb - m.minDb >= 10);
+});
+test("settings: every palette name exists in the library", () => {
+  for (const p of CFG.SCHEMA.palette.values) assert.ok(L.PALETTE_NAMES.includes(p), p);
+});
+test("settings: load / save survive broken or throwing storage", () => {
+  const st = memStore(); const s = CFG.defaults(); s.agc = "fast"; s.step = 12500;
+  assert.ok(CFG.save(st, s)); assert.deepStrictEqual(CFG.load(st), CFG.sanitize(s));
+  assert.deepStrictEqual(CFG.load(memStore("{not json")), CFG.defaults());
+  assert.deepStrictEqual(CFG.load(memStore('{"agc":"off","gainDb":"x"}')).agc, "off");
+  const bad = { getItem() { throw new Error("blocked"); }, setItem() { throw new Error("blocked"); } };
+  assert.deepStrictEqual(CFG.load(bad), CFG.defaults()); assert.strictEqual(CFG.save(bad, s), false);
+});
+test("settings: export / import round trip, foreign files refused", () => {
+  const s = CFG.defaults(); s.theme = "dark"; s.lang = "lt"; s.minDb = -90;
+  assert.deepStrictEqual(CFG.importJson(CFG.exportJson(s)), CFG.sanitize(s));
+  assert.strictEqual(CFG.importJson("[]"), null); assert.strictEqual(CFG.importJson("nope"), null); assert.strictEqual(CFG.importJson('{"settings":{}}'), null);
+});
+test("settings: spectrum request follows FFT size, speed and the server's limits", () => {
+  const s = CFG.defaults();
+  assert.strictEqual(CFG.binsFor(s, 1500, 2048), 2048); assert.strictEqual(CFG.binsFor(s, 300, 2048), 512); assert.strictEqual(CFG.binsFor(s, 5000, 1024), 1024);
+  s.fftBins = 4096; assert.strictEqual(CFG.binsFor(s, 800, 2048), 2048); assert.strictEqual(CFG.binsFor(s, 800, 8192), 4096);
+  s.wfFps = 30; assert.strictEqual(CFG.fpsFor(s, 15), 15); s.wfFps = 5; assert.strictEqual(CFG.fpsFor(s, 15), 5);
+});
+test("settings: rx and audio messages stay inside the protocol", () => {
+  const s = CFG.defaults(); s.agc = "off"; s.gainDb = 40;
+  const m = L.msg.rx(CFG.rxFields(s, "wfm")); assert.deepStrictEqual(m, { type: "rx", agc: "off", gain_db: 40, deemph_us: 50 });
+  assert.ok(!("deemph_us" in CFG.rxFields(s, "nfm")));
+  assert.deepStrictEqual(CFG.audioParams(s, "wfm"), { codec: "adpcm", rate: 48000 }); assert.deepStrictEqual(CFG.audioParams(s, "usb"), { codec: "adpcm", rate: 12000 });
+  s.audioRate = 24000; s.audioCodec = "pcm16"; assert.deepStrictEqual(CFG.audioParams(s, "usb"), { codec: "pcm16", rate: 24000 });
+  for (const r of CFG.SCHEMA.audioRate.values) if (r) assert.ok([8000, 12000, 16000, 24000, 48000].includes(r));
+});
+test("auto-range: floor under the noise, top over the strongest signal, smooth following", () => {
+  const n = 512, lv = new Uint8Array(n).fill(60); lv[200] = 200;
+  const row = { bins: n, levels: lv, floorDb: -100, topDb: -20 };
+  const r = CFG.autoRange(row); near(r.min, -100 + 60 / 255 * 80 - 4, 0.5, "min"); near(r.max, -100 + 200 / 255 * 80 + 6 > r.min + 20 ? Math.max(-100 + 60 / 255 * 80 + 6, r.min + 20) : r.min + 20, 6, "max");
+  assert.ok(r.max - r.min >= 20);
+  const f = CFG.followRange({ min: -90, max: -30 }, { min: -100, max: -20 }, 0.05); assert.ok(f.min < -90 && f.min > -100 && f.max > -30 && f.max < -20);
+  assert.deepStrictEqual(CFG.followRange(null, r), { min: r.min, max: r.max });
+  assert.deepStrictEqual(CFG.levels(Object.assign(CFG.defaults(), { rangeMode: "manual", minDb: -90, maxDb: -40 }), row, null), { lo: -90, span: 50 });
+  assert.deepStrictEqual(CFG.levels(CFG.defaults(), row, null), { lo: -100, span: 70 });
+  const sm = CFG.smoothTrace(new Float32Array([0, 0, NaN]), new Float32Array([10, 10, 10]), 50); assert.strictEqual(sm[0], 5); assert.strictEqual(sm[2], 10);
+});
+test("i18n: every language key exists in English, placeholders match, fallback works", () => {
+  assert.deepStrictEqual(I18N.orphanKeys(), []);
+  for (const l of I18N.LANGS) for (const [k, v] of Object.entries(I18N.CAT[l])) {
+    const ph = (x) => (x.match(/\{\w+\}/g) || []).sort().join(","); assert.strictEqual(ph(v), ph(I18N.CAT.en[k]), l + ":" + k);
+    assert.ok(typeof v === "string" && v.length && !/[<>]/.test(v), l + ":" + k);
+  }
+  I18N.setLang("lt"); assert.strictEqual(I18N.t("menu.view"), "Rodinys"); assert.strictEqual(I18N.t("map.wide"), "Expand");   // untranslated: English
+  assert.strictEqual(I18N.t("head.listeners", { n: 2, max: 8 }), "2 / 8 klausytojų"); assert.strictEqual(I18N.t("no.such.key"), "no.such.key");
+  I18N.setLang("xx"); assert.strictEqual(I18N.lang(), "en");
+  assert.strictEqual(I18N.pickLang("auto", ["lt-LT", "en"]), "lt"); assert.strictEqual(I18N.pickLang("auto", ["fr"]), "en"); assert.strictEqual(I18N.pickLang("de", ["lt"]), "de");
+  for (const l of Object.keys(I18N.CAT)) assert.ok(I18N.coverage(l) > 0.2, l);
+});
+test("i18n: the page's data-i18n keys all exist", () => {
+  const html = require("fs").readFileSync(path.join(__dirname, "../../web/onair-web/index.html"), "utf8");
+  const keys = [...html.matchAll(/data-i18n(?:-title|-aria|-ph)?="([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(keys.length > 40); for (const k of keys) assert.ok(k in I18N.CAT.en, k);
+  const src = require("fs").readFileSync(path.join(__dirname, "../../web/onair-web/app.js"), "utf8");
+  for (const m of src.matchAll(/\bt\("([a-z][\w.]*[\w])"/g)) assert.ok(m[1] in I18N.CAT.en, "app.js: " + m[1]);
+});
+test("map: project and unproject are inverse, zoom keeps the anchor, pan moves the centre", () => {
+  const v = { lat: 54.7, lon: 25.3, z: 8 }, w = 800, h = 600;
+  const p = MAP.project(v, w, h, 54.7, 25.3); near(p.x, 400, 1e-6); near(p.y, 300, 1e-6);
+  for (const [la, lo] of [[55.1, 24.2], [50, 30], [54.7, 25.3]]) { const q = MAP.project(v, w, h, la, lo), u = MAP.unproject(v, w, h, q.x, q.y); near(u.lat, la, 1e-6); near(u.lon, lo, 1e-6); }
+  const a = MAP.unproject(v, w, h, 600, 200), v2 = MAP.zoomAt(v, w, h, 600, 200, 1.5), b = MAP.unproject(v2, w, h, 600, 200);
+  near(b.lat, a.lat, 1e-6); near(b.lon, a.lon, 1e-6); near(v2.z, 9.5, 1e-9);
+  const v3 = MAP.panBy(v, w, h, 100, 0); assert.ok(v3.lon < v.lon); near(v3.lat, v.lat, 1e-9);
+  assert.ok(MAP.clampView({ lat: 89, lon: 0, z: 3 }, w, h).lat < 86 && MAP.clampView({ lat: 0, lon: 200, z: 3 }, w, h).lon < 0);
+});
+test("map: fit shows every point, one point is a close view, none the world, the date line works", () => {
+  const w = 800, h = 600, pts = [{ lat: 54.5, lon: 24.9 }, { lat: 55.2, lon: 26.4 }, { lat: 54.9, lon: 25.6 }];
+  const v = MAP.fit(pts, w, h, 30);
+  for (const p of pts) { const q = MAP.project(v, w, h, p.lat, p.lon); assert.ok(q.x >= 0 && q.x <= w && q.y >= 0 && q.y <= h, JSON.stringify(q)); }
+  assert.ok(MAP.fit([pts[0]], w, h).z >= 10); assert.ok(MAP.fit([], w, h).z < 3);
+  const dl = MAP.fit([{ lat: 0, lon: 179.5 }, { lat: 1, lon: -179.5 }], w, h); assert.ok(dl.z > 5, "date line fit z=" + dl.z);
+  const q = MAP.project(dl, w, h, 0, 179.5), r = MAP.project(dl, w, h, 1, -179.5); assert.ok(q.x > 0 && q.x < w && r.x > 0 && r.x < w && q.y > 0 && r.y < h);
+  assert.strictEqual(MAP.hit(v, w, h, [{ id: "a", lat: 54.9, lon: 25.6 }], MAP.project(v, w, h, 54.9, 25.6).x + 3, MAP.project(v, w, h, 54.9, 25.6).y, 10).id, "a");
+  assert.strictEqual(MAP.hit(v, w, h, [{ id: "a", lat: 54.9, lon: 25.6 }], 5, 5, 10), null);
+  const sb = MAP.scaleBar(v, 100); assert.ok(sb.px > 40 && sb.px < 260 && /km|m/.test(sb.label));
+});
+test("map: the bundled world outline is well formed", () => {
+  const sandbox = {}; new Function("globalThis", require("fs").readFileSync(path.join(__dirname, "../../web/onair-web/onair-world.js"), "utf8"))(sandbox);
+  const w = sandbox.OnAirWorld; assert.ok(Array.isArray(w) && w.length >= 10);
+  for (const poly of w) { assert.ok(poly.length >= 3); for (const [lo, la] of poly) assert.ok(lo >= -180 && lo <= 180 && la >= -90 && la <= 90); }
+});
+test("decoder marks carry a kind and an info line for the map", () => {
+  const ac = D.aircraftTable({ aircraft: [{ icao: "4ABCD1", callsign: "TST1", lat: 54.6, lon: 25.2, alt_ft: 31000, speed_kt: 420, track_deg: 90, age_s: 2 }] });
+  assert.strictEqual(ac.marks[0].kind, "adsb"); assert.ok(/31000 ft/.test(ac.marks[0].info));
+  const ve = D.vesselTable({ vessels: [{ mmsi: 244123456, name: "SEA", lat: 55, lon: 20, sog_kt: 8.2, ship_type_text: "Cargo", destination: "KLAIPEDA", age_s: 5 }] });
+  assert.strictEqual(ve.marks[0].kind, "ais"); assert.ok(/KLAIPEDA/.test(ve.marks[0].info));
+  const ap = D.aprsTables({ stations: [{ call: "LY1AA", lat: 54.7, lon: 25.3, comment: "iGate", count: 3 }], frames: [] });
+  assert.strictEqual(ap.marks[0].kind, "aprs");
+});
+test("the page loads its scripts in dependency order and has no external references", () => {
+  const html = require("fs").readFileSync(path.join(__dirname, "../../web/onair-web/index.html"), "utf8");
+  const srcs = [...html.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(srcs.indexOf("onair-i18n.js") < srcs.indexOf("app.js") && srcs.indexOf("onair-lib.js") < srcs.indexOf("onair-map.js") && srcs.indexOf("onair-world.js") < srcs.indexOf("onair-map.js"));
+  for (const f of srcs) assert.ok(require("fs").existsSync(path.join(__dirname, "../../web/onair-web", f)), f);
+  assert.ok(!/(src|href)="https?:\/\/(?!github\.com\/adswill|discord\.gg\/)/.test(html), "no runtime internet use");
+  for (const f of ["app.js", "style.css", "onair-map.js", "onair-settings.js"]) assert.ok(!/https?:\/\/(?!github|www\.w3\.org|<)/.test(require("fs").readFileSync(path.join(__dirname, "../../web/onair-web", f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "")), f + " has a URL");
+});
+
 console.log(passed + " tests passed" + (process.exitCode ? ", some FAILED" : ""));

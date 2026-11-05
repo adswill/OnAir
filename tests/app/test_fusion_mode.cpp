@@ -24,11 +24,11 @@ int main() {
     CHECK(t.stdMode == 130, "stdMode %d", t.stdMode);
     const dect2::ModeTuning* reg = dect2::modeTuning(130);
     CHECK(reg != nullptr, "modeTuning(130) not registered");
-    if (reg) CHECK(std::string(reg->name) == "Yaesu Fusion (WIP)" && std::string(reg->id) == "fusion", "registered as '%s'", reg->name);
+    if (reg) CHECK(std::string(reg->name) == "Yaesu Fusion" && std::string(reg->id) == "fusion", "registered as '%s'", reg->name);
     CHECK(dect2::modeTuningById("fusion") != nullptr, "not found by id");
 
     const std::string table = readFile("app/ui/mode_table.cpp");
-    CHECK(has(table, "{128, \"Yaesu Fusion (WIP)\", 11,"), "mode row for family 128 missing (group 11, with D-STAR and M17)");
+    CHECK(has(table, "{128, \"Yaesu Fusion\", 11,"), "mode row for family 128 missing (group 11, with D-STAR and M17)");
     CHECK(has(readFile("app/panels/modeui.cpp"), "case 128: return &kFusionUi;"), "family 128 not mapped to kFusionUi");
     const std::string appH = readFile("app/app.h");
     const size_t at = appH.find("constexpr int kNumFamilies = ");
@@ -47,7 +47,7 @@ int main() {
     CHECK(has(readFile("core/src/engine/modes.cpp"), "fusionTuning()"), "tuning list");
 
     const std::string ui = readFile("app/fusion/fusion_ui.cpp");
-    const char* strings[] = {"Yaesu Fusion (WIP)", "Position / slow data text", "Call mode: %s", "Repeater downlink", "Repeater uplink", "Source", "Destination",
+    const char* strings[] = {"Yaesu Fusion", "Position / slow data text", "Call mode: %s", "Repeater downlink", "Repeater uplink", "Source", "Destination",
                              "no audio until the codec above is ready", "speechCodecGate(\"ysf\"", "a.rx.standard == 129", "Data channel units"};
     for (const char* s : strings) CHECK(has(ui, s), "panel string missing: %s", s);
 

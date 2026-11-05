@@ -492,6 +492,7 @@ static void dabRecordUi(App& a, const DabEnsemble& ens) {
     const DabRecStats rs = a.engine.dabAudio().recording();
     const DabAudioStats au = a.rx.dab.audio;
     sectionHeader(Ic::Record, "Recording");
+    kit::recordingsButton("dab", "dab-recordings");
     if (!rs.active) {
         ImGui::BeginDisabled(au.sub < 0);
         if (ImGui::Button("Record")) {
@@ -502,7 +503,7 @@ static void dabRecordUi(App& a, const DabEnsemble& ens) {
             char ts[32];
             std::strftime(ts, sizeof ts, "%Y%m%d_%H%M%S", std::localtime(&now));
             std::error_code ec;
-            const std::string dir = plat::dataDir() + "/dab-recordings";
+            const std::string dir = recordingsSub("dab-recordings");
             std::filesystem::create_directories(dir, ec);
             std::string err;
             if (!a.engine.dabAudio().startRecording(dir + "/" + name + "_" + ts, a.dabRecFmt ? DabRecFormat::Encoded : DabRecFormat::Wav, a.dabRecLog, &err)) a.dabRecErr = err;

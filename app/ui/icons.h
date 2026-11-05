@@ -8,7 +8,7 @@
 enum class Ic {
     Logo, Antenna, Play, Stop, Refresh, Chip, Gauge, Wave, Clock, Signal, Tv, Radio, Speaker, Mute, Scan, Compass, Grid, Layers, Chart,
     Lock, Warning, Check, Cross, File, Folder, Usb, Record, Sliders, Fullscreen, Popout, Info, Search, Star, Target, Echo, Bolt, Globe, Pulse,
-    Book, Doc, Cpu, Down, Right, Gear, Subtitles, Link, Camera, Save
+    Book, Doc, Cpu, Down, Right, Gear, Subtitles, Link, Camera, Save, Discord
 };
 
 namespace icons {
@@ -164,6 +164,9 @@ inline void draw(Ic id, ImVec2 centre, float size, ImU32 col, ImDrawList* dl = n
     case Ic::Link:
         p.rect(-0.95f, -0.3f, 0.1f, 0.3f, 0.3f); p.rect(-0.1f, -0.3f, 0.95f, 0.3f, 0.3f);
         break;
+    case Ic::Discord: {   // simplified game-controller-like Discord mark: rounded head with two eyes
+        const float h[] = {-0.9f, -0.55f, -0.45f, -0.75f, -0.25f, -0.62f, 0.25f, -0.62f, 0.45f, -0.75f, 0.9f, -0.55f, 0.95f, 0.45f, 0.5f, 0.78f, 0.35f, 0.58f, -0.35f, 0.58f, -0.5f, 0.78f, -0.95f, 0.45f};
+        p.poly(h, 12, true); p.dot(-0.33f, 0.0f, 0.2f); p.dot(0.33f, 0.0f, 0.2f); break; }
     case Ic::Camera: p.rect(-0.9f, -0.5f, 0.9f, 0.7f, 0.15f); p.circle(0, 0.1f, 0.35f); p.fillRect(-0.4f, -0.8f, 0.0f, -0.5f); break;
     }
 }

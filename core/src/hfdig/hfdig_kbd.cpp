@@ -13,7 +13,7 @@ const int kKbdBwList[5] = {125, 250, 500, 1000, 2000};
 
 namespace {
 const char* const kFamilyNames[kKbdFamilies] = {"Olivia", "Contestia", "MFSK", "THOR", "DominoEX", "Hellschreiber"};
-const char* const kMfskNames[] = {"MFSK4", "MFSK8", "MFSK11", "MFSK16", "MFSK22", "MFSK31", "MFSK32", "MFSK64"};
+const char* const kMfskNames[] = {"MFSK4", "MFSK8", "MFSK11", "MFSK16", "MFSK22", "MFSK31", "MFSK32", "MFSK64", "MFSK128", "MFSK64L", "MFSK128L"};
 const char* const kThorNames[] = {"THOR 4", "THOR 5", "THOR 8", "THOR 11", "THOR 16", "THOR 22", "THOR 25x4", "THOR 50x1", "THOR 50x2", "THOR 100"};
 const char* const kDomNames[] = {"DominoEX 4", "DominoEX 5", "DominoEX 8", "DominoEX 11", "DominoEX 16", "DominoEX 22"};
 const char* const kHellNames[] = {"Feld Hell", "Slow Hell", "Hell 80", "HellX5", "HellX9", "FSK Hell 245", "FSK Hell 105"};
@@ -107,6 +107,8 @@ struct HfdigKbd::Impl {
     std::vector<kbd::cf> fb;
     uint64_t lastSearch = 0;
     std::string lastCall;
+    const KbdPicture* lastPic = nullptr;
+    uint64_t picId = 0;
     std::string recent;               // the last characters decoded: do they read as text
     // the Hell picture
     std::deque<uint8_t> hellCols;
@@ -125,7 +127,7 @@ struct HfdigKbd::Impl {
         }
         centre = c.centreHz;
         if (eng) eng->setCentre(centre);
-        winN = 0; evals = 0; stable = 0; cand = 0; recent.clear();
+        winN = 0; evals = 0; stable = 0; cand = 0; recent.clear(); lastPic = nullptr;
         std::fill(pow.begin(), pow.end(), 0.f);
         cfg.variant = c.variant;
         cfgNew = false;
@@ -189,11 +191,24 @@ struct HfdigKbd::Impl {
                 for (int k = 0; k < 4096; k++) fb[k] = kbd::cf((float)(win[k] * (0.5 - 0.5 * std::cos(2 * kbd::kPi * k / 4096))), 0);
                 fft.run(fb.data());
                 for (int k = 0; k < 2048; k++) pow[k] += (std::norm(fb[k]) - pow[k]) * 0.15f;
-                if (autoC && !(eng->locked && plausible()) && ++evals >= 2) { evals = 0; search(samples); }
+                if (autoC && !eng->busy && !(eng->locked && plausible()) && ++evals >= 2) { evals = 0; search(samples); }
             }
         }
         eng->feed(x, n);
         lk.lock();
+        if (eng->pic && (eng->picDirty || eng->picDone)) {
+            if (eng->pic.get() != lastPic) { lastPic = eng->pic.get(); picId++; }
+            auto snap = std::make_shared<KbdPicture>(*eng->pic);
+            snap->id = picId;
+            t.picLive = snap;
+            t.picSerial++;
+            if (eng->picDone) {
+                t.picHistory.insert(t.picHistory.begin(), snap);
+                if (t.picHistory.size() > (size_t)kKbdPicHistory) t.picHistory.resize(kKbdPicHistory);
+                if (log) log(std::string(kbdVariantName(KbdMfsk, cfg.variant)) + ": picture " + std::to_string(snap->width) + "x" + std::to_string(snap->height) + (snap->colour ? " colour" : " grey"));
+            }
+            eng->picDirty = eng->picDone = false;
+        }
         std::string add;
         add.swap(eng->out);
         if (!add.empty()) {
@@ -248,6 +263,7 @@ void HfdigKbd::setConfig(const KbdConfig& c) {
     p_->cfgNew = true;
 }
 KbdConfig HfdigKbd::config() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->cfg; }
+void HfdigKbd::clearPictures() { std::lock_guard<std::mutex> lk(p_->mu); p_->t.picLive.reset(); p_->t.picHistory.clear(); p_->t.picSerial++; }
 void HfdigKbd::clearText() { std::lock_guard<std::mutex> lk(p_->mu); p_->t.text.clear(); p_->t.chars = 0; p_->t.callsign.clear(); p_->lastCall.clear(); p_->hellCols.clear(); p_->t.hellTotal = 0; }
 void HfdigKbd::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }
 std::unique_ptr<HfdigKbd> makeKbdDecoder() { return std::make_unique<HfdigKbd>(); }
@@ -263,7 +279,7 @@ public:
         const double centre = k.centreHz + c.offsetHz;
         switch (k.family) {
         case KbdOlivia: case KbdContestia: mod_ = kbd::makeOliviaMod(k, centre); break;
-        case KbdMfsk: mod_ = kbd::makeMfskMod(k, centre); break;
+        case KbdMfsk: mod_ = kbd::makeMfskMod(k, centre, c.picture, c.pictureAfterChars); break;
         case KbdThor: case KbdDominoex: mod_ = kbd::makeIfkMod(k, centre); break;
         default: mod_ = kbd::makeHellMod(k, centre); break;
         }

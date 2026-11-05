@@ -4,6 +4,7 @@
 #include "adsb_internal.h"
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
+#include "ui/kit/mode_panel.h"
 void vdl2NoteAdsb(const dect2::AdsbTelemetry& t);   // vdl2_ui.cpp: VDL2 links its aircraft to what ADS-B heard
 
 using namespace adsbui;
@@ -178,6 +179,19 @@ void tab(App& a) {
         detail(a);
         ImGui::EndChild();
     }
+}
+
+// Simple view: the aircraft table and the map side by side; the readout of a picked aircraft as a third pane
+void command(App& a) {
+    kit::modeHeader({11, "ADS-B", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    const bool picked = S.sel != 0xFFFFFFFFu;
+    if (picked)
+        modepanel::panes({{"##adsbcmdt", tr("Aircraft"), [&a] { aircraftTable(a, false); }, 1.3f, 240.f},
+                          {"##adsbcmdm", tr("Map"), [&a] { mapView(a, ImGui::GetContentRegionAvail()); }, 1.2f, 260.f},
+                          {"##adsbcmdd", tr("Selected"), [&a] { detail(a); }, 0.9f, 220.f}}, 300.f);
+    else
+        modepanel::panes({{"##adsbcmdt", tr("Aircraft"), [&a] { aircraftTable(a, false); }, 1.3f, 240.f},
+                          {"##adsbcmdm", tr("Map"), [&a] { mapView(a, ImGui::GetContentRegionAvail()); }, 1.2f, 260.f}}, 330.f);
 }
 
 void list(App& a) {
@@ -380,6 +394,7 @@ const ModeUi kAdsbUi = {
     .synth = synth,
     .tick = tick,
     .meters = meters,
+    .command = command,
 };
 
 // The receiver's position, shared by every screen that needs one (ADS-B ranges, the pass planner): the ADS-B antenna position

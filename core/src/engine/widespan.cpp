@@ -1,13 +1,18 @@
 #include "dect2/engine/widespan.h"
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include "dect2/common/mathconst.h"
 
 namespace dect2 {
 
+namespace { std::atomic<double> gWideCap{0}; }
+double wideSpanCapHz() { const double c = gWideCap.load(); return c > 0 ? c : kWideMaxSpanHz; }
+void setWideSpanCapHz(double hz) { gWideCap = hz > 0 ? hz : 0; }
+
 void WideDecimator::configure(double inRate, double spanHz) {
     fs_ = inRate;
-    span_ = std::max(1000.0, std::min(spanHz, kWideMaxSpanHz));
+    span_ = std::max(1000.0, std::min(spanHz, wideSpanCapHz()));
     const double want = std::max(1.5 * span_, 260000.0);
     dec_ = std::max(1, (int)std::floor(fs_ / want));
     outRate_ = fs_ / dec_;

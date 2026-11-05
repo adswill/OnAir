@@ -51,3 +51,7 @@ when any good word differs.
 
 Measured on the synthetic test signal (POCSAG 1200, bursts of 6 ms noise at random times, `pager_combine_rx`): complete correct pages 33 of 47
 without combining, 45 of 47 with it; wrong texts 14 down to 2. Real paging networks and real interference were not available.
+
+## Keyword alerts
+
+Capcodes view > **Keywords**: one keyword per line, any case, looked for in the message text and in the capcode name. A line that starts with `re:` is a regular expression (ECMAScript, case-insensitive; a bad one is counted and skipped). Lines that start with `#` are comments. Matching rows are highlighted in Messages and the last three matches run in a ticker above the table. **Notify on a keyword match** (off by default) raises a desktop notification, at most three per pass, with an optional **Beep** (never when the program is muted). Pure code in `app/pager/pager_keywords.h`, test `pager_keywords`. The list is saved in the preferences (`pagerKeywords`, `pagerKwNotify`, `pagerKwSound`).

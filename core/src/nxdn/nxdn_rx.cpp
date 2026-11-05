@@ -92,7 +92,7 @@ struct NxdnReceiver::Impl {
     }
 
     void initFront() {
-        afc.reset(); afcHz = 0;
+        afc.reset(); afc.enableFine(true); afcHz = 0;
         D = std::max(1, (int)std::floor(rate / 100000.0));
         fd = rate > 0 ? rate / D : 0;
         inv = 1.0 / ((double)D * D * D);

@@ -32,6 +32,34 @@ const char* phasePattern(bool master, char code) {
     return code == 'B' ? "+-+-++--" : "+++++--+";
 }
 
+const char* chainName(int griUs) {
+    static const struct { int gri; const char* name; } kChains[] = {
+        {5543, "Calcutta"}, {5930, "Canadian East Coast"}, {5980, "Russian-American"}, {5990, "Canadian West Coast"}, {6042, "Bombay"}, {6731, "Lessay"},
+        {6780, "China South Sea"}, {7001, "Bo"}, {7030, "Saudi Arabia South"}, {7270, "Newfoundland East Coast"}, {7430, "China North Sea"}, {7499, "Sylt"},
+        {7950, "Eastern Russia Chayka"}, {7960, "Gulf of Alaska"}, {7980, "Southeast U.S."}, {7990, "Mediterranean Sea"}, {8290, "North Central U.S."},
+        {8390, "China East Sea"}, {8830, "Saudi Arabia North"}, {8930, "North West Pacific"}, {8970, "Great Lakes"}, {9007, "Eidi (Faroe Islands)"},
+        {9610, "South Central U.S."}, {9930, "East Asia"}, {9940, "U.S. West Coast"}, {9960, "Northeast U.S."}, {9990, "North Pacific"},
+    };
+    for (const auto& c : kChains) if (c.gri * 10 == griUs) return c.name;
+    return nullptr;
+}
+
+double ninthPulseDelayUs(int state) {
+    if (state < 0 || state > 31) return -1;
+    return 50.625 * (state / 8) + 1.25 * (state % 8);
+}
+
+int ninthPulseState(double delayUs) {
+    if (delayUs < -1.0 || delayUs > 165.0) return -1;
+    int best = 0;
+    double bestD = 1e9;
+    for (int k = 0; k < 32; k++) {
+        const double d = std::fabs(ninthPulseDelayUs(k) - delayUs);
+        if (d < bestD) { bestD = d; best = k; }
+    }
+    return best;
+}
+
 double pulseEnvelope(double t) {
     if (t <= 0 || t > 600) return 0;
     return t * t * std::exp(-2.0 * t / kTauUs) / (kTauUs * kTauUs * std::exp(-2.0));
@@ -167,7 +195,7 @@ Result Detector::analyze(const cf* x, size_t n, int hintGriUs) const {
     const long peelHalf = off(350.0);
     const double firstPeak = *std::max_element(C.begin(), C.end());
 
-    struct Raw { double pos; bool ninth; float margin; };
+    struct Raw { double pos; bool ninth; float margin; double wT; };
     std::vector<Raw> raws;
     for (int s = 0; s < kMaxStations; s++) {
         size_t jb = 0;
@@ -184,7 +212,24 @@ Result Detector::analyze(const cf* x, size_t n, int hintGriUs) const {
         for (long d = -3; d <= 3; d++) v9 = std::max(v9, Fm[(size_t)wrap((long)jb + offk[8] + d)]);
         const double sig1 = sig0 / std::sqrt((double)kGroupPulses);
         const bool ninth = v9 > std::max(0.5 * vmean, 3.0 * sig1);
-        raws.push_back({pos, ninth, (float)(20.0 * std::log10((y1 - med0) / (kStationThresholdSigma * sig0)))});
+        // the tuning error rotates the carrier from pulse to pulse (omega x 1 ms): the product of neighbouring pulses has that rotation and a sign of +-1, which the square removes,
+        // so half the angle of the summed squares is the rotation per pulse (unambiguous within +-250 Hz)
+        double wT = 0;
+        {
+            std::complex<double> acc(0, 0);
+            const long pI0 = (long)std::lround(pos);
+            for (long i = 0; i < M; i++) {
+                const long bi = (long)std::lround((double)i * stepS) + pI0;
+                for (int k = 0; k < kGroupPulses - 1; k++) {
+                    const long i0 = bi + offk[k], i1 = bi + offk[k + 1];
+                    if (i0 < 0 || i1 >= (long)nm) continue;
+                    const std::complex<double> d = std::complex<double>(mc[(size_t)i1]) * std::conj(std::complex<double>(mc[(size_t)i0]));
+                    acc += d * d;
+                }
+            }
+            if (std::abs(acc) > 0) wT = 0.5 * std::arg(acc);
+        }
+        raws.push_back({pos, ninth, (float)(20.0 * std::log10((y1 - med0) / (kStationThresholdSigma * sig0))), wT});
         for (int k = 0; k < (ninth ? 9 : 8); k++)
             for (long d = -peelHalf; d <= peelHalf; d++) Fm[(size_t)wrap((long)jb + offk[k == 8 ? 8 : k] + d)] = 0.f;
         comb(C);
@@ -195,11 +240,14 @@ Result Detector::analyze(const cf* x, size_t n, int hintGriUs) const {
     // alternate groups) and search the position over +-2.5 ms, which also repairs a comb that locked one or two pulses off.
     // The best hypothesis gives the code, the best position the arrival time.
     const long Q = off(2500.0);
-    struct Ref { double pos; bool ninth; float margin; bool codeMaster; int a; double acc; double second; };
+    struct Ref { double pos; bool ninth; float margin; bool codeMaster; int a; double acc; double second; double wT; };
     std::vector<Ref> refs;
     std::vector<double> qacc((size_t)(2 * Q + 1));
     for (const Raw& r : raws) {
         const long pI = (long)std::lround(r.pos);
+        cf rot[kGroupPulses];
+        std::complex<double> rotD[kGroupPulses];
+        for (int k = 0; k < kGroupPulses; k++) { rotD[k] = std::polar(1.0, -(double)k * r.wT); rot[k] = cf((float)rotD[k].real(), (float)rotD[k].imag()); }
         double bestAcc = -1, secondAcc = 0;
         long bestQ = 0;
         int bestMst = 0, bestA = 0;
@@ -216,7 +264,7 @@ Result Detector::analyze(const cf* x, size_t n, int hintGriUs) const {
                         if (i0 < 0 || i0 + offk[7] >= (long)nm) continue;
                         float sr = 0, si = 0;
                         for (int k = 0; k < kGroupPulses; k++) {
-                            const cf& v = mc[(size_t)(i0 + offk[k])];
+                            const cf v = mc[(size_t)(i0 + offk[k])] * rot[k];
                             if (pat[k] == '+') { sr += v.real(); si += v.imag(); } else { sr -= v.real(); si -= v.imag(); }
                         }
                         qacc[(size_t)(q + Q)] += (double)sr * sr + (double)si * si;
@@ -248,7 +296,7 @@ Result Detector::analyze(const cf* x, size_t n, int hintGriUs) const {
                     const float f = (float)(t - (double)i1);
                     // cubic (Catmull-Rom) interpolation of the matched output
                     const cf p0 = mc[(size_t)i1 - 1], p1 = mc[(size_t)i1], p2 = mc[(size_t)i1 + 1], p3 = mc[(size_t)i1 + 2];
-                    const cf v = p1 + 0.5f * f * ((p2 - p0) + f * ((2.f * p0 - 5.f * p1 + 4.f * p2 - p3) + f * (3.f * (p1 - p2) + p3 - p0)));
+                    const cf v = (p1 + 0.5f * f * ((p2 - p0) + f * ((2.f * p0 - 5.f * p1 + 4.f * p2 - p3) + f * (3.f * (p1 - p2) + p3 - p0)))) * rot[k];
                     const double sg = pat[k] == '+' ? 1.0 : -1.0;
                     sr += sg * v.real();
                     si += sg * v.imag();
@@ -277,7 +325,7 @@ Result Detector::analyze(const cf* x, size_t n, int hintGriUs) const {
                 if (!(mst == bestMst && a == bestA)) sec = std::max(sec, groupPow(mst, a, posFine));
         bestAcc = groupPow(bestMst, bestA, posFine);
         (void)secondAcc;
-        refs.push_back({posFine, r.ninth, r.margin, bestMst == 1, bestA, bestAcc, sec});
+        refs.push_back({posFine, r.ninth, r.margin, bestMst == 1, bestA, bestAcc, sec, r.wT});
     }
     if (refs.empty()) { res.griUs = 0; return res; }
     // drop duplicates (two peaks that are the same station)
@@ -302,6 +350,7 @@ Result Detector::analyze(const cf* x, size_t n, int hintGriUs) const {
         st.codeMaster = r.codeMaster;
         st.ninth = r.ninth;
         st.hypA = r.a;
+        st.cfoHz = r.wT / (2.0 * kPi * 1e-3);
         st.master = r.ninth || r.codeMaster;   // narrowed below
         const long lastCl = (M - 1) & 1;
         st.code = (lastCl == 0 ? r.a : 1 - r.a) ? 'B' : 'A';
@@ -341,6 +390,7 @@ Result Detector::analyze(const cf* x, size_t n, int hintGriUs) const {
     // averaged pulse envelope of the first station: all its pulses in all groups, carrier phase removed with the group's own phase
     {
         const long pI = (long)std::lround(res.stations[0].absUs / 1e6 * fs);
+        const double wTenv = res.stations[0].cfoHz * 2.0 * kPi * 1e-3;
         const long u0 = -off(50.0), u1 = off(400.0);
         res.envStartUs = -50.0;
         res.envStepUs = 1e6 / fs;
@@ -356,14 +406,14 @@ Result Detector::analyze(const cf* x, size_t n, int hintGriUs) const {
             pat = phasePattern(res.stations[0].codeMaster, (cl == 0 ? a : 1 - a) ? 'B' : 'A');
             std::complex<double> ph(0, 0);
             for (int k = 0; k < kGroupPulses; k++) {
-                const cf& v = mc[(size_t)(bi + offk[k])];
-                ph += (pat[k] == '+' ? 1.0 : -1.0) * std::complex<double>(v);
+                const std::complex<double> v = std::complex<double>(mc[(size_t)(bi + offk[k])]) * std::polar(1.0, -(double)k * wTenv);
+                ph += (pat[k] == '+' ? 1.0 : -1.0) * v;
             }
             if (std::abs(ph) < 1e-20) continue;
             ph /= std::abs(ph);
             for (int k = 0; k < kGroupPulses; k++)
                 for (long u = u0; u <= u1; u++)
-                    acc[(size_t)(u - u0)] += (pat[k] == '+' ? 1.0 : -1.0) * (std::complex<double>(x[(size_t)(bi + offk[k] + u)]) * std::conj(ph)).real();
+                    acc[(size_t)(u - u0)] += (pat[k] == '+' ? 1.0 : -1.0) * (std::complex<double>(x[(size_t)(bi + offk[k] + u)]) * std::polar(1.0, -(double)k * wTenv) * std::conj(ph)).real();
             used++;
         }
         for (double v : acc) res.pulseEnv.push_back((float)(used > 0 ? v / (double)(used * kGroupPulses) : 0.0));

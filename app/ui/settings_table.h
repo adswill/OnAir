@@ -2,6 +2,9 @@
 // The key is the stored name: for a field of App it is the key of app/state/prefs.cpp, so Settings and the old menus read and write the same value.
 #pragma once
 #include "settings_logic.h"
+#ifndef N_
+#define N_(s) s   // marks a text for the translation catalogs (app/i18n); tr() runs when it is shown
+#endif
 
 namespace settings {
 
@@ -16,6 +19,7 @@ inline const char* const kDecoding = "Decoding";
 inline const char* const kLocation = "Location";
 inline const char* const kNetwork = "Network and updates";
 inline const char* const kPrivacy = "Privacy";
+inline const char* const kPlugins = N_("Plug-ins and scripts");
 inline const char* const kAdvanced = "Advanced";
 
 inline const std::vector<Info>& table() {
@@ -23,6 +27,9 @@ inline const std::vector<Info>& table() {
     static const std::vector<Info> t = {
         // ---- General
         {"uiLang", kGeneral, "Language", "The interface language. Same as the system follows the computer.", "translate locale", K::Custom},
+        {"easyMode", kGeneral, N_("Easy mode"), N_("Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs."), "simple advanced beginner one button start easy", K::Custom},
+        {"regionPreset", kGeneral, N_("Region preset"), N_("One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...)."), "region country lithuania eu europe units metric imperial band plan fm", K::Custom},
+        {"setupRun", kGeneral, N_("First-run setup"), N_("Open the setup again: radio, region, antenna, interests, voice codecs."), "wizard first run setup codecs antenna", K::Link},
         {"modeVisLink", kGeneral, "Modes shown", "Choose which modes the mode lists, picker and keys 1-9 show.", "hide favourites groups", K::Link},
         {"powerLowMode", kGeneral, "Low power mode", "Slower redraws and background work to save battery.", "battery energy laptop", K::Choice, 1, 0, 0, "Off|Automatic (on battery or hot)|Always"},
         {"powerHidden", kGeneral, "Save power when hidden", "Slower spectrum updates while the window is hidden or minimised.", "battery minimised", K::Choice, 1, 0, 0, "Off|On battery|Always"},
@@ -71,7 +78,8 @@ inline const std::vector<Info>& table() {
         {"popTop", kAudioC, "Video pop-out stays on top", "The pop-out video window stays above other windows.", "window", K::Bool, 1},
         {"subsOn", kAudioC, "Show subtitles", "Subtitles of the video modes, when the station sends them.", "teletext captions", K::Bool, 1},
         // ---- Recording and files
-        {"recFormat", kFiles, "IQ recording format", "8-bit (small), float (exact) or X-Midas BLUE .tmp with float samples.", "iq record file", K::Choice, 0, 0, 0, "8-bit|Float|X-Midas BLUE (.tmp)"},
+        {"recFormat", kFiles, "IQ recording format", "8-bit (small), float (exact) or X-Midas BLUE .tmp with float samples.", "iq record file", K::Choice, 0, 0, 0, "8-bit|Float|X-Midas BLUE (.tmp)|16-bit"},
+        {"recordingsFolder", kFiles, "Recordings folder", "Where recordings (IQ, audio, images, logs) are saved. Choose your own folder; default is inside the data folder.", "folder directory path open recordings", K::Custom},
         {"dataFolder", kFiles, "Data folder", "Where recordings, layouts and settings live.", "folder directory path open", K::Custom},
         // ---- Decoding
         {"fmMono", kDecoding, "FM: force mono", "A weak station is quieter in mono.", "stereo", K::Bool, 0},
@@ -97,6 +105,9 @@ inline const std::vector<Info>& table() {
         // ---- Privacy
         {"privacyInfo", kPrivacy, "What leaves this computer", "The update check (when on) sends one HTTPS request to api.github.com, or to your mirror, with the header User-Agent: OnAir/<version>. GitHub therefore sees your IP address and the app version, nothing else. Sending your station to the map server and the Discord status are opt-in and off until you turn them on.", "telemetry network data sent", K::Custom},
         // ---- Advanced
+        // ---- Plug-ins and scripts
+        {"pluginsLink", kPlugins, N_("Plug-ins"), N_("Add your own decoders as plug-ins (a native library plus a manifest). Plug-ins are listed in the mode list under PLUGINS. They run native code with this program's rights: install only ones you trust."), "plugin sdk decoder extension safe mode", K::Link},
+        {"automationLink", kPlugins, N_("Scripts and rules"), N_("Run a program or script when something is decoded, with the decoded fields in its arguments. Off until you tick Allow running programs in Automations."), "automation script hook run command webhook rules", K::Link},
         {"saveLog", kAdvanced, "Save the log", "Write the log lines of this run to a text file in the data folder.", "verbose debug crash report", K::Custom},
         {"exportImport", kAdvanced, "Export or import settings", "Write all these settings to a file, or read them back.", "backup config", K::Custom},
         {"resetAll", kAdvanced, "Reset every setting", "Put every setting of this window back to its default.", "factory", K::Custom},

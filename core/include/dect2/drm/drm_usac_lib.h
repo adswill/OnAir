@@ -51,7 +51,12 @@ public:
     bool decode(const std::vector<uint8_t>& au, std::vector<int16_t>& pcm, int& rate, int& channels);
     void close();
     bool isOpen() const { return h_ != nullptr; }
+    // The last AAC_DECODER_ERROR code that open() or decode() got from the library (0 = none), and the step that gave it.
+    int lastError() const { return err_; }
+    const char* lastStep() const { return step_; }
 private:
+    int err_ = 0;
+    const char* step_ = "";
     UsacLib lib_;
     void* h_ = nullptr;
 };

@@ -1,0 +1,3427 @@
+# Machine-translated, not yet reviewed by a native speaker. One English key per line; delete a line once the translation was checked.
+%.1f dB
+%s  #%d  %.3f MHz%s
+%s  %.4f MHz  %s%s%s%s  %.1f dB  %s
+-
+1 kHz test tone
+8 MHz
+A P6 PPM is sent as the picture; any other or empty file uses the test picture. The callsign is stamped on it.
+A SAME header. ZCZC- is added when missing.
+Aircraft registration
+An RS41 with this serial. Empty: the demo sondes.
+Are you sure? This clears all previous data and cannot be undone.
+ATSC 3.0 uses a ROUTE / fMP4 demo; a custom MPEG-TS is not the payload path.
+Audio file
+Audio input
+AX.25 UI frame. Empty: the demo CubeSat cycle.
+Baud
+Browse…
+Callsign / my ID
+Capcode
+Carrier tune
+Clear all
+Clears all previous data: the decoded lists of every mode (aircraft, ships, messages, pictures and so on), on every open receiver. The saved copy on disk is emptied too.
+Code rate / MODCOD index
+Colour code
+Comment
+CQ
+D2-MAC test scene (custom video is not wired into this analogue generator).
+DATV (DVB-S/S2 file)
+Default input
+Destination
+Destination / ID
+Destination ID
+Device ID
+Dial frequency the decoder should assume (the sound card is not tuned)
+DVB standard
+Empty: the demo 802.15.4 scene.
+Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.
+Empty: the demo Mode S uplink scene.
+Empty: the demo VDES scene.
+File
+File to send
+Free text
+Gain controls apply to radios only (not to a recording, a sound card, or the synthetic signal)
+I/Q stereo
+ICAO address
+Image (PNG / PPM)
+Image (PPM)
+Input device
+Latitude
+libcodec2 is not loaded: live encode is off. A 1 kHz tone, silence or a WAV/MP3 can still be sent.
+libcodec2 is not loaded: live encode is off. Destination callsigns still go on the air; voice bits are the known test pattern. A 1 kHz tone, silence or a WAV/MP3 can still be sent as analog NFM.
+Live voice is encoded with Codec 2 (FreeDV).
+Live voice is encoded with Codec 2 (libcodec2).
+Longitude
+Look for Red Pitaya boards on this computer's networks again
+LSB audio
+Message
+MHz
+Mic level
+Microphone
+MMSI
+Mode
+Morse identification, up to four letters.
+NAVTEX sends the text (ZCZC / NNNN are added when missing). DSC (when that service is selected) uses the MMSI.
+No Red Pitaya answered on this computer's networks (is its SDR transceiver app running?): type its address.
+PAN / short address
+Path
+Payload text
+Power (dBm)
+Pre-emphasis
+PSK variant
+QO-100 path
+Radio ID
+Radio text (RT)
+RDS PI
+Receiver-style options (demo signal)
+Report
+Reverse (mark is the upper tone)
+RFPI
+RFPI of the base station.
+Roll-off
+Satellite standard
+searching for Red Pitaya boards…
+Send analog NFM of the audio instead of the digital test pattern
+Send analog NFM of the microphone or a file instead of the test scene
+Serial / ID
+Shift
+Sideband
+Silence
+sound card
+SSB (microphone)
+SSTV mode
+Station name (PS)
+Symbol rate (Hz)
+Talkgroup
+test DJI DroneID scene (custom serial is not packed)
+test downlink scene (this generator does not take a custom message)
+test LRPT/HRIT scene (custom image not wired)
+test NCDXF-style beacon scene
+test weather-fax chart (custom image not wired)
+TETRA ACELP is not encoded here. Colour code and IDs are shown; the downlink test pattern is sent. A 1 kHz tone, silence or a WAV/MP3 can be sent as analog NFM instead.
+Text
+The capture rate of the sound card. The engine runs at this rate; there is no radio to tune.
+The file bytes go out as a HamDRM object with this callsign. Empty file: the test picture.
+The microphone starts only when you press START TRANSMITTING.
+The registration and free-text go on the air as an H1 / ACARS downlink. Empty: the demo traffic.
+this mode has no transmit generator
+This vocoder cannot encode: OnAir loads mbelib for decode only (AMBE/IMBE). Destination ID / talkgroup / colour code still go on the air; voice bits are the test pattern. A 1 kHz tone, silence or a WAV/MP3 can be sent as analog NFM instead.
+Timeslot
+To
+USB audio
+Vessel name
+View
+Help
+Language
+Interface language
+Same as the system
+Start receiver
+Stop receiver
+Start the receiver
+Stop the receiver
+%s (space)
+Start the receiver first
+Click to switch mode and restart receiver automatically
+Start
+Stop
+Receiving
+Stopped
+starting
+stopped
+searching
+syncing
+locked
+Locked
+Warning: ADS-B simulates aircraft. Send it only into a dummy load or a shielded setup, never to an antenna.
+Warning: AIS simulates vessels. Send it only into a dummy load or a shielded setup, never to an antenna: false ships can confuse real receivers, which is a safety risk and illegal in most places.
+WAV / MP3 file
+weak
+stereo
+mono
+radio disconnected
+What to send
+WPM
+yes
+no lock
+never
+%.0f s ago
+%.0f min ago
+State
+Channel
+Delay
+dropped
+level %.1f dBFS
+load %.0f%%
+FM: no station
+%s  SNR %.0f dB  %d services
+OK
+Close
+Clear
+clear
+Add
+Remove
+Connect
+connecting…
+Open
+Open…
+Use
+Tune
+Back
+Next
+Finish
+Skip
+Dismiss
+Again
+Auto
+Auto (%s)
+Automatic
+Automatic (220 kHz)
+Manual
+Manual…
+off
+now
+Listen
+Mute
+Unmute
+Volume (shared with the other modes)
+Light (dark on white)
+Sidebar
+Scope
+Tiles
+Faceplate
+Scope: Cinema
+Scope: Meters
+Scope: Dock
+Panel
+Terminal palette
+Instrument palette
+Mono palette
+Show in Discord
+Show the frequency
+Shows on your Discord profile that you are using OnAir, the mode and the frequency. Needs the Discord desktop app running.
+Discord application ID not set in this build
+Passes
+Data feeds...
+Data feeds
+Scanner (highly experimental)
+Scanner (highly experimental)...
+HIGHLY EXPERIMENTAL
+HIGHLY EXPERIMENTAL: step through a list of frequencies and modes, or a band, and stop on activity
+Classic interface
+New interface
+Try the new interface. You can switch back at any time.
+Guided tour
+Tour
+by: Kristijonas Adomaitis, made with help from the community
+Thank you to everyone who reported bugs, sent recordings and opened pull requests.
+Source
+source
+Tuner
+Tuner (FM)
+Tuner (DAB)
+tuner
+Gain
+gain
+GAIN
+Display
+Decoder
+decoder
+Log
+mode
+MODE
+Peak hold
+peak hold
+Spectrum
+Waterfall
+search modes (FT8, LoRa, APRS...)
+search (FT8, LoRa, APRS...)
+no mode matches "%s"
+Controls  ▴
+Controls  ▾
+INSTRUMENTS
+Analysis
+ANALYSIS
+Receiver
+CONTROLS
+LOG
+DISPLAY
+SPECTRUM
+SPECTRUM / WATERFALL
+SOURCE / GAIN
+MODE / TUNER
+STATUS
+CONSTELLATIONS
+ADC level
+no stations yet: run the scan
+no saved channels yet: run the scan
+Hz
+Frequency in MHz (%.3f to %.3f)
+OnAir crashed
+no picture - press Esc
+no picture
+Video
+TV
+BROADCAST RADIO
+AVIATION
+MARITIME
+SATELLITE & NAVIGATION
+TWO-WAY RADIO
+CELLULAR & RAIL
+PAGERS
+IoT & SENSORS
+WEATHER & SCIENCE
+AMATEUR - DIGITAL
+AMATEUR - VOICE & PACKET
+HF UTILITY
+GENERAL & TOOLS
+T2 and T, automatic
+8-VSB, North America
+NextGen TV
+Japan, Brazil
+China, Hong Kong, Cuba
+Cable
+PAL, SECAM, NTSC
+D2-MAC, D-MAC satellite
+Digital radio
+Stereo and RDS
+SW, MW, VHF
+USA, FM and AM
+China digital radio
+Aircraft, 1090 MHz
+Interrogations, 1030 MHz
+Aircraft messages, VHF
+Data link, 136.9 MHz
+Data link, 8.9 MHz
+AM voice, 118-137 MHz
+Radial, 108-118 MHz
+Localizer and glide slope
+Drones, 2.4 GHz
+Ships, 162 MHz
+Ship warnings, 518 kHz
+Ship calls, 2187.5 kHz
+Weather charts, HF
+GPS, GLONASS, BeiDou
+Satellites, 1622 MHz
+Satellites, 137 MHz
+Weather pictures, 137 MHz
+Weather images, 1694 MHz
+Satellites, 2 m / 70 cm
+Digital voice
+Digital voice, 6.25 / 12.5 kHz
+Digital voice, 12.5 kHz
+Digital voice, 6.25 kHz
+Digital voice, 14.236 MHz
+Digital voice, 433.475 MHz
+Digital voice, 145.375 MHz
+Network info, 380 - 470 MHz
+Network info, UHF
+LTE, band scan
+5G NR, GSCN scan
+Railway, 921 - 925 MHz
+Pagers, 512-2400 bd
+Pagers, 1600-6400
+Sensors, 433 / 868 MHz
+IoT, 868.1 MHz
+LoRa mesh, 869.525 MHz
+LoRa mesh, 869.618 MHz
+Advertising, 2.4 GHz
+Beacons, 2.4 / 5 / 6 GHz
+Balloons, 403 MHz
+LF and HF time codes
+Chirp sweeps, 0 - 30 MHz
+Hydrogen line, 1420 MHz
+Beacons, 14.0956 MHz
+Keyboard chat, 14.070 MHz
+Messaging, 14.078 MHz
+Teletype, 14.080 MHz
+Morse, 14.020 MHz
+Pictures, 14.230 MHz
+Digital SSTV, 14.233 MHz
+Link establishment, 14.109 MHz
+NFM / AM / SSB / CW
+Spectrum, waterfall, sweep
+Sweep, 1 - 6000 MHz
+Aero, L-band
+EGC, L-band
+SRC
+FREQ
+RATE
+STD
+COMPUTE
+Centre frequency
+DAB channel
+FM station
+Channel bandwidth
+Rescan for devices
+Add network radio…
+Network radios
+Address
+Port
+Cannot connect: %s
+Added radios (listed with the others)
+This build has no SoapySDR, which SoapyRemote needs.
+Antenna port%s%s
+Sample rate of the radio for this mode
+Sample rate of the radio for this mode, remembered for this radio. Auto is the mode's own rate.
+Sample rate (Msps)
+The test signal is made at the mode's own rate (%s).
+This mode needs at least %s.
+This radio: %s to %s.
+The radio runs at %s.
+A higher rate shows more spectrum but needs more USB bandwidth and processor time: when the status bar reports samples lost on the radio side, choose a lower rate.
+A recording plays at the rate it was made at: set it with the file.
+A scan is using the radio and sets its own rate.
+DVB-T2 and DVB-T channels sit on this raster; a running radio may be opened again at another sample rate.
+Automatic: the width of the signal is measured in the spectrum and the channel bandwidth (5, 6, 7 or 8 MHz) is set for you.
+ISDB-T channel width: 6 MHz in Japan, Brazil and the rest of the Americas, 8 MHz in the Maldives (ISDB-T International).\nThe same signal, every time scaled by the width. Automatic measures it in the spectrum and tries each width\nwhile nothing locks; it opens the radio at 10 Msps.
+Amp
+LNA
+VGA
+gain helper %d/%d ...
+ADC OVERLOAD - %s
+AGC is lowering the gain
+reduce the gain (or enable AGC)
+ADC level high
+ADC level low - raise the gain
+ADC sees almost nothing - antenna / gain?
+ADC level (rms). %s\npeak %.2f   clip %.3f%%   DC %+.3f / %+.3f
+Bias-tee (antenna power)
+Sends DC power up the antenna cable for an active antenna or LNA (e.g. a GNSS patch antenna). Leave it off with a passive antenna, and never with a DC short in the antenna path (some antennas, splitters or filters): it can damage the radio.
+Most GNSS antennas are active and need this on.
+IQ correction
+Corrects I/Q gain and phase imbalance, which puts a faint mirror image of every signal on the other side of the centre.\nMeasured from the signal itself; now %.2f dB, %.1f degrees. Not applied in DTMB and analog TV (their signals fool the measurement).
+The spike in the middle of the spectrum is the radio's own oscillator leaking in (strong on the HackRF and RTL-SDR).\nRemove: filtered out of the samples (not in FM: a station tuned to the centre has its carrier there).\nTune beside it: the radio is tuned just beside the channel, so the spike falls outside it, and the channel is moved\nback digitally. Needs a higher sample rate (DAB about 3.5 Msps); a radio too slow for it removes the spike instead.\nA line that stays at a round frequency (e.g. 650.000 MHz) when you retune is interference from the radio's clock, not the DC spike.
+%+.2f MHz
+Which broadcast standard to decode.\nAuto alternates between DVB-T2 and DVB-T until one locks.
+synthetic
+%s test signal
+echo
+file
+rate
+loop
+ext
+Level
+Quality
+signal quality: %s
+signal quality %.0f%%  %s
+data SNR %.1f dB, needed about %.1f dB (margin %+.1f dB)\nFEC blocks decoded %.1f%%
+data SNR %.1f dB, needed for this modulation/code rate about %.1f dB
+data SNR %.1f dB, data decoded %.1f%% (last frames)
+margin %+.1f dB, FEC blocks decoded %.1f%% (last frames)
+FEC blocks decoded in the last frame: %.1f%%
+0 dB margin is the edge of reception (25%); +6 dB or more is comfortable.
+ATSC 3.0 does not report a signal-to-noise ratio yet; this bar shows how much of the data decodes.
+This bar shows how much of the recent data decodes.
+multipath: %s
+Files and the test signal never lose samples: they wait for the receiver.
+Receiver load: %.0f%% of real time
+Demod
+How the signal becomes the audio the decoders hear.\nAuto: USB below 30 MHz, NFM at and above.\nNFM: 12.5 kHz channel, no de-emphasis, 300 - 3000 Hz audio.\nISS SSTV on 145.800 MHz is FM.
+Sample stream. Green: the ADC level is in a healthy range. Amber: too low or high. Red: clipping.
+DVB-T2: the P1 preamble symbol (frame start and mode) is being found.
+Guard interval and symbol timing are locked.
+DVB-T2: the L1 pre-signalling block (frame structure) decodes with a good CRC.
+DVB-T2: the L1 post-signalling block (PLP list, modulation) decodes with a good CRC.
+A full T2 frame is being received and equalised.
+Forward error correction, inner code: share of blocks that decode.
+Forward error correction, outer code: share of blocks that decode.
+Transport stream: services found, continuity errors counted.
+The player is decoding and showing pictures.
+The player has audio buffered and playing.
+DVB-T: OFDM symbol sync from the cyclic prefix.
+DVB-T: the transmission parameter signalling bits are decoded.
+Channel estimate from the pilots is valid.
+DVB-T: the convolutional decoder found the packet sync.
+Reed-Solomon outer code: share of packets that are clean.
+ATSC: the 8-VSB pilot carrier is locked.
+ATSC: data segment sync found.
+ATSC: field sync found.
+ATSC: the equaliser is trained.
+ATSC: the trellis decoder produces a valid transport stream.
+click to tune to %.4f MHz
+Channel width: %s
+The width of the signal is measured in the spectrum and the receiver switches between 1.7, 5, 6, 7 and 8 MHz by itself.
+The receiver's channel filter. Narrower keeps a strong neighbour out (150 kHz copes with one 10 dB stronger 150 kHz away); below about 180 kHz loud passages distort a little and RDS suffers first.
+The width is measured in the spectrum, and 6, 8 and 7 MHz are tried in turn while nothing locks.
+6 MHz in Japan and the Americas, 8 MHz in the Maldives (ISDB-T International). The signal is the same, scaled in time by the width.
+Set by the country: there is nothing to measure it from. A receiver set to the wrong width finds nothing.
+Follows the symbol rate: symbol rate x (1 + roll-off).
+Choose automatic or a manual symbol rate in the tuner to change it.
+This mode
+%s: fixed for this mode.
+The receiver's filters are made for the signal (or for the group of channels it watches), so a manual width would only make reception worse.
+Channel width: the band the receiver works with (the light band).\nClick to choose automatic or a manual width.
+Channel width: the band the receiver works with (the light band), set by the standard.
+power (dBFS/bin)
+seconds ago
+Identify this signal
+Radio settings
+Radio settings*
+Radio settings (%d changed)
+%s: frequency correction and the other settings of this radio
+The driver's own settings show up here\nonce this radio has been started.
+0 = libiio's default
+Weather (137 MHz)
+Amateur
+Amateur satellites
+downloading...
+Downloading...
+the download failed (no network, or Celestrak refused)
+downloaded
+Download TLEs from Celestrak
+Downloads only when you click. Fetches:
+Paste TLEs...
+Hide paste box
+Use pasted TLEs
+Forget pasted TLEs
+No TLE for:
+no valid TLE in the pasted text (two lines per satellite, checksums must match)
+pasted TLEs added:
+No TLEs yet: download them or paste some.
+No TLEs: open TLE data above.
+No passes in the next 24 hours.
+TLE data
+%d TLEs, %d satellites listed
+the oldest is %.0f days old: download again
+NORAD catalogue number
+Receiver position
+The same position as the ADS-B antenna position
+not set: the times are for a placeholder position
+Satellite
+AOS
+LOS
+Max el
+Duration
+Frequency
+AOS in %d:%02d:%02d
+%s - %s, max %.0f deg
+no pass
+az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz
+Track
+Track (choose a pass)
+During each pass of this satellite, retune about once a second for the Doppler shift
+Auto start at AOS, stop at LOS
+Switches to the satellite's mode and starts the receiver at AOS (when it is stopped), and stops it at LOS
+Auto record IQ
+Records the radio's IQ during the pass, as Record IQ does (format from the Record IQ setting), into %s/recordings
+OnAir has no decoder for this: auto start opens the Spectrum explorer, and Auto record keeps the IQ
+tracking%s
+, recording
+Sends decoded data to other programs while the mode runs. Every feed is off until you turn it on.
+Let other computers connect to the TCP feeds (LAN)
+SBS-1 BaseStation (TCP server)
+Beast binary (TCP server)
+NMEA !AIVDM (UDP)
+APRS-IS (receive-only igate)
+KISS (TCP server)
+ACARS, acarsdec format (UDP)
+VDL2, dumpvdl2 format (UDP)
+ACARS and VDL2 (JSON)
+Callsign
+Passcode
+Server
+Station ID
+%s, %llu sent, %llu dropped
+Steps through the list or a band, stops on activity. A mode change restarts the receiver.
+Start scan
+Stop scan
+List
+Band
+Name
+name
+Dwell s
+dwell s
+Priority
+Lockout
+Add current
+Adds the frequency and mode the receiver is on now
+Clear lockouts
+Import CSV...
+Export CSV...
+Columns: frequency_mhz, mode, name, dwell_s, lockout, priority.\nmode is a mode id: fm, dab, airband, dmr, pocsag, ft8 ...
+imported %d entries%s
+ (some with a mode OnAir does not know)
+exported
+could not write
+start MHz
+stop MHz
+step kHz
+%d steps, %d locked out
+Time
+For
+Decoded
+Hits
+Move on to the next channel now
+Skip this channel from now on
+Channel power over the noise (in the mode's bandwidth) that counts as activity.\nA mode that reports it decodes (sync, frames, data) stops the scan too.
+Checked every %.0f s, also while another channel holds (one priority entry)
+squelch %.0f dB
+hang %.1f s
+priority every %.0f s
+priority off
+idle
+listening
+ACTIVE
+hang
+  (priority)
+signal only
+nothing left to scan
+the band has no steps (check start, stop and step)
+the list has nothing to scan (empty, or every entry locked out)
+Identify signal
+Start the receiver to identify a signal.
+The strongest signal around %s
+Region %s, %s wide
+collecting samples
+Working it out...
+Nothing to identify here.
+Switch to %s and tune to %s
+Candidates
+(sync %dx)
+(no sync)
+Centre
+On the air
+Modulation
+Envelope
+Symbol rate
+Updates
+Check for updates automatically
+Include beta versions
+Check now
+Not checked yet.
+Asking GitHub for the newest version…
+Yes, clear all
+You have the newest version.
+Version %s is available%s.
+ (beta)
+Download and install
+Download and install them by themselves
+Skip this version
+Release page
+Download page
+Checking and preparing the new version…
+Downloaded and checked. It is installed when you close OnAir.
+Restart now and update
+Windows asks for permission to run the installer.
+This copy of OnAir cannot replace itself.
+The update to v%s did not install (setup exit code %d).
+Only github.com is contacted. Downloads are checked against the SHA-256 GitHub lists for the file.
+checking…
+update %s
+downloading %.0f%%
+preparing…
+restart to update
+6 MHz (Cuba)
+DAB ensemble, transmission mode I
+ATSC 8-VSB receiver: matched filter, pilot loop, symbol clock, field sync, per-field equaliser, trellis, Reed-Solomon
+Overview
+Stream
+Scan
+Antenna
+History
+Radio
+Ensemble
+Map
+Analyzer
+Record IQ
+Recordings of a file are not needed
+Start the radio first
+Saves the radio's raw samples to a file, for a bug report
+Copy diagnostics
+Copied
+Copies the version, system, radios, messages and radio log lines, for a bug report
+spectrum dB
+waterfall dB
+  (mirrored: I/Q swapped)
+%s, %d client%s, %llu sent, %llu dropped
+A Linux driver for TV sticks took the radio before the SDRplay software could.
+A high-end computer is recommended. Lower sample rates help.
+A world map: find a position by coordinates or Maidenhead locator, distance and bearing from your location
+Add a receiver: another radio with its own mode
+Add receiver
+Added to a level in dBFS to give dBm for this radio: feed a known signal into the antenna port and set the difference. Used when the spectrum shows dBm (Spectrum button on the plot).
+Aircraft
+Allow remote control (frequency and gain)
+An SDRplay RSP is plugged in, but the SDRplay Hardware API is not installed. Install it separately even if SDRconnect already works with the radio.
+Another program is using the HackRF
+Australia and New Zealand
+Average
+CPU load now: %.0f%% (100%% = one core)
+Calls and data are shown, but the voice is silent until you install the codec yourself. OnAir does not ship it (patents).
+Cancel
+Carrier MHz
+Channel MHz
+Channel raster
+Check that PulseAudio or PipeWire runs, and that an output is chosen in the sound settings.
+Check that rtl_tcp is running on the other computer and prints "listening".
+Check that the file still exists and that you may read it.
+Check that the firmware is the stock one, or a known one such as Tezuka.
+Check the USB cable and port, then press the refresh button.
+Check the address and port, and that nothing blocks them (firewall, Wi-Fi).
+China
+Choose a frequency inside the range shown in the message.
+Choose the file again.
+Close other programs that use the radio.
+Close programs that hold the sound device exclusively.
+Close the other program (a second OnAir, SDR software, hackrf_info).
+Close this receiver: it stops and lets go of its radio
+Colour map
+Converter (up-converter / LNB)
+Copy the command
+Copy the restart command
+Copy the udev command
+Details
+Don't show again
+Down, LO above: radio = LO - RF (mirrored)
+Down, LO below: radio = RF - LO
+Download the Hardware API for this computer from sdrplay.com/hardware-api and run the installer.
+Download the current SDRplay API from sdrplay.com and install it.
+Drag to resize, double click for the automatic size
+Drones, 2.4 / 5.8 GHz
+Elsewhere
+Europe
+FM radio
+Files: audio and IQ
+Fill under the line
+Find "SDRplay API Service" and press Start (or Restart).
+Fix the address of the network radio (host:port).
+Download OnAir again and unpack or install the whole package: the codec2 library belongs next to the program.
+Follow the steps in the full instructions to install the codec.
+For an RSP, install the SDRplay API first (sdrplay.com).
+Found %s (%s)
+Found:
+Frequency and level of the strongest peaks in view
+Full instructions
+Gliders, 868.2 / 868.4 MHz
+Grid
+How far the converter's oscillator runs fast (positive) or slow. The LO used is LO x (1 + ppm / 1e6).
+How fast the max-hold line falls; 0: it stays until reset
+How to fix
+Images
+Install OnAir's blacklist file (the .deb package does it), or run: sudo systemctl restart sdrplay
+Install the SDRplay API
+Install the SDRplay API from sdrplay.com if you have not.
+Install the WinUSB driver once with Zadig (zadig.akeo.ie): choose the radio, then the driver WinUSB, then Install.
+Install the udev rules (install-udev-rules.sh), then unplug and replug the radio.
+Install the udev rules: run install-udev-rules.sh from the OnAir folder (the .deb does it).
+Install the udev rules: run install-udev-rules.sh from the OnAir folder (the .deb package does it for you).
+Intensity (dB)
+IoT, 2.4 GHz
+IoT, sub-GHz
+It is streaming to another program: stop it there first.
+Japan
+Journaline
+Just explore
+LO (MHz)
+LO correction (ppm)
+Let other computers connect (LAN)
+Level at the cursor
+Level dB
+Linux grabbed the SDRplay radio
+Linux treats the radio as a sound card
+Load
+Look again
+Look for Hermes Lite 2 radios on this computer's networks again
+Maritime, VHF
+Max hold
+Meteor scatter, 28.145 MHz
+Middle East
+Mirror the spectrum (swap I and Q)
+NB-IoT, band scan
+NCDXF/IARU, Long Dashes, single letters
+Network
+Network radio: %llu samples lost (underruns)
+No Hermes Lite 2 answered on this computer's networks: type its address.
+No radio found
+No sound output
+North America
+Not a locator or coordinates
+On Windows a HackRF needs its WinUSB driver once: install it with Zadig (zadig.akeo.ie).
+OnAir %s
+OnAir cannot see a HackRF on the USB ports.
+OnAir could not open the speakers, so there will be no sound.
+OnAir could not use the rtl_tcp server, or the connection dropped.
+OnAir found the SDRplay software, but its background service does not answer, so the RSP cannot be opened.
+OnAir lists a radio when the computer sees it. You can still try everything with the synthetic signal or an IQ file.
+OnAir needs SDRplay API 3.07 or a newer 3.x.
+Only one program can use an rtl_tcp server at a time: close any other client.
+Only one program can use the radio at a time.
+Only one receiver plays its sound at a time: click to hear this one
+Open Services (press Win+R, type services.msc).
+Open System Settings > Sound and pick an output device.
+Open codecs folder
+Open driver page
+Open firmware page
+Open the SDRplay API page
+Open the device list
+Or choose another radio from the list.
+Or install OnAir's blacklist file (the .deb package does it).
+Or set the UHD_IMAGES_DIR variable to the folder with the images.
+Own accent colour
+PSK Reporter
+Pagers, tones and FFSK
+Pause
+Peak markers
+Plug a radio into the computer that runs the SpyServer, and restart the SpyServer.
+Plug the radio in again and press the refresh button.
+Plug the radio in, directly or through a powered hub.
+Press "Look again" in the ? help next to the sound.
+Press the refresh button next to the radio list.
+Press the refresh button next to the source.
+Put the library in the OnAir codecs folder (button below).
+Put the panels back to their automatic sizes (drag the bars between panels to resize them)
+Radar chirps, HF
+Radio settings (%d changed)###radioset
+Radio settings###radioset
+Receivers at once
+Reduce CPU when hidden
+Remote driver
+Reset
+Reset layout
+Restart OnAir (the installer starts SDRplay's background service).
+Restart OnAir.
+Restart the Mac, or run in Terminal: sudo launchctl kickstart -k system/com.sdrplay.service
+Right-click the speaker icon, open Sound settings and pick an output device.
+Run in a terminal: sudo systemctl restart sdrplay
+Run once in a terminal: uhd_images_downloader
+Run: sudo modprobe -r msi2500 msi001
+Running several radios at the same time needs a lot of processing power. Performance may limit what is possible: with too many or too fast receivers samples are dropped and decoding gets worse.
+SDR
+SNR dB
+Satellites
+Satellites, 1.6 GHz
+Save bug report
+Saves one zip file with the diagnostics, the log and the last crash report: attach it to a GitHub issue
+Search
+Seen
+Send spots to PSK Reporter (pskreporter.info)
+Services
+Set the LO above 0 MHz.
+Share my radio (rtl_tcp server)
+Share the radio's samples as an rtl_tcp server
+Ships
+Show and tune the frequency at the antenna while the radio is tuned to what the converter outputs.
+Skip setup
+Spectrum: averaging, max hold, peak markers, fill, grid and the unit (dBFS or dBm)
+Speed (rows a second)
+Spots are public. A valid amateur radio callsign is required; the dial frequency is the tuned frequency.
+Stop adding rows: the picture stays, and drag or the wheel on the waterfall scroll and zoom back through it
+Text size
+Text size %d%%
+The FreeDV / M17 voice codec (codec2) was not found
+The HackRF firmware does not match
+The HackRF is not found
+The Linux sound driver holds the radio, so the SDRplay software cannot see it.
+The PlutoSDR answered, but without its radio chip. It may still be starting, or run unusual firmware.
+The PlutoSDR does not show its radio chip
+The RTL-SDR is gone
+The SDRplay service is not running
+The SDRplay software is too old
+The SpyServer answered, but no radio is plugged into it.
+The USRP needs its firmware images
+The USRP software is installed, but the firmware images it loads are missing.
+The address of the network radio must look like host:port, for example 192.168.1.20:1234.
+The file could not be opened
+The firmware inside the HackRF is older than the software talking to it.
+OnAir still asks the radio for it, but the radio or its driver may not reach this frequency, or the signal may be weak or absent.
+The most receivers are open
+The network radio (rtl_tcp) does not answer
+The picture holds the last %.0f s.
+The radio did not start
+The radio is plugged in, but the system does not let your account use it yet.
+The radio opened badly or stopped at once. The message above says why; these steps solve most cases.
+The radio was found but the USB link to it did not work. This is usually permission, the cable or the port.
+The radio you chose is no longer connected.
+The radio's SoapySDR driver on the server, or a key=value list: driver=sdrplay,serial=1.
+The radio's USB connection failed
+The recording file is missing, moved or not readable.
+The rtl_tcp address is not valid
+The server has no radio
+The text and data are shown, but speech needs the codec2 library. It comes with OnAir, so this copy is probably incomplete.
+The voice codec (mbelib) is not installed
+This frequency is not reachable through the converter.
+This is a Linux problem. On this system, unplug the radio, plug it in again and press the refresh button.
+This frequency is outside what this radio is specified for
+This user may not open the radio
+Time constant of the averaged line: longer is calmer
+Tools
+Trace
+Try another USB port and a short cable.
+Try another USB port, directly on the computer (not a hub), and a short cable.
+Try another USB port, directly on the computer (not a hub).
+Try another USB port, directly on the computer.
+Tuner (DAB)###Tuner
+Tuner (FM)###Tuner
+Unit
+United Kingdom and Ireland
+Unplug and replug the radio, then press the refresh button.
+Unplug the HackRF and plug it in again.
+Unplug the USRP, plug it in again and press the refresh button.
+Unplug the radio and plug it in again, then press the refresh button.
+Unplug the radio and plug it in again.
+Unplug the radio, plug it in again and press the refresh button.
+Up: radio = RF + LO
+Update the HackRF firmware (the page below has the steps; the file comes with the HackRF software).
+Wait a minute after plugging it in, then press the refresh button.
+Waterfall: colour map, intensity range, speed and pause (then drag or use the wheel to look back)
+Wave buoys, HF
+Weather alerts, 162.55 MHz
+Weather pictures, 1.7 GHz
+What to add to a level in dBFS to get dBm for this radio (its calibration: a known signal into the antenna port shows it). Also in the radio's settings.
+Your callsign
+Your locator
+antenna %.6g MHz -> %s LO %.6g -> radio %.6g MHz%s
+channel scan has the radio
+dBm offset
+dBm offset (dB)
+decode every channel in the span: a receiver for each occupied channel, one plays, the others keep decoding\n(right click: how many at once, where the channels sit)
+decode every signal in the visible span, not just the tuned one
+empty
+holds
+last send %s
+listening on %s port %d, %d client(s), %.1f MB sent, %.1f MB dropped
+max
+on air
+partial
+point %s
+searching for Hermes Lite 2 radios…
+up-converter
+waiting
+waterfall dB##wfdb
+spectrum dB##specdb
+Clear##log
+ADS-B
+AFSK, 144.8 MHz
+AIS
+APRS
+ATSC 8-VSB, 6 MHz
+CFO
+Ctrl + / Ctrl - / Ctrl 0
+DVB-T
+EVM %.1f dB
+Es'hail-2, 10.49 GHz
+FIC
+GI
+LNB
+LoRa, 433.175 MHz
+LoRa, 433.775 MHz
+ONAIR
+SNR
+SRO
+TR
+WSJT, 1.8366 MHz
+WSJT, 14.074 MHz
+WSJT, 14.076 MHz
+WSJT, 14.078 MHz
+WSJT, 14.080 MHz
+WSJT, 14.084 MHz
+WSJT, 14.100 MHz
+%.0f deg
+%s, %llu spots sent in %llu packets, %llu duplicates skipped
+offset %+.3f %+.3f
+sigma %.3f per axis (%.0f%% of the half-distance to a neighbour)
+A second OnAir (Add network radio, rtl_tcp), SDR# or SDR++ connects to this computer's address and the port. Samples are sent as 8-bit IQ at the rate the radio runs at. Without 'allow remote control' the clients cannot change the frequency or gain.
+Sends the FT8, FT4, FT2, WSPR, JS8Call, PSK31 and CW stations you decode to pskreporter.info, so they show on its public map and statistics. A report is: the sender's callsign, frequency, SNR, mode, its locator when the message has one, and when it was heard; with your callsign, locator, antenna text and 'OnAir'. Reports are batched and sent every 5 minutes; the same station on the same band is sent once per 10 minutes. Nothing is sent until you tick the box. Spots are public: use your own valid amateur radio callsign. CW and PSK31 are only reported when the text says 'DE callsign'.
+BW
+CH
+Channel scan
+FM
+The RX888 needs its firmware file
+The RX888 MkII has no program of its own in its USB chip: OnAir loads SDDC_FX3.img into RAM when the radio is in boot-loader mode (nothing is flashed to the radio). Official OnAir packages include this file; a copy built by hand may not.
+Download SDDC_FX3.img from the Releases page of the SDDC_Driver project (button below).
+Put the file in OnAir's codecs folder (button below).
+The RX888 is on a USB 2 port
+The RX888 MkII sends up to 256 MB per second. It needs a USB 3 (SuperSpeed) port and a USB 3 cable; on a USB 2 port it cannot stream.
+Plug the radio into a USB 3 port directly on the computer, not through a USB 2 hub.
+Use a USB 3 cable (the one that came with the radio).
+Downloads when you click, and by itself once a day. Fetches:
+Automatic update
+Downloads the TLEs again once a day, only while this window is open or a pass is tracked. Without a network the saved lists are used.
+last downloaded %s
+Pass of %s in %d:%02d (max %.0f deg): the receiver starts by itself
+Pass of %s in %d:%02d (max %.0f deg)
+remind %.0f min before
+A line at the top of the window and a log entry before the tracked pass rises (0: off)
+Record this pass
+Cancel recording this pass
+Arms this pass only: at AOS the receiver starts in the satellite's mode and frequency (when it is stopped), Doppler is followed and the IQ is recorded; at LOS it stops and tracking switches off again
+armed: %s at %s
+Save PNG...
+Save CSV...
+saved
+All time
+Last 24 hours
+Last hour
+Rolling window: a sector's furthest position counts only for this long
+Set the receiver position first: ranges are measured from it.
+Nothing heard yet: the plot fills in as positions arrive.
+Longest range: %.0f %s at %.0f deg (%llu reports)
+Range
+Dark
+High contrast (black, white, yellow)
+Remote control API (HTTP and WebSocket)
+Let scripts and other programs control this receiver
+Let other computers connect (LAN, needs the token)
+Token
+New token
+Copy token
+listening on %s port %d, %d HTTP and %d WebSocket client(s), %d requests, %d refused
+Programs on this computer need no token; any other address must send it as 'Authorization: Bearer <token>'. The API lists the radios, starts and stops the receiver, sets mode, frequency, sample rate and gain, and gives the telemetry and the spectrum as JSON, also as a WebSocket stream. Endpoints: see README.md.
+Stop optimising
+Optimise gain
+Optimise gain: steps through the radio's gain range and measures the reception quality at each step (the mode's SNR while it is locked, else the signal-to-noise ratio of the spectrum around the channel, else the ADC level), then sets the lowest gain that is within 0.5 dB of the best quality and does not overload the ADC. Takes about 40 s and needs a signal. The AGC is paused and stays off.
+Undo gain
+Go back to the gain (and the AGC setting) from before the last optimisation
+Optimising gain %d/%d: %d dB ...
+Every gain step overloaded the ADC: the lowest gain was kept
+Gain optimised: %d dB (was %d dB)
+judged by the mode's SNR
+judged by the SNR in the spectrum
+judged by the ADC level
+Transmit...
+Send this mode's own signal through a radio that can transmit. Off until you start it; needs a licence or permission.
+TRANSMITTING
+Channel width
+Frequency (MHz)
++14 dB amplifier
+Repeat until stopped
+seconds
+START TRANSMITTING
+This radio has no transmit driver in OnAir.
+Before you transmit
+Transmitting needs a licence or permission where you are. You are responsible for what you emit and for not interfering with others (including services that people rely on for safety). Connect an antenna, an attenuator or a dummy load to the radio before you start. OnAir does not limit the frequency or the power: the radio's own limits are the only ones.
+I understand
+TX VGA 0 to 47 dB; the +14 dB amplifier has its own switch
+the AD9361's TX attenuation shown as a gain: -89.75 dB (least power) to 0 dB (most)
+the driver's own TX gain scale (known after the radio has been opened once)
+RX
+TX
+Transmit radio
+Choose a radio to transmit with.
+%s (in use by RX %d)
+%s is in use by RX %d, and this radio cannot receive and transmit at the same time. Choose another radio for transmitting, or stop that receiver first.
+Type the PlutoSDR's IP (USB gadget 192.168.2.1, or its Ethernet address) and Connect. It is then in the Radio list.
+GNSS, Bluetooth LE, LoRa (UDP JSON / NMEA)
+GNSS NMEA RMC/GGA (UDP)
+Bluetooth LE advertisements, JSON (UDP)
+LoRa / LoRaWAN / Meshtastic, JSON (UDP)
+JSON lines (one object a line) unless GNSS, which is NMEA. Off until you turn a feed on. Only modes that already have structured messages are sent.
+Support
+Support OnAir on Ko-fi
+Documentation
+Troubleshooting
+Website
+Passive: only the beacons, probe responses and FILS discovery frames that access points broadcast are read. Nothing is transmitted, joined or decrypted.
+all
+Width
+Std
+First seen
+Channels
+This radio is specified up to %.0f MHz: %.0f MHz is out of its range
+This radio is specified from %.0f MHz: %.0f MHz is out of its range
+A 20 MHz channel needs 20 Msps; this radio reaches only %.1f Msps
+2.4 GHz: channels 1 - 14. 5 GHz: 36 - 177 (with DFS). 6 GHz: 1 - 233 (Wi-Fi 6E / 7).
+Domain
+The channels each region allows. All lists every channel.
+other
+One 20 MHz channel at a time. Wider networks beacon on their 20 MHz primary channel. 6 GHz: channels 5, 21, 37 ... (PSC) carry FILS discovery.
+hop##wfhop
+Step through the band's channels; dwell longer than 102.4 ms (the beacon interval).
+PSC only##wfpsc
+skip DFS##wfdfs
+Networks
+Beacons
+Strongest
+Networks per channel
+Channels 1, 6 and 11 do not overlap.
+Amber: DFS channels (radar sharing).
+Bright numbers: preferred scanning channels (PSC), where FILS discovery is sent.
+start the receiver to see the channels
+Keep sending positions
+OnAir asks this question at every start. "No, do not ask again" stops it until OnAir is updated.
+Nothing is sent in this session. OnAir asks again the next time it starts.
+Nothing is sent and this question is not shown again until OnAir is updated. You can still turn it on later in the Server menu.
+(hidden)
+The radio runs at %.1f Msps: %d MHz channels need at least %.0f Msps (%.0f recommended). Pick the RATE in the top bar or another receive width.
+At %.1f Msps channels up to %d MHz are read; 16 MHz channels need 16 Msps or more (20 recommended).
+Receive only: OnAir never transmits, probes, joins or answers a network, and nothing is decrypted. The security type is what the beacon announces, shown for information. Sub-GHz Wi-Fi HaLow (802.11ah) is for low power sensors and cameras at long range; 1, 2, 4, 8 and 16 MHz channels. 1 and 2 MHz channels work from 2.4 Msps (an RTL-SDR), 4 MHz from 4 Msps, 8 MHz from 10 Msps, 16 MHz from 20 Msps.
+channel
+Filter
+SSID, BSSID, vendor, security, country
+Level above
+%s only
+Show all
+Forget every network and frame heard so far
+last frame:
+stream(s)
+class
+operating width
+primary
+country
+power constraint
+long preamble
+basic rate set
+click to show only this network's frames
+start the receiver to see the networks around you
+Frames per second
+Vendor
+Ch
+Security
+Beacon
+Country
+Last seen
+What the beacon announces, for information. OnAir does not decrypt or test anything.
+nothing heard yet
+no network passes the filter
+start the receiver to see the frames
+Showing %s only
+Copy
+%.0f frames/s
+Preamble
+Type
+Len
+no frames yet
+no frame passes the selection
+start the receiver to see the statistics
+SIG fields read
+Radio rate needed
+%.0f Msps (%.0f recommended)
+sample rate too low
+not selected
+by MCS
+by streams
+by preamble
+read from the SIG field only
+%llu several streams, %llu STBC, %llu LDPC, %llu A-MPDU, %llu null data packets
+The data field is decoded for one spatial stream with BCC coding at MCS 0 - 10. With several streams (a radio with one antenna cannot separate them), STBC, LDPC coding (parity-check matrices not included) and A-MPDU the frame is detected and counted, its contents are not read.
+Auto 1 - 4 MHz
+Auto, all widths
+Region
+The channel width of the list below: S1G channels of this width in the region. What the receiver reads is set by Receive.
+S1G channels of the region and width: centre = start frequency + 0.5 MHz x channel number, with the operating class of the plan
+Receive
+scan
+Step through the channels of the list, listening to each for the dwell time (a radio that takes in a single channel misses what is\nsent on the others meanwhile). Off: single channel.
+Frames
+Statistics
+state
+tuned
+signal
+tone SNR %.1f dB, offset %+.1f kHz
+preambles
+%llu detected, %llu SIG fields read, %llu not readable
+frames
+%llu good, %llu failed FCS, %llu only counted
+by width
+reads
+up to %d MHz channels at this rate
+input
+signal time
+%s at %.6f MHz, level %.1f dB
+Apply frequency and level now
+Bring it back here
+Carrier tune (hold)
+Clipping
+Idle
+No radio that can transmit was found. Plug one in (HackRF, PlutoSDR, or a SoapySDR radio with a transmitter) and refresh the radio list. The test below needs no radio.
+Nothing matches this search.
+Occupied bandwidth
+Output level (dB)
+Peak
+Pop out into a window of its own
+Preparing
+RMS
+Recent
+STOP
+STOP ALL
+Sample rate
+Search signals...
+Settings
+Signal
+Space = start / stop     Esc = stop
+Stops the transmission or test, the carrier and any pending start, and gives the radio back.
+TEST - NO RF
+Test (dry run, no RF)
+Test (no RF)
+Test: the IQ the radio would get
+The IQ going to the radio
+The generator fell behind %llu time(s): silence was sent for those gaps.
+The transmit panel is in its own window.
+This is added to the frequency sent to the radio, for a radio that radiates off frequency.
+TX channel
+Transmit
+Transmitting
+Unmodulated carrier at this frequency and level, for adjusting the transmission (drive, filter, SWR, dummy-load level), not a message. Hold the button. Stop still applies. Not saved as transmitting.
+What will be sent (preview)
+at full scale: the limiter will round the peaks
+making the preview...
+none chosen
+none: the signal fits
+radio range %s
+test (no RF)
+the limiter is working: %.2f%% of samples (lower the level)
+25 kHz
+12.5 kHz
+Receive filter width. 12.5 kHz cuts a neighbouring channel better but needs the signal on the channel centre; 25 kHz is the wider, more forgiving filter.
+Receive filter width. 12.5 kHz cuts a neighbouring channel better (often best for APRS) but needs the signal on the channel centre; 25 kHz is the wider, more forgiving filter.
+Call letters
+RDS standard
+Auto (RBDS on odd tenths)
+RDS (Europe)
+RBDS (US)
+RDS and the US RBDS share the data but name the programme types differently, and RBDS stations send call letters. Auto uses RBDS on the US channel raster (87.9, 88.1 ... 107.9 MHz); Europe has stations on those channels too, so pick RDS (Europe) there.
+Real (mono)
+Left
+Right
+Left + right
+IF centre
+Swap sideband
+Audio range
+Show the sound card's whole audio range, 0 Hz to half the sample rate, across the spectrum, with the frequency scale in audio Hz from the dial. Off: the IF centre in the middle (the decoders always get it there).
+Find centre
+Sets the IF centre to the middle of the strongest signal on the screen (a fax or FSK signal: halfway between its tones).
+Clipping: lower the input level
+Left and right are identical: this is audio, not I/Q.
+Use Real (mono)
+Remove DC
+For WebSDR, a virtual audio cable (VAC), or a radio's speaker, line or IF output into the computer. Not a replacement for an SDR when you need megahertz of bandwidth. The frequency field is the dial the decoder should assume (the radio frequency of the IF centre); the sound card is not tuned.
+I/Q stereo: left is I, right is Q (HDSDR / WebSDR VAC). USB audio: real audio to analytic IQ for FT8, RTTY, CW, SSB from a speaker tap or a receiver's audio. LSB audio: the same, mirrored. Real (mono): real samples (an AF tap, an IF such as 12 kHz) made analytic, with the sideband switch below.
+The audio frequency of the signal's centre in the sound card, for example 12000 for a radio's 12 kHz IF output, or 0 for plain audio. It is shifted down to 0 Hz, so the decoder sees the signal at the dial frequency above.
+Mirror the spectrum: for a receiver whose output is the other sideband.
+The sound card's sample rate, 8 to 192 kHz. A wider rate shows more of an IF. It applies when the receiver is started.
+For WebSDR, a virtual audio cable (VAC), or a radio's speaker or line into the computer. Not a replacement for an SDR when you need megahertz of bandwidth.
+Touch
+Switch to the touch interface (big buttons, on-screen keypad). You can switch back at any time.
+Touch interface
+For tablets and touch screens: big buttons, an on-screen keypad for the frequency, a full-screen mode picker.
+now %s MHz
+Tuning step
+Stop the receiver to change the mode.
+Menu
+Desktop interface
+Receive view
+Transmit view
+Volume
+More
+Status
+Running
+Step
+Keyboard
+Re-sync
+Drop the lock and search for the CDR signal again without stopping the radio.\nUse it when the sound stays silent after the signal faded.
+"%s" is stored on this frequency and mode already.
+%zu memories
+(frequency only)
+(no name)
+(nothing stored or used yet)
+0 keeps the mode's own rate (Auto)
+Add another
+Back to my list
+Bandwidth
+Bandwidth (kHz)
+Click a heading of the table to sort by it too
+Colour
+Could not apply this memory.
+Delete
+Edit...
+Enter a frequency.
+Export JSON...
+Exported to 
+Favourite
+Frequency only
+Group
+Groups
+Import failed: 
+Import...
+Include in the memory scan
+Informative: the channel width at the time. The mode's own width options are in the options below.
+Keep the gains
+Keeps this receiver's frequency, mode, sample rate, gains and the mode's options. The name is the station's when the mode reports one.
+Last used
+Manual order
+Memories: the frequencies you keep, with mode and settings (Ctrl+M)
+Memory
+Memory panel...
+Memory...
+No group
+No memories yet. Tune to a frequency you want to keep and press Store current; or import a list.
+Notes
+Options
+RX%d: %s
+Recall
+Recall frequency only
+Sample rate (kHz)
+Save
+Scan memories
+Search name, tag, mode, frequency (162.4)
+Show Memory as a tab
+Stars only
+Steps through the memories marked 'Include in the memory scan' with the Scanner: it tunes each one, switches the mode, listens for its dwell time and stops while the receiver reports a signal or a lock. Memories without a mode are left out.
+Store current
+Store current...
+Tags
+The list is the memories flagged for scan (Memory panel).
+The memory bank is full.
+The mode's settings, one key=value per line (demodulator, de-emphasis, widths ...).
+The receiver Store current and Recall work on
+This receiver
+Tunes to the frequency and keeps the mode as it is
+Tunes to the frequency, switches to the stored mode and applies its options and gains. Double-click a row does the same. A running receiver restarts when the mode changes.
+Undo delete
+Update it
+Words separated by commas; the search finds them.
+stored with: %s
+Edit memory
+Click to make this a favourite
+Favourite: kept at the top. Click to remove
+Ham It Down: 1500 MHz down-converter for about 1.5 to 3 GHz (2.4 GHz, 2.3/3.4 GHz). Connect it between the antenna and the radio; the radio sees RF - 1500 MHz. Below 1500 MHz is not supported.
+Contrast
+Below 1 lifts the weak signals, above 1 darkens the noise (double click: 1)
+Credits and licences
+OnAir is free software under the GNU General Public License v3 or later. It is built on the work of the people and projects below; thank you.
+Click a link to open it in your browser. The full notices and open licence points are in THIRD_PARTY.md.
+Project
+Author
+Licence
+Used for
+Update source
+Automatic: GitHub
+GitHub only
+Mirror only
+Use the mirror when GitHub cannot be reached
+Mirror address (https://host/{url} or a base address)
+A mirror is a third-party web address you chose. It sees that you check for updates and which version you run. It is used only after GitHub fails (not at all with GitHub only), the package is checked against the checksum from GitHub when GitHub can be reached, and nothing is installed from a mirror without your confirmation.
+The list of versions came through the mirror and GitHub could not be reached to confirm the checksum: only the mirror vouches for this package. Nothing is installed without your confirmation.
+I understand, download it anyway
+The list came through the mirror; the checksum was confirmed by GitHub.
+Noise remover (neural)##gennr
+Mix of cleaned and original audio: right removes more noise, left keeps more of the original. Adds about 20 ms of delay.
+Speech only; do not use on music or data modes.
+Noise remover (neural)##airnr
+Photo / info
+No identifier to look up
+Opens %s in your browser (nothing is loaded until you click)
+Pictures and details in a public database: opens your browser
+Preferred site
+Sunday
+Monday
+Tuesday
+Wednesday
+Thursday
+Friday
+Saturday
+Your radio cannot tune 225 kHz.
+Long wave needs an SDRplay, an Airspy HF+, an RTL-SDR in direct sampling mode, or an upconverter in front of a radio that starts at a few MHz (set it under the radio's settings), and a long wire or a ferrite rod antenna. A BFO recording of the radio's audio also plays: tick Audio, not IQ in the Receiver tab.
+time decoded, two packets agree
+time decoded (one packet)
+carrier found, waiting for a time packet
+searching for the carrier
+start the receiver to read the time service
+local time
+last packet
+summer time
+the local time changes next Sunday at 01:00 UTC (summer / standard time)
+no change announced
+leap second
+one is to be removed at the end of the quarter
+one is to be added at the end of the quarter
+none announced
+transmitter
+computer clock
+ahead
+behind
+The computer clock when each time packet began, minus the stamp in the packet and the path delay, averaged over the last packets. It includes the radio's buffering (the earliest arrival is used). The frame timing of the service is from its description (GUM, v1.0) and not yet checked against a signal with a known clock: use it as an indication.
+nothing to compare (a recording)
+once the time is decoded
+path
+; set your position in ADS-B (Receiver position) for the right delay
+clock offset
+level
+start the receiver to see the signal
+carrier
+phase of the carrier
+The last two seconds of the carrier's phase, one point per 8 ms, newest brightest. The service keys the phase between two states 36 degrees apart (50 bit/s); a clean signal shows two tight clusters.
+signal at the bit slicer
+The phase change over each 20 ms bit: a step of +-1 is a bit that changes the keying state, 0 one that does not; the slicer decides at half (dashed). The last two seconds.
+Frame
+Result
+no frame yet: a time packet comes every few slots of the minute frame
+, audio recording
+Recording of the radio's audio
+Audio, not IQ
+The file is a recording of a receiver's audio (SSB / CW) tuned a little off 225 kHz, so the carrier is a tone (a WAV with the audio on the left channel and silence on the right; a mono WAV: eczastool rx reads it directly). Not for IQ files or radios.
+carrier tone Hz
+The pitch of the carrier in the recording: 1000 Hz when the radio's dial was 224 kHz (upper sideband).
+Not used: the Reed-Solomon bytes of the frame (a frame with a wrong check byte is dropped, not repaired).
+Carrier
+Sync
+The test signal carries the computer's time with a time packet every 12 s: the clock offset should stay near zero (the simulator's own buffering shows in it).
+LW time service, Poland
+Predict positions
+Fills the gaps between position reports: the aircraft moves smoothly and, when messages stop, is dead-reckoned along its track (and along the route when a message named the destination). Predicted positions are drawn as a ghost with a dashed ring.
+uncertainty
+Draws the uncertainty ellipse (95 percent) of every estimated position.
+predicted from the last position %s ago, +-%.1f NM
+estimated from the ground station only, within about %.0f NM
+Hear this receiver
+Close receiver
+Radio: %s
+HD Radio sound needs the HDC codec, which you install yourself (click ?)
+HDC sound codec cannot be used: %s
+HDC sound codec not installed (no sound; click ? for the steps)
+sound: HD%d (HDC)
+sound: HD%d, waiting for audio
+The HD Radio sound codec (HDC) is not installed
+The station, program data and pictures are shown, but HD Radio sound stays silent until you install the codec yourself. OnAir does not ship it (HDC is patented and owned by Xperi).
+Build the HDC-patched FAAD2 as the full instructions explain (it needs the open-source nrsc5 patch).
+Put the library (libfaad_hdc) in the OnAir codecs folder (button below).
+The HD Radio sound library cannot be used
+OnAir found a library for HDC, but it is not a FAAD2 build with the HDC patch that OnAir knows how to call, so it was left alone.
+Build the library again from FAAD2 2.10 or 2.11 with the nrsc5 patch, as the full instructions explain.
+Replace the file in the OnAir codecs folder (button below).
+Band plan
+None (built-in ranges)
+My band plans
+Export...
+Really delete?
+Replaced band plan "%s" (%zu bands).
+Imported band plan "%s" (%zu bands).
+Deleted band plan %s.
+Not fully verified: %s
+The channel raster of your country: TV channels for the scan and the channel list, and more. Automatic picks a plan from the interface language and the system's region.
+Reads a band plan from a CSV or JSON file (format in docs/band-plans.md), checks it and keeps it in your settings folder. Nothing is changed when the file has a mistake; the message says where.
+Saves the plan as a JSON file, or as CSV when the name ends in .csv. A built-in plan makes a good starting point for your own.
+Deletes one of your own band plans. The built-in plans stay.
+Crew
+Operations
+Company
+Maintenance
+Fault
+Show all messages
+ACARS messages
+%d ACARS messages
+Copy these messages as text
+No ACARS messages heard from this aircraft
+Also share interesting ACARS messages (text becomes public on the map)
+Messages an aircraft sent by ACARS (free text, crew, operations, company and maintenance messages), shown on that aircraft's card on the public map for 48 hours. Phone numbers and e-mail addresses are removed first. Position reports and link tests are not part of this. You can turn it off at any time.
+Messages that aircraft send by ACARS (free text and crew, operations, company and maintenance messages) can be shown on the aircraft's card as well, with phone numbers and e-mail addresses removed. This is a separate choice that you can change in the Server menu.
+%.0f MHz/s, %d hops, %d averages, %.0f ms per sweep
+pick a radio first (the test signal and files cannot sweep)
+Save scan...
+rtl_power compatible CSV: opens in Heatmap.py, rtl_power_fftw tools and spreadsheets
+Load as baseline...
+Keep this scan as baseline
+Save signal log...
+Sweep scanner
+from MHz
+to MHz
+bin %.0f kHz
+dwell %.0f ms
+Time spent on each hop: longer averages more FFTs (a steadier floor, weak signals show) but sweeps slower
+measure retune time
+settle %.0f ms
+rate: radio's best
+rate: 10 Msps
+rate: 5 Msps
+rate: 2.4 Msps
+gain %.0f dB
+Pause between sweeps: a repeated sweep every so many seconds keeps the CPU and the battery calm
+threshold floor+%.0f dB
+floor percentile %.0f
+The noise floor is this percentile of the bin power in each hop (50 = median). Lower it in crowded bands, raise it on empty ones
+retune settle %.1f ms
+noise floor %.1f dBFS per bin (%.0f kHz bins), threshold %.1f dBFS, %zu signals in this sweep
+vs baseline: floor %+.1f dB, largest rise %+.1f dB at %.3f MHz
+Signals found
+mode: as it is
+Tune to selected
+Bandwidth kHz
+Peak dBFS
+Best SNR dB
+Sweep
+every %.0f s
+back to back
+Fast wideband sweep with a noise-floor measurement, signal log and waterfall
+Record audio
+Split
+Show recording
+Saves the sound you hear, in any mode, to a file (before the volume slider, so the level does not depend on it)
+MP3 needs the LAME library (libmp3lame), which is not installed
+WAV: 16-bit, large. FLAC: lossless, about half the size. MP3: small (needs libmp3lame). FM stereo is kept as stereo.
+One file per transmission: a new file starts after 3 s of silence
+The SoapyRemote module is missing from this installation of OnAir, so it cannot reach a remote radio. Reinstall OnAir, and please report it if it happens again. The radio's computer must run SoapySDRServer --bind.
+The SoapyRemote module is missing from this installation of OnAir, so it cannot reach a remote radio. Reinstall OnAir (or run brew install soapyremote), and please report it if it happens again. The radio's computer must run SoapySDRServer --bind.
+SoapySDR here has no SoapyRemote client module, so it cannot reach a remote radio. Install it (Debian/Ubuntu: sudo apt install soapysdr-module-remote; other systems: github.com/pothosware/SoapyRemote), then restart OnAir. The radio's computer must run SoapySDRServer --bind.
+%zu built in, %zu yours
+Add entry...
+Add frequency
+Add to Memory
+Added to Memory.
+Already in Memory.
+An entry with this frequency and mode exists already.
+Category
+Could not save 
+Could not tune to this entry.
+Exports your own entries (not the built-in ones)
+Frequencies
+Frequencies...
+Imported %zu entries, %zu skipped (duplicates or lines without a frequency).
+Keeps this entry in the Memory panel
+Known frequencies (%zu)
+Mine
+Nothing matches. Clear the search or the filters.
+Nothing to import in this file.
+Only the entries you added or imported
+Open the Frequencies panel...
+Reads a CSV or JSON file written by Export (or by the Memory panel), or a plain list of 'frequency,name' lines (MHz). Entries on a frequency and mode that exist already are skipped.
+Search name, notes, mode, frequency (162.4)
+Show Frequencies as a tab
+Source...
+Switches to the entry's mode, applies the mode's tuning and tunes to the frequency. A double-click on a row does the same. A running receiver restarts when the mode changes.
+Tuned: %s  %s MHz
+Well-known frequencies of this mode: pick one to tune to it
+Stop scan##dsc
+Scan band##dsc
+DECT carrier %d, %.3f MHz
+Steps through the carriers of the band, 1.5 s each, and stays on one while bursts are heard.
+US / Canada 1920-1930 MHz (DECT 6.0)
+Brazil 1910-1920 MHz
+Latin America 1910-1930 MHz
+US ISM 902-928 MHz (DECT in ISM)
+Europe 1880-1900 MHz
+USA, Canada: the UPCS band, DECT 6.0 phones
+Brazil
+Several Latin American countries
+USA, standard DECT in the 900 MHz ISM band: rare, most 900 MHz cordless phones are not DECT
+Europe, most of Asia, Africa, Australia: the common DECT band
+Your radio cannot tune %.3f - %.3f MHz (the %s band); its range is %.6g - %.6g MHz. Use a radio that reaches it (HackRF, PlutoSDR, LimeSDR, BladeRF) or a converter set under the radio's settings.
+The nRSP-ST is reached through SDRconnect: run SDRconnect (or its headless build) on a computer with the WebSocket server on (port 5454) and its nRSP-ST selected, and type that computer's address. No password is needed or stored.
+Tuning and gain
+Modes
+Spectrum and waterfall
+Mode panel
+Memory and frequencies
+Receivers
+Audio
+Server and support
+Take the guided tour
+Choose the radio or recording that supplies samples. Record IQ saves the raw signal for later playback.
+Set the frequency, band and sample rate here. Gain and AGC set the input level; Second mode decodes another mode from the same capture.
+%d modes, grouped by family. Use the search box to find one by name.
+Click to tune and scroll to zoom. Peak hold keeps the strongest level seen on each frequency.
+Each mode has its own tabs for decoded output, settings and tools. They change with the selected mode.
+Memory stores frequencies with their mode and settings. Frequencies and band plans list what is on air, per mode.
+Each receiver pairs a radio with a mode. This strip switches between them and chooses which one plays sound.
+Listen plays the demodulated signal. Volume and mute are here; Record audio saves it to a file.
+Server sends decoded positions to the public map. Support helps fund development.
+Documentation, troubleshooting, credits and licences are here. Guided tour starts this tour again.
+Auto: USB below 30 MHz, narrow FM above
+Volume of the monitor
+Fine tuning from the tuned frequency, in Hz (an SSB signal is heard 1 to 2 kHz above or below its carrier)
+(the mode plays)
+System default
+Output 1
+Output 2
+Delay (ms)
+Audio queued before it starts playing: lower is quicker, higher survives a busy computer
+Stay silent while the mode plays
+Network audio stream
+WAV header
+Allow other computers
+16-bit stereo, 48 kHz. ffplay -f s16le -ar 48000 -ac 2 tcp://127.0.0.1:PORT, or a WAV player with the header on. Security: anyone who can reach the port can listen; leave 'Allow other computers' off unless you need it.
+Listeners:
+video
+audio
+profile
+Video: %s (OnAir cannot decode this video) — audio, subtitles and data still work
+Open in an external player
+Save the transport stream to a file
+Stream it as UDP to %s
+Copy VLC command
+Copy mpv command
+Copy ffplay command
+Start the UDP stream first, then run the command. Whether the player shows the picture depends on its own build (docs/AVSPLUS.md).
+Credits
+Contributors
+Projects and licences
+People
+By mode
+pull request
+optimisation
+fix
+bug report
+samples
+translation
+testing
+idea
+Thank you to everyone who sent fixes, reported bugs, shared recordings, translated or suggested ideas. The author is Kristijonas Adomaitis.
+Want your name changed or removed? Tell us on Discord or open an issue.
+Airport data updated: %s
+Airport data not updated: %s
+Memory set %s: %d added, %d already there.
+Airports
+Airport
+EGLL, LHR, Heathrow, Vilnius ...
+ICAO or IATA code, name or city. Pick an airport to load all its frequencies as channels.
+Near me
+Airports within the radius of your station position (Settings), nearest first.
+Set your station position first (Settings or the ADS-B map): then the airports around you are listed.
+Your station position is not set.
+Type a code, a name or a city.
+No airport found.
+Code
+Place
+km
+Freq.
+This airport has no frequency in the airband in the table.
+%d more outside the airband (not received here).
+Load channels
+Loaded %s
+Replace the channel list with this airport's frequencies and tune the radio to hold as many as the sample rate allows.
+Add to list
+Added %s
+Save as memory set
+One memory per channel, in the group of this airport (Memory panel).
+The frequencies spread over %.1f MHz; the radio takes in %.1f MHz at once, so they come in %zu captures. Tune to each:
+Imported table:
+Built-in table (OurAirports, public domain):
+Community data: can be out of date. Never use it for navigation.
+Downloading ...
+Refresh from the web
+Downloads airports.csv and airport-frequencies.csv from https://davidmegginson.github.io/ourairports-data/ (about 14 MB) when you click, never by itself. The SHA-256 of what came is shown.
+Import CSV ...
+Imported: %s
+Import failed: %s
+Pick airports.csv, then airport-frequencies.csv (OurAirports format).
+Back to built-in
+Using the built-in table again.
+Hold
+Stay on the channel the scan stopped on, also after it has gone quiet.
+Noise remover (neural)
+%d of %zu channels are outside what the radio takes in now. Tune to a capture:
+None of the %zu channels is inside what the radio takes in now. Tune to a capture:
+On air: %s
+No signal: every channel is quiet.
+no signal
+This channel's squelch (carrier to noise, dB). In brackets: the global squelch applies. Drag to set; right-click to go back to the global one.
+tune here
+Back to hearing every open channel.
+Hear only this channel (solo), whatever else is on the air.
+Only active
+Show only the channels that are open or were heard in the last 30 seconds.
+%d quiet channels hidden
+No channel yet: search an airport above, add a frequency, or see what is on the air (On the air tab).
+Carriers on the air in the whole capture that are not in your list, strongest activity first. Add the ones you want to hear.
+Start the receiver to see what is on the air.
+Add all
+Nothing yet: carriers show here a moment after they start transmitting.
+The radio's tuning error is not measured yet: names may be off by a channel.
+Cannot open the recording (interleaved complex float32, one sample of every channel after the other).
+The recording has a different number of channels than the array.
+Choose a source first.
+No data to calibrate with.
+Calibration stored.
+Add this bearing
+Keeps the current bearing and your position as a line. Move, or take bearings from other stations, add more lines and the position is fixed where they cross.
+Clear lines
+Position
+95%% ellipse %.1f x %.1f km, %d of %d lines used
+The lines do not cross (parallel, or they meet behind the stations).
+Direction finder
+Simulator (demo, no hardware)
+Recording (cf32 / SigMF)
+KrakenSDR bearing file (JSON)
+Lock to the tuned frequency
+Run
+path of the recording
+a file the DoA server's JSON lines are saved to
+channels
+kS/s
+Bearing
+Confidence
+Sidelobe %.0f dB, coherence %.2f
+Waiting for a bearing.
+Array and estimator
+Circular (KrakenSDR)
+Linear
+Array
+Elements
+Spacing (wavelengths)
+Array orientation
+Compass offset
+Added to every bearing: where the array's own north points relative to true north.
+Interferometer
+Estimator
+Sources
+Forward-backward averaging (reflections)
+Calibration
+1. Feed all channels the same signal: the receiver's noise source (KrakenSDR: switch it on in the DAQ), or a signal from a known bearing. 2. Choose the matching mode and press Calibrate. The offsets between the channels are measured and removed.
+Common noise source
+Known bearing
+Bearing of the source
+Calibrate
+Forget
+Use calibration
+Not calibrated.
+Simulated channel errors
+Simulator
+Transmitter bearing
+Spin
+SNR per channel
+Second transmitter
+Second bearing
+Position fix
+Sharing
+Share my bearing on the map server
+Needs Server > Send data to map server. Only the bearing, its uncertainty, the frequency and your station position go up; the map shows where bearings from several stations cross.
+Bearing and position of a transmitter from an antenna array such as the KrakenSDR
+Decoded only
+Hides tone-only pages and pages whose text could not be decoded.
+%zu tone-only or undecoded pages hidden (Decoded only)
+%zu tone-only or undecoded pages hidden
+hidden
+What LBJ carries
+LBJ is the Chinese railway train approach warning on about 821.2375 MHz. Every locomotive sends 1200 bit/s POCSAG numeric pages: a short message every few seconds with the train number, the speed (km/h) and the kilometre post, and longer messages with the locomotive type and number and the route.\n\nOnAir decodes the pages itself (receive only). A value that is blank had damaged digits; a row in grey had errors that were corrected, so check it against the next message of the same train.
+tune to about 821.2375 MHz and start the receiver
+FM, 1200 bit/s FSK, %.2f Msps
+%llu messages, %llu sync words, %llu blank, %llu failed checks
+listening (level %.0f dBFS, offset %+.0f Hz)
+Train
+Speed km/h
+Km post
+Direction
+Locomotive
+Route
+Up
+Down
+Some digits were corrected or lost: check this row against the next message of the train
+Train warning, 821 MHz
+clear picture
+Clears the picture and the lines the decoder has collected, and starts a new picture at the next start tone or phasing. Pictures already in the list on the right stay.
+Clears the NAVTEX and DSC lists and the weather fax picture.
+Clip
+Radio clip: save the last moments (spectrogram, audio, decoded messages) as a file to share. Key: C
+Radio clip
+Last:
+What the receiver saw, oldest on the left. Brighter is a stronger signal. Drag to choose the part to save.
+Include:
+Spectrogram picture
+Decoded messages
+Title
+Your station position is never included.
+Could not save:
+Saved: %s (zip %.1f MB)
+Save clip
+Nothing to save: no waterfall, audio or decoded rows in this range
+Saving...
+Copy Discord post text
+Copied: paste it into Discord and attach the files
+Open folder
+Memory kept for clips
+Waterfall history
+%d min
+%d MB max
+Audio history
+%d s
+Decoded rows history
+Uses about %.1f MB now
+Decoded rows are kept from the results tables you have open.
+Password
+blank if the owner set none
+Find KiwiSDR…
+pick a public receiver from the list
+A KiwiSDR is a receiver on the internet that covers 0 to 30 MHz; OnAir takes its 12 kHz IQ stream. Public ones have few user slots and many end a session after about 30 minutes: use one connection per receiver and leave when you are done. The password is kept in OnAir's settings.
+S-meter %.0f dBm%s
+, ADC overload
+Find KiwiSDR
+Download the public list
+Downloads the list of public KiwiSDR receivers from the internet when you click (one request, never at startup).
+downloading the list…
+filter by name, place or antenna
+Public receivers have few user slots, and many end a session after about 30 minutes. Pick one that is not full, and leave it when you are done.
+Location
+Users
+Distance
+offline
+full
+Adds this receiver to the Network radios (it does not connect until you pick it as the radio).
+The downloaded list has no receivers OnAir can read.
+Could not download the list. Check the internet connection.
+Voice (radio calls)
+No radio call with this aircraft's callsign heard yet
+Live transcription is off (View > Transcripts). Airband calls would be listed here by callsign.
+Live captions: off.
+Set up transcripts
+Turns what is said on the airband channels into text as it is heard. It needs a speech model that you download or put in the models folder.
+Live captions
+working ...
+listening ...
+Transcripts
+Airband is off in the transcript settings
+Cannot write %s
+Saved %s
+Transcribe speech
+Master switch. While a transmission is going on the audio is cut out, sent to the speech engine and turned into text. Nothing runs while the channels are quiet.
+Airband channels
+Marine VHF
+Speech model
+none
+Open models folder
+Put a whisper.cpp model file (ggml-*.bin) here to use it. The folder is made if it does not exist.
+No speech model yet. Download one below, or put a model file in the models folder.
+Loading the speech model ...
+Speech model loaded.
+This build has no speech engine.
+checking
+Download speech model:
+%s %d MB
+Already downloaded
+English only. tiny is the fastest (real time on a laptop), small hears more words and needs a stronger computer.
+Other languages (multilingual models)
+The loaded model is English only: other languages need a multilingual model (tiny, base or small without .en).
+CPU threads
+How many processor threads the speech engine may use for one transmission. Fewer threads use less battery and take longer.
+Keep transcripts (days)
+Heard %llu, kept %llu, left out %llu (silence, noise, repeats), skipped %llu (too slow), speed %.2f x real time
+Download the speech model %s (%d MB)?
+OnAir asks the model repository (huggingface.co) for this one file and sends nothing else. The file is checked against a fixed SHA-256 checksum and thrown away if it does not match. The model is MIT licensed.
+Download
+Delete all saved transcripts? This cannot be undone.
+Delete all
+Transcription is off.
+Hide settings
+Settings and speech model
+Search the text ...
+All frequencies
+A callsign (DLH123), a registration (N123AB) or an ICAO address (3C6444)
+An airport code or name found in the channel name or the text (EYVI, Tower)
+%zu of %zu
+Copy all shown
+Export %s
+Delete all ...
+Time (UTC)
+Sure
+Speaker (a guess from the wording)
+Click to copy this line
+Aircraft on the screen
+Also share transcripts of aircraft radio calls (text becomes public on the map)
+The text of airband radio calls that a speech engine on this computer made from what you receive (Transcripts window), linked to the aircraft by the callsign spoken in it, shown on that aircraft's card on the public map for 48 hours. It can contain mistakes. Phone numbers are removed first. Only airband is shared, never marine, amateur or other channels. Off until you choose it, and you can turn it off at any time.
+Transcripts ...
+What is said on the airband and other voice channels, as text: live captions, search, export. Off until you turn it on.
+%d firings. Dropped events: %llu
+(the whole rule)
+Add a condition
+Add a copy
+Add an action...
+Advanced
+Allow running programs
+Allow this rule to run it
+Any event
+Apply
+Arguments, one per line
+Arguments:
+At most per hour (0: no limit)
+Automations
+Automations...
+Bot token
+Cannot write the file.
+Chat id
+Choose a rule on the left, or make a new one.
+Choose what to tell apart in "separately for each" so every thing has its own state.
+Columns (optional)
+Confirm this rule...
+Confirmed
+Define function on_event(e). e.type, e.mode, e.freq, e.time and the event's fields (e.callsign, e.squawk ...).\n\nActions: notify(title, text), sound(file), record_iq(seconds), record_audio(seconds), save_rewind(seconds), tune(hz, mode), memory(name), webhook(url, text_or_table), screenshot(), log(text), log_row(file, a, b, ...).\nHelpers: distance_km(lat, lon), bearing_deg(lat, lon), now(), hour(), json(table).\nText: s:contains(x), s:starts_with(x), s:ends_with(x), s:matches('a*b'), s:replace(a, b). No io, os, load, require, pcall or pattern matching; 1 million instructions, 250 ms and 16 MB per script.
+Delete...
+Distance, km
+Does not fire for the sample event:
+Duplicate
+Edit
+Edit as text and apply, or copy it to share.
+Every event
+Expression (and'ed to the conditions above)
+Expression is fine.
+Fields, and or not, comparisons, contains startswith endswith matches in, arithmetic, distance_km() within() inside() hour() ...
+File name
+File:
+Fire with sample event
+Frequency, MHz
+Generic JSON
+Imported, switched off. Look it over, then switch it on.
+Insert an example...
+Inside an area (polygon)
+JSON body (optional)
+Keep
+Last error:
+Limits
+Lua script
+Manage
+Memory name
+Mode id (optional)
+New rule
+New script
+No location test
+No rules yet. Make one, or add a recipe.
+Not active:
+Not imported:
+Note
+Nothing has fired yet.
+Notification
+Off. A rule may start a program only when this is on and you confirmed that rule.
+Only between these local hours
+Pick one event type to choose its fields from a list.
+Points as lat,lon; lat,lon; ...
+Program
+Program:
+Quiet after firing, seconds
+Ready-made rules and scripts. Adding one makes a copy that you can edit; it starts switched off.
+Really delete
+Really does the actions, once, with a made-up event.
+Recall a memory
+Receives these events
+Recipes
+Recipes...
+Rules and scripts: when something is decoded, notify, record, tune or call a webhook
+Rules: when something is decoded (an aircraft squawks 7700, a pager message says fire, a vessel enters an area ...), do something (notify, record, tune, log, call a webhook). Scripts do the same in Lua.
+Run a program (advanced)
+Run a program?
+Runs a program on this computer. Off until you allow it below and confirm this rule.
+Save a screenshot
+Saved to
+Seconds
+Server (optional)
+Service
+Shows what the rule would do with a made-up event. Nothing is sent or started.
+Sound alert
+Test (dry run)
+Test with a sample event
+Text can use:
+The receiver position is not set (ADS-B window).
+The recipe file
+The script ran and did nothing for this event.
+Then do
+This rule will start the program below, on this computer, every time it fires, with text from the decoded signals in its arguments. Anyone who can send such a signal can influence it. Only allow it if you wrote it or trust the one who did.
+Topic
+WAV file (empty: beeps)
+Webhook
+Webhook address
+What can a script do?
+When this happens
+Within a distance of a point
+Within a distance of my receiver
+Write a CSV log row
+all of the conditions
+and only if
+any of the conditions
+contains
+ends with
+equals
+has a value
+is at least
+is at most
+is less than
+is more than
+is not
+is one of (a, b, c)
+last fired %s, %d times
+matches (* ?)
+only as it comes in
+separately for each
+starts with
+to
+when it is inside
+when it is outside
+%s%.0f deg (average)
+Reported by the aircraft.
+Estimated by the position filter from the position reports (not broadcast by the aircraft).
+Derived from 2 positions %s apart: an average over that time; a curved path is longer than the straight line, so the real speed may be higher. The track is the average bearing.
+Derived from 2 positions %s apart (distance on the WGS-84 ellipsoid divided by the time). The aircraft did not report a speed.
+DRA+ decoder loaded
+DRA+ audio needs a decoder add-on that is not included (the codec's patent and licence status is unclear). How to install:
+The DRA+ decoder add-on cannot be used: %s. How to install:
+How to install
+The services, signal information and data work without it.
+Interface and windows
+View switches the layout (Sidebar, Scope, Tiles, Faceplate, Panel), the classic interface, text size and palette; Touch interface is under Tools. Windows such as Frequencies, Sweep scanner, Direction finder and Automations open from here.
+Guide
+until
+Genre
+Saved
+Now
+objects
+services
+programmes
+scheduled
+objects decoded
+Guide data
+last update
+no update yet
+not collecting
+from the cache
+cached data, expires with time
+waiting for the carousel directory...
+Export XMLTV
+Collect the guide in the background
+Could not write the file.
+Listen to this station
+search title or description
+Nothing matches.
+No description in the guide.
+Click a programme in the grid or the search results to see its details.
+Start the receiver on a DAB channel to see the guide.
+This ensemble does not announce a programme guide (SPI, user application 0x007).
+The guide of this ensemble is sent in the PAD of a station: play that station to collect it.
+The broadcaster sends service information (names, logos) but no programme schedule.
+No programme schedule received yet. A guide carousel can take several minutes to come round.
+Air-interface encryption: %s
+%llu signalling PDUs with an encryption mode set (not decrypted); %llu blocks unreadable (CRC failed)
+none advertised
+class 2
+class 3
+available
+unknown
+Save CADU
+Every frame Reed-Solomon passes, as 1024 byte CADUs into <data folder>/goes/frames.cadu (the same kind of file SatDump writes), to compare decoders
+Open CADU
+Decode a .cadu file (1024 byte frames, from this program or SatDump) through Reed-Solomon, the packets and the files; GOES HRIT must be running
+Messages
+Messages...
+Every decoded message in one searchable database, with filters and export
+The message database could not be opened:
+Search text (words, prefix*)
+Identity
+All modes
+With position
+matching
+stored
+Newer
+Older
+Export CSV
+Export JSON
+Export ADIF
+Storage
+Record decoded messages
+Most rows (thousands, 0 = no limit)
+Size cap in MB (0 = none)
+Keep days (0 = forever)
+Apply limits now
+Clear all...
+Really clear
+The database file:
+Voice audio and encrypted traffic are never stored.
+Band survey
+record every sweep into the survey
+persistent at %.0f%%
+A signal is persistent when it is above the threshold in at least this share of the sweeps
+quiet slot %.0f kHz
+Clear survey
+Save survey...
+Load as previous survey...
+Export occupancy CSV...
+Export persistent signals CSV...
+Export picture...
+cannot write the picture
+Run a sweep: every sweep adds a row to the survey. With "every" set to a few minutes it can run for hours in the background.
+%zu sweeps over %.1f h
+since the previous survey: floor %+.1f dB, occupancy %+.1f%%, %zu new, %zu gone
+new %.4f MHz, %.0f%% of the time
+gone %.4f MHz, was %.0f%% of the time
+Occupancy %
+Mean dB above floor
+Peak dB above floor
+Quietest slots
+From MHz
+Width kHz
+Pick a programme to see its details.
+Cancel recording
+Record
+Stop series
+Record series
+The broadcaster sends no series identifier for this programme.
+No reminder
+Remind me
+Watch
+Not enough tuners: this overlaps a recording on another multiplex and will not be recorded.
+No description broadcast.
+Waiting for the service list...
+Search title or description
+This multiplex only
+time zone:
+this computer
+No programme information received yet. Broadcasters send it in the EIT tables, which repeat every few seconds (now/next) to a few minutes (schedule). Some multiplexes send none at all.
+Opening the recording...
+Pause (timeshift)
+Freezes live TV and keeps recording it to disk, so you can resume or rewind.
+buffered
+Timeshift
+Play
+behind live
+Live
+Recordings run only while OnAir is open and the computer is awake; a sleeping computer records nothing. Scrambled services are recorded as they arrive and are not decoded. For personal use only.
+Scheduled
+recording
+conflict
+any multiplex
+series
+waiting for the tuner
+Nothing scheduled. Pick a programme in the Guide, or add a manual recording below.
+Manual recording
+Starts at this clock time (today, or tomorrow when it has passed), no padding.
+Recorded
+No recordings yet.
+Export
+Delete this recording and its subtitle files?
+free
+Recorder settings
+Folder
+Start earlier (s)
+End later (s)
+Tuners
+How many different multiplexes can be received at once. Services of the same multiplex always record together.
+Keep free (GB)
+Stop after signal loss (s, 0 = never)
+Save teletext subtitles next to recordings (.srt, .vtt)
+Tune to a scheduled recording's channel when it starts
+Timeshift buffer on disk
+minutes
+Propagation
+open
+marginal
+closed
+Best band now
+Stations
+Best SNR
+Farthest
+Heard from
+Forget the history
+What this receiver has heard, by band: beacons (NCDXF/IARU, Long Dashes, single letters, carriers) and the FT8 / FT4 / FT2 / WSPR stations decoded in the HF digital screen. A band is open when at least 3 stations were heard in the last 30 minutes. Own receiver only: nothing is downloaded, so no solar flux or K index.
+Nothing heard in the last 30 minutes: start the HF beacons or the HF digital screen and leave it running.
+Last 24 hours (UTC), 15 minute cells, darker: fewer stations
+%s asks for these permissions:
+A crash or a hang of the plugin then only ends its helper process. Takes effect the next time the plugin starts.
+Add decoders and actions without rebuilding OnAir: install, enable and set up plugins
+Add-ons
+Allow
+Asks for
+Asks for no permissions.
+Community plugins
+Do not allow
+Enabled
+Files: read and write its own data folder
+Install from file...
+Installed
+Kind
+Map points
+Modes (in the mode list, group PLUGINS)
+Network: talk to other computers
+No plugins installed. Use Install from file, or copy a plugin folder into the plugins folder. A plugin is a .onairplugin file.
+Not installed
+Open its folder
+PLUGINS
+Permissions are what OnAir hands the plugin. A plugin running inside OnAir can still use the system itself: install plugins you trust, or run them in a helper process.
+Plugin idle
+Plugin log
+Plugin modes run on receiver 1.
+Plugin running
+Plugins
+Plugins are not available on this receiver.
+Plugins...
+Programs: start other programs
+Recording: save audio or IQ
+Refresh
+Results the plugin sent beyond the limits
+Run in a helper process
+Safe mode (no plugins)
+Safe mode is on: plugins are switched off. Open the Plugins mode to leave it.
+Safe mode: all plugins are switched off.
+Select a plugin.
+Sound: play audio through the program
+The plugin was switched off after a failure. See its log in the Plugins mode.
+This plugin is off.
+This plugin mode is not installed any more.
+Try plugins again
+Turn it on
+blocks
+by
+%d bins flagged in the last spectrum
+Add spectrum at the target l
+Az %.1f  El %.1f   site %.3f, %.3f
+Body                 Az     El     transit (UTC)  rise    set
+Calibration / RFI
+Capture cold
+Capture hot
+Cassiopeia A
+Clear map
+Compute
+Custom (RA / Dec)
+Cygnus A
+Elevation of the selected body over the UTC day (hours)
+Fit lines
+Flag and interpolate RFI
+Galactic position
+IAU standard solar motion (off: Schoenrich 2010)
+LSR axis
+Moon
+No processed spectrum yet.
+Nothing logged yet.
+Open session
+Point the antenna at each galactic longitude l along b = 0 (set it in Velocity), integrate, then add the spectrum here.
+Pointing
+R0 kpc
+Sagittarius A*
+Save CSV
+Save FITS
+Save SigMF text
+Save session
+Site is the receiver location (View > Map). Time is the computer clock, UTC.
+Sun
+The rotation curve needs spectra at several longitudes between 0 and 90 (or 270 and 360).
+Towards the target: Earth rotation %+.2f, orbit %+.2f, Sun %+.2f; total %+.2f km/s (add to the topocentric velocity)
+Tsys K
+V0 km/s
+Velocity
+Y = %.3f   receiver %.1f K   Tsys %.1f K
+Y-factor: capture a spectrum looking at a hot load (room-temperature absorber), then at a cold load (or the cold sky), with their temperatures.
+cold K
+fit rms %.3f K
+hot K
+no positions yet
+peak K, centre km/s (LSR), FWHM km/s, area K km/s; one sigma
+sigma
+sky + spill K
+, %.0f baud
+, %s wide
+, bursts (%.0f %% on)
+, useful symbol %.4g us
+A score is the share of the evidence that holds; the percentages are calibrated on OnAir's own test signals, not on every real signal.
+Add to memory
+Best guess
+Copy as text
+Could be %s (%.0f %%) or %s (%.0f %%).
+Could not open this mode.
+I do not know what this is: nothing I know fits well enough to say.
+Identify all signals
+Identify: click a signal or drag across it. Esc or I leaves the tool.
+Most likely %s, %.0f %% sure.
+No signal stands out of the noise here.
+Open in %s
+Opened %s
+Perhaps %s (%.0f %%).
+Signals in the view
+The frequency list has here:
+What is this? Click a signal, or drag across it, and OnAir says what it is and how sure it is. Key I. Shift+drag does it without the tool.
+Why?
+Identify selected
+Tune the radio to the selected signal and say what it is (needs the receiver in a mode whose sample rate covers it)
+Paste at least two packets, one per line.
+constant
+counter
+check value
+few values
+varying
+Load a recording of the unknown signal, or paste packets you already have, and the lab works out how the signal is built: modulation, baud rate, preamble, CRC and fields. Nothing is decrypted.
+Recording
+Browse...
+Format
+Sample rate (Hz)
+Signal offset from the centre (Hz)
+Signal bandwidth (Hz, 0 = all)
+Read the offset and the width off the waterfall of the recording; the lab mixes the signal to the centre and cuts away the rest.
+Analyse the recording
+Packets
+One packet per line, as hex bytes or as bits. The packets are taken as sliced from the air: the preamble and the sync word may still be in them.
+Lines are bits (0 and 1)
+Analyse the packets
+Demo signals
+Made-up signals with a known structure, to see what the lab finds. None of them is a real protocol.
+Make it and analyse
+Demodulator
+Baud (0 = find it)
+Gap (ms)
+A pause shorter than this does not end a packet. Raise it for signals with long runs of silence inside a packet.
+Working...
+%zu bursts found.
+Nothing found.
+Line coding
+Sync word
+Check value
+Whitening
+Score
+after a preamble
+The best reading is first. A check value that holds for most packets is strong evidence; without one, treat the rest as a guess.
+No packets.
+Bytes from the start of the sync word. Grey: constant, blue: counter, green: check value, yellow: few values.
+Packet %d, byte %d
+Readings that could fit this packet
+No fields.
+C constant, N counter, K check value, E few values, V varying; one letter per byte from the start of the sync word.
+Byte
+Entropy (bits per byte)
+Distinct values
+adds %d each packet
+follows byte %d (r = %.2f)
+looks random: a check value, a key or encrypted data
+Two packets are needed.
+Packet A
+Packet B
+^ marks the bits that differ.
+No check value found. Either the packets have none, it covers something this search does not try (for example header bytes in another order), the bits still hold errors, or the payload is whitened or encrypted. Try another demodulator, the other polarity or a cleaner recording.
+Covers bytes
+Polynomial
+Init
+XOR out
+Reflect
+Byte order
+input and output
+input only
+output only
+big endian
+little endian
+When all packets are the same length, the init value and the XOR-out value cannot be told apart: several pairs fit equally well and the first plain one is shown. A short check value (8 bit) with few packets can fit by chance; the more packets that agree, the better.
+Protocol name
+Copy protocol (JSON)
+Save protocol...
+Copy packets as bits
+Save packets as bits...
+Copy packets as hex
+rtl_433 decoder line (a starting point, not a tested decoder):
+Copy the rtl_433 line
+The bit file has one packet per line; tools such as Universal Radio Hacker can open protocol text like that.
+Bytes
+Fields
+Compare
+Protocol lab
+Protocol lab...
+Work out an unknown digital signal: modulation, baud rate, sync word, CRC and fields, with an export
+Orbit from Doppler
+Follows the carrier of the tracked satellite during a pass and fits its orbit to the Doppler curve. Needs a steady frequency reference (a GPS-disciplined or well calibrated receiver); an error of the receiver's clock is fitted as a constant offset.
+Measure the carrier during tracked passes
+gate +-%.0f kHz
+How far from the predicted carrier the peak is looked for
+%d measurements of %s
+Fit orbit
+Save refined TLE
+saved in %s
+Writes the refined elements to a separate file, marked as derived from this measurement; the downloaded TLEs are not touched
+Use the derived elements for predictions
+no measurements yet
+grey: predicted by the downloaded elements, blue: refined, green: measured, amber: residual of the refined curve
+residual %.1f Hz -> %.1f Hz (%d used, %d rejected); receiver offset %+.0f Hz
+mean anomaly %+.3f deg, mean motion %+.5f rev/day, inclination %+.4f deg, RAAN %+.4f deg
+estimated timing error of the prediction: %.1f s before, %.1f s after (1 sigma)
+Also share GPS interference cells (counts per area, no aircraft)
+For every 0.5 degree square (about 55 km) around your ADS-B receiver: how many aircraft were heard in the last hour and how many of them reported a poor GPS position. Only these two numbers per square are sent, never aircraft identities, tracks or your location. It feeds the GPS interference layer of the public map and is an indicator, not proof of jamming. Off until you choose it.
+Calibrate...
+Measure this radio's frequency error against an FM station or a carrier of known frequency
+Frequency calibration
+Not with a converter in front of the radio.
+Start the receiver first.
+Ready.
+Looking for a reference signal.
+Measuring: %+.2f ppm, uncertainty %.2f ppm.
+No usable reference signal was found.
+Current setting: %.2f ppm
+No measurements of this radio yet.
+History of this radio (ppm)
+Drift: %+.3f ppm per minute
+Band from (kHz)
+Calibrate from two landmarks
+Calibrated.
+Camera snapshot URL (JPEG)
+Cannot load the picture.
+Cannot save the snapshot.
+Centre azimuth
+Click the picture to set the column of the selected landmark.
+Demo skyline (no camera)
+Enable RF camera
+Field of view
+Heat strength
+No picture.
+Normal camera lens
+Panorama (equirectangular)
+Picture
+Picture or panorama file
+Projection
+RF camera
+Save snapshot
+Snapshot saved: %s
+Sub-bands
+The two landmarks do not fit a picture.
+Weakest shown
+azimuth
+azimuth only; the picture is just a backdrop
+column
+to (kHz)
+Translate to English
+Speech in another language is also translated to English, offline, next to the original. Needs a multilingual model and costs about 1.5 times more processor time; it is skipped when the engine cannot keep up. Nothing is sent anywhere. Translation into other languages is not available.
+The loaded model is English only: translation needs a multilingual model.
+Live: stop the room
+Copy room link
+Host PIN (to moderate on the room page):
+Go live (Live rooms)...
+Could not create the room
+Lost the connection to the rooms server
+The live rooms server is not available yet.
+No internet connection.
+The live rooms server did not answer in time.
+The live rooms server is full right now. Try again later.
+Too many rooms were started from here. Try again in a few minutes.
+The live rooms server refused the request.
+The live rooms server sent an answer OnAir does not understand.
+Checking the live rooms server...
+Check the live rooms server again
+Live rooms: while you are live, anyone with the room link can watch this receiver's waterfall, the mode and the frequency you are tuned to, and chat with each other. The room list on the web also shows its title. Nothing is sent before you press Go live, and nothing is stored after the room ends. Your location, your name and the audio are never sent.
+Room title
+Also show decoded ACARS text in the room (public)
+Needs Server > Send data to map server and Also share interesting ACARS messages.
+Go live
+Schedule passes by itself
+Takes the passes of the ticked groups one at a time, highest priority first, and starts, tunes and records each one without you. Overlapping passes are trimmed or skipped; a receiver you started yourself is left alone.
+Priority (higher wins)
+Keep the SDR free every day
+from %d:00
+to %d:00
+Nothing planned.
+planned
+trimmed
+skipped: SDR reserved
+skipped: too short
+skipped: higher priority
+Aircraft from the echoes of a broadcast transmitter, with two coherent channels
+Baseline %.1f km, transmitter bearing %.0f degrees
+Cancellation taps
+Cannot open the recording.
+Clutter cancelled by %.0f dB, %d detections
+Complex float32, channel 0 reference and channel 1 surveillance, sample-synchronous.
+Doppler Hz
+Doppler over time
+Echo level (dB)
+End of the recording.
+Enter the illuminator position.
+False alarm rate 1e-x
+Illuminator
+NLMS instead of ECA
+Noise-like waveform (DVB-T)
+Passive radar
+Processing
+Range km
+Range rate (m/s)
+Range-Doppler map
+Rate m/s
+Saved illuminators
+Second target
+Target range (km)
+Targets closer than the tap count in range samples are hidden by the cancellation.
+The receiver position is the one set for ADS-B.
+Tracks
+Two recordings (reference, surveillance)
+Two-channel recording (cf32)
+Waiting for data.
+Rewind
+Keeps the last seconds of the radio's raw samples in memory, so the signal from just before something happened can be saved too
+A file source is already there: nothing to keep
+Keep a rolling memory of the raw samples
+Reaches back (s)
+Memory limit (MB)
+Full rate
+Samples kept
+1 / 4 averages every 4 samples: the memory then reaches 4 times as far back, but only the middle quarter of the band is kept. The settings can be changed while it is off.
+Reaches back %s using %d MB; %s in memory now (%.3f Msps)
+The memory limit shortens the window; raise it or keep fewer samples.
+Save the last (s)
+Then keep recording (s)
+Save when the General receiver's squelch opens
+In the General receiver mode; for other events use an automation rule with the action "Save the rewind"
+Save now
+Save the rewind
+Seconds to keep after the event
+FM broadcast
+Airband
+DAB / VHF band III
+UHF TV
+868 MHz ISM
+ADS-B 1090 MHz
+Measuring %s (%d/%d)
+Pick a radio first (the test signal and files cannot be measured)
+None of the measuring bands is inside this radio's range
+%s: the ADC is overloaded (%.2f%% of the samples clip). Lower the gain or add an attenuator.
+%s: a strong signal (%.0f dB over the floor) overloads the ADC while other bands are starved at this gain. Add a band-stop filter for that band (an FM notch for the FM band) instead of lowering the gain.
+%s: the ADC level is high (%.1f dBFS rms), little headroom is left for strong signals. Lower the gain a little.
+%s: the receiver noise is only %.1f dB above the ADC's own, so weak signals are lost. Raise the gain.
+%s: the receiver noise is only %.1f dB above the ADC's own and the gain is already at its maximum. Add a low-noise amplifier (LNA) next to the antenna.
+%s: the gain could be about %.0f dB lower without losing sensitivity, which gives more headroom against strong signals.
+%s: the noise floor is %.0f dB higher than in the quietest band. Look for a local noise source (LED lighting, switching power supplies, computers), move the antenna away from it, or add a ferrite choke on the cable.
+No %s stations were found, though there are normally some. Check the antenna and the cable; the band may also be empty in your area.
+The strongest %s station is only %.0f dB over the noise (a healthy antenna gives at least %.0f dB). Move the antenna higher or outdoors, or add a band filter and an LNA.
+The radio's clock is %+.1f ppm off. Enter %+.1f as the frequency correction (ppm) in the radio's settings.
+The radio's clock is %+.1f ppm off: fine.
+ADS-B range is short: the farthest aircraft was %.0f nm away (a clear outdoor antenna reaches 150 nm or more); the weakest direction is around %.0f degrees. Move the antenna higher, with a clear view of the sky.
+No aircraft at all in %.0f sectors of 10 degrees starting at %.0f degrees, while the neighbouring directions reach far: something blocks the view there (a wall, a hill, a building).
+ADS-B range: not enough positions yet. Run the ADS-B mode with the antenna position set for a few minutes, then run the report again.
+Nothing wrong found. The gain, noise floor and reference stations look healthy.
+Station health report
+Gain: %.0f dB
+%s: noise floor %.1f dBFS per bin, ADC margin %.1f dB, strongest signal %.0f dB over the floor, ADC level %.1f dBFS, clipping %.2f%%
+   %s stations found: %d, strongest %.0f dB over the floor
+The numbers are relative to the receiver itself (not calibrated to dBm).
+Station health
+Measures the noise floor and the ADC level on a few bands, looks for FM, DAB and DVB-T stations, and tells you what to change at the antenna. The receiver stops while it measures (about a minute).
+known carrier MHz (optional)
+A carrier whose frequency you trust (an ATSC pilot, a cell tower's beacon, a time signal). The report gives the radio's clock error in ppm from it. Leave at 0 to skip.
+Save report...
+Save as JSON...
+Noise floor
+ADC margin
+%.1f dBFS
+%.0f dB
+none found
+%s: %d, best %.0f dB
+Clock error: %+.2f ppm (%+.0f Hz at %.4f MHz)
+No carrier found at the frequency given
+What to do
+ADS-B range by direction
+Check station
+Noise floor, ADC level and reference stations per band, with plain advice on gain, filters and antenna placement
+Unknown
+Switching power supply
+LED lamp or driver
+Powerline (PLC)
+Local oscillator or clock leak
+Cannot open the GPS device or file.
+Waiting for a position fix.
+Interference gone
+The noise floor rose by %.1f dB
+New broadband noise %.2f - %.2f MHz, %.0f dB: %s
+New signal at %.4f MHz, %.0f dB above the baseline: %s
+Demo (simulated sweeps)
+A comb of spurs needs a spacing of at least 5 bins to be told from a wide signal: use finer bins to see closely spaced spurs
+Pause between sweeps: the monitor can run for hours with long pauses; the walk wants back to back
+spur threshold %.0f dB
+floor alert %.0f dB
+confirm in %d sweeps
+floor change dB
+Learning the baseline: %d of %d sweeps. Keep the band as it normally is.
+Watching. Noise floor %.1f dBFS, baseline %.1f dBFS, %zu known signals.
+Press Start. The first sweeps become the baseline: what is normal in this band.
+Learn the baseline again
+What is there now is normal
+Adds the interference that has been reported to the baseline, so it raises no more alerts
+Save the alerts...
+Save the noise floor log...
+Interference now
+Likely source
+To MHz
+Spacing kHz
+Alerts
+Event
+dB above baseline
+new signal
+noise floor up
+new broadband noise
+gone
+no position
+the receiver position (set for ADS-B)
+type a position
+GPS device or NMEA file
+latitude
+longitude
+A serial GPS (for example /dev/cu.usbmodem1101 or COM3 on a PC; 9600 baud) or a text file of NMEA sentences
+Reconnect
+Readings are logged at %.5f, %.5f
+Readings are logged without a position.
+%+.1f dB above the quiet level
+Press Start and walk. The meter is full when the interference is 25 dB above the quietest place so far.
+Quiet
+Some interference
+Loud
+- getting louder
+- getting quieter
+- steady
+strongest spur %.4f MHz, %.0f dB
+This is the quiet level
+Leave out the signals seen now
+Broadcast carriers and devices you already know are left out of the meter: do this where it is quiet, before walking
+Clear the readings
+Save as CSV...
+Save as GPX...
+reading
+dB above the quiet level
+Loudest reading: %+.1f dB at %.5f, %.5f (%s)
+Loudest reading: %+.1f dB (%s), no position
+Strongest spur MHz
+Interference hunter
+Monitor
+Walk
+Watch a band for new interference, tell what kind it is, and walk to find it with a loud / quiet meter
+The watchlist file could not be read:
+APRS call signs
+Words in messages
+One per line: an ICAO hex address (4840D6), a registration (A6-EDA) or a call sign (KLM1023). A trailing * matches the start (KLM*). Heard by ADS-B, ACARS, VDL2 and HFDL.
+One per line: an MMSI number, a ship name or a call sign. A trailing * matches the start (2190*). Heard by AIS and DSC. The entry DSC distress alerts on every DSC distress call.
+One per line: a call sign. Without an SSID (LY1ABC) every SSID matches; with one (LY1ABC-9) only that one.
+One per line: a frequency in MHz (162.025), with a unit (162025 kHz) or a range (144-146). Anything decoded on it counts.
+One per line: a word or a phrase (not case sensitive). A trailing * matches word starts (fire*). Searched in pager, ACARS, APRS and other decoded text.
+New list...
+Make a list on the left: aircraft, ships, APRS call signs, frequencies or words. OnAir tells you when something on it is heard.
+On
+Tolerance (kHz)
+entries
+Delete list
+Desktop notification
+Sound (follows Mute)
+WAV file, empty = three beeps
+Push alerts go to a service you choose, with the address and token you give. They are stored in your data folder and never written to a log.
+optional
+optional, sent as a Bearer token
+Send a test alert
+Most alerts per hour (0 = no limit)
+Same station again after (minutes)
+Quiet hours (no alerts, still listed in the history)
+From
+Until
+Local time of this computer.
+alerts sent
+Heard
+What happened
+held back: quiet hours
+held back: rate limit
+Watchlists
+Watch for these
+Lists
+Watchlists...
+Alerts when listed aircraft, ships, call signs, frequencies or words are heard: notification, sound, ntfy, Telegram or webhook
+Scan done. Strongest: %s
+Scan done. No transmitter found.
+No picture yet.
+The picture could not be saved.
+Recording stopped: %d pictures
+Recording into %s
+no transmitter on this channel
+transmitter found, waiting for sync
+waiting for a picture
+colour
+monochrome
+Snapshot
+Saves the picture as a PNG file into <data folder>/fpv/.
+Records up to 5 pictures a second as numbered PNG files into a new folder in <data folder>/fpv/.
+video SNR
+sync
+sound
+The on-screen display (OSD) of the flight controller is part of the picture; it is shown, not decoded.
+Scan 5.8 GHz
+Scan 1.2 GHz
+Tune to the strongest
+When the scan is done, tune to the channel with the most signal. Otherwise go back to the frequency before the scan.
+A scan tunes the radio over the channels one after the other and measures each one inside the capture. Click a channel to tune to it.
+over the noise
+not measured yet
+tuned channel level
+the capture, MHz from the centre; the lines are the channels of the plans inside it
+start the receiver to see the spectrum
+(none)
+System
+automatic
+Sound
+The sound subcarrier of the video transmitter, an FM carrier above the picture. Automatic takes the stronger of 6.0 and 6.5 MHz.
+Saturation
+Weave
+Bob
+offset
+picture
+lines
+fields/s
+depth
+fields
+ok
+damaged
+polarity
+sync tip is the lowest frequency
+sync tip is the highest frequency
+over the noise beside them
+5.8 GHz bands A, B, E, F, R (Raceband) and L, and the 1.2 GHz plan. Needs a wide radio: 20 Msps (a HackRF). The picture is the frequency of the carrier; PAL or NTSC is found by itself.
+no transmitter heard: scan the channels, or tune to one
+Transmitter
+Video sync
+FPV video
+system
+test card
+colour bars
+no transmitter (noise only)
+The test signal is a transmitter on the channel the radio is tuned to: FM video with a 1 kHz tone on the sound subcarrier.
+5.8 / 1.2 GHz video
+TX sample rate
+Requested transmit IQ sample rate. For a shared RX/TX radio, set the same hardware rate on both sides. Stop transmitting before changing it.
+Manual TX sample rate must be greater than zero.
+Data (off)
+Generic
+AM / airband
+NFM / VHF / UHF
+WFM broadcast
+SSB / HF
+CW
+Audio cleanup: noise reduction, notch, leveller ...
+Audio cleanup
+Basic
+Settings for
+Automatic (%s)
+A data mode: its sound is left as it is. Pick another kind above to clean it up anyway.
+Clean the sound you hear. The decoders always get the untouched sound.
+Strength
+noise reduction
+auto notch
+leveller
+silence gate
+voice emphasis
+Nothing is on for this kind of mode. See Advanced.
+Noise reduction
+Takes down the steady hiss and rumble between and under the speech. More strength cleans more and costs some naturalness.
+Auto notch
+Finds a steady whistle, carrier or heterodyne in the sound and cuts it out narrowly, following it as it drifts. Lets go again when it stops.
+cutting %.0f Hz
+Manual notch
+Cuts one frequency out of the sound, for a tone you can see in the audio spectrum.
+width %.0f %%
+Leveller
+Brings quiet and loud stations to the same loudness, with a soft limiter against peaks.
+balance %.0f %%
+target %.0f dB
+Do not boost the noise between transmissions
+Silence gate
+Mutes the sound when only noise is left, like a squelch that follows the noise level by itself.
+opens %.0f dB above noise
+muted
+Voice emphasis
+Cuts the rumble below the voice and lifts the presence, so a weak voice is easier to understand.
+De-esser
+Softens sharp S sounds.
+Record the cleaned sound
+Record audio saves the sound as you hear it now, cleaned, instead of the raw sound.
+Skip silence in the recording
+Nothing is recorded while the silence gate holds the sound off.
+Reset to the preset
+Auto gain
+AGC settings
+Let AGC turn the amp on/off by itself
+Off by default. With this off the AGC only moves the LNA and VGA and never touches the amp: it stays as you set it. The amp is the first stage and can be damaged by strong signals.
+This radio has no amp for the AGC to switch.
+The amp can fry itself on strong signals while on
+Aims for: %s
+wide channel: ADC headroom
+narrow channel: lowest noise, neighbours kept out
+pulsed signals: peaks decide
+strong stations: front end protected
+Now: %s
+cut after an overload
+lowering the gain
+raising the gain
+strong neighbour: front gain limited
+decoder locked: gain frozen
+at the end of the gain range
+holding the level
+0 is the normal suppressed carrier. A little carrier helps a receiver lock on; the top of the range is as strong as the loudest audio.
+A second tone added to the first (0 = off). Two tones make a two-tone linearity test.
+AM (carrier and sidebands)
+AM sends the carrier and both sidebands. Double sideband with suppressed carrier sends only the sidebands.
+Audio above this level is turned down.
+Audio frequency
+Boosts the high notes before sending (0 = off).
+Boosts the high notes before sending. 50 µs in Europe and most of the world, 75 µs in the Americas.
+CTCSS tone
+Carrier injection
+Carrier level
+Choose a radio below, or switch on the test (no RF).
+Choose a signal in the list.
+Cuts the audio above this pitch, which sets how wide the signal is (0 = off).
+DSB (suppressed carrier)
+Default: %s
+Deviation
+Esc = stop
+Evens out loud and quiet speech so the signal stays strong without over-modulating.
+Every setting of this signal: modulation, audio, filters, output and timing. The defaults are sensible; open this only to change them.
+Filters
+Follow the receiver
+Frequency offset
+Gain added after the compressor.
+Gain applied to the whole signal just before the radio. Lower it when the meter shows clipping; the radio's own gain is set above.
+HOLD TO TRANSMIT
+High-pass (low cut)
+How far the RDS subcarrier deviates the carrier.
+How far the audio swings the frequency. 2.5 kHz is a 12.5 kHz channel, 5 kHz a 25 kHz channel.
+How far the audio swings the frequency. Broadcast FM uses 75 kHz.
+How far the audio swings the signal. Full modulation is at 100 percent; more than that over-modulates and distorts.
+How fast the compressor lets go after a loud passage.
+How long the VOX stays open after the sound stops.
+How loud the audio must be to open the VOX.
+How loud the test tone is, as a share of full audio.
+How strongly audio above the threshold is turned down; 20 is close to a hard limiter.
+Key-up fade-in
+Left level
+Left test tone
+Low-pass (audio bandwidth)
+Lower sideband (LSB)
+Make-up gain
+Mirror the spectrum
+Modulation depth
+Music (not speech)
+Name for a new preset
+No presets saved for this signal yet.
+Output
+Output level
+Output trim
+Peak level
+Pilot level
+Pitch
+Presets
+Preview
+Programme type
+Push to talk (hold the button)
+Puts every setting below back to its default.
+RDS
+RDS level
+RF level
+RX %.6f MHz
+Ratio
+Release
+Removes rumble and hum below this pitch (0 = off).
+Reset to default
+Right level
+Right test tone
+Runs the signal generator at the radio's sample rate into nothing: no radio is opened and nothing is sent. The spectrum and levels show what would go out.
+Save preset
+Saves the settings below, the frequency and the level under this name.
+Second test tone
+Sends the 19 kHz pilot and the stereo difference signal.
+Sends the station name, radio text and programme type on a 57 kHz subcarrier.
+Speech compressor
+Start transmitting
+Stereo
+Stop transmitting
+Swaps I and Q so the signal is turned over: an upper sideband becomes a lower one. For a radio or mixer that inverts.
+TRANSMITTING (release to stop)
+TX = RX
+TX independent
+Test tone
+Test tone level
+The 19 kHz stereo pilot, as a share of the full deviation.
+The RDS flag for a station that carries traffic announcements.
+The RDS flag for music instead of speech.
+The RDS flag that a traffic announcement is on the air.
+The RDS programme type code (0 to 31; 10 is pop music).
+The largest signal as a share of full scale.
+The left test tone, as a share of full audio.
+The pitch of the Morse tone, as an offset above the dial frequency.
+The pitch of the test tone, used when the audio input is the test tone.
+The pitch on the left channel, used when the audio input is the test tone.
+The pitch on the right channel (0 = three times the left).
+The radio's output level. Start low.
+The right test tone, as a share of full audio.
+The signal fades in over this time after Start, so the key-up does not click.
+The signal goes out only while there is sound on the audio input.
+The signal goes out only while you hold the button down.
+The size of the carrier as a share of full scale. At a depth of 85 percent the peaks reach about full scale.
+The size of the signal as a share of full scale.
+The transmit frequency follows the receiver's. Typing a different one here unlinks them. Click to unlink.
+The transmit frequency is its own. The receiver is on %.6f MHz. Click to make the transmitter follow it.
+Threshold
+Timing
+Traffic announcement now
+Traffic programme
+Upper sideband (USB)
+VOX (transmit on voice)
+VOX hang time
+VOX threshold
+Well-known frequencies of this signal: pick one to set the transmit frequency
+Where the middle of the signal sits in the audio passband, as an offset above the dial frequency.
+Where the signal sits in the audio passband, as an offset above the dial frequency.
+Which sideband is sent.
+follows the receiver
+on
+Full screen
+Exit full screen
+Back to the normal layout (Esc)
+The map fills the whole window (Esc to leave)
+The radar fills the whole window (Esc to leave)
+This screen fills the whole window (Esc to leave)
+Labels
+Names on the spectrum
+Station and channel names on the spectrum and the waterfall. A click on a name tunes to it and opens its mode.
+Frequency database
+FM stations (RDS names)
+DAB ensembles
+DVB networks and services
+Memories
+Names that do not fit are left out. Zoom in to see more of them.
+Names of the stations and channels on the spectrum: choose which sources are shown
+Click to tune here
+Click to tune here and open its mode
+Coastlines
+Borders
+Mosaic
+Histogram
+Crop to view
+Clear crop
+Save GeoTIFF...
+Add to mosaic
+Clear mosaic
+S-curve (contrast)
+Lift shadows
+Cloud detail (flat bright end)
+Night infrared
+No palette
+Thermal
+Rainbow
+Enhanced infrared
+Sepia
+Tone curve applied after the gamma
+Colour palette on the brightness of the picture, for infrared and other single-channel pictures
+Simplified coastlines drawn into the map (good to about 50 - 100 km, not a survey)
+A few of the longest country borders, simplified
+Zoom to the part you want, then crop: saving and mosaic use only the part inside the yellow frame
+The map as a GeoTIFF (WGS 84, no overlays, transparent where the pass did not reach) for GIS programs
+Keep this projected pass to stitch with others in the Mosaic view
+Stitch several projected passes into one map
+The mosaic is empty. Open a pass with a map, switch Map projection on and press Add to mosaic. Several passes are stitched into one map.
+Data packs
+Data packs...
+Download map tiles, satellite elements and airports once, to work without internet
+Map tiles
+Transmitters
+Downloaded: 
+Stopped: 
+ (start it again to continue)
+%ld tiles, zoom %d to %d
+Pack
+Size
+Last updated
+Action
+not downloaded
+Update
+Starts the download now. Files that are already there and correct are kept.
+Check
+Checks every file against the checksum recorded at the download
+Deleted: 
+Credit: 
+Download data once and use it without internet. Nothing is downloaded until you click Download on a pack.
+Free disk space: %s
+Map tiles around a position
+Radius (km)
+Deepest zoom
+The zoom is lowered by itself so the area stays within 4000 tiles (the OpenStreetMap tile policy does not allow bulk downloads).
+Map data (c) OpenStreetMap contributors. Satellite elements: CelesTrak. Airports: OurAirports (public domain). Details: Help > Credits.
+start the receiver to see the meters
+Maker
+Last reading
+encrypted payload
+no meter heard yet: most meters send every few seconds to a few minutes
+type
+status
+The payload of this meter is encrypted (AES). It is listed but never decoded.
+Meter
+no frame yet
+CRC failures
+No Wireless M-Bus channel lies inside this capture. Tune to 868.625 MHz with 2 Msps (S1, T1, C1, R2) or to 169.4375 MHz (N1).
+strongest channel
+last frame at the chip slicer
+The demodulated frequency of the last frame, one point per chip: +-1 is the nominal deviation of the mode.
+Meters
+meters
+868 MHz: S1 868.3, T1 and C1 868.95, R2 868.03 - 868.15 MHz; 169 MHz: N1 169.40625 - 169.46875 MHz. Encrypted payloads are never decoded.
+The test signal sends six simulated meters (S1, T1, C1 in both formats, R2) on the 868 MHz channels, one with an encrypted payload.
+Meters, 868 / 169 MHz
+5-tone
+2-tone
+sub-audible
+extended tone
+standard tone
+code of the usual list
+code not in the usual list
+same waveform
+no CTCSS tone or DCS code
+start the receiver on an FM channel or a sound card to decode tones
+voice-band tone
+keys
+, sound card
+, FM
+gate
+open (no gate)
+audio spectrum, 0 - 3.5 kHz
+the 50 CTCSS tones, 67 - 254 Hz
+The level of each of the 50 tones in the last second of the sub-audible band, left to right from 67.0 to 254.1 Hz. A tone that stands clear of the others for about half a second is taken as the CTCSS tone.
+start the receiver to see what is heard
+Length
+Hear the channel (the sub-audible tones are taken out); with a gate set under Receiver the sound opens only for the chosen tone or code
+sound card audio
+FM channel
+Gate
+Open the sound
+always
+on any tone or code
+only on the chosen tone or code
+Like the squelch of a radio with CTCSS or DCS: while the gate is closed the Listen sound is muted. The decoders keep running either way.
+inverted
+DCS polarity (N or I) follows the deviation sign of the receiver; the same waveform can read as two codes, the second is shown as the alias. Five-tone tone lengths are vendor specific: when several standards fit, the one whose usual tone length is closest is listed first.
+Tone decoders
+The test signal repeats every 40 s: CTCSS 123.0 Hz under speech-like noise, DCS D023N, DTMF 159#, a ZVEI1 call 12345, SELCAL AM-CP and a two-tone page.
+CTCSS, DCS, DTMF, selcall
+A 406 MHz distress beacon (EPIRB on a boat, ELT in an aircraft, PLB carried by a person) sends a burst of about half a second every 50 seconds: an unmodulated carrier, then 112 or 144 bits at 400 bit/s. The message holds a 15 digit hex ID that is unique to the beacon, the country, the kind of beacon, and often a position (rounded to 15 minutes in a short message, to 4 seconds in a long one). Two BCH checks protect the message; up to three damaged bits in the first field are repaired.\n\nOnAir only receives. Test beacons and self-test bursts are marked. If you think you heard a real one, tell the rescue coordination centre of your country; do not rely on this program for safety.
+EPIRB (boat)
+ELT (aircraft)
+PLB (person)
+Ship security
+Test
+What a 406 MHz beacon sends
+Hex ID
+ (self-test burst)
+Protocol
+Identification
+Precision
+about 4 seconds of arc
+15 minutes of arc (short message)
+Homing 121.5 MHz
+no
+long, 144 bits
+short, 112 bits
+Check bits
+both good
+first good, second failed
+first good
+bits repaired
+no beacon decoded yet; a beacon sends a burst about every 50 seconds
+Checks
+fit
+no decoded beacon carries a position yet
+blue EPIRB, orange ELT, green PLB, grey test; a short message is rounded to 15 minutes of arc
+nothing decoded yet
+Raw bits
+tune to 406.028 MHz and start the receiver
+Receive only. A real beacon means somebody may be in danger: tell the rescue centre; do not rely on this program for safety.
+no input
+beacon decoded lately
+Bursts
+heard
+failed the checks
+Last burst
+Input
+start the receiver to see beacons
+The test signal repeats five made-up beacons every 3 seconds (real ones send every 50 seconds): an EPIRB, a PLB, an ELT, a maritime user beacon and an EPIRB in the southern hemisphere.
+Distress beacons, 406 MHz
+%.0f Hz above the dial (%.3f kHz)
+Interleave
+Line
+Long
+MT63 comes in three widths, 500, 1000 and 2000 Hz (5, 10 and 20 characters per second). Automatic looks for all three.
+Play the sideband (dial + 200 Hz to 3.8 kHz) on the sound card; decoding is the same either way
+Robust chat, 14.1095 MHz
+Short
+The 64 carriers: the level of each, relative to the strongest
+The long interleave spreads every character over 64 symbols, the short one over 32: the long one survives longer fades and bursts, the short one has less delay. Automatic decodes both and shows the one with clean codewords.
+bandwidth
+centre
+characters
+codeword quality
+interleave
+no callsigns yet
+start the receiver to read the band
+synchronising
+unclear
+Copies the pings as CSV: id, UTC time, duration, peak level, Doppler, drift, type, beacon frequency.
+Log to file
+Appends every ping to meteor_scatter.csv in the data folder, also when nobody watches the screen.
+threshold %d dB
+How far above its long-term level a spectrum bin must rise to count as an echo. Lower finds weaker pings and more false ones.
+start the receiver to see the pings
+No beacon line found. Tune to the beacon (GRAVES: 143.050 MHz) so that it lies within 4 kHz of the centre, with 1 Msps or more.
+Doppler
+Drift
+overdense
+underdense
+no ping yet: on GRAVES a quiet hour brings a few, a shower peak hundreds
+shape
+overdense: long, flat top
+underdense: sharp rise, exponential decay
+start the receiver to see the rates
+pings per hour (UTC), the last 24 hours
+pings per day (UTC), the last 30 days; showers marked at their peak
+meteor showers now and near (peak date, typical hourly rate for an eye observer)
+Shower
+Rate
+today
+in %d days
+%d days ago
+active
+, daytime: best for radio
+not active
+start the receiver to see the echoes
+echoes: +-500 Hz around the beacon line, the last 30 seconds (brighter = stronger over the background)
+beacon
+ping
+long-term spectrum around the beacon (dB over the noise)
+Pings
+Rates
+Echoes
+pings
+not found
+noise
+detector
+log
+The beacon is a fixed transmitter far beyond the horizon: it is heard only when a meteor trail reflects it, as a short echo a few Hz to a few hundred Hz away from the line. Echoes closer than 18 Hz to the line are masked.
+Ping
+with interference bursts
+The test signal is a beacon 420 Hz off the centre with simulated meteor echoes: short underdense ones and a few long overdense ones.
+Beacon echoes, 143.050 MHz
+Voice inversion: undo a simple voice scrambler
+Voice inversion
+Frequency inversion only mirrors the sound of a voice; it is not encryption. In many countries it may be illegal to listen to private communications. You are responsible for what you listen to and for following the law where you are. Encrypted traffic is never touched.
+I understand and accept
+Descramble the sound you hear. The decoders always get the untouched sound.
+Simple
+Split-band
+Split at
+Band from
+Listens for 5 seconds, then tries the carrier (or split) frequencies and picks the one that sounds most like speech. Works best while someone is talking.
+Found %.0f Hz (match %.0f %%)
+Nothing speech-like found. Try again while someone is talking.
+Not encryption: it only mirrors the sound. Encrypted traffic is never touched.
+No sound reached the descrambler: tune a voice signal first.
+Baseband filter
+Custom filter
+ ended
+%d channels at most
+%zu SSTV pictures
+%zu channels, %d dropped
+Auto decoder
+Auto listen
+CPU %.0f %%
+CPU limit %.1f cores
+Conversations
+Decode automatically
+Decoding
+Dial MHz
+Downlink MHz
+FT4 on every signal that keys in 7.5 s slots
+FT8 on every signal that keys in 15 s slots
+How many decoder channels may run at once; each channel decodes every signal inside 3.4 kHz of audio
+JS8Call on every signal that keys in 15 s slots
+List the SSB conversations (the Conversations view); no decoder runs
+Listen follows the loudest or the newest active conversation by itself, switching when it goes quiet or another one is clearly louder
+Listen is off
+Listen is on
+Listening
+Morse on every keyed carrier
+Mute the audio while only noise is there
+Open the gallery
+PSK31 / PSK63 on every narrow continuous signal
+RTTY on every wide continuous pair of tones
+Record this conversation to a WAV file in the QO-100 folder of the data folder
+SSB conversations
+SSTV on every steady signal about 1.3 kHz wide; pictures go to the gallery
+Squelch
+Start (UTC)
+Stop following
+Tick SSB conversations in the Auto decoder view to list the voice conversations.
+Time the decoders use per second of signal, against the limit
+Tune the listening channel to this conversation (upper sideband, 300 - 3000 Hz) and play it; the dial follows its drift
+When the decoders need more than this, the weakest channel is dropped
+no SSB conversation heard yet
+talking
+the loudest conversation
+the newest conversation
+Speed
+Your callsign: lines addressed to it, to allcall or to cqcqcq are marked
+The 73 tone positions watched: how often each was the strongest tone. The 33 tones of the band are the ones that light up.
+Cmd
+The command character after the addressee: ? asks for the signal report, * for an acknowledgement, $ for the heard list, @ for the location, & for the message of the day, ^ for the software version, ; relays the message, ! and ~ repeat it, # stores it, + asks for a file, | is an alert, > and < change the speed
+speed
+tone spacing
+tones heard
+tone quality
+FSQ speeds: 1.5, 2, 3, 4.5 and 6 baud. Automatic looks for all five; the band is 290 Hz wide at every speed.
+IFKP speeds: 0.5, 1.0 and 2.0 (1.95, 3.9 and 7.8 baud). Automatic looks for all three; the band is 387 Hz wide at every speed.
+Directed chat, 14.105 MHz
+Keyboard chat, 14.083 MHz
+25 Hz pilot
+Audio width
+Auto switches to stereo when the 25 Hz pilot is there. Mono plays L + R on both sides. Stereo uses the quadrature part whatever the pilot says.
+Left and right audio level (dBFS, the last 30 s on the right)
+MONO
+MW stereo, 531 - 1602 kHz
+Mono
+Mute the noise when the carrier is weaker than 4 dB over it
+NO CARRIER
+Pilot
+STEREO
+The channel filter, each side of the carrier: 4.5 kHz for 9 kHz channel spacing, 5 kHz for 10 kHz, wider for a quiet band
+The quadrature part of the carrier (L - R and the pilot), 0 - 60 Hz. A C-QUAM station has a 25 Hz tone at about 5 percent of the carrier here.
+carrier to noise
+found
+modulation
+no carrier yet
+pilot
+pilot checks
+separation
+stereo phase
+Captions
+Save SRT
+Save VTT
+behind real time (%.1f x): the oldest speech is skipped
+speed %.2f x real time
+music skipped %llu
+auto captions
+Captions made on your computer from the speech you hear, with the offline speech model (View > Transcripts > Settings). Nothing is sent anywhere.
+Station's own subtitles
+Generated from speech
+Both
+Generated where the station has none
+Auto subtitles (captions)
+Captions from the speech of the sound you hear: FM and AM broadcast, DAB, TV audio, amateur and digital voice. They are made here with the offline speech model, shown on the receiver, and kept only in memory (and in .srt / .vtt files if you save them). Music is skipped. Off until you turn it on.
+Make captions
+TV subtitles
+As spoken
+English translation
+Caption text
+Tick Translate to English above (multilingual model) to get translated captions.
+Caption size, percent
+Background, percent
+Lines
+At the top of the picture
+Save .srt and .vtt next to audio recordings
+Captions: %llu pieces, %llu music skipped, %llu skipped (too slow), speed %.2f x real time
+The speech engine is slower than the audio: use a smaller model or fewer CPU threads. The oldest speech is skipped, never the newest.
+category
+from
+in distress
+unreadable
+repair
+symbols
+DISTRESS
+search calls
+saved %s
+could not write %s
+%d symbols fixed, one rebuilt from the check character
+%d symbols taken from the second copy
+In a Ships list, the entry DSC distress alerts on every DSC distress call; an MMSI alerts on that station.
+DSC scanner
+Distress and safety (MF/HF)
+Worldwide calling
+Series A calling
+Series B calling
+VHF channel 70
+Scan these channels with this radio
+Steps the radio through the channels: the distress channels are visited more often, and a locked decoder or a call keeps the radio on its channel.
+Decode the chosen MF/HF channels in the same capture
+Decodes every chosen channel that lies inside the radio's bandwidth at the same time (channels in a group are 0.5 kHz apart, the distress channels are MHz apart). Needs a sample rate of 250 kHz or more.
+scanning:
+extra channels:
+none inside the capture
+Ship and coast station names
+entries; ship names, call signs and types are learned from AIS (static data), and your own list can be imported.
+Export list
+There is no bundled coast station list: no openly licensed one is available, so bring your own file.
+Marine bands
+A click tunes the radio and opens the mode for it.
+Protocols
+positions
+Export KML
+Export GPX
+ARDOP has no calling frequency: every gateway publishes its own dial frequency. These buttons only jump to the digital part of each band.
+CRC or Reed-Solomon failed
+Called
+Count
+Detail
+Last
+Last heard
+Locator
+Reed-Solomon corrections
+S/N %d dB, quality %d/100
+Session
+Station
+Winlink HF, 14.103 MHz
+bytes
+bytes corrected
+data frames
+failed
+header only (PSK, QAM or 600 baud data)
+leader %d ms
+no data yet
+no stations yet
+other modulations
+quality %d/100
+tone offset
+Copies the reports as CSV: id, time, platform address, channel, frequency, bit rate, coding, level, data format, parity errors, data.
+Appends every report to goes_dcs.csv in the data folder, also when nobody watches the screen.
+How far above the noise a carrier line must rise to be followed. Lower finds weaker platforms and more false carriers.
+start the receiver to see the reports
+No report yet. Tune the uplink band (401.7 to 402.1 MHz, centre 401.85 MHz) with 0.5 Msps or more: platforms send once every few minutes to once an hour, mostly at set times.
+Platform
+Data
+Manchester
+NRZ
+address
+BCH check passed after correcting bit errors
+BCH check passed
+flags
+format
+pseudo-binary B
+ASCII
+, no end code (carrier lost)
+sensor data
+text as received
+start the receiver to see the platforms
+platforms heard, the most recent first
+Reports
+Last (UTC)
+Latest data
+no platform heard yet
+start the receiver to see the band
+the captured band, the last few seconds (brighter = stronger over the noise); carriers being followed are marked
+spectrum now (dB over the local noise)
+Platforms
+reports
+carriers
+receiving
+locked, waiting for the sync
+The GOES and Meteosat data collection system: river gauges, weather stations, tide gauges and buoys send a short report on a 1.5 kHz channel of 401.7 to 402.1 MHz, at 100, 300 or 1200 bps. The 8-digit hex address names the platform. The receiver tries every bit rate and coding on every carrier it finds.
+with a steady carrier on another channel
+The test signal is three platforms on channels 60, 100 and 140 that each send a short report every 14 to 18 seconds.
+Platform reports, 401.85 MHz
+Codes
+start the receiver to see the codes
+Squawk and altitude, 1090 MHz
+Mode A is the squawk, Mode C the altitude in 100 ft steps. A reply does not say which of the two it is: a code shows as A/C until it can only be a squawk or is matched to a Mode S aircraft by its squawk or its altitude.
+Receive only: item trackers are recognised from their public advertisements. OnAir never connects to one, sends to one or reads its owner's data. Identifiers stay in memory for 30 minutes after a tracker was last heard, are shown as the last two address bytes only and are never saved.
+your own
+following you
+separated from its owner
+nearby
+start the receiver to see the trackers around you
+Tracker
+Stays
+Near
+Trend
+Addresses
+closer
+farther
+steady
+Unmark
+Mark as mine
+no trackers heard yet
+An alert is also sent to the watchlists: add the word tracker to a list of the Words kind to get a notification or a push message.
+Alert
+no alerts yet
+Trackers
+packets
+in the last minute
+in the last 30 min
+alert after
+A tracker that stays near a fixed receiver, such as a neighbour's tag, is reported too, and the levels are the radio's own, not calibrated distances. The detector is meant for a receiver that travels with you.
+Adverts
+Trackers advertise on all three channels in turn, so any one of them hears every tracker.
+Alert after
+How long a tracker must stay with the receiver before the alert.
+Near level
+The averaged level from which a tracker counts as near. The radio's level, not a calibrated distance.
+Trackers, 2.4 GHz
+Telemetry
+start the receiver to see the beacon
+No narrow carrier found. Tune so that the beacon lies inside the capture: a Ku-band beacon seen through an LNB is usually within a few hundred kHz of the centre.
+Appends the carrier measurements and every frame to satellite_beacon.csv in the data folder, also when nobody watches the screen.
+Copies the learned frames as hex lines.
+capture spectrum (dB over the noise): the narrow lines are carriers
+phase modulation of the carrier (dB over the floor): the telemetry tones stand out
+No telemetry: the carrier is not phase modulated, or the tones are too weak.
+Errors
+template
+fixed bits
+subcarrier
+bit rate
+other lines
+A satellite beacon is a carrier, sometimes phase modulated with telemetry, that ground stations use to measure the link. The carrier is followed in frequency and level; the telemetry is recovered as raw frames and the frame length is learned from their repetition. The layout of a given satellite's frames is not decoded.
+The test signal is a carrier 236 kHz off the centre, drifting like an LNB, with a second carrier 545 kHz above it and 4800 bit/s bi-phase telemetry on a 48 kHz subcarrier, in frames of 256 bytes.
+Carrier, drift, telemetry frames
+decoded
+estimated
+unknown meaning
+decoded: checked against the data. estimated: inferred, hover for the reason. unknown meaning: shown as it is; the meaning of a word is the spacecraft maker's and is never guessed.
+Save JSON
+saved to
+Value
+Raw
+primary channel at
+vendor elements
+Colour by altitude
+Track width (px)
+Never drop silent aircraft
+Drop after (s)
+contact lines
+A line between the two stations of a contact, drawn from the decoded messages: the great circle from the caller to the station called.
+show contact lines
+fade with age
+highlight completed contacts
+only the selected station
+line labels
+colour by band
+colour by time
+keep lines for (min)
+deselect
+click a station on the map to select it
+%zu stations by their locators, %zu contact lines
+%d stations at the centre of their grid squares, %zu contact lines
+Labels on the map
+The callsign, altitude and speed boxes beside the aircraft. Off: cleaner in crowded areas; the selected aircraft still shows its box.
+1/min
+1/30 s
+Slow rows for long watches: one row a minute keeps about 8.5 hours in the picture
+The picture holds the last %.1f hours.
+The picture holds the last %.0f minutes.
+Average the rows
+Clock time on the time scale
+The waterfall's time scale shows the time of day of each row instead of seconds ago
+time of day
+Watched only
+Show only the capcodes of the watch list (set it in the Capcodes view)
+Unknown frequency? Turn on Whole span (top right of the spectrum): every pager carrier in the band the radio captures is decoded, and the MHz column shows where each capcode was heard.
+Watch list
+Capcodes (RICs) to watch, separated by spaces or commas; a range like 2000-2099. Watched rows are marked; Messages > Watched only shows just them.
+Off
+Decimate in OnAir
+Setting up the server…
+How to run rtl_tcp, SpyServer, SoapySDRServer, SDR++ server, KiwiSDR or TCI on the radio's computer, and what to do when it does not connect (opens the guide in the browser)
+Use docking
+Dock left
+Dock right
+Dock top
+Dock bottom
+Dock as a tab of the spectrum
+Undock
+Next tab
+Previous tab
+The radio runs this many times faster than the mode asks, and OnAir filters the samples down to the mode's rate itself.\nFor radios that are poor at low sample rates (images, a weak anti-alias filter). Costs CPU and USB bandwidth;\nthe radio's highest rate still applies. Off: the radio runs at the mode's rate.
+At a set speed each row is the highest level of the frames in between, so a short burst is never missed.\nAverage: the mean level instead, which calms the noise and shows steady weak signals better.
+Action code: 0x%02X, reserved: 0x%02X
+Basic and detail paired
+Cab end (raw): %s
+Cars
+Clock: %s
+Corrected bits: %d
+Decreasing mileage
+End of train, FFSK
+Increasing mileage
+Locomotive code: %s, serial: %s
+Network time: %s
+Parameter: %s
+Pressure kPa
+Setup
+Signal %d, semaphore %d, locomotive role %d
+Start the receiver to listen
+Station %u, track %u, actual track %u, driver %u
+Tail ID
+Test frame
+Train dispatch, FFSK
+Unpaired detail
+Weight %u t, length %.1f
+A country file (cty.dat, wl_cty.dat) from country-files.com gives every DXCC entity with its CQ and ITU zone. Thanks to Jim Reisert AD1C and the country-files.com team. OnAir does not bundle it: load one you have, or press Download (only on your click).
+Show country and zone in decoded messages
+Load file...
+Download from country-files.com
+Reset to built-in

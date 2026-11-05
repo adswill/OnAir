@@ -27,6 +27,7 @@ struct GoesTelemetry {
     double timeSec = 0, inputRate = 0;
     double symbolRate = 0;            // measured by the timing loop
     bool carrierLock = false, frameLock = false;
+    bool qpsk = false;                // the demodulator is the QPSK one (GK-2A HRIT)
     bool invertedG2 = true;           // how the convolutional code's second output arrives
     bool rsDualBasis = true;          // Reed-Solomon symbols in the CCSDS dual basis (true) or the conventional one
     float lockMetric = 0;             // 0 .. 1: BPSK constellation quality

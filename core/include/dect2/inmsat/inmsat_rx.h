@@ -33,6 +33,7 @@ public:
     void setFocus(int carrierId);
     void setBudget(double units);             // CPU budget (Advanced); an Aero window costs 1
     void setInmarsatC(bool on);
+    void setVoice(bool on);                   // try the wide carriers as Aero C (voice) channels (default on)
     inmsat::VoiceMixer& voice();              // mute / solo / recording; the audio thread calls mix()
 private:
     struct Impl;

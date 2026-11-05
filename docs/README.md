@@ -135,7 +135,10 @@ The user guides and notes that live in the repository. The same text is on the [
 | [goes-dcs.md](goes-dcs.md) | GOES / Meteosat DCS |
 | [ifkp.md](ifkp.md) | IFKP (Incremental Frequency Keying Plus) |
 | [marine-vhf.md](marine-vhf.md) | Marine VHF (channels 1 to 88, 156 to 162 MHz) |
+| [GK2A.md](GK2A.md) | GK-2A (Korea, 128.2 E) LRIT 1692.14 MHz BPSK and HRIT 1695.4 MHz QPSK: xRIT files, JPEG 2000 pictures, KMA DES keys, sensitivity |
+| [selcal.md](selcal.md) | SELCAL, the tone call of aircraft on HF and VHF voice channels |
 | [atis.md](atis.md) | ATIS, the transmitter identification of the European inland waterways (Rhine, Danube) |
+| [fy3.md](fy3.md) | FY-3 AHRPT and FY-3 MPT: the Fengyun-3 polar weather satellites (VIRR, MERSI pictures), what is decoded and how sensitive it is |
 | [modeac.md](modeac.md) | Mode A/C |
 | [propagation.md](propagation.md) | Propagation (Tools > Propagation) |
 | [qo100-auto.md](qo100-auto.md) | QO-100 narrowband: presets, auto decoder, conversation manager |

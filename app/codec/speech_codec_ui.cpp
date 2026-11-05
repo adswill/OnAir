@@ -178,7 +178,11 @@ void voiceCodecLine(const char* id, const char* name, const std::string& libPath
     const bool ok = plug || !libPath.empty();
     ImGui::AlignTextToFramePadding();
     if (ok) ImGui::TextColored(ImVec4(0.5f, 0.9f, 0.6f, 1), "Voice codec loaded: %s %s (%s)", name, plug ? "plug-in" : "libmbe", plug ? p.c_str() : libPath.c_str());
-    else ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.3f, 1), "Voice codec missing: %s. Install the plug-in (see ?). Calls are still found and logged.", name);
+    else {   // wraps: the Simple views show it in a narrow pane
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.3f, 1), "Voice codec missing: %s. Install the plug-in (see ?). Calls are still found and logged.", name);
+        ImGui::PopTextWrapPos();
+    }
     codecNoticePrompt(id);
 }
 
@@ -337,6 +341,46 @@ static void codecSetupAssistant() {
         }
     }
     ImGui::Spacing();
+}
+
+// The setup wizard's codec screen: the status of every voice codec plug-in in one line each, Open codecs folder, Look again, the steps for this computer.
+// Nothing is downloaded or installed by OnAir; the user builds the plug-ins on their own computer (docs/CODECS.md).
+void wizardCodecPanel() {
+    namespace cd = dect2::codec;
+    namespace vv = dect2::voice;
+    vv::SetupProbe pr;
+    pr.fileExists = fileExists;
+    pr.archOfFile = [](const std::string& f) {
+#if defined(__APPLE__)
+        return cd::machoArchOfFile(f);
+#else
+        (void)f; return std::string();
+#endif
+    };
+    pr.loaded = [](const std::string& id, std::string* path) { return cd::pluginLoaded(id, path); };
+    pr.processArch = cd::processArch();
+    const auto items = vv::codecSetupStatus(codecSearchFolders(), pr);
+    ImGui::TextColored(ImVec4(0.5f, 0.9f, 0.6f, 1), "%s", vv::setupSummary(items).c_str());
+    for (const auto& it : items) {
+        const bool good = it.state == vv::SetupState::Loaded || it.state == vv::SetupState::Ready;
+        ImGui::Bullet();
+        ImGui::TextUnformatted(it.name.c_str());
+        ImGui::SameLine();
+        ImGui::TextColored(good ? ImVec4(0.5f, 0.9f, 0.6f, 1) : ImVec4(0.95f, 0.75f, 0.3f, 1), "%s",
+                           it.state == vv::SetupState::Loaded ? tr("working") : it.state == vv::SetupState::Ready ? tr("installed") : it.state == vv::SetupState::WrongArch ? tr("wrong processor") : tr("missing"));
+        ImGui::SameLine();
+        ImGui::TextDisabled("(%s)", it.modes.c_str());
+    }
+    ImGui::Spacing();
+    if (openCodecFolderButtons()) {}
+    ImGui::SameLine();
+    if (ImGui::Button(tr("Look again##wizcodecs"))) for (const auto& it : items) speechCodecRescan(it.id.c_str());
+    ImGui::SameLine();
+    if (ImGui::Button(tr("Copy build command##wizcodecs"))) ImGui::SetClipboardText(vv::setupBuildCommand(vv::currentSetupOs()).c_str());
+    ImGui::Spacing();
+    ImGui::TextDisabled("%s", tr("How to install (this computer):"));
+    const auto steps = vv::setupSteps(vv::currentSetupOs());
+    for (size_t i = 0; i < steps.size(); ++i) ImGui::TextDisabled("%zu. %s", i + 1, steps[i].c_str());
 }
 
 void voiceCodecsWindow(App& a) {

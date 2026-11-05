@@ -13,10 +13,11 @@ std::map<std::string, Slot>& slots() { static std::map<std::string, Slot> m; ret
 const std::vector<CodecInfo>& codecTable() {
     static const std::vector<CodecInfo> t = {
         {"ambe2", "AMBE+2 (3600x2450)", CodecKind::Patented, "DMR, NXDN, dPMR, P25 phase 2", "plug-in onair-codec-ambe2 (for example around mbelib), or libmbe in the codecs folder"},
-        {"ambe",  "AMBE (3600x2400)",   CodecKind::Patented, "D-STAR, Inmarsat Aero voice (3.3)", "plug-in onair-codec-ambe, or libmbe in the codecs folder"},
+        {"ambe",  "AMBE (3600x2400)",   CodecKind::Patented, "D-STAR", "plug-in onair-codec-ambe, or libmbe in the codecs folder"},
+        {"aeroambe", "AMBE 4800x3600 (Inmarsat Aero)", CodecKind::Patented, "Inmarsat Aero C channel voice", "plug-in onair-codec-aeroambe (build tools/addons/aeroambe against libaeroambe's mbelib; docs/CODECS.md)"},
         {"imbe",  "IMBE (7200x4400)",   CodecKind::Patented, "P25 phase 1, ProVoice / EDACS", "plug-in onair-codec-imbe, or libmbe in the codecs folder"},
         {"ysf",   "AMBE+2 (Yaesu)",     CodecKind::Patented, "Yaesu System Fusion (C4FM)", "plug-in onair-codec-ysf"},
-        {"iridium", "AMBE-family (Iridium)", CodecKind::Patented, "Iridium voice", "plug-in onair-codec-iridium; gets the 39 byte voice field of each frame as received (unverified without recordings)"},
+        {"iridium", "AMBE-family (Iridium)", CodecKind::Patented, "Iridium voice", "plug-in onair-codec-iridium; gets the 39 byte voice field of each frame, first bit received = least significant bit (iridium-toolkit .dfs order; unverified without recordings)"},
         {"tetra", "TETRA ACELP",        CodecKind::Patented, "TETRA", "plug-in onair-codec-tetra (unencrypted calls only)"},
         {"tetrapol", "TETRAPOL RP-CELP", CodecKind::Patented, "TETRAPOL", "plug-in onair-codec-tetrapol (clear calls only)"},
         {"",      "Codec 2",            CodecKind::Open,     "M17, FreeDV 700D / 700E / 1600", "built in (libcodec2 comes with OnAir)"},
@@ -34,7 +35,7 @@ const CodecInfo* findCodec(const std::string& id) {
 }
 
 size_t pluginFrameBytes(const std::string& id) {
-    if (id == "ambe2" || id == "ambe") return 12;
+    if (id == "ambe2" || id == "ambe" || id == "aeroambe") return 12;
     if (id == "imbe") return 23;
     if (id == "iridium") return 39;
     if (id == "tetrapol") return 16;

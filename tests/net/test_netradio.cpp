@@ -284,8 +284,8 @@ static void testRtlTcpLocalStall() {
     uint64_t w0 = 0, w1 = 0; int64_t ns = 0; size_t nn = 0;
     ring.lastWrite(w0, ns, nn);
     srv.pause = false;
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    ring.lastWrite(w1, ns, nn);
+    // the samples are back: polled up to 6 s (a fixed 500 ms was too short for a loaded runner that is also running other tests)
+    for (int i = 0; i < 120; i++) { std::this_thread::sleep_for(std::chrono::milliseconds(50)); ring.lastWrite(w1, ns, nn); if (w1 > w0 + 100000) break; }
     CHECK(w1 > w0 + 100000);                                        // and the samples are back
     CHECK(srv.connections == before);
     src->stop();

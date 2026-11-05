@@ -9,7 +9,7 @@ namespace dect2::inmsat {
 const std::vector<SatDef>& satTable() {
     static const std::vector<SatDef> t = {
         // name,                                   lon,   region, 600/1200 P MHz,        10500 P MHz
-        {"Alphasat 25E",                            25.0, -1, 1545.115, 1545.130, 1546.0125, 1546.0275},
+        {"Alphasat 25E",                            25.0, -1, 1545.115, 1545.130, 1545.315, 1545.3275},    // 10500 bit/s P pair observed 2026-10-30, its system table naming 25.5E
         {"Inmarsat-4 F3 98W",                      -98.0, -1, 1545.020, 1545.205, 1546.005, 1546.0775},
         {"Inmarsat-3 F5 54W (AOR-W)",              -54.0,  0, 1545.025, 1545.040, 1546.055, 1546.070},
         {"Inmarsat-6 F1 83.5E",                     83.5, -1, 1545.160, 1545.225, 1546.0425, 1546.1225},

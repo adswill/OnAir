@@ -79,9 +79,9 @@ bool genTransmissionBits(const GenParams& p, std::vector<uint8_t>& bits, std::ve
     return emit(t);
 }
 
-std::vector<std::complex<float>> modulateC4fm(const std::vector<uint8_t>& bits, double fs, double cfoHz, float amp, int idle) {
+std::vector<std::complex<float>> modulateC4fm(const std::vector<uint8_t>& bits, double fs, double cfoHz, float amp, int idle, double devScale, double rateScale) {
     const int nsym = (int)bits.size() / 2;
-    const double sps = fs / 4800.0;
+    const double sps = fs / (4800.0 * rateScale);
     const int total = (int)std::ceil((nsym + 2 * idle + 8) * sps);
     std::vector<float> lvl((size_t)(nsym + 2 * idle + 8), 0.f);
     for (int i = 0; i < nsym; i++) lvl[(size_t)(idle + 4 + i)] = (float)dibitLevel(bits[(size_t)(2 * i)] * 2 + bits[(size_t)(2 * i + 1)]);
@@ -100,7 +100,7 @@ std::vector<std::complex<float>> modulateC4fm(const std::vector<uint8_t>& bits, 
         const double t = n / sps;
         const int c = (int)std::floor(t);
         double f = 0;
-        for (int k = c - 4; k <= c + 4; k++) if (k >= 0 && k < (int)lvl.size()) f += lvl[(size_t)k] * 900.0 * rc(t - (k + 0.5));
+        for (int k = c - 4; k <= c + 4; k++) if (k >= 0 && k < (int)lvl.size()) f += lvl[(size_t)k] * 900.0 * devScale * rc(t - (k + 0.5));
         ph += 2 * kPi * (f + cfoHz) / fs;
         if (ph > kPi) ph -= 2 * kPi;
         if (ph < -kPi) ph += 2 * kPi;

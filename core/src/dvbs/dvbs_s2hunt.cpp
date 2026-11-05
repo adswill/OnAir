@@ -294,6 +294,9 @@ S2HuntResult s2Hunt(const cf32* z, size_t n, bool sfPilots) {
     }
     if (bi < 0) { S2HuntResult v; if (vlHunt(z, n, v)) return v; return best; }
     const Chain& c = chains[(size_t)bi];
+    // A chain of two headers at a negative Es/N0 is what noise gives as well (a false 64APSK header, then "frame synchronisation lost", again and again),
+    // and a VL-SNR signal at -5 dB looks like it: its 990 known symbols are far more reliable than two 90 symbol headers, so they are asked first
+    if (c.pos.size() <= 2 && c.first.snrDb < 0.f) { S2HuntResult v; if (vlHunt(z, n, v, true)) return v; }
     // the start: the first header that is a data frame (not a dummy), with another header exactly one frame later
     size_t si = 0;
     for (size_t i = 0; i < c.pos.size(); i++) if (s2PlsKind(c.code[i]) == 0) { si = i; break; }

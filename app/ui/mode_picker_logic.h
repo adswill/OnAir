@@ -53,7 +53,7 @@ inline uint32_t tagsOfName(const std::string& n) {
     if (n == "Airband" || n == "Airband voice") return TVoice | TAviation;
     if (n == "VOR / ILS" || n == "NDB") return TAviation;
     if (n == "NAVTEX" || n == "DSC" || n == "Weather fax") return TMarine | THf;
-    if (n == "Meteor-M LRPT" || n == "GOES HRIT" || n == "Elektro-L") return TSatellite | TWeather;
+    if (n == "Meteor-M LRPT" || n == "GOES HRIT" || n == "Elektro-L" || n == "GK-2A LRIT" || n == "GK-2A HRIT" || n == "FY-4 LRIT" || n == "FY-4A HRIT-II/III" || n == "FY-2 S-VISSR") return TSatellite | TWeather;
     if (n == "GNSS") return TSatellite;
     if (n == "FM" || n == "DAB") return TBroadcast;
     return 0;

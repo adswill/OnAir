@@ -14,10 +14,10 @@ namespace {
 
 using dect2::math::kPi;
 constexpr double kBaud = 2400.0, kCentreHz = 1800.0;   // ARINC 618: 2400 bit/s MSK, tones 1200 Hz and 2400 Hz around 1800 Hz
-constexpr double kTimingGain = 0.04;                    // bit-clock correction per bit, as a fraction of a bit at full early-late error
+constexpr double kTimingGain = 0.015;                    // bit-clock correction per bit, as a fraction of a bit at full early-late error
 constexpr int kMaxParityErr = 3;                        // parity errors a block may have and still be tried for repair
 constexpr int kN3 = 25;
-constexpr float kRefKeep = 0.9f;                        // memory of the carrier reference, per bit
+constexpr float kRefKeep = 0.97f;                        // memory of the carrier reference, per bit
 
 double besselI0(double x) { return dect2::window::besselI0(x, 40, 0.0); }
 

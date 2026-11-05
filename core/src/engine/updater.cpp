@@ -269,6 +269,7 @@ bool wantedAsset(const std::string& n, InstallKind kind, const std::string& arch
     case InstallKind::MacApp: return has(n, "macos") && has(n, arm ? "arm64" : "x86_64") && endsWith(n, ".dmg");
     case InstallKind::WindowsInstall: return has(n, "windows") && endsWith(n, "-setup.exe");
     case InstallKind::LinuxPortable: return has(n, "linux") && has(n, arm ? "aarch64" : "x86_64") && endsWith(n, "-portable.tar.gz");
+    case InstallKind::LinuxAppImage: return endsWith(n, ".AppImage") && has(n, arm ? "aarch64" : "x86_64");
     case InstallKind::LinuxDeb: return endsWith(n, ".deb") && has(n, arm ? "arm64" : "amd64");
     default: return false;
     }
@@ -339,6 +340,21 @@ bool fileExists(const std::string& p) { std::ifstream f(p, std::ios::binary); re
 std::string dirOf(const std::string& p) { const size_t k = p.find_last_of("/\\"); return k == std::string::npos ? std::string(".") : p.substr(0, k); }
 }
 
+std::string appImagePath() {
+#if defined(__linux__)
+    const char* e = getenv("APPIMAGE");
+    if (e && *e && endsWith(e, ".AppImage") && fileExists(e)) return e;
+#endif
+    return std::string();
+}
+
+bool looksLikeAppImage(const std::string& file) {
+    std::ifstream f(file, std::ios::binary);
+    unsigned char h[11] = {0};
+    if (!f.read((char*)h, sizeof h)) return false;
+    return h[0] == 0x7f && h[1] == 'E' && h[2] == 'L' && h[3] == 'F' && h[8] == 'A' && h[9] == 'I' && h[10] == 2;
+}
+
 InstallKind detectInstallKind(const std::string& exe) {
     if (exe.empty()) return InstallKind::Unknown;
 #if defined(__APPLE__)
@@ -346,6 +362,7 @@ InstallKind detectInstallKind(const std::string& exe) {
 #elif defined(_WIN32)
     return fileExists(dirOf(exe) + "\\Uninstall.exe") ? InstallKind::WindowsInstall : InstallKind::Unknown;
 #else
+    if (endsWith(exe, ".AppImage") && looksLikeAppImage(exe)) return InstallKind::LinuxAppImage;
     if (exe.compare(0, 5, "/usr/") == 0) return InstallKind::LinuxDeb;
     const std::string bin = dirOf(exe), root = dirOf(bin);
     if (bin.size() >= 4 && bin.compare(bin.size() - 4, 4, "/bin") == 0 && fileExists(root + "/lib/../README.txt")) return InstallKind::LinuxPortable;
@@ -358,6 +375,7 @@ const char* installKindName(InstallKind k) {
     case InstallKind::MacApp: return "macOS app";
     case InstallKind::WindowsInstall: return "Windows installation";
     case InstallKind::LinuxPortable: return "portable Linux package";
+    case InstallKind::LinuxAppImage: return "AppImage";
     case InstallKind::LinuxDeb: return "Debian package";
     default: return "portable or development copy";   // the Windows zip lands here too
     }
@@ -605,6 +623,12 @@ std::string batchValue(const std::string& v, bool path) {
 std::string trim(const std::string& s) { return dect2::str::trimSpace(s); }
 }
 
+std::string debInstallCommand(const std::string& debFile) {
+    std::string q = "'";
+    for (char c : debFile) { if (c == '\'') q += "'\\''"; else q += c; }
+    return "sudo apt install " + q + "'";
+}
+
 std::string windowsApplyScript(int pid, const std::string& setupExe, const std::string& installedExe, const std::string& resultFile, const std::string& version, bool restart) {
     std::ostringstream o;
     o << "@echo off\r\n"
@@ -674,7 +698,8 @@ std::string updateResultPath() { const std::string t = tempRoot(); return t + (t
 Updater::Updater(const std::string& v) : current_(v) {
     api_ = "https://api.github.com/repos/adswill/OnAir/releases?per_page=12";
     if (const char* e = getenv("ONAIR_UPDATE_URL")) if (*e) setApiUrl(e);
-    setExecutable(executablePath());
+    const std::string ai = appImagePath();   // started from an AppImage: the program file is the AppImage, not the copy in its temporary mount
+    setExecutable(ai.empty() ? executablePath() : ai, ai.empty() ? -1 : (int)InstallKind::LinuxAppImage);
 }
 
 Updater::~Updater() { cancel_ = true; if (th_.joinable()) th_.join(); }
@@ -684,7 +709,8 @@ void Updater::setExecutable(const std::string& p, int kindOverride) {
     kind_ = kindOverride >= 0 ? (InstallKind)kindOverride : detectInstallKind(p);
     std::lock_guard<std::mutex> lk(mu_);
     st_.kind = kind_;
-    st_.autoInstallable = kind_ == InstallKind::MacApp || kind_ == InstallKind::WindowsInstall || kind_ == InstallKind::LinuxPortable;
+    st_.autoInstallable = kind_ == InstallKind::MacApp || kind_ == InstallKind::WindowsInstall || kind_ == InstallKind::LinuxPortable || kind_ == InstallKind::LinuxAppImage;
+    st_.manualInstall = kind_ == InstallKind::LinuxDeb;
 }
 
 Updater::Status Updater::status() const { std::lock_guard<std::mutex> lk(mu_); return st_; }
@@ -880,6 +906,17 @@ void Updater::runCheck(bool pre) {
         if (confirmOfficial(r)) {}
         else if (r.sha256 == "!") { setPhase(Phase::Failed, "the mirror's checksum for the package does not match GitHub's: not installing it"); return; }
     }
+    if (r.valid && !viaMirror && !r.assetName.empty() && (r.sha256.size() != 64 || kind_ == InstallKind::LinuxAppImage)) {
+        // no digest in GitHub's list (or an AppImage, which is checked twice): the release's own SHA256SUMS file. Both have to agree when both exist.
+        std::string sums;
+        if (fetch(dlBase_ + r.tag + "/SHA256SUMS", &sums, "", 10, 1u << 16) == 0) {
+            const std::string f = checksumFor(sums, r.assetName);
+            if (f.size() == 64) {
+                if (r.sha256.size() == 64 && r.sha256 != f) { setPhase(Phase::Failed, "the checksum GitHub lists for the package differs from the one in SHA256SUMS: not installing it"); return; }
+                if (r.sha256.size() != 64) { r.sha256 = f; r.officialVerified = true; }
+            }
+        }
+    }
     std::lock_guard<std::mutex> lk(mu_);
     st_.checkedAt = nowSeconds();
     if (!err.empty()) { st_.phase = Phase::Failed; st_.error = err; return; }
@@ -981,8 +1018,23 @@ bool Updater::prepare(const std::string& file, std::string& err) {
         staged_ = stage + "/" + top;
         return true;
     }
-    case InstallKind::WindowsInstall:
+    case InstallKind::LinuxAppImage: {
+        // the new AppImage is copied next to the old one (same volume, so that swapping them is a rename); it has to be a real AppImage
+        if (!looksLikeAppImage(file)) { err = "the downloaded file is not an AppImage: not installing it"; return false; }
+        const std::string stage = exe_ + ".new";
+        std::remove(stage.c_str());
+        if (runCommand("cp " + shq(file) + " " + shq(stage)) != 0 || !fileExists(stage)) { err = "the new version could not be written next to the installed one (no permission to write in " + dirOf(exe_) + "?)"; std::remove(stage.c_str()); return false; }
+#ifndef _WIN32
+        chmod(stage.c_str(), 0755);
+#endif
+        staged_ = stage;
+        return true;
+    }
     case InstallKind::LinuxDeb:
+        staged_ = file;
+        { std::lock_guard<std::mutex> lk(mu_); st_.manualCommand = debInstallCommand(file); }
+        return true;
+    case InstallKind::WindowsInstall:
         staged_ = file;
         return true;
     default:
@@ -1054,9 +1106,10 @@ bool Updater::apply(bool restart, std::string* err) {
         return true;
     }
 #else
-    if (kind_ == InstallKind::MacApp || kind_ == InstallKind::LinuxPortable) {
+    if (kind_ == InstallKind::MacApp || kind_ == InstallKind::LinuxPortable || kind_ == InstallKind::LinuxAppImage) {
         const bool mac = kind_ == InstallKind::MacApp;
-        const std::string target = mac ? exe_.substr(0, exe_.find(".app/Contents/MacOS/") + 4) : dirOf(dirOf(exe_));
+        const bool ai = kind_ == InstallKind::LinuxAppImage;
+        const std::string target = mac ? exe_.substr(0, exe_.find(".app/Contents/MacOS/") + 4) : ai ? exe_ : dirOf(dirOf(exe_));
         const std::string script = dir + "/apply.sh";
         std::ofstream o(script);
         o << "#!/bin/sh\n"
@@ -1066,25 +1119,23 @@ bool Updater::apply(bool restart, std::string* err) {
           << "if mv \"$TARGET\" \"$OLD\"; then\n"
           << "  if mv \"$NEW\" \"$TARGET\"; then rm -rf \"$OLD\"; else mv \"$OLD\" \"$TARGET\"; fi\n"
           << "fi\n"
-          << "rmdir \"$(dirname \"$NEW\")\" 2>/dev/null\n";
+          << (ai ? "" : "rmdir \"$(dirname \"$NEW\")\" 2>/dev/null\n");
         if (mac) o << "if [ \"$RESTART\" = 1 ]; then open \"$TARGET\"; fi\n";
         else o << "if [ \"$RESTART\" = 1 ]; then \"$LAUNCH\" >/dev/null 2>&1 & fi\n";
         o << "rm -rf \"" << dir << "\"\n";
         o.close();
         chmod(script.c_str(), 0755);
-        const std::string launch = mac ? std::string() : target + "/bin/onair";
+        const std::string launch = mac ? std::string() : ai ? target : target + "/bin/onair";
         spawnDetached(script, {pid, target, staged_, restart ? "1" : "0", launch});
         return true;
     }
     if (kind_ == InstallKind::LinuxDeb) {
-        // the package manager needs the administrator: polkit asks for the password in a window
-        const std::string script = dir + "/apply.sh";
-        std::ofstream o(script);
-        o << "#!/bin/sh\npkexec dpkg -i " << shq(staged_) << " && { if [ \"$1\" = 1 ]; then onair >/dev/null 2>&1 & fi; }\n";
-        o.close();
-        chmod(script.c_str(), 0755);
-        spawnDetached(script, {restart ? "1" : "0"});
-        return true;
+        // Installing a .deb needs the administrator. Nothing is run as root from here, not even through a password prompt: the package is
+        // downloaded and checked, and the user gets the exact command to run themselves.
+        std::string ver;
+        { std::lock_guard<std::mutex> lk(mu_); ver = st_.release.version; }
+        if (err) *err = "Update " + ver + " is downloaded and checked. Install it with: " + debInstallCommand(staged_);
+        return false;
     }
 #endif
     if (err) *err = "this copy of OnAir cannot replace itself";

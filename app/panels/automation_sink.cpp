@@ -153,8 +153,8 @@ std::pair<bool, std::string> doOnUi(App& a, const Pending& p) {
         int sec = std::max(1, std::min(3600, atoi(get("seconds").c_str())));
         if (!a.engine.running()) return {false, "the receiver is not running"};
         if (a.engine.recordingStats().active) { gIqStop = std::max(gIqStop, now + sec); return {true, "already recording: extended"}; }
-        const dect2::FileFormat f = a.recFormat >= 1 ? dect2::FileFormat::CF32 : dect2::FileFormat::CS8;
-        const std::string path = plat::dataDir() + "/recordings/" + (a.recFormat == 2 ? dect2::blueRecordingName(a.engine.recordingName(f)) : a.engine.recordingName(f));
+        const dect2::FileFormat f = (dect2::FileFormat)recFileFormatOf(a.recFormat);
+        const std::string path = recordingsDir() + "/" + (a.recFormat == 2 ? dect2::blueRecordingName(a.engine.recordingName(f)) : a.engine.recordingName(f));
         std::string err;
         if (!a.engine.startRecording(path, f, err)) { a.engine.log("automation: recording failed: " + err); return {false, err}; }
         a.recDonePath.clear();
@@ -170,7 +170,7 @@ std::pair<bool, std::string> doOnUi(App& a, const Pending& p) {
         int sec = std::max(1, std::min(3600, atoi(get("seconds").c_str())));
         auto& rec = dect2::AudioRecorder::instance();
         if (rec.active()) { gAudioStop = std::max(gAudioStop, now + sec); return {true, "already recording: extended"}; }
-        const std::string path = plat::dataDir() + "/recordings/" + dect2::AudioRecorder::fileName("automation", a.freqMhz * 1e6, dect2::AudioRecFormat::Wav);
+        const std::string path = recordingsDir() + "/" + dect2::AudioRecorder::fileName("automation", a.freqMhz * 1e6, dect2::AudioRecFormat::Wav);
         std::string err;
         dect2::AudioRecOptions o;
         if (!rec.start(path, o, err)) return {false, err};
@@ -254,6 +254,15 @@ public:
     }
 };
 }  // namespace
+
+void alertNow(App& a, const std::string& title, const std::string& body, bool sound) {
+    {
+        std::lock_guard<std::mutex> lk(gMu);
+        gBanner = {title, body, nowS() + 10};
+    }
+    plat::notify(title, body);
+    if (sound) { std::string note; playSound(a, "", note); }
+}
 
 ActionSink& sink() {
     static AppSink s;

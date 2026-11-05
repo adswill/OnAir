@@ -19,13 +19,19 @@
 #include "dect2/p25p2/p25p2_rx.h"
 #include "dect2/p25p2/p25p2_tel.h"
 #include "dect2/tetrapol/tetrapol_rx.h"
+#include "dect2/tetra/tetra_gen.h"
 #include "dect2/tetrapol/tetrapol_tel.h"
 #include "dect2/meteor/meteor_rx.h"
 #include "dect2/meteor/meteor_tel.h"
 #include "dect2/hrpt/hrpt_rx.h"
 #include "dect2/hrpt/hrpt_tel.h"
+#include "dect2/fy3/fy3_rx.h"
+#include "dect2/fy3/fy3_tel.h"
 #include "dect2/goes/goes_rx.h"
 #include "dect2/goes/goes_tel.h"
+#include "dect2/gk2a/gk2a_rx.h"
+#include "dect2/fygeo/fygeo_rx.h"
+#include "dect2/fygeo/fygeo_tel.h"
 #include "dect2/globalstar/globalstar_rx.h"
 #include "dect2/globalstar/globalstar_tel.h"
 #include "dect2/orbcomm/orbcomm_rx.h"
@@ -48,6 +54,38 @@
 #include "dect2/ble/ble_tel.h"
 #include "dect2/inmc/inmc_rx.h"
 #include "dect2/inmc/inmc_tel.h"
+#include "dect2/hfdl/hfdl_gen.h"
+#include "dect2/pactorhf/pactorhf_rx.h"
+#include "dect2/pactorhf/pactorhf_tel.h"
+#include "dect2/pactorhf/pactorhf_rx.h"
+#include "dect2/pactorhf/pactorhf_tel.h"
+#include "dect2/hfdl/hfdl_rx.h"
+#include "dect2/hfdl/hfdl_tel.h"
+#include "dect2/ndb/ndb_rx.h"
+#include "dect2/ndb/ndb_tel.h"
+#include "dect2/cw/cw_rx.h"
+#include "dect2/cw/cw_tel.h"
+#include "dect2/ism/ism_rx.h"
+#include "dect2/ism/ism_tel.h"
+#include "dect2/cell/cell_rx.h"
+#include "dect2/cell/cell_tel.h"
+#include "dect2/vor/vor_rx.h"
+#include "dect2/vor/vor_tel.h"
+#include "dect2/hfdig/hfdig_rx.h"
+#include "dect2/hfdig/hfdig_tel.h"
+#include "dect2/airband/airband_gen.h"
+#include "dect2/airband/airband_rx.h"
+#include "dect2/airband/airband_tel.h"
+#include "dect2/marine/marine_gen.h"
+#include "dect2/marine/marine_rx.h"
+#include "dect2/marine/marine_tel.h"
+#include "dect2/sitor/sitor_live.h"
+#include "dect2/cdr/cdr_rx.h"
+#include "dect2/cdr/cdr_tel.h"
+#include "dect2/dvbc/dvbc.h"
+#include "dect2/dvbc/dvbc_rx.h"
+#include "dect2/dvbc/dvbc_tel.h"
+#include "dect2/atsc3/atsc3_rx.h"
 #include "sens_impair.h"
 #include <chrono>
 #include <cmath>
@@ -59,6 +97,10 @@
 
 namespace sens {
 using namespace dect2;
+
+// GK-2A receivers take their link in the constructor: LRIT (BPSK 128 ksym/s) and HRIT (QPSK 3 Msym/s)
+struct Gk2aLritRx : Gk2aReceiver { Gk2aLritRx() : Gk2aReceiver(0) {} };
+struct Gk2aHritRx : Gk2aReceiver { Gk2aHritRx() : Gk2aReceiver(1) {} };
 
 struct Metric { double good = 0, bad = 0; };   // cumulative: units with a good check, units that failed theirs
 
@@ -363,10 +405,31 @@ inline std::vector<Mode> allModes() {
         m.make = factory<DrmReceiver, DrmTelemetry>([](DrmReceiver& rx, double r) { rx.setSilent(true); rx.configure(r); }, blocks<DrmTelemetry>);
         add(m);
     }
+    {   // DRM mode B, 10 kHz, 16-QAM at the strongest protection (level 0): the most robust audio setting of DRM30
+        Mode m = base("drm16", "DRM 16-QAM prot 0", "ofdm-radio", 12, 2e6, 8.0, 10e3, 10);
+        m.echoUs = 1000; m.fdHz = 2; m.snrHi = 24; m.maxJobs = 4; m.pnHz = 1;
+        m.gen = [](size_t n) { SynthConfig c; c.modeOpt[2] = 1; c.modeOpt[3] = 1; c.modeOpt[4] = 1; c.modeOpt[5] = 1; return clean(12, c, 2e6, n); };
+        m.make = factory<DrmReceiver, DrmTelemetry>([](DrmReceiver& rx, double r) { rx.setSilent(true); rx.configure(r); }, blocks<DrmTelemetry>);
+        add(m);
+    }
+    {   // DRM+ (mode E), 100 kHz, 4-QAM MSC: the lowest-order DRM audio setting
+        Mode m = base("drmE", "DRM+ 4-QAM", "ofdm-radio", 12, 2e6, 8.0, 100e3, 90);
+        m.echoUs = 20; m.fdHz = 2; m.snrHi = 20; m.maxJobs = 4; m.pnHz = 1;
+        m.gen = [](size_t n) { SynthConfig c; c.modeOpt[0] = 5; c.modeOpt[2] = 1; c.modeOpt[5] = 1; return clean(12, c, 2e6, n); };
+        m.make = factory<DrmReceiver, DrmTelemetry>([](DrmReceiver& rx, double r) { rx.setSilent(true); rx.configure(r); }, blocks<DrmTelemetry>);
+        add(m);
+    }
     {   // ADS-B: 12 aircraft
         Mode m = base("adsb", "ADS-B", "burst", 13, 4e6, 3.0, 2e6, 1090);
         m.echoUs = 0.3; m.snrHi = 30;
         m.gen = [](size_t n) { SynthConfig c; c.modeOpt[0] = 12; return clean(13, c, 4e6, n); };
+        m.make = factory<AdsbReceiver, AdsbTelemetry>([](AdsbReceiver& rx, double r) { rx.configure(r); }, blocks<AdsbTelemetry>);
+        add(m);
+    }
+    {   // ADS-B, one aircraft: no level mix, so the SNR is that of the only transmitter (fairness check for the 12 aircraft run)
+        Mode m = base("adsb1", "ADS-B (1 aircraft)", "burst", 13, 4e6, 6.0, 2e6, 1090);
+        m.echoUs = 0.3; m.snrHi = 30;
+        m.gen = [](size_t n) { SynthConfig c; c.modeOpt[0] = 1; c.modeOpt[1] = 1; return clean(13, c, 4e6, n); };
         m.make = factory<AdsbReceiver, AdsbTelemetry>([](AdsbReceiver& rx, double r) { rx.configure(r); }, blocks<AdsbTelemetry>);
         add(m);
     }
@@ -383,6 +446,20 @@ inline std::vector<Mode> allModes() {
         m.snrHi = 30; m.maxJobs = 4;
         m.gen = [](size_t n) { return clean(16, SynthConfig(), 2e6, n); };
         m.make = factory<AisReceiver, AisTelemetry>([](AisReceiver& rx, double r) { rx.setSignalOffset(0); rx.configure(r); }, blocks<AisTelemetry>);
+        add(m);
+    }
+    {   // AIS, one ship (class A, no extras): single transmitter, so no level mix
+        Mode m = base("ais1", "AIS (1 ship)", "narrowband-data", 16, 2e6, 24.0, 25e3, 162);
+        m.snrHi = 30; m.maxJobs = 4;
+        m.gen = [](size_t n) { SynthConfig c; c.modeOpt[0] = 1; c.modeOpt[3] = 1; return clean(16, c, 2e6, n); };
+        m.make = factory<AisReceiver, AisTelemetry>([](AisReceiver& rx, double r) { rx.setSignalOffset(0); rx.configure(r); }, blocks<AisTelemetry>);
+        add(m);
+    }
+    {   // ACARS, one aircraft on one channel
+        Mode m = base("acars1", "ACARS (1 aircraft)", "narrowband-data", 18, 2e6, 24.0, 25e3, 131.5);
+        m.snrHi = 30; m.maxJobs = 4;
+        m.gen = [](size_t n) { SynthConfig c; c.modeOpt[0] = 1; c.modeOpt[3] = 1; return clean(18, c, 2e6, n); };
+        m.make = factory<AcarsReceiver, AcarsTelemetry>([](AcarsReceiver& rx, double r) { rx.setSignalOffset(0); rx.setCenterHz(131.5e6); rx.configure(r); }, blocks<AcarsTelemetry>);
         add(m);
     }
     {   // ACARS: six aircraft on three channels
@@ -447,12 +524,80 @@ inline std::vector<Mode> allModes() {
         addGen(TBle(), {"ble", "Bluetooth LE", 53, 4.0, 1e6, 25});
         addGen(TInmc(), {"inmc", "Inmarsat-C", 19, 40.0, 1.2e3, 25});
     }
+    {   // DVB-C 64-QAM 6.952 Msym/s: Reed-Solomon packets (SNR = Es/N0)
+        Mode m = base("dvbc", "DVB-C 64-QAM", "cable-tv", 42, 10e6, 1.5, 6.952e6, 474);
+        m.snrHi = 36; m.maxJobs = 4;
+        m.gen = [](size_t n) { dvbc::SignalConfig sc; sc.qam = 2; sc.snrDb = 200; sc.sampleRate = 10e6; dvbc::Signal g(sc); Sig v(n); g.generate(v.data(), n); return v; };
+        m.make = factory<DvbcReceiver, DvbcTelemetry>([](DvbcReceiver& rx, double r) { rx.configure(r); rx.setBlocking(true); }, blocks<DvbcTelemetry>, false,
+                                                      [](DvbcReceiver& rx) { rx.flush(); });
+        add(m);
+    }
+    {   // ATSC 3.0 (engine synthetic): baseband packets with a good check
+        Mode m = base("atsc3", "ATSC 3.0", "ofdm-tv", 5, 8e6, 4.0, 5.83e6, 600);
+        m.snrHi = 30; m.maxJobs = 2; m.echoUs = 0;
+        m.gen = [](size_t n) { return clean(5, SynthConfig(), 8e6, n); };
+        m.make = factory<Atsc3Rx, Atsc3Telemetry>([](Atsc3Rx& rx, double r) { rx.setBlocking(true); rx.configure(r); },
+                                                  [](const Atsc3Telemetry& t) { return Metric{(double)t.bbPackets, (double)t.bbBad}; }, true,
+                                                  [](Atsc3Rx& rx) { rx.stop(); });
+        add(m);
+    }
     {   // Meshtastic LongFast
         Mode m = base("mesh", "Meshtastic / MeshCore LoRa", "lora", 22, 2e6, 15.0, 250e3, 869.5);
         m.snrHi = 20; m.heavy = true; m.maxJobs = 2;
         m.gen = [](size_t n) { SynthConfig c; c.modeVal[0] = 5; return clean(22, c, 2e6, n); };
         const double off = modeTuning(22) ? modeTuning(22)->tuneOffsetHz : 0;
         m.make = factory<MeshReceiver, MeshTelemetry>([off](MeshReceiver& rx, double r) { rx.setSignalOffset(-off); rx.configure(r); }, blocks<MeshTelemetry>);
+        add(m);
+    }
+    {   // HFDL, one burst rate at a time (m1 0..3 = 300, 600, 1200, 1800 bit/s, one slot): ACARS downlinks every 2.3 s, SNR = Es/N0 in the 1800 Hz symbol rate
+        struct R { const char* id; const char* name; int m1; };
+        for (const R r : {R{"hfdl300", "HFDL 300 bit/s (BPSK 1/4)", 0}, R{"hfdl600", "HFDL 600 bit/s (BPSK 1/2)", 1}, R{"hfdl1200", "HFDL 1200 bit/s (QPSK 1/2)", 2}, R{"hfdl1800", "HFDL 1800 bit/s (8PSK 1/2)", 3}}) {
+            Mode m = base(r.id, r.name, "hf-data", 37, 48e3, 20.0, 1800, 8.935);
+            m.snrHi = 24; m.maxJobs = 8;
+            const int m1 = r.m1;
+            m.gen = [m1](size_t n) {
+                const double rate = 48000, centre = 8.935e6, ch = 8.927e6;
+                Sig v(n, cf32(0, 0));
+                const double dur = hfdlBurstSeconds(m1);
+                int k = 0;
+                for (double t0 = 0.3; t0 < (double)n / rate - dur - 0.2; t0 += dur + 0.4, k++) {
+                    const std::vector<uint8_t> pdu = hfdlMpduDown(1, 23, {hfdlUnnumbered(hfdlAcarsHfnpdu("N1UA", "H1", '2', "SENS TEST " + std::to_string(k), true))});
+                    HfdlWave w = hfdlMakeWave(m1, pdu, {}, 10 + (uint32_t)k);
+                    w.start = t0 * rate; w.carHz = ch + kHfdlCarrierHz - centre; w.amp = 0.1f; w.phase = 0.3 + k;
+                    hfdlRender(w, v.data(), 0, n, rate);
+                }
+                return v;
+            };
+            m.make = factory<HfdlReceiver, HfdlTelemetry>([](HfdlReceiver& rx, double r) { rx.configure(r); rx.setCenterHz(8.935e6); rx.setChannels({8.927e6}); }, blocks<HfdlTelemetry>);
+            add(m);
+        }
+    }
+    {   // NAVTEX (518 kHz FSK, 100 Bd): a short message (about 8 s) after 3 s of idle, again and again; 40 s trials (a trial that starts mid-message needs a second message)
+        Mode m = base("navtex", "NAVTEX (518 kHz FSK)", "marine", 17, 2e6, 40.0, 300, 0.518);
+        m.snrHi = 25; m.maxJobs = 4;
+        m.gen = [](size_t n) {
+            SynthConfig c; c.modeOpt[0] = 1; c.modeOpt[2] = 4; c.modeVal[1] = 3;
+            c.snrDb = 25;
+            auto s = makeModeSynth(17, c, 2e6);
+            Sig v(n);
+            if (s) for (size_t o = 0; o < n; o += 65536) s->generate(v.data() + o, std::min<size_t>(65536, n - o));
+            return v;
+        };
+        m.make = factory<MarineReceiver, MarineTelemetry>([](MarineReceiver& rx, double r) { prepGeneric(rx, r, 17); rx.setService(1); rx.setFrequencyHz(518e3); }, blocks<MarineTelemetry>);
+        add(m);
+    }
+    {   // SITOR-B (family 119): the NAVTEX test signal read as plain FEC text; a trial counts when the decoder locks and prints characters
+        Mode m = base("sitor", "SITOR-B (FEC, 100 Bd)", "marine", 121, 2e6, 40.0, 300, 0.518);
+        m.snrHi = 25; m.maxJobs = 4;
+        m.gen = [](size_t n) {
+            SynthConfig c; c.modeOpt[0] = 1; c.modeOpt[2] = 4; c.modeVal[1] = 3;
+            c.snrDb = 25;
+            auto s = makeModeSynth(17, c, 2e6);
+            Sig v(n);
+            if (s) for (size_t o = 0; o < n; o += 65536) s->generate(v.data() + o, std::min<size_t>(65536, n - o));
+            return v;
+        };
+        m.make = factory<SitorLiveReceiver, SitorTelemetry>([](SitorLiveReceiver& rx, double r) { prepGeneric(rx, r, 121); }, blocks<SitorTelemetry>);
         add(m);
     }
     // The table driven narrowband modes: the same set-up for all (see prepGeneric); the synthetic option in the lambda is the test signal the
@@ -467,6 +612,83 @@ inline std::vector<Mode> allModes() {
         m.make = factory<Rx, Tel>([std_](Rx& rx, double r) { prepGeneric(rx, r, std_); }, blocks<Tel>);
         add(m);
     };
+    // 3.6 third sensitivity pass (feat36-sens3): the engine's own test signal of each mode, the receiver set up as prepGeneric does. SNR = carrier (active
+    // burst) power against noise in bwHz, theory in docs/SENSITIVITY-3.6.md.
+    narrow.template operator()<NdbReceiver, NdbTelemetry>("ndb", "NDB (400 Hz AM ident)", "beacon", 31, 2e6, 40.0, 300, 0.4, nullptr, 25);
+    narrow.template operator()<CwReceiver, CwTelemetry>("cw", "CW skimmer", "hf-narrow", 36, 2e6, 12.0, 500, 7.03, nullptr, 25);
+    narrow.template operator()<IsmReceiver, IsmTelemetry>("ism", "ISM sensors (433 MHz)", "ism", 30, 2e6, 8.0, 100e3, 433.92, nullptr, 25);
+    narrow.template operator()<VorReceiver, VorTelemetry>("vorils", "VOR / ILS", "nav", 32, 2e6, 12.0, 25e3, 113, nullptr, 40);
+    {   // HF digital, RTTY 45.45 Bd / 170 Hz (the RTTY decoder only): characters decoded; SNR in 3 kHz (SSB passband)
+        Mode m = base("hfdig", "HF digital (RTTY 45.45/170)", "hf-narrow", 27, 2e6, 40.0, 3e3, 7.04);
+        m.snrHi = 25; m.maxJobs = 4;
+        m.gen = [](size_t n) { SynthConfig c; c.mode = 27; c.modeOpt[0] = 0; return clean(27, c, 2e6, n); };
+        m.make = factory<HfdigReceiver, HfdigTelemetry>([](HfdigReceiver& rx, double r) { rx.setSilent(true); rx.setDecoders(1); rx.configure(r); rx.setSignalOffset(-hfdigTuning().tuneOffsetHz); },
+            [](const HfdigTelemetry& t) {   // whole words of the known test text received without a damaged character (chars alone count garbage too)
+                static const char* const known[] = {"RYRYRY", "ONAIR", "TEST", "0123456789", "QUICK", "BROWN"};
+                double good = 0, all = 0;
+                std::string w;
+                auto flush = [&] { if (w.size() >= 4) { all++; for (const char* k : known) if (w == k) { good++; break; } } w.clear(); };
+                for (char c : t.rtty.text) { if (c == ' ' || c == '\n' || c == '\r') flush(); else w += c; }
+                return Metric{good, all - good};
+            });
+        add(m);
+    }
+    {   // Airband AM, one 25 kHz channel keyed 2 s in 6: a unit is a transmission the squelch opened for (squelch at its lowest, -5 dB, so the receiver and not the
+        // squelch setting is measured; the default is 6 dB); SNR = carrier to noise in 8 kHz (the AM audio band, twice 4 kHz)
+        Mode m = base("airband", "Airband AM (one channel)", "voice", 28, 1e6, 18.0, 8e3, 118.7);
+        m.snrHi = 30; m.maxJobs = 4;
+        m.gen = [](size_t n) {
+            AirbandGenConfig g; g.rate = 1e6; g.dialOffsetHz = -airbandTuning().tuneOffsetHz; g.snrDb = 120;
+            AirbandGenChannel c; c.offsetHz = 0; c.audio = 0; c.period = 6; c.on = 2; c.phase = 0.5; g.chans = {c};
+            AirbandGenerator gen(g);
+            Sig v(n);
+            for (size_t o = 0; o < n; o += 65536) gen.generate(v.data() + o, std::min<size_t>(65536, n - o));
+            return v;
+        };
+        m.make = factory<AirbandReceiver, AirbandTelemetry>([](AirbandReceiver& rx, double r) {
+            rx.setSilent(true); rx.configure(r); rx.setCenterHz(118.7e6 + airbandTuning().tuneOffsetHz); rx.setSquelchDb(-5);
+            AirbandChannel c; c.freqHz = 118.7e6; rx.setChannels({c});
+        }, [](const AirbandTelemetry& t) { return Metric{(double)t.activity.size(), 0.0}; });
+        add(m);
+    }
+    {   // LTE: 5 MHz test cell at 20 Msps (cell_gen), system information blocks decoded (a capture block each, so short and memory heavy); SNR in the 4.5 MHz of the carrier
+        Mode m = base("cell", "Cell towers (LTE 5 MHz, SIB)", "cell", 34, 20e6, 0.8, 4.5e6, 806);
+        m.snrHi = 25; m.maxJobs = 2;
+        m.gen = [](size_t n) { return clean(34, SynthConfig(), 20e6, n); };
+        struct CellSess : Session {   // the receiver searches one captured block at a time and drops what arrives meanwhile: feed only as fast as it searches (as the tools do)
+            CellReceiver rx;
+            Metric poll() override { CellTelemetry t; rx.telemetry(t, 0); return {(double)t.blocksOk, (double)t.blocksBad}; }
+            void feed(const cf32* x, size_t n) override {
+                for (size_t o = 0; o < n; o += 200000) {
+                    rx.feed(x + o, std::min<size_t>(200000, n - o));
+                    while (rx.busy()) std::this_thread::sleep_for(std::chrono::milliseconds(2));
+                }
+            }
+            void finish() override { while (rx.busy()) std::this_thread::sleep_for(std::chrono::milliseconds(5)); }
+        };
+        m.make = [](double r) -> std::unique_ptr<Session> { auto s = std::make_unique<CellSess>(); s->rx.configure(r); s->rx.setCenterHz(806e6); return s; };
+        add(m);
+    }
+    {   // NAVTEX, several messages a trial: the receiver merges repeats of one message, a unit here is every complete message without a damaged character
+        // (entry count x repeats), so a 150 s trial holds about 13 and the 90 % point is no longer one message wide
+        Mode m = base("navtexl", "NAVTEX (518 kHz FSK), 150 s trials", "marine", 17, 2e6, 150.0, 300, 0.518);
+        m.snrHi = 25; m.maxJobs = 4;
+        m.gen = [](size_t n) {
+            SynthConfig c; c.modeOpt[0] = 1; c.modeOpt[2] = 4; c.modeVal[1] = 3;
+            c.snrDb = 25;
+            auto s = makeModeSynth(17, c, 2e6);
+            Sig v(n);
+            if (s) for (size_t o = 0; o < n; o += 65536) s->generate(v.data() + o, std::min<size_t>(65536, n - o));
+            return v;
+        };
+        m.make = factory<MarineReceiver, MarineTelemetry>([](MarineReceiver& rx, double r) { prepGeneric(rx, r, 17); rx.setService(1); rx.setFrequencyHz(518e3); },
+            [](const MarineTelemetry& t) {
+                double g = 0, b = 0;
+                for (const auto& e : t.navtex) { if (e.complete && e.errors == 0) g += e.repeats; else b += e.repeats; }
+                return Metric{g, b};
+            });
+        add(m);
+    }
     {   // AM broadcast (general receiver), envelope and synchronous detector; USB voice
         struct G { const char* id; const char* name; int demod, det; double bw; };
         for (const G g : {G{"am", "AM (envelope)", GenAm, 0, 9e3}, G{"am-sync", "AM (synchronous)", GenAm, 1, 9e3}, G{"ssb", "SSB (USB)", GenUsb, 0, 2.7e3}}) {
@@ -489,22 +711,65 @@ inline std::vector<Mode> allModes() {
             add(m);
         }
     }
+    {   // PACTOR-II / -III / -IV (physical layer only): "valid output" = analyses that found the wanted signal and, for II / III, its repeating frame; SNR in 2.5 kHz of
+        // the whole signal. 250 ksps, 45 s trials (the analysis runs every 4 s on the last 40 s)
+        struct Pa : PactorHfReceiver { Pa() : PactorHfReceiver(2) {} };
+        struct Pb : PactorHfReceiver { Pb() : PactorHfReceiver(3) {} };
+        struct Pc : PactorHfReceiver { Pc() : PactorHfReceiver(4) {} };
+        auto pac = [&]<class Rx>(const char* id, const char* name, int var, int std_, double secs, double bw) {
+            Mode m = base(id, name, "hf-data", std_, 250e3, secs, bw, 14.072);
+            m.snrHi = 35; m.maxJobs = 2;
+            m.gen = [std_](size_t n) { SynthConfig c; c.modeOpt[0] = 4; c.snrDb = 200; return clean(std_, c, 250e3, n); };
+            m.make = factory<Rx, PactorHfTelemetry>([std_](Rx& rx, double r) { prepGeneric(rx, r, std_); rx.setAnalysisInterval(4); },
+                                                    [var](const PactorHfTelemetry& t) { const bool ok = t.variant == var && (var == 4 || t.dataValid); return Metric{ok ? (double)t.detections : 0.0, 0.0}; }, true);
+            add(m);
+        };
+        pac.template operator()<Pa>("pactor2", "PACTOR-II (D-QPSK, physical layer)", 2, 239, 45.0, 450);
+        pac.template operator()<Pb>("pactor3", "PACTOR-III level 4 (14 carriers, D-QPSK, physical layer)", 3, 240, 45.0, 2000);
+        pac.template operator()<Pc>("pactor4", "PACTOR-IV (QPSK 1800 baud, physical layer)", 4, 241, 30.0, 2400);
+    }
     narrow.template operator()<PagerReceiver, PagerTelemetry>("pager", "POCSAG / FLEX pagers", "narrowband-data", 25, 1.2e6, 8.0, 25e3, 466, nullptr, 25);
     narrow.template operator()<PacketReceiver, PacketTelemetry>("packet", "APRS / AX.25 packet", "narrowband-data", 26, 1.2e6, 6.0, 25e3, 144.8, [](SynthConfig& c) { c.modeOpt[0] = 0; }, 25);
     narrow.template operator()<Vdl2Receiver, Vdl2Telemetry>("vdl2", "VDL Mode 2", "narrowband-data", 29, 2e6, 8.0, 25e3, 136.9, [](SynthConfig& c) { c.modeVal[0] = 3; }, 28);
     narrow.template operator()<DstarReceiver, DstarTelemetry>("dstar", "D-STAR", "digital-voice", 35, 1.2e6, 6.0, 6.25e3, 145, nullptr, 25);
     narrow.template operator()<NxdnReceiver, NxdnTelemetry>("nxdn", "NXDN", "digital-voice", 40, 1.2e6, 6.0, 6.25e3, 450, nullptr, 25);
     narrow.template operator()<DpmrReceiver, DpmrTelemetry>("dpmr", "dPMR", "digital-voice", 47, 1.2e6, 6.0, 6.25e3, 446, nullptr, 25);
-    narrow.template operator()<TetraReceiver, TetraTelemetry>("tetra", "TETRA", "digital-voice", 48, 2e6, 8.0, 25e3, 390, [](SynthConfig& c) { c.modeOpt[0] = 1; }, 22);
+    {   // TETRA: the cell's test signal is made for the centre 392.5 MHz (kTetraTestCentreHz), not the mode's default dial frequency
+        narrow.template operator()<TetraReceiver, TetraTelemetry>("tetra", "TETRA", "digital-voice", 48, 2e6, 8.0, 25e3, 390, [](SynthConfig& c) { c.modeOpt[0] = 1; }, 22);
+        Mode& m = v.back();
+        m.make = factory<TetraReceiver, TetraTelemetry>([](TetraReceiver& rx, double r) { rx.configure(r); rx.setCenterHz(kTetraTestCentreHz); }, blocks<TetraTelemetry>, true);
+    }
     narrow.template operator()<M17Receiver, M17Telemetry>("m17", "M17", "digital-voice", 33, 2e6, 6.0, 9e3, 433, nullptr, 25);
     narrow.template operator()<FusionReceiver, FusionTelemetry>("fusion", "Yaesu System Fusion", "digital-voice", 130, 2e6, 6.0, 12.5e3, 144, nullptr, 25);
     narrow.template operator()<P25p2Receiver, P25p2Telemetry>("p25p2", "P25 phase 2", "digital-voice", 182, 2e6, 6.0, 12.5e3, 851, nullptr, 25);
     narrow.template operator()<TetrapolReceiver, TetrapolTelemetry>("tetrapol", "TETRAPOL", "digital-voice", 81, 2e6, 6.0, 12.5e3, 400, nullptr, 25);
     narrow.template operator()<P25Receiver, P25Telemetry>("p25", "P25 phase 1", "digital-voice", 52, 1.2e6, 6.0, 12.5e3, 851, nullptr, 25);
+    narrow.template operator()<MarineReceiver, MarineTelemetry>("dsc", "Marine DSC VHF ch 70", "marine", 17, 2e6, 25.0, 25e3, 156.525, [](SynthConfig& c) { c.modeOpt[0] = 4; }, 25);
+    narrow.template operator()<CdrReceiver, CdrTelemetry>("cdr", "China Digital Radio", "ofdm-radio", 24, 2e6, 6.0, 1e6, 100, nullptr, 25);
     // weather satellites: the SNR is Es/N0 (the noise bandwidth is the symbol rate); frames whose Reed-Solomon codewords all passed
     narrow.template operator()<MeteorReceiver, MeteorTelemetry>("meteor", "Meteor-M LRPT (OQPSK 72k)", "satellite-weather", 61, 1e6, 8.0, 72e3, 137.9, nullptr, 16);
     narrow.template operator()<HrptReceiver, HrptTelemetry>("hrpt", "MetOp AHRPT", "satellite-weather", 66, 8e6, 1.5, 2.33e6, 1701.3, nullptr, 16);
+    narrow.template operator()<Fy3AhrptReceiver, Fy3Telemetry>("fy3ahrpt", "FY-3 AHRPT (FY-3C)", "satellite-weather", 237, 6e6, 4.0, 2.6e6, 1701.4, nullptr, 14);
     narrow.template operator()<GoesReceiver, GoesTelemetry>("goes", "GOES HRIT", "satellite-weather", 62, 2.4e6, 4.0, 927e3, 1694.1, nullptr, 16);
+    // GK-2A: Es/N0 per symbol (the noise bandwidth is the symbol rate); BPSK/QPSK + K=7 r=1/2 + RS(255,223) x4, theory threshold -1.1 / +1.9 dB
+    narrow.template operator()<Gk2aLritRx, Gk2aTelemetry>("gk2alrit", "GK-2A LRIT (BPSK 128k)", "satellite-weather", 232, 2.4e6, 8.0, 128e3, 1692.14, nullptr, 14);
+    narrow.template operator()<Gk2aHritRx, Gk2aTelemetry>("gk2ahrit", "GK-2A HRIT (QPSK 3M)", "satellite-weather", 233, 10e6, 0.6, 3e6, 1695.4, nullptr, 14);
+    {   // FengYun geostationary: FY-4 over the DVB-S2 receiver (LDPC/BCH frames that passed), FY-2 S-VISSR (uncoded BPSK: frames synced, and frames with a bit error ratio under 2 %)
+        struct Fy { const char* id; const char* name; int link; double rate, secs, bw, snrHi; bool quality; };
+        for (const Fy f : {Fy{"fy4a-lrit", "FY-4A LRIT (DVB-S2 QPSK 2/5)", 0, 2e6, 12.0, 90e3, 8, false}, Fy{"fy4b-lrit", "FY-4B LRIT (DVB-S2 QPSK 8/9)", 1, 2e6, 10.0, 120e3, 16, false},
+                           Fy{"fy4a-hrit", "FY-4A HRIT-II/III (DVB-S2 QPSK 5/6)", 2, 4e6, 8.0, 1e6, 16, false}, Fy{"fy2-svissr", "FY-2 S-VISSR (sync)", 3, 2.4e6, 12.0, 660e3, 16, false},
+                           Fy{"fy2-svissr-q", "FY-2 S-VISSR (BER under 2 %)", 3, 2.4e6, 12.0, 660e3, 16, true}}) {
+            Mode m = base(f.id, f.name, "satellite-weather", (f.link < 2 ? 234 : 233 + f.link), f.rate, f.secs, f.bw, fygeoMhz(f.link));
+            m.snrHi = f.snrHi; m.maxJobs = 2;
+            const int link = f.link; const double rate = f.rate;
+            m.gen = [link, rate](size_t n) { SynthConfig sc; sc.modeOpt[0] = link < 2 ? link : 0; return clean(link < 2 ? 234 : 233 + link, sc, rate, n); };
+            const bool q = f.quality;
+            m.make = factory<FygeoReceiver, FygeoTelemetry>([link](FygeoReceiver& rx, double r) { rx.setLink(link); rx.setBlocking(true); rx.configure(r); },
+                                                            [q](const FygeoTelemetry& t) { return q ? Metric{(double)t.svUsable, (double)(t.svFrames - t.svUsable)} : Metric{(double)t.blocksOk, (double)t.blocksBad}; },
+                                                            link != 3);
+            add(m);
+        }
+    }
     return v;
 }
 

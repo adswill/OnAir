@@ -183,7 +183,7 @@ int main() {
         for (size_t i = 0; i < tone.size(); i++) tone[i] = 0.5f * (float)std::sin(2 * 3.14159265358979 * 1200.0 * (double)i / 24000.0);
         CHECK(decode(tone, 24000).empty() && decode(std::vector<float>(24000 * 5, 0.f), 24000).empty(), "tone or silence gave a message");
     }
-    // --- bit errors: a flipped bit in one address codeword loses that message and is counted bad; no wrong message is reported
+    // --- bit errors: one flipped bit is repaired (Appendix 2); two or more lose that message and are counted bad; no wrong message is reported
     {
         for (size_t which = 0; which < msgs.size(); which++) {
             std::vector<uint8_t> b = bits;
@@ -192,10 +192,14 @@ int main() {
             b[pos] ^= 1;
             Stats st;
             const std::vector<uint64_t> got = decode(ffskAudio(b, 24000), 24000, &st);
-            std::vector<uint64_t> want = msgs;
-            want.erase(want.begin() + (long)which);
-            CHECK(sameSeq(got, want), "bit error in message %zu: %zu messages decoded (wanted %zu)", which, got.size(), want.size());
-            CHECK(st.bad >= 1, "bit error in message %zu: bad count %llu", which, (unsigned long long)st.bad);
+            CHECK(sameSeq(got, msgs), "bit error in message %zu: %zu messages decoded (wanted %zu)", which, got.size(), msgs.size());
+            CHECK(st.corrected == 1 && st.bad == 0, "bit error in message %zu: corrected %llu bad %llu", which, (unsigned long long)st.corrected, (unsigned long long)st.bad);
+        }
+        // a single error anywhere in the 64 bits of a codeword (information, check or parity bit) is repaired
+        for (size_t k = 0; k < 64; k++) {
+            std::vector<uint8_t> b = bits;
+            b[32 + 128 + k] ^= 1;
+            CHECK(sameSeq(decode(ffskAudio(b, 24000), 24000), msgs), "single error at codeword bit %zu not repaired", k + 1);
         }
         // two errors in the same codeword
         std::vector<uint8_t> b = bits;
@@ -209,7 +213,7 @@ int main() {
     {
 #ifndef MPT_STANDALONE   // quick compile of the mode sources alone (no engine registry)
         const ModeTuning* reg = modeTuning(129);
-        CHECK(reg != nullptr && std::string(reg->name) == "MPT1327 trunking (WIP)" && std::string(reg->id) == "mpt1327", "modeTuning(129)");
+        CHECK(reg != nullptr && std::string(reg->name) == "MPT1327 trunking" && std::string(reg->id) == "mpt1327", "modeTuning(129)");
 #endif
         CHECK(mpt1327Tuning().stdMode == 129, "stdMode");
     }

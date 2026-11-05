@@ -195,6 +195,7 @@ struct TonesReceiver::Impl {
     double fs = 0;
     bool isReady = false, audioIn = false;
     int demod = TonesFm;
+    bool selcalOnly = false;             // the SELCAL mode: only the SELCAL detector runs
     pktdemod::FmFront fe;
     SsbFront ssb;
     ExactResampler rs;
@@ -730,13 +731,13 @@ struct TonesReceiver::Impl {
                 decimCnt = 0;
                 ring1k[(size_t)n1k & (kRing1k - 1)] = y;
                 n1k++;
-                if (n1k % kDcsHop == 0) dcsHop();
-                if (n1k % kCtcssHop == 0) ctcssHop();
+                if (!selcalOnly && n1k % kDcsHop == 0) dcsHop();
+                if (!selcalOnly && n1k % kCtcssHop == 0) ctcssHop();
             }
-            if (n8 % kDtmfHop == 0) dtmfHop();
-            if (n8 % kSeqHop == 0) seqHop();
+            if (!selcalOnly && n8 % kDtmfHop == 0) dtmfHop();
+            if (!selcalOnly && n8 % kSeqHop == 0) seqHop();
             if (n8 % kSelHop == 0) selcalHop();
-            if (n8 % kLongHop == 0) longHop();
+            if (!selcalOnly && n8 % kLongHop == 0) longHop();
         }
         if (cntsq >= 2000) {
             audioDb = (float)(10 * std::log10(sumsq / (double)cntsq / (kFull * kFull) + 1e-12));
@@ -798,6 +799,10 @@ void TonesReceiver::setDemod(int d) {
     if (p_->demod == d) return;
     p_->demod = d;
     if (p_->fs > 0) p_->configure(p_->fs);
+}
+void TonesReceiver::setSelcalOnly(bool on) {
+    std::lock_guard<std::mutex> lk(p_->procMu);
+    p_->selcalOnly = on;
 }
 const char* tonesDemodName(int d) {
     static const char* n[] = {"FM", "USB", "LSB", "AM"};

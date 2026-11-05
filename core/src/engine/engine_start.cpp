@@ -132,7 +132,7 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     radioLost_ = false; lastSamples_ = std::chrono::steady_clock::now(); reconnectErr_.clear();
     automation::receiverState("started", "receiver started");
     logP1Count_ = 0; logGi_ = -2; logState_ = -1; logFrameSyms_ = 0;
-    bwMhz_ = tune.bandwidthMhz; bwActive_ = bwMhz_;
+    bwMhz_ = tune.channelBwMhz > 0 ? tune.channelBwMhz : tune.bandwidthMhz; bwActive_ = bwMhz_;   // (a custom capture bandwidth does not change the width of the signal)
     bwDetected_ = 0; bwReset_ = true; bwReq_ = false;
     configureTvReceivers(dev, tune);
     placeNarrowReceivers(dev, tune);
@@ -145,7 +145,8 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
 
 // Configures the TV, DAB, FM, DVB-S, DTMB, analog TV and first group of receivers for the current sample rate
 void Engine::configureTvReceivers(const DeviceInfo& dev, const TuneSettings& tune) {
-    rx_.configure(rate_, tune.bandwidthMhz);
+    const double chanBw = tune.channelBwMhz > 0 ? tune.channelBwMhz : tune.bandwidthMhz;   // the signal's channel; a custom capture bandwidth is the radio's, not the channel's
+    rx_.configure(rate_, chanBw);
     {   // the resampler on its own thread: live radios on Windows by default (not yet tried elsewhere); DECT2_PIPELINE=0/1 forces it off/on
 #ifdef _WIN32
         bool pipe = src_->realtimeHardware();
@@ -155,7 +156,7 @@ void Engine::configureTvReceivers(const DeviceInfo& dev, const TuneSettings& tun
         if (const char* e = getenv("DECT2_PIPELINE")) pipe = atoi(e) != 0;
         rx_.setPipelined(pipe);
     }
-    rxT_.configure(rate_, tune.bandwidthMhz);
+    rxT_.configure(rate_, chanBw);
     {   // DVB-T: the error correction on its own thread for a live radio, so the analysis thread only demodulates (DECT2_PIPELINE=0/1 forces it)
         bool pipe = src_->realtimeHardware();
         if (const char* e = getenv("DECT2_PIPELINE")) pipe = atoi(e) != 0;
@@ -175,7 +176,7 @@ void Engine::configureTvReceivers(const DeviceInfo& dev, const TuneSettings& tun
     rxDvbs_.configure(rate_);
     rxDvbs_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { rxDvbs_.feedTs(pk, n); onTsPackets(pk, n, secs); });   // runs on the receiver thread
     rxDvbs_.setLogCallback([this](const std::string& s) { log(s); });
-    rxDtmb_.configure(rate_, tune.bandwidthMhz);
+    rxDtmb_.configure(rate_, chanBw);
     rxDtmb_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the receiver thread
     rxDtmb_.setLogCallback([this](const std::string& s) { log(s); });
     rxAtv_.configure(rate_);
@@ -199,11 +200,12 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         const ModeTuning* mto = modeTuning(stdMode_.load());
         const double o = mto && dev.kind != DeviceInfo::File && dev.kind != DeviceInfo::Audio ? -mto->tuneOffsetHz : 0.0;
         for (int wm : WideModes::modes()) wide_.configure(wm, rate_, o);
-        wide_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : fileCentreHz_.load());   // the logs of a whole-span decoder keep their rows' frequencies over a retune
+        { const double wc_ = dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : fileCentreHz_.load(); wide_.setCenterHz(wc_); wideAllCentre_.store(wc_); }   // the logs of a whole-span decoder keep their rows' frequencies over a retune
         rxSonde_.setSignalOffset(o);
         rxAis_.setSignalOffset(o);
         rxAis_.setCenterHz(dev.isRadio() ? radioTune(tune).centerHz : dev.kind == DeviceInfo::File && rate_ >= 5e6 ? fileCentreHz_.load() : 0.0);   // a wide capture holds the long-range channels too
         rxMarine_.setSignalOffset(o);
+        rxSitor_.setSignalOffset(o);
         rxAcars_.setSignalOffset(o);
         if (dev.kind != DeviceInfo::File) rxAcars_.setCenterHz(radioTune(tune).centerHz);   // channel frequencies and the 25 kHz grid come from it
         rxInmc_.setSignalOffset(o);
@@ -217,6 +219,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxAirband_.setSignalOffset(o);
         rxVdl2_.setSignalOffset(o);
         rxVdl2_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
+        rxDme_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the channel number of the tuned reply frequency
         rxAirband_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the channels are placed from it
         rxIsm_.setSignalOffset(o);
         rxIsm_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the devices' frequencies
@@ -268,6 +271,13 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxInmsat_.setSignalOffset(o);
         rxNrf_.setSignalOffset(o);
         rxAtis_.setSignalOffset(o);
+        rxSelcal_.setSignalOffset(o);
+        rxSelcal_.setDialHz(tune.centerHz);
+        rxFy3a_.setSignalOffset(o);
+        rxFy3m_.setSignalOffset(o);
+        rxPh2_.setSignalOffset(o);
+        rxPh3_.setSignalOffset(o);
+        rxPh4_.setSignalOffset(o);
         rxSw_.setSignalOffset(o);
         rxSw_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxInmsat_.setCenterFrequency(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
@@ -366,6 +376,9 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxNr_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the sync raster points searched
         rxGoes_.setSignalOffset(o);
         rxEl_.setSignalOffset(o);
+        rxGkL_.setSignalOffset(o);
+        rxGkH_.setSignalOffset(o);
+        rxFy_.setSignalOffset(o);
         rxVdl4_.setSignalOffset(o);
         rxHrpt_.setSignalOffset(o);
         rxWifi_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the channel noted with each network
@@ -410,6 +423,8 @@ void Engine::configureDecoderReceivers(const DeviceInfo& dev, const TuneSettings
     rxVor_.setLogCallback([this](const std::string& s) { log(s); });
     rxNdb_.configure(rate_);
     rxNdb_.setLogCallback([this](const std::string& s) { log(s); });
+    rxSitor_.configure(rate_);
+    rxSitor_.setLogCallback([this](const std::string& s) { log(s); });
     rxDme_.configure(rate_);
     rxDme_.setLogCallback([this](const std::string& s) { log(s); });
     rxM17_.configure(rate_);
@@ -585,8 +600,21 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxSw_.configure(rate_);
     rxSw_.setLogCallback([this](const std::string& s) { log(s); });
     rxNrf_.setLogCallback([this](const std::string& s) { log(s); });
+    rxSelcal_.setAudioInput(dev.kind == DeviceInfo::Audio);
+    rxSelcal_.configure(rate_);
+    rxSelcal_.setLogCallback([this](const std::string& s) { log(s); });
     rxAtis_.configure(rate_);
     rxAtis_.setLogCallback([this](const std::string& s) { log(s); });
+    rxFy3a_.configure(rate_);
+    rxFy3a_.setLogCallback([this](const std::string& s) { log(s); });
+    rxFy3m_.configure(rate_);
+    rxFy3m_.setLogCallback([this](const std::string& s) { log(s); });
+    rxPh2_.configure(rate_);
+    rxPh2_.setLogCallback([this](const std::string& s) { log(s); });
+    rxPh3_.configure(rate_);
+    rxPh3_.setLogCallback([this](const std::string& s) { log(s); });
+    rxPh4_.configure(rate_);
+    rxPh4_.setLogCallback([this](const std::string& s) { log(s); });
     rxInmsat_.configure(rate_);
     rxInmsat_.setLogCallback([this](const std::string& s) { log(s); });
     rxEsg_.setLogCallback([this](const std::string& s) { log(s); });
@@ -660,10 +688,16 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxMeteor_.setLogCallback([this](const std::string& s) { log(s); });
     rxGoes_.configure(rate_);
     rxEl_.configure(rate_);
+    rxGkL_.configure(rate_);
+    rxGkH_.configure(rate_);
     rxHrpt_.configure(rate_);
     rxHrpt_.setLogCallback([this](const std::string& s) { log(s); });
     rxGoes_.setLogCallback([this](const std::string& s) { log(s); });
     rxEl_.setLogCallback([this](const std::string& s) { log(s); });
+    rxGkL_.setLogCallback([this](const std::string& s) { log(s); });
+    rxGkH_.setLogCallback([this](const std::string& s) { log(s); });
+    rxFy_.setLogCallback([this](const std::string& s) { log(s); });
+    if (const int fl = fygeoLinkOfActive(activeStdFor(stdMode_.load()), rxFy_.lritSatellite()); fl >= 0) { rxFy_.setLink(fl); rxFy_.configure(rate_); }   // FengYun: only when it is the mode (the DVB-S2 receiver inside is heavy)
     rxUat_.configure(rate_);
     rxUat_.setLogCallback([this](const std::string& s) { log(s); });
     rxVdl4_.configure(rate_);
@@ -704,12 +738,13 @@ void Engine::checkRateAndResetState(const DeviceInfo& dev, const TuneSettings& t
     {   // DVB-T2 / DVB-T, ATSC and DAB at a rate their receiver cannot use (the telemetry test that stood here never fired: the receiver
         // publishes nothing before its first samples, so the user got no word at all, e.g. an RTL-SDR at 2.56 Msps on an 8 MHz channel)
         const int sm = stdMode_.load();
-        const double need = sm <= 4 ? minSampleRateFor(sm, tune.bandwidthMhz) : 0;
+        const double chanW = tune.channelBwMhz > 0 ? tune.channelBwMhz : tune.bandwidthMhz;
+        const double need = sm <= 4 ? minSampleRateFor(sm, chanW) : 0;
         if (need > 0 && rate_.load() < need - 1) {
             char what[64], m[240];
             if (sm == 3) snprintf(what, sizeof what, "an ATSC channel");
             else if (sm == 4) snprintf(what, sizeof what, "a DAB ensemble");
-            else snprintf(what, sizeof what, "the %g MHz %s channel", tune.bandwidthMhz, sm == 1 ? "DVB-T2" : sm == 2 ? "DVB-T" : "DVB-T2 / DVB-T");
+            else snprintf(what, sizeof what, "the %g MHz %s channel", chanW, sm == 1 ? "DVB-T2" : sm == 2 ? "DVB-T" : "DVB-T2 / DVB-T");
             snprintf(m, sizeof m, "sample rate %.2f Msps is too low for %s (at least %.2f Msps is needed) - %s", rate_.load() / 1e6, what, need / 1e6,
                      sm <= 2 ? "only the spectrum is shown" : "the receiver cannot lock with this radio");
             log(m);

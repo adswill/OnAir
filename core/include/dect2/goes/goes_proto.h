@@ -11,6 +11,7 @@
 // Images compressed with Rice (CCSDS 121, ccsds.h) send one scan line a packet after the header packet; JPEG and GIF products are a
 // whole picture file, EMWIN text is plain or ZIP. The segments of a full disk or mesoscale image (header 128) are put together here.
 #pragma once
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -46,11 +47,14 @@ struct Headers {
     int productId = 0, subId = 0, parameter = 0, noaaCompression = 0;   // NOAA compression: 0 none, 1 Rice, 2 JPEG, 5 GIF, 10 ZIP
     bool hasRice = false;
     int riceFlags = 0, ricePpb = 0, riceLines = 0;
+    int keyNo = 0;                     // GK-2A key header (7): index of the DES key the data field is encrypted with, 0 = plain
+    std::string obsTime;               // GK-2A header 131: image observation time
 };
-// false when the primary header is missing or the records do not fit
-bool parseHeaders(const uint8_t* p, size_t n, Headers& h);
+// false when the primary header is missing or the records do not fit. dialect 1: the GK-2A (KMA) records: 7 key header, 128 image
+// segment (sequence, total, first line), 129 .. 132 text
+bool parseHeaders(const uint8_t* p, size_t n, Headers& h, int dialect = 0);
 // the header records of h (the primary header's lengths filled in from dataBits and the records)
-std::vector<uint8_t> buildHeaders(const Headers& h);
+std::vector<uint8_t> buildHeaders(const Headers& h, int dialect = 0);
 // unix seconds of the time stamp
 double headerTime(const Headers& h);
 
@@ -82,6 +86,12 @@ struct Product {
     bool errors = false;                // packets lost or CRC errors
     uint64_t version = 0;               // grows with every change
     uint64_t bytes = 0;                 // file bytes received
+    // GK-2A: files that could not be turned into pictures
+    int keyNo = 0;                      // the key this product's data are encrypted with (0 plain)
+    bool needKey = false;               // encrypted and the key is not loaded
+    std::string note;                   // why a picture is missing (shown in the product list)
+    int segsLocked = 0;                 // segments received encrypted and still waiting for their key
+    int channelIdx = -1;                // GK-2A: 0 .. 15 for VI004 .. IR133, -1 not a channel image
 };
 
 // ---- the transport layer and file assembly: corrected VCDUs in, products out
@@ -92,12 +102,19 @@ public:
     void reset();                         // everything partial is dropped; the products stay
     void clear();                         // the products too
     void push(const uint8_t* vcdu, double nowSec = 0);
+    // Other xRIT downlinks (FengYun-4): the packet zone of a VCDU is zoneBytes long (the VCDU 8 + zoneBytes), CRC-16 checking is optional, and with
+    // raw set no products are made here: every whole file (transport header removed, headers of the caller's dialect and data) goes to onFile.
+    void setRawFiles(bool raw, int zoneBytes = kZoneBytes, bool checkCrc = true);
     std::function<void(const std::string&)> onLog;
     std::function<void(const std::vector<uint8_t>& file, int vcid, int apid)> onFile;   // every whole LRIT file (headers and data)
     // products, newest first (at most maxProducts are kept)
     std::vector<std::shared_ptr<Product>> products() const;
     void adopt(std::vector<std::shared_ptr<Product>> v);   // products from the results file (newest first): they replace the list
     void setMaxProducts(size_t n);
+    // 0 GOES / Elektro-L (HRIT as CGMS), 1 GK-2A (KMA xRIT: JPEG 2000 pictures, DES, headers 7 / 128 of the KMA kind). Before the first frame.
+    void setDialect(int d);
+    // DES keys by key number (GK-2A); a file with a key number that is not here stays encrypted and says so
+    void setKeys(const std::vector<std::pair<int, std::array<uint8_t, 8>>>& keys);
     // counters
     uint64_t vcdus = 0, fillVcdus = 0, vcduGaps = 0, packets = 0, crcErrors = 0, files = 0, fileErrors = 0;
     int scid = -1;
@@ -106,6 +123,13 @@ private:
     struct Impl;
     std::unique_ptr<Impl> p_;
 };
+
+// KMA key file as xrit-rx reads it (EncryptionKeyMessage.bin once decrypted for the station): 2 byte count, then (2 byte index, 8 byte key)
+// each. Also accepts lines of "index:hexkey" text. Empty when nothing parses.
+std::vector<std::pair<int, std::array<uint8_t, 8>>> parseKeyFile(const std::vector<uint8_t>& data);
+// the channel number (0 .. 15) a GK-2A file name names (IMG_FD_143_IR105_...), -1 when it is not an image name
+int gk2aChannelIndex(const std::string& annotation);
+const char* gk2aChannelName(int idx);       // "VI004" ... "IR133"
 
 // unpacks the first file of a ZIP archive (stored or deflated): false when it is not one
 bool unzipFirst(const std::vector<uint8_t>& zip, std::vector<uint8_t>& out, std::string& name);
@@ -120,7 +144,7 @@ struct FileOut {
 // Builds the packet stream of a virtual channel into VCDUs: whole files at a time, the last zone padded with an idle packet.
 class Mux {
 public:
-    explicit Mux(int scid = 0) : scid_(scid) {}
+    explicit Mux(int scid = 0, int zoneBytes = kZoneBytes) : scid_(scid), zone_(zoneBytes) {}   // zoneBytes: the packet zone of a VCDU (FengYun-4: 1012)
     void addFile(int vcid, const FileOut& f);
     bool next(uint8_t vcdu[kVcduBytes]);            // false when no data are waiting (then send fill)
     void fill(uint8_t vcdu[kVcduBytes]);            // a fill VCDU (virtual channel 63)
@@ -128,12 +152,13 @@ private:
     struct Vc { std::vector<uint8_t> q; std::vector<size_t> starts; uint32_t counter = 0; };
     void flushVc(Vc& v);
     int scid_;
+    int zone_;
     Vc vc_[64];
     int seq_[2048] = {};
     std::vector<int> order_;                          // virtual channels with data, in the order they were filled
     uint32_t fillCounter_ = 0;
 };
 // A whole file as the generator makes it: headers (h's lengths filled in) and the data field.
-std::vector<uint8_t> makeFile(Headers h, const std::vector<uint8_t>& dataField);
+std::vector<uint8_t> makeFile(Headers h, const std::vector<uint8_t>& dataField, int dialect = 0);
 
 } // namespace dect2::goes

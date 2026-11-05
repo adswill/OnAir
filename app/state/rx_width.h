@@ -8,6 +8,8 @@
 #include <cmath>
 #include <cstdlib>
 #include <string>
+#include "dect2/engine/rate_choice.h"
+#include "dect2/source/source.h"
 
 struct RxWidthPlan { double bandwidthMhz = 0, sampleRate = 0, basebandHz = 0; };
 
@@ -39,6 +41,30 @@ inline double parseWidthMhz(const char* s) {
     if (*e == 'k' || *e == 'K') return v / 1e3;
     if (*e == 'h' || *e == 'H') return v / 1e6;   // Hz
     return v;
+}
+
+
+// ---- the shared receive path (3.6): what applyBandwidth() and the tests both run, so every mode gets the custom bandwidth and rate the same way.
+// `t` holds the mode's own values (bandwidth, rate, radio filter). widthMhz <= 0 leaves them untouched. Otherwise the bandwidth, the rate that
+// carries it and the radio's analogue filter are replaced; minRate is the decoder's own floor (a floor of the arithmetic, never a limit of the control).
+inline void rxApplyWidth(dect2::TuneSettings& t, double widthMhz, double minRate) {
+    if (!(widthMhz > 0) || !std::isfinite(widthMhz)) return;
+    const RxWidthPlan p = rxWidthPlan(widthMhz, t.bandwidthMhz, t.sampleRate, t.basebandFilterHz, minRate);
+    if (!(t.channelBwMhz > 0)) t.channelBwMhz = t.bandwidthMhz;   // the signal keeps its own channel width: DVB-T2 / DVB-T / DTMB decode with it, the capture width is only the radio's
+    t.bandwidthMhz = p.bandwidthMhz; t.sampleRate = p.sampleRate; t.basebandFilterHz = p.basebandHz;
+    t.rateChosen = true;
+}
+// a rate the user chose for this mode (0 = the mode's own): any positive rate goes to the driver; a value outside the radio's list only warns
+inline dect2::RateCheck rxApplyRate(dect2::TuneSettings& t, double chosenHz, const dect2::RateLimits& L, double minRate) {
+    dect2::RateCheck c = dect2::checkManualRate(L, minRate, chosenHz);
+    if (chosenHz > 0 && c.ok) { t.sampleRate = chosenHz; t.rateChosen = true; }
+    return c;
+}
+// The one-line warning for a custom width: the rate that carries it against what this radio lists and what the decoder works with (empty: none).
+// Never a refusal; the driver decides and the app shows its message if it does.
+inline std::string rxWidthWarning(double rateHz, const dect2::RateLimits& L, double minRate) {
+    if (!(rateHz > 0)) return "";
+    return dect2::checkManualRate(L, minRate, rateHz).why;
 }
 
 // ---- what is saved (per mode; the sample rate also per radio). Templates over the settings store so the app (plat::prefs()) and the tests (a map) share them.

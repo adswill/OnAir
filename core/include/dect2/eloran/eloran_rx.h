@@ -1,4 +1,4 @@
-// Loran-C detector (the eLoran data channel is not implemented: see the notes at the end of this header).
+// Loran-C detector (the eLoran data channel is not decoded: see the notes at the end of this header; its 9th pulse position states are here).
 // Works on complex baseband with the 100 kHz carrier at 0 Hz and the band limited to about +-11 kHz, sampled at fs >= 250 kHz.
 //
 // Signal model, from public sources only:
@@ -26,6 +26,16 @@ constexpr double kPulseSpacingUs = 1000.0;
 constexpr int kGroupPulses = 8;
 constexpr double kEnvLengthUs = 260.0;     // template length: the tail beyond this is under 2 percent of the peak
 
+// The chain that uses a GRI (group repetition interval in microseconds, 99600 for GRI 9960), from the public chain lists; nullptr when it is not a known chain.
+const char* chainName(int griUs);
+
+// eLoran 9th pulse data channel: every station sends one extra pulse 1000 us after its eighth pulse, position modulated with one of 32 states (5 bits per GRI): state 8m + n is
+// delayed by 50.625 m + 1.25 n microseconds (m 0..3, n 0..7), always with the positive phase code (Lo et al., IEEE TAES 43(2), 2007, equation 2 and table III).
+// A message is 24 states (RS(24,9) over 5-bit symbols, 120 bits): the Reed-Solomon constants and the message layouts of the Loran Data Channel standard are not public text,
+// so the states are measured and shown but the frame is not decoded.
+double ninthPulseDelayUs(int state);          // ideal delay of state 0..31
+int ninthPulseState(double delayUs);          // the nearest state of a measured delay (carrier phase and envelope together), -1 outside 0 .. 165 us
+
 // phase pattern of the 8 pulses ('+' = 0 degrees, '-' = 180 degrees); code 'A' or 'B'
 const char* phasePattern(bool master, char code);
 // the pulse envelope at t microseconds after the pulse start (peak value 1 at kTauUs)
@@ -42,6 +52,7 @@ struct Station {
     float codeScore = 0;       // 0..1, how much of the pulse energy the code explains
     int groupsUsed = 0;
     bool ninth = false;        // energy at the 9th pulse position (2000 us after the 8th)
+    double cfoHz = 0;          // the tuning error of the carrier, measured from the rotation between the pulses of a group (within +-250 Hz)
     int hypA = 0;              // which pattern the even groups of the window carry (0 = A), used for the averaged pulse
 };
 

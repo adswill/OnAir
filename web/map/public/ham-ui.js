@@ -39,6 +39,8 @@ export function initHam({ map, tracks, selectById, esc, REDUCED }) {
     const li = e.target.closest("li[data-id]");
     if (li) selectById(li.dataset.id);
   });
+  let soon = 0;   // the data changes every few seconds: follow it, at most twice a second, and keep the 5 s tick for the ageing
+  document.addEventListener("onair:tracks", () => { if (!soon) soon = setTimeout(() => { soon = 0; refresh(); }, 500); });
   setInterval(refresh, 5000);
   refresh();
 }

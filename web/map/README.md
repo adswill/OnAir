@@ -21,7 +21,9 @@ proxies OSM tiles and serves `/meta` (aircraft type, airline and route from adsb
 - `public/shapes.js`, `icons.js` - original hand-authored vector icons (SVG paths) and the lazy canvas rendering at device resolution; `icons.js` also holds the altitude colour scale and the image ids. `test/icon-sheet.html` shows every icon on a dark and a light map (serve `web/map` and open it).
 - `public/airports.js` - ~290 major airports (fallback coordinates when the route lookup has none).
 - `public/df.js` - map features for the DF layers: bearing line, wedge (one sigma) and station dot per `doa`, 95 % ellipse and marker per `fix`.
-- `public/demo.js` - `?demo=1` synthetic data.
+- `public/demo.js` - `?demo=1` synthetic data (includes ham contacts in the exact form the desktop app posts them).
+- `public/iconsvg.js` - the icon set as one inline SVG sprite generated from `shapes.js`, the legend table, `iconSvg()`; `public/view.js` - pure helpers: layer groups, age fade / filter, shortcut table, sparkline geometry; `public/theme.js` - auto / dark / light.
+- `test/dev-server.js` - run the page locally against the real hub rules (`node test/dev-server.js --serve --seed`, then open http://localhost:8791/?shot=1). Serves `public/`, takes `POST /ingest` through `sanitize()` + `TrackBook`, answers `/live`, a WebSocket (hello and upserts), OSM tiles (cached on disk) and `/icon-sheet`. `--still` stops the periodic updates.
 - `test/` - `node --test` tests for the pure modules.
 
 ## Preview offline (demo)

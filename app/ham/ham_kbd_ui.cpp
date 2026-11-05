@@ -1,6 +1,7 @@
 // The keyboard-mode half of the Ham view: see ham_kbd_ui.h.
 #include "ham_kbd_ui.h"
 #include "../platform/platform.h"
+#include "ham_ops_ui.h"
 #include "dect2/cw/cw_tel.h"
 #include "dect2/hfdig/hfdig_rtty.h"
 #include "dect2/hfdig/hfdig_tel.h"
@@ -147,7 +148,8 @@ void hamKbdPanel(HamKbdCtx& c, int preset) {
     for (size_t i = 0; i < calls.size() && i < 8; i++) {
         ImGui::SameLine();
         const bool w = c.worked.worked(calls[i]);
-        if (ImGui::SmallButton((calls[i] + (w ? " *" : "")).c_str())) { snprintf(k.theirCall, sizeof k.theirCall, "%s", calls[i].c_str()); k.pickedAt = now; }
+        const std::string tag = hamCountryInMessages() ? hamCountryTag(calls[i]) : std::string();
+        if (ImGui::SmallButton((calls[i] + (w ? " *" : "") + (tag.empty() ? "" : " (" + tag + ")")).c_str())) { snprintf(k.theirCall, sizeof k.theirCall, "%s", calls[i].c_str()); k.pickedAt = now; }
     }
 
     // the other station

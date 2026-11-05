@@ -38,6 +38,9 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | LoRaWAN (all channels) | 200 | 202 | 201 | 160 | mode-lora-030 | |
 | LoRa satellites | 201 | 203 | 202 | 161 | mode-lora-030 | |
 | DME | 121 | 123 | 122 | 162 | (0.2.9) | poll slot was 110, shared with DGPS: moved in 3.0 |
+| FY-4 LRIT | 232 | 234 | 233 | 191 | feat36-fygeo | FengYun-4 LRIT, FY-4A (90 ksym/s) or FY-4B (120 ksym/s) as a choice; one receiver (`rxFy_`) for the three entries, told apart by the active standard |
+| FY-4A HRIT-II/III | 233 | 235 | 234 | 192 | feat36-fygeo | |
+| FY-2 S-VISSR | 234 | 236 | 235 | 193 | feat36-fygeo | |
 | PSK demodulator (BPSK / QPSK analyser) | 202 | 204 | 203 | 163 | issue-modes-030 | #282 |
 | PACTOR-I (monitor) | 203 | 205 | 204 | 164 | issue-modes-030 | #216 |
 | Flipper Zero Sub-GHz chat | 204 | 206 | 205 | 165 | (3.1) | row added with the 3.2 modes below |
@@ -49,6 +52,15 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | nRF24L01 | 210 | 212 | 211 | 186 | feat34-iqtcp-nrf24 | 3.4; needs a user test; numbers may need to move at merge |
 | ATIS (inland waterways) | 211 | 213 | 212 | 187 | feat35-lane-b | 3.5; needs a user test; numbers may need to move at merge |
 | Shortwave | 212 | 214 | 213 | 188 | feat35-shortwave | 3.5; the general receiver with one-click HF decoders; numbers may need to move at merge |
+| GK-2A LRIT | 230 | 232 | 231 | 189 | feat36-gk2a | 3.6; BPSK 128 ksym/s; needs a user test (no live signal); numbers may need to move at merge |
+| GK-2A HRIT | 231 | 233 | 232 | 190 | feat36-gk2a | 3.6; QPSK 3 Msym/s; needs a user test (no live signal); numbers may need to move at merge |
+| FY-3 AHRPT | 235 | 237 | 236 | 195 | feat36-fy3 | 3.6; Fengyun-3 polar AHRPT (VIRR, MERSI pictures); no live signal tested; numbers may need to move at merge |
+| FY-3 MPT | 236 | 238 | 237 | 196 | feat36-fy3 | 3.6; Fengyun-3 A / B / C medium rate picture transmission (MERSI); no live signal tested; numbers may need to move at merge |
+| PACTOR-II | 237 | 239 | 238 | 197 | feat36-pactor | 3.6; physical layer only (carriers, clock, symbols, frame period); one real recording; numbers may need to move at merge |
+| PACTOR-III | 238 | 240 | 239 | 198 | feat36-pactor | 3.6; physical layer only; synthetic signals only; numbers may need to move at merge |
+| PACTOR-IV | 239 | 241 | 240 | 199 | feat36-pactor | 3.6; physical layer only (1800 baud single carrier and its constellation); synthetic signals only; numbers may need to move at merge |
+| SITOR-B | 119 | 121 | 120 | 194 | feat36-modes | 3.6; FEC teletype text (NAVTEX and HF coast stations) through the marine FSK front end and the NAVTEX framing; synthetic NAVTEX signals only; the family and standards date from the WIP row, only the poll slot is new |
+| SELCAL (aircraft tone call) | 240 | 242 | 241 | 200 | feat36-dsc | 3.6; own mode for the SELCAL detector of the tone decoders (call log, codes, aircraft table); synthetic signals only; numbers may need to move at merge |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |
@@ -56,6 +68,6 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 Protocol entries (a row with a subId, such as FT8 in HF digital or POCSAG in pagers) share their family on purpose; the test checks
 that each (family, subId) pair is unique instead.
 
-`kNumFamilies` = 213, `kPollSeqSlots` = 189.
+`kNumFamilies` = 241, `kPollSeqSlots` = 201 (families 213 to 234 and poll slots 189 to 194 are kept for the other 3.6 lanes).
 
 A new mode takes the next free family above the highest one in this table and the next free poll slot, and adds its row here.

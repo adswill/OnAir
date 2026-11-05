@@ -12,6 +12,7 @@
 #include "native_common.h"
 #include "dect2/net/netradio.h"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstring>
 #include <map>
@@ -106,7 +107,24 @@ bool connectAndAsk(WsClient& ws, const std::string& host, int port, int timeoutM
 }
 
 void closeWs(WsClient& ws) {
-    if (ws.sock() != kBadSock) { ws.sendClose(); sockShutdown(ws.sock()); sockClose(ws.sock()); ws.attach(kBadSock); }
+    if (ws.sock() == kBadSock) return;
+    // A graceful end: the commands sent last (iq_stop) must reach the server. Closing a socket that still has unread IQ in its receive queue
+    // makes Windows send a reset, and the reset throws away what was sent but not yet read by the server (iq_stop never arrived there).
+    // So: the close frame, the send side shut, and the incoming data read away for a moment until the server ends the stream or goes quiet.
+    ws.sendClose();
+#ifdef _WIN32
+    shutdown(ws.sock(), SD_SEND);
+#else
+    shutdown(ws.sock(), SHUT_WR);
+#endif
+    sockRecvTimeout(ws.sock(), 100);
+    {
+        char junk[8192];
+        const auto t0 = std::chrono::steady_clock::now();
+        while (std::chrono::steady_clock::now() - t0 < std::chrono::milliseconds(400) && sockRecv(ws.sock(), junk, sizeof junk) > 0) {}
+    }
+    sockClose(ws.sock());
+    ws.attach(kBadSock);
 }
 
 } // namespace
@@ -270,7 +288,14 @@ protected:
             lostAt_ = std::chrono::steady_clock::now();
         }
     }
-    void interrupt() override {   /* read side only: closeDevice still has to send iq_stop */ if (ws_.sock() != kBadSock) sockShutdownRead(ws_.sock()); }
+    void interrupt() override {   /* read side only: closeDevice still has to send iq_stop */
+        if (ws_.sock() == kBadSock) return;
+#ifdef _WIN32
+        sockRecvTimeout(ws_.sock(), 50);   // Windows answers data that arrives after shutdown(SD_RECEIVE) with a reset: that would cut the connection before iq_stop is sent. A short receive timeout ends the read loop instead
+#else
+        sockShutdownRead(ws_.sock());
+#endif
+    }
 
 private:
     std::string addr_;

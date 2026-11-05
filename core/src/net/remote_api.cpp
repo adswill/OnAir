@@ -79,7 +79,7 @@ std::string hostOnly(const std::string& h) { return netp::hostOnly(h); }
 bool loopbackName(const std::string& n) { return netp::loopbackName(n); }
 std::string urlDecode(const std::string& s) { return netp::urlDecode(s); }
 std::string queryParam(const std::string& q, const std::string& key) { return netp::queryParam(q, key); }
-std::string statusText(int c) { return netp::statusText(c); }
+std::string statusText(int c) { return c == 202 ? std::string("Accepted") : netp::statusText(c); }
 struct Request {
     std::string method, path, query, body;
     std::map<std::string, std::string> h;   // lower-case names
@@ -196,6 +196,19 @@ struct RemoteApiServer::Impl {
     void route(sock_t s, const Request& rq) {
         const std::string& p = rq.path;
         const bool isGet = rq.method == "GET", isPost = rq.method == "POST";
+        if (p == "/mcp" || p == "/mcp/") {   // the MCP endpoint (docs/MCP.md): the raw JSON-RPC body goes to the host
+            if (rq.method != "POST" && rq.method != "GET" && rq.method != "DELETE") { sendErr(s, 405, "method not allowed", "Allow: POST, GET, DELETE\r\n"); return; }
+            if (rq.method == "POST" && !needJson(rq)) { sendErr(s, 415, "Content-Type: application/json required"); return; }
+            std::string out;
+            int code;
+            { std::lock_guard<std::mutex> lk(hostMu); code = host.handleMcp(rq.method, rq.body, out); }
+            if (code == 0) { sendErr(s, 404, "no MCP server in this program"); return; }
+            if (code == 405) { sendErr(s, 405, out.empty() ? "use POST" : out, "Allow: POST\r\n"); return; }
+            if (code >= 400 && out.empty()) { sendErr(s, code, "failed"); return; }
+            send(s, code, out);
+            return;
+        }
+        if (host.mcpOnly()) { sendErr(s, 404, "this port carries only /mcp"); return; }
         if (!isGet && !isPost) { sendErr(s, 405, "method not allowed", "Allow: GET, POST\r\n"); return; }
         const apipol::Route pr = apipol::parseRoute(rq.method, p);   // malformed paths, the refusal list, unknown API versions, wrong verbs
         if (pr.status == 405) { sendErr(s, 405, pr.msg, "Allow: " + pr.allow + "\r\n"); return; }
@@ -289,7 +302,7 @@ struct RemoteApiServer::Impl {
             return;
         }
         const bool known = p == "/api/v1/start" || p == "/api/v1/stop" || p == "/api/v1/mode" || p == "/api/v1/frequency" || p == "/api/v1/samplerate" || p == "/api/v1/gain"
-                         || p == "/api/v1/autogain" || p == "/api/v1/bandwidth" || p == "/api/v1/squelch" || p == "/api/v1/volume" || p == "/api/v1/mute"
+                         || p == "/api/v1/autogain" || p == "/api/v1/bandwidth" || p == "/api/v1/capture_bandwidth" || p == "/api/v1/squelch" || p == "/api/v1/volume" || p == "/api/v1/mute"
                          || p == "/api/v1/recording/start" || p == "/api/v1/recording/stop" || p == "/api/v1/tx/start" || p == "/api/v1/tx/stop"
                          || p == "/api/v1/rotator/goto" || p == "/api/v1/rotator/stop" || p == "/api/v1/rotator/park";
         if (!known) { sendErr(s, 404, "no such endpoint"); return; }
@@ -319,7 +332,7 @@ struct RemoteApiServer::Impl {
         } else if (p == "/api/v1/samplerate") {
             double hz = 0;
             if (num("hz", v)) hz = v; else if (num("msps", v)) hz = v * 1e6; else { fail("give hz or msps (0 = automatic)"); return; }
-            if (hz < 0 || hz > 1e9) { fail("sample rate out of range"); return; }
+            if (!(hz >= 0) || !std::isfinite(hz)) { fail("not a sample rate"); return; }   // any positive rate goes to the driver; it says if it cannot
             if (host.setSampleRateHz(hz, err)) okJson(); else fail(err);
         } else if (p == "/api/v1/rotator/stop") {
             Rotator::get().stop();
@@ -344,8 +357,13 @@ struct RemoteApiServer::Impl {
         } else if (p == "/api/v1/bandwidth") {
             double hz = 0;
             if (num("hz", v)) hz = v; else if (num("khz", v)) hz = v * 1e3; else { fail("give hz or khz"); return; }
-            if (!(hz > 0) || hz > 1e9) { fail("bandwidth out of range"); return; }
+            if (!(hz > 0) || !std::isfinite(hz)) { fail("not a bandwidth"); return; }
             if (host.setBandwidthHz(hz, err)) okJson(); else fail(err);
+        } else if (p == "/api/v1/capture_bandwidth") {   // the custom capture bandwidth of the mode (0 = the mode's own); any positive width
+            double hz = 0;
+            if (num("hz", v)) hz = v; else if (num("khz", v)) hz = v * 1e3; else if (num("mhz", v)) hz = v * 1e6; else { fail("give hz, khz or mhz (0 = the mode's own bandwidth)"); return; }
+            if (!(hz >= 0) || !std::isfinite(hz)) { fail("not a bandwidth"); return; }
+            if (host.setCaptureBandwidthHz(hz, err)) okJson(); else fail(err);
         } else if (p == "/api/v1/squelch") {
             auto on = j.find("on"), au = j.find("auto");
             double db = -100;

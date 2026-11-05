@@ -465,6 +465,13 @@ std::string WebHub::ipShown(const std::string& ip) const {
 int WebHub::admit(const AdmitRequest& r, std::string& code, std::string& why) {
     std::lock_guard<std::mutex> g(mu_);
     code = err::Busy;
+    {
+        auto b = bans_.find(r.ip);
+        if (b != bans_.end()) {
+            if (b->second > wallSeconds()) { code = err::Forbidden; why = "the host has blocked your address for now"; rejected_++; return 0; }
+            bans_.erase(b);
+        }
+    }
     if ((int)sessions_.size() >= lim_.maxUsers) { why = "the server is full, try again later"; rejected_++; return 0; }
     int fromIp = 0;
     for (auto& kv : sessions_) if (kv.second->ip == r.ip) fromIp++;
@@ -522,6 +529,45 @@ bool WebHub::kick(int id, const std::string& reason) {
     std::lock_guard<std::mutex> g(s->qm);
     if (s->kick.empty()) { s->kick = reason.empty() ? "kicked" : reason; kicked_++; }
     return true;
+}
+
+bool WebHub::ban(int id, int minutes, const std::string& reason) {
+    std::string ip;
+    {
+        std::lock_guard<std::mutex> g(mu_);
+        auto it = sessions_.find(id);
+        if (it == sessions_.end()) return false;
+        ip = it->second->ip;
+        minutes = std::clamp(minutes <= 0 ? 1440 : minutes, 1, 7 * 1440);
+        bans_[ip] = wallSeconds() + 60.0 * minutes;
+        if (bans_.size() > 1000) for (auto b = bans_.begin(); b != bans_.end();) { if (b->second <= wallSeconds()) b = bans_.erase(b); else ++b; }
+    }
+    std::vector<int> ids;
+    { std::lock_guard<std::mutex> g(mu_); for (auto& kv : sessions_) if (kv.second->ip == ip) ids.push_back(kv.first); }
+    for (int i : ids) kick(i, reason.empty() ? "blocked by the host" : "blocked: " + reason);
+    return true;
+}
+
+bool WebHub::unban(const std::string& tag) {
+    std::lock_guard<std::mutex> g(mu_);
+    for (auto b = bans_.begin(); b != bans_.end(); ++b)
+        if (ipShown(b->first) == tag) { bans_.erase(b); return true; }
+    return false;
+}
+
+std::string WebHub::bansJson() const {
+    std::lock_guard<std::mutex> g(mu_);
+    std::ostringstream o;
+    o << "{\"bans\":[";
+    bool first = true;
+    const double now = wallSeconds();
+    for (auto& kv : bans_) {
+        if (kv.second <= now) continue;
+        o << (first ? "" : ",") << "{\"address\":\"" << jsonEsc(ipShown(kv.first)) << "\",\"minutes_left\":" << (long long)((kv.second - now) / 60 + 1) << "}";
+        first = false;
+    }
+    o << "]}";
+    return o.str();
 }
 
 int WebHub::userCount() const { std::lock_guard<std::mutex> g(mu_); return (int)sessions_.size(); }

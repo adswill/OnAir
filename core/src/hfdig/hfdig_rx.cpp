@@ -287,7 +287,7 @@ void HfdigReceiver::setAudioTap(std::function<void(const float* x, size_t n)> cb
 void HfdigReceiver::setSpeechTap(std::function<void(const float* x, size_t n)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->speechTapSet = std::move(cb); p_->tapsReq = true; }
 
 void HfdigReceiver::setWide(bool on, double spanHz) {
-    p_->wideSpan = std::max(1000.0, std::min(kWideMaxSpanHz, spanHz));
+    p_->wideSpan = std::max(1000.0, std::min(wideSpanCapHz(), spanHz));
     if (p_->wideReq.exchange(on) != on) p_->wideChanged = true;
 }
 bool HfdigReceiver::wide() const { return p_->wideReq.load(); }

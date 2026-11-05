@@ -19,6 +19,7 @@ struct HamOps {
     std::string logPath;
     dect2::ham::DxccDb dxcc;                 // the built-in table, or the user's cty.dat (prefs "ham.ctyPath")
     std::string ctyPath, ctyInfo;
+    bool ctyInMsg = true;                    // country and zone beside decoded messages (prefs "ham.ctyInMsg")
     dect2::ham::WorkedIndex worked;
     bool workedDirty = true;                 // rebuilt from the log on the next frame
     dect2::ham::SpotList spots;
@@ -46,6 +47,11 @@ bool hamLogQso(dect2::ham::LogQso q, std::string& err);
 dect2::ham::LogQso hamFromRecord(const dect2::ham::QsoRecord& r);
 std::string hamDxccKey(const std::string& call);            // the award key of a call's entity, "" when not known
 std::string hamCountry(const std::string& call);            // the entity name, "" when not known
+std::string hamCountryTag(const std::string& call);         // "Germany, CQ 14, ITU 28", "" when not known
+bool hamCountryInMessages();                                 // the setting: show it beside decoded messages
+bool hamCountryLoadFile(const std::string& path, std::string& err);   // cty.dat / wl_cty.dat; the old table stays when it fails
+void hamCountryReset();                                      // back to the built-in table
+void hamCountryUi();                                         // the "Country file" settings block (Load, Download on click, Reset)
 void hamToast(const std::string& s);
 void hamSaveStation();
 

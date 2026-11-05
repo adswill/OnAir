@@ -145,6 +145,10 @@ public:
     void tick(double nowUnix);                      // call about once a second: ticks plugins, notices failed ones (disables them, logs why)
     // the IQ stream a running mode asked for (0 = none)
     bool wantedIq(const std::string& id, double& centreHz, double& sampleRate) const;
+    // The sound of the plugins (audio_out, permission "audio-out"): the app plays it. Called on the plugin's thread (or the helper's reader
+    // thread) with mono float PCM; must not block. Without a sink the audio is dropped.
+    using AudioSink = std::function<int(const std::string& pluginId, const float* pcm, size_t n, double sampleRate)>;
+    void setAudioSink(AudioSink s);
 
     // install / remove
     bool installFile(const std::string& zipPath, std::string& installedId, std::string& err);

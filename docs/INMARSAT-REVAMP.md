@@ -11,7 +11,7 @@ Everything marked **needs a user test with a real capture** has only been checke
 |---|---|---|---|
 | Aero | `core/src/aero` (`AeroReceiver`) | Band search finds P carriers (up to 6) in one capture, demodulates 600 / 1200 / 10500 bit/s, SU layer, ACARS, ADS-C, positions | P channel data only, its own search, no voice, no channel table in the UI |
 | Inmarsat-C | `core/src/inmc` (`InmcReceiver`) | NCS common channel 1200 sym/s BPSK, EGC (SafetyNET, FleetNET), searches up to 3 more channels | one UI, separate mode from Aero |
-| Voice | none | `docs/CODECS.md`: OnAir "does not tune voice channels" | C channels not detected or decoded |
+| Voice | none (3.3) | `docs/CODECS.md`: OnAir "does not tune voice channels" | C channels not detected or decoded. 3.6: done, see section 4.4 |
 
 Two separate modes, each with a private band search, each decoding what it finds without a shared view of the band.
 
@@ -79,7 +79,7 @@ A table, one row per detected carrier: frequency, type (P / C / Inmarsat-C TDM /
 - Aero C channel is circuit voice (AMBE-family vocoder, user-installed; framing in Inmarsat's Aero SDM, not public).
 - **Plumbing built in 3.3 stage 3:** `VoiceChannel` objects, one per active C carrier, each a frame source feeding a `codec::SpeechCodec` from the existing plug-in system (`core/include/dect2/codec`, `onair-codec-<id>` in the user's codecs folder, notice accepted once). A per-channel mute / solo mixer, a recorder (WAV per call, with carrier, start and end), and the "install codec" message when the plug-in is missing (silent, never an error).
 - **Not shipped:** any patented codec; nothing is downloaded or linked. Unencrypted traffic only; no cracking; user keys only where a user-imported key applies, as in docs/KEYS.md.
-- **Open problem, stated honestly:** the C-channel modulation and framing are not in a public specification we may reproduce. In 3.3 the mode detects and lists C carriers, demodulates what public sources describe (A-QPSK / OQPSK at 8.4 kbit/s, unverified), and hands frames to the codec when they validate. Without a real capture of a C channel the frame layer cannot be proven; it ships marked **needs a user test with a real capture**, and the call recording stores the raw demodulated bits for a later decoder so a user's capture is not wasted.
+- **3.6, solved:** the open problem above was solved by reading JAERO (MIT, github.com/jontio/JAERO): the C channel is 8400 bit/s OQPSK (root raised cosine, roll-off 0.6), a 500 ms frame of two 52-symbol unique words (one per arm) and 4096 coded bits, interleaved in blocks of 256, punctured to rate 2/3, convolutional code K = 7 (the P channel code), the P channel scrambler, giving 25 AMBE frames of 12 bytes and 3 signal units. Code: `core/src/aero/aero_cchan.*` (framing and coding), `aero_crx.*` (one carrier: mixer, decimator, demodulator, framer), `aero_cgen.*` (test signal), the manager's per-window C receivers (`inmsat_manager.cpp`, `updateC`) and the mixer's `pushCFrame`. A real recording from JAERO's sample set decodes (CRC-16 of every signal unit, call-progress unit with aircraft and ground station). The AMBE decoder is the user's plug-in `aeroambe`, built from `tools/addons/aeroambe` and libaeroambe's mbelib: the plug-in was run on the same recording and gives speech bursts (checked from level and zero-crossing statistics; nobody listened).
 
 ### 4.5 UI
 

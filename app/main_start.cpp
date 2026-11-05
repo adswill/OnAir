@@ -4,6 +4,7 @@
 #include "dect2/packs/datasets.h"
 #include "dect2/session/session_store.h"
 #include "ui/input_map.h"
+#include "ui/kit/mode_panel.h"
 #include "dect2/source/device_pick.h"
 #ifdef __linux__
 #include <unistd.h>
@@ -56,6 +57,9 @@ void startApp(App& app, int argc, char** argv) {
     {
         std::vector<std::string> keys;
         for (const auto& it : plat::basePrefs().dumpAll()) keys.push_back(it.key);
+        bool fresh = !plat::prefs().getB("setupDone", false);   // no settings of any earlier use (the wizard's own and the system's keys do not count)
+        for (const std::string& k : keys) if (!setup::isOwnOrSystemKey(k) && k != "apiToken") fresh = false;   // the API token is made at the first start
+        modepanel::startup(fresh);   // Simple / Advanced default (ui/kit/mode_panel.h)
         setupPending = setup::wizardPending(argc == 1, plat::prefs().getB("setupDone", false), keys, failedStarts >= 2, plat::prefs().has("setupStep"));
     }
     app.wizOpen = tour::autoStart(argc == 1, plat::prefs().getB(tour::prefKey(), false), setupPending);   // the tour runs on the very first start only
@@ -63,7 +67,9 @@ void startApp(App& app, int argc, char** argv) {
     if (getenv("DECT2_WIZARD")) app.wizOpen = true;   // test hook: open the tour at start-up (DECT2_WIZSTEP picks the step)
     if (getenv("DECT2_SETUP")) { app.wizOpen = false; setupWizardOpen(app); if (const char* ss = getenv("DECT2_SETUPSTEP")) app.setupStep = atoi(ss);
         if (const char* sl = getenv("DECT2_SETUPLOC")) snprintf(app.setupLoc, sizeof app.setupLoc, "%s", sl);   // test hooks: a position and the ticked interests (bits)
-        if (const char* si = getenv("DECT2_SETUPINT")) app.setupInterests = (unsigned)atoi(si); }
+        if (const char* si = getenv("DECT2_SETUPINT")) app.setupInterests = (unsigned)atoi(si);
+        if (const char* sc = getenv("DECT2_SETUPCOUNTRY")) { app.setupLoc[0] = 0; snprintf(app.setupCountry, sizeof app.setupCountry, "%s", sc); }   // test hook: a regional preset by country code
+        if (const char* sa = getenv("DECT2_SETUPANT")) app.setupAntenna = atoi(sa); }
     app.wizStepT = ImGui::GetTime();
     app.engine.player().setHardwareDecode(plat::prefs().getB("hwVideo", true));
     app.tune.synth.demoTv = true;   // the synthetic DVB-T / ATSC signal carries a test-card programme
@@ -143,6 +149,9 @@ void parseDevFlags(App& app, int argc, char** argv, DevOpts& o) {
         if (std::string(argv[i]) == "--fmscan") o.fmScanAuto = true;
         if (std::string(argv[i]) == "--vfo" && i + 1 < argc) o.fileVfoMhz = atof(argv[++i]);
         if (std::string(argv[i]) == "--ssb-conversations") ssbConvDevOpen(app, i + 1 < argc && std::string(argv[i + 1]) == "demo");   // dev: open View > Conversations (demo: with the synthetic signals)
+        if (std::string(argv[i]) == "--mcp") mcpDevOpen(app);   // dev: View > Data feeds on the AI assistant (MCP) section, switched on
+        if (std::string(argv[i]) == "--trunk-pool") app.trunkPoolOpen = true;   // dev: the Multi-radio trunking window open (screenshots)
+        if (std::string(argv[i]) == "--wide-all") { app.wideAllOpen = true; app.engine.setWideAll(true); }   // dev: Everything in view open and on (screenshots)
         if (std::string(argv[i]) == "--passes") app.passesOpen = true;
         if (std::string(argv[i]) == "--df") app.dfOpen = true;
         if (std::string(argv[i]) == "--passive-radar") app.passiveRadarOpen = true;

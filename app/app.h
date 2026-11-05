@@ -13,6 +13,7 @@
 #include "gfx/autolabel_logic.h"
 #include "i18n/i18n.h"
 #include "state/fm_saved.h"
+#include "state/recdir.h"
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -154,7 +155,7 @@ using SavedChannel = plat::Channel;
 // parts of the window the tour points at
 enum WizTarget { TgNone = 0, TgSwitch, TgToolbar, TgMain, TgRight, TgConst, TgCount };
 
-constexpr int kNumFamilies = 213;   // App::family runs from 0 to kNumFamilies - 1
+constexpr int kNumFamilies = 241;   // App::family runs from 0 to kNumFamilies - 1
 constexpr int kShortwaveFamily = 212;   // Shortwave (engine standard 213): the general receiver with one-click HF decoders
 // The two modes that listen with the General receiver's screen (app/general): the General receiver and Shortwave
 inline bool isGeneralFamily(int f) { return f == 55 || f == kShortwaveFamily; }
@@ -188,6 +189,10 @@ struct App {
     bool genAutoOn = true;              // General / Auto: in the General receiver, signals are spotted in the background and labelled (app/specx/general_auto_ui.cpp; docs/GENERAL-AUTO.md)
     bool genAutoDecode = false;         // General / Auto: decode by itself when the tuned frequency sits on a sure label (off by default)
     int genAutoReleaseKhz = 0;          // General / Auto: keep decoding while the tuned frequency is within this of the signal; 0: automatic
+    bool trunkPoolOpen = false;         // the multi-radio trunking window (View > Multi-radio trunking; app/trunkpool/trunkpool_ui.cpp)
+    bool wideAllOpen = false;           // the Everything in view window (View > Everything in view; app/panels/wide_all_ui.cpp)
+    double wideAllCpu = 0.8;            // its CPU limit as a share of one core (0: none)
+    int wideAllListen = 0;              // the entry whose sound is followed there
     bool rfFpOpen = false;              // the RF fingerprint window (View > RF fingerprint; app/panels/rffp_ui.cpp; docs/RF-FINGERPRINT.md)
     bool doctorOpen = false;            // the Reception Doctor window (View > Reception doctor; app/panels/doctor_ui.cpp)
     bool stationHealthOpen = false;     // the station health report window (View > Station health; app/panels/station_health_ui.cpp)
@@ -211,6 +216,8 @@ struct App {
     int setupStep = 0, setupRegion = 0;
     unsigned setupGoals = 0;            // bit per learn::Goal (app/ui/learn_logic.h)
     int setupAntenna = 0;               // learn::Antenna
+    int setupUnits = 0;                 // setup wizard: 0 follow the region, 1 metric, 2 imperial
+    bool setupEasy = true;              // setup wizard: Easy mode (every mode opens its Simple view)
     char setupLoc[48] = "";             // a Maidenhead locator or coordinates
     unsigned setupInterests = 0;        // bit per setup::Interest (app/ui/setup_logic.h): the interests ticked in the setup wizard
     char setupQuery[48] = "";           // the city or country typed in the wizard's location step
@@ -494,7 +501,7 @@ struct App {
     std::string monDev, monDev2; bool monOut2 = false; float monVol2 = 1.f; double monOffset = 0;
     bool monNet = false; int monPort = 7355; bool monBindAll = false, monWav = true;
     bool audioRecWasActive = false; int audioRecMode = 0; double audioRecFreq = 0; std::string audioRecDonePath;
-    int recFormat = 0;                  // IQ recording format: 0 = 8-bit, 1 = float, 2 = X-Midas BLUE .tmp with float samples (pref "recFormat")
+    int recFormat = 0;                  // IQ recording format: 0 = 8-bit, 1 = float, 2 = X-Midas BLUE .tmp with float samples, 3 = 16-bit (pref "recFormat")
     int tvBufMb = 256;                  // TV live buffer for Pause (pref "tvBufMb")
     // HD / SD simulcast (core/src/tv/hd_pair.h): the services of the scanned multiplexes (prefs "tvCatalog"), the user's pairing table ("tvHdPairs"), the per-programme
     // choice ("tvHdChoice": programme key -> 1 HD, 0 SD) and "always prefer HD" ("tvHdAlways")
@@ -792,6 +799,12 @@ void generalApiSquelch(bool on, bool autoLevel, double db);
 bool generalApiRecord(App& a, bool on, std::string& err);
 std::string tvRecJobsJson();                        // tvrec_ui.cpp, for the remote API: the recorder's scheduled jobs (read only)
 void generalRecallHz(App& a, double hz);          // general_ui.cpp: a memory's frequency: the dial on hz, the channel marker back on the dial              // general_ui.cpp: the general receiver's listening frequency (the dial plus its offset)
+void trunkPoolWindow(App& a);                        // trunkpool_ui.cpp: control radio + voice radios, call log, access list, channel plan (docs/TRUNKING.md)
+void trunkPoolTick(App& a);                          // every frame, window shut or not: feeds grants, drives the pool
+void wideAllWindow(App& a);                          // wide_all_ui.cpp: every signal of the capture found, identified and decoded at once (wide_session.h)
+void passesDownloadTles();                          // passes_ui.cpp: fetch the TLE sets (CelesTrak) in the background
+bool wideAllWorthIt(const App& a);                   // the capture is wide enough to hold several signals (or it is on already)
+void wideAllButton(App& a);                          // the one button of it (Simple views and the window)
 void rfFingerprintWindow(App& a);                   // rffp_ui.cpp: RF fingerprint of a transmitter, carrier-only log (a.rfFpOpen; docs/RF-FINGERPRINT.md)
 void receptionDoctorWindow(App& a);                // doctor_ui.cpp: Reception Doctor, why a mode is not decoding, with one-click fixes (a.doctorOpen; docs/RECEPTION-DOCTOR.md)
 void chooseSampleRate(App& a, double hz);          // ui/toolbar_source.cpp: set and apply a sample rate for this mode and radio (0 = Auto)
@@ -870,6 +883,10 @@ const char* fmtKbps(char* b, size_t n, double k);
 void qualityBar(App& a, float width);
 // app_state.cpp
 void setFamily(App& a, int f);                 // a family with protocol entries opens on its first one
+// A replayed recording puts the receiver back in the mode it was made in: the mode id in the SigMF description (or the "onair_<id>_" file name).
+// Returns the id restored, "" when it names no mode (or DVB, which is T or T2) and the mode stays as it is. Never while the receiver runs.
+std::string restoreRecordingMode(App& a, const std::string& description, const std::string& path);
+int recFileFormatOf(int recFormat);             // IQ recording choice -> dect2::FileFormat as int (8-bit CS8, 16-bit CI16, float CF32; BLUE is float)
 void setMode(App& a, int f, int sub);          // a mode-list entry: family and protocol entry (0 none, or the family's first)
 const dect2::SubMode* curSub(const App& a);    // the protocol entry selected, nullptr for a mode without them
 int subIndexOf(const char* id);                // 1 .. kNumSubModes, 0 when not one
@@ -889,6 +906,8 @@ std::string rateModeId(const App& a);
 std::string rateContext(const App& a);
 double rxWidthMhz(const App& a);              // state/rx_width.cpp: the custom bandwidth of this mode in MHz (0 = the mode's own standard width)
 void rxWidthControl(App& a, bool& retune);    // and its Advanced row (custom bandwidth + custom sample rate), shown for every mode
+void rxWidthSetFromApi(App& a, double widthMhz);   // the remote API / MCP: set the custom bandwidth of this mode in MHz (0 = the mode's own), as the row does
+void rxWidthChip(App& a);                     // the compact "Bandwidth: default / custom" chip of the Simple view (state/rx_width.cpp)
 bool captureRowShown(const App& a);           // the Advanced row is drawn for a radio or the test signal (not a recording or a sound card)
 bool sampleRateAdvanced(App& a);              // ui/toolbar_source.cpp: the sample-rate half of that row (true when it changed the rate)
 double savedSampleRate(const App& a);
@@ -949,6 +968,8 @@ void remoteApiLoadPrefs(App& a);    // remote_api_app.cpp: the remote-control AP
 void remoteApiSavePrefs(const App& a);
 void remoteApiTick(App& a);          // every frame: runs the commands the API queued for the main thread, publishes the telemetry
 void remoteApiSection(App& a);       // the settings panel (in the Data feeds window)
+void mcpDevOpen(App& a);             // dev flag --mcp: Data feeds open on the AI assistant section, switched on (not saved)
+void mcpSection(App& a);             // remote_api_app.cpp: the AI assistant (MCP) panel: switch, token, connection snippets, activity log (docs/MCP.md)
 void shareTick(App& a);             // feeds_ui.cpp: carries out the frequency / gain commands of the clients of "Share my radio" (when allowed)
 void integrationsWindow(App& a);   // app/integrations/integrations_ui.cpp: the Integrations window (View > Integrations); also starts the publisher
 void ssbConvWindow(App& a);   // app/ssbconv/ssbconv_ui.cpp: the Conversations window (View > Conversations); also feeds the finder while it is open and drives auto-listen
@@ -1100,6 +1121,8 @@ struct ModeUi {
     void (*scan)(App&) = nullptr;                       // the Scan tab (null: a note)
     void (*tick)(App&) = nullptr;                       // every frame while the mode is selected: push volume and mute to the receiver, run scans, collect histories
     void (*meters)(const App&, std::vector<ModeMeter>& out) = nullptr;   // the meter bank of the Scope: Meters layout
+    void (*command)(App&) = nullptr;                    // Simple view (app/ui/kit/mode_panel.h): the merged body under the shared summary strip; null: the generic Command view (the mode's tab on its first view, its controls, its meters)
+    bool noSimple = false;                              // no Simple view for this mode (the Advanced tabs only)
 };
 bool modeSupportsWideHf(int family);                    // modeui.cpp: the HF families that decode the visible span inside the receiver (CW, PSK, HF digital)
 bool modeSupportsWideChannels(int family);               // modeui.cpp: VDL2, HFDL (Whole span = every channel of the capture, set on the receiver)
@@ -1226,6 +1249,7 @@ void specxDrawBookmarks(ImDrawList* dl, double loHz, double hiHz, float x0, floa
 void identifyStart(App& a, double sampleCentreRadioHz, double offHz, double widthHz, double rfOfCentreHz);
 void identifyAt(App& a, double clickMhz);
 void identifyRegion(App& a, double loMhz, double hiMhz);   // a dragged region (MHz)
+void scanIdentifyBar(App& a);                              // Simple view: the Scan and Identify buttons (app/specx/scan_identify_bar.cpp)
 void identifyAll(App& a);                                  // every signal in the capture, in a table
 void identifyTuned(App& a, double freqHz, double bwHz);    // tunes the radio to a signal found by the sweep and identifies it there
 bool identifyBusy();                                       // the Identify window is open (it owns the capture)
@@ -1249,6 +1273,7 @@ void vfoPanelWindow(App& a);
 void vfoPopupSection(App& a);
 void vfoAddAt(App& a, double mhz);
 void generalPlotMouse(App& a, int plotId);
+void generalWheelTune(App& a, int n, double stepHzOverride);   // wheel tuning in the general receiver (#409)
 void generalChannelBand(const App& a, bool fill);
 bool generalDragging(int plotId);
 double generalChannelWidthMhz(const App& a);
@@ -1412,6 +1437,8 @@ void tourStartTour(App& a, int which);                 // tour.cpp: start one of
 void tourMark(const char* id, ImVec2 lo, ImVec2 hi);   // tour.cpp: report where a part of the window is this frame (the tour points at it)
 void wizEnter(App& a, int step);
 void setupWizardOpen(App& a);                        // wizard.cpp: (re)start the setup wizard
+bool regionPresetRow(const std::string& current, std::string& picked);   // wizard.cpp: the buttons of the regional presets, wrapped; true on a click (id in picked)
+void setupApplyPreset(App& a, const std::string& presetId, int units);   // wizard.cpp: a regional preset (Settings > Region preset), no wizard
 void setupWizard(App& a, ImVec2 disp);               // wizard.cpp: the window, each frame
 void lessonsStart(App& a, int planPos = -1);         // learn.cpp: the hands-on lessons for the setup's goals (resumes where they were left when planPos < 0)
 void lessonsUi(App& a, ImVec2 disp);                 // learn.cpp: the running lesson (spotlight + card), the Lessons list, the glossary and the checkup windows, each frame

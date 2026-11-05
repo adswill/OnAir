@@ -2,6 +2,7 @@
 #include "dect2/dpmr/dpmr_rx.h"
 #include "dect2/dsp/up6.h"
 #include "dect2/dsp/cic3.h"
+#include "dect2/dsp/mean_afc.h"
 #include "dect2/results/results_io.h"
 #include "dect2/dpmr/dpmr_tel.h"
 #include "dect2/dpmr/dpmr_proto.h"
@@ -89,6 +90,8 @@ struct DpmrReceiver::Impl {
     int M = 0, nPh = 64;
     std::vector<float> fir;
     cf32 prevZ{0, 0};
+    MeanAfc afc;
+    double afcHz = 0;   // frequency capture while searching: the oscillator's move to follow a carrier that is a few kHz off
 
     double hopHz() const { return baseCh && curCh ? (curCh - baseCh) * 6250.0 : 0; }
     void initFront() {
@@ -96,6 +99,7 @@ struct DpmrReceiver::Impl {
         fd = rate > 0 ? rate / D : 0;
         inv = 1.0 / ((double)D * D * D);
         lo = 1; loCount = 0;
+        afc.reset(); afc.enableFine(true, 1200.0); afcHz = 0;
         loStep = rate > 0 ? std::polar(1.0, -2 * kPi * (offset + hopHz()) / rate) : std::complex<double>(1, 0);
         cic.reset();
         decCount = 0;
@@ -142,7 +146,14 @@ struct DpmrReceiver::Impl {
             rp += rstep;
             const cf32 d = acc * std::conj(prevZ);
             prevZ = acc;
-            push((float)(std::atan2(d.imag(), d.real()) * kFs / (2 * kPi)));
+            const float fq = (float)(std::atan2(d.imag(), d.real()) * kFs / (2 * kPi));
+            if (mode == Search) {   // never mid-call: a move there upsets the level tracking
+                if (const double a = afc.push(fq, kFs); a != 0 && std::fabs(afcHz + a) <= MeanAfc::kMaxTotalHz) {
+                    afcHz += a;
+                    loStep = std::polar(1.0, -2 * kPi * (offset + hopHz() + afcHz) / rate);
+                }
+            }
+            push(fq);
             step();
         }
     }

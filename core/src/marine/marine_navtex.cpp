@@ -298,6 +298,7 @@ void NavtexDecoder::process(bool force) {
 
 void NavtexDecoder::emitChar(int ch, bool err) {
     charsOut_++;
+    if (charCb_) charCb_(ch, err);
     tail_.push_back((char)ch);
     if (tail_.size() > 4) tail_.erase(tail_.begin());
     if (mstate_ != 0 && matchWord(tail_, "ZCZC")) {      // a new message starts before the old one ended

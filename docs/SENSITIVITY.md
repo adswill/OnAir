@@ -83,7 +83,7 @@ and uploads the JSON as the artifact `sens-results`. Start it with `gh workflow 
 ## Coverage
 
 In the harness (generator + receiver wired like `tests/engine/test_iq_modes.cpp`): `dvbt2 dvbt atsc dab isdbt fm fm-rds dvbs2 dtmb atv dmr drm
-adsb sonde ais acars aero iridium mesh(heavy) pager packet vdl2 dstar nxdn dpmr tetra p25`. A mode whose clean reference run gives no valid
+adsb sonde ais acars aero iridium mesh(heavy) pager packet vdl2 dstar nxdn dpmr tetra p25 hfdl300 hfdl600 hfdl1200 hfdl1800 navtex dsc cdr dvbc atsc3` (3.6; see SENSITIVITY-3.6.md). A mode whose clean reference run gives no valid
 output is reported as "skipped" (receiver wiring in the harness needs a look) instead of producing numbers.
 
 **Gap list** (`sens_sweep --gaps` prints the current state):
@@ -91,8 +91,7 @@ output is reported as "skipped" (receiver wiring in the harness needs a look) in
 * No built-in test signal at all: `wb dgps dme eloran mpt1327 fusion ltr edacs milhf marinevhf p25p2` (DVB-C has the `tests/dvbc` generator, DVB-T2 MISO/other
   PLP configurations only the one in the table).
 * Test signal exists, not yet in the harness (needs a receiver block in `sens_modes.h`; most are `blocks<Tel>` plus a prepGeneric, a few need long
-  signals): `gnss` (C/N0 defined, not SNR), `marine` NAVTEX/DSC (25 s signals), `inmc` (36 s), `atsc3`, `dvbc`, `hfdl`, `hdr cdr hfdig airband ism ndb vorils m17 cell cw
-  psk js8 gsmr specx specan uplink orbcomm mac astro ale ble iono qo100 wifi general rid nr time meteor goes cubesat globalstar vdes hrpt zigbee flarm
+  signals): `gnss` (C/N0 defined, not SNR), `marine` NAVTEX/DSC (25 s signals), `inmc` (36 s), `atsc3`, `dvbc`, `hfdl`, `hdr cdr psk js8 gsmr specx specan uplink orbcomm mac astro ale ble iono qo100 wifi general rid nr time meteor goes cubesat globalstar vdes hrpt zigbee flarm
   hfbeacon dji nbiot halow loraraw codar datawell multitone same ant dect tetrapol elektro lbj vdl4 uat wisun eczas wmbus tones sarsat mt63 zwave fpv
   mscatter cquam fsq ifkp kaal kavb kapp kaft kait kaws ardop goesdcs modeac bletracker satbeacon klw tdcs nfc sbas asterix argos sigfox isdbs horus
   lorawanwide lorasat`, and the weak-signal HF modes FT8/FT4/WSPR (no generator found in the repo), APT/LRPT (`meteor`).
@@ -186,3 +185,7 @@ Threshold SNR in dB (lowest SNR with at least 90 % success, 8 trials a point, 1 
 - `sro50ppm` used a 4 point cubic interpolator that damaged wide modes by a filter that moved with the fractional position; a clean ATSC signal with 10 ppm read 19 dB data SNR. Now a 24 tap Kaiser sinc. ATSC at 30 dB, 50 ppm: good 4230 / bad 11006 before, 18356 / 0 after (the receiver was fine).
 - FM, AM and SSB audio: the 1 kHz tone is searched +-1.5 Hz; at exactly 1000 Hz a 50 ppm clock error capped the audio SNR near 27 dB (FM `sro50ppm` 12 dB -> 5 dB).
 - Phase noise linewidth per mode (`Mode::pnHz`); at the 50 Hz default no TV OFDM or ATSC receiver decoded even at 30 dB. False-lock rate on noise only is reported per mode.
+
+## 3.6 sens3 additions
+
+ATSC 3.0 QPSK 8/15: AWGN 4 -> 2 dB, TU6 16 -> 12 dB (channel estimate, docs/SENSITIVITY-3.6.md). New harness modes: `ndb cw ism vorils hfdig airband cell navtexl` with theory derivations in SENSITIVITY-3.6.md; NAVTEX measured finer: floor 10 dB, about 4 to 5 dB over theory (real gap, not yet located).

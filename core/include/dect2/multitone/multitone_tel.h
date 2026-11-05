@@ -62,6 +62,16 @@ struct MtBurst {
     std::vector<uint32_t> words;        // up to 32 words from the best alignment
     std::vector<uint8_t> wordOk;
     std::string verdict;                // what can and cannot be said about it
+    // Framing measured from the bit stream (analyseFraming; what repeats, never what it means)
+    int dupBits = 1;                    // every bit was sent this many times in a row (2: the audio FFSK of the recordings sends each bit twice)
+    double dataBaud = 0;                // baud / dupBits
+    int markerBits = 0;                 // length of a marker pattern that comes back at a fixed spacing (0 none)
+    std::string marker;                 // as 0 / 1 characters
+    int markerCount = 0, markerGap = 0; // how often, and the usual distance between two (bits, after collapsing)
+    std::vector<std::string> frameWords;// the bits between a marker and the next position one gap on, up to 64, as 0 / 1 characters
+    int doubledWords = 0;               // of those, how many equal the one before (the words come in repeated pairs)
+    int distinctWords = 0;
+    int halfEqualWords = 0;             // of those, how many have their last two halves (after a first byte) equal within one bit: a value sent twice
 };
 
 struct MultitoneTelemetry {

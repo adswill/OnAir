@@ -2,6 +2,8 @@
 #include "server_host.h"
 #include "web_ui.h"
 #include "web/web_hub.h"
+#include "../app/state/rx_width.h"
+#include "dect2/engine/widespan.h"
 #include "dect2/audio/audio_monitor.h"
 #include "dect2/audio/hf_demod.h"
 #include "dect2/engine/mode_tuning.h"
@@ -135,6 +137,7 @@ void ServerHost::init() {
     modeIdx_ = (int)(m - modes_.data());
     freqHz_ = cfg_.num("freq_mhz", m->defMhz) * 1e6;
     rateHz_ = cfg_.num("rate_msps", 0) * 1e6;
+    captureBwMhz_ = cfg_.num("capture_bw_mhz", 0);
     gainDb_ = cfg_.num("gain_db", 30);
     const int dm = demodFromName(cfg_.get("audio_demod", "auto"));
     demod_ = dm < 0 ? 4 : dm;
@@ -162,6 +165,8 @@ TuneSettings ServerHost::buildTune(const DeviceInfo& d) const {
     t.centerHz = freqHz_;
     t.synth.mode = m.family >= 4 ? m.family : 0;
     if (!m.sub.empty()) if (const SubMode* sm = subModeById(m.sub)) applySubModeSynth(t.synth, *sm);
+    dect2::setWideSpanCapHz(captureBwMhz_ > 0 ? 1e12 : 0);   // a custom bandwidth lifts the default cap on whole-span decoding
+    if (d.isRadio() || d.kind == DeviceInfo::Synthetic) rxApplyWidth(t, captureBwMhz_, mt ? mt->minSampleRate : 0);   // the custom capture bandwidth (same call as the app)
     if (d.isRadio() && rateHz_ > 0) t.sampleRate = rateHz_;
     if (d.isGeneric()) {
         t.sampleRate = linkRateFor(d, t, t.sampleRate, minSampleRateFor(m.family, t.bandwidthMhz));
@@ -241,6 +246,7 @@ void ServerHost::saveState() {
     cfg_.set("mode", m.sub.empty() ? m.id : m.sub);
     cfg_.setNum("freq_mhz", freqHz_ / 1e6);
     cfg_.setNum("rate_msps", rateHz_ / 1e6);
+    cfg_.setNum("capture_bw_mhz", captureBwMhz_);
     cfg_.setNum("gain_db", gainDb_);
     cfg_.set("audio_demod", demodName(demod_));
     if (devIdx_ >= 0 && devIdx_ < (int)devices_.size() && devices_[(size_t)devIdx_].kind != DeviceInfo::Synthetic) cfg_.set("device", devices_[(size_t)devIdx_].name);
@@ -338,6 +344,17 @@ bool ServerHost::setSampleRateHz(double hz, std::string& err) {
     std::lock_guard<std::mutex> lk(mu_);
     if (devIdx_ >= 0 && devIdx_ < (int)devices_.size() && !devices_[(size_t)devIdx_].isRadio()) { err = "this source runs at its own rate"; return false; }
     rateHz_ = hz;
+    const bool was = e_.running();
+    stopLocked();
+    saveState();
+    if (was && wantRun_) { const bool ok = startLocked(err); err_ = ok ? std::string() : err; return ok; }
+    return true;
+}
+
+bool ServerHost::setCaptureBandwidthHz(double hz, std::string& err) {
+    std::lock_guard<std::mutex> lk(mu_);
+    if (devIdx_ >= 0 && devIdx_ < (int)devices_.size() && !(devices_[(size_t)devIdx_].isRadio() || devices_[(size_t)devIdx_].kind == DeviceInfo::Synthetic)) { err = "this source runs at its own rate"; return false; }
+    captureBwMhz_ = hz > 0 ? hz / 1e6 : 0;
     const bool was = e_.running();
     stopLocked();
     saveState();

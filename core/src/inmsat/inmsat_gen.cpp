@@ -1,6 +1,7 @@
 // Inmarsat all-carriers test signal (inmsat_gen.h).
 #include "dect2/inmsat/inmsat_gen.h"
 #include "dect2/aero/aero_gen.h"
+#include "dect2/aero/aero_cgen.h"
 #include "dect2/inmc/inmc_gen.h"
 #include <algorithm>
 #include <cmath>
@@ -24,12 +25,19 @@ public:
         inmc_ = makeInmcSynth(c, rate);
         shift_[0] = 0; shift_[1] = -0.23 * rate; shift_[2] = 0.15 * rate;
         wideOff_ = 0.30 * rate;
+        if (cfg.modeOpt[2] == 1) {      // a real Aero C channel (voice frames, aero_cgen.h) in place of the stand-in
+            AeroCGenConfig g;
+            g.fs = rate; g.carrierHz = wideOff_; g.seed = cfg.modeOpt[1] ? (uint32_t)cfg.modeOpt[1] : 1;
+            g.amplitude = aero1_->noiseSigma() * std::sqrt(2.0 * 8400.0 * std::pow(10.0, ebn0 / 10) / rate);
+            cgen_ = std::make_unique<AeroCGenerator>(g);
+        }
         const double bw = 3000;
         pole_ = 1.0 - 2.0 * M_PI * bw / rate * 0.8;
     }
     double sampleRate() const override { return fs_; }
     void generate(cf32* out, size_t n) override {
         b1_.resize(n); b2_.resize(n); b3_.resize(n);
+        if (cgen_) { b4_.resize(n); cgen_->generate(b4_.data(), n); }
         aero1_->generate(b1_.data(), n);
         aero2_->generate(b2_.data(), n);
         inmc_->generate(b3_.data(), n);
@@ -44,7 +52,7 @@ public:
             const cf32 wn(gauss(), gauss());
             y1_ = (float)pole_ * y1_ + wn; y2_ = (float)pole_ * y2_ + y1_;
             const cf32 wide = y2_ * (float)(0.05 * (1 - pole_) * (1 - pole_)) * cf32((float)std::cos(phw_), (float)std::sin(phw_));
-            cf32 v = 0.55f * (b1_[i] + b2_[i] * r2 + b3_[i] * r3) + wide * 0.2f;
+            cf32 v = 0.55f * (b1_[i] + b2_[i] * r2 + b3_[i] * r3) + (cgen_ ? 0.55f * b4_[i] : wide * 0.2f);
             v = cf32(std::max(-0.9f, std::min(0.9f, v.real())), std::max(-0.9f, std::min(0.9f, v.imag())));
             out[i] = v;
         }
@@ -56,7 +64,8 @@ private:
     cf32 y1_{}, y2_{};
     std::unique_ptr<AeroSynth> aero1_, aero2_;
     std::unique_ptr<ModeSynth> inmc_;
-    std::vector<cf32> b1_, b2_, b3_;
+    std::vector<cf32> b1_, b2_, b3_, b4_;
+    std::unique_ptr<AeroCGenerator> cgen_;
 };
 }
 

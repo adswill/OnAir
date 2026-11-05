@@ -106,6 +106,8 @@ std::vector<Engine::ResultSlot> Engine::resultSlots() {
         DECT2_RESULT_SLOT("ant", 78, rxAnt_),
         DECT2_RESULT_SLOT("tetrapol", 80, rxTetrapol_),
         DECT2_RESULT_SLOT("elektro", 81, rxEl_),
+        DECT2_RESULT_SLOT("gk2alrit", 231, rxGkL_),
+        DECT2_RESULT_SLOT("gk2ahrit", 232, rxGkH_),
         DECT2_RESULT_SLOT("lbj", 82, rxLbj_),
         DECT2_RESULT_SLOT("klw", railway::kKlwActiveStandard, rxKlw_),
         DECT2_RESULT_SLOT("tdcs", railway::kTdcsActiveStandard, rxTdcs_),
@@ -115,6 +117,11 @@ std::vector<Engine::ResultSlot> Engine::resultSlots() {
         DECT2_RESULT_SLOT("lorawanwide", 201, rxLw_),
         DECT2_RESULT_SLOT("lorasat", 202, rxLs_),
         DECT2_RESULT_SLOT("wisun", 85, rxWs_),
+        // FengYun: one receiver for the three modes, each link keeps its own list (the link number is the argument); the LRIT mode has two (FY-4A, FY-4B)
+        ResultSlot{"fy4alrit", 233, [this] { return rxFy_.saveResults(0); }, [this](const std::string& b) { return rxFy_.loadResults(b, 0); }, [this] { rxFy_.clearResults(0); }},
+        ResultSlot{"fy4blrit", 233, [this] { return rxFy_.saveResults(1); }, [this](const std::string& b) { return rxFy_.loadResults(b, 1); }, [this] { rxFy_.clearResults(1); }},
+        ResultSlot{"fy4ahrit", 234, [this] { return rxFy_.saveResults(2); }, [this](const std::string& b) { return rxFy_.loadResults(b, 2); }, [this] { rxFy_.clearResults(2); }},
+        ResultSlot{"fy2svissr", 235, [this] { return rxFy_.saveResults(3); }, [this](const std::string& b) { return rxFy_.loadResults(b, 3); }, [this] { rxFy_.clearResults(3); }},
     };
 }
 

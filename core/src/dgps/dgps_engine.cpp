@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdio>
 #include <mutex>
+#include <vector>
 
 namespace dect2 {
 
@@ -13,7 +14,8 @@ constexpr double kTargetFs = 4800.0;     // the decoder's working rate (12 sampl
 
 struct DgpsReceiver::Impl {
     mutable std::mutex mu;
-    dgps::Receiver rx;
+    std::vector<dgps::Receiver> rxs{dgps::Receiver(200), dgps::Receiver(100), dgps::Receiver(50)};   // the beacons' bit rates (25 bit/s is not used any more)
+    size_t best = 0;
     double rate = 0;          // input sample rate
     int decim = 1;            // input samples averaged into one working sample
     double fsEff = 0;         // working sample rate after decimation
@@ -30,8 +32,37 @@ struct DgpsReceiver::Impl {
 
     void emit(const std::string& s) { if (log) log(s); }
 
+    static std::string describe(const dgps::Message& m) {
+        char b[200];
+        std::string t;
+        switch (m.h.type) {
+        case 1: case 9: {
+            snprintf(b, sizeof b, "%s: %zu satellites", m.h.type == 1 ? "corrections, all satellites" : "corrections, partial set", m.sats.size());
+            t = b;
+            for (size_t i = 0; i < m.sats.size() && i < 4; i++) { snprintf(b, sizeof b, "%s G%02d %+.2f m %+.3f m/s", i ? ";" : ":", m.sats[i].sat, m.sats[i].prc(), m.sats[i].rrc()); t += b; }
+            if (m.sats.size() > 4) t += " ...";
+            break;
+        }
+        case 3:
+            if (m.hasPosition) { snprintf(b, sizeof b, "reference station %.5f %.5f, %.1f m (ECEF %.2f %.2f %.2f)", m.lat, m.lon, m.height, m.x, m.y, m.z); t = b; }
+            else t = "reference station position";
+            break;
+        case 5: snprintf(b, sizeof b, "constellation health, %zu satellites", m.satHealth.size()); t = b; break;
+        case 6: t = "null frame (fill)"; break;
+        case 7:
+            snprintf(b, sizeof b, "beacon almanac, %zu beacons", m.almanac.size()); t = b;
+            for (size_t i = 0; i < m.almanac.size() && i < 3; i++) { snprintf(b, sizeof b, "%s %.1f kHz id %d %d bit/s %d km", i ? ";" : ":", m.almanac[i].frequencyKhz, m.almanac[i].stationId, m.almanac[i].bitRate, m.almanac[i].rangeKm); t += b; }
+            break;
+        case 16: t = "special message: " + m.text; break;
+        default: snprintf(b, sizeof b, "message type %d (%d words)", m.h.type, m.h.length); t = b;
+        }
+        if (!m.complete) t += " [word error]";
+        return t;
+    }
+
     void clearState() {
-        rx.reset();
+        for (auto& r : rxs) r.reset();
+        best = 0;
         block.clear();
         acc = {0, 0};
         accN = 0;
@@ -44,23 +75,45 @@ struct DgpsReceiver::Impl {
     }
 
     void processBlock() {
-        rx.process(block.data(), block.size(), fsEff);
+        for (auto& r : rxs) r.process(block.data(), block.size(), fsEff);
         block.clear();
-        const dgps::Stats& st = rx.stats();
+        for (size_t i = 0; i < rxs.size(); i++) {   // the receiver that finds the most messages wins (ties keep the faster rate)
+            const dgps::Stats& a = rxs[i].stats(); const dgps::Stats& b = rxs[best].stats();
+            if (a.messagesComplete * 4 + a.framesOk > b.messagesComplete * 4 + b.framesOk) best = i;
+        }
+        const dgps::Stats& st = rxs[best].stats();
         snap.cfoHz = st.carrierOffsetHz;
         snap.levelDb = (float)st.levelDb;
         snap.blocksOk = (uint64_t)st.framesOk;
         snap.dataValid = st.framesOk > 0;
         snap.state = st.framesOk > 0 ? 2 : 1;
         snap.typesSeen.assign(st.typesSeen.begin(), st.typesSeen.end());
+        snap.bitRate = st.bitRate;
+        snap.inverted = st.inverted;
+        snap.messagesComplete = (uint64_t)st.messagesComplete;
+        snap.wordsBad = (uint64_t)st.wordsBad;
         if ((uint64_t)st.framesOk != framesSeen) {
             framesSeen = (uint64_t)st.framesOk;
             snap.stationId = st.last.stationId;
             snap.lastType = st.last.type;
             snap.zcount = st.last.zcount;
             snap.health = st.last.health;
+            snap.rows.clear();
+            for (size_t i = st.messages.size(); i-- > 0;) {
+                const dgps::Message& m = st.messages[i];
+                DgpsMessageRow r;
+                r.type = m.h.type; r.station = m.h.stationId; r.zcount = m.h.zcount; r.seq = m.h.seq; r.length = m.h.length; r.health = m.h.health; r.complete = m.complete;
+                r.text = describe(m);
+                snap.rows.push_back(r);
+                if (!m.complete) continue;
+                if (m.hasPosition && !snap.hasPosition) { snap.hasPosition = true; snap.lat = m.lat; snap.lon = m.lon; snap.height = m.height; }
+                if (m.h.type == 7 && snap.almanac.empty())
+                    for (const auto& a : m.almanac) { DgpsBeacon bc; bc.latitude = a.latitude; bc.longitude = a.longitude; bc.frequencyKhz = a.frequencyKhz; bc.rangeKm = a.rangeKm; bc.stationId = a.stationId; bc.bitRate = a.bitRate; bc.health = a.health; snap.almanac.push_back(bc); }
+                if (m.h.type == 16 && snap.specialText.empty()) snap.specialText = m.text;
+                if ((m.h.type == 1 || m.h.type == 9) && !snap.satellites) snap.satellites = (int)m.sats.size();
+            }
             char b[120];
-            snprintf(b, sizeof b, "DGPS: frame %llu, station %d, type %d", (unsigned long long)framesSeen, st.last.stationId, st.last.type);
+            snprintf(b, sizeof b, "DGPS: frame %llu, station %d, type %d, %.0f bit/s", (unsigned long long)framesSeen, st.last.stationId, st.last.type, st.bitRate);
             emit(b);
         }
         snap.seq = ++seq;
@@ -138,7 +191,7 @@ ModeTuning dgpsTuning() {
     ModeTuning t;
     t.stdMode = 122;
     t.id = "dgps";
-    t.name = "DGPS beacon (WIP)";
+    t.name = "DGPS beacon";
     t.minMhz = 0.2835;
     t.maxMhz = 0.325;
     t.defMhz = 0.300;

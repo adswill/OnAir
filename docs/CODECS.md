@@ -41,7 +41,8 @@ The built files are yours: they are never committed to the OnAir repository and 
 | CDR (China Digital Radio) | DRA+ (patent and licence status not verified) | the **DRA+ add-on** (`libonair_dra`) that you build yourself (see [DRA+ (CDR sound)](#dra-cdr-sound)); sound is silent until you do |
 | FreeDV 700D / 700E / 1600, M17 | codec2 (open, LGPL) | **codec2**: comes with OnAir (the library `libcodec2` next to the program) |
 | FreeDV RADE | RADE neural modem (open, BSD) | **librade** (not codec2): optional; without it the RADE slot stays dark |
-| Yaesu System Fusion (WIP) | AMBE+2 class (proprietary, DVSI) | a speech codec **plug-in with the id `ysf`** that you install yourself (see [Speech codec plug-ins](#speech-codec-plug-ins-voice-modes)); callsigns and data are shown without it, no sound |
+| Inmarsat Aero C channel voice (Inmarsat > Voice) | AMBE 4800x3600 (patented) | a **speech codec plug-in** `onair-codec-aeroambe` that you build yourself from `tools/addons/aeroambe` and libaeroambe's mbelib (see [AMBE (Inmarsat Aero voice)](#ambe-inmarsat-aero-voice)); calls, aircraft and ground station are shown without it |
+| Yaesu System Fusion | AMBE+2 class (proprietary, DVSI) | a speech codec **plug-in with the id `ysf`** that you install yourself (see [Speech codec plug-ins](#speech-codec-plug-ins-voice-modes)); callsigns and data are shown without it, no sound |
 | TETRA | its own speech codec | nothing from you: it is not mbelib and not codec2 |
 | TETRA voice (unencrypted calls only) | TETRA ACELP | a **speech codec plug-in** `onair-codec-tetra` that you build yourself, for example around **mbelib-neo** (see [Speech codec plug-ins](#speech-codec-plug-ins-voice-modes)); the cell, network and call information work without it |
 | TETRAPOL voice (clear calls only) | RP-CELP (PAS 0001-7, patented) | a **speech codec plug-in** `onair-codec-tetrapol` that you install yourself (see [TETRAPOL voice](#tetrapol-voice-id-tetrapol)); cells, frame sync and the call table work without it |
@@ -369,19 +370,40 @@ its streams in the clear is not shown as scrambled: OnAir goes by the scrambling
 
 ## AMBE (Inmarsat Aero voice)
 
-Aero C channel voice uses an AMBE vocoder. OnAir decodes the P channel data only and does not tune voice channels. Separate programs,
-for example JAERO (<https://github.com/jontio/JAERO>), work on C channels.
+OnAir demodulates and decodes Aero C channels (8400 bit/s, circuit-mode voice; Inmarsat > Voice tab) after JAERO. The vocoder is AMBE 4800x3600 (the "mini-M" frame: 96 bits per 20 ms), patented, so OnAir ships none and loads yours as the plug-in **`onair-codec-aeroambe`** (id `aeroambe`, the usual `onair_speech_*` ABI, 8 kHz PCM, 160 samples per call). Each call gets **12 bytes**: one voice frame exactly as JAERO hands it to libaeroambe, bits packed least significant bit first, in transmission order. Without the plug-in the calls are listed and the coded frames are saved to `.bits` files (12 bytes per frame).
+
+Build it (the source of the plug-in is `tools/addons/aeroambe` and contains no vocoder; the vocoder is the mbelib copy inside libaeroambe, MIT licence with mbelib's patent notice):
+
+```
+git clone https://github.com/jontio/libaeroambe
+cmake -S libaeroambe/mbelib-master -B libaeroambe/mbelib-master/build -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+cmake --build libaeroambe/mbelib-master/build
+cd OnAir/tools/addons/aeroambe
+cmake -S . -B build -DAEROAMBE_MBELIB=/path/to/libaeroambe/mbelib-master
+cmake --build build
+```
+
+Copy `libmbe` (from the mbelib build folder) next to the plug-in or install it. The plug-in sets the unvoiced-sound quality to 3 and silences a frame with more than 3 corrected errors (mbelib would otherwise repeat the previous frame's parameters; chosen by ear on real calls). `ONAIR_AEROAMBE_UVQ`, `ONAIR_AEROAMBE_MUTE` and `ONAIR_AEROAMBE_POST=1` (a 250-3400 Hz band-pass with a slow AGC, off by default) change that for tests. `decode_bits` (built beside the plug-in) turns a call's `.bits` file into a WAV with the same options, to compare them by ear.
+
+Copy `onair-codec-aeroambe.dylib` / `.so` / `onair-codec-aeroambe.dll` into the OnAir codecs folder (see "File names and search order") and accept the notice once. The plug-in unpacks the 12 bytes, moves bit i to `ambe_fr[rW[i]][rX[i]]` (libaeroambe's tables) and calls `mbe_processAmbe4800x3600Frame`. It was run on a real C-channel recording (JAERO's 8400bps sample): zero Golay/Hamming errors in the frames and speech-like bursts at the output. It does not decode encrypted traffic and there is no key handling. The old mention of the `ambe` id for Inmarsat is gone: `ambe` stays D-STAR's.
 
 ## AMBE variant (Iridium voice)
 
 OnAir ships no Iridium vocoder. Voice slots are grouped into calls (Iridium > Calls: time, frequency, direction, length, satellite and
-beam when a broadcast frame on that frequency named them, status) with a Listen selector and one WAV recording per call in the recordings
-folder. Sound needs a plug-in `onair-codec-iridium` (id `iridium`, ABI in `core/include/dect2/codec/speech_codec.h`) that you install
-yourself. Each call to `onair_speech_decode` gets the 39 bytes (312 bits) of the voice field exactly as received (over-the-air bit order,
-MSB first; no de-scrambling or de-interleaving by OnAir) and returns PCM. **Unverified:** this has only been tested with synthetic
-bursts and a stub plug-in, never a real Iridium recording; whether the voice field needs further de-interleaving or FEC before the vocoder
-is for the plug-in. **The Iridium voice plug-in is not distributed with OnAir.** Without one the voice stays silent; use **Save for iridium-toolkit** below. No public description defines an "encrypted" marker, so none is shown: frames that fail their checks or that the
-plug-in refuses are listed as "not readable" and stay silent, and OnAir never decodes encrypted traffic or works on keys.
+beam when a broadcast frame on that frequency named them, a level meter, **Mute** and **Solo** per call, status) with a Listen selector and, with **Record calls** on, one WAV
+recording per call in the recordings folder (written when the call ends). A soloed call is heard alone (several soloed calls are mixed) and
+the Listen choice is ignored while any call is soloed; a muted call is still decoded and recorded. Frames that the network marks as silence
+(link control word 001111 / 100000000000000000000, the toolkit's "silent") are counted and not sent to the codec.
+
+Sound needs a plug-in `onair-codec-iridium` (id `iridium`, ABI in `core/include/dect2/codec/speech_codec.h`) that you install yourself. Each call
+to `onair_speech_decode` gets the **39 bytes (312 bits) of the voice field** of one voice frame, in the byte order of iridium-toolkit's
+`bits_to_dfs.py` (the file its `ir77_ambe_decode` reads): the first bit received is the least significant bit of each byte. OnAir does no
+de-scrambling, de-interleaving or error correction of its own; a plug-in that wraps osmo-ir77's decoder (or a decoder extracted from firmware,
+see the toolkit's `ambe_emu`) therefore gets exactly what the toolkit would give it, and returns 8 kHz PCM. **Unverified:** this has been tested
+with synthetic bursts through the whole receiver (offsets, Doppler, clock error, noise) and a stub plug-in, never a real Iridium recording.
+**The Iridium voice plug-in is not distributed with OnAir.** Without one the voice stays silent; use **Save for iridium-toolkit** below. No public
+description defines an "encrypted" marker, so none is shown: frames that fail their checks or that the plug-in refuses are listed as "not
+readable" and stay silent. OnAir never decodes encrypted traffic itself; a key handed to your own plug-in is your own business and OnAir has no key handling.
 
 Alternatively, **Save for iridium-toolkit** writes a `.bits` file. Then:
 
@@ -451,7 +473,7 @@ after you accept it once. The plug-in's C interface is in `core/include/dect2/co
 
 TETRA voice: OnAir removes the radio channel coding (ETSI EN 300 395-2 clause 5.5) and gives the plug-in one speech frame per call of `onair_speech_decode`: 137 bytes, one bit per byte (0 or 1), byte i is speech frame bit B(i+1) of table 4 of that standard (the output order of the source encoder). Two frames per burst, 30 ms each, in order. Frames whose CRC fails are dropped, not passed on. Encrypted calls, and calls whose set-up OnAir did not hear saying "clear", are never decoded and never reach the plug-in.
 Yaesu Fusion (id `ysf`) hands the plug-in one voice frame per call, as it was sent: 9 bytes (the 72 channel bits of V/D mode 1), 7 bytes (the 49 voice
-bits of V/D mode 2 after the error correction, MSB first) or 18 bytes (the 144 channel bits of voice FR). The bit order inside the V/D mode 1 and voice FR frames is not in
+bits of V/D mode 2 after the error correction, MSB first) or 18 bytes (the 144 channel bits of voice FR). V/D mode 1 frames are the same 72-bit AMBE+2 frame as DMR and NXDN (the bit positions agree with MMDVMHost's tables), so with the mbelib you installed for DMR and NXDN they play without the `ysf` plug-in. The bit order inside voice FR frames is not in
 Yaesu's public specification, so the plug-in has to do that part itself.
 
 Recommended source for a TETRA plug-in: mbelib-neo (https://github.com/arancormonk/mbelib-neo), GPL-2.0-or-later. It has a TETRA full-rate speech decoder (`mbe_tetraDecodeFrame`) that takes the same 137 bytes, one bit per byte, B(1)..B(137), so a small wrapper exporting the four `onair_speech_*` functions is enough. Its authors have not cleared the patent status of the TETRA codec, so check that you may use it where you live. You build it yourself; OnAir does not include it.
@@ -489,6 +511,8 @@ Three more plug-in ids, one registry (`core/include/dect2/codec/codec_registry.h
 |---|---|---|
 | `ambe2` | DMR, NXDN, dPMR (AMBE+2 3600x2450) | 12: the four de-interleaved code words C0..C3 of mbelib, 24 bits each, row by row, most significant bit first |
 | `ambe` | D-STAR (AMBE 3600x2400) | 12, the same layout |
+| `aeroambe` | Inmarsat Aero C channel (AMBE 4800x3600) | 12, one JAERO voice frame, bits packed LSB first (see above) |
+| `iridium` | Iridium voice (AMBE family) | 39, the 312 bit voice field, first bit received = least significant bit of the byte (toolkit `.dfs` order) |
 | `imbe` | P25 phase 1 (IMBE 7200x4400) | 23: the eight code words c0..c7, 23 bits each, row by row, MSB first (184 bits) |
 
 OnAir does the de-interleaving; the plug-in only has to expand the bits back into mbelib's `char fr[4][24]` (or `fr[8][23]`) and call `mbe_processAmbe3600x2450Frame` / `mbe_processAmbe3600x2400Frame` / `mbe_processImbe7200x4400Frame`, then return the 160 samples. A small reference wrapper is in `tools/codec-plugin-example/mbelib_wrapper.c` (compile it yourself against your own mbelib; no codec code is in this repository).
