@@ -187,6 +187,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES shortwave)   # Shortwave: the general receiver with one-click HF decoders (family 212, docs/SHORTWAVE-MODE.md): core/src/shortwave, app/shortwave, tests/shortwave
   list(APPEND DECT2_MODES pskdsp)   # PSK demodulator and analyser (family 202, #282): core/src/pskdsp, app/pskdsp, tests/pskdsp
   list(APPEND DECT2_MODES pactorhf)   # PACTOR-II (family 237), -III (238) and -IV (239), physical layer only: core/src/pactorhf, app/pactorhf, tests/pactorhf (docs/pactorhf.md)
+  list(APPEND DECT2_MODES sensors)   # Sub-GHz sensors (family 241, docs/SENSORS-3.7.md): core/src/sensors, app/sensors, tests/sensors; decoders vendored from rtl_433 (third_party/rtl_433)
   list(APPEND DECT2_MODES fygeo)   # FengYun geostationary: FY-4A / FY-4B LRIT, FY-4A HRIT (DVB-S2) and FY-2 S-VISSR (families 232 - 235, docs/FENGYUN-GEO.md): core/src/fygeo, app/fygeo, tests/fygeo
 target_sources(dect2core PRIVATE core/src/tv/mheg_render.cpp core/src/tv/ts_proto_rs.cpp core/src/common/text_charset_rs.cpp core/src/tv/dvb_text.cpp core/src/tv/dvb_text_rs.cpp core/src/tv/teletext_rs.cpp core/src/tv/dvbsub_rs.cpp core/src/tv/epg.cpp core/src/tv/subtitle_export.cpp core/src/tv/recorder.cpp core/src/tv/timeshift.cpp core/src/tv/playback.cpp core/src/tv/dsmcc.cpp core/src/tv/mheg.cpp core/src/tv/mheg_engine.cpp core/src/tv/rcs.cpp core/src/tv/si_tables.cpp core/src/tv/ts_data.cpp core/src/tv/hd_pair.cpp) # MPEG-TS parsing layer (C++ or the Rust crate onair_ts) and the TV recorder (guide, schedule, timeshift, playback) (C++ or the Rust crate onair_ts)
 target_sources(dect2core PRIVATE core/src/tv/mheg_render.cpp core/src/tv/ts_proto_rs.cpp core/src/common/text_charset_rs.cpp core/src/tv/dvb_text.cpp core/src/tv/dvb_text_rs.cpp core/src/tv/teletext_rs.cpp core/src/tv/dvbsub_rs.cpp core/src/tv/epg.cpp core/src/tv/subtitle_export.cpp core/src/tv/recorder.cpp core/src/tv/timeshift.cpp core/src/tv/playback.cpp core/src/tv/dsmcc.cpp core/src/tv/mheg.cpp core/src/tv/rcs.cpp core/src/tv/si_tables.cpp core/src/tv/ts_data.cpp core/src/tv/hd_pair.cpp) # MPEG-TS parsing layer (C++ or the Rust crate onair_ts) and the TV recorder (guide, schedule, timeshift, playback) (C++ or the Rust crate onair_ts)
@@ -225,6 +226,14 @@ if(NOT MSVC)
 endif()
 target_include_directories(dect2core PRIVATE third_party/openjpeg)
 set_source_files_properties(core/src/fygeo/fygeo_proto.cpp PROPERTIES COMPILE_DEFINITIONS "OPJ_STATIC")   # openjpeg.h without dllimport on Windows
+# rtl_433 (merbanan/rtl_433, GPL-2.0-or-later, third_party/rtl_433): pulse detector, slicers and the device decoders of the Sub-GHz sensors mode, see THIRD_PARTY.md
+file(GLOB ONAIR_R433_SRC CONFIGURE_DEPENDS third_party/rtl_433/src/*.c third_party/rtl_433/devices/*.c third_party/rtl_433/onair_glue.c)
+target_sources(dect2core PRIVATE ${ONAIR_R433_SRC})
+set_source_files_properties(${ONAIR_R433_SRC} PROPERTIES LANGUAGE C)
+if(NOT MSVC)
+  set_source_files_properties(${ONAIR_R433_SRC} PROPERTIES COMPILE_OPTIONS "-w")
+endif()
+target_include_directories(dect2core PRIVATE third_party/rtl_433/include)
 target_sources(dect2core PRIVATE third_party/ssdv/ssdv.c third_party/ssdv/rs8.c)   # SSDV packet decoder / encoder (fsphil/ssdv, GPL-3.0-or-later; rs8.c Phil Karn LGPL), see THIRD_PARTY.md
 target_include_directories(dect2core PRIVATE third_party/ssdv)
 set_source_files_properties(third_party/ssdv/ssdv.c third_party/ssdv/rs8.c PROPERTIES LANGUAGE C)
@@ -1464,6 +1473,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_nrf24_mode PRIVATE dect2core)
     target_compile_definitions(test_nrf24_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME nrf24_mode COMMAND test_nrf24_mode)
+    add_executable(test_sensors_mode tests/app/test_sensors_mode.cpp)   # Sub-GHz sensors: tuning, mode row, engine / panel wiring, credits, honest doc
+    target_link_libraries(test_sensors_mode PRIVATE dect2core)
+    target_compile_definitions(test_sensors_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME sensors_mode COMMAND test_sensors_mode)
     add_executable(test_gk2a_mode tests/app/test_gk2a_mode.cpp)   # GK-2A: tunings, mode rows, engine / panel wiring, the doc page, credits
     target_link_libraries(test_gk2a_mode PRIVATE dect2core)
     target_compile_definitions(test_gk2a_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
@@ -2425,6 +2438,11 @@ if(DECT2_BUILD_TESTS)
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tools/${m}tool.cpp)   # a new mode may not have its tool yet
       add_executable(${m}tool tools/${m}tool.cpp)
       target_link_libraries(${m}tool PRIVATE dect2core)
+    endif()
+  endforeach()
+  foreach(t test_sensors_families test_sensors_vectors)   # read the repository's test tables
+    if(TARGET ${t})
+      target_compile_definitions(${t} PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     endif()
   endforeach()
   if(TARGET test_multitone_real)
