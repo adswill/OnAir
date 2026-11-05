@@ -51,6 +51,6 @@ int main(int argc, char** argv) {
     check(!ffmpeglibs::status().external && !ffmpeglibs::status().problem.empty(), "unusable choice: the shipped FFmpeg and a reason");
     std::error_code ec;
     fs::remove_all(root, ec);
-    printf(fails ? "FAILED\n" : "OK\n");
+    std::fputs(fails ? "FAILED\n" : "OK\n", stdout);
     return fails ? 1 : 0;
 }

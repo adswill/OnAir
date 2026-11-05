@@ -15,6 +15,7 @@ extern "C" {
 #include <cstring>
 #include <filesystem>
 #include <sstream>
+#include <string_view>
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -90,7 +91,7 @@ std::string trim(std::string s) {
     size_t a = 0;
     while (a < s.size() && (s[a] == '\n' || s[a] == '\r' || s[a] == ' ')) a++;
     s = s.substr(a);
-    if (s.size() > 500) s = s.substr(0, 500) + "...";
+    if (s.size() > 500) { s.resize(500); s += "..."; }
     return s;
 }
 
@@ -132,7 +133,7 @@ std::string selfExe() {
     _NSGetExecutablePath(nullptr, &n);
     std::string p(n, '\0');
     if (_NSGetExecutablePath(p.data(), &n) != 0) return "";
-    p.resize(strlen(p.c_str()));
+    if (const size_t z = p.find('\0'); z != std::string::npos) p.resize(z);
     std::error_code ec;
     const fs::path c = fs::canonical(p, ec);
     return ec ? p : c.string();
@@ -145,10 +146,14 @@ std::string selfExe() {
 
 #ifdef _WIN32
 std::string winError(DWORD e) {
-    char* m = nullptr;
-    FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, e, 0, (LPSTR)&m, 0, nullptr);
-    std::string s = m ? trim(m) : std::string();
-    if (m) LocalFree(m);
+    LPSTR m = nullptr;   // FORMAT_MESSAGE_ALLOCATE_BUFFER: Windows allocates the text and sets m; len is its length (0: no text)
+    const DWORD len = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, e, 0,
+                                     reinterpret_cast<LPSTR>(&m), 0, nullptr);
+    std::string s;
+    if (len > 0) {
+        s = trim(std::string(m, len));
+        LocalFree(m);
+    }
     return "Windows error " + std::to_string((unsigned long)e) + (s.empty() ? "" : ": " + s);
 }
 // loads the libraries of folder by their full path, in dependency order (each one's own imports are looked up in its folder first) and
@@ -271,7 +276,7 @@ int runCheckCopy(const std::string& folder, std::string& out) {
         const int r = poll(&p, 1, left);
         if (r < 0 && errno == EINTR) continue;
         if (r <= 0) continue;
-        const ssize_t n = read(fd[0], b, sizeof b);
+        const ssize_t n = read(fd[0], b, sizeof b);   // Flawfinder: ignore (at most sizeof b bytes, only n of them are used)
         if (n <= 0) break;   // the copy has ended (its end of the pipe is closed)
         out.append(b, (size_t)n);
     }
@@ -480,7 +485,8 @@ std::vector<std::string> ownRunpath() {
     const std::string origin = fs::path(selfExe()).parent_path().string();
     std::stringstream ss(rp);
     for (std::string d; std::getline(ss, d, ':');) {
-        for (const char* tok : {"$ORIGIN", "${ORIGIN}"}) for (size_t k; (k = d.find(tok)) != std::string::npos;) d.replace(k, strlen(tok), origin);
+        for (const std::string_view tok : {std::string_view("$ORIGIN"), std::string_view("${ORIGIN}")})
+            for (size_t k = d.find(tok); k != std::string::npos; k = d.find(tok, k + origin.size())) d.replace(k, tok.size(), origin);
         if (!d.empty()) v.push_back(d);
     }
     return v;
