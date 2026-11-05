@@ -171,7 +171,7 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${ONAIR_ROOT}/dat
 target_sources(dect2core PRIVATE core/src/airports/airports.cpp)
 target_sources(dect2core PRIVATE core/src/engine/general_auto.cpp)   # General / Auto: labels, hysteresis, Decode and return-to-General (docs/GENERAL-AUTO.md)
 target_sources(dect2core PRIVATE core/src/fingerprint/rf_fingerprint.cpp)   # RF fingerprint of a transmitter (docs/RF-FINGERPRINT.md)
-target_sources(dect2core PRIVATE core/src/airports/airports.cpp core/src/common/radioid_db.cpp)   # radioid_db: the DMR / NXDN radio ID name list (user-downloaded CSV)
+target_sources(dect2core PRIVATE core/src/airports/airports.cpp core/src/common/radioid_db.cpp core/src/common/tg_dir.cpp)   # radioid_db: the DMR / NXDN radio ID name list (user-downloaded CSV)
 target_sources(dect2core PRIVATE core/src/doctor/reception_doctor.cpp)   # Reception Doctor: why a mode is not decoding (docs/RECEPTION-DOCTOR.md)
 target_sources(dect2core PRIVATE core/src/sweep/station_health.cpp core/src/source/agc.cpp)   # station and antenna health report (docs/STATION_HEALTH.md)
 target_sources(dect2core PRIVATE core/src/source/autogain.cpp core/src/source/autogain_radio.cpp core/src/source/autogain_measure.cpp core/src/source/autogain_v2.cpp core/src/source/gain_meter.cpp core/src/source/gain_cal.cpp core/src/dsp/spur_notch.cpp)   # automatic gain for every radio and mode (docs/AUTOGAIN.md)
@@ -1975,6 +1975,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_radioid tests/radioid/test_radioid.cpp)   # DMR / NXDN radio ID name list: radioid.net CSV, header variants, quotes, damaged rows
   target_link_libraries(test_radioid PRIVATE dect2core)
   add_test(NAME radioid COMMAND test_radioid)
+  add_executable(test_tg_dir tests/tgdir/test_tg_dir.cpp)   # talkgroup name directory: own CSV, RadioReference import, edit, filter (docs/TALKGROUPS.md)
+  target_link_libraries(test_tg_dir PRIVATE dect2core)
+  add_test(NAME tg_dir COMMAND test_tg_dir)
   add_executable(test_airports tests/airports/test_airports.cpp)   # airport table: built-in data, search, near, channels of an airport, OurAirports import
   target_link_libraries(test_airports PRIVATE dect2core)
   add_test(NAME airports COMMAND test_airports)

@@ -11,6 +11,7 @@
 #include "ui/kit/session_list.h"
 #include "voice/voice_monitor_ui.h"
 #include "voice/watch_ui.h"
+#include "voice/tgdir_ui.h"
 #include "dect2/codec/codec_registry.h"
 #include "dect2/codec/codec_registry.h"
 #include "../codec/speech_codec_ui.h"
@@ -120,6 +121,7 @@ std::string clock(int64_t t) {
 }
 
 std::string dstOf(const dect2::P25Call& c) { return (c.group ? "TG " : "") + dect2::p25Id(c.dst); }
+std::string dstOfUi(const dect2::P25Call& c) { return c.group ? tgdirui::withName(dect2::TgKind::P25, dstOf(c), (uint32_t)c.dst) : dstOf(c); }   // with the directory's name
 const char* kindOf(const dect2::P25Call& c) { return c.kind == 1 ? "grant" : c.kind == 2 ? "data" : "voice"; }
 std::string mhz(double hz) { if (hz <= 0) return "-"; char b[32]; snprintf(b, sizeof b, "%.5f MHz", hz / 1e6); return b; }
 std::string cryptoOf(const dect2::P25Call& c) {
@@ -162,7 +164,7 @@ void nowView(App& a) {
         return;
     }
     ImGui::PushFont(a.mono, 0);
-    ImGui::TextColored(n.active ? pal::okGreen() : pal::grey(0.6f), "%s  %s  ->  %s", n.active ? "ON AIR" : "last", dect2::p25Id(n.src).c_str(), dstOf(n).c_str());
+    ImGui::TextColored(n.active ? pal::okGreen() : pal::grey(0.6f), "%s  %s  ->  %s", n.active ? "ON AIR" : "last", dect2::p25Id(n.src).c_str(), dstOfUi(n).c_str());
     ImGui::PopFont();
     kvRow(a, "call", "%s, NAC %03X%s", n.group ? "group" : "unit to unit", n.nac < 0 ? 0 : n.nac, n.lateEntry ? ", joined late" : "");
     if (n.emergency) { ImGui::TextDisabled("note"); kvColumn(130 * gUi); ImGui::TextColored(pal::warnAmber(), "EMERGENCY"); }
@@ -210,7 +212,7 @@ void callsView(App& a) {
         ImGui::TableNextColumn(); ImGui::TextColored(c, "%s", on ? "on air" : clock(e.wallTime).c_str());
         ImGui::TableNextColumn(); ImGui::TextUnformatted(kindOf(e));
         ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0); ImGui::TextColored(c, "%s", dect2::p25Id(e.src).c_str()); ImGui::PopFont();
-        ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0); ImGui::TextUnformatted(dstOf(e).c_str()); ImGui::PopFont();
+        ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0); ImGui::TextUnformatted(dstOfUi(e).c_str()); ImGui::PopFont();
         ImGui::TableNextColumn();
         if (e.kind == 1) ImGui::Text("%s  %s", dect2::p25::channelText(e.channel).c_str(), mhz(e.freqHz).c_str()); else ImGui::TextDisabled("-");
         ImGui::TableNextColumn();
@@ -278,6 +280,7 @@ void trunkingView(App& a) {
 }
 
 void talkgroupView(App& a) {
+    tgdirui::section(dect2::TgKind::P25);
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const auto& tg = a.rx.p25.talkgroups;
     if (tg.empty()) { ImGui::TextDisabled("no talkgroups heard yet"); return; }
@@ -303,6 +306,7 @@ void talkgroupView(App& a) {
         ImGui::TableNextRow();
         const ImVec4 c = g.active ? pal::okGreen() : ImGui::GetStyleColorVec4(ImGuiCol_Text);
         ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0); ImGui::TextColored(c, "%d", g.tg); ImGui::PopFont();
+        { const std::string nm = tgdirui::nameOf(dect2::TgKind::P25, (uint32_t)g.tg); if (!nm.empty()) { ImGui::SameLine(); ImGui::TextUnformatted(nm.c_str()); } }
         ImGui::TableNextColumn(); ImGui::Text("%u", g.grants);
         ImGui::TableNextColumn(); ImGui::Text("%u", g.calls);
         ImGui::TableNextColumn(); ImGui::TextUnformatted(dect2::p25Id(g.lastSrc).c_str());

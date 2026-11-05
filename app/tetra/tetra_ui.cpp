@@ -10,6 +10,7 @@
 #include "ui/kit/session_list.h"
 #include "voice/voice_monitor_ui.h"
 #include "voice/watch_ui.h"
+#include "voice/tgdir_ui.h"
 #include "dect2/voice/voice_monitor.h"
 #include "codec/speech_codec_ui.h"
 #include "dect2/audio/audioout.h"
@@ -276,6 +277,7 @@ void slotPanel(App& a) {
         if (k.lastHeardSec >= 0) snprintf(heard, sizeof heard, "%.0f s ago", std::max(0.0, now - k.lastHeardSec));
         char ids[64] = "";
         if (k.talkgroup) snprintf(ids, sizeof ids, " TG %u", k.talkgroup);
+        if (k.talkgroup) { const std::string nm = tgdirui::nameOf(dect2::TgKind::Tetra, k.talkgroup); if (!nm.empty()) snprintf(ids + strlen(ids), sizeof ids - strlen(ids), " %s", nm.c_str()); }
         if (k.issi) snprintf(ids + strlen(ids), sizeof ids - strlen(ids), " ISSI %u", k.issi);
         const bool enc = k.state == T::SlotState::Encrypted;
         if (enc) ImGui::PushStyleColor(ImGuiCol_Text, pal::warnAmber());
@@ -541,6 +543,7 @@ void list(App& a) {
 }
 
 void receiver(App& a) {
+    tgdirui::section(dect2::TgKind::Tetra);
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const dect2::TetraTelemetry& t = a.rx.tetra;
     voiceWhyRow(a, dect2::tetraWhy(t));
