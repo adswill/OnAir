@@ -74,7 +74,7 @@ struct Settings {
 };
 
 // The encoders, tried once (opening hardware encoders takes a moment: call from a worker thread). MPEG-2 video is always offered first
-// when present; the bundled LGPL FFmpeg has mpeg2video, mp2 and aac only.
+// when present; the bundled LGPL FFmpeg has mpeg2video, mp2, aac and ac3 only.
 const std::vector<EncoderInfo>& videoEncoders();
 const std::vector<EncoderInfo>& audioEncoders();
 const std::vector<EncoderProblem>& videoEncoderProblems();   // tried together with videoEncoders()

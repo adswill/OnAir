@@ -161,7 +161,7 @@ A 7 MHz channel carries 7/8 of these, a 6 MHz channel 6/8. The **Digital Televis
 The window lists only the encoders that really work on this computer: each one is tried when the window first opens. MPEG-2 video is
 always there and is used when the chosen encoder is missing.
 
-- The FFmpeg in the Linux and macOS packages is built under the LGPL and has MPEG-2 video, MPEG-1 Layer II and AAC only. The Windows
+- The FFmpeg in the Linux and macOS packages is built under the LGPL and has MPEG-2 video, MPEG-1 Layer II, AAC and AC-3 only. The Windows
   package has MPEG-2 video, MPEG-1 Layer II, AAC and AC-3, and H.264 and H.265 through Windows Media Foundation: the graphics card's
   encoder when it has one, else Windows' own (H.265 needs the HEVC Video Extensions from the Microsoft Store).
 - OnAir built against the system's FFmpeg (most Linux distributions, MSYS2 on Windows) usually has libx264 and libx265 as well, and AC-3.
