@@ -70,7 +70,7 @@ const RowHelp kRowHelp[] = {
     {N_("Length"), N_("How long the .ts file is. One minute for a still picture unless you change it; the file's own length for a video. A stream has no length: it runs until you press Stop.")},
     {N_("TS content"), N_("Which streams go into the transport stream. Audio uses part of the capacity. Multiple audio tracks carry the same sound on their own PIDs, to test receivers that offer a language choice.")},
     {N_("Audio tracks"), N_("How many audio tracks, each at the audio bitrate below.")},
-    {N_("Video codec"), N_("H.264 is widely supported and the safe choice for DVB-T. H.265 needs about 30 % less bitrate, but only newer receivers (DVB-T2 sets) decode it: check your whole chain. MPEG-2 works everywhere but needs about twice the bitrate of H.264. Only the encoders that work on this computer are listed; the bundled FFmpeg has MPEG-2 only.")},
+    {N_("Video codec"), N_("H.264 is widely supported and the safe choice for DVB-T. H.265 needs about 30 % less bitrate, but only newer receivers (DVB-T2 sets) decode it: check your whole chain. MPEG-2 works everywhere but needs about twice the bitrate of H.264. Only the encoders that work on this computer are listed. The FFmpeg in the Linux and macOS packages has MPEG-2 only; on Windows H.264 and H.265 come from Media Foundation (the graphics card when it has an encoder). An orange (!) next to the list tells which hardware encoders are missing here and why.")},
     {N_("Rate control"), N_("CBR: a constant rate, predictable, what a broadcast link needs. Constrained VBR: the rate varies with the scene up to 1.5 times the bitrate, so the mux rate needs headroom for the peaks. VBR / CRF: a constant quality instead of a rate (x264 and x265 only), capped at twice the bitrate.")},
     {N_("Video bitrate"), N_("More bitrate generally gives a better picture but uses more of the channel. Auto follows a rule of thumb for this codec, resolution, frame rate and frame types; the estimate on the right shows what the whole stream then needs. Untick Auto to set your own. MPEG-2 has a lowest bitrate for each picture size (about 160 bit/s per 16x16 block, e.g. 150 kbit/s at 640x360): a picture must reach the receiver within about 0.7 s.")},
     {N_("CRF"), N_("The quality level: lower is better and costs more bits. 18 is close to transparent, 23 is the x264 default, 28 is clearly softer.")},
@@ -474,6 +474,50 @@ void outputSection(State& s, float col, float w) {
     }
 }
 
+// Why an encoder this FFmpeg has does not work here, in plain words (FFmpeg's own message follows it in the tooltip)
+const char* encoderAdvice(const std::string& name) {
+    if (name.find("_nvenc") != std::string::npos) return N_("needs an NVIDIA graphics card (GeForce GTX 600 or newer) with a current driver");
+    if (name.find("_amf") != std::string::npos) return N_("needs an AMD Radeon graphics card with a current driver");
+    if (name.find("_qsv") != std::string::npos) return N_("needs Intel graphics (Quick Sync) with its driver, switched on in the BIOS");
+    if (name.find("_vaapi") != std::string::npos) return N_("not supported by the generator yet: it wants the pictures on the graphics card");
+    if (name.find("_videotoolbox") != std::string::npos) return N_("needs a Mac with a hardware video encoder");
+    if (name.find("(hardware)") != std::string::npos) return N_("Windows found no graphics card encoder for it; Windows' own software encoder is used instead when it works");
+    if (name == "hevc_mf") return N_("needs the HEVC Video Extensions from the Microsoft Store");
+    if (name == "h264_mf") return N_("needs Windows Media Foundation (the Media Feature Pack on Windows N editions)");
+    return N_("does not work on this computer");
+}
+
+// An orange "(!)" after the video codec list when an encoder or a whole codec is missing; hovering it says which and why
+void encoderNotice(const std::vector<EncoderInfo>& venc) {
+    const auto& problems = videoEncoderProblems();
+    std::vector<Codec> missing;
+    for (Codec cd : {Codec::H264, Codec::Hevc})
+        if (std::none_of(venc.begin(), venc.end(), [cd](const EncoderInfo& i) { return i.codec == cd; })) missing.push_back(cd);
+    if (problems.empty() && missing.empty()) return;
+    ImGui::SameLine(0, 4 * gUi);
+    ImGui::TextColored(ImVec4(0.9f, 0.7f, 0.28f, 1), "(!)");
+    if (!ImGui::IsItemHovered()) return;
+    ImGui::BeginTooltip();
+    ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 460 * gUi);
+    ImGui::TextUnformatted(tr("The list shows only the encoders that work on this computer. A hardware encoder needs the matching graphics card and driver."));
+    if (!problems.empty()) {
+        ImGui::Spacing();
+        ImGui::TextUnformatted(tr("Not available here:"));
+        for (const EncoderProblem& pr : problems) {
+            ImGui::BulletText("%s: %s", pr.name.c_str(), tr(encoderAdvice(pr.name)));
+            ImGui::Indent();
+            ImGui::TextDisabled("FFmpeg: %s", pr.reason.c_str());
+            ImGui::Unindent();
+        }
+    }
+    for (Codec cd : missing) {
+        ImGui::Spacing();
+        ImGui::Text(tr("No %s encoder works here: the FFmpeg OnAir is built with has none for this computer. The bundled LGPL build has no H.264 or H.265 software encoder (x264 and x265 are GPL)."), codecName(cd));
+    }
+    ImGui::PopTextWrapPos();
+    ImGui::EndTooltip();
+}
+
 void encodingSection(State& s, float col, float w) {
     Settings& e = s.cfg.enc;
     const auto& venc = videoEncoders();
@@ -498,17 +542,9 @@ void encodingSection(State& s, float col, float w) {
             if (ImGui::Selectable(i.label.c_str(), i.name == e.videoEncoder)) e.videoEncoder = i.name;
             if (i.hardware && ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Hardware encoder: preset, tuning and CRF do not apply"));
         }
-        // the codecs this FFmpeg cannot make, shown so it is clear why they are missing
-        for (Codec cd : {Codec::H264, Codec::Hevc}) {
-            if (std::any_of(venc.begin(), venc.end(), [cd](const EncoderInfo& i) { return i.codec == cd; })) continue;
-            ImGui::BeginDisabled();
-            ImGui::Selectable((std::string(codecName(cd)) + " - " + tr("not in this FFmpeg")).c_str(), false);
-            ImGui::EndDisabled();
-            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                ImGui::SetTooltip("%s", tr("The FFmpeg OnAir is built with has no encoder for this codec that works on this computer (the bundled LGPL build has MPEG-2 only; a system FFmpeg with libx264 / libx265 or a hardware encoder adds them)"));
-        }
         ImGui::EndCombo();
     }
+    encoderNotice(venc);
     rowLabel(N_("Rate control"), col);
     int rc = (int)e.rc;
     std::vector<bool> rcOn = {true, true, caps.crf};
@@ -1059,6 +1095,11 @@ void controlBar(State& s) {
         ImGui::TextUnformatted(t);
         ImGui::SameLine();
         ImGui::TextDisabled("%s%s%s", st.videoEncoder.c_str(), st.audioEncoder.empty() ? "" : " + ", st.audioEncoder.c_str());
+        if (!st.notice.empty()) {
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(0.95f, 0.65f, 0.2f, 1), "%s", tr("(simplified)"));
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", st.notice.c_str());
+        }
         if (st.lateFrames > 0) { ImGui::SameLine(); ImGui::TextColored(ImVec4(0.95f, 0.65f, 0.2f, 1), tr("%d frames late: the encoder is too slow for real time"), st.lateFrames); }
     } else if (!st.error.empty()) {
         ImGui::TextColored(ImVec4(0.95f, 0.4f, 0.35f, 1), "%s", st.error.c_str());
