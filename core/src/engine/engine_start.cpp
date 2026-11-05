@@ -271,6 +271,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxEbi_.setSignalOffset(o);
         rxInmsat_.setSignalOffset(o);
         rxNrf_.setSignalOffset(o);
+        rxSens_.setSignalOffset(o);
         rxAtis_.setSignalOffset(o);
         rxSelcal_.setSignalOffset(o);
         rxSelcal_.setDialHz(tune.centerHz);
@@ -598,9 +599,11 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxEbi_.configure(rate_);
     rxEbi_.setLogCallback([this](const std::string& s) { log(s); });
     rxNrf_.configure(rate_);
+    rxSens_.configure(rate_);
     rxSw_.configure(rate_);
     rxSw_.setLogCallback([this](const std::string& s) { log(s); });
     rxNrf_.setLogCallback([this](const std::string& s) { log(s); });
+    rxSens_.setLogCallback([this](const std::string& s) { log(s); });
     rxSelcal_.setAudioInput(dev.kind == DeviceInfo::Audio);
     rxSelcal_.configure(rate_);
     rxSelcal_.setLogCallback([this](const std::string& s) { log(s); });
