@@ -431,20 +431,12 @@ struct NxdnReceiver::Impl {
         if (late) tel.lateEntries++;
         ambe = tel.ambe ? std::make_unique<NxdnAmbe>() : nullptr;
         // Match a user key to this call (never a search). Nothing is decrypted when the user loaded no matching key.
-        dec.reset();
-        if (cipher != 0) {
-            voicekeys::CallKeyInfo info;
-            info.protocol = voicekeys::Protocol::Nxdn;
-            info.keyId = key; info.talkgroup = type == 1 ? dst : -1; info.unitId = src;
-            auto look = voicekeys::lookupForCall(info, true, 72);
-            tel.now.decrypt = voicekeys::Decryptor::statusLine(look.status, look.keyName);
-            if (look.decryptor) dec = std::move(look.decryptor);
-            event("NXDN " + tel.now.decrypt);
-        }
+        applyKey();
     }
     void endCall(bool rel) {
         if (!tel.now.active) return;
         flushAudio();
+        pendCipher = pendKey = 0;
         tel.now.active = false;
         tel.now.endSeen = rel;
         tel.now.durSec = sigSec() - tel.now.startSec;
@@ -470,13 +462,40 @@ struct NxdnReceiver::Impl {
         for (bool& o : sfOk) o = false;
     }
 
-    void onMsg(const nxdn::Msg& m, const Chain& c, int ran, bool fromSacch) {
+    // A cipher flag is believed only when it is seen twice in a row (any FEC-passing VCALL): one misparsed or bit-flipped message must not turn a clear call
+    // into "encrypted, enter key" (the voice then goes quiet). Clear (0) is taken at once. Nothing is kept from one call to the next (startCall resets).
+    int pendCipher = 0, pendKey = 0;
+    bool trustCipher(const nxdn::Msg& m) {
+        if (m.cipher == 0) { pendCipher = 0; return true; }
+        const bool seen = pendCipher == m.cipher && pendKey == m.keyId;
+        pendCipher = m.cipher; pendKey = m.keyId;
+        return seen || (tel.now.active && tel.now.cipher == m.cipher && tel.now.keyId == m.keyId);
+    }
+    void applyKey() {
+        dec.reset();
+        if (tel.now.cipher == 0) { tel.now.decrypt.clear(); return; }
+        voicekeys::CallKeyInfo info;
+        info.protocol = voicekeys::Protocol::Nxdn;
+        info.keyId = tel.now.keyId; info.talkgroup = tel.now.callType == 1 ? tel.now.dst : -1; info.unitId = tel.now.src;
+        auto look = voicekeys::lookupForCall(info, true, 72);
+        tel.now.decrypt = voicekeys::Decryptor::statusLine(look.status, look.keyName);
+        if (look.decryptor) dec = std::move(look.decryptor);
+        event("NXDN " + tel.now.decrypt);
+    }
+
+    void onMsg(const nxdn::Msg& m0, const Chain& c, int ran, bool fromSacch) {
         char b[200];
+        nxdn::Msg m = m0;
+        if (m.type == nxdn::kVcall) {
+            if (!trustCipher(m)) { m.cipher = 0; m.keyId = 0; if (tel.now.active) { m.cipher = tel.now.cipher; m.keyId = tel.now.keyId; } }
+        }
         switch (m.type) {
         case nxdn::kVcall: {
             const NxdnCall& n = tel.now;
             if (n.active && (n.src == m.src || n.src < 0) && (n.dst == m.dst || n.dst < 0)) {   // the call goes on (or its ids arrive)
+                const bool cipherChanged = tel.now.cipher != m.cipher || tel.now.keyId != m.keyId;
                 tel.now.src = m.src; tel.now.dst = m.dst; tel.now.callType = m.callType; tel.now.cipher = m.cipher; tel.now.keyId = m.keyId; tel.now.ran = ran;
+                if (cipherChanged) applyKey();
                 return;
             }
             startCall(m.src, m.dst, m.callType, m.cipher, m.keyId, ran, c.baud, fromSacch);

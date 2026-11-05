@@ -122,6 +122,7 @@ std::vector<std::string> searchFolders(const std::string& override) {
     std::vector<std::string> v;
     if (!override.empty()) { v.push_back(override); return v; }
     if (const char* e = getenv("DECT2_AVSPLUS_DIR")) if (*e) v.push_back(e);
+    { const std::string x = dect2::codec::externalFfmpegDir(); if (!x.empty()) v.push_back(x); }   // the user's own FFmpeg folder (Settings)
     for (auto& d : native::codecFolders()) v.push_back(d);
     return v;
 }

@@ -22,6 +22,7 @@ struct NxdnGenTx {
     int baud = 2400;
     int src = 1001, dst = 200, callType = 1, ran = 1;
     int cipher = 0;
+    int sacchGlitchCipher = 0;   // test: one SACCH superframe (the 3rd) carries this cipher type with a valid CRC (a misparsed message)
     int status = 0;
     std::string text;            // short data
     double durSec = 2;           // voice / site

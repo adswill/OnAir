@@ -957,6 +957,7 @@ void wfExportRow(App& a, double now);   // gfx/wf_export.cpp: a row the waterfal
 void wfExportPopup(App& a);             // gfx/wf_export.cpp: the Start / Stop block of the waterfall popup
 void loadPrefs(App& a);
 void applyStaleFromPrefs();   // the Settings > Decoding "remove after" times -> the trackers (dect2/limits.h)
+void applyFfmpegDirFromPrefs();   // Settings > Advanced: external FFmpeg folder + SDRconnect traffic log -> the core
 void loadFeedPrefs(App& a);         // feeds_ui.cpp: the data feed settings, and starts the ones that are on
 void saveFeedPrefs(const App& a);
 void gainOptButtons(App& a, bool running);   // gain_opt_ui.cpp: "Optimise gain" / "Cancel" and "Undo gain" on the gain row

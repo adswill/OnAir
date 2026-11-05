@@ -1,3 +1,5 @@
+#include "dect2/codec/codec_paths.h"
+#include "dect2/net/ws_trace.h"
 // Saved settings: loadPrefs() and savePrefs(). The plain keys (a flag, a number with limits, a text) are one table, kKeys,
 // that both directions walk, so a key is spelled once; the keys that need real logic (the mode and its gains, the
 // spectrum range, the FM station lists, the wide-capture mask) are written out below the table.
@@ -390,9 +392,17 @@ void applyStaleFromPrefs() {
     one("staleAis", F::Ais); one("staleUat", F::Uat); one("staleInmsat", F::Inmsat);
 }
 
+// the external FFmpeg folder and the SDRconnect traffic log (Settings > Advanced) reach the core
+void applyFfmpegDirFromPrefs() {
+    plat::Prefs& d = plat::prefs();
+    dect2::codec::setExternalFfmpegDir(d.getB("ffmpegExternal", false) ? d.getS("ffmpegDir", "") : std::string());
+    dect2::wstrace::configure(d.getB("sdrconnectLog", false), plat::dataDir() + "/sdrconnect-ws.log");
+}
+
 void loadPrefs(App& a) {
     plat::Prefs& d = plat::prefs();
     applyStaleFromPrefs();
+    applyFfmpegDirFromPrefs();
     a.netRadios = netRadiosFromString(d.getS("netRadios", ""));
     a.vfoRows = vfoRowsFromString(d.getS("vfoRows", ""));   // multi-VFO channels
     a.netRadiosSeen = a.netRadios;

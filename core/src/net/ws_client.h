@@ -4,6 +4,8 @@
 #pragma once
 #include "tcp_client.h"
 #include "dect2/net/remote_api.h"
+#include "dect2/net/ws_trace.h"
+#include <atomic>
 #include <cstdint>
 #include <mutex>
 #include <random>
@@ -18,7 +20,9 @@ public:
     static constexpr size_t kDefaultMaxMessage = 4u << 20;
 
     WsClient() = default;
-    void attach(sock_t s) { s_ = s; }
+    void attach(sock_t s) { s_ = s; closeSent_ = false; }
+    // Log the text messages of this connection to the SDRconnect traffic log (ws_trace.h) when that is on.
+    void setTrace(bool on) { trace_ = on; }
     sock_t sock() const { return s_; }
 
     // The upgrade request and its answer: 101 with the matching Sec-WebSocket-Accept. err says why not, in plain words.
@@ -60,9 +64,14 @@ public:
         return true;
     }
 
-    bool sendText(const std::string& s) { return sendFrame(0x1, s.data(), s.size()); }
+    bool sendText(const std::string& s) { if (trace_) wstrace::line("->", s); return sendFrame(0x1, s.data(), s.size()); }
     bool sendBinary(const void* d, size_t n) { return sendFrame(0x2, d, n); }
-    void sendClose() { sendFrame(0x8, "\x03\xe8", 2); }
+    // The close frame goes out once per connection (a second one made SDRconnect_headless crash, #peterdewitte): later calls do nothing until attach().
+    void sendClose() {
+        if (closeSent_.exchange(true)) { if (trace_) wstrace::line("--", "close not sent again (already sent)"); return; }
+        if (trace_) wstrace::line("->", "[close frame]");
+        sendFrame(0x8, "\x03\xe8", 2);
+    }
 
     // One whole message (fragments joined; pings answered, pongs dropped). Closed: a close frame or the connection went. Timeout: nothing
     // came within the receive timeout. Bad: not a valid frame, a message over maxMessage, or a masked frame from the server.
@@ -89,7 +98,11 @@ public:
                 if (len > 125 || !fin) return Kind::Bad;
                 std::vector<unsigned char> p((size_t)len);
                 if (len && recvExact(p.data(), p.size()) != 1) return Kind::Closed;
-                if (op == 0x8) { sendFrame(0x8, p.data(), p.size() >= 2 ? 2 : 0); return Kind::Closed; }
+                if (op == 0x8) {
+                    if (trace_) wstrace::line("<-", "[close frame]");
+                    if (!closeSent_.exchange(true)) { if (trace_) wstrace::line("->", "[close frame echo]"); sendFrame(0x8, p.data(), p.size() >= 2 ? 2 : 0); }
+                    return Kind::Closed;
+                }
                 if (op == 0x9) sendFrame(0xA, p.data(), p.size());
                 else if (op != 0xA) return Kind::Bad;
                 continue;
@@ -100,7 +113,10 @@ public:
             const size_t at = out.size();
             out.resize(at + (size_t)len);
             if (len && recvExact(out.data() + at, (size_t)len) != 1) return Kind::Closed;
-            if (fin) return kind == 0x1 ? Kind::Text : Kind::Binary;
+            if (fin) {
+                if (kind == 0x1 && trace_) wstrace::line("<-", std::string(out.begin(), out.end()));
+                return kind == 0x1 ? Kind::Text : Kind::Binary;
+            }
         }
     }
 
@@ -148,6 +164,8 @@ private:
 
     sock_t s_ = kBadSock;
     std::mutex sendMu_;
+    std::atomic<bool> closeSent_{false};
+    bool trace_ = false;
 };
 
 } // namespace dect2

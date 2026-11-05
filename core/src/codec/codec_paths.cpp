@@ -129,6 +129,9 @@ std::vector<std::string> libraryPaths(const std::vector<CodecDir>& dirs, const s
 
 void setExtraCodecDir(const std::string& dir) { std::lock_guard<std::mutex> lk(gMu); gExtra = dir; }
 std::string extraCodecDir() { std::lock_guard<std::mutex> lk(gMu); return gExtra; }
+static std::string gFfmpegDir;
+void setExternalFfmpegDir(const std::string& dir) { std::lock_guard<std::mutex> lk(gMu); gFfmpegDir = dir; }
+std::string externalFfmpegDir() { std::lock_guard<std::mutex> lk(gMu); return gFfmpegDir; }
 
 #if defined(_WIN32)
 // Windows ANSI calls return the system code page (GBK, 1251, ...), not UTF-8; std::filesystem then threw "Cannot convert character sequence" on a

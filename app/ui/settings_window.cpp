@@ -190,6 +190,32 @@ void customRow(App& a, const Info& i) {
         if (ImGui::Button(tr("Open"))) revealFolder(recordingsDir());
         if (!chosenRecordingsDir().empty() && recdir::normalise(chosenRecordingsDir()) != cur) ImGui::TextColored(ImVec4(1.f, 0.75f, 0.3f, 1), "%s", tr("That folder cannot be written: the default is used."));
     }
+    else if (k == "ffmpegLibs") {
+        static char buf[1024]; static bool init = false;
+        if (!init) { init = true; snprintf(buf, sizeof buf, "%s", plat::prefs().getS("ffmpegDir", "").c_str()); }
+        bool ext = plat::prefs().getB("ffmpegExternal", false);
+        int sel = ext ? 1 : 0;
+        ImGui::SetNextItemWidth(-1);
+        bool changed = ImGui::Combo("##ffsel", &sel, (std::string(tr("Bundled (default)")) + '\0' + tr("External folder") + '\0').c_str());
+        if (sel == 1) {
+            ImGui::SetNextItemWidth(-1);
+            ImGui::InputTextWithHint("##ffdir", tr("Folder with libavcodec and libavutil"), buf, sizeof buf);
+            if (ImGui::Button(tr("Choose..."))) { const std::string d = plat::openFolderDialog(); if (!d.empty()) { snprintf(buf, sizeof buf, "%s", d.c_str()); changed = true; } }
+            ImGui::SameLine();
+            if (ImGui::Button(tr("Use typed path"))) changed = true;
+        }
+        if (changed) {
+            plat::prefs().setB("ffmpegExternal", sel == 1);
+            plat::prefs().setS("ffmpegDir", buf);
+            applyFfmpegDirFromPrefs();
+        }
+        if (sel == 1 && buf[0]) ImGui::TextDisabled("%s", tr("Takes effect the next time an add-on looks for its library (restart if unsure)."));
+    }
+    else if (k == "sdrconnectLog") {
+        bool on = plat::prefs().getB("sdrconnectLog", false);
+        if (ImGui::Checkbox(tr("Log SDRconnect websocket traffic"), &on)) { plat::prefs().setB("sdrconnectLog", on); applyFfmpegDirFromPrefs(); }
+        ImGui::TextDisabled("%s", (plat::dataDir() + "/sdrconnect-ws.log").c_str());
+    }
     else if (k == "dataFolder") {
         const std::string d = plat::dataDir();
         ImGui::TextWrapped("%s", d.c_str());
