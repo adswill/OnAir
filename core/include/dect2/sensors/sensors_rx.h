@@ -1,7 +1,7 @@
 // Sub-GHz sensors (433.92 MHz first, also 315, 868 and 915 MHz): pulse detector, slicers and device decoders of rtl_433 (third_party/rtl_433, GPL-2.0-or-later)
 // behind the engine's receiver contract, a device table with history, an unknown signal analyser and flex-style custom decoders.
 //
-// Chain: the IQ stream (any rate; averaged down to 250 to 500 kHz) -> 8-bit IQ as rtl_433 reads it -> AM envelope + FM discriminator -> rtl_433's pulse detector
+// Chain: the IQ stream (any rate; used as it is up to 1.1 Msps, faster inputs averaged down towards 1 Msps) -> 8-bit IQ as rtl_433 reads it -> AM envelope + FM discriminator -> rtl_433's pulse detector
 // (OOK and FSK packages) -> every enabled decoder through its slicer (PWM, PPM, Manchester, PCM, DMC, ...) -> decoded messages. A package that no
 // decoder takes goes to the unknown signal analyser (pulse and gap widths, modulation guess, bits, a flex decoder definition).
 //

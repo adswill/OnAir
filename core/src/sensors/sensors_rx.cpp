@@ -166,7 +166,7 @@ struct SensorsReceiver::Impl {
     std::function<void(const std::string&)> logCb;
     std::function<void(const std::string&)> jsonCb;
     std::function<int64_t()> clock = wallNow;
-    int fskMode = FSK_PULSE_DETECT_AUTO;
+    int fskMode = FSK_PULSE_DETECT_OLD;   // classic: 2946 of 3031 rtl_433 test samples pass with it, 2147 with the auto mode of the vendored version
     bool autoLevel = false;
     float fixedLevel = 0.0f, minLevel = -12.1442f, minSnr = 9.0f;
     float minLevelAuto = 0, noiseLevel = 0;
@@ -208,6 +208,7 @@ struct SensorsReceiver::Impl {
     uint64_t lastUnknownHash = 0; int64_t lastUnknownUtc = 0;
 
     Impl() {
+        baseband_init();
         pd = pulse_detect_create();
         pulse = (pulse_data_t*)calloc(1, sizeof(pulse_data_t));
         fskPulse = (pulse_data_t*)calloc(1, sizeof(pulse_data_t));
@@ -479,7 +480,8 @@ void SensorsReceiver::configure(double inputRateHz) {
     s.inRate = inputRateHz;
     s.isReady = inputRateHz >= sensorsTuning().minSampleRate - 1;
     if (!s.isReady) { if (inputRateHz > 0) s.say("Sensors: the sample rate is too low (200 ksps at least)"); return; }
-    s.decim = std::max(1, (int)std::lround(inputRateHz / 250e3));
+    // up to 1.1 Msps the input is used as it is (smart meters need the fast clock); faster inputs are averaged down towards 1 Msps
+    s.decim = std::max(1, (int)std::lround(inputRateHz / 1.024e6));
     s.rate = (uint32_t)std::lround(inputRateHz / s.decim);
     s.u8.clear(); s.u8.reserve(1 << 17);
     s.accI = s.accQ = 0; s.accN = 0;

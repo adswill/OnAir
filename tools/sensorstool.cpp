@@ -16,7 +16,7 @@
 int main(int argc, char** argv) {
     std::string file, code;
     std::vector<unsigned> only;
-    int fskMode = 2;
+    int fskMode = 0;
     float level = 0, minlevel = -12.1442f;
     bool haveLevel = false, haveMin = false;
     uint32_t rate = 0;
