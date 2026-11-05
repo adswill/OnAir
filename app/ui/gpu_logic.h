@@ -16,8 +16,10 @@ struct Row {
 };
 // the mode-list rows that have a GPU stage today. DVB drives DVB-T2 (LDPC) and DVB-T (Viterbi, experimental: only when GPU is picked).
 inline const Row* gpuRows(int& n) {
-    static const Row r[] = {{"DVB", {dect2::gpupol::T2, dect2::gpupol::T}}, {"DVB-S/S2", {dect2::gpupol::DvbS, -1}}, {"DTMB", {dect2::gpupol::Dtmb, -1}}};
-    n = 3;
+    static const Row r[] = {{"DVB", {dect2::gpupol::T2, dect2::gpupol::T}}, {"DVB-S/S2", {dect2::gpupol::DvbS, -1}}, {"DTMB", {dect2::gpupol::Dtmb, -1}},
+                          {"ATSC 3.0", {dect2::gpupol::Atsc3, -1}}, {"ISDB-T", {dect2::gpupol::IsdbT, -1}},
+                          {"Spectrum", {dect2::gpupol::Dsp, -1}}};
+    n = 6;
     return r;
 }
 inline const Row* rowOf(const char* mode) {
@@ -60,7 +62,7 @@ inline bool modeAllowed(bool global, const std::string& list, const char* mode) 
 // why a mode has no GPU tick (one line); nullptr when it has one
 inline const char* noGpuReason(const char* mode) {
     if (rowOf(mode)) return nullptr;
-    static const std::initializer_list<const char*> fecCpu = {"ATSC 3.0", "ATSC", "ISDB-T", "ISDB-S (BS)", "DVB-C", "DAB / DAB+", "DRM", "HD Radio", "CDR", "FT8", "FT4", "FT2",
+    static const std::initializer_list<const char*> fecCpu = {"ATSC", "ISDB-S (BS)", "DVB-C", "DAB / DAB+", "DRM", "HD Radio", "CDR", "FT8", "FT4", "FT2",
         "JS8Call", "WSPR", "Wi-Fi HaLow (802.11ah)", "TETRA", "DMR", "P25", "Cell towers", "5G NR cells", "NB-IoT cells", "Meteor-M LRPT", "GOES HRIT", "HRPT / AHRPT"};
     for (const char* n : fecCpu) if (!strcmp(n, mode)) return "Its error correction has no GPU kernel yet; it runs on the CPU.";
     return "Nothing in this mode is heavy enough for the GPU; it runs on the CPU.";

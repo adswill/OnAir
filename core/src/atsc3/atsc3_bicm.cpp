@@ -2,6 +2,9 @@
 #include "atsc3_data_tables.h"
 #include "atsc3_ldpc.h"
 #include "dect2/dsp/ldpc.h"
+#include "dect2/dsp/gpu_ldpc.h"
+#include "dect2/dsp/gpu_policy.h"
+#include <cstdlib>
 #include "dect2/atsc3/atsc3_l1.h"
 #include "dect2/dsp/simd.h"
 #include "dect2/t2/t2fec.h"
@@ -329,12 +332,34 @@ void Bicm::decodeBatch(const std::vector<const cf32*>& cells, float noiseVar, st
     payload.assign((size_t)nb, std::vector<uint8_t>());
     ok.assign((size_t)nb, 0);
     if (!ok_ || nb == 0 || nb > Ldpc::kBatch) return;
-    if (qcCode(cfg_.nInner, cfg_.rate15)) {
-        // Type B: word by word on the quasi-cyclic decoder (decodeLlr)
+    if (const dect2::LdpcCode* qc = qcCode(cfg_.nInner, cfg_.rate15)) {
+        // Type B: on the GPU in one batch when it is on and worth it (gpu_policy.h; the words it fails on go to the CPU decoder below), else word by word
+        // on the quasi-cyclic decoder (decodeLlr)
         std::vector<float> llr;
         std::vector<uint8_t> hard;
+        std::vector<uint8_t> gHard, gOk;
+        const int mode = gpupol::liveMode(gpupol::Atsc3);
+        static const bool noGpu = getenv("DECT2_NOGPU") != nullptr;
+        // Auto: a batch of 12 or more words (a GPU round trip is a fixed cost; docs/GPU-AUDIT-3.7.md has the measured crossover)
+        const bool wantGpu = !noGpu && mode != 0 && (mode == 1 || nb >= 12) && GpuLdpc::instance().available();
+        if (wantGpu) {
+            std::vector<float> all((size_t)nb * (size_t)cfg_.nInner);
+            for (int b = 0; b < nb; b++) {
+                llrs(cells[(size_t)b], noiseVar, llr);
+                if (llr.size() != (size_t)cfg_.nInner) { all.clear(); break; }
+                std::copy(llr.begin(), llr.end(), all.begin() + (size_t)b * (size_t)cfg_.nInner);
+            }
+            std::vector<int> it((size_t)nb);
+            gHard.resize((size_t)nb * (size_t)cfg_.nInner); gOk.resize((size_t)nb);
+            if (!all.empty() && GpuLdpc::instance().decode(*qc, all.data(), nb, 50, gHard.data(), gOk.data(), it.data(), qcAlpha(cfg_.nInner, cfg_.rate15), true)) gpupol::reportGpu(gpupol::Atsc3, true);
+            else { gOk.clear(); gpupol::reportGpu(gpupol::Atsc3, false); }
+        } else gpupol::reportGpu(gpupol::Atsc3, false);
         for (int b = 0; b < nb; b++) {
-            llrs(cells[(size_t)b], noiseVar, llr);
+            if (!gOk.empty() && gOk[(size_t)b]) {
+                hard.assign(gHard.begin() + (size_t)b * (size_t)cfg_.nInner, gHard.begin() + (size_t)(b + 1) * (size_t)cfg_.nInner);
+                if (finish(hard, payload[(size_t)b])) { ok[(size_t)b] = 1; continue; }
+            }
+            llrs(cells[(size_t)b], noiseVar, llr);   // the CPU decoder: no GPU, or the GPU did not converge on this word (it also has the 8-bit first pass)
             ok[(size_t)b] = decodeLlr(llr, hard) && finish(hard, payload[(size_t)b]);
         }
         return;
