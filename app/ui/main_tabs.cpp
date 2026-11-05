@@ -147,6 +147,7 @@ static void mainTabsInner(App& a, bool unified) {
         }
         modepanel::levelBar(a);
     }
+    modeActionBar(a);   // 3.7: the same row (next step, Auto setup, Reset this mode) above the tabs of every mode
     gTightTabs = ImGui::GetContentRegionAvail().x < 760 * gUi;
     if (gTightTabs) ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(3 * gUi, ImGui::GetStyle().FramePadding.y));
     const bool bar = pal::dev() ? kit::beginTabs("tabs") : ImGui::BeginTabBar("tabs", 0);

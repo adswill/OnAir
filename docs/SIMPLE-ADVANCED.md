@@ -39,3 +39,14 @@ Own `command` view (summary header, key controls, live tables side by side; Adva
 Not converted: the TV and radio modes without a `ModeUi` (DVB-T/T2, DVB-S/S2, DAB, FM, ATSC, ISDB-T keep their screens; they have no Simple view), DRM and Fusion (their first view is already one merged screen), and the small single-view modes, which use the generic Command view. A narrow pane wraps its toolbars (`sameLineIf`), so a mode's `command` can use any table function of its tab.
 
 The pager keyword ticker is in the Messages view, which the Simple view shows; the voice **Watch** views (DMR, P25, NXDN, TETRA) are Advanced-only sub-views because they need a typed entry.
+
+## The action row (3.7, feat37-ease2)
+
+Under the Simple / Advanced switch, above the Command view and above the tabs of every mode (also the modes without a Simple view), `modeActionBar()` (`app/ui/kit/mode_actions.cpp`) draws one row:
+
+- the **"what do I do next" line** (`nextStepLine()`, `app/ui/next_step_logic.h`): always one line in the same place. Grey while nothing needs doing, green "Receiving well.", amber with a one-click fix when a step helps. A mode whose lock the app cannot read says "Listening. This mode does not report a lock ..." and never "no signal".
+- **Auto setup**: Auto gain (radios with a gain), the mode's own bandwidth and sample rate (clears a custom width / rate), and the fine frequency: for a capture of 0.6 MHz or less, the strongest peak within a tenth of the capture (at most 25 kHz) of the tuned frequency, when it stands 8 dB over the median there. A wide capture keeps its frequency and says so.
+- **Reset this mode**: frequency, bandwidth and sample rate back to the mode's defaults (`ModeTuning`), custom width and chosen rate cleared. Gain, the audio and the other modes are not touched.
+- both leave a one-line note and **Undo** for 12 seconds (restores frequency, rate, bandwidth, gain, Auto gain and the custom width).
+
+The tuner / decoder / synthetic-signal controls of a mode live in the top bar and the side panels, which do not depend on the Simple / Advanced switch, so every parameter stays reachable; Advanced adds the tabs (Receiver, Stream, Scan, History, the mode's other views).

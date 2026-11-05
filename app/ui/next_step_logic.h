@@ -89,7 +89,8 @@ inline Out advise(const In& in) {
         return o;
     }
     o.state = in.lockKnown ? State::Starting : State::Unknown;
-    if (in.lockKnown) o.text = N_("Looking for the signal...");
+    o.text = in.lockKnown ? N_("Looking for the signal...")
+                          : N_("Listening. This mode does not report a lock: watch the list for decoded items.");   // never "no signal": the app cannot tell
     return o;
 }
 
