@@ -613,13 +613,13 @@ Off by default. **View > Show in Discord** shows on your Discord profile that yo
 <details>
 <summary>Build instructions</summary>
 
-You need a C++20 compiler, CMake 3.20 or newer, **Rust (cargo and rustc 1.70 or newer; required since 0.2.7, the protocol layers are Rust)**, pkg-config, FFmpeg, libhackrf, and GLFW for the app. SoapySDR is optional. For a cross build install the Rust target first (`rustup target add <triple>`); CMake names it when it is missing.
+You need a C++20 compiler, CMake 3.20 or newer, **Rust (cargo and rustc 1.70 or newer; required since 0.2.7, the protocol layers are Rust)**, pkg-config, FFmpeg, libhackrf, and GLFW for the app. Desktop builds also need Python 3 to embed the bundled Chinese fonts (standard library only). SoapySDR is optional. For a cross build install the Rust target first (`rustup target add <triple>`); CMake names it when it is missing.
 
 ```sh
 # macOS
-brew install cmake rust pkg-config hackrf soapysdr libusb ffmpeg glfw
+brew install cmake rust pkg-config hackrf soapysdr libusb ffmpeg glfw python
 # Debian / Ubuntu
-sudo apt install build-essential cmake cargo pkg-config libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev \
+sudo apt install build-essential cmake cargo python3 pkg-config libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev \
   libglfw3-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev
 
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON
@@ -649,7 +649,7 @@ Configure with a clean `build` folder after changing these. Other options in `CM
 2. Update MSYS2 with `pacman -Syu` (if the window closes, open UCRT64 again and run it a second time).
 3. Install the tools and libraries:
    ```sh
-   pacman -S --needed git zip mingw-w64-ucrt-x86_64-{gcc,cmake,ninja,pkgconf,ffmpeg,glfw,hackrf,soapysdr,libiconv}
+   pacman -S --needed git zip mingw-w64-ucrt-x86_64-{gcc,cmake,ninja,python,pkgconf,ffmpeg,glfw,hackrf,soapysdr,libiconv}
    ```
    Optional: `mingw-w64-ucrt-x86_64-nsis` for the setup .exe. (codec2 is built from `third_party/codec2` with OnAir and goes into the zip.)
 4. Get the source and build:

@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cmath>
 #include "typography.h"
+#include "cjk_fonts.h"
 #include "imgui_internal.h"
 #include "dect2/common/inflate.h"
 #include <vector>
@@ -22,13 +23,15 @@ Fonts& fonts() { static Fonts f; return f; }
 
 static std::vector<uint8_t>& store(int i) { static std::vector<uint8_t> v[5]; return v[i]; }
 
-static ImFont* add(ImGuiIO& io, int slot, const unsigned char* z, size_t zn, float size, void (*merge)(ImGuiIO&, ImFont*)) {
+static ImFont* add(ImGuiIO& io, int slot, const unsigned char* z, size_t zn, float size, void (*merge)(ImGuiIO&, ImFont*), cjk::Weight weight = cjk::Regular) {
     std::vector<uint8_t>& raw = store(slot);
     if (!dect2::inflateRaw(z, zn, raw) || raw.empty()) return nullptr;
     ImFontConfig c;
+    cjk::configureBase(c);
     c.FontDataOwnedByAtlas = false;   // the vector above keeps the bytes
     c.OversampleH = 2; c.OversampleV = 1;
     ImFont* f = io.Fonts->AddFontFromMemoryTTF(raw.data(), (int)raw.size(), size, &c);
+    if (f) cjk::merge(io, f, weight);
     if (f && merge) merge(io, f);   // ImGui 1.92 merges into the font added last, so each base font gets its fallbacks right away
     return f;
 }
@@ -38,10 +41,10 @@ bool loadFonts(ImGuiIO& io, void (*merge)(ImGuiIO&, ImFont*)) {
     Fonts f;
     const float s = baseSize();
     f.regular = add(io, 0, kFont_Inter_Regular, sizeof kFont_Inter_Regular, s, merge);
-    f.medium = add(io, 1, kFont_Inter_Medium, sizeof kFont_Inter_Medium, s, merge);
-    f.semibold = add(io, 2, kFont_Inter_SemiBold, sizeof kFont_Inter_SemiBold, s, merge);
+    f.medium = add(io, 1, kFont_Inter_Medium, sizeof kFont_Inter_Medium, s, merge);   // share the Regular Chinese subset with the Inter Medium role
+    f.semibold = add(io, 2, kFont_Inter_SemiBold, sizeof kFont_Inter_SemiBold, s, merge, cjk::Bold);
     f.mono = add(io, 3, kFont_JetBrainsMono_Regular, sizeof kFont_JetBrainsMono_Regular, s - 0.5f, merge);
-    f.monoBold = add(io, 4, kFont_JetBrainsMono_Bold, sizeof kFont_JetBrainsMono_Bold, s - 0.5f, merge);
+    f.monoBold = add(io, 4, kFont_JetBrainsMono_Bold, sizeof kFont_JetBrainsMono_Bold, s - 0.5f, merge, cjk::Bold);
     if (!f.regular || !f.medium || !f.semibold || !f.mono || !f.monoBold) return false;
     fonts() = f;
     return true;

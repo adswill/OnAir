@@ -7,6 +7,7 @@
 #include "app.h"
 #include "dect2/power/power.h"
 #include "ui/typography.h"
+#include "ui/cjk_fonts.h"
 #include "ui/contrast.h"
 #include "dect2/source/iq_file.h"
 #include "panels/gallery.h"
@@ -149,7 +150,7 @@ static void mergeCjk(ImGuiIO& io, ImFont* dst) {
         ImFontConfig mc;
         mc.MergeMode = true;
         mc.DstFont = dst;
-        io.Fonts->AddFontFromFileTTF(f.c_str(), 13.0f, &mc);
+        io.Fonts->AddFontFromFileTTF(f.c_str(), dst->Sources[0]->SizePixels, &mc);
     }
 }
 
@@ -158,15 +159,27 @@ void loadFonts(App& app, ImGuiIO& io) {
         app.ui = typo::fonts().regular; app.mono = typo::fonts().mono;
         return;
     }
-    ImFont* ui = nullptr;
-    app.mono = nullptr;
-    for (const auto& f : plat::monoFontCandidates()) if (access(f.c_str(), R_OK) == 0 && (ui = io.Fonts->AddFontFromFileTTF(f.c_str(), 13.0f))) break; // the whole UI is monospaced
-    if (!ui) ui = typo::loadEmbeddedMono(io, 13.0f, [](ImGuiIO& i, ImFont* f) { mergeCjk(i, f); });   // no system font (NixOS): the embedded one
-    if (!ui) ui = io.Fonts->AddFontDefault();
-    // CJK (Korean/Japanese/Chinese): merge every system font that loads (Menlo has no Hangul; DRM Journaline needs it).
-    mergeCjk(io, ui);
-    for (const auto& f : plat::monoFontCandidates()) if (access(f.c_str(), R_OK) == 0 && (app.mono = io.Fonts->AddFontFromFileTTF(f.c_str(), 13.0f))) break;
-    if (app.mono) mergeCjk(io, app.mono);
+    auto systemMono = [&]() -> ImFont* {
+        ImFontConfig config;
+        cjk::configureBase(config);
+        for (const auto& path : plat::monoFontCandidates()) {
+            if (access(path.c_str(), R_OK) != 0) continue;
+            if (ImFont* f = io.Fonts->AddFontFromFileTTF(path.c_str(), 13.0f, &config)) {
+                cjk::merge(io, f);
+                mergeCjk(io, f);
+                return f;
+            }
+        }
+        return nullptr;
+    };
+    ImFont* ui = systemMono();
+    if (!ui) ui = typo::loadEmbeddedMono(io, 13.0f, mergeCjk);
+    if (!ui) {
+        ui = io.Fonts->AddFontDefault();
+        cjk::merge(io, ui);
+        mergeCjk(io, ui);
+    }
     app.ui = ui;
+    app.mono = systemMono();
     if (!app.mono) app.mono = ui;
 }
