@@ -184,6 +184,9 @@ void analyse(const pulse_data_t* p, bool fsk, SensorUnknown& out) {
     Cand* best = nullptr;
     for (auto& c : cands) {
         tryCand(p, c);
+        // PWM / PPM with two clean clusters explain the signal best; a clock-based slicer finds some pattern in anything
+        const bool lengthCode = c.modulation == oPWM || c.modulation == OOK_PULSE_PPM;
+        if (lengthCode && c.score > 0) c.score *= 4;
         if (c.score > 0 && (!best || c.score > best->score)) best = &c;
     }
     if (!best) {

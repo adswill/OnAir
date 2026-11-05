@@ -14,7 +14,7 @@ typedef std::vector<std::pair<double, double>> PulseList;   // (pulse us, gap us
 
 // the pulse train of one Nexus-TH message (36 bits) repeated `repeats` times; tempC in tenths of a degree
 PulseList sensorsNexusPulses(int id, int channel, bool batteryOk, double tempC, int humidity, int repeats = 12);
-// a PWM burst (300 / 700 us pulses, 500 us gap) of the given bits, repeated: not any protocol
+// a PWM burst (280 / 820 us pulses, 610 us gap) of the given bits, repeated: not any protocol
 PulseList sensorsUnknownPwmPulses(uint32_t bits, int nbits, int repeats = 6);
 // the pulse list as an OOK signal: complex samples, carrier amplitude amp, rise and fall of 6 us, no noise
 std::vector<cf32> sensorsOokSignal(const PulseList& p, double rate, double amp, double leadUs = 3000, double tailUs = 12000);

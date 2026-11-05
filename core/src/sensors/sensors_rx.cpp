@@ -522,6 +522,7 @@ void SensorsReceiver::feedCu8(const uint8_t* iq, size_t n, uint32_t rate) {
 
 void SensorsReceiver::flush() {
     Impl& s = *p_;
+    if (!s.u8.empty() && s.rate) { s.process(s.u8.data(), s.u8.size() / 2, s.rate); s.u8.clear(); }
     if (s.rate) s.process(nullptr, 0, s.rate);
     s.publish();
 }

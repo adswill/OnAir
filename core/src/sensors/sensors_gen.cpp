@@ -20,9 +20,9 @@ PulseList sensorsNexusPulses(int id, int channel, bool batteryOk, double tempC, 
     for (int r = 0; r < repeats; r++) {
         for (int i = 35; i >= 0; i--) {
             const bool bit = (v >> i) & 1;
-            const double gap = i == 0 ? 4000.0 : (bit ? 2000.0 : 1000.0);
-            p.push_back({500.0, gap});
+            p.push_back({500.0, bit ? 2000.0 : 1000.0});
         }
+        p.push_back({500.0, 4000.0});   // the closing pulse: the gap after it is the sync gap that ends the row
     }
     return p;
 }
@@ -31,7 +31,7 @@ PulseList sensorsUnknownPwmPulses(uint32_t bits, int nbits, int repeats) {
     PulseList p;
     for (int r = 0; r < repeats; r++)
         for (int i = nbits - 1; i >= 0; i--)
-            p.push_back({((bits >> i) & 1) ? 700.0 : 300.0, i == 0 ? 6000.0 : 500.0});
+            p.push_back({((bits >> i) & 1) ? 820.0 : 280.0, i == 0 ? 6000.0 : 610.0});
     return p;
 }
 
@@ -83,7 +83,7 @@ private:
         const int k = (int)(count_++ % 7);
         PulseList p;
         if (k == 6 && !noUnknown_) {
-            p = sensorsUnknownPwmPulses(0x5a3c96u, 24, 6);
+            p = sensorsUnknownPwmPulses(0x5a3c96e1u, 32, 6);
         } else {
             const auto& s = sensors_[(size_t)(k % 3)];
             // the temperature drifts a little between the messages
