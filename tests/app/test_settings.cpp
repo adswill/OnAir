@@ -19,8 +19,9 @@ int main() {
             else choiceOk &= i.def >= 0 && i.def < (double)split(i.choices, '|').size();
         }
         if (!i.label[0] || !i.cat[0]) tipOk = false;
+        if (!i.tip[0]) { tipOk = false; printf("no help text: %s\n", i.key); }   // 3.7: every setting has a one-line help
     }
-    check(!dup, "keys are unique"); check(inRange, "defaults inside their limits"); check(choiceOk, "choices and defaults agree"); check(tipOk, "label and category present");
+    check(!dup, "keys are unique"); check(inRange, "defaults inside their limits"); check(choiceOk, "choices and defaults agree"); check(tipOk, "label, category and help present");
     check(categories(t).size() >= 8, "categories");
 
     // search: every word, any category; empty query with a category is that category only

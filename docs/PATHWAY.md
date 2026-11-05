@@ -1097,3 +1097,10 @@ Not done: real-radio / real-OBS checks, i18n catalogs beyond en.
 
 ## 2026-11-05: feat37-sens2
 FM station finder threshold 10x -> 1.6x (off-centre FM 14 -> 5 dB on Linux); SRO gaps in the old baseline found stale (none left); docs/SENSITIVITY-3.7.md has the table.
+
+## 2026-11-05 - Ease of use part 2 (feat37-ease2)
+- One action row above every mode's Simple view and tabs (app/ui/kit/mode_actions.cpp): the "what do I do next" line (now always visible, in the mode panel instead of only the side bar; green when it works, a plain "does not report a lock" line for modes without a lock reading, never a false "no signal"), [Auto setup] (Auto gain, the mode's own bandwidth and rate, fine frequency snap for captures of 0.6 MHz or less, 8 dB prominence, at most 25 kHz) and [Reset this mode] (frequency, bandwidth, rate; gain and other modes untouched), each with a 12 s Undo.
+- Settings table: every row has a one-line help; labels, help and category names are N_() so they enter the catalog scan. test_settings now fails on a row without help; test_mode_actions covers the snap.
+- Checked on screen with a renamed copy, --hidden --mute --shot: AIS Simple (line, Auto setup, Reset, Undo note after a click), DVB Advanced (green "Receiving well." above the tabs).
+- Audit: tuner / decoder / synth controls live in the top bar and side panels, independent of Simple / Advanced; Advanced adds the tabs. No mode found with a parameter unreachable.
+- Not done: Reset does not touch mode-specific decoder options (no stored defaults for them); Auto setup snap not tested on a real radio; other-language catalogs.

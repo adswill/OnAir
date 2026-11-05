@@ -913,6 +913,13 @@ double rxWidthMhz(const App& a);              // state/rx_width.cpp: the custom 
 void rxWidthControl(App& a, bool& retune);    // and its Advanced row (custom bandwidth + custom sample rate), shown for every mode
 void rxWidthSetFromApi(App& a, double widthMhz);   // the remote API / MCP: set the custom bandwidth of this mode in MHz (0 = the mode's own), as the row does
 void rxWidthChip(App& a);                     // the compact "Bandwidth: default / custom" chip of the Simple view (state/rx_width.cpp)
+struct RxWidthSnap { int custom = -1; double widthMhz = 0; double chosenRateHz = 0; };   // the saved Custom tick, width and rate of the mode on screen (state/rx_width.cpp)
+RxWidthSnap rxWidthSnapshot(const App& a);
+bool rxWidthIsCustom(const App& a);          // a custom width or a chosen sample rate is in force for this mode
+void rxWidthReset(App& a);                   // back to the mode's own bandwidth and rate (the custom values stay saved)
+void rxWidthRestore(App& a, const RxWidthSnap& s);   // Undo of "Reset this mode"
+void nextStepLine(App& a);                   // panels/diag_ui.cpp: the "what do I do next" line of the mode on screen (app/ui/next_step_logic.h), drawn by modepanel::actionBar
+void modeActionBar(App& a);                  // ui/kit/mode_actions.cpp: next step line, "Auto setup" and "Reset this mode" with its undo note
 bool captureRowShown(const App& a);           // the Advanced row is drawn for a radio or the test signal (not a recording or a sound card)
 bool sampleRateAdvanced(App& a);              // ui/toolbar_source.cpp: the sample-rate half of that row (true when it changed the rate)
 double savedSampleRate(const App& a);

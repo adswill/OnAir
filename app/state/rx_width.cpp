@@ -201,3 +201,23 @@ void rxWidthSetFromApi(App& a, double widthMhz) {
     plat::prefs().flush();
     applyWidthChange(a, widthMhz > 0, custom0, saved, true);
 }
+
+// "Reset this mode" and its Undo (app/ui/kit/mode_actions.cpp): the saved Custom tick, the width and the chosen rate of this mode
+RxWidthSnap rxWidthSnapshot(const App& a) {
+    RxWidthSnap s;
+    s.custom = plat::prefs().getI((key(a) + ".custom").c_str(), -1);
+    s.widthMhz = plat::prefs().getD(key(a).c_str(), 0);
+    s.chosenRateHz = a.chosenRateHz;
+    return s;
+}
+bool rxWidthIsCustom(const App& a) { return customOf(a) || a.chosenRateHz > 0; }
+void rxWidthReset(App& a) { resetToDefault(a); }
+void rxWidthRestore(App& a, const RxWidthSnap& s) {
+    const bool custom0 = customOf(a);
+    const double saved = savedWidth(a);
+    if (s.custom >= 0) plat::prefs().setI((key(a) + ".custom").c_str(), s.custom);
+    plat::prefs().setD(key(a).c_str(), s.widthMhz);
+    plat::prefs().flush();
+    if (s.chosenRateHz > 0 && a.chosenRateHz != s.chosenRateHz) restoreSampleRate(a, s.chosenRateHz);   // restarts the receiver itself
+    applyWidthChange(a, customOf(a), custom0, saved, true);
+}

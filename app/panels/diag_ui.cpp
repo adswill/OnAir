@@ -587,7 +587,7 @@ void fixitUi(App& a, const fixit::Entry* e, const char* idKey) {
 }
 
 // "What do I do next": one plain line about how the reception is going and, when a click helps, the one fix (app/ui/next_step_logic.h)
-static void nextStepUi(App& a) {
+void nextStepLine(App& a) {
     static double startedAt = -1;
     const double now = ImGui::GetTime();
     const bool run = a.engine.running();
@@ -609,9 +609,9 @@ static void nextStepUi(App& a) {
     else if (run && a.dabMode && a.rx.standard == 3) { in.lockKnown = true; in.locked = a.rx.dab.state == 2; in.snrDb = a.rx.dab.snrDb; }
     else if (run && !a.fmMode && !a.dabMode && a.rx.standard >= 0 && a.rx.standard <= 1) { in.lockKnown = true; in.locked = a.rx.state == 2; in.snrDb = a.rx.dataValid ? a.rx.dataSnrDb : NAN; }
     const nextstep::Out o = nextstep::advise(in);
-    if (!run && !o.fixLabel[0]) return;   // stopped with no radio: the radio list already says so
-    if (!o.needsAttention() && o.state != nextstep::State::Stopped) return;
-    const ImVec4 col = o.state == nextstep::State::Stopped ? ImVec4(0.62f, 0.66f, 0.72f, 1) : ImVec4(0.95f, 0.78f, 0.25f, 1);
+    if (!o.text[0]) return;
+    // always one line, in the same place in every mode: grey while nothing needs doing, green when it works, amber when a step helps
+    const ImVec4 col = o.needsAttention() ? ImVec4(0.95f, 0.78f, 0.25f, 1) : o.state == nextstep::State::Good ? pal::okGreen() : ImVec4(0.62f, 0.66f, 0.72f, 1);
     ImGui::PushStyleColor(ImGuiCol_Text, col);
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextUnformatted(tr(o.text));
@@ -637,7 +637,6 @@ void radioMessagesUi(App& a, bool vertical) {
         if (ImGui::IsItemHovered()) { ImGui::BeginTooltip(); ImGui::PushTextWrapPos(420 * gUi); for (auto& m : msgs) ImGui::TextWrapped("%s", m.text.c_str()); ImGui::PopTextWrapPos(); ImGui::EndTooltip(); }
         return;
     }
-    if (msgs.empty()) nextStepUi(a);   // an error message, when there is one, says more than the generic line
     for (size_t i = 0; i < msgs.size(); i++) {
         const RadioMsg& m = msgs[i];
         const ImVec4 col = m.kind <= 1 ? ImVec4(0.95f, 0.4f, 0.35f, 1) : m.kind == 2 ? ImVec4(0.95f, 0.78f, 0.25f, 1) : ImVec4(0.62f, 0.66f, 0.72f, 1);
