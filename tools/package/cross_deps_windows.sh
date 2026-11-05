@@ -54,8 +54,10 @@ Cflags: -I\${includedir}/libhackrf -DLIBHACKRF_STATIC
 PC
 }
 
-[ -f "$P/lib/libavcodec.a" ] || { step ffmpeg; unpack ffmpeg-8.0.tar.xz ffmpeg-8.0; mkdir -p ffmpeg-build; (cd ffmpeg-build && ../ffmpeg-8.0/configure --prefix=$P --enable-cross-compile --target-os=mingw32 --arch=x86_64 --cross-prefix=$HOST- \
-    --enable-static --disable-shared --disable-programs --disable-doc --disable-debug --disable-avdevice --disable-network --pkg-config=pkg-config --extra-cflags="-I$P/include" --extra-ldflags="-L$P/lib" >/dev/null && make -j$JOBS >/dev/null && grep -qE '^#define CONFIG_GPL 0' config.h && grep -qE '^#define CONFIG_VERSION3 0' config.h && grep -qE '^#define CONFIG_NONFREE 0' config.h && make install >/dev/null) || { echo "FFmpeg for Windows failed or is not the LGPL build (GPL/version3/nonfree are not allowed)"; exit 1; }; }
+# libavdevice with only the DirectShow input: the cameras and capture cards (core/src/audio/videoin_ffmpeg.cpp). Without it CMake builds the camera stub and
+# the program lists no camera at all. A prefix built before this has no libavdevice.a and is rebuilt.
+[ -f "$P/lib/libavcodec.a" ] && [ -f "$P/lib/libavdevice.a" ] || { step ffmpeg; rm -rf ffmpeg-build; unpack ffmpeg-8.0.tar.xz ffmpeg-8.0; mkdir -p ffmpeg-build; (cd ffmpeg-build && ../ffmpeg-8.0/configure --prefix=$P --enable-cross-compile --target-os=mingw32 --arch=x86_64 --cross-prefix=$HOST- \
+    --enable-static --disable-shared --disable-programs --disable-doc --disable-debug --disable-indevs --enable-indev=dshow --disable-outdevs --disable-network --pkg-config=pkg-config --extra-cflags="-I$P/include" --extra-ldflags="-L$P/lib" >/dev/null && make -j$JOBS >/dev/null && grep -qE '^#define CONFIG_GPL 0' config.h && grep -qE '^#define CONFIG_VERSION3 0' config.h && grep -qE '^#define CONFIG_NONFREE 0' config.h && grep -qE '^#define CONFIG_DSHOW_INDEV 1' config_components.h && make install >/dev/null) || { echo "FFmpeg for Windows failed or is not the LGPL build (GPL/version3/nonfree are not allowed) or has no DirectShow camera input"; exit 1; }; }
 
 # --- generic radios: SoapySDR (a DLL). Its RTL-SDR and Airspy modules are not built: the native drivers of the same name always win and hide them.
 

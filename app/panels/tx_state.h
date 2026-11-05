@@ -48,7 +48,8 @@ struct TxUi {
     double freqSent = 0;
     int tickFrame = -1;
     char callsign[16] = {}, grid[8] = {}, dest[24] = {}, name[16] = {}, path[64] = {}, file[512] = {}, text[256] = {};
-    char rdsRt[128] = {}, audioDevice[64] = {};
+    std::string rdsRt;
+    std::string audioDevice;   // the microphone (listAudioInputs id: its name, which can be longer than 64 bytes); empty = default
     char provider[64] = {}, network[64] = {}, svc[4][48] = {}, svcFile[4][512] = {}, svcCam[4][96] = {}, videoDevice[96] = {};
     int nsvc = 1, serviceId = 1, videoSrc = 0, svcSrc[4] = {};
     int kind = 0, baudIdx = 0, shiftIdx = 0, variant = 0, wpm = 20, dbm = 37, function = 3;
