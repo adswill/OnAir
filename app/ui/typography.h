@@ -20,7 +20,8 @@ float baseSize();             // Clean: Body-large (14); Compact: Body (13); Cur
 struct Fonts { ImFont *regular = nullptr, *medium = nullptr, *semibold = nullptr, *mono = nullptr, *monoBold = nullptr; };
 Fonts& fonts();
 
-// Loads the five fonts (embedded) when the look is not Classic; bundled Noto CJK is merged first; mergeFallback(io, font) adds remaining system fallbacks.
+// Loads the five fonts (embedded) when the look is not Classic; bundled Noto CJK is merged first for Chinese UI only;
+// mergeFallback(io, font) adds the system fallbacks in every language.
 // Returns false (and leaves everything as it was) for Classic or when a font fails to load.
 bool loadFonts(ImGuiIO& io, void (*mergeFallback)(ImGuiIO&, ImFont*));
 // the embedded JetBrains Mono at `size`: the Classic look when no system monospaced font exists (NixOS, minimal containers)

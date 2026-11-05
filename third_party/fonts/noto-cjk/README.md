@@ -16,8 +16,11 @@ triangles U+25B4/U+25BE are absent upstream and continue to use the base/system 
 
 Subsetting removes unused glyphs/tables and renames the fonts; the retained glyph
 outlines, horizontal metrics, units per em and line metrics are unchanged and verified
-against the originals by the generation script. Chinese text in the retained repertoire
-uses these fonts first. Other characters (including Hangul and Han characters outside
+against the originals by the generation script. Only Chinese UI languages use these
+fonts first; Japanese, Korean and other UI languages keep their system fonts. The
+effective language follows the saved preference, otherwise the OS language; changing
+the language rebuilds the font atlas before the next frame. Other characters in a
+Chinese UI (including Hangul and Han characters outside
 the subset) depend on the existing system-font fallbacks. No font downloads occur at runtime.
 
 The CJK em is normalized to 90% of the base UI line height (the upstream fonts have

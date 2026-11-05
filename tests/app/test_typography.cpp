@@ -1,6 +1,7 @@
 // Chinese text must use one family at every size, even when system fallbacks overlap.
 #include "typography.h"
 #include "cjk_fonts.h"
+#include "i18n/i18n.h"
 #include "imgui_internal.h"
 #include <cmath>
 #include <cstdio>
@@ -78,6 +79,35 @@ int main() {
         if (entry.path().extension() == ".otf") fontBytes += entry.file_size();
     CHECK(fontBytes <= 10u * 1024u * 1024u);
     printf("CJK resources: %zu bytes\n", fontBytes);
+    // SC glyphs must not override Japanese/Korean system fallbacks, including after a language switch.
+    for (typo::Variant variant : {typo::Classic, typo::Clean, typo::Compact}) {
+        typo::setVariant(variant);
+        ImGui::CreateContext();
+        ImGuiIO& io = ImGui::GetIO();
+        io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;
+        io.DisplaySize = ImVec2(300, 200);
+        for (const char* language : {"ja-JP", "zh_CN.UTF-8", "ko-KR", "en", "zh-Hans", "ja"}) {
+            i18n::set(language);
+            const bool chinese = !std::strcmp(i18n::current(), "zh");
+            io.Fonts->Clear();
+            ImFont* font = nullptr;
+            if (variant == typo::Classic) font = typo::loadEmbeddedMono(io, 13.f, nullptr);
+            else { CHECK(typo::loadFonts(io, nullptr)); font = typo::fonts().regular; }
+            for (ImFont* role : io.Fonts->Fonts) {
+                CHECK(role->Sources.Size == (chinese ? 2 : 1));
+                CHECK((role->Sources[0]->GlyphExcludeRanges != nullptr) == chinese);
+                CHECK(role->IsGlyphInFont(0x4e2d) == chinese);
+            }
+            CHECK(font != nullptr);
+            ImGui::NewFrame();
+            ImGui::Begin("Language switch");
+            ImGui::TextUnformatted("A 中 時 한");
+            ImGui::End();
+            ImGui::Render();
+        }
+        ImGui::DestroyContext();
+    }
+    i18n::set("zh");
     for (typo::Variant variant : {typo::Classic, typo::Clean, typo::Compact}) {
         typo::setVariant(variant);
         ImGui::CreateContext();

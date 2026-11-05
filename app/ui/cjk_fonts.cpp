@@ -1,7 +1,9 @@
 #include "cjk_fonts.h"
+#include "i18n/i18n.h"
 #include "dect2/common/inflate.h"
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <vector>
 
 namespace cjk {
@@ -11,11 +13,13 @@ extern const size_t regularSize, boldSize;
 }
 
 void configureBase(ImFontConfig& config) {
+    if (std::strcmp(i18n::current(), "zh") != 0) return;
     static const ImWchar exclude[] = {0x2e80, 0x9fff, 0xa960, 0xa97f, 0xac00, 0xd7ff, 0xf900, 0xfaff, 0xff00, 0xffef, 0};
     config.GlyphExcludeRanges = exclude;
 }
 
 void merge(ImGuiIO& io, ImFont* font, Weight weight) {
+    if (std::strcmp(i18n::current(), "zh") != 0) return;
     static std::vector<uint8_t> fonts[2];
     auto& raw = fonts[weight];
     if (raw.empty()) {
