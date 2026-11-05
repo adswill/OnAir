@@ -1088,3 +1088,6 @@ Measured the per-mode CPU cost of 31 modes with bench_modes (Release, synthetic 
 - ISDB-T Viterbi can use GpuViterbi (bit-exact) but is 5 to 14 times slower than the CPU, so only when GPU is chosen.
 - New GpuFft (Metal): FFT, windowed power spectrum, FIR decimator. Slower than the CPU at every spectrum size, so the "Spectrum" tick only matters when COMPUTE = GPU; FIR not wired. Vulkan / D3D11 not written.
 - Numbers and the modes left on the CPU: docs/GPU-AUDIT-3.7.md.
+
+## 2026-11-05: feat37-sens2
+FM station finder threshold 10x -> 1.6x (off-centre FM 14 -> 5 dB on Linux); SRO gaps in the old baseline found stale (none left); docs/SENSITIVITY-3.7.md has the table.
