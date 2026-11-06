@@ -4,6 +4,7 @@
 #include "dect2/fm/fm_rx.h"
 #include "dect2/fm/rds_live.h"
 #include "../../core/src/net/netcompat.h"
+#include "../../core/src/net/tcp_client.h"
 #include <chrono>
 #include <cstdio>
 #include <cstring>

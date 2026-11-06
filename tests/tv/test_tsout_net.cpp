@@ -3,6 +3,7 @@
 // the RTP header, the HTTP header, the service filter and a restart (reconfigure) in the middle.
 #include "dect2/tv/tsout.h"
 #include "../../core/src/net/netcompat.h"
+#include "../../core/src/net/tcp_client.h"
 #include <chrono>
 #include <cstdio>
 #include <cstring>
