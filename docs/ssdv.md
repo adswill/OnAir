@@ -72,3 +72,10 @@ frequencies, clock errors of +-1500 ppm, a drift of 2 kHz/s, Gaussian and rectan
 rates of 1, 2.4, 3.2 and 4 MHz; noise alone and a fixed wrong speed give nothing. The noise figures are in the test output (`ctest -R ssdv_wenet -V`).
 
 Tests: `ctest -R ssdv` (includes `ssdv_wenet`) (`tests/ssdv`), wiring in `tests/app/test_ssdv_mode.cpp`.
+
+## From a WAV recording (3.7)
+
+Choose **File** as the source, press **Open** and pick the WAV. Any sample rate, mono or stereo (the first channel), 8 / 16 / 24 / 32-bit PCM or 32 / 64-bit float. The
+file must hold the **audio of an FM receiver carrying the FSK waveform** (the discriminator output: 9600 baud G3RUH-style or any of the 1200 - 19200 baud speeds); OnAir
+turns it back into a frequency-modulated carrier (core/src/ssdv/ssdv_audio.cpp) and the normal receiver decodes it. A two-channel IQ WAV is still played as IQ. AFSK tone
+pairs (1200 / 2200 Hz style) are not demodulated by this path. Tested on generated packets in 6 WAV layouts (tests/ssdv/test_ssdv_audio.cpp); no real recording yet.

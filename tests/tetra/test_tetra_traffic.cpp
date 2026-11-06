@@ -115,10 +115,10 @@ int main() {
         t.onEvent(cn, 12.0);
         CHECK(t.slotState(2, 12.5).known && t.slotState(2, 12.5).encMode == 0, "D-CONNECT without the element changes nothing");
         cn.enc = 1;
-        t.onEvent(cn, 13.0);
+        t.onEvent(cn, 13.0); t.onEvent(cn, 13.2);   // 2 identical messages
         CHECK(voiceVerdict(t.slotState(2, 13.5)) == VoiceVerdict::EncryptedNotDecoded, "a PDU of the call saying encrypted wins");
         t.onEvent(su, 14.0);
-        CHECK(voiceVerdict(t.slotState(2, 14.5)) == VoiceVerdict::EncryptedNotDecoded, "encrypted stays encrypted for the call");
+        CHECK(voiceVerdict(t.slotState(2, 14.5)) == VoiceVerdict::Passed, "a clear set-up is accepted at once, even after an encrypted state");
         CallEvent rel; rel.kind = 3; rel.callId = 100;
         t.onEvent(rel, 15.0);
         CHECK(voiceVerdict(t.slotState(2, 15.5)) == VoiceVerdict::StateUnknownNotDecoded, "released call: unknown again");
@@ -129,7 +129,7 @@ int main() {
         t.onEvent(noSlot, 17.0);
         CHECK(!t.slotState(2, 17.5).known, "no channel allocation: no slot, never clear");
         CallEvent first; first.kind = 2; first.callId = 5; first.enc = 1; first.slots = 0x8; first.carrier = 1234;
-        t.onEvent(first, 18.0);
+        t.onEvent(first, 18.0); t.onEvent(first, 18.2);
         CHECK(voiceVerdict(t.slotState(1, 18.5)) == VoiceVerdict::EncryptedNotDecoded, "D-CONNECT saying encrypted: refused");
     }
     {   // a long group call: D-TX-GRANTED / CEASED of the same call keep a clear call alive past kTtlSec; they never make a slot clear on their own
@@ -147,7 +147,7 @@ int main() {
         t.onEvent(otherTx, 40.0);
         CHECK(!t.slotState(3, 50.0).known, "another call's D-TX-GRANTED does not keep it");
         CallEvent enc = su; enc.callId = 400; enc.enc = 1; enc.slots = 0x1;   // timeslot 4, encrypted
-        t.onEvent(enc, 60.0);
+        t.onEvent(enc, 60.0); t.onEvent(enc, 61.0);
         tx.callId = 400;
         t.onEvent(tx, 75.0);
         CHECK(voiceVerdict(t.slotState(4, 85.0)) == VoiceVerdict::EncryptedNotDecoded, "an encrypted call stays encrypted");

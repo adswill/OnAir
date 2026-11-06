@@ -10,6 +10,9 @@
 #include "dect2/hdr/hdr_rx.h"
 #include "dect2/source/hamlib_link.h"
 #include "dect2/source/iq_file.h"
+#include "dect2/ssdv/ssdv_audio.h"
+#include <filesystem>
+#include <cstring>
 #include <algorithm>
 #include <cctype>
 #include <map>
@@ -38,7 +41,29 @@ int adcBitsFor(const DeviceInfo& d, double rateHz) {
 static void applyIqFileInfo(App& a, const std::string& path) {
     a.file.offsetBytes = 0; a.file.endBytes = 0; a.file.bigEndian = false; a.file.centreHz = 0;
     IqFileInfo info; std::string err;
-    if (!probeIqFile(path, info, err)) { if (!err.empty()) { a.engine.log(err); a.file.path.clear(); } return; }
+    if (!probeIqFile(path, info, err)) {
+        // SSDV from a sound recording: a WAV of the radio's audio (any rate, mono or stereo, 8 - 32 bit PCM or float) is turned back into a
+        // frequency-modulated carrier and played as an IQ file (ssdv_audio.h)
+        const ModeTuning* mt = modeTuning(engineStd(a));
+        std::string low = path;
+        for (char& c : low) c = (char)tolower((unsigned char)c);
+        if (mt && !strcmp(mt->id, "ssdv") && low.size() > 4 && low.compare(low.size() - 4, 4, ".wav") == 0) {
+            const std::string dir = iqPrivateTempDir();
+            double outRate = 0; std::string cerr;
+            if (!dir.empty()) {
+                const std::string out = (std::filesystem::path(dir) / "onair-ssdv-audio.cf32").string();
+                if (ssdvWavToCf32File(path, out, outRate, cerr)) {
+                    a.file.path = out; a.file.format = FileFormat::CF32; a.file.bigEndian = false; a.file.offsetBytes = 0; a.file.endBytes = 0;
+                    a.file.sampleRate = outRate;
+                    a.engine.log("SSDV: audio recording " + path + " converted for the receiver (the audio is the FSK waveform of an FM receiver)");
+                    return;
+                }
+                err = cerr;
+            }
+        }
+        if (!err.empty()) { a.engine.log(err); a.file.path.clear(); }
+        return;
+    }
     a.file.path = info.dataPath; a.file.format = info.format; a.file.bigEndian = info.bigEndian;
     a.file.offsetBytes = info.offsetBytes; a.file.endBytes = info.endBytes;
     if (info.sampleRate > 0) a.file.sampleRate = info.sampleRate;

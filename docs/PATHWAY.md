@@ -1121,3 +1121,8 @@ Windows: tests/esp32 loopback includes <functional>. adsb_track updated to the r
 ## 2026-11-05 feat37-discord2 (NXDN false 'encrypted', external FFmpeg folder, SDRconnect log)
 - NXDN: a cipher flag from a VCALL (SACCH superframe, FACCH or CAC) is believed only when seen twice in a row; clear is taken at once; pending state is cleared at call end. A later cipher change re-runs the key lookup. Regression: tests/nxdn/test_nxdn_plugin.cpp (generator option sacchGlitchCipher): without the fix 80 of 96 frames reach the codec, with it 96 of 96. Root cause on the VE3SCP signal not confirmed (no recording).
 - Settings > Advanced: FFmpeg libraries (bundled / external folder; used by the AC-4 and AVS+ run-time loaders only), Log SDRconnect websocket traffic (sdrconnect-ws.log in the data folder). WsClient sends the close frame once per connection.
+
+## 2026-11-06 feat37-discord3
+- TETRA: a call's cipher flag needs 2 identical consecutive set-up messages, clear is accepted at once; a clear call is vetoed by encrypted PDUs of a capture only when they outnumber the clear ones (a cell mixing terminals). Field offsets of MAC-RESOURCE checked against EN 300 392-2 (type 2, fill 1, grant 1, encryption mode 2): correct; CRC-failed blocks never reach the parser.
+- CoreAudio output: a refused stream format (device at another rate) is now converted instead of played at the wrong speed (kevtheskin's choppy / pitched-up audio; Windows and miniaudio already convert). Not reproduced here.
+- SSDV: WAV audio recordings (FSK waveform from an FM receiver) open via File > Open; ssdv_audio converts to an FM carrier at 192 kHz; the receiver floor is now 190 kHz. Test test_ssdv_audio.

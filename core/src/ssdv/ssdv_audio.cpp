@@ -87,8 +87,8 @@ bool ssdvAudioToIq(const std::vector<float>& audio, double audioRate, std::vecto
     double ph = 0;
     iq.resize(up.size());
     for (size_t i = 0; i < up.size(); i++) {
-        ph += kTwoPi * dev * (double)up[i].real() / outRate;
-        if (ph > kPi) ph -= kTwoPi; else if (ph < -kPi) ph += kTwoPi;
+        ph += 2.0 * math::kPi * dev * (double)up[i].real() / outRate;
+        if (ph > math::kPi) ph -= 2.0 * math::kPi; else if (ph < -math::kPi) ph += 2.0 * math::kPi;
         iq[i] = std::complex<float>(0.4f * (float)std::cos(ph), 0.4f * (float)std::sin(ph));
     }
     return true;
