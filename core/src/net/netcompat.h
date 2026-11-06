@@ -25,6 +25,8 @@ inline long long sockPeekClosed(sock_t s) {
     if (select(0, &rd, nullptr, nullptr, &tv) <= 0) return -1;
     char c; return recv(s, &c, 1, 0);
 }
+// receive timeout in ms (Winsock wants a DWORD of milliseconds, POSIX a timeval)
+inline void sockRecvTimeout(sock_t s, int ms) { DWORD d = (DWORD)ms; setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&d, sizeof d); }
 inline void sockShutdown(sock_t s) { shutdown(s, SD_BOTH); }
 inline void sockShutdownRead(sock_t s) { shutdown(s, SD_RECEIVE); }
 } // namespace dect2
@@ -44,6 +46,7 @@ inline long long sockSend(sock_t s, const void* d, size_t n) { return send(s, d,
 inline long long sockSendTo(sock_t s, const void* d, size_t n, const sockaddr_in& to) { return sendto(s, d, n, 0, (const sockaddr*)&to, sizeof to); }
 inline long long sockRecv(sock_t s, void* d, size_t n) { return recv(s, d, n, 0); }
 inline long long sockPeekClosed(sock_t s) { char c; return recv(s, &c, 1, MSG_DONTWAIT); }
+inline void sockRecvTimeout(sock_t s, int ms) { timeval tv{ms / 1000, (ms % 1000) * 1000}; setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof tv); }
 inline void sockShutdown(sock_t s) { shutdown(s, SHUT_RDWR); }
 inline void sockShutdownRead(sock_t s) { shutdown(s, SHUT_RD); }
 } // namespace dect2

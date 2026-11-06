@@ -7,6 +7,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <thread>
 
@@ -93,6 +94,7 @@ int main() {
         CHECK(connect(t, (sockaddr*)&to, sizeof to) == 0, "tcp connect");
         const char* tm = "TP=0\n";
         sockSend(t, tm, strlen(tm));
+        sockRecvTimeout(t, 2000);
         char buf[64] = {};
         const auto n = sockRecv(t, buf, sizeof buf - 1);
         CHECK(n > 0 && std::strncmp(buf, "OK", 2) == 0 && !L.get().tp, "TCP reply '%s'", buf);
@@ -112,7 +114,7 @@ int main() {
         sockClose(s);
     }
     {   // file watch
-        const std::string path = "/tmp/rds_live_test.txt";
+        const std::string path = (std::filesystem::temp_directory_path() / "rds_live_test.txt").string();
         { std::ofstream f(path); f << "Now playing: A - B\n"; }
         RdsLive L;
         L.watchFile(path);
