@@ -4,10 +4,10 @@
 #include "dect2/fm/fm_rx.h"
 #include "dect2/fm/rds_live.h"
 #include "../../core/src/net/netcompat.h"
+#include "../common/tmp_path.h"
 #include <chrono>
 #include <cstdio>
 #include <cstring>
-#include <filesystem>
 #include <fstream>
 #include <thread>
 
@@ -113,7 +113,7 @@ int main() {
         sockClose(s);
     }
     {   // file watch
-        const std::string path = (std::filesystem::temp_directory_path() / "rds_live_test.txt").string();   // no /tmp on Windows
+        const std::string path = tmpPath("rds_live_test.txt");
         { std::ofstream f(path); f << "Now playing: A - B\n"; }
         RdsLive L;
         L.watchFile(path);
