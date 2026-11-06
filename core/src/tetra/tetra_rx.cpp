@@ -333,7 +333,9 @@ CarrierDecode decodeCarrier(const cf32* x, size_t n, int kMcc, int kMnc, int kCc
     std::vector<CallEncryption> gate(traffic.size());
     if (!traffic.empty()) {
         CallEncryption cell;
+        int encPdus = 0, clearPdus = 0;
         for (const auto& m : out.macs) {
+            encPdus += m.encrypted; clearPdus += m.resources - m.encrypted;
             if (m.encrypted > 0) cell.encMode = 1;
             if (m.sysinfo && m.si.bsService >= 0 && (m.si.bsService & kSvcAirEncryption)) cell.cellOffersEncryption = true;
         }
@@ -341,7 +343,8 @@ CarrierDecode decodeCarrier(const cf32* x, size_t n, int kMcc, int kMnc, int kCc
             // the per-call gate AND the cell-level gate: clear only when the call's set-up PDU said "no encryption" and no PDU of the capture is encrypted
             CallEncryption ce = calls ? calls->slotState(traffic[k].tn, nowSec) : CallEncryption{};
             ce.cellOffersEncryption = cell.cellOffersEncryption;
-            if (cell.encMode != 0) ce.encMode = 1;
+            // a call whose own set-up said clear is vetoed only when encrypted PDUs outnumber the clear ones (a cell mixing clear and encrypted terminals)
+            if (cell.encMode != 0 && !(ce.known && ce.encMode == 0 && encPdus <= clearPdus)) ce.encMode = 1;
             gate[k] = ce;
             const VoiceVerdict v = voiceVerdict(ce);
             out.voiceStatus = voiceVerdictText(v);

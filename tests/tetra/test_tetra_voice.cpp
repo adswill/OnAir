@@ -182,6 +182,20 @@ int main() {
             CHECK(k.calls == 0 && k.gaps == 0 && d.voiceTn == 0 && d.voicePassed == 0 && d.voiceNotDecoded > 0, "encrypted call: nothing reaches the sink"); }
         {   Sink k; const CarrierDecode d = decode(-2, ts, k);
             CHECK(k.calls == 0 && d.voiceTn == 0 && d.voicePassed == 0 && k.gaps >= 30, "no call set-up heard: no speech, silence for the followed slot (%d)", k.gaps); }
+        {   // a clear call is never flipped to encrypted by one stray cipher flag; two identical ones are believed; clear is accepted at once
+            CallTracker c; c.setMainCarrier(cell.si.mainCarrier);
+            auto ev = [&](int callId, int enc) { CallEvent e; e.kind = 1; e.callId = callId; e.enc = enc; e.slots = 1 << (4 - ts); e.carrier = cell.si.mainCarrier; c.onEvent(e, now); };
+            ev(7, 0); ev(7, 1);
+            CHECK(c.slotState(ts, now).known && c.slotState(ts, now).encMode == 0, "one stray encrypted flag on a clear call: still clear");
+            ev(7, 0); ev(7, 1); ev(7, 0); ev(7, 1);
+            CHECK(c.slotState(ts, now).encMode == 0, "non-consecutive encrypted flags: still clear");
+            ev(7, 1); ev(7, 1);
+            CHECK(c.slotState(ts, now).encMode == 1, "two consecutive encrypted flags: encrypted");
+            ev(7, 0);
+            CHECK(c.slotState(ts, now).known && c.slotState(ts, now).encMode == 0, "a clear set-up is accepted at once");
+            ev(8, 1);
+            CHECK(!c.slotState(ts, now).known, "a new call that starts with one encrypted flag stays unknown (not decoded)");
+        }
         {   // the timeline across captures: the frames of the followed slot between the last capture and this one come first, as silence
             Sink k0; VoiceTimeline t0;
             CallTracker calls; calls.setMainCarrier(cell.si.mainCarrier);
