@@ -7,6 +7,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <thread>
 
@@ -112,7 +113,7 @@ int main() {
         sockClose(s);
     }
     {   // file watch
-        const std::string path = "/tmp/rds_live_test.txt";
+        const std::string path = (std::filesystem::temp_directory_path() / "rds_live_test.txt").string();   // no /tmp on Windows
         { std::ofstream f(path); f << "Now playing: A - B\n"; }
         RdsLive L;
         L.watchFile(path);

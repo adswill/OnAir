@@ -3,6 +3,7 @@
 // the RTP header, the HTTP header, the service filter and a restart (reconfigure) in the middle.
 #include "dect2/tv/tsout.h"
 #include "../../core/src/net/netcompat.h"
+#include "../../core/src/net/tcp_client.h"
 #include <chrono>
 #include <cstdio>
 #include <cstring>
@@ -27,8 +28,7 @@ static sock_t udpSock(int& port) {
     bind(s, (sockaddr*)&a, sizeof a);
     socklen_t l = sizeof a; getsockname(s, (sockaddr*)&a, &l);
     port = ntohs(a.sin_port);
-    timeval tv{0, 200000};
-    setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+    sockRecvTimeout(s, 200);   // Winsock takes a DWORD of ms, not a timeval
     return s;
 }
 
@@ -80,7 +80,7 @@ int main() {
         std::atomic<bool> stop{false};
         const auto t0 = Clk::now();
         std::thread ru([&] { uint8_t b[2048]; while (!stop) { const auto n = sockRecv(rx, b, sizeof b); if (n > 0) cap.d.push_back({std::chrono::duration<double>(Clk::now() - t0).count(), std::vector<uint8_t>(b, b + n)}); } });
-        std::thread rh([&] { uint8_t b[8192]; timeval tv{0, 200000}; setsockopt(h, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv); while (!stop) { const auto n = sockRecv(h, b, sizeof b); if (n > 0) http.insert(http.end(), b, b + n); else if (n == 0) break; } });
+        std::thread rh([&] { uint8_t b[8192]; sockRecvTimeout(h, 200); while (!stop) { const auto n = sockRecv(h, b, sizeof b); if (n > 0) http.insert(http.end(), b, b + n); else if (n == 0) break; } });
         int cc = 0; size_t sent = 0;
         feed(out, 2.0, 4.0, cc, sent);
         std::this_thread::sleep_for(std::chrono::milliseconds(600));
