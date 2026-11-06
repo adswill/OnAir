@@ -53,7 +53,7 @@ int main() {
         CallTracker t; t.setMainCarrier(1234);
         CallEvent clear; clear.kind = 1; clear.callId = 5; clear.enc = 0; clear.slots = 0b0010; clear.carrier = 1234; clear.gssi = 4001; clear.issi = 2345678;
         CallEvent enc;   enc.kind = 1;   enc.callId = 6;   enc.enc = 1;   enc.slots = 0b0100; enc.carrier = 1234;   enc.gssi = 4002; enc.issi = 999;   // even if a parser leaked IDs
-        t.onEvent(clear, 100); t.onEvent(enc, 100);
+        t.onEvent(clear, 100); t.onEvent(enc, 100); t.onEvent(enc, 100);   // the cipher flag is believed after 2 identical messages
         uint32_t tg = 1, is = 1;
         t.slotIds(3, 101, tg, is);
         CHECK(tg == 4001 && is == 2345678, "unencrypted call: GSSI and ISSI kept");
@@ -61,10 +61,9 @@ int main() {
         CHECK(tg == 0 && is == 0, "encrypted call: no IDs");
         t.slotIds(3, 200, tg, is);
         CHECK(tg == 0 && is == 0, "expired set-up: no IDs");
-        CallEvent late = clear; late.slots = 0b0100; late.callId = 6; late.enc = 0;   // a later 'clear' PDU cannot un-encrypt a call
+        CallEvent late = clear; late.slots = 0b0100; late.callId = 6; late.enc = 0;   // a later 'clear' PDU is accepted at once (a false cipher flag recovers)
         t.onEvent(late, 102);
-        t.slotIds(2, 103, tg, is);
-        CHECK(tg == 0 && is == 0, "encrypted is sticky: still no IDs");
+        CHECK(t.slotState(3, 103).known && t.slotState(3, 103).encMode == 0, "a clear PDU after an encrypted one: clear again");
         SlotInfo si[4];
         t.slotIds(3, 101, si[2].talkgroup, si[2].issi); si[2].state = SlotState::Voice; si[2].lastHeardSec = 100;
         SlotSelect a2; a2.mode = SlotMode::Talkgroup; a2.id = 4001;

@@ -119,7 +119,7 @@ struct SsdvReceiver::Impl {
         isReady = false;
         fe.chanPass = 12000.0; fe.chanStop = 20000.0; fe.chanPass2 = 3500.0; fe.chanStop2 = 7500.0;
         fe.clipHz = 12000.f; fe.afcMaxHz = 12000.0;
-        if (!fe.configure(fs, ssdvTuning().minSampleRate)) return;
+        if (!fe.configure(fs, 190000)) return;   // the tuning asks 1 Msps of a radio; a recording of audio (ssdv_audio.h) comes at 192 kHz
         wn.configure(fs);
         wn.setCallback([this](const wenet::Hit& h) { onWenet(h); });
         applyMask();

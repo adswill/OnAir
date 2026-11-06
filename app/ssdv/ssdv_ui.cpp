@@ -162,6 +162,9 @@ void tick(App& a) {
 
 void tuner(App&, bool&) {
     load();
+    ImGui::PushTextWrapPos(0);
+    ImGui::TextDisabled("%s", tr("From a sound recording: choose File as the source, press Open and pick the WAV (any sample rate, mono or stereo, 8 - 32 bit). It must hold the audio of an FM receiver with the FSK waveform (9600 baud or other speeds), not AFSK tones."));
+    ImGui::PopTextWrapPos();
     if (ImGui::CollapsingHeader(trw("Advanced##ssdv"))) {
         ImGui::TextDisabled("%s", tr("Speed"));
         ImGui::SameLine();

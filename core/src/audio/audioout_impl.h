@@ -16,6 +16,7 @@ namespace dect2 {
 struct AudioOut::Impl {
     std::string device;               // chosen output device by name, "" = default (set before the backend starts)
     void* backend = nullptr;          // owned by the backend implementation
+    void* backendAux = nullptr;       // CoreAudio: the rate-conversion state of the render callback
     int backendKind = 0;              // 1 our own backend, 2 the miniaudio fallback (Windows, Linux)
     std::vector<float> ring;          // interleaved stereo
     size_t frames = 0;                // ring capacity in frames (power of two)
