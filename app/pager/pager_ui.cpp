@@ -37,6 +37,7 @@ struct State {
     size_t ignoredHidden = 0;            // pages the ignore list hid in the last pass over the table
     bool watchOnly = false;              // the Messages view shows only watched addresses (saved as pagerWatchOnly)
     bool pocsag = true, flex = true;
+    bool both = false;                   // decode POCSAG and FLEX together on this channel, from either mode entry (saved as pagerBoth)
     bool decodedOnly = false;            // hide tone-only and empty pages from the table, Copy and the list (saved as pagerDecodedOnly)
     bool baud512 = true, baud1200 = true, baud2400 = true;
     int pushedBaud = -1;
@@ -93,6 +94,7 @@ void loadRead() {
     S.decodedOnly = d.getI("pagerDecodedOnly", 0) != 0;
     S.combine = d.getI("pagerCombine", 1) != 0;
     S.selcall = d.getI("pagerSelcall", 0) != 0;
+    S.both = d.getI("pagerBoth", 0) != 0;
     {
         std::string k = d.getS("pagerKeywords", "");
         for (auto& c : k) if (c == '\x1e') c = '\n';
@@ -208,7 +210,7 @@ void lampRow(const App& a) {
     lamp("Signal", !on ? 0 : t.signal ? 1 : 0); flowNext(12 * gUi);
     lamp("Sync", !on ? 0 : t.sync ? 1 : t.state == 1 ? 2 : 0); flowNext(12 * gUi);
     const SubMode* sm = curSub(a);   // a protocol entry (POCSAG or FLEX) decodes only its own
-    const int m = sm ? sm->decoders : 3;
+    const int m = S.both || !sm ? 3 : sm->decoders;
     if (m & 1) { lamp("POCSAG", !on ? 0 : t.timeSec - t.lastPocsagSec < 60 ? 1 : t.lastPocsagSec > 0 ? 2 : 0); flowNext(12 * gUi); }
     if (m & 2) lamp("FLEX", !on ? 0 : t.timeSec - t.lastFlexSec < 60 ? 1 : t.lastFlexSec > 0 ? 2 : 0);
     flowEnd();
@@ -239,6 +241,9 @@ void messageView(App& a) {
     if (ImGui::Checkbox(tr("Watched only"), &S.watchOnly)) { plat::prefs().setI("pagerWatchOnly", S.watchOnly ? 1 : 0); plat::prefs().flush(); }
     ImGui::EndDisabled();
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Show only the capcodes of the watch list (set it in the Capcodes view)"));
+    flowNext(12 * gUi);
+    if (ImGui::Checkbox(tr("POCSAG + FLEX (both)"), &S.both)) { plat::prefs().setI("pagerBoth", S.both ? 1 : 0); savePrefs(a); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Decode POCSAG and FLEX at the same time on this channel, whichever mode entry is selected. They share one demodulator; only the channel you are tuned to is heard, so use it when a network or neighbouring channels carry both."));
     flowNext(12 * gUi);
     ImGui::Checkbox("POCSAG", &S.pocsag);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("POCSAG is the ITU-R M.584 / CCIR Radiopaging Code No. 1 (RPC1): the same signal, so CCIR paging on the pager bands is decoded here at 512, 1200 and 2400 baud. The CCIR 5-tone selective calls are in the Tones mode."));
@@ -626,6 +631,11 @@ void tick(App& a) {
     loadRead();
     keywordScan(a);
     const int m = baudMask();
+    {   // both protocols from either entry; otherwise the entry's own (a mode switch resets the engine to the entry)
+        const SubMode* sm = curSub(a);
+        const int want = S.both || !sm ? 3 : sm->decoders;
+        if (a.engine.pager().protocols() != want) a.engine.pager().setProtocols(want);
+    }
     if ((int)a.pagerNarrow != S.pushedNarrow) { a.engine.pager().setNarrowChannel(a.pagerNarrow); S.pushedNarrow = a.pagerNarrow; }
     if (m != S.pushedBaud) { a.engine.pager().setPocsagBauds(m); S.pushedBaud = m; }
     if ((int)S.selcall != S.pushedSelcall) { a.engine.pager().setSelcall(S.selcall); S.pushedSelcall = S.selcall; }
