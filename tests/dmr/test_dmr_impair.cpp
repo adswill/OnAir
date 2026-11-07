@@ -54,6 +54,17 @@ int main() {
             check(name, s);
         }
     }
+    // Clear calls at low SNR: a bit-flipped embedded link control must never mark a clear call "encrypted" (its voice would go silent).
+    for (int direct = 0; direct < 2; direct++)
+        for (double snr : {4.0, 6.0, 8.0, 11.0}) {
+            DmrScenario s;
+            s.cfg.snrDb = snr; s.cfg.direct = direct; s.secs = 20; s.cfg.encrypted = false;
+            const DmrRunResult r = dmrRun(s);
+            int priv = 0, calls = 0;
+            for (const auto& c : r.tel.callLog) { if (c.kind <= 2) { calls++; if (c.privacy) priv++; } }
+            printf("clear calls %s SNR %4.1f dB: %d logged, %d flagged encrypted\n", direct ? "direct" : "base", snr, calls, priv);
+            if (priv) { printf("FAIL: clear call flagged encrypted at %.1f dB\n", snr); fails++; }
+        }
     printf(fails ? "%d FAILED\n" : "all passed\n", fails);
     return fails ? 1 : 0;
 }

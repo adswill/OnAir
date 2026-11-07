@@ -948,13 +948,24 @@ void Link::voiceBurst(Track& t, int pos, const Bits& burst, int lcss, const Bits
             parseFullLc(lc, f);
             if (f.flco == kFlcoGroupVoice || f.flco == kFlcoUnitVoice) {
                 const int kind = f.flco == kFlcoUnitVoice ? 1 : (f.dst >= 0xFFFFF0 ? 2 : 0);
-                if (!t.inCall) startCall(t, kind, f.src, f.dst, f.svc, true, true);
+                // The embedded LC is protected by a 5-bit checksum only: one that passes by chance must not mark a clear call "encrypted" (its voice is
+                // then skipped) or swap its IDs. Privacy and an ID change are believed when two embedded LCs in a row agree; clear and unchanged are taken at once.
+                const uint64_t key = (uint64_t)f.src << 32 | (uint64_t)f.dst << 8 | f.svc;
+                const bool agreed = t.embPendKey == key && t.embPendSet;
+                t.embPendKey = key; t.embPendSet = true;
+                const bool idChange = t.inCall && t.call.idsKnown && (t.call.src != f.src || t.call.dst != f.dst);
+                const bool risky = (f.svc & 0x40) || idChange;
+                if (risky && !agreed) {
+                    // wait for the next copy
+                } else if (!t.inCall) startCall(t, kind, f.src, f.dst, f.svc, true, true);
                 else if (!t.call.idsKnown) {
                     t.call.src = f.src; t.call.dst = f.dst; t.call.kind = kind; t.call.idsKnown = true;
                     t.call.emergency = f.svc & 0x80; t.call.privacy = f.svc & 0x40;
                     say("slot " + std::to_string(slotOf(t)) + ": call from " + idText(f.src) + " to " + idText(f.dst));
-                } else if (t.call.src != f.src || t.call.dst != f.dst) {
+                } else if (idChange) {
                     startCall(t, kind, f.src, f.dst, f.svc, true, true);
+                } else if ((f.svc & 0x40) && !t.call.privacy) {
+                    t.call.privacy = true;     // confirmed twice
                 }
             } else if (f.flco >= kFlcoTalkerAliasHeader && f.flco <= kFlcoTalkerAliasBlock3) {
                 t.ta.add(f);

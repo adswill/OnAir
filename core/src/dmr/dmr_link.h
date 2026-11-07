@@ -87,6 +87,7 @@ private:
         int vpos = -1;                              // voice burst position of the last voice burst, -1 none
         uint64_t lastVoiceSample = 0;
         int lcHave = 0;
+        uint64_t embPendKey = 0; bool embPendSet = false;   // the last embedded LC (IDs + service options), to confirm risky changes
         Bits lcFrag[4];
         TalkerAlias ta;
         Assembler msg;
