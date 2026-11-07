@@ -62,6 +62,7 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | SITOR-B | 119 | 121 | 120 | 194 | feat36-modes | 3.6; FEC teletype text (NAVTEX and HF coast stations) through the marine FSK front end and the NAVTEX framing; synthetic NAVTEX signals only; the family and standards date from the WIP row, only the poll slot is new |
 | SELCAL (aircraft tone call) | 240 | 242 | 241 | 200 | feat36-dsc | 3.6; own mode for the SELCAL detector of the tone decoders (call log, codes, aircraft table); synthetic signals only; numbers may need to move at merge |
 | Sub-GHz sensors | 241 | 243 | 242 | 201 | feat37-sensors | 3.7; 433.92 MHz first (315 / 868 / 915 MHz too); decoders vendored from rtl_433, see docs/SENSORS-3.7.md; numbers may need to move at merge |
+| Sferics (lightning) | 243 | 245 | 244 | 203 | feat37-modesB | 3.7; broadband impulse counter, mains-train rejection; synthetic signals only; family 242 / std 244 / 243 / slot 202 are left for feat37-modesA; numbers may need to move at merge |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |
@@ -69,6 +70,6 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 Protocol entries (a row with a subId, such as FT8 in HF digital or POCSAG in pagers) share their family on purpose; the test checks
 that each (family, subId) pair is unique instead.
 
-`kNumFamilies` = 242, `kPollSeqSlots` = 202 (families 213 to 234 and poll slots 189 to 194 are kept for the other 3.6 lanes).
+`kNumFamilies` = 244, `kPollSeqSlots` = 204 (families 213 to 234 and poll slots 189 to 194 are kept for the other 3.6 lanes).
 
 A new mode takes the next free family above the highest one in this table and the next free poll slot, and adds its row here.
