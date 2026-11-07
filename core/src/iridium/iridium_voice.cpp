@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstdio>
+#include <ctime>
 #include <deque>
 #include <mutex>
 
@@ -18,6 +19,7 @@ constexpr double kCallGap = 1.0;        // seconds without a frame that end a ca
 constexpr double kSameFreqHz = 4000;    // a call's frequency drifts with Doppler; frames this close belong together
 constexpr size_t kMaxCalls = 100, kMaxActive = 8;
 constexpr size_t kMaxPcm = 8000 * 300;  // five minutes kept per call
+constexpr int kMinPeak = 64;            // a call whose loudest sample is below this (about -54 dBFS) is silence: no WAV is written
 constexpr double kCtxSec = 5, kCtxHz = 3000;
 }
 
@@ -51,6 +53,7 @@ struct IridiumVoice::Impl {
         int rate = 8000;
         float upPrev = 0;
         bool saved = false;
+        int peak = 0;                       // loudest sample of the call's sound, 0..32768
         bool mute = false, solo = false;
     };
     struct Ctx { double t, f; int sat, beam; };
@@ -69,6 +72,7 @@ struct IridiumVoice::Impl {
     std::vector<float> st;
 
     static const char* statusOf(const Call& k, bool codecThere) {
+        if (k.c.decoded && k.peak < kMinPeak) return "silent audio";   // the plug-in answered, but only zeros: nothing is saved
         if (k.c.decoded) return "decoded";
         if (k.c.frames > 0 && k.c.silent == k.c.frames) return "silence";
         if (!k.c.readable) return "not readable";
@@ -79,11 +83,12 @@ struct IridiumVoice::Impl {
         if (k.saved) return;
         k.saved = true;
         if (recDir.empty() || k.pcm.empty()) return;
+        if (k.peak < kMinPeak) { k.c.warning = "The codec plug-in returned only silence for this call (wrong plug-in, or the voice frames are not in the layout it expects). No WAV was written."; return; }
         char name[160];
         snprintf(name, sizeof name, "/iridium-call-%03d-%.3fMHz-%s.wav", k.c.id, k.c.freqHz / 1e6, k.c.downlink ? "down" : "up");
         const std::string path = recDir + name;
         FILE* f = fopen(path.c_str(), "wb");
-        if (!f) return;
+        if (!f) { k.c.warning = "The recording could not be written: " + path; return; }
         auto u32 = [&](uint32_t v) { for (int i = 0; i < 4; i++) fputc(int((v >> (8 * i)) & 255), f); };
         auto u16 = [&](uint16_t v) { fputc(v & 255, f); fputc(v >> 8, f); };
         const uint32_t bytes = uint32_t(k.pcm.size() * 2);
@@ -91,14 +96,18 @@ struct IridiumVoice::Impl {
         u32(16); u16(1); u16(1); u32(uint32_t(k.rate)); u32(uint32_t(k.rate) * 2); u16(2); u16(16);
         fwrite("data", 1, 4, f); u32(bytes);
         for (int16_t s : k.pcm) u16(uint16_t(s));
+        const bool wrote = fflush(f) == 0 && !ferror(f);
         fclose(f);
+        if (!wrote) { std::remove(path.c_str()); k.c.warning = "The recording could not be written (disk full?): " + path; return; }
         k.c.file = path;
+        k.c.wallEnd = int64_t(std::time(nullptr));
     }
 
     void close(Call& k) {
         if (!k.c.active && k.saved) return;
         k.c.active = false;
         save(k);
+        k.c.status = statusOf(k, codec::pluginLoaded("iridium"));
         k.codec.reset();
     }
 
@@ -203,6 +212,7 @@ void IridiumVoice::feed(const IridiumBurstBits& b, const IridiumFrame& f) {
             if (k->pcm.size() < kMaxPcm) k->pcm.insert(k->pcm.end(), pcm.begin(), pcm.end());
             int pk = 0;
             for (int16_t x : pcm) pk = std::max(pk, std::abs(int(x)));
+            k->peak = std::max(k->peak, pk);
             k->c.level = float(pk) / 32768.f;
             k->c.audible = s.isAudible(*k, s.anySolo());
             if (k->c.audible) s.play(*k, pcm);
@@ -210,6 +220,11 @@ void IridiumVoice::feed(const IridiumBurstBits& b, const IridiumFrame& f) {
     }
     k->c.mute = k->mute; k->c.solo = k->solo;
     k->c.status = Impl::statusOf(*k, codec::pluginLoaded("iridium"));
+    if (k->c.status == "codec needed")
+        k->c.warning = "No Iridium voice codec is installed, so no sound and no WAV file. Install your own plug-in (docs/CODECS.md).";
+    else if (k->c.status == "silent audio" && k->c.warning.empty() && k->c.decoded >= 25)
+        k->c.warning = "The codec plug-in returns only silence so far (wrong plug-in, or the voice frames are not in the layout it expects).";
+    else if (k->c.status == "decoded") k->c.warning.clear();
 }
 
 void IridiumVoice::expire(double t) { std::lock_guard<std::mutex> lk(p_->mu); p_->expireLocked(t); }
