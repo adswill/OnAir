@@ -25,8 +25,9 @@ struct AisFilter {
     uint32_t groups = (1u << AIS_GRP_COUNT) - 1; // bit g = AisShipGroup g shown
     bool movingOnly = false;                     // only stations with a known speed of at least minSogKn
     float minSogKn = 0.5f;
+    std::vector<std::string> countries;          // ISO 3166-1 alpha-2 codes of the MMSI's MID (ais_mid.h): empty shows every country; a station without a country (SART, ...) is hidden when set
     bool matches(const AisVessel& v) const;
-    bool active() const { return classes != 0x3F || groups != (1u << AIS_GRP_COUNT) - 1 || movingOnly; }
+    bool active() const { return classes != 0x3F || groups != (1u << AIS_GRP_COUNT) - 1 || movingOnly || !countries.empty(); }
     std::string toText() const;                  // "classes=63;groups=1023;moving=0;sog=0.5" for the settings
     static AisFilter fromText(const std::string& s);   // unknown keys are ignored, a bad number keeps the default
 };
