@@ -238,6 +238,14 @@ target_include_directories(dect2core PRIVATE third_party/rtl_433/include)
 target_sources(dect2core PRIVATE third_party/ssdv/ssdv.c third_party/ssdv/rs8.c)   # SSDV packet decoder / encoder (fsphil/ssdv, GPL-3.0-or-later; rs8.c Phil Karn LGPL), see THIRD_PARTY.md
 target_include_directories(dect2core PRIVATE third_party/ssdv)
 set_source_files_properties(third_party/ssdv/ssdv.c third_party/ssdv/rs8.c PROPERTIES LANGUAGE C)
+# libacars (szpajder/libacars, MIT, third_party/libacars): the asn1c tables, runtime and text formatter of the FANS-1/A CPDLC messages, see THIRD_PARTY.md
+file(GLOB ONAIR_LA_SRC CONFIGURE_DEPENDS third_party/libacars/libacars/*.c third_party/libacars/libacars/asn1/*.c)
+target_sources(dect2core PRIVATE ${ONAIR_LA_SRC})
+set_source_files_properties(${ONAIR_LA_SRC} PROPERTIES LANGUAGE C)
+if(NOT MSVC)
+  set_source_files_properties(${ONAIR_LA_SRC} PROPERTIES COMPILE_OPTIONS "-w")
+endif()
+target_include_directories(dect2core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/third_party/libacars)
 target_sources(dect2core PRIVATE core/src/ros/ros_detect.cpp)   # ROS identifier (proprietary mode, identification only; docs/ROS.md), used by the signal identifier
 # TLS for the remote-control API (headless server): OpenSSL, off by default so the packages need no extra library (docs/headless-server.md)
 option(DECT2_WITH_TLS "Serve the remote-control API over HTTPS / wss (links OpenSSL)" OFF)

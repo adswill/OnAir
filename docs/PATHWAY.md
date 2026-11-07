@@ -1126,3 +1126,7 @@ Windows: tests/esp32 loopback includes <functional>. adsb_track updated to the r
 - TETRA: a call's cipher flag needs 2 identical consecutive set-up messages, clear is accepted at once; a clear call is vetoed by encrypted PDUs of a capture only when they outnumber the clear ones (a cell mixing terminals). Field offsets of MAC-RESOURCE checked against EN 300 392-2 (type 2, fill 1, grant 1, encryption mode 2): correct; CRC-failed blocks never reach the parser.
 - CoreAudio output: a refused stream format (device at another rate) is now converted instead of played at the wrong speed (kevtheskin's choppy / pitched-up audio; Windows and miniaudio already convert). Not reproduced here.
 - SSDV: WAV audio recordings (FSK waveform from an FM receiver) open via File > Open; ssdv_audio converts to an FM carrier at 192 kHz; the receiver floor is now 190 kHz. Test test_ssdv_audio.
+
+## 2026-11-07 feat37-modesA
+- Checked MODE-GAPS: FST4, FST4W, Q65 and MSK144 are already modes (hfdig, kFtxModes 6 to 9; mode table rows 156 to 158), nothing added for them.
+- CPDLC: FANS-1/A ASN.1 PER decode (uplink and downlink sets, CR1 / CC1 / DR1 / AT1 with CRC-16) through the vendored libacars asn1c tables (third_party/libacars, MIT), shown in the VDL2 frame detail and the ACARS / Aero detail. Test test_aero_cpdlc (4 real downlinks + 1 real connect request from libacars examples, loopback encode/decode, damaged/truncated/lower-case). Not a separate mode entry: a layer on the ACARS readers (docs/CPDLC.md). ATN B1 CPDLC and ADS-C contract decode still missing.

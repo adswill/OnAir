@@ -3,6 +3,7 @@
 #include "vdl2_internal.h"
 #include "dect2/acars/acars_proto.h"
 #include "dect2/aero/aero_adsc.h"
+#include "dect2/aero/aero_cpdlc.h"
 #include "dect2/aero/aero_pos.h"
 #include <algorithm>
 #include <cmath>
@@ -156,15 +157,16 @@ void analyseAcarsText(Vdl2Message& m, const std::string& label, const std::strin
             }
         }
     }
-    // FANS-1/A CPDLC (ARINC 622 IMI AT1 / CR1 / CC1 / DR1): found and named, the ASN.1 PER body is not decoded
-    for (const char* imi : {".AT1", ".CR1", ".CC1", ".DR1"}) {
-        const size_t at = text.find(imi);
-        if (at != std::string::npos) {
-            const std::string what = imi[1] == 'A' ? "CPDLC message" : imi[1] == 'C' && imi[2] == 'R' ? "CPDLC connect request" : imi[2] == 'C' ? "CPDLC connect confirm" : "CPDLC disconnect";
-            addLine(m.detail, "FANS-1/A %s (IMI %s), ground facility %s, %zu hex digits of ASN.1 PER (not decoded)", what.c_str(), imi + 1, text.substr(at > 7 ? at - 7 : 0, at > 7 ? 7 : at).c_str(),
-                    text.size() - at - 4);
+    // FANS-1/A CPDLC (ARINC 622 IMI AT1 / CR1 / CC1 / DR1): the ASN.1 PER body decoded to the plain message text (aero_cpdlc.h)
+    {
+        AeroCpdlcMessage cp;
+        if (aeroDecodeCpdlc(text, uplink, cp)) {
+            m.detail += aeroDescribeCpdlc(cp);
+            const char* what = cp.imi == "AT1" ? "CPDLC message" : cp.imi == "CR1" ? "CPDLC connect request" : cp.imi == "CC1" ? "CPDLC connect confirm" : "CPDLC disconnect";
+            std::string one;
+            for (char c : cp.text) one += (c == '\n' || c == '\r') ? ' ' : c;
             m.summary = "ACARS " + label + " FANS-1/A " + what;
-            break;
+            if (cp.parsed && !one.empty()) m.summary += ": " + (one.size() > 80 ? one.substr(0, 80) + "..." : one);
         }
     }
     if (m.hasPos) addLine(m.detail, "  position %.4f %.4f%s (%s)", m.lat, m.lon, m.hasAlt ? (" " + std::to_string(m.altFt) + " ft").c_str() : "", m.posKind.c_str());
