@@ -286,6 +286,7 @@ protected:
                     memcpy(&im, b + 8 * k + 4, 4);
                     conv_[k] = cf32(re * scale, im * scale);
                 }
+                scrubNonFinite(conv_.data(), n / 8);
                 push(conv_.data(), n / 8);
             } else if (t == kMsgClientSync) {   // the controlling client moved the radio, or control changed hands
                 std::lock_guard<std::mutex> lk(infoMu_);

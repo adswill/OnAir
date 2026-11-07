@@ -104,7 +104,7 @@ struct FakeSdrpp {
     sock_t ls = kBadSock;
     int port = 0;
     std::thread th;
-    std::atomic<bool> run{true}, dropNow{false};
+    std::atomic<bool> run{true}, dropNow{false}, badScale{false};   // badScale: the scale field of every baseband packet is NaN (a garbled server)
     std::atomic<int> connections{0}, rejected{0};
     std::mutex mu;
     // the Airspy source's state
@@ -296,7 +296,7 @@ struct FakeSdrpp {
                 int count;
                 { std::lock_guard<std::mutex> lk(mu); count = (int)((srId == 0 ? 10e6 : 2.5e6) * dt * throttle); }
                 std::vector<unsigned char> body{0, 0, (unsigned char)st, 0};
-                const float scale = 1.0f;
+                const float scale = badScale ? std::nanf("") : 1.0f;
                 uint32_t su; memcpy(&su, &scale, 4); u32(body, su);
                 for (int i = 0; i < count; i++) {
                     if (st == 2) { float re = level, im = -0.25f; uint32_t a, b2; memcpy(&a, &re, 4); memcpy(&b2, &im, 4); u32(body, a); u32(body, b2); }
@@ -510,6 +510,34 @@ static void testClient() {
 }
 
 // a server started with --autostart: streaming when the client connects, so SDR++ sends its rate late and garbles a GET_UI asked before it
+// A garbled server (scale field NaN, or float samples that are NaN / infinity) must never put a non-finite sample into the receiver: it would stay
+// in every filter and AGC until Stop.
+static void testGarbledScale() {
+    FakeSdrpp srv;
+    CHECK(srv.start());
+    if (!srv.port) return;
+    NetRadio nr; nr.type = NetRadio::SdrppServer; nr.host = "127.0.0.1"; nr.port = srv.port;
+    std::string err;
+    CHECK(probeNetRadio(nr, 2000, err));
+    auto devs = netRadioDevices({nr});
+    CHECK(devs.size() == 1);
+    if (devs.empty()) { srv.stop(); return; }
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    srv.badScale = true;
+    auto src = makeSource(devs[0]);
+    IqRing ring(1u << 20);
+    TuneSettings s;
+    s.sampleRate = 2.5e6; s.centerHz = 100e6; s.gainDb = 10;
+    CHECK(src->start(s, ring, err));
+    std::vector<cf32> buf(8192);
+    CHECK(readIq(ring, buf));
+    size_t nonFinite = 0;
+    for (const cf32& v : buf) if (!std::isfinite(v.real()) || !std::isfinite(v.imag())) nonFinite++;
+    CHECK(nonFinite == 0);
+    src->stop();
+    srv.stop();
+}
+
 static void testConnectRace() {
     FakeSdrpp srv;
     srv.racy = true;
@@ -551,6 +579,7 @@ int main() {
     testPrefs();
     testClient();
     testConnectRace();
+    testGarbledScale();
     if (fails) { fprintf(stderr, "%d failure(s)\n", fails); return 1; }
     printf("sdrpp: all passed\n");
     return 0;

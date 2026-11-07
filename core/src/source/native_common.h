@@ -398,6 +398,15 @@ inline bool openErrorLooksTransient(const std::string& e) {
     return false;
 }
 
+// Samples that arrive over a network from a server (SDR++ float packets or a garbled scale field, SpyServer float format): a NaN or infinity
+// would stay in every filter and AGC of the receiver until Stop. They are replaced by silence. Returns how many were replaced.
+inline size_t scrubNonFinite(cf32* p, size_t n) {
+    size_t bad = 0;
+    for (size_t i = 0; i < n; i++)
+        if (!std::isfinite(p[i].real()) || !std::isfinite(p[i].imag())) { p[i] = cf32(0.f, 0.f); bad++; }
+    return bad;
+}
+
 class NativeSource : public IqSource {
 public:
     ~NativeSource() override = default;
