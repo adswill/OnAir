@@ -69,7 +69,7 @@ def main():
     cc = json.load(open(os.path.join(bd, "compile_commands.json")))
     tgt_src = {}
     for e in cc:
-        m = re.match(r"CMakeFiles/([^/]+)\.dir/", e.get("output", ""))
+        m = re.search(r"CMakeFiles/([^/]+)\.dir/", e.get("output", ""))
         if m:
             tgt_src.setdefault(m.group(1), set()).add(os.path.relpath(e["file"], src))
     cm = open(os.path.join(src, "CMakeLists.txt")).read()
@@ -130,6 +130,8 @@ def main():
     s = f"scope={scope} areas={sorted(areas)} changed={len(files)} shard={a.shard}\ntests={len(sel)} (timing {len(timing)}) targets={len(targets)} of {len(set(test_tgt.values()))} unmapped_tests={len(unmapped)}\n" + "\n".join(why[:10])
     open(os.path.join(a.out, "summary.txt"), "w").write(s + "\n")
     print(s)
+    if sel and not targets:
+        sys.exit("ci_select: tests selected but no build targets found (compile_commands.json format?)")
 
 if __name__ == "__main__":
     main()
