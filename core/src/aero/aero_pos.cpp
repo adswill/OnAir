@@ -1,5 +1,6 @@
 // Positions from Aero ACARS messages (formats and sources in aero_pos.h).
 #include "dect2/aero/aero_pos.h"
+#include "dect2/aero/aero_cpdlc.h"
 #include "dect2/aero/aero_adsc.h"
 
 #include <cctype>
@@ -141,6 +142,8 @@ bool aeroPositionFromMessage(const std::string& label, const std::string& text, 
         }
         return true;
     }
+    AeroCpdlcMessage cp;
+    if (detail && aeroDecodeCpdlc(text, uplink, cp)) *detail = aeroDescribeCpdlc(cp);
     return aeroParseTextPosition(label, text, out);
 }
 

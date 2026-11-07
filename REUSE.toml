@@ -546,3 +546,11 @@ path = [
 precedence = "closest"
 SPDX-FileCopyrightText = "Copyright the rtl_433 authors (Benjamin Larsson, Christian W. Zuckschwerdt, Tommy Vestermark and contributors; see the header of each file)"
 SPDX-License-Identifier = "GPL-2.0-or-later"
+
+[[annotations]]
+path = [
+  "third_party/libacars/**",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = "Copyright (c) 2018-2023 Tomasz Lemiech (libacars); asn1c runtime Copyright (c) 2003-2017 Lev Walkin; see the header of each file"
+SPDX-License-Identifier = "MIT AND BSD-2-Clause"
