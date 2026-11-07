@@ -124,7 +124,7 @@ void networksView(App& a) {
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s%s%s\nclick to show only this network's devices and frames", p.zigbee ? "Zigbee network" : "IEEE 802.15.4 network (no Zigbee header seen)",
                                                       p.stackProfile >= 0 ? (p.stackProfile == 2 ? ", stack profile 2 (Zigbee PRO)" : p.stackProfile == 1 ? ", stack profile 1" : "") : "", p.joinOpen ? "\njoining is open" : "");
         ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0); ImGui::TextUnformatted(p.extPan.c_str()); ImGui::PopFont();
-        ImGui::TableNextColumn(); if (p.channel) ImGui::Text("%d", p.channel); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (p.channel) ImGui::TextUnformatted(dect2::zigbee::channelCodeName(p.channel).c_str()); else ImGui::TextDisabled("-");
         ImGui::TableNextColumn(); ImGui::TextUnformatted(p.coordinator.c_str());
         ImGui::TableNextColumn(); ImGui::Text("%d", p.devices);
         ImGui::TableNextColumn(); ImGui::Text("%.0f", p.rssi);
@@ -201,7 +201,7 @@ void framesView(App& a) {
         for (size_t i : rows) {
             const auto& f = log[i];
             char b[600];
-            snprintf(b, sizeof b, "%s\t%d\t%s\t%s > %s\t%d\t%s\t%s\n", clock(f.wallTime).c_str(), f.channel, f.type.c_str(), f.src.c_str(), f.dst.c_str(), f.len, f.fcsOk ? "ok" : "bad", f.info.c_str());
+            snprintf(b, sizeof b, "%s\t%s\t%s\t%s > %s\t%d\t%s\t%s\n", clock(f.wallTime).c_str(), dect2::zigbee::channelCodeName(f.channel).c_str(), f.type.c_str(), f.src.c_str(), f.dst.c_str(), f.len, f.fcsOk ? "ok" : "bad", f.info.c_str());
             txt += b;
         }
         ImGui::SetClipboardText(txt.c_str());
@@ -222,7 +222,7 @@ void framesView(App& a) {
             const auto& f = log[rows[(size_t)i]];
             ImGui::TableNextRow();
             ImGui::TableNextColumn(); ImGui::TextUnformatted(clock(f.wallTime).c_str());
-            ImGui::TableNextColumn(); if (f.channel) ImGui::Text("%d", f.channel); else ImGui::TextDisabled("-");
+            ImGui::TableNextColumn(); if (f.channel) ImGui::TextUnformatted(dect2::zigbee::channelCodeName(f.channel).c_str()); else ImGui::TextDisabled("-");
             ImGui::TableNextColumn(); ImGui::TextUnformatted(f.type.c_str());
             ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0); ImGui::Text("%s > %s", f.src.c_str(), f.dst.c_str()); ImGui::PopFont();
             ImGui::TableNextColumn(); ImGui::Text("%d", f.len);
@@ -235,7 +235,7 @@ void framesView(App& a) {
 }
 
 void hopTo(App& a, int ch) {
-    const double mhz = dect2::zigbee::channelMhz(ch);
+    const double mhz = dect2::zigbee::channelCodeMhz(ch);
     a.freqMhz = mhz;
     a.tune.centerHz = mhz * 1e6;
     a.engine.retune(a.tune);   // no reset: the tables stay
@@ -248,16 +248,20 @@ void tick(App& a) {
     if (!a.engine.running() || !S.scan || a.devices[a.devIdx].kind == DeviceInfo::File) { S.lastHop = ImGui::GetTime(); return; }
     if (ImGui::GetTime() - S.lastHop < S.dwellSec) return;
     S.lastHop = ImGui::GetTime();
-    const int cur = dect2::zigbee::channelOf(a.freqMhz);
-    hopTo(a, cur >= dect2::zigbee::kLastChannel || cur < dect2::zigbee::kFirstChannel ? dect2::zigbee::kFirstChannel : cur + 1);
+    namespace zb = dect2::zigbee;
+    const int cur = zb::channelCodeOf(a.freqMhz);
+    int next = zb::kFirstChannel;   // 2.4 GHz: 11 ... 26, then 11 again; 868 / 915 MHz: 868 ch 0, 915 ch 1 ... 10, then 868 ch 0 again (each band scans itself)
+    if (zb::isSubGhzChannel(cur)) next = cur >= zb::kSubChannelBase + 10 ? zb::kSubChannelBase : cur + 1;
+    else if (cur >= zb::kFirstChannel && cur < zb::kLastChannel) next = cur + 1;
+    hopTo(a, next);
 }
 
 void tuner(App& a, bool& retune) {
     loadState();
     ImGui::TextDisabled("Channel");
-    const int cur = dect2::zigbee::channelOf(a.freqMhz);
-    char label[40];
-    if (cur) snprintf(label, sizeof label, "%d (%.0f MHz)", cur, dect2::zigbee::channelMhz(cur)); else snprintf(label, sizeof label, "other");
+    const int cur = dect2::zigbee::channelCodeOf(a.freqMhz);
+    char label[48];
+    if (cur) snprintf(label, sizeof label, "%s (%.1f MHz)", dect2::zigbee::channelCodeName(cur).c_str(), dect2::zigbee::channelCodeMhz(cur)); else snprintf(label, sizeof label, "other");
     ImGui::SameLine(0, 5 * gUi);
     ImGui::SetNextItemWidth(std::min(140 * gUi, ImGui::GetContentRegionAvail().x));
     if (ImGui::BeginCombo("##zbch", label)) {
@@ -266,10 +270,17 @@ void tuner(App& a, bool& retune) {
             snprintf(b, sizeof b, "%d  %.0f MHz", c, dect2::zigbee::channelMhz(c));
             if (ImGui::Selectable(b, c == cur)) { tuneFreq(a, dect2::zigbee::channelMhz(c)); retune = true; }
         }
+        ImGui::Separator();
+        for (int c = dect2::zigbee::kSubChannelBase; c <= dect2::zigbee::kSubChannelBase + 10; c++) {   // sub-GHz BPSK: Europe 868.3 MHz, North America / Australia 906 - 924 MHz
+            char b[64];
+            snprintf(b, sizeof b, "%s  %.1f MHz%s", dect2::zigbee::channelCodeName(c).c_str(), dect2::zigbee::channelCodeMhz(c), c == dect2::zigbee::kSubChannelBase ? "  (Europe, 20 kbit/s)" : "  (US / Australia, 40 kbit/s)");
+            if (ImGui::Selectable(b, c == cur)) { tuneFreq(a, dect2::zigbee::channelCodeMhz(c)); retune = true; }
+        }
         ImGui::EndCombo();
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("802.15.4 channels 11 to 26, 2 MHz wide, 5 MHz apart from 2405 MHz. A radio takes in one channel at a time at 4 Msps;\n"
-                                                  "channels 15, 20, 25 and 26 are the ones Zigbee networks usually avoid Wi-Fi with. Single-channel mode listens to the one chosen.");
+                                                  "channels 15, 20, 25 and 26 are the ones Zigbee networks usually avoid Wi-Fi with. Single-channel mode listens to the one chosen.\n"
+                                                  "Below the line: the sub-GHz BPSK channels, 868.3 MHz (Europe) and 906 - 924 MHz in 2 MHz steps (US, Australia), at 20 and 40 kbit/s.");
     ImGui::SameLine(0, 8 * gUi);
     if (ImGui::Checkbox("scan", &S.scan)) { plat::prefs().setB("zbScan", S.scan); plat::prefs().flush(); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Step through channels 11 to 26, listening to each for the dwell time (a radio that takes in a single 2 MHz channel misses what is sent\n"
@@ -299,7 +310,7 @@ void list(App& a) {
         if (ImGui::Selectable("##row", S.selPan == p.pan, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap)) S.selPan = S.selPan == p.pan ? -1 : p.pan;
         ImGui::SameLine(0, 0);
         ImGui::PushFont(a.mono, 0); ImGui::TextColored(recent ? pal::okGreen() : ImGui::GetStyleColorVec4(ImGuiCol_Text), "PAN %s", panText(p.pan).c_str()); ImGui::PopFont();
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("channel %d, %d devices\n%s", p.channel, p.devices, p.extPan.c_str());
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("channel %s, %d devices\n%s", dect2::zigbee::channelCodeName(p.channel).c_str(), p.devices, p.extPan.c_str());
         ImGui::TableNextColumn(); ImGui::TextDisabled("%.0f", p.rssi);
         ImGui::PopID();
     }
@@ -310,7 +321,7 @@ void receiver(App& a) {
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const dect2::ZigbeeTelemetry& t = a.rx.zigbee;
     kvRow(a, "state", "%s", dect2::zigbeeSummary(t).c_str());
-    if (t.channel) kvRow(a, "channel", "%d (%.0f MHz)%s", t.channel, dect2::zigbee::channelMhz(t.channel), S.scan ? ", scanning" : "");
+    if (t.channel) kvRow(a, "channel", "%s (%.1f MHz)%s", dect2::zigbee::channelCodeName(t.channel).c_str(), dect2::zigbee::channelCodeMhz(t.channel), S.scan ? ", scanning" : "");
     kvRow(a, "signal", "chip SNR %.1f dB, offset %+.1f kHz", t.snrDb, t.cfoHz / 1e3);
     kvRow(a, "frames", "%llu good, %llu failed FCS, %llu preambles, %llu encrypted", (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad, (unsigned long long)t.preambles, (unsigned long long)t.encryptedFrames);
     kvRow(a, "by type", "beacon %llu, data %llu, ack %llu, command %llu", (unsigned long long)t.perType[0], (unsigned long long)t.perType[1], (unsigned long long)t.perType[2], (unsigned long long)t.perType[3]);

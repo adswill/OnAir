@@ -20,6 +20,26 @@ inline int channelOf(double mhz) {   // the channel whose centre lies within 2.5
     return ch >= kFirstChannel && ch <= kLastChannel && std::fabs(mhz - channelMhz(ch)) < 2.5 ? ch : 0;
 }
 
+// Sub-GHz BPSK channels (IEEE 802.15.4-2006 table 2): channel 0 is 868.3 MHz (Europe, 300 kchip/s, 20 kbit/s), channels 1 - 10 are
+// 906 + 2 (k - 1) MHz (North America, Australia, 600 kchip/s, 40 kbit/s). They are coded 100 (channel 0) and 101 - 110 (channels 1 - 10) so
+// that one number names every channel of this mode (11 - 26 stay as they are, 0 is "unknown").
+constexpr int kSubChannelBase = 100;
+inline bool isSubGhzChannel(int code) { return code >= kSubChannelBase && code <= kSubChannelBase + 10; }
+inline double subChannelMhz(int code) { return code == kSubChannelBase ? 868.3 : 906.0 + 2.0 * (code - kSubChannelBase - 1); }
+inline int subChannelOf(double mhz) {   // the sub-GHz channel code whose centre lies within 0.6 MHz (channel 0) or 1 MHz, 0 when none
+    if (std::fabs(mhz - 868.3) < 0.6) return kSubChannelBase;
+    for (int k = 1; k <= 10; k++) if (std::fabs(mhz - subChannelMhz(kSubChannelBase + k)) < 1.0) return kSubChannelBase + k;
+    return 0;
+}
+inline int channelCodeOf(double mhz) { return mhz < 1000.0 ? subChannelOf(mhz) : channelOf(mhz); }
+inline double channelCodeMhz(int code) { return isSubGhzChannel(code) ? subChannelMhz(code) : channelMhz(code); }
+inline std::string channelCodeName(int code) {   // "11", "26", "868 ch 0", "915 ch 4", "" for unknown
+    if (code >= kFirstChannel && code <= kLastChannel) return std::to_string(code);
+    if (code == kSubChannelBase) return "868 ch 0";
+    if (isSubGhzChannel(code)) return "915 ch " + std::to_string(code - kSubChannelBase);
+    return std::string();
+}
+
 // FCS: ITU-T CRC-16 (x^16 + x^12 + x^5 + 1), initial value 0, bits least significant first (the "Kermit" CRC: "123456789" gives 0x2189)
 uint16_t crc16(const uint8_t* d, size_t n);
 

@@ -3,6 +3,7 @@
 #include "dect2/results/results_io.h"
 #include "dect2/zigbee/zigbee_tel.h"
 #include "dect2/zigbee/zigbee_proto.h"
+#include "zigbee_bpsk.h"
 #include "dect2/dsp/gen_util.h"
 #include <algorithm>
 #include <atomic>
@@ -70,6 +71,9 @@ struct ZigbeeReceiver::Impl {
     std::vector<float> taps, hr, hi;      // hr / hi: the input history written twice, so a window is contiguous
     int hp = 0;
     double step = 1;
+    double outRate = kOut, cutoff = 1.3e6;   // demodulator rate and front-end cut-off: the O-QPSK values, or the BPSK ones
+    int phy = 0;                            // 0 2.4 GHz O-QPSK, 1 868 MHz BPSK (20 kbit/s), 2 915 MHz BPSK (40 kbit/s)
+    Bpsk154Demod bp;
     int64_t outK = 0;
     std::complex<float> yF{0, 0};
     // demodulator at 8 Msps
@@ -97,17 +101,43 @@ struct ZigbeeReceiver::Impl {
 
     int hintChannel() const {
         const double c = centerHz.load();
-        return c > 0 ? zigbee::channelOf((c + offset) / 1e6) : 0;
+        return c > 0 ? zigbee::channelCodeOf((c + offset) / 1e6) : 0;
+    }
+
+    // which PHY the tuned frequency means: below 1 GHz the sub-GHz BPSK PHY (868.3 MHz or the 915 MHz channels), else O-QPSK; no centre known: O-QPSK
+    void choosePhy() {
+        const double c = centerHz.load();
+        const double mhz = (c + offset) / 1e6;
+        phy = 0;
+        if (c > 0 && mhz < 1000.0) phy = (std::fabs(mhz - 868.3) < 5.0) ? 1 : 2;
+        if (phy == 0) { outRate = kOut; cutoff = 1.3e6; }
+        else {
+            const double chip = phy == 1 ? 300e3 : 600e3;
+            outRate = 4 * chip; cutoff = 1.1 * chip;
+            bp.init(chip);
+            bp.onFrame = [this](const Bpsk154Demod::Result& r) { bpskFrame(r); };
+        }
+    }
+    void bpskFrame(const Bpsk154Demod::Result& r) {
+        const std::vector<uint8_t>& psdu = r.psdu;
+        const uint16_t calc = zigbee::crc16(psdu.data(), psdu.size() - 2);
+        const uint16_t fcs = (uint16_t)(psdu[psdu.size() - 2] | psdu[psdu.size() - 1] << 8);
+        if (calc != fcs) { tel.blocksBad++; return; }
+        snrAvg = tel.blocksOk == 0 ? r.snrDb : 0.8 * snrAvg + 0.2 * r.snrDb;
+        tel.cfoHz = r.cfoHz;
+        accept(psdu, r.rssiDb, r.endSample / outRate);
     }
 
     void initFront() {
         lo = 1; loCount = 0;
         loStep = rate > 0 ? std::polar(1.0, -2 * kPi * offset / rate) : std::complex<double>(1, 0);
-        step = rate / kOut;
+        choosePhy();
+        step = rate / outRate;
         // windowed sinc, cut-off 1.3 MHz: the 2 MHz channel's main lobe passes, the next channel (5 MHz away) and the noise beyond do not
-        L = std::max(15, (int)std::ceil(3.3 * rate / 1.6e6)) | 1;
+        // (BPSK: 1.1 times the chip rate, the raised-cosine signal's width)
+        L = std::max(15, (int)std::ceil(3.3 * rate / (cutoff * 1.23))) | 1;
         taps.assign((size_t)L, 0.f);
-        const double fc = 1.3e6 / rate;
+        const double fc = cutoff / rate;
         double sum = 0;
         for (int i = 0; i < L; i++) {
             const double m = i - (L - 1) / 2.0;
@@ -210,6 +240,7 @@ struct ZigbeeReceiver::Impl {
     // ---------------------------------------------------------------- chip detector
 
     __attribute__((always_inline)) void demod(std::complex<float> y) {   // inlined: a call per sample stored the two floats and loaded them as one 8-byte value (store-forwarding stall)
+        if (phy) { bp.push(y); return; }
         g++;
         const int ph = (int)(g & (kSps - 1));
         const std::complex<float> z = y * std::conj(yring[ph]);   // y four samples ago: one chip
@@ -350,7 +381,7 @@ struct ZigbeeReceiver::Impl {
         const double snr = resid > 0 ? 10 * std::log10((kPi / 2) * (kPi / 2) / resid) : 40;
         snrAvg = tel.blocksOk == 0 ? snr : 0.8 * snrAvg + 0.2 * snr;
         tel.cfoHz = w0 * 2e6 / (2 * kPi);
-        accept(psdu, rssi, (double)(B0 - 32 * kSymSamples) / kOut);
+        accept(psdu, rssi, (double)(B0 - 32 * kSymSamples) / outRate);
     }
 
     // ---------------------------------------------------------------- tables
@@ -428,7 +459,7 @@ struct ZigbeeReceiver::Impl {
         const int ch = hintChannel();
         tel.blocksOk++;
         if (f.type >= 0 && f.type < 8) tel.perType[f.type]++;
-        if (ch >= kFirstChannel && ch <= kLastChannel) tel.perChannel[ch - kFirstChannel]++;
+        if (ch >= kFirstChannel && ch <= kLastChannel) tel.perChannel[ch - kFirstChannel]++;   // (sub-GHz channels are not in this histogram)
         if (f.encrypted) tel.encryptedFrames++;
         lastGood = sigSec();
         ppsAcc++;
@@ -525,7 +556,13 @@ ZigbeeReceiver::~ZigbeeReceiver() = default;
 
 void ZigbeeReceiver::configure(double r) { std::lock_guard<std::mutex> lk(p_->mu); p_->rateSet = r; p_->resetReq = true; }
 void ZigbeeReceiver::setSignalOffset(double hz) { std::lock_guard<std::mutex> lk(p_->mu); if (hz != p_->offsetSet) { p_->offsetSet = hz; p_->resetReq = true; } }
-void ZigbeeReceiver::setCenterHz(double hz) { p_->centerHz = hz; }
+void ZigbeeReceiver::setCenterHz(double hz) {
+    // a move between the 2.4 GHz band and the sub-GHz bands changes the PHY and the front end: start the demodulator again
+    const bool sub = hz > 0 && hz < 1e9, was = p_->centerHz.load() > 0 && p_->centerHz.load() < 1e9;
+    const bool band868 = hz > 0 && std::fabs(hz / 1e6 - 868.3) < 5.0, was868 = p_->centerHz.load() > 0 && std::fabs(p_->centerHz.load() / 1e6 - 868.3) < 5.0;
+    p_->centerHz = hz;
+    if (sub != was || band868 != was868) p_->resetReq = true;
+}
 bool ZigbeeReceiver::ready() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->rateSet >= zigbeeTuning().minSampleRate - 1; }
 void ZigbeeReceiver::reset() { p_->resetReq = true; }
 void ZigbeeReceiver::clearResults() {
@@ -544,7 +581,8 @@ void ZigbeeReceiver::feed(const cf32* x, size_t n) {
     if (m.resetReq.exchange(false)) m.resetState();
     if (m.clearReq.exchange(false)) m.clearAll();
     m.takeRequests();
-    if (m.rate < zigbeeTuning().minSampleRate - 1 || n == 0) {
+    // 2.4 GHz needs 4 Msps (2 MHz channel, 4 samples per chip); the sub-GHz BPSK channels need 2 Msps (an RTL-SDR does)
+    if (m.rate < (m.phy == 1 ? 2000000.0 : m.phy == 2 ? 2400000.0 : 4000000.0) - 1 || n == 0) {
         if (m.rate > 0) { m.nIn += (int64_t)n; if ((double)m.nIn >= m.nextReport) { m.nextReport += 0.25 * m.rate; m.report(); } }
         return;
     }
@@ -589,11 +627,11 @@ void ZigbeeReceiver::setLogCallback(std::function<void(const std::string&)> cb) 
 ModeTuning zigbeeTuning() {
     ModeTuning t;
     t.stdMode = 67; t.id = "zigbee"; t.name = "Zigbee / 802.15.4";
-    t.minMhz = 2405; t.maxMhz = 2480; t.defMhz = 2405;   // channel 11
+    t.minMhz = 863; t.maxMhz = 2480; t.defMhz = 2405;   // channel 11; 868.3 and 902 - 928 MHz are the sub-GHz BPSK channels
     t.sampleRate = 4000000;                  // one 2 MHz channel at a time (channels 11 - 26 span 77 MHz)
     t.basebandHz = 0;
     t.bandwidthMhz = 2;
-    t.minSampleRate = 4000000;
+    t.minSampleRate = 4000000;               // the engine asks for 4 Msps in both bands (the receiver itself decodes the sub-GHz channels from 2 / 2.4 Msps)
     t.tuneOffsetHz = 1000000;                // the radio sits 1 MHz above the channel, away from its DC spike
     return t;
 }
