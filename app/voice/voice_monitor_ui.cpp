@@ -1,5 +1,6 @@
 // The voice monitor on screen (voice_monitor_ui.h). English only, like the codec helper.
 #include "voice_monitor_ui.h"
+#include "voice_clips_ui.h"
 #include "../app.h"
 #include "../platform/platform.h"
 #include "../codec/speech_codec_ui.h"
@@ -324,6 +325,19 @@ void historyTab(vm::Monitor& m, Bufs& b) {
     ImGui::EndTable();
 }
 
+// the shared "Recent voice clips" list (voice_clips_ui.h) for this mode's recordings
+void clipsTab(App& a, vm::Monitor& m) {
+    std::vector<vm::Clip> fresh;
+    for (const auto& e : m.history(std::string(), 500)) {
+        if (e.file.empty() || e.active) continue;
+        vm::Clip c;
+        c.path = e.file; c.mode = m.mode(); c.label = target(e) + " from " + source(e);
+        c.wallStart = e.wallStart; c.seconds = e.seconds();
+        fresh.push_back(std::move(c));
+    }
+    voiceclips::panel(a, m.mode().c_str(), "vmclips", recordFolder(m), std::string(), fresh);
+}
+
 void heardTab(vm::Monitor& m) {
     const auto h = m.heard(300);
     ImGui::TextDisabled("%zu radios heard this session. Click a name to hold or mute it.", h.size());
@@ -596,7 +610,6 @@ void helpTab(const char* title) {
 } // namespace
 
 void window(App& a) {
-    (void)a;
     if (!S.open) return;
     load();
     firstWindowSize(760 * gUi, 520 * gUi);
@@ -621,6 +634,7 @@ void window(App& a) {
         if (ImGui::BeginTabItem("Calls")) { callsTab(m, s); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem("Conversations")) { conversationsTab(m); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem("History")) { historyTab(m, b); ImGui::EndTabItem(); }
+        if (ImGui::BeginTabItem("Clips")) { clipsTab(a, m); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem("Last heard")) { heardTab(m); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem("Filters")) { filtersTab(m, s, b); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem("Sound")) { soundTab(m, s, b, titleOf(S.mode)); ImGui::EndTabItem(); }
