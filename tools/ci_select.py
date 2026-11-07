@@ -75,7 +75,7 @@ def main():
     cm = open(os.path.join(src, "CMakeLists.txt")).read()
     cmd = dict(re.findall(r"add_test\(\s*NAME\s+(\S+)\s+COMMAND\s+(\w+)", cm))
     for n, tg in re.findall(r"add_test\(\s*NAME\s+(\S+)\s+COMMAND[^\n]*?TARGET_FILE:(\w+)", cm):
-        cmd[n] = tg
+        cmd.setdefault(n, tg)
     test_tgt, test_area = {}, {}
     for n in tests:
         tg = next((c for c in ("test_" + n, n, cmd.get(n)) if c in tgt_src), None)
@@ -116,7 +116,12 @@ def main():
     sel = {n for n in sel if zlib.crc32(n.encode()) % n_sh == k - 1}
     os.makedirs(a.out, exist_ok=True)
     unmapped = sorted(n for n in sel if n not in test_tgt)
-    targets = sorted({test_tgt[n] for n in sel if n in test_tgt})
+    if os.path.exists(os.path.join(bd, "build.ninja")):
+        real = {l.split(":")[0] for l in sh("ninja", "-C", bd, "-t", "targets", "all").splitlines()}
+    else:
+        real = {l.replace("... ", "").split(" ")[0] for l in sh("cmake", "--build", bd, "--target", "help").splitlines()}
+    # a name seen in compile_commands that is no real build target here (OBJECT libraries, platform conditionals) is dropped
+    targets = sorted({test_tgt[n] for n in sel if n in test_tgt and test_tgt[n] in real})
     # tests with no known target (fuzz, tools-driven): only built when the whole tree is, so they need --target all
     need_all = False
     if unmapped:   # python/node tests drive the server binary
