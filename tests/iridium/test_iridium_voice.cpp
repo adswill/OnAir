@@ -8,6 +8,7 @@
 //  5. satellite and beam come from a broadcast frame on the same frequency just before; each ended call is saved as a WAV of the right size.
 // NOT covered: a real Iridium recording, the real vocoder, the real FEC / interleaving of the voice field (unverified, see the header).
 #include "dect2/iridium/iridium_voice.h"
+#include "dect2/voice/clip_history.h"
 #include "../codec/plugin_test_util.h"
 #include <cstdio>
 #include <filesystem>
@@ -111,6 +112,10 @@ int main() {
             CHECK(tapped[1] == 12 * 960 && tapped.count(2) == 0, "listened sound: call 1 %zu samples, call 2 %zu", tapped[1], tapped[2]);
             CHECK(fs::exists(c[0].file) && fs::file_size(c[0].file) == 44 + 12 * 160 * 2, "recording of call 1: %s", c[0].file.c_str());
             CHECK(fs::exists(c[1].file) && fs::file_size(c[1].file) == 44 + 12 * 160 * 2, "recording of call 2 missing");
+            // the WAV holds real sound (not zeros), at the codec's rate
+            std::vector<int16_t> pcm; int rate = 0;
+            CHECK(voice::wavReadMono16(c[0].file, pcm, rate) && rate == 8000 && pcm.size() == 12 * 160 && voice::pcmHasSound(pcm), "recording of call 1 is silent or unreadable");
+            CHECK(c[0].warning.empty() && c[0].status == "decoded", "warning on a good call: %s", c[0].warning.c_str());
         }
         CHECK(plugtest::gBadSize == 0, "%d frames of the wrong size to the plug-in", plugtest::gBadSize.load());
         CHECK(v.framesToCodec() == 12 + 12 + 5, "frames to codec %llu", (unsigned long long)v.framesToCodec());
@@ -164,6 +169,38 @@ int main() {
         const IridiumBurstBits b = burst(iridiumBuildLcwFrame(0, 0, 0, raw), 0, 1.6e9);
         std::vector<uint8_t> q;
         CHECK(iridiumVoicePayload(b, q) && q[0] == 0x01 && q[1] == 0x02, "bit order: %02x %02x", q.empty() ? 0 : q[0], q.size() < 2 ? 0 : q[1]);
+    }
+    // a plug-in that answers with zeros: the call is "silent audio", no WAV is written, and the user is told
+    {
+        struct Zero final : codec::SpeechCodec {
+            int sampleRate() const override { return 8000; }
+            std::vector<int16_t> decode(const std::vector<uint8_t>&) override { return std::vector<int16_t>(160, 0); }
+        };
+        codec::setPluginFactory("iridium", [] { return std::unique_ptr<codec::SpeechCodec>(new Zero); }, "test-zero");
+        const fs::path rec2 = rec / "zero";
+        fs::create_directories(rec2, ec);
+        IridiumVoice v;
+        v.setSilent(true);
+        v.setRecordFolder(rec2.string());
+        feedCall(v, 30, 1.0, 1.6200e9, true, 1000);
+        v.closeAll();
+        const auto c = v.calls();
+        CHECK(c.size() == 1 && c[0].decoded == 30, "zero codec: calls %zu", c.size());
+        CHECK(!c.empty() && c[0].status == "silent audio" && c[0].file.empty() && !c[0].warning.empty(), "zero codec: status '%s' file '%s' warning '%s'", c.empty() ? "-" : c[0].status.c_str(), c.empty() ? "-" : c[0].file.c_str(), c.empty() ? "-" : c[0].warning.c_str());
+        size_t wavs = 0;
+        for (auto& e : fs::directory_iterator(rec2)) wavs += e.path().extension() == ".wav";
+        CHECK(wavs == 0, "a silent WAV was written (%zu files)", wavs);
+        // a codec that is missing: warning says so, still no file
+        codec::setPluginFactory("iridium", nullptr, "");
+        IridiumVoice w;
+        w.setSilent(true);
+        w.setRecordFolder(rec2.string());
+        feedCall(w, 5, 1.0, 1.6200e9, true, 1100);
+        w.closeAll();
+        const auto d = w.calls();
+        CHECK(d.size() == 1 && d[0].status == "codec needed" && d[0].warning.find("codec") != std::string::npos && d[0].file.empty(), "missing codec: status/warning");
+        for (auto& e : fs::directory_iterator(rec2)) wavs += e.path().extension() == ".wav";
+        CHECK(wavs == 0, "a WAV was written without a codec");
     }
     fs::remove_all(rec, ec);
     printf(fails ? "%d failure(s)\n" : "all passed\n", fails);
