@@ -128,12 +128,12 @@ def main():
         targets = sorted(set(targets) | ({"onair-server"} & set(tgt_src)))
     rx = lambda names: "^(" + "|".join(re.escape(x) for x in sorted(names)) + ")$" if names else "^$NONE$"
     timing = {n for n in sel if "timing" in tests[n]}
-    open(os.path.join(a.out, "targets.txt"), "w").write("\n".join(targets) + "\n")
-    open(os.path.join(a.out, "fast.regex"), "w").write(rx(sel - timing))
-    open(os.path.join(a.out, "timing.regex"), "w").write(rx(timing))
-    open(os.path.join(a.out, "need_all"), "w").write("1" if need_all else "0")
+    open(os.path.join(a.out, "targets.txt"), "w", newline="\n").write("\n".join(targets) + "\n")
+    open(os.path.join(a.out, "fast.regex"), "w", newline="\n").write(rx(sel - timing))
+    open(os.path.join(a.out, "timing.regex"), "w", newline="\n").write(rx(timing))
+    open(os.path.join(a.out, "need_all"), "w", newline="\n").write("1" if need_all else "0")
     s = f"scope={scope} areas={sorted(areas)} changed={len(files)} shard={a.shard}\ntests={len(sel)} (timing {len(timing)}) targets={len(targets)} of {len(set(test_tgt.values()))} unmapped_tests={len(unmapped)}\n" + "\n".join(why[:10])
-    open(os.path.join(a.out, "summary.txt"), "w").write(s + "\n")
+    open(os.path.join(a.out, "summary.txt"), "w", newline="\n").write(s + "\n")
     print(s)
     if sel and not targets:
         sys.exit("ci_select: tests selected but no build targets found (compile_commands.json format?)")

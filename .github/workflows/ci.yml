@@ -98,7 +98,7 @@ jobs:
           git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
           python3 tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" --shard ${{ matrix.shard }}/${{ matrix.of }} --out sel | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Build the selected targets
-        run: cmake --build build -j 4 --target $(cat sel/targets.txt)
+        run: cmake --build build -j 4 --target $(tr -d "\r" < sel/targets.txt)
       - name: ccache statistics
         if: always()
         run: ccache -s
@@ -167,7 +167,7 @@ jobs:
           git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
           python3 tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" --shard ${{ matrix.shard }}/${{ matrix.of }} --out sel | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Build the selected targets
-        run: cmake --build build -j 4 --target $(cat sel/targets.txt)
+        run: cmake --build build -j 4 --target $(tr -d "\r" < sel/targets.txt)
       - name: ccache statistics
         if: always()
         run: ccache -s
@@ -224,7 +224,7 @@ jobs:
           BASE="$BASE_IN"; case "$BASE" in ""|0000000000000000000000000000000000000000) BASE=origin/main;; esac
           git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
           python tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" --shard ${{ matrix.shard }}/2 --out sel
-          T=$(cat sel/targets.txt); [ ${{ matrix.shard }} = 1 ] && T="$T dect2"
+          T=$(tr -d "\r" < sel/targets.txt); [ ${{ matrix.shard }} = 1 ] && T="$T dect2"
           cmake --build build -j 4 --target $T
       - name: ccache statistics
         if: always()
