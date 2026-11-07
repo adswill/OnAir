@@ -33,6 +33,8 @@ struct Waterfall {
     plt::WfView view;
     w3d::State s3d;                  // the 3D view of the history (wf3d.h, drawn by wf3d_plot.cpp): its settings, camera and cached mesh
     float gamma = 1.f, builtGamma = 1.f;   // contrast: the level ^ gamma picks the colour (below 1 lifts weak signals)
+    inline static float sat = 1.f;   // colour intensity 0..2 (1: the map as it is), one value for every waterfall (this one, the TX one and the mode pictures that use jet()); saved as wfSat
+    float builtSat = 1.f;
     float brightness = 0.f, contrast = 1.f, builtBright = 0.f, builtContrast = 1.f;   // the level shifted and stretched before the gamma
     int builtCustom = 0;             // the custom gradient's version the table was made with
     static int& customGen() { static int g = 0; return g; }   // bumped when the custom gradient changes
@@ -85,15 +87,15 @@ struct Waterfall {
     static int& themeMode() { static int m = 0; return m; }   // the interface theme's waterfall choice (pal::wfMode(), set by the app each frame)
     int effMap() const { return map >= 0 && map < NumMaps ? map : themeMode() == 5 ? Paper : themeMode() == 4 ? Amber : themeMode() == 3 ? Magma : themeMode() == 2 ? Turbo : themeMode() == 1 ? Grey : Classic; }
     static int& curMap() { static int m = 0; return m; }   // the map in use, for the other waterfalls (modes with their own picture) that colour with jet()
-    static uint32_t jet(float v) { return color(curMap(), v); }
+    static uint32_t jet(float v) { return cmap::saturate(color(curMap(), v), sat); }
     bool paletteStale() const {
-        return effMap() != builtMap || gamma != builtGamma || brightness != builtBright || contrast != builtContrast || (builtMap == Custom && builtCustom != customGen());
+        return effMap() != builtMap || gamma != builtGamma || brightness != builtBright || sat != builtSat || contrast != builtContrast || (builtMap == Custom && builtCustom != customGen());
     }
     void palette() {   // after the map, the level controls or the interface palette changed
         if (builtMap >= 0 && builtMap != effMap()) slook::floorPlace(effMap(), autoBelow, autoSpan);   // a new map: its own place for the noise floor
         builtMap = effMap(); curMap() = builtMap;
-        for (int i = 0; i < 256; i++) lut[i] = color(builtMap, cmap::levelTransform(i / 255.0f, brightness, contrast, gamma));
-        builtGamma = gamma; builtBright = brightness; builtContrast = contrast; builtCustom = customGen(); lutGen++;
+        for (int i = 0; i < 256; i++) lut[i] = cmap::saturate(color(builtMap, cmap::levelTransform(i / 255.0f, brightness, contrast, gamma)), sat);
+        builtGamma = gamma; builtBright = brightness; builtContrast = contrast; builtSat = sat; builtCustom = customGen(); lutGen++;
     }
     void init(gfx::Backend* gfx) {
         img = gfx->createImage(W, H, 0xFF000000u);

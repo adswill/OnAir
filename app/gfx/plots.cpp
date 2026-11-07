@@ -1043,9 +1043,14 @@ void wfDisplayPopup(App& a) {
     if (ImGui::IsItemDeactivatedAfterEdit()) savePrefs(a);
     lv |= levelSlider(tr("Gamma"), &a.wf.gamma, 0.4f, 2.5f, "%.2f", 1.f, tr("Below 1 lifts the weak signals, above 1 darkens the noise (double click: 1)"));
     if (ImGui::IsItemDeactivatedAfterEdit()) savePrefs(a);
+    {   // shown as a percentage, stored as 0..2
+        float pct = a.wf.sat * 100.f;
+        if (levelSlider(tr("Colour intensity"), &pct, 0.f, 200.f, "%.0f%%", 100.f, tr("How vivid the colours are, apart from the level range: 0 is grey, 100% the map as it is, 200% twice as saturated (double click: 100%)"))) { a.wf.sat = pct / 100.f; lv = true; }
+    }
+    if (ImGui::IsItemDeactivatedAfterEdit()) savePrefs(a);
     if (lv) a.wf.palette();
-    if (a.wf.brightness != 0.f || a.wf.contrast != 1.f || a.wf.gamma != 1.f) {
-        if (ImGui::SmallButton(tr("Reset levels"))) { a.wf.brightness = 0; a.wf.contrast = 1; a.wf.gamma = 1; a.wf.palette(); savePrefs(a); }
+    if (a.wf.brightness != 0.f || a.wf.contrast != 1.f || a.wf.gamma != 1.f || a.wf.sat != 1.f) {
+        if (ImGui::SmallButton(tr("Reset levels"))) { a.wf.brightness = 0; a.wf.contrast = 1; a.wf.gamma = 1; a.wf.sat = 1; a.wf.palette(); savePrefs(a); }
     }
     ImGui::Separator();
     ImGui::TextDisabled("%s", tr("Colour map"));
