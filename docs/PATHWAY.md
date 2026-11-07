@@ -1126,3 +1126,6 @@ Windows: tests/esp32 loopback includes <functional>. adsb_track updated to the r
 - TETRA: a call's cipher flag needs 2 identical consecutive set-up messages, clear is accepted at once; a clear call is vetoed by encrypted PDUs of a capture only when they outnumber the clear ones (a cell mixing terminals). Field offsets of MAC-RESOURCE checked against EN 300 392-2 (type 2, fill 1, grant 1, encryption mode 2): correct; CRC-failed blocks never reach the parser.
 - CoreAudio output: a refused stream format (device at another rate) is now converted instead of played at the wrong speed (kevtheskin's choppy / pitched-up audio; Windows and miniaudio already convert). Not reproduced here.
 - SSDV: WAV audio recordings (FSK waveform from an FM receiver) open via File > Open; ssdv_audio converts to an FM carrier at 192 kHz; the receiver floor is now 190 kHz. Test test_ssdv_audio.
+
+## 2026-11-07 - bug hunt 3.7-D (sources and modes)
+Network IQ sources now scrub NaN/infinity (SDR++, SpyServer float); rtl_tcp chunk test added; modes and drivers reviewed, listed in docs/BUGS-3.7-D.md. No ASan run yet (GitHub).
