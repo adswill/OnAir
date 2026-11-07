@@ -429,6 +429,7 @@ private:
                 conv_.resize(bytes / 2);
                 for (size_t k = 0; k < conv_.size(); k++) conv_[k] = cf32((int8_t)d[2 * k] * m, (int8_t)d[2 * k + 1] * m);
             } else return;
+            scrubNonFinite(conv_.data(), conv_.size());   // a garbled float or scale must not put a NaN into the receiver
             if (onSamples && !conv_.empty()) onSamples(conv_.data(), conv_.size());
             return;
         }
