@@ -125,6 +125,7 @@ nrf24	--mode nrf24	Overview|nRF24|Receiver|History
 atis	--mode atis	Overview|ATIS|Receiver|History
 selcal	--mode selcal	Overview|SELCAL|Receiver|History
 sensors	--mode sensors	Overview|Sensors|Receiver|History
+sferics	--mode sferics	Overview|Sferics|Receiver|History
 gk2alrit	--mode gk2alrit	Overview|Products|Receiver|History
 gk2ahrit	--mode gk2ahrit	Overview|Products|Receiver|History
 fy3ahrpt	--mode fy3ahrpt	Overview|Picture|Receiver|History
