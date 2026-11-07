@@ -40,6 +40,8 @@ public:
 
     // "Remove after": sensors not heard for this long leave the list (0 = never)
     void setRemoveAfterSec(int s);
+    // sensors (SensorDevice::key) that never expire, whatever "Remove after" says
+    void setPinned(const std::vector<std::string>& keys);
     // flex-style custom decoders, rtl_433 flex syntax ("n=name,m=OOK_PWM,s=300,l=600,r=2000,bits>=20"); returns how many were accepted
     int setCustomDecoders(const std::vector<std::string>& specs);
     // "" when the spec is valid, else why not
