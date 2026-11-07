@@ -144,8 +144,6 @@ static std::filesystem::path privateTempDir() {
 #endif
 }
 
-std::string iqPrivateTempDir() { return privateTempDir().string(); }
-
 // Converts into a file with an unpredictable name (mkstemp: created O_EXCL, 0600) inside the private folder, then renames it to `target`.
 static bool convertPrivately(const std::string& src, const std::filesystem::path& dir, const std::filesystem::path& target, std::string& err) {
 #ifdef _WIN32
@@ -216,6 +214,9 @@ bool probeBlue(const std::string& path, IqFileInfo& out, std::string& err, bool 
 }
 
 } // namespace
+
+// (outside the anonymous namespace: the app calls it)
+std::string iqPrivateTempDir() { return privateTempDir().string(); }
 
 bool probeIqFile(const std::string& path, IqFileInfo& out, std::string& err, bool allowConvert) {
     err.clear();
