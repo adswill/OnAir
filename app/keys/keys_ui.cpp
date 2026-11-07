@@ -217,6 +217,8 @@ void editDialog() {
     combo(tr("Algorithm##k"), f.algorithm, (int)algorithmChoices().size(), [](int i) { return vk::algorithmName(algorithmChoices()[i]); });
     const Algorithm alg = algorithmChoices()[std::clamp(f.algorithm, 0, (int)algorithmChoices().size() - 1)];
     ImGui::TextDisabled("%s", keyswin::lengthRule(alg).c_str());
+    if (alg == Algorithm::HyteraBp || alg == Algorithm::HyteraEnhanced)
+        ImGui::TextWrapped("%s", tr("Hytera privacy is not an ETSI standard: the method follows the open-source DSD-FME. Enter your own key. It is checked against DSD-FME's algorithm only, not yet against a live Hytera call, and the DMR receiver does not apply it to live audio yet."));
     // the key, hidden unless Reveal is on
     snprintf(buf, sizeof buf, "%s", f.hex.c_str());
     ImGui::SetNextItemWidth(420 * gUi);

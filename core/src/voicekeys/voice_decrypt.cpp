@@ -41,6 +41,12 @@ Decryptor::Decryptor(const VoiceKey& key, int frameBits) : key_(key), frameBits_
         case Algorithm::Scrambler:
             lfsr_.setSeed((uint16_t)((key_.key.size() >= 2 ? (key_.key[0] << 8 | key_.key[1]) : (key_.key.empty() ? 1 : key_.key[0])) & 0x7FFF));
             break;
+        case Algorithm::HyteraBp:
+        case Algorithm::HyteraEnhanced:
+            hyt_ = std::make_unique<HyteraDecryptor>(alg_ == Algorithm::HyteraBp ? HyteraDecryptor::Basic : HyteraDecryptor::Enhanced, key_.key);
+            if (!hyt_->ok()) { status_ = DecryptStatus::Unsupported; note_ = alg_ == Algorithm::HyteraBp ? "Hytera-BP needs a 5, 16 or 32 byte key" : "Hytera-Enhanced needs a 5-byte key"; }
+            else if (frameBits_ != 49) { status_ = DecryptStatus::Unsupported; note_ = "Hytera privacy works on the 49 vocoder bits of a DMR frame"; }
+            break;
         default:
             status_ = DecryptStatus::Unsupported; note_ = "no algorithm";
             break;
@@ -53,6 +59,7 @@ void Decryptor::setIv(const uint8_t* iv, size_t n) {
     haveIv_ = true;
     ofbPos_ = 16;
     std::memcpy(ofbFb_, iv_, 16);
+    if (hyt_) { if (alg_ == Algorithm::HyteraEnhanced && n >= 5) hyt_->setMessageIndicator(iv_); return; }
     if (alg_ == Algorithm::Rc4) {
         // RC4 re-keyed with key || IV, as the P25 ADP profile derives its key schedule from the key and the message indicator.
         std::vector<uint8_t> seed = key_.key;
@@ -88,6 +95,7 @@ void Decryptor::keystreamBytes(uint8_t* out, size_t n) {
 bool Decryptor::decryptFrame(uint8_t* bits) {
     if (status_ == DecryptStatus::Unsupported) return false;
     const size_t nb = (size_t)frameBits_;
+    if (hyt_) { hyt_->applyFrame(bits); return true; }
     if (alg_ == Algorithm::Scrambler) {
         uint8_t ks[256];
         for (size_t off = 0; off < nb; off += sizeof ks) {

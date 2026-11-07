@@ -31,6 +31,8 @@ enum class Algorithm : uint8_t {
     Aes128Ofb,   // AES-128 in OFB (DMR/NXDN AES where the standard publishes the framing)
     Aes256Ofb,   // AES-256 in OFB (P25 AES; DMR/NXDN AES-256)
     Scrambler,   // 15-bit LFSR scrambler seeded by the key (NXDN and dPMR scramblers)
+    HyteraBp,    // Hytera Basic Privacy: 40 / 128 / 256 bit repeating key stream over the 49 vocoder bits (DMR, hytera.h). Not an ETSI standard
+    HyteraEnhanced, // Hytera Enhanced Privacy: 40-bit RC4 key plus the 40-bit message indicator (DMR, hytera.h). Not an ETSI standard
 };
 const char* algorithmName(Algorithm a);
 bool algorithmFromName(const std::string& s, Algorithm& a);

@@ -213,7 +213,7 @@ target_sources(dect2core PRIVATE core/src/net/remote_api.cpp core/src/net/satnog
 target_sources(dect2core PRIVATE core/src/net/remote_api.cpp core/src/results/rx_json.cpp core/src/source/gain_opt.cpp core/src/mesh/mesh_report.cpp core/src/source/rotator.cpp)   # remote-control API server, telemetry JSON, gain optimiser, mesh report text, antenna rotator
 target_sources(dect2core PRIVATE core/src/packs/packs.cpp core/src/packs/datasets.cpp core/src/packs/datasets_inventory.cpp)   # offline data packs: catalog, download with resume, checksums, disk guard, delete
 # User-supplied voice decryption keys: the key store, standard cipher primitives, per-call decryption and encrypted-at-rest persistence (docs/KEYS.md). Never an auto-decrypter.
-target_sources(dect2core PRIVATE core/src/voicekeys/voice_crypto.cpp core/src/voicekeys/voice_keys.cpp core/src/voicekeys/voice_decrypt.cpp core/src/voicekeys/key_persist.cpp)
+target_sources(dect2core PRIVATE core/src/voicekeys/voice_crypto.cpp core/src/voicekeys/voice_keys.cpp core/src/voicekeys/voice_decrypt.cpp core/src/voicekeys/hytera.cpp core/src/voicekeys/key_persist.cpp)
 target_sources(dect2core PRIVATE core/src/net/remote_api.cpp core/src/net/api_policy.cpp core/src/net/map_guard.cpp core/src/net/api_servers.cpp core/src/net/satnogs.cpp core/src/results/rx_json.cpp core/src/source/gain_opt.cpp core/src/mesh/mesh_report.cpp core/src/source/rotator.cpp)   # remote-control API server, telemetry JSON, gain optimiser, mesh report text, antenna rotator
 target_sources(dect2core PRIVATE core/src/net/remote_api.cpp core/src/net/api_policy.cpp core/src/net/api_servers.cpp core/src/results/rx_json.cpp core/src/source/gain_opt.cpp core/src/mesh/mesh_report.cpp core/src/source/rotator.cpp)   # remote-control API server, telemetry JSON, gain optimiser, mesh report text, antenna rotator
 target_sources(dect2core PRIVATE core/src/source/mount_driver.cpp core/src/source/mount_track.cpp)   # antenna mount drivers: Hamlib rotctld, ASCOM Alpaca; pass-driven mount plan
@@ -2361,6 +2361,10 @@ if(DECT2_BUILD_TESTS)
   target_include_directories(test_voice_keys PRIVATE core/include core/src/mesh)
   target_link_libraries(test_voice_keys PRIVATE dect2core)
   add_test(NAME voice_keys COMMAND test_voice_keys)
+  add_executable(test_hytera tests/voicekeys/test_hytera.cpp)
+  target_include_directories(test_hytera PRIVATE core/include)
+  target_link_libraries(test_hytera PRIVATE dect2core)
+  add_test(NAME hytera COMMAND test_hytera)
   # the Keys window's pure logic and the key-file / web / remote-API guards (tests/app/test_voice_keys_win.cpp)
   add_executable(test_voice_keys_win tests/app/test_voice_keys_win.cpp app/keys/keys_logic.cpp)
   target_include_directories(test_voice_keys_win PRIVATE core/include app)

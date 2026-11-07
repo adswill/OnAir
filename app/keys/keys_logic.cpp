@@ -13,7 +13,7 @@ const std::vector<Protocol>& protocolChoices() {
     return v;
 }
 const std::vector<Algorithm>& algorithmChoices() {
-    static const std::vector<Algorithm> v = {Algorithm::Aes256Ofb, Algorithm::Aes128Ofb, Algorithm::DesOfb, Algorithm::Rc4, Algorithm::Scrambler};
+    static const std::vector<Algorithm> v = {Algorithm::Aes256Ofb, Algorithm::Aes128Ofb, Algorithm::DesOfb, Algorithm::Rc4, Algorithm::Scrambler, Algorithm::HyteraBp, Algorithm::HyteraEnhanced};
     return v;
 }
 
@@ -31,6 +31,8 @@ std::string lengthRule(Algorithm a) {
     const size_t n = algorithmKeyBytes(a);
     std::string s = algorithmName(a);
     if (a == Algorithm::Scrambler) return s + ": a 15-bit seed = 4 hex digits, the first digit 0-7";
+    if (a == Algorithm::HyteraBp) return s + " (Hytera Basic Privacy, DMR): 5, 16 or 32 bytes = 10, 32 or 64 hex digits";
+    if (a == Algorithm::HyteraEnhanced) return s + " (Hytera Enhanced Privacy, DMR): 5 bytes = 10 hex digits";
     if (n == 0) return s + ": any length, whole bytes (P25 ADP uses 5 bytes = 10 hex digits)";
     return s + ": " + std::to_string(n) + " bytes = " + std::to_string(n * 2) + " hex digits";
 }
