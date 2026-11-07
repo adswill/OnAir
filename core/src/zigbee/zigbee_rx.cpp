@@ -4,6 +4,7 @@
 #include "dect2/zigbee/zigbee_tel.h"
 #include "dect2/zigbee/zigbee_proto.h"
 #include "zigbee_bpsk.h"
+#include "dect2/thread/thread_proto.h"
 #include "dect2/dsp/gen_util.h"
 #include <algorithm>
 #include <atomic>
@@ -72,6 +73,7 @@ struct ZigbeeReceiver::Impl {
     int hp = 0;
     double step = 1;
     double outRate = kOut, cutoff = 1.3e6;   // demodulator rate and front-end cut-off: the O-QPSK values, or the BPSK ones
+    bool thread = false;                    // Thread mode: frames are read as Thread / 6LoWPAN
     int phy = 0;                            // 0 2.4 GHz O-QPSK, 1 868 MHz BPSK (20 kbit/s), 2 915 MHz BPSK (40 kbit/s)
     Bpsk154Demod bp;
     int64_t outK = 0;
@@ -454,8 +456,14 @@ struct ZigbeeReceiver::Impl {
 
     void accept(const std::vector<uint8_t>& psdu, float rssi, double sec) {
         using namespace zigbee;
-        const Frame f = parse(psdu.data(), psdu.size());
+        Frame f = parse(psdu.data(), psdu.size());
         if (!f.ok && f.info.empty()) { tel.blocksBad++; return; }
+        dect2::thread::Frame th;
+        if (thread) {   // Thread: no Zigbee NWK / APS reading, the 6LoWPAN layer instead
+            th = dect2::thread::analyse(f, psdu.data(), psdu.size());
+            f.hasNwk = f.hasAps = f.zbBeacon = false;
+            if (!th.info.empty()) f.info = th.info;
+        }
         const int ch = hintChannel();
         tel.blocksOk++;
         if (f.type >= 0 && f.type < 8) tel.perType[f.type]++;
@@ -478,13 +486,17 @@ struct ZigbeeReceiver::Impl {
         if (hasPan) {
             ZbPan& p = panEntry(pan, ch);
             p.packets++; p.rssi = rssi; p.lastSec = sigSec(); p.lastWall = wall;
-            if (f.zbBeacon) {
+            if (thread && th.beacon) {
+                p.zigbee = true; p.networkName = th.networkName; p.extPan = addrText(th.extPan); p.threadVersion = th.version; p.joinOpen = f.assocPermit;
+                if (f.panCoordinator || p.coordinator.empty()) p.coordinator = srcText(f);
+            } else if (f.zbBeacon) {
                 p.zigbee = true; p.extPan = addrText(f.extPanId); p.stackProfile = f.stackProfile; p.joinOpen = f.assocPermit;
                 if (f.panCoordinator || p.coordinator.empty()) p.coordinator = srcText(f);
             } else if (f.type == Beacon) {
                 p.joinOpen = f.assocPermit;
                 if (f.panCoordinator || p.coordinator.empty()) p.coordinator = srcText(f);
             }
+            if (thread && th.lowpan) p.zigbee = true;   // (the flag means "the upper layer was seen": Thread here)
             if (f.hasNwk) { p.zigbee = true; if (f.nwkSrc == 0 && p.coordinator.empty()) p.coordinator = "0x0000"; }
         }
         // the devices: the sender (MAC), and the NWK originator when the frame was relayed
@@ -529,6 +541,7 @@ struct ZigbeeReceiver::Impl {
         tel.levelDb = nPower ? (float)(10 * std::log10(power / (double)nPower + 1e-20)) : -200.f;
         power = 0; nPower = 0;
         tel.channel = hintChannel();
+        tel.phy = phy;
         tel.snrDb = (float)snrAvg;
         tel.state = sigSec() - lastGood < 5 ? 1 : 0;
         tel.dataValid = tel.state >= 1;
@@ -556,6 +569,7 @@ ZigbeeReceiver::~ZigbeeReceiver() = default;
 
 void ZigbeeReceiver::configure(double r) { std::lock_guard<std::mutex> lk(p_->mu); p_->rateSet = r; p_->resetReq = true; }
 void ZigbeeReceiver::setSignalOffset(double hz) { std::lock_guard<std::mutex> lk(p_->mu); if (hz != p_->offsetSet) { p_->offsetSet = hz; p_->resetReq = true; } }
+void ZigbeeReceiver::setThreadMode(bool on) { p_->thread = on; }
 void ZigbeeReceiver::setCenterHz(double hz) {
     // a move between the 2.4 GHz band and the sub-GHz bands changes the PHY and the front end: start the demodulator again
     const bool sub = hz > 0 && hz < 1e9, was = p_->centerHz.load() > 0 && p_->centerHz.load() < 1e9;
@@ -623,6 +637,13 @@ bool ZigbeeReceiver::telemetry(ZigbeeTelemetry& out, uint64_t lastSeq) {
     return true;
 }
 void ZigbeeReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }
+
+ModeTuning threadTuning() {
+    ModeTuning t = zigbeeTuning();
+    t.stdMode = 246; t.id = "thread"; t.name = "Thread";
+    t.minMhz = 2405; t.maxMhz = 2480; t.defMhz = 2405;   // channel 11
+    return t;
+}
 
 ModeTuning zigbeeTuning() {
     ModeTuning t;

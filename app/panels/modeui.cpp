@@ -66,6 +66,7 @@ extern const ModeUi kPluginUi;
 extern const ModeUi kModeBuilderUi;
 extern const ModeUi kVdesUi;
 extern const ModeUi kZigbeeUi;
+extern const ModeUi kThreadUi;
 extern const ModeUi kFlarmUi;
 extern const ModeUi kHfbeaconUi;
 extern const ModeUi kDjiUi;
@@ -211,6 +212,7 @@ const ModeUi* modeUi(int family) {
     case 62: return &kGlobalstarUi;
     case 63: return &kVdesUi;
     case 65: return &kZigbeeUi;
+    case 244: return &kThreadUi;
     case 66: return &kFlarmUi;
     case 67: return &kHfbeaconUi;
     case 68: return &kDjiUi;

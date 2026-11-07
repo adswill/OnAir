@@ -232,6 +232,7 @@ struct RxTelemetry {
     VdesTelemetry vdes;       // valid when standard == 64 (VDES)
     NbiotTelemetry nbiot;     // valid when standard == 70 (NB-IoT cells)
     ZigbeeTelemetry zigbee;   // valid when standard == 66 (Zigbee / 802.15.4)
+    ZigbeeTelemetry thread;   // valid when standard == 245 (Thread, family 244, engine standard 246)
     LoraRawTelemetry loraraw; // valid when standard == 72 (LoRa raw)
     LorawanTelemetry lorawan; // valid when standard == 201 (LoRaWAN all channels, family 200, engine standard 202)
     LoraSatTelemetry lorasat; // valid when standard == 202 (LoRa satellites, family 201, engine standard 203)

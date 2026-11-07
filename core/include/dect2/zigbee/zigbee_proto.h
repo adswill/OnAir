@@ -61,7 +61,9 @@ struct Frame {
     uint16_t destPan = 0, srcPan = 0;
     uint16_t destShort = 0, srcShort = 0;
     uint64_t destExt = 0, srcExt = 0;   // as the usual EUI-64 (the air carries it little endian)
-    size_t payloadAt = 0, payloadLen = 0;   // within the PSDU, FCS excluded
+    size_t payloadAt = 0, payloadLen = 0;   // within the PSDU, FCS excluded (after the auxiliary security header, the MIC taken off)
+    int secLevel = -1, secKeyMode = 0, secKeyIndex = -1;   // MAC security: level (4 and above encrypt), key identifier mode, key index (key mode 1: Thread)
+    uint32_t frameCounter = 0;
     // MAC command
     int command = -1;
     // beacon

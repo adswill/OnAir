@@ -33,6 +33,7 @@ public:
 
     void configure(double inputRateHz);
     void setSignalOffset(double hz);
+    void setThreadMode(bool on);          // Thread: the same 802.15.4 receiver, the frames read as 6LoWPAN / Thread (thread_proto.h) instead of Zigbee
     void setCenterHz(double hz);          // the radio's centre: which channel the tuned frequency is (0: unknown)
     bool ready() const;
     void reset();                         // the demodulator only: the tables stay
@@ -50,5 +51,6 @@ private:
 };
 
 ModeTuning zigbeeTuning();
+ModeTuning threadTuning();   // 2.4 GHz channels 11 - 26 only (the sub-GHz BPSK PHY is Zigbee's)
 
 } // namespace dect2

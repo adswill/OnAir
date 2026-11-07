@@ -316,6 +316,8 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxWs_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // where every Wi-SUN channel lies in the band taken in
         rxZb_.setSignalOffset(o);
         rxZb_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // which 802.15.4 channel the radio is on
+        rxTh_.setSignalOffset(o);
+        rxTh_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxNb_.setSignalOffset(o);
         rxNb_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // which raster points the radio takes in
         rxHl_.setSignalOffset(o);
@@ -530,6 +532,8 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxCube_.setWallClock(dev.kind != DeviceInfo::File);
     rxCube_.setLogCallback([this](const std::string& s) { log(s); });
     rxZb_.configure(rate_);
+    rxTh_.configure(rate_);
+    rxTh_.setThreadMode(true);
     rxNb_.configure(rate_);
     rxNb_.setLogCallback([this](const std::string& s) { log(s); });
     rxHl_.configure(rate_);
@@ -584,6 +588,7 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxMt_.configure(rate_);
     rxMt_.setLogCallback([this](const std::string& s) { log(s); });
     rxZb_.setLogCallback([this](const std::string& s) { log(s); });
+    rxTh_.setLogCallback([this](const std::string& s) { log(s); });
     rxLr_.configure(rate_);
     rxLr_.setLogCallback([this](const std::string& s) { log(s); });
     rxLw_.configure(rate_);

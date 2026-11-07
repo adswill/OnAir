@@ -145,6 +145,7 @@ void Privacy::applyDefaultClasses() {
         54,    // Wi-Fi networks
         70,    // Wi-Fi HaLow
         65,    // Zigbee / 802.15.4
+        244,   // Thread (device addresses of a home network)
         98,    // Z-Wave
         153,   // Sigfox
         77,    // ANT+ (ids and heart rate)

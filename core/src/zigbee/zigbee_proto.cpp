@@ -156,6 +156,7 @@ const char* vendorOfExt(uint64_t ext) {
 
 namespace {
 uint16_t le16(const uint8_t* p) { return (uint16_t)dect2::endian::loadLe16(p); }
+uint32_t le32(const uint8_t* p) { return (uint32_t)dect2::endian::loadLe32(p); }
 uint64_t le64(const uint8_t* p) { return (uint64_t)dect2::endian::loadLe64(p); }
 }
 
@@ -300,9 +301,11 @@ Frame parse(const uint8_t* d, size_t total) {
         const int sc = d[i++];
         const int level = sc & 7, keyMode = sc >> 3 & 3;
         const bool noCounter = f.version >= 2 && (sc >> 5 & 1);
-        if (!noCounter) { if (n < i + 4) return f; i += 4; }
+        if (!noCounter) { if (n < i + 4) return f; f.frameCounter = le32(d + i); i += 4; }
         i += keyMode == 0 ? 0 : keyMode == 1 ? 1 : keyMode == 2 ? 5 : 9;
         if (n < i) return f;
+        f.secLevel = level; f.secKeyMode = keyMode;
+        if (keyMode == 1) f.secKeyIndex = d[i - 1];
         mic = level == 0 ? 0 : (size_t)(4 << ((level & 3) - 1 >= 0 ? (level & 3) - 1 : 0));
         if ((level & 3) == 0) mic = 0;
         f.encrypted = level >= 4;
