@@ -32,12 +32,15 @@ struct State {
     std::set<unsigned> diff;            // protocol numbers whose state differs from rtl_433's default
     char filter[64] = {};
     std::string note;
-    std::string graphKey;               // which value of the selected sensor the graph shows
+    std::string graphKey;               // which value of the selected sensor the graph shows ("" or kBothKey: the two main values together)
+    std::set<std::string> pinned;       // sensors that never expire (saved as sensorsPinned)
 };
 State S;
 
 struct RemoveOpt { const char* label; int sec; };
-const RemoveOpt kRemove[] = {{N_("Never"), 0}, {N_("1 minute"), 60}, {N_("5 minutes"), 300}, {N_("15 minutes"), 900}, {N_("1 hour"), 3600}, {N_("6 hours"), 21600}, {N_("24 hours"), 86400}};
+const RemoveOpt kRemove[] = {{N_("Never"), 0}, {N_("1 minute"), 60}, {N_("5 minutes"), 300}, {N_("15 minutes"), 900}, {N_("1 hour"), 3600}, {N_("2 hours"), 7200}, {N_("6 hours"), 21600}, {N_("1 day"), 86400}};
+const int kRemoveDefaultSec = 3600;   // a car's tyre sensors pass once; an hour is long enough for every normal sensor (they send every 30-180 s) and short enough to tidy the list
+const char* const kBothKey = "*both*";
 
 bool live(const App& a) { return a.rx.standard == 242; }   // the engine reports its standard code minus one
 
@@ -57,8 +60,16 @@ void applyDiff(App& a) {
 void load(App& a) {
     if (S.loaded) return;
     S.loaded = true;
-    S.removeIdx = std::clamp((int)plat::prefs().getI("sensorsRemoveIdx", 0), 0, (int)(sizeof kRemove / sizeof *kRemove) - 1);
-    a.engine.sensors().setRemoveAfterSec(kRemove[S.removeIdx].sec);
+    {   // saved as seconds (the old index key counted a shorter list); a profile without the new key gets the default
+        const int sec = (int)plat::prefs().getI("sensorsRemoveSec", kRemoveDefaultSec);
+        S.removeIdx = 0;
+        for (int i = 0; i < (int)(sizeof kRemove / sizeof *kRemove); i++) if (kRemove[i].sec == sec) S.removeIdx = i;
+        a.engine.sensors().setRemoveAfterSec(kRemove[S.removeIdx].sec);
+        std::stringstream ps(plat::prefs().getS("sensorsPinned", ""));
+        std::string k;
+        while (std::getline(ps, k, '\n')) if (!k.empty()) S.pinned.insert(k);
+        a.engine.sensors().setPinned(std::vector<std::string>(S.pinned.begin(), S.pinned.end()));
+    }
     std::stringstream ss(plat::prefs().getS("sensorsFlex", ""));
     std::string l;
     while (std::getline(ss, l, '\n')) if (!l.empty()) S.custom.push_back(l);
@@ -169,12 +180,12 @@ void sensorsView(App& a) {
         for (int i = 0; i < (int)(sizeof kRemove / sizeof *kRemove); i++)
             if (ImGui::Selectable(tr(kRemove[i].label), i == S.removeIdx)) {
                 S.removeIdx = i;
-                plat::prefs().setI("sensorsRemoveIdx", i);
+                plat::prefs().setI("sensorsRemoveSec", kRemove[i].sec);
                 a.engine.sensors().setRemoveAfterSec(kRemove[i].sec);
             }
         ImGui::EndCombo();
     }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("A sensor that has not been heard for this long leaves the list. Most sensors send every 30 to 180 seconds."));
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("A sensor that has not been heard for this long leaves the list (a car passing with tyre sensors, a neighbour's thermometer). Sensors you pin keep their place. Most sensors send every 30 to 180 seconds."));
     ImGui::SameLine(0, 12 * gUi);
     if (ImGui::Button(tr("Export CSV...##sens"))) { const std::string p = saveFileDialog("sensors.csv"); if (!p.empty()) writeFile(p, dect2::sensorsCsv(t), S.note); }
     ImGui::SameLine();
@@ -184,17 +195,34 @@ void sensorsView(App& a) {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("One line per value: topic and payload, topics as rtl_433's MQTT output (rtl_433/devices/<model>/<channel>/<id>/<value>), ready for mosquitto_pub."));
     if (!S.note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", S.note.c_str()); }
 
-    const float graphH = S.selKey.empty() ? 0.f : 150 * gUi;
-    if (!ImGui::BeginTable("##sensl", 11, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Resizable,
+    const float graphH = 170 * gUi;   // the lower box: the history of the selected row
+    if (!ImGui::BeginTable("##sensl", 12, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Resizable,
                            ImVec2(0, std::max(60.f * gUi, ImGui::GetContentRegionAvail().y - graphH - 6 * gUi)))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
-    ImGui::TableSetupColumn(tr("Sensor")); ImGui::TableSetupColumn("ID"); ImGui::TableSetupColumn(tr("Ch")); ImGui::TableSetupColumn(tr("Temperature"));
+    ImGui::TableSetupColumn(tr("Pin"), ImGuiTableColumnFlags_WidthFixed, 30 * gUi); ImGui::TableSetupColumn(tr("Sensor")); ImGui::TableSetupColumn("ID"); ImGui::TableSetupColumn(tr("Ch")); ImGui::TableSetupColumn(tr("Temperature"));
     ImGui::TableSetupColumn(tr("Humidity")); ImGui::TableSetupColumn(tr("Pressure")); ImGui::TableSetupColumn(tr("Wind")); ImGui::TableSetupColumn(tr("Rain"));
     ImGui::TableSetupColumn(tr("Battery")); ImGui::TableSetupColumn(tr("dB")); ImGui::TableSetupColumn(tr("Last heard"), ImGuiTableColumnFlags_WidthStretch);
     ImGui::TableHeadersRow();
     const int64_t now = (int64_t)std::time(nullptr);
-    for (const auto& d : t.devices) {
+    // pinned sensors first, then the others as the receiver has them: the most recently heard on top, so a sensor that has gone quiet sinks and expires
+    std::vector<const dect2::SensorDevice*> order;
+    for (const auto& d : t.devices) if (S.pinned.count(d.key)) order.push_back(&d);
+    for (const auto& d : t.devices) if (!S.pinned.count(d.key)) order.push_back(&d);
+    for (const dect2::SensorDevice* dp : order) {
+        const dect2::SensorDevice& d = *dp;
         ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        {
+            bool pin = S.pinned.count(d.key) != 0;
+            if (ImGui::Checkbox(("##pin" + d.key).c_str(), &pin)) {
+                if (pin) S.pinned.insert(d.key); else S.pinned.erase(d.key);
+                std::string v;
+                for (const auto& k : S.pinned) v += k + "\n";
+                plat::prefs().setS("sensorsPinned", v);
+                a.engine.sensors().setPinned(std::vector<std::string>(S.pinned.begin(), S.pinned.end()));
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Pin: this sensor stays at the top and is never removed by Remove after."));
+        }
         ImGui::TableNextColumn();
         const bool sel = d.key == S.selKey;
         if (ImGui::Selectable((d.model + "##" + d.key).c_str(), sel, ImGuiSelectableFlags_SpanAllColumns)) { S.selKey = sel ? "" : d.key; S.graphKey.clear(); }
@@ -218,35 +246,73 @@ void sensorsView(App& a) {
     if (t.devices.empty()) ImGui::TextDisabled("%s", t.packages ? tr("No sensor decoded yet. A pulse signal was heard: see Unknown signals.") : tr("No sensors yet. Sensors send every 30 to 180 seconds; wait a few minutes."));
 
     // the graph of the selected sensor
-    if (S.selKey.empty()) return;
+    if (S.selKey.empty()) { ImGui::TextDisabled("%s", tr("Select a sensor above to see its history here.")); return; }
     const dect2::SensorDevice* sd = nullptr;
     for (const auto& d : t.devices) if (d.key == S.selKey) { sd = &d; break; }
     if (!sd) { ImGui::TextDisabled("%s", tr("The selected sensor left the list.")); return; }
     if (sd->history.empty()) { ImGui::TextDisabled("%s", tr("No measured values to graph for this sensor.")); return; }
-    // value picker: the sensor's numeric values
-    if (S.graphKey.empty() || std::none_of(sd->history.begin(), sd->history.end(), [&](const dect2::SensorSeries& s) { return s.key == S.graphKey; })) {
-        S.graphKey = sd->history.front().key;
-        for (const char* pref : {"temperature_C", "temperature_F", "pressure_kPa", "humidity"}) {
-            for (const auto& s : sd->history) if (s.key == pref) { S.graphKey = pref; break; }
-            if (S.graphKey == pref) break;
-        }
-    }
+    // the two main values together (temperature + humidity, pressure + temperature ...), or any one value
+    auto find = [&](const char* k) -> const dect2::SensorSeries* { for (const auto& x : sd->history) if (x.key == k) return &x; return nullptr; };
+    auto isTemp = [](const std::string& k) { return k.rfind("temperature", 0) == 0; };
+    const dect2::SensorSeries *s1 = nullptr, *s2 = nullptr;   // the pair shown in "both"
+    for (const auto& x : sd->history) if (!s1 && isTemp(x.key)) s1 = &x;
+    if (s1) for (const char* k : {"humidity", "pressure_hPa", "pressure_kPa", "pressure_PSI", "pressure_bar", "moisture"}) if (!s2 && (s2 = find(k)) != nullptr) break;
+    if (s1 && !s2) for (const auto& x : sd->history) if (&x != s1 && !s2) s2 = &x;
+    if (!s1) { s1 = &sd->history.front(); if (sd->history.size() > 1) s2 = &sd->history[1]; }
+    const bool canBoth = s2 != nullptr;
+    if (S.graphKey.empty() || (S.graphKey == kBothKey && !canBoth) || (S.graphKey != kBothKey && !find(S.graphKey.c_str()))) S.graphKey = canBoth ? kBothKey : s1->key;
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted(sd->model.c_str()); ImGui::SameLine();
-    ImGui::SetNextItemWidth(180 * gUi);
-    if (ImGui::BeginCombo("##sensg", S.graphKey.c_str())) {
-        for (const auto& s : sd->history) if (ImGui::Selectable(s.key.c_str(), s.key == S.graphKey)) S.graphKey = s.key;
+    ImGui::SetNextItemWidth(200 * gUi);
+    const std::string cur = S.graphKey == kBothKey ? std::string(tr("Both values")) : S.graphKey;
+    if (ImGui::BeginCombo("##sensg", cur.c_str())) {
+        if (canBoth && ImGui::Selectable(tr("Both values"), S.graphKey == kBothKey)) S.graphKey = kBothKey;
+        for (const auto& x : sd->history) if (ImGui::Selectable(x.key.c_str(), x.key == S.graphKey)) S.graphKey = x.key;
         ImGui::EndCombo();
     }
-    const dect2::SensorSeries* ser = nullptr;
-    for (const auto& s : sd->history) if (s.key == S.graphKey) ser = &s;
-    if (!ser || ser->pts.size() < 2) { ImGui::SameLine(); ImGui::TextDisabled("%s", tr("history builds up as messages arrive")); return; }
-    std::vector<float> v;
-    float lo = 1e30f, hi = -1e30f;
-    for (const auto& p : ser->pts) { v.push_back((float)p.v); lo = std::min(lo, (float)p.v); hi = std::max(hi, (float)p.v); }
+    const bool both = S.graphKey == kBothKey;
+    const dect2::SensorSeries* a1 = both ? s1 : find(S.graphKey.c_str());
+    const dect2::SensorSeries* a2 = both ? s2 : nullptr;
+    if (!a1 || a1->pts.size() < 2) { ImGui::SameLine(); ImGui::TextDisabled("%s", tr("history builds up as messages arrive")); return; }
+    int64_t t0 = a1->pts.front().utc, t1 = a1->pts.back().utc;
+    if (a2 && a2->pts.size() >= 2) { t0 = std::min(t0, a2->pts.front().utc); t1 = std::max(t1, a2->pts.back().utc); }
     ImGui::SameLine();
-    ImGui::TextDisabled("%s %.1f   %s %.1f   %s %.1f   %.0f %s", tr("min"), lo, tr("max"), hi, tr("now"), v.back(), (double)(ser->pts.back().utc - ser->pts.front().utc) / 60.0, tr("min span"));
-    ImGui::PlotLines("##sensplot", v.data(), (int)v.size(), 0, nullptr, lo - (hi - lo) * 0.1f - 0.01f, hi + (hi - lo) * 0.1f + 0.01f, ImVec2(-1, 110 * gUi));
+    ImGui::TextDisabled("%.0f %s", (double)(t1 - t0) / 60.0, tr("min span"));
+    // the plot: one or two series, each with its own axis (left, right) and colour, and a legend
+    const ImVec2 sz(ImGui::GetContentRegionAvail().x, std::max(60.f * gUi, ImGui::GetContentRegionAvail().y - 4 * gUi));
+    const ImVec2 p0 = ImGui::GetCursorScreenPos();
+    ImGui::InvisibleButton("##sensplot", sz);
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    const ImU32 cText = ImGui::GetColorU32(ImGuiCol_TextDisabled), cGrid = ImGui::GetColorU32(ImGuiCol_Border);
+    const ImU32 col[2] = {IM_COL32(240, 150, 70, 255), IM_COL32(90, 180, 240, 255)};
+    const float padL = 56 * gUi, padR = a2 ? 56 * gUi : 8 * gUi, padT = 18 * gUi, padB = 4 * gUi;
+    const ImVec2 q0(p0.x + padL, p0.y + padT), q1(p0.x + sz.x - padR, p0.y + sz.y - padB);
+    dl->AddRect(q0, q1, cGrid);
+    const dect2::SensorSeries* sers[2] = {a1, a2};
+    for (int si = 0; si < 2; si++) {
+        const dect2::SensorSeries* sr = sers[si];
+        if (!sr || sr->pts.empty()) continue;
+        double lo = 1e300, hi = -1e300;
+        for (const auto& p : sr->pts) { lo = std::min(lo, p.v); hi = std::max(hi, p.v); }
+        double pad = (hi - lo) * 0.1; if (pad < 0.01) pad = 0.5;
+        lo -= pad; hi += pad;
+        auto X = [&](int64_t u) { return q0.x + (t1 > t0 ? (float)(u - t0) / (float)(t1 - t0) : 0.f) * (q1.x - q0.x); };
+        auto Y = [&](double v) { return q1.y - (float)((v - lo) / (hi - lo)) * (q1.y - q0.y); };
+        for (size_t k = 1; k < sr->pts.size(); k++) dl->AddLine(ImVec2(X(sr->pts[k - 1].utc), Y(sr->pts[k - 1].v)), ImVec2(X(sr->pts[k].utc), Y(sr->pts[k].v)), col[si], 1.8f * gUi);
+        // the axis labels in the series' colour: left for the first, right for the second
+        for (int g = 0; g <= 4; g++) {
+            const double v = lo + (hi - lo) * g / 4.0;
+            char b[24]; std::snprintf(b, sizeof b, "%.1f", v);
+            const float y = Y(v);
+            if (si == 0) dl->AddText(ImVec2(q0.x - ImGui::CalcTextSize(b).x - 4 * gUi, y - ImGui::GetFontSize() * 0.5f), col[0], b);
+            else dl->AddText(ImVec2(q1.x + 4 * gUi, y - ImGui::GetFontSize() * 0.5f), col[1], b);
+        }
+        // the legend: colour, name, last value
+        char lg[96]; std::snprintf(lg, sizeof lg, "%s  %s %.1f", sr->key.c_str(), tr("now"), sr->pts.back().v);
+        const float lx = si == 0 ? q0.x : q0.x + (q1.x - q0.x) * 0.5f;
+        dl->AddRectFilled(ImVec2(lx, p0.y + 5 * gUi), ImVec2(lx + 10 * gUi, p0.y + 13 * gUi), col[si]);
+        dl->AddText(ImVec2(lx + 14 * gUi, p0.y + 1 * gUi), cText, lg);
+    }
 }
 
 // ----- messages -----

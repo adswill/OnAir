@@ -1,4 +1,6 @@
 #include "dect2/ais/ais_alerts.h"
+#include "dect2/ais/ais_mid.h"
+#include <algorithm>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -35,6 +37,10 @@ bool AisFilter::matches(const AisVessel& v) const {
     if (v.cls == AIS_CLASS_A || v.cls == AIS_CLASS_B || v.cls == AIS_CLASS_OTHER) {
         if (!(groups >> aisShipGroup(v.shipType) & 1)) return false;
     }
+    if (!countries.empty()) {
+        const char* iso = aisMmsiInfo(v.mmsi).iso;
+        if (std::find(countries.begin(), countries.end(), std::string(iso)) == countries.end()) return false;
+    }
     if (movingOnly && !(v.sog >= minSogKn && v.sog < 102.3f)) return false;
     return true;
 }
@@ -42,7 +48,12 @@ bool AisFilter::matches(const AisVessel& v) const {
 std::string AisFilter::toText() const {
     char b[96];
     snprintf(b, sizeof b, "classes=%u;groups=%u;moving=%d;sog=%.2f", classes, groups, movingOnly ? 1 : 0, minSogKn);
-    return b;
+    std::string o = b;
+    if (!countries.empty()) {
+        o += ";countries=";
+        for (size_t i = 0; i < countries.size(); i++) o += (i ? "," : "") + countries[i];
+    }
+    return o;
 }
 
 AisFilter AisFilter::fromText(const std::string& s) {
@@ -56,6 +67,16 @@ AisFilter AisFilter::fromText(const std::string& s) {
         const size_t q = kv.find('=');
         if (q == std::string::npos) continue;
         const std::string k = kv.substr(0, q), val = kv.substr(q + 1);
+        if (k == "countries") {
+            size_t c = 0;
+            while (c < val.size()) {
+                size_t ce = val.find(',', c); if (ce == std::string::npos) ce = val.size();
+                const std::string iso = val.substr(c, ce - c);
+                if (iso.size() == 2) f.countries.push_back(iso);
+                c = ce + 1;
+            }
+            continue;
+        }
         char* end = nullptr;
         const double d = strtod(val.c_str(), &end);
         if (end == val.c_str()) continue;

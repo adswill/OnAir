@@ -107,6 +107,7 @@ const std::vector<PrefKey>& keyTable() {
         flagB("specAutoDb", AT(a.specAutoDb), true), flagB("specPerHz", AT(a.specPerHz), true),
         flagB("wfAvg", AT(a.wf.rowAverage), false, false, true), flagB("wfClock", AT(a.wf.clockLabels), false, false, true),
         real("wfGamma", AT(a.wf.gamma), 0.4, 2.5),
+        real("wfSat", AT(a.wf.sat), 0.0, 2.0),
         real("wfBright", AT(a.wf.brightness), -0.5, 0.5), real("wfContrast", AT(a.wf.contrast), 0.25, 4),
         num("wfDetailAuto", AT(a.wf.detail), -1, -1, Waterfall::kMaxCols, true), flagB("wfPerMode", AT(a.wfPerMode), false, false, true),
         flagB("wf3d", AT(a.wf.s3d.on), false), num("wf3dRows", AT(a.wf.s3d.rows), 256, 64, 1024), real("wf3dHeight", AT(a.wf.s3d.heightScale), 0.05, 1.5),

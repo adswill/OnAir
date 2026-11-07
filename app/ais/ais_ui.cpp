@@ -12,6 +12,7 @@
 #include "dect2/ais/ais_tel.h"
 #include "ais_sat_ui.h"
 #include "ais_alerts_ui.h"
+#include "dect2/ais/ais_mid.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -47,6 +48,12 @@ void loadState() {
 
 std::string mmsiText(uint32_t m) { char b[16]; snprintf(b, sizeof b, "%09u", m); return b; }
 
+// the country of the MMSI's MID as the ISO code (the flag state), "-" when it has none; the long form for tooltips
+std::string flagText(uint32_t mmsi) { const dect2::AisMmsiInfo i = dect2::aisMmsiInfo(mmsi); return *i.iso ? i.iso : "-"; }
+std::string countryLong(uint32_t mmsi) {
+    const dect2::AisMmsiInfo i = dect2::aisMmsiInfo(mmsi);
+    return *i.country ? std::string(i.country) + " (" + i.iso + ")" : i.mid ? std::string(tr("unknown country")) + " (MID " + std::to_string(i.mid) + ")" : std::string("-");
+}
 std::string nameOf(const AisVessel& v) { return v.name.empty() ? mmsiText(v.mmsi) : v.name; }
 
 const char* chLabel(char c) { return dect2::aisChannelLabel(dect2::aisChannelIndex(c)); }
@@ -173,6 +180,8 @@ void detail(App& a) {
         ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::TextUnformatted(s); ImGui::PopTextWrapPos(); ImGui::PopFont();
     };
     kv("MMSI", mmsiText(v->mmsi).c_str());
+    kv(tr("MMSI type"), tr(dect2::aisMmsiKindText(dect2::aisMmsiInfo(v->mmsi).kind)));
+    kv(tr("country"), countryLong(v->mmsi).c_str());
     if (!v->callsign.empty()) kv("call sign", v->callsign.c_str());
     if (v->imo) { snprintf(b, sizeof b, "%u", v->imo); kv("IMO", b); }
     if (v->shipType >= 0) { snprintf(b, sizeof b, "%s (%d)", dect2::aisShipTypeText(v->shipType), v->shipType); kv("type", b); }
@@ -269,6 +278,10 @@ void mapView(App& a, ImVec2 size) {
                 const float rr = 11.f * gUi;
                 for (int k = 0; k < 12; k += 2) { dl->PathArcTo(q, rr, k * (float)M_PI / 6, (k + 1) * (float)M_PI / 6, 4); dl->PathStroke(IM_COL32(245, 150, 60, 230), 0, 1.6f); }
             }
+            if (mouseIn && std::hypot(q.x - mouse.x, q.y - mouse.y) < 10 * gUi) {
+                const std::string c = countryLong(v.mmsi);
+                ImGui::SetTooltip("%s\n%s  %s\n%s", nameOf(v).c_str(), mmsiText(v.mmsi).c_str(), tr(dect2::aisMmsiKindText(dect2::aisMmsiInfo(v.mmsi).kind)), c.c_str());
+            }
             const bool hovered = S.labels == 1 && mouseIn && std::hypot(q.x - mouse.x, q.y - mouse.y) < 14 * gUi;   // labels off: the vessel under the pointer still names itself
             if (sel || hovered || S.labels == 2 || (S.labels == 0 && S.map.zoom >= 10)) {
                 const std::string s = nameOf(v);
@@ -318,15 +331,15 @@ void vesselTable(App& a, bool compact) {
     const dect2::AisTelemetry& t = a.rx.ais;
     aisFilterBar(a);
     if (aisUiFilter().active()) { ImGui::SameLine(); ImGui::TextDisabled("%s", tr("some stations are hidden")); }
-    const int cols = compact ? 3 : 7;
+    const int cols = compact ? 3 : 9;
     if (!compact) {
         static std::string note;
-        resexp::Table x; x.cols = {"time", "frequency_hz", "mode", "name", "mmsi", "type", "sog_kn", "lat", "lon", "heard_s_ago", "channel", "long_range", "received_unix"};
+        resexp::Table x; x.cols = {"time", "frequency_hz", "mode", "name", "mmsi", "type", "sog_kn", "lat", "lon", "heard_s_ago", "channel", "long_range", "received_unix", "country_iso", "mmsi_type"};
         const std::string now = resexp::stamp();
         for (const auto& v : t.vessels)
             x.add({now, resexp::num(dect2::aisChannelHz(dect2::aisChannelIndex(v.channel)), 0), "AIS", nameOf(v), std::to_string(v.mmsi), v.shipType >= 0 ? dect2::aisShipTypeText(v.shipType) : dect2::aisClassText(v.cls),
                    v.sog >= 0 ? resexp::num(v.sog, 1) : "", v.hasPos ? resexp::num(v.lat, 6) : "", v.hasPos ? resexp::num(v.lon, 6) : "", resexp::num(v.ageSec, 0), chLabel(v.channel),
-                   v.longRange ? "1" : "0", v.lastUtc > 0 ? resexp::num(v.lastUtc, 3) : ""}, v.lastUtc);
+                   v.longRange ? "1" : "0", v.lastUtc > 0 ? resexp::num(v.lastUtc, 3) : "", dect2::aisMmsiInfo(v.mmsi).iso, dect2::aisMmsiKindText(dect2::aisMmsiInfo(v.mmsi).kind)}, v.lastUtc);
         resexp::saveButton(x, "ais", note, "svais");
         if (!note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", note.c_str()); }
     }
@@ -334,7 +347,7 @@ void vesselTable(App& a, bool compact) {
     if (!ImGui::BeginTable(compact ? "##ais_s" : "##ais_f", cols, fl, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch, 0, 0);
-    if (!compact) { ImGui::TableSetupColumn("MMSI", 0, 0, 1); ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthStretch, 0, 2); }
+    if (!compact) { ImGui::TableSetupColumn("MMSI", 0, 0, 1); ImGui::TableSetupColumn(tr("Flag"), 0, 0, 7); ImGui::TableSetupColumn(tr("MMSI type"), 0, 0, 8); ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthStretch, 0, 2); }
     ImGui::TableSetupColumn("SOG kn", 0, 0, 3);
     ImGui::TableSetupColumn("Heard", ImGuiTableColumnFlags_DefaultSort, 0, 4);
     if (!compact) { ImGui::TableSetupColumn("Pos", 0, 0, 5); ImGui::TableSetupColumn("Ch", 0, 0, 6); }
@@ -353,6 +366,8 @@ void vesselTable(App& a, bool compact) {
         case 3: return x->sog < y->sog ? -1 : x->sog > y->sog;
         case 4: return x->ageSec < y->ageSec ? -1 : x->ageSec > y->ageSec;
         case 5: return (int)x->hasPos - (int)y->hasPos;
+        case 7: return strcmp(flagText(x->mmsi).c_str(), flagText(y->mmsi).c_str());
+        case 8: return dect2::aisMmsiInfo(x->mmsi).kind - dect2::aisMmsiInfo(y->mmsi).kind;
         default: return x->channel < y->channel ? -1 : x->channel > y->channel;
         }
     };
@@ -371,6 +386,9 @@ void vesselTable(App& a, bool compact) {
         char b[32];
         if (!compact) {
             ImGui::TableNextColumn(); ImGui::TextUnformatted(mmsiText(v->mmsi).c_str());
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(flagText(v->mmsi).c_str());
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", countryLong(v->mmsi).c_str());
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(tr(dect2::aisMmsiKindText(dect2::aisMmsiInfo(v->mmsi).kind)));
             ImGui::TableNextColumn();
             if (v->shipType >= 0) ImGui::TextUnformatted(dect2::aisShipTypeText(v->shipType)); else ImGui::TextDisabled("%s", dect2::aisClassText(v->cls));
         }

@@ -112,6 +112,8 @@ int main() {
         CHECK(js.find("\"model\":\"Nexus-TH\"") != std::string::npos && js.find("\"temperature_C\":21.9") != std::string::npos, "json");
         CHECK(mq.find("rtl_433/devices/Nexus-TH/1/106/temperature_C 21.9") != std::string::npos, "mqtt: %s", mq.substr(0, 200).c_str());
         // remove after: 60 s, the clock moves on, the next block of samples prunes
+        const std::string pinKey = t.devices.empty() ? std::string() : t.devices.front().key;
+        rx.setPinned({pinKey});
         rx.setRemoveAfterSec(60);
         now[0] = 1010 + 30;
         feedAll(rx, std::vector<cf32>(40000, cf32(0, 0)));
@@ -121,7 +123,12 @@ int main() {
         feedAll(rx, std::vector<cf32>(40000, cf32(0, 0)));
         SensorsTelemetry t2;
         CHECK(rx.telemetry(t2, 0), "telemetry after prune");
-        CHECK(t2.devices.empty(), "removed after 60 s, %zu left", t2.devices.size());
+        CHECK(t2.devices.size() == 1 && t2.devices.front().key == pinKey, "removed after 60 s except the pinned one, %zu left", t2.devices.size());
+        rx.setPinned({});
+        now[0] = 1010 + 400;
+        feedAll(rx, std::vector<cf32>(40000, cf32(0, 0)));
+        SensorsTelemetry t3;
+        CHECK(rx.telemetry(t3, 0) && t3.devices.empty(), "unpinned: removed");
     }
 
     // unknown signal: a PWM burst no decoder knows -> analyser guess, bits, flex spec; the spec decodes the signal

@@ -54,6 +54,7 @@ inline const std::vector<Info>& table() {
          "Classic|Viridis|Inferno|Grey|Turbo|Cividis|Magma|Deep heat|Ice|Fire|Night (red)|High contrast|Custom|Smooth heat|Deep blue|Navy heat|Blue green", "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16"},
         {"wfAutoFloor", kDisplay, N_("Waterfall range follows the noise floor"), N_("The intensity range tracks the noise so weak signals show."), "auto level", K::Bool, 1},
         {"wfGamma", kDisplay, N_("Waterfall contrast curve"), N_("Below 1 lifts weak signals."), "gamma", K::Float, 1, 0.4, 2.5, nullptr, nullptr, "", true},
+        {"wfSat", kDisplay, N_("Waterfall colour intensity"), N_("How vivid the waterfall colours are, apart from the level range: 0 is grey, 1 the map as it is, 2 twice as saturated."), "saturation colour vivid intensity", K::Float, 1, 0, 2, nullptr, nullptr, "", true},
         {"wfBright", kDisplay, N_("Waterfall brightness"), N_("Shifts every level."), "", K::Float, 0, -0.5, 0.5, nullptr, nullptr, "", true},
         {"wfContrast", kDisplay, N_("Waterfall contrast"), N_("Stretches the levels."), "", K::Float, 1, 0.25, 4, nullptr, nullptr, "", true},
         {"wfClock", kDisplay, N_("Clock time on the waterfall"), N_("Label rows with the clock time instead of seconds ago."), "time scale", K::Bool, 0},

@@ -3,6 +3,8 @@
 // (Settings > Receiver position); a moving own ship can be entered under Advanced. The alerts reach the automations as ais.cpa and ais.geofence.
 #include "app.h"
 #include "ais_alerts_ui.h"
+#include "dect2/ais/ais_mid.h"
+#include <map>
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -95,7 +97,7 @@ bool aisFilterBar(App& a) {
     char lab[48];
     snprintf(lab, sizeof lab, "%s##aisflt", S.filter.active() ? tr("Filter (on)") : tr("Filter"));
     if (ImGui::SmallButton(lab)) ImGui::OpenPopup("##aisfltpop");
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Show only some stations: Class A, Class B, base stations, aids to navigation, and groups of ship types"));
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Show only some stations: Class A, Class B, base stations, aids to navigation, groups of ship types, and countries"));
     if (ImGui::BeginPopup("##aisfltpop")) {
         ImGui::TextDisabled("%s", tr("Station class"));
         for (int c = 0; c < 6; c++) {
@@ -107,6 +109,21 @@ bool aisFilterBar(App& a) {
         for (int g = 0; g < dect2::AIS_GRP_COUNT; g++) {
             bool on = S.filter.groups >> g & 1;
             if (ImGui::Checkbox(dect2::aisShipGroupText(g), &on)) { S.filter.groups = on ? (S.filter.groups | 1u << g) : (S.filter.groups & ~(1u << g)); changed = true; }
+        }
+        ImGui::Separator();
+        {   // the countries heard so far (from the MMSI's MID); none ticked = every country
+            ImGui::TextDisabled("%s", tr("Country (flag state of the MMSI); none ticked shows all"));
+            std::map<std::string, std::string> heard;   // iso -> name
+            for (const auto& v : a.rx.ais.vessels) { const dect2::AisMmsiInfo i = dect2::aisMmsiInfo(v.mmsi); if (*i.iso) heard[i.iso] = i.country; }
+            for (const auto& c : S.filter.countries) if (!heard.count(c)) heard[c] = c;   // a saved choice stays listed
+            if (heard.empty()) ImGui::TextDisabled("%s", tr("no station heard yet"));
+            ImGui::BeginChild("##aisfltc", ImVec2(220 * gUi, std::min(150.f * gUi, 24.f * gUi * (float)std::max<size_t>(1, heard.size()))));
+            for (const auto& [iso, name] : heard) {
+                auto it = std::find(S.filter.countries.begin(), S.filter.countries.end(), iso);
+                bool on = it != S.filter.countries.end();
+                if (ImGui::Checkbox((iso + "  " + name).c_str(), &on)) { if (on) S.filter.countries.push_back(iso); else S.filter.countries.erase(it); changed = true; }
+            }
+            ImGui::EndChild();
         }
         ImGui::Separator();
         changed |= ImGui::Checkbox(tr("Moving only (0.5 kn or more)"), &S.filter.movingOnly);

@@ -171,6 +171,7 @@ struct SensorsReceiver::Impl {
     float fixedLevel = 0.0f, minLevel = -12.1442f, minSnr = 9.0f;
     float minLevelAuto = 0, noiseLevel = 0;
     int removeAfter = 0;
+    std::set<std::string> pinned;      // keys that are never removed (under setMu)
 
     // decoders
     std::vector<bool> on;              // by device index (protocol number - 1)
@@ -437,8 +438,9 @@ struct SensorsReceiver::Impl {
 
     void prune(int64_t now) {
         if (removeAfter <= 0) return;
+        std::lock_guard<std::mutex> lk(setMu);
         for (size_t i = devices.size(); i-- > 0;)
-            if (now - devices[i].lastSeen > removeAfter) devices.erase(devices.begin() + (long)i);
+            if (now - devices[i].lastSeen > removeAfter && !pinned.count(devices[i].key)) devices.erase(devices.begin() + (long)i);
     }
 
     void publish() {
@@ -472,6 +474,10 @@ void SensorsReceiver::setFixedLevelDb(float db) { p_->fixedLevel = db; pulse_det
 void SensorsReceiver::setMinLevelDb(float db) { p_->minLevel = db; pulse_detect_set_levels(p_->pd, 0, p_->fixedLevel, db, p_->minSnr, 0); }
 void SensorsReceiver::setAutoLevel(bool on) { p_->autoLevel = on; }
 void SensorsReceiver::setRemoveAfterSec(int s) { p_->removeAfter = s; }
+void SensorsReceiver::setPinned(const std::vector<std::string>& keys) {
+    std::lock_guard<std::mutex> lk(p_->setMu);
+    p_->pinned = std::set<std::string>(keys.begin(), keys.end());
+}
 void SensorsReceiver::setCenterHz(double hz) { p_->centerHz = hz; }
 bool SensorsReceiver::ready() const { return p_->isReady; }
 

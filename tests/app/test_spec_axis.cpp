@@ -98,6 +98,14 @@ int main() {
     }
     // colours
     check(cmap::levelTransform(0.3f, 0, 1, 1) == 0.3f, "brightness 0, contrast 1, gamma 1: unchanged");
+    {
+        const uint32_t red = 0xFF2030E0u;   // 0xAABBGGRR
+        check(cmap::saturate(red, 1.f) == red, "colour intensity 1 leaves the colour");
+        const uint32_t g = cmap::saturate(red, 0.f);
+        check(((g >> 16) & 0xFF) == ((g >> 8) & 0xFF) && ((g >> 8) & 0xFF) == (g & 0xFF) && (g >> 24) == 0xFF, "colour intensity 0 is grey, opaque");
+        const uint32_t v = cmap::saturate(red, 2.f);
+        check((v & 0xFF) >= (red & 0xFF) && ((v >> 16) & 0xFF) <= ((red >> 16) & 0xFF), "colour intensity 2 pushes the channels apart");
+    }
     check(near(cmap::levelTransform(0.3f, 0.1f, 1, 1), 0.4, 1e-6) && near(cmap::levelTransform(0.75f, 0, 2, 1), 1.0, 1e-6) && near(cmap::levelTransform(0.5f, 0, 3, 1), 0.5, 1e-6), "brightness and contrast");
     check(cmap::levelTransform(2.f, 0.5f, 4, 0.5f) == 1.f && cmap::levelTransform(-1.f, -0.5f, 4, 2) == 0.f, "clamped");
     cmap::Gradient g;

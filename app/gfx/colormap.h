@@ -173,6 +173,16 @@ inline float levelTransform(float v, float brightness, float contrast, float gam
     return applyGamma(v, gamma);
 }
 
+// Colour intensity: 1 leaves the colour, 0 is grey, up to 2 is twice as saturated (each channel moves away from the luma). Independent of
+// the level range, brightness, contrast and gamma, which only pick the colour index.
+inline uint32_t saturate(uint32_t c, float s) {
+    if (s == 1.f) return c;
+    const float r = (float)(c & 0xFF), g = (float)((c >> 8) & 0xFF), b = (float)((c >> 16) & 0xFF);
+    const float y = 0.299f * r + 0.587f * g + 0.114f * b;
+    auto ch = [&](float v) { return (uint32_t)std::min(255.f, std::max(0.f, y + (v - y) * s + 0.5f)); };
+    return (c & 0xFF000000u) | (ch(b) << 16) | (ch(g) << 8) | ch(r);
+}
+
 // Trace colours: index 0 is the usual soft white (dark grey on a light theme); the others read on both. RGB 0..1.
 struct TracePreset { const char* name; float dark[3]; float light[3]; };
 inline const TracePreset kTracePresets[] = {
