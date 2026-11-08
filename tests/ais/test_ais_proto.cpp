@@ -5,6 +5,7 @@
 #include "dect2/ais/ais_tel.h"
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <random>
 using namespace dect2;

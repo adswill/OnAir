@@ -3,6 +3,7 @@
 // Then frames built here and read back (the PAN advert and EAPOL fields no off-air frame of ours carries in the clear).
 #include "dect2/wisun/wisun_proto.h"
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <string>
 #include <vector>

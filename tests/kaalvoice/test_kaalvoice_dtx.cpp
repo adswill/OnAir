@@ -2,6 +2,7 @@
 // data), comfort noise at the right level, the in-band type bit of fixed-size slots, and the input noise suppressor.
 #include "kv_test_common.h"
 #include <cstdio>
+#include <cstdlib>
 #include "../common/test_util.h"
 
 using namespace kvtest;

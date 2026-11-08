@@ -3,6 +3,7 @@
 // and random garbage fed to the decoder.
 #include "kv_test_common.h"
 #include <cstdio>
+#include <cstdlib>
 #include "../common/test_util.h"
 
 using namespace kvtest;

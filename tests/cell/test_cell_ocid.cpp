@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <string>
 #include <thread>
+#include <vector>
 #include <unistd.h>
 using namespace dect2;
 #include "../common/test_util.h"
