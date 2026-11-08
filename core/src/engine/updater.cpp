@@ -110,18 +110,21 @@ std::string sha256File(const std::string& path, std::string* err) {
 // ---------------------------------------------------------------- a small JSON reader
 
 namespace {
+struct JKV;   // an object member; not std::pair<std::string, J>, which clang rejects while J is incomplete
 struct J {
     enum T { Null, Bool, Num, Str, Arr, Obj } t = Null;
     bool b = false;
     double n = 0;
     std::string s;
     std::vector<J> a;
-    std::vector<std::pair<std::string, J>> o;
-    const J* get(const char* key) const { for (auto& kv : o) if (kv.first == key) return &kv.second; return nullptr; }
+    std::vector<JKV> o;
+    const J* get(const char* key) const;
     std::string str(const char* key) const { const J* v = get(key); return v && v->t == Str ? v->s : std::string(); }
     double num(const char* key) const { const J* v = get(key); return v && v->t == Num ? v->n : 0; }
     bool flag(const char* key) const { const J* v = get(key); return v && v->t == Bool && v->b; }
 };
+struct JKV { std::string first; J second; };
+inline const J* J::get(const char* key) const { for (auto& kv : o) if (kv.first == key) return &kv.second; return nullptr; }
 
 struct JParser {
     const std::string& s;

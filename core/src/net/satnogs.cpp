@@ -8,15 +8,18 @@ namespace dect2 {
 namespace {
 
 // A small JSON reader: enough for the flat objects the API sends (nested values are read and skipped).
+struct JKV;   // an object member; not std::pair<std::string, J>, which clang rejects while J is incomplete
 struct J {
     enum T { Null, Bool, Num, Str, Arr, Obj } t = Null;
     bool b = false;
     double n = 0;
     std::string s;
     std::vector<J> a;
-    std::vector<std::pair<std::string, J>> o;
-    const J* get(const char* k) const { for (const auto& p : o) if (p.first == k) return &p.second; return nullptr; }
+    std::vector<JKV> o;
+    const J* get(const char* k) const;
 };
+struct JKV { std::string first; J second; };
+inline const J* J::get(const char* k) const { for (const auto& p : o) if (p.first == k) return &p.second; return nullptr; }
 
 struct P {
     const std::string& s;

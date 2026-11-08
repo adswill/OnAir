@@ -54,14 +54,17 @@ int parseIdList(const std::string& text, std::map<int, std::string>& out) {
 
 // ---------------------------------------------------------------- a small JSON reader for the custom field list
 namespace {
+struct JKV;   // an object member; not std::pair<std::string, J>, which clang rejects while J is incomplete
 struct J {
     enum T { Null, Str, Num, Arr, Obj } t = Null;
     std::string s;
     double n = 0;
     std::vector<J> a;
-    std::vector<std::pair<std::string, J>> o;
-    const J* get(const char* k) const { for (const auto& kv : o) if (kv.first == k) return &kv.second; return nullptr; }
+    std::vector<JKV> o;
+    const J* get(const char* k) const;
 };
+struct JKV { std::string first; J second; };
+inline const J* J::get(const char* k) const { for (const auto& kv : o) if (kv.first == k) return &kv.second; return nullptr; }
 struct Reader {
     const std::string& x; size_t i = 0; std::string err;
     explicit Reader(const std::string& s) : x(s) {}

@@ -1,6 +1,7 @@
 #include "dect2/tv/mheg_engine.h"
 #include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 #include <deque>
 #include <map>
 #include <set>

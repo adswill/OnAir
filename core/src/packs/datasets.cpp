@@ -55,14 +55,17 @@ int compareVersions(const std::string& a, const std::string& b) {
 
 // ---------------------------------------------------------------- tiny JSON (objects, arrays, strings, numbers, true/false/null)
 namespace {
+struct JKV;   // an object member; not std::pair<std::string, J>, which clang rejects while J is incomplete
 struct J {
     enum K { Null, Num, Str, Bool, Arr, Obj } k = Null;
     double num = 0;
     std::string str;
     std::vector<J> arr;
-    std::vector<std::pair<std::string, J>> obj;
-    const J* get(const std::string& key) const { for (const auto& p : obj) if (p.first == key) return &p.second; return nullptr; }
+    std::vector<JKV> obj;
+    const J* get(const std::string& key) const;
 };
+struct JKV { std::string first; J second; };
+inline const J* J::get(const std::string& key) const { for (const auto& p : obj) if (p.first == key) return &p.second; return nullptr; }
 struct JP {
     const std::string& s;
     size_t p = 0;
