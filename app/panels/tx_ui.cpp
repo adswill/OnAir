@@ -88,8 +88,8 @@ void chooseMode(App& a, TxUi& s, const TxModeSpec& m) {
     if (rm && rm == &m) { s.synth = a.tune.synth; s.freqMhz = a.freqMhz; }
     else {
         s.synth = SynthConfig();
-        const ModeTuning* mt = modeTuning(m.stdMode);
-        s.freqMhz = mt && mt->defMhz > 0 ? mt->defMhz : a.freqMhz;
+        const double def = txModeDefaultMhz(m);
+        s.freqMhz = def > 0 ? def : a.freqMhz;
     }
 }
 

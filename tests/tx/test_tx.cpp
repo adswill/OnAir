@@ -899,6 +899,7 @@ static TxPayloadKind expectedKind(const std::string& id) {
     if (id == "vdes") return TxPayloadKind::Vdes;
     if (id == "uplink") return TxPayloadKind::Uplink;
     if (id == "mesh") return TxPayloadKind::Mesh;
+    if (id == "loraaprs") return TxPayloadKind::LoraAprs;
     if (id == "mac") return TxPayloadKind::Mac;
     if (id == "kaal") return TxPayloadKind::Kaal;
     if (id == "kapp") return TxPayloadKind::Kapp;
@@ -927,6 +928,7 @@ static void payloadUiCoverage() {
     CHECK(txModeForList(25, "ft8") && std::string(txModeForList(25, "ft8")->id) == "ft8", "list FT8");
     CHECK(txModeForList(59, nullptr) && std::string(txModeForList(59, nullptr)->id) == "meteor", "list Meteor");
     CHECK(txModeForList(12, nullptr), "GNSS is offered");
+    CHECK(txModeForList(11, "loraaprs") && std::string(txModeForList(11, "loraaprs")->id) == "loraaprs", "list LoRa APRS: its own mode, not Meshtastic");
 }
 
 static void dvbsFileTs() {

@@ -154,6 +154,22 @@ std::vector<P> build(const TxModeSpec& m, bool analog, int variant) {
     case TxPayloadKind::Psk:
         add(v, {F("audio.tone", Sec::Modulation, N_("Audio frequency"), N_("Where the signal sits in the audio passband, as an offset above the dial frequency."), 1000, 200, 3000, "%.0f Hz", nullptr, Bind::ToneHz)});
         break;
+    case TxPayloadKind::LoraAprs: {   // read by txLoraAprsRadio (tx.h)
+        P sync = I("lora.sync", Sec::Modulation, N_("Sync word"), N_("The LoRa sync word (SX127x style, one byte). LoRa APRS uses 0x12 (the private sync word, 0x1424 on an SX126x); LoRaWAN uses 0x34, Meshtastic and MeshCom 0x2B. A receiver only hears frames with its own sync word."), 0x12, 0, 255, "lora.preset=4");
+        sync.hex = true;
+        add(v, {
+            C("lora.preset", Sec::Modulation, N_("LoRa settings"), N_("The settings of the LoRa APRS networks: 125 kHz, preamble 8, sync word 0x12, CRC on, as the lora-aprs and CA2RXU tracker and iGate firmware send. Own settings: every value below can be changed."), 0,
+              {N_("EU: 433.775 MHz, SF12, 4/5"), N_("PL: 434.855 MHz, SF9, 4/7"), N_("UK: 439.9125 MHz, SF12, 4/5"), N_("915 MHz, SF12, 4/5"), N_("Own settings")}),
+            I("lora.sf", Sec::Modulation, N_("Spreading factor"), N_("SF7 to SF12: each step up doubles the time on air and reaches further."), 12, 7, 12, "lora.preset=4"),
+            C("lora.bwIdx", Sec::Modulation, N_("Bandwidth"), N_("The LoRa bandwidth; LoRa APRS uses 125 kHz."), 1, {"62.5 kHz", "125 kHz", "250 kHz", "500 kHz"}, 0, Bind::Opt, "lora.preset=4"),
+            C("lora.cr", Sec::Modulation, N_("Coding rate"), N_("The forward error correction: 4/5 is the least, 4/8 the most."), 0, {"4/5", "4/6", "4/7", "4/8"}, 5, Bind::Opt, "lora.preset=4"),
+            I("lora.preamble", Sec::Modulation, N_("Preamble"), N_("The up-chirps before the sync word; LoRa APRS uses 8."), 8, 6, 64, "lora.preset=4"),
+            sync,
+            B("lora.crc", Sec::Modulation, N_("CRC"), N_("A checksum after the packet. LoRa APRS receivers expect it."), true, "lora.preset=4"),
+            F("lora.gapSec", Sec::Timing, N_("Pause between packets"), N_("The packet is sent again after this pause, until Stop (or once per pass when Repeat until stopped is off)."), 10, 1, 600, "%.0f s"),
+        });
+        break;
+    }
     default:
         break;
     }
@@ -292,6 +308,7 @@ bool paramRow(TxUi& s, const PDef& d, bool running) {
         char def[64];
         if (d.type == PType::Choice) snprintf(def, sizeof def, "%s", tr(d.choices[(size_t)std::max(0.0, std::min(d.hi, d.def))]));
         else if (d.type == PType::Bool) snprintf(def, sizeof def, "%s", d.def > 0.5 ? tr("on") : tr("off"));
+        else if (d.hex) snprintf(def, sizeof def, "0x%02X", (int)std::lround(d.def));
         else snprintf(def, sizeof def, d.fmt, d.def);
         ImGui::BeginTooltip();
         ImGui::PushTextWrapPos(320 * gUi);
@@ -310,7 +327,13 @@ bool paramRow(TxUi& s, const PDef& d, bool running) {
         if (ImGui::SliderFloat("##v", &f, (float)d.lo, (float)d.hi, d.fmt, ImGuiSliderFlags_AlwaysClamp)) { v = f; ch = true; }
     } else if (d.type == PType::Int) {
         int n = (int)std::lround(v);
-        if (ImGui::SliderInt("##v", &n, (int)d.lo, (int)d.hi)) { v = n; ch = true; }
+        if (d.hex) {   // typed as hex digits: a sync word is always written that way
+            ImGui::SetNextItemWidth(80 * gUi);
+            if (ImGui::InputScalar("##v", ImGuiDataType_S32, &n, nullptr, nullptr, "%02X", ImGuiInputTextFlags_CharsHexadecimal)) {
+                v = std::max((int)d.lo, std::min((int)d.hi, n));
+                ch = true;
+            }
+        } else if (ImGui::SliderInt("##v", &n, (int)d.lo, (int)d.hi)) { v = n; ch = true; }
     } else if (d.type == PType::Bool) {
         bool b = v > 0.5;
         if (ImGui::Checkbox("##v", &b)) { v = b ? 1 : 0; ch = true; }
