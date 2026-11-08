@@ -3230,7 +3230,7 @@ if(DECT2_BUILD_APP AND NOT APPLE)
   # the libraries of the radios OnAir drives by itself, shipped with it (tools/package/collect_radio_libs_linux.sh makes the folder)
   if(DECT2_RADIO_LIB_DIR)
     install(DIRECTORY ${DECT2_RADIO_LIB_DIR}/ DESTINATION ${CMAKE_INSTALL_LIBDIR}/onair USE_SOURCE_PERMISSIONS)
-    set_target_properties(dect2 dect2cli dect2scan PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_FULL_LIBDIR}/onair" BUILD_WITH_INSTALL_RPATH ON)   # the programs are installed by copying: they must carry the final path already
+    set_target_properties(dect2 dect2cli dect2scan onair-server onair-plugin-host PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_FULL_LIBDIR}/onair" BUILD_WITH_INSTALL_RPATH ON)   # the programs are installed by copying: they must carry the final path already
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS_PRIVATE_DIRS "${CMAKE_INSTALL_FULL_LIBDIR}/onair")
   endif()
   install(FILES README.md LICENSE DESTINATION ${CMAKE_INSTALL_DOCDIR} OPTIONAL)

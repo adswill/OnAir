@@ -12,7 +12,8 @@ if strings "$PROG" | grep -E -- '--enable-(gpl|nonfree|version3)' | grep -v -e '
 fi
 links=
 case "$(file -b "$PROG")" in
-  *Mach-O*) links=$(otool -L "$PROG" | tail -n +2) ;;
+  *Mach-O*) OT=$(command -v otool || command -v llvm-otool) || { echo "FAIL: no otool or llvm-otool, $PROG cannot be checked"; exit 1; }
+            links=$("$OT" -L "$PROG" | tail -n +2) ;;
   *ELF*) links=$(readelf -d "$PROG" 2>/dev/null | grep NEEDED) ;;
 esac   # (a Windows .exe: only the configuration string is checked)
 for d in "$@"; do links="$links"$'\n'"$(ls "$d" 2>/dev/null)"; done
