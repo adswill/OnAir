@@ -6,20 +6,35 @@
 #include "dect2/mesh/mesh_proto.h"
 #include "dect2/mesh/mesh_rx.h"
 #include "../data/mesh/testutil.h"
+#include <array>
 #include <cmath>
+#include <cstdarg>
 #include <cstdio>
 #include <string>
 #include <vector>
 using namespace dect2;
 using meshtest::Chain;
 
+static int fails = 0;
+// one failed check: the message with a constant format, counted here (not in testutil.h's CHECK, which a static analyser does not follow)
+static void check(bool ok, const char* fmt, ...) {
+    if (ok) return;
+    std::array<char, 512> msg{};
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(msg.data(), msg.size(), fmt, ap);
+    va_end(ap);
+    printf("FAIL: %s\n", msg.data());
+    fails++;
+}
+
 static std::vector<cf32> make(const TxRequest& r, double rate, double secs) {
     std::string err;
     const TxModeSpec* m = txModeById("loraaprs");
-    CHECK(m != nullptr, "the loraaprs mode is on the list");
+    check(m != nullptr, "the loraaprs mode is on the list");
     if (!m) return {};
     auto g = makeTxGenerator(*m, r, rate, err);
-    CHECK(g != nullptr, "generator: %s", err.c_str());
+    check(g != nullptr, "generator: %s", err.c_str());
     if (!g) return {};
     std::vector<cf32> x((size_t)(secs * rate));
     for (size_t i = 0; i < x.size(); i += 65536) g->generate(x.data() + i, std::min<size_t>(65536, x.size() - i));
@@ -36,21 +51,21 @@ static lora::Params paramsOf(const TxLoraAprsRadio& lr) {
 static void packetText() {
     printf("TNC2 packet:\n");
     TxRequest r;
-    CHECK(txLoraAprsTnc2(r).empty(), "no callsign: no packet (the demo stations are sent)");
+    check(txLoraAprsTnc2(r).empty(), "no callsign: no packet (the demo stations are sent)");
     r.callsign = " on4abc-7 ";
     r.text = "OnAir test";
-    CHECK(txLoraAprsTnc2(r) == "ON4ABC-7>APRS,WIDE1-1:>OnAir test", "defaults: '%s'", txLoraAprsTnc2(r).c_str());
+    check(txLoraAprsTnc2(r) == "ON4ABC-7>APRS,WIDE1-1:>OnAir test", "defaults: '%s'", txLoraAprsTnc2(r).c_str());
     r.dest = "aplrt1"; r.path = "-";
-    CHECK(txLoraAprsTnc2(r) == "ON4ABC-7>APLRT1:>OnAir test", "no path: '%s'", txLoraAprsTnc2(r).c_str());
+    check(txLoraAprsTnc2(r) == "ON4ABC-7>APLRT1:>OnAir test", "no path: '%s'", txLoraAprsTnc2(r).c_str());
     r.path = "WIDE1-1, WIDE2-1";
     r.lat = 50.85045; r.lon = -4.34878;
     const std::string pos = txLoraAprsTnc2(r);
-    CHECK(pos == "ON4ABC-7>APLRT1,WIDE1-1,WIDE2-1:!5051.03N/00420.93W-OnAir test", "position: '%s'", pos.c_str());
+    check(pos == "ON4ABC-7>APLRT1,WIDE1-1,WIDE2-1:!5051.03N/00420.93W-OnAir test", "position: '%s'", pos.c_str());
     // the receiver's own LoRa APRS parser reads it back
     const auto b = loraAprsFrame(pos);
     const MeshDecodeResult d = meshDecodeLoraAprs(b.data(), b.size());
-    CHECK(d.ok && d.aprsSource == "ON4ABC-7" && d.aprsDest == "APLRT1" && d.aprsPath == "WIDE1-1,WIDE2-1", "parsed header %s %s %s", d.aprsSource.c_str(), d.aprsDest.c_str(), d.aprsPath.c_str());
-    CHECK(d.aprs.hasPos && std::fabs(d.aprs.lat - 50.85045) < 1e-3 && std::fabs(d.aprs.lon + 4.34878) < 1e-3 && d.aprs.comment == "OnAir test", "parsed position %.5f %.5f '%s'",
+    check(d.ok && d.aprsSource == "ON4ABC-7" && d.aprsDest == "APLRT1" && d.aprsPath == "WIDE1-1,WIDE2-1", "parsed header %s %s %s", d.aprsSource.c_str(), d.aprsDest.c_str(), d.aprsPath.c_str());
+    check(d.aprs.hasPos && std::fabs(d.aprs.lat - 50.85045) < 1e-3 && std::fabs(d.aprs.lon + 4.34878) < 1e-3 && d.aprs.comment == "OnAir test", "parsed position %.5f %.5f '%s'",
           d.aprs.lat, d.aprs.lon, d.aprs.comment.c_str());
 }
 
@@ -58,22 +73,22 @@ static void radioSettings() {
     printf("radio settings:\n");
     TxRequest r;
     TxLoraAprsRadio p = txLoraAprsRadio(r);
-    CHECK(p.mhz == 433.775 && p.sf == 12 && p.bwHz == 125000 && p.cr == 5 && p.preamble == 8 && p.syncWord == 0x12 && p.crc, "EU default");
+    check(p.mhz == 433.775 && p.sf == 12 && p.bwHz == 125000 && p.cr == 5 && p.preamble == 8 && p.syncWord == 0x12 && p.crc, "EU default");
     r.opt["lora.preset"] = 1;
     p = txLoraAprsRadio(r);
-    CHECK(p.mhz == 434.855 && p.sf == 9 && p.cr == 7 && p.syncWord == 0x12, "PL");
+    check(p.mhz == 434.855 && p.sf == 9 && p.cr == 7 && p.syncWord == 0x12, "PL");
     r.opt["lora.preset"] = 2;
-    CHECK(txLoraAprsRadio(r).mhz == 439.9125, "UK");
+    check(txLoraAprsRadio(r).mhz == 439.9125, "UK");
     r.opt["lora.preset"] = 4;
     r.opt["lora.sf"] = 7; r.opt["lora.bwIdx"] = 2; r.opt["lora.cr"] = 8; r.opt["lora.preamble"] = 12; r.opt["lora.sync"] = 0x34; r.opt["lora.crc"] = 0;
     p = txLoraAprsRadio(r);
-    CHECK(p.mhz == 0 && p.sf == 7 && p.bwHz == 250000 && p.cr == 8 && p.preamble == 12 && p.syncWord == 0x34 && !p.crc, "own settings");
+    check(p.mhz == 0 && p.sf == 7 && p.bwHz == 250000 && p.cr == 8 && p.preamble == 12 && p.syncWord == 0x34 && !p.crc, "own settings");
     r.opt["lora.sf"] = 40; r.opt["lora.bwIdx"] = 9; r.opt["lora.sync"] = 999; r.opt["lora.cr"] = 1;
     p = txLoraAprsRadio(r);
-    CHECK(p.sf == 12 && p.bwHz == 500000 && p.syncWord == 255 && p.cr == 5, "out of range values are clamped");
-    CHECK(txModeDefaultMhz(*txModeById("loraaprs")) == 433.775, "the panel starts on 433.775 MHz");
-    CHECK(std::fabs(txModeDefaultMhz(*txModeById("mesh")) - 869.525) < 1e-9, "Mesh (LoRa) keeps 869.525 MHz");
-    CHECK(txPayloadKind("loraaprs") == TxPayloadKind::LoraAprs, "its own payload fields");
+    check(p.sf == 12 && p.bwHz == 500000 && p.syncWord == 255 && p.cr == 5, "out of range values are clamped");
+    check(txModeDefaultMhz(*txModeById("loraaprs")) == 433.775, "the panel starts on 433.775 MHz");
+    check(std::fabs(txModeDefaultMhz(*txModeById("mesh")) - 869.525) < 1e-9, "Mesh (LoRa) keeps 869.525 MHz");
+    check(txPayloadKind("loraaprs") == TxPayloadKind::LoraAprs, "its own payload fields");
 }
 
 // the transmitted IQ through a LoRa demodulator on `lr`'s settings: the frames it finds
@@ -100,22 +115,23 @@ static void roundTrip(const char* what, TxRequest r, double secs) {
             txSpectrumDb(x.data() + at, nfft, (int)nfft, db);
             for (size_t i = 0; i < nfft; i++) acc[i] += std::pow(10.0, db[i] / 10.0);
         }
-        for (size_t i = 0; i < nfft; i++) db[i] = (float)(10.0 * std::log10(std::max(acc[i], 1e-30)));
-        const double obw = txOccupiedBandwidthHz(db, rate);
+        std::vector<float> avg(nfft);
+        for (size_t i = 0; i < nfft; i++) avg[i] = (float)(10.0 * std::log10(std::max(acc[i], 1e-30)));
+        const double obw = txOccupiedBandwidthHz(avg, rate);
         printf("  %s: occupied bandwidth %.1f kHz\n", what, obw / 1e3);
-        CHECK(obw > 0.8 * lr.bwHz && obw < 1.3 * lr.bwHz, "%s: occupied bandwidth %.1f kHz for a %.0f kHz LoRa signal", what, obw / 1e3, lr.bwHz / 1e3);
+        check(obw > 0.8 * lr.bwHz && obw < 1.3 * lr.bwHz, "%s: occupied bandwidth %.1f kHz for a %.0f kHz LoRa signal", what, obw / 1e3, lr.bwHz / 1e3);
     }
     int good = 0;
     for (const auto& f : fr) if (f.crcOk == lr.crc && f.payload == want) good++;
     printf("  %s: SF%d %.0f kHz 4/%d sync 0x%02X: %zu frames, %d with the packet\n", what, lr.sf, lr.bwHz / 1e3, lr.cr, lr.syncWord, fr.size(), good);
-    CHECK(good >= 1, "%s: the packet decodes back (%zu frames)", what, fr.size());
+    check(good >= 1, "%s: the packet decodes back (%zu frames)", what, fr.size());
     // the same signal through a demodulator on another sync word: nothing
     TxLoraAprsRadio other = lr;
     other.syncWord = lr.syncWord == 0x12 ? 0x2B : 0x12;
     const auto fo = decode(x, rate, other);
     int wrong = 0;
     for (const auto& f : fo) if (f.payload == want) wrong++;
-    CHECK(wrong == 0, "%s: a receiver on sync word 0x%02X does not get the packet (%d)", what, other.syncWord, wrong);
+    check(wrong == 0, "%s: a receiver on sync word 0x%02X does not get the packet (%d)", what, other.syncWord, wrong);
 }
 
 static void roundTrips() {
@@ -132,7 +148,7 @@ static void roundTrips() {
     r.opt["lora.sf"] = 7;
     const auto x = make(r, 1e6, 2.0);
     const auto fr = decode(x, 1e6, txLoraAprsRadio(r));
-    CHECK(fr.size() >= 3, "sent again after the pause: %zu frames in 2 s", fr.size());
+    check(fr.size() >= 3, "sent again after the pause: %zu frames in 2 s", fr.size());
 }
 
 static void demo() {
@@ -141,7 +157,7 @@ static void demo() {
     const auto x = make(r, 2e6, 0.5);
     double e = 0;
     for (const auto& v : x) e += std::norm(v);
-    CHECK(!x.empty() && std::isfinite(e), "the demo scene is generated");
+    check(!x.empty() && std::isfinite(e), "the demo scene is generated");
 }
 
 int main() {
@@ -149,7 +165,6 @@ int main() {
     radioSettings();
     roundTrips();
     demo();
-    if (meshtest::fails) { printf("%d FAILED\n", meshtest::fails); return 1; }
-    printf("all LoRa APRS transmit checks passed\n");
-    return 0;
+    printf("%s (%d failures)\n", fails ? "FAIL" : "PASS", fails);
+    return fails ? 1 : 0;
 }
