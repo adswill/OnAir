@@ -1,7 +1,12 @@
 // The X-band links end to end on the built-in test signals. Simulated only. Impairments: carrier offset, drift, clock error, noise, phase ambiguity.
 #include "dect2/xband/xband_gen.h"
+#include "dect2/fy3/fy3_gen.h"
+#include "dect2/fy3/fy3_rx.h"
+#include "dect2/fy3/fy3_tel.h"
 #include "dect2/xband/xband_instr.h"
 #include "dect2/xband/xband_proto.h"
+#include "dect2/xband/xband_products.h"
+#include <cstring>
 #include "dect2/xband/xband_rx.h"
 #include "dect2/xband/xband_tel.h"
 #include <cmath>
@@ -81,6 +86,21 @@ static void instruments() {
     { XbandReceiver rx(kXbMetopDump); XbTelemetry t = viaCadu(rx, kXbMetopDump, 400);
       CHECK(t.satName == "MetOp-B", "metop name");
       for (int c = 0; c < 5; c++) pixels(rx, c, "AVHRR", [&](int x, int y) { return (int)(xbTestPixel(c, x, y) >> 2) << 6; }, 10); }
+    { XbandReceiver rx(kXbMetopDump); viaCadu(rx, kXbMetopDump, 400);
+      auto pr = rx.products(0);
+      printf("    AVHRR products:"); for (auto& q : pr) printf(" %s;", q.name.c_str()); printf("\n");
+      CHECK(pr.size() >= 3, "AVHRR products");
+      // calibration: the black body count must come back as the black body temperature
+      xband::AvhrrCal cal; cal.satIndex = 0; xband::AvhrrCal::Line l;
+      l.nPrt = 3; l.prt[0] = 300; l.prt[1] = 301; l.prt[2] = 302; for (int j = 0; j < 3; j++) { l.cb[j] = 400; l.cs[j] = 985; } cal.lines.push_back(l);
+      const double tbb = (276.5853 + 276.5335 + 276.5721) / 3 + 0.05102 * 301 + 1.5e-06 * 301 * 301;
+      const double t4 = xband::avhrrTemperature(cal, 0, 1, 400), t5 = xband::avhrrTemperature(cal, 0, 2, 400);
+      printf("    AVHRR calibration: Tbb %.2f K, T4(cb) %.2f K, T5(cb) %.2f K\n", tbb, t4, t5);
+      CHECK(std::fabs(t4 - tbb) < 2 && std::fabs(t5 - tbb) < 2, "AVHRR calibration");
+      XbProductImage f; f.width = 64; f.height = 48; f.rgba.assign(64 * 48, 0xFF804020u);
+      auto gif = rx.loopGif({f, f, f}, 50);
+      CHECK(gif.size() > 900 && std::memcmp(gif.data(), "GIF89a", 6) == 0, "loop gif");
+    }
     { XbandReceiver rx(kXbGcomW1); viaCadu(rx, kXbGcomW1, 400);
       for (int c : {0, 7, 19}) pixels(rx, c, "AMSR2", [&](int x, int y) { return x < 243 && y < 20 ? (int)xbTestPixel(c, x, y) << 4 : -1; }, 8); }
     { XbandReceiver rx(kXbLandsatX); viaCadu(rx, kXbLandsatX, 400);
@@ -99,6 +119,15 @@ static void instruments() {
       std::vector<cf32> b(1 << 16); for (int i = 0; i < 700; i++) { gen.generate(b.data(), b.size()); rx.feed(b.data(), b.size()); } rx.finish();
       XbTelemetry t; rx.telemetry(t, 0); printf("  Kanopus-V: %llu frames, %llu lines, state %d\n", (unsigned long long)t.blocksOk, (unsigned long long)t.lines, t.state);
       CHECK(t.blocksOk > 50, "kanopus frames"); CHECK(t.lines > 400, "kanopus lines"); }
+    // FY-3D / E / F X-band AHRPT is the existing FY-3 AHRPT receiver (family 235) with the X-band symbol rates: simulated check at 40 Msps
+    for (int sat : {3, 4, 5}) {
+        Fy3GenConfig g; g.rate = 50e6; g.product = 0; g.sat = sat; g.symbolRate = sat == 3 ? 30e6 : 38.4e6; g.rolloff = 0.35; g.snrDb = 20; g.cfoHz = 40000; Fy3Generator gen(g);
+        Fy3Receiver rx(0); rx.configure(50e6); rx.setSymbolRate(g.symbolRate); rx.setRolloff(0.35);
+        std::vector<cf32> b(1 << 16); Fy3Telemetry t; uint64_t q = 0;
+        for (int i = 0; i < 200; i++) { gen.generate(b.data(), b.size()); rx.feed(b.data(), b.size()); if (rx.telemetry(t, q)) q = t.seq; }
+        printf("  FY-3%c AHRPT X-band: state %d, frames %llu\n", 'A' + sat, t.state, (unsigned long long)t.blocksOk);
+        CHECK(t.blocksOk > 20, "FY-3 sat %d X-band frames", sat);
+    }
     // DMSP on the air: no CADU path
     { XbandGenConfig g; g.profile = kXbDmsp; g.rate = 2e6; g.snrDb = 16; g.cfoHz = 3000; XbandGenerator gen(g); XbandReceiver rx(kXbDmsp); rx.configure(2e6);
       std::vector<cf32> b(1 << 16); for (int i = 0; i < 60; i++) { gen.generate(b.data(), b.size()); rx.feed(b.data(), b.size()); } rx.finish();
@@ -117,7 +146,7 @@ int main(int argc, char** argv) {
     int only = argc > 1 ? atoi(argv[1]) : -1;
     std::vector<Case> cs = {
         {kXbSaralL, 3e6, 0.25, 20, 12000, 0, 0, 0, 5, 0},
-        {kXbSaralL, 3e6, 0.25, 8, -8000, 500, 20, 5, 5, 0},
+        {kXbSaralL, 3e6, 0.4, 8, -8000, 500, 20, 5, 5, 0},
         {kXbOceansat3, 3e6, 0.2, 12, 20000, 0, 0, 1, 3, 0},
         {kXbProbaS, 6e6, 0.2, 12, 15000, 0, 0, 0, 3, 0},
         {kXbLandsatS, 4e6, 0.5, 15, 5000, 0, 0, 2, 5, 0},
@@ -149,6 +178,11 @@ int main(int argc, char** argv) {
     }
     for (auto& k : cs) if (only < 0 || k.profile == only) expect(k);
     if (only < 0 || only == 100) instruments();
+    if (only < 0 || only == 101) {
+        for (int amb = 0; amb < 8; amb++) { Case k{kXbSaralL, 3e6, 0.25, 12, 3000, 0, 0, amb, 5, 0}; expect(k); }
+        for (double snr : {14.0, 10.0, 7.0, 5.0, 4.0}) { Case k{kXbSaralL, 3e6, 0.4, snr, 6000, 200, 15, 0, 8, 0}; XbTelemetry t = run(k); printf("    Saral coded link at %.0f dB: %llu frames\n", snr, (unsigned long long)t.blocksOk); if (snr >= 5) CHECK(t.blocksOk >= 8, "coded link %.0f dB", snr); }
+        for (double snr : {16.0, 12.0, 9.0}) { Case k{kXbMetopDump, 45e6, 0.03, snr, 2000, 0, 0, 0, 10, 0}; XbTelemetry t = run(k); printf("    MetOp uncoded link at %.0f dB: %llu frames, %llu bad\n", snr, (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad); if (snr >= 12) CHECK(t.blocksOk >= 10, "uncoded link %.0f dB", snr); }
+    }
     printf("%s\n", fails ? "FAILED" : "ok");
     return fails ? 1 : 0;
 }

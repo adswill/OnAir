@@ -30,5 +30,7 @@ double avhrrPlanckRadiance(double t, double vc);
 std::vector<XbProduct> makeProducts(const Store& s, int profile, const AvhrrCal* cal, int maxWidth);
 // The names of the products a profile can make, without computing them (for the screen)
 std::vector<std::string> productNames(int profile);
+// A weather loop: frames of equal size (others are skipped) as an animated GIF, 6 x 6 x 6 colour cube, delay in 1/100 s
+std::vector<uint8_t> makeLoopGif(const std::vector<XbProduct>& frames, int delayCs);
 
 } // namespace dect2::xband

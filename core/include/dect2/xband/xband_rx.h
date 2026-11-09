@@ -34,6 +34,7 @@ public:
     void finish();                                          // the end of a pass: what is buffered goes to the channels, the telemetry is published
     void pushCadu(const uint8_t* cadu);                     // frames already synchronised, starting at the 0x1ACFFC1D sync word, not yet derandomised / corrected
     bool setCaduOutput(const std::string& path);            // the decoded frames are appended to this file; "" closes it
+    std::vector<uint8_t> loopGif(const std::vector<XbProductImage>& frames, int delayCs) const;
     std::vector<XbProductImage> products(int maxWidth) const;   // colour composites and products of the pass so far (xband_products.h)
     bool readPlane(int channel, int& width, int& height, std::vector<uint16_t>& px) const;   // tests
     std::vector<XbProductImage> channelImages() const;           // each channel full size, 8 bit grey

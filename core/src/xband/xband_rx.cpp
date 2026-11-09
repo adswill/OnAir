@@ -104,7 +104,7 @@ public:
     size_t consPos = 0;
 
     void configure(double rate, double symbolRate, XbMod m, double alpha) {
-        inRate = rate; sym = symbolRate; mod = m;
+        inRate = rate; sym = symbolRate; mod = m; alpha_ = alpha;
         int ratio = (int)std::floor(rate / (4.0 * sym));
         if (ratio < 2) ratio = 1;
         ratio_ = ratio;
@@ -140,11 +140,12 @@ public:
     }
 
 private:
-    static constexpr int kAcq = 1 << 15;
+    static constexpr int kAcq = 1 << 17;
     std::vector<cfp> acq_;
     FirDec fir_;
     Rrc rrc_;
     int ratio_ = 1;
+    double alpha_ = 0.5;
     double spsNom_ = 2, sps_ = 2, cA_ = 0.01, cB_ = 1e-4, tBl_ = 0.005;
     double phase_ = 0, freq_ = 0, t_ = 1;
     cfp rot_{1, 0}, step_{1, 0};
@@ -164,15 +165,19 @@ private:
         const std::vector<cfp>& src = use ? *use : acq_;
         const double decRate2 = rateIn > 0 ? rateIn : decRate;
         std::vector<float> re((size_t)N), im((size_t)N), pow((size_t)N);
-        for (int i = 0; i < N; i++) {
-            cfp v = src[(size_t)i];
-            cfp w = mult == 4 ? (v * v) * (v * v) : v * v;
-            w /= std::max(1e-7f, std::abs(w));
-            const float win = 0.5f - 0.5f * (float)std::cos(2 * kPi * i / N);
-            re[(size_t)i] = w.real() * win; im[(size_t)i] = w.imag() * win;
+        std::fill(pow.begin(), pow.end(), 0.f);
+        const int blocks = (int)(src.size() / (size_t)N);
+        for (int b = 0; b < std::max(1, blocks); b++) {
+            for (int i = 0; i < N; i++) {
+                cfp v = src[(size_t)(b * N + i)];
+                cfp w = mult == 4 ? (v * v) * (v * v) : v * v;
+                w /= std::max(1e-7f, std::abs(w));
+                const float win = 0.5f - 0.5f * (float)std::cos(2 * kPi * i / N);
+                re[(size_t)i] = w.real() * win; im[(size_t)i] = w.imag() * win;
+            }
+            fftSplit(re.data(), im.data(), log2n, false);
+            for (int i = 0; i < N; i++) pow[(size_t)i] += re[(size_t)i] * re[(size_t)i] + im[(size_t)i] * im[(size_t)i];
         }
-        fftSplit(re.data(), im.data(), log2n, false);
-        for (int i = 0; i < N; i++) pow[(size_t)i] = re[(size_t)i] * re[(size_t)i] + im[(size_t)i] * im[(size_t)i];
         const double maxHz = std::min(0.45 * decRate2 / mult, 1.5e6);
         const int maxBin = (int)(maxHz * mult / decRate2 * N);
         int best = 0; float bv = 0;
@@ -188,6 +193,8 @@ private:
     }
 
     void acquire() {
+        // a matched filter first: at many samples a symbol the power law works on the noise of the whole band otherwise
+        { Rrc f; f.design(spsNom_, alpha_); for (auto& v : acq_) v = f.push(v); }
         double off = 0;
         double peak = 0;
         const int N = 1 << 15;
@@ -208,7 +215,6 @@ private:
                 p4 = scan(4, 0, o4, &up, 16, decRate * 2);
             } else p4 = scan(4, 0, o4);
             const double p2 = scan(2, (int)std::lround(sym * 0.5 / decRate * N), o2);
-            if (getenv("XB_DBG")) printf("acq p4 %.1f off %.0f  p2 %.1f off %.0f\n", p4, o4, p2, o2);
             peak = p4 >= p2 ? p4 : p2; off = p4 >= p2 ? o4 : o2;
         }
         if (peak > 6) cfoCoarse += off;
@@ -447,14 +453,12 @@ struct XbandReceiver::Impl {
                         else { if (i == 0) { w = 0; prevSeed_ = tb; continue; } a = prevSeed_; b = ta; prevSeed_ = tb; }
                     }
                     w = w << 2 | (uint64_t)(a > 0) << 1 | (uint64_t)(b > 0);
-                    if (i >= 31 && getenv("XB_DBG2") && i % 1000 == 0) printf("%llx %llx\n", (unsigned long long)w, (unsigned long long)pat0);
                     if (i >= 31) {
-                        if (__builtin_popcountll((w ^ pat0) & mask) <= 6) hits.push_back(i);
-                        else if (L.nrzm && __builtin_popcountll((w ^ pat1) & mask) <= 6) hits.push_back(i);
+                        if (__builtin_popcountll((w ^ pat0) & mask) <= 10) hits.push_back(i);
+                        else if (L.nrzm && __builtin_popcountll((w ^ pat1) & mask) <= 10) hits.push_back(i);
                     }
                 }
                 const int wantFrameBits = L.caduBytes * 8;
-                if (getenv("XB_DBG")) printf("t %d al %d: %zu hits, np %d\n", t, al, hits.size(), np);
                 int at = -1;
                 for (size_t x = 0; x < hits.size() && at < 0; x++) for (size_t y = x + 1; y < hits.size(); y++) if (hits[y] - hits[x] == wantFrameBits) { at = hits[y]; break; }
                 if (at < 0) continue;
@@ -728,6 +732,11 @@ bool XbandReceiver::setCaduOutput(const std::string& path) {
     if (path.empty()) return true;
     p_->caduOut.open(path, std::ios::binary | std::ios::app);
     return p_->caduOut.is_open();
+}
+std::vector<uint8_t> XbandReceiver::loopGif(const std::vector<XbProductImage>& frames, int delayCs) const {
+    std::vector<xband::XbProduct> v;
+    for (const auto& f : frames) { xband::XbProduct p; p.width = f.width; p.height = f.height; p.rgba = f.rgba; v.push_back(std::move(p)); }
+    return xband::makeLoopGif(v, delayCs);
 }
 std::vector<XbProductImage> XbandReceiver::products(int maxWidth) const {
     std::vector<XbProductImage> out;

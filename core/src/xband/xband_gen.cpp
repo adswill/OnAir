@@ -108,7 +108,12 @@ struct Source {
         hrpt::Line l;
         l.day = 12000; l.ms = (uint32_t)(1000 + nextLine * 167);
         for (int c = 0; c < 5; c++) for (int x = 0; x < kHrptWidth; x++) l.px[(size_t)c * kHrptWidth + x] = (uint16_t)(xbTestPixel(c, x, nextLine) >> 2);
-        m.add(hrpt::kApid3a, 3, nextLine & 0x3FFF, hrpt::encodeAvhrrPacket(l));
+        auto u = hrpt::encodeAvhrrPacket(l);
+        // the on-board targets (10-bit words of the packet from byte 14): PRTs, 10 black body views and 10 space views of channels 3b / 4 / 5
+        const auto put = [&](int word, int v) { for (int k = 0; k < 10; k++) { const int bit = word * 10 + k; const size_t b = (size_t)14 + bit / 8; const uint8_t m = (uint8_t)(0x80 >> (bit % 8)); if ((v >> (9 - k)) & 1) u[b] |= m; else u[b] &= (uint8_t)~m; } };
+        for (int i = 0; i < 3; i++) put(10295 + 2 + i, 300 + i);
+        for (int i = 0; i < 10; i++) for (int j = 0; j < 3; j++) { put(10305 + 5 * i + j + 2, 400 + j * 20 + (i & 1)); put(5 * i + j + 2, 980 + j); }
+        m.add(hrpt::kApid3a, 3, nextLine & 0x3FFF, u);
         nextLine++;
     }
     // DMSP RTD: an alarm (line start) frame and 490 pixel frames

@@ -37,6 +37,7 @@ struct State {
     std::vector<XbProductImage> products;
     double lastProd = 0;
     int view2 = 0;
+    std::vector<XbProductImage> loop;
 };
 State gS[kXbNumProfiles];
 
@@ -150,6 +151,16 @@ void tab(App& a) {
     flowNext(5 * gUi);
     if (ImGui::Button(tr("Save all"))) s.msg = saveAll(a, P, s, rx);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Products and every channel at full size, in the data folder, and the products in the gallery"));
+    flowNext(5 * gUi);
+    if (ImGui::Button(tr("Add to loop")) && s.view < nProd) { s.loop.push_back(s.products[(size_t)s.view]); s.msg = "loop: " + std::to_string(s.loop.size()) + " frames"; }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Adds the product on screen as a frame of a weather loop; several passes make a loop"));
+    flowNext(5 * gUi);
+    if (ImGui::Button(tr("Save loop")) && !s.loop.empty()) {
+        const auto gif = rx.loopGif(s.loop, 50);
+        const std::string f = saveFolder(P) + "/loop.gif";
+        std::FILE* o = std::fopen(f.c_str(), "wb");
+        if (o) { std::fwrite(gif.data(), 1, gif.size(), o); std::fclose(o); s.msg = "saved " + f; } else s.msg = "could not write " + f;
+    }
     flowNext(5 * gUi);
     if (ImGui::Button(tr("New pass"))) { rx.clearImage(); s.products.clear(); s.view = 0; s.shownId = 0; s.msg.clear(); }
     flowEnd();

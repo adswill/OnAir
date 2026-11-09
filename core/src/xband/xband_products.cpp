@@ -208,4 +208,51 @@ std::vector<XbProduct> makeProducts(const Store& s, int profile, const AvhrrCal*
     return out;
 }
 
+std::vector<uint8_t> makeLoopGif(const std::vector<XbProduct>& frames, int delayCs) {
+    std::vector<uint8_t> o;
+    if (frames.empty()) return o;
+    const int w = frames[0].width, h = frames[0].height;
+    const auto put16 = [&](int v) { o.push_back((uint8_t)v); o.push_back((uint8_t)(v >> 8)); };
+    o.insert(o.end(), {'G', 'I', 'F', '8', '9', 'a'});
+    put16(w); put16(h);
+    o.push_back(0xF7); o.push_back(0); o.push_back(0);   // global colour table of 256
+    for (int r = 0; r < 6; r++) for (int g = 0; g < 6; g++) for (int b = 0; b < 6; b++) { o.push_back((uint8_t)(r * 51)); o.push_back((uint8_t)(g * 51)); o.push_back((uint8_t)(b * 51)); }
+    for (int i = 216; i < 256; i++) { o.push_back(0); o.push_back(0); o.push_back(0); }
+    o.insert(o.end(), {0x21, 0xFF, 0x0B, 'N', 'E', 'T', 'S', 'C', 'A', 'P', 'E', '2', '.', '0', 3, 1, 0, 0, 0});   // loop for ever
+    for (const auto& f : frames) {
+        if (f.width != w || f.height != h || f.rgba.size() != (size_t)w * h) continue;
+        o.insert(o.end(), {0x21, 0xF9, 4, 4}); put16(delayCs); o.push_back(0); o.push_back(0);
+        o.push_back(0x2C); put16(0); put16(0); put16(w); put16(h); o.push_back(0);
+        o.push_back(8);       // LZW minimum code size
+        // LZW with the table reset on every code width overflow
+        std::vector<uint8_t> blk; uint32_t acc = 0; int nb = 0;
+        const auto flush = [&]() { size_t at = 0; while (at < blk.size()) { const size_t n = std::min<size_t>(255, blk.size() - at); o.push_back((uint8_t)n); o.insert(o.end(), blk.begin() + (std::ptrdiff_t)at, blk.begin() + (std::ptrdiff_t)(at + n)); at += n; } blk.clear(); };
+        const auto emit = [&](int code, int bits) { acc |= (uint32_t)code << nb; nb += bits; while (nb >= 8) { blk.push_back((uint8_t)acc); acc >>= 8; nb -= 8; } if (blk.size() >= 240) flush(); };
+        const int clear = 256, stop = 257;
+        std::vector<int16_t> dict(4096 * 256, -1);
+        int next = 258, bits = 9;
+        emit(clear, bits);
+        int prefix = -1;
+        const auto pal = [](uint32_t c) { const int r = c & 255, g = c >> 8 & 255, b = c >> 16 & 255; return (r * 5 + 127) / 255 * 36 + (g * 5 + 127) / 255 * 6 + (b * 5 + 127) / 255; };
+        for (uint32_t c : f.rgba) {
+            const int p = pal(c);
+            if (prefix < 0) { prefix = p; continue; }
+            const int16_t found = dict[(size_t)prefix * 256 + p];
+            if (found >= 0) { prefix = found; continue; }
+            emit(prefix, bits);
+            dict[(size_t)prefix * 256 + p] = (int16_t)next++;
+            if (next >= (1 << bits) + 1 && bits < 12) bits++;
+            if (next >= 4095) { emit(clear, bits); std::fill(dict.begin(), dict.end(), (int16_t)-1); next = 258; bits = 9; }
+            prefix = p;
+        }
+        if (prefix >= 0) emit(prefix, bits);
+        emit(stop, bits);
+        if (nb > 0) { blk.push_back((uint8_t)acc); acc = 0; nb = 0; }
+        flush();
+        o.push_back(0);       // block terminator
+    }
+    o.push_back(0x3B);
+    return o;
+}
+
 } // namespace dect2::xband
