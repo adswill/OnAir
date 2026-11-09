@@ -71,6 +71,8 @@ struct DrmReceiver::Impl {
     // Journaline data service (TS 102 979 clause 8.2): packet mode stream, DAB domain, user application 0x44a
     JournalineDecoder jl;
     DrmPacketDemux jlDemux;
+    std::atomic<int> chanPassHz{0};          // requested channel filter (0 = off); applied on the receiver thread in feed()
+    int chanPassApplied = 0;
     std::atomic<int> jlStream{-1};
     int jlKey = -1;
     void journaline(const LogicalFrame& f, const SdcInfo& sd) {
@@ -274,6 +276,7 @@ struct DrmReceiver::Impl {
         if (eLane) swapLanes();
         inRate = rate;
         ready = front.configure(rate);
+        front.setChannelPass((double)chanPassApplied);
         eOk = other.front.configure(rate, kFsE, kMinRateE);
         other.fs = kFsE; fs = kFs;
         cc.configure(rate, 10000, 12000, 4.0);
@@ -1264,6 +1267,12 @@ struct DrmReceiver::Impl {
 
     void feed(const cf32* x, size_t n) {
         if (!ready || n == 0) return;
+        if (const int want = chanPassHz.load(); want != chanPassApplied) {
+            chanPassApplied = want;
+            if (eLane) swapLanes();
+            front.setChannelPass((double)want);
+            resetAll(false);
+        }
         if (!eLane) {
             // a channel away from the middle of the sample band (beyond the +-24 kHz the front end keeps) is moved there first
             cin.assign(x, x + n);
@@ -1521,6 +1530,8 @@ void DrmReceiver::setVolume(float v) { p_->volume = std::max(0.f, std::min(1.f, 
 void DrmReceiver::setMuted(bool m) { p_->muted = m; }
 void DrmReceiver::setSilent(bool s) { p_->silent = s; }
 void DrmReceiver::setAudioTap(std::function<void(const float*, const float*, size_t)> cb) { p_->tap = std::move(cb); }
+void DrmReceiver::setChannelFilterHz(int passHz) { p_->chanPassHz = std::max(0, std::min(24000, passHz)); }
+int DrmReceiver::channelFilterHz() const { return p_->chanPassHz; }
 void DrmReceiver::selectService(int shortId) { p_->selected = shortId; }
 JournalineDecoder& DrmReceiver::journaline() { return p_->jl; }
 bool DrmReceiver::dataView(int shortId, DrmDataView& out) const {
