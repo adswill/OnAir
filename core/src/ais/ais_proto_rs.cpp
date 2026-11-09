@@ -99,7 +99,7 @@ bool decodeMessage(const Bits& b, AisMsg& m) {
     m.aidType = r.aid_type; m.offPosition = r.off_position != 0; m.virtualAid = r.virtual_aid != 0;
     m.altitudeM = r.altitude_m;
     m.year = r.year; m.month = r.month; m.day = r.day; m.hour = r.hour; m.minute = r.minute; m.sec = r.sec;
-    if (r.text_bits) m.text = getText(b, 40, r.text_bits);
+    if (r.text_bits) m.text = getText(b, r.type == 12 ? 72 : 40, r.text_bits);
     m.dac = r.dac; m.fi = r.fi; m.destMmsi = r.dest_mmsi;
     // the flags the Rust layer does not carry (ITU-R M.1371-5 tables 46, 49 and 79)
     if (m.type >= 1 && m.type <= 3 && b.size() == 168) { m.posAccuracy = (int)getU(b, 60, 1); m.raim = (int)getU(b, 148, 1); }

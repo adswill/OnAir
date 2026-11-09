@@ -10,6 +10,7 @@
 #include "../adsb/adsb_map.h"
 #include "map/rangeplot_ui.h"
 #include "dect2/ais/ais_tel.h"
+#include "dect2/ais/ais_apps.h"
 #include "ais_sat_ui.h"
 #include "ais_alerts_ui.h"
 #include "dect2/ais/ais_mid.h"
@@ -27,6 +28,7 @@ struct State {
     int view = 1;                    // 1 table (Live), 0 map, 2 messages, 3 NMEA, 4 range, 5 satellite
     uint32_t sel = 0;                // the selected station (MMSI), 0 = none
     adsbmap::View map;
+    bool showReports = true;         // weather stations, area notices and the like on the map (Reports view)
     bool mapFollow = true;           // the map fits the stations until the user drags it
     int sortCol = 4, sortDir = 1;    // table: the column and the direction (1 ascending); starts on "heard"
     bool nmeaScroll = true;
@@ -232,6 +234,141 @@ void detail(App& a) {
     if (!shown) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("none in the last 50"); ImGui::PopTextWrapPos(); }
 }
 
+// ---------------------------------------------------------------- application and network messages (ais_apps.h)
+
+const char* reportTime(double utc, char* b, size_t n) {
+    const time_t t = (time_t)utc;
+    struct tm tmv;
+#ifdef _WIN32
+    gmtime_s(&tmv, &t);
+#else
+    gmtime_r(&t, &tmv);
+#endif
+    strftime(b, n, "%H:%M:%S", &tmv);
+    return b;
+}
+
+void drawAreaShape(ImDrawList* dl, const dect2::AisAreaShape& sh, ImU32 col) {
+    if (sh.kind == 0 || sh.kind == 2) {
+        const int n = 48;
+        const bool sector = sh.kind == 2;
+        double from = 0, to = 360;
+        if (sector) { from = sh.leftDeg; to = sh.rightDeg; if (to <= from) to += 360; }
+        const ImVec2 c = adsbmap::project(sh.lat, sh.lon);
+        if (sh.radiusM <= 0) { dl->AddCircleFilled(c, 4 * gUi, col); return; }
+        if (sector) dl->PathLineTo(c);
+        for (int i = 0; i <= n; i++) {
+            double la, lo;
+            dect2::ais::aisOffset(sh.lat, sh.lon, from + (to - from) * i / n, sh.radiusM, la, lo);
+            dl->PathLineTo(adsbmap::project(la, lo));
+        }
+        dl->PathStroke(col, sector ? ImDrawFlags_Closed : 0, 1.8f);
+    } else if (sh.kind == 1) {
+        double cla = sh.lat, clo = sh.lon, la, lo;
+        const double e = sh.eastM, no = sh.northM;
+        dect2::ais::aisOffset(sh.lat, sh.lon, sh.orientDeg + 90, e, la, lo); const ImVec2 b = adsbmap::project(la, lo);
+        double la2, lo2; dect2::ais::aisOffset(la, lo, sh.orientDeg, no, la2, lo2); const ImVec2 c = adsbmap::project(la2, lo2);
+        dect2::ais::aisOffset(cla, clo, sh.orientDeg, no, la, lo); const ImVec2 d = adsbmap::project(la, lo);
+        const ImVec2 q = adsbmap::project(cla, clo);
+        dl->AddQuad(q, b, c, d, col, 1.8f);
+    } else if (sh.pts.size() >= 2) {
+        for (size_t i = 0; i + 1 < sh.pts.size(); i++) dl->AddLine(adsbmap::project(sh.pts[i].lat, sh.pts[i].lon), adsbmap::project(sh.pts[i + 1].lat, sh.pts[i + 1].lon), col, 1.8f);
+        if (sh.kind == 4) dl->AddLine(adsbmap::project(sh.pts.back().lat, sh.pts.back().lon), adsbmap::project(sh.pts[0].lat, sh.pts[0].lon), col, 1.8f);
+    }
+}
+
+ImU32 reportColour(int category) {
+    switch (category) {
+    case dect2::AIS_APP_WEATHER: return IM_COL32(90, 190, 255, 235);
+    case dect2::AIS_APP_WATER: return IM_COL32(60, 220, 200, 235);
+    case dect2::AIS_APP_NOTICE: return IM_COL32(255, 120, 80, 235);
+    case dect2::AIS_APP_TRAFFIC: return IM_COL32(250, 210, 90, 235);
+    case dect2::AIS_APP_NETWORK: return IM_COL32(170, 170, 190, 180);
+    default: return IM_COL32(230, 230, 230, 220);
+    }
+}
+
+// the map: area notices, routes and the regions of channel management drawn, stations that report weather, water or signals marked
+void reportsOverlay(App& a, ImDrawList* dl, ImVec2 p0, ImVec2 size, ImVec2 mouse, bool mouseIn) {
+    for (const auto& r : a.rx.ais.apps) {
+        const ImU32 col = reportColour(r.category);
+        for (const auto& sh : r.shapes) drawAreaShape(dl, sh, col);
+        if (!r.hasPos || r.category == dect2::AIS_APP_NETWORK) continue;
+        const ImVec2 q = adsbmap::project(r.lat, r.lon);
+        if (q.x < p0.x - 20 || q.y < p0.y - 20 || q.x > p0.x + size.x + 20 || q.y > p0.y + size.y + 20) continue;
+        const float h = 6 * gUi;
+        dl->AddTriangleFilled(ImVec2(q.x, q.y - h), ImVec2(q.x - h, q.y + h * 0.7f), ImVec2(q.x + h, q.y + h * 0.7f), col);
+        if (mouseIn && std::hypot(q.x - mouse.x, q.y - mouse.y) < 10 * gUi) ImGui::SetTooltip("%s\n%s\n%s", tr(r.title.c_str()), r.summary.c_str(), mmsiText(r.mmsi).c_str());
+    }
+}
+
+void reportsView(App& a) {
+    const auto& apps = a.rx.ais.apps;
+    static std::string note;
+    static int filter = 0;
+    static uint64_t selN = 0;
+    resexp::Table x; x.cols = {"time_unix", "mmsi", "dest_mmsi", "message_type", "dac", "fi", "category", "title", "summary", "lat", "lon", "repeats", "fields"};
+    for (const auto& r : apps) {
+        std::string fs;
+        for (const auto& f : r.fields) { if (!fs.empty()) fs += "; "; fs += f.key + "=" + f.value; }
+        x.add({resexp::num(r.utc, 3), std::to_string(r.mmsi), r.destMmsi ? std::to_string(r.destMmsi) : "", std::to_string(r.type), r.dac >= 0 ? std::to_string(r.dac) : "", r.fi >= 0 ? std::to_string(r.fi) : "", dect2::aisAppCategoryText(r.category),
+               r.title, r.summary, r.hasPos ? resexp::num(r.lat, 6) : "", r.hasPos ? resexp::num(r.lon, 6) : "", std::to_string(r.count), fs}, r.utc);
+    }
+    resexp::saveButton(x, "ais_reports", note, "svaisr");
+    if (!note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", note.c_str()); }
+    ImGui::SameLine();
+    ImGui::Checkbox(tr("on the map"), &S.showReports);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(130 * gUi);
+    static const char* const cats[9] = {"All", "Other", "Weather", "Water", "Area notice", "Text", "Ship", "Traffic", "Network"};
+    if (ImGui::BeginCombo("##aisrf", tr(cats[filter]))) {
+        for (int i = 0; i < 9; i++) if (ImGui::Selectable(tr(cats[i]), i == filter)) filter = i;
+        ImGui::EndCombo();
+    }
+    const float H = ImGui::GetContentRegionAvail().y, W = ImGui::GetContentRegionAvail().x, rw = std::min(340.f * gUi, W * 0.4f);
+    const dect2::AisAppRecord* sel = nullptr;
+    ImGui::BeginChild("##aisrl", ImVec2(W - rw - 8 * gUi, H));
+    if (ImGui::BeginTable("##aisrt", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_Borders, ImVec2(0, ImGui::GetContentRegionAvail().y))) {
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableSetupColumn(tr("Time"), ImGuiTableColumnFlags_WidthFixed, 66 * gUi);
+        ImGui::TableSetupColumn("MMSI", ImGuiTableColumnFlags_WidthFixed, 80 * gUi);
+        ImGui::TableSetupColumn(tr("Kind"), 0, 1.f);
+        ImGui::TableSetupColumn(tr("Content"), 0, 2.2f);
+        ImGui::TableHeadersRow();
+        for (auto it = apps.rbegin(); it != apps.rend(); ++it) {
+            const auto& r = *it;
+            if (filter && r.category != filter - 1) continue;
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            char b[16]; ImGui::PushID((int)r.n);
+            if (ImGui::Selectable(reportTime(r.utc, b, sizeof b), selN == r.n, ImGuiSelectableFlags_SpanAllColumns)) selN = r.n;
+            ImGui::PopID();
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(mmsiText(r.mmsi).c_str());
+            ImGui::TableNextColumn(); ImGui::TextColored(ImColor(reportColour(r.category)), "%s", tr(r.title.c_str()));
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(r.summary.c_str());
+            if (selN == r.n) sel = &r;
+        }
+        ImGui::EndTable();
+    }
+    ImGui::EndChild();
+    ImGui::SameLine();
+    ImGui::BeginChild("##aisrd", ImVec2(0, H), ImGuiChildFlags_Borders);
+    if (!sel) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", apps.empty() ? tr("nothing interpreted yet") : tr("click a row")); ImGui::PopTextWrapPos(); }
+    else {
+        ImGui::TextColored(pal::heading(), "%s", tr(sel->title.c_str()));
+        ImGui::TextDisabled("%s  x %u", mmsiText(sel->mmsi).c_str(), sel->count);
+        if (sel->dac >= 0) ImGui::TextDisabled("DAC %d, FI %d", sel->dac, sel->fi);
+        if (sel->destMmsi) ImGui::TextDisabled("%s %09u", tr("to"), sel->destMmsi);
+        if (sel->hasPos) ImGui::TextDisabled("%.5f, %.5f", sel->lat, sel->lon);
+        ImGui::Separator();
+        for (const auto& f : sel->fields) {
+            ImGui::TextDisabled("%s", tr(f.key.c_str())); kvColumn(120 * gUi);
+            ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::TextUnformatted(f.value.c_str()); ImGui::PopTextWrapPos(); ImGui::PopFont();
+        }
+    }
+    ImGui::EndChild();
+}
+
 // ---------------------------------------------------------------- the map
 
 void mapView(App& a, ImVec2 size) {
@@ -257,6 +394,7 @@ void mapView(App& a, ImVec2 size) {
     const AisVessel* hit = nullptr; float best = 16 * gUi;
     ImVec2 click; const bool clicked = adsbmap::clickedAt(click);
     if (on) {
+        if (S.showReports) reportsOverlay(a, dl, p0, size, mouse, mouseIn);
         for (const auto& v : t.vessels) {   // tracks first, so the marks sit on top
             if (!aisUiFilter().matches(v)) continue;
             if (!v.hasPos || v.track.size() < 2) continue;
@@ -481,7 +619,7 @@ void nmeaView(App& a) {
 void tab(App& a) {
     loadState();
     kit::modeHeader({14, "AIS", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("aisv", S.view, {{tr("Live"), 1}, {tr("Tracks"), 6}, {tr("Map"), 0}, {tr("Log"), 2, true}, {tr("NMEA"), 3, true}, {tr("Range"), 4, true}, {tr("Satellite"), 5, true}, {tr("Alerts"), 7, true}});
+    kit::modeNav("aisv", S.view, {{tr("Live"), 1}, {tr("Tracks"), 6}, {tr("Map"), 0}, {tr("Log"), 2, true}, {tr("NMEA"), 3, true}, {tr("Range"), 4, true}, {tr("Satellite"), 5, true}, {tr("Alerts"), 7, true}, {tr("Reports"), 8, true}});
     const bool on = live(a);
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     if (S.view == 2) {
@@ -494,6 +632,7 @@ void tab(App& a) {
     if (S.view == 5) { aisSatPanel(a); return; }
     if (S.view == 6) { kit::sessionItems(14, 3, "ais"); return; }
     if (S.view == 7) { aisAlertsPanel(a); return; }
+    if (S.view == 8) { reportsView(a); return; }
     const float cw = std::min(320.f * gUi, W * 0.34f);
     ImGui::BeginChild("##ais_l", ImVec2(W - cw - 8 * gUi, H));
     if (S.view == 0) {

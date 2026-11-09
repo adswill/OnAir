@@ -62,6 +62,34 @@ struct AisRxRecord {
     int layer = 0;                   // 0 decoded directly, 1 found on another frequency or part of the burst, 2+ after cancelling the stronger burst(s)
 };
 
+// One interpreted message beyond the position and static reports (ais_apps.h): binary application messages 6/8 and the network, text and
+// assignment types. A record stands for the last message of its kind from a station, 'count' how often the same content was repeated.
+struct AisAreaShape {
+    int kind = 0;                    // 0 circle or point, 1 rectangle, 2 sector, 3 polyline, 4 polygon
+    double lat = 0, lon = 0;         // centre, or the south-west corner of a rectangle
+    double radiusM = 0, eastM = 0, northM = 0, orientDeg = 0, leftDeg = 0, rightDeg = 0;
+    std::vector<AisTrackPoint> pts;  // polyline or polygon vertices, the start point first
+};
+struct AisAppField { std::string key, value; };
+struct AisAppRecord {
+    uint64_t n = 0;                  // running number, grows with every update
+    double utc = 0;
+    uint32_t count = 1;
+    char channel = 'A';
+    int type = 0, dac = -1, fi = -1; // dac and fi are -1 outside messages 6, 8 and structured 25 / 26
+    uint32_t mmsi = 0, destMmsi = 0;
+    int category = 0;                // AisAppCategory
+    std::string title, summary;      // what it is, one line with the main values
+    std::vector<AisAppField> fields; // every value that was in the message
+    bool hasPos = false; double lat = 0, lon = 0;
+    std::vector<AisAreaShape> shapes;  // area notice geometry, route waypoints
+};
+enum AisAppCategory { AIS_APP_OTHER = 0, AIS_APP_WEATHER, AIS_APP_WATER, AIS_APP_NOTICE, AIS_APP_TEXT, AIS_APP_SHIP, AIS_APP_TRAFFIC, AIS_APP_NETWORK };
+inline const char* aisAppCategoryText(int c) {
+    static const char* const n[8] = {"Other", "Weather", "Water", "Area notice", "Text", "Ship", "Traffic", "Network"};
+    return c >= 0 && c < 8 ? n[c] : "";
+}
+
 struct AisTelemetry {
     // ---- the part every mode has: the engine copies it into RxTelemetry; keep these members and what they mean
     uint64_t seq = 0;            // grows with every report and never restarts (not even after reset())
@@ -96,6 +124,7 @@ struct AisTelemetry {
     uint32_t vesselCount = 0;            // stations in the table (the list below holds them all, up to dect2::limits::kVessels)
     std::vector<AisVessel> vessels;      // most recently heard first
     std::vector<std::string> nmea;       // the last 50 good messages as !AIVDM sentences, newest last
+    std::vector<AisAppRecord> apps;      // interpreted application and network messages (ais_apps.h), the most recently updated last, up to 150
 };
 
 // ITU-R M.1371-5 table 50 (ship and cargo type) in words

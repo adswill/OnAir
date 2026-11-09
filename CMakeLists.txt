@@ -2381,6 +2381,10 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_ais_proto_rs PRIVATE onair_rs)
   target_compile_options(test_ais_proto_rs PRIVATE -ffp-contract=off)
   add_test(NAME ais_proto_rs COMMAND test_ais_proto_rs)
+  add_executable(test_ais_apps tests/ais/test_ais_apps.cpp core/src/ais/ais_apps.cpp core/src/ais/ais_proto.cpp core/src/ais/ais_proto_rs.cpp)
+  target_include_directories(test_ais_apps PRIVATE core/include)
+  target_link_libraries(test_ais_apps PRIVATE onair_rs)
+  add_test(NAME ais_apps COMMAND test_ais_apps)
 
   # The converted protocol layers exist only in Rust (the C++ they replaced is deleted): tests/<mode>/test_<mode>_proto_rs.cpp is a golden-vector test (digest of a seeded
   # run, tests/common/golden.h) and fuzz_<mode>_proto a seeded mutation run (meant for DECT2_SANITIZE=ON). Both link the core, which holds the Rust-backed files.

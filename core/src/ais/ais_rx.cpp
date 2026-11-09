@@ -16,6 +16,7 @@
 #include "dect2/ais/ais_alerts.h"
 #include "dect2/ais/ais_anomaly.h"
 #include "dect2/ais/ais_proto.h"
+#include "dect2/ais/ais_apps.h"
 #include "dect2/ais/ais_longrange.h"
 #include "dect2/ais/ais_sat.h"
 #include "dect2/automation/event.h"
@@ -156,6 +157,8 @@ struct AisReceiver::Impl {
     bool timeBaseFixed = false;
     std::deque<AisRxRecord> recent;
     uint64_t recN = 0;
+    std::deque<AisAppRecord> apps;
+    uint64_t appN = 0;
     std::vector<double> hints[4];   // satellite mode: frequency candidates per channel, refreshed with every report
 
     // results
@@ -297,6 +300,7 @@ struct AisReceiver::Impl {
         for (const auto& kv : vessels) o.longRangeVessels += kv.second.v.longRange;
         o.nmea.assign(nmea.begin(), nmea.end());
         o.recent.assign(recent.begin(), recent.end());
+        o.apps.assign(apps.begin(), apps.end());
     }
     // a report of the lists alone (after a reset, a load or a clear: no new signal to wait for)
     void republish() {
@@ -471,6 +475,17 @@ struct AisReceiver::Impl {
         recent.push_back(rec);
         while (recent.size() > 500) recent.pop_front();
         if (m.mmsi) updateVessel(m, chn, tnow, rec.utc);
+        // the application, text and network messages, as readable records (ais_apps.h): one record per kind and content, the repeats just counted
+        if (!(m.type <= 5 || m.type == 9 || m.type == 11 || m.type == 18 || m.type == 19 || m.type == 21 || m.type == 24 || m.type == 27)) {
+            AisAppRecord ar;
+            if (ais::interpretApp(bits, m, ar)) {
+                ar.channel = chn; ar.utc = rec.utc; ar.n = ++appN;
+                auto same = std::find_if(apps.begin(), apps.end(), [&](const AisAppRecord& x) { return x.mmsi == ar.mmsi && x.type == ar.type && x.dac == ar.dac && x.fi == ar.fi && x.summary == ar.summary; });
+                if (same != apps.end()) { ar.count = same->count + 1; apps.erase(same); }
+                apps.push_back(std::move(ar));
+                while (apps.size() > 150) apps.pop_front();
+            }
+        }
     }
 
     // satellite mode: the frequency candidates of a channel: the bursts heard lately, and (with the satellite's elements) the Doppler shift each
@@ -785,7 +800,7 @@ bool AisReceiver::telemetry(AisTelemetry& out, uint64_t lastSeq) {
 }
 void AisReceiver::clearResults() {
     std::lock_guard<std::mutex> lk(p_->procMu);
-    p_->vessels.clear(); p_->nmea.clear(); p_->recent.clear(); p_->alertLog.clear(); p_->alertEng.clear(); p_->anomalyLog.clear(); p_->anomalyEng.clear();
+    p_->vessels.clear(); p_->nmea.clear(); p_->recent.clear(); p_->apps.clear(); p_->alertLog.clear(); p_->alertEng.clear(); p_->anomalyLog.clear(); p_->anomalyEng.clear();
     p_->republish();
 }
 std::string AisReceiver::saveResults() const {

@@ -189,5 +189,5 @@ int main() {
         }
     }
     if (abiFails) return 1;
-    return golden::check("ais_proto_rs", dig, 0x839cf1fb96bac6f8ull, !e);
+    return golden::check("ais_proto_rs", dig, 0x83ee07b4ec42ad84ull, !e);
 }

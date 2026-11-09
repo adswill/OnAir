@@ -60,7 +60,7 @@ pub fn acceptable_ais(typ: i32, valid: bool, mmsi: u32, decoded: bool) -> bool {
     if !(1..=27).contains(&typ) {
         return false;
     }
-    if matches!(typ, 1..=6 | 8 | 9 | 11 | 14 | 18 | 19 | 21 | 24 | 27) && (!decoded || !valid) {
+    if matches!(typ, 1..=27) && (!decoded || !valid) {
         return false;
     }
     mmsi_plausible(mmsi)
