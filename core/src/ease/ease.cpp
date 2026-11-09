@@ -1,5 +1,6 @@
 #include "dect2/ease/ease.h"
 #include "dect2/inmsat/inmsat_satid.h"
+#include "dect2/geo/maidenhead.h"
 #include <algorithm>
 #include <cmath>
 #include <utility>
@@ -138,6 +139,16 @@ void AlignMeter::update(float db, bool valid) {
 float AlignMeter::fraction() const { return std::max(0.f, std::min(1.f, level_ / 30.f)); }
 float AlignMeter::peakFraction() const { return havePeak_ ? std::max(0.f, std::min(1.f, peak_ / 30.f)) : 0.f; }
 double AlignMeter::toneHz() const { return 300.0 + 1200.0 * fraction(); }
+
+bool stationFill(std::string& call, std::string& locator, const std::vector<std::string>& calls, const std::string& grid, bool havePos, double lat, double lon) {
+    bool changed = false;
+    if (call.empty()) for (const auto& c : calls) if (!c.empty()) { call = c; changed = true; break; }
+    if (locator.empty()) {
+        if (havePos) { locator = toMaidenhead(lat, lon, 6); changed = true; }
+        else if (!grid.empty()) { locator = grid; changed = true; }
+    }
+    return changed;
+}
 
 bool modeNotUsedIn(const std::string& name, const std::string& country) {
     if (country.empty()) return false;

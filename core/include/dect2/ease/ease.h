@@ -93,6 +93,10 @@ private:
     bool havePeak_ = false;
 };
 
+// ---- One callsign, one position. Fills a callsign or locator that is still empty, from the first known callsign and the station position (else a known
+// grid); what the user typed is never replaced. Returns true when anything was filled.
+bool stationFill(std::string& call, std::string& locator, const std::vector<std::string>& knownCalls, const std::string& knownGrid, bool havePos, double lat, double lon);
+
 // ---- Regional modes: true when this mode's signals exist only elsewhere. False for every mode without a tag and when the country (ISO code) is unknown.
 bool modeNotUsedIn(const std::string& modeName, const std::string& country);
 

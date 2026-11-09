@@ -24,6 +24,9 @@ bool nitTransponders(App& a, int kind, bool locked, bool inverted, int& pol);
 // "Align": a big level bar with peak hold for aiming a dish, from one frame's level in dB over the noise. The tone is off until ticked and is never remembered.
 void alignButton(App& a, const char* id, float db, bool valid);
 
+// PSK Reporter / WSPRnet / ham setup: fills a blank callsign and locator once per field, from the others and the station position. A field the user cleared stays clear.
+bool stationFillOnce(App& a, const char* doneKey, std::string& call, std::string& locator);
+
 // A voice mode whose codec is not installed: said on the mode's own screen before the first call, with the install guide; Hide is remembered per mode.
 void codecNotice(App& a);
 

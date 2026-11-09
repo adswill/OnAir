@@ -181,11 +181,24 @@ static void testAlign() {
     m.update(0, false); CHECK(m.toneHz() == 300.0);
 }
 
+static void testStation() {
+    std::string c, l;
+    CHECK(stationFill(c, l, {"", "LY2XX"}, "", true, 54.69, 25.28));
+    CHECK(c == "LY2XX"); CHECK(l.size() == 6); CHECK(l.rfind("KO24", 0) == 0);
+    std::string c2 = "LY1ME", l2 = "KO25";          // never replaces what was typed
+    CHECK(!stationFill(c2, l2, {"LY2XX"}, "AA00", true, 54.69, 25.28));
+    CHECK(c2 == "LY1ME"); CHECK(l2 == "KO25");
+    std::string c3, l3;                             // no position: the known grid; no callsign anywhere: stays empty
+    CHECK(stationFill(c3, l3, {}, "KO14", false, 0, 0)); CHECK(c3.empty()); CHECK(l3 == "KO14");
+    std::string c4, l4;
+    CHECK(!stationFill(c4, l4, {}, "", false, 0, 0)); CHECK(l4.empty());
+}
+
 int testNavtex();
 int testRepeaters();
 
 int main() {
-    testSonde(); testGeo(); testPreselect(); testFollowAndDsc(); testRegions(); testAutoBand(); testHunt(); testDrmHits(); testAlign();
+    testSonde(); testGeo(); testPreselect(); testFollowAndDsc(); testRegions(); testAutoBand(); testHunt(); testDrmHits(); testAlign(); testStation();
     fails += testNavtex();
     fails += testRepeaters();
     if (!fails) printf("ease ok\n");

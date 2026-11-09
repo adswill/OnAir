@@ -1,3 +1,4 @@
+#include "ease/ease_ui.h"
 // The Ham view's station setup wizard, the in-app Ham guide and the keyboard shortcut table: see ham_ops_ui.h.
 #include "ham_ops_ui.h"
 #include "../platform/platform.h"
@@ -46,6 +47,10 @@ void hamSetupWizard(App& a, char* call, size_t callN, char* grid, size_t gridN, 
     switch (step) {
     case 0: {
         ImGui::TextWrapped("%s", tr("Your callsign and your grid locator go into every message and every log entry."));
+        {   // once: what the rest of the program already knows, for the fields still blank
+            std::string cs = call, gs = grid;
+            if (easeui::stationFillOnce(a, "stationFilled.ham", cs, gs)) { snprintf(call, callN, "%s", cs.c_str()); snprintf(grid, gridN, "%s", gs.c_str()); }
+        }
         ImGui::SetNextItemWidth(140 * gUi);
         if (ImGui::IsWindowAppearing()) ImGui::SetKeyboardFocusHere();
         ImGui::InputText(tr("Callsign"), call, callN, U);

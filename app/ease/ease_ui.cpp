@@ -240,6 +240,17 @@ void alignButton(App& a, const char* id, float db, bool valid) {
     alignToneTick(a, g.tone && g.open && a.engine.running());
 }
 
+bool stationFillOnce(App& a, const char* doneKey, std::string& call, std::string& locator) {
+    plat::Prefs& p = plat::basePrefs();
+    if (p.getB(doneKey, false)) return false;
+    double la = 0, lo = 0;
+    const bool have = receiverLocationSet();
+    if (have) receiverLocation(la, lo);
+    if (!dect2::ease::stationFill(call, locator, {p.getS("ham.call", ""), a.pskr.call, a.wsprNet.call}, p.getS("ham.grid", ""), have, la, lo)) return false;
+    if (!call.empty() && !locator.empty()) p.setB(doneKey, true);
+    return true;
+}
+
 void codecNotice(App& a) {
     for (const ModeDef& m : allModes()) {
         if (!modeSelected(a, m)) continue;
