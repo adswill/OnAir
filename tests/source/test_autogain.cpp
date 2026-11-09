@@ -149,7 +149,7 @@ static void testTargets() {
     CHECK(ad.kind == ModeKind::Pulsed && ad.metric == Metric::Sensitivity && ad.policy == Policy::Sensitivity, "ADS-B: sensitivity");
     const ModeTarget dmr = modeTargetFor(11, 12.5e3, 2.4e6);
     CHECK(dmr.kind == ModeKind::NarrowVoice && dmr.metric == Metric::ChannelSnr, "DMR: SNR in the channel");
-    CHECK(modeTargetFor(44, 10e6, 10e6).metric == Metric::Headroom, "analyser: headroom");
+    CHECK(modeTargetFor(44, 10e6, 10e6).metric == Metric::Sensitivity && modeTargetFor(44, 10e6, 10e6).minHeadroomDb >= 8, "analyser: the floor over the ADC with a headroom floor");
     CHECK(modeTargetFor(7, 200e3, 2.4e6).policy == Policy::Linearity, "FM broadcast: linearity");
     CHECK(dmr.headroomDb > modeTargetFor(1, 8e6, 9.14e6).headroomDb, "narrow in a wide span keeps more headroom than TV");
 }
@@ -520,7 +520,7 @@ static void testHackrfSweep() {
         });
         if (verbose) printf("  hackrf std %2d sig %6.1f start %4.0f -> %5.1f dB, %d changes (%d after 150 s, %d reversals), headroom %.1f clip %.3f snr %.1f\n",
                             m.std_, sig, start, c.current().totalDb, changes, late, reversals, c.meters().headroomDb, sim.lastClip, sim.snrDb());
-        if (verbose && getenv("AGLOG2") && m.std_ == atoi(getenv("AGLOG2")) && sig == atof(getenv("AGSIG")) && start == 60) for (const auto& e : c.log()) if (e.t > 150) printf("     %.1f %.1f -> %.1f %s\n", e.t, e.fromDb, e.toDb, e.why.c_str());
+        if (verbose && getenv("AGLOG2") && m.std_ == atoi(getenv("AGLOG2")) && sig == atof(getenv("AGSIG")) && start == (getenv("AGSTART") ? atof(getenv("AGSTART")) : 60)) for (const auto& e : c.log()) if (e.t > 150) printf("     %.1f %.1f -> %.1f %s\n", e.t, e.fromDb, e.toDb, e.why.c_str());
         CHECK(hi - lo <= 4.01, "hackrf std %d sig %.0f start %.0f: still moving after 150 s (%d changes, range %.0f dB)", m.std_, sig, start, late, hi - lo);
         CHECK(!ampSeen && !badStep, "hackrf std %d sig %.0f: amp %d, a step off the hardware grid %d", m.std_, sig, (int)ampSeen, (int)badStep);
         CHECK(sim.lastClip <= tg.clipLimit * 3 + 1e-9, "hackrf std %d sig %.0f start %.0f: clipping %.3f at the end", m.std_, sig, start, sim.lastClip);

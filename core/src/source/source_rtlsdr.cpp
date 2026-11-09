@@ -253,6 +253,7 @@ protected:
         rtl().set_tuner_gain_mode(dev_, 1);   // manual gain: OnAir runs its own AGC
         return configure(s, err, false);
     }
+    double lastTuneHz_ = -1;
     bool configure(const TuneSettings& s, std::string& err, bool live) override {
         if (!dev_) return false;
         if (!live) {
@@ -327,11 +328,13 @@ protected:
         }
         // the library takes the frequency as a 32-bit Hz value: 4.29 GHz is all the wire format holds
         if (tuneHz > 4.29e9) addNote(err, "the RTL-SDR library takes at most 4.29 GHz (32-bit Hz): " + mhz(f) + " MHz was cut to that");
-        if (rtl().set_center_freq(dev_, (uint32_t)std::llround(std::min(tuneHz, 4.29e9))) < 0) {
+        // a retune that only changes the gain leaves the tuner alone (the same frequency set again glitches the stream)
+        if ((!live || tuneHz != lastTuneHz_) && rtl().set_center_freq(dev_, (uint32_t)std::llround(std::min(tuneHz, 4.29e9))) < 0) {
             err = "RTL-SDR: the driver refused " + mhz(f) + " MHz" + (hi_ > 0 ? " (this radio is specified for " + mhz(specLo) + " to " + mhz(hi_) + " MHz)" : std::string());
             openFailure_ = OpenFailure::Final;
             return false;
         }
+        lastTuneHz_ = tuneHz;
         {   // the chip's digital AGC (#233)
             const bool agc = radioFlag(s, "rtlagc");
             if (agc != agc_ && rtl().set_agc_mode(dev_, agc ? 1 : 0) == 0) agc_ = agc;

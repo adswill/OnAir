@@ -5,6 +5,7 @@
 #include "dect2/engine/mode_tuning.h"
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <map>
 #include <string>
 using namespace agsim;
@@ -34,6 +35,7 @@ static Res runOne(const RadioProfile& rp, const Scene& sc, bool v2) {
     });
     o.snr = n ? sum / n : sim.snrDb();
     o.gain = c.current().totalDb;
+    if (getenv("AGLOG") && strstr(sc.name, getenv("AGLOG")) && rp.id == (getenv("AGRADIO") ? getenv("AGRADIO") : rp.id)) for (const auto& e : c.log()) printf("     %.1f %.1f -> %.1f %s\n", e.t, e.fromDb, e.toDb, e.why.c_str());
     return o;
 }
 static double bestOf(const RadioProfile& rp, const Scene& sc) {

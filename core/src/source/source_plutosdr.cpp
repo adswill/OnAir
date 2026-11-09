@@ -396,12 +396,13 @@ protected:
         const double f = s.centerHz;
         // outside what the radio is specified for it is asked all the same: the AD936x driver decides (it refuses a frequency its PLL cannot make)
         const std::string spec = freqSpecNote("PlutoSDR", f, loHz_, hiHz_);
-        if (iio().channel_attr_write_longlong(lo_, "frequency", (long long)std::llround(std::max(tuneHz, 0.0))) != 0) {
+        if ((!live || tuneHz != lastTuneHz_) && iio().channel_attr_write_longlong(lo_, "frequency", (long long)std::llround(std::max(tuneHz, 0.0))) != 0) {   // a gain-only retune leaves the LO alone
             err = "PlutoSDR: the driver refused " + mhz(f) + " MHz (specified for " + mhz(loHz_) + "-" + mhz(hiHz_) + " MHz)";
             if (hiHz_ <= 3.8e9) err += ": the stock firmware tunes 325-3800 MHz, 70-6000 MHz needs the AD9364 setting (fw_setenv attr_name compatible; fw_setenv attr_val ad9364)";
             openFailure_ = OpenFailure::Final;
             return false;
         }
+        lastTuneHz_ = tuneHz;
         addNote(err, spec);
         // The highest gain depends on the frequency (the AD9361's gain tables: 73 dB below 1300 MHz, 71 dB to 4000 MHz, 62 dB above), and a
         // gain above it is refused (EINVAL) with the old gain left in place: the driver's own range for this frequency, else the tables
@@ -473,6 +474,7 @@ protected:
     void interrupt() override { if (buf_) iio().buffer_cancel(buf_); }
     bool resumeAfterConfigureFailure() const override { return retuneRestored_; }
     bool retuneRestored_ = false;
+    double lastTuneHz_ = -1;
 
 private:
     void createBuffer() {

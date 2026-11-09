@@ -286,6 +286,7 @@ protected:
         if (cfg) addNote(err, lockNote_);
         return cfg;
     }
+    double lastReqHz_ = -1;
     bool configure(const TuneSettings& s, std::string& err, bool live) override {
         if (!dev_) return false;
         const size_t ch = ch_;
@@ -316,7 +317,9 @@ protected:
         // UHD has no frequency correction (a USRP takes an external reference or a GPSDO for that): a correction the user set is taken out of the frequency
         UhdApi::tune_request_t req{ppmCorrectedHz(f, radioPpm(s)), UhdApi::kPolicyAuto, 0, UhdApi::kPolicyAuto, 0, noArgs};
         UhdApi::tune_result_t res{};
-        if (uhd().set_rx_freq(dev_, &req, ch, &res) != 0) { err = "USRP: the driver refused " + mhz(f) + " MHz" + range + ": " + uhd().text(dev_); return false; }
+        const double reqHz = ppmCorrectedHz(f, radioPpm(s));
+        if ((!live || reqHz != lastReqHz_) && uhd().set_rx_freq(dev_, &req, ch, &res) != 0) { err = "USRP: the driver refused " + mhz(f) + " MHz" + range + ": " + uhd().text(dev_); return false; }
+        lastReqHz_ = reqHz;
         addNote(err, freqSpecNote("USRP", f, lo_, hi_));
         double gmin = 0, gmax = 76;
         if (UhdApi::range_t_* rg = nullptr; uhd().meta_range_make(&rg) == 0 && rg) {

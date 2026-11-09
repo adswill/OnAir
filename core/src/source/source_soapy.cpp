@@ -428,6 +428,7 @@ private:
         dev_ = nullptr;
     }
 
+    double lastTuneHz_ = -1;
     bool apply(const TuneSettings& s, std::string& err, bool live) {
         const int ch = 0;
         if (!live || std::fabs(s.sampleRate - requestedRate_) > 1.0) {
@@ -492,7 +493,7 @@ private:
             for (const auto& x : dev_->getFrequencyRange(SOAPY_SDR_RX, ch)) { hi = std::max(hi, x.maximum()); lo = lo == 0 ? x.minimum() : std::min(lo, x.minimum()); }
             addNote(err, freqSpecNote("radio", s.centerHz, lo, hi));
         } catch (...) {}
-        dev_->setFrequency(SOAPY_SDR_RX, ch, std::max(tuneHz, 0.0));
+        if (!live || tuneHz != lastTuneHz_) { dev_->setFrequency(SOAPY_SDR_RX, ch, std::max(tuneHz, 0.0)); lastTuneHz_ = tuneHz; }   // (a gain-only retune leaves the LO alone)
         try { if (dev_->hasGainMode(SOAPY_SDR_RX, ch)) dev_->setGainMode(SOAPY_SDR_RX, ch, false); } catch (...) {}   // we run our own AGC
         const auto gr = effectiveGainRange(dev_, ch);
         const double g = std::min(std::max(s.gainDb, gr.minimum()), gr.maximum());

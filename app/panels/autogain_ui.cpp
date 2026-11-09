@@ -442,7 +442,7 @@ bool autogainStep(App& a) {
         if (want == ag::AgMode::Off) { s.run = ag::AgMode::Off; s.c.stop(); }
         else startMode(a, want);
     }
-    if (std::fabs(a.freqMhz - s.ctxFreq) > 1e-9) {   // a retune: Auto acquires afresh; a one-shot is cancelled (it measured another channel)
+    if (std::fabs(a.freqMhz - s.ctxFreq) > 1e-9 && ag::retuneNeedsSearch((a.freqMhz - s.ctxFreq) * 1e6, a.engine.radioRate() > 0 ? a.engine.radioRate() : a.tune.sampleRate, false)) {   // a retune that matters (a VFO step inside the span changes nothing the radio sees): Auto acquires afresh; a one-shot is cancelled (it measured another channel)
         s.ctxFreq = a.freqMhz;
         if (s.run == ag::AgMode::Auto) {
             // the gain remembered for this radio, mode and band is applied at once (no search); otherwise the quick search runs
@@ -475,6 +475,7 @@ bool autogainStep(App& a) {
         }
         return false;
     }
+    if (std::fabs(a.freqMhz - s.ctxFreq) > 1e-9) s.ctxFreq = a.freqMhz;   // the small step inside the span (above): noted, no search
     ag::AgCommand cmd;
     const bool ch = s.c.tick(input(a), cmd);
     if (ch) applyCmd(a, cmd);
