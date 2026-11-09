@@ -34,6 +34,7 @@
 #include "dect2/js8/js8_proto.h"
 #include "dect2/js8/js8_rx.h"
 #include "dect2/loraraw/loraraw_gen.h"
+#include "dect2/mesh/mesh_gen.h"
 #include "dect2/mesh/mesh_proto.h"
 #include "dect2/mesh/mesh_rx.h"
 #include "dect2/mesh/mesh_tx.h"
@@ -310,7 +311,93 @@ std::unique_ptr<ModeSynth> aisVessel(const TxRequest& r, const SynthConfig& s, d
     return std::make_unique<LoopIq>(renderAisBursts(b, rc), rate);
 }
 
+// The APRS info field of APRS over AFSK and of LoRa APRS: a position (house symbol) with the comment when lat / lon are set, else a status
+std::string aprsInfo(const TxRequest& r) {
+    if (r.lat == 0 && r.lon == 0) return ">" + (r.text.empty() ? std::string("OnAir") : r.text);
+    // n as `width` digits with leading zeros
+    auto digits = [](long n, size_t width) { std::string d = std::to_string(n); return d.size() < width ? std::string(width - d.size(), '0') + d : d; };
+    // degrees and minutes to hundredths of a minute, rounded first so 59.999' becomes the next degree and not "60.00"
+    auto dm = [&](double v, size_t degWidth) {
+        const long h = std::lround(std::fabs(v) * 6000.0);
+        return digits(h / 6000, degWidth) + digits((h % 6000) / 100, 2) + "." + digits(h % 100, 2);
+    };
+    return "!" + dm(r.lat, 2) + (r.lat < 0 ? "S" : "N") + "/" + dm(r.lon, 3) + (r.lon < 0 ? "W" : "E") + "-" + r.text;
+}
+
+// a TNC2 header field as typed: spaces dropped, capitals
+std::string tnc2Call(const std::string& in) {
+    std::string s;
+    for (char c : in) if (c != ' ' && c != '\t') s += c;
+    return upper(s);
+}
+
+// LoRa APRS: the TNC2 packet with its prefix on the frame's radio settings, sent again after lora.gapSec. No callsign: the 70 cm test scene's
+// LoRa APRS stations (mesh_gen.h region 2, tuned to 433.775 MHz), always on the EU settings.
+std::unique_ptr<ModeSynth> loraAprsSynth(const TxRequest& r, const SynthConfig& s, double rate) {
+    const std::string tnc2 = txLoraAprsTnc2(r);
+    if (tnc2.empty()) {
+        SynthConfig d = s;
+        d.modeOpt[0] = 4;   // LoRa APRS only
+        d.modeOpt[1] = 2;   // the 70 cm scene
+        d.modeOpt[4] = 1;   // placed for a receiver tuned to 433.775 MHz
+        return makeMeshSynth(d, rate);
+    }
+    const TxLoraAprsRadio lr = txLoraAprsRadio(r);
+    LoraRawGenConfig c;
+    c.rate = rate;
+    c.dialOffsetHz = -meshTuning().tuneOffsetHz;
+    c.snrDb = 99;
+    c.loop = true;
+    LoraRawGenFrame g;
+    g.p.sf = lr.sf; g.p.bwHz = lr.bwHz; g.p.cr = lr.cr; g.p.preamble = lr.preamble; g.p.syncWord = (uint8_t)lr.syncWord;
+    g.p.ldro = meshLoraLdro(lr.sf, lr.bwHz);
+    g.p.crc = lr.crc;
+    g.payload = loraAprsFrame(tnc2);
+    if (g.payload.size() > 255) g.payload.resize(255);   // a LoRa frame carries at most 255 bytes
+    g.gapSec = std::max(0.1, r.o("lora.gapSec", 10));
+    c.frames.push_back(std::move(g));
+    return std::make_unique<WrapGen<LoraRawGenerator>>(std::make_unique<LoraRawGenerator>(c), rate);
+}
+
 } // namespace
+
+TxLoraAprsRadio txLoraAprsRadio(const TxRequest& r) {
+    TxLoraAprsRadio p;
+    switch ((int)std::lround(r.o("lora.preset", 0))) {
+    case 1: p.name = "PL"; p.mhz = 434.855; p.sf = 9; p.cr = 7; break;
+    case 2: p.name = "UK"; p.mhz = 439.9125; break;
+    case 3: p.name = "915"; p.mhz = 915.0; break;
+    case 4: {
+        static const double kBw[] = {62500, 125000, 250000, 500000};
+        p.name = "own";
+        p.mhz = 0;
+        p.sf = std::max(7, std::min(12, (int)std::lround(r.o("lora.sf", 12))));
+        p.bwHz = kBw[std::max(0, std::min(3, (int)std::lround(r.o("lora.bwIdx", 1))))];
+        p.cr = std::max(5, std::min(8, (int)std::lround(r.o("lora.cr", 5))));
+        p.preamble = std::max(6, std::min(65535, (int)std::lround(r.o("lora.preamble", 8))));
+        p.syncWord = std::max(0, std::min(255, (int)std::lround(r.o("lora.sync", 0x12))));
+        p.crc = r.o("lora.crc", 1) > 0.5;
+        break;
+    }
+    default: break;   // EU
+    }
+    return p;
+}
+
+std::string txLoraAprsTnc2(const TxRequest& r) {
+    const std::string call = tnc2Call(r.callsign);
+    if (call.empty()) return {};
+    const std::string dest = r.dest.empty() ? "APRS" : tnc2Call(r.dest);
+    std::string path = tnc2Call(r.path.empty() ? "WIDE1-1" : r.path);
+    if (path == "-" || path == "NONE") path.clear();
+    return call + ">" + dest + (path.empty() ? "" : "," + path) + ":" + aprsInfo(r);
+}
+
+double txModeDefaultMhz(const TxModeSpec& m) {
+    if (m.id && std::string(m.id) == "loraaprs") return 433.775;   // LoRa APRS EU; the mode's engine tuning (mesh) starts at Meshtastic's 869.525
+    const ModeTuning* mt = modeTuning(m.stdMode);
+    return mt && mt->defMhz > 0 ? mt->defMhz : 0;
+}
 
 std::string txFtxMessage(const TxRequest& r) {
     const std::string call = upper(r.callsign), grid = upper(r.grid), dest = upper(r.dest);
@@ -471,16 +558,8 @@ std::unique_ptr<ModeSynth> makeTxPayloadSynth(const TxModeSpec& m, const TxReque
             if (c == std::string::npos) break;
             i = c + 1;
         }
-        char info[256];
-        if (r.lat != 0 || r.lon != 0) {
-            // degrees and minutes to hundredths of a minute, rounded first so 59.999' becomes the next degree and not "60.00"
-            const long la = std::lround(std::fabs(r.lat) * 6000.0), lo = std::lround(std::fabs(r.lon) * 6000.0);
-            snprintf(info, sizeof info, "!%02ld%02ld.%02ld%c/%03ld%02ld.%02ld%c-%s",
-                     la / 6000, (la % 6000) / 100, la % 100, r.lat < 0 ? 'S' : 'N',
-                     lo / 6000, (lo % 6000) / 100, lo % 100, r.lon < 0 ? 'W' : 'E',
-                     r.text.c_str());
-        } else snprintf(info, sizeof info, ">%s", r.text.empty() ? "OnAir" : r.text.c_str());
-        f.info = info;
+        f.info = aprsInfo(r);
+        if (f.info.size() > 255) f.info.resize(255);   // as the 256 byte buffer this replaced cut it
         return makePacketSynthFrame(s, rate, f, r.baudIdx == 1 ? 9600 : 1200);
     }
 
@@ -703,6 +782,8 @@ std::unique_ptr<ModeSynth> makeTxPayloadSynth(const TxModeSpec& m, const TxReque
         c.voice = false;
         return std::make_unique<WrapGen<VorGenerator>>(std::make_unique<VorGenerator>(c), rate);
     }
+
+    if (id == "loraaprs") return loraAprsSynth(r, s, rate);   // before the Meshtastic text below: the same engine mode (22), its own packets
 
     if (m.stdMode == 22 && !r.text.empty()) {   // Meshtastic text from the user's own node identity (mesh_tx.h); warnings only, never a refusal
         MeshLoraSettings ls;

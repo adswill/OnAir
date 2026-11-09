@@ -23,7 +23,7 @@ inline double txBurstRampSec(const std::string& id) {
     static const R kRamps[] = {
         {"m17", 1e-3}, {"nxdn", 1e-3}, {"p25", 1e-3},          // 4800 / 2400 symbol/s 4FSK in 12.5 / 6.25 kHz
         {"multitone", 5e-3},                                    // analog tone paging: the carrier keyed on and off
-        {"loraraw", 0.25e-3},                                   // LoRa: chirps of a millisecond and more
+        {"loraraw", 0.25e-3}, {"loraaprs", 0.25e-3},            // LoRa: chirps of a quarter of a millisecond (SF7 at 500 kHz) and more
         {"vdl4", 0.1e-3},                                       // 19.2 kbit/s GFSK
         {"wmbus", 50e-6}, {"zwave", 50e-6},                     // 32.768 .. 100 kchip/s FSK
         {"uat", 4e-6},                                          // 1.041667 Mbit/s CPFSK

@@ -24,6 +24,7 @@ struct PDef {
     const char* key = ""; Sec sec = Sec::Modulation; PType type = PType::Float; const char* label = ""; const char* tip = "";
     double def = 0, lo = 0, hi = 1; const char* fmt = "%.2f"; const char* when = nullptr; Bind bind = Bind::Opt;
     std::vector<const char*> choices; double base = 0;   // Choice: the value sent is base + the chosen index
+    bool hex = false;                                     // Int: shown as 0xNN (a sync word)
 };
 
 struct TxUi {

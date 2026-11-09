@@ -63,7 +63,8 @@ This list is taken from the tables in `core/src/tx/tx.cpp` (`txModes()`).
 | inmc | Inmarsat-C | 19 | makeInmcSynth |
 | aero | Inmarsat Aero | 20 | makeAeroSynth |
 | iridium | Iridium | 21 | makeIridiumSynth |
-| mesh | Mesh (LoRa) | 22 | makeMeshSynth |
+| mesh | Mesh (LoRa) | 22 | makeMeshSynth; with a text: a Meshtastic packet from the panel's node identity |
+| loraaprs | LoRa APRS | 22 | '<' 0xFF 0x01 + a TNC2 packet (callsign, destination, path, position, comment) as LoRa frames; Advanced: preset EU 433.775 / PL 434.855 / UK 439.9125 / 915 MHz (125 kHz, preamble 8, sync 0x12, CRC) or own SF, bandwidth, coding rate, preamble, sync word, CRC, and the pause between packets; no callsign: the 70 cm test scene's LoRa APRS stations |
 | hdr | HD Radio | 23 | makeHdrSynth |
 | cdr | CDR | 24 | makeCdrSynth |
 | pager | Pagers (POCSAG / FLEX) | 25 | makePagerSynth, FM on a 25 kHz channel |

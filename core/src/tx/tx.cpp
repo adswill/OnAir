@@ -97,6 +97,8 @@ std::vector<TxModeSpec> makeTxTable() {
         mk("aero", "Inmarsat Aero", 20, "makeAeroSynth", kOpt, kUnv),
         mk("iridium", "Iridium", 21, "makeIridiumSynth", kOpt, kUnv),
         mk("mesh", "Mesh (LoRa)", 22, "makeMeshSynth", kOpt, kUnv),
+        mk("loraaprs", "LoRa APRS", 22, "LoRa APRS frames: '<' 0xFF 0x01 + a TNC2 packet (tx_payload.cpp); no callsign: the 70 cm test scene's stations",
+           "preset EU / PL / UK / 915 MHz or own SF, bandwidth, coding rate, preamble, sync word, CRC (txLoraAprsRadio)", "tests/tx/test_tx_loraaprs.cpp"),
         mk("hdr", "HD Radio", 23, "makeHdrSynth", kOpt, kUnv),
         mk("cdr", "CDR", 24, "makeCdrSynth", kOpt, kUnv),
         mk("pager", "Pagers (POCSAG / FLEX)", 25, "makePagerSynth, FM on a 25 kHz channel", "mix / POCSAG / FLEX, speed, polarity (pager_gen.h)", kTrip),
@@ -251,7 +253,7 @@ const TxModeSpec* txModeForList(int family, const char* subId, int dvbVariant) {
         if (s == "pocsag" || s == "flex") return txModeById("pager");
         if (s == "navtex" || s == "dsc" || s == "wefax") return txModeById("marine");
         if (s == "vor" || s == "ils") return txModeById("vorils");
-        if (s == "lorawan" || s == "meshtastic" || s == "meshcore" || s == "loraaprs" || s == "meshcom") return txModeById("mesh");
+        if (s == "lorawan" || s == "meshtastic" || s == "meshcore" || s == "meshcom") return txModeById("mesh");
     }
     if (family == 0) return txModeFor(0, dvbVariant == 2 ? 2 : 1);
     return txModeFor(txEngineStd(family), dvbVariant);
@@ -298,6 +300,7 @@ TxPayloadKind txPayloadKind(const std::string& id) {
     if (id == "vdes") return TxPayloadKind::Vdes;
     if (id == "uplink") return TxPayloadKind::Uplink;
     if (id == "mesh") return TxPayloadKind::Mesh;
+    if (id == "loraaprs") return TxPayloadKind::LoraAprs;
     if (id == "mac") return TxPayloadKind::Mac;
     if (id == "kaal") return TxPayloadKind::Kaal;
     if (id == "kait") return TxPayloadKind::Kait;
