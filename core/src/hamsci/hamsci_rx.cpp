@@ -360,7 +360,7 @@ ModeTuning hamsciTuning(int kind) {
     t.stdMode = hamsciStd(kind);
     t.id = hamsciId(kind);
     t.name = hamsciName(kind);
-    t.sampleRate = 2e6;
+    t.sampleRate = 600000;   // the audio modes: a radio rate of 250 kHz or more is enough (the front end brings the channel to 24 kHz)
     t.bandwidthMhz = 0.3;
     t.minSampleRate = 250000;
     t.tuneOffsetHz = 0;
