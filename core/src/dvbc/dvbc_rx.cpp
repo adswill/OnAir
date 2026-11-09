@@ -88,6 +88,7 @@ struct DvbcReceiver::Impl {
     std::vector<cf32> j83Trial, j83Block;
     DocsisDownstream docsis;                      // the DOCSIS management messages on PID 0x1FFE, when this is a cable modem carrier
     uint64_t j83BadSeen = 0, j83FramesSeen = 0;
+    bool j83Sync = false;
     std::mutex docMu;
     std::function<void(const std::string&)> logCb;
     std::function<void(const uint8_t*, size_t, double)> pktCb;
@@ -484,12 +485,13 @@ struct DvbcReceiver::Impl {
                     if (annexB.load()) {
                         j83Block.resize(kPhBlock);
                         for (size_t i = 0; i < kPhBlock; i++) { const cf32 z = smB.phOut[i + kPhMargin]; j83Block[i] = inv ? std::conj(z) : z; }
-                        j83[0]->feed(j83Block.data(), j83Block.size());
+                        if (!j83Sync) j83Sync = j83[0]->trial(j83Block.data(), j83Block.size());   // the symbols before the lock are gone: the first frame is found again here
+                        else j83[0]->feed(j83Block.data(), j83Block.size());
                         const j83b::DecStats& js = j83[0]->stats();
                         rsClean = js.rsClean; rsCorr = js.rsCorrected; rsFail = js.rsFailed; packets = js.packets;
                         // the trailer of a frame, more than a few times missing: the lock has gone
-                        if (js.framesBad > j83BadSeen + 24) lostFlag = true;
-                        if (js.frames > j83FramesSeen) { j83FramesSeen = js.frames; if (js.framesBad == j83BadSeen) j83BadSeen = js.framesBad; }
+                        // the frame trailer, missing many times in a row: the lock has gone (a frame is 1.5 ms)
+                        if (js.framesBad > j83BadSeen + 24) { j83BadSeen = js.framesBad; lostFlag = true; }
                     } else outer();
                     pk.swap(out);
                 }
@@ -513,12 +515,12 @@ struct DvbcReceiver::Impl {
             if (!j83[v]->trial(buf.data(), buf.size())) continue;
             inv = v == 1;
             if (v == 1) std::swap(j83[0], j83[1]);
+            j83[0]->configure(qam == 4);
             j83[0]->setPacketCallback([this](const uint8_t* p, size_t n) { out.insert(out.end(), p, p + n * 188); });
-            j83Trial.clear(); j83BadSeen = 0; j83FramesSeen = 0;
+            j83Trial.clear(); j83BadSeen = 0; j83FramesSeen = 0; j83Sync = false;
             stage = Locked; lockedAt = processed; failCycles = 0; pendSecs = 0; consecBad = 0;
             char m[160];
-            const j83b::DecStats& st = j83[0]->stats();
-            snprintf(m, sizeof m, "annex B %s locked, %.4f Msym/s, MER %.1f dB, interleaver I %d J %d%s", dvbc::qamName(qam), rs / (1 + tnu) / 1e6, mer(), st.I, st.J, inv ? ", spectrum inverted" : "");
+            snprintf(m, sizeof m, "annex B %s locked, %.4f Msym/s, MER %.1f dB%s", dvbc::qamName(qam), rs / (1 + tnu) / 1e6, mer(), inv ? ", spectrum inverted" : "");
             log(m);
             return;
         }
@@ -952,7 +954,8 @@ std::unique_ptr<ModeSynth> makeDvbcSynth(const SynthConfig& cfg, double sampleRa
         auto n = std::make_shared<uint64_t>(0);
         c.symbols = [enc, src, n](std::vector<cf32>& out) {
             static const int pids[3] = {0x31, 0x34, 0x1FFB};
-            for (int i = 0; i < 512 && out.empty(); i++) {
+            const size_t was = out.size();
+            for (int i = 0; i < 2000 && out.size() == was; i++) {
                 uint8_t p[188];
                 if (src) src(p); else { memset(p, 0xA5, 188); const int pid = pids[(*n) % 3]; p[0] = 0x47; p[1] = (uint8_t)(pid >> 8); p[2] = (uint8_t)pid; p[3] = 0x10 | ((*n / 3) & 15); (*n)++; }
                 enc->push(p);

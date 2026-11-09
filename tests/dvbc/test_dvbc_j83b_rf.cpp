@@ -20,10 +20,10 @@ int main() {
         dvbc::SignalConfig sc; sc.qam = c.qam; sc.sampleRate = fs; sc.symbolRate = c.qam == 4 ? j83b::kSymRate256 : j83b::kSymRate64; sc.rollOff = c.qam == 4 ? j83b::kRollOff256 : j83b::kRollOff64;
         sc.snrDb = c.snr; sc.cfoHz = c.cfo; sc.clockPpm = c.ppm;
         sc.symbols = [enc, n](std::vector<cf32>& out) {
-            for (int i = 0; i < 512 && out.empty(); i++) { uint8_t p[188]; memset(p, 0x5A, 188); const int pid = 0x100 + ((*n) & 3); p[0] = 0x47; p[1] = pid >> 8; p[2] = pid; p[3] = 0x10 | ((*n / 4) & 15); (*n)++; enc->push(p); enc->take(out); }
+            const size_t was = out.size(); for (int i = 0; i < 2000 && out.size() == was; i++) { uint8_t p[188]; memset(p, 0x5A, 188); const int pid = 0x100 + ((*n) & 3); p[0] = 0x47; p[1] = pid >> 8; p[2] = pid; p[3] = 0x10 | ((*n / 4) & 15); (*n)++; enc->push(p); enc->take(out); }
         };
         dvbc::Signal sig(sc);
-        DvbcReceiver rx; rx.configure(fs); rx.setAnnexB(true); rx.setBlocking(true);
+        DvbcReceiver rx; rx.setLogCallback([](const std::string& m) { printf("  %s\n", m.c_str()); }); rx.configure(fs); rx.setAnnexB(true); rx.setBlocking(true);
         std::vector<uint8_t> got;
         rx.setPacketCallback([&](const uint8_t* p, size_t k, double) { got.insert(got.end(), p, p + k * 188); });
         std::vector<cf32> buf(1 << 18);
