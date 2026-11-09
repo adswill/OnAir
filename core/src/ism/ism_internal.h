@@ -189,6 +189,8 @@ const char* mbusType(uint8_t t);
 void decMbus(Bits& B, Out& out);
 void decKnxRf(Bits& B, Out& out);
 void decHomeMatic(Bits& B, Out& out);
+void decEnOcean(Bits& B, Out& out);
+void decDash7(Bits& B, Out& out, bool lo);
 const char* zwClassName(uint8_t c);
 std::string zwCommand(uint8_t c, uint8_t k);
 double zwValue(const uint8_t* p, int size, bool& ok);

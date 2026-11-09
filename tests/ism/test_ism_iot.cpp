@@ -16,6 +16,7 @@ using BitRow = std::vector<int>;
 static void putB(BitRow& v, const std::vector<uint8_t>& b) { for (uint8_t x : b) for (int i = 7; i >= 0; i--) v.push_back((x >> i) & 1); }
 
 // NRZ with edge jitter (fraction of a bit) and a bit-rate error; mark = 1
+static bool gFsk = true;   // the train type nrz() produces
 static IsmTrain nrz(const BitRow& b, float T, std::mt19937& g, float jitter, float rateErr, bool invert, bool spikes) {
     std::uniform_real_distribution<float> u(-1.f, 1.f);
     std::vector<float> edge;                       // times of the level changes
@@ -26,7 +27,7 @@ static IsmTrain nrz(const BitRow& b, float T, std::mt19937& g, float jitter, flo
         if (v != cur) { edge.push_back((float)i * Tr + u(g) * jitter * Tr); cur = v; }
     }
     edge.push_back((float)b.size() * Tr);
-    IsmTrain t; t.fsk = true;
+    IsmTrain t; t.fsk = gFsk;
     const int lvl = invert ? !b[0] : b[0];
     float last = 0;
     std::vector<IsmPulse> pr;                     // mark / space pairs; a leading space is dropped (the train starts at the first mark)
@@ -115,12 +116,79 @@ static BitRow hmChips(const std::vector<uint8_t>& e) {
     return v;
 }
 
+
+// ------------------------------------------------------------ EnOcean ERP1
+
+static BitRow eoChips(uint8_t rorg, const std::vector<uint8_t>& data, uint32_t sender, uint8_t status, bool corruptCrc = false) {
+    std::vector<uint8_t> t = {rorg};
+    t.insert(t.end(), data.begin(), data.end());
+    for (int i = 3; i >= 0; i--) t.push_back((uint8_t)(sender >> (8 * i)));
+    t.push_back(status);
+    t.push_back((uint8_t)(ismCrc8(t.data(), (unsigned)t.size(), 0x07, 0) ^ (corruptCrc ? 0x10 : 0)));
+    BitRow v = {0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1};   // alternating chips, then the 11-chip start 01010101001
+    for (size_t k = 0; k < t.size(); k++) {
+        const uint8_t x = t[k];
+        auto bit = [&](int i) { return (x >> i) & 1; };
+        const int c[10] = {bit(7), bit(6), bit(5), !bit(5), bit(4), bit(3), bit(2), !bit(2), bit(1), bit(0)};
+        v.insert(v.end(), c, c + 10);
+        const bool more = k + 1 < t.size();
+        v.push_back(more ? 0 : 1); v.push_back(more ? 1 : 0);
+    }
+    for (int i = 0; i < 8; i++) v.push_back(0);
+    return v;
+}
+
+// ------------------------------------------------------------ DASH7
+
+static void d7Whiten(std::vector<uint8_t>& v) {
+    uint16_t r = 0x1FF;
+    for (auto& b : v) {
+        b ^= (uint8_t)r;
+        for (int i = 0; i < 8; i++) { const uint16_t n = (uint16_t)((((r & 0x20) >> 5) ^ r) << 8) | ((r >> 1) & 0xFF); r = n & 0x1FF; }
+    }
+}
+// CRC-16 as the Sub-IoT crc.c computes it bit by bit (an independent form of CCITT-FALSE, to catch a wrong polynomial in the decoder)
+static uint16_t d7Crc(const uint8_t* d, unsigned n) {
+    uint16_t crc = 0xFFFF;
+    for (unsigned i = 0; i < n; i++) {
+        uint16_t c = (uint16_t)((uint8_t)(crc >> 8) | (crc << 8));
+        c ^= d[i];
+        c ^= (uint8_t)(c & 0xFF) >> 4;
+        c ^= (uint16_t)(c << 12);
+        c ^= (uint16_t)((c & 0xFF) << 5);
+        crc = c;
+    }
+    return crc;
+}
+static BitRow d7Chips(std::vector<uint8_t> f, uint16_t sync, int preBytes = 6) {   // f: the frame without CRC (foreground: length first)
+    const uint16_t crc = d7Crc(f.data(), (unsigned)f.size());
+    f.push_back((uint8_t)(crc >> 8)); f.push_back((uint8_t)crc);
+    d7Whiten(f);
+    BitRow v;
+    for (int i = 0; i < preBytes; i++) putB(v, {0xAA});
+    putB(v, {(uint8_t)(sync >> 8), (uint8_t)sync});
+    putB(v, f);
+    for (int i = 0; i < 4; i++) v.push_back(0);
+    return v;
+}
+static std::vector<uint8_t> d7Foreground(uint8_t subnet, int targetType, const std::vector<uint8_t>& target, uint8_t nls, int originType, uint8_t oclass,
+                                         const std::vector<uint8_t>& origin, int eirp, const std::vector<uint8_t>& payload) {
+    std::vector<uint8_t> f = {0, subnet, (uint8_t)(targetType << 6 | ((eirp + 32) & 0x3F))};
+    f.insert(f.end(), target.begin(), target.end());
+    f.push_back((uint8_t)(nls | (originType << 4)));                 // origin void when originType == 4 is not used here: always with an origin
+    f.push_back(oclass);
+    f.insert(f.end(), origin.begin(), origin.end());
+    f.insert(f.end(), payload.begin(), payload.end());
+    f[0] = (uint8_t)(f.size() + 2 - 1);                               // everything after the length byte, with the CRC
+    return f;
+}
+
 int main() {
     std::mt19937 g(7);
     const auto& P = ismProtocols();
-    bool hasKnx = false, hasHm = false;
-    for (const auto& p : P) { hasKnx |= std::string(p.name).find("KNX") != std::string::npos; hasHm |= std::string(p.name).find("HomeMatic") != std::string::npos; }
-    CHECK(hasKnx && hasHm, "both protocols are listed");
+    bool hasKnx = false, hasHm = false, hasEo = false, hasD7 = false;
+    for (const auto& p : P) { hasKnx |= std::string(p.name).find("KNX") != std::string::npos; hasHm |= std::string(p.name).find("HomeMatic") != std::string::npos; hasEo |= std::string(p.name).find("EnOcean") != std::string::npos; hasD7 |= std::string(p.name).find("DASH7") != std::string::npos; }
+    CHECK(hasKnx && hasHm && hasEo && hasD7, "both protocols are listed");
 
     // ---- KNX RF: every payload length of one to three data blocks, both address kinds, every hop count, timing errors
     int knxOk = 0, knxN = 0;
@@ -227,6 +295,124 @@ int main() {
         // truncated
         BitRow cut(ok.begin(), ok.end() - 24);
         CHECK(!find(ismDecode(nrz(cut, 100.f, g, 0, 0, false, false)), "HomeMatic-BidCoS"), "truncated frame accepted");
+    }
+
+
+    // ---- EnOcean ERP1 (ASK: the line is inverted, as rtl_433 reads it)
+    gFsk = false;
+    {
+        int ok = 0, n = 0;
+        std::uniform_int_distribution<int> r8(0, 255);
+        for (int variant = 0; variant < 6; variant++)
+            for (int k = 0; k < 40; k++) {
+                const uint32_t sender = 0x01800000u + (uint32_t)k * 0x1357u + (uint32_t)variant;
+                const uint8_t rep = (uint8_t)(k % 3);
+                BitRow ch;
+                uint8_t rorg = 0;
+                std::vector<uint8_t> dat;
+                if (variant == 0) { rorg = 0xF6; dat = {(uint8_t)(0x30 | 0x10)}; ch = eoChips(rorg, dat, sender, (uint8_t)(0x30 | rep)); }                      // N-message, R1 = 1, EB pressed
+                else if (variant == 1) { rorg = 0xF6; dat = {0x00}; ch = eoChips(rorg, dat, sender, (uint8_t)(0x20 | rep)); }                                       // U-message, released
+                else if (variant == 2) { rorg = 0xD5; dat = {(uint8_t)(0x08 | (k & 1))}; ch = eoChips(rorg, dat, sender, rep); }                                   // contact
+                else if (variant == 3) { rorg = 0xA5; dat = {(uint8_t)(0x02 << 2 | 0), (uint8_t)(0x05 << 3 | 0), 0x7D, 0x80}; ch = eoChips(rorg, dat, sender, rep); }   // teach-in, EEP A5-02-05, manufacturer 0x7D
+                else if (variant == 4) { rorg = 0xA5; dat = {0x00, (uint8_t)r8(g), (uint8_t)r8(g), 0x08}; ch = eoChips(rorg, dat, sender, rep); }
+                else { rorg = 0xD2; for (int i = 0; i < 1 + k % 14; i++) dat.push_back((uint8_t)r8(g)); ch = eoChips(rorg, dat, sender, rep); }
+                const auto rs = ismDecode(nrz(ch, 8.f, g, (k % 3) * 0.03f, ((k % 5) - 2) * 0.01f, true, false));
+                n++;
+                const IsmReading* r = find(rs, "EnOcean-ERP1");
+                char id[16]; snprintf(id, sizeof id, "%08X", sender);
+                bool good = r && r->id == id && num(*r, "Repeaters") == rep;
+                if (good && variant == 0) good = num(*r, "Rocker 1") == 1 && text(*r, "Energy bow") == "pressed" && text(*r, "RORG") == "RPS (F6)";
+                if (good && variant == 1) good = num(*r, "Buttons pressed") == 0 && text(*r, "Energy bow") == "released";
+                if (good && variant == 2) good = text(*r, "Contact") == ((k & 1) ? "closed" : "open");
+                if (good && variant == 3) good = text(*r, "Teach-in") == "4BS" && text(*r, "EEP") == "A5-02-05" && num(*r, "Manufacturer") == 0x7D;
+                if (good && variant == 4) good = text(*r, "Data").size() == 8;
+                if (good && variant == 5) good = text(*r, "Data").size() == dat.size() * 2;
+                CHECK(good, "EnOcean variant %d k %d", variant, k);
+                ok += good;
+            }
+        printf("  EnOcean ERP1: %d / %d telegrams decoded\n", ok, n);
+        // a wrong CRC, a single damaged chip, a cut telegram: nothing
+        std::mt19937 g2(3);
+        const BitRow good = eoChips(0xA5, {0, 1, 2, 8}, 0x0180ABCD, 0x01);
+        CHECK(find(ismDecode(nrz(good, 8.f, g2, 0, 0, true, false)), "EnOcean-ERP1"), "clean telegram");
+        CHECK(!find(ismDecode(nrz(eoChips(0xA5, {0, 1, 2, 8}, 0x0180ABCD, 0x01, true), 8.f, g2, 0, 0, true, false)), "EnOcean-ERP1"), "bad CRC accepted");
+        int leaked = 0, tried = 0;
+        for (size_t i = 23; i < good.size() - 8 - 2; i++) {   // not the two end-marker chips: any value but "01" ends the telegram
+            BitRow b = good; b[i] = !b[i]; tried++;
+            if (find(ismDecode(nrz(b, 8.f, g2, 0, 0, true, false)), "EnOcean-ERP1")) leaked++;
+        }
+        CHECK(leaked == 0, "EnOcean: %d of %d single-chip errors accepted", leaked, tried);
+        BitRow cut(good.begin(), good.end() - 8 - 36);
+        CHECK(!find(ismDecode(nrz(cut, 8.f, g2, 0, 0, true, false)), "EnOcean-ERP1"), "cut telegram accepted");
+        // random ASK noise
+        int fp = 0;
+        std::uniform_int_distribution<int> b01(0, 1);
+        for (int i = 0; i < 3000; i++) {
+            BitRow v;
+            for (int q = 0; q < 300; q++) v.push_back(b01(g2));
+            fp += find(ismDecode(nrz(v, 8.f, g2, 0.1f, 0, true, false)), "EnOcean-ERP1") != nullptr;
+        }
+        CHECK(fp == 0, "%d false EnOcean readings in noise", fp);
+    }
+    gFsk = true;
+
+    // ---- DASH7: both rates, both frame classes, VID / UID / broadcast targets, origin IDs, secured frames
+    {
+        int ok = 0, n = 0;
+        std::uniform_int_distribution<int> r8(0, 255);
+        for (int rate = 0; rate < 2; rate++)
+            for (int variant = 0; variant < 6; variant++)
+                for (int k = 0; k < 24; k++) {
+                    const float T = rate ? 104.17f : 18.0f;
+                    std::vector<uint8_t> tgt, org;
+                    int tt = 0, ot = 3;
+                    uint8_t nls = 0;
+                    if (variant == 0) { tt = 3; tgt = {0xAB, (uint8_t)k}; ot = 2; for (int i = 0; i < 8; i++) org.push_back((uint8_t)(0x40 + i + k)); }   // VID target, UID origin
+                    else if (variant == 1) { tt = 2; for (int i = 0; i < 8; i++) tgt.push_back((uint8_t)(0x10 + i)); ot = 3; org = {0x12, (uint8_t)k}; }
+                    else if (variant == 2) { tt = 1; ot = 3; org = {0xCA, 0xFE}; }                                                                       // broadcast
+                    else if (variant == 3) { tt = 0; ot = 0; org = {(uint8_t)k}; }                                                                       // NBID
+                    else if (variant == 4) { tt = 3; tgt = {1, 2}; ot = 3; org = {0xBE, 0xEF}; nls = 7; }                                                 // AES-CCM-32 secured
+                    else { tt = 3; tgt = {1, 2}; ot = 3; org = {0xBE, 0xEF}; }
+                    std::vector<uint8_t> pl;
+                    for (int i = 0; i < 3 + k % 30; i++) pl.push_back((uint8_t)r8(g));
+                    const int eirp = -20 + k % 30;
+                    const auto f = d7Foreground(0xFF, tt, tgt, nls, ot, 0x01, org, eirp, pl);
+                    const bool bg = variant == 5;
+                    BitRow ch;
+                    if (bg) { std::vector<uint8_t> b = {0xFF, (uint8_t)(3 << 6 | (k & 0x3F)), (uint8_t)(k * 3), (uint8_t)(k * 5)}; ch = d7Chips(b, 0xE6D0); }
+                    else ch = d7Chips(f, 0x0B67);
+                    const auto rs = ismDecode(nrz(ch, T, g, (k % 3) * 0.03f, ((k % 5) - 2) * 0.01f, k % 2 == 1, k % 4 == 1 && rate == 1));
+                    n++;
+                    const IsmReading* r = find(rs, bg ? "DASH7-Background" : "DASH7");
+                    bool good = r != nullptr;
+                    if (good && bg) good = num(*r, "Identifier tag") == (k & 0x3F) && num(*r, "ETA") == (double)(((k * 3) & 0xFF) << 8 | ((k * 5) & 0xFF)) && text(*r, "Subnet") == "FF";
+                    if (good && !bg) {
+                        good = text(*r, "Rate") == (rate ? "9.6 kbit/s" : "55.555 kbit/s") && text(*r, "Subnet") == "FF" && num(*r, "EIRP") == eirp && text(*r, "Origin access class") == "01";
+                        std::string want;
+                        for (uint8_t x : org) want += hex2(x);
+                        std::string tw = "broadcast";
+                        if (!tgt.empty()) { tw.clear(); for (uint8_t x : tgt) tw += hex2(x); }
+                        good = good && text(*r, "Target") == tw && (org.empty() || r->id == want);
+                        if (nls) good = good && num(*r, "Security (NLS method)") == 7 && text(*r, "Payload") == "?";
+                        else good = good && text(*r, "Payload").size() == std::min<size_t>(24, pl.size()) * 2;
+                    }
+                    CHECK(good, "DASH7 rate %d variant %d k %d", rate, variant, k);
+                    ok += good;
+                }
+        printf("  DASH7: %d / %d frames decoded\n", ok, n);
+        const auto f = d7Foreground(0xFF, 3, {1, 2}, 0, 3, 1, {9, 9}, 10, {1, 2, 3, 4, 5, 6});
+        const BitRow good = d7Chips(f, 0x0B67);
+        CHECK(find(ismDecode(nrz(good, 18.f, g, 0, 0, false, false)), "DASH7"), "clean frame");
+        int leaked = 0, tried = 0;
+        for (size_t i = 6 * 8 + 16; i < good.size() - 4; i++) {   // every single-bit error from the first whitened byte on
+            BitRow b = good; b[i] = !b[i]; tried++;
+            if (find(ismDecode(nrz(b, 18.f, g, 0, 0, false, false)), "DASH7")) leaked++;
+        }
+        CHECK(leaked == 0, "DASH7: %d of %d single-bit errors accepted", leaked, tried);
+        BitRow cut(good.begin(), good.end() - 4 - 24);
+        CHECK(!find(ismDecode(nrz(cut, 18.f, g, 0, 0, false, false)), "DASH7"), "cut frame accepted");
+        // the FEC-coded channel (other sync word) is not decoded: nothing, and no false frame
+        CHECK(!find(ismDecode(nrz(d7Chips(f, 0x192F), 18.f, g, 0, 0, false, false)), "DASH7"), "FEC-class frame read as PN9");
     }
 
     // ---- noise: random bit rows at both bit rates must not produce either model (and nothing must crash)
