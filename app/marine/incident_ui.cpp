@@ -85,7 +85,7 @@ void incidentBoardUi(App& a, bool compact) {
                 ImGui::TextWrapped("NAVTEX %s: %s", n.header.c_str(), n.reason.c_str());
                 if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", n.excerpt.c_str());
             }
-            if (!compact && ImGui::TreeNode(tr("Timeline"))) {
+            if (!compact && ImGui::TreeNode(trw("Timeline"))) {
                 for (const auto& e : i.timeline) ImGui::TextWrapped("%s  %-8s %s%s", clockText(e.utc).c_str(), e.source.c_str(), e.text.c_str(), e.count > 1 ? (" x" + std::to_string(e.count)).c_str() : "");
                 ImGui::TreePop();
             }
