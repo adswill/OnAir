@@ -624,3 +624,13 @@ const ModeUi kTetraUi = {
     .tick = tick,
     .command = command,
 };
+
+// TETRA Direct Mode uses the same clear-speech path as TETRA: wire it, load the codec after the notice gate, and hand the sink over.
+dect2::tetra::SpeechFrameSink* tetraSharedVoiceSink(App& a) {
+    wireVoice(a);
+    if (!gVoice.hasCodec()) {
+        std::unique_ptr<dect2::codec::SpeechCodec> c;
+        if (appcodec::speechCodecPoll("tetra", c).status == dect2::codec::CodecStatus::Ready && c) gVoice.setCodec(std::move(c));
+    }
+    return &gVoice;
+}

@@ -1,5 +1,6 @@
 // DMR test signal (see dmr_gen.h): the content of a base station or a handset as 4FSK symbols, the pulse shaping and the frequency modulator.
 #include "dect2/dmr/dmr_gen.h"
+#include "dect2/dmr/dmr_xpt.h"
 #include "dect2/dmr/dmr_dsp.h"
 #include <algorithm>
 #include <cmath>
@@ -216,6 +217,16 @@ private:
         if (family_ == 0) for (int h = 0; h < c_.hangBursts; h++) q_.push_back(bptcBurst(kDtTerminatorLc, info));
     }
 
+    void pushXptSite() {
+        static const int st[6] = {3, 0, 2, 0, 0, 3};
+        static const int tg[6] = {21, 0, 77, 0, 0, 35};
+        Bits info;
+        csbkInfo(xptSiteStatusCsbk(xptSeq_ % 3, 5, st, tg), info);
+        xptSeq_++;
+        q_.push_back(bptcBurst(kDtCsbk, info));
+    }
+    int xptSeq_ = 0;
+
     void pushCsbk(int opcode, uint32_t src, uint32_t dst, int extra) {
         Csbk c;
         c.opcode = opcode;
@@ -311,6 +322,13 @@ private:
         const int idleChance = mix == 1 ? 75 : mix == 3 ? 15 : 40;
         if (r < idleChance) { pushIdle(3 + rng_.range(mix == 1 ? 40 : 14)); return; }
         const int k = rng_.range(100);
+        if (c_.xptSite) {   // a site status every call, and the XPT call set-up link control in front of the voice calls
+            pushXptSite();
+            const FullLc f = xptCallLc(3, 5, 1, 0x0015, 0x001234);
+            Bits info;
+            lcBurstInfo(f.raw, true, info);
+            q_.push_back(bptcBurst(kDtTerminatorLc, info));
+        }
         if (k < 55) pushVoiceCall(0);
         else if (k < 68) pushVoiceCall(1);
         else if (k < 72) pushVoiceCall(2);

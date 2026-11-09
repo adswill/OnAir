@@ -1,5 +1,6 @@
 // DMR receiver telemetry, shared by the receiver and the UI.
 #pragma once
+#include "dect2/dmr/dmr_xpt.h"
 #include "dect2/common/ring.h"
 #include <cstdint>
 #include <cstdio>
@@ -113,6 +114,7 @@ struct DmrTelemetry {
     std::vector<DmrCall> callLog;    // oldest first, at most 100
     std::vector<DmrMessage> messages;   // oldest first, at most 16
     std::vector<DmrLocation> locations;   // oldest first, at most 512 (LRRP fixes and NoFix reports)
+    XptState xpt;                    // Hytera XPT (dmr_xpt.h), when its control blocks are heard
 };
 
 // One line for the command line and the log

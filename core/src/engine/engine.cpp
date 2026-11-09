@@ -658,6 +658,8 @@ void Engine::resetReceiver(int a) {
     case 130: rxLtr_.reset(); break;
     case 131: rxEdacs_.reset(); break;
     case 321: rxSmartnet_.reset(); break;
+    case 322: rxTetraDmo_.reset(); break;
+    case 323: rxOpenSky_.reset(); break;
     case 156: rxMarineVhf_.reset(); break;
     case 181: rxP25p2_.reset(); break;
     case 61: rxGoes_.reset(); break;

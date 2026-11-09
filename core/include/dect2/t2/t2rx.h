@@ -59,6 +59,8 @@
 #include "dect2/ltr/ltr_tel.h"
 #include "dect2/edacs/edacs_tel.h"
 #include "dect2/smartnet/smartnet_tel.h"
+#include "dect2/tetradmo/tetradmo_tel.h"
+#include "dect2/opensky/opensky_tel.h"
 #include "dect2/marinevhf/marinevhf_tel.h"
 #include "dect2/p25p2/p25p2_tel.h"
 #include "dect2/milhf/milhf_engine.h"
@@ -320,6 +322,8 @@ struct RxTelemetry {
     MarineVhfTelemetry marinevhf;   // valid when standard == 156 (Marine VHF voice, engine standard 157)
     EdacsTelemetry edacs;       // valid when standard == 131 (EDACS control channel, engine standard 132)
     SmartnetTelemetry smartnet; // valid when standard == 321 (Motorola Type II, family 320)
+    TetraDmoTelemetry tetradmo; // valid when standard == 322 (TETRA Direct Mode, family 321)
+    OpenSkyTelemetry opensky;   // valid when standard == 323 (OpenSky identifier, family 322)
     SbasTelemetry sbas;         // valid when standard == 151 (SBAS, family 150, engine standard 152)
     ArgosTelemetry argos;       // valid when standard == 153 (Argos, engine standard 154)
     SigfoxModeTelemetry sigfoxm;   // valid when standard == 154 (Sigfox, engine standard 155)

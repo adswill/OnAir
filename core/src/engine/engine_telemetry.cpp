@@ -358,6 +358,8 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 130: return pollStd(rxLtr_, 130, t, seqs[126], &RxTelemetry::ltr);     // LTR control channel (slot 126)
     case 131: return pollStd(rxEdacs_, 131, t, seqs[127], &RxTelemetry::edacs); // EDACS control channel (slot 127)
     case 321: return pollStd(rxSmartnet_, 321, t, seqs[230], &RxTelemetry::smartnet); // Motorola Type II (slot 230)
+    case 322: return pollStd(rxTetraDmo_, 322, t, seqs[231], &RxTelemetry::tetradmo); // TETRA Direct Mode (slot 231)
+    case 323: return pollStd(rxOpenSky_, 323, t, seqs[232], &RxTelemetry::opensky);   // OpenSky identifier (slot 232)
     case 156: return pollStd(rxMarineVhf_, 156, t, seqs[142], &RxTelemetry::marinevhf);   // Marine VHF voice (slot 142)
     case 181: return pollStd(rxP25p2_, 181, t, seqs[181], &RxTelemetry::p25p2); // P25 Phase 2 (slot 181)
     default: return -1;

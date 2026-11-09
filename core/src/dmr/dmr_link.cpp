@@ -685,6 +685,7 @@ Link::Outcome Link::decodeData(Track& t, const Bits& burst, const float* z, int 
         o.valid = true;
         if (!idsFixed && rs == 0 && (f.flco == kFlcoGroupVoice || f.flco == kFlcoUnitVoice)) { heard_.note(f.src); heard_.note(f.dst); }
         int kind = f.flco == kFlcoUnitVoice ? 1 : (f.dst >= 0xFFFFF0 ? 2 : 0);
+        if (xptParseCall(f, now, tel_.xpt)) { t.lastBurst += " (XPT call set-up)"; break; }
         if (f.flco != kFlcoGroupVoice && f.flco != kFlcoUnitVoice) { t.lastBurst += " (other LC)"; break; }
         if (!term) {
             if (t.inCall && t.call.idsKnown && t.call.src == f.src && t.call.dst == f.dst) { /* repeated header */ }
@@ -723,6 +724,7 @@ Link::Outcome Link::decodeData(Track& t, const Bits& burst, const float* z, int 
             tel_.crcOk++;
             o.valid = true;
             endVoiceByData();
+            if (xptParseCsbk(c, now, tel_.xpt)) { t.lastBurst = "CSBK Hytera XPT"; break; }
             const uint64_t key = (uint64_t)c.opcode << 56 | (uint64_t)c.fid << 48 | (uint64_t)be24(c.data + 2) << 24 | be24(c.data + 5);
             if (!(key == t.lastCsbkKey && now - t.lastCsbkSec < 3.0)) {
                 DmrCall e;

@@ -41,6 +41,7 @@ struct DmrGenConfig {
     bool textMessages = true, talkerAlias = true;
     int hangBursts = 6;          // base station: terminators repeated after a voice call (hang time)
     bool headerSync = true;      // false: the voice headers carry embedded signalling in the centre instead of a sync pattern
+    bool xptSite = false;        // base station: Hytera XPT site status blocks (dmr_xpt.h) are sent now and then, and one XPT call set-up per voice call
     bool blockSync = true;       // false: every second data block of a message has reverse channel signalling in the centre instead of a sync pattern
     double snrDb = 40;           // in 12.5 kHz
     double cfoHz = 0;
