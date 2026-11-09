@@ -47,14 +47,14 @@ void FadeTracker::push(float db) {
 }
 
 struct AmDiversity::Impl {
-    int rate = 48000, decim = 6, N = 1 << 14;
+    int rate = 48000, decim = 6, N = 1 << 13;
     std::vector<float> ra, rb, da, db_;
     std::deque<float> qa, qb;
     int delay = 0;                  // of channel 1 against 0 (samples)
     int act = 0, want = 0, fade = 0, nsw = 0;
     float snr[2] = {0, 0};
     uint64_t sinceSwitch = 0, sinceCorr = 0;
-    Fft fft{1 << 14};
+    Fft fft{1 << 13};
     std::vector<cf32> fa, fb;
 
     void reset() { ra.clear(); rb.clear(); qa.clear(); qb.clear(); delay = 0; act = 0; want = 0; fade = 0; nsw = 0; snr[0] = snr[1] = 0; sinceSwitch = 0; sinceCorr = 0; }
@@ -90,7 +90,7 @@ struct AmDiversity::Impl {
         sinceCorr += n;
         if (sinceCorr >= (uint64_t)rate / 2) { sinceCorr = 0; corr(); }
         // read position: rate samples (1 s) behind the newest, on each channel with the alignment applied
-        const size_t hold = (size_t)rate + (size_t)std::abs(delay);
+        const size_t hold = (size_t)N * (size_t)decim + (size_t)rate / 20 + (size_t)std::abs(delay);
         const size_t cf = (size_t)(0.05 * rate);
         while (qa.size() > hold && qb.size() > hold + 0) {
             const int oa = delay > 0 ? 0 : 0;

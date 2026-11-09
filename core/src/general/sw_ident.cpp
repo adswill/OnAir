@@ -128,7 +128,8 @@ void IntervalDetector::analyse() {
     if (n < (int)(8 * fr)) return;
     // the frame-to-frame similarity at each lag; the best lag above 1 s that is a repeat of the whole recent past
     const int lo = (int)(1.0 * fr), hi = std::min(n / 2, (int)(30 * fr));
-    float best = 0; int bk = 0;
+    std::vector<float> sim((size_t)hi + 1, 0.f);
+    float best = 0;
     for (int k = lo; k <= hi; k++) {
         double sum = 0; int cnt = 0;
         for (int i = k; i < n; i += 2) {
@@ -136,9 +137,15 @@ void IntervalDetector::analyse() {
             for (int m = 0; m < 12; m++) d += a[(size_t)m] * b[(size_t)m];
             sum += d; cnt++;
         }
-        const float v = cnt ? (float)(sum / cnt) : 0.f;
-        if (v > best + 0.01f) { best = v; bk = k; }
+        sim[(size_t)k] = cnt ? (float)(sum / cnt) : 0.f;
+        best = std::max(best, sim[(size_t)k]);
     }
+    int bk = 0;   // a melody repeats at every multiple of its loop too: the shortest lag that is (nearly) as good as the best, at a local top
+    for (int k = lo; k <= hi; k++) {
+        const bool top = (k == lo || sim[(size_t)k] >= sim[(size_t)k - 1]) && (k == hi || sim[(size_t)k] >= sim[(size_t)k + 1]);
+        if (top && sim[(size_t)k] >= best - 0.04f) { bk = k; break; }
+    }
+    if (bk) best = sim[(size_t)bk];
     // the mean similarity between unrelated frames (a melody has a level of it too): strength is above that
     double base = 0; int cnt = 0;
     for (int i = n / 2; i < n; i += 3) for (int j = 0; j < n / 2; j += 7) {

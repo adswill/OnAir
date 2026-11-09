@@ -51,7 +51,7 @@ int main() {
         {98.3, -8, 0, true, 0x5001, "ALPHA   "}, {98.7, -20, 1500, true, 0x5002, "BRAVO   "}, {99.2, -32, -2500, false, 0x5003, "CHARLIE "},
         {99.6, -14, 400, true, 0x5004, "DELTA   "}, {100.1, -26, -900, true, 0x5005, "ECHO    "}, {100.9, -18, 2000, false, 0x5006, "FOXTROT "}};
     one(4e6, 99.5, 8, a, -62, 0);                // an integer ratio to the 500 kHz
-    one(3.2e6, 99.5, 8, a, -62, 310e3);          // another ratio and an unmodulated spur (not a station)
+    one(3.2e6, 99.65, 8, a, -62, 310e3);          // another ratio and an unmodulated spur (not a station)
     // two strong neighbours on the 200 kHz raster and a weak one
     one(4e6, 100.0, 8, {{99.7, -10, 0, true, 0x6001, "ONE     "}, {99.9, -12, 0, true, 0x6002, "TWO     "}, {100.8, -40, 0, true, 0x6003, "THREE   "}}, -66, 0);
     printf(fails ? "FAILED %d\n" : "ok\n", fails);

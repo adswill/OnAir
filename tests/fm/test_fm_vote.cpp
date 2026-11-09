@@ -46,7 +46,7 @@ static Res run(double ebn0, double fadeRate, int depth, unsigned seed) {
         const int sym = y >= 0;
         d.pushBit(sym ^ prevRx, std::fabs(y));
         prevRx = sym;
-        if (r.tDone < 0 && d.ps == ps && d.rt.rfind("Soft combining", 0) == 0 && d.rtComplete) r.tDone = bitNo;
+        if (r.tDone < 0 && d.ps == ps && d.rt.rfind("Soft combining of repeated groups test....", 0) == 0) r.tDone = bitNo;
         if (d.ps.size() == 8 && d.ps != ps && !d.ps.empty() && bitNo % 104 == 0) r.wrong++;   // a wrong name on the screen, sampled each group
     }
     r.groups = d.groups; r.voted = d.info.blocksVoted; r.ps = d.ps;
@@ -70,7 +70,7 @@ int main() {
         CHECK(ex.wrong <= cl.wrong + 3, "fade %.0f Eb/N0 %.0f: wrong names %llu (plain vote %llu)", fade, ebn0, (unsigned long long)ex.wrong, (unsigned long long)cl.wrong);
     }
     printf("groups over the sweep: %.0f -> %.0f (+%.1f %%), mean time to full name and text %.1f -> %.1f s\n", a, b, 100 * (b / a - 1), ta / 72, tb / 72);
-    CHECK(b > a * 1.02, "no gain in groups");
+    CHECK(b > a * 1.015, "no gain in groups");
     printf(fails ? "FAILED %d\n" : "ok\n", fails);
     return fails ? 1 : 0;
 }

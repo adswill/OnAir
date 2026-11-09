@@ -104,51 +104,62 @@ struct AmCensus::Impl {
         }
         step = raster();
         const double f0 = std::ceil((centre - half) / step) * step;
-        std::vector<AmCensusRow> out;
+        struct Cand { double hz; AmKind kind; bool present; double line, snr, band, loDb, upDb, spread; };
+        std::vector<Cand> cand;
         for (double hz = f0; hz < centre + half; hz += step) {
             const int b = N / 2 + (int)std::lround((hz - centre) / binHz);
             const int w = std::max(1, (int)std::lround(60.0 / binHz));                 // the carrier: +-60 Hz
-            int bb = b; double line = 0;
-            for (int j = -w; j <= w; j++) if (b + j >= 0 && b + j < N && power[(size_t)(b + j)] > line) { line = power[(size_t)(b + j)]; bb = b + j; }
+            double line = 0;
+            for (int j = -w; j <= w; j++) if (b + j >= 0 && b + j < N) line = std::max(line, (double)power[(size_t)(b + j)]);
             const auto bins = [&](double hzFrom, double hzTo) { return band(b + (int)(hzFrom / binHz), b + (int)(hzTo / binHz)); };
             const double lo = bins(-4300, -250), up = bins(250, 4300);        // the first few kHz of the sidebands
-            const int wn = (int)(150.0 / binHz);                               // the channel's own floor: the quietest parts between stations (inside +-step/2 and just beyond)
-            const double far1 = bins(-0.5 * step - 700, -0.5 * step + 700), far2 = bins(0.5 * step - 700, 0.5 * step + 700);
-            (void)wn;
-            const double chFloor = std::max(floorP, std::min(far1, far2));
-            const double lineDb = db(line / nrm);
+            // the channel's floor: beside the channel, on the quieter side
+            const double chFloor = std::max(floorP, std::min(bins(-12700, -11300), bins(11300, 12700)));
+            const double around = 0.5 * (bins(-1000, -250) + bins(250, 1000));
             const double snr = 10 * std::log10(std::max(line / chFloor, 1e-3));
-            const double sideDb = 10 * std::log10(std::max((lo + up) * 0.5 / chFloor, 1e-3));
+            const double prom = 10 * std::log10(std::max(line / std::max(around, 1e-30), 1e-3));
             const double loDb = 10 * std::log10(std::max(lo / chFloor, 1e-3)), upDb = 10 * std::log10(std::max(up / chFloor, 1e-3));
-            const double flat = (loDb + upDb) * 0.5;
-            const double spread = std::fabs(loDb - upDb);
-            AmKind kind; bool present = false;
-            if (snr >= cfg.onDb && (sideDb < 3)) { kind = AmKind::Carrier; present = true; }          // a line with nothing around it: a spur or an unmodulated carrier
-            else if (snr >= cfg.onDb) { kind = AmKind::Am; present = true; }
-            else if (flat >= cfg.onDb - 2 && spread < 4 && sideDb >= cfg.onDb - 2 && bins(4600, 9000) > chFloor * 2 && bins(-9000, -4600) > chFloor * 2) { kind = AmKind::Drm; present = true; }   // no line, flat over the whole channel
-            else if (std::max(loDb, upDb) >= cfg.onDb && spread >= 6) { kind = AmKind::Ssb; present = true; }
-            else kind = AmKind::Am;
+            const double spread = std::fabs(loDb - upDb), sideDb = 10 * std::log10(std::max((lo + up) * 0.5 / chFloor, 1e-3));
+            const bool wideLo = bins(-9000, -4600) > chFloor * 2, wideUp = bins(4600, 9000) > chFloor * 2;
+            Cand c{hz, AmKind::Am, false, line, snr, (lo + up) * 0.5, loDb, upDb, spread};
+            if (snr >= cfg.onDb + 4 && prom >= 12) { c.kind = sideDb < 3 ? AmKind::Carrier : AmKind::Am; c.present = true; }   // a line (with nothing around it: a spur)
+            else if (sideDb >= cfg.onDb - 2 && spread < 4 && wideLo && wideUp) { c.kind = AmKind::Drm; c.present = true; }     // no line, flat over the whole channel
+            else if (std::max(loDb, upDb) >= cfg.onDb && spread >= 6) { c.kind = AmKind::Ssb; c.present = true; }
+            cand.push_back(c);
+        }
+        for (size_t i = 0; i < cand.size(); i++) {
+            const Cand& c = cand[i];
+            if (!c.present) continue;
+            if (c.kind == AmKind::Drm || c.kind == AmKind::Ssb) {
+                // the channels beside a signal see parts of its spectrum: only the strongest of the neighbourhood is a signal, and nothing beside a carrier
+                bool shadow = false;
+                const size_t reach = (size_t)std::lround(10e3 / step);
+                for (size_t j = i > reach ? i - reach : 0; j < std::min(cand.size(), i + reach + 1); j++) {
+                    if (j == i || !cand[j].present) continue;
+                    if (cand[j].kind == AmKind::Am || cand[j].band > c.band) shadow = true;
+                }
+                if (shadow) continue;
+            }
+            const double hz = c.hz;
             const long key = std::lround(hz / step);
-            if (!present) continue;
-            Ch& c = ch[key];
-            const float carDb = kind == AmKind::Am || kind == AmKind::Carrier ? (float)lineDb : (float)db((lo + up) * 0.5 / nrm);
-            c.car.push_back(carDb); c.side.push_back(db((lo + up) * 0.5 / nrm));
+            Ch& ct = ch[key];
+            const float carDb = c.kind == AmKind::Am || c.kind == AmKind::Carrier ? db(c.line / nrm) : db(c.band / nrm);
+            ct.car.push_back(carDb); ct.side.push_back(db(c.band / nrm));
             const size_t cap = (size_t)(kHistSec / kFrameSec);
-            while (c.car.size() > cap) { c.car.pop_front(); c.side.pop_front(); }
-            c.seen++;
-            AmCensusRow& r = c.row;
-            r.khz = hz / 1e3; r.kind = kind; r.carrierDb = carDb; r.snrDb = (float)snr; r.lastSec = secs;
-            // fade depth
-            if (c.car.size() >= 40) {
-                std::vector<float> v(c.car.begin(), c.car.end()), sv(c.side.begin(), c.side.end());
+            while (ct.car.size() > cap) { ct.car.pop_front(); ct.side.pop_front(); }
+            ct.seen++;
+            AmCensusRow& r = ct.row;
+            r.khz = hz / 1e3; r.kind = c.kind; r.carrierDb = carDb; r.snrDb = (float)c.snr; r.lastSec = secs;
+            if (ct.car.size() >= 40) {
+                std::vector<float> v(ct.car.begin(), ct.car.end()), sv(ct.side.begin(), ct.side.end());
                 std::sort(v.begin(), v.end()); std::sort(sv.begin(), sv.end());
                 r.fadeDb = v[v.size() * 9 / 10] - v[v.size() / 10];
                 const float sideFade = sv[sv.size() * 9 / 10] - sv[sv.size() / 10];
                 r.fading = r.fadeDb > 6;
                 r.selective = r.fading && sideFade < r.fadeDb * 0.5f;
             }
-            r.ecss = kind == AmKind::Am && spread > 8 ? (loDb > upDb ? 1 : -1) : 0;   // the stronger side holds the interference: listen to the other
-            r.score = (kind == AmKind::Am ? (float)snr : (float)snr - 10) - 0.5f * r.fadeDb - (r.ecss ? 3.f : 0.f);
+            r.ecss = c.kind == AmKind::Am && c.spread > 8 ? (c.loDb > c.upDb ? 1 : -1) : 0;   // the stronger side holds the interference: listen to the other
+            r.score = c.kind == AmKind::Carrier ? -50.f : (c.kind == AmKind::Am ? (float)c.snr : (float)c.snr - 10) - 0.5f * r.fadeDb - (r.ecss ? 3.f : 0.f);
         }
         std::lock_guard<std::mutex> lk(mu);
         table.clear();

@@ -262,25 +262,28 @@ bool RdsDecoder::keyedBlock(uint32_t& w, int pos) {
     const uint16_t b = blk_[1];
     KeyedSum* e = nullptr, *oldest = tab;
     for (int i = 0; i < kKeyed; i++) {
-        if (tab[i].n && tab[i].b == b) { e = &tab[i]; break; }
+        if (tab[i].at && tab[i].b == b) { e = &tab[i]; break; }
         if (tab[i].at < oldest->at) oldest = &tab[i];
     }
     if (!e) { e = oldest; *e = KeyedSum(); e->b = b; }
     else if (bitNo_ - e->at > 26ull * 4 * 700 || e->n >= 8) { *e = KeyedSum(); e->b = b; }   // a minute old or many copies without a result: the content has changed
     for (int i = 0; i < 26; i++) { const float r = std::max(0.01f, rel_[(bitNo_ - 26 + (uint64_t)i) & 31]); e->sum[i] += ((w >> (25 - i)) & 1) ? r : -r; }
     e->n++; e->at = bitNo_;
-    if (e->n < 2) return false;
-    uint32_t v = 0;
-    for (int i = 0; i < 26; i++) v = (v << 1) | (e->sum[i] > 0 ? 1u : 0u);
-    const uint32_t syn = rdsRem(v, 26);
-    if (syn == offsetOfPos(pos) || (pos == 2 && syn == kOffsets[3])) { w = v; return true; }   // the entry stays: the next bad copy repeats it and passes the "came before" test
     if (e->n < 3) return false;
+    uint32_t v = 0;
+    double total = 0;
+    for (int i = 0; i < 26; i++) { v = (v << 1) | (e->sum[i] > 0 ? 1u : 0u); total += std::fabs(e->sum[i]); }
+    int weak = 0;   // bits that the copies did not settle: a sum with many of them would pass the checkword only by chance
+    for (int i = 0; i < 26; i++) if (std::fabs(e->sum[i]) < 0.25f * (float)(total / 26)) weak++;
+    const uint32_t syn = rdsRem(v, 26);
+    if (weak <= 2 && (syn == offsetOfPos(pos) || (pos == 2 && syn == kOffsets[3]))) { w = v; e->n = 0; return true; }   // the sum starts again: the "came before" test wants a second, independent result
+    if (e->n < 4 || weak > 3) return false;
     float save[26];
     for (int i = 0; i < 26; i++) { float& r = rel_[(bitNo_ - 26 + (uint64_t)i) & 31]; save[i] = r; r = std::fabs(e->sum[i]); }
     uint32_t rep = v;
     const bool ok = correct(rep, syn, pos);
     for (int i = 0; i < 26; i++) rel_[(bitNo_ - 26 + (uint64_t)i) & 31] = save[i];
-    if (ok && __builtin_popcount(rep ^ v) <= 3) { w = rep; return true; }
+    if (ok && __builtin_popcount(rep ^ v) <= 3) { w = rep; e->n = 0; return true; }
     return false;
 }
 
