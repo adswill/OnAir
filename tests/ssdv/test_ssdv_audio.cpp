@@ -74,7 +74,8 @@ static bool decodeWav(const std::string& wav, int fixedBaud, int& baud) {
     r.flush();
     SsdvTelemetry t; r.telemetry(t, 0);
     baud = t.baud;
-    std::filesystem::remove(cf);
+    std::error_code removeEc;
+    std::filesystem::remove(cf, removeEc);   // Windows can still hold the file open here; the folder is removed at the end
     return !t.images.empty() && t.images[0].complete && t.images[0].jpeg && *t.images[0].jpeg == gGoodJpeg;
 }
 
@@ -114,6 +115,6 @@ int main() {
         writeWav(p, std::vector<float>(4800, 0.f), 48000, 1, 16);
         double r; CHECK(!ssdvWavToCf32File(p, p + ".cf32", r, err) && !err.empty(), "a silent recording is refused");
     }
-    std::filesystem::remove_all(dir);
+    { std::error_code ec; std::filesystem::remove_all(dir, ec); }
     return testSummary("ssdv audio");
 }
