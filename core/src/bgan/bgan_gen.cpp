@@ -127,7 +127,7 @@ public:
         else {
             add(0, 8, -280000.0, 1, 0, 0);            // the global beam bulletin board bearer
             add(2, 6, -150000.0, 2, 12, 1);           // a regional QPSK bearer
-            add(3, 8, 0.0, 3, 77, 2);
+            add(3, 8, 25000.0, 3, 77, 2);
             add(8, 8, 180000.0, 4, 112, 2);
             add(10, 9, 380000.0, 5, 113, 2);
         }

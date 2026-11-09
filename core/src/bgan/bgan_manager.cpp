@@ -50,15 +50,17 @@ bool gmr2Lines(const std::vector<cf32>& x, double fs) {
     tmp = m;
     std::nth_element(tmp.begin(), tmp.begin() + n / 2, tmp.end());
     const float med = tmp[n / 2] + 1e-20f;
-    const int sep = int(std::lround(135416.67 / (fs / n)));
+    const int sep1 = int(std::lround(135416.67 / (fs / n))), sep2 = 2 * sep1;     // the pair of lines is one or two symbol rates apart, depending on the pulse
     const int tol = std::max(2, int(600.0 / (fs / n)));
     float best = 0; int bestI = -1;
     for (int i = 0; i < n; i++) if (m[i] > best) { best = m[i]; bestI = i; }
-    if (best < 18 * med || bestI < 0) return false;
-    for (int d : { sep, -sep }) {
-        for (int e = -tol; e <= tol; e++) {
-            const int j = (bestI + d + e + n) % n;
-            if (m[j] > 8 * med) return true;
+    if (best < 14 * med || bestI < 0) return false;
+    for (int sep : { sep1, sep2 }) {
+        for (int d : { sep, -sep }) {
+            for (int e = -tol; e <= tol; e++) {
+                const int j = ((bestI + d + e) % n + n) % n;
+                if (m[j] > 5 * med) return true;
+            }
         }
     }
     return false;
@@ -146,14 +148,52 @@ struct Manager::Impl {
 
     Chan* find(int id) { for (auto& c : chans) if (c->id == id) return c.get(); return nullptr; }
 
+    struct Group { int id; double offsetHz, widthHz; float snrDb; bool confirmed; };
+    // one carrier can show as several regions (the DC gap of the detector, or dips in a wide flat carrier): regions that nearly touch are one
+    std::vector<Group> groups(const std::vector<inmsat::DetectedCarrier>& cars) const {
+        std::vector<const inmsat::DetectedCarrier*> v;
+        for (const auto& c : cars) if (c.confirmed) v.push_back(&c);
+        std::sort(v.begin(), v.end(), [](auto* a, auto* b) { return a->offsetHz < b->offsetHz; });
+        std::vector<Group> out;
+        for (size_t i = 0; i < v.size();) {
+            // a chain of pieces that together look like one wide carrier
+            double lo = v[i]->offsetHz - v[i]->widthHz / 2, hi = v[i]->offsetHz + v[i]->widthHz / 2;
+            size_t j = i + 1, best = i;
+            while (j < v.size()) {
+                const double l2 = v[j]->offsetHz - v[j]->widthHz / 2, h2 = v[j]->offsetHz + v[j]->widthHz / 2;
+                if (l2 - hi >= 30000 || h2 - lo > 225000) break;
+                hi = std::max(hi, h2);
+                if (hi - lo >= 130000) best = j;
+                j++;
+            }
+            size_t last = i;
+            if (best > i) last = best;
+            else {
+                // otherwise only regions that nearly touch are one (the DC gap of the detector)
+                while (last + 1 < v.size()) {
+                    const double gap = (v[last + 1]->offsetHz - v[last + 1]->widthHz / 2) - (v[last]->offsetHz + v[last]->widthHz / 2);
+                    const double span = (v[last + 1]->offsetHz + v[last + 1]->widthHz / 2) - (v[i]->offsetHz - v[i]->widthHz / 2);
+                    if (gap >= 5000 || span > 235000) break;
+                    last++;
+                }
+            }
+            double left = v[i]->offsetHz - v[i]->widthHz / 2, right = v[i]->offsetHz + v[i]->widthHz / 2;
+            float snr = v[i]->snrDb;
+            for (size_t k = i; k <= last; k++) { left = std::min(left, v[k]->offsetHz - v[k]->widthHz / 2); right = std::max(right, v[k]->offsetHz + v[k]->widthHz / 2); snr = std::max(snr, v[k]->snrDb); }
+            out.push_back({ v[i]->id, 0.5 * (left + right), right - left, snr, true });
+            i = last + 1;
+        }
+        return out;
+    }
+
     void plan() {
-        const auto& cars = det.carriers();
+        const auto cars = groups(det.carriers());
         const double now = det.nowSec();
         bool changed = false;
         // keep channels whose carrier is still there
         for (auto& c : chans) {
             for (const auto& car : cars) {
-                if (car.id == c->id && car.confirmed) { c->offsetHz += 0.02 * (car.offsetHz - c->offsetHz); c->widthHz = car.widthHz; c->snrDb = car.snrDb; c->lastCarrier = now; }
+                if (std::fabs(car.offsetHz - c->offsetHz) < 0.5 * car.widthHz + 2000) { c->offsetHz += 0.02 * (car.offsetHz - c->offsetHz); if (car.widthHz > c->widthHz) c->widthHz = car.widthHz; c->snrDb = car.snrDb; c->lastCarrier = now; }
             }
         }
         for (size_t i = 0; i < chans.size();) {

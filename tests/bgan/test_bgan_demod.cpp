@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
     std::printf("Impairments at the R subtype (+2 dB over the figure above): decoded frames / frames\n");
     static const struct { const char* lab; double off, drift, fh, fd, ppm; } imp[] = {
         {"offset +1500 Hz", 1500,0,0,0,0},{"offset -2500 Hz", -2500,0,0,0,0},{"Doppler drift 20 Hz/s", 0,20,0,0,0},
-        {"clock +50 ppm", 0,0,0,0,50},{"clock -50 ppm", 0,0,0,0,-50},{"fading 2 Hz, 50 %", 0,0,2,0.5,0},{"fading 20 Hz, 50 %", 0,0,20,0.5,0},{"fading 20 Hz, 80 %", 0,0,20,0.8,0} };
+        {"clock +20 ppm", 0,0,0,0,20},{"clock -20 ppm", 0,0,0,0,-20},{"clock +50 ppm", 0,0,0,0,50},{"clock -50 ppm", 0,0,0,0,-50},{"fading 2 Hz, 50 %", 0,0,2,0.5,0},{"fading 20 Hz, 50 %", 0,0,20,0.5,0},{"fading 20 Hz, 80 %", 0,0,20,0.8,0} };
     for (const auto& im : imp) {
         for (int bi : {0, 2, 3, 8, 10, 12}) {
             double req = 0; for (const auto& e : sw) if (e.b == bi && e.sub == 8) req = e.req;

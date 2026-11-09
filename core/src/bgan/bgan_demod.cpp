@@ -92,6 +92,7 @@ struct BearerDemod::Impl {
     int layoutFor = -1;
     int nextRate[16], nextMod[16];
     bool nextValid = false;
+    int syncRun = 0;                            // frames in a row with unique word and coherent pilots
 
     void clearNext() { nextValid = false; for (int i = 0; i < 16; i++) { nextRate[i] = -1; nextMod[i] = 0; } }
 
@@ -193,7 +194,7 @@ struct BearerDemod::Impl {
         double bestUw = 0, bestS = 0, bestFa = 0;
         int bestW = -1;
         const int aliases = 4;
-        for (int n = 0; n < frameSym / L + 2; n++) {
+        for (int n = -(frameSym / L + 2); n < frameSym / L + 2; n++) {
             const double s = bestStart + n * L - (40 + bestDs);
             if (s < 2) continue;
             const double s4 = s * os;
@@ -234,7 +235,7 @@ struct BearerDemod::Impl {
         spsEst = sps;
         bearerIdx = chosen;
         locked = true;
-        misses = 0; okRun = 0;
+        misses = 0; okRun = 0; syncRun = 0;
         // drop what is before the frame
         drop(int64_t(std::max(0.0, frameStart - double(yBase) - 16)));
         return true;
@@ -272,9 +273,9 @@ struct BearerDemod::Impl {
         }
         for (int i = 1; i < K; i++) acc += pil[i] * std::conj(pil[i - 1]);
         const double df = std::arg(acc) / (2 * kPi * L);
-        fCyc += st.frames < 4 ? df * 0.8 : df * 0.25;
+        fCyc += st.frames < 4 ? df * 0.8 : df * 0.1;
         // and a finer one: the frequency that maximises the coherent sum of the frame's pilots (parabola on three test frequencies)
-        double step = 1.0 / mos;
+        double step = 0.25 / mos;
         auto cohAt = [&](double d) {
             cf32 c(0, 0);
             for (int i = 0; i < K; i++) {
@@ -283,7 +284,7 @@ struct BearerDemod::Impl {
             }
             return double(std::abs(c));
         };
-        for (int pass = 0; pass < 4; pass++, step *= 0.5) {
+        for (int pass = 0; pass < 3; pass++, step *= 0.5) {
             const double m0 = cohAt(-step), m1 = cohAt(0), m2 = cohAt(step);
             const double denom = m0 - 2 * m1 + m2;
             if (std::fabs(denom) > 1e-12) fCyc += std::clamp(0.5 * step * (m0 - m2) / denom, -step, step);
@@ -323,15 +324,20 @@ struct BearerDemod::Impl {
         const double ampl = std::abs(pC) / K;
         const double pilotPower = ampl * ampl;
         const double uwScore = bestC / (40 * ampl + 1e-12);
-        const bool gotUw = uwScore > 0.5 && bestWord >= 0;
+        double pilotPwr = 0;
+        for (int i = 0; i < K; i++) pilotPwr += std::norm(pil[i]);
+        const double pilotCoh = std::norm(pC) / (K * pilotPwr / K + 1e-20) / K;     // 1 = perfect, 1 / K for noise
+        const bool gotUw = uwScore > 0.5 && bestWord >= 0 && pilotCoh > 0.12;
         if (!gotUw) {
             misses++;
+            syncRun = 0;
             st.framesLost++;
-            if (misses > 4) { locked = false; st.state = 0; st.bearer = -1; decided = -1; }
+            if (misses > 4) { locked = false; st.state = 0; st.bearer = -1; decided = -1; syncRun = 0; }
             advance(mos, 0);
             return true;
         }
         misses = 0;
+        syncRun = std::min(syncRun + 1, 8);
         // channel estimate: UW and pilots as references, smoothed
         struct Ref { int pos; cf32 h; };
         std::vector<Ref> refs;
@@ -463,9 +469,9 @@ struct BearerDemod::Impl {
         okEma += 0.1f * ((decodedOk ? 1.f : 0.f) - okEma);
         st.blockOkRate = okEma;
         st.frames++;
-        st.bearer = bearerIdx;
+        st.bearer = syncRun >= 3 || decided >= 0 ? bearerIdx : -1;
         st.structureOnly = !decodedOk && decided < 0 && cyclesSinceOk > 3;
-        st.state = decodedOk || decided >= 0 ? 2 : 1;
+        st.state = decodedOk || decided >= 0 ? 2 : syncRun >= 3 ? 1 : 0;
         // timing: the pilot energy at +/- half a symbol, over the first and the last third of the pilots: the two halves give the error and the clock rate
         const int third = std::max(4, K / 3);
         const double sp = st.frames < 6 ? 0.5 : 0.25;              // a wide look at first; the data symbols next to the pilots disturb a wide look more
@@ -489,11 +495,14 @@ struct BearerDemod::Impl {
         const double dtAll = timing(0, K);
         double dt = dtAll;
         const double ppm = slope * 1e6;
-        if (std::fabs(dtB - dtA) > 0.12 && std::fabs(ppm) > 10 && st.frames < 40) {     // a big clock error, early on: take the slope, and the error at the start of the frame
-            spsEst *= 1.0 + 0.7 * slope;
+        if (std::fabs(dtB - dtA) > 0.2 && std::fabs(ppm) > 10 && st.frames < 20 && st.esn0Db > 6) {     // a big clock error, early on: take the slope, and the error at the start of the frame
+            spsEst *= 1.0 + 0.7 * std::clamp(slope, -80e-6, 80e-6);
             dt = dtA - pp[third / 2] * slope;
         } else {
             spsEst *= 1.0 + 0.05 * dtAll / mos;          // the clock rate follows the timing error slowly
+        }
+        spsEst = std::clamp(spsEst, spsNom * (1 - 120e-6), spsNom * (1 + 120e-6));
+        {
         }
         advance(mos, dt);
         return true;
