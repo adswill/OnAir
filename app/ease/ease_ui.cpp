@@ -3,6 +3,9 @@
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/inmsat/inmsat_satid.h"
 #include "i18n/i18n.h"
+#include <cmath>
+#include <map>
+#include <memory>
 
 namespace easeui {
 
@@ -38,6 +41,36 @@ bool satPointing(App& a, double slotLon, SatPick& st) {
         if (ImGui::SmallButton(tr("Undo##easesat"))) { undo = true; st.undoable = false; }
     }
     return undo;
+}
+
+bool autoBandControl(App& a, const char* prefKey, uint64_t decoded) {
+    struct St { bool loaded = false, on = false; std::unique_ptr<dect2::ease::AutoBand> ab; double lastMhz = 0; std::string note; };
+    static std::map<std::string, St> all;
+    St& s = all[prefKey];
+    if (!s.loaded) { s.loaded = true; s.on = plat::prefs().getB(prefKey, false); }
+    if (ImGui::Checkbox(tr("Auto band"), &s.on)) {
+        plat::prefs().setB(prefKey, s.on);
+        s.ab.reset(); s.lastMhz = 0; s.note.clear();
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Listens 30 s on each band used in your region, settles where devices are heard and keeps sampling the others. One radio can still miss a device that sends rarely. Tuning by hand turns it off."));
+    if (!s.on) {
+        if (!s.note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", s.note.c_str()); }
+        return true;
+    }
+    if (!s.ab) s.ab = std::make_unique<dect2::ease::AutoBand>(dect2::ease::ismBandsFor(plat::prefs().getS("locCountry", "")));
+    if (!a.engine.running()) { ImGui::SameLine(); ImGui::TextDisabled("%s", tr("Starts when the receiver runs.")); return false; }
+    if (s.lastMhz > 0 && std::fabs(a.freqMhz - s.lastMhz) > 0.0001) {   // someone tuned: that choice wins
+        s.on = false; plat::prefs().setB(prefKey, false); s.ab.reset(); s.lastMhz = 0;
+        s.note = tr("Auto band off: you tuned by hand.");
+        return true;
+    }
+    const int idx = s.ab->update(ImGui::GetTime(), decoded);
+    const double mhz = s.ab->bandMhz(idx);
+    if (std::fabs(a.freqMhz - mhz) > 0.0001) tuneFreq(a, mhz);
+    s.lastMhz = a.freqMhz;
+    ImGui::SameLine();
+    ImGui::TextDisabled(s.ab->settled() ? tr("On %.2f MHz, where decodes arrive.") : tr("Looking for devices, now on %.2f MHz."), mhz);
+    return false;
 }
 
 void codecNotice(App& a) {

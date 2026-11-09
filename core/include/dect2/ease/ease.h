@@ -33,6 +33,26 @@ enum class Preselect {
 };
 Preselect preselectAction(bool prefExists, bool positionKnown, bool running, double freqMhz, double defMhz);
 
+// ---- ISM auto band: stay where decodes arrive, keep sampling the others. One radio can still miss a device that sends rarely.
+std::vector<double> ismBandsFor(const std::string& country);   // MHz, the first is tuned first
+class AutoBand {
+public:
+    AutoBand(std::vector<double> bandsMhz, double dwellS = 30.0, double stayS = 300.0);
+    // Call with a monotonic clock and the running count of decodes. Returns the index of the band to be on.
+    int update(double nowS, uint64_t decodesTotal);
+    bool settled() const { return settled_; }
+    double bandMhz(int i) const { return bands_[(size_t)i]; }
+    int count() const { return (int)bands_.size(); }
+    double score(int i) const { return scores_[(size_t)i]; }
+private:
+    int best() const;
+    std::vector<double> bands_, scores_;
+    double dwell_, stay_, since_ = -1;
+    uint64_t last_ = 0;
+    bool haveLast_ = false, settled_ = false, sampling_ = false;
+    int cur_ = 0, sampleNext_ = 0;
+};
+
 // ---- Regional modes: true when this mode's signals exist only elsewhere. False for every mode without a tag and when the country (ISO code) is unknown.
 bool modeNotUsedIn(const std::string& modeName, const std::string& country);
 

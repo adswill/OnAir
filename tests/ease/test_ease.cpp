@@ -98,10 +98,53 @@ static void testRegions() {
     CHECK(modeNotUsedIn("ATSC", "U"));                 // a partial code does not match "US"
 }
 
+static void testAutoBand() {
+    // no decodes at all: rotates every dwell
+    {
+        AutoBand a({433.92, 868.3});
+        int last = a.update(0, 0), changes = 0;
+        for (int t = 1; t <= 120; t++) { const int c = a.update(t, 0); if (c != last) changes++; last = c; }
+        CHECK(changes == 4); CHECK(!a.settled());
+    }
+    // devices only on the second band: must settle there, then keep sampling the first and come back
+    {
+        AutoBand a({433.92, 868.3});
+        uint64_t n = 0; int on1 = 0, on0 = 0;
+        for (int t = 0; t < 3600; t++) { const int c = a.update(t, n); if (c == 1 && t % 7 == 0) n++; (c ? on1 : on0)++; }
+        CHECK(a.settled()); CHECK(on1 > on0 * 5);
+        CHECK(on0 >= 200);    // it still looks at the other band
+    }
+    // first band first
+    {
+        AutoBand a({433.92, 868.3});
+        uint64_t n = 0;
+        for (int t = 0; t < 1000; t++) { const int c = a.update(t, n); if (c == 0 && t % 11 == 0) n++; }
+        CHECK(a.settled()); CHECK(a.score(0) > 0); CHECK(a.score(1) == 0);
+    }
+    // a device that goes away and a new one elsewhere: the radio ends up on the new band
+    {
+        AutoBand a({433.92, 868.3});
+        uint64_t n = 0; int c = 0;
+        for (int t = 0; t < 2000; t++) { c = a.update(t, n); if (c == 0 && t % 5 == 0) n++; }
+        for (int t = 2000; t < 14000; t++) { c = a.update(t, n); if (c == 1 && t % 5 == 0) n++; }
+        int on1 = 0;
+        for (int t = 14000; t < 15000; t++) { c = a.update(t, n); if (c == 1) { on1++; if (t % 5 == 0) n++; } }
+        CHECK(on1 > 800);
+    }
+    // a counter that restarts is not a burst of decodes
+    {
+        AutoBand a({433.92, 868.3});
+        a.update(0, 1000); a.update(1, 0); a.update(2, 0);
+        CHECK(a.score(0) == 0);
+    }
+    { AutoBand a({433.92}); CHECK(a.update(0, 0) == 0); CHECK(a.update(1000, 5) == 0); }
+    CHECK(ismBandsFor("LT")[1] == 868.3); CHECK(ismBandsFor("US")[1] == 915.0); CHECK(ismBandsFor("")[0] == 433.92);
+}
+
 int testNavtex();
 
 int main() {
-    testSonde(); testGeo(); testPreselect(); testFollowAndDsc(); testRegions();
+    testSonde(); testGeo(); testPreselect(); testFollowAndDsc(); testRegions(); testAutoBand();
     fails += testNavtex();
     if (!fails) printf("ease ok\n");
     return fails ? 1 : 0;

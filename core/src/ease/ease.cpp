@@ -1,6 +1,7 @@
 #include "dect2/ease/ease.h"
 #include "dect2/inmsat/inmsat_satid.h"
 #include <cmath>
+#include <utility>
 #include <cstdlib>
 #include <cstring>
 
@@ -48,6 +49,52 @@ Preselect preselectAction(bool prefExists, bool positionKnown, bool running, dou
     if (!positionKnown || running) return Preselect::Wait;
     if (std::fabs(freqMhz - defMhz) > 0.001) return Preselect::LeaveAlone;
     return Preselect::Pick;
+}
+
+std::vector<double> ismBandsFor(const std::string& c) {
+    static const char* const k915[] = {"US", "CA", "MX", "BR", "AR", "CL", "CO", "PE", "AU", "NZ"};
+    for (const char* x : k915) if (c == x) return {433.92, 915.0};
+    return {433.92, 868.3};
+}
+
+AutoBand::AutoBand(std::vector<double> b, double dwellS, double stayS) : bands_(std::move(b)), scores_(bands_.size(), 0.0), dwell_(dwellS), stay_(stayS) {}
+
+int AutoBand::best() const {
+    int b = 0;
+    for (int i = 1; i < (int)scores_.size(); i++) if (scores_[(size_t)i] > scores_[(size_t)b]) b = i;
+    return b;
+}
+
+int AutoBand::update(double now, uint64_t total) {
+    if (bands_.empty()) return 0;
+    if (since_ < 0) since_ = now;
+    if (!haveLast_ || total < last_) { last_ = total; haveLast_ = true; }   // a receiver restart resets its counter
+    scores_[(size_t)cur_] += (double)(total - last_);
+    last_ = total;
+    const int n = (int)bands_.size();
+    if (n < 2) return 0;
+    const double elapsed = now - since_;
+    if (!settled_) {                                // searching: a band per dwell until one of them decodes
+        if (elapsed >= dwell_) {
+            const int b = best();
+            if (scores_[(size_t)b] > 0) { settled_ = true; cur_ = b; sampleNext_ = (b + 1) % n; }
+            else cur_ = (cur_ + 1) % n;
+            since_ = now;
+        }
+        return cur_;
+    }
+    if (sampling_) {                                // a short look elsewhere, then back to the best band
+        if (elapsed >= dwell_) { sampling_ = false; cur_ = best(); since_ = now; sampleNext_ = (cur_ + 1) % n; }
+        return cur_;
+    }
+    if (elapsed >= stay_) {
+        for (double& s : scores_) s *= 0.7;         // old decodes count for less, so a device that went away stops holding the radio
+        int i = sampleNext_;
+        if (i == cur_) i = (i + 1) % n;
+        sampleNext_ = (i + 1) % n;
+        cur_ = i; sampling_ = true; since_ = now;
+    }
+    return cur_;
 }
 
 bool modeNotUsedIn(const std::string& name, const std::string& country) {

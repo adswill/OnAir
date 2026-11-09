@@ -1,6 +1,7 @@
 // Sub-GHz sensors screens: the live list of sensors with a history graph, the message log, the unknown signal analyser with a flex decoder editor,
 // and the decoder list. Receive only. The decoders are rtl_433's (docs/SENSORS-3.7.md says which ones are supported and how far they were tested).
 #include "app.h"
+#include "ease/ease_ui.h"
 #include "i18n/i18n.h"
 #include "dect2/common/time_fmt.h"
 #include "dect2/sensors/sensors_rx.h"
@@ -447,6 +448,7 @@ void decodersView(App& a) {
 
 void tab(App& a) {
     load(a);
+    easeui::autoBandControl(a, "sensAutoBand", a.rx.sensors.blocksOk);
     banner(a);
     ImGui::Spacing();
     subNav("sensv", S.view, {"Sensors", "Messages", "Unknown signals", "Decoders"});
