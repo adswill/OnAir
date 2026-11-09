@@ -19,6 +19,8 @@ struct FmTelemetry {
     float levelDbfs = -120;     // power of the selected channel after filtering
     float multipathPct = 0;     // ripple of the channel's level over the frequencies the modulation sweeps (an echo), %
     bool equaliser = false;     // the multipath equaliser is in use (multipathPct above about 6 %)
+    float neighbourDb = 0, neighbourKhz = 0;   // the neighbouring station being cancelled: its level over this one and its offset (0: none)
+    uint64_t clicksFixed = 0;   // discriminator clicks repaired since the start (a weak station)
     bool stereo = false;        // the 19 kHz pilot is locked and the stereo decoder is on
     float stereoPct = 0;        // how much of the stereo difference is in the sound: 100 full stereo, lower = blended towards mono (a weak station)
     bool squelched = false;     // the squelch (setSquelch) holds the sound muted

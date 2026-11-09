@@ -71,6 +71,8 @@ public:
     void setCorrection(bool burst, bool soft) { ecBurst_ = burst; ecSoft_ = soft; ecVote_ = soft; }   // voting (repeated copies of a block) comes with the top level
 
     void setVoting(bool on) { ecVote_ = on; }   // after setCorrection; on by default
+    // Tests: 1 the plain vote of three or more copies, 2 (default) also two copies and the repair on the summed reliabilities
+    void setVoteDepth(int d) { voteDepth_ = d; }
 
     // state
     bool synced = false;
@@ -105,6 +107,7 @@ private:
     uint16_t blk_[4] = {};
     uint8_t err_[4] = {2, 2, 2, 2};
     bool ecBurst_ = true, ecSoft_ = true, ecVote_ = true;
+    int voteDepth_ = 2;
     // Voting: the bad blocks of one position (A, B, C, D) are kept with their bit reliabilities. Groups repeat (block A is the PI in every
     // group, a PS or RT segment comes again every few seconds), so three or more copies that lie close together vote bit by bit (weighted
     // by reliability), and the result is taken only when its checkword is right.
@@ -113,6 +116,12 @@ private:
     VoteCopy vote_[4][kVote] = {};
     int nVote_[4] = {}, votePos_[4] = {};
     bool voteBlock(uint32_t& w, int pos);
+    // Keyed combining: blocks C and D of a group whose block B is good are the same segment again and again (block B holds its address), so their
+    // copies need no closeness test: their reliabilities are summed per value of block B, as long as they keep failing.
+    struct KeyedSum { uint16_t b = 0; int n = 0; float sum[26] = {}; uint64_t at = 0; };
+    static constexpr int kKeyed = 40;
+    KeyedSum keyed_[2][kKeyed] = {};
+    bool keyedBlock(uint32_t& w, int pos);
     GroupTap tap_;
     // group decoder
     char psBuf_[9] = "        ";

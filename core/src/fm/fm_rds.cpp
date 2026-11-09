@@ -166,6 +166,7 @@ void RdsDecoder::pushBit(int bit, float reliability) {
         if (syn == offsetOfPos(expect_) || (expect_ == 2 && syn == kOffsets[3])) e = 0;
         else if (correct(w, syn, expect_)) e = 1;
         else if (ecVote_ && voteBlock(w, expect_)) { e = 1; info.blocksVoted++; }
+        else if (ecVote_ && voteDepth_ >= 2 && keyedBlock(w, expect_)) { e = 1; info.blocksVoted++; }
         if (e == 0) info.blocksGood++; else if (e == 1) info.blocksCorrected++; else info.blocksBad++;
         okPct += ((e < 2 ? 100.f : 0.f) - okPct) * 0.05f;
         badRun_ = e == 0 ? 0 : e == 1 ? badRun_ : badRun_ + 1;
@@ -235,6 +236,30 @@ bool RdsDecoder::voteBlock(uint32_t& w, int pos) {
     // not usable (yet): keep this copy, the oldest goes when the store is full
     if (nVote_[pos] < kVote) st[nVote_[pos]++] = cur;
     else { st[votePos_[pos]] = cur; votePos_[pos] = (votePos_[pos] + 1) % kVote; }
+    return false;
+}
+
+bool RdsDecoder::keyedBlock(uint32_t& w, int pos) {
+    if (pos < 2 || err_[1] != 0) return false;
+    KeyedSum* tab = keyed_[pos - 2];
+    const uint16_t b = blk_[1];
+    KeyedSum* e = nullptr, *oldest = tab;
+    for (int i = 0; i < kKeyed; i++) {
+        if (tab[i].at && tab[i].b == b) { e = &tab[i]; break; }
+        if (tab[i].at < oldest->at) oldest = &tab[i];
+    }
+    if (!e) { e = oldest; *e = KeyedSum(); e->b = b; }
+    else if (bitNo_ - e->at > 26ull * 4 * 700 || e->n >= 8) { *e = KeyedSum(); e->b = b; }   // a minute old or many copies without a result: the content has changed
+    for (int i = 0; i < 26; i++) { const float r = std::max(0.01f, rel_[(bitNo_ - 26 + (uint64_t)i) & 31]); e->sum[i] += ((w >> (25 - i)) & 1) ? r : -r; }
+    e->n++; e->at = bitNo_;
+    if (e->n < 3) return false;
+    uint32_t v = 0;
+    double total = 0;
+    for (int i = 0; i < 26; i++) { v = (v << 1) | (e->sum[i] > 0 ? 1u : 0u); total += std::fabs(e->sum[i]); }
+    int weak = 0;   // bits that the copies did not settle: a sum with many of them would pass the checkword only by chance
+    for (int i = 0; i < 26; i++) if (std::fabs(e->sum[i]) < 0.25f * (float)(total / 26)) weak++;
+    const uint32_t syn = rdsRem(v, 26);
+    if (weak <= 1 && (syn == offsetOfPos(pos) || (pos == 2 && syn == kOffsets[3]))) { w = v; e->n = 0; return true; }   // the sum starts again: the "came before" test wants a second, independent result
     return false;
 }
 

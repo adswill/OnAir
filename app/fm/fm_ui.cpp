@@ -163,6 +163,7 @@ void fmStatus(App& a) {
 
 // ------------------------------------------------------------------ history, volume
 void fmHistory(App& a) {
+    fmSmartTick(a);
     static uint64_t lastSeq = 0;
     static bool wasRunning = false;
     static float lastVol = -1;
@@ -478,6 +479,7 @@ void fmRadioPanel(App& a) {
                 std::string af;
                 for (double f : fm.rds.afMhz) { char b[16]; snprintf(b, sizeof b, "%s%.1f", af.empty() ? "" : ", ", f); af += b; }
                 ImGui::Text("%s: %s MHz", tr("Also on"), af.c_str());
+                fmAfPanel(a);
             }
             if (fm.rds.ecc >= 0) ImGui::Text("%s: %02X  PI %04X", tr("Country code (ECC)"), fm.rds.ecc, fm.piCode);
             if (fm.rds.pinDay) ImGui::Text("%s: day %d, %02d:%02d", tr("Programme item"), fm.rds.pinDay, fm.rds.pinHour, fm.rds.pinMinute);
@@ -724,7 +726,7 @@ static void fmScanBeginRange(App::FmScan& s) {
 }
 
 // power of one 100 kHz channel (+-50 kHz) in a spectrum frame, dB; the radio's DC spike is skipped
-static double fmChannelDb(const SpectrumFrame& f, double fs, double offHz) {
+double fmChannelDb(const SpectrumFrame& f, double fs, double offHz) {
     const size_t n = f.dbfs.size();
     const double binHz = fs / (double)n;
     double sum = 0;
@@ -741,6 +743,7 @@ static double fmChannelDb(const SpectrumFrame& f, double fs, double offHz) {
 }
 
 void fmScanTab(App& a) {
+    fmCensusPanel(a);
     App::FmScan& s = a.fmScan;
     const bool run = a.engine.running();
     double lo = 87.0, hi = 108.0;
