@@ -53,11 +53,11 @@ Compared with Gpredict (lists, map, polar view, Hamlib rigs and rotors), SatDump
 
 Each key behaviour was also checked by mutation: nine deliberate breaks of the logic (peak filter, dead band, restore, transmit, busy, priority, coarse step, newest merge, stale class) each made the test fail. `passes`, `pass_sched` and `doppler_fit` still pass.
 
-GUI: run hidden and muted from a renamed copy with `DECT2_DATA_DIR` and `HOME` isolated. The screen, filters, Arm (queue written and "planned"), Sky / Map switch and timeline were checked this way, and a hidden real-time run past an actual AOS.
+GUI: run hidden and muted from a renamed copy with `DECT2_DATA_DIR` and `HOME` isolated. The screen, filters, Arm (queue written and "planned"), Sky / Map switch and timeline were checked this way, and a hidden real-time run armed a real predicted pass (Geoscan-2): at its AOS the app switched to the CubeSat mode and the row showed "receiving". That run had no radio attached and ended before LOS.
 
 ## Not tested
 
-No live pass on real hardware: no antenna was pointed at a satellite in this work, so reception, decoding and the actual Doppler tracking accuracy at AOS are not verified. The runner's receiver control is proven against a fake host (the unit test) and the app's wiring only with whatever the isolated run's default source is. The Meteor frequencies are from SatDump's list and may move (see the list's own note). `Arktika-M` stays unusable in the tracker: `Sgp4` is near-earth only and reports "orbit not usable".
+No live pass on real hardware: no antenna was pointed at a satellite in this work, so reception, decoding and the actual Doppler tracking accuracy at AOS are not verified. The full sequence through LOS and restore, and the recording, are proven only against a fake host (the unit test); in the real app only the arm, mode switch at AOS and the status were seen, with no radio, so no IQ file was written. The Meteor frequencies are from SatDump's list and may move (see the list's own note). `Arktika-M` stays unusable in the tracker: `Sgp4` is near-earth only and reports "orbit not usable".
 
 ## Decisions for the owner
 
