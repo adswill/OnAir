@@ -37,6 +37,9 @@ struct HfdigTelemetry {
     HfdigFtxTelemetry ftx;
     HfdigHamdrmTelemetry hamdrm;
     HfdigKbdTelemetry kbd;
+    std::string rsidMode;        // the last RSID heard (fldigi's mode identifier)
+    double rsidAudioHz = 0;
+    float rsidAgeSec = 0;
     MbStatus multiBand;                     // multi-band monitor (hfdig_multiband.h): what is covered, dropped, the load
     bool multiBandOn = false;
 };

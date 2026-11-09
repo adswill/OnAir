@@ -3,6 +3,7 @@
 #include "dect2/hfdig/hfdig_rx.h"
 #include "dect2/results/results_io.h"
 #include "dect2/hfdig/hfdig_tel.h"
+#include "dect2/hfdig/hfdig_rsid.h"
 #include "dect2/hfdig/hfdig_rtty.h"
 #include "dect2/hfdig/hfdig_sstv.h"
 #include "dect2/hfdig/hfdig_freedv.h"
@@ -56,6 +57,8 @@ struct HfdigReceiver::Impl {
     std::unique_ptr<HfdigFtx> ftx = makeFtxDecoder();
     std::unique_ptr<HfdigHamdrm> hamdrm = makeHamdrmDecoder();
     std::unique_ptr<HfdigKbd> kbd = makeKbdDecoder();
+    RsidDetector rsid;
+    std::string rsidName; double rsidHz = 0, rsidAt = -1e9;
     HfdigDecoder* decoders[6] = {rtty.get(), sstv.get(), freedv.get(), ftx.get(), hamdrm.get(), kbd.get()};
     std::atomic<int> decMask{31};
     std::atomic<int> demodSet{HfDemodUsb}; // setDemod()          // setDecoders(): which of the six run
@@ -118,6 +121,7 @@ struct HfdigReceiver::Impl {
         std::function<void(const std::string&)> cb;
         double off;
         { std::lock_guard<std::mutex> lk(mu); curRate = rate; off = offsetHz; cb = log; }
+        rsid.reset();
         const uint64_t s = tel.seq;        // the report number goes on
         tel = HfdigTelemetry();
         tel.seq = s;
@@ -160,8 +164,28 @@ struct HfdigReceiver::Impl {
         audioOut->write(pcm.data(), (int)(pcm.size() / 2));
     }
 
+    // fldigi's mode identifier: name the mode, and start the keyboard decoder on it when the keyboard decoder is running
+    void onRsid(const RsidHit& h, bool kbdRunning) {
+        rsidName = h.name; rsidHz = h.audioHz; rsidAt = curRate > 0 ? (double)nIn / curRate : 0;
+        char b[120];
+        snprintf(b, sizeof b, "RSID: %s at %.0f Hz", h.name.c_str(), h.audioHz);
+        if (log) log(b);
+        if (!kbdRunning) return;
+        for (const auto& mo : rsidModes()) {
+            if (mo.code != h.code || mo.kbdFamily < 0) continue;
+            KbdConfig c = kbd->config();
+            c.family = mo.kbdFamily;
+            c.centreHz = h.audioHz; c.autoCentre = false;
+            if (mo.kbdVariant) {
+                for (int v = 0; v < kbdVariantCount(mo.kbdFamily); v++) if (std::string(kbdVariantName(mo.kbdFamily, v)) == mo.kbdVariant) c.variant = v;
+            } else { c.tones = mo.tones; c.bandwidth = mo.bandwidth; }
+            kbd->setConfig(c);
+        }
+    }
+
     void report() {
         tel.seq++;
+        tel.rsidMode = rsidName; tel.rsidAudioHz = rsidHz; tel.rsidAgeSec = (float)(curRate > 0 ? (double)nIn / curRate - rsidAt : 0);
         tel.timeSec = curRate > 0 ? (double)nIn / curRate : 0;
         tel.levelDb = nPower ? (float)(10 * std::log10(power / (double)nPower + 1e-20)) : -200.f;
         tel.audioDb = nAudio ? (float)(10 * std::log10(audioPower / (double)nAudio + 1e-20)) : -200.f;
@@ -260,6 +284,8 @@ void HfdigReceiver::feed(const cf32* x, size_t n) {
             if (m.audioTap) m.audioTap(m.audio.data(), m.audio.size());
             const int dm = m.decMask.load() & (m.multi ? ~8 : ~0);   // the monitor decodes the dial frequency too, when selected
             for (int k = 0; k < 6; k++) if (dm & (1 << k)) m.decoders[k]->feedAudio(m.audio.data(), m.audio.size());
+            m.rsid.feedAudio(m.audio.data(), m.audio.size());
+            for (RsidHit h; m.rsid.poll(h);) m.onRsid(h, (dm & 32) != 0);
             if (dm != 4) m.listen.play(m.audio.data(), m.audio.size());   // FreeDV alone plays its speech instead
         }
     }

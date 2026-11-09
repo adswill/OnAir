@@ -1,6 +1,9 @@
 # name	author	licence	where used	how	url	what the licence needs / status
 # Source of the credits: tools/gen_credits.py turns this file into app/panels/credits_data.h (the in-app Credits window), THIRD_PARTY.md and docs/credits-for-website.md. Never leave a field empty.
 # --- bundled or linked code ---
+openETCS XML of SUBSET-026 chapter 7 (protocol reference)	openETCS project	EUPL-1.1	core/src/ebicab/ebicab_proto.cpp (packet field layouts: protocol reference, not copied code)	layouts read from the published XML	https://github.com/openETCS/validation	Keep this credit.
+wmbusmeters (protocol reference)	Fredrik Öhrström	GPL-3.0-or-later	core/src/wmbus/wmbus_proto.cpp (mode 5 IV layout: protocol reference, not copied code)	reimplemented	https://github.com/wmbusmeters/wmbusmeters	Keep this credit; GPL-3 compatible.
+fldigi RSID (protocol reference)	Dave Freese W1HKJ and contributors	GPL-3.0	core/src/hfdig/hfdig_rsid.cpp (RSID code and mode numbers: protocol reference, not copied code)	reimplemented	https://github.com/w1hkj/fldigi	Keep this credit; GPL-3 compatible.
 RS demodulators (protocol reference)	zilog80 (github.com/rs1729)	GPL-3.0	core/src/sonde/sonde_extra.cpp (iMet, iMet-54, MRZ, iMS-100 layouts: protocol reference, not copied code)	reimplemented from the published decoders	https://github.com/rs1729/RS	Keep this credit; GPL-3 compatible.
 Dear ImGui	Omar Cornut and contributors	MIT	app/ and third_party/imgui (user interface)	vendored, compiled in	https://github.com/ocornut/imgui	Keep the copyright notice and licence text (third_party/imgui/LICENSE.txt, reproduced in THIRD_PARTY.md). GPL-3 compatible.
 stb_truetype, stb_rect_pack, stb_textedit	Sean Barrett and contributors	MIT or public domain	third_party/imgui/imstb_*.h (fonts and text input)	vendored, compiled in	https://github.com/nothings/stb	Notice kept in the file headers. GPL-3 compatible.
