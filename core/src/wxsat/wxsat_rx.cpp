@@ -22,7 +22,7 @@ namespace dect2 {
 namespace {
 using math::kPi;
 using cfp = std::complex<float>;
-constexpr double kPubSec = 0.25;
+constexpr double kPubSec = 0.1;
 
 double nowSec() { using namespace std::chrono; return duration<double>(steady_clock::now().time_since_epoch()).count(); }
 

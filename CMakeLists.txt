@@ -1528,6 +1528,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_atis_mode PRIVATE dect2core)
     target_compile_definitions(test_atis_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME atis_mode COMMAND test_atis_mode)
+    add_executable(test_wxsat_mode tests/app/test_wxsat_mode.cpp)   # wxsat links: tuning, numbers, wiring
+    target_link_libraries(test_wxsat_mode PRIVATE dect2core)
+    target_compile_definitions(test_wxsat_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME wxsat_mode COMMAND test_wxsat_mode)
     add_executable(test_fy3_mode tests/app/test_fy3_mode.cpp)   # FY-3 AHRPT / MPT: tuning, mode rows, engine / panel wiring, the doc page
     target_link_libraries(test_fy3_mode PRIVATE dect2core)
     target_compile_definitions(test_fy3_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")

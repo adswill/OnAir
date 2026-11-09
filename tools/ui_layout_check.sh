@@ -129,6 +129,15 @@ sensors	--mode sensors	Overview|Sensors|Receiver|History
 sferics	--mode sferics	Overview|Sferics|Receiver|History
 gk2alrit	--mode gk2alrit	Overview|Products|Receiver|History
 gk2ahrit	--mode gk2ahrit	Overview|Products|Receiver|History
+noaaapt	--mode noaaapt	Overview|Picture|Receiver|History
+noaahrpt	--mode noaahrpt	Overview|Picture|Receiver|History
+noaagac	--mode noaagac	Overview|Picture|Receiver|History
+noaadsb	--mode noaadsb	Overview|Picture|Receiver|History
+meteorhrpt	--mode meteorhrpt	Overview|Picture|Receiver|History
+elektrordas	--mode elektrordas	Overview|Picture|Receiver|History
+arktikardas	--mode arktikardas	Overview|Picture|Receiver|History
+arktikaggak	--mode arktikaggak	Overview|Picture|Receiver|History
+awsl	--mode awsl	Overview|Picture|Receiver|History
 fy3ahrpt	--mode fy3ahrpt	Overview|Picture|Receiver|History
 fy3mpt	--mode fy3mpt	Overview|Picture|Receiver|History
 pskd	--mode pskd	Overview|PSK|Receiver|History

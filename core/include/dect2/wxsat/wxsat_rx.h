@@ -16,7 +16,7 @@ namespace dect2 {
 
 class WxsatReceiver {
 public:
-    explicit WxsatReceiver(int profile);
+    WxsatReceiver(int profile);
     ~WxsatReceiver();
     void configure(double inputRateHz);
     void setSignalOffset(double hz);

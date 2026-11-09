@@ -1150,3 +1150,6 @@ Network IQ sources now scrub NaN/infinity (SDR++, SpyServer float); rtl_tcp chun
 - Thread (family 244): the 802.15.4 receiver in Thread mode + thread_proto (beacon network name / ext PAN / version, MAC security aux header, 6LoWPAN mesh / fragment / IPHC / UDP NHC, MLE and CoAP where clear). Encrypted traffic is shown as encrypted (no keys). tests/thread. No user-supplied Zigbee / Thread network key decryption (not done).
 ## 2026-11-07 - bug hunt 3.7-D (sources and modes)
 Network IQ sources now scrub NaN/infinity (SDR++, SpyServer float); rtl_tcp chunk test added; modes and drivers reviewed, listed in docs/BUGS-3.7-D.md. No ASan run yet (GitHub).
+
+## 2026-11-09: SatDump tier 1 weather links (feat37-sd1)
+Added the NOAA APT, NOAA HRPT, GAC, DSB, Meteor HRPT, Elektro / Arktika RDAS, Arktika GGAK and AWS L-band entries (families 260 - 268) on one new receiver class in core/src/wxsat, Elektro LRIT 294k and HRIT 1.15M OQPSK rates in the existing entry, and one-click pass following. Validated on real recordings: NOAA APT, NOAA HRPT and Meteor HRPT; the rest on synthetic signals with Doppler, offset and noise sweeps. Arktika GGAK is wired but the shared GGAK receiver did not frame-lock in a standalone test, noted in docs/SATDUMP-TIER1-3.7.md.

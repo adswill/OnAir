@@ -284,7 +284,7 @@ void msuGsIrDecode(const uint8_t* f, MsuGsIr& o) {
     if (!o.valid) return;
     uint16_t w[1548];
     int pos = 5;
-    for (int i = 0; i < 1546; i += 4, pos += 5) words5(f + pos, w + i);
+    for (int i = 0; i < 1544 && pos + 5 <= kMsuGsIrFrame; i += 4, pos += 5) words5(f + pos, w + i);
     for (int ch = 0; ch < kMsuGsIrChannels; ch++)
         for (int i = 0; i < 183; i++) o.seg[(size_t)ch * 183 + (size_t)i] = w[kIrOff[ch] + i];
 }
@@ -296,8 +296,9 @@ void msuGsIrBuild(int counter, int segment, std::vector<uint8_t>& f) {
     uint16_t w[1548] = {};
     for (int ch = 0; ch < kMsuGsIrChannels; ch++)
         for (int i = 0; i < 183; i++) w[kIrOff[ch] + i] = wxTestPixel(ch, segment / 2 * 183 + i, counter);
-    int pos = 5;
-    for (int i = 0; i < 1546; i += 4, pos += 5) put5(f.data() + pos, w + i);
+    // the words before 112 overlap the sync word and the counter (only the receiver reads them, and ignores them)
+    int pos = 5 + 112 / 4 * 5;
+    for (int i = 112; i < 1544 && pos + 5 <= kMsuGsIrFrame; i += 4, pos += 5) put5(f.data() + pos, w + i);
 }
 
 int msuGsVisDecode(const uint8_t* f, std::vector<uint16_t>& a, std::vector<uint16_t>& b) {
@@ -306,7 +307,7 @@ int msuGsVisDecode(const uint8_t* f, std::vector<uint16_t>& a, std::vector<uint1
     a.resize(kMsuGsVisFullWidth); b.resize(kMsuGsVisFullWidth);
     uint16_t w[12048];
     int pos = 5 * 38;
-    for (int i = 0; i < 12044; i += 4, pos += 5) words5(f + pos, w + i);
+    for (int i = 0; i < 12044 && pos + 5 <= kMsuGsVisFrame; i += 4, pos += 5) words5(f + pos, w + i);
     for (int i = 0; i < kMsuGsVisFullWidth; i++) { a[(size_t)i] = w[i * 2]; b[(size_t)i] = w[i * 2 + 1]; }
     return counter;
 }
@@ -318,7 +319,7 @@ void msuGsVisBuild(int counter, std::vector<uint8_t>& f) {
     std::vector<uint16_t> w(12048, 0);
     for (int i = 0; i < kMsuGsVisFullWidth; i++) { w[(size_t)i * 2] = wxTestPixel(0, i / 8, counter / 4); w[(size_t)i * 2 + 1] = wxTestPixel(1, i / 8, counter / 4); }
     int pos = 5 * 38;
-    for (int i = 0; i < 12044; i += 4, pos += 5) put5(f.data() + pos, w.data() + i);
+    for (int i = 0; i < 12044 && pos + 5 <= kMsuGsVisFrame; i += 4, pos += 5) put5(f.data() + pos, w.data() + i);
 }
 
 // ------------------------------------------------------------ AWS
