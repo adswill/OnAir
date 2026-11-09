@@ -128,3 +128,10 @@ drfruct	https://github.com/drfruct	pull request	DMR Whole span: the sound goes t
 frank-1225	https://github.com/frank-1225	pull request	HFDL: ICAO octet bit order matches dumphfdl	HFDL	#327
 F5OEO	https://github.com/F5OEO	pull request	Pluto: the native driver scans the network and asks boards for their firmware	area:Network radios	#345
 drelectro	https://github.com/drelectro	pull request	P25 follower keeps decoding the control channel in follow-only mode; first call heard	P25	#347
+peterdewitte	https://github.com/peterdewitte	pull request	Video generator: easy mode and a Preview tab (3.7)	area:Tools	#444
+peterdewitte	https://github.com/peterdewitte	pull request	Video generator: hardware encoders that are listed also start	area:Tools	#446
+peterdewitte	https://github.com/peterdewitte	pull request	Windows camera input kept in the release build, microphone remembered by name	area:Video input	#445
+peterdewitte	https://github.com/peterdewitte	pull request	LoRa APRS transmit with its own packet and LoRa settings	LoRa APRS	#467
+bellx2	https://github.com/bellx2	pull request	RTL-SDR on macOS: reading and converting on separate threads	area:Radios	#447
+DME-3	https://github.com/DME-3	pull request	Mode Builder: binary FSK acquisition stays centred for near-zero lead-ins	Mode Builder	#461, #460
+BI8SYN	https://github.com/BI8SYN	pull request	Chinese UI fonts cut to a small size and made consistent on all desktop platforms	area:Languages	#437

@@ -4,7 +4,7 @@ OnAir exists because of the people below: they sent fixes, reported bugs, shared
 
 In the program: Help, Credits, tab Contributors. To add someone, edit `tools/contributors.tsv` and run `python3 tools/gen_credits.py`.
 
-## People (86)
+## People (89)
 
 | Who | What | Kind | Where | Reference |
 |---|---|---|---|---|
@@ -21,6 +21,8 @@ In the program: Help, Credits, tab Contributors. To add someone, edit `tools/con
 | [Arclamp (CasualArclamp)](https://github.com/CasualArclamp) | DecSAT, a satellite receiver: its published description of PCM/PSK/PM satellite beacons (bi-phase data on a subcarrier, IRIG 106 and CCSDS sync words, the minor frame counter) identified the format of the recorded beacon, and its table of published Ku-band beacons is used to estimate the satellite; reference for the DVB-S work | idea | TV sat beacon decoder | [cc7a56e1](https://github.com/adswill/OnAir/commit/cc7a56e1), [e235347b](https://github.com/adswill/OnAir/commit/e235347b) |
 | [Arclamp (CasualArclamp)](https://github.com/CasualArclamp) | DecSAT's GSE and IP crates and its MPE extractor (GSE variants and their automatic choice, vendor CRC trailer, IP validation, fragments, flow statistics, PCAP, MPE) ported to C++ for IP data over DVB-S/S2; allowed by the author | pull request | DVB-S/S2 | [a38b6ecd](https://github.com/adswill/OnAir/commit/a38b6ecd) |
 | [Axpelle](https://github.com/Axpelle) | NAVTEX, airband range and weak WEFAX reports | bug report | NAVTEX; Airband; Weather fax | [#25](https://github.com/adswill/OnAir/issues/25), [#42](https://github.com/adswill/OnAir/issues/42), [#52](https://github.com/adswill/OnAir/issues/52), [#103](https://github.com/adswill/OnAir/issues/103) |
+| [bellx2](https://github.com/bellx2) | RTL-SDR on macOS: reading and converting on separate threads | pull request | Radios | [#447](https://github.com/adswill/OnAir/issues/447) |
+| [BI8SYN](https://github.com/BI8SYN) | Chinese UI fonts cut to a small size and made consistent on all desktop platforms | pull request | Languages | [#437](https://github.com/adswill/OnAir/issues/437) |
 | [bithunter-99](https://github.com/bithunter-99) | DECT receiver | idea | DECT cordless phones | [#94](https://github.com/adswill/OnAir/issues/94) |
 | [BSDnux](https://github.com/BSDnux) | List of analogue and MAC TV systems | idea | MAC; Analog TV | [#15](https://github.com/adswill/OnAir/issues/15), [#73](https://github.com/adswill/OnAir/issues/73) |
 | [carlosjs](https://github.com/carlosjs) | Basic LoRa decoder; Sigfox | idea | LoRa (raw) | [#20](https://github.com/adswill/OnAir/issues/20), [#170](https://github.com/adswill/OnAir/issues/170) |
@@ -34,6 +36,7 @@ In the program: Help, Credits, tab Contributors. To add someone, edit `tools/con
 | [dj1fti](https://github.com/dj1fti) | DAB+ scan CSV and Astrometa report | testing | DAB / DAB+ | [#179](https://github.com/adswill/OnAir/issues/179), [#180](https://github.com/adswill/OnAir/issues/180) |
 | [DL5BCA](https://github.com/DL5BCA) | DVB-S below 700 MHz | idea | DVB-S/S2 | [#30](https://github.com/adswill/OnAir/issues/30) |
 | [DL9DAK](https://github.com/DL9DAK) | ADS-B local antenna position and full map | idea | ADS-B | [#56](https://github.com/adswill/OnAir/issues/56), [#57](https://github.com/adswill/OnAir/issues/57) |
+| [DME-3](https://github.com/DME-3) | Mode Builder: binary FSK acquisition stays centred for near-zero lead-ins | pull request | Mode Builder | [#461](https://github.com/adswill/OnAir/issues/461), [#460](https://github.com/adswill/OnAir/issues/460) |
 | [dominik0815](https://github.com/dominik0815) | Pop-out fullscreen closing | bug report | DVB-S/S2 | [#71](https://github.com/adswill/OnAir/issues/71) |
 | [drelectro](https://github.com/drelectro) | DVB-T timing steps carried into the pilot phase ramp; timing loop and TPS error correction | fix | DVB | [#8](https://github.com/adswill/OnAir/issues/8), [9298e71c](https://github.com/adswill/OnAir/commit/9298e71c), [0a9a6355](https://github.com/adswill/OnAir/commit/0a9a6355) |
 | [drelectro](https://github.com/drelectro) | Smooth waterfall scrolling, single gain slider placement | fix | Interface | [#7](https://github.com/adswill/OnAir/issues/7), [#10](https://github.com/adswill/OnAir/issues/10) |
@@ -104,6 +107,10 @@ In the program: Help, Credits, tab Contributors. To add someone, edit `tools/con
 | [peterdewitte](https://github.com/peterdewitte) | Digital video generator tool | pull request | Tools | [#343](https://github.com/adswill/OnAir/issues/343) |
 | [peterdewitte](https://github.com/peterdewitte) | Windows cameras opened by name and listed through DirectShow | pull request | Video input | [#346](https://github.com/adswill/OnAir/issues/346) |
 | [peterdewitte](https://github.com/peterdewitte) | CI: Node 24 actions, pinned docker and setup-gradle actions, LF line endings | pull request | Interface | [#353](https://github.com/adswill/OnAir/issues/353), [#354](https://github.com/adswill/OnAir/issues/354), [#355](https://github.com/adswill/OnAir/issues/355) |
+| [peterdewitte](https://github.com/peterdewitte) | Video generator: easy mode and a Preview tab (3.7) | pull request | Tools | [#444](https://github.com/adswill/OnAir/issues/444) |
+| [peterdewitte](https://github.com/peterdewitte) | Video generator: hardware encoders that are listed also start | pull request | Tools | [#446](https://github.com/adswill/OnAir/issues/446) |
+| [peterdewitte](https://github.com/peterdewitte) | Windows camera input kept in the release build, microphone remembered by name | pull request | Video input | [#445](https://github.com/adswill/OnAir/issues/445) |
+| [peterdewitte](https://github.com/peterdewitte) | LoRa APRS transmit with its own packet and LoRa settings | pull request | LoRa APRS | [#467](https://github.com/adswill/OnAir/issues/467) |
 | [PU2SWX](https://github.com/PU2SWX) | Portuguese (Brazil) interface translation | translation | Languages | [#117](https://github.com/adswill/OnAir/issues/117), [#141](https://github.com/adswill/OnAir/issues/141) |
 | [py2gn](https://github.com/py2gn) | Crash on CPUs without AVX | bug report | Windows | [#74](https://github.com/adswill/OnAir/issues/74) |
 | [PY2PLL](https://github.com/PY2PLL) | AirSpy Discovery stop and Meteor M2-3 LRPT reports | bug report | Meteor-M LRPT | [#78](https://github.com/adswill/OnAir/issues/78), [#79](https://github.com/adswill/OnAir/issues/79) |
@@ -170,10 +177,12 @@ In the program: Help, Credits, tab Contributors. To add someone, edit `tools/con
 - **Iridium**: WasyaTheWolf
 - **LBJ**: YZYMC
 - **LoRa (raw)**: carlosjs
+- **LoRa APRS**: peterdewitte
 - **MAC**: BSDnux
 - **MeshCore**: drelectro, ffishman, KvaKKK, WispAyr
 - **Meshtastic**: f5gkw, ffishman, KvaKKK, WispAyr
 - **Meteor-M LRPT**: PY2PLL
+- **Mode Builder**: DME-3
 - **NAVTEX**: Axpelle
 - **Orbcomm**: f0cyf
 - **P25**: drelectro
@@ -194,10 +203,10 @@ In the program: Help, Credits, tab Contributors. To add someone, edit `tools/con
 - **Credits**: DickvanNoort
 - **Docker**: sbuchweitz
 - **Interface**: A2ureIm4la, andriux26, drelectro, grahampaull, Jamiar, nature.van, peterdewitte, richt314, Sunnnset5, Tech500, Ugo300, unilabs-exp, Voyager-III
-- **Languages**: andriux26, ffishman, PU2SWX
+- **Languages**: andriux26, BI8SYN, ffishman, PU2SWX
 - **Memory**: Ken W4KRR
 - **Network radios**: andriux26, Chercheur, DG9BFC, drelectro, F5OEO, ffishman, MUSTARDTIGERFPV, nmaster2042, rlabs-oss, tortyl
-- **Radios**: drelectro, ea4hwg, iu0azb, iu1mrd, mechanicalpotato, mrwish7, OM5NA, OnesAndZer0s, sugusllly, Topol (Pawel Topolski), in collaboration with AI, trebor-56
+- **Radios**: bellx2, drelectro, ea4hwg, iu0azb, iu1mrd, mechanicalpotato, mrwish7, OM5NA, OnesAndZer0s, sugusllly, Topol (Pawel Topolski), in collaboration with AI, trebor-56
 - **Satellite passes**: andriux26
 - **Tools**: peterdewitte
 - **Video input**: peterdewitte

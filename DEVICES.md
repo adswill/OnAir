@@ -33,6 +33,14 @@ airspy_info
 - gain is the linearity gain, 0 to 21
 - 10 Msps needs a decent CPU, a 2-core laptop couldn't keep up with live ATSC
 
+# HydraSDR RFOne
+
+Native driver (`core/src/source/source_hydrasdr.cpp`), receive only. 24 MHz to 1.8 GHz, 10 Msps and decimated rates down to 156 ksps, float samples, a bias tee on the ANT input, three RF inputs (ANT, CABLE1, CABLE2: the radio's "RF input" setting). OnAir loads `libhydrasdr` (rfone_host, MIT) at run time when it is installed; it is not included in the downloads. USB id 1d50:60a1 with firmware before 1.0.2 and 38af:0001 since; on Windows the WinUSB binding is done by the driver. Not tested here on a real radio for TV-width channels.
+
+# ESP32 and nRF24L01 modules (3.7)
+
+A home-made module on a USB serial port: nRF24L01+ receive and transmit (Enhanced ShockBurst, all its parameters), BLE advertisements and WiFi observation (networks, clients, signal, channel load; never transmits). Transmit is behind the Arm gate. The firmware is in `firmware/esp32/`, the design and limits in docs/ESP32-NRF24-DESIGN.md. It was written without hardware and tested only against a simulated serial device: **untested on a real ESP32 or nRF24 module.**
+
 # SDRplay RSPduo
 
 OnAir talks directly to the [SDRplay Hardware API](https://sdrplay.com/hardware-api/), which supplies IQ samples. Install API 3.x

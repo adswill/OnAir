@@ -401,6 +401,9 @@ to `onair_speech_decode` gets the **39 bytes (312 bits) of the voice field** of 
 de-scrambling, de-interleaving or error correction of its own; a plug-in that wraps osmo-ir77's decoder (or a decoder extracted from firmware,
 see the toolkit's `ambe_emu`) therefore gets exactly what the toolkit would give it, and returns 8 kHz PCM. **Unverified:** this has been tested
 with synthetic bursts through the whole receiver (offsets, Doppler, clock error, noise) and a stub plug-in, never a real Iridium recording.
+
+3.7: Iridium voice never writes a silent WAV. Slots that carry data (Reed-Solomon and zero-sum checks as in iridium-toolkit) are no longer sent to the codec, lost frames leave a silent gap of the right length instead of shortening the call, and a call with no sound says why (no plug-in, plug-in refused the frames, data only). If your plug-in expects a different byte order from the toolkit's 39-byte `.dfs` frames the calls stay silent; the counters on the call row show it. Not proven on a real recording (docs/IRIDIUM-3.7.md).
+
 **The Iridium voice plug-in is not distributed with OnAir.** Without one the voice stays silent; use **Save for iridium-toolkit** below. No public
 description defines an "encrypted" marker, so none is shown: frames that fail their checks or that the plug-in refuses are listed as "not
 readable" and stay silent. OnAir never decodes encrypted traffic itself; a key handed to your own plug-in is your own business and OnAir has no key handling.
