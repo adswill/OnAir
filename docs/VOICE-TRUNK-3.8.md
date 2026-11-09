@@ -29,7 +29,7 @@ Written from ETSI EN 300 396-2 and -3 V1.4.1. DSB found by differential correlat
 
 Encrypted calls: `air interface encryption state != 0` or the end-to-end flag stop the traffic before it reaches the codec. Nothing is decrypted, and no call is decoded before a clear DM-SETUP has been heard for it.
 
-Measured (`tests/tetradmo/test_tetradmo_rx.cpp`): all 40 traffic bursts delivered at 72 and 240 ksps and at 2.4 Msps, at -1800 and +800 Hz, at +100 ppm, via a repeater and for an individual call; 40 of 40 with noise 0.05. 36 to 39 of the 40 bursts arrive with 8 or fewer wrong bits (the generator cuts the signal hard at the burst edges; a real transmitter ramps). The speech itself is not tested here: there is no codec in the test.
+Measured (`tests/tetradmo/test_tetradmo_rx.cpp`): all 40 traffic bursts delivered at 72 and 240 ksps and at 2.4 Msps, at -1800 and +800 Hz, at +100 ppm, via a repeater and for an individual call; 40 of 40 with noise 0.05. 35 to 39 of the 40 bursts arrive with 8 or fewer wrong bits (the rest have about 10; the cause was not traced). The speech itself is not tested here: there is no codec in the test.
 
 ## ProVoice on EDACS (`core/src/edacs/provoice.cpp`)
 
