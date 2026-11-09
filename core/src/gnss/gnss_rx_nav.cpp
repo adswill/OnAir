@@ -82,6 +82,12 @@ void GnssReceiver::Impl::handleInav(GnssTracker& t, const GnssSubframeEvent& ev,
             logf(b);
         }
     }
+    if (ev.osnmaPage == 0 && ev.nma8 != lastNma) {
+        lastNma = ev.nma8;
+        char b[140];
+        snprintf(b, sizeof b, "OSNMA header: service %s, chain %d, %s (from %s; signatures not checked)", osnmaStatusName(ev.nma8 >> 6), (ev.nma8 >> 4) & 3, osnmaChainStatusName((ev.nma8 >> 1) & 7), satName(GnssGalileo, t.prn).c_str());
+        logf(b);
+    }
     if (type == 10 && g.ggtoValid) {
         if (!ggtoValid) {
             char b[100];

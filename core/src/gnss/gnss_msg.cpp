@@ -194,6 +194,9 @@ bool inavCheckPage(const uint8_t* even, const uint8_t* odd, uint8_t* word) {
     return true;
 }
 
+const char* osnmaStatusName(int s) { static const char* const n[4] = {"reserved", "test", "operational", "don't use"}; return n[s & 3]; }
+const char* osnmaChainStatusName(int s) { static const char* const n[8] = {"reserved", "nominal", "end of chain", "chain revoked", "new public key", "public key revoked", "new Merkle tree", "alert message"}; return n[s & 7]; }
+
 bool GalRlmAssembler::complete(GalRlm& o) {
     int ones = 0;
     const int total = longR_ ? 160 : 80;

@@ -129,6 +129,7 @@ struct GnssReceiver::Impl {
     SatNav gsat[kGalPrns];
     GalNav gnav[kGalPrns];
     GalRlmAssembler rlmAsm[kGalPrns];
+    uint8_t lastNma = 0xFF;
     bool ggtoValid = false;                      // GST - GPS from word type 10
     double ggtoA0 = 0, ggtoA1 = 0, ggtoT0 = 0;
     int ggtoWn0 = 0, ggtoWn = 0;

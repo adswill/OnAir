@@ -15,21 +15,28 @@ Everything marked "done" decodes its generator's output in a unit test. Nothing 
 | Wi-Fi clients | Probe requests, data-frame association, deauth flood alarm, EAPOL-Key frames counted only. Addresses shown as salted per-run hashes | IEEE 802.11 | tests/wifi/test_wifi_clients.cpp |
 | APRS | PHG, RNG, !DAO! precision | APRS101, WB4APR datum note | rust/onair_ax25 tests |
 | Yaesu Fusion | GPS position and radio model from the slow data | YSFGateway, GPL-2+ | tests/fusion/test_fusion_gps.cpp |
-| Meshtastic | Waypoint (port 8), air quality and power telemetry variants | meshtastic/protobufs | rust/onair_mesh tests |
+| Meshtastic | Waypoint, air quality and power telemetry, range test, alert, detection sensor, reply, paxcounter, store and forward, map report, position speed/track/HDOP | meshtastic/protobufs | rust/onair_mesh tests |
+| EBICab | SUBSET-026 packets 5, 21, 27, 41, 65, 68, 72, 79 after the header; other packets are skipped by their length | openETCS XML of chapter 7 (Baseline 3) | tests/ebicab/test_ebicab_packets.cpp |
+| NDB census | One decoder per carrier across the capture, table in the NDB tab | Existing NDB decoder | tests/ndb/test_ndb_census.cpp: 3 beacons, 22 and 35 dB |
+| TACAN | Radial from main and auxiliary bursts and 15/135 Hz amplitude modulation | MIL-STD-291C bursts; the east-referenced convention from secondary descriptions | tests/dme/test_dme_tacan.cpp: within 0.2 degrees in simulation; direction of rotation not confirmed on air |
+| User keys | Zigbee NWK, Wi-SUN (key is the GAK), Z-Wave S0, wM-Bus mode 5, LoRaWAN MIC and FRMPayload. Keys come only from the key store | Wireshark, Grizzly and arXiv papers, wmbusmeters, LoRaWAN spec | tests/voicekeys/test_net_crypto.cpp, tests/lorawan/test_lorawan_crypto.cpp: RFC 4493, RFC 3610 and the lora-packet example frame pass; wrong keys rejected |
+| LoRaWAN Class B | EU868 beacons (869.525 MHz SF9 implicit, 17 bytes) | LoRaWAN 1.0.2 chapter 15 | The spec's example frame, and through the LoRa bank at 5 and 25 dB |
+| fldigi RSID | Mode and audio frequency, starts the matching keyboard decoder | fldigi rsid.cxx | tests/hfdig/test_hfdig_rsid.cpp |
+| FX.25 and IL2P | Receive on the 1200 baud demodulators, frames join the normal packet list | Dire Wolf, IL2P draft 0.6 | tests/packet/test_packet_fec.cpp at bit level; the receiver wiring has only a syntax check |
+| WSPR balloon | Altitude, locator letters, temperature, battery, speed from telemetry spots | QRP Labs S4 page | tests/hfdig/test_hfdig_balloon.cpp. The page's worked example prints 36 C and 3.8 V; the same formulas give 38 C and 3.85 V, so one of the two is wrong |
+| FIS-B TWGO | Text and overlay records (products 8 to 16), overlay points listed as text | fisb-decode | tests/uat/test_uat_twgo.cpp |
+| GOES DCS relay | Band selector for 1679.85 MHz with the same decoder | NOAA frequency plan | Assumes a bent-pipe relay. One wiki and an old plan say 8PSK on the downlink, so unconfirmed |
+| Galileo OSNMA | NMA header only: service status, chain id, chain and key status, in the log | OSNMA SIS ICD 1.1 | No authentication is done |
 
 Limits worth knowing: iMS-100 temperature and humidity need the calibration table and are not shown. MRZ and iMet-54 do not report all sensor values. SIB6 to SIB8 are still not parsed, so a SIB10 or SIB11 placed after one of them in the same SI message is not read; SIB12 and SIB16 are unaffected.
 
 ## Not done
 
-Skipped because the spec or layout could not be read:
+- Galileo OSNMA authentication (DSM-KROOT signature, TESLA chain, MACs). Only the header is read. Needs the MAC look-up table, ADKD message assembly and ECDSA, and there is no signal to check it against.
+- 5G SIB1: needs PDCCH blind decoding, DCI polar decoding, PDSCH and an LDPC decoder with the 38.212 base graphs. Not started.
+- SARSAT second generation rotating fields: C/S T.018 could not be read. A mirror and search results gave only the table of contents.
+- Extra ADS-B Comm-B registers: ICAO Doc 9871 is sold, and the open decoders only cover the registers already implemented.
+- Z-Wave S2 (needs the session key exchange), wM-Bus mode 7, FX.25/IL2P at 9600 baud, FLMSG, TWGO on the map and segmented APDUs.
+- LoRaWAN joins: join-accept decryption is not implemented; session keys must be supplied.
 
-- SARSAT second generation rotating fields: T.018 could not be fetched from any public source I could reach.
-- UAT FIS-B graphics other than NEXRAD (TWGO overlays): DO-358B is not public and dump978 does not decode them.
-- ADS-B Comm-B extra registers: ICAO Doc 9871 was not available to check against.
-- WSPR balloon telemetry: the U4B page describes fields but not the numeric mapping; the S4 page was not read.
-
-Not started, for lack of time (no technical blocker found, unless stated):
-
-- 5G SIB1: needs PDCCH blind decoding, polar DCI, PDSCH and an LDPC decoder with the 38.212 base graphs. Moved to the end because of its size.
-- Galileo OSNMA: needs TESLA chain, HMAC and ECDSA with the imported key. The ICD is available.
-- GOES DCS relay at 1679.7 MHz, EBICab SUBSET-026 packets, NDB census, TACAN bearing, Zigbee/Z-Wave/Wi-SUN/wM-Bus decryption with user keys, Meshtastic other ports, LoRaWAN Class B and user keys, fldigi RSID, FX.25 and IL2P.
+To use LoRaWAN keys, add two entries in the Keys window with protocol LoRaWAN and Unit = DevAddr (decimal): talkgroup 1 for NwkSKey, talkgroup 2 for AppSKey.

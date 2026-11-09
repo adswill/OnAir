@@ -44,5 +44,6 @@ int main() {
     CHECK(got && !r3.parityOk);
     // a part without a start cannot start a message
     GalRlmAssembler s2; GalRlm r4; p[1][0] = 0; CHECK(!s2.push(p[1], r4));
+    CHECK(std::string(osnmaStatusName(2)) == "operational" && std::string(osnmaChainStatusName(7)) == "alert message");
     return testSummary("gnss_galrlm");
 }

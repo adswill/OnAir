@@ -30,6 +30,8 @@ struct GnssSubframeEvent {
     int kind = GnssMsgLnav;       // what this is: an LNAV subframe, an SBAS message or an I/NAV word
     int sbasType = -1;            // SBAS: the message type
     uint8_t word[128] = {};       // I/NAV: the 128 bit word of a page with a good CRC
+    uint8_t nma8 = 0;             // I/NAV: the first 8 bits of the 40-bit OSNMA field (the NMA header of page 0)
+    int osnmaPage = -1;           // page 0..14 of the I/NAV sub-frame (30 s), -1 until the time of week is known
     uint8_t sar[22] = {};         // I/NAV: the SAR field of the odd part (OS SIS ICD Table 60)
     uint8_t bits[300] = {};       // BeiDou: the information bits of the subframe (ICD numbering, after the BCH correction); GLONASS: the 85 bits of a string
     LnavSubframe sf;

@@ -63,6 +63,10 @@ private:
     bool complete(GalRlm& out);
 };
 
+// OSNMA NMA header (Galileo OSNMA SIS ICD issue 1.1 section 3.1): status of the service, chain id, chain and public key status. The MAC and signature checks are not implemented.
+const char* osnmaStatusName(int nmas);
+const char* osnmaChainStatusName(int cpks);
+
 struct GalNav {
     int iod[5] = {-1, -1, -1, -1, -1};                         // IODnav of words 1..4 as received
     GpsEphemeris eph;                                          // being collected (galileo = true)
