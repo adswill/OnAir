@@ -53,6 +53,19 @@ int main() {
                 bool hasPos = false; for (const auto& d : t.devices) if (d.hasPos && std::fabs(d.lat - 54.6872) < 1e-5) hasPos = true;
                 CHECK(hasPos, "SiK position on the device table");
             }
+    // every SiK air speed from 16 kbit/s up (2, 4 and 8 kbit/s are too slow for a short test), automatic search and overlap with a second link on another hop channel
+    for (int kbps : {16, 19, 24, 32, 48, 64, 96, 128, 192, 250}) {
+        const double fs = 8e6;
+        const double sec = 0.02 + 450.0 * 8 / (kbps * 1e3);
+        std::vector<cf32> x((size_t)(sec * fs), cf32(0, 0));
+        const auto air = frameBytes(sikPre, sikBuild(25, mav, 300, false));
+        addGfsk(x, 20000, toBits(air), kbps * 1e3, kbps * 1e3 * 0.5, fs, -1.5e6, 0.4f);
+        addGfsk(x, 21000, toBits(frameBytes(sikPre, sikBuild(9, mav, 200, false))), kbps * 1e3, kbps * 1e3 * 0.5, fs, 2.0e6, 0.4f);
+        addNoise(x, 0.01);
+        RcLinkReceiver rx; rx.setProtocols(Sik);
+        const RcTelemetry t = run(rx, x, fs);
+        CHECK(count(t, "GLOBAL_POSITION_INT") == 2, "SiK auto %d kbit/s, two links overlapping: %d of 2", kbps, count(t, "GLOBAL_POSITION_INT"));
+    }
     // Golay frames and auto air rate
     {
         const double fs = 4e6;
@@ -64,7 +77,7 @@ int main() {
         CHECK(count(t, "GLOBAL_POSITION_INT") == 1, "SiK ECC with automatic air rate: %d", count(t, "GLOBAL_POSITION_INT"));
     }
     // ---- noise sweep for one FSK protocol: frames must stop at low SNR without false frames
-    for (double sigma : {0.002, 0.01, 0.04, 0.1}) {
+    for (double sigma : {0.002, 0.01, 0.04, 0.1, 0.2, 0.3}) {
         const double fs = 2.4e6;
         std::vector<cf32> x((size_t)(0.04 * fs), cf32(0, 0));
         const uint16_t c8[8] = {1500, 1600, 1700, 1800, 2000, 2200, 2400, 2600};
