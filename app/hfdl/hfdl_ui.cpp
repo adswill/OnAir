@@ -41,6 +41,7 @@ struct State {
     bool mapFollow = true;
     uint32_t selAir = 0;
     RangeView range;                     // the receiver-range plot (Range view)
+    bool onlyPos = false;                // aircraft tables: only those with a position (pref hfdlOnlyPos)
     bool autoHop = false;                // follow the best band (pref hfdlHop)
     dect2::HfdlBandHopper hopper;
     bool hopWasOn = false;
@@ -59,6 +60,7 @@ void loadState() {
     snprintf(S.chans, sizeof S.chans, "%s", d.getS("hfdlChans", "").c_str());
     S.map.zoom = (int)d.getI("hfdlZoom", 2);
     S.autoHop = d.getB("hfdlHop", false);
+    S.onlyPos = d.getB("hfdlOnlyPos", false);
     S.map.lat = 40; S.map.lon = -30;
     S.range.plot.configure(5.0, 0.0, 20040.0);   // HF reaches anywhere: the sanity limit is half way round the Earth, not the VHF 1000 km
     if (const char* e = getenv("DECT2_HFDL_VIEW")) S.viewMode = std::max(0, std::min(5, atoi(e)));   // dev: open on a view (screenshots)
@@ -456,6 +458,10 @@ void mapView(App& a) {
 
 // ---------------------------------------------------------------- tables
 
+void onlyPosBox() {
+    if (ImGui::Checkbox(tr("Only aircraft with a position"), &S.onlyPos)) plat::prefs().setB("hfdlOnlyPos", S.onlyPos);
+}
+
 void aircraftView(const App& a) {
     const dect2::HfdlTelemetry& t = a.rx.hfdl;
     {
@@ -470,6 +476,7 @@ void aircraftView(const App& a) {
         }
         resexp::saveButton(x, "hfdl_aircraft", note, "svhfair");
         if (!note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", note.c_str()); }
+        ImGui::SameLine(0, 12 * gUi); onlyPosBox();
     }
     if (!ImGui::BeginTable("##hfair", 11, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
@@ -480,6 +487,7 @@ void aircraftView(const App& a) {
     ImGui::TableHeadersRow();
     if (live(a))
         for (const auto& c : t.aircraft) {
+            if (S.onlyPos && !c.hasPos) continue;
             ImGui::TableNextRow();
             ImGui::TableNextColumn(); ImGui::TextUnformatted(c.icao ? hex6(c.icao).c_str() : "-");
             ImGui::TableNextColumn(); ImGui::TextUnformatted(c.reg.c_str());
@@ -589,11 +597,13 @@ void list(App& a) {
     const dect2::HfdlTelemetry& t = a.rx.hfdl;
     int heard = 0; for (const auto& g : t.stations) heard += g.heardDirect;
     ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%zu aircraft, %d ground stations heard", t.aircraft.size(), heard); ImGui::PopTextWrapPos();
+    onlyPosBox();
     if (!ImGui::BeginTable("##hfl_s", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("Aircraft"); ImGui::TableSetupColumn("Msgs");
     ImGui::TableHeadersRow();
     for (const auto& c : t.aircraft) {
+        if (S.onlyPos && !c.hasPos) continue;
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         char id[24]; snprintf(id, sizeof id, "##hl%u", c.key);
