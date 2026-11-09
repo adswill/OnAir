@@ -44,7 +44,7 @@ gr-satellites is GPL-3.0 (repository licence checked, files marked GPL-3.0-or-la
 - Identification: 12 of 12 tracks among 1500 satellites, all confident, with unknown offset up to 9 kHz and 15 Hz of noise. Correct at 5 and 30 Hz noise; no answer at 60 Hz and above (the limit is `goodRmsHz`). No confident wrong answer at any noise. A fixed line gives no answer; a launch-train twin is reported ambiguous.
 - Bistatic: 8 of 8. GRAVES through the meteor receiver: 3 of 3 named, no false echo with beacon and meteor pings only.
 - Starlink frame gap: detected at 0 and -5 dB SNR in the capture, not at -10 dB. OneWeb: detected at +5, 0 and -5 dB. Noise alone detected neither. The test signals follow published numbers; the real signals have structure not modelled.
-- NavIC: all 28 code tables match the ICD's check column. FEC all good at sigma 0.6, 25 of 30 at 0.8.
+- NavIC: all 28 PRN codes (L5 and S) match the ICD's check column. FEC: all subframes at sigma 0.6, 25 of 30 at 0.8. Receiver on its generator with two satellites at 46 and 42 dB-Hz, Dopplers +2800 and -1400 Hz: both tracked, subframes decoded with good CRC, no phantom satellites. Its C/N0 readout was about 6 dB low at 46 dB-Hz (39.9). The week number field is checked by a direct parse test, not through the receiver: the 34 s run only reaches subframe 2.
 - GOMX-1: fields against a frame built from the published layout, not against a real frame.
 
 Not tested: the app GUI (syntax-checked only under the overnight limits; the integrator's build is the first real build of the screens) and any real hardware.

@@ -41,6 +41,18 @@ int main() {
     }
     { uint8_t b[kNavicBits] = {}; navicSetCrcTail(b); b[100] ^= 1; CHECK(!navicCrcOk(b), "CRC misses an error"); }
 
+    // Subframe fields: bit numbers of the ICD (TOWC 9-25, alert 26, autonav 27, ID 28-29, WN 31-40 in subframe 1, message ID 31-36 and PRN 257-262 in 3 and 4)
+    {
+        uint8_t b[kNavicBits] = {};
+        const auto put = [&](int first, int len, unsigned v) { for (int i = 0; i < len; i++) b[first - 1 + i] = (uint8_t)((v >> (len - 1 - i)) & 1); };
+        put(9, 17, 70000); put(26, 1, 1); put(28, 2, 0); put(31, 10, 987);
+        NavicFields f; navicParse(b, f);
+        CHECK(f.towc == 70000 && f.alert && !f.autonav && f.subframeId == 1 && f.wn == 987, "subframe 1: %u %d %d", f.towc, f.subframeId, f.wn);
+        put(28, 2, 3); put(31, 6, 26); put(257, 6, 9);
+        NavicFields g; navicParse(b, g);
+        CHECK(g.subframeId == 4 && g.msgId == 26 && g.prnId == 9 && g.wn == -1, "subframe 4: %d %d %d", g.subframeId, g.msgId, g.prnId);
+    }
+
     // Receiver
     for (double cn0 : {46.0, 42.0}) {
         NavicGenConfig gc; gc.cn0Db = cn0; gc.nSats = 2; gc.dopplerHz = 2800;

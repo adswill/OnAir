@@ -42,11 +42,11 @@ int main() {
     { SatDetectTelemetry t = run(554, 10e6, 4, 30, false); CHECK(t.channels.size() < 5, "%zu false channels in noise", t.channels.size()); }
     // Starlink frame gap at several SNRs in the capture
     for (double snr : {0.0, -5.0, -10.0, -15.0}) {
-        SatDetectTelemetry t = run(556, 20e6, 1.5, snr, true);
+        SatDetectTelemetry t = run(556, 20e6, 2.0, snr, true);
         printf("starlink snr %.0f dB: level %.1f detected %d (rate %.3f)\n", snr, t.frames[0].levelDb, t.frames[0].detected, t.frames[0].measuredHz);
         if (snr >= -5) CHECK(t.frames[0].detected, "not detected at %.0f", snr);
     }
-    { SatDetectTelemetry t = run(556, 20e6, 1.5, 0, false); printf("starlink noise: level %.1f\n", t.frames[0].levelDb); CHECK(!t.frames[0].detected, "false detection on noise, %.1f dB", t.frames[0].levelDb); }
+    { SatDetectTelemetry t = run(556, 20e6, 2.0, 0, false); printf("starlink noise: level %.1f\n", t.frames[0].levelDb); CHECK(!t.frames[0].detected, "false detection on noise, %.1f dB", t.frames[0].levelDb); }
     // OneWeb repeated sequence
     for (double snr : {5.0, 0.0, -5.0}) {
         SatDetectTelemetry t = run(557, 20e6, 1, snr, true);
