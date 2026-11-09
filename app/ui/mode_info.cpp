@@ -57,7 +57,7 @@ ModeFit modeFit(const App& a, const ModeDef& m) {
     n.minRateHz = m.minRateMsps * 1e6;
     n.defMhz = m.bandMinMhz;
     const modepick::Fit f = modepick::fit(radioOf(a), n);
-    return {f.ok, f.reason};
+    return {f.ok, f.reason, modeGeoNote(m), modeAntennaNote(m)};
 }
 
 // a voice mode whose vocoder the user has to install (docs/CODECS.md) and has not: the calls and data still decode, the sound stays off.

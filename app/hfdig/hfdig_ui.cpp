@@ -146,6 +146,8 @@ void loadDemod(const App& a) {
 } // namespace
 
 // the SSTV band buttons pick the sideband with the frequency (80 and 40 m SSTV is on lower sideband)
+int hfdigDemod(const App& a) { loadDemod(a); return S.demod; }
+
 void hfdigSetDemod(const App& a, int d) {
     loadDemod(a);
     S.demod = d;

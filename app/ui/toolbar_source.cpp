@@ -112,6 +112,7 @@ void startReceiver(App& a) {
         a.engine.start(a.devices[a.devIdx], a.tune, a.file);
         savePrefs(a);
         a.smooth.clear(); a.peak.clear(); a.lastSeq = 0;
+        firstStartAfterStart(a);
     }
 }
 

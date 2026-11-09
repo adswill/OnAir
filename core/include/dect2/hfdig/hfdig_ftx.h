@@ -68,6 +68,7 @@ struct HfdigFtxTelemetry {
     int timeMode = 0;                         // 0 system clock, 1 the given start time, 2 slot search: looking, 3 slot search: found
     double nowUtc = 0;                        // the time of the newest audio (the slot clock)
     float clockErr = 0;                       // median DT of the recent decodes, s
+    float clockTrim = 0;                      // the automatic correction in use: added to the computer clock, s (docs/EASE-3.8.md)
     float dtSpread = 0;                       // their spread (half the 16 .. 84 % range), s
     int clockN = 0;                           // decodes it is measured on
     bool clockWarn = false;                   // |clockErr| > 1 s

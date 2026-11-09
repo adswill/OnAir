@@ -339,6 +339,7 @@ void receiver(App& a) {
     auto kv = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); kvColumn(130 * gUi); ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::Text(fmt, v...); ImGui::PopTextWrapPos(); ImGui::PopFont(); };
     kv("state", "%s", dect2::js8Summary(t).c_str());
     kv("clock", "%s, DT median %+.2f s", t.timeMode ? "the recording's start time" : "system clock (UTC)", t.clockErr);
+    if (t.clockTrim != 0.f) kv("correction", "computer clock %+.1f s (automatic)", t.clockTrim);
     for (int m = 0; m < 3; m++)
         kv(dect2::js8::spec(m).name, "%s, %llu slots, %d frames in the last, %.0f ms to decode", t.enabled[m] ? "on" : "off", (unsigned long long)t.slots[m], t.lastSlotCount[m], t.decodeMs[m]);
     kv("frames", "%llu decoded, %llu candidates that did not", (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);

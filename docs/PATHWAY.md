@@ -1227,3 +1227,7 @@ Recording from #332 (CNR-1, 11.695 MHz, mode B, xHE-AAC 32 kHz mono), real libfd
 - A damaged directory element refused the whole super frame; elements repeat the frame count, so only the damaged one is dropped now.
 Not known: why libfdk-aac rejects those 89 frames (a fresh decoder rejects them too, so it is the frames and not decoder state). Not checked: how it sounds, no listening here; the reporter's "strange noise" is not confirmed gone.
 The #332 crash did not reproduce under ASan/UBSan on this recording (reporter: gone since 3.2.0); crash.zip was not fetched. #331 has no attachment. HamDRM does not use this path. test_drm_xhe_lib covers all three, with a stub library.
+
+## 2026-11-09 Ease of first use (feat38-ease1)
+
+E3-E12, E14, E15 from ease-of-decoding.md: next pass and Follow in the hint strip (uses the sattrack PassRunner; ISS SSTV event link), geostationary visibility card, first Start scans and plays for FM, DAB and the TV modes, Airband loads the nearest airport, automatic clock correction for FT8/WSPR/JS8, HF band picked from time and sun, normal-silence lines, antenna need per mode, GNSS fix fills the station position, near-me VOR/NDB/DME list from OurAirports, ADS-B Listen on airband. docs/EASE-3.8.md. Unit tests with simulated signals only; no GUI run on this branch.

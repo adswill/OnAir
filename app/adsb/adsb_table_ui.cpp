@@ -222,7 +222,7 @@ static void acarsLogSection(const App& a, const AdsbAircraft& ac) {
     ImGui::EndChild();
 }
 
-void detail(const App& a) {
+void detail(App& a) {
     // the readout of the selected aircraft is refreshed once a second and always has the same rows, so that it does not jump about
     static AdsbAircraft shown; static bool have = false; static double at = 0; static uint32_t of = 0;
     const AdsbTelemetry& t = a.rx.adsb;
@@ -232,6 +232,12 @@ void detail(const App& a) {
     const double now = ImGui::GetTime();
     if (!have || of != cur->icao || now - at > 1.0) { shown = *cur; have = true; of = cur->icao; at = now; }
     const AdsbAircraft* ac = &shown;
+    if (ac->hasPos && ImGui::SmallButton(tr("Listen on airband"))) {   // E15: opens Airband on the nearest airport's Tower / Approach / Centre
+        std::string what;
+        if (airbandListenAt(a, ac->lat, ac->lon, ac->hasAlt ? ac->altFt : 10000, what)) firstStartSay(what);
+        else firstStartSay(tr("No airport with airband frequencies near this aircraft."));
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Switches this receiver to Airband, tuned to the nearest airport. The channel is a best guess from the aircraft's height and position."));
     auto kv = [&](const char* k, const std::string& v) { ImGui::TextDisabled("%s", k); kvColumn(96 * gUi); ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::TextUnformatted(v.c_str()); ImGui::PopTextWrapPos(); ImGui::PopFont(); };
     char b[96];
     kv("ICAO", icaoText(ac->icao) + (ac->icao >> 24 ? " (not ICAO)" : ""));

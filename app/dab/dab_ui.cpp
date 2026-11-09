@@ -832,6 +832,9 @@ void dabEnsembleTab(App& a) {
 }
 
 // ------------------------------------------------------------------ scanner (Band III, one ensemble per channel)
+// First start: what the Scan button does (docs/EASE-3.8.md)
+void dabAutoScan(App& a) { App::DabScan& s = a.dabScan; s.running = true; s.idx = -1; s.t0 = 0; s.results.clear(); s.savedFreq = a.freqMhz; dabSelectStation(a, -1, false); }
+
 void dabScanTab(App& a) {
     App::DabScan& s = a.dabScan;
     const bool run = a.engine.running();

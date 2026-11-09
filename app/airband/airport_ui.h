@@ -18,6 +18,10 @@ void airportSection(App& a, const std::function<void(const std::vector<dect2::Ai
 
 // Radio tuned so that centreHz is the centre of the capture (the airband mode keeps the dial on the 25 kHz raster and the DC spike off the channels)
 void airportTuneCentre(App& a, double centreHz);
+// First start: the nearest airport (within 300 km) with airband channels loaded and the radio tuned to hold as many as fit; what is set to a sentence for the user. False: no position or none near.
+// E15: the nearest airport to this aircraft position; the channels loaded and the radio tuned so the channel for the aircraft's phase is held
+bool airportListenAt(App& a, double lat, double lon, int altFt, const std::function<void(const std::vector<dect2::AirbandChannel>&, bool replace)>& apply, std::string& what);
+bool airportLoadNearest(App& a, const std::function<void(const std::vector<dect2::AirbandChannel>&, bool replace)>& apply, std::string& what);
 
 // "EGLL Tower" for a channel frequency that belongs to an airport near the station (or any airport when the position is not set and only one has it); "" when none is known
 std::string airportLabelFor(double freqHz);

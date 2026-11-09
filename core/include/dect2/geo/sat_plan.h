@@ -29,6 +29,7 @@ struct SatLink {
     double needRateHz = 0;       // sample rate the mode needs (0 = unknown)
     double retuneTolHz = 150;    // Doppler: the radio is retuned when the wanted frequency has moved this far
     bool radioFollowsDoppler = true;   // false: the decoder follows the shift itself, a retune would break a frame (LoRa)
+    bool eventOnly = false;      // on the air only during announced events (ISS SSTV): chosen when asked for, never by default over a link that always runs
 };
 
 // A link is hearable with this radio and antenna: the frequency in both, and a sample rate the radio reaches

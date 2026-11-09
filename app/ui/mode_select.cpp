@@ -30,6 +30,7 @@ void selectMode(App& a, int fam, const char* subId) {
     if (wasRunning) a.engine.stop();
     setMode(a, fam, sub);
     presetsapp::applyModeDefault(a);   // the mode's default preset, when the user set one
+    firstBandPick(a);                 // E9: a shortwave mode's first opening goes to a band that is open now
     savePrefs(a);
     if (wasRunning) {
         a.engine.log("switching receiver mode");

@@ -752,6 +752,7 @@ std::string adsbTypeOfIcao(uint32_t icao);          // adsb_ui.cpp: the aircraft
 std::string adsbDistText(double nm);               // adsb_ui.cpp: a distance in the units chosen for ADS-B (NM or km), no unit
 const char* adsbDistUnit();                         // its unit
 double receiverAltitudeM();                         // its height above sea level, metres (0 until set)
+void receiverLocationClear(App& a, double lat, double lon);   // adsb_ui.cpp: undo an automatic position: the old value, reported as not set
 void setReceiverLocation(App& a, double lat, double lon);   // move it (saved), e.g. View > Map's "Use as my location"
 void syncAdsbReference(App& a);                              // push antenna position into the ADS-B tracker while that mode is running
 struct MapSatRef { std::string name; int norad = 0; const dect2::Sgp4* sgp = nullptr; };
@@ -775,6 +776,8 @@ bool mapFamilySends(int family);                    // this mode can put decoded
 std::string mapSendStatusLine();                    // short "connected / N sent" line for the mode header (empty when off)
 std::string mapSendDiagnosticsBlock(const App& a);  // map.on-air.dev ingest state + recent log for Copy diagnostics
 std::string passesArmFamily(App& a, int family);   // passes_ui.cpp: one click: track the next pass of this mode's satellite
+constexpr int kPassFamilyIssSstv = 100025;           // passes_ui.cpp: a pass link's "family" for the ISS's SSTV events (the SSTV entry of family 25, on FM)
+std::string passesFamilyLine(App& a, int family, bool* armed);   // passes_ui.cpp: "Next pass: ..." of this mode's satellites, for the mode's hint line
 void passesDevTle(const std::string& path);       // dev (--tle): TLEs from a file, as if pasted
 std::vector<std::pair<std::string, double>> passesArgosDoppler(double unixSec, double freqHz);       // passes_ui.cpp: MetOp (Argos downlink) satellites above the horizon and their Doppler
 std::vector<std::pair<std::string, double>> passesGlobalstarDoppler(double unixSec, double freqHz);   // passes_ui.cpp: Globalstar satellites above the horizon and their Doppler (TLEs from the planner)
@@ -929,6 +932,18 @@ bool rxWidthIsCustom(const App& a);          // a custom width or a chosen sampl
 void rxWidthReset(App& a);                   // back to the mode's own bandwidth and rate (the custom values stay saved)
 void rxWidthRestore(App& a, const RxWidthSnap& s);   // Undo of "Reset this mode"
 void nextStepLine(App& a);                   // panels/diag_ui.cpp: the "what do I do next" line of the mode on screen (app/ui/next_step_logic.h), drawn by modepanel::actionBar
+void vorUseNavaidFile(const std::string& path);    // vor_ui.cpp: the auto-downloaded navaids.csv becomes the VOR station list unless the user imported one
+void vorSetFixPair(App& a, double mhz1, double mhz2);   // vor_ui.cpp: the two stations of the fix
+bool airbandListenAt(App& a, double lat, double lon, int altFt, std::string& what);   // airband_ui.cpp: E15: the nearest airport's Tower / Approach / Centre for this aircraft
+void firstBandPick(App& a);                    // ui/first_start.cpp: a shortwave mode's first opening: pick a band that is open now
+void firstStartAfterStart(App& a);            // ui/first_start.cpp: the receiver has been asked to start
+void firstStartTick(App& a);                  // every frame
+void firstStartSay(const std::string& text);    // a note in the hint strip for about a minute and a half
+void firstStartHint(App& a);                  // its line in the hint strip
+const char* curModeName(const App& a);        // ui/mode_hints.cpp: the name of the current mode-list entry (null: none)
+std::string modeAntennaNote(const ModeDef& m);
+void modeHintsLine(App& a);                  // ui/mode_hints.cpp: next pass, satellite visibility and other per-mode hints under the next step line
+std::string modeGeoNote(const ModeDef& m);   // ui/mode_hints.cpp: non-blocking "below your horizon" note for the mode browser
 void modeActionBar(App& a);                  // ui/kit/mode_actions.cpp: next step line, "Auto setup" and "Reset this mode" with its undo note
 bool captureRowShown(const App& a);           // the Advanced row is drawn for a radio or the test signal (not a recording or a sound card)
 bool sampleRateAdvanced(App& a);              // ui/toolbar_source.cpp: the sample-rate half of that row (true when it changed the rate)
@@ -1182,7 +1197,7 @@ void modePicker(App& a);           // once a frame: the M key and the window
 bool modePickerWantsKeys();        // the window is open and has the keyboard
 void modePickerButton(App& a, const char* id = "##modes");   // the "Modes" button of the top bars
 void modeInfoFill();               // mode_info.cpp: tags, needs and minimum rate of rows that have none (also plugin rows added later)
-struct ModeFit { bool ok = true; std::string reason; };
+struct ModeFit { bool ok = true; std::string reason; std::string note; std::string antenna; };   // note, antenna: facts that never grey the mode
 ModeFit modeFit(const App& a, const ModeDef& m);              // does the selected radio fit the mode (grey + reason; never blocks)
 bool modeCodecMissing(const ModeDef& m);                      // a voice codec the user must install is missing (false until wired)
 extern bool (*gModeSignalHint)(const ModeDef&, float* conf);  // set by the identifier: a signal for this mode is on air now (null: none)

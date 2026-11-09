@@ -70,6 +70,7 @@ struct Js8Telemetry {
     int lastSlotCount[3] = {};
     float decodeMs[3] = {};
     float clockErr = 0;          // median DT of the recent decodes, s
+    float clockTrim = 0;         // the automatic correction in use, s (added to the computer clock)
     std::vector<Js8Decode> decodes;          // oldest first
     std::vector<Js8Message> messages;        // oldest first
     std::vector<Js8Station> stations;        // by last heard, newest first
