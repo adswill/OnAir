@@ -11,7 +11,7 @@ tarball=
 for f in "$REPO/build-windows-deps/src/$T" "$REPO/tools/package/cache/$T"; do [ -f "$f" ] && tarball=$f && break; done
 if [ -z "$tarball" ]; then
   tarball=$W/$T
-  curl -fsSL -o "$tarball" https://github.com/rtlsdrblog/rtl-sdr-blog/archive/aed0ea1.tar.gz
+  curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 -o "$tarball" https://github.com/rtlsdrblog/rtl-sdr-blog/archive/aed0ea1.tar.gz
 fi
 mkdir "$W/src" && tar xf "$tarball" -C "$W/src" --strip-components=1
 sed -i '' 's/^set(VERSION_INFO_PATCH_VERSION git)/set(VERSION_INFO_PATCH_VERSION 0)/' "$W/src/CMakeLists.txt"

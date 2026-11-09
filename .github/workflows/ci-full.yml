@@ -7,6 +7,11 @@ on:
   schedule:
     - cron: "17 2 * * *"   # nightly: only the slow tier (ctest -L slow)
 
+# a newer run on the same ref cancels the older one (not the nightly schedule)
+concurrency:
+  group: full-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
+
 # ccache as in ci.yml (see the comment there for the cache keys); one cache per job/matrix entry.
 env:
   CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -39,7 +44,8 @@ jobs:
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: brew install cmake pkg-config nasm ccache hackrf soapysdr libusb ffmpeg glfw
-      - uses: actions/cache@v6
+      - name: Restore ccache
+        uses: actions/cache/restore@v6
         with:
           path: .ccache
           key: ccache-full-${{ strategy.job-index }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
@@ -53,6 +59,12 @@ jobs:
       - name: ccache statistics
         if: always()
         run: ccache -s
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: .ccache
+          key: ccache-full-${{ strategy.job-index }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
       - name: Test
         run: ctest --test-dir build -j 4 ${{ github.event_name == 'schedule' && '-L slow' || '' }} --output-on-failure --timeout 1500
 
@@ -69,7 +81,8 @@ jobs:
           install: >-
             mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-python mingw-w64-ucrt-x86_64-pkgconf mingw-w64-ucrt-x86_64-ccache mingw-w64-ucrt-x86_64-rust
             mingw-w64-ucrt-x86_64-ffmpeg mingw-w64-ucrt-x86_64-glfw mingw-w64-ucrt-x86_64-hackrf mingw-w64-ucrt-x86_64-soapysdr mingw-w64-ucrt-x86_64-libiconv
-      - uses: actions/cache@v6
+      - name: Restore ccache
+        uses: actions/cache/restore@v6
         with:
           path: .ccache
           key: ccache-full-windows-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
@@ -83,6 +96,12 @@ jobs:
       - name: ccache statistics
         if: always()
         run: ccache -s
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: .ccache
+          key: ccache-full-windows-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
       - name: Test
         run: ctest --test-dir build -j 4 ${{ github.event_name == 'schedule' && '-L slow' || '' }} --output-on-failure --timeout 1500
 
@@ -108,7 +127,8 @@ jobs:
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: brew install cmake pkg-config ccache hackrf soapysdr libusb ffmpeg glfw
-      - uses: actions/cache@v6
+      - name: Restore ccache
+        uses: actions/cache/restore@v6
         with:
           path: .ccache
           key: ccache-app-${{ strategy.job-index }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
@@ -122,6 +142,12 @@ jobs:
       - name: ccache statistics
         if: always()
         run: ccache -s
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: .ccache
+          key: ccache-app-${{ strategy.job-index }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
       - name: Test macOS packaging checks
         if: runner.os == 'macOS'
         run: python3 -m unittest discover -s tools/package -p 'test_*.py' -v

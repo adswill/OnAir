@@ -1,4 +1,5 @@
 name: Release
+run-name: Release ${{ inputs.platform || 'all' }}
 
 # A version tag (git tag v0.2.6 && git push --tags) builds the installers and attaches them to that release.
 # A push to a release branch (release-0.2.6) builds the same installers, deletes the previous beta of that
@@ -13,10 +14,16 @@ on:
       - 'release-*'
       - '!release-*-pipeline-*'   # work branches on the release tooling must not publish a beta
   workflow_dispatch:
+    inputs:
+      platform:
+        description: "Build one platform only (tools/release/release.sh starts each on its own, so a failed one can be run again at once)"
+        type: choice
+        options: [all, windows, macos, linux]
+        default: all
 
 # A newer push on the same branch cancels the beta build still running, so an older beta is not published after it.
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ github.ref }}-${{ inputs.platform || 'all' }}
   cancel-in-progress: true
 
 permissions:
@@ -71,54 +78,123 @@ jobs:
           fi
           echo "skip=${skip}" >> "$GITHUB_OUTPUT"
 
-  # Windows first in the workflow file so the cross build starts with macOS/Linux (same runner pool; long cached prefix).
+  # Windows: cross-built on macOS with the same Homebrew mingw-w64 the dependency prefix was built with (the DLLs of the prefix need that libstdc++;
+  # a Linux cross build fails tools/package/check_win_dlls.sh). The prefix is a file of the draft release "ci-windows-prefix" of this repository, put
+  # there by tools/release/upload_win_prefix.sh; drafts are visible only to the repository. No prefix for the current cross_deps_windows.sh: a
+  # warning, no Windows files, and the rest of the release goes on.
   windows:
     name: Windows x64 package
     needs: version
-    # Off by default: the dependency prefix (build-windows-deps/src) exists only on the maintainer's machines. The Windows files come from
-    # package.yml in the private adswill/OnAir-ci (tools/release/release.sh). Set the repository variable ONAIR_WINDOWS_IN_ACTIONS=true to use this job.
-    if: vars.ONAIR_WINDOWS_IN_ACTIONS == 'true' && needs.version.outputs.skip != 'true'
+    if: needs.version.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'windows')
     runs-on: macos-15
+    timeout-minutes: 150
+    outputs:
+      built: ${{ steps.pfx.outputs.have }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_MAXSIZE: 1G
+      CCACHE_COMPRESS: "true"
     steps:
       - uses: actions/checkout@v7
-      - name: Install cross toolchain
+      - name: Get the Windows dependency prefix
+        id: pfx
         run: |
-          brew install cmake pkg-config nasm mingw-w64
-          rustup target add x86_64-pc-windows-gnu   # the Rust protocol layers (rust/README.md) are linked into the exe
-      - name: Cache Windows cross prefix
-        id: winpfx
-        uses: actions/cache@v6
+          set -eu
+          ID=$(tools/package/win_prefix_id.sh)
+          if ! tools/release/retry.sh -n 3 gh release download ci-windows-prefix --repo "$GITHUB_REPOSITORY" -p "onair-win-prefix-$ID.tar.gz" -D "$RUNNER_TEMP/pfx" --clobber; then
+            echo "::warning::no onair-win-prefix-$ID.tar.gz on the draft release ci-windows-prefix: no Windows files in this run (tools/release/upload_win_prefix.sh, docs/CI-FAST.md)"
+            echo "have=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          python3 tools/package/unpack_win_prefix.py "$RUNNER_TEMP/pfx/onair-win-prefix-$ID.tar.gz" "$HOME/onair-win-prefix"
+          echo "have=true" >> "$GITHUB_OUTPUT"
+      - name: Install the cross toolchain
+        if: steps.pfx.outputs.have == 'true'
+        run: |
+          tools/release/retry.sh brew install cmake ninja ccache pkg-config nasm mingw-w64
+          # rustup's cargo, ahead of any Homebrew rust on the PATH (only rustup can add the Windows target)
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.cargo/bin:$PATH"
+          tools/release/retry.sh rustup toolchain install stable --profile minimal
+          rustup default stable
+          tools/release/retry.sh rustup target add x86_64-pc-windows-gnu
+      - name: Restore ccache
+        if: steps.pfx.outputs.have == 'true'
+        uses: actions/cache/restore@v6
         with:
-          path: onair-win-prefix
-          key: onair-win-prefix-${{ hashFiles('tools/package/cross_deps_windows.sh', 'packaging/windows/mingw-toolchain.cmake') }}
-      - name: Build Windows dependencies
-        if: steps.winpfx.outputs.cache-hit != 'true'
+          path: .ccache
+          key: ccache-release-windows-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
+          restore-keys: |
+            ccache-release-windows-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-
+            ccache-release-windows-
+      - name: Build the Windows zip
+        if: steps.pfx.outputs.have == 'true'
         env:
-          ONAIR_WIN_PREFIX: ${{ github.workspace }}/onair-win-prefix
-          ONAIR_WIN_WORK: ${{ runner.temp }}/onair-win-work
-        run: |
-          test -d build-windows-deps/src || { echo "error: build-windows-deps/src is missing (vendor tarballs for cross_deps_windows.sh)"; exit 1; }
-          tools/package/cross_deps_windows.sh
-      - name: Build Windows zip and installer
-        env:
-          ONAIR_WIN_PREFIX: ${{ github.workspace }}/onair-win-prefix
           ONAIR_WIN_BUILD: build-windows
+          ONAIR_WIN_NO_INSTALLER: "1"   # the installer is made on Linux (windows-installer below): Homebrew's makensis crashes on some macOS versions
         run: tools/package/make_windows_cross.sh "${{ needs.version.outputs.ver }}"
+      - name: ccache statistics
+        if: always() && steps.pfx.outputs.have == 'true'
+        run: ccache -s
+      - name: Save ccache
+        if: always() && steps.pfx.outputs.have == 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: .ccache
+          key: ccache-release-windows-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
+      - uses: actions/upload-artifact@v7
+        if: steps.pfx.outputs.have == 'true'
+        with:
+          name: windows-x64-zip
+          path: build-windows/OnAir-*-windows-x64.zip
+          if-no-files-found: error
+
+  windows-installer:
+    name: Windows installer
+    needs: [version, windows]
+    if: needs.windows.result == 'success' && needs.windows.outputs.built == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with: { name: windows-x64-zip, path: dist }
+      - name: Install NSIS
+        run: |
+          tools/release/retry.sh sudo apt-get update
+          tools/release/retry.sh sudo apt-get install -y -o Acquire::Retries=5 --no-install-recommends nsis
+      - name: Build the installer from the zip
+        env:
+          VER: ${{ needs.version.outputs.ver }}
+        run: |
+          set -eu
+          mkdir unz && unzip -q "dist/OnAir-$VER-windows-x64.zip" -d unz
+          SRC=$(cd "unz/OnAir-$VER-windows-x64" && pwd)
+          makensis -V2 -DVERSION="$VER" -DSRC="$SRC" -DICON="$PWD/packaging/windows/OnAir.ico" -DOUTFILE="$PWD/dist/OnAir-$VER-windows-x64-setup.exe" packaging/windows/onair.nsi
+          ls -la dist
       - uses: actions/upload-artifact@v7
         with:
           name: windows-x64
           path: |
-            build-windows/OnAir-*-windows-x64.zip
-            build-windows/OnAir-*-windows-x64-setup.exe
+            dist/OnAir-*-windows-x64.zip
+            dist/OnAir-*-windows-x64-setup.exe
+          if-no-files-found: error
 
   macos:
     name: macOS disk image (${{ matrix.arch }})
     needs: version
-    if: needs.version.outputs.skip != 'true'
+    if: needs.version.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'macos')
     env:
       MACOSX_DEPLOYMENT_TARGET: "15.0"
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_MAXSIZE: 1G
+      CCACHE_COMPRESS: "true"
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false   # the other architecture keeps building: its artifact stays usable when the failed one is run again
       matrix:
         include:
           - { arch: arm64, os: macos-15 }
@@ -126,7 +202,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Install dependencies
-        run: brew install cmake pkg-config nasm hackrf soapysdr soapyremote libusb glfw librtlsdr airspy airspyhf libbladerf limesuite uhd hamlib openssl@3   # radio libraries and Hamlib go into the app (tools/package/bundle_macos.py)
+        run: tools/release/retry.sh brew install cmake pkg-config nasm ccache hackrf soapysdr soapyremote libusb glfw librtlsdr airspy airspyhf libbladerf limesuite uhd hamlib openssl@3   # radio libraries and Hamlib go into the app (tools/package/bundle_macos.py)
       # No Homebrew FFmpeg (it is --enable-gpl): the LGPL static build of tools/package/build_ffmpeg_static.sh, cached per architecture and script version
       - name: Cache the static FFmpeg
         id: ffmpeg
@@ -135,17 +211,32 @@ jobs:
       - name: Build FFmpeg (LGPL, static, only what OnAir uses)
         if: steps.ffmpeg.outputs.cache-hit != 'true'
         run: tools/package/build_ffmpeg_static.sh "$HOME/ffmpeg"
+      - name: Restore ccache
+        uses: actions/cache/restore@v6
+        with:
+          path: .ccache
+          key: ccache-release-macos-${{ matrix.arch }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
+          restore-keys: |
+            ccache-release-macos-${{ matrix.arch }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-
+            ccache-release-macos-${{ matrix.arch }}-
       - name: Build the app and the .dmg
         run: FFMPEG_PREFIX="$HOME/ffmpeg" tools/package/make_dmg.sh "${{ needs.version.outputs.ver }}"
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: .ccache
+          key: ccache-release-macos-${{ matrix.arch }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
       - uses: actions/upload-artifact@v7
         with: { name: "macos-dmg-${{ matrix.arch }}", path: build-release/*.dmg }
 
   linux:
     name: Linux ${{ matrix.arch }} packages
     needs: version
-    if: needs.version.outputs.skip != 'true'
+    if: needs.version.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'linux')
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false   # the other architecture keeps building
       matrix:
         include:
           # built on the oldest Ubuntu that is still supported: a program built on an old system runs on newer ones
@@ -155,8 +246,8 @@ jobs:
       - uses: actions/checkout@v7
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential file desktop-file-utils cmake pkg-config ccache nasm patchelf curl xz-utils libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libglfw3-dev libairspy0 libbladerf2 libiio0 liblimesuite20.10-1 libuhd4.1.0 libhamlib-dev libssl-dev
+          tools/release/retry.sh sudo apt-get update
+          tools/release/retry.sh sudo apt-get install -y -o Acquire::Retries=5 build-essential file desktop-file-utils cmake pkg-config ccache nasm patchelf curl xz-utils libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libglfw3-dev libairspy0 libbladerf2 libiio0 liblimesuite20.10-1 libuhd4.1.0 libhamlib-dev libssl-dev
       - name: Cache the static FFmpeg
         id: ffmpeg
         uses: actions/cache@v6
@@ -166,7 +257,8 @@ jobs:
         run: tools/package/build_ffmpeg_static.sh "$HOME/ffmpeg"
       - name: "Gather the radio libraries (RTL-SDR is built here from the RTL-SDR Blog source: the distribution's librtlsdr0 cannot drive the V4)"
         run: tools/package/collect_radio_libs_linux.sh "$GITHUB_WORKSPACE/build/radiolibs"
-      - uses: actions/cache@v6   # ccache, same scheme as ci.yml; separate cache per architecture
+      - name: Restore ccache   # same scheme as ci.yml; separate cache per architecture; saved below also when the build fails
+        uses: actions/cache/restore@v6
         with:
           path: .ccache
           key: ccache-release-${{ matrix.arch }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
@@ -183,6 +275,12 @@ jobs:
           cmake -S . -B build -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=ON -DDECT2_HAVE_HAMLIB=ON -DDECT2_WITH_TLS=ON -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_SKIP_INSTALL_ALL_DEPENDENCY=ON -DDECT2_FFMPEG_PREFIX="$HOME/ffmpeg" -DDECT2_RADIO_LIB_DIR="$GITHUB_WORKSPACE/build/radiolibs" -DONAIR_VERSION="${{ needs.version.outputs.ver }}"
           cmake --build build -j 4 --target dect2 dect2cli dect2scan onair-server
           ccache -s
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: .ccache
+          key: ccache-release-${{ matrix.arch }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
       - name: Package
         run: |
           cd build && cpack -G DEB
@@ -191,14 +289,14 @@ jobs:
         run: |
           set -eu
           case "$(uname -m)" in x86_64) AT=x86_64 ;; aarch64) AT=aarch64 ;; *) echo "no appimagetool for $(uname -m)"; exit 1 ;; esac
-          curl -fsSL -o /tmp/appimagetool "https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-$AT.AppImage"
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 -o /tmp/appimagetool "https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-$AT.AppImage"
           chmod +x /tmp/appimagetool
           printf '#!/bin/sh\nexec /tmp/appimagetool --appimage-extract-and-run "$@"\n' > /tmp/appimagetool-run; chmod +x /tmp/appimagetool-run
           cd build && APPIMAGETOOL=/tmp/appimagetool-run "$GITHUB_WORKSPACE/tools/package/make_appimage.sh" "$PWD"/onair-*-portable.tar.gz "$PWD"
       - name: Smoke test (the portable package starts, draws one frame and exits) and size report
         run: |
           set -eu
-          sudo apt-get install -y xvfb libgl1-mesa-dri
+          tools/release/retry.sh sudo apt-get install -y -o Acquire::Retries=5 xvfb libgl1-mesa-dri
           T=$(ls build/onair-*-portable.tar.gz); mkdir -p smoke && tar xzf "$T" -C smoke
           D=$(ls -d smoke/onair-*-portable)
           export HOME="$PWD/smoke/home"; mkdir -p "$HOME"
@@ -209,9 +307,6 @@ jobs:
       - uses: actions/upload-artifact@v7
         with: { name: "linux-${{ matrix.arch }}", path: "build/onair_*.deb\nbuild/onair-*-portable.tar.gz\nbuild/OnAir-*.AppImage" }
 
-  # Windows: built on a Mac with tools/package/make_windows_cross.sh, which ships the RTL-SDR, Airspy, BladeRF and PlutoSDR
-  # libraries and the SoapySDR drivers (MSYS2 has no packages for most of them, so a build here only had HackRF), then
-  # attached with: gh release upload <tag> build-windows/OnAir-<version>-windows-x64.zip build-windows/OnAir-<version>-windows-x64-setup.exe
   publish:
     name: Attach to the release
     # macOS/Linux first; Windows attaches in attach-windows (long cross build, must not block the beta).
@@ -220,7 +315,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/download-artifact@v8
-        with: { path: dist, merge-multiple: true }
+        with: { pattern: "macos-dmg-*", path: dist, merge-multiple: true }
+      - uses: actions/download-artifact@v8
+        with: { pattern: "linux-*", path: dist, merge-multiple: true }
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -257,10 +354,10 @@ jobs:
 
   attach-windows:
     name: Attach Windows to the release
-    needs: [version, publish, windows]
+    needs: [version, publish, windows, windows-installer]
     if: |
       (startsWith(github.ref, 'refs/tags/v') || (startsWith(github.ref, 'refs/heads/release-') && github.event_name == 'push')) &&
-      needs.windows.result == 'success'
+      needs.windows-installer.result == 'success'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/download-artifact@v8

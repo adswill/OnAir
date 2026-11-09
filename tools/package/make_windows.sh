@@ -42,7 +42,7 @@ done
 tools/package/check_win_dlls.sh "$OUT" || { echo "error: the DLLs of $OUT do not fit together (see above)"; exit 1; }
 cp LICENSE "$OUT/LICENSE.txt"
 # MSYS2's mingw-w64-ffmpeg is built with --enable-gpl (x264, x265 ...): this check fails for it. The release zip comes from make_windows_cross.sh (LGPL FFmpeg).
-tools/package/for f in "$OUT"/OnAir.exe "$OUT"/avcodec-*.dll; do [ -f "$f" ] && { tools/package/check_lgpl_bundle.sh "$f" || FFBAD=1; }; done; [ -z "${FFBAD:-}" ] || { echo "Do not publish this build: use tools/package/make_windows_cross.sh"; exit 1; }
+for f in "$OUT"/OnAir.exe "$OUT"/avcodec-*.dll; do [ -f "$f" ] && { tools/package/check_lgpl_bundle.sh "$f" || FFBAD=1; }; done; [ -z "${FFBAD:-}" ] || { echo "Do not publish this build: use tools/package/make_windows_cross.sh"; exit 1; }
 tools/package/add_license_files.sh "$OUT"   # THIRD_PARTY.md, LICENSES/, LICENSE-NOTICES-BINARIES.md (licence of every bundled DLL, source offer)
 cat > "$OUT/README.txt" <<'TXT'
 OnAir - DVB-T2 / DVB-T / ATSC / DAB receiver (Windows x64)
