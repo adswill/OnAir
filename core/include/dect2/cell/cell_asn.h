@@ -1,6 +1,6 @@
 // Cell towers: ASN.1 unaligned PER of the broadcast system information (3GPP TS 36.331 for LTE, 38.331 for NR, 44.018 for GSM is
 // in cell_gsm.h). Only the cell's public broadcast is read: SIB1 (operator, area, cell identity, scheduling), SIB2 (common radio
-// configuration), SIB3/4/5 (reselection and neighbours). Nothing subscriber-related exists in these messages.
+// configuration), SIB3/4/5 (reselection and neighbours), SIB9 (home eNB name), SIB10/11/12 (public warnings), SIB16 (time). Nothing subscriber-related exists in these messages.
 #pragma once
 #include "cell_fec.h"
 #include <cstdint>
@@ -79,12 +79,29 @@ struct LteSib4 { std::vector<LteNeigh> neigh; std::vector<std::pair<int, int>> b
 struct LteSib5Freq { int earfcn = 0, qRxLevMinDbm = 0, priority = -1, threshHigh = 0, threshLow = 0, bwRb = 0, qOffsetFreqDb = 0; std::vector<LteNeigh> neigh; };
 struct LteSib5 { std::vector<LteSib5Freq> freqs; };
 
+// SIB10 (ETWS primary), SIB11 (ETWS secondary, segmented) and SIB12 (CMAS, segmented), 36.331 sec 6.3.1. Public warnings, in the clear.
+struct LteWarnSeg {
+    int sib = 12;                     // 10, 11 or 12
+    uint32_t messageId = 0, serial = 0;
+    uint32_t warningType = 0;         // SIB10 only: the 16 bits of Warning-Type, 23.041 sec 9.3.24
+    bool last = true;                 // warningMessageSegmentType
+    int segment = 0;                  // warningMessageSegmentNumber
+    std::vector<uint8_t> data;        // warningMessageSegment
+    int dcs = -1;                     // dataCodingScheme (segment 0 only), -1 absent
+};
+// SIB16: GPS-related UTC. timeUtc counts 10 ms units since 00:00:00 on Gregorian 1900-01-01 (36.331 timeInfoUTC-r11)
+struct LteSib16 { bool hasTime = false; uint64_t timeUtc = 0; int dst = -1, leapSeconds = -128, localOffsetQh = -64; };
+
 struct LteBcch {
     bool isSib1 = false;
     LteSib1 sib1;
     bool has2 = false, has3 = false, has4 = false, has5 = false;
     LteSib2 sib2; LteSib3 sib3; LteSib4 sib4; LteSib5 sib5;
     std::vector<int> sibsSeen;        // SIB numbers in an SI message (also those not read)
+    std::vector<LteWarnSeg> warn;     // SIB10 / 11 / 12 in this message
+    bool has9 = false, has16 = false;
+    std::string hnbName;              // SIB9 home eNB name (UTF-8), empty when absent
+    LteSib16 sib16;
 };
 
 // BCCH-DL-SCH-Message: false when it does not parse
@@ -92,6 +109,8 @@ bool lteParseBcch(const Bits& msg, LteBcch& out);
 // Encoders (the test signal): the complete BCCH-DL-SCH-Message, padded to whole octets
 Bits lteEncodeSib1(const LteSib1& s);
 Bits lteEncodeSi(const LteSib2* s2, const LteSib3* s3, const LteSib4* s4, const LteSib5* s5);
+// SI message with SIB9 (when hnb is non-empty), the warning segments and optionally SIB16: test signals only
+Bits lteEncodeSiWarn(const std::vector<LteWarnSeg>& warn, const LteSib16* s16 = nullptr, const std::string& hnb = std::string());
 
 int qOffsetDb(int idx);               // Q-OffsetRange index -> dB
 int qOffsetIdx(int db);
