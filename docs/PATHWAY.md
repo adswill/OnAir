@@ -1209,3 +1209,8 @@ Version 3.7.0 in CMakeLists.txt, macOS Info.plist and the Windows resource (chec
 
 ## 2026-11-09 3.8 fast CI and one-command release (feat38-fastci)
 Branch feat38-fastci on v3.7.0 with feat37-fastci merged. Quick gate tools/gate/run.sh (gate.yml on every push, Lint job of ci.yml): mode numbers, web_policy, Android stand-ins, credits, gui_rules, i18n; checked against history: it finds the av_guess_frame_rate and BGAN misses of 3.7. ci.yml: app tests back on Linux and macOS, Windows 4 shards, timeouts as before, cross-shard ccache. release.yml: Windows zip on macOS from a prefix on the draft release ci-windows-prefix (tools/release/upload_win_prefix.sh, once by the owner), installer on Linux, per-platform runs, retries, ccache saved on failure. release.sh: one command, per-platform runs with one automatic rerun, every asset checked on the draft before --publish. APK signing only with the secrets, key removed always. Measured vs expected in docs/CI-FAST.md; nothing proven on CI yet (no dispatches until 3.7 is out). make_windows.sh syntax error fixed.
+## 2026-11-09: 3.8 ADS-L mode and coarse TIS-B fix (feat38-adsl)
+
+- Bug: DF18 CF 3 (coarse TIS-B) no longer read as ADS-B (rust/onair_adsb, regression test); checked against readsb.
+- New mode ADS-L, family 300 (std 302, active 301, poll slot 260): core/src/adsl, app/adsl, tests/adsl, docs/ADSL-3.8.md. M-band, O-LDR and O-HDR from one 2 Msps capture, FLARM decoded from the same samples, map and shared tracks, no keys needed.
+- Tested on our own generator and spec examples only: no public ADS-L recording found. The GUI and app were not run (no full build allowed); test_mode_numbers, test_gui_rules, test_credits pass by standalone links.

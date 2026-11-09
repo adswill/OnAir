@@ -257,6 +257,8 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxVdes_.setSignalOffset(o);
         rxVdes_.setDialHz(dev.kind != DeviceInfo::File ? tune.centerHz : 0.0);   // places the ASM channels and the VDE-TER bands
         rxFlarm_.setSignalOffset(o);
+        rxAdsl_.setSignalOffset(o);
+        rxAdsl_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // which channels are in the capture
         rxDji_.setSignalOffset(o);
         rxDji_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the bands and frequencies of the signals
         rxCube_.setDialHz(dev.kind != DeviceInfo::File ? tune.centerHz : 0.0);   // names frames after the satellite table
@@ -528,6 +530,8 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxFlarm_.configure(rate_);
     rxFlarm_.setWallClock(true);   // the packets are keyed to the time of day; a file is decoded as if it were live
     rxFlarm_.setLogCallback([this](const std::string& s) { log(s); });
+    rxAdsl_.configure(rate_);
+    rxAdsl_.setLogCallback([this](const std::string& s) { log(s); });
     rxDji_.configure(rate_);
     rxDji_.setWallClock(dev.kind != DeviceInfo::File);
     rxDji_.setLogCallback([this](const std::string& s) { log(s); });

@@ -1863,3 +1863,20 @@ case 246: {
     { Table tb({"Item"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
+case 301: {
+    const auto& t = rx.adsl; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Time Sec", t.timeSec);
+    cardIf(o, "Input Rate", t.inputRate);
+    cardIf(o, "Noise Db", t.noiseDb);
+    cardIf(o, "Level Db", t.levelDb);
+    cardIf(o, "Packets Per Sec", t.packetsPerSec);
+    cardIf(o, "Traffic", t.traffic);
+    cardIf(o, "Status", t.status);
+    cardIf(o, "Uplink", t.uplink);
+    { Table tb({"Id", "Amt", "Category", "Flight State", "Emergency", "Lat", "Lon", "Alt M"}); int n = 0; for (auto it = t.aircraft.rbegin(); it != t.aircraft.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.id), cell(e.amt), cell(e.category), cell(e.flightState), cell(e.emergency), cell(e.lat), cell(e.lon), cell(e.altM)}); } if (n) addTable(o, "Aircraft", tb); }
+    break;
+}

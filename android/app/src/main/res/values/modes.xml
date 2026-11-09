@@ -214,6 +214,7 @@
         <item>Arktika-M GGAK</item>
         <item>AWS L-band</item>
         <item>Inmarsat BGAN</item>
+        <item>ADS-L</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -409,6 +410,7 @@
         <item>Arktika-M N1 / N2 space-weather telemetry (GGAK, experimental: frame lock not reached yet) on 1703 MHz, PM 5 ksym/s: the Elektro GGAK frames and magnetometer. Highly elliptical orbit: Follow the next pass tracks the Doppler</item>
         <item>Arctic Weather Satellite on 1707 MHz: QPSK 1.785 Msym/s, CCSDS convolutional code, Reed-Solomon interleave 5, the MWR microwave scans (19 channels, 145 points) line by line. Needs a dish at 1.7 GHz and 4 Msps or more; Follow the next pass tunes with Doppler and starts by itself</item>
         <item>Inmarsat BGAN (ETSI TS 102 744 Family SL), the satellite data service: every forward carrier from 1525 to 1559 MHz, bearer type and code rate, satellite, spot beam, network identity, and the system information it broadcasts. One-click scan across the band. Signalling and carrier structure only: no voice, no user data, no subscriber identity. Needs a user test: only synthetic signals so far, never validated on a real BGAN recording. A patch antenna is enough for the global beam and for bearers aimed at your region; narrow spot beams elsewhere are out of reach</item>
+        <item>ADS-L (EASA ADS-L 4 SRD-860): the iConspicuity broadcast of light aircraft, gliders, paragliders and drones on 868.2, 868.4 and 869.525 MHz. Traffic, status and ground uplink packets give position, altitude, speed, category and address on the map and in a table. Tuned to 868.875 MHz at 2 Msps one capture holds every channel and also FLARM. Receive only; no key is needed</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -604,6 +606,7 @@
         <item>Arktika-M GGAK telemetry</item>
         <item>AWS MWR, 1.7 GHz</item>
         <item>Satellite, L-band</item>
+        <item>Light aircraft, 868 MHz</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -799,5 +802,6 @@
         <item>arktika ggak sem 1703 magnetometer heo space weather</item>
         <item>aws arctic weather satellite 1707 mwr microwave radiometer eumetsat sterna</item>
         <item>bgan inmarsat i-4 alphasat family sl ts 102 744 l-band satcom 1545 1550 16qam spot beam isatphone</item>
+        <item>adsl ads-l adsl4 srd860 iconspicuity ogn flarm glider paraglider easa sesar 868 aviation</item>
     </string-array>
 </resources>

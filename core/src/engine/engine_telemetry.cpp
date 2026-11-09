@@ -267,6 +267,7 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 66: return pollStd(rxZb_, 66, t, seqs[60], &RxTelemetry::zigbee);
     case 245: return pollStd(rxTh_, 245, t, seqs[204], &RxTelemetry::thread);   // Thread (slot 204)
     case 67: return pollStd(rxFlarm_, 67, t, seqs[61], &RxTelemetry::flarm);
+    case 301: return pollStd(rxAdsl_, 301, t, seqs[260], &RxTelemetry::adsl);   // ADS-L (slot 260)
     case 68: return poll68(rxHfb_, t, seqs);
     case 69: return pollStd(rxDji_, 69, t, seqs[63], &RxTelemetry::dji);
     case 70: return pollStd(rxNb_, 70, t, seqs[64], &RxTelemetry::nbiot);

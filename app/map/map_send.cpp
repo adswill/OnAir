@@ -15,6 +15,7 @@
 #define ONAIR_VERSION "dev"
 #endif
 #include "dect2/flarm/flarm_proto.h"
+#include "dect2/adsl/adsl_proto.h"
 #include "dect2/gnss/gnss_tel.h"
 #include "dect2/ham/ham_mapfeed.h"
 #include "dect2/net/map_guard.h"
@@ -444,6 +445,24 @@ void collectFrom(App& rx, std::vector<Track>& v, std::unordered_set<std::string>
             t.hasAlt = true; t.alt = a.altM / 0.3048;
             t.hasHdg = true; t.hdg = a.trackDeg; t.hasSpd = true; t.spd = a.speedKmh / 1.852;
             t.cat = dect2::flarm::aircraftTypeName(a.acType);
+            for (const auto& p : a.track) t.path.push_back({p.lat, p.lon});
+            addTrack(v, seen, std::move(t));
+        }
+    }
+
+    dect2::AdslTelemetry adsl;
+    if (rx.engine.adsl().telemetry(adsl, 0)) {
+        for (const auto& a : adsl.aircraft) {
+            if (!a.hasPos || a.amt == dect2::adsl::AmtRandom) continue;   // a random address is the sender asking not to be identified: shown locally, never shared
+            Track t; t.kind = "flarm"; t.sub = "ADS-L"; t.src = "adsl";
+            char id[16]; snprintf(id, sizeof id, "%06X", a.id & 0xFFFFFF);
+            t.id = id; t.label = dect2::adsl::categoryName(a.category);
+            t.lat = a.lat; t.lon = a.lon; t.age = a.ageSec;
+            t.hasHeard = true; t.heardAt = adsl.timeSec - a.ageSec;
+            if (a.hasAlt) { t.hasAlt = true; t.alt = a.altM / 0.3048; }
+            if (a.hasTrack) { t.hasHdg = true; t.hdg = a.trackDeg; }
+            if (a.hasSpeed) { t.hasSpd = true; t.spd = a.speedKmh / 1.852; }
+            t.cat = dect2::adsl::categoryName(a.category);
             for (const auto& p : a.track) t.path.push_back({p.lat, p.lon});
             addTrack(v, seen, std::move(t));
         }
@@ -1032,6 +1051,7 @@ bool mapFamilySends(int family) {
     case 44:  // Orbcomm
     case 56:  // Remote ID
     case 66:  // FLARM
+    case 300: // ADS-L
     case 68:  // DJI
     case 74:  // Datawell
         return true;

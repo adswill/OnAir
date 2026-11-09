@@ -174,6 +174,7 @@ cubesat	--mode cubesat	Overview|Frames|Receiver|History
 globalstar	--mode globalstar	Overview|Activity|Receiver|History
 vdes	--mode vdes	Overview|Messages|Receiver|History
 flarm	--mode flarm	Overview|Aircraft|Receiver|History
+adsl	--mode adsl	Overview|Aircraft|Receiver|History
 hfbeacon	--mode hfbeacon	Overview|Beacons|Receiver|History
 dji	--mode dji	Overview|Signals|Receiver|History
 loraraw	--mode loraraw	Overview|LoRa|Receiver|History

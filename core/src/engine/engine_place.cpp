@@ -169,6 +169,7 @@ void Engine::configureReceiver(int a, double r) {
     case 66: rxZb_.configure(r); break;
     case 245: rxTh_.configure(r); break;
     case 67: rxFlarm_.configure(r); break;
+    case 301: rxAdsl_.configure(r); rxFlarm_.configure(r); break;
     case 68: rxHfb_.configure(r); break;
     case 69: rxDji_.configure(r); break;
     case 70: rxNb_.configure(r); break;
@@ -347,6 +348,7 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 66: rxZb_.setSignalOffset(o); rxZb_.setCenterHz(centreHz); break;
     case 245: rxTh_.setSignalOffset(o); rxTh_.setCenterHz(centreHz); break;
     case 67: rxFlarm_.setSignalOffset(o); break;
+    case 301: rxAdsl_.setSignalOffset(o); rxAdsl_.setCenterHz(centreHz); rxFlarm_.setSignalOffset(rxAdsl_.flarmOffsetHz()); break;
     case 68: rxHfb_.setSignalOffset(o); rxHfb_.setCenterHz(centreHz); break;
     case 69: rxDji_.setSignalOffset(o); rxDji_.setCenterHz(centreHz); break;
     case 70: rxNb_.setSignalOffset(o); rxNb_.setCenterHz(centreHz); break;

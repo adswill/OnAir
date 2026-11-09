@@ -51,7 +51,7 @@ bool online();                                 // tiles are fetched from the til
 void shutdown();                               // stop the downloader; delete this session's tiles unless they are kept
 
 // Aircraft icon fill: white ADS-B, blue Inmarsat, red ACARS, yellow HFDL; grey when the last update is older than 30 s (60 s for satellite).
-enum class AcSrc { Adsb, Sat, Acars, Hfdl, Flarm };
+enum class AcSrc { Adsb, Sat, Acars, Hfdl, Flarm, Adsl };
 inline double acStaleSec(AcSrc s) { return s == AcSrc::Sat ? 60.0 : 30.0; }
 inline ImU32 acLive(AcSrc s) {
     switch (s) {
@@ -59,6 +59,7 @@ inline ImU32 acLive(AcSrc s) {
         case AcSrc::Acars: return IM_COL32(220, 72, 72, 255);
         case AcSrc::Hfdl: return IM_COL32(230, 198, 64, 255);
         case AcSrc::Flarm: return IM_COL32(108, 204, 122, 255);
+        case AcSrc::Adsl: return IM_COL32(120, 196, 236, 255);
         default: return IM_COL32(236, 238, 240, 255);
     }
 }

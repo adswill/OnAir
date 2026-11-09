@@ -167,6 +167,7 @@ std::vector<TxModeSpec> makeTxTable() {
         mk("hrpt", "HRPT / AHRPT", 66, "makeHrptSynth", kOpt, kUnv),
         mk("zigbee", "Zigbee / 802.15.4", 67, "makeZigbeeSynth", kOpt, kUnv),
         mk("flarm", "FLARM", 68, "makeFlarmSynth", kOpt, kUnv),
+        mk("adsl", "ADS-L", 302, "makeAdslSynth", kOpt, kUnv),
         mk("hfbeacon", "HF beacons", 69, "makeHfbeaconSynth", kOpt, kUnv),
         mk("dji", "DJI drones", 70, "makeDjiSynth", kOpt, kUnv),
         mk("loraraw", "LoRa (raw)", 73, "makeLoraRawSynth", kOpt, kUnv),
