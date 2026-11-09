@@ -75,7 +75,7 @@ interface SettingsActions {
     fun setDark(on: Boolean); fun setFollowSystemTheme(on: Boolean); fun setTypeLook(l: TypeLook); fun setColormap(i: Int)
     fun setRange(lo: Float, hi: Float); fun autoRange(); fun setPeakHold(on: Boolean); fun setCentreTuning(on: Boolean); fun setStepHz(hz: Double)
     fun setHideUnused(on: Boolean); fun setOnlyCapable(on: Boolean); fun setSound(volume: Float, muted: Boolean); fun setReduceMotion(on: Boolean)
-    fun setDiscovery(on: Boolean); fun setMapConsent(v: Int); fun setVerbose(on: Boolean)
+    fun setDiscovery(on: Boolean); fun setMapConsent(v: Int); fun setVerbose(on: Boolean); fun setAutoStart(on: Boolean)
 }
 
 private fun vmSettingsActions(vm: ReceiverViewModel) = object : SettingsActions {
@@ -93,6 +93,7 @@ private fun vmSettingsActions(vm: ReceiverViewModel) = object : SettingsActions 
     override fun setSound(volume: Float, muted: Boolean) = vm.setSound(volume, muted)
     override fun setReduceMotion(on: Boolean) = vm.setReduceMotion(on)
     override fun setDiscovery(on: Boolean) = vm.setDiscovery(on)
+    override fun setAutoStart(on: Boolean) = vm.setAutoStart(on)
     override fun setMapConsent(v: Int) = vm.setMapConsent(v)
     override fun setVerbose(on: Boolean) = vm.setVerbose(on)
 }
