@@ -2,7 +2,7 @@
 
 <h1 align="center">OnAir</h1>
 
-<p align="center"><b>Receive TV, radio, aircraft, ships, satellites, two-way radio, pagers, time signals and more: <!-- modecount -->178<!-- /modecount --> modes with one software-defined radio.</b><br>
+<p align="center"><b>Receive TV, radio, aircraft, ships, satellites, two-way radio, pagers, time signals and more: <!-- modecount -->181<!-- /modecount --> modes with one software-defined radio.</b><br>
 Free and open source, for macOS, Windows, Linux and Android.</p>
 
 <p align="center">
@@ -89,8 +89,8 @@ OnAir is a receiver first. It can also send test signals through a transmit-capa
 | **Two-way radio** | 12 | DMR, P25 (phase 1 and 2, with a trunking follower), NXDN, dPMR, D-STAR, M17, TETRA, TETRAPOL, tone decoders (CTCSS, DCS, DTMF, selcall) |
 | **Cellular and rail** | 6 | LTE, 5G NR and NB-IoT cells, GSM-R, LBJ, KLW, TDCS |
 | **Pagers** | 3 | POCSAG, FLEX, Multitone |
-| **IoT and sensors** | 20 | ISM sensors, LoRaWAN, Meshtastic, MeshCore, Bluetooth LE, BLE tracker detector, Zigbee, Wi-Fi, Wi-SUN, Wireless M-Bus, Z-Wave, DECT, ANT+, Sigfox, NFC / RFID, Flipper Zero Sub-GHz chat |
-| **Weather and science** | 11 | Radiosondes, Horus balloons, HRPT, FY-3 AHRPT and MPT, SAME alerts, time signals, e-Czas, ionospheric sounders, radio astronomy, meteor scatter |
+| **IoT and sensors** | 22 | ISM sensors, LoRaWAN, Meshtastic, MeshCore, Bluetooth LE, BLE tracker detector, Zigbee, Thread, Sub-GHz sensors, Wi-Fi, Wi-SUN, Wireless M-Bus, Z-Wave, DECT, ANT+, Sigfox, NFC / RFID, Flipper Zero Sub-GHz chat |
+| **Weather and science** | 12 | Radiosondes, Horus balloons, HRPT, FY-3 AHRPT and MPT, SAME alerts, time signals, e-Czas, ionospheric sounders, radio astronomy, meteor scatter, Sferics (lightning) |
 | **Amateur** | 35 | FT8, FT4, WSPR, JS8Call, RTTY, PSK, MT63, FSQ, IFKP, ARDOP, SSTV, FreeDV, APRS, LoRa APRS, MeshCom and more |
 | **HF utility** | 10 | ALE, beacons, Datawell buoys, CODAR |
 | **Tools** | 4 | General receiver, spectrum analyser, spectrum explorer, signal workbench; also a gain optimiser, a direction finder, a pass planner and a remote-control API |
@@ -244,7 +244,7 @@ No radio? Open an IQ recording through the *IQ recording file* source (cs8, cu8,
 
 ## Modes
 
-<!-- modecount -->178<!-- /modecount --> modes, grouped as in the app (the list in the app also has a Plugins entry for managing add-ons). Every receiver is built from the published specifications and tested on generated signals (carrier offsets, noise, echoes, clock errors) and, where recordings exist, on real captures. Reports and recordings from your own antenna help most: send them on [Discord](https://discord.gg/ptxkzCuzR) or upload them to the [signal sample library](https://files.on-air.dev). Where a mode has a specific caveat it is said below. **Receive only** means nothing is transmitted, decrypted or joined.
+<!-- modecount -->181<!-- /modecount --> modes, grouped as in the app (the list in the app also has a Plugins entry for managing add-ons). Every receiver is built from the published specifications and tested on generated signals (carrier offsets, noise, echoes, clock errors) and, where recordings exist, on real captures. Reports and recordings from your own antenna help most: send them on [Discord](https://discord.gg/ptxkzCuzR) or upload them to the [signal sample library](https://files.on-air.dev). Where a mode has a specific caveat it is said below. **Receive only** means nothing is transmitted, decrypted or joined.
 
 <details>
 <summary><b>All modes, by family</b></summary>
@@ -326,7 +326,8 @@ No radio? Open an IQ recording through the *IQ recording file* source (cs8, cu8,
 - **Wireless M-Bus** (EN 13757-4 utility meters: S1, T1, C1 and R2 on 868 MHz, N1 on 169 MHz; manufacturer, ID, device type and the readings of unencrypted frames, encrypted payloads stay encrypted; [details](docs/wmbus.md)).
 - **Sigfox** (uplinks at 868.130 / 902.200 MHz and the other zones, 100 and 600 bit/s: device ID, message counter, payload hex, the three repetitions merged, CRC checked; the authentication code is never checked and nothing is decrypted; [details](docs/sigfox.md)).
 - **LoRaWAN** (EU868 / US915, all spreading factors; clear headers only, payloads stay encrypted), **Meshtastic** and **MeshCore** (nodes, map, chat, telemetry, exports), **LoRa (raw)** (plain point-to-point LoRa; hex and text frames, no decryption).
-- **Bluetooth LE** (advertising, never connects), **Zigbee / 802.15.4** (needs a fast radio), **Wi-Fi networks** (2.4 GHz beacons, passive), **Wi-Fi HaLow** (802.11ah sub-GHz beacons), **Z-Wave** (G.9959 R1 / R2 / R3, encrypted payloads stay encrypted), **Wi-SUN FAN** (smart meter and street light mesh, all regional band plans), **ANT+ sensors** and **DECT cordless phones** (base stations from beacons; calls are encrypted, no voice; Europe 1880-1900 MHz, US/Canada DECT 6.0 1920-1930 MHz, Brazil, Latin America and the US 900 MHz ISM band, see docs/DECT.md).
+- **Bluetooth LE** (advertising, never connects), **Zigbee / 802.15.4** (2.4 GHz needs a fast radio; also the sub-GHz BPSK bands, 868.3 MHz and 906-924 MHz, with channel presets), **Thread** (the same 802.15.4 receiver: beacon network name, MAC security header, 6LoWPAN, MLE and CoAP where sent in the clear; encrypted traffic is shown as encrypted, no keys), **Wi-Fi networks** (2.4 GHz beacons, passive), **Wi-Fi HaLow** (802.11ah sub-GHz beacons), **Z-Wave** (G.9959 R1 / R2 / R3, encrypted payloads stay encrypted), **Wi-SUN FAN** (smart meter and street light mesh, all regional band plans), **ANT+ sensors** and **DECT cordless phones** (base stations from beacons; calls are encrypted, no voice; Europe 1880-1900 MHz, US/Canada DECT 6.0 1920-1930 MHz, Brazil, Latin America and the US 900 MHz ISM band, see docs/DECT.md).
+- **Sub-GHz sensors** (433.92 MHz first, also 315, 868 and 915 MHz: weather stations, thermometers, tyre pressure, remotes and meters, decoded with the vendored [rtl_433](https://github.com/merbanan/rtl_433) decoders, GPL-2.0-or-later; live list with history graphs, an unknown signal analyser, custom decoders, CSV / JSON / MQTT-style export; it decodes the listed protocols only, receive only; [details](docs/SENSORS-3.7.md)).
 - **Flipper Zero Sub-GHz chat** (receive and send: chat with Flippers running the Enhanced Sub-GHz Chat app on 433.92 MHz or any frequency they use, plain or AES-256-GCM encrypted with their password or hex key; a HackRF pauses its receiver while a line goes out; [details](docs/esubghz.md)).
 - **NFC / RFID 13.56 MHz** (*in development*): ISO/IEC 14443 Type A and Type B and ISO/IEC 15693, receive only. Tag UIDs, ATQA / SAK / ATS, CRC checks and NDEF text / URI from Type 2 tags, with a frame log and a tag table. Needs an HF-capable receiver at a few Msps so the 847.5 kHz load-modulation subcarrier fits. An active reader can transmit through the TX gate (13.553-13.567 MHz ISM band only). Nothing is cloned and no encrypted content is decoded; pet microchips are 134.2 kHz, a different band. See docs/NFC.md.
 
@@ -337,6 +338,7 @@ No radio? Open an IQ recording through the *IQ recording file* source (cs8, cu8,
 - **SSDV pictures** (balloon and satellite pictures: 256-byte SSDV packets from FSK at 1200 - 19200 baud or RTTY-framed bytes, Reed-Solomon corrected, the JPEG built up as packets arrive and saved; code by fsphil/ssdv, GPL-3.0-or-later; [details](docs/ssdv.md)).
 - **Time signals** (DCF77, MSF, WWVB, JJY, WWV / WWVH, BPM, BPC and more; the computer clock can be synced), **e-Czas** (Poland's official time on 225 kHz long wave, from a long-wave capable radio or an upconverter; [how to receive it](docs/eczas.md)) and **Ionospheric sounders** (ionograms from chirp sounders).
 - **Radio astronomy** (21 cm hydrogen line and OH lines).
+- **Sferics** (lightning: a broadband impulse counter that follows the noise floor; strikes, flashes and a per-minute histogram, mains hum trains at 100 / 120 Hz rejected; a very-low-frequency or HF capable radio; [details](docs/SFERICS-3.7.md)).
 - **GOES / Meteosat DCS** (river gauges, weather stations, tide gauges and buoys reporting on the 401.7 - 402.1 MHz uplink: every carrier in the capture followed, 100 / 300 / 1200 bps with NRZ or Manchester coding, the BCH-checked platform address, the channel and the ASCII or pseudo-binary sensor data, CSV logging; [details](docs/goes-dcs.md)).
 - **Meteor scatter** (pings of meteor trails reflecting a distant beacon such as GRAVES on 143.050 MHz: start, duration, peak level, Doppler, rates per hour and day with the showers marked, CSV logging; [details](docs/mscatter.md)).
 - **BLE tracker detector** (Apple Find My accessories such as AirTag, Tile, Chipolo, Samsung SmartTag and Google Find My Device tags recognised from their advertisements; how long and how close each stays, and an alert through the watchlists for one that follows you; receive only, identifiers kept for a short window and never saved; [details](docs/bletrk.md)).
