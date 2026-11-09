@@ -1844,3 +1844,22 @@ case 245: {
     { Table tb({"Wall Time", "Sec", "Channel", "Type", "Src", "Dst", "Pan", "Info"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.sec), cell(e.channel), cell(e.type), cell(e.src), cell(e.dst), cell(e.pan), cell(e.info)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
+case 246: {
+    const auto& t = rx.bgan; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Rate", t.rate);
+    cardIf(o, "Center Hz", t.centerHz);
+    cardIf(o, "Carriers", t.carriers);
+    cardIf(o, "Bearers", t.bearers);
+    cardIf(o, "Identified Gmr", t.identifiedGmr);
+    cardIf(o, "Floor Db", t.floorDb);
+    cardIf(o, "Network", t.network);
+    cardIf(o, "Satellites", t.satellites);
+    { Table tb({"Id", "Freq Hz", "Offset Hz", "Width Hz", "Bearer", "Subtype", "Plmn", "Satellite"}); int n = 0; for (auto it = t.rows.rbegin(); it != t.rows.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.id), cell(e.freqHz), cell(e.offsetHz), cell(e.widthHz), cell(e.bearer), cell(e.subtype), cell(e.plmn), cell(e.satellite)}); } if (n) addTable(o, "Rows", tb); }
+    { Table tb({"Spot", "Beam Type", "Mhz", "Bearer"}); int n = 0; for (auto it = t.beams.rbegin(); it != t.beams.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.spot), cell(e.beamType), cell(e.mhz), cell(e.bearer)}); } if (n) addTable(o, "Beams", tb); }
+    { Table tb({"Item"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e)}); } if (n) addTable(o, "Log", tb); }
+    break;
+}

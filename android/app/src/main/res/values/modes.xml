@@ -204,6 +204,16 @@
         <item>KAPP</item>
         <item>KAFT</item>
         <item>KAWS</item>
+        <item>NOAA APT</item>
+        <item>NOAA HRPT</item>
+        <item>NOAA GAC</item>
+        <item>NOAA DSB</item>
+        <item>Meteor HRPT</item>
+        <item>Elektro-L RDAS</item>
+        <item>Arktika-M RDAS</item>
+        <item>Arktika-M GGAK</item>
+        <item>AWS L-band</item>
+        <item>Inmarsat BGAN</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -231,7 +241,7 @@
         <item>NDB (non-directional beacon) on long wave, 190-535 kHz: the Morse ident of an aeronautical beacon (a keyed 400 Hz or 1020 Hz tone, or a keyed carrier, about 7 WPM). Receive only. Not the HF beacon list</item>
         <item>Drone Remote ID (ASTM F3411 / ASD-STAN EN 4709-002 Open Drone ID) on 2.4 GHz: Bluetooth LE advertising and Wi-Fi beacons at once; serial number or session ID, UA type, position, height, speed and track, operator position and ID, on a table and a map (receive only: Remote ID is a public broadcast meant for anyone to read; nothing is transmitted)</item>
         <item>AIS ship transponders on 161.975 and 162.025 MHz</item>
-        <item>VDES (VHF Data Exchange System, ITU-R M.2092): ASM messages on 161.975 / 162.025 MHz decoded (GMSK 9.6 kbit/s, AIS framing, CRC checked); AIS-like frames show their position, on the Map tab and as !AIVDM sentences over UDP for a chart program (the AIS data feed); VDE-TER bursts on the 157.2 and 161.8 MHz channels detected with bandwidth, level and modulation class (frames not decoded)</item>
+        <item>VDES (VHF Data Exchange System, ITU-R M.2092): ASM messages on 161.950 / 162.000 MHz decoded (GMSK 9.6 kbit/s, AIS framing, CRC checked); AIS-like frames show their position, on the Map tab and as !AIVDM sentences over UDP for a chart program (the AIS data feed); VDE-TER bursts on the 157.2 and 161.8 MHz channels detected with bandwidth, level and modulation class (frames not decoded)</item>
         <item>NAVTEX navigational and weather warnings to ships, 518 kHz (SITOR-B)</item>
         <item>DSC digital selective calling: distress alerts and calls, MF/HF and VHF channel 70</item>
         <item>HF weather fax (radiofax): weather charts for ships on upper sideband</item>
@@ -389,6 +399,16 @@
         <item>KAPP: the packet mode of the KAAL family, 100 kHz wide (80 ksym/s, BPSK to 1024-QAM with LDPC, bursts with selective repeat). Receive lists the messages that arrive whole with the profile, SNR, counts and a constellation; it only listens and sends no acknowledgement. Transmit sends a text or a file one-way, repeated, to a radio or an IQ file</item>
         <item>KAFT: the file transfer mode of the KAAL family, 200 kHz, 500 kHz or 1 MHz wide (ten profiles from BPSK 1/4 to 1024-QAM 9/10, LDPC blocks with CRC-32, a hash check of the whole file). Receive follows the transfer and saves each verified file to a folder you choose; it only listens and sends no reply. Transmit sends a file one-way, repeated, to a radio or an IQ file</item>
         <item>KAWS: the HF weak-signal chat and beacon mode of the KAAL family, 2.4 kHz wide (eight profiles from chirp spread spectrum for the weakest signals to OFDM, LDPC blocks with CRC-16, a woven-lattice preamble, 15 s to 120 s UTC slots). Receive lists the chat messages and beacons that arrive, with the profile, SNR estimate and the preamble indicator, from upper-sideband audio; it only listens and sends no acknowledgement. Transmit sends a chat message or a beacon one-way, repeated, to a radio or an IQ file. The slots come from the computer clock, which must be UTC-accurate. KAWS is simulation-only: it has never been on the air, and the voice profiles need a speech codec that you install</item>
+        <item>NOAA APT analogue pictures on 137 MHz: FM, the 2400 Hz subcarrier, sync A, two channels side by side growing line by line and saved as PNG. NOAA-15, -18 and -19 stopped transmitting in 2025, so this mode is for recordings; pick a recording with File &gt; Open</item>
+        <item>NOAA HRPT on 1698 / 1702.5 / 1707 MHz: PM with a residual carrier, Manchester 665.4 kbit/s, 11090-word minor frames, the AVHRR picture and HIRS from the TIP. NOAA-15, -18 and -19 stopped transmitting in 2025, so this mode is for recordings</item>
+        <item>NOAA GAC on-board recorder dump: BPSK 2.6616 Msym/s, scrambled 3327-word frames, the reduced AVHRR picture (409 pixels) and HIRS. NOAA-15, -18 and -19 stopped transmitting in 2025, so this mode is for recordings</item>
+        <item>NOAA DSB on 137.35 / 137.77 MHz: PM, Manchester 8320 bit/s, 104-byte TIP minor frames, spacecraft ID, HIRS picture. NOAA-15, -18 and -19 stopped transmitting in 2025, so this mode is for recordings</item>
+        <item>Meteor-M HRPT on 1700 MHz: PM with a residual carrier, Manchester 665.4 kbit/s, 1024-byte CADUs, the MSU-MR picture line by line (6 channels, a colour composite). Needs a dish at 1.7 GHz and 3 Msps or more; Follow the next pass tunes with Doppler and starts by itself</item>
+        <item>Elektro-L RDAS downlink, X-band 7500 MHz: BPSK 30.72 Msym/s, NRZ-M, CADUs, the MSU-GS infrared disc (7 channels, 3294 x 3400) and a reduced visible picture. Needs an X-band dish and 40 Msps or more; recordings work</item>
+        <item>Arktika-M RDAS, X-band 7865 MHz: the same MSU-GS downlink as Elektro-L RDAS, from a highly elliptical orbit. Needs an X-band dish, 40 Msps or more and Doppler tracking; recordings work</item>
+        <item>Arktika-M N1 / N2 space-weather telemetry (GGAK, experimental: frame lock not reached yet) on 1703 MHz, PM 5 ksym/s: the Elektro GGAK frames and magnetometer. Highly elliptical orbit: Follow the next pass tracks the Doppler</item>
+        <item>Arctic Weather Satellite on 1707 MHz: QPSK 1.785 Msym/s, CCSDS convolutional code, Reed-Solomon interleave 5, the MWR microwave scans (19 channels, 145 points) line by line. Needs a dish at 1.7 GHz and 4 Msps or more; Follow the next pass tunes with Doppler and starts by itself</item>
+        <item>Inmarsat BGAN (ETSI TS 102 744 Family SL), the satellite data service: every forward carrier from 1525 to 1559 MHz, bearer type and code rate, satellite, spot beam, network identity, and the system information it broadcasts. One-click scan across the band. Signalling and carrier structure only: no voice, no user data, no subscriber identity. Needs a user test: only synthetic signals so far, never validated on a real BGAN recording. A patch antenna is enough for the global beam and for bearers aimed at your region; narrow spot beams elsewhere are out of reach</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -574,6 +594,16 @@
         <item>KAPP, 100 kHz packets</item>
         <item>KAFT, 200 kHz - 1 MHz files</item>
         <item>KAWS, 2.4 kHz HF chat</item>
+        <item>NOAA APT pictures (recordings)</item>
+        <item>NOAA HRPT pictures (recordings)</item>
+        <item>NOAA GAC dump (recordings)</item>
+        <item>NOAA DSB / TIP (recordings)</item>
+        <item>Meteor HRPT pictures, 1.7 GHz</item>
+        <item>Elektro-L RDAS, X-band</item>
+        <item>Arktika-M RDAS, X-band</item>
+        <item>Arktika-M GGAK telemetry</item>
+        <item>AWS MWR, 1.7 GHz</item>
+        <item>Satellite, L-band</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -759,5 +789,15 @@
         <item>kapp kris custom packet data message arq</item>
         <item>kaft kris custom file transfer save</item>
         <item>kaws kris custom hf weak signal chat beacon ssb usb slot utc chirp lattice</item>
+        <item>noaa apt 137 analogue picture retired noaa15 noaa18 noaa19 fm 2400 sync</item>
+        <item>noaa hrpt avhrr 1698 1702.5 1707 manchester retired tip hirs</item>
+        <item>noaa gac avhrr 2661600 retired dump recorder</item>
+        <item>noaa dsb tip hirs 137.35 137.77 retired</item>
+        <item>meteor m hrpt msumr msu-mr 1700 665.4 manchester lrpt polar russian</item>
+        <item>elektro rdas msu-gs msugs 7500 x-band 30.72 geostationary dish</item>
+        <item>arktika rdas msu-gs 7865 x-band heo molniya</item>
+        <item>arktika ggak sem 1703 magnetometer heo space weather</item>
+        <item>aws arctic weather satellite 1707 mwr microwave radiometer eumetsat sterna</item>
+        <item>bgan inmarsat i-4 alphasat family sl ts 102 744 l-band satcom 1545 1550 16qam spot beam isatphone</item>
     </string-array>
 </resources>
