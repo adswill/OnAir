@@ -184,6 +184,27 @@ void beaconsView(App& a) {
     if (log.empty()) ImGui::TextDisabled("no beacons yet");
 }
 
+// Stations probing and talking, deauthentication floods, handshakes counted only. Addresses are hashed per run, so a client's tag says nothing about the device.
+void clientsView(App& a) {
+    if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "start the receiver to see the clients"); return; }
+    const dect2::WifiTelemetry& t = a.rx.wifi;
+    ImGui::TextDisabled("%s: %llu, %s: %llu", tr("deauth and disassociation frames"), (unsigned long long)t.deauthFrames, tr("WPA handshake frames (counted only, not captured)"), (unsigned long long)t.handshakeFrames);
+    for (const auto& al : t.floodAlarms) ImGui::TextColored(ImVec4(1.0f, 0.45f, 0.35f, 1.0f), "%s %s (%d %s)", tr("Deauthentication flood at"), al.bssid.c_str(), al.frames, tr("frames in 10 s"));
+    if (!ImGui::BeginTable("##wfc", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    ImGui::TableSetupColumn(tr("Client")); ImGui::TableSetupColumn(tr("Network")); ImGui::TableSetupColumn(tr("Frames")); ImGui::TableSetupColumn(tr("Probing for"), ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableHeadersRow();
+    for (const auto& c : t.clients) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(c.tag.c_str());
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(c.withAp.empty() ? "-" : c.withAp.c_str());
+        ImGui::TableNextColumn(); ImGui::Text("%llu", (unsigned long long)(c.probeFrames + c.dataFrames));
+        ImGui::TableNextColumn();
+        std::string pr; for (const auto& s : c.probes) { if (!pr.empty()) pr += ", "; pr += s; }
+        ImGui::TextUnformatted(pr.empty() ? "-" : pr.c_str());
+    }
+    ImGui::EndTable();
+}
+
 // ---------------------------------------------------------------- hooks
 
 void tick(App& a) { wfui::hopTick(a); }
@@ -191,8 +212,8 @@ void tick(App& a) { wfui::hopTick(a); }
 void tuner(App& a, bool& retune) { wfui::tunerControls(a, retune); }
 
 void tab(App& a) {
-    subNav("wfv", S.view, {"Networks", "Beacons", tr("Channels")});
-    if (S.view == 0) networksView(a); else if (S.view == 1) beaconsView(a); else wfui::channelsView(a);
+    subNav("wfv", S.view, {"Networks", "Beacons", tr("Channels"), tr("Clients")});
+    if (S.view == 0) networksView(a); else if (S.view == 1) beaconsView(a); else if (S.view == 3) clientsView(a); else wfui::channelsView(a);
 }
 
 void list(App& a) {

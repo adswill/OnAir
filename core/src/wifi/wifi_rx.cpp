@@ -1,5 +1,6 @@
 // Wi-Fi network monitor (see wifi_rx.h).
 #include "dect2/wifi/wifi_rx.h"
+#include <random>
 #include "dect2/results/results_io.h"
 #include "dect2/wifi/wifi_tel.h"
 #include "dect2/wifi/wifi_proto.h"
@@ -362,6 +363,8 @@ struct WifiReceiver::Impl {
 
     // A frame whose FCS passed: count it, and for beacons, probe responses and FILS discovery frames update the access point's row.
     // tuned / bnd: the channel and band the frame was heard on (0 / -1: unknown, a file); the DSSS chain passes -1 and gets the radio's.
+    WifiClientTracker clients{(uint32_t)std::random_device{}()};
+
     void accept(const uint8_t* p, size_t n, int len, float rssi, double sec, int tuned = -1, int bnd = -2) {
         tel.blocksOk++;
         lastGood = sigSec();
@@ -371,6 +374,8 @@ struct WifiReceiver::Impl {
         wifi::Frame f;
         if (!wifi::parseFrame(p, n, f, bnd)) return;
         if (f.type >= 0 && f.type < 3) tel.perType[f.type]++;
+        clients.observe(p, n, wifi::macText(f.bssid), (int64_t)time(nullptr), sec);
+        tel.clients = clients.clients(); tel.floodAlarms = clients.alarms(); tel.deauthFrames = clients.deauths(); tel.handshakeFrames = clients.handshakes();
         if (!f.beacon && !f.probeResp && !f.fils) return;   // data and the other frames: counted only
         // A 40 / 80 / 160 MHz BSS sends its non-HT frame on every 20 MHz part (clause 17.3.8.2): the copies heard away from the primary channel are not new beacons
         if (bnd >= wifi::Band5 && tuned && f.channel && f.channel != tuned && wifi::validChannel(bnd, f.channel) && !f.fils) { tel.dupFrames++; return; }
