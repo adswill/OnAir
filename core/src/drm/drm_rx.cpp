@@ -1391,6 +1391,7 @@ struct DrmReceiver::Impl {
             t.hierarchicalUnsupported = be.hierarchical();
         }
         const SdcInfo& sd = be.sdc();
+        t.sdcExtra = sd.extra;
         if (be.sdcValid()) {
             t.protA = sd.mux.protA; t.protB = sd.mux.protB;
             t.numStreams = sd.mux.nStreams;

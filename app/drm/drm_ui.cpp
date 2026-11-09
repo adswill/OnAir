@@ -564,6 +564,12 @@ void receiver(App& a) {
     sectionHeader(Ic::Chip, "Receiver");
     kv("state", t.holding ? "holding through a fade (frequency, timing and clock frozen)" : stateText(t.state));
     kv("status", t.status.empty() ? "-" : t.status);
+    if (!t.sdcExtra.altFreq.empty()) { char b[64]; snprintf(b, sizeof b, "%zu lists, first %d kHz", t.sdcExtra.altFreq.size(), t.sdcExtra.altFreq[0].freqKhz.empty() ? 0 : t.sdcExtra.altFreq[0].freqKhz[0]); kv("alternative frequencies", b); }
+    if (!t.sdcExtra.schedules.empty()) { char b[64]; snprintf(b, sizeof b, "%zu slots (start %02d:%02d UTC)", t.sdcExtra.schedules.size(), t.sdcExtra.schedules[0].startMin / 60, t.sdcExtra.schedules[0].startMin % 60); kv("schedule", b); }
+    if (!t.sdcExtra.regions.empty()) { char b[64]; snprintf(b, sizeof b, "%zu areas (first %d, %d deg)", t.sdcExtra.regions.size(), t.sdcExtra.regions[0].latDeg, t.sdcExtra.regions[0].lonDeg); kv("regions", b); }
+    if (!t.sdcExtra.announcements.empty()) kv("announcements", std::to_string(t.sdcExtra.announcements.size()) + " signalled");
+    if (!t.sdcExtra.packetFec.empty()) kv("packet FEC", "signalled (R " + std::to_string(t.sdcExtra.packetFec[0].r) + ", C " + std::to_string(t.sdcExtra.packetFec[0].c) + ")");
+    if (!t.sdcExtra.ca.empty()) kv("conditional access", std::to_string(t.sdcExtra.ca.size()) + " entries");
     kf("level", "%.1f dBFS in the %s channel", t.levelDbfs, t.mode == 4 ? "192 kHz" : "48 kHz");
     kf("quality", "%.0f %%", t.quality * 100.0);
     sectionHeader(Ic::Wave, "Signal");

@@ -70,6 +70,21 @@ struct SdcApp {
     int dabUserApp() const { return domain == 0 && appData.size() >= 2 ? ((appData[0] & 7) << 8) | appData[1] : -1; }
 };
 
+// SDC data entities beyond the ones the receiver acts on (ES 201 980 clause 6.4.3): schedules, regions, announcements, alternative frequencies, CA and packet FEC parameters.
+struct SdcSchedule { int id = 0, dayCode = 0, startMin = 0, durationMin = 0; };
+struct SdcRegion { int id = 0, latDeg = 0, lonDeg = 0, latExt = 0, lonExt = 0; std::vector<int> ciraf; };
+struct SdcAnnounce { int shortFlags = 0; bool otherService = false; int shortOrAnn = 0, support = 0, switching = 0; };
+struct SdcAltFreq { int shortFlags = 0; bool synchronous = false; int region = 0, schedule = 0; std::vector<int> freqKhz; };
+struct SdcCa { int shortId = 0; bool audio = false, data = false; std::vector<uint8_t> info; };
+struct SdcPacketFec { int streamId = 0, r = 0, c = 0, packetLen = 0; };
+struct SdcExtra {
+    std::vector<SdcSchedule> schedules;
+    std::vector<SdcRegion> regions;
+    std::vector<SdcAnnounce> announcements;
+    std::vector<SdcAltFreq> altFreq;
+    std::vector<SdcCa> ca;
+    std::vector<SdcPacketFec> packetFec;
+};
 struct SdcInfo {
     int afsIndex = 0;
     SdcMux mux;                 // the current configuration (version flag 0)
@@ -80,11 +95,13 @@ struct SdcInfo {
     SdcApp app[4];
     SdcTime time;
     std::vector<int> otherTypes;   // data entity types that are present but not interpreted
+    SdcExtra extra;                // types 2, 3, 4, 6, 7, 14
     int entities = 0;
 };
 
 // data: the SDC data field (bytes). Returns the number of entities read.
 int sdcParse(const uint8_t* data, int bytes, SdcInfo& out);
+void sdcParseExtra(const uint8_t* data, int bytes, SdcExtra& out);   // also called by sdcParse
 // Writing: append one entity to a data field
 void sdcPutEntity(std::vector<uint8_t>& field, int type, int version, const std::vector<uint8_t>& body4plus);   // body: first nibble in the high bits of body[0], then whole bytes
 std::vector<uint8_t> sdcEntityMux(const SdcMux& m);
