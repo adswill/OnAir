@@ -78,6 +78,7 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | HimawariCast | 270 | 272 | 271 | 230 | feat37-sd2 | 3.8; Fazzt files on DVB-S2, C-band; numbers may need to move at merge |
 | GeoNetCast | 271 | 273 | 272 | 231 | feat37-sd2 | 3.8; Fazzt files on DVB-S2, C-band; numbers may need to move at merge |
 | ADS-L | 300 | 302 | 301 | 260 | feat38-adsl | 3.8; EASA ADS-L 4 SRD-860 on 868.2 / 868.4 / 869.525 MHz, feeds the FLARM receiver from the same capture (docs/ADSL-3.8.md); no live signal tested; numbers may need to move at merge |
+| RC and mesh links (Reticulum, ExpressLRS, MAVLink SiK, FrSky, FlySky) | 360 | 362 | 361 | 360 | feat38-mesh-rc | 3.8; protocol entries through subModes (362 masks 1-16); simulated signals only; family block 360-379; numbers may need to move at merge |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |
@@ -85,6 +86,6 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 Protocol entries (a row with a subId, such as FT8 in HF digital or POCSAG in pagers) share their family on purpose; the test checks
 that each (family, subId) pair is unique instead.
 
-`kNumFamilies` = 301, `kPollSeqSlots` = 261 (families 213 to 234 and poll slots 189 to 194 are kept for the other 3.6 lanes).
+`kNumFamilies` = 361, `kPollSeqSlots` = 361 (families 213 to 234 and poll slots 189 to 194 are kept for the other 3.6 lanes).
 
 A new mode takes the next free family above the highest one in this table and the next free poll slot, and adds its row here.

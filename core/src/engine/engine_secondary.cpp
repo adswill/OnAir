@@ -296,6 +296,7 @@ void applySubMode(Engine& e, const SubMode* s) {
         else if (s->sel >= 0) for (int m = 0; m < kFtxModes; m++) e.hfdig().ftx().setEnabled(m, m == s->sel || (s->sel == 7 && m == 9));   // FST4 also listens for FST4W
         break;
     case 22: e.mesh().setProtocols(s->decoders); break;
+    case 362: e.rclink().setProtocols(s->decoders); break;
     case 32: e.vor().setFunction(s->sel); break;
     case 25: e.pager().setProtocols(s->decoders); break;
     case 17: e.marine().setService(s->sel); break;

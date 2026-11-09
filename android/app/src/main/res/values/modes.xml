@@ -218,6 +218,11 @@
         <item>MSG Raw Data</item>
         <item>HimawariCast</item>
         <item>GeoNetCast</item>
+        <item>Reticulum (RNode)</item>
+        <item>ExpressLRS</item>
+        <item>MAVLink (SiK radio)</item>
+        <item>FrSky RC (D8 / D16)</item>
+        <item>FlySky RC (AFHDS / 2A)</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -417,6 +422,11 @@
         <item>Meteosat Second Generation raw downlink on 1686.83 MHz: QPSK 3.75 Msym/s, CCSDS convolutional code, Reed-Solomon interleave 5, the SEVIRI disc line by line (11 channels and HRV, reduced to fit memory, saved when the disc ends every 15 minutes). Needs a fixed dish of about 1.2 m or more at 1.7 GHz with an LNA and 6 Msps. Receive only</item>
         <item>HimawariCast file broadcast from JCSAT-2B, C-band 4148 MHz (1002 MHz after a 5150 MHz LNB): DVB-S2 QPSK 2/3 at 2.586 Msym/s, IP over MPE on PID 1001, Fazzt files. The Himawari full discs put together from their ten HRIT segments per channel and saved as PNG, and every other file saved as it comes. Needs a C-band dish of about 1.8 m or more, an LNB and 4.5 Msps. Receive only</item>
         <item>GeoNetCast Americas file broadcast, C-band 4080 MHz (1070 MHz after a 5150 MHz LNB): DVB-S2 8PSK 5/6 at 30 Msym/s, IP over MPE on PID 4201, Fazzt files, saved as they come (satellite pictures and weather products in their own formats). Needs a C-band dish and 52 Msps or more, so most radios can only play a recording. Receive only</item>
+        <item>Reticulum mesh traffic on RNode LoRa: announces with their signature checked, packet types and destinations; data stays encrypted, structure only</item>
+        <item>ExpressLRS RC links on the 900 MHz LoRa rates: link id, rate and hop index from SYNC frames; RC channels only with your own binding phrase (Advanced). 2.4 GHz FLRC and long-interleaver LoRa are not decodable</item>
+        <item>MAVLink telemetry on SiK / 3DR radios at 433 and 915 MHz: GFSK frequency hopping, every air speed, MAVLink v1 / v2 messages with vehicle position on the map</item>
+        <item>FrSky D8 and D16 2.4 GHz RC links (CC2500 GFSK, hopping): transmitter id and channels; layouts from the DIY-Multiprotocol-TX-Module project, simulated signals only so far</item>
+        <item>FlySky AFHDS and AFHDS 2A 2.4 GHz RC links (A7105 GFSK, hopping): transmitter id and channels; layouts from the DIY-Multiprotocol-TX-Module project, simulated signals only so far</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -616,6 +626,11 @@
         <item>Meteosat SEVIRI raw, 1.7 GHz</item>
         <item>Himawari full discs, C-band</item>
         <item>GeoNetCast files, C-band</item>
+        <item>LoRa mesh, structure only</item>
+        <item>RC link, structure only</item>
+        <item>Drone telemetry</item>
+        <item>RC link</item>
+        <item>RC link</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -815,5 +830,10 @@
         <item>msg meteosat seviri raw eumetsat 1686 hrv geostationary second generation</item>
         <item>himawari himawaricast jma jcsat hrit c-band 4148 dvb-s2 fazzt ahi geostationary</item>
         <item>geonetcast gnc americas noaa c-band 4080 dvb-s2 fazzt files weather products</item>
+        <item>reticulum rnode rns lxmf nomad</item>
+        <item>elrs expresslrs rc drone fpv</item>
+        <item>mavlink sik 3dr ardupilot px4 telemetry drone</item>
+        <item>frsky d8 d16 accst taranis rc</item>
+        <item>flysky afhds i6 rc</item>
     </string-array>
 </resources>

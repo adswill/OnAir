@@ -107,6 +107,7 @@
 #include "dect2/ssdv/ssdv_tel.h"
 #include "dect2/ebicab/ebicab_tel.h"
 #include "dect2/inmsat/inmsat_tel.h"
+#include "dect2/rclink/rc_tel.h"
 #include "dect2/nrf24/nrf24_tel.h"
 #include "dect2/sensors/sensors_tel.h"
 #include "dect2/bgan/bgan_tel.h"
@@ -253,6 +254,7 @@ struct RxTelemetry {
     SensorsTelemetry sensors; // valid when standard == 242 (Sub-GHz sensors, family 241, engine standard 243)
     BganTelemetry bgan;       // valid when standard == 246 (Inmarsat BGAN, family 245, engine standard 247)
     SfericsTelemetry sferics; // valid when standard == 244 (Sferics, family 243, engine standard 245)
+    RcTelemetry rclink;       // valid when standard == 361 (RC and mesh links, family 360, engine standard 362)
     Nrf24Telemetry nrf24;     // valid when standard == 211 (nRF24L01, family 210, engine standard 212)
     InmsatTelemetry inmsat;   // valid when standard == 209 (Inmarsat all carriers, family 208, engine standard 210)
     EbicabTelemetry ebicab;   // valid when standard == 208 (EBICab / Eurobalise, family 207, engine standard 209)

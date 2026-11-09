@@ -102,6 +102,7 @@ astro	--mode astro	Overview|Astronomy|Receiver|History
 ble	--mode ble	Overview|Devices|Receiver|History
 zigbee	--mode zigbee	Overview|Zigbee|Receiver|History
 thread	--mode thread	Overview|Thread|Receiver|History
+rclink	--mode reticulum	Overview|Links|Receiver|History
 wisun	--mode wisun	Overview|Wi-SUN|Receiver|History
 zwave	--mode zwave	Overview|Z-Wave|Receiver|History
 eczas	--mode eczas	Overview|e-Czas|Receiver|History
