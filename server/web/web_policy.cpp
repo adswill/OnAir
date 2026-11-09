@@ -1,4 +1,7 @@
 #include "web_policy.h"
+#include "dect2/mesh/mesh_crypto.h"
+#include <cstring>
+#include <cstdlib>
 #include "server_config.h"
 #include <cctype>
 #include <random>
@@ -209,12 +212,54 @@ AuthResult authenticate(const AuthConfig& a, const std::string& password, const 
     switch (a.mode) {
     case AuthMode::Open: r.ok = true; r.cls = UserClass::Public; return r;
     case AuthMode::Password:
-        if (a.password.size() >= 8 && ctEq(password, a.password)) { r.ok = true; r.cls = UserClass::Member; return r; }
+        if (!a.passwordHash.empty() ? passwordMatchesHash(password, a.passwordHash) : (a.password.size() >= 8 && ctEq(password, a.password))) { r.ok = true; r.cls = UserClass::Member; return r; }
         r.why = password.empty() ? "password required" : "wrong password";
         return r;
     case AuthMode::Invite: r.why = "invite required"; return r;
     }
     return r;
+}
+
+namespace {
+void pbkdf2Sha256(const std::string& pw, const std::vector<uint8_t>& salt, int iterations, uint8_t out[32]) {
+    std::vector<uint8_t> msg(salt);
+    msg.insert(msg.end(), {0, 0, 0, 1});
+    uint8_t u[32];
+    dect2::meshcrypto::hmacSha256(reinterpret_cast<const uint8_t*>(pw.data()), pw.size(), msg.data(), msg.size(), u);
+    memcpy(out, u, 32);
+    for (int i = 1; i < iterations; i++) {
+        uint8_t next[32];
+        dect2::meshcrypto::hmacSha256(reinterpret_cast<const uint8_t*>(pw.data()), pw.size(), u, 32, next);
+        memcpy(u, next, 32);
+        for (int k = 0; k < 32; k++) out[k] ^= u[k];
+    }
+}
+std::string toHexStr(const uint8_t* p, size_t n) { static const char* hx = "0123456789abcdef"; std::string s; for (size_t i = 0; i < n; i++) { s += hx[p[i] >> 4]; s += hx[p[i] & 15]; } return s; }
+bool fromHexStr(const std::string& h, std::vector<uint8_t>& out) {
+    if (h.size() % 2 || h.empty()) return false;
+    out.clear();
+    auto nib = [](char c) { return c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'f' ? c - 'a' + 10 : -1; };
+    for (size_t i = 0; i < h.size(); i += 2) { const int a = nib(h[i]), b = nib(h[i + 1]); if (a < 0 || b < 0) return false; out.push_back((uint8_t)(a * 16 + b)); }
+    return true;
+}
+} // namespace
+
+std::string hashPassword(const std::string& password, const std::string& saltHex, int iterations) {
+    const std::string salt = saltHex.empty() ? newToken(16) : saltHex;
+    std::vector<uint8_t> s;
+    if (!fromHexStr(salt, s) || iterations < 1000) return {};
+    uint8_t h[32];
+    pbkdf2Sha256(password, s, iterations, h);
+    return "pbkdf2$" + std::to_string(iterations) + "$" + salt + "$" + toHexStr(h, 32);
+}
+
+bool passwordMatchesHash(const std::string& password, const std::string& hash) {
+    size_t a = hash.find('$'), b = a == std::string::npos ? a : hash.find('$', a + 1), c = b == std::string::npos ? b : hash.find('$', b + 1);
+    if (c == std::string::npos || hash.compare(0, a, "pbkdf2") != 0 || password.size() > 256) return false;
+    const int iters = atoi(hash.substr(a + 1, b - a - 1).c_str());
+    if (iters < 1000 || iters > 10000000) return false;
+    const std::string mine = hashPassword(password, hash.substr(b + 1, c - b - 1), iters);
+    return !mine.empty() && mine.size() == hash.size() && ctEq(mine, hash);
 }
 
 std::string newToken(int bytes) {

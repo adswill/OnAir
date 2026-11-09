@@ -45,11 +45,22 @@ struct ShareSettings {
     int userKbps = 0;                 // 0: the server's default (512)
     bool audioOnly = false;
     bool limitToRange = false;        // listeners may tune only inside the shared range (web_allow_range)
-    std::string password;             // empty: open to everyone who has the link
-    std::string link = "relay";       // relay: a public address through the OnAir relay service (an outbound connection, no helper program, no port forwarding); tunnel: the free Cloudflare quick tunnel; own: an https address you set up (a reverse proxy on this computer); lan: this network only
+    std::string password;             // only while it is being typed (kept in memory, never written to disk); empty: unchanged
+    std::string passwordHash;         // what is saved and given to the server (pbkdf2$...): the plain password is on no disk
+    bool accessPassword = false;      // the access mode "Password" (needs passwordHash)
+    std::string link = "auto";        // auto (default): the OnAir relay if it answers, else a Cloudflare tunnel, so one button works everywhere; relay: a public address through the OnAir relay service (an outbound connection, no helper program, no port forwarding); tunnel: the free Cloudflare quick tunnel; own: an https address you set up (a reverse proxy on this computer); lan: this network only
     std::string relayUrl = "wss://relay.on-air.dev/relay/v1/host";   // link == "relay": the relay service (a different one can be set under Advanced)
     // access and safety
     bool inviteOnly = false;          // listeners need an invite link made in this window (overrides password)
+    std::string control = "everyone"; // who may tune or change mode: everyone, members (password / invite), slot (one person at a time), nobody
+    int controlSlotMin = 5;           // control == "slot": how long one person holds it
+    int audioRate = 0;                // audio quality cap in Hz (0: the listener's choice, up to the bit-rate limit)
+    std::string allowRanges;          // extra frequency limits for listeners: comma separated, e.g. "88-108 MHz, 118-137 MHz"
+    std::string blockRanges;          // ranges listeners may never tune
+    bool allowTx = false;             // listeners may send transmit requests (off by default; see the warning in Advanced)
+    bool bindAll = false;             // link == "own": listen on every interface (direct port forwarding), not only this computer
+    bool autostart = false;           // share when OnAir starts, with the same choices
+    bool autoList = false;            // autostart also lists it again (the owner has confirmed the listing once)
     int maxPerIp = 2;                 // listeners from one address
     int cpuCapPct = 75;               // new listeners are refused above this share of the computer's processor
     int maxKbpsTotal = 0;             // all listeners together, kbit/s (0: the server's default, 8000)
@@ -66,10 +77,12 @@ struct ShareSettings {
     // step 2
     bool listPublic = false;
     std::string name = "OnAir Web", desc, loc, contact, radioLabel, dirUrl = "https://web.on-air.dev";
-    int locDecimals = 2;              // 0: about 100 km, 1: about 10 km, 2: about 1 km
+    int locDecimals = 1;              // 0: about 100 km, 1: about 10 km (default: coarse), 2: about 1 km ...
     bool reach = false;               // the directory may check once an hour that the server answers
 };
 bool settingsValid(const ShareSettings& s, std::string& why);   // lengths, characters, numbers
+// The app's own location as a listing location, already coarse ("54.7,25.3"); empty when the app has none (lat and lon both 0)
+std::string locationText(double lat, double lon, int decimals);
 std::string settingsToText(const ShareSettings& s);
 ShareSettings settingsFromText(const std::string& text);        // unknown / bad lines keep the defaults
 

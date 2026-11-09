@@ -134,7 +134,8 @@ bool dirNormalizeEndpoint(const std::string& in, std::string& out, std::string& 
         std::string rest = in.substr(7);
         std::string host = rest.substr(0, rest.find_first_of("/:"));
         std::transform(host.begin(), host.end(), host.begin(), [](unsigned char c) { return (char)tolower(c); });
-        if (host != "127.0.0.1" && host != "localhost" && host != "[::1]") { err = "the address must start with https:// (plain http is only accepted for this computer, for tests)"; return false; }
+        const bool dotLocalhost = host.size() > 10 && host.compare(host.size() - 10, 10, ".localhost") == 0;   // RFC 6761: always this computer (the local test stack)
+        if (host != "127.0.0.1" && host != "localhost" && host != "[::1]" && !dotLocalhost) { err = "the address must start with https:// (plain http is only accepted for this computer, for tests)"; return false; }
         if (rest.find_first_of("?#@\\ ") != std::string::npos) { err = "the address must not have a user name, query, fragment or spaces"; return false; }
         const size_t slash = rest.find('/');
         std::string path = slash == std::string::npos ? "/" : rest.substr(slash);
@@ -207,7 +208,7 @@ bool dirBuildRecord(const DirectoryConfig& c, const std::string& infoJson, long 
     const Json* n = j.get("name");
     r.name = dirClean(c.name.empty() ? (n && n->kind == Json::Str ? n->str : std::string()) : c.name, 48);
     if (r.name.empty()) { err = "web_name is empty"; return false; }
-    if (!dirNormalizeUrl(c.publicUrl, r.url, err)) { err = "web_public_url: " + err; return false; }
+    if (!dirNormalizeEndpoint(c.publicUrl, r.url, err)) { err = "web_public_url: " + err; return false; }
     if (!dirNormalizeLoc(c.loc, c.locDecimals, r.loc, err)) { err = "web_directory_loc: " + err; return false; }
     if (!c.freq.empty()) {
         if (!dirParseFreqMHz(c.freq, r.freq, err)) return false;

@@ -153,6 +153,7 @@
   function sendTune(extra) {
     S.pendingTune = performance.now();
     const m = Object.assign({ freq_hz: S.freq }, extra || {});
+    if (S.control && !S.control.can_tune) { renderControl(); return; }   // the host's tune permission: the server would refuse it anyway
     const go = () => { S.lastTuneSent = performance.now(); send(L.msg.tune(m)); };
     clearTimeout(S.tuneTimer);
     const wait = Math.max(0, 70 - (performance.now() - S.lastTuneSent));
@@ -582,6 +583,18 @@
       S.info = await r.json(); renderInfo(); return S.info;
     } catch (e) { return null; }
   }
+  // Who may tune: the host chooses everyone, members, a time-limited control slot or nobody (welcome.control, {"type":"control"}); older servers send nothing
+  function renderControl() {
+    const b = $("ctrlBtn"); if (!b) return;
+    const c = S.control;
+    if (!c || c.mode === "everyone") { b.hidden = true; return; }
+    b.hidden = false;
+    if (c.mode === "slot") {
+      b.disabled = !!c.busy;
+      b.textContent = c.holder ? "Give back control (" + Math.max(0, c.left_s) + " s left)" : c.busy ? "Someone else is tuning (" + Math.max(0, c.left_s) + " s)" : "Take control (" + c.slot_min + " min)";
+      b.onclick = () => send({ type: "control", take: !c.holder });
+    } else { b.disabled = true; b.textContent = c.mode === "members" && !c.can_tune ? "Tuning needs the password or an invite" : c.mode === "nobody" ? "Listen only" : "You can tune"; b.onclick = null; }
+  }
   function renderInfo() {
     const i = S.info; if (!i) return;
     $("srvName").textContent = i.name || "OnAir Web"; $("srvWhere").textContent = [i.location, i.antenna].filter(Boolean).join(", ");
@@ -652,6 +665,7 @@
       case "welcome": return onWelcome(m);
       case "state": return onState(m);
       case "ranges": S.ranges = L.readRanges(m.ranges); applyRanges(true); return;
+      case "control": S.control = m; renderControl(); return;
       case "capture": S.cap = { centre_hz: m.centre_hz, rate_hz: m.rate_hz }; setCapture(); return;
       case "event": return onEvent(m);
       case "error": if (m.code !== "busy") banner(m.message || m.code); return;
@@ -671,6 +685,7 @@
     S.cap = m.capture; S.view = null; setCapture();
     $("app").hidden = false; $("login").hidden = true; $("empty").hidden = true;
     setConn(m.class, "ok"); if (S.info) renderInfo();
+    fetchInfo(); clearInterval(S.infoTimer); S.infoTimer = setInterval(() => { if (S.welcome) fetchInfo(); }, 15000);   // the listener count of the header
     if (m.server && m.server.name) { $("srvName").textContent = m.server.name; }
     buildModes(m.demods); buildDecoders(m.decoders);
     const last = store.get("last", null);
@@ -681,7 +696,8 @@
     if (last && last.f && S.view && (S.freq < S.view.start || S.freq > S.view.stop)) S.view = null;
     renderRangeInfo(); buildBands();
     renderMode(); renderFreq(); renderSquelch();
-    send(L.msg.tune({ freq_hz: S.freq, mode: S.mode, low_hz: S.low, high_hz: S.high }));
+    S.control = m.control || null; renderControl();
+    if (!S.control || S.control.can_tune) send(L.msg.tune({ freq_hz: S.freq, mode: S.mode, low_hz: S.low, high_hz: S.high }));
     send(L.msg.rx(Object.assign({ squelch_db: S.sq }, Cfg.rxFields(ST, S.mode))));
     requestSpan();
     if (S.audioOn) { S.audioSeq = -1; sendAudio(); }

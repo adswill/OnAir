@@ -3,6 +3,7 @@
 #include "web/web_policy.h"
 #include "web/web_directory_proto.h"
 #include "web/web_relay.h"
+#include "web/web_ranges.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -156,14 +157,24 @@ bool settingsValid(const ShareSettings& s, std::string& why) {
     if (!cleanText(s.loc, 40)) { why = "The location must be on one line (latitude,longitude or a locator)."; return false; }
     if (!cleanText(s.contact, 80)) { why = "The contact is too long (80 characters at most)."; return false; }
     if (!cleanText(s.radioLabel, 48)) { why = "The radio name is too long (48 characters at most)."; return false; }
-    if (!cleanText(s.password, 64) || (!s.password.empty() && s.password.size() < 8)) { why = "A password needs 8 to 64 characters (or leave it empty for open access)."; return false; }
+    if (!cleanText(s.password, 64) || (!s.password.empty() && s.password.size() < 8)) { why = "A password needs 8 to 64 characters."; return false; }
+    if (s.accessPassword && !s.inviteOnly && s.passwordHash.empty() && s.password.empty()) { why = "Access is set to Password, but no password has been set yet. Type one under Advanced > Access."; return false; }
+    for (const std::string* src : {&s.allowRanges, &s.blockRanges}) {
+        std::string tok;
+        for (char ch : *src + ",") {
+            if (ch != ',') { tok += ch; continue; }
+            tok = trimS(tok);
+            if (!tok.empty()) { onair_web::RangeRule r; std::string e; if (!onair_web::parseRangeSpec(tok, r, e)) { why = "Frequency limit \"" + tok + "\": " + e; return false; } }
+            tok.clear();
+        }
+    }
     if (!(s.centreMHz > 0) || !std::isfinite(s.centreMHz)) { why = "The centre frequency must be a number above 0 MHz."; return false; }
     if (!s.wholeSpan && !(s.spanMHz > 0)) { why = "The span must be above 0 MHz."; return false; }
     if (!s.rateAuto && !(s.rateMsps > 0)) { why = "The sample rate must be above 0 Msps."; return false; }
     if (!cleanText(s.antenna, 60)) { why = "The antenna description is too long (60 characters at most) or has line breaks."; return false; }
     if (s.port != 0 && (s.port < 1024 || s.port > 65535)) { why = "The port must be 0 (automatic) or between 1024 and 65535."; return false; }
     if (s.tlsCert.empty() != s.tlsKey.empty()) { why = "A certificate needs both files: the certificate and its key (or leave both empty)."; return false; }
-    if (s.link == "relay") {
+    if (s.link == "relay" || s.link == "auto") {
         onair_web::RelayUrl u; std::string e;
         if (!onair_web::relayParseUrl(s.relayUrl, u, e)) { why = "The relay address: " + e; return false; }
     }
@@ -178,6 +189,13 @@ bool settingsValid(const ShareSettings& s, std::string& why) {
     return true;
 }
 
+std::string locationText(double lat, double lon, int decimals) {
+    if ((lat == 0 && lon == 0) || !std::isfinite(lat) || !std::isfinite(lon)) return {};
+    char b[48];
+    snprintf(b, sizeof b, "%.*f,%.*f", std::clamp(decimals, 0, 5), lat, std::clamp(decimals, 0, 5), lon);
+    return b;
+}
+
 std::string settingsToText(const ShareSettings& s) {
     std::ostringstream o;
     auto b = [](bool v) { return v ? "1" : "0"; };
@@ -185,11 +203,13 @@ std::string settingsToText(const ShareSettings& s) {
       << "rig=" << s.rig << "\nwhole_span=" << b(s.wholeSpan) << "\ncentre_mhz=" << num(s.centreMHz) << "\nspan_mhz=" << num(s.spanMHz) << "\nrate_auto=" << b(s.rateAuto)
       << "\nrate_msps=" << num(s.rateMsps) << "\ngain_manual=" << b(s.gainManual) << "\ngain_db=" << num(s.gainDb) << "\ndata_off=" << joinSet(s.dataOff)
       << "\nrestricted_on=" << joinSet(s.restrictedOn) << "\nlegal_ack=" << b(s.legalAck) << "\ndemods=" << s.demods << "\nmax_users=" << s.maxUsers << "\nuser_kbps=" << s.userKbps
-      << "\naudio_only=" << b(s.audioOnly) << "\nlimit_to_range=" << b(s.limitToRange) << "\npassword=" << s.password << "\nlink=" << s.link << "\nown_url=" << s.ownUrl << "\nlist_public=" << b(s.listPublic)
+      << "\naudio_only=" << b(s.audioOnly) << "\nlimit_to_range=" << b(s.limitToRange) << "\npassword_hash=" << s.passwordHash << "\naccess_password=" << b(s.accessPassword) << "\nlink=" << s.link << "\nown_url=" << s.ownUrl << "\nlist_public=" << b(s.listPublic)
       << "\nname=" << s.name << "\ndesc=" << s.desc << "\nloc=" << s.loc << "\ncontact=" << s.contact << "\nradio_label=" << s.radioLabel << "\ndir_url=" << s.dirUrl
       << "\nloc_decimals=" << s.locDecimals << "\nreach=" << b(s.reach) << "\nrelay_url=" << s.relayUrl << "\ninvite_only=" << b(s.inviteOnly) << "\nmax_per_ip=" << s.maxPerIp
       << "\ncpu_cap_pct=" << s.cpuCapPct << "\nmax_kbps_total=" << s.maxKbpsTotal << "\nidle_min=" << s.idleMin << "\nsession_min=" << s.sessionMin << "\nport=" << s.port
-      << "\ntls_cert=" << s.tlsCert << "\ntls_key=" << s.tlsKey << "\nmax_bins=" << s.maxBins << "\nmax_fps=" << s.maxFps << "\nauto_apply=" << b(s.autoApply) << "\nantenna=" << s.antenna << "\n";
+      << "\ntls_cert=" << s.tlsCert << "\ntls_key=" << s.tlsKey << "\nmax_bins=" << s.maxBins << "\nmax_fps=" << s.maxFps << "\nauto_apply=" << b(s.autoApply) << "\nantenna=" << s.antenna
+      << "\ncontrol=" << s.control << "\ncontrol_slot_min=" << s.controlSlotMin << "\naudio_rate=" << s.audioRate << "\nallow_ranges=" << s.allowRanges << "\nblock_ranges=" << s.blockRanges
+      << "\nallow_tx=" << b(s.allowTx) << "\nbind_all=" << b(s.bindAll) << "\nautostart=" << b(s.autostart) << "\nauto_list=" << b(s.autoList) << "\n";
     return o.str();
 }
 
@@ -222,8 +242,19 @@ ShareSettings settingsFromText(const std::string& text) {
         else if (k == "user_kbps") s.userKbps = std::clamp(atoi(v.c_str()), 0, 100000);
         else if (k == "audio_only") s.audioOnly = flag(v, false);
         else if (k == "limit_to_range") s.limitToRange = flag(v, false);
-        else if (k == "password") s.password = v;
-        else if (k == "link") s.link = (v == "own" || v == "lan" || v == "tunnel") ? v : "relay";
+        else if (k == "password") { if (!v.empty()) { s.passwordHash = onair_web::hashPassword(v); s.accessPassword = true; } }   // settings from before 3.7: the plain text is not kept
+        else if (k == "password_hash") s.passwordHash = v;
+        else if (k == "access_password") s.accessPassword = flag(v, false);
+        else if (k == "link") s.link = (v == "own" || v == "lan" || v == "tunnel" || v == "relay") ? v : "auto";
+        else if (k == "control") s.control = (v == "members" || v == "slot" || v == "nobody") ? v : "everyone";
+        else if (k == "control_slot_min") s.controlSlotMin = std::clamp(atoi(v.c_str()), 1, 1440);
+        else if (k == "audio_rate") s.audioRate = std::clamp(atoi(v.c_str()), 0, 96000);
+        else if (k == "allow_ranges") s.allowRanges = v;
+        else if (k == "block_ranges") s.blockRanges = v;
+        else if (k == "allow_tx") s.allowTx = flag(v, false);
+        else if (k == "bind_all") s.bindAll = flag(v, false);
+        else if (k == "autostart") s.autostart = flag(v, false);
+        else if (k == "auto_list") s.autoList = flag(v, false);
         else if (k == "relay_url") s.relayUrl = v;
         else if (k == "invite_only") s.inviteOnly = flag(v, false);
         else if (k == "max_per_ip") s.maxPerIp = std::clamp(atoi(v.c_str()), 1, 100);
@@ -331,9 +362,9 @@ void setGroup(ShareSettings& s, const std::string& group, bool on) {
 std::string buildServerConf(const ShareSettings& s, const Plan& plan, int port, int apiPort, const std::string& publicUrl, const std::string& adminToken) {
     std::ostringstream c;
     c << "# written by OnAir (Server > Share on web); changes made here are overwritten\n"
-      << "web=1\nweb_port=" << port << "\nweb_bind=" << (s.link == "lan" ? "0.0.0.0" : "127.0.0.1") << "\nweb_name=" << s.name << "\n"
-      << "port=" << apiPort << "\nlan=0\nweb_trust_proxy=" << (s.link == "lan" || s.link == "relay" || s.link == "tunnel" || s.link == "own" ? 1 : 0) << "\n";
-    if (s.link == "relay") c << "web_relay=1\nweb_relay_url=" << s.relayUrl << "\n";
+      << "web=1\nweb_port=" << port << "\nweb_bind=" << (s.link == "lan" || (s.link == "own" && s.bindAll) ? "0.0.0.0" : "127.0.0.1") << "\nweb_name=" << s.name << "\n"
+      << "port=" << apiPort << "\nlan=0\nweb_trust_proxy=" << (s.link == "lan" || s.link == "relay" || s.link == "tunnel" || s.link == "own" || s.link == "auto" ? 1 : 0) << "\n";
+    if (s.link == "relay" || s.link == "auto") c << "web_relay=1\nweb_relay_url=" << s.relayUrl << "\n";
     if (!s.antenna.empty()) c << "web_antenna=" << s.antenna << "\n";
     if (!s.tlsCert.empty()) c << "web_tls_cert=" << s.tlsCert << "\nweb_tls_key=" << s.tlsKey << "\n";
     c << "web_max_per_ip=" << std::clamp(s.maxPerIp, 1, 100) << "\nweb_cpu_cap_pct=" << std::clamp(s.cpuCapPct, 5, 100) << "\n";
@@ -350,8 +381,18 @@ std::string buildServerConf(const ShareSettings& s, const Plan& plan, int port, 
     if (s.userKbps > 0) c << "web_user_kbps=" << std::max(32, s.userKbps) << "\n";
     c << "web_spectrum=" << (s.audioOnly ? 0 : 1) << "\n";
     if (s.inviteOnly) c << "web_auth=invite\n";
-    else if (!s.password.empty()) c << "web_auth=password\nweb_password=" << s.password << "\n";
+    else if (s.accessPassword && !s.passwordHash.empty()) c << "web_auth=password\nweb_password_hash=" << s.passwordHash << "\n";
     else c << "web_auth=open\n";
+    if (s.control != "everyone") c << "web_control=" << s.control << "\nweb_control_slot_min=" << std::clamp(s.controlSlotMin, 1, 1440) << "\n";
+    if (s.audioRate > 0) c << "web_max_audio_rate=" << s.audioRate << "\n";
+    if (s.allowTx) c << "web_allow_tx=1\n";
+    for (const std::string* src : {&s.allowRanges, &s.blockRanges}) {
+        std::string tok;
+        for (char ch : *src + ",") {
+            if (ch == ',') { tok = trimS(tok); if (!tok.empty()) c << (src == &s.allowRanges ? "web_allow_range=" : "web_block_range=") << tok << "\n"; tok.clear(); }
+            else tok += ch;
+        }
+    }
     c << "web_demods=" << s.demods << "\n";
     std::string off, on;
     {
@@ -362,7 +403,7 @@ std::string buildServerConf(const ShareSettings& s, const Plan& plan, int port, 
     }
     c << "web_decoders_off=" << off << "\n";
     if (s.legalAck) c << "web_legal_ack=" << onair_web::kLegalNoticeVersion << "\nweb_decoders_on=" << on << "\n";
-    if (s.limitToRange) c << "web_allow_range=" << rangeSpecMHz(plan.loHz, plan.hiHz) << "MHz\n";
+    if (s.limitToRange && s.allowRanges.empty()) c << "web_allow_range=" << rangeSpecMHz(plan.loHz, plan.hiHz) << "MHz\n";
     return c.str();
 }
 
@@ -563,7 +604,7 @@ std::string easySummary(const ShareSettings& s, const RigCaps& rig, const Plan& 
     std::ostringstream o;
     o << (rig.name.empty() ? std::string("no radio found") : rig.name) << ", " << rangeSpecMHz(plan.loHz, plan.hiHz) << " MHz, up to " << s.maxUsers << " listeners, ";
     o << (s.link == "relay" ? "through the OnAir relay" : s.link == "tunnel" ? "through a Cloudflare tunnel" : s.link == "own" ? "at your own address" : "on this network only") << ", ";
-    o << (s.inviteOnly ? "invite links only" : s.password.empty() ? "open to anyone with the link" : "with a password");
+    o << (s.inviteOnly ? "invite links only" : !s.accessPassword ? "open to anyone with the link" : "with a password");
     if (s.audioOnly) o << ", audio only";
     return o.str();
 }

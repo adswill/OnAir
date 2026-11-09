@@ -138,7 +138,8 @@ const BAD_PORTS = new Set([21, 22, 23, 25, 53, 110, 111, 135, 137, 139, 143, 389
 
 // Literal host and scheme / port rules. A hostname still has to resolve to public addresses only (the Worker checks the answers with isPublicIp).
 // Returns {ok, error, url (normalised, no query), host, literal, port}.
-export function validateUrl(text) {
+// devLocal: only for the local test stack (`wrangler dev --var ONAIR_DEV_LOCAL:1`), lets http://*.localhost:port be listed. Never set on the real directory.
+export function validateUrl(text, devLocal = false) {
   if (typeof text !== "string" || text.length > LIMITS.url) return { ok: false, error: "url too long or missing" };
   if (hasControl(text) || /\s/.test(text)) return { ok: false, error: "url has spaces or control characters" };
   let u;
@@ -147,6 +148,10 @@ export function validateUrl(text) {
   if (u.username || u.password) return { ok: false, error: "url must not contain a user name or password" };
   if (u.search || u.hash) return { ok: false, error: "url must not have a query or fragment" };
   if (!/^\/[A-Za-z0-9._~\-\/]*$/.test(u.pathname)) return { ok: false, error: "url path has odd characters" };
+  if (devLocal && u.protocol === "http:" && u.hostname.toLowerCase().endsWith(".localhost")) {
+    const p0 = u.pathname.endsWith("/") ? u.pathname : u.pathname + "/";
+    return { ok: true, host: u.hostname.toLowerCase(), literal: false, devLocal: true, port: Number(u.port || 80), url: `${u.protocol}//${u.host}${p0}` };
+  }
   const port = u.port ? Number(u.port) : (u.protocol === "https:" ? 443 : 80);
   if (BAD_PORTS.has(port) || (port < 1024 && port !== 80 && port !== 443)) return { ok: false, error: "url port not allowed" };
   const host = u.hostname.toLowerCase();
@@ -182,7 +187,7 @@ function int(rec, k, lo, hi, errs, def) {
 
 // Checks a heartbeat or delete body (already JSON-parsed). Returns {ok, errors, rec}; rec has exactly the signed fields in final form.
 // `sig` is checked for shape only here; the signature itself is verified by the caller with WebCrypto.
-export function validateRecord(body, now) {
+export function validateRecord(body, now, devLocal = false) {
   const errs = [];
   if (!body || typeof body !== "object" || Array.isArray(body)) return { ok: false, errors: ["body must be a JSON object"] };
   const allowed = new Set([...HEARTBEAT_KEYS, "sig", "v"]);
@@ -200,7 +205,7 @@ export function validateRecord(body, now) {
   const rec = { action, id, pub, ts };
   if (action === "heartbeat") {
     rec.name = str(body, "name", LIMITS.name, errs, true);
-    const u = validateUrl(body.url);
+    const u = validateUrl(body.url, devLocal);
     if (!u.ok) errs.push(u.error);
     rec.url = u.ok ? u.url : "";
     if (u.ok && body.url !== u.url) errs.push("url must be written in its normal form: " + u.url);

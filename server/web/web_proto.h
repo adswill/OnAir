@@ -27,7 +27,7 @@ enum class AgcMode { Off, Slow, Fast };
 
 // One validated client message. Only the fields of its type are meaningful; `has` bits tell which optional ones were given.
 struct ClientMsg {
-    enum Type { Hello, Tune, Rx, Audio, Spectrum, Subscribe, Unsubscribe, Ping, Bye, Tx } type = Ping;
+    enum Type { Hello, Tune, Rx, Audio, Spectrum, Subscribe, Unsubscribe, Ping, Bye, Tx, Control } type = Ping;
     // Tx: only parsed when the host allows web transmit (web_allow_tx=1); the raw message goes to the host's transmit handler
     std::string txType, txRaw;
     // hello
@@ -54,6 +54,8 @@ struct ClientMsg {
     double decFreqHz = 0; bool hasDecFreq = false;
     // ping
     double t = 0;
+    // control: take (true) or give back (false) the time-limited control slot
+    bool take = false;
 };
 
 // Error codes sent to the client in {"type":"error","code":...}

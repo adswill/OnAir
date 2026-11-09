@@ -40,6 +40,11 @@ struct HubLimits {
     int publicMaxMin = 0;         // session time limit for open access (0: none)
     int memberMaxMin = 0;         // for password / invite users (an invite's own limit wins)
     int maxFps = 15, maxBins = 2048;
+    int maxAudioRate = 0;         // 0: any of the protocol's rates; else a listener's audio rate is lowered to this (bandwidth and quality)
+    // who may tune or change mode: everyone (the default), only people who gave the password or an invite, the one holder of a time-limited control slot, or nobody
+    enum { CtlEveryone = 0, CtlMembers = 1, CtlSlot = 2, CtlNobody = 3 };
+    int controlMode = CtlEveryone;
+    int controlSlotMin = 5;       // how long one person may hold the slot
     bool spectrum = true;         // web_spectrum=0: audio only, listeners get no spectrum / waterfall rows (the setup window's "audio only")
     int threads = 0;              // worker threads (0: automatic)
     size_t queueBytes = 384 * 1024;   // outgoing queue of one listener
@@ -115,6 +120,7 @@ public:
     std::string statsJson() const;
     int userCount() const;
     void setServerInfo(const std::string& name, const std::string& location, const std::string& antenna);
+    std::string controlJson(int id) const;   // {"type":"control",...} as this session sees it
 
 private:
     struct Session;
@@ -126,6 +132,11 @@ private:
     std::map<std::string, std::shared_ptr<SharedDec>> decs_;
     std::map<std::string, DecoderFactory> factories_;
     HubLimits lim_;
+    std::atomic<int> slotHolder_{0};     // the session holding the control slot (0: free)
+    std::atomic<double> slotUntil_{0};   // when it ends
+    std::atomic<bool> slotAnnounced_{true};
+    bool canTune(const Session& s, const HubLimits& L) const;
+    void controlChanged();               // tells every session the new state
     std::atomic<size_t> qCap_{384 * 1024};   // lim_.queueBytes, read without the lock
     WebPolicy policy_;
     std::function<std::string(int, const std::string&, const std::string&)> txHandler_;
