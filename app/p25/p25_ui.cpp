@@ -122,7 +122,7 @@ std::string clock(int64_t t) {
 
 std::string dstOf(const dect2::P25Call& c) { return (c.group ? "TG " : "") + dect2::p25Id(c.dst); }
 std::string dstOfUi(const dect2::P25Call& c) { return c.group ? tgdirui::withName(dect2::TgKind::P25, dstOf(c), (uint32_t)c.dst) : dstOf(c); }   // with the directory's name
-const char* kindOf(const dect2::P25Call& c) { return c.kind == 1 ? "grant" : c.kind == 2 ? "data" : "voice"; }
+const char* kindOf(const dect2::P25Call& c) { return c.kind == 1 ? "grant" : c.kind == 2 ? "data" : c.kind == 3 ? "denied" : "voice"; }
 std::string mhz(double hz) { if (hz <= 0) return "-"; char b[32]; snprintf(b, sizeof b, "%.5f MHz", hz / 1e6); return b; }
 std::string cryptoOf(const dect2::P25Call& c) {
     char b[96];
@@ -256,6 +256,36 @@ void trunkingView(App& a) {
             ImGui::TableNextColumn(); ImGui::TextUnformatted(clock(j.wallTime).c_str());
         }
         ImGui::EndTable();
+    }
+    ImGui::Spacing();
+    ImGui::TextDisabled("%s", tr("Patches"));
+    if (t.patches.empty()) ImGui::TextDisabled("  %s", tr("none heard"));
+    else for (const auto& p : t.patches) {
+        std::string m;
+        for (int g : p.members) { if (!m.empty()) m += ", "; m += std::to_string(g); }
+        ImGui::Text("  %s %d: %s", tr("Supergroup"), p.supergroup, m.c_str());
+    }
+    ImGui::Spacing();
+    {
+        static std::string noteAff;
+        resexp::Table x; x.cols = {"unit", "talkgroup", "last_seen"};
+        for (const auto& u : t.affiliations) x.add({dect2::p25Id(u.unit), u.tg >= 0 ? std::to_string(u.tg) : "", clock(u.wallTime)}, (double)u.wallTime);
+        ImGui::TextDisabled("%s (%zu)", tr("Units on this site"), t.affiliations.size());
+        ImGui::SameLine();
+        resexp::saveButton(x, "p25_units", noteAff, "svp25u");
+        if (!noteAff.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", noteAff.c_str()); }
+        if (!t.affiliations.empty() && ImGui::BeginTable("##p25aff", 3, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, 150 * gUi))) {
+            ImGui::TableSetupScrollFreeze(0, 1);
+            ImGui::TableSetupColumn(tr("Unit")); ImGui::TableSetupColumn(tr("Talkgroup")); ImGui::TableSetupColumn(tr("Heard"));
+            ImGui::TableHeadersRow();
+            for (const auto& u : t.affiliations) {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn(); ImGui::TextUnformatted(dect2::p25Id(u.unit).c_str());
+                ImGui::TableNextColumn(); if (u.tg >= 0) ImGui::Text("%d", u.tg); else ImGui::TextDisabled("-");
+                ImGui::TableNextColumn(); ImGui::TextUnformatted(clock(u.wallTime).c_str());
+            }
+            ImGui::EndTable();
+        }
     }
     ImGui::Spacing();
     ImGui::TextDisabled("Channel identifiers");

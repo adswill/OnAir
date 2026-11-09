@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -82,6 +83,7 @@ private:
     IdenInfo idens_[16];
     std::vector<double> secondary_;
     std::vector<std::pair<std::pair<int, std::pair<int, int>>, std::pair<double, double>>> positions_;
+    std::map<int, std::set<int>> patches_;    // supergroup to its member talkgroups (Motorola / Harris regroups heard)
     uint64_t nTsbk_ = 0, nGrant_ = 0;
     void leaveSite(double nowSec);
 };

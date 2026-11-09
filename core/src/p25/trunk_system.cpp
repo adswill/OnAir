@@ -1,6 +1,7 @@
 // P25 trunking system model: what the control channel's TSBKs say (TIA-102.AABC), turned into a site, a channel identifier table and Grants.
 // Receive only. Clean-room from the message layouts in the spec; the existing receiver's decoding (p25_rx.cpp) uses the same field positions.
 #include "dect2/p25/trunk.h"
+#include "dect2/p25/p25_cc.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdarg>
@@ -91,6 +92,19 @@ void SystemModel::setSitePosition(int sysId, int rfss, int site, double lat, dou
 
 std::string SystemModel::onTsbk(const p25::Tsbk& t, int nac, double now, std::vector<Grant>* grants) {
     nTsbk_++;
+    {   // patches: a grant to a supergroup also counts as a call of every member talkgroup, so a user following a member does not miss it
+        p25::CcItem cc;
+        if (p25::tsbkDescribe(t.mfid, t.opcode, t.args, cc)) {
+            auto it = patches_.find(cc.supergroup);
+            if (cc.kind == p25::kCcPatchAdd) { auto& m = patches_[cc.supergroup]; for (int g : cc.members) m.insert(g); }
+            else if (cc.kind == p25::kCcPatchDel && it != patches_.end()) { for (int g : cc.members) it->second.erase(g); if (it->second.empty()) patches_.erase(it); }
+            else if (cc.kind == p25::kCcPatchGrant && grants && cc.channel >= 0) {
+                Grant g; g.group = true; g.tg = cc.supergroup; g.src = cc.unit; g.channel = cc.channel; g.freqHz = channelFreq(cc.channel, &g.slot, &g.tdma);
+                nGrant_++; grants->push_back(g);
+                if (it != patches_.end()) for (int m : it->second) { Grant c = g; c.tg = m; nGrant_++; grants->push_back(c); }
+            }
+        }
+    }
     if (t.mfid != 0 && t.mfid != 1) return std::string();   // a manufacturer's own message: not interpreted
     const uint64_t a = t.args;
     auto place = [&](int ch, Grant& g) {
