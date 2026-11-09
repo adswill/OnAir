@@ -1,3 +1,4 @@
+#include "dect2/tv/cc_decode.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/tv/player.h"
 #include "dect2/tv/hw_guard.h"
@@ -80,7 +81,6 @@ using Clock = std::chrono::steady_clock;
 static double nowSec() { return dect2::steadyNowSec(); }
 
 struct SubImage { int x, y, w, h; std::vector<uint8_t> rgba; };
-#include "dect2/tv/cc_decode.h"
 struct Subtitle { double start = 0, end = 0; int canvasW = 720, canvasH = 576; std::vector<SubImage> images; };
 
 struct Player::Impl {
