@@ -30,6 +30,7 @@ void selectMode(App& a, int fam, const char* subId) {
     if (wasRunning) a.engine.stop();
     setMode(a, fam, sub);
     presetsapp::applyModeDefault(a);   // the mode's default preset, when the user set one
+    stationAutoPick(a);                // My station: a better free radio when this one cannot do the mode
     savePrefs(a);
     if (wasRunning) {
         a.engine.log("switching receiver mode");

@@ -49,6 +49,7 @@ static modepick::Radio radioOf(const App& a) {
 }
 
 ModeFit modeFit(const App& a, const ModeDef& m) {
+    if (ModeFit st; stationFit(a, m, st)) return st;   // the whole station when the user entered one
     modepick::ModeNeed n;
     n.minRateHz = m.minRateMsps * 1e6;
     n.defMhz = m.bandMinMhz;
