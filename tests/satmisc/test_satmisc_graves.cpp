@@ -42,6 +42,7 @@ static Run run(const std::vector<Tle>& cat, const Sgp4* target, double t0, const
     MsTelemetry t; rxr.telemetry(t, 0);
     Run r{(int)t.satEchoTotal, (int)t.satEchoMatched, t.satEchoes.empty() ? "" : t.satEchoes[0].name};
     printf("  beacon state %d, pings %llu, echoes %llu, matched %llu, first: %s\n", t.state, (unsigned long long)t.blocksOk, (unsigned long long)t.satEchoTotal, (unsigned long long)t.satEchoMatched, r.name.c_str());
+    for (const auto& e : t.satEchoes) printf("    echo %.1f s, %.0f -> %.0f Hz, %.0f dB, %s\n", e.durationSec, e.startHz, e.endHz, e.peakSnrDb, e.name.c_str());
     return r;
 }
 int main() {

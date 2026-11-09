@@ -49,7 +49,8 @@ struct MscatterLiveReceiver::Impl {
     void takeEchoes() {
         for (satmisc::LineTrack& tr : echoes.takeFinished()) {
             // a satellite's Doppler sweeps; a long overdense meteor stays put
-            if (std::fabs(tr.pts.back().hz - tr.pts.front().hz) / std::max(0.1, tr.durationSec()) < 2.0) continue;
+            const double sweep = std::fabs(tr.pts.back().hz - tr.pts.front().hz);
+            if (sweep < 15.0 || sweep / std::max(0.1, tr.durationSec()) < 2.0) continue;
             MsSatEcho e;
             e.id = nextEcho++;
             e.wallTime = baseUtc + (int64_t)std::floor(tr.startSec);
