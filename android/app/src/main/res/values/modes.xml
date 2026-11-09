@@ -214,6 +214,26 @@
         <item>Arktika-M GGAK</item>
         <item>AWS L-band</item>
         <item>Inmarsat BGAN</item>
+        <item>JPSS HRD (NPP, NOAA-20)</item>
+        <item>JPSS HRD (NOAA-21)</item>
+        <item>EOS DB (Aqua, Aura)</item>
+        <item>EOS DB (Terra)</item>
+        <item>MetOp X-band dump</item>
+        <item>MetOp-SG DDB</item>
+        <item>Landsat 8/9 X-band</item>
+        <item>Landsat 8/9 S-band</item>
+        <item>Proba S-band dump</item>
+        <item>Proba-V X-band dump</item>
+        <item>GCOM-W1</item>
+        <item>GCOM-C1</item>
+        <item>STEREO high rate</item>
+        <item>Oceansat-2 DB</item>
+        <item>Oceansat-3 L-band</item>
+        <item>Saral L-band</item>
+        <item>Oceansat-3 X-band dump</item>
+        <item>Saral X-band dump</item>
+        <item>Kanopus-V</item>
+        <item>DMSP RTD</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -409,6 +429,26 @@
         <item>Arktika-M N1 / N2 space-weather telemetry (GGAK, experimental: frame lock not reached yet) on 1703 MHz, PM 5 ksym/s: the Elektro GGAK frames and magnetometer. Highly elliptical orbit: Follow the next pass tracks the Doppler</item>
         <item>Arctic Weather Satellite on 1707 MHz: QPSK 1.785 Msym/s, CCSDS convolutional code, Reed-Solomon interleave 5, the MWR microwave scans (19 channels, 145 points) line by line. Needs a dish at 1.7 GHz and 4 Msps or more; Follow the next pass tunes with Doppler and starts by itself</item>
         <item>Inmarsat BGAN (ETSI TS 102 744 Family SL), the satellite data service: every forward carrier from 1525 to 1559 MHz, bearer type and code rate, satellite, spot beam, network identity, and the system information it broadcasts. One-click scan across the band. Signalling and carrier structure only: no voice, no user data, no subscriber identity. Needs a user test: only synthetic signals so far, never validated on a real BGAN recording. A patch antenna is enough for the global beam and for bearers aimed at your region; narrow spot beams elsewhere are out of reach</item>
+        <item>Suomi NPP and NOAA-20 direct broadcast (HRD) on 7812 MHz: QPSK 15 Msym/s, CCSDS K=7 r=1/2 with NRZ-M, CADUs, the VIIRS channels and colour composites. Needs a tracking X-band dish (1.2 m or more), a down-converter and 25 Msps or more. A recording is the usual way to use it.</item>
+        <item>NOAA-21 direct broadcast on 7812 MHz: OQPSK 25 Msym/s, K=7 r=1/2, NRZ-M, 1279-byte CADUs, VIIRS. Needs a tracking X-band dish, a down-converter and 40 Msps or more. A recording is the usual way to use it.</item>
+        <item>Aqua and Aura direct broadcast on 8160 MHz: OQPSK 7.5 Msym/s, NRZ-M per rail, the MODIS channels and colour composites (Aqua). Needs a tracking X-band dish, a down-converter and 15 Msps. A recording is the usual way to use it.</item>
+        <item>Terra direct broadcast on 8212.5 MHz: BPSK 13.125 Msym/s, K=7 r=1/2, the MODIS channels and colour composites. Needs a tracking X-band dish, a down-converter and 45 Msps. A recording is the usual way to use it.</item>
+        <item>MetOp X-band full dump on 7800 MHz: QPSK 35 Msym/s, CADUs, the AVHRR channels of a whole orbit, cloud-top, sea surface and fire maps from the instrument\'s own calibration. Needs a tracking X-band dish, a down-converter and 45 Msps. A recording is the usual way to use it.</item>
+        <item>MetOp-SG direct data broadcast on 7825 MHz: QPSK 93.3 Msym/s, CCSDS, the METimage channels. Needs a tracking X-band dish, a down-converter and 105 Msps or more. A recording is the usual way to use it.</item>
+        <item>Landsat 8 and 9 X-band link: OQPSK 220.4 Msym/s, TIRS channels from decoded .cadu frames. The LDPC 7/8 code from raw IQ is not decoded here. Needs a tracking X-band dish and 240 Msps or more. A recording is the usual way to use it.</item>
+        <item>Landsat 8 and 9 S-band link: OQPSK 1.067 Msym/s, K=7 r=1/2, CADU frames. Needs a tracking S-band dish and 2 Msps. A recording is the usual way to use it.</item>
+        <item>Proba-1, Proba-2 and Proba-V S-band dump on 2235 MHz: BPSK 2 Msym/s, K=7 r=1/2, CADU frames and the Proba-V Vegetation channels. Needs a tracking S-band dish and 3 Msps. A recording is the usual way to use it.</item>
+        <item>Proba-V X-band dump on 8300 MHz: OQPSK 35 Msym/s, K=7 r=1/2, CADU frames (Vegetation pictures use CCSDS 122 compression, not decoded). Needs a tracking X-band dish, a down-converter and 38 Msps. A recording is the usual way to use it.</item>
+        <item>GCOM-W1 X-band link on 8245 MHz: OQPSK 10 Msym/s, K=7 r=1/2, shortened Reed-Solomon, the AMSR2 microwave channels. Needs a tracking X-band dish, a down-converter and 13 Msps. A recording is the usual way to use it.</item>
+        <item>GCOM-C1 X-band link: OQPSK 69.4 Msym/s, uncoded CADUs, frame counts only. Needs a tracking X-band dish, a down-converter and 75 Msps or more. A recording is the usual way to use it.</item>
+        <item>STEREO A/B high rate on 8443.52 MHz: BPSK 1.44 Msym/s, frame counts from .cadu files. The CCSDS turbo code from raw IQ and the ICER images are not decoded. Needs a large tracking dish (deep space). A recording is the usual way to use it.</item>
+        <item>Oceansat-2 direct broadcast, X-band: QPSK 21.2 Msym/s, differential, the OCM channels. Tested on simulated signals only. Needs a tracking X-band dish, a down-converter and 28 Msps. A recording is the usual way to use it.</item>
+        <item>Oceansat-3 Argos link on 1703 MHz: QPSK 1 Msym/s, K=7 r=1/2, CADU frames. Needs a tracking L-band dish and 1.5 Msps. A recording is the usual way to use it.</item>
+        <item>Saral Argos link on 1698.4 MHz: QPSK 400 ksym/s, K=7 r=1/2, CADU frames. Needs a tracking L-band dish and 0.6 Msps. A recording is the usual way to use it.</item>
+        <item>Oceansat-3 X-band dump: QPSK 80 Msym/s, uncoded CADUs with Reed-Solomon, frame counts. Needs a tracking X-band dish, a down-converter and 90 Msps or more. A recording is the usual way to use it.</item>
+        <item>Saral X-band dump: QPSK 16 Msym/s, K=7 r=1/2, CADU frames. Needs a tracking X-band dish, a down-converter and 20 Msps. A recording is the usual way to use it.</item>
+        <item>Kanopus-V X-band link: QPSK 61.44 Msym/s, differential, the PSS panchromatic swaths and MSS bands. Tested on simulated signals only. Needs a tracking X-band dish, a down-converter and 72 Msps or more. A recording is the usual way to use it.</item>
+        <item>DMSP real-time data on 2252.5 MHz: BPSK 1.024 Msym/s, the OLS visible and infrared swath. Needs a tracking S-band dish and 2 Msps; works live. A recording is the usual way to use it.</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -604,6 +644,26 @@
         <item>Arktika-M GGAK telemetry</item>
         <item>AWS MWR, 1.7 GHz</item>
         <item>Satellite, L-band</item>
+        <item>JPSS HRD (NPP, NOAA-20)</item>
+        <item>JPSS HRD (NOAA-21)</item>
+        <item>EOS DB (Aqua, Aura)</item>
+        <item>EOS DB (Terra)</item>
+        <item>MetOp X-band dump</item>
+        <item>MetOp-SG DDB</item>
+        <item>Landsat 8/9 X-band</item>
+        <item>Landsat 8/9 S-band</item>
+        <item>Proba S-band dump</item>
+        <item>Proba-V X-band dump</item>
+        <item>GCOM-W1</item>
+        <item>GCOM-C1</item>
+        <item>STEREO high rate</item>
+        <item>Oceansat-2 DB</item>
+        <item>Oceansat-3 L-band</item>
+        <item>Saral L-band</item>
+        <item>Oceansat-3 X-band dump</item>
+        <item>Saral X-band dump</item>
+        <item>Kanopus-V</item>
+        <item>DMSP RTD</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -799,5 +859,25 @@
         <item>arktika ggak sem 1703 magnetometer heo space weather</item>
         <item>aws arctic weather satellite 1707 mwr microwave radiometer eumetsat sterna</item>
         <item>bgan inmarsat i-4 alphasat family sl ts 102 744 l-band satcom 1545 1550 16qam spot beam isatphone</item>
+        <item>xband direct broadcast satellite cadu recording jpss hrd (npp, noaa-20)</item>
+        <item>xband direct broadcast satellite cadu recording jpss hrd (noaa-21)</item>
+        <item>xband direct broadcast satellite cadu recording eos db (aqua, aura)</item>
+        <item>xband direct broadcast satellite cadu recording eos db (terra)</item>
+        <item>xband direct broadcast satellite cadu recording metop x-band dump</item>
+        <item>xband direct broadcast satellite cadu recording metop-sg ddb</item>
+        <item>xband direct broadcast satellite cadu recording landsat 8/9 x-band</item>
+        <item>xband direct broadcast satellite cadu recording landsat 8/9 s-band</item>
+        <item>xband direct broadcast satellite cadu recording proba s-band dump</item>
+        <item>xband direct broadcast satellite cadu recording proba-v x-band dump</item>
+        <item>xband direct broadcast satellite cadu recording gcom-w1</item>
+        <item>xband direct broadcast satellite cadu recording gcom-c1</item>
+        <item>xband direct broadcast satellite cadu recording stereo high rate</item>
+        <item>xband direct broadcast satellite cadu recording oceansat-2 db</item>
+        <item>xband direct broadcast satellite cadu recording oceansat-3 l-band</item>
+        <item>xband direct broadcast satellite cadu recording saral l-band</item>
+        <item>xband direct broadcast satellite cadu recording oceansat-3 x-band dump</item>
+        <item>xband direct broadcast satellite cadu recording saral x-band dump</item>
+        <item>xband direct broadcast satellite cadu recording kanopus-v</item>
+        <item>xband direct broadcast satellite cadu recording dmsp rtd</item>
     </string-array>
 </resources>
