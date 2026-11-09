@@ -92,11 +92,17 @@ int main() {
         std::printf("riometer IQ: minute powers (dB):");
         for (float v : h) std::printf(" %.2f", (double)v);
         std::printf("\n");
-        CHECK(h.size() >= 5, "minutes %zu", h.size());
-        if (h.size() >= 5) {
+        CHECK(h.size() == 2, "minutes %zu (130 s)", h.size());
+        if (h.size() >= 2) {
             CHECK(std::fabs(h[0] - 0.0) < 0.25, "first minute %.2f dB (want 0 with a carrier and 12 %% bursts in the data)", (double)h[0]);
-            CHECK(std::fabs(h[4] - (-0.5)) < 0.2, "fifth minute %.2f dB (want -0.5, the step at 70 s)", (double)h[4]);
+            CHECK(std::fabs(h[1] - (-0.5)) < 0.2, "second minute %.2f dB (want -0.5, the step at 70 s)", (double)h[1]);
         }
+        // the same record fed in chunks of one second and of 1.4 s gives the same minutes (the clock is the sample count, not the number of calls)
+        Riometer r2;
+        r2.setStartUnix(1.8e9);
+        r2.configure(rate);
+        for (size_t i = 0; i < x.size(); i += 65536) r2.feed(x.data() + i, std::min<size_t>(65536, x.size() - i));
+        CHECK(r2.state().powerHistory.size() == 2, "chunk size changes the minute count: %zu", r2.state().powerHistory.size());
     }
     std::printf(g_fails ? "riometer: %d failures\n" : "riometer: all passed\n", g_fails);
     return g_fails ? 1 : 0;

@@ -218,13 +218,13 @@ double Riometer::siderealHours(double unixTime, double lonDeg) {
 
 Riometer::Riometer() { qdc_.assign(288, 0.f); qdcN_.assign(288, 0); reset(); }
 
-void Riometer::configure(double rate) { rate_ = rate; secCount_ = 0; sampleN_ = 0; blk_.clear(); blkAcc_ = 0; blkN_ = 0; secs_.clear(); minuteEnd_ = 60; floorSecs_.clear(); }
+void Riometer::configure(double rate) { rate_ = rate; pend_.clear(); secCount_ = 0; sampleN_ = 0; blk_.clear(); blkAcc_ = 0; blkN_ = 0; secs_.clear(); minuteEnd_ = 60; floorSecs_.clear(); }
 
 void Riometer::reset() {
     const auto q = qdc_; const auto qn = qdcN_;
     st_ = RioState();
     qdc_ = q; qdcN_ = qn;
-    sampleN_ = 0; secCount_ = 0; blk_.clear(); blkAcc_ = 0; blkN_ = 0; secs_.clear(); minuteEnd_ = 60; floorSecs_.clear();
+    sampleN_ = 0; secCount_ = 0; pend_.clear(); blk_.clear(); blkAcc_ = 0; blkN_ = 0; secs_.clear(); minuteEnd_ = 60; floorSecs_.clear();
     rejects_ = minutes_ = 0;
     int fill = 0;
     for (int i = 0; i < 288; i++) if (qdc_[(size_t)i] > 0) fill++;
@@ -238,7 +238,7 @@ void Riometer::feed(const std::complex<float>* x, size_t n) {
     // second rejects bursts of interference
     static constexpr int kN = 1024;
     static thread_local std::vector<cd> a;
-    static thread_local std::vector<std::complex<float>> buf;
+    std::vector<std::complex<float>>& buf = pend_;
     static thread_local std::vector<float> w;
     if (w.empty()) { w.resize(kN); for (int i = 0; i < kN; i++) w[(size_t)i] = (float)(0.5 - 0.5 * std::cos(2 * kPi * (i + 0.5) / kN)); }
     const size_t perBlock = std::max<size_t>(kN, (size_t)std::llround(rate_ * 0.02));
@@ -257,23 +257,20 @@ void Riometer::feed(const std::complex<float>* x, size_t n) {
             std::vector<double> t(P);
             std::nth_element(t.begin(), t.begin() + kN / 2, t.end());
             const double med = t[kN / 2] / 0.693 / ((double)cnt * kN * 0.375);   // exponential median -> mean; Hann: sum w^2 = 3/8 N; per bin of white noise of power 1 this is 1
-            floorSecs_.push_back((float)med);
             buf.clear();
             sampleN_ += perBlock;
+            const size_t sec = (size_t)((double)sampleN_ / rate_);
+            if (sec > secCount_ && !floorSecs_.empty()) {   // a new second: finish the one that ended (by the sample clock, whatever the chunk size of feed())
+                std::vector<float> f(floorSecs_);
+                floorSecs_.clear();
+                std::sort(f.begin(), f.end());
+                const double low = f[f.size() / 4];
+                secs_.push_back(low);
+                if (f[f.size() / 2] > 1.35 * low) rejects_++;
+                secCount_ = sec;
+            }
+            floorSecs_.push_back((float)med);
         }
-        // the one second boundary: counted on the samples consumed so far (+ the buffer)
-    }
-    const double t = ((double)sampleN_) / rate_;
-    // finish seconds
-    while (t >= (double)(secCount_ + 1) && !floorSecs_.empty()) {
-        secCount_++;
-        std::vector<float> f(floorSecs_);
-        floorSecs_.clear();
-        std::sort(f.begin(), f.end());
-        const double low = f[f.size() / 4];
-        const double med = f[f.size() / 2];
-        secs_.push_back(low);
-        if (med > 1.35 * low) rejects_++;
     }
     while (secs_.size() >= 60) {
         std::vector<double> m(secs_.begin(), secs_.begin() + 60);

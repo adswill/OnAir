@@ -297,6 +297,7 @@ private:
     std::vector<int> qdcN_;
     int rejects_ = 0, minutes_ = 0;
     size_t secCount_ = 0;
+    std::vector<std::complex<float>> pend_;   // samples of the block being collected
     std::vector<float> floorSecs_;
     RioState st_;
 };
