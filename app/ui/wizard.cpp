@@ -371,11 +371,8 @@ static void setupApplyRegion(App& a, const setup::Derived& d, int units) {
     plat::prefs().setB("unitsImperial", setup::useImperial(units, d));
     plat::prefs().setI("setupUnits", units);
     plat::prefs().setI("fmStepKhz", d.fmStepKhz);
-    plat::prefs().setI("ituRegion", d.itu);
     plat::prefs().setS("locCountry", d.country);
     tvPlanFollowLocation();   // the TV channel plans (tvplan.h) start from this country
-    plat::prefs().setS("locTimeZone", d.tz);
-    plat::prefs().setB("dabBand3", d.dab3);
     plat::prefs().setD("defaultFmMhz", rd.fmMhz);
     plat::prefs().setD("defaultAprsMhz", rd.aprsMhz);
     if (!d.approx) {   // a real position (a city or coordinates); a preset keeps the position the user has
