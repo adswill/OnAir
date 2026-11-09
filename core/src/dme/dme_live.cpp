@@ -91,7 +91,7 @@ void DmeLiveReceiver::setLogCallback(std::function<void(const std::string&)> cb)
 ModeTuning dmeTuning() {
     ModeTuning t;
     t.stdMode = 123; t.id = "dme"; t.name = "DME";
-    t.minMhz = 0.962; t.maxMhz = 1.213; t.defMhz = 1.104;   // the DME reply band (ICAO Annex 10); modeTuning() opens the range
+    t.minMhz = 962; t.maxMhz = 1213; t.defMhz = 1104;   // the DME reply band (ICAO Annex 10); modeTuning() opens the range
     t.sampleRate = 2.4e6;                    // 3.5 us pulses need 2 Msps or more: the sample rate asked of the radio
     t.basebandHz = 0;
     t.bandwidthMhz = 1.0;
