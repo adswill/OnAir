@@ -28,7 +28,11 @@ concurrency:
 permissions:
   contents: read
 
+# ccache around the core's compile (CMake uses it when it is installed); restored from the newest older run, saved also when the run fails
 env:
+  CCACHE_MAXSIZE: 1G
+  CCACHE_COMPRESS: "true"
+
   NDK_VERSION: "27.2.12479018"
   CMAKE_VERSION: "3.31.5"
 
@@ -70,17 +74,20 @@ jobs:
       - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c   # v5.0.2
       - name: Build tools and headers
         # only headers are used for Android (android/native/src/stubs_ext.c stands in for the libraries)
-        run: brew install pkg-config hackrf libusb ffmpeg
+        run: tools/release/retry.sh brew install pkg-config ccache hackrf libusb ffmpeg
       - name: Rust with the Android target
         run: |
-          rustup toolchain install stable --profile minimal
+          # (rustup's cargo first on the PATH: only rustup can add the Android target)
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.cargo/bin:$PATH"
+          tools/release/retry.sh rustup toolchain install stable --profile minimal
           rustup default stable
-          rustup target add aarch64-linux-android
+          tools/release/retry.sh rustup target add aarch64-linux-android
       - name: NDK and CMake
         run: |
           SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           yes | "$SDKM" --licenses > /dev/null || true
-          "$SDKM" --install "ndk;$NDK_VERSION" "cmake;$CMAKE_VERSION" > /dev/null
+          tools/release/retry.sh "$SDKM" --install "ndk;$NDK_VERSION" "cmake;$CMAKE_VERSION" > /dev/null
           echo "ANDROID_NDK=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
           echo "CMAKE=$ANDROID_HOME/cmake/$CMAKE_VERSION/bin/cmake" >> "$GITHUB_ENV"
       - name: Version
@@ -90,11 +97,28 @@ jobs:
         run: |
           set -eu
           mkdir -p "$RUNNER_TEMP/libusb-src"
-          git clone --depth 1 --branch v1.0.27 https://github.com/libusb/libusb "$RUNNER_TEMP/libusb-src"
+          tools/release/retry.sh git clone --depth 1 --branch v1.0.27 https://github.com/libusb/libusb "$RUNNER_TEMP/libusb-src"
           echo "libusb v1.0.27 commit $(git -C "$RUNNER_TEMP/libusb-src" rev-parse HEAD)"
           echo "LIBUSB_SRC=$RUNNER_TEMP/libusb-src" >> "$GITHUB_ENV"
+      - name: Restore ccache
+        uses: actions/cache/restore@v6
+        with:
+          path: .ccache
+          key: ccache-android-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'android/native/CMakeLists.txt') }}-${{ github.sha }}
+          restore-keys: |
+            ccache-android-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'android/native/CMakeLists.txt') }}-
+            ccache-android-
       - name: libonair.so (core + JNI bridge)
+        env:
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CCACHE_BASEDIR: ${{ github.workspace }}
         run: JOBS=$(sysctl -n hw.ncpu) android/tools/build_native.sh
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: .ccache
+          key: ccache-android-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'android/native/CMakeLists.txt') }}-${{ github.sha }}
       - name: Debug APK (no signing key)
         if: github.event_name == 'workflow_dispatch' && inputs.debug
         working-directory: android
@@ -102,26 +126,35 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: github.event_name == 'workflow_dispatch' && inputs.debug
         with: { name: onair-android-debug, path: android/app/build/outputs/apk/debug/*.apk, retention-days: 7 }
+      # Signing only when the secrets exist (android/README.md, "Signing"). The keystore never goes in the log or an artifact: it is decoded to the
+      # runner's temp folder for the one Gradle step, the passwords reach only that step, and the file is removed afterwards whatever happened.
       - name: Signing key from secrets
+        id: signing
         if: github.event_name != 'workflow_dispatch' || !inputs.debug
         env:
           KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          if [ -z "$KS_B64" ]; then echo "::warning::No ANDROID_KEYSTORE_BASE64 secret: the APK is built unsigned"; exit 0; fi
+          if [ -z "$KS_B64" ]; then echo "::warning::No ANDROID_KEYSTORE_BASE64 secret: the APK is built unsigned"; echo "have=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          umask 077
           echo "$KS_B64" | base64 --decode > "$RUNNER_TEMP/onair-release.jks"
-          {
-            echo "ONAIR_STORE_FILE=$RUNNER_TEMP/onair-release.jks"
-            echo "ONAIR_STORE_PASSWORD=$KS_PASS"
-            echo "ONAIR_KEY_ALIAS=$KEY_ALIAS"
-            echo "ONAIR_KEY_PASSWORD=${KEY_PASS:-$KS_PASS}"
-          } >> "$GITHUB_ENV"
-      - name: Release APK
-        if: github.event_name != 'workflow_dispatch' || !inputs.debug
+          echo "have=true" >> "$GITHUB_OUTPUT"
+      # Two steps because an empty ONAIR_STORE_FILE would count as a keystore path in android/app/build.gradle.kts
+      - name: Release APK (signed)
+        if: (github.event_name != 'workflow_dispatch' || !inputs.debug) && steps.signing.outputs.have == 'true'
+        working-directory: android
+        env:
+          ONAIR_STORE_FILE: ${{ runner.temp }}/onair-release.jks
+          ONAIR_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ONAIR_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ONAIR_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: ./gradlew --no-daemon assembleRelease
+      - name: Release APK (unsigned, no signing secrets)
+        if: (github.event_name != 'workflow_dispatch' || !inputs.debug) && steps.signing.outputs.have != 'true'
         working-directory: android
         run: ./gradlew --no-daemon assembleRelease
+      - name: Remove the signing key
+        if: always() && steps.signing.outputs.have == 'true'
+        run: rm -f "$RUNNER_TEMP/onair-release.jks"
       - name: Name the APK
         if: github.event_name != 'workflow_dispatch' || !inputs.debug
         run: |
@@ -130,7 +163,6 @@ jobs:
           for f in android/app/build/outputs/apk/release/*.apk; do
             case "$f" in *unsigned*) cp "$f" "out/OnAir-$V-android-unsigned.apk" ;; *) cp "$f" "out/OnAir-$V-android.apk" ;; esac
           done
-          rm -f "$RUNNER_TEMP/onair-release.jks"
           ls -la out
       - uses: actions/upload-artifact@v7
         if: github.event_name != 'workflow_dispatch' || !inputs.debug

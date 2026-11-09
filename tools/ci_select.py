@@ -14,9 +14,12 @@ import argparse, json, os, re, subprocess, sys, zlib
 
 SHARED = {"dsp", "engine", "common", "fec", "source", "session", "sessionmodes", "state", "files", "net", "ofdm", "audio",
           "codec", "channels", "fastscan", "doctor", "export"}
-SMOKE = ["bandwidth", "direction", "u8file", "ros_detect", "atsc_fec", "dme", "sync", "i18n"]
-NO_TEST_PREFIX = ("docs/", "android/", "firmware/", "packaging/", "web/", "relay/", "shots/", "scratchpad/", "assets/", "LICENSES/",
-                  ".github/workflows/android", ".github/workflows/release", ".github/workflows/nix", ".github/workflows/sens")
+# the checks that protect the whole program run on every change, whatever its area: the real tests behind tools/gate/gate_check.py included
+SMOKE = ["bandwidth", "direction", "u8file", "ros_detect", "atsc_fec", "dme", "sync", "i18n", "gui_rules", "credits", "mode_numbers", "web_safety"]
+# web/ and relay/ are not here: the JavaScript tests have no build target of their own, so a change there selects every non-slow test
+NO_TEST_PREFIX = ("docs/", "android/", "firmware/", "packaging/", "shots/", "scratchpad/", "assets/", "LICENSES/",
+                  ".github/workflows/android", ".github/workflows/release", ".github/workflows/nix", ".github/workflows/sens",
+                  ".github/workflows/gate", ".github/workflows/windows-check")
 NO_TEST_EXT = (".md", ".txt", ".png", ".svg", ".toml")
 
 def sh(*a):

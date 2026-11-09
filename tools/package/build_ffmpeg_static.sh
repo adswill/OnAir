@@ -12,7 +12,7 @@ WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 if [ -z "$TARBALL" ]; then
   TARBALL=$WORK/ffmpeg-$VER.tar.xz
-  curl -fsSL -o "$TARBALL" "https://ffmpeg.org/releases/ffmpeg-$VER.tar.xz"
+  curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 -o "$TARBALL" "https://ffmpeg.org/releases/ffmpeg-$VER.tar.xz"
 fi
 tar -xf "$TARBALL" -C "$WORK"
 mkdir "$WORK/build" && cd "$WORK/build"
