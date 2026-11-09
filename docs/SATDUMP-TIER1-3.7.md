@@ -13,15 +13,20 @@ The first batch of the SatDump parity list: weather satellite links on cheap or 
 | Meteor HRPT | 264 | PM Manchester 665.4 kbit/s, 1024-byte CADU, MSU-MR | new | real baseband (METEOR_HRPT.wav, 3 Msps, 4.7 s: 384 CADUs, 29 MSU-MR lines, channels plausible); synthetic with pixels checked |
 | Elektro-L RDAS | 265 | BPSK 30.72 Msym/s, NRZ-M, CADU, MSU-GS IR (7 channels), visible reduced 4:1 | new | synthetic only (needs 40 Msps and X-band) |
 | Arktika-M RDAS | 266 | as Elektro-L RDAS at 7865 MHz | new | synthetic only |
-| Arktika-M GGAK | 267 | PM 5 ksym/s on 1703 MHz, Elektro GGAK receiver | new entry on the existing receiver | NOT validated: the existing GGAK receiver does not frame-lock on its own generator in a standalone test (state stays at carrier); that needs its own look |
+| Arktika-M GGAK | 267 | PM 5 ksym/s on 1703 MHz, Elektro GGAK receiver | new entry on the existing receiver | NOT validated: run through this mode, the existing GGAK receiver finds the carrier (right offset, 28 dB) but never frame-locks on its own test generator. Not isolated further, so Elektro GGAK may share the fault; the check in tests/wxsat prints the state and does not fail on it |
 | AWS L-band | 268 | QPSK 1.785 Msym/s, CCSDS K=7 r=1/2, ASM, RS(255,223) x5, MWR 19 channels | new (MWR only, NAVATT not decoded) | synthetic only (down to 4 dB Es/N0) |
-| Elektro-L LRIT 294 ksym/s, HRIT 1.15 Msym/s OQPSK | 80 (existing entry) | link choices added; OQPSK delays I by half a symbol into the QPSK path (rail delay as in SatDump's pipeline, not tested on real signals) | rates added | not tested on a signal (the HRIT QPSK/LRIT BPSK path below is the existing one) |
-| Meteor-M LRPT rates | 59 | QPSK 72k, OQPSK 72k (differential), OQPSK 80k | already there; re-read, no change needed | existing tests |
-| NOAA HRPT in the HRPT / AHRPT entry | 64 | kept for compatibility | | |
+| Elektro-L LRIT 294 ksym/s, HRIT 1.15 Msym/s OQPSK | 80 (existing entry) | link choices added; OQPSK delays I by half a symbol into the QPSK path (rail delay as in SatDump's pipeline, not tested on real signals) | rates added | NOT tested on any signal, synthetic or real |
+| Meteor-M LRPT rates | 59 | QPSK 72k, OQPSK 72k (differential), OQPSK 80k | already there (the header lists all three); no change | not re-run in this batch |
 
 Automatic on top: the Passes planner knows the new satellites (APT, DSB, HRPT, Meteor HRPT, Arktika GGAK, AWS), "Follow the next pass" in the mode's panel arms tracking with auto start and Doppler, and the picture saves itself when no new lines come for 90 s (setting per mode). Manual tuning stays in the normal controls.
 
 Products: pictures grow line by line in the panel and are saved as PNG under `<data folder>/wxsat/<mode>/`. Telemetry: frame counts, spacecraft id, HIRS picture where the frames carry it.
+
+The app was checked with an isolated renamed copy (hidden, muted, own shot) playing METEOR_HRPT.wav: Meteor HRPT locked, 930 frames, 72 lines, the picture and buttons drawn. Setting HOME did not move macOS preferences (they went to the renamed copy's own domain in the real ~/Library/Preferences, deleted afterwards; dect2.plist unchanged): only the rename and DECT2_DATA_DIR isolate a run.
+
+The Doppler and pass start button runs the existing pass tracker; it has not been exercised on a live pass.
+
+Synthetic thresholds seen: NOAA HRPT decodes at 4 dB Es/N0 (chips), AWS at 4 dB and fails at 2 dB, APT at 6 dB.
 
 ## Left out / next
 - GAC tape-reversed dumps (SatDump's "backward" option): the reversed sync is not searched.

@@ -364,17 +364,6 @@ void retuneTo(App& a, double mhz) {
 }
 
 // "Record this pass" is over (or cancelled): the tracking settings it overrode come back
-// One click from a mode's screen: the first listed satellite of this family that has a TLE, tracked with auto start (and Doppler) from its next pass
-std::string passesArmFamily(App& a, int family) {
-    (void)a;
-    for (size_t i = 0; i < S.sats.size(); i++) if (S.sats[i].family == family) {
-        S.selSat = (int)i; S.selName = S.sats[i].name;
-        S.track = true; S.autoStart = true;
-        return "tracking " + S.sats[i].name + ": the receiver starts at its next pass";
-    }
-    return "this satellite is not in the list yet: download the weather satellites' elements in View > Passes";
-}
-
 void disarmOnce() {
     if (!S.once) return;
     S.once = false;
@@ -1046,6 +1035,17 @@ void drawWindow(App& a) {
 void passesDownloadTles() { loadState(); startDownload(); }
 
 // dev: --tle <file> loads TLEs from a file as pasted ones would (tests without the network)
+// One click from a mode's screen: the first listed satellite of this family that has a TLE, tracked with auto start (and Doppler) from its next pass
+std::string passesArmFamily(App& a, int family) {
+    (void)a;
+    for (size_t i = 0; i < S.sats.size(); i++) if (S.sats[i].family == family) {
+        S.selSat = (int)i; S.selName = S.sats[i].name;
+        S.track = true; S.autoStart = true;
+        return "tracking " + S.sats[i].name + ": the receiver starts at its next pass";
+    }
+    return "this satellite is not in the list yet: download the weather satellites' elements in View > Passes";
+}
+
 void passesDevTle(const std::string& path) {
     loadState();
     for (const dect2::Tle& t : dect2::parseTleText(readText(path))) S.tles[t.norad] = t;
