@@ -411,19 +411,27 @@ void RdsDecoder::decodeGroup(const uint16_t b[4], const uint8_t err[4], double n
         ptynBuf_[seg * 4 + 2] = rdsChar(b[3] >> 8); ptynBuf_[seg * 4 + 3] = rdsChar(b[3] & 0xFF);
         ptynSeen_ |= (uint8_t)(1 << seg);
         if (ptynSeen_ == 3) info.ptyn = rdsText(ptynBuf_, 8, charset);
-    } else if (type == 14 && !verB && cOk) {
+    } else if (type == 14 && (verB || cOk)) {
+        // other networks: 14A carries the name (variants 0-3), the PTY and TA (variant 13) and the TP of the other network (bit 4 of block B);
+        // 14B carries its TP and TA announcements (bits 4 and 3 of block B)
         const int variant = low & 15, on = b[3];
-        if (variant <= 3 && on != 0 && on != pi) {
+        if (on != 0 && on != pi) {
             auto it = std::find_if(eonBuf_.begin(), eonBuf_.end(), [&](const EonBuf& e) { return e.pi == on; });
             if (it == eonBuf_.end()) {
                 if (eonBuf_.size() >= 16) return;
-                EonBuf e{}; e.pi = on; std::memset(e.ps, ' ', 8); e.ps[8] = 0;
+                EonBuf e{}; e.pi = on; std::memset(e.ps, ' ', 8); e.ps[8] = 0; e.tp = e.ta = e.pty = -1;
                 eonBuf_.push_back(e); it = eonBuf_.end() - 1;
             }
-            it->ps[variant * 2] = rdsChar(b[2] >> 8); it->ps[variant * 2 + 1] = rdsChar(b[2] & 0xFF);
-            it->seen |= (uint8_t)(1 << variant);
+            if (verB) { it->tp = (low >> 4) & 1; it->ta = (low >> 3) & 1; }
+            else {
+                it->tp = (low >> 4) & 1;
+                if (variant <= 3) {
+                    it->ps[variant * 2] = rdsChar(b[2] >> 8); it->ps[variant * 2 + 1] = rdsChar(b[2] & 0xFF);
+                    it->seen |= (uint8_t)(1 << variant);
+                } else if (variant == 13) { it->pty = (b[2] >> 11) & 31; it->ta = b[2] & 1; }
+            }
             info.eon.clear();
-            for (const auto& e : eonBuf_) info.eon.push_back({e.pi, e.seen == 15 ? rdsText(e.ps, 8, charset) : std::string()});
+            for (const auto& e : eonBuf_) { RdsEon x; x.pi = e.pi; x.ps = e.seen == 15 ? rdsText(e.ps, 8, charset) : std::string(); x.tp = e.tp; x.ta = e.ta; x.pty = e.pty; info.eon.push_back(x); }
         }
     }
 }

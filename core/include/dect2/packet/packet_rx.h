@@ -20,6 +20,7 @@ public:
 
     void configure(double inputRateHz);
     void setWideInput(bool on);                          // the input is one carrier at 192 ksps from the whole-span bank (accepted below the radio's minimum rate)
+    void setTableScale(int scale);                       // frame (200) and station (300) lists times 1 (default) .. 20; the oldest leave first
     void setNarrowChannel(bool on);                      // channel filter width: false 25 kHz (default), true 12.5 kHz (rejects a neighbouring channel better; the signal must be centred)
     bool narrowChannel() const;
     // "Fix bits": a frame that fails the FCS is tried again with one bit (1), or also two neighbouring bits (2), flipped; 0 = off (default).

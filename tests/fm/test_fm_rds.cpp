@@ -139,6 +139,19 @@ static void testGroups() {
         const char* n = "LRT KL. ";
         for (int v = 0; v < 4; v++) send(B(14, 0, v), (uint16_t)(n[2 * v] << 8 | n[2 * v + 1]), 0x4B01);
     }
+    // EON 14A variant 13 (PTY 10, TA on, TP on), then 14B (TP on, TA off) (#436)
+    send(B(14, 0, 13 | 16), (uint16_t)(10 << 11 | 1), 0x4B01);
+    {
+        const RdsInfo& e = d.info;
+        CHECK(e.eon.size() == 1 && e.eon[0].pty == 10 && e.eon[0].ta == 1 && e.eon[0].tp == 1, "EON 13: size %zu pty %d ta %d tp %d", e.eon.size(),
+              e.eon.empty() ? -9 : e.eon[0].pty, e.eon.empty() ? -9 : e.eon[0].ta, e.eon.empty() ? -9 : e.eon[0].tp);
+    }
+    send(B(14, 1, 16 | 0), kPi, 0x4B01);
+    {
+        const RdsInfo& e = d.info;
+        CHECK(e.eon.size() == 1 && e.eon[0].ta == 0 && e.eon[0].tp == 1 && e.eon[0].ps == "LRT KL. ", "EON 14B: ta %d tp %d ps '%s'", e.eon.empty() ? -9 : e.eon[0].ta, e.eon.empty() ? -9 : e.eon[0].tp,
+              e.eon.empty() ? "" : e.eon[0].ps.c_str());
+    }
     const RdsInfo& i = d.info;
     CHECK(d.ps == "TESTFM  " && d.rt == "Hello world", "PS '%s' RT '%s'", d.ps.c_str(), d.rt.c_str());
     CHECK(i.afMhz.size() == 3 && std::fabs(i.afMhz[0] - 90.5) < 0.01 && std::fabs(i.afMhz[1] - 92.0) < 0.01 && std::fabs(i.afMhz[2] - 95.5) < 0.01,

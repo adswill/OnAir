@@ -233,6 +233,44 @@ void tvFilePanel(TxUi& s, const TxModeSpec& mode, bool running) {
             }
         }
     }
+    if (id == "isdbt") {   // ISDB-T: the transmission parameters (the one-segment layer A stays QPSK 2/3; layer B carries the programme) (#466)
+        static const char* const bwn[] = {"6 MHz", "7 MHz", "8 MHz"};
+        const int bi = s.synth.isdbtBwMhz == 8 ? 2 : s.synth.isdbtBwMhz == 7 ? 1 : 0;
+        ImGui::SetNextItemWidth(120 * gUi);
+        if (ImGui::BeginCombo(tr("Channel width##tx2"), bwn[bi])) {
+            for (int i = 0; i < 3; i++) if (ImGui::Selectable(bwn[i], i == bi)) s.synth.isdbtBwMhz = 6 + i;
+            ImGui::EndCombo();
+        }
+        static const char* const modes[] = {"mode 1 (2K)", "mode 2 (4K)", "mode 3 (8K)"};
+        const int mi = std::max(1, std::min(3, s.synth.isdbtMode)) - 1;
+        ImGui::SetNextItemWidth(140 * gUi);
+        if (ImGui::BeginCombo(tr("FFT mode"), modes[mi])) {
+            for (int i = 0; i < 3; i++) if (ImGui::Selectable(modes[i], i == mi)) s.synth.isdbtMode = i + 1;
+            ImGui::EndCombo();
+        }
+        static const char* const gis[] = {"1/32", "1/16", "1/8", "1/4"};
+        const int gi = std::max(0, std::min(3, s.synth.isdbtGuard));
+        ImGui::SetNextItemWidth(90 * gUi);
+        if (ImGui::BeginCombo(tr("Guard interval"), gis[gi])) {
+            for (int i = 0; i < 4; i++) if (ImGui::Selectable(gis[i], i == gi)) s.synth.isdbtGuard = i;
+            ImGui::EndCombo();
+        }
+        static const char* const mods[] = {"DQPSK", "QPSK", "16-QAM", "64-QAM"};
+        const int mo = std::max(0, std::min(3, s.synth.isdbtMod));
+        ImGui::SetNextItemWidth(110 * gUi);
+        if (ImGui::BeginCombo(tr("Constellation"), mods[mo])) {
+            for (int i = 0; i < 4; i++) if (ImGui::Selectable(mods[i], i == mo)) s.synth.isdbtMod = i;
+            ImGui::EndCombo();
+        }
+        static const char* const rates[] = {"1/2", "2/3", "3/4", "5/6", "7/8"};
+        const int ra = std::max(0, std::min(4, s.synth.isdbtRate));
+        ImGui::SetNextItemWidth(90 * gUi);
+        if (ImGui::BeginCombo(tr("Code rate (FEC)"), rates[ra])) {
+            for (int i = 0; i < 5; i++) if (ImGui::Selectable(rates[i], i == ra)) s.synth.isdbtRate = i;
+            ImGui::EndCombo();
+        }
+        ImGui::TextDisabled("%s", tr("Default: mode 3, 1/8, 64-QAM 3/4. The area code, PIDs and bitrates come from the transport stream you send; the test programme uses fixed ones."));
+    }
     if (id == "dvbs") {
         if (s.synth.modeVal[0] <= 0) s.synth.modeVal[0] = 5e6;
         ImGui::InputDouble(tr("Symbol rate (Hz)"), &s.synth.modeVal[0], 0, 0, "%.0f");

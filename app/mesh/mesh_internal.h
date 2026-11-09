@@ -30,6 +30,7 @@ struct State {
     int chatChannel = 0;                         // index into the channel list built each frame (0 = all)
     int region = 0, protocols = 15;              // region: index into kPlans
     bool allPresets = false;
+    int tableScale = 1, pushedScale = -1;         // table sizes times 1 / 5 / 20 (pref meshTableScale)
     std::vector<Key> keys;
     bool keysPushed = false;
     int pushedRegion = -1, pushedProtocols = -1, pushedPresets = -1;

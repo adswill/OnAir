@@ -3484,3 +3484,336 @@ Custom remove-after time (minutes)	Özel kaldırma süresi (dakika)
 Used by every Remove after row set to Custom.	Özel olarak ayarlanmış her Şundan sonra kaldır satırı bunu kullanır.
 Default	Varsayılan
 Custom	Özel
+#  added later (machine translation, unreviewed)
+%+.1f kHz from the capture centre, %.1f kHz wide	Çekim merkezinden %+.1f kHz, %.1f kHz geniş
+%d spur(s) cut	%d parazit kesildi
+16-bit	16 bit
+A certificate needs both files.	Bir sertifika için iki dosya da gerekir.
+A desktop notification for each matching new page (off by default)	Eşleşen her yeni sayfa için masaüstü bildirimi (varsayılan olarak kapalı)
+A desktop notification when a call starts (off by default)	Bir çağrı başladığında masaüstü bildirimi (varsayılan olarak kapalı)
+A preset has no exact position: type a city or coordinates above if you want the aircraft map and satellite passes centred on you.	Bir ön ayarın tam konumu yoktur: uçak haritasının ve uydu geçişlerinin sizin etrafınızda ortalanmasını istiyorsanız yukarıya bir şehir veya koordinat yazın.
+A sound card or a web radio used as the input.	Giriş olarak kullanılan bir ses kartı veya web radyosu.
+AI assistant (MCP)	Yapay zeka yardımcısı (MCP)
+Activity	Etkinlik
+Add a transmitter to the table	Tabloya bir verici ekle
+Add as	Şu olarak ekle
+Add selected region	Seçili bölgeyi ekle
+Add the signal at the tuner marker (12.5 kHz wide).	Ayarlayıcı işaretindeki sinyali ekle (12,5 kHz geniş).
+Add tuned signal	Ayarlı sinyali ekle
+Advanced: every tab of this mode with all the detail	Gelişmiş: bu modun tüm ayrıntılarıyla her sekmesi
+Airspy HF+: a very sensitive receiver for long, medium and short wave and FM, up to 260 MHz.	Airspy HF+: uzun, orta ve kısa dalga ile 260 MHz'e kadar FM için çok hassas bir alıcı.
+All voice modes	Tüm ses modları
+Allow again##wsUnban	Yeniden izin ver##wsUnban
+Allow the AI to transmit (off by default; this is your decision, it is forgotten at restart)	Yapay zekanın yayın yapmasına izin ver (varsayılan olarak kapalı; karar sizindir, yeniden başlatınca unutulur)
+An AI assistant (Claude, ChatGPT-style clients, a local model) that you connect can tune, scan bands, identify signals and start decoders for you, and read what was decoded. It cannot read files, run programs, change settings or decrypt anything, and it cannot transmit unless you allow that below. Every action is listed in the log.	Bağladığınız bir yapay zeka yardımcısı (Claude, ChatGPT tarzı istemciler, yerel bir model) sizin yerinize ayar yapabilir, bantları tarayabilir, sinyalleri tanımlayabilir, çözücüleri başlatabilir ve çözülenleri okuyabilir. Dosya okuyamaz, program çalıştıramaz, ayar değiştiremez ve hiçbir şeyin şifresini çözemez; aşağıdan izin vermediğiniz sürece yayın da yapamaz. Her eylem günlükte listelenir.
+An AI is connected: %s	Bir yapay zeka bağlı: %s
+Antenna (shown to listeners, optional)	Anten (dinleyicilere gösterilir, isteğe bağlı)
+Antenna: %s	Anten: %s
+Anyone with the link	Bağlantıya sahip herkes
+Apply changes	Değişiklikleri uygula
+Australia	Avustralya
+Auto decode cubesats	Cubesat'leri otomatik çöz
+Auto decode: on (click to stop)	Otomatik çözme: açık (durdurmak için tıklayın)
+Auto-assign devices	Cihazları otomatik ata
+Auto-save to file	Dosyaya otomatik kaydet
+BPSK	BPSK
+Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	Bu modun kendi bant genişliğine ve örnekleme hızına dön. Özel değerleriniz, Özel'i bir sonraki işaretleyişinizde kullanılmak üzere kayıtlı kalır.
+Band and channels	Bant ve kanallar
+Base stations	Baz istasyonları
+Baud rate	Baud hızı
+Baud rate (0: automatic, any value)	Baud hızı (0: otomatik, herhangi bir değer)
+Beep	Bip
+Block 24 h##wsBlock	24 saat engelle##wsBlock
+Blocked: %s (%d min left)	Engellendi: %s (%d dk kaldı)
+CPU	İşlemci
+CPU limit %	İşlemci sınırı %
+Call log	Çağrı günlüğü
+Calls	Çağrılar
+Calls %llu, followed %llu, retune %.2f s (max %.2f s)	Çağrılar %llu, izlenen %llu, yeniden ayar %.2f sn (en çok %.2f sn)
+Calls are saved in the recordings folder, trunk. Sound needs the vocoder add-on.	Çağrılar kayıtlar klasörüne, trunk altına kaydedilir. Ses için vokoder eklentisi gerekir.
+Canada	Kanada
+Carriers	Taşıyıcılar
+Carriers followed at once	Aynı anda izlenen taşıyıcılar
+Change any of this at any time: Help > Setup and lessons > Run setup again, Mode > Modes shown, View > Language, Settings > Appearance > Font look.	Bunların hepsini istediğiniz zaman değiştirebilirsiniz: Yardım > Kurulum ve dersler > Kurulumu yeniden çalıştır, Mod > Gösterilen modlar, Görünüm > Dil, Ayarlar > Görünüm > Yazı biçimi.
+Channel options	Kanal seçenekleri
+Channel plan	Kanal planı
+Channel width (Hz, 0: automatic, any value)	Kanal genişliği (Hz, 0: otomatik, herhangi bir değer)
+Chat	Sohbet
+Choose...	Seç...
+Claude Desktop: put this in its config file (Settings > Developer > Edit config) and restart it; it needs Node.js for the bridge. Claude Code: run the command in a terminal. Other clients: use the address (streamable HTTP) or start onair-server --mcp-stdio. Then ask, for example: there is some DRM around 15 MHz, find it and decode it.	Claude Desktop: bunu yapılandırma dosyasına (Ayarlar > Geliştirici > Yapılandırmayı düzenle) koyup yeniden başlatın; köprü için Node.js gerekir. Claude Code: komutu bir terminalde çalıştırın. Diğer istemciler: adresi (akışlı HTTP) kullanın veya onair-server --mcp-stdio komutunu başlatın. Sonra örneğin şunu isteyin: 15 MHz civarında bir DRM var, bul ve çöz.
+Clean the input: DC spike, IQ imbalance and the radio's own spurs	Girişi temizle: DC sivri ucu, IQ dengesizliği ve radyonun kendi parazitleri
+Clear log	Günlüğü temizle
+Clear pictures	Resimleri temizle
+Codecs	Kodekler
+Connected to the OnAir relay.	OnAir rölesine bağlanıldı.
+Connecting to the OnAir relay ...	OnAir rölesine bağlanılıyor ...
+Connecting to the relay ...	Röleye bağlanılıyor ...
+Copy CSV	CSV'yi kopyala
+Copy as CSV	CSV olarak kopyala
+Copy build command	Derleme komutunu kopyala
+Copy invite link	Davet bağlantısını kopyala
+Copy the table as CSV to the clipboard	Tabloyu CSV olarak panoya kopyala
+Copy the table as CSV to the clipboard (positions included)	Tabloyu CSV olarak panoya kopyala (konumlar dahil)
+Decode everything in view	Görünümdeki her şeyi çöz
+Decoded packets	Çözülen paketler
+Default (inside the data folder)	Varsayılan (veri klasörünün içinde)
+Defaults: FM %.1f MHz, APRS %.3f MHz, units %s.	Varsayılanlar: FM %.1f MHz, APRS %.3f MHz, birimler %s.
+Deny	Reddet
+Devices	Cihazlar
+Digital voice (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA) is silent until you install its codec plug-in. The calls, IDs and data work without it.	Dijital ses (DMR, P25, NXDN, dPMR, D-STAR, Yaesu, TETRA), kodek eklentisini kurana kadar sessizdir. Çağrılar, kimlikler ve veriler onsuz da çalışır.
+Done	Bitti
+Downloading orbits from CelesTrak (the built-in set is used meanwhile).	Yörüngeler CelesTrak'tan indiriliyor (bu arada yerleşik küme kullanılır).
+EMERG	ACİL
+EMERGENCY	ACİL DURUM
+ENC	ŞİFRELİ
+Easy mode	Kolay mod
+Easy mode (recommended)	Kolay mod (önerilir)
+European Union (generic)	Avrupa Birliği (genel)
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. Off: the detailed tabs.	Her mod Basit görünümüyle açılır: spektrum ve bir Başlat düğmesi ile ana denetimleri olan tek ekran. Kapalıyken: ayrıntılı sekmeler.
+Every mode opens its Simple view: the spectrum and one screen with a Start button and the key controls. The detailed tabs are one click away (Simple | Advanced above them).	Her mod Basit görünümüyle açılır: spektrum ve bir Başlat düğmesi ile ana denetimleri olan tek ekran. Ayrıntılı sekmeler tek tık uzaklıkta (üstlerinde Basit | Gelişmiş).
+Everything in view	Görünümdeki her şey
+Everything in view: on	Görünümdeki her şey: açık
+Export log	Günlüğü dışa aktar
+Export results CSV...	Sonuçları CSV olarak dışa aktar...
+Field	Alan
+File...	Dosya...
+Find every signal in the whole capture (digital voice, TETRA, pagers, packet radio, air band, Inmarsat, TV) and decode all of them at once.	Tüm çekimdeki her sinyali bul (dijital ses, TETRA, çağrı cihazları, paket radyo, hava bandı, Inmarsat, TV) ve hepsini birden çöz.
+First-run setup	İlk kurulum
+Flags	Bayraklar
+Fobos SDR: a wideband receiver, 100 kHz to 6 GHz. Needs the radio's own library, see the ? in Radio settings.	Fobos SDR: 100 kHz ile 6 GHz arası geniş bantlı alıcı. Radyonun kendi kitaplığı gerekir; Radyo ayarlarındaki ? işaretine bakın.
+Follow calls with several radios	Çağrıları birkaç radyoyla izle
+Follow satellites from the table (passes and Doppler)	Tablodaki uyduları izle (geçişler ve Doppler)
+Follow talkgroups that are not listed	Listede olmayan konuşma gruplarını izle
+Follow talkgroups, radio IDs or callsigns. Alerts and recording are off until you tick them for an entry. Encrypted calls are listed but never recorded.	Konuşma gruplarını, radyo kimliklerini veya çağrı işaretlerini izleyin. Siz bir girdi için işaretlemedikçe uyarılar ve kayıt kapalıdır. Şifreli çağrılar listelenir ama asla kaydedilmez.
+Follow the region	Bölgeyi izle
+Follow this signal's sound; it is never paused by the CPU limit	Bu sinyalin sesini izle; işlemci sınırı tarafından asla duraklatılmaz
+Framing	Çerçeveleme
+Free Cloudflare tunnel (needs a small helper program, downloaded once)	Ücretsiz Cloudflare tüneli (bir kez indirilen küçük bir yardımcı program gerekir)
+Free disk space:	Serbest disk alanı:
+Frequency (kHz)	Frekans (kHz)
+From, to (the same number for one), action, priority	Başlangıç, bitiş (tek için aynı sayı), eylem, öncelik
+Germany	Almanya
+Ground stations	Yer istasyonları
+Hang time (s)	Bekleme süresi (sn)
+How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	Radyonun ne kadar spektrum yakaladığı. Varsayılan modun kendi genişliğidir; istediğiniz genişliği ayarlamak için tıklayın.
+How to connect your AI	Yapay zekanızı nasıl bağlarsınız
+How to install (this computer):	Bu bilgisayara nasıl kurulur:
+I don't know what this is: measure the strongest signal (or the region you dragged on the spectrum) and show the most likely modes with how sure OnAir is.	Bunun ne olduğunu bilmiyorum: en güçlü sinyali (veya spektrumda sürüklediğiniz bölgeyi) ölç ve en olası modları OnAir'in ne kadar emin olduğuyla göster.
+Identifiers	Tanımlayıcılar
+Identify	Tanımla
+Identify automatically	Otomatik tanımla
+Imperial	İngiliz (mil)
+Import plan	Planı içe aktar
+Import rules	Kuralları içe aktar
+In	İçeride
+Interests	İlgi alanları
+Invite links only	Yalnızca davet bağlantıları
+Join the OnAir Discord	OnAir Discord'una katıl
+Keep a record of every call	Her çağrının kaydını tut
+Key file for that certificate	Bu sertifikanın anahtar dosyası
+Keywords	Anahtar sözcükler
+Keywords on: no match yet	Anahtar sözcükler açık: henüz eşleşme yok
+Kick##wsKick	Çıkar##wsKick
+Last position	Son konum
+Let an AI assistant control this receiver (MCP)	Bir yapay zeka yardımcısının bu alıcıyı denetlemesine izin ver (MCP)
+Listener limits	Dinleyici sınırları
+Listeners and invites	Dinleyiciler ve davetler
+Listeners from one address at once	Aynı adresten aynı anda dinleyiciler
+Lithuania	Litvanya
+Longest session of one listener in minutes (0 = no limit)	Bir dinleyicinin en uzun oturumu, dakika olarak (0 = sınırsız)
+Look for carriers the table does not explain	Tablonun açıklamadığı taşıyıcıları ara
+Look for every signal in what the radio sees, find out what each one is and offer to open it. One click.	Radyonun gördüğü her sinyali ara, her birinin ne olduğunu bul ve açmayı öner. Tek tık.
+Looking for signals...	Sinyaller aranıyor...
+Lowest elevation (deg)	En düşük yükselim (derece)
+Make an invite link	Davet bağlantısı oluştur
+Measured from the signal itself, never the wanted channel: the DC spike and the IQ mirror image are skipped in the modes they would harm, and a spur inside the channel is cut only when it stays at the same place of the baseband after a retune (a real signal moves with the tuner).	İstenen kanaldan değil, sinyalin kendisinden ölçülür: DC sivri ucu ve IQ ayna görüntüsü, zarar verecekleri modlarda atlanır; kanal içindeki bir parazit ise yalnızca yeniden ayardan sonra ana bandın aynı yerinde kalıyorsa kesilir (gerçek sinyal ayarlayıcıyla birlikte kayar).
+Metric	Metrik
+Minimum SNR (dB)	En düşük SNR (dB)
+Modulation of unknown carriers	Bilinmeyen taşıyıcıların modülasyonu
+Most spectrum rows per second (0 = the default)	Saniyedeki en çok spektrum satırı (0 = varsayılan)
+Multi-radio trunking	Çok radyolu trunking
+NORAD number	NORAD numarası
+Name (optional)	Ad (isteğe bağlı)
+Neighbours	Komşular
+Next passes	Sonraki geçişler
+No AI has connected yet.	Henüz bir yapay zeka bağlanmadı.
+No GPS position heard yet (needs LRRP data)	Henüz GPS konumu duyulmadı (LRRP verisi gerekir)
+No calls of the watched entries heard yet.	İzlenen girdilerin henüz hiç çağrısı duyulmadı.
+No satellite is expected soon: scanning this span for any carrier.	Yakında beklenen uydu yok: bu aralıkta herhangi bir taşıyıcı aranıyor.
+Nobody is listening right now.	Şu anda kimse dinlemiyor.
+Nodes	Düğümler
+Nothing to export: no row matches the search.	Dışa aktarılacak bir şey yok: hiçbir satır aramayla eşleşmiyor.
+Nothing was uploaded.	Hiçbir şey yüklenmedi.
+Nothing watched yet.	Henüz izlenen bir şey yok.
+Nothing yet.	Henüz hiçbir şey yok.
+Notify	Bildir
+Notify on a keyword match	Anahtar sözcük eşleşmesinde bildir
+Off. Press the button to decode everything in the capture.	Kapalı. Çekimdeki her şeyi çözmek için düğmeye basın.
+On air	Yayında
+OnAir does not include or download these codecs (they are patented). You build or install them on your own computer; whether you may use them is your own responsibility. FreeDV, M17, DAB, DRM and TV need nothing.	OnAir bu kodekleri içermez ve indirmez (patentlidir). Onları kendi bilgisayarınızda derler veya kurarsınız; kullanıp kullanamayacağınız kendi sorumluluğunuzdadır. FreeDV, M17, DAB, DRM ve TV için hiçbir şey gerekmez.
+One capture, every signal in it. OnAir finds the signals, says what each one is and starts the right decoder for it. Switch one off, pin the ones that must never be paused, or give an unknown signal its mode by hand.	Tek çekim, içindeki her sinyal. OnAir sinyalleri bulur, her birinin ne olduğunu söyler ve ona uygun çözücüyü başlatır. Birini kapatın, asla duraklatılmaması gerekenleri sabitleyin veya bilinmeyen bir sinyale modunu elle verin.
+One click sets the band plan, TV channels, FM band and step, default frequencies and units for a region (Lithuania, EU, ...).	Tek tık, bir bölge için (Litvanya, AB, ...) bant planını, TV kanallarını, FM bandını ve adımını, varsayılan frekansları ve birimleri ayarlar.
+One keyword per line, any case. It is looked for in the message text and in the capcode name. Start a line with re: for a regular expression, for example re:structure fire|MVA. Matching pages are highlighted in Messages and shown in the ticker.	Satır başına bir anahtar sözcük, büyük/küçük harf fark etmez. Mesaj metninde ve capcode adında aranır. Düzenli ifade için satırı re: ile başlatın, örneğin re:structure fire|MVA. Eşleşen sayfalar Mesajlar'da vurgulanır ve şeritte gösterilir.
+One radio listens to the control channel of a trunked system. When it announces a call, another radio is tuned to the voice channel, and the call is logged. With one radio, calls inside its capture are followed and the rest are not.	Bir radyo, trunk sisteminin kontrol kanalını dinler. Bir çağrı duyurulduğunda başka bir radyo ses kanalına ayarlanır ve çağrı kaydedilir. Tek radyoyla yalnızca çekimi içindeki çağrılar izlenir, diğerleri izlenmez.
+Only digital voice modes need a codec. You can skip this screen and come back from Help > Voice codecs.	Yalnızca dijital ses modları bir kodek gerektirir. Bu ekranı atlayıp Yardım > Ses kodekleri üzerinden geri gelebilirsiniz.
+Only my network (a phone on the same Wi-Fi)	Yalnızca benim ağım (aynı Wi-Fi'deki bir telefon)
+Open Automations...	Otomasyonları aç...
+Open Plug-ins...	Eklentileri aç...
+Open recordings folder	Kayıtlar klasörünü aç
+Open the setup again: radio, region, antenna, interests, voice codecs.	Kurulumu yeniden aç: radyo, bölge, anten, ilgi alanları, ses kodekleri.
+Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.	Bu kaydın klasörünü açar ve yolunu kopyalar. Dosyayı gönderin (SigMF için .sigmf-meta ve .sigmf-data birlikte): kendi frekansı, hızı ve moduyla yeniden oynatılır.
+Or search for a city or country	Veya bir şehir ya da ülke arayın
+Other client	Diğer istemci
+Pager keyword	Çağrı cihazı anahtar sözcüğü
+Password (8 characters or more)	Parola (8 karakter veya daha uzun)
+Pictures sent inside the MFSK stream (Shortwave Radiogram) appear here as they arrive.	MFSK akışının içinde gönderilen resimler (Shortwave Radiogram) geldikçe burada görünür.
+Pin	Sabitle
+Pinned: never paused by the CPU limit	Sabitlendi: işlemci sınırı tarafından asla duraklatılmaz
+Play the channel audio; decoding is the same either way	Kanalın sesini çal; çözme her iki durumda da aynıdır
+Plug-ins	Eklentiler
+Plug-ins and scripts	Eklentiler ve betikler
+Poland	Polonya
+Port on this computer (0 = the first free one from 8073)	Bu bilgisayardaki bağlantı noktası (0 = 8073'ten başlayarak ilk boş olan)
+Press the button: it does the rest.	Düğmeye basın: gerisini o yapar.
+Priority 1 (highest) to 10, 0 none. A higher priority talkgroup takes a radio from a lower one.	Öncelik 1 (en yüksek) ile 10 arası, 0 yok. Daha yüksek öncelikli konuşma grubu daha düşük olandan radyo alır.
+Priority talkgroups take a radio	Öncelikli konuşma grupları radyo alır
+Processor %.0f%% of the %.0f%% limit	İşlemci %.0f%% (sınır %.0f%%)
+Programs on this computer need the token too	Bu bilgisayardaki programların da belirtece ihtiyacı var
+Quick pick: a region preset sets the band plan, the TV channels, the FM band, the default frequencies and the units	Hızlı seçim: bir bölge ön ayarı bant planını, TV kanallarını, FM bandını, varsayılan frekansları ve birimleri ayarlar
+RFNM: a wideband radio board with one or two daughter boards, on USB or the network.	RFNM: bir veya iki yavru karta sahip, USB veya ağ üzerinden geniş bantlı radyo kartı.
+Refresh orbits	Yörüngeleri yenile
+Region preset	Bölge ön ayarı
+Relay service address (only if you run your own relay)	Röle hizmeti adresi (yalnızca kendi rölenizi çalıştırıyorsanız)
+Remove: a signal you added is taken away, a found one is switched off	Kaldır: eklediğiniz sinyal çıkarılır, bulunan kapatılır
+Retune wait (s)	Yeniden ayar bekleme süresi (sn)
+Role	Rol
+Run setup again...	Kurulumu yeniden çalıştır...
+Running programs is allowed.	Program çalıştırmaya izin verilir.
+Running programs is off.	Program çalıştırma kapalı.
+SDR++ server: a radio shared by another computer running SDR++.	SDR++ sunucusu: SDR++ çalıştıran başka bir bilgisayarın paylaştığı radyo.
+SDRplay nRSP-ST: a network radio, used through SDRconnect running on a computer.	SDRplay nRSP-ST: bir bilgisayarda çalışan SDRconnect üzerinden kullanılan ağ radyosu.
+Save PNG	PNG kaydet
+Save every picture	Her resmi kaydet
+Save the audio of its calls to the recordings folder through the auto-record rules (this also switches auto-record on). Encrypted calls are never recorded. You are responsible for the law of your country.	Çağrılarının sesini otomatik kayıt kuralları aracılığıyla kayıtlar klasörüne kaydet (bu aynı zamanda otomatik kaydı açar). Şifreli çağrılar asla kaydedilmez. Ülkenizin yasalarından siz sorumlusunuz.
+Saves the rows now in the table (with the search and the filters applied, built-in and yours) as a CSV file. Import and the Memory panel read it back.	Tablodaki satırları (aramanın ve süzgeçlerin uygulandığı hâliyle, yerleşik ve sizin eklediğiniz) CSV dosyası olarak şimdi kaydeder. İçe aktarma ve Bellek paneli onu geri okur.
+Scan resolution (Hz, 0: automatic)	Tarama çözünürlüğü (Hz, 0: otomatik)
+Scripts and rules	Betikler ve kurallar
+Search window around the predicted carrier (Hz)	Öngörülen taşıyıcı çevresindeki arama penceresi (Hz)
+Sec	Sn
+Selected	Seçili
+Server settings	Sunucu ayarları
+Share##rec	Paylaş##rec
+Show on map	Haritada göster
+Simple: the spectrum and one view with the summary, the live data and the key controls of this mode	Basit: spektrum ve bu modun özeti, canlı verileri ve ana denetimlerini içeren tek görünüm
+Site	Saha
+Start a P25 receiver on the control channel, then press Auto-assign devices.	Bir P25 alıcısını kontrol kanalında başlatın, sonra Cihazları otomatik ata'ya basın.
+Start the receiver to begin.	Başlamak için alıcıyı başlatın.
+Start the receiver to scan.	Taramak için alıcıyı başlatın.
+System, identifier table (iden_up) and channel numbers from a CSV file	Sistem, tanımlayıcı tablosu (iden_up) ve kanal numaraları bir CSV dosyasından
+TCI: a radio of the ExpertSDR family (SunSDR and others) on the network. Receive only.	TCI: ağdaki ExpertSDR ailesinden (SunSDR ve diğerleri) bir radyo. Yalnızca alma.
+TG	KG
+TG 91, 3120123, 100-199, LY1ABC, LY*	TG 91, 3120123, 100-199, LY1ABC, LY*
+TV channels in the capture: %.0f MHz wide	Çekimdeki TV kanalları: %.0f MHz geniş
+Table	Tablo
+Talkgroup and radio rules	Konuşma grubu ve radyo kuralları
+That folder cannot be written: the default is used.	Bu klasöre yazılamıyor: varsayılan kullanılır.
+The AI can now start transmissions. You are responsible for the law where you are and for your hardware.	Yapay zeka artık yayın başlatabilir. Bulunduğunuz yerin yasalarından ve donanımınızdan siz sorumlusunuz.
+The OnAir relay refuses or cannot be reached: %s	OnAir rölesi reddediyor veya ulaşılamıyor: %s
+The decoders' share of one processor core, against the limit. Above the limit the lowest ranked signals are paused.	Çözücülerin tek bir işlemci çekirdeğinden aldığı pay ve sınır. Sınırın üstünde en düşük sıradaki sinyaller duraklatılır.
+The radio on the control channel stays there; every other open receiver becomes a voice radio. Open more receivers with + at the bottom.	Kontrol kanalındaki radyo orada kalır; açık olan diğer her alıcı ses radyosu olur. Alttaki + ile daha fazla alıcı açın.
+The relay link dropped (%s). Trying again in %d s.	Röle bağlantısı koptu (%s). %d sn sonra yeniden denenecek.
+The setup has six short screens and every one can be skipped. Nothing is forced.\n\nRadio: OnAir looks for radios on USB and on the network and picks one. "?" beside a radio opens its help page. Without a radio, the test signal lets you try OnAir.\n\nLocation: one click on a region preset (Lithuania, the EU, ...) or a city, a locator or coordinates give your country, the band plan, the TV channels, the FM band and step, the default frequencies and the units.\n\nAntenna: hints for what you can hear with the antenna you have.\n\nInterests: decide which modes are starred and listed first, where OnAir starts and a few starter presets. Everything stays available.\n\nCodecs: digital voice needs a codec plug-in that you install yourself; Look again checks the folder.\n\nEasy mode on the last screen opens every mode in its Simple view. Run the setup again any time from Help > Setup and lessons > Run setup again, or from Settings.	Kurulum kısa altı ekrandan oluşur ve her biri atlanabilir. Hiçbir şey zorlanmaz.\n\nRadyo: OnAir USB'deki ve ağdaki radyoları arar ve birini seçer. Bir radyonun yanındaki "?" onun yardım sayfasını açar. Radyo yoksa test sinyaliyle OnAir'i deneyebilirsiniz.\n\nKonum: bir bölge ön ayarına (Litvanya, AB, ...) tek tık veya bir şehir, bir lokatör ya da koordinatlar ülkenizi, bant planını, TV kanallarını, FM bandını ve adımını, varsayılan frekansları ve birimleri belirler.\n\nAnten: sahip olduğunuz antenle neler duyabileceğinize dair ipuçları.\n\nİlgi alanları: hangi modların yıldızlanıp başa listeleneceğine, OnAir'in nerede başlayacağına ve birkaç başlangıç ön ayarına karar verin. Her şey kullanılabilir kalır.\n\nKodekler: dijital ses, kendiniz kuracağınız bir kodek eklentisi gerektirir; Yeniden bak klasörü kontrol eder.\n\nSon ekrandaki Kolay mod her modu Basit görünümüyle açar. Kurulumu istediğiniz zaman Yardım > Kurulum ve dersler > Kurulumu yeniden çalıştır'dan veya Ayarlar'dan yeniden çalıştırabilirsiniz.
+This computer cannot keep up: %d signals are paused to save CPU. Pin the ones you need, or raise the limit.	Bu bilgisayar yetişemiyor: işlemciden tasarruf için %d sinyal duraklatıldı. İhtiyacınız olanları sabitleyin veya sınırı yükseltin.
+Tones (Hz)	Tonlar (Hz)
+Tried on	Denenen
+Trunking	Trunking
+Tuned for	Şunun için ayarlandı
+Tunes a span that holds the satellites about to pass, follows their Doppler shift, finds every narrow carrier, works out its modulation and baud rate, and decodes it with every framing that fits. Nothing to set up.	Geçmek üzere olan uyduları içeren bir aralığı ayarlar, Doppler kaymalarını izler, her dar taşıyıcıyı bulur, modülasyonunu ve baud hızını çıkarır ve uyan her çerçeveleme ile çözer. Ayarlanacak bir şey yok.
+Turn the Identify tool on (key I) and drag across a signal on the spectrum, then add it here.	Tanımla aracını açın (I tuşu) ve spektrumda bir sinyalin üzerinden sürükleyin, sonra buraya ekleyin.
+United Kingdom	Birleşik Krallık
+United States	Amerika Birleşik Devletleri
+Units	Birimler
+Upload %.0f of %.0f kbit/s	Yükleme %.0f / %.0f kbit/sn
+Use typed path	Yazılan yolu kullan
+Vessels	Gemiler
+Watching	İzleniyor
+What	Ne
+What the AI did	Neden
+What this means for you	Bu sizin için ne anlama geliyor
+What to do:	Yapılacaklar:
+When the decoders take longer than this share of one core, the lowest ranked signal is paused (never a pinned one or the one you listen to) and comes back when there is room. 0: no limit.	Çözücüler bir çekirdeğin bu payından uzun sürerse en düşük sıradaki sinyal duraklatılır (asla sabitlenmiş olan veya dinlediğiniz değil) ve yer açılınca geri gelir. 0: sınır yok.
+Where recordings are saved. Change it in Settings > Files.	Kayıtların kaydedildiği yer. Ayarlar > Dosyalar'dan değiştirin.
+Which antenna will you use? It matters more than the radio. OnAir uses the answer for hints only; nothing is changed in the radio.	Hangi anteni kullanacaksınız? Radyodan daha önemlidir. OnAir yanıtı yalnızca ipuçları için kullanır; radyoda hiçbir şey değiştirilmez.
+While sharing	Paylaşım sırasında
+Why	Neden
+Will share: %s, %s MHz, up to %d listeners, %s, %s.	Paylaşılacak: %s, %s MHz, en çok %d dinleyici, %s, %s.
+Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded.	Paketleri SatNOGS'a hazır bir dosya (satır başına bir telemetri kaydı), bir CSV ve bir KISS dosyası olarak veri klasörüne yazar. Hiçbir şey yüklenmez.
+Zoom: mouse wheel (both axes), Ctrl+wheel (frequency), Shift+wheel (level).\nCtrl+PageUp / PageDown: step the view by one screen in frequency. Double click: tune. Home: show the whole band.	Yakınlaştırma: fare tekerleği (iki eksen), Ctrl+tekerlek (frekans), Shift+tekerlek (seviye).\nCtrl+PageUp / PageDown: görünümü frekansta bir ekran kaydırır. Çift tık: ayarla. Home: tüm bandı göster.
+at your own address	kendi adresinizde
+byte errors put right	düzeltilen bayt hataları
+calls	çağrılar
+carrier found	taşıyıcı bulundu
+carrier only	yalnızca taşıyıcı
+control	kontrol
+copied	kopyalandı
+custom	özel
+dB	dB
+decoding	çözülüyor
+decoding well	iyi çözülüyor
+decoding, but over a third of the blocks are lost: a stronger signal or a better antenna would help	çözülüyor, ama blokların üçte birinden fazlası kayıp: daha güçlü bir sinyal veya daha iyi bir anten yardımcı olur
+default	varsayılan
+encrypted	şifreli
+ended	sona erdi
+failed their checks	denetimlerinde başarısız oldu
+frame syncs found, but the payload fails its FEC / CRC: weak signal, fading or a sample clock error	çerçeve eşzamanlamaları bulundu, ama veri kısmı FEC / CRC denetiminde başarısız: zayıf sinyal, sönümleme veya örnekleme saati hatası
+frame syncs found, but their identity (NID, LICH, slot type) is unreadable: the signal is too noisy or distorted	çerçeve eşzamanlamaları bulundu, ama kimlikleri (NID, LICH, yuva türü) okunamıyor: sinyal çok gürültülü veya bozuk
+framing	çerçeveleme
+grey	gri
+hold	beklet
+identifying	tanımlanıyor
+imperial (miles, feet)	İngiliz (mil, fit)
+installed	kurulu
+invite links only	yalnızca davet bağlantıları
+just now	şu an
+lines are not valid and were skipped	satır geçerli değil ve atlandı
+listening on %s port %d, %d requests, %d refused	dinleniyor: %s bağlantı noktası %d, %d istek, %d reddedildi
+lost	kayıp
+metric (km, metres)	metrik (km, metre)
+min ago	dk önce
+missing	eksik
+more matching pages	eşleşen daha fazla sayfa
+no calls yet	henüz çağrı yok
+no codes yet	henüz kod yok
+no decoder	çözücü yok
+no known signal	bilinen sinyal yok
+no pass of a satellite in the table in the next hours (set your location, refresh the orbits)	tablodaki hiçbir uydunun önümüzdeki saatlerde geçişi yok (konumunuzu ayarlayın, yörüngeleri yenileyin)
+no radio found	radyo bulunamadı
+no signal at the channel: check the tuning, the antenna and the gain	kanalda sinyal yok: ayarı, anteni ve kazancı kontrol edin
+none yet	henüz yok
+not followed	izlenmiyor
+on this network only	yalnızca bu ağda
+open to anyone with the link	bağlantıya sahip herkese açık
+orbits for %zu satellites, %zu table entries	%zu uydu için yörüngeler, %zu tablo girdisi
+paused (CPU)	duraklatıldı (işlemci)
+received	alındı
+rows	satır
+rows read	okunan satır
+rtl_tcp: an RTL-SDR shared by another computer over the network.	rtl_tcp: ağdaki başka bir bilgisayarın paylaştığı bir RTL-SDR.
+rules read	okunan kurallar
+running	çalışıyor
+satellite	uydu
+signal, but no frame sync found: check the tuning (offset, polarity), the bandwidth and the signal-to-noise ratio	sinyal var, ama çerçeve eşzamanlaması bulunamadı: ayarı (kayma, kutupluluk), bant genişliğini ve sinyal gürültü oranını kontrol edin
+skipped	atlandı
+some stations are hidden	bazı istasyonlar gizli
+strongest tone	en güçlü ton
+telemetry	telemetri
+through a Cloudflare tunnel	bir Cloudflare tüneli üzerinden
+through the OnAir relay (no router settings needed)	OnAir rölesi üzerinden (yönlendirici ayarı gerekmez)
+tuning	ayarlanıyor
+valid	geçerli
+validated by	doğrulayan
+voice	ses
+with a password	parolalı
+working	çalışıyor
+working out the passes ...	geçişler hesaplanıyor ...
+wrong processor	yanlış işlemci

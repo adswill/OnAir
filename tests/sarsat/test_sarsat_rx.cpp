@@ -50,6 +50,16 @@ static int countFound(const SarsatTelemetry& t, const char* what) {
     int stray = 0;
     for (const SarsatEntry& e : t.log) if (!known.count(e.b.hexId)) { stray++; printf("  stray %s corr %d t %.2f snr %.1f cfo %.0f long %d id %s\n", e.b.hexId.c_str(), e.b.corrected, e.timeSec, e.snrDb, e.cfoHz, (int)e.b.longMsg, e.b.idText.c_str()); }
     CHECK(stray == 0, "%s: %d messages that were not sent", what, stray);
+    for (const SarsatEntry& e : t.log) {   // the frame as received next to the repaired one (#438): they differ by exactly the repaired bits
+        const sarsat::Beacon& b = e.b;
+        CHECK(!b.rxHex.empty() && b.rxHex.size() == b.rawHex.size(), "%s: received frame missing or of another length (%s)", what, b.hexId.c_str());
+        int diff = 0;
+        for (size_t i = 0; i < b.rxHex.size() && i < b.rawHex.size(); i++) {
+            const int x = std::stoi(std::string(1, b.rxHex[i]), nullptr, 16) ^ std::stoi(std::string(1, b.rawHex[i]), nullptr, 16);
+            diff += __builtin_popcount((unsigned)x);
+        }
+        CHECK(diff == (int)b.fixedBits.size() && (int)b.fixedBits.size() == b.corrected, "%s: %d bits differ, %zu listed, %d repaired", what, diff, b.fixedBits.size(), b.corrected);
+    }
     return found;
 }
 

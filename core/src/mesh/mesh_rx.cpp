@@ -127,6 +127,7 @@ template <class T> void capPush(std::vector<T>& v, T&& x, size_t cap) {
 
 struct MeshReceiver::Impl {
     // settings, written by any thread
+    std::atomic<int> capScale{1};            // table sizes are the defaults times this (1, 5, 20): the snapshot of every update is copied, so it stays a choice
     std::mutex mu;
     double rate = 0, offsetHz = 0, tunedHz = 0;
     int region = 0, protocols = 15;
@@ -271,7 +272,7 @@ struct MeshReceiver::Impl {
         const std::string key = std::to_string(protocol) + "|" + id;
         auto it = nodeIdx.find(key);
         if (it != nodeIdx.end()) return tel.nodes[it->second];
-        if (tel.nodes.size() >= kNodeCap) {
+        if (tel.nodes.size() >= kNodeCap * (size_t)capScale.load()) {
             // the node heard longest ago leaves
             size_t old = 0;
             for (size_t i = 1; i < tel.nodes.size(); i++) if (tel.nodes[i].lastHeard < tel.nodes[old].lastHeard) old = i;
@@ -348,12 +349,12 @@ struct MeshReceiver::Impl {
             row.note = r.packet.note.empty() ? "not a " + std::string(protoName(di.protocol)) + " packet" : r.packet.note;   // (the first one tried)
             if (crcBad) row.note = row.note == "CRC error" ? row.note : std::string("CRC error") + (row.note.empty() ? "" : "; " + row.note);
             count(di.protocol, "unknown");
-            capPush(tel.packets, std::move(row), kPacketCap);
+            capPush(tel.packets, std::move(row), kPacketCap * (size_t)capScale.load());
             return;
         }
         if (proto_ == 5 && crcBad) {   // a LoRaWAN frame with a failed CRC is never trusted: counted and listed, but no device is made from it
             row.note = row.note.empty() ? "CRC error" : std::string("CRC error; ") + row.note;
-            capPush(tel.packets, std::move(row), kPacketCap);
+            capPush(tel.packets, std::move(row), kPacketCap * (size_t)capScale.load());
             return;
         }
         if (proto_ == 5) { onLorawan(c, t, f, r, std::move(row)); return; }
@@ -425,7 +426,7 @@ struct MeshReceiver::Impl {
             auto it = nodeIdx.find(std::to_string(mm.protocol) + "|" + m.from);
             if (it != nodeIdx.end()) mm.fromName = tel.nodes[it->second].longName;
             else if (mm.protocol == 2) mm.fromName = m.from;   // MeshCore puts the sender's name in the text
-            capPush(tel.messages, std::move(mm), kMessageCap);
+            capPush(tel.messages, std::move(mm), kMessageCap * (size_t)capScale.load());
         }
         if (!crcBad && (proto_ == 1 || proto_ == 2)) {
             for (const auto& u : r.nodes) {   // names, roles and positions help to read the graph
@@ -440,14 +441,14 @@ struct MeshReceiver::Impl {
             if (fit != nodeIdx.end()) { const MeshNode& nd = tel.nodes[fit->second]; topoNoteMeshNode(topo, nd.id, nd.longName.empty() ? nd.shortName : nd.longName, nd.role, nd.hasPosition, nd.lat, nd.lon, t, proto_); }
             topoFeedLora(topo, topoSt, row, t);
         }
-        capPush(tel.packets, std::move(row), kPacketCap);
+        capPush(tel.packets, std::move(row), kPacketCap * (size_t)capScale.load());
     }
 
     MeshAprsStation& aprsStation(int protocol, const std::string& call) {
         const std::string key = std::to_string(protocol) + "|" + call;
         auto it = aprsIdx.find(key);
         if (it != aprsIdx.end()) return tel.aprsStations[it->second];
-        if (tel.aprsStations.size() >= kAprsCap) {
+        if (tel.aprsStations.size() >= kAprsCap * (size_t)capScale.load()) {
             size_t old = 0;
             for (size_t i = 1; i < tel.aprsStations.size(); i++) if (tel.aprsStations[i].st.lastHeardSec < tel.aprsStations[old].st.lastHeardSec) old = i;
             tel.aprsStations.erase(tel.aprsStations.begin() + (long)old);
@@ -502,9 +503,9 @@ struct MeshReceiver::Impl {
             MeshMessage mm;
             mm.timeSec = t; mm.protocol = pr;
             mm.channel = m.channel; mm.from = m.from; mm.fromName = m.from; mm.to = m.to; mm.text = m.text.substr(0, 240); mm.packetId = m.packetId;
-            capPush(tel.messages, std::move(mm), kMessageCap);
+            capPush(tel.messages, std::move(mm), kMessageCap * (size_t)capScale.load());
         }
-        capPush(tel.packets, std::move(row), kPacketCap);
+        capPush(tel.packets, std::move(row), kPacketCap * (size_t)capScale.load());
     }
 
     // LoRaWAN: the device table (by DevAddr; join requests by DevEUI) and the packet row. Nothing is decrypted.
@@ -531,7 +532,7 @@ struct MeshReceiver::Impl {
         if (!id.empty()) {
             auto it = lwIdx.find(id);
             if (it == lwIdx.end()) {
-                if (tel.lorawanDevices.size() >= kLorawanCap) {
+                if (tel.lorawanDevices.size() >= kLorawanCap * (size_t)capScale.load()) {
                     size_t old = 0;
                     for (size_t i = 1; i < tel.lorawanDevices.size(); i++) if (tel.lorawanDevices[i].lastHeard < tel.lorawanDevices[old].lastHeard) old = i;
                     tel.lorawanDevices.erase(tel.lorawanDevices.begin() + (long)old);
@@ -564,7 +565,7 @@ struct MeshReceiver::Impl {
             }
         }
         (void)c;
-        capPush(tel.packets, std::move(row), kPacketCap);
+        capPush(tel.packets, std::move(row), kPacketCap * (size_t)capScale.load());
     }
 
     void report() {
@@ -736,6 +737,7 @@ bool MeshReceiver::telemetry(MeshTelemetry& out, uint64_t lastSeq) {
 void MeshReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }
 void MeshReceiver::setTunedHz(double hz) { std::lock_guard<std::mutex> lk(p_->mu); p_->tunedHz = hz; p_->dirty = true; }
 void MeshReceiver::setRegion(int r) { std::lock_guard<std::mutex> lk(p_->mu); p_->region = r >= 1 && r <= 3 ? r : 0; p_->dirty = true; }
+void MeshReceiver::setTableScale(int scale) { p_->capScale = std::max(1, std::min(20, scale)); }
 void MeshReceiver::setProtocols(int mask) { std::lock_guard<std::mutex> lk(p_->mu); p_->protocols = mask & 31; p_->dirty = true; }
 void MeshReceiver::setPresetSearch(bool all) { std::lock_guard<std::mutex> lk(p_->mu); p_->presetSearch = all; p_->dirty = true; }
 void MeshReceiver::setMeshtasticPlan(const std::string& region, const std::string& preset) {

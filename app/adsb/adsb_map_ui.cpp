@@ -242,36 +242,41 @@ static void drawAircraft(ImDrawList* dl, const AdsbTelemetry& t, ImVec2 p0, ImVe
         if (lite || !S.disp.labels ? sel : (S.map.zoom >= 6 || sel)) {   // labels off (#85): only the selected aircraft has its box
             char l1[48]; snprintf(l1, sizeof l1, "%s", ac.callsign.empty() ? icaoText(ac.icao).c_str() : ac.callsign.c_str());
             char l2[48] = "", l3[48] = "";
-            if (ac.ground) snprintf(l2, sizeof l2, "GND");
+            const int lf = S.disp.labelFields;
+            if (!(lf & 1)) {}
+            else if (ac.ground) snprintf(l2, sizeof l2, "GND");
             else if (ac.hasAlt) {
                 if (S.units.metric()) snprintf(l2, sizeof l2, "%s m", uAlt(ac.altFt).c_str());
                 else snprintf(l2, sizeof l2, "FL%03d", (ac.altFt + 50) / 100);
             }
-            if (ac.hasSpeed) {
+            if ((lf & 1) && ac.hasSpeed) {
                 const size_t n = strlen(l2);
                 snprintf(l2 + n, sizeof l2 - n, "%s%s %s", n ? "  " : "", uSpd(ac.speedKt).c_str(), au::speedUnit(S.units));
             }
-            if (ac.hasSquawk) snprintf(l3, sizeof l3, "sqk %04d", ac.squawk);
-            if (!ac.category.empty()) {
+            if ((lf & 2) && ac.hasSquawk) snprintf(l3, sizeof l3, "sqk %04d", ac.squawk);
+            if ((lf & 2) && !ac.category.empty()) {
                 const size_t n = strlen(l3);
                 snprintf(l3 + n, sizeof l3 - n, "%s%s", n ? "  " : "", ac.category.c_str());
             }
             char l4[96] = "";   // registration, country code and operator: for the selected aircraft and when zoomed in
-            if (sel || S.map.zoom >= 9) {
+            if ((lf & 4) && (sel || S.map.zoom >= 9)) {
                 const std::string rg = registrationOf(ac.icao), cc = countryCode(ac.icao), op = operatorOf(ac.icao);
                 snprintf(l4, sizeof l4, "%s%s%s%s%s", rg.c_str(), rg.empty() || cc.empty() ? "" : " ", cc.c_str(), op.empty() ? "" : "  ", op.c_str());
             }
-            const ImVec2 t1 = ImGui::CalcTextSize(l1), t2 = ImGui::CalcTextSize(l2), t3 = ImGui::CalcTextSize(l3), t4 = ImGui::CalcTextSize(l4);
+            const float ls = S.disp.labelScale / 100.f, fs = ImGui::GetFontSize() * ls;
+            ImFont* const lfont = ImGui::GetFont();
+            auto sized = [&](const char* t) { const ImVec2 v = ImGui::CalcTextSize(t); return ImVec2(v.x * ls, v.y * ls); };
+            const ImVec2 t1 = sized(l1), t2 = sized(l2), t3 = sized(l3), t4 = sized(l4);
             const float w = std::max(std::max(t1.x, t2.x), std::max(t3.x, t4.x)) + 8 * gUi;
             const float hh = t1.y + (l2[0] ? t2.y : 0) + (l3[0] ? t3.y : 0) + (l4[0] ? t4.y : 0) + 4 * gUi;
             const ImVec2 lp(q.x + 12 * gUi, q.y - hh * 0.5f);
             dl->AddRectFilled(lp, ImVec2(lp.x + w, lp.y + hh), IM_COL32(10, 12, 14, 210), 2.f);
             dl->AddRect(lp, ImVec2(lp.x + w, lp.y + hh), sel ? IM_COL32(255, 255, 255, 200) : IM_COL32(60, 64, 68, 255), 2.f);
             float y = lp.y + 2 * gUi;
-            dl->AddText(ImVec2(lp.x + 4 * gUi, y), IM_COL32(235, 238, 240, 255), l1); y += t1.y;
-            if (l2[0]) { dl->AddText(ImVec2(lp.x + 4 * gUi, y), fill, l2); y += t2.y; }
-            if (l3[0]) { dl->AddText(ImVec2(lp.x + 4 * gUi, y), IM_COL32(190, 194, 198, 255), l3); y += t3.y; }
-            if (l4[0]) dl->AddText(ImVec2(lp.x + 4 * gUi, y), IM_COL32(170, 176, 182, 255), l4);
+            dl->AddText(lfont, fs, ImVec2(lp.x + 4 * gUi, y), IM_COL32(235, 238, 240, 255), l1); y += t1.y;
+            if (l2[0]) { dl->AddText(lfont, fs, ImVec2(lp.x + 4 * gUi, y), fill, l2); y += t2.y; }
+            if (l3[0]) { dl->AddText(lfont, fs, ImVec2(lp.x + 4 * gUi, y), IM_COL32(190, 194, 198, 255), l3); y += t3.y; }
+            if (l4[0]) dl->AddText(lfont, fs, ImVec2(lp.x + 4 * gUi, y), IM_COL32(170, 176, 182, 255), l4);
         }
         const float d = std::hypot(q.x - click.x, q.y - click.y);
         if (clicked && d < best) { best = d; hit = &ac; }

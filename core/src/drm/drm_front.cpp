@@ -140,7 +140,27 @@ bool DrmFront::configure(double inRate, double outRate, double minIn) {
     return true;
 }
 
+void DrmFront::setChannelPass(double passHz) {
+    chPass_ = 0; chH_.clear(); chHist_.clear();
+    if (passHz <= 0 || outRate_ != kOutRate) return;
+    // Blackman windowed sinc, cut-off in the middle of the transition (passHz + 1.5 kHz at -6 dB would leave a flat top to passHz)
+    const double fc = (passHz + 1500.0) / outRate_;
+    const int N = kChTaps, M = N / 2;
+    chH_.resize((size_t)N);
+    double sum = 0;
+    for (int i = 0; i < N; i++) {
+        const double x = i - M;
+        const double sinc = x == 0 ? 2 * fc : std::sin(2 * M_PI * fc * x) / (M_PI * x);
+        const double w = 0.42 - 0.5 * std::cos(2 * M_PI * i / (N - 1)) + 0.08 * std::cos(4 * M_PI * i / (N - 1));
+        chH_[(size_t)i] = (float)(sinc * w); sum += sinc * w;
+    }
+    for (auto& h : chH_) h = (float)(h / sum);
+    chHist_.assign((size_t)N - 1, cf32(0, 0));
+    chPass_ = passHz;
+}
+
 void DrmFront::reset() {
+    if (!chHist_.empty()) std::fill(chHist_.begin(), chHist_.end(), cf32(0, 0));
     for (auto& s : stages_) s.reset();
     if (useRs_) rs_.reset();
     dc_ = cf32(0, 0);
@@ -169,6 +189,18 @@ void DrmFront::process(const cf32* in, size_t n, std::vector<cf32>& out) {
             cur = dst.data(); cn = dst.size();
         }
         rs_.process(cur, cn, out);
+    }
+    if (chPass_ > 0 && out.size() > start) {   // the channel filter (always through it once on: a constant delay)
+        const size_t m = out.size() - start, N = chH_.size();
+        chTmp_.assign(chHist_.begin(), chHist_.end());
+        chTmp_.insert(chTmp_.end(), out.begin() + (ptrdiff_t)start, out.end());
+        for (size_t i = 0; i < m; i++) {
+            float re = 0, im = 0;
+            const cf32* x = &chTmp_[i];
+            for (size_t j = 0; j < N; j++) { re += x[j].real() * chH_[N - 1 - j]; im += x[j].imag() * chH_[N - 1 - j]; }
+            out[start + i] = cf32(re, im);
+        }
+        std::copy(chTmp_.end() - (ptrdiff_t)(N - 1), chTmp_.end(), chHist_.begin());
     }
     // DC removal (the radio's DC spike) with a time constant of 0.3 s, and the level
     for (size_t i = start; i < out.size(); i++) {

@@ -289,7 +289,9 @@ std::string recordsProblem(const std::vector<FwRecord>& r) {
         // tells the real firmware from any other file; this only throws out something that is not a firmware loader sequence at all.
         const size_t end = (size_t)x.wValue + x.data.size();
         const bool inCode = end <= 0x4000, inScratch = x.wValue >= 0xE000 && end <= 0xE200;
-        if (!inCode && !inScratch) { char b[96]; snprintf(b, sizeof b, "a write outside the FX2 RAM (0x%04X, %zu bytes)", (unsigned)x.wValue, x.data.size()); return b; }
+        // the vendor sequence also holds and releases the processor in the middle (CPUCS 0xE600 = 1 / 0, one byte), to run a first stage before the rest is loaded (#357, #430)
+        const bool cpucs = x.wValue == kCpucs && x.data.size() == 1 && (x.data[0] == 0 || x.data[0] == 1);
+        if (!inCode && !inScratch && !cpucs) { char b[96]; snprintf(b, sizeof b, "a write outside the FX2 RAM (0x%04X, %zu bytes)", (unsigned)x.wValue, x.data.size()); return b; }
     }
     return "";
 }

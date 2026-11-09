@@ -800,6 +800,7 @@ struct FmReceiver::Impl {
         t.rdsGroups = rds.groups;
         t.psName = rds.ps; t.radioText = rds.rt; t.radioTextComplete = rds.rtComplete; const bool rbds = rdsUseRbds(rdsRegion.load(), tunedMhz.load());
         t.rbds = rbds;
+        t.ptyCode = rds.groups ? rds.pty : -1;
         t.ptyText = rds.groups ? rdsPtyName(rds.pty, rbds) : "";
         t.callSign = rbds && rds.groups ? rbdsCallSign(rds.pi) : "";   // US call letters are in the PI code
         t.tmc = rds.tmc.system();

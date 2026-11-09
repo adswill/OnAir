@@ -407,9 +407,9 @@ class IsdbtSynth : public ModeSynth {
 public:
     IsdbtSynth(const SynthConfig& c, double rate) : rate_(rate), cfo_(c.cfoHz), sigma_((float)std::sqrt(std::pow(10.0, -c.snrDb / 10.0) / 2.0)), noise_(7) {
         isdbt::Params p;   // as isdbtgen: a one-segment layer A and a twelve-segment layer B that carries the programme
-        p.mode = 3; p.guard = isdbt::kGi8; p.partial = true;
+        p.mode = c.isdbtMode >= 1 && c.isdbtMode <= 3 ? c.isdbtMode : 3; p.guard = c.isdbtGuard >= 0 && c.isdbtGuard <= 3 ? c.isdbtGuard : (int)isdbt::kGi8; p.partial = true;
         p.layer[0].segments = 1; p.layer[0].mod = isdbt::kQpsk; p.layer[0].rate = isdbt::kR23; p.layer[0].ti = 2;
-        p.layer[1].segments = 12; p.layer[1].mod = isdbt::k64Qam; p.layer[1].rate = isdbt::kR34; p.layer[1].ti = 1;
+        p.layer[1].segments = 12; p.layer[1].mod = c.isdbtMod >= 0 && c.isdbtMod <= 3 ? c.isdbtMod : (int)isdbt::k64Qam; p.layer[1].rate = c.isdbtRate >= 0 && c.isdbtRate <= 4 ? c.isdbtRate : (int)isdbt::kR34; p.layer[1].ti = 1;
         p.bwMhz = c.isdbtBwMhz == 7 || c.isdbtBwMhz == 8 ? c.isdbtBwMhz : 6;
         gen_ = std::make_unique<isdbt::Generator>(p, isdbt::singleLayerSource(1, demoTsSource(isdbt::layerBitrate(p, 1) * 0.9)), 1);
         const double fs = isdbt::sampleRateFor(p.bwMhz);

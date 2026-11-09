@@ -1268,3 +1268,6 @@ Branch feat38-channels on integ-38: seven modes in one receiver (core/src/chanvo
 
 Added GOES GRB, GVAR, CDA, MDL, GK-2A UHRIT and CDAS, a generic S-band CCSDS mode with 46 satellites (Falcon 9, Starship, Crew Dragon, Jason-3, CloudSat, FORMOSAT and others), and the Geoscan, Lucky-7, Spino and Erminaz cubesats: families 290 - 299, 510, one receiver class, docs/SATDUMP-TIER3-3.8.md. Geoscan decoded a real SatNOGS pass (6 of 7 frames); everything else is simulated only and says so; Lucky-7 failed the CRC on a real pass. DVB-S receiver gained a BBFRAME callback. SatDump code taken as formats and parameters, credits in THIRD_PARTY.md and in-app.
 
+
+## 2026-11-09 feat38-issues: owner-approved GitHub feature requests
+Branch feat38-issues on integ-38. Built #464 #449 #438 #455 #421 #427 #443 #453 #375 (TV texts) #431 #432 #436 #368 #466 and the R8600 firmware check (#357/#430); details, checks and what was skipped (#397 download, #233 native stage gains, #242 multi-viewport, #165 already done) in docs/ISSUES-3.8.md. Checks were syntax-only for GUI code, unit tests for the DRM filter, SARSAT frames, RDS EON and the R8600 records; no full build was run.

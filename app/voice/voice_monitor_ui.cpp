@@ -287,6 +287,70 @@ void callsTab(vm::Monitor& m, const vm::Settings& s) {
     ImGui::EndTable();
 }
 
+// ---- the Channels tab (#431): every talkgroup heard, with Mute / Solo / Priority as in the Aviation channel list.
+// Mute: the talkgroup is never played. Solo: only the talkgroups that are solo play (the allow list; "Play only the allow list" is switched on and
+// off with it). Priority: a call of it takes the sound from the others.
+std::vector<std::string> idTokens(const std::string& text) {
+    std::vector<std::string> v; std::string cur;
+    for (char c : text) { if (c == ',' || c == ' ' || c == '\n' || c == '\t' || c == ';') { if (!cur.empty()) v.push_back(cur); cur.clear(); } else cur += c; }
+    if (!cur.empty()) v.push_back(cur);
+    return v;
+}
+std::string upperOf(std::string s) { for (auto& c : s) c = (char)std::toupper((unsigned char)c); return s; }
+bool hasToken(const std::string& text, const std::string& tok) {
+    for (const auto& t : idTokens(text)) if (upperOf(t) == upperOf(tok)) return true;
+    return false;
+}
+std::string toggleToken(const std::string& text, const std::string& tok, bool on) {
+    std::string out;
+    for (const auto& t : idTokens(text)) if (upperOf(t) != upperOf(tok)) { if (!out.empty()) out += ", "; out += t; }
+    if (on) { if (!out.empty()) out += ", "; out += tok; }
+    return out;
+}
+
+void channelsTab(vm::Monitor& m, vm::Settings s) {
+    struct Row { std::string tok, name; vm::CallInfo info; int64_t last = 0; uint32_t calls = 0; };
+    std::vector<Row> rows;
+    auto add = [&](const vm::CallEntry& e) {
+        const std::string tok = vm::Monitor::targetToken(e.info);
+        if (tok.empty()) return;
+        for (Row& r : rows) if (r.tok == tok) { r.calls++; r.last = std::max(r.last, std::max(e.wallEnd, e.wallStart)); return; }
+        Row r; r.tok = tok; r.name = target(e); r.info = e.info; r.last = std::max(e.wallEnd, e.wallStart); r.calls = 1; rows.push_back(std::move(r));
+    };
+    for (const auto& e : m.calls()) add(e);
+    for (const auto& e : m.history(std::string(), 2000)) add(e);
+    // a talkgroup on a list but not heard yet (typed in Filters) is also shown
+    for (const std::string* l : {&s.allow, &s.mute, &s.priority})
+        for (const auto& t : idTokens(*l)) { bool have = false; for (const Row& r : rows) if (upperOf(r.tok) == upperOf(t)) have = true; if (!have) { Row r; r.tok = t; r.name = t; rows.push_back(std::move(r)); } }
+    ImGui::PushTextWrapPos(0);
+    ImGui::TextDisabled("%s", "Mute: never played. Solo: only the solo talkgroups are played. Priority: a call of it takes the sound from the others. The lists are the ones in Filters.");
+    ImGui::PopTextWrapPos();
+    if (rows.empty()) { ImGui::TextDisabled("No talkgroup heard yet."); return; }
+    if (!ImGui::BeginTable("##vmchan", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    ImGui::TableSetupScrollFreeze(0, 1);
+    ImGui::TableSetupColumn("Talkgroup", ImGuiTableColumnFlags_WidthStretch, 1.f);
+    ImGui::TableSetupColumn("Calls", ImGuiTableColumnFlags_WidthFixed, 44 * gUi);
+    ImGui::TableSetupColumn("Mute", ImGuiTableColumnFlags_WidthFixed, 48 * gUi);
+    ImGui::TableSetupColumn("Solo", ImGuiTableColumnFlags_WidthFixed, 48 * gUi);
+    ImGui::TableSetupColumn("Priority", ImGuiTableColumnFlags_WidthFixed, 60 * gUi);
+    ImGui::TableHeadersRow();
+    bool ch = false;
+    for (size_t i = 0; i < rows.size(); i++) {
+        Row& r = rows[i];
+        ImGui::PushID((int)i);
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(r.name.c_str());
+        ImGui::TableNextColumn(); if (r.calls) ImGui::Text("%u", r.calls); else ImGui::TextUnformatted("-");
+        bool mute = hasToken(s.mute, r.tok), solo = hasToken(s.allow, r.tok), prio = hasToken(s.priority, r.tok);
+        ImGui::TableNextColumn(); if (ImGui::Checkbox("##mute", &mute)) { s.mute = toggleToken(s.mute, r.tok, mute); if (mute) s.allow = toggleToken(s.allow, r.tok, false); ch = true; }
+        ImGui::TableNextColumn(); if (ImGui::Checkbox("##solo", &solo)) { s.allow = toggleToken(s.allow, r.tok, solo); if (solo) s.mute = toggleToken(s.mute, r.tok, false); ch = true; }
+        ImGui::TableNextColumn(); if (ImGui::Checkbox("##prio", &prio)) { s.priority = toggleToken(s.priority, r.tok, prio); ch = true; }
+        ImGui::PopID();
+    }
+    ImGui::EndTable();
+    if (ch) { s.allowOnly = !idTokens(s.allow).empty(); m.setSettings(s); save(); }
+}
+
 void historyTab(vm::Monitor& m, Bufs& b) {
     ImGui::SetNextItemWidth(220 * gUi);
     ImGui::InputTextWithHint("##vmsearch", "search: talkgroup, ID, callsign, label, state", b.search, sizeof b.search);
@@ -632,6 +696,7 @@ void window(App& a) {
     else ImGui::TextDisabled("nobody talking");
     if (ImGui::BeginTabBar("##vmtabs")) {
         if (ImGui::BeginTabItem("Calls")) { callsTab(m, s); ImGui::EndTabItem(); }
+        if (ImGui::BeginTabItem("Channels")) { channelsTab(m, s); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem("Conversations")) { conversationsTab(m); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem("History")) { historyTab(m, b); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem("Clips")) { clipsTab(a, m); ImGui::EndTabItem(); }

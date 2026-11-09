@@ -24,6 +24,8 @@ struct State {
     bool pushedMute = false;
     int sel = -1;                     // short id the user picked, -1: the first audio service
     int pushedSel = -2;
+    int chanFilter = -1;              // 0 off, 1 10 kHz channel, 2 20 kHz channel (pref drmChanFilter); -1: not loaded yet
+    int chanPushed = -1;
     int dataSel = -1;                 // short id of the data service shown instead of the audio one, -1 none
     gfx::Image* img = nullptr;        // the slide show picture of that service
     uint64_t imgSeq = 0;
@@ -110,6 +112,11 @@ void tick(App& a) {
             a.engine.drm().setMuted(a.muted);
             S.pushedVol = a.volume; S.pushedMute = a.muted;
         }
+    }
+    if (S.chanFilter < 0) S.chanFilter = std::max(0, std::min(2, (int)plat::prefs().getI("drmChanFilter", 0)));
+    if (run && (!S.wasRunning || S.chanFilter != S.chanPushed)) {
+        a.engine.drm().setChannelFilterHz(S.chanFilter == 1 ? 7000 : S.chanFilter == 2 ? 12000 : 0);
+        S.chanPushed = S.chanFilter;
     }
     if (run && (!S.wasRunning || S.sel != S.pushedSel)) { a.engine.drm().selectService(S.sel); S.pushedSel = S.sel; }
     S.wasRunning = run;
@@ -613,6 +620,17 @@ void receiver(App& a) {
     auto kv = [&](const char* k, const std::string& v) { kvRow(a, k, v, 150); };
     auto kf = [&](const char* k, const char* fmt, auto... v) { snprintf(b, sizeof b, fmt, v...); kvRow(a, k, b, 150); };
     sectionHeader(Ic::Chip, "Receiver");
+    {
+        static const char* cf[] = {"off (all 48 kHz)", "10 kHz channel", "20 kHz channel"};
+        ImGui::TextDisabled("%s", tr("Channel filter")); ImGui::SameLine(150 * gUi);
+        int v = S.chanFilter;
+        ImGui::SetNextItemWidth(160 * gUi);
+        if (ImGui::BeginCombo("##drmcf", cf[std::max(0, std::min(2, v))])) {
+            for (int i = 0; i < 3; i++) if (ImGui::Selectable(cf[i], v == i)) { S.chanFilter = i; plat::prefs().setI("drmChanFilter", i); }
+            ImGui::EndCombo();
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Keeps only the DRM channel width and drops the AM stations beside it. 10 kHz: most DRM30 broadcasts. Changing it restarts the search."));
+    }
     kv("state", t.holding ? "holding through a fade (frequency, timing and clock frozen)" : stateText(t.state));
     kv("status", t.status.empty() ? "-" : t.status);
     kf("level", "%.1f dBFS in the %s channel", t.levelDbfs, t.mode == 4 ? "192 kHz" : "48 kHz");

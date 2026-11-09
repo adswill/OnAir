@@ -4,6 +4,9 @@
 #include "dect2/common/time_fmt.h"
 #include "app.h"
 #include "../adsb/adsb_map.h"
+#include "ui/kit/kit.h"
+#include "ui/kit/export.h"
+#include "ui/msglog_ui.h"
 #include "dect2/hfdig/hfdig_ftx.h"
 #include "dect2/hfdig/hfdig_rx.h"
 #include "dect2/hfdig/hfdig_tel.h"
@@ -61,6 +64,21 @@ bool shown(const dect2::FtxDecode& d) {
 }
 
 void decodeTable(App& a, const dect2::HfdigFtxTelemetry& f, bool wsprOnly) {
+    {   // the decodes as a file: Save results (CSV / JSON ...), Copy CSV, and the text log with Auto-save (a new file each day) (#432)
+        static std::string note;
+        resexp::Table x; x.cols = {"time_utc_s", "mode", "snr_db", "dt_s", "audio_hz", "dial_hz", "call", "grid", "dbm", "message"};
+        std::vector<dect2::msglog::Row> rows;
+        for (const dect2::FtxDecode& d : f.decodes) {   // oldest first
+            if (wsprOnly ? d.mode != 3 : !shown(d)) continue;
+            x.add({resexp::num(d.slotUtc, 0), dect2::ftxModeName(d.mode), resexp::num(d.snrDb, 0), resexp::num(d.dt, 1), resexp::num(d.hz, d.mode == 3 ? 1 : 0),
+                   d.dialHz > 0 ? resexp::num(d.dialHz, 0) : "", d.call, d.grid, d.dbm >= 0 ? std::to_string(d.dbm) : "", d.msg}, d.slotUtc);
+            dect2::msglog::Row r; r.epoch = (int64_t)d.slotUtc; r.mode = dect2::ftxModeName(d.mode); r.freqHz = d.dialHz; r.address = d.call; r.text = d.msg;
+            rows.push_back(std::move(r));
+        }
+        kit::exportBar(x, wsprOnly ? "wspr" : "ftx", note, wsprOnly ? "ftxxw" : "ftxxd");
+        ImGui::SameLine();
+        msglog_ui::bar(wsprOnly ? "wspr" : "ftx", wsprOnly ? "WSPR" : "FT8", rows);
+    }
     const ImGuiTableFlags fl = ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV;
     const bool mb = hfdigMultiBandActive();   // the monitor is on: the dial frequency of every decode is shown
     const int cols = (wsprOnly ? 8 : 6) + (mb ? 2 : 0);
@@ -174,6 +192,13 @@ void mapView(App& a, const dect2::HfdigFtxTelemetry& f, ImVec2 size) {
         const ImVec2 lp(q.x + 8 * gUi, q.y - ts.y * 0.5f - 2 * gUi);
         dl->AddRectFilled(lp, ImVec2(lp.x + ts.x + 8 * gUi, lp.y + ts.y + 4 * gUi), IM_COL32(10, 12, 14, 210), 2.f);
         dl->AddText(ImVec2(lp.x + 4 * gUi, lp.y + 2 * gUi), IM_COL32(235, 238, 240, 255), p.call.c_str());
+    }
+    if (receiverLocationSet()) {   // home
+        double rl, ro; receiverLocation(rl, ro);
+        const ImVec2 q = adsbmap::project(rl, ro);
+        dl->AddRectFilled(ImVec2(q.x - 5 * gUi, q.y - 5 * gUi), ImVec2(q.x + 5 * gUi, q.y + 5 * gUi), IM_COL32(240, 200, 60, 255));
+        dl->AddRect(ImVec2(q.x - 5 * gUi, q.y - 5 * gUi), ImVec2(q.x + 5 * gUi, q.y + 5 * gUi), IM_COL32(0, 0, 0, 200));
+        dl->AddText(ImVec2(q.x + 8 * gUi, q.y - 7 * gUi), IM_COL32(240, 200, 60, 255), tr("home"));
     }
     dl->PopClipRect();
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 8 * gUi));
@@ -376,6 +401,12 @@ void hfdigFtxTab(App& a, const dect2::HfdigTelemetry& t) {
     modeOptions(a, only, f);
     flowEnd();
     hfdigMultiBandPanel(a, t);
+    if (kit::collapsingSection(tr("My location"), false)) {   // the one receiver position of the whole program (ADS-B, passes, maps), also set here (#453)
+        ImGui::AlignTextToFramePadding();
+        receiverPositionFields(a);
+        if (!receiverLocationSet()) { ImGui::SameLine(); ImGui::TextColored(pal::warnAmber(), "%s", tr("not set")); }
+        ImGui::TextDisabled("%s", tr("The same position as in every other mode (ADS-B antenna position, Passes, Map). It is marked on the map below."));
+    }
     bandButtons(a, only >= 0 ? only : 0);
     // the clock
     {

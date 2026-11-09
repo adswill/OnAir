@@ -728,9 +728,9 @@ std::unique_ptr<TxGenerator> makeTxGenerator(const TxModeSpec& m, const TxReques
     } else if (m.stdMode == 6) {
         const double rr = rateHz > 0 ? rateHz : m.nominalRateHz;
         isdbt::Params p;
-        p.mode = 3; p.guard = isdbt::kGi8; p.partial = true;
+        p.mode = s.isdbtMode >= 1 && s.isdbtMode <= 3 ? s.isdbtMode : 3; p.guard = s.isdbtGuard >= 0 && s.isdbtGuard <= 3 ? s.isdbtGuard : (int)isdbt::kGi8; p.partial = true;
         p.layer[0].segments = 1; p.layer[0].mod = isdbt::kQpsk; p.layer[0].rate = isdbt::kR23; p.layer[0].ti = 2;
-        p.layer[1].segments = 12; p.layer[1].mod = isdbt::k64Qam; p.layer[1].rate = isdbt::kR34; p.layer[1].ti = 1;
+        p.layer[1].segments = 12; p.layer[1].mod = s.isdbtMod >= 0 && s.isdbtMod <= 3 ? s.isdbtMod : (int)isdbt::k64Qam; p.layer[1].rate = s.isdbtRate >= 0 && s.isdbtRate <= 4 ? s.isdbtRate : (int)isdbt::kR34; p.layer[1].ti = 1;
         p.bwMhz = s.isdbtBwMhz == 7 || s.isdbtBwMhz == 8 ? s.isdbtBwMhz : 6;
         auto src = isdbt::singleLayerSource(1, namedTs(fileTs, isdbt::layerBitrate(p, 1) * 0.9));
         auto gen = std::make_shared<isdbt::Generator>(p, src, 1);
