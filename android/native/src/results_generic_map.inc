@@ -437,6 +437,7 @@ case 58: {
 }
 case 59: {
     const auto& t = rx.timesig; (void)t;
+    cardIf(o, "Wwvb Phase Utc", t.wwvbPhaseUtc);
     cardIf(o, "Dcf Phase Corr", t.dcfPhaseCorr);
     cardIf(o, "Dcf Phase Bit", t.dcfPhaseBit);
     cardIf(o, "Cfo Hz", t.cfoHz);
@@ -448,7 +449,6 @@ case 59: {
     cardIf(o, "Tick1000 Db", t.tick1000Db);
     cardIf(o, "Tick1200 Db", t.tick1200Db);
     cardIf(o, "Time Sec", t.timeSec);
-    cardIf(o, "Input Rate", t.inputRate);
     { Table tb({"Wall Time", "Text", "Bits"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.text), cell(e.bits)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
@@ -1872,6 +1872,6 @@ case 481: {
     cardIf(o, "Blocks Bad", t.blocksBad);
     cardIf(o, "Scans", t.scans);
     cardIf(o, "Last Scan Ms", t.lastScanMs);
-    { Table tb({"Psc", "Group", "Cfo Hz", "Ec Io Db", "Rscp Dbfs", "Frame Offset", "Blocks", "Last Seen"}); int n = 0; for (auto it = t.cells.rbegin(); it != t.cells.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.psc), cell(e.group), cell(e.cfoHz), cell(e.ecIoDb), cell(e.rscpDbfs), cell(e.frameOffset), cell(e.blocks), cell(e.lastSeen)}); } if (n) addTable(o, "Cells", tb); }
+    { Table tb({"Mcc", "Mnc", "Mnc Digits", "Cell Identity", "Bch Blocks", "Psc", "Group", "Cfo Hz"}); int n = 0; for (auto it = t.cells.rbegin(); it != t.cells.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.mcc), cell(e.mnc), cell(e.mncDigits), cell(e.cellIdentity), cell(e.bchBlocks), cell(e.psc), cell(e.group), cell(e.cfoHz)}); } if (n) addTable(o, "Cells", tb); }
     break;
 }
