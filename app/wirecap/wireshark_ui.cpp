@@ -128,7 +128,7 @@ void wiresharkWindow(App& a) {
         }
         ImGui::EndTable();
     }
-    if (ImGui::CollapsingHeader(tr("Advanced"))) {
+    if (ImGui::CollapsingHeader(trw("Advanced"))) {
         char b[512];
         bool cfg = false;
         cfg |= ImGui::Checkbox(tr("Write pcapng files"), &gCfg.files);
