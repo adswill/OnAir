@@ -1,6 +1,7 @@
 // Z-Wave monitor, see zwave_rx.h
 #include "dect2/zwave/zwave_rx.h"
 #include "dect2/zwave/zwave_proto.h"
+#include "dect2/voicekeys/voice_keys.h"
 #include "dect2/zwave/zwave_tel.h"
 #include "dect2/map/mesh_topology_feed.h"
 #include "dect2/common/mathconst.h"
@@ -135,6 +136,7 @@ struct ZwaveReceiver::Impl {
     std::map<uint32_t, ZwNetwork> nets;
     std::map<uint64_t, ZwNode> nodes;
     std::map<std::string, uint64_t> perCc;
+    zwave::S0Session s0;
     uint64_t ok = 0, bad = 0, bursts = 0, perRate[3] = {}, encS0 = 0, encS2 = 0, acks = 0;
     std::vector<ZwChannel> chans;
 
@@ -242,7 +244,16 @@ struct ZwaveReceiver::Impl {
         levelEma = levelDb;
         if (!snrInit) { snrEma = snr; snrInit = true; } else snrEma = 0.8f * snrEma + 0.2f * snr;
         for (size_t ci : g.chanIdx[dec.rate]) chans[ci].frames++;
-        const int enc = zwave::encryption(f.payload);
+        s0.observe(f);
+        std::string s0Text;
+        int enc = zwave::encryption(f.payload);
+        if (enc == 1) {
+            voicekeys::CallKeyInfo ki; ki.protocol = voicekeys::Protocol::ZWave;
+            for (const auto& k : voicekeys::KeyStore::instance().candidates(ki)) {
+                std::vector<uint8_t> pl;
+                if (k.key.size() == 16 && s0.decrypt(f, k.key.data(), pl)) { zwave::Frame in = f; in.payload = pl; s0Text = "[S0 decrypted] " + zwave::describe(in); break; }
+            }
+        }
         if (enc == 1) encS0++; else if (enc == 2) encS2++;
         if (f.headerType == zwave::kHdrAck) acks++;
         ZwFrame z;
@@ -253,7 +264,7 @@ struct ZwaveReceiver::Impl {
             for (size_t i = 0; i < f.group.size(); i++) z.dst += (i ? "," : "") + std::to_string(f.group[i]);
         } else z.dst = zwave::nodeText(f.dst);
         z.type = f.routed ? "routed" : zwave::headerName(f.headerType);
-        z.text = zwave::describe(f);
+        z.text = s0Text.empty() ? zwave::describe(f) : s0Text;
         z.seq = f.seq; z.ackReq = f.ackReq; z.encryption = enc; z.rssi = levelDb; z.snrDb = snr; z.len = f.len;
         std::vector<uint8_t> raw = zwave::build(f, dec.rate);
         z.hex = zwave::hex(raw.data(), raw.size());

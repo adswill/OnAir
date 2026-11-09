@@ -1,5 +1,6 @@
 // Wireless M-Bus receiver for the engine (see wmbus_live.h).
 #include "dect2/wmbus/wmbus_live.h"
+#include "dect2/voicekeys/voice_keys.h"
 #include "dect2/wmbus/wmbus_tel.h"
 #include "dect2/common/mathconst.h"
 #include <algorithm>
@@ -190,6 +191,11 @@ struct WmbusLiveReceiver::Impl {
         Frame f;
         const bool fb = ch.formatB;
         const bool ok = parseFrame(ch.bytes.data(), ch.bytes.size(), fb, f);
+        if (f.encrypted) {
+            voicekeys::CallKeyInfo ki; ki.protocol = voicekeys::Protocol::WMBus;
+            for (const auto& k : voicekeys::KeyStore::instance().candidates(ki))
+                if (k.key.size() == 16 && decryptFrame(f, k.key.data())) break;
+        }
         const Phy ph = ch.tc ? (fb ? Phy::C1B : (ch.coding == Coding::ThreeOfSix ? Phy::T1 : Phy::C1A)) : ch.phy;
         const int64_t now = wallSec();
         WmbusFrameLog lg;

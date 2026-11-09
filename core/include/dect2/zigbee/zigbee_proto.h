@@ -88,12 +88,16 @@ struct Frame {
     bool hasAps = false, apsSecured = false;
     int apsType = 0, apsDelivery = 0, apsDestEp = -1, apsSrcEp = -1, apsCounter = -1;
     int apsCluster = -1, apsProfile = -1;
+    int nwkAuxAt = -1;                // offset of the NWK auxiliary security header in the NWK frame
+    bool decrypted = false;           // decrypted with a user-imported key
     bool encrypted = false;           // the payload is encrypted (MAC or NWK or APS security): shown as such, never decoded
     std::string info;                 // one line: what the frame is
 };
 
 // Reads a PSDU (FCS included; fcs says whether it matched). The header is decoded as far as it goes.
 Frame parse(const uint8_t* psdu, size_t n);
+// With a network key the user imported: decrypts the NWK payload of a secured frame and reads its APS header. True on a MIC match. See core/src/voicekeys/net_crypto.h.
+bool decryptNwk(const uint8_t* psdu, size_t n, Frame& f, const uint8_t key[16], std::vector<uint8_t>& plain);
 std::string addrText(uint64_t ext);          // "00:12:4B:00:01:02:03:04"
 std::string shortText(uint16_t a);           // "0x1A2B"
 const char* macCommandName(int c);

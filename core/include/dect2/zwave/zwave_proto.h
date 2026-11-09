@@ -43,6 +43,17 @@ struct Frame {
     bool checkOk = false;
 };
 
+// S0 encapsulation with a network key the user imported. S0 uses a nonce the receiver sent earlier in a NONCE_REPORT (0x98 0x80), so this keeps the
+// recent reports per node pair. Returns true when a 0x98 0x81 frame was authenticated and decrypted (plain: the payload after the sequence byte).
+class S0Session {
+public:
+    void observe(const Frame& f);          // every frame: remembers nonce reports
+    bool decrypt(const Frame& f, const uint8_t key[16], std::vector<uint8_t>& plain) const;
+private:
+    struct Rep { int src = -1, dst = -1; uint8_t nonce[8] = {}; };
+    std::vector<Rep> rep_;
+};
+
 // The route header at the start of a routed frame's payload (clean-room from the public descriptions of the routed frame, checked by loopback
 // only): octet 0 low nibble = type (0 routed frame, 1 routed ack, 2 routed error), octet 1 = repeater count (high nibble, at most 4) and the
 // index of the hop this copy is on (low nibble: 0 the source is sending, count: the last repeater is sending), then the repeater node numbers

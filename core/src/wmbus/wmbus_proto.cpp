@@ -1,5 +1,6 @@
 // Wireless M-Bus link layer and data records (see wmbus_proto.h). Clean room from the public EN 13757-3 / -4 descriptions.
 #include "dect2/wmbus/wmbus_proto.h"
+#include "dect2/voicekeys/net_crypto.h"
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -360,6 +361,32 @@ const PhySpec& phySpec(Phy p) {
         {Phy::N1, 4800, 2400, Coding::Nrz, 0xF68D},
     };
     return t[(int)p < 6 ? (int)p : 0];
+}
+
+bool decryptFrame(Frame& f, const uint8_t key[16]) {
+    if (!f.encrypted || ((f.config >> 8) & 0x1F) != 5 || f.data.size() < 10) return false;
+    const int blocks = (f.config >> 4) & 15;
+    if (blocks == 0 || (size_t)blocks * 16 > f.payload.size()) return false;
+    uint8_t iv[16];
+    size_t pos = 2;      // the link layer's M and A; a long application header carries its own
+    if (f.longHeader && f.data.size() >= 22) pos = 12;   // L C M2 A6 CI + 8 bytes (ID4 M2 V T): the transport header's ID and M come first
+    if (pos == 2) { for (int i = 0; i < 8; i++) iv[i] = f.data[(size_t)2 + (size_t)i]; }
+    else { iv[0] = f.data[pos + 4]; iv[1] = f.data[pos + 5]; for (int i = 0; i < 4; i++) iv[2 + i] = f.data[pos + (size_t)i]; iv[6] = f.data[pos + 6]; iv[7] = f.data[pos + 7]; }
+    for (int i = 8; i < 16; i++) iv[i] = f.acc;
+    const size_t n = (size_t)blocks * 16;
+    std::vector<uint8_t> out(f.payload.size());
+    dect2::voicekeys::aes128CbcDecrypt(key, iv, f.payload.data(), n, out.data());
+    for (size_t i = n; i < f.payload.size(); i++) out[i] = f.payload[i];
+    if (out[0] != 0x2F || out[1] != 0x2F) return false;
+    f.payload = out;
+    f.decrypted = true;
+    f.encrypted = false;
+    f.records.clear();
+    std::vector<uint8_t> body;
+    for (size_t i = 0; i < n; i++) body.push_back(out[i]);
+    for (size_t i = n; i < out.size(); i++) body.push_back(out[i]);
+    if (!parseRecords(body.data(), body.size(), f.records, f.hasManufacturerData)) f.error = "record cut off";
+    return true;
 }
 
 std::vector<uint8_t> encodeChips(Phy p, const std::vector<uint8_t>& air, int pre) {

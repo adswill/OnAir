@@ -46,6 +46,7 @@ struct Frame {
     uint8_t acc = 0, status = 0;
     uint16_t config = 0;
     bool encrypted = false;   // the payload is encrypted: shown as such, never decoded
+    bool decrypted = false;   // decrypted with a user key
     std::string statusText;
     std::vector<uint8_t> data;       // L C M A CI ... without the CRCs
     std::vector<uint8_t> payload;    // after the CI and the header (the application data)
@@ -57,6 +58,9 @@ struct Frame {
 
 // Check the CRCs and strip them; fills the link layer fields and, for an unencrypted payload, the records. n is what was received (>= airLength).
 bool parseFrame(const uint8_t* b, size_t n, bool formatB, Frame& f);
+
+// With an AES key the user imported: decrypts TPL security mode 5 (AES-CBC, IV = M, A, 8 x ACC; the first plaintext bytes are 2F 2F) and reads the records. True when it decrypted.
+bool decryptFrame(Frame& f, const uint8_t key[16]);
 
 std::string mfrCodeToString(uint16_t code);
 uint16_t mfrStringToCode(const char* three);

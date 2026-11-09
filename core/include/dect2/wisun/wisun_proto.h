@@ -118,6 +118,10 @@ struct Schedule {
 const char* chFunctionName(int f);
 std::string scheduleText(const Schedule& s);
 
+// With a MAC key the user imported (the GAK): AES-CCM* of a secured frame. Header IEs stay in the clear, payload IEs and payload are decrypted. True on a MIC match.
+struct Frame;
+bool decryptFrame(const uint8_t* mpdu, size_t n, const Frame& f, const uint8_t key[16], std::vector<uint8_t>& plain);
+
 struct Frame {
     bool ok = false;                  // the header could be read
     int type = 0, version = 0;
