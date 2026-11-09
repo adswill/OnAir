@@ -26,6 +26,10 @@ public:
     // More frames get through on a weak signal, at a small risk of a wrong frame passing the check (docs/PACKET.md)
     void setFixBits(int level);
     int fixBits() const;
+    // "Vote" (default on, automatic): a frame that no demodulator got right is rebuilt from the copies of all of them (ax25::voteRepair): majority
+    // vote bit by bit, then the few positions where they disagree are tried until the check sequence fits. Gains a little at the threshold.
+    void setVote(bool on);
+    bool vote() const;
     // 1200 baud audio emphasis: 0 auto (default, no filter: the slicers cover a tone balance of +-6 dB; telemetry twistDb tells which it
     // is), 1 de-emphasis (for a transmitter's pre-emphasised microphone audio), 2 pre-emphasis (for a radio's de-emphasised speaker audio)
     void setEmphasis(int mode);

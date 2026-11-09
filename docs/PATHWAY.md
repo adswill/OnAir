@@ -1169,3 +1169,5 @@ FT8/FT4/FT2: cross-slot soft-bit combining (about 2 dB on repeated messages), a-
 
 ## 2026-11-09 smart voice package (feat37-sm-voice)
 Soft AMBE frame FEC + concealment (DMR/D-STAR/NXDN), optional symbol equaliser (off: no gain through the FM front end), heard-ID header repair (D-STAR, DMR), trunk call dedup across sites, control channel health + auto park + site book, TETRA SDS/LIP parser. Details and numbers: docs/SMART-voice-3.7.md.
+## 2026-11-09 feat37-sm-pager
+Pager smart package: text repair and positions/fields/incidents for pagers (pager_intel), digipeater path graph and the demodulator vote for APRS (packet_path, voteRepair; +14 % frames at the threshold, 0 wrong). Measurements in docs/SMART-pager-3.7.md. Targeted tests only; full CI left to GitHub.

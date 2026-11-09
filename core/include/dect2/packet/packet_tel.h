@@ -1,6 +1,7 @@
 // APRS / Packet receiver telemetry, shared by the receiver and the UI.
 // The first members are copied into RxTelemetry (history plot, top bar): keep them and their meaning.
 #pragma once
+#include "packet_path.h"
 #include <cstdint>
 #include <cstdio>
 #include <string>
@@ -61,6 +62,10 @@ struct PacketTelemetry {
     uint64_t digiCopies = 0;     // packets heard again through a digipeater (listed, not counted as new)
     float twistDb = 0;           // 1200 baud tone balance, mark against space (dB), over the recent frames: about -5 a pre-emphasised transmitter
     uint32_t twistFrames = 0;    // (heard on the radio's discriminator) or +5 de-emphasised speaker audio; 0 frames = not measured yet
+    uint64_t votedFrames = 0;    // frames that passed only after the demodulators' copies were voted (ax25::voteRepair)
+    uint32_t directFrames = 0;   // frames heard with no digipeater hop
+    std::vector<PacketDigi> digis;          // who repeated what (packet_path.h), most heard first
+    std::vector<PacketPathEdge> edges;      // the hops: station or digipeater to the next one
     // results (the newest frame last; the stations newest first)
     std::vector<PacketFrameInfo> frames;
     std::vector<PacketStation> stations;

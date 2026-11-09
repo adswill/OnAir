@@ -1,5 +1,8 @@
 // AX.25 link layer: see packet_ax25.h. Written from the AX.25 2.2 specification.
 #include "dect2/packet/packet_ax25.h"
+#include <algorithm>
+#include <cstdlib>
+#include <map>
 
 namespace dect2 {
 namespace ax25 {
@@ -128,6 +131,40 @@ int repairFrame(const std::vector<uint8_t>& bits, const std::vector<std::vector<
     }
     out.clear();
     return 0;
+}
+
+bool voteRepair(const std::vector<std::vector<uint8_t>>& copies, const std::function<bool(const std::vector<uint8_t>&)>& sane, VoteResult& r, int maxContested) {
+    // the largest set of copies of one length
+    std::map<size_t, std::vector<const std::vector<uint8_t>*>> byLen;
+    for (const auto& c : copies) if (c.size() >= 17 * 8 && c.size() <= 4000) byLen[c.size()].push_back(&c);
+    const std::vector<const std::vector<uint8_t>*>* best = nullptr;
+    for (const auto& kv : byLen) if (kv.second.size() >= 2 && (!best || kv.second.size() > best->size())) best = &kv.second;
+    if (!best) return false;
+    const size_t n = (*best)[0]->size(), m = best->size();
+    std::vector<uint8_t> base(n);
+    struct Pos { size_t i; int margin; };
+    std::vector<Pos> contested;
+    for (size_t i = 0; i < n; i++) {
+        int ones = 0;
+        for (const auto* c : *best) ones += (*c)[i] & 1;
+        const int zeros = (int)m - ones;
+        base[i] = ones > zeros ? 1 : ones < zeros ? 0 : ((*(*best)[0])[i] & 1);
+        if (ones && zeros) contested.push_back({i, std::abs(ones - zeros)});
+    }
+    std::stable_sort(contested.begin(), contested.end(), [](const Pos& a, const Pos& b) { return a.margin < b.margin; });
+    if ((int)contested.size() > maxContested) contested.resize((size_t)maxContested);
+    const int k = (int)contested.size();
+    r.copies = (int)m; r.contested = k;
+    std::vector<uint32_t> masks((size_t)1 << k);
+    for (uint32_t i = 0; i < masks.size(); i++) masks[i] = i;
+    std::stable_sort(masks.begin(), masks.end(), [](uint32_t a, uint32_t b) { return __builtin_popcount(a) < __builtin_popcount(b); });
+    std::vector<uint8_t> b = base, out;
+    for (uint32_t mask : masks) {
+        for (int j = 0; j < k; j++) if (mask >> j & 1) b[contested[(size_t)j].i] ^= 1;
+        if (frameFromStuffedBits(b, out) && (!sane || sane(out))) { r.frame = out; r.flips = __builtin_popcount(mask); return true; }
+        for (int j = 0; j < k; j++) if (mask >> j & 1) b[contested[(size_t)j].i] ^= 1;
+    }
+    return false;
 }
 
 bool plausibleFrame(const std::vector<uint8_t>& f) {

@@ -38,6 +38,15 @@ public:
     bool narrowChannel() const;
     void setCombineCopies(bool on);                      // multi-copy combining of repeated messages (default on); applies from the next lock
     bool combineCopies() const;
+    // The smart layer (pager_intel.h), all on by default and automatic. Repair: lost characters of a damaged POCSAG page are filled in from what that
+    // capcode sent before (guessed ones are marked). Insight: positions, learned fields and incidents. Medical-looking pages are skipped unless allowed.
+    void setSmartRepair(bool on);
+    bool smartRepair() const;
+    void setSmartInsight(bool on);
+    bool smartInsight() const;
+    void setAnalyseMedical(bool on);
+    bool analyseMedical() const;
+    void setPlaces(const std::string& csv);              // the place list: lines "name,lat,lon"; pages that name a place get its position
     int protocols() const;                               // the masks as set (the whole-span bank copies them to its receivers)
     int pocsagBauds() const;
     void setLogCallback(std::function<void(const std::string&)> cb);   // events for the log pane; may be called from the receiver thread

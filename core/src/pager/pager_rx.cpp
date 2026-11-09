@@ -12,6 +12,7 @@
 #include "dect2/dmr/dmr_dsp.h"
 #include "dect2/dsp/exact_resampler.h"
 #include "dect2/pager/pager_proto.h"
+#include "dect2/pager/pager_intel.h"
 #include "dect2/tones/seq_decoder.h"
 #include <algorithm>
 #include <atomic>
@@ -194,6 +195,11 @@ struct PagerReceiver::Impl {
     pager::PocsagParser parser;
     pager::FlexPhaseCombiner flexComb;     // multi-copy combining of repeated FLEX phases (#20)
     std::atomic<bool> combineOn{true};     // setCombineCopies(): both protocols
+    // the smart layer (pager_intel.h): text repair, positions, fields, incidents. Used on the receiver thread only; the setters leave requests
+    pager::PagerBrain brain;
+    std::atomic<bool> smartRepair{true}, smartIntel{true}, smartMedical{false}, brainClearReq{false}, placesReq{false};
+    bool incidentsDirty = true;
+    std::string placesText;                // guarded by mu
     int wi = 0, bi = 0; uint32_t curWord = 0; bool inSync = false;
     float wordRel[32] = {};                // the reliability of each bit of curWord, relative to the outer amplitude
     bool firstBatch = false;               // the batch after a searched sync: held until enough of its words are valid
@@ -290,6 +296,9 @@ struct PagerReceiver::Impl {
         tel.sync = locked;
         tel.state = (locked || (double)(cur - lastLockEnd) < 2.0 * kWork) ? 1 : 0;
         tel.snrDb = tel.signal ? (float)snrEma : 0.f;
+        applySmartRequests();
+        if (listDirty || incidentsDirty) tel.incidents = brain.incidents();
+        incidentsDirty = false;
         std::lock_guard<std::mutex> lk(mu);
         if (listDirty) {
             tel.messages = std::make_shared<const std::vector<PagerMessage>>(list.begin(), list.end());
@@ -298,9 +307,26 @@ struct PagerReceiver::Impl {
         pub = tel;
     }
 
+
     // ---- results
+    void applySmartRequests() {
+        brain.opt.repair = smartRepair.load();
+        brain.opt.intel = smartIntel.load();
+        brain.opt.analyseMedical = smartMedical.load();
+        if (brainClearReq.exchange(false)) brain.reset();
+        if (placesReq.exchange(false)) {
+            std::string t;
+            { std::lock_guard<std::mutex> lk(mu); t = placesText; }
+            brain.clearPlaces();
+            brain.loadPlaces(t);
+        }
+    }
     void emit(std::vector<PagerMessage>& v, int spd, bool flex) {
+        applySmartRequests();
         for (PagerMessage& pm : v) {
+            pm.speed = spd;
+            pm.flex = flex;
+            brain.process(pm, pm.wallTime ? pm.wallTime : (int64_t)std::time(nullptr));
             uint64_t sn;
             {
                 std::lock_guard<std::mutex> lk(mu);
@@ -311,6 +337,7 @@ struct PagerReceiver::Impl {
                 list.push_front(pm);
                 if (list.size() > kMaxMessages) list.pop_back();
                 listDirty = true;
+                incidentsDirty = true;
             }
             tel.speeds[spd].messages++;
             tel.messagesTotal++;
@@ -829,6 +856,7 @@ void PagerReceiver::reset() {
 }
 
 void PagerReceiver::clearResults() {
+    p_->brainClearReq = true;                // what was learned goes with the messages
     std::lock_guard<std::mutex> lk(p_->mu);
     p_->list.clear();
     p_->listDirty = true;
@@ -877,6 +905,13 @@ void PagerReceiver::setNarrowChannel(bool on) {
     if (p_->narrow.exchange(on) != on) p_->resetReq = true;   // the filter is rebuilt by the receiver thread
 }
 bool PagerReceiver::narrowChannel() const { return p_->narrow; }
+void PagerReceiver::setSmartRepair(bool on) { p_->smartRepair = on; }
+bool PagerReceiver::smartRepair() const { return p_->smartRepair; }
+void PagerReceiver::setSmartInsight(bool on) { p_->smartIntel = on; }
+bool PagerReceiver::smartInsight() const { return p_->smartIntel; }
+void PagerReceiver::setAnalyseMedical(bool on) { p_->smartMedical = on; }
+bool PagerReceiver::analyseMedical() const { return p_->smartMedical; }
+void PagerReceiver::setPlaces(const std::string& csv) { { std::lock_guard<std::mutex> lk(p_->mu); p_->placesText = csv; } p_->placesReq = true; }
 void PagerReceiver::setCombineCopies(bool on) { p_->combineOn = on; }
 bool PagerReceiver::combineCopies() const { return p_->combineOn; }
 void PagerReceiver::setSelcall(bool on) { p_->selOn = on; }

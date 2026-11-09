@@ -22,6 +22,9 @@ inline const char* pagerTypeName(int t) {
     return t >= 0 && t <= kPagerBinary ? n[t] : "?";
 }
 
+// One field the smart layer read out of a message (pager_intel.h): a role the capcode's messages have in common and its value
+struct PagerField { std::string key, value; };
+
 // One page. Strings are plain text; a character that is not printable is dropped.
 struct PagerMessage {
     uint64_t serial = 0;         // grows by one per message, never restarts: a list row keeps its identity
@@ -47,6 +50,31 @@ struct PagerMessage {
     // a five-tone selective call (CCIR / ZVEI / EEA / EIA / DZVEI) heard on the same channel: text = the digits, selStd = the plan, address 0
     bool selcall = false;
     std::string selStd;
+    // damaged POCSAG pages (reading as alphanumeric): per 7-bit character the value as received and a mask of the bits that survived (bit k set =
+    // bit k of the character is known). Input for the text repair (pager_intel.h); empty when nothing was lost.
+    std::string alphaRaw, alphaKnown;
+    int alphaTailLost = 0;       // code words lost at the end of the page (the text may be longer than shown)
+    // the smart layer (pager::PagerBrain, pager_intel.h), filled by the receiver
+    std::string repairedText;    // text with lost characters filled in from the capcode's earlier messages or marked '?'; empty = no repair
+    std::string guessMask;       // per byte of repairedText: 0 received, 1 guessed from earlier messages, 2 lost ('?')
+    std::vector<PagerField> fields;   // the structure learned for this capcode: job number, incident type, address, coordinates ...
+    bool hasPos = false;         // a position was read from the text or looked up in the place list
+    double lat = 0, lon = 0;
+    bool posApprox = false;      // the position is the capcode's usual area, not in this message
+    std::string place;           // where the position comes from: "coordinates", "UTM", "MGRS", or the place name that matched
+    uint32_t incident = 0;       // pages of different capcodes that belong together share a number (0 = none)
+    bool sensitive = false;      // looks like medical text: not analysed unless the privacy option is off
+};
+
+// Pages of one or more capcodes that belong together (same job number, same position, or nearly the same words within minutes)
+struct PagerIncident {
+    uint32_t id = 0;
+    int64_t firstWall = 0, lastWall = 0;
+    int count = 0;                       // pages
+    std::vector<uint32_t> capcodes;      // the addresses that took part
+    std::string title;                   // the type field or the start of the first page
+    bool hasPos = false;
+    double lat = 0, lon = 0;
 };
 
 // The name of the Protocol column: the paging speed or the five-tone plan
@@ -130,6 +158,7 @@ struct PagerTelemetry {
     uint64_t messagesTotal = 0;
     PagerSpeedStat speeds[kPagerSpeeds];
     std::shared_ptr<const std::vector<PagerMessage>> messages;   // newest first, at most 2000; null = none
+    std::vector<PagerIncident> incidents;                        // pages that belong together (two or more), newest first
 };
 
 inline std::string pagerSummary(const PagerTelemetry& t) {
