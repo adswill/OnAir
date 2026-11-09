@@ -696,6 +696,11 @@ static void tsPidsView(App& a) {
     { ImGui::PushTextWrapPos(0); ImGui::Text("network \"%s\"  onid 0x%04X  tsid 0x%04X   %s", ts.networkName.c_str(), ts.onid, ts.tsid, ts.utc.c_str()); ImGui::PopTextWrapPos(); }
     { ImGui::PushTextWrapPos(0); ImGui::Text("multiplex %s (null packets %s)   packets %llu   continuity errors %llu   TEI %llu",
                 fmtKbps(b, sizeof b, ts.muxKbps), fmtKbps(b2, sizeof b2, ts.nullKbps), (unsigned long long)ts.totalPackets, (unsigned long long)ts.ccErrors, (unsigned long long)ts.teiPackets); ImGui::PopTextWrapPos(); }
+    {   // ETSI TR 101 290: the checks that have fired (only those)
+        std::string fired;
+        for (const Tr290Check& c : a.engine.tr290Checks()) if (c.count) { char x[64]; snprintf(x, sizeof x, "%s%s %llu", fired.empty() ? "" : ", ", c.name, (unsigned long long)c.count); fired += x; }
+        ImGui::PushTextWrapPos(0); ImGui::Text("TR 101 290: %s  PCR jitter %.3f ms", fired.empty() ? tr("no errors") : fired.c_str(), a.engine.tr290JitterMs()); ImGui::PopTextWrapPos();
+    }
     { ImGui::PushTextWrapPos(0); ImGui::Text("BB frames %llu (lost %llu)  mode %s  ISSYI %d NPD %d  SIS/MIS %d ISI %d  resyncs %llu  CRC-8 errors %llu  skipped %llu", (unsigned long long)a.bb.frames, (unsigned long long)a.bb.framesLost,
                 a.bb.hem ? "high-efficiency" : "normal", a.bb.issyi, a.bb.npd, a.bb.sisMis, a.bb.isi, (unsigned long long)a.bb.resyncs, (unsigned long long)a.bb.crcErrors, (unsigned long long)a.bb.unsupported); ImGui::PopTextWrapPos(); }
     ImGui::PopFont();

@@ -414,6 +414,7 @@ void Engine::onTsPackets(const uint8_t* pk, size_t n, double secs) {
     for (size_t i = 0; i < n; i++) {
         const uint8_t* q = pk + i * 188;
         demux_.feed(q);
+        tr290_.feed(q, tr290T_); tr290T_ += n ? secs / (double)n : 0;
         if (!playerExternal_) ttx_.feedTs(q);
         if (!playerExternal_) dvbsub_.feedTs(q);
     }

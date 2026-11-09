@@ -119,6 +119,7 @@
 #include "dect2/atis/atis_rx.h"
 #include "dect2/selcal/selcal_rx.h"
 #include "dect2/umts/umts_rx.h"
+#include "dect2/tv/tr101290.h"
 #include "dect2/fy3/fy3_rx.h"
 #include "dect2/pactorhf/pactorhf_rx.h"
 #include "dect2/shortwave/shortwave_rx.h"
@@ -535,6 +536,8 @@ public:
     Fy3Receiver& fy3Ahrpt() { return rxFy3a_; }   // FY-3 AHRPT: satellite preset, symbol rate, roll-off, new pictures (telemetry through latestRx)
     Fy3Receiver& fy3Mpt() { return rxFy3m_; }     // FY-3 MPT: the same
     PactorHfReceiver& pactorHf(int variant) { return variant == 3 ? rxPh3_ : variant == 4 ? rxPh4_ : rxPh2_; }   // PACTOR-II / -III / -IV: clear the results (telemetry through latestRx)
+    std::vector<Tr290Check> tr290Checks() { std::lock_guard<std::mutex> k(tsMu_); return tr290_.checks(); }
+    double tr290JitterMs() { std::lock_guard<std::mutex> k(tsMu_); return tr290_.pcrJitterMs(); }
     UmtsReceiver& umts() { return rxUmts_; }   // UMTS cells (family 480)
     SelcalReceiver& selcal() { return rxSelcal_; }   // SELCAL: call log, aircraft table, Listen volume / mute (telemetry through latestRx)
     AtisReceiver& atis() { return rxAtis_; }   // ATIS (inland waterways): clear the lists, Listen volume / mute (telemetry through latestRx)
@@ -964,6 +967,7 @@ private:
     AtisReceiver rxAtis_;
     SelcalReceiver rxSelcal_;
     UmtsReceiver rxUmts_;
+    Tr290Monitor tr290_; double tr290T_ = 0;
     Fy3Receiver rxFy3a_{0}, rxFy3m_{1};
     PactorHfReceiver rxPh2_{2}, rxPh3_{3}, rxPh4_{4};   // PACTOR-II (family 237), -III (238), -IV (239)
     ShortwaveReceiver rxSw_;
