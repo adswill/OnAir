@@ -57,6 +57,7 @@ struct HfdigRttyTelemetry {
     bool reverse = false, unshiftOnSpace = false;
     float quality = 0;               // 0 .. 1: how clean the signal is
     int autoState = 0;               // auto lock: 0 not asked, 1 waiting for audio, 2 done and applied, 3 nothing found
+    bool autoOn = false, autoLocked = false;   // Auto is on / it has found the signal and the decoder is on it
     std::vector<RttyAutoHyp> autoHyps;   // its guesses, best first (the first one is in use)
 };
 
@@ -87,6 +88,10 @@ public:
     void setFixedPair(double lowToneHz);   // whole-span decoding: the pair is given (lower tone, Hz), the decoder does not search (0: it does)
     void setReverse(bool r);
     void setUnshiftOnSpace(bool u);    // a space returns the figures shift to letters
+    // Auto: speed, shift and polarity follow the signal (on by default in the receiver). The analysis runs when the decoder has no good text
+    // and re-runs when the text stops or turns to framing errors. setBaudIndex, setShiftIndex and setReverse turn it off: the user decides.
+    void setAuto(bool on);
+    bool autoOn() const;
     void autoLock();                   // one click: speed, shift and polarity from the last seconds of audio (needs about 6 s of signal), see rttyAutoAnalyse
     void clearText();
     void setText(const std::string& text, uint64_t chars);   // the receiver thread: a loaded results file (reset() keeps the text)

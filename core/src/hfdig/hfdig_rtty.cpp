@@ -4,6 +4,8 @@
 #include "dect2/source/source.h"
 #include <algorithm>
 #include <atomic>
+#include <chrono>
+#include <future>
 #include <cmath>
 #include <complex>
 #include <cstddef>
@@ -69,6 +71,15 @@ struct HfdigRtty::Impl {
     std::atomic<bool> reverse{false}, unshift{false}, clearReq{false};
     std::atomic<uint32_t> cfgGen{1};
     std::atomic<bool> autoReq{false};
+    // Auto (setAuto, on in the receiver): rttyAutoAnalyse runs on its own thread whenever the decoder has no good text, and the result replaces the settings.
+    std::atomic<bool> autoOn{false}, autoKick{false};
+    std::future<std::vector<RttyAutoHyp>> autoJob;
+    bool autoDiscard = false;                // a reset came while a job was running: its answer is about the old signal
+    bool autoLocked = false;
+    uint64_t autoLastRun = 0, autoSecAt = 0, autoCharsSeen = 0, autoErrsSeen = 0;
+    static constexpr int kAutoWin = 8;       // seconds of health kept
+    int autoGrace = 0;
+    int autoWinChars[kAutoWin] = {}, autoWinErrs[kAutoWin] = {}, autoWinPos = 0;
     std::vector<float> hist;                 // the last kHist samples of audio, for the auto lock
     size_t histPos = 0, histFill = 0;
     static constexpr size_t kHist = 20 * 8000;
@@ -128,6 +139,9 @@ struct HfdigRtty::Impl {
         t.text = std::move(tel.text); t.chars = tel.chars;
         tel = std::move(t);
         pos = 0; lastCharAt = 0; histPos = histFill = 0;
+        if (autoJob.valid()) autoDiscard = true;
+        autoLocked = false; autoLastRun = 0; autoSecAt = 0; autoState = 0; autoHyps.clear();
+        autoCharsSeen = tel.chars; autoErrsSeen = tel.framingErrors;
         std::fill(ring.begin(), ring.end(), 0.f);
         std::fill(pw.begin(), pw.end(), 0.f);
         ringPos = 0; sinceFrame = 0; frames = 0;
@@ -333,7 +347,9 @@ struct HfdigRtty::Impl {
         }
     }
 
+    void autoTick();
     void fill() {
+        tel.autoOn = autoOn.load(); tel.autoLocked = autoLocked;
         tel.baud = baud; tel.shiftHz = shift; tel.reverse = rev; tel.unshiftOnSpace = uns;
         tel.audioSamples = pos;
         tel.autoState = autoReq.load() ? 1 : autoState;
@@ -377,16 +393,67 @@ void HfdigRtty::feedAudio(const float* x, size_t n) {
             m.autoState = 2;
         }
     }
+    m.autoTick();
     m.fill();
+}
+
+// The Auto rule. Lock lost means: the window has no text, or mostly framing errors. A signal that goes away or changes speed lands here,
+// the analysis then runs every few seconds until it finds one; a good lock is never second-guessed, so a working decode is left alone.
+void HfdigRtty::Impl::autoTick() {
+    if (autoKick.exchange(false)) { autoLocked = false; autoLastRun = 0; autoSecAt = pos; autoCharsSeen = tel.chars; autoErrsSeen = tel.framingErrors; std::fill(std::begin(autoWinChars), std::end(autoWinChars), 0); std::fill(std::begin(autoWinErrs), std::end(autoWinErrs), 0); }
+    if (!autoOn.load()) { if (autoJob.valid()) autoDiscard = true; if (!autoJob.valid()) return; }
+    if (autoJob.valid()) {
+        if (autoJob.wait_for(std::chrono::seconds(0)) != std::future_status::ready) return;
+        auto hyps = autoJob.get();
+        const bool drop = autoDiscard || !autoOn.load();
+        autoDiscard = false;
+        if (drop) return;
+        if (hyps.empty()) { autoState = 3; return; }
+        autoHyps = std::move(hyps);
+        const RttyAutoHyp& h = autoHyps[0];
+        baudIdx = h.baudIdx; shiftIdx = h.shiftIdx; reverse = h.reverse;
+        fixedLo = 0;
+        cfgGen++;
+        autoState = 2;
+        autoLocked = true;
+        autoCharsSeen = tel.chars; autoErrsSeen = tel.framingErrors;
+        std::fill(std::begin(autoWinChars), std::end(autoWinChars), 0); std::fill(std::begin(autoWinErrs), std::end(autoWinErrs), 0);
+        autoSecAt = pos;
+        autoGrace = 4;
+        return;
+    }
+    while (pos - autoSecAt >= (uint64_t)kFs) {   // one bucket per second
+        autoSecAt += (uint64_t)kFs;
+        autoWinPos = (autoWinPos + 1) % kAutoWin;
+        autoWinChars[autoWinPos] = (int)(tel.chars - autoCharsSeen);
+        autoWinErrs[autoWinPos] = (int)(tel.framingErrors - autoErrsSeen);
+        autoCharsSeen = tel.chars; autoErrsSeen = tel.framingErrors;
+        if (autoGrace > 0) { autoGrace--; continue; }
+        if (autoLocked) {
+            int c = 0, e = 0;
+            for (int i = 0; i < kAutoWin; i++) { c += autoWinChars[i]; e += autoWinErrs[i]; }
+            if (c == 0 || (c + e >= 12 && e > c)) { autoLocked = false; autoLastRun = 0; autoState = 0; }
+        }
+    }
+    if (autoLocked || histFill < (size_t)(6 * kFs) || pos - autoLastRun < (uint64_t)(4 * kFs)) return;
+    autoLastRun = pos;
+    const size_t take = std::min(histFill, (size_t)(8 * kFs));
+    std::vector<float> a(take);
+    const size_t start = (histPos + kHist - take) % kHist;
+    for (size_t i = 0; i < take; i++) a[i] = hist[(start + i) % kHist];
+    if (autoState != 2) autoState = 1;
+    autoJob = std::async(std::launch::async, [v = std::move(a)]() { return rttyAutoAnalyse(v.data(), v.size(), 3); });
 }
 
 void HfdigRtty::telemetry(HfdigRttyTelemetry& out) const { out = p_->tel; }
 
-void HfdigRtty::setBaudIndex(int i) { p_->baudIdx = std::clamp(i, 0, kRttyBauds - 1); p_->cfgGen++; }
-void HfdigRtty::setShiftIndex(int i) { p_->shiftIdx = std::clamp(i, 0, kRttyShifts - 1); p_->cfgGen++; }
+void HfdigRtty::setBaudIndex(int i) { p_->autoOn = false; p_->baudIdx = std::clamp(i, 0, kRttyBauds - 1); p_->cfgGen++; }
+void HfdigRtty::setShiftIndex(int i) { p_->autoOn = false; p_->shiftIdx = std::clamp(i, 0, kRttyShifts - 1); p_->cfgGen++; }
 void HfdigRtty::setFixedPair(double lowToneHz) { p_->fixedLo = lowToneHz; }
-void HfdigRtty::setReverse(bool r) { p_->reverse = r; p_->cfgGen++; }
+void HfdigRtty::setReverse(bool r) { p_->autoOn = false; p_->reverse = r; p_->cfgGen++; }
 void HfdigRtty::setUnshiftOnSpace(bool u) { p_->unshift = u; p_->cfgGen++; }
+void HfdigRtty::setAuto(bool on) { if (on && !p_->autoOn.load()) p_->autoKick = true; p_->autoOn = on; }
+bool HfdigRtty::autoOn() const { return p_->autoOn.load(); }
 void HfdigRtty::autoLock() { p_->autoState = 0; p_->autoReq = true; }
 void HfdigRtty::clearText() { p_->clearReq = true; }
 void HfdigRtty::setText(const std::string& text, uint64_t chars) { p_->tel.text = text; p_->tel.chars = chars; }
