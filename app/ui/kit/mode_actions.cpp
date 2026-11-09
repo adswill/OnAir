@@ -78,13 +78,12 @@ void modeActionBar(App& a) {
     ImGui::PushID("##modeactions");
     nextStepLine(a);
     const bool radio = hasRadioRunning(a);
-    if (!radio) ImGui::BeginDisabled();
+    if (!radio) { ImGui::PopID(); return; }   // no radio selected: two greyed, framed buttons that do nothing are only clutter; draw nothing
     if (ImGui::SmallButton(tr("Auto setup"))) { const std::string s = autoSetup(a); gUndo.what = std::string(tr("Auto setup: ")) + s; }
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("One click: Auto gain, this mode's own bandwidth and sample rate, and the frequency nudged onto the signal when it is a narrow one. Every step can be undone."));
     ImGui::SameLine();
     if (ImGui::SmallButton(tr("Reset this mode"))) resetThisMode(a);
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Put this mode's frequency, bandwidth and sample rate back to its defaults. Other modes and your other settings stay as they are."));
-    if (!radio) ImGui::EndDisabled();
     if (gUndo.have && ImGui::GetTime() < gUndo.until && gUndo.family == presetsapp::modeKey(a)) {
         ImGui::SameLine();
         ImGui::TextDisabled("%s", gUndo.what.c_str());
