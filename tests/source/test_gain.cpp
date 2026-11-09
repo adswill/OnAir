@@ -137,7 +137,7 @@ int main() {
         for (auto& x : sw.entries()) jprintf("  LNA %2d VGA %2d amp %d: SNR %6.1f dB (%d samples) level %6.1f dBFS clip %.3f%%\n", x.g.lna, x.g.vga, x.g.amp, x.snrDb, x.n, x.rms, x.clip * 100);
         jprintf("sweep %s\n", sw.summary().c_str());
         double bs = -1e9;
-        for (auto& x : sw.entries()) if (x.clip <= 0.001f) bs = std::max(bs, x.snrDb);
+        for (auto& x : sw.entries()) if (x.clip <= 0.001f && !x.overload) bs = std::max(bs, x.snrDb);   // the same rule as GainSweep::best()
         for (auto& x : sw.entries()) if (x.g == sw.best()) { CHECK(x.clip <= 0.001f, "winner clips"); CHECK(x.snrDb >= bs - 0.01, "winner is not the best SNR"); }
         e.stop();
     });
