@@ -57,7 +57,7 @@ EXPORT int rtlsdr_open(rtl_dev** d, uint32_t) { if (const int r = rtlOpenRefusal
 EXPORT int rtlsdr_close(rtl_dev* d) { delete d; return 0; }
 EXPORT int rtlsdr_set_center_freq(rtl_dev*, uint32_t f) { rec("rtl.freq", f); rec("rtl.tunedHz", f); return 0; }
 // the Blog library retunes to its last frequency here: 0 Hz on a fresh open would switch an R820T to direct sampling (#450)
-EXPORT int rtlsdr_set_sample_rate(rtl_dev*, uint32_t r) { rec("rtl.rate", r); if (fake_state("rtl.tunedHz") == 0) count("rtl.rateAtZeroHz"); return 0; }
+EXPORT int rtlsdr_set_sample_rate(rtl_dev*, uint32_t r) { rec("rtl.rate", r); if (fake_state("rtl.tunedHz") == 0) rec("rtl.rateAtZeroHz", std::max(0.0, fake_state("rtl.rateAtZeroHz")) + 1); return 0; }
 EXPORT uint32_t rtlsdr_get_sample_rate(rtl_dev*) { return (uint32_t)fake_state("rtl.rate"); }
 EXPORT int rtlsdr_set_tuner_gain_mode(rtl_dev*, int m) { rec("rtl.gainmode", m); return 0; }
 EXPORT int rtlsdr_get_tuner_gains(rtl_dev*, int* g) { static const int v[] = {0, 90, 140, 270, 370, 496}; if (g) memcpy(g, v, sizeof v); return 6; }
