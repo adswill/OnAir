@@ -177,6 +177,22 @@ pub fn decode_port(d: &Data, c: &Ctx) -> Decoded {
         }
         3 => position(d, &from_id, &mut out),
         8 => waypoint(d, &mut out),
+        10 | 11 | 32 | 66 => {
+            // plain text ports: detection sensor, alert, reply, range test
+            let label: &str = match d.portnum {
+                10 => "sensor: ",
+                11 => "ALERT: ",
+                32 => "reply: ",
+                _ => "range test: ",
+            };
+            out.detail.write(|w| {
+                w.str(label);
+                clip(w, d.payload, 120);
+            });
+        }
+        34 => paxcount(d, &mut out),
+        65 => store_forward(d, &mut out),
+        73 => map_report(d, &mut out),
         4 => nodeinfo(d, &from_id, &mut out),
         67 => telemetry(d, &mut out),
         5 => {
@@ -221,6 +237,7 @@ fn position(d: &Data, from_id: &S64, out: &mut Decoded) {
     let (mut lat, mut lon, mut alt, mut alt_hae) = (0i32, 0i32, 0i32, 0i32);
     let (mut t, mut ts, mut prec) = (0u32, 0u32, 0u32);
     let mut sats = -1i32;
+    let (mut gs, mut track, mut hdop) = (None::<u64>, None::<u64>, None::<u64>);
     while let Some(f) = r.next() {
         match (f.num, f.wire) {
             (1, 5) => {
@@ -241,6 +258,9 @@ fn position(d: &Data, from_id: &S64, out: &mut Decoded) {
                 alt_hae = f.as_sint32();
                 has_hae = true;
             }
+            (15, 0) => gs = Some(f.value),
+            (16, 0) => track = Some(f.value),
+            (12, 0) => hdop = Some(f.value),
             (19, 0) => sats = f.value as i32,
             (23, 0) => prec = f.value as u32,
             _ => {}
@@ -268,6 +288,19 @@ fn position(d: &Data, from_id: &S64, out: &mut Decoded) {
             w.str(", ");
             w.idec(u.alt_m as i32 as i64);
             w.str(" m");
+            if let Some(v) = gs {
+                w.str(", ");
+                w.udec(v);
+                w.str(" m/s");
+            }
+            if let Some(v) = track {
+                w.str(", track ");
+                w.fixed(format_f, 1, v as f64 * 1e-5);   // mesh.proto: 1e-5 degrees
+            }
+            if let Some(v) = hdop {
+                w.str(", HDOP ");
+                w.fixed(format_f, 2, v as f64 / 100.0);
+            }
             if prec != 0 && prec < 32 {
                 w.str(", ");
                 w.udec(prec as u64);
@@ -344,6 +377,131 @@ fn metrics(m: &Field, local: bool, u: &mut Node) {
 }
 
 /// TELEMETRY_APP (telemetry.proto Telemetry): device metrics (2), environment metrics (3) or local stats (6); the last one present gives the detail line.
+/// PAXCOUNTER_APP (paxcount.proto): people counted by Wi-Fi and BLE devices seen.
+fn paxcount(d: &Data, out: &mut Decoded) {
+    let mut r = Reader::new(d.payload);
+    let (mut wifi, mut ble, mut up) = (0u64, 0u64, 0u64);
+    while let Some(f) = r.next() {
+        match (f.num, f.wire) {
+            (1, 0) => wifi = f.value,
+            (2, 0) => ble = f.value,
+            (3, 0) => up = f.value,
+            _ => {}
+        }
+    }
+    out.detail.write(|w| {
+        w.str("paxcounter: wifi ");
+        w.udec(wifi);
+        w.str(", ble ");
+        w.udec(ble);
+        w.str(", uptime ");
+        w.udec(up);
+        w.str(" s");
+    });
+}
+
+/// STORE_FORWARD_APP (storeforward.proto): the request/response code and, for a router, its heartbeat or history size.
+fn store_forward(d: &Data, out: &mut Decoded) {
+    let mut r = Reader::new(d.payload);
+    let mut rr = 0u64;
+    let (mut period, mut secondary, mut hist) = (None::<u64>, 0u64, None::<u64>);
+    while let Some(f) = r.next() {
+        match (f.num, f.wire) {
+            (1, 0) => rr = f.value,
+            (3, 2) => {
+                let mut m = Reader::new(f.data);
+                while let Some(g) = m.next() {
+                    if g.num == 1 && g.wire == 0 {
+                        hist = Some(g.value);
+                    }
+                }
+            }
+            (4, 2) => {
+                let mut m = Reader::new(f.data);
+                while let Some(g) = m.next() {
+                    match (g.num, g.wire) {
+                        (1, 0) => period = Some(g.value),
+                        (2, 0) => secondary = g.value,
+                        _ => {}
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    let name = match rr {
+        1 => "router error",
+        2 => "router heartbeat",
+        3 => "router ping",
+        4 => "router pong",
+        5 => "router busy",
+        6 => "router history",
+        7 => "router stats",
+        8 => "text direct",
+        9 => "text broadcast",
+        64 => "client error",
+        65 => "client history request",
+        66 => "client stats request",
+        67 => "client ping",
+        68 => "client pong",
+        106 => "client abort",
+        _ => "unset",
+    };
+    out.detail.write(|w| {
+        w.str("store and forward: ");
+        w.str(name);
+        if let Some(p) = period {
+            w.str(", every ");
+            w.udec(p);
+            w.str(" s");
+            if secondary != 0 {
+                w.str(", secondary");
+            }
+        }
+        if let Some(h) = hist {
+            w.str(", ");
+            w.udec(h);
+            w.str(" messages");
+        }
+    });
+}
+
+/// MAP_REPORT_APP (mqtt.proto `MapReport`): name, firmware, position, nodes online.
+fn map_report(d: &Data, out: &mut Decoded) {
+    let mut r = Reader::new(d.payload);
+    let (mut name, mut fw): (&[u8], &[u8]) = (&[], &[]);
+    let (mut lat, mut lon, mut nodes) = (None::<i32>, None::<i32>, None::<u64>);
+    while let Some(f) = r.next() {
+        match (f.num, f.wire) {
+            (1, 2) => name = f.data,
+            (5, 2) => fw = f.data,
+            (9, 5) => lat = Some(f.as_i32()),
+            (10, 5) => lon = Some(f.as_i32()),
+            (13, 0) => nodes = Some(f.value),
+            _ => {}
+        }
+    }
+    out.detail.write(|w| {
+        w.str("map report: ");
+        clip(w, name, 40);
+        if !fw.is_empty() {
+            w.str(", fw ");
+            clip(w, fw, 24);
+        }
+        if let (Some(a), Some(b)) = (lat, lon) {
+            w.str(", ");
+            w.fixed(format_f, 5, f64::from(a) * 1e-7);
+            w.str(" ");
+            w.fixed(format_f, 5, f64::from(b) * 1e-7);
+        }
+        if let Some(n) = nodes {
+            w.str(", ");
+            w.udec(n);
+            w.str(" nodes");
+        }
+    });
+}
+
 /// WAYPOINT_APP (mesh.proto `Waypoint`): a named map pin.
 fn waypoint(d: &Data, out: &mut Decoded) {
     let mut r = Reader::new(d.payload);

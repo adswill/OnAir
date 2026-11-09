@@ -147,3 +147,32 @@ fn waypoint_and_telemetry_variants() {
     let o = meshtastic::decode_port(&meshtastic::parse_data(&plain).unwrap(), &c);
     assert_eq!(o.detail.as_bytes(), b"power, ch1 3.30 V 120.0 mA");
 }
+
+#[test]
+fn more_ports() {
+    let c = meshtastic::Ctx { from: 1, to: 2, hop_start: 3, hop_limit: 3, packet_id: 1 };
+    let pay = |port: u8, p: &[u8]| {
+        let mut v = vec![0x08, port, 0x12, p.len() as u8];
+        v.extend_from_slice(p);
+        let o = meshtastic::decode_port(&meshtastic::parse_data(&v).unwrap(), &c);
+        String::from_utf8_lossy(o.detail.as_bytes()).into_owned()
+    };
+    assert_eq!(pay(66, b"seq 12"), "range test: seq 12");
+    assert_eq!(pay(11, b"Fire"), "ALERT: Fire");
+    assert_eq!(pay(34, &[0x08, 12, 0x10, 5, 0x18, 100]), "paxcounter: wifi 12, ble 5, uptime 100 s");
+    // heartbeat every 300 s from a secondary router
+    assert_eq!(pay(65, &[0x08, 2, 0x22, 5, 0x08, 0xAC, 0x02, 0x10, 1]), "store and forward: router heartbeat, every 300 s, secondary");
+    let mut m = vec![0x0A, 3, b'N', b'o', b'd', 0x2A, 3, b'2', b'.', b'6', 0x4D];
+    m.extend_from_slice(&546789000i32.to_le_bytes());
+    m.push(0x55);
+    m.extend_from_slice(&252791000i32.to_le_bytes());
+    m.extend_from_slice(&[0x68, 7]);
+    assert_eq!(pay(73, &m), "map report: Nod, fw 2.6, 54.67890 25.27910, 7 nodes");
+    // position with speed, track, HDOP
+    let mut p = vec![0x0D];
+    p.extend_from_slice(&546789000i32.to_le_bytes());
+    p.push(0x15);
+    p.extend_from_slice(&252791000i32.to_le_bytes());
+    p.extend_from_slice(&[0x18, 100, 0x60, 150, 1, 0x78, 7, 0x80, 1, 0xC0, 0x84, 0x3D]);
+    assert_eq!(pay(3, &p), "54.67890, 25.27910, 100 m, 7 m/s, track 10.0, HDOP 1.50");
+}
