@@ -97,11 +97,16 @@ Every message is one JSON object with `type`. Unknown fields, wrong types and va
 | `subscribe` | `decoder` (an id from `welcome.decoders`), `freq_hz` (required when `needs_freq`) | at most 4 a session |
 | `unsubscribe` | `decoder`, `freq_hz` | |
 | `ping` | `t` (any number, echoed) | |
+| `control` | `take` (bool, required) | take (`true`) or give back (`false`) the control slot when the host set `web_control=slot`. Refused with `busy` while another listener holds it |
 | `bye` | | the server closes with 1000 |
 
 Passband limits per mode (Hz relative to the tuned frequency): AM and NFM -10000 .. 10000, WFM -110000 .. 110000, USB -1000 .. 10000, LSB -10000 .. 1000, CW -1500 .. 1500. Defaults: AM +-4500, NFM +-6250, WFM +-100000, USB 100 .. 2800, LSB -2800 .. -100, CW +-250 (heard at a 700 Hz tone).
 
 **Forbidden types.** `tx`, `transmit`, `ptt`, `arm`, `tx_arm`, `carrier`, `key`, `keys`, `import_key`, `key_import`, `voicekeys`, `decrypt`, `record`, `recording`, `save`, `upload`, `exec`, `shell`, `config`, `admin` are answered with `{"type":"error","code":"forbidden"}`. There is no way to transmit, arm a transmitter, load or use keys, decrypt, or write to the server's disk from a web session; the server code cannot even reach the transmit path (see docs/ONAIR-WEB.md, Safety).
+
+## Tuning permission
+
+The welcome carries `control`: `{"type":"control","mode":"everyone|members|slot|nobody","can_tune":bool,"holder":bool,"busy":bool,"left_s":n,"slot_min":n}` (missing on older servers: everyone can tune). A `tune` without the right is refused with `not_allowed` and changes nothing; in slot mode the session keeps its receiver where it was. The server sends a `control` message whenever the slot changes hands or expires. Each listener still has their own receiver: the slot limits who may retune, it is not a shared dial.
 
 ## Server text messages
 

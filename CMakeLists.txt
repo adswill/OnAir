@@ -1834,6 +1834,11 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_webshare_core tests/webshare/test_webshare_core.cpp app/webshare/webshare_core.cpp app/webshare/qr.cpp server/server_config.cpp)   # OnAir Web setup: settings, plan, decoders, step 2 state machine, QR
   target_link_libraries(test_webshare_core PRIVATE onair_web)
   add_test(NAME webshare_core COMMAND test_webshare_core)
+  find_program(ONAIR_NODE node)
+  if(ONAIR_NODE)   # relay + the real directory Worker + onair-server + guests (and Chrome when ONAIR_E2E_PLAYWRIGHT is set); skipped without wrangler
+    add_test(NAME webonair_e2e COMMAND ${ONAIR_NODE} ${CMAKE_SOURCE_DIR}/tests/web/webonair_e2e.js $<TARGET_FILE:onair-server>)
+    set_tests_properties(webonair_e2e PROPERTIES TIMEOUT 300 SKIP_RETURN_CODE 77 RUN_SERIAL TRUE)
+  endif()
   find_program(ONAIR_PYTHON3 python3)   # the fake directory worker (tools/fake_directory.py) drives step 1 / step 2 against onair-server
   find_program(ONAIR_OPENSSL openssl)
   if(ONAIR_PYTHON3)

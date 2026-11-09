@@ -63,7 +63,7 @@ static void testProtocol() {
     }
     // what a session can send at all: none of it reaches a transmitter, a key or the disk
     for (const auto& t : clientTypes()) CHECK(!isForbiddenType(t), "%s", t.c_str());
-    CHECK(clientTypes().size() == 9, "the protocol has exactly the nine documented client types");
+    CHECK(clientTypes().size() == 10, "the protocol has exactly the ten documented client types");
     h.leave(id);
 }
 

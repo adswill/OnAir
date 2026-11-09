@@ -310,6 +310,11 @@ void writeAdminHeader() {
     writeFile(dir() / "admin.hdr", "Authorization: Bearer " + g.adminToken + "\n", true);
 }
 
+std::string infoUrl(std::string url) {   // the relay's link ends in a slash and "//web/v1/info" is not the same path
+    while (!url.empty() && url.back() == '/') url.pop_back();
+    return url + "/web/v1/info";
+}
+
 void shareWorker(ShareSettings S, RigCaps rig, Plan plan) {
     g.shareRunning = true;
     g.cancel = false;
@@ -370,7 +375,7 @@ void shareWorker(ShareSettings S, RigCaps rig, Plan plan) {
             bool up = false;
             for (int i = 0; i < 12 && !g.cancel && !up; i++) {
                 int st = 0;
-                const std::string body = curlGet(url + "/web/v1/info", 6, &st);
+                const std::string body = curlGet(infoUrl(url), 6, &st);
                 up = st == 200 && body.find("\"proto\"") != std::string::npos;
                 if (!up && !sleepOrCancel(1000)) break;
             }
@@ -407,7 +412,7 @@ void shareWorker(ShareSettings S, RigCaps rig, Plan plan) {
         bool up = false;
         for (int i = 0; i < 40 && !g.cancel && !up; i++) {   // a new quick-tunnel name needs a few seconds before it works from outside
             int st = 0;
-            const std::string body = curlGet(url + "/web/v1/info", 6, &st);
+            const std::string body = curlGet(infoUrl(url), 6, &st);
             up = st == 200 && body.find("\"proto\"") != std::string::npos;
             if (!up && !sleepOrCancel(1500)) break;
         }
@@ -662,7 +667,7 @@ void statsWorker(std::string url, bool checkPublic) {
     int pub = -1;
     if (checkPublic && !url.empty()) {
         int ps = 0;
-        const std::string pb = curlGet(url + "/web/v1/info", 8, &ps);
+        const std::string pb = curlGet(infoUrl(url), 8, &ps);
         pub = ps == 200 && pb.find("\"proto\"") != std::string::npos ? 1 : 0;
     }
     std::vector<UserRow> users;

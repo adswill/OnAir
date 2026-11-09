@@ -22,16 +22,16 @@ static void testPrefsRoundTrip() {
     ShareSettings s;
     s.rig = "HackRF Pro (serial 0000a0)"; s.wholeSpan = false; s.centreMHz = 127.5; s.spanMHz = 19; s.rateAuto = false; s.rateMsps = 22.5; s.gainManual = true; s.gainDb = 41;
     s.dataOff = {"ft8", "wspr"}; s.restrictedOn = {"dmr"}; s.legalAck = true; s.demods = "am,usb"; s.maxUsers = 12; s.userKbps = 256; s.audioOnly = true; s.limitToRange = true;
-    s.password = "correct horse"; s.link = "own"; s.ownUrl = "https://radio.example.org/"; s.listPublic = true; s.name = "Roof"; s.desc = "FM and air"; s.loc = "54.69,25.28"; s.contact = "me@example.org";
+    s.passwordHash = "pbkdf2$60000$00$11"; s.accessPassword = true; s.link = "own"; s.ownUrl = "https://radio.example.org/"; s.listPublic = true; s.name = "Roof"; s.desc = "FM and air"; s.loc = "54.69,25.28"; s.contact = "me@example.org";
     s.radioLabel = "HackRF Pro"; s.locDecimals = 1; s.reach = true; s.dirUrl = "https://web.on-air.dev";
     const ShareSettings b = settingsFromText(settingsToText(s));
     CHK(b.rig == s.rig && !b.wholeSpan && b.centreMHz == 127.5 && b.spanMHz == 19 && !b.rateAuto && b.rateMsps == 22.5 && b.gainManual && b.gainDb == 41);
     CHK(b.dataOff == s.dataOff && b.restrictedOn == s.restrictedOn && b.legalAck && b.demods == "am,usb" && b.maxUsers == 12 && b.userKbps == 256 && b.audioOnly && b.limitToRange);
-    CHK(b.password == s.password && b.link == "own" && b.ownUrl == s.ownUrl && b.listPublic && b.name == "Roof" && b.desc == "FM and air" && b.loc == "54.69,25.28" && b.contact == s.contact);
+    CHK(b.password.empty() && b.passwordHash == s.passwordHash && b.accessPassword && b.link == "own" && b.ownUrl == s.ownUrl && b.listPublic && b.name == "Roof" && b.desc == "FM and air" && b.loc == "54.69,25.28" && b.contact == s.contact);
     CHK(b.radioLabel == "HackRF Pro" && b.locDecimals == 1 && b.reach);
     // garbage lines and bad numbers keep the defaults
     const ShareSettings d = settingsFromText("centre_mhz=abc\nmax_users=-5\nlink=evil\nwhat\n=x\nloc_decimals=99\n");
-    CHK(d.centreMHz == 98.0 && d.maxUsers == 1 && d.link == "relay" && d.locDecimals == 5);
+    CHK(d.centreMHz == 98.0 && d.maxUsers == 1 && d.link == "auto" && d.locDecimals == 5);
     CHK(settingsToText(ShareSettings{}) == settingsToText(settingsFromText("")));
     // the 3.6 settings
     ShareSettings n;
@@ -137,10 +137,10 @@ static void testDecoders() {
 // the settings file must reach the real server code: parse it with the server's own loaders
 static void testServerConf() {
     ShareSettings s;
-    s.maxUsers = 20; s.userKbps = 128; s.audioOnly = true; s.password = "longpassword"; s.dataOff = {"ft8", "aprs"}; s.demods = "am,wfm";
+    s.maxUsers = 20; s.userKbps = 128; s.audioOnly = true; s.passwordHash = onair_web::hashPassword("longpassword"); s.accessPassword = true; s.dataOff = {"ft8", "aprs"}; s.demods = "am,wfm";
     s.legalAck = true; s.restrictedOn = {"pocsag"}; s.limitToRange = true; s.gainManual = true; s.gainDb = 33;
     ShareSettings d = s; applyPreset(d, rangePresets()[0]);
-    d.dataOff = s.dataOff; d.demods = s.demods; d.legalAck = true; d.restrictedOn = s.restrictedOn; d.limitToRange = true; d.password = s.password; d.audioOnly = true; d.maxUsers = 20; d.userKbps = 128;
+    d.dataOff = s.dataOff; d.demods = s.demods; d.legalAck = true; d.restrictedOn = s.restrictedOn; d.limitToRange = true; d.passwordHash = s.passwordHash; d.accessPassword = true; d.audioOnly = true; d.maxUsers = 20; d.userKbps = 128;
     const Plan p = resolvePlan(d, hackrf());
     const std::string conf = buildServerConf(d, p, 8075, 8766, "", "0123456789abcdef0123456789abcdef");
     onair_server::ConfigFile c;
@@ -152,7 +152,7 @@ static void testServerConf() {
     onair_web::WebSettings w = onair_web::loadWebSettings(c, madeAdmin);
     CHK(w.on && w.server.port == 8075 && w.server.bind == "127.0.0.1" && w.server.trustProxy && !madeAdmin);
     CHK(w.limits.maxUsers == 20 && w.limits.maxKbpsUser == 128 && !w.limits.spectrum);
-    CHK(w.server.auth.mode == onair_web::AuthMode::Password && w.server.auth.password == "longpassword");
+    CHK(w.server.auth.mode == onair_web::AuthMode::Password && w.server.auth.password.empty() && onair_web::passwordMatchesHash("longpassword", w.server.auth.passwordHash));
     CHK(w.server.auth.adminToken == "0123456789abcdef0123456789abcdef");
     onair_web::WebPolicy pol;
     pol.load(c);
@@ -203,7 +203,7 @@ static void testDirectoryConf() {
     CHK(c.get("web_directory_radio") == "HackRF Pro" && c.get("web_directory_ack") == "abc123def456" && c.flag("web_directory_reach", false) && c.get("web_directory_freq") == coverageText(p));
     bool made2 = false;
     onair_web::WebSettings w = onair_web::loadWebSettings(c, made2);
-    CHK(w.directory.on && w.directory.loc == "54.6872,25.2797" && w.directory.locDecimals == 2 && w.directory.keyFile == "/tmp/x/web_directory.key");
+    CHK(w.directory.on && w.directory.loc == "54.6872,25.2797" && w.directory.locDecimals == 1 && w.directory.keyFile == "/tmp/x/web_directory.key");
     // the coverage text is what dirParseFreqMHz understands
     std::vector<std::pair<long long, long long>> fr; std::string e;
     CHK(onair_web::dirParseFreqMHz(coverageText(p), fr, e) && fr.size() == 1 && fr[0].first > 80000000 && fr[0].second < 120000000);
@@ -347,7 +347,26 @@ static void testListeners() {
     ShareSettings s;
     RigCaps rig = hackrf();
     const std::string e = easySummary(s, rig, resolvePlan(s, rig));
-    CHK(e.find("relay") != std::string::npos && e.find("anyone") != std::string::npos);
+    CHK(e.find("public link") != std::string::npos && e.find("anyone") != std::string::npos);
+    // 3.7: the default link is automatic, the location coarse, the password never written as text
+    CHK(s.link == "auto" && s.locDecimals == 1 && !s.accessPassword && !s.autostart);
+    ShareSettings legacy = settingsFromText("password=correct-horse-staple\nlink=relay\n");
+    CHK(legacy.accessPassword && legacy.password.empty() && onair_web::passwordMatchesHash("correct-horse-staple", legacy.passwordHash) && !onair_web::passwordMatchesHash("wrong", legacy.passwordHash));
+    CHK(settingsToText(legacy).find("correct-horse-staple") == std::string::npos);
+    ShareSettings nopw; nopw.accessPassword = true; std::string why2; CHK(!settingsValid(nopw, why2));
+    ShareSettings adv;
+    adv.control = "slot"; adv.controlSlotMin = 7; adv.audioRate = 8000; adv.allowTx = true; adv.allowRanges = "88-108 MHz, 118-137 MHz"; adv.blockRanges = "121.4-121.6 MHz"; adv.autostart = true; adv.autoList = true; adv.link = "own"; adv.bindAll = true; adv.ownUrl = "https://x.example/";
+    const std::string adv2 = settingsToText(adv);
+    const ShareSettings back = settingsFromText(adv2);
+    CHK(back.control == "slot" && back.controlSlotMin == 7 && back.audioRate == 8000 && back.allowTx && back.allowRanges == adv.allowRanges && back.blockRanges == adv.blockRanges && back.autostart && back.autoList && back.bindAll);
+    std::string bad3; ShareSettings badr; badr.allowRanges = "nonsense"; CHK(!settingsValid(badr, bad3) && bad3.find("nonsense") != std::string::npos);
+    RigCaps tr; tr.name = "Test"; tr.test = true;
+    const std::string cf = buildServerConf(adv, resolvePlan(adv, tr), 8073, 8765, "", "token01234567890123456789");
+    CHK(cf.find("web_control=slot\n") != std::string::npos && cf.find("web_control_slot_min=7") != std::string::npos && cf.find("web_max_audio_rate=8000") != std::string::npos && cf.find("web_allow_tx=1") != std::string::npos);
+    CHK(cf.find("web_allow_range=88-108 MHz\n") != std::string::npos && cf.find("web_allow_range=118-137 MHz\n") != std::string::npos && cf.find("web_block_range=121.4-121.6 MHz\n") != std::string::npos && cf.find("web_bind=0.0.0.0") != std::string::npos);
+    CHK(locationText(54.6872, 25.2797, 1) == "54.7,25.3" && locationText(0, 0, 1).empty());
+    ShareSettings dflt; const std::string cd = buildServerConf(dflt, resolvePlan(dflt, tr), 8073, 8765, "", "token01234567890123456789");
+    CHK(cd.find("web_relay=1") != std::string::npos && cd.find("web_allow_tx") == std::string::npos && cd.find("web_control") == std::string::npos && cd.find("web_password") == std::string::npos);
 }
 
 int main() {

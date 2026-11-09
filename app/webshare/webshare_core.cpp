@@ -603,7 +603,7 @@ bool parseInviteToken(const std::string& json, std::string& token) {
 std::string easySummary(const ShareSettings& s, const RigCaps& rig, const Plan& plan) {
     std::ostringstream o;
     o << (rig.name.empty() ? std::string("no radio found") : rig.name) << ", " << rangeSpecMHz(plan.loHz, plan.hiHz) << " MHz, up to " << s.maxUsers << " listeners, ";
-    o << (s.link == "relay" ? "through the OnAir relay" : s.link == "tunnel" ? "through a Cloudflare tunnel" : s.link == "own" ? "at your own address" : "on this network only") << ", ";
+    o << (s.link == "auto" ? "with a public link" : s.link == "relay" ? "through the OnAir relay" : s.link == "tunnel" ? "through a Cloudflare tunnel" : s.link == "own" ? "at your own address" : "on this network only") << ", ";
     o << (s.inviteOnly ? "invite links only" : !s.accessPassword ? "open to anyone with the link" : "with a password");
     if (s.audioOnly) o << ", audio only";
     return o.str();

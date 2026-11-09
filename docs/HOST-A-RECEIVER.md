@@ -4,6 +4,9 @@ This guide is for people who have never done anything like this. You do not need
 
 At the end, anybody with a web browser can open a web page, tune your radio, and listen. Your radio can also appear in the public list at https://web.on-air.dev.
 
+
+From OnAir 3.7 the quickest way is inside the app: **Server > Share this radio**, one button, a link and a QR code; no port forwarding and no files to edit. The options below are for running a standalone server.
+
 ## Read this first: what is tested and what is not
 
 Be honest with yourself about the state of this feature before you start.
