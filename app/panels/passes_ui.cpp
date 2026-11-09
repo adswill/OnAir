@@ -261,6 +261,10 @@ void buildSats() {
             if (p.tleName[0] && !p.uplinkOnly && t.name.rfind(p.tleName, 0) == 0) { add(t.name, no, dect2::TagAmateur, Amateur, false, true, link(p.mhz * 1e6, kLoraSat, "LoRa satellite")); break; }
     for (const Cube& c : S.cubes) add(c.name, c.norad, dect2::TagAmateur | dect2::TagCubesat, Amateur, false, true, link(c.mhz * 1e6, c.aprs ? kAprs : kCubesat, c.aprs ? "APRS" : "CubeSat telemetry"));
     auto addTx = [&](const dect2::cubesat::TxEntry& t) {
+        const auto it = at.find(t.norad);
+        if (it != at.end())   // a dedicated mode (Meteor's LRPT, ISS APRS) is what the user wants, not the SatNOGS row of the same downlink (listed as "FSK 40000")
+            for (const dect2::SatLink& o : S.sats[it->second].links)
+                if (o.family != kCubesat && std::fabs(o.hz - t.hz) < 2e6) return;
         const bool lora = t.mod == dect2::cubesat::ModLora, am = amateur.count(t.norad) != 0;
         std::string mode = t.mode.empty() ? std::string(dect2::cubesat::modName(t.mod)) : t.mode;
         if (t.baud > 0) mode += " " + std::to_string(t.baud);
@@ -340,7 +344,7 @@ void loadState() {
     S.showRetired = p.getB("passShowRetired", false);
     S.antenna = (unsigned)p.getD("passAntenna", dect2::BandAny);
     S.showMap = p.getB("passShowMap", false);
-    S.mapView.lat = 54; S.mapView.lon = 24; S.mapView.zoom = 3;
+    S.mapView.zoom = 2;   // (centred on the receiver when first shown)
     S.schedTakeOver = p.getB("passSchedTakeOver", false);
     S.userTx = dect2::cubesat::txFromText(p.getS("csmUserTx", ""));
     if (std::string q = p.getS("passQueue", ""); !q.empty()) {   // armed passes survive a restart (those already over are dropped by refreshQueue)
@@ -1214,13 +1218,13 @@ void passTable(double now) {
     if (!ImGui::BeginTable("##passes", 8, tf)) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn(tr("Satellite"), ImGuiTableColumnFlags_WidthStretch);
-    ImGui::TableSetupColumn(tr("Starts"));
-    ImGui::TableSetupColumn(tr("Peak"));
-    ImGui::TableSetupColumn(tr("Length"));
-    ImGui::TableSetupColumn(tr("Path"));
-    ImGui::TableSetupColumn(tr("Signal"));
-    ImGui::TableSetupColumn(tr("You get"));
-    ImGui::TableSetupColumn("");
+    ImGui::TableSetupColumn(tr("Starts"), ImGuiTableColumnFlags_WidthFixed, 100 * gUi);
+    ImGui::TableSetupColumn(tr("Peak"), ImGuiTableColumnFlags_WidthFixed, 40 * gUi);
+    ImGui::TableSetupColumn(tr("Length"), ImGuiTableColumnFlags_WidthFixed, 48 * gUi);
+    ImGui::TableSetupColumn(tr("Path"), ImGuiTableColumnFlags_WidthFixed, 50 * gUi);
+    ImGui::TableSetupColumn(tr("Signal"), ImGuiTableColumnFlags_WidthFixed, 118 * gUi);
+    ImGui::TableSetupColumn(tr("You get"), ImGuiTableColumnFlags_WidthFixed, 122 * gUi);
+    ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 112 * gUi);
     ImGui::TableHeadersRow();
     ImGuiListClipper clip;
     clip.Begin((int)S.visible.size());
@@ -1262,6 +1266,7 @@ void passTable(double now) {
 // The pass on the map: its track, the footprint (at the satellite's place now during the pass, else at the highest point), the receiver
 void passMap(const Row* r, float w, float h) {
     const ImVec2 p0 = ImGui::GetCursorScreenPos();
+    { static bool centred = false; if (!centred) { centred = true; S.mapView.lat = S.lat; S.mapView.lon = S.lon; } }
     adsbmap::draw(S.mapView, ImVec2(w, h));
     ImDrawList* dl = ImGui::GetWindowDrawList();
     dl->PushClipRect(p0, ImVec2(p0.x + w, p0.y + h), true);
@@ -1278,7 +1283,7 @@ void passMap(const Row* r, float w, float h) {
             poly(pt.track, acc, 2.f * gUi);
             auto c = dect2::circlePoints(pt.lat, pt.lon, pt.footprintKm, 90);
             c.push_back(c[0]);
-            poly(c, (acc & 0x00FFFFFF) | 0x70000000, 1.f * gUi);
+            poly(c, (acc & 0x00FFFFFF) | 0xC0000000, 1.5f * gUi);
             dl->AddCircleFilled(adsbmap::project(pt.lat, pt.lon), 4.f * gUi, ImGui::GetColorU32(pal::warnAmber()));
         }
     }
