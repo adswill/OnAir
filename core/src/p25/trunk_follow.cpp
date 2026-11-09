@@ -164,6 +164,17 @@ void Follower::searchAt(double hz, double now) {
     dwellStart_ = now;
 }
 
+bool Follower::parkAt(double hz, double now) {
+    if (state_ != FollowState::ControlHold || !(hz > 0)) return false;
+    ccHz_ = hz;
+    Action a;
+    a.kind = Action::Retune; a.freqHz = hz;
+    out_.push_back(a);
+    radioHz_ = hz;
+    setState(FollowState::Returning, now);
+    return true;
+}
+
 void Follower::goHome(double now) {
     const double home = ccHz_ > 0 ? ccHz_ : homeHz_;
     if (home <= 0) { setState(FollowState::NoControl, now); return; }
