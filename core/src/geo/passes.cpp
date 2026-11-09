@@ -255,7 +255,7 @@ std::vector<Pass> findPasses(const Sgp4& s, const Observer& o, double t0, double
         while (hi - lo > 0.5) { const double m = 0.5 * (lo + hi); if ((el(m, ok) < 0) == riseLo) lo = m; else hi = m; }
         return 0.5 * (lo + hi);
     };
-    const double step = 20.0;   // a pass above the horizon lasts minutes: none is missed with this step except a graze of seconds
+    const double fine = 20.0;   // a pass above the horizon lasts minutes: none is missed with this step except a graze of seconds
     bool ok;
     double prevT = t0, prevE = el(t0, ok);
     if (!ok) return out;
@@ -263,16 +263,18 @@ std::vector<Pass> findPasses(const Sgp4& s, const Observer& o, double t0, double
     bool in = prevE >= 0;
     if (in) cur.aos = t0;
     double bestT = t0, bestE = prevE;
+    double step = fine;
     for (double t = t0 + step;; t += step) {
         if (t > t1) t = t1;
         const double e = el(t, ok);
         if (!ok) break;
+        step = !in && e + minEl < -25.0 ? 120.0 : fine;   // far below the horizon (a low orbit needs minutes to get up): save the work
         if (!in && e >= 0) { in = true; cur = Pass(); cur.aos = edge(prevT, t); bestT = t; bestE = e; }
         if (in && e > bestE) { bestE = e; bestT = t; }
         if (in && (e < 0 || t >= t1)) {
             cur.los = e < 0 ? edge(prevT, t) : t;
             // the highest point: golden-section search around the best sample
-            double a = std::max(cur.aos, bestT - step), b = std::min(cur.los, bestT + step);
+            double a = std::max(cur.aos, bestT - fine), b = std::min(cur.los, bestT + fine);
             const double g = 0.381966011250105;
             for (int k = 0; k < 40 && b - a > 0.2; k++) {
                 const double m1 = a + g * (b - a), m2 = b - g * (b - a);
