@@ -448,7 +448,6 @@ The width of the signal is measured in the spectrum and the receiver switches be
 The receiver's channel filter. Narrower keeps a strong neighbour out (150 kHz copes with one 10 dB stronger 150 kHz away); below about 180 kHz loud passages distort a little and RDS suffers first.	Het kanaalfilter van de ontvanger. Smaller houdt een sterke buurzender buiten (150 kHz verdraagt er een die 10 dB sterker is op 150 kHz afstand); onder ongeveer 180 kHz vervormen luide passages een beetje en lijdt RDS het eerst.
 The width is measured in the spectrum, and 6, 8 and 7 MHz are tried in turn while nothing locks.	De breedte wordt in het spectrum gemeten en 6, 8 en 7 MHz worden om beurten geprobeerd zolang er niets vergrendelt.
 6 MHz in Japan and the Americas, 8 MHz in the Maldives (ISDB-T International). The signal is the same, scaled in time by the width.	6 MHz in Japan en Amerika, 8 MHz op de Malediven (ISDB-T International). Het signaal is hetzelfde, in de tijd geschaald met de breedte.
-Set by the country: there is nothing to measure it from. A receiver set to the wrong width finds nothing.	Bepaald door het land: er is niets om haar aan te meten. Een ontvanger met de verkeerde breedte vindt niets.
 Follows the symbol rate: symbol rate x (1 + roll-off).	Volgt de symboolsnelheid: symboolsnelheid x (1 + roll-off).
 Choose automatic or a manual symbol rate in the tuner to change it.	Kies in de tuner automatische of handmatige symboolsnelheid om dit te wijzigen.
 This mode	Deze modus

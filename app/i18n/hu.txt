@@ -448,7 +448,6 @@ The width of the signal is measured in the spectrum and the receiver switches be
 The receiver's channel filter. Narrower keeps a strong neighbour out (150 kHz copes with one 10 dB stronger 150 kHz away); below about 180 kHz loud passages distort a little and RDS suffers first.	A vevő csatornaszűrője. A keskenyebb kint tartja az erős szomszédot (150 kHz elbír egy 10 dB-lel erősebb, 150 kHz-re lévő állomást); kb. 180 kHz alatt a hangos részek kissé torzulnak, és az RDS szenved először.
 The width is measured in the spectrum, and 6, 8 and 7 MHz are tried in turn while nothing locks.	A szélességet a spektrumból mérjük, és 6, 8 és 7 MHz-et próbál sorban, amíg semmi sem kapcsolódik be.
 6 MHz in Japan and the Americas, 8 MHz in the Maldives (ISDB-T International). The signal is the same, scaled in time by the width.	6 MHz Japánban és Amerikában, 8 MHz a Maldív-szigeteken (ISDB-T International). A jel ugyanaz, időben a szélességgel skálázva.
-Set by the country: there is nothing to measure it from. A receiver set to the wrong width finds nothing.	Az ország határozza meg: nincs mit mérni. A rossz szélességre állított vevő semmit sem talál.
 Follows the symbol rate: symbol rate x (1 + roll-off).	Követi a szimbólumsebességet: szimbólumsebesség x (1 + roll-off).
 Choose automatic or a manual symbol rate in the tuner to change it.	A módosításhoz válassz automatikus vagy kézi szimbólumsebességet a hangolóban.
 This mode	Ez az üzemmód

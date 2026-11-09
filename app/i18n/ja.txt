@@ -448,7 +448,6 @@ The width of the signal is measured in the spectrum and the receiver switches be
 The receiver's channel filter. Narrower keeps a strong neighbour out (150 kHz copes with one 10 dB stronger 150 kHz away); below about 180 kHz loud passages distort a little and RDS suffers first.	受信機のチャンネルフィルターです。狭くすると強い隣接局を排除できます (150 kHz なら 150 kHz 離れた 10 dB 強い局に耐えます)。約 180 kHz 未満では大きな音がやや歪み、まず RDS に影響が出ます。
 The width is measured in the spectrum, and 6, 8 and 7 MHz are tried in turn while nothing locks.	スペクトラムから幅を測定し、ロックしない間は 6、8、7 MHz を順に試します。
 6 MHz in Japan and the Americas, 8 MHz in the Maldives (ISDB-T International). The signal is the same, scaled in time by the width.	日本と中南米では 6 MHz、モルディブでは 8 MHz (ISDB-T International)。信号は同じで、幅に応じて時間軸が拡縮されます。
-Set by the country: there is nothing to measure it from. A receiver set to the wrong width finds nothing.	国によって決まります。測定の手がかりはありません。幅を間違えた受信機は何も見つけられません。
 Follows the symbol rate: symbol rate x (1 + roll-off).	シンボルレートに従います: シンボルレート x (1 + ロールオフ)。
 Choose automatic or a manual symbol rate in the tuner to change it.	変更するには、チューナーでシンボルレートを自動または手動にしてください。
 This mode	このモード

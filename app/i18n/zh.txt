@@ -455,7 +455,6 @@ The width of the signal is measured in the spectrum and the receiver switches be
 The receiver's channel filter. Narrower keeps a strong neighbour out (150 kHz copes with one 10 dB stronger 150 kHz away); below about 180 kHz loud passages distort a little and RDS suffers first.	接收机的信道滤波器。越窄越能挡住强邻台（150 kHz 可应付相距 150 kHz、强 10 dB 的电台）；低于约 180 kHz 时响亮段落会略有失真，RDS 最先受影响。
 The width is measured in the spectrum, and 6, 8 and 7 MHz are tried in turn while nothing locks.	在频谱中测量宽度，未锁定时依次尝试 6、8 和 7 MHz。
 6 MHz in Japan and the Americas, 8 MHz in the Maldives (ISDB-T International). The signal is the same, scaled in time by the width.	日本和美洲为 6 MHz，马尔代夫为 8 MHz（ISDB-T International）。信号相同，只是按宽度在时间上缩放。
-Set by the country: there is nothing to measure it from. A receiver set to the wrong width finds nothing.	由所在国家决定：无从测量。设置错误宽度的接收机将什么也找不到。
 Follows the symbol rate: symbol rate x (1 + roll-off).	随符号率变化：符号率 x（1 + 滚降系数）。
 Choose automatic or a manual symbol rate in the tuner to change it.	要更改，请在调谐中选择自动或手动符号率。
 This mode	此模式
