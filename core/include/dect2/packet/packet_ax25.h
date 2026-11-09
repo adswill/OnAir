@@ -74,12 +74,15 @@ public:
     void setRawCallback(RawCallback cb) { rawCb_ = std::move(cb); raw_.clear(); rawOk_ = false; }
     void reset() { hdlcReset(st_); raw_.clear(); rawOk_ = false; rprev_ = 0; rpat_ = 0; }
     void bit(int level);
+    // every line bit also goes here: the FX.25 and IL2P receivers listen to the same demodulator
+    void setBitTap(std::function<void(int)> f) { bitTap_ = std::move(f); }
     bool inFrame() const { return st_.inFrame; }
     bool flagSeen() const { return st_.flagRecent > 0; }   // a flag came a short while ago
     bool takeClockResync() { const bool r = st_.resyncClock; st_.resyncClock = false; return r; }
 private:
     Callback cb_;
     RawCallback rawCb_;
+    std::function<void(int)> bitTap_;
     bool nrzi_;
     HdlcState st_;
     std::vector<uint8_t> raw_;

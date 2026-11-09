@@ -16,6 +16,7 @@
 #include "dect2/packet/packet_aprs.h"
 #include "dect2/packet/packet_ax25.h"
 #include "dect2/packet/packet_demod.h"
+#include "dect2/packet/packet_fec.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -67,6 +68,7 @@ struct PacketReceiver::Impl {
     dmr::Fir<float> audio48;               // 96 -> 48 kHz low-pass for the 1200 baud path
     dmr::Fir<float> lp9600[2];
     AfskMulti afsk[3];
+    std::vector<std::unique_ptr<PacketFecRx>> fec;
     pktdemod::Emphasis emph;
     Fsk9600 fsk[2];
     // "fix bits": stretches of a frame's length that failed, tried again a little later unless another demodulator got the frame
@@ -116,6 +118,16 @@ struct PacketReceiver::Impl {
         for (int i = 0; i < 3; i++)
             for (size_t k = 0; k < afsk[i].chains.size(); k++)
                 afsk[i].chains[k].hdlc.setCallback([this, i, k](const std::vector<uint8_t>& dat, bool ok) { onRaw(1200, i * 16 + (int)k, dat, ok, afsk[i].pos * 2); });
+        // FX.25 and IL2P on the same line bits (IL2P is not differentially coded and only makes sense before the 9600 scrambler, so the 1200 baud chains only)
+        fec.clear();
+        for (int i = 0; i < 3; i++)
+            for (size_t k = 0; k < afsk[i].chains.size(); k++) {
+                auto f = std::make_unique<PacketFecRx>();
+                f->setSink([this, i, k](const std::vector<uint8_t>& dat, int, bool) { onRaw(1200, -1, dat, true, afsk[i].pos * 2); });
+                PacketFecRx* fp = f.get();
+                afsk[i].chains[k].hdlc.setBitTap([fp](int lv) { fp->lineBit(lv, true); });
+                fec.push_back(std::move(f));
+            }
         for (int i = 0; i < 2; i++) fsk[i].hdlc.setCallback([this, i](const std::vector<uint8_t>& dat, bool ok) { onRaw(9600, i, dat, ok, fsk[i].pos); });
         applyFixBits();
         emph.set(emphasis);

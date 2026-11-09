@@ -65,6 +65,7 @@ std::vector<uint8_t> scramble(const std::vector<uint8_t>& bits, uint32_t& st) {
 }
 
 void HdlcRx::bit(int level) {
+    if (bitTap_) bitTap_(level);
     size_t n = 0;
     const int ev = hdlcStep(st_, level, nrzi_, n);
     if (rawCb_) {
