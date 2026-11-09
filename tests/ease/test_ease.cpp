@@ -142,10 +142,12 @@ static void testAutoBand() {
 }
 
 int testNavtex();
+int testRepeaters();
 
 int main() {
     testSonde(); testGeo(); testPreselect(); testFollowAndDsc(); testRegions(); testAutoBand();
     fails += testNavtex();
+    fails += testRepeaters();
     if (!fails) printf("ease ok\n");
     return fails ? 1 : 0;
 }

@@ -905,7 +905,7 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_isdbs PRIVATE dect2core)
   target_include_directories(test_isdbs PRIVATE core/src)
   add_test(NAME isdbs COMMAND test_isdbs)
-  add_executable(test_ease tests/ease/test_ease.cpp tests/ease/test_navtex_table.cpp core/src/ease/ease.cpp core/src/ease/navtex.cpp core/src/ease/navtex_data.cpp core/src/inmsat/inmsat_satid.cpp core/src/geo/maidenhead.cpp)   # first-use helpers: launch windows, geostationary picks
+  add_executable(test_ease tests/ease/test_ease.cpp tests/ease/test_navtex_table.cpp tests/ease/test_repeaters_csv.cpp core/src/ease/repeaters.cpp core/src/ease/ease.cpp core/src/ease/navtex.cpp core/src/ease/navtex_data.cpp core/src/inmsat/inmsat_satid.cpp core/src/geo/maidenhead.cpp)   # first-use helpers: launch windows, geostationary picks
   target_include_directories(test_ease PRIVATE core/include)
   add_test(NAME ease COMMAND test_ease)
   add_executable(test_mpt1327 tests/mpt1327/test_mpt1327.cpp)   # MPT1327 control channel: check code, address codewords, FFSK decoder, engine receiver

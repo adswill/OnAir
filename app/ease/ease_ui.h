@@ -14,6 +14,9 @@ bool satPointing(App& a, double slotLonDeg, SatPick& st);
 // "Auto band" for the sensor modes. Returns true when the manual band controls should be shown (auto is off).
 bool autoBandControl(App& a, const char* prefKey, uint64_t decoded);
 
+// "Repeaters near me" for a voice mode ("DMR", "D-STAR", "Fusion", "M17"): a button and its list. The list is one the user imported.
+void repeaterPicker(App& a, const char* mode);
+
 // A voice mode whose codec is not installed: said on the mode's own screen before the first call, with the install guide; Hide is remembered per mode.
 void codecNotice(App& a);
 

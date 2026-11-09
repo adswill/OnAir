@@ -3,6 +3,12 @@
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/inmsat/inmsat_satid.h"
 #include "i18n/i18n.h"
+#include "dect2/ease/repeaters.h"
+#include "platform/platform.h"
+#include <filesystem>
+#include <fstream>
+#include <sstream>
+#include <vector>
 #include <cmath>
 #include <map>
 #include <memory>
@@ -71,6 +77,70 @@ bool autoBandControl(App& a, const char* prefKey, uint64_t decoded) {
     ImGui::SameLine();
     ImGui::TextDisabled(s.ab->settled() ? tr("On %.2f MHz, where decodes arrive.") : tr("Looking for devices, now on %.2f MHz."), mhz);
     return false;
+}
+
+namespace {
+namespace fs = std::filesystem;
+struct RepList { bool loaded = false; std::vector<dect2::ease::Repeater> rows; std::string msg; };
+RepList gRep;
+std::string repPath() { return plat::dataDir() + "/repeaters/list.csv"; }
+bool repRead(const std::string& path) {
+    std::ifstream in(fs::u8path(path), std::ios::binary);
+    if (!in) return false;
+    std::stringstream ss; ss << in.rdbuf();
+    int skipped = 0; std::string err;
+    auto v = dect2::ease::parseRepeaterCsv(ss.str(), skipped, err);
+    if (!err.empty()) { gRep.msg = err; return false; }
+    gRep.rows = std::move(v);
+    char b[96]; snprintf(b, sizeof b, tr("%d repeaters, %d rows skipped"), (int)gRep.rows.size(), skipped);
+    gRep.msg = b;
+    return true;
+}
+}
+
+void repeaterPicker(App& a, const char* mode) {
+    if (!gRep.loaded) { gRep.loaded = true; std::error_code ec; if (fs::exists(fs::u8path(repPath()), ec)) repRead(repPath()); }
+    const std::string pid = std::string("##rep") + mode;
+    if (ImGui::SmallButton(tr("Repeaters near me"))) ImGui::OpenPopup(pid.c_str());
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Lists the repeaters closest to your position from a list you import. Clicking one tunes to it."));
+    if (!ImGui::BeginPopup(pid.c_str())) return;
+    if (ImGui::SmallButton(tr("Import list..."))) {
+        const std::string p = plat::openFileDialog();
+        if (!p.empty() && repRead(p)) {
+            std::error_code ec;
+            fs::create_directories(fs::u8path(plat::dataDir() + "/repeaters"), ec);
+            fs::copy_file(fs::u8path(p), fs::u8path(repPath()), fs::copy_options::overwrite_existing, ec);
+        }
+    }
+    if (!gRep.msg.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", gRep.msg.c_str()); }
+    if (gRep.rows.empty()) {
+        ImGui::PushTextWrapPos(380 * gUi);
+        ImGui::TextDisabled("%s", tr("OnAir ships no repeater list. Export one as CSV from a repeater directory you use (columns for the output frequency and the position), and import it here. It stays on this computer."));
+        ImGui::PopTextWrapPos();
+    } else if (!receiverLocationSet()) {
+        ImGui::TextDisabled("%s", tr("Set your position (View > Map) to see the ones near you."));
+    } else {
+        double la, lo; receiverLocation(la, lo);
+        const auto near = dect2::ease::nearestRepeaters(gRep.rows, mode, la, lo);
+        if (near.empty()) ImGui::TextDisabled("%s", tr("None within 300 km in this list."));
+        else if (ImGui::BeginTable("##rept", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY, ImVec2(420 * gUi, 260 * gUi))) {
+            ImGui::TableSetupColumn(tr("Call")); ImGui::TableSetupColumn(tr("Place")); ImGui::TableSetupColumn("MHz"); ImGui::TableSetupColumn("km"); ImGui::TableSetupColumn("CC");
+            ImGui::TableHeadersRow();
+            int id = 0;
+            for (const auto& n : near) {
+                ImGui::TableNextRow(); ImGui::TableNextColumn();
+                ImGui::PushID(id++);
+                if (ImGui::Selectable((n.r->call.empty() ? "-" : n.r->call.c_str()), false, ImGuiSelectableFlags_SpanAllColumns)) { tuneFreq(a, n.r->mhz); ImGui::CloseCurrentPopup(); }
+                ImGui::PopID();
+                ImGui::TableNextColumn(); ImGui::TextUnformatted(n.r->where.c_str());
+                ImGui::TableNextColumn(); ImGui::Text("%.4f", n.r->mhz);
+                ImGui::TableNextColumn(); ImGui::Text("%.0f", n.km);
+                ImGui::TableNextColumn(); if (n.r->colourCode >= 0) ImGui::Text("%d", n.r->colourCode); else ImGui::TextUnformatted("-");
+            }
+            ImGui::EndTable();
+        }
+    }
+    ImGui::EndPopup();
 }
 
 void codecNotice(App& a) {

@@ -1,6 +1,7 @@
 // Yaesu System Fusion screens (work in progress): lock, frame counts, call mode, source / destination callsigns, repeater, the slow data
 // text and the state of the speech codec plug-in. The voice needs a codec that the user installs (codec id "ysf", docs/CODECS.md).
 #include "app.h"
+#include "ease/ease_ui.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/session_list.h"
 #include "voice/voice_monitor_ui.h"
@@ -114,6 +115,7 @@ void tab(App& a) {
 }
 
 void receiver(App& a) {
+    easeui::repeaterPicker(a, "Fusion");
     if (!live(a)) return;
     const dect2::FusionTelemetry& t = a.rx.fusion;
     ImGui::Text("%s", dect2::fusionSummary(t).c_str());

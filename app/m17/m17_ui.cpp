@@ -3,6 +3,7 @@
 // about the Codec 2 library the voice needs.
 #include "dect2/common/time_fmt.h"
 #include "app.h"
+#include "ease/ease_ui.h"
 #include "ui/kit/mode_panel.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/session_list.h"
@@ -284,6 +285,7 @@ void list(App& a) {
 }
 
 void receiver(App& a) {
+    easeui::repeaterPicker(a, "M17");
     wideCarriersTable(a, 0);
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const dect2::M17Telemetry& t = a.rx.m17;
