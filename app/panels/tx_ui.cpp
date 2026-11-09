@@ -186,7 +186,7 @@ TxRequest makeReq(const TxUi& s, const TxModeSpec& mode, bool carrier) {
     r.tune.channel = s.txCh < 0 ? 0 : s.txCh;
     r.callsign = s.callsign;
     r.grid = s.grid;
-    r.text = s.text[0] ? s.text : s.rdsRt;
+    r.text = s.text[0] ? std::string(s.text) : s.rdsRt;
     if (std::string(mode.id) == "mesh") {
         r.mesh.longName = s.meshLong; r.mesh.shortName = s.meshShort; r.mesh.nodeId = s.meshNode; r.mesh.channelName = s.meshChan;
         r.mesh.psk = s.meshPsk; r.mesh.preset = s.meshPreset; r.mesh.hopLimit = s.meshHop;

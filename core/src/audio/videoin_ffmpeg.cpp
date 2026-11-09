@@ -8,11 +8,13 @@ extern "C" {
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
 }
+#include <cstdarg>
 #include <cstring>
+#include <mutex>
 #include <string_view>
 #ifdef _WIN32
+#include "win_privacy.h"
 #include <chrono>
-#include <mutex>
 #include <windows.h>
 #else
 #include <dirent.h>
@@ -60,8 +62,57 @@ std::vector<VideoInputDevice> dshowCameras() {
 }
 #endif
 
+// FFmpeg says why a device did not open (dshow: "Could not set video options", "Could not run graph (sometimes caused by a device
+// already in use by other application)", ...) only through av_log, which goes to stderr: a Windows GUI program has none. While a camera
+// opens, its error lines are kept and put into the error message.
+std::mutex logMu;
+std::string* logSink = nullptr;
+
+void logCb(void* avcl, int level, const char* fmt, va_list vl) {
+    if (level <= AV_LOG_ERROR) {
+        std::lock_guard<std::mutex> lk(logMu);
+        if (logSink && logSink->size() < 600) {
+            std::string line(512, '\0');
+            int prefix = 1;
+            va_list cp;
+            va_copy(cp, vl);
+            av_log_format_line2(avcl, level, fmt, cp, line.data(), (int)line.size(), &prefix);
+            va_end(cp);
+            line.resize(std::string_view(line.c_str()).size());
+            while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) line.pop_back();
+            if (!line.empty()) *logSink += (logSink->empty() ? "" : "; ") + line;
+        }
+    }
+    av_log_default_callback(avcl, level, fmt, vl);
+}
+
+struct KeepLog {
+    std::string text;
+    KeepLog() {
+        static std::once_flag once;
+        std::call_once(once, [] { av_log_set_callback(logCb); });
+        std::lock_guard<std::mutex> lk(logMu);
+        if (!logSink) logSink = &text;   // two cameras opening at once: the first keeps the lines
+    }
+    ~KeepLog() {
+        std::lock_guard<std::mutex> lk(logMu);
+        if (logSink == &text) logSink = nullptr;
+    }
+    KeepLog(const KeepLog&) = delete;
+    KeepLog& operator=(const KeepLog&) = delete;
+};
+
+std::string privacyHint() {
+#ifdef _WIN32
+    return winPrivacyCameraHint();
+#else
+    return {};
+#endif
+}
+
 bool openCam(VideoIn::Impl* I, const std::string& url, std::string& err) {
     avdevice_register_all();
+    KeepLog log;
     const AVInputFormat* inf = av_find_input_format(inputFmt());
     if (!inf) { err = "this build has no capture-device support (libavdevice)"; return false; }
     AVFormatContext* fmt = nullptr;
@@ -76,9 +127,15 @@ bool openCam(VideoIn::Impl* I, const std::string& url, std::string& err) {
         std::string e(AV_ERROR_MAX_STRING_SIZE, '\0');
         av_strerror(rc, e.data(), e.size());
         err = "could not open this capture device (" + url + "): " + e.c_str();
+        if (!log.text.empty()) err += " (" + log.text + ")";
+        err += privacyHint();
         return false;
     }
-    if (avformat_find_stream_info(fmt, nullptr) < 0) { avformat_close_input(&fmt); err = "this capture device sent no video"; return false; }
+    if (avformat_find_stream_info(fmt, nullptr) < 0) {
+        avformat_close_input(&fmt);
+        err = "this capture device sent no video" + (log.text.empty() ? std::string() : " (" + log.text + ")") + privacyHint();
+        return false;
+    }
     const int si = av_find_best_stream(fmt, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
     if (si < 0) { avformat_close_input(&fmt); err = "this capture device has no video"; return false; }
     AVStream* st = fmt->streams[si];
@@ -119,7 +176,7 @@ bool videoInCameraStart(VideoIn::Impl* I, const std::string& deviceId, std::stri
     std::string url = deviceId;
     if (url.empty()) {
         const auto cams = dshowCameras();
-        if (cams.empty()) { err = "Windows reports no camera or capture card"; return false; }
+        if (cams.empty()) { err = "Windows reports no camera or capture card" + privacyHint(); return false; }
         url = cams.front().id;
     } else if (url.find('=') == std::string::npos) {
         url = "video=" + url;
