@@ -1,6 +1,7 @@
 #include "dect2/tv/ts.h"
 #include "dect2/tv/dvb_text.h"
 #include "dect2/tv/epg.h"
+#include "dect2/tv/psip.h"
 #include "dect2/tv/mux_change.h"
 #include "dect2/tv/ts_proto.h"
 #include <algorithm>
@@ -58,7 +59,7 @@ void TsDemux::noteIds(int tsid, int onid) {
     prev.tsid = tsid_; prev.onid = onid_;
     cur.tsid = tsid; cur.onid = onid;
     if (isDifferentMux(prev, cur)) {   // only the service state: the section being parsed lives in sec_ and must stay
-        services_.clear(); pmtToService_.clear(); epg_.clear(); epgExt_.clear(); network_.clear();
+        psip_ = psip::State(); services_.clear(); pmtToService_.clear(); epg_.clear(); epgExt_.clear(); network_.clear();
     }
     tsid_ = tsid;
     if (onid > 0) onid_ = onid;
@@ -94,7 +95,7 @@ void TsDemux::feed(const uint8_t* p) {
     const int off = hd.payloadOff;
     if (off < 0) return;
     // only PSI/SI PIDs and PMT PIDs carry sections we care about
-    const bool psi = pid == 0 || pid == 1 || pid == 0x10 || pid == 0x11 || pid == 0x12 || pid == 0x14 || pid == 0x1FFB || (pid >= 0x1FC8 && pid <= 0x1FCF) || pmtToService_.count(pid);
+    const bool psi = pid == 0 || pid == 1 || pid == 0x10 || pid == 0x11 || pid == 0x12 || pid == 0x14 || pid == 0x1FFB || (pid >= 0x1FC8 && pid <= 0x1FCF) || pmtToService_.count(pid) || psip_.eitPids.count(pid) || psip_.ettPids.count(pid);
     if (!psi) return;
     SectionBuf& sb = sec_[pid];
     const uint8_t* d = p + off;
@@ -145,7 +146,11 @@ void TsDemux::section(int pid, const uint8_t* s, int len) {
     else if (tid == 0x40) parseNit(s, len);
     else if (tid == 0x4E || (tid >= 0x50 && tid <= 0x5F)) parseEit(s, len);
     else if (tid == 0x70 || tid == 0x73) parseTdt(s, len);
-    else if (pid == 0x1FFB && (tid == 0xC8 || tid == 0xC9)) parseTvct(s, len);
+    else if (pid == 0x1FFB && (tid == 0xC8 || tid == 0xC9)) { parseTvct(s, len); psip::parseVctSources(s, len, psip_); }
+    else if (pid == 0x1FFB && tid == 0xC7) psip::parseMgt(s, len, psip_);
+    else if (pid == 0x1FFB && tid == 0xCD) psip::parseStt(s, len, psip_);
+    else if (psip_.eitPids.count(pid) && tid == 0xCB) psipEit(s, len);
+    else if (psip_.ettPids.count(pid) && tid == 0xCC) psipEtt(s, len);
 }
 
 // ATSC A/65 virtual channel table: names and channel numbers, shown like DVB services (name, number in the provider line).
@@ -165,6 +170,35 @@ void TsDemux::parseTvct(const uint8_t* s, int len) {
         snprintf(b, sizeof b, "channel %d.%d", c.major, c.minor);
         sv.provider = b;
     }
+}
+
+void TsDemux::psipEit(const uint8_t* s, int len) {
+    std::vector<psip::Event> ev;
+    if (!psip::parseEit(s, len, psip_, ev)) return;
+    for (const psip::Event& e : ev) {
+        auto it = psip_.sourceToProgram.find(e.sourceId);
+        if (it == psip_.sourceToProgram.end()) continue;
+        auto& evs = epg_[it->second];
+        EpgEvent n; n.eventId = e.eventId; n.start = e.start; n.duration = e.duration; n.running = 0; n.title = e.title;
+        auto was = evs.find(e.eventId);
+        if (was != evs.end()) n.extended = was->second.extended;
+        const uint32_t etm = (uint32_t)e.sourceId << 16 | (uint32_t)e.eventId << 2 | 2;
+        auto tx = psip_.ett.find(etm);
+        if (tx != psip_.ett.end()) n.extended = tx->second;
+        evs[e.eventId] = n;
+    }
+}
+
+void TsDemux::psipEtt(const uint8_t* s, int len) {
+    uint32_t id = 0; std::string t;
+    if (!psip::parseEtt(s, len, psip_, &id, &t)) return;
+    if ((id & 3) != 2) return;                                  // not an event ETM
+    const int src = (int)(id >> 16), evn = (int)((id >> 2) & 0x3FFF);
+    auto it = psip_.sourceToProgram.find(src);
+    if (it == psip_.sourceToProgram.end()) return;
+    auto& evs = epg_[it->second];
+    auto e = evs.find(evn);
+    if (e != evs.end()) e->second.extended = t;
 }
 
 void TsDemux::parsePat(const uint8_t* s, int len) {
