@@ -134,6 +134,21 @@ int main() {
         CHECK(tapped[1] == 4 * 960, "sound after choosing call 1: %zu", tapped[1]);
         CHECK(v.calls().size() == 1 && v.calls()[0].decoded == 8, "Listen off must still decode");
     }
+    // lost bursts: a hole of two 90 ms frames is filled with silence so the call keeps its timing; a data slot in the middle is not sent
+    {
+        IridiumVoice v;
+        v.setSilent(true);
+        v.setRecordFolder(rec.string());
+        const double t[] = {1.0, 1.09, 1.36, 1.45};   // 1.09 -> 1.36 loses two frames
+        for (int i = 0; i < 4; i++) {
+            const IridiumBurstBits b = burst(iridiumBuildVoice(payloadOf(1300 + uint32_t(i))), t[i], 1.6210e9, true);
+            v.feed(b, decodeIridiumBurst(b));
+        }
+        v.closeAll();
+        const auto c = v.calls();
+        CHECK(!c.empty() && c.back().gapFrames == 2 && c.back().decoded == 4, "gap fill: %u gap frames, %u decoded", c.empty() ? 0u : c.back().gapFrames, c.empty() ? 0u : c.back().decoded);
+        CHECK(!c.empty() && fs::exists(c.back().file) && fs::file_size(c.back().file) == 44 + 6 * 160 * 2, "gap-filled recording size");
+    }
     // mixer: solo beats Listen, mute silences but still decodes; silence frames are counted and not sent
     {
         IridiumVoice v;
