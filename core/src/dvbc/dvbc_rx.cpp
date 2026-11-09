@@ -4,6 +4,8 @@
 #include "dect2/common/stage_prof.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/dvbc/dvbc_rx.h"
+#include "dect2/dvbc/j83b.h"
+#include "dect2/dvbc/docsis_down.h"
 #include "dect2/dvbc/dvbc.h"
 #include "dect2/dvbt/dvbt.h"
 #include "dect2/dsp/fftutil.h"
@@ -81,6 +83,12 @@ struct DvbcReceiver::Impl {
     std::atomic<double> manualRs{0};
     std::atomic<int> qamSet{-1};
     std::atomic<bool> annexC{false}, blocking{false};
+    std::atomic<bool> annexB{false};              // ITU-T J.83 annex B (clear QAM): its own FEC chain (j83b.h) behind the same demodulator
+    std::unique_ptr<j83b::J83bDecoder> j83[2] = {std::make_unique<j83b::J83bDecoder>(), std::make_unique<j83b::J83bDecoder>()};                     // the decoders of the two hypotheses of the spectrum's direction while trying, [0] once locked
+    std::vector<cf32> j83Trial, j83Block;
+    DocsisDownstream docsis;                      // the DOCSIS management messages on PID 0x1FFE, when this is a cable modem carrier
+    uint64_t j83BadSeen = 0, j83FramesSeen = 0;
+    std::mutex docMu;
     std::function<void(const std::string&)> logCb;
     std::function<void(const uint8_t*, size_t, double)> pktCb;
 
@@ -297,7 +305,7 @@ struct DvbcReceiver::Impl {
     }
 
     void startFront() {
-        const double beta = annexC.load() ? 0.13 : 0.15;
+        const double beta = annexB.load() ? (qam == 4 ? j83b::kRollOff256 : j83b::kRollOff64) : annexC.load() ? 0.13 : 0.15;
         sps = fs / rs;
         K = (int)std::ceil(8 * sps);
         taps.assign((size_t)kPhases * 2 * (size_t)K, 0);
@@ -473,10 +481,20 @@ struct DvbcReceiver::Impl {
                     DECT2_STAGE("dvbc.decide+rs");
                     for (size_t i = kPhMargin; i < kPhMargin + kPhBlock; i++) smB.cell[i] = j.c->cellOf(smB.phOut[i].real(), smB.phOut[i].imag());
                     for (size_t i = kPhMargin; i < kPhMargin + kPhBlock; i++) lockedDecided(smB.phOut[i], *j.c, smB.cell[i]);
-                    outer();
+                    if (annexB.load()) {
+                        j83Block.resize(kPhBlock);
+                        for (size_t i = 0; i < kPhBlock; i++) { const cf32 z = smB.phOut[i + kPhMargin]; j83Block[i] = inv ? std::conj(z) : z; }
+                        j83[0]->feed(j83Block.data(), j83Block.size());
+                        const j83b::DecStats& js = j83[0]->stats();
+                        rsClean = js.rsClean; rsCorr = js.rsCorrected; rsFail = js.rsFailed; packets = js.packets;
+                        // the trailer of a frame, more than a few times missing: the lock has gone
+                        if (js.framesBad > j83BadSeen + 24) lostFlag = true;
+                        if (js.frames > j83FramesSeen) { j83FramesSeen = js.frames; if (js.framesBad == j83BadSeen) j83BadSeen = js.framesBad; }
+                    } else outer();
                     pk.swap(out);
                 }
                 pendSecs += j.blockSecs;
+                if (!pk.empty() && annexB.load()) { std::lock_guard<std::mutex> bl2(docMu); docsis.feed(pk.data(), pk.size() / 188); }
                 if (!pk.empty() && pktCb) { const double dt = pendSecs; pendSecs = 0; pktCb(pk.data(), pk.size() / 188, dt); }
             }
             {
@@ -486,6 +504,31 @@ struct DvbcReceiver::Impl {
             }
         }
     }
+    void trialCheckB() {
+        for (int v = 0; v < 2; v++) {
+            j83[v]->configure(qam == 4);
+            j83[v]->setPacketCallback([this](const uint8_t* p, size_t n) { out.insert(out.end(), p, p + n * 188); });
+            std::vector<cf32> buf(j83Trial);
+            if (v) for (auto& z : buf) z = std::conj(z);
+            if (!j83[v]->trial(buf.data(), buf.size())) continue;
+            inv = v == 1;
+            if (v == 1) std::swap(j83[0], j83[1]);
+            j83[0]->setPacketCallback([this](const uint8_t* p, size_t n) { out.insert(out.end(), p, p + n * 188); });
+            j83Trial.clear(); j83BadSeen = 0; j83FramesSeen = 0;
+            stage = Locked; lockedAt = processed; failCycles = 0; pendSecs = 0; consecBad = 0;
+            char m[160];
+            const j83b::DecStats& st = j83[0]->stats();
+            snprintf(m, sizeof m, "annex B %s locked, %.4f Msym/s, MER %.1f dB, interleaver I %d J %d%s", dvbc::qamName(qam), rs / (1 + tnu) / 1e6, mer(), st.I, st.J, inv ? ", spectrum inverted" : "");
+            log(m);
+            return;
+        }
+        j83Trial.clear();
+        { char m[120]; snprintf(m, sizeof m, "annex B: no frame sync as %s, MER %.1f dB", dvbc::qamName(qam), mer()); log(m); }
+        if (++trialIdx < trialOrders.size()) { startTrial(); return; }
+        failCycles++; reacq++;
+        stage = Acq; acq.clear(); phBuf.clear();
+    }
+
     void handleLost() {
         backStop();
         log("lost the stream, searching again");
@@ -503,6 +546,12 @@ struct DvbcReceiver::Impl {
         errP = 0.999 * errP + 0.001 * std::norm(zr - d);
         sigP = 0.999 * sigP + 0.001 * std::norm(d);
         if (cells.size() < 2048) cells.push_back(zr); else { cells[cellPos] = zr; cellPos = (cellPos + 1) % 2048; }
+        if (stage == Trial && annexB.load()) {
+            if (stageSyms <= kDdSyms) return;
+            j83Trial.push_back(zr);
+            if (j83Trial.size() >= (qam == 4 ? 30000u : 34000u)) trialCheckB();
+            return;
+        }
         if (stage == Trial) {
             if (stageSyms > kDdSyms) {
                 dm[0].push(sym, tb[0]);
@@ -554,6 +603,7 @@ struct DvbcReceiver::Impl {
         zbuf.clear();
         trialOrders.clear();
         if (qamSet.load() >= 0) trialOrders.push_back(qamSet.load());
+        else if (annexB.load()) trialOrders = {4, 2};   // annex B carries 256-QAM and 64-QAM only
         else trialOrders = {4, 2, 0, 3, 1};
         trialIdx = 0;
         startTrial();
@@ -564,7 +614,7 @@ struct DvbcReceiver::Impl {
         memcpy(w, wCma, sizeof w);
         theta = theta0; nu = nu0;
         dm[0].setQam(qam); dm[1].setQam(qam);
-        tb[0].clear(); tb[1].clear();
+        tb[0].clear(); tb[1].clear(); j83Trial.clear();
         errP = 0; sigP = 1; phBuf.clear();
         stage = Trial; stageSyms = 0;
     }
@@ -744,7 +794,9 @@ struct DvbcReceiver::Impl {
         t.symbolRateMeasured = rsMeasured;
         t.width3dBHz = width;
         t.annexC = annexC.load();
-        t.rollOff = t.annexC ? 0.13f : 0.15f;
+        t.annexB = annexB.load();
+        { std::lock_guard<std::mutex> bl2(docMu); t.docsis = docsis.status(); }
+        t.rollOff = t.annexB ? (float)(qam == 4 ? j83b::kRollOff256 : j83b::kRollOff64) : t.annexC ? 0.13f : 0.15f;
         t.inverted = inv && stage == Locked;
         t.clockPpm = rsNominal > 0 ? (rsNow / rsNominal - 1) * 1e6 + (usedManual ? 0 : 0) : 0;
         t.rsClean = rsClean; t.rsCorrected = rsCorr; t.rsFailed = rsFail;
@@ -840,6 +892,7 @@ void DvbcReceiver::setPacketCallback(std::function<void(const uint8_t*, size_t, 
 void DvbcReceiver::setSymbolRate(double hz) { if (hz != p_->manualRs.load()) { p_->manualRs = hz; reset(); } }
 void DvbcReceiver::setQam(int q) { if (q != p_->qamSet.load()) { p_->qamSet = q; reset(); } }
 void DvbcReceiver::setAnnexC(bool c) { if (c != p_->annexC.load()) { p_->annexC = c; reset(); } }
+void DvbcReceiver::setAnnexB(bool b) { if (b != p_->annexB.load()) { p_->annexB = b; reset(); } }
 void DvbcReceiver::setBlocking(bool b) { p_->blocking = b; }
 
 double dvbcChannelCentreMhz(double mhz) {
@@ -871,11 +924,11 @@ static dvbc::SignalConfig dvbcSynthCommon(const SynthConfig& cfg, double sampleR
     static const int qmap[5] = {2, 0, 1, 3, 4};
     dvbc::SignalConfig c;
     c.qam = qmap[std::clamp(cfg.modeOpt[0], 0, 4)];
-    const bool annexC = cfg.modeOpt[1] == 1;
-    c.rollOff = annexC ? 0.13 : 0.15;
+    const bool annexC = cfg.modeOpt[1] == 1, annexB = cfg.modeOpt[1] == 2;
+    c.rollOff = annexB ? (c.qam == 4 ? j83b::kRollOff256 : j83b::kRollOff64) : annexC ? 0.13 : 0.15;
     c.inverted = cfg.modeOpt[2] == 1;
     c.sampleRate = sampleRate > 0 ? sampleRate : 10e6;
-    c.symbolRate = cfg.modeVal[0] > 0 ? cfg.modeVal[0] : annexC ? 5.274e6 : 6.952e6;
+    c.symbolRate = cfg.modeVal[0] > 0 ? cfg.modeVal[0] : annexB ? (c.qam == 4 ? j83b::kSymRate256 : j83b::kSymRate64) : annexC ? 5.274e6 : 6.952e6;
     c.symbolRate = std::min(c.symbolRate, c.sampleRate / 1.2);
     return c;
 }
@@ -892,6 +945,21 @@ std::unique_ptr<ModeSynth> makeDvbcSynth(const SynthConfig& cfg, double sampleRa
     c.cfoHz = cfg.cfoHz;
     if (cfg.echoDb > 0) { c.echoDb = cfg.echoDb; c.echoUs = cfg.echoDelay / c.sampleRate * 1e6; }
     if (ts) c.ts = std::move(ts);
+    if (cfg.modeOpt[1] == 2) {   // annex B: 64-QAM or 256-QAM frames instead of the annex A ones
+        c.qam = c.qam == 4 ? 4 : 2;
+        auto enc = std::make_shared<j83b::J83bEncoder>(j83b::EncConfig{c.qam == 4, 0});
+        auto src = c.ts ? c.ts : std::function<void(uint8_t*)>();
+        auto n = std::make_shared<uint64_t>(0);
+        c.symbols = [enc, src, n](std::vector<cf32>& out) {
+            static const int pids[3] = {0x31, 0x34, 0x1FFB};
+            for (int i = 0; i < 512 && out.empty(); i++) {
+                uint8_t p[188];
+                if (src) src(p); else { memset(p, 0xA5, 188); const int pid = pids[(*n) % 3]; p[0] = 0x47; p[1] = (uint8_t)(pid >> 8); p[2] = (uint8_t)pid; p[3] = 0x10 | ((*n / 3) & 15); (*n)++; }
+                enc->push(p);
+                enc->take(out);
+            }
+        };
+    }
     return std::make_unique<DvbcSynth>(c);
 }
 std::unique_ptr<ModeSynth> makeDvbcSynth(const SynthConfig& cfg, double sampleRate) {

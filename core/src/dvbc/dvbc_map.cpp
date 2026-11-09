@@ -144,6 +144,7 @@ Signal::Signal(const SignalConfig& cfg) : cfg_(cfg), map_(cfg.qam), il_(new Il),
 Signal::~Signal() = default;
 
 void Signal::refill() {
+    if (config().symbols) { config().symbols(sym_); packets_ += 8; return; }
     uint8_t ts[8 * 188], sc[8 * 188], rs[8 * 204], il[8 * 204];
     for (int i = 0; i < 8; i++) { ts_(ts + i * 188); ts[i * 188] = 0x47; }
     dvbt::scramble(ts, 8, sc);

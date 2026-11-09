@@ -22,11 +22,13 @@ namespace dect2 {
 double gsmrArfcnToHz(int n) {
     if (n >= 0 && n <= 124) return (935.0 + 0.2 * n) * 1e6;
     if (n >= 955 && n <= 1023) return (935.0 + 0.2 * (n - 1024)) * 1e6;
+    if (n >= 512 && n <= 885) return (1805.2 + 0.2 * (n - 512)) * 1e6;   // DCS 1800
     return 0;
 }
 
 int gsmrHzToArfcn(double hz) {
     const double m = hz / 1e6;
+    if (m >= 1805.1 && m <= 1879.9) return 512 + (int)std::lround((m - 1805.2) / 0.2);   // DCS 1800
     if (m < 921.1 || m > 959.9) return -1;
     const long k = std::lround((m - 935.0) / 0.2);
     if (k >= 0) return (int)k;
@@ -61,7 +63,7 @@ const char* gsmrCountry(int mcc) {
 ModeTuning gsmrTuning() {
     ModeTuning t;
     t.stdMode = 41; t.id = "gsmr"; t.name = "GSM-R";
-    t.minMhz = 860; t.maxMhz = 960; t.defMhz = 922.8;
+    t.minMhz = 860; t.maxMhz = 1880; t.defMhz = 922.8;
     t.sampleRate = 5000000;      // the whole railway band (921 - 925 MHz) in one capture
     t.basebandHz = 5000000;
     t.bandwidthMhz = 4.8;

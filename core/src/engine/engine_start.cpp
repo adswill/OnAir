@@ -619,6 +619,8 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxSelcal_.setAudioInput(dev.kind == DeviceInfo::Audio);
     rxSelcal_.configure(rate_);
     rxSelcal_.setLogCallback([this](const std::string& s) { log(s); });
+    rxUmts_.configure(rate_);
+    rxUmts_.setLogCallback([this](const std::string& s) { log(s); });
     rxAtis_.configure(rate_);
     rxAtis_.setLogCallback([this](const std::string& s) { log(s); });
     for (auto& w : rxWx_) { w.configure(rate_); w.setLogCallback([this](const std::string& s) { log(s); }); }

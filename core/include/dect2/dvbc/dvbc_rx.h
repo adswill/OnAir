@@ -30,6 +30,7 @@ public:
     void setSymbolRate(double hz);                       // 0 = measure it (a manual rate that does not lock gives way to the measured one)
     void setQam(int q);                                  // -1 automatic, 0..4 16..256-QAM
     void setAnnexC(bool c);                              // roll-off 0.13 instead of 0.15
+    void setAnnexB(bool b);                              // ITU-T J.83 annex B (clear QAM): 64-QAM or 256-QAM with its own FEC (j83b.h)
     void setSignalOffset(double hz) { (void)hz; }       // centred channel: nothing to mix out
     void setBlocking(bool b);                            // recordings and tests: wait for the decoder instead of dropping input
     void flush();                                        // waits until everything fed so far is decoded

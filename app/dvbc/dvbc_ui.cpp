@@ -13,7 +13,7 @@ struct State {
     bool wasRunning = false, loaded = false;
     double srMsym = 0;                                // 0 = measured
     int qam = -1;                                     // -1 automatic, 0..4
-    bool annexC = false;
+    bool annexC = false, annexB = false;
     double pushedSr = -1; int pushedQam = -2; int pushedAnnex = -1;
     std::deque<float> mer, loss;
     std::deque<std::pair<uint64_t, uint64_t>> blocks;
@@ -33,6 +33,7 @@ void loadState() {
     S.srMsym = std::max(0.0, d.getD("dvbcSr", 0.0));
     S.qam = (int)std::max(-1L, std::min(4L, d.getI("dvbcQam", -1)));
     S.annexC = d.getI("dvbcAnnexC", 0) != 0;
+    S.annexB = d.getI("dvbcAnnexB", 0) != 0;
 }
 
 void saveState(App& a) {
@@ -40,6 +41,7 @@ void saveState(App& a) {
     d.setD("dvbcSr", S.srMsym);
     d.setI("dvbcQam", S.qam);
     d.setI("dvbcAnnexC", S.annexC ? 1 : 0);
+    d.setI("dvbcAnnexB", S.annexB ? 1 : 0);
     savePrefs(a);
 }
 
@@ -55,11 +57,12 @@ float recentLoss() {
 void tick(App& a) {
     loadState();
     const bool run = a.engine.running();
-    if (run && (!S.wasRunning || S.pushedSr != S.srMsym || S.pushedQam != S.qam || S.pushedAnnex != (int)S.annexC)) {
+    if (run && (!S.wasRunning || S.pushedSr != S.srMsym || S.pushedQam != S.qam || S.pushedAnnex != (int)S.annexC + 2 * (int)S.annexB)) {
         a.engine.dvbc().setSymbolRate(S.srMsym * 1e6);
         a.engine.dvbc().setQam(S.qam);
         a.engine.dvbc().setAnnexC(S.annexC);
-        S.pushedSr = S.srMsym; S.pushedQam = S.qam; S.pushedAnnex = (int)S.annexC;
+        a.engine.dvbc().setAnnexB(S.annexB);
+        S.pushedSr = S.srMsym; S.pushedQam = S.qam; S.pushedAnnex = (int)S.annexC + 2 * (int)S.annexB;
     }
     S.wasRunning = run;
     if (!live(a) || a.rx.seq == S.lastSeq) return;
@@ -115,7 +118,7 @@ void status(App& a) {
 void summary(const App& a, std::string& l1, std::string& l2) {
     const DvbcTelemetry& t = a.rx.dvbc;
     char b[128];
-    l1 = t.annexC ? "DVB-C (annex C)" : "DVB-C";
+    l1 = t.annexB ? "Clear QAM (annex B)" : t.annexC ? "DVB-C (annex C)" : "DVB-C";
     if (!live(a)) return;
     if (t.lockSync) snprintf(b, sizeof b, "%s %.4f Msym/s  MER %.0f dB  %s", t.qam >= 0 ? kQam[t.qam] : "", t.symbolRate / 1e6, t.merDb, t.tsLock ? "locked" : "decoding");
     else snprintf(b, sizeof b, "%s", t.stage.c_str());
@@ -194,7 +197,12 @@ void receiver(App& a) {
     auto kv = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); kvColumn(190 * gUi); ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::Text(fmt, v...); ImGui::PopTextWrapPos(); ImGui::PopFont(); };
     kv("state", "%s", t.stage.c_str());
     if (!t.note.empty()) kv("note", "%s", t.note.c_str());
-    kv("annex", "%s, roll-off %.2f", t.annexC ? "C (6 MHz)" : "A (8 MHz)", t.rollOff);
+    kv("annex", "%s, roll-off %.2f", t.annexB ? "B (6 MHz, clear QAM)" : t.annexC ? "C (6 MHz)" : "A (8 MHz)", t.rollOff);
+    if (t.docsis.present) {
+        kv(tr("DOCSIS"), "%llu MAC frames, %llu management, CMTS %s", (unsigned long long)t.docsis.framesTotal, (unsigned long long)t.docsis.framesMgmt, t.docsis.lastMac.c_str());
+        for (auto& u : t.docsis.upstream) kv(tr("upstream"), "id %d: %.3f MHz, %.2f Msym/s, %d bursts", u.first, u.second.frequencyMhz, u.second.symbolRateMsym, u.second.bursts);
+        for (auto& d : t.docsis.downstream) kv(tr("downstream"), "id %d: %.3f MHz %s", d.channelId, d.frequencyMhz, d.primaryCapable ? "primary" : "");
+    }
     kv("QAM", "%s%s", t.qam >= 0 ? kQam[t.qam] : "not known yet", t.qamManual ? " (manual)" : "");
     kv("symbol rate", "%.4f Msym/s%s", t.symbolRate / 1e6, t.symbolRateManual ? " (manual)" : "");
     kv("  measured", "%.4f Msym/s (envelope line), carrier width %.3f MHz", t.symbolRateMeasured / 1e6, t.width3dBHz / 1e6);
@@ -271,6 +279,10 @@ void tuner(App& a, bool& retune) {
     flowNext(8 * gUi);
     bool c = S.annexC;
     if (ImGui::Checkbox("Annex C", &c)) { S.annexC = c; saveState(a); }
+    flowNext(8 * gUi);
+    bool bx = S.annexB;
+    if (ImGui::Checkbox("Annex B (clear QAM)", &bx)) { S.annexB = bx; saveState(a); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("ITU-T J.83 annex B: North American cable, 64-QAM or 256-QAM with its own error correction."));
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("ITU-T J.83 annex C (Japan, 6 MHz channels): roll-off 0.13 instead of 0.15.");
     ImGui::PushTextWrapPos(0);
     ImGui::TextColored(kWarn, "%s", kCableNote);
