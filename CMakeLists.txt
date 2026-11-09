@@ -1630,6 +1630,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_fygeo_mode PRIVATE dect2core)
     target_compile_definitions(test_fygeo_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME fygeo_mode COMMAND test_fygeo_mode)
+    add_executable(test_voice_trunk_modes tests/app/test_voice_trunk_modes.cpp)   # Motorola Type II, TETRA DMO, OpenSky identifier: registered tunings, mode rows, family count, panels
+    target_link_libraries(test_voice_trunk_modes PRIVATE dect2core)
+    target_compile_definitions(test_voice_trunk_modes PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME voice_trunk_modes COMMAND test_voice_trunk_modes)
     add_executable(test_ltr_edacs_mode tests/app/test_ltr_edacs_mode.cpp)   # LTR and EDACS trunking modes: registered tunings, mode rows, family count and panel strings
     target_link_libraries(test_ltr_edacs_mode PRIVATE dect2core)
     target_compile_definitions(test_ltr_edacs_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
