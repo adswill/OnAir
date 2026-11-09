@@ -1,6 +1,8 @@
 // LoRaWAN monitor (see lorawan_rx.h): a bank of LoRa channels (lora_bank.h) over the channels of a regional plan, and the MAC layer parser
 // (lorawan_plan.h) on every frame. Keyless: nothing is decrypted.
 #include "dect2/lorawan/lorawan_rx.h"
+#include "dect2/lorawan/lorawan_crypto.h"
+#include "dect2/voicekeys/voice_keys.h"
 #include "dect2/automation/engine.h"
 #include "dect2/lorawan/lora_bank.h"
 #include "dect2/lorawan/lorawan_fsk.h"
@@ -158,6 +160,17 @@ struct LorawanReceiver::Impl {
             tel.channels.push_back(ci);
             planCh.push_back(k.c); chanFreq.push_back(k.c.mhz * 1e6); planIndex.push_back(k.idx);
         }
+        // the Class B beacon: EU868 869.525 MHz SF9/125, implicit header, 17 bytes (LoRaWAN 1.0.x ch 15), when the capture covers it
+        if (cfg.downlinks && cfg.plan == 0) {
+            const double off = 869.525e6 - dialHz + offset;
+            lorabank::Channel c; c.offsetHz = off; c.bwHz = 125e3; c.syncs = {0x34}; c.sfs = {9}; c.normalIq = true; c.invertedIq = false; c.preamble = 10; c.implicitLen = 17;
+            if (lorabank::Bank::fits(rate, c)) {
+                bc.push_back(c);
+                LwChannelInfo ci; ci.freqHz = 869.525e6; ci.bwHz = 125e3; ci.sfMin = 9; ci.sfMax = 9; ci.downlinkOnly = true; ci.inBand = true;
+                tel.channels.push_back(ci);
+                lorawan::PlanChannel beacon; beacon.mhz = 869.525; beacon.bwKhz = 125; planCh.push_back(beacon); chanFreq.push_back(869.525e6); planIndex.push_back((size_t)-1);
+            }
+        }
         // channels that do not fit get no decoder at all: give them a channel with no SF so the bank keeps the indices
         bank.configure(rate, bc);
         tel.channelsListed = (uint32_t)bc.size();
@@ -218,6 +231,20 @@ struct LorawanReceiver::Impl {
     void logFrame(LwFrame r, const std::vector<uint8_t>& payload, size_t telChan) {
         const bool good = r.crcOk || !r.hasCrc;
         r.hex = lorawan::hex(payload.data(), payload.size());
+        if (payload.size() == 17 && !r.hasCrc) {          // a Class B beacon
+            const lorawan::Beacon b = lorawan::parseBeacon(payload.data(), payload.size());
+            if (b.ok) {
+                r.type = "Class B beacon"; r.lorawan = false;
+                char t[160];
+                snprintf(t, sizeof t, "time %u%s", b.timeSec, b.newFormat ? " (GPS s)" : " (UTC s)");
+                r.summary = t;
+                if (b.hasGps) { snprintf(t, sizeof t, ", gateway %.5f %.5f (antenna %d)", b.lat, b.lon, b.infoDesc); r.summary += t; }
+                if (telChan < tel.channels.size()) tel.channels[telChan].frames++;
+                tel.log.insert(tel.log.begin(), std::move(r));
+                if (tel.log.size() > kLwLogMax) tel.log.pop_back();
+                return;
+            }
+        }
         if (good) {
             const lorawan::Frame m = lorawan::parse(payload.data(), payload.size());
             if (!m.ok && !r.hasCrc) return;      // a header-only frame (downlink) that is no LoRaWAN is most likely noise
@@ -225,6 +252,7 @@ struct LorawanReceiver::Impl {
                 r.lorawan = true; r.mtype = m.mtype; r.uplink = m.uplink;
                 r.type = lorawan::mtypeName(m.mtype);
                 r.flags = m.flags; r.mic = m.mic; r.summary = m.summary;
+                decryptFrame(m, payload, r);
                 r.fport = m.fport; r.frmLen = (int)m.frmLen;
                 if (m.mtype >= 2 && m.mtype <= 5) { r.devAddr = m.devAddr; r.hasDevAddr = true; r.addrType = m.addrType; r.nwkId = m.nwkId; r.fcnt = m.fcnt; }
                 r.devEui = m.devEui; r.joinEui = m.joinEui; r.devNonce = m.devNonce;
@@ -255,6 +283,33 @@ struct LorawanReceiver::Impl {
     }
 
     double sigSec() const { return bank.timeSec(); }
+
+    // User keys only (key store): the MIC checks a NwkSKey (key store talkgroup 1; unit = DevAddr), an AppSKey (talkgroup 2) then decrypts the FRMPayload.
+    void decryptFrame(const lorawan::Frame& m, const std::vector<uint8_t>& p, LwFrame& r) {
+        if (m.mtype < 2 || m.mtype > 5 || p.size() < 12 || m.frmLen == 0) return;
+        const uint32_t a = (uint32_t)p[1] | (uint32_t)p[2] << 8 | (uint32_t)p[3] << 16 | (uint32_t)p[4] << 24;
+        const uint16_t fc16 = (uint16_t)(p[6] | p[7] << 8);
+        const bool up = m.uplink;
+        const size_t foptLen = p[5] & 15;
+        if (8 + foptLen + 4 + 1 > p.size()) return;
+        const size_t frmAt = 8 + foptLen + 1, frmLen = p.size() - frmAt - 4;
+        voicekeys::CallKeyInfo ki; ki.protocol = voicekeys::Protocol::LoRaWAN; ki.unitId = (long)a;
+        const auto keys = voicekeys::KeyStore::instance().candidates(ki);
+        bool verified = false; std::string nwkName;
+        const uint32_t mic = (uint32_t)p[p.size() - 4] | (uint32_t)p[p.size() - 3] << 8 | (uint32_t)p[p.size() - 2] << 16 | (uint32_t)p[p.size() - 1] << 24;
+        std::vector<uint8_t> nwkKey;
+        for (const auto& k : keys) if (k.key.size() == 16 && k.talkgroup != 2 && lorawan::dataMic(p.data(), p.size() - 4, k.key.data(), up, a, fc16) == mic) { verified = true; nwkKey = k.key; break; }
+        if (!verified) return;
+        const auto useKey = [&]() -> std::vector<uint8_t> {
+            if (m.fport == 0) return nwkKey;
+            for (const auto& k : keys) if (k.key.size() == 16 && k.talkgroup == 2) return k.key;
+            return {};
+        }();
+        r.summary += " [MIC ok with your key]";
+        if (useKey.empty() || frmLen == 0) return;
+        const auto pl = lorawan::decryptFrm(p.data() + frmAt, frmLen, useKey.data(), up, a, fc16);
+        r.summary += " decrypted: " + lorawan::hex(pl.data(), pl.size());
+    }
 
     void updateDevice(const LwFrame& r, const lorawan::Frame& m) {
         if (!r.hasDevAddr && r.devEui == 0) return;
