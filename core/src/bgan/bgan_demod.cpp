@@ -72,6 +72,7 @@ struct BearerDemod::Impl {
     std::vector<uint64_t> uwSigns[1];           // unused
     // tracking
     bool locked = false;
+    double mixHz = 0, mixPhase = 0;             // pre-correction of a large carrier offset, ahead of the matched filter
     double frameStart = 0;                      // absolute sample index (of the matched filter output) of the first UW symbol
     double fCyc = 0;                            // carrier offset in cycles per symbol
     int bearerIdx = -1;                         // the bearer that is being demodulated
@@ -112,7 +113,7 @@ struct BearerDemod::Impl {
     }
     void hardReset() {
         y.clear(); yBase = 0; hist.assign(mf.size() ? mf.size() - 1 : 0, cf32(0, 0));
-        locked = false; decided = -1; misses = 0; okRun = 0; frameStart = 0; fCyc = 0; bearerIdx = -1; okEma = 0; occEma = -1; clearNext();
+        locked = false; decided = -1; misses = 0; okRun = 0; frameStart = 0; fCyc = 0; bearerIdx = -1; okEma = 0; occEma = -1; mixHz = 0; mixPhase = 0; clearNext();
         st = DemodStatus{};
         layoutFor = -1;
         lines.clear();
@@ -223,6 +224,11 @@ struct BearerDemod::Impl {
         int chosen = -1;
         for (int c : cand) if (bearer(c).ds == bestDs && bearer(c).ps == bestPs) { chosen = c; break; }
         if (chosen < 0) { drop(int64_t(frameSym * sps * 0.5)); return true; }
+        if (std::fabs(bestFa) > 0.03) {             // a large offset: move the carrier to 0 Hz ahead of the matched filter and search again
+            mixHz += bestFa * symRate;
+            y.clear(); yBase = 0; hist.assign(mf.size() - 1, cf32(0, 0));
+            return true;
+        }
         frameStart = double(yBase) + 8.0 + tt * bestS * os;
         fCyc = bestFa;
         spsEst = sps;
@@ -266,7 +272,22 @@ struct BearerDemod::Impl {
         }
         for (int i = 1; i < K; i++) acc += pil[i] * std::conj(pil[i - 1]);
         const double df = std::arg(acc) / (2 * kPi * L);
-        fCyc += df * 0.8;
+        fCyc += st.frames < 4 ? df * 0.8 : df * 0.25;
+        // and a finer one: the frequency that maximises the coherent sum of the frame's pilots (parabola on three test frequencies)
+        double step = 1.0 / mos;
+        auto cohAt = [&](double d) {
+            cf32 c(0, 0);
+            for (int i = 0; i < K; i++) {
+                const double ph = -2 * kPi * (fCyc + d) * pp[i];
+                c += frameSyms[pp[i]] * cf32(float(std::cos(ph)), float(std::sin(ph)));
+            }
+            return double(std::abs(c));
+        };
+        for (int pass = 0; pass < 4; pass++, step *= 0.5) {
+            const double m0 = cohAt(-step), m1 = cohAt(0), m2 = cohAt(step);
+            const double denom = m0 - 2 * m1 + m2;
+            if (std::fabs(denom) > 1e-12) fCyc += std::clamp(0.5 * step * (m0 - m2) / denom, -step, step);
+        }
         for (int i = 0; i < K; i++) {
             const double ph = -2 * kPi * fCyc * pp[i];
             pil[i] = frameSyms[pp[i]] * cf32(float(std::cos(ph)), float(std::sin(ph)));
@@ -323,7 +344,8 @@ struct BearerDemod::Impl {
         }
         for (int i = 0; i < K; i++) refs.push_back({ pp[i], pil[i] });
         // smoothing window: wide enough to average noise, narrow enough for fading: about 1 ms worth, at least 3 pilots
-        const int w = std::clamp(int(round(0.0008 * symRate / L)), 1, 8);
+        const double wSec = st.esn0Db < 5 ? 0.012 : st.esn0Db < 10 ? 0.005 : 0.002;   // the lower the SNR, the longer the average (fading on GEO is slow)
+        const int w = std::clamp(int(std::lround(wSec * symRate / L)), 1, 32);
         const int n = int(refs.size());
         std::vector<cf32> smooth(n);
         for (int i = 0; i < n; i++) {
@@ -344,7 +366,7 @@ struct BearerDemod::Impl {
         const double esn0 = 10 * std::log10(std::max(1e-6, (es - 0.0) / pe / noiseVar));
         st.esn0Db += 0.2 * (esn0 - st.esn0Db);
         st.cn0Dbhz = st.esn0Db + 10 * std::log10(double(symRate));
-        st.cfoHz = fCyc * symRate;
+        st.cfoHz = fCyc * symRate + mixHz;
         // data symbols, equalised: x = y / h * axis(1+j)
         const cf32 pref = cf32(Bp.uwAxis, Bp.uwAxis);
         const std::vector<int>& dp = layout.dataPos;
@@ -429,6 +451,7 @@ struct BearerDemod::Impl {
             (void)attempted;
         }
         if (decodedOk) {
+            st.framesDecoded++;
             okRun++;
             if (decided < 0 && okRun >= 2) decided = okFrom;
             bearerIdx = okFrom;
@@ -443,38 +466,52 @@ struct BearerDemod::Impl {
         st.bearer = bearerIdx;
         st.structureOnly = !decodedOk && decided < 0 && cyclesSinceOk > 3;
         st.state = decodedOk || decided >= 0 ? 2 : 1;
-        // timing refinement: energy of the pilots +/- a quarter symbol
-        double e[3] = { 0, 0, 0 };
-        const double dts[3] = { -0.25, 0, 0.25 };
-        for (int t = 0; t < 3; t++) {
-            cf32 c(0, 0);
-            for (int i = 0; i < K; i++) {
-                const double ph = -2 * kPi * fCyc * pp[i];
-                c += at(frameStart + spsEst * (pp[i] + dts[t])) * cf32(float(std::cos(ph)), float(std::sin(ph)));
+        // timing: the pilot energy at +/- half a symbol, over the first and the last third of the pilots: the two halves give the error and the clock rate
+        const int third = std::max(4, K / 3);
+        const double sp = st.frames < 6 ? 0.5 : 0.25;              // a wide look at first; the data symbols next to the pilots disturb a wide look more
+        auto timing = [&](int from, int to) {
+            double e[3] = { 0, 0, 0 };
+            const double dts[3] = { -sp, 0, sp };
+            for (int t = 0; t < 3; t++) {
+                cf32 c(0, 0);
+                for (int i = from; i < to; i++) {
+                    const double ph = -2 * kPi * fCyc * pp[i];
+                    c += at(frameStart + spsEst * (pp[i] + dts[t])) * cf32(float(std::cos(ph)), float(std::sin(ph)));
+                }
+                e[t] = std::abs(c);
             }
-            e[t] = std::abs(c);
+            const double denom = e[0] - 2 * e[1] + e[2];
+            return std::fabs(denom) > 1e-12 ? std::clamp(0.5 * sp * (e[0] - e[2]) / denom, -sp, sp) : 0.0;
+        };
+        const double dtA = timing(0, third), dtB = timing(K - third, K);
+        const double span = pp[K - third + third / 2] - pp[third / 2];
+        const double slope = (dtB - dtA) / span;                    // symbols of error per symbol
+        const double dtAll = timing(0, K);
+        double dt = dtAll;
+        const double ppm = slope * 1e6;
+        if (std::fabs(dtB - dtA) > 0.12 && std::fabs(ppm) > 10 && st.frames < 40) {     // a big clock error, early on: take the slope, and the error at the start of the frame
+            spsEst *= 1.0 + 0.7 * slope;
+            dt = dtA - pp[third / 2] * slope;
+        } else {
+            spsEst *= 1.0 + 0.05 * dtAll / mos;          // the clock rate follows the timing error slowly
         }
-        const double denom = e[0] - 2 * e[1] + e[2];
-        double dt = 0;
-        if (std::fabs(denom) > 1e-12) dt = 0.25 * 0.5 * (e[0] - e[2]) / denom;
-        dt = std::clamp(dt, -0.25, 0.25);
         advance(mos, dt);
         return true;
     }
 
     void advance(int mos, double dtSym) {
-        const double before = frameStart;
         frameStart += spsEst * mos + dtSym * spsEst * 0.6;
-        // clock rate tracking
-        if (dtSym != 0) { const double measured = (frameStart - before) / mos; spsEst += 0.12 * (measured - spsEst); }
         drop(int64_t(std::max(0.0, frameStart - double(yBase) - 16)));
     }
 
     void feed(const cf32* x, size_t n) {
         const size_t L = mf.size();
         for (size_t i = 0; i < n; i++) {
-            // direct form
-            hist.push_back(x[i]);
+            // direct form, after the carrier offset found by the search
+            const cf32 rot(float(std::cos(mixPhase)), float(std::sin(mixPhase)));
+            mixPhase -= 2 * kPi * mixHz / fs;
+            if (mixPhase < -kPi) mixPhase += 2 * kPi; else if (mixPhase > kPi) mixPhase -= 2 * kPi;
+            hist.push_back(x[i] * rot);
             cf32 v(0, 0);
             const size_t hs = hist.size();
             for (size_t k = 0; k < L; k++) v += hist[hs - 1 - k] * mf[k];
@@ -497,9 +534,12 @@ struct BearerDemod::Impl {
 BearerDemod::BearerDemod() : p_(std::make_unique<Impl>()) { p_->clearNext(); }
 BearerDemod::~BearerDemod() = default;
 bool BearerDemod::configure(double fs, int symRate) {
+    const bool same = fs == p_->fs && symRate == p_->symRate;
     p_->fs = fs; p_->symRate = symRate;
     if (!p_->build()) return false;
+    const DemodStatus keep = p_->st;
     p_->hardReset();
+    if (same) { p_->st = keep; p_->st.state = 0; }   // a restart after a new channeliser keeps counts and tables, acquisition starts over
     return true;
 }
 void BearerDemod::reset() { p_->hardReset(); }

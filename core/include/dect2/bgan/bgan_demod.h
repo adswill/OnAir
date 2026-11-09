@@ -17,7 +17,7 @@ struct DemodStatus {
     int subtype = -1;              // subtype of the unique word
     double cfoHz = 0;
     double esn0Db = 0, cn0Dbhz = 0;   // measured from the pilots
-    uint64_t frames = 0, framesLost = 0, blocksOk = 0, blocksBad = 0, blocksEmpty = 0;
+    uint64_t frames = 0, framesDecoded = 0, framesLost = 0, blocksOk = 0, blocksBad = 0, blocksEmpty = 0;
     float blockOkRate = 0;         // recent decode success
     float occupancy = -1;          // recent share of non-empty FEC blocks, -1 before any decode
     bool structureOnly = false;    // frame sync holds but the bearer has no published tables / decoders never verified
