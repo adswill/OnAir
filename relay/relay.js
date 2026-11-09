@@ -273,6 +273,7 @@ if (require.main === module) {
   const e = process.env;
   const relay = createRelay({
     domain: e.RELAY_DOMAIN || 'relay.on-air.dev', mainHost: e.RELAY_MAIN_HOST || undefined,
+    scheme: e.RELAY_SCHEME || 'https', publicPort: e.RELAY_PUBLIC_PORT || '',
     adminToken: e.RELAY_ADMIN_TOKEN || '', clientIpHeader: e.RELAY_CLIENT_IP_HEADER || '',
     bansIds: (e.RELAY_BAN_IDS || '').split(',').filter(Boolean), bansIps: (e.RELAY_BAN_IPS || '').split(',').filter(Boolean),
     maxBytesPerSecHost: Number(e.RELAY_MAX_BPS) || 8 * 1024 * 1024, maxConnsPerHost: Number(e.RELAY_MAX_CONNS_PER_HOST) || 64,
