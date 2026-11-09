@@ -148,3 +148,4 @@ KEEP void* sws_getCoefficients(void) { return NULL; }
 KEEP void* sws_getContext(void) { return NULL; }
 KEEP long sws_scale(void) { return -1; }
 KEEP long sws_setColorspaceDetails(void) { return -1; }
+void* av_frame_get_side_data(void* frame, int type) { (void)frame; (void)type; return 0; }

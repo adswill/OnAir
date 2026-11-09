@@ -437,6 +437,8 @@ case 58: {
 }
 case 59: {
     const auto& t = rx.timesig; (void)t;
+    cardIf(o, "Dcf Phase Corr", t.dcfPhaseCorr);
+    cardIf(o, "Dcf Phase Bit", t.dcfPhaseBit);
     cardIf(o, "Cfo Hz", t.cfoHz);
     cardIf(o, "Snr Db", t.snrDb);
     cardIf(o, "Level Db", t.levelDb);
@@ -447,8 +449,6 @@ case 59: {
     cardIf(o, "Tick1200 Db", t.tick1200Db);
     cardIf(o, "Time Sec", t.timeSec);
     cardIf(o, "Input Rate", t.inputRate);
-    cardIf(o, "Sec Phase Ms", t.secPhaseMs);
-    cardIf(o, "Tick Jitter Ms", t.tickJitterMs);
     { Table tb({"Wall Time", "Text", "Bits"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.text), cell(e.bits)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
@@ -1610,6 +1610,7 @@ case 207: {
     cardIf(o, "Wenet Idle", t.wenetIdle);
     cardIf(o, "Fixed Baud", t.fixedBaud);
     cardIf(o, "Corrected", t.corrected);
+    { Table tb({"Id", "Text"}); int n = 0; for (auto it = t.wenetTexts.rbegin(); it != t.wenetTexts.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.id), cell(e.text)}); } if (n) addTable(o, "Wenet Texts", tb); }
     { Table tb({"Utc", "Time Sec", "Call", "Image Id", "Packet Id", "Rs Errors", "Baud", "Snr Db"}); int n = 0; for (auto it = t.packets.rbegin(); it != t.packets.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.utc), cell(e.timeSec), cell(e.call), cell(e.imageId), cell(e.packetId), cell(e.rsErrors), cell(e.baud), cell(e.snrDb)}); } if (n) addTable(o, "Packets", tb); }
     { Table tb({"Call", "Image Id", "Width", "Height", "Quality", "Packets", "Last Packet", "Saved Path"}); int n = 0; for (auto it = t.images.rbegin(); it != t.images.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.call), cell(e.imageId), cell(e.width), cell(e.height), cell(e.quality), cell(e.packets), cell(e.lastPacket), cell(e.savedPath)}); } if (n) addTable(o, "Images", tb); }
     break;
@@ -1861,5 +1862,16 @@ case 246: {
     { Table tb({"Id", "Freq Hz", "Offset Hz", "Width Hz", "Bearer", "Subtype", "Plmn", "Satellite"}); int n = 0; for (auto it = t.rows.rbegin(); it != t.rows.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.id), cell(e.freqHz), cell(e.offsetHz), cell(e.widthHz), cell(e.bearer), cell(e.subtype), cell(e.plmn), cell(e.satellite)}); } if (n) addTable(o, "Rows", tb); }
     { Table tb({"Spot", "Beam Type", "Mhz", "Bearer"}); int n = 0; for (auto it = t.beams.rbegin(); it != t.beams.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.spot), cell(e.beamType), cell(e.mhz), cell(e.bearer)}); } if (n) addTable(o, "Beams", tb); }
     { Table tb({"Item"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e)}); } if (n) addTable(o, "Log", tb); }
+    break;
+}
+case 481: {
+    const auto& t = rx.umts; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Scans", t.scans);
+    cardIf(o, "Last Scan Ms", t.lastScanMs);
+    { Table tb({"Psc", "Group", "Cfo Hz", "Ec Io Db", "Rscp Dbfs", "Frame Offset", "Blocks", "Last Seen"}); int n = 0; for (auto it = t.cells.rbegin(); it != t.cells.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.psc), cell(e.group), cell(e.cfoHz), cell(e.ecIoDb), cell(e.rscpDbfs), cell(e.frameOffset), cell(e.blocks), cell(e.lastSeen)}); } if (n) addTable(o, "Cells", tb); }
     break;
 }

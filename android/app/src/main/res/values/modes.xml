@@ -214,6 +214,7 @@
         <item>Arktika-M GGAK</item>
         <item>AWS L-band</item>
         <item>Inmarsat BGAN</item>
+        <item>UMTS cells</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -268,7 +269,7 @@
         <item>LTE cells around you: operator, band, EARFCN, PCI, eNB and sector, TAC, neighbours (receive only, public broadcast)</item>
         <item>5G NR cells around you from their SS/PBCH blocks on the sync raster (GSCN) of n1, n3, n7, n8, n20, n28, n38, n40, n41, n77, n78: PCI, SSB index / beam, SS-RSRP / RSRQ / SINR, MIB (SFN, subcarrier spacing, k_SSB, CORESET#0, barred) (receive only, public broadcast)</item>
         <item>LTE NB-IoT cells around you (180 kHz carriers, in-band, guard band or standalone) from their NPSS / NSSS, NPBCH (MIB-NB) and SIB1-NB: PCI, operating mode, antenna ports, SFN, operator (MCC / MNC), tracking area, cell identity, band, level; band scan over the 100 kHz raster. Receive only: the public broadcast only, nothing addressed to a device is decoded</item>
-        <item>Railway GSM base stations (GSM-R, 921 - 925 MHz): cell identity, location area, operator, channel lists (receive only, public broadcast)</item>
+        <item>GSM base stations, railway GSM-R (921 - 925 MHz) and the public GSM 900 / DCS 1800 bands: cell identity, location area, operator, channel lists (receive only, public broadcast)</item>
         <item>LBJ (Chinese railway train proximity warning) on about 821.2375 MHz: FM voice channel with 1200 bit/s FSK data for train number, kilometre marker, locomotive ID, direction and speed (receive only)</item>
         <item>POCSAG paging messages (512, 1200 and 2400 bd) on a 25 kHz channel</item>
         <item>FLEX paging messages (1600, 3200 and 6400 bit/s) on a 25 kHz channel</item>
@@ -409,6 +410,7 @@
         <item>Arktika-M N1 / N2 space-weather telemetry (GGAK, experimental: frame lock not reached yet) on 1703 MHz, PM 5 ksym/s: the Elektro GGAK frames and magnetometer. Highly elliptical orbit: Follow the next pass tracks the Doppler</item>
         <item>Arctic Weather Satellite on 1707 MHz: QPSK 1.785 Msym/s, CCSDS convolutional code, Reed-Solomon interleave 5, the MWR microwave scans (19 channels, 145 points) line by line. Needs a dish at 1.7 GHz and 4 Msps or more; Follow the next pass tunes with Doppler and starts by itself</item>
         <item>Inmarsat BGAN (ETSI TS 102 744 Family SL), the satellite data service: every forward carrier from 1525 to 1559 MHz, bearer type and code rate, satellite, spot beam, network identity, and the system information it broadcasts. One-click scan across the band. Signalling and carrier structure only: no voice, no user data, no subscriber identity. Needs a user test: only synthetic signals so far, never validated on a real BGAN recording. A patch antenna is enough for the global beam and for bearers aimed at your region; narrow spot beams elsewhere are out of reach</item>
+        <item>UMTS (3G) cells in a 5 MHz channel, from the synchronisation channels and the pilot: primary scrambling code, code group, Ec/Io, level and carrier offset. Receive only; the broadcast channel (operator and cell identity) is not decoded</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -604,6 +606,7 @@
         <item>Arktika-M GGAK telemetry</item>
         <item>AWS MWR, 1.7 GHz</item>
         <item>Satellite, L-band</item>
+        <item>Cells, 3G</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -658,7 +661,7 @@
         <item>cell tower lte 4g enb earfcn pci operator</item>
         <item>5g nr new radio gnb cell tower ssb pss sss pbch mib gscn pci beam n78 n77 n28 n20 3.5 ghz sa nsa</item>
         <item>nb-iot nbiot narrowband iot lte-m cellular iot npss nsss npbch mib-nb sib1-nb pci operator tac band 20 8 3 800 900 1800 mhz 4g</item>
-        <item>gsm-r gsmr gsm railway train rail bcch arfcn bsic lac etcs</item>
+        <item>gsm-r gsmr gsm 900 1800 dcs cell census railway train rail bcch arfcn bsic lac etcs</item>
         <item>lbj chinese railway train warning 821 821.2375 cr-lbj locomotive km marker kilometre 列车接近预警</item>
         <item>pocsag pager paging</item>
         <item>flex pager paging</item>
@@ -799,5 +802,6 @@
         <item>arktika ggak sem 1703 magnetometer heo space weather</item>
         <item>aws arctic weather satellite 1707 mwr microwave radiometer eumetsat sterna</item>
         <item>bgan inmarsat i-4 alphasat family sl ts 102 744 l-band satcom 1545 1550 16qam spot beam isatphone</item>
+        <item>umts wcdma 3g cell psc primary scrambling code cpich sch nodeb utran ec/io band 1 2100 900</item>
     </string-array>
 </resources>
