@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <random>
 using namespace dect2; using namespace dect2::bgan;
+static const double M_PI_L = 3.14159265358979323846;
 static int fails = 0;
 #define CHECK(c, ...) do { if (!(c)) { std::printf("FAIL %d: ", __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); fails++; } } while (0)
 
@@ -25,11 +26,11 @@ static void addOqpsk(std::vector<cf32>& out, double fs, double offsetHz, double 
             if (k < 0 || size_t(k) * 2 + 1 >= bits.size()) continue;
             const double x = t - k;
             const double x2 = x - 0.5;
-            const double p1 = std::fabs(x) < 8 ? std::cos(M_PI * x / 16) * std::cos(M_PI * x / 16) * (std::fabs(x) < 1e-6 ? 1 : std::sin(M_PI * x) / (M_PI * x)) : 0;
-            const double p2 = std::fabs(x2) < 8 ? std::cos(M_PI * x2 / 16) * std::cos(M_PI * x2 / 16) * (std::fabs(x2) < 1e-6 ? 1 : std::sin(M_PI * x2) / (M_PI * x2)) : 0;
+            const double p1 = std::fabs(x) < 8 ? std::cos(M_PI_L * x / 16) * std::cos(M_PI_L * x / 16) * (std::fabs(x) < 1e-6 ? 1 : std::sin(M_PI_L * x) / (M_PI_L * x)) : 0;
+            const double p2 = std::fabs(x2) < 8 ? std::cos(M_PI_L * x2 / 16) * std::cos(M_PI_L * x2 / 16) * (std::fabs(x2) < 1e-6 ? 1 : std::sin(M_PI_L * x2) / (M_PI_L * x2)) : 0;
             i += float(p1) * bits[k * 2]; q += float(p2) * bits[k * 2 + 1];
         }
-        ph += 2 * M_PI * offsetHz / fs;
+        ph += 2 * M_PI_L * offsetHz / fs;
         out[n] += float(amp) * cf32(float(std::cos(ph)), float(std::sin(ph))) * cf32(i, q);
     }
 }

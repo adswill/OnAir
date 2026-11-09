@@ -43,7 +43,7 @@ int main() {
         for (int i = 0; i < t->symbols; i++) { cf32 y = s[i] + cf32(g(rng), g(rng)) * std::sqrt(nv / 2); softDemap(m, y, nv, &llr[i * t->bps]); }
         dec.decode(*t, llr.data(), out, 8);
         int err = 0;
-        for (size_t i = 0; i < in.size(); i++) err += __builtin_popcount(in[i] ^ out[i]);
+        for (size_t i = 0; i < in.size(); i++) { int v = in[i] ^ out[i]; while (v) { err += v & 1; v >>= 1; } }
         if (err) { std::printf("fam %d %s esn0 %.1f rate %.2f: %d bit errors\n", fam, subtypeName(st), esn0, rate, err); fails++; }
     }
     CHECK(tested == 118, "tested %d", tested);

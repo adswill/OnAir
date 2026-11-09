@@ -33,7 +33,6 @@ bool crcGood(const uint8_t* d, size_t n) {   // n includes the two CRC octets
 int sign12(int v) { return v >= 2048 ? v - 4096 : v; }
 int sext(int v, int bits) { const int m = 1 << (bits - 1); return (v ^ m) - m; }
 
-void format(std::string& s, const char* f, ...) __attribute__((format(printf, 2, 3)));
 void format(std::string& s, const char* f, ...) {
     char b[300];
     va_list ap;
@@ -266,7 +265,7 @@ int parseBlock(const uint8_t* d, size_t n, CarrierSig& s, std::vector<std::strin
                     if (off >= slen) break;
                     const int bm = v[off];
                     if (part < 2) for (int i = 0; i < 8; i++) if (bm >> (7 - i) & 1) { c += c.empty() ? "" : ", "; c += part == 0 ? p1[i] : p2[i]; }
-                    off += 1 + __builtin_popcount(bm) * 2;
+                    { int ones = 0; for (int i = 0; i < 8; i++) ones += bm >> i & 1; off += 1 + ones * 2; }
                 }
                 if (!c.empty()) s.sysInfoIndex = c;
                 break; }
