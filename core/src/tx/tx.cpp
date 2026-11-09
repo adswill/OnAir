@@ -1064,7 +1064,8 @@ bool TxSession::start(std::unique_ptr<TxSink> sink, const TxRequest& r, const Tx
             video_.reset();
             note("video file not used: " + verr + "; the test card is sent instead");
         } else {
-            req_.pullVideo = [this](int w, int h, float* y, float* u, float* v) { return video_ && video_->copyYuv(w, h, y, u, v); };
+            const int waitMs = sink_->name() == "IQ file" ? 500 : 0;   // into a file the signal runs ahead of the clock: the picture waits for its frame
+            req_.pullVideo = [this, waitMs](double t, int w, int h, float* y, float* u, float* v) { if (!video_) return false; video_->setClock(t, waitMs); return video_->copyYuv(w, h, y, u, v); };
         }
     }
     try {

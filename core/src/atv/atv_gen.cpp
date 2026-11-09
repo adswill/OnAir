@@ -368,7 +368,7 @@ struct AtvGenerator::Impl {
         if (cfg.pullVideo) {
             const int W = fmt.picW, H = fmt.picH;
             liveY.resize((size_t)W * (size_t)H); liveU = liveY; liveV = liveY;
-            if (cfg.pullVideo(W, H, liveY.data(), liveU.data(), liveV.data())) {
+            if (cfg.pullVideo(t, W, H, liveY.data(), liveU.data(), liveV.data())) {
                 const int rows = fmt.fieldRows;
                 for (int k = 0; k < rows; k++) {
                     const int r = std::min(2 * k + fld, H - 1);

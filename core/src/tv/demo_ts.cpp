@@ -358,6 +358,7 @@ struct LiveMux {
                 for (size_t s = 0; s < progs.size(); s++) {
                     av_frame_make_writable(pe[s].vf);
                     bool got = false;
+                    if (s < cams.size() && cams[s]) cams[s]->setClock((double)n / kFps);   // a file programme plays at its own speed
                     if (s < cams.size() && cams[s])
                         got = cams[s]->copyYuv420(kW, kH, pe[s].vf->data[0], pe[s].vf->data[1], pe[s].vf->data[2],
                                                  pe[s].vf->linesize[0], pe[s].vf->linesize[1], pe[s].vf->linesize[2]);

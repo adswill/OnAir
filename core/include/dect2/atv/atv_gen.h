@@ -51,7 +51,7 @@ struct AtvGenConfig {
     // 48 kHz interleaved stereo for the sound carrier (mic / file). Empty: the built-in tone / melody of `sound`.
     std::function<int(float* stereo, int frames)> pullAudio;
     // Live camera / file: full-frame analog YUV at picW x picH (Y 0..1). Empty: the test card / bars of `pattern`.
-    std::function<bool(int w, int h, float* y, float* u, float* v)> pullVideo;
+    std::function<bool(double t, int w, int h, float* y, float* u, float* v)> pullVideo;   // t: the time in the signal of this field (s)
     bool groupDelay = true;
     bool nyquistTx = false;
     bool setup = true;            // 7.5 IRE black level in M

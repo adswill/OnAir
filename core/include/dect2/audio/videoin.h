@@ -27,6 +27,9 @@ public:
     bool start(Kind k, const std::string& pathOrDevice, std::string& err);
     void stop();
     bool running() const { return running_; }
+    // A file plays against the consumer's clock, the time of the picture about to be sent (a file source has no speed of its own: #439); before the
+    // first call against the wall clock. waitMs > 0: wait that long at most for the frame of this time (for a consumer that runs faster than real time).
+    void setClock(double seconds, int waitMs = 0);
     Kind kind() const { return kind_; }
     int width() const;
     int height() const;

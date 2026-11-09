@@ -1001,7 +1001,7 @@ static void analogTvLiveVideo() {
     r.modeId = "atv";
     r.videoSrc = 2;
     r.videoDevice = "cam0";
-    r.pullVideo = [](int w, int h, float* y, float* u, float* v) {
+    r.pullVideo = [](double, int w, int h, float* y, float* u, float* v) {
         for (int i = 0; i < w * h; i++) { y[i] = 0.42f; if (u) u[i] = 0.f; if (v) v[i] = 0.f; }
         return true;
     };
