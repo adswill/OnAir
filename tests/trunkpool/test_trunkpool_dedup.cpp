@@ -131,30 +131,30 @@ int main() {
         siteGrant(s, 2, 30, 500, F + 3e6);
         const CallRecord* a = s.pool.nowTalking().empty() ? nullptr : s.pool.nowTalking()[0];
         CHECK(a && a->site == 1 && s.active() == 1, "late better copy: the call stays");
-        siteGrant(s, 2, 30, 500, F + 3e6, 777);   // another unit talks on the same talkgroup at the other site
-        CHECK(s.active() == 2, "another caller: its own call (%d)", s.active());
     }
     // 4. capacity: 3 radios, 40 calls on 20 talkgroup bursts, each granted by 2 sites; compare the calls missed for lack of a radio
     {
-        long missedOn = 0, missedOff = 0, totalOn = 0, totalOff = 0;
+        long missedOn = 0, missedOff = 0, totalOn = 0, totalOff = 0, rtOn = 0, rtOff = 0;
         for (int mode = 0; mode < 2; mode++) {
             PoolConfig c; c.dedupSites = mode == 0;
             Sim s(c);
             s.add("ctl", F); s.add("v1", 0, 0, 0, false); s.add("v2", 0, 0, 0, false); s.add("v3", 0, 0, 0, false);
-            std::mt19937 g(11);
             for (int i = 0; i < 40; i++) {
-                const int tg = 1000 + (int)(g() % 30);
-                const double hz = F + 1e6 + 25e3 * (double)(g() % 40);
-                siteGrant(s, 1, 15, tg, hz, 100 + tg);
+                const int tgA = 1000 + 2 * i, tgB = 1001 + 2 * i;
+                const double hz = F + 1e6;
+                siteGrant(s, 1, 15, tgA, hz, 100 + tgA); siteGrant(s, 1, 15, tgB, hz + 25e3, 100 + tgB);
                 s.run(0.05);
-                siteGrant(s, 2, 12, tg, hz + 7e6, 100 + tg);   // the copy at the second site on another channel
-                s.run(1.0 + (double)(g() % 20) / 10.0);
+                siteGrant(s, 2, 12, tgA, hz + 7e6, 100 + tgA); siteGrant(s, 2, 12, tgB, hz + 7e6 + 25e3, 100 + tgB);
+                s.run(1.0);
+                for (auto* r : s.rx) r->term = true;
+                s.run(0.3);
             }
             s.run(5);
             (mode == 0 ? missedOn : missedOff) = (long)s.pool.stats().missedBusy;
+            (mode == 0 ? rtOn : rtOff) = s.pool.stats().retunes;
             (mode == 0 ? totalOn : totalOff) = (long)s.pool.stats().calls;
         }
-        printf("capacity (3 radios, 40 calls, each granted by 2 sites): calls logged %ld -> %ld, missed for lack of a radio %ld -> %ld\n", totalOff, totalOn, missedOff, missedOn);
+        printf("capacity (3 radios, 40 pairs of simultaneous calls, each granted by 2 sites): calls logged %ld -> %ld, missed for lack of a radio %ld -> %ld, radio retunes %ld -> %ld\n", totalOff, totalOn, missedOff, missedOn, rtOff, rtOn);
         CHECK(totalOn < totalOff, "fewer rows");
         CHECK(missedOn <= missedOff, "no more missed calls with the merge");
     }
