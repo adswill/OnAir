@@ -17,6 +17,7 @@ struct WxsatGenConfig {
     double phaseDeg = 0;
     double pmIndexDeg = 67.5;    // Manchester links: the phase swing, as on the real downlink
     double amp = 0.4;
+    double fileSymbolRate = 0;   // HimawariCast, GeoNetCast: another symbol rate than the link's (tests of the 30 Msym/s chain at a low rate)
     int lines = 400;             // the test picture repeats after this many lines
     uint32_t seed = 1;
 };

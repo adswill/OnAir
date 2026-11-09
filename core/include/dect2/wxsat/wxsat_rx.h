@@ -13,6 +13,7 @@
 #include <string>
 
 namespace dect2 {
+namespace wxsat { class FilecastLayer; }
 
 class WxsatReceiver {
 public:
@@ -30,6 +31,13 @@ public:
     bool loadResults(const std::string& blob);
     void setLogCallback(std::function<void(const std::string&)> cb);
     int profile() const;
+    // ---- file broadcasts (HimawariCast, GeoNetCast)
+    void setSaveDir(const std::string& dir);          // where files and pictures go ("" nowhere)
+    void setFilecastSymbolRate(double hz);            // Advanced: 0 is the link's own rate
+    void setFilecastPid(int pid);                     // Advanced: 0 is the link's own PID
+    wxsat::FilecastLayer* fileLayer();                // the file layer behind the radio, null for the other profiles
+    void setBlocking(bool blocking);                  // file sources: before the first feed; wait for the decoder instead of losing frames
+    void flush();                                     // tests and recordings: everything fed so far is decoded and reported
 
 private:
     struct Impl;

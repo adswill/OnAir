@@ -28,6 +28,10 @@ struct State {
     int shownView = -1, shownImg = -1;
     std::vector<const WxLine*> drawn;
     bool follow = true, autoSave = false;
+    bool dirSet = false;
+    uint64_t cycles = 0, picId = 0;
+    int pictureSel = 0, pid = 0;
+    double symKs = 0;
     std::string msg, passMsg;
     int lastLines = 0;
     double lastGrow = 0;
@@ -41,6 +45,8 @@ const WxImage* activeImage(const WxsatTelemetry& t, int sel) {
 }
 
 bool live(const App& a, int P) { return a.engine.running() && a.rx.standard == 261 + P; }
+constexpr bool isFiles(int P) { return P == kWxHimawariCast || P == kWxGeoNetCast; }
+constexpr bool isGeo(int P) { return P == kWxMsgRaw || isFiles(P); }
 
 void kvRow(const App& a, const char* k, const char* fmt, ...) {
     ImGui::TextDisabled("%s", k); kvColumn(130 * gUi);
@@ -138,9 +144,81 @@ std::string saveImage(int P, const WxImage* im, int view) {
     return gfx::writePng(path.c_str(), reinterpret_cast<const uint8_t*>(px.data()), w, im->lines) ? "saved " + path : "could not write " + path;
 }
 
+// What runs whatever panel is showing: where files go, and the finished MSG discs saved without being asked
+void housekeeping(App& a, int P) {
+    State& s = gS[P];
+    loadState(P);
+    if (isFiles(P) && !s.dirSet) { s.dirSet = true; a.engine.wxsat(P).setSaveDir(plat::dataDir() + "/wxsat/" + wxProfile(P).id); }
+    if (P == kWxMsgRaw && live(a, P) && a.rx.wxsat.cyclesDone != s.cycles) {
+        s.cycles = a.rx.wxsat.cyclesDone;
+        if (s.autoSave && a.rx.wxsat.imageDone) {
+            for (int v = 0; v < numViews(a.rx.wxsat.imageDone.get()); v++) s.msg = saveImage(P, a.rx.wxsat.imageDone.get(), v);
+            if (a.rx.wxsat.image2Done) s.msg = saveImage(P, a.rx.wxsat.image2Done.get(), 1);
+        }
+    }
+}
+
+// HimawariCast, GeoNetCast: the pictures that have come together, and the files as they arrive
+void filesTab(App& a, int P) {
+    State& s = gS[P];
+    const FilecastTelemetry& f = a.rx.wxsat.files;
+    const bool on = live(a, P);
+    if (!on && f.recent.empty()) {
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextDisabled("%s", P == kWxHimawariCast ? "Point a C-band dish (about 1.8 m or more) at JCSAT-2B with a 5150 MHz LNB and start: the receiver finds the carrier by itself. Full discs appear here, a channel at a time, every 10 to 30 minutes."
+                                                       : "GeoNetCast needs a C-band dish and 52 Msps or more, so most radios can only play a recording. Use File > Open recording, or Test signal.");
+        ImGui::PopTextWrapPos();
+        return;
+    }
+    if (!f.pictures.empty()) {
+        s.pictureSel = std::clamp(s.pictureSel, 0, (int)f.pictures.size() - 1);
+        ImGui::SetNextItemWidth(std::min(240 * gUi, ImGui::GetContentRegionAvail().x));
+        char cur[96]; const FilecastPicture& c = f.pictures[(size_t)s.pictureSel];
+        snprintf(cur, sizeof cur, "%s  %s  (%d/%d)", c.channel.c_str(), c.stamp.c_str(), c.have, c.total);
+        if (ImGui::BeginCombo("##fcpic", cur)) {
+            for (int i = 0; i < (int)f.pictures.size(); i++) {
+                char n[96]; snprintf(n, sizeof n, "%s  %s  (%d/%d)", f.pictures[(size_t)i].channel.c_str(), f.pictures[(size_t)i].stamp.c_str(), f.pictures[(size_t)i].have, f.pictures[(size_t)i].total);
+                if (ImGui::Selectable(n, i == s.pictureSel)) s.pictureSel = i;
+            }
+            ImGui::EndCombo();
+        }
+        const FilecastPicture& p = f.pictures[(size_t)s.pictureSel];
+        if (gGfx && p.px && (p.id != s.picId || !s.tex || s.texW != p.w || s.texCap != p.h)) {
+            s.picId = p.id;
+            delete s.tex;
+            s.tex = gGfx->createImage(p.w, p.h, 0xFF000000u);
+            s.texW = p.w; s.texCap = p.h;
+            std::vector<uint32_t> row((size_t)p.w);
+            if (s.tex) for (int y = 0; y < p.h; y++) {
+                for (int x = 0; x < p.w; x++) { const uint32_t g = (*p.px)[(size_t)y * (size_t)p.w + (size_t)x]; row[(size_t)x] = 0xFF000000u | g << 16 | g << 8 | g; }
+                s.tex->update(0, y, p.w, 1, row.data());
+            }
+        }
+        const float H = ImGui::GetContentRegionAvail().y;
+        ImGui::BeginChild("##fcimg", ImVec2(0, H * 0.72f), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+        if (s.tex && p.w > 0) {
+            const ImVec2 av = ImGui::GetContentRegionAvail();
+            const float z = std::max(0.05f, std::min(av.x / p.w, av.y / p.h));
+            ImGui::Image(s.tex->texture(), ImVec2(p.w * z, p.h * z));
+        }
+        ImGui::EndChild();
+        if (!p.path.empty()) ImGui::TextDisabled("saved: %s", p.path.c_str());
+    }
+    ImGui::TextDisabled("%llu files complete, %llu incomplete, %llu failed. Saved in <data folder>/wxsat/%s/", (unsigned long long)f.filesComplete, (unsigned long long)f.filesPartial, (unsigned long long)f.filesFailed, wxProfile(P).id);
+    ImGui::BeginChild("##fclist");
+    ImGui::PushFont(a.mono, 0);
+    for (const auto& r : f.recent) {
+        if (r.complete) ImGui::Text("%-60s %10llu", r.name.c_str(), (unsigned long long)r.size);
+        else ImGui::TextDisabled("%-60s %10llu  %d/%d parts", r.name.c_str(), (unsigned long long)r.size, r.have, r.parts);
+    }
+    ImGui::PopFont();
+    ImGui::EndChild();
+}
+
 template<int P>
 void tab(App& a) {
-    loadState(P);
+    housekeeping(a, P);
+    if (isFiles(P)) { filesTab(a, P); return; }
     State& s = gS[P];
     const WxsatTelemetry& t = a.rx.wxsat;
     const bool on = live(a, P);
@@ -172,7 +250,7 @@ void tab(App& a) {
     flowNext(5 * gUi);
     if (runningButton(a, tr("New picture"))) { a.engine.wxsat(P).clearImage(); s.msg.clear(); s.autoSaved = false; s.lastLines = 0; }
     flowNext(5 * gUi);
-    if (ImGui::Button(tr("Follow the next pass"))) s.passMsg = passesArmFamily(a, wxProfile(P).family);
+    if (!isGeo(P) && ImGui::Button(tr("Follow the next pass"))) s.passMsg = passesArmFamily(a, wxProfile(P).family);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Opens nothing else: tracks the next pass of this satellite, starts the receiver by itself at the rise, follows the Doppler and stops at the set.");
     flowNext(8 * gUi);
     ImGui::Checkbox(tr("Follow"), &s.follow);
@@ -201,6 +279,7 @@ void tab(App& a) {
         ImGui::PushTextWrapPos(0);
         const char* idle = P == kWxApt || P == kWxNoaaHrpt || P == kWxNoaaGac || P == kWxNoaaDsb
             ? "NOAA-15, -18 and -19 stopped transmitting in 2025: this mode opens recordings. Use File > Open recording with the right sample rate, or Test signal."
+            : P == kWxMsgRaw ? "Point a dish (about 1.2 m or more) with an LNA at 1686.83 MHz at Meteosat-9, -10 or -11 and start: a disc takes 15 minutes and saves itself."
             : P == kWxElektroRdas || P == kWxArktikaRdas ? "Needs an X-band dish, a down-converter and 40 Msps or more (RDAS is 30.72 Msym/s); recordings work too."
             : "Press Follow the next pass, or start the receiver during a pass. Needs a dish on 1.7 GHz (about 1 m, following the satellite), an LNA at the feed and a fast radio.";
         ImGui::TextDisabled("%s", on ? wxsatSummary(t).c_str() : idle);
@@ -243,6 +322,23 @@ void receiver(App& a) {
     kvRow(a, "signal time", "%.1f s", t.timeSec);
     if (!t.hint.empty()) kvRow(a, "note", "%s", t.hint.c_str());
     if (wxProfile(P).retired) kvRow(a, "satellite", "retired 2025: recordings only");
+    if (isFiles(P)) {
+        const FilecastTelemetry& f = t.files;
+        kvRow(a, "PID", "%d", f.pid);
+        kvRow(a, "IP / Fazzt", "%llu datagrams, %llu packets (%llu bad)", (unsigned long long)f.datagrams, (unsigned long long)f.frames, (unsigned long long)f.badFrames);
+        kvRow(a, "open files", "%llu", (unsigned long long)f.open);
+        if (f.filesDropped) kvRow(a, "dropped", "%llu files (the disk or the machine could not keep up)", (unsigned long long)f.filesDropped);
+        if (!f.lastError.empty()) kvRow(a, "last problem", "%s", f.lastError.c_str());
+        ImGui::Spacing();
+        if (ImGui::TreeNode(tr("Advanced"))) {
+            State& s = gS[P];
+            ImGui::SetNextItemWidth(130 * gUi);
+            if (ImGui::InputDouble(tr("Symbol rate, ksym/s (0: the link's)"), &s.symKs, 0, 0, "%.3f")) a.engine.wxsat(P).setFilecastSymbolRate(s.symKs * 1e3);
+            ImGui::SetNextItemWidth(130 * gUi);
+            if (ImGui::InputInt(tr("PID (0: the link's)"), &s.pid)) a.engine.wxsat(P).setFilecastPid(s.pid);
+            ImGui::TreePop();
+        }
+    }
 }
 
 template<int P>
@@ -260,6 +356,7 @@ void panels(App& a) {
 
 template<int P>
 void status(App& a) {
+    housekeeping(a, P);
     const bool run = a.engine.running(), on = live(a, P);
     const SignalStats& st = a.spec.stats;
     const AdcStatus adc = classifyAdc(st.rmsDbfs, st.peak, st.clipFraction);
@@ -284,7 +381,8 @@ template<int P>
 void meters(const App& a, std::vector<ModeMeter>& out) {
     const WxsatTelemetry& t = a.rx.wxsat;
     out.push_back({"SNR  dB", "%.0f", t.snrDb, 0, 25, t.snrDb >= 8 ? 1 : t.snrDb >= 5 ? 2 : 3});
-    out.push_back({"LINES", "%.0f", (double)t.lines, 0, 4000, t.state >= 3 ? 1 : 0});
+    if (isFiles(P)) out.push_back({"FILES", "%.0f", (double)(t.files.filesComplete + t.files.filesPartial), 0, 500, t.state >= 3 ? 1 : 0});
+    else out.push_back({"LINES", "%.0f", (double)t.lines, 0, 4000, t.state >= 3 ? 1 : 0});
 }
 
 template<int P>
@@ -294,8 +392,11 @@ void tuner(App& a, bool& retune) {
     static const F noaaApt[] = {{"NOAA-15 137.620", 137.620}, {"NOAA-18 137.9125", 137.9125}, {"NOAA-19 137.100", 137.100}};
     static const F noaaHrpt[] = {{"NOAA-18 1707.0", 1707.0}, {"NOAA-19 1698.0", 1698.0}, {"NOAA-15 1702.5", 1702.5}, {"POES S-band 2247.5", 2247.5}};
     static const F noaaDsb[] = {{"NOAA-15 / 18 137.35", 137.35}, {"NOAA-19 137.77", 137.77}};
+    static const F himawari[] = {{"After a 5150 MHz LNB: 1002.0", 1002.0}, {"Direct: 4148.0", 4148.0}};
+    static const F gnc[] = {{"After a 5150 MHz LNB: 1070.0", 1070.0}, {"Direct: 4080.0", 4080.0}};
     const F* f = nullptr; int n = 0;
     if (P == kWxApt) { f = noaaApt; n = 3; } else if (P == kWxNoaaHrpt || P == kWxNoaaGac) { f = noaaHrpt; n = 4; } else if (P == kWxNoaaDsb) { f = noaaDsb; n = 2; }
+    else if (P == kWxHimawariCast) { f = himawari; n = 2; } else if (P == kWxGeoNetCast) { f = gnc; n = 2; }
     char cur[32]; snprintf(cur, sizeof cur, "%.3f MHz", a.freqMhz);
     if (f) {
         ImGui::SetNextItemWidth(std::min(250 * gUi, ImGui::GetContentRegionAvail().x));
@@ -321,4 +422,4 @@ template<int P> constexpr ModeUi makeUi() {
 } // namespace
 
 extern const ModeUi kWxsatUi[kWxNumProfiles];
-const ModeUi kWxsatUi[kWxNumProfiles] = {makeUi<0>(), makeUi<1>(), makeUi<2>(), makeUi<3>(), makeUi<4>(), makeUi<5>(), makeUi<6>(), makeUi<7>(), makeUi<8>()};
+const ModeUi kWxsatUi[kWxNumProfiles] = {makeUi<0>(), makeUi<1>(), makeUi<2>(), makeUi<3>(), makeUi<4>(), makeUi<5>(), makeUi<6>(), makeUi<7>(), makeUi<8>(), makeUi<9>(), makeUi<10>(), makeUi<11>()};

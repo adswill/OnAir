@@ -1,6 +1,8 @@
 // See wxsat_rx.h. Link parameters from SatDump's pipelines (GPL-3.0, Copyright Aang23 and contributors); code written for OnAir.
 #include "dect2/wxsat/wxsat_rx.h"
 #include "dect2/wxsat/wxsat_proto.h"
+#include "dect2/wxsat/filecast.h"
+#include "dect2/dvbs/dvbs_rx.h"
 #include "dect2/common/mathconst.h"
 #include "dect2/dsp/dsp_compat.h"
 #include "dect2/dsp/rrc.h"
@@ -310,6 +312,18 @@ struct WxsatReceiver::Impl {
     hrpt::Viterbi vit;
     wxsat::Deframer defCcsds, msu, visDef[3], irDef;
     wxsat::AwsDemux aws[64];
+    int msgLast = -1;
+    uint64_t cyclesDone = 0;
+    // file broadcasts: the DVB-S/S2 receiver of the app and the file layer behind it
+    std::unique_ptr<DvbsReceiver> dvb;
+    std::unique_ptr<wxsat::FilecastLayer> files;
+    std::atomic<double> fcSymbols{0};
+    std::atomic<bool> fcSymbolsSet{false};
+    std::atomic<bool> fileBlocking{false};    // a recording: wait for the decoder rather than lose frames
+    uint64_t dvbSeq = 0;
+    bool isFilecast() const { return P == kWxHimawariCast || P == kWxGeoNetCast; }
+    // the DVB-S2 receiver's own limit, at the rate it is told to expect
+    bool fileRateOk() const { const double hz = fcSymbols.load(); return dvbsMaxSymbolRate(rate, 0.35) * 1.02 >= (hz > 0 ? hz : info.symbolRate); }
     wxsat::MwrDecoder mwr;
     wxsat::HirsDecoder hirs;
     double lastGood = 0, lastAcq = 0, tStart = 0;
@@ -330,6 +344,7 @@ struct WxsatReceiver::Impl {
 
     explicit Impl(int p) : P(std::clamp(p, 0, (int)kWxNumProfiles - 1)), info(wxProfile(P)) {
         tel.profile = pub.profile = P;
+        if (isFilecast()) files = std::make_unique<wxsat::FilecastLayer>(P);
         apt.onLine = [this](int idx, const uint8_t* px) { setLine(0, idx, px, 2080); };
     }
 
@@ -349,6 +364,7 @@ struct WxsatReceiver::Impl {
             im[1] = mk(wxsat::kMsuGsVisWidth, 3, "MSU-GS visible (reduced)");
             break;
         case kWxAws: im[0] = mk(wxsat::kMwrWidth, wxsat::kMwrChannels, "MWR"); break;
+        case kWxMsgRaw: im[0] = mk(wxsat::kSeviriNrmOutW, wxsat::kSeviriNrmChannels, "SEVIRI"); im[1] = mk(wxsat::kSeviriHrvOutW, 1, "SEVIRI HRV"); break;
         default: break;
         }
         for (auto& e : edit) e.clear();
@@ -366,6 +382,7 @@ struct WxsatReceiver::Impl {
         case kWxNoaaGac: mod = Bpsk; alpha = 0.5; break;
         case kWxElektroRdas: case kWxArktikaRdas: mod = Bpsk; alpha = 0.5; break;
         case kWxAws: mod = Qpsk; alpha = 0.45; break;
+        case kWxMsgRaw: mod = Qpsk; alpha = 0.35; break;
         default: break;
         }
         if (P == kWxApt) {
@@ -377,6 +394,7 @@ struct WxsatReceiver::Impl {
             return;
         }
         if (P == kWxArktikaGgak) { ggak.configure(rate); ggak.setSignalOffset(offset); return; }
+        if (isFilecast()) { if (dvb) configureDvb(); return; }
         if (rate >= info.minRate - 1) { dem.configure(rate, info.symbolRate, mod, alpha); dem.setOffset(offset); }
         const auto frameCb = [this](const uint8_t* f) { frame(f); };
         for (int k = 0; k < 2; k++) def[k].onFrame = frameCb;
@@ -387,7 +405,7 @@ struct WxsatReceiver::Impl {
         case kWxMeteorHrpt: for (int k = 0; k < 2; k++) def[k].configure(meteor::kAsm, 32, wxsat::kCadu * 8, 3, 10); break;
         case kWxNoaaGac: def[0].configure(wxsat::kGacSync, 32, wxsat::kGacBits, 3, 10); break;
         case kWxElektroRdas: case kWxArktikaRdas: def[0].configure(meteor::kAsm, 32, wxsat::kCadu * 8, 2, 8); break;
-        case kWxAws: defCcsds.configure(meteor::kAsm, 32, wxsat::kAwsCadu * 8, 3, 10); break;
+        case kWxAws: case kWxMsgRaw: defCcsds.configure(meteor::kAsm, 32, wxsat::kAwsCadu * 8, 3, 10); break;
         default: break;
         }
         msu.configure(wxsat::kMsuSync, 64, wxsat::kMsuMrFrame * 8, 10, 14);
@@ -401,6 +419,7 @@ struct WxsatReceiver::Impl {
     void resetState() {
         if (P == kWxApt) { apt.reset(); aptFir.clear(); aptPrev = {1, 0}; aptBuf.clear(); }
         else if (P == kWxArktikaGgak) { ggak.reset(); }
+        else if (isFilecast()) { if (dvb) dvb->reset(); files->reset(); }
         else if (rate >= info.minRate - 1) dem.resetAll();
         chipN = 0; alignment = -1; defUse = -1; prevChip = 0; nrzPrev = 0;
         for (auto& d : def) d.reset();
@@ -434,7 +453,7 @@ struct WxsatReceiver::Impl {
         switch (P) {
         case kWxNoaaHrpt: case kWxNoaaDsb: case kWxMeteorHrpt: chip(I); break;
         case kWxNoaaGac: case kWxElektroRdas: case kWxArktikaRdas: bit(I > 0 ? 1 : 0); break;
-        case kWxAws: qpskPair(sat8(I * 40), sat8(Q * 40)); break;
+        case kWxAws: case kWxMsgRaw: qpskPair(sat8(I * 40), sat8(Q * 40)); break;
         default: break;
         }
     }
@@ -494,7 +513,7 @@ struct WxsatReceiver::Impl {
         case kWxNoaaDsb: dsb(f); break;
         case kWxMeteorHrpt: meteorCadu(f); break;
         case kWxElektroRdas: case kWxArktikaRdas: rdas(f); break;
-        case kWxAws: awsCadu(f); break;
+        case kWxAws: case kWxMsgRaw: awsCadu(f); break;
         default: break;
         }
     }
@@ -604,7 +623,72 @@ struct WxsatReceiver::Impl {
         aws[tel.vcid].push(v);
     }
 
+    // SEVIRI lands by the time in the packet; north is at the top, so the first scan line of a disc (the south) is the last row. Standard channels 2:1, HRV 3:1.
+    void msgPacket(const wxsat::AwsPacket& p) {
+        tel.packets++;
+        if (tel.vcid != 0 || p.apid != wxsat::kSeviriApid) return;
+        const wxsat::SeviriPacket s = wxsat::seviriDecode(tel.scid, p);
+        if (!s.valid) return;
+        tel.satName = wxsat::seviriSatName(tel.scid);
+        if (s.chunk == 0) {
+            // a new disc: the scan position has jumped back
+            if (msgLast >= 0 && s.line + 1000 < msgLast) discDone();
+            msgLast = s.line;
+        }
+        if (s.chunk < 11) {
+            for (int k = 0; k < 3; k++) {
+                const int row = s.line + k;
+                if (row & 1 || row >= wxsat::kSeviriNrmLines) continue;
+                const int y = wxsat::kSeviriNrmOutH - 1 - row / 2;
+                WxLine& ln = editLine(0, y);
+                const int c = wxsat::seviriChannelSwapped(s.chunk) ? 2 - k : k;
+                uint8_t* out = &ln.px[(size_t)s.chunk * wxsat::kSeviriNrmOutW];
+                for (int x = 0; x < wxsat::kSeviriNrmOutW; x++) out[wxsat::kSeviriNrmOutW - 1 - x] = (uint8_t)(s.px[(size_t)c * wxsat::kSeviriNrmWidth + (size_t)x * 2] >> 2);
+                touch(0, y);
+                if (s.chunk == 0) { tel.lines++; }
+            }
+        } else {
+            const int n = s.chunk < 15 ? 2 : 1;
+            for (int k = 0; k < n; k++) {
+                const int row = s.line + k;
+                if (row % 3 || row >= wxsat::kSeviriHrvLines) continue;
+                const int y = wxsat::kSeviriHrvOutH - 1 - row / 3;
+                WxLine& ln = editLine(1, y);
+                for (int x = 0; x < wxsat::kSeviriHrvOutW; x++) ln.px[(size_t)(wxsat::kSeviriHrvOutW - 1 - x)] = (uint8_t)(s.px[(size_t)k * wxsat::kSeviriHrvWidth + (size_t)x * 3] >> 2);
+                touch(1, y);
+            }
+        }
+    }
+
+    void discDone() {
+        flushEdits();
+        tel.imageDone = im[0] ? std::make_shared<WxImage>(*im[0]) : nullptr;
+        tel.image2Done = im[1] ? std::make_shared<WxImage>(*im[1]) : nullptr;
+        tel.cyclesDone = ++cyclesDone;
+        initImages();
+        tel.lines = 0;
+        say("a full disc is finished");
+    }
+
+    void configureDvb() {
+        dvb->configure(rate);
+        dvb->setStandardHint(2);
+        const double hz = fcSymbols.load();
+        dvb->setSymbolRate(hz > 0 ? hz : info.symbolRate);
+    }
+
+    void startDvb() {
+        if (dvb) { if (fcSymbolsSet.exchange(false)) configureDvb(); return; }
+        dvb = std::make_unique<DvbsReceiver>();
+        dvb->setBlocking(fileBlocking.load());
+        dvb->setLogCallback(logCb);
+        wxsat::FilecastLayer* fl = files.get();
+        dvb->setPacketCallback([fl](const uint8_t* pk, size_t n, double secs) { fl->pushTs(pk, n, secs); });
+        configureDvb();
+    }
+
     void awsPacket(const wxsat::AwsPacket& p) {
+        if (P == kWxMsgRaw) { msgPacket(p); return; }
         tel.packets++;
         std::vector<uint16_t> px;
         if (tel.vcid == 3 && mwr.push(p, px)) {
@@ -685,6 +769,25 @@ struct WxsatReceiver::Impl {
             if (ggak.telemetry(g, ggakSeq)) { ggakSeq = g.seq; tel.ggak = std::move(g); }
             tel.state = tel.ggak.state >= 2 ? 3 : tel.ggak.state;
             tel.blocksOk = tel.ggak.blocksOk; tel.blocksBad = tel.ggak.blocksBad; tel.cfoHz = tel.ggak.cfoHz; tel.snrDb = tel.ggak.snrDb; tel.frameLock = tel.ggak.frameLock;
+        } else if (isFilecast()) {
+            if (fileRateOk() && dvb) {
+                DvbsTelemetry d;
+                if (dvb->telemetry(d, dvbSeq)) {
+                    dvbSeq = d.seq;
+                    tel.cfoHz = d.cfoHz; tel.snrDb = d.snrDb;
+                    tel.blocksOk = d.blocksOk; tel.blocksBad = d.blocksBad;
+                    tel.frameLock = d.state >= 2;
+                    tel.carrierLock = d.state >= 1 ? 1.f : 0.f;
+                    tel.symbolRate = d.symbolRate;
+                    tel.state = d.dataValid ? 3 : d.state >= 2 ? 2 : d.state;
+                    tel.hint = d.signalNote;
+                }
+            } else if (!fileRateOk()) {
+                char b[160];
+                snprintf(b, sizeof b, "this link needs %.1f Msps or more (a recording works)", info.minRate / 1e6);
+                tel.hint = b;
+            }
+            if (files) tel.files = files->telemetry();
         } else if (P == kWxApt) {
             tel.state = apt.locked() ? 3 : apt.carrierLevel() > 0.02f ? 1 : 0;
             tel.frameLock = apt.locked();
@@ -719,9 +822,11 @@ struct WxsatReceiver::Impl {
     void feed(const cf32* x, size_t n) {
         if (rate <= 0 || n == 0) return;
         if (resetReq.exchange(false)) resetState();
-        if (clearReq.exchange(false)) { initImages(); tel.image.reset(); tel.image2.reset(); tel.lines = 0; }
+        if (clearReq.exchange(false)) { initImages(); tel.image.reset(); tel.image2.reset(); tel.lines = 0; msgLast = -1; }
         if (P == kWxArktikaGgak) ggak.feed(x, n);
-        else if (P == kWxApt) {
+        else if (isFilecast()) {
+            if (fileRateOk()) { startDvb(); dvb->feed(x, n); }
+        } else if (P == kWxApt) {
             for (size_t i = 0; i < n; i++) {
                 cfp y;
                 if (!aptFir.push(cfp(x[i].real(), x[i].imag()) * aptRot, y)) { aptRot *= aptStep; continue; }
@@ -762,9 +867,10 @@ void WxsatReceiver::setSignalOffset(double hz) {
     m.offset = hz;
     if (m.P == kWxApt) m.setAptStep();
     else if (m.P == kWxArktikaGgak) m.ggak.setSignalOffset(hz);
+    else if (m.isFilecast()) {}   // the DVB-S2 receiver works on the carrier nearest the centre, wherever it is
     else if (m.rate >= m.info.minRate - 1) m.dem.setOffset(hz);
 }
-bool WxsatReceiver::ready() const { return p_->rate >= p_->info.minRate - 1; }
+bool WxsatReceiver::ready() const { return p_->isFilecast() ? p_->fileRateOk() : p_->rate >= p_->info.minRate - 1; }
 void WxsatReceiver::reset() { p_->resetReq = true; }
 void WxsatReceiver::clearImage() {
     { std::lock_guard<std::mutex> lk(p_->mu); p_->pub.image.reset(); p_->pub.image2.reset(); p_->pub.imageSeq++; p_->pub.seq++; }
@@ -778,6 +884,12 @@ bool WxsatReceiver::telemetry(WxsatTelemetry& out, uint64_t lastSeq) {
     return true;
 }
 void WxsatReceiver::clearResults() { clearImage(); }
+void WxsatReceiver::setSaveDir(const std::string& dir) { if (p_->files) p_->files->setSaveDir(dir); }
+void WxsatReceiver::setFilecastSymbolRate(double hz) { p_->fcSymbols = hz; p_->fcSymbolsSet = true; }
+void WxsatReceiver::setFilecastPid(int pid) { if (p_->files) p_->files->setPid(pid); }
+wxsat::FilecastLayer* WxsatReceiver::fileLayer() { return p_->files.get(); }
+void WxsatReceiver::setBlocking(bool b) { p_->fileBlocking = b; }
+void WxsatReceiver::flush() { if (p_->dvb) { p_->dvb->flush(); } if (p_->files) p_->files->flush(); p_->report(); }
 int WxsatReceiver::profile() const { return p_->P; }
 void WxsatReceiver::setLogCallback(std::function<void(const std::string&)> cb) { p_->logCb = std::move(cb); }
 
@@ -838,7 +950,7 @@ ModeTuning wxsatTuning(int p) {
     t.stdMode = i.family + 2; t.id = i.id; t.name = i.name;
     t.minMhz = 1; t.maxMhz = 12000; t.defMhz = i.defMhz;
     t.sampleRate = i.sampleRate; t.basebandHz = 0;
-    t.bandwidthMhz = p == kWxApt ? 0.05 : p == kWxNoaaDsb || p == kWxArktikaGgak ? 0.05 : p == kWxElektroRdas || p == kWxArktikaRdas ? 45 : i.symbolRate / 1e6 * 1.4;
+    t.bandwidthMhz = p == kWxHimawariCast ? 3.2 : p == kWxGeoNetCast ? 36 : p == kWxApt ? 0.05 : p == kWxNoaaDsb || p == kWxArktikaGgak ? 0.05 : p == kWxElektroRdas || p == kWxArktikaRdas ? 45 : i.symbolRate / 1e6 * 1.4;
     t.minSampleRate = i.minRate;
     t.tuneOffsetHz = (p == kWxApt || p == kWxNoaaDsb) ? 100000 : 0;
     t.carrierAtCentre = (p == kWxNoaaHrpt || p == kWxNoaaDsb || p == kWxMeteorHrpt);

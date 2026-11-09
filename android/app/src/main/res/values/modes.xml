@@ -215,6 +215,9 @@
         <item>AWS L-band</item>
         <item>Inmarsat BGAN</item>
         <item>ADS-L</item>
+        <item>MSG Raw Data</item>
+        <item>HimawariCast</item>
+        <item>GeoNetCast</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -411,6 +414,9 @@
         <item>Arctic Weather Satellite on 1707 MHz: QPSK 1.785 Msym/s, CCSDS convolutional code, Reed-Solomon interleave 5, the MWR microwave scans (19 channels, 145 points) line by line. Needs a dish at 1.7 GHz and 4 Msps or more; Follow the next pass tunes with Doppler and starts by itself</item>
         <item>Inmarsat BGAN (ETSI TS 102 744 Family SL), the satellite data service: every forward carrier from 1525 to 1559 MHz, bearer type and code rate, satellite, spot beam, network identity, and the system information it broadcasts. One-click scan across the band. Signalling and carrier structure only: no voice, no user data, no subscriber identity. Needs a user test: only synthetic signals so far, never validated on a real BGAN recording. A patch antenna is enough for the global beam and for bearers aimed at your region; narrow spot beams elsewhere are out of reach</item>
         <item>ADS-L (EASA ADS-L 4 SRD-860): the iConspicuity broadcast of light aircraft, gliders, paragliders and drones on 868.2, 868.4 and 869.525 MHz. Traffic, status and ground uplink packets give position, altitude, speed, category and address on the map and in a table. Tuned to 868.875 MHz at 2 Msps one capture holds every channel and also FLARM. Receive only; no key is needed</item>
+        <item>Meteosat Second Generation raw downlink on 1686.83 MHz: QPSK 3.75 Msym/s, CCSDS convolutional code, Reed-Solomon interleave 5, the SEVIRI disc line by line (11 channels and HRV, reduced to fit memory, saved when the disc ends every 15 minutes). Needs a fixed dish of about 1.2 m or more at 1.7 GHz with an LNA and 6 Msps. Receive only</item>
+        <item>HimawariCast file broadcast from JCSAT-2B, C-band 4148 MHz (1002 MHz after a 5150 MHz LNB): DVB-S2 QPSK 2/3 at 2.586 Msym/s, IP over MPE on PID 1001, Fazzt files. The Himawari full discs put together from their ten HRIT segments per channel and saved as PNG, and every other file saved as it comes. Needs a C-band dish of about 1.8 m or more, an LNB and 4.5 Msps. Receive only</item>
+        <item>GeoNetCast Americas file broadcast, C-band 4080 MHz (1070 MHz after a 5150 MHz LNB): DVB-S2 8PSK 5/6 at 30 Msym/s, IP over MPE on PID 4201, Fazzt files, saved as they come (satellite pictures and weather products in their own formats). Needs a C-band dish and 52 Msps or more, so most radios can only play a recording. Receive only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -607,6 +613,9 @@
         <item>AWS MWR, 1.7 GHz</item>
         <item>Satellite, L-band</item>
         <item>Light aircraft, 868 MHz</item>
+        <item>Meteosat SEVIRI raw, 1.7 GHz</item>
+        <item>Himawari full discs, C-band</item>
+        <item>GeoNetCast files, C-band</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -803,5 +812,8 @@
         <item>aws arctic weather satellite 1707 mwr microwave radiometer eumetsat sterna</item>
         <item>bgan inmarsat i-4 alphasat family sl ts 102 744 l-band satcom 1545 1550 16qam spot beam isatphone</item>
         <item>adsl ads-l adsl4 srd860 iconspicuity ogn flarm glider paraglider easa sesar 868 aviation</item>
+        <item>msg meteosat seviri raw eumetsat 1686 hrv geostationary second generation</item>
+        <item>himawari himawaricast jma jcsat hrit c-band 4148 dvb-s2 fazzt ahi geostationary</item>
+        <item>geonetcast gnc americas noaa c-band 4080 dvb-s2 fazzt files weather products</item>
     </string-array>
 </resources>
