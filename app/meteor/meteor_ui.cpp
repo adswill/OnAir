@@ -26,9 +26,10 @@ using dect2::MeteorStrip;
 using dect2::MeteorTelemetry;
 using dect2::kMeteorWidth;
 
-// views: 0 automatic composite, 1 composite 123, 2 composite 125, 3 .. 8 channel 1 .. 6
-const char* const kViews[] = {"Colour (automatic)", "Colour 123", "Colour 125", "Channel 1", "Channel 2", "Channel 3", "Channel 4", "Channel 5", "Channel 6"};
-constexpr int kNumViews = 9;
+// views: 0 automatic composite, 1 composite 123, 2 composite 125, 3 .. 8 channel 1 .. 6, 9 composite 124 (M2-3 / M2-4 send APID 64, 65 and 67),
+// 10 vegetation (false colour: the near-infrared channel 2 in red). New views go at the end: the number is saved in the settings.
+const char* const kViews[] = {"Colour (automatic)", "Colour 123", "Colour 125", "Channel 1", "Channel 2", "Channel 3", "Channel 4", "Channel 5", "Channel 6", "Colour 124", "Vegetation (false colour)"};
+constexpr int kNumViews = 11;
 const char* const kMods[] = {"Automatic", "OQPSK 72k (N2-3, N2-4)", "QPSK 72k (N2)", "OQPSK 80k interleaved"};
 
 struct State {
@@ -73,12 +74,15 @@ bool hasCh(const MeteorImage& im, int c) { return im.packets[(size_t)c] > 0; }
 
 // the channels (0 .. 5) behind red, green and blue; -1 none. One channel: the same in all three (grey).
 std::array<int, 3> channelsFor(const MeteorImage* im, int view) {
-    if (view >= 3) { const int c = view - 3; return {c, c, c}; }
+    if (view == 9) return {0, 1, 3};
+    if (view == 10) return {1, 0, 0};   // near-infrared in red, the visible channel in green and blue: vegetation shows red
+    if (view >= 3 && view <= 8) { const int c = view - 3; return {c, c, c}; }
     if (view == 1) return {0, 1, 2};
     if (view == 2) return {0, 1, 4};
     if (!im) return {0, 1, 2};
     if (hasCh(*im, 0) && hasCh(*im, 1) && hasCh(*im, 2)) return {0, 1, 2};   // day
     if (hasCh(*im, 0) && hasCh(*im, 1) && hasCh(*im, 4)) return {0, 1, 4};   // night: the infrared channel instead of 3
+    if (hasCh(*im, 0) && hasCh(*im, 1) && hasCh(*im, 3)) return {0, 1, 3};   // APID 64, 65 and 67 (channel 3 is not sent)
     for (int c = 0; c < 6; c++) if (hasCh(*im, c)) return {c, c, c};
     return {0, 1, 2};
 }
