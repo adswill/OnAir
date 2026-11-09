@@ -695,11 +695,13 @@ std::function<void(uint8_t*)> filecastTestTs(int profile) {
     const auto nextFile = [send](State& s) {
         std::string name;
         std::vector<uint8_t> body;
+        const int cycle = s.file / (kFcTestSegments + 1);        // each round of the carousel is a new scan, ten minutes later, as on the air
         const int n = s.file++ % (kFcTestSegments + 1);
+        const int minutes = (2 * 60 + 30 + cycle * 10) % (24 * 60);
         const uint32_t id = s.ids++;
         if (s.profile == kWxHimawariCast) {
             if (n < kFcTestSegments) {
-                char nm[64]; snprintf(nm, sizeof nm, "IMG_DK01IR1_202611090230_%03d", n + 1);
+                char nm[64]; snprintf(nm, sizeof nm, "IMG_DK01IR1_20261109%02d%02d_%03d", minutes / 60, minutes % 60, n + 1);
                 goes::Headers h;
                 h.fileType = 0; h.hasImage = true; h.bpp = 16; h.columns = kFcTestColumns; h.lines = kFcTestSegLines; h.compression = 0;
                 h.annotation = nm; h.hasSeg = true; h.segSeq = n + 1; h.maxSeg = kFcTestSegments; h.startLine = n * kFcTestSegLines + 1;

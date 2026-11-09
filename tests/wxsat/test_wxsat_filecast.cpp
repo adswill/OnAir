@@ -162,6 +162,14 @@ static void checkPicture(const FilecastTelemetry& t) {
     CHECK(p.w == kFcTestColumns && p.h == kFcTestSegLines * kFcTestSegments, "size %d x %d", p.w, p.h);
     int bad = 0;
     for (int y = 0; y < p.have * kFcTestSegLines; y += 3) for (int x = 0; x < p.w; x += 5) if ((*p.px)[(size_t)y * p.w + x] != (filecastTestPixel(x, y) >> 2)) bad++;
+    if (bad) {   // which segments, and how: a whole segment of zeros has not landed, anything else is damage
+        printf("    picture %s %s: %d/%d segments\n", p.channel.c_str(), p.stamp.c_str(), p.have, p.total);
+        for (int s = 0; s < p.total; s++) {
+            int wrong = 0, zero = 0, n = 0;
+            for (int y = s * kFcTestSegLines; y < (s + 1) * kFcTestSegLines; y += 3) for (int x = 0; x < p.w; x += 5) { const int v = (*p.px)[(size_t)y * p.w + x]; n++; zero += v == 0; wrong += v != (filecastTestPixel(x, y) >> 2); }
+            printf("      segment %2d: %d of %d wrong, %d zero\n", s + 1, wrong, n, zero);
+        }
+    }
     CHECK(bad == 0, "%d wrong pixels", bad);
 }
 
