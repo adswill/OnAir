@@ -2,6 +2,7 @@
 #include "dect2/zwave/zwave_rx.h"
 #include "dect2/zwave/zwave_proto.h"
 #include "dect2/zwave/zwave_tel.h"
+#include "dect2/map/mesh_topology_feed.h"
 #include "dect2/common/mathconst.h"
 #include "dect2/dsp/gen_util.h"
 #include <algorithm>
@@ -128,6 +129,9 @@ struct ZwaveReceiver::Impl {
     double cfoEma = 0;
     // tables (under mu)
     std::deque<ZwFrame> logq;
+    MeshTopology topo;                           // routes and links of every home ID heard (mesh_topology.h)
+    TopoSnapshot topoCache;
+    double topoAt = -1e9;
     std::map<uint32_t, ZwNetwork> nets;
     std::map<uint64_t, ZwNode> nodes;
     std::map<std::string, uint64_t> perCc;
@@ -270,6 +274,7 @@ struct ZwaveReceiver::Impl {
             if (n.id == 0 && n.sent == 0 && n.received == 0) { n.homeId = f.homeId; n.home = z.home; n.id = id; n.firstSec = z.sec; n.role = id == 1 ? "controller" : "node"; }
             return n;
         };
+        topoFeedZwave(topo, f, snr, z.sec);
         ZwNode& s = node(f.src);
         s.sent++; if (enc) s.encrypted++;
         s.rate = dec.rate; s.rssi = levelDb; s.lastSec = z.sec; s.lastWall = z.wallTime;
@@ -361,6 +366,7 @@ void ZwaveReceiver::setLogCallback(std::function<void(const std::string&)> cb) {
 void ZwaveReceiver::clearResults() {
     std::lock_guard<std::mutex> lk(p_->mu);
     p_->logq.clear(); p_->nets.clear(); p_->nodes.clear(); p_->perCc.clear();
+    p_->topo.clear(); p_->topoCache = TopoSnapshot(); p_->topoAt = -1e9;
     p_->ok = p_->bad = p_->bursts = p_->encS0 = p_->encS2 = p_->acks = 0;
     for (auto& v : p_->perRate) v = 0;
     for (auto& c : p_->chans) c.frames = c.bad = 0;
@@ -403,6 +409,8 @@ bool ZwaveReceiver::telemetry(ZwaveTelemetry& out, uint64_t lastSeq) {
     for (const auto& kv : p->nodes) out.nodes.push_back(kv.second);
     std::sort(out.nodes.begin(), out.nodes.end(), [](const ZwNode& a, const ZwNode& b) { return a.lastSec > b.lastSec; });
     out.log.assign(p->logq.begin(), p->logq.end());
+    if (p->now() - p->topoAt >= 1.0 || p->topoAt > p->now()) { p->topoCache = p->topo.snapshot(); p->topoAt = p->now(); }
+    out.topo = p->topoCache;
     return true;
 }
 

@@ -26,7 +26,7 @@ struct LoraTopoState {
 };
 
 // A node-table entry of the mesh monitor: role, name, position (any may be empty / unknown).
-void topoNoteMeshNode(MeshTopology& t, const std::string& id, const std::string& name, const std::string& role, bool hasPos, double lat, double lon, double now);
+void topoNoteMeshNode(MeshTopology& t, const std::string& id, const std::string& name, const std::string& role, bool hasPos, double lat, double lon, double now, int protocol = 1);
 // One decoded LoRa packet (Meshtastic and MeshCore are used, others ignored). `now` is any monotonic time in seconds.
 void topoFeedLora(MeshTopology& t, LoraTopoState& st, const MeshPacket& p, double now);
 // One Z-Wave frame whose check passed; snrDb is the receiver's estimate.

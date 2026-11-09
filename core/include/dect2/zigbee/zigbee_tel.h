@@ -1,6 +1,7 @@
 // Zigbee / IEEE 802.15.4 monitor telemetry, shared by the receiver and the UI.
 // The first members are copied into RxTelemetry (history plot, top bar): keep them and their meaning.
 #pragma once
+#include "dect2/map/mesh_topology.h"
 #include <cstdint>
 #include <cstdio>
 #include <string>
@@ -84,6 +85,7 @@ struct ZigbeeTelemetry {
     std::vector<ZbPan> pans;           // most recently heard first
     std::vector<ZbDevice> devices;     // most recently heard first
     std::vector<ZbFrame> log;          // newest first, at most kZbLogMax
+    TopoSnapshot topo;                 // the mesh of each PAN: links, routers, single points of failure (refreshed about once a second)
 };
 
 inline std::string zigbeeSummary(const ZigbeeTelemetry& t) {

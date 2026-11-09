@@ -7,6 +7,7 @@
 #include "../app.h"
 #include "dect2/common/u8file.h"
 #include "dect2/loraraw/loraraw_lab.h"
+#include "dect2/loraraw/loraraw_survey.h"
 #include "dect2/protolab/protolab.h"
 #include "dect2/signallab/signallab.h"
 #include "dect2/source/source.h"
@@ -74,6 +75,8 @@ struct State {
     std::vector<dect2::lora::LabFrame> lrFrames;
     dect2::lora::DemodStats lrStats;
     dect2::lora::LabDetect lrDet;
+    dect2::lora::SurveyResult lrSurvey;   // the wideband survey: every LoRa signal of the capture
+    double lrCentreMhz = 0;               // the capture's centre frequency, 0 unknown (the survey then shows offsets only)
     std::string lrNote;
     // evaluation
     int evalCases = 40;
@@ -831,10 +834,16 @@ void loraTab(App& a) {
     const bool run = ImGui::Button(tr("Demodulate"));
     ImGui::SameLine();
     const bool det = ImGui::Button(tr("Auto-detect parameters"));
+    ImGui::SameLine();
+    const bool sv = ImGui::Button(tr("Survey all channels"));
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Finds every LoRa signal in the whole capture at once, whatever its spreading factor, bandwidth or sync word, and says which network it looks like (Meshtastic preset, LoRaWAN plan, LoRa APRS, MeshCore, private). Nothing has to be set first."));
     ImGui::EndDisabled();
-    if (run || det) {
+    ImGui::SetNextItemWidth(110 * gUi);
+    ImGui::InputDouble(tr("Centre frequency of the capture (MHz, optional)"), &S.lrCentreMhz, 0, 0, "%.3f");
+    if (run || det || sv) {
         const dect2::lora::LabSettings ls = lrSettings();
-        const bool detect = det, autoOff = S.lrAutoOffset;
+        const bool detect = det, autoOff = S.lrAutoOffset, survey = sv;
+        const double centreHz = S.lrCentreMhz * 1e6;
         const int src = S.lrSource;
         const std::string path = S.path;
         static const dect2::protolab::IqFormat fmts[] = {dect2::protolab::IqFormat::Cf32, dect2::protolab::IqFormat::Cs16, dect2::protolab::IqFormat::Cu8, dect2::protolab::IqFormat::Cs8};
@@ -844,7 +853,7 @@ void loraTab(App& a) {
         double selRate = 0, selOff = 0;
         bool ok = true;
         if (src == 1) { std::lock_guard<std::mutex> lk(S.mu); S.err.clear(); ok = lrSamples(a, sel, selRate, selOff); }
-        if (ok) startWork(detect ? tr("searching the LoRa parameters") : tr("demodulating LoRa"), [=, sel = std::move(sel)]() mutable {
+        if (ok) startWork(survey ? tr("surveying the LoRa signals") : detect ? tr("searching the LoRa parameters") : tr("demodulating LoRa"), [=, sel = std::move(sel)]() mutable {
             std::vector<dect2::cf32> x;
             double fs = rate, off = fileOff;
             if (src == 1) { x = std::move(sel); fs = selRate; off = selOff; }
@@ -854,7 +863,13 @@ void loraTab(App& a) {
                 if (!dect2::protolab::loadIq(path, fmt, iq, err, 30000000)) { std::lock_guard<std::mutex> lk(S.mu); S.err = err; return; }
                 x.assign(iq.begin(), iq.end());
             }
-            if (detect) {
+            if (survey) {
+                dect2::lora::SurveyOptions so;
+                so.centerHz = centreHz;
+                const dect2::lora::SurveyResult sr = dect2::lora::loraSurvey(x.data(), x.size(), fs, so);
+                std::lock_guard<std::mutex> lk(S.mu);
+                S.lrSurvey = sr; S.lrNote = sr.note; S.lrDet = dect2::lora::LabDetect(); S.lrFrames.clear();
+            } else if (detect) {
                 dect2::lora::LabDetectOptions o;
                 o.autoOffset = autoOff; o.offsetHz = ls.offsetHz + (src == 1 ? off : 0);
                 const dect2::lora::LabDetect d = dect2::lora::labAutoDetect(x.data(), x.size(), fs, o);
@@ -883,6 +898,34 @@ void loraTab(App& a) {
             if (++shown > 6) break;
             ImGui::BulletText("SF%d, %.1f kHz: %d frame(s), %d with a good CRC, %d preamble(s)", c.sf, c.bwHz / 1e3, c.frames, c.crcOk, c.preambles);
         }
+    }
+    if (!S.lrSurvey.entries.empty() && ImGui::BeginTable("##lrsurvey", 9, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY, ImVec2(0, 200 * gUi))) {
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableSetupColumn(tr("Network"), ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn(tr("Frequency"), ImGuiTableColumnFlags_WidthFixed, 90 * gUi);
+        ImGui::TableSetupColumn(tr("SF"), ImGuiTableColumnFlags_WidthFixed, 34 * gUi);
+        ImGui::TableSetupColumn(tr("Bandwidth"), ImGuiTableColumnFlags_WidthFixed, 70 * gUi);
+        ImGui::TableSetupColumn(tr("CR"), ImGuiTableColumnFlags_WidthFixed, 36 * gUi);
+        ImGui::TableSetupColumn(tr("Sync"), ImGuiTableColumnFlags_WidthFixed, 40 * gUi);
+        ImGui::TableSetupColumn(tr("Frames"), ImGuiTableColumnFlags_WidthFixed, 60 * gUi);
+        ImGui::TableSetupColumn(tr("SNR"), ImGuiTableColumnFlags_WidthFixed, 44 * gUi);
+        ImGui::TableSetupColumn(tr("Duty"), ImGuiTableColumnFlags_WidthFixed, 50 * gUi);
+        ImGui::TableHeadersRow();
+        for (const auto& e : S.lrSurvey.entries) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(e.network.c_str());
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", e.detail.c_str());
+            ImGui::TableNextColumn();
+            if (e.freqHz > 0) ImGui::Text("%.4f MHz", e.freqHz / 1e6); else ImGui::Text("%+.1f kHz", e.offsetHz / 1e3);
+            ImGui::TableNextColumn(); ImGui::Text("%d", e.sf);
+            ImGui::TableNextColumn(); ImGui::Text("%.1f kHz", e.bwHz / 1e3);
+            ImGui::TableNextColumn(); if (e.cr) ImGui::Text("4/%d", e.cr);
+            ImGui::TableNextColumn(); if (e.decoded) ImGui::Text("%02X", e.syncWord);
+            ImGui::TableNextColumn(); ImGui::Text("%d/%d", e.crcOk, e.frames);
+            ImGui::TableNextColumn(); if (e.decoded) ImGui::Text("%.1f", e.snrDb);
+            ImGui::TableNextColumn(); if (e.decoded) ImGui::Text("%.1f %%", e.dutyPct);
+        }
+        ImGui::EndTable();
     }
     if (!S.lrFrames.empty() && ImGui::BeginTable("##lrframes", 7, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY, ImVec2(0, 220 * gUi))) {
         ImGui::TableSetupScrollFreeze(0, 1);

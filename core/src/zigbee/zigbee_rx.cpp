@@ -5,6 +5,7 @@
 #include "dect2/zigbee/zigbee_proto.h"
 #include "zigbee_bpsk.h"
 #include "dect2/thread/thread_proto.h"
+#include "dect2/map/mesh_topology_feed.h"
 #include "dect2/dsp/gen_util.h"
 #include <algorithm>
 #include <atomic>
@@ -91,6 +92,8 @@ struct ZigbeeReceiver::Impl {
     int64_t decodedUntil = 0;
     // results
     ZigbeeTelemetry tel, pub;
+    MeshTopology topo;                 // links and routers of every PAN heard (mesh_topology.h)
+    double topoSnapAt = -1e9;
     std::unordered_map<uint32_t, size_t> panIdx;     // pan << 8 | channel
     std::unordered_map<uint32_t, size_t> shortIdx;   // pan << 16 | short
     std::unordered_map<uint64_t, size_t> extIdx;
@@ -173,8 +176,8 @@ struct ZigbeeReceiver::Impl {
     ZigbeeTelemetry loaded;
     double loadedAt = 0;
     static void moveLists(ZigbeeTelemetry& to, ZigbeeTelemetry& from) {
-        to.pans = std::move(from.pans); to.devices = std::move(from.devices); to.log = std::move(from.log);
-        from.pans.clear(); from.devices.clear(); from.log.clear();
+        to.pans = std::move(from.pans); to.devices = std::move(from.devices); to.log = std::move(from.log); to.topo = std::move(from.topo);
+        from.pans.clear(); from.devices.clear(); from.log.clear(); from.topo = TopoSnapshot();
     }
     static void shiftTimes(ZigbeeTelemetry& t, double dt) {
         for (auto& p : t.pans) { p.firstSec += dt; p.lastSec += dt; }
@@ -204,6 +207,7 @@ struct ZigbeeReceiver::Impl {
         const uint64_t seq = tel.seq;
         tel = ZigbeeTelemetry(); tel.seq = seq; tel.inputRate = rate;
         panIdx.clear(); shortIdx.clear(); extIdx.clear();
+        topo.clear(); topoSnapAt = -1e9;
         snrAvg = 0;
         nextPps = rate > 0 ? (double)nIn + rate : 1; ppsAcc = 0;
     }
@@ -477,6 +481,7 @@ struct ZigbeeReceiver::Impl {
         if (f.type == Beacon && f.hasSrcPan) { pan = f.srcPan; hasPan = true; }
         else if (f.hasDestPan && f.destPan != 0xFFFF) { pan = f.destPan; hasPan = true; }
         else if (f.hasSrcPan && f.srcPan != 0xFFFF) { pan = f.srcPan; hasPan = true; }
+        topoFeedIeee(topo, f, thread ? &th : nullptr, hasPan ? pan : (uint16_t)0, (float)snrAvg, sec);
         // the log
         ZbFrame lf;
         lf.wallTime = wall; lf.sec = sec; lf.channel = ch; lf.type = frameTypeName(f.type); lf.src = srcText(f); lf.dst = dstText(f);
@@ -551,6 +556,7 @@ struct ZigbeeReceiver::Impl {
             if (tel.ppsHist.size() > kZbPpsHist) tel.ppsHist.erase(tel.ppsHist.begin());
             ppsAcc = 0; nextPps += rate;
         }
+        if (tel.timeSec - topoSnapAt >= 1.0 || topoSnapAt > tel.timeSec) { tel.topo = topo.snapshot(); topoSnapAt = tel.timeSec; }
         ZigbeeTelemetry out = tel;
         std::stable_sort(out.pans.begin(), out.pans.end(), [](const ZbPan& x, const ZbPan& y) { return x.lastSec > y.lastSec; });
         std::stable_sort(out.devices.begin(), out.devices.end(), [](const ZbDevice& x, const ZbDevice& y) { return x.lastSec > y.lastSec; });

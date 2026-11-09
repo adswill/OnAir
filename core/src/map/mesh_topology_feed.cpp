@@ -33,9 +33,9 @@ std::string topoGroupName(const std::string& g) {
     return g;
 }
 
-void topoNoteMeshNode(MeshTopology& t, const std::string& id, const std::string& name, const std::string& role, bool hasPos, double lat, double lon, double now) {
+void topoNoteMeshNode(MeshTopology& t, const std::string& id, const std::string& name, const std::string& role, bool hasPos, double lat, double lon, double now, int protocol) {
     if (id.empty()) return;
-    TopoNode& n = t.node(id, kMeshtastic, now);
+    TopoNode& n = t.node(id, protocol == 2 ? kMeshCore : kMeshtastic, now);
     n.placeholder = false;
     if (!name.empty()) n.label = name;
     if (!role.empty()) n.role = role;

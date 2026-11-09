@@ -1,5 +1,6 @@
 // Z-Wave monitor telemetry, shared by the receiver and the UI. The first members are copied into RxTelemetry (history plot, top bar).
 #pragma once
+#include "dect2/map/mesh_topology.h"
 #include <cstdint>
 #include <cstdio>
 #include <string>
@@ -80,6 +81,7 @@ struct ZwaveTelemetry {
     std::vector<ZwNetwork> networks;   // most recently heard first
     std::vector<ZwNode> nodes;
     std::vector<ZwFrame> log;          // newest first
+    TopoSnapshot topo;                 // the mesh of each home ID: repeaters, routes, single points of failure (refreshed about once a second)
 };
 
 inline std::string zwaveSummary(const ZwaveTelemetry& t) {
