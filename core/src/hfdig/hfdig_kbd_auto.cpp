@@ -28,26 +28,38 @@ KbdAutoHyp trial(const float* x, size_t n, const KbdConfig& base) {
     KbdAutoHyp h;
     h.tones = c.tones; h.bandwidth = c.bandwidth; h.variant = c.variant; h.centreHz = t.centreHz;
     h.chars = (uint32_t)t.chars;
-    h.readable = autoparam::readableFraction(t.text);
+    // the start of a decode is noise (the signal search, the interleaver filling): judge the rest
+    const size_t skip = t.text.size() / 3;
+    h.readable = autoparam::readableFraction(t.text.substr(skip));
     h.score = (float)((double)t.chars * h.readable * h.readable);
     return h;
 }
 
-// the sets of tones and bandwidth worth trying for this occupied band and pitch; Olivia and Contestia share the grid
-std::vector<KbdConfig> oliviaSets(int family, const autoparam::ToneComb& comb) {
-    std::vector<KbdConfig> v;
-    for (int bw : kKbdBwList) {
-        if (comb.found && std::fabs(comb.occupiedHz - bw) > 0.45 * bw) continue;
+// how a set fits the shape measured from the spectrum: 0 is perfect
+double setDistance(const autoparam::ToneComb& comb, double bw) {   // the pitch of the tones is not usable: orthogonal tones overlap in the spectrum, there is no comb to see
+    return comb.occupiedHz > 0 ? std::fabs(std::log(bw / std::max(1.0, comb.occupiedHz))) : 0;
+}
+struct Cand { KbdConfig c; double dist; };
+
+std::vector<Cand> oliviaSets(int family, const autoparam::ToneComb& comb) {
+    std::vector<Cand> v;
+    for (int bw : kKbdBwList)
         for (int tones : kKbdTonesList) {
             const double pitch = (double)bw / tones;
-            if (pitch < 7.8 || pitch > 500) continue;   // beyond the sets stations use: 500 Hz / 64 is the slowest tried
-            if (comb.spacingHz > 0 && (pitch > comb.spacingHz * 2.3 || pitch < comb.spacingHz * 0.43)) continue;
+            if (pitch < 7.8 || pitch > 500) continue;   // beyond the sets stations use
             KbdConfig c; c.family = family; c.tones = tones; c.bandwidth = bw;
-            v.push_back(c);
+            v.push_back({c, setDistance(comb, bw)});
         }
+    return v;
+}
+
+std::vector<Cand> variantSets(int family, const autoparam::ToneComb& comb) {
+    std::vector<Cand> v;
+    for (int i = 0; i < kbdVariantCount(family); i++) {
+        KbdConfig c; c.family = family; c.variant = i;
+        const double bw = kbdBandwidthHz(c);
+        v.push_back({c, setDistance(comb, bw)});
     }
-    if (v.empty())
-        for (int bw : kKbdBwList) for (int tones : {8, 16, 32}) { KbdConfig c; c.family = family; c.tones = tones; c.bandwidth = bw; v.push_back(c); }
     return v;
 }
 
@@ -98,13 +110,25 @@ std::vector<KbdAutoHyp> hellAnalyse(const float* x, size_t n, int maxHyps) {
     for (auto& v : env) v -= envMean;
     int best = -1;
     double bestV = 0;
-    for (int i = 0; i < (int)(sizeof kHell / sizeof *kHell); i++) {
-        if (kHell[i].fsk == amKeyed) continue;
-        double v = lineAt(kHell[i].fsk ? dfq : env, kHell[i].pps, kFs);
-        if (kHell[i].fsk) v *= 1.0 / (1.0 + std::fabs(q - kHell[i].dev) / std::max(20.0, kHell[i].dev));
-        if (v > bestV) { bestV = v; best = i; }
+    const int nHell = (int)(sizeof kHell / sizeof *kHell);
+    if (amKeyed) {   // on/off keying: the narrow ones (about 390 Hz) and the two fast ones (over 1 kHz); the keying line separates the pair
+        for (int i = 0; i < nHell; i++) {
+            if (kHell[i].fsk || (comb.occupiedHz > 900) != (i == 3 || i == 4)) continue;
+            const double v = lineAt(env, kHell[i].pps, kFs);
+            if (v > bestV) { bestV = v; best = i; }
+        }
+        if (best < 0 || bestV < 0.008) return out;
+    } else {         // frequency keying: the occupied width follows the deviation
+        double bestD = 1e9;
+        for (int i = 0; i < nHell; i++) {
+            if (!kHell[i].fsk) continue;
+            const double nominal = kHell[i].dev * 2 + 180;
+            const double d = std::fabs(comb.occupiedHz - nominal);
+            if (d < bestD) { bestD = d; best = i; }
+        }
+        if (best < 0 || bestD > 0.4 * (kHell[best].dev * 2 + 180) || comb.snrDb < 12) return out;
+        bestV = comb.snrDb;
     }
-    if (best < 0 || bestV < 0.01) return out;
     KbdAutoHyp h;
     h.variant = best; h.centreHz = comb.centreHz; h.score = (float)bestV; h.readable = 1; h.chars = 0;
     out.push_back(h);
@@ -119,27 +143,24 @@ std::vector<KbdAutoHyp> kbdAutoAnalyse(const float* audio, size_t n, int family,
     if (family == KbdHell) return hellAnalyse(audio, n, maxHyps);
     const auto comb = autoparam::analyseToneComb(audio, n, kFs);
     if (!comb.found || comb.snrDb < 4) return res;   // nothing stands out: no decoder would find anything
-    std::vector<KbdConfig> sets;
-    if (family == KbdOlivia || family == KbdContestia) sets = oliviaSets(family, comb);
-    else {
-        for (int v = 0; v < kbdVariantCount(family); v++) {
-            KbdConfig c; c.family = family; c.variant = v;
-            const double bw = kbdBandwidthHz(c);
-            if (comb.found && (comb.occupiedHz < bw * 0.35 || comb.occupiedHz > bw * 3.0)) continue;
-            sets.push_back(c);
-        }
-        if (sets.empty()) for (int v = 0; v < kbdVariantCount(family); v++) { KbdConfig c; c.family = family; c.variant = v; sets.push_back(c); }
-    }
-    if (sets.size() > 8) sets.resize(8);
-    const size_t take = std::min(n, (size_t)(24 * kFs));
+    auto sets = family == KbdOlivia || family == KbdContestia ? oliviaSets(family, comb) : variantSets(family, comb);
+    std::stable_sort(sets.begin(), sets.end(), [](const Cand& a, const Cand& b) { return a.dist < b.dist; });
+    if (sets.size() > 5) sets.resize(5);
+    const size_t take = std::min(n, (size_t)(45 * kFs));
     const float* x = audio + (n - take);
+    // the shape of the signal decides; the decoder only has to agree. A wrong set often still gives letters (noise decodes to the short codes), so the text alone cannot choose.
+    double firstDist = -1;
     std::vector<KbdAutoHyp> all;
-    for (auto& c : sets) {
-        c.centreHz = comb.centreHz > 0 ? comb.centreHz : 1500;
-        auto h = trial(x, take, c);
-        if (h.chars >= 8 && h.readable >= 0.8) all.push_back(h);
+    for (auto& k : sets) {
+        k.c.centreHz = comb.centreHz > 0 ? comb.centreHz : 1500;
+        auto h = trial(x, take, k.c);
+        if (h.chars < 8 || h.readable < 0.85) continue;
+        if (firstDist < 0) firstDist = k.dist;
+        if (k.dist > firstDist + 0.25) break;
+        all.push_back(h);
     }
-    std::sort(all.begin(), all.end(), [](const KbdAutoHyp& a, const KbdAutoHyp& b) { return a.score > b.score; });
+    // among sets that fit the band equally, the cleanest text; only a clear tie goes to the one with the most of it
+    std::stable_sort(all.begin(), all.end(), [](const KbdAutoHyp& a, const KbdAutoHyp& b) { return std::fabs(a.readable - b.readable) > 0.02 ? a.readable > b.readable : a.score > b.score; });
     for (const auto& h : all) { if ((int)res.size() >= maxHyps) break; res.push_back(h); }
     return res;
 }

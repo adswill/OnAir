@@ -366,8 +366,10 @@ void applyBandwidth(App& a) {
     if (const ModeTuning* mt = a.family >= 6 ? modeTuning(a.family + 2) : nullptr) {   // the mode says what the radio should do
         a.tune.bandwidthMhz = mt->bandwidthMhz; a.tune.sampleRate = mt->sampleRate; a.tune.basebandFilterHz = mt->basebandHz;
         if (mt->stdMode == 9) {   // DTMB: the channel width the user picked (6 MHz in Cuba); the test signal follows it
-            a.tune.bandwidthMhz = a.dtmbBwMhz; a.tune.basebandFilterHz = a.dtmbBwMhz * 1e6;
+            const int dtmbW = a.dtmbAuto ? 8 : a.dtmbBwMhz;    // Auto captures the whole 8 MHz and measures the width in the receiver
+            a.tune.bandwidthMhz = dtmbW; a.tune.basebandFilterHz = dtmbW * 1e6;
             a.tune.synth.modeOpt[7] = a.dtmbBwMhz == 6 ? 1 : 0;
+            a.engine.dtmb().setAutoWidth(a.dtmbAuto);
         } else if (mt->stdMode == 10 && a.atvFm && !a.atvNbtv) {   // analog FPV video: a link about 17 MHz wide, the radio's filter at 18 MHz
             a.tune.bandwidthMhz = 18; a.tune.sampleRate = 20e6; a.tune.basebandFilterHz = 18e6;
         } else if (mt->stdMode == 10 && a.atvWide && !a.atvNbtv) {   // system E: a 14 MHz channel

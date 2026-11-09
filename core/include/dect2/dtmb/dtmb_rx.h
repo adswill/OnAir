@@ -17,6 +17,7 @@ public:
     DtmbReceiver();
     ~DtmbReceiver();
 
+    void setAutoWidth(bool on);                  // the channel width (8 or 6 MHz) follows the occupied band of the input while nothing is locked; any thread
     void configure(double inputRateHz, double bwMhz = 8);   // bwMhz: the channel, 8 MHz (China) or 6 MHz (Cuba)
     bool ready() const;                                  // false when the input rate is too low for this mode
     void reset();                                        // after a retune: forget the signal, drop queued output

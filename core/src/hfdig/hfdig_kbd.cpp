@@ -272,7 +272,7 @@ void HfdigKbd::telemetry(HfdigKbdTelemetry& out) const {
 // The Auto rule (as RTTY's): no text for a while means the settings are wrong or the signal changed; then the audio goes through the trial decoders on another
 // thread. A good decode is left alone. The analysis job is dropped when the mode changes.
 void HfdigKbd::Impl::autoTick(const float* x, size_t n) {
-    constexpr size_t kCap = (size_t)(30 * kbd::kFs);
+    constexpr size_t kCap = (size_t)(45 * kbd::kFs);
     const bool on = cfg.autoParams;
     if (!on) { autoFill = autoPos = 0; autoLocked = false; if (autoJob.valid()) autoDiscard = true; else return; }
     if (autoHist.size() != kCap) autoHist.assign(kCap, 0.f);
@@ -297,7 +297,7 @@ void HfdigKbd::Impl::autoTick(const float* x, size_t n) {
     const bool hell = cfg.family == KbdHell;
     if (t.chars != autoCharsSeen || (hell && eng && eng->locked)) { autoCharsSeen = t.chars; autoCharsAt = samples; }
     const uint64_t quiet = samples - autoCharsAt;
-    if (autoLocked && quiet < (uint64_t)(hell ? 6 : 14) * (uint64_t)kbd::kFs) return;
+    if (autoLocked && quiet < (uint64_t)(hell ? 6 : 14) * (uint64_t)kbd::kFs && (hell || recent.size() < 40 || plausible())) return;   // text that stops reading as text: the settings no longer fit
     autoLocked = false;
     if (autoFill < (size_t)(8 * kbd::kFs) || samples - autoLastRun < (uint64_t)(6 * kbd::kFs)) return;
     autoLastRun = samples;

@@ -43,6 +43,7 @@ struct DtmbTelemetry {
     uint64_t cwDropped = 0;      // codewords dropped because the decoder was behind
     uint64_t cwSkipped = 0;      // codewords not tried: after a long run of failures only every eighth is decoded
     uint64_t bchCorrected = 0;   // BCH blocks with one corrected bit
+    double autoWidthMhz = 0;     // Auto: the width measured from the spectrum (8 or 6), 0 while off or not measured
     bool tsLock = false;         // transport packets with good sync bytes are coming out
     float netMbps = 0;           // payload bit rate of the signalled mode
     float frameLossPct = 0;      // share of recent frames without a usable header

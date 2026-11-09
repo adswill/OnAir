@@ -1,5 +1,6 @@
 // PSK31 / PSK63 multi-signal receiver (see psk_rx.h).
 #include "dect2/psk/psk_rx.h"
+#include "dect2/autoparam/autoparam.h"
 #include "dect2/results/results_io.h"
 #include "dect2/psk/psk_tel.h"
 #include "dect2/psk/psk_varicode.h"
@@ -669,7 +670,13 @@ uint64_t PskReceiver::Impl::trialMode(const std::vector<cf32>& band, int mode, f
     uint64_t ok = 0, bad = 0;
     t->report();
     ok = t->tel.blocksOk; bad = t->tel.blocksBad;
-    return ok >= 16 && ok >= 4 * bad ? ok - 3 * bad : 0;
+    if (!(ok >= 16 && ok >= 4 * bad)) return 0;
+    // a too-fast modulation still produces characters from a slower signal (the short codes of noise); only text that reads counts
+    std::string text;
+    for (const PskSignal& s : t->tel.signals) if (s.chars > 0) text += s.text;
+    const double r = autoparam::readableFraction(text.substr(text.size() / 3));
+    if (r < 0.85) return 0;
+    return (uint64_t)(1000.0 * (double)(ok - 3 * bad) * r * r / pskBaud(mode));   // per baud: a too-fast decoder runs off short codes, its text per symbol is what is low
 }
 std::pair<int, uint64_t> PskReceiver::Impl::trialAll(const std::vector<cf32>& band, float thr) {
     int best = -1;
@@ -689,7 +696,12 @@ void PskReceiver::Impl::autoFeed(const cf32* x, size_t n) {
     for (size_t i = 0; i < n; i++) { autoRing[autoPos] = x[i]; if (++autoPos >= cap) autoPos = 0; }
     autoFill = std::min(cap, autoFill + n);
     autoSamples += n;
-    if (tel.blocksOk > autoCharsSeen) { autoCharsSeen = tel.blocksOk; autoGoodAt = autoSamples; }
+    if (tel.blocksOk > autoCharsSeen) {
+        autoCharsSeen = tel.blocksOk;
+        std::string t;   // the newest text of the band: garbage keeps the counter running, so the count alone does not say the lock is good
+        for (const PskSignal& s : tel.signals) if (s.chars > 0) t += s.text.substr(s.text.size() > 80 ? s.text.size() - 80 : 0);
+        if (t.size() < 24 || autoparam::readableFraction(t) >= 0.8) autoGoodAt = autoSamples;
+    }
     if (autoJob.valid()) {
         if (autoJob.wait_for(std::chrono::seconds(0)) != std::future_status::ready) return;
         const auto r = autoJob.get();

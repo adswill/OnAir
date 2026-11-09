@@ -1,6 +1,7 @@
 // Signal workbench: the Measure, Demodulate, Bits and Export tabs, the background jobs behind them and the listening.
 #include "dect2/common/thread_name.h"
 #include "wb_state.h"
+#include "dect2/signallab/signallab.h"
 #include "ui/scale.h"
 #include <algorithm>
 #include <cmath>
@@ -287,6 +288,38 @@ static void autoBaud(App&) {
     s.note = b;
 }
 
+// One button for the Demodulate tab: modulation, then symbol rate, from the selection (Signal Lab, core/src/signallab). Only what it is sure of is applied.
+static void autoAll(App& a) {
+    State& s = S();
+    uint64_t t0, t1; double f0, f1;
+    selection(t0, t1, f0, f1);
+    double bw = f1 > f0 ? f1 - f0 : (s.src->real() ? 0.96 * s.src->rate() / 2 : 0.96 * s.src->rate());
+    double centre = f1 > f0 ? 0.5 * (f0 + f1) : (s.src->real() ? s.src->rate() / 4 : 0);
+    Extracted e;
+    t1 = std::min<uint64_t>(t1, t0 + (uint64_t)(1u << 25));
+    if (!extractBand(*s.src, t0, t1, centre, bw, std::min(std::max(bw * 2.5, 4000.0), s.src->rate()), e, 1u << 20) || e.x.size() < 4096) { s.note = tr("the selection is too short"); return; }
+    const auto mod = dect2::signallab::classify(e.x, e.rate, e.bwHz);
+    const auto g = mod.best();
+    namespace L = dect2::signallab;
+    int kind = -1;
+    if (g.confidence >= 0.35) {
+        if (g.mod == L::Mod::OOK || g.mod == L::Mod::ASK) kind = KAsk;
+        else if (g.mod == L::Mod::FSK) kind = g.order >= 4 ? KFsk4 : KFsk2;
+        else if (g.mod == L::Mod::MSK) kind = KMsk;
+        else if (g.mod == L::Mod::GMSK) kind = KGmsk;
+        else if (g.mod == L::Mod::PSK) kind = g.order >= 8 ? KPsk8 : g.order >= 4 ? KQpsk : KBpsk;
+    }
+    char b[200];
+    if (kind < 0) { snprintf(b, sizeof b, "%s", tr("Auto: the modulation is not clear (select one burst of data, or set it by hand)")); s.note = b; return; }
+    s.dp.kind = kind;
+    SymEstimate est;
+    const bool haveRate = estimateSymbolRate(e.x.data(), e.x.size(), e.rate, est);
+    if (haveRate) s.dp.baud = snapBaud(est.baud);
+    snprintf(b, sizeof b, tr("Auto: %s, %.0f%% sure; symbol rate %s"), kindName(kind), g.confidence * 100, haveRate ? (std::to_string((int)std::lround(s.dp.baud)) + " Bd").c_str() : tr("not found"));
+    s.note = b;
+    (void)a;
+}
+
 static void eyePlot(const DemodResult& r, ImVec2 size) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
     const ImVec2 p0 = ImGui::GetCursorScreenPos();
@@ -359,6 +392,9 @@ void drawDemod(App& a) {
     DemodParams& p = s.dp;
     // the demodulator
     ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("Demodulator"); ImGui::SameLine(0, 6 * gUi);
+    if (ImGui::Button(tr("Auto"))) autoAll(a);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Finds the modulation and symbol rate of the selection and fills them in. You can change them afterwards."));
+    ImGui::SameLine(0, 8 * gUi);
     ImGui::SetNextItemWidth(120 * gUi);
     if (ImGui::BeginCombo("##wbkind", kindName(p.kind))) {
         static const int order[] = {KAm, KFm, KUsb, KLsb, KCw, KAsk, KFsk2, KFsk4, KAfsk, KBpsk, KQpsk, KPsk8, KMsk, KGmsk};

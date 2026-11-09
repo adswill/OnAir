@@ -132,8 +132,8 @@ ToneComb analyseToneComb(const float* x, size_t n, double fs) {
     const auto pw = powerSpectrum(x, n, kN, kN / 2);
     const int lo = (int)(200 / bin), hi = std::min(kN / 2 - 2, (int)(3600 / bin));
     std::vector<double> sc(pw.begin() + lo, pw.begin() + hi + 1);
-    std::nth_element(sc.begin(), sc.begin() + (long)sc.size() / 2, sc.end());
-    const double fl = std::max(1e-12, sc[sc.size() / 2]);
+    std::nth_element(sc.begin(), sc.begin() + (long)sc.size() / 5, sc.end());
+    const double fl = std::max(1e-12, sc[sc.size() / 5] * 1.6);   // the floor: a low percentile, a wide signal fills most of the band
     // smooth over about 10 Hz; a tone stands out against the floor
     std::vector<double> sm((size_t)(hi - lo + 1), 0.0);
     const int w = std::max(1, (int)std::lround(5 / bin));
@@ -171,27 +171,18 @@ ToneComb analyseToneComb(const float* x, size_t n, double fs) {
         for (auto& d : v) d -= mean;
         double r0 = 0;
         for (double d : v) r0 += d * d;
-        const int minLag = std::max(2, (int)(3.5 / bin)), maxLag = L / 2;
-        double best = 0;
-        int bestLag = 0;
-        for (int lag = minLag; lag <= maxLag; lag++) {
+        const int minLag = std::max(3, (int)(7.0 / bin)), maxLag = std::min(L / 2, (int)(520.0 / bin));
+        std::vector<double> ac((size_t)maxLag + 2, 0.0);
+        for (int lag = minLag - 1; lag <= maxLag + 1 && lag + 1 < L; lag++) {
             double c = 0;
             for (int k = 0; k + lag < L; k++) c += v[(size_t)k] * v[(size_t)(k + lag)];
-            c /= (double)(L - lag) / L;
-            if (c > best) { best = c; bestLag = lag; }
+            ac[(size_t)lag] = c / ((double)(L - lag) / L);
         }
-        if (bestLag > 0 && best > 0.2 * r0) {
-            // the first strong repeat, not a multiple of it
-            for (int d = 4; d >= 2; d--) {
-                const int sub = bestLag / d;
-                if (sub < minLag) continue;
-                double c = 0;
-                for (int k = 0; k + sub < L; k++) c += v[(size_t)k] * v[(size_t)(k + sub)];
-                c /= (double)(L - sub) / L;
-                if (c > 0.7 * best) { bestLag = sub; break; }
-            }
-            r.spacingHz = bestLag * bin;
-        }
+        double best = 0;
+        for (int lag = minLag; lag <= maxLag; lag++) best = std::max(best, ac[(size_t)lag]);
+        if (best > 0.2 * r0)
+            for (int lag = minLag; lag <= maxLag; lag++)   // the first local peak that is nearly as strong as the strongest: the pitch, not a multiple of it
+                if (ac[(size_t)lag] > ac[(size_t)lag - 1] && ac[(size_t)lag] >= ac[(size_t)lag + 1] && ac[(size_t)lag] >= 0.6 * best) { r.spacingHz = lag * bin; break; }
     }
     r.found = r.snrDb >= 4.0;
     return r;
