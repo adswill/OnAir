@@ -51,6 +51,9 @@ struct State {
     bool aliasDirty = false;                 // names edited in the table, written to the file when the field is left
     bool combine = true;                     // multi-copy combining (#20), saved as pagerCombine
     int pushedCombine = -1;
+    bool smartRepair = true, smartInsight = true, smartMedical = false;   // the smart layer (pager_intel.h), saved as pagerSmartRepair / pagerSmartInsight / pagerSmartMedical
+    int pushedSmart = -1;
+    bool pushedPlaces = false;
     bool selcall = false;                // also decode five-tone selective calls on the channel audio (saved as pagerSelcall)
     int pushedSelcall = -1;
     dect2::PagerKeywords kw;                 // keyword alerts: matched against the text and the capcode name, saved as pagerKeywords
@@ -93,6 +96,9 @@ void loadRead() {
     { const long cs = d.getI("pagerCharset", 0); S.charset = cs >= 0 && cs < dect2::kPagerCharsets ? (int)cs : 0; }
     S.decodedOnly = d.getI("pagerDecodedOnly", 0) != 0;
     S.combine = d.getI("pagerCombine", 1) != 0;
+    S.smartRepair = d.getI("pagerSmartRepair", 1) != 0;
+    S.smartInsight = d.getI("pagerSmartInsight", 1) != 0;
+    S.smartMedical = d.getI("pagerSmartMedical", 0) != 0;
     S.selcall = d.getI("pagerSelcall", 0) != 0;
     S.both = d.getI("pagerBoth", 0) != 0;
     {
@@ -259,6 +265,17 @@ void messageView(App& a) {
     if (ImGui::Checkbox(tr("Combine repeats"), &S.combine)) { plat::prefs().setI("pagerCombine", S.combine ? 1 : 0); savePrefs(a); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Networks send a page more than once. When a copy has code words the error correction cannot repair, the same words from an earlier copy of the same page are used, so the message comes out complete. Pages made this way are marked."));
     flowNext(12 * gUi);
+    if (ImGui::Checkbox(tr("Repair text"), &S.smartRepair)) { plat::prefs().setI("pagerSmartRepair", S.smartRepair ? 1 : 0); plat::prefs().flush(); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("When a code word is lost, the missing characters are filled in from words this address sent before, but only when one reading clearly beats the others. Guessed characters are shown in colour and listed in the tooltip; characters that cannot be guessed stay as ?."));
+    flowNext(12 * gUi);
+    if (ImGui::Checkbox(tr("Read positions and fields"), &S.smartInsight)) { plat::prefs().setI("pagerSmartInsight", S.smartInsight ? 1 : 0); plat::prefs().flush(); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Finds coordinates (decimal, degrees and minutes, UTM, MGRS) and place names from pager_places.csv (name,lat,lon per line) in the data folder, names the parts each address always sends, and groups pages of several addresses about one event. All of it stays on this computer."));
+    if (S.smartInsight) {
+        flowNext(12 * gUi);
+        if (ImGui::Checkbox(tr("Include medical pages"), &S.smartMedical)) { plat::prefs().setI("pagerSmartMedical", S.smartMedical ? 1 : 0); plat::prefs().flush(); }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Off by default for privacy: pages that look medical are not analysed, grouped or learned from."));
+    }
+    flowNext(12 * gUi);
     ImGui::TextDisabled("%s", tr("Channel")); ImGui::SameLine(0, 5 * gUi);
     ImGui::SetNextItemWidth(80 * gUi);
     if (ImGui::BeginCombo("##pgbw", a.pagerNarrow ? tr("12.5 kHz") : tr("25 kHz"))) {
@@ -405,7 +422,31 @@ void messageView(App& a) {
                 ImGui::TableNextColumn();
                 ImGui::PushFont(a.mono, 0);
                 if (m.type == dect2::kPagerTone) ImGui::TextDisabled("(tone only)");
+                else if (!m.repairedText.empty()) {
+                    ImGui::PushStyleColor(ImGuiCol_Text, pal::accent());
+                    ImGui::TextWrapped("%s  [repaired]", m.repairedText.c_str());
+                    ImGui::PopStyleColor();
+                    if (ImGui::IsItemHovered()) {
+                        std::string marked;
+                        bool in = false;
+                        for (size_t k = 0; k < m.repairedText.size(); k++) {
+                            const bool g = k < m.guessMask.size() && m.guessMask[k] == 1;
+                            if (g && !in) marked += '[';
+                            if (!g && in) marked += ']';
+                            in = g;
+                            marked += m.repairedText[k];
+                        }
+                        if (in) marked += ']';
+                        ImGui::SetTooltip(tr("Characters in [ ] were guessed from earlier pages of this address; ? could not be recovered.\n\n%s"), marked.c_str());
+                    }
+                }
                 else ImGui::TextWrapped("%s%s%s", m.text.c_str(), m.damaged ? "  [incomplete]" : "", m.combined ? "  [combined]" : "");
+                if (!m.fields.empty() || m.hasPos || m.incident) {
+                    std::string info;
+                    for (const dect2::PagerField& f : m.fields) info += f.key + ": " + f.value + "   ";
+                    if (m.hasPos) { char b[96]; snprintf(b, sizeof b, "%.5f, %.5f (%s%s)", m.lat, m.lon, m.place.c_str(), m.posApprox ? ", approximate" : ""); info += b; }
+                    if (!info.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", info.c_str()); ImGui::PopTextWrapPos(); }
+                }
                 if (m.combined && ImGui::IsItemHovered()) ImGui::SetTooltip(tr("Repaired from %d copies of this page: code words lost in this copy were taken from an earlier one."), m.copies);
                 ImGui::PopFont();
                 if (!m.flex && !m.numText.empty() && ImGui::IsItemHovered()) {
@@ -438,6 +479,10 @@ void statsView(App& a) {
     if (!live(a)) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "start the receiver to see the counters"); ImGui::PopTextWrapPos(); return; }
     auto kv = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); kvColumn(130 * gUi); ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::Text(fmt, v...); ImGui::PopTextWrapPos(); ImGui::PopFont(); };
     kv("last sync", "%s", t.lastSpeed >= 0 ? dect2::pagerSpeedName(t.lastSpeed) : "none yet");
+    for (size_t i = 0; i < t.incidents.size() && i < 8; i++) {
+        const dect2::PagerIncident& n = t.incidents[i];
+        kv(i == 0 ? tr("incidents") : "", "%d pages, %zu addresses: %.40s%s", n.count, n.capcodes.size(), n.title.c_str(), n.hasPos ? "  (position)" : "");
+    }
     kv("channel", "%.0f dB over the noise, carrier %+.0f Hz off", t.snrDb, t.cfoHz);
     kv("pages", "%llu", (unsigned long long)t.messagesTotal);
     ImGui::Spacing();
@@ -639,6 +684,21 @@ void tick(App& a) {
     if ((int)a.pagerNarrow != S.pushedNarrow) { a.engine.pager().setNarrowChannel(a.pagerNarrow); S.pushedNarrow = a.pagerNarrow; }
     if (m != S.pushedBaud) { a.engine.pager().setPocsagBauds(m); S.pushedBaud = m; }
     if ((int)S.selcall != S.pushedSelcall) { a.engine.pager().setSelcall(S.selcall); S.pushedSelcall = S.selcall; }
+    if (S.pushedPlaces != a.engine.running()) {   // the place list is read each time the receiver starts
+        S.pushedPlaces = a.engine.running();
+        if (S.pushedPlaces) {
+            std::ifstream f(plat::dataDir() + "/pager_places.csv");
+            std::stringstream ss; ss << f.rdbuf();
+            a.engine.pager().setPlaces(ss.str());
+        }
+    }
+    {
+        const int sm = (S.smartRepair ? 1 : 0) | (S.smartInsight ? 2 : 0) | (S.smartMedical ? 4 : 0);
+        if (sm != S.pushedSmart) {
+            a.engine.pager().setSmartRepair(S.smartRepair); a.engine.pager().setSmartInsight(S.smartInsight); a.engine.pager().setAnalyseMedical(S.smartMedical);
+            S.pushedSmart = sm;
+        }
+    }
     if ((int)S.combine != S.pushedCombine) { a.engine.pager().setCombineCopies(S.combine); S.pushedCombine = S.combine; }
 }
 

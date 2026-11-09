@@ -26,6 +26,7 @@ struct State {
     int pushedNarrow = -1;
     int fixBits = 0, emphasis = 0; bool audioIn = false;   // saved as packetFixBits, packetEmphasis, packetAudioIn (docs/PACKET.md)
     int pushedFix = -1, pushedEmph = -1, pushedAudioIn = -1;
+    bool vote = true, pushedVote = true, pushedVoteInit = false;   // multi-demodulator vote, saved as packetVote
     bool listen = false; int pushedListen = -1; float pushedVol = -1; int pushedMute = -1;
 };
 State S;
@@ -40,6 +41,7 @@ void loadState() {
     S.fixBits = std::max(0, std::min(2, (int)plat::prefs().getI("packetFixBits", 0)));
     S.emphasis = std::max(0, std::min(2, (int)plat::prefs().getI("packetEmphasis", 0)));
     S.audioIn = plat::prefs().getB("packetAudioIn", false);
+    S.vote = plat::prefs().getB("packetVote", true);
 }
 
 std::string ageText(double s) {
@@ -178,6 +180,33 @@ void stationTable(App& a, bool compact) {
 }
 
 // ---------------------------------------------------------------- the map
+
+// who repeated what: digipeaters and IGates heard in the paths (packet_path.h)
+void digiTable(App& a) {
+    const dect2::PacketTelemetry& t = a.rx.packet;
+    if (t.digis.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", tr("No digipeater heard yet. Frames show them in their path once they repeat a packet.")); ImGui::PopTextWrapPos(); return; }
+    if (!ImGui::BeginTable("##pk_d", 7, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    ImGui::TableSetupScrollFreeze(0, 1);
+    ImGui::TableSetupColumn(tr("Digipeater")); ImGui::TableSetupColumn(tr("Heard")); ImGui::TableSetupColumn(tr("Stations")); ImGui::TableSetupColumn(tr("Range km"));
+    ImGui::TableSetupColumn(tr("Last")); ImGui::TableSetupColumn(tr("Repeats")); ImGui::TableSetupColumn(tr("Notes"), ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableHeadersRow();
+    for (const dect2::PacketDigi& d : t.digis) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(d.call.c_str());
+        ImGui::TableNextColumn(); ImGui::Text("%u", (unsigned)d.heard);
+        ImGui::TableNextColumn(); ImGui::Text("%u", (unsigned)d.stations);
+        ImGui::TableNextColumn(); if (d.rangeKm > 0) ImGui::Text("%.0f", d.rangeKm); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(ageText(t.timeSec - d.lastSec).c_str());
+        ImGui::TableNextColumn(); ImGui::Text("%u", (unsigned)d.copies);
+        ImGui::TableNextColumn();
+        std::string n;
+        if (d.igate) n += std::string(tr("IGate")) + "  ";
+        if (d.looping) n += std::string(tr("looping")) + "  ";
+        if (d.silent) n += std::string(tr("silent")) + "  ";
+        ImGui::TextUnformatted(n.c_str());
+    }
+    ImGui::EndTable();
+}
 
 void mapView(App& a, ImVec2 size) {
     const dect2::PacketTelemetry& t = a.rx.packet;
@@ -340,6 +369,7 @@ void tick(App& a) {
     dect2::PacketReceiver& r = a.engine.packet();
     if ((int)a.packetNarrow != S.pushedNarrow) { r.setNarrowChannel(a.packetNarrow); S.pushedNarrow = a.packetNarrow; }
     if ((int)S.listen != S.pushedListen) { r.setListen(S.listen); S.pushedListen = S.listen; }
+    if (!S.pushedVoteInit || S.vote != S.pushedVote) { r.setVote(S.vote); S.pushedVote = S.vote; S.pushedVoteInit = true; }
     if (S.fixBits != S.pushedFix) { r.setFixBits(S.fixBits); S.pushedFix = S.fixBits; }
     if (S.emphasis != S.pushedEmph) { r.setEmphasis(S.emphasis); S.pushedEmph = S.emphasis; }
     if ((int)S.audioIn != S.pushedAudioIn) { r.setAudioInput(S.audioIn); S.pushedAudioIn = S.audioIn; }
@@ -387,6 +417,9 @@ void controls(App& a) {
             ImGui::EndCombo();
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("A frame that fails its check is tried again with one wrong bit (or two in a row) corrected. More frames from weak stations; a repaired frame is marked [1 bit fixed]. Off by default: a few repaired frames could be wrong."));
+        flowNext(10 * gUi);
+        if (ImGui::Checkbox(tr("Vote"), &S.vote)) plat::prefs().setB("packetVote", S.vote);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Several demodulators run side by side. When none of them gets a frame right, their copies are voted bit by bit and the few bits they disagree on are tried until the check fits. More frames at the edge of reception; frames made this way are marked [repaired by vote]. On by default."));
         flowNext(10 * gUi);
         ImGui::TextDisabled("%s", tr("Input")); ImGui::SameLine(0, 5 * gUi);
         ImGui::SetNextItemWidth(120 * gUi);
@@ -472,6 +505,7 @@ static void command(App& a) {
     if (kit::collapsingSection(tr("Channel options"), false)) controls(a);
     modepanel::panes({{"##pktcst", tr("Stations"), [&a] { if (live(a)) stationTable(a, false); else ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "start the receiver"); }, 1.2f, 240.f},
                       {"##pktcmap", tr("Map"), [&a] { mapView(a, ImGui::GetContentRegionAvail()); }, 1.2f, 260.f},
+                      {"##pktcdg", tr("Digipeaters"), [&a] { if (live(a)) digiTable(a); else ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "start the receiver"); }, 1.f, 220.f},
                       {"##pktclog", tr("Log"), [&a] { packetLog(a); }, 1.f, 220.f}}, 320.f);
 }
 

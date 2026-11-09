@@ -1150,3 +1150,5 @@ Network IQ sources now scrub NaN/infinity (SDR++, SpyServer float); rtl_tcp chun
 - Thread (family 244): the 802.15.4 receiver in Thread mode + thread_proto (beacon network name / ext PAN / version, MAC security aux header, 6LoWPAN mesh / fragment / IPHC / UDP NHC, MLE and CoAP where clear). Encrypted traffic is shown as encrypted (no keys). tests/thread. No user-supplied Zigbee / Thread network key decryption (not done).
 ## 2026-11-07 - bug hunt 3.7-D (sources and modes)
 Network IQ sources now scrub NaN/infinity (SDR++, SpyServer float); rtl_tcp chunk test added; modes and drivers reviewed, listed in docs/BUGS-3.7-D.md. No ASan run yet (GitHub).
+## 2026-11-09 feat37-sm-pager
+Pager smart package: text repair and positions/fields/incidents for pagers (pager_intel), digipeater path graph and the demodulator vote for APRS (packet_path, voteRepair; +14 % frames at the threshold, 0 wrong). Measurements in docs/SMART-pager-3.7.md. Targeted tests only; full CI left to GitHub.
