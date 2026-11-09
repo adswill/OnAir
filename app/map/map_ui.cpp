@@ -24,7 +24,7 @@ struct State {
     // layers: shown or not (saved), the data they read (refreshed once a second; kept when the mode is not running), what was clicked
     bool layerOn[dect2::LayerCount + 1] = {true, true, true, true, true, true, true, true};   // the last one: the receiver
     double refreshedAt = -1e9;
-    dect2::AdsbTelemetry adsb; dect2::AisTelemetry ais; dect2::PacketTelemetry packet; dect2::SondeTelemetry sonde; dect2::CellTelemetry cell; dect2::DmrTelemetry dmr; dect2::VdesTelemetry vdes;
+    dect2::AdsbTelemetry adsb; dect2::AisTelemetry ais; dect2::TetraTelemetry tetra; dect2::PacketTelemetry packet; dect2::SondeTelemetry sonde; dect2::CellTelemetry cell; dect2::DmrTelemetry dmr; dect2::VdesTelemetry vdes;
     std::vector<dect2::MapMarker> markers;
     std::vector<dect2::SatMapPoint> sats;
     std::vector<MapCellTower> towers;
@@ -40,7 +40,7 @@ void load() {
     for (int i = 0; i <= dect2::LayerCount; i++) { char k[24]; snprintf(k, sizeof k, "mapLayer%d", i); S.layerOn[i] = plat::prefs().getB(k, true); }
 }
 
-const char* const kLayerName[] = {"ADS-B aircraft", "AIS ships", "APRS stations", "Radiosondes", "Satellites", "Cell towers", "DMR radios", "Receiver"};
+const char* const kLayerName[] = {"ADS-B aircraft", "AIS ships", "APRS stations", "Radiosondes", "Satellites", "Cell towers", "DMR and TETRA radios", "Receiver"};
 ImU32 layerColour(int l, int alpha = 255) {
     static const ImU32 c[] = {IM_COL32(255, 200, 60, 255), IM_COL32(80, 170, 255, 255), IM_COL32(120, 230, 120, 255), IM_COL32(255, 120, 200, 255), IM_COL32(200, 160, 255, 255), IM_COL32(240, 240, 240, 255), IM_COL32(255, 160, 70, 255), IM_COL32(110, 210, 230, 255)};
     const ImU32 v = c[std::max(0, std::min(7, l))];
@@ -58,10 +58,11 @@ void refresh(App& a) {
     a.engine.sonde().telemetry(S.sonde, S.sonde.seq);
     a.engine.cell().telemetry(S.cell, S.cell.seq);
     a.engine.dmr().telemetry(S.dmr, S.dmr.seq);
+    a.engine.tetra().telemetry(S.tetra, S.tetra.seq);
     a.engine.vdes().telemetry(S.vdes, S.vdes.seq);
     S.markers.clear();
     auto add = [](std::vector<dect2::MapMarker> v) { for (auto& m : v) S.markers.push_back(std::move(m)); };
-    add(dect2::markersFromAdsb(S.adsb)); add(dect2::markersFromAis(S.ais)); add(dect2::markersFromVdes(S.vdes)); add(dect2::markersFromAprs(S.packet)); add(dect2::markersFromSonde(S.sonde)); add(dect2::markersFromDmr(S.dmr));
+    add(dect2::markersFromAdsb(S.adsb)); add(dect2::markersFromAis(S.ais)); add(dect2::markersFromTetra(S.tetra)); add(dect2::markersFromVdes(S.vdes)); add(dect2::markersFromAprs(S.packet)); add(dect2::markersFromSonde(S.sonde)); add(dect2::markersFromDmr(S.dmr));
     S.towers.clear();
     cellMapTowers(S.cell, S.towers);
     S.sats.clear();

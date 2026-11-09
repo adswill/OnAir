@@ -26,7 +26,7 @@ void CallTracker::onEvent(const CallEvent& e, double now) {
         return;
     }
     if (e.kind == 4) {   // D-TX-GRANTED / CONTINUE / CEASED: a call already known goes on (a long group call outlives kTtlSec); its state is kept as it is
-        for (auto& s : slot_) if (s.valid && s.callId == e.callId) s.t = now;
+        for (auto& s : slot_) if (s.valid && s.callId == e.callId) { s.t = now; if (e.enc == 0 && e.issi >= 0 && s.enc != 1) s.issi = e.issi; }   // D-TX-GRANTED names who holds the floor
         return;
     }
     if (e.kind != 1 && e.kind != 2) return;

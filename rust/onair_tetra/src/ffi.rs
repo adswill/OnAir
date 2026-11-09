@@ -25,7 +25,7 @@ unsafe fn wr<'a, T>(p: *mut T, n: usize) -> &'a mut [T] {
 /// ABI version of this module's C interface; bump it when an exported signature changes.
 #[no_mangle]
 pub extern "C" fn onair_tetra_version() -> u32 {
-    4
+    5
 }
 
 /// Sizes of the `repr(C)` records (Sync, Sysinfo, Neighbour, Nwrk, MacBlock) so C++ can check its own layout at start-up.
@@ -108,6 +108,29 @@ pub unsafe extern "C" fn onair_tetra_network_time_text(t: u64, out: *mut u8, cap
 /// Walk one signalling block of `len` bits. `blk` receives the counters, the SYSINFO and the number of broadcasts found; `nwrk` (capacity `nwrk_cap`) and
 /// `nbr` (capacity `nbr_cap`) receive the D-NWRK-BROADCASTs and their neighbours; broadcasts beyond a capacity are counted in `blk` but not stored. A block
 /// of `len` bits holds at most `len / 8 + 1` broadcasts of at most 7 neighbours each.
+#[no_mangle]
+pub unsafe extern "C" fn onair_tetra_parse_sdu(
+    bits: *const u8,
+    len: usize,
+    addr: i32,
+    slots: i32,
+    carrier: i32,
+    blk: *mut MacBlock,
+    nwrk: *mut Nwrk,
+    nwrk_cap: usize,
+    nbr: *mut Neighbour,
+    nbr_cap: usize,
+) -> i32 {
+    if blk.is_null() {
+        return 0;
+    }
+    let mut o = Out { blk: MacBlock::default(), nwrk: wr(nwrk, nwrk_cap), nbr: wr(nbr, nbr_cap) };
+    let b = rd(bits, len);
+    crate::mac::parse_tl_sdu(b, 0, b.len(), slots, carrier, addr, &mut o);
+    *blk = o.blk;
+    1
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn onair_tetra_parse_block(
     bits: *const u8,

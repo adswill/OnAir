@@ -142,4 +142,16 @@ pub struct MacBlock {
     pub n_call: i32,
     pub call: [CallInfo; MAX_CALLS],
     pub si: Sysinfo,
+    /// Clear D-STATUS and D-SDS-DATA PDUs of this block, as bit ranges of the input (the PDU type first) and the MAC address.
+    pub n_cmce: i32,
+    pub cmce_from: [u32; 2],
+    pub cmce_to: [u32; 2],
+    pub cmce_addr: [i32; 2],
+    /// A fragment of a fragmented signalling PDU: 0 none, 1 the start (MAC-RESOURCE), 2 a MAC-FRAG, 3 the MAC-END. The bit range holds its TM-SDU.
+    pub frag_kind: i32,
+    pub frag_from: u32,
+    pub frag_to: u32,
+    pub frag_addr: i32,
+    pub frag_slots: i32,
+    pub frag_carrier: i32,
 }

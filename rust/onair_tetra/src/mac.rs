@@ -106,6 +106,17 @@ fn parse_nwrk(r: &mut Reader, out: &mut Out) {
 /// call's own encryption flag is clear (-1 otherwise). `slots` and `carrier` come from the channel allocation of the MAC-RESOURCE that carried the PDU.
 fn parse_cmce(r: &mut Reader, slots: i32, carrier: i32, addr: i32, out: &mut Out) {
     let ty = r.get(5);
+    if (ty == 8 || ty == 15) && r.ok {
+        // D-STATUS and D-SDS-DATA: handed over as bits (the caller's tetra_sds reads them)
+        let k = out.blk.n_cmce as usize;
+        if k < 2 {
+            out.blk.cmce_from[k] = (r.p - 5) as u32;
+            out.blk.cmce_to[k] = r.end as u32;
+            out.blk.cmce_addr[k] = addr;
+            out.blk.n_cmce += 1;
+        }
+        return;
+    }
     let (mut gssi, mut issi) = (-1i32, -1i32);
     let (kind, id, enc) = match ty {
         7 => {
@@ -190,13 +201,45 @@ fn parse_cmce(r: &mut Reader, slots: i32, carrier: i32, addr: i32, out: &mut Out
             }
             (3, id, -1)
         }
-        9 | 10 | 11 => {
-            // D-TX-CEASED, D-TX-CONTINUE, D-TX-GRANTED: the call goes on (a talk spurt starts or ends); only the call id is read
+        9 | 10 => {
+            // D-TX-CEASED, D-TX-CONTINUE: the call goes on; only the call id
             let id = r.get(14);
             if !r.ok {
                 return;
             }
             (4, id, -1)
+        }
+        11 => {
+            // D-TX-GRANTED (table 14.18): call id 14, transmission grant 2, permission 1, encryption control 1, reserved 1; then the O-bit
+            // and the type 2 elements: notification (P, 6) and the transmitting party identifier (P, 2) with its SSI (24) and extension (24)
+            let id = r.get(14);
+            r.get(2);
+            r.get(1);
+            let e = r.bit();
+            r.get(1);
+            if !r.ok {
+                return;
+            }
+            let mut enc = -1;
+            if !e && r.bit() {
+                if r.bit() {
+                    r.get(6);
+                }
+                if r.bit() {
+                    let t = r.get(2);
+                    if t == 1 || t == 2 {
+                        let ssi = r.get(24);
+                        if t == 2 {
+                            r.get(24);
+                        }
+                        if r.ok {
+                            issi = ssi as i32;
+                            enc = 0;
+                        }
+                    }
+                }
+            }
+            (4, id, enc)
         }
         _ => return,
     };
@@ -208,7 +251,7 @@ fn parse_cmce(r: &mut Reader, slots: i32, carrier: i32, addr: i32, out: &mut Out
 }
 
 /// TL-SDU: the LLC header, then the MLE; only the mobility link entity's (protocol discriminator 5) broadcast and the CMCE call set-up facts are read.
-fn parse_tl_sdu(b: &[u8], from: usize, to: usize, slots: i32, carrier: i32, addr: i32, out: &mut Out) {
+pub fn parse_tl_sdu(b: &[u8], from: usize, to: usize, slots: i32, carrier: i32, addr: i32, out: &mut Out) {
     let mut r = Reader::new(b, from, to);
     let llc = r.get(4);
     match llc {
@@ -295,7 +338,41 @@ pub fn parse_block(b: &[u8], out: &mut Out) {
             break;
         }
         if ty == 1 {
-            out.blk.fragments += 1; // MAC-FRAG / MAC-END: a continuation, not reassembled
+            // MAC-FRAG / MAC-END (21.4.3.2-3): its TM-SDU goes to the caller for reassembly
+            out.blk.fragments += 1;
+            let sub = r.bit();
+            let fill = r.bit();
+            let (mut from, mut to) = (r.p, n);
+            if sub {
+                r.bit(); // position of grant
+                let li = r.get(6) as usize;
+                let l = if (1..=0x3A).contains(&li) { li * 8 } else { n - pos };
+                to = (pos + l).min(n);
+                if r.bit() {
+                    r.get(8); // slot granting
+                }
+                if r.bit() {
+                    let l2 = chan_alloc_len(b, r.p);
+                    if l2 < 0 {
+                        break;
+                    }
+                    r.p += l2 as usize;
+                }
+                from = r.p;
+            }
+            if fill {
+                while to > from && b[to - 1] == 0 {
+                    to -= 1;
+                }
+                if to > from {
+                    to -= 1;
+                }
+            }
+            if r.ok && to >= from {
+                out.blk.frag_kind = if sub { 3 } else { 2 };
+                out.blk.frag_from = from as u32;
+                out.blk.frag_to = to as u32;
+            }
             break;
         }
         if ty == 3 {
@@ -326,7 +403,12 @@ pub fn parse_block(b: &[u8], out: &mut Out) {
         out.blk.resources += 1;
         // The MAC address is read only for an SSI (type 1, and 5 / 6 with an event label or usage marker after it: a group call set-up is usually
         // sent to the SSI with the usage marker it is given); parse_cmce keeps it only for a call that is not encrypted.
-        let addr = if at == 1 || at == 5 || at == 6 { r.get(24) as i32 } else { r.get(ADDR_LEN[at & 7]); -1 };
+        let addr = if at == 1 || at == 5 || at == 6 {
+            r.get(24) as i32
+        } else {
+            r.get(ADDR_LEN[at & 7]);
+            -1
+        };
         if at == 5 || at == 6 {
             r.get(ADDR_LEN[at] - 24); // event label (10) or usage marker (6)
         }
@@ -337,11 +419,11 @@ pub fn parse_block(b: &[u8], out: &mut Out) {
             r.get(8); // slot granting
         }
         let ca = r.bit();
+        let (mut slots, mut carrier) = (-1i32, -1i32);
         if enc != 0 {
             out.blk.encrypted += 1;
         } else if r.ok {
             let mut readable = true;
-            let (mut slots, mut carrier) = (-1i32, -1i32);
             if ca {
                 // timeslot assigned and carrier number of the channel allocation (21.5.2): type 2, timeslots 4, up/down 2, CLCH 1, cell change 1, carrier 12
                 let mut c = Reader::new(b, r.p, b.len());
@@ -377,6 +459,14 @@ pub fn parse_block(b: &[u8], out: &mut Out) {
         }
         if frag {
             out.blk.fragments += 1;
+            if enc == 0 && r.ok {
+                out.blk.frag_kind = 1;
+                out.blk.frag_from = r.p as u32;
+                out.blk.frag_to = n as u32;
+                out.blk.frag_addr = addr;
+                out.blk.frag_slots = slots;
+                out.blk.frag_carrier = carrier;
+            }
             break;
         }
         pos += len;

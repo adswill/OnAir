@@ -82,6 +82,42 @@ std::string networkTimeText(uint64_t t) {
     return std::string(reinterpret_cast<const char*>(buf), n);
 }
 
+void parseTlSdu(const Bits& b, int addr, int slots, int carrier, MacBlock& out) {
+    OnairTetraMacBlock k;
+    memset(&k, 0, sizeof k);
+    std::vector<OnairTetraNwrk> nw(4);
+    std::vector<OnairTetraNeighbour> nb(28);
+    onair_tetra_parse_sdu(b.data(), b.size(), addr, slots, carrier, &k, nw.data(), nw.size(), nb.data(), nb.size());
+    for (int i = 0; i < k.n_call && i < 4; i++) {
+        CallEvent e;
+        e.kind = k.call[i].kind; e.callId = k.call[i].call_id; e.enc = k.call[i].enc; e.slots = k.call[i].slots; e.carrier = k.call[i].carrier;
+        if (e.enc == 0) { e.gssi = k.call[i].gssi; e.issi = k.call[i].issi; }
+        out.calls.push_back(e);
+    }
+    for (int i = 0; i < 8; i++) out.byPd[i] += k.by_pd[i];
+    for (int i = 0; i < k.n_cmce && i < 2; i++) {
+        MacBlock::CmcePdu c;
+        c.bits.assign(b.begin() + k.cmce_from[i], b.begin() + k.cmce_to[i]);
+        c.addr = k.cmce_addr[i];
+        out.cmce.push_back(std::move(c));
+    }
+}
+
+bool FragReassembler::feed(const MacBlock& m, Bits& sdu, int& addr, int& slots, int& carrier) {
+    if (m.fragKind == 1) {       // the MAC-RESOURCE that opens a fragmented PDU
+        active_ = true; have_ = m.fragBits; addr_ = m.fragAddr; slots_ = m.fragSlots; carrier_ = m.fragCarrier; count_ = 1;
+        return false;
+    }
+    if (m.fragKind != 2 && m.fragKind != 3) return false;
+    if (!active_) return false;  // a continuation whose start was missed
+    if (++count_ > 40 || have_.size() + m.fragBits.size() > 8192) { reset(); return false; }
+    have_.insert(have_.end(), m.fragBits.begin(), m.fragBits.end());
+    if (m.fragKind == 2) return false;
+    sdu = std::move(have_); addr = addr_; slots = slots_; carrier = carrier_;
+    reset();
+    return true;
+}
+
 void parseMacBlock(const Bits& b, MacBlock& out) {
     const size_t cap = b.size() / 8 + 2;
     std::vector<OnairTetraNwrk> nw(cap);
@@ -98,6 +134,17 @@ void parseMacBlock(const Bits& b, MacBlock& out) {
         e.kind = k.call[i].kind; e.callId = k.call[i].call_id; e.enc = k.call[i].enc; e.slots = k.call[i].slots; e.carrier = k.call[i].carrier;
         if (e.enc == 0) { e.gssi = k.call[i].gssi; e.issi = k.call[i].issi; }   // IDs only of a call that said clear (defence in depth: the parser already drops them)
         out.calls.push_back(e);
+    }
+    for (int i = 0; i < k.n_cmce && i < 2; i++) {
+        MacBlock::CmcePdu c;
+        c.bits.assign(b.begin() + k.cmce_from[i], b.begin() + k.cmce_to[i]);
+        c.addr = k.cmce_addr[i];
+        out.cmce.push_back(std::move(c));
+    }
+    if (k.frag_kind) {
+        out.fragKind = k.frag_kind;
+        out.fragBits.assign(b.begin() + k.frag_from, b.begin() + k.frag_to);
+        out.fragAddr = k.frag_addr; out.fragSlots = k.frag_slots; out.fragCarrier = k.frag_carrier;
     }
     for (uint32_t i = 0; i < k.n_nwrk && i < nw.size(); i++) {
         NwrkBroadcast n;

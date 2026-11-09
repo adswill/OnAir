@@ -207,7 +207,9 @@ fn group_setup_block(at: u64) -> Vec<u8> {
     }
     // LLC BL-UDATA, MLE discriminator 2, D-SETUP: call id 777, time-out 5, hook 0, simplex 1, circuit mode 0, clear, point-to-multipoint,
     // slots / speech 0; transmission grant 0, request permission 0, priority 0, O-bit 0
-    for (v, n) in [(2, 4), (2, 3), (7, 5), (777, 14), (5, 4), (0, 1), (1, 1), (0, 3), (0, 1), (1, 2), (0, 2), (0, 2), (0, 1), (0, 4), (0, 1)] {
+    for (v, n) in
+        [(2, 4), (2, 3), (7, 5), (777, 14), (5, 4), (0, 1), (1, 1), (0, 3), (0, 1), (1, 2), (0, 2), (0, 2), (0, 1), (0, 4), (0, 1)]
+    {
         w.put(v, n);
     }
     w.put(1, 1);
@@ -230,4 +232,109 @@ fn group_setup_gssi_by_address_type() {
         let c = o.blk.call[0];
         assert_eq!((c.kind, c.call_id, c.enc, c.gssi), (1, 777, 0, want), "address type {at}");
     }
+}
+
+/// A clear MAC-RESOURCE around a CMCE PDU given as bits, with the SSI address 0x123456.
+fn cmce_block(pdu: &[u8], fragmented: bool) -> Vec<u8> {
+    let mut w = W(vec![]);
+    w.put(0, 2); // MAC-RESOURCE
+    w.put(1, 1); // fill bits
+    w.put(0, 1); // position of grant
+    w.put(0, 2); // no air interface encryption
+    w.put(0, 1); // random access
+    let total = 43 + 7 + pdu.len();
+    let octets = (total + 8) / 8;
+    w.put(if fragmented { 0x3F } else { octets as u64 }, 6);
+    w.put(1, 3); // address type 1: SSI
+    w.put(0x123456, 24);
+    w.put(0, 1); // power control
+    w.put(0, 1); // slot granting
+    w.put(0, 1); // channel allocation
+    while w.0.len() < 43 {
+        w.put(0, 1);
+    }
+    w.put(0b0010, 4); // BL-UDATA
+    w.put(2, 3); // CMCE
+    for &b in pdu {
+        w.put(b as u64, 1);
+    }
+    if !fragmented {
+        w.put(1, 1);
+        while w.0.len() % 8 != 0 {
+            w.put(0, 1);
+        }
+    }
+    while w.0.len() < 268 {
+        w.put(0, 1);
+    }
+    w.0
+}
+
+fn pdu_bits(fields: &[(u64, u32)]) -> Vec<u8> {
+    let mut w = W(vec![]);
+    for &(v, n) in fields {
+        w.put(v, n as usize);
+    }
+    w.0
+}
+
+#[test]
+fn floor_holder_status_sds_and_fragments() {
+    // D-TX-GRANTED with the transmitting party SSI 4321, clear call
+    let p = pdu_bits(&[(11, 5), (777, 14), (0, 2), (0, 1), (0, 1), (0, 1), (1, 1), (0, 1), (1, 1), (1, 2), (4321, 24)]);
+    let mut nw = [Nwrk::default(); 4];
+    let mut nb = [Neighbour::default(); 8];
+    let mut o = Out { blk: MacBlock::default(), nwrk: &mut nw, nbr: &mut nb };
+    parse_block(&cmce_block(&p, false), &mut o);
+    assert_eq!(o.blk.n_call, 1);
+    let c = o.blk.call[0];
+    assert_eq!((c.kind, c.call_id, c.enc, c.issi), (4, 777, 0, 4321));
+    // the same with the end-to-end encryption flag set: nothing about the party
+    let p = pdu_bits(&[(11, 5), (777, 14), (0, 2), (0, 1), (1, 1), (0, 1), (1, 1), (0, 1), (1, 1), (1, 2), (4321, 24)]);
+    let mut o = Out { blk: MacBlock::default(), nwrk: &mut nw, nbr: &mut nb };
+    parse_block(&cmce_block(&p, false), &mut o);
+    assert_eq!(o.blk.call[0].issi, -1);
+    // D-STATUS: handed over as a bit range
+    let p = pdu_bits(&[(8, 5), (1, 2), (4321, 24), (32769, 16)]);
+    let mut o = Out { blk: MacBlock::default(), nwrk: &mut nw, nbr: &mut nb };
+    parse_block(&cmce_block(&p, false), &mut o);
+    assert_eq!(o.blk.n_cmce, 1);
+    assert_eq!(o.blk.cmce_addr[0], 0x123456);
+    let n = (o.blk.cmce_to[0] - o.blk.cmce_from[0]) as usize;
+    assert!(n >= p.len() && n < p.len() + 12, "{n}");
+    // a fragmented PDU: the first part is reported, nothing is parsed yet
+    let long: Vec<u8> = vec![0u8; 400];
+    let b = cmce_block(&long, true);
+    let mut o = Out { blk: MacBlock::default(), nwrk: &mut nw, nbr: &mut nb };
+    parse_block(&b, &mut o);
+    assert_eq!((o.blk.frag_kind, o.blk.frag_addr, o.blk.n_call), (1, 0x123456, 0));
+    assert_eq!(o.blk.frag_from as usize, 43);
+    // MAC-FRAG without fill: TM-SDU after the 4-bit header
+    let mut f = vec![0u8; 124];
+    f[0] = 0;
+    f[1] = 1; // MAC PDU type 01
+    let mut o = Out { blk: MacBlock::default(), nwrk: &mut nw, nbr: &mut nb };
+    parse_block(&f, &mut o);
+    assert_eq!((o.blk.frag_kind, o.blk.frag_from, o.blk.frag_to), (2, 4, 124));
+    // MAC-END with LI = 10 octets, no grants: TM-SDU 15 .. 80
+    let mut w = W(vec![]);
+    w.put(1, 2);
+    w.put(1, 1);
+    w.put(0, 1);
+    w.put(0, 1);
+    w.put(10, 6);
+    w.put(0, 1);
+    w.put(0, 1);
+    while w.0.len() < 124 {
+        w.put(0, 1);
+    }
+    let mut o = Out { blk: MacBlock::default(), nwrk: &mut nw, nbr: &mut nb };
+    parse_block(&w.0, &mut o);
+    assert_eq!((o.blk.frag_kind, o.blk.frag_from, o.blk.frag_to), (3, 13, 80));
+    // an encrypted start is not reported as a fragment
+    let mut b = cmce_block(&long, true);
+    b[4] = 1;
+    let mut o = Out { blk: MacBlock::default(), nwrk: &mut nw, nbr: &mut nb };
+    parse_block(&b, &mut o);
+    assert_eq!(o.blk.frag_kind, 0);
 }

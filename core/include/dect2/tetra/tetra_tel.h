@@ -63,6 +63,8 @@ struct TetraCell {
 };
 
 struct TetraEvent { int64_t wallTime = 0; double sec = 0; std::string text; };
+// One clear SDS message, status or LIP position (tetra_sds.h)
+struct TetraSdsRec { int64_t wallTime = 0; double freqHz = 0; int fromIssi = -1, toAddr = -1; std::string kind, text; bool hasPos = false; double lat = 0, lon = 0; int count = 1; };
 struct TetraCarrierSeen { double freqHz = 0; float levelDb = 0; bool synced = false; };   // a 25 kHz hump in the spectrum
 
 struct TetraTelemetry {
@@ -81,6 +83,7 @@ struct TetraTelemetry {
     std::vector<TetraCarrierSeen> carriers;   // in the last block
     std::vector<TetraCell> cells;             // most recently seen first
     std::vector<TetraEvent> events;           // newest first, at most kTetraLogMax
+    std::vector<TetraSdsRec> sds;             // clear SDS messages and positions, newest first, at most 300
 };
 
 constexpr size_t kTetraLogMax = 300;
