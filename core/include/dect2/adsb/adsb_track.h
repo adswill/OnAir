@@ -3,6 +3,7 @@
 #pragma once
 #include "adsb_msg.h"
 #include "adsb_tel.h"
+#include "adsb_trust.h"
 #include <cstdint>
 #include <deque>
 #include <unordered_map>
@@ -131,6 +132,9 @@ private:
     double now_ = 0;
     double snrEma_ = 0, levelEma_ = 0; bool snrInit_ = false;
     bool touchedNew_ = false;
+    AdsbTrustModel trust_;
+    std::deque<AdsbRaEvent> raEvents_;
+    void noteRa(Rec& r, const AdsbFrame& f, const adsb::CommB& c);
 };
 
 std::string adsbDescribe(const adsb::Msg& m);

@@ -219,6 +219,13 @@ static void drawWinds(ImDrawList* dl, const AdsbTelemetry& t) {
 static void drawAircraft(ImDrawList* dl, const AdsbTelemetry& t, ImVec2 p0, ImVec2 size, ImVec2 click, bool clicked, float& best, const AdsbAircraft*& hit) {
     const double nowT = ImGui::GetTime();
     const bool lite = rcaps::lowPowerDraw();   // low-power drawing: a triangle per aircraft, the label box only for the selected one
+    for (const auto& ac : t.aircraft) {        // who triggered an ACAS advisory: a line from the aircraft to its threat
+        if (!ac.hasPos || !ac.hasRa || !ac.raThreat) continue;
+        for (const auto& th : t.aircraft) if (th.icao == ac.icao ? false : (th.icao == ac.raThreat && th.hasPos)) {
+            dl->AddLine(adsbmap::project(ac.lat, ac.lon), adsbmap::project(th.lat, th.lon), IM_COL32(235, 70, 70, 220), 2.f * gUi);
+            break;
+        }
+    }
     for (const auto& ac : t.aircraft) {
         if (!ac.hasPos) continue;
         dect2::track::PosEstimate pe;
@@ -238,6 +245,7 @@ static void drawAircraft(ImDrawList* dl, const AdsbTelemetry& t, ImVec2 p0, ImVe
             } else drawPlane(dl, q, hd, r, fill, sel);
         }
         if (est && !lite) { pospred::drawPredictionMarks(dl, pe, q, fill, gPred.ellipses); pospred::hoverTooltip(pe, q); }
+        if (ac.trust >= 0 && ac.trust < 80) dl->AddCircle(q, 16.f * gUi, ac.trust < 50 ? IM_COL32(235, 70, 70, 230) : IM_COL32(240, 180, 60, 200), 0, 1.5f * gUi);   // doubtful: ring, the reasons are in the readout
         if (!lite && acarslog::count(ac.icao) > 0) dl->AddCircleFilled(ImVec2(q.x + 8 * gUi, q.y - 8 * gUi), 3.f * gUi, IM_COL32(245, 160, 40, 255));   // it has sent ACARS messages
         if (lite || !S.disp.labels ? sel : (S.map.zoom >= 6 || sel)) {   // labels off (#85): only the selected aircraft has its box
             char l1[48]; snprintf(l1, sizeof l1, "%s", ac.callsign.empty() ? icaoText(ac.icao).c_str() : ac.callsign.c_str());
