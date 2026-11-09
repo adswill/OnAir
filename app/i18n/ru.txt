@@ -456,7 +456,6 @@ Radio settings (%d changed)	Настройки радио (изменено: %d)
 %s: frequency correction and the other settings of this radio	%s: поправка частоты и остальные настройки этого радио
 The driver's own settings show up here\nonce this radio has been started.	Собственные настройки драйвера появятся здесь\nпосле запуска этого радио.
 0 = libiio's default	0 = значение libiio по умолчанию
-Weather (137 MHz)	Погода (137 MHz)
 Amateur	Любительская связь
 Amateur satellites	Любительские спутники
 downloading...	загрузка...
@@ -473,8 +472,6 @@ No TLE for:	Нет TLE для:
 no valid TLE in the pasted text (two lines per satellite, checksums must match)	во вставленном тексте нет корректных TLE (две строки на спутник, контрольные суммы должны совпадать)
 pasted TLEs added:	вставленные TLE добавлены:
 No TLEs yet: download them or paste some.	TLE пока нет: загрузите их или вставьте.
-No TLEs: open TLE data above.	Нет TLE: откройте данные TLE выше.
-No passes in the next 24 hours.	В ближайшие 24 часа пролётов нет.
 TLE data	Данные TLE
 %d TLEs, %d satellites listed	TLE: %d, спутников в списке: %d
 the oldest is %.0f days old: download again	самому старому %.0f дн.: загрузите снова
@@ -483,23 +480,14 @@ Receiver position	Положение приёмника
 The same position as the ADS-B antenna position	То же положение, что у антенны ADS-B
 not set: the times are for a placeholder position	не задано: время указано для условного положения
 Satellite	Спутник
-AOS	AOS
-LOS	LOS
 Max el	Макс. угол
 Duration	Длительность
 Frequency	Частота
 AOS in %d:%02d:%02d	AOS через %d:%02d:%02d
 %s - %s, max %.0f deg	%s - %s, макс. %.0f град.
-no pass	нет пролёта
 az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz	аз %.0f  угол %.0f  %.0f км\nДоплер %+.0f Hz
-Track	Сопровождение
-Track (choose a pass)	Сопровождение (выберите пролёт)
-During each pass of this satellite, retune about once a second for the Doppler shift	Во время каждого пролёта этого спутника подстраивать частоту примерно раз в секунду на доплеровский сдвиг
 Auto start at AOS, stop at LOS	Автозапуск на AOS, остановка на LOS
-Switches to the satellite's mode and starts the receiver at AOS (when it is stopped), and stops it at LOS	Переключается на режим спутника и запускает приёмник на AOS (если он остановлен), а на LOS останавливает его
 Auto record IQ	Автозапись IQ
-Records the radio's IQ during the pass, as Record IQ does (format from the Record IQ setting), into %s/recordings	Записывает IQ радио во время пролёта, как «Запись IQ» (формат из настройки «Запись IQ»), в %s/recordings
-OnAir has no decoder for this: auto start opens the Spectrum explorer, and Auto record keeps the IQ	В OnAir нет декодера для этого: автозапуск открывает анализатор спектра, а автозапись сохраняет IQ
 tracking%s	сопровождение%s
 , recording	, идёт запись
 Sends decoded data to other programs while the mode runs. Every feed is off until you turn it on.	Отправляет декодированные данные другим программам, пока работает режим. Каждый поток выключен, пока вы его не включите.
@@ -910,7 +898,6 @@ WSJT, 14.078 MHz	WSJT, 14.078 MHz
 WSJT, 14.080 MHz	WSJT, 14.080 MHz
 WSJT, 14.084 MHz	WSJT, 14.084 MHz
 WSJT, 14.100 MHz	WSJT, 14.100 MHz
-%.0f deg	%.0f град.
 %s, %llu spots sent in %llu packets, %llu duplicates skipped	%s, отправлено спотов: %llu в %llu пакетах, пропущено дубликатов: %llu
 offset %+.3f %+.3f	смещение %+.3f %+.3f
 sigma %.3f per axis (%.0f%% of the half-distance to a neighbour)	сигма %.3f по оси (%.0f%% половины расстояния до соседа)
@@ -925,11 +912,8 @@ High contrast (black, white, yellow)	Высокий контраст (чёрны
 Look for Red Pitaya boards on this computer's networks again	Снова искать платы Red Pitaya в сетях этого компьютера
 No Red Pitaya answered on this computer's networks (is its SDR transceiver app running?): type its address.	Ни одна Red Pitaya не ответила в сетях этого компьютера (запущено ли её SDR-приложение трансивера?): введите её адрес.
 searching for Red Pitaya boards…	поиск плат Red Pitaya…
-A line at the top of the window and a log entry before the tracked pass rises (0: off)	Строка вверху окна и запись в журнале перед началом отслеживаемого пролёта (0: выкл)
 All time	За всё время
-Arms this pass only: at AOS the receiver starts in the satellite's mode and frequency (when it is stopped), Doppler is followed and the IQ is recorded; at LOS it stops and tracking switches off again	Включает только этот пролёт: на AOS приёмник запускается в режиме и на частоте спутника (если он остановлен), отслеживается доплеровский сдвиг и записывается IQ; на LOS он останавливается, и сопровождение снова отключается
 Automatic update	Автоматическое обновление
-Cancel recording this pass	Отменить запись этого пролёта
 Download SDDC_FX3.img from the Releases page of the SDDC_Driver project (button below).	Скачайте SDDC_FX3.img со страницы Releases проекта SDDC_Driver (кнопка ниже).
 Downloads the TLEs again once a day, only while this window is open or a pass is tracked. Without a network the saved lists are used.	Снова загружает TLE раз в сутки, только пока это окно открыто или отслеживается пролёт. Без сети используются сохранённые списки.
 Downloads when you click, and by itself once a day. Fetches:	Загружает по щелчку и сам раз в сутки. Берёт:
@@ -937,12 +921,10 @@ Last 24 hours	Последние 24 часа
 Last hour	Последний час
 Longest range: %.0f %s at %.0f deg (%llu reports)	Максимальная дальность: %.0f %s при %.0f град. (отчётов: %llu)
 Nothing heard yet: the plot fills in as positions arrive.	Пока ничего не принято: график заполняется по мере поступления позиций.
-Pass of %s in %d:%02d (max %.0f deg)	Пролёт %s через %d:%02d (макс. %.0f град.)
 Pass of %s in %d:%02d (max %.0f deg): the receiver starts by itself	Пролёт %s через %d:%02d (макс. %.0f град.): приёмник запустится сам
 Plug the radio into a USB 3 port directly on the computer, not through a USB 2 hub.	Подключите радио к порту USB 3 прямо на компьютере, а не через хаб USB 2.
 Put the file in OnAir's codecs folder (button below).	Положите файл в папку кодеков OnAir (кнопка ниже).
 Range	Дальность
-Record this pass	Записать этот пролёт
 Rolling window: a sector's furthest position counts only for this long	Скользящее окно: самая дальняя позиция сектора учитывается только в течение этого времени
 Save CSV...	Сохранить CSV...
 Save PNG...	Сохранить PNG...
@@ -952,7 +934,6 @@ The RX888 is on a USB 2 port	RX888 подключён к порту USB 2
 The RX888 needs its firmware file	RX888 нужен файл прошивки
 The RX888 MkII has no program of its own in its USB chip: OnAir loads SDDC_FX3.img into RAM when the radio is in boot-loader mode (nothing is flashed to the radio). Official OnAir packages include this file; a copy built by hand may not.	В USB-чипе RX888 MkII нет собственной программы: OnAir загружает SDDC_FX3.img в RAM в режиме загрузчика (в радио ничего не прошивается). Официальные пакеты OnAir включают этот файл; в собранной вручную копии его может не быть.
 Use a USB 3 cable (the one that came with the radio).	Используйте кабель USB 3 (тот, что шёл с радио).
-armed: %s at %s	готово: %s в %s
 last downloaded %s	последняя загрузка %s
 remind %.0f min before	напомнить за %.0f мин
 saved	сохранено
@@ -2408,13 +2389,10 @@ Room title	Название комнаты
 Also show decoded ACARS text in the room (public)	Показывать в комнате и декодированный текст ACARS (публично)
 Needs Server > Send data to map server and Also share interesting ACARS messages.	Требуется Сервер > Отправлять данные на сервер карты и Делиться также интересными сообщениями ACARS.
 Go live	Начать трансляцию
-Schedule passes by itself	Планировать пролёты автоматически
-Takes the passes of the ticked groups one at a time, highest priority first, and starts, tunes and records each one without you. Overlapping passes are trimmed or skipped; a receiver you started yourself is left alone.	Берёт пролёты отмеченных групп по одному, сначала с высшим приоритетом, и сама запускает, настраивает и записывает каждый. Пересекающиеся пролёты укорачиваются или пропускаются; приёмник, запущенный вами, не трогается.
 Priority (higher wins)	Приоритет (больший побеждает)
 Keep the SDR free every day	Освобождать SDR каждый день
 from %d:00	с %d:00
 to %d:00	до %d:00
-Nothing planned.	Ничего не запланировано.
 planned	запланирован
 trimmed	укорочен
 skipped: SDR reserved	пропущен: SDR зарезервирован

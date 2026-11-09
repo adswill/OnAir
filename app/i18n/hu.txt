@@ -465,7 +465,6 @@ Radio settings (%d changed)	Rádióbeállítások (%d módosítva)
 %s: frequency correction and the other settings of this radio	%s: frekvenciakorrekció és a rádió egyéb beállításai
 The driver's own settings show up here\nonce this radio has been started.	Az illesztőprogram saját beállításai itt jelennek meg,\nmiután a rádiót elindítottad.
 0 = libiio's default	0 = a libiio alapértéke
-Weather (137 MHz)	Időjárás (137 MHz)
 Amateur	Amatőr
 Amateur satellites	Amatőr műholdak
 downloading...	letöltés...
@@ -482,8 +481,6 @@ No TLE for:	Nincs TLE ehhez:
 no valid TLE in the pasted text (two lines per satellite, checksums must match)	nincs érvényes TLE a beillesztett szövegben (műholdanként két sor, az ellenőrzőösszegeknek egyezniük kell)
 pasted TLEs added:	beillesztett TLE-k hozzáadva:
 No TLEs yet: download them or paste some.	Még nincsenek TLE-k: tölts le vagy illessz be néhányat.
-No TLEs: open TLE data above.	Nincsenek TLE-k: nyisd meg fent a TLE-adatokat.
-No passes in the next 24 hours.	Nincs átvonulás a következő 24 órában.
 TLE data	TLE-adatok
 %d TLEs, %d satellites listed	%d TLE, %d műhold listázva
 the oldest is %.0f days old: download again	a legrégebbi %.0f napos: tölts le újat
@@ -492,23 +489,14 @@ Receiver position	A vevő helye
 The same position as the ADS-B antenna position	Ugyanaz a hely, mint az ADS-B antenna helye
 not set: the times are for a placeholder position	nincs megadva: az időpontok egy helyettesítő pozícióra vonatkoznak
 Satellite	Műhold
-AOS	AOS
-LOS	LOS
 Max el	Max. emelk.
 Duration	Időtartam
 Frequency	Frekvencia
 AOS in %d:%02d:%02d	AOS %d:%02d:%02d múlva
 %s - %s, max %.0f deg	%s - %s, max. %.0f fok
-no pass	nincs átvonulás
 az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz	azim. %.0f  emelk. %.0f  %.0f km\nDoppler %+.0f Hz
-Track	Követés
-Track (choose a pass)	Követés (válassz átvonulást)
-During each pass of this satellite, retune about once a second for the Doppler shift	A műhold minden átvonulása alatt kb. másodpercenként újrahangol a Doppler-eltolódás miatt
 Auto start at AOS, stop at LOS	Automatikus indítás AOS-nál, leállítás LOS-nál
-Switches to the satellite's mode and starts the receiver at AOS (when it is stopped), and stops it at LOS	AOS-nál átvált a műhold üzemmódjára és elindítja a vevőt (ha le van állítva), LOS-nál leállítja
 Auto record IQ	Automatikus IQ-felvétel
-Records the radio's IQ during the pass, as Record IQ does (format from the Record IQ setting), into %s/recordings	Az átvonulás alatt rögzíti a rádió IQ-jét, mint az IQ rögzítése (a formátum az IQ rögzítése beállításból), ide: %s/recordings
-OnAir has no decoder for this: auto start opens the Spectrum explorer, and Auto record keeps the IQ	Az OnAirnek nincs dekódere ehhez: az automatikus indítás a Spektrumfelfedezőt nyitja meg, az automatikus felvétel pedig megtartja az IQ-t
 tracking%s	követés%s
 , recording	, felvétel
 Sends decoded data to other programs while the mode runs. Every feed is off until you turn it on.	Dekódolt adatot küld más programoknak, amíg az üzemmód fut. Minden adatforrás ki van kapcsolva, amíg be nem kapcsolod.
@@ -923,7 +911,6 @@ WSJT, 14.078 MHz	WSJT, 14.078 MHz
 WSJT, 14.080 MHz	WSJT, 14.080 MHz
 WSJT, 14.084 MHz	WSJT, 14.084 MHz
 WSJT, 14.100 MHz	WSJT, 14.100 MHz
-%.0f deg	%.0f fok
 %s, %llu spots sent in %llu packets, %llu duplicates skipped	%s, %llu spot elküldve %llu csomagban, %llu duplikátum kihagyva
 offset %+.3f %+.3f	eltolás %+.3f %+.3f
 sigma %.3f per axis (%.0f%% of the half-distance to a neighbour)	sigma %.3f tengelyenként (a szomszédig mért fél távolság %.0f%%-a)
@@ -947,13 +934,7 @@ Automatic update	Automatikus frissítés
 Downloads the TLEs again once a day, only while this window is open or a pass is tracked. Without a network the saved lists are used.	Naponta egyszer újratölti a TLE-ket, csak amíg ez az ablak nyitva van vagy egy átvonulást követ. Hálózat nélkül a mentett listákat használja.
 last downloaded %s	utoljára letöltve: %s
 Pass of %s in %d:%02d (max %.0f deg): the receiver starts by itself	%s átvonulása %d:%02d múlva (max. %.0f fok): a vevő magától elindul
-Pass of %s in %d:%02d (max %.0f deg)	%s átvonulása %d:%02d múlva (max. %.0f fok)
 remind %.0f min before	emlékeztető %.0f perccel előtte
-A line at the top of the window and a log entry before the tracked pass rises (0: off)	Egy sor az ablak tetején és egy naplóbejegyzés a követett átvonulás kezdete előtt (0: ki)
-Record this pass	E átvonulás rögzítése
-Cancel recording this pass	E átvonulás rögzítésének törlése
-Arms this pass only: at AOS the receiver starts in the satellite's mode and frequency (when it is stopped), Doppler is followed and the IQ is recorded; at LOS it stops and tracking switches off again	Csak erre az átvonulásra: AOS-kor a vevő (ha le van állítva) a műhold módjában és frekvenciáján indul, a Doppler követve van és az IQ rögzítve; LOS-kor leáll, és a követés újra kikapcsol
-armed: %s at %s	élesítve: %s, %s
 Save PNG...	PNG mentése...
 Save CSV...	CSV mentése...
 saved	mentve
@@ -2411,13 +2392,10 @@ Room title	Szoba címe
 Also show decoded ACARS text in the room (public)	A dekódolt ACARS-szöveg megjelenítése a szobában (nyilvános)
 Needs Server > Send data to map server and Also share interesting ACARS messages.	Szükséges hozzá: Szerver > Adatok küldése a térképszervernek és Az érdekes ACARS-üzenetek megosztása is.
 Go live	Élő adás indítása
-Schedule passes by itself	Átvonulások automatikus ütemezése
-Takes the passes of the ticked groups one at a time, highest priority first, and starts, tunes and records each one without you. Overlapping passes are trimmed or skipped; a receiver you started yourself is left alone.	A bejelölt csoportok átvonulásait egymás után veszi, a legnagyobb prioritásúval kezdve, és mindegyiket magától indítja, hangolja és rögzíti. Az átfedő átvonulásokat lerövidíti vagy kihagyja; a te indította vevőhöz nem nyúl.
 Priority (higher wins)	Prioritás (a magasabb nyer)
 Keep the SDR free every day	SDR szabadon tartása naponta
 from %d:00	%d:00-tól
 to %d:00	%d:00-ig
-Nothing planned.	Nincs betervezve semmi.
 planned	betervezve
 trimmed	lerövidítve
 skipped: SDR reserved	kihagyva: az SDR le van foglalva

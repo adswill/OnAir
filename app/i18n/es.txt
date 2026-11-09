@@ -474,7 +474,6 @@ Radio settings (%d changed)	Ajustes de la radio (%d cambiados)
 The driver's own settings show up here\nonce this radio has been started.	Los ajustes propios del controlador aparecen aquí\nuna vez iniciada esta radio.
 0 = libiio's default	0 = valor por defecto de libiio
 #  passes
-Weather (137 MHz)	Meteorología (137 MHz)
 Amateur	Aficionados
 Amateur satellites	Satélites de aficionados
 downloading...	descargando...
@@ -491,8 +490,6 @@ No TLE for:	Sin TLE para:
 no valid TLE in the pasted text (two lines per satellite, checksums must match)	ningún TLE válido en el texto pegado (dos líneas por satélite, las sumas de control deben coincidir)
 pasted TLEs added:	TLE pegados añadidos:
 No TLEs yet: download them or paste some.	Aún no hay TLE: descárguelos o pegue algunos.
-No TLEs: open TLE data above.	Sin TLE: abra Datos TLE arriba.
-No passes in the next 24 hours.	No hay pasos en las próximas 24 horas.
 TLE data	Datos TLE
 %d TLEs, %d satellites listed	%d TLE, %d satélites en la lista
 the oldest is %.0f days old: download again	el más antiguo tiene %.0f días: descargue de nuevo
@@ -501,23 +498,14 @@ Receiver position	Posición del receptor
 The same position as the ADS-B antenna position	La misma posición que la de la antena ADS-B
 not set: the times are for a placeholder position	no definida: las horas son para una posición provisional
 Satellite	Satélite
-AOS	AOS
-LOS	LOS
 Max el	Elev. máx
 Duration	Duración
 Frequency	Frecuencia
 AOS in %d:%02d:%02d	AOS en %d:%02d:%02d
 %s - %s, max %.0f deg	%s - %s, máx %.0f grados
-no pass	sin paso
 az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz	az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz
-Track	Seguir
-Track (choose a pass)	Seguir (elija un paso)
-During each pass of this satellite, retune about once a second for the Doppler shift	Durante cada paso de este satélite, resintonizar aproximadamente una vez por segundo por el efecto Doppler
 Auto start at AOS, stop at LOS	Inicio automático en AOS, parada en LOS
-Switches to the satellite's mode and starts the receiver at AOS (when it is stopped), and stops it at LOS	Cambia al modo del satélite e inicia el receptor en AOS (si está detenido), y lo detiene en LOS
 Auto record IQ	Grabar IQ automáticamente
-Records the radio's IQ during the pass, as Record IQ does (format from the Record IQ setting), into %s/recordings	Graba la IQ de la radio durante el paso, como Grabar IQ (formato según ese ajuste), en %s/recordings
-OnAir has no decoder for this: auto start opens the Spectrum explorer, and Auto record keeps the IQ	OnAir no tiene decodificador para esto: el inicio automático abre el Spectrum explorer y la grabación automática guarda la IQ
 tracking%s	siguiendo%s
 , recording	, grabando
 #  data feeds
@@ -937,7 +925,6 @@ WSJT, 14.078 MHz	WSJT, 14.078 MHz
 WSJT, 14.080 MHz	WSJT, 14.080 MHz
 WSJT, 14.084 MHz	WSJT, 14.084 MHz
 WSJT, 14.100 MHz	WSJT, 14.100 MHz
-%.0f deg	%.0f grados
 %s, %llu spots sent in %llu packets, %llu duplicates skipped	%s, %llu spots enviados en %llu paquetes, %llu duplicados omitidos
 offset %+.3f %+.3f	desplazamiento %+.3f %+.3f
 sigma %.3f per axis (%.0f%% of the half-distance to a neighbour)	sigma %.3f por eje (%.0f%% de la semidistancia a un vecino)
@@ -961,13 +948,7 @@ Automatic update	Actualización automática
 Downloads the TLEs again once a day, only while this window is open or a pass is tracked. Without a network the saved lists are used.	Vuelve a descargar los TLE una vez al día, solo mientras esta ventana está abierta o se sigue un paso. Sin red se usan las listas guardadas.
 last downloaded %s	última descarga: %s
 Pass of %s in %d:%02d (max %.0f deg): the receiver starts by itself	Paso de %s en %d:%02d (máx. %.0f grados): el receptor arranca solo
-Pass of %s in %d:%02d (max %.0f deg)	Paso de %s en %d:%02d (máx. %.0f grados)
 remind %.0f min before	avisar %.0f min antes
-A line at the top of the window and a log entry before the tracked pass rises (0: off)	Una línea en la parte superior de la ventana y una entrada en el registro antes de que salga el paso seguido (0: desactivado)
-Record this pass	Grabar este paso
-Cancel recording this pass	Cancelar la grabación de este paso
-Arms this pass only: at AOS the receiver starts in the satellite's mode and frequency (when it is stopped), Doppler is followed and the IQ is recorded; at LOS it stops and tracking switches off again	Solo para este paso: en el AOS el receptor arranca (si está parado) en el modo y la frecuencia del satélite, se sigue el Doppler y se graba el IQ; en el LOS se detiene y el seguimiento se desactiva
-armed: %s at %s	armado: %s a las %s
 Save PNG...	Guardar PNG...
 Save CSV...	Guardar CSV...
 saved	guardado
@@ -2425,13 +2406,10 @@ Room title	Título de la sala
 Also show decoded ACARS text in the room (public)	Mostrar también el texto ACARS decodificado en la sala (público)
 Needs Server > Send data to map server and Also share interesting ACARS messages.	Requiere Servidor > Enviar datos al servidor del mapa y Compartir también mensajes ACARS interesantes.
 Go live	Emitir en directo
-Schedule passes by itself	Programar pasos automáticamente
-Takes the passes of the ticked groups one at a time, highest priority first, and starts, tunes and records each one without you. Overlapping passes are trimmed or skipped; a receiver you started yourself is left alone.	Toma los pasos de los grupos marcados de uno en uno, primero el de mayor prioridad, y inicia, sintoniza y graba cada uno sin que intervengas. Los pasos que se solapan se recortan u omiten; un receptor que iniciaste tú no se toca.
 Priority (higher wins)	Prioridad (la mayor gana)
 Keep the SDR free every day	Mantener el SDR libre cada día
 from %d:00	desde %d:00
 to %d:00	hasta %d:00
-Nothing planned.	Nada planificado.
 planned	planificado
 trimmed	recortado
 skipped: SDR reserved	omitido: SDR reservado

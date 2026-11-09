@@ -467,7 +467,6 @@ Radio settings (%d changed)	無線機の設定 (%d 件変更)
 The driver's own settings show up here\nonce this radio has been started.	ドライバー固有の設定は、この無線機を一度\n開始するとここに表示されます。
 0 = libiio's default	0 = libiio の既定値
 #  passes
-Weather (137 MHz)	気象 (137 MHz)
 Amateur	アマチュア
 Amateur satellites	アマチュア衛星
 downloading...	ダウンロード中...
@@ -484,8 +483,6 @@ No TLE for:	TLE がありません:
 no valid TLE in the pasted text (two lines per satellite, checksums must match)	貼り付けたテキストに有効な TLE がありません (衛星ごとに 2 行、チェックサムが一致する必要があります)
 pasted TLEs added:	貼り付けた TLE を追加しました:
 No TLEs yet: download them or paste some.	TLE がまだありません: ダウンロードするか貼り付けてください。
-No TLEs: open TLE data above.	TLE がありません: 上の TLE データを開いてください。
-No passes in the next 24 hours.	今後 24 時間以内のパスはありません。
 TLE data	TLE データ
 %d TLEs, %d satellites listed	TLE %d 件、衛星 %d 機を一覧表示
 the oldest is %.0f days old: download again	最も古いものは %.0f 日前です: 再ダウンロードしてください
@@ -494,23 +491,14 @@ Receiver position	受信地点
 The same position as the ADS-B antenna position	ADS-B アンテナの位置と同じ
 not set: the times are for a placeholder position	未設定: 時刻は仮の位置のものです
 Satellite	衛星
-AOS	AOS
-LOS	LOS
 Max el	最大仰角
 Duration	継続時間
 Frequency	周波数
 AOS in %d:%02d:%02d	AOS まで %d:%02d:%02d
 %s - %s, max %.0f deg	%s - %s、最大 %.0f 度
-no pass	パスなし
 az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz	方位 %.0f  仰角 %.0f  %.0f km\nドップラー %+.0f Hz
-Track	追尾
-Track (choose a pass)	追尾 (パスを選択)
-During each pass of this satellite, retune about once a second for the Doppler shift	この衛星のパス中、ドップラーシフトに合わせて約 1 秒ごとに同調し直します
 Auto start at AOS, stop at LOS	AOS で自動開始、LOS で停止
-Switches to the satellite's mode and starts the receiver at AOS (when it is stopped), and stops it at LOS	衛星のモードに切り替え、AOS で受信機を開始し (停止中の場合)、LOS で停止します
 Auto record IQ	IQ を自動録音
-Records the radio's IQ during the pass, as Record IQ does (format from the Record IQ setting), into %s/recordings	IQ 録音と同様に (形式は IQ 録音の設定に従います)、パス中の無線機の IQ を %s/recordings に録音します
-OnAir has no decoder for this: auto start opens the Spectrum explorer, and Auto record keeps the IQ	OnAir にはこれ用のデコーダーがありません。自動開始では Spectrum explorer が開き、自動録音では IQ が保存されます
 tracking%s	追尾中%s
 , recording	、録音中
 #  data feeds
@@ -928,7 +916,6 @@ WSJT, 14.078 MHz	WSJT、14.078 MHz
 WSJT, 14.080 MHz	WSJT、14.080 MHz
 WSJT, 14.084 MHz	WSJT、14.084 MHz
 WSJT, 14.100 MHz	WSJT、14.100 MHz
-%.0f deg	%.0f 度
 %s, %llu spots sent in %llu packets, %llu duplicates skipped	%s、%llu 件のスポットを %llu パケットで送信、重複 %llu 件をスキップ
 offset %+.3f %+.3f	オフセット %+.3f %+.3f
 sigma %.3f per axis (%.0f%% of the half-distance to a neighbour)	シグマ 軸あたり %.3f (隣接点との半分の距離の %.0f%%)
@@ -944,11 +931,8 @@ FM	FM
 %s  %.4f MHz  %s%s%s%s  %.1f dB  %s	%s  %.4f MHz  %s%s%s%s  %.1f dB  %s
 -	-
 8 MHz	8 MHz
-A line at the top of the window and a log entry before the tracked pass rises (0: off)	追尾するパスが始まる前に、ウィンドウ上部の表示とログを出します (0: オフ)
 All time	全期間
-Arms this pass only: at AOS the receiver starts in the satellite's mode and frequency (when it is stopped), Doppler is followed and the IQ is recorded; at LOS it stops and tracking switches off again	このパスだけを予約します。AOS で、受信機が停止中なら衛星のモードと周波数で開始し、ドップラーに追従して IQ を録音します。LOS で停止し、追尾も再びオフになります
 Automatic update	自動アップデート
-Cancel recording this pass	このパスの録音を取り消す
 Dark	ダーク
 Download SDDC_FX3.img from the Releases page of the SDDC_Driver project (button below).	SDDC_Driver プロジェクトの Releases ページから SDDC_FX3.img をダウンロードしてください (下のボタン)。
 Downloads the TLEs again once a day, only while this window is open or a pass is tracked. Without a network the saved lists are used.	TLE を 1 日に 1 回再ダウンロードします。このウィンドウが開いているか、パスを追尾している間のみです。ネットワークがない場合は保存済みのリストを使います。
@@ -961,12 +945,10 @@ Look for Red Pitaya boards on this computer's networks again	このコンピュ�
 MHz	MHz
 No Red Pitaya answered on this computer's networks (is its SDR transceiver app running?): type its address.	このコンピューターのネットワーク上で Red Pitaya の応答がありません (SDR トランシーバーアプリは動作していますか?): アドレスを入力してください。
 Nothing heard yet: the plot fills in as positions arrive.	まだ何も受信していません。位置情報が届くとプロットが埋まっていきます。
-Pass of %s in %d:%02d (max %.0f deg)	%s のパスまで %d:%02d (最大 %.0f 度)
 Pass of %s in %d:%02d (max %.0f deg): the receiver starts by itself	%s のパスまで %d:%02d (最大 %.0f 度): 受信機は自動で開始します
 Plug the radio into a USB 3 port directly on the computer, not through a USB 2 hub.	無線機は USB 2 ハブ経由ではなく、コンピューター本体の USB 3 ポートに直接接続してください。
 Put the file in OnAir's codecs folder (button below).	ファイルを OnAir のコーデックフォルダーに置いてください (下のボタン)。
 Range	距離
-Record this pass	このパスを録音
 Rolling window: a sector's furthest position counts only for this long	移動ウィンドウ: 各セクターの最遠位置は、この時間だけ有効です
 Save CSV...	CSV を保存...
 Save PNG...	PNG を保存...
@@ -976,7 +958,6 @@ The RX888 is on a USB 2 port	RX888 が USB 2 ポートに接続されていま�
 The RX888 needs its firmware file	RX888 にはファームウェアファイルが必要です
 The RX888 MkII has no program of its own in its USB chip: OnAir loads SDDC_FX3.img into RAM when the radio is in boot-loader mode (nothing is flashed to the radio). Official OnAir packages include this file; a copy built by hand may not.	RX888 MkII の USB チップには自前のプログラムがなく、OnAir はブートローダーモードで SDDC_FX3.img を RAM に読み込みます（無線機には書き込みません）。公式 OnAir パッケージには含まれます。手元でビルドしたコピーには含まれない場合があります。
 Use a USB 3 cable (the one that came with the radio).	USB 3 ケーブル (無線機に付属のもの) を使用してください。
-armed: %s at %s	予約済み: %s、%s
 last downloaded %s	最終ダウンロード %s
 remind %.0f min before	%.0f 分前に通知
 saved	保存しました
@@ -2425,13 +2406,10 @@ Room title	ルームのタイトル
 Also show decoded ACARS text in the room (public)	デコードしたACARSテキストもルームに表示する（公開）
 Needs Server > Send data to map server and Also share interesting ACARS messages.	サーバー > 地図サーバーにデータを送信 と 興味深いACARSメッセージも共有 が必要です。
 Go live	ライブ配信を開始
-Schedule passes by itself	通過を自動でスケジュール
-Takes the passes of the ticked groups one at a time, highest priority first, and starts, tunes and records each one without you. Overlapping passes are trimmed or skipped; a receiver you started yourself is left alone.	チェックしたグループの通過を優先度の高い順に1つずつ取り、操作なしで開始・同調・録音します。重なる通過は短縮またはスキップされ、自分で起動した受信機には手を触れません。
 Priority (higher wins)	優先度(高い方が優先)
 Keep the SDR free every day	毎日SDRを空けておく
 from %d:00	%d:00から
 to %d:00	%d:00まで
-Nothing planned.	予定なし。
 planned	予定済み
 trimmed	短縮
 skipped: SDR reserved	スキップ: SDR予約中

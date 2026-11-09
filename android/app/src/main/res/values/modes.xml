@@ -214,6 +214,19 @@
         <item>Arktika-M GGAK</item>
         <item>AWS L-band</item>
         <item>Inmarsat BGAN</item>
+        <item>Zombie satellites</item>
+        <item>What satellite is this\?</item>
+        <item>UHF SATCOM skimmer</item>
+        <item>Thuraya GMR-1 channels</item>
+        <item>Starlink detector</item>
+        <item>OneWeb detector</item>
+        <item>TDRS carriers</item>
+        <item>Tiangong / Shenzhou carriers</item>
+        <item>Tsikada / Parus</item>
+        <item>Gonets</item>
+        <item>Tiantong signalling</item>
+        <item>Space station</item>
+        <item>NavIC</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -409,6 +422,19 @@
         <item>Arktika-M N1 / N2 space-weather telemetry (GGAK, experimental: frame lock not reached yet) on 1703 MHz, PM 5 ksym/s: the Elektro GGAK frames and magnetometer. Highly elliptical orbit: Follow the next pass tracks the Doppler</item>
         <item>Arctic Weather Satellite on 1707 MHz: QPSK 1.785 Msym/s, CCSDS convolutional code, Reed-Solomon interleave 5, the MWR microwave scans (19 channels, 145 points) line by line. Needs a dish at 1.7 GHz and 4 Msps or more; Follow the next pass tunes with Doppler and starts by itself</item>
         <item>Inmarsat BGAN (ETSI TS 102 744 Family SL), the satellite data service: every forward carrier from 1525 to 1559 MHz, bearer type and code rate, satellite, spot beam, network identity, and the system information it broadcasts. One-click scan across the band. Signalling and carrier structure only: no voice, no user data, no subscriber identity. Needs a user test: only synthetic signals so far, never validated on a real BGAN recording. A patch antenna is enough for the global beam and for bearers aimed at your region; narrow spot beams elsewhere are out of reach</item>
+        <item>Defunct satellites still transmitting (AO-7, Transit 5B-5, LES-1, LES-5, IMAGE): their carriers found and checked by frequency and Doppler</item>
+        <item>Follows every carrier in the capture and names the satellite whose predicted Doppler curve fits. Needs orbital elements and your location</item>
+        <item>Skims 240 - 270 MHz military satellite downlinks for active channels (5 and 25 kHz): frequency, width, activity. Detection only</item>
+        <item>Thuraya GMR-1 satellite phone downlink 1525 - 1559 MHz: active 31.25 kHz channels. No decoder is implemented</item>
+        <item>Detects Starlink\'s Ku-band downlink by its 750 Hz frame gap (published reverse engineering; no public specification). Needs an LNB and a dish</item>
+        <item>Detects OneWeb\'s Ku-band downlink by its 1 ms repeating sequence (published reverse engineering; no public specification). Needs an LNB and a dish</item>
+        <item>NASA TDRS S-band forward links, carrier only (not verified from the ground)</item>
+        <item>Chinese space station and crew craft: S-band TT&amp;C and telemetry carriers, Doppler checked. The format is not public: carriers only</item>
+        <item>Russian Transit-type navigation satellites at 150 and 400 MHz. The format is not public: carriers and Doppler only</item>
+        <item>Russian store-and-forward messaging satellites, 387 - 390 MHz. No public protocol: bursts and channels only</item>
+        <item>Chinese S-band mobile satellite 2170 - 2200 MHz. No public air interface: channel energy only</item>
+        <item>Every ISS downlink in one mode: FM voice and SSTV on 145.800, APRS on 145.825, the repeater on 437.800. Shows which is on and opens the decoder</item>
+        <item>NavIC (IRNSS) L5 at 1176.45 MHz: satellites, time and week number from the navigation message (no position fix). The satellites are receivable around India</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -604,6 +630,19 @@
         <item>Arktika-M GGAK telemetry</item>
         <item>AWS MWR, 1.7 GHz</item>
         <item>Satellite, L-band</item>
+        <item>Satellite carriers</item>
+        <item>Satellite carriers</item>
+        <item>Satellite carriers</item>
+        <item>Satellite carriers</item>
+        <item>Satellite carriers</item>
+        <item>Satellite carriers</item>
+        <item>Satellite carriers</item>
+        <item>Satellite carriers</item>
+        <item>Satellite carriers</item>
+        <item>Satellite carriers</item>
+        <item>Satellite carriers</item>
+        <item>Satellite carriers</item>
+        <item>L5 navigation message</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -799,5 +838,18 @@
         <item>arktika ggak sem 1703 magnetometer heo space weather</item>
         <item>aws arctic weather satellite 1707 mwr microwave radiometer eumetsat sterna</item>
         <item>bgan inmarsat i-4 alphasat family sl ts 102 744 l-band satcom 1545 1550 16qam spot beam isatphone</item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
     </string-array>
 </resources>
