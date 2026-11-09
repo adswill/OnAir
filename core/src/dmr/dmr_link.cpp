@@ -485,7 +485,7 @@ void Link::decodeBurst(Track& t) {
     } else if (sync >= 0 && syncIsVoice(sync)) {
         // burst A: the voice sync; no field protects the burst, but a locked track expects it
         structure = true; payloadOk = true;
-        voiceBurst(t, 0, burst, 0, Bits(), true);
+        voiceBurst(t, 0, burst, 0, Bits(), true, z);
         if (t.slot == 0 && syncIsDirect(sync)) t.slot = syncDirectSlot(sync);
     } else {
         const EmbInfo emb = burstEmb(burst);
@@ -498,7 +498,7 @@ void Link::decodeBurst(Track& t) {
             noteFec(t, emb.errors, 16);
             int pos = t.vpos >= 0 ? (t.vpos + 1) % 6 : -1;
             if (pos < 0) pos = emb.lcss == 1 ? 1 : emb.lcss == 2 ? 4 : emb.lcss == 0 ? 5 : 2;
-            voiceBurst(t, pos, burst, emb.lcss, emb.emb32, false);
+            voiceBurst(t, pos, burst, emb.lcss, emb.emb32, false, z);
         } else if (t.confirmed) {
             // silence after the end of a transmission is not an error of the channel; a burst missing inside a call is
             tel_.unknownBursts++;
@@ -909,7 +909,7 @@ void Link::finishMessage(Track& t) {
 
 // ---------------------------------------------------------------------------------------------------- voice
 
-void Link::voiceBurst(Track& t, int pos, const Bits& burst, int lcss, const Bits& emb32, bool hadSync) {
+void Link::voiceBurst(Track& t, int pos, const Bits& burst, int lcss, const Bits& emb32, bool hadSync, const float* z) {
     tel_.voiceBursts++;
     t.state = 1;
     t.lastVoiceSample = n_;
@@ -926,6 +926,12 @@ void Link::voiceBurst(Track& t, int pos, const Bits& burst, int lcss, const Bits
     if (onVoiceBurst) {
         Bits vs;
         burstVoicePayload(burst, vs);
+        // reliability of the 216 voice bits: dibits 0..53 and 78..131 of the burst (the middle 24 dibits are the sync or the embedded field)
+        for (int i = 0; i < 216; i++) {
+            const int bit = i < 108 ? i : i + 48;   // the bit position in the burst (156 follows 108)
+            const float r = z ? std::min(1.2f, bitRel(z[bit / 2], bit & 1)) : 1.f;
+            voiceRel_[i] = (uint8_t)(r / 1.2f * 255.f);
+        }
         onVoiceBurst(slotOf(t), pos, vs);
     }
     if (hadSync) { t.lcHave = 0; return; }

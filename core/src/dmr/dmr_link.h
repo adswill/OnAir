@@ -25,6 +25,8 @@ public:
     double nowSec() const { return (double)n_ / 48000.0; }
     // a voice callback for a later vocoder: slot, burst position 0..5 (A..F), 216 bits VS(215)..VS(0)
     std::function<void(int, int, const Bits&)> onVoiceBurst;
+    // inside onVoiceBurst: the reliability (0..255) of each of the 216 bits just delivered, from the soft symbols (for the soft vocoder frame FEC)
+    const uint8_t* voiceReliability() const { return voiceRel_; }
     // the call on this slot (1 or 2) is marked private/encrypted by its service options: its voice must not be decoded
     bool slotEncrypted(int slot) const { for (const auto& t : tr_) if (t.inCall && slotOf(t) == slot && t.call.privacy) return true; return false; }
     // the call on this slot as the voice monitor lists it (voice_monitor.h): IDs, kind, flags, colour code, bit error rate (-1 not known)
@@ -136,7 +138,8 @@ private:
         int dt = -1;
     };
     Outcome decodeData(Track& t, const Bits& burst, const float* z, int sync, int cc, int dt);
-    void voiceBurst(Track& t, int pos, const Bits& burst, int lcss, const Bits& emb32, bool hadSync);
+    uint8_t voiceRel_[216] = {};
+    void voiceBurst(Track& t, int pos, const Bits& burst, int lcss, const Bits& emb32, bool hadSync, const float* z);
     void handleCach(Track& t, const float* zc);
 
     // ---- calls and messages

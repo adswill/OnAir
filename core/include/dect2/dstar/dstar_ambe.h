@@ -17,7 +17,11 @@ public:
     ~DstarAmbe();
     bool ok() const;
     void decode(const uint8_t bits[72], int16_t pcm[160]);
+    // With the reliability (0..255) of each of the 72 bits: soft-decision correction and concealment before the codec (voice/vocoder_fec.h)
+    void decodeSoft(const uint8_t bits[72], const uint8_t rel[72], int16_t pcm[160]);
+    void fecCounts(int* frames, int* repaired, int* concealed) const;
 private:
+    void decodeFrame(const char fr[4][24], int16_t pcm[160]);
     struct Impl;
     std::unique_ptr<Impl> p_;
 };

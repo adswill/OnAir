@@ -404,8 +404,11 @@ struct DstarReceiver::Impl {
         tel.voiceFrames++; tel.blocksOk++;
         tel.now.voiceFrames++;
         tel.now.durSec = tel.now.voiceFrames * 0.02;
-        if (weak) pend.emplace_back(fb, fb + dstar::kVoiceBits);   // held back until a good frame shows the call goes on
-        else { for (auto& q : pend) voice(q.data()); pend.clear(); voice(fb); }
+        // the reliability of each voice bit, from the soft symbol against the frame's mean (for the soft vocoder frame FEC)
+        uint8_t vrel[dstar::kVoiceBits];
+        for (int i = 0; i < dstar::kVoiceBits; i++) vrel[i] = (uint8_t)std::min(255.0, 160.0 * std::fabs(fz[i]) / std::max(m, 1e-6));
+        if (weak) { pend.emplace_back(fb, fb + dstar::kVoiceBits); pend.back().insert(pend.back().end(), vrel, vrel + dstar::kVoiceBits); }   // held back until a good frame shows the call goes on
+        else { for (auto& q : pend) voice(q.data(), q.data() + dstar::kVoiceBits); pend.clear(); voice(fb, vrel); }
         lastAny = sigSec();
         const int idx = fi % dstar::kSuperframe;
         fi++;
@@ -552,7 +555,7 @@ struct DstarReceiver::Impl {
         txOn = false;
         DstarCall& n = tel.now;
         n.active = false; n.endSeen = endSeen;
-        for (auto& q : pend) voice(q.data());
+        for (auto& q : pend) voice(q.data(), q.data() + dstar::kVoiceBits);
         pend.clear();
         flushAudio();
         if (!n.headerOk && n.syncOk == 0) return;   // nothing that checked: not a call
@@ -562,7 +565,7 @@ struct DstarReceiver::Impl {
 
     // ------------------------------------------------------------ voice
 
-    void voice(const uint8_t* bits) {
+    void voice(const uint8_t* bits, const uint8_t* rel = nullptr) {
         if (vtap) vtap(bits);
         voice::Monitor* mon = activeMonitor();
         if (mon) {   // the voice monitor (voice_monitor.h) lists the call and says whether it is played
@@ -579,7 +582,7 @@ struct DstarReceiver::Impl {
         if (!ambe) ambe = std::make_unique<DstarAmbe>();
         if (!ambe->ok()) return;
         int16_t pcm[160];
-        ambe->decode(bits, pcm);
+        if (rel) ambe->decodeSoft(bits, rel, pcm); else ambe->decode(bits, pcm);
         for (int16_t s : pcm) aud8.push_back(s / 32768.f);
         tel.voiceDecoded++;
         tel.now.voice = true;

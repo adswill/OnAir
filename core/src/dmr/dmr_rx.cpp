@@ -207,7 +207,7 @@ struct DmrReceiver::Impl {
         if (!ambe[s] || !ambe[s]->ok()) ambe[s] = std::make_unique<DmrAmbe>();   // again after a codec plug-in was installed while running
         if (!ambe[s]->ok()) return;
         int16_t pcm[480];
-        ambe[s]->decodeBurst(vs, pcm);
+        ambe[s]->decodeBurstSoft(vs, link.voiceReliability(), pcm);
         for (int16_t v : pcm) aud8.push_back(v / 32768.f);
         voiceDecoded++;
     }

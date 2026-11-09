@@ -396,6 +396,11 @@ struct NxdnReceiver::Impl {
                         uint8_t vb[72];
                         for (int i = 0; i < 72; i++) vb[i] = hb[72 * vf + i] > 0 ? 1 : 0;
                         voice.emplace_back(vb, vb + 72);
+                        // the reliability of each bit against the half's mean (for the soft vocoder frame FEC)
+                        float mean = 0.f;
+                        for (int i = 0; i < 72; i++) mean += std::fabs(hb[72 * vf + i]);
+                        mean = std::max(mean / 72.f, 1e-6f);
+                        for (int i = 0; i < 72; i++) voice.back().push_back((uint8_t)std::min(255.f, 160.f * std::fabs(hb[72 * vf + i]) / mean));
                     }
                 }
             }
@@ -403,7 +408,7 @@ struct NxdnReceiver::Impl {
         // voice only from frames that are surely ours: a good SACCH, or a found sync and LICH within a call
         // (a call is started from voice only with a found sync and a good SACCH: the 6-bit CRC alone passes noise once in 64)
         const bool sure = sacchOk && lichOk && !c.fly;
-        if (sure || (lichOk && tel.now.active && lastChain == idx && (sacchOk || !c.fly))) for (const auto& vb : voice) voiceFrame(vb.data(), c, sure);
+        if (sure || (lichOk && tel.now.active && lastChain == idx && (sacchOk || !c.fly))) for (const auto& vb : voice) voiceFrame(vb.data(), vb.data() + 72, c, sure);
         tel.blocksOk = tel.sacchOk + tel.facchOk + tel.cacOk;
         tel.blocksBad = tel.sacchBad + tel.facchBad + tel.cacBad;
         if (any) {
@@ -543,7 +548,7 @@ struct NxdnReceiver::Impl {
         }
     }
 
-    void voiceFrame(const uint8_t vb[72], const Chain& c, bool sure) {
+    void voiceFrame(const uint8_t vb[72], const uint8_t rel[72], const Chain& c, bool sure) {
         if (!tel.now.active && !sure) return;
         if (!tel.now.active) startCall(-1, -1, 1, 0, 0, tel.ran, c.baud, true);
         tel.now.voiceFrames++;
@@ -570,7 +575,7 @@ struct NxdnReceiver::Impl {
         }
         if (!ambe || !ambe->ok() || !clear) return;
         int16_t pcm[160];
-        ambe->decode(frame, pcm);
+        ambe->decodeSoft(frame, rel, pcm);
         for (int16_t s : pcm) aud8.push_back(s / 32768.f);
         tel.voiceDecoded++;
         tel.now.voice = true;

@@ -3,6 +3,7 @@
 #include "dect2/nxdn/nxdn_proto.h"
 #include "../source/mbe_dyn.h"
 #include "dect2/codec/codec_registry.h"
+#include "dect2/voice/vocoder_fec.h"
 #include <algorithm>
 #include <cstring>
 
@@ -20,6 +21,9 @@ struct NxdnAmbe::Impl {
     const mbe::Api<FrameFn>* a = nullptr;
     std::shared_ptr<mbe::State> s = std::make_shared<mbe::State>();
     std::unique_ptr<codec::SpeechCodec> plug;   // the user's codec plug-in "ambe2" (docs/CODECS.md); preferred over mbelib
+    voicefec::AmbeProtector prot;               // soft-decision correction and concealment in front of the codec
+    int perm[96];
+    bool permOk = false;
 };
 
 NxdnAmbe::NxdnAmbe() : p_(std::make_unique<Impl>()) {
@@ -37,6 +41,29 @@ void NxdnAmbe::decode(const uint8_t bits[72], int16_t pcm[160]) {
     char fr[4][24];
     nxdn::ambeFrame(bits, fr);
     decodeFr(fr, pcm);
+}
+
+void NxdnAmbe::decodeSoft(const uint8_t bits[72], const uint8_t rel[72], int16_t pcm[160]) {
+    char fr[4][24];
+    nxdn::ambeFrame(bits, fr);
+    if (!p_->permOk) { voicefec::permutationOf([](const uint8_t* b, char f[4][24]) { nxdn::ambeFrame(b, f); }, p_->perm); p_->permOk = true; }
+    uint8_t r[4][24];
+    voicefec::permuteReliability(p_->perm, rel, r);
+    decodeFrSoft(fr, r, pcm);
+}
+
+void NxdnAmbe::decodeFrSoft(const char fr[4][24], const uint8_t rel[4][24], int16_t pcm[160]) {
+    if (!voicefec::enabled()) { decodeFr(fr, pcm); return; }
+    char out[4][24];
+    const voicefec::FrameInfo fi = p_->prot.process(fr, rel, out);
+    decodeFr(out, pcm);
+    if (fi.gain != 1.f) for (int i = 0; i < 160; i++) pcm[i] = (int16_t)(pcm[i] * fi.gain);
+}
+
+void NxdnAmbe::fecCounts(int* frames, int* repaired, int* concealed) const {
+    if (frames) *frames = p_->prot.frames;
+    if (repaired) *repaired = p_->prot.repairedFrames;
+    if (concealed) *concealed = p_->prot.concealedFrames;
 }
 
 void NxdnAmbe::decodeFr(const char frIn[4][24], int16_t pcm[160]) {
