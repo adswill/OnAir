@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <string>
 #include <utility>
 #include <vector>
@@ -111,6 +112,118 @@ inline int strongestIdx(const std::vector<float>& snr) {
     int b = -1;
     for (int i = 0; i < (int)snr.size(); i++) if (b < 0 || snr[i] > snr[b]) b = i;
     return b;
+}
+
+}  // namespace ease
+
+// ---- E9, E10, E11
+namespace ease {
+
+// E9: the band to open on: the highest listed frequency under the path's usable limit (0.85 of the MUF), the lowest band when nothing is usable.
+// bands: dial frequencies low to high. Returns the index, -1 when the list is empty.
+struct HfBand { const char* name; double mhz; };
+inline int pickHfBand(const std::vector<HfBand>& bands, double mufMhz) {
+    if (bands.empty()) return -1;
+    int best = 0;
+    for (int i = 0; i < (int)bands.size(); i++) if (bands[i].mhz <= 0.85 * mufMhz) best = i;
+    return best;
+}
+inline std::vector<HfBand> hfBandsOf(const char* modeName) {
+    const std::string m = modeName ? modeName : "";
+    if (m == "FT8") return {{"80 m", 3.573}, {"40 m", 7.074}, {"30 m", 10.136}, {"20 m", 14.074}, {"17 m", 18.100}, {"15 m", 21.074}, {"12 m", 24.915}, {"10 m", 28.074}};
+    if (m == "FT4") return {{"80 m", 3.575}, {"40 m", 7.0475}, {"30 m", 10.140}, {"20 m", 14.080}, {"17 m", 18.104}, {"15 m", 21.140}, {"12 m", 24.919}, {"10 m", 28.180}};
+    if (m == "WSPR") return {{"80 m", 3.5686}, {"40 m", 7.0386}, {"30 m", 10.1387}, {"20 m", 14.0956}, {"17 m", 18.1046}, {"15 m", 21.0946}, {"12 m", 24.9246}, {"10 m", 28.1246}};
+    if (m == "JS8Call") return {{"80 m", 3.578}, {"40 m", 7.078}, {"30 m", 10.130}, {"20 m", 14.078}, {"17 m", 18.104}, {"15 m", 21.078}, {"12 m", 24.922}, {"10 m", 28.078}};
+    if (m == "PSK31") return {{"80 m", 3.580}, {"40 m", 7.070}, {"30 m", 10.141}, {"20 m", 14.070}, {"17 m", 18.100}, {"15 m", 21.070}, {"10 m", 28.120}};
+    if (m == "RTTY") return {{"80 m", 3.590}, {"40 m", 7.045}, {"20 m", 14.085}, {"15 m", 21.085}, {"10 m", 28.085}};
+    if (m == "CW") return {{"80 m", 3.560}, {"40 m", 7.030}, {"30 m", 10.116}, {"20 m", 14.060}, {"17 m", 18.086}, {"15 m", 21.060}, {"12 m", 24.906}, {"10 m", 28.060}};
+    return {};
+}
+// "40 m: 20 m is closed now"; empty when the band that was going to be used is usable anyway
+inline std::string hfBandSay(const HfBand& chosen, const HfBand& original) {
+    if (chosen.mhz >= original.mhz - 0.5) return "";
+    return std::string(chosen.name) + ": " + original.name + " is closed now";
+}
+
+// E10: for the modes where a quiet screen is normal, what to expect. Null when the mode has no such note.
+struct Quiet { const char* mode; const char* text; };
+inline const char* quietNote(const char* modeName) {
+    static const Quiet k[] = {
+        {"DSC", N_("Normal: DSC calls can be many minutes apart.")},
+        {"NAVTEX", N_("Normal: NAVTEX is broadcast in scheduled slots, several hours apart per station.")},
+        {"Weather fax", N_("Normal: charts follow a broadcast schedule; nothing is sent between them.")},
+        {"COSPAS-SARSAT 406 MHz", N_("Normal: 406 MHz beacons are rare, mostly tests and exercises.")},
+        {"POCSAG", N_("Normal: pagers can be quiet for minutes between messages.")},
+        {"FLEX", N_("Normal: pagers can be quiet for minutes between messages.")},
+        {"ISM sensors", N_("Normal: sensors send every 30 s to a few minutes.")},
+        {"Sub-GHz sensors", N_("Normal: sensors send every 30 s to a few minutes.")},
+        {"ACARS", N_("Normal: aircraft send only when nearby; gaps of minutes are normal.")},
+        {"VDL2", N_("Normal: aircraft send only when nearby; gaps of minutes are normal.")},
+        {"HFDL", N_("Normal: traffic comes and goes with the band; low frequencies work best at night.")},
+        {"SELCAL (aircraft tone call)", N_("Normal: selective calls are sporadic.")},
+        {"AIS", N_("Normal: without ships in range there is nothing to hear.")},
+        {"Radiosonde", N_("Normal: most sites launch near 11:15 and 23:15 UTC.")},
+        {"FLARM", N_("Normal: gliders fly by day and in season.")},
+        {"LoRaWAN", N_("Normal: nodes send seconds to hours apart.")},
+        {"Meshtastic", N_("Normal: nodes send seconds to hours apart.")},
+        {"MeshCore", N_("Normal: nodes send seconds to hours apart.")},
+        {"LoRa (raw)", N_("Normal: nodes send seconds to hours apart.")},
+        {"Tone decoders (CTCSS, DCS, DTMF, selcall)", N_("Normal: tones are heard only when someone transmits.")},
+    };
+    if (!modeName) return nullptr;
+    for (const Quiet& q : k) if (!std::strcmp(q.mode, modeName)) return q.text;
+    return nullptr;
+}
+inline std::string quietLine(const char* note, double runSec) {
+    char b[48];
+    std::snprintf(b, sizeof b, " Listening for %ld min.", std::max(0L, std::lround(runSec / 60)));
+    return std::string(note) + b;
+}
+
+// E11: what antenna the mode needs: from the frequency and a short table of the special cases. Only facts and sums: quarter-wave length from the frequency.
+struct AntennaNeed { std::string text; double mhz = 0; };
+inline AntennaNeed antennaNeed(const char* modeName, double mhz) {
+    const std::string m = modeName ? modeName : "";
+    AntennaNeed n; n.mhz = mhz;
+    struct Row { const char* mode; const char* text; };
+    static const Row rows[] = {
+        {"ADS-B", N_("a 1090 MHz collinear or ground plane, outside and high")}, {"UAT", N_("a 978 MHz vertical, outside and high")},
+        {"Mode S uplink", N_("a 1030 MHz vertical")}, {"Mode A/C", N_("a 1090 MHz collinear or ground plane")},
+        {"GNSS", N_("an active patch antenna with antenna power, open sky")}, {"SBAS", N_("an active patch antenna with antenna power, open sky")},
+        {"Meteor-M LRPT", N_("a 137 MHz V-dipole or QFH, right-hand circular")}, {"NOAA APT", N_("a 137 MHz V-dipole or QFH")}, {"Argos", N_("a 466 MHz vertical, open sky")},
+        {"QO-100", N_("a 60 cm dish or larger with a Ku LNB")}, {"DVB-S/S2", N_("a dish with a universal LNB")}, {"ISDB-S (BS)", N_("a 45 cm dish with an LNB")},
+        {"Inmarsat-C", N_("an L-band patch aimed at the satellite")}, {"Inmarsat Aero", N_("an L-band patch aimed at the satellite")}, {"Inmarsat BGAN", N_("an L-band patch aimed at the satellite")},
+        {"Iridium", N_("an L-band patch with open sky")}, {"NFC / RFID 13.56 MHz", N_("a loop within a few centimetres of the reader")},
+        {"Time signals", N_("a loop or long wire, far from electronics")}, {"e-Czas (225 kHz, Poland)", N_("a loop or long wire")},
+        {"Sferics (lightning)", N_("a long wire or large loop")},
+        {"GOES HRIT", N_("a dish of 80 cm or larger with a 1.7 GHz LNA")}, {"Elektro-L", N_("a dish of 80 cm or larger with a 1.7 GHz LNA")},
+        {"GK-2A LRIT", N_("a dish of 80 cm or larger with a 1.7 GHz LNA")}, {"GK-2A HRIT", N_("a dish of 1.2 m or larger with a 1.7 GHz LNA")},
+        {"FY-4 LRIT", N_("a dish of 80 cm or larger with a 1.7 GHz LNA")}, {"FY-2 S-VISSR", N_("a dish of 1.2 m or larger with a 1.7 GHz LNA")},
+        {"HRPT / AHRPT", N_("a tracked dish with a 1.7 GHz LNA")}, {"NOAA HRPT", N_("a tracked dish with a 1.7 GHz LNA")}, {"Meteor HRPT", N_("a tracked dish with a 1.7 GHz LNA")}, {"FY-3 AHRPT", N_("a tracked dish with a 1.7 GHz LNA")},
+    };
+    for (const Row& r : rows) if (m == r.mode) { n.text = r.text; return n; }
+    if (mhz <= 0) return n;
+    char b[100];
+    if (mhz < 30) n.text = N_("a long wire or a loop");
+    else {
+        const double quarterCm = 7500.0 / mhz;
+        if (quarterCm >= 100) std::snprintf(b, sizeof b, N_("a vertical or dipole, quarter wave %.2f m"), quarterCm / 100);
+        else std::snprintf(b, sizeof b, N_("a vertical or dipole, quarter wave %.0f cm"), quarterCm);
+        n.text = b;
+    }
+    return n;
+}
+// The stated antenna (learn::Antenna: 0 whip, 1 dipole, 2 discone, 3 loop, 4 long wire, 5 none): a word when it does not suit this frequency. Empty when it does (or for wide-band dish modes where the row already says what to get).
+inline const char* antennaWarn(int stated, double mhz) {
+    if (mhz <= 0) return "";
+    switch (stated) {
+        case 0: return mhz > 1000 ? N_("The small whip is poor above 1 GHz.") : mhz < 30 ? N_("The small whip is poor on short wave.") : "";
+        case 1: return mhz > 2000 ? N_("A dipole is poor at this frequency.") : "";
+        case 2: return mhz < 25 ? N_("A discone is poor below 25 MHz.") : mhz > 1300 ? N_("A discone is poor above 1.3 GHz.") : "";
+        case 3: case 4: return mhz > 30 ? N_("Your HF antenna is poor at this frequency.") : "";
+        case 5: return N_("Without an antenna almost nothing is heard.");
+        default: return "";
+    }
 }
 
 }  // namespace ease

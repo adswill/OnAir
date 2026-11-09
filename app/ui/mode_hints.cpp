@@ -2,6 +2,7 @@
 // this location, and later hints. Facts and one click, nothing is blocked. The logic is in ease_logic.h.
 #include "../app.h"
 #include "ease_logic.h"
+#include "dect2/engine/mode_tuning.h"
 #include "typography.h"
 #include "imgui.h"
 #include <cmath>
@@ -58,12 +59,41 @@ void geoHint(App& a) {
     ImGui::PopID();
 }
 
+// E11: stated once per mode, while there is nothing else on the air to explain the silence: stopped, or in its first minute
+void antennaHint(App& a) {
+    static const char* lastMode = nullptr;
+    static double shownUntil = 0;
+    const char* name = curModeName(a);
+    const double now = ImGui::GetTime();
+    if (name != lastMode) { lastMode = name; shownUntil = now + 60; }
+    if (a.engine.running() && now > shownUntil) return;
+    const ease::AntennaNeed n = ease::antennaNeed(name, a.freqMhz);
+    if (n.text.empty()) return;
+    const char* warn = ease::antennaWarn(a.setupAntenna, a.freqMhz);
+    ImGui::TextDisabled("%s: %s.%s%s", tr("Antenna"), tr(n.text.c_str()), warn[0] ? " " : "", tr(warn));
+}
+
 }  // namespace
+
+const char* curModeName(const App& a) {
+    for (const ModeDef& m : allModes()) if (m.family == a.family && (!m.subId || !a.sub || subIndexOf(m.subId) == a.sub)) return m.name;
+    return nullptr;
+}
 
 void modeHintsLine(App& a) {
     firstStartHint(a);
     passHint(a);
     geoHint(a);
+    antennaHint(a);
+}
+
+// E11: the browser's antenna row (its wording, not a judgement)
+std::string modeAntennaNote(const ModeDef& m) {
+    const ModeTuning* mt = nullptr;
+    if (m.family >= 6) mt = dect2::modeTuning(m.family + 2);
+    const double mhz = m.bandMinMhz > 0 ? m.bandMinMhz : mt ? mt->defMhz : 0;
+    const ease::AntennaNeed n = ease::antennaNeed(m.name, mhz);
+    return n.text.empty() ? std::string() : std::string("Antenna: ") + n.text;
 }
 
 // E4: a note in the mode browser. Empty when the mode is not geostationary, no position is set, or a satellite is above the horizon.

@@ -7,6 +7,8 @@
 #include "imgui.h"
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/engine/scanner.h"
+#include "dect2/prop/prop.h"
+#include <ctime>
 #include <cmath>
 #include <string>
 #include <vector>
@@ -90,6 +92,38 @@ void onReady(App& a) {
 }
 
 }  // namespace
+
+// E9: the first time a shortwave mode opens, a band that is open now (only with a location and a real radio, and never over a frequency the mode remembers)
+void firstBandPick(App& a) {
+    const char* name = curModeName(a);
+    const std::vector<ease::HfBand> bands = ease::hfBandsOf(name);
+    if (bands.empty() || !receiverLocationSet()) return;
+    if (!(a.devIdx >= 0 && a.devIdx < (int)a.devices.size() && a.devices[a.devIdx].isRadio())) return;
+    const int slot = modeSlot(a);
+    if (a.family >= 6 && slot >= 0 && slot < kNumSlots && a.famFreq[slot] > 0) return;
+    const std::string key = std::string("firstBand.") + name;
+    plat::Prefs& p = plat::prefs();
+    if (p.getB(key.c_str(), false)) return;
+    p.setB(key.c_str(), true); p.flush();
+    double lat, lon;
+    receiverLocation(lat, lon);
+    const std::time_t tt = std::time(nullptr);
+    std::tm t = *std::gmtime(&tt);
+    dect2::prop::Params pp;
+    pp.txLat = lat; pp.txLon = lon;
+    pp.year = t.tm_year + 1900; pp.month = t.tm_mon + 1; pp.day = t.tm_mday; pp.utcHour = t.tm_hour + t.tm_min / 60.0;
+    pp.sfi = 130;       // a mid-cycle guess: no live solar data is used for the first pick
+    const double muf = dect2::prop::mufMHz(lat, lon, 1500, pp);
+    const int b = ease::pickHfBand(bands, muf);
+    if (b < 0) return;
+    int orig = 0;
+    for (int i = 0; i < (int)bands.size(); i++) if (std::fabs(bands[i].mhz - a.freqMhz) < 0.5) orig = i;
+    if (std::fabs(bands[b].mhz - a.freqMhz) < 0.01) return;
+    S.backMhz = a.freqMhz;
+    tuneFreq(a, bands[b].mhz);
+    const std::string note = ease::hfBandSay(bands[b], bands[orig]);
+    say(note.empty() ? std::string(bands[b].name) + tr(" is open now: tuned there.") : tr(note.c_str()), true);
+}
 
 void firstStartAfterStart(App&) { S.t0 = ImGui::GetTime() + 1.5; S.fam = 0; }
 

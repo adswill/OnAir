@@ -56,6 +56,27 @@ int main() {
       dect2::ClockComp x; x.slotEnded(0, 0); x.slotEnded(3, 0.1); x.slotEnded(0, 0); x.slotEnded(0, 0); x.slotEnded(0, 0); check(!x.wantWide(), "a decode resets the silence"); }
     // the sweep: a wrong clock of any size up to 5 s ends within 0.5 s of right (signals reach the slot clock as DT = error until corrected)
     for (double err = -5; err <= 5; err += 0.25) { dect2::ClockComp c; double e = err; for (int i = 0; i < 12; i++) { const double s = c.slotEnded(4, e); e -= s; } check(std::fabs(e) < 0.5, "clock error sweep converges"); }
+    // E9
+    { auto ft8 = hfBandsOf("FT8"); check(ft8.size() == 8 && hfBandsOf("Nothing").empty(), "bands of a mode");
+      check(pickHfBand(ft8, 34) == 7, "MUF 34: highest band under the limit (10 m)");
+      check(pickHfBand(ft8, 20) == 3, "MUF 20: 20 m");
+      check(pickHfBand(ft8, 9) == 1, "MUF 9: 40 m");
+      check(pickHfBand(ft8, 3) == 0, "MUF below every band: the lowest");
+      check(pickHfBand({}, 10) == -1, "empty");
+      for (const char* m : {"FT8", "FT4", "WSPR", "JS8Call", "PSK31", "RTTY", "CW"}) { auto b = hfBandsOf(m); for (size_t i = 1; i < b.size(); i++) check(b[i].mhz > b[i - 1].mhz, "dial frequencies ascending"); }
+      check(hfBandSay({"40 m", 7.074}, {"20 m", 14.074}) == "40 m: 20 m is closed now", "says why it moved");
+      check(hfBandSay({"20 m", 14.074}, {"20 m", 14.074}).empty(), "nothing to say on the same band");
+      check(hfBandSay({"17 m", 18.1}, {"20 m", 14.074}).empty(), "a move up is not closed"); }
+    // E10
+    { check(quietNote("DSC") && !strncmp(quietNote("DSC"), "Normal:", 7), "DSC note"); check(!quietNote("FM") && !quietNote(nullptr), "modes without a note");
+      check(quietLine("Normal: x.", 185).find("Listening for 3 min") != std::string::npos, "minutes"); check(quietLine("n", 10).find("for 0 min") != std::string::npos, "under a minute"); }
+    // E11
+    { check(antennaNeed("ADS-B", 1090).text.find("1090") != std::string::npos, "ADS-B row");
+      AntennaNeed f = antennaNeed("FM", 100); check(f.text.find("75 cm") != std::string::npos, "100 MHz quarter wave"); AntennaNeed h = antennaNeed("POCSAG", 466); check(h.text.find("16 cm") != std::string::npos, "466 MHz quarter wave");
+      check(antennaNeed("Shortwave", 7).text.find("long wire") != std::string::npos, "HF"); check(antennaNeed("x", 0).text.empty(), "no frequency, no line");
+      check(*antennaWarn(0, 1090) != 0 && *antennaWarn(0, 100) == 0, "whip: poor above 1 GHz only (in VHF/UHF)");
+      check(*antennaWarn(4, 100) != 0 && *antennaWarn(4, 7) == 0, "long wire: HF only");
+      check(*antennaWarn(5, 100) != 0, "no antenna"); check(*antennaWarn(2, 150) == 0, "discone fine at VHF"); check(*antennaWarn(1, 900) == 0, "dipole fine at UHF"); }
     if (fails == 0) std::printf("ease: all passed\n");
     return fails != 0;
 }

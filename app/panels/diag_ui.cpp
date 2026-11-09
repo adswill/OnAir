@@ -18,6 +18,7 @@
 #include "dect2/voicekeys/key_guard.h"
 #include "../ui/panel_layout.h"
 #include "../ui/next_step_logic.h"
+#include "../ui/ease_logic.h"
 #include <fstream>
 #include <iterator>
 #include <cstring>
@@ -610,11 +611,14 @@ void nextStepLine(App& a) {
     else if (run && !a.fmMode && !a.dabMode && a.rx.standard >= 0 && a.rx.standard <= 1) { in.lockKnown = true; in.locked = a.rx.state == 2; in.snrDb = a.rx.dataValid ? a.rx.dataSnrDb : NAN; }
     const nextstep::Out o = nextstep::advise(in);
     if (!o.text[0]) return;
+    // E10: where a quiet screen is normal the mode says so, instead of "no signal" or a general note
+    std::string text = tr(o.text);
+    if (const char* note = ease::quietNote(curModeName(a)); note && run && in.runSec >= nextstep::kSearchSec && (o.state == nextstep::State::Unknown || o.state == nextstep::State::NoSignal)) text = ease::quietLine(tr(note), in.runSec);
     // always one line, in the same place in every mode: grey while nothing needs doing, green when it works, amber when a step helps
     const ImVec4 col = o.needsAttention() ? ImVec4(0.95f, 0.78f, 0.25f, 1) : o.state == nextstep::State::Good ? pal::okGreen() : ImVec4(0.62f, 0.66f, 0.72f, 1);
     ImGui::PushStyleColor(ImGuiCol_Text, col);
     ImGui::PushTextWrapPos(0.0f);
-    ImGui::TextUnformatted(tr(o.text));
+    ImGui::TextUnformatted(text.c_str());
     ImGui::PopTextWrapPos();
     ImGui::PopStyleColor();
     if (o.fix != nextstep::Fix::None) {

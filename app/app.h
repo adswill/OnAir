@@ -930,9 +930,12 @@ bool rxWidthIsCustom(const App& a);          // a custom width or a chosen sampl
 void rxWidthReset(App& a);                   // back to the mode's own bandwidth and rate (the custom values stay saved)
 void rxWidthRestore(App& a, const RxWidthSnap& s);   // Undo of "Reset this mode"
 void nextStepLine(App& a);                   // panels/diag_ui.cpp: the "what do I do next" line of the mode on screen (app/ui/next_step_logic.h), drawn by modepanel::actionBar
+void firstBandPick(App& a);                    // ui/first_start.cpp: a shortwave mode's first opening: pick a band that is open now
 void firstStartAfterStart(App& a);            // ui/first_start.cpp: the receiver has been asked to start
 void firstStartTick(App& a);                  // every frame
 void firstStartHint(App& a);                  // its line in the hint strip
+const char* curModeName(const App& a);        // ui/mode_hints.cpp: the name of the current mode-list entry (null: none)
+std::string modeAntennaNote(const ModeDef& m);
 void modeHintsLine(App& a);                  // ui/mode_hints.cpp: next pass, satellite visibility and other per-mode hints under the next step line
 std::string modeGeoNote(const ModeDef& m);   // ui/mode_hints.cpp: non-blocking "below your horizon" note for the mode browser
 void modeActionBar(App& a);                  // ui/kit/mode_actions.cpp: next step line, "Auto setup" and "Reset this mode" with its undo note
@@ -1188,7 +1191,7 @@ void modePicker(App& a);           // once a frame: the M key and the window
 bool modePickerWantsKeys();        // the window is open and has the keyboard
 void modePickerButton(App& a, const char* id = "##modes");   // the "Modes" button of the top bars
 void modeInfoFill();               // mode_info.cpp: tags, needs and minimum rate of rows that have none (also plugin rows added later)
-struct ModeFit { bool ok = true; std::string reason; std::string note; };   // note: a fact that never greys the mode
+struct ModeFit { bool ok = true; std::string reason; std::string note; std::string antenna; };   // note, antenna: facts that never grey the mode
 ModeFit modeFit(const App& a, const ModeDef& m);              // does the selected radio fit the mode (grey + reason; never blocks)
 bool modeCodecMissing(const ModeDef& m);                      // a voice codec the user must install is missing (false until wired)
 extern bool (*gModeSignalHint)(const ModeDef&, float* conf);  // set by the identifier: a signal for this mode is on air now (null: none)
