@@ -63,4 +63,15 @@ inline std::vector<uint8_t> eotFrameBits(const std::vector<uint8_t>& d, int prea
     return b;
 }
 
+// ---- Two-level FM: bits (Manchester or plain chips) at chipRate, +-dev, Gaussian-free
+inline void appendFsk(std::vector<cf32>& out, const std::vector<uint8_t>& chips, double chipRate, double fs, double dev, double& ph, double amp = 1, double ppm = 0) {
+    const double spc = fs / chipRate * (1 + ppm * 1e-6);
+    double acc = 0; size_t i = 0;
+    while (i < chips.size()) {
+        ph += 2 * kPi * (chips[i] ? dev : -dev) / fs;
+        out.push_back(cf32((float)(amp * std::cos(ph)), (float)(amp * std::sin(ph))));
+        if (++acc >= spc) { acc -= spc; i++; }
+    }
+}
+
 } // namespace avgen

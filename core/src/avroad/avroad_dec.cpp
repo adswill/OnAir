@@ -6,6 +6,8 @@ namespace dect2 {
 std::unique_ptr<avroad::Decoder> avroad::makeDecoder(int v) {
     switch (v) {
     case EotHot: return makeEot();
+    case Fanet: return makeFanet();
+    case Ogn: return makeOgn();
     default: return nullptr;
     }
 }

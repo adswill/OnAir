@@ -41,6 +41,8 @@ protected:
 
 std::unique_ptr<Decoder> makeDecoder(int variant);
 std::unique_ptr<Decoder> makeEot();
+std::unique_ptr<Decoder> makeFanet();
+std::unique_ptr<Decoder> makeOgn();
 
 // Low-pass, then resample to exactly workRate
 class Chain {
