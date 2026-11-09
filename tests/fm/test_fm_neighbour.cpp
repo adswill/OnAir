@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdio>
 #include <random>
+#include <string>
 #include <vector>
 
 using namespace dect2;
@@ -34,9 +35,14 @@ static R run(double neighbourDb, double offset, bool on, bool stereoN) {
     return {t.rdsGroups, 10 * std::log10(tone / rest), t.psName == "WANTED  " && t.piCode == 0x7A11, t.neighbourDb};
 }
 
-int main() {
+int main(int argc, char** argv) {
+    // --quick: the one operating point of the fast test tier; the whole sweep is labelled slow
+    const bool quick = argc > 1 && std::string(argv[1]) == "--quick";
+    const std::vector<double> offs = quick ? std::vector<double>{200e3} : std::vector<double>{200e3, -200e3};
+    const std::vector<double> lvls = quick ? std::vector<double>{20.0} : std::vector<double>{0.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0};
+    const std::vector<bool> sts = quick ? std::vector<bool>{false} : std::vector<bool>{false, true};
     double gain20 = 0;
-    for (double off : {200e3, -200e3}) for (double lvl : {0.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0}) for (bool st : {false, true}) {
+    for (double off : offs) for (double lvl : lvls) for (bool st : sts) {
         const R a = run(lvl, off, false, st), b = run(lvl, off, true, st);
         printf("offset %+.0f kHz neighbour %+.0f dB %s: groups %3llu -> %3llu, audio %5.1f -> %5.1f dB, PS %d -> %d, level read %.1f dB\n", off / 1e3, lvl, st ? "stereo" : "mono  ", (unsigned long long)a.groups, (unsigned long long)b.groups, a.audio, b.audio, a.ps, b.ps, b.nDb);
         if (off == 200e3 && lvl == 20 && !st) gain20 = b.audio - a.audio;

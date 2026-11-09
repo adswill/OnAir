@@ -4,6 +4,7 @@
 #include "dect2/fm/fm_rx.h"
 #include <cmath>
 #include <cstdio>
+#include <string>
 #include <vector>
 
 using namespace dect2;
@@ -30,9 +31,14 @@ static R run(double cnr, double cfo, bool on, bool stereo, uint32_t seed) {
     return {10 * std::log10(tone / rest), t.rdsGroups, t.clicksFixed};
 }
 
-int main() {
+int main(int argc, char** argv) {
+    // --quick: the 10 dB point of the fast test tier; the whole sweep is labelled slow
+    const bool quick = argc > 1 && std::string(argv[1]) == "--quick";
+    const std::vector<double> cfos = quick ? std::vector<double>{0.0} : std::vector<double>{0.0, 12000.0};
+    const std::vector<bool> stereos = quick ? std::vector<bool>{false} : std::vector<bool>{false, true};
+    const std::vector<double> cnrs = quick ? std::vector<double>{10.0} : std::vector<double>{6.0, 8.0, 10.0, 12.0, 14.0, 18.0};
     double gainAt10 = 0, groupsOff = 0, groupsOn = 0;
-    for (double cfo : {0.0, 12000.0}) for (bool stereo : {false, true}) for (double cnr : {6.0, 8.0, 10.0, 12.0, 14.0, 18.0}) {
+    for (double cfo : cfos) for (bool stereo : stereos) for (double cnr : cnrs) {
         const R off = run(cnr, cfo, false, stereo, 7), on = run(cnr, cfo, true, stereo, 7);
         printf("cnr %4.0f cfo %+6.0f %s: audio %5.1f -> %5.1f dB, RDS groups %4llu -> %4llu, clicks %llu\n", cnr, cfo, stereo ? "stereo" : "mono  ", off.audioSnr, on.audioSnr,
                (unsigned long long)off.groups, (unsigned long long)on.groups, (unsigned long long)on.clicks);
