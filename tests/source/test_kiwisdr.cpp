@@ -384,7 +384,8 @@ int main() {
     CHECK(eventually([&] { return srv.hasPrefix("SET mod=iq"); }));
     { std::lock_guard<std::mutex> lk(srv.mu); CHECK(srv.path.rfind("/kiwi/", 0) == 0 && srv.path.size() > 10 && srv.path.compare(srv.path.size() - 4, 4, "/SND") == 0); }
     CHECK(srv.has("SET mod=iq low_cut=-5000 high_cut=5000 freq=7074.000"));
-    CHECK(srv.has("SET ident_user=OnAir") && srv.has("SET compression=0") && srv.has("SET AR OK in=12000 out=44100"));
+    CHECK(srv.has("SET ident_user=OnAir") && srv.has("SET compression=0"));
+    CHECK(eventually([&] { return srv.has("SET AR OK in=12000 out=44100"); }));   // audio_rate arrives after version, so it is answered from the receive loop
     CHECK(eventually([&] { return srv.hasPrefix("SET agc=1 ") && srv.hasPrefix("SET keepalive"); }));
     CHECK(std::fabs(src->sampleRate() - 252000) < 1);
     std::vector<cf32> buf(30000);

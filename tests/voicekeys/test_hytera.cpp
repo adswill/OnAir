@@ -5,6 +5,7 @@
 #include "dect2/voicekeys/voice_decrypt.h"
 #include "dect2/voicekeys/voice_keys.h"
 #include <cstdio>
+#include <cstring>
 #include <random>
 using namespace dect2::voicekeys;
 static int fails = 0;

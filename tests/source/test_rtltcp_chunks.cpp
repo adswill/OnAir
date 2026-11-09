@@ -58,7 +58,9 @@ struct Srv {
 };
 
 int main() {
+#ifndef _WIN32
     signal(SIGPIPE, SIG_IGN);
+#endif
     Srv srv;
     CHECK(srv.start());
     DeviceInfo d;
