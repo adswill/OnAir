@@ -1,30 +1,40 @@
-# Quick check: builds the app, tools and tests on Linux, macOS and Windows and runs the fast tests in
-# parallel. The slow tests and the other code paths run in ci-full.yml. It runs on every push to the 0.2.7
-# branch and by hand (Actions tab > CI > Run workflow), so the builds and tests do not have to run on a laptop.
+# Quick check: builds ONLY the test programs the change can affect (tools/ci_select.py) and runs them, spread over shards that run at the
+# same time. How it picks (docs/CI-FAST.md):
+#   scope auto    changed files -> test areas (core/src/<mode>/, app/<mode>/, tests/<mode>/ -> tests/<mode>/) + a small smoke set;
+#                 a shared file (dsp, engine, CMake, headers ...) -> every non-slow test
+#   scope full    every test including the slow ones (tags, and the manual input)
+# The three "Linux x86_64", "macOS arm64" and "Windows x64 (MinGW-w64)" jobs at the end are the required checks: they only gather the shards.
 name: CI
 
 on:
   push:
-    branches: ['main', '0.2.8']
+    branches: ['main', '0.2.8', 'integ-*']
+    tags: ['v*']
   workflow_dispatch:
+    inputs:
+      scope:
+        description: "auto (changed areas), wide (all non-slow), full (all incl. slow), smoke"
+        default: auto
+      base:
+        description: "git ref the change is measured against (auto scope)"
+        default: origin/main
 
 # A newer push cancels the run still going for an older one.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# Build cache (ccache, wrapped around every C/C++ compile via CMAKE_*_COMPILER_LAUNCHER):
-#  - the cache key is os + hash of CMakeLists.txt/cmake/** + the commit; the commit never matches an old run, so the
-#    restore-keys prefixes pick the newest cache of the same os (then the same CMake inputs) and only changed files recompile;
-#  - CCACHE_BASEDIR makes paths relative so a checkout in another directory still hits; compression keeps the cache small;
-#  - the Rust layers build with cargo inside build/rust from workspace sources only (no crates to download), and cargo
-#    decides by file mtime, which a fresh checkout resets, so caching its target dir would never hit and is left out.
+# ccache around every compile; one cache per os + shard (the shards build different files), restored from the newest older one,
+# saved also when the run failed. Paths are made relative (BASEDIR) so another checkout directory still hits.
 env:
   CCACHE_DIR: ${{ github.workspace }}/.ccache
   CCACHE_BASEDIR: ${{ github.workspace }}
   CCACHE_MAXSIZE: 1G
   CCACHE_COMPRESS: "true"
   CCACHE_COMPRESSLEVEL: "6"
+  CCACHE_SLOPPINESS: "time_macros,pch_defines,include_file_mtime,include_file_ctime"
+  SCOPE: ${{ inputs.scope || (startsWith(github.ref, 'refs/tags/') && 'full') || 'auto' }}
+  BASE_IN: ${{ inputs.base || github.event.before }}
 
 jobs:
   lint:
@@ -41,115 +51,262 @@ jobs:
       - name: FFI width check
         run: python3 tools/check_ffi_widths.py
 
-  unix:
+  linux-shards:
     needs: lint
-    name: ${{ matrix.name }}
+    name: ${{ matrix.name }} ${{ matrix.shard }}/${{ matrix.of }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { name: "Linux x86_64", os: ubuntu-24.04 }
-          - { name: "macOS arm64", os: macos-15 }
+          - { name: "Linux x86_64", os: ubuntu-24.04, shard: 1, of: 4, plat: linux }
+          - { name: "Linux x86_64", os: ubuntu-24.04, shard: 2, of: 4, plat: linux }
+          - { name: "Linux x86_64", os: ubuntu-24.04, shard: 3, of: 4, plat: linux }
+          - { name: "Linux x86_64", os: ubuntu-24.04, shard: 4, of: 4, plat: linux }
     steps:
       - name: Free disk space (Linux)
         if: runner.os == 'Linux'
         run: |
-          # the build of ~1300 test executables filled the 14 GB runner disk ("ld: No space left on device", then tests failed from a full /tmp)
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
           df -h /
       - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake pkg-config ccache libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libglfw3-dev
+          sudo apt-get install -y build-essential cmake pkg-config ccache lld ninja-build libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libglfw3-dev
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
-        run: brew install cmake pkg-config ccache hackrf soapysdr libusb ffmpeg glfw
-      - uses: actions/cache@v6
+        run: brew install cmake ninja pkg-config ccache hackrf soapysdr libusb ffmpeg glfw
+      - name: Restore ccache
+        uses: actions/cache/restore@v6
         with:
           path: .ccache
-          key: ccache-${{ matrix.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
+          key: ccache-${{ matrix.plat }}-s${{ matrix.shard }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
           restore-keys: |
-            ccache-${{ matrix.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-
-            ccache-${{ matrix.os }}-
+            ccache-${{ matrix.plat }}-s${{ matrix.shard }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-
+            ccache-${{ matrix.plat }}-s${{ matrix.shard }}-
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-      - name: Build
-        run: cmake --build build -j 4
+        run: |
+          LD=""; [ "$RUNNER_OS" = Linux ] && LD="-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld"
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache $LD
+      - name: Select the tests of this shard
+        run: |
+          BASE="$BASE_IN"; case "$BASE" in ""|0000000000000000000000000000000000000000) BASE=origin/main;; esac
+          git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
+          python3 tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" --shard ${{ matrix.shard }}/${{ matrix.of }} --out sel | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Build the selected targets
+        run: cmake --build build -j 4 --target $(tr -d "\r" < sel/targets.txt)
       - name: ccache statistics
         if: always()
         run: ccache -s
-      # the socket / thread timing tests (label "timing") on their own, two at a time, a failed one run once more: beside a -j 4 run they
-      # measured the runner's load. (A retry step after a failed test step never ran: a step only runs when the ones before it passed.)
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.plat }}-s${{ matrix.shard }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
+      # the socket / thread timing tests (label "timing") on their own, two at a time, a failed one run once more
       - name: Test (fast tests)
-        run: ctest --test-dir build -j 4 -LE "slow|timing" --output-on-failure --timeout 600 --output-log ctest-fast.log
+        run: ctest --test-dir build -j 4 -R "$(cat sel/fast.regex)" --output-on-failure --timeout 1500 --output-log ctest-fast.log
       - name: Test (timing tests, a failure retried once)
         if: success() || failure()
-        run: ctest --test-dir build -j 2 -L timing -LE slow --repeat until-pass:2 --output-on-failure --timeout 600 --output-log ctest-timing.log
-      # the speed figures of every test (tests/common/cpu_report.h), also of those that passed: for calibrating the limits on these machines
+        run: ctest --test-dir build -j 2 -R "$(cat sel/timing.regex)" --repeat until-pass:2 --output-on-failure --timeout 1500 --output-log ctest-timing.log
       - name: CPU figures (CPUCAL)
         if: always()
-        run: grep -h CPUCAL ctest-fast.log ctest-timing.log > cpucal.txt || true; cat cpucal.txt
+        run: grep -h CPUCAL ctest-fast.log ctest-timing.log > cpucal.txt || true
       - uses: actions/upload-artifact@v7
         if: always()
-        with: { name: "cpucal-${{ matrix.name }}", path: "cpucal.txt\nctest-fast.log\nctest-timing.log", if-no-files-found: ignore }
-      # The app on Mesa's software OpenGL held to 3.1 and a 4096 texture limit, as on a Raspberry Pi 4/5 (#283, #284): it must open,
-      # draw a frame and make no GL errors.
-      - name: "App: OpenGL 3.1 software run (Raspberry Pi limits)"
+        with: { name: "cpucal-${{ matrix.name }}-${{ matrix.shard }}", path: "cpucal.txt\nctest-fast.log\nctest-timing.log\nsel/summary.txt", if-no-files-found: ignore }
+
+
+  macos-shards:
+    needs: lint
+    name: ${{ matrix.name }} ${{ matrix.shard }}/${{ matrix.of }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: "macOS arm64", os: macos-15, shard: 1, of: 2, plat: macos }
+          - { name: "macOS arm64", os: macos-15, shard: 2, of: 2, plat: macos }
+    steps:
+      - name: Free disk space (Linux)
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get install -y xvfb libgl1-mesa-dri
-          set +e
-          LIBGL_ALWAYS_SOFTWARE=1 MESA_GL_VERSION_OVERRIDE=3.1 MESA_GLSL_VERSION_OVERRIDE=140 MESA_DEBUG=1 DECT2_MAX_TEXTURE=4096 \
-            timeout 120 xvfb-run -a -s "-screen 0 1600x1000x24" ./build/dect2 --hidden --mute --shot "$GITHUB_WORKSPACE/shot-gl31.png" > gl31.log 2>&1
-          echo "exit $?"
-          cat gl31.log | tail -40
-          [ -f "$GITHUB_WORKSPACE/shot-gl31.png" ] || { echo "no frame drawn"; exit 1; }
-          if grep -q 'Mesa: error\|GL_INVALID' gl31.log; then echo "OpenGL errors"; exit 1; fi
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h /
+      - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake pkg-config ccache lld ninja-build libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libglfw3-dev
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install cmake ninja pkg-config ccache hackrf soapysdr libusb ffmpeg glfw
+      - name: Restore ccache
+        uses: actions/cache/restore@v6
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.plat }}-s${{ matrix.shard }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ matrix.plat }}-s${{ matrix.shard }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-
+            ccache-${{ matrix.plat }}-s${{ matrix.shard }}-
+      - name: Configure
+        run: |
+          LD=""; [ "$RUNNER_OS" = Linux ] && LD="-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld"
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache $LD
+      - name: Select the tests of this shard
+        run: |
+          BASE="$BASE_IN"; case "$BASE" in ""|0000000000000000000000000000000000000000) BASE=origin/main;; esac
+          git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
+          python3 tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" --shard ${{ matrix.shard }}/${{ matrix.of }} --out sel | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Build the selected targets
+        run: cmake --build build -j 4 --target $(tr -d "\r" < sel/targets.txt)
+      - name: ccache statistics
+        if: always()
+        run: ccache -s
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.plat }}-s${{ matrix.shard }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
+      # the socket / thread timing tests (label "timing") on their own, two at a time, a failed one run once more
+      - name: Test (fast tests)
+        run: ctest --test-dir build -j 4 -R "$(cat sel/fast.regex)" --output-on-failure --timeout 1500 --output-log ctest-fast.log
+      - name: Test (timing tests, a failure retried once)
+        if: success() || failure()
+        run: ctest --test-dir build -j 2 -R "$(cat sel/timing.regex)" --repeat until-pass:2 --output-on-failure --timeout 1500 --output-log ctest-timing.log
+      - name: CPU figures (CPUCAL)
+        if: always()
+        run: grep -h CPUCAL ctest-fast.log ctest-timing.log > cpucal.txt || true
       - uses: actions/upload-artifact@v7
-        if: always() && runner.os == 'Linux'
-        with: { name: linux-gl31-shot, path: "shot-gl31.png\ngl31.log", if-no-files-found: ignore }
+        if: always()
+        with: { name: "cpucal-${{ matrix.name }}-${{ matrix.shard }}", path: "cpucal.txt\nctest-fast.log\nctest-timing.log\nsel/summary.txt", if-no-files-found: ignore }
 
-  windows:
-    name: Windows x64 (MinGW-w64)
+
+  windows-shards:
+    needs: lint
+    name: Windows shard ${{ matrix.shard }}/2
     runs-on: windows-2022
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix: { shard: [1, 2] }
     defaults: { run: { shell: 'msys2 {0}' } }
     steps:
       - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
       - uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64   # the MINGW64 environment has no hackrf and soapysdr packages
           update: true
           install: >-
-            mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-python mingw-w64-ucrt-x86_64-pkgconf mingw-w64-ucrt-x86_64-ccache mingw-w64-ucrt-x86_64-rust
-            mingw-w64-ucrt-x86_64-ffmpeg mingw-w64-ucrt-x86_64-glfw mingw-w64-ucrt-x86_64-hackrf mingw-w64-ucrt-x86_64-soapysdr mingw-w64-ucrt-x86_64-libiconv
-      - uses: actions/cache@v6
+            git python mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-pkgconf mingw-w64-ucrt-x86_64-ccache mingw-w64-ucrt-x86_64-rust
+            mingw-w64-ucrt-x86_64-ffmpeg mingw-w64-ucrt-x86_64-glfw mingw-w64-ucrt-x86_64-hackrf mingw-w64-ucrt-x86_64-soapysdr mingw-w64-ucrt-x86_64-libiconv mingw-w64-ucrt-x86_64-python
+      - name: Restore ccache
+        uses: actions/cache/restore@v6
         with:
           path: .ccache
-          key: ccache-windows-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
+          key: ccache-windows-s${{ matrix.shard }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
           restore-keys: |
-            ccache-windows-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-
-            ccache-windows-
-      - name: Configure and build (app, tools, tests)
+            ccache-windows-s${{ matrix.shard }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-
+            ccache-windows-s${{ matrix.shard }}-
+      - name: Configure, select and build
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-          cmake --build build -j 4
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          BASE="$BASE_IN"; case "$BASE" in ""|0000000000000000000000000000000000000000) BASE=origin/main;; esac
+          git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
+          python tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" --shard ${{ matrix.shard }}/2 --out sel
+          T=$(tr -d "\r" < sel/targets.txt); [ ${{ matrix.shard }} = 1 ] && T="$T dect2"
+          cmake --build build -j 4 --target $T
       - name: ccache statistics
         if: always()
         run: ccache -s
-      # the socket / thread timing tests (label "timing") on their own, two at a time, a failed one run once more: beside a -j 4 run they
-      # measured the runner's load. (A retry step after a failed test step never ran: a step only runs when the ones before it passed.)
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: .ccache
+          key: ccache-windows-s${{ matrix.shard }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
       - name: Test (fast tests)
-        run: ctest --test-dir build -j 4 -LE "slow|timing" --output-on-failure --timeout 600 --output-log ctest-fast.log
+        run: ctest --test-dir build -j 4 -R "$(cat sel/fast.regex)" --output-on-failure --timeout 1500 --output-log ctest-fast.log
       - name: Test (timing tests, a failure retried once)
         if: success() || failure()
-        run: ctest --test-dir build -j 2 -L timing -LE slow --repeat until-pass:2 --output-on-failure --timeout 600 --output-log ctest-timing.log
-      # the speed figures of every test (tests/common/cpu_report.h), also of those that passed: for calibrating the limits on these machines
-      - name: CPU figures (CPUCAL)
-        if: always()
-        run: grep -h CPUCAL ctest-fast.log ctest-timing.log > cpucal.txt || true; cat cpucal.txt
+        run: ctest --test-dir build -j 2 -R "$(cat sel/timing.regex)" --repeat until-pass:2 --output-on-failure --timeout 1500 --output-log ctest-timing.log
       - uses: actions/upload-artifact@v7
         if: always()
-        with: { name: "cpucal-Windows x64", path: "cpucal.txt\nctest-fast.log\nctest-timing.log", if-no-files-found: ignore }
+        with: { name: "cpucal-Windows-${{ matrix.shard }}", path: "ctest-fast.log\nctest-timing.log\nsel/summary.txt", if-no-files-found: ignore }
+
+  gl31:
+    needs: lint
+    name: "App: OpenGL 3.1 software run (Raspberry Pi limits)"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build pkg-config ccache lld libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libglfw3-dev xvfb libgl1-mesa-dri
+      - uses: actions/cache/restore@v6
+        with:
+          path: .ccache
+          key: ccache-gl31-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
+          restore-keys: ccache-gl31-
+      - name: Build the app only
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=OFF -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build build -j 4 --target dect2
+      - uses: actions/cache/save@v6
+        if: always()
+        with:
+          path: .ccache
+          key: ccache-gl31-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
+      - name: Run at OpenGL 3.1
+        run: |
+          set +e
+          LIBGL_ALWAYS_SOFTWARE=1 MESA_GL_VERSION_OVERRIDE=3.1 MESA_GLSL_VERSION_OVERRIDE=140 MESA_DEBUG=1 DECT2_MAX_TEXTURE=4096 \
+            timeout 120 xvfb-run -a -s "-screen 0 1600x1000x24" ./build/dect2 --hidden --mute --shot "$GITHUB_WORKSPACE/shot-gl31.png" > gl31.log 2>&1
+          echo "exit $?"
+          tail -40 gl31.log
+          [ -f "$GITHUB_WORKSPACE/shot-gl31.png" ] || { echo "no frame drawn"; exit 1; }
+          if grep -q 'Mesa: error\|GL_INVALID' gl31.log; then echo "OpenGL errors"; exit 1; fi
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: { name: linux-gl31-shot, path: "shot-gl31.png\ngl31.log", if-no-files-found: ignore }
+
+  # required check "Linux x86_64": passes when every shard of it passed
+  gather-linux:
+    name: Linux x86_64
+    needs: [linux-shards, gl31]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          echo '${{ toJSON(needs) }}' | python3 -c "import sys,json; r=json.load(sys.stdin); bad=[k for k,v in r.items() if v['result']!='success']; print('results',{k:v['result'] for k,v in r.items()}); sys.exit(1 if bad else 0)"
+
+  # required check "macOS arm64": passes when every shard of it passed
+  gather-macos:
+    name: macOS arm64
+    needs: [macos-shards]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          echo '${{ toJSON(needs) }}' | python3 -c "import sys,json; r=json.load(sys.stdin); bad=[k for k,v in r.items() if v['result']!='success']; print('results',{k:v['result'] for k,v in r.items()}); sys.exit(1 if bad else 0)"
+
+  # required check "Windows x64 (MinGW-w64)": passes when every shard of it passed
+  gather-windows:
+    name: Windows x64 (MinGW-w64)
+    needs: [windows-shards]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          echo '${{ toJSON(needs) }}' | python3 -c "import sys,json; r=json.load(sys.stdin); bad=[k for k,v in r.items() if v['result']!='success']; print('results',{k:v['result'] for k,v in r.items()}); sys.exit(1 if bad else 0)"

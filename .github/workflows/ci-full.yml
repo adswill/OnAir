@@ -7,6 +7,11 @@ on:
   schedule:
     - cron: "17 2 * * *"   # nightly: only the slow tier (ctest -L slow)
 
+# a newer run on the same ref cancels the older one (not the nightly schedule)
+concurrency:
+  group: full-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
+
 # ccache as in ci.yml (see the comment there for the cache keys); one cache per job/matrix entry.
 env:
   CCACHE_DIR: ${{ github.workspace }}/.ccache
