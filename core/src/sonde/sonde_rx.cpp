@@ -55,6 +55,10 @@ int kindOfType(const std::string& t) {
     if (t == "M10") return SondeM10;
     if (t == "M20") return SondeM20;
     if (t == "LMS6") return SondeLms6;
+    if (t == "iMet") return SondeImet;
+    if (t == "iMet-54") return SondeImet54;
+    if (t == "MRZ") return SondeMrz;
+    if (t == "iMS-100") return SondeMeisei;
     return SondeUnknown;
 }
 
@@ -124,8 +128,9 @@ public:
             if (!d) return;
             const double baud = d->symbolRate();
             int ci = -1;
-            for (size_t i = 0; i < chains.size(); i++) if (std::fabs(chains[i].baud() - baud) < 1e-6) ci = (int)i;
-            if (ci < 0) { chains.emplace_back(); chains.back().init(fs2, baud); ci = (int)chains.size() - 1; }
+            const bool mid = d->midpointSlicer();
+            for (size_t i = 0; i < chains.size(); i++) if (std::fabs(chains[i].baud() - baud) < 1e-6 && chains[i].midpoint() == mid) ci = (int)i;
+            if (ci < 0) { chains.emplace_back(); chains.back().init(fs2, baud, d->isAfsk(), mid); ci = (int)chains.size() - 1; }
             Dec e; e.d = std::move(d); e.kind = kind; e.chain = ci; e.rs41 = r41; e.rs92 = r92;
             decs.push_back(std::move(e));
         };
@@ -135,6 +140,12 @@ public:
         addDec(makeM10Decoder(), SondeM10, nullptr);
         addDec(makeM20Decoder(), SondeM20, nullptr);
         if (lband) addDec(makeLms6Decoder(), SondeLms6, nullptr);
+        else {
+            addDec(makeImetDecoder(), SondeImet, nullptr);
+            addDec(makeImet54Decoder(), SondeImet54, nullptr);
+            addDec(makeMrzDecoder(), SondeMrz, nullptr);
+            addDec(makeMeiseiDecoder(), SondeMeisei, nullptr);
+        }
         syms.assign(chains.size(), {});
         symT.assign(chains.size(), 0.0);
     }
@@ -227,6 +238,7 @@ private:
                 std::vector<SondeFix> out;
                 e.d->push(syms[c].data(), syms[c].size(), symT[c], out);
                 for (auto& f : out) {
+                    if (f.serial.empty() && e.kind == SondeImet) { char sb[32]; snprintf(sb, sizeof sb, "iMet-%.0f", freq / 1000.0); f.serial = sb; }   // these packets carry no serial
                     Fix fx; fx.kind = e.kind; fx.fix = f; fx.announcedHz = e.rs41 ? e.rs41->announcedFreqHz() : e.rs92 ? e.rs92->announcedFreqHz() : 0;
                     fixes.push_back(std::move(fx));
                     if (f.crcOk) { lockedKind = e.kind; lastFixT = tNow; }

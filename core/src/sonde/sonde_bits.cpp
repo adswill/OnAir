@@ -5,6 +5,8 @@ namespace dect2 {
 
 double sondeFramePeriodS(const std::string& type) {
     if (type == "DFM") return 280.0 / 1250.0;       // frames of 280 bits at 1250 bit/s follow each other without a gap
+    if (type == "MRZ") return 2.2;                  // a frame is sent 6 times (2.04 s), then a pause
+    if (type == "iMS-100") return 0.5;              // two 300-bit subframes per half second
     if (type == "LMS6") return 0.5;                 // two MK2A subframes per second
     return 1.0;                                     // M10, M20: one frame a second
 }

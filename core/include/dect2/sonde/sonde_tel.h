@@ -12,7 +12,7 @@
 
 namespace dect2 {
 
-enum SondeKind { SondeUnknown = 0, SondeRs41, SondeRs92, SondeDfm, SondeM10, SondeM20, SondeLms6 };
+enum SondeKind { SondeUnknown = 0, SondeRs41, SondeRs92, SondeDfm, SondeM10, SondeM20, SondeLms6, SondeImet, SondeImet54, SondeMrz, SondeMeisei };
 
 inline const char* sondeKindName(int k) {
     switch (k) {
@@ -22,6 +22,10 @@ inline const char* sondeKindName(int k) {
     case SondeM10: return "M10";
     case SondeM20: return "M20";
     case SondeLms6: return "LMS6";
+    case SondeImet: return "iMet";
+    case SondeImet54: return "iMet-54";
+    case SondeMrz: return "MRZ";
+    case SondeMeisei: return "iMS-100";
     default: return "?";
     }
 }

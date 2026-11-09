@@ -105,15 +105,31 @@ void Decim::process(const cf32* in, size_t n, std::vector<cf32>& out) {
     }
 }
 
-void SymbolChain::init(double fs, double baud) {
-    fs_ = fs; baud_ = baud;
+void SymbolChain::init(double fs, double baud, bool afsk, bool midpoint) {
+    fs_ = fs; baud_ = baud; afsk_ = afsk; midpoint_ = midpoint;
+    decay_ = (float)(baud / fs / 12.0);                    // about a dozen symbols
+    max_ = min_ = 0;
     dp0_ = baud / fs;
     L_ = std::max(1, (int)std::lround(0.7 * fs / baud));
     win_.assign((size_t)L_, 0.f);
+    if (afsk_) {
+        afLen_ = std::max(2, (int)std::lround(fs / baud));          // one bit: the DFT window
+        afBuf_.assign((size_t)afLen_, 0.f);
+        const double tones[2] = {1200.0, 2200.0};
+        for (int t = 0; t < 2; t++) {
+            const double w = 2 * M_PI * tones[t] / fs;
+            afRotRe_[t] = std::cos(w); afRotIm_[t] = -std::sin(w);
+            afEndRe_[t] = std::cos(w * afLen_) * std::pow(0.99999, afLen_); afEndIm_[t] = -std::sin(w * afLen_) * std::pow(0.99999, afLen_);
+        }
+    }
     reset();
 }
 
 void SymbolChain::reset() {
+    max_ = min_ = 0;
+    afPos_ = 0;
+    std::fill(afBuf_.begin(), afBuf_.end(), 0.f);
+    afRe_[0] = afRe_[1] = afIm_[0] = afIm_[1] = 0;
     std::fill(win_.begin(), win_.end(), 0.f);
     wpos_ = 0; wsum_ = 0;
     prev_ = 0; havePrev_ = false;

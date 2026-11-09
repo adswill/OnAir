@@ -4,6 +4,7 @@
 struct CreditEntry { const char *name, *author, *licence, *where, *how, *url, *note; };
 
 inline constexpr CreditEntry kCredits[] = {
+    {"RS demodulators (protocol reference)", "zilog80 (github.com/rs1729)", "GPL-3.0", "core/src/sonde/sonde_extra.cpp (iMet, iMet-54, MRZ, iMS-100 layouts: protocol reference, not copied code)", "reimplemented from the published decoders", "https://github.com/rs1729/RS", "Keep this credit; GPL-3 compatible."},
     {"Dear ImGui", "Omar Cornut and contributors", "MIT", "app/ and third_party/imgui (user interface)", "vendored, compiled in", "https://github.com/ocornut/imgui", "Keep the copyright notice and licence text (third_party/imgui/LICENSE.txt, reproduced in THIRD_PARTY.md). GPL-3 compatible."},
     {"stb_truetype, stb_rect_pack, stb_textedit", "Sean Barrett and contributors", "MIT or public domain", "third_party/imgui/imstb_*.h (fonts and text input)", "vendored, compiled in", "https://github.com/nothings/stb", "Notice kept in the file headers. GPL-3 compatible."},
     {"Inter (fonts)", "The Inter Project Authors (Rasmus Andersson)", "SIL OFL 1.1", "third_party/fonts, app/ui/typography.cpp (interface text; Regular, Medium and SemiBold, subset); Android app: android/app/src/main/res/font (Clean and Compact looks)", "bundled, embedded (compressed) in the program", "https://github.com/rsms/inter", "OFL text must accompany the fonts: LICENSES/OFL-1.1.txt and third_party/fonts/README.md (copyright line kept). No Reserved Font Name. GPL-3 compatible for bundling."},
