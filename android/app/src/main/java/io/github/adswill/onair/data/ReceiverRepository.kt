@@ -117,7 +117,7 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
     private var fileFd: ParcelFileDescriptor? = null
 
     /** USB radios, network radios, the sound-card input (data/RadioRepository.kt, docs/USB.md). */
-    val radios = RadioRepository(
+    val radios: RadioRepository = RadioRepository(
         ctx, scope,
         object : EngineExec { override suspend fun <T> call(name: String, block: () -> T): T = engine.call(name) { block() } },
         settings, ::updateSettings,
