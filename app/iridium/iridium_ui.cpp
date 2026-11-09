@@ -2,6 +2,7 @@
 // counters and burst rates, the ring alert list, the pager messages with a text panel, the Iridium time, and a burst scatter
 // (time against frequency) of the last 2 s.
 #include "app.h"
+#include "iridium_sky.h"
 #include "ui/kit/mode_panel.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/session_list.h"
@@ -548,13 +549,14 @@ void panels(App& a) {
 void tab(App& a) {
     loadState();
     kit::modeHeader({19, "Iridium", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("iriv", S.view, {{tr("Live"), 0}, {tr("Tracks"), 8}, {tr("Messages"), 1, true}, {tr("Ring alerts"), 2, true}, {tr("Bursts"), 3, true}, {tr("Calls"), 4, true}, {tr("ACARS"), 5, true}, {tr("Log"), 6, true}, {tr("Pager"), 7, true}});
+    kit::modeNav("iriv", S.view, {{tr("Live"), 0}, {tr("Tracks"), 8}, {tr("Messages"), 1, true}, {tr("Ring alerts"), 2, true}, {tr("Bursts"), 3, true}, {tr("Calls"), 4, true}, {tr("ACARS"), 5, true}, {tr("Log"), 6, true}, {tr("Pager"), 7, true}, {tr("Sky"), 9, true}});
     if (S.view == 8) { kit::sessionItems(19, 3, "iridium"); return; }
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     if (S.view == 4) { callsView(a); return; }
     if (S.view == 5) { iridiumui::acarsView(a); return; }
     if (S.view == 6) { iridiumui::packetsView(a); return; }
     if (S.view == 7) { iridiumui::pagerView(a); return; }
+    if (S.view == 9) { iridiumSkyView(a, W, H); return; }
     if (S.view == 1) { messages(a, W, H); return; }
     if (S.view == 2) { ringAlerts(a); return; }
     if (S.view == 3) {
@@ -638,6 +640,7 @@ void summary(const App& a, std::string& l1, std::string& l2) {
 // The engine does not pass the tuned frequency on: the receiver needs it for absolute frequencies and the simplex rule.
 void tick(App& a) {
     loadState();
+    iridiumSkyTick(a);
     if (!a.engine.running()) { S.pushedCenter = 0; S.pushedThr = -1; return; }
     dect2::IridiumReceiver& r = a.engine.iridium();
     if (live(a)) appcodec::voiceCodecTick("iridium");   // the user's codec plug-in (docs/CODECS.md), loaded whichever tab is shown

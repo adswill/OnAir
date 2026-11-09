@@ -1150,3 +1150,5 @@ Network IQ sources now scrub NaN/infinity (SDR++, SpyServer float); rtl_tcp chun
 - Thread (family 244): the 802.15.4 receiver in Thread mode + thread_proto (beacon network name / ext PAN / version, MAC security aux header, 6LoWPAN mesh / fragment / IPHC / UDP NHC, MLE and CoAP where clear). Encrypted traffic is shown as encrypted (no keys). tests/thread. No user-supplied Zigbee / Thread network key decryption (not done).
 ## 2026-11-07 - bug hunt 3.7-D (sources and modes)
 Network IQ sources now scrub NaN/infinity (SDR++, SpyServer float); rtl_tcp chunk test added; modes and drivers reviewed, listed in docs/BUGS-3.7-D.md. No ASan run yet (GitHub).
+## 2026-11-09 - smart maritime (3.7, feat37-sm-maritime)
+Checked first: no incident join, LQA store, HFDL learning or Iridium Doppler existed (grep). Built the sea incident board (DSC + AIS + SART/MOB/EPIRB + nearby + NAVTEX geocoding), AIS anomaly engine, ALE link-quality store, HFDL frequency learner, Iridium Doppler identification, with UI and tests; numbers in docs/SMART-maritime-3.7.md. No real recordings, no GUI shots.
