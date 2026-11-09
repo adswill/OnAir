@@ -1,6 +1,7 @@
 // Inmarsat-C screens: the message list with a reading pane, the channel status with the packet counters, and the system information of the
 // station (bulletin board).
 #include "app.h"
+#include "ease/ease_ui.h"
 #include "ui/kit/mode_panel.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/session_list.h"
@@ -23,6 +24,7 @@ struct State {
     bool search = true;                  // look for more channels in the band
     int pushedSearch = -1;
     int sat = 0;                         // 0 = not chosen, else 1 + index into kSats
+    easeui::SatPick autoPick;            // the automatic choice, for its Undo
     double hintSince = -1;               // when the tuner started waiting for a first message with no satellite chosen
 };
 State S;
@@ -30,12 +32,12 @@ State S;
 // Satellites that carry the Inmarsat-C NCS common channel (the TDM channel with the EGC broadcasts), one per ocean region.
 // Sources: thebaldgeek.github.io/stdc.html, sigidwiki.com/wiki/Inmarsat-C_TDM, and the satellite tables of
 // github.com/alphafox02/inmarsat-sniffer (satellites.c).
-struct Sat { const char* name; double mhz; const char* tip; };
+struct Sat { const char* name; double mhz; const char* tip; double lonDeg; };
 const Sat kSats[] = {
-    {"Alphasat 25E (Europe, Africa, Indian Ocean)", 1537.10, "NCS common channel of the Indian Ocean region (IOR)."},
-    {"Inmarsat-4 F3 98W (Americas)", 1537.70, "NCS common channel of the Atlantic Ocean region West (AOR-W)."},
-    {"Inmarsat-3 F5 54W (Atlantic East)", 1541.45, "NCS common channel of the Atlantic Ocean region East (AOR-E)."},
-    {"Inmarsat-4 F1 143.5E (Pacific, Asia)", 1541.45, "NCS common channel of the Pacific Ocean region (POR). Community value (thebaldgeek, sigidwiki), not confirmed from Inmarsat's own list."},
+    {"Alphasat 25E (Europe, Africa, Indian Ocean)", 1537.10, "NCS common channel of the Indian Ocean region (IOR).", 25.0},
+    {"Inmarsat-4 F3 98W (Americas)", 1537.70, "NCS common channel of the Atlantic Ocean region West (AOR-W).", -98.0},
+    {"Inmarsat-3 F5 54W (Atlantic East)", 1541.45, "NCS common channel of the Atlantic Ocean region East (AOR-E).", -54.0},
+    {"Inmarsat-4 F1 143.5E (Pacific, Asia)", 1541.45, "NCS common channel of the Pacific Ocean region (POR). Community value (thebaldgeek, sigidwiki), not confirmed from Inmarsat's own list.", 143.5},
 };
 constexpr int kNumSats = (int)(sizeof kSats / sizeof kSats[0]);
 
@@ -348,13 +350,18 @@ void summary(const App& a, std::string& l1, std::string& l2) {
 void tuner(App& a, bool& retune) {
     loadState();
     const dect2::InmcTelemetry& t = a.rx.inmc;
+    {   // the first visit with a position: the highest satellite (a satellite chosen or a frequency tuned by hand stays)
+        double lons[kNumSats]; for (int i = 0; i < kNumSats; i++) lons[i] = kSats[i].lonDeg;
+        const int pick = easeui::preselectSat(a, "inmcSat", lons, kNumSats, S.autoPick);
+        if (pick >= 0) { S.sat = pick + 1; a.freqMhz = kSats[pick].mhz; retune = true; }
+    }
     ImGui::TextDisabled("Satellite"); ImGui::SameLine(0, 6 * gUi);
     ImGui::SetNextItemWidth(-FLT_MIN);
     if (ImGui::BeginCombo("##icsat", S.sat ? kSats[S.sat - 1].name : "Not chosen (tune by hand)")) {
         if (ImGui::Selectable("Not chosen (tune by hand)", S.sat == 0)) { S.sat = 0; plat::prefs().setI("inmcSat", 0); savePrefs(a); }
         for (int i = 0; i < kNumSats; i++) {
             if (ImGui::Selectable(kSats[i].name, S.sat == i + 1)) {
-                S.sat = i + 1; plat::prefs().setI("inmcSat", i + 1); savePrefs(a);
+                S.sat = i + 1; plat::prefs().setI("inmcSat", i + 1); savePrefs(a); S.autoPick.undoable = false;
                 a.freqMhz = kSats[i].mhz; retune = true;
             }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("Tunes to %.2f MHz.\n%s", kSats[i].mhz, kSats[i].tip);
@@ -362,6 +369,7 @@ void tuner(App& a, bool& retune) {
         ImGui::EndCombo();
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Optional. Choosing a satellite tunes to its NCS common channel; you can still tune by hand.");
+    if (S.sat && easeui::satPointing(a, kSats[S.sat - 1].lonDeg, S.autoPick)) { S.sat = 0; plat::prefs().setI("inmcSat", 0); savePrefs(a); a.freqMhz = S.autoPick.prevMhz; retune = true; }
     if (ImGui::Checkbox("find more channels", &S.search)) plat::prefs().setD("inmcSearch", S.search ? 1.0 : 0.0);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Look for other Inmarsat-C channels in the captured band and decode up to three of them at the same time.\nThe channel you tuned to is always decoded.");
     // the hint only when nothing has come in for a while and no satellite is chosen

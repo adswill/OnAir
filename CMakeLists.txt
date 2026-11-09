@@ -189,6 +189,7 @@ target_sources(dect2core PRIVATE core/src/source/autogain.cpp core/src/source/au
 target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup and restore (docs/BACKUP.md)
 # The modes added after FM (DVB-S/S2, DTMB, analog TV, DMR, DRM, ADS-B): every core/src/<mode>/*.cpp belongs to its mode, so a mode can add files without editing this list
   set(DECT2_MODES autodet fsq ifkp cquam selfcal dvbs dtmb atv dmr drm adsb gnss dab sonde ais marine acars inmc aero iridium mesh hdr cdr pager packet hfdig airband vdl2 ism vor ils m17 cell cw dstar hfdl nxdn gsmr psk js8 specx wb specan dvbc dpmr orbcomm uplink tetra tetrapol ale mac astro p25 ble iono qo100 wifi general time rid meteor nr cubesat ccsds goes globalstar vdes hrpt zigbee flarm hfbeacon dji nbiot halow codar datawell same multitone loraraw ant dect elektro ndb lbj railway horus eczas vdl4 uat wisun fpv wmbus tones sarsat mt63 zwave mscatter dgps dme sitor kris kavb kapp kaft eloran mpt1327 trunkpool fusion ardop goesdcs modeac bletrk ltr edacs p25p2 kait satbeacon kaws milhf nfc kaal ham prop antd lorawan lorasat isdbs marinevhf argos sigfox sbas asterix voice)
+  list(APPEND DECT2_MODES ease)   # first-use helpers across modes (3.8): core/src/ease, app/ease, tests/ease
   list(APPEND DECT2_MODES pactor)   # PACTOR-I monitor (family 203): core/src/pactor, app/pactor, tests/pactor
   list(APPEND DECT2_MODES roshf ssdv ebicab nrf24 atis selcal)   # ROS (HF) detector (family 205), SSDV pictures (206), EBICab / Eurobalise up-link (207): core/src/<mode>, app/<mode>, tests/<mode>
   list(APPEND DECT2_MODES esp32)   # ESP32 / nRF24 module radio over USB serial (3.7): core/src/esp32, app/esp32, tests/esp32, firmware/esp32, docs/ESP32-NRF24-DESIGN.md
@@ -904,6 +905,9 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_isdbs PRIVATE dect2core)
   target_include_directories(test_isdbs PRIVATE core/src)
   add_test(NAME isdbs COMMAND test_isdbs)
+  add_executable(test_ease tests/ease/test_ease.cpp core/src/ease/ease.cpp core/src/inmsat/inmsat_satid.cpp)   # first-use helpers: launch windows, geostationary picks
+  target_include_directories(test_ease PRIVATE core/include)
+  add_test(NAME ease COMMAND test_ease)
   add_executable(test_mpt1327 tests/mpt1327/test_mpt1327.cpp)   # MPT1327 control channel: check code, address codewords, FFSK decoder, engine receiver
   target_link_libraries(test_mpt1327 PRIVATE dect2core)
   add_test(NAME mpt1327 COMMAND test_mpt1327)
