@@ -25,8 +25,8 @@ namespace {
 // freedv_api.h, codec2 1.2.0
 using dect2::math::kPi;
 constexpr int FREEDV_MODE_1600 = 0, FREEDV_MODE_700D = 7, FREEDV_MODE_700E = 13;
-constexpr int kModeCode[kFreedvModes] = {FREEDV_MODE_700D, FREEDV_MODE_700E, FREEDV_MODE_1600, -1};   // -1: RADE is librade, not codec2
-const char* const kModeName[kFreedvModes] = {"700D", "700E", "1600", "RADE"};
+constexpr int kModeCode[kFreedvModes] = {FREEDV_MODE_700D, FREEDV_MODE_700E, FREEDV_MODE_1600};
+const char* const kModeName[kFreedvModes] = {"700D", "700E", "1600"};
 // The library's sync flag also fires on RTTY tones, SSTV and noise (FreeDV 1600 above all) and its text channel then gives garbage. A mode
 // counts as synced only after the flag held for 1.5 s with an SNR estimate of at least kMinSnrDb; either failing drops it at once.
 constexpr uint64_t kConfirmSamples = 12000;
@@ -118,7 +118,7 @@ std::atomic<int> gModeChoice{0};
 } // namespace
 
 const char* freedvModeName(int idx) { return idx >= 0 && idx < kFreedvModes ? kModeName[idx] : ""; }
-void hfdigFreedvSetMode(int choice) { gModeChoice = std::min(std::max(choice, 0), kFreedvModes); }
+void hfdigFreedvSetMode(int choice) { gModeChoice = choice >= 0 && choice <= kFreedvModes ? choice : 0;   // 0 also takes a saved choice of a mode no longer listed }
 int hfdigFreedvMode() { return gModeChoice; }
 bool hfdigFreedvLibrary(std::string* path, std::string* version) {
     const Api& a = api();
@@ -210,7 +210,6 @@ struct HfdigFreedv::Impl {
         tel.state = 1;
         for (int m = 0; m < kFreedvModes; m++) {
             Rx& r = rx[m];
-            if (kModeCode[m] < 0) continue;   // RADE: not a codec2 mode
             r.f = a.open(kModeCode[m]);
             if (!r.f) continue;
             tel.open[m] = true;
@@ -391,7 +390,6 @@ std::unique_ptr<HfdigTestAudio> makeFreedvTestAudio(const SynthConfig& cfg) {
     const Api& a = api();
     if (!a.ok) return nullptr;   // no library, no test signal: the shell keeps its noise
     const int m = std::min(std::max(cfg.modeOpt[1], 0), kFreedvModes - 1);
-    if (kModeCode[m] < 0) return nullptr;   // RADE has no codec2 test audio
     freedv* f = a.open(kModeCode[m]);
     if (!f) return nullptr;
     return std::make_unique<FreedvTestAudio>(a, f);

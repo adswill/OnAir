@@ -37,7 +37,6 @@ int main() {
     std::mt19937 rng(7);
     dect2::normal_distribution<float> nd(0.f, 1.f);
     for (int m = 0; m < kFreedvModes; m++) {
-        if (strcmp(freedvModeName(m), "RADE") == 0) continue;   // RADE is librade, not codec2
         SynthConfig sc;
         sc.modeOpt[1] = m;
         auto gen = makeFreedvTestAudio(sc);

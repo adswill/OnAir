@@ -7,7 +7,7 @@
 
 namespace {
 
-const char* const kChoices[] = {"Automatic", "700D", "700E", "1600", "RADE"};
+const char* const kChoices[] = {N_("Automatic"), "700D", "700E", "1600"};
 
 const char* installHint() {   // codec2 ships with OnAir: it is missing only from an incomplete copy
 #if defined(__APPLE__)
@@ -47,16 +47,11 @@ void hfdigFreedvTab(App& a, const dect2::HfdigTelemetry& t) {
     ImGui::TextDisabled("Mode");
     ImGui::SameLine(0, 6 * gUi);
     ImGui::SetNextItemWidth(130 * gUi);
-    if (ImGui::BeginCombo("##fdvmode", kChoices[std::min(std::max(choice, 0), 4)])) {
-        for (int i = 0; i < 5; i++) if (ImGui::Selectable(kChoices[i], i == choice)) dect2::hfdigFreedvSetMode(i);
+    if (ImGui::BeginCombo("##fdvmode", tr(kChoices[std::min(std::max(choice, 0), 3)]))) {
+        for (int i = 0; i < 4; i++) if (ImGui::Selectable(tr(kChoices[i]), i == choice)) dect2::hfdigFreedvSetMode(i);
         ImGui::EndCombo();
     }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Automatic listens for FreeDV 700D, 700E and 1600 at the same time. RADE is a separate library (librade), not codec2.");
-    if (choice == 4) {
-        ImGui::PushTextWrapPos(0);
-        ImGui::TextDisabled("RADE is not in codec2 1.2. It needs librade (freedv/rade_c) plus FARGAN model files. 700D / 700E / 1600 still decode with the codec2 that ships with OnAir.");
-        ImGui::PopTextWrapPos();
-    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Automatic listens for FreeDV 700D, 700E and 1600 at the same time."));
     if (!found) return;
 
     const bool live = run && f.mode >= 0;
