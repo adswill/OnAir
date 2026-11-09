@@ -7,5 +7,9 @@
 #define HAVE_UNISTD_H 1
 #endif
 #define HAVE_SYS_TIME_H 1
+#ifdef _WIN32
+#define LFIND_NMEMB_SIZE_UINT 1
+#else
 #define LFIND_NMEMB_SIZE_SIZE_T 1
+#endif
 #endif

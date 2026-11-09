@@ -124,12 +124,12 @@ size_t ClipHistory::scanFolder(const std::string& dir, const std::string& prefix
         int rate = 0; double sec = 0;
         if (!wavInfo(p, rate, sec)) continue;
         const auto mt = fs::last_write_time(*it, ec);
-        const int64_t unix = ec ? 0 : int64_t(std::chrono::duration_cast<std::chrono::seconds>(mt.time_since_epoch()).count()) +
+        const int64_t unixSec = ec ? 0 : int64_t(std::chrono::duration_cast<std::chrono::seconds>(mt.time_since_epoch()).count()) +
             int64_t(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() -
                     std::chrono::duration_cast<std::chrono::seconds>(fs::file_time_type::clock::now().time_since_epoch()).count());
         Clip c;
         c.path = p; c.mode = mode_; c.label = it->path().stem().string(); c.seconds = sec;
-        c.wallStart = unix > 0 ? unix - int64_t(sec) : 0;
+        c.wallStart = unixSec > 0 ? unixSec - int64_t(sec) : 0;
         const size_t before = clips_.size();
         add(std::move(c));
         added += clips_.size() - before;
