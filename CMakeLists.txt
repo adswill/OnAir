@@ -193,6 +193,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES roshf ssdv ebicab nrf24 atis selcal)   # ROS (HF) detector (family 205), SSDV pictures (206), EBICab / Eurobalise up-link (207): core/src/<mode>, app/<mode>, tests/<mode>
   list(APPEND DECT2_MODES esp32)   # ESP32 / nRF24 module radio over USB serial (3.7): core/src/esp32, app/esp32, tests/esp32, firmware/esp32, docs/ESP32-NRF24-DESIGN.md
   list(APPEND DECT2_MODES thread)   # Thread (family 244): core/src/thread (6LoWPAN / MLE layer; the receiver is the 802.15.4 one in core/src/zigbee), app/thread, tests/thread
+  list(APPEND DECT2_MODES wxsat)   # SatDump-list weather links (families 260 - 268): core/src/wxsat, app/wxsat, tests/wxsat (docs/SATDUMP-TIER1-3.7.md)
   list(APPEND DECT2_MODES fy3)   # FY-3 AHRPT (family 235) and FY-3 MPT (236): core/src/fy3, app/fy3, tests/fy3 (docs/fy3.md)
   list(APPEND DECT2_MODES esubghz)   # Flipper Zero Sub-GHz chat, receive and send (family 204): core/src/esubghz, app/esubghz, tests/esubghz
   list(APPEND DECT2_MODES inmsat)   # Inmarsat all-carriers mode (3.3, docs/INMARSAT-REVAMP.md): core/src/inmsat, tests/inmsat
@@ -1578,6 +1579,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_atis_mode PRIVATE dect2core)
     target_compile_definitions(test_atis_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME atis_mode COMMAND test_atis_mode)
+    add_executable(test_wxsat_mode tests/app/test_wxsat_mode.cpp)   # wxsat links: tuning, numbers, wiring
+    target_link_libraries(test_wxsat_mode PRIVATE dect2core)
+    target_compile_definitions(test_wxsat_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME wxsat_mode COMMAND test_wxsat_mode)
     add_executable(test_fy3_mode tests/app/test_fy3_mode.cpp)   # FY-3 AHRPT / MPT: tuning, mode rows, engine / panel wiring, the doc page
     target_link_libraries(test_fy3_mode PRIVATE dect2core)
     target_compile_definitions(test_fy3_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")

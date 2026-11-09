@@ -19,8 +19,8 @@ void ElektroReceiver::setSignalOffset(double hz) {
 }
 void ElektroReceiver::setCraft(int craft) { craft_ = std::clamp(craft, 0, 2); }
 void ElektroReceiver::setLink(int link) {
-    link_ = std::clamp(link, 0, 4);
-    if (!elektroIsGgak(link_)) inner_.setSymbolRate(elektroSymbolRate(link_));
+    link_ = std::clamp(link, 0, 6);
+    if (!elektroIsGgak(link_)) { inner_.setSymbolRate(elektroSymbolRate(link_)); inner_.setOqpsk(link_ == 6); }
 }
 bool ElektroReceiver::ready() const { return elektroIsGgak(link_) ? ggak_.ready() : inner_.ready(); }
 void ElektroReceiver::reset() { inner_.reset(); ggak_.reset(); }

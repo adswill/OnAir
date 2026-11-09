@@ -34,6 +34,7 @@ namespace {
 namespace fs = std::filesystem;
 fs::path fsPath(const std::string& p) { return fs::path(reinterpret_cast<const char8_t*>(p.c_str())); }
 
+constexpr int kNoaaApt = 260, kNoaaHrpt = 261, kNoaaDsb = 263, kMeteorHrpt = 264, kArktikaGgak = 267, kAws = 268;   // families of the wxsat links
 constexpr int kSpecx = 41, kAprs = 24, kOrbcomm = 44, kMeteor = 59, kCubesat = 61, kGlobalstar = 62, kArgos = 152, kLoraSat = 201;   // mode families: Spectrum explorer (no decoder), APRS (AFSK), Orbcomm, Meteor-M LRPT, CubeSat telemetry, Argos, LoRa satellites
 
 struct Source { const char* file; const char* url; };
@@ -53,9 +54,20 @@ const char* const kGroupLabel[NumGroups] = {N_("Weather (137 MHz)"), "ISS", "Orb
 
 struct Known { const char* name; int norad; double mhz; const char* mode; int family; int group; };
 const Known kKnown[] = {
-    {"NOAA 15", 25338, 137.620, "APT", kSpecx, Weather},
-    {"NOAA 18", 28654, 137.9125, "APT", kSpecx, Weather},
-    {"NOAA 19", 33591, 137.100, "APT", kSpecx, Weather},
+    {"NOAA 15", 25338, 137.620, "APT", kNoaaApt, Weather},
+    {"NOAA 18", 28654, 137.9125, "APT", kNoaaApt, Weather},
+    {"NOAA 19", 33591, 137.100, "APT", kNoaaApt, Weather},
+    {"NOAA 15 DSB", 25338, 137.350, "DSB", kNoaaDsb, Weather},
+    {"NOAA 18 DSB", 28654, 137.350, "DSB", kNoaaDsb, Weather},
+    {"NOAA 19 DSB", 33591, 137.770, "DSB", kNoaaDsb, Weather},
+    {"NOAA 15 HRPT", 25338, 1702.5, "HRPT", kNoaaHrpt, Weather},
+    {"NOAA 18 HRPT", 28654, 1707.0, "HRPT", kNoaaHrpt, Weather},
+    {"NOAA 19 HRPT", 33591, 1698.0, "HRPT", kNoaaHrpt, Weather},
+    {"Meteor-M N2-3 HRPT", 57166, 1700.0, "HRPT", kMeteorHrpt, Weather},
+    {"Meteor-M N2-4 HRPT", 59051, 1700.0, "HRPT", kMeteorHrpt, Weather},
+    {"Arktika-M N1 GGAK", 47719, 1703.0, "GGAK", kArktikaGgak, Weather},
+    {"Arktika-M N2 GGAK", 58584, 1703.0, "GGAK", kArktikaGgak, Weather},
+    {"Arctic Weather Satellite", 60543, 1707.0, "L-band", kAws, Weather},
     {"Meteor-M N2-3", 57166, 137.100, "LRPT", kMeteor, Weather},
     {"Meteor-M N2-4", 59051, 137.900, "LRPT", kMeteor, Weather},
     {"MetOp-B Argos", 38771, 465.9875, "Argos downlink", kArgos, Weather},   // A-DCS downlink (SatNOGS transmitter entry for MetOp-B)
@@ -1023,6 +1035,17 @@ void drawWindow(App& a) {
 void passesDownloadTles() { loadState(); startDownload(); }
 
 // dev: --tle <file> loads TLEs from a file as pasted ones would (tests without the network)
+// One click from a mode's screen: the first listed satellite of this family that has a TLE, tracked with auto start (and Doppler) from its next pass
+std::string passesArmFamily(App& a, int family) {
+    (void)a;
+    for (size_t i = 0; i < S.sats.size(); i++) if (S.sats[i].family == family) {
+        S.selSat = (int)i; S.selName = S.sats[i].name;
+        S.track = true; S.autoStart = true;
+        return "tracking " + S.sats[i].name + ": the receiver starts at its next pass";
+    }
+    return "this satellite is not in the list yet: download the weather satellites' elements in View > Passes";
+}
+
 void passesDevTle(const std::string& path) {
     loadState();
     for (const dect2::Tle& t : dect2::parseTleText(readText(path))) S.tles[t.norad] = t;
