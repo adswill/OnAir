@@ -20,6 +20,7 @@ struct TimeFrameLog {
 };
 
 struct TimeTelemetry {
+    bool dcfPhaseLocked = false; float dcfPhaseCorr = 0; int dcfPhaseBit = -1;   // DCF77 phase code: chip sequence found, correlation, last bit
     uint64_t seq = 0;
     int state = 0;                    // 0 searching, 1 the seconds are found, 2 the time is decoded
     double cfoHz = 0;                 // carrier offset from the dial

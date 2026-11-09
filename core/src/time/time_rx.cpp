@@ -1,4 +1,5 @@
 // Time signal receiver (see time_rx.h).
+#include "dect2/time/dcf77_phase.h"
 #include "dect2/time/time_rx.h"
 #include "dect2/results/results_io.h"
 #include "dect2/time/time_tel.h"
@@ -178,8 +179,10 @@ struct TimeReceiver::Impl {
     template <class T> static void put(std::vector<T>& r, int64_t i, T v) { r[(size_t)(i & (int64_t)(r.size() - 1))] = v; }
 
     // ---------------------------------------------------------------- 8 kHz
+    Dcf77Phase dcfPhase;
     void sample8(cd x) {
         const int64_t j = k8++;
+        if (st == Dcf77) dcfPhase.feed(std::complex<float>((float)x.real(), (float)x.imag()));
         const cd c = car.push(x);
         const bool hf = amAudio(st);
         if (hf) {
@@ -719,6 +722,7 @@ struct TimeReceiver::Impl {
         t.timeSec = tNow(); t.inputRate = rate;
         t.cfoHz = cfo; t.snrDb = snr; t.levelDb = level; t.depth = (float)depth;
         t.secPhaseMs = phase * 1000;
+        t.dcfPhaseLocked = dcfPhase.status().locked; t.dcfPhaseCorr = dcfPhase.status().corr; t.dcfPhaseBit = dcfPhase.status().lastBit;
         if (resid.size() >= 3) {
             double m = 0, q = 0;
             for (double r : resid) m += r;
