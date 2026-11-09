@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
         }
         std::printf("  %-16s required %.1f dB-Hz: decoded from %.1f (loss %+.1f dB) symbol rate %d kBd\n", e.lab, e.req, best, best ? best - e.req : 99.0, bearer(e.b).symRate / 1000);
     }
-    std::printf("Impairments at the R subtype (+2 dB over the figure above): decoded frames / frames\n");
+    std::printf("Impairments at the R subtype (+4 dB over the figure above): decoded frames / frames\n");
     static const struct { const char* lab; double off, drift, fh, fd, ppm; } imp[] = {
         {"offset +1500 Hz", 1500,0,0,0,0},{"offset -2500 Hz", -2500,0,0,0,0},{"Doppler drift 20 Hz/s", 0,20,0,0,0},
         {"clock +20 ppm", 0,0,0,0,20},{"clock -20 ppm", 0,0,0,0,-20},{"clock +50 ppm", 0,0,0,0,50},{"clock -50 ppm", 0,0,0,0,-50},{"fading 2 Hz, 50 %", 0,0,2,0.5,0},{"fading 20 Hz, 50 %", 0,0,20,0.5,0},{"fading 20 Hz, 80 %", 0,0,20,0.8,0} };

@@ -54,13 +54,41 @@ Rough link budget only (no field test): the BGAN terminal classes have G/T of ab
 
 See `tests/bgan/test_bgan_demod.cpp` `sweep`. Column: required C/N0 (Annex B, ideal modem, BLER 1e-3) vs the C/N0 at which this implementation decodes at least 90 % of frames over 6 s.
 
-SWEEP_TABLE
+| bearer, level | Annex B required (dB-Hz) | decoded from (dB-Hz) | difference |
+|---|---|---|---|
+| F80T0.25Q R | 48.3 | 46.3 | -2.0 dB |
+| F80T0.25Q L8 | 40.1 | 38.6 | -1.5 dB |
+| F80T1Q-4B R | 53.6 | 51.6 | -2.0 dB |
+| F80T1Q-4B L8 | 46.1 | 44.1 | -2.0 dB |
+| F80T1X-4B R | 53.5 | 52.0 | -1.5 dB |
+| FR2.5X4/16 R | 57.0 | 60.5 | +3.5 dB |
+| FR2.5X16 R | 57.3 | 56.8 | -0.5 dB |
+| FR2.5X32 R | 60.0 | 63.0 | +3.0 dB |
+| FR2.5X64 R | 60.7 | 59.7 | -1.0 dB |
+| F4.5X R | 59.6 | 58.1 | -1.5 dB |
+| FR5X4/16 R | 60.6 | 59.1 | -1.5 dB |
+| FR5X16 R | 60.0 | 59.5 | -0.5 dB |
+| FR5X32 R | 62.3 | 61.8 | -0.5 dB |
+| FR5X64 R | 64.0 | 63.0 | -1.0 dB |
 
 Impairments at R subtype, C/N0 = required + 4 dB:
 
-IMP_TABLE
+Decoded frames / frames in sync over 4 s (50 frames; a lower total means sync was lost for part of the run).
 
-Generated with: 3 ppm sample clock, phase noise none, RRC and a 16-bit-free float pipeline, 4 samples per symbol. Fading is amplitude and phase; deeper fades than the table are not expected on a healthy GEO link but happen with foliage or motion.
+| impairment | F80T0.25Q-1B | F80T1Q-4B | F80T1X-4B | F80T4.5X-8B | FR80T5X16-9B | FR80T5X64-13B |
+|---|---|---|---|---|---|---|
+| offset +1500 Hz | 46/46 | 46/46 | 46/46 | 49/49 | 49/49 | 49/49 |
+| offset -2500 Hz | 46/46 | 46/46 | 46/46 | 49/49 | 49/49 | 49/49 |
+| Doppler drift 20 Hz/s | 49/49 | 49/49 | 49/49 | 49/49 | 49/49 | 49/49 |
+| clock +20 ppm | 49/49 | 49/49 | 49/49 | 48/49 | 46/49 | 38/49 |
+| clock -20 ppm | 49/49 | 49/49 | 49/49 | 47/49 | 49/49 | 40/49 |
+| clock +50 ppm | 49/49 | 49/49 | 49/49 | 7/9 | 7/13 | 7/13 |
+| clock -50 ppm | 49/49 | 49/49 | 49/49 | 7/10 | 8/13 | 7/13 |
+| fading 2 Hz, 50 % | 49/49 | 48/49 | 49/49 | 48/49 | 39/49 | 43/49 |
+| fading 20 Hz, 50 % | 19/22 | 26/26 | 27/27 | 25/25 | 21/23 | 17/25 |
+| fading 20 Hz, 80 % | 0/5 | 25/28 | 12/18 | 21/24 | 0/25 | 0/20 |
+
+Generated with a 3 ppm clock error in the AWGN sweep, no phase noise, floating point samples, 4 samples per symbol (at least 100 kHz). The difference column compares two different criteria (90 % of frames here, BLER 1e-3 in the annex), so a negative figure does not mean better than the standard's modem. Fading is a synthetic amplitude and phase modulation; deep fades are not expected on a healthy GEO link but happen with foliage or motion.
 
 ## Honest limits
 
