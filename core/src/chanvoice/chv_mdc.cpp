@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 
 namespace dect2 {
 namespace chv {
@@ -165,6 +166,7 @@ void MdcDecoder::feed(const float* x, size_t n) {
                     for (int k = 0; k < 112; k++) { prev ^= P.blk[k]; bits[k] = (uint8_t)prev; }
                     uint8_t dd[14];
                     const bool ok = block(bits, dd);
+                    if (getenv("CHV_MDC_DEBUG") && !ok) fprintf(stderr, "phase %d state %d crc fail: %02X %02X %02X %02X crc %02X%02X\n", p, P.state, dd[0], dd[1], dd[2], dd[3], dd[5], dd[4]);
                     if (ok && P.state == 1) {
                         MdcPacket pk; pk.op = dd[0]; pk.arg = dd[1]; pk.unitId = (uint16_t)((dd[2] << 8) | dd[3]); pk.timeSec = t;
                         if (pk.op == 0x35 || pk.op == 0x55) { pk.dbl = true; P.first = pk; P.first.extra[0] = (uint8_t)prev; P.state = 2; P.got = 0; }

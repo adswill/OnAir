@@ -43,7 +43,7 @@ std::vector<cf32> makeChanVoiceScene(const GenScene& sc) {
         if (t.mdc) { mdcAudio = mdcEncode(t.mdcPacket, 48000, 0.2); voiceStart = (double)mdcAudio.size() / 48000.0 + 0.15; }
         if (voiceStart < t.durSec - 0.2) {
             if (t.speech) { ts.noise(voiceStart, t.durSec - voiceStart, 0.01); ts.speech(voiceStart, t.durSec - voiceStart, t.mod == Demod::Am || t.mod == Demod::Usb || t.mod == Demod::Lsb ? 0.4 : 0.35); }
-            else ts.tone(1000.0, voiceStart, t.durSec - voiceStart, 0.3);
+            else for (double hz : t.tones) ts.tone(hz, voiceStart, t.durSec - voiceStart, 0.3 / (double)std::max<size_t>(1, t.tones.size()));
         }
         if (t.ctcssHz > 0) ts.ctcss(t.ctcssHz, 0, t.durSec, 0.08);
         if (t.dcsCode >= 0) ts.dcs(t.dcsCode, t.dcsInverted, 0, t.durSec, 0.1);

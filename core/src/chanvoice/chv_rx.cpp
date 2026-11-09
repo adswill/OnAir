@@ -164,6 +164,7 @@ public:
             const std::complex<double> zl = ssbL_.run(s0 * rc) * std::conj(rc);
             const double ssb = side_ >= 0 ? zu.real() : zl.real();
             if (ctx_ && ctx_->toneOn.load(std::memory_order_relaxed) && svc_ != Service::HfVoice) { const float vv = (float)std::max(-1.0, std::min(1.0, v)); tone_.feed48k(&vv, 1); }
+            sblk_[(size_t)nb_] = s;
             fmB_[(size_t)nb_] = (float)fm; amB_[(size_t)nb_] = (float)am; ssbB_[(size_t)nb_] = (float)ssb; rawB_[(size_t)nb_] = (float)lo;
             nb_++;
             if (nb_ == kBlock) { block(ovr); nb_ = 0; pw_ = plo_ = phi_ = sumAbs_ = 0; centroid_ = 0; }
@@ -172,6 +173,21 @@ public:
 
 private:
     struct Blk { std::array<float, kBlock> a, raw; bool gate; int demod; };
+
+    // the share of the block's power (|f| < 2.5 kHz) in its strongest 100 Hz line: an AM carrier holds most of it, single sideband speech very little
+    double carrierShare() {
+        struct Tab { std::vector<float> c, s; Tab() : c(51 * kBlock), s(51 * kBlock) { for (int k = 0; k < 51; k++) for (int n = 0; n < kBlock; n++) { const double w = 2 * kPi * (k - 25) * 100.0 * n / kRate; c[(size_t)(k * kBlock + n)] = (float)std::cos(w); s[(size_t)(k * kBlock + n)] = (float)-std::sin(w); } } };
+        static const Tab tab;
+        double best = 0, tot = 0;
+        for (int k = 0; k < 51; k++) {
+            double re = 0, im = 0;
+            const float* c = &tab.c[(size_t)k * kBlock]; const float* sn = &tab.s[(size_t)k * kBlock];
+            for (int n = 0; n < kBlock; n++) { re += c[n] * sblk_[(size_t)n].real() - sn[n] * sblk_[(size_t)n].imag(); im += c[n] * sblk_[(size_t)n].imag() + sn[n] * sblk_[(size_t)n].real(); }
+            const double p = re * re + im * im;
+            best = std::max(best, p); tot += p;
+        }
+        return tot > 0 ? best / tot : 0.0;
+    }
 
     Demod decide(int ovr) {
         if (ovr >= 0 && ovr != (int)Demod::Auto) return (Demod)ovr;
@@ -185,13 +201,20 @@ private:
         const double lo = plo_ / kBlock, hi = phi_ / kBlock;
         if (!init_) { qlo_ = lo; qhi_ = hi; init_ = true; }
         else { qlo_ += 0.4 * (lo - qlo_); qhi_ += 0.4 * (hi - qhi_); }
-        const double quiet = pw_ / kBlock < 1e-9 ? -30.0 : 10 * std::log10((qlo_ + 1e-12) / (qhi_ + 1e-12));   // (no signal at all: closed)
+        const double qSmooth = pw_ / kBlock < 1e-9 ? -30.0 : 10 * std::log10((qlo_ + 1e-12) / (qhi_ + 1e-12));   // (no signal at all: closed)
+        // the smoothed measure needs 100 ms to follow a signal that comes up 40 dB out of the noise: the last two blocks on their own open it at once
+        // when they are clearly above the threshold (3 dB more), so a burst that starts the transmission is not cut
+        const double qInst = 10 * std::log10((lo + 1e-12) / (hi + 1e-12));
+        const double qFast = std::min(qInst, qInstPrev_) - 3.0;
+        qInstPrev_ = qInst;
+        const double quiet = std::max(qSmooth, pw_ / kBlock < 1e-9 ? -30.0 : qFast);
         const int sq = ctx_ ? ctx_->squelch.load(std::memory_order_relaxed) : 50;
         const double thr = 1.0 + 0.08 * std::max(0, std::min(100, sq));   // noise alone reads about -0.5 dB after the channel filter, a clean signal 25 dB and up
         // the envelope statistic for the classification: coefficient of variation over about 100 ms
         const double m1 = sumAbs_ / kBlock, m2 = pw_ / kBlock;
         const double cv = m1 > 1e-9 ? std::sqrt(std::max(0.0, m2 - m1 * m1)) / m1 : 0.0;
         cvS_ += 0.1 * (cv - cvS_);
+        if (open_ && plan_ == Demod::Auto) carrierS_ += 0.2 * (carrierShare() - carrierS_);
         const Demod want = decide(ovr);
         const bool envAllowed = (plan_ == Demod::Auto && (ovr < 0 || ovr == (int)Demod::Auto)) || want == Demod::Am || want == Demod::Usb || want == Demod::Lsb;
         const bool fmOpen = !envOnly_ && quiet > thr;
@@ -202,7 +225,7 @@ private:
         if (!open_) {
             if (sig) {
                 if (++above_ >= (fmOpen ? 2 : 1)) {
-                    open_ = true; rose = true; hang_ = fmOpen ? kHangFm : kHangEnv; votes_ = 0; centroidAcc_ = 0; centroidN_ = 0; cvAcc_ = 0;
+                    open_ = true; rose = true; hang_ = fmOpen ? kHangFm : kHangEnv; votes_ = 0; centroidAcc_ = 0; centroidN_ = 0; cvAcc_ = 0; carrierS_ = 1.0;
                     if (plan_ == Demod::Auto) autoDemod_ = fmOpen ? Demod::Nfm : Demod::Am;
                     cur_ = decide(ovr);
                 }
@@ -214,8 +237,8 @@ private:
         // classification (Auto): FM when the discriminator is quiet and clean, else SSB when the envelope is wild, else AM
         if (plan_ == Demod::Auto && (ovr < 0 || ovr == (int)Demod::Auto) && open_) {
             Demod vote;
-            if (quiet > 6.0) vote = Demod::Nfm;
-            else if (cvS_ > 0.75) vote = (centroidAcc_ >= 0 ? Demod::Usb : Demod::Lsb);
+            if (quiet > 6.0 && cvS_ < 0.35) vote = Demod::Nfm;
+            else if (carrierS_ < 0.45) vote = (centroidAcc_ >= 0 ? Demod::Usb : Demod::Lsb);
             else vote = Demod::Am;
             centroidN_++;
             centroidAcc_ += centroid_ / std::max(1e-12, pw_) > 0 ? 1 : -1;
@@ -228,7 +251,7 @@ private:
         }
         if (rose) firstOpen_ = true;
         cur_ = decide(ovr);
-        if (getenv("CHV_TRACE") && key_ == atoi(getenv("CHV_TRACE")) && blocks_ % 50 == 0) fprintf(stderr, "k%d b%llu quiet %.1f thr %.1f fmOpen %d finder %d open %d cv %.2f dm %d pw %.1f\n", key_, (unsigned long long)blocks_, quiet, thr, (int)fmOpen, (int)finderActive_, (int)open_, cvS_, (int)cur_, lvl);
+        if (getenv("CHV_TRACE") && key_ == atoi(getenv("CHV_TRACE")) && (blocks_ % 50 == 0 || (getenv("CHV_TRACE_EARLY") && blocks_ < 40))) fprintf(stderr, "k%d b%llu quiet %.1f thr %.1f fmOpen %d finder %d open %d cv %.2f carrier %.2f dm %d pw %.1f\n", key_, (unsigned long long)blocks_, quiet, thr, (int)fmOpen, (int)finderActive_, (int)open_, cvS_, carrierS_, (int)cur_, lvl);
         if (cur_ == Demod::Usb) side_ = 1; else if (cur_ == Demod::Lsb) side_ = -1;
         blocks_++;
         tSec_ = (double)blocks_ * kBlock / kRate;
@@ -268,6 +291,7 @@ private:
             if (key_ >= 0 && ctx_->audio && ctx_->playKey.load(std::memory_order_relaxed) == key_) ctx_->audio(key_, p, kBlock);
         }
         if (mdc_ && b.gate) {   // the flat audio: MDC data is not pre-emphasised
+            if (getenv("CHV_DUMP_RAW")) { static FILE* df = fopen(getenv("CHV_DUMP_RAW"), "wb"); if (df) { fwrite(b.raw.data(), 4, kBlock, df); fflush(df); } }
             mdc_->feed(b.raw.data(), kBlock);
         }
         if (callActive_) {
@@ -317,6 +341,8 @@ private:
     std::complex<double> prev_{1.0, 0.0};
     std::array<float, kBlock> fmB_{}, amB_{}, ssbB_{}, rawB_{};
     std::array<double, kBlock> rot_{};
+    std::array<std::complex<float>, kBlock> sblk_{};
+    double carrierS_ = 0, qInstPrev_ = -30;
     int nb_ = 0, wr_ = 0, rotN_ = 0, side_ = 1;
     double pw_ = 0, plo_ = 0, phi_ = 0, qlo_ = 0, qhi_ = 0, sumAbs_ = 0, centroid_ = 0, cvS_ = 0;
     int centroidAcc_ = 0, centroidN_ = 0, votes_ = 0; double cvAcc_ = 0;
@@ -338,7 +364,7 @@ private:
 // ---- one wireless microphone candidate: wide FM at 192 kHz
 class MicRx {
 public:
-    void setActive(bool a, double lvl) { active_ = a; level_ = lvl; }
+    void setActive(bool a, double snrDb) { active_ = a; snr_ = snrDb; }
     void bind(int id, double mhz, std::function<void(const float*, size_t)> audio) { id_ = id; mhz_ = mhz; audio_ = std::move(audio); lp_.design(false, 15000, kChvMicRate, 0.7071); lp2_.design(false, 15000, kChvMicRate, 0.7071); }
     double devKhz() const { return devKhz_.load(); }
     double meanHz() const { return meanF_; }
@@ -358,10 +384,10 @@ public:
             if (cnt_ == 19200) {   // 100 ms
                 const double m1 = sumM_ / cnt_, m2 = sumM2_ / cnt_;
                 const double cv = m1 > 1e-9 ? std::sqrt(std::max(0.0, m2 - m1 * m1)) / m1 : 1.0;
-                minPw_ = minPw_ <= 0 ? m2 : std::min(m2, minPw_ * 1.02);
-                const bool sig = m2 > 3.0 * minPw_;   // 5 dB over the quietest the channel has been lately: a carrier is on
-                if (sig) fmLike_ = cv < 0.35;
-                if (getenv("CHV_TRACE_MIC")) fprintf(stderr, "mic %.3f cv %.3f dev %.1f mean %.0f\n", mhz_, cv, devAcc_ / 1000.0, meanF_);
+                maxPw_ = std::max(m2, maxPw_ * 0.97);
+                const bool sig = active_ && snr_ > 8.0 && ++win_ > 2 && m2 > 0.7 * maxPw_;   // a carrier is on (the finder lags at both ends: only full-strength windows count)
+                if (sig) fmLike_ = cv < 0.35 && devAcc_ > 3000.0;   // a constant envelope that moves by kHz: analogue FM (an unmodulated carrier or an AM one does not)
+                if (getenv("CHV_TRACE_MIC")) fprintf(stderr, "mic %.3f cv %.3f dev %.1f mean %.0f active %d snr %.1f\n", mhz_, cv, devAcc_ / 1000.0, meanF_, (int)active_, snr_);
                 if (sig) devKhz_ = devKhz_.load() == 0 ? devAcc_ / 1000.0 : 0.7 * devKhz_.load() + 0.3 * devAcc_ / 1000.0;
                 sumM_ = sumM2_ = 0; cnt_ = 0; devAcc_ = 0;
             }
@@ -371,11 +397,12 @@ public:
     }
 private:
     int id_ = 0; double mhz_ = 0;
-    bool active_ = false; double level_ = -200;
+    bool active_ = false; double snr_ = 0;
     std::function<void(const float*, size_t)> audio_;
     Biquad lp_, lp2_;
     std::complex<double> prev_{1.0, 0.0};
-    double sumM_ = 0, sumM2_ = 0, devAcc_ = 0, meanF_ = 0, minPw_ = 0;
+    double sumM_ = 0, sumM2_ = 0, devAcc_ = 0, meanF_ = 0, maxPw_ = 0;
+    int win_ = 0;
     int cnt_ = 0, dec_ = 0;
     std::atomic<double> devKhz_{0};
     std::atomic<bool> fmLike_{false};
@@ -667,17 +694,6 @@ struct ChanVoiceReceiver::Impl {
     }
 
     void feedSpan(const cf32* x, size_t n) {   // under mu
-        // history for the pre-roll
-        if (!hist.empty()) {
-            const size_t cap = hist.size();
-            if (n >= cap) { std::copy(x + (n - cap), x + n, hist.begin()); histW = 0; histN = cap; }
-            else {
-                const size_t first = std::min(n, cap - histW);
-                std::copy(x, x + first, hist.begin() + (long)histW);
-                if (first < n) std::copy(x + first, x + n, hist.begin());
-                histW = (histW + n) % cap; histN = std::min(cap, histN + n);
-            }
-        }
         finder.setKeep(0);
         // squelch slider -> the finder's thresholds
         { static thread_local int lastSq = -1; (void)lastSq; }
@@ -692,7 +708,7 @@ struct ChanVoiceReceiver::Impl {
             s->hz = c.hz; s->levelDb = c.levelDb; s->snrDb = c.snrDb; s->widthHz = c.widthHz; s->active = c.active; s->ageSec = c.ageSec;
             if (!s->fixed && std::fabs(c.hz - s->ch.shiftHz()) > 0.06 * finder.cfg().stepHz) s->ch.setShift(c.hz);
             if (s->rx) s->rx->setFinder(c.active, c.levelDb);
-            if (s->mic) s->mic->setActive(c.active, c.levelDb);
+            if (s->mic) s->mic->setActive(c.active, c.snrDb);
         }
         std::vector<Slot*> v;
         for (auto& p : slots) v.push_back(p.second.get());
@@ -703,6 +719,17 @@ struct ChanVoiceReceiver::Impl {
             if (s.rx) s.rx->feed(s.tmp.data(), s.tmp.size()); else if (s.mic) s.mic->feed(s.tmp.data(), s.tmp.size());
         };
         if (v.size() > 1) ThreadPool::shared().parallelFor(v.size(), work); else if (v.size() == 1) work(0);
+        // history for the pre-roll (after the carriers were fed: a carrier found in the next block replays only what came before it)
+        if (!hist.empty()) {
+            const size_t cap = hist.size();
+            if (n >= cap) { std::copy(x + (n - cap), x + n, hist.begin()); histW = 0; histN = cap; }
+            else {
+                const size_t first = std::min(n, cap - histW);
+                std::copy(x, x + first, hist.begin() + (long)histW);
+                if (first < n) std::copy(x + first, x + n, hist.begin());
+                histW = (histW + n) % cap; histN = std::min(cap, histN + n);
+            }
+        }
     }
 };
 

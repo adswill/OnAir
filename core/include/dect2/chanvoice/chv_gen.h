@@ -21,7 +21,8 @@ struct GenTx {
     double cfoHz = 0;             // carrier frequency error
     double ctcssHz = 0;           // sub-audible tone under the voice (0 none), 0.08 of full scale = 400 Hz
     int dcsCode = -1; bool dcsInverted = false;
-    bool speech = true;           // speech-like audio; false: the 1 kHz test tone
+    bool speech = true;           // speech-like audio; false: the tones below
+    std::vector<double> tones = {1000.0};   // the test tones of a non-speech transmission (Hz), each 0.3 / n of full scale
     bool mdc = false; MdcPacket mdcPacket;   // an MDC-1200 burst at the start, voice after it
     unsigned seed = 1;
 };
