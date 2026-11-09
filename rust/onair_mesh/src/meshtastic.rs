@@ -176,6 +176,7 @@ pub fn decode_port(d: &Data, c: &Ctx) -> Decoded {
             out.message = Some(m);
         }
         3 => position(d, &from_id, &mut out),
+        8 => waypoint(d, &mut out),
         4 => nodeinfo(d, &from_id, &mut out),
         67 => telemetry(d, &mut out),
         5 => {
@@ -343,6 +344,42 @@ fn metrics(m: &Field, local: bool, u: &mut Node) {
 }
 
 /// TELEMETRY_APP (telemetry.proto Telemetry): device metrics (2), environment metrics (3) or local stats (6); the last one present gives the detail line.
+/// WAYPOINT_APP (mesh.proto `Waypoint`): a named map pin.
+fn waypoint(d: &Data, out: &mut Decoded) {
+    let mut r = Reader::new(d.payload);
+    let (mut lat, mut lon, mut id) = (None::<i32>, None::<i32>, 0u64);
+    let mut name: &[u8] = &[];
+    let mut desc: &[u8] = &[];
+    while let Some(f) = r.next() {
+        match (f.num, f.wire) {
+            (1, 0) => id = f.value,
+            (2, 5) => lat = Some(f.as_i32()),
+            (3, 5) => lon = Some(f.as_i32()),
+            (6, 2) => name = f.data,
+            (7, 2) => desc = f.data,
+            _ => {}
+        }
+    }
+    out.detail.write(|w| {
+        w.str("waypoint ");
+        w.udec(id);
+        if !name.is_empty() {
+            w.str(" ");
+            clean_text(w, name);
+        }
+        if !desc.is_empty() {
+            w.str(": ");
+            clean_text(w, desc);
+        }
+        if let (Some(a), Some(b)) = (lat, lon) {
+            w.str(" at ");
+            w.fixed(format_f, 5, f64::from(a) * 1e-7);
+            w.str(" ");
+            w.fixed(format_f, 5, f64::from(b) * 1e-7);
+        }
+    });
+}
+
 fn telemetry(d: &Data, out: &mut Decoded) {
     let mut r = Reader::new(d.payload);
     let mut u = Node::default();
@@ -370,6 +407,66 @@ fn telemetry(d: &Data, out: &mut Decoded) {
                 w.str(" %, air tx ");
                 w.fixed(format_f, 1, u.air_util_tx_pct);
                 w.str(" %");
+            });
+        } else if f.num == 4 && f.wire == 2 {
+            // air quality (telemetry.proto, AirQualityMetrics)
+            let mut mr = Reader::new(f.data);
+            let (mut pm25, mut pm10, mut co2) = (None, None, None);
+            while let Some(g) = mr.next() {
+                match (g.num, g.wire) {
+                    (2, 0) => pm25 = Some(g.value),
+                    (3, 0) => pm10 = Some(g.value),
+                    (13, 0) => co2 = Some(g.value),
+                    _ => {}
+                }
+            }
+            det.write(|w| {
+                w.str("air quality");
+                if let Some(v) = pm25 {
+                    w.str(", PM2.5 ");
+                    w.udec(v);
+                }
+                if let Some(v) = pm10 {
+                    w.str(", PM10 ");
+                    w.udec(v);
+                }
+                if let Some(v) = co2 {
+                    w.str(", CO2 ");
+                    w.udec(v);
+                    w.str(" ppm");
+                }
+            });
+        } else if f.num == 5 && f.wire == 2 {
+            // power channels (PowerMetrics): voltage and current as fixed32 floats
+            let mut mr = Reader::new(f.data);
+            let mut v = [None::<f32>; 3];
+            let mut i = [None::<f32>; 3];
+            while let Some(g) = mr.next() {
+                if g.wire == 5 && (1..=6).contains(&g.num) {
+                    let idx = ((g.num - 1) / 2) as usize;
+                    if (g.num - 1) % 2 == 0 {
+                        v[idx] = Some(g.as_f32());
+                    } else {
+                        i[idx] = Some(g.as_f32());
+                    }
+                }
+            }
+            det.write(|w| {
+                w.str("power");
+                for k in 0..3 {
+                    if let Some(vv) = v[k] {
+                        w.str(", ch");
+                        w.udec((k + 1) as u64);
+                        w.str(" ");
+                        w.fixed(format_f, 2, f64::from(vv));
+                        w.str(" V");
+                        if let Some(ii) = i[k] {
+                            w.str(" ");
+                            w.fixed(format_f, 1, f64::from(ii));
+                            w.str(" mA");
+                        }
+                    }
+                }
             });
         } else if f.num == 3 && f.wire == 2 {
             let mut mr = Reader::new(f.data);

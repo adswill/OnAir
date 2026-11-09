@@ -112,3 +112,38 @@ fn text_detail_cut_on_an_emoji() {
     want.extend_from_slice(b"...");
     assert_eq!(o.detail.as_bytes(), &want[..]);
 }
+
+#[test]
+fn waypoint_and_telemetry_variants() {
+    // Data: portnum 8, Waypoint: id 42, latitude_i 546789000 (sfixed32), longitude_i 252791000, name "Camp", description "Water"
+    let mut wp = vec![0x08u8, 0x2A, 0x15];
+    wp.extend_from_slice(&546789000i32.to_le_bytes());
+    wp.push(0x1D);
+    wp.extend_from_slice(&252791000i32.to_le_bytes());
+    wp.extend_from_slice(&[0x32, 4, b'C', b'a', b'm', b'p', 0x3A, 5, b'W', b'a', b't', b'e', b'r']);
+    let mut plain = vec![0x08, 0x08, 0x12, wp.len() as u8];
+    plain.extend_from_slice(&wp);
+    let d = meshtastic::parse_data(&plain).unwrap();
+    let c = meshtastic::Ctx { from: 1, to: 2, hop_start: 3, hop_limit: 3, packet_id: 1 };
+    let o = meshtastic::decode_port(&d, &c);
+    assert_eq!(o.detail.as_bytes(), b"waypoint 42 Camp: Water at 54.67890 25.27910");
+    // Telemetry: air quality (oneof 4): pm25 12, pm10 30, co2 900
+    let air = [0x10u8, 12, 0x18, 30, 0x68, 0x84, 0x07];
+    let mut tel = vec![0x22, air.len() as u8];
+    tel.extend_from_slice(&air);
+    let mut plain = vec![0x08, 67, 0x12, tel.len() as u8];
+    plain.extend_from_slice(&tel);
+    let o = meshtastic::decode_port(&meshtastic::parse_data(&plain).unwrap(), &c);
+    assert_eq!(o.detail.as_bytes(), b"air quality, PM2.5 12, PM10 30, CO2 900 ppm");
+    // power (oneof 5): ch1 3.3 V, 120 mA
+    let mut p = vec![0x0D];
+    p.extend_from_slice(&3.3f32.to_le_bytes());
+    p.push(0x15);
+    p.extend_from_slice(&120.0f32.to_le_bytes());
+    let mut tel = vec![0x2A, p.len() as u8];
+    tel.extend_from_slice(&p);
+    let mut plain = vec![0x08, 67, 0x12, tel.len() as u8];
+    plain.extend_from_slice(&tel);
+    let o = meshtastic::decode_port(&meshtastic::parse_data(&plain).unwrap(), &c);
+    assert_eq!(o.detail.as_bytes(), b"power, ch1 3.30 V 120.0 mA");
+}
