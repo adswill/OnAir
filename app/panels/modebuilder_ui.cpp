@@ -892,9 +892,9 @@ bool customModeSink(const float* iq, size_t n, double rate) {
     return true;
 }
 
-void modeBuilderFrame(App& a) {
+void modeBuilderRegister(App& a) {
     if (a.rxId != 1) return;
-    if (!R.loaded) {   // the registered custom modes join the mode list at the first frame
+    if (!R.loaded) {   // the registered custom modes join the mode list before anything draws (#465: the toolbar asks for the tuning of the mode on screen)
         dect2::registerPluginTuning(kCustomFamilyBase - 1 + 2, "modebuilder", "Mode Builder", 0.001, 300000, 433.92, 250000, 0.2);
         R.load();
         for (const Registered& r : R.list) {
@@ -904,6 +904,11 @@ void modeBuilderFrame(App& a) {
             else { mb::Definition dd; dd.name = r.name; dd.symbolRate = 1; addRow(r, dd); }
         }
     }
+}
+
+void modeBuilderFrame(App& a) {
+    if (a.rxId != 1) return;
+    modeBuilderRegister(a);
     if (!isCustomFamily(a.family)) {
         if (V.family) {
             std::lock_guard<std::mutex> lk(L.mu);

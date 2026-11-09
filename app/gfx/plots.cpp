@@ -560,6 +560,8 @@ static void markerLayer(const App& a, bool labels) {
     }
 }
 
+constexpr double kFreqSpanMinMhz = 0.001;   // 1 kHz at full zoom-in
+
 // The spectrum and the waterfall share one frequency axis: panning or zooming either moves both, and a retune brings both back to the band.
 static void setupFreqAxis(const App& a) {
     const double fs = (a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate) / 1e6;
@@ -578,9 +580,8 @@ static void setupFreqAxis(const App& a) {
     plt::SetupAxisLinks(plt::X1, &gXLo, &gXHi);
     plt::SetupAxisFormat(plt::X1, "%freq");
     plt::SetupAxisConstraints(plt::X1, rc - fs / 2, rc + fs / 2);   // pan and zoom stay inside the band the radio hears
+    plt::SetupAxisSpan(plt::X1, std::min(kFreqSpanMinMhz, fs), fs);   // the wheel stops where the zoom slider does (#425, #442)
 }
-
-constexpr double kFreqSpanMinMhz = 0.001;   // 1 kHz at full zoom-in
 
 static double sampleRateMhz(const App& a) {
     return (a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate) / 1e6;
@@ -1606,6 +1607,8 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
         const bool rangeEdited = a.yMin != setMin || a.yMax != setMax;
         plt::SetupAxisLimits(plt::Y1, a.yMin, a.yMax, rangeEdited ? plt::Cond_Always : plt::Cond_Once);
         if (rangeEdited) { setMin = a.yMin; setMax = a.yMax; }
+        plt::SetupAxisConstraints(plt::Y1, kDbAbsLo, kDbAbsHi);   // the wheel stops at the range of the dB sliders, however far it turns (#425, #442)
+        plt::SetupAxisSpan(plt::Y1, kDbMinSpan, kDbAbsHi - kDbAbsLo);
         if (dbm) {   // the axis stays in dBFS (the fields and the keys too); its labels are dBm: marks every 1, 2, 5 ... dB
             static double tp[24]; static char tb[24][12]; static const char* tl[24];
             const double span = std::max(1.0, (double)a.yMax - a.yMin);
@@ -1621,7 +1624,16 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
         plotMin = plt::GetPlotPos(); plotSize = plt::GetPlotSize();
         if (!rangeEdited) {
             const plt::Rect lim = plt::GetPlotLimits();
-            if (std::fabs(lim.Y.Min - a.yMin) > 0.01 || std::fabs(lim.Y.Max - a.yMax) > 0.01) { a.yMin = setMin = (float)lim.Y.Min; a.yMax = setMax = (float)lim.Y.Max; a.specAutoDb = false; }
+            if (std::fabs(lim.Y.Min - a.yMin) > 0.01 || std::fabs(lim.Y.Max - a.yMax) > 0.01) {
+                a.yMin = setMin = (float)lim.Y.Min; a.yMax = setMax = (float)lim.Y.Max; a.specAutoDb = false;
+                if (!ImGui::IsMouseDown(ImGuiMouseButton_Left) && !a.smooth.empty()) {   // a wheel zoom does not lose the trace (#425); a drag is deliberate. a.yMin moved away from setMin: the next frame applies it
+                    const double fsM = (a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate) / 1e6, x0M = radioCenterMhz(a) - fsM / 2, dxM = fsM / (double)a.smooth.size();
+                    const size_t i0 = (size_t)std::max(0.0, std::floor((lim.X.Min - x0M) / dxM)), i1 = (size_t)std::min((double)a.smooth.size(), std::ceil((lim.X.Max - x0M) / dxM));
+                    float tLo = 1e9f, tHi = -1e9f;
+                    for (size_t i = i0; i < i1; i++) if (std::isfinite(a.smooth[i])) { tLo = std::min(tLo, a.smooth[i]); tHi = std::max(tHi, a.smooth[i]); }
+                    plt::keepTraceInView(a.yMin, a.yMax, tLo, tHi, kDbAbsLo, kDbAbsHi);
+                }
+            }
         }
         if (plt::IsPlotHovered() && dbRangeKeys(a)) savePrefs(a);
         if (!a.smooth.empty()) {
@@ -1906,7 +1918,7 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
         // Paused, the view is free to scroll and zoom back through the rows (but not past the oldest or the newest), with ordinary tick labels.
         if (gWfScrollPending && a.wf.paused) { plt::SetupAxisLimits(plt::Y1, gWfScrollLo, gWfScrollHi, plt::Cond_Always); gWfScrollPending = false; }   // the wheel scrolled the rows (View > Controls)
         else plt::SetupAxisLimits(plt::Y1, -H, 0, a.wf.paused ? plt::Cond_Once : plt::Cond_Always);
-        if (a.wf.paused) plt::SetupAxisConstraints(plt::Y1, -H, 0);
+        if (a.wf.paused) { plt::SetupAxisConstraints(plt::Y1, -H, 0); plt::SetupAxisSpan(plt::Y1, std::min(8.0, (double)H), H); }   // at least a few rows stay in view
         plt::SetupAxisUnit(plt::Y1, sc.dt);
         if (!a.wf.paused) plt::SetupAxisTicks(plt::Y1, sc.pos.data(), (int)sc.pos.size(), sc.cstr.data());
         // rows arrive at the engine's ~30 Hz, the screen draws faster: slide down by the part of a row that is due since the last one,

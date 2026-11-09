@@ -87,7 +87,7 @@ const std::vector<MarineBand>& marineBands() {
         {"VHF", 156.8e6, "Channel 16", "Voice FM", "International distress, safety and calling. No decoder, tune and listen.", -1, nullptr},
         {"VHF", 161.975e6, "AIS 1 (channel 87B)", "AIS GMSK 9.6 kbit/s, M.1371", "Ship positions and static data.", 14, nullptr},
         {"VHF", 162.025e6, "AIS 2 (channel 88B)", "AIS GMSK 9.6 kbit/s", "", 14, nullptr},
-        {"VHF", 161.95e6, "VDES / ASM", "VDES (M.2092): ASM and VDE-TER", "Application-specific messages, channels 2024-2027 area.", 63, nullptr},
+        {"VHF", 161.95e6, "VDES / ASM", "VDES (M.2092): ASM and VDE-TER", "Application-specific messages: ASM 1 on channel 2027 (161.950 MHz), ASM 2 on channel 2028 (162.000 MHz).", 63, nullptr},
         {"UHF", 406.037e6, "EPIRB / PLB beacons", "COSPAS-SARSAT 406 MHz, 400 bps BPSK", "Beacon bursts; the first-generation beacons sit between 406.025 and 406.04 MHz.", 92, nullptr},
         {"UHF", 121.5e6, "EPIRB / PLB homing", "AM sweep tone", "Aircraft and homing signal of the beacons.", -1, nullptr},
         {"L band", 1537.1e6, "Inmarsat-C (EGC)", "Inmarsat-C TDM", "SafetyNET maritime safety information, 1.5 GHz.", 17, nullptr},

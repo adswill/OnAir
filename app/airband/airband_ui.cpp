@@ -422,6 +422,9 @@ void spectrumView(App& a) {
     const double rc = radioCenterMhz(a);
     plt::SetupAxisLimits(plt::X1, rc - fs / 2, rc + fs / 2, plt::Cond_Once);
     plt::SetupAxisLimits(plt::Y1, a.yMin, a.yMax, plt::Cond_Once);
+    plt::SetupAxisSpan(plt::X1, std::min(0.001, fs), fs);   // the wheel limits of the main spectrum (#425, #442)
+    plt::SetupAxisConstraints(plt::Y1, -160, 20);
+    plt::SetupAxisSpan(plt::Y1, 10, 180);
     plt::SetupAxisFormat(plt::X1, "%.3f");
     for (size_t i = 0; i < S.chans.size(); i++) {
         const auto& c = S.chans[i];

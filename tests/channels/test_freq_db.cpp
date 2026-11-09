@@ -191,7 +191,7 @@ static void testIo() {
 
 // Issue #411: the rows of a search can be exported as CSV and read back
 static void testExportResults() {
-    std::vector<FreqEntry> all = {mk("VDES ASM 1", 161950000, "vdes"), mk("VDES ASM 2", 162050000, "vdes"), mk("Tower, \"north\"", 118100000, "airband"), mk("Noor", 93900000, "fm")};
+    std::vector<FreqEntry> all = {mk("VDES ASM 1", 161950000, "vdes"), mk("VDES ASM 2", 162000000, "vdes"), mk("Tower, \"north\"", 118100000, "airband"), mk("Noor", 93900000, "fm")};
     FreqQuery q; q.text = "asm";
     std::vector<FreqEntry> rows;
     for (size_t i : freqSearch(all, q)) rows.push_back(all[i]);
@@ -200,11 +200,22 @@ static void testExportResults() {
     CHECK(csv.find("VDES ASM 1") != std::string::npos && csv.find("VDES ASM 2") != std::string::npos && csv.find("Noor") == std::string::npos && csv.find("Tower") == std::string::npos, "only the searched rows are in the CSV");
     std::vector<FreqEntry> back;
     freqImportText(csv, back);
-    CHECK(back.size() == 2 && back[0].hz + back[1].hz == 161950000ull + 162050000ull, "the exported results import again");
+    CHECK(back.size() == 2 && back[0].hz + back[1].hz == 161950000ull + 162000000ull, "the exported results import again");
+}
+
+// Issue #411: ASM 1 and ASM 2 are channels 2027 and 2028 of Radio Regulations Appendix 18
+static void testVdesAsmChannels() {
+    int found = 0;
+    for (const FreqEntry& e : builtinFrequencies()) {
+        if (e.name == "VDES ASM 1") { CHECK(e.hz == 161950000ull, "ASM 1 is 161.950 MHz"); found++; }
+        if (e.name == "VDES ASM 2") { CHECK(e.hz == 162000000ull, "ASM 2 is 162.000 MHz"); found++; }
+    }
+    CHECK(found == 2, "both ASM channels are listed");
 }
 
 int main() {
     testExportResults();
+    testVdesAsmChannels();
     testData();
     testSearch();
     testParser();

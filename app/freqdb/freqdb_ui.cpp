@@ -224,7 +224,7 @@ const std::vector<FreqEntry>& airportRows() {
         FreqEntry e;
         e.hz = (uint64_t)std::llround(c.freqHz);
         e.mode = "airband";
-        e.name = c.label;
+        e.name = dect2::airportRowName(*ap, c.label, t);
         e.region = ap->country;
         e.category = "airport";
         e.notes = ap->name + (ap->city.empty() ? "" : ", " + ap->city) + (c.is833 ? ". 8.33 kHz channel." : ". 25 kHz channel.");

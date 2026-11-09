@@ -548,9 +548,11 @@ const ModeUi kPluginUi = {
     .summary = summary,
 };
 
+void pluginRegister(App& a) { if (a.rxId == 1 && !P.inited) init(a); }   // first thing in the frame: the plugin rows have a tuning before anything asks for it (#465)
+
 void pluginFrame(App& a) {
     if (a.rxId != 1) return;
-    if (!P.inited) init(a);
+    pluginRegister(a);
     gSoundVolume = a.volume; gSoundMuted = a.muted;   // the sound controls are shared with the other modes
     const double now = ImGui::GetTime();
     if (now - P.lastTick > 1.0) {
