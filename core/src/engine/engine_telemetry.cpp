@@ -359,6 +359,7 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 131: return pollStd(rxEdacs_, 131, t, seqs[127], &RxTelemetry::edacs); // EDACS control channel (slot 127)
     case 156: return pollStd(rxMarineVhf_, 156, t, seqs[142], &RxTelemetry::marinevhf);   // Marine VHF voice (slot 142)
     case 181: return pollStd(rxP25p2_, 181, t, seqs[181], &RxTelemetry::p25p2); // P25 Phase 2 (slot 181)
+    case 381: return pollStd(rxBtc_, 381, t, seqs[380], &RxTelemetry::btc);     // Bluetooth Classic discovery (slot 380)
     default: return -1;
     }
 }

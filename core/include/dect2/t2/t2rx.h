@@ -70,6 +70,7 @@
 #include "dect2/ale/ale_tel.h"
 #include "dect2/p25/p25_tel.h"
 #include "dect2/ble/ble_tel.h"
+#include "dect2/btc/btc_tel.h"
 #include "dect2/iono/iono_tel.h"
 #include "dect2/psk/psk_tel.h"
 #include "dect2/js8/js8_tel.h"
@@ -222,6 +223,7 @@ struct RxTelemetry {
     AleTelemetry ale;         // valid when standard == 50 (HF ALE)
     P25Telemetry p25;         // valid when standard == 51 (P25 Phase 1)
     BleTelemetry ble;         // valid when standard == 52 (Bluetooth LE advertising)
+    BtcTelemetry btc;         // valid when standard == 381 (Bluetooth Classic discovery)
     IonoTelemetry iono;       // valid when standard == 53 (ionospheric sounders)
     Qo100Telemetry qo100;     // valid when standard == 54 (QO-100)
     WifiTelemetry wifi;       // valid when standard == 55 (Wi-Fi networks)

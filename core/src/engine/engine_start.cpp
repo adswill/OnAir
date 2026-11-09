@@ -248,6 +248,8 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxAle_.setDialHz(dev.kind != DeviceInfo::File ? tune.centerHz : 0.0);   // the dial, logged with each call
         rxOrb_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // absolute frequencies and Doppler
         rxBle_.setSignalOffset(o);
+        rxBtc_.setSignalOffset(o);
+        rxBtc_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // which 1 MHz channels the capture covers
         rxBle_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the advertising channel tried first
         rxQo100_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the IF: where the beacons and transponders lie
         rxTime_.setSignalOffset(o);
@@ -669,6 +671,8 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxArd_.configure(rate_);
     rxArd_.setLogCallback([this](const std::string& s) { log(s); });
     rxZw_.configure(rate_);
+    rxBtc_.configure(rate_);
+    rxBtc_.setLogCallback([this](const std::string& m) { log(m); });
     rxZw_.setLogCallback([this](const std::string& m) { log(m); });
     rxEcz_.configure(rate_);
     rxWmb_.configure(rate_);

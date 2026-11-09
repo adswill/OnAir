@@ -204,6 +204,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES sensors)   # Sub-GHz sensors (family 241, docs/SENSORS-3.7.md): core/src/sensors, app/sensors, tests/sensors; decoders vendored from rtl_433 (third_party/rtl_433)
   list(APPEND DECT2_MODES bgan)   # Inmarsat BGAN forward bearers, signalling only (family 245, docs/BGAN-3.7.md): core/src/bgan, app/bgan, tests/bgan
   list(APPEND DECT2_MODES sferics)   # Sferics / lightning (family 243): core/src/sferics, app/sferics, tests/sferics
+  list(APPEND DECT2_MODES btc)   # Bluetooth Classic discovery (family 380, docs/IOT-3.8.md): core/src/btc, app/btc, tests/btc
   list(APPEND DECT2_MODES fygeo)   # FengYun geostationary: FY-4A / FY-4B LRIT, FY-4A HRIT (DVB-S2) and FY-2 S-VISSR (families 232 - 235, docs/FENGYUN-GEO.md): core/src/fygeo, app/fygeo, tests/fygeo
 target_sources(dect2core PRIVATE core/src/tv/mheg_render.cpp core/src/tv/ts_proto_rs.cpp core/src/common/text_charset_rs.cpp core/src/tv/dvb_text.cpp core/src/tv/dvb_text_rs.cpp core/src/tv/teletext_rs.cpp core/src/tv/dvbsub_rs.cpp core/src/tv/epg.cpp core/src/tv/subtitle_export.cpp core/src/tv/recorder.cpp core/src/tv/timeshift.cpp core/src/tv/playback.cpp core/src/tv/dsmcc.cpp core/src/tv/mheg.cpp core/src/tv/mheg_engine.cpp core/src/tv/rcs.cpp core/src/tv/si_tables.cpp core/src/tv/ts_data.cpp core/src/tv/hd_pair.cpp) # MPEG-TS parsing layer (C++ or the Rust crate onair_ts) and the TV recorder (guide, schedule, timeshift, playback) (C++ or the Rust crate onair_ts)
 target_sources(dect2core PRIVATE core/src/tv/mheg_render.cpp core/src/tv/ts_proto_rs.cpp core/src/common/text_charset_rs.cpp core/src/tv/dvb_text.cpp core/src/tv/dvb_text_rs.cpp core/src/tv/teletext_rs.cpp core/src/tv/dvbsub_rs.cpp core/src/tv/epg.cpp core/src/tv/subtitle_export.cpp core/src/tv/recorder.cpp core/src/tv/timeshift.cpp core/src/tv/playback.cpp core/src/tv/dsmcc.cpp core/src/tv/mheg.cpp core/src/tv/rcs.cpp core/src/tv/si_tables.cpp core/src/tv/ts_data.cpp core/src/tv/hd_pair.cpp) # MPEG-TS parsing layer (C++ or the Rust crate onair_ts) and the TV recorder (guide, schedule, timeshift, playback) (C++ or the Rust crate onair_ts)
@@ -2732,7 +2733,7 @@ if(DECT2_BUILD_TESTS)
   # Long-running tests (30 s and more): the quick CI on every push skips them (ctest -LE slow),
   # the full CI runs them nightly and on release tags.
   foreach(t gain overload channel t2_payload dvbt_rx dab_rx atsc3_synth_options
-            atv_impair atv_interf atv_engine drm_impair drm_rx drm_smooth drm_mrr adsb_engine ism_rx ism_iot_rx
+            atv_impair atv_interf atv_engine drm_impair drm_rx drm_smooth drm_mrr adsb_engine ism_rx ism_iot_rx btc_rx
             protolab_sweep signallab_eval gnss_loops gnss_rates gnss_sweep gnss_rate20 gnss_gap gnss_qzss_sbas gnss_galileo gnss_beidou gnss_glonass iq_modes sbas_engine)
     if(TEST ${t})
       set_tests_properties(${t} PROPERTIES LABELS slow)

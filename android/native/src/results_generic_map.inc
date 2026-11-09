@@ -1863,3 +1863,21 @@ case 246: {
     { Table tb({"Item"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
+case 381: {
+    const auto& t = rx.btc; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Level Db", t.levelDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Time Sec", t.timeSec);
+    cardIf(o, "Input Rate", t.inputRate);
+    cardIf(o, "Center Mhz", t.centerMhz);
+    cardIf(o, "Channels Covered", t.channelsCovered);
+    cardIf(o, "Giac Ids", t.giacIds);
+    cardIf(o, "Fhs Count", t.fhsCount);
+    cardIf(o, "Bursts Seen", t.burstsSeen);
+    { Table tb({"Lap", "Lap Text", "Kind", "Addr", "Cod", "Major", "Cod Raw", "Clk"}); int n = 0; for (auto it = t.devices.rbegin(); it != t.devices.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.lap), cell(e.lapText), cell(e.kind), cell(e.addr), cell(e.cod), cell(e.major), cell(e.codRaw), cell(e.clk)}); } if (n) addTable(o, "Devices", tb); }
+    { Table tb({"Wall Time", "Sec", "Mhz", "Lap", "Rssi", "Errors", "Info"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.sec), cell(e.mhz), cell(e.lap), cell(e.rssi), cell(e.errors), cell(e.info)}); } if (n) addTable(o, "Log", tb); }
+    break;
+}
