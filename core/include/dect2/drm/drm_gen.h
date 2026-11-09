@@ -78,6 +78,7 @@ struct DrmTxConfig {
     std::string text = "OnAir DRM test signal";
     int year = 2026, month = 10, day = 6, hour = 12, minute = 0;   // the clock that SDC type 8 reports (advances with the signal)
     bool sendTime = true, sendLanguage = true;
+    std::vector<std::pair<int, std::vector<uint8_t>>> extraEntities;   // more SDC entities in the rotation: type, body (the first nibble in the high half of the first byte)
     uint32_t seed = 1;
     // A packet mode data service next to the audio service (modes A to D only): short id 1, stream 1 with equal error protection, DAB domain user application
     // `dataApp` (0 = none; 0x002 slide show, 0x003 broadcast website, 0x004 TPEG, 0x007 EPG). Its units come from dataSource; they are cut into packets of

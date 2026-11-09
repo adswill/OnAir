@@ -6,6 +6,8 @@
 #include "panels/journaline_view.h"
 #include "codec/speech_codec_ui.h"
 #include "dect2/drm/drm_usac_lib.h"
+#include "platform/platform.h"
+#include <algorithm>
 #include <cmath>
 #include <ctime>
 #include <deque>
@@ -377,6 +379,69 @@ void tab(App& a) {
     signalPanel(a, sw, H);
 }
 
+// ---------------------------------------------------------------- alternative frequencies (SDC types 3, 4, 11) and the station book
+static void altFreqList(App& a, const DrmTelemetry& t) {
+    if (t.altFreqs.empty()) return;
+    ImGui::Separator();
+    ImGui::TextDisabled("%s", tr("Also on"));
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Other frequencies this station announces: the same multiplex, or the same programme on AM, FM or DAB. Click to tune. Greyed: not on the air now by its own schedule."));
+    int shown = 0;
+    for (const auto& f : t.altFreqs) {
+        if (shown++ >= 24) break;
+        ImGui::PushID(shown);
+        char b[96];
+        const char* sys = f.kind == 0 ? (f.modeE ? "DRM+" : "DRM") : f.kind == 1 ? "AM" : f.kind == 2 ? "FM" : "DAB";
+        if (f.kind == 3) snprintf(b, sizeof b, "%s %s", sys, f.dabChannel.empty() ? "?" : f.dabChannel.c_str());
+        else if (f.khz >= 30000) snprintf(b, sizeof b, "%.1f MHz %s", f.khz / 1000.0, sys);
+        else snprintf(b, sizeof b, "%.0f kHz %s", f.khz, sys);
+        if (!f.activeNow) ImGui::BeginDisabled();
+        const bool canTune = f.khz > 0 && f.kind == 0;   // the same DRM receiver; another system is a different mode, the frequency is only shown
+        if (canTune) { if (ImGui::SmallButton(b)) tuneFreq(a, f.khz / 1000.0); } else ImGui::TextUnformatted(b);
+        if (!f.activeNow) ImGui::EndDisabled();
+        if (f.synchronous) { ImGui::SameLine(); ImGui::TextDisabled("%s", tr("same multiplex")); }
+        else if (!f.sameService) { ImGui::SameLine(); ImGui::TextDisabled("%s", tr("alternative programme")); }
+        ImGui::PopID();
+    }
+}
+
+static void stationBook(App& a, const DrmTelemetry& t) {
+    static dect2::DrmStationBook book; static bool loaded = false; static double savedAt = 0;
+    const std::string path = plat::dataDir() + "/drm_stations.txt";
+    if (!loaded) { loaded = true; book.load(path); }
+    bool dirty = false;
+    for (const auto& s : t.services) {
+        if (!s.id || t.state < 2) continue;
+        dect2::DrmBookEntry e; e.id = s.id; e.audio = s.audio; e.label = s.label; e.language = s.languageName; e.country = s.country; e.programme = s.programmeName; e.text = t.textMessage;
+        e.heardKhz.push_back(std::round(a.freqMhz * 1000.0)); e.bestSnr = t.snrDb; e.lastHeard = (int64_t)std::time(nullptr);
+        for (const auto& f : t.altFreqs) if (f.kind == 0 && f.khz > 0) e.altKhz.push_back(f.khz);
+        book.note(e); dirty = true;
+    }
+    if (dirty && ImGui::GetTime() - savedAt > 30.0) { savedAt = ImGui::GetTime(); book.save(path); }
+    if (book.entries().empty()) return;
+    ImGui::Separator();
+    if (!ImGui::TreeNode(tr("Stations heard"))) return;
+    if (ImGui::BeginTable("##drmbook", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY, ImVec2(0, 180 * gUi))) {
+        ImGui::TableSetupColumn(tr("Station")); ImGui::TableSetupColumn(tr("Language")); ImGui::TableSetupColumn(tr("Programme")); ImGui::TableSetupColumn(tr("Frequencies, kHz")); ImGui::TableHeadersRow();
+        int row = 0;
+        for (const auto& e : book.newestFirst()) {
+            ImGui::PushID(row++);
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            char idt[20]; snprintf(idt, sizeof idt, "%06X", e.id);
+            ImGui::TextUnformatted(e.label.empty() ? idt : e.label.c_str());
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(e.language.c_str());
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(e.programme.c_str());
+            ImGui::TableNextColumn();
+            int n = 0;
+            for (double k : e.heardKhz) { char b[24]; snprintf(b, sizeof b, "%.0f", k); if (n++) ImGui::SameLine(); if (ImGui::SmallButton(b)) tuneFreq(a, k / 1000.0); }
+            for (double k : e.altKhz) if (std::find(e.heardKhz.begin(), e.heardKhz.end(), k) == e.heardKhz.end()) { char b[24]; snprintf(b, sizeof b, "%.0f*", k); if (n++) ImGui::SameLine(); if (ImGui::SmallButton(b)) tuneFreq(a, k / 1000.0); }
+            ImGui::PopID();
+        }
+        ImGui::EndTable();
+    }
+    ImGui::TreePop();
+}
+
 // ---------------------------------------------------------------- the services list
 
 void list(App& a) {
@@ -399,6 +464,8 @@ void list(App& a) {
         if (s.audio && ImGui::IsItemHovered() && !s.codecText.empty()) ImGui::SetTooltip("%s", s.codecText.c_str());
         ImGui::PopID();
     }
+    altFreqList(a, t);
+    stationBook(a, t);
 }
 
 // ---------------------------------------------------------------- the analysis row

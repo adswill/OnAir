@@ -18,7 +18,7 @@ void DrmBackend::reset() {
     mode_ = -1; occ_ = -1; layout_.reset();
     wRefFac_ = wRefSdc_ = wRefMux_ = 0; pendFacValid_ = false; pendPos_ = -1; announced_ = 0;
     facValid_ = false; sdcSeen_ = false; hierarchical_ = false;
-    fac_ = FacInfo(); sdc_ = SdcInfo();
+    fac_ = FacInfo(); sdc_ = SdcInfo(); afs_.clear();
     for (int i = 0; i < 4; i++) facSeen_[i] = false;
     pos_ = -1;
     facCode_.reset(); sdcCode_.reset(); mscCode_.reset();
@@ -195,6 +195,7 @@ void DrmBackend::decodeSdc() {
     sdcSeen_ = true;
     sdc_.afsIndex = afs;
     sdcParse(field.data(), F, sdc_);
+    afs_.feed(field.data(), F);
     if (first && log) {
         char b[200];
         snprintf(b, sizeof b, "DRM: SDC read: %d data entities", sdc_.entities);

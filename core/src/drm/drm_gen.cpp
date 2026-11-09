@@ -293,6 +293,7 @@ struct DrmTransmitter::Impl {
             sdcPutEntity(e, 8, 0, sdcEntityTime(t));
             opt.push_back(e);
         }
+        for (const auto& x : cfg.extraEntities) { std::vector<uint8_t> e; sdcPutEntity(e, x.first, 0, x.second); opt.push_back(e); }
         for (size_t i = 0; i < opt.size(); i++) {
             const auto& e = opt[((size_t)entityRotation + i) % opt.size()];
             if ((int)(field.size() + e.size()) <= sdcFieldBytes) field.insert(field.end(), e.begin(), e.end());

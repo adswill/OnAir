@@ -2,6 +2,7 @@
 // (time deinterleaver, multilevel decoder, descrambler) into the logical frames of the streams. The OFDM front end (synchronisation, channel
 // estimation) hands it one transmission frame of cells at a time.
 #pragma once
+#include "drm_afs.h"
 #include "drm_defs.h"
 #include "drm_fec.h"
 #include "drm_msg.h"
@@ -55,6 +56,7 @@ public:
     bool facValid() const { return facValid_; }
     const FacInfo& fac() const { return fac_; }
     const SdcInfo& sdc() const { return sdc_; }
+    const DrmAfs& afs() const { return afs_; }
     bool sdcValid() const { return sdcSeen_; }
     const FacService* facService(int shortId) const { return facSeen_[shortId & 3] ? &facSvc_[shortId & 3] : nullptr; }
     int mscQamBits() const;              // 4 / 16 / 64 cell constellation as bits per cell, 0 unknown
@@ -92,6 +94,7 @@ private:
     FacService facSvc_[4];
     bool facSeen_[4] = {};
     SdcInfo sdc_;
+    DrmAfs afs_;
     int pos_ = -1;                       // expected position of the next frame in the super frame
     std::unique_ptr<MlcCode> facCode_, sdcCode_, mscCode_;
     int sdcCodeMode_ = -1, mscKey_ = -1;

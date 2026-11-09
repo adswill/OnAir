@@ -1,6 +1,7 @@
 // DRM receiver telemetry, shared by the receiver and the UI.
 #pragma once
 #include "dect2/common/ring.h"
+#include "drm_afs.h"
 #include <cstdint>
 #include <cstdio>
 #include <string>
@@ -104,6 +105,7 @@ struct DrmTelemetry {
     std::string textMessage;     // text message of the audio service
     uint64_t textSegmentsOk = 0, textSegmentsBad = 0;
     std::string status;          // one line: what the receiver is doing
+    std::vector<DrmAltFreq> altFreqs;   // other frequencies of this multiplex and the same programme elsewhere (SDC types 3, 4, 11)
 };
 
 inline const char* drmServiceKind(const DrmService& s) { return s.audio ? "audio" : "data"; }

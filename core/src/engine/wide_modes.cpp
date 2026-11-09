@@ -22,6 +22,8 @@
 #include "dect2/p25/p25_tel.h"
 #include "dect2/t2/t2rx.h"
 #include "dect2/engine/wide_bank.h"
+#include "dect2/drm/drm_find.h"
+#include "dect2/drm/drm_rx.h"
 #include <algorithm>
 #include <cstdio>
 #include <map>
@@ -128,6 +130,9 @@ struct WideModes::Impl {
     WideBank<PagerReceiver, PagerTelemetry>* pager = nullptr;
     WideBank<PacketReceiver, PacketTelemetry>* packet = nullptr;
     WideBank<FusionReceiver, FusionTelemetry>* fusion = nullptr;
+    WideBank<DrmReceiver, DrmTelemetry>* drm = nullptr;
+    DrmFinder drmFind;                  // only signals it proves to be DRM get a receiver
+    std::vector<double> drmRel;         // the confirmed reference frequencies, relative to the span centre
     bool pagerNarrow = false, packetNarrow = false;   // the single receivers' channel width, copied to every carrier receiver (setNarrowChannels)
     int packetFix = 0, packetEmph = 0;                // setPacketOptions: the packet receiver's fix bits and emphasis, for every carrier receiver
     int pagerProtos = 3, pagerBauds = 7; bool pagerSelcall = false;   // the single receiver's settings, copied to every carrier's receiver (setPagerOptions)
@@ -171,6 +176,11 @@ struct WideModes::Impl {
         const std::vector<FreqEntry>& db = builtinFrequencies();
         for (auto& [m, bk] : banks) {
             std::vector<double> v;
+            if (m == 11) {   // DRM: the finder decides; the frequency database cannot tell a DRM channel from an AM one
+                for (double f : drmRel) v.push_back(centerHz + f);
+                bk->setPriorsAbs(std::move(v), true);
+                continue;
+            }
             auto fm = followMode.find(m);
             if (fm != followMode.end()) {   // the wide session placed these channels on this mode
                 for (double f : fm->second) if (bk->rate > 0 && std::fabs(f - centerHz) < bk->rate / 2) v.push_back(f);
@@ -255,6 +265,21 @@ struct WideModes::Impl {
         };
         q.info = [](const P25Telemetry& t) { return t.nac >= 0 ? fmt("NAC %03X", t.nac) : std::string(); };
         p25 = put(51, q, &RxTelemetry::p25);
+
+        // DRM30 and DRM+: the receiver at 192 ksps (DRM+ needs it, a DRM30 receiver filters its 48 kHz channel itself), on the reference frequency the finder gave
+        auto dr = baseOps<DrmReceiver, DrmTelemetry>(192000);
+        dr.occupiedHz = 110000; dr.preRollSec = 0; dr.pinToPrior = true;
+        dr.clearLists = [](DrmTelemetry&) {};
+        dr.hasLog = [](const DrmTelemetry&) { return false; };
+        dr.append = [](DrmTelemetry&, const DrmTelemetry&, double) {};
+        dr.info = [](const DrmTelemetry& t) {
+            if (t.mode < 0) return std::string();
+            char b[120]; snprintf(b, sizeof b, "mode %c, %.1f kHz", t.modeName, t.bandwidthKhz);
+            std::string o = b;
+            if (!t.services.empty() && !t.services[0].label.empty()) o = t.services[0].label + ", " + o;
+            return o;
+        };
+        drm = put(11, dr, &RxTelemetry::drm);
 
         // pagers: one 25 kHz channel each; the carrier is brought to 192 ksps (the receiver's own front end takes it from there). Pages come in bursts,
         // so a carrier found late gets the half second before it was found, and a carrier stays for half a minute after its last burst.
@@ -390,12 +415,13 @@ WideModes::WideModes() : p_(new Impl()) {
 }
 WideModes::~WideModes() = default;
 
-const std::vector<int>& WideModes::modes() { static const std::vector<int> v = {10, 32, 34, 39, 46, 51, 24, 25, 128, 129, 130, 131}; return v; }
+const std::vector<int>& WideModes::modes() { static const std::vector<int> v = {10, 11, 32, 34, 39, 46, 51, 24, 25, 128, 129, 130, 131}; return v; }
 bool WideModes::supports(int m) { const auto& v = modes(); return std::find(v.begin(), v.end(), m) != v.end(); }
 
 std::vector<std::string> WideModes::freqDbModes(int m) {
     switch (m) {
     case 10: return {"dmr"};
+    case 11: return {};
     case 32: return {"m17"};
     case 34: return {"dstar"};
     case 39: return {"nxdn"};
@@ -417,6 +443,7 @@ CarrierCfg WideModes::cfgFor(int m) {
     c.maxCarriers = 8;
     c.rejectTones = m != 130;   // a spur or the LO's leak is not a carrier; an LTR repeater's carrier is (its data is sub-audible)
     if (m == 24 || m == 25) { c.debounceSec = 0.12; c.holdSec = 30; }   // pages and packets come in short bursts
+    if (m == 11) { c.stepHz = 5000; c.maxCarriers = 6; c.rejectTones = false; c.mergeSplit = false; c.trackDrift = false; c.onDb = 3; c.offDb = 1; c.holdSec = 30; c.debounceSec = 0.1; }   // only proven DRM signals are searched (priors): a fade must not end a receiver
     if (m == 128 || m == 130 || m == 131) c.holdSec = 15;               // a control channel is on all the time; a short fade must not lose its decoder
     return c;
 }
@@ -428,12 +455,20 @@ void WideModes::configure(int m, double rate, double origin) {
     b->origin = origin;
     b->configure(rate, c);
     p_->applyTuning(m, *b);
+    if (m == 11) { p_->drmFind.configure(rate, p_->centerHz); p_->drmRel.clear(); }
     p_->priors();
 }
 
-void WideModes::reset() { for (auto& [m, b] : p_->banks) b->reset(); }
+void WideModes::reset() { p_->drmFind.reset(); p_->drmRel.clear(); for (auto& [m, b] : p_->banks) b->reset(); }
 void WideModes::clearResults() { for (auto& [m, b] : p_->banks) b->clearResults(); }
-void WideModes::feed(int m, const cf32* x, size_t n) { if (BankBase* b = p_->bank(m)) b->feed(x, n); }
+void WideModes::feed(int m, const cf32* x, size_t n) {
+    if (m == 11) {
+        p_->drmFind.feed(x, n);
+        std::vector<DrmSpanHit> h;
+        if (p_->drmFind.takeChanged(h)) { p_->drmRel.clear(); for (const auto& e : h) p_->drmRel.push_back(e.hz); p_->priors(); }
+    }
+    if (BankBase* b = p_->bank(m)) b->feed(x, n);
+}
 size_t WideModes::liveCount(int m) const { const BankBase* b = p_->bank(m); return b ? b->liveCount() : 0; }
 std::vector<double> WideModes::liveHz(int m) const { const BankBase* b = p_->bank(m); return b ? b->liveHz() : std::vector<double>(); }
 bool WideModes::ready(int m) const { const BankBase* b = p_->bank(m); return b && b->ready(); }
@@ -451,11 +486,12 @@ void WideModes::setVolume(float v) {
     p_->dpmr->forEach([v](DpmrReceiver& r) { r.setVolume(v); });
     p_->p25->forEach([v](P25Receiver& r) { r.setVolume(v); });
     p_->fusion->forEach([v](FusionReceiver& r) { r.setVolume(v); });
+    p_->drm->forEach([v](DrmReceiver& r) { r.setVolume(v); });
 }
 
 void WideModes::setCenterHz(double hz) {
     for (auto& [m, b] : p_->banks) b->setCenterHz(hz);
-    if (hz != p_->centerHz) { p_->centerHz = hz; p_->priors(); }
+    if (hz != p_->centerHz) { p_->centerHz = hz; p_->drmFind.setCentre(hz); p_->drmRel.clear(); p_->priors(); }
 }
 
 void WideModes::setTuning(const WideTuning& t) {

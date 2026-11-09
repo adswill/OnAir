@@ -400,7 +400,7 @@ void secondModeTabs(App& a) {
 #include "../platform/platform.h"
 static std::set<int>& wideFamilies() {
     // DMR, M17, D-STAR, NXDN, dPMR, P25, pagers, APRS / packet, MPT1327, Yaesu Fusion, LTR, EDACS: one decoder per carrier (core/wide_modes.h)
-    static std::set<int> s = {9, 31, 33, 38, 45, 50, 23, 24, 127, 128, 129, 130};
+    static std::set<int> s = {9, 10, 31, 33, 38, 45, 50, 23, 24, 127, 128, 129, 130};
     return s;
 }
 bool modeSupportsWideChannels(int family) { return family == 27 || family == 35; }   // VDL2, HFDL: the receiver decodes every channel in the capture (setWholeSpan)
