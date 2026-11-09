@@ -114,6 +114,9 @@ void decodeTable(App& a, const dect2::HfdigFtxTelemetry& f, bool wsprOnly) {
         if (d.cq && d.mode != 3) ImGui::TextColored(pal::okGreen(), "%s", d.msg.c_str());
         else ImGui::TextUnformatted(d.msg.c_str());
         if (d.mirrored) { ImGui::SameLine(); ImGui::TextDisabled("(upside down)"); }
+        if (d.early) { ImGui::SameLine(); ImGui::TextDisabled("(early)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("Decoded before the slot ended; the full decode replaces it."); }
+        if (d.how == 1) { ImGui::SameLine(); ImGui::TextDisabled("(combined)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("Decoded by adding this signal's soft bits from earlier slots (the same message repeated)."); }
+        else if (d.how == 2) { ImGui::SameLine(); ImGui::TextDisabled("(a-priori)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("Decoded with the calls of a conversation heard on the band taken as known."); }
         ImGui::PopFont();
     }
     ImGui::EndTable();
@@ -323,6 +326,10 @@ void hfdigFtxTab(App& a, const dect2::HfdigTelemetry& t) {
     bool mir = dec.mirrored();
     if (ImGui::Checkbox("Upside down too", &mir)) dec.setMirrored(mir);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Also look for signals sent on the lower sideband (their tones run backwards). FT8, FT4, FT2 and WSPR only: the other modes expect upper sideband.");
+    flowNext(14 * gUi);
+    bool early = dec.earlyDecode();
+    if (ImGui::Checkbox("Early decode", &early)) dec.setEarlyDecode(early);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("FT8 and FT4: a first decode a few seconds before the slot ends, marked (early) and replaced by the full decode.");
     flowNext(14 * gUi);
     if (only < 0) {
         ImGui::AlignTextToFramePadding();

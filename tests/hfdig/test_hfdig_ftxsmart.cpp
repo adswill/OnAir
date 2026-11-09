@@ -77,13 +77,15 @@ int main(int argc, char** argv) {
                 runs++;
             }
             printf("apqso %.0f dB: %d of %d weak messages (alone %d, cross-slot %d, apriori %d)\n", snrs[si], ok, runs, how[0], how[1], how[2]);
+            CHECK(other == 0, "apqso %.0f dB: %d false decodes", snrs[si], other);
+            if (!sweep && si >= 1 && si <= 2) CHECK(ok >= 3, "apqso %.0f dB: only %d of %d", snrs[si], ok, runs);
         }
     }
     // 3. noise only after a conversation was heard: nothing may be decoded from it
     if (want("noise")) {
         int bad = 0;
         for (uint64_t seed = 1; seed <= 2; seed++) {
-            std::vector<std::vector<Tx>> tx(14);
+            std::vector<std::vector<Tx>> tx(44);
             tx[0] = {{"CQ W9XYZ EN37", 1500, -6, 0.1}, {"CQ DL1ABC JO62", 800, -6, 0.0}};
             tx[1] = {{"W9XYZ K1ABC FN42", 1900, -6, 0.0}, {"DL1ABC G4XYZ IO91", 2300, -6, 0.2}};
             tx[2] = {{"K1ABC W9XYZ -10", 1500, -6, 0.1}};
@@ -94,7 +96,7 @@ int main(int argc, char** argv) {
                 if (!known) { bad++; printf("  noise: false decode \"%s\" %.1f Hz (how %d)\n", x.msg.c_str(), x.hz, x.how); }
             }
         }
-        printf("noise: %d false decodes in 28 slots\n", bad);
+        printf("noise: %d false decodes in 88 slots\n", bad);
         CHECK(bad == 0, "noise: %d false decodes", bad);
     }
     // 4. the early decode: the audio up to 11.3 s into the slot is enough for a strong station; the full decode then replaces it

@@ -1150,3 +1150,5 @@ Network IQ sources now scrub NaN/infinity (SDR++, SpyServer float); rtl_tcp chun
 - Thread (family 244): the 802.15.4 receiver in Thread mode + thread_proto (beacon network name / ext PAN / version, MAC security aux header, 6LoWPAN mesh / fragment / IPHC / UDP NHC, MLE and CoAP where clear). Encrypted traffic is shown as encrypted (no keys). tests/thread. No user-supplied Zigbee / Thread network key decryption (not done).
 ## 2026-11-07 - bug hunt 3.7-D (sources and modes)
 Network IQ sources now scrub NaN/infinity (SDR++, SpyServer float); rtl_tcp chunk test added; modes and drivers reviewed, listed in docs/BUGS-3.7-D.md. No ASan run yet (GitHub).
+## 2026-11-09 feat37-sm-ft8 (smart FT8 / RTTY)
+FT8/FT4/FT2: cross-slot soft-bit combining (about 2 dB on repeated messages), a-priori decoding from conversations heard on the band (2-3 dB), early decode ~4-5 s before slot end; RTTY one-click auto-lock (speed/polarity 40/40, exact shift 39/40). Beacon calibration dropped (selfcal exists). Details: docs/SMART-ft8-3.7.md. Tests: test_hfdig_ftxsmart, test_hfdig_rttyauto; full suite via CI.
