@@ -1,4 +1,4 @@
-// VDES receiver (ITU-R M.2092): ASM on the AIS 1 / AIS 2 channels (161.975 / 162.025 MHz, GMSK 9.6 kbit/s, HDLC + CRC-16 as AIS; decoded through the AIS
+// VDES receiver (ITU-R M.2092): ASM on channels 2027 / 2028 (161.950 / 162.000 MHz, 25 kHz either side of AIS 1, GMSK 9.6 kbit/s, HDLC + CRC-16 as AIS; decoded through the AIS
 // physical layer, ais_phy.h), and VDE-TER detection on the 100 kHz channels at 157.2 and 161.8 MHz (four 25 kHz sub-channels each): bursts are found
 // by a power detector per sub-channel, their bandwidth (25 / 50 / 100 kHz) is the number of sub-channels occupied, and the modulation is classified
 // as pi/4-QPSK, 8PSK or 16QAM from the symbol statistics (symbol rate 19.2 kbaud per 25 kHz, root-raised-cosine). VDE-TER content is not decoded.

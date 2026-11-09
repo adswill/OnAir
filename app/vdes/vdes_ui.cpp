@@ -49,7 +49,7 @@ void asmView(App& a) {
     const std::vector<dect2::VdesAsm> none;
     const std::vector<dect2::VdesAsm>& fr = on ? a.rx.vdes.asms : none;
     ImGui::PushTextWrapPos(0);
-    ImGui::TextDisabled("ASM (application specific messages) on the AIS channels: demodulated and CRC checked. The payload is shown as it was sent; "
+    ImGui::TextDisabled("ASM (application specific messages) on channels 2027 and 2028 (161.950 and 162.000 MHz): demodulated and CRC checked. The payload is shown as it was sent; "
                         "it is read as an AIS message only when its first bits look like one.");
     ImGui::PopTextWrapPos();
     if (ImGui::SmallButton("Clear")) { a.engine.vdes().clearResults(); S.selKey = 0; }
@@ -155,7 +155,7 @@ void list(App& a) {
     if (!ImGui::BeginTable("##vdl", 3, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit)) return;
     ImGui::TableSetupColumn("Channel", ImGuiTableColumnFlags_WidthStretch); ImGui::TableSetupColumn("Level"); ImGui::TableSetupColumn("Frames");
     struct Row { const char* n; bool inView; float lvl; uint64_t cnt; };
-    const Row rows[4] = {{"ASM 1  161.975", t.asmInView, t.asmLevelDb[0], t.asmOk[0]}, {"ASM 2  162.025", t.asmInView, t.asmLevelDb[1], t.asmOk[1]},
+    const Row rows[4] = {{"ASM 1  161.950", t.asmInView, t.asmLevelDb[0], t.asmOk[0]}, {"ASM 2  162.000", t.asmInView, t.asmLevelDb[1], t.asmOk[1]},
                          {"VDE-TER 157.2", t.bandInView[0], t.vdeLevelDb[0], 0}, {"VDE-TER 161.8", t.bandInView[1], t.vdeLevelDb[1], 0}};
     for (int i = 0; i < 4; i++) {
         ImGui::TableNextRow();

@@ -56,23 +56,47 @@ bool openFileLoop(VideoIn::Impl* I, const std::string& path, std::string& err) {
     AVFrame* fr = av_frame_alloc();
     AVPacket* pk = av_packet_alloc();
     std::vector<uint8_t> rgb;
+    const AVRational rs = av_guess_frame_rate(fmt, st, nullptr);
+    const double nominalDur = rs.num > 0 && rs.den > 0 ? av_q2d(av_inv_q(rs)) : 0.04;
+    const double tb = av_q2d(st->time_base);
+    I->wallStart = std::chrono::steady_clock::now();
+    I->clock = -1;
+    { std::lock_guard<std::mutex> lk(I->mu); I->pubPts = -1; I->pubDur = 0; I->fileDone = false; }
     I->fileTh = dect2::namedThread("onair-vidin", [=]() mutable {
         auto closeAll = [&] {
             if (sws) sws_freeContext(sws);
             av_frame_free(&fr); av_packet_free(&pk);
             avcodec_free_context(&ctx); avformat_close_input(&fmt);
+            std::lock_guard<std::mutex> lk(I->mu);
+            I->fileDone = true;
+            I->cv.notify_all();
         };
+        double loopBase = 0, zero = 0, lastRel = -nominalDur;   // the frame times go on rising over the file's loops
+        bool haveZero = false;
         while (!I->stop.load()) {
             int rc = av_read_frame(fmt, pk);
             if (rc < 0) {
                 av_seek_frame(fmt, si, 0, AVSEEK_FLAG_BACKWARD);
                 avcodec_flush_buffers(ctx);
+                loopBase += lastRel + nominalDur;
+                lastRel = -nominalDur;
                 if (av_read_frame(fmt, pk) < 0) break;
             }
             if (pk->stream_index != si) { av_packet_unref(pk); continue; }
             if (avcodec_send_packet(ctx, pk) < 0) { av_packet_unref(pk); continue; }
             av_packet_unref(pk);
             while (avcodec_receive_frame(ctx, fr) >= 0) {
+                const int64_t ts = fr->best_effort_timestamp;
+                double rel = lastRel + nominalDur;
+                if (ts != AV_NOPTS_VALUE) { if (!haveZero) { zero = (double)ts * tb; haveZero = true; } rel = (double)ts * tb - zero; }
+                if (rel < lastRel) rel = lastRel + nominalDur;   // a timestamp jump backwards in a damaged file
+                lastRel = rel;
+                const double pts = loopBase + rel;
+                {   // hold the frame until its time comes
+                    std::unique_lock<std::mutex> lk(I->mu);
+                    while (!I->stop.load() && I->clockNow() + 1e-4 < pts) I->cv.wait_for(lk, std::chrono::milliseconds(5));
+                }
+                if (I->stop.load()) break;
                 if (!sws || I->w != fr->width || I->h != fr->height) {
                     if (sws) sws_freeContext(sws);
                     sws = sws_getContext(fr->width, fr->height, (AVPixelFormat)fr->format, fr->width, fr->height, AV_PIX_FMT_RGB24, SWS_BILINEAR, nullptr, nullptr, nullptr);
@@ -84,6 +108,9 @@ bool openFileLoop(VideoIn::Impl* I, const std::string& path, std::string& err) {
                     sws_scale(sws, fr->data, fr->linesize, 0, fr->height, dst, ls);
                     I->setRgb(fr->width, fr->height, rgb.data());
                 }
+                std::lock_guard<std::mutex> lk(I->mu);
+                I->pubPts = pts; I->pubDur = nominalDur;
+                I->cv.notify_all();
             }
         }
         closeAll();
@@ -126,6 +153,14 @@ void VideoIn::stop() {
     if (p_->fileTh.joinable()) p_->fileTh.join();
     running_ = false;
     kind_ = None;
+}
+
+void VideoIn::setClock(double seconds, int waitMs) {
+    if (kind_ != File || !(seconds >= 0)) return;
+    p_->clock = seconds;
+    std::unique_lock<std::mutex> lk(p_->mu);
+    p_->cv.notify_all();
+    if (waitMs > 0) p_->cv.wait_for(lk, std::chrono::milliseconds(waitMs), [&] { return p_->stop.load() || p_->fileDone || (p_->pubPts >= 0 && p_->pubPts + p_->pubDur > seconds); });
 }
 
 bool VideoIn::copyYuv(int dw, int dh, float* y, float* u, float* v) {

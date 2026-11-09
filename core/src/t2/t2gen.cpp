@@ -136,6 +136,12 @@ T2Generator::~T2Generator() {
     delete i_;
 }
 
+double T2Generator::tsBitrate(double nativeRate) const {
+    if (!p_.payload || plpBlocks_ <= 0 || !(nativeRate > 0)) return 0;
+    PlpFec f; f.shortFrame = p_.plpShort; f.rate = p_.plpCod; f.mod = p_.plpMod; f.rotation = p_.plpRot;
+    return (double)plpBlocks_ * ((fecDims(f).kBch - 80) / 1504) * 1504.0 * nativeRate / (double)frameLength();
+}
+
 void T2Generator::nextFrame(std::vector<cf32>& out) {
     Impl& I = *i_;
     out.resize(frameLength());

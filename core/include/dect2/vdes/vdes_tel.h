@@ -15,7 +15,7 @@
 namespace dect2 {
 
 constexpr size_t kVdesAsmMax = 200, kVdeBurstsMax = 300;
-constexpr double kVdesAsm1Hz = 161.975e6, kVdesAsm2Hz = 162.025e6;   // the ASM channels (as AIS 1 / AIS 2)
+constexpr double kVdesAsm1Hz = 161.950e6, kVdesAsm2Hz = 162.000e6;   // the ASM channels 2027 and 2028 (ITU-R M.2092, RR Appendix 18)
 constexpr double kVdeBandHz[2] = {157.2e6, 161.8e6};                 // centres of the 100 kHz VDE-TER channels
 constexpr double kVdesDefaultDialHz = 161.9e6;                       // assumed for a file without a tuned frequency
 
@@ -27,7 +27,7 @@ inline const char* vdeModName(int m) {
 struct VdesAsm {
     double timeSec = 0;
     int64_t wallTime = 0;           // the computer's clock (0: a file)
-    char channel = 'A';             // 'A' = ASM 1 (161.975 MHz), 'B' = ASM 2 (162.025 MHz)
+    char channel = 'A';             // 'A' = ASM 1 (161.950 MHz), 'B' = ASM 2 (162.000 MHz)
     int bits = 0;                   // payload length in bits, without the CRC
     std::string hex;                // the payload, MSB first, last byte padded with zeros
     int aisType = 0;                // first six bits read as an AIS message type, 0 when they are not 1 .. 27

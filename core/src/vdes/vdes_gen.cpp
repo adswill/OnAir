@@ -137,7 +137,7 @@ std::vector<cf32> renderVdes(const std::vector<AisBurstSpec>& asmBursts, const s
     else {
         AisRenderConfig ac;
         ac.rate = c.rate; ac.durationSec = c.durationSec; ac.snrDb = -200; ac.cfoHz = c.cfoHz; ac.sroPpm = c.sroPpm;
-        ac.tuneOffsetHz = -((kVdesAsm1Hz - c.dialHz) + 25000.0);   // AIS 1 / AIS 2 sit at -25 / +25 kHz of the tuned frequency, minus this
+        ac.tuneOffsetHz = -((kVdesAsm1Hz - c.dialHz) + 25000.0);   // ASM 1 / ASM 2 sit at -25 / +25 kHz of the tuned frequency, minus this
         out = renderAisBursts(asmBursts, ac);
     }
     for (const auto& b : vdeBursts) addVde(out, b, c);

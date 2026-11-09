@@ -163,6 +163,19 @@ private:
     double rate_;
 };
 
+void applySynthProfile(dtmb::SignalConfig& sc, const SynthConfig& cfg) {
+    using namespace dtmb;
+    sc.symbolRate = symbolRateFor(cfg.modeOpt[7] == 1 ? 6 : 8);   // modeOpt[7]: 1 = a 6 MHz channel
+    sc.tx.header = cfg.modeOpt[0] == 1 ? Header::Pn595 : cfg.modeOpt[0] == 2 ? Header::Pn420 : Header::Pn945;
+    static const Mapping maps[5] = {Mapping::Qam64, Mapping::Qam32, Mapping::Qam16, Mapping::Qam4, Mapping::Qam4Nr};
+    sc.tx.profile.map = maps[std::max(0, std::min(4, cfg.modeOpt[1]))];
+    static const Rate rates[3] = {Rate::R06, Rate::R04, Rate::R08};
+    sc.tx.profile.rate = rates[std::max(0, std::min(2, cfg.modeOpt[2]))];
+    if (!profileValid(sc.tx.profile)) sc.tx.profile.rate = Rate::R08;
+    sc.tx.profile.mode2 = cfg.modeOpt[3] == 1;
+    if (cfg.modeOpt[4] == 1) sc.tx.header = Header::Pn595;   // single carrier is defined with PN595 only
+}
+
 std::unique_ptr<ModeSynth> makeDtmbSynthImpl(const SynthConfig& cfg, double sampleRate, dtmb::FrameTx::TsSource tsIn) {
     using namespace dtmb;
     SignalConfig sc;
@@ -172,13 +185,7 @@ std::unique_ptr<ModeSynth> makeDtmbSynthImpl(const SynthConfig& cfg, double samp
     sc.snrDb = cfg.snrDb;
     sc.cfoHz = cfg.cfoHz;
     sc.sroPpm = cfg.sroPpm;
-    sc.tx.header = cfg.modeOpt[0] == 1 ? Header::Pn595 : cfg.modeOpt[0] == 2 ? Header::Pn420 : Header::Pn945;
-    static const Mapping maps[5] = {Mapping::Qam64, Mapping::Qam32, Mapping::Qam16, Mapping::Qam4, Mapping::Qam4Nr};
-    sc.tx.profile.map = maps[std::max(0, std::min(4, cfg.modeOpt[1]))];
-    static const Rate rates[3] = {Rate::R06, Rate::R04, Rate::R08};
-    sc.tx.profile.rate = rates[std::max(0, std::min(2, cfg.modeOpt[2]))];
-    if (!profileValid(sc.tx.profile)) sc.tx.profile.rate = Rate::R08;
-    sc.tx.profile.mode2 = cfg.modeOpt[3] == 1;
+    applySynthProfile(sc, cfg);
     sc.tx.phaseRotate = cfg.modeOpt[5] == 0;
     if (cfg.modeOpt[4] == 1) { sc.tx.carriers = 1; sc.tx.header = Header::Pn595; sc.tx.phaseRotate = false; }   // single carrier is defined with PN595 only
     if (cfg.echoDb > 0) sc.echoes.push_back({cfg.echoDb, (double)cfg.echoDelay});
@@ -187,6 +194,12 @@ std::unique_ptr<ModeSynth> makeDtmbSynthImpl(const SynthConfig& cfg, double samp
                                 : (cfg.modeOpt[6] == 1 ? testPacketSource(1) : demoTsSource(netBitrate(sc.tx.header, sc.tx.profile, sc.symbolRate)));
     return std::make_unique<DtmbSynth>(sc, std::move(ts), sampleRate);
 }
+}
+
+double dtmbSynthNetBitrate(const SynthConfig& cfg) {
+    dtmb::SignalConfig sc;
+    applySynthProfile(sc, cfg);
+    return dtmb::netBitrate(sc.tx.header, sc.tx.profile, sc.symbolRate);
 }
 
 std::unique_ptr<ModeSynth> makeDtmbSynth(const SynthConfig& cfg, double sampleRate) {

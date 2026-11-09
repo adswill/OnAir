@@ -40,6 +40,7 @@ private:
 };
 
 ModeTuning dvbcTuning();
+double dvbcSynthNetBitrate(const SynthConfig& cfg, double sampleRate);   // the transport stream bit rate these options carry
 std::unique_ptr<ModeSynth> makeDvbcSynth(const SynthConfig& cfg, double sampleRate);
 std::unique_ptr<ModeSynth> makeDvbcSynth(const SynthConfig& cfg, double sampleRate, std::function<void(uint8_t*)> ts);
 // SynthConfig for the test signal: modeOpt[0] QAM (0 = 64-QAM, 1 16, 2 32, 3 128, 4 256), modeOpt[1] 1 = annex C (roll-off 0.13),

@@ -19,6 +19,7 @@
 #include <vector>
 
 namespace dect2 {
+double dtmbSynthNetBitrate(const SynthConfig& cfg);   // the transport stream bit rate these options carry
 std::unique_ptr<ModeSynth> makeDtmbSynth(const SynthConfig& cfg, double sampleRate);   // nullptr: below 8 Msps
 std::unique_ptr<ModeSynth> makeDtmbSynth(const SynthConfig& cfg, double sampleRate, std::function<void(uint8_t*)> ts);
 

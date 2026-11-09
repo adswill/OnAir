@@ -8,7 +8,7 @@ hi, thanks for testing. short answer: this one is on purpose. OnAir only does th
 
 ## #411 VDES/ASM frequencies
 - A: the first two hits are the airport search. "ASM" is the IATA code of Asmara (HHAS) so its airband channels are listed first. not a bug but ill make it clearer.
-- B: 162.050 is right. ASM 1 is 161.950 and ASM 2 is 162.050 (ITU-R M.2092), 162.000 is the middle between AIS 1/2... so no change.
+- B: correction: 162.050 was wrong. ASM 1 is 161.950 (channel 2027) and ASM 2 is 162.000 (channel 2028) per ITU-R M.2092, the list and the VDES receiver are fixed.
 - C: Export CSV only writes your own entries right now. exporting the search result is a good small idea, ill put it on the list.
 
 ## #410 hardware decoding on H.264
