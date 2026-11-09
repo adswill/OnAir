@@ -4,11 +4,13 @@
 #include "dect2/inmsat/inmsat_satid.h"
 #include "i18n/i18n.h"
 #include "dect2/ease/repeaters.h"
+#include "dect2/ease/nit.h"
 #include "platform/platform.h"
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <algorithm>
 #include <cmath>
 #include <map>
 #include <memory>
@@ -141,6 +143,37 @@ void repeaterPicker(App& a, const char* mode) {
         }
     }
     ImGui::EndPopup();
+}
+
+bool nitTransponders(App& a, int kind, bool locked, bool inverted, int& pol) {
+    pol = -1;
+    const dect2::SiSnapshot* si = a.ts.si.get();
+    if (!locked || !si) return false;
+    const auto rows = dect2::ease::nitRows(*si, kind, a.ts.tsid, a.freqMhz, inverted);
+    if (rows.size() < 2) return false;   // only itself: nothing to go to
+    bool tuned = false;
+    ImGui::Spacing();
+    ImGui::TextDisabled("%s", tr("Transponders this network announces"));
+    if (ImGui::BeginTable("##nitrows", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY, ImVec2(0, std::min(200 * gUi, (rows.size() + 1.5f) * ImGui::GetFrameHeight())))) {
+        ImGui::TableSetupColumn("MHz"); ImGui::TableSetupColumn(tr("Pol")); ImGui::TableSetupColumn("kSym/s"); ImGui::TableSetupColumn(tr("Mod")); ImGui::TableSetupColumn("FEC"); ImGui::TableSetupColumn("");
+        ImGui::TableHeadersRow();
+        int id = 0;
+        for (const auto& r : rows) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn(); ImGui::Text("%.3f", r.mhz);
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(kind == 1 ? dect2::siPolName(r.pol) : "");
+            ImGui::TableNextColumn(); ImGui::Text("%.0f", r.symbolRateK);
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(dect2::siModName(r.kind, r.modulation));
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(r.fec >= 0 ? dect2::siFecName(r.fec) : "");
+            ImGui::TableNextColumn();
+            ImGui::PushID(id++);
+            if (r.current) ImGui::TextDisabled("%s", tr("this one"));
+            else if (r.tuneMhz > 0 && ImGui::SmallButton(tr("Tune"))) { tuneFreq(a, r.tuneMhz); pol = r.pol; tuned = true; }
+            ImGui::PopID();
+        }
+        ImGui::EndTable();
+    }
+    return tuned;
 }
 
 void codecNotice(App& a) {

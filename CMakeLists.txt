@@ -908,6 +908,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_ease tests/ease/test_ease.cpp tests/ease/test_navtex_table.cpp tests/ease/test_repeaters_csv.cpp core/src/ease/repeaters.cpp core/src/ease/ease.cpp core/src/ease/navtex.cpp core/src/ease/navtex_data.cpp core/src/inmsat/inmsat_satid.cpp core/src/geo/maidenhead.cpp)   # first-use helpers: launch windows, geostationary picks
   target_include_directories(test_ease PRIVATE core/include)
   add_test(NAME ease COMMAND test_ease)
+  add_executable(test_nit_rows tests/ease/test_nit_rows.cpp core/src/ease/nit.cpp core/src/tv/si_tables.cpp)   # the NIT consumer of DVB-S and DVB-C
+  target_include_directories(test_nit_rows PRIVATE core/include)
+  add_test(NAME nit_rows COMMAND test_nit_rows)
   add_executable(test_mpt1327 tests/mpt1327/test_mpt1327.cpp)   # MPT1327 control channel: check code, address codewords, FFSK decoder, engine receiver
   target_link_libraries(test_mpt1327 PRIVATE dect2core)
   add_test(NAME mpt1327 COMMAND test_mpt1327)

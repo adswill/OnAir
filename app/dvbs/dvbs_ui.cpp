@@ -1,6 +1,7 @@
 // DVB-S/S2 screens: lock lamps and readouts, constellation and quality plots, the receiver tab, symbol rate and standard controls,
 // and the options of the test signal.
 #include "app.h"
+#include "ease/ease_ui.h"
 #include "dect2/dvbs/dvbs_s2.h"
 #include "dvbs_autoservice.h"
 #include <cfloat>
@@ -509,6 +510,10 @@ void ipSection(App& a, const DvbsTelemetry& t) {
 void receiver(App& a) {
     const DvbsTelemetry& t = a.rx.dvbs;
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
+    {   // the network's own transponder list; the polarisation of a row goes to the warning below (pn 1 vertical, 2 horizontal; the NIT has 0 H, 1 V)
+        int pol = -1;
+        if (easeui::nitTransponders(a, 1, t.tsLock, t.inverted, pol) && (pol == 0 || pol == 1)) { S.txPol = pol == 1 ? 1 : 2; saveState(a); }
+    }
     struct KV { std::string k, v; };
     std::vector<KV> L, R;
     auto head = [](std::vector<KV>& v, const char* h) { if (!v.empty()) v.push_back({"", ""}); v.push_back({h, "#"}); };

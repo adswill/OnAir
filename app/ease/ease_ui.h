@@ -17,6 +17,10 @@ bool autoBandControl(App& a, const char* prefKey, uint64_t decoded);
 // "Repeaters near me" for a voice mode ("DMR", "D-STAR", "Fusion", "M17"): a button and its list. The list is one the user imported.
 void repeaterPicker(App& a, const char* mode);
 
+// DVB-S and DVB-C: the transponders the network announces about itself, once the stream is locked. Returns true when a row was tuned;
+// pol then holds the satellite polarisation of that row (0 horizontal, 1 vertical, -1 none).
+bool nitTransponders(App& a, int kind, bool locked, bool inverted, int& pol);
+
 // A voice mode whose codec is not installed: said on the mode's own screen before the first call, with the install guide; Hide is remembered per mode.
 void codecNotice(App& a);
 
