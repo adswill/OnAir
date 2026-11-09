@@ -867,7 +867,7 @@ private:
 };
 } // namespace
 
-std::unique_ptr<ModeSynth> makeDvbcSynth(const SynthConfig& cfg, double sampleRate, std::function<void(uint8_t*)> ts) {
+static dvbc::SignalConfig dvbcSynthCommon(const SynthConfig& cfg, double sampleRate) {
     static const int qmap[5] = {2, 0, 1, 3, 4};
     dvbc::SignalConfig c;
     c.qam = qmap[std::clamp(cfg.modeOpt[0], 0, 4)];
@@ -877,6 +877,16 @@ std::unique_ptr<ModeSynth> makeDvbcSynth(const SynthConfig& cfg, double sampleRa
     c.sampleRate = sampleRate > 0 ? sampleRate : 10e6;
     c.symbolRate = cfg.modeVal[0] > 0 ? cfg.modeVal[0] : annexC ? 5.274e6 : 6.952e6;
     c.symbolRate = std::min(c.symbolRate, c.sampleRate / 1.2);
+    return c;
+}
+
+double dvbcSynthNetBitrate(const SynthConfig& cfg, double sampleRate) {
+    const dvbc::SignalConfig c = dvbcSynthCommon(cfg, sampleRate);
+    return dvbc::netBitrate(c.qam, c.symbolRate);
+}
+
+std::unique_ptr<ModeSynth> makeDvbcSynth(const SynthConfig& cfg, double sampleRate, std::function<void(uint8_t*)> ts) {
+    dvbc::SignalConfig c = dvbcSynthCommon(cfg, sampleRate);
     c.clockPpm = cfg.modeVal[1] + cfg.sroPpm;
     c.snrDb = cfg.snrDb;
     c.cfoHz = cfg.cfoHz;

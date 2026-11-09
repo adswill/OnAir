@@ -681,8 +681,10 @@ std::unique_ptr<TxGenerator> makeTxGenerator(const TxModeSpec& m, const TxReques
         } else {
             TxParams tp = s.tx;
             tp.payload = true;
-            tp.tsSource = namedTs(fileTs, 24e6);
+            auto ts = std::make_shared<std::function<void(uint8_t*)>>();   // the padding needs the bit rate, which the generator knows once built
+            tp.tsSource = [ts](uint8_t* pk) { (*ts)(pk); };
             auto gen = std::make_shared<T2Generator>(tp);
+            *ts = namedTs(fileTs, gen->tsBitrate(native));
             g = std::make_unique<FrameGen>(native, [gen](std::vector<cf32>& f) { gen->nextFrame(f); }, 0.25f);
         }
     } else if (m.stdMode == 3) {
@@ -698,13 +700,13 @@ std::unique_ptr<TxGenerator> makeTxGenerator(const TxModeSpec& m, const TxReques
         native = rr;
     } else if (m.stdMode == 9) {
         const double rr = rateHz > 0 ? rateHz : m.nominalRateHz;
-        auto ms = makeDtmbSynth(s, rr, namedTs(fileTs, 20e6));
+        auto ms = makeDtmbSynth(s, rr, namedTs(fileTs, dtmbSynthNetBitrate(s)));
         if (!ms) { char b[200]; snprintf(b, sizeof b, "the %s generator cannot make a signal at %.3f Msps with these options", m.name, rr / 1e6); err = b; return nullptr; }
         g = std::make_unique<SynthGen>(std::move(ms), rr);
         native = rr;
     } else if (m.stdMode == 42) {
         const double rr = rateHz > 0 ? rateHz : m.nominalRateHz;
-        auto ms = makeDvbcSynth(s, rr, namedTs(fileTs, 20e6));
+        auto ms = makeDvbcSynth(s, rr, namedTs(fileTs, dvbcSynthNetBitrate(s, rr)));
         if (!ms) { char b[200]; snprintf(b, sizeof b, "the %s generator cannot make a signal at %.3f Msps with these options", m.name, rr / 1e6); err = b; return nullptr; }
         g = std::make_unique<SynthGen>(std::move(ms), rr);
         native = rr;

@@ -58,6 +58,7 @@ public:
     // With payload: the baseband frames (BBHEADER + data field + padding, before scrambling) sent in the last frame, one per FEC block.
     const std::vector<std::vector<uint8_t>>& lastBbFrames() const { return lastBb_; }
     int plpBlocks() const { return plpBlocks_; }
+    double tsBitrate(double nativeRate) const;   // with payload: the transport stream rate the PLP really carries at this sample rate (bit/s)
 
     struct Impl;
 
