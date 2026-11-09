@@ -25,7 +25,7 @@ int main() {
     CHECK(has(readFile("core/src/engine/engine.cpp"), "a < 261 + kWxNumProfiles"), "the engine feeds every profile");
     CHECK(has(tbl, "stopped transmitting in 2025"), "retired satellites are named in the description");
     CHECK(has(readFile("THIRD_PARTY.md"), "SatDump (weather satellite plug-ins"), "THIRD_PARTY entry");
-    CHECK(has(readFile("app/panels/credits_data.h"), "SatDump (weather plug-ins)"), "in-app credit");
+    CHECK(has(readFile("app/panels/credits_data.h"), "SatDump (weather satellite plug-ins"), "in-app credit");
     printf(fails ? "wxsat mode: %d FAILED\n" : "wxsat mode: all passed\n", fails);
     return fails ? 1 : 0;
 }
