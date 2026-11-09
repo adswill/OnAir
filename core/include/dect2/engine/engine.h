@@ -21,6 +21,9 @@
 #include "dect2/atsc3/atsc3_rx.h"
 #include "dect2/isdbt/isdbt_rx.h"
 #include "dect2/fm/fm_rx.h"
+#include "dect2/fm/fm_census.h"
+#include "dect2/general/am_census.h"
+#include "dect2/general/am_diversity.h"
 #include "dect2/dvbs/dvbs_rx.h"
 #include "dect2/dtmb/dtmb_rx.h"
 #include "dect2/atv/atv_rx.h"
@@ -440,6 +443,18 @@ public:
     dect2::DabSpiDecoder& dabSpi() { return rxD_.spi(); }
     DabAudio& dabAudio() { return rxD_.audio(); }
     FmReceiver& fm() { return rxFm_; }   // volume, mute and de-emphasis of the FM receiver
+    // FM / AM census: every station of the capture, beside the mode's own receiver (docs/SMART-fmam-3.7.md). Rows from any thread.
+    void setFmCensus(bool on) { if (!on) fmCensusReady_ = false; fmCensusOn_ = on; }
+    bool fmCensusOn() const { return fmCensusOn_.load(); }
+    std::vector<FmCensusRow> fmCensusRows() const { return fmCensus_.rows(); }
+    void setAmCensus(bool on) { if (!on) amCensusReady_ = false; amCensusOn_ = on; }
+    bool amCensusOn() const { return amCensusOn_.load(); }
+    std::vector<AmCensusRow> amCensusRows() const { return amCensus_.rows(); }
+    double amCensusStepHz() const { return amCensus_.stepHz(); }
+    // AM frequency diversity: general() and generalExtra(0) (the partner frequency) play through AmDiversity; offsetHz is the partner from the dial, the extra channel carries the same demodulator
+    void setAmDiversity(bool on, double offsetHz = 0);
+    bool amDiversityOn() const { return amDivOn_.load(); }
+    AmDivPlayer& amDiversity() { return amDiv_; }
     DvbsReceiver& dvbs() { return rxDvbs_; }   // DVB-S/S2: the receiver's own controls and results (the interface reads telemetry through latestRx)
     DtmbReceiver& dtmb() { return rxDtmb_; }   // DTMB: the receiver's own controls and results (the interface reads telemetry through latestRx)
     AtvReceiver& atv() { return rxAtv_; }   // Analog TV: the receiver's own controls and results (the interface reads telemetry through latestRx)
@@ -806,6 +821,12 @@ private:
     Atsc3Rx rxA3_;
     IsdbtReceiver rxI_;
     FmReceiver rxFm_;
+    FmCensus fmCensus_;
+    AmCensus amCensus_;
+    std::atomic<bool> fmCensusOn_{false}, amCensusOn_{false}, amDivOn_{false};
+    bool fmCensusReady_ = false, amCensusReady_ = false;
+    double fmCensusC_ = 0, fmCensusR_ = 0, amCensusC_ = 0, amCensusR_ = 0;
+    AmDivPlayer amDiv_;
     DvbsReceiver rxDvbs_;
     DtmbReceiver rxDtmb_;
     AtvReceiver rxAtv_;

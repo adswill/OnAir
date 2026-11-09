@@ -36,7 +36,7 @@ static R run(double neighbourDb, double offset, bool on, bool stereoN) {
 
 int main() {
     double gain20 = 0;
-    for (double off : {200e3, -200e3, 400e3}) for (double lvl : {0.0, 10.0, 15.0, 20.0, 30.0}) for (bool st : {false, true}) {
+    for (double off : {200e3, -200e3}) for (double lvl : {0.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0}) for (bool st : {false, true}) {
         const R a = run(lvl, off, false, st), b = run(lvl, off, true, st);
         printf("offset %+.0f kHz neighbour %+.0f dB %s: groups %3llu -> %3llu, audio %5.1f -> %5.1f dB, PS %d -> %d, level read %.1f dB\n", off / 1e3, lvl, st ? "stereo" : "mono  ", (unsigned long long)a.groups, (unsigned long long)b.groups, a.audio, b.audio, a.ps, b.ps, b.nDb);
         if (off == 200e3 && lvl == 20 && !st) gain20 = b.audio - a.audio;

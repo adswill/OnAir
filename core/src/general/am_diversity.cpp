@@ -1,4 +1,5 @@
 #include "dect2/general/am_diversity.h"
+#include "dect2/audio/audioout.h"
 #include <algorithm>
 #include <cmath>
 
@@ -126,5 +127,39 @@ void AmDiversity::process(const float* a, const float* b, size_t n, float sa, fl
 int AmDiversity::active() const { return p_->act; }
 int AmDiversity::delaySamples() const { return p_->delay; }
 int AmDiversity::switches() const { return p_->nsw; }
+
+AmDivPlayer::AmDivPlayer() = default;
+AmDivPlayer::~AmDivPlayer() { stop(); }
+
+void AmDivPlayer::start(int rate, bool silent) {
+    std::lock_guard<std::mutex> lk(mu_);
+    div_.configure(rate); a_.clear(); b_.clear(); outputs_ = 0; running_ = true;
+    if (!silent) { audio_ = std::make_unique<AudioOut>(); audio_->start(rate); audio_->setVolume(vol_); audio_->setStartThreshold(rate / 5); }
+}
+void AmDivPlayer::stop() {
+    std::lock_guard<std::mutex> lk(mu_);
+    running_ = false; audio_.reset(); a_.clear(); b_.clear();
+}
+void AmDivPlayer::setVolume(float v) { std::lock_guard<std::mutex> lk(mu_); vol_ = v; if (audio_) audio_->setVolume(v); }
+void AmDivPlayer::pushA(const float* x, size_t n) { std::lock_guard<std::mutex> lk(mu_); if (running_) { a_.insert(a_.end(), x, x + n); pump(); } }
+void AmDivPlayer::pushB(const float* x, size_t n) { std::lock_guard<std::mutex> lk(mu_); if (running_) { b_.insert(b_.end(), x, x + n); pump(); } }
+void AmDivPlayer::pump() {
+    const size_t n = std::min(a_.size(), b_.size());
+    if (n < 480) return;
+    out_.clear();
+    div_.process(a_.data(), b_.data(), n, snrA_.load(), snrB_.load(), out_);
+    a_.erase(a_.begin(), a_.begin() + (std::ptrdiff_t)n);
+    b_.erase(b_.begin(), b_.begin() + (std::ptrdiff_t)n);
+    if (out_.empty()) return;
+    outputs_ += out_.size();
+    if (audio_) {
+        std::vector<float> st(out_.size() * 2);
+        for (size_t i = 0; i < out_.size(); i++) st[2 * i] = st[2 * i + 1] = out_[i];
+        audio_->write(st.data(), (int)out_.size());
+    }
+}
+int AmDivPlayer::active() const { return div_.active(); }
+int AmDivPlayer::switches() const { return div_.switches(); }
+int AmDivPlayer::delaySamples() const { return div_.delaySamples(); }
 
 } // namespace dect2

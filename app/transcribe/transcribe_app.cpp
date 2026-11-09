@@ -1198,3 +1198,16 @@ void captionsRecordStop(const std::string& recordingPath) {
 }
 
 }  // namespace tx
+
+namespace tx {
+std::string latestLanguage(double freqHz, float* probability) {
+    const int64_t now = (int64_t)std::time(nullptr);
+    dect2::TranscriptFilter f; f.freqHz = freqHz; f.from = now - 120;
+    for (const dect2::TranscriptStore* st : {&gStore, &gCapStore}) {
+        const auto v = st->find(f, 1);
+        if (!v.empty() && !v[0].lang.empty()) { if (probability) *probability = v[0].confidence; return v[0].lang; }
+    }
+    if (probability) *probability = 0;
+    return "";
+}
+}

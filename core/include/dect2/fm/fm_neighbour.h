@@ -1,4 +1,4 @@
-// First-adjacent cancellation for FM: a strong neighbour at +-200 or +-400 kHz is demodulated with its own limiter, regenerated as a constant-envelope FM waveform and subtracted from
+// First-adjacent cancellation for FM: a strong first-adjacent neighbour at +-200 kHz is demodulated with its own limiter, regenerated as a constant-envelope FM waveform and subtracted from
 // the capture, so that the wanted station's filter no longer sees its skirts. Automatic: runs only while a neighbour stands at least 10 dB above the wanted station.
 // A strong neighbour's FM waveform is recoverable because the wanted station is far below it (the limiter keeps the stronger signal). Filter delays are matched.
 #pragma once

@@ -27,6 +27,8 @@ std::vector<dect2::AcarsLogEntry> voiceForTrack(const std::string& id, const std
 bool indicator(std::string& text);
 // What it is doing in plain words ("Listening for speech.", "Model missing: ...", "No speech heard in the last 10 s."). level: 0 information, 1 working, 2 a problem.
 std::string statusLine(int* level);
+// The language the speech model heard last near freqHz (within 5 kHz, in the last 2 minutes), "" when none (the model is user-installed)
+std::string latestLanguage(double freqHz, float* probability);
 void shotReport();   // dev (--shot): the status line, the counters and every transcript line on stderr, "tx: ..."
 
 

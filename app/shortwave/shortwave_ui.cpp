@@ -389,6 +389,7 @@ void panes(App& a) {
 
 void tab(App& a) {
     load();
+    amSmartPanel(a);
     if (!gSpectrumInShell) {   // the classic layout: the waterfall (click it to tune) stays above the decoders
         const float h = std::clamp(ImGui::GetContentRegionAvail().y * 0.30f, 150.f * gUi, 400.f * gUi);
         ImGui::BeginChild("##swspec", ImVec2(0, h), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);

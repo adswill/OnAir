@@ -4,7 +4,9 @@
 #include "dect2/dsp/fftutil.h"
 #include <cstdint>
 #include <deque>
+#include <atomic>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 namespace dect2 {
@@ -39,6 +41,35 @@ public:
 private:
     struct Impl;
     std::unique_ptr<Impl> p_;
+};
+
+class AudioOut;
+
+// The two receivers' sound (their taps come from their own threads) through AmDiversity to a sound device of its own.
+class AmDivPlayer {
+public:
+    AmDivPlayer();
+    ~AmDivPlayer();
+    void start(int rate = 48000, bool silent = false);   // silent: tests, no sound device
+    void stop();
+    void pushA(const float* x, size_t n);
+    void pushB(const float* x, size_t n);
+    void setSnr(float a, float b) { snrA_ = a; snrB_ = b; }
+    void setVolume(float v);
+    int active() const;
+    int switches() const;
+    int delaySamples() const;
+    size_t outputs() const { return outputs_; }
+private:
+    void pump();
+    AmDiversity div_;
+    std::unique_ptr<AudioOut> audio_;
+    std::mutex mu_;
+    std::vector<float> a_, b_, out_;
+    std::atomic<float> snrA_{0}, snrB_{0};
+    float vol_ = 1;
+    bool running_ = false;
+    std::atomic<size_t> outputs_{0};
 };
 
 } // namespace dect2

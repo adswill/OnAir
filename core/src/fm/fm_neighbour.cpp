@@ -9,7 +9,7 @@ using dect2::math::kPi;
 
 namespace {
 constexpr int kScanN = 8192;
-constexpr double kPass = 95e3, kStop = 150e3;   // the neighbour's own filter: enough of it for its FM to be regenerated, little of the wanted station
+constexpr double kPass = 115e3, kStop = 175e3;   // the neighbour's own filter: enough of it for its FM to be regenerated, little of the wanted station
 
 std::vector<float> lowpass(double pass, double stop, double fs) {
     const double fc = 0.5 * (pass + stop) / fs, df = (stop - pass) / fs;
@@ -76,7 +76,7 @@ void FmNeighbourCancel::detect(const cf32* x, size_t n) {
         };
         const double me = band(0);
         double best = 0, bestOff = 0;
-        for (double f : {-400e3, -200e3, 200e3, 400e3}) {
+        for (double f : {-200e3, 200e3}) {
             if (std::fabs(f) + kStop > 0.47 * rate_) continue;
             const double p = band(f);
             if (p > best) { best = p; bestOff = f; }

@@ -800,6 +800,7 @@ void memoryToolbarButton(App& a);                  // memory_ui.cpp: the same qu
 void memoryMenu(App& a);                           // memory_ui.cpp: the "M" menu of the menu bar: open, store, the favourites and the ten most recent
 double generalListenHz(const App& a);
 void generalSetListenHz(App& a, double hz);       // general_ui.cpp: move the listening frequency (SDR++: the VFO inside the captured band, else the radio)
+void amSmartPanel(App& a);                   // am_smart_ui.cpp: AM census, station identification, diversity
 void generalControlsPanel(App& a);                  // general_ui.cpp: the General screen's controls (frequency, demodulator, filter, squelch, recording), for Shortwave
 void generalTick(App& a);                           // ... and its per-frame push to the receiver (Shortwave pushes the same settings to its own general receiver)
 void generalApiSetWidthHz(double hz);
@@ -1450,6 +1451,10 @@ void dabTiiCollect(App& a);        // dab_tii_ui.cpp: notes the transmitters hea
 void dabScanTab(App& a);
 void dabScanStep(App& a);
 void fmScanTab(App& a);
+void fmSmartTick(App& a);                    // fm_smart_ui.cpp: AF follow and the DX log
+void fmAfPanel(App& a);
+void fmCensusPanel(App& a);
+double fmChannelDb(const SpectrumFrame& f, double fs, double offHz);
 void fmScanStep(App& a);
 // fm_ui.cpp
 bool fmFrequencyCombo(App& a);
