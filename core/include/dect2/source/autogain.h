@@ -384,6 +384,7 @@ private:
     bool objective(double& j) const;
     bool decoderValue(double& v) const;          // the decoder's own number while it is locked (MER, SNR, BER, lock): never mixed into the level objective
     bool hasSignal() const;                      // something to judge a gain by: a locked decoder, messages, or a channel well over the floor
+    double clipLimitNow() const;                 // the clipped fraction that counts as overload now: tighter when a weak channel sits far under strong carriers
     double minHead_() const;                     // the headroom floor in force (a radio whose steps are not known yet keeps the safe value)
     bool floorFine() const;                      // the floor is high enough over the ADC's own noise that more gain buys nothing on an empty channel
     void settleHere(const AgInput& in);          // the loop rests at this gain: remembers the world it rests in
@@ -408,6 +409,7 @@ private:
     bool cutActive_ = false; double cutFrom_ = -1e9, cutAt_ = -1e9;   // a cut (clip or headroom floor) took the gain down from cutFrom_: recovery aims back at it, whatever the cause was
     void noteCut(double now);
     double cutOobIn_ = -300;
+    int specBins_ = 0;
     bool bracketedOnce_ = false;          // the first search of this start has run: later ones wait for something to judge by
     bool cutWasOob_ = false;              // the cut came from a signal outside the channel (it can leave while the channel stays idle)
     double lastSigAt_ = -1e9, lastRecoverAt_ = -1e9, recWait_ = 1.5;   // when a signal was last seen (the gain holds through a call that ended), the back-off of re-clipping recoveries

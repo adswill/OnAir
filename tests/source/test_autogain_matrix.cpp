@@ -296,8 +296,8 @@ static void gainSpan(const std::vector<Sample>& l, double t0, double t1, double&
 struct Limits { double settle, dq, acqClip, chg, deaf, irClip, irDq, irRec, small, idleChg, idleSpan, burstChg; };
 static Limits limitsFor(ModeClass m, const RadioProfile& p) {
     Limits l;
-    l.settle = (m == PULSED ? 60 : m == TDMA ? 25 : 12) * (p.remote ? 2.0 : 1.0);
-    l.dq = m == WIDE ? 3.5 : 1.0; l.acqClip = 1.5; l.chg = m == PULSED ? 150 : 30;   /* ADS-B keeps looking on purpose: the sky changes, and a message mode has no lock to break */  l.deaf = 12; l.irClip = 1.5; l.irDq = m == WIDE ? 4.0 : 2.0;
+    l.settle = (m == PULSED ? 60 : 12) * (p.remote ? 2.0 : 1.0);
+    l.dq = 1.0; l.acqClip = 1.5; l.chg = 30; l.deaf = 12; l.irClip = 1.5; l.irDq = 2.0;
     l.irRec = p.remote ? 45 : 30; l.small = 6; l.idleChg = 20; l.idleSpan = 6; l.burstChg = 60;
     return l;
 }
@@ -461,7 +461,7 @@ static Row runCell(const RadioRow& rr, ModeClass m) {
     flag(row.modeS > limitsFor((ModeClass)((m + 1) % kModes), prof).settle, "modesw");
     flag(row.idleChg > lim.idleChg, "idle");
     flag(row.idleSpan > lim.idleSpan, "idlespan");
-    if (m != OFDM) flag(row.burstChg > lim.burstChg, "bursty");   // (a continuous OFDM carrier does not come and go: its number is kept for information)
+    flag(row.burstChg > lim.burstChg, "bursty");
     flag(m != PULSED && row.burstDq > 1.5, "burstq");
     return row;
 }

@@ -64,15 +64,25 @@ bool AutoGainController::hasSignal() const {
     if (tgt_.kind == ModeKind::Pulsed && q_.pulseValid) return pj_.started() && pj_.msgs() > 0;
     // a channel that fills the capture has no floor to compare with (its SNR reads a few dB on nothing): a mode with a decoder then needs the decoder to say so
     if (tgt_.lockSnrDb < 1e8 && !(fl_.oobDbfs > -199)) return false;
-    return fl_.valid && fl_.snrDb >= (tgt_.lockSnrDb < 1e8 ? 6.0 : 3.0);
+    // a mode with a decoder: level alone must be close to what would lock it (FM stations' products read 6-10 dB in an empty channel and the loop chased them)
+    return fl_.valid && fl_.snrDb >= (tgt_.lockSnrDb < 1e8 ? std::max(6.0, tgt_.lockSnrDb - 6.0) : 3.0);
 }
 
 double AutoGainController::minHead_() const { return tgt_.minHeadroomDb; }
 
+// Clipping spreads roughly 30 times the clipped fraction of the span's power over all bins. A strong carrier 60 dB over the floor: a fraction far under the mode's limit already
+// buries a weak channel beside it, and the spectrum reads clean until it is too late. So the limit is the fraction whose distortion stays under the noise floor per bin
+// (never above the mode's own, never below 2 % of it, Auto v2 only). An OFDM channel's floor is close to its span: its limit does not move.
+double AutoGainController::clipLimitNow() const {
+    if (!set_.v2 || !fl_.valid || fl_.spanDbfs < -150 || specBins_ <= 0) return tgt_.clipLimit;
+    const double allowed = std::pow(10.0, (fl_.floorDbfs - fl_.spanDbfs) / 10.0) * specBins_ / 30.0;
+    return std::clamp(allowed, tgt_.clipLimit * 0.02, tgt_.clipLimit);
+}
+
 bool AutoGainController::floorFine() const { return fl_.valid && fl_.adcMarginDb >= tgt_.marginGoalDb - 2.0; }
 
 void AutoGainController::noteCut(double now) {
-    if (now - lastRecoverAt_ < 3.0) recWait_ = std::min(120.0, recWait_ * 3.0);   // the jump back clipped again: the next one waits longer (a keyed transmitter must not pump the gain)
+    if (now - lastRecoverAt_ < 120.0) recWait_ = std::min(600.0, recWait_ * 3.0);   // the jump back clipped again: the next one waits longer (a keyed transmitter must not pump the gain)
     cutOobIn_ = -300;   // measured once the cut has settled: during the clip the out-of-band power is the distortion's
     if (!cutActive_) { cutActive_ = true; cutFrom_ = clTrial_ ? basePlan_.totalDb : cur_.totalDb; cutWasOob_ = fl_.valid && (!(fl_.oobDbfs > -199) || fl_.oobDbfs > fl_.chanDbfs + 3 + 10 * std::log10(std::max(1.0, fl_.snrDb))); }   // (a channel that fills the capture cannot tell: treated as possibly from outside)
     cutAt_ = now;
@@ -84,7 +94,7 @@ void AutoGainController::settleHere(const AgInput& in) {
     refValid_ = fl_.valid;
     if (fl_.valid) { floorRef_ = fl_.floorDbfs - cur_.totalDb; oobRef_ = fl_.oobDbfs - cur_.totalDb; }
     headRef_ = headAvg_ + cur_.totalDb;
-    if (!(in.adc.clipFraction > tgt_.clipLimit) && (!cutActive_ || cur_.totalDb >= cutFrom_ - 1)) goodGain_ = cur_.totalDb;
+    if (!(in.adc.clipFraction > clipLimitNow()) && (!cutActive_ || cur_.totalDb >= cutFrom_ - 1)) goodGain_ = cur_.totalDb;
     if (cutActive_ && (cur_.totalDb >= cutFrom_ - 1 || !cutWasOob_)) cutActive_ = false;   // a cut on the channel's own signal is the right gain for it: nothing to come back to
 }
 
@@ -264,7 +274,7 @@ bool AutoGainController::tickClimb(const AgInput& in, AgCommand& out) {
             lastWakeAt_ = now; idleCycles_ = 0;
         }
         // a settled loop looks at its neighbours ever more rarely: 6, 12, 24 ... up to 15 minutes, 30 minutes while the decoder is comfortable. Each look is a gain step the decoder hears
-        const double every = tgt_.kind == ModeKind::Pulsed && q_.pulseValid ? std::min(120.0, 6.0 * std::pow(2.0, (double)std::min(idleCycles_, 5))) :   // the sky changes all the time: ADS-B keeps looking at its neighbours
+        const double every = tgt_.kind == ModeKind::Pulsed && q_.pulseValid ? std::min(600.0, 6.0 * std::pow(2.0, (double)std::min(idleCycles_, 7))) :   // the sky changes, slowly: ADS-B keeps looking at its neighbours
                              tgt_.lockSnrDb > 1e8 && tgt_.metric == Metric::Sensitivity && !q_.pulseValid ? std::min(1800.0, 60.0 * std::pow(3.0, (double)std::min(idleCycles_, 4))) :   // no decoder to serve (a wide span, GNSS): the floor does not change by itself
                              comf && idleCycles_ >= 2 ? std::min(1800.0, 120.0 * std::pow(2.0, (double)std::min(idleCycles_, 5))) : std::min(900.0, 6.0 * std::pow(3.0, (double)std::min(idleCycles_, 6)));
         if (now - settledAt_ < every / sp) {
@@ -405,11 +415,11 @@ bool AutoGainController::evaluateTrial(const AgInput& in, AgCommand& out) {
             }
             const FloorEstimate fh = estimateFloor(hi, in.rateHz, in.chanBwHz, in.offsetHz, radio_.adcBits);
             const FloorEstimate fb = estimateFloor(specBase_, in.rateHz, in.chanBwHz, in.offsetHz, radio_.adcBits);
-            if (dg > 0 && fh.valid && fb.valid && !(in.adc.clipFraction > tgt_.clipLimit) && fh.floorDbfs - fb.floorDbfs > 1.3 * dg + 0.8) { imd = true; slopeWhy = f2("the noise floor rose %.1f dB for %.1f dB of gain", fh.floorDbfs - fb.floorDbfs, dg); }
+            if (dg > 0 && fh.valid && fb.valid && !(in.adc.clipFraction > clipLimitNow()) && fh.floorDbfs - fb.floorDbfs > 1.3 * dg + 0.8) { imd = true; slopeWhy = f2("the noise floor rose %.1f dB for %.1f dB of gain", fh.floorDbfs - fb.floorDbfs, dg); }
         }
     }
     met_.slopeDbPerDb = slope_;
-    const bool clip = in.adc.clipFraction > tgt_.clipLimit;
+    const bool clip = in.adc.clipFraction > clipLimitNow();
     const bool tight = eff < minHead_() || (tgt_.kind == ModeKind::Pulsed && q_.pulseValid && pj_.tooLoud());
     bool accept = false, sensWhy = false;
     std::string why;
@@ -418,6 +428,8 @@ bool AutoGainController::evaluateTrial(const AgInput& in, AgCommand& out) {
         accept = !bad && dJ > thr;
         // more gain that still measurably helps and leaves room above the headroom floor costs nothing: take it (a radio whose noise figure keeps falling with gain, a gentle hill)
         if (!accept && !bad && dJ > 0.3 && dJ > 0.5 * thr && eff - dg > minHead_() + 3.0) accept = true;
+        // a wide capture has no decoder and the floor rises with the gain whatever the noise figure does: as much gain as the headroom floor and the slope test allow
+        if (!accept && !bad && tgt_.kind == ModeKind::WideSpan && eff - dg >= minHead_() - 0.2) accept = true;
         // the objective is blind while the wanted signal is under the noise (its SNR reads ~0 whatever the gain): the floor over the ADC's own noise
         // decides then, as the old loop's sensitivity rule did
         const double mGain = mTri_.mean - mBase_.mean;

@@ -163,6 +163,7 @@ void AutoGainController::measure(const AgInput& in) {
     adcLast_ = a;
     met_.clipping = a.clipFraction > tgt_.clipLimit;
     q_ = in.q;
+    if (in.spectrum) specBins_ = (int)in.spectrum->size();
     if (in.spectrum && !in.spectrum->empty()) fl_ = estimateFloor(*in.spectrum, in.rateHz, in.chanBwHz, in.offsetHz, radio_.adcBits);
     else fl_ = FloorEstimate();
     met_.floorValid = fl_.valid;
@@ -244,7 +245,7 @@ bool AutoGainController::tickAuto(const AgInput& in, AgCommand& out) {
     if (br_) return tickBracket(in, out);   // the short search owns the gain until it is done (it backs off on a clip by itself)
     // overload acts at once, whatever else is going on (settling included: a burst does not wait)
     // v2: the clipped fraction decides. A lone sample at full scale in half a million is the tail of an OFDM signal's peak, not an overload (it cut 6 dB and forced the linear split)
-    const bool over = in.adc.clipFraction > tgt_.clipLimit || (!set_.v2 && in.adc.peak >= 0.999 && in.adc.clipFraction > 0);
+    const bool over = in.adc.clipFraction > clipLimitNow() || (!set_.v2 && in.adc.peak >= 0.999 && in.adc.clipFraction > 0);
     if (over && now >= changedAt_ + radio_.settleSec + 0.1) {   // only the radio's own delay: a burst does not wait for the loop's settle time
         const double c = in.adc.clipFraction;
         // at acquisition (start, retune) the start gain may be anywhere in the range: cut much harder while the ADC is hard against full scale
@@ -262,9 +263,16 @@ bool AutoGainController::tickAuto(const AgInput& in, AgCommand& out) {
         while (!ovTimes_.empty() && ovTimes_.front() < now - 60) ovTimes_.erase(ovTimes_.begin());
         // a soft ceiling under the gain that clipped: 20 s, 90 s when it keeps happening (three episodes in a minute)
         if (episode && !returning) { ceil_ = cur_.totalDb - 3; preOvDb_ = cur_.totalDb; }
+        // a look at a higher gain that clips is undone exactly: the baseline was fine, no cut below it and no recovery afterwards
+        if (set_.v2 && clTrial_ && candKind_ != 2) {
+            out.plan = basePlan_; out.why = fmt("the look at a higher gain clipped (%.2f %%): gain put back", c * 100);
+            logEvent(now, cur_.totalDb, basePlan_.totalDb, out.why);
+            cur_ = basePlan_; pol_ = basePol_; lastDown_ = now; changedAt_ = now; nAvg_ = 0; changes_++; clTrial_ = false; cand_ = 0; clMark_ = -1;
+            ceil_ = basePlan_.totalDb + 0.01; ceilUntil_ = now + 300.0 / sp;
+            return true;
+        }
         if (set_.v2) noteCut(now);
         ceilUntil_ = now + (ovTimes_.size() >= 3 ? 90 : 20) / sp;
-        if (set_.v2 && clTrial_) { ceil_ = basePlan_.totalDb + 0.01; ceilUntil_ = now + 300.0 / sp; }   // a look at a higher gain clipped: not worth another look for five minutes
         // the linear split costs noise figure, so only an overload from outside the channel (or products) earns it: then it stays 5 minutes (not for pulsed ADS-B: a long linear split
         // costs the far aircraft). The ADC clipped on the wanted signal itself: the gain is cut, the split stays as the mode wants it
         const bool frontOverload = !set_.v2 || (!acq && (imdSeen_ || (fl_.valid && fl_.strongestDbfs > fl_.chanDbfs + 10)));   // (a start gain that clips says nothing about the band)
@@ -432,7 +440,7 @@ int AutoGainController::chooseTrial(Metric& used, double minHead, double maxMarg
     const double tgtH = headroomTarget();
     const double penalH = mode_ == AgMode::Auto && set_.v2 ? minHead_() : tgtH;   // Auto v2: headroom is a floor (minHeadroomDb), not a set-point
     auto marginOf = [&](const AgTrial& t) { return t.nFloor ? t.floor() + (6.02 * radio_.adcBits + 1.76) + 10 * std::log10((double)std::max<size_t>(t.spec.size(), 64)) - 1.76 : -1e9; };
-    auto safe = [&](const AgTrial& t) { return t.done && t.n > 0 && t.clipMax <= tgt_.clipLimit && !t.imd && t.headroomMin >= minHead && marginOf(t) <= maxMargin; };
+    auto safe = [&](const AgTrial& t) { return t.done && t.n > 0 && t.clipMax <= clipLimitNow() && !t.imd && t.headroomMin >= minHead && marginOf(t) <= maxMargin; };
     bool anyMetric = false, anySnr = false;
     for (const auto& t : trials_) if (safe(t)) { if (t.nMetric > 0 && t.nMetric * 2 >= t.n) anyMetric = true; if (t.nSnr > 0) anySnr = true; }
     const Metric want = set_.metric != Metric::Auto ? set_.metric : tgt_.metric;
@@ -514,7 +522,7 @@ bool AutoGainController::tickOnce(const AgInput& in, AgCommand& out) {
     AgTrial& t = trials_[(size_t)ti_];
     if (now < changedAt_ + settleTime()) return false;
     accumulate(t, in);
-    const bool bad = in.adc.clipFraction > tgt_.clipLimit * 5 || in.adc.headroomDb < 0.1;   // clearly overloaded: no need to measure the full time
+    const bool bad = in.adc.clipFraction > clipLimitNow() * 5 || in.adc.headroomDb < 0.1;   // clearly overloaded: no need to measure the full time
     if (now - measuredFrom_ < set_.measureSec && !bad) return false;
     t.done = true;
     // the intermodulation check against the step below it (same split)
@@ -525,7 +533,7 @@ bool AutoGainController::tickOnce(const AgInput& in, AgCommand& out) {
         if (r.valid && r.overload && p.headroomMin > 1 && (!radio_.stepsUncertain || radio_.calibrated() || unitLearned_)) { t.imd = true; imdSeen_ = imdSeen_ || r.spurs > 0; compSeen_ = compSeen_ || r.compressed; }
         break;
     }
-    const bool over = t.clipMax > tgt_.clipLimit || t.imd || t.headroomMin < 0.5;
+    const bool over = t.clipMax > clipLimitNow() || t.imd || t.headroomMin < 0.5;
     if (over && phase_ == Phase::Sweeping) {   // the steps above it are worse still: drop them
         std::vector<std::pair<double, Policy>> keep;
         for (const auto& q : queue_) if (q.first < t.plan.totalDb - 0.01 || q.second != t.pol) keep.push_back(q);
@@ -575,7 +583,7 @@ bool AutoGainController::tickSafe(const AgInput& in, AgCommand& out) {
     AgTrial& t = trials_[(size_t)ti_];
     if (now < changedAt_ + settleTime()) return false;
     accumulate(t, in);
-    const bool bad = in.adc.clipFraction > tgt_.clipLimit || in.adc.headroomDb < 0.3;
+    const bool bad = in.adc.clipFraction > clipLimitNow() || in.adc.headroomDb < 0.3;
     if (now - measuredFrom_ < set_.measureSec && !bad) return false;
     t.done = true;
     if (ti_ > 0) {
@@ -587,12 +595,12 @@ bool AutoGainController::tickSafe(const AgInput& in, AgCommand& out) {
     }
     bool ch = false;
     const double tgtH = headroomTarget();
-    if (t.clipMax > tgt_.clipLimit || t.headroomMin < tgtH - tgt_.windowDb || t.imd) {   // too far: one step back (two after intermodulation)
+    if (t.clipMax > clipLimitNow() || t.headroomMin < tgtH - tgt_.windowDb || t.imd) {   // too far: one step back (two after intermodulation)
         int back = ti_ - (t.imd ? 2 : 1);
         back = std::max(0, back);
         if (ti_ == 0) back = 0;
         finish(now, back, Metric::Headroom, out, ch);
-        result_ = fmt("%.1f dB: ", cur_.totalDb) + (t.imd ? "intermodulation above it" : t.clipMax > tgt_.clipLimit ? "the ADC clipped above it" : "the headroom ran out above it");
+        result_ = fmt("%.1f dB: ", cur_.totalDb) + (t.imd ? "intermodulation above it" : t.clipMax > clipLimitNow() ? "the ADC clipped above it" : "the headroom ran out above it");
         logEvent(now, cur_.totalDb, cur_.totalDb, "safe start: " + result_);
         return ch;
     }
@@ -895,7 +903,7 @@ bool AutoGainController::tickBracket(const AgInput& in, AgCommand& out) {
         if (now < ready) return false;
         if (t.n == 0) brFrom_ = now;
         accumulate(t, in);
-        const bool bad = in.adc.clipFraction > tgt_.clipLimit * 3 || in.adc.headroomDb < 0.1;
+        const bool bad = in.adc.clipFraction > clipLimitNow() * 3 || in.adc.headroomDb < 0.1;
         if (now - brFrom_ < set_.bracketSec && !bad) return false;
         t.done = true;
         for (int k = ti_ - 1; k >= 0; k--) {   // intermodulation: against the step below (a product rises about 3 dB per dB)
@@ -905,16 +913,16 @@ bool AutoGainController::tickBracket(const AgInput& in, AgCommand& out) {
             if (r.valid && r.overload && p.headroomMin > 1 && (!radio_.stepsUncertain || radio_.calibrated() || unitLearned_)) { t.imd = true; imdSeen_ = imdSeen_ || r.spurs > 0; compSeen_ = compSeen_ || r.compressed; }
             break;
         }
-        if (t.clipMax > tgt_.clipLimit || t.imd || t.headroomMin < 0.5) {   // the gains above it are worse still
+        if (t.clipMax > clipLimitNow() || t.imd || t.headroomMin < 0.5) {   // the gains above it are worse still
             queue_.erase(std::remove_if(queue_.begin(), queue_.end(), [&](const std::pair<double, Policy>& q) { return q.first >= t.plan.totalDb - 0.01; }), queue_.end());
-            if (t.clipMax > tgt_.clipLimit) { met_.overloads++; }
+            if (t.clipMax > clipLimitNow()) { met_.overloads++; }
         }
     }
     if (queue_.empty() && ti_ >= 0 && brExtra_ < 4) {
         // still room above the last gain although nothing overloaded: the ADC's own noise hid the signal at the start, so the headroom
         // estimate was too low; the search climbs further (a jump of 70 % of the missing headroom, 4-16 dB), not past the range
         const AgTrial& l = trials_[(size_t)ti_];
-        const bool over = l.clipMax > tgt_.clipLimit || l.imd || l.headroomMin < 0.5;
+        const bool over = l.clipMax > clipLimitNow() || l.imd || l.headroomMin < 0.5;
         const double hi = std::min(maxGain(), ceilingDb(now));
         if (!over && l.headroomMin > bracketHead() + 1.5 && l.plan.totalDb < hi - 0.5) {
             brExtra_++;
@@ -950,7 +958,7 @@ bool AutoGainController::tickBracket(const AgInput& in, AgCommand& out) {
         b = chooseTrial(used, minHead);
         if (b >= 0) {
             int lo = -1;
-            for (size_t i = 0; i < trials_.size(); i++) if (trials_[i].done && trials_[i].nFloor && trials_[i].clipMax <= tgt_.clipLimit && (lo < 0 || trials_[i].plan.totalDb < trials_[(size_t)lo].plan.totalDb)) lo = (int)i;
+            for (size_t i = 0; i < trials_.size(); i++) if (trials_[i].done && trials_[i].nFloor && trials_[i].clipMax <= clipLimitNow() && (lo < 0 || trials_[i].plan.totalDb < trials_[(size_t)lo].plan.totalDb)) lo = (int)i;
             if (lo >= 0) {
                 const AgTrial& L = trials_[(size_t)lo];
                 const double qPerBin = -(6.02 * radio_.adcBits + 1.76) - 10 * std::log10((double)std::max<size_t>(L.spec.size(), 64)) + 1.76;
@@ -961,9 +969,9 @@ bool AutoGainController::tickBracket(const AgInput& in, AgCommand& out) {
     }
     if (b < 0 || used == Metric::Auto) b = chooseTrial(used);
     // a search must never end on a gain that clipped hard: the highest clean one instead (v2)
-    if (set_.v2 && b >= 0 && trials_[(size_t)b].clipMax > tgt_.clipLimit * 3) {
+    if (set_.v2 && b >= 0 && trials_[(size_t)b].clipMax > clipLimitNow() * 3) {
         int alt = -1;
-        for (size_t i = 0; i < trials_.size(); i++) if (trials_[i].done && trials_[i].clipMax <= tgt_.clipLimit * 3 && (alt < 0 || trials_[i].plan.totalDb > trials_[(size_t)alt].plan.totalDb)) alt = (int)i;
+        for (size_t i = 0; i < trials_.size(); i++) if (trials_[i].done && trials_[i].clipMax <= clipLimitNow() * 3 && (alt < 0 || trials_[i].plan.totalDb > trials_[(size_t)alt].plan.totalDb)) alt = (int)i;
         if (alt < 0) {   // every gain tried clipped: the lowest of them, and the loop goes on from there
             for (size_t i = 0; i < trials_.size(); i++) if (trials_[i].done && (alt < 0 || trials_[i].plan.totalDb < trials_[(size_t)alt].plan.totalDb)) alt = (int)i;
         }
@@ -976,7 +984,7 @@ bool AutoGainController::tickBracket(const AgInput& in, AgCommand& out) {
     const AgTrial best = trials_[(size_t)b];
     used_ = used;
     double unsafeAbove = 1e9;   // the lowest gain above the best that overloaded: the loop does not climb into it for a while
-    for (const auto& t : trials_) if (t.done && (t.clipMax > tgt_.clipLimit || t.imd || t.headroomMin < 0.5) && t.plan.totalDb > best.plan.totalDb + 0.01) unsafeAbove = std::min(unsafeAbove, t.plan.totalDb);
+    for (const auto& t : trials_) if (t.done && (t.clipMax > clipLimitNow() || t.imd || t.headroomMin < 0.5) && t.plan.totalDb > best.plan.totalDb + 0.01) unsafeAbove = std::min(unsafeAbove, t.plan.totalDb);
     if (unsafeAbove < 1e8) { ceil_ = unsafeAbove - 1; ceilUntil_ = now + 60 / std::max(0.25, set_.loopSpeed); }
     const std::string why = fmt("quick search: %.0f dB gave the best ", best.plan.totalDb) + metricName(used);
     if (wastedTo > -1 && !set_.v2) {

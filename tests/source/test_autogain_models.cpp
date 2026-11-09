@@ -72,10 +72,8 @@ static void perRadio() {
             // a radio whose gain steps are coarse (an Airspy step is 2 dB, a network radio slow) may sit a step below the best: 4 dB; never clip for long, never worse than the old loop by more than 1.5 dB
             // an SNR above 20 dB is more than any decoder needs: the comparison is capped there (the loop prefers headroom to the last tenths of a dB when the antenna's noise is far over the ADC's)
             const double cap = 20.0;
-            // known limit (docs/AUTOGAIN-3.7.md, "What remains"): a SpyServer index table with in-channel products: the level objective cannot see them before the step size is learned
-            const bool knownIndexImd = rp.id == "spyserver" && strstr(sc.name, "beside strong carriers");
-            CHECK(knownIndexImd || std::min(b.snr, cap) >= std::min(best, cap) - 4.0, "%s / %s: settled SNR %.1f dB is more than 4 dB under the best %.1f dB", rp.id.c_str(), sc.name, b.snr, best);
-            CHECK(knownIndexImd || std::min(b.snr, cap) >= std::min(a.snr, cap) - 1.5, "%s / %s: new loop %.1f dB, old %.1f dB", rp.id.c_str(), sc.name, b.snr, a.snr);
+            CHECK(std::min(b.snr, cap) >= std::min(best, cap) - 4.0, "%s / %s: settled SNR %.1f dB is more than 4 dB under the best %.1f dB", rp.id.c_str(), sc.name, b.snr, best);
+            CHECK(std::min(b.snr, cap) >= std::min(a.snr, cap) - 1.5, "%s / %s: new loop %.1f dB, old %.1f dB", rp.id.c_str(), sc.name, b.snr, a.snr);
             CHECK(b.clipSec <= 3.0, "%s / %s: clipped %.1f s", rp.id.c_str(), sc.name, b.clipSec);
             CHECK(b.gain >= rp.minTotal(false) - 0.01 && b.gain <= rp.maxTotal(false) + 0.01, "%s / %s: gain %.1f outside the radio's range", rp.id.c_str(), sc.name, b.gain);
         }
