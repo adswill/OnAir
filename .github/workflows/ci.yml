@@ -289,7 +289,7 @@ jobs:
   gather-linux:
     name: Linux x86_64
     needs: [linux-shards, gl31]
-    if: always()
+    if: ${{ !cancelled() }}   # a shard failing or skipped still fails this; a run replaced by a newer one has nothing to gather
     runs-on: ubuntu-24.04
     steps:
       - run: |
@@ -299,7 +299,7 @@ jobs:
   gather-macos:
     name: macOS arm64
     needs: [macos-shards]
-    if: always()
+    if: ${{ !cancelled() }}   # a shard failing or skipped still fails this; a run replaced by a newer one has nothing to gather
     runs-on: ubuntu-24.04
     steps:
       - run: |
@@ -309,7 +309,7 @@ jobs:
   gather-windows:
     name: Windows x64 (MinGW-w64)
     needs: [windows-shards]
-    if: always()
+    if: ${{ !cancelled() }}   # a shard failing or skipped still fails this; a run replaced by a newer one has nothing to gather
     runs-on: ubuntu-24.04
     steps:
       - run: |
