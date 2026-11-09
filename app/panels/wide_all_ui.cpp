@@ -3,10 +3,14 @@
 // can be switched off, pinned (never paused), listened to, given a mode by hand, removed, and signals can be added from the spectrum (the Identify
 // tool's dragged region, or the tuned signal). The CPU limit pauses the lowest ranked signals when the computer cannot keep up and says so here.
 #include "../app.h"
+#include "dect2/engine/rate_choice.h"
+#include "dect2/engine/wide_placed.h"
 #include "dect2/engine/wide_session.h"
+#include "dect2/station/station.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <map>
 
 using namespace dect2;
 
@@ -44,6 +48,109 @@ struct State {
     bool wasOn = false;
 };
 State S;
+
+// Several modes at once (issue #384): the signals placed at fixed frequencies, one list per receiver, kept in the settings
+struct PlacedState {
+    bool loaded = false, only = true;
+    std::vector<Placed> list;
+    PlacedSync sync;
+    std::string note;
+};
+std::map<int, PlacedState> gPlaced;
+
+PlacedState& placedOf(App& a) {
+    PlacedState& p = gPlaced[a.rxId];
+    if (!p.loaded) {
+        p.loaded = true;
+        const std::string key = "widePlaced" + std::to_string(a.rxId), okey = "widePlacedOnly" + std::to_string(a.rxId);
+        p.list = placedFromText(plat::prefs().getS(key.c_str(), ""));
+        p.only = plat::prefs().getB(okey.c_str(), true);
+    }
+    return p;
+}
+
+void savePlaced(App& a, const PlacedState& p) {
+    const std::string key = "widePlaced" + std::to_string(a.rxId), okey = "widePlacedOnly" + std::to_string(a.rxId);
+    plat::prefs().setS(key.c_str(), placedToText(p.list));
+    plat::prefs().setB(okey.c_str(), p.only);
+}
+
+// every frame, also with the window closed: the placed signals follow the capture
+void placedTick(App& a) {
+    PlacedState& p = placedOf(a);
+    WideSession& ws = a.engine.wideAllSession();
+    if (!a.engine.wideAll() || !a.engine.running() || p.list.empty()) {
+        if (!p.sync.ids().empty()) p.sync.clear(ws);
+        ws.setOnlyManual(false);
+        return;
+    }
+    ws.setOnlyManual(p.only);
+    const std::vector<WsEntry> es = ws.entries();
+    for (const auto& kv : p.sync.ids()) {   // the session was reset (a restart, a new mode): its entries went with it
+        bool there = false;
+        for (const WsEntry& e : es) if (e.id == kv.second) there = true;
+        if (!there) { p.sync.forget(); break; }
+    }
+    p.sync.apply(ws, p.list, radioCenterMhz(a) * 1e6, a.engine.sampleRate());
+}
+
+void fitPlacedInCapture(App& a, PlacedState& p) {
+    std::vector<dect2::station::CaptureChannel> ch;
+    for (const Placed& q : p.list) ch.push_back({q.absHz, q.widthHz});
+    double maxRate = 0;
+    if (a.devIdx >= 0 && a.devIdx < (int)a.devices.size()) maxRate = rateLimitsOf(a.devices[(size_t)a.devIdx]).maxHz;
+    const dect2::station::CapturePlan plan = dect2::station::planCapture(ch, maxRate, 2e6);
+    if (plan.rateHz <= 0) { p.note = tr("None of them fits this radio's sample rate."); return; }
+    a.freqMhz += plan.centerHz / 1e6 - radioCenterMhz(a);
+    chooseSampleRate(a, plan.rateHz);
+    if (a.engine.running()) { a.tune.centerHz = settingsRetuneCentreHz(a); a.engine.retune(a.tune); }
+    char b[120];
+    if (plan.fits) snprintf(b, sizeof b, tr("All of them are now in the capture (%.1f Msps)."), plan.rateHz / 1e6);
+    else snprintf(b, sizeof b, tr("%d do not fit in one capture on this radio and stay off until you tune to them."), (int)plan.outside.size());
+    p.note = b;
+}
+
+void placedPanel(App& a) {
+    PlacedState& p = placedOf(a);
+    if (!ImGui::CollapsingHeader(tr("Several modes at once"), p.list.empty() ? 0 : ImGuiTreeNodeFlags_DefaultOpen)) return;
+    ImGui::TextWrapped("%s", tr("Place signals at fixed frequencies, each with its own mode: they are decoded together from this capture, and stop by themselves when you tune away."));
+    const char* names[kPickN + 1];
+    names[0] = tr("Identify automatically");
+    for (int i = 0; i < kPickN; i++) names[i + 1] = wsKindName(kPick[i]);
+    int removeAt = -1;
+    bool changed = false;
+    const double centre = radioCenterMhz(a) * 1e6, rate = a.engine.sampleRate();
+    for (int i = 0; i < (int)p.list.size(); i++) {
+        Placed& q = p.list[(size_t)i];
+        ImGui::PushID(i);
+        double mhz = q.absHz / 1e6;
+        ImGui::SetNextItemWidth(130 * gUi);
+        if (ImGui::InputDouble("##mhz", &mhz, 0, 0, "%.4f", ImGuiInputTextFlags_EnterReturnsTrue) && mhz > 0) { q.absHz = mhz * 1e6; changed = true; }
+        ImGui::SameLine();
+        int cur = 0;
+        for (int k = 0; k < kPickN; k++) if (kPick[k] == q.kind) cur = k + 1;
+        ImGui::SetNextItemWidth(170 * gUi);
+        if (ImGui::Combo("##kind", &cur, names, kPickN + 1)) { q.kind = cur ? kPick[cur - 1] : WsKind::Unknown; changed = true; }
+        ImGui::SameLine();
+        if (!placedInCapture(q, centre, rate)) { ImGui::TextDisabled("%s", tr("outside the capture")); ImGui::SameLine(); }
+        if (ImGui::SmallButton(tr("Remove"))) removeAt = i;
+        ImGui::PopID();
+    }
+    if (removeAt >= 0) { p.list.erase(p.list.begin() + removeAt); changed = true; }
+    if (ImGui::Button(tr("Place at the tuned frequency"))) {
+        Placed q; q.absHz = a.freqMhz * 1e6; q.widthHz = 12500; q.kind = S.addKind ? kPick[S.addKind - 1] : WsKind::Unknown;
+        p.list.push_back(q);
+        changed = true;
+    }
+    if (p.list.size() >= 2) {
+        ImGui::SameLine();
+        if (ImGui::Button(tr("Fit them all in one capture"))) fitPlacedInCapture(a, p);
+    }
+    if (ImGui::Checkbox(tr("Decode only these"), &p.only)) changed = true;
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("On: the other signals in the capture stay off. Off: everything found is decoded as well."));
+    if (!p.note.empty()) ImGui::TextDisabled("%s", p.note.c_str());
+    if (changed) savePlaced(a, p);
+}
 
 void addFromRegion(App& a, double lo, double hi) {
     const double centre = radioCenterMhz(a);
@@ -88,6 +195,7 @@ void wideAllButton(App& a) {
 }
 
 void wideAllWindow(App& a) {
+    placedTick(a);
     if (!a.wideAllOpen) return;
     firstWindowSize(900 * gUi, 520 * gUi);
     if (!ImGui::Begin(trw("Everything in view"), &a.wideAllOpen)) { ImGui::End(); return; }
@@ -112,6 +220,7 @@ void wideAllWindow(App& a) {
     }
     if (on && st.tvPresent) ImGui::TextDisabled(tr("TV channels in the capture: %.0f MHz wide"), st.tvWidthMhz);
 
+    placedPanel(a);
     // adding signals from the spectrum
     ImGui::Separator();
     {

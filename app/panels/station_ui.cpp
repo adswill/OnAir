@@ -193,15 +193,17 @@ std::string stationUseLine(const App& a, const ModeDef& m) {
     return pairName(st::assess(S, needOf(m), busyFor(a)));
 }
 
-void stationAutoPick(App& a) {
+void stationAutoPick(App& a, bool onlyIfBusy) {
     sync(a);
     if (!gAuto || S.radios.size() < 2) return;
     modeInfoFill();
     const ModeDef* m = currentMode(a);
     const int cur = stationIndexOfDevice(a);
     if (!m || cur < 0) return;   // the test signal or a file stay what they are
+    const std::vector<bool> busy = busyFor(a);
+    if (onlyIfBusy && !(cur < (int)busy.size() && busy[(size_t)cur])) return;   // Start never overrules a radio that is free
     const st::ModeNeed n = needOf(*m);
-    const int want = st::pickRadio(S, n, cur, busyFor(a));
+    const int want = st::pickRadio(S, n, cur, busy);
     if (want == cur) return;
     const int di = deviceOf(a, S.radios[(size_t)want]);
     if (di < 0) return;

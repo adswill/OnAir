@@ -98,6 +98,7 @@ std::string rateWarning(const App& a) {
 
 void startReceiver(App& a) {
     if (std::string why; receiverModeBusy(a, &why)) { a.engine.log(why); return; }   // two receivers in one mode share screen state (docs/multi-sdr.md)
+    stationAutoPick(a, true);   // My station: another free radio when this one is held by a different receiver
     // a running scan has the radio: the receiver opening it too would take it away from the scan (SDRplay) or fail
     if (a.scanner.progress().running && a.devices[a.devIdx].isRadio()) { a.engine.log("a scan is using the radio: stop the scan first"); return; }
     const bool isFile = a.devices[a.devIdx].kind == DeviceInfo::File;

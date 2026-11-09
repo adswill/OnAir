@@ -226,6 +226,7 @@ struct WideSession::Impl {
     std::map<int, Ctl> ctl;
     double budget = 0.8, loadOverride = -1;
     std::vector<WsKnown> known;
+    std::atomic<bool> onlyManual{false};
     bool useDb = true;
     mutable std::mutex snapMu;
     std::vector<WsEntry> snap;
@@ -394,6 +395,7 @@ struct WideSession::Impl {
     }
     // the state an entry should have given its kind, switches and the CPU guard
     void settleState(WsEntry& e) {
+        if (onlyManual && e.id < kFirstManualId) { e.state = WsState::Off; e.why = "not one of the signals you placed"; return; }
         if (e.state == WsState::Unidentified && e.kind == WsKind::Unknown) return;
         if (e.kind == WsKind::Unknown) { e.state = WsState::Identifying; return; }
         if (e.kind == WsKind::NoDecoder) { e.state = WsState::NoDecoder; return; }
@@ -632,6 +634,7 @@ struct WideSession::Impl {
         int identifying = 0;
         for (auto& q : nar) {
             N& a = *q;
+            if (onlyManual && a.e.id < kFirstManualId) continue;   // no CPU on identifying what the user did not ask for
             if (a.e.kind != WsKind::Unknown || a.e.state == WsState::Unidentified || a.pending) continue;
             if (!a.e.active || clock < a.nextTry) continue;
             if (identifying >= kMaxIdentifying) break;
@@ -648,6 +651,7 @@ struct WideSession::Impl {
         }
         for (auto& q : tvs) {
             T& t = *q;
+            if (onlyManual && t.e.id < kFirstManualId) continue;
             if (t.e.kind != WsKind::Unknown || t.e.state == WsState::Unidentified || t.pending || clock < t.nextTry || !t.occ) continue;
             if (!t.cfOk) { t.cfOk = t.cf.configure(cfg.spanRate, t.e.offsetHz, tvChannelRate(tvWidthMhz, cfg.spanRate)); if (!t.cfOk) continue; }
             std::vector<cf32> tmp;
@@ -800,12 +804,13 @@ int WideSession::addManual(double offsetHz, double bandwidthHz, WsKind k) {
 }
 void WideSession::remove(int id) {
     std::lock_guard<std::mutex> lk(p_->ctlMu);
-    if (id >= 500000 && id < 1000000) p_->removes.push_back(id); else p_->ctl[id].enabled = false;
+    if (id >= kFirstManualId && id < 1000000) p_->removes.push_back(id); else p_->ctl[id].enabled = false;
 }
 void WideSession::setKind(int id, WsKind k) { std::lock_guard<std::mutex> lk(p_->ctlMu); p_->ctl[id].forced = k; }
 void WideSession::setListen(int id) { p_->listen = id; }
 void WideSession::setBudget(double frac) { std::lock_guard<std::mutex> lk(p_->ctlMu); p_->budget = std::max(0.0, frac); }
 void WideSession::setLoadOverride(double v) { std::lock_guard<std::mutex> lk(p_->ctlMu); p_->loadOverride = v; }
+void WideSession::setOnlyManual(bool on) { p_->onlyManual = on; }
 void WideSession::setKnownChannels(const std::vector<WsKnown>& k) { std::lock_guard<std::mutex> lk(p_->ctlMu); p_->known = k; }
 void WideSession::useFrequencyDatabase(bool on) { std::lock_guard<std::mutex> lk(p_->ctlMu); p_->useDb = on; }
 

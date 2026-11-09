@@ -184,7 +184,7 @@ target_sources(dect2core PRIVATE core/src/engine/general_auto.cpp)   # General /
 target_sources(dect2core PRIVATE core/src/fingerprint/rf_fingerprint.cpp)   # RF fingerprint of a transmitter (docs/RF-FINGERPRINT.md)
 target_sources(dect2core PRIVATE core/src/airports/airports.cpp core/src/common/radioid_db.cpp core/src/common/tg_dir.cpp)   # radioid_db: the DMR / NXDN radio ID name list (user-downloaded CSV)
 target_sources(dect2core PRIVATE core/src/doctor/reception_doctor.cpp)   # Reception Doctor: why a mode is not decoding (docs/RECEPTION-DOCTOR.md)
-target_sources(dect2core PRIVATE core/src/station/station.cpp core/src/station/heard.cpp)   # My station: radios, antennas, which mode can use what (docs/STATION-3.8.md)
+target_sources(dect2core PRIVATE core/src/station/station.cpp core/src/station/heard.cpp core/src/engine/wide_placed.cpp)   # My station: radios, antennas, which mode can use what (docs/STATION-3.8.md)
 target_sources(dect2core PRIVATE core/src/sweep/station_health.cpp core/src/source/agc.cpp)   # station and antenna health report (docs/STATION_HEALTH.md)
 target_sources(dect2core PRIVATE core/src/source/autogain.cpp core/src/source/autogain_radio.cpp core/src/source/autogain_measure.cpp core/src/source/autogain_v2.cpp core/src/source/gain_meter.cpp core/src/source/gain_cal.cpp core/src/dsp/spur_notch.cpp)   # automatic gain for every radio and mode (docs/AUTOGAIN.md)
 target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup and restore (docs/BACKUP.md)
@@ -2302,6 +2302,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_wide_session tests/engine/test_wide_session.cpp)   # wide multi-signal decode: DMR + P25 + pager + APRS + air band AM from one capture, identifier, enable/disable, CPU guard
   target_link_libraries(test_wide_session PRIVATE dect2core)
   add_test(NAME wide_session COMMAND test_wide_session)
+  add_executable(test_wide_placed tests/engine/test_wide_placed.cpp)   # several modes at once on one capture (issue #384), simulated signals
+  target_link_libraries(test_wide_placed PRIVATE dect2core)
+  add_test(NAME wide_placed COMMAND test_wide_placed)
   add_executable(test_wide_session_tv tests/engine/test_wide_session_tv.cpp)   # the same with a DVB-T2 and a DVB-T channel in the capture
   target_link_libraries(test_wide_session_tv PRIVATE dect2core)
   add_test(NAME wide_session_tv COMMAND test_wide_session_tv)
