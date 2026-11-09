@@ -196,6 +196,8 @@ void connect() {
         c.grantTap = [](const dect2::trunk::Grant& g, double now) {
             tp::GrantEvent e = tp::grantFromTrunk(g);
             if (!(e.freqHz > 0) && e.channel >= 0 && !g.dmr) e.freqHz = pool().plan.p25Freq(e.channel);   // a channel plan from the user's file, before the site's own identifier table is heard
+            const auto& si = p25TrunkController().sys.site();
+            if (si.site >= 0) e.site = (si.rfss >= 0 ? si.rfss * 1000 : 0) + si.site;   // the pool merges the same call granted by another site
             pool().onGrant(e, now);
         };
         dect2::trunk::FollowConfig fc = c.follower.config();
