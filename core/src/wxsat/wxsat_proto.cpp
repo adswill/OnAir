@@ -21,8 +21,8 @@ const WxProfileInfo& wxProfile(int p) {
         {"arktikaggak", "Arktika-M GGAK", kWxFirstFamily + 7, 1703.0, 1.024e6, 20e3, 5000.0, "GGAK", false},
         {"awsl", "AWS L-band", kWxFirstFamily + 8, 1707.0, 6e6, 4e6, 1785000.0, "MWR", false},
         {"msgraw", "MSG Raw Data", kWxFirstFamily + 9, 1686.83, 6e6, 5.5e6, 3750000.0, "SEVIRI", false},
-        {"himawaricast", "HimawariCast", kWxFirstFamily + 10, 1002.0, 6e6, 4.1e6, 2586148.0, "AHI", false},
-        {"geonetcast", "GeoNetCast", kWxFirstFamily + 11, 1070.0, 50e6, 46.8e6, 30000000.0, "files", false},
+        {"himawaricast", "HimawariCast", kWxFirstFamily + 10, 1002.0, 6e6, 4.5e6, 2586148.0, "AHI", false},
+        {"geonetcast", "GeoNetCast", kWxFirstFamily + 11, 1070.0, 52e6, 51.7e6, 30000000.0, "files", false},
     };
     return t[p < 0 || p >= kWxNumProfiles ? 0 : p];
 }

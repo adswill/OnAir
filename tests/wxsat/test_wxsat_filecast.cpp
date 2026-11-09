@@ -4,6 +4,7 @@
 #include "dect2/wxsat/wxsat_gen.h"
 #include "dect2/wxsat/wxsat_proto.h"
 #include "dect2/wxsat/wxsat_rx.h"
+#include "dect2/goes/goes_proto.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -110,6 +111,41 @@ static void testFazzt() {
     CHECK(!parseHritName("IMG_XX01IR1_201703080230_001").ok && !parseHritName("SOMETHING.txt").ok, "other names");
 }
 
+static std::vector<uint8_t> testSegment(const char* stamp, int n) {
+    char nm[64]; snprintf(nm, sizeof nm, "IMG_DK01IR1_%s_%03d", stamp, n + 1);
+    goes::Headers h;
+    h.fileType = 0; h.hasImage = true; h.bpp = 16; h.columns = kFcTestColumns; h.lines = kFcTestSegLines; h.compression = 0;
+    h.annotation = nm; h.hasSeg = true; h.segSeq = n + 1; h.maxSeg = kFcTestSegments; h.startLine = n * kFcTestSegLines + 1;
+    std::vector<uint8_t> px((size_t)kFcTestColumns * kFcTestSegLines * 2);
+    for (int y = 0; y < kFcTestSegLines; y++) for (int x = 0; x < kFcTestColumns; x++) { const int v = filecastTestPixel(x, y + n * kFcTestSegLines); const size_t i = (size_t)(y * kFcTestColumns + x) * 2; px[i] = (uint8_t)(v >> 8); px[i + 1] = (uint8_t)v; }
+    return goes::makeFile(h, px, 1);
+}
+
+static void testMosaic() {
+    HritMosaic m;
+    struct Got { std::string stamp; int w, h, have, total, bad; };
+    std::vector<Got> got;
+    m.onImage = [&](const std::string&, const std::string& s, int w, int h, const uint8_t* px, int have, int total) {
+        int bad = 0;
+        if (have == total) for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) if (px[(size_t)y * w + x] != (filecastTestPixel(x, y) >> 2)) bad++;
+        got.push_back({s, w, h, have, total, bad});
+    };
+    char nm[64];
+    // out of order, one segment twice: one whole picture, every pixel right
+    for (int n : {3, 0, 9, 1, 2, 2, 4, 5, 6, 7, 8}) { snprintf(nm, sizeof nm, "IMG_DK01IR1_202611090230_%03d", n + 1); CHECK(m.push(nm, testSegment("202611090230", n)), "segment"); }
+    CHECK(got.size() == 1 && got[0].have == kFcTestSegments && got[0].h == kFcTestSegLines * kFcTestSegments && got[0].bad == 0, "whole picture (%zu, bad %d)", got.size(), got.empty() ? -1 : got[0].bad);
+    // a segment lost: the next scan pushes out the old one, marked partial
+    for (int n = 0; n < 5; n++) { snprintf(nm, sizeof nm, "IMG_DK01IR1_202611090240_%03d", n + 1); m.push(nm, testSegment("202611090240", n)); }
+    snprintf(nm, sizeof nm, "IMG_DK01IR1_202611090250_%03d", 1); m.push(nm, testSegment("202611090250", 0));
+    CHECK(got.size() == 2 && got[1].stamp == "202611090240" && got[1].have == 5, "partial picture pushed out");
+    // damage: too short for its own headers, or not HRIT at all
+    std::vector<uint8_t> cut = testSegment("202611090300", 0); cut.resize(cut.size() / 2);
+    const uint64_t before = m.bad;
+    CHECK(m.push("IMG_DK01IR1_202611090300_001", cut) && m.bad == before + 1, "cut segment");
+    CHECK(m.push("IMG_DK01IR1_202611090300_002", std::vector<uint8_t>(40, 0)) && m.bad == before + 2, "not HRIT");
+    CHECK(!m.push("SOMETHING_ELSE.txt", std::vector<uint8_t>(40, 0)), "other file");
+}
+
 static void waitTs(FilecastLayer& l, int profile, int nPackets) {
     auto src = filecastTestTs(profile);
     std::vector<uint8_t> b(188 * 256);
@@ -121,10 +157,11 @@ static void checkPicture(const FilecastTelemetry& t) {
     CHECK(t.pictures.size() == 1, "%zu pictures", t.pictures.size());
     if (t.pictures.empty() || !t.pictures[0].px) return;
     const FilecastPicture& p = t.pictures[0];
-    CHECK(p.channel == "IR1" && p.have == p.total && p.total == kFcTestSegments, "picture %s %d/%d", p.channel.c_str(), p.have, p.total);
+    // the carousel never stops, so the newest picture may be part way through: its segments come in order, and only those that have landed are compared here (testMosaic checks whole ones)
+    CHECK(p.channel == "IR1" && p.have >= 1 && p.total == kFcTestSegments, "picture %s %d/%d", p.channel.c_str(), p.have, p.total);
     CHECK(p.w == kFcTestColumns && p.h == kFcTestSegLines * kFcTestSegments, "size %d x %d", p.w, p.h);
     int bad = 0;
-    for (int y = 0; y < p.h; y += 3) for (int x = 0; x < p.w; x += 5) if ((*p.px)[(size_t)y * p.w + x] != (filecastTestPixel(x, y) >> 2)) bad++;
+    for (int y = 0; y < p.have * kFcTestSegLines; y += 3) for (int x = 0; x < p.w; x += 5) if ((*p.px)[(size_t)y * p.w + x] != (filecastTestPixel(x, y) >> 2)) bad++;
     CHECK(bad == 0, "%d wrong pixels", bad);
 }
 
@@ -170,6 +207,7 @@ static WxsatTelemetry runRf(const Rf& k) {
     WxsatGenConfig g; g.profile = k.profile; g.rate = k.rate; g.snrDb = k.snr; g.cfoHz = k.cfo; g.clockPpm = k.ppm; g.seed = 5; g.fileSymbolRate = k.sym;
     WxsatGenerator gen(g);
     WxsatReceiver rx(k.profile);
+    rx.setBlocking(true);   // as for a file: this test is about the decoding, not about how busy the machine is
     rx.configure(k.rate);
     if (k.sym > 0) rx.setFilecastSymbolRate(k.sym);
     std::vector<cf32> buf(1 << 16);
@@ -192,17 +230,25 @@ static void testMsg() {
         if (!t.image) { CHECK(false, "no picture"); continue; }
         const WxImage& im = *t.image;
         CHECK(im.width == kSeviriNrmOutW && im.channels == kSeviriNrmChannels, "shape");
-        int good = 0, seen = 0;
+        int good = 0, seen = 0, channelLines = 0;
         for (const auto& l : im.line) {
             if (!l) continue;
             const int row = (kSeviriNrmOutH - 1 - l->idx) * 2;
-            for (int ch = 0; ch < kSeviriNrmChannels; ch++) for (int x = 0; x < kSeviriNrmOutW; x += 13) {
+            for (int ch = 0; ch < kSeviriNrmChannels; ch++) {
+              // a channel-line not received yet (the first and last steps of the window) is empty: not an error
+              bool any = false;
+              for (int x = 0; x < kSeviriNrmOutW && !any; x++) any = l->px[(size_t)ch * im.width + (size_t)x] != 0;
+              if (!any) continue;
+              channelLines++;
+              for (int x = 0; x < kSeviriNrmOutW; x += 13) {
                 seen++;
                 if (l->px[(size_t)ch * im.width + (size_t)(kSeviriNrmOutW - 1 - x)] == (uint8_t)((wxTestPixel(ch, x * 2, row % 400) & 1023) >> 2)) good++;
+              }
             }
         }
-        printf("    SEVIRI pixels: %d of %d right\n", good, seen);
-        CHECK(seen > 0 && good > seen * 95 / 100, "pixels %d of %d", good, seen);
+        printf("    SEVIRI pixels: %d of %d right, %d channel-lines\n", good, seen, channelLines);
+        CHECK(channelLines >= 22, "only %d channel-lines", channelLines);
+        CHECK(seen > 0 && good == seen, "pixels %d of %d", good, seen);
         CHECK(t.image2 && t.image2->lines > 0, "HRV picture");
     }
 }
@@ -256,6 +302,7 @@ int main(int argc, char** argv) {
     if (argc >= 3 && !strcmp(argv[1], "real")) return real(argv[2], argc > 3 ? argv[3] : nullptr);
     testBzip2();
     testFazzt();
+    testMosaic();
     testLayer();
     testMsg();
     testRf();

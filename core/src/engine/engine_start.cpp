@@ -621,7 +621,7 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxSelcal_.setLogCallback([this](const std::string& s) { log(s); });
     rxAtis_.configure(rate_);
     rxAtis_.setLogCallback([this](const std::string& s) { log(s); });
-    for (auto& w : rxWx_) { w.configure(rate_); w.setLogCallback([this](const std::string& s) { log(s); }); }
+    for (auto& w : rxWx_) { w.setBlocking(!src_->realtimeHardware()); w.configure(rate_); w.setLogCallback([this](const std::string& s) { log(s); }); }
     rxFy3a_.configure(rate_);
     rxFy3a_.setLogCallback([this](const std::string& s) { log(s); });
     rxFy3m_.configure(rate_);

@@ -319,8 +319,11 @@ struct WxsatReceiver::Impl {
     std::unique_ptr<wxsat::FilecastLayer> files;
     std::atomic<double> fcSymbols{0};
     std::atomic<bool> fcSymbolsSet{false};
+    std::atomic<bool> fileBlocking{false};    // a recording: wait for the decoder rather than lose frames
     uint64_t dvbSeq = 0;
     bool isFilecast() const { return P == kWxHimawariCast || P == kWxGeoNetCast; }
+    // the DVB-S2 receiver's own limit, at the rate it is told to expect
+    bool fileRateOk() const { const double hz = fcSymbols.load(); return dvbsMaxSymbolRate(rate, 0.35) * 1.02 >= (hz > 0 ? hz : info.symbolRate); }
     wxsat::MwrDecoder mwr;
     wxsat::HirsDecoder hirs;
     double lastGood = 0, lastAcq = 0, tStart = 0;
@@ -677,6 +680,7 @@ struct WxsatReceiver::Impl {
     void startDvb() {
         if (dvb) { if (fcSymbolsSet.exchange(false)) configureDvb(); return; }
         dvb = std::make_unique<DvbsReceiver>();
+        dvb->setBlocking(fileBlocking.load());
         dvb->setLogCallback(logCb);
         wxsat::FilecastLayer* fl = files.get();
         dvb->setPacketCallback([fl](const uint8_t* pk, size_t n, double secs) { fl->pushTs(pk, n, secs); });
@@ -766,7 +770,7 @@ struct WxsatReceiver::Impl {
             tel.state = tel.ggak.state >= 2 ? 3 : tel.ggak.state;
             tel.blocksOk = tel.ggak.blocksOk; tel.blocksBad = tel.ggak.blocksBad; tel.cfoHz = tel.ggak.cfoHz; tel.snrDb = tel.ggak.snrDb; tel.frameLock = tel.ggak.frameLock;
         } else if (isFilecast()) {
-            if (rate >= info.minRate - 1 && dvb) {
+            if (fileRateOk() && dvb) {
                 DvbsTelemetry d;
                 if (dvb->telemetry(d, dvbSeq)) {
                     dvbSeq = d.seq;
@@ -778,7 +782,7 @@ struct WxsatReceiver::Impl {
                     tel.state = d.dataValid ? 3 : d.state >= 2 ? 2 : d.state;
                     tel.hint = d.signalNote;
                 }
-            } else if (rate < info.minRate - 1) {
+            } else if (!fileRateOk()) {
                 char b[160];
                 snprintf(b, sizeof b, "this link needs %.1f Msps or more (a recording works)", info.minRate / 1e6);
                 tel.hint = b;
@@ -821,7 +825,7 @@ struct WxsatReceiver::Impl {
         if (clearReq.exchange(false)) { initImages(); tel.image.reset(); tel.image2.reset(); tel.lines = 0; msgLast = -1; }
         if (P == kWxArktikaGgak) ggak.feed(x, n);
         else if (isFilecast()) {
-            if (rate >= info.minRate - 1) { startDvb(); dvb->feed(x, n); }
+            if (fileRateOk()) { startDvb(); dvb->feed(x, n); }
         } else if (P == kWxApt) {
             for (size_t i = 0; i < n; i++) {
                 cfp y;
@@ -866,7 +870,7 @@ void WxsatReceiver::setSignalOffset(double hz) {
     else if (m.isFilecast()) {}   // the DVB-S2 receiver works on the carrier nearest the centre, wherever it is
     else if (m.rate >= m.info.minRate - 1) m.dem.setOffset(hz);
 }
-bool WxsatReceiver::ready() const { return p_->rate >= p_->info.minRate - 1; }
+bool WxsatReceiver::ready() const { return p_->isFilecast() ? p_->fileRateOk() : p_->rate >= p_->info.minRate - 1; }
 void WxsatReceiver::reset() { p_->resetReq = true; }
 void WxsatReceiver::clearImage() {
     { std::lock_guard<std::mutex> lk(p_->mu); p_->pub.image.reset(); p_->pub.image2.reset(); p_->pub.imageSeq++; p_->pub.seq++; }
@@ -884,7 +888,8 @@ void WxsatReceiver::setSaveDir(const std::string& dir) { if (p_->files) p_->file
 void WxsatReceiver::setFilecastSymbolRate(double hz) { p_->fcSymbols = hz; p_->fcSymbolsSet = true; }
 void WxsatReceiver::setFilecastPid(int pid) { if (p_->files) p_->files->setPid(pid); }
 wxsat::FilecastLayer* WxsatReceiver::fileLayer() { return p_->files.get(); }
-void WxsatReceiver::flush() { if (p_->dvb) { p_->dvb->setBlocking(true); p_->dvb->flush(); } if (p_->files) p_->files->flush(); p_->report(); }
+void WxsatReceiver::setBlocking(bool b) { p_->fileBlocking = b; }
+void WxsatReceiver::flush() { if (p_->dvb) { p_->dvb->flush(); } if (p_->files) p_->files->flush(); p_->report(); }
 int WxsatReceiver::profile() const { return p_->P; }
 void WxsatReceiver::setLogCallback(std::function<void(const std::string&)> cb) { p_->logCb = std::move(cb); }
 

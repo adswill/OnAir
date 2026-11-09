@@ -166,7 +166,7 @@ void filesTab(App& a, int P) {
     if (!on && f.recent.empty()) {
         ImGui::PushTextWrapPos(0);
         ImGui::TextDisabled("%s", P == kWxHimawariCast ? "Point a C-band dish (about 1.8 m or more) at JCSAT-2B with a 5150 MHz LNB and start: the receiver finds the carrier by itself. Full discs appear here, a channel at a time, every 10 to 30 minutes."
-                                                       : "GeoNetCast needs a C-band dish and 47 Msps or more, so most radios can only play a recording. Use File > Open recording, or Test signal.");
+                                                       : "GeoNetCast needs a C-band dish and 52 Msps or more, so most radios can only play a recording. Use File > Open recording, or Test signal.");
         ImGui::PopTextWrapPos();
         return;
     }

@@ -36,6 +36,7 @@ public:
     void setFilecastSymbolRate(double hz);            // Advanced: 0 is the link's own rate
     void setFilecastPid(int pid);                     // Advanced: 0 is the link's own PID
     wxsat::FilecastLayer* fileLayer();                // the file layer behind the radio, null for the other profiles
+    void setBlocking(bool blocking);                  // file sources: before the first feed; wait for the decoder instead of losing frames
     void flush();                                     // tests and recordings: everything fed so far is decoded and reported
 
 private:
