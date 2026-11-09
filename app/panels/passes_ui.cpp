@@ -19,6 +19,7 @@
 #include "dect2/automation/engine.h"
 #include <algorithm>
 #include <atomic>
+#include <cctype>
 #include <cmath>
 #include <cstring>
 #include <ctime>
