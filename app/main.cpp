@@ -363,7 +363,6 @@ int main(int argc, char** argv) {
     static ImGuiStyle baseStyle = ImGui::GetStyle();   // the style at scale 1
 
     App app;
-    loadFonts(app, io);
     // A layout slip (an item missing after SetCursorPos, for example) is recovered by ImGui; the red 'MESSAGE FROM DEAR IMGUI' box and the assert
     // are for developers, so users do not get a popup over the window. The recovery message still goes to the debug log.
     io.ConfigErrorRecoveryEnableAssert = false;
@@ -383,12 +382,20 @@ int main(int argc, char** argv) {
     startApp(app, argc, argv);
     DevOpts o;
     parseDevFlags(app, argc, argv, o);
+    loadFonts(app, io);   // preferences, the OS language and --lang have now selected the effective UI language
+    std::string fontLanguage = i18n::current();
     if (!o.shotPath && argc <= 1 && touch::autoTouch(gWorkAreaW, gWorkAreaH, plat::prefs().has("touchUi") || plat::prefs().has("touchAutoSeen"))) {   // #139: a small screen starts in the touch interface (View > Touch interface turns it off)
         app.touchUi = true; plat::prefs().setB("touchAutoSeen", true); savePrefs(app);
     }
     double last = glfwGetTime();
     double frameNext = 0, lastInputT = 0;
     while (!glfwWindowShouldClose(window)) {
+        if (fontLanguage != i18n::current()) {
+            // Language changes happen during a frame; rebuild before the next one so no draw data keeps old fonts.
+            io.Fonts->Clear();
+            loadFonts(app, io);
+            fontLanguage = i18n::current();
+        }
         appResultsSave(app);   // every 30 s: the lists the screens keep themselves (the engine saves its own on a thread)
         layoutTick(app, !app.touchUi && !o.shotPath);   // per-mode window positions (desktop; not in --shot runs)
         workspaceSessionTick(app);   // every few seconds: the last-session file (crash restore)
