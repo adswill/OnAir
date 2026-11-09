@@ -1206,6 +1206,7 @@ struct HfdigFtx::Impl {
     bool autoFound[kFtxModes];
     int64_t autoScanAt = 0;
     void autoBuild(HfdigFtx& self, uint32_t mask);
+    void autoScan();
     XMem mem[kFtxModes];                  // worker thread only
     std::atomic<int> sub[kFtxModes];
     std::atomic<double> per[kFtxModes];   // 0: the default of the mode
@@ -1531,14 +1532,17 @@ void HfdigFtx::feedAudio(const float* x, size_t n) {
     p_->autoScanAt += (int64_t)n;
     if (p_->autoScanAt < 16000) return;
     p_->autoScanAt = 0;
+    p_->autoScan();
+}
+void HfdigFtx::Impl::autoScan() {
     HfdigFtxTelemetry kt;
-    for (auto& k : p_->autoKids) {
+    for (auto& k : autoKids) {
         k.d->telemetry(kt);
         const uint64_t c = kt.perMode[k.mode];
         if (c > k.seen) {
             k.seen = c;
-            std::lock_guard<std::mutex> lk(p_->mu);
-            p_->autoFound[k.mode] = true; p_->autoSubFound[k.mode] = k.sub; p_->autoPerFound[k.mode] = k.period;
+            std::lock_guard<std::mutex> lk(mu);
+            autoFound[k.mode] = true; autoSubFound[k.mode] = k.sub; autoPerFound[k.mode] = k.period;
         }
     }
 }
@@ -1636,10 +1640,14 @@ void HfdigFtx::copyClockFrom(HfdigFtx& o) {
     p_->startTime = st; p_->slotSearch = ss; p_->wall = std::move(w);
 }
 void HfdigFtx::waitIdle() {
-    std::unique_lock<std::mutex> lk(p_->mu);
-    p_->idleCv.wait(lk, [&] { return p_->jobs.empty() && !p_->busy; });
+    {
+        std::unique_lock<std::mutex> lk(p_->mu);
+        p_->idleCv.wait(lk, [&] { return p_->jobs.empty() && !p_->busy; });
+    }
+    for (auto& k : p_->autoKids) k.d->waitIdle();
+    if (!p_->autoKids.empty()) p_->autoScan();
 }
-void HfdigFtx::flushSlots() { p_->schedule(true); }
+void HfdigFtx::flushSlots() { p_->schedule(true); for (auto& k : p_->autoKids) k.d->flushSlots(); }
 
 std::unique_ptr<HfdigFtx> makeFtxDecoder() { return std::make_unique<HfdigFtx>(); }
 

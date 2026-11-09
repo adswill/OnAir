@@ -97,7 +97,7 @@ struct PskReceiver::Impl {
     std::vector<cf32> autoRing;
     size_t autoPos = 0, autoFill = 0;
     uint64_t autoSamples = 0, autoLastRun = 0, autoCharsSeen = 0, autoGoodAt = 0;
-    int autoFound = -1;
+    int autoFound = -1, autoCand = -1;
     bool autoLocked = false;
     std::future<std::pair<int, uint64_t>> autoJob;
     bool autoDiscard = false;
@@ -708,15 +708,23 @@ void PskReceiver::Impl::autoFeed(const cf32* x, size_t n) {
         const bool drop = autoDiscard || !autoOn.load();
         autoDiscard = false;
         if (drop) return;
-        if (r.first >= 0) {
-            autoLocked = true; autoFound = r.first;
-            autoGoodAt = autoSamples;
-            modeReq = r.first;
-        } else autoFound = -1;
+        if (r.first < 0) { if (!autoLocked) autoFound = -1; autoCand = -1; return; }
+        // while locked, a different answer must repeat before the decode is moved: a burst of noise must not throw away a working lock
+        if (autoLocked && r.first != autoFound) {
+            if (autoCand == r.first) { autoCand = -1; autoFound = r.first; autoGoodAt = autoSamples; modeReq = r.first; }
+            else autoCand = r.first;
+            return;
+        }
+        autoCand = -1;
+        autoLocked = true; autoFound = r.first;
+        autoGoodAt = autoSamples;
+        modeReq = r.first;
         return;
     }
-    if (autoLocked && autoSamples - autoGoodAt < (uint64_t)(10 * kBase)) return;
-    autoLocked = false;
+    if (autoLocked) {
+        if (autoSamples - autoGoodAt >= (uint64_t)(10 * kBase)) { autoLocked = false; autoLastRun = 0; }
+        else if (autoSamples - autoLastRun < (uint64_t)(10 * kBase)) return;   // a working decode is re-checked now and then: a slower modulation can still give letters
+    }
     if (autoSamples < autoLastRun + (uint64_t)(4 * kBase) || autoFill < (size_t)(6 * kBase)) return;
     if (chans.empty()) return;   // nothing in the window: the trial would have nothing to read
     autoLastRun = autoSamples;
