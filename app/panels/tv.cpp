@@ -402,6 +402,17 @@ void playerTab(App& a) {
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("This signal carries T2-Base and T2-Lite frames. The receiver follows one of them."));
         }
         for (auto& u : rx.unsupported) { ImGui::TextColored(ImVec4(0.95f, 0.6f, 0.2f, 1), "! %s", u.c_str()); }
+        if (a.engine.t2miFound()) {
+            char lb[80]; snprintf(lb, sizeof lb, "T2-MI on PID 0x%X", a.engine.t2miPid());
+            ImGui::TextDisabled("%s", lb); ImGui::SameLine();
+            ImGui::SetNextItemWidth(160 * gUi);
+            std::string cur = a.engine.t2miPlp() < 0 ? tr("this stream") : "PLP " + std::to_string(a.engine.t2miPlp());
+            if (ImGui::BeginCombo("##t2mi", cur.c_str())) {
+                if (ImGui::Selectable(tr("this stream"), a.engine.t2miPlp() < 0)) a.engine.setT2miPlp(-1);
+                for (int p : a.engine.t2miPlps()) if (ImGui::Selectable(("PLP " + std::to_string(p)).c_str(), a.engine.t2miPlp() == p)) a.engine.setT2miPlp(p);
+                ImGui::EndCombo();
+            }
+        }
         { size_t ccN = 0; const std::string cc = a.engine.player().latestCaption(&ccN); if (!cc.empty()) ImGui::TextDisabled("CC  %s", cc.c_str()); }
     }
     // the controls below the picture take what they took in the last frame (they wrap onto more lines in a narrow tab)

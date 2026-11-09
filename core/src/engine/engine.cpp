@@ -411,6 +411,14 @@ void Engine::onTsPackets(const uint8_t* pk, size_t n, double secs) {
     demux_.setGbDefault(stdMode_.load() == 9);   // DTMB
     dvbsi::setGbDefaultGlobal(stdMode_.load() == 9);
     dvbsi::setAribDefaultGlobal(stdMode_.load() == 5 || stdMode_.load() == 156);   // ISDB-T, ISDB-S: ARIB text
+    // T2-MI: a transmitter feed in this stream. The monitor keeps looking at the outer stream; the demuxer and the player can follow a PLP inside it.
+    t2miInner_.clear();
+    {
+        t2miIn_.setSink([this](int plp, const uint8_t* p) { if (plp == t2miUse_.load()) t2miInner_.insert(t2miInner_.end(), p, p + 188); });
+        for (size_t i = 0; i < n; i++) t2miIn_.feed(pk + i * 188);
+    }
+    const bool innerOnly = t2miUse_.load() >= 0 && t2miIn_.found();
+    if (innerOnly) { pk = t2miInner_.data(); n = t2miInner_.size() / 188; }
     for (size_t i = 0; i < n; i++) {
         const uint8_t* q = pk + i * 188;
         demux_.feed(q);

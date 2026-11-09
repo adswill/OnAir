@@ -120,6 +120,7 @@
 #include "dect2/selcal/selcal_rx.h"
 #include "dect2/umts/umts_rx.h"
 #include "dect2/tv/tr101290.h"
+#include "dect2/t2/t2mi_in.h"
 #include "dect2/fy3/fy3_rx.h"
 #include "dect2/pactorhf/pactorhf_rx.h"
 #include "dect2/shortwave/shortwave_rx.h"
@@ -538,6 +539,11 @@ public:
     PactorHfReceiver& pactorHf(int variant) { return variant == 3 ? rxPh3_ : variant == 4 ? rxPh4_ : rxPh2_; }   // PACTOR-II / -III / -IV: clear the results (telemetry through latestRx)
     std::vector<Tr290Check> tr290Checks() { std::lock_guard<std::mutex> k(tsMu_); return tr290_.checks(); }
     double tr290JitterMs() { std::lock_guard<std::mutex> k(tsMu_); return tr290_.pcrJitterMs(); }
+    bool t2miFound() { std::lock_guard<std::mutex> k(tsMu_); return t2miIn_.found(); }
+    int t2miPid() { std::lock_guard<std::mutex> k(tsMu_); return t2miIn_.pid(); }
+    std::vector<int> t2miPlps() { std::lock_guard<std::mutex> k(tsMu_); return t2miIn_.plps(); }
+    void setT2miPlp(int plp) { t2miUse_ = plp; }   // -1: back to the outer stream
+    int t2miPlp() const { return t2miUse_.load(); }
     UmtsReceiver& umts() { return rxUmts_; }   // UMTS cells (family 480)
     SelcalReceiver& selcal() { return rxSelcal_; }   // SELCAL: call log, aircraft table, Listen volume / mute (telemetry through latestRx)
     AtisReceiver& atis() { return rxAtis_; }   // ATIS (inland waterways): clear the lists, Listen volume / mute (telemetry through latestRx)
@@ -968,6 +974,7 @@ private:
     SelcalReceiver rxSelcal_;
     UmtsReceiver rxUmts_;
     Tr290Monitor tr290_; double tr290T_ = 0;
+    T2miIngest t2miIn_; std::vector<uint8_t> t2miInner_; std::atomic<int> t2miUse_{-1};   // -1 off, else the PLP of the T2-MI stream shown instead of the outer stream
     Fy3Receiver rxFy3a_{0}, rxFy3m_{1};
     PactorHfReceiver rxPh2_{2}, rxPh3_{3}, rxPh4_{4};   // PACTOR-II (family 237), -III (238), -IV (239)
     ShortwaveReceiver rxSw_;
