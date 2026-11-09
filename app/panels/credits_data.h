@@ -4,6 +4,7 @@
 struct CreditEntry { const char *name, *author, *licence, *where, *how, *url, *note; };
 
 inline constexpr CreditEntry kCredits[] = {
+    {"fisb-decode (FIS-B TWGO layout, protocol reference)", "Rand Projects", "see project", "core/src/uat/uat_twgo.cpp (protocol reference, not copied code)", "reimplemented", "https://github.com/rand-projects/fisb-decode", "Keep this credit."},
     {"Dire Wolf (FX.25 tag table and IL2P scrambler, protocol reference)", "John Langner WB2OSZ", "GPL-2.0-or-later", "core/src/packet/packet_fec.cpp (protocol reference, not copied code)", "reimplemented", "https://github.com/wb2osz/direwolf", "Keep this credit; GPL-3 compatible."},
     {"openETCS XML of SUBSET-026 chapter 7 (protocol reference)", "openETCS project", "EUPL-1.1", "core/src/ebicab/ebicab_proto.cpp (packet field layouts: protocol reference, not copied code)", "layouts read from the published XML", "https://github.com/openETCS/validation", "Keep this credit."},
     {"wmbusmeters (protocol reference)", "Fredrik Öhrström", "GPL-3.0-or-later", "core/src/wmbus/wmbus_proto.cpp (mode 5 IV layout: protocol reference, not copied code)", "reimplemented", "https://github.com/wmbusmeters/wmbusmeters", "Keep this credit; GPL-3 compatible."},

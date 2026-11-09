@@ -1,5 +1,6 @@
 // UAT protocol layer: wraps dump978 uat_decode and maps into UatTelemetry types.
 #include "dect2/uat/uat_proto.h"
+#include "dect2/uat/uat_twgo.h"
 #include "dect2/adsb/adsb_msg.h"
 #include "dect2/uat/uat_decode_c.h"
 #include "dect2/uat/uat_frame.h"
@@ -77,6 +78,10 @@ bool uatDecodeFrame(const UatRawFrame& raw, UatDecoded& out) {
             out.fisb.productId = fr.fisb.product_id;
             out.fisb.title = uatFisbProductName(fr.fisb.product_id);
             out.fisb.text = fisbTextFromApdu(fr.fisb);
+            if (fr.fisb.product_id >= 8 && fr.fisb.product_id <= 16) {
+                std::string tw;
+                if (uatTwgoDecode((uint16_t)fr.fisb.product_id, fr.fisb.data, (size_t)fr.fisb.length, tw, out.overlays)) out.fisb.text = tw;
+            }
             out.fisb.timeSec = raw.timeSec;
             out.summary = out.fisb.title;
             if (!out.fisb.text.empty()) out.summary += ": " + out.fisb.text.substr(0, 120);
