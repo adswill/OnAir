@@ -19,6 +19,8 @@ bool gIdInit = false;
 std::map<int, dect2::FadeTracker> gFade;   // per listened kHz
 double gLastFade = 0;
 
+void installTap(App& a) { a.engine.general().setAudioTap([](const float* x, size_t n) { std::lock_guard<std::mutex> lk(gIntervalMu); gInterval.push(x, n); }); }
+
 void idInit(App& a) {
     if (gIdInit) return;
     gIdInit = true;
@@ -35,7 +37,7 @@ void idInit(App& a) {
         std::vector<float> p; std::stringstream s(line.substr(tab + 1)); float v; while (s >> v) p.push_back(v);
         if (!p.empty()) gId.teachInterval(line.substr(0, tab), p);
     }
-    a.engine.general().setAudioTap([](const float* x, size_t n) { std::lock_guard<std::mutex> lk(gIntervalMu); gInterval.push(x, n); });
+    installTap(a);
 }
 }
 
@@ -75,7 +77,7 @@ void amSmartPanel(App& a) {
         d.setSnr(t1.amActive ? t1.amSnrDb : t1.snrDb, t2.amActive ? t2.amSnrDb : t2.snrDb);
         ImGui::Text("%s: %s  (%d %s, %.0f ms)", tr("Two frequencies"), d.active() == 0 ? tr("first") : tr("second"), d.switches(), tr("changes"), d.delaySamples() / 48.0);
         ImGui::SameLine();
-        if (ImGui::SmallButton(tr("Stop"))) a.engine.setAmDiversity(false);
+        if (ImGui::SmallButton(tr("Stop"))) { a.engine.setAmDiversity(false); installTap(a); }
     }
     // the fade of the listened carrier and when the next one is due
     {
