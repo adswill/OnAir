@@ -855,7 +855,7 @@ static void dabCensusSection(App& a) {
         ImGui::EndTable();
     }
     const auto merged = dect2::dabCensusMerge(rows);
-    if (!merged.empty() && ImGui::TreeNode(tr("All services"))) {
+    if (!merged.empty() && ImGui::TreeNode(trw("All services"))) {
         int id = 0;
         for (const auto& m : merged) {
             ImGui::PushID(id++);

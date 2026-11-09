@@ -419,7 +419,7 @@ static void stationBook(App& a, const DrmTelemetry& t) {
     if (dirty && ImGui::GetTime() - savedAt > 30.0) { savedAt = ImGui::GetTime(); book.save(path); }
     if (book.entries().empty()) return;
     ImGui::Separator();
-    if (!ImGui::TreeNode(tr("Stations heard"))) return;
+    if (!ImGui::TreeNode(trw("Stations heard"))) return;
     if (ImGui::BeginTable("##drmbook", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY, ImVec2(0, 180 * gUi))) {
         ImGui::TableSetupColumn(tr("Station")); ImGui::TableSetupColumn(tr("Language")); ImGui::TableSetupColumn(tr("Programme")); ImGui::TableSetupColumn(tr("Frequencies, kHz")); ImGui::TableHeadersRow();
         int row = 0;

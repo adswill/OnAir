@@ -70,5 +70,22 @@ int main() {
     CHECK(a.exportOccupancyCsv(tmpPath("test_survey.csv"), err) && a.exportSignalsCsv(tmpPath("test_survey_sig.csv"), 0.5, err), "csv");
     remove(tmpPath("test_survey.csv")); remove(tmpPath("test_survey_sig.csv"));
     printf(fails ? "survey: %d FAILED\n" : "survey: all ok\n", fails);
+    {   // a signal that comes back regularly: one sweep every 300 s, on for one sweep every hour (with a jitter of a sweep); an irregular burster and a carrier that is always on are not listed
+        Survey sv; std::mt19937 r2(5);
+        std::uniform_real_distribution<double> u(0, 1);
+        const double t0 = 1.7e9;
+        for (int k = 0; k < 240; k++) {
+            Sweep s = make(t0 + k * 300.0, false, 102e6, r2);
+            auto put = [&](double hz, float up) { const size_t i = (size_t)std::llround((hz - s.startHz) / s.binHz); for (int j = -1; j <= 1; j++) s.db[i + j] += up; };
+            if (k % 12 == 0 || (k % 12 == 1 && u(r2) < 0.15)) put(107e6, 22);       // hourly
+            if (k > 30 && (k * k % 97) < 3) put(108e6, 22);                          // irregular
+            sv.add(s);
+        }
+        const auto rec = sv.recurring();
+        bool hourly = false; int others = 0;
+        for (const auto& q : rec) { if (std::fabs(q.freqHz - 107e6) < 30e3) { hourly = true; CHECK(std::fabs(q.periodSec - 3600) <= 300, "period %.0f", q.periodSec); CHECK(q.nextSec >= t0 + 239 * 300.0, "next is in the future"); CHECK(q.starts >= 18, "starts %d", q.starts); } else others++; }
+        CHECK(hourly, "hourly signal found");
+        CHECK(others == 0, "other signals listed as recurring: %d", others);
+    }
     return fails ? 1 : 0;
 }

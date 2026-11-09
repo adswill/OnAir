@@ -217,6 +217,18 @@ void surveyPanel(App& a) {
         }
         ImGui::EndTable();
     }
+    {
+        const auto rec = S.survey.recurring();
+        if (!rec.empty()) {
+            ImGui::Text("%s", tr("Signals on a schedule"));
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Signals that come back at regular times during this survey, and when each is due next."));
+            const double now = (double)std::time(nullptr);
+            for (size_t i = 0; i < rec.size() && i < 20; i++) {
+                const auto& q = rec[i];
+                ImGui::Text("%.3f MHz  %s %.0f min  %s %.0f min  (%d %s)", q.freqHz / 1e6, tr("every"), q.periodSec / 60.0, tr("next in"), std::max(0.0, q.nextSec - now) / 60.0, q.starts, tr("times"));
+            }
+        }
+    }
     ImGui::Text("%s", tr("Quietest slots"));
     if (ImGui::BeginTable("##quiet", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders)) {
         ImGui::TableSetupColumn(tr("From MHz")); ImGui::TableSetupColumn(tr("Width kHz")); ImGui::TableSetupColumn(tr("Occupancy %")); ImGui::TableSetupColumn(tr("Peak dB above floor"));
