@@ -256,7 +256,7 @@ struct HamsciReceiver::Impl {
         if (kind == kHsPulsar) {
             t.pulsarObservedSec = psr.observedSec();
             t.pulsarSearching = searching.load();
-            { std::lock_guard<std::mutex> l(mu); t.pulsar = psrResult; }
+            t.pulsar = psrResult;   // buildSnap runs with mu held (the worker writes psrResult under it)
             t.dataValid = t.pulsar.ok;
             state = t.pulsar.ok ? 3 : t.pulsarObservedSec > 10 ? 2 : 1;
             t.snrDb = (float)t.pulsar.snr;
