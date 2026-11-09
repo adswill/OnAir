@@ -98,7 +98,7 @@ void tvPlaybackRow(App& a) {
     const Player::ShiftStats ss = pl.shift();
     ImGui::BeginDisabled(pl.selected() < 0);
     if (ImGui::Button(ss.paused ? "Play##tvps" : "Pause##tvps")) { if (ss.paused) pl.play(); else pl.pause(); }
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("Freeze the picture; the service keeps filling the buffer. Play resumes from here (Space)");
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip(tr("Freeze the picture; the service keeps filling the buffer. Play resumes from here (Space)"));
     flowNext(6 * gUi);
     static float drag = 0; static bool dragging = false;
     const float maxS = (float)std::max(1.0, ss.bufferedSec);
@@ -112,10 +112,10 @@ void tvPlaybackRow(App& a) {
     char lab[48]; snprintf(lab, sizeof lab, ss.behind ? "-%s behind" : "live", clockText(dragging ? maxS - v : ss.behindSec).c_str());
     if (ImGui::SliderFloat("##tvseek", &v, 0, maxS, lab)) { drag = v; dragging = true; }
     if (ImGui::IsItemDeactivated()) { if (dragging) pl.seekBehind(v >= maxS - 0.5f ? 0 : maxS - v); dragging = false; }
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("How far behind live the picture is. Drag to go back (up to %s) or forward.", clockText(ss.bufferedSec).c_str());
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip(tr("How far behind live the picture is. Drag to go back (up to %s) or forward."), clockText(ss.bufferedSec).c_str());
     flowNext(6 * gUi);
     ImGui::BeginDisabled(!ss.behind);
-    if (ImGui::Button("Jump to live##tvlive")) pl.goLive();
+    if (ImGui::Button(tr("Jump to live##tvlive"))) pl.goLive();
     ImGui::EndDisabled();
     flowNext(6 * gUi);
     ImGui::SetNextItemWidth(84 * gUi);
@@ -124,7 +124,7 @@ void tvPlaybackRow(App& a) {
         for (int mb : {64, 128, 256, 512, 1024, 2048}) { char l[24]; snprintf(l, sizeof l, "%d MB", mb); if (ImGui::Selectable(l, mb == pl.bufferMB())) { pl.setBufferMB(mb); a.tvBufMb = mb; plat::prefs().setI("tvBufMb", mb); } }
         ImGui::EndCombo();
     }
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("Memory for the live buffer (filled %.0f MB). When it is full the oldest part is dropped.", ss.bufferBytes / 1e6);
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip(tr("Memory for the live buffer (filled %.0f MB). When it is full the oldest part is dropped."), ss.bufferBytes / 1e6);
     ImGui::EndDisabled();
 }
 
@@ -144,13 +144,13 @@ void tvRecordRow(App& a) {
         ImGui::PushStyleColor(ImGuiCol_Text, pal::badRed());
         if (ImGui::Button(b)) pl.stopRecording();
         ImGui::PopStyleColor();
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Stops the recording (R)");
-        if (rs.droppedPackets) { flowNext(4 * gUi); ImGui::TextColored(pal::warnAmber(), "dropped %llu", (unsigned long long)rs.droppedPackets); if (ImGui::IsItemHovered()) ImGui::SetTooltip("The disk was too slow: some packets are missing from the recording."); }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip(tr("Stops the recording (R)"));
+        if (rs.droppedPackets) { flowNext(4 * gUi); ImGui::TextColored(pal::warnAmber(), tr("dropped %llu"), (unsigned long long)rs.droppedPackets); if (ImGui::IsItemHovered()) ImGui::SetTooltip(tr("The disk was too slow: some packets are missing from the recording.")); }
     } else {
         ImGui::BeginDisabled(pl.selected() < 0);
         const ImVec2 p0 = ImGui::GetCursorScreenPos();
         const float sp = ImGui::CalcTextSize(" ").x;
-        if (ImGui::Button("    Record##tvrec")) tvRecordStart(a);
+        if (ImGui::Button(tr("    Record##tvrec"))) tvRecordStart(a);
         ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(p0.x + ImGui::GetStyle().FramePadding.x + 2.2f * sp, p0.y + ImGui::GetItemRectSize().y * 0.5f), 3.2f * gUi, pl.selected() >= 0 ? ImGui::GetColorU32(pal::badRed()) : IM_COL32(120, 80, 78, 255));
         ImGui::EndDisabled();
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", pl.selected() < 0 ? "Play a service first" : "Saves this service (its video, audio and subtitles only) as a .ts file in the recordings folder (R)");
@@ -159,7 +159,7 @@ void tvRecordRow(App& a) {
     ImGui::BeginDisabled(rs.active);
     ImGui::SetNextItemWidth(70 * gUi);
     if (ImGui::InputInt("min##tvrecmin", &a.tvRecMin, 0, 0)) { a.tvRecMin = std::max(0, std::min(24 * 60, a.tvRecMin)); plat::prefs().setI("tvRecMin", a.tvRecMin); }
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("Stop the recording after this many minutes (0 = no limit)");
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip(tr("Stop the recording after this many minutes (0 = no limit)"));
     flowNext(6 * gUi);
     if (ImGui::Checkbox("at##tvrecat", &a.tvRecAtOn)) plat::prefs().setB("tvRecAtOn", a.tvRecAtOn);
     ImGui::SameLine(0, 4 * gUi);
@@ -169,10 +169,10 @@ void tvRecordRow(App& a) {
     ImGui::SetNextItemWidth(44 * gUi);
     if (ImGui::InputInt("##tvrecm", &a.tvRecAtM, 0, 0)) { a.tvRecAtM = std::max(0, std::min(59, a.tvRecAtM)); plat::prefs().setI("tvRecAtM", a.tvRecAtM); }
     ImGui::EndDisabled();
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("Stop the recording at this clock time (the next time it shows it)");
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip(tr("Stop the recording at this clock time (the next time it shows it)"));
     if (!a.tvRecDonePath.empty() && !rs.active) {
         flowNext(6 * gUi);
-        if (ImGui::SmallButton("Show recording")) dect2::openUrl(a.tvRecDonePath.substr(0, a.tvRecDonePath.find_last_of("/\\")));
+        if (ImGui::SmallButton(tr("Show recording"))) dect2::openUrl(a.tvRecDonePath.substr(0, a.tvRecDonePath.find_last_of("/\\")));
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", a.tvRecDonePath.c_str());
     }
     flowBreak();
@@ -206,16 +206,16 @@ void teletextTab(App& a) {
     ImGui::SameLine(); if (ImGui::SmallButton(">")) goPage(a.ttxPage + 1); if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Next page"));
     ImGui::SameLine(); if (ImGui::SmallButton("100")) goPage(100);
     ImGui::SameLine();
-    if (ImGui::Checkbox("hold", &a.ttxHold)) { TtxPage cur; if (a.ttxHold && tx.page(a.ttxPage, cur, a.ttxSub)) a.ttxHeld = cur; else a.ttxHold = false; }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Freeze the page (it keeps updating in the background)");
+    if (ImGui::Checkbox(tr("hold"), &a.ttxHold)) { TtxPage cur; if (a.ttxHold && tx.page(a.ttxPage, cur, a.ttxSub)) a.ttxHeld = cur; else a.ttxHold = false; }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip(tr("Freeze the page (it keeps updating in the background)"));
     ImGui::SameLine();
-    ImGui::Checkbox("reveal", &a.ttxReveal);
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Show concealed text (quiz answers)");
+    ImGui::Checkbox(tr("reveal"), &a.ttxReveal);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip(tr("Show concealed text (quiz answers)"));
     if (a.ttxEntry) { ImGui::SameLine(); ImGui::TextColored(ImVec4(0.95f, 0.85f, 0.4f, 1), "P%d%s", a.ttxEntryVal, a.ttxEntry == 1 ? "--" : "-"); }
-    else { ImGui::SameLine(); ImGui::TextDisabled("type a page number"); }
+    else { ImGui::SameLine(); ImGui::TextDisabled(tr("type a page number")); }
     {
         auto pages = tx.pages();
-        { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%zu pages received, %llu packets", pages.size(), (unsigned long long)tx.packets()); ImGui::PopTextWrapPos(); }
+        { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(tr("%zu pages received, %llu packets"), pages.size(), (unsigned long long)tx.packets()); ImGui::PopTextWrapPos(); }
         if (!pages.empty()) {
             ImGui::SameLine();
             std::string l = "available: ";
@@ -226,7 +226,7 @@ void teletextTab(App& a) {
     }
     TtxPage pg;
     if (a.ttxHold) pg = a.ttxHeld;
-    else if (!tx.page(a.ttxPage, pg, a.ttxSub) && !idDemo) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("page %d has not been received yet (pages repeat every few seconds)", a.ttxPage); ImGui::PopTextWrapPos(); } return; }
+    else if (!tx.page(a.ttxPage, pg, a.ttxSub) && !idDemo) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(tr("page %d has not been received yet (pages repeat every few seconds)"), a.ttxPage); ImGui::PopTextWrapPos(); } return; }
     // subpages: the newest by default, or step through the ones held
     {
         const std::vector<int> subs = tx.subpages(a.ttxPage);
@@ -234,9 +234,9 @@ void teletextTab(App& a) {
             int at = 0;
             for (int i = 0; i < (int)subs.size(); i++) if (subs[i] == pg.subcode) at = i;
             if (ImGui::SmallButton("<##sp")) { a.ttxSub = subs[(at + (int)subs.size() - 1) % (int)subs.size()]; a.ttxHold = false; } if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Previous sub-page"));
-            ImGui::SameLine(); ImGui::Text("subpage %d/%d", at + 1, (int)subs.size());
+            ImGui::SameLine(); ImGui::Text(tr("subpage %d/%d"), at + 1, (int)subs.size());
             ImGui::SameLine(); if (ImGui::SmallButton(">##sp")) { a.ttxSub = subs[(at + 1) % (int)subs.size()]; a.ttxHold = false; } if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Next sub-page"));
-            ImGui::SameLine(); if (ImGui::SmallButton("newest")) a.ttxSub = -1;
+            ImGui::SameLine(); if (ImGui::SmallButton(tr("newest"))) a.ttxSub = -1;
         }
     }
     // Fastext: the four coloured keys and the index key, from packet 27
@@ -323,11 +323,11 @@ void playerTab(App& a) {
         char fb[48]; snprintf(fb, sizeof fb, "%.3f MHz", a.freqMhz);
         const std::string curLab = cur ? channelLabel(*cur, muxName(a)) : std::string(fb);
         ImGui::AlignTextToFramePadding();
-        ImGui::TextDisabled("channel");
+        ImGui::TextDisabled(tr("channel"));
         ImGui::SameLine();
         ImGui::SetNextItemWidth(std::min(360 * gUi, ImGui::GetContentRegionAvail().x - 150 * gUi));   // room for the HD box and the + and x buttons
         if (ImGui::BeginCombo("##chan", ((cur && cur->favourite) ? "* " + curLab : curLab).c_str())) {
-            if (a.channels.empty()) ImGui::TextDisabled("no channels yet - run a scan (Scan tab)");
+            if (a.channels.empty()) ImGui::TextDisabled(tr("no channels yet - run a scan (Scan tab)"));
             for (size_t i = 0; i < a.channels.size(); i++) {
                 const SavedChannel& c = a.channels[i];
                 std::string l = (c.favourite ? "* " : "") + channelLabel(c, muxName(a));
@@ -341,12 +341,12 @@ void playerTab(App& a) {
         tvHdCheckbox(a);
         ImGui::SameLine();
         if (ImGui::SmallButton("+##fav")) { ImGui::OpenPopup("savefav"); if (!a.favName[0] && cur) snprintf(a.favName, sizeof a.favName, "%s", cur->name.c_str()); }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Save the current frequency as a favourite channel");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip(tr("Save the current frequency as a favourite channel"));
         if (ImGui::BeginPopup("savefav")) {
-            ImGui::TextDisabled("name for %.3f MHz", a.freqMhz);
+            ImGui::TextDisabled(tr("name for %.3f MHz"), a.freqMhz);
             ImGui::SetNextItemWidth(220 * gUi);
             ImGui::InputText("##favn", a.favName, sizeof a.favName);
-            if (ImGui::Button("Save")) {
+            if (ImGui::Button(tr("Save"))) {
                 SavedChannel sc; sc.freqMhz = a.freqMhz; sc.bwMhz = kBw[a.bwIdx].mhz; sc.name = a.favName; sc.favourite = true;
                 if (cur) { sc.mode = cur->mode; sc.snrDb = cur->snrDb; sc.nServices = cur->nServices; }
                 bool f = false;
@@ -360,7 +360,7 @@ void playerTab(App& a) {
         if (cur) {
             ImGui::SameLine();
             if (ImGui::SmallButton("x##del")) { const double f = cur->freqMhz; a.channels.erase(std::remove_if(a.channels.begin(), a.channels.end(), [&](const SavedChannel& c) { return std::fabs(c.freqMhz - f) < 0.01; }), a.channels.end()); savePrefs(a); }
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Forget this channel");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip(tr("Forget this channel"));
         }
         const float qMin = ImGui::CalcTextSize("signal quality 100%  excellent").x + 16 * gUi;
         sameLineIf(qMin, 18 * gUi);   // on a line of its own when the tab is narrow
@@ -379,15 +379,15 @@ void playerTab(App& a) {
             std::string cur = a.plpSel < 0 ? "automatic" : "PLP " + std::to_string(a.plpSel);
             if (a.plpSel < 0 && rx.plpSelectedId >= 0) cur += " (PLP " + std::to_string(rx.plpSelectedId) + ")";
             ImGui::AlignTextToFramePadding();
-            ImGui::TextDisabled("PLP");
+            ImGui::TextDisabled(tr("PLP"));
             ImGui::SameLine();
             ImGui::SetNextItemWidth(260 * gUi);
             if (ImGui::BeginCombo("##plp", cur.c_str())) {
-                if (ImGui::Selectable("automatic (first data PLP)", a.plpSel < 0)) { a.plpSel = -1; a.engine.selectPlp(-1); }
+                if (ImGui::Selectable(tr("automatic (first data PLP)"), a.plpSel < 0)) { a.plpSel = -1; a.engine.selectPlp(-1); }
                 for (auto& p : rx.plpList) if (ImGui::Selectable(lab(p).c_str(), a.plpSel == p.id)) { a.plpSel = p.id; a.engine.selectPlp(p.id); }
                 ImGui::EndCombo();
             }
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("This multiplex carries several physical layer pipes. The receiver decodes one at a time.");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip(tr("This multiplex carries several physical layer pipes. The receiver decodes one at a time."));
         }
         for (auto& u : rx.unsupported) { ImGui::TextColored(ImVec4(0.95f, 0.6f, 0.2f, 1), "! %s", u.c_str()); }
     }
@@ -396,7 +396,7 @@ void playerTab(App& a) {
     const ImGuiID ctlKey = ImGui::GetID("##tvctlh");
     const float h = std::max(60.f * gUi, ImGui::GetContentRegionAvail().y - stor->GetFloat(ctlKey, 44.f * gUi));
     ImGui::BeginChild("vbox", ImVec2(-1, h), ImGuiChildFlags_Borders);
-    if (pl.selected() < 0) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Pick a service in the list on the right to start playback."); ImGui::PopTextWrapPos(); }
+    if (pl.selected() < 0) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(tr("Pick a service in the list on the right to start playback.")); ImGui::PopTextWrapPos(); }
     else if (!ps.videoNote.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", ps.videoNote.c_str()); ImGui::PopTextWrapPos(); }
     else if (!a.video.has()) ImGui::TextDisabled("%s", ps.hasAudio && !ps.hasVideo ? "audio only" : ps.status.c_str());
     else a.video.draw(ImGui::GetContentRegionAvail());
@@ -454,7 +454,7 @@ void playerTab(App& a) {
             for (auto& l : kLangs) if (ImGui::Selectable(l.name, epgLanguageKey(l.code) == epgLanguageKey(a.tvLang))) { a.tvLang = l.code; savePrefs(a); }
             ImGui::EndCombo();
         }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("The language to use where a channel offers several:\nprogramme names and descriptions in the guide, the audio track and the subtitles.\nWhere a channel does not have it, what it sends first is used.");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip(tr("The language to use where a channel offers several:\nprogramme names and descriptions in the guide, the audio track and the subtitles.\nWhere a channel does not have it, what it sends first is used."));
         flowNext();
         if (epgPreferredLanguage() != epgLanguageKey(a.tvLang)) epgSetPreferredLanguage(a.tvLang);
     }
@@ -543,7 +543,7 @@ static void multiChannelTable(App& a) {
 
 void rightPanel(App& a) {
     if (const ModeUi* mu = modeUi(a.family)) if (mu->list) {
-        if (!a.engine.running() && a.rx.standard > 0) ImGui::TextDisabled("stopped - showing saved results");
+        if (!a.engine.running() && a.rx.standard > 0) ImGui::TextDisabled(tr("stopped - showing saved results"));
         mu->list(a); return;
     }
     const bool run = a.engine.running();
@@ -557,14 +557,14 @@ void rightPanel(App& a) {
         if (pal::dev()) {   // one plain line: 14:41:34 UTC
             ImGui::Text("%s%s", hm, ss);
             ImGui::SameLine(0, 6 * gUi);
-            ImGui::TextDisabled("UTC");
+            ImGui::TextDisabled(tr("UTC"));
         } else {
         ImGui::PushFont(a.ui, 40.f);
         ImGui::TextUnformatted(hm);
         ImGui::PopFont();
         ImGui::SameLine(0, 4 * gUi);
         ImGui::BeginGroup();
-        ImGui::TextDisabled("UTC");
+        ImGui::TextDisabled(tr("UTC"));
         ImGui::TextDisabled("%s", ss);
         ImGui::EndGroup();
         }
@@ -619,8 +619,8 @@ void rightPanel(App& a) {
         const bool clicked = ImGui::InvisibleButton("##card", ImVec2(w, cardH));
         const bool hov = ImGui::IsItemHovered();
         if (!sv.name.empty() && ImGui::BeginPopupContextItem("##tvlogo")) {
-            if (ImGui::MenuItem("Set logo (PNG)...")) { const std::string f = plat::openFileDialog(); if (!f.empty()) tvLogoSet(sv.name, f); }
-            if (ImGui::MenuItem("Remove logo", nullptr, false, tvLogo(sv.name) != nullptr)) tvLogoClear(sv.name);
+            if (ImGui::MenuItem(tr("Set logo (PNG)..."))) { const std::string f = plat::openFileDialog(); if (!f.empty()) tvLogoSet(sv.name, f); }
+            if (ImGui::MenuItem(tr("Remove logo"), nullptr, false, tvLogo(sv.name) != nullptr)) tvLogoClear(sv.name);
             ImGui::EndPopup();
         }
         if (clicked) {
@@ -705,7 +705,7 @@ void rightPanel(App& a) {
         const Player& pl = a.engine.player();
         const PlayerStats ps = pl.stats();
         sectionHeader(Ic::Play, "Player");
-        if (pl.selected() < 0) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("click a service to play it"); ImGui::PopTextWrapPos(); }
+        if (pl.selected() < 0) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(tr("click a service to play it")); ImGui::PopTextWrapPos(); }
         else if (ImGui::BeginTable("pkv", 2, ImGuiTableFlags_SizingFixedFit)) {
             ImGui::TableSetupColumn("k", ImGuiTableColumnFlags_WidthFixed, 88 * gUi);
             auto row = [&](Ic ic, const char* k, const char* fmt, auto... args) {
@@ -719,15 +719,15 @@ void rightPanel(App& a) {
             row(Ic::Warning, "Errors", "%llu     underruns %d", (unsigned long long)ps.errors, ps.underruns);
             if (ps.repairEvents) row(Ic::Camera, "Repaired", "%llu damaged spans, %llu pictures replaced", (unsigned long long)ps.repairEvents, (unsigned long long)ps.repairedFrames);
             if (ps.concealEvents) row(Ic::Pulse, "Smoothed", "%llu gaps, %llu pictures generated (%s)", (unsigned long long)ps.concealEvents, (unsigned long long)ps.concealedFrames, ps.concealBackend.c_str());
-            ImGui::TableNextRow(); ImGui::TableNextColumn(); iconInline(Ic::Pulse, iconDim(), 0.9f); ImGui::SameLine(0, 5 * gUi); ImGui::TextDisabled("Gaps"); ImGui::TableNextColumn();
-            { bool on = a.engine.player().conceal(); if (ImGui::Checkbox("smooth picture gaps", &on)) a.engine.player().setConceal(on);
-              if (ImGui::IsItemHovered()) ImGui::SetTooltip("When a fade swallows part of the stream or damages the pictures after it, generate the missing pictures\n(Apple ML interpolation) instead of freezing or showing smears. It hides the loss; it cannot bring the data back.\nThe sound is not changed: a dropout stays a clean silence."); }
+            ImGui::TableNextRow(); ImGui::TableNextColumn(); iconInline(Ic::Pulse, iconDim(), 0.9f); ImGui::SameLine(0, 5 * gUi); ImGui::TextDisabled(tr("Gaps")); ImGui::TableNextColumn();
+            { bool on = a.engine.player().conceal(); if (ImGui::Checkbox(tr("smooth picture gaps"), &on)) a.engine.player().setConceal(on);
+              if (ImGui::IsItemHovered()) ImGui::SetTooltip(tr("When a fade swallows part of the stream or damages the pictures after it, generate the missing pictures\n(Apple ML interpolation) instead of freezing or showing smears. It hides the loss; it cannot bring the data back.\nThe sound is not changed: a dropout stays a clean silence.")); }
 #if defined(__APPLE__) || defined(_WIN32)
-            ImGui::TableNextRow(); ImGui::TableNextColumn(); iconInline(Ic::Chip, iconDim(), 0.9f); ImGui::SameLine(0, 5 * gUi); ImGui::TextDisabled("Decode"); ImGui::TableNextColumn();
-            { bool on = a.engine.player().hardwareDecode(); if (ImGui::Checkbox("hardware video decoding", &on)) { a.engine.player().setHardwareDecode(on); plat::prefs().setB("hwVideo", on); plat::prefs().flush(); }
-              if (ImGui::IsItemHovered()) ImGui::SetTooltip("Use the graphics chip to decode the video. It saves processor time for the receiver.\nSwitch it off if the picture shows green or garbled patches (a graphics driver problem)."); }
+            ImGui::TableNextRow(); ImGui::TableNextColumn(); iconInline(Ic::Chip, iconDim(), 0.9f); ImGui::SameLine(0, 5 * gUi); ImGui::TextDisabled(tr("Decode")); ImGui::TableNextColumn();
+            { bool on = a.engine.player().hardwareDecode(); if (ImGui::Checkbox(tr("hardware video decoding"), &on)) { a.engine.player().setHardwareDecode(on); plat::prefs().setB("hwVideo", on); plat::prefs().flush(); }
+              if (ImGui::IsItemHovered()) ImGui::SetTooltip(tr("Use the graphics chip to decode the video. It saves processor time for the receiver.\nSwitch it off if the picture shows green or garbled patches (a graphics driver problem).")); }
 #endif
-            ImGui::TableNextRow(); ImGui::TableNextColumn(); iconInline(a.muted ? Ic::Mute : Ic::Speaker, iconDim(), 0.9f); ImGui::SameLine(0, 5 * gUi); ImGui::TextDisabled("Volume"); ImGui::TableNextColumn();
+            ImGui::TableNextRow(); ImGui::TableNextColumn(); iconInline(a.muted ? Ic::Mute : Ic::Speaker, iconDim(), 0.9f); ImGui::SameLine(0, 5 * gUi); ImGui::TextDisabled(tr("Volume")); ImGui::TableNextColumn();
             ImGui::SetNextItemWidth(-1);
             float vol = a.volume * 100.f;
             if (ImGui::SliderFloat("##vol", &vol, 0, 100, "%.0f %%")) { a.volume = vol / 100.f; a.engine.player().setVolume(a.volume); }
@@ -739,22 +739,22 @@ void rightPanel(App& a) {
             if (!ps.audioNote.empty()) { codecHelpButton(CodecHelp::Dra); ImGui::SameLine(); ImGui::PushTextWrapPos(0); ImGui::TextColored(pal::warnAmber(), "%s", ps.audioNote.c_str()); ImGui::PopTextWrapPos(); }
             {   // ATSC 3.0 sound in AC-4 and no decoder library: say why there is no sound
                 const dect2::Ac4Status a4 = dect2::ac4Status();
-                if (a4.seen && a4.dropped && !a4.hasDecoder) { codecHelpButton(CodecHelp::Ac4); ImGui::SameLine(); ImGui::PushTextWrapPos(0); ImGui::TextColored(pal::warnAmber(), "This service's sound is AC-4 (Dolby). OnAir needs an optional FFmpeg with an AC-4 decoder to play it."); ImGui::PopTextWrapPos(); }
+                if (a4.seen && a4.dropped && !a4.hasDecoder) { codecHelpButton(CodecHelp::Ac4); ImGui::SameLine(); ImGui::PushTextWrapPos(0); ImGui::TextColored(pal::warnAmber(), tr("This service's sound is AC-4 (Dolby). OnAir needs an optional FFmpeg with an AC-4 decoder to play it.")); ImGui::PopTextWrapPos(); }
             }
             if (pl.hasSavableAudio()) {   // the raw DRA (else MPEG audio) stream to a file FFmpeg can play
                 static std::string savedTo, saveErr;
                 Player& mp = a.engine.player();
                 if (mp.savingAudioStream()) {
-                    if (ImGui::Button("Stop saving")) mp.stopSaveAudioStream();
-                    ImGui::SameLine(); ImGui::TextDisabled("%.1f kB written", mp.savedAudioBytes() / 1024.0);
+                    if (ImGui::Button(tr("Stop saving"))) mp.stopSaveAudioStream();
+                    ImGui::SameLine(); ImGui::TextDisabled(tr("%.1f kB written"), mp.savedAudioBytes() / 1024.0);
                 } else {
-                    if (ImGui::Button("Save stream")) {
+                    if (ImGui::Button(tr("Save stream"))) {
                         std::string nm = "service";
                         for (const auto& sv : a.ts.services) if (sv.id == pl.selected() && !sv.name.empty()) nm = sv.name;
                         savedTo = mp.saveAudioStream(streamSavePath(nm));
                         saveErr = savedTo.empty() ? "cannot save: no DRA or MPEG audio stream, or the file cannot be written" : "";
                     }
-                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Write the raw audio stream of this service (DRA, else MPEG audio) to a file you can play with FFmpeg (see the README).");
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip(tr("Write the raw audio stream of this service (DRA, else MPEG audio) to a file you can play with FFmpeg (see the README)."));
                 }
                 if (!saveErr.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextColored(pal::warnAmber(), "%s", saveErr.c_str()); ImGui::PopTextWrapPos(); }
                 else if (!savedTo.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", savedTo.c_str()); ImGui::PopTextWrapPos(); }
@@ -768,19 +768,19 @@ void rightPanel(App& a) {
         const float vh = std::min(vw * 9.f / 16.f, std::max(60.f, ImGui::GetContentRegionAvail().y - 52.f - 2 * ImGui::GetTextLineHeightWithSpacing()));
         ImGui::BeginChild("video", ImVec2(0, vh), ImGuiChildFlags_Borders);
         const PlayerStats ps = a.engine.player().stats();
-        if (a.engine.player().selected() < 0) ImGui::TextDisabled("no picture");
+        if (a.engine.player().selected() < 0) ImGui::TextDisabled(tr("no picture"));
         else if (!ps.videoNote.empty()) {
             ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", ps.videoNote.c_str()); ImGui::PopTextWrapPos();
             ImGui::Spacing();
             externalPlayerBox(a);
         }
-        else if (!ps.hasVideo && ps.hasAudio) ImGui::TextDisabled("audio only");
+        else if (!ps.hasVideo && ps.hasAudio) ImGui::TextDisabled(tr("audio only"));
         else if (!a.video.has()) ImGui::TextDisabled("%s", ps.status.c_str());
         else a.video.draw(ImGui::GetContentRegionAvail());
         ImGui::EndChild();
         // The picture here is only a preview: the big one is on the TV tab (and many people look for it here, #118)
         ImGui::PushTextWrapPos(0);
-        ImGui::TextDisabled("This is a small preview. For the big picture, open the TV tab (the pop-out window and full screen are there too).");
+        ImGui::TextDisabled(tr("This is a small preview. For the big picture, open the TV tab (the pop-out window and full screen are there too)."));
         ImGui::PopTextWrapPos();
     }
     {
@@ -788,10 +788,10 @@ void rightPanel(App& a) {
         iconLabel(Ic::Link, "Outputs", iconAccent());
         ImGui::SameLine(0, 10 * gUi);
         iconInline(Ic::File, os.fileOpen ? IM_COL32(120, 190, 235, 255) : IM_COL32(86, 94, 104, 255), 0.9f); ImGui::SameLine(0, 3 * gUi);
-        ImGui::TextColored(os.fileOpen ? (pal::dev() ? pal::accent() : ImVec4(0.55f, 0.76f, 0.92f, 1)) : ImVec4(0.45f, 0.48f, 0.52f, 1), "file");
+        ImGui::TextColored(os.fileOpen ? (pal::dev() ? pal::accent() : ImVec4(0.55f, 0.76f, 0.92f, 1)) : ImVec4(0.45f, 0.48f, 0.52f, 1), tr("file"));
         ImGui::SameLine(0, 10 * gUi);
         iconInline(Ic::Globe, os.udpOpen ? IM_COL32(120, 190, 235, 255) : IM_COL32(86, 94, 104, 255), 0.9f); ImGui::SameLine(0, 3 * gUi);
-        ImGui::TextColored(os.udpOpen ? (pal::dev() ? pal::accent() : ImVec4(0.55f, 0.76f, 0.92f, 1)) : ImVec4(0.45f, 0.48f, 0.52f, 1), "udp");
+        ImGui::TextColored(os.udpOpen ? (pal::dev() ? pal::accent() : ImVec4(0.55f, 0.76f, 0.92f, 1)) : ImVec4(0.45f, 0.48f, 0.52f, 1), tr("udp"));
         if (os.fileOpen) { ImGui::SameLine(); ImGui::TextDisabled("%.1f MB", os.fileBytes / 1e6); }
         if (os.udpOpen) { ImGui::SameLine(); ImGui::TextDisabled("%s:%d%s", a.udpHost, a.out.port, a.out.rtp ? " RTP" : ""); }
     }

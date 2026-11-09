@@ -536,3 +536,49 @@ Remove after: Inmarsat
 How long after it was last heard an entry stays in the list and on the map. Default is the rule of the mode; Never keeps everything.
 Custom remove-after time (minutes)
 Used by every Remove after row set to Custom.
+%.1f kB written
+%zu pages received, %llu packets
+Decode
+Forget this channel
+Freeze the page (it keeps updating in the background)
+Freeze the picture; the service keeps filling the buffer. Play resumes from here (Space)
+Gaps
+How far behind live the picture is. Drag to go back (up to %s) or forward.
+Jump to live##tvlive
+Memory for the live buffer (filled %.0f MB). When it is full the oldest part is dropped.
+PLP
+Pick a service in the list on the right to start playback.
+    Record##tvrec
+Remove logo
+Save stream
+Save the current frequency as a favourite channel
+Set logo (PNG)...
+Show concealed text (quiz answers)
+Stop saving
+Stop the recording after this many minutes (0 = no limit)
+Stop the recording at this clock time (the next time it shows it)
+Stops the recording (R)
+The disk was too slow: some packets are missing from the recording.
+The language to use where a channel offers several:\nprogramme names and descriptions in the guide, the audio track and the subtitles.\nWhere a channel does not have it, what it sends first is used.
+This is a small preview. For the big picture, open the TV tab (the pop-out window and full screen are there too).
+This multiplex carries several physical layer pipes. The receiver decodes one at a time.
+This service's sound is AC-4 (Dolby). OnAir needs an optional FFmpeg with an AC-4 decoder to play it.
+UTC
+Use the graphics chip to decode the video. It saves processor time for the receiver.\nSwitch it off if the picture shows green or garbled patches (a graphics driver problem).
+When a fade swallows part of the stream or damages the pictures after it, generate the missing pictures\n(Apple ML interpolation) instead of freezing or showing smears. It hides the loss; it cannot bring the data back.\nThe sound is not changed: a dropout stays a clean silence.
+Write the raw audio stream of this service (DRA, else MPEG audio) to a file you can play with FFmpeg (see the README).
+audio only
+automatic (first data PLP)
+click a service to play it
+dropped %llu
+hardware video decoding
+name for %.3f MHz
+newest
+no channels yet - run a scan (Scan tab)
+page %d has not been received yet (pages repeat every few seconds)
+reveal
+smooth picture gaps
+stopped - showing saved results
+subpage %d/%d
+type a page number
+udp

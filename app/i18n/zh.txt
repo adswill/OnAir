@@ -3827,3 +3827,50 @@ Custom remove-after time (minutes)	自定义移除时间(分钟)
 Used by every Remove after row set to Custom.	每个设为自定义的移除时间行都使用它。
 Default	默认
 Custom	自定义
+#  TV player and teletext (tr() added in panels/tv.cpp)
+%.1f kB written	已写入 %.1f kB
+%zu pages received, %llu packets	已接收 %zu 页，%llu 个数据包
+Decode	解码
+Forget this channel	忘记此频道
+Freeze the page (it keeps updating in the background)	冻结页面（后台仍在更新）
+Freeze the picture; the service keeps filling the buffer. Play resumes from here (Space)	冻结画面；节目仍继续填充缓冲区。播放将从此处继续（空格键）
+Gaps	间断
+How far behind live the picture is. Drag to go back (up to %s) or forward.	画面落后直播多久。拖动可后退（最多 %s）或前进。
+Jump to live##tvlive	跳到直播##tvlive
+Memory for the live buffer (filled %.0f MB). When it is full the oldest part is dropped.	直播缓冲区的内存（已用 %.0f MB）。缓冲区满时将丢弃最旧的部分。
+PLP	PLP
+Pick a service in the list on the right to start playback.	在右侧列表中选择一个节目即可开始播放。
+    Record##tvrec	    录制##tvrec
+Remove logo	移除台标
+Save stream	保存码流
+Save the current frequency as a favourite channel	将当前频率保存为收藏频道
+Set logo (PNG)...	设置台标（PNG）...
+Show concealed text (quiz answers)	显示隐藏文字（测验答案）
+Stop saving	停止保存
+Stop the recording after this many minutes (0 = no limit)	在这么多分钟后停止录制（0 = 不限）
+Stop the recording at this clock time (the next time it shows it)	在此时刻停止录制（下一次出现该时间时）
+Stops the recording (R)	停止录制（R）
+The disk was too slow: some packets are missing from the recording.	磁盘速度太慢：录像中缺少一些数据包。
+The language to use where a channel offers several:\nprogramme names and descriptions in the guide, the audio track and the subtitles.\nWhere a channel does not have it, what it sends first is used.	频道提供多种语言时使用的语言：\n节目指南中的节目名称和说明、音轨和字幕。\n频道没有该语言时，使用其首先发送的语言。
+This is a small preview. For the big picture, open the TV tab (the pop-out window and full screen are there too).	这是一个小预览。要看大画面，请打开“电视”标签页（弹出窗口和全屏也在那里）。
+This multiplex carries several physical layer pipes. The receiver decodes one at a time.	此复用包含多个物理层管道。接收机一次解码一个。
+This service's sound is AC-4 (Dolby). OnAir needs an optional FFmpeg with an AC-4 decoder to play it.	此节目的声音为 AC-4（杜比）。OnAir 需要带有 AC-4 解码器的可选 FFmpeg 才能播放。
+UTC	UTC
+Use the graphics chip to decode the video. It saves processor time for the receiver.\nSwitch it off if the picture shows green or garbled patches (a graphics driver problem).	使用显卡芯片解码视频，可为接收机节省处理器时间。\n如果画面出现绿色或花屏色块（显卡驱动问题），请关闭它。
+When a fade swallows part of the stream or damages the pictures after it, generate the missing pictures\n(Apple ML interpolation) instead of freezing or showing smears. It hides the loss; it cannot bring the data back.\nThe sound is not changed: a dropout stays a clean silence.	当衰落吞掉部分码流或损坏其后的画面时，生成缺失的画面\n（Apple ML 插帧），而不是画面冻结或出现拖影。这只是掩盖损失，无法找回数据。\n声音不变：中断时仍是干净的静音。
+Write the raw audio stream of this service (DRA, else MPEG audio) to a file you can play with FFmpeg (see the README).	将此节目的原始音频流（DRA，否则为 MPEG 音频）写入文件，可用 FFmpeg 播放（见 README）。
+audio only	仅音频
+automatic (first data PLP)	自动（第一个数据 PLP）
+click a service to play it	点击节目即可播放
+dropped %llu	丢失 %llu
+hardware video decoding	硬件视频解码
+name for %.3f MHz	%.3f MHz 的名称
+newest	最新
+no channels yet - run a scan (Scan tab)	还没有频道 - 请运行扫描（扫描标签页）
+page %d has not been received yet (pages repeat every few seconds)	尚未收到第 %d 页（页面每隔几秒重复一次）
+reveal	显示
+smooth picture gaps	平滑画面间断
+stopped - showing saved results	已停止 - 显示已保存的结果
+subpage %d/%d	子页 %d/%d
+type a page number	输入页码
+udp	udp
