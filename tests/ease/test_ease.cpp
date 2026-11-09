@@ -65,8 +65,11 @@ static void testPreselect() {
     CHECK(preselectAction(false, true, false, 1541.45, 1537.7) == P::LeaveAlone); // tuned by hand
 }
 
+int testNavtex();
+
 int main() {
     testSonde(); testGeo(); testPreselect();
+    fails += testNavtex();
     if (!fails) printf("ease ok\n");
     return fails ? 1 : 0;
 }

@@ -29,6 +29,8 @@
 #include <cstring>
 #include <filesystem>
 #include <ctime>
+#include "dect2/ease/navtex.h"
+#include "dect2/geo/maidenhead.h"
 
 void marineFaxTexture();   // below: the texture of a picture loaded from the results file
 
@@ -161,14 +163,55 @@ void subjectBadge(char s) {
 
 // ---------------------------------------------------------------- NAVTEX
 
+// "in 37 min", "in 2 h 5 min" (a station's slot length is 10 minutes, so "now" covers the first of them)
+std::string navSlotIn(int secs) {
+    char b[48];
+    if (secs < 60) snprintf(b, sizeof b, "%s", tr("about to start"));
+    else if (secs < 3600) snprintf(b, sizeof b, tr("in %d min"), secs / 60);
+    else snprintf(b, sizeof b, tr("in %d h %d min"), secs / 3600, (secs % 3600) / 60);
+    return b;
+}
+
+int navKhz(const App& a) { const int k = (int)std::lround(a.freqMhz * 1000.0); return k == 490 ? 490 : 518; }
+
+// the stations you can expect: nearest first, with the next broadcast of each
+void navStationList(const App& a) {
+    if (!receiverLocationSet()) {
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextDisabled("%s", tr("Each station sends for ten minutes every four hours. Set your position (View > Map) to see the nearest ones and when they send."));
+        ImGui::PopTextWrapPos();
+        return;
+    }
+    double la, lo;
+    receiverLocation(la, lo);
+    const auto near = dect2::ease::navtexNearest(la, lo, navKhz(a), (int64_t)time(nullptr));
+    if (near.empty()) { ImGui::TextDisabled("%s", tr("No station on this frequency in the list.")); return; }
+    const auto* soon = &near[0];
+    for (const auto& n : near) if (n.secsToNext < soon->secsToNext) soon = &n;
+    ImGui::PushTextWrapPos(0);
+    ImGui::TextDisabled(tr("Next from your nearest stations: %s (%c), %s."), soon->st->name, soon->st->letter, navSlotIn(soon->secsToNext).c_str());
+    ImGui::PopTextWrapPos();
+    for (const auto& n : near) {
+        ImGui::TextDisabled("%c  %s, %.0f km, %s", n.st->letter, n.st->name, n.km, navSlotIn(n.secsToNext).c_str());
+    }
+    ImGui::PushTextWrapPos(0);
+    ImGui::TextDisabled("%s", tr("Stations and times come from a community list and may be out of date. Range is usually about 400 nautical miles."));
+    ImGui::PopTextWrapPos();
+}
+
 void navtexView(App& a) {
     const dect2::MarineTelemetry& t = a.rx.marine;
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     const float lw = std::min(380.f * gUi, W * 0.42f);
     std::vector<const NavtexMessage*> rows;
     for (const auto& m : t.navtex) rows.push_back(&m);
-    std::stable_sort(rows.begin(), rows.end(), [](const NavtexMessage* x, const NavtexMessage* y) {
-        if (x->station != y->station) return x->station < y->station;
+    const bool havePos = receiverLocationSet();
+    double myLa = 0, myLo = 0;
+    if (havePos) receiverLocation(myLa, myLo);
+    const int navK = navKhz(a);
+    auto stKm = [&](char c) { const auto* s = dect2::ease::navtexByLetter(c, navK, havePos, myLa, myLo); if (!s || !havePos) return 1e9; double km = 0, br = 0; dect2::greatCircle(myLa, myLo, s->lat, s->lon, km, br); return km; };
+    std::stable_sort(rows.begin(), rows.end(), [&](const NavtexMessage* x, const NavtexMessage* y) {
+        if (x->station != y->station) { const double kx = stKm(x->station), ky = stKm(y->station); return kx != ky ? kx < ky : x->station < y->station; }   // the nearest station first
         return x->rxSec > y->rxSec;      // newest first within a station
     });
     const NavtexMessage* sel = nullptr;
@@ -176,7 +219,8 @@ void navtexView(App& a) {
     if (!sel && !t.navtex.empty()) sel = &t.navtex.back();
 
     ImGui::BeginChild("##nav_l", ImVec2(lw, H), ImGuiChildFlags_Borders);
-    if (rows.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", live(a) ? "no NAVTEX message yet (one takes a minute or more)" : "start the receiver"); ImGui::PopTextWrapPos(); }
+    if (rows.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", live(a) ? tr("No NAVTEX message yet.") : tr("Start the receiver.")); ImGui::PopTextWrapPos(); ImGui::Spacing(); navStationList(a); }
+    else if (typo::collapsingHeader(tr("Nearest stations###navnear"))) navStationList(a);
     char cur = 0;
     bool open = true;
     for (const auto* m : rows) {
@@ -184,8 +228,10 @@ void navtexView(App& a) {
             cur = m->station;
             int n = 0;
             for (const auto* x : rows) n += x->station == cur;
-            char h[48];
-            snprintf(h, sizeof h, "Station %c  (%d)###st%c", cur, n, cur);
+            char h[128];
+            const auto* known = dect2::ease::navtexByLetter(cur, navK, havePos, myLa, myLo);
+            if (known) snprintf(h, sizeof h, "Station %c  %s  (%d)###st%c", cur, known->name, n, cur);
+            else snprintf(h, sizeof h, "Station %c  (%d)###st%c", cur, n, cur);
             ImGui::SetNextItemOpen(true, ImGuiCond_Once);
             open = typo::collapsingHeader(h);
         }
