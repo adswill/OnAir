@@ -74,6 +74,7 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | Arktika-M RDAS | 266 | 268 | 267 | 226 | feat37-sd1 | 3.7; MSU-GS, X-band 30.72 Msym/s; numbers may need to move at merge |
 | Arktika-M GGAK | 267 | 269 | 268 | 227 | feat37-sd1 | 3.7; 1703 MHz PM; numbers may need to move at merge |
 | AWS L-band | 268 | 270 | 269 | 228 | feat37-sd1 | 3.7; MWR, 1707 MHz; numbers may need to move at merge |
+| ADS-L | 300 | 302 | 301 | 260 | feat38-adsl | 3.8; EASA ADS-L 4 SRD-860 on 868.2 / 868.4 / 869.525 MHz, feeds the FLARM receiver from the same capture (docs/ADSL-3.8.md); no live signal tested; numbers may need to move at merge |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |
@@ -81,6 +82,6 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 Protocol entries (a row with a subId, such as FT8 in HF digital or POCSAG in pagers) share their family on purpose; the test checks
 that each (family, subId) pair is unique instead.
 
-`kNumFamilies` = 269, `kPollSeqSlots` = 229 (families 213 to 234 and poll slots 189 to 194 are kept for the other 3.6 lanes).
+`kNumFamilies` = 301, `kPollSeqSlots` = 261 (families 213 to 234 and poll slots 189 to 194 are kept for the other 3.6 lanes).
 
 A new mode takes the next free family above the highest one in this table and the next free poll slot, and adds its row here.

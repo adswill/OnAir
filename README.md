@@ -83,7 +83,7 @@ OnAir is a receiver first. It can also send test signals through a transmit-capa
 |---|:---:|---|
 | **TV** | 14 | DVB-T/T2, DVB-S/S2/S2X, ISDB-S, TV sat beacon decoder, DVB-C, ATSC 1.0 and 3.0, ISDB-T, DTMB, analogue TV and MAC, analog FPV video (5.8 / 1.2 GHz), with a live player (picture, sound, subtitles, teletext, programme guide), recording, pause and live buffer, and 2-3 adjacent channels from one wide capture |
 | **Broadcast radio** | 7 | DAB+ (with a programme guide), DRM (with its data services), HD Radio, CDR, AM broadcast (medium wave and shortwave), AM stereo (C-QUAM), and FM with RDS, a Mono switch for weak stations and a saved-station library |
-| **Aviation** | 18 | ADS-B with a live map, ASTERIX radar data from UDP or a file, Mode A/C squawks and altitudes, UAT, ACARS, VDL2 and VDL4, HFDL, airband, VOR / ILS / NDB, FLARM, drones |
+| **Aviation** | 19 | ADS-B with a live map, ASTERIX radar data from UDP or a file, Mode A/C squawks and altitudes, UAT, ACARS, VDL2 and VDL4, HFDL, airband, VOR / ILS / NDB, FLARM, ADS-L, drones |
 | **Maritime** | 8 | AIS (also long-range and satellite AIS), VDES, NAVTEX, DSC, weather fax, Marine VHF voice |
 | **Satellite and navigation** | 30 | Weather pictures from Meteor, NOAA (APT, DSB), GOES, Elektro-L and Arktika-M (RDAS), FengYun-4 (LRIT, HRIT), FengYun-2 (S-VISSR) and MetOp, Iridium, Inmarsat (including BGAN), Orbcomm, QO-100, CubeSat telemetry, GNSS, SBAS corrections, COSPAS-SARSAT 406 MHz distress beacons, GOES / Meteosat DCS platform reports, Argos platforms and downlink |
 | **Two-way radio** | 12 | DMR, P25 (phase 1 and 2, with a trunking follower), NXDN, dPMR, D-STAR, M17, TETRA, TETRAPOL, tone decoders (CTCSS, DCS, DTMF, selcall) |
@@ -293,6 +293,7 @@ No radio? Open an IQ recording through the *IQ recording file* source (cs8, cu8,
 - **UAT** (978 MHz, DO-282): ADS-B reports, FIS-B weather products, TIS-B traffic relay. **Mode S uplink** (1030 MHz, needs 8 Msps): interrogator codes, TCAS coordination.
 - **ACARS**, **VDL Mode 2** (every channel at once), **VDL Mode 4** (STDMA; spec-based, no live captures validated yet) and **HFDL** (every channel in the band at once), with positions on a map.
 - **Airband** (AM voice, several 25 and 8.33 kHz channels at once, scan, priority), **VOR**, **ILS** and **NDB**.
+- **ADS-L** (868.2 / 868.4 / 869.525 MHz): EASA light-aviation conspicuity, traffic, status and ground uplink; hears FLARM from the same capture. Tested on synthetic signals only.
 - **FLARM** (868.2 / 868.4 MHz): the old protocol is decoded; the newer one is only counted. Aircraft with the no-track or stealth flag are never shown, logged or exported.
 - **DJI drones** (2.4 and 5.8 GHz, 16 Msps or more): OcuSync-like bursts are classified by shape (a guess, never an identification); DroneID is decoded. **Drone Remote ID** (ASTM F3411, BLE and Wi-Fi). Receive only.
 

@@ -156,6 +156,7 @@ void Privacy::applyDefaultClasses() {
         56,    // Drone Remote ID (operator and pilot location)
         68,    // DJI drones
         66,    // FLARM
+        300,   // ADS-L
         23,    // POCSAG (capcodes)
         17, 18, 19, 62, 208,   // satellite terminals: Inmarsat-C, Inmarsat Aero, Iridium, Globalstar, Inmarsat (all carriers)
     };

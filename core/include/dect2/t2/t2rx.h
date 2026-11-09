@@ -85,6 +85,7 @@
 #include "dect2/vdes/vdes_tel.h"
 #include "dect2/zigbee/zigbee_tel.h"
 #include "dect2/flarm/flarm_tel.h"
+#include "dect2/adsl/adsl_tel.h"
 #include "dect2/hfbeacon/hfbeacon_tel.h"
 #include "dect2/dji/dji_tel.h"
 #include "dect2/nbiot/nbiot_tel.h"
@@ -228,6 +229,7 @@ struct RxTelemetry {
     GeneralTelemetry general; // valid when standard == 56 (general receiver)
     TimeTelemetry timesig;    // valid when standard == 59 (time signals)
     FlarmTelemetry flarm;     // valid when standard == 67 (FLARM)
+    AdslTelemetry adsl;       // valid when standard == 301 (ADS-L, family 300, engine standard 302)
     DjiTelemetry dji;         // valid when standard == 69 (DJI drones)
     CubeTelemetry cube;       // valid when standard == 62 (CubeSat telemetry)
     GlobalstarTelemetry globalstar;   // valid when standard == 63 (Globalstar activity monitor)

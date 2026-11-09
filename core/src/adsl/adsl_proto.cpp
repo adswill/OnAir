@@ -145,8 +145,8 @@ int rsDecode(uint8_t* block, size_t n) {
         pw = 1;
         for (int i = 0; i < kRsParity; i++) { ov ^= f.mul(om[i], pw); pw = f.mul(pw, xInv); }
         if (!dv) return -1;
-        // Forney with first root 121: e = X^(1 - fcr') Omega(X^-1) / (X^-1 Lambda'(X^-1)), fcr' = 121 in units of the root's step (X = alpha^(11 j))
-        const int fac = ((255 - xLog) * 120) % 255;      // X^(-120): 1 - 121
+        // Forney with first root 121: e = X^(1 - 121) Omega(X^-1) / Lambda'(X^-1), and dv is X^-1 Lambda'(X^-1), so e = X^(-121) Omega / dv (X = alpha^(11 j))
+        const int fac = ((255 - xLog) * 121) % 255;
         block[p] ^= f.mul(f.exp[fac], f.div(ov, dv));
         found++;
     }
