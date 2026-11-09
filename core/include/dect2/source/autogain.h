@@ -401,7 +401,7 @@ private:
     bool wasLocked_ = false;
     Run base_, tri_, mBase_, mTri_;   // the objective and the noise floor over the ADC's own noise, at the baseline and at the trial
     Run decB_, decT_;                 // the decoder's number while locked (the level objective above never sees it: a lock flickering must not read as 50 dB)
-    double settledDec_ = -1e9, floorRef_ = 0, oobRef_ = 0; bool refValid_ = false;   // the world the loop settled in
+    double settledDec_ = -1e9, floorRef_ = 0, oobRef_ = 0, chanRef_ = -300, headRef_ = 0; bool refValid_ = false;   // the world the loop settled in
     double lastSearchAt_ = -1e9, lastWakeAt_ = -1e9, imdAt_ = -1e9;
     bool blindRest_ = false, splitTried_ = false, splitKept_ = false;
     bool cutActive_ = false; double cutFrom_ = -1e9, cutAt_ = -1e9;   // a cut (clip or headroom floor) took the gain down from cutFrom_: recovery aims back at it, whatever the cause was

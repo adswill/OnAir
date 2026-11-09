@@ -266,7 +266,7 @@ bool AutoGainController::tickAuto(const AgInput& in, AgCommand& out) {
         ceilUntil_ = now + (ovTimes_.size() >= 3 ? 90 : 20) / sp;
         // the linear split costs noise figure, so only an overload from outside the channel (or products) earns it: then it stays 5 minutes (not for pulsed ADS-B: a long linear split
         // costs the far aircraft). The ADC clipped on the wanted signal itself: the gain is cut, the split stays as the mode wants it
-        const bool frontOverload = !set_.v2 || imdSeen_ || (fl_.valid && fl_.strongestDbfs > fl_.chanDbfs + 10);
+        const bool frontOverload = !set_.v2 || (!acq && (imdSeen_ || (fl_.valid && fl_.strongestDbfs > fl_.chanDbfs + 10)));   // (a start gain that clips says nothing about the band)
         const Policy cutPol = frontOverload ? Policy::Linearity : pol_;
         if (frontOverload) linearUntil_ = now + (set_.v2 && tgt_.kind != ModeKind::Pulsed ? 300 : 30);
         probe_ = 0; guard_ = false;
@@ -974,7 +974,7 @@ bool AutoGainController::tickBracket(const AgInput& in, AgCommand& out) {
     for (const auto& t : trials_) if (t.done && (t.clipMax > tgt_.clipLimit || t.imd || t.headroomMin < 0.5) && t.plan.totalDb > best.plan.totalDb + 0.01) unsafeAbove = std::min(unsafeAbove, t.plan.totalDb);
     if (unsafeAbove < 1e8) { ceil_ = unsafeAbove - 1; ceilUntil_ = now + 60 / std::max(0.25, set_.loopSpeed); }
     const std::string why = fmt("quick search: %.0f dB gave the best ", best.plan.totalDb) + metricName(used);
-    if (wastedTo > -1) {
+    if (wastedTo > -1 && !set_.v2) {
         const double to = std::max(minGain(), wastedTo);
         move(now, nextStep(best.plan.totalDb, to - best.plan.totalDb, best.pol), best.pol, "quick search: the noise floor is far above the ADC's at every gain tried, so the lowest useful gain", out);
         explain(out.why);

@@ -189,6 +189,7 @@ static double oracle(const Fe& r0, const ModeTarget& t, double* bestGain = nullp
             r.live = planStages(r.prof, g, pol, mask, {}, false);
             const double p = r.clipProb();
             if (p > t.clipLimit || r.headroomNow() < std::max(0.5, t.minHeadroomDb - 1.0)) continue;
+            if (r.mode == PULSED) { double rt, lr; r.pulseRates(rt, lr); if (rt <= 0 || lr / rt > 0.10) continue; }
             r.lastClip = p;
             const double q = r.trueQuality();
             if (q > best + 0.01) { best = q; bg = g; }
@@ -297,7 +298,7 @@ static Limits limitsFor(ModeClass m, const RadioProfile& p) {
     Limits l;
     l.settle = (m == PULSED ? 60 : 12) * (p.remote ? 2.0 : 1.0);
     l.dq = 1.0; l.acqClip = 1.5; l.chg = 30; l.deaf = 12; l.irClip = 1.5; l.irDq = 2.0;
-    l.irRec = p.remote ? 45 : 30; l.small = 1; l.idleChg = 20; l.idleSpan = 6; l.burstChg = 30;
+    l.irRec = p.remote ? 45 : 30; l.small = 6; l.idleChg = 20; l.idleSpan = 6; l.burstChg = 30;
     return l;
 }
 
@@ -308,6 +309,14 @@ struct Row {
 };
 
 static bool gVerbose = false;
+static void dump(const Rig& g, const char* label) {
+    const char* e = getenv("AGDUMP");
+    if (!e || strcmp(e, label)) return;
+    printf("--- %s (quality / gain timeline every 10 s, then the events)\n", label);
+    double nx = 0;
+    for (const auto& s : g.log) if (s.t >= nx) { printf("  t %.0f gain %.1f q %.1f clip %.5f\n", s.t, s.gain, s.q, s.clip); nx = s.t + 10; }
+    for (const auto& ev : g.c.log()) printf("    %7.1f %5.1f -> %5.1f  %s\n", ev.t, ev.fromDb, ev.toDb, ev.why.c_str());
+}
 
 static Row runCell(const RadioRow& rr, ModeClass m) {
     Row row;
@@ -331,9 +340,9 @@ static Row runCell(const RadioRow& rr, ModeClass m) {
             g.run(1200);
             row.dq = std::max(row.dq, best - medianQ(g.log, 1200, 1260));
             int moves; double a, b;
-            gainSpan(g.log, 60, 1260, a, b, moves);
-            row.chg = moves * 3.0;
-            row.deaf = deafSeconds(g.log, 60, 1260) * 3.0;
+            gainSpan(g.log, 360, 1260, a, b, moves);   // the rate it settles into (probing backs off over the first minutes)
+            row.chg = moves * 4.0;
+            row.deaf = deafSeconds(g.log, 360, 1260) * 4.0;
             row.clipSteady = clipSeconds(g.log, 60, 1260, clipLim);
             if (gVerbose) {
                 double bg = 0;
@@ -350,7 +359,7 @@ static Row runCell(const RadioRow& rr, ModeClass m) {
         applyScene(g.r, m, sc0);
         g.run(60);
         SceneDef with = sc0;
-        with.blockers.push_back({0.22 * rr.rate, -22});
+        with.blockers.push_back({0.45 * rr.rate, -22});
         applyScene(g.r, m, with);
         const double bestWith = oracle(g.r, g.tgt);
         const double t0 = g.now;
@@ -362,6 +371,7 @@ static Row runCell(const RadioRow& rr, ModeClass m) {
         const double t1 = g.now;
         g.run(150);
         row.irRec = convergeAt(g.log, t1, t1 + 150, best, 1.0, clipLim, 8);
+        dump(g, "ir");
     }
     // 3. a retune to a much weaker channel, the app's way (a fresh start); a small VFO move inside the span; a mode switch
     {
@@ -378,6 +388,7 @@ static Row runCell(const RadioRow& rr, ModeClass m) {
         g.run(90);
         row.rtS = convergeAt(g.log, t0, t0 + 90, best, 1.0, clipLim);
         row.rtDq = best - medianQ(g.log, t0 + 75, t0 + 90);
+        dump(g, "retune");
         // the small move: the VFO steps two channels inside the span and the gain must not be searched again
         applyScene(g.r, m, sc0);
         g.run(30);
@@ -397,6 +408,7 @@ static Row runCell(const RadioRow& rr, ModeClass m) {
         const double t1 = g.now;
         g.run(60);
         row.modeS = convergeAt(g.log, t1, t1 + 60, bestN, 1.0, g.tgt.clipLimit);
+        dump(g, "mode");
     }
     // 4. idle: nothing in the channel for 20 minutes
     {
@@ -407,9 +419,10 @@ static Row runCell(const RadioRow& rr, ModeClass m) {
         applyScene(g.r, m, idle);
         g.run(1200);
         double a, b; int moves;
-        gainSpan(g.log, 60, 1200, a, b, moves);
-        row.idleChg = moves * 3600.0 / 1140.0;
+        gainSpan(g.log, 300, 1200, a, b, moves);
+        row.idleChg = moves * 4.0;
         row.idleSpan = b - a;
+        dump(g, "idle");
     }
     // 5. bursty: calls of 8-30 s with 10-60 s of silence
     if (m != PULSED) {
@@ -425,8 +438,9 @@ static Row runCell(const RadioRow& rr, ModeClass m) {
         };
         g.run(1200, sceneFn);
         double a, b; int moves;
-        gainSpan(g.log, 60, 1200, a, b, moves);
-        row.burstChg = moves * 3600.0 / 1140.0;
+        gainSpan(g.log, 300, 1200, a, b, moves);
+        row.burstChg = moves * 4.0;
+        dump(g, "bursty");
         for (const auto& s : g.log) if (s.t > 60 && s.q > -100) qOn.push_back(s.q);
         if (!qOn.empty()) { std::nth_element(qOn.begin(), qOn.begin() + (long)(qOn.size() * 0.9), qOn.end()); row.burstDq = best - qOn[(size_t)(qOn.size() * 0.9)]; }
     }
