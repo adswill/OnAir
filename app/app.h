@@ -194,6 +194,7 @@ struct App {
     double wideAllCpu = 0.8;            // its CPU limit as a share of one core (0: none)
     int wideAllListen = 0;              // the entry whose sound is followed there
     bool rfFpOpen = false;              // the RF fingerprint window (View > RF fingerprint; app/panels/rffp_ui.cpp; docs/RF-FINGERPRINT.md)
+    bool surpriseReq = false;           // Surprise me (the command palette, My station): handled once per request by stationWindow
     bool stationOpen = false;           // My station window (View > My station; app/panels/station_ui.cpp)
     bool heardOpen = false;             // Search everything heard (View > Search everything; app/panels/heard_ui.cpp)
     bool doctorOpen = false;            // the Reception Doctor window (View > Reception doctor; app/panels/doctor_ui.cpp)

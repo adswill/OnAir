@@ -5,11 +5,14 @@
 #include "dect2/engine/device_claims.h"
 #include "dect2/engine/rate_choice.h"
 #include "dect2/engine/mode_tuning.h"
+#include "dect2/msgdb/msgdb.h"
+#include "dect2/station/fun.h"
 #include "dect2/station/station.h"
 #include "../ui/mode_picker_logic.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <ctime>
 
 using namespace dect2;
 namespace st = dect2::station;
@@ -222,7 +225,32 @@ void stationAutoPick(App& a, bool onlyIfBusy) {
     a.engine.log("My station: using " + S.radios[(size_t)want].name + " for this mode");
 }
 
+// Surprise me: a random mode this station can receive, the ones not heard yet more often, opened on its usual frequency and started
+void stationSurprise(App& a) {
+    modeInfoFill();
+    std::vector<const ModeDef*> rows;
+    std::vector<st::SurpriseMode> cand;
+    std::vector<std::string> heard;
+    if (dect2::msgdb::global().isOpen()) heard = dect2::msgdb::global().modes();
+    for (const auto& m : allModes()) {
+        if (m.group == 13 || m.group == 14 || m.group == 15 || m.group == 16 || (m.needs & modepick::NPlugin) || (m.needs & modepick::NCodec)) continue;
+        if (m.subId && !strncmp(m.subId, "auto:", 5)) continue;   // the "automatic" rows are not a station of their own
+        st::SurpriseMode c;
+        c.ready = modeFit(a, m).ok;
+        for (const std::string& h : heard) if (modepick::lower(h) == modepick::lower(m.name)) c.heard = true;
+        rows.push_back(&m);
+        cand.push_back(c);
+    }
+    const int pick = st::surprise(cand, (uint32_t)std::time(nullptr));
+    if (pick < 0) { a.engine.log("Surprise me: no mode can be received with this station yet"); return; }
+    const ModeDef& m = *rows[(size_t)pick];
+    a.engine.log(std::string("Surprise me: ") + m.name);
+    selectMode(a, m.family, m.subId);
+    if (!a.engine.running()) startReceiver(a);
+}
+
 void stationWindow(App& a) {
+    if (a.surpriseReq) { a.surpriseReq = false; stationSurprise(a); }
     if (!a.stationOpen) return;
     sync(a);
     firstWindowSize(640 * gUi, 480 * gUi);
@@ -267,6 +295,9 @@ void stationWindow(App& a) {
         if (v.level == st::Level::Ready) ImGui::TextColored(ImVec4(.45f, .85f, .5f, 1), "%s: %s", cur->name, pair.c_str());
         else ImGui::TextColored(ImVec4(1, .7f, .3f, 1), "%s: %s%s%s", cur->name, pair.c_str(), pair.empty() ? "" : ", ", missingLine(v).c_str());
     }
+    ImGui::Spacing();
+    if (ImGui::Button(tr("Surprise me"))) a.surpriseReq = true;
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Tries a mode this station can receive, ones you have not heard yet more often."));
     ImGui::Spacing();
     if (ImGui::CollapsingHeader(tr("Advanced"))) {
         if (ImGui::Checkbox(tr("Choose the radio automatically"), &gAuto)) changed = true;

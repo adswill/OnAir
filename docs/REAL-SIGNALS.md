@@ -4,6 +4,10 @@ What the tests decode from a recording made on the air (not from OnAir's own gen
 
 Rules: owner recordings are used with the owner's consent; public files only with a licence that allows redistribution (credit in `THIRD_PARTY.md`); a file with no licence stated is not copied into the repository, only listed here as a lead. Downloaded files were handled as untrusted data (own scratch directory, read by our own decoders only).
 
+## Library hook for CI
+
+`tools/signal_library.py` decodes every recording listed in `tests/real/signal_library.txt` with `dect2cli` and fails when the output lacks the expected text (test `signal_library`). Set `ONAIR_SIGNAL_LIB` to a folder with its own `manifest.txt` (same format) to add recordings too large or not licensed for the repository; missing files are reported and skipped. A clip saved from the Reception Doctor (`.sigmf-data`, 8-bit I/Q) can be listed there once somebody knows what it should decode to.
+
 ## Modes with a real-recording test
 
 | Mode | Source | Licence | Excerpt | Test | Status |
