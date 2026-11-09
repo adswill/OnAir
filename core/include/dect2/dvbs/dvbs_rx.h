@@ -26,6 +26,8 @@ public:
     bool telemetry(DvbsTelemetry& out, uint64_t lastSeq);
     void setLogCallback(std::function<void(const std::string&)> cb);   // events for the log pane; may be called from the receiver thread
     // The decoded transport stream: packets of 188 bytes, `secs` of signal time since the previous call. Runs on the receiver thread.
+    // Every BBFRAME of a generic stream (BBHEADER + data field), mod and rate as in dvbs_s2.h, TS/GS as signalled. Runs on the receiver thread.
+    void setDataFieldCallback(std::function<void(const uint8_t* bbframe, size_t n, int mod, int rate, bool shortFrame, int tsGs)> cb);
     void setPacketCallback(std::function<void(const uint8_t* packets, size_t nPackets, double secs)> cb);
 
     // ---- controls (any thread)

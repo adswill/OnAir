@@ -122,6 +122,7 @@
 #include "dect2/selcal/selcal_tel.h"
 #include "dect2/fy3/fy3_tel.h"
 #include "dect2/wxsat/wxsat_tel.h"
+#include "dect2/sd3/sd3_tel.h"
 #include "dect2/shortwave/shortwave_tel.h"
 #include "dect2/pskdsp/pskdsp_tel.h"
 #include "dect2/wisun/wisun_tel.h"
@@ -252,6 +253,7 @@ struct RxTelemetry {
     PactorTelemetry pactor;   // valid when standard == 204 (PACTOR-I monitor, family 203, engine standard 205)
     RoshfTelemetry roshf;     // valid when standard == 206 (ROS (HF) detector, family 205, engine standard 207)
     SsdvTelemetry ssdv;       // valid when standard == 207 (SSDV pictures, family 206, engine standard 208)
+    Sd3Telemetry sd3;         // valid when standard is 291 .. 300 or 511 (families 290 .. 299, 510, sd3_tel.h)
     WxsatTelemetry wxsat;     // valid when standard is 261 .. 272 (families 260 .. 271, wxsat_tel.h)
     Fy3Telemetry fy3a;        // valid when standard == 236 (FY-3 AHRPT, family 235, engine standard 237)
     Fy3Telemetry fy3m;        // valid when standard == 237 (FY-3 MPT, family 236, engine standard 238)

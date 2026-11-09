@@ -129,6 +129,7 @@ struct DvbsReceiver::Impl {
     std::mutex cbMu;
     std::function<void(const std::string&)> logCb;
     std::function<void(const uint8_t*, size_t, double)> pktCb;
+    std::function<void(const uint8_t*, size_t, int, int, bool, int)> dataFieldCb;   // every BBFRAME of a generic stream (setDataFieldCallback)
     // IP data: GSE from the BBFRAMEs (here), MPE and ULE from the transport stream (feedTs); one sink for the statistics and the PCAP file
     std::mutex ipMu;
     struct IsiIp { dvbsip::GseIp gse; dvbsip::HemDeframer hem; uint64_t fields = 0; };
@@ -419,6 +420,7 @@ struct DvbsReceiver::Impl {
         s2.setSuperframePilots(sfPilotsNow());
         s2.setBlocking(blocking.load());
         s2.setDataFieldCallback([this](const uint8_t* bb, size_t n, int mod, int rate, bool sh, int tsGs) {
+            { std::function<void(const uint8_t*, size_t, int, int, bool, int)> dfc; { std::lock_guard<std::mutex> lk(cbMu); dfc = dataFieldCb; } if (dfc) dfc(bb, n, mod, rate, sh, tsGs); }
             std::vector<dvbsip::IpPacket> pk;
             const double now = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count();
             if (n < 10) return;
@@ -814,6 +816,7 @@ void DvbsReceiver::resetNow() {
     I.resetReq = false; I.restartReq = false;
 }
 void DvbsReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->cbMu); p_->logCb = std::move(cb); }
+void DvbsReceiver::setDataFieldCallback(std::function<void(const uint8_t*, size_t, int, int, bool, int)> cb) { std::lock_guard<std::mutex> lk(p_->cbMu); p_->dataFieldCb = std::move(cb); }
 void DvbsReceiver::setPacketCallback(std::function<void(const uint8_t*, size_t, double)> cb) { std::lock_guard<std::mutex> lk(p_->cbMu); p_->pktCb = std::move(cb); }
 void DvbsReceiver::setSymbolDump(const std::string& path) {
     std::lock_guard<std::mutex> lk(p_->dumpMu);

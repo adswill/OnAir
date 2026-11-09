@@ -44,6 +44,7 @@ fs::path fsPath(const std::string& p) { return fs::path(reinterpret_cast<const c
 
 constexpr int kNoaaApt = 260, kNoaaHrpt = 261, kNoaaDsb = 263, kMeteorHrpt = 264, kArktikaGgak = 267, kAws = 268;   // families of the wxsat links
 constexpr int kIssSstv = kPassFamilyIssSstv, kHfdig = 25;   // the ISS's SSTV events: the SSTV entry of the HF digital family on FM (AppHost)
+constexpr int kGeoscanCs = 297, kSpino = 299;   // cubesat families of the SatDump tier 3 links
 constexpr int kSpecx = 41, kAprs = 24, kOrbcomm = 44, kMeteor = 59, kCubesat = 61, kGlobalstar = 62, kArgos = 152, kLoraSat = 201;   // mode families: Spectrum explorer (no decoder), APRS (AFSK), Orbcomm, Meteor-M LRPT, CubeSat telemetry, Argos, LoRa satellites
 
 struct Source { const char* file; const char* url; };
@@ -84,6 +85,13 @@ const Known kKnown[] = {
     {"Arctic Weather Satellite", 60543, 1707.0, "L-band", kAws, Weather, 6, false},
     {"MetOp-B Argos", 38771, 465.9875, "Argos downlink", kArgos, Weather, 0, false},   // A-DCS downlink (SatNOGS transmitter entry for MetOp-B)
     {"MetOp-C Argos", 43689, 465.9875, "Argos downlink", kArgos, Weather, 0, false},
+    {"StratoSat-TK1", 57167, 435.870, "9k6 FSK", kGeoscanCs, Amateur, 0, false},
+    {"RTU-MIREA1", 61785, 436.200, "9k6 FSK", kGeoscanCs, Amateur, 0, false},
+    {"TUSUR-GO", 61782, 437.730, "9k6 FSK", kGeoscanCs, Amateur, 0, false},
+    {"VIZARD-ION", 61749, 436.870, "9k6 FSK", kGeoscanCs, Amateur, 0, false},
+    {"COLIBRI-S", 61746, 436.835, "9k6 FSK", kGeoscanCs, Amateur, 0, false},
+    {"HORIZON", 61755, 435.430, "9k6 FSK", kGeoscanCs, Amateur, 0, false},
+    {"Spino", 56211, 435.200, "2k4 FSK", kSpino, Amateur, 0, false},
     {"ISS APRS", 25544, 145.825, "APRS", kAprs, Iss, 0, false},
     {"ISS voice", 25544, 145.800, "FM voice", kSpecx, Iss, 0, false},
     {"ISS SSTV", 25544, 145.800, "SSTV events", kIssSstv, Iss, 0, false},   // only during announced events: never the default link (SatLink::eventOnly)

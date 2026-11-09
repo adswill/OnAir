@@ -1263,3 +1263,8 @@ Branch feat38-channels on integ-38: seven modes in one receiver (core/src/chanvo
 - AAR end of train verified on the real PyEOT recording (3 frames). BSM layout verified on a published example. Every other mode: simulated signals only.
 - Decoders: FANET, OGN (LDPC), end of train, ERMES, 802.11p BSM/CAM, DSRC framing. Structure only: LDACS, AeroMACS, C-V2X, GBAS bursts. Detection: marine and weather radar (no bearing with one antenna).
 - Skipped (no public protocol): ReFLEX, ATCS, GBAS message content.
+
+### 2026-11-09 SatDump tier 3
+
+Added GOES GRB, GVAR, CDA, MDL, GK-2A UHRIT and CDAS, a generic S-band CCSDS mode with 46 satellites (Falcon 9, Starship, Crew Dragon, Jason-3, CloudSat, FORMOSAT and others), and the Geoscan, Lucky-7, Spino and Erminaz cubesats: families 290 - 299, 510, one receiver class, docs/SATDUMP-TIER3-3.8.md. Geoscan decoded a real SatNOGS pass (6 of 7 frames); everything else is simulated only and says so; Lucky-7 failed the CRC on a real pass. DVB-S receiver gained a BBFRAME callback. SatDump code taken as formats and parameters, credits in THIRD_PARTY.md and in-app.
+
