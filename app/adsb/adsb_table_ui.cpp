@@ -53,6 +53,17 @@ void displayControls() {
     if (ImGui::Checkbox(tr("Labels on the map"), &S.disp.labels)) ch = true;
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The callsign, altitude and speed boxes beside the aircraft. Off: cleaner in crowded areas; the selected aircraft still shows its box."));
     ImGui::SetNextItemWidth(140 * gUi);
+    if (ImGui::SliderInt(tr("Label text size (%)"), &S.disp.labelScale, ad::kMinLabelScale, ad::kMaxLabelScale)) { S.disp.labelScale = ad::clampLabelScale(S.disp.labelScale); ch = true; }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The size of the text in the boxes beside the aircraft on the map. 100 is the normal size."));
+    {
+        bool f1 = S.disp.labelFields & 1, f2 = S.disp.labelFields & 2, f4 = S.disp.labelFields & 4;
+        ImGui::TextDisabled("%s", tr("Show in the label"));
+        if (ImGui::Checkbox(tr("Altitude and speed"), &f1)) ch = true;
+        if (ImGui::Checkbox(tr("Squawk and category"), &f2)) ch = true;
+        if (ImGui::Checkbox(tr("Registration and operator"), &f4)) ch = true;
+        S.disp.labelFields = (f1 ? 1 : 0) | (f2 ? 2 : 0) | (f4 ? 4 : 0);
+    }
+    ImGui::SetNextItemWidth(140 * gUi);
     if (ImGui::SliderInt(tr("Track width (px)"), &S.disp.trackWidth, ad::kMinTrackWidth, ad::kMaxTrackWidth)) { S.disp.trackWidth = ad::clampTrackWidth(S.disp.trackWidth); ch = true; }
     bool never = S.disp.dropSec == 0;
     if (ImGui::Checkbox(tr("Never drop silent aircraft"), &never)) { S.disp.dropSec = never ? 0 : ad::kDefaultDropSec; ch = true; }
@@ -64,7 +75,7 @@ void displayControls() {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("An aircraft that has not been heard for this long leaves the table and the map. Never keeps them until the list is cleared (the table holds at most 2000)."));
     if (ch) {
         plat::Prefs& p = plat::prefs();
-        p.setB(ad::kPrefAltColour, S.disp.altColour); p.setB(ad::kPrefLabels, S.disp.labels); p.setI(ad::kPrefTrackWidth, S.disp.trackWidth); p.setI(ad::kPrefDropSec, S.disp.dropSec);
+        p.setB(ad::kPrefAltColour, S.disp.altColour); p.setB(ad::kPrefLabels, S.disp.labels); p.setI(ad::kPrefLabelScale, S.disp.labelScale); p.setI(ad::kPrefLabelFields, S.disp.labelFields); p.setI(ad::kPrefTrackWidth, S.disp.trackWidth); p.setI(ad::kPrefDropSec, S.disp.dropSec);
         p.flush();
     }
     ImGui::EndPopup();

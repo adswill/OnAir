@@ -28,6 +28,7 @@ int main() {
     CHECK(!expired(60, 60) && expired(60.1, 60) && !expired(10, 60), "60 s");
     CHECK(clampDropSec(0) == 0 && clampDropSec(-5) == 0 && clampDropSec(1) == kMinDropSec && clampDropSec(99999) == kMaxDropSec && clampDropSec(90) == 90, "drop clamp");
     CHECK(clampTrackWidth(0) == 1 && clampTrackWidth(9) == 6 && clampTrackWidth(3) == 3, "width clamp");
+    CHECK(clampLabelScale(10) == 70 && clampLabelScale(900) == 250 && clampLabelScale(130) == 130 && kAllLabelFields == 7, "label scale clamp");
     CHECK(trackerDropSec(0) > 1e8 && trackerDropSec(45) == 45, "tracker drop");
     // defaults keep the old behaviour
     Options o;

@@ -11,6 +11,10 @@ inline constexpr const char* kPrefTrackWidth = "adsbTrackWidth"; // int px, 1 - 
 inline constexpr const char* kPrefDropSec = "adsbDropSec";       // int s, 0 = never, default 60
 inline constexpr const char* kPrefLabels = "adsbLabels";         // bool, default true: the label boxes on the map (#85: off in crowded areas, the selected aircraft keeps its own)
 
+inline constexpr const char* kPrefLabelScale = "adsbLabelScale";   // int %, 70 - 250, default 100: the size of the text in the label boxes (#368)
+inline constexpr const char* kPrefLabelFields = "adsbLabelFields"; // bit mask, default 7: 1 altitude and speed, 2 squawk and category, 4 registration and operator
+
+inline constexpr int kDefaultLabelScale = 100, kMinLabelScale = 70, kMaxLabelScale = 250, kAllLabelFields = 7;
 inline constexpr int kDefaultTrackWidth = 2, kMinTrackWidth = 1, kMaxTrackWidth = 6;
 inline constexpr int kDefaultDropSec = 60, kMinDropSec = 5, kMaxDropSec = 3600;
 
@@ -19,9 +23,12 @@ struct Options {
     int trackWidth = kDefaultTrackWidth;
     int dropSec = kDefaultDropSec;   // 0: never
     bool labels = true;              // label boxes beside the aircraft on the map (the selected one always has its box)
+    int labelScale = kDefaultLabelScale;
+    int labelFields = kAllLabelFields;
 };
 
 inline int clampTrackWidth(int w) { return std::max(kMinTrackWidth, std::min(kMaxTrackWidth, w)); }
+inline int clampLabelScale(int p) { return std::max(kMinLabelScale, std::min(kMaxLabelScale, p)); }
 inline int clampDropSec(int s) { return s <= 0 ? 0 : std::max(kMinDropSec, std::min(kMaxDropSec, s)); }
 
 struct Rgb { uint8_t r, g, b; };

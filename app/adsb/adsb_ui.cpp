@@ -55,6 +55,8 @@ void loadState() {
     S.units.spd = d.getI("adsbSpeedUnit", 0) == 1 ? dect2::adsbu::Speed::MS : dect2::adsbu::Speed::KmH;
     S.disp.altColour = d.getB(dect2::adsbd::kPrefAltColour, true);
     S.disp.labels = d.getB(dect2::adsbd::kPrefLabels, true);
+    S.disp.labelScale = dect2::adsbd::clampLabelScale((int)d.getI(dect2::adsbd::kPrefLabelScale, dect2::adsbd::kDefaultLabelScale));
+    S.disp.labelFields = (int)d.getI(dect2::adsbd::kPrefLabelFields, dect2::adsbd::kAllLabelFields) & dect2::adsbd::kAllLabelFields;
     S.disp.trackWidth = dect2::adsbd::clampTrackWidth((int)d.getI(dect2::adsbd::kPrefTrackWidth, dect2::adsbd::kDefaultTrackWidth));
     S.disp.dropSec = dect2::adsbd::clampDropSec((int)d.getI(dect2::adsbd::kPrefDropSec, dect2::adsbd::kDefaultDropSec));
     S.map.lat = S.refLat; S.map.lon = S.refLon;
