@@ -26,32 +26,13 @@ DECT2_AVX2_DISPATCH(void, equalise, (const float* cell, const float* h, const fl
 void T2Receiver::Impl::submitPlp(const std::vector<cf32>& dstream, const std::vector<float>& dn0, double sigma2) {
     const int cP2 = (int)p2Sym[0].size();
     const int nPre = 1840, nPost = l1pre.postSize;
-    // pick the data PLP (first non-common PLP, else the first)
+    // the data PLP asked for, else the first one of type 1 or 2; and the common PLP of its group, whose SI and shared packets belong to the same stream (annex D)
     int sel = -1;
     const int want = plpSelect.load();
     if (want >= 0) for (size_t i = 0; i < l1post.plps.size(); i++) if (l1post.plps[i].id == want) { sel = (int)i; break; }
-    if (sel < 0) { sel = 0; for (size_t i = 0; i < l1post.plps.size(); i++) if (l1post.plps[i].type == 1) { sel = (int)i; break; } }
+    if (sel < 0) { sel = 0; for (size_t i = 0; i < l1post.plps.size(); i++) if (l1post.plps[i].type == 1 || l1post.plps[i].type == 2) { sel = (int)i; break; } }
     if (sel < 0 || sel >= (int)l1post.plps.size()) return;
-    const L1PlpConf& pc = l1post.plps[sel];
-    if (sel >= (int)l1post.dyn.size()) return;
-    const L1PlpDyn& dy = l1post.dyn[sel];
-    selectedPlpId = pc.id;
-    if (pc.timeIlType != 0 || pc.type == 2 || l1post.subSlices > 1) { plpSkipped++; return; } // inter-frame interleaving and sub-slicing are not implemented
-    PlpJob job;
-    job.frameNo = ++frameCounter;
-    job.t2Frame = l1post.frameIdx;
-    job.numT2Frames = l1pre.numFrames;
-    job.frameInterval = std::max(1, pc.frameInterval);
-    job.frameSec = frameMsv / 1e3;
-    job.plpId = pc.id;
-    job.fec.shortFrame = pc.fecType == 0;
-    job.fec.rate = pc.cod;
-    job.fec.mod = pc.mod;
-    job.fec.rotation = pc.rotation != 0;
-    job.numBlocks = dy.numBlocks;
-    job.tiBlocks = pc.timeIlLength;
-    FecDims d = fecDims(job.fec);
-    if (!d.ok || job.numBlocks <= 0) { plpSkipped++; return; }
+    selectedPlpId = l1post.plps[sel].id;
     std::vector<cf32> stream, g2s;
     p2Gather(p2Sym, nP2, cP2, nPre, nPost, stream);
     {
@@ -63,13 +44,51 @@ void T2Receiver::Impl::submitPlp(const std::vector<cf32>& dstream, const std::ve
     for (size_t i = 0; i < stream.size(); i++) n0s[i] = (float)(sigma2 / (2.0 * std::max(1e-12f, g2s[i].real())));
     stream.insert(stream.end(), dstream.begin(), dstream.end());
     n0s.insert(n0s.end(), dn0.begin(), dn0.end());
-    const size_t start = (size_t)nPre + nPost + dy.start;
-    const size_t need = (size_t)job.numBlocks * d.cellsPerBlock;
-    if (start + need > stream.size()) { plpSkipped++; return; }
-    job.cells.assign(stream.begin() + start, stream.begin() + start + need);
-    job.n0.assign(n0s.begin() + start, n0s.begin() + start + need);
-    plpValid = true; plpId = pc.id; plpFec = job.fec; plpBlocks = job.numBlocks;
-    plpDec.submit(std::move(job));
+    auto one = [&](int idx, bool common) {
+        const L1PlpConf& pc = l1post.plps[idx];
+        if (idx >= (int)l1post.dyn.size()) return;
+        const L1PlpDyn& dy = l1post.dyn[idx];
+        if (pc.timeIlType != 0) { plpSkipped++; return; }   // inter-frame interleaving is not implemented
+        PlpJob job;
+        job.frameNo = ++frameCounter;
+        job.t2Frame = l1post.frameIdx;
+        job.numT2Frames = l1pre.numFrames;
+        job.frameInterval = std::max(1, pc.frameInterval);
+        job.frameSec = frameMsv / 1e3;
+        job.plpId = pc.id;
+        job.commonPlp = common;
+        job.fec.shortFrame = pc.fecType == 0;
+        job.fec.rate = pc.cod;
+        job.fec.mod = pc.mod;
+        job.fec.rotation = pc.rotation != 0;
+        job.numBlocks = dy.numBlocks;
+        job.tiBlocks = pc.timeIlLength;
+        FecDims d = fecDims(job.fec);
+        if (!d.ok || job.numBlocks <= 0) { plpSkipped++; return; }
+        const size_t l1 = (size_t)nPre + nPost;
+        const size_t need = (size_t)job.numBlocks * d.cellsPerBlock;
+        if (pc.type == 2 && l1post.subSlices > 1) {
+            // equal sub-slices at PLP_START + j * SUB_SLICE_INTERVAL (8.3.6.3.3, E.2.7.2)
+            const size_t nSub = (size_t)l1post.subSlices, per = need / nSub, itv = (size_t)l1post.subSliceInterval;
+            if (per * nSub != need || l1 + (size_t)dy.start + (nSub - 1) * itv + per > stream.size()) { plpSkipped++; return; }
+            job.cells.resize(need); job.n0.resize(need);
+            for (size_t j = 0; j < nSub; j++) {
+                const size_t a = l1 + (size_t)dy.start + j * itv;
+                std::copy_n(stream.begin() + (ptrdiff_t)a, per, job.cells.begin() + (ptrdiff_t)(j * per));
+                std::copy_n(n0s.begin() + (ptrdiff_t)a, per, job.n0.begin() + (ptrdiff_t)(j * per));
+            }
+        } else {
+            const size_t start = l1 + (size_t)dy.start;
+            if (start + need > stream.size()) { plpSkipped++; return; }
+            job.cells.assign(stream.begin() + (ptrdiff_t)start, stream.begin() + (ptrdiff_t)(start + need));
+            job.n0.assign(n0s.begin() + (ptrdiff_t)start, n0s.begin() + (ptrdiff_t)(start + need));
+        }
+        if (!common) { plpValid = true; plpId = pc.id; plpFec = job.fec; plpBlocks = job.numBlocks; }
+        plpDec.submit(std::move(job));
+    };
+    // the common PLP first: its packets are waiting when the data PLP's frame comes out (T2PlpMerge)
+    if (commonOn.load()) for (size_t i = 0; i < l1post.plps.size(); i++) if (l1post.plps[i].type == 0 && l1post.plps[i].groupId == l1post.plps[sel].groupId && (int)i != sel) one((int)i, true);
+    one(sel, false);
 }
 
 void T2Receiver::Impl::pollPlp() {

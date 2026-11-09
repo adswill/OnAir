@@ -121,6 +121,7 @@
 #include "dect2/umts/umts_rx.h"
 #include "dect2/tv/tr101290.h"
 #include "dect2/t2/t2mi_in.h"
+#include "dect2/t2/t2plp_merge.h"
 #include "dect2/fy3/fy3_rx.h"
 #include "dect2/pactorhf/pactorhf_rx.h"
 #include "dect2/shortwave/shortwave_rx.h"
@@ -742,6 +743,7 @@ private:
     void onMultiPackets(const uint8_t* pk, size_t n, double secs, const TsSnapshot& snap);
     std::mutex tsMu_;
     BbUnpacker unpack_;
+    BbUnpacker commonUnpack_; std::vector<uint8_t> commonFrame_; T2PlpMerge plpMerge_;   // the common PLP of the selected group
     TsDemux demux_;
     TsSnapshot tsSnap_;
     OutputManager outputs_;

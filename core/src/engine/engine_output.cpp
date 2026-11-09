@@ -47,6 +47,13 @@ void Engine::onPlp(const PlpResult& r) {
     std::lock_guard<std::mutex> lk(tsMu_);
     gPlpWaitUs += usSince(tWait0);
     struct HoldTimer { std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now(); ~HoldTimer() { gPlpHoldUs += usSince(t0); gPlpFrames++; } } holdTimer;
+    if (r.commonPlp) {   // the common PLP of the group: its frame waits for the data PLP's frame of the same T2 frame (annex D)
+        commonFrame_.clear();
+        commonUnpack_.setSink([this](const uint8_t* p) { commonFrame_.insert(commonFrame_.end(), p, p + 188); });
+        for (const auto& f : r.frames) { if (f.bits.empty()) commonUnpack_.lost(); else commonUnpack_.push(f.bits, f.header); }
+        plpMerge_.commonFrame(commonFrame_);
+        return;
+    }
     frameBuf_.clear();
     // FRAME_IDX restarts at 0 every super-frame (NUM_T2_FRAMES frames), and a PLP with FRAME_INTERVAL > 1 skips frames: compare the
     // index with the one expected, not with last + 1, or every super-frame boundary (every second frame on a 2-frame super-frame) looks

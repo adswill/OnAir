@@ -241,6 +241,7 @@ struct T2Receiver::Impl {
     L1Post l1post;
     std::atomic<int> plpSelect{-1};
     // T2 layer: a mixed signal carries T2-Base frames with T2-Lite frames in the FEF parts (or the other way round), each with its own P1
+    std::atomic<bool> commonOn{true};  // also decode the common PLP of the selected PLP's group
     std::atomic<int> layerWant{0};     // 0 = automatic (the first layer seen), 1 = T2-Base, 2 = T2-Lite
     int layerLocked = 0;               // the layer in use, 0 = none yet
     bool otherLayerSeen = false;       // P1 symbols of the other layer turned up: P1 spacing is not regular, so no windowed search

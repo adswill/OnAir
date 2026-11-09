@@ -14,6 +14,7 @@
 namespace dect2 {
 
 struct PlpJob {
+    bool commonPlp = false;     // the common PLP that goes with the selected data PLP
     uint64_t frameNo = 0;
     int t2Frame = 0;        // L1-post FRAME_IDX
     int numT2Frames = 0;    // L1-pre NUM_T2_FRAMES: FRAME_IDX counts 0..numT2Frames-1 inside the super-frame
@@ -34,6 +35,7 @@ struct BbFrame {
 };
 
 struct PlpResult {
+    bool commonPlp = false;
     uint64_t frameNo = 0;
     int t2Frame = 0, numT2Frames = 0, frameInterval = 1;
     double frameSec = 0;

@@ -130,6 +130,42 @@ T2Generator::T2Generator(const TxParams& p) : i_(new Impl), p_(p) {
         c.numBlocksMax = plpBlocks_;
         post_.dyn[0].numBlocks = plpBlocks_;
         post_.dyn[0].start = 0;
+        addrCap_ = cap;
+    }
+    if (p.payload && !p.plps.empty()) {
+        // several PLPs: the signalling first (its size depends on the number of PLPs), then the addresses
+        post_.numPlp = (int)p.plps.size();
+        post_.plps.assign(p.plps.size(), L1PlpConf());
+        post_.dyn.assign(p.plps.size(), L1PlpDyn());
+        post_.subSlices = p.subSlices;
+        for (size_t i = 0; i < p.plps.size(); i++) {
+            const TxPlp& q = p.plps[i]; L1PlpConf& c = post_.plps[i];
+            c.id = q.id; c.type = q.type; c.groupId = q.group; c.mod = q.mod; c.cod = q.cod; c.rotation = q.rot ? 1 : 0; c.fecType = q.shortFrame ? 0 : 1; c.timeIlLength = q.ti; c.plpMode = 1; c.numBlocksMax = q.blocks;
+            post_.dyn[i].id = q.id; post_.dyn[i].numBlocks = q.blocks;
+        }
+        L1Pre pre = pre_;
+        const int nPost = (int)encodeL1Post(pre, post_, nP2_, p_.mixed).size();
+        const int nPre = (int)encodeL1Pre(pre).size();
+        long cap = (long)nP2_ * pm_->p2DataCells() - nPre - nPost;
+        std::vector<uint8_t> types;
+        for (int s = nP2_; s < symbols_; s++) { pm_->symbolTypes(s, symbols_, types); for (int k = 0; k < k_; k++) cap += types[k] == kCellData; }
+        addrCap_ = cap;
+        long a = 0, d2 = 0;
+        for (size_t i = 0; i < p.plps.size(); i++) {
+            PlpFec f; f.shortFrame = p.plps[i].shortFrame; f.rate = p.plps[i].cod; f.mod = p.plps[i].mod; f.rotation = p.plps[i].rot;
+            const long n = (long)p.plps[i].blocks * fecDims(f).cellsPerBlock;
+            if (p.plps[i].type != 2) { post_.dyn[i].start = (int)a; a += n; } else d2 += n;
+        }
+        post_.type2Start = (int)a;
+        // the type 2 region fills what is left, in equal sub-slices (8.3.6.3.3): one sub-slice of each type 2 PLP after the other
+        const long nSub = std::max(1, p.subSlices);
+        post_.subSliceInterval = (int)(d2 / nSub);
+        long off = a;
+        for (size_t i = 0; i < p.plps.size(); i++) if (p.plps[i].type == 2) {
+            PlpFec f; f.shortFrame = p.plps[i].shortFrame; f.rate = p.plps[i].cod; f.mod = p.plps[i].mod; f.rotation = p.plps[i].rot;
+            post_.dyn[i].start = (int)off;
+            off += (long)p.plps[i].blocks * fecDims(f).cellsPerBlock / nSub;
+        }
     }
 }
 
@@ -166,16 +202,16 @@ void T2Generator::nextFrame(std::vector<cf32>& out) {
     // PLP payload cells (only with p_.payload): they follow L1 in the P2 symbols and carry on through the data symbols
     std::vector<cf32> plp;
     size_t plpUsed = 0;
-    if (p_.payload && plpBlocks_ > 0) {
-        PlpFec f; f.shortFrame = p_.plpShort; f.rate = p_.plpCod; f.mod = p_.plpMod; f.rotation = p_.plpRot;
+    // one PLP to cells: baseband frames, BCH, LDPC, bit and cell interleaving
+    auto makeCells = [&](const PlpFec& f, int blocks, int ti, const std::function<void(uint8_t*)>& src, std::vector<std::vector<uint8_t>>& bb, std::vector<cf32>& outCells) {
         const FecDims d = fecDims(f);
         const LdpcCode& ldpc = ldpcFor(f);
         const BchCode& bch = bchFor(f);
         const auto& map = bitInterleaverMap(f);
         const uint8_t* rnd = bbRandomiser();
-        lastBb_.assign(plpBlocks_, {});
+        bb.assign(blocks, {});
         std::vector<cf32> cells;
-        for (int b = 0; b < plpBlocks_; b++) {
+        for (int b = 0; b < blocks; b++) {
             // a transport stream of 188-byte packets in normal mode: each unit is the CRC-8 of the previous packet, then 187 bytes
             const int npk = (d.kBch - 80) / 1504;
             std::vector<uint8_t> bits(d.kBch, 0);
@@ -185,7 +221,7 @@ void T2Generator::nextFrame(std::vector<cf32>& out) {
             uint8_t prevCrc = 0;
             for (int k = 0; k < npk; k++) {
                 uint8_t pay[187];
-                if (p_.tsSource) { uint8_t pk[188]; p_.tsSource(pk); memcpy(pay, pk + 1, 187); }
+                if (src) { uint8_t pk[188]; src(pk); memcpy(pay, pk + 1, 187); }
                 else for (int j = 0; j < 187; j++) pay[j] = (uint8_t)(I.rng() >> 11);
                 size_t o = 80 + (size_t)k * 1504;
                 auto putByte = [&](size_t at, uint8_t v) { for (int q = 0; q < 8; q++) bits[at + q] = (v >> (7 - q)) & 1; };
@@ -196,7 +232,7 @@ void T2Generator::nextFrame(std::vector<cf32>& out) {
                 for (int j = 0; j < 187; j++) for (int q = 7; q >= 0; q--) { unsigned fb = ((crc >> 7) & 1) ^ ((pay[j] >> q) & 1); crc = (crc << 1) & 0xff; if (fb) crc ^= 0xD5; }
                 prevCrc = (uint8_t)crc;
             }
-            lastBb_[b] = bits;
+            bb[b] = bits;
             for (int i = 0; i < d.kBch; i++) bits[i] ^= rnd[i];
             bch.encode(bits, d.kBch);
             ldpc.encode(bits);
@@ -206,7 +242,27 @@ void T2Generator::nextFrame(std::vector<cf32>& out) {
             qamMapBlock(f, lab, cl);
             cells.insert(cells.end(), cl.begin(), cl.end());
         }
-        cellInterleave(f, plpBlocks_, p_.plpTi, cells, plp);
+        cellInterleave(f, blocks, ti, cells, outCells);
+    };
+    if (p_.payload && !p_.plps.empty()) {
+        // every PLP at its addresses (8.3.6.3); addresses no PLP takes keep random dummy cells
+        plp.assign((size_t)addrCap_, cf32(0, 0));
+        std::vector<uint8_t> used((size_t)addrCap_, 0);
+        for (size_t i = 0; i < p_.plps.size(); i++) {
+            const TxPlp& q = p_.plps[i];
+            PlpFec f; f.shortFrame = q.shortFrame; f.rate = q.cod; f.mod = q.mod; f.rotation = q.rot;
+            std::vector<cf32> cl;
+            makeCells(f, q.blocks, q.ti, q.tsSource, lastBbPlp_[q.id], cl);
+            const long start = post_.dyn[i].start;
+            if (q.type == 2) {
+                const size_t nSub = (size_t)std::max(1, p_.subSlices), per = cl.size() / nSub;
+                for (size_t j = 0; j < nSub; j++) for (size_t k = 0; k < per; k++) { const size_t at = (size_t)start + j * (size_t)post_.subSliceInterval + k; if (at < plp.size()) { plp[at] = cl[j * per + k]; used[at] = 1; } }
+            } else for (size_t k = 0; k < cl.size() && (size_t)start + k < plp.size(); k++) { plp[(size_t)start + k] = cl[k]; used[(size_t)start + k] = 1; }
+        }
+        for (size_t k = 0; k < plp.size(); k++) if (!used[k]) { const uint32_t r = I.rng(); plp[k] = cf32((r & 1) ? dect2::math::k1OverSqrt2f : -dect2::math::k1OverSqrt2f, (r & 2) ? dect2::math::k1OverSqrt2f : -dect2::math::k1OverSqrt2f); }
+    } else if (p_.payload && plpBlocks_ > 0) {
+        PlpFec f; f.shortFrame = p_.plpShort; f.rate = p_.plpCod; f.mod = p_.plpMod; f.rotation = p_.plpRot;
+        makeCells(f, plpBlocks_, p_.plpTi, p_.tsSource, lastBb_, plp);
     }
     while ((int)stream.size() < nP2_ * cP2) {
         if (plpUsed < plp.size()) { stream.push_back(plp[plpUsed++]); continue; }

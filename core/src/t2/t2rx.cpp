@@ -196,11 +196,10 @@ void T2Receiver::Impl::publish() {
             pi.id = c.id; pi.type = c.type; pi.payloadType = c.payloadType; pi.mod = c.mod; pi.cod = c.cod; pi.rotation = c.rotation;
             pi.fecType = c.fecType; pi.tiType = c.timeIlType; pi.tiLength = c.timeIlLength;
             pi.blocks = i < l1post.dyn.size() ? l1post.dyn[i].numBlocks : 0;
-            pi.supported = c.timeIlType == 0 && c.type != 2 && l1post.subSlices <= 1;
+            pi.supported = c.timeIlType == 0;
             t.plpList.push_back(pi);
             char b[160];
             if (c.timeIlType != 0) { snprintf(b, sizeof b, "PLP %d uses inter-frame time interleaving (TIME_IL_TYPE 1), which is not implemented", c.id); t.unsupported.push_back(b); }
-            if (c.type == 2 || l1post.subSlices > 1) { snprintf(b, sizeof b, "PLP %d is sub-sliced (type 2 / %d sub-slices per frame), which is not implemented", c.id, l1post.subSlices); t.unsupported.push_back(b); }
         }
     }
     if (l1preOk) {
