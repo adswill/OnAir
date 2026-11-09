@@ -19,12 +19,13 @@ void tab(App& a) {
                         "at a few Msps so the subcarrier sidebands fit. Nothing is cloned and no encrypted content is decoded.");
     ImGui::PopTextWrapPos();
     ImGui::Spacing();
-    if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "tune to 13.56 MHz and start the receiver"); return; }
+    if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : tr("Tune to 13.56 MHz and start the receiver. NFC only carries a few centimetres: hold a loop antenna within a few cm of the reader.")); return; }
 
     const dect2::NfcTelemetry& t = a.rx.nfc;
     ImGui::Text("Field %.1f dBFS   subcarrier %.1f dBFS   frames %llu   CRC/parity errors %llu",
                 (double)t.levelDb, (double)t.subcarrierDb, (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
     ImGui::Spacing();
+    if (t.blocksOk == 0) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", tr("No frames yet. NFC only carries a few centimetres: hold a loop antenna within a few cm of the reader, with the card on the reader.")); ImGui::PopTextWrapPos(); ImGui::Spacing(); }
 
     // ---- tag table ----
     if (!t.tags.empty()) {

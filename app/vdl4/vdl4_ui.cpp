@@ -23,6 +23,8 @@ void loadState() {
 void tab(App& a) {
     loadState();
     const dect2::Vdl4Telemetry& t = a.rx.vdl4;
+    if (!live(a)) ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("Start the receiver."));
+    else if (t.aircraft.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", tr("No VDL Mode 4 burst yet. It is used in only a few places, on VHF airband channels; bursts are short and need a line of sight to the transmitter.")); ImGui::PopTextWrapPos(); }
     if (S.view == 0) {
         if (ImGui::BeginTable("vdl4m", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY, ImVec2(0, 220 * gUi))) {
             ImGui::TableSetupColumn("Time");

@@ -75,6 +75,8 @@ void aircraftTable(const dect2::UatTelemetry& t) {
 
 void tab(App& a) {
     const dect2::UatTelemetry& t = a.rx.uat;
+    if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("Start the receiver.")); }
+    else if (t.aircraft.empty() && t.fisb.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", tr("No UAT message yet. UAT is on 978 MHz and is used in the United States; aircraft and FIS-B ground stations appear here as they are heard.")); ImGui::PopTextWrapPos(); }
     if (typo::beginTabItem("Aircraft")) { aircraftTable(t); ImGui::EndTabItem(); }
     if (typo::beginTabItem("FIS-B")) {
         for (const auto& p : t.fisb) {
