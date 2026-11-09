@@ -373,6 +373,9 @@ void fmRadioPanel(App& a) {
             if (!fm.rds.ert.empty()) row(Ic::Wave, tr("Text (eRT)"), "%s", fm.rds.ert.c_str());
         }
         row(Ic::Layers, "Programme", "%s", live && !fm.ptyText.empty() && fm.ptyText != "None" ? fm.ptyText.c_str() : "-");
+        if (live && fm.rdsSync && fm.ptyCode >= 0) {   // PTY code and the TP / TA / music-speech flags (#436)
+            row(Ic::Layers, tr("Type and flags"), "PTY %d%s%s%s  %s", fm.ptyCode, fm.ptyCode == 31 && !fm.rbds ? " (alarm)" : "", fm.trafficProgram ? "  TP" : "", fm.trafficAlert ? "  TA (announcement on air)" : "", fm.music ? tr("music") : tr("speech"));
+        }
         if (live && fm.rbds && !fm.callSign.empty()) row(Ic::Radio, tr("Call letters"), "%s", fm.callSign.c_str());
         {
             char snd[64];
@@ -460,7 +463,7 @@ void fmRadioPanel(App& a) {
         ImGui::EndTable();
     }
     ImGui::Spacing();
-    if (live && fm.rdsSync && (!fm.rds.afMhz.empty() || !fm.rds.ptyn.empty() || fm.rds.clockUtc || fm.rds.ecc >= 0 || !fm.rds.eon.empty() || !fm.rds.oda.empty())) {
+    if (live && fm.rdsSync && (!fm.rds.afMhz.empty() || fm.rds.language >= 0 || !fm.rds.ptyn.empty() || fm.rds.clockUtc || fm.rds.ecc >= 0 || !fm.rds.eon.empty() || !fm.rds.oda.empty())) {
         // the rest of RDS: what the station sends beyond the name and the text
         if (typo::collapsingHeader(trw("RDS details"), 0)) {
             ImGui::PushTextWrapPos(0);
@@ -483,7 +486,14 @@ void fmRadioPanel(App& a) {
             }
             if (fm.rds.ecc >= 0) ImGui::Text("%s: %02X  PI %04X", tr("Country code (ECC)"), fm.rds.ecc, fm.piCode);
             if (fm.rds.pinDay) ImGui::Text("%s: day %d, %02d:%02d", tr("Programme item"), fm.rds.pinDay, fm.rds.pinHour, fm.rds.pinMinute);
-            for (const auto& e : fm.rds.eon) ImGui::Text("%s: %04X %s", tr("Other network"), e.pi, e.ps.empty() ? "..." : fmTrim(e.ps).c_str());
+            if (fm.rds.language >= 0) ImGui::Text("%s: %s (%02X)", tr("Language"), rdsLanguageName(fm.rds.language), fm.rds.language);
+            for (const auto& e : fm.rds.eon) {
+                std::string x = e.ps.empty() ? "..." : fmTrim(e.ps);
+                if (e.pty >= 0) x += std::string("  PTY ") + std::to_string(e.pty);
+                if (e.tp == 1) x += "  TP";
+                if (e.ta == 1) x += "  TA";
+                ImGui::Text("%s: %04X %s", tr("Other network"), e.pi, x.c_str());
+            }
             for (const auto& t : fm.rds.rtPlus) if (t.type != 1 && t.type != 4) ImGui::Text("%s: %s", t.name.c_str(), t.text.c_str());
             if (!fm.rds.oda.empty()) {
                 std::string o;

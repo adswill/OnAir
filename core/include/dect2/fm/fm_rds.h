@@ -28,6 +28,9 @@ struct RtPlusTag {
 struct RdsEon {
     int pi = 0;
     std::string ps;      // 8 characters once complete, "" before
+    int tp = -1;         // its traffic programme flag (14A / 14B), -1 not received
+    int ta = -1;         // its traffic announcement flag (14B, 14A variant 13), -1 not received
+    int pty = -1;        // its programme type (14A variant 13), -1 not received
 };
 
 // What the decoder knows about the station, filled into FmTelemetry.
@@ -49,6 +52,15 @@ struct RdsInfo {
     uint64_t blocksGood = 0, blocksCorrected = 0, blocksBad = 0;
     uint64_t blocksVoted = 0;   // blocks rebuilt by voting over repeated copies (a subset of blocksCorrected)
 };
+
+// Language of the programme (group 1A variant 3), the codes of EN 50067 annex J as best known; "unknown" for the others
+inline const char* rdsLanguageName(int code) {
+    static const char* const n[] = {"unknown", "Albanian", "Breton", "Catalan", "Croatian", "Welsh", "Czech", "Danish", "German", "English", "Spanish", "Esperanto",
+        "Estonian", "Basque", "Faroese", "French", "Frisian", "Irish", "Gaelic", "Galician", "Icelandic", "Italian", "Lappish", "Latin", "Latvian", "Luxembourgian",
+        "Lithuanian", "Hungarian", "Maltese", "Dutch", "Norwegian", "Occitan", "Polish", "Portuguese", "Romanian", "Romansh", "Serbian", "Slovak", "Slovene",
+        "Finnish", "Swedish", "Turkish", "Flemish", "Walloon"};
+    return code >= 0 && code < (int)(sizeof n / sizeof n[0]) ? n[code] : "unknown";
+}
 
 // Content type names of RadioText+ (the RT+ specification, 64 classes)
 const char* rtPlusTypeName(int type);
@@ -143,7 +155,7 @@ private:
     int rtPlusToggle_ = -1;
     struct RawTag { int type, start, len; };
     RawTag rtPlusRaw_[2] = {{0, 0, 0}, {0, 0, 0}};
-    struct EonBuf { int pi; char ps[9]; uint8_t seen; };
+    struct EonBuf { int pi; char ps[9]; uint8_t seen; int tp, ta, pty; };
     std::vector<EonBuf> eonBuf_;
     struct Sig { uint16_t b, c, d; uint8_t cOk; uint32_t raw; };   // raw: a hash of the received words of the corrected blocks, 0 = clean
     uint32_t rawHash_ = 0;

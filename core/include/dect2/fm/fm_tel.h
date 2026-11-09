@@ -33,6 +33,7 @@ struct FmTelemetry {
     std::string psName;         // programme service name, 8 characters
     std::string radioText;      // radio text, up to 64 characters
     bool radioTextComplete = false;   // every segment of the radio text received (not only a part of it)
+    int ptyCode = -1;           // programme type number 0..31 (-1 until a group came)
     std::string ptyText;        // programme type (the RBDS names when rbds)
     bool rbds = false;          // the RBDS (US) meanings are in use, by the setting or Auto from the tuned frequency
     std::string callSign;       // US call letters from the PI code (RBDS only, empty when the PI holds none)
