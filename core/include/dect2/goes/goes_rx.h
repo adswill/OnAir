@@ -34,6 +34,7 @@ public:
     void setSymbolRate(double hz);          // default 927 ksym/s (GOES-R HRIT); Elektro-L HRIT is 665.4 ksym/s
     double symbolRate() const;
     void setSignalOffset(double hz);
+    void setOqpsk(bool on);                 // Elektro HRIT 1.15 Msym/s: OQPSK (QPSK with the Q rail half a symbol late)
     void setQpsk(bool on);                  // GK-2A HRIT: QPSK (G1 on I, G2 on Q) instead of BPSK
     // 1: the KMA (GK-2A) xRIT files; `tag` heads the log lines ("GK-2A HRIT")
     void setDialect(int dialect, const std::string& tag);

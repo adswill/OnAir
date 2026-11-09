@@ -109,7 +109,10 @@ extern const ModeUi kNrUi;
 extern const ModeUi kGoesUi;
 extern const ModeUi kDmeUi;
 extern const ModeUi kHrptUi;
+#include "dect2/wxsat/wxsat_tel.h"
+using dect2::kWxNumProfiles;
 extern const ModeUi kFy3AhrptUi;
+extern const ModeUi kWxsatUi[kWxNumProfiles];
 extern const ModeUi kFy3MptUi;
 extern const ModeUi kLbjUi;
 extern const ModeUi kKlwUi;
@@ -262,6 +265,7 @@ const ModeUi* modeUi(int family) {
     case 232: return &kFy4LritUi;
     case 233: return &kFy4aHritUi;
     case 234: return &kFy2SvissrUi;
+    case 260: case 261: case 262: case 263: case 264: case 265: case 266: case 267: case 268: return &kWxsatUi[family - 260];
     case 235: return &kFy3AhrptUi;
     case 236: return &kFy3MptUi;
     case 237: return &kPactor2Ui;

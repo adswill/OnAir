@@ -82,7 +82,7 @@ const std::set<std::string>& restrictedKnownKinds() {
     "shortwave",
     // 3.6 modes: blocked likewise
     "fy4lrit", "fy4ahrit", "fy2svissr",
-    "fy3ahrpt", "fy3mpt",
+    "fy3ahrpt", "fy3mpt", "noaaapt", "noaahrpt", "noaagac", "noaadsb", "meteorhrpt", "elektrordas", "arktikardas", "arktikaggak", "awsl",
     "sitor", "pactor2", "pactor3", "pactor4",
     };
     return s;

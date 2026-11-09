@@ -32,6 +32,8 @@ inline const char* elektroLinkName(int link) {
     case 2: return "LRIT 128 ksym/s";
     case 3: return "LRIT 64 ksym/s";
     case 4: return "GGAK 5 ksym/s";
+    case 5: return "LRIT 294 ksym/s";
+    case 6: return "HRIT 1.15 Msym/s OQPSK";
     default: return "HRIT 665.4 ksym/s";
     }
 }
@@ -41,6 +43,8 @@ inline double elektroSymbolRate(int link) {
     case 2: return 128e3;
     case 3: return 64e3;
     case 4: return kGgakSymbolRate;
+    case 5: return 294000.0;
+    case 6: return 1150000.0;
     default: return 665400.0;
     }
 }

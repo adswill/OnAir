@@ -315,6 +315,15 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 211: return pollStd(rxNrf_, 211, t, seqs[186], &RxTelemetry::nrf24);   // nRF24L01 (slot 186)
     case 241: return pollStd(rxSelcal_, 241, t, seqs[200], &RxTelemetry::selcal);   // SELCAL (slot 200)
     case 212: return pollStd(rxAtis_, 212, t, seqs[187], &RxTelemetry::atis);   // ATIS inland waterways (slot 187)
+    case 261: return pollStd(rxWx_[0], 261, t, seqs[220], &RxTelemetry::wxsat);   // 0
+    case 262: return pollStd(rxWx_[1], 262, t, seqs[221], &RxTelemetry::wxsat);   // 1
+    case 263: return pollStd(rxWx_[2], 263, t, seqs[222], &RxTelemetry::wxsat);   // 2
+    case 264: return pollStd(rxWx_[3], 264, t, seqs[223], &RxTelemetry::wxsat);   // 3
+    case 265: return pollStd(rxWx_[4], 265, t, seqs[224], &RxTelemetry::wxsat);   // 4
+    case 266: return pollStd(rxWx_[5], 266, t, seqs[225], &RxTelemetry::wxsat);   // 5
+    case 267: return pollStd(rxWx_[6], 267, t, seqs[226], &RxTelemetry::wxsat);   // 6
+    case 268: return pollStd(rxWx_[7], 268, t, seqs[227], &RxTelemetry::wxsat);   // 7
+    case 269: return pollStd(rxWx_[8], 269, t, seqs[228], &RxTelemetry::wxsat);   // 8
     case 236: return pollStd(rxFy3a_, 236, t, seqs[195], &RxTelemetry::fy3a);   // FY-3 AHRPT (slot 195)
     case 237: return pollStd(rxFy3m_, 237, t, seqs[196], &RxTelemetry::fy3m);   // FY-3 MPT (slot 196)
     case 238: return pollStd(rxPh2_, 238, t, seqs[197], &RxTelemetry::pactorhf);   // PACTOR-II (slot 197)

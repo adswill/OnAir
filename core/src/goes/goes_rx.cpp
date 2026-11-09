@@ -112,6 +112,16 @@ struct GoesReceiver::Impl {
     int alignParity = 0;
     float firstOfPair = 0;
     hrpt::Viterbi vit;                    // fast 16 bit butterflies: 3 Msym/s QPSK (GK-2A HRIT) needs it
+    bool oqpsk = false;                   // Elektro HRIT 1.15 Msym/s: the Q rail starts half a symbol later (SatDump pipeline elektro_hrit); I is delayed to line them up
+    std::vector<float> iDelay; size_t iPos = 0;
+    cf32 oqpskAlign(cf32 v) {
+        const size_t nd = std::max<size_t>(1, (size_t)std::lround(sps / 2));
+        if (iDelay.size() != nd) { iDelay.assign(nd, 0.f); iPos = 0; }
+        const float old = iDelay[iPos];
+        iDelay[iPos] = v.real();
+        iPos = (iPos + 1) % nd;
+        return cf32(old, v.imag());
+    }
     bool qpsk = false;                    // GK-2A HRIT: QPSK, G1 on I and G2 on Q; the receiver turns the serial order and polarity up in the sync search
     bool swapIQ = false;
     std::vector<float> syncBuf2;          // the same symbols with I and Q swapped (QPSK: a quarter turn swaps them)
@@ -617,6 +627,7 @@ struct GoesReceiver::Impl {
                 decPhase = 0;
                 d = lpf.out();
             }
+            if (oqpsk) d = oqpskAlign(d);
             mf.push(d);
             const cf32 o = mf.out();
             y.push_back(o);
@@ -690,6 +701,12 @@ void GoesReceiver::setSignalOffset(double hz) { p_->offset = hz; }
 void GoesReceiver::setQpsk(bool on) {
     if (p_->qpsk == on) return;
     p_->qpsk = on;
+    const double r = p_->rateSet;
+    if (r > 0) configure(r);
+}
+void GoesReceiver::setOqpsk(bool on) {
+    if (p_->oqpsk == on && p_->qpsk == on) return;
+    p_->oqpsk = on; p_->qpsk = on;
     const double r = p_->rateSet;
     if (r > 0) configure(r);
 }

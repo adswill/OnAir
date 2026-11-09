@@ -1,0 +1,60 @@
+// Receiver of the wxsat links (wxsat_tel.h): one class, one profile per mode-list entry. PM with a residual carrier (the Manchester links, NOAA HRPT, DSB,
+// Meteor HRPT), BPSK (NOAA GAC, RDAS), QPSK with the CCSDS convolutional code (AWS), or the FM + 2400 Hz AM of APT. Arktika GGAK runs the Elektro GGAK receiver at
+// its own frequency. Written to the engine's contract: configure() once the sample rate is known, feed() from the analysis thread, telemetry() and the setters from the
+// interface thread.
+#pragma once
+#include "dect2/engine/mode_tuning.h"
+#include "dect2/common/ring.h"
+#include "dect2/wxsat/wxsat_tel.h"
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <string>
+
+namespace dect2 {
+
+class WxsatReceiver {
+public:
+    explicit WxsatReceiver(int profile);
+    ~WxsatReceiver();
+    void configure(double inputRateHz);
+    void setSignalOffset(double hz);
+    bool ready() const;
+    void reset();
+    void clearImage();
+    void feed(const cf32* x, size_t n);
+    bool telemetry(WxsatTelemetry& out, uint64_t lastSeq);
+    void clearResults();
+    std::string saveResults() const;
+    bool loadResults(const std::string& blob);
+    void setLogCallback(std::function<void(const std::string&)> cb);
+    int profile() const;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> p_;
+};
+
+ModeTuning wxsatTuning(int profile);
+
+namespace wxsat {
+// APT below the FM discriminator, on its own so recordings of the audio can be tested: real audio at audioRate in, 2080-sample lines out.
+class AptDecoder {
+public:
+    AptDecoder();
+    ~AptDecoder();
+    void configure(double audioRate);
+    void reset();
+    void pushAudio(const float* x, size_t n);
+    std::function<void(int idx, const uint8_t* px)> onLine;       // px: 2080 samples, 8 bit
+    bool locked() const;
+    uint64_t linesOut() const;
+    float carrierLevel() const;
+private:
+    struct Impl;
+    std::unique_ptr<Impl> p_;
+};
+}
+
+} // namespace dect2

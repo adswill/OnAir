@@ -64,6 +64,15 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | Sub-GHz sensors | 241 | 243 | 242 | 201 | feat37-sensors | 3.7; 433.92 MHz first (315 / 868 / 915 MHz too); decoders vendored from rtl_433, see docs/SENSORS-3.7.md; numbers may need to move at merge |
 | Sferics (lightning) | 243 | 245 | 244 | 203 | feat37-modesB | 3.7; broadband impulse counter, mains-train rejection; synthetic signals only; family 242 / std 244 / 243 / slot 202 are left for feat37-modesA; numbers may need to move at merge |
 | Thread | 244 | 246 | 245 | 204 | feat37-discord5 | 3.7; 802.15.4 receiver in Thread mode (beacons, 6LoWPAN / MLE where clear, encrypted traffic shown as encrypted); synthetic signals only; numbers may need to move at merge (feat37-modesB took 242 / 243) |
+| NOAA APT | 260 | 262 | 261 | 220 | feat37-sd1 | 3.7; analogue pictures, retired 2025, recordings only; numbers may need to move at merge |
+| NOAA HRPT | 261 | 263 | 262 | 221 | feat37-sd1 | 3.7; PM Manchester, retired 2025, recordings only; numbers may need to move at merge |
+| NOAA GAC | 262 | 264 | 263 | 222 | feat37-sd1 | 3.7; retired 2025, recordings only; numbers may need to move at merge |
+| NOAA DSB | 263 | 265 | 264 | 223 | feat37-sd1 | 3.7; TIP / HIRS, retired 2025, recordings only; numbers may need to move at merge |
+| Meteor HRPT | 264 | 266 | 265 | 224 | feat37-sd1 | 3.7; MSU-MR at 1700 MHz; numbers may need to move at merge |
+| Elektro-L RDAS | 265 | 267 | 266 | 225 | feat37-sd1 | 3.7; MSU-GS, X-band 30.72 Msym/s; numbers may need to move at merge |
+| Arktika-M RDAS | 266 | 268 | 267 | 226 | feat37-sd1 | 3.7; MSU-GS, X-band 30.72 Msym/s; numbers may need to move at merge |
+| Arktika-M GGAK | 267 | 269 | 268 | 227 | feat37-sd1 | 3.7; 1703 MHz PM; numbers may need to move at merge |
+| AWS L-band | 268 | 270 | 269 | 228 | feat37-sd1 | 3.7; MWR, 1707 MHz; numbers may need to move at merge |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |
@@ -71,6 +80,6 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 Protocol entries (a row with a subId, such as FT8 in HF digital or POCSAG in pagers) share their family on purpose; the test checks
 that each (family, subId) pair is unique instead.
 
-`kNumFamilies` = 245, `kPollSeqSlots` = 205 (families 213 to 234 and poll slots 189 to 194 are kept for the other 3.6 lanes).
+`kNumFamilies` = 269, `kPollSeqSlots` = 229 (families 213 to 234 and poll slots 189 to 194 are kept for the other 3.6 lanes).
 
 A new mode takes the next free family above the highest one in this table and the next free poll slot, and adds its row here.

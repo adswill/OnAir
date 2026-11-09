@@ -155,7 +155,7 @@ using SavedChannel = plat::Channel;
 // parts of the window the tour points at
 enum WizTarget { TgNone = 0, TgSwitch, TgToolbar, TgMain, TgRight, TgConst, TgCount };
 
-constexpr int kNumFamilies = 245;   // App::family runs from 0 to kNumFamilies - 1
+constexpr int kNumFamilies = 269;   // App::family runs from 0 to kNumFamilies - 1
 constexpr int kShortwaveFamily = 212;   // Shortwave (engine standard 213): the general receiver with one-click HF decoders
 // The two modes that listen with the General receiver's screen (app/general): the General receiver and Shortwave
 inline bool isGeneralFamily(int f) { return f == 55 || f == kShortwaveFamily; }
@@ -773,6 +773,7 @@ void mapSendShutdown();                             // join the ingest thread be
 bool mapFamilySends(int family);                    // this mode can put decoded positions on the public map
 std::string mapSendStatusLine();                    // short "connected / N sent" line for the mode header (empty when off)
 std::string mapSendDiagnosticsBlock(const App& a);  // map.on-air.dev ingest state + recent log for Copy diagnostics
+std::string passesArmFamily(App& a, int family);   // passes_ui.cpp: one click: track the next pass of this mode's satellite
 void passesDevTle(const std::string& path);       // dev (--tle): TLEs from a file, as if pasted
 std::vector<std::pair<std::string, double>> passesArgosDoppler(double unixSec, double freqHz);       // passes_ui.cpp: MetOp (Argos downlink) satellites above the horizon and their Doppler
 std::vector<std::pair<std::string, double>> passesGlobalstarDoppler(double unixSec, double freqHz);   // passes_ui.cpp: Globalstar satellites above the horizon and their Doppler (TLEs from the planner)
