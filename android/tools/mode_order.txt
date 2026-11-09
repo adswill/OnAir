@@ -191,3 +191,8 @@
 267|
 268|
 245|
+360|reticulum
+360|elrs
+360|mavlink
+360|frsky
+360|flysky

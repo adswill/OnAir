@@ -270,6 +270,8 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxSsdv_.setSignalOffset(o);
         rxEbi_.setSignalOffset(o);
         rxInmsat_.setSignalOffset(o);
+        rxRc_.setSignalOffset(o);
+        rxRc_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxNrf_.setSignalOffset(o);
         rxSens_.setSignalOffset(o);
         rxBgan_.setSignalOffset(o); rxBgan_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
@@ -606,6 +608,7 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxSsdv_.setLogCallback([this](const std::string& s) { log(s); });
     rxEbi_.configure(rate_);
     rxEbi_.setLogCallback([this](const std::string& s) { log(s); });
+    rxRc_.configure(rate_);
     rxNrf_.configure(rate_);
     rxSens_.configure(rate_);
     rxBgan_.configure(rate_);
@@ -614,6 +617,7 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxSfer_.setLogCallback([this](const std::string& s) { log(s); });
     rxSw_.configure(rate_);
     rxSw_.setLogCallback([this](const std::string& s) { log(s); });
+    rxRc_.setLogCallback([this](const std::string& s) { log(s); });
     rxNrf_.setLogCallback([this](const std::string& s) { log(s); });
     rxSens_.setLogCallback([this](const std::string& s) { log(s); });
     rxSelcal_.setAudioInput(dev.kind == DeviceInfo::Audio);

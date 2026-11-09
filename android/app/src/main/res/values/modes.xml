@@ -214,6 +214,11 @@
         <item>Arktika-M GGAK</item>
         <item>AWS L-band</item>
         <item>Inmarsat BGAN</item>
+        <item>Reticulum (RNode)</item>
+        <item>ExpressLRS</item>
+        <item>MAVLink (SiK radio)</item>
+        <item>FrSky RC (D8 / D16)</item>
+        <item>FlySky RC (AFHDS / 2A)</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -409,6 +414,11 @@
         <item>Arktika-M N1 / N2 space-weather telemetry (GGAK, experimental: frame lock not reached yet) on 1703 MHz, PM 5 ksym/s: the Elektro GGAK frames and magnetometer. Highly elliptical orbit: Follow the next pass tracks the Doppler</item>
         <item>Arctic Weather Satellite on 1707 MHz: QPSK 1.785 Msym/s, CCSDS convolutional code, Reed-Solomon interleave 5, the MWR microwave scans (19 channels, 145 points) line by line. Needs a dish at 1.7 GHz and 4 Msps or more; Follow the next pass tunes with Doppler and starts by itself</item>
         <item>Inmarsat BGAN (ETSI TS 102 744 Family SL), the satellite data service: every forward carrier from 1525 to 1559 MHz, bearer type and code rate, satellite, spot beam, network identity, and the system information it broadcasts. One-click scan across the band. Signalling and carrier structure only: no voice, no user data, no subscriber identity. Needs a user test: only synthetic signals so far, never validated on a real BGAN recording. A patch antenna is enough for the global beam and for bearers aimed at your region; narrow spot beams elsewhere are out of reach</item>
+        <item>Reticulum mesh traffic on RNode LoRa: announces with their signature checked, packet types and destinations; data stays encrypted, structure only</item>
+        <item>ExpressLRS RC links on the 900 MHz LoRa rates: link id, rate and hop index from SYNC frames; RC channels only with your own binding phrase (Advanced). 2.4 GHz FLRC and long-interleaver LoRa are not decodable</item>
+        <item>MAVLink telemetry on SiK / 3DR radios at 433 and 915 MHz: GFSK frequency hopping, every air speed, MAVLink v1 / v2 messages with vehicle position on the map</item>
+        <item>FrSky D8 and D16 2.4 GHz RC links (CC2500 GFSK, hopping): transmitter id and channels; layouts from the DIY-Multiprotocol-TX-Module project, simulated signals only so far</item>
+        <item>FlySky AFHDS and AFHDS 2A 2.4 GHz RC links (A7105 GFSK, hopping): transmitter id and channels; layouts from the DIY-Multiprotocol-TX-Module project, simulated signals only so far</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -604,6 +614,11 @@
         <item>Arktika-M GGAK telemetry</item>
         <item>AWS MWR, 1.7 GHz</item>
         <item>Satellite, L-band</item>
+        <item>LoRa mesh, structure only</item>
+        <item>RC link, structure only</item>
+        <item>Drone telemetry</item>
+        <item>RC link</item>
+        <item>RC link</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -799,5 +814,10 @@
         <item>arktika ggak sem 1703 magnetometer heo space weather</item>
         <item>aws arctic weather satellite 1707 mwr microwave radiometer eumetsat sterna</item>
         <item>bgan inmarsat i-4 alphasat family sl ts 102 744 l-band satcom 1545 1550 16qam spot beam isatphone</item>
+        <item>reticulum rnode rns lxmf nomad</item>
+        <item>elrs expresslrs rc drone fpv</item>
+        <item>mavlink sik 3dr ardupilot px4 telemetry drone</item>
+        <item>frsky d8 d16 accst taranis rc</item>
+        <item>flysky afhds i6 rc</item>
     </string-array>
 </resources>
