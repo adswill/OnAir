@@ -3,6 +3,8 @@
 // that repeats at a multiple of the 100 / 120 Hz mains half period is mains interference: the receiver waits 0.5 s before it counts an impulse so a
 // regular train can be recognised and left out. Impulses longer than 5 ms are not lightning.
 #include "dect2/sferics/sferics_rx.h"
+#include "dect2/sferics/sferics_storm.h"
+#include "dect2/automation/engine.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -156,9 +158,12 @@ struct SfericsReceiver::Impl {
             s.widthUs = (float)(e.widthS * 1e6);
             s.flash = flashNo;
             recent.push_back(s);
+            storm.add(e.t, (float)e.peakDb);
             if (recent.size() > kSfericsRecentMax) recent.pop_front();
         }
     }
+
+    StormTrend storm; StormPhase lastPhase = StormPhase::None;
 
     void updateFloor() {
         std::vector<float> v(blocks.begin(), blocks.end());
@@ -187,6 +192,17 @@ struct SfericsReceiver::Impl {
         t.perMin1 = last60;
         const double span10 = std::min(600.0, std::max(60.0, nowT));
         t.perMin10 = (double)strikeTimes.size() / (span10 / 60.0);
+        {
+            const StormPhase ph = storm.update(nowT);
+            t.stormPhase = (int)ph; t.stormDbChange = storm.dbChange;
+            if (ph != lastPhase && (ph == StormPhase::Approaching || ph == StormPhase::Overhead || ph == StormPhase::Receding) && automation::wants(automation::FSignal)) {
+                automation::Event ev("sferics.storm");
+                ev.at(automation::wallNow(), "Sferics", 0);
+                ev.str("phase", stormPhaseName(ph)).num("db_change", storm.dbChange).num("per_min", storm.rateNow);
+                automation::emit(std::move(ev));
+            }
+            lastPhase = ph;
+        }
         t.lastAgoSec = lastStrikeT < 0 ? -1 : nowT - lastStrikeT;
         t.state = n == 0 ? 0 : !floorValid ? 1 : (!strikeTimes.empty() ? 3 : 2);
         t.perMinute.assign(kSfericsMinutes, 0);

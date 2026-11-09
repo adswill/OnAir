@@ -24,6 +24,15 @@ struct SensorField {
 struct SensorHistPoint { int64_t utc = 0; double v = 0; };
 struct SensorSeries { std::string key; std::vector<SensorHistPoint> pts; };
 
+// what the receiver learned about a sensor (sensors_health.h)
+struct SensorHealth {
+    double intervalSec = 0;      // 0 until learned (at least 3 transmissions)
+    int gaps = 0;
+    int64_t lastTx = 0;
+    bool silent = false, outlier = false, collision = false, batteryFalling = false;
+    std::string detail;          // the field that looked wrong
+};
+
 struct SensorDevice {
     std::string key;                 // model|id|channel
     std::string model, id, channel;
@@ -35,6 +44,7 @@ struct SensorDevice {
     float rssiDb = -200, snrDb = 0;
     int batteryOk = -1;              // -1 unknown, 0 low, 1 ok
     std::string json;                // the last message as JSON (rtl_433 style, for export)
+    SensorHealth health;
 };
 
 // A pulse train that no decoder took: what the unknown signal analyser shows

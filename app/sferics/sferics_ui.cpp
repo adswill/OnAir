@@ -3,6 +3,7 @@
 // the histogram and the list side by side; Advanced: the same with the details. The threshold, the mains filter and the merge time are
 // the decoder options in the side panel; "Clear counts" zeroes the counters.
 #include "app.h"
+#include "dect2/sferics/sferics_storm.h"
 #include "i18n/i18n.h"
 #include "dect2/common/time_fmt.h"
 #include "dect2/sferics/sferics_gen.h"
@@ -52,6 +53,10 @@ void meters(App& a) {
     auto kv = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); kvColumn(150 * gUi); ImGui::PushFont(a.mono, 0); ImGui::Text(fmt, v...); ImGui::PopFont(); };
     kv(tr("state"), "%s", dect2::sfericsSummary(t).c_str());
     kv(tr("activity"), "%s", tr(dect2::sfericsActivity(t.perMin1)));
+    if (t.stormPhase != 0) {
+        kv(tr("trend"), "%s", tr(dect2::stormPhaseName((dect2::StormPhase)t.stormPhase)));
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("From the strike rate and the strike strength over the last ten minutes at this antenna. It says whether the storm is coming or going, not where it is."));
+    }
     kv(tr("strikes per minute (1 min)"), "%.0f", t.perMin1);
     kv(tr("strikes per minute (10 min)"), "%.1f", t.perMin10);
     kv(tr("strikes"), "%llu", (unsigned long long)t.strikes);

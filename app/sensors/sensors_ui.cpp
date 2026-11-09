@@ -241,6 +241,11 @@ void sensorsView(App& a) {
         if (d.batteryOk == 0) ImGui::TextColored(ImVec4(0.95f, 0.55f, 0.3f, 1), "%s", tr("low")); else ImGui::TextUnformatted(batText(d).c_str());
         ImGui::TableNextColumn(); ImGui::TextDisabled("%.0f", d.rssiDb);
         ImGui::TableNextColumn(); ImGui::TextDisabled("%s  x%llu", ago(now, d.lastSeen).c_str(), (unsigned long long)d.count);
+        {
+            const auto& h = d.health;
+            const char* w = h.silent ? N_("silent") : h.collision ? N_("two sensors, one id?") : h.outlier ? N_("odd reading") : h.batteryFalling ? N_("battery falling") : nullptr;
+            if (w) { ImGui::SameLine(); ImGui::TextColored(ImVec4(0.95f, 0.65f, 0.3f, 1), "%s", tr(w)); if (ImGui::IsItemHovered() && !h.detail.empty()) ImGui::SetTooltip("%s", h.detail.c_str()); }
+        }
     }
     ImGui::EndTable();
     if (t.devices.empty()) ImGui::TextDisabled("%s", t.packages ? tr("No sensor decoded yet. A pulse signal was heard: see Unknown signals.") : tr("No sensors yet. Sensors send every 30 to 180 seconds; wait a few minutes."));
