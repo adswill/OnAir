@@ -18,7 +18,7 @@ namespace {
 struct State {
     int view = 0;                 // 0 cells, 1 channel lists, 2 carriers, 3 log
     int sel = -1;                 // selected cell (index in cells)
-    bool railway = true, publicBand = false;
+    bool railway = true, publicBand = false, dcsBand = false;
     bool scanning = false;
     std::vector<double> plan;     // centres, MHz
     size_t step = 0;
@@ -56,6 +56,7 @@ void makePlan(const App& a) {
     auto add = [&](double lo, double hi) { for (double c = lo + span / 2; c - span / 2 < hi; c += span) S.plan.push_back(std::round(c * 10) / 10); };
     if (S.railway) add(921.0, 925.0);
     if (S.publicBand) add(925.0, 960.0);
+    if (S.dcsBand) add(1805.0, 1880.0);
 }
 
 void scanBar(App& a) {
@@ -67,6 +68,8 @@ void scanBar(App& a) {
     flowNext(6 * gUi);
     ImGui::Checkbox("GSM 900 925 - 960##gb1", &S.publicBand);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("The public GSM 900 downlink: the same broadcast, the same decoder");
+    flowNext(6 * gUi);
+    ImGui::Checkbox("DCS 1800 1805 - 1880##gb2", &S.dcsBand);
     flowNext(10 * gUi);
     if (!S.scanning) {
         if (runningButton(a, tr("Scan"), true)) { makePlan(a); S.step = 0; S.stepAt = 0; S.scanning = !S.plan.empty(); }
@@ -83,8 +86,8 @@ void scanBar(App& a) {
         resexp::Table t; t.cols = {"time", "frequency_hz", "mode", "operator", "arfcn", "bsic", "lac", "cell_id", "band", "level_db", "snr_db"};
         const std::string now = resexp::stamp();
         for (const auto& c : a.rx.gsmr.cells)
-            t.add({now, resexp::num(c.freqHz, 0), c.railway ? "GSM-R" : "GSM 900", opText(c), c.arfcn >= 0 ? std::to_string(c.arfcn) : "", std::to_string(c.ncc) + "-" + std::to_string(c.bcc),
-                   c.hasLai ? std::to_string(c.lac) : "", c.hasSi3 ? std::to_string(c.cellId) : "", c.railway ? "GSM-R" : "GSM 900",
+            t.add({now, resexp::num(c.freqHz, 0), c.railway ? "GSM-R" : c.freqHz > 1.7e9 ? "DCS 1800" : "GSM 900", opText(c), c.arfcn >= 0 ? std::to_string(c.arfcn) : "", std::to_string(c.ncc) + "-" + std::to_string(c.bcc),
+                   c.hasLai ? std::to_string(c.lac) : "", c.hasSi3 ? std::to_string(c.cellId) : "", c.railway ? "GSM-R" : c.freqHz > 1.7e9 ? "DCS 1800" : "GSM 900",
                    resexp::num(c.levelDb, 0), resexp::num(c.snrDb, 0)});
         resexp::saveButton(t, "gsmr", note, "svgsmr");
         if (!note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", note.c_str()); }
@@ -114,7 +117,7 @@ void cellTable(App& a) {
         ImGui::TableNextColumn(); ImGui::Text("%d-%d", c.ncc, c.bcc);
         ImGui::TableNextColumn(); if (c.hasLai) ImGui::Text("%u", c.lac); else ImGui::TextDisabled("-");
         ImGui::TableNextColumn(); if (c.hasSi3) ImGui::Text("%u", c.cellId); else ImGui::TextDisabled("-");
-        if (wide) { ImGui::TableNextColumn(); ImGui::TextUnformatted(c.railway ? "GSM-R" : "GSM 900"); }
+        if (wide) { ImGui::TableNextColumn(); ImGui::TextUnformatted(c.railway ? "GSM-R" : c.freqHz > 1.7e9 ? "DCS 1800" : "GSM 900"); }
         ImGui::TableNextColumn(); ImGui::Text("%.0f", c.levelDb);
         if (wide) { ImGui::TableNextColumn(); ImGui::Text("%.0f", c.snrDb); }
         if (wide) { ImGui::TableNextColumn(); ImGui::TextUnformatted(ago(c.lastWall).c_str()); }
