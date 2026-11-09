@@ -3599,11 +3599,9 @@ Pinned: never paused by the CPU limit	Fijada: el límite de CPU nunca la pausa
 Follow this signal's sound; it is never paused by the CPU limit	Seguir el sonido de esta señal; el límite de CPU nunca la pausa
 Remove: a signal you added is taken away, a found one is switched off	Quitar: una señal añadida se elimina; una encontrada se desactiva
 # Share on web: relay, listeners, server settings
-Share my radio	Compartir mi radio
 Connecting to the relay ...	Conectando con el relé ...
 Anyone with the link	Cualquiera con el enlace
 Invite links only	Solo enlaces de invitación
-Limits that protect your computer	Límites que protegen su equipo
 Antenna (shown to listeners, optional)	Antena (visible para los oyentes, opcional)
 Listener limits	Límites de oyentes
 While sharing	Mientras se comparte
@@ -3629,7 +3627,6 @@ Most spectrum rows per second (0 = the default)	Máximo de filas de espectro por
 Key file for that certificate	Archivo de clave de ese certificado
 A certificate needs both files.	Un certificado necesita ambos archivos.
 Relay service address (only if you run your own relay)	Dirección del servicio de relé (solo si usa su propio relé)
-OnAir relay (recommended: no setup, no open ports)	Relé de OnAir (recomendado: sin configurar, sin puertos abiertos)
 Free Cloudflare tunnel (needs a small helper program, downloaded once)	Túnel gratuito de Cloudflare (necesita un pequeño programa auxiliar, se descarga una vez)
 Only my network (a phone on the same Wi-Fi)	Solo mi red (un teléfono en el mismo Wi-Fi)
 Password (8 characters or more)	Contraseña (8 caracteres o más)
@@ -3644,7 +3641,6 @@ invite links only	solo con enlaces de invitación
 open to anyone with the link	abierto a cualquiera con el enlace
 with a password	con contraseña
 no radio found	no se encontró ninguna radio
-No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	No se encontró ninguna radio. Conecte una y pulse Actualizar en la pestaña Radio y rango, o elija la señal de prueba.
 Join the OnAir Discord	Unirse al Discord de OnAir
 
 # Multi-radio trunking (trunk pool)

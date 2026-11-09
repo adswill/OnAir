@@ -3601,11 +3601,9 @@ Pinned: never paused by the CPU limit	固定: CPU上限では一時停止され�
 Follow this signal's sound; it is never paused by the CPU limit	この信号の音声を追いかけます。CPU上限では一時停止されません
 Remove: a signal you added is taken away, a found one is switched off	削除: 追加した信号は取り除かれ、検出された信号はオフになります
 # Share on web: relay, listeners, server settings
-Share my radio	ラジオを共有する
 Connecting to the relay ...	リレーに接続中 ...
 Anyone with the link	リンクを知っている人なら誰でも
 Invite links only	招待リンクのみ
-Limits that protect your computer	コンピューターを守る制限
 Antenna (shown to listeners, optional)	アンテナ（リスナーに表示、任意）
 Listener limits	リスナーの制限
 While sharing	共有中
@@ -3631,7 +3629,6 @@ Most spectrum rows per second (0 = the default)	1秒あたりの最大スペク�
 Key file for that certificate	その証明書の鍵ファイル
 A certificate needs both files.	証明書には両方のファイルが必要です。
 Relay service address (only if you run your own relay)	リレーサービスのアドレス（自分のリレーを使う場合のみ）
-OnAir relay (recommended: no setup, no open ports)	OnAirリレー（推奨: 設定不要、ポート開放不要）
 Free Cloudflare tunnel (needs a small helper program, downloaded once)	無料のCloudflareトンネル（小さな補助プログラムが必要、初回のみダウンロード）
 Only my network (a phone on the same Wi-Fi)	自分のネットワークのみ（同じWi-Fiのスマートフォン）
 Password (8 characters or more)	パスワード（8文字以上）
@@ -3646,7 +3643,6 @@ invite links only	招待リンクのみ
 open to anyone with the link	リンクを知っている人なら誰でも
 with a password	パスワード付き
 no radio found	ラジオが見つかりません
-No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	ラジオが見つかりません。ラジオを接続し、「ラジオと範囲」タブで更新を押すか、テスト信号を選んでください。
 Join the OnAir Discord	OnAir の Discord に参加
 
 # Multi-radio trunking (trunk pool)

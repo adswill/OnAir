@@ -3600,11 +3600,9 @@ Pinned: never paused by the CPU limit	Przypięty: limit CPU nigdy go nie wstrzym
 Follow this signal's sound; it is never paused by the CPU limit	Podąża za dźwiękiem tego sygnału; limit CPU nigdy go nie wstrzymuje
 Remove: a signal you added is taken away, a found one is switched off	Usuń: dodany sygnał znika, znaleziony zostaje wyłączony
 # Share on web: relay, listeners, server settings
-Share my radio	Udostępnij moje radio
 Connecting to the relay ...	Łączenie z przekaźnikiem ...
 Anyone with the link	Każdy, kto ma link
 Invite links only	Tylko linki z zaproszeniem
-Limits that protect your computer	Limity chroniące komputer
 Antenna (shown to listeners, optional)	Antena (widoczna dla słuchaczy, opcjonalnie)
 Listener limits	Limity słuchaczy
 While sharing	Podczas udostępniania
@@ -3630,7 +3628,6 @@ Most spectrum rows per second (0 = the default)	Maks. wierszy widma na sekundę 
 Key file for that certificate	Plik klucza tego certyfikatu
 A certificate needs both files.	Certyfikat wymaga obu plików.
 Relay service address (only if you run your own relay)	Adres usługi przekaźnika (tylko dla własnego przekaźnika)
-OnAir relay (recommended: no setup, no open ports)	Przekaźnik OnAir (zalecany: bez konfiguracji i otwartych portów)
 Free Cloudflare tunnel (needs a small helper program, downloaded once)	Darmowy tunel Cloudflare (potrzebny mały program pomocniczy, pobierany raz)
 Only my network (a phone on the same Wi-Fi)	Tylko moja sieć (telefon w tym samym Wi-Fi)
 Password (8 characters or more)	Hasło (8 znaków lub więcej)
@@ -3645,7 +3642,6 @@ invite links only	tylko z linkiem z zaproszeniem
 open to anyone with the link	otwarte dla każdego, kto ma link
 with a password	z hasłem
 no radio found	nie znaleziono radia
-No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	Nie znaleziono radia. Podłącz radio i naciśnij Odśwież na karcie Radio i zakres albo wybierz sygnał testowy.
 Join the OnAir Discord	Dołącz do Discorda OnAir
 
 # Multi-radio trunking (trunk pool)

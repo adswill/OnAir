@@ -3624,11 +3624,9 @@ Pinned: never paused by the CPU limit	已固定：CPU 上限不会将其暂停
 Follow this signal's sound; it is never paused by the CPU limit	跟随此信号的声音；CPU 上限不会将其暂停
 Remove: a signal you added is taken away, a found one is switched off	移除：手动添加的信号将被删除，自动发现的信号将被关闭
 # Share on web: relay, listeners, server settings
-Share my radio	分享我的电台
 Connecting to the relay ...	正在连接中继 ...
 Anyone with the link	任何拥有链接的人
 Invite links only	仅限邀请链接
-Limits that protect your computer	保护电脑的限制
 Antenna (shown to listeners, optional)	天线（对听众可见，可选）
 Listener limits	听众限制
 While sharing	分享期间
@@ -3654,7 +3652,6 @@ Most spectrum rows per second (0 = the default)	每秒最多频谱行数（0 = �
 Key file for that certificate	该证书的密钥文件
 A certificate needs both files.	证书需要两个文件。
 Relay service address (only if you run your own relay)	中继服务地址（仅在使用自己的中继时）
-OnAir relay (recommended: no setup, no open ports)	OnAir 中继（推荐：无需设置，无需开放端口）
 Free Cloudflare tunnel (needs a small helper program, downloaded once)	免费 Cloudflare 隧道（需要一个小型辅助程序，仅下载一次）
 Only my network (a phone on the same Wi-Fi)	仅限本地网络（同一 Wi-Fi 下的手机）
 Password (8 characters or more)	密码（8 个字符或更多）
@@ -3669,7 +3666,6 @@ invite links only	仅限邀请链接
 open to anyone with the link	任何拥有链接的人都可收听
 with a password	需要密码
 no radio found	未找到电台
-No radio found. Plug in a radio and press Refresh on the Radio and range tab, or pick the test signal.	未找到电台。请连接电台并在“电台与范围”选项卡中点击刷新，或选择测试信号。
 Join the OnAir Discord	加入 OnAir Discord
 
 # Multi-radio trunking (trunk pool)
