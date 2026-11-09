@@ -111,6 +111,57 @@ private:
     std::vector<uint8_t> frame_;
 };
 
+// Lucky-7 sends short bursts with a 16-bit sync word and no time for a clock loop: correlate the discriminator against the sync word on every sample (as SatDump's demodulator)
+// and take the symbols from the burst's own timing.
+class Lucky7Burst {
+public:
+    std::function<void(const uint8_t* bytes39)> onFrame;
+    uint64_t tries = 0;
+    void configure(double decRate, double sym) {
+        sps_ = decRate / sym;
+        n_ = (int)std::ceil(kLucky7Bits * sps_) + 2;
+        buf_.assign((size_t)n_ * 2, 0.f);
+        pos_ = 0; have_ = 0; skip_ = 0;
+        edge_.resize((size_t)kLucky7Bits + 1);
+        for (int i = 0; i <= kLucky7Bits; i++) edge_[(size_t)i] = (int)std::lround(i * sps_);
+    }
+    void push(float v) {
+        buf_[(size_t)pos_] = buf_[(size_t)pos_ + n_] = v;
+        pos_ = (pos_ + 1) % n_;
+        if (have_ < n_) have_++;
+        if (skip_ > 0) { skip_--; return; }
+        if (have_ < n_) return;
+        const float* x = &buf_[(size_t)pos_];   // oldest first
+        static const int kSync[16] = {-1, -1, 1, -1, 1, 1, -1, 1, 1, 1, -1, 1, -1, 1, -1, -1};
+        float corr = 0, mag = 0;
+        for (int i = 0; i < 16; i++) {
+            float sum = 0;
+            for (int k = edge_[(size_t)i]; k < edge_[(size_t)i + 1]; k++) { sum += x[k]; mag += std::fabs(x[k]); }
+            corr += (float)kSync[i] * sum;
+        }
+        if (mag < 1e-9f || std::fabs(corr) < 0.72f * mag) return;
+        tries++;
+        std::vector<float> sym((size_t)kLucky7Bits);
+        float mean = 0;
+        for (int i = 0; i < kLucky7Bits; i++) {
+            float sum = 0;
+            for (int k = edge_[(size_t)i]; k < edge_[(size_t)i + 1]; k++) sum += x[k];
+            sym[(size_t)i] = sum / std::max(1, edge_[(size_t)i + 1] - edge_[(size_t)i]);
+            mean += sym[(size_t)i];
+        }
+        mean /= kLucky7Bits;
+        const int inv = corr < 0 ? 1 : 0;
+        uint8_t by[39] = {};
+        for (int i = 0; i < kLucky7Bits; i++) by[i >> 3] = (uint8_t)(by[i >> 3] << 1 | (((sym[(size_t)i] - mean) > 0 ? 1 : 0) ^ inv));
+        if (lucky7Frame(by)) { if (onFrame) onFrame(by); skip_ = n_ - 1; }
+    }
+private:
+    double sps_ = 1;
+    int n_ = 1, pos_ = 0, have_ = 0, skip_ = 0;
+    std::vector<float> buf_;
+    std::vector<int> edge_;
+};
+
 Mod toMod(int m) { return m == kSd3Bpsk ? Bpsk : m == kSd3Qpsk ? Qpsk : m == kSd3Oqpsk ? Oqpsk : m == kSd3Pm ? Pm : Fsk; }
 
 } // namespace
@@ -140,6 +191,7 @@ struct Sd3Receiver::Impl {
     int qdiffPrev = 0, qdiffHave = 0;
     wxsat::Deframer def[4];
     BurstDeframer burst;
+    Lucky7Burst luckyB;
     bool burstLink = false;
     int defUse = -1;
     uint64_t codedPat = 0;
@@ -149,7 +201,6 @@ struct Sd3Receiver::Impl {
     hrpt::Viterbi vit;
     int frameBytes = 0;
     bool mdl = false, gvar = false, geoscan = false, lucky7 = false, spino = false, s2 = false;
-    std::vector<uint8_t> luckyBits;
     SpinoDeframer spinoDef[2];
     // S2 links
     CaduStream caduS;
@@ -225,7 +276,7 @@ struct Sd3Receiver::Impl {
         codedPat = encodedSync(link.sync, link.nrzm);
         soft.clear(); softSince = 0; searchLock = false; vit.reset(); xt = 0; slip = 0;
         nrzPrev = 0; qdiffHave = 0; qdiffPrev = 0;
-        luckyBits.clear(); spinoDef[0].reset(); spinoDef[1].reset();
+        spinoDef[0].reset(); spinoDef[1].reset();
         spinoDef[0].onFrame = spinoDef[1].onFrame = [this](const std::vector<uint8_t>& f) { logFrame(f.data(), f.size(), true); tel.blocksOk++; markGood(); };
         caduS.configure(kGrbCadu);
         tel.symbolRate = pub.symbolRate = link.sym;
@@ -256,6 +307,11 @@ struct Sd3Receiver::Impl {
         } else if (rate > 0) {
             dem.configure(rate, link.sym, toMod(link.mod), link.rrc);
             dem.setOffset(offset);
+            if (lucky7) {
+                luckyB.configure(dem.decRate, link.sym);
+                dem.onFsk = [this](float f) { luckyB.push(f); };
+                luckyB.onFrame = [this](const uint8_t* by) { tel.blocksOk++; markGood(); tel.lastText = lucky7Kind(by + 2); logFrame(by + 2, 35, true); };
+            } else dem.onFsk = nullptr;
         }
         statStart = nowSec();
     }
@@ -376,7 +432,6 @@ struct Sd3Receiver::Impl {
         const float sc = 60.f;
         const int8_t si = sat8(I * sc), sq = sat8(Q * sc);
         const int mod = link.mod;
-        if (lucky7) { lucky7Bit(si > 0); return; }
         if (spino) { spinoDef[0].push(si > 0); spinoDef[1].push(si <= 0); return; }
         if (gvar) { int b = si > 0; const int d = (b ^ nrzPrev) ^ 1; nrzPrev = b; def[0].push(d); return; }
         if (burstLink) { burst.push(si > 0); return; }
@@ -489,26 +544,6 @@ struct Sd3Receiver::Impl {
                 return;
             }
         }
-    }
-
-    void lucky7Bit(int bit) {
-        luckyBits.push_back((uint8_t)bit);
-        if (luckyBits.size() > kLucky7Bits) luckyBits.erase(luckyBits.begin());
-        if ((int)luckyBits.size() < kLucky7Bits) return;
-        static const int kSync[16] = {0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0};
-        int e0 = 0, e1 = 0;
-        for (int i = 0; i < 16; i++) { if (luckyBits[(size_t)i] != kSync[i]) e0++; if (luckyBits[(size_t)i] == kSync[i]) e1++; }
-        if (e0 > 2 && e1 > 2) return;
-        uint8_t by[39] = {};
-        const int inv = e1 <= 2 ? 1 : 0;
-        for (int i = 0; i < kLucky7Bits; i++) by[i >> 3] = (uint8_t)(by[i >> 3] << 1 | (luckyBits[(size_t)i] ^ inv));
-        if (lucky7Frame(by)) {
-            tel.blocksOk++;
-            markGood();
-            tel.lastText = lucky7Kind(by + 2);
-            logFrame(by + 2, 35, true);
-            luckyBits.clear();
-        } else tel.blocksBad++;
     }
 
     void process(const cf32* x, size_t n) {

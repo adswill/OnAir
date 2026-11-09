@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <complex>
+#include <functional>
 #include <vector>
 
 namespace dect2::sd3 {
@@ -96,6 +97,7 @@ public:
     std::vector<std::pair<float, float>> cons;
     size_t consPos = 0;
     double acqPeak = 0;
+    std::function<void(float)> onFsk;   // FSK: the discriminator output, before the matched filter and the clock
 
     void configure(double rate, double symbolRate, Mod m, double alpha) {
         inRate = rate; sym = symbolRate; mod = m; alpha_ = alpha;
@@ -203,6 +205,7 @@ private:
             const float dcA = (float)std::min(0.5, 1.0 / (60.0 * spsNom_));
             fskDc_ += dcA * (f - fskDc_);
             f -= fskDc_;
+            if (onFsk) { onFsk(f); return; }
             fskAvg_ += 0.002f * (std::fabs(f) - fskAvg_);
             carrierLock += 0.0005f * (std::min(1.f, fskAvg_ * 2.f) - carrierLock);
             h_[0] = h_[1]; h_[1] = h_[2]; h_[2] = h_[3]; h_[3] = rrc_.push(cfp(f, 0), false);

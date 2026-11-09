@@ -38,7 +38,7 @@ public:
     void push(const uint8_t* cadu);
     uint64_t dropped = 0;
 private:
-    void parse();
+    void parse(size_t limit);
     int mpdu_;
     bool secExtends_;
     std::vector<uint8_t> buf_;

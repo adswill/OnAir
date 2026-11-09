@@ -138,6 +138,17 @@ elektrordas	--mode elektrordas	Overview|Picture|Receiver|History
 arktikardas	--mode arktikardas	Overview|Picture|Receiver|History
 arktikaggak	--mode arktikaggak	Overview|Picture|Receiver|History
 awsl	--mode awsl	Overview|Picture|Receiver|History
+goesgrb	--mode goesgrb	Overview|Frames|Receiver|History
+goesgvar	--mode goesgvar	Overview|Frames|Receiver|History
+goescda	--mode goescda	Overview|Frames|Receiver|History
+goesmdl	--mode goesmdl	Overview|Frames|Receiver|History
+gk2auhrit	--mode gk2auhrit	Overview|Frames|Receiver|History
+gk2acdas	--mode gk2acdas	Overview|Frames|Receiver|History
+sband	--mode sband	Overview|Frames|Receiver|History
+geoscan	--mode geoscan	Overview|Frames|Receiver|History
+lucky7	--mode lucky7	Overview|Frames|Receiver|History
+spino	--mode spino	Overview|Frames|Receiver|History
+erminaz	--mode erminaz	Overview|Frames|Receiver|History
 fy3ahrpt	--mode fy3ahrpt	Overview|Picture|Receiver|History
 fy3mpt	--mode fy3mpt	Overview|Picture|Receiver|History
 pskd	--mode pskd	Overview|PSK|Receiver|History

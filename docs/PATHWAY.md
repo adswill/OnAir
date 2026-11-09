@@ -1209,3 +1209,8 @@ Version 3.7.0 in CMakeLists.txt, macOS Info.plist and the Windows resource (chec
 
 ## 2026-11-09 3.8 fast CI and one-command release (feat38-fastci)
 Branch feat38-fastci on v3.7.0 with feat37-fastci merged. Quick gate tools/gate/run.sh (gate.yml on every push, Lint job of ci.yml): mode numbers, web_policy, Android stand-ins, credits, gui_rules, i18n; checked against history: it finds the av_guess_frame_rate and BGAN misses of 3.7. ci.yml: app tests back on Linux and macOS, Windows 4 shards, timeouts as before, cross-shard ccache. release.yml: Windows zip on macOS from a prefix on the draft release ci-windows-prefix (tools/release/upload_win_prefix.sh, once by the owner), installer on Linux, per-platform runs, retries, ccache saved on failure. release.sh: one command, per-platform runs with one automatic rerun, every asset checked on the draft before --publish. APK signing only with the secrets, key removed always. Measured vs expected in docs/CI-FAST.md; nothing proven on CI yet (no dispatches until 3.7 is out). make_windows.sh syntax error fixed.
+
+### 2026-11-09 SatDump tier 3
+
+Added GOES GRB, GVAR, CDA, MDL, GK-2A UHRIT and CDAS, a generic S-band CCSDS mode with 46 satellites (Falcon 9, Starship, Crew Dragon, Jason-3, CloudSat, FORMOSAT and others), and the Geoscan, Lucky-7, Spino and Erminaz cubesats: families 290 - 299, 510, one receiver class, docs/SATDUMP-TIER3-3.8.md. Geoscan decoded a real SatNOGS pass (6 of 7 frames); everything else is simulated only and says so; Lucky-7 failed the CRC on a real pass. DVB-S receiver gained a BBFRAME callback. SatDump code taken as formats and parameters, credits in THIRD_PARTY.md and in-app.
+

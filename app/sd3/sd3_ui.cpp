@@ -159,6 +159,11 @@ void tab(App& a) {
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip(tr("Frames, xRIT files and GRB metadata in <data folder>/sd3/%s/"), sd3Profile(P).id);
     flowNext(8 * gUi);
+    if (P == kSd3Geoscan || P == kSd3Spino) {
+        if (ImGui::Button(tr("Follow the next pass"))) s.msg = passesArmFamily(a, sd3Profile(P).family);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Tracks the next pass of these satellites, starts the receiver by itself at the rise, follows the Doppler and stops at the set."));
+        flowNext(8 * gUi);
+    }
     const bool pictures = P == kSd3Grb || P == kSd3Gvar;
     if (pictures) {
         if (on) update(P, t);
@@ -273,10 +278,23 @@ void receiver(App& a) {
 }
 
 template<int P> void panels(App& a) { receiver<P>(a); }
-template<int P> void status(App& a) { const bool on = live(a, P); ImGui::TextUnformatted(!on ? "stopped" : sd3Summary(a.rx.sd3).c_str()); }
-template<int P> std::string summary(App& a) { return live(a, P) ? sd3Summary(a.rx.sd3) : std::string(); }
-template<int P> void tuner(App&) {}
-template<int P> void meters(App&) {}
+template<int P>
+void status(App& a) {
+    const bool on = live(a, P);
+    const Sd3Telemetry& t = a.rx.sd3;
+    StatusPanel panel;
+    lamp("Carrier", !on ? 0 : t.state >= 1 ? 1 : 0); flowNext(10 * gUi);
+    lamp("Frames", !on ? 0 : t.state >= 3 ? 1 : t.state == 2 ? 2 : 0); flowNext(10 * gUi);
+    ImGui::TextDisabled("|"); flowNext(10 * gUi);
+    ImGui::PushFont(a.mono, 0); ImGui::TextUnformatted(!on ? (a.engine.running() ? "starting" : "stopped") : sd3Summary(t).c_str()); ImGui::PopFont();
+}
+template<int P> void summary(const App& a, std::string& l1, std::string& l2) { l1 = sd3Profile(P).name; if (live(a, P)) l2 = sd3Summary(a.rx.sd3); }
+template<int P> void tuner(App&, bool&) {}
+template<int P> void meters(const App& a, std::vector<ModeMeter>& out) {
+    const Sd3Telemetry& t = a.rx.sd3;
+    out.push_back({"SNR  dB", "%.0f", t.snrDb, 0, 25, t.snrDb >= 8 ? 1 : t.snrDb >= 5 ? 2 : 3});
+    out.push_back({"FRAMES", "%.0f", (double)t.blocksOk, 0, 5000, t.state >= 3 ? 1 : 0});
+}
 
 template<int P>
 void command(App& a) {

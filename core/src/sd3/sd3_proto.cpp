@@ -100,15 +100,16 @@ static uint16_t crc16b(const uint8_t* p, size_t n, uint16_t poly, uint16_t c) {
     return c;
 }
 
-void AosDemux::parse() {
+void AosDemux::parse(size_t limit) {
     size_t at = 0;
     for (;;) {
-        if (buf_.size() - at < 6) break;
+        if (at >= limit || buf_.size() - at < 6) break;
         const uint8_t* h = &buf_[at];
         if ((h[0] >> 5) != 0) { have_ = false; buf_.clear(); return; }     // not a version-0 space packet: resync at the next pointer
         const bool sec = (h[0] >> 3) & 1;
         const size_t total = 6 + (size_t)(((int)h[4] << 8 | h[5]) + 1) + ((secExtends_ && sec) ? 8 : 0);
         if (buf_.size() - at < total) break;
+        if (limit != SIZE_MAX && at + total > limit) break;       // it would run over the next packet start the frame announces: junk
         Packet p;
         p.apid = ((h[0] & 7) << 8) | h[1];
         p.seqFlag = h[2] >> 6;
@@ -118,6 +119,7 @@ void AosDemux::parse() {
         if (p.apid != 2047 && onPacket) onPacket(p);
         at += total;
     }
+    if (limit != SIZE_MAX && at < limit && limit <= buf_.size()) { dropped++; at = limit; }   // padding or a broken packet: restart where the frame says
     buf_.erase(buf_.begin(), buf_.begin() + (std::ptrdiff_t)at);
 }
 
@@ -128,14 +130,16 @@ void AosDemux::push(const uint8_t* c) {
     const int fhp = (c[10] & 7) << 8 | c[11];
     const uint8_t* d = c + 12;
     if (have_) {
+        const size_t boundary = fhp < 2047 && fhp < mpdu_ ? buf_.size() + (size_t)fhp : SIZE_MAX;
         buf_.insert(buf_.end(), d, d + mpdu_);
-        parse();
+        parse(boundary);
+        parse(SIZE_MAX);
         return;
     }
     if (fhp >= 2047 || fhp >= mpdu_) return;
     buf_.assign(d + fhp, d + mpdu_);
     have_ = true;
-    parse();
+    parse(SIZE_MAX);
 }
 
 void buildAosFrame(int scid, int vcid, uint32_t counter, int mpdu, const std::vector<uint8_t>& stream, size_t& pos, int caduBytes, uint8_t* c, const std::vector<size_t>& starts) {

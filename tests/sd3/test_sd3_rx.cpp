@@ -91,7 +91,71 @@ int main(int argc, char** argv) {
         CHECK(!r.t.products.empty(), "grb products");
         CHECK(r.t.image && r.t.image->lines >= 3, "grb picture");
     }
-    if (want("uhrit")) {
+    if (want("impair")) {
+        struct Case { const char* name; int link; double es; };
+        // one link of each kind: BPSK, QPSK with the convolutional code and NRZ-M, OQPSK with Reed-Solomon, PM, wide FSK
+        const char* ids[] = {"formosat5_s_dump", "jason3_link", "swot_tlm", "hinode_s_dump", "falcon9_tlm"};
+        const double snrFloor[] = {9, 7, 7, 9, 12};
+        for (int k = 0; k < 5; k++) {
+            int idx = 0;
+            for (int i = 0; i < sd3LinkCount(kSd3Sband); i++) if (std::string(sd3LinkAt(kSd3Sband, i).id) == ids[k]) idx = i;
+            const Sd3Link& l = sd3LinkAt(kSd3Sband, idx);
+            const double rate = 4 * l.sym;
+            const double frameSec = l.frameBits * (l.conv ? 2.0 : 1.0) / (l.mod == kSd3Qpsk || l.mod == kSd3Oqpsk ? 2.0 : 1.0) / l.sym;
+            const double sec = std::min(1.5, 14 * frameSec) + 0.05;
+            char b[100];
+            auto rep = [&](const char* w, double snr, double cfo, double ppm, double drift, double off, bool inv) {
+                auto r = run(kSd3Sband, idx, rate, sec, snr, cfo + off, ppm, drift, off, inv);
+                snprintf(b, sizeof b, "%s: %s", l.id, w); show(b, r);
+                CHECK(r.t.blocksOk >= 3, "%s frames %llu", b, (unsigned long long)r.t.blocksOk);
+            };
+            rep("offset +0.5% sym", snrFloor[k] + 8, 0.005 * l.sym, 0, 0, 0, false);
+            rep("offset -1% sym", snrFloor[k] + 8, -0.01 * l.sym, 0, 0, 0, false);
+            rep("clock +50 ppm", snrFloor[k] + 8, 0, 50, 0, 0, false);
+            rep("Doppler 500 Hz/s", snrFloor[k] + 8, 0.002 * l.sym, 0, 500, 0, false);
+            rep("off centre (0.15 Rs)", snrFloor[k] + 8, 0, 0, 0, 0.15 * l.sym, false);
+            if (l.mod != kSd3Fsk && l.mod != kSd3Pm) rep("spectrum inverted", snrFloor[k] + 8, 0, 0, 0, 0, true);
+            rep("near threshold", snrFloor[k], 0.001 * l.sym, 0, 0, 0, false);
+        }
+    }
+    if (want("cadu")) {       // the CADU layers straight, with lost frames
+        sd3::UhritDecoder u;
+        int got = 0; std::string name;
+        u.onFile = [&](const std::vector<uint8_t>& f, int, int) { got++; name = sd3::xritAnnotation(f); };
+        for (int n = 0; n < 3; n++) {
+            std::vector<uint8_t> file(10, 0);
+            std::vector<uint8_t> ann = {'A', 'B', 'C'};
+            const uint32_t hdr = 16 + 3 + (uint32_t)ann.size();
+            file.insert(file.end(), {0, 0, 16, 0, (uint8_t)(hdr >> 24), (uint8_t)(hdr >> 16), (uint8_t)(hdr >> 8), (uint8_t)hdr, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, (uint8_t)(3 + ann.size())});
+            file.insert(file.end(), ann.begin(), ann.end());
+            file.resize(5000, (uint8_t)n);
+            std::vector<uint8_t> r(6 + 8, 0);
+            r[0] = 0x08; r[1] = 0x20; r[2] = 3 << 6;
+            r.insert(r.end(), file.begin(), file.end());
+            const size_t len = r.size() + 4 - 6 - 8 - 1;
+            r[4] = (uint8_t)(len >> 8); r[5] = (uint8_t)len;
+            const uint32_t c = sd3::crc32Hdlc(r.data(), r.size());
+            for (int i = 24; i >= 0; i -= 8) r.push_back((uint8_t)(c >> i));
+            std::vector<size_t> starts = {0};
+            std::vector<uint8_t> cadu(sd3::kUhritCadu);
+            size_t pos = 0;
+            uint32_t cnt = (uint32_t)n * 10;
+            while (pos < r.size()) { sd3::buildUhritCadu(1, 7, cnt++, r, pos, cadu.data(), starts); u.pushCadu(cadu.data()); }
+        }
+        CHECK(got == 3, "uhrit layer files %d", got);
+        CHECK(name == "ABC", "uhrit name %s", name.c_str());
+        std::vector<uint8_t> f(2048);
+        for (int i = 0; i < 8; i++) { uint8_t pay[35] = {}; pay[1] = (uint8_t)(i * 3); uint8_t out[39]; sd3::lucky7Build(pay, out); CHECK(sd3::lucky7Frame(out), "lucky7 crc"); }
+        std::vector<uint8_t> h(16, 1), body(20, 2);
+        auto spino = sd3::spinoBuild(h, body);
+        sd3::SpinoDeframer sp;
+        int spinoGot = 0;
+        sp.onFrame = [&](const std::vector<uint8_t>& v) { spinoGot += v.size() == spino.size() - 4 ? 1 : 0; };
+        for (uint8_t b : spino) for (int i = 7; i >= 0; i--) sp.push((b >> i) & 1);
+        CHECK(spinoGot == 1, "spino layer");
+        printf("CADU layers ok\n");
+    }
+    if (want("uhrit") && (getenv("SD3_FULL") || only == "uhrit")) {
         auto r = run(kSd3Uhrit, 0, 30e6, 0.4, 16, 10000); show("UHRIT 14 dB", r);
         CHECK(r.t.files >= 2, "uhrit files %llu", (unsigned long long)r.t.files);
         CHECK(r.t.lastText.find("IMG_TEST") != std::string::npos, "uhrit name %s", r.t.lastText.c_str());

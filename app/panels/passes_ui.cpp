@@ -35,6 +35,7 @@ namespace fs = std::filesystem;
 fs::path fsPath(const std::string& p) { return fs::path(reinterpret_cast<const char8_t*>(p.c_str())); }
 
 constexpr int kNoaaApt = 260, kNoaaHrpt = 261, kNoaaDsb = 263, kMeteorHrpt = 264, kArktikaGgak = 267, kAws = 268;   // families of the wxsat links
+constexpr int kGeoscanCs = 297, kSpino = 299;   // cubesat families of the SatDump tier 3 links
 constexpr int kSpecx = 41, kAprs = 24, kOrbcomm = 44, kMeteor = 59, kCubesat = 61, kGlobalstar = 62, kArgos = 152, kLoraSat = 201;   // mode families: Spectrum explorer (no decoder), APRS (AFSK), Orbcomm, Meteor-M LRPT, CubeSat telemetry, Argos, LoRa satellites
 
 struct Source { const char* file; const char* url; };
@@ -55,6 +56,13 @@ const char* const kGroupLabel[NumGroups] = {N_("Weather (137 MHz)"), "ISS", "Orb
 struct Known { const char* name; int norad; double mhz; const char* mode; int family; int group; };
 const Known kKnown[] = {
     {"NOAA 15", 25338, 137.620, "APT", kNoaaApt, Weather},
+    {"StratoSat-TK1", 57167, 435.870, "9k6 FSK", kGeoscanCs, Amateur},
+    {"RTU-MIREA1", 61785, 436.200, "9k6 FSK", kGeoscanCs, Amateur},
+    {"TUSUR-GO", 61782, 437.730, "9k6 FSK", kGeoscanCs, Amateur},
+    {"VIZARD-ION", 61749, 436.870, "9k6 FSK", kGeoscanCs, Amateur},
+    {"COLIBRI-S", 61746, 436.835, "9k6 FSK", kGeoscanCs, Amateur},
+    {"HORIZON", 61755, 435.430, "9k6 FSK", kGeoscanCs, Amateur},
+    {"Spino", 56211, 435.200, "2k4 FSK", kSpino, Amateur},
     {"NOAA 18", 28654, 137.9125, "APT", kNoaaApt, Weather},
     {"NOAA 19", 33591, 137.100, "APT", kNoaaApt, Weather},
     {"NOAA 15 DSB", 25338, 137.350, "DSB", kNoaaDsb, Weather},
