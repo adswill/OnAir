@@ -95,6 +95,7 @@ private:
     bool facSeen_[4] = {};
     SdcInfo sdc_;
     DrmAfs afs_;
+    std::vector<cf32> sdcPrevZ_; std::vector<float> sdcPrevW_; int sdcPrevN_ = 0;   // the earlier blocks, for adding a repeated SDC
     int pos_ = -1;                       // expected position of the next frame in the super frame
     std::unique_ptr<MlcCode> facCode_, sdcCode_, mscCode_;
     int sdcCodeMode_ = -1, mscKey_ = -1;

@@ -160,6 +160,40 @@ bool AdsbTracker::tryCorrect(AdsbRaw& raw, int len, uint32_t, double now) {
                     if (tryFlip(3, sel)) return true;
                 }
             }
+            if (opt_.fixBits >= 3 && L == 112) {
+                // deeper repair (an Advanced choice): four or five flips among the 18 least certain bits, only for a frame whose format fits, from a known aircraft, and what it says
+                // fits that aircraft's altitude (ordered by XOR first, so most combinations cost one compare)
+                int idx2[112];
+                std::iota(idx2, idx2 + L, 0);
+                const int K2 = 18;
+                std::partial_sort(idx2, idx2 + K2, idx2 + L, [&](int a, int b) { return raw.conf[a] < raw.conf[b]; });
+                uint32_t sy[K2];
+                for (int k = 0; k < K2; k++) sy[k] = singleBitSyndrome(L, idx2[k]);
+                auto accept = [&](std::initializer_list<int> sel) {
+                    uint8_t t[14];
+                    std::memcpy(t, raw.bytes, 14);
+                    for (int i : sel) t[idx2[i] >> 3] ^= (uint8_t)(0x80 >> (idx2[i] & 7));
+                    int df; uint32_t icao;
+                    if (!fits(t, df, icao) || !knownAddress(icao, now)) return false;
+                    auto it = rec_.find(icao);
+                    if (it == rec_.end()) return false;
+                    const int tc = (int)getBits(t, 33, 5);
+                    if (tc >= 9 && tc <= 18 && now - it->second.altTime <= 30.0) {
+                        int alt = 0;
+                        if (adsb::decodeAlt12(getBits(t, 41, 12), alt) && std::abs(alt - it->second.trustedAltFt) > 2500) return false;
+                    }
+                    std::memcpy(raw.bytes, t, 14); raw.bits = L;
+                    return true;
+                };
+                for (int a = 0; a < K2; a++) for (int b = a + 1; b < K2; b++) for (int c = b + 1; c < K2; c++) {
+                    const uint32_t x = sy[a] ^ sy[b] ^ sy[c] ^ rem;
+                    for (int d = c + 1; d < K2; d++) {
+                        if (sy[d] == x && accept({a, b, c, d})) return true;
+                        const uint32_t y = x ^ sy[d];
+                        for (int e = d + 1; e < K2; e++) if (sy[e] == y && accept({a, b, c, d, e})) return true;
+                    }
+                }
+            }
         }
     }
     return false;

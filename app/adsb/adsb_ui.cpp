@@ -334,11 +334,11 @@ void tuner(App& a, bool& retune) {
 }
 
 void decoder(App& a, bool&) {
-    static const char* names[] = {"off", "1 bit", "up to 3 bits"};
+    static const char* names[] = {"off", "1 bit", "up to 3 bits", "up to 5 bits"};
     ImGui::TextDisabled("FIX"); ImGui::SameLine(0, 5 * gUi);
     ImGui::SetNextItemWidth(std::min(90 * gUi, ImGui::GetContentRegionAvail().x));   // no wider than the side panel
     if (ImGui::BeginCombo("##fix", names[S.correction])) {
-        for (int i = 0; i < 3; i++) if (ImGui::Selectable(names[i], S.correction == i)) { S.correction = i; if (a.engine.running()) a.engine.adsb().setCorrection(i); }
+        for (int i = 0; i < 4; i++) if (ImGui::Selectable(names[i], S.correction == i)) { S.correction = i; if (a.engine.running()) a.engine.adsb().setCorrection(i); }
         ImGui::EndCombo();
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Repair of bit errors in DF11, DF17 and DF18 messages. 2 bits finds more messages but lets more false ones through.");

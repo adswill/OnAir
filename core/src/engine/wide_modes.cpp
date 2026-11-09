@@ -22,6 +22,8 @@
 #include "dect2/p25/p25_tel.h"
 #include "dect2/t2/t2rx.h"
 #include "dect2/engine/wide_bank.h"
+#include "dect2/ale/ale_rx.h"
+#include "dect2/ale/ale_tel.h"
 #include "dect2/drm/drm_find.h"
 #include "dect2/drm/drm_rx.h"
 #include <algorithm>
@@ -192,6 +194,14 @@ struct WideModes::Impl {
                 bk->setPriorsAbs(std::move(v), true);
                 continue;
             }
+            if (m == 50 && bk->rate > 0) {   // ALE: the common channels and the database; only known channels are decoded
+                int cnt = 0; const AlePreset* pr = alePresets(cnt);
+                for (int i = 0; i < cnt; i++) if (std::fabs(pr[i].mhz * 1e6 - centerHz) < bk->rate / 2) v.push_back(pr[i].mhz * 1e6);
+                for (const FreqEntry& e : db) if (e.mode == "ale" && std::fabs((double)e.hz - centerHz) < bk->rate / 2) v.push_back((double)e.hz);
+                for (double f : extraPriors) if (std::fabs(f - centerHz) < bk->rate / 2) v.push_back(f);
+                bk->setPriorsAbs(std::move(v), true);
+                continue;
+            }
             if (tuning.usePriors && bk->rate > 0 && centerHz > 0) {
                 const std::vector<std::string> ids = freqDbModes(m);
                 for (const FreqEntry& e : db)
@@ -280,6 +290,30 @@ struct WideModes::Impl {
             return o;
         };
         drm = put(11, dr, &RxTelemetry::drm);
+
+        // HF ALE: one 3 kHz SSB channel each, on its dial frequency (the known channels: the presets and the frequency database). A scanning net calls on a different channel each step,
+        // so a bank hears the whole handshake a single channel only hears a part of. No sound.
+        WideOps<AleReceiver, AleTelemetry> al;
+        al.outRate = 48000; al.occupiedHz = 6000; al.preRollSec = kPreRoll; al.pinToPrior = true;
+        al.log = [this](const std::string& line) { if (log) log(line); };
+        al.setup = [this](AleReceiver& r) { commonSetup(r, log); };
+        al.bind = [](AleReceiver& r, double absHz) { r.setDialHz(absHz); };
+        al.clear = [](AleReceiver& r) { r.clearResults(); };
+        al.clearLists = [](AleTelemetry& t) { t.words.clear(); t.events.clear(); t.stations.clear(); };
+        al.hasLog = [](const AleTelemetry& t) { return !t.events.empty() || !t.stations.empty(); };
+        al.append = [](AleTelemetry& t, const AleTelemetry& x, double) {
+            t.events.insert(t.events.end(), x.events.begin(), x.events.end());
+            t.words.insert(t.words.end(), x.words.begin(), x.words.end());
+            for (const auto& st : x.stations) {
+                auto it = std::find_if(t.stations.begin(), t.stations.end(), [&](const AleStation& q) { return q.address == st.address; });
+                if (it == t.stations.end()) t.stations.push_back(st);
+            }
+            if (t.events.size() > 2000) t.events.erase(t.events.begin(), t.events.end() - 2000);
+            if (t.words.size() > 4000) t.words.erase(t.words.begin(), t.words.end() - 4000);
+        };
+        al.info = [](const AleTelemetry& t) { return t.stations.empty() ? std::string() : t.stations.front().address; };
+        al.rowState = [](const AleTelemetry& t) { return t.state == 2 ? 2 : t.state; };
+        put(50, al, &RxTelemetry::ale);
 
         // pagers: one 25 kHz channel each; the carrier is brought to 192 ksps (the receiver's own front end takes it from there). Pages come in bursts,
         // so a carrier found late gets the half second before it was found, and a carrier stays for half a minute after its last burst.
@@ -415,13 +449,14 @@ WideModes::WideModes() : p_(new Impl()) {
 }
 WideModes::~WideModes() = default;
 
-const std::vector<int>& WideModes::modes() { static const std::vector<int> v = {10, 11, 32, 34, 39, 46, 51, 24, 25, 128, 129, 130, 131}; return v; }
+const std::vector<int>& WideModes::modes() { static const std::vector<int> v = {10, 11, 32, 34, 39, 46, 50, 51, 24, 25, 128, 129, 130, 131}; return v; }
 bool WideModes::supports(int m) { const auto& v = modes(); return std::find(v.begin(), v.end(), m) != v.end(); }
 
 std::vector<std::string> WideModes::freqDbModes(int m) {
     switch (m) {
     case 10: return {"dmr"};
     case 11: return {};
+    case 50: return {"ale"};
     case 32: return {"m17"};
     case 34: return {"dstar"};
     case 39: return {"nxdn"};
@@ -444,6 +479,7 @@ CarrierCfg WideModes::cfgFor(int m) {
     c.rejectTones = m != 130;   // a spur or the LO's leak is not a carrier; an LTR repeater's carrier is (its data is sub-audible)
     if (m == 24 || m == 25) { c.debounceSec = 0.12; c.holdSec = 30; }   // pages and packets come in short bursts
     if (m == 11) { c.stepHz = 5000; c.maxCarriers = 6; c.rejectTones = false; c.mergeSplit = false; c.trackDrift = false; c.onDb = 3; c.offDb = 1; c.holdSec = 30; c.debounceSec = 0.1; }   // only proven DRM signals are searched (priors): a fade must not end a receiver
+    if (m == 50) { c.stepHz = 6000; c.maxCarriers = 24; c.rejectTones = false; c.mergeSplit = false; c.trackDrift = false; c.onDb = 5; c.offDb = 2; c.holdSec = 20; c.debounceSec = 0.15; c.priorOnly = true; }
     if (m == 128 || m == 130 || m == 131) c.holdSec = 15;               // a control channel is on all the time; a short fade must not lose its decoder
     return c;
 }
