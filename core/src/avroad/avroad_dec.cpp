@@ -9,6 +9,11 @@ std::unique_ptr<avroad::Decoder> avroad::makeDecoder(int v) {
     case Fanet: return makeFanet();
     case Ogn: return makeOgn();
     case Ermes: return makeErmes();
+    case MarineRadar: return makeRadar(false);
+    case WeatherRadar: return makeRadar(true);
+    case Ldacs: return makeOfdmDetect(0);
+    case Aeromacs: return makeOfdmDetect(1);
+    case Cv2x: return makeOfdmDetect(2);
     default: return nullptr;
     }
 }
@@ -22,7 +27,7 @@ ModeTuning avRoadTuning(int v) {
         {"fanet", 860, 930, 868.2, 1000000, 500000, 0.25},
         {"ogn", 860, 930, 868.3, 1000000, 1000000, 0.6},
         {"gbas", 108, 118, 113.0, 250000, 62500, 0.025},
-        {"ldacs", 960, 1215, 1000.0, 2000000, 1000000, 0.5},
+        {"ldacs", 960, 1215, 1000.0, 2000000, 625000, 0.5},
         {"aeromacs", 5000, 5150, 5095.0, 5600000, 5600000, 5.0},
         {"eot", 150, 520, 457.9375, 1000000, 48000, 0.0125},
         {"atcs", 890, 960, 935.8875, 1000000, 48000, 0.0125},
