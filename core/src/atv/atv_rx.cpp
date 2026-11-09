@@ -4,6 +4,7 @@
 //                       -> [running: vision channel -> picture decoder -> pictures]
 //                                    sound channel  -> 48 kHz mono -> sound device
 #include "dect2/atv/atv_sound2.h"
+#include "dect2/atv/atv_btsc.h"
 #include "dect2/atv/atv_rx.h"
 #include "atv_front.h"
 #include "atv_fm.h"
@@ -34,6 +35,8 @@ struct AtvReceiver::Impl {
     AtvFront front;
     AtvVideo video;
     AtvSound sound;
+    BtscRx btsc;                        // BTSC stereo and SAP on the 4.5 MHz sound carrier of system M
+    std::vector<float> btl, btr;
     A2Rx a2rx;                          // second sound: A2 (two FM carriers) and NICAM-728, found by themselves
     NicamRx nicrx;
     std::atomic<int> sndMode{0};        // 0 automatic, 1 FM sound only
@@ -166,6 +169,7 @@ struct AtvReceiver::Impl {
         front.configure(rate);
         sound.configure(rate);
         a2rx.configure(rate);
+        btsc.configure(rate);
         nicrx.configure(rate);
         video.configure(front.videoRate(), front.colourCapable());
         videoRateNow = front.videoRate();
@@ -245,7 +249,7 @@ struct AtvReceiver::Impl {
         video.setNoiseScale(front.noiseGain() * fs / 5e6);
         pending.clear();
         video.reset();
-        sound.reset(); a2rx.reset(); nicrx.reset(); soundSys.clear(); a2Next = a2Until = 0;
+        btsc.reset(); sound.reset(); a2rx.reset(); nicrx.reset(); soundSys.clear(); a2Next = a2Until = 0;
         mode = kSearch; haveCarrier = false; syncOn = false; rawMode = false;
         front.setSyncDetector(false);
         dc = cf32(0, 0);
@@ -544,6 +548,17 @@ struct AtvReceiver::Impl {
     void secondSound(size_t m) {
         soundSys = "FM";
         const double sp = carrier.spacingMhz;
+        if (sp == 4.5 && sndMode.load() == 0 && !sound.am() && video.lineLocked()) {
+            btl.clear(); btr.clear();
+            const bool wantSap = dualChoice.load() != 0;
+            btsc.process(xd.data(), m, front.carrierHz() + sp * 1e6 + sound.trimHz(), wantSap, btl, btr);
+            const BtscStatus bs = btsc.status();
+            if (bs.pilot || (wantSap && bs.sap)) {
+                soundSys = wantSap && bs.sap ? "BTSC second audio program" : bs.sap ? "BTSC stereo + SAP" : "BTSC stereo";
+                audioBuf = btl; audioR = btr;
+            }
+            return;
+        }
         const bool sysI = sp > 5.9 && sp < 6.1;
         if (sndMode.load() != 0 || !video.lineLocked() || !(sp == 5.5 || sp == 6.5 || sysI)) return;
         const double vis = front.carrierHz();
