@@ -226,6 +226,7 @@
         <item>Motorola Type II</item>
         <item>TETRA DMO</item>
         <item>OpenSky identifier</item>
+        <item>Bluetooth Classic</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -433,6 +434,7 @@
         <item>Motorola Type II trunking (SmartNet, SmartZone): 3600 bit/s control channel, talkgroups, sites, calls followed inside the capture (analog as FM, digital through the P25 receiver and the user-installed IMBE plug-in)</item>
         <item>TETRA Direct Mode (terminal to terminal, or through a DM repeater or gateway): the addresses, the calls and clear speech (with the user-installed TETRA codec); encrypted calls are listed, not decoded</item>
         <item>OpenSky (M/A-COM / Harris) identifier: measures the symbol rate, the levels, the width and the TDMA burst pattern; the air interface is not public and the traffic is encrypted, so nothing is decoded</item>
+        <item>Bluetooth Classic (BR/EDR) discovery over a wide capture of the 2.4 GHz band: every packet starts with the sync word of its piconet master\'s LAP, so devices and piconets in use are listed by LAP; a discoverable device that answers an inquiry also gives its full address and class of device. The radio hops over 79 channels of 1 MHz, so a HackRF at 20 Msps hears about a quarter of the packets. Receive only: never inquires, pages or answers; payloads are not decoded</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -640,6 +642,7 @@
         <item>SmartNet, SmartZone</item>
         <item>Direct Mode</item>
         <item>identify only</item>
+        <item>IoT, 2.4 GHz</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -847,5 +850,6 @@
         <item>smartnet smartzone motorola type ii trunking</item>
         <item>tetra dmo direct mode</item>
         <item>opensky macom harris fmp</item>
+        <item>bluetooth classic br edr inquiry discoverable lap bd addr piconet 2.4 ghz 2441 hopping headset phone speaker class of device</item>
     </string-array>
 </resources>

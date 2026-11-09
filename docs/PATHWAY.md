@@ -1249,3 +1249,7 @@ My station (radios found by themselves, antennas from a list), mode list verdict
 ## 2026-11-09 3.8 voice trunking modes (feat38-voice-trunk)
 Branch feat38-voice-trunk on integ-38, families 320-339. New modes: Motorola Type II (SmartNet / SmartZone, family 320) with call following through the trunk pool and a new wide-capture voice radio (trunkpool/capture_voice), TETRA Direct Mode (321) from EN 300 396 with clear speech to the existing codec path, OpenSky identifier (322) measuring the channel only since the air interface is not public and the traffic encrypted. ProVoice added to the EDACS follower through the IMBE plug-in (7100x4400 rewritten to 7200x4400 code words), Hytera XPT status blocks read in the DMR receiver (no call following). Tait: no public Tait-specific trunking description, not built. All validated on generated signals only; see docs/VOICE-TRUNK-3.8.md.
 
+
+## 2026-11-09 (3.8 IoT, feat38-iot)
+
+KNX RF, HomeMatic BidCoS, EnOcean ERP1 and DASH7 decoders in the ISM sensors decoder, with a fast ASK path so 125 kbit/s EnOcean is received; the Bluetooth Classic discovery mode (family 380: access codes by LAP, inquiry responses with address and class of device). KNX RF checked against 11 real recordings (10 decode); everything else on simulated signals only. Lutron ClearConnect, wireless DMX, mioty and DECT NR+ skipped: reasons in docs/IOT-3.8.md. Insteon and EnOcean were already in the Sensors mode.

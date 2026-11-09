@@ -235,6 +235,7 @@ void Engine::configureReceiver(int a, double r) {
     case 203: rxPskd_.configure(r); break;
     case 85: rxWs_.configure(r); break;
     case 99: rxZw_.configure(r); break;
+    case 381: rxBtc_.configure(r); break;
     case 86: rxEcz_.configure(r); break;
     case 102: rxFpv_.configure(r); break;
     case 87: rxWmb_.configure(r); break;
@@ -419,6 +420,7 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 233: case 234: case 235: rxFy_.setLink(fygeoLinkOfActive(a, rxFy_.lritSatellite())); rxFy_.setSignalOffset(o); break;
     case 203: rxPskd_.setSignalOffset(o); break;
     case 99: rxZw_.setSignalOffset(o); rxZw_.setCenterHz(centreHz); rxZw_.setDialHz(dialHz); break;
+    case 381: rxBtc_.setSignalOffset(o); rxBtc_.setCenterHz(centreHz); break;
     case 85: rxWs_.setSignalOffset(o); rxWs_.setCenterHz(centreHz); rxWs_.setDialHz(dialHz); break;
     case 86: rxEcz_.setSignalOffset(o); break;
     case 102: rxFpv_.setSignalOffset(o); rxFpv_.setCenterHz(centreHz); break;

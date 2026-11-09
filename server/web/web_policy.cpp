@@ -67,7 +67,7 @@ const std::set<std::string>& pagerKinds() {
 // Every other mode id of the receiver registry, listed so that a new mode that nobody classified is noticed by the test. They are all blocked.
 const std::set<std::string>& restrictedKnownKinds() {
     static const std::set<std::string> s = {
-    "aero", "ale", "ant", "ardop", "astro", "atsc", "atsc3", "atv", "ble", "bletracker", "cdr", "cell", "codar", "contestia", "cquam",
+    "aero", "ale", "ant", "ardop", "astro", "atsc", "atsc3", "atv", "ble", "bletracker", "btc", "cdr", "cell", "codar", "contestia", "cquam",
     "cubesat", "cw", "dab", "datawell", "dect", "dgps", "dji", "dme", "dominoex", "drm", "dsc", "dtmb", "dvb", "dvbc", "dvbs", "eczas",
     "adsl", "eloran", "flarm", "fpv", "freedv", "fsq", "fst4", "ft2", "globalstar", "gnss", "goesdcs", "gsmr", "halow", "hamdrm", "hdr", "hell",
     "hfbeacon", "hfdig", "hfdl", "ifkp", "ils", "inmc", "iono", "iridium", "isdbt", "ism", "js8", "jt4", "jt65", "jt9", "kaal", "kaft",

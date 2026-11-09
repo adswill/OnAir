@@ -372,6 +372,30 @@ struct IsmReceiver::Impl {
             t.p.push_back({(float)(pl * us), j > last ? 1e6f : (float)((j - a) * us)});
         }
         fold(t);
+        if (ismDecode(t).empty()) {
+            // a fast ASK (EnOcean: 8 us chips) is smeared by the narrow envelope: slice the channel envelope itself and keep that train
+            // only when a protocol reads it, so slow bursts and noise are not reported twice
+            std::vector<float> magF(M);
+            magF[0] = std::abs(y[0]);
+            for (size_t k = 1; k < M; k++) magF[k] = 0.5f * (std::abs(y[k]) + std::abs(y[k - 1]));
+            std::vector<uint8_t> st2;
+            size_t f2 = M, l2 = 0;
+            double p2 = 0;
+            if (slice(magF, st2) && span(st2, f2, l2, p2) >= 10) {
+                IsmTrain t2; t2.fsk = false;
+                size_t j2 = f2;
+                while (j2 <= l2) {
+                    size_t a2 = j2;
+                    while (j2 <= l2 && st2[j2]) j2++;
+                    const size_t pl = j2 - a2;
+                    a2 = j2;
+                    while (j2 <= l2 && !st2[j2]) j2++;
+                    t2.p.push_back({(float)(pl * us), j2 > l2 ? 1e6f : (float)((j2 - a2) * us)});
+                }
+                fold(t2);
+                if (!ismDecode(t2).empty()) { handle(t2, fAbs, rssi, snr, 0, sec); return; }
+            }
+        }
         handle(t, fAbs, rssi, snr, 0, sec);
     }
 

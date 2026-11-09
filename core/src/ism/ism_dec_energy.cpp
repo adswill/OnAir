@@ -142,7 +142,7 @@ void decMbus(Bits& B, Out& out) {
         if (!mbusCrc(d.data(), std::min<unsigned>(L - 1, 126))) return;
     }
     const uint16_t mf = (uint16_t)(d[3] << 8 | d[2]);
-    if (d[2] == 0xFF && d[3] == 0x03) return;   // KNX RF, not shown
+    if (d[2] == 0xFF && d[3] == 0x03) return;   // KNX RF has its own S-mode physical layer: decKnxRf (ism_dec_iot.cpp)
     const std::string man{(char)(((mf >> 10) & 0x1F) + 0x40), (char)(((mf >> 5) & 0x1F) + 0x40), (char)((mf & 0x1F) + 0x40)};
     const unsigned id = (unsigned)(bcd(d[7]) * 1000000 + bcd(d[6]) * 10000 + bcd(d[5]) * 100 + bcd(d[4]));
     char ids[16];

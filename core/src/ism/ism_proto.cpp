@@ -141,6 +141,11 @@ const std::vector<Proto>& protos() {
         {{"Z-Wave R2 (40 kbit/s)", "G.9959", "Z-Wave", true}, FskPcm, {25, 25, 1000, 0, 0, 0}, [](Bits& b, Out& o) { decZwave(b, o, 2); }, 10},
         {{"Z-Wave R3 (100 kbit/s)", "G.9959", "Z-Wave", true}, FskPcm, {10, 10, 500, 0, 0, 0}, [](Bits& b, Out& o) { decZwave(b, o, 3); }},
         {{"Wireless M-Bus T / C (header)", "m_bus.c", "Meter", true}, FskPcm, {10, 10, 500, 0, 0, 0}, decMbus},
+        {{"KNX RF 1.1 (S-mode PHY, 32.768 kchip/s)", "m_bus.c", "Sensor", true}, FskPcm, {30.5f, 30.5f, 275, 0, 0, 0}, decKnxRf, 15},
+        {{"DASH7 (55.555 kbit/s)", "Sub-IoT phy.c / dll.c", "Sensor", true}, FskPcm, {18, 18, 1500, 0, 0, 0}, [](Bits& b, Out& o) { decDash7(b, o, false); }, 8},
+        {{"DASH7 (9.6 kbit/s)", "Sub-IoT phy.c / dll.c", "Sensor", true}, FskPcm, {104, 104, 8000, 0, 0, 0}, [](Bits& b, Out& o) { decDash7(b, o, true); }, 40},
+        {{"EnOcean ERP1 (868.3 MHz ASK, 125 kbit/s)", "enocean_erp1.c", "Sensor", false}, OokPcm, {8, 8, 800, 0, 0, 0}, decEnOcean},
+        {{"HomeMatic BidCoS (868.3 MHz, 10 kbit/s)", "culfw rf_asksin.c / FHEM HMConfig.pm", "Sensor", true}, FskPcm, {100, 100, 4000, 0, 0, 0}, decHomeMatic, 30},
     };
     return p;
 }
