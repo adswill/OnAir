@@ -91,6 +91,7 @@ void loadState() {
     S.region = std::max(0, std::min(kNumPlans - 1, (int)d.getI("meshRegion", 0)));
     S.protocols = (int)d.getI("meshProtocols", 15);
     S.allPresets = d.getB("meshPresets", false);
+    S.tableScale = (int)d.getI("meshTableScale", 1); if (S.tableScale != 5 && S.tableScale != 20) S.tableScale = 1;
     S.mtRegion = d.getS("meshMtRegion", "");
     S.mtPreset = d.getS("meshMtPreset", "LongFast");
     S.mcPreset = d.getS("meshCorePreset", "");
@@ -177,6 +178,7 @@ void tick(App& a) {
     if (!S.keysPushed) { pushKeys(a); S.keysPushed = true; }
     if (S.pushedRegion != effRegion(a)) { S.pushedRegion = effRegion(a); r.setRegion(kPlans[S.pushedRegion].rxRegion); }
     if (S.pushedProtocols != effProtocols(a)) { S.pushedProtocols = effProtocols(a); r.setProtocols(S.pushedProtocols); }   // a protocol entry: only its own network
+    if (S.pushedScale != S.tableScale) { r.setTableScale(S.tableScale); S.pushedScale = S.tableScale; }
     if (S.pushedPresets != (int)S.allPresets) { r.setPresetSearch(S.allPresets); S.pushedPresets = (int)S.allPresets; }
     if (S.pushedTuned != a.freqMhz) { r.setTunedHz(a.freqMhz * 1e6); S.pushedTuned = a.freqMhz; }   // the engine does not pass the user's frequency
     if (!a.engine.running()) { S.lastSeq = 0; S.logPrimed = false; return; }

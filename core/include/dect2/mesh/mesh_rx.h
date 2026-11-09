@@ -33,6 +33,7 @@ public:
     // settings (any thread; they take effect at the next feed())
     void setTunedHz(double hz);                          // the user's frequency (default: meshTuning().defMhz); places the channels
     void setRegion(int region);                          // 0 EU (default), 1 US (also LoRaWAN EU868 / US915), 2 ANZ (no LoRaWAN), 3 ANZ with MeshCore Mid
+    void setTableScale(int scale);                       // 1 (default: 100 packets, 150 nodes, 100 messages, 150 APRS stations, 200 LoRaWAN devices) .. 20 times that; the oldest still leave first
     void setProtocols(int mask);                         // 1 Meshtastic, 2 MeshCore, 4 LoRa APRS, 8 MeshCom, 16 LoRaWAN (default 15: all but LoRaWAN)
     void setPresetSearch(bool all);                      // also the other Meshtastic presets of the region (more CPU)
     // Meshtastic channel plan: a firmware region ("EU_433", "ANZ", "LORA_24", ...; "" = EU_868 / US from setRegion) and the primary

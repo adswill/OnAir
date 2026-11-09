@@ -290,6 +290,17 @@ void settingsView(App& a) {
     }
     if (!subMask(a) || subMask(a) == 1)    if (ImGui::Checkbox("Search every Meshtastic preset of the region", &S.allPresets)) plat::prefs().setB("meshPresets", S.allPresets);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Off: LongFast only (the default of every new node). On: also MediumFast, MediumSlow, ShortFast, ShortSlow, LongModerate\nand LongSlow, each on its own channel slot. Uses more CPU, and only the slots inside the captured band are searched.");
+    {
+        static const char* sz[] = {"standard", "5 times", "20 times"};
+        int cur = S.tableScale == 20 ? 2 : S.tableScale == 5 ? 1 : 0;
+        ImGui::TextUnformatted(tr("Table size")); ImGui::SameLine(0, 8 * gUi);
+        ImGui::SetNextItemWidth(120 * gUi);
+        if (ImGui::BeginCombo("##meshsz", sz[cur])) {
+            for (int i = 0; i < 3; i++) if (ImGui::Selectable(sz[i], cur == i)) { S.tableScale = i == 2 ? 20 : i == 1 ? 5 : 1; plat::prefs().setI("meshTableScale", S.tableScale); }
+            ImGui::EndCombo();
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("How many rows the lists keep before the oldest leave: standard is 100 packets, 150 nodes, 100 messages, 150 APRS stations, 200 LoRaWAN devices. Larger sizes use more memory and a little more CPU; Save results exports what is kept."));
+    }
     ImGui::Spacing();
     loraSettings(a);
     ImGui::Spacing();

@@ -6,6 +6,7 @@
 // "fix bits" (a failed frame retried with one or two bits flipped), and a sound-card mode where the input is FM-demodulated audio.
 // 9600 baud: two slicers with different filters, a clock loop, the G3RUH descrambler (x^17 + x^12 + 1) and NRZI.
 // The frame layer is packet_ax25.*, the APRS layer packet_aprs.*.
+#include <atomic>
 #include "dect2/session/mode_adapters.h"
 #include "dect2/packet/packet_rx.h"
 #include "dect2/automation/engine.h"
@@ -30,7 +31,7 @@ namespace dect2 {
 namespace {
 
 using pktdemod::kMidRate;
-constexpr size_t kMaxFrames = 200, kMaxStations = 300;
+constexpr size_t kMaxFramesBase = 200, kMaxStationsBase = 300;
 constexpr int64_t kDupWindow = (int64_t)(0.03 * kMidRate);   // the same bytes this close together are one transmission
 constexpr double kDigiWindowSec = 30.0;                       // the same source, destination and text again within this: a digipeated copy
 const std::vector<float> kSlicerGains = {1.0f, 0.71f, 1.41f, 0.5f, 2.0f};   // mark against space: 0, -3, +3, -6, +6 dB (index 0 counts the failures)
@@ -52,6 +53,9 @@ struct PacketReceiver::Impl {
     std::function<void(const std::string&)> log;
 
     double fs = 0;
+    std::atomic<int> capScale{1};          // setTableScale(): frame and station caps times this
+    size_t kMaxFrames() const { return kMaxFramesBase * (size_t)capScale.load(); }
+    size_t kMaxStations() const { return kMaxStationsBase * (size_t)capScale.load(); }
     bool narrow = false;                   // setNarrowChannel()
     int fixBits = 0;                       // setFixBits()
     bool vote = true;                      // setVote(): failed frames are voted over the demodulators' copies
@@ -254,7 +258,7 @@ struct PacketReceiver::Impl {
     void touchStation(const std::string& call, const aprs::Info* a, bool object, const std::string& via, double tnow) {
         auto it = stations.find(call);
         if (it == stations.end()) {
-            if (stations.size() >= kMaxStations) {
+            if (stations.size() >= kMaxStations()) {
                 auto old = stations.begin();
                 for (auto j = stations.begin(); j != stations.end(); ++j) if (j->second.s.lastHeardSec < old->second.s.lastHeardSec) old = j;
                 stations.erase(old);
@@ -315,7 +319,7 @@ struct PacketReceiver::Impl {
             pf.summary = "(again, via " + (pf.path.empty() ? std::string("direct") : pf.path) + ") " + pf.summary;
             if (Feeds::get().wantKiss()) Feeds::get().kiss(dat.data(), dat.size());   // KISS clients get every frame, as from a TNC
             frames.push_back(pf);
-            while (frames.size() > kMaxFrames) frames.pop_front();
+            while (frames.size() > kMaxFrames()) frames.pop_front();
             auto st = stations.find(pf.from);
             if (st != stations.end()) st->second.s.lastHeardSec = tnow;
             clearFailsNear(baud, tt);
@@ -330,7 +334,7 @@ struct PacketReceiver::Impl {
             automation::emit(std::move(ev));
         }
         frames.push_back(pf);
-        while (frames.size() > kMaxFrames) frames.pop_front();
+        while (frames.size() > kMaxFrames()) frames.pop_front();
         if (!inner.empty()) {   // the gateway that sent it is heard, the station inside is where the position goes
             touchStation(pf.from, nullptr, false, "", tnow);
             touchStation(inner, &a, false, "", tnow);
@@ -421,6 +425,7 @@ void PacketReceiver::setWideInput(bool on) {
     p_->wideInput = on;
     if (p_->fs > 0) p_->configure(p_->fs);
 }
+void PacketReceiver::setTableScale(int scale) { p_->capScale = std::max(1, std::min(20, scale)); }
 void PacketReceiver::setNarrowChannel(bool on) {
     std::lock_guard<std::mutex> lk(p_->procMu);
     if (p_->narrow == on) return;

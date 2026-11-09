@@ -24,6 +24,7 @@ struct State {
     bool mapFollow = true;           // the map fits the stations until the user drags it
     bool logScroll = true;
     int pushedNarrow = -1;
+    int tableScale = 1, pushedScale = -1;   // list sizes times 1 / 5 / 20 (pref packetTableScale)
     int fixBits = 0, emphasis = 0; bool audioIn = false;   // saved as packetFixBits, packetEmphasis, packetAudioIn (docs/PACKET.md)
     int pushedFix = -1, pushedEmph = -1, pushedAudioIn = -1;
     bool vote = true, pushedVote = true, pushedVoteInit = false;   // multi-demodulator vote, saved as packetVote
@@ -38,6 +39,7 @@ void loadState() {
     S.loaded = true;
     S.map.zoom = (int)plat::prefs().getI("packetZoom", 9);
     S.listen = plat::prefs().getB("packetListen", false);
+    S.tableScale = (int)plat::prefs().getI("packetTableScale", 1); if (S.tableScale != 5 && S.tableScale != 20) S.tableScale = 1;
     S.fixBits = std::max(0, std::min(2, (int)plat::prefs().getI("packetFixBits", 0)));
     S.emphasis = std::max(0, std::min(2, (int)plat::prefs().getI("packetEmphasis", 0)));
     S.audioIn = plat::prefs().getB("packetAudioIn", false);
@@ -368,6 +370,7 @@ void tick(App& a) {
     if (!a.engine.running()) return;
     dect2::PacketReceiver& r = a.engine.packet();
     if ((int)a.packetNarrow != S.pushedNarrow) { r.setNarrowChannel(a.packetNarrow); S.pushedNarrow = a.packetNarrow; }
+    if (S.tableScale != S.pushedScale) { r.setTableScale(S.tableScale); S.pushedScale = S.tableScale; }
     if ((int)S.listen != S.pushedListen) { r.setListen(S.listen); S.pushedListen = S.listen; }
     if (!S.pushedVoteInit || S.vote != S.pushedVote) { r.setVote(S.vote); S.pushedVote = S.vote; S.pushedVoteInit = true; }
     if (S.fixBits != S.pushedFix) { r.setFixBits(S.fixBits); S.pushedFix = S.fixBits; }
@@ -389,6 +392,18 @@ void controls(App& a) {
         ImGui::EndCombo();
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Receive filter width. 12.5 kHz cuts a neighbouring channel better (often best for APRS) but needs the signal on the channel centre; 25 kHz is the wider, more forgiving filter."));
+    flowNext(10 * gUi);
+    {
+        static const char* kSz[] = {"standard", "5 times", "20 times"};
+        const int cur = S.tableScale == 20 ? 2 : S.tableScale == 5 ? 1 : 0;
+        ImGui::TextDisabled("%s", tr("Lists")); ImGui::SameLine(0, 5 * gUi);
+        ImGui::SetNextItemWidth(95 * gUi);
+        if (ImGui::BeginCombo("##pktsz", kSz[cur])) {
+            for (int i = 0; i < 3; i++) if (ImGui::Selectable(kSz[i], cur == i)) { S.tableScale = i == 2 ? 20 : i == 1 ? 5 : 1; plat::prefs().setI("packetTableScale", S.tableScale); }
+            ImGui::EndCombo();
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("How many frames (200) and stations (300) are kept before the oldest leave. Larger lists suit a full day of monitoring; they use more memory."));
+    }
     flowNext(10 * gUi);
     {
         static const char* kEmph[] = {"Auto", "De-emphasis", "Pre-emphasis"};
