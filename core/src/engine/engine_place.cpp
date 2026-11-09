@@ -210,6 +210,8 @@ void Engine::configureReceiver(int a, double r) {
     case 212: rxAtis_.configure(r); break;
     case 241: rxSelcal_.configure(r); break;
     case 236: rxFy3a_.configure(r); break;
+    case 531: case 532: case 533: case 534: case 535: case 536: case 537: case 538: case 539: case 540:
+    case 541: case 542: case 543: case 544: case 545: case 546: case 547: case 548: case 549: case 550: rxXb_[a - 531].configure(r); break;
     case 261: rxWx_[0].configure(r); break;
     case 262: rxWx_[1].configure(r); break;
     case 263: rxWx_[2].configure(r); break;
@@ -387,6 +389,8 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 212: rxAtis_.setSignalOffset(o); break;
     case 241: rxSelcal_.setSignalOffset(o); rxSelcal_.setDialHz(dialHz); break;
     case 236: rxFy3a_.setSignalOffset(o); break;
+    case 531: case 532: case 533: case 534: case 535: case 536: case 537: case 538: case 539: case 540:
+    case 541: case 542: case 543: case 544: case 545: case 546: case 547: case 548: case 549: case 550: rxXb_[a - 531].setSignalOffset(o); break;
     case 261: rxWx_[0].setSignalOffset(o); break;
     case 262: rxWx_[1].setSignalOffset(o); break;
     case 263: rxWx_[2].setSignalOffset(o); break;

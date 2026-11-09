@@ -24,7 +24,7 @@ constexpr int kSpan = 8, kTabRes = 256;
 
 uint16_t xbTestPixel(int ch, int x, int y) {
     // two waves over a ramp, different per channel: a wrong channel or an off-by-one line shows
-    const int v = (x * 3 + y * (ch + 2) * 5 + (ch * 311) % 997 + ((x / 16 + y / 8) & 1 ? 200 : 0)) & 4095;
+    const int v = (x * 3 + y * (ch + 2) * 5 + (ch * 311) % 997 + ((x / 16 + y / 8) & 1 ? 200 : 0) + (((x * x * (ch + 3) + y * y * 7) >> 4) & 63)) & 4095;
     return (uint16_t)v;
 }
 
@@ -109,6 +109,33 @@ struct Source {
         m.add(hrpt::kApid3a, 3, nextLine & 0x3FFF, hrpt::encodeAvhrrPacket(l));
         nextLine++;
     }
+    // DMSP RTD: an alarm (line start) frame and 490 pixel frames
+    void dmspFrames(std::deque<uint8_t>& bits) {
+        const auto frameBits = [&](const uint8_t words[16]) {
+            std::vector<int> b;
+            for (int i = 12; i >= 0; i--) b.push_back((0b1010110011111 >> i) & 1);
+            b.push_back(0);
+            for (int i = 1; i <= 15; i++) for (int k = 7; k >= 0; k--) b.push_back((words[i] >> k) & 1);
+            while (b.size() < 150) b.push_back(0);
+            for (int x : b) bits.push_back((uint8_t)x);
+        };
+        uint8_t alarm[16] = {};
+        for (int i = 1; i < 13; i++) alarm[i] = (i & 1) == 0 ? 0x07 : 0xFB;
+        alarm[15] = 0; // forward scan
+        frameBits(alarm);
+        for (int pos = 0; pos < 490; pos++) {
+            uint8_t w[16] = {};
+            for (int i = 0; i < 15; i++) w[1 + i] = (uint8_t)(((xbTestPixel(0, pos * 15 + i, nextLine) >> 6) & 63) << 2);
+            for (int k = 0; k < 3; k++) {
+                const uint8_t v = (uint8_t)(xbTestPixel(1, pos * 15 + k * 5, nextLine) >> 4);
+                const int a = 1 + k * 5;
+                w[a] |= (v >> 6) & 3; w[a + 1] |= (v >> 4) & 3; w[a + 2] |= (v >> 2) & 3; w[a + 3] |= v & 3;
+            }
+            w[1] |= 1;
+            frameBits(w);
+        }
+        nextLine++;
+    }
     void amsrLine(xband::Mux& m) {
         for (int pkt = 0; pkt < 20; pkt++) {
             std::vector<uint8_t> d(1018, 0);
@@ -121,6 +148,41 @@ struct Source {
             }
             m.add(1576, pkt == 19 ? 1 : 0, 0, d);
         }
+        nextLine++;
+    }
+    // METimage: 20 channels x 58 packets, 56 groups of 25 values a packet (first value of a group unused)
+    void metimageSegment(xband::Mux& m) {
+        static const struct { int marker, depth; bool rev; } ch[20] = {{30,18,true},{28,18,true},{26,18,true},{25,17,true},{23,17,true},{24,17,true},{22,17,true},{4,17,false},{12,17,false},{8,17,false},{17,17,false},{15,18,false},{16,18,false},{20,18,false},{40,18,false},{39,18,false},{37,17,false},{34,17,false},{35,17,false},{33,17,false}};
+        const int seg = nextLine;
+        for (int c = 0; c < 20; c++) for (int pk = 0; pk < 58; pk++) {
+            const int depth = ch[c].depth;
+            std::vector<uint8_t> d(depth == 17 ? 3027 - 6 : 3202 - 6, 0);
+            d[15] = (uint8_t)ch[c].marker;
+            const int offset = pk * 56;
+            d[19] = (uint8_t)(offset >> 8); d[20] = (uint8_t)offset;
+            std::vector<uint32_t> vals(1400, 0);
+            for (int i = 0; i < 56; i++) for (int l = 0; l < 24; l++) {
+                // the rows are reversed left to right after reassembly, and 56 columns are trimmed: plane x = 3248 - 1 - (offset + i) - 56
+                const int planeX = 3248 - 1 - (offset + i) - 56;
+                const int v = planeX >= 0 ? xbTestPixel(c, planeX, seg * 24 + l) : 0;
+                vals[(size_t)i * 25 + 1 + (ch[c].rev ? 23 - l : l)] = (uint32_t)v << (depth - 12);
+            }
+            uint64_t sr = 0; int have = 0; size_t o = 44;
+            for (uint32_t v : vals) {
+                sr = sr << depth | v; have += depth;
+                while (have >= 8 && o < d.size()) { d[o++] = (uint8_t)(sr >> (have - 8)); have -= 8; }
+            }
+            m.add(1443, 3, 0, d);
+        }
+        nextLine++;
+    }
+    void vegLine(xband::Mux& m) {
+        // the first channel of the first group
+        std::vector<uint8_t> d(7818, 0);
+        std::vector<uint16_t> w(5200);
+        for (int x = 0; x < 5200; x++) w[(size_t)x] = xbTestPixel(0, x, nextLine);
+        xband::pack12(w.data(), 5200, &d[18]);
+        m.add(290, 3, 0, d);
         nextLine++;
     }
     void tirsLine(xband::Mux& m) {
@@ -144,6 +206,7 @@ struct XbandGenerator::Impl {
     Source src;
     double rs = 1;
     int syms = 2;
+    std::vector<uint8_t> noFrame;
     std::vector<float> tab, I, Q;
     int64_t symN = 0;
     double sTime = 0, tstep = 0, phase = 0, freq = 0, amp = 1, sigma = 0, scale = 1;
@@ -162,7 +225,7 @@ struct XbandGenerator::Impl {
         switch (p) { case kXbNpp: return 159; case kXbJpss2: return 177; case kXbAquaAura: return 154; case kXbTerra: return 42; case kXbMetopDump: return 11; case kXbMetopSg: return 3; default: return 1; }
     }
     static int vcidFor(int p) {
-        switch (p) { case kXbNpp: case kXbJpss2: return 16; case kXbAquaAura: return 30; case kXbTerra: return 42; case kXbMetopDump: return 9; case kXbGcomW1: return 17; case kXbLandsatX: return 5; case kXbMetopSg: return 16; default: return 0; }
+        switch (p) { case kXbNpp: case kXbJpss2: return 16; case kXbAquaAura: return 30; case kXbTerra: return 42; case kXbMetopDump: return 9; case kXbGcomW1: return 17; case kXbLandsatX: return 5; case kXbMetopSg: return 16; case kXbProbaS: return 4; default: return 0; }
     }
     explicit Impl(const XbandGenConfig& cfg) : c(cfg), P(cfg.profile), L(xbLink(cfg.profile)), cadu(L), mux(L, scidFor(cfg.profile), vcidFor(cfg.profile)), src(cfg.profile), rng(cfg.seed) {
         rs = L.symbolRate;
@@ -194,6 +257,8 @@ struct XbandGenerator::Impl {
                 case kXbMetopDump: src.avhrrLine(mux); break;
                 case kXbGcomW1: src.amsrLine(mux); break;
                 case kXbLandsatX: src.tirsLine(mux); break;
+                case kXbMetopSg: src.metimageSegment(mux); break;
+                case kXbProbaS: src.vegLine(mux); break;
                 default: return fallback();
                 }
                 continue;
@@ -219,6 +284,7 @@ struct XbandGenerator::Impl {
     }
 
     void pushBits() {
+        if (P == kXbDmsp) { src.dmspFrames(bits); return; }
         nextPayload();
         for (int i = 0; i < L.caduBytes * 8; i++) {
             int b = frame[(size_t)i >> 3] >> (7 - (i & 7)) & 1;

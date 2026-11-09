@@ -13,9 +13,11 @@
 
 namespace dect2 {
 
+struct XbProductImage { std::string name, note; int width = 0, height = 0; std::vector<uint32_t> rgba; };
+
 class XbandReceiver {
 public:
-    explicit XbandReceiver(int profile);
+    XbandReceiver(int profile);
     ~XbandReceiver();
     void configure(double inputRateHz);
     void setSignalOffset(double hz);
@@ -32,7 +34,9 @@ public:
     void finish();                                          // the end of a pass: what is buffered goes to the channels, the telemetry is published
     void pushCadu(const uint8_t* cadu);                     // frames already synchronised, starting at the 0x1ACFFC1D sync word, not yet derandomised / corrected
     bool setCaduOutput(const std::string& path);            // the decoded frames are appended to this file; "" closes it
-    bool savePlanes(const std::string& folder, std::string* err) const;   // the channels at full resolution, 16 bit PNG
+    std::vector<XbProductImage> products(int maxWidth) const;   // colour composites and products of the pass so far (xband_products.h)
+    bool readPlane(int channel, int& width, int& height, std::vector<uint16_t>& px) const;   // tests
+    std::vector<XbProductImage> channelImages() const;           // each channel full size, 8 bit grey
 
 private:
     struct Impl;

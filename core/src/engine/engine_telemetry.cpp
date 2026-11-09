@@ -316,6 +316,26 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 211: return pollStd(rxNrf_, 211, t, seqs[186], &RxTelemetry::nrf24);   // nRF24L01 (slot 186)
     case 241: return pollStd(rxSelcal_, 241, t, seqs[200], &RxTelemetry::selcal);   // SELCAL (slot 200)
     case 212: return pollStd(rxAtis_, 212, t, seqs[187], &RxTelemetry::atis);   // ATIS inland waterways (slot 187)
+    case 531: return pollStd(rxXb_[0], 531, t, seqs[530], &RxTelemetry::xband);
+    case 532: return pollStd(rxXb_[1], 532, t, seqs[531], &RxTelemetry::xband);
+    case 533: return pollStd(rxXb_[2], 533, t, seqs[532], &RxTelemetry::xband);
+    case 534: return pollStd(rxXb_[3], 534, t, seqs[533], &RxTelemetry::xband);
+    case 535: return pollStd(rxXb_[4], 535, t, seqs[534], &RxTelemetry::xband);
+    case 536: return pollStd(rxXb_[5], 536, t, seqs[535], &RxTelemetry::xband);
+    case 537: return pollStd(rxXb_[6], 537, t, seqs[536], &RxTelemetry::xband);
+    case 538: return pollStd(rxXb_[7], 538, t, seqs[537], &RxTelemetry::xband);
+    case 539: return pollStd(rxXb_[8], 539, t, seqs[538], &RxTelemetry::xband);
+    case 540: return pollStd(rxXb_[9], 540, t, seqs[539], &RxTelemetry::xband);
+    case 541: return pollStd(rxXb_[10], 541, t, seqs[540], &RxTelemetry::xband);
+    case 542: return pollStd(rxXb_[11], 542, t, seqs[541], &RxTelemetry::xband);
+    case 543: return pollStd(rxXb_[12], 543, t, seqs[542], &RxTelemetry::xband);
+    case 544: return pollStd(rxXb_[13], 544, t, seqs[543], &RxTelemetry::xband);
+    case 545: return pollStd(rxXb_[14], 545, t, seqs[544], &RxTelemetry::xband);
+    case 546: return pollStd(rxXb_[15], 546, t, seqs[545], &RxTelemetry::xband);
+    case 547: return pollStd(rxXb_[16], 547, t, seqs[546], &RxTelemetry::xband);
+    case 548: return pollStd(rxXb_[17], 548, t, seqs[547], &RxTelemetry::xband);
+    case 549: return pollStd(rxXb_[18], 549, t, seqs[548], &RxTelemetry::xband);
+    case 550: return pollStd(rxXb_[19], 550, t, seqs[549], &RxTelemetry::xband);
     case 261: return pollStd(rxWx_[0], 261, t, seqs[220], &RxTelemetry::wxsat);   // 0
     case 262: return pollStd(rxWx_[1], 262, t, seqs[221], &RxTelemetry::wxsat);   // 1
     case 263: return pollStd(rxWx_[2], 263, t, seqs[222], &RxTelemetry::wxsat);   // 2

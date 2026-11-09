@@ -118,7 +118,9 @@ public:
     uint64_t lines() const;
     const std::string& satName() const;
     int lastScid() const;
+    const struct AvhrrCal* avhrrCal() const; // AVHRR on-board calibration data of MetOp, else null
     void finish();                          // the end of a pass: what is still buffered goes to the channels
+    void rawFrame(const uint8_t* f);        // links without CADUs (DMSP RTD frames)
 private:
     struct Impl;
     std::unique_ptr<Impl> p_;

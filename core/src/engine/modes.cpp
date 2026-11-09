@@ -245,6 +245,9 @@
 #include "dect2/wxsat/wxsat_rx.h"
 #include "dect2/wxsat/wxsat_gen.h"
 #include "dect2/wxsat/wxsat_tel.h"
+#include "dect2/xband/xband_rx.h"
+#include "dect2/xband/xband_gen.h"
+#include "dect2/xband/xband_tel.h"
 #include "dect2/fy3/fy3_rx.h"
 #include "dect2/fy3/fy3_gen.h"
 #include "dect2/fy3/fy3_tel.h"
@@ -442,7 +445,7 @@ static std::vector<ModeTuning> anyFrequency(std::vector<ModeTuning> t) {
 
 static const std::vector<ModeTuning>& table() {
     static const std::vector<ModeTuning> t = anyFrequency({dvbsTuning(), dtmbTuning(), atvTuning(), dmrTuning(), drmTuning(), adsbTuning(), gnssTuning(), sondeTuning(), aisTuning(), marineTuning(), acarsTuning(), inmcTuning(), aeroTuning(), iridiumTuning(), meshTuning(),
-                                               wxsatTuning(0), wxsatTuning(1), wxsatTuning(2), wxsatTuning(3), wxsatTuning(4), wxsatTuning(5), wxsatTuning(6), wxsatTuning(7), wxsatTuning(8), hdrTuning(), cdrTuning(), pagerTuning(), packetTuning(), hfdigTuning(), airbandTuning(), vdl2Tuning(), ismTuning(), vorTuning(), m17Tuning(), cellTuning(), cwTuning(), dstarTuning(), hfdlTuning(), nxdnTuning(), dpmrTuning(), gsmrTuning(), pskTuning(), js8Tuning(), specxTuning(), specanTuning(), dvbcTuning(), orbcommTuning(), uplinkTuning(), tetraTuning(), aleTuning(), macTuning(), astroTuning(), p25Tuning(), bleTuning(), ionoTuning(), qo100Tuning(), wifiTuning(), generalTuning(), timeTuning(), ridTuning(), meteorTuning(), nrTuning(), cubesatTuning(), goesTuning(), globalstarTuning(), vdesTuning(), hrptTuning(), zigbeeTuning(), threadTuning(), flarmTuning(), hfbeaconTuning(), djiTuning(), nbiotTuning(), halowTuning(), codarTuning(), wbTuning(), datawellTuning(), multitoneTuning(), sameTuning(), loraRawTuning(), antTuning(), dectTuning(), tetrapolTuning(), elektroTuning(), gk2aLritTuning(), gk2aHritTuning(), ndbTuning(), lbjTuning(), klwTuning(), tdcsTuning(), horusTuning(), dgpsTuning(), vdl4Tuning(), wisunTuning(), uatTuning(), eczasTuning(), wmbusTuning(), tonesTuning(), sarsatTuning(), mt63Tuning(), fsqTuning(), ifkpTuning(), kaalTuning(), kavbTuning(), kappTuning(), kaftTuning(), zwaveTuning(), mscatterTuning(), fpvTuning(), cquamTuning(), dmeTuning(), sitorTuning(), elLoranTuning(), mpt1327Tuning(), fusionTuning(), ardopTuning(), goesdcsTuning(), modeacTuning(), bletrkTuning(), kaitTuning(), satbeaconTuning(), kawsTuning(), milhfTuning(), sbasTuning(), asterixTuning(), ltrTuning(), edacsTuning(), lorawanTuning(), loraSatTuning(), pactorTuning(), esubghzTuning(), roshfTuning(), ssdvTuning(), ebicabTuning(), inmsatTuning(), iptvTuning(), nrf24Tuning(), atisTuning(), fy3AhrptTuning(), fy3MptTuning(), pactor2Tuning(), pactor3Tuning(), pactor4Tuning(), pskdTuning(), p25p2Tuning(), isdbsTuning(), marineVhfTuning(), selcalTuning(), argosTuning(), sigfoxTuning(), nfcTuning(), shortwaveTuning(), fy4LritTuning(), fy4aHritTuning(), fy2SvissrTuning(), sensorsTuning(), bganTuning(), sfericsTuning()});
+                                               xbandTuning(0), xbandTuning(1), xbandTuning(2), xbandTuning(3), xbandTuning(4), xbandTuning(5), xbandTuning(6), xbandTuning(7), xbandTuning(8), xbandTuning(9), xbandTuning(10), xbandTuning(11), xbandTuning(12), xbandTuning(13), xbandTuning(14), xbandTuning(15), xbandTuning(16), xbandTuning(17), xbandTuning(18), xbandTuning(19), wxsatTuning(0), wxsatTuning(1), wxsatTuning(2), wxsatTuning(3), wxsatTuning(4), wxsatTuning(5), wxsatTuning(6), wxsatTuning(7), wxsatTuning(8), hdrTuning(), cdrTuning(), pagerTuning(), packetTuning(), hfdigTuning(), airbandTuning(), vdl2Tuning(), ismTuning(), vorTuning(), m17Tuning(), cellTuning(), cwTuning(), dstarTuning(), hfdlTuning(), nxdnTuning(), dpmrTuning(), gsmrTuning(), pskTuning(), js8Tuning(), specxTuning(), specanTuning(), dvbcTuning(), orbcommTuning(), uplinkTuning(), tetraTuning(), aleTuning(), macTuning(), astroTuning(), p25Tuning(), bleTuning(), ionoTuning(), qo100Tuning(), wifiTuning(), generalTuning(), timeTuning(), ridTuning(), meteorTuning(), nrTuning(), cubesatTuning(), goesTuning(), globalstarTuning(), vdesTuning(), hrptTuning(), zigbeeTuning(), threadTuning(), flarmTuning(), hfbeaconTuning(), djiTuning(), nbiotTuning(), halowTuning(), codarTuning(), wbTuning(), datawellTuning(), multitoneTuning(), sameTuning(), loraRawTuning(), antTuning(), dectTuning(), tetrapolTuning(), elektroTuning(), gk2aLritTuning(), gk2aHritTuning(), ndbTuning(), lbjTuning(), klwTuning(), tdcsTuning(), horusTuning(), dgpsTuning(), vdl4Tuning(), wisunTuning(), uatTuning(), eczasTuning(), wmbusTuning(), tonesTuning(), sarsatTuning(), mt63Tuning(), fsqTuning(), ifkpTuning(), kaalTuning(), kavbTuning(), kappTuning(), kaftTuning(), zwaveTuning(), mscatterTuning(), fpvTuning(), cquamTuning(), dmeTuning(), sitorTuning(), elLoranTuning(), mpt1327Tuning(), fusionTuning(), ardopTuning(), goesdcsTuning(), modeacTuning(), bletrkTuning(), kaitTuning(), satbeaconTuning(), kawsTuning(), milhfTuning(), sbasTuning(), asterixTuning(), ltrTuning(), edacsTuning(), lorawanTuning(), loraSatTuning(), pactorTuning(), esubghzTuning(), roshfTuning(), ssdvTuning(), ebicabTuning(), inmsatTuning(), iptvTuning(), nrf24Tuning(), atisTuning(), fy3AhrptTuning(), fy3MptTuning(), pactor2Tuning(), pactor3Tuning(), pactor4Tuning(), pskdTuning(), p25p2Tuning(), isdbsTuning(), marineVhfTuning(), selcalTuning(), argosTuning(), sigfoxTuning(), nfcTuning(), shortwaveTuning(), fy4LritTuning(), fy4aHritTuning(), fy2SvissrTuning(), sensorsTuning(), bganTuning(), sfericsTuning()});
     return t;
 }
 
@@ -646,6 +649,26 @@ std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, do
     case 243: return makeSensorsSynth(cfg, sampleRate);   // Sub-GHz sensors (family 241)
     case 247: return makeBganSynth(cfg, sampleRate);   // Inmarsat BGAN (family 245)
     case 245: return makeSfericsSynth(cfg, sampleRate);   // Sferics (family 243)
+    case 532: return makeXbandSynth(cfg, sampleRate, 0);
+    case 533: return makeXbandSynth(cfg, sampleRate, 1);
+    case 534: return makeXbandSynth(cfg, sampleRate, 2);
+    case 535: return makeXbandSynth(cfg, sampleRate, 3);
+    case 536: return makeXbandSynth(cfg, sampleRate, 4);
+    case 537: return makeXbandSynth(cfg, sampleRate, 5);
+    case 538: return makeXbandSynth(cfg, sampleRate, 6);
+    case 539: return makeXbandSynth(cfg, sampleRate, 7);
+    case 540: return makeXbandSynth(cfg, sampleRate, 8);
+    case 541: return makeXbandSynth(cfg, sampleRate, 9);
+    case 542: return makeXbandSynth(cfg, sampleRate, 10);
+    case 543: return makeXbandSynth(cfg, sampleRate, 11);
+    case 544: return makeXbandSynth(cfg, sampleRate, 12);
+    case 545: return makeXbandSynth(cfg, sampleRate, 13);
+    case 546: return makeXbandSynth(cfg, sampleRate, 14);
+    case 547: return makeXbandSynth(cfg, sampleRate, 15);
+    case 548: return makeXbandSynth(cfg, sampleRate, 16);
+    case 549: return makeXbandSynth(cfg, sampleRate, 17);
+    case 550: return makeXbandSynth(cfg, sampleRate, 18);
+    case 551: return makeXbandSynth(cfg, sampleRate, 19);
     case 262: return makeWxsatSynth(cfg, sampleRate, 0);
     case 263: return makeWxsatSynth(cfg, sampleRate, 1);
     case 264: return makeWxsatSynth(cfg, sampleRate, 2);
@@ -802,6 +825,9 @@ std::string modeSummary(const RxTelemetry& t) {
     case 242: return sensorsSummary(t.sensors);
     case 246: return bganSummary(t.bgan);
     case 244: return sfericsSummary(t.sferics);
+    case 531: case 532: case 533: case 534: case 535: case 536: case 537: case 538: case 539: case 540:
+    case 541: case 542: case 543: case 544: case 545: case 546: case 547: case 548: case 549: case 550:
+        return xbandSummary(t.xband);
     case 261:
     case 262:
     case 263:

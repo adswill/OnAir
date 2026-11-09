@@ -74,6 +74,26 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | Arktika-M RDAS | 266 | 268 | 267 | 226 | feat37-sd1 | 3.7; MSU-GS, X-band 30.72 Msym/s; numbers may need to move at merge |
 | Arktika-M GGAK | 267 | 269 | 268 | 227 | feat37-sd1 | 3.7; 1703 MHz PM; numbers may need to move at merge |
 | AWS L-band | 268 | 270 | 269 | 228 | feat37-sd1 | 3.7; MWR, 1707 MHz; numbers may need to move at merge |
+| JPSS HRD (NPP, NOAA-20) | 530 | 532 | 531 | 530 | feat38-sat-xband | 3.8; numbers may need to move at merge |
+| JPSS HRD (NOAA-21) | 531 | 533 | 532 | 531 | feat38-sat-xband | 3.8; numbers may need to move at merge |
+| EOS DB (Aqua, Aura) | 532 | 534 | 533 | 532 | feat38-sat-xband | 3.8; numbers may need to move at merge |
+| EOS DB (Terra) | 533 | 535 | 534 | 533 | feat38-sat-xband | 3.8; numbers may need to move at merge |
+| MetOp X-band dump | 534 | 536 | 535 | 534 | feat38-sat-xband | 3.8; numbers may need to move at merge |
+| MetOp-SG DDB | 535 | 537 | 536 | 535 | feat38-sat-xband | 3.8; numbers may need to move at merge |
+| Landsat 8/9 X-band | 536 | 538 | 537 | 536 | feat38-sat-xband | 3.8; numbers may need to move at merge |
+| Landsat 8/9 S-band | 537 | 539 | 538 | 537 | feat38-sat-xband | 3.8; numbers may need to move at merge |
+| Proba S-band dump | 538 | 540 | 539 | 538 | feat38-sat-xband | 3.8; numbers may need to move at merge |
+| Proba-V X-band dump | 539 | 541 | 540 | 539 | feat38-sat-xband | 3.8; numbers may need to move at merge |
+| GCOM-W1 | 540 | 542 | 541 | 540 | feat38-sat-xband | 3.8; numbers may need to move at merge |
+| GCOM-C1 | 541 | 543 | 542 | 541 | feat38-sat-xband | 3.8; numbers may need to move at merge |
+| STEREO high rate | 542 | 544 | 543 | 542 | feat38-sat-xband | 3.8; numbers may need to move at merge |
+| Oceansat-2 DB | 543 | 545 | 544 | 543 | feat38-sat-xband | 3.8; numbers may need to move at merge |
+| Oceansat-3 L-band | 544 | 546 | 545 | 544 | feat38-sat-xband | 3.8; numbers may need to move at merge |
+| Saral L-band | 545 | 547 | 546 | 545 | feat38-sat-xband | 3.8; numbers may need to move at merge |
+| Oceansat-3 X-band dump | 546 | 548 | 547 | 546 | feat38-sat-xband | 3.8; numbers may need to move at merge |
+| Saral X-band dump | 547 | 549 | 548 | 547 | feat38-sat-xband | 3.8; numbers may need to move at merge |
+| Kanopus-V | 548 | 550 | 549 | 548 | feat38-sat-xband | 3.8; numbers may need to move at merge |
+| DMSP RTD | 549 | 551 | 550 | 549 | feat38-sat-xband | 3.8; numbers may need to move at merge |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |

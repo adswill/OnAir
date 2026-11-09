@@ -85,7 +85,7 @@ const std::set<std::string>& restrictedKnownKinds() {
     "shortwave",
     // 3.6 modes: blocked likewise
     "fy4lrit", "fy4ahrit", "fy2svissr",
-    "fy3ahrpt", "fy3mpt", "noaaapt", "noaahrpt", "noaagac", "noaadsb", "meteorhrpt", "elektrordas", "arktikardas", "arktikaggak", "awsl",
+    "fy3ahrpt", "fy3mpt", "noaaapt", "noaahrpt", "noaagac", "noaadsb", "meteorhrpt", "elektrordas", "arktikardas", "arktikaggak", "awsl", "xb_npp", "xb_jpss2", "xb_aqua", "xb_terra", "xb_metopd", "xb_metopsg", "xb_landsatx", "xb_landsats", "xb_probas", "xb_probav", "xb_gcomw", "xb_gcomc", "xb_stereo", "xb_oceansat2", "xb_oceansat3", "xb_saral", "xb_oceansat3x", "xb_saralx", "xb_kanopus", "xb_dmsp",
     "sitor", "pactor2", "pactor3", "pactor4",
     };
     return s;

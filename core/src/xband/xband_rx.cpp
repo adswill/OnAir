@@ -1,6 +1,7 @@
 // See xband_rx.h. Link parameters from SatDump's pipelines (GPL-3.0, Copyright Aang23 and contributors); code written for OnAir.
 #include "dect2/xband/xband_rx.h"
 #include "dect2/xband/xband_proto.h"
+#include "dect2/xband/xband_products.h"
 #include "dect2/common/mathconst.h"
 #include "dect2/dsp/dsp_compat.h"
 #include "dect2/dsp/rrc.h"
@@ -336,6 +337,7 @@ struct XbandReceiver::Impl {
         haveRate = rate >= L.minRate - 1;
         if (haveRate) { dem.configure(rate, L.symbolRate, L.mod, L.alpha); dem.setOffset(offset); }
         if (L.caduBytes > 0) def.configure(xband::kAsm, 32, L.caduBytes * 8, 3, 10, true);
+        if (P == kXbDmsp) { def.configure(0b1010110011111, 13, 150, 0, 5, true); def.onFrame = [this](const uint8_t* f) { dmspFrame(f); }; }
         frameSyms = L.caduBytes > 0 ? symsPerFrame() : 0;
         resetState();
     }
@@ -496,7 +498,8 @@ struct XbandReceiver::Impl {
         vit.reset(); def.reset(); havePending = false; alignDone = false; prevI = prevQ = nrzPrev = 0;
         const uint64_t okBefore = tel.blocksOk, hitsBefore = tel.asmHits, badBefore = tel.blocksBad;
         const int np = (int)symI.size();
-        const int start = std::max(0, from - 200);
+        int start = std::max(0, from - 200);
+        if (L.mod == kXbBpsk && L.fec == kXbFecConv) { start = std::max(0, (from - 200) * 2) + al; alignDone = true; }
         for (int i = start; i < np; i++) pathSymbol(symI[(size_t)i], symQ[(size_t)i]);
         const bool good = tel.blocksOk > okBefore || (L.rsI == 0 && tel.asmHits >= hitsBefore + 2);
         if (!good) { locked = false; tel.blocksBad = badBefore; return false; }
@@ -538,7 +541,12 @@ struct XbandReceiver::Impl {
         if (caduOut.is_open()) { caduOut.write((const char*)frameTmp.data(), L.caduBytes); tel.caduWritten++; }
     }
 
-    void special(float, float) {}
+    void special(float I, float) { if (P == kXbDmsp) { def.push(I > 0 ? 1 : 0); tel.frameLock = def.locked(); } }
+    void dmspFrame(const uint8_t* f) {
+        tel.blocksOk++; tel.state = 3; lastFrameT = nowSec(); tel.asmHits++;
+        std::lock_guard<std::mutex> g(store.mu);
+        inst.rawFrame(f);
+    }
 
     // ---- feed ----
     void feed(const cf32* x, size_t n) {
@@ -554,6 +562,7 @@ struct XbandReceiver::Impl {
         if (L.fec == kXbFecConv) { /* the Viterbi output stays in the buffer until 256 bits, see vitPush */ }
         const double now = nowSec();
         if (dem.acquired) tel.state = std::max(tel.state, dem.carrierLock > 0.5f ? 1 : 0);
+        if (L.caduBytes == 0 && !def.locked() && P == kXbDmsp && tel.state == 3 && now - lastFrameT > 1) tel.state = 1;
         if (locked && !def.locked() && now - lastFrameT > std::max(1.0, 0.5 * (double)frameSyms / L.symbolRate * 4)) {
             locked = false; symI.clear(); symQ.clear(); tel.state = dem.carrierLock > 0.5f ? 1 : 0; tel.frameLock = false;
         }
@@ -640,7 +649,166 @@ bool XbandReceiver::setCaduOutput(const std::string& path) {
     p_->caduOut.open(path, std::ios::binary | std::ios::app);
     return p_->caduOut.is_open();
 }
-bool XbandReceiver::savePlanes(const std::string&, std::string* err) const { if (err) *err = "not built yet"; return false; }
+std::vector<XbProductImage> XbandReceiver::products(int maxWidth) const {
+    std::vector<XbProductImage> out;
+    std::lock_guard<std::mutex> g(p_->store.mu);
+    for (auto& v : xband::makeProducts(p_->store, p_->P, p_->inst.avhrrCal(), maxWidth)) out.push_back({v.name, v.note, v.width, v.height, std::move(v.rgba)});
+    return out;
+}
+bool XbandReceiver::readPlane(int c, int& w, int& h, std::vector<uint16_t>& px) const {
+    std::lock_guard<std::mutex> g(p_->store.mu);
+    if (c < 0 || c >= p_->store.count()) return false;
+    const auto& pl = p_->store.plane(c);
+    w = pl.width; h = pl.lines; px = pl.px;
+    return true;
+}
+std::vector<XbProductImage> XbandReceiver::channelImages() const {
+    std::vector<XbProductImage> out;
+    std::lock_guard<std::mutex> g(p_->store.mu);
+    for (int i = 0; i < p_->store.count(); i++) {
+        const xband::Plane& pl = p_->store.plane(i);
+        if (pl.lines == 0) continue;
+        XbProductImage m; m.name = pl.name; m.width = pl.width; m.height = pl.lines;
+        // stretch on the data range
+        uint32_t lo = 65535, hi = 0;
+        for (size_t k = 0; k < pl.px.size(); k += 11) if (pl.px[k]) { lo = std::min<uint32_t>(lo, pl.px[k]); hi = std::max<uint32_t>(hi, pl.px[k]); }
+        if (hi <= lo) { lo = 0; hi = 65535; }
+        m.rgba.resize((size_t)m.width * m.height);
+        for (size_t k = 0; k < m.rgba.size(); k++) {
+            const uint32_t v = (uint32_t)std::clamp<int64_t>((int64_t)((pl.px[k] - (int64_t)lo)) * 255 / std::max<int64_t>(1, (int64_t)hi - lo), 0, 255);
+            m.rgba[k] = 0xFF000000u | v << 16 | v << 8 | v;
+        }
+        out.push_back(std::move(m));
+    }
+    return out;
+}
+
+// ---- recordings ---------------------------------------------------------------------------------------------------------------
+struct XbFileRunner::Impl {
+    std::thread th;
+    std::atomic<bool> stop{false}, running{false};
+    std::atomic<float> progress{0};
+    std::mutex mu;
+    std::string status;
+    void say(std::string s) { std::lock_guard<std::mutex> g(mu); status = std::move(s); }
+};
+XbFileRunner::XbFileRunner() : p_(std::make_unique<Impl>()) {}
+XbFileRunner::~XbFileRunner() { stop(); }
+void XbFileRunner::stop() { p_->stop = true; if (p_->th.joinable()) p_->th.join(); p_->running = false; }
+bool XbFileRunner::running() const { return p_->running; }
+float XbFileRunner::progress() const { return p_->progress; }
+std::string XbFileRunner::status() const { std::lock_guard<std::mutex> g(p_->mu); return p_->status; }
+
+namespace {
+enum Sample { kCu8, kCs8, kCs16, kCf32 };
+bool sampleFmt(const std::string& ext, Sample& s) {
+    if (ext == "cu8" || ext == "u8") { s = kCu8; return true; }
+    if (ext == "cs8" || ext == "s8") { s = kCs8; return true; }
+    if (ext == "cs16" || ext == "s16" || ext == "sc16") { s = kCs16; return true; }
+    if (ext == "cf32" || ext == "fc32" || ext == "c64" || ext == "bin" || ext == "raw") { s = kCf32; return true; }
+    return false;
+}
+std::string lowerExt(const std::string& p) {
+    const size_t d = p.rfind('.');
+    if (d == std::string::npos) return "";
+    std::string e = p.substr(d + 1);
+    for (auto& c : e) c = (char)std::tolower((unsigned char)c);
+    return e;
+}
+// A SigMF metadata file: the two fields we need, by plain text search
+bool readSigmf(const std::string& meta, Sample& s, double& rate) {
+    std::ifstream f(meta);
+    if (!f) return false;
+    std::string t((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    const auto field = [&](const char* k) { const size_t at = t.find(k); if (at == std::string::npos) return std::string(); size_t c = t.find(':', at + strlen(k)); if (c == std::string::npos) return std::string(); c++; while (c < t.size() && (t[c] == ' ' || t[c] == '"')) c++; size_t e = c; while (e < t.size() && t[e] != '"' && t[e] != ',' && t[e] != '}' && t[e] != '\n') e++; return t.substr(c, e - c); };
+    const std::string dt = field("core:datatype");
+    if (dt.find("cf32") == 0) s = kCf32; else if (dt.find("ci16") == 0 || dt.find("cu16") == 0) s = kCs16; else if (dt.find("ci8") == 0) s = kCs8; else if (dt.find("cu8") == 0) s = kCu8; else return false;
+    const std::string sr = field("core:sample_rate");
+    rate = sr.empty() ? 0 : std::atof(sr.c_str());
+    return true;
+}
+}
+
+bool XbFileRunner::start(XbandReceiver& rx, const XbFileJob& j, std::string* err) {
+    stop();
+    p_->stop = false;
+    const auto fail = [&](const char* m) { if (err) *err = m; return false; };
+    std::string path = j.path;
+    std::string ext = lowerExt(path);
+    Sample smp = kCs16;
+    double rate = j.sampleRate;
+    bool isCadu = ext == "cadu";
+    int64_t dataOff = 0;
+    bool wav = ext == "wav";
+    const auto dot = path.rfind('.');
+    if (ext == "sigmf-meta" || ext == "sigmf-data") {
+        const std::string base = path.substr(0, dot);
+        if (!readSigmf(base + ".sigmf-meta", smp, rate)) return fail("cannot read the SigMF metadata");
+        path = base + ".sigmf-data";
+        if (j.sampleRate > 0) rate = j.sampleRate;
+    } else if (!isCadu && !wav) {
+        if (!j.format.empty()) { if (!sampleFmt(j.format, smp)) return fail("unknown sample format"); }
+        else if (!sampleFmt(ext, smp)) return fail("unknown file type: use .cadu, .wav, .sigmf or raw .cs8/.cu8/.cs16/.cf32 with a sample rate");
+    }
+    std::ifstream f(path, std::ios::binary);
+    if (!f) return fail("cannot open the file");
+    f.seekg(0, std::ios::end);
+    const int64_t size = (int64_t)f.tellg();
+    f.seekg(0);
+    if (wav) {
+        char h[44];
+        f.read(h, 44);
+        const int bits = (uint8_t)h[34] | ((uint8_t)h[35] << 8);
+        const int fmt = (uint8_t)h[20] | ((uint8_t)h[21] << 8);
+        rate = (double)((uint8_t)h[24] | ((uint8_t)h[25] << 8) | ((uint8_t)h[26] << 16) | ((uint32_t)(uint8_t)h[27] << 24));
+        smp = bits == 8 ? kCu8 : (fmt == 3 ? kCf32 : kCs16);
+        dataOff = 44;
+    }
+    if (!isCadu && rate <= 0) return fail("this file needs a sample rate");
+    p_->running = true;
+    p_->progress = 0;
+    XbandReceiver* rp = &rx;
+    const double r2 = rate, off2 = j.offsetHz;
+    const int bytesS = isCadu ? 1 : smp == kCf32 ? 8 : smp == kCs16 ? 4 : 2;
+    p_->th = std::thread([this, f = std::move(f), rp, isCadu, smp, r2, off2, size, dataOff, bytesS]() mutable {
+        (void)dataOff;
+        const XbLink& L = xbLink(rp->profile());
+        int64_t done = 0;
+        if (isCadu) {
+            if (L.caduBytes <= 0) { p_->say("this link has no CADUs"); p_->running = false; return; }
+            std::vector<uint8_t> b((size_t)L.caduBytes);
+            while (!p_->stop && f.read((char*)b.data(), (std::streamsize)b.size())) {
+                rp->pushCadu(b.data());
+                done += L.caduBytes;
+                p_->progress = (float)done / std::max<int64_t>(1, size);
+            }
+        } else {
+            rp->configure(r2);
+            if (off2 != 0) rp->setSignalOffset(off2);
+            std::vector<uint8_t> raw((size_t)bytesS << 18);
+            std::vector<cf32> buf((size_t)1 << 18);
+            while (!p_->stop && f.read((char*)raw.data(), (std::streamsize)raw.size())) {
+                for (size_t i = 0; i < buf.size(); i++) {
+                    float a, b;
+                    const uint8_t* s = &raw[i * bytesS];
+                    if (smp == kCu8) { a = (s[0] - 127.5f) / 127.5f; b = (s[1] - 127.5f) / 127.5f; }
+                    else if (smp == kCs8) { a = (int8_t)s[0] / 127.f; b = (int8_t)s[1] / 127.f; }
+                    else if (smp == kCs16) { a = (int16_t)(s[0] | s[1] << 8) / 32768.f; b = (int16_t)(s[2] | s[3] << 8) / 32768.f; }
+                    else { float fv[2]; std::memcpy(fv, s, 8); a = fv[0]; b = fv[1]; }
+                    buf[i] = cf32(a, b);
+                }
+                rp->feed(buf.data(), buf.size());
+                done += (int64_t)raw.size();
+                p_->progress = (float)done / std::max<int64_t>(1, size);
+            }
+        }
+        rp->finish();
+        p_->progress = 1;
+        p_->say(p_->stop ? "stopped" : "finished");
+        p_->running = false;
+    });
+    return true;
+}
 
 ModeTuning xbandTuning(int p) {
     const XbLink& i = xbLink(p);

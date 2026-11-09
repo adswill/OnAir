@@ -2,6 +2,7 @@
 // landsat_support, proba_support (GPL-3.0, Copyright Aang23 and contributors); code written for OnAir, test signals in xband_gen.cpp. See THIRD_PARTY.md.
 #include "dect2/xband/xband_proto.h"
 #include "dect2/xband/xband_instr.h"
+#include "dect2/xband/xband_products.h"
 #include "dect2/ccsds/ccsds.h"
 #include "dect2/hrpt/hrpt_proto.h"
 #include "dect2/hrpt/hrpt_tel.h"
@@ -278,6 +279,7 @@ void modisDayPacket(int scan, int pos1, bool partTwo, std::vector<uint8_t>& p, u
 // ---- AVHRR through the MetOp packets (existing AHRPT decoder) ------------------------------------------------------
 struct AvhrrDec {
     Store& s;
+    AvhrrCal* cal = nullptr;
     int plane[5];
     int lines = 0;
     uint32_t lastMs = 0; bool haveMs = false;
@@ -297,6 +299,24 @@ struct AvhrrDec {
         for (int c = 0; c < 5; c++) {
             for (int x = 0; x < kHrptWidth; x++) row[(size_t)x] = (uint16_t)(l.px[(size_t)c * kHrptWidth + x] << 6);
             s.plane(plane[c]).setRow(y, row.data());
+        }
+        // on-board targets: PRT counts, 10 black body and space views of channels 3b / 4 / 5 (SatDump's avhrr_reader: counts start at byte 14)
+        if (cal) {
+            std::vector<uint16_t> w((size_t)(12960 - 14) * 8 / 10, 0);
+            for (size_t i = 0; i < w.size(); i++) { const int bit = (int)i * 10; int v = 0; for (int k = 0; k < 10; k++) { const int b = bit + k; v = v << 1 | ((p.data[(size_t)14 + b / 8] >> (7 - b % 8)) & 1); } w[i] = (uint16_t)v; }
+            if ((int)cal->lines.size() <= y) cal->lines.resize((size_t)y + 1);
+            AvhrrCal::Line& ln = cal->lines[(size_t)y];
+            ln.is3b = p.apid == hrpt::kApid3b;
+            for (int i = 0; i < 3; i++) { const uint16_t pv = w[(size_t)10295 + 2 + i]; if (pv > 100 && pv < 500) ln.prt[ln.nPrt++] = pv; }
+            for (int j = 0; j < 3; j++) {
+                double bbSum = 0, spSum = 0; int bbN = 0, spN = 0;
+                for (int i = 0; i < 10; i++) {
+                    const int bv = w[(size_t)10305 + 5 * i + j + 2], sv = w[(size_t)5 * i + j + 2];
+                    if (bv > 100) { bbSum += bv; bbN++; }
+                    if (sv > 880) { spSum += sv; spN++; }
+                }
+                ln.cb[j] = bbN ? (float)(bbSum / bbN) : 0; ln.cs[j] = spN ? (float)(spSum / spN) : 0;
+            }
         }
     }
 };
@@ -360,6 +380,7 @@ struct MetimageDec {
     int plane[20];
     std::vector<uint16_t> wip;   // [c * 24 + l] * width
     int segs = 0, channels = 20;
+    bool any = false;
     uint64_t lineCount = 0;
     static const Cfg* cfg(int m) {
         static const Cfg t[] = {{30,0,18,true},{28,1,18,true},{26,2,18,true},{25,3,17,true},{23,4,17,true},{24,5,17,true},{22,6,17,true},{4,7,17,false},{12,8,17,false},{8,9,17,false},{17,10,17,false},{15,11,18,false},{16,12,18,false},{20,13,18,false},{40,14,18,false},{39,15,18,false},{37,16,17,false},{34,17,17,false},{35,18,17,false},{33,19,17,false}};
@@ -391,19 +412,101 @@ struct MetimageDec {
         if ((p.apid != 1443 && p.apid != 1444) || p.data.size() < 21) return;
         const int ch = p.data[15];
         const int offset = p.data[19] << 8 | p.data[20];
-        if (offset == 0 && ch == 30) { flush(); }
+        if (offset == 0 && ch == 30) { if (any) flush(); any = true; }
         const Cfg* c = cfg(ch);
         if (!c || offset + kSub > kWidth) return;
         const size_t need = c->depth == 17 ? 3027 - 6 : 3202 - 6;
         if (p.data.size() < need) return;
-        uint32_t vals[1401];
+        uint32_t vals[1400];
         const int bytes = c->depth == 17 ? 2975 : 3150;
         if ((size_t)44 + bytes > p.data.size()) return;
-        unpackBits(&p.data[44], c->depth, kSub * 25 + 1, vals);
+        unpackBits(&p.data[44], c->depth, 1400, vals);
         for (int i = 0; i < kSub; i++) for (int l = 0; l < 24; l++) {
             const uint32_t v = vals[i * 25 + 1 + (c->rev ? (23 - l) : l)] >> (c->depth - 16);
             wip[(size_t)(c->idx * 24 + l) * kWidth + offset + i] = (uint16_t)v;
         }
+    }
+};
+
+// ---- DMSP OLS (RTD frames) ------------------------------------------------------------------------------------------------
+struct DmspDec {
+    Store& s;
+    int vis, ir;
+    int lines = 0, pos = 0, dir = 0, sync = 0;
+    uint64_t alarmLines = 0;
+    std::vector<uint16_t> vrow, irow;
+    static constexpr int kW = 490 * 15;
+    explicit DmspDec(Store& st) : s(st), vrow(kW, 0), irow(kW, 0) {
+        vis = s.add("OLS visible", 0.65, kW);
+        ir = s.add("OLS infrared", 11.0, kW);
+    }
+    void flushLine() {
+        std::vector<uint16_t> a(kW), b(kW);
+        for (int i = 0; i < kW; i++) { a[(size_t)i] = vrow[(size_t)(kW - 1 - i)]; b[(size_t)i] = irow[(size_t)(kW - 1 - i)]; }
+        s.plane(vis).setRow(lines, a.data()); s.plane(ir).setRow(lines, b.data());
+        std::fill(vrow.begin(), vrow.end(), (uint16_t)0); std::fill(irow.begin(), irow.end(), (uint16_t)0);
+    }
+    void frame(const uint8_t* f) {
+        uint8_t w[19];
+        for (int i = 0; i < 19; i++) w[i] = (uint8_t)((f[i] << 6) | (i < 18 ? f[i + 1] >> 2 : 0));
+        int match = 0;
+        for (int i = 1; i < 13; i++) {
+            int code = (i & 1) == 0 ? 0x07 : 0xFB, v = w[i];
+            for (int j = 1; j < 9; j++) { if ((v & 1) == (code & 1)) match++; v >>= 1; code >>= 1; }
+        }
+        if (match > 70 && (alarmLines == 0 || pos > 400)) {
+            dir = (w[15] >> 2) & 1;
+            sync = (w[13] & 0xFC) | w[14] >> 6;
+            pos = 0;
+            if (alarmLines++ > 0) { flushLine(); lines++; }
+            return;
+        }
+        if (w[1] == 0 && w[2] == 0) return;
+        if (alarmLines == 0 || pos >= 490) return;
+        uint8_t fine[15], smooth[15];
+        for (int i = 0; i < 15; i++) fine[i] = w[1 + i] & 0xFC;
+        for (int k = 0; k < 3; k++) {
+            const int a = 1 + k * 5;
+            const uint8_t v = (uint8_t)((w[a] & 3) << 6 | (w[a + 1] & 3) << 4 | (w[a + 2] & 3) << 2 | (w[a + 3] & 3));
+            for (int i = 0; i < 5; i++) smooth[k * 5 + i] = v;
+        }
+        for (int i = 0; i < 15; i++) {
+            if (dir == 0) {
+                const int px = pos * 15 + i - sync / 10;
+                if (px > 0 && px < kW) { vrow[(size_t)px] = (uint16_t)(fine[i] << 8); irow[(size_t)px] = (uint16_t)(smooth[i] << 8); }
+            } else {
+                const int px = pos * 15 - i - sync / 10;
+                if (px > 0 && px < kW) { vrow[(size_t)(kW - 1 - px)] = (uint16_t)(fine[14 - i] << 8); irow[(size_t)(kW - 1 - px)] = (uint16_t)(smooth[14 - i] << 8); }
+            }
+        }
+        pos++;
+    }
+};
+
+// ---- Proba-V S-band VEGETATION (12-bit lines) -----------------------------------------------------------------------------
+struct VegsDec {
+    Store& s;
+    struct Spec { int apid, frm, width; };
+    static const Spec* spec(int a, int& idx) {
+        static const Spec t[18] = {{290, 7818, 5200},{274, 7818, 5200},{322, 7818, 5200},{282, 1554, 1024},{298, 1554, 1024},{330, 1554, 1024},
+                                   {289, 7818, 5200},{273, 7818, 5200},{321, 7818, 5200},{281, 1554, 1024},{297, 1554, 1024},{329, 1554, 1024},
+                                   {292, 7818, 5200},{276, 7818, 5200},{324, 7818, 5200},{284, 1554, 1024},{300, 1554, 1024},{332, 1554, 1024}};
+        for (int i = 0; i < 18; i++) if (t[i].apid == a) { idx = i; return &t[i]; }
+        return nullptr;
+    }
+    int plane[18]; int lines[18] = {};
+    explicit VegsDec(Store& st) : s(st) {
+        for (int i = 0; i < 18; i++) { int ii = 0; const Spec* sp = nullptr; (void)ii; (void)sp; static const char* gname[3] = {"VEG-1", "VEG-2", "VEG-3"};
+            static const int w[6] = {5200, 5200, 5200, 1024, 1024, 1024}; plane[i] = s.add(std::string(gname[i / 6]) + " " + std::to_string(i % 6 + 1), 0, w[i % 6]); }
+    }
+    uint64_t lineCount() const { int m = 0; for (int l : lines) m = std::max(m, l); return (uint64_t)m; }
+    void packet(const Packet& p) {
+        int i; const Spec* sp = spec(p.apid, i);
+        if (!sp || (int)p.data.size() < sp->frm) return;
+        std::vector<uint16_t> w((size_t)sp->width + 8), row((size_t)sp->width);
+        unpack12(&p.data[18], sp->width, w.data());
+        for (int x = 0; x < sp->width; x++) row[(size_t)x] = (uint16_t)(w[(size_t)x] << 4);
+        s.plane(plane[i]).setRow(lines[i]++, row.data());
     }
 };
 
@@ -419,16 +522,21 @@ struct Instruments::Impl {
     std::unique_ptr<Amsr2Dec> amsr2;
     std::unique_ptr<TirsDec> tirs;
     std::unique_ptr<MetimageDec> metimage;
+    std::unique_ptr<DmspDec> dmsp;
+    std::unique_ptr<VegsDec> vegs;
+    AvhrrCal avhrrCal;
     std::string sat;
     int scid = -1;
     Impl(int p, Store& s) : P(p), L(xbLink(p)), store(s) {
         switch (P) {
         case kXbNpp: case kXbJpss2: viirs = std::make_unique<ViirsDec>(s); break;
         case kXbAquaAura: case kXbTerra: modis = std::make_unique<ModisDec>(s); break;
-        case kXbMetopDump: avhrr = std::make_unique<AvhrrDec>(s); break;
+        case kXbMetopDump: avhrr = std::make_unique<AvhrrDec>(s); avhrr->cal = &avhrrCal; break;
         case kXbGcomW1: amsr2 = std::make_unique<Amsr2Dec>(s); break;
         case kXbLandsatX: tirs = std::make_unique<TirsDec>(s); break;
         case kXbMetopSg: metimage = std::make_unique<MetimageDec>(s); break;
+        case kXbDmsp: dmsp = std::make_unique<DmspDec>(s); break;
+        case kXbProbaS: vegs = std::make_unique<VegsDec>(s); break;
         default: break;
         }
         for (auto& d : dem) d.onPacket = [this](const Packet& p) { packet(p); };
@@ -440,6 +548,7 @@ struct Instruments::Impl {
         else if (amsr2) amsr2->packet(p);
         else if (tirs) tirs->packet(p);
         else if (metimage) metimage->packet(p);
+        else if (vegs) vegs->packet(p);
     }
     void name(int id) {
         scid = id;
@@ -448,7 +557,7 @@ struct Instruments::Impl {
         case kXbNpp: case kXbJpss2: n = id == 157 ? "Suomi NPP" : id == 159 ? "NOAA-20" : id == 177 ? "NOAA-21" : nullptr; break;
         case kXbAquaAura: n = id == 154 ? "Aqua" : id == 204 ? "Aura" : nullptr; break;
         case kXbTerra: n = id == 42 ? "Terra" : nullptr; break;
-        case kXbMetopDump: n = id == 12 ? "MetOp-A" : id == 11 ? "MetOp-B" : id == 13 ? "MetOp-C" : nullptr; break;
+        case kXbMetopDump: n = id == 12 ? "MetOp-A" : id == 11 ? "MetOp-B" : id == 13 ? "MetOp-C" : nullptr; avhrrCal.satIndex = id == 13 ? 1 : 0; break;
         case kXbMetopSg: n = id == 3 ? "MetOp-SG A1" : id == 0x42 ? "MetOp-SG B1" : nullptr; break;
         default: break;
         }
@@ -463,6 +572,7 @@ struct Instruments::Impl {
         case kXbGcomW1: return vcid == 17;
         case kXbLandsatX: return vcid == 5;
         case kXbMetopSg: return vcid == 16;
+        case kXbProbaS: return vcid == 4;
         default: return false;
         }
     }
@@ -481,9 +591,11 @@ struct Instruments::Impl {
         if (amsr2) return (uint64_t)amsr2->lines;
         if (tirs) return (uint64_t)std::max({tirs->lines[0], tirs->lines[1], tirs->lines[2]});
         if (metimage) return metimage->lineCount;
+        if (dmsp) return (uint64_t)dmsp->lines;
+        if (vegs) return vegs->lineCount();
         return 0;
     }
-    void finish() { if (viirs) viirs->flushAll(); if (metimage) metimage->flush(); }
+    void finish() { if (viirs) viirs->flushAll(); if (metimage && metimage->any) { metimage->flush(); metimage->any = false; } }
 };
 
 Instruments::Instruments(int profile, Store& s) : p_(std::make_unique<Impl>(profile, s)) {}
@@ -494,5 +606,7 @@ uint64_t Instruments::lines() const { return p_->lines(); }
 const std::string& Instruments::satName() const { return p_->sat; }
 int Instruments::lastScid() const { return p_->scid; }
 void Instruments::finish() { p_->finish(); }
+const AvhrrCal* Instruments::avhrrCal() const { return p_->avhrr ? &p_->avhrrCal : nullptr; }
+void Instruments::rawFrame(const uint8_t* f) { if (p_->dmsp) p_->dmsp->frame(f); }
 
 } // namespace dect2::xband
