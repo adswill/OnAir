@@ -4,6 +4,7 @@
 #include "dect2/common/time_fmt.h"
 #include "app.h"
 #include "../adsb/adsb_map.h"
+#include "ui/kit/kit.h"
 #include "dect2/hfdig/hfdig_ftx.h"
 #include "dect2/hfdig/hfdig_rx.h"
 #include "dect2/hfdig/hfdig_tel.h"
@@ -174,6 +175,13 @@ void mapView(App& a, const dect2::HfdigFtxTelemetry& f, ImVec2 size) {
         const ImVec2 lp(q.x + 8 * gUi, q.y - ts.y * 0.5f - 2 * gUi);
         dl->AddRectFilled(lp, ImVec2(lp.x + ts.x + 8 * gUi, lp.y + ts.y + 4 * gUi), IM_COL32(10, 12, 14, 210), 2.f);
         dl->AddText(ImVec2(lp.x + 4 * gUi, lp.y + 2 * gUi), IM_COL32(235, 238, 240, 255), p.call.c_str());
+    }
+    if (receiverLocationSet()) {   // home
+        double rl, ro; receiverLocation(rl, ro);
+        const ImVec2 q = adsbmap::project(rl, ro);
+        dl->AddRectFilled(ImVec2(q.x - 5 * gUi, q.y - 5 * gUi), ImVec2(q.x + 5 * gUi, q.y + 5 * gUi), IM_COL32(240, 200, 60, 255));
+        dl->AddRect(ImVec2(q.x - 5 * gUi, q.y - 5 * gUi), ImVec2(q.x + 5 * gUi, q.y + 5 * gUi), IM_COL32(0, 0, 0, 200));
+        dl->AddText(ImVec2(q.x + 8 * gUi, q.y - 7 * gUi), IM_COL32(240, 200, 60, 255), tr("home"));
     }
     dl->PopClipRect();
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 8 * gUi));
@@ -349,6 +357,12 @@ void hfdigFtxTab(App& a, const dect2::HfdigTelemetry& t) {
     modeOptions(a, only);
     flowEnd();
     hfdigMultiBandPanel(a, t);
+    if (kit::collapsingSection(tr("My location"), false)) {   // the one receiver position of the whole program (ADS-B, passes, maps), also set here (#453)
+        ImGui::AlignTextToFramePadding();
+        receiverPositionFields(a);
+        if (!receiverLocationSet()) { ImGui::SameLine(); ImGui::TextColored(pal::warnAmber(), "%s", tr("not set")); }
+        ImGui::TextDisabled("%s", tr("The same position as in every other mode (ADS-B antenna position, Passes, Map). It is marked on the map below."));
+    }
     bandButtons(a, only >= 0 ? only : 0);
     // the clock
     {
