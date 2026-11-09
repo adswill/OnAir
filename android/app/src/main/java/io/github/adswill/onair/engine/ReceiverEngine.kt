@@ -111,7 +111,7 @@ class ReceiverEngine(
         while (currentCoroutineContext().isActive) {
             val wait = nextTick - SystemClock.uptimeMillis()
             // select, not withTimeoutOrNull around receive: a command delivered just as the timeout fired was lost, its caller waited forever and
-            // the receive session could no longer be stopped or changed (seen in the all-modes test, about one change in 15)
+            // the receive session could no longer be stopped or changed (seen in the all-modes test)
             val c = if (wait > 0) select<Command?> {
                 queue.onReceiveCatching { it.getOrNull() }
                 onTimeout(wait) { null }

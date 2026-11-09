@@ -75,6 +75,8 @@ data class ReceiverState(
     companion object {
         /** The engine's standard code of a desktop family number (app_state.cpp engineStd). */
         fun stdOf(f: Int) = when { f >= 6 -> f + 2; f == 1 -> 3; f == 2 -> 4; f == 3 -> 5; f == 4 -> 6; f == 5 -> 7; else -> 0 }
+        /** The number the receiver reports in Telemetry.standard, one below the engine's code (panels and the mode's exporter go by this one). */
+        fun telemetryStdOf(f: Int) = if (f <= 0) 0 else f + 1
     }
 }
 

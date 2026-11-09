@@ -219,7 +219,7 @@ fun RunButton(active: Boolean, onToggle: () -> Unit) {
 fun SoundStrip(vm: ReceiverViewModel) {
     val s by vm.settings.collectAsStateWithLifecycle()
     val st by vm.state.collectAsStateWithLifecycle()
-    val general = ReceiverState.stdOf(st.mode.family) == Telemetry.STD_GENERAL
+    val general = ReceiverState.telemetryStdOf(st.mode.family) == Telemetry.STD_GENERAL
     val rec = UiHooks.recorder
     val recording = rec?.recording?.collectAsState()?.value ?: false
     val recSeconds = rec?.seconds?.collectAsState()?.value ?: 0
