@@ -233,6 +233,7 @@ void GnssReceiver::Impl::resetState() {
     for (auto& s : sat) s = SatNav();
     for (auto& s : gsat) s = SatNav();
     for (auto& g : gnav) g = GalNav();
+    for (auto& a : rlmAsm) a.reset();
     for (auto& s : gsol) s = SolInfo();
     ggtoValid = false; galCredit = 0; predictedGal.clear();
     galRoundSeen = 0; galLong = false; galRoundHits = 0; galEmptyRounds = 0; galIdleUntil = 0; codeRateFrac = 0;

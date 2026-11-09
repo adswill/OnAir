@@ -194,6 +194,40 @@ bool inavCheckPage(const uint8_t* even, const uint8_t* odd, uint8_t* word) {
     return true;
 }
 
+bool GalRlmAssembler::complete(GalRlm& o) {
+    int ones = 0;
+    const int total = longR_ ? 160 : 80;
+    for (int i = 0; i < total; i++) ones += bits_[i];
+    o = GalRlm();
+    o.longRlm = longR_;
+    o.parityOk = (ones & 1) == 0;
+    for (int i = 0; i < 15; i++) { int v = 0; for (int b = 0; b < 4; b++) v = v * 2 + bits_[i * 4 + b]; o.hex[i] = "0123456789ABCDEF"[v]; }
+    o.messageCode = 0; for (int i = 0; i < 4; i++) o.messageCode = o.messageCode * 2 + bits_[60 + i];
+    if (!longR_) { uint32_t p = 0; for (int i = 0; i < 16; i++) p = p * 2 + bits_[64 + i]; o.params16 = p; }
+    o.ack = !longR_ && o.messageCode == 1 && bits_[64] == 1 && bits_[65] == 0;
+    o.test = !longR_ && o.messageCode == 15;
+    return true;
+}
+
+bool GalRlmAssembler::push(const uint8_t* sar, GalRlm& out) {
+    const bool start = sar[0] != 0, lng = sar[1] != 0;
+    bool finished = false;
+    if (start) { n_ = 0; have_ = true; opened_ = true; longR_ = lng; parts_ = 0; }
+    else if (!have_) return false;
+    else if (lng != longR_) { have_ = false; return false; }
+    // an all-'1' spare (Table 64): the first part only counts when the next start bit is 0, which the check below does by waiting
+    if (have_) {
+        for (int i = 0; i < 20 && n_ < 160; i++) bits_[n_++] = sar[2 + i];
+        parts_++;
+        const int need = longR_ ? 8 : 4;
+        if (parts_ == need) {
+            have_ = false;
+            finished = complete(out);
+        }
+    }
+    return finished;
+}
+
 int inavParseWord(const uint8_t* w, GalNav& g, int* tow) {
     const int type = (int)inavField(w, 0, 6);
     if (tow) *tow = -1;

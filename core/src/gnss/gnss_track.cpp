@@ -492,6 +492,7 @@ void GnssTracker::inavPart(int64_t p) {
         if (++badInRow_ >= 6) { frameSync_ = false; }
         return;
     }
+    std::memcpy(ev.sar, bits + 58, 22);             // odd part: 2 + 16 + reserved 40 (OSNMA), then SAR
     badInRow_ = 0;
     framesOk_++;
     frameSync_ = true;
