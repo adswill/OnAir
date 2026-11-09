@@ -4,6 +4,7 @@
 #include "dect2/dsp/resampler.h"
 #include "dect2/xlink/ht_phy.h"
 #include "dect2/xlink/npr.h"
+#include "dect2/xlink/winmor.h"
 #include <chrono>
 #include <cmath>
 #include <map>
@@ -28,7 +29,7 @@ ModeTuning xlinkNarrowTuning() {
     t.stdMode = 603;
     t.id = "xlinknb";
     t.name = "Extra links, narrow";
-    t.minMhz = 100; t.maxMhz = 6000; t.defMhz = 437;
+    t.minMhz = 1; t.maxMhz = 6000; t.defMhz = 437;
     t.sampleRate = 4e6;
     t.bandwidthMhz = 2;
     t.minSampleRate = 1e6;
@@ -69,6 +70,10 @@ struct XlinkReceiver::Impl {
         cf32 prev{1, 0};
     };
     std::vector<std::unique_ptr<NprChain>> npr;
+    RationalResampler wrs;
+    bool wrsOn = false, wrsActive = false;
+    xlink::winmor::PilotFinder winmor;
+    std::vector<cf32> wout;
     double phase = 0, dphi = 0;
     std::vector<cf32> buf, out;
     struct Seq { uint64_t lastBlock = 0; int lastFrag = -1; int maxFrag = -1; bool have = false; };
@@ -100,9 +105,25 @@ struct XlinkReceiver::Impl {
         }
     }
 
+    void buildWinmor() {
+        wrsActive = false;
+        if (!(protocols & xlink::Winmor)) return;
+        wrsOn = std::fabs(fs - xlink::winmor::kRate) > 1;
+        double err = 0;
+        if (wrsOn && !wrs.configure(fs, xlink::winmor::kRate, &err, 8000)) return;
+        winmor.reset();
+        winmor.setCallback([this](const xlink::winmor::Pilot& p) {
+            char det[96];
+            snprintf(det, sizeof det, "pilot %d symbols, tones %d %d %d %d (raw)", p.symbols, p.tones[0], p.tones[1], p.tones[2], p.tones[3]);
+            addFrame(xlink::Winmor, "WINMOR", "pilot", det, "", p.offsetHz, 0.f);
+        });
+        wrsActive = true;
+    }
+
     void rebuild() {
         dirty = false;
         buildNpr();
+        buildWinmor();
         canHt = false;
         resample = false;
         phase = 0;
@@ -236,6 +257,11 @@ void XlinkReceiver::feed(const cf32* x, size_t n) {
         c.phase.resize(m);
         for (size_t i = 0; i < m; i++) { c.phase[i] = (float)std::arg(y[i] * std::conj(c.prev)); c.prev = y[i]; }
         c.f->feed(c.phase.data(), m);
+    }
+    if (s.wrsActive) {
+        const cf32* y = in; size_t m = n;
+        if (s.wrsOn) { s.wout.clear(); s.wrs.process(in, n, s.wout); y = s.wout.data(); m = s.wout.size(); }
+        s.winmor.feed(y, m);
     }
     if (!(s.protocols & 1) || !s.canHt) { std::lock_guard<std::mutex> g(s.m); s.tel.timeSec = (double)s.nIn / s.fs; s.tel.seq = ++s.seq; return; }
     if (s.resample) { s.out.clear(); s.rsm.process(in, n, s.out); s.ht.feed(s.out.data(), s.out.size()); }

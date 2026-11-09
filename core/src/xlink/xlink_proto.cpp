@@ -9,6 +9,7 @@ const char* protoName(int proto) {
     case WfbNg: return "wfb-ng";
     case OpenHd: return "OpenHD";
     case Npr: return "NPR-70";
+    case Winmor: return "WINMOR";
     default: return "?";
     }
 }

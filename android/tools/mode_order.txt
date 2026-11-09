@@ -202,3 +202,4 @@
 360|flysky
 600|wfbng
 600|npr
+600|winmor
