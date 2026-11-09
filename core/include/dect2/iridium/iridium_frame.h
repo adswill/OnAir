@@ -52,6 +52,7 @@ struct IridiumFrame {
     std::string msgRaw;                 // MSG: the 7-bit characters of this part as sent
     int lbfc = -1;                      // IBC: raw frame counter ("Iridium time") when this frame carries it
     bool uplink = false;
+    std::string vtype;                  // Voice slot content: "VOC" vocoder frame (the only kind for the codec), "VO6"/"VOD"/"VOZ" data in a voice slot (toolkit)
 };
 
 IridiumFrame decodeIridiumBurst(const IridiumBurstBits& b);
