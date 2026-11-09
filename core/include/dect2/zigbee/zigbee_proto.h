@@ -81,6 +81,9 @@ struct Frame {
     uint16_t nwkDest = 0, nwkSrc = 0;
     bool nwkHasDestExt = false, nwkHasSrcExt = false;
     uint64_t nwkDestExt = 0, nwkSrcExt = 0;
+    // NWK source route subframe: the relay list (short addresses) as carried, index of the next relay. The frame walks source, list[last] ... list[0], destination.
+    int nwkRelayIndex = -1;
+    std::vector<uint16_t> nwkRelays;
     // Zigbee APS (only when the NWK payload is in the clear)
     bool hasAps = false, apsSecured = false;
     int apsType = 0, apsDelivery = 0, apsDestEp = -1, apsSrcEp = -1, apsCounter = -1;
@@ -124,6 +127,8 @@ struct NwkBuild {
     uint16_t dest = 0, src = 0;
     bool destExt = false, srcExt = false;
     uint64_t destExtAddr = 0, srcExtAddr = 0;
+    std::vector<uint16_t> relays;   // a source route subframe (relay list as carried); relayIndex is the index of the next relay
+    int relayIndex = 0;
     std::vector<uint8_t> payload;
 };
 std::vector<uint8_t> buildNwk(const NwkBuild& b);

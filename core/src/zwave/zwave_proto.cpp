@@ -192,12 +192,53 @@ static const char* sensorType(int t) {
     }
 }
 
+bool parseRoute(const std::vector<uint8_t>& p, Route& r) {
+    r = Route();
+    if (p.size() < 2) return false;
+    const int type = p[0] & 0x0F, count = p[1] >> 4, hop = p[1] & 0x0F;
+    if (type > 2 || count > 4 || hop > count || p.size() < 2 + (size_t)count) return false;
+    r.valid = true; r.type = type; r.count = count; r.hop = hop; r.size = 2 + (size_t)count;
+    for (int i = 0; i < count; i++) r.repeaters.push_back(p[2 + i]);
+    return true;
+}
+
+std::vector<uint8_t> buildRoute(int type, int hop, const std::vector<int>& reps) {
+    std::vector<uint8_t> v;
+    v.push_back((uint8_t)(type & 0x0F));
+    v.push_back((uint8_t)((reps.size() & 15) << 4 | (hop & 15)));
+    for (int r : reps) v.push_back((uint8_t)r);
+    return v;
+}
+
+std::vector<int> routePath(const Frame& f, const Route& r) {
+    std::vector<int> path;
+    if (!f.routed || !r.valid || f.dst < 0) return path;
+    path.push_back(f.src);
+    for (int x : r.repeaters) path.push_back(x);
+    path.push_back(f.dst);
+    return path;
+}
+
 std::string describe(const Frame& f) {
     char b[200];
-    if (f.headerType == kHdrAck) return "ack";
+    if (f.headerType == kHdrAck && !f.routed) return "ack";
     const auto& p = f.payload;
     if (p.empty()) return f.routed ? "routed" : "";
-    if (f.routed) return "routed (route header not decoded)";
+    if (f.routed) {
+        Route r;
+        if (!parseRoute(p, r)) return "routed (route header damaged)";
+        std::string via;
+        for (int x : r.repeaters) via += (via.empty() ? "" : " > ") + std::to_string(x);
+        static const char* kind[] = {"routed", "routed ack", "routed error"};
+        snprintf(b, sizeof b, "%s %d > %s%s%s (hop %d of %d)", kind[r.type], f.src, via.c_str(), via.empty() ? "" : " > ", f.dst == 255 ? "all" : std::to_string(f.dst).c_str(), r.hop, r.count + 1);
+        std::string head = b;
+        if (r.type != 0 || p.size() <= r.size) return head;
+        Frame inner = f;
+        inner.routed = false; inner.headerType = kHdrSinglecast;
+        inner.payload.assign(p.begin() + (long)r.size, p.end());
+        const std::string in = describe(inner);
+        return in.empty() ? head : head + ": " + in;
+    }
     const int enc = encryption(p);
     if (enc) { snprintf(b, sizeof b, "Security %s encrypted (%zu octets, not decoded)", enc == 1 ? "S0" : "S2", p.size()); return b; }
     const int cc = p[0];

@@ -210,6 +210,7 @@ target_sources(dect2core PRIVATE core/src/engine/modes.cpp core/src/engine/rate_
 target_sources(dect2core PRIVATE core/src/engine/modes.cpp core/src/engine/rate_choice.cpp core/src/geo/passes.cpp core/src/dsp/imgproc.cpp core/src/dsp/wxstudio.cpp core/src/dsp/wx_vectors.cpp core/src/engine/sig_ident.cpp core/src/geo/maidenhead.cpp core/src/geo/maplayers.cpp core/src/geo/tilecache.cpp core/src/mesh/mesh_report.cpp core/src/df/df.cpp core/src/df/source.cpp core/src/df/position.cpp core/src/df/rfcam.cpp core/src/df/group.cpp core/src/df/rtl_group.cpp core/src/geo/pass_sched.cpp core/src/geo/doppler_fit.cpp core/src/geo/wx_overlay.cpp core/src/engine/sig_known.cpp core/src/radar/passive.cpp core/src/rfi/rfi.cpp core/src/map/contact_graph.cpp)
 target_sources(dect2core PRIVATE core/src/image/j2k.cpp core/src/common/des.cpp core/src/image/enhance.cpp core/src/image/enhance_geom.cpp core/src/image/enhance_filter.cpp core/src/image/enhance_tone.cpp)   # shared image enhancement of every picture mode (docs/IMAGE-ENHANCE.md)
 target_sources(dect2core PRIVATE core/src/df/beam.cpp)
+target_sources(dect2core PRIVATE core/src/map/mesh_topology.cpp core/src/map/mesh_topology_feed.cpp core/src/loraraw/loraraw_survey.cpp)   # passive mesh topology shared by Meshtastic, Zigbee / Thread and Z-Wave
 target_sources(dect2core PRIVATE core/src/net/remote_api.cpp core/src/net/satnogs.cpp core/src/results/rx_json.cpp core/src/source/gain_opt.cpp core/src/mesh/mesh_report.cpp core/src/source/rotator.cpp)   # remote-control API server, telemetry JSON, gain optimiser, mesh report text, antenna rotator
 target_sources(dect2core PRIVATE core/src/net/remote_api.cpp core/src/results/rx_json.cpp core/src/source/gain_opt.cpp core/src/mesh/mesh_report.cpp core/src/source/rotator.cpp)   # remote-control API server, telemetry JSON, gain optimiser, mesh report text, antenna rotator
 target_sources(dect2core PRIVATE core/src/packs/packs.cpp core/src/packs/datasets.cpp core/src/packs/datasets_inventory.cpp)   # offline data packs: catalog, download with resume, checksums, disk guard, delete
@@ -1725,6 +1726,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_contact_graph tests/map/test_contact_graph.cpp)
   target_link_libraries(test_contact_graph PRIVATE dect2core)
   add_test(NAME contact_graph COMMAND test_contact_graph)
+  add_executable(test_mesh_topology tests/map/test_mesh_topology.cpp)   # shared mesh topology: relay bytes, routes, cut nodes, loss sweep
+  target_link_libraries(test_mesh_topology PRIVATE dect2core)
+  add_test(NAME mesh_topology COMMAND test_mesh_topology)
   add_executable(test_bar_flow tests/map/test_bar_flow.cpp)
   add_test(NAME bar_flow COMMAND test_bar_flow)
   add_executable(test_maplayers tests/geo/test_maplayers.cpp)
