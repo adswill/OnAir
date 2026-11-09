@@ -2,6 +2,9 @@
 // art; Data: the large objects and the other data services; Signal: the receiver's figures), the program list on the right, the status
 // lamps, the analysis row (constellation, MER, P1 frames), the Receiver tab and the options of the test signal. HD Radio sound is HDC, a
 // patented codec that OnAir does not ship: with the user's own patched FAAD2 the program selected on the right is played (hdr_hdc.h).
+#include "dect2/hdr/hdr_maps.h"
+#include "dect2/common/png.h"
+#include <map>
 #include "app.h"
 #include "dect2/hdr/hdr_l2.h"
 #include "dect2/hdr/hdr_rx.h"
@@ -587,7 +590,39 @@ void panels(App& a) {
     ImGui::EndGroup();
 }
 
+
+// Traffic and radar maps put together from the LOT files of the data services (TMT_ tiles, DWRO_ overlay, DWRI_ position)
+void mapsView(App& a) {
+    static dect2::hdr::TrafficMap traffic;
+    static std::map<std::string, uint64_t> seen;
+    static Pic trafficPic, radarPic;
+    static dect2::hdr::RadarInfo radar;
+    static std::string radarStamp;
+    const HdrTelemetry& t = a.rx.hdr;
+    for (const auto& l : t.lots) {
+        if (!l.complete) continue;
+        const std::string key = std::to_string(l.port) + ":" + l.name;
+        if (seen[key] == l.version + 1) continue;
+        int x, y; std::string st, id;
+        const bool isT = dect2::hdr::parseTrafficName(l.name, x, y, st), isR = dect2::hdr::parseRadarName(l.name, id, st), isI = l.name.rfind("DWRI_", 0) == 0;
+        if (!isT && !isR && !isI) continue;
+        std::vector<uint8_t> bytes;
+        if (!a.engine.hdr().lotBytes(l.port, l.lot, bytes) || bytes.empty()) continue;
+        seen[key] = l.version + 1;
+        if (isI) { double c[4]; if (dect2::hdr::parseRadarInfo(std::string(bytes.begin(), bytes.end()), id, c)) { radar.valid = true; radar.id = id; memcpy(radar.corners, c, sizeof c); } continue; }
+        int w = 0, h = 0; std::vector<uint8_t> rgba;
+        if (!dect2::decodePng(bytes.data(), bytes.size(), w, h, rgba)) continue;
+        auto upload = [](Pic& p, const dect2::hdr::MapImage& m) { if (!p.img || p.w != m.w || p.h != m.h) { delete p.img; p.img = gGfx->createImage(m.w, m.h, 0xFF000000u); } std::vector<uint32_t> px((size_t)m.w * m.h); memcpy(px.data(), m.rgba.data(), px.size() * 4); p.img->update(0, 0, m.w, m.h, px.data()); p.w = m.w; p.h = m.h; p.failed = false; };
+        if (isT && traffic.addTile(x, y, st, rgba.data(), w, h)) upload(trafficPic, traffic.image());
+        if (isR && st >= radarStamp) { radarStamp = st; dect2::hdr::MapImage im; dect2::hdr::radarComposite(rgba.data(), w, h, im); upload(radarPic, im); }
+    }
+    if (!trafficPic.img && !radarPic.img) return;
+    if (trafficPic.img) { ImGui::TextDisabled("%s %s", tr("Traffic map"), traffic.image().stamp.c_str()); drawPicture(&trafficPic, 300 * gUi, ""); ImGui::SameLine(); }
+    if (radarPic.img) { ImGui::BeginGroup(); ImGui::TextDisabled("%s %s", tr("Radar"), radarStamp.c_str()); if (radar.valid) ImGui::TextDisabled("%.2f, %.2f - %.2f, %.2f", radar.corners[0], radar.corners[1], radar.corners[2], radar.corners[3]); drawPicture(&radarPic, 300 * gUi, ""); ImGui::EndGroup(); }
+}
+
 void tab(App& a) {
+    mapsView(a);
     subNav("hdrv", S.view, {"Station", "Data", "Signal"});
     if (S.view == 2) { signalTab(a); return; }
     ImGui::BeginChild("##hdr_tab", ImVec2(0, 0));
