@@ -73,6 +73,10 @@ private:
 // Whether a frequency-table region (GLOBAL, EU, NA, UK, or a country code) applies to a country; true when the country is unknown.
 bool freqRegionApplies(const std::string& region, const std::string& country);
 
+// ---- Find DRM: carriers the census called DRM, across the bands visited. A channel seen again keeps its best SNR; list best first.
+struct DrmHit { double khz = 0; float snrDb = 0; };
+void addDrmHit(std::vector<DrmHit>& hits, double khz, float snrDb);
+
 // ---- Regional modes: true when this mode's signals exist only elsewhere. False for every mode without a tag and when the country (ISO code) is unknown.
 bool modeNotUsedIn(const std::string& modeName, const std::string& country);
 

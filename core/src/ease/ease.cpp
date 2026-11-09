@@ -1,5 +1,6 @@
 #include "dect2/ease/ease.h"
 #include "dect2/inmsat/inmsat_satid.h"
+#include <algorithm>
 #include <cmath>
 #include <utility>
 #include <cstdlib>
@@ -119,6 +120,13 @@ bool freqRegionApplies(const std::string& r, const std::string& c) {
         for (const char* x : k) if (c == x) return true;
     }
     return false;
+}
+
+void addDrmHit(std::vector<DrmHit>& h, double khz, float snr) {
+    bool seen = false;
+    for (auto& x : h) if (std::fabs(x.khz - khz) < 0.5) { x.snrDb = std::max(x.snrDb, snr); seen = true; }
+    if (!seen) h.push_back({khz, snr});
+    std::sort(h.begin(), h.end(), [](const DrmHit& a, const DrmHit& b) { return a.snrDb > b.snrDb; });
 }
 
 bool modeNotUsedIn(const std::string& name, const std::string& country) {

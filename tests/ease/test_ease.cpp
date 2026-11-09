@@ -159,11 +159,17 @@ static void testHunt() {
     CHECK(freqRegionApplies("US", ""));
 }
 
+static void testDrmHits() {
+    std::vector<DrmHit> h;
+    addDrmHit(h, 7325, 10); addDrmHit(h, 11650, 20); addDrmHit(h, 7325.2, 15); addDrmHit(h, 9500, 12);
+    CHECK(h.size() == 3); CHECK(h[0].khz == 11650); CHECK(h[1].khz == 7325 && h[1].snrDb == 15); CHECK(h[2].khz == 9500);
+}
+
 int testNavtex();
 int testRepeaters();
 
 int main() {
-    testSonde(); testGeo(); testPreselect(); testFollowAndDsc(); testRegions(); testAutoBand(); testHunt();
+    testSonde(); testGeo(); testPreselect(); testFollowAndDsc(); testRegions(); testAutoBand(); testHunt(); testDrmHits();
     fails += testNavtex();
     fails += testRepeaters();
     if (!fails) printf("ease ok\n");
