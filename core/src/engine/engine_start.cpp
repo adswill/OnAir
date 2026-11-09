@@ -306,6 +306,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxSw_.setDialHz(tune.centerHz);
         rxZw_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxSb_.setSignalOffset(o);
+        rxSatd_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxSb_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // for the CSV and the screen
         rxMs_.setSignalOffset(o);
         rxGd_.setSignalOffset(o);
@@ -676,6 +677,7 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxModeAc_.configure(rate_);
     rxModeAc_.setLogCallback([this](const std::string& s) { log(s); });
     rxSb_.configure(rate_);
+    if (satmisc::isSatDetectStd(stdMode_.load())) { rxSatd_.setSystem(stdMode_.load()); rxSatd_.configure(rate_); }
     rxSb_.setLogCallback([this](const std::string& s) { log(s); });
     rxMs_.configure(rate_);
     rxBt_.configure(rate_);

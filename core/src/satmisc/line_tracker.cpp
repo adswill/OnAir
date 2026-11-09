@@ -63,6 +63,10 @@ void LineTracker::frame() {
     struct Peak { double hz; float snr; bool used; };
     std::vector<Peak> peaks;
     const int edge = n_ / 40;
+    // the level that noise alone reaches about once in a hundred frames across this many bins (an average of M exponential values, mean over median 1.6 dB)
+    const double nb = std::log(100.0 * n_), m = std::max(1, cfg_.average);
+    const double noiseT = m == 1 ? nb : 1 + std::sqrt(2 * nb / m) + nb / m;
+    const float thr = (float)std::max(cfg_.thresholdDb, 10 * std::log10(noiseT) + 1.6);
     for (int i = 0; i < n_; i++) {
         const int b = std::min(blocks - 1, i / bw);
         const float db = 10 * std::log10(std::max(p[(size_t)i], 1e-20f) / med[(size_t)b]);
@@ -70,7 +74,7 @@ void LineTracker::frame() {
     }
     for (int i = std::max(edge, 1); i < n_ - std::max(edge, 1); i++) {
         const float db = lastDb_[(size_t)i];
-        if (db < cfg_.thresholdDb || p[(size_t)i] < p[(size_t)i - 1] || p[(size_t)i] < p[(size_t)i + 1]) continue;
+        if (db < thr || p[(size_t)i] < p[(size_t)i - 1] || p[(size_t)i] < p[(size_t)i + 1]) continue;
         double hz = (i - n_ / 2) * binHz_;
         if (cfg_.spanHz > 0 && std::fabs(hz) > cfg_.spanHz) continue;
         if (cfg_.excludeHz > 0 && std::fabs(hz - cfg_.excludeCentreHz) < cfg_.excludeHz) continue;
