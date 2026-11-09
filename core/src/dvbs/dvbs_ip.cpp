@@ -1,6 +1,8 @@
 // IP over DVB-S/S2 (see dvbs_ip.h). Adapted from DecSAT by Arclamp (CasualArclamp), GPL-3.0-or-later, https://github.com/CasualArclamp/DecSAT
 // (crates decsat-gse and decsat-ip), rewritten in C++.
 #include "dect2/dvbs/dvbs_ip.h"
+#include "dect2/wirecap/wire.h"
+#include "dect2/wirecap/wire.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -996,9 +998,8 @@ bool PcapWriter::open(const std::string& p) {
     f_ = fopen(p.c_str(), "wb");
     if (!f_) return false;
     path = p; packets = bytes = 0;
-    const uint32_t hdr[6] = {0xA1B2C3D4u, 0, 0, 0, 65535, 101};
-    const uint16_t ver[2] = {2, 4};
-    fwrite(&hdr[0], 4, 1, f_); fwrite(ver, 2, 2, f_); fwrite(&hdr[1], 4, 1, f_); fwrite(&hdr[2], 4, 1, f_); fwrite(&hdr[4], 4, 1, f_); fwrite(&hdr[5], 4, 1, f_);
+    const wire::Bytes hdr = wire::pcapFileHeader(wire::kLinkRaw, 65535);
+    fwrite(hdr.data(), 1, hdr.size(), f_);
     return true;
 }
 
@@ -1006,10 +1007,11 @@ void PcapWriter::close() { if (f_) { fclose(f_); f_ = nullptr; } }
 
 void PcapWriter::write(double t, const uint8_t* p, size_t n) {
     if (!f_) return;
-    const uint32_t stored = (uint32_t)std::min<size_t>(n, 65535);
-    const uint32_t rec[4] = {(uint32_t)t, (uint32_t)((t - std::floor(t)) * 1e6), stored, (uint32_t)n};
-    fwrite(rec, 4, 4, f_);
-    fwrite(p, 1, stored, f_);
+    const size_t stored = std::min<size_t>(n, 65535);
+    wire::Bytes rec;
+    wire::appendPcapRecord(rec, (int64_t)(t * 1e6), p, stored);
+    rec[12] = (uint8_t)n; rec[13] = (uint8_t)(n >> 8); rec[14] = (uint8_t)(n >> 16); rec[15] = (uint8_t)(n >> 24);   // the original length, when cut
+    fwrite(rec.data(), 1, rec.size(), f_);
     packets++; bytes += n;
 }
 
@@ -1030,6 +1032,7 @@ void IpSink::push(const uint8_t* ip, size_t n, double now) {
         }
     }
     if (pcap.isOpen()) pcap.write(now, whole.data(), wi.len);
+    if (wire::on(wire::DvbIp)) wire::Hub::get().publish(wire::DvbIp, whole.data(), wi.len);
 }
 
 } // namespace dvbsip

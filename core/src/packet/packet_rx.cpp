@@ -7,6 +7,7 @@
 // 9600 baud: two slicers with different filters, a clock loop, the G3RUH descrambler (x^17 + x^12 + 1) and NRZI.
 // The frame layer is packet_ax25.*, the APRS layer packet_aprs.*.
 #include "dect2/session/mode_adapters.h"
+#include "dect2/wirecap/wire.h"
 #include "dect2/packet/packet_rx.h"
 #include "dect2/automation/engine.h"
 #include "dect2/results/results_io.h"
@@ -283,6 +284,7 @@ struct PacketReceiver::Impl {
         const double tnow = (double)tt / kMidRate;
         ax25::Frame f;
         if (!ax25::parseFrame(dat.data(), dat.size(), f)) { t.blocksBad++; if (baud == 1200) t.bad1200++; else t.bad9600++; return; }
+        if (wire::on(wire::Aprs)) wire::Hub::get().publish(wire::Aprs, dat);
         t.blocksOk++;
         if (baud == 1200) { t.ok1200++; t.last1200Sec = tnow; } else { t.ok9600++; t.last9600Sec = tnow; }
         aprs::Info a;

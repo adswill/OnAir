@@ -1,5 +1,6 @@
 // Zigbee / IEEE 802.15.4 monitor (see zigbee_rx.h).
 #include "dect2/zigbee/zigbee_rx.h"
+#include "dect2/wirecap/wire.h"
 #include "dect2/results/results_io.h"
 #include "dect2/zigbee/zigbee_tel.h"
 #include "dect2/zigbee/zigbee_proto.h"
@@ -462,6 +463,7 @@ struct ZigbeeReceiver::Impl {
         using namespace zigbee;
         Frame f = parse(psdu.data(), psdu.size());
         if (!f.ok && f.info.empty()) { tel.blocksBad++; return; }
+        { const wire::Chan wc = thread ? wire::Thread : wire::Zigbee; if (wire::on(wc)) wire::Hub::get().publish(wc, psdu); }   // the PSDU with its FCS, as received (never decrypted)
         dect2::thread::Frame th;
         if (thread) {   // Thread: no Zigbee NWK / APS reading, the 6LoWPAN layer instead
             th = dect2::thread::analyse(f, psdu.data(), psdu.size());

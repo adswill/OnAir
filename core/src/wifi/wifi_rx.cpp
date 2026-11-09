@@ -1,5 +1,6 @@
 // Wi-Fi network monitor (see wifi_rx.h).
 #include "dect2/wifi/wifi_rx.h"
+#include "dect2/wirecap/wire.h"
 #include "dect2/results/results_io.h"
 #include "dect2/wifi/wifi_tel.h"
 #include "dect2/wifi/wifi_proto.h"
@@ -368,6 +369,7 @@ struct WifiReceiver::Impl {
         if (onFrame) onFrame(p, n, rssi);
         if (tuned < 0) tuned = tunedChannel();
         if (bnd == -2) { const double c = centerHz.load(); bnd = c > 0 ? wifi::bandOfMhz((c + offset) / 1e6) : -1; }
+        if (wire::on(wire::Wifi)) wire::Hub::get().publish(wire::Wifi, wire::radiotap80211(p, n, (bnd >= 0 && tuned > 0) ? (int)std::lround(wifi::bandChannelMhz(bnd, tuned)) : 0, rssi));   // as received: a protected payload stays encrypted
         wifi::Frame f;
         if (!wifi::parseFrame(p, n, f, bnd)) return;
         if (f.type >= 0 && f.type < 3) tel.perType[f.type]++;

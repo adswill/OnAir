@@ -1,5 +1,6 @@
 // ASTERIX receiver: UDP and file input, track table, demo traffic. See asterix_engine.h.
 #include "dect2/limits.h"
+#include "dect2/wirecap/wire.h"
 #include "dect2/asterix/asterix_engine.h"
 #include "../net/netcompat.h"
 #ifndef _WIN32
@@ -227,6 +228,7 @@ struct AsterixReceiver::Impl {
 
     // decode a datagram (or a chunk of data blocks) and merge it; nowS is the receiver clock, live false for data from a file
     void process(const uint8_t* d, size_t n, double nowS, bool live) {
+        if (wire::on(wire::Asterix)) wire::Hub::get().publish(wire::Asterix, d, n);
         std::vector<asterix::Target> out;
         asterix::BlockStats st;
         asterix::decodeBlocks(d, n, out, &st);

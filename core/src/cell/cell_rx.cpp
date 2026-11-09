@@ -1,5 +1,6 @@
 // Cell towers receiver (cell_rx.h): blocks of input, carriers found in the spectrum, cells searched and their broadcast decoded.
 #include "dect2/common/thread_name.h"
+#include "dect2/wirecap/wire.h"
 #include "dect2/cell/cell_rx.h"
 #include "dect2/results/results_io.h"
 #include "dect2/cell/cell_asn.h"
@@ -386,6 +387,7 @@ struct CellReceiver::Impl {
         tel.blocksBad += (uint64_t)r.tbFail;
         for (const auto& m : r.si) {
             cell::LteBcch bc;
+            if (wire::on(wire::Lte)) { const wire::Bytes b = wire::packBitsMsbFirst(m.bits.data(), m.bits.size()); wire::Hub::get().publish(wire::Lte, wire::makeGsmtap(wire::gsmtap::kTypeLteRrc, wire::gsmtap::kLteBcchDlSch, b.data(), b.size(), (uint16_t)std::max(ear, 0))); }
             if (!cell::lteParseBcch(m.bits, bc)) continue;
             tel.blocksOk++;
             t->siMsgs++;

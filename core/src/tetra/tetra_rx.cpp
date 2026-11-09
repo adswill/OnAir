@@ -1,6 +1,7 @@
 // TETRA network information receiver (tetra_rx.h): blocks of input, 25 kHz carriers found in the spectrum, slot synchronised on the
 // training sequences, the broadcast channels decoded.
 #include "dect2/common/thread_name.h"
+#include "dect2/wirecap/wire.h"
 #include "dect2/tetra/tetra_rx.h"
 #include "dect2/mesh/mesh_lora.h"
 #include "dect2/results/results_io.h"
@@ -256,6 +257,7 @@ CarrierDecode decodeCarrier(const cf32* x, size_t n, int kMcc, int kMnc, int kCc
         if (!decodeChannel(llr.data() + kSbSb, kBsch, scramblerInit(0, 0, 0), t1)) { out.blocksBad++; continue; }
         Sync s;
         if (!parseSync(t1, s)) { out.blocksBad++; continue; }
+        if (wire::on(wire::Tetra)) { const wire::Bytes b = wire::packBitsMsbFirst(t1.data(), t1.size()); wire::Hub::get().publish(wire::Tetra, wire::makeGsmtap(wire::gsmtap::kTypeTetraI1, wire::gsmtap::kTetraBsch, b.data(), b.size())); }
         out.synced = true; out.sync = s; out.syncs++; out.blocksOk++;
         syncSlot = (long)i;
     }
@@ -298,6 +300,12 @@ CarrierDecode decodeCarrier(const cf32* x, size_t n, int kMcc, int kMnc, int kCc
             Bits t1;
             if (!decodeChannel(l, c, scr, t1)) { out.blocksBad++; return; }
             out.blocksOk++;
+            if (wire::on(wire::Tetra) && !t1.empty()) {   // type-1 bits of the signalling block, as received: encrypted content stays encrypted (voice is not sent)
+                const bool broadcast = t1.size() > 1 && t1[0] == 1 && t1[1] == 0;   // MAC PDU type 2
+                const uint8_t sub = t1.size() >= 200 ? wire::gsmtap::kTetraSchF : broadcast ? wire::gsmtap::kTetraBnch : wire::gsmtap::kTetraSchHd;
+                const wire::Bytes b = wire::packBitsMsbFirst(t1.data(), t1.size());
+                wire::Hub::get().publish(wire::Tetra, wire::makeGsmtap(wire::gsmtap::kTypeTetraI1, sub, b.data(), b.size(), 0, (uint8_t)(tn > 0 ? tn - 1 : 0), (uint32_t)fn));
+            }
             MacBlock mb;
             parseMacBlock(t1, mb);
             out.macs.push_back(std::move(mb));

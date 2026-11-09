@@ -1,6 +1,7 @@
 // LoRaWAN monitor (see lorawan_rx.h): a bank of LoRa channels (lora_bank.h) over the channels of a regional plan, and the MAC layer parser
 // (lorawan_plan.h) on every frame. Keyless: nothing is decrypted.
 #include "dect2/lorawan/lorawan_rx.h"
+#include "dect2/wirecap/wire.h"
 #include "dect2/automation/engine.h"
 #include "dect2/lorawan/lora_bank.h"
 #include "dect2/lorawan/lorawan_fsk.h"
@@ -221,6 +222,7 @@ struct LorawanReceiver::Impl {
         if (good) {
             const lorawan::Frame m = lorawan::parse(payload.data(), payload.size());
             if (!m.ok && !r.hasCrc) return;      // a header-only frame (downlink) that is no LoRaWAN is most likely noise
+            if (wire::on(wire::LoRaWan)) wire::Hub::get().publish(wire::LoRaWan, wire::loraTap(payload.data(), payload.size(), r.freqHz, r.fsk ? 0 : r.bwHz, r.sf, r.snrDb));   // the PHY payload as received (LoRaWAN is never decrypted here)
             if (m.ok) {
                 r.lorawan = true; r.mtype = m.mtype; r.uplink = m.uplink;
                 r.type = lorawan::mtypeName(m.mtype);

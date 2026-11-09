@@ -1,5 +1,6 @@
 // Bluetooth LE advertising monitor (see ble_rx.h).
 #include "dect2/ble/ble_rx.h"
+#include "dect2/wirecap/wire.h"
 #include "dect2/automation/engine.h"
 #include "dect2/results/results_io.h"
 #include "dect2/ble/ble_tel.h"
@@ -335,6 +336,7 @@ struct BleReceiver::Impl {
             snrAvg = tel.blocksOk == 0 ? snr : 0.8 * snrAvg + 0.2 * snr;
             tel.cfoHz = thr;
             tel.deviationHz = (float)dev;
+            if (wire::on(wire::Ble)) wire::Hub::get().publish(wire::Ble, wire::bleLl(pdu, (size_t)total));   // de-whitened PDU and CRC
             accept(a, ch, rssi, (double)best / kOut);
             return;
         }

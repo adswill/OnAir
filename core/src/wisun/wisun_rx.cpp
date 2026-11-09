@@ -1,5 +1,6 @@
 // Wi-SUN FAN monitor (see wisun_rx.h).
 #include "dect2/dsp/fast_phase.h"
+#include "dect2/wirecap/wire.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/wisun/wisun_rx.h"
 #include "dect2/dsp/dsp_compat.h"
@@ -787,6 +788,7 @@ struct WisunReceiver::Impl {
     }
 
     void accept(const std::vector<uint8_t>& psdu, bool fcs2, const Chan& ch, int br, float rssi, float snr, double sec) {
+        if (wire::on(wire::WiSun) && psdu.size() > (fcs2 ? 2u : 4u)) wire::Hub::get().publish(wire::WiSun, psdu.data(), psdu.size() - (fcs2 ? 2 : 4));   // as received, without the FCS (2 or 4 bytes, so the link type without FCS)
         using namespace wisun;
         const Frame f = parse(psdu.data(), psdu.size() - (fcs2 ? 2 : 4));
         tel.blocksOk++;

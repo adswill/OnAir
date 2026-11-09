@@ -1,5 +1,6 @@
 // GSM-R receiver (gsmr_rx.h): blocks of input, 200 kHz carriers found in the spectrum, base stations synchronised and their BCCH decoded.
 #include "dect2/common/thread_name.h"
+#include "dect2/wirecap/wire.h"
 #include "dect2/gsmr/gsmr_rx.h"
 #include "dect2/results/results_io.h"
 #include "dect2/cell/cell_dsp.h"
@@ -262,6 +263,7 @@ struct GsmrReceiver::Impl {
             xcchDeinterleave(dat, l456);
             uint8_t m[23];
             if (xcchDecode(l456, m)) {
+                if (wire::on(wire::GsmR)) wire::Hub::get().publish(wire::GsmR, wire::makeGsmtap(wire::gsmtap::kTypeUm, wire::gsmtap::kChanBcch, m, sizeof m));
                 Bcch bc;
                 if (parseBcch(m, bc)) d.msgs.push_back(bc);   // a good frame that is not system information (filler, a message of another kind) is not an error
             } else if (all) d.bad++;

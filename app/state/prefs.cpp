@@ -459,6 +459,7 @@ void loadPrefs(App& a) {
         for (const auto& r : fmSavedDecode(d.getS("fmSaved", ""))) a.fmSaved.push_back(r);
     }
     aisAlertsLoadPrefs(a);   // the AIS alerts also run with the AIS tab closed
+    if (a.rxId == 1) loadWiresharkPrefs(a);
     if (a.rxId == 1) loadFeedPrefs(a);   // the feeds are shared by all receivers: RX 1 owns their settings
     a.channels = d.getChannels();
     tvHdLoad(a);
@@ -525,6 +526,7 @@ void savePrefs(const App& a) {
     d.setS("fmSaved", fmSavedEncode(a.fmSaved));   // the saved-stations library, not the scan results
     d.setChannels(a.channels);
     tvHdSave(a);
+    saveWiresharkPrefs(a);
     saveFeedPrefs(a);
     d.flush();
 }
