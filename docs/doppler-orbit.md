@@ -4,7 +4,7 @@ The Passes window has an **Orbit from Doppler** section. During a tracked pass i
 
 ## How to use it
 
-1. Track a pass in the Passes window (Track, or "Record this pass") with a satellite whose nominal downlink frequency is known (a beacon, NOAA APT 137.x, Meteor, ISS 145.800 / 437.800, an amateur satellite). The receiver must run, with the carrier inside the spectrum.
+1. Arm a pass in the Passes window (or Follow it under Advanced) with a satellite whose nominal downlink frequency is known (a beacon, NOAA APT 137.x, Meteor, ISS 145.800 / 437.800, an amateur satellite). The receiver must run, with the carrier inside the spectrum.
 2. Tick **Measure the carrier during tracked passes**. About once a second, between 3 degrees elevation and LOS, the strongest narrow peak within the gate (default +-4 kHz around the predicted carrier) is recorded as one measurement. A peak must stand at least 8 dB above the median of the gate.
 3. After the pass press **Fit orbit**. The plot shows the measurements (green), the curve the downloaded elements predicted (grey), the refined curve (blue) and the residuals of the refined curve (amber).
 4. **Save refined TLE** appends the elements to `derived_doppler.tle` in the TLE folder. The file starts each entry with a comment saying it is derived from a measured Doppler curve and the name ends in "(derived)". The downloaded TLE files are never changed. Tick **Use the derived elements for predictions** to let the pass planner use them (the last saved entry of a satellite wins).

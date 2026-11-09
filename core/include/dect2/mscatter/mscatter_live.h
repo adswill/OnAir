@@ -9,11 +9,13 @@
 #pragma once
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/common/ring.h"
+#include "dect2/geo/passes.h"
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace dect2 {
 
@@ -32,6 +34,9 @@ public:
     void clearResults();                        // empties the list and the counts
     void setThresholdDb(double db);             // detection level over the background (default 13)
     void setLogFile(const std::string& path);   // append every ping as a CSV line ("" off)
+    // Satellite echoes of GRAVES: the elements to match them with and where the receiver is (an empty list: echoes are listed unnamed)
+    void setSatelliteMatch(const std::vector<Tle>& tles, double latDeg, double lonDeg, double altKm);
+    void setBeaconMhz(double mhz);              // the transmit frequency for the Doppler scale (default 143.050)
     void setStartUtc(int64_t utcSec);           // tests: the UTC second of the first sample (default: now)
     void feed(const cf32* x, size_t n);
     bool telemetry(MsTelemetry& out, uint64_t lastSeq);

@@ -24,6 +24,20 @@ struct MsPing {
     std::vector<float> profile;         // peak level per slice of the ping (dB), at most kMsProfile points
 };
 
+// A satellite seen in the GRAVES radar's reflection: much longer than a meteor ping, with a Doppler that sweeps (see core/src/satmisc)
+struct MsSatEcho {
+    uint32_t id = 0;
+    int64_t wallTime = 0;               // UTC seconds of the start
+    float durationSec = 0;
+    float peakSnrDb = 0;
+    float startHz = 0, endHz = 0;       // Doppler from the beacon line
+    std::string name;                   // the best matching satellite with known elements; "" when none matched
+    int norad = 0;
+    float rmsHz = 0;                    // residual of the matching satellite's Doppler curve
+    bool ambiguous = false;             // several satellites fit equally well
+};
+constexpr size_t kMsSatEchoMax = 100;
+
 struct MsShower {
     std::string name;
     int peakDayDelta = 0;               // days from today to the peak (negative: past)
@@ -48,6 +62,9 @@ struct MsTelemetry {
     bool active = false;                // a ping is in progress
     float activeSnrDb = 0;
     std::vector<MsPing> pings;          // newest first
+    std::vector<MsSatEcho> satEchoes;   // newest first
+    uint64_t satEchoTotal = 0, satEchoMatched = 0;
+    int satCatalog = 0;                 // satellites with elements given to setSatelliteMatch
     std::vector<int> hourly;            // last 24 hours, UTC hours, the current one last
     std::vector<int> daily;             // last 30 days, UTC days, today last
     int64_t hourStart = 0, dayStart = 0;   // UTC seconds of the start of the last hourly / daily bin

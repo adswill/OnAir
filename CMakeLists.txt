@@ -194,6 +194,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES esp32)   # ESP32 / nRF24 module radio over USB serial (3.7): core/src/esp32, app/esp32, tests/esp32, firmware/esp32, docs/ESP32-NRF24-DESIGN.md
   list(APPEND DECT2_MODES thread)   # Thread (family 244): core/src/thread (6LoWPAN / MLE layer; the receiver is the 802.15.4 one in core/src/zigbee), app/thread, tests/thread
   list(APPEND DECT2_MODES wxsat)   # SatDump-list weather links (families 260 - 268): core/src/wxsat, app/wxsat, tests/wxsat (docs/SATDUMP-TIER1-3.7.md)
+  list(APPEND DECT2_MODES satmisc)   # 3.8: satellite carriers and identification (docs/SAT-MISC-3.8.md): core/src/satmisc, app/satmisc, tests/satmisc
   list(APPEND DECT2_MODES fy3)   # FY-3 AHRPT (family 235) and FY-3 MPT (236): core/src/fy3, app/fy3, tests/fy3 (docs/fy3.md)
   list(APPEND DECT2_MODES esubghz)   # Flipper Zero Sub-GHz chat, receive and send (family 204): core/src/esubghz, app/esubghz, tests/esubghz
   list(APPEND DECT2_MODES inmsat)   # Inmarsat all-carriers mode (3.3, docs/INMARSAT-REVAMP.md): core/src/inmsat, tests/inmsat
@@ -219,8 +220,8 @@ if(ONAIR_RUST_RING)
   target_compile_definitions(dect2core PUBLIC DECT2_RUST_RING)   # ring.h is included by the app and the tests too: every user must see the same IqRing
 endif()
 onair_rust_use(dect2core)   # links the Rust library onair_rs
-target_sources(dect2core PRIVATE core/src/engine/modes.cpp core/src/engine/rate_choice.cpp core/src/geo/passes.cpp core/src/dsp/imgproc.cpp core/src/dsp/wxstudio.cpp core/src/dsp/wx_vectors.cpp core/src/engine/sig_ident.cpp core/src/geo/maidenhead.cpp core/src/geo/maplayers.cpp core/src/geo/tilecache.cpp core/src/mesh/mesh_report.cpp core/src/df/df.cpp core/src/df/source.cpp core/src/df/position.cpp core/src/df/rfcam.cpp core/src/df/group.cpp core/src/df/rtl_group.cpp core/src/geo/pass_sched.cpp core/src/geo/doppler_fit.cpp core/src/geo/wx_overlay.cpp core/src/engine/sig_known.cpp core/src/engine/sig_known_gen.cpp core/src/radar/passive.cpp core/src/rfi/rfi.cpp core/src/map/contact_graph.cpp)
-target_sources(dect2core PRIVATE core/src/engine/modes.cpp core/src/engine/rate_choice.cpp core/src/geo/passes.cpp core/src/dsp/imgproc.cpp core/src/dsp/wxstudio.cpp core/src/dsp/wx_vectors.cpp core/src/engine/sig_ident.cpp core/src/geo/maidenhead.cpp core/src/geo/maplayers.cpp core/src/geo/tilecache.cpp core/src/mesh/mesh_report.cpp core/src/df/df.cpp core/src/df/source.cpp core/src/df/position.cpp core/src/df/rfcam.cpp core/src/df/group.cpp core/src/df/rtl_group.cpp core/src/geo/pass_sched.cpp core/src/geo/doppler_fit.cpp core/src/geo/wx_overlay.cpp core/src/engine/sig_known.cpp core/src/radar/passive.cpp core/src/rfi/rfi.cpp core/src/map/contact_graph.cpp)
+target_sources(dect2core PRIVATE core/src/engine/modes.cpp core/src/engine/rate_choice.cpp core/src/geo/passes.cpp core/src/geo/sat_plan.cpp core/src/dsp/imgproc.cpp core/src/dsp/wxstudio.cpp core/src/dsp/wx_vectors.cpp core/src/engine/sig_ident.cpp core/src/geo/maidenhead.cpp core/src/geo/maplayers.cpp core/src/geo/tilecache.cpp core/src/mesh/mesh_report.cpp core/src/df/df.cpp core/src/df/source.cpp core/src/df/position.cpp core/src/df/rfcam.cpp core/src/df/group.cpp core/src/df/rtl_group.cpp core/src/geo/pass_sched.cpp core/src/geo/doppler_fit.cpp core/src/geo/wx_overlay.cpp core/src/engine/sig_known.cpp core/src/engine/sig_known_gen.cpp core/src/radar/passive.cpp core/src/rfi/rfi.cpp core/src/map/contact_graph.cpp)
+target_sources(dect2core PRIVATE core/src/engine/modes.cpp core/src/engine/rate_choice.cpp core/src/geo/passes.cpp core/src/geo/sat_plan.cpp core/src/dsp/imgproc.cpp core/src/dsp/wxstudio.cpp core/src/dsp/wx_vectors.cpp core/src/engine/sig_ident.cpp core/src/geo/maidenhead.cpp core/src/geo/maplayers.cpp core/src/geo/tilecache.cpp core/src/mesh/mesh_report.cpp core/src/df/df.cpp core/src/df/source.cpp core/src/df/position.cpp core/src/df/rfcam.cpp core/src/df/group.cpp core/src/df/rtl_group.cpp core/src/geo/pass_sched.cpp core/src/geo/doppler_fit.cpp core/src/geo/wx_overlay.cpp core/src/engine/sig_known.cpp core/src/radar/passive.cpp core/src/rfi/rfi.cpp core/src/map/contact_graph.cpp)
 target_sources(dect2core PRIVATE core/src/image/j2k.cpp core/src/common/des.cpp core/src/image/enhance.cpp core/src/image/enhance_geom.cpp core/src/image/enhance_filter.cpp core/src/image/enhance_tone.cpp)   # shared image enhancement of every picture mode (docs/IMAGE-ENHANCE.md)
 target_sources(dect2core PRIVATE core/src/df/beam.cpp)
 target_sources(dect2core PRIVATE core/src/map/mesh_topology.cpp core/src/map/mesh_topology_feed.cpp core/src/loraraw/loraraw_survey.cpp)   # passive mesh topology shared by Meshtastic, Zigbee / Thread and Z-Wave
@@ -1734,6 +1735,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_passes tests/geo/test_passes.cpp)
   target_link_libraries(test_passes PRIVATE dect2core)
   add_test(NAME passes COMMAND test_passes)
+  add_executable(test_sat_plan tests/geo/test_sat_plan.cpp)
+  target_link_libraries(test_sat_plan PRIVATE dect2core)
+  add_test(NAME sat_plan COMMAND test_sat_plan)
   add_executable(test_pass_sched tests/geo/test_pass_sched.cpp)
   target_link_libraries(test_pass_sched PRIVATE dect2core)
   add_test(NAME pass_sched COMMAND test_pass_sched)
