@@ -124,6 +124,7 @@ bool hfdlParsePdu(const uint8_t* p, size_t n, std::vector<HfdlMessage>& out) {
         m.squitter = c.squitter != 0; m.uplink = c.uplink != 0; m.gsId = c.gs_id; m.acId = c.ac_id; m.icao = c.icao;
         m.kind = str(c.kind); m.hfnpdu = str(c.hfnpdu); m.summary = str(c.summary); m.detail = str(c.detail);
         m.frameIndex = c.frame_index; m.utcSync = c.utc_sync != 0;
+        if (m.squitter && n >= 55) m.systable = (int)p[53] | ((int)(p[54] & 0xF) << 8);   // the SPDU's system table version (octets 53 and 54)
         m.activeKhz.assign(c.active_khz, c.active_khz + std::max(0, std::min(20, (int)c.active_n)));
         m.flight = str(c.flight);
         m.hasPos = c.has_pos != 0; m.lat = c.lat; m.lon = c.lon; m.posKind = str(c.pos_kind); m.utcSec = c.utc_sec;

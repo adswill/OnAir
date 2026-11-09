@@ -2,6 +2,7 @@
 #include "dect2/limits.h"
 #include "dect2/session/mode_adapters.h"
 #include "dect2/hfdl/hfdl_rx.h"
+#include "dect2/hfdl/hfdl_learn.h"
 #include "dect2/dsp/rrc.h"
 #include "dect2/dsp/fftutil.h"
 #include "dect2/automation/engine.h"
@@ -734,6 +735,7 @@ struct HfdlReceiver::Impl {
         if (m.squitter) {
             tel.squitters++;
             HfdlGroundStation& g = station(m.gsId);
+            { const int dk = (int)std::lround(dial / 1e3); HfdlFreqLearner::global().squitter(m.gsId, dk, m.systable, m.activeKhz, (double)std::time(nullptr)); }   // the frequency plan follows what is heard (hfdl_learn.h)
             g.squitters++; g.freqHz = dial; g.lastHeardSec = now; g.levelDb = m.levelDb; g.utcSync = m.utcSync; g.frameIndex = m.frameIndex; g.activeKhz = m.activeKhz; g.heardDirect = true;
             if (!logged[m.gsId]) {
                 logged[m.gsId] = true;
@@ -832,6 +834,11 @@ void HfdlReceiver::feed(const cf32* x, size_t n) {
         for (Impl::Chan* k : act) { for (auto& f : k->pend) f(); k->pend.clear(); }
     }
     I.nIn += n;
+    {   // the frequencies this capture covers, for the learner's "listened long enough" rule
+        std::vector<int> khz;
+        for (Impl::Chan* k : act) khz.push_back((int)std::lround(k->dial / 1e3));
+        HfdlFreqLearner::global().listen(khz, I.rate > 0 ? (double)n / I.rate : 0);
+    }
     std::lock_guard<std::mutex> lk(I.mu);
     const double now = I.nowSec();
     I.tel.nowSec = now;

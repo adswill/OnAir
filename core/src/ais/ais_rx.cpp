@@ -7,12 +7,14 @@
 #include "dect2/limits.h"
 #include "dect2/session/mode_adapters.h"
 #include "dect2/marine/marine_mmsi.h"
+#include "dect2/marine/marine_incident.h"
 #include "dect2/ais/ais_rx.h"
 #include "dect2/dsp/baseband_filter.h"
 #include "dect2/automation/engine.h"
 #include "dect2/net/feeds.h"
 #include "dect2/ais/ais_phy.h"
 #include "dect2/ais/ais_alerts.h"
+#include "dect2/ais/ais_anomaly.h"
 #include "dect2/ais/ais_proto.h"
 #include "dect2/ais/ais_longrange.h"
 #include "dect2/ais/ais_sat.h"
@@ -176,6 +178,8 @@ struct AisReceiver::Impl {
     bool collisionCancel = true;
     AisAlertEngine alertEng;
     std::deque<AisAlertRecord> alertLog;
+    AisAnomalyEngine anomalyEng;
+    std::deque<AisAnomalyRecord> anomalyLog;
 
     void logLine(const std::string& s) { if (log) log(s); }
     double now() const { return fs > 0 ? (double)inSamples / fs : 0.0; }
@@ -371,7 +375,30 @@ struct AisReceiver::Impl {
                 .num("sog_kt", v.sog).num("cog_deg", v.cog).num("nav_status", v.navStatus).str("class", cls[v.cls >= 0 && v.cls <= 5 ? v.cls : 5]).str("destination", v.destination);
             automation::emit(std::move(ev));
         }
-        if (m.hasPos) raiseAlerts(v);
+        if (m.hasPos) { raiseAlerts(v); raiseAnomalies(v); incidentFeed(v); }
+    }
+
+    // the sea distress board (marine/marine_incident.h) sees every position; its alerts (AIS-SART, MOB, EPIRB) are logged and become events
+    void incidentFeed(const AisVessel& v) {
+        marine::IncidentBoard::global().onAis(v, automation::wallNow());   // wall clock: the DSC calls and NAVTEX messages of the marine receiver use it too
+        marine::incidentFlush([this](const std::string& t) { logLine(t); });
+    }
+
+    // consistency checks (ais_anomaly.h): the alerts go to the list, the log and the automation event ais.anomaly
+    void raiseAnomalies(const AisVessel& v) {
+        const double utc = v.lastUtc > 0 ? v.lastUtc : automation::wallNow();
+        for (const AisAnomaly& a : anomalyEng.update(v, utc)) {
+            AisAnomalyRecord r;
+            r.utc = a.utc; r.kind = a.kind; r.severity = a.severity; r.mmsi = a.mmsi; r.name = a.name; r.lat = a.lat; r.lon = a.lon; r.text = a.text;
+            anomalyLog.push_back(r);
+            while (anomalyLog.size() > 100) anomalyLog.pop_front();
+            logLine("AIS anomaly: " + std::to_string(a.mmsi) + " " + a.name + " " + a.kind + ": " + a.text);
+            if (!automation::wants(automation::FAis)) continue;
+            automation::Event ev("ais.anomaly");
+            ev.at(automation::wallNow(), "AIS", aisChannelHz(aisChannelIndex(v.channel)));
+            ev.num("mmsi", a.mmsi).str("name", a.name).str("kind", a.kind).num("severity", a.severity).num("lat", a.lat).num("lon", a.lon).str("text", a.text);
+            automation::emit(std::move(ev));
+        }
     }
 
     // CPA and geofence alerts for one position update
@@ -614,6 +641,8 @@ struct AisReceiver::Impl {
         AisTelemetry o = t;
         fillLists(o, tnow);
         o.alerts.assign(alertLog.begin(), alertLog.end());
+        o.anomalies.assign(anomalyLog.begin(), anomalyLog.end());
+        { const AisAnomalyEngine::Stats st = anomalyEng.stats(); o.anomalyTracked = (uint32_t)st.tracked; o.anomalySectors = (uint32_t)st.sectorsKnown; o.anomalyRangeNm = (float)st.maxRangeNm; }
         std::lock_guard<std::mutex> lk(telMu);
         o.seq = ++seq;
         pub = std::move(o);
@@ -719,6 +748,9 @@ void AisReceiver::setCollisionCancel(bool on) {
 void AisReceiver::setAlertConfig(const AisAlertConfig& c) {
     std::lock_guard<std::mutex> lk(p_->procMu);
     p_->alertEng.configure(c);
+    AisAnomalyConfig a = c.anomaly;
+    a.ownValid = c.ownValid; a.ownLat = c.ownLat; a.ownLon = c.ownLon;   // the coverage model works from the receiver position
+    p_->anomalyEng.configure(a);
 }
 void AisReceiver::setSatelliteTle(const Tle* tle) {
     std::lock_guard<std::mutex> lk(p_->procMu);
@@ -753,7 +785,7 @@ bool AisReceiver::telemetry(AisTelemetry& out, uint64_t lastSeq) {
 }
 void AisReceiver::clearResults() {
     std::lock_guard<std::mutex> lk(p_->procMu);
-    p_->vessels.clear(); p_->nmea.clear(); p_->recent.clear(); p_->alertLog.clear(); p_->alertEng.clear();
+    p_->vessels.clear(); p_->nmea.clear(); p_->recent.clear(); p_->alertLog.clear(); p_->alertEng.clear(); p_->anomalyLog.clear(); p_->anomalyEng.clear();
     p_->republish();
 }
 std::string AisReceiver::saveResults() const {

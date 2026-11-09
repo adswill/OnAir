@@ -3,6 +3,7 @@
 // (Settings > Receiver position); a moving own ship can be entered under Advanced. The alerts reach the automations as ais.cpa and ais.geofence.
 #include "app.h"
 #include "ais_alerts_ui.h"
+#include "../marine/incident_ui.h"
 #include "dect2/ais/ais_mid.h"
 #include <map>
 #include <algorithm>
@@ -18,6 +19,7 @@ struct State {
     bool cpaOn = false;
     float cpaNm = 0.5f, tcpaMin = 15.f, cooldownMin = 10.f;
     bool ownMoving = false; float ownSog = 0, ownCog = 0;
+    bool anomalyOn = true; float darkMin = 30.f, maxKn = 60.f;   // the consistency checks (ais_anomaly.h)
     char fences[2048] = "";
     std::vector<std::string> fenceErrors;
     bool dirty = true;
@@ -37,6 +39,9 @@ void load() {
     S.cooldownMin = (float)std::max(0.5, std::min(1440.0, d.getD("aisCpaCooldownMin", 10)));
     S.ownMoving = d.getB("aisOwnMoving", false);
     S.ownSog = (float)d.getD("aisOwnSog", 0); S.ownCog = (float)d.getD("aisOwnCog", 0);
+    S.anomalyOn = d.getB("aisAnomalyOn", true);
+    S.darkMin = (float)std::max(5.0, std::min(720.0, d.getD("aisDarkMin", 30)));
+    S.maxKn = (float)std::max(20.0, std::min(150.0, d.getD("aisMaxKn", 60)));
     const std::string f = d.getS("aisFences", "");
     snprintf(S.fences, sizeof S.fences, "%s", f.c_str());
     S.dirty = true;
@@ -48,6 +53,7 @@ void save() {
     d.setB("aisCpaOn", S.cpaOn); d.setD("aisCpaNm", S.cpaNm); d.setD("aisTcpaMin", S.tcpaMin); d.setD("aisCpaCooldownMin", S.cooldownMin);
     d.setB("aisOwnMoving", S.ownMoving); d.setD("aisOwnSog", S.ownSog); d.setD("aisOwnCog", S.ownCog);
     d.setS("aisFences", S.fences);
+    d.setB("aisAnomalyOn", S.anomalyOn); d.setD("aisDarkMin", S.darkMin); d.setD("aisMaxKn", S.maxKn);
 }
 
 dect2::AisAlertConfig makeConfig() {
@@ -60,6 +66,7 @@ dect2::AisAlertConfig makeConfig() {
     c.ownSogKn = S.ownMoving ? S.ownSog : 0; c.ownCogDeg = S.ownMoving ? S.ownCog : 0;
     c.cpaNm = S.cpaNm; c.tcpaMin = S.tcpaMin; c.cooldownSec = S.cooldownMin * 60.0;
     c.filter = S.filter;
+    c.anomaly.enabled = S.anomalyOn; c.anomaly.darkMinutes = S.darkMin; c.anomaly.maxSpeedKn = S.maxKn;
     S.fenceErrors.clear();
     c.fences = dect2::aisParseGeofences(S.fences, &S.fenceErrors);
     return c;
@@ -153,6 +160,7 @@ void aisAlertsPanel(App& a) {
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("%s", tr("Alerts go to Automations as ais.cpa and ais.geofence (notification, sound, webhook, recording ...). Both are off until you turn them on."));
     ImGui::PopTextWrapPos();
+    incidentBoardUi(a, false);   // sea distress incidents (DSC + AIS-SART / MOB / EPIRB + NAVTEX), shown when there is one
     ImGui::Spacing();
     ch |= ImGui::Checkbox(tr("Close-approach alerts (CPA)"), &S.cpaOn);
     if (S.cpaOn) {
@@ -171,7 +179,13 @@ void aisAlertsPanel(App& a) {
     if (!S.fenceErrors.empty()) for (const std::string& e : S.fenceErrors) ImGui::TextColored(ImVec4(0.9f, 0.35f, 0.3f, 1), "%s", e.c_str());
     ImGui::Spacing();
     ImGui::TextDisabled("%s", tr("Alerts use the station filter (the Filter button above the table): only the stations it shows raise them."));
+    ch |= ImGui::Checkbox(tr("Spoof, clone and dark-ship checks"), &S.anomalyOn);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Flags positions no ship could reach, one MMSI in two places, aids that moved, wrong station class, impossible speeds, renamed ships, and ships that went silent inside the sea this receiver covers. Automatic; alerts go to Automations as ais.anomaly."));
     if (ImGui::TreeNode(trw("Advanced"))) {
+        if (S.anomalyOn) {
+            ch |= ImGui::SliderFloat(tr("dark ship: silent for (minutes)"), &S.darkMin, 5.f, 240.f, "%.0f");
+            ch |= ImGui::SliderFloat(tr("jump: speed limit (kn)"), &S.maxKn, 20.f, 150.f, "%.0f");
+        }
         ch |= ImGui::SliderFloat(tr("same ship again after (minutes)"), &S.cooldownMin, 1.f, 120.f, "%.0f");
         ch |= ImGui::Checkbox(tr("my own ship is moving"), &S.ownMoving);
         if (S.ownMoving) {
@@ -182,6 +196,32 @@ void aisAlertsPanel(App& a) {
     }
     if (ch) { save(); S.dirty = true; push(a); }
     ImGui::Separator();
+    {
+        const dect2::AisTelemetry& t = a.rx.ais;
+        if (S.anomalyOn) {
+            ImGui::TextUnformatted(tr("Anomalies"));
+            if (t.anomalySectors) ImGui::TextDisabled("%u %s, %u %s, %s %.0f nm", t.anomalyTracked, tr("ships tracked"), t.anomalySectors, tr("bearing sectors known"), tr("farthest range"), (double)t.anomalyRangeNm);
+            else if (!receiverLocationSet()) ImGui::TextDisabled("%s", tr("Set the receiver position (Settings) to turn on the dark-ship check."));
+            else ImGui::TextDisabled("%s", tr("Learning what this receiver hears in each direction (the dark-ship check starts by itself)."));
+            if (t.anomalies.empty()) ImGui::TextDisabled("%s", tr("none yet"));
+            else if (ImGui::BeginTable("##aisanom", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY, ImVec2(0, 8.f * ImGui::GetTextLineHeightWithSpacing()))) {
+                ImGui::TableSetupColumn(tr("UTC"));
+                ImGui::TableSetupColumn(tr("Kind"));
+                ImGui::TableSetupColumn(tr("Ship"), ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn(tr("Detail"), ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableHeadersRow();
+                for (auto it = t.anomalies.rbegin(); it != t.anomalies.rend(); ++it) {
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn(); ImGui::TextUnformatted(clock(it->utc).c_str());
+                    ImGui::TableNextColumn(); if (it->severity >= 2) ImGui::TextColored(ImVec4(0.9f, 0.35f, 0.3f, 1), "%s", it->kind.c_str()); else ImGui::TextUnformatted(it->kind.c_str());
+                    ImGui::TableNextColumn(); ImGui::Text("%s (%09u)", it->name.empty() ? "-" : it->name.c_str(), it->mmsi);
+                    ImGui::TableNextColumn(); ImGui::TextWrapped("%s", it->text.c_str());
+                }
+                ImGui::EndTable();
+            }
+            ImGui::Separator();
+        }
+    }
     ImGui::TextUnformatted(tr("Recent alerts"));
     const dect2::AisTelemetry& t = a.rx.ais;
     if (t.alerts.empty()) { ImGui::TextDisabled("%s", tr("none yet")); return; }

@@ -5,6 +5,7 @@
 #include "dect2/marine/marine_dsp.h"
 #include "dect2/marine/marine_bands.h"
 #include "dect2/marine/marine_navtex.h"
+#include "dect2/marine/marine_incident.h"
 #include "dect2/results/results_io.h"
 #include <algorithm>
 #include <atomic>
@@ -139,6 +140,8 @@ struct MarineReceiver::Impl {
         char b[160];
         snprintf(b, sizeof b, "NAVTEX %s%s: %s%s, %u characters, %u unreadable", m.header.c_str(), m.complete ? "" : " (cut short)", m.subjectName.c_str(), "", m.chars, m.errors);
         say(b);
+        if (m.complete) IncidentBoard::global().onNavtex(m, (double)m.rxTime);   // sea distress incidents (marine_incident.h)
+        incidentFlush([this](const std::string& t) { say(t); });
     }
 
     void onDsc(const DscCall& c0, bool vhfPath, double carrierHz = -1) {
@@ -167,6 +170,8 @@ struct MarineReceiver::Impl {
         tel.dataValid = true;
         if (c.eccOk) { lastDscSec = c.rxSec; dscVhfSeen = vhfPath; }   // only a checked call says which service is on the air
         say("DSC " + c.text);
+        IncidentBoard::global().onDsc(c, (double)c.rxTime);   // opens or joins a sea distress incident (marine_incident.h)
+        incidentFlush([this](const std::string& t) { say(t); });
     }
 
     // telMu held: the sample count starts again, the kept messages stay in the past of the new clock
