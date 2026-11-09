@@ -34,5 +34,6 @@ private:
 };
 
 ModeTuning xlinkTuning();
+ModeTuning xlinkNarrowTuning();   // the narrow-band members of the family
 
 } // namespace dect2

@@ -13,7 +13,7 @@ namespace {
 struct State { int view = 0; };
 State S;
 
-bool live(const App& a) { return a.rx.standard == 601; }   // the engine reports its standard code minus one
+bool live(const App& a) { return a.rx.standard == 601 || a.rx.standard == 602; }   // the engine reports its standard code minus one
 
 void framesView(App& a) {
     const auto& fr = a.rx.xlink.frames;

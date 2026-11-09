@@ -224,6 +224,7 @@
         <item>FrSky RC (D8 / D16)</item>
         <item>FlySky RC (AFHDS / 2A)</item>
         <item>wfb-ng / OpenHD</item>
+        <item>New Packet Radio (NPR-70)</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -429,6 +430,7 @@
         <item>FrSky D8 and D16 2.4 GHz RC links (CC2500 GFSK, hopping): transmitter id and channels; layouts from the DIY-Multiprotocol-TX-Module project, simulated signals only so far</item>
         <item>FlySky AFHDS and AFHDS 2A 2.4 GHz RC links (A7105 GFSK, hopping): transmitter id and channels; layouts from the DIY-Multiprotocol-TX-Module project, simulated signals only so far</item>
         <item>wfb-ng and OpenHD digital video links: 802.11n frames injected in monitor mode, MCS 0 - 7 at 20 MHz. Link and port, FEC block numbers, frames lost; the video stays encrypted</item>
+        <item>New Packet Radio on 70 cm (F4HDK NPR-70 modems): sync words, network ID and symbol rate of each frame. Frame content is not read, it is whitened by the radio chip. Simulated signals only so far</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -634,6 +636,7 @@
         <item>RC link</item>
         <item>RC link</item>
         <item>Video link, structure only</item>
+        <item>Packet radio, sync only</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -839,5 +842,6 @@
         <item>frsky d8 d16 accst taranis rc</item>
         <item>flysky afhds i6 rc</item>
         <item>wfb wfbng openhd openipc fpv video drone wifi broadcast</item>
+        <item>npr new packet radio f4hdk nfpr 70cm ip si4463</item>
     </string-array>
 </resources>

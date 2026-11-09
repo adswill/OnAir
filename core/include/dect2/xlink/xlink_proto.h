@@ -7,7 +7,7 @@
 
 namespace dect2::xlink {
 
-enum Proto { WfbNg = 1, OpenHd = 2 };
+enum Proto { WfbNg = 1, OpenHd = 2, Npr = 4 };
 const char* protoName(int proto);
 
 struct WfbFrame {

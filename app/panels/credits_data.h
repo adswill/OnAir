@@ -168,5 +168,6 @@ inline constexpr CreditEntry kCredits[] = {
     {"DIY-Multiprotocol-TX-Module", "Pascal Langer and contributors", "GPL-3.0", "core/src/rclink/rc_proto.cpp (FrSky D8 / D16 and FlySky AFHDS / 2A frame layouts, reverse-engineered there)", "format read, re-implemented", "https://github.com/pascallanger/DIY-Multiprotocol-TX-Module", "Compatible."},
     {"wfb-ng", "Vasily Evseenko and contributors", "GPL-3.0", "core/src/xlink/xlink_proto.cpp (802.11 frame layout, session and data packet headers)", "format read, re-implemented; no code taken", "https://github.com/svpcom/wfb-ng", "Compatible."},
     {"OpenHD wifibroadcast", "OpenHD contributors", "GPL-3.0", "core/src/xlink/xlink_proto.cpp (802.11 frame layout, radio port and nonce fields)", "format read, re-implemented; no code taken", "https://github.com/OpenHD/wifibroadcast", "Compatible."},
+    {"NPR-70 modem firmware", "F4HDK and contributors", "GPL-3.0", "core/src/xlink/npr.cpp (Si4463 radio settings, sync word and network ID table)", "settings read from the firmware; no code taken", "https://hackaday.io/project/164092-npr-new-packet-radio", "Compatible."},
 };
 inline constexpr int kCreditCount = (int)(sizeof kCredits / sizeof kCredits[0]);

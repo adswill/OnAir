@@ -1880,7 +1880,7 @@ case 301: {
     { Table tb({"Id", "Amt", "Category", "Flight State", "Emergency", "Lat", "Lon", "Alt M"}); int n = 0; for (auto it = t.aircraft.rbegin(); it != t.aircraft.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.id), cell(e.amt), cell(e.category), cell(e.flightState), cell(e.emergency), cell(e.lat), cell(e.lon), cell(e.altM)}); } if (n) addTable(o, "Aircraft", tb); }
     break;
 }
-case 601: {
+case 601: case 602: {
     const auto& t = rx.xlink; (void)t;
     cardIf(o, "Cfo Hz", t.cfoHz);
     cardIf(o, "Snr Db", t.snrDb);

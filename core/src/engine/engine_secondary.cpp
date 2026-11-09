@@ -297,7 +297,7 @@ void applySubMode(Engine& e, const SubMode* s) {
         break;
     case 22: e.mesh().setProtocols(s->decoders); break;
     case 362: e.rclink().setProtocols(s->decoders); break;
-    case 602: e.xlink().setProtocols(s->decoders); break;
+    case 602: case 603: e.xlink().setProtocols(s->decoders); break;
     case 32: e.vor().setFunction(s->sel); break;
     case 25: e.pager().setProtocols(s->decoders); break;
     case 17: e.marine().setService(s->sel); break;

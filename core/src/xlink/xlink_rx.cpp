@@ -3,6 +3,7 @@
 #include "dect2/common/mathconst.h"
 #include "dect2/dsp/resampler.h"
 #include "dect2/xlink/ht_phy.h"
+#include "dect2/xlink/npr.h"
 #include <chrono>
 #include <cmath>
 #include <map>
@@ -19,6 +20,18 @@ ModeTuning xlinkTuning() {
     t.sampleRate = 20e6;
     t.bandwidthMhz = 20;
     t.minSampleRate = 20e6;
+    return t;
+}
+
+ModeTuning xlinkNarrowTuning() {
+    ModeTuning t;
+    t.stdMode = 603;
+    t.id = "xlinknb";
+    t.name = "Extra links, narrow";
+    t.minMhz = 100; t.maxMhz = 6000; t.defMhz = 437;
+    t.sampleRate = 4e6;
+    t.bandwidthMhz = 2;
+    t.minSampleRate = 1e6;
     return t;
 }
 
@@ -47,6 +60,15 @@ struct XlinkReceiver::Impl {
     bool canHt = false, resample = false, rateTold = false;
     RationalResampler rsm;
     xlink::ht::HtRx ht;
+    struct NprChain {
+        double sr = 0;
+        RationalResampler rs;
+        std::unique_ptr<xlink::npr::SyncFinder> f;
+        std::vector<cf32> out;
+        std::vector<float> phase;
+        cf32 prev{1, 0};
+    };
+    std::vector<std::unique_ptr<NprChain>> npr;
     double phase = 0, dphi = 0;
     std::vector<cf32> buf, out;
     struct Seq { uint64_t lastBlock = 0; int lastFrag = -1; int maxFrag = -1; bool have = false; };
@@ -57,8 +79,30 @@ struct XlinkReceiver::Impl {
         ht.setCallback([this](const uint8_t* mpdu, size_t n, const xlink::ht::HtInfo& in) { onHt(mpdu, n, in); });
     }
 
+    void buildNpr() {
+        npr.clear();
+        if (!(protocols & xlink::Npr)) return;
+        for (int i = 0; i < 5; i++) {
+            const double sr = xlink::npr::kSymbolRates[i];
+            if (fs < 4 * sr - 1) continue;
+            auto c = std::make_unique<NprChain>();
+            c->sr = sr;
+            double err = 0;
+            if (std::fabs(fs - 4 * sr) > 1 && !c->rs.configure(fs, 4 * sr, &err, 1.3 * sr)) continue;
+            c->f = std::make_unique<xlink::npr::SyncFinder>(i);
+            c->f->setCallback([this, sr](const xlink::npr::Hit& h) {
+                char id[32], det[96];
+                snprintf(id, sizeof id, "network %d", h.network);
+                snprintf(det, sizeof det, "%.0f ksym/s 4GFSK, sync word 45 D2 %02X, payload whitened", sr / 1e3, (unsigned)(xlink::npr::syncWord(h.network) & 0xFF));
+                addFrame(xlink::Npr, id, "sync", det, "", h.offsetHz, 0.f);
+            });
+            npr.push_back(std::move(c));
+        }
+    }
+
     void rebuild() {
         dirty = false;
+        buildNpr();
         canHt = false;
         resample = false;
         phase = 0;
@@ -176,7 +220,6 @@ void XlinkReceiver::feed(const cf32* x, size_t n) {
     { std::lock_guard<std::mutex> g(s.m); rebuild = s.dirty && s.fs > 0; if (rebuild) s.rebuild(); }
     if (s.fs <= 0) return;
     s.nIn += (int64_t)n;
-    if (!(s.protocols & 1) || !s.canHt) { std::lock_guard<std::mutex> g(s.m); s.tel.timeSec = (double)s.nIn / s.fs; return; }
     const cf32* in = x;
     if (s.offset != 0) {
         s.buf.resize(n);
@@ -185,6 +228,16 @@ void XlinkReceiver::feed(const cf32* x, size_t n) {
         s.phase = std::remainder(ph, 2 * math::kPi);
         in = s.buf.data();
     }
+    for (auto& cp : s.npr) {
+        Impl::NprChain& c = *cp;
+        const cf32* y = in;
+        size_t m = n;
+        if (std::fabs(s.fs - 4 * c.sr) > 1) { c.out.clear(); c.rs.process(in, n, c.out); y = c.out.data(); m = c.out.size(); }
+        c.phase.resize(m);
+        for (size_t i = 0; i < m; i++) { c.phase[i] = (float)std::arg(y[i] * std::conj(c.prev)); c.prev = y[i]; }
+        c.f->feed(c.phase.data(), m);
+    }
+    if (!(s.protocols & 1) || !s.canHt) { std::lock_guard<std::mutex> g(s.m); s.tel.timeSec = (double)s.nIn / s.fs; s.tel.seq = ++s.seq; return; }
     if (s.resample) { s.out.clear(); s.rsm.process(in, n, s.out); s.ht.feed(s.out.data(), s.out.size()); }
     else s.ht.feed(in, n);
     const auto st = s.ht.stats();

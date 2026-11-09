@@ -8,6 +8,7 @@ const char* protoName(int proto) {
     switch (proto) {
     case WfbNg: return "wfb-ng";
     case OpenHd: return "OpenHD";
+    case Npr: return "NPR-70";
     default: return "?";
     }
 }
