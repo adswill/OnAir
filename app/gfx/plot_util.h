@@ -50,6 +50,24 @@ inline std::string formatFreqUnit(double mhz) {
 }
 
 // Alpha (0..1) at the bottom of a faded fill, from the fade amount (0: none).
+// Wheel or pinch zoom: the factor that keeps the new span inside minSpan..maxSpan. At a limit it is 1, so the view stays where it is (#425, #442).
+inline double zoomFactorWithin(double span, double factor, double minSpan, double maxSpan) {
+    if (!(span > 0) || !std::isfinite(span) || !std::isfinite(factor)) return 1;
+    return std::max(minSpan, std::min(maxSpan, span * factor)) / span;
+}
+// The narrowest span a plot can still draw at these values: below it the tick steps vanish in the rounding of a double, and a tick loop never ends (#442).
+inline double numericMinSpan(double lo, double hi) { return std::max(1e-12, std::max(std::fabs(lo), std::fabs(hi)) * 1e-11); }
+// A zoom left the dB view [lo, hi] above or below the whole trace [traceLo, traceHi] (#425): move the view, same span, so the nearest part of the trace
+// shows again, inside absLo..absHi. false: some of the trace is in view already, nothing changes.
+inline bool keepTraceInView(float& lo, float& hi, float traceLo, float traceHi, float absLo, float absHi) {
+    if (!(traceHi >= traceLo) || !(hi > lo) || (traceHi >= lo && traceLo <= hi)) return false;
+    const float span = hi - lo;
+    if (traceHi < lo) { lo = traceHi - span * 0.8f; hi = lo + span; }
+    else { hi = traceLo + span * 0.8f; lo = hi - span; }
+    if (lo < absLo) { lo = absLo; hi = lo + span; }
+    if (hi > absHi) { hi = absHi; lo = hi - span; }
+    return true;
+}
 inline float fillBottomAlpha(float fade) { return 1.f - std::min(1.f, std::max(0.f, fade)); }
 
 // Alpha factor of a dense scatter of n dots (alpha accumulation): 1 up to 600 dots, then falling with the square root, never below 0.22.

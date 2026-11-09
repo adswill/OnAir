@@ -802,6 +802,11 @@ if(DECT2_BUILD_APP)
   add_executable(spec_render tools/spec_render.cpp app/gfx/plot.cpp app/gfx/gfx_png.cpp)
   target_include_directories(spec_render PRIVATE app)
   target_link_libraries(spec_render PRIVATE dect2core imgui)
+  add_executable(test_wheel_zoom_limits tests/app/test_wheel_zoom_limits.cpp app/gfx/plot.cpp)   # #425 #442 the wheel stops at limits and never hangs; #465 modes without a slot
+  target_include_directories(test_wheel_zoom_limits PRIVATE app core/include)
+  target_compile_definitions(test_wheel_zoom_limits PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+  target_link_libraries(test_wheel_zoom_limits PRIVATE imgui)
+  add_test(NAME wheel_zoom_limits COMMAND test_wheel_zoom_limits)
   add_executable(test_freq_model tests/app/test_freq_model.cpp)   # listening / centre / hardware frequency and the SDR++ VFO rule
   add_test(NAME freq_model COMMAND test_freq_model)
   add_executable(test_freq_remember tests/app/test_freq_remember.cpp)   # #393 a saved satellite-carry frequency does not beat the mode default

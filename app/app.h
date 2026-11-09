@@ -1003,12 +1003,14 @@ void protolabWindow(App& a);   // protolab_ui.cpp: the Protocol lab window (View
 void esp32Window(App& a);       // app/esp32/esp32_ui.cpp: the nRF24 / ESP32 radio window (Tools menu, nRF24 mode)
 void signallabWindow(App& a);  // signallab_ui.cpp: the Signal Lab window (Tools > Signal Lab)
 void modeBuilderWindow(App& a);   // modebuilder_ui.cpp: the Mode Builder window (Tools > Mode Builder)
+void modeBuilderRegister(App& a); // modebuilder_ui.cpp: the Mode Builder row and the custom modes get their tuning; first thing in the frame
 void modeBuilderFrame(App& a);    // modebuilder_ui.cpp, every frame: lists the registered custom modes, runs the selected one on receiver 1
 void modeBuilderOpenText(const std::string& json);   // modebuilder_ui.cpp: opens the Mode Builder with this definition (Protocol lab > Export)
 bool customModeSink(const float* iq, size_t nComplex, double rate);   // modebuilder_ui.cpp: the samples of a running custom mode (true: taken)
 void txStudioWindow(App& a);   // tx_studio.cpp: Tools > TX studio (a.txStudioOpen); no radio, nothing is transmitted
 bool vgQueueDrop(int n, const char** paths);   // videogen_ui.cpp: files dropped on the window; true when the Digital video generator is open and took them
 void videoGenWindow(App& a);   // videogen_ui.cpp: Tools > Digital video generator (a.videoGenOpen); stands alone, no link to the receiver or transmitter
+void pluginRegister(App& a);       // plugin/plugin_app.cpp: discovery and the tunings of the plugin rows; first thing in the frame
 void pluginFrame(App& a);          // plugin/plugin_app.cpp, every frame: discovery at the first call, starts and stops the running plugin mode, ticks the host
 void pluginShutdown();             // at exit: stops the plugins and removes the crash marker
 void pluginManagerWindow(App& a);  // View > Plugins

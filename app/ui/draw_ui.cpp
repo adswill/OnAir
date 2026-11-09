@@ -315,6 +315,8 @@ static void hiddenPopOut(App& a) {
 }
 
 void drawUI(App& a, ImVec2 disp, bool draw) {
+    modeBuilderRegister(a);   // before the toolbar: it reads the tuning of the mode on screen, and a saved or --pick mode is on screen from the first frame (#465)
+    pluginRegister(a);
     {   // the user's power choices (View > Power) to the policy the engine and the background threads read
         dect2::power::Settings ps;
         ps.lowPower = (dect2::power::LowPowerMode)std::clamp(a.powerLowMode, 0, 2);

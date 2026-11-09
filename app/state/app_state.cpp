@@ -1,4 +1,5 @@
 // application state: preferences, device list, bandwidth, ingesting spectrum and receiver telemetry, channel list
+#include "mode_slot.h"
 #include "freq_remember.h"
 #include "rx_width.h"
 #include "dect2/engine/widespan.h"
@@ -103,7 +104,9 @@ void setMode(App& a, int f, int sub) {
     if (a.family >= 6 && from < kNumSlots && to != from) a.famFreq[from] = a.freqMhz;   // each of the newer modes comes back on the frequency it was left on
     if (a.family >= 0 && from < kNumSlots && to != from) {   // the gains that suit FM are not the ones for a TV channel: remember them per mode
         a.famGain[from] = {a.tune.lnaDb, a.tune.vgaDb, a.tune.ampOn, true};
-        const App::FamGain& g = a.famGain[to];
+        // the Mode Builder (19999), Plugins (999), plugin and custom modes have no slot: their family number is far past the end of these arrays (#465)
+        const App::FamGain* gp = modeslot::at(a.famGain, to);
+        const App::FamGain g = gp ? *gp : App::FamGain{};
         if (g.known) { a.tune.lnaDb = g.lna; a.tune.vgaDb = g.vga; a.tune.ampOn = g.amp; }
         else if (f == 5) { a.tune.lnaDb = 24; a.tune.vgaDb = 20; a.tune.ampOn = false; }   // FM stations are strong
         else if (a.family == 5 || f >= 6) { a.tune.lnaDb = 32; a.tune.vgaDb = 34; a.tune.ampOn = false; }   // the amp is off unless the user turns it on (it can be damaged by strong signals): its 14 dB are in the VGA
@@ -126,7 +129,8 @@ void setMode(App& a, int f, int sub) {
         const ModeTuning* mt = modeTuning(f + 2);
         const SubMode* sm = curSub(a);
         const double def = sm ? sm->defMhz : mt ? mt->defMhz : a.freqMhz;
-        a.freqMhz = rememberedFreqOk(mt, def, a.famFreq[to]) ? a.famFreq[to] : def;
+        const double* remembered = modeslot::at(a.famFreq, to);
+        a.freqMhz = remembered && rememberedFreqOk(mt, def, *remembered) ? *remembered : def;
         if (carryMhz > 0) a.freqMhz = carryMhz;
     }
     if (f == 0 && !(a.freqMhz >= 170 && a.freqMhz <= 870)) a.freqMhz = 522.0;       // a TV channel, not a leftover FM or DAB frequency

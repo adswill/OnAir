@@ -91,6 +91,7 @@ void EndSubplots();
 void SetupAxes(const char* xLabel, const char* yLabel, int xFlags = 0, int yFlags = 0);
 void SetupAxisLimits(Axis axis, double min, double max, Cond cond = Cond_Once);
 void SetupAxisConstraints(Axis axis, double min, double max);   // pan and zoom (drag, wheel) stay inside min..max
+void SetupAxisSpan(Axis axis, double minSpan, double maxSpan);   // the view of this axis is never narrower or wider than this (every axis also has a floor the drawing needs)
 void SetupAxisFormat(Axis axis, const char* fmt);
 void SetupAxisUnit(Axis axis, double unit);   // data in one unit, tick labels in another: a label shows value * unit
 void SetupAxisScale(Axis axis, Scale scale);

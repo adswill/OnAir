@@ -33,6 +33,7 @@ struct AxisSetup {
     std::vector<std::string> tickLab;
     double* linkMin = nullptr; double* linkMax = nullptr;
     double cmin = -std::numeric_limits<double>::infinity(), cmax = std::numeric_limits<double>::infinity();   // pan and zoom stay inside these
+    double spanMin = 0, spanMax = std::numeric_limits<double>::infinity();   // SetupAxisSpan: how narrow and how wide the view may get
     double fitMin = std::numeric_limits<double>::infinity(), fitMax = -std::numeric_limits<double>::infinity();
 };
 
@@ -172,7 +173,21 @@ std::vector<Tick> makeTicks(int a, double pixels, double minPixelsPerTick) {
 
 // keep [a, b] of axis ax inside the constraints: no wider than they are, and shifted back in
 static double gPanOverflowX = 0;
+// the span an axis may have: what SetupAxisSpan and the constraints ask for, and always one the drawing can resolve
+void spanLimits(int ax, double a, double b, double& mn, double& mx) {
+    const AxisSetup& A = C.ax[ax];
+    mx = std::min(A.spanMax, 1e15);
+    if (std::isfinite(A.cmin) && std::isfinite(A.cmax) && A.cmax > A.cmin) mx = std::min(mx, A.cmax - A.cmin);
+    mn = std::min(mx, std::max(A.spanMin, numericMinSpan(a, b)));
+}
 void clampAxis(int ax, double& a, double& b) {
+    if (!std::isfinite(a) || !std::isfinite(b)) return;
+    double smn, smx;
+    spanLimits(ax, a, b, smn, smx);
+    if (b - a < smn || b - a > smx) {   // too narrow or too wide (the wheel stops at the limit by itself; this catches the rest): keep the middle
+        const double mid = (a + b) * 0.5, s = std::max(smn, std::min(smx, b - a));
+        a = mid - s * 0.5; b = mid + s * 0.5;
+    }
     const double lo = C.ax[ax].cmin, hi = C.ax[ax].cmax;
     if (!std::isfinite(lo) || !std::isfinite(hi) || !(hi > lo)) return;
     double span = b - a;
@@ -280,7 +295,10 @@ void finishSetup() {
                     p = tunedrag::zoomAnchor(p, C.zoomMarker, b0, b1, C.plot.GetWidth(), C.zoomMarkerPx);
                     mm = (p - b0) / r;
                 }
-                double n0 = p - mm * r * f, n1 = p + (1 - mm) * r * f;
+                double smn, smx;
+                spanLimits(a, b0, b1, smn, smx);
+                const double ff = zoomFactorWithin(r, f, smn, smx);
+                double n0 = p - mm * r * ff, n1 = p + (1 - mm) * r * ff;
                 clampAxis(a, n0, n1);
                 if (smooth) { C.st->tgt[a][0] = n0; C.st->tgt[a][1] = n1; C.st->hasTgt[a] = true; }
                 else { C.st->lim[a][0] = n0; C.st->lim[a][1] = n1; }
@@ -294,8 +312,11 @@ void finishSetup() {
             for (int a = 0; a < 2; a++) {
                 if (!(movable[a] && C.ax[a].scale == Scale_Linear)) continue;
                 const double m = a == 0 ? mx : my, r = C.st->lim[a][1] - C.st->lim[a][0], p = C.st->lim[a][0] + m * r;
-                const double pan = a == 0 ? -g.panDx / C.plot.GetWidth() * r * f : g.panDy / C.plot.GetHeight() * r * f;
-                double n0 = p - m * r * f + pan, n1 = p + (1 - m) * r * f + pan;
+                double smn, smx;
+                spanLimits(a, C.st->lim[a][0], C.st->lim[a][1], smn, smx);
+                const double ff = zoomFactorWithin(r, f, smn, smx);
+                const double pan = a == 0 ? -g.panDx / C.plot.GetWidth() * r * ff : g.panDy / C.plot.GetHeight() * r * ff;
+                double n0 = p - m * r * ff + pan, n1 = p + (1 - m) * r * ff + pan;
                 clampAxis(a, n0, n1);
                 C.st->lim[a][0] = n0; C.st->lim[a][1] = n1; C.st->hasTgt[a] = false;
             }
@@ -452,6 +473,7 @@ void SetupAxisLimits(Axis a, double mn, double mx, Cond cond) {
     C.ax[a].min = mn; C.ax[a].max = mx; C.ax[a].cond = cond; C.ax[a].haveLimits = true;
 }
 void SetupAxisConstraints(Axis a, double lo, double hi) { if (C.active) { C.ax[a].cmin = lo; C.ax[a].cmax = hi; } }
+void SetupAxisSpan(Axis a, double minSpan, double maxSpan) { if (C.active) { C.ax[a].spanMin = minSpan; C.ax[a].spanMax = maxSpan; } }
 void SetupAxisFormat(Axis a, const char* fmt) { if (C.active) C.ax[a].fmt = fmt ? fmt : ""; }
 void SetupAxisUnit(Axis a, double unit) { if (C.active && unit > 0 && std::isfinite(unit)) C.ax[a].unit = unit; }
 void SetupAxisScale(Axis a, Scale s) { if (C.active) C.ax[a].scale = s; }

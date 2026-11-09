@@ -7,6 +7,7 @@
 // Frequencies are whole kHz: 118500 is the 25 kHz channel 118.500; 118505 is the 8.33 kHz channel named 118.505 (the channel 118.500 MHz with
 // 8.33 spacing), 118510 is 118.50833 MHz. The same convention as the airband mode's channel names (airband_rx.h, airbandParse).
 #pragma once
+#include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -33,6 +34,14 @@ struct Airport {
     std::vector<AirportFreq> freqs;
     size_t airbandCount() const { size_t n = 0; for (const auto& f : freqs) n += f.airband(); return n; }
 };
+
+// The name of a channel row found by searching for an airport code. The label carries the ICAO code, so a search by the IATA code (ASM finds HHAS)
+// says why the row is there (#411).
+inline std::string airportRowName(const Airport& a, const std::string& label, const std::string& query) {
+    if (a.iata.empty() || query.size() != a.iata.size()) return label;
+    for (size_t i = 0; i < query.size(); i++) if (std::toupper((unsigned char)query[i]) != std::toupper((unsigned char)a.iata[i])) return label;
+    return label + " (" + a.iata + ")";
+}
 
 struct AirportReport { size_t airports = 0, freqs = 0, skipped = 0; std::vector<std::string> log; };
 

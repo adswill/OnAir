@@ -10,8 +10,8 @@
 156.825|Long-range AIS 2 (channel 76)|25|Message 27 from class A ships to AIS satellites (ITU-R M.1371-5, WRC-15); weak from the shore
 159.400|AIS all four channels (capture centre)|5400|One capture of 6 Msps or more holds AIS 1, AIS 2, 75 and 76 (docs/SATELLITE_AIS.md)
 @mode vdes
-161.950|VDES ASM 1|25|Application specific messages
-162.050|VDES ASM 2|25|
+161.950|VDES ASM 1|25|Application specific messages (channel 2027, Radio Regulations Appendix 18)
+162.000|VDES ASM 2|25|Application specific messages (channel 2028, Radio Regulations Appendix 18)
 @mode dsc
 156.525|DSC distress calling (VHF channel 70)|25|1200 baud FSK, ITU-R M.493
 2.1875|DSC MF distress (2187.5 kHz)|1|

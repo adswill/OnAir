@@ -1157,3 +1157,10 @@ Network IQ sources now scrub NaN/infinity (SDR++, SpyServer float); rtl_tcp chun
 - Follow-ups: Python added to ci-full.yml's Windows job and the Linux Docker images (the build now generates the font resources); LoRa APRS comment box has its own ImGui ID; no B-frames on h264_videotoolbox (the muxer refused them).
 - Left out: #448 (draft, its author withdrew delay-loaded FFmpeg, overlaps the existing external FFmpeg folder setting) and #414 (already ported in a161b3310, the rest duplicates our Aero C code).
 - Checked on macOS: typography, text_select, modebuilder, native_lifecycle, native_nobias, theme, credits, i18n, gui_rules, tx, tx_params, tx_loraaprs, videogen. Not exercised here: Windows camera path, FFmpeg prefix check in package builds, NVENC/AMF, over-the-air LoRa APRS.
+## 2026-11-09: Mode Builder crash, wheel zoom limits, VDES ASM 2 (#465, #442, #425, #411)
+
+#465: reproduced by selecting Mode Builder while running (SIGBUS in setMode). The family number 19999 was used as an index into famGain and famFreq, which only have kNumSlots entries; Plugins and the plugin and custom modes read past the end the same way. setMode now checks the slot (app/state/mode_slot.h). A second crash showed up when the mode is on screen from the first frame (--pick): the toolbar read the tuning before it was registered, so the registration now runs first in drawUI.
+
+#425, #442: a headless run of the real plot code hung after 310 wheel notches, in the tick loop of the frequency axis (the step was lost in double rounding). The wheel had no span limit on either axis and the dB axis no range at all. Added SetupAxisSpan and a numeric floor for every plot; the spectrum and waterfall stop at 1 kHz and at 10 to 180 dB inside -160..20, and a wheel zoom can no longer leave the dB view off the trace. The other items in #442 are not touched.
+
+#411: ASM 2 is 162.000 MHz (channel 2028), corrected from 162.050. A row found by an IATA code now shows it ("HHAS Tower (ASM)"). The CSV export already exists. Open: the VDES receiver still treats ASM as AIS 1 / AIS 2 (161.975 / 162.025 MHz, GMSK), which does not match the channels above.
