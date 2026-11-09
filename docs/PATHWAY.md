@@ -1150,3 +1150,10 @@ Network IQ sources now scrub NaN/infinity (SDR++, SpyServer float); rtl_tcp chun
 - Thread (family 244): the 802.15.4 receiver in Thread mode + thread_proto (beacon network name / ext PAN / version, MAC security aux header, 6LoWPAN mesh / fragment / IPHC / UDP NHC, MLE and CoAP where clear). Encrypted traffic is shown as encrypted (no keys). tests/thread. No user-supplied Zigbee / Thread network key decryption (not done).
 ## 2026-11-07 - bug hunt 3.7-D (sources and modes)
 Network IQ sources now scrub NaN/infinity (SDR++, SpyServer float); rtl_tcp chunk test added; modes and drivers reviewed, listed in docs/BUGS-3.7-D.md. No ASan run yet (GitHub).
+
+## 2026-11-09: open pull requests reviewed for 3.7 (feat37-prs)
+
+- Merged, authors kept: #461 (DME-3, FSK acquisition, fixes #460), #447 (bellx2, RTL-SDR macOS read thread, may help #210), #445 (peterdewitte, Windows camera and microphone by name), #467 (peterdewitte, LoRa APRS transmit), #446 and #444 (peterdewitte, video generator encoders, easy mode and preview; joined by hand), #437 (BI8SYN, Chinese fonts, squashed at the author's request so the full-size font blobs stay out of the history).
+- Follow-ups: Python added to ci-full.yml's Windows job and the Linux Docker images (the build now generates the font resources); LoRa APRS comment box has its own ImGui ID; no B-frames on h264_videotoolbox (the muxer refused them).
+- Left out: #448 (draft, its author withdrew delay-loaded FFmpeg, overlaps the existing external FFmpeg folder setting) and #414 (already ported in a161b3310, the rest duplicates our Aero C code).
+- Checked on macOS: typography, text_select, modebuilder, native_lifecycle, native_nobias, theme, credits, i18n, gui_rules, tx, tx_params, tx_loraaprs, videogen. Not exercised here: Windows camera path, FFmpeg prefix check in package builds, NVENC/AMF, over-the-air LoRa APRS.
