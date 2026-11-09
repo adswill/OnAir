@@ -21,10 +21,11 @@ const char* protoName(Proto p) {
     case Proto::Mpt1327: return "MPT 1327";
     case Proto::Edacs: return "EDACS";
     case Proto::Ltr: return "LTR";
+    case Proto::MotorolaTypeII: return "Motorola Type II";
     default: return "other";
     }
 }
-bool protoDigitalVoice(Proto p) { return p != Proto::Mpt1327 && p != Proto::Ltr && p != Proto::Other; }   // EDACS: the analog calls are followed as carriers; both need the radio only
+bool protoDigitalVoice(Proto p) { return p != Proto::Mpt1327 && p != Proto::Ltr && p != Proto::Other && p != Proto::MotorolaTypeII; }   // EDACS: the analog calls are followed as carriers; both need the radio only
 
 namespace {
 

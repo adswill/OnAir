@@ -166,6 +166,9 @@
 #include "dect2/fusion/fusion_rx.h"
 #include "dect2/ltr/ltr_rx.h"
 #include "dect2/edacs/edacs_rx.h"
+#include "dect2/smartnet/smartnet_rx.h"
+#include "dect2/tetradmo/tetradmo_rx.h"
+#include "dect2/opensky/opensky_rx.h"
 #include "dect2/marinevhf/marinevhf_rx.h"
 #include "dect2/p25p2/p25p2_rx.h"
 #include "dect2/milhf/milhf_engine.h"
@@ -595,6 +598,9 @@ public:
     LtrReceiver& ltr() { return rxLtr_; }   // LTR control channel (telemetry through latestRx)
     MarineVhfReceiver& marineVhf() { return rxMarineVhf_; }   // Marine VHF voice: all channels of the span (telemetry through latestRx)
     EdacsReceiver& edacs() { return rxEdacs_; }   // EDACS control channel (telemetry through latestRx)
+    SmartnetReceiver& smartnet() { return rxSmartnet_; }   // Motorola Type II (family 320), telemetry through latestRx
+    TetraDmoReceiver& tetradmo() { return rxTetraDmo_; }   // TETRA Direct Mode (family 321)
+    OpenSkyReceiver& opensky() { return rxOpenSky_; }      // OpenSky identifier (family 322)
     SbasReceiver& sbas() { return rxSbas_; }   // SBAS L1: the decoded messages are cleared from here (telemetry through latestRx)
     AsterixReceiver& asterix() { return rxAsterix_; }   // ASTERIX: UDP / file input, demo, origin; its own telemetry (it runs without a radio)
     ArgosReceiver& argos() { return rxArgos_; }   // Argos uplink / downlink: link choice, clear (telemetry through latestRx)
@@ -994,6 +1000,9 @@ private:
     FusionReceiver rxFusion_;
     LtrReceiver rxLtr_;
     EdacsReceiver rxEdacs_;
+    SmartnetReceiver rxSmartnet_;
+    TetraDmoReceiver rxTetraDmo_;
+    OpenSkyReceiver rxOpenSky_;
     MarineVhfReceiver rxMarineVhf_;
     P25p2Receiver rxP25p2_;
     MilhfReceiver rxMilhf_;

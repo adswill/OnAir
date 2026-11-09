@@ -1,12 +1,22 @@
 // EDACS whole-system test signal (see edacs_gen.h).
 #include "dect2/edacs/edacs_gen.h"
 #include "dect2/edacs/edacs_proto.h"
+#include "dect2/edacs/provoice.h"
 #include <algorithm>
 #include <cmath>
 #include <complex>
 #include <random>
 
 namespace dect2 {
+
+void edacsPvInfo(uint32_t seed, int frame, uint8_t info[88]) {
+    std::mt19937 r(seed * 977u + (uint32_t)frame);
+    for (int i = 0; i < 88; i++) info[i] = (uint8_t)(r() & 1);
+    // a fundamental that gives a K well inside the table (the speech parameters of a real call do this)
+    for (int i = 1; i <= 6; i++) info[i] = (uint8_t)((60 >> (6 - i)) & 1);
+    info[86] = 1; info[87] = 0;
+    info[0] = 0;
+}
 
 std::vector<cf32> edacsSystemSignal(const EdacsGenConfig& c) {
     const double pi = 3.14159265358979323846;
@@ -36,6 +46,7 @@ std::vector<cf32> edacsSystemSignal(const EdacsGenConfig& c) {
             if (t >= t0 && t < call.endSec && k % 3 == 1) {   // the assignment repeats every third frame while the call lasts
                 edacs::Msg m;
                 m.type = call.group ? edacs::MsgType::GroupAssign : edacs::MsgType::IndividualAssign; m.lcn = call.lcn; m.emergency = call.emergency;
+                m.digital = call.digital;
                 m.gid = call.group ? call.gid & 0x7FF : call.gid & 0x3FFF; m.lid = call.lid & 0x3FFF; m.source = call.lid & 0x3FFF; m.individual = !call.group;
                 edacs::build(m, c.layout, a, b);
             }
@@ -56,6 +67,21 @@ std::vector<cf32> edacsSystemSignal(const EdacsGenConfig& c) {
         if (call.lcn < 1 || (size_t)call.lcn > c.lcnFreqHz.size()) continue;
         const double off = c.lcnFreqHz[(size_t)call.lcn - 1] - c.centreHz;
         const size_t i0 = (size_t)std::llround(call.startSec * c.rate), i1 = std::min(total, (size_t)std::llround(call.endSec * c.rate));
+        if (call.digital) {
+            // ProVoice: blocks of four generated IMBE frames; the bit stream runs for the whole call
+            std::vector<uint8_t> vb;
+            const int blocks = (int)((call.endSec - call.startSec) * edacs::kBaud / provoice::kBlockBits) + 2;
+            int frame = 0;
+            for (int b = 0; b < blocks; b++) {
+                provoice::Frame7100 f[4];
+                for (int k = 0; k < 4; k++) { uint8_t info[88]; edacsPvInfo(call.pvSeed, frame++, info); provoice::encode7100(info, f[k]); }
+                const auto block = provoice::makeBlock(f, provoice::kSyncStd, (uint16_t)(call.lid & 0x3FFF));
+                vb.insert(vb.end(), block.begin(), block.end());
+            }
+            std::vector<cf32> v = edacs::modulate(vb, c.rate, off, 2400.0, call.amp, true);   // payload bit 1 is the lower frequency
+            for (size_t i = i0; i < i1 && i - i0 < v.size(); i++) sig[i] += v[i - i0];
+            continue;
+        }
         double ph = 0;
         for (size_t i = i0; i < i1; i++) {
             const double t = (double)i / c.rate;

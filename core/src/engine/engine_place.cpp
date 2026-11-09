@@ -263,6 +263,9 @@ void Engine::configureReceiver(int a, double r) {
     case 155: rxIsdbs_.configure(r); break;
     case 130: rxLtr_.configure(r); break;
     case 131: rxEdacs_.configure(r); break;
+    case 321: rxSmartnet_.configure(r); break;
+    case 322: rxTetraDmo_.configure(r); break;
+    case 323: rxOpenSky_.configure(r); break;
     case 156: rxMarineVhf_.configure(r); break;
     case 181: rxP25p2_.configure(r); break;
     default: break;
@@ -438,6 +441,9 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 155: rxIsdbs_.setSignalOffset(o); rxIsdbs_.setCenterHz(centreHz); break;
     case 130: rxLtr_.setSignalOffset(o); rxLtr_.setCenterHz(centreHz); break;
     case 131: rxEdacs_.setSignalOffset(o); rxEdacs_.setCenterHz(centreHz); break;
+    case 321: rxSmartnet_.setCenterHz(centreHz); rxSmartnet_.setSignalOffset(o); break;
+    case 322: rxTetraDmo_.setSignalOffset(o); break;
+    case 323: rxOpenSky_.setSignalOffset(o); break;
     case 156: rxMarineVhf_.setSignalOffset(o); rxMarineVhf_.setCenterHz(centreHz); rxMarineVhf_.setDialHz(dialHz); break;
     case 181: rxP25p2_.setSignalOffset(o); break;
     case 134: rxKaws_.setSignalOffset(o); break;

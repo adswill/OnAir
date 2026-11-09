@@ -16,6 +16,8 @@ struct EdacsGenCall {
     double announceLeadSec = 0.05;           // the assignment goes out this long before the carrier
     bool announce = true;                     // false: a carrier only
     bool sendEnd = true;                     // a call end message when the carrier stops
+    bool digital = false;                    // ProVoice: 9600 bit/s frames of generated IMBE data (the seed below) instead of a tone
+    uint32_t pvSeed = 1;
     double toneHz = 1000, devHz = 3000;      // the voice: a tone
     float amp = 0.4f;
 };
@@ -38,5 +40,8 @@ struct EdacsGenConfig {
 };
 
 std::vector<cf32> edacsSystemSignal(const EdacsGenConfig& c);
+
+// The ProVoice information bits of frame number n of a generated call (88 bits, 7100 arrangement), also for the tests
+void edacsPvInfo(uint32_t seed, int frame, uint8_t info[88]);
 
 } // namespace dect2

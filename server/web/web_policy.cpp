@@ -30,6 +30,8 @@ const std::vector<DecoderInfo>& decoderCatalogue() {
         {"p25", DecoderClass::Voice, "P25"},
         {"nxdn", DecoderClass::Voice, "NXDN"},
         {"tetra", DecoderClass::Voice, "TETRA"},
+        {"smartnet", DecoderClass::Voice, "Motorola Type II"},
+        {"tetradmo", DecoderClass::Voice, "TETRA DMO"},
         {"dpmr", DecoderClass::Voice, "dPMR"},
         {"dstar", DecoderClass::Voice, "D-STAR"},
         {"ysf", DecoderClass::Voice, "Yaesu System Fusion"},
@@ -54,7 +56,7 @@ const std::set<std::string>& webSafeKinds() {
     return s;
 }
 const std::set<std::string>& voiceKinds() {
-    static const std::set<std::string> s = {"dmr", "p25", "nxdn", "tetra", "dpmr", "dstar", "d-star", "ysf", "fusion", "yaesu", "m17", "dmr_wide",
+    static const std::set<std::string> s = {"dmr", "p25", "nxdn", "tetra", "smartnet", "tetradmo", "dpmr", "dstar", "d-star", "ysf", "fusion", "yaesu", "m17", "dmr_wide",
                                             "p25_wide", "nxdn_wide", "edacs", "tetrapol", "mpt1327", "ltr", "trunk", "trunking", "p25p2", "marinevhf"};
     return s;
 }
@@ -80,7 +82,7 @@ const std::set<std::string>& restrictedKnownKinds() {
     // 3.2 modes: blocked likewise
     "rclink", "reticulum", "elrs", "mavlink", "frsky", "flysky", "roshf", "ssdv", "ebicab", "esubghz", "inmsat", "bgan", "nrf24", "sensors", "sferics",
     // 3.4 modes: blocked likewise
-    "iptv", "atis", "selcal", "gk2alrit", "gk2ahrit",   // (esubghz was never classified: web_safety failed on integ-32)
+    "iptv", "atis", "selcal", "gk2alrit", "gk2ahrit", "opensky",   // (esubghz was never classified: web_safety failed on integ-32)
     // 3.5 modes: blocked likewise (shortwave is a broadcast receiver like "general", but the web allow-list is the owner's call)
     "shortwave",
     // 3.6 modes: blocked likewise

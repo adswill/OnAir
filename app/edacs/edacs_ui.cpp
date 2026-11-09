@@ -1,6 +1,6 @@
 // EDACS trunking screens: lock, good / bad frame counts, the frame list and a table of the most frequent data words, then the calls, talkgroups and
 // site information read from the control channel, the voice channel table with its activity, and the following of one analog voice channel.
-// Control data and analog voice only; ProVoice (digital) voice is not decoded and nothing encrypted is handled. The data words are shown raw next to what the
+// Control data, analog voice, and ProVoice through the user-installed IMBE plug-in; nothing encrypted is handled. The data words are shown raw next to what the
 // published message layout makes of them (core/include/dect2/edacs/edacs_msg.h); only frames whose first message passes its BCH check are listed.
 #include "app.h"
 #include "dect2/edacs/edacs_rx.h"
@@ -112,7 +112,7 @@ std::string idOf(int v) { return v < 0 ? std::string("?") : std::to_string(v); }
 void voiceSection(App& a, const dect2::EdacsTelemetry& t) {
     ImGui::Spacing();
     ImGui::SeparatorText("Voice channels");
-    ImGui::TextDisabled("Analog FM voice only. ProVoice (digital) calls are not decoded, nothing encrypted is handled. Needs a capture wide enough to hold the channels.");
+    ImGui::TextDisabled("Analog FM calls, and ProVoice calls through the user-installed IMBE plug-in (onair-codec-imbe). Nothing encrypted is handled. Needs a capture wide enough to hold the channels.");
     ImGui::TextUnformatted("Frequency table (MHz): one line per channel, the first line is LCN 1, or \"LCN frequency\"");
     if (ImGui::InputTextMultiline("##edtable", S.table, sizeof S.table, ImVec2(-1, 90 * gUi))) S.dirty = true;
     if (ImGui::Checkbox("Follow calls", &S.follow)) S.dirty = true;
@@ -166,7 +166,7 @@ void messageSection(App& a, const dect2::EdacsTelemetry& t) {
             ImGui::TableNextColumn(); ImGui::TextUnformatted(idOf(c.lid).c_str());
             ImGui::TableNextColumn(); ImGui::Text("%.1f", c.durSec);
             ImGui::TableNextColumn();
-            ImGui::Text("%s%s%s", c.fromActivity ? "carrier only " : "", c.emergency ? "emergency " : "", c.digital ? "digital (not decoded)" : "");
+            ImGui::Text("%s%s%s", c.fromActivity ? "carrier only " : "", c.emergency ? "emergency " : "", c.digital ? "ProVoice" : "");
         }
         ImGui::EndTable();
     }

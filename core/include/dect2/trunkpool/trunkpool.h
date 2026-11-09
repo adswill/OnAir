@@ -22,7 +22,7 @@ namespace dect2 {
 namespace trunk { struct Grant; }
 namespace tpool {
 
-enum class Proto { P25p1, P25p2, DmrTier3, DmrCapPlus, DmrConnectPlus, Tetra, Mpt1327, Edacs, Ltr, Other };
+enum class Proto { P25p1, P25p2, DmrTier3, DmrCapPlus, DmrConnectPlus, Tetra, Mpt1327, Edacs, Ltr, Other, MotorolaTypeII };
 const char* protoName(Proto p);
 bool protoDigitalVoice(Proto p);
 

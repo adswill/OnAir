@@ -223,6 +223,9 @@
         <item>MAVLink (SiK radio)</item>
         <item>FrSky RC (D8 / D16)</item>
         <item>FlySky RC (AFHDS / 2A)</item>
+        <item>Motorola Type II</item>
+        <item>TETRA DMO</item>
+        <item>OpenSky identifier</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -427,6 +430,9 @@
         <item>MAVLink telemetry on SiK / 3DR radios at 433 and 915 MHz: GFSK frequency hopping, every air speed, MAVLink v1 / v2 messages with vehicle position on the map</item>
         <item>FrSky D8 and D16 2.4 GHz RC links (CC2500 GFSK, hopping): transmitter id and channels; layouts from the DIY-Multiprotocol-TX-Module project, simulated signals only so far</item>
         <item>FlySky AFHDS and AFHDS 2A 2.4 GHz RC links (A7105 GFSK, hopping): transmitter id and channels; layouts from the DIY-Multiprotocol-TX-Module project, simulated signals only so far</item>
+        <item>Motorola Type II trunking (SmartNet, SmartZone): 3600 bit/s control channel, talkgroups, sites, calls followed inside the capture (analog as FM, digital through the P25 receiver and the user-installed IMBE plug-in)</item>
+        <item>TETRA Direct Mode (terminal to terminal, or through a DM repeater or gateway): the addresses, the calls and clear speech (with the user-installed TETRA codec); encrypted calls are listed, not decoded</item>
+        <item>OpenSky (M/A-COM / Harris) identifier: measures the symbol rate, the levels, the width and the TDMA burst pattern; the air interface is not public and the traffic is encrypted, so nothing is decoded</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -631,6 +637,9 @@
         <item>Drone telemetry</item>
         <item>RC link</item>
         <item>RC link</item>
+        <item>SmartNet, SmartZone</item>
+        <item>Direct Mode</item>
+        <item>identify only</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -835,5 +844,8 @@
         <item>mavlink sik 3dr ardupilot px4 telemetry drone</item>
         <item>frsky d8 d16 accst taranis rc</item>
         <item>flysky afhds i6 rc</item>
+        <item>smartnet smartzone motorola type ii trunking</item>
+        <item>tetra dmo direct mode</item>
+        <item>opensky macom harris fmp</item>
     </string-array>
 </resources>

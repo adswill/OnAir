@@ -194,6 +194,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES adsl)   # ADS-L (family 300, docs/ADSL-3.8.md): core/src/adsl, app/adsl, tests/adsl
   list(APPEND DECT2_MODES autoparam)   # the shared Auto detectors (docs/AUTO-PARAMS-3.8.md)
   list(APPEND DECT2_MODES ease)   # first-use helpers across modes (3.8): core/src/ease, app/ease, tests/ease
+  list(APPEND DECT2_MODES smartnet tetradmo opensky)   # Motorola Type II (320), TETRA Direct Mode (321), OpenSky identifier (322): docs/VOICE-TRUNK-3.8.md
   list(APPEND DECT2_MODES pactor)   # PACTOR-I monitor (family 203): core/src/pactor, app/pactor, tests/pactor
   list(APPEND DECT2_MODES roshf ssdv ebicab nrf24 atis selcal)   # ROS (HF) detector (family 205), SSDV pictures (206), EBICab / Eurobalise up-link (207): core/src/<mode>, app/<mode>, tests/<mode>
   list(APPEND DECT2_MODES esp32)   # ESP32 / nRF24 module radio over USB serial (3.7): core/src/esp32, app/esp32, tests/esp32, firmware/esp32, docs/ESP32-NRF24-DESIGN.md
@@ -1674,6 +1675,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_fygeo_mode PRIVATE dect2core)
     target_compile_definitions(test_fygeo_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME fygeo_mode COMMAND test_fygeo_mode)
+    add_executable(test_voice_trunk_modes tests/app/test_voice_trunk_modes.cpp)   # Motorola Type II, TETRA DMO, OpenSky identifier: registered tunings, mode rows, family count, panels
+    target_link_libraries(test_voice_trunk_modes PRIVATE dect2core)
+    target_compile_definitions(test_voice_trunk_modes PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME voice_trunk_modes COMMAND test_voice_trunk_modes)
     add_executable(test_ltr_edacs_mode tests/app/test_ltr_edacs_mode.cpp)   # LTR and EDACS trunking modes: registered tunings, mode rows, family count and panel strings
     target_link_libraries(test_ltr_edacs_mode PRIVATE dect2core)
     target_compile_definitions(test_ltr_edacs_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
