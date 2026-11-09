@@ -455,7 +455,6 @@ The width of the signal is measured in the spectrum and the receiver switches be
 The receiver's channel filter. Narrower keeps a strong neighbour out (150 kHz copes with one 10 dB stronger 150 kHz away); below about 180 kHz loud passages distort a little and RDS suffers first.	El filtro de canal del receptor. Más estrecho deja fuera un vecino fuerte (150 kHz soporta uno 10 dB más fuerte a 150 kHz); por debajo de unos 180 kHz los pasajes fuertes se distorsionan un poco y el RDS sufre primero.
 The width is measured in the spectrum, and 6, 8 and 7 MHz are tried in turn while nothing locks.	El ancho se mide en el espectro y se prueban 6, 8 y 7 MHz por turnos mientras nada engancha.
 6 MHz in Japan and the Americas, 8 MHz in the Maldives (ISDB-T International). The signal is the same, scaled in time by the width.	6 MHz en Japón y América, 8 MHz en Maldivas (ISDB-T International). La señal es la misma, escalada en el tiempo según el ancho.
-Set by the country: there is nothing to measure it from. A receiver set to the wrong width finds nothing.	La fija el país: no hay nada de donde medirla. Un receptor con el ancho equivocado no encuentra nada.
 Follows the symbol rate: symbol rate x (1 + roll-off).	Sigue la tasa de símbolos: tasa de símbolos x (1 + roll-off).
 Choose automatic or a manual symbol rate in the tuner to change it.	Elija una tasa de símbolos automática o manual en el sintonizador para cambiarlo.
 This mode	Este modo

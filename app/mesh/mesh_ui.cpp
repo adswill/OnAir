@@ -90,7 +90,7 @@ void loadState() {
     S.view = (int)d.getI("meshView", 0);
     S.region = std::max(0, std::min(kNumPlans - 1, (int)d.getI("meshRegion", 0)));
     S.protocols = (int)d.getI("meshProtocols", 15);
-    S.allPresets = d.getB("meshPresets", false);
+    S.allPresets = d.getB("meshPresets", true);   // Auto: every Meshtastic preset of the region, the node need not be on LongFast
     S.mtRegion = d.getS("meshMtRegion", "");
     S.mtPreset = d.getS("meshMtPreset", "LongFast");
     S.mcPreset = d.getS("meshCorePreset", "");

@@ -456,7 +456,6 @@ The width of the signal is measured in the spectrum and the receiver switches be
 The receiver's channel filter. Narrower keeps a strong neighbour out (150 kHz copes with one 10 dB stronger 150 kHz away); below about 180 kHz loud passages distort a little and RDS suffers first.	Alıcının kanal filtresi. Daha dar tutmak güçlü bir komşuyu dışarıda tutar (150 kHz, 150 kHz uzaklıktaki 10 dB daha güçlü bir komşuyla başa çıkar); yaklaşık 180 kHz'in altında yüksek sesli kısımlar biraz bozulur ve önce RDS zarar görür.
 The width is measured in the spectrum, and 6, 8 and 7 MHz are tried in turn while nothing locks.	Genişlik spektrumda ölçülür ve hiçbir şey kilitlenmezse sırayla 6, 8 ve 7 MHz denenir.
 6 MHz in Japan and the Americas, 8 MHz in the Maldives (ISDB-T International). The signal is the same, scaled in time by the width.	Japonya ve Amerika'da 6 MHz, Maldivler'de 8 MHz (ISDB-T International). Sinyal aynıdır, genişliğe göre zamanda ölçeklenir.
-Set by the country: there is nothing to measure it from. A receiver set to the wrong width finds nothing.	Ülkeye göre belirlenir: ölçülecek bir şey yoktur. Yanlış genişliğe ayarlanmış bir alıcı hiçbir şey bulamaz.
 Follows the symbol rate: symbol rate x (1 + roll-off).	Sembol hızını izler: sembol hızı x (1 + roll-off).
 Choose automatic or a manual symbol rate in the tuner to change it.	Değiştirmek için tunerde otomatik veya el ile sembol hızı seçin.
 This mode	Bu kip

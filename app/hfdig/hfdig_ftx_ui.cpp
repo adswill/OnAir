@@ -247,9 +247,9 @@ void bandButtons(App& a, int mode) {
 
 // The sub-mode and the T/R period of the modes that have a choice (JT65 A B C, Q65 A .. E and 15 .. 300 s, FST4 / FST4W 15 .. 1800 s, MSK144 15 / 30 s),
 // remembered in the settings and handed to the decoder every frame.
-struct ModeOpt { int sub; double per; };
+struct ModeOpt { int sub; double per; bool autoOn; };
 ModeOpt& modeOpt(int m) {
-    static ModeOpt o[dect2::kFtxModes] = {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 60}, {0, 60}, {0, 60}, {0, 60}, {0, 15}, {0, 120}, {0, 60}};
+    static ModeOpt o[dect2::kFtxModes] = {{0, 0, true}, {0, 0, true}, {0, 0, true}, {0, 0, true}, {0, 60, true}, {0, 60, true}, {0, 60, true}, {0, 60, true}, {0, 15, true}, {0, 120, true}, {0, 60, true}};
     static bool loaded = false;
     if (!loaded) {
         loaded = true;
@@ -257,18 +257,20 @@ ModeOpt& modeOpt(int m) {
             char key[24];
             snprintf(key, sizeof key, "ftxSub%d", k); o[k].sub = (int)plat::prefs().getI(key, o[k].sub);
             snprintf(key, sizeof key, "ftxPer%d", k); o[k].per = (double)plat::prefs().getI(key, (long)o[k].per);
+            snprintf(key, sizeof key, "ftxAuto%d", k); o[k].autoOn = plat::prefs().getB(key, true);
         }
     }
     return o[m];
 }
 
-void modeOptions(App& a, int only) {
+void modeOptions(App& a, int only, const dect2::HfdigFtxTelemetry& f) {
     using namespace dect2;
     HfdigFtx& dec = a.engine.hfdig().ftx();
     auto save = [&](int m) {
         char key[24];
         snprintf(key, sizeof key, "ftxSub%d", m); plat::prefs().setI(key, modeOpt(m).sub);
         snprintf(key, sizeof key, "ftxPer%d", m); plat::prefs().setI(key, (long)modeOpt(m).per);
+        snprintf(key, sizeof key, "ftxAuto%d", m); plat::prefs().setB(key, modeOpt(m).autoOn);
     };
     auto periodCombo = [&](int m, const double* list, int n, const char* id) {
         ModeOpt& o = modeOpt(m);
@@ -279,7 +281,7 @@ void modeOptions(App& a, int only) {
             for (int i = 0; i < n; i++) {
                 char b[16];
                 snprintf(b, sizeof b, "%g s", list[i]);
-                if (ImGui::Selectable(b, std::fabs(list[i] - o.per) < 0.5)) { o.per = list[i]; save(m); }
+                if (ImGui::Selectable(b, std::fabs(list[i] - o.per) < 0.5)) { o.per = list[i]; o.autoOn = false; save(m); }
             }
             ImGui::EndCombo();
         }
@@ -289,7 +291,7 @@ void modeOptions(App& a, int only) {
         ModeOpt& o = modeOpt(m);
         ImGui::SetNextItemWidth(52 * gUi);
         if (ImGui::BeginCombo(id, names[std::max(0, std::min(n - 1, o.sub))])) {
-            for (int i = 0; i < n; i++) if (ImGui::Selectable(names[i], i == o.sub)) { o.sub = i; save(m); }
+            for (int i = 0; i < n; i++) if (ImGui::Selectable(names[i], i == o.sub)) { o.sub = i; o.autoOn = false; save(m); }
             ImGui::EndCombo();
         }
     };
@@ -297,12 +299,37 @@ void modeOptions(App& a, int only) {
     static const char* const ae[] = {"A", "B", "C", "D", "E"};
     static const double q65p[] = {15, 30, 60, 120, 300}, fstp[] = {15, 30, 60, 120, 300, 900, 1800}, mskp[] = {15, 30};
     auto label = [&](const char* t) { ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", t); ImGui::SameLine(0, 4 * gUi); };
+    // The one mode on screen: Auto (the default), the options under Advanced. With several modes listed the options stay as they are.
+    const bool single = only >= 4 && only < kFtxModes && only != 5;
+    if (single) {
+        const int m = only;
+        ModeOpt& o = modeOpt(m);
+        if (ImGui::Checkbox(tr("Auto##ftx"), &o.autoOn)) { char key[24]; snprintf(key, sizeof key, "ftxAuto%d", m); plat::prefs().setB(key, o.autoOn); }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Listens with every sub-mode and period at once and shows what decodes; a wrong one fails its check. Uses more CPU than one setting."));
+        flowNext(6 * gUi);
+        ImGui::AlignTextToFramePadding();
+        if (!o.autoOn) ImGui::TextDisabled("%s", tr("manual settings (Advanced)"));
+        else if (!f.autoFound[m]) ImGui::TextDisabled("%s", tr("Auto: listening on every setting"));
+        else {
+            static const char* const ae2[] = {"A", "B", "C", "D", "E", "F", "G"};
+            const int sb = std::max(0, std::min(6, f.autoSub[m]));
+            if (m == 7 || m == 8 || m == 9) ImGui::TextDisabled(tr("Found: %g s"), f.autoPeriod[m]);
+            else if (m == 6) ImGui::TextDisabled(tr("Found: %s, %g s"), ae2[sb], f.autoPeriod[m]);
+            else ImGui::TextDisabled(tr("Found: %s"), ae2[sb]);
+        }
+        flowEnd();
+    }
+    const bool showManual = !single || ImGui::TreeNode(tr("Advanced##ftxopt"));
+    if (showManual) {
     if (only < 0 || only == 4) { label("JT65"); subCombo(4, abc, 3, "##jt65sub"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("JT65 sub-mode: A, B and C have tone spacings of 2.7, 5.4 and 10.8 Hz"); flowNext(10 * gUi); }
     if (only < 0 || only == 10) { static const char* const ag[] = {"A", "B", "C", "D", "E", "F", "G"}; label("JT4"); subCombo(10, ag, 7, "##jt4sub"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("JT4 sub-mode: A to G have tone spacings of 4.4 Hz doubling up to 280 Hz"); flowNext(10 * gUi); }
     if (only < 0 || only == 6) { label("Q65"); subCombo(6, ae, 5, "##q65sub"); flowNext(4 * gUi); periodCombo(6, q65p, 5, "##q65per"); flowNext(10 * gUi); }
     if (only < 0 || only == 7) { label("FST4"); periodCombo(7, fstp, 7, "##fst4per"); flowNext(10 * gUi); }
     if (only < 0 || only == 7) { label("FST4W"); periodCombo(9, fstp, 7, "##fst4wper"); flowNext(10 * gUi); }
     if (only < 0 || only == 8) { label("MSK144"); periodCombo(8, mskp, 2, "##mskper"); flowNext(10 * gUi); }
+        if (single) { flowEnd(); ImGui::TextDisabled("%s", tr("Changing one of these turns Auto off.")); ImGui::TreePop(); }
+    }
+    for (int m = 4; m < kFtxModes; m++) dec.setAutoOption(m, single && m == only && modeOpt(m).autoOn);
     for (int m = 4; m < kFtxModes; m++) dec.setModeOption(m, modeOpt(m).sub, modeOpt(m).per);
 }
 
@@ -346,7 +373,7 @@ void hfdigFtxTab(App& a, const dect2::HfdigTelemetry& t) {
     flowNext(10 * gUi);
     if (ImGui::Button("Clear")) a.engine.hfdig().clearResults(8);   // the decodes the receiver keeps (also in the results file)
     flowEnd();
-    modeOptions(a, only);
+    modeOptions(a, only, f);
     flowEnd();
     hfdigMultiBandPanel(a, t);
     bandButtons(a, only >= 0 ? only : 0);

@@ -160,7 +160,7 @@ const std::vector<PrefKey>& keyTable() {
         shared(flagB("modeFavsOnly", AT(a.modeFavsOnly), false)),
         shared(num("uiVariant", AT(a.uiVariant), 0, 0, 7, true)),
         shared(numFix("dtmbBw", AT(a.dtmbBwMhz), 8, fixDtmbBw)),
-        shared(numFix("isdbtBw", AT(a.isdbtBwMhz), 6, fixIsdbtBw)),
+        shared(numFix("isdbtBw", AT(a.isdbtBwMhz), 0, fixIsdbtBw)),
         shared(flagI("atvFm", AT(a.atvFm), false)),
         shared(num("atvNbtv", AT(a.atvNbtv), 0, 0, 2, true)),
         shared(num("atvNbtvLines", AT(a.atvNbtvLines), 32, 24, 240, true)),
@@ -419,6 +419,7 @@ void loadPrefs(App& a) {
     loadKeys(d, a, true);   // the Hamlib picker, the frequency and the gains
     a.recFormat = fixRecFormat((int)d.getI("recFormat", 0));
     a.recSigmf = d.getB("recSigmf", true);
+    a.dtmbAuto = d.getB("dtmbAuto", true);
     a.audioRecFmt = std::max(0, std::min(2, (int)d.getI("audioRecFmt", 0)));
     a.audioRecGate = d.getB("audioRecGate", false); a.audioRecSplit = d.getB("audioRecSplit", false); a.audioRecKeep = d.getB("audioRecKeep", false);
     a.monOn = d.getB("monOn", false); a.monDemod = std::max(0, std::min(4, (int)d.getI("monDemod", 4)));

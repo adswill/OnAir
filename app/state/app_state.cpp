@@ -8,6 +8,7 @@
 #include "dect2/common/verbose_log.h"
 #include "../clips/clips_ui.h"
 #include "../gfx/file_vfo.h"
+#include <cmath>
 #include <cstring>
 #include "dect2/source/usb_diag.h"
 #include "dect2/source/iq_record.h"
@@ -128,7 +129,8 @@ void setMode(App& a, int f, int sub) {
     if (f >= 6) {
         const ModeTuning* mt = modeTuning(f + 2);
         const SubMode* sm = curSub(a);
-        const double def = sm ? sm->defMhz : mt ? mt->defMhz : a.freqMhz;
+        double def = sm ? sm->defMhz : mt ? mt->defMhz : a.freqMhz;
+        if (f == 24 && std::fabs(def - 144.8) < 1e-3) def = plat::prefs().getD("defaultAprsMhz", def);   // APRS on 2 m differs per ITU region (setup wizard)
         const double* remembered = modeslot::at(a.famFreq, to);
         a.freqMhz = remembered && rememberedFreqOk(mt, def, *remembered) ? *remembered : def;
         if (carryMhz > 0) a.freqMhz = carryMhz;
@@ -141,7 +143,10 @@ void setMode(App& a, int f, int sub) {
     if (f == 5) {   // FM band (with the plan's extended FM below 87.5 MHz), default to 100 MHz
         double lo = 87.5, hi = 108;
         fmBandRange(a, lo, hi);
-        if (!(a.freqMhz >= lo && a.freqMhz <= hi)) a.freqMhz = 100.0;
+        if (!(a.freqMhz >= lo && a.freqMhz <= hi)) {
+            const double home = plat::prefs().getD("defaultFmMhz", 100.0);   // the region's FM start (setup wizard)
+            a.freqMhz = home >= lo && home <= hi ? home : 100.0;
+        }
     }
     nameSynth(a);
 }
@@ -361,8 +366,10 @@ void applyBandwidth(App& a) {
     if (const ModeTuning* mt = a.family >= 6 ? modeTuning(a.family + 2) : nullptr) {   // the mode says what the radio should do
         a.tune.bandwidthMhz = mt->bandwidthMhz; a.tune.sampleRate = mt->sampleRate; a.tune.basebandFilterHz = mt->basebandHz;
         if (mt->stdMode == 9) {   // DTMB: the channel width the user picked (6 MHz in Cuba); the test signal follows it
-            a.tune.bandwidthMhz = a.dtmbBwMhz; a.tune.basebandFilterHz = a.dtmbBwMhz * 1e6;
+            const int dtmbW = a.dtmbAuto ? 8 : a.dtmbBwMhz;    // Auto captures the whole 8 MHz and measures the width in the receiver
+            a.tune.bandwidthMhz = dtmbW; a.tune.basebandFilterHz = dtmbW * 1e6;
             a.tune.synth.modeOpt[7] = a.dtmbBwMhz == 6 ? 1 : 0;
+            a.engine.dtmb().setAutoWidth(a.dtmbAuto);
         } else if (mt->stdMode == 10 && a.atvFm && !a.atvNbtv) {   // analog FPV video: a link about 17 MHz wide, the radio's filter at 18 MHz
             a.tune.bandwidthMhz = 18; a.tune.sampleRate = 20e6; a.tune.basebandFilterHz = 18e6;
         } else if (mt->stdMode == 10 && a.atvWide && !a.atvNbtv) {   // system E: a 14 MHz channel

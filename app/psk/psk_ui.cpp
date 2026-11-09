@@ -16,6 +16,8 @@ namespace {
 
 struct State {
     int mode = 0;
+    bool autoOn = true;
+    int pushedAuto = -1;
     float thrDb = 5;
     bool wasRunning = false;
     int pushedMode = -1; float pushedThr = -1;
@@ -38,6 +40,7 @@ void load() {
     if (S.loaded) return;
     S.loaded = true;
     S.mode = std::max(0, std::min(dect2::kPskModes - 1, (int)plat::prefs().getI("pskMode", 0)));
+    S.autoOn = plat::prefs().getI("pskAuto", 1) != 0;
     S.thrDb = (float)plat::prefs().getD("pskThreshold", 5);
     S.listen = plat::prefs().getB("pskListen", false);
 }
@@ -91,12 +94,20 @@ void presets(App& a) {
     ImGui::TextDisabled("|"); flowNext(8 * gUi);
     ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("Mode"); ImGui::SameLine(0, 5 * gUi);
     ImGui::SetNextItemWidth(100 * gUi);
-    if (ImGui::BeginCombo("##pskmode", dect2::pskModeName(S.mode))) {
+    if (ImGui::BeginCombo("##pskmode", S.autoOn ? tr("Auto") : dect2::pskModeName(S.mode))) {
+        if (ImGui::Selectable(tr("Auto"), S.autoOn)) { S.autoOn = true; plat::prefs().setI("pskAuto", 1); }
         for (int m = 0; m < dect2::kPskModes; m++)
-            if (ImGui::Selectable(dect2::pskModeName(m), m == S.mode)) { S.mode = m; plat::prefs().setI("pskMode", m); }
+            if (ImGui::Selectable(dect2::pskModeName(m), !S.autoOn && m == S.mode)) { S.mode = m; S.autoOn = false; plat::prefs().setI("pskMode", m); plat::prefs().setI("pskAuto", 0); }
         ImGui::EndCombo();
     }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("BPSK31 is what most stations send; PSK63 is twice as fast; QPSK adds error correction");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Auto finds BPSK31, PSK63, QPSK and the faster modes from the signals in the band. Pick one to fix it."));
+    if (S.autoOn && live(a) && a.engine.running()) {
+        const dect2::PskTelemetry& at = a.rx.psk;
+        flowNext(4 * gUi);
+        ImGui::AlignTextToFramePadding();
+        if (at.autoLocked && at.autoMode >= 0) ImGui::TextDisabled(tr("Found: %s"), dect2::pskModeName(at.autoMode));
+        else ImGui::TextDisabled("%s", tr("Auto: listening..."));
+    }
     flowNext(8 * gUi);
     ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("Threshold"); ImGui::SameLine(0, 5 * gUi);
     ImGui::SetNextItemWidth(110 * gUi);
@@ -239,7 +250,8 @@ void tick(App& a) {
     if (!a.engine.running()) { S.wasRunning = false; return; }
     if (live(a)) follow(a.rx.psk);
     dect2::PskReceiver& r = a.engine.psk();
-    if (!S.wasRunning || S.mode != S.pushedMode) { r.setMode(S.mode); S.pushedMode = S.mode; }
+    if (!S.wasRunning || (int)S.autoOn != S.pushedAuto) { r.setAuto(S.autoOn); S.pushedAuto = S.autoOn; S.pushedMode = -1; }
+    if (!S.autoOn && (!S.wasRunning || S.mode != S.pushedMode)) { r.setMode(S.mode); S.pushedMode = S.mode; }
     if (!S.wasRunning || S.thrDb != S.pushedThr) { r.setThresholdDb(S.thrDb); S.pushedThr = S.thrDb; }
     if (!S.wasRunning || (int)S.listen != S.pushedListen) { r.setListen(S.listen); S.pushedListen = S.listen; }
     if (!S.wasRunning || a.volume != S.pushedVol || a.muted != S.pushedMute) {   // the sound controls are shared with the other modes

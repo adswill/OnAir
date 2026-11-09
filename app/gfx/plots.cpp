@@ -278,10 +278,14 @@ void channelWidthPopup(App& a) {
         }
         ImGui::TextDisabled("%s", tr("6 MHz in Japan and the Americas, 8 MHz in the Maldives (ISDB-T International). The signal is the same, scaled in time by the width."));
     } else if (a.family == 7) {
-        if (ImGui::RadioButton(tr("8 MHz"), a.dtmbBwMhz != 6) && a.dtmbBwMhz == 6) setDtmbBandwidth(a, 8);
+        if (ImGui::RadioButton(tr("Automatic"), a.dtmbAuto) && !a.dtmbAuto) setDtmbBandwidth(a, 0);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The width is measured from the spectrum of the channel (7.56 MHz of signal on an 8 MHz channel, 5.67 MHz on a 6 MHz one)."));
         ImGui::SameLine();
-        if (ImGui::RadioButton(tr("6 MHz (Cuba)"), a.dtmbBwMhz == 6) && a.dtmbBwMhz != 6) setDtmbBandwidth(a, 6);
-        ImGui::TextDisabled("%s", tr("Set by the country: there is nothing to measure it from. A receiver set to the wrong width finds nothing."));
+        if (ImGui::RadioButton(tr("8 MHz"), !a.dtmbAuto && a.dtmbBwMhz != 6)) setDtmbBandwidth(a, 8);
+        ImGui::SameLine();
+        if (ImGui::RadioButton(tr("6 MHz (Cuba)"), !a.dtmbAuto && a.dtmbBwMhz == 6)) setDtmbBandwidth(a, 6);
+        if (a.dtmbAuto && a.engine.running() && a.rx.dtmb.autoWidthMhz > 0) ImGui::TextDisabled(tr("Found: %.0f MHz"), a.rx.dtmb.autoWidthMhz);
+        else ImGui::TextDisabled("%s", tr("A receiver set to the wrong width finds nothing: leave it on Automatic unless the channel plan says otherwise."));
     } else if (isGeneralFamily(a.family)) {
         ImGui::TextUnformatted("Demodulator");
         generalDemodPicker();

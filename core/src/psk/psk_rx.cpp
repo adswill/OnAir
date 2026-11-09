@@ -1,5 +1,6 @@
 // PSK31 / PSK63 multi-signal receiver (see psk_rx.h).
 #include "dect2/psk/psk_rx.h"
+#include "dect2/autoparam/autoparam.h"
 #include "dect2/results/results_io.h"
 #include "dect2/psk/psk_tel.h"
 #include "dect2/psk/psk_varicode.h"
@@ -11,6 +12,9 @@
 #include "dect2/dsp/fftutil.h"
 #include <algorithm>
 #include <atomic>
+#include <memory>
+#include <chrono>
+#include <future>
 #include <cmath>
 #include <cstdlib>
 #include <complex>
@@ -87,6 +91,19 @@ struct PskReceiver::Impl {
     bool focusReq = false; double focusHz = 0;   // under mu
     std::atomic<float> thrDb{5.f};
     std::atomic<int> modeReq{0};
+    // Auto (setAuto): the last seconds of the 24 kHz band go through a trial decoder of each modulation on another thread, the one with the most good text is kept
+    std::atomic<bool> autoOn{false}, autoKick{false};
+    bool trial = false;                       // a trial decoder: nothing is reported to the outside world
+    std::vector<cf32> autoRing;
+    size_t autoPos = 0, autoFill = 0;
+    uint64_t autoSamples = 0, autoLastRun = 0, autoCharsSeen = 0, autoGoodAt = 0;
+    int autoFound = -1, autoCand = -1;
+    bool autoLocked = false;
+    std::future<std::pair<int, uint64_t>> autoJob;
+    bool autoDiscard = false;
+    static std::pair<int, uint64_t> trialAll(const std::vector<cf32>& band, float thr);
+    static uint64_t trialMode(const std::vector<cf32>& band, int mode, float thr);
+    void autoFeed(const cf32* x, size_t n);
     // receiver thread
     PskTelemetry tel;
     double curRate = 0;
@@ -341,7 +358,7 @@ struct PskReceiver::Impl {
             std::string flat = c.text;
             std::replace(flat.begin(), flat.end(), '\n', ' ');
             const std::vector<std::string> now = cw::callsigns(flat);
-            if (PskReporter::get().want())
+            if (!trial && PskReporter::get().want())
                 for (const std::string& k : now)
                     if (std::find(c.calls.begin(), c.calls.end(), k) == c.calls.end() && pskr::sendsInText(flat, k))
                         PskReporter::get().spot(mode == 0 ? "PSK31" : mode == 1 ? "PSK63" : mode == 4 ? "PSK125" : mode == 5 ? "PSK250" : "PSK", c.f + spotShift.load(), (float)std::max(-5.0, std::min(40.0, 10 * std::log10(1.0 / std::max(1e-4f, c.errShown)))), k);
@@ -488,6 +505,7 @@ struct PskReceiver::Impl {
         power = 0; nPower = 0;
         tel.floorDb = (float)(10 * std::log10(floorLin + 1e-20));
         tel.mode = mode;
+        tel.autoOn = autoOn.load(); tel.autoLocked = autoLocked; tel.autoMode = autoFound;
         if (accN > 0) {
             tel.spectrum.resize(acc.size());
             for (size_t i = 0; i < acc.size(); i++) { tel.spectrum[i] = (float)(10 * std::log10(acc[i] / accN + 1e-20)); acc[i] = 0; }
@@ -592,6 +610,7 @@ void PskReceiver::feed(const cf32* x, size_t n) {
         for (cf32& v : m.base) if (!std::isfinite(v.real()) || !std::isfinite(v.imag())) v = cf32(0, 0);
         m.listen.playBase(m.base.data(), m.base.size());   // a copy to the sound card only while listening
         m.process(m.base.data(), m.base.size());
+        m.autoFeed(m.base.data(), m.base.size());
     }
     while ((double)m.nIn >= m.nextReport) {
         m.nextReport += 0.25 * m.curRate;
@@ -638,6 +657,86 @@ void PskReceiver::setMuted(bool m) { p_->listen.muted = m; }
 void PskReceiver::setSilent(bool s) { p_->listen.silent = s; }
 void PskReceiver::setListenTap(std::function<void(const float* x, size_t n)> cb) { p_->listen.setTap(std::move(cb)); }
 void PskReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }
+// One modulation over the band: the good characters less the bad codes, zero when it is not clearly better than nothing
+uint64_t PskReceiver::Impl::trialMode(const std::vector<cf32>& band, int mode, float thr) {
+    auto t = std::make_unique<Impl>();
+    t->trial = true;
+    t->thrDb = thr;
+    t->modeReq = mode;
+    { std::lock_guard<std::mutex> lk(t->mu); t->rate = pskTuning().minSampleRate; }
+    t->resetState();
+    t->resetReq = false;
+    for (size_t i = 0; i < band.size(); i += 2400) t->process(band.data() + i, std::min<size_t>(2400, band.size() - i));
+    uint64_t ok = 0, bad = 0;
+    t->report();
+    ok = t->tel.blocksOk; bad = t->tel.blocksBad;
+    if (!(ok >= 16 && ok >= 4 * bad)) return 0;
+    // a too-fast modulation still produces characters from a slower signal (the short codes of noise); only text that reads counts
+    std::string text;
+    for (const PskSignal& s : t->tel.signals) if (s.chars > 0) text += s.text;
+    const double r = autoparam::readableFraction(text.substr(text.size() / 3));
+    if (r < 0.85) return 0;
+    return (uint64_t)(1000.0 * (double)(ok - 3 * bad) * r * r / pskBaud(mode));   // per baud: a too-fast decoder runs off short codes, its text per symbol is what is low
+}
+std::pair<int, uint64_t> PskReceiver::Impl::trialAll(const std::vector<cf32>& band, float thr) {
+    int best = -1;
+    uint64_t bestS = 0;
+    for (int m = 0; m < kPskModes; m++) {
+        const uint64_t s = trialMode(band, m, thr);
+        if (s > bestS) { bestS = s; best = m; }
+    }
+    return {best, bestS};
+}
+// The Auto rule: no text for a while and something in the window: try every modulation. A band that keeps giving text is left alone.
+void PskReceiver::Impl::autoFeed(const cf32* x, size_t n) {
+    if (autoKick.exchange(false)) { autoLocked = false; autoLastRun = 0; autoFill = 0; autoPos = 0; autoCharsSeen = tel.blocksOk; autoGoodAt = autoSamples; }
+    if (!autoOn.load()) { if (autoJob.valid()) autoDiscard = true; else return; }
+    const size_t cap = (size_t)(10 * kBase);
+    if (autoRing.size() != cap) autoRing.assign(cap, cf32(0, 0));
+    for (size_t i = 0; i < n; i++) { autoRing[autoPos] = x[i]; if (++autoPos >= cap) autoPos = 0; }
+    autoFill = std::min(cap, autoFill + n);
+    autoSamples += n;
+    if (tel.blocksOk > autoCharsSeen) {
+        autoCharsSeen = tel.blocksOk;
+        std::string t;   // the newest text of the band: garbage keeps the counter running, so the count alone does not say the lock is good
+        for (const PskSignal& s : tel.signals) if (s.chars > 0) t += s.text.substr(s.text.size() > 80 ? s.text.size() - 80 : 0);
+        if (t.size() < 24 || autoparam::readableFraction(t) >= 0.8) autoGoodAt = autoSamples;
+    }
+    if (autoJob.valid()) {
+        if (autoJob.wait_for(std::chrono::seconds(0)) != std::future_status::ready) return;
+        const auto r = autoJob.get();
+        const bool drop = autoDiscard || !autoOn.load();
+        autoDiscard = false;
+        if (drop) return;
+        if (r.first < 0) { if (!autoLocked) autoFound = -1; autoCand = -1; return; }
+        // while locked, a different answer must repeat before the decode is moved: a burst of noise must not throw away a working lock
+        if (autoLocked && r.first != autoFound) {
+            if (autoCand == r.first) { autoCand = -1; autoFound = r.first; autoGoodAt = autoSamples; modeReq = r.first; }
+            else autoCand = r.first;
+            return;
+        }
+        autoCand = -1;
+        autoLocked = true; autoFound = r.first;
+        autoGoodAt = autoSamples;
+        modeReq = r.first;
+        return;
+    }
+    if (autoLocked) {
+        if (autoSamples - autoGoodAt >= (uint64_t)(10 * kBase)) { autoLocked = false; autoLastRun = 0; }
+        else if (autoSamples - autoLastRun < (uint64_t)(10 * kBase)) return;   // a working decode is re-checked now and then: a slower modulation can still give letters
+    }
+    if (autoSamples < autoLastRun + (uint64_t)(4 * kBase) || autoFill < (size_t)(6 * kBase)) return;
+    if (chans.empty()) return;   // nothing in the window: the trial would have nothing to read
+    autoLastRun = autoSamples;
+    const size_t take = std::min(autoFill, (size_t)(8 * kBase));
+    std::vector<cf32> a(take);
+    const size_t start = (autoPos + cap - take) % cap;
+    for (size_t i = 0; i < take; i++) a[i] = autoRing[(start + i) % cap];
+    const float thr = thrDb.load();
+    autoJob = std::async(std::launch::async, [v = std::move(a), thr]() { return trialAll(v, thr); });
+}
+void PskReceiver::setAuto(bool on) { if (on && !p_->autoOn.load()) p_->autoKick = true; p_->autoOn = on; }
+bool PskReceiver::autoOn() const { return p_->autoOn.load(); }
 void PskReceiver::setMode(int m) { p_->modeReq = std::max(0, std::min(kPskModes - 1, m)); }
 void PskReceiver::setFocusHz(double hz) { std::lock_guard<std::mutex> lk(p_->mu); p_->focusReq = true; p_->focusHz = hz; }
 void PskReceiver::clearSignals() {

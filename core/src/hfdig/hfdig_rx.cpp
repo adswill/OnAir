@@ -50,7 +50,7 @@ struct HfdigReceiver::Impl {
     hfdig::Listen listen;                  // "Listen": the sideband audio on the sound card (off by default)
     std::vector<cf32> base;
     std::vector<float> audio;
-    std::unique_ptr<HfdigRtty> rtty = makeRttyDecoder();
+    std::unique_ptr<HfdigRtty> rtty = [] { auto d = makeRttyDecoder(); d->setAuto(true); return d; }();
     std::unique_ptr<HfdigSstv> sstv = makeSstvDecoder();
     std::unique_ptr<HfdigFreedv> freedv = makeFreedvDecoder();
     std::unique_ptr<HfdigFtx> ftx = makeFtxDecoder();

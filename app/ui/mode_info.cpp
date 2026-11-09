@@ -3,6 +3,10 @@
 #include "../app.h"
 #include "dect2/engine/mode_tuning.h"
 #include "mode_picker_logic.h"
+#include "dect2/codec/codec_registry.h"
+#include "dect2/dstar/dstar_ambe.h"
+#include "dect2/nxdn/nxdn_ambe.h"
+#include "dect2/p25/p25_imbe.h"
 #include <cstdlib>
 #include <cstring>
 
@@ -56,4 +60,15 @@ ModeFit modeFit(const App& a, const ModeDef& m) {
     return {f.ok, f.reason};
 }
 
-bool modeCodecMissing(const ModeDef&) { return false; }   // wired to the codec check (docs/CODECS.md) later
+// a voice mode whose vocoder the user has to install (docs/CODECS.md) and has not: the calls and data still decode, the sound stays off.
+// Called for every visible row each frame: pluginLoaded is a map lookup and the mbelib scan is done once.
+bool modeCodecMissing(const ModeDef& m) {
+    if (!m.name) return false;
+    const std::string n = m.name;
+    if (n == "DMR" || n == "NXDN" || n == "P25 Phase 2" || n.rfind("dPMR", 0) == 0) return !dect2::nxdnAmbeAvailable(nullptr);
+    if (n == "P25") return !dect2::p25ImbeAvailable(nullptr);
+    if (n == "D-STAR") return !dect2::dstarAmbeAvailable(nullptr);
+    if (n == "Yaesu Fusion") return !dect2::codec::pluginLoaded("ysf") && !dect2::nxdnAmbeAvailable(nullptr);   // fusion_rx: the plug-in, else the DMR/NXDN one
+    if (n == "TETRA") return !dect2::codec::pluginLoaded("tetra");
+    return false;
+}

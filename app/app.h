@@ -330,7 +330,8 @@ struct App {
     std::string uniSplit;         // Unified layout: per mode "family=share,collapsed;..." (remembered splitter positions)
     std::string uiLang;       // the interface language chosen in View > Language ("de", "lt" ...), empty: the system's
     int dtmbBwMhz = 8;        // DTMB channel width: 8 MHz (China, Hong Kong), 6 MHz (Cuba)
-    int isdbtBwMhz = 6;       // ISDB-T channel width: 6 MHz (Japan, the Americas), 7, 8 MHz (the Maldives); 0 = automatic
+    bool dtmbAuto = true;     // DTMB: the channel width is measured from the spectrum; picking one below turns it off
+    int isdbtBwMhz = 0;       // ISDB-T channel width: 6 MHz (Japan, the Americas), 7, 8 MHz (the Maldives); 0 = automatic
     bool atvFm = false;       // analog TV: FM video as analog FPV links send it (20 Msps), not the amplitude modulated broadcast signal
     int atvNbtv = 0;          // analog TV: 0 television, 1 NBTV / mechanical TV on AM, 2 the same on narrow FM (the audio is the picture)
     int atvNbtvLines = 32;    // NBTV / mechanical: lines (24 .. 240) and pictures a second; 32 at 12.5 is the NBTVA standard

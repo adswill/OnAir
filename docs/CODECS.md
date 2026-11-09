@@ -40,7 +40,6 @@ The built files are yours: they are never committed to the OnAir repository and 
 | HD Radio (NRSC-5, FM and AM) | HDC (patented, owned by Xperi) | a **patched FAAD2** (`libfaad_hdc`) that you build yourself (see below); sound is silent until you do |
 | CDR (China Digital Radio) | DRA+ (patent and licence status not verified) | the **DRA+ add-on** (`libonair_dra`) that you build yourself (see [DRA+ (CDR sound)](#dra-cdr-sound)); sound is silent until you do |
 | FreeDV 700D / 700E / 1600, M17 | codec2 (open, LGPL) | **codec2**: comes with OnAir (the library `libcodec2` next to the program) |
-| FreeDV RADE | RADE neural modem (open, BSD) | **librade** (not codec2): optional; without it the RADE slot stays dark |
 | Inmarsat Aero C channel voice (Inmarsat > Voice) | AMBE 4800x3600 (patented) | a **speech codec plug-in** `onair-codec-aeroambe` that you build yourself from `tools/addons/aeroambe` and libaeroambe's mbelib (see [AMBE (Inmarsat Aero voice)](#ambe-inmarsat-aero-voice)); calls, aircraft and ground station are shown without it |
 | Yaesu System Fusion | AMBE+2 class (proprietary, DVSI) | a speech codec **plug-in with the id `ysf`** that you install yourself (see [Speech codec plug-ins](#speech-codec-plug-ins-voice-modes)); callsigns and data are shown without it, no sound |
 | TETRA | its own speech codec | nothing from you: it is not mbelib and not codec2 |

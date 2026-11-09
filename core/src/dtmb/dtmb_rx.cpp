@@ -8,6 +8,7 @@
 #include "dect2/dtmb/dtmb_front.h"
 #include "dect2/dtmb/dtmb_map.h"
 #include "dect2/dtmb/dtmb_sync.h"
+#include "dect2/dsp/fftutil.h"
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -102,6 +103,15 @@ struct DtmbReceiver::Impl {
     bool rateOk = false;
     SrrcResampler front;
     std::atomic<bool> resetReq{false};
+    std::atomic<bool> autoW{false};     // Auto (setAutoWidth): the channel width follows the occupied band of the input
+    double curBw = 8;
+    int widthVotes = 0, widthVoted = 0;
+    std::vector<cf32> widthBuf;
+    std::vector<double> widthPow;
+    int widthFrames = 0;
+    double widthFound = 0;
+    int widthRequest = 0;               // receiver thread: the width to change to (before the next block)
+    void widthTick(const cf32* x, size_t n);
     std::vector<cf32> tmp;
     double levelAcc = 0; uint64_t levelN = 0; float levelDb = -120;
 
@@ -844,6 +854,7 @@ struct DtmbReceiver::Impl {
             t.blocksOk = statsKeep.cwOk; t.blocksBad = statsKeep.cwBad; t.packets = statsKeep.packets;
         }
         t.rateOk = rateOk;
+        t.autoWidthMhz = autoW.load() ? widthFound : 0;
         t.computeMode = computeMode.load(); t.gpuAvailable = FecChain::gpuUsable();
         std::lock_guard<std::mutex> lk(mu);
         t.seq = ++seq;
@@ -875,6 +886,7 @@ DtmbReceiver::~DtmbReceiver() {
 void DtmbReceiver::configure(double inputRateHz, double bwMhz) {
     Impl& s = *p_;
     s.inRate = inputRateHz;
+    s.curBw = bwMhz;
     s.symRate = symbolRateFor(bwMhz);
     s.acq.symRate = s.symRate;
     s.rateOk = s.front.configure(inputRateHz, s.symRate);
@@ -888,10 +900,54 @@ bool DtmbReceiver::ready() const { return p_->rateOk; }
 
 void DtmbReceiver::reset() { p_->resetReq = true; }
 
+// Average spectrum of the input, the edges of the band above the noise: 7.56 Msym/s is 8 MHz, 5.67 is 6. Only while nothing is locked; a capture too narrow to show
+// an 8 MHz channel (under 8.5 Msps) keeps the width that was set.
+void DtmbReceiver::Impl::widthTick(const cf32* x, size_t n) {
+    constexpr int kN = 4096, kFrames = 16;
+    if (inRate < 8.5e6 || state != 0) return;
+    if (widthPow.empty()) { widthPow.assign(kN, 0.0); widthBuf.reserve(kN); }
+    (void)0;
+    for (size_t i = 0; i < n; i++) {
+        widthBuf.push_back(x[i]);
+        if (widthBuf.size() < (size_t)kN) continue;
+        Fft f(kN);
+        for (int k = 0; k < kN; k++) widthBuf[(size_t)k] *= (float)(0.5 - 0.5 * std::cos(2 * kPi * k / kN));
+        f.forward(widthBuf.data());
+        for (int k = 0; k < kN; k++) widthPow[(size_t)k] += std::norm(widthBuf[(size_t)k]);
+        widthBuf.clear();
+        if (++widthFrames < kFrames) continue;
+        widthFrames = 0;
+        std::vector<double> s(widthPow);   // centred, then a floor and a threshold halfway (in dB) between the floor and the plateau
+        std::rotate(s.begin(), s.begin() + kN / 2, s.end());
+        std::vector<double> sorted(s);
+        std::sort(sorted.begin(), sorted.end());
+        const double fl = std::max(1e-30, sorted[kN / 10]), top = sorted[kN * 9 / 10];
+        std::fill(widthPow.begin(), widthPow.end(), 0.0);
+        if (top < fl * 8) { widthVotes = 0; continue; }   // nothing stands 9 dB out of the floor
+        const double thr = std::sqrt(fl * top);
+        int lo = -1, hi = -1;
+        for (int k = 0; k < kN; k++) if (s[(size_t)k] > thr) { if (lo < 0) lo = k; hi = k; }
+        if (lo < 0) continue;
+        const double wMhz = (hi - lo + 1) * inRate / kN / 1e6;
+        const int v = wMhz > 6.8 ? 8 : 6;
+        if (v == widthVoted) widthVotes++; else { widthVoted = v; widthVotes = 1; }
+        if (widthVotes >= 3) {
+            widthFound = v;
+            if ((double)v != curBw) { const bool ok = rateOk; (void)ok; widthRequest = v; }
+        }
+    }
+}
+
+void DtmbReceiver::setAutoWidth(bool on) { p_->autoW = on; if (!on) p_->widthRequest = 0; }
+
 void DtmbReceiver::feed(const cf32* x, size_t n) {
     Impl& s = *p_;
     if (!s.rateOk || !n) return;
     if (s.resetReq.exchange(false)) s.doReset();
+    if (s.autoW.load()) {
+        s.widthTick(x, n);
+        if (s.widthRequest) { const int v = s.widthRequest; s.widthRequest = 0; configure(s.inRate, v); s.widthVotes = 0; }
+    }
     // input level
     {
         Prof::Scope pl(s.prof, 10);

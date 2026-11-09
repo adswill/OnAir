@@ -1195,6 +1195,18 @@ struct HfdigFtx::Impl {
     std::atomic<bool> clearReq{false};
     std::atomic<bool> early{true};        // FT8 / FT4: an early decode
     std::atomic<bool> memClear{false};
+    // Auto for the sub-mode and period (setAutoOption): one child decoder per candidate, all listening at once; a candidate with the wrong setting
+    // simply never passes the CRC, so what decodes is the answer, and the signal changing needs no re-lock. Mode bits; receiver thread only for the rest.
+    std::atomic<uint32_t> autoMask{0};
+    struct AutoChild { std::unique_ptr<HfdigFtx> d; int mode, sub; double period; uint64_t seen; };
+    std::vector<AutoChild> autoKids;
+    uint32_t autoBuilt = 0;
+    int autoSubFound[kFtxModes];
+    double autoPerFound[kFtxModes];
+    bool autoFound[kFtxModes];
+    int64_t autoScanAt = 0;
+    void autoBuild(HfdigFtx& self, uint32_t mask);
+    void autoScan();
     XMem mem[kFtxModes];                  // worker thread only
     std::atomic<int> sub[kFtxModes];
     std::atomic<double> per[kFtxModes];   // 0: the default of the mode
@@ -1332,7 +1344,7 @@ struct HfdigFtx::Impl {
                 const bool partial = flushAll && uEnd > S + sp(m).t0 + 0.5 * sp(m).nn * sp(m).symSec;
                 if (!complete && !partial) break;
                 nextSlot[m] = S + (search ? P / 2 : P);
-                if (!enabled[m].load()) continue;
+                if (!enabled[m].load() || ((autoMask.load() >> m) & 1)) continue;   // Auto: the child decoders have this mode
                 Job j;
                 j.mode = m; j.slotUtc = S; j.search = search; j.dtMin = dtMin; j.dtMax = dtMax; j.sub = sub[m].load(); j.period = P;
                 const double ja = r.outputPos(audioOfUtc(S + a));
@@ -1504,7 +1516,7 @@ struct HfdigFtx::Impl {
 HfdigFtx::HfdigFtx() : p_(std::make_unique<Impl>()) {}
 HfdigFtx::~HfdigFtx() = default;
 
-void HfdigFtx::reset() { p_->resetState(); }
+void HfdigFtx::reset() { p_->resetState(); for (auto& k : p_->autoKids) k.d->reset(); }
 void HfdigFtx::feedAudio(const float* x, size_t n) {
     if (p_->clearReq.exchange(false)) {
         std::lock_guard<std::mutex> lk(p_->mu);
@@ -1513,11 +1525,73 @@ void HfdigFtx::feedAudio(const float* x, size_t n) {
         p_->tel = t;
     }
     p_->feed(x, n);
+    const uint32_t mask = p_->autoMask.load();
+    if (mask != p_->autoBuilt) p_->autoBuild(*this, mask);
+    if (p_->autoKids.empty()) return;
+    for (auto& k : p_->autoKids) k.d->feedAudio(x, n);
+    p_->autoScanAt += (int64_t)n;
+    if (p_->autoScanAt < 16000) return;
+    p_->autoScanAt = 0;
+    p_->autoScan();
 }
+void HfdigFtx::Impl::autoScan() {
+    HfdigFtxTelemetry kt;
+    for (auto& k : autoKids) {
+        k.d->telemetry(kt);
+        const uint64_t c = kt.perMode[k.mode];
+        if (c > k.seen) {
+            k.seen = c;
+            std::lock_guard<std::mutex> lk(mu);
+            autoFound[k.mode] = true; autoSubFound[k.mode] = k.sub; autoPerFound[k.mode] = k.period;
+        }
+    }
+}
+// The candidates: every sub-mode x every period the mode has; nothing is searched that the mode cannot do
+void HfdigFtx::Impl::autoBuild(HfdigFtx& self, uint32_t mask) {
+    autoBuilt = mask;
+    for (auto& k : autoKids) k.d->setForwardTo(nullptr);
+    autoKids.clear();
+    static const double q65[] = {15, 30, 60, 120, 300}, fst[] = {15, 30, 60, 120, 300, 900, 1800}, msk[] = {15, 30};
+    auto add = [&](int m, int s, double p) {
+        AutoChild k;
+        k.d = makeFtxDecoder();
+        for (int o = 0; o < kFtxModes; o++) k.d->setEnabled(o, o == m);
+        k.d->setModeOption(m, s, p);
+        k.d->setMirrored(false);
+        k.d->setEarlyDecode(false);
+        k.d->copyClockFrom(self);
+        k.d->setDialHz(dialHz);
+        k.d->setForwardTo(&self);
+        k.d->reset();
+        k.mode = m; k.sub = s; k.period = p; k.seen = 0;
+        autoKids.push_back(std::move(k));
+    };
+    for (int m = 0; m < kFtxModes; m++) {
+        if (!((mask >> m) & 1)) continue;
+        switch (m) {
+        case 4: for (int s = 0; s < 3; s++) add(m, s, 0); break;                                  // JT65 A B C
+        case 10: for (int s = 0; s < 7; s++) add(m, s, 0); break;                                 // JT4 A .. G
+        case 6: for (int s = 0; s < 5; s++) for (double p : q65) add(m, s, p); break;              // Q65
+        case 7: case 9: for (double p : fst) add(m, 0, p); break;                                 // FST4, FST4W
+        case 8: for (double p : msk) add(m, 0, p); break;                                         // MSK144
+        default: break;
+        }
+    }
+}
+void HfdigFtx::setAutoOption(int m, bool on) {
+    if (m < 0 || m >= kFtxModes) return;
+    if (on) p_->autoMask.fetch_or(1u << m); else p_->autoMask.fetch_and(~(1u << m));
+    std::lock_guard<std::mutex> lk(p_->mu);
+    if (!on) p_->autoFound[m] = false;
+}
+bool HfdigFtx::autoOption(int m) const { return m >= 0 && m < kFtxModes && ((p_->autoMask.load() >> m) & 1); }
 void HfdigFtx::telemetry(HfdigFtxTelemetry& out) const {
     std::lock_guard<std::mutex> lk(p_->mu);
     out = p_->tel;
-    for (int m = 0; m < kFtxModes; m++) { out.enabled[m] = p_->enabled[m].load(); out.sub[m] = p_->sub[m].load(); out.period[m] = p_->sp(m).period; }
+    for (int m = 0; m < kFtxModes; m++) {
+        out.enabled[m] = p_->enabled[m].load(); out.sub[m] = p_->sub[m].load(); out.period[m] = p_->sp(m).period;
+        out.autoOn[m] = ((p_->autoMask.load() >> m) & 1) != 0; out.autoFound[m] = p_->autoFound[m]; out.autoSub[m] = p_->autoSubFound[m]; out.autoPeriod[m] = p_->autoPerFound[m];
+    }
     out.pending = (int)p_->jobs.size() + (p_->busy ? 1 : 0);
 }
 void HfdigFtx::setEnabled(int m, bool on) { if (m >= 0 && m < kFtxModes) p_->enabled[m] = on; }
@@ -1546,7 +1620,7 @@ void HfdigFtx::setDecodes(std::vector<FtxDecode> d) {
 void HfdigFtx::setStartTime(double utc) { std::lock_guard<std::mutex> lk(p_->setMu); p_->startTime = utc; }
 void HfdigFtx::setSlotSearch(bool on) { std::lock_guard<std::mutex> lk(p_->setMu); p_->slotSearch = on; }
 void HfdigFtx::setWallClock(std::function<double()> fn) { std::lock_guard<std::mutex> lk(p_->setMu); p_->wall = std::move(fn); }
-void HfdigFtx::setDialHz(double hz) { p_->dialHz = hz; }
+void HfdigFtx::setDialHz(double hz) { p_->dialHz = hz; for (auto& k : p_->autoKids) k.d->setDialHz(hz); }
 void HfdigFtx::setSpotShiftHz(double hz) { p_->spotShift = hz; }
 void HfdigFtx::setForwardTo(HfdigFtx* main) { p_->fwd = main; }
 void HfdigFtx::addForeign(const std::vector<FtxDecode>& d, int m, double slotUtc, float ms) {
@@ -1566,10 +1640,14 @@ void HfdigFtx::copyClockFrom(HfdigFtx& o) {
     p_->startTime = st; p_->slotSearch = ss; p_->wall = std::move(w);
 }
 void HfdigFtx::waitIdle() {
-    std::unique_lock<std::mutex> lk(p_->mu);
-    p_->idleCv.wait(lk, [&] { return p_->jobs.empty() && !p_->busy; });
+    {
+        std::unique_lock<std::mutex> lk(p_->mu);
+        p_->idleCv.wait(lk, [&] { return p_->jobs.empty() && !p_->busy; });
+    }
+    for (auto& k : p_->autoKids) k.d->waitIdle();
+    if (!p_->autoKids.empty()) p_->autoScan();
 }
-void HfdigFtx::flushSlots() { p_->schedule(true); }
+void HfdigFtx::flushSlots() { p_->schedule(true); for (auto& k : p_->autoKids) k.d->flushSlots(); }
 
 std::unique_ptr<HfdigFtx> makeFtxDecoder() { return std::make_unique<HfdigFtx>(); }
 

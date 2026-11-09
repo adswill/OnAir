@@ -21,7 +21,6 @@ const std::vector<CodecInfo>& codecTable() {
         {"tetra", "TETRA ACELP",        CodecKind::Patented, "TETRA", "plug-in onair-codec-tetra (unencrypted calls only)"},
         {"tetrapol", "TETRAPOL RP-CELP", CodecKind::Patented, "TETRAPOL", "plug-in onair-codec-tetrapol (clear calls only)"},
         {"",      "Codec 2",            CodecKind::Open,     "M17, FreeDV 700D / 700E / 1600", "built in (libcodec2 comes with OnAir)"},
-        {"",      "RADE",               CodecKind::Open,     "FreeDV RADE", "optional librade"},
         {"",      "KA codecs",          CodecKind::Open,     "KAAL, KAPP, KAFT, KAVB, KAIT, KAWS", "built in"},
         {"",      "DECT and satellite voice", CodecKind::Unsupported, "DECT, other satellite voice", "no voice decoder in OnAir (signalling and data only)"},
     };

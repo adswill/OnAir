@@ -455,7 +455,6 @@ The width of the signal is measured in the spectrum and the receiver switches be
 The receiver's channel filter. Narrower keeps a strong neighbour out (150 kHz copes with one 10 dB stronger 150 kHz away); below about 180 kHz loud passages distort a little and RDS suffers first.	Imtuvo kanalo filtras. Siauresnis neįsileidžia stipraus kaimyno (150 kHz atlaiko 10 dB stipresnį už 150 kHz); žemiau maždaug 180 kHz garsios vietos šiek tiek iškraipomos, o pirmiausia nukenčia RDS.
 The width is measured in the spectrum, and 6, 8 and 7 MHz are tried in turn while nothing locks.	Plotis matuojamas spektre, o kol niekas nesisinchronizuoja, paeiliui bandoma 6, 8 ir 7 MHz.
 6 MHz in Japan and the Americas, 8 MHz in the Maldives (ISDB-T International). The signal is the same, scaled in time by the width.	6 MHz Japonijoje ir Amerikoje, 8 MHz Maldyvuose (ISDB-T International). Signalas tas pats, laike pakeistas pagal plotį.
-Set by the country: there is nothing to measure it from. A receiver set to the wrong width finds nothing.	Nustato šalis: nėra iš ko jį išmatuoti. Netinkamo pločio imtuvas nieko neras.
 Follows the symbol rate: symbol rate x (1 + roll-off).	Priklauso nuo simbolių spartos: sparta x (1 + roll-off).
 Choose automatic or a manual symbol rate in the tuner to change it.	Norėdami pakeisti, derinime pasirinkite automatinę arba rankinę simbolių spartą.
 This mode	Šis režimas
