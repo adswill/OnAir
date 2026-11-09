@@ -1,0 +1,33 @@
+// First-use hints and first-Start decisions (app/ui/ease_logic.h, docs/EASE-3.8.md).
+#include "../../app/ui/ease_logic.h"
+#include <cstdio>
+#include <cstring>
+static int fails = 0;
+static void check(bool ok, const char* w) { if (!ok) { std::printf("FAIL: %s\n", w); fails++; } }
+static bool near(double a, double b, double tol) { return std::fabs(a - b) <= tol; }
+using namespace ease;
+
+int main() {
+    // E3
+    check(passLine("Meteor-M N2-4", "14:32", 63.2, 41 * 60, 55 * 60) == "Next pass: Meteor-M N2-4 at 14:32, 63 deg, in 41 min", "next pass line");
+    check(passLine("ISS", "14:32", 40, -30, 300) == "Overhead now: ISS, peak 40 deg, sets in 5 min", "pass under way");
+    check(passLine("X", "01:00", 20, 2 * 3600 + 5 * 60, 2 * 3600 + 900).find("2 h 05 min") != std::string::npos, "hours and minutes");
+    check(passLine("X", "01:00", 20, 10, 600).find("1 min") != std::string::npos, "under a minute reads 1 min");
+    check(passLine("X", "01:00", 20, -900, -5).find("sets in 1 min") != std::string::npos, "a pass just ending is not negative");
+    // E4: the figures computed in the proposal for Vilnius (54.69 N, 25.28 E), spherical Earth: within half a degree
+    struct { const char* n; double lon, el; } v[] = {{"GOES-19", -75.2, -14.5}, {"GK-2A", 128.2, -15.8}, {"FY-4A", 104.7, -2.6}, {"FY-2H", 79.0, 11.5}, {"Alphasat", 25.0, 27.6}, {"QO-100", 25.9, 27.6}};
+    for (auto& s : v) { GeoView g = geoView(54.69, 25.28, {s.n, s.lon}); check(near(g.elDeg, s.el, 0.6), s.n); check(g.above == (s.el > 0), "above matches the sign"); }
+    { GeoView g = geoView(54.69, 25.28, {"QO-100", 25.9}); check(near(g.azDeg, 180, 2), "QO-100 is due south of Vilnius"); check(near(g.skewDeg, 0, 1), "no skew due south"); check(!strcmp(compassName(g.azDeg), "south"), "compass"); }
+    { GeoView e = geoView(50, 0, {"E", 30}), w = geoView(50, 0, {"W", -30}); check(e.skewDeg < 0 && w.skewDeg > 0 && near(e.skewDeg, -w.skewDeg, 1e-9), "skew sign flips east to west"); check(near(e.skewDeg, -std::atan(std::sin(30 * M_PI / 180) / std::tan(50 * M_PI / 180)) * 180 / M_PI, 1e-9), "skew formula"); }
+    { GeoView g = geoView(0.1, 0, {"E", 30}); check(near(g.skewDeg, 90, 1e-9), "equator: no divide by zero"); }
+    { GeoView a = geoView(40, 179, {"S", -179}); check(a.above, "date line: 2 deg apart, visible"); }
+    for (double lat : {-80.0, -35.0, 0.0, 35.0, 80.0}) for (double lon : {-170.0, -45.0, 0.0, 90.0, 170.0}) {
+        GeoView g = geoView(lat, lon, {"s", 19.2}); check(g.azDeg >= 0 && g.azDeg < 360 && g.elDeg >= -90 && g.elDeg <= 90, "angles in range"); (void)compassName(g.azDeg); check(!std::isnan(g.skewDeg), "skew defined");
+    }
+    check(geoSatsOf(60).size() == 2 && geoSatsOf(59).empty(), "geostationary modes only");
+    check(geoLine(geoView(54.69, 25.28, {"GK-2A", 128.2}), false).find("below your horizon") != std::string::npos, "below the horizon says so");
+    check(geoLine(geoView(54.69, 25.28, {"QO-100", 25.9}), true).find("LNB skew") != std::string::npos, "Ku satellites give a skew");
+    { std::vector<GeoView> vs = {geoView(54.69, 25.28, {"low", -75.2}), geoView(54.69, 25.28, {"high", 25.9})}; check(geoBest(vs) == 1, "highest wins"); check(geoBest({}) == -1, "empty"); }
+    if (fails == 0) std::printf("ease: all passed\n");
+    return fails != 0;
+}

@@ -97,6 +97,7 @@ void card(const App& a, const ModeDef& m, const ModeFit& fit, float conf, bool d
     add(m.needs & NWideRadio, "a radio with a wide sample rate"); add(m.needs & NPlugin, "a plugin"); add(m.needs & NCodec, "a voice codec you install");
     if (!needs.empty()) ImGui::TextColored(ImVec4(0.95f, 0.78f, 0.45f, 1), "%s: %s", tr("Needs"), needs.c_str());
     if (!fit.ok) ImGui::TextColored(ImVec4(0.95f, 0.55f, 0.45f, 1), "%s: %s. %s", tr("Your radio"), tr(fit.reason.c_str()), tr("You can still pick it."));
+    if (!fit.note.empty()) ImGui::TextColored(ImVec4(0.95f, 0.78f, 0.45f, 1), "%s. %s", tr(fit.note.c_str()), tr("You can still pick it."));
     if (detected) ImGui::TextColored(ImVec4(0.45f, 0.9f, 0.5f, 1), "%s (%.0f%%)", tr("Signal detected"), conf * 100);
     const std::string cr = modeCreditsLine(m.name);
     if (!cr.empty()) ImGui::TextDisabled("%s", cr.c_str() + 2);

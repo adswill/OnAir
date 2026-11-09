@@ -6,6 +6,7 @@
 #include "dect2/common/thread_name.h"
 #include "../app.h"
 #include "../ui/typography.h"
+#include "../ui/ease_logic.h"
 #include "gallery.h"
 #include "../adsb/adsb_map.h"
 #include "dect2/geo/passes.h"
@@ -33,6 +34,8 @@
 #include <vector>
 
 void rotatorPassStep(const dect2::MountPlan& m);   // rotator_ui.cpp
+void hfdigSetDemod(const App& a, int d);           // hfdig_ui.cpp
+int hfdigDemod(const App& a);
 
 namespace {
 
@@ -40,6 +43,7 @@ namespace fs = std::filesystem;
 fs::path fsPath(const std::string& p) { return fs::path(reinterpret_cast<const char8_t*>(p.c_str())); }
 
 constexpr int kNoaaApt = 260, kNoaaHrpt = 261, kNoaaDsb = 263, kMeteorHrpt = 264, kArktikaGgak = 267, kAws = 268;   // families of the wxsat links
+constexpr int kIssSstv = kPassFamilyIssSstv, kHfdig = 25;   // the ISS's SSTV events: the SSTV entry of the HF digital family on FM (AppHost)
 constexpr int kSpecx = 41, kAprs = 24, kOrbcomm = 44, kMeteor = 59, kCubesat = 61, kGlobalstar = 62, kArgos = 152, kLoraSat = 201;   // mode families: Spectrum explorer (no decoder), APRS (AFSK), Orbcomm, Meteor-M LRPT, CubeSat telemetry, Argos, LoRa satellites
 
 struct Source { const char* file; const char* url; };
@@ -82,6 +86,7 @@ const Known kKnown[] = {
     {"MetOp-C Argos", 43689, 465.9875, "Argos downlink", kArgos, Weather, 0, false},
     {"ISS APRS", 25544, 145.825, "APRS", kAprs, Iss, 0, false},
     {"ISS voice", 25544, 145.800, "FM voice", kSpecx, Iss, 0, false},
+    {"ISS SSTV", 25544, 145.800, "SSTV events", kIssSstv, Iss, 0, false},   // only during announced events: never the default link (SatLink::eventOnly)
 };
 
 struct Cube { std::string name; int norad = 0; double mhz = 0; bool aprs = false; };
@@ -96,6 +101,7 @@ const char* yieldsOf(const dect2::SatLink& l) {
         case kArktikaGgak: return N_("Space-weather telemetry");
         case kAws: return N_("Microwave scans");
         case kArgos: return N_("Platform messages");
+        case kIssSstv: return N_("Pictures, during announced events");
         case kAprs: return N_("APRS packets");
         case kOrbcomm: return N_("Decoded messages");
         case kGlobalstar: return N_("Activity monitor");
@@ -118,7 +124,7 @@ struct Sat {
     bool hasFamily(int f) const { for (const dect2::SatLink& l : links) if (l.family == f) return true; return false; }
 };
 struct Row { int sat; dect2::Pass p; };
-struct Armed { int norad = 0; double hz = 0; dect2::Pass p; };   // the queue: passes the user armed
+struct Armed { int norad = 0; double hz = 0; dect2::Pass p; int family = 0; };   // the queue: passes the user armed
 
 struct State {
     bool loaded = false;
@@ -158,6 +164,7 @@ struct State {
     double planAt = 0; bool planDirty = true;
     dect2::PassRunner run;
     bool rotatorOn = false;
+    double cardAt = -1e18;                                   // a mode's next-pass card was on screen at this time
     int armFamily = -1;                                      // a mode's "follow the next pass": arm once the passes are known
     std::vector<std::string> history;                        // lines of passes_history.tsv
     // TLE data
@@ -246,6 +253,7 @@ void buildSats() {
     auto link = [](double hz, int fam, const std::string& mode, double need = 0, bool dec = true) {
         dect2::SatLink l; l.hz = hz; l.family = fam; l.mode = mode; l.needRateHz = need; l.decoder = dec;
         l.radioFollowsDoppler = fam != kLoraSat;   // a retune in the middle of a frame would break it, and the decoder follows the shift
+        l.eventOnly = fam == kIssSstv;
         return l;
     };
     std::map<int, bool> amateur;
@@ -351,7 +359,7 @@ void loadState() {
     if (std::string q = p.getS("passQueue", ""); !q.empty()) {   // armed passes survive a restart (those already over are dropped by refreshQueue)
         std::stringstream ss(q);
         for (std::string it; std::getline(ss, it, ';');) {
-            Armed x; if (sscanf(it.c_str(), "%d|%lf|%lf|%lf|%lf|%lf", &x.norad, &x.hz, &x.p.aos, &x.p.los, &x.p.tca, &x.p.maxElDeg) == 6) S.queue.push_back(x);
+            Armed x; if (sscanf(it.c_str(), "%d|%lf|%lf|%lf|%lf|%lf|%d", &x.norad, &x.hz, &x.p.aos, &x.p.los, &x.p.tca, &x.p.maxElDeg, &x.family) >= 6) S.queue.push_back(x);
         }
     }
     { std::ifstream f(fsPath(plat::dataDir() + "/passes_history.tsv")); for (std::string l; std::getline(f, l);) S.history.push_back(l); }
@@ -426,7 +434,7 @@ struct CalcOut { std::vector<Row> rows; uint64_t gen = 0; } gCalcOut;
 
 void saveQueue() {
     std::string q;
-    for (const Armed& x : S.queue) { char b[160]; snprintf(b, sizeof b, "%d|%.1f|%.1f|%.1f|%.1f|%.2f;", x.norad, x.hz, x.p.aos, x.p.los, x.p.tca, x.p.maxElDeg); q += b; }
+    for (const Armed& x : S.queue) { char b[180]; snprintf(b, sizeof b, "%d|%.1f|%.1f|%.1f|%.1f|%.2f|%d;", x.norad, x.hz, x.p.aos, x.p.los, x.p.tca, x.p.maxElDeg, x.family); q += b; }
     plat::prefs().setS("passQueue", q);
 }
 
@@ -552,7 +560,7 @@ int armedIdx(int norad, const dect2::Pass& p) {
 void armRow(const Row& r) {
     const Sat& s = S.sats[r.sat];
     if (armedIdx(s.norad, r.p) >= 0) return;
-    Armed q; q.norad = s.norad; q.hz = s.ln().hz; q.p = r.p;
+    Armed q; q.norad = s.norad; q.hz = s.ln().hz; q.p = r.p; q.family = s.ln().family;
     S.queue.push_back(q);
     saveQueue();
     S.planDirty = true;
@@ -568,8 +576,10 @@ std::string armNextOfFamily(int family) {
     }
     if (!best) return "no pass of this satellite is predicted: update the orbits in View > Passes";
     Sat& s = S.sats[best->sat];
+    const int keepLink = s.link; const bool keepChosen = s.linkChosen;
     for (int i = 0; i < (int)s.links.size(); i++) if (s.links[i].family == family) { s.link = i; s.linkChosen = true; }
     armRow(*best);
+    if (family == kIssSstv) { s.link = keepLink; s.linkChosen = keepChosen; }   // an event, not the ISS's usual downlink: the queue keeps the link for this pass
     return "armed " + s.name + " at " + timeText(best->p.aos) + ": the receiver starts, follows the Doppler shift and records by itself";
 }
 
@@ -631,14 +641,34 @@ const char* planStatus(const Row& r, std::string* why = nullptr) {
 }
 
 // The program as the runner sees it: the existing receiver, Doppler retune and IQ recording paths
+struct IssSstvTaken { bool taken = false; int family = 0, sub = 0, demod = dect2::HfDemodNfm; } gIssSstv;
+
 class AppHost : public dect2::PassHost {
+    void setMode_(int sub) { ::setMode(a_, kHfdig, sub); }
 public:
     explicit AppHost(App& a) : a_(a) {}
     bool running() const override { return a_.engine.running(); }
     bool transmitting() const override { return txActive(); }
-    int family() const override { return a_.family; }
+    int family() const override {
+        if (a_.family == kHfdig && a_.sub == subIndexOf("sstv") && std::fabs(a_.freqMhz - 145.8) < 0.1) return kIssSstv;   // already there: not switched, not restored
+        return a_.family;
+    }
     double tunedHz() const override { return a_.freqMhz * 1e6; }
-    void setMode(int f) override { if (a_.family != f) selectMode(a_, f); }
+    void setMode(int f) override {
+        if (f == kIssSstv) {   // the SSTV entry on FM, and what to put back afterwards (the HF digital family is one family of many entries)
+            if (!gIssSstv.taken) { gIssSstv.taken = true; gIssSstv.family = a_.family; gIssSstv.sub = a_.sub; }
+            selectMode(a_, kHfdig, "sstv");
+            gIssSstv.demod = hfdigDemod(a_);
+            hfdigSetDemod(a_, dect2::HfDemodNfm);
+            return;
+        }
+        if (gIssSstv.taken) {   // the pass is over
+            gIssSstv.taken = false;
+            hfdigSetDemod(a_, gIssSstv.demod);
+            if (f == kHfdig && gIssSstv.family == kHfdig && a_.sub != gIssSstv.sub) { const bool on = a_.engine.running(); if (on) a_.engine.stop(); setMode_(gIssSstv.sub); if (on) startReceiver(a_); return; }
+        }
+        if (a_.family != f) selectMode(a_, f);
+    }
     void tune(double hz) override { retuneTo(a_, hz / 1e6); }
     void start() override { startReceiver(a_); }
     void stop() override { a_.engine.stop(); }
@@ -689,7 +719,7 @@ bool jobFromSlot(const dect2::SchedSlot& sl, dect2::RunJob& j) {
     const Sat& s = S.sats[sl.sp.sat];
     const int ai = armedIdx(s.norad, sl.sp.pass);
     const dect2::SatLink* l = &s.ln();
-    if (ai >= 0) for (const dect2::SatLink& x : s.links) if (std::fabs(x.hz - S.queue[ai].hz) < 1) l = &x;   // the link it was armed with
+    if (ai >= 0) for (const dect2::SatLink& x : s.links) if (std::fabs(x.hz - S.queue[ai].hz) < 1 && (!S.queue[ai].family || x.family == S.queue[ai].family)) l = &x;   // the link it was armed with
     j.norad = s.norad; j.name = s.name; j.mode = l->mode; j.hz = l->hz; j.family = l->family;
     j.pass = sl.sp.pass; j.start = sl.start; j.end = sl.end;
     j.radioFollowsDoppler = l->radioFollowsDoppler; j.retuneTolHz = l->retuneTolHz;
@@ -1470,8 +1500,31 @@ void passesDownloadTles() { loadState(); startDownload(); }
 std::string passesArmFamily(App& a, int family) {
     (void)a;
     loadState();
-    if (S.rows.empty()) { S.armFamily = family; return "working out the passes: the next one will be armed"; }
+    if (S.rows.empty()) { S.armFamily = family; return tr("working out the passes: the next one will be armed"); }
     return armNextOfFamily(family);
+}
+
+// A mode's own line about its satellites (app/ui/mode_hints.cpp): the next pass in plain words, and one click to follow it. While it is on screen the passes
+// are worked out and the elements are kept up to date (once a day, the same limit as the planner, with a line saying so while it happens).
+std::string passesFamilyLine(App& a, int family, bool* armed) {
+    (void)a;
+    loadState();
+    S.cardAt = nowSec();
+    if (armed) *armed = false;
+    if (S.sats.empty()) return gDl.load() == 1 ? tr("Getting the satellite orbits from celestrak.org...") : tr("No orbits for this satellite yet: update them in View > Passes.");
+    const double now = nowSec();
+    const Row* best = nullptr;
+    for (const Row& r : S.rows) {
+        const Sat& s = S.sats[r.sat];
+        if (r.p.los < now || s.retired || r.p.maxElDeg < S.minEl || !s.hasFamily(family)) continue;
+        if (!best || r.p.aos < best->p.aos) best = &r;
+    }
+    if (!best) return gCalc.load() != 0 || S.rows.empty() ? tr("Working out the next pass...") : tr("No pass of this satellite in the next two days.");
+    const Sat& s = S.sats[best->sat];
+    if (armed) *armed = armedIdx(s.norad, best->p) >= 0;
+    std::string line = ease::passLine(s.name, timeText(best->p.aos), best->p.maxElDeg, best->p.aos - now, best->p.los - now);
+    if (gDl.load() == 1) line += std::string(" ") + tr("(updating the orbits from celestrak.org)");
+    return line;
 }
 
 void passesDevTle(const std::string& path) {
@@ -1505,10 +1558,11 @@ void passesMapSatellites(std::vector<MapSatRef>& out) {
 
 void passesWindow(App& a) {
     loadState();
-    if (!S.sats.empty() && (S.track || S.sched || a.passesOpen || !S.queue.empty() || S.armFamily >= 0 || S.run.active())) compute();
+    const bool cardShown = nowSec() - S.cardAt < 3;
+    if (!S.sats.empty() && (S.track || S.sched || a.passesOpen || !S.queue.empty() || S.armFamily >= 0 || S.run.active() || cardShown)) compute();
     if (S.armFamily >= 0 && !S.rows.empty()) { a.engine.log(armNextOfFamily(S.armFamily)); S.armFamily = -1; }
     pollDownload();
-    autoUpdateTle(a.passesOpen || S.track || S.sched || !S.queue.empty());
+    autoUpdateTle(a.passesOpen || S.track || S.sched || !S.queue.empty() || cardShown);
     trackTick(a);
     dopplerCollect(a);
     aosBanner(a);

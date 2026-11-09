@@ -22,7 +22,7 @@ bool linkHearable(const SatLink& l, const RadioCaps& radio, unsigned antennaMask
 int bestLink(const std::vector<SatLink>& links, const RadioCaps& radio, unsigned antennaMask, bool* hearable) {
     int best = -1, bestScore = -1;
     for (int i = 0; i < (int)links.size(); i++) {
-        const int score = (linkHearable(links[i], radio, antennaMask) ? 2 : 0) + (links[i].decoder ? 1 : 0);
+        const int score = (links[i].eventOnly ? 0 : 4) + (linkHearable(links[i], radio, antennaMask) ? 2 : 0) + (links[i].decoder ? 1 : 0);
         if (best < 0 || score > bestScore || (score == bestScore && links[i].hz < links[best].hz)) { best = i; bestScore = score; }
     }
     if (hearable) *hearable = best >= 0 && linkHearable(links[best], radio, antennaMask);

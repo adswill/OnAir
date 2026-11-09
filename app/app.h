@@ -774,6 +774,8 @@ bool mapFamilySends(int family);                    // this mode can put decoded
 std::string mapSendStatusLine();                    // short "connected / N sent" line for the mode header (empty when off)
 std::string mapSendDiagnosticsBlock(const App& a);  // map.on-air.dev ingest state + recent log for Copy diagnostics
 std::string passesArmFamily(App& a, int family);   // passes_ui.cpp: one click: track the next pass of this mode's satellite
+constexpr int kPassFamilyIssSstv = 100025;           // passes_ui.cpp: a pass link's "family" for the ISS's SSTV events (the SSTV entry of family 25, on FM)
+std::string passesFamilyLine(App& a, int family, bool* armed);   // passes_ui.cpp: "Next pass: ..." of this mode's satellites, for the mode's hint line
 void passesDevTle(const std::string& path);       // dev (--tle): TLEs from a file, as if pasted
 std::vector<std::pair<std::string, double>> passesArgosDoppler(double unixSec, double freqHz);       // passes_ui.cpp: MetOp (Argos downlink) satellites above the horizon and their Doppler
 std::vector<std::pair<std::string, double>> passesGlobalstarDoppler(double unixSec, double freqHz);   // passes_ui.cpp: Globalstar satellites above the horizon and their Doppler (TLEs from the planner)
@@ -928,6 +930,8 @@ bool rxWidthIsCustom(const App& a);          // a custom width or a chosen sampl
 void rxWidthReset(App& a);                   // back to the mode's own bandwidth and rate (the custom values stay saved)
 void rxWidthRestore(App& a, const RxWidthSnap& s);   // Undo of "Reset this mode"
 void nextStepLine(App& a);                   // panels/diag_ui.cpp: the "what do I do next" line of the mode on screen (app/ui/next_step_logic.h), drawn by modepanel::actionBar
+void modeHintsLine(App& a);                  // ui/mode_hints.cpp: next pass, satellite visibility and other per-mode hints under the next step line
+std::string modeGeoNote(const ModeDef& m);   // ui/mode_hints.cpp: non-blocking "below your horizon" note for the mode browser
 void modeActionBar(App& a);                  // ui/kit/mode_actions.cpp: next step line, "Auto setup" and "Reset this mode" with its undo note
 bool captureRowShown(const App& a);           // the Advanced row is drawn for a radio or the test signal (not a recording or a sound card)
 bool sampleRateAdvanced(App& a);              // ui/toolbar_source.cpp: the sample-rate half of that row (true when it changed the rate)
@@ -1181,7 +1185,7 @@ void modePicker(App& a);           // once a frame: the M key and the window
 bool modePickerWantsKeys();        // the window is open and has the keyboard
 void modePickerButton(App& a, const char* id = "##modes");   // the "Modes" button of the top bars
 void modeInfoFill();               // mode_info.cpp: tags, needs and minimum rate of rows that have none (also plugin rows added later)
-struct ModeFit { bool ok = true; std::string reason; };
+struct ModeFit { bool ok = true; std::string reason; std::string note; };   // note: a fact that never greys the mode
 ModeFit modeFit(const App& a, const ModeDef& m);              // does the selected radio fit the mode (grey + reason; never blocks)
 bool modeCodecMissing(const ModeDef& m);                      // a voice codec the user must install is missing (false until wired)
 extern bool (*gModeSignalHint)(const ModeDef&, float* conf);  // set by the identifier: a signal for this mode is on air now (null: none)

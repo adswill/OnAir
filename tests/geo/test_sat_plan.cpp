@@ -81,6 +81,13 @@ static SchedPass sp(int sat, int prio, double aos, double los, double el) {
 }
 
 int main() {
+    {   // a link that exists only during events is never the default, but is chosen when it is the only one
+        SatLink always; always.hz = 145.825e6; always.family = 24; SatLink event; event.hz = 145.800e6; event.family = 100025; event.eventOnly = true;
+        RadioCaps none; bool h = false;
+        if (bestLink({always, event}, none, BandAny, &h) != 0 || !h) { printf("FAIL: event-only link taken by default\n"); return 1; }
+        if (bestLink({event}, none, BandAny, &h) != 0 || !h) { printf("FAIL: event-only link alone\n"); return 1; }
+    }
+
     {   // SGP4 against the published verification values (Hoots & Roehrich, Spacetrack Report #3, as republished by Vallado et al. 2006: satellite 00005, 360 minutes)
         Tle t;
         CHECK(parseTle("1 00005U 58002B   00179.78495062  .00000023  00000-0  28098-4 0  4753", "2 00005  34.2682 348.7242 1859667 331.7664  19.3264 10.82419157413667", t, "VANGUARD 1"), "parse 00005");

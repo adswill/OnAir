@@ -77,6 +77,7 @@ void resetThisMode(App& a) {
 void modeActionBar(App& a) {
     ImGui::PushID("##modeactions");
     nextStepLine(a);
+    modeHintsLine(a);
     const bool radio = hasRadioRunning(a);
     if (!radio) { ImGui::PopID(); return; }   // no radio selected: two greyed, framed buttons that do nothing are only clutter; draw nothing
     if (ImGui::SmallButton(tr("Auto setup"))) { const std::string s = autoSetup(a); gUndo.what = std::string(tr("Auto setup: ")) + s; }
