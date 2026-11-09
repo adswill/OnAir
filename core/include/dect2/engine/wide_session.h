@@ -105,6 +105,8 @@ struct WsConfig {
 // database knows: carriers on it (within 7 kHz) get this kind when the measurement does not say better.
 struct WsKnown { double absHz = 0; WsKind kind = WsKind::Unknown; };
 
+constexpr int kFirstManualId = 500000;   // addManual() entries have ids from here
+
 class WideSession {
 public:
     WideSession();
@@ -135,6 +137,8 @@ public:
     void setBudget(double frac);                    // 0: no limit
     void setLoadOverride(double v);                 // test hook: the load the guard sees (< 0: measure)
     void setKnownChannels(const std::vector<WsKnown>& k);
+    // Only the signals the user placed (addManual) are decoded and identified; the carriers found by themselves are listed as off (Several modes at once)
+    void setOnlyManual(bool on);
     void useFrequencyDatabase(bool on);             // the built-in frequency database as known channels (default on)
 
     // ---- results

@@ -22,12 +22,14 @@ struct Layer {
     dect2::track::TrackHub hub;
     bool predict = true, ellipses = false, loaded = false;
     std::string keyPredict, keyEllipse;
+    ~Layer() { dect2::track::unregisterHub(&hub); }
     std::unordered_map<uint32_t, std::pair<double, double>> lastFed_;
     double lastPurge_ = 0;
     // defaults: the satellite and VDL2 maps predict (their aircraft report every few minutes), ADS-B interpolates but draws no ellipses
     void load(const char* prefix, bool predictDefault, bool ellipseDefault) {
         if (loaded) return;
         loaded = true;
+        dect2::track::registerHub(&hub);   // Search everything asks the map screens for live positions
         keyPredict = std::string(prefix) + "Predict"; keyEllipse = std::string(prefix) + "PredictEllipse";
         predict = plat::prefs().getB(keyPredict.c_str(), predictDefault);
         ellipses = plat::prefs().getB(keyEllipse.c_str(), ellipseDefault);

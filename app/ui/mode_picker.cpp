@@ -97,6 +97,7 @@ void card(const App& a, const ModeDef& m, const ModeFit& fit, float conf, bool d
     add(m.needs & NDish, "a dish with an LNA"); add(m.needs & NActiveAnt, "an active antenna"); add(m.needs & NCable, "a cable feed");
     add(m.needs & NWideRadio, "a radio with a wide sample rate"); add(m.needs & NPlugin, "a plugin"); add(m.needs & NCodec, "a voice codec you install");
     if (!needs.empty()) ImGui::TextColored(ImVec4(0.95f, 0.78f, 0.45f, 1), "%s: %s", tr("Needs"), needs.c_str());
+    if (const std::string use = stationUseLine(a, m); !use.empty()) ImGui::TextColored(ImVec4(0.55f, 0.85f, 0.6f, 1), "%s: %s", tr("Your station"), use.c_str());
     if (!fit.ok) ImGui::TextColored(ImVec4(0.95f, 0.55f, 0.45f, 1), "%s: %s. %s", tr("Your radio"), tr(fit.reason.c_str()), tr("You can still pick it."));
     if (!fit.antenna.empty()) ImGui::TextDisabled("%s", tr(fit.antenna.c_str()));
     if (!fit.note.empty()) ImGui::TextColored(ImVec4(0.95f, 0.78f, 0.45f, 1), "%s. %s", tr(fit.note.c_str()), tr("You can still pick it."));

@@ -1,0 +1,5 @@
+# Real recordings the CI decodes with dect2cli (tools/signal_library.py). One per line, fields separated by |:
+#   file | format (cs8, cu8, cf32) | rate in Msps | mode id (dect2cli --standard) | seconds | what the output must contain (a regular expression)
+# A file path is relative to this file's folder, or to the library named by $ONAIR_SIGNAL_LIB (its own manifest.txt, same format, is read as well).
+# Only recordings with a licence that allows redistribution go into the repository (docs/REAL-SIGNALS.md).
+../data/adsb/modes1_2msps_cu8.bin | cu8 | 2 | adsb | 2 | new aircraft 4D2023

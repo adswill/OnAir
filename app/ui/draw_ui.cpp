@@ -209,6 +209,8 @@ static void floatingWindows(App& a, ImVec2 disp) {
     scanViewWindow(a);
     sweepWindow(a);
     stationHealthWindow(a);
+    stationWindow(a);
+    heardWindow(a);
     receptionDoctorWindow(a);
     rfFingerprintWindow(a);
     wideAllWindow(a);
