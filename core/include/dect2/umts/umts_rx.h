@@ -1,5 +1,5 @@
 // UMTS (3G) cells receiver: every second a block of the channel goes through umtsCellSearch() (primary sync, secondary sync, CPICH) and the cells found are kept in a table.
-// Receive only: just the synchronisation channels and the pilot, which carry no identities of subscribers. The BCH (operator, cell identity) is not decoded.
+// Receive only: just the synchronisation channels and the pilot, which carry no identities of subscribers. Operator and cell identity from the BCH (umts_bch.h).
 #pragma once
 #include "dect2/umts/umts_cell.h"
 #include "dect2/engine/mode_tuning.h"
@@ -10,7 +10,7 @@
 
 namespace dect2 {
 
-struct UmtsCellRow { int psc = -1; int group = -1; double cfoHz = 0, ecIoDb = 0, rscpDbfs = 0; int frameOffset = 0; uint64_t blocks = 0; double lastSeen = 0; };
+struct UmtsCellRow { int mcc = -1, mnc = -1, mncDigits = 0; int64_t cellIdentity = -1; uint64_t bchBlocks = 0; int psc = -1; int group = -1; double cfoHz = 0, ecIoDb = 0, rscpDbfs = 0; int frameOffset = 0; uint64_t blocks = 0; double lastSeen = 0; };
 struct UmtsTelemetry {
     uint64_t seq = 0;
     int state = 0;                   // 0 waiting for samples, 1 scanning

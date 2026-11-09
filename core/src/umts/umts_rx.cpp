@@ -49,6 +49,9 @@ struct UmtsReceiver::Impl {
                 for (auto& e : tel.cells) if (e.psc == c.scramblingCode) r = &e;
                 if (!r) { tel.cells.push_back({}); r = &tel.cells.back(); r->psc = c.scramblingCode; r->group = c.group; if (log) { char m[96]; snprintf(m, sizeof m, "UMTS: cell PSC %d (Ec/Io %.1f dB)", c.scramblingCode, c.ecIoDb); log(m); } }
                 r->cfoHz = c.cfoHz; r->ecIoDb = c.ecIoDb; r->rscpDbfs = c.rscpDbfs; r->frameOffset = c.frameOffsetChips; r->blocks++; r->lastSeen = now;
+                if (c.mcc >= 0) { r->mcc = c.mcc; r->mnc = c.mnc; r->mncDigits = c.mncDigits; }
+                if (c.cellIdentity >= 0) r->cellIdentity = c.cellIdentity;
+                r->bchBlocks += (uint64_t)c.bchBlocks;
             }
             std::sort(tel.cells.begin(), tel.cells.end(), [](const UmtsCellRow& a, const UmtsCellRow& b2) { return a.ecIoDb > b2.ecIoDb; });
             tel.dataValid = !tel.cells.empty(); tel.blocksOk = tel.cells.size(); tel.blocksBad = 0; tel.cfoHz = tel.cells.empty() ? 0 : tel.cells[0].cfoHz; tel.snrDb = tel.cells.empty() ? 0.f : (float)tel.cells[0].ecIoDb;
@@ -91,7 +94,7 @@ bool UmtsReceiver::telemetry(UmtsTelemetry& out, uint64_t lastSeq) { std::lock_g
 namespace {
 class UmtsSynth : public ModeSynth {
 public:
-    UmtsSynth(const SynthConfig& c, double rate) : rate_(rate > 0 ? rate : 7.68e6), s_(umtsGenerate({{17, c.cfoHz, 1, 500, 0.4}, {280, 2300 + c.cfoHz, 0.7, 9000, 0.3}}, 38400 * 2 * 2, c.snrDb)) {}
+    UmtsSynth(const SynthConfig& c, double rate) : rate_(rate > 0 ? rate : 7.68e6), s_(umtsGenerate({{17, c.cfoHz, 1, 500, 0.4, 1, 1, 2, 0x123456}, {280, 2300 + c.cfoHz, 0.7, 9000, 0.3, 1, 1, 2, 0x234567}}, 38400 * 2 * 4, c.snrDb)) {}
     double sampleRate() const override { return rate_; }
     void generate(cf32* out, size_t n) override { for (size_t i = 0; i < n; i++) { out[i] = s_[pos_] * 0.2f; pos_ = (pos_ + 1) % s_.size(); } }
 private:

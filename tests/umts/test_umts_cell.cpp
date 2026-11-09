@@ -30,6 +30,14 @@ int main() {
         auto f = umtsCellSearch(n.data(), n.size(), 7500, 6);
         CHECK(f.empty(), "%zu false cells on noise", f.size());
     }
+    {   // the broadcast channel: operator and cell identity through the whole chain, at a realistic Ec/Io
+        for (double snr : {25.0, 5.0}) for (double cfo : {0.0, 2100.0}) {
+            auto x = umtsGenerate({{33, cfo, 1, 1700, 0.3, 246, 3, 2, 0x0ABCDEF}}, 38400 * 2 * 8, snr, 11);
+            auto f = umtsCellSearch(x.data(), x.size(), 7500, 6);
+            bool ok = false; for (auto& c : f) if (c.scramblingCode == 33) { printf("BCH snr %.0f cfo %.0f: blocks %d, MCC %d MNC %d, cell %lld\n", snr, cfo, c.bchBlocks, c.mcc, c.mnc, (long long)c.cellIdentity); if (c.mcc == 246 && c.mnc == 3 && c.cellIdentity == 0x0ABCDEF && c.bchBlocks >= 2) ok = true; }
+            CHECK(ok, "BCH snr %.0f cfo %.0f", snr, cfo);
+        }
+    }
     printf(fails ? "umts cells FAILED\n" : "umts cells passed\n");
     return fails ? 1 : 0;
 }

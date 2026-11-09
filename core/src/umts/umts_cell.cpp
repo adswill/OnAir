@@ -1,5 +1,6 @@
 // UMTS cell search: see umts_cell.h. Code tables: 3GPP TS 25.213 clauses 5.1.2 (scrambling), 5.2.3 (synchronisation codes) and table 4.
 #include "dect2/umts/umts_cell.h"
+#include "dect2/umts/umts_bch.h"
 #include "dect2/common/stable_random.h"
 #include <algorithm>
 #include <chrono>
@@ -179,6 +180,40 @@ std::vector<UmtsCell> umtsCellSearch(const cf32* x2, size_t n, double maxCfoHz, 
         cell.ecIoDb = 10 * std::log10(std::max(1e-12, cpichPow) / ptot);
         cell.rscpDbfs = 10 * std::log10(std::max(1e-12, cpichPow));
         cell.slotPeak = pk.pos;
+        // the broadcast channel, where the block holds whole 20 ms transport blocks: P-CCPCH on code 1 of SF 256, off for the first 256 chips of a slot
+        {
+            static thread_local std::vector<cf32> code2;
+            scramble(16 * (bg * 8 + bcode), code2);
+            umts::BchParser parser;
+            for (int parity = 0; parity < 2; parity++) {
+                int good = 0;
+                for (size_t tti = 0;; tti++) {
+                    const size_t start = frame0 + (size_t)parity * 38400 + tti * 76800;
+                    if (start + 76800 > N) break;
+                    std::vector<float> soft(540);
+                    for (int fr = 0; fr < 2; fr++) for (int sl = 0; sl < 15; sl++) {
+                        const size_t sb = start + (size_t)fr * 38400 + (size_t)sl * 2560;
+                        cf32 cp(0, 0);
+                        for (int i = 0; i < 2560; i++) { const double w = 2 * kPi * bCfo * (double)(sb + (size_t)i) / kChipRate; cp += c[sb + (size_t)i] * std::conj(code2[(size_t)(sl * 2560 + i)]) * cf32((float)std::cos(w), -(float)std::sin(w)); }
+                        const cf32 h = cp / cf32(1, 1);                 // the channel, from the pilot (1 + j)
+                        for (int sy = 0; sy < 9; sy++) {
+                            cf32 r(0, 0);
+                            for (int i = 0; i < 256; i++) { const size_t ci = (size_t)sl * 2560 + 256 + (size_t)sy * 256 + (size_t)i; const double w = 2 * kPi * bCfo * (double)(start + (size_t)fr * 38400 + ci) / kChipRate; r += c[start + (size_t)fr * 38400 + ci] * std::conj(code2[ci]) * cf32(i < 128 ? 1.f : -1.f, 0) * cf32((float)std::cos(w), -(float)std::sin(w)); }
+                            const cf32 z = r * std::conj(h);
+                            const size_t idx = (size_t)fr * 270 + (size_t)sl * 18 + (size_t)sy * 2;
+                            soft[idx] = z.real(); soft[idx + 1] = z.imag();
+                        }
+                    }
+                    uint8_t tb[umts::kBchInfo];
+                    if (umts::bchDecode(soft.data(), tb)) { parser.feed(tb); good++; }
+                }
+                cell.bchBlocks += good;
+                if (good) break;
+            }
+            const umts::BchInfo& bi = parser.info();
+            if (bi.haveMib) { cell.mcc = bi.mcc; cell.mnc = bi.mnc; cell.mncDigits = bi.mncDigits; }
+            if (bi.haveSib3) cell.cellIdentity = bi.cellIdentity;
+        }
         bool dup = false;
         for (auto& f : found) if (f.scramblingCode == cell.scramblingCode) dup = true;
         if (!dup) found.push_back(cell);
@@ -196,6 +231,11 @@ std::vector<cf32> umtsGenerate(const std::vector<UmtsTxCell>& cells, size_t samp
     for (const UmtsTxCell& c : cells) {
         const int g = c.code / 8, k = c.code % 8;
         std::vector<cf32> code; scramble(16 * (g * 8 + k), code);
+        // the broadcast channel: MIB and SIB 3 in alternating transport blocks
+        std::vector<std::vector<uint8_t>> tb;
+        if (c.mcc >= 0) { auto m = umts::bchEncode(umts::bchMakeMib(c.mcc, c.mnc, c.mncDigits).data()); auto s3 = umts::bchEncode(umts::bchMakeSib3(c.cellIdentity).data()); tb.push_back(m); tb.push_back(s3); }
+        const int frames = (int)(samples / 76800) + 3;
+        std::vector<std::vector<cf32>> allFrames;
         std::vector<cf32> chips((size_t)38400);
         for (int i = 0; i < 38400; i++) chips[(size_t)i] = code[(size_t)i] * cf32(1, 1) * (float)(0.3);    // CPICH
         if (c.dataPower > 0) { for (int i = 0; i < 38400; i++) { const int b = (int)(rng() & 3); chips[(size_t)i] += code[(size_t)i] * cf32(b & 1 ? 1.f : -1.f, b & 2 ? 1.f : -1.f) * (float)std::sqrt(c.dataPower); } }
@@ -203,12 +243,24 @@ std::vector<cf32> umtsGenerate(const std::vector<UmtsTxCell>& cells, size_t samp
             const int cc = kSeq[g][sl];
             for (int i = 0; i < 256; i++) chips[(size_t)(sl * 2560 + i)] += cf32(1, 1) * 0.7f * (float)p[(size_t)i] * 0.5f + cf32(1, 1) * 0.7f * (float)S[(size_t)cc][(size_t)i] * 0.5f;
         }
-        double ph = 0;
+        for (int f = 0; f < frames; f++) {
+            std::vector<cf32> fr = chips;
+            if (!tb.empty()) {
+                const auto& t = tb[(size_t)((f / 2) % 2)];
+                for (int sl = 0; sl < 15; sl++) for (int sy = 0; sy < 9; sy++) {
+                    const int bitI = t[(size_t)(f & 1) * 270 + (size_t)sl * 18 + (size_t)sy * 2], bitQ = t[(size_t)(f & 1) * 270 + (size_t)sl * 18 + (size_t)sy * 2 + 1];
+                    const cf32 sv(bitI ? -1.f : 1.f, bitQ ? -1.f : 1.f);
+                    for (int i = 0; i < 256; i++) { const int ci = sl * 2560 + 256 + sy * 256 + i; fr[(size_t)ci] += code[(size_t)ci] * sv * (i < 128 ? 0.3f : -0.3f); }
+                }
+            }
+            allFrames.push_back(std::move(fr));
+        }
         for (size_t i = 0; i < samples; i++) {
-            const size_t chip = (i / 2 + (size_t)c.chipOffset) % 38400;
+            const size_t ch0 = i / 2 + (size_t)c.chipOffset;
+            const size_t chip = ch0 % 38400;
+            const auto& chips = allFrames[std::min<size_t>(ch0 / 38400, allFrames.size() - 1)];
             const double w = 2 * kPi * c.cfoHz * (double)i / (2 * kChipRate);
             out[i] += chips[chip] * (float)c.amp * cf32((float)std::cos(w), (float)std::sin(w));
-            (void)ph;
         }
     }
     double pw = 0; for (auto& v : out) pw += std::norm(v);
