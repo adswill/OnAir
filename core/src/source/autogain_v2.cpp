@@ -336,7 +336,7 @@ bool AutoGainController::startTrial(const AgInput& in, AgCommand& out) {
             what = f2("probe +%.1f dB", stepReal(cur_.totalDb, to));
         } else if (kind == 2) {   // down
             if (cur_.totalDb <= minGain() + 0.01) { cand_++; continue; }
-            to = nextStep(cur_.totalDb, -clStep_, pol);
+            to = nextStep(cur_.totalDb, -std::min(clStep_, 2.0), pol);   // a look downwards stays small: it costs signal, and a real change is found by the search
             if (to >= cur_.totalDb - 0.01) { cand_++; continue; }
             what = f2("probe %.1f dB", stepReal(cur_.totalDb, to));
         } else {   // the other stage split at the same total (HackRF: LNA first or VGA first)
