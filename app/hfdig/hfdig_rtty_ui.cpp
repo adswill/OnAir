@@ -58,6 +58,22 @@ void hfdigRttyTab(App& a, const dect2::HfdigTelemetry& t) {
     HfdigRtty& dec = a.engine.hfdig().rtty();
 
     rttyBandButtons(a);
+    // one click: speed, shift and polarity from the last seconds of audio; the boxes below are the manual settings
+    if (ImGui::Button("Auto lock")) dec.autoLock();
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Finds the speed, shift and polarity from the audio of the last seconds (needs about 6 s of signal) and sets the boxes.");
+    flowNext(6 * gUi);
+    ImGui::AlignTextToFramePadding();
+    if (r.autoState == 1) ImGui::TextDisabled("listening...");
+    else if (r.autoState == 3) ImGui::TextDisabled("no RTTY found");
+    else if (r.autoState == 2 && !r.autoHyps.empty()) {
+        const auto& h = r.autoHyps[0];
+        ImGui::TextDisabled("auto: %g baud, %g Hz%s", h.baud, h.shiftHz, h.reverse ? ", reversed" : "");
+        for (size_t i = 1; i < r.autoHyps.size(); i++) {
+            ImGui::SameLine(0, 8 * gUi);
+            ImGui::TextDisabled("(or %g / %g%s)", r.autoHyps[i].baud, r.autoHyps[i].shiftHz, r.autoHyps[i].reverse ? " rev" : "");
+        }
+    }
+    flowEnd();
     // settings
     ImGui::AlignTextToFramePadding();
     ImGui::TextDisabled("Baud"); ImGui::SameLine(0, 5 * gUi);

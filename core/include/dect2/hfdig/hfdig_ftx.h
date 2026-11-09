@@ -45,6 +45,9 @@ struct FtxDecode {
     int dbm = -1;            // WSPR: the power sent
     int pass = 0;            // 0 first pass, 1 .. after subtracting the stronger signals
     double dialHz = 0;       // the dial frequency of the slot it was heard on (whole-span decoding: several slots at once); 0: not known
+    int how = 0;             // FT8 / FT4 / FT2: 0 decoded from this slot alone, 1 by adding the soft bits of the same signal in earlier slots, 2 with the calls of
+                             // a conversation heard on the band taken as known (a-priori)
+    bool early = false;      // decoded from the first part of the slot (the end of the signal still to come); replaced by the full decode of the slot
 };
 
 struct HfdigFtxTelemetry {
@@ -83,6 +86,8 @@ public:
     // JT65 sub-mode (0 A, 1 B, 2 C), Q65 sub-mode (0 A .. 4 E) and the T/R period of Q65 (15 / 30 / 60 / 120 / 300 s), FST4 and FST4W
     // (15 / 30 / 60 / 120 / 300 / 900 / 1800 s) and MSK144 (15 / 30 s); the others have one (any thread; sub < 0 or period <= 0 keep the old)
     void setModeOption(int mode, int sub, double periodSec);
+    void setEarlyDecode(bool on);                    // FT8 / FT4: a first decode a few seconds before the slot ends (default on; a one-slot-at-a-time decoder only)
+    bool earlyDecode() const;
     void setMirrored(bool on);                       // also look for upside-down signals (default on)
     bool mirrored() const;
     void clearDecodes();
