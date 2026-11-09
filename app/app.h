@@ -571,6 +571,7 @@ struct App {
     std::string subsPick;           // its key, remembered between runs
     std::string tvLang;             // the language to prefer for the guide texts, the audio track and the subtitles of a TV service (ISO 639-2, "fin"); empty: what the broadcaster puts first
     int plpSel = -1; // -1 = automatic
+    int t2LayerSel = 0; // 0 = automatic, 1 = T2-Base, 2 = T2-Lite
     int subTv = 0, subRx = 0, subStream = 0; // sub-view of the TV / Receiver / Stream tabs
     std::map<int, std::vector<EpgEvent>> epg;
     double epgT = -10;

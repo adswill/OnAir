@@ -109,6 +109,7 @@ T2Generator::T2Generator(const TxParams& p) : i_(new Impl), p_(p) {
     post_.dyn.resize(1);
     post_.dyn[0].numBlocks = 100;
     pre_.lite = (p.s1 == 3 || p.s1 == 4) ? 1 : 0;
+    if (p.mixed) { post_.fefType = 0; post_.fefLength = p.fefLength & 0x3FFFFF; post_.fefInterval = p.fefInterval; post_.fefLengthMsb = (p.fefLength >> 22) & 3; }
     if (p.payload) {
         L1PlpConf& c = post_.plps[0];
         c.mod = p.plpMod; c.cod = p.plpCod; c.rotation = p.plpRot ? 1 : 0; c.fecType = p.plpShort ? 0 : 1; c.timeIlLength = p.plpTi;
@@ -117,7 +118,7 @@ T2Generator::T2Generator(const TxParams& p) : i_(new Impl), p_(p) {
         // how many FEC blocks fit: the P2 cells left after L1, plus the data cells of every data symbol
         post_.frameIdx = 0;
         L1Pre pre = pre_;
-        const int nPost = (int)encodeL1Post(pre, post_, nP2_, false).size();
+        const int nPost = (int)encodeL1Post(pre, post_, nP2_, p_.mixed).size();
         const int nPre = (int)encodeL1Pre(pre).size();
         long cap = (long)nP2_ * pm_->p2DataCells() - nPre - nPost;
         std::vector<uint8_t> types;
@@ -156,7 +157,7 @@ void T2Generator::nextFrame(std::vector<cf32>& out) {
     // ---- P2 payload: L1-pre, L1-post, then filler, distributed over the P2 symbols and frequency interleaved
     post_.frameIdx = (int)(frameNo_ % (uint64_t)pre_.numFrames);   // clause 7.2.3.1: FRAME_IDX < NUM_T2_FRAMES
     L1Pre pre = pre_;
-    auto postCells = encodeL1Post(pre, post_, nP2_, false);
+    auto postCells = encodeL1Post(pre, post_, nP2_, p_.mixed);
     auto preCells = encodeL1Pre(pre);
     const int cP2 = pm_->p2DataCells();
     std::vector<cf32> stream;

@@ -389,6 +389,18 @@ void playerTab(App& a) {
             }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("This multiplex carries several physical layer pipes. The receiver decodes one at a time.");
         }
+        if (rx.t2OtherLayerP1 > 0) {   // a mixed signal: T2-Base frames with T2-Lite in the FEF parts
+            static const char* layers[] = {N_("automatic"), "T2-Base", "T2-Lite"};
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextDisabled("%s", tr("T2 layer"));
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(160 * gUi);
+            if (ImGui::BeginCombo("##t2layer", a.t2LayerSel == 0 ? tr(layers[0]) : layers[a.t2LayerSel])) {
+                for (int i = 0; i < 3; i++) if (ImGui::Selectable(i == 0 ? tr(layers[0]) : layers[i], a.t2LayerSel == i)) { a.t2LayerSel = i; a.engine.selectT2Layer(i); }
+                ImGui::EndCombo();
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("This signal carries T2-Base and T2-Lite frames. The receiver follows one of them."));
+        }
         for (auto& u : rx.unsupported) { ImGui::TextColored(ImVec4(0.95f, 0.6f, 0.2f, 1), "! %s", u.c_str()); }
     }
     // the controls below the picture take what they took in the last frame (they wrap onto more lines in a narrow tab)

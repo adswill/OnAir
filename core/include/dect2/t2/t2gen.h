@@ -36,6 +36,7 @@ struct TxParams {
     int cellId = 0x1001, networkId = 0x3085, systemId = 0x8001;
     int plpId = 0;           // PLP_ID of the data PLP
     uint32_t seed = 1;
+    int fefLength = 0, fefInterval = 0;   // mixed signals: the FEF part length (samples) and how often one comes, as signalled in L1-post
     // With payload: a source of 188-byte transport packets for PLP 0 instead of random bytes (set: the packet's sync byte is replaced by the CRC-8 as usual)
     std::function<void(uint8_t*)> tsSource;
 };

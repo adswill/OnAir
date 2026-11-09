@@ -2268,6 +2268,9 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_dvbsub PRIVATE dect2core)
   add_test(NAME dvbsub COMMAND test_dvbsub)
 
+  add_executable(test_t2_fef_layers tests/t2/test_t2_fef_layers.cpp)   # T2-Base and T2-Lite in one mixed signal
+  target_link_libraries(test_t2_fef_layers PRIVATE dect2core)
+  add_test(NAME t2_fef_layers COMMAND test_t2_fef_layers)
   add_executable(test_t2_payload tests/t2/test_t2_payload.cpp)
   target_link_libraries(test_t2_payload PRIVATE dect2core)
   add_test(NAME t2_payload COMMAND test_t2_payload)

@@ -198,7 +198,7 @@ void T2Receiver::Impl::scanP1() {
     // Once locked, the next P1 is expected one frame after the last one, so only a window around that position is searched (a P1 is
     // 2048 samples in a frame of two million). A window that comes up empty is widened, after three misses the whole range is searched
     // again until a P1 is accepted, and every 20 frames one frame's worth is searched in full to catch a change at the transmitter.
-    const bool noTrack = trackDisabled();
+    const bool noTrack = trackDisabled() || otherLayerSeen;
     bool tracked = !noTrack && state == 2 && frameLen > 0 && prevPos >= 0 && trackMiss < 3;
     if (tracked && trackFrames >= 20) { trackFrames = 0; trackFullUntil = lo + cHi + (int64_t)frameLen; }
     if (tracked && lo + cLo < trackFullUntil) tracked = false;
@@ -431,10 +431,18 @@ void T2Receiver::Impl::handleP1Candidate(int64_t d, float metric) {
     P1Decode r = decodeP1(d, epsC);
     if (!r.ok) return;
 
+    // The T2 layers of a mixed signal (T2-Base with T2-Lite in the FEF parts, EN 302 755 annex) each have their own P1: follow one and step over the other.
+    if (r.s1 == 0 || r.s1 == 1 || r.s1 == 3 || r.s1 == 4) {
+        const int cls = r.s1 >= 3 ? 2 : 1, wanted = layerWant.load();
+        if (wanted != 0 && wanted != layerLocked) { layerLocked = wanted; }
+        if (layerLocked == 0) layerLocked = cls;
+        if (cls != layerLocked) { otherLayerSeen = true; otherLayerP1++; lastP1Abs = d; return; }
+    }
+
     // Once the frame length is known, a P1 that does not land where the previous frame predicts is suspicious (a false
     // detection would make a whole garbage frame). Ignore it - unless the next P1 agrees with it, which means the
     // timeline really did jump (e.g. samples were lost), so resynchronise on it.
-    if (state == 2 && frameLen > 0 && prevPos >= 0) {
+    if (state == 2 && frameLen > 0 && prevPos >= 0 && !otherLayerSeen) {
         auto plausible = [&](double from, double at) {
             double dist = at - from, k = std::round(dist / frameLen), err = dist - k * frameLen;
             return k >= 1 && std::fabs(err) <= std::max(300.0, frameLen * 150e-6);
@@ -556,6 +564,7 @@ void T2Receiver::Impl::onFrameSpacing(double L) {
     int sym = fftN + guard;
     double nSyms = (L - kP1Len) / sym;
     double r = std::round(nSyms);
+    if (otherLayerSeen && (frameSyms <= 0 || (int)r != frameSyms)) return;   // a spacing that holds a frame of the other layer says nothing about this one
     double tol = std::max(40.0, L * 150e-6) / sym;   // allow +-150 ppm of sample-clock error (what is left after the correction below)
     if (r >= 1 && std::fabs(nSyms - r) <= tol) {
         frameSyms = (int)r;

@@ -268,6 +268,7 @@ public:
     bool gpuAllowed(int domain) const { return domain >= 0 && domain < gpupol::kDomains && gpu_.allowed[domain].load(); }
     int computeMode() const { return computeMode_; }
     void selectPlp(int id) { rx_.selectPlp(id); }
+    void selectT2Layer(int layer) { rx_.selectLayer(layer); }   // 0 = automatic, 1 = T2-Base, 2 = T2-Lite (mixed signals)
     // Which standard to decode: 0 = automatic (alternates between DVB-T2 and DVB-T until one locks), 1 = DVB-T2, 2 = DVB-T, 3 = ATSC, 4 = DAB, 5 = ATSC 3.0, 6 = ISDB-T, 7 = FM,
     // 8 = DVB-S/S2, 9 = DTMB, 10 = analog TV, 11 = DMR, 12 = DRM, 13 = ADS-B, 14 = GNSS,
     // 15 = radiosonde, 16 = AIS, 17 = marine, 18 = ACARS, 19 = Inmarsat-C, 20 = Inmarsat Aero, 21 = Iridium, 22 = mesh,
