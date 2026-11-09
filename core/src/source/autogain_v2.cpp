@@ -43,7 +43,7 @@ bool AutoGainController::objective(double& j) const {
         if (fl_.valid) { j = fl_.snrDb; return true; }
         return decoderValue(j);   // no spectrum: only the decoder's number
     case Metric::ChannelSnr: case Metric::Sensitivity:
-        if (score(m, q_, fl_, adcLast_, tgt_, tgt_.minHeadroomDb, v)) { j = v; return true; }   // headroom is a floor in the climb, not a set-point
+        if (score(m, q_, fl_, adcLast_, tgt_, minHead_(), v)) { j = v; return true; }   // headroom is a floor in the climb, not a set-point
         return false;
     default: return false;
     }
@@ -66,6 +66,8 @@ bool AutoGainController::hasSignal() const {
     if (tgt_.lockSnrDb < 1e8 && !(fl_.oobDbfs > -199)) return false;
     return fl_.valid && fl_.snrDb >= (tgt_.lockSnrDb < 1e8 ? 6.0 : 3.0);
 }
+
+double AutoGainController::minHead_() const { return tgt_.minHeadroomDb; }
 
 bool AutoGainController::floorFine() const { return fl_.valid && fl_.adcMarginDb >= tgt_.marginGoalDb - 2.0; }
 
@@ -107,7 +109,7 @@ double AutoGainController::stepReal(double from, double to) const {
 // 0.1 % of the samples and the 99.99 % point only measures the noise; clipping is still caught by the clipped fraction. Else the lower of the two.
 double AutoGainController::effHeadroom(const AgInput& in) const {
     const bool hold = in.adc.holdHeadroomDb < 119;
-    if (tgt_.kind == ModeKind::Pulsed && q_.pulseValid && hold) return std::min(headAvg_, std::max(in.adc.holdHeadroomDb, tgt_.minHeadroomDb + 1.0));   // (the noise itself near full scale still counts) messages say more than one peak: the nearest aircraft may touch full scale; the loud share (tooLoud) and the clip fraction take the gain down
+    if (tgt_.kind == ModeKind::Pulsed && q_.pulseValid && hold) return std::min(headAvg_, std::max(in.adc.holdHeadroomDb, minHead_() + 1.0));   // (the noise itself near full scale still counts) messages say more than one peak: the nearest aircraft may touch full scale; the loud share (tooLoud) and the clip fraction take the gain down
     double eff = headAvg_;
     if (tgt_.usePeakHold && hold) eff = std::min(eff, in.adc.holdHeadroomDb);
     return eff;
@@ -185,7 +187,7 @@ bool AutoGainController::tickClimb(const AgInput& in, AgCommand& out) {
         }
     }
     double eff = effHeadroom(in);
-    const double minHead = tgt_.minHeadroomDb;
+    const double minHead = minHead_();
     const double dwell = set_.dwellSec / sp;
     if (hasSignal()) lastSigAt_ = now;
     if (q_.locked && fl_.valid) chanRef_ = fl_.chanDbfs - cur_.totalDb;   // the channel's level while the decoder locks
@@ -197,7 +199,7 @@ bool AutoGainController::tickClimb(const AgInput& in, AgCommand& out) {
         if (cutActive_ && cutOobIn_ < -299 && !clTrial_ && now >= changedAt_ + settleTime() && now - cutAt_ >= settleTime() && fl_.valid) cutOobIn_ = fl_.oobDbfs - cur_.totalDb;
         const bool recovering = cutActive_ && !idleHold && cur_.totalDb < cutFrom_ - 1 && now - cutAt_ > recWait_ / sp;
         if (!clTrial_ && recovering && now - lastUp_ >= 1.1 / sp && now - lastDown_ >= 1.5 / sp) {
-            const double room = effHeadroom(in) - tgt_.minHeadroomDb - 1.0;
+            const double room = effHeadroom(in) - minHead_() - 1.0;
             const double sc = radio_.calibrated() ? 1.0 : (radio_.driverSplits && radio_.singleControl() ? unitScale_ : 1.0);
             const double scSafe = !unitLearned_ && !radio_.calibrated() && (radio_.stepsUncertain || radio_.driverSplits) ? std::max(sc, 2.5) : sc;   // an unmeasured step table: count on the worst
             double target = room < 5.0 ? cur_.totalDb : std::min({maxGain(), cutFrom_, cur_.totalDb + std::max(0.0, room) / std::max(0.5, scSafe)});
@@ -281,7 +283,7 @@ bool AutoGainController::startTrial(const AgInput& in, AgCommand& out) {
     const bool strongNb = fl_.valid && fl_.strongestDbfs > -25 && fl_.strongestDbfs > fl_.chanDbfs + 20;
     const Policy pol = pol_;   // a split that bought objective stays; a product or an overload caps the gain (an overload cut itself moves to the linear split)
     double eff = effHeadroom(in);
-    const double minHead = tgt_.minHeadroomDb;
+    const double minHead = minHead_();
     const double ceiling = std::min(maxGain(), ceilingDb(now));
     const bool wasted = fl_.valid && fl_.adcMarginDb > tgt_.marginGoalDb + 15;   // the antenna's noise is far above the ADC's: more gain buys nothing
     const int seq[3] = {clDir_ >= 0 ? 1 : 2, clDir_ >= 0 ? 2 : 1, 3};
@@ -302,7 +304,8 @@ bool AutoGainController::startTrial(const AgInput& in, AgCommand& out) {
             const double room = eff - minHead;
             if (cur_.totalDb >= ceiling - 0.01 || (wasted && !q_.locked && !hasSignal()) || room < 0.7) { limit_ = room < 0.7 ? "headroom" : wasted ? "noise floor already far over the ADC's" : cur_.totalDb >= maxGain() - 0.01 ? "top of the gain range" : "ceiling after an overload"; cand_++; continue; }
             const double sc = radio_.calibrated() ? 1.0 : (radio_.driverSplits && radio_.singleControl() ? unitScale_ : 1.0);
-            const double want = std::min({clStep_, tgt_.maxStepDb, 0.7 * room / std::max(0.5, sc)});   // 30 % of the room stays for what the table does not know
+            double want = std::min({clStep_, tgt_.maxStepDb, 0.7 * room / std::max(0.5, sc)});
+            if (radio_.stepsUncertain && !unitLearned_ && !radio_.calibrated()) want = std::min(want, 1.0);   // the real dB of one index step is not known yet: the smallest step first   // 30 % of the room stays for what the table does not know
             to = nextStep(cur_.totalDb, want, pol);
             double snapTo = planStages(radio_, to, pol, set_.stageMask, cur_.db, cur_.ampOn).totalDb;
             if (snapTo > ceiling + 0.01) {
@@ -407,14 +410,14 @@ bool AutoGainController::evaluateTrial(const AgInput& in, AgCommand& out) {
     }
     met_.slopeDbPerDb = slope_;
     const bool clip = in.adc.clipFraction > tgt_.clipLimit;
-    const bool tight = eff < tgt_.minHeadroomDb || (tgt_.kind == ModeKind::Pulsed && q_.pulseValid && pj_.tooLoud());
+    const bool tight = eff < minHead_() || (tgt_.kind == ModeKind::Pulsed && q_.pulseValid && pj_.tooLoud());
     bool accept = false, sensWhy = false;
     std::string why;
     if (candKind_ == 1) {
         const bool bad = imd || comp || clip || tight;
         accept = !bad && dJ > thr;
         // more gain that still measurably helps and leaves room above the headroom floor costs nothing: take it (a radio whose noise figure keeps falling with gain, a gentle hill)
-        if (!accept && !bad && dJ > 0.3 && dJ > 0.5 * thr && eff - dg > tgt_.minHeadroomDb + 3.0) accept = true;
+        if (!accept && !bad && dJ > 0.3 && dJ > 0.5 * thr && eff - dg > minHead_() + 3.0) accept = true;
         // the objective is blind while the wanted signal is under the noise (its SNR reads ~0 whatever the gain): the floor over the ADC's own noise
         // decides then, as the old loop's sensitivity rule did
         const double mGain = mTri_.mean - mBase_.mean;
@@ -433,10 +436,10 @@ bool AutoGainController::evaluateTrial(const AgInput& in, AgCommand& out) {
             ceilUntil_ = std::max(ceilUntil_, now + hold / std::max(0.25, set_.loopSpeed));
             if (imd || comp) { imdSeen_ = imdSeen_ || imd; compSeen_ = compSeen_ || comp; imdAt_ = now; linearUntil_ = std::max(linearUntil_, now + 60); }
             limit_ = imd ? "intermodulation" : comp ? "compression" : clip ? "overload" : "headroom";
-            why = f2("+%.1f dB undone: ", dg) + (imd || comp ? slopeWhy : clip ? std::string("the ADC clipped") : f2("headroom %.1f dB under the %.0f dB minimum", eff, tgt_.minHeadroomDb));
+            why = f2("+%.1f dB undone: ", dg) + (imd || comp ? slopeWhy : clip ? std::string("the ADC clipped") : f2("headroom %.1f dB under the %.0f dB minimum", eff, minHead_()));
         } else why = accept ? (sensWhy ? f2("+%.1f dB kept: the noise floor was only %.1f dB over the ADC's", dg, mBase_.mean) : f2("+%.1f dB kept: objective +%.1f dB", dg, dJ)) : f2("+%.1f dB undone: objective only %+.1f dB (needs %.1f)", dg, dJ, thr);
     } else if (candKind_ == 2) {
-        const bool nearLimit = basePlan_.totalDb > 0 && (tight || eff < tgt_.minHeadroomDb + 1.0);
+        const bool nearLimit = basePlan_.totalDb > 0 && (tight || eff < minHead_() + 1.0);
         // the objective can be blind to a front end that compresses or makes products at the higher gain (a floor margin only grows with gain): the slope test decides then
         const bool slopeSaysDown = (imd || comp) && dg < 0;
         accept = dJ > thr || (nearLimit && dJ > -0.25 * thr) || slopeSaysDown;
@@ -481,7 +484,7 @@ void AutoGainController::setStatus(const std::string& lead) {
     else if (q_.locked && (q_.merValid || q_.snrValid)) s += f2(": decoder %.1f dB", q_.merValid ? q_.merDb : q_.snrDb);
     else if (fl_.valid) s += f2(": channel SNR %.1f dB", fl_.snrDb);
     (void)j;
-    s += f2(", headroom %.1f dB (min %.0f)", headAvg_, tgt_.minHeadroomDb);
+    s += f2(", headroom %.1f dB (min %.0f)", headAvg_, minHead_());
     if (br_ || wantBracket_) s += std::string(", searching") + (retuneWhy_.empty() ? "" : " (" + retuneWhy_ + ")");
     else if (clTrial_) s += ", trying a neighbouring gain";
     else if (settled_) s += blindRest_ ? ", waiting for a signal" : comfortable() ? ", settled (decoder comfortably locked)" : ", settled";

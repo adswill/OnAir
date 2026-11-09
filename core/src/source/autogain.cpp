@@ -56,7 +56,7 @@ void AutoGainController::setSettings(const AgSettings& s) {
     if (modeChanged) { mode_ = s.mode; phase_ = Phase::Idle; }
 }
 
-double AutoGainController::bracketHead() const { return set_.v2 ? tgt_.minHeadroomDb + 2.0 : headroomTarget(); }
+double AutoGainController::bracketHead() const { return set_.v2 ? minHead_() + 2.0 : headroomTarget(); }
 double AutoGainController::headroomTarget() const { return set_.headroomDb >= 0 ? set_.headroomDb : tgt_.headroomDb; }
 double AutoGainController::settleTime() const { return radio_.settleSec + set_.settleSec / std::max(0.25, set_.loopSpeed); }
 
@@ -430,7 +430,7 @@ void AutoGainController::accumulate(AgTrial& t, const AgInput& in) {
 
 int AutoGainController::chooseTrial(Metric& used, double minHead, double maxMargin) const {
     const double tgtH = headroomTarget();
-    const double penalH = mode_ == AgMode::Auto && set_.v2 ? tgt_.minHeadroomDb : tgtH;   // Auto v2: headroom is a floor (minHeadroomDb), not a set-point
+    const double penalH = mode_ == AgMode::Auto && set_.v2 ? minHead_() : tgtH;   // Auto v2: headroom is a floor (minHeadroomDb), not a set-point
     auto marginOf = [&](const AgTrial& t) { return t.nFloor ? t.floor() + (6.02 * radio_.adcBits + 1.76) + 10 * std::log10((double)std::max<size_t>(t.spec.size(), 64)) - 1.76 : -1e9; };
     auto safe = [&](const AgTrial& t) { return t.done && t.n > 0 && t.clipMax <= tgt_.clipLimit && !t.imd && t.headroomMin >= minHead && marginOf(t) <= maxMargin; };
     bool anyMetric = false, anySnr = false;
@@ -930,7 +930,7 @@ bool AutoGainController::tickBracket(const AgInput& in, AgCommand& out) {
     // a gain that would (1 dB per dB from the last one measured) leave less than the mode's headroom is not worth a clip: the search ends below it
     if (!queue_.empty() && ti_ >= 0) {
         const AgTrial& l = trials_[(size_t)ti_];
-        const double floorHead = set_.v2 ? std::max(1.5, tgt_.minHeadroomDb - 1.0) : std::max(1.0, bracketHead() - tgt_.windowDb - 3.0);
+        const double floorHead = set_.v2 ? std::max(1.5, minHead_() - 1.0) : std::max(1.0, bracketHead() - tgt_.windowDb - 3.0);
         queue_.erase(std::remove_if(queue_.begin(), queue_.end(), [&](const std::pair<double, Policy>& q) {
             return q.second == l.pol && l.headroomMin - (q.first - l.plan.totalDb) < floorHead && q.first > l.plan.totalDb; }), queue_.end());
     }
@@ -943,7 +943,7 @@ bool AutoGainController::tickBracket(const AgInput& in, AgCommand& out) {
     Metric used;
     // Auto keeps the mode's headroom (within its dead band) wherever it can: raw SNR with the ADC near full scale is not the aim
     // and does not buy gain that only costs headroom (the floor already far above the ADC's own noise: the loop would take it down again)
-    const double minHead = set_.v2 ? std::max(0.5, tgt_.minHeadroomDb - 1.0) : std::max(0.5, headroomTarget() - tgt_.windowDb - 1.0);   // a dB of allowance for the short measurement
+    const double minHead = set_.v2 ? std::max(0.5, minHead_() - 1.0) : std::max(0.5, headroomTarget() - tgt_.windowDb - 1.0);   // a dB of allowance for the short measurement
     int b = chooseTrial(used, minHead, set_.v2 ? 1e9 : tgt_.marginGoalDb + 15);   // v2: no "wasted gain" limit here: many radios' noise figure keeps falling with gain long after the floor clears the ADC's, the climb's measurement decides
     double wastedTo = -1;   // every gain tried was already "wasted": the floor sits that far above the ADC's own noise at the lowest one: go down by the excess
     if (b < 0 || used == Metric::Auto) {

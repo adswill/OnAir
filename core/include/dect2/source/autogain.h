@@ -384,6 +384,7 @@ private:
     bool objective(double& j) const;
     bool decoderValue(double& v) const;          // the decoder's own number while it is locked (MER, SNR, BER, lock): never mixed into the level objective
     bool hasSignal() const;                      // something to judge a gain by: a locked decoder, messages, or a channel well over the floor
+    double minHead_() const;                     // the headroom floor in force (a radio whose steps are not known yet keeps the safe value)
     bool floorFine() const;                      // the floor is high enough over the ADC's own noise that more gain buys nothing on an empty channel
     void settleHere(const AgInput& in);          // the loop rests at this gain: remembers the world it rests in
     bool worldChanged(const AgInput& in, std::string& why);   // settled: the floor or the out-of-band signals moved, so the gain may be wrong now
