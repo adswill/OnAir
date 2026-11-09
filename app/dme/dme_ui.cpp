@@ -17,6 +17,7 @@ void tab(App& a) {
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
 
     const dect2::DmeTelemetry& t = a.rx.dme;
+    if (t.state == 0) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", tr("No pulse pairs yet. Tune to the reply frequency of a DME beacon near an airport or on an airway; a beacon usually needs a line of sight, and the channel table in the Known frequencies list helps.")); ImGui::PopTextWrapPos(); }
     ImGui::PushFont(a.mono, 0);
     ImGui::SetWindowFontScale(2.4f);
     const std::string id = t.ident.empty() ? std::string("...") : t.ident;

@@ -62,6 +62,19 @@ void amSmartPanel(App& a) {
             ImGui::TableNextColumn(); ImGui::TextUnformatted(r.ecss > 0 ? tr("upper sideband") : r.ecss < 0 ? tr("lower sideband") : "");
             ImGui::TableNextColumn();
             ImGui::PushID((int)r.khz);
+            if (r.kind == dect2::AmKind::Drm) {   // a DRM-shaped channel: open the DRM mode on it
+                if (ImGui::SmallButton(tr("Decode DRM"))) {
+                    const bool was = a.engine.running();
+                    if (was) a.engine.stop();
+                    ::setMode(a, 10, 0);
+                    a.freqMhz = r.khz / 1e3; a.tune.centerHz = a.freqMhz * 1e6;
+                    savePrefs(a);
+                    if (was) startReceiver(a);
+                    ImGui::PopID(); ImGui::EndTable();
+                    return;
+                }
+                ImGui::SameLine();
+            }
             if (ImGui::SmallButton(tr("Listen"))) generalSetListenHz(a, r.khz * 1e3);
             ImGui::TableNextColumn();
             if (!a.engine.amDiversityOn() && std::fabs(r.khz * 1e3 - dial) > 500 && ImGui::SmallButton(tr("Also on"))) a.engine.setAmDiversity(true, r.khz * 1e3 - dial);

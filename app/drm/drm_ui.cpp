@@ -1,6 +1,8 @@
 // DRM screens: the Radio tab (the band presets, short wave and the VHF bands of DRM+, now playing, text message, time, signal summary), the services
 // list, status lamps, the analysis plots (FAC / SDC / MSC cells, channel, SNR), the Receiver tab with all telemetry and the options of the test signal.
 #include "app.h"
+#include "dect2/ease/ease.h"
+#include <memory>
 #include "panels/gallery.h"
 #include "panels/enhance_ui.h"
 #include "panels/journaline_view.h"
@@ -367,8 +369,57 @@ void presets(App& a) {
     flowEnd();
 }
 
+// "Find DRM": a few seconds on each short wave band with the AM census on; every channel it calls DRM is listed for one click to decode.
+struct FindDrm { std::unique_ptr<dect2::ease::FreqHunt> h; std::vector<dect2::ease::DrmHit> hits; double lastMhz = 0, backMhz = 0, bandAt = 0; int lastIdx = -1; bool hadCensus = false; std::string note; };
+FindDrm FD;
+
+void findDrm(App& a) {
+    static const std::vector<double> kBands = {5.95, 7.325, 9.6, 11.8, 15.3, 17.7};
+    auto finish = [&](const char* note) {
+        FD.h.reset();
+        a.engine.setAmCensus(FD.hadCensus);
+        if (FD.backMhz > 0) tuneFreq(a, FD.backMhz);
+        FD.backMhz = 0;
+        FD.note = note;
+    };
+    if (!FD.h) {
+        if (ImGui::SmallButton(tr("Find DRM"))) {
+            FD.hits.clear(); FD.note.clear(); FD.lastMhz = 0; FD.lastIdx = -1; FD.backMhz = a.freqMhz; FD.hadCensus = a.engine.amCensusOn();
+            FD.h = std::make_unique<dect2::ease::FreqHunt>(kBands, 8.0);
+            a.engine.setAmCensus(true);
+            if (!a.engine.running()) startReceiver(a);
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Looks a few seconds at each short wave band for channels shaped like DRM and lists them. A radio that captures at least 500 kHz is needed. The shape is a guess until it decodes."));
+    } else {
+        if (ImGui::SmallButton(tr("Stop finding##drm"))) finish(tr("Stopped."));
+        else if (FD.lastMhz > 0 && std::fabs(a.freqMhz - FD.lastMhz) > 0.0001) { FD.backMhz = 0; finish(tr("Stopped: you tuned by hand.")); }
+        else if (FD.lastMhz > 0 && !a.engine.running()) { FD.backMhz = 0; finish(tr("Stopped: the receiver was stopped.")); }
+        else if (a.engine.running()) {
+            const int i = FD.h->update(ImGui::GetTime(), 0);
+            if (FD.h->finished()) finish(FD.hits.empty() ? tr("No DRM-shaped channel found right now.") : tr("Done."));
+            else {
+                const double m = FD.h->mhz(i);
+                if (i != FD.lastIdx) { FD.lastIdx = i; FD.bandAt = ImGui::GetTime(); if (std::fabs(a.freqMhz - m) > 0.0001) tuneFreq(a, m); }
+                FD.lastMhz = a.freqMhz;
+                if (ImGui::GetTime() - FD.bandAt > 3.0)   // the census has had time to see this band; its rows stay from the band before until then
+                    for (const auto& r : a.engine.amCensusRows()) if (r.kind == dect2::AmKind::Drm && std::fabs(r.khz / 1e3 - m) < 0.4) dect2::ease::addDrmHit(FD.hits, r.khz, r.snrDb);
+                ImGui::SameLine(); ImGui::TextDisabled(tr("Looking at %.3f MHz (%d of %d)."), m, i + 1, FD.h->size());
+            }
+        }
+    }
+    if (!FD.note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", FD.note.c_str()); }
+    int id = 0;
+    for (const auto& h : FD.hits) {
+        ImGui::PushID(id++);
+        if (ImGui::SmallButton(tr("Decode"))) tuneFreq(a, h.khz / 1e3);
+        ImGui::SameLine(); ImGui::TextDisabled("%.1f kHz  %.0f dB", h.khz, h.snrDb);
+        ImGui::PopID();
+    }
+}
+
 void tab(App& a) {
     presets(a);
+    findDrm(a);
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     const float gap = 8 * gUi;
     const float sw = std::min(std::max(250.f * gUi, W * 0.34f), W * 0.5f);

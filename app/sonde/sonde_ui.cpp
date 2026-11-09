@@ -9,6 +9,8 @@
 #include "dect2/geo/maidenhead.h"
 #include "../adsb/adsb_map.h"
 #include "dect2/sonde/sonde_tel.h"
+#include "dect2/ease/ease.h"
+#include <ctime>
 #include <algorithm>
 #include <cmath>
 
@@ -25,6 +27,8 @@ struct State {
     std::string sel;                   // serial of the selected sonde ("" = the most recently heard)
     double pushedCenter = 0;
     uint64_t lastSeq = 0;
+    bool autoStart = false;            // start by itself at the next launch window (off until ticked)
+    int64_t autoFired = 0;             // the last window that used its start
 };
 State S;
 
@@ -36,6 +40,8 @@ void loadState() {
     S.loaded = true;
     plat::Prefs& d = plat::prefs();
     S.map.zoom = (int)d.getI("sondeZoom", 8);
+    S.autoStart = d.getB("sondeAutoStart", false);
+    S.autoFired = (int64_t)d.getD("sondeAutoFired", 0);
 }
 
 // landing prediction with the descent smoothed over the user's averaging window (Advanced, 0 to 60 s; 0 is the instantaneous velocity)
@@ -74,6 +80,13 @@ void tick(App& a) {
         if (s && s->hasPos && S.mapFollow) { S.map.lat = s->lat; S.map.lon = s->lon; }
     }
     if (!a.engine.running()) S.lastSeq = 0;
+    if (S.autoStart) {   // the optional start at a launch window: a receiver already running uses up the window, so a stop by hand stays a stop
+        const dect2::ease::SondeWindow w = dect2::ease::sondeWindow((int64_t)time(nullptr));
+        const bool busy = a.engine.running() || txActive();
+        const bool due = dect2::ease::sondeAutoStartDue(w, S.autoFired, S.autoStart, busy);
+        if (w.inWindow && w.id != S.autoFired && (busy || due)) { S.autoFired = w.id; plat::prefs().setD("sondeAutoFired", (double)w.id); }
+        if (due) startReceiver(a);
+    }
 }
 
 std::string heardText(double s) {
@@ -211,6 +224,21 @@ void sondeTable(App& a, bool compact) {
     ImGui::EndTable();
 }
 
+// when balloons usually go up: the rule of thumb and the optional start
+void launchInfo() {
+    const dect2::ease::SondeWindow w = dect2::ease::sondeWindow((int64_t)time(nullptr));
+    ImGui::PushTextWrapPos(0);
+    if (w.inWindow && w.secsToLaunch > 0) ImGui::TextDisabled(tr("Most sites launch near 11:15 and 23:15 UTC. The next launch is in about %d min."), w.secsToLaunch / 60 + 1);
+    else if (w.inWindow) ImGui::TextDisabled("%s", tr("Most sites launch near 11:15 and 23:15 UTC. A launch window is open now, a flight lasts about two hours."));
+    else ImGui::TextDisabled(tr("Most sites launch near 11:15 and 23:15 UTC. Next window in %d h %d min."), w.secsToLaunch / 3600, (w.secsToLaunch % 3600) / 60);
+    ImGui::PopTextWrapPos();
+    if (ImGui::Checkbox(tr("Start by itself at the next launch window"), &S.autoStart)) {
+        plat::prefs().setB("sondeAutoStart", S.autoStart);
+        if (S.autoStart && w.inWindow) { S.autoFired = w.id; plat::prefs().setD("sondeAutoFired", (double)w.id); }   // ticked inside a window: the next one
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("While this mode is on screen and the receiver is stopped. It starts once per window; if you stop it, it stays stopped until the next one. Site times vary."));
+}
+
 // every field of one sonde
 void detailCard(const App& a) {
     const SondeTelemetry& t = a.rx.sonde;
@@ -221,6 +249,7 @@ void detailCard(const App& a) {
     if (sp) ImGui::Text("%s  %s", sp->subtype.empty() ? sp->type.c_str() : sp->subtype.c_str(), sp->serial.c_str());
     else { ImGui::PushTextWrapPos(0); ImGui::TextUnformatted(on ? (t.state == 0 ? "searching" : "no sonde decoded yet") : "stopped"); ImGui::PopTextWrapPos(); }
     ImGui::PopStyleColor();
+    if (!sp) launchInfo();
     const SondeInfo e;
     const SondeInfo& s = sp ? *sp : e;
     char b[96];

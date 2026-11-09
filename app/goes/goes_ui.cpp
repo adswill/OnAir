@@ -4,6 +4,7 @@
 // A dish (about 1 m, or a grid) with an LNA at the feed is needed: a note says so while nothing is received.
 #include "ui/kit/mode_panel.h"
 #include "app.h"
+#include "ease/ease_ui.h"
 #include "panels/gallery.h"
 #include "gfx/gfx.h"
 #include "map/wx_overlay.h"
@@ -337,6 +338,7 @@ void list(App& a) {
 }
 
 void receiver(App& a) {
+    easeui::alignButton(a, "goes", a.rx.goes.snrDb, live(a) && a.rx.goes.snrDb > 0);
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const GoesTelemetry& t = a.rx.goes;
     kvRow(a, "state", "%s", dect2::goesSummary(t).c_str());

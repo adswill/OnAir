@@ -1,6 +1,7 @@
 // DVB-C screens: status bar, the analysis row (constellation, equaliser taps, MER history, Reed-Solomon losses), the Receiver tab, the tuner
 // (cable channel, symbol rate, QAM, annex) and the test signal options. The TV tab, services and the player are the shared ones.
 #include "app.h"
+#include "ease/ease_ui.h"
 #include "dect2/dvbc/dvbc_rx.h"
 #include <cmath>
 #include <deque>
@@ -184,6 +185,7 @@ void panels(App& a) {
 
 void receiver(App& a) {
     const DvbcTelemetry& t = a.rx.dvbc;
+    { int pol = -1; easeui::nitTransponders(a, 2, live(a) && t.tsLock, t.inverted, pol); }
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("DVB-C (EN 300 429 / ITU-T J.83 annex A, and annex C): symbol rate from the spectrum, matched filter and timing loop, blind then "
                         "decision-directed equaliser with a carrier loop, QAM order found from the stream, Reed-Solomon (204,188), energy dispersal.");

@@ -2,6 +2,7 @@
 // positions on a map (the ADS-B map underneath, as for APRS and M17), the calling-channel presets, and a "?" about the mbelib library the
 // voice needs (docs/CODECS.md).
 #include "app.h"
+#include "ease/ease_ui.h"
 #include "ui/kit/mode_panel.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/session_list.h"
@@ -257,6 +258,7 @@ void list(App& a) {
 }
 
 void receiver(App& a) {
+    easeui::repeaterPicker(a, "D-STAR");
     wideCarriersTable(a, 0);
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const dect2::DstarTelemetry& t = a.rx.dstar;

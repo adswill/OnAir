@@ -4,6 +4,9 @@
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
 #include "app.h"
+#include "dect2/ease/ease.h"
+#include "dect2/channels/freq_db.h"
+#include <memory>
 #include "pager_filter.h"
 #include "pager_alias.h"
 #include "pager_keywords.h"
@@ -738,7 +741,57 @@ void list(App& a) {
     ImGui::EndTable();
 }
 
+// "Find pagers": the known pager frequencies of the region in turn, 20 s each, until a page is decoded. Tuning by hand ends it.
+struct FindPagers { std::unique_ptr<dect2::ease::FreqHunt> h; double lastMhz = 0, backMhz = 0; std::string note; double noDecodeSince = -1; uint64_t seen = 0; };
+FindPagers F;
+
+void findPagersRow(App& a) {
+    uint64_t msgs = 0;
+    for (const auto& m : messagesOf(a.rx.pager)) msgs = std::max(msgs, m.serial);   // the serial grows per message and never restarts
+    if (!F.h) {
+        if (ImGui::SmallButton(tr("Find pagers"))) {
+            std::vector<double> mhz;
+            const std::string c = plat::prefs().getS("locCountry", "");
+            for (const auto& e : dect2::builtinFrequencies()) if ((e.mode == "pocsag" || e.mode == "flex") && dect2::ease::freqRegionApplies(e.region, c)) mhz.push_back((double)e.hz / 1e6);
+            if (mhz.empty()) F.note = tr("No known pager frequencies for your region.");
+            else {
+                F.backMhz = a.freqMhz; F.lastMhz = 0; F.note.clear();
+                F.h = std::make_unique<dect2::ease::FreqHunt>(mhz, 20.0);
+                if (!a.engine.running()) startReceiver(a);
+            }
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Listens 20 s on each known pager frequency of your region and stops where a page is decoded."));
+        if (!F.note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", F.note.c_str()); }
+    } else {
+        bool stop = ImGui::SmallButton(tr("Stop finding"));
+        if (F.lastMhz > 0 && std::fabs(a.freqMhz - F.lastMhz) > 0.0001) { stop = true; F.note = tr("Stopped: you tuned by hand."); F.backMhz = 0; }
+        else if (!a.engine.running() && F.lastMhz > 0) { stop = true; F.note = tr("Stopped: the receiver was stopped."); F.backMhz = 0; }
+        if (!stop && a.engine.running()) {
+            const int i = F.h->update(ImGui::GetTime(), msgs);
+            const double m = F.h->mhz(i);
+            if (F.h->found()) { F.note = tr("Found pages here."); F.h.reset(); F.backMhz = 0; }
+            else if (F.h->finished()) { F.note = tr("No pages heard on the known frequencies."); F.h.reset(); stop = true; }
+            else { if (std::fabs(a.freqMhz - m) > 0.0001) tuneFreq(a, m); F.lastMhz = a.freqMhz; ImGui::SameLine(); ImGui::TextDisabled(tr("Listening on %.4f MHz (%d of %d)."), m, i + 1, F.h->size()); }
+        }
+        if (stop) { F.h.reset(); if (F.backMhz > 0) tuneFreq(a, F.backMhz); F.backMhz = 0; }
+    }
+    // the first time a wide radio has heard nothing for half a minute: offer Whole span, once
+    plat::Prefs& p = plat::prefs();
+    const bool wideRadio = a.devIdx >= 0 && a.devIdx < (int)a.devices.size() && a.devices[a.devIdx].isRadio() && a.devices[a.devIdx].maxRateHz >= 8e6;
+    if (msgs != F.seen || !live(a)) { F.seen = msgs; F.noDecodeSince = ImGui::GetTime(); }
+    if (F.noDecodeSince < 0) F.noDecodeSince = ImGui::GetTime();
+    if (wideRadio && !wideActive(a) && modeSupportsWide(a.family) && !F.h && !p.has("pagerWideOffered") && ImGui::GetTime() - F.noDecodeSince > 30.0 && msgs == 0) {
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextDisabled("%s", tr("Nothing heard yet. Your radio is wide enough to decode every pager carrier in its band at once."));
+        ImGui::PopTextWrapPos();
+        if (ImGui::SmallButton(tr("Turn on Whole span"))) { a.wideDecode = true; setWideFam(a, a.family, true); savePrefs(a); p.setB("pagerWideOffered", true); }
+        ImGui::SameLine();
+        if (ImGui::SmallButton(tr("No thanks##pgwide"))) p.setB("pagerWideOffered", true);
+    }
+}
+
 void receiver(App& a) {
+    findPagersRow(a);
     wideCarriersTable(a, 0);
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const dect2::PagerTelemetry& t = a.rx.pager;

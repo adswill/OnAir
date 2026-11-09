@@ -2,6 +2,7 @@
 #include "call_filter.h"
 #include "ui/kit/export.h"
 #include "app.h"
+#include "ease/ease_ui.h"
 #include "ui/voice_why_ui.h"
 #include "dect2/voice/voice_why_modes.h"
 #include "ui/kit/session_list.h"
@@ -510,6 +511,7 @@ void spectrumPlotDmr(const DmrTelemetry& t, bool on, ImVec2 sz) {
 }
 
 void receiver(App& a) {
+    easeui::repeaterPicker(a, "DMR");
     radioidui::section(dect2::RadioIdKind::Dmr);
     tgdirui::section(dect2::TgKind::Dmr);
     wideCarriersTable(a, 0);

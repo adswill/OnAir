@@ -2,6 +2,7 @@
 // viewer for reporting them, band presets and the privacy note.
 #include "dect2/common/time_fmt.h"
 #include "app.h"
+#include "ease/ease_ui.h"
 #include "dect2/ism/ism_rx.h"
 #include "dect2/ism/ism_tel.h"
 #include <algorithm>
@@ -445,7 +446,7 @@ void tick(App& a) {
 }
 
 void tab(App& a) {
-    presets(a);
+    if (easeui::autoBandControl(a, "ismAutoBand", a.rx.ism.blocksOk)) presets(a);
     privacyNote();
     subNav("ismv", S.view, {"Devices", "Log", "Unknown", "Supported", "Z-Wave", "Sigfox"});
     if (S.view == 3) { supportedView(); return; }

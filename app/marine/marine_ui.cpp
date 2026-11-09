@@ -29,6 +29,10 @@
 #include <cstring>
 #include <filesystem>
 #include <ctime>
+#include "dect2/ease/navtex.h"
+#include "dect2/ease/ease.h"
+#include "dect2/general/general_rx.h"
+#include "dect2/geo/maidenhead.h"
 
 void marineFaxTexture();   // below: the texture of a picture loaded from the results file
 
@@ -38,6 +42,12 @@ using dect2::DscCall;
 using dect2::NavtexMessage;
 
 struct State {
+    bool schedOn = false;            // "Follow the schedule": retune before each broadcast (off until chosen, not saved)
+    std::string schedStation;        // "" = any station of the region shown
+    long long schedTunedFor = 0;     // the broadcast already tuned for
+    double schedDialMhz = 0;         // where it tuned: another frequency means the user tuned by hand, and following stops
+    bool schedRan = false;           // the receiver ran for it: a Stop then ends following too
+    std::string schedNote;
     bool loaded = false;
     int view = 0;                    // 0 NAVTEX, 1 DSC, 2 fax, 3 tuning, 4 fax stations
     int region = 0;                  // fax stations: the region shown (0 all)
@@ -159,7 +169,55 @@ void subjectBadge(char s) {
     ImGui::Dummy(ImVec2(h, h));
 }
 
+// leave the Marine screens for the voice that follows a call
+void listenGeneralUsb(App& a, double khz) {
+    const bool was = a.engine.running();
+    if (was) a.engine.stop();
+    ::setMode(a, 55, 0);
+    generalRecallHz(a, khz * 1e3);
+    a.tune.centerHz = a.freqMhz * 1e6;
+    generalApiSetDemod(dect2::GenUsb);
+    savePrefs(a);
+    if (was) startReceiver(a);
+}
+
 // ---------------------------------------------------------------- NAVTEX
+
+// "in 37 min", "in 2 h 5 min" (a station's slot length is 10 minutes, so "now" covers the first of them)
+std::string navSlotIn(int secs) {
+    char b[48];
+    if (secs < 60) snprintf(b, sizeof b, "%s", tr("about to start"));
+    else if (secs < 3600) snprintf(b, sizeof b, tr("in %d min"), secs / 60);
+    else snprintf(b, sizeof b, tr("in %d h %d min"), secs / 3600, (secs % 3600) / 60);
+    return b;
+}
+
+int navKhz(const App& a) { const int k = (int)std::lround(a.freqMhz * 1000.0); return k == 490 ? 490 : 518; }
+
+// the stations you can expect: nearest first, with the next broadcast of each
+void navStationList(const App& a) {
+    if (!receiverLocationSet()) {
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextDisabled("%s", tr("Each station sends for ten minutes every four hours. Set your position (View > Map) to see the nearest ones and when they send."));
+        ImGui::PopTextWrapPos();
+        return;
+    }
+    double la, lo;
+    receiverLocation(la, lo);
+    const auto near = dect2::ease::navtexNearest(la, lo, navKhz(a), (int64_t)time(nullptr));
+    if (near.empty()) { ImGui::TextDisabled("%s", tr("No station on this frequency in the list.")); return; }
+    const auto* soon = &near[0];
+    for (const auto& n : near) if (n.secsToNext < soon->secsToNext) soon = &n;
+    ImGui::PushTextWrapPos(0);
+    ImGui::TextDisabled(tr("Next from your nearest stations: %s (%c), %s."), soon->st->name, soon->st->letter, navSlotIn(soon->secsToNext).c_str());
+    ImGui::PopTextWrapPos();
+    for (const auto& n : near) {
+        ImGui::TextDisabled("%c  %s, %.0f km, %s", n.st->letter, n.st->name, n.km, navSlotIn(n.secsToNext).c_str());
+    }
+    ImGui::PushTextWrapPos(0);
+    ImGui::TextDisabled("%s", tr("Stations and times come from a community list and may be out of date. Range is usually about 400 nautical miles."));
+    ImGui::PopTextWrapPos();
+}
 
 void navtexView(App& a) {
     const dect2::MarineTelemetry& t = a.rx.marine;
@@ -167,8 +225,13 @@ void navtexView(App& a) {
     const float lw = std::min(380.f * gUi, W * 0.42f);
     std::vector<const NavtexMessage*> rows;
     for (const auto& m : t.navtex) rows.push_back(&m);
-    std::stable_sort(rows.begin(), rows.end(), [](const NavtexMessage* x, const NavtexMessage* y) {
-        if (x->station != y->station) return x->station < y->station;
+    const bool havePos = receiverLocationSet();
+    double myLa = 0, myLo = 0;
+    if (havePos) receiverLocation(myLa, myLo);
+    const int navK = navKhz(a);
+    auto stKm = [&](char c) { const auto* s = dect2::ease::navtexByLetter(c, navK, havePos, myLa, myLo); if (!s || !havePos) return 1e9; double km = 0, br = 0; dect2::greatCircle(myLa, myLo, s->lat, s->lon, km, br); return km; };
+    std::stable_sort(rows.begin(), rows.end(), [&](const NavtexMessage* x, const NavtexMessage* y) {
+        if (x->station != y->station) { const double kx = stKm(x->station), ky = stKm(y->station); return kx != ky ? kx < ky : x->station < y->station; }   // the nearest station first
         return x->rxSec > y->rxSec;      // newest first within a station
     });
     const NavtexMessage* sel = nullptr;
@@ -176,7 +239,8 @@ void navtexView(App& a) {
     if (!sel && !t.navtex.empty()) sel = &t.navtex.back();
 
     ImGui::BeginChild("##nav_l", ImVec2(lw, H), ImGuiChildFlags_Borders);
-    if (rows.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", live(a) ? "no NAVTEX message yet (one takes a minute or more)" : "start the receiver"); ImGui::PopTextWrapPos(); }
+    if (rows.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", live(a) ? tr("No NAVTEX message yet.") : tr("Start the receiver.")); ImGui::PopTextWrapPos(); ImGui::Spacing(); navStationList(a); }
+    else if (typo::collapsingHeader(tr("Nearest stations###navnear"))) navStationList(a);
     char cur = 0;
     bool open = true;
     for (const auto* m : rows) {
@@ -184,8 +248,10 @@ void navtexView(App& a) {
             cur = m->station;
             int n = 0;
             for (const auto* x : rows) n += x->station == cur;
-            char h[48];
-            snprintf(h, sizeof h, "Station %c  (%d)###st%c", cur, n, cur);
+            char h[128];
+            const auto* known = dect2::ease::navtexByLetter(cur, navK, havePos, myLa, myLo);
+            if (known) snprintf(h, sizeof h, "Station %c  %s  (%d)###st%c", cur, known->name, n, cur);
+            else snprintf(h, sizeof h, "Station %c  (%d)###st%c", cur, n, cur);
             ImGui::SetNextItemOpen(true, ImGuiCond_Once);
             open = typo::collapsingHeader(h);
         }
@@ -380,6 +446,19 @@ void dscDetail(App& a, const DscCall* c, ImVec2 size) {
             char bl[64]; snprintf(bl, sizeof bl, "Listen on VHF channel %d##dscvhf", ch ? ch : 16);
             if (ImGui::SmallButton(bl)) marineVhfJump(a, ch ? ch : 16);
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Opens the Marine VHF voice mode on that channel (it needs a radio that covers 156 to 162 MHz).");
+        }
+        if (!c->vhf) {   // MF/HF: the working frequencies the call names, in USB in the General receiver
+            int shown = 0;
+            double first = 0;
+            for (const std::string* t : {&c->freqRx, &c->freqTx}) {
+                const double k = dect2::ease::dscWorkingKhz(*t);
+                if (k <= 0 || k == first) continue;
+                if (shown++) ImGui::SameLine();
+                else first = k;
+                char bl[64]; snprintf(bl, sizeof bl, tr("Listen on %.1f kHz USB##dschf%d"), k, shown);
+                if (ImGui::SmallButton(bl)) { listenGeneralUsb(a, k); break; }
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Opens the General receiver in USB on this frequency. The call may name one frequency for each direction."));
+            }
         }
     }
     kv("end", c->eos == 117 ? "acknowledgement requested" : c->eos == 122 ? "acknowledgement" : c->eos == 127 ? "other call" : "");
@@ -686,12 +765,63 @@ void tuneStation(App& a, double carrierKhz) {
     if (!a.engine.running()) startReceiver(a);
 }
 
+const char* const kFaxRegions[] = {"all regions", "Europe", "North America", "Asia", "Oceania", "South America", "Africa"};
+
+std::vector<dect2::ease::WefaxSlot> faxSlots(const std::vector<dect2::WefaxNext>& n) {
+    std::vector<dect2::ease::WefaxSlot> out;
+    for (const auto& x : n) out.push_back({x.s->id, x.startUtc});
+    return out;
+}
+
+// once a second: tune for the next broadcast (two minutes early, times are approximate), but never over a chart under way
+void scheduleTick(App& a) {
+    if (!S.schedOn) return;
+    if (S.schedDialMhz > 0 && std::fabs(a.freqMhz - S.schedDialMhz) > 0.0001) { S.schedOn = false; S.schedNote = tr("Stopped following: you tuned by hand."); return; }
+    if (S.schedRan && !a.engine.running()) { S.schedOn = false; S.schedNote = tr("Stopped following: the receiver was stopped."); return; }
+    const long long now = (long long)time(nullptr);
+    const auto next = dect2::wefaxNext(now - 60, 200, S.region > 0 ? kFaxRegions[S.region] : "");
+    const int i = dect2::ease::wefaxFollowPick(faxSlots(next), S.schedStation, now);
+    if (i < 0 || next[i].s->carrierKhz.empty()) { S.schedNote = tr("No broadcast listed for this choice."); return; }
+    const auto& n = next[i];
+    const bool chart = live(a) && a.rx.marine.fax.state == 2;
+    if (dect2::ease::wefaxFollowDue(n.startUtc, now, 120, S.schedTunedFor, chart)) {
+        S.schedTunedFor = n.startUtc;
+        if (txActive()) return;
+        tuneStation(a, n.s->carrierKhz[0]);
+        S.schedDialMhz = a.freqMhz;
+        S.schedRan = true;
+    }
+    char b[160];
+    const long long d = n.startUtc - now;
+    if (d > 0) snprintf(b, sizeof b, tr("Next: %s %s at %02d:%02d UTC, in %lld min."), n.s->callsign, n.b->product, n.b->utcMin / 60, n.b->utcMin % 60, d / 60 + 1);
+    else snprintf(b, sizeof b, tr("Receiving: %s %s."), n.s->callsign, n.b->product);
+    S.schedNote = b;
+}
+
+void scheduleControls(App& a) {
+    using namespace dect2;
+    if (ImGui::Checkbox(tr("Follow the schedule"), &S.schedOn)) {
+        S.schedTunedFor = 0; S.schedDialMhz = 0; S.schedRan = false; S.schedNote.clear();
+        if (S.schedOn) scheduleTick(a);
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Tunes two minutes before each broadcast of the region or station and receives it. Charts are kept by the autosave. A chart under way is never interrupted. Tuning by hand or Stop ends it."));
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(180 * gUi);
+    const WefaxStation* cur = S.schedStation.empty() ? nullptr : wefaxStation(S.schedStation);
+    if (ImGui::BeginCombo("##wfsch", cur ? cur->name : tr("Any station"))) {
+        if (ImGui::Selectable(tr("Any station"), !cur)) S.schedStation.clear();
+        for (const WefaxStation& s : wefaxStations()) if (S.region == 0 || !strcmp(s.region, kFaxRegions[S.region])) if (ImGui::Selectable(s.name, cur == &s)) S.schedStation = s.id;
+        ImGui::EndCombo();
+    }
+    if (!S.schedNote.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", S.schedNote.c_str()); }
+}
+
 void stationsView(App& a) {
     using namespace dect2;
-    static const char* const regions[] = {"all regions", "Europe", "North America", "Asia", "Oceania", "South America", "Africa"};
+    scheduleControls(a);
     ImGui::SetNextItemWidth(140 * gUi);
-    ImGui::Combo("##wfreg", &S.region, regions, 7);
-    const std::string reg = S.region > 0 ? regions[S.region] : "";
+    ImGui::Combo("##wfreg", &S.region, kFaxRegions, 7);
+    const std::string reg = S.region > 0 ? kFaxRegions[S.region] : "";
     ImGui::SameLine();
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("Frequencies are the carriers; a click tunes the USB dial 1.9 kHz lower. Times (UTC) marked ~ are approximate: "
@@ -943,6 +1073,7 @@ void scanTick(App& a) {
     const double now = (double)time(nullptr);
     if (now == lastSec) return;
     lastSec = now;
+    scheduleTick(a);
     dect2::MarineReceiver& r = a.engine.marine();
     if (S.parOn && !S.scanOn) {
         std::vector<double> want;

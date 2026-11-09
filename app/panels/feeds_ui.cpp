@@ -1,3 +1,4 @@
+#include "ease/ease_ui.h"
 // View > Data feeds: send what the decoders find to other programs (tar1090 / readsb / VRS, OpenCPN, APRS-IS, acarshub).
 // Every feed is off until the user turns it on; the network work is in core (feeds.cpp).
 #include "../app.h"
@@ -286,7 +287,7 @@ void feedsWindow(App& a) {
         ImGui::EndTooltip();
     }
     dect2::PskReporterConfig& r = a.pskr;
-    bool pc = false;
+    bool pc = easeui::stationFillOnce(a, "stationFilled.pskr", r.call, r.locator);
     pc |= ImGui::Checkbox(tr("Send spots to PSK Reporter (pskreporter.info)"), &r.on);
     ImGui::Indent();
     pc |= textField(N_("Your callsign"), r.call, ImGuiInputTextFlags_CharsUppercase, 120);
@@ -322,7 +323,7 @@ void feedsWindow(App& a) {
         ImGui::EndTooltip();
     }
     dect2::WsprNetConfig& wn = a.wsprNet;
-    bool wc = false;
+    bool wc = easeui::stationFillOnce(a, "stationFilled.wspr", wn.call, wn.locator);
     wc |= ImGui::Checkbox(tr("Send WSPR spots to WSPRnet (wsprnet.org)"), &wn.on);
     ImGui::Indent();
     wc |= textField(N_("Your callsign"), wn.call, ImGuiInputTextFlags_CharsUppercase, 120);

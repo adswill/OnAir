@@ -4,6 +4,7 @@
 // hand-over to DVB-S/S2, and the drift history. Every frequency shown is the corrected downlink frequency once the beacons are locked.
 #include "dect2/common/time_fmt.h"
 #include "app.h"
+#include "ease/ease_ui.h"
 #include "state/results_export.h"
 #include "panels/gallery.h"
 #include "dvbs/dvbs_autoservice.h"
@@ -845,6 +846,11 @@ void list(App& a) {
 
 void receiver(App& a) {
     const auto& t = T(a);
+    {   // aim on the beacons
+        float best = 0; bool found = false;
+        for (const auto& b : t.beacons) if (b.found) { best = std::max(best, (float)b.snrDb); found = true; }
+        easeui::alignButton(a, "qo100", best, live(a) && found);
+    }
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     ImGui::TextWrapped("%s", dect2::qo100Summary(t).c_str());
     ImGui::TextWrapped("Radio %s at %.3f Msps = %s - %s (LO %s%s)", mhz(t.centreIfHz).c_str(), t.rate / 1e6, mhz(t.wbF0Hz).c_str(),
