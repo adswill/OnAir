@@ -358,6 +358,7 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 130: return pollStd(rxLtr_, 130, t, seqs[126], &RxTelemetry::ltr);     // LTR control channel (slot 126)
     case 131: return pollStd(rxEdacs_, 131, t, seqs[127], &RxTelemetry::edacs); // EDACS control channel (slot 127)
     case 156: return pollStd(rxMarineVhf_, 156, t, seqs[142], &RxTelemetry::marinevhf);   // Marine VHF voice (slot 142)
+    case 341: case 342: case 343: case 344: case 345: case 346: case 347: return pollStd(rxChv_, a, t, seqs[218], &RxTelemetry::chanvoice);   // channelised voice (slot 218, one receiver for all seven)
     case 181: return pollStd(rxP25p2_, 181, t, seqs[181], &RxTelemetry::p25p2); // P25 Phase 2 (slot 181)
     default: return -1;
     }

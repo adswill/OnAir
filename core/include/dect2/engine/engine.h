@@ -165,6 +165,7 @@
 #include "dect2/ltr/ltr_rx.h"
 #include "dect2/edacs/edacs_rx.h"
 #include "dect2/marinevhf/marinevhf_rx.h"
+#include "dect2/chanvoice/chv_rx.h"
 #include "dect2/p25p2/p25p2_rx.h"
 #include "dect2/milhf/milhf_engine.h"
 #include "dect2/sbas/sbas_engine.h"
@@ -589,6 +590,7 @@ public:
     MptReceiver& mpt1327() { return rxMpt_; }   // MPT1327 trunking control channel: messages and channel table (telemetry through latestRx)
     FusionReceiver& fusion() { return rxFusion_; }   // Yaesu Fusion: callsigns and slow data, the speech codec plug-in (telemetry through latestRx)
     LtrReceiver& ltr() { return rxLtr_; }   // LTR control channel (telemetry through latestRx)
+    ChanVoiceReceiver& chanVoice() { return rxChv_; }   // CB, FRS / GMRS, PMR446, ham FM repeaters, HF voice, MDC-1200, wireless mic finder (families 340 - 346, docs/CHANNELS-3.8.md)
     MarineVhfReceiver& marineVhf() { return rxMarineVhf_; }   // Marine VHF voice: all channels of the span (telemetry through latestRx)
     EdacsReceiver& edacs() { return rxEdacs_; }   // EDACS control channel (telemetry through latestRx)
     SbasReceiver& sbas() { return rxSbas_; }   // SBAS L1: the decoded messages are cleared from here (telemetry through latestRx)
@@ -990,6 +992,7 @@ private:
     LtrReceiver rxLtr_;
     EdacsReceiver rxEdacs_;
     MarineVhfReceiver rxMarineVhf_;
+    ChanVoiceReceiver rxChv_;   // one receiver for the seven channelised voice modes (active standards 341 - 347)
     P25p2Receiver rxP25p2_;
     MilhfReceiver rxMilhf_;
     SbasReceiver rxSbas_;
