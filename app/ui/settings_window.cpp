@@ -175,6 +175,7 @@ void customRow(App& a, const Info& i) {
     else if (k == "recordingsFolder") {
         static char buf[1024]; static bool init = false;
         if (!init) { init = true; snprintf(buf, sizeof buf, "%s", chosenRecordingsDir().c_str()); }
+        ImGui::PushID("recdirBlock");
         const std::string cur = recordingsDir();
         ImGui::TextWrapped("%s", cur.c_str());
         const unsigned long long fb = recdir::freeBytes(cur);
@@ -189,6 +190,7 @@ void customRow(App& a, const Info& i) {
         ImGui::SameLine();
         if (ImGui::Button(tr("Open"))) revealFolder(recordingsDir());
         if (!chosenRecordingsDir().empty() && recdir::normalise(chosenRecordingsDir()) != cur) ImGui::TextColored(ImVec4(1.f, 0.75f, 0.3f, 1), "%s", tr("That folder cannot be written: the default is used."));
+        ImGui::PopID();
     }
     else if (k == "ffmpegLibs") {
         static char buf[1024]; static bool init = false;
