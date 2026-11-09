@@ -9,6 +9,7 @@
 #include <cmath>
 #include <complex>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <random>
 #include <set>
@@ -37,6 +38,7 @@ struct Case {
     bool narrow = false;
     int frames = 40;
     int fixBits = 0;
+    bool vote = true;            // the receiver's multi-demodulator vote (ax25::voteRepair)
     int emphasis = 0;            // the receiver's setting
     bool audio = false;          // sound-card input: the FM-demodulated audio (cnrDb is then the audio SNR in 4 kHz)
     bool noiseOnly = false;      // no transmissions at all (false frames)
@@ -131,7 +133,7 @@ std::vector<float> fskAudio(const std::vector<uint8_t>& lv, double ppm) {
     return a;
 }
 
-struct Result { int sent = 0, got = 0, falseFrames = 0, fixed = 0; double twist = 0; };
+struct Result { int sent = 0, got = 0, falseFrames = 0, fixed = 0, voted = 0; double twist = 0; };
 
 Result run(const Case& c) {
     std::mt19937 rng((unsigned)c.seed * 7919u + (unsigned)c.baud);
@@ -202,6 +204,7 @@ Result run(const Case& c) {
     rx.setNarrowChannel(c.narrow);
     rx.setSilent(true);
     rx.setFixBits(c.fixBits);
+    rx.setVote(c.vote);
     rx.setEmphasis(c.emphasis);
     rx.setAudioInput(c.audio);
     rx.configure(kFs);
@@ -228,6 +231,7 @@ Result run(const Case& c) {
     }
     r.got = (int)got.size();
     r.fixed = (int)tel.fixedFrames;
+    r.voted = (int)tel.votedFrames;
     r.twist = tel.twistDb;
     return r;
 }
@@ -242,9 +246,26 @@ void check(Case c, double minPct) {
     if (p + 1e-9 < minPct || r.falseFrames) { printf("FAIL: %s at %.1f dB\n", c.name, c.cnrDb); fails++; }
 }
 
+// vote: the demodulators' failed copies of one frame voted into a good one (weak signals, 1200 baud); never a wrong frame
+void voteBlock(const std::vector<double>& cnrs, int seeds, double minGain = 1.0) {
+    int off = 0, on = 0, voted = 0, sent = 0, wrong = 0;
+    for (double cnr : cnrs) {
+        for (int seed = 1; seed <= seeds; seed++) {
+            Case c; c.cnrDb = cnr; c.frames = 80; c.seed = seed;
+            c.vote = false; const Result r0 = run(c);
+            c.vote = true; const Result r1 = run(c);
+            printf("  1200 vote at %.0f dB seed %d: off %d, on %d (%d voted) of %d\n", cnr, seed, r0.got, r1.got, r1.voted, r0.sent);
+            off += r0.got; on += r1.got; voted += r1.voted; sent += r0.sent; wrong += r1.falseFrames;
+        }
+    }
+    printf("%-58s off %d, on %d (%d voted) of %d, wrong frames %d\n", "1200 vote, total", off, on, voted, sent, wrong);
+    if (on < off * minGain || wrong) { printf("FAIL: vote (need %.0f%% more frames than without)\n", (minGain - 1) * 100); fails++; }
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
+    if (argc > 1 && !strcmp(argv[1], "--vote")) { voteBlock({1.0, 2.0, 3.0, 4.0, 5.0}, argc > 2 ? atoi(argv[2]) : 3); return fails ? 1 : 0; }
     const bool sweep = argc > 1 && !strcmp(argv[1], "--sweep");
     if (sweep) {
         printf("decode %% vs CNR (25 kHz)\n");
@@ -309,6 +330,7 @@ int main(int argc, char** argv) {
         printf("%-58s %5.1f dB  off %d, 1 bit %d (%d fixed), 2 bits %d (%d fixed) of %d\n", "1200 fix bits", c.cnrDb, r0.got, r1.got, r1.fixed, r2.got, r2.fixed, r0.sent);
         if (r1.got < r0.got || r2.got < r1.got || r1.falseFrames || r2.falseFrames) { printf("FAIL: fix bits\n"); fails++; }
     }
+    voteBlock({4.0, 5.0}, 2, 1.05);
     { Case c = b; c.name = "1200 tones 9 dB apart (mark low)"; c.twistDb = -9; c.cnrDb = 10; check(c, 95); }
     { Case c = b; c.name = "1200 tones 6 dB apart (mark high)"; c.twistDb = 6; c.cnrDb = 10; check(c, 95); }
     { Case c = b; c.name = "1200 pre-emphasis, band-pass, limiter"; c.preEmph = true; c.txFilter = true; c.clip = true; c.cnrDb = 12; check(c, 95); }
