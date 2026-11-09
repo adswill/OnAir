@@ -1,6 +1,8 @@
 // See wxsat_gen.h. Formats from SatDump (GPL-3.0, Copyright Aang23 and contributors); code written for OnAir.
 #include "dect2/wxsat/wxsat_gen.h"
 #include "dect2/wxsat/wxsat_proto.h"
+#include "dect2/wxsat/filecast.h"
+#include "dect2/dvbs/dvbs_gen.h"
 #include "dect2/common/mathconst.h"
 #include "dect2/common/stable_random.h"
 #include "dect2/dsp/rrc.h"
