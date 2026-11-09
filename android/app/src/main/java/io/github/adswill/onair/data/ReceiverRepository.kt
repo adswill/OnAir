@@ -75,6 +75,8 @@ data class ReceiverState(
     companion object {
         /** The engine's standard code of a desktop family number (app_state.cpp engineStd). */
         fun stdOf(f: Int) = when { f >= 6 -> f + 2; f == 1 -> 3; f == 2 -> 4; f == 3 -> 5; f == 4 -> 6; f == 5 -> 7; else -> 0 }
+        /** The number the receiver reports in Telemetry.standard, one below the engine's code (panels and the mode's exporter go by this one). */
+        fun telemetryStdOf(f: Int) = if (f <= 0) 0 else f + 1
     }
 }
 
@@ -117,12 +119,14 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
     private var fileFd: ParcelFileDescriptor? = null
 
     /** USB radios, network radios, the sound-card input (data/RadioRepository.kt, docs/USB.md). */
-    val radios = RadioRepository(
+    val radios: RadioRepository = RadioRepository(
         ctx, scope,
         object : EngineExec { override suspend fun <T> call(name: String, block: () -> T): T = engine.call(name) { block() } },
         settings, ::updateSettings,
         onRadioLost = { msg -> stopBecause(msg) },
         onRadiosChanged = { if (_settings.value.source == SourceKind.USB) refreshCaps() },
+        // a radio plugged in while the app still shows the test signal: use it, nothing else to set up
+        onRadioReady = { r -> if (!_state.value.active && _settings.value.source == SourceKind.TEST_SIGNAL) { radios.selectUsb(r); chooseSource(SourceKind.USB); AppLog.i("usb", "using ${r.label}") } },
     )
 
     init {
@@ -156,7 +160,7 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
         }
         if (CrashLog.hasUnseen(ctx)) _state.update { it.copy(error = ctx.getString(R.string.previous_crash, CrashLog.file(ctx).absolutePath)) }
         val saved = s.modeIndex
-        val idx = if (saved in Modes.all.indices) saved else Modes.all.indexOfFirst { it.family == 5 }.coerceAtLeast(0)
+        val idx = if (saved in Modes.all.indices && !Modes.all[saved].removed) saved else Modes.all.indexOfFirst { it.family == 5 }.coerceAtLeast(0)
         applyMode(idx)
         radios.start()
         refreshCaps(s)
@@ -172,6 +176,9 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
 
     // ---- receive session ------------------------------------------------------------------------------------------------------
     fun toggle() { if (_state.value.active) stop() else start() }
+
+    /** Starts when nothing is running; queued behind a mode change made just before. */
+    fun startIfIdle() { if (_state.value.phase == Phase.IDLE) start() }
 
     fun start() {
         val st = _state.value

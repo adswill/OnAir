@@ -142,6 +142,11 @@ class ReceiverViewModel(app: Application) : AndroidViewModel(app) {
     // receive session
     fun toggle() = repo.toggle()
     fun selectMode(idx: Int) = repo.selectMode(idx)
+    /** A mode picked in the list: selected, and receiving starts when [UiPrefs.autoStart] is on (one tap from the list to a running decoder). */
+    fun pickMode(idx: Int) { repo.selectMode(idx); if (ui.value.autoStart) repo.startIfIdle() }
+    fun startIfIdle() = repo.startIfIdle()
+    fun setAutoStart(on: Boolean) { uiStore.update { it.copy(autoStart = on) } }
+    fun markBatteryHintShown() { uiStore.update { it.copy(batteryHintShown = true) } }
     fun tune(mhz: Double) = repo.tune(mhz)
     fun clearError() = repo.clearError()
     fun clearResults() = repo.clearResults()

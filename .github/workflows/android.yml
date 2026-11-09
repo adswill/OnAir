@@ -16,6 +16,10 @@ on:
         description: "Build libonair.so and the release APK (off: quick Kotlin-only debug build)"
         type: boolean
         default: true
+      debug:
+        description: "Debug APK with the native library (never uses the signing key; for testing a branch)"
+        type: boolean
+        default: false
 
 concurrency:
   group: android-${{ github.ref }}
@@ -31,7 +35,7 @@ env:
 jobs:
   check:
     name: Kotlin check (no native library)
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/') || (github.event_name == 'workflow_dispatch' && !inputs.native)
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/') || (github.event_name == 'workflow_dispatch' && !inputs.native && !inputs.debug)
     runs-on: ubuntu-24.04
     defaults: { run: { working-directory: android } }
     steps:
@@ -43,14 +47,20 @@ jobs:
         run: python3 tools/check_jni.py
       - name: Scripts
         run: bash -n tools/build_native.sh && python3 -m py_compile tools/*.py
+      - name: The generated mode list and results are current
+        run: |
+          python3 tools/gen_modes.py && python3 tools/gen_results_map.py
+          git diff --exit-code -- tools/mode_order.txt app/src/main/res/values/modes.xml app/src/main/java/io/github/adswill/onair/Modes.kt native/src/results_generic_map.inc
       - name: Debug APK (Kotlin compile, resources, manifest)
         run: ./gradlew --no-daemon assembleDebug
+      - name: Unit tests
+        run: ./gradlew --no-daemon testDebugUnitTest
       - uses: actions/upload-artifact@v7
         with: { name: onair-android-debug-no-native, path: android/app/build/outputs/apk/debug/*.apk, retention-days: 7 }
 
   apk:
     name: Release APK (arm64-v8a)
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.native)
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && (inputs.native || inputs.debug))
     runs-on: macos-15            # the maintainer's own build host: Homebrew gives the pkg-config headers the core configures with
     timeout-minutes: 120
     steps:
@@ -85,7 +95,15 @@ jobs:
           echo "LIBUSB_SRC=$RUNNER_TEMP/libusb-src" >> "$GITHUB_ENV"
       - name: libonair.so (core + JNI bridge)
         run: JOBS=$(sysctl -n hw.ncpu) android/tools/build_native.sh
+      - name: Debug APK (no signing key)
+        if: github.event_name == 'workflow_dispatch' && inputs.debug
+        working-directory: android
+        run: ./gradlew --no-daemon assembleDebug
+      - uses: actions/upload-artifact@v7
+        if: github.event_name == 'workflow_dispatch' && inputs.debug
+        with: { name: onair-android-debug, path: android/app/build/outputs/apk/debug/*.apk, retention-days: 7 }
       - name: Signing key from secrets
+        if: github.event_name != 'workflow_dispatch' || !inputs.debug
         env:
           KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -101,9 +119,11 @@ jobs:
             echo "ONAIR_KEY_PASSWORD=${KEY_PASS:-$KS_PASS}"
           } >> "$GITHUB_ENV"
       - name: Release APK
+        if: github.event_name != 'workflow_dispatch' || !inputs.debug
         working-directory: android
         run: ./gradlew --no-daemon assembleRelease
       - name: Name the APK
+        if: github.event_name != 'workflow_dispatch' || !inputs.debug
         run: |
           V="${ONAIR_VERSION:-$(grep -m1 -oE 'project\(OnAir VERSION [0-9.]+' CMakeLists.txt | awk '{print $3}')}"
           mkdir -p out
@@ -113,4 +133,5 @@ jobs:
           rm -f "$RUNNER_TEMP/onair-release.jks"
           ls -la out
       - uses: actions/upload-artifact@v7
+        if: github.event_name != 'workflow_dispatch' || !inputs.debug
         with: { name: onair-android-apk, path: out/*.apk, retention-days: 30 }

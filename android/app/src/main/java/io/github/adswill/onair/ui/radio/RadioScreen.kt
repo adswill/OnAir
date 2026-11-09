@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -152,10 +153,6 @@ fun RadioScreen(vm: ReceiverViewModel, pickFile: () -> Unit, modifier: Modifier 
                         else -> listOf(0.5e6, 1e6, 2e6, 2.4e6, 4e6, 8e6, 10e6, 20e6)
                     }
                 }
-                val items = listOf(stringResource(R.string.rate_auto)) + rates.map { rateText(it) }
-                val sel = if (s.rateHz <= 0) 0 else rates.indexOfFirst { it == s.rateHz } + 1
-                Dropdown(items, sel.coerceAtLeast(0), { i -> vm.setRate(if (i == 0) 0.0 else rates[i - 1]) }, label = stringResource(R.string.rate))
-                Spacer(Modifier.height(4.dp))
                 val agcGain by vm.agcGain.collectAsStateWithLifecycle()
                 val gmax = if (st.caps.gainMax > 0) st.caps.gainMax else 50.0
                 // the slider moves a local value; the gain is set when the finger lifts. With AGC on it follows the AGC's choice.
@@ -168,8 +165,17 @@ fun RadioScreen(vm: ReceiverViewModel, pickFile: () -> Unit, modifier: Modifier 
                 )
                 CheckRow(stringResource(R.string.agc), s.agc) { vm.setGain(gain.toDouble(), it) }
                 if (st.caps.biasTee) CheckRow(stringResource(R.string.bias_tee), s.biasTee) { vm.setBiasTee(it) }
-                val radio = s.radioFor(s.source)
-                for (rs in st.caps.settings) SettingRow(vm, s.source, radio, rs)
+                // the sample rate and the radio's own settings are chosen automatically; a chosen rate keeps this section open
+                var advanced by rememberSaveable(s.source) { mutableStateOf(s.rateHz > 0) }
+                CheckRow(stringResource(R.string.section_advanced), advanced) { advanced = it }
+                if (advanced) {
+                    val items = listOf(stringResource(R.string.rate_auto)) + rates.map { rateText(it) }
+                    val sel = if (s.rateHz <= 0) 0 else rates.indexOfFirst { it == s.rateHz } + 1
+                    Dropdown(items, sel.coerceAtLeast(0), { i -> vm.setRate(if (i == 0) 0.0 else rates[i - 1]) }, label = stringResource(R.string.rate))
+                    Spacer(Modifier.height(4.dp))
+                    val radio = s.radioFor(s.source)
+                    for (rs in st.caps.settings) SettingRow(vm, s.source, radio, rs)
+                }
             }
         }
         Spacer(Modifier.height(24.dp))

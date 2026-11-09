@@ -61,6 +61,7 @@ import io.github.adswill.onair.OnAirIcons
 import io.github.adswill.onair.R
 import io.github.adswill.onair.TypeScale
 import io.github.adswill.onair.diag.CrashLog
+import io.github.adswill.onair.ui.settings.Battery
 import io.github.adswill.onair.ui.about.AboutScreen
 import io.github.adswill.onair.ui.log.LogScreen
 import io.github.adswill.onair.ui.modes.ModePickerScreen
@@ -109,6 +110,8 @@ fun OnAirApp(vm: ReceiverViewModel, pickFile: () -> Unit, pendingLink: String? =
             if (link != null) {
                 val idx = link.mode?.let { DeepLink.resolveMode(it, names, Modes.all.map { m -> m.subId }) }
                 vm.tuneTo(idx, link.freqMhz)
+                // debug builds only: lets a script start a mode (the all-modes smoke test); a link from another app never starts the radio
+                if (link.run && io.github.adswill.onair.BuildConfig.DEBUG) vm.startIfIdle()
                 nav.navigate(Dest.RECEIVER)
             }
             onLinkHandled()
@@ -143,6 +146,8 @@ private fun MainShell(
         Column(m) {
             if (crashBanner) Banner(stringResource(R.string.crash_banner), p.bad) { CrashLog.markSeen(ctx); onCrashSeen(); nav.navigate(Dest.LOG) }
             if (st.error.isNotEmpty()) Banner(st.error, p.bad) { vm.clearError(); nav.navigate(Dest.LOG) }
+            val ui by vm.ui.collectAsStateWithLifecycle()
+            if (st.running && !ui.batteryHintShown && !Battery.exempt(ctx)) Banner(stringResource(R.string.battery_hint), p.accent) { vm.markBatteryHintShown(); Battery.request(ctx) }
             Destination(vm, nav, pickFile, toggle, Modifier.weight(1f).fillMaxWidth())
         }
     }

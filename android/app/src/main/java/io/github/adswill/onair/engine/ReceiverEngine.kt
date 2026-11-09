@@ -18,7 +18,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.selects.onTimeout
+import kotlinx.coroutines.selects.select
 import java.util.concurrent.Executors
 
 /**
@@ -109,7 +110,12 @@ class ReceiverEngine(
         var nextTele = 0L
         while (currentCoroutineContext().isActive) {
             val wait = nextTick - SystemClock.uptimeMillis()
-            val c = if (wait > 0) withTimeoutOrNull(wait) { queue.receiveCatching().getOrNull() } else queue.tryReceive().getOrNull()
+            // select, not withTimeoutOrNull around receive: a command delivered just as the timeout fired was lost, its caller waited forever and
+            // the receive session could no longer be stopped or changed (seen in the all-modes test)
+            val c = if (wait > 0) select<Command?> {
+                queue.onReceiveCatching { it.getOrNull() }
+                onTimeout(wait) { null }
+            } else queue.tryReceive().getOrNull()
             if (queue.isClosedForReceive && c == null) break
             if (c != null) {
                 execute(c)
@@ -173,7 +179,10 @@ class ReceiverEngine(
 
     private fun pollTelemetryAndLog() {
         val force = forceTelemetry || _telemetry.value == null
-        core.telemetry(force)?.let { _telemetry.value = it; forceTelemetry = false }
+        core.telemetry(force)?.let {
+            _telemetry.value = it; forceTelemetry = false
+            if (io.github.adswill.onair.BuildConfig.DEBUG) android.util.Log.i("OnAirSmoke", "std=${it.standard} rate=${meta[1]} lock=${it.lock} snr=${it.snrDb} cards=${it.cards.size} tables=${it.tables.size} rows=${it.tables.sumOf { t -> t.rows.size }} summary=${it.summary.take(100)}")
+        }
         val (total, lines) = core.log(logTotal)
         logTotal = total
         if (lines.isNotEmpty()) {

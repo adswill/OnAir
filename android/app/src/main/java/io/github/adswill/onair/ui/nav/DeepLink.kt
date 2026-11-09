@@ -11,7 +11,7 @@ import java.util.Locale
  * mode: a mode's name as the mode list shows it (`FM broadcast`, `fm-broadcast`, case and punctuation ignored), its protocol id
  * (`vor`, `navtex`), or its index in the list (`#12` or `12`).
  */
-data class DeepLink(val freqMhz: Double?, val mode: String?) {
+data class DeepLink(val freqMhz: Double?, val mode: String?, val run: Boolean = false) {
     companion object {
         const val SCHEME = "onair"
         const val HOST_TUNE = "tune"
@@ -34,7 +34,7 @@ data class DeepLink(val freqMhz: Double?, val mode: String?) {
             val f = (params["freq"] ?: params["f"])?.let { parseFreqMhz(it) }
             val m = params["mode"]?.trim()?.takeIf { it.isNotEmpty() }
             if (f == null && m == null) return null
-            return DeepLink(f, m)
+            return DeepLink(f, m, params["run"] == "1")
         }
 
         private fun decode(s: String): String = try { URLDecoder.decode(s, "UTF-8") } catch (_: Exception) { s }

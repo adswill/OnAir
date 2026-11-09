@@ -57,13 +57,13 @@ import java.util.concurrent.CopyOnWriteArrayList
 data class PanelContext(
     val modeIndex: Int,
     val mode: ModeDef,
-    /** The engine standard (ReceiverState.stdOf(family)); Telemetry.standard carries the same number. */
+    /** The standard as Telemetry.standard reports it (ReceiverState.telemetryStdOf): what [Std] and the panels compare with. */
     val standard: Int,
     /** The protocol id of a shared receiver (ModeDef.subId), or null. */
     val subId: String?,
 ) {
     companion object {
-        fun of(st: ReceiverState) = PanelContext(st.modeIndex, st.mode, ReceiverState.stdOf(st.mode.family), st.mode.subId)
+        fun of(st: ReceiverState) = PanelContext(st.modeIndex, st.mode, ReceiverState.telemetryStdOf(st.mode.family), st.mode.subId)
     }
 }
 
