@@ -17,6 +17,7 @@ struct EbicabTelegram {
     double timeSec = 0;
     bool longFmt = false, inverted = false;
     ebicab::Header header;
+    std::vector<ebicab::Packet> packets;   // SUBSET-026 packets after the header
     std::string hex;             // the user bits
     int repeats = 1;             // copies seen in a row (the balise repeats its telegram while the train passes)
     float snrDb = 0;

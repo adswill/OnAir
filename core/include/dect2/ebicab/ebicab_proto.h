@@ -35,6 +35,10 @@ struct Header {
 };
 Header parseHeader(const std::vector<uint8_t>& userBits);
 
+// SUBSET-026 chapter 7 packets after the header, one readable line each. Field layout read from the openETCS XML transcription of the chapter (a Baseline 3 text).
+struct Packet { int nid = -1, qDir = 0, lenBits = 0; std::string text; };
+std::vector<Packet> parsePackets(const std::vector<uint8_t>& userBits);
+
 struct Telegram {
     bool longFmt = false;
     bool inverted = false;           // the whole telegram was received inverted (the radio side swapped the two frequencies)
@@ -45,6 +49,7 @@ struct Telegram {
     uint16_t scrambling = 0;         // the 12 scrambling bits
     int shift = 0;                   // where the telegram started in the window
     Header header;
+    std::vector<Packet> packets;
     std::string hex;                 // the user bits as hex (padded with zeros to a whole byte)
 };
 

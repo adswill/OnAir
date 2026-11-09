@@ -22,6 +22,8 @@ Portugal, Bulgaria) and EBICab 900 (Finland, Spain's Mediterranean corridor) are
 - **Bursts that give no telegram** (damaged ones, other systems, EBICab) are listed with their length in bits, duration and first bits. A length
   near 32 or 255 bits is *hinted* as the length of an EBICab 700 / 900 telegram, nothing more.
 
+- **Packets** of SUBSET-026 chapter 7 are walked by their length; linking (5), gradient (21), speed (27), level transition (41), temporary speed (65), track condition (68), plain text (72) and geographical position (79) are shown as text. Field layouts come from the openETCS XML transcription of the chapter (a Baseline 3 text); simulated bits only.
+
 ## What is not decoded
 
 The EBICab 700 (32 bit) and EBICab 900 (255 bit) telegram formats and their coding are not published, and OnAir does not reverse engineer closed

@@ -72,6 +72,106 @@ Header parseHeader(const std::vector<uint8_t>& u) {
     return h;
 }
 
+namespace {
+struct Br {
+    const std::vector<uint8_t>& u; size_t p, end; bool ok = true;
+    int get(int n) { int v = 0; for (int i = 0; i < n; i++) { if (p >= end) { ok = false; v <<= 1; continue; } v = v << 1 | u[p++]; } return v; }
+};
+std::string distText(int scale, int raw) {
+    if (raw == 32767) return "now/unknown";
+    static const double m[4] = {0.1, 1.0, 10.0, 0.0};
+    char b[32];
+    if (m[scale & 3] == 0.0) return "?";
+    snprintf(b, sizeof b, "%.1f m", raw * m[scale & 3]);
+    return b;
+}
+std::string speedText(int v) { if (v == 127) return "end"; char b[24]; snprintf(b, sizeof b, "%d km/h", v * 5); return b; }
+
+void packetBody(int nid, Br& r, Packet& p) {
+    char b[160];
+    const int sc = r.get(2);
+    if (nid == 5) {
+        int d = r.get(15); const int newC = r.get(1); int nidC = newC ? r.get(10) : -1; int bg = r.get(14); r.get(1); r.get(2); r.get(6);
+        std::string t;
+        int nIter = 0;
+        if (r.ok) nIter = r.get(5);
+        snprintf(b, sizeof b, "linking: next group %d", bg); t = b;
+        if (nidC >= 0) { snprintf(b, sizeof b, " country %d", nidC); t += b; }
+        t += " at " + distText(sc, d);
+        for (int i = 0; i < nIter && r.ok; i++) { d = r.get(15); const int nc = r.get(1); if (nc) r.get(10); bg = r.get(14); r.get(1); r.get(2); r.get(6); snprintf(b, sizeof b, ", %d", bg); t += b; t += " at +" + distText(sc, d); }
+        p.text = t;
+    } else if (nid == 21) {
+        int d = r.get(15), dir = r.get(1), ga = r.get(8);
+        std::string t = "gradient: at " + distText(sc, d) + (dir ? " +" : " -") + std::to_string(ga) + " per mil";
+        const int n = r.get(5);
+        for (int i = 0; i < n && r.ok; i++) { d = r.get(15); dir = r.get(1); ga = r.get(8); t += ", +" + distText(sc, d) + (ga == 255 ? " end" : (dir ? " +" : " -") + std::to_string(ga)); }
+        p.text = t;
+    } else if (nid == 27) {
+        int d = r.get(15), v = r.get(7); r.get(1);
+        auto diffs = [&](int cnt) { for (int i = 0; i < cnt && r.ok; i++) { const int q = r.get(2); if (q == 0 || q == 1 || q == 2) r.get(4); r.get(7); } };
+        diffs(r.get(5));
+        std::string t = "speed: " + speedText(v) + " at " + distText(sc, d);
+        const int n = r.get(5);
+        for (int i = 0; i < n && r.ok; i++) { d = r.get(15); v = r.get(7); r.get(1); diffs(r.get(5)); t += ", " + speedText(v) + " at +" + distText(sc, d); }
+        p.text = t;
+    } else if (nid == 41) {
+        int d = r.get(15), m = r.get(3);
+        if (m == 1) { r.get(8); r.get(15); }
+        static const char* const lv[8] = {"level 0", "NTC", "level 1", "level 2", "level 3", "?", "?", "?"};
+        p.text = "level transition to " + std::string(lv[m & 7]) + " at " + distText(sc, d);
+    } else if (nid == 65) {
+        const int id = r.get(8); int d = r.get(15), l = r.get(15); r.get(1); int v = r.get(7);
+        snprintf(b, sizeof b, "temporary speed %d: ", id);
+        p.text = std::string(b) + speedText(v) + " at " + distText(sc, d) + " for " + distText(sc, l);
+    } else if (nid == 68) {
+        const int init = r.get(1);
+        if (init) { p.text = "track conditions: initial state at " + distText(sc, r.get(15)); return; }
+        int d = r.get(15), l = r.get(15), m = r.get(4);
+        static const char* const cond[16] = {"non-stopping area", "tunnel stopping area", "sound horn", "powerless (lower pantograph)", "radio hole", "air tightness",
+                                             "regenerative brake off", "eddy current service brake off", "magnetic shoe brake off", "powerless (main switch off)", "eddy current emergency brake off",
+                                             "spare", "spare", "spare", "spare", "spare"};
+        snprintf(b, sizeof b, "track condition: %s at %s for %s", cond[m & 15], distText(sc, d).c_str(), distText(sc, l).c_str());
+        p.text = b;
+    } else if (nid == 72) {
+        r.get(2); r.get(1); r.get(15); r.get(4); const int lv = r.get(3); if (lv == 1) r.get(8);
+        r.get(15); r.get(10); r.get(4); const int lv2 = r.get(3); if (lv2 == 1) r.get(8);
+        const int conf = r.get(2);
+        if (conf) { r.get(1); const int rep = r.get(1); if (rep) { r.get(8); r.get(10); r.get(14); } }
+        const int n = r.get(8);
+        std::string t = "text: ";
+        for (int i = 0; i < n && r.ok; i++) { const int c = r.get(8); t += c >= 32 && c < 127 ? (char)c : ' '; }
+        p.text = t;
+    } else if (nid == 79) {
+        const int nc = r.get(1); if (nc) r.get(10);
+        const int bg = r.get(14), off = r.get(15); const int qm = r.get(1); const int pos = r.get(24);
+        snprintf(b, sizeof b, "geographical position: group %d %s from it, km %d.%03d counting %s", bg, distText(sc, off).c_str(), pos / 1000, pos % 1000, qm ? "up" : "down");
+        p.text = b;
+    }
+}
+} // namespace
+
+std::vector<Packet> parsePackets(const std::vector<uint8_t>& u) {
+    std::vector<Packet> out;
+    Br r{u, 50, u.size()};
+    if (u.size() < 58) return out;
+    for (int guard = 0; guard < 64; guard++) {
+        Br rd{u, r.p, u.size()};
+        const int nid = rd.get(8);
+        if (!rd.ok || nid == 255) break;
+        Packet p; p.nid = nid; p.qDir = rd.get(2);
+        const size_t start = r.p;
+        p.lenBits = rd.get(13);
+        if (!rd.ok || p.lenBits < 23 || start + (size_t)p.lenBits > u.size()) break;
+        Br body{u, rd.p, start + (size_t)p.lenBits};
+        packetBody(nid, body, p);
+        if (!body.ok) p.text.clear();
+        if (p.text.empty()) { char b[40]; snprintf(b, sizeof b, "packet %d, %d bits", nid, p.lenBits); p.text = b; }
+        out.push_back(p);
+        r.p = start + (size_t)p.lenBits;
+    }
+    return out;
+}
+
 std::vector<uint8_t> userBitsFromHeader(const Header& h, int total) {
     std::vector<uint8_t> u;
     auto put = [&](int v, int n) { for (int i = n - 1; i >= 0; i--) u.push_back((uint8_t)((v >> i) & 1)); };
@@ -192,6 +292,7 @@ bool decodeWindow(const uint8_t* bits, size_t count, bool lng, Telegram& out) {
     for (int j = 0; j < 10; j++) u[(size_t)j] = (uint8_t)((orig >> (9 - j)) & 1);
     out.userBits = u;
     out.header = parseHeader(u);
+    out.packets = parsePackets(u);
     static const char* hx = "0123456789ABCDEF";
     for (size_t i = 0; i < u.size(); i += 8) {
         int v = 0; for (size_t j = 0; j < 8; j++) v = v << 1 | (i + j < u.size() ? u[i + j] : 0);
