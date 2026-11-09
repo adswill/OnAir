@@ -8,6 +8,7 @@ std::unique_ptr<avroad::Decoder> avroad::makeDecoder(int v) {
     case EotHot: return makeEot();
     case Fanet: return makeFanet();
     case Ogn: return makeOgn();
+    case Ermes: return makeErmes();
     default: return nullptr;
     }
 }

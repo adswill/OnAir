@@ -43,6 +43,7 @@ std::unique_ptr<Decoder> makeDecoder(int variant);
 std::unique_ptr<Decoder> makeEot();
 std::unique_ptr<Decoder> makeFanet();
 std::unique_ptr<Decoder> makeOgn();
+std::unique_ptr<Decoder> makeErmes();
 
 // Low-pass, then resample to exactly workRate
 class Chain {

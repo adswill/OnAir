@@ -35,4 +35,13 @@ bool ognRepair(uint8_t* packet26, const float* soft208, int iterations = 30);   
 OgnPacket ognParse(const uint8_t* packet26);                     // dewhitens a copy; an encrypted packet's position fields are left at zero
 void ognWhiten(uint8_t* packet26);                               // the transmit-side scrambling (for the tests)
 
+// ---- ERMES (ETS 300 133-4)
+uint32_t ermesEncode(uint32_t info18);                           // the 30 bit codeword (for the tests)
+bool ermesDecode(uint32_t word30, uint32_t& info18, int* fixed); // repairs up to two errors
+constexpr uint32_t kErmesPreamble = 0b001000100010001000100010001000u, kErmesSync = 0b100010100010000010100000101010u, kErmesApt = 0b100100111000011000100011100100u, kErmesDelim = 0b110101011110011111101110111011u;
+struct ErmesSystem { int country = 0, oper = 0, area = 0, eti = 0, bai = 0, fsi = 0, cycle = 0, subseq = 0, batch = 0, ssit = 0, ssif = 0; };
+ErmesSystem ermesSystem(uint32_t si0, uint32_t si1, uint32_t ssi);
+std::string ermesSystemText(const ErmesSystem& s);
+std::string ermesMessageText(int category, const std::vector<uint32_t>& data18);   // category: 0 tone, 1 numeric, 2 alphanumeric, 3 transparent
+
 } // namespace dect2::avroad
