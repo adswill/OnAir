@@ -447,7 +447,6 @@ bool AutoGainController::evaluateTrial(const AgInput& in, AgCommand& out) {
         why = accept ? f2("other stage split kept: objective +%.1f dB", dJ) : f2("other stage split undone: objective %+.1f dB", dJ);
     }
     lastDecision_ = why;
-    if (getenv("AGDBG")) fprintf(stderr,"[%.1f] kind %d dec %d lost %d gained %d j0 %.2f j1 %.2f thr %.2f shB %.2f shT %.2f n %g %g snr %.1f marg %.1f %s\n",now,candKind_,decDomain,lostLock,gainedLock,j0,j1,thr,shB,shT,rb.n,rt.n,fl_.snrDb,fl_.adcMarginDb,why.c_str());
     if (accept) {
         clTrial_ = false;
         base_ = tri_; decB_ = decT_; mBase_ = mTri_;   // what was measured is the new baseline (and the spectrum accumulating now is its own)

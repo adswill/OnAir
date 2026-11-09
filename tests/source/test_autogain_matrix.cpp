@@ -470,8 +470,10 @@ static std::string fmtS(double v) { char b[24]; if (v > 1e8) snprintf(b, sizeof 
 
 int main(int argc, char** argv) {
     const char* csv = nullptr, *only = nullptr, *modeArg = nullptr;
+    bool quick = false;
     for (int i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "--csv") && i + 1 < argc) csv = argv[++i];
+        if (!strcmp(argv[i], "--quick")) quick = true;
+        else if (!strcmp(argv[i], "--csv") && i + 1 < argc) csv = argv[++i];
         else if (!strcmp(argv[i], "--only") && i + 1 < argc) only = argv[++i];
         else if (!strcmp(argv[i], "--mode") && i + 1 < argc) modeArg = argv[++i];
         else if (!strcmp(argv[i], "--verbose")) gVerbose = true;
@@ -484,6 +486,7 @@ int main(int argc, char** argv) {
     std::map<std::string, int> byFail;
     for (const auto& rr : kRadios) {
         if (only && strcmp(only, rr.id)) continue;
+        if (quick && strcmp(rr.id, "hackrf") && strcmp(rr.id, "rtl-r820t") && strcmp(rr.id, "sdrplay")) continue;   // the three gain models CI runs (ctest: one per kind of gain chain)
         for (int m = 0; m < kModes; m++) {
             if (modeArg && strcmp(modeArg, kModeName[m])) continue;
             const Row r = runCell(rr, (ModeClass)m);
