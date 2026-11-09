@@ -1,6 +1,7 @@
 // JS8Call receiver (see js8_rx.h).
 #include "dect2/common/thread_name.h"
 #include "dect2/js8/js8_rx.h"
+#include "dect2/hfdig/clock_comp.h"
 #include "dect2/net/pskreporter.h"
 #include "dect2/results/results_io.h"
 #include "dect2/js8/js8_tel.h"
@@ -291,6 +292,8 @@ struct Js8Receiver::Impl {
     std::vector<cf32> buf;               // the 4 kHz stream
     int64_t bufStart = 0, n4 = 0;        // absolute index of buf[0], samples so far
     double t0 = 0;                       // slot clock of sample 0
+    ClockComp clockComp;                 // automatic correction of a wrong computer clock (docs/EASE-3.8.md); live only (t0 from the system clock)
+    double clockShift = 0;               // from the decoder thread, taken before the next slots are scheduled
     int64_t nextSlot[3] = {};
     int64_t nIn = 0;
     double nextReport = 0, power = 0;
@@ -401,6 +404,7 @@ struct Js8Receiver::Impl {
 
     // slots whose samples are all in: to the decoder
     void schedule(bool all) {
+        { std::lock_guard<std::mutex> lk(mu); t0 -= clockShift; clockShift = 0; }
         const double now = streamUtc(n4);
         for (int m = 0; m < 3; m++) {
             const js8::Spec& sp = js8::spec(m);
@@ -597,6 +601,14 @@ struct Js8Receiver::Impl {
         std::vector<float> dts;
         for (size_t i = pub.decodes.size() > 40 ? pub.decodes.size() - 40 : 0; i < pub.decodes.size(); i++) dts.push_back(pub.decodes[i].dt);
         if (!dts.empty()) { std::nth_element(dts.begin(), dts.begin() + dts.size() / 2, dts.end()); pub.clockErr = dts[dts.size() / 2]; }
+        if (startReq < 0) {   // the computer clock, from the DT of this slot
+            std::vector<float> slotDts;
+            for (const auto& d : out) slotDts.push_back(d.dt);
+            float med = 0;
+            if (!slotDts.empty()) { std::nth_element(slotDts.begin(), slotDts.begin() + slotDts.size() / 2, slotDts.end()); med = slotDts[slotDts.size() / 2]; }
+            const double s = clockComp.slotEnded((int)out.size(), med);
+            if (s != 0) { clockShift += s; pub.clockTrim = (float)clockComp.total(); }
+        }
         pub.seq++;
     }
 };

@@ -9,6 +9,7 @@
 #include "dect2/hfdig/hfdig_ftx.h"
 #include "dect2/net/pskreporter.h"
 #include "dect2/net/wsprnet.h"
+#include "dect2/hfdig/clock_comp.h"
 #include "dect2/dsp/fftutil.h"
 #include "hfdig_ftx_int.h"
 #include "hfdig_wsjt_int.h"
@@ -1221,6 +1222,12 @@ struct HfdigFtx::Impl {
     std::deque<Job> jobs;
     bool busy = false, quit = false;
     double searchShift = std::numeric_limits<double>::quiet_NaN();   // from a slot search: the DT that becomes 0
+    // Automatic clock correction while following the system clock: the shifts are found by the decoder thread, taken by the audio thread
+    ClockComp clockComp;
+    double clockTrim = 0;            // added to the system clock (audio thread)
+    double autoShift = std::numeric_limits<double>::quiet_NaN();
+    bool wideReq = false, wideRun = false;   // the one automatic slot search
+    double wideUntil = 0;
     HfdigFtxTelemetry tel;
     CallHash hash;
     std::map<uint32_t, std::string> wsprHash;
@@ -1385,14 +1392,33 @@ struct HfdigFtx::Impl {
             anchorK = 0;
             if (!std::isnan(st)) { timeMode = 1; anchorUtc = st; }
             else if (search) { timeMode = 2; anchorUtc = 0; }
-            else { timeMode = 0; anchorUtc = clockNow(); }
+            else { timeMode = 0; anchorUtc = clockNow() + clockTrim; }
         }
         // a slot search that found the slots: the clock moves by the DT measured
         {
             std::lock_guard<std::mutex> lk(mu);
+            if (timeMode == 0 && !std::isnan(autoShift)) {   // the computer clock is off: the slot clock is corrected and the system clock is followed with that offset
+                anchorUtc -= autoShift;
+                clockTrim -= autoShift;
+                tel.clockTrim = (float)clockTrim;
+                for (double& v : nextSlot) v = std::numeric_limits<double>::quiet_NaN();
+            }
+            autoShift = std::numeric_limits<double>::quiet_NaN();
+            if (timeMode == 0 && wideReq) {   // no decode for a while: one slot search, slots up to half a period away
+                timeMode = 2; wideRun = true; wideUntil = clockNow() + 75;
+                for (double& v : nextSlot) v = std::numeric_limits<double>::quiet_NaN();
+            }
+            wideReq = false;
+            if (wideRun && timeMode == 2 && clockNow() > wideUntil) {   // nothing found: back to the system clock, the question is not asked again
+                wideRun = false; timeMode = 0;
+                for (double& v : nextSlot) v = std::numeric_limits<double>::quiet_NaN();
+            }
             if (!std::isnan(searchShift) && timeMode == 2) {
                 anchorUtc -= searchShift;
-                timeMode = 3;
+                if (wideRun) {
+                    clockTrim -= searchShift; clockComp.searchFound(searchShift); wideRun = false; timeMode = 0;
+                    tel.clockTrim = (float)clockTrim;
+                } else timeMode = 3;
                 for (double& v : nextSlot) v = std::numeric_limits<double>::quiet_NaN();
             }
             searchShift = std::numeric_limits<double>::quiet_NaN();
@@ -1408,7 +1434,7 @@ struct HfdigFtx::Impl {
         for (int s = 0; s < kStreams; s++) rs[s]->process(x, n, buf[s]);
         nAudio += (int64_t)n;
         if (timeMode == 0) {   // follow the system clock; a jump (a stall, the clock set) moves the anchor
-            const double err = clockNow() - utcOfAudio((double)nAudio);
+            const double err = clockNow() + clockTrim - utcOfAudio((double)nAudio);
             errEma += 0.05 * (err - errEma);
             if (std::fabs(err) > 2.0) { anchorUtc += err; errEma = 0; }
             else if (std::fabs(errEma) > 0.2) { anchorUtc += errEma; errEma = 0; }
@@ -1455,6 +1481,16 @@ struct HfdigFtx::Impl {
                 continue;
             }
             tel.slots[m]++;
+            if (!j.search && tel.timeMode == 0) {   // the computer clock, from the DT of everything this slot decoded
+                double med = 0;
+                if (!dec.empty()) {
+                    std::vector<float> dts; for (const auto& d : dec) dts.push_back(d.dt);
+                    std::nth_element(dts.begin(), dts.begin() + dts.size() / 2, dts.end()); med = dts[dts.size() / 2];
+                }
+                const double shift = clockComp.slotEnded((int)dec.size(), med);
+                if (shift != 0) autoShift = shift;
+                if (clockComp.wantWide()) wideReq = true;
+            }
             tel.lastSlotCount[m] = (int)dec.size();
             tel.lastSlotUtc[m] = j.slotUtc;
             tel.decodeMs[m] = (float)ms;

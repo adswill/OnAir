@@ -1,5 +1,6 @@
 // First-use hints and first-Start decisions (app/ui/ease_logic.h, docs/EASE-3.8.md).
 #include "../../app/ui/ease_logic.h"
+#include "dect2/hfdig/clock_comp.h"
 #include <cstdio>
 #include <cstring>
 static int fails = 0;
@@ -45,6 +46,16 @@ int main() {
       check(pickFirstService({}) == -1, "empty");
       check(pickFirstService({{-1, 1, false}}) == -1, "invalid id"); }
     check(strongestIdx({1.f, 9.f, 3.f}) == 1 && strongestIdx({}) == -1, "strongest");
+    // E8: a steady DT moves the clock, a lone odd decode does not, silence asks for one wider search
+    { dect2::ClockComp c; check(c.slotEnded(5, 1.3) == 0, "first slot only measures"); double s = c.slotEnded(6, 1.2); check(near(s, 1.2, 1e-6) && near(c.total(), -1.2, 1e-6), "steady: applied"); check(c.slotEnded(5, 0.1) == 0, "small DT is left alone");
+      dect2::ClockComp d; d.slotEnded(5, -1.0); check(near(d.slotEnded(5, -0.9), -0.9, 1e-6) && near(d.total(), 0.9, 1e-6), "negative direction");
+      dect2::ClockComp e; e.slotEnded(5, 1.0); check(e.slotEnded(5, -1.0) == 0, "opposite signs are not steady");
+      dect2::ClockComp f; f.slotEnded(1, 0.7); check(f.slotEnded(1, 0.7) == 0, "one station with a modest DT never moves the clock");
+      dect2::ClockComp g; g.slotEnded(1, 2.5); check(near(g.slotEnded(1, 2.5), 2.5, 1e-6), "a large DT counts even on one decode");
+      dect2::ClockComp w; for (int i = 0; i < 3; i++) { w.slotEnded(0, 0); check(!w.wantWide(), "not yet"); } w.slotEnded(0, 0); check(w.wantWide(), "four silent slots ask for the search"); w.slotEnded(0, 0); check(!w.wantWide(), "once only"); w.searchFound(3.5); check(near(w.total(), -3.5, 1e-9), "search result counted");
+      dect2::ClockComp x; x.slotEnded(0, 0); x.slotEnded(3, 0.1); x.slotEnded(0, 0); x.slotEnded(0, 0); x.slotEnded(0, 0); check(!x.wantWide(), "a decode resets the silence"); }
+    // the sweep: a wrong clock of any size up to 5 s ends within 0.5 s of right (signals reach the slot clock as DT = error until corrected)
+    for (double err = -5; err <= 5; err += 0.25) { dect2::ClockComp c; double e = err; for (int i = 0; i < 12; i++) { const double s = c.slotEnded(4, e); e -= s; } check(std::fabs(e) < 0.5, "clock error sweep converges"); }
     if (fails == 0) std::printf("ease: all passed\n");
     return fails != 0;
 }

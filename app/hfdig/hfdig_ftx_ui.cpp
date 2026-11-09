@@ -365,6 +365,7 @@ void hfdigFtxTab(App& a, const dect2::HfdigTelemetry& t) {
             snprintf(b, sizeof b, "DT %+.2f s, spread %.2f s, %d decodes", f.clockErr, f.dtSpread, f.clockN);
             if (f.clockWarn) ImGui::TextColored(pal::warnAmber(), "clock off by %+.1f s: set the computer clock (decodes still work to 2.5 s)", f.clockErr);
             else ImGui::TextDisabled("%s", b);
+            if (f.clockTrim != 0.f) { ImGui::SameLine(0, 10 * gUi); ImGui::TextColored(pal::warnAmber(), tr("computer clock corrected by %+.1f s"), f.clockTrim); }
         } else ImGui::TextDisabled("no decodes yet");
         flowEnd();
         std::string last;
