@@ -1,6 +1,7 @@
 // The ACARS block layer on top of the Rust crate rust/onair_acars: the functions of acars_proto.h; acars_proto.cpp keeps
 // acarsBuildFrame (the transmitter of the test signal).
 #include "dect2/acars/acars_proto.h"
+#include "dect2/acars/acars_text.h"
 #include "dect2/common/rs_abi.h"
 #include "dect2/rs/acars.h"
 #include <cstdio>
@@ -32,7 +33,7 @@ std::string acarsDecodeText(const std::string& label, const std::string& text) {
     std::string s(256, '\0');
     for (;;) {
         const size_t n = onair_acars_decode_text((const uint8_t*)label.data(), label.size(), (const uint8_t*)text.data(), text.size(), (uint8_t*)&s[0], s.size());
-        if (n != SIZE_MAX) { s.resize(n); return s; }
+        if (n != SIZE_MAX) { s.resize(n); return n ? s : acarsInterpretLine(label, text); }
         s.assign(s.size() * 4, '\0');
     }
 }

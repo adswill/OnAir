@@ -26,12 +26,14 @@ struct SdsMsg {
 
 // bits: the CMCE PDU from its first bit (PDU type); false when it is not a D-SDS-DATA or it is cut short
 bool parseSdsData(const Bits& bits, SdsMsg& out);
+// D-STATUS (table 14.14): calling party and the 16-bit pre-coded status. False when not a D-STATUS or cut short.
+bool parseStatus(const Bits& bits, SdsMsg& out);
 // the LIP short location report alone (76 bits from the PDU type)
 bool parseLipShort(const Bits& bits, size_t pos, SdsMsg& out);
 
 // generator (tests, the demo)
 Bits buildLipShort(double lat, double lon, int errCode, int speedCode, int dir16, int timeElapsed, int reason);
 Bits buildSdsData(int callingIssi, const Bits& userData4, int pid);          // short data type 3 with SDS-TL protocol identifier
-Bits buildSdsText(int callingIssi, const std::string& text);                 // PID 0x01, ISO 8859-1
+Bits buildSdsText(int callingIssi, const std::string& text);                 // PID 0x02 (table 29.21), ISO 8859-1
 
 } // namespace dect2::tetra

@@ -86,8 +86,25 @@ struct MacBlock {
     int byPd[8] = {};           // clear MLE layer messages by protocol discriminator (1 MM, 2 CMCE, 4 SNDCP, 5 MLE, 6 management): counted, never read
     std::vector<NwrkBroadcast> nwrk;
     std::vector<CallEvent> calls;   // the call set-up PDUs sent in the clear (never from air interface encrypted PDUs)
+    struct CmcePdu { Bits bits; int addr = -1; };
+    std::vector<CmcePdu> cmce;      // clear D-STATUS and D-SDS-DATA PDUs of this block, whole (from the PDU type)
+    int fragKind = 0;               // fragment of a longer signalling PDU: 0 none, 1 start, 2 MAC-FRAG, 3 MAC-END
+    Bits fragBits;                  // its TM-SDU
+    int fragAddr = -1, fragSlots = -1, fragCarrier = -1;
 };
 void parseMacBlock(const Bits& type1, MacBlock& out);
+// A TL-SDU put together from fragments (MLE and up): what it held, added to `out` the same way.
+void parseTlSdu(const Bits& sdu, int addr, int slots, int carrier, MacBlock& out);
+// Joins MAC-RESOURCE fragments, MAC-FRAG and MAC-END of one timeslot. feed() returns true with the whole TL-SDU when the last piece arrives.
+class FragReassembler {
+public:
+    bool feed(const MacBlock& m, Bits& sdu, int& addr, int& slots, int& carrier);
+    void reset() { active_ = false; have_.clear(); }
+private:
+    bool active_ = false;
+    Bits have_;
+    int addr_ = -1, slots_ = -1, carrier_ = -1, count_ = 0;
+};
 
 // ACCESS-ASSIGN (21.4.7): the downlink use of the slot in frames 1 - 17: -1 not stated, 0 unallocated, 1 assigned control, 2 common control, 3 reserved, 4 and up traffic
 int aachDlUsage(uint16_t aa, bool frame18);

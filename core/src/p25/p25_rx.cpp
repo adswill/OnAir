@@ -1,5 +1,6 @@
 // P25 Phase 1 receiver (see p25_rx.h).
 #include "dect2/p25/p25_rx.h"
+#include "dect2/p25/p25_cc.h"
 #include "dect2/dsp/up6.h"
 #include "dect2/dsp/cic3.h"
 #include "dect2/results/results_io.h"
@@ -552,6 +553,12 @@ struct P25Receiver::Impl {
         if (tel.now.active) endCall(true);
     }
 
+    static std::vector<uint8_t> bitsToBytes12(const uint8_t* b) {
+        std::vector<uint8_t> o(12, 0);
+        for (int i = 0; i < 96; i++) if (b[i]) o[(size_t)(i / 8)] |= (uint8_t)(0x80 >> (i % 8));
+        return o;
+    }
+
     int tsbks(const Pending& f, size_t P) {
         int n = 0;
         for (int blk = 0; blk < 3; blk++) {
@@ -573,6 +580,25 @@ struct P25Receiver::Impl {
         for (int i = 0; i < 98; i++) lv[i] = dl[P + (size_t)i];
         uint8_t b[96];
         if (!p25::trellisDecode(lv, b) || (uint16_t)bitsVal(b + 80, 16) != p25::crcCcitt(b, 80)) return 0;
+        // the data blocks (rate 1/2 only): multi-block trunking and unconfirmed data
+        std::vector<std::vector<uint8_t>> blks;
+        blks.push_back(bitsToBytes12(b));
+        {
+            const int nb = std::min((int)bitsVal(b + 49, 7), 40);
+            for (int k = 1; k <= nb; k++) {
+                if (P + (size_t)(98 * (k + 1)) > dl.size()) break;
+                for (int i = 0; i < 98; i++) lv[i] = dl[P + (size_t)(98 * k + i)];
+                uint8_t d[96];
+                if (!p25::trellisDecode(lv, d)) break;
+                blks.push_back(bitsToBytes12(d));
+            }
+        }
+        std::vector<p25::Tsbk> asTsbk;
+        if (p25::mbtToTsbks(blks, asTsbk)) {
+            for (auto& t : asTsbk) { onTsbk(t, f.nac); event("MBT decoded to " + std::string(p25::opcodeName(t.opcode))); }
+            tel.tsbkOk++;
+            return (int)blks.size();
+        }
         const int fmt = (int)bitsVal(b + 3, 5), sap = (int)bitsVal(b + 10, 6), llid = (int)bitsVal(b + 24, 24), blocks = (int)bitsVal(b + 49, 7);
         const bool out = b[2];
         P25Call c;
@@ -581,6 +607,10 @@ struct P25Receiver::Impl {
         c.group = false;
         char t[160];
         snprintf(t, sizeof t, "data packet, SAP %d, %d blocks (%s, format 0x%02X)", sap, blocks, out ? "outbound" : "inbound", fmt);
+        {
+            p25::PduData pd;
+            if (p25::pduAssemble(blks, pd)) { snprintf(t, sizeof t, "data: %s", pd.summary.c_str()); (void)fmt; }
+        }
         c.text = t;
         pushLog(c);
         snprintf(t, sizeof t, "PDU %s LLID %d, SAP %d, %d blocks", out ? "to" : "from", llid, sap, blocks);
@@ -612,6 +642,43 @@ struct P25Receiver::Impl {
         event(b);
     }
 
+    void onCc(const p25::CcItem& c, int nac) {
+        const int64_t wall = (int64_t)time(nullptr);
+        switch (c.kind) {
+        case p25::kCcPatchAdd: case p25::kCcPatchDel: {
+            auto it = std::find_if(tel.patches.begin(), tel.patches.end(), [&](const P25Telemetry::Patch& p) { return p.supergroup == c.supergroup; });
+            if (c.kind == p25::kCcPatchAdd) {
+                if (it == tel.patches.end()) { tel.patches.insert(tel.patches.begin(), P25Telemetry::Patch{c.supergroup, {}, wall}); it = tel.patches.begin(); }
+                it->wallTime = wall;
+                for (int m : c.members) if (std::find(it->members.begin(), it->members.end(), m) == it->members.end()) it->members.push_back(m);
+            } else if (it != tel.patches.end()) {
+                for (int m : c.members) it->members.erase(std::remove(it->members.begin(), it->members.end(), m), it->members.end());
+                if (it->members.empty()) tel.patches.erase(it);
+            }
+            break;
+        }
+        case p25::kCcAffiliation: case p25::kCcRegistration: case p25::kCcDeregistration: {
+            if (c.kind != p25::kCcDeregistration && !c.accepted) break;
+            auto it = std::find_if(tel.affiliations.begin(), tel.affiliations.end(), [&](const P25Telemetry::Affiliation& x) { return x.unit == c.unit; });
+            if (c.kind == p25::kCcDeregistration) { if (it != tel.affiliations.end()) tel.affiliations.erase(it); break; }
+            P25Telemetry::Affiliation x = it != tel.affiliations.end() ? *it : P25Telemetry::Affiliation{};
+            if (it != tel.affiliations.end()) tel.affiliations.erase(it);
+            x.unit = c.unit; x.wallTime = wall; x.registered = true;
+            if (c.tg >= 0 && c.kind == p25::kCcAffiliation) x.tg = c.tg;
+            tel.affiliations.insert(tel.affiliations.begin(), x);
+            if (tel.affiliations.size() > 2000) tel.affiliations.pop_back();
+            break;
+        }
+        case p25::kCcDeny: case p25::kCcQueue: {
+            P25Call r; r.wallTime = wall; r.startSec = sigSec(); r.kind = 3; r.src = c.unit; r.group = false; r.nac = nac; r.endSeen = true; r.text = c.text;
+            pushLog(r);
+            break;
+        }
+        default: break;
+        }
+        event(c.text);
+    }
+
     void onTsbk(const p25::Tsbk& t, int nac) {
         tel.control = true;
         {
@@ -620,6 +687,10 @@ struct P25Receiver::Impl {
             r.seq = ++seq; r.nac = nac; r.opcode = t.opcode; r.mfid = t.mfid; r.args = t.args; r.sigSec = sigSec();
             tel.tsbks.push_back(r);
             if (tel.tsbks.size() > kP25TsbkMax) tel.tsbks.erase(tel.tsbks.begin(), tel.tsbks.end() - (long)kP25TsbkMax);
+        }
+        {
+            p25::CcItem cc;
+            if (p25::tsbkDescribe(t.mfid, t.opcode, t.args, cc)) onCc(cc, nac);
         }
         if (t.mfid != 0 && t.mfid != 1) return;   // a manufacturer's own
         const uint64_t a = t.args;

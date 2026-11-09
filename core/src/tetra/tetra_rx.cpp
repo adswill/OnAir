@@ -2,6 +2,7 @@
 // training sequences, the broadcast channels decoded.
 #include "dect2/common/thread_name.h"
 #include "dect2/tetra/tetra_rx.h"
+#include "dect2/tetra/tetra_sds.h"
 #include "dect2/mesh/mesh_lora.h"
 #include "dect2/results/results_io.h"
 #include "dect2/cell/cell_dsp.h"
@@ -294,12 +295,18 @@ CarrierDecode decodeCarrier(const cf32* x, size_t n, int kMcc, int kMnc, int kCc
             usage = aachDlUsage(aa, fn == 18);
             if (tn >= 1 && usage >= 0) out.tsUsage[tn - 1] = usage;
         }
+        static thread_local FragReassembler localFrag;
         auto block = [&](const float* l, const ChanSpec& c) {
             Bits t1;
             if (!decodeChannel(l, c, scr, t1)) { out.blocksBad++; return; }
             out.blocksOk++;
             MacBlock mb;
             parseMacBlock(t1, mb);
+            if (mb.fragKind) {
+                Bits sdu; int a = -1, sl2 = -1, cr = -1;
+                FragReassembler& fr = calls ? calls->frag_[tn >= 1 && tn <= 4 ? tn : 0] : localFrag;
+                if (fr.feed(mb, sdu, a, sl2, cr)) parseTlSdu(sdu, a, sl2, cr, mb);
+            }
             out.macs.push_back(std::move(mb));
         };
         if (sl.f.type == Burst::Sync) block(llr.data() + kSbBkn2, kSchHd);
@@ -645,7 +652,7 @@ struct TetraReceiver::Impl {
         if (!gaveVoice) { playCarrierHz = 0.0; playTn = 0; }
         std::lock_guard<std::mutex> lk(mu);
         if (gen.load() != g) return;
-        if (clearReq.exchange(false)) { tel.cells.clear(); tel.events.clear(); tel.blocksOk = tel.blocksBad = 0; }
+        if (clearReq.exchange(false)) { tel.cells.clear(); tel.events.clear(); tel.sds.clear(); tel.blocksOk = tel.blocksBad = 0; }
         tel.blocks++;
         tel.carriers = seen;
         for (auto& fr : found) merge(fr.c, fr.d, fr.freq, center, sec);
@@ -710,6 +717,21 @@ struct TetraReceiver::Impl {
         }
         const bool encBefore = t->encryption();
         for (const auto& m : d.macs) {
+            for (const auto& c : m.cmce) {          // clear SDS and status: the message list, the positions on the map
+                tetra::SdsMsg sm;
+                const bool ok = c.bits.size() >= 5 && (tetra::parseSdsData(c.bits, sm) || tetra::parseStatus(c.bits, sm));
+                if (!ok || !sm.valid) continue;
+                TetraSdsRec r;
+                r.wallTime = (int64_t)time(nullptr); r.freqHz = freq; r.fromIssi = sm.callingIssi; r.toAddr = c.addr; r.kind = sm.kind; r.text = sm.text;
+                r.hasPos = sm.hasPos; r.lat = sm.lat; r.lon = sm.lon;
+                auto same = std::find_if(tel.sds.begin(), tel.sds.end(), [&](const TetraSdsRec& x) { return x.fromIssi == r.fromIssi && x.text == r.text && x.toAddr == r.toAddr; });
+                if (same != tel.sds.end()) { r.count = same->count + 1; tel.sds.erase(same); }
+                tel.sds.insert(tel.sds.begin(), std::move(r));
+                if (tel.sds.size() > 300) tel.sds.pop_back();
+                char b2[220];
+                snprintf(b2, sizeof b2, "SDS %s from %d to %d: %s", sm.kind.c_str(), sm.callingIssi, c.addr, sm.text.c_str());
+                event(b2, sec);
+            }
             t->encryptedPdus += (uint64_t)m.encrypted;
             for (int k = 0; k < 8; k++) t->clearPdus += (uint64_t)m.byPd[k];
             if (m.sysinfo) {

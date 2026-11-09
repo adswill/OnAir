@@ -88,6 +88,9 @@ public:
 private:
     struct Entry { bool valid = false; int callId = 0, enc = -1; bool encSeen = false; double t = 0; int gssi = -1, issi = -1; };
     Entry slot_[4];
+public:
+    FragReassembler frag_[5];     // MAC-FRAG / MAC-END of each downlink timeslot (index 1 - 4; 0 for frames not tied to one)
+private:
     int mainCarrier_ = -1;
 };
 

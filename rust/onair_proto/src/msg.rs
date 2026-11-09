@@ -384,6 +384,83 @@ pub fn decode_message(b: &[u8], m: &mut Msg) -> bool {
             m.cog = if c >= 360 { -1.0 } else { c as f32 };
             m.valid = 1;
         }
+        7 | 13 => {
+            if !(72..=168).contains(&n) {
+                return false;
+            }
+            m.dest_mmsi = get_u(b, 40, 30);
+            m.valid = 1;
+        }
+        10 => {
+            if n < 72 {
+                return false;
+            }
+            m.dest_mmsi = get_u(b, 40, 30);
+            m.valid = 1;
+        }
+        12 => {
+            if !(72..=1008).contains(&n) {
+                return false;
+            }
+            m.dest_mmsi = get_u(b, 40, 30);
+            m.text_bits = (n - 72) / 6 * 6;
+            m.valid = 1;
+        }
+        15 => {
+            if !(88..=168).contains(&n) {
+                return false;
+            }
+            m.dest_mmsi = get_u(b, 40, 30);
+            m.valid = 1;
+        }
+        16 => {
+            if !(96..=168).contains(&n) {
+                return false;
+            }
+            m.dest_mmsi = get_u(b, 40, 30);
+            m.valid = 1;
+        }
+        17 => {
+            if !(80..=816).contains(&n) {
+                return false;
+            }
+            let lo = get_s(b, 40, 18);
+            let la = get_s(b, 58, 17);
+            m.has_pos = (lo != 181 * 600 && la != 91 * 600 && within(lo as f64 / 600.0, 180.0) && within(la as f64 / 600.0, 90.0)) as u8;
+            m.lon = lo as f64 / 600.0;
+            m.lat = la as f64 / 600.0;
+            m.valid = 1;
+        }
+        20 => {
+            if !(72..=186).contains(&n) {
+                return false;
+            }
+            m.valid = 1;
+        }
+        22 => {
+            if !(160..=176).contains(&n) {
+                return false;
+            }
+            m.valid = 1;
+        }
+        23 => {
+            if !(152..=176).contains(&n) {
+                return false;
+            }
+            m.valid = 1;
+        }
+        25 => {
+            if !(40..=168).contains(&n) {
+                return false;
+            }
+            m.valid = 1;
+        }
+        26 => {
+            if !(60..=1064).contains(&n) {
+                return false;
+            }
+            m.valid = 1;
+        }
         _ => {}
     }
     m.valid != 0

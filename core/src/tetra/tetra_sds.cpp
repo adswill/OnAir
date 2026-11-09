@@ -29,6 +29,21 @@ bool parseLipShort(const Bits& b, size_t p, SdsMsg& o) {
     return o.hasPos;
 }
 
+bool parseStatus(const Bits& b, SdsMsg& o) {
+    o = SdsMsg();
+    size_t p = 0;
+    if (b.size() < 5 + 2 + 16) return false;
+    if (take(b, p, 5) != 8) return false;                 // D-STATUS
+    const int cpti = (int)take(b, p, 2);
+    if (cpti == 1 || cpti == 2) { if (b.size() < p + 24) return false; o.callingIssi = (int)take(b, p, 24); }
+    if (cpti == 2) { if (b.size() < p + 24) return false; take(b, p, 24); }
+    if (b.size() < p + 16) return false;
+    const int st = (int)take(b, p, 16);
+    char t[32]; snprintf(t, sizeof t, "status %d (0x%04X)", st, st);
+    o.kind = "status"; o.text = t; o.valid = true;
+    return true;
+}
+
 bool parseSdsData(const Bits& b, SdsMsg& o) {
     o = SdsMsg();
     size_t p = 0;
@@ -56,7 +71,7 @@ bool parseSdsData(const Bits& b, SdsMsg& o) {
                 o.headingDeg = lip.headingDeg; o.timeElapsed = lip.timeElapsed; o.reason = lip.reason;
                 char t[96]; snprintf(t, sizeof t, "%.5f, %.5f", lip.lat, lip.lon); o.text = t;
             }
-        } else if ((o.pid == 0x01 || o.pid == 0x09) && rest >= 8) {
+        } else if ((o.pid == 0x02 || o.pid == 0x09) && rest >= 8) {
             take(b, p, 8);   // text coding scheme: only 8 bit ISO 8859-1 is read as text here
             std::string t;
             for (size_t i = 0; i + 8 <= rest - 8; i += 8) { const char c = (char)take(b, p, 8); t += c >= 32 || c == '\n' ? c : '.'; }
@@ -88,7 +103,7 @@ Bits buildSdsText(int issi, const std::string& s) {
     Bits ud;
     put(ud, 1, 8);   // coding scheme: ISO 8859-1
     for (char c : s) put(ud, (uint8_t)c, 8);
-    return buildSdsData(issi, ud, 0x01);
+    return buildSdsData(issi, ud, 0x02);
 }
 
 } // namespace dect2::tetra

@@ -94,6 +94,10 @@ struct P25Telemetry {
     P25Call now;
     std::vector<P25Call> log;    // newest first, at most kP25LogMax
     std::vector<std::string> events;   // newest first: decoded control messages as text
+    struct Patch { int supergroup = -1; std::vector<int> members; int64_t wallTime = 0; };
+    struct Affiliation { int unit = -1, tg = -1; int64_t wallTime = 0; bool registered = false; };
+    std::vector<Patch> patches;        // active patches heard (Motorola / Harris regroups), newest first
+    std::vector<Affiliation> affiliations;   // units seen on this site and the talkgroup they affiliated to, most recent first, at most 2000
     std::vector<P25TsbkRec> tsbks;     // the last decoded TSBKs, oldest first, at most kP25TsbkMax
 };
 

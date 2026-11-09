@@ -12,9 +12,11 @@
 #pragma once
 #include "dect2/trunkpool/cc_health.h"
 #include "dect2/p25/p25_proto.h"
+#include "dect2/dmr/dmr_vendor.h"
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -82,6 +84,7 @@ private:
     IdenInfo idens_[16];
     std::vector<double> secondary_;
     std::vector<std::pair<std::pair<int, std::pair<int, int>>, std::pair<double, double>>> positions_;
+    std::map<int, std::set<int>> patches_;    // supergroup to its member talkgroups (Motorola / Harris regroups heard)
     uint64_t nTsbk_ = 0, nGrant_ = 0;
     void leaveSite(double nowSec);
 };
@@ -276,11 +279,13 @@ public:
     double lcnFreq(int lcn) const;
     // csbk: opcode, feature ID, 8 data bytes. The grant layout used: logical channel (12 bits, bits 0-11) + slot (bit 12), then 24-bit target and 24-bit source.
     bool onCsbk(int opcode, int fid, const uint8_t data[8], double nowSec, Grant& out);
+    bool onCsbkVendor(int opcode, int fid, const uint8_t data[8], std::vector<Grant>& out);      // Capacity Plus and Connect Plus (dmr_vendor.h)
     uint64_t grants() const { return n_; }
 
 private:
     DmrOpcodes ops_;
     std::map<int, double> lcn_;
+    dmr::CapPlus capPlus_;
     uint64_t n_ = 0;
 };
 

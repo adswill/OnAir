@@ -1,4 +1,5 @@
 #include "dect2/geo/maplayers.h"
+#include "dect2/tetra/tetra_tel.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -52,6 +53,17 @@ std::vector<MapMarker> markersFromAis(const AisTelemetry& t) {
         if (s.longRange) m.detail = "long-range AIS (message 27)" + (m.detail.empty() ? std::string() : ", " + m.detail);
         if (s.altitudeM >= 0) { m.hasAlt = true; m.altM = s.altitudeM; }
         for (const auto& p : s.track) m.track.push_back({p.lat, p.lon});
+        v.push_back(std::move(m));
+    }
+    return v;
+}
+
+std::vector<MapMarker> markersFromTetra(const TetraTelemetry& t) {
+    std::vector<MapMarker> v;
+    for (const TetraSdsRec& s : t.sds) {
+        if (!s.hasPos) continue;
+        MapMarker m; m.layer = LayerDmr; m.id = "tetra-" + std::to_string(s.fromIssi); m.label = "TETRA " + std::to_string(s.fromIssi);
+        m.lat = s.lat; m.lon = s.lon; m.ageSec = 0; m.detail = "LIP position";
         v.push_back(std::move(m));
     }
     return v;

@@ -43,10 +43,18 @@ typedef struct {   // what one signalling block held
     int32_t n_call;
     OnairTetraCallInfo call[4];
     OnairTetraSysinfo si;
+    int32_t n_cmce;
+    uint32_t cmce_from[2], cmce_to[2];
+    int32_t cmce_addr[2];
+    int32_t frag_kind;
+    uint32_t frag_from, frag_to;
+    int32_t frag_addr, frag_slots, frag_carrier;
 } OnairTetraMacBlock;
 
-// ABI version of this module (4).
+// ABI version of this module (5).
 uint32_t onair_tetra_version(void);
+int32_t onair_tetra_parse_sdu(const uint8_t* bits, size_t len, int32_t addr, int32_t slots, int32_t carrier, OnairTetraMacBlock* blk,
+                              OnairTetraNwrk* nwrk, size_t nwrk_cap, OnairTetraNeighbour* nbr, size_t nbr_cap);
 // Sizes of the records above in this order: Sync, Sysinfo, Neighbour, Nwrk, MacBlock (out: 5 size_t).
 void onair_tetra_struct_sizes(size_t* out);
 

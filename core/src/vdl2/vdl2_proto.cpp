@@ -2,6 +2,7 @@
 #include "dect2/vdl2/vdl2_proto.h"
 #include "vdl2_internal.h"
 #include "dect2/acars/acars_proto.h"
+#include "dect2/acars/acars_text.h"
 #include "dect2/aero/aero_adsc.h"
 #include "dect2/aero/aero_cpdlc.h"
 #include "dect2/aero/aero_pos.h"
@@ -198,7 +199,8 @@ void readAcars(const uint8_t* p, size_t n, Vdl2Message& m) {
     addLine(m.detail, "ACARS: mode %c, registration %s, label %s%s%s, block id %c%s", a.mode ? a.mode : '-', a.reg.empty() ? "-" : a.reg.c_str(), a.label.c_str(),
             a.labelText.empty() ? "" : " ", a.labelText.c_str(), a.blockId ? a.blockId : '-', m.acarsCrcOk ? "" : ", check sequence FAILED");
     if (!a.msgNum.empty() || !a.flightId.empty()) addLine(m.detail, "  message %s, flight %s", a.msgNum.empty() ? "-" : a.msgNum.c_str(), a.flightId.empty() ? "-" : a.flightId.c_str());
-    if (!a.decoded.empty()) addLine(m.detail, "  reading: %s", a.decoded.c_str());
+    const std::string reading = !a.decoded.empty() ? a.decoded : acarsInterpretLine(a.label, a.text);
+    if (!reading.empty()) addLine(m.detail, "  reading: %s", reading.c_str());
     analyseAcarsText(m, a.label, a.text);
 }
 

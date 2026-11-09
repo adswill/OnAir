@@ -2,6 +2,7 @@
 // burst and PDU builders for the test signal and the ACARS reader stay here.
 #include "dect2/hfdl/hfdl_proto.h"
 #include "dect2/acars/acars_proto.h"
+#include "dect2/acars/acars_text.h"
 #include "dect2/aero/aero_pos.h"
 #include "hfdl_internal.h"
 #include <algorithm>
@@ -274,7 +275,8 @@ void hfdlReadAcars(const uint8_t* p, size_t n, HfdlMessage& m) {
     addLine(m.detail, "ACARS: mode %c, registration %s, label %s%s%s, block id %c%s", a.mode ? a.mode : '-', a.reg.empty() ? "-" : a.reg.c_str(), a.label.c_str(),
             a.labelText.empty() ? "" : " ", a.labelText.c_str(), a.blockId ? a.blockId : '-', m.acarsCrcOk ? "" : ", check sequence FAILED");
     if (!a.msgNum.empty() || !a.flightId.empty()) addLine(m.detail, "  message %s, flight %s", a.msgNum.empty() ? "-" : a.msgNum.c_str(), a.flightId.empty() ? "-" : a.flightId.c_str());
-    if (!a.decoded.empty()) addLine(m.detail, "  reading: %s", a.decoded.c_str());
+    const std::string reading = !a.decoded.empty() ? a.decoded : acarsInterpretLine(a.label, a.text);
+    if (!reading.empty()) addLine(m.detail, "  reading: %s", reading.c_str());
     AeroPosition pos;
     std::string adsc;
     if (aeroPositionFromMessage(a.label, a.text, m.uplink, pos, &adsc) && pos.valid) {

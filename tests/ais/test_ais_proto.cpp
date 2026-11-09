@@ -178,7 +178,7 @@ int main() {
     {
         AisMsg m;
         const Bits b = fromSentences({"!AIVDM,1,1,,B,:5MlU41GMK6@,0*6C"});    // type 10
-        CHECK(!decodeMessage(b, m) && m.type == 10 && m.mmsi == 366814480, "type 10 is counted, not decoded");
+        CHECK(decodeMessage(b, m) && m.type == 10 && m.mmsi == 366814480 && m.destMmsi == 366832740, "type 10 addressed to a station");
         Bits s = fromSentences({"!AIVDM,1,1,,A,15RTgt0PAso;90TKcjM8h6g208CQ,0*4A"});
         s.resize(150);
         CHECK(!decodeMessage(s, m), "short type 1 refused");

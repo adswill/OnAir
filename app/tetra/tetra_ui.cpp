@@ -484,6 +484,45 @@ void carrierView(App& a) {
         ImGui::BulletText("%.4f MHz, %.0f dB over the floor, %s", c.freqHz / 1e6, c.levelDb, c.synced ? "TETRA synchronisation" : "no TETRA synchronisation in this block");
 }
 
+// clear SDS messages, status and LIP positions (D-SDS-DATA, D-STATUS)
+void messageView(App& a) {
+    const auto& t = a.rx.tetra;
+    static std::string note;
+    resexp::Table x; x.cols = {"time_unix", "from_issi", "to_address", "kind", "text", "lat", "lon", "repeats", "frequency_hz"};
+    for (const auto& r : t.sds)
+        x.add({std::to_string(r.wallTime), r.fromIssi >= 0 ? std::to_string(r.fromIssi) : "", r.toAddr >= 0 ? std::to_string(r.toAddr) : "", r.kind, r.text,
+               r.hasPos ? resexp::num(r.lat, 6) : "", r.hasPos ? resexp::num(r.lon, 6) : "", std::to_string(r.count), resexp::num(r.freqHz, 0)}, (double)r.wallTime);
+    resexp::saveButton(x, "tetra_sds", note, "svtetrasds");
+    if (!note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", note.c_str()); }
+    if (t.sds.empty()) { ImGui::TextDisabled("%s", tr("no clear messages heard")); return; }
+    if (ImGui::BeginTable("##tsds", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_Borders, ImVec2(0, ImGui::GetContentRegionAvail().y))) {
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableSetupColumn(tr("Time"), ImGuiTableColumnFlags_WidthFixed, 66 * gUi);
+        ImGui::TableSetupColumn(tr("From"), ImGuiTableColumnFlags_WidthFixed, 80 * gUi);
+        ImGui::TableSetupColumn(tr("To"), ImGuiTableColumnFlags_WidthFixed, 80 * gUi);
+        ImGui::TableSetupColumn(tr("Kind"), ImGuiTableColumnFlags_WidthFixed, 70 * gUi);
+        ImGui::TableSetupColumn(tr("Content"), 0, 1.f);
+        ImGui::TableHeadersRow();
+        for (const auto& r : t.sds) {
+            ImGui::TableNextRow();
+            char tb[16]; const time_t tt = (time_t)r.wallTime; struct tm tmv; 
+#ifdef _WIN32
+            gmtime_s(&tmv, &tt);
+#else
+            gmtime_r(&tt, &tmv);
+#endif
+            strftime(tb, sizeof tb, "%H:%M:%S", &tmv);
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(tb);
+            ImGui::TableNextColumn(); if (r.fromIssi >= 0) ImGui::Text("%d", r.fromIssi); else ImGui::TextDisabled("-");
+            ImGui::TableNextColumn(); if (r.toAddr >= 0) ImGui::Text("%d", r.toAddr); else ImGui::TextDisabled("-");
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(r.kind.c_str());
+            ImGui::TableNextColumn();
+            if (r.hasPos) ImGui::Text("%s  (%.5f, %.5f)", r.text.c_str(), r.lat, r.lon); else ImGui::TextWrapped("%s", r.text.c_str());
+        }
+        ImGui::EndTable();
+    }
+}
+
 void logView(App& a) {
     for (const auto& e : a.rx.tetra.events) ImGui::TextUnformatted(e.text.c_str());
     if (a.rx.tetra.events.empty()) ImGui::TextDisabled("nothing yet");
@@ -522,9 +561,10 @@ void tab(App& a) {
     voiceStrip(a);
     if (kit::collapsingSection(tr("Listen"), false)) slotPanel(a);
     kit::modeHeader({46, "TETRA", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("tetrav", S.view, {{tr("Live"), 0}, {tr("Calls"), 4}, {tr("Neighbours"), 1, true}, {tr("Carriers"), 2, true}, {tr("Log"), 3, true}, {tr("Watch"), 90, true}});
+    kit::modeNav("tetrav", S.view, {{tr("Live"), 0}, {tr("Calls"), 4}, {tr("Neighbours"), 1, true}, {tr("Carriers"), 2, true}, {tr("Log"), 3, true}, {tr("Messages"), 5, true}, {tr("Watch"), 90, true}});
     if (S.view == 90) { watchui::watchView(a, "tetra"); return; }
     if (S.view == 4) { kit::sessionItems(46, 1, "tetra"); return; }
+    if (S.view == 5) { messageView(a); return; }
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "start the receiver to find the TETRA base stations around you"); return; }
     if (S.view == 0) {
         const float h = ImGui::GetContentRegionAvail().y;

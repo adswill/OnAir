@@ -1,4 +1,5 @@
 // DMR link layer of the receiver, see dmr_link.h.
+#include "dect2/dmr/dmr_vendor.h"
 #include "dmr_link.h"
 #include "dect2/dmr/dmr_dsp.h"
 #include "dect2/dmr/dmr_lrrp.h"
@@ -730,7 +731,11 @@ Link::Outcome Link::decodeData(Track& t, const Bits& burst, const float* z, int 
                 e.dst = be24(c.data + 2); e.src = be24(c.data + 5);
                 e.idsKnown = c.opcode == 0x3D || c.opcode == 0x04 || c.opcode == 0x38 || c.opcode == 0x05;
                 char nb[96];
-                snprintf(nb, sizeof nb, "%s (opcode %02X%s)", csbkName(c.opcode, c.fid), c.opcode, c.fid ? ", manufacturer" : "");
+                const char* vendor = dmr::vendorCsbkName(c.fid, c.opcode);
+                dmr::ConPlus con;
+                if ((c.fid == 0x06) && c.opcode == 0x03 && dmr::conPlusParse(c.opcode, c.data + 2, con)) { e.src = con.src; e.dst = con.dst; e.idsKnown = true; snprintf(nb, sizeof nb, "%s, channel %d slot %d", vendor, con.lcn, con.slot + 1); }
+                else if (*vendor) snprintf(nb, sizeof nb, "%s", vendor);
+                else snprintf(nb, sizeof nb, "%s (opcode %02X%s)", csbkName(c.opcode, c.fid), c.opcode, c.fid ? ", manufacturer" : "");
                 e.note = nb;
                 e.terminated = true;
                 addLog(e);
@@ -909,6 +914,11 @@ void Link::finishMessage(Track& t) {
     }
     }
     if (crcOk || (m.crcAllOk && total >= 32 && dmrIpv4HeaderOk(data.data(), data.size()))) {   // a wrong packet CRC but a right IPv4 header checksum (#335)
+        dmr::IpService svc;
+        if (dmr::ipService(data.data(), data.size(), svc)) {
+            if (svc.port == 4005) { msg.format = "ARS: radio on the system"; msg.text = svc.text.empty() ? "registration" : svc.text; }
+            else if (svc.port == 4007) { msg.format = svc.ack ? "Text message acknowledgment" : "Text message (TMS)"; msg.text = svc.text; }
+        }
         DmrLocation loc;
         bool have = parseDmrLrrp(data.data(), data.size(), loc);
         bool nmea = false;
