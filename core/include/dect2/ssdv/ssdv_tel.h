@@ -1,5 +1,6 @@
 // SSDV telemetry, shared by the receiver and the UI. The first members are copied into RxTelemetry (history plot, top bar).
 #pragma once
+#include "dect2/ssdv/wenet_tel.h"
 #include <cstdint>
 #include <cstdio>
 #include <memory>
@@ -54,6 +55,9 @@ struct SsdvTelemetry {
     bool async = false;
     bool wenet = false;        // the last good packet came over Wenet
     uint64_t wenetOther = 0, wenetIdle = 0;   // Wenet frames that were not SSDV: telemetry / text, and idle fill (both count in blocksOk)
+    WenetGps wenetGps;         // Wenet GPS and system telemetry, newest
+    WenetOrient wenetOrient;   // orientation (Wenet type 2), newest
+    std::vector<WenetText> wenetTexts;   // text messages, newest last (at most 50)
     int fixedBaud = 0;         // the speed chosen by hand (0: automatic)
     uint64_t corrected = 0;    // packets that needed the Reed-Solomon code
     uint64_t imagesDone = 0;

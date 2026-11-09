@@ -212,6 +212,15 @@ void receiver(App& a) {
     const dect2::SsdvTelemetry& t = a.rx.ssdv;
     auto kv = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); kvColumn(130 * gUi); ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::Text(fmt, v...); ImGui::PopTextWrapPos(); ImGui::PopFont(); };
     kv(tr("state"), "%s", dect2::ssdvSummary(t).c_str());
+    if (t.wenetGps.valid) {
+        const dect2::WenetGps& g = t.wenetGps;
+        kv(tr("position"), "%.5f, %.5f  %.0f m  %d sats", g.lat, g.lon, g.alt, g.numSv);
+        kv(tr("motion"), "%.1f m/s, heading %.0f, climb %+.1f m/s", g.speed, g.heading, g.ascent);
+        if (g.haveSys) kv(tr("radio / CPU"), "%.1f C / %.1f C", g.radioTemp, g.cpuTemp);
+        if (g.havePower) kv(tr("battery"), "%.2f V, %d mA", g.battV, g.battI);
+    }
+    if (t.wenetOrient.valid) kv(tr("attitude"), "heading %.1f, roll %.1f, pitch %.1f", t.wenetOrient.heading, t.wenetOrient.roll, t.wenetOrient.pitch);
+    if (!t.wenetTexts.empty()) kv(tr("message"), "%s", t.wenetTexts.back().text.c_str());
     if (t.baud) kv(tr("speed"), "%d baud%s", t.baud, t.wenet ? tr(", Wenet (LDPC)") : t.async ? tr(", RTTY-framed bytes") : "");
     if (t.wenetOther || t.wenetIdle) kv(tr("Wenet other"), "%llu telemetry / text, %llu idle", (unsigned long long)t.wenetOther, (unsigned long long)t.wenetIdle);
     kv(tr("packets"), "%llu OK, %llu %s, %llu %s", (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad, tr("failed"), (unsigned long long)t.corrected, tr("corrected"));
