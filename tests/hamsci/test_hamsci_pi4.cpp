@@ -24,7 +24,7 @@ int main() {
                 if (ok) CHECK(std::fabs(r.freqHz - f0) < 3.0 && std::fabs(r.startSec - start) < 0.1, "'%s' f %.1f (want %.0f) start %.2f (want %.1f)", m, r.freqHz, f0, r.startSec, start);
             }
     {
-        const double snrs[] = {5, 0, -8, -12, -15, -18};
+        const double snrs[] = {5, -8, -15, -20, -23, -26};
         int okAt[6] = {};
         for (int si = 0; si < 6; si++)
             for (uint32_t seed = 1; seed <= 6; seed++) {
@@ -37,7 +37,7 @@ int main() {
         std::printf("PI4 noise sweep (SNR in 2500 Hz, exact of 6):");
         for (int i = 0; i < 6; i++) std::printf(" %+.0f dB: %d", snrs[i], okAt[i]);
         std::printf("\n");
-        CHECK(okAt[0] == 6 && okAt[1] == 6, "strong signals: %d %d", okAt[0], okAt[1]);
+        CHECK(okAt[0] == 6 && okAt[1] == 6 && okAt[2] == 6, "strong signals: %d %d %d", okAt[0], okAt[1], okAt[2]);
     }
     {   // noise alone
         int falses = 0;

@@ -316,6 +316,15 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 211: return pollStd(rxNrf_, 211, t, seqs[186], &RxTelemetry::nrf24);   // nRF24L01 (slot 186)
     case 241: return pollStd(rxSelcal_, 241, t, seqs[200], &RxTelemetry::selcal);   // SELCAL (slot 200)
     case 212: return pollStd(rxAtis_, 212, t, seqs[187], &RxTelemetry::atis);   // ATIS inland waterways (slot 187)
+    case 461: return pollStd(rxHs_[0], 461, t, seqs[300], &RxTelemetry::hamsci);   // QRSS (slot 300)
+    case 462: return pollStd(rxHs_[1], 462, t, seqs[301], &RxTelemetry::hamsci);   // DFCW (slot 301)
+    case 463: return pollStd(rxHs_[2], 463, t, seqs[302], &RxTelemetry::hamsci);   // FSK441 (slot 302)
+    case 464: return pollStd(rxHs_[3], 464, t, seqs[303], &RxTelemetry::hamsci);   // ISCAT (slot 303)
+    case 465: return pollStd(rxHs_[4], 465, t, seqs[304], &RxTelemetry::hamsci);   // PI4 (slot 304)
+    case 466: return pollStd(rxHs_[5], 466, t, seqs[305], &RxTelemetry::hamsci);   // Throb (slot 305)
+    case 501: return pollStd(rxHs_[6], 501, t, seqs[306], &RxTelemetry::hamsci);   // SuperSID (slot 306)
+    case 502: return pollStd(rxHs_[7], 502, t, seqs[307], &RxTelemetry::hamsci);   // riometer (slot 307)
+    case 503: return pollStd(rxHs_[8], 503, t, seqs[308], &RxTelemetry::hamsci);   // pulsar (slot 308)
     case 261: return pollStd(rxWx_[0], 261, t, seqs[220], &RxTelemetry::wxsat);   // 0
     case 262: return pollStd(rxWx_[1], 262, t, seqs[221], &RxTelemetry::wxsat);   // 1
     case 263: return pollStd(rxWx_[2], 263, t, seqs[222], &RxTelemetry::wxsat);   // 2

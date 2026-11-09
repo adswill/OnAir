@@ -79,6 +79,8 @@ const std::set<std::string>& restrictedKnownKinds() {
     "pactor", "pskd",
     // 3.2 modes: blocked likewise
     "roshf", "ssdv", "ebicab", "esubghz", "inmsat", "bgan", "nrf24", "sensors", "sferics",
+    // 3.8 ham science modes: blocked likewise
+    "qrss", "dfcw", "fsk441", "iscat", "pi4", "throb", "supersid", "riometer", "pulsar",
     // 3.4 modes: blocked likewise
     "iptv", "atis", "selcal", "gk2alrit", "gk2ahrit",   // (esubghz was never classified: web_safety failed on integ-32)
     // 3.5 modes: blocked likewise (shortwave is a broadcast receiver like "general", but the web allow-list is the owner's call)

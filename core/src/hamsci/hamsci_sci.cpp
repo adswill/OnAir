@@ -218,13 +218,13 @@ double Riometer::siderealHours(double unixTime, double lonDeg) {
 
 Riometer::Riometer() { qdc_.assign(288, 0.f); qdcN_.assign(288, 0); reset(); }
 
-void Riometer::configure(double rate) { rate_ = rate; sampleN_ = 0; blk_.clear(); blkAcc_ = 0; blkN_ = 0; secs_.clear(); minuteEnd_ = 60; floorSecs_.clear(); }
+void Riometer::configure(double rate) { rate_ = rate; secCount_ = 0; sampleN_ = 0; blk_.clear(); blkAcc_ = 0; blkN_ = 0; secs_.clear(); minuteEnd_ = 60; floorSecs_.clear(); }
 
 void Riometer::reset() {
     const auto q = qdc_; const auto qn = qdcN_;
     st_ = RioState();
     qdc_ = q; qdcN_ = qn;
-    sampleN_ = 0; blk_.clear(); blkAcc_ = 0; blkN_ = 0; secs_.clear(); minuteEnd_ = 60; floorSecs_.clear();
+    sampleN_ = 0; secCount_ = 0; blk_.clear(); blkAcc_ = 0; blkN_ = 0; secs_.clear(); minuteEnd_ = 60; floorSecs_.clear();
     rejects_ = minutes_ = 0;
     int fill = 0;
     for (int i = 0; i < 288; i++) if (qdc_[(size_t)i] > 0) fill++;
@@ -265,7 +265,8 @@ void Riometer::feed(const std::complex<float>* x, size_t n) {
     }
     const double t = ((double)sampleN_) / rate_;
     // finish seconds
-    while (t >= (double)(secs_.size() + 1) && !floorSecs_.empty()) {
+    while (t >= (double)(secCount_ + 1) && !floorSecs_.empty()) {
+        secCount_++;
         std::vector<float> f(floorSecs_);
         floorSecs_.clear();
         std::sort(f.begin(), f.end());
@@ -462,7 +463,7 @@ double bestWidthSnr(const std::vector<double>& prof, int* peakBin, int* widthOut
 }
 }  // namespace
 
-PulsarResult PulsarFolder::search() {
+PulsarResult PulsarFolder::searchSeries(const std::vector<float>& series_) const {
     PulsarResult res;
     const int C = cfg_.channels;
     const size_t R = series_.size() / (size_t)C;

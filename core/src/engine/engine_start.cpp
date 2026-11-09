@@ -279,6 +279,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxSelcal_.setDialHz(tune.centerHz);
         rxFy3a_.setSignalOffset(o);
         for (auto& w : rxWx_) w.setSignalOffset(o);
+        for (auto& h : rxHs_) h.setSignalOffset(o);
         rxFy3m_.setSignalOffset(o);
         rxPh2_.setSignalOffset(o);
         rxPh3_.setSignalOffset(o);
@@ -621,6 +622,7 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxSelcal_.setLogCallback([this](const std::string& s) { log(s); });
     rxAtis_.configure(rate_);
     rxAtis_.setLogCallback([this](const std::string& s) { log(s); });
+    for (auto& h : rxHs_) { h.configure(rate_); h.setLogCallback([this](const std::string& s) { log(s); }); }
     for (auto& w : rxWx_) { w.configure(rate_); w.setLogCallback([this](const std::string& s) { log(s); }); }
     rxFy3a_.configure(rate_);
     rxFy3a_.setLogCallback([this](const std::string& s) { log(s); });

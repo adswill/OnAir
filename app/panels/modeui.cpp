@@ -147,6 +147,7 @@ extern const ModeUi kNrf24Ui;
 extern const ModeUi kSensorsUi;
 extern const ModeUi kBganUi;
 extern const ModeUi kSfericsUi;
+extern const ModeUi kHamsciUi[9];   // app/hamsci: the nine ham science modes by kind (families 460 - 465, 500 - 502)
 extern const ModeUi kAtisUi;
 extern const ModeUi kSelcalUi;
 extern const ModeUi kShortwaveUi;
@@ -259,6 +260,8 @@ const ModeUi* modeUi(int family) {
     case 241: return &kSensorsUi;
     case 245: return &kBganUi;
     case 243: return &kSfericsUi;
+    case 460: case 461: case 462: case 463: case 464: case 465: return &kHamsciUi[family - 460];
+    case 500: case 501: case 502: return &kHamsciUi[6 + family - 500];
     case 211: return &kAtisUi;
     case 240: return &kSelcalUi;
     case 212: return &kShortwaveUi;

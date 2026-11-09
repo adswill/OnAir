@@ -74,6 +74,15 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | Arktika-M RDAS | 266 | 268 | 267 | 226 | feat37-sd1 | 3.7; MSU-GS, X-band 30.72 Msym/s; numbers may need to move at merge |
 | Arktika-M GGAK | 267 | 269 | 268 | 227 | feat37-sd1 | 3.7; 1703 MHz PM; numbers may need to move at merge |
 | AWS L-band | 268 | 270 | 269 | 228 | feat37-sd1 | 3.7; MWR, 1707 MHz; numbers may need to move at merge |
+| QRSS grabber | 460 | 462 | 461 | 300 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
+| DFCW grabber | 461 | 463 | 462 | 301 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
+| FSK441 | 462 | 464 | 463 | 302 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
+| ISCAT | 463 | 465 | 464 | 303 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
+| PI4 | 464 | 466 | 465 | 304 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
+| Throb / ThrobX | 465 | 467 | 466 | 305 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
+| SuperSID (VLF) | 500 | 502 | 501 | 306 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
+| Riometer | 501 | 503 | 502 | 307 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
+| Pulsar folding | 502 | 504 | 503 | 308 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |
@@ -81,6 +90,6 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 Protocol entries (a row with a subId, such as FT8 in HF digital or POCSAG in pagers) share their family on purpose; the test checks
 that each (family, subId) pair is unique instead.
 
-`kNumFamilies` = 269, `kPollSeqSlots` = 229 (families 213 to 234 and poll slots 189 to 194 are kept for the other 3.6 lanes).
+`kNumFamilies` = 503, `kPollSeqSlots` = 309 (families 213 to 234 and poll slots 189 to 194 are kept for the other 3.6 lanes).
 
 A new mode takes the next free family above the highest one in this table and the next free poll slot, and adds its row here.

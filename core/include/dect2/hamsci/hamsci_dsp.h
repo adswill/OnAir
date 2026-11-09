@@ -296,6 +296,7 @@ private:
     std::vector<float> qdc_;         // 288 bins (5 min of sidereal time), linear power, upper envelope
     std::vector<int> qdcN_;
     int rejects_ = 0, minutes_ = 0;
+    size_t secCount_ = 0;
     std::vector<float> floorSecs_;
     RioState st_;
 };
@@ -337,7 +338,9 @@ public:
     void reset();
     void feed(const std::complex<float>* x, size_t n);
     // Run the search on what has been collected (can be called every few seconds; cost grows with the record)
-    PulsarResult search();
+    PulsarResult search() const { return searchSeries(series_); }
+    PulsarResult searchSeries(const std::vector<float>& series) const;   // the same on a copy (the receiver searches on a worker thread)
+    const std::vector<float>& series() const { return series_; }
     double observedSec() const { return (double)samplesOut_ * cfg_.sampleSec; }
     size_t blocksStored() const { return series_.size() / (size_t)cfg_.channels; }
     const PulsarConfig& config() const { return cfg_; }
