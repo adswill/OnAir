@@ -44,6 +44,8 @@ struct AdsbAircraft {
     bool hasRa = false; unsigned raAra = 0, raRac = 0; bool raTerminated = false; uint32_t raThreat = 0; float raAgeSec = 0;
     int subnetVersion = -1; bool acasRa = false; uint32_t gicbMask = 0;   // 1,0 and 1,7 capability
     int adsbVersion = -1; int nacp = -1;                     // operational status
+    int nacv = -1, lengthCode = -1;                         // velocity quality (TC 19), surface length/width code (TC 31)
+    int capAcas = -1, cap1090In = -1, capUatIn = -1, raActive = -1, identOn = -1, atcSvc = -1;   // operational status: -1 unknown, 0/1
     int sil = -1; int nic = -1;                              // source integrity level (operational status); NIC from the airborne position type code (supplement bits not applied)
     uint8_t srcId = 0;               // the source that last updated this aircraft: 0 this receiver, 1.. the feeds from other receivers (AdsbTelemetry::sources)
     uint32_t messages = 0;           // messages received from this address
