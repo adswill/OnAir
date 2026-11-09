@@ -60,6 +60,12 @@ struct LlsTable {
     bool ok = false;
 };
 
+// An advanced emergency alert (A/331 AEAT, LLS table 4): what the table says, in plain fields. Fields it does not carry stay empty.
+struct AeatAlert {
+    std::string id, issuer, audience, type, priority, effective, expires, eventCode, eventDesc, location, text, lang;
+};
+std::vector<AeatAlert> parseAeat(const std::string& xml);
+
 // Parses the payload of a UDP datagram to 224.0.23.60:4937.
 LlsTable parseLls(const uint8_t* payload, size_t size);
 std::vector<uint8_t> makeLls(int tableId, int group, int version, const std::string& xml);

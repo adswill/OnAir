@@ -259,6 +259,7 @@ void Atsc3Receiver::onUdp(const UdpDatagram& d) {
         {
             std::lock_guard<std::mutex> lk(mu_);
             st_.llsTables++;
+            if (t.tableId == 4) { alerts_ = parseAeat(t.xml); return; }
             if (t.tableId != 1) return;
             lls_[t.groupId] = t;
             services_.clear();

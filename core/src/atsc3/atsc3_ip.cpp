@@ -136,6 +136,26 @@ void parseSlt(const std::shared_ptr<XmlNode>& root, Slt& slt) {
 
 } // namespace
 
+std::vector<AeatAlert> parseAeat(const std::string& xml) {
+    std::vector<AeatAlert> out;
+    auto root = parseXml(xml);
+    if (!root || root->local() != "AEAT") return out;
+    for (const auto& ev : root->all("AEA")) {
+        AeatAlert a;
+        a.id = ev->attr("AEAId"); a.issuer = ev->attr("issuer"); a.audience = ev->attr("audience"); a.type = ev->attr("AEAType"); a.priority = ev->attr("priority");
+        if (auto h = ev->first("Header")) {
+            a.effective = h->attr("effective"); a.expires = h->attr("expires");
+            if (auto c = h->first("EventCode")) a.eventCode = c->text;
+            if (auto d = h->first("EventDesc")) a.eventDesc = d->text;
+            for (const auto& l : h->all("Location")) { if (!a.location.empty()) a.location += "; "; a.location += l->text; }
+        }
+        auto texts = ev->all("AEAText");
+        if (!texts.empty()) { a.text = texts[0]->text; a.lang = texts[0]->attr("lang"); }
+        out.push_back(std::move(a));
+    }
+    return out;
+}
+
 LlsTable parseLls(const uint8_t* p, size_t n) {
     LlsTable t;
     if (n < 4) return t;

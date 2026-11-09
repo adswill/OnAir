@@ -120,6 +120,7 @@ void Atsc3Rx::worker() {
             t.cfoHz = ss.cfoHz; t.bootstraps = ss.bootstraps; t.frames = ss.frames; t.framesFailed = rs.framesFailed;
             t.bbPackets = rs.bbPackets; t.bbBad = rs.bbBad; t.alpPackets = rs.alpPackets; t.udp = rs.udp; t.llsTables = rs.llsTables; t.routeObjects = rs.routeObjects;
             t.services = rx_->services();
+            t.alerts = rx_->alerts();
             t.selected = rx_->selectedService();
             t.serviceReady = rx_->serviceReady();
             t.frame = rx_->frameInfo();

@@ -531,7 +531,12 @@ void signalRows(App& a) {
     kf("receiver load", "%.1f %% of real time", t.loadPct);
     sectionHeader(Ic::Gauge, "Measurements");
     if (on && t.state >= 2) {
-        if (t.band == 1) kf("MER", "%.1f dB lower sideband, %.1f dB upper", t.merLower, t.merUpper);
+        if (t.band == 1) {
+            kf("MER", "%.1f dB lower sideband, %.1f dB upper", t.merLower, t.merUpper);
+            if (std::fabs(t.merLower - t.merUpper) >= 6.0f)
+                ImGui::TextDisabled("%s", t.merLower < t.merUpper ? tr("The lower sideband is much worse: probably a station on the channel below. The decoder relies on the cleaner side.")
+                                                                  : tr("The upper sideband is much worse: probably a station on the channel above. The decoder relies on the cleaner side."));
+        }
         else kf("MER", "%.1f dB (primary sidebands)", t.merLower);
         kf("channel bit errors", "%.2f %% (P1, before the Viterbi decoder)", t.ber * 100);
         kf("carrier offset", "%+.1f Hz", t.cfoHz);
