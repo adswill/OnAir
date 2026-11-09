@@ -9,7 +9,7 @@ namespace dect2 {
 using namespace avroad;
 
 const char* avroad::variantName(int v) {
-    static const char* n[kNumVariants] = {"FANET", "OGN tracker", "GBAS VDB", "LDACS", "AeroMACS", "End of train", "ATCS", "DSRC toll", "802.11p V2X", "C-V2X", "ERMES", "Marine radar", "Weather radar"};
+    static const char* n[kNumVariants] = {"FANET", "OGN tracker", "GBAS VDB", "LDACS", "AeroMACS", "End of train", "DSRC toll", "802.11p V2X", "C-V2X", "ERMES", "Marine radar", "Weather radar"};
     return v >= 0 && v < kNumVariants ? n[v] : "";
 }
 

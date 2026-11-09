@@ -45,6 +45,9 @@ std::unique_ptr<Decoder> makeFanet();
 std::unique_ptr<Decoder> makeOgn();
 std::unique_ptr<Decoder> makeErmes();
 std::unique_ptr<Decoder> makeRadar(bool weather);
+std::unique_ptr<Decoder> makeIts();
+std::unique_ptr<Decoder> makeDsrc();
+std::unique_ptr<Decoder> makeGbas();
 std::unique_ptr<Decoder> makeOfdmDetect(int kind);      // 0 LDACS, 1 AeroMACS, 2 C-V2X
 
 // Low-pass, then resample to exactly workRate

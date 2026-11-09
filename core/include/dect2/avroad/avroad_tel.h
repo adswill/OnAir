@@ -1,4 +1,4 @@
-// Telemetry shared by the aviation, rail and road receivers of 3.8 (families 400 - 412, docs/AVIA-ROAD-3.8.md) and their screens.
+// Telemetry shared by the aviation, rail and road receivers of 3.8 (families 400 - 411, docs/AVIA-ROAD-3.8.md) and their screens.
 #pragma once
 #include <cstdint>
 #include <string>

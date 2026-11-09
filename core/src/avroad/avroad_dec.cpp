@@ -14,6 +14,9 @@ std::unique_ptr<avroad::Decoder> avroad::makeDecoder(int v) {
     case Ldacs: return makeOfdmDetect(0);
     case Aeromacs: return makeOfdmDetect(1);
     case Cv2x: return makeOfdmDetect(2);
+    case ItsG5: return makeIts();
+    case Dsrc: return makeDsrc();
+    case Gbas: return makeGbas();
     default: return nullptr;
     }
 }
@@ -30,7 +33,6 @@ ModeTuning avRoadTuning(int v) {
         {"ldacs", 960, 1215, 1000.0, 2000000, 625000, 0.5},
         {"aeromacs", 5000, 5150, 5095.0, 5600000, 5600000, 5.0},
         {"eot", 150, 520, 457.9375, 1000000, 48000, 0.0125},
-        {"atcs", 890, 960, 935.8875, 1000000, 48000, 0.0125},
         {"dsrc", 5700, 5900, 5802.5, 4000000, 2000000, 1.0},
         {"its", 5800, 6000, 5900.0, 10000000, 10000000, 10.0},
         {"cv2x", 5800, 6000, 5915.0, 15360000, 15360000, 10.0},

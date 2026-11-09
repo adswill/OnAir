@@ -1,4 +1,4 @@
-// One receiver object for the thirteen aviation, rail and road modes of 3.8 (docs/AVIA-ROAD-3.8.md): which decoder runs is set from the
+// One receiver object for the twelve aviation, rail and road modes of 3.8 (docs/AVIA-ROAD-3.8.md): which decoder runs is set from the
 // active standard, as the FengYun receiver does. Receive only. Written to the engine's contract: configure() once the sample rate is known,
 // feed() from the analysis thread, telemetry() and the setters from the interface thread.
 #pragma once
@@ -15,7 +15,7 @@ namespace dect2 {
 struct AvRoadTelemetry;
 
 namespace avroad {
-enum Variant : int { Fanet, Ogn, Gbas, Ldacs, Aeromacs, EotHot, Atcs, Dsrc, ItsG5, Cv2x, Ermes, MarineRadar, WeatherRadar, kNumVariants };
+enum Variant : int { Fanet, Ogn, Gbas, Ldacs, Aeromacs, EotHot, Dsrc, ItsG5, Cv2x, Ermes, MarineRadar, WeatherRadar, kNumVariants };
 constexpr int kFamilyBase = 400;     // variant v: family 400 + v, active standard 401 + v, engine standard 402 + v, poll slot 300 + v
 constexpr int variantOfActive(int active) { return active >= kFamilyBase + 1 && active <= kFamilyBase + (int)kNumVariants ? active - kFamilyBase - 1 : -1; }
 const char* variantName(int v);

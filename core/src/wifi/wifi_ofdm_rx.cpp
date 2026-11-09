@@ -153,11 +153,13 @@ struct OfdmRx::Impl {
         for (int i = 18; i < 24; i++) tail |= bits[i];
         if (par || bits[4] || tail) { st.signalBad++; return false; }
         const int rate = bits[0] | bits[1] << 1 | bits[2] << 2 | bits[3] << 3;
-        if (rate != kRate6) { st.otherRate++; st.signalOk++; skipUntil = d0 + 208 + 80; return false; }
+        pqpsk = allowQpsk && rate == kRate12;
+        if (rate != kRate6 && !pqpsk) { st.otherRate++; st.signalOk++; skipUntil = d0 + 208 + 80; return false; }
         if (len < 14 || len > 4095) { st.signalBad++; return false; }
         st.signalOk++;
         plen = len;
-        pnsym = (16 + 8 * len + 6 + 23) / 24;
+        const int dbps = pqpsk ? 48 : 24;       // data bits per symbol; the receiver only reads the two lowest rates
+        pnsym = (16 + 8 * len + 6 + dbps - 1) / dbps;
         pend = d0 + 208 + (int64_t)kSym * pnsym;
         return true;
     }
@@ -171,6 +173,7 @@ struct OfdmRx::Impl {
     // One symbol at start s (the start of its 80 samples): equalise, track the pilots, 48 soft values (a one positive). err accumulates the
     // squared distance of the decided points, nErr counts them
     int nErr = 0;
+    bool allowQpsk = false, pqpsk = false;
     void symbol(int64_t s, int index, float* soft, float& err, double* /*unused*/) {
         cf32 Y[53];
         carriers(s + kCp, pcfo, pd, Y);
@@ -191,21 +194,28 @@ struct OfdmRx::Impl {
             const int k = dk[(size_t)j];
             const std::complex<double> e = std::complex<double>(E[k + 26]) * std::polar(1.0, -(a + slope * k));
             const float w = std::norm(H[(size_t)(k + 26)]) / havg;
-            soft[j] = (float)e.real() * w;
-            const double dr = std::fabs(e.real()) - 1.0;
-            err += (float)(dr * dr + e.imag() * e.imag());
+            if (pqpsk && index > 0) {        // SIGNAL is always BPSK
+                soft[2 * j] = (float)e.real() * w; soft[2 * j + 1] = (float)e.imag() * w;
+                const double dr = std::fabs(e.real()) * std::sqrt(2.0) - 1.0, di = std::fabs(e.imag()) * std::sqrt(2.0) - 1.0;
+                err += (float)(dr * dr + di * di);
+            } else {
+                soft[j] = (float)e.real() * w;
+                const double dr = std::fabs(e.real()) - 1.0;
+                err += (float)(dr * dr + e.imag() * e.imag());
+            }
             nErr++;
         }
     }
 
     void decodeData() {
-        std::vector<float> coded((size_t)pnsym * 48);
+        const int cbps = pqpsk ? 96 : 48;
+        std::vector<float> coded((size_t)pnsym * cbps);
         float err = 0;
         nErr = 0;
         for (int s = 0; s < pnsym; s++) {
-            float soft[48];
+            float soft[96];
             symbol(pd + 208 + (int64_t)kSym * s, s + 1, soft, err, nullptr);
-            for (int k = 0; k < 48; k++) coded[(size_t)s * 48 + (size_t)k] = soft[3 * (k % 16) + k / 16];
+            for (int k = 0; k < cbps; k++) coded[(size_t)s * cbps + (size_t)k] = soft[cbps / 16 * (k % 16) + k / 16];     // Equation 17-17; the second permutation does nothing below 16-QAM
         }
         const int nb = 16 + 8 * plen + 6;
         std::vector<uint8_t> bits((size_t)nb);
@@ -261,6 +271,7 @@ struct OfdmRx::Impl {
 OfdmRx::OfdmRx() : p_(std::make_unique<Impl>()) {}
 OfdmRx::~OfdmRx() = default;
 void OfdmRx::setCallback(FrameCb cb) { p_->cb = std::move(cb); }
+void OfdmRx::setAllowQpsk(bool on) { p_->allowQpsk = on; }
 void OfdmRx::reset() { p_->reset(); }
 const OfdmRx::Stats& OfdmRx::stats() const { return p_->st; }
 void OfdmRx::feed(const cf32* x, size_t cnt) {

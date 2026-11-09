@@ -44,4 +44,16 @@ ErmesSystem ermesSystem(uint32_t si0, uint32_t si1, uint32_t ssi);
 std::string ermesSystemText(const ErmesSystem& s);
 std::string ermesMessageText(int category, const std::vector<uint32_t>& data18);   // category: 0 tone, 1 numeric, 2 alphanumeric, 3 transparent
 
+// ---- 802.11p / ITS-G5 safety messages
+struct Bsm { int msgCnt = 0; uint32_t id = 0; int lat = 0, lon = 0, elev = 0, speed = 0, heading = 0; };
+bool bsmParse(const uint8_t* p, size_t n, Bsm& out);             // p at the start of the MessageFrame (messageId 20, UPER)
+struct Cam { uint32_t station = 0; int protocol = 0, stationType = 0, lat = 0, lon = 0; };
+bool camParse(const uint8_t* p, size_t n, Cam& out);             // p at the ItsPduHeader
+std::string itsFrameText(const uint8_t* mpdu, size_t n, std::string& kind, std::string& id, double* latLon, bool& hasPos);  // an 802.11 data frame; "" when no safety message was found
+
+// ---- DSRC tolling: HDLC framing only
+struct DsrcFrame { size_t bytes = 0; int lidBytes = 0; bool broadcast = false; int control = 0; };
+bool dsrcFrame(const uint8_t* p, size_t n, DsrcFrame& out);      // p: a frame between flags including its FCS; false when the FCS fails
+uint16_t dsrcFcs(const uint8_t* p, size_t n);                    // X.25
+
 } // namespace dect2::avroad

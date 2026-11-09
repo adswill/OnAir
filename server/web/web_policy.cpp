@@ -67,7 +67,7 @@ const std::set<std::string>& restrictedKnownKinds() {
     static const std::set<std::string> s = {
     "aero", "ale", "ant", "ardop", "astro", "atsc", "atsc3", "atv", "ble", "bletracker", "cdr", "cell", "codar", "contestia", "cquam",
     "cubesat", "cw", "dab", "datawell", "dect", "dgps", "dji", "dme", "dominoex", "drm", "dsc", "dtmb", "dvb", "dvbc", "dvbs", "eczas",
-    "adsl", "eloran", "flarm", "fpv", "freedv", "fsq", "fst4", "ft2", "globalstar", "gnss", "goesdcs", "gsmr", "halow", "hamdrm", "hdr", "hell",
+    "adsl", "cv2x", "dsrc", "eot", "ermes", "fanet", "its", "ogn", "eloran", "flarm", "fpv", "freedv", "fsq", "fst4", "ft2", "globalstar", "gnss", "goesdcs", "gsmr", "halow", "hamdrm", "hdr", "hell",
     "hfbeacon", "hfdig", "hfdl", "ifkp", "ils", "inmc", "iono", "iridium", "isdbt", "ism", "js8", "jt4", "jt65", "jt9", "kaal", "kaft",
     "kait", "kapp", "kavb", "kaws", "klw", "lbj", "loraaprs", "loraraw", "lorawan", "mac", "marine", "mesh", "meshcom", "meshcore",
     "meshtastic", "mfsk", "milhf", "modeac", "mscatter", "msk144", "mt63", "multitone", "navtex", "nbiot", "ndb", "nr", "olivia",

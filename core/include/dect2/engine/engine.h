@@ -93,6 +93,7 @@
 #include "dect2/zigbee/zigbee_rx.h"
 #include "dect2/flarm/flarm_rx.h"
 #include "dect2/adsl/adsl_rx.h"
+#include "dect2/avroad/avroad_rx.h"
 #include "dect2/hfbeacon/hfbeacon_rx.h"
 #include "dect2/dji/dji_rx.h"
 #include "dect2/nbiot/nbiot_rx.h"
@@ -273,7 +274,7 @@ public:
     // 8 = DVB-S/S2, 9 = DTMB, 10 = analog TV, 11 = DMR, 12 = DRM, 13 = ADS-B, 14 = GNSS,
     // 15 = radiosonde, 16 = AIS, 17 = marine, 18 = ACARS, 19 = Inmarsat-C, 20 = Inmarsat Aero, 21 = Iridium, 22 = mesh,
     // 23 = HD Radio, 24 = CDR, 25 = pagers, 26 = APRS / packet, 27 = HF digital, 28 = airband, 29 = VDL Mode 2, 30 = ISM sensors, 32 = VOR / ILS, 33 = M17, 34 = cell towers, 35 = D-STAR, 36 = CW, 37 = HFDL, 38 = PSK31, 39 = JS8Call, 42 = DVB-C, 46 = Orbcomm, 40 = NXDN, 41 = GSM-R, 45 = Mode S uplink, 47 = dPMR, 51 = HF ALE, 48 = TETRA, 49 = MAC, 50 = radio astronomy, 51 = HF ALE, 52 = P25, 53 = Bluetooth LE, 54 = ionospheric sounders
-    static constexpr int kPollSeqSlots = 261;   // pollMode() seqs[] indices; LBJ uses slot 76
+    static constexpr int kPollSeqSlots = 312;   // pollMode() seqs[] indices; LBJ uses slot 76
     void setStandard(int m) { stdMode_ = m; stdReq_ = true; refreshIdle(); }
     int standardMode() const { return stdMode_.load(); }
     int activeStandard() const { return activeStd_.load(); }  // 0 = DVB-T2, 1 = DVB-T, 2 = ATSC, 3 = DAB, 4 = ATSC 3.0, 5 = ISDB-T, 6 = FM, 7 = DVB-S/S2, 8 = DTMB, 9 = analog TV, 10 = DMR, 11 = DRM, 12 = ADS-B, 13 = GNSS, 14 to 27 = radiosonde, AIS, marine, ACARS, Inmarsat-C, Inmarsat Aero, Iridium, mesh, HD Radio, CDR, pagers, APRS / packet, HF digital, airband, VDL Mode 2, ISM sensors, VOR / ILS, M17, 34 = D-STAR, 35 = CW, 36 = HFDL, 37 = PSK31, 38 = JS8Call, 41 = DVB-C, 44 = Mode S uplink, 45 = Orbcomm, 46 = dPMR, 39 = NXDN, 47 = TETRA, 48 = MAC, 49 = radio astronomy, 50 = HF ALE, 51 = P25, 52 = Bluetooth LE, 53 = ionospheric sounders , 54 = QO-100, 55 = Wi-Fi networks, 56 = general receiver (always the standard code minus one)
@@ -516,6 +517,7 @@ public:
     NbiotReceiver& nbiot() { return rxNb_; }   // NB-IoT cells: clear the cell table (telemetry through latestRx)
     ZigbeeReceiver& thread() { return rxTh_; }   // Thread: clear the network and device tables (telemetry through latestRx)
     ZigbeeReceiver& zigbee() { return rxZb_; }   // Zigbee / 802.15.4: clear the PAN and device tables (telemetry through latestRx)
+    AvRoadReceiver& avroad() { return rxAvRoad_; }   // aviation, rail and road modes (families 400 - 411; telemetry through latestRx)
     AdslReceiver& adsl() { return rxAdsl_; }   // ADS-L: receiver position, clear (telemetry through latestRx)
     FlarmReceiver& flarm() { return rxFlarm_; }   // FLARM: receiver position, clear (telemetry through latestRx)
     WmbusLiveReceiver& wmbus() { return rxWmb_; }   // Wireless M-Bus meters: clear the device table (telemetry through latestRx)
@@ -1004,6 +1006,7 @@ private:
     WxsatReceiver rxWx_[kWxNumProfiles]{{0},{1},{2},{3},{4},{5},{6},{7},{8}};   // the SatDump-list weather links, families 260 - 268 (slots 220 - 228)
     FlarmReceiver rxFlarm_;
     AdslReceiver rxAdsl_;
+    AvRoadReceiver rxAvRoad_;
     uint64_t modeSeq_[kPollSeqSlots] = {};      // the last report taken from each of the modes added after FM (same order as above)
     mutable std::mutex atsc3Mu_;
     Atsc3Telemetry atsc3Tel_;

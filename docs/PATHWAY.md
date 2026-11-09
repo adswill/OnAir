@@ -1214,3 +1214,9 @@ Branch feat38-fastci on v3.7.0 with feat37-fastci merged. Quick gate tools/gate/
 - Bug: DF18 CF 3 (coarse TIS-B) no longer read as ADS-B (rust/onair_adsb, regression test); checked against readsb.
 - New mode ADS-L, family 300 (std 302, active 301, poll slot 260): core/src/adsl, app/adsl, tests/adsl, docs/ADSL-3.8.md. M-band, O-LDR and O-HDR from one 2 Msps capture, FLARM decoded from the same samples, map and shared tracks, no keys needed.
 - Tested on our own generator and spec examples only: no public ADS-L recording found. The GUI and app were not run (no full build allowed); test_mode_numbers, test_gui_rules, test_credits pass by standalone links.
+
+## 2026-11-09 Aviation, rail and road modes (feat38-avia-road)
+- Twelve new modes, families 400-411, one receiver `core/src/avroad`, table of decoded items and Receiver page in `app/avroad`, all receive only; ADS-L branch merged in. Details and limits in docs/AVIA-ROAD-3.8.md.
+- AAR end of train verified on the real PyEOT recording (3 frames). BSM layout verified on a published example. Every other mode: simulated signals only.
+- Decoders: FANET, OGN (LDPC), end of train, ERMES, 802.11p BSM/CAM, DSRC framing. Structure only: LDACS, AeroMACS, C-V2X, GBAS bursts. Detection: marine and weather radar (no bearing with one antenna).
+- Skipped (no public protocol): ReFLEX, ATCS, GBAS message content.

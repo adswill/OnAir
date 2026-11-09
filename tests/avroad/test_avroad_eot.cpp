@@ -30,7 +30,8 @@ static std::vector<cf32> scene(double fs, std::vector<EotFields> frames, double 
 int main(int argc, char** argv) {
     // The real recording, FM modulated back onto a carrier at the file's rate
     {
-        const std::string dir = argc > 1 ? argv[1] : "tests/avroad/data";
+        std::string here = __FILE__; here = here.substr(0, here.find_last_of("/\\") + 1);
+        const std::string dir = argc > 1 ? argv[1] : here + "data";
         std::ifstream f(dir + "/demo3eot.wav", std::ios::binary);
         CHECK((bool)f, "open the recording");
         std::vector<char> b((std::istreambuf_iterator<char>(f)), {});

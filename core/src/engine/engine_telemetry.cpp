@@ -267,6 +267,18 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 66: return pollStd(rxZb_, 66, t, seqs[60], &RxTelemetry::zigbee);
     case 245: return pollStd(rxTh_, 245, t, seqs[204], &RxTelemetry::thread);   // Thread (slot 204)
     case 67: return pollStd(rxFlarm_, 67, t, seqs[61], &RxTelemetry::flarm);
+    case 401: return pollStd(rxAvRoad_, 401, t, seqs[300], &RxTelemetry::avroad);
+    case 402: return pollStd(rxAvRoad_, 402, t, seqs[301], &RxTelemetry::avroad);
+    case 403: return pollStd(rxAvRoad_, 403, t, seqs[302], &RxTelemetry::avroad);
+    case 404: return pollStd(rxAvRoad_, 404, t, seqs[303], &RxTelemetry::avroad);
+    case 405: return pollStd(rxAvRoad_, 405, t, seqs[304], &RxTelemetry::avroad);
+    case 406: return pollStd(rxAvRoad_, 406, t, seqs[305], &RxTelemetry::avroad);
+    case 407: return pollStd(rxAvRoad_, 407, t, seqs[306], &RxTelemetry::avroad);
+    case 408: return pollStd(rxAvRoad_, 408, t, seqs[307], &RxTelemetry::avroad);
+    case 409: return pollStd(rxAvRoad_, 409, t, seqs[308], &RxTelemetry::avroad);
+    case 410: return pollStd(rxAvRoad_, 410, t, seqs[309], &RxTelemetry::avroad);
+    case 411: return pollStd(rxAvRoad_, 411, t, seqs[310], &RxTelemetry::avroad);
+    case 412: return pollStd(rxAvRoad_, 412, t, seqs[311], &RxTelemetry::avroad);
     case 301: return pollStd(rxAdsl_, 301, t, seqs[260], &RxTelemetry::adsl);   // ADS-L (slot 260)
     case 68: return poll68(rxHfb_, t, seqs);
     case 69: return pollStd(rxDji_, 69, t, seqs[63], &RxTelemetry::dji);
