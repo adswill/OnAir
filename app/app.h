@@ -195,6 +195,7 @@ struct App {
     int wideAllListen = 0;              // the entry whose sound is followed there
     bool rfFpOpen = false;              // the RF fingerprint window (View > RF fingerprint; app/panels/rffp_ui.cpp; docs/RF-FINGERPRINT.md)
     bool stationOpen = false;           // My station window (View > My station; app/panels/station_ui.cpp)
+    bool heardOpen = false;             // Search everything heard (View > Search everything; app/panels/heard_ui.cpp)
     bool doctorOpen = false;            // the Reception Doctor window (View > Reception doctor; app/panels/doctor_ui.cpp)
     bool stationHealthOpen = false;     // the station health report window (View > Station health; app/panels/station_health_ui.cpp)
     bool sweepOpen = false;             // the sweep scanner window (View > Sweep scanner)
@@ -821,6 +822,7 @@ void passesDownloadTles();                          // passes_ui.cpp: fetch the 
 bool wideAllWorthIt(const App& a);                   // the capture is wide enough to hold several signals (or it is on already)
 void wideAllButton(App& a);                          // the one button of it (Simple views and the window)
 void rfFingerprintWindow(App& a);                   // rffp_ui.cpp: RF fingerprint of a transmitter, carrier-only log (a.rfFpOpen; docs/RF-FINGERPRINT.md)
+void heardWindow(App& a);                           // heard_ui.cpp: one box for a call sign, ICAO, MMSI or frequency over every mode's history
 void stationWindow(App& a);                         // station_ui.cpp: My station, radios and antennas entered once (a.stationOpen; docs/STATION-3.8.md)
 void stationAutoPick(App& a);                       // station_ui.cpp: selecting a mode moves to a better free radio when the selected one cannot do it (the radio is left alone otherwise)
 struct ModeFit;

@@ -61,4 +61,10 @@ private:
     WindField wind_;
 };
 
+// The map screens' hubs, so that other windows (Search everything) can ask for an aircraft's latest track position. UI thread only.
+void registerHub(const TrackHub* h);
+void unregisterHub(const TrackHub* h);
+// The most recent fix of this aircraft in any registered hub, estimated at the time of that fix (no prediction); false when no hub has it.
+bool liveFix(Key k, double& lat, double& lon);
+
 }  // namespace dect2::track

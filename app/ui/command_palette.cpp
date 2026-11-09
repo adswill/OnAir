@@ -32,7 +32,7 @@ const Panel kPanels[] = {
     {"Messages...", &App::msgdbOpen}, {"Protocol lab...", &App::protolabOpen}, {"TX studio...", &App::txStudioOpen}, {"Mode Builder...", &App::modeBuilderOpen}, {"Signal Lab...", &App::signallabOpen}, {"nRF24 / ESP32 radio...", &App::esp32Open}, {"Conversations...", &App::ssbConvOpen}, {"Watchlists...", &App::watchlistOpen}, {"Integrations...", &App::integrationsOpen},
     {"Automations...", &App::automationOpen}, {"Plugins...", &App::pluginsOpen}, {"Memory...", &App::memoryOpen},
     {"Datasets...", &App::datasetsOpen}, {"Data packs...", &App::packsOpen}, {"Frequencies...", &App::freqOpen}, {"Map", &App::mapOpen}, {"Propagation...", &App::propOpen},
-    {"Sweep scanner", &App::sweepOpen}, {"Station health", &App::stationHealthOpen}, {"My station", &App::stationOpen}, {"Reception doctor", &App::doctorOpen}, {"RF fingerprint", &App::rfFpOpen}, {"Everything in view", &App::wideAllOpen}, {"Multi-radio trunking", &App::trunkPoolOpen}, {"Antenna rotator...", &App::rotatorOpen},
+    {"Sweep scanner", &App::sweepOpen}, {"Station health", &App::stationHealthOpen}, {"My station", &App::stationOpen}, {"Search everything heard", &App::heardOpen}, {"Reception doctor", &App::doctorOpen}, {"RF fingerprint", &App::rfFpOpen}, {"Everything in view", &App::wideAllOpen}, {"Multi-radio trunking", &App::trunkPoolOpen}, {"Antenna rotator...", &App::rotatorOpen},
     {"Antenna designer...", &App::antdOpen},
 };
 
