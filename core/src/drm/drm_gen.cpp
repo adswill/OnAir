@@ -298,7 +298,7 @@ struct DrmTransmitter::Impl {
             const auto& e = opt[((size_t)entityRotation + i) % opt.size()];
             if ((int)(field.size() + e.size()) <= sdcFieldBytes) field.insert(field.end(), e.begin(), e.end());
         }
-        entityRotation++;
+        if (cfg.sdcRotate) entityRotation++;
     }
 
     void superFrame(std::vector<cf32>& out) {

@@ -1,4 +1,5 @@
 // DRM back end: FAC, SDC and MSC decoding from equalised cells.
+#include <atomic>
 #include "dect2/drm/drm_dec.h"
 #include <algorithm>
 #include <cmath>
@@ -160,6 +161,8 @@ void DrmBackend::buildMscCode() {
     }
 }
 
+std::atomic<bool> gDrmSdcCombine{true};   // tests compare with and without
+
 void DrmBackend::decodeSdc() {
     if (!layout_ || !facValid_) return;
     const int mode = fac_.sdcMode;
@@ -187,7 +190,7 @@ void DrmBackend::decodeSdc() {
     const int F = sdcDataBytes(mode_, occ_, mode);
     int afs = 0;
     bool sdcGood = F >= 4 && sdcCheckBits(u.data(), F, afs);
-    if (!sdcGood && F >= 4 && sdcPrevZ_.size() == sdcZ_.size()) {
+    if (!sdcGood && F >= 4 && sdcPrevZ_.size() == sdcZ_.size() && gDrmSdcCombine.load(std::memory_order_relaxed)) {
         // The SDC usually repeats unchanged: the cells of the failed block added to those of the earlier blocks (weighted). A block whose content changed fails its CRC and nothing is lost;
         // only a block that passes the CRC is used.
         const size_t N = sdcZ_.size();

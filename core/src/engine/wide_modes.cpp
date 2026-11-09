@@ -294,7 +294,7 @@ struct WideModes::Impl {
         // HF ALE: one 3 kHz SSB channel each, on its dial frequency (the known channels: the presets and the frequency database). A scanning net calls on a different channel each step,
         // so a bank hears the whole handshake a single channel only hears a part of. No sound.
         WideOps<AleReceiver, AleTelemetry> al;
-        al.outRate = 48000; al.occupiedHz = 6000; al.preRollSec = kPreRoll; al.pinToPrior = true;
+        al.outRate = std::max(aleTuning().minSampleRate, 48000.0); al.occupiedHz = 6000; al.preRollSec = kPreRoll; al.pinToPrior = true;
         al.log = [this](const std::string& line) { if (log) log(line); };
         al.setup = [this](AleReceiver& r) { commonSetup(r, log); };
         al.bind = [](AleReceiver& r, double absHz) { r.setDialHz(absHz); };

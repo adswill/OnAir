@@ -12,7 +12,7 @@ using namespace dect2;
 #include "../common/test_util.h"
 
 int main() {
-    const double rate = 192000, centre = 7120000;
+    const double rate = 500000, centre = 7120000;
     for (double cfo : {0.0, 25.0}) {
         const double secs = 26;
         const size_t n = (size_t)(rate * secs);

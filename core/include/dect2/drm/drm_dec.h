@@ -62,7 +62,7 @@ public:
     int mscQamBits() const;              // 4 / 16 / 64 cell constellation as bits per cell, 0 unknown
     bool hierarchical() const { return hierarchical_; }
     bool mscReady() const { return mscCode_ != nullptr; }
-    uint64_t facOk = 0, facBad = 0, sdcOk = 0, sdcBad = 0, mscOk = 0, mscBad = 0;
+    uint64_t facOk = 0, facBad = 0, sdcOk = 0, sdcBad = 0, mscOk = 0, mscBad = 0, sdcCombined = 0;
     uint64_t mscSkipped = 0;             // multiplex frames not decoded because their cells carry no signal (a fade): counted in mscBad too
     uint64_t facRejected = 0;            // FAC blocks that passed their CRC but disagreed with the frame sequence or the configuration once (not taken)
     std::vector<cf32> facConst, sdcConst, mscConst;
