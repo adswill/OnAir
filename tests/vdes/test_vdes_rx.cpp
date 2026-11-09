@@ -1,5 +1,6 @@
 // VDES: ASM bursts (GMSK 9.6 kbit/s, AIS framing) decode with the payload sent; VDE-TER bursts of 25 / 50 / 100 kHz are detected, their bandwidth, band,
 // level and modulation (pi/4-QPSK, 8PSK, 16QAM) reported; offsets, noise and clock errors; noise alone gives nothing.
+#include "dect2/ais/ais_gen.h"
 #include "dect2/ais/ais_proto.h"
 #include "dect2/dsp/gen_util.h"
 #include "dect2/vdes/vdes_gen.h"
@@ -113,7 +114,32 @@ static void vdeTest(double rate, double snr, double cfo, double ppm, int band = 
     CHECK(t.state >= 1, "state %d", t.state);
 }
 
+// The channels are ITU-R M.2092's: ASM 1 = 161.950 (channel 2027), ASM 2 = 162.000 (2028). Bursts placed with the AIS renderer at absolute
+// frequencies (not through kVdesAsm*): the pair decodes on the right channels; real AIS on 161.975 / 162.025, even off frequency, is not ASM.
+static void channelPlanTest() {
+    CHECK(kVdesAsm1Hz == 161.950e6 && kVdesAsm2Hz == 162.000e6, "ASM channels %.0f / %.0f Hz", kVdesAsm1Hz, kVdesAsm2Hz);
+    const double dial = 161.9e6, rate = 1e6;
+    std::mt19937 rng(11);
+    std::vector<AisBurstSpec> sp;
+    for (int i = 0; i < 8; i++) { AisBurstSpec b; b.payload = payload(rng, 168); b.channel = i & 1 ? 'B' : 'A'; b.startSec = 0.3 + 0.2 * i; sp.push_back(b); }
+    const auto render = [&](double midHz, double cfo) {
+        AisRenderConfig ac; ac.rate = rate; ac.durationSec = 2.2; ac.snrDb = 30; ac.cfoHz = cfo; ac.tuneOffsetHz = -(midHz - dial);
+        return renderAisBursts(sp, ac);
+    };
+    for (double cfo : {0.0, -1500.0, 1500.0}) {
+        const VdesTelemetry t = feedAll(render(161.975e6, cfo), rate, dial);
+        int ok = 0;
+        for (const AisBurstSpec& b : sp) for (const VdesAsm& a : t.asms) if (a.hex == hexOf(b.payload) && a.channel == b.channel) { ok++; break; }
+        printf("ASM pair 161.950 / 162.000, cfo %+5.0f: %d of 8 on the right channel\n", cfo, ok);
+        CHECK(ok == 8, "ASM pair: %d of 8 at cfo %.0f", ok, cfo);
+        const VdesTelemetry w = feedAll(render(162.000e6, cfo), rate, dial);
+        printf("AIS 161.975 / 162.025, cfo %+5.0f: %zu listed as ASM\n", cfo, w.asms.size());
+        CHECK(w.asms.empty(), "AIS channels: %zu frames listed as ASM at cfo %.0f", w.asms.size(), cfo);
+    }
+}
+
 int main() {
+    channelPlanTest();
     asmTest(1e6, 30, 0, 0);
     for (double snr : {14.0, 20.0, 30.0}) for (double cfo : {-1200.0, 900.0}) asmTest(1e6, snr, cfo, 0);
     asmTest(1e6, 22, 0, 40);

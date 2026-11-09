@@ -1,7 +1,7 @@
 // VDES test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
-// The signal sits around the mode's default dial frequency (161.9 MHz): the two ASM channels (161.975 and 162.025 MHz, GMSK 9.6 kbit/s with the AIS
-// framing) at +75 and +125 kHz, and the 100 kHz VDE-TER channel of 161.8 MHz at -100 kHz with bursts of 25, 50 and 100 kHz (pi/4-QPSK, 8PSK and 16QAM,
+// The signal sits around the mode's default dial frequency (161.9 MHz): the two ASM channels (161.950 and 162.000 MHz, GMSK 9.6 kbit/s with the AIS
+// framing) at +50 and +100 kHz, and the 100 kHz VDE-TER channel of 161.8 MHz at -100 kHz with bursts of 25, 50 and 100 kHz (pi/4-QPSK, 8PSK and 16QAM,
 // root-raised-cosine with roll-off 0.3, 19.2 kbaud per 25 kHz of channel). makeVdesSynth() plays a cycle of both in turn; renderVdes() puts chosen
 // bursts at chosen times for tests and the tool.
 //
@@ -40,7 +40,7 @@ struct VdesRenderConfig {
     uint32_t seed = 1;
 };
 
-// ASM bursts (channel 'A' = 161.975, 'B' = 162.025 MHz, the payload without FCS) and VDE-TER bursts in one baseband
+// ASM bursts (channel 'A' = 161.950, 'B' = 162.000 MHz, the payload without FCS) and VDE-TER bursts in one baseband
 std::vector<cf32> renderVdes(const std::vector<AisBurstSpec>& asmBursts, const std::vector<VdeBurstSpec>& vdeBursts, const VdesRenderConfig& cfg);
 std::unique_ptr<ModeSynth> makeVdesSynth(const SynthConfig& cfg, double sampleRate);
 

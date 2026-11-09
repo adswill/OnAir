@@ -119,7 +119,7 @@ struct VdesReceiver::Impl {
     }
 
     void plan() {
-        const double aisO = offsetHz + (162.0e6 - dial());
+        const double aisO = offsetHz + (0.5 * (kVdesAsm1Hz + kVdesAsm2Hz) - dial());   // the AIS demodulator takes the pair as -25 / +25 kHz of this
         asmInView = std::fabs(aisO) + 70000.0 <= 0.46 * fs && fs >= 250000.0;
         if (asmInView) ais.setSignalOffset(aisO);
         for (int b = 0; b < 2; b++) {

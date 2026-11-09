@@ -11,7 +11,7 @@
 159.400|AIS all four channels (capture centre)|5400|One capture of 6 Msps or more holds AIS 1, AIS 2, 75 and 76 (docs/SATELLITE_AIS.md)
 @mode vdes
 161.950|VDES ASM 1|25|Application specific messages
-162.050|VDES ASM 2|25|
+162.000|VDES ASM 2|25|Application specific messages
 @mode dsc
 156.525|DSC distress calling (VHF channel 70)|25|1200 baud FSK, ITU-R M.493
 2.1875|DSC MF distress (2187.5 kHz)|1|
