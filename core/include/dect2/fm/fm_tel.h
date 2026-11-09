@@ -3,6 +3,7 @@
 #include "dect2/common/ring.h"
 #include "fm_rds.h"
 #include "rds_tmc.h"
+#include "fm_subcarrier.h"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -25,6 +26,7 @@ struct FmTelemetry {
     float stereoPct = 0;        // how much of the stereo difference is in the sound: 100 full stereo, lower = blended towards mono (a weak station)
     bool squelched = false;     // the squelch (setSquelch) holds the sound muted
     float pilotPct = 0;         // pilot injection in % of 75 kHz deviation (a healthy station: 8 - 10)
+    FmSubcarrierStatus sub;     // RDS2 and SCA subcarriers
     bool rdsSync = false;       // RDS block synchronisation
     float rdsBlockOkPct = 0;    // share of RDS blocks with a good checkword, recent
     uint64_t rdsGroups = 0;     // RDS groups decoded since start

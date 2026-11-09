@@ -48,6 +48,8 @@ public:
     // symbols chosen by their reliability (default). A group with a corrected block is used only when it has come the same before.
     // Call before feeding (tests, the command line).
     void setRdsCorrection(int level);
+    // Listen to an SCA audio subcarrier instead of the programme (fm_subcarrier.h): 0 = 67 kHz, 1 = 92 kHz, -1 = off (any thread).
+    void setScaListen(int channel);
     // Every RDS group as it ends (blocks A-D; err 0 good, 1 corrected, 2 bad), from feed(): a group log, redsea-style hex (rdsHexGroup)
     void setRdsGroupTap(std::function<void(const uint16_t blocks[4], const uint8_t err[4])> cb);
     // Tests: the demodulated audio (left, right) at 48 kHz, called from feed()
