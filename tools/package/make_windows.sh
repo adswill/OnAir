@@ -18,6 +18,7 @@ rm -rf "$OUT" && mkdir -p "$OUT"
 strip -o "$OUT/OnAir.exe" $BUILD/dect2.exe
 strip -o "$OUT/onair-cli.exe" $BUILD/dect2cli.exe
 strip -o "$OUT/onair-scan.exe" $BUILD/dect2scan.exe
+strip -o "$OUT/onair-extcap.exe" $BUILD/onair-extcap.exe   # Wireshark capture interface (docs/WIRESHARK-3.8.md)
 # every DLL the programs need from the MSYS2 tree (FFmpeg, GLFW, libhackrf, libusb, the C++ runtime ...), found recursively
 collect() {
   ldd "$1" | awk -v p="$PREFIX/" 'index($3, p) == 1 {print $3}' | while read -r dll; do

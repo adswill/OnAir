@@ -37,6 +37,7 @@ S=x86_64-w64-mingw32-strip
 $S -o "$OUT/OnAir.exe" $BUILD/dect2.exe
 $S -o "$OUT/onair-cli.exe" $BUILD/dect2cli.exe
 $S -o "$OUT/onair-scan.exe" $BUILD/dect2scan.exe
+$S -o "$OUT/onair-extcap.exe" $BUILD/onair-extcap.exe   # Wireshark capture interface (docs/WIRESHARK-3.8.md)
 $S -o "$OUT/onair-server.exe" $BUILD/onair-server.exe   # the headless server (OnAir Web)
 [ -f "$OUT/onair-server.exe" ] || { echo "error: onair-server.exe is missing from $OUT"; exit 1; }
 mkdir -p "$OUT/web"; cp -R web/onair-web "$OUT/web/"   # the OnAir Web browser page (onair-server.exe looks in web\\onair-web next to it)

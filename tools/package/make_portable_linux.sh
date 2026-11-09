@@ -12,6 +12,7 @@ D=$(mktemp -d)/onair-$VERSION-linux-$ARCH-portable
 mkdir -p "$D/bin" "$D/lib"
 cp $B/dect2 "$D/bin/onair"; cp $B/dect2cli "$D/bin/onair-cli"; cp $B/dect2scan "$D/bin/onair-scan"
 cp $B/onair-server "$D/bin/onair-server"   # the headless server (OnAir Web)
+cp $B/onair-extcap "$D/bin/onair-extcap"   # Wireshark capture interface (docs/WIRESHARK-3.8.md)
 SKIP='linux-vdso|ld-linux|/libc\.so|/libm\.so|/libdl\.so|/libpthread\.so|/librt\.so|/libutil\.so|/libresolv\.so|/libstdc\+\+|/libgcc_s|/libGL|/libEGL|/libOpenGL|/libX|/libxcb|/libwayland|/libdrm|/libasound|/libpulse|/libudev|/libdbus|/libsystemd|/libxkbcommon|/libffi|/libgbm|/libva'
 collect() {
   ldd "$1" | awk '/=> \//{print $3}' | while read -r lib; do

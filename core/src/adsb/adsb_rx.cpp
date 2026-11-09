@@ -1,6 +1,7 @@
 // ADS-B receiver: the pulse demodulator (adsb_demod), the frame checks and the aircraft table (adsb_track), reports four times a second.
 // Everything runs in feed(); telemetry() and the setters only take the lock that protects the table.
 #include "dect2/session/mode_adapters.h"
+#include "dect2/wirecap/wire.h"
 #include "dect2/adsb/adsb_rx.h"
 #include "dect2/adsb/adsb_demod.h"
 #include <atomic>
@@ -98,6 +99,7 @@ AdsbReceiver::AdsbReceiver() : p_(std::make_unique<Impl>()) {
             std::lock_guard<std::mutex> lk(p->mu);
             ok = p->tracker.accept(raw, f, last);
             if (ok) {
+                if (wire::on(wire::AdsB)) wire::Hub::get().publish(wire::AdsB, f.bytes, (size_t)f.bits / 8);
                 p->lastGood = f.timeSec;
                 cb = p->frameCb;
                 if (f.newAircraft && f.timeSec - p->lastNewLog >= 2.0) {

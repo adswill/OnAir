@@ -28,7 +28,7 @@ int gTabFrame = -1;
 struct Panel { const char* name; bool App::*on; };
 const Panel kPanels[] = {
     {"Passes", &App::passesOpen}, {"Scheduler", &App::schedulerOpen}, {"Recordings", &App::recmgrOpen}, {"SatNOGS transmitters", &App::satnogsOpen}, {"Direction finder", &App::dfOpen}, {"Interference hunter", &App::rfiOpen},
-    {"Passive radar", &App::passiveRadarOpen}, {"Images", &App::galleryOpen}, {"Data feeds...", &App::feedsOpen},
+    {"Passive radar", &App::passiveRadarOpen}, {"Images", &App::galleryOpen}, {"Data feeds...", &App::feedsOpen}, {"Wireshark...", &App::wiresharkOpen},
     {"Messages...", &App::msgdbOpen}, {"Protocol lab...", &App::protolabOpen}, {"TX studio...", &App::txStudioOpen}, {"Mode Builder...", &App::modeBuilderOpen}, {"Signal Lab...", &App::signallabOpen}, {"nRF24 / ESP32 radio...", &App::esp32Open}, {"Conversations...", &App::ssbConvOpen}, {"Watchlists...", &App::watchlistOpen}, {"Integrations...", &App::integrationsOpen},
     {"Automations...", &App::automationOpen}, {"Plugins...", &App::pluginsOpen}, {"Memory...", &App::memoryOpen},
     {"Datasets...", &App::datasetsOpen}, {"Data packs...", &App::packsOpen}, {"Frequencies...", &App::freqOpen}, {"Map", &App::mapOpen}, {"Propagation...", &App::propOpen},

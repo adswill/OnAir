@@ -5,6 +5,7 @@
 // and decimated to 48 kHz (5 samples per bit). A power detector finds the bursts (they are short and stand alone), each one is cut out of a ring of samples
 // and decoded offline by aisDecodeBurst (ais_phy.cpp). The message layer and the station table are here.
 #include "dect2/limits.h"
+#include "dect2/wirecap/wire.h"
 #include "dect2/session/mode_adapters.h"
 #include "dect2/marine/marine_mmsi.h"
 #include "dect2/marine/marine_incident.h"
@@ -455,6 +456,7 @@ struct AisReceiver::Impl {
         const std::vector<std::string> sentences = ais::toNmea(bits, chn, nmeaSeq);
         if (forwardFeeds && Feeds::get().wantAis()) Feeds::get().ais(sentences);   // the data feed out (feeds.h), off unless the user turned it on
         for (const std::string& s : sentences) nmea.push_back(s);
+        if (wire::on(wire::Ais)) for (std::string s : sentences) { s += "\r\n"; wire::Hub::get().publish(wire::Ais, (const uint8_t*)s.data(), s.size()); }
         if (bits.size() > 6 * 60) nmeaSeq = (nmeaSeq + 1) % 10;
         while (nmea.size() > kNmeaCap) nmea.pop_front();
         ch[c].dop.add(tnow, cfoHz);

@@ -1236,3 +1236,6 @@ Added core/src/ease, app/ease, tests/ease. Radiosonde launch windows, highest-sa
 ## 2026-11-09: decoder gaps batch 1 (feat38-decode1)
 
 AIS binary messages 6/8 and the 12 undecoded types, about 60 ACARS text formats shared by ACARS, VDL2, HFDL, Aero and Iridium, P25 patches/affiliations/denials/MBT/unconfirmed PDUs, DMR Capacity Plus and Connect Plus grants with ARS and TMS, TETRA floor holder, MAC-FRAG reassembly and SDS/status wired to the Messages view and map. Details and limits: docs/DECODE1-3.8.md.
+
+## 2026-11-09 3.8 Wireshark output (feat38-wireshark)
+View > Wireshark: one switch per mode, off by default. Packets go to pcapng files, a live capture through the new onair-extcap program (127.0.0.1 only), and GSMTAP over UDP for GSM-R, TETRA and LTE. 16 modes, link types in docs/WIRESHARK-3.8.md; USER0 and USER1 only for Mode S and Z-Wave, read by the installed onair.lua. Hooks sit before any decryption. The DVB-S pcap writer now uses the shared format code. test_wirecap parses every channel back and runs Zigbee, BLE and Z-Wave from generator to file; tshark was not available, so no real Wireshark has read the files yet.

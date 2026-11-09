@@ -1,5 +1,6 @@
 // Wi-Fi HaLow (802.11ah) network monitor (see halow_rx.h): the mixer, the receive chains (halow_chain.h), the network table and the frame log.
 #include "dect2/halow/halow_rx.h"
+#include "dect2/wirecap/wire.h"
 #include "dect2/halow/halow_chain.h"
 #include "dect2/halow/halow_proto.h"
 #include "dect2/halow/halow_tel.h"
@@ -229,6 +230,7 @@ struct HalowReceiver::Impl {
     void accept(const HalowEvent& e) {
         const std::vector<uint8_t>& psdu = e.psdu;
         if (!fcsOk(psdu.data(), psdu.size())) { tel.blocksBad++; return; }
+        if (wire::on(wire::Halow) && psdu.size() > 4) wire::Hub::get().publish(wire::Halow, wire::radiotap80211(psdu.data(), psdu.size() - 4, 0, 0));   // as received, without the FCS
         tel.blocksOk++;
         ppsAcc++;
         lastGood = sigSec();

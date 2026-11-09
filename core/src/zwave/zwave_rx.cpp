@@ -1,5 +1,6 @@
 // Z-Wave monitor, see zwave_rx.h
 #include "dect2/zwave/zwave_rx.h"
+#include "dect2/wirecap/wire.h"
 #include "dect2/zwave/zwave_proto.h"
 #include "dect2/zwave/zwave_tel.h"
 #include "dect2/map/mesh_topology_feed.h"
@@ -257,6 +258,7 @@ struct ZwaveReceiver::Impl {
         z.seq = f.seq; z.ackReq = f.ackReq; z.encryption = enc; z.rssi = levelDb; z.snrDb = snr; z.len = f.len;
         std::vector<uint8_t> raw = zwave::build(f, dec.rate);
         z.hex = zwave::hex(raw.data(), raw.size());
+        if (wire::on(wire::Zwave)) wire::Hub::get().publish(wire::Zwave, wire::zwaveUser(raw.data(), raw.size(), dec.rate));   // S0 / S2 payloads stay encrypted
         logq.push_front(z);
         if (logq.size() > kZwLogMax) logq.pop_back();
         if (!f.payload.empty() && f.headerType != zwave::kHdrAck && !f.routed) {
