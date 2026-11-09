@@ -155,8 +155,95 @@ std::string eddystoneUrl(const uint8_t* d, size_t n) {
 
 static void addBeacon(Adv& o, const std::string& s) { if (!o.beacon.empty()) o.beacon += "; "; o.beacon += s; }
 
+// ----------------------------------------------------- sensor payloads in the clear
+namespace {
+struct BtHomeObj { uint8_t id; const char* name; int bytes; bool sgn; double factor; const char* unit; };
+const BtHomeObj kBtHome[] = {   // bthome.io/format v2
+    {0x51, "acceleration", 2, false, 0.001, "m/s2"}, {0x01, "battery", 1, false, 1, "%"}, {0x60, "channel", 1, false, 1, ""},
+    {0x12, "CO2", 2, false, 1, "ppm"}, {0x56, "conductivity", 2, false, 1, "uS/cm"}, {0x09, "count", 1, false, 1, ""},
+    {0x3D, "count", 2, false, 1, ""}, {0x3E, "count", 4, false, 1, ""}, {0x59, "count", 1, true, 1, ""}, {0x5A, "count", 2, true, 1, ""}, {0x5B, "count", 4, true, 1, ""},
+    {0x43, "current", 2, false, 0.001, "A"}, {0x5D, "current", 2, true, 0.001, "A"}, {0x08, "dewpoint", 2, true, 0.01, "C"}, {0x5E, "direction", 2, false, 0.01, "deg"},
+    {0x40, "distance", 2, false, 1, "mm"}, {0x41, "distance", 2, false, 0.1, "m"}, {0x42, "duration", 3, false, 0.001, "s"}, {0x4D, "energy", 4, false, 0.001, "kWh"}, {0x0A, "energy", 3, false, 0.001, "kWh"},
+    {0x4B, "gas", 3, false, 0.001, "m3"}, {0x4C, "gas", 4, false, 0.001, "m3"}, {0x52, "gyroscope", 2, false, 0.001, "deg/s"}, {0x03, "humidity", 2, false, 0.01, "%"}, {0x2E, "humidity", 1, false, 1, "%"},
+    {0x05, "illuminance", 3, false, 0.01, "lx"}, {0x64, "light level", 1, false, 1, ""}, {0x06, "mass", 2, false, 0.01, "kg"}, {0x07, "mass", 2, false, 0.01, "lb"},
+    {0x14, "moisture", 2, false, 0.01, "%"}, {0x2F, "moisture", 1, false, 1, "%"}, {0x0D, "PM2.5", 2, false, 1, "ug/m3"}, {0x0E, "PM10", 2, false, 1, "ug/m3"},
+    {0x0B, "power", 3, false, 0.01, "W"}, {0x5C, "power", 4, true, 0.01, "W"}, {0x5F, "precipitation", 2, false, 0.1, "mm"}, {0x04, "pressure", 3, false, 0.01, "hPa"},
+    {0x3F, "rotation", 2, true, 0.1, "deg"}, {0x61, "rotational speed", 2, false, 1, "rpm"}, {0x44, "speed", 2, false, 0.01, "m/s"},
+    {0x57, "temperature", 1, true, 1, "C"}, {0x58, "temperature", 1, true, 0.35, "C"}, {0x45, "temperature", 2, true, 0.1, "C"}, {0x02, "temperature", 2, true, 0.01, "C"},
+    {0x50, "timestamp", 4, false, 1, ""}, {0x13, "TVOC", 2, false, 1, "ug/m3"}, {0x0C, "voltage", 2, false, 0.001, "V"}, {0x4A, "voltage", 2, false, 0.1, "V"},
+    {0x4E, "volume", 4, false, 0.001, "L"}, {0x47, "volume", 2, false, 0.1, "L"}, {0x48, "volume", 2, false, 1, "mL"}, {0x55, "volume storage", 4, false, 0.001, "L"},
+    {0x49, "flow", 2, false, 0.001, "m3/h"}, {0x46, "UV index", 1, false, 0.1, ""}, {0x4F, "water", 4, false, 0.001, "L"},
+};
+
+std::string numFmt(double v, const char* unit) {
+    char b[48];
+    if (std::fabs(v - std::lround(v)) < 1e-6) snprintf(b, sizeof b, "%.0f %s", v, unit); else snprintf(b, sizeof b, "%.2f %s", v, unit);
+    std::string s = b;
+    while (!s.empty() && s.back() == ' ') s.pop_back();
+    return s;
+}
+
+bool btHome(const uint8_t* d, size_t n, std::string& out) {
+    if (n < 1) return false;
+    if ((d[0] >> 5) != 2) return false;              // v2 only
+    if (d[0] & 1) { out = "BTHome (encrypted)"; return true; }
+    out = "BTHome";
+    size_t i = 1;
+    while (i < n) {
+        const uint8_t id = d[i++];
+        if (id == 0x53 || id == 0x54) {              // text / raw with a length byte
+            if (i >= n) return true;
+            const size_t len = d[i++];
+            if (i + len > n) return true;
+            if (id == 0x53) { std::string t((const char*)d + i, len); out += ", text " + t; }
+            i += len;
+            continue;
+        }
+        const BtHomeObj* f = nullptr;
+        for (const auto& k : kBtHome) if (k.id == id) { f = &k; break; }
+        if (!f || i + (size_t)f->bytes > n) return true;      // the spec: stop at the first object not understood
+        uint32_t raw = 0;
+        for (int b = 0; b < f->bytes; b++) raw |= (uint32_t)d[i + (size_t)b] << (8 * b);
+        i += (size_t)f->bytes;
+        double v = raw;
+        if (f->sgn) { const uint32_t bit = 1u << (f->bytes * 8 - 1); v = (double)(int32_t)((raw ^ bit) - bit); }
+        out += std::string(", ") + f->name + " " + numFmt(v * f->factor, f->unit);
+    }
+    return true;
+}
+
+bool pvvx(const uint8_t* d, size_t n, std::string& out) {
+    if (n != 15) return false;                       // MAC, temperature, humidity, mV, %, counter, flags
+    const double t = (int16_t)(d[6] | d[7] << 8) / 100.0, h = (uint16_t)(d[8] | d[9] << 8) / 100.0;
+    const int mv = d[10] | d[11] << 8, pc = d[12];
+    char b[120];
+    snprintf(b, sizeof b, "ATC/pvvx sensor: %.2f C, %.2f %%, battery %d mV (%d %%)", t, h, mv, pc);
+    out = b;
+    return true;
+}
+
+bool ruuvi5(const uint8_t* d, size_t n, std::string& out) {
+    if (n < 18 || d[0] != 5) return false;
+    char b[200];
+    std::string s = "RuuviTag";
+    const int16_t ti = (int16_t)(d[1] << 8 | d[2]);
+    if ((uint16_t)ti != 0x8000) { snprintf(b, sizeof b, ", %.2f C", ti * 0.005); s += b; }
+    const uint16_t hu = (uint16_t)(d[3] << 8 | d[4]);
+    if (hu != 0xFFFF) { snprintf(b, sizeof b, ", %.2f %%", hu * 0.0025); s += b; }
+    const uint16_t pr = (uint16_t)(d[5] << 8 | d[6]);
+    if (pr != 0xFFFF) { snprintf(b, sizeof b, ", %.2f hPa", (pr + 50000) / 100.0); s += b; }
+    const uint16_t pw = (uint16_t)(d[13] << 8 | d[14]);
+    if ((pw >> 5) != 2047) { snprintf(b, sizeof b, ", battery %d mV", (pw >> 5) + 1600); s += b; }
+    out = s;
+    return true;
+}
+} // namespace
+
 static void serviceData(Adv& o, int u, const uint8_t* d, size_t n) {
     char b[200];
+    std::string sens;
+    if (u == 0xFCD2 && btHome(d, n, sens)) { addBeacon(o, sens); return; }
+    if (u == 0x181A && pvvx(d, n, sens)) { addBeacon(o, sens); return; }
     if (u == 0xFEAA && n >= 1) {   // Eddystone
         if (d[0] == 0x00 && n >= 18) {
             snprintf(b, sizeof b, "Eddystone UID %s / %s, %d dBm at 0 m", hex(d + 2, 10).c_str(), hex(d + 12, 6).c_str(), (int8_t)d[1]);
@@ -186,6 +273,7 @@ static void manufacturer(Adv& o, const uint8_t* d, size_t n) {
     const char* c = companyName(o.company);
     char b[200];
     if (c) o.vendor = c; else { snprintf(b, sizeof b, "company 0x%04X", o.company); o.vendor = b; }
+    { std::string sens; if (o.company == 0x0499 && ruuvi5(d + 2, n - 2, sens)) addBeacon(o, sens); }
     if (o.company == 0x004C && n >= 3) {
         if (d[2] == 0x02 && n >= 25 && d[3] == 0x15) {
             snprintf(b, sizeof b, "iBeacon %s major %d minor %d, %d dBm at 1 m", uuidBigEndian(d + 4).c_str(), d[20] << 8 | d[21], d[22] << 8 | d[23], (int8_t)d[24]);
