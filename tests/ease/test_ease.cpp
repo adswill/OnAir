@@ -65,10 +65,31 @@ static void testPreselect() {
     CHECK(preselectAction(false, true, false, 1541.45, 1537.7) == P::LeaveAlone); // tuned by hand
 }
 
+static void testFollowAndDsc() {
+    std::vector<WefaxSlot> v = {{"a", 1000}, {"b", 2000}, {"a", 3000}};
+    CHECK(wefaxFollowPick(v, "", 900) == 0);
+    CHECK(wefaxFollowPick(v, "b", 900) == 1);
+    CHECK(wefaxFollowPick(v, "", 1061) == 1);          // more than a minute late: the next one
+    CHECK(wefaxFollowPick(v, "a", 1500) == 2);
+    CHECK(wefaxFollowPick(v, "c", 900) == -1);
+    CHECK(wefaxFollowPick({}, "", 900) == -1);
+    CHECK(!wefaxFollowDue(1000, 700, 120, 0, false));   // too early
+    CHECK(wefaxFollowDue(1000, 900, 120, 0, false));
+    CHECK(!wefaxFollowDue(1000, 900, 120, 1000, false)); // once per broadcast
+    CHECK(!wefaxFollowDue(1000, 900, 120, 0, true));     // never over a chart under way
+    CHECK(dscWorkingKhz("8291.0 kHz") == 8291.0);
+    CHECK(dscWorkingKhz("2182.0 kHz") == 2182.0);
+    CHECK(dscWorkingKhz("VHF ch 16") == 0);
+    CHECK(dscWorkingKhz("") == 0);
+    CHECK(dscWorkingKhz("kHz") == 0);
+    CHECK(dscWorkingKhz("90000.0 kHz") == 0);            // not MF/HF
+    CHECK(dscWorkingKhz("500.0 kHz") == 0);
+}
+
 int testNavtex();
 
 int main() {
-    testSonde(); testGeo(); testPreselect();
+    testSonde(); testGeo(); testPreselect(); testFollowAndDsc();
     fails += testNavtex();
     if (!fails) printf("ease ok\n");
     return fails ? 1 : 0;

@@ -3,6 +3,7 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace dect2::ease {
 
@@ -31,5 +32,14 @@ enum class Preselect {
     Done            // decided on an earlier visit
 };
 Preselect preselectAction(bool prefExists, bool positionKnown, bool running, double freqMhz, double defMhz);
+
+// ---- Weather fax "Follow the schedule". A chart under way is never cut off to reach the next one; a broadcast is tuned for once.
+struct WefaxSlot { std::string station; long long startUtc = 0; };
+// The first broadcast still worth tuning for (late by at most lateS seconds), optionally of one station; -1 when none.
+int wefaxFollowPick(const std::vector<WefaxSlot>& slots, const std::string& stationId, long long nowUtc, int lateS = 60);
+bool wefaxFollowDue(long long startUtc, long long nowUtc, int marginS, long long tunedForStart, bool chartUnderWay);
+
+// ---- DSC MF/HF: the kHz of a proposed working frequency ("8291.0 kHz"), 0 when the text is not a plausible MF/HF frequency.
+double dscWorkingKhz(const std::string& text);
 
 } // namespace dect2::ease

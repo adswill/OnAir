@@ -30,6 +30,8 @@
 #include <filesystem>
 #include <ctime>
 #include "dect2/ease/navtex.h"
+#include "dect2/ease/ease.h"
+#include "dect2/general/general_rx.h"
 #include "dect2/geo/maidenhead.h"
 
 void marineFaxTexture();   // below: the texture of a picture loaded from the results file
@@ -40,6 +42,12 @@ using dect2::DscCall;
 using dect2::NavtexMessage;
 
 struct State {
+    bool schedOn = false;            // "Follow the schedule": retune before each broadcast (off until chosen, not saved)
+    std::string schedStation;        // "" = any station of the region shown
+    long long schedTunedFor = 0;     // the broadcast already tuned for
+    double schedDialMhz = 0;         // where it tuned: another frequency means the user tuned by hand, and following stops
+    bool schedRan = false;           // the receiver ran for it: a Stop then ends following too
+    std::string schedNote;
     bool loaded = false;
     int view = 0;                    // 0 NAVTEX, 1 DSC, 2 fax, 3 tuning, 4 fax stations
     int region = 0;                  // fax stations: the region shown (0 all)
@@ -159,6 +167,18 @@ void subjectBadge(char s) {
     const ImVec2 ts = ImGui::CalcTextSize(t);
     dl->AddText(ImVec2(p.x + (h - ts.x) * 0.5f, p.y), IM_COL32(10, 12, 14, 255), t);
     ImGui::Dummy(ImVec2(h, h));
+}
+
+// leave the Marine screens for the voice that follows a call
+void listenGeneralUsb(App& a, double khz) {
+    const bool was = a.engine.running();
+    if (was) a.engine.stop();
+    ::setMode(a, 55, 0);
+    generalRecallHz(a, khz * 1e3);
+    a.tune.centerHz = a.freqMhz * 1e6;
+    generalApiSetDemod(dect2::GenUsb);
+    savePrefs(a);
+    if (was) startReceiver(a);
 }
 
 // ---------------------------------------------------------------- NAVTEX
@@ -426,6 +446,19 @@ void dscDetail(App& a, const DscCall* c, ImVec2 size) {
             char bl[64]; snprintf(bl, sizeof bl, "Listen on VHF channel %d##dscvhf", ch ? ch : 16);
             if (ImGui::SmallButton(bl)) marineVhfJump(a, ch ? ch : 16);
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Opens the Marine VHF voice mode on that channel (it needs a radio that covers 156 to 162 MHz).");
+        }
+        if (!c->vhf) {   // MF/HF: the working frequencies the call names, in USB in the General receiver
+            int shown = 0;
+            double first = 0;
+            for (const std::string* t : {&c->freqRx, &c->freqTx}) {
+                const double k = dect2::ease::dscWorkingKhz(*t);
+                if (k <= 0 || k == first) continue;
+                if (shown++) ImGui::SameLine();
+                else first = k;
+                char bl[64]; snprintf(bl, sizeof bl, tr("Listen on %.1f kHz USB##dschf%d"), k, shown);
+                if (ImGui::SmallButton(bl)) { listenGeneralUsb(a, k); break; }
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Opens the General receiver in USB on this frequency. The call may name one frequency for each direction."));
+            }
         }
     }
     kv("end", c->eos == 117 ? "acknowledgement requested" : c->eos == 122 ? "acknowledgement" : c->eos == 127 ? "other call" : "");
@@ -732,12 +765,63 @@ void tuneStation(App& a, double carrierKhz) {
     if (!a.engine.running()) startReceiver(a);
 }
 
+const char* const kFaxRegions[] = {"all regions", "Europe", "North America", "Asia", "Oceania", "South America", "Africa"};
+
+std::vector<dect2::ease::WefaxSlot> faxSlots(const std::vector<dect2::WefaxNext>& n) {
+    std::vector<dect2::ease::WefaxSlot> out;
+    for (const auto& x : n) out.push_back({x.s->id, x.startUtc});
+    return out;
+}
+
+// once a second: tune for the next broadcast (two minutes early, times are approximate), but never over a chart under way
+void scheduleTick(App& a) {
+    if (!S.schedOn) return;
+    if (S.schedDialMhz > 0 && std::fabs(a.freqMhz - S.schedDialMhz) > 0.0001) { S.schedOn = false; S.schedNote = tr("Stopped following: you tuned by hand."); return; }
+    if (S.schedRan && !a.engine.running()) { S.schedOn = false; S.schedNote = tr("Stopped following: the receiver was stopped."); return; }
+    const long long now = (long long)time(nullptr);
+    const auto next = dect2::wefaxNext(now - 60, 200, S.region > 0 ? kFaxRegions[S.region] : "");
+    const int i = dect2::ease::wefaxFollowPick(faxSlots(next), S.schedStation, now);
+    if (i < 0 || next[i].s->carrierKhz.empty()) { S.schedNote = tr("No broadcast listed for this choice."); return; }
+    const auto& n = next[i];
+    const bool chart = live(a) && a.rx.marine.fax.state == 2;
+    if (dect2::ease::wefaxFollowDue(n.startUtc, now, 120, S.schedTunedFor, chart)) {
+        S.schedTunedFor = n.startUtc;
+        if (txActive()) return;
+        tuneStation(a, n.s->carrierKhz[0]);
+        S.schedDialMhz = a.freqMhz;
+        S.schedRan = true;
+    }
+    char b[160];
+    const long long d = n.startUtc - now;
+    if (d > 0) snprintf(b, sizeof b, tr("Next: %s %s at %02d:%02d UTC, in %lld min."), n.s->callsign, n.b->product, n.b->utcMin / 60, n.b->utcMin % 60, d / 60 + 1);
+    else snprintf(b, sizeof b, tr("Receiving: %s %s."), n.s->callsign, n.b->product);
+    S.schedNote = b;
+}
+
+void scheduleControls(App& a) {
+    using namespace dect2;
+    if (ImGui::Checkbox(tr("Follow the schedule"), &S.schedOn)) {
+        S.schedTunedFor = 0; S.schedDialMhz = 0; S.schedRan = false; S.schedNote.clear();
+        if (S.schedOn) scheduleTick(a);
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Tunes two minutes before each broadcast of the region or station and receives it. Charts are kept by the autosave. A chart under way is never interrupted. Tuning by hand or Stop ends it."));
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(180 * gUi);
+    const WefaxStation* cur = S.schedStation.empty() ? nullptr : wefaxStation(S.schedStation);
+    if (ImGui::BeginCombo("##wfsch", cur ? cur->name : tr("Any station"))) {
+        if (ImGui::Selectable(tr("Any station"), !cur)) S.schedStation.clear();
+        for (const WefaxStation& s : wefaxStations()) if (S.region == 0 || !strcmp(s.region, kFaxRegions[S.region])) if (ImGui::Selectable(s.name, cur == &s)) S.schedStation = s.id;
+        ImGui::EndCombo();
+    }
+    if (!S.schedNote.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", S.schedNote.c_str()); }
+}
+
 void stationsView(App& a) {
     using namespace dect2;
-    static const char* const regions[] = {"all regions", "Europe", "North America", "Asia", "Oceania", "South America", "Africa"};
+    scheduleControls(a);
     ImGui::SetNextItemWidth(140 * gUi);
-    ImGui::Combo("##wfreg", &S.region, regions, 7);
-    const std::string reg = S.region > 0 ? regions[S.region] : "";
+    ImGui::Combo("##wfreg", &S.region, kFaxRegions, 7);
+    const std::string reg = S.region > 0 ? kFaxRegions[S.region] : "";
     ImGui::SameLine();
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("Frequencies are the carriers; a click tunes the USB dial 1.9 kHz lower. Times (UTC) marked ~ are approximate: "
@@ -989,6 +1073,7 @@ void scanTick(App& a) {
     const double now = (double)time(nullptr);
     if (now == lastSec) return;
     lastSec = now;
+    scheduleTick(a);
     dect2::MarineReceiver& r = a.engine.marine();
     if (S.parOn && !S.scanOn) {
         std::vector<double> want;

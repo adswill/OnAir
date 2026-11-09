@@ -1,6 +1,8 @@
 #include "dect2/ease/ease.h"
 #include "dect2/inmsat/inmsat_satid.h"
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
 
 namespace dect2::ease {
 
@@ -46,6 +48,27 @@ Preselect preselectAction(bool prefExists, bool positionKnown, bool running, dou
     if (!positionKnown || running) return Preselect::Wait;
     if (std::fabs(freqMhz - defMhz) > 0.001) return Preselect::LeaveAlone;
     return Preselect::Pick;
+}
+
+int wefaxFollowPick(const std::vector<WefaxSlot>& slots, const std::string& id, long long now, int lateS) {
+    for (int i = 0; i < (int)slots.size(); i++) {
+        if (slots[i].startUtc + lateS < now) continue;
+        if (!id.empty() && slots[i].station != id) continue;
+        return i;
+    }
+    return -1;
+}
+
+bool wefaxFollowDue(long long start, long long now, int marginS, long long tunedFor, bool chartUnderWay) {
+    return !chartUnderWay && tunedFor != start && start - now <= marginS;
+}
+
+double dscWorkingKhz(const std::string& t) {
+    if (t.size() < 5 || t.compare(t.size() - 3, 3, "kHz") != 0) return 0;
+    char* end = nullptr;
+    const double k = std::strtod(t.c_str(), &end);
+    if (end == t.c_str()) return 0;
+    return k >= 1605.0 && k <= 27500.0 ? k : 0;
 }
 
 } // namespace dect2::ease
