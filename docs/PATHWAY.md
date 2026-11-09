@@ -1150,3 +1150,7 @@ Network IQ sources now scrub NaN/infinity (SDR++, SpyServer float); rtl_tcp chun
 - Thread (family 244): the 802.15.4 receiver in Thread mode + thread_proto (beacon network name / ext PAN / version, MAC security aux header, 6LoWPAN mesh / fragment / IPHC / UDP NHC, MLE and CoAP where clear). Encrypted traffic is shown as encrypted (no keys). tests/thread. No user-supplied Zigbee / Thread network key decryption (not done).
 ## 2026-11-07 - bug hunt 3.7-D (sources and modes)
 Network IQ sources now scrub NaN/infinity (SDR++, SpyServer float); rtl_tcp chunk test added; modes and drivers reviewed, listed in docs/BUGS-3.7-D.md. No ASan run yet (GitHub).
+
+
+## 2026-11-09 smart voice package (feat37-sm-voice)
+Soft AMBE frame FEC + concealment (DMR/D-STAR/NXDN), optional symbol equaliser (off: no gain through the FM front end), heard-ID header repair (D-STAR, DMR), trunk call dedup across sites, control channel health + auto park + site book, TETRA SDS/LIP parser. Details and numbers: docs/SMART-voice-3.7.md.
