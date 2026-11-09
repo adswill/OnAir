@@ -499,6 +499,57 @@ std::vector<uint8_t> payloadBytes(const Bits& d, size_t off, size_t nbytes, bool
     return v;
 }
 
+// ---- Reed-Solomon checks of the voice slot (rs.py / rs6.py of the toolkit): a voice slot that passes one of them carries data, not speech ----
+struct Gf { int bits, prim; std::vector<int> ex, lg; };
+Gf makeGf(int bits, int prim) {
+    Gf g; g.bits = bits; g.prim = prim;
+    const int n = (1 << bits) - 1;
+    g.ex.assign(size_t(2 * n), 0); g.lg.assign(size_t(n + 1), 0);
+    int x = 1;
+    for (int i = 0; i < n; i++) { g.ex[size_t(i)] = x; g.lg[size_t(x)] = i; x <<= 1; if (x > n) x ^= prim; }
+    for (int i = n; i < 2 * n; i++) g.ex[size_t(i)] = g.ex[size_t(i - n)];
+    return g;
+}
+// systematic parity (nsym symbols) of msg, generator roots alpha^(fcr..fcr+nsym-1), as reedsolo rs_encode_msg
+std::vector<int> rsParity(const Gf& g, const std::vector<int>& msg, int nsym, int fcr) {
+    const int n = (1 << g.bits) - 1;
+    auto mul = [&](int a, int b) { return (a && b) ? g.ex[size_t(g.lg[size_t(a)] + g.lg[size_t(b)])] : 0; };
+    std::vector<int> gen{1};
+    for (int i = 0; i < nsym; i++) {
+        const int r = g.ex[size_t(((fcr + i) % n))];
+        std::vector<int> t(gen.size() + 1, 0);
+        for (size_t j = 0; j < gen.size(); j++) { t[j] ^= gen[j]; t[j + 1] ^= mul(gen[j], r); }
+        gen = t;
+    }
+    std::vector<int> rem(size_t(nsym), 0);
+    for (int m : msg) {
+        const int fb = m ^ rem[0];
+        for (int j = 0; j + 1 < nsym; j++) rem[size_t(j)] = rem[size_t(j + 1)] ^ mul(fb, gen[size_t(j + 1)]);
+        rem[size_t(nsym - 1)] = mul(fb, gen[size_t(nsym)]);
+    }
+    return rem;
+}
+// toolkit rs.py: 31 message bytes + 8 check bytes (the other 8 of the RS(55,31) code are not sent), prim 0x11d, first root alpha^0
+bool rs8Ok(const std::vector<uint8_t>& pf) {
+    static const Gf g = makeGf(8, 0x11d);
+    if (pf.size() < 39) return false;
+    std::vector<int> m(pf.begin(), pf.begin() + 31);
+    const std::vector<int> par = rsParity(g, m, 16, 0);
+    for (int i = 0; i < 8; i++) if (par[size_t(i)] != pf[size_t(31 + i)]) return false;
+    return true;
+}
+// toolkit rs6.py: 42 six-bit message symbols + 10 check symbols, prim 0x43, first root alpha^54
+bool rs6Ok(const Bits& d, size_t off) {
+    static const Gf g = makeGf(6, 0x43);
+    if (d.size() < off + 312) return false;
+    std::vector<int> sy;
+    for (int i = 0; i < 52; i++) sy.push_back(int(rd(d, off + 6 * size_t(i), 6)));
+    std::vector<int> m(sy.begin(), sy.begin() + 42);
+    const std::vector<int> par = rsParity(g, m, 10, 54);
+    for (int i = 0; i < 10; i++) if (par[size_t(i)] != sy[size_t(42 + i)]) return false;
+    return true;
+}
+
 void decodeIda(const Bits& d, IridiumFrame& f) {
     f.type = IridiumType::IDA; f.typeName = "IDA";
     size_t off = 46;
@@ -564,7 +615,16 @@ void decodeLw(const Bits& d, IridiumFrame& f) {
             f.hex = hexOf(pr, 35);
             f.ok = true;
         } else if (l.ft == 0) {
-            f.type = IridiumType::Voice; f.typeName = "VOC";   // counted, never decoded
+            // toolkit order of tests: CRC24 (above), RS6, RS8, zero-sum; whatever is left is taken as vocoder data
+            f.type = IridiumType::Voice; f.typeName = "VOC"; f.vtype = "VOC";
+            if (rs6Ok(d, 46)) { f.typeName = f.vtype = "VO6"; }
+            else if (rs8Ok(payloadBytes(d, 46, 39, false))) { f.typeName = f.vtype = "VOD"; }
+            else {
+                const auto pf = payloadBytes(d, 46, 39, false);
+                unsigned sum = 0;
+                for (uint8_t x : pf) sum += x;
+                if (pf[35] == 0 && pf[36] == 0 && pf[37] == 0 && (sum & 255) == 0) f.typeName = f.vtype = "VOZ";
+            }
         } else {
             f.type = IridiumType::IIU; f.typeName = "IIU";    // IIQ/IIR need the toolkit's Reed-Solomon code (not implemented)
             f.hex = hexOf(payloadBytes(d, 46, 39, false));

@@ -55,6 +55,7 @@ struct IridiumVoice::Impl {
         bool saved = false;
         int peak = 0;                       // loudest sample of the call's sound, 0..32768
         bool mute = false, solo = false;
+        size_t lastPcmLen = 0;
     };
     struct Ctx { double t, f; int sat, beam; };
 
@@ -75,6 +76,7 @@ struct IridiumVoice::Impl {
         if (k.c.decoded && k.peak < kMinPeak) return "silent audio";   // the plug-in answered, but only zeros: nothing is saved
         if (k.c.decoded) return "decoded";
         if (k.c.frames > 0 && k.c.silent == k.c.frames) return "silence";
+        if (k.c.dataSlots > 0 && k.c.dataSlots + k.c.silent >= k.c.frames) return "data";   // only data in voice slots: no speech to decode
         if (!k.c.readable) return "not readable";
         return codecThere ? "not readable" : "codec needed";   // with the plug-in loaded, every frame was refused
     }
@@ -190,9 +192,18 @@ void IridiumVoice::feed(const IridiumBurstBits& b, const IridiumFrame& f) {
         }
         k = &s.calls.back();
     }
-    k->c.last = b.timeSec;
+    const double prevLast = k->c.last;
+    const bool first = k->c.frames == 0;
     k->c.freqHz = b.freqHz;
     k->c.frames++;
+    // data in a voice slot (toolkit VO6 / VOD / VOZ, IP via voice slot): never speech, never sent to the vocoder; it still keeps the call alive
+    if (f.vtype.size() && f.vtype != "VOC") {
+        k->c.dataSlots++;
+        k->c.last = b.timeSec;
+        k->c.status = Impl::statusOf(*k, codec::pluginLoaded("iridium"));
+        return;
+    }
+    k->c.last = b.timeSec;
     const bool uniform = have && std::all_of(pay.begin(), pay.end(), [&](uint8_t v) { return v == pay[0]; });
     const bool silentFrame = f.lcw2 == 15 && f.lcw3 == 0x100000;   // iridium-toolkit: LCW(0,001111,100000000000000000000) is silence
     if (silentFrame) k->c.silent++;
@@ -206,6 +217,16 @@ void IridiumVoice::feed(const IridiumBurstBits& b, const IridiumFrame& f) {
     if (readable && k->codec) {
         std::vector<int16_t> pcm = k->codec->decode(pay);
         s.toCodec++;
+        if (pcm.empty()) k->c.emptyFrames++;
+        else {
+            // a lost burst leaves a hole of a whole number of 90 ms frames: keep the call in time with silence (never more than a second)
+            const double dt = b.timeSec - prevLast;
+            if (!first && k->lastPcmLen > 0 && dt > 0.135 && dt < 1.0) {
+                const int miss = std::min(11, int(std::lround(dt / 0.09)) - 1);
+                for (int i = 0; i < miss && k->pcm.size() < kMaxPcm; i++) { k->pcm.insert(k->pcm.end(), k->lastPcmLen, int16_t(0)); k->c.gapFrames++; }
+            }
+            k->lastPcmLen = pcm.size();
+        }
         if (!pcm.empty()) {
             k->c.decoded++;
             k->c.audioSec += double(pcm.size()) / k->rate;
