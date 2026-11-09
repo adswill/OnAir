@@ -214,6 +214,17 @@
         <item>Arktika-M GGAK</item>
         <item>AWS L-band</item>
         <item>Inmarsat BGAN</item>
+        <item>GOES GRB</item>
+        <item>GOES GVAR</item>
+        <item>GOES CDA</item>
+        <item>GOES MDL</item>
+        <item>GK-2A UHRIT</item>
+        <item>GK-2A CDAS</item>
+        <item>S-band CCSDS</item>
+        <item>Geoscan</item>
+        <item>Lucky-7</item>
+        <item>Spino</item>
+        <item>Erminaz</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -409,6 +420,17 @@
         <item>Arktika-M N1 / N2 space-weather telemetry (GGAK, experimental: frame lock not reached yet) on 1703 MHz, PM 5 ksym/s: the Elektro GGAK frames and magnetometer. Highly elliptical orbit: Follow the next pass tracks the Doppler</item>
         <item>Arctic Weather Satellite on 1707 MHz: QPSK 1.785 Msym/s, CCSDS convolutional code, Reed-Solomon interleave 5, the MWR microwave scans (19 channels, 145 points) line by line. Needs a dish at 1.7 GHz and 4 Msps or more; Follow the next pass tunes with Doppler and starts by itself</item>
         <item>Inmarsat BGAN (ETSI TS 102 744 Family SL), the satellite data service: every forward carrier from 1525 to 1559 MHz, bearer type and code rate, satellite, spot beam, network identity, and the system information it broadcasts. One-click scan across the band. Signalling and carrier structure only: no voice, no user data, no subscriber identity. Needs a user test: only synthetic signals so far, never validated on a real BGAN recording. A patch antenna is enough for the global beam and for bearers aimed at your region; narrow spot beams elsewhere are out of reach</item>
+        <item>GOES-R series GRB on 1686.6 MHz: DVB-S2, 8.67 Msym/s, CADUs with ABI pictures (JPEG 2000), SUVI, GLM and metadata. Needs an L-band dish and 12 Msps or more</item>
+        <item>GOES GVAR, the 2.11 Msym/s BPSK imager broadcast of the GOES-13 to 15 generation on 1685.7 MHz: the imager visible and infrared lines. GOES-N is retired, so this mode opens recordings</item>
+        <item>GOES CDA telemetry downlink on 1693 / 1694 MHz: GOES-R (40 or 4 kbit/s, BPSK with CCSDS frames) or GOES-N (PM, 4 kbit/s): frame log and virtual channels</item>
+        <item>GOES-N MDL (multi-use data link) on 1681.5 MHz: QPSK 200 ksym/s, 464-byte frames in a frame log</item>
+        <item>GK-2A UHRIT on 8070 MHz: DVB-S2, 15.6 Msym/s, CADUs with xRIT files. Needs an X-band dish, a down-converter and about 28 Msps or more; recordings work</item>
+        <item>GK-2A CDAS service: QPSK 3.096 Msym/s, CCSDS frames with Reed-Solomon, frame log and virtual channels. Needs a dish and 8 Msps</item>
+        <item>S-band and L-band CCSDS downlinks: pick the satellite from the table (Jason-3, CloudSat, FORMOSAT, Hinode, SMAP, Falcon 9, Starship, Crew Dragon and many others), tuning and frame format are set for you. Frames, virtual channels and spacecraft IDs; Needs a tracking S-band dish</item>
+        <item>Geoscan cubesats on 70 cm (StratoSat-TK1, RTU-MIREA1, TUSUR-GO, VIZARD-ION, COLIBRI-S, HORIZON): 9600 bit/s FSK, 66-byte frames with CRC. A 70 cm Yagi or vertical works during a pass</item>
+        <item>Lucky-7 cubesat on 437.525 MHz: 4800 bit/s FSK, 35-byte frames with telemetry and picture chunks</item>
+        <item>AMSAT-F Spino cubesat on 435.2 MHz: 2400 bit/s FSK, variable-length frames with CRC</item>
+        <item>ERMINAZ cubesat on 435.775 MHz: 9600 bit/s FSK, CCSDS frames with Reed-Solomon</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -604,6 +626,17 @@
         <item>Arktika-M GGAK telemetry</item>
         <item>AWS MWR, 1.7 GHz</item>
         <item>Satellite, L-band</item>
+        <item>GOES GRB pictures, 1.7 GHz</item>
+        <item>GOES GVAR (recordings)</item>
+        <item>GOES CDA telemetry</item>
+        <item>GOES MDL frames</item>
+        <item>GK-2A UHRIT, X-band</item>
+        <item>GK-2A CDAS frames</item>
+        <item>S-band CCSDS satellites</item>
+        <item>Geoscan cubesats</item>
+        <item>Lucky-7 cubesat</item>
+        <item>Spino cubesat</item>
+        <item>Erminaz cubesat</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -799,5 +832,16 @@
         <item>arktika ggak sem 1703 magnetometer heo space weather</item>
         <item>aws arctic weather satellite 1707 mwr microwave radiometer eumetsat sterna</item>
         <item>bgan inmarsat i-4 alphasat family sl ts 102 744 l-band satcom 1545 1550 16qam spot beam isatphone</item>
+        <item>goes r grb 1686.6 dvb-s2 abi suvi glm rebroadcast</item>
+        <item>goes gvar 1685.7 bpsk imager goes-n retired</item>
+        <item>goes cda telemetry 1693 1694 goes-n goes-r</item>
+        <item>goes mdl multi use data link 1681.5 qpsk</item>
+        <item>gk-2a gk2a uhrit 8070 dvb-s2 xrit kma</item>
+        <item>gk-2a gk2a cdas qpsk 3.096 kma</item>
+        <item>s-band sband ccsds telemetry falcon 9 starship crew dragon jason cloudsat formosat hinode smap dscovr iris cheops prefire swot tropics</item>
+        <item>geoscan cubesat stratosat rtu mirea tusur vizard colibri horizon 9600 fsk 70cm uhf</item>
+        <item>lucky-7 lucky7 cubesat 437.525 4800 fsk si4462</item>
+        <item>spino amsat-f cubesat 435.2 2400 fsk</item>
+        <item>erminaz cubesat 435.775 9600 fsk ccsds</item>
     </string-array>
 </resources>
