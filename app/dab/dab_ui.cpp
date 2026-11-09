@@ -831,9 +831,48 @@ void dabEnsembleTab(App& a) {
     }
 }
 
+// ------------------------------------------------------------------ the census: every ensemble of a wide capture at once
+static void dabCensusSection(App& a) {
+    bool on = a.engine.dabCensusOn();
+    if (ImGui::Checkbox(tr("Every ensemble in the capture"), &on)) a.engine.setDabCensus(on);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("With a capture of several MHz: reads every Band III ensemble in it at once, no scanning. Click a channel to listen."));
+    if (!on) return;
+    const auto rows = a.engine.dabCensusRows();
+    if (rows.empty()) { ImGui::TextDisabled("%s", tr("No ensemble in the capture yet (needs at least 3 MHz of Band III).")); return; }
+    if (ImGui::BeginTable("##dabcens", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingStretchProp)) {
+        ImGui::TableSetupColumn(tr("Channel")); ImGui::TableSetupColumn(tr("Ensemble")); ImGui::TableSetupColumn(tr("Services")); ImGui::TableSetupColumn(tr("SNR")); ImGui::TableSetupColumn(tr("Level")); ImGui::TableSetupColumn(tr("TII")); ImGui::TableHeadersRow();
+        int id = 0;
+        for (const auto& r : rows) {
+            ImGui::PushID(id++); ImGui::TableNextRow(); ImGui::TableNextColumn();
+            if (ImGui::SmallButton(r.channel.c_str())) tuneFreq(a, r.mhz);
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(r.ensemble.empty() ? (r.locked ? tr("reading") : tr("searching")) : r.ensemble.c_str());
+            ImGui::TableNextColumn(); ImGui::Text("%zu", r.services.size());
+            ImGui::TableNextColumn(); if (r.locked) ImGui::Text("%.1f dB", r.snrDb); else ImGui::TextDisabled("-");
+            ImGui::TableNextColumn(); ImGui::Text("%.0f dBFS", r.levelDb);
+            ImGui::TableNextColumn(); if (!r.tii.empty()) ImGui::Text("%d/%d", r.tii[0].first, r.tii[0].second); else ImGui::TextDisabled("-");
+            ImGui::PopID();
+        }
+        ImGui::EndTable();
+    }
+    const auto merged = dect2::dabCensusMerge(rows);
+    if (!merged.empty() && ImGui::TreeNode(tr("All services"))) {
+        int id = 0;
+        for (const auto& m : merged) {
+            ImGui::PushID(id++);
+            if (ImGui::SmallButton(m.channel.c_str())) tuneFreq(a, m.mhz);
+            ImGui::SameLine(); ImGui::Text("%s", m.label.empty() ? "?" : m.label.c_str());
+            if (!m.alsoOn.empty()) { std::string o; for (const auto& c : m.alsoOn) { o += o.empty() ? "" : ", "; o += c; } ImGui::SameLine(); ImGui::TextDisabled("%s %s", tr("also"), o.c_str()); }
+            ImGui::PopID();
+        }
+        ImGui::TreePop();
+    }
+    ImGui::Separator();
+}
+
 // ------------------------------------------------------------------ scanner (Band III, one ensemble per channel)
 void dabScanTab(App& a) {
     App::DabScan& s = a.dabScan;
+    dabCensusSection(a);
     const bool run = a.engine.running();
     { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Tunes through the 38 Band III channels (5A to 13F) and lists the ensembles with their stations. Channels without DAB are left after 0.7 s, so it takes 30 s to a minute."); ImGui::PopTextWrapPos(); }
     ImGui::Spacing();

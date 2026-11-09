@@ -22,6 +22,7 @@
 #include "dect2/isdbt/isdbt_rx.h"
 #include "dect2/fm/fm_rx.h"
 #include "dect2/fm/fm_census.h"
+#include "dect2/dab/dab_census.h"
 #include "dect2/general/am_census.h"
 #include "dect2/general/am_diversity.h"
 #include "dect2/dvbs/dvbs_rx.h"
@@ -449,6 +450,9 @@ public:
     void setFmCensus(bool on) { if (!on) fmCensusReady_ = false; fmCensusOn_ = on; }
     bool fmCensusOn() const { return fmCensusOn_.load(); }
     std::vector<FmCensusRow> fmCensusRows() const { return fmCensus_.rows(); }
+    void setDabCensus(bool on) { if (!on) dabCensusReady_ = false; dabCensusOn_ = on; }
+    bool dabCensusOn() const { return dabCensusOn_.load(); }
+    std::vector<DabCensusRow> dabCensusRows() const { return dabCensus_.rows(); }
     void setAmCensus(bool on) { if (!on) amCensusReady_ = false; amCensusOn_ = on; }
     bool amCensusOn() const { return amCensusOn_.load(); }
     std::vector<AmCensusRow> amCensusRows() const { return amCensus_.rows(); }
@@ -826,6 +830,7 @@ private:
     IsdbtReceiver rxI_;
     FmReceiver rxFm_;
     FmCensus fmCensus_;
+    DabCensus dabCensus_; std::atomic<bool> dabCensusOn_{false}; bool dabCensusReady_ = false; double dabCensusC_ = 0, dabCensusR_ = 0;
     AmCensus amCensus_;
     std::atomic<bool> fmCensusOn_{false}, amCensusOn_{false}, amDivOn_{false};
     bool fmCensusReady_ = false, amCensusReady_ = false;
