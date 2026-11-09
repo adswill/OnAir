@@ -473,7 +473,6 @@ Radio settings (%d changed)	无线电设置（已更改 %d 项）
 The driver's own settings show up here\nonce this radio has been started.	启动此设备后，\n驱动程序自身的设置会显示在这里。
 0 = libiio's default	0 = libiio 默认值
 #  passes
-Weather (137 MHz)	气象（137 MHz）
 Amateur	业余
 Amateur satellites	业余卫星
 downloading...	正在下载...
@@ -490,8 +489,6 @@ No TLE for:	没有以下卫星的 TLE：
 no valid TLE in the pasted text (two lines per satellite, checksums must match)	粘贴的文本中没有有效 TLE（每颗卫星两行，校验和必须正确）
 pasted TLEs added:	已添加粘贴的 TLE：
 No TLEs yet: download them or paste some.	还没有 TLE：请下载或粘贴。
-No TLEs: open TLE data above.	没有 TLE：请打开上方的 TLE 数据。
-No passes in the next 24 hours.	未来 24 小时内没有过境。
 TLE data	TLE 数据
 %d TLEs, %d satellites listed	%d 条 TLE，列出 %d 颗卫星
 the oldest is %.0f days old: download again	最旧的已有 %.0f 天：请重新下载
@@ -500,23 +497,15 @@ Receiver position	接收机位置
 The same position as the ADS-B antenna position	与 ADS-B 天线位置相同
 not set: the times are for a placeholder position	未设置：时间按占位位置计算
 Satellite	卫星
-AOS	入境
-LOS	出境
 Max el	最大仰角
 Duration	时长
 Frequency	频率
 AOS in %d:%02d:%02d	%d:%02d:%02d 后入境
 %s - %s, max %.0f deg	%s - %s，最大 %.0f 度
-no pass	无过境
 az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz	方位 %.0f  仰角 %.0f  %.0f km\n多普勒 %+.0f Hz
 Track	跟踪
-Track (choose a pass)	跟踪（请选择一次过境）
-During each pass of this satellite, retune about once a second for the Doppler shift	此卫星每次过境期间，约每秒重新调谐一次以补偿多普勒频移
 Auto start at AOS, stop at LOS	入境时自动开始，出境时停止
-Switches to the satellite's mode and starts the receiver at AOS (when it is stopped), and stops it at LOS	切换到该卫星的模式，在入境时启动接收机（若已停止），出境时停止
 Auto record IQ	自动录制 IQ
-Records the radio's IQ during the pass, as Record IQ does (format from the Record IQ setting), into %s/recordings	过境期间录制设备的 IQ，与“录制 IQ”相同（格式取自该设置），保存到 %s/recordings
-OnAir has no decoder for this: auto start opens the Spectrum explorer, and Auto record keeps the IQ	OnAir 没有对应的解码器：自动开始会打开 Spectrum explorer，自动录制会保存 IQ
 tracking%s	跟踪中%s
 , recording	，录制中
 #  data feeds
@@ -936,7 +925,6 @@ WSJT, 14.078 MHz	WSJT, 14.078 MHz
 WSJT, 14.080 MHz	WSJT, 14.080 MHz
 WSJT, 14.084 MHz	WSJT, 14.084 MHz
 WSJT, 14.100 MHz	WSJT, 14.100 MHz
-%.0f deg	%.0f 度
 %s, %llu spots sent in %llu packets, %llu duplicates skipped	%s，已在 %llu 个数据包中发送 %llu 个 spot，跳过 %llu 个重复项
 offset %+.3f %+.3f	偏移 %+.3f %+.3f
 sigma %.3f per axis (%.0f%% of the half-distance to a neighbour)	每轴 sigma %.3f（相邻点半距离的 %.0f%%）
@@ -960,13 +948,7 @@ Automatic update	自动更新
 Downloads the TLEs again once a day, only while this window is open or a pass is tracked. Without a network the saved lists are used.	每天重新下载一次 TLE，仅在此窗口打开或正在跟踪过境时进行。没有网络时使用已保存的列表。
 last downloaded %s	上次下载：%s
 Pass of %s in %d:%02d (max %.0f deg): the receiver starts by itself	%s 将在 %d:%02d 后过境（最大 %.0f 度）：接收机将自动启动
-Pass of %s in %d:%02d (max %.0f deg)	%s 将在 %d:%02d 后过境（最大 %.0f 度）
 remind %.0f min before	提前 %.0f 分钟提醒
-A line at the top of the window and a log entry before the tracked pass rises (0: off)	在被跟踪的过境开始前，窗口顶部显示一行提示并写入日志（0：关闭）
-Record this pass	录制此次过境
-Cancel recording this pass	取消录制此次过境
-Arms this pass only: at AOS the receiver starts in the satellite's mode and frequency (when it is stopped), Doppler is followed and the IQ is recorded; at LOS it stops and tracking switches off again	仅对此次过境有效：在 AOS 时，接收机（若已停止）以卫星的模式和频率启动，跟随多普勒并录制 IQ；在 LOS 时停止，跟踪随之关闭
-armed: %s at %s	已就绪：%s，%s
 Save PNG...	保存 PNG...
 Save CSV...	保存 CSV...
 saved	已保存
@@ -2424,13 +2406,10 @@ Room title	房间标题
 Also show decoded ACARS text in the room (public)	同时在房间中显示解码的 ACARS 文本（公开）
 Needs Server > Send data to map server and Also share interesting ACARS messages.	需要 服务器 > 向地图服务器发送数据 以及 同时分享有趣的 ACARS 消息。
 Go live	开始直播
-Schedule passes by itself	自动安排过境
-Takes the passes of the ticked groups one at a time, highest priority first, and starts, tunes and records each one without you. Overlapping passes are trimmed or skipped; a receiver you started yourself is left alone.	按优先级从高到低逐个处理已勾选分组的过境,无需你操作即可自动启动、调谐并录制。重叠的过境会被缩短或跳过;你自己启动的接收机不会被改动。
 Priority (higher wins)	优先级(越高越优先)
 Keep the SDR free every day	每天保持 SDR 空闲
 from %d:00	从 %d:00
 to %d:00	到 %d:00
-Nothing planned.	没有计划。
 planned	已计划
 trimmed	已缩短
 skipped: SDR reserved	已跳过:SDR 已预留

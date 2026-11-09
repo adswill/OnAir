@@ -330,7 +330,7 @@ void receiver(App& a) {
         if (f.filesDropped) kvRow(a, "dropped", "%llu files (the disk or the machine could not keep up)", (unsigned long long)f.filesDropped);
         if (!f.lastError.empty()) kvRow(a, "last problem", "%s", f.lastError.c_str());
         ImGui::Spacing();
-        if (ImGui::TreeNode(tr("Advanced"))) {
+        if (ImGui::TreeNode(trw("Advanced"))) {
             State& s = gS[P];
             ImGui::SetNextItemWidth(130 * gUi);
             if (ImGui::InputDouble(tr("Symbol rate, ksym/s (0: the link's)"), &s.symKs, 0, 0, "%.3f")) a.engine.wxsat(P).setFilecastSymbolRate(s.symKs * 1e3);

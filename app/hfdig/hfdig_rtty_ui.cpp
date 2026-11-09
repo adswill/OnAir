@@ -75,7 +75,7 @@ void hfdigRttyTab(App& a, const dect2::HfdigTelemetry& t) {
     flowEnd();
     // the hand-set values
     char lbl[32];
-    if (ImGui::TreeNode(tr("Advanced##rtty"))) {
+    if (ImGui::TreeNode(trw("Advanced##rtty"))) {
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled("%s", tr("Baud")); ImGui::SameLine(0, 5 * gUi);
         snprintf(lbl, sizeof lbl, "%g", kRttyBaudTable[dec.baudIndex()]);

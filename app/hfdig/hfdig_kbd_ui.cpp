@@ -302,7 +302,7 @@ void hfdigKbdTab(App& a, const dect2::HfdigTelemetry& t) {
     }
     else ImGui::TextDisabled("%s", tr("Auto: listening..."));
     flowEnd();
-    if (ImGui::TreeNode(tr("Advanced##kbd"))) {
+    if (ImGui::TreeNode(trw("Advanced##kbd"))) {
         bool manualChange = false;
     ImGui::AlignTextToFramePadding();
     if (fam == KbdOlivia || fam == KbdContestia) {

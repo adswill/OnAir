@@ -319,7 +319,7 @@ void modeOptions(App& a, int only, const dect2::HfdigFtxTelemetry& f) {
         }
         flowEnd();
     }
-    const bool showManual = !single || ImGui::TreeNode(tr("Advanced##ftxopt"));
+    const bool showManual = !single || ImGui::TreeNode(trw("Advanced##ftxopt"));
     if (showManual) {
     if (only < 0 || only == 4) { label("JT65"); subCombo(4, abc, 3, "##jt65sub"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("JT65 sub-mode: A, B and C have tone spacings of 2.7, 5.4 and 10.8 Hz"); flowNext(10 * gUi); }
     if (only < 0 || only == 10) { static const char* const ag[] = {"A", "B", "C", "D", "E", "F", "G"}; label("JT4"); subCombo(10, ag, 7, "##jt4sub"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("JT4 sub-mode: A to G have tone spacings of 4.4 Hz doubling up to 280 Hz"); flowNext(10 * gUi); }

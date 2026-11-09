@@ -473,7 +473,6 @@ Radio settings (%d changed)	Radijo nustatymai (pakeista: %d)
 The driver's own settings show up here\nonce this radio has been started.	Tvarkyklės nustatymai atsiras čia,\nkai šis radijas bus paleistas.
 0 = libiio's default	0 = libiio numatytoji reikšmė
 #  passes
-Weather (137 MHz)	Orai (137 MHz)
 Amateur	Mėgėjų
 Amateur satellites	Mėgėjų palydovai
 downloading...	atsisiunčiama...
@@ -490,8 +489,6 @@ No TLE for:	Nėra TLE:
 no valid TLE in the pasted text (two lines per satellite, checksums must match)	įklijuotame tekste nėra galiojančio TLE (po dvi eilutes kiekvienam palydovui, kontrolinės sumos turi sutapti)
 pasted TLEs added:	pridėta įklijuotų TLE:
 No TLEs yet: download them or paste some.	TLE dar nėra: atsisiųskite arba įklijuokite.
-No TLEs: open TLE data above.	TLE nėra: atverkite TLE duomenis viršuje.
-No passes in the next 24 hours.	Per artimiausias 24 valandas praskridimų nėra.
 TLE data	TLE duomenys
 %d TLEs, %d satellites listed	TLE: %d, rodoma palydovų: %d
 the oldest is %.0f days old: download again	seniausias yra %.0f d. senumo: atsisiųskite iš naujo
@@ -500,23 +497,15 @@ Receiver position	Imtuvo vieta
 The same position as the ADS-B antenna position	Ta pati vieta kaip ADS-B antenos
 not set: the times are for a placeholder position	nenustatyta: laikai skaičiuojami tariamai vietai
 Satellite	Palydovas
-AOS	AOS
-LOS	LOS
 Max el	Maks. aukštis
 Duration	Trukmė
 Frequency	Dažnis
 AOS in %d:%02d:%02d	AOS po %d:%02d:%02d
 %s - %s, max %.0f deg	%s - %s, maks. %.0f laipsn.
-no pass	praskridimo nėra
 az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz	az %.0f  aukšt. %.0f  %.0f km\nDopleris %+.0f Hz
 Track	Sekti
-Track (choose a pass)	Sekti (pasirinkite praskridimą)
-During each pass of this satellite, retune about once a second for the Doppler shift	Kiekvieno šio palydovo praskridimo metu maždaug kartą per sekundę perderinti dėl Doplerio poslinkio
 Auto start at AOS, stop at LOS	Automatiškai pradėti per AOS, sustoti per LOS
-Switches to the satellite's mode and starts the receiver at AOS (when it is stopped), and stops it at LOS	Perjungia į palydovo režimą, per AOS paleidžia imtuvą (jei jis sustabdytas) ir per LOS jį sustabdo
 Auto record IQ	Automatiškai įrašyti IQ
-Records the radio's IQ during the pass, as Record IQ does (format from the Record IQ setting), into %s/recordings	Praskridimo metu įrašo radijo IQ kaip „Įrašyti IQ“ (formatas pagal tą nustatymą) į %s/recordings
-OnAir has no decoder for this: auto start opens the Spectrum explorer, and Auto record keeps the IQ	OnAir neturi tam dekoderio: automatinis paleidimas atveria Spectrum explorer, o automatinis įrašymas išsaugo IQ
 tracking%s	sekama%s
 , recording	, įrašoma
 #  data feeds
@@ -936,7 +925,6 @@ WSJT, 14.078 MHz	WSJT, 14.078 MHz
 WSJT, 14.080 MHz	WSJT, 14.080 MHz
 WSJT, 14.084 MHz	WSJT, 14.084 MHz
 WSJT, 14.100 MHz	WSJT, 14.100 MHz
-%.0f deg	%.0f laipsnių
 %s, %llu spots sent in %llu packets, %llu duplicates skipped	%s, išsiųsta %llu spotų %llu paketuose, praleista %llu dublikatų
 offset %+.3f %+.3f	poslinkis %+.3f %+.3f
 sigma %.3f per axis (%.0f%% of the half-distance to a neighbour)	sigma %.3f vienai ašiai (%.0f%% pusės atstumo iki kaimyno)
@@ -960,13 +948,7 @@ Automatic update	Automatinis atnaujinimas
 Downloads the TLEs again once a day, only while this window is open or a pass is tracked. Without a network the saved lists are used.	Kartą per dieną vėl atsisiunčia TLE, tik kol šis langas atidarytas arba sekamas praskridimas. Be tinklo naudojami išsaugoti sąrašai.
 last downloaded %s	paskutinį kartą atsisiųsta: %s
 Pass of %s in %d:%02d (max %.0f deg): the receiver starts by itself	%s praskris po %d:%02d (maks. %.0f laipsnių): imtuvas pasileis pats
-Pass of %s in %d:%02d (max %.0f deg)	%s praskris po %d:%02d (maks. %.0f laipsnių)
 remind %.0f min before	priminti prieš %.0f min.
-A line at the top of the window and a log entry before the tracked pass rises (0: off)	Eilutė lango viršuje ir žurnalo įrašas prieš sekamo praskridimo pradžią (0: išjungta)
-Record this pass	Įrašyti šį praskridimą
-Cancel recording this pass	Atšaukti šio praskridimo įrašymą
-Arms this pass only: at AOS the receiver starts in the satellite's mode and frequency (when it is stopped), Doppler is followed and the IQ is recorded; at LOS it stops and tracking switches off again	Tik šiam praskridimui: AOS metu imtuvas (jei sustabdytas) pasileidžia palydovo režimu ir dažniu, sekamas Doplerio poslinkis ir įrašomas IQ; LOS metu sustoja, o sekimas vėl išsijungia
-armed: %s at %s	paruošta: %s, %s
 Save PNG...	Įrašyti PNG...
 Save CSV...	Įrašyti CSV...
 saved	įrašyta
@@ -2424,13 +2406,10 @@ Room title	Kambario pavadinimas
 Also show decoded ACARS text in the room (public)	Rodyti kambaryje ir dekoduotą ACARS tekstą (viešai)
 Needs Server > Send data to map server and Also share interesting ACARS messages.	Reikia: Serveris > Siųsti duomenis žemėlapio serveriui ir Dalytis ir įdomiais ACARS pranešimais.
 Go live	Pradėti transliaciją
-Schedule passes by itself	Praskridimus planuoti automatiškai
-Takes the passes of the ticked groups one at a time, highest priority first, and starts, tunes and records each one without you. Overlapping passes are trimmed or skipped; a receiver you started yourself is left alone.	Paimia pažymėtų grupių praskridimus po vieną, pirma aukščiausio prioriteto, ir pats paleidžia, sutaiko bei įrašo kiekvieną. Persidengiantys praskridimai sutrumpinami arba praleidžiami; pats paleistas imtuvas neliečiamas.
 Priority (higher wins)	Prioritetas (didesnis laimi)
 Keep the SDR free every day	Kasdien laikyti SDR laisvą
 from %d:00	nuo %d:00
 to %d:00	iki %d:00
-Nothing planned.	Nieko neplanuota.
 planned	suplanuota
 trimmed	sutrumpinta
 skipped: SDR reserved	praleista: SDR rezervuotas

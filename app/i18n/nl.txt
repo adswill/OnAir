@@ -466,7 +466,6 @@ Radio settings (%d changed)	Radio-instellingen (%d gewijzigd)
 The driver's own settings show up here\nonce this radio has been started.	De eigen instellingen van het stuurprogramma verschijnen hier\nzodra deze radio is gestart.
 0 = libiio's default	0 = standaardwaarde van libiio
 #  passes
-Weather (137 MHz)	Weer (137 MHz)
 Amateur	Amateur
 Amateur satellites	Amateursatellieten
 downloading...	downloaden...
@@ -483,8 +482,6 @@ No TLE for:	Geen TLE voor:
 no valid TLE in the pasted text (two lines per satellite, checksums must match)	geen geldige TLE in de geplakte tekst (twee regels per satelliet, controlesommen moeten kloppen)
 pasted TLEs added:	geplakte TLE's toegevoegd:
 No TLEs yet: download them or paste some.	Nog geen TLE's: download ze of plak ze.
-No TLEs: open TLE data above.	Geen TLE's: open hierboven de TLE-gegevens.
-No passes in the next 24 hours.	Geen overvluchten in de komende 24 uur.
 TLE data	TLE-gegevens
 %d TLEs, %d satellites listed	%d TLE's, %d satellieten vermeld
 the oldest is %.0f days old: download again	de oudste is %.0f dagen oud: download opnieuw
@@ -493,23 +490,15 @@ Receiver position	Positie van de ontvanger
 The same position as the ADS-B antenna position	Dezelfde positie als de positie van de ADS-B-antenne
 not set: the times are for a placeholder position	niet ingesteld: de tijden gelden voor een plaatsvervangende positie
 Satellite	Satelliet
-AOS	AOS
-LOS	LOS
 Max el	Max. elev.
 Duration	Duur
 Frequency	Frequentie
 AOS in %d:%02d:%02d	AOS over %d:%02d:%02d
 %s - %s, max %.0f deg	%s - %s, max. %.0f gr.
-no pass	geen overvlucht
 az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz	az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz
 Track	Volgen
-Track (choose a pass)	Volgen (kies een overvlucht)
-During each pass of this satellite, retune about once a second for the Doppler shift	Tijdens elke overvlucht van deze satelliet ongeveer eens per seconde bijstemmen voor de dopplerverschuiving
 Auto start at AOS, stop at LOS	Automatisch starten bij AOS, stoppen bij LOS
-Switches to the satellite's mode and starts the receiver at AOS (when it is stopped), and stops it at LOS	Schakelt naar de modus van de satelliet en start de ontvanger bij AOS (als die gestopt is), en stopt hem bij LOS
 Auto record IQ	IQ automatisch opnemen
-Records the radio's IQ during the pass, as Record IQ does (format from the Record IQ setting), into %s/recordings	Neemt het IQ van de radio op tijdens de overvlucht, zoals IQ opnemen (formaat uit die instelling), naar %s/recordings
-OnAir has no decoder for this: auto start opens the Spectrum explorer, and Auto record keeps the IQ	OnAir heeft hiervoor geen decoder: automatisch starten opent de Spectrum explorer en automatisch opnemen bewaart het IQ
 tracking%s	volgen%s
 , recording	, opname
 #  data feeds
@@ -927,7 +916,6 @@ WSJT, 14.078 MHz	WSJT, 14.078 MHz
 WSJT, 14.080 MHz	WSJT, 14.080 MHz
 WSJT, 14.084 MHz	WSJT, 14.084 MHz
 WSJT, 14.100 MHz	WSJT, 14.100 MHz
-%.0f deg	%.0f gr.
 %s, %llu spots sent in %llu packets, %llu duplicates skipped	%s, %llu spots verzonden in %llu pakketten, %llu duplicaten overgeslagen
 offset %+.3f %+.3f	offset %+.3f %+.3f
 sigma %.3f per axis (%.0f%% of the half-distance to a neighbour)	sigma %.3f per as (%.0f%% van de halve afstand tot een buur)
@@ -943,11 +931,8 @@ FM	FM
 %s  %.4f MHz  %s%s%s%s  %.1f dB  %s	%s  %.4f MHz  %s%s%s%s  %.1f dB  %s
 -	-
 8 MHz	8 MHz
-A line at the top of the window and a log entry before the tracked pass rises (0: off)	Een regel bovenin het venster en een logregel voordat de gevolgde overvlucht begint (0: uit)
 All time	Altijd
-Arms this pass only: at AOS the receiver starts in the satellite's mode and frequency (when it is stopped), Doppler is followed and the IQ is recorded; at LOS it stops and tracking switches off again	Stelt alleen deze overvlucht in: bij AOS start de ontvanger (als die gestopt is) in de modus en op de frequentie van de satelliet, wordt de dopplerverschuiving gevolgd en het IQ opgenomen; bij LOS stopt hij en wordt het volgen weer uitgeschakeld
 Automatic update	Automatische update
-Cancel recording this pass	Opname van deze overvlucht annuleren
 Dark	Donker
 Download SDDC_FX3.img from the Releases page of the SDDC_Driver project (button below).	Download SDDC_FX3.img van de Releases-pagina van het SDDC_Driver-project (knop hieronder).
 Downloads the TLEs again once a day, only while this window is open or a pass is tracked. Without a network the saved lists are used.	Downloadt de TLE's eenmaal per dag opnieuw, alleen zolang dit venster openstaat of een overvlucht wordt gevolgd. Zonder netwerk worden de opgeslagen lijsten gebruikt.
@@ -960,12 +945,10 @@ Look for Red Pitaya boards on this computer's networks again	Opnieuw zoeken naar
 MHz	MHz
 No Red Pitaya answered on this computer's networks (is its SDR transceiver app running?): type its address.	Geen Red Pitaya antwoordde op de netwerken van deze computer (draait de SDR-transceiverapp?): typ het adres.
 Nothing heard yet: the plot fills in as positions arrive.	Nog niets gehoord: de grafiek vult zich naarmate er posities binnenkomen.
-Pass of %s in %d:%02d (max %.0f deg)	Overvlucht van %s over %d:%02d (max. %.0f gr.)
 Pass of %s in %d:%02d (max %.0f deg): the receiver starts by itself	Overvlucht van %s over %d:%02d (max. %.0f gr.): de ontvanger start vanzelf
 Plug the radio into a USB 3 port directly on the computer, not through a USB 2 hub.	Sluit de radio aan op een USB 3-poort rechtstreeks op de computer, niet via een USB 2-hub.
 Put the file in OnAir's codecs folder (button below).	Zet het bestand in de codecmap van OnAir (knop hieronder).
 Range	Bereik
-Record this pass	Deze overvlucht opnemen
 Rolling window: a sector's furthest position counts only for this long	Voortschrijdend venster: de verste positie van een sector telt maar zo lang mee
 Save CSV...	CSV opslaan...
 Save PNG...	PNG opslaan...
@@ -975,7 +958,6 @@ The RX888 is on a USB 2 port	De RX888 zit op een USB 2-poort
 The RX888 needs its firmware file	De RX888 heeft zijn firmwarebestand nodig
 The RX888 MkII has no program of its own in its USB chip: OnAir loads SDDC_FX3.img into RAM when the radio is in boot-loader mode (nothing is flashed to the radio). Official OnAir packages include this file; a copy built by hand may not.	De RX888 MkII heeft geen eigen programma in zijn USB-chip: OnAir laadt SDDC_FX3.img in RAM in de boot-loader-modus (er wordt niets naar de radio geflasht). Officiële OnAir-pakketten bevatten dit bestand; een handmatig gebouwde kopie mogelijk niet.
 Use a USB 3 cable (the one that came with the radio).	Gebruik een USB 3-kabel (die bij de radio werd geleverd).
-armed: %s at %s	ingesteld: %s om %s
 last downloaded %s	laatst gedownload %s
 remind %.0f min before	herinner %.0f min van tevoren
 saved	opgeslagen
@@ -2424,13 +2406,10 @@ Room title	Titel van de ruimte
 Also show decoded ACARS text in the room (public)	Ook gedecodeerde ACARS-tekst in de ruimte tonen (openbaar)
 Needs Server > Send data to map server and Also share interesting ACARS messages.	Vereist Server > Gegevens naar kaartserver sturen en Ook interessante ACARS-berichten delen.
 Go live	Live gaan
-Schedule passes by itself	Overvluchten zelf plannen
-Takes the passes of the ticked groups one at a time, highest priority first, and starts, tunes and records each one without you. Overlapping passes are trimmed or skipped; a receiver you started yourself is left alone.	Neemt de overvluchten van de aangevinkte groepen één voor één op, hoogste prioriteit eerst, en start, stemt af en neemt elk op zonder jouw tussenkomst. Overlappende overvluchten worden ingekort of overgeslagen; een ontvanger die je zelf startte blijft ongemoeid.
 Priority (higher wins)	Prioriteit (hoger wint)
 Keep the SDR free every day	SDR elke dag vrijhouden
 from %d:00	vanaf %d:00
 to %d:00	tot %d:00
-Nothing planned.	Niets gepland.
 planned	gepland
 trimmed	ingekort
 skipped: SDR reserved	overgeslagen: SDR gereserveerd

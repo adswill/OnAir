@@ -921,9 +921,9 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_isdbs PRIVATE dect2core)
   target_include_directories(test_isdbs PRIVATE core/src)
   add_test(NAME isdbs COMMAND test_isdbs)
-  add_executable(test_ease tests/ease/test_ease.cpp tests/ease/test_navtex_table.cpp tests/ease/test_repeaters_csv.cpp core/src/ease/repeaters.cpp core/src/ease/ease.cpp core/src/ease/navtex.cpp core/src/ease/navtex_data.cpp core/src/inmsat/inmsat_satid.cpp core/src/geo/maidenhead.cpp)   # first-use helpers: launch windows, geostationary picks
-  target_include_directories(test_ease PRIVATE core/include)
-  add_test(NAME ease COMMAND test_ease)
+  add_executable(test_ease_helpers tests/ease/test_ease.cpp tests/ease/test_navtex_table.cpp tests/ease/test_repeaters_csv.cpp core/src/ease/repeaters.cpp core/src/ease/ease.cpp core/src/ease/navtex.cpp core/src/ease/navtex_data.cpp core/src/inmsat/inmsat_satid.cpp core/src/geo/maidenhead.cpp)   # first-use helpers: launch windows, geostationary picks
+  target_include_directories(test_ease_helpers PRIVATE core/include)
+  add_test(NAME ease_helpers COMMAND test_ease_helpers)
   add_executable(test_nit_rows tests/ease/test_nit_rows.cpp core/src/ease/nit.cpp core/src/tv/si_tables.cpp)   # the NIT consumer of DVB-S and DVB-C
   target_include_directories(test_nit_rows PRIVATE core/include)
   add_test(NAME nit_rows COMMAND test_nit_rows)

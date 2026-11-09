@@ -474,7 +474,6 @@ Radio settings (%d changed)	Telsiz ayarları (%d değişti)
 The driver's own settings show up here\nonce this radio has been started.	Sürücünün kendi ayarları, bu telsiz başlatıldığında\nburada görünür.
 0 = libiio's default	0 = libiio varsayılanı
 #  passes
-Weather (137 MHz)	Hava durumu (137 MHz)
 Amateur	Amatör
 Amateur satellites	Amatör uydular
 downloading...	indiriliyor...
@@ -491,8 +490,6 @@ No TLE for:	TLE yok:
 no valid TLE in the pasted text (two lines per satellite, checksums must match)	yapıştırılan metinde geçerli TLE yok (uydu başına iki satır, sağlama toplamları eşleşmeli)
 pasted TLEs added:	yapıştırılan TLE'ler eklendi:
 No TLEs yet: download them or paste some.	Henüz TLE yok: indirin veya birkaçını yapıştırın.
-No TLEs: open TLE data above.	TLE yok: yukarıdaki TLE verilerini açın.
-No passes in the next 24 hours.	Önümüzdeki 24 saatte geçiş yok.
 TLE data	TLE verileri
 %d TLEs, %d satellites listed	%d TLE, %d uydu listelendi
 the oldest is %.0f days old: download again	en eskisi %.0f günlük: yeniden indirin
@@ -501,23 +498,15 @@ Receiver position	Alıcı konumu
 The same position as the ADS-B antenna position	ADS-B anten konumuyla aynı konum
 not set: the times are for a placeholder position	ayarlanmadı: saatler yer tutucu bir konuma göre
 Satellite	Uydu
-AOS	AOS
-LOS	LOS
 Max el	Maks yük.
 Duration	Süre
 Frequency	Frekans
 AOS in %d:%02d:%02d	AOS %d:%02d:%02d sonra
 %s - %s, max %.0f deg	%s - %s, maks %.0f derece
-no pass	geçiş yok
 az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz	az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz
 Track	İzle
-Track (choose a pass)	İzle (bir geçiş seç)
-During each pass of this satellite, retune about once a second for the Doppler shift	Bu uydunun her geçişi sırasında Doppler kayması için yaklaşık saniyede bir yeniden ayarla
 Auto start at AOS, stop at LOS	AOS'ta otomatik başlat, LOS'ta durdur
-Switches to the satellite's mode and starts the receiver at AOS (when it is stopped), and stops it at LOS	Uydunun kipine geçer ve AOS'ta alıcıyı başlatır (durdurulmuşsa) ve LOS'ta durdurur
 Auto record IQ	Otomatik IQ kaydı
-Records the radio's IQ during the pass, as Record IQ does (format from the Record IQ setting), into %s/recordings	Geçiş sırasında telsizin IQ'sunu, Record IQ gibi (biçim Record IQ ayarından), %s/recordings içine kaydeder
-OnAir has no decoder for this: auto start opens the Spectrum explorer, and Auto record keeps the IQ	OnAir'in bunun için çözücüsü yok: otomatik başlatma Spektrum gezginini açar ve Otomatik kayıt IQ'yu tutar
 tracking%s	izleniyor%s
 , recording	, kayıt
 #  data feeds
@@ -936,7 +925,6 @@ WSJT, 14.078 MHz	WSJT, 14.078 MHz
 WSJT, 14.080 MHz	WSJT, 14.080 MHz
 WSJT, 14.084 MHz	WSJT, 14.084 MHz
 WSJT, 14.100 MHz	WSJT, 14.100 MHz
-%.0f deg	%.0f derece
 %s, %llu spots sent in %llu packets, %llu duplicates skipped	%s, %llu paket içinde %llu spot gönderildi, %llu yinelenen atlandı
 offset %+.3f %+.3f	kayma %+.3f %+.3f
 sigma %.3f per axis (%.0f%% of the half-distance to a neighbour)	eksen başına sigma %.3f (komşuya yarım mesafenin %.0f%% kadarı)
@@ -960,13 +948,7 @@ Automatic update	Otomatik güncelleme
 Downloads the TLEs again once a day, only while this window is open or a pass is tracked. Without a network the saved lists are used.	TLE'leri günde bir kez yeniden indirir, yalnızca bu pencere açıkken veya bir geçiş izlenirken. Ağ yoksa kayıtlı listeler kullanılır.
 last downloaded %s	son indirme %s
 Pass of %s in %d:%02d (max %.0f deg): the receiver starts by itself	%s geçişi %d:%02d içinde (maks %.0f derece): alıcı kendiliğinden başlar
-Pass of %s in %d:%02d (max %.0f deg)	%s geçişi %d:%02d içinde (maks %.0f derece)
 remind %.0f min before	%.0f dk önce hatırlat
-A line at the top of the window and a log entry before the tracked pass rises (0: off)	İzlenen geçiş yükselmeden önce pencerenin üstünde bir satır ve günlüğe bir kayıt (0: kapalı)
-Record this pass	Bu geçişi kaydet
-Cancel recording this pass	Bu geçişin kaydını iptal et
-Arms this pass only: at AOS the receiver starts in the satellite's mode and frequency (when it is stopped), Doppler is followed and the IQ is recorded; at LOS it stops and tracking switches off again	Yalnızca bu geçiş için hazırlar: AOS'ta alıcı uydunun kipinde ve frekansında başlar (durdurulmuşsa), Doppler izlenir ve IQ kaydedilir; LOS'ta durur ve izleme yeniden kapanır
-armed: %s at %s	hazır: %s, %s
 Save PNG...	PNG kaydet...
 Save CSV...	CSV kaydet...
 saved	kaydedildi
@@ -2423,13 +2405,10 @@ Room title	Oda başlığı
 Also show decoded ACARS text in the room (public)	Odada çözülen ACARS metnini de göster (herkese açık)
 Needs Server > Send data to map server and Also share interesting ACARS messages.	Sunucu > Harita sunucusuna veri gönder ve İlginç ACARS iletilerini de paylaş gerekir.
 Go live	Canlı yayına geç
-Schedule passes by itself	Geçişleri kendisi zamanlar
-Takes the passes of the ticked groups one at a time, highest priority first, and starts, tunes and records each one without you. Overlapping passes are trimmed or skipped; a receiver you started yourself is left alone.	İşaretli grupların geçişlerini tek tek, en yüksek öncelik önce olacak şekilde alır ve her birini sizsiz başlatır, ayarlar ve kaydeder. Çakışan geçişler kırpılır veya atlanır; kendi başlattığınız bir alıcıya dokunulmaz.
 Priority (higher wins)	Öncelik (yüksek kazanır)
 Keep the SDR free every day	SDR'yi her gün boş tut
 from %d:00	%d:00'dan
 to %d:00	%d:00'a kadar
-Nothing planned.	Planlanan bir şey yok.
 planned	planlandı
 trimmed	kırpıldı
 skipped: SDR reserved	atlandı: SDR ayrılmış
