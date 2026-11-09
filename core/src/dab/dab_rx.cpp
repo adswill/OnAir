@@ -1,5 +1,6 @@
 // DAB receiver, transmission mode I: null-symbol and phase-reference synchronisation, carrier and timing tracking, DQPSK
 // demodulation, fast information channel (ensemble, services, labels) and the main service channel of the selected sub-channel.
+#include "dect2/dab/dab_pktfec.h"
 #include "dect2/common/text_charset.h"
 #include "dect2/dab/dab.h"
 #include "dect2/dab/dab_journaline.h"
@@ -193,6 +194,8 @@ struct DabReceiver::Impl {
     // SPI (programme guide): a second sub-channel decoded next to the selected one (packet mode data service), its data groups go to spiDec
     DabSpiDecoder spiDec;
     DabPacketDemux spiDemux;
+    DabPacketFec spiFec, mainFec;       // FIG 0/14 says FEC scheme 1: the sub-channel's packets through the RS outer code first
+    std::vector<uint8_t> pktOut;
     int spiReq = -1, spiAddr = -1, spiSel = -1;
     bool spiDirty = false;
     DabSubchannel spiSub;
@@ -1015,7 +1018,11 @@ struct DabReceiver::Impl {
         if (spiSub.size <= 0 || spiSub.start + spiSub.size > kCifCu) return;
         feedCifs(spiDecI, spiSub, [this](const uint8_t* bytes, int n, bool) {
             if (tap) tap(spiSel, bytes, n);
-            spiDemux.feed(bytes, (size_t)n, [this](const uint8_t* g, size_t m) { spiDec.dataGroup(g, m); });
+            auto sink = [this](const uint8_t* g, size_t m) { spiDec.dataGroup(g, m); };
+            bool fec = false;
+            { std::lock_guard<std::mutex> lk(mu); auto fi = ens.subFec.find(spiSel); fec = fi != ens.subFec.end() && fi->second == 1; }
+            if (fec) { pktOut.clear(); spiFec.feed(bytes, (size_t)n, pktOut); if (!pktOut.empty()) spiDemux.feed(pktOut.data(), pktOut.size(), sink); }
+            else spiDemux.feed(bytes, (size_t)n, sink);
         });
     }
 
@@ -1046,7 +1053,13 @@ struct DabReceiver::Impl {
         erasedCifs += (uint64_t)std::min(gapCifs, 20);
         feedCifs(mainDec, selSub, [this](const uint8_t* bytes, int n, bool erased) {
             if (tap) tap(sel, bytes, n);
-            if (selPktAddr >= 0) demux.feed(bytes, (size_t)n, [this](const uint8_t* g, size_t m) { jl.feedDataGroup(g, m); });
+            if (selPktAddr >= 0) {
+                auto sink = [this](const uint8_t* g, size_t m) { jl.feedDataGroup(g, m); };
+                bool fec = false;
+                { std::lock_guard<std::mutex> lk(mu); auto fi = ens.subFec.find(sel); fec = fi != ens.subFec.end() && fi->second == 1; }
+                if (fec) { pktOut.clear(); mainFec.feed(bytes, (size_t)n, pktOut); if (!pktOut.empty()) demux.feed(pktOut.data(), pktOut.size(), sink); }
+                else demux.feed(bytes, (size_t)n, sink);
+            }
             else if (selDmb) dmb.push(bytes, n);
             else if (!selCa) audio.push(bytes, n, erased);   // scrambled audio decoded would only be noise
         });
