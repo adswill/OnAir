@@ -24,6 +24,7 @@ constexpr double kRate = 20e6;           // samples per second
 constexpr int kFft = 64, kCp = 16, kSym = 80;
 constexpr int kStfLen = 160, kLtfLen = 160, kPreamble = 320;
 constexpr int kRate6 = 0xB;              // RATE field 1101, read with R1 as the lowest bit: 6 Mbit/s (Table 17-6)
+constexpr int kRate12 = 0xA;             // RATE field 0101: 12 Mbit/s, QPSK rate 1/2 (802.11p sends it at 6 Mbit/s on a 10 MHz channel)
 
 // Pieces shared by the transmit side, the receiver and the tests
 int pilotPolarity(int n);                                      // p_n, +1 or -1 (n mod 127), Equation 17-25
@@ -50,6 +51,7 @@ public:
     OfdmRx();
     ~OfdmRx();
     void setCallback(FrameCb cb);
+    void setAllowQpsk(bool on);                                // also read QPSK rate 1/2 frames (802.11p); off by default
     void reset();                                              // forget the buffer; the counters stay
     void feed(const cf32* x, size_t n);                        // 20 Msps samples, any block size
     struct Stats { uint64_t triggers = 0, noSync = 0, signalOk = 0, signalBad = 0, otherRate = 0, framesOk = 0, framesBad = 0; };

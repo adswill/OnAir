@@ -260,6 +260,8 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxVdes_.setDialHz(dev.kind != DeviceInfo::File ? tune.centerHz : 0.0);   // places the ASM channels and the VDE-TER bands
         rxFlarm_.setSignalOffset(o);
         rxAdsl_.setSignalOffset(o);
+        rxAvRoad_.setSignalOffset(o);
+        rxAvRoad_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxAdsl_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // which channels are in the capture
         rxDji_.setSignalOffset(o);
         rxDji_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the bands and frequencies of the signals
@@ -542,6 +544,8 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxFlarm_.setWallClock(true);   // the packets are keyed to the time of day; a file is decoded as if it were live
     rxFlarm_.setLogCallback([this](const std::string& s) { log(s); });
     rxAdsl_.configure(rate_);
+    if (const int v = avroad::variantOfActive(activeStdFor(stdMode_.load())); v >= 0) { rxAvRoad_.setVariant(v); rxAvRoad_.configure(rate_); }
+    rxAvRoad_.setLogCallback([this](const std::string& s) { log(s); });
     rxAdsl_.setLogCallback([this](const std::string& s) { log(s); });
     rxDji_.configure(rate_);
     rxDji_.setWallClock(dev.kind != DeviceInfo::File);

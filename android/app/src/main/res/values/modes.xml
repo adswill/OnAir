@@ -234,6 +234,18 @@
         <item>Wireless mic finder</item>
         <item>Ham FM repeaters</item>
         <item>HFGCS / HF voice</item>
+        <item>FANET</item>
+        <item>OGN tracker</item>
+        <item>GBAS VDB</item>
+        <item>LDACS (structure)</item>
+        <item>AeroMACS (structure)</item>
+        <item>End of train (AAR EOT/HOT)</item>
+        <item>DSRC road toll (EN 12253)</item>
+        <item>802.11p V2X (ITS-G5, DSRC)</item>
+        <item>C-V2X (structure)</item>
+        <item>ERMES paging</item>
+        <item>Marine radar (detect)</item>
+        <item>Weather radar (detect)</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -449,6 +461,18 @@
         <item>Finds wireless microphones and in-ear monitors: wide FM carriers in the UHF bands of your region (470 - 694 MHz, 823 - 832 MHz, 863 - 865 MHz; USA 470 - 698, 902 - 928, 944 - 952 MHz), with width, deviation and FM or not, and a click to listen</item>
         <item>Amateur FM repeaters and simplex on 2 m and 70 cm: the repeater outputs of your IARU region with their input offsets, the CTCSS tone or DCS code heard on each, calling channels, a busy-channel list and a scan</item>
         <item>HF voice in USB on fixed frequencies: the HFGCS primary frequencies (4724, 8992, 11175 and 15016 kHz), the MARS and Canadian Forces relays and the VOLMET weather broadcasts with their schedules; the scan retunes the radio and stays on one that is on the air</item>
+        <item>FANET (Skytraxx open protocol, LoRa SF7 at 868.2 MHz in Europe, 920.8 MHz elsewhere): paragliders and hang gliders. Tracking, ground status, names, messages and weather stations in a table and on a map. Receive only.</item>
+        <item>OGN tracker radio protocol on 868.2 and 868.4 MHz, 100 kchip/s Manchester FSK with LDPC, the FLARM air format with its own sync word. Gliders and light aircraft, position, altitude and speed in a table and on a map. Positions marked encrypted are counted and not read. Receive only.</item>
+        <item>GBAS VHF data broadcast (108 - 118 MHz) for satellite landing systems. Bursts in 62.5 ms slots and the 10 500 symbol/s line are detected. The message content is not read: the burst format is only in documents that are not public.</item>
+        <item>LDACS L-band digital aeronautical link, 625 kHz OFDM: detected by its cyclic prefix (symbol period, prefix, carrier offset). Structure only, nothing is decoded.</item>
+        <item>AeroMACS airport data link, 5091 - 5150 MHz, 5 MHz WiMAX-profile OFDM: detected by its cyclic prefix and 5 ms frames. Structure only, nothing is decoded. Needs at least 5.6 Msps.</item>
+        <item>US end-of-train telemetry on 457.9375 MHz and head-of-train commands on 452.9375 MHz: 1200 bit/s AFSK on FM, the AAR frame with its BCH check. Unit number, brake pipe pressure, motion and battery from the end of the train (tested on a real recording). Head-of-train frames are shown only when they use the same frame check; their fields are not decoded. Receive only.</item>
+        <item>5.8 GHz tolling, EN 12253 downlink at 500 kbit/s: frames and their class are counted. Identifying structure only: link identifiers and any content are not shown or saved.</item>
+        <item>Vehicle safety messages on 5.9 GHz, 802.11p 10 MHz channels at 3 and 6 Mbit/s: BSM (SAE J2735) and CAM (ETSI) positions in a table and on a map. Needs at least 10 Msps. Receive only.</item>
+        <item>LTE sidelink vehicle links on 5.9 GHz (10 MHz): detected by the 1 ms subframe and SC-FDMA cyclic prefix. Structure only: the safety messages are not decoded. Needs at least 15.36 Msps.</item>
+        <item>ERMES (ETS 300 133) pan-European paging, 169.4 - 169.8 MHz, 4-level FM at 6250 bit/s: network identity, addresses, and numeric or text messages. Tune one 25 kHz channel. Receive only.</item>
+        <item>Pulse radar detection (S or X band with a suitable receiver): rotation rate, pulse repetition frequency, pulse width and beamwidth from the beam passing. A bearing needs direction finding with two coherent channels. FMCW radars are not seen.</item>
+        <item>Weather radar detection (C or S band): rotation, single or dual pulse repetition frequency, pulse width and the elevation sweeps of the scan pattern.</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -664,6 +688,18 @@
         <item>UHF, wide FM</item>
         <item>2 m / 70 cm, FM + CTCSS</item>
         <item>USB, fixed HF frequencies</item>
+        <item>Paragliders, LoRa</item>
+        <item>Glider trackers, 868 MHz</item>
+        <item>Landing system data, VHF</item>
+        <item>Data link, L band</item>
+        <item>Airport data link, 5 GHz</item>
+        <item>Train telemetry, 457.9 MHz</item>
+        <item>Road toll, 5.8 GHz</item>
+        <item>Vehicle safety, 5.9 GHz</item>
+        <item>Vehicle sidelink, 5.9 GHz</item>
+        <item>Pagers, 169 MHz</item>
+        <item>Radar pulses</item>
+        <item>Weather radar</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -879,5 +915,17 @@
         <item>wireless microphone mic radio mic sennheiser shure in ear monitor iem pmse uhf 470 694 823 863 902 theatre stage tv band finder</item>
         <item>ham amateur repeater fm 2m 70cm 144 145 146 147 430 433 438 440 442 offset shift tone ctcss pl dcs calling 145.500 146.520 simplex</item>
         <item>hfgcs hf global communications system skyking eam emergency action message volmet shannon gander new york raf military one aviation weather hf usb 4724 8992 11175 15016 mars</item>
+        <item>fanet skytraxx paraglider hang glider lora sf7 868 flarm ogn</item>
+        <item>ogn open glider network ogntp tracker flarm glider ldpc 868</item>
+        <item>gbas vdb laas lcgs d8psk vhf landing 108 117</item>
+        <item>ldacs l-band aeronautical datalink ofdm 1000 mhz future</item>
+        <item>aeromacs airport wimax 5 ghz 802.16 ofdm</item>
+        <item>eot hot end of train head of train aar s-9152 softeot pyeot rail train freight 457 452</item>
+        <item>dsrc toll tolling en 12253 12795 5.8 ghz obu rsu efc road</item>
+        <item>802.11p v2x its-g5 dsrc bsm cam denm j2735 etsi 5.9 ghz vehicle</item>
+        <item>c-v2x cv2x pc5 lte sidelink 5.9 ghz vehicle</item>
+        <item>ermes paging pager 169 ets 300 133 4-pam</item>
+        <item>marine radar ship rotation rpm pulse s band x band 3 ghz 9 ghz</item>
+        <item>weather radar nexrad wsr-88d c band s band scan pattern volume prf</item>
     </string-array>
 </resources>

@@ -158,6 +158,9 @@ void Privacy::applyDefaultClasses() {
         68,    // DJI drones
         66,    // FLARM
         300,   // ADS-L
+        400, 401,   // FANET, OGN trackers
+        406, 407, 408,   // DSRC tolling, V2X
+        409,   // ERMES (pager addresses)
         23,    // POCSAG (capcodes)
         17, 18, 19, 62, 208,   // satellite terminals: Inmarsat-C, Inmarsat Aero, Iridium, Globalstar, Inmarsat (all carriers)
     };

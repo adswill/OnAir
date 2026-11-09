@@ -79,6 +79,18 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | GeoNetCast | 271 | 273 | 272 | 231 | feat37-sd2 | 3.8; Fazzt files on DVB-S2, C-band; numbers may need to move at merge |
 | ADS-L | 300 | 302 | 301 | 260 | feat38-adsl | 3.8; EASA ADS-L 4 SRD-860 on 868.2 / 868.4 / 869.525 MHz, feeds the FLARM receiver from the same capture (docs/ADSL-3.8.md); no live signal tested; numbers may need to move at merge |
 | RC and mesh links (Reticulum, ExpressLRS, MAVLink SiK, FrSky, FlySky) | 360 | 362 | 361 | 360 | feat38-mesh-rc | 3.8; protocol entries through subModes (362 masks 1-16); simulated signals only; family block 360-379; numbers may need to move at merge |
+| FANET | 400 | 402 | 401 | 300 | feat38-avia-road | 3.8; one receiver (`rxAvRoad_`), see docs/AVIA-ROAD-3.8.md; numbers may need to move at merge |
+| OGN tracker | 401 | 403 | 402 | 301 | feat38-avia-road | 3.8; one receiver (`rxAvRoad_`), see docs/AVIA-ROAD-3.8.md; numbers may need to move at merge |
+| GBAS VDB (bursts only) | 402 | 404 | 403 | 302 | feat38-avia-road | 3.8; one receiver (`rxAvRoad_`), see docs/AVIA-ROAD-3.8.md; numbers may need to move at merge |
+| LDACS (structure) | 403 | 405 | 404 | 303 | feat38-avia-road | 3.8; one receiver (`rxAvRoad_`), see docs/AVIA-ROAD-3.8.md; numbers may need to move at merge |
+| AeroMACS (structure) | 404 | 406 | 405 | 304 | feat38-avia-road | 3.8; one receiver (`rxAvRoad_`), see docs/AVIA-ROAD-3.8.md; numbers may need to move at merge |
+| AAR end of train | 405 | 407 | 406 | 305 | feat38-avia-road | 3.8; one receiver (`rxAvRoad_`), see docs/AVIA-ROAD-3.8.md; numbers may need to move at merge |
+| DSRC road toll | 406 | 408 | 407 | 306 | feat38-avia-road | 3.8; one receiver (`rxAvRoad_`), see docs/AVIA-ROAD-3.8.md; numbers may need to move at merge |
+| 802.11p V2X | 407 | 409 | 408 | 307 | feat38-avia-road | 3.8; one receiver (`rxAvRoad_`), see docs/AVIA-ROAD-3.8.md; numbers may need to move at merge |
+| C-V2X (structure) | 408 | 410 | 409 | 308 | feat38-avia-road | 3.8; one receiver (`rxAvRoad_`), see docs/AVIA-ROAD-3.8.md; numbers may need to move at merge |
+| ERMES | 409 | 411 | 410 | 309 | feat38-avia-road | 3.8; one receiver (`rxAvRoad_`), see docs/AVIA-ROAD-3.8.md; numbers may need to move at merge |
+| Marine radar | 410 | 412 | 411 | 310 | feat38-avia-road | 3.8; one receiver (`rxAvRoad_`), see docs/AVIA-ROAD-3.8.md; numbers may need to move at merge |
+| Weather radar | 411 | 413 | 412 | 311 | feat38-avia-road | 3.8; one receiver (`rxAvRoad_`), see docs/AVIA-ROAD-3.8.md; numbers may need to move at merge |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |
@@ -86,6 +98,6 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 Protocol entries (a row with a subId, such as FT8 in HF digital or POCSAG in pagers) share their family on purpose; the test checks
 that each (family, subId) pair is unique instead.
 
-`kNumFamilies` = 361, `kPollSeqSlots` = 361 (families 213 to 234 and poll slots 189 to 194 are kept for the other 3.6 lanes).
+`kNumFamilies` = 412, `kPollSeqSlots` = 312 (families 213 to 234 and poll slots 189 to 194 are kept for the other 3.6 lanes).
 
 A new mode takes the next free family above the highest one in this table and the next free poll slot, and adds its row here.

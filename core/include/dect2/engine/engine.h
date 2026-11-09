@@ -94,6 +94,7 @@
 #include "dect2/zigbee/zigbee_rx.h"
 #include "dect2/flarm/flarm_rx.h"
 #include "dect2/adsl/adsl_rx.h"
+#include "dect2/avroad/avroad_rx.h"
 #include "dect2/hfbeacon/hfbeacon_rx.h"
 #include "dect2/dji/dji_rx.h"
 #include "dect2/nbiot/nbiot_rx.h"
@@ -523,6 +524,7 @@ public:
     NbiotReceiver& nbiot() { return rxNb_; }   // NB-IoT cells: clear the cell table (telemetry through latestRx)
     ZigbeeReceiver& thread() { return rxTh_; }   // Thread: clear the network and device tables (telemetry through latestRx)
     ZigbeeReceiver& zigbee() { return rxZb_; }   // Zigbee / 802.15.4: clear the PAN and device tables (telemetry through latestRx)
+    AvRoadReceiver& avroad() { return rxAvRoad_; }   // aviation, rail and road modes (families 400 - 411; telemetry through latestRx)
     AdslReceiver& adsl() { return rxAdsl_; }   // ADS-L: receiver position, clear (telemetry through latestRx)
     FlarmReceiver& flarm() { return rxFlarm_; }   // FLARM: receiver position, clear (telemetry through latestRx)
     WmbusLiveReceiver& wmbus() { return rxWmb_; }   // Wireless M-Bus meters: clear the device table (telemetry through latestRx)
@@ -1022,6 +1024,7 @@ private:
     WxsatReceiver rxWx_[kWxNumProfiles]{{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}};   // the SatDump-list weather links, families 260 - 271 (slots 220 - 231)
     FlarmReceiver rxFlarm_;
     AdslReceiver rxAdsl_;
+    AvRoadReceiver rxAvRoad_;
     uint64_t modeSeq_[kPollSeqSlots] = {};      // the last report taken from each of the modes added after FM (same order as above)
     mutable std::mutex atsc3Mu_;
     Atsc3Telemetry atsc3Tel_;

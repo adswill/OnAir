@@ -1257,3 +1257,9 @@ KNX RF, HomeMatic BidCoS, EnOcean ERP1 and DASH7 decoders in the ISM sensors dec
 ## 2026-11-09 channelised analog voice modes (feat38-channels)
 Branch feat38-channels on integ-38: seven modes in one receiver (core/src/chanvoice, app/chanvoice), families 340 - 346: CB radio (EU / DE-CZ-HU 80 / UK 27/81 / US plans, AM / FM / USB / LSB decided from the signal), FRS / GMRS, PMR446 analog, ham FM repeaters (2 m and 70 cm, IARU regions), HFGCS / HF voice (HFGCS and VOLMET with minute schedules, single tuner scan), MDC-1200 on analog FM, wireless mic finder. Busy-channel list, CTCSS / DCS reading per channel, whole-span and HF scans, recording, region from the location setting. MDC-1200 written from the format, not from the GPL-2.0-only reference; FleetSync not done (no public spec). All validated on simulated signals only; the app was not built locally (syntax checks only). Poll slot 218, kNumFamilies 360. See docs/CHANNELS-3.8.md.
 
+
+## 2026-11-09 Aviation, rail and road modes (feat38-avia-road)
+- Twelve new modes, families 400-411, one receiver `core/src/avroad`, table of decoded items and Receiver page in `app/avroad`, all receive only; ADS-L branch merged in. Details and limits in docs/AVIA-ROAD-3.8.md.
+- AAR end of train verified on the real PyEOT recording (3 frames). BSM layout verified on a published example. Every other mode: simulated signals only.
+- Decoders: FANET, OGN (LDPC), end of train, ERMES, 802.11p BSM/CAM, DSRC framing. Structure only: LDACS, AeroMACS, C-V2X, GBAS bursts. Detection: marine and weather radar (no bearing with one antenna).
+- Skipped (no public protocol): ReFLEX, ATCS, GBAS message content.
