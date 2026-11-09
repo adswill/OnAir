@@ -214,6 +214,16 @@
         <item>Arktika-M GGAK</item>
         <item>AWS L-band</item>
         <item>Inmarsat BGAN</item>
+        <item>MIL-STD-188-110 serial</item>
+        <item>STANAG 4285</item>
+        <item>ARQ-E</item>
+        <item>ARQ-N</item>
+        <item>AUTOSPEC</item>
+        <item>SPREAD</item>
+        <item>G-TOR</item>
+        <item>EFR teleswitch</item>
+        <item>Piccolo Mk VI</item>
+        <item>Coquelet-8</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -409,6 +419,16 @@
         <item>Arktika-M N1 / N2 space-weather telemetry (GGAK, experimental: frame lock not reached yet) on 1703 MHz, PM 5 ksym/s: the Elektro GGAK frames and magnetometer. Highly elliptical orbit: Follow the next pass tracks the Doppler</item>
         <item>Arctic Weather Satellite on 1707 MHz: QPSK 1.785 Msym/s, CCSDS convolutional code, Reed-Solomon interleave 5, the MWR microwave scans (19 channels, 145 points) line by line. Needs a dish at 1.7 GHz and 4 Msps or more; Follow the next pass tunes with Doppler and starts by itself</item>
         <item>Inmarsat BGAN (ETSI TS 102 744 Family SL), the satellite data service: every forward carrier from 1525 to 1559 MHz, bearer type and code rate, satellite, spot beam, network identity, and the system information it broadcasts. One-click scan across the band. Signalling and carrier structure only: no voice, no user data, no subscriber identity. Needs a user test: only synthetic signals so far, never validated on a real BGAN recording. A patch antenna is enough for the global beam and for bearers aimed at your region; narrow spot beams elsewhere are out of reach</item>
+        <item>MIL-STD-188-110A/C fixed-frequency serial tone modem, receive only: 2400 Bd 8-PSK on 1800 Hz, 75 to 4800 bit/s. The preamble gives speed and interleaver, then probes, deinterleaver and Viterbi decoding, with STANAG 5066 D_PDU framing when present. Tested on simulated signals.</item>
+        <item>STANAG 4285 HF modem, receive only: 2400 Bd frames of 256 symbols, 75 to 3600 bit/s. Coded speeds found automatically from the code and its start pattern; uncoded speeds chosen under Advanced. STANAG 5066 D_PDU framing is read. Tested on simulated signals.</item>
+        <item>ARQ-E (ARQ-1000 Duplex), receive only: 7-unit ITA2-P characters with inverted characters every 4 or 8; speed, shift, alignment and cycle found automatically. Control characters are counted, not named. Tested on simulated signals.</item>
+        <item>ARQ-N, receive only: as ARQ-E without inverted characters. Tested on simulated signals.</item>
+        <item>AUTOSPEC Mk 1, receive only: 10-bit Bauer code on ITA2, single errors corrected. Tested on simulated signals.</item>
+        <item>SPREAD 11 / 21 / 51, receive only: the Bauer code spread over 11, 21 or 51 bits; the depth is found automatically. The bit layout follows the published description of the spreading. Tested on simulated signals.</item>
+        <item>G-TOR monitor, receive only: 100, 200, 300 Bd frames with Golay coding and CRC, data and Golay forms both read. ASCII frames show text; Huffman frames stay as hex. Tested on simulated signals.</item>
+        <item>EFR radio teleswitching, receive only: DCF49 (129.1 kHz) and DCF39 (139 kHz), 200 Bd FSK, DIN 19244 frames with message number, addresses and checksum. Semagyr and Versacom content stays as hex. Tested on simulated signals.</item>
+        <item>Piccolo Mk VI (II) 6-tone MFSK, receive only: ITA2 by tone pairs at 20 Hz spacing, 50 ms tones. Tested on simulated signals.</item>
+        <item>Coquelet-8 MFSK, receive only: ITA2 by tone pairs (8 tones, 26.67 Hz spacing), 37.5, 50 or 75 ms tones found automatically. Tested on simulated signals.</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -604,6 +624,16 @@
         <item>Arktika-M GGAK telemetry</item>
         <item>AWS MWR, 1.7 GHz</item>
         <item>Satellite, L-band</item>
+        <item>HF data modem, 8-PSK</item>
+        <item>HF data modem, PSK</item>
+        <item>HF ARQ, FSK</item>
+        <item>HF ARQ, FSK</item>
+        <item>HF FEC, FSK</item>
+        <item>HF FEC, FSK</item>
+        <item>HF ARQ, FSK</item>
+        <item>LF telegrams, FSK</item>
+        <item>HF MFSK</item>
+        <item>HF MFSK</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -799,5 +829,15 @@
         <item>arktika ggak sem 1703 magnetometer heo space weather</item>
         <item>aws arctic weather satellite 1707 mwr microwave radiometer eumetsat sterna</item>
         <item>bgan inmarsat i-4 alphasat family sl ts 102 744 l-band satcom 1545 1550 16qam spot beam isatphone</item>
+        <item>mil-std-188-110 milstd 110a 110b 110c serial tone hf modem military stanag 5066 8psk 2400 baud utility</item>
+        <item>stanag 4285 nato hf modem 2400 baud psk 5066 data utility</item>
+        <item>arq-e arqe arq-1000 duplex siemens ita2 fsk hf utility</item>
+        <item>arq-n arqn arq-1000 duplex ita2 fsk hf utility</item>
+        <item>autospec bauer fsk hf fec ita2 utility</item>
+        <item>spread 11 21 51 autospec bauer fsk hf fec utility</item>
+        <item>g-tor gtor golay kantronics hf arq amateur fsk</item>
+        <item>efr dcf49 dcf39 teleswitch ripple control semagyr versacom 200 baud lf fsk din 19244 europe</item>
+        <item>piccolo mk6 mk vi mfsk hf utility</item>
+        <item>coquelet 8 coq-8 mfsk hf utility</item>
     </string-array>
 </resources>

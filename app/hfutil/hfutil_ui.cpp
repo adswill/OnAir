@@ -36,7 +36,7 @@ template <int K> void presets(App& a) {
     char cl[40]; snprintf(cl, sizeof cl, "%s##hfu%d", tr("Clear"), K);
     if (ImGui::Button(cl)) a.engine.hfUtil(K).clearResults();
     flowEnd();
-    if (ImGui::CollapsingHeader(tr("Advanced"))) {
+    if (ImGui::CollapsingHeader(trw("Advanced"))) {
         if (K == 1) {
             static const char* prof[] = {N_("Automatic (needs a start-of-message pattern)"), N_("2400 bit/s coded, short"), N_("1200 bit/s coded, short"), N_("600 bit/s coded, short"), N_("300 bit/s coded, short"), N_("150 bit/s coded, short"), N_("75 bit/s coded, short"), N_("3600 bit/s uncoded"), N_("2400 bit/s uncoded"), N_("1200 bit/s uncoded")};
             int v = S[K].prof + 1;
