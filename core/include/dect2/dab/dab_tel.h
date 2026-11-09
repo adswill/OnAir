@@ -91,6 +91,7 @@ struct DabAnnSwitch {
 };
 
 struct DabEnsemble {
+    std::map<int, int> subFec;    // sub-channel id -> FEC scheme (FIG 0/14)
     bool valid = false;           // ensemble id and at least one service seen
     uint16_t eid = 0;
     std::string label;

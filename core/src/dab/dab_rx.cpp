@@ -824,6 +824,8 @@ struct DabReceiver::Impl {
                 }
                 ens.subs[s.id] = s;
             }
+        } else if (ext == 14) {  // FEC scheme of packet mode sub-channels
+            for (int i = 1; i < n; i++) ens.subFec[d[i] >> 2] = d[i] & 3;
         } else if (ext == 3) {   // packet mode service components: SCId -> sub-channel, address (EN 300 401 clause 6.3.2)
             for (const dabp::Fig03Packet& e : dabp::fig0Packet(d, n)) {
                 DabEnsemble::PacketComp pc;
