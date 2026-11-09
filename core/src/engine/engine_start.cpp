@@ -366,6 +366,8 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxLtr_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxEdacs_.setSignalOffset(o);
         rxEdacs_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
+        rxSmartnet_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
+        rxSmartnet_.setSignalOffset(o);
         rxMarineVhf_.setSignalOffset(o);
         rxMarineVhf_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxMarineVhf_.setDialHz(tune.centerHz);   // files: the dial frequency places the channels
@@ -583,6 +585,8 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxLtr_.setLogCallback([this](const std::string& s) { log(s); });
     rxEdacs_.configure(rate_);
     rxEdacs_.setLogCallback([this](const std::string& s) { log(s); });
+    rxSmartnet_.configure(rate_);
+    rxSmartnet_.setLogCallback([this](const std::string& s) { log(s); });
     rxMarineVhf_.configure(rate_);
     rxMarineVhf_.setLogCallback([this](const std::string& s) { log(s); });
     rxP25p2_.configure(rate_);

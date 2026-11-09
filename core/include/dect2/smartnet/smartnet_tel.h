@@ -48,6 +48,8 @@ struct SmartnetTelemetry {
     bool locked = false, dataValid = false, inverted = false;
     float snrDb = 0, levelDb = -200, deviationHz = 0;
     uint64_t oswOk = 0, oswBad = 0, oswFixed = 0, messages = 0, messagesKnown = 0;
+    uint64_t blocksOk = 0, blocksBad = 0;   // the same counts, for the engine's common status line
+    double cfoHz = 0;                 // not measured
     double timeSec = 0, inputRate = 0, centerHz = 0;
     int systemId = -1, siteId = -1, features = -1;
     double controlHz = 0;

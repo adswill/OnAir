@@ -190,7 +190,7 @@ struct SmartnetReceiver::Impl {
         }
     }
     void goodOsw(const Osw& o, int fixed) {
-        tel.oswOk++;
+        tel.oswOk++; tel.blocksOk++;
         tel.oswFixed += (uint64_t)fixed;
         tel.dataValid = true;
         lastGoodSec = timeSec();
@@ -198,7 +198,7 @@ struct SmartnetReceiver::Impl {
         parser.feed(o);
         pump(o);
     }
-    void badOsw() { tel.oswBad++; parser.bad(); Osw z; pump(z); }
+    void badOsw() { tel.oswBad++; tel.blocksBad++; parser.bad(); Osw z; pump(z); }
     void pump(const Osw& o) {
         Msg m;
         while (parser.next(m)) handle(m, o);

@@ -357,6 +357,7 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 145: return pollStd(rxSb_, 145, t, seqs[140], &RxTelemetry::satbeacon);   // TV sat beacon decoder (slot 140)
     case 130: return pollStd(rxLtr_, 130, t, seqs[126], &RxTelemetry::ltr);     // LTR control channel (slot 126)
     case 131: return pollStd(rxEdacs_, 131, t, seqs[127], &RxTelemetry::edacs); // EDACS control channel (slot 127)
+    case 321: return pollStd(rxSmartnet_, 321, t, seqs[230], &RxTelemetry::smartnet); // Motorola Type II (slot 230)
     case 156: return pollStd(rxMarineVhf_, 156, t, seqs[142], &RxTelemetry::marinevhf);   // Marine VHF voice (slot 142)
     case 181: return pollStd(rxP25p2_, 181, t, seqs[181], &RxTelemetry::p25p2); // P25 Phase 2 (slot 181)
     default: return -1;
