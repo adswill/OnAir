@@ -15,20 +15,20 @@ Limits per run: settle (12 s, TDMA 25 s, ADS-B 60 s, doubled on network radios),
 | | before (integ-37) | after |
 |---|---|---|
 | cells with any failure | 40 / 40 | 14 / 40 |
-| settle time over limit | 15 | 2 |
+| settle time over limit | 15 | 1 |
 | more than 1 dB under the best achievable | 16 | 1 |
 | clipping during acquisition | 0 | 0 |
 | hunting when settled (> 30 changes/h) | 24 | 0 |
 | decoder interrupted (> 12 s/h) | 20 | 0 |
 | clipping when settled | 0 | 0 |
-| clipping when an interferer appears (> 1.5 s) | 4 | 1 |
-| quality with the interferer present | 7 | 2 |
-| recovery after the interferer leaves | 23 | 4 |
+| clipping when an interferer appears (> 1.5 s) | 4 | 0 |
+| quality with the interferer present | 7 | 1 |
+| recovery after the interferer leaves | 23 | 3 |
 | retune recovery time | 21 | 3 |
 | quality after a retune | 20 | 2 |
 | a VFO step triggers a gain search | 33 | 0 |
-| mode switch recovery | 12 | 4 |
-| moves on an idle channel (> 20/h) | 32 | 4 |
+| mode switch recovery | 12 | 3 |
+| moves on an idle channel (> 20/h) | 32 | 3 |
 | gain wander on an idle channel (> 6 dB) | 2 | 2 |
 | moves on a bursty channel (> 60/h) | 16 | 3 |
 | quality on a bursty channel | 10 | 5 |
@@ -74,11 +74,11 @@ Numbers: settle s, final dQ dB, changes per hour settled, interrupted s/h, inter
 | rtltcp | tdma | 12.6 → 12.6 | 0.00 → 0.00 | 844.0 → 8.0 | 112.53 → 1.07 | 27.3 → 10.7 | 3.7 → 3.7 | 0.00 → 0.00 | 9 → 0 | 56.0 → 8.0 | 1568.0 → 16.0 | none |
 | rtltcp | pulsed | never → 6.4 | 4.42 → 0.25 | 56.0 → 56.0 | 3.00 → 3.07 | never → 6.2 | never → 3.7 | 4.42 → 0.25 | 13 → 2 | 40.0 → 0.0 | 0.0 → 0.0 | none |
 | rtltcp | wide | never → 13.6 | 3.62 → 0.97 | 0.0 → 8.0 | 0.00 → 0.40 | never → 21.2 | 6.5 → 6.5 | 0.00 → 0.00 | 5 → 0 | 0.0 → 16.0 | 0.0 → 8.0 | none |
-| spyserver | ofdm | 21.8 → 12.0 | 0.00 → 0.00 | 204.0 → 8.0 | 44.20 → 1.73 | 8.2 → 16.2 | 22.0 → 12.1 | 0.00 → 0.00 | 13 → 0 | 56.0 → 8.0 | 932.0 → 600.0 | irq,modesw |
-| spyserver | fm | never → never | 2.99 → 2.99 | 56.0 → 8.0 | 2.93 → 0.40 | never → never | never → never | 17.42 → 17.42 | 6 → 0 | 64.0 → 24.0 | 500.0 → 16.0 | burstq,idle,irrec,modesw,quality,retune,rtq,settle |
+| spyserver | ofdm | 21.8 → 12.0 | 0.00 → 0.00 | 204.0 → 8.0 | 44.20 → 1.73 | 8.2 → 18.2 | 22.0 → 12.1 | 0.00 → 0.00 | 13 → 0 | 56.0 → 8.0 | 932.0 → 600.0 | modesw |
+| spyserver | fm | never → never | 2.99 → 2.99 | 56.0 → 8.0 | 2.93 → 0.40 | never → never | never → never | 17.42 → 17.42 | 6 → 0 | 64.0 → 8.0 | 500.0 → 16.0 | burstq,irrec,modesw,quality,retune,rtq,settle |
 | spyserver | tdma | never → 12.0 | 38.40 → 0.00 | 468.0 → 8.0 | 62.40 → 1.07 | 56.4 → 9.3 | 12.1 → 12.1 | 0.00 → 0.00 | 7 → 0 | 56.0 → 8.0 | 468.0 → 16.0 | none |
-| spyserver | pulsed | never → 6.1 | 26.82 → 0.58 | 56.0 → 96.0 | 2.93 → 5.07 | 114.6 → never | never → 6.1 | 1.62 → 0.58 | 10 → 0 | 40.0 → 40.0 | 0.0 → 0.0 | idle,irclip,irrec,modesw |
-| spyserver | wide | never → never | 17.85 → 2.92 | 0.0 → 16.0 | 0.00 → 0.93 | 3.2 → 7.5 | 6.1 → 12.1 | 0.00 → 0.00 | 13 → 0 | 0.0 → 16.0 | 0.0 → 16.0 | burstq,settle |
+| spyserver | pulsed | never → 6.1 | 26.82 → 0.58 | 56.0 → 96.0 | 2.93 → 5.07 | 114.6 → 32.2 | never → 6.1 | 1.62 → 0.58 | 10 → 0 | 40.0 → 40.0 | 0.0 → 0.0 | idle |
+| spyserver | wide | never → 14.6 | 17.85 → 2.92 | 0.0 → 8.0 | 0.00 → 0.40 | 3.2 → 7.5 | 6.1 → 12.1 | 0.00 → 0.00 | 13 → 0 | 0.0 → 8.0 | 0.0 → 8.0 | burstq |
 
 
 ## What was wrong and what changed
