@@ -2275,6 +2275,9 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_t2_payload PRIVATE dect2core)
   add_test(NAME t2_payload COMMAND test_t2_payload)
 
+  add_executable(test_t2_miso tests/t2/test_t2_miso.cpp)   # MISO, two transmitter groups
+  target_link_libraries(test_t2_miso PRIVATE dect2core)
+  add_test(NAME t2_miso COMMAND test_t2_miso)
   add_executable(test_t2_plps tests/t2/test_t2_plps.cpp)   # common PLP, type 2 sub-slices, annex D merge
   target_link_libraries(test_t2_plps PRIVATE dect2core)
   add_test(NAME t2_plps COMMAND test_t2_plps)

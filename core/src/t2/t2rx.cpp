@@ -203,7 +203,6 @@ void T2Receiver::Impl::publish() {
         }
     }
     if (l1preOk) {
-        if (l1pre.s1 == 1 || l1pre.s1 == 4) t.unsupported.insert(t.unsupported.begin(), "MISO transmission (two transmitters, Alamouti coding) is not implemented");
         if (l1pre.type != 0) t.unsupported.push_back("the multiplex carries generic streams (GSE/GS), not an MPEG transport stream");
     }
     if (l1postOk && l1post.fefLength > 0 && !otherLayerSeen) t.unsupported.push_back("the signal contains FEF (future extension) frames; they are skipped");

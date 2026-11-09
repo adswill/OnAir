@@ -67,6 +67,7 @@ T2Generator::T2Generator(const TxParams& p) : i_(new Impl), p_(p) {
     nP2_ = m->nP2;
     PilotConfig pc;
     pc.fftCode = m->code; pc.ext = p.ext && m->kExt; pc.pp = p.pp; pc.tr = p.tr; pc.giIdx = p.giIdx;
+    pc.miso = p.s1 == 1 || p.s1 == 4;
     pm_.reset(new PilotMap(pc));
     for (int pp = 0; !pm_->valid() && pp < 8; pp++) { pc.pp = pp; pm_.reset(new PilotMap(pc)); }
     p_.pp = pc.pp;
@@ -279,6 +280,11 @@ void T2Generator::nextFrame(std::vector<cf32>& out) {
         p2sym[l] = out;
     }
     frameNo_++;
+    const bool miso = p_.s1 == 1 || p_.s1 == 4;
+    if (miso) { tx2_.resize(frameLength()); memcpy(tx2_.data(), out.data(), sizeof(cf32) * (size_t)kP1Len); }
+    cf32* o2 = tx2_.data() + (miso ? kP1Len : 0);
+    std::vector<float> re2, im2;
+    const int dxP = pm_->dx();
     for (int s = 0; s < symbols_; s++) {
         pm_->symbolTypes(s, symbols_, types);
         int p2idx = 0, dIdx = 0;
@@ -297,25 +303,49 @@ void T2Generator::nextFrame(std::vector<cf32>& out) {
         }
         std::fill(I.re.begin(), I.re.end(), 0.f);
         std::fill(I.im.begin(), I.im.end(), 0.f);
+        if (miso) { re2.assign(I.re.size(), 0.f); im2.assign(I.im.size(), 0.f); }
+        // the data cells in carrier order, for the Alamouti pairs of group 2 (9.1)
+        std::vector<cf32> carrierData;
         for (int k = 0; k < k_; k++) {
             int f = k - (k_ - 1) / 2;
             size_t bin = (size_t)((f + n_) % n_);
             switch (types[k]) {
             case kCellData: {
-                if (s < nP2_) {
-                    cf32 v = p2sym[s][p2idx++];
-                    I.re[bin] = v.real();
-                    I.im[bin] = v.imag();
-                } else {
-                    const cf32 v = logical[Hd[dIdx++]];
-                    I.re[bin] = v.real();
-                    I.im[bin] = v.imag();
-                }
+                const cf32 v = s < nP2_ ? p2sym[s][p2idx++] : logical[Hd[dIdx++]];
+                I.re[bin] = v.real();
+                I.im[bin] = v.imag();
+                if (miso) carrierData.push_back(v);
             } break;
             case kCellP2Papr:
             case kCellTrPapr: break;
-            default: I.re[bin] = pm_->pilot(s, k, types[k]).real(); break;
+            default: {
+                const float pv = pm_->pilot(s, k, types[k]).real();
+                I.re[bin] = pv;
+                if (miso) {
+                    // 9.2.8: the pilots of group 2
+                    bool inv = false;
+                    if (types[k] == kCellP2Pilot) inv = (k % 6) == 3;
+                    else if (k == 0 || k == k_ - 1) inv = (s & 1) != 0;
+                    else if (k % dxP == 0) inv = ((k / dxP) & 1) != 0;   // scattered, frame closing, and continual pilots on scattered-pilot-bearing carriers
+                    re2[bin] = inv ? -pv : pv;
+                }
+            } break;
             }
+        }
+        if (miso) {
+            size_t p = 0;
+            for (int k = 0; k < k_; k++) {
+                if (types[k] != kCellData) continue;
+                int f = k - (k_ - 1) / 2; size_t bin = (size_t)((f + n_) % n_);
+                const cf32 v = p & 1 ? std::conj(carrierData[p - 1]) : (p + 1 < carrierData.size() ? -std::conj(carrierData[p + 1]) : cf32(0, 0));
+                re2[bin] = v.real(); im2[bin] = v.imag();
+                p++;
+            }
+            std::vector<float> xr = re2, xi = im2;
+            inverseFft(I.log2N, xr, xi);
+            for (int i = 0; i < g_; i++) o2[i] = cf32(xr[n_ - g_ + i], xi[n_ - g_ + i]) * norm;
+            for (int i = 0; i < n_; i++) o2[g_ + i] = cf32(xr[i], xi[i]) * norm;
+            o2 += n_ + g_;
         }
         inverseFft(I.log2N, I.re, I.im);
         for (int i = 0; i < g_; i++) o[i] = cf32(I.re[n_ - g_ + i], I.im[n_ - g_ + i]) * norm;

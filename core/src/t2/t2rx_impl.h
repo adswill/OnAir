@@ -226,9 +226,18 @@ struct T2Receiver::Impl {
     } dsCache;
     // pilot maps of the P2 stage by configuration (building one generates a 28,000-value PRBS, and the stage runs every frame)
     std::map<int, std::unique_ptr<PilotMap>> pmCache;
+    // MISO (EN 302 755 clause 9): the two paths from pilots that are H1 + H2 on even grid points and H1 - H2 on odd ones, per carrier
+    static void misoChannels(const std::vector<cf32>& grid, int step, int K, std::vector<cf32>& H1, std::vector<cf32>& H2);
+    static inline void alamouti(cf32 r0, cf32 r1, cf32 h1, cf32 h2, cf32& a0, cf32& a1, cf32& gain) {
+        const float g = std::max(1e-12f, std::norm(h1) + std::norm(h2));
+        a0 = (std::conj(h1) * r0 + h2 * std::conj(r1)) / g;
+        a1 = (std::conj(h1) * r1 - h2 * std::conj(r0)) / g;
+        gain = cf32(g, 0);
+    }
+    bool misoNow() const { return curS1 == 1 || curS1 == 4; }
     const PilotMap& cachedPilotMap(int fftCode, bool ext, int pp) {
-        std::unique_ptr<PilotMap>& e = pmCache[(fftCode * 2 + (ext ? 1 : 0)) * 8 + pp];
-        if (!e) { PilotConfig c; c.fftCode = fftCode; c.ext = ext; c.pp = pp; e.reset(new PilotMap(c)); }
+        std::unique_ptr<PilotMap>& e = pmCache[((fftCode * 2 + (ext ? 1 : 0)) * 8 + pp) * 2 + (misoNow() ? 1 : 0)];
+        if (!e) { PilotConfig c; c.fftCode = fftCode; c.ext = ext; c.pp = pp; c.miso = misoNow(); e.reset(new PilotMap(c)); }
         return *e;
     }
     bool chValid = false, extDetected = false;

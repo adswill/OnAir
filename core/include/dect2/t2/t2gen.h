@@ -69,6 +69,8 @@ public:
     int symbolsPerFrame() const { return symbols_; }
     size_t frameLength() const { return (size_t)kP1Len + (size_t)symbols_ * (n_ + g_); }
     void nextFrame(std::vector<cf32>& out); // one full frame: P1 + symbols
+    // MISO (s1 = 1 or 4): the frame of MISO group 2 (Alamouti cells, modified pilots), made by the last nextFrame()
+    const std::vector<cf32>& lastTx2() const { return tx2_; }
     // With payload: the baseband frames (BBHEADER + data field + padding, before scrambling) sent in the last frame, one per FEC block.
     const std::vector<std::vector<uint8_t>>& lastBbFrames() const { return lastBb_; }
     const std::vector<std::vector<uint8_t>>& lastBbFrames(int plpId) const { return lastBbPlp_.at(plpId); }
@@ -86,6 +88,7 @@ private:
     int frameNo_ = 0;
     int plpBlocks_ = 0;
     std::vector<std::vector<uint8_t>> lastBb_;
+    std::vector<cf32> tx2_;
     std::map<int, std::vector<std::vector<uint8_t>>> lastBbPlp_;
     long addrCap_ = 0;        // cell addresses after L1 in a frame
     int n_, g_, k_, symbols_, nP2_;
