@@ -4,7 +4,7 @@
 //  3. the saved settings and overlay layout come back the same; snapping; the fit plans (letterbox, crop)
 //  4. the overlay is drawn and laid on the picture
 //  5. a .ts file from a still picture (MPEG-2 + MP2, two audio tracks, set service ID and PIDs): PAT, PMT, SDT name, length and mux rate
-//  6. the same with H.264 when this FFmpeg has an H.264 encoder
+//  6. the same with H.264 when this FFmpeg has an H.264 encoder; every encoder found (hardware ones too) with the settings a user picks
 //  7. UDP and RTP streaming to a local port: whole TS datagrams, RTP header with payload type 33
 // Run from the source root (the overlay font is third_party/fonts/Inter-Medium.ttf).
 #include "dect2/tv/videogen.h"
@@ -141,6 +141,16 @@ static void testEncoders() {
     CHECK(x.preset && x.zeroLatency && x.profile && x.crf && x.bFrames, "x264 has every option");
     CHECK(!m2.preset && !m2.crf && !m2.profile && m2.bFrames, "MPEG-2: B-frames only");
     CHECK(!hw.preset && !hw.crf && hw.profile, "hardware H.264: profile, no x264 preset or CRF");
+    CHECK(!capsOf("hevc_nvenc").bFrames && !capsOf("hevc_amf").bFrames, "hardware HEVC: no B-frames (older cards refuse them)");
+    CHECK(!capsOf("h264_mf").bFrames && capsOf("h264_mf").profile && !capsOf("hevc_mf").bFrames, "Media Foundation: profile, no B-frames (pts < dts)");
+    // the profile as each encoder takes it: FFmpeg's generic "profile" option knows no names, an encoder without its own takes the number
+    CHECK(profileName("libx264", 2) == "high" && profileName("h264_nvenc", 0) == "baseline" && profileName("h264_qsv", 1) == "main", "profile names");
+    CHECK(profileName("h264_amf", 0) == "constrained_baseline" && profileName("h264_amf", 2) == "high", "AMF calls Baseline constrained_baseline");
+    CHECK(profileName("h264_mf", 1).empty() && profileName("libopenh264", 1).empty(), "Media Foundation and OpenH264: the number, not a name");
+    for (const EncoderProblem& pr : videoEncoderProblems()) {
+        CHECK(!pr.reason.empty(), "a reason for %s", pr.name.c_str());
+        CHECK(!hasEncoder(pr.name.c_str()), "%s is listed and also does not work", pr.name.c_str());
+    }
     for (const EncoderInfo& a : audioEncoders()) CHECK(audioCodecOf(a.name) == a.audio, "audio codec of %s", a.name.c_str());
     std::printf("video encoders:");
     for (const EncoderInfo& e : v) std::printf(" %s", e.name.c_str());
@@ -385,6 +395,34 @@ static void testH264(const fs::path& dir, const fs::path& pic) {
     CHECK(ti.sync && h264 && aac, "PMT: H.264 (0x1B) and AAC (0x0F) with %s", enc.c_str());
 }
 
+// Every encoder the list offers starts with what a user picks (720p, I/P/B, CBR, Main or Baseline): a hardware encoder that opened in
+// the trial but refuses the real settings shows up here, on the computer that has it
+static void testEveryEncoder(const fs::path& dir, const fs::path& pic) {
+    for (const EncoderProblem& pr : videoEncoderProblems()) std::printf("not working here: %s: %s\n", pr.name.c_str(), pr.reason.c_str());
+    for (const EncoderInfo& e : videoEncoders()) {
+        for (int profile : {1, 0}) {
+            if (profile == 0 && !capsOf(e.name).profile) continue;
+            GenConfig c = pictureConfig(pic);
+            c.output = Output::File;
+            c.tsPath = (dir / ("every_" + e.name + ".ts")).string();
+            c.seconds = 1;
+            c.enc.width = 1280; c.enc.height = 720; c.enc.fps = 25;
+            c.enc.frames = FrameTypes::IPB;
+            c.enc.rc = RateControl::Cbr;
+            c.enc.profile = profile;
+            c.enc.videoEncoder = e.name;
+            VideoGenerator g;
+            std::string err;
+            CHECK(g.start(c, err), "start %s: %s", e.name.c_str(), err.c_str());
+            CHECK(g.wait(60), "%s is finished in time", e.name.c_str());
+            const GenStats st = g.stats();
+            CHECK(st.error.empty() && st.finished && st.frames == 25, "%s (profile %d): %s", e.name.c_str(), profile, st.error.c_str());
+            CHECK(st.videoEncoder == e.name, "%s is used, not %s", e.name.c_str(), st.videoEncoder.c_str());
+            std::printf("%s (%s, profile %d): %llu bytes%s%s\n", e.name.c_str(), e.hardware ? "hardware" : "software", profile,
+                        (unsigned long long)st.bytes, st.notice.empty() ? "" : ", ", st.notice.c_str());
+        }
+    }
+}
 
 // packets per PID and the last time stamp of each stream (seconds), read back with libavformat
 struct Streams { int videoFrames = 0, audioPackets = 0; double videoEnd = 0, audioEnd = 0; };
@@ -979,6 +1017,7 @@ int main() {
     testOverlay();
     testTsFile(dir, pic);
     testH264(dir, pic);
+    testEveryEncoder(dir, pic);
     testMpeg2LowRate(dir);
     testGenerator(dir, pic);
     testVideoFile(dir, pic);

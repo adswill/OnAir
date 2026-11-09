@@ -3,21 +3,26 @@
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/channel_layout.h>
+#include <libavutil/error.h>
+#include <libavutil/opt.h>
 }
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <sstream>
 #include <string_view>
+#include <thread>
 
 namespace dect2::vgen {
 
 namespace {
 
 struct Candidate { const char* name; Codec codec; bool hw; };
-// best first within a codec; the software encoders before the hardware ones of the same codec
+// best first within a codec; the software encoders before the hardware ones of the same codec. h264_mf / hevc_mf are tried as the
+// graphics card's encoder first, then as Windows' own software one (hevc_mf needs the HEVC Video Extensions from the Store).
 const Candidate kVideo[] = {
     {"mpeg2video", Codec::Mpeg2, false},
     {"libx264", Codec::H264, false}, {"h264_nvenc", Codec::H264, true}, {"h264_qsv", Codec::H264, true}, {"h264_amf", Codec::H264, true},
@@ -40,21 +45,57 @@ bool hasPixFmt(const AVCodec* c, AVPixelFormat want) {
     return false;
 }
 
-// An encoder counts only when it opens: a name in the build is not enough (nvenc without an NVIDIA card, VAAPI without frames on the GPU)
-bool videoOpens(const AVCodec* c) {
-    const AVPixelFormat pf = hasPixFmt(c, AV_PIX_FMT_YUV420P) ? AV_PIX_FMT_YUV420P : hasPixFmt(c, AV_PIX_FMT_NV12) ? AV_PIX_FMT_NV12 : AV_PIX_FMT_NONE;
-    if (pf == AV_PIX_FMT_NONE) return false;
+std::string averr(int e) {
+    char b[AV_ERROR_MAX_STRING_SIZE] = {0};
+    av_strerror(e, b, sizeof b);
+    return b;
+}
+
+bool isMf(const std::string& e) { return e == "h264_mf" || e == "hevc_mf"; }
+
+// An encoder counts only when it encodes: a name in the build is not enough (nvenc without an NVIDIA card, QSV without an Intel GPU,
+// VAAPI without frames on the GPU, a Media Foundation encoder this Windows lacks). A few black pictures go through it, set up as the
+// start sets it up (setupVideoEncoder, the second-try way: the start drops the profile and B-frames itself when they are refused).
+// Empty when it works, else why not.
+std::string tryVideo(const AVCodec* c, bool hwMode) {
+    constexpr int W = 320, H = 240;
+    Settings s;
+    s.videoEncoder = c->name; s.width = W; s.height = H; s.fps = 25; s.autoBitrate = false; s.videoKbps = 500;
     AVCodecContext* cx = avcodec_alloc_context3(c);
-    if (!cx) return false;
-    cx->width = 320; cx->height = 240; cx->pix_fmt = pf;
-    cx->time_base = AVRational{1, 25}; cx->framerate = AVRational{25, 1};
-    cx->bit_rate = 500000; cx->gop_size = 25;
+    if (!cx) return "out of memory";
     AVDictionary* o = nullptr;
-    if (strcmp(c->name, "libx265") == 0) av_dict_set(&o, "x265-params", "log-level=none", 0);
-    const bool ok = avcodec_open2(cx, c, &o) >= 0;
+    std::string why;
+    if (!setupVideoEncoder(cx, &o, c, c->name, hwMode, s, W, H, 25, 1, false)) why = "takes no YUV 4:2:0 or NV12 pictures from memory (it wants frames on the GPU)";
+    if (why.empty() && strcmp(c->name, "libx265") == 0) av_dict_set(&o, "x265-params", "log-level=none", 0);
+    int r = 0;
+    if (why.empty() && (r = avcodec_open2(cx, c, &o)) < 0) why = "does not open: " + averr(r);
     av_dict_free(&o);
+    AVFrame* f = av_frame_alloc();
+    AVPacket* pk = av_packet_alloc();
+    if (why.empty() && (!f || !pk)) why = "out of memory";
+    if (why.empty()) {
+        f->format = cx->pix_fmt; f->width = W; f->height = H;
+        if (av_frame_get_buffer(f, 0) < 0) why = "out of memory";
+    }
+    if (why.empty()) {   // black: Y 16, U and V 128 (NV12: U and V side by side on one plane)
+        for (int y = 0; y < H; y++) memset(f->data[0] + (size_t)y * f->linesize[0], 16, W);
+        for (int y = 0; y < H / 2; y++) {
+            if (cx->pix_fmt == AV_PIX_FMT_NV12) memset(f->data[1] + (size_t)y * f->linesize[1], 128, W);
+            else { memset(f->data[1] + (size_t)y * f->linesize[1], 128, W / 2); memset(f->data[2] + (size_t)y * f->linesize[2], 128, W / 2); }
+        }
+    }
+    int packets = 0;
+    const auto count = [&packets](AVPacket*) { packets++; };
+    for (int n = 0; why.empty() && n < 3; n++) {
+        f->pts = n;
+        if ((r = sendToEncoder(cx, f, pk, count)) < 0) why = "does not encode: " + averr(r);
+    }
+    if (why.empty() && (r = sendToEncoder(cx, nullptr, pk, count)) < 0) why = "does not finish: " + averr(r);
+    if (why.empty() && packets == 0) why = "gives no pictures out";
+    av_packet_free(&pk);
+    av_frame_free(&f);
     avcodec_free_context(&cx);
-    return ok;
+    return why;
 }
 
 bool audioOpens(const AVCodec* c) {
@@ -112,9 +153,117 @@ EncoderCaps capsOf(const std::string& e) {
     else if (e == "libx265") { c.preset = c.zeroLatency = c.bFrames = c.crf = true; }   // x265's profiles are main / main10, not the H.264 ones
     else if (e == "mpeg2video") { c.bFrames = true; }
     else if (e == "libopenh264") { c.profile = true; }
+    // Media Foundation (Windows' own H.264 encoder) gives B-frames with pts < dts, which the MPEG-TS muxer refuses
+    else if (isMf(e)) { c.profile = codecOf(e) == Codec::H264; }
     else if (codecOf(e) == Codec::H264) { c.profile = c.bFrames = true; }
-    else if (codecOf(e) == Codec::Hevc) { c.bFrames = true; }
+    // hardware HEVC: no B-frames. NVIDIA before Turing (GTX 10xx) and AMD before RDNA 3 refuse them, and the encoder does not open.
+    else if (codecOf(e) == Codec::Hevc) { c.bFrames = false; }
     return c;
+}
+
+std::string profileName(const std::string& e, int p) {
+    p = std::clamp(p, 0, kNumProfiles - 1);
+    if (e == "h264_amf") { static const char* const amf[] = {"constrained_baseline", "main", "high"}; return amf[p]; }
+    if (e == "libx264" || e == "h264_nvenc" || e == "h264_qsv" || e == "h264_videotoolbox") return kProfiles[p];
+    return std::string();
+}
+
+#ifdef AV_PROFILE_H264_HIGH
+#define VGEN_H264_PROFILE(x) AV_PROFILE_H264_##x
+#else
+#define VGEN_H264_PROFILE(x) FF_PROFILE_H264_##x
+#endif
+
+bool setupVideoEncoder(AVCodecContext* vx, AVDictionary** o, const AVCodec* vc, const std::string& venc, bool hwMode, const Settings& s,
+                       int W, int H, int fpsNum, int fpsDen, bool full) {
+    const bool nvenc = venc.find("_nvenc") != std::string::npos, amf = venc.find("_amf") != std::string::npos, mf = isMf(venc);
+    // a hardware encoder works in NV12: Intel's encoder behind Media Foundation lists YUV 4:2:0 too, but gives no pictures out with it
+    const bool hw = (mf && hwMode) || nvenc || amf || venc.find("_qsv") != std::string::npos || venc.find("_videotoolbox") != std::string::npos;
+    const AVPixelFormat first = hw ? AV_PIX_FMT_NV12 : AV_PIX_FMT_YUV420P, second = hw ? AV_PIX_FMT_YUV420P : AV_PIX_FMT_NV12;
+    const AVPixelFormat pf = hasPixFmt(vc, first) ? first : hasPixFmt(vc, second) ? second : AV_PIX_FMT_NONE;
+    if (pf == AV_PIX_FMT_NONE) return false;
+    const AVRational fr{fpsNum, fpsDen};
+    const double fps = av_q2d(fr);
+    const EncoderCaps caps = capsOf(venc);
+    vx->width = W; vx->height = H;
+    vx->pix_fmt = pf;
+    vx->time_base = av_inv_q(fr); vx->framerate = fr;
+    vx->sample_aspect_ratio = AVRational{1, 1};
+    const int gop = s.frames == FrameTypes::IOnly ? 1 : std::max(1, (int)std::lround(s.gopSeconds * fps));
+    vx->gop_size = gop;
+    int bf = full && s.frames == FrameTypes::IPB && caps.bFrames ? 2 : 0;
+    if (caps.profile && s.profile == 0) bf = 0;   // Baseline has no B-frames
+    vx->max_b_frames = std::min(bf, gop - 1);
+    const int64_t rate = (int64_t)effectiveVideoKbps(s) * 1000;
+    const bool mpeg2 = codecOf(venc) == Codec::Mpeg2;
+    const int64_t vbvCap = mpeg2 ? (W <= 720 && H <= 576 ? 1835008 : 9781248) : INT64_MAX;   // MPEG-2 Main Level / High Level
+    RateControl rc = s.rc;
+    if (rc == RateControl::Crf && !caps.crf) rc = RateControl::ConstrainedVbr;
+    // the encoder's own rate-control mode: NVENC, AMF and Media Foundation pick their own otherwise (AMF: peak-constrained VBR even
+    // when the minimum, mean and maximum rate are the same); QSV takes CBR from rc_max_rate == bit_rate by itself
+    if (rc == RateControl::Cbr) {
+        vx->bit_rate = vx->rc_min_rate = vx->rc_max_rate = rate;
+        vx->rc_buffer_size = (int)std::min<int64_t>(rate, vbvCap);
+        if (venc == "libx264") av_dict_set(o, "nal-hrd", "cbr", 0);   // filler data keeps the rate even on a still picture
+        if (nvenc) av_dict_set(o, "rc", "cbr", 0);
+        if (full && amf) av_dict_set(o, "rc", "cbr", 0);
+        if (full && mf) av_dict_set(o, "rate_control", "cbr", 0);
+    } else if (rc == RateControl::ConstrainedVbr) {
+        vx->bit_rate = rate;
+        vx->rc_max_rate = rate * 3 / 2;
+        vx->rc_buffer_size = (int)std::min<int64_t>(rate * 3 / 2, vbvCap);
+        if (nvenc) av_dict_set(o, "rc", "vbr", 0);
+        if (full && amf) av_dict_set(o, "rc", "vbr_peak", 0);
+        if (full && mf) av_dict_set(o, "rate_control", "pc_vbr", 0);
+    } else {
+        av_dict_set_int(o, "crf", s.crf, 0);
+        vx->rc_max_rate = rate * 2;   // capped, so the mux rate the estimate gives is enough
+        vx->rc_buffer_size = (int)(rate * 2);
+    }
+    if (mpeg2) {
+        // vbv_delay is 16 bits of 90 kHz: a buffer longer than about 0.7 s of the rate makes the stream VBR in the headers
+        vx->rc_buffer_size = (int)std::min<int64_t>(vx->rc_buffer_size, vx->rc_max_rate * 7 / 10);
+        vx->rc_initial_buffer_occupancy = vx->rc_buffer_size * 3 / 4;
+        // a busy picture (camera noise) can still take longer than vbv_delay holds, and FFmpeg aborts on it in CBR: VBR headers
+        // then (vbv_delay 0xFFFF); the rate control keeps the set rate, the muxer pads the rest with null packets
+        if (vx->rc_min_rate && !mpeg2CbrHeaders(W, H, vx->rc_min_rate)) vx->rc_min_rate = 0;
+    }
+    if (caps.preset) av_dict_set(o, "preset", kPresets[std::clamp(s.preset, 0, kNumPresets - 1)], 0);
+    if (caps.zeroLatency && s.zeroLatency) av_dict_set(o, "tune", "zerolatency", 0);
+    if (full && caps.profile) {
+        const int p = std::clamp(s.profile, 0, kNumProfiles - 1);
+        const std::string name = profileName(venc, p);
+        if (!name.empty()) av_dict_set(o, "profile", name.c_str(), 0);
+        else vx->profile = p == 0 ? VGEN_H264_PROFILE(CONSTRAINED_BASELINE) : p == 1 ? VGEN_H264_PROFILE(MAIN) : VGEN_H264_PROFILE(HIGH);
+    }
+    if (mf && hwMode) av_dict_set(o, "hw_encoding", "1", 0);   // without it FFmpeg takes Windows' software encoder
+    if (venc == "libx264") av_dict_set(o, "x264-params", "scenecut=0", 0);   // the GOP the user set, not one the scene cuts choose
+    if (venc == "libx265") av_dict_set(o, "x265-params", rc == RateControl::Cbr ? "log-level=error:scenecut=0:strict-cbr=1" : "log-level=error:scenecut=0", 0);
+    return true;
+}
+
+int sendToEncoder(AVCodecContext* cx, const AVFrame* f, AVPacket* pk, const std::function<void(AVPacket*)>& take) {
+    auto drain = [&] {   // the packets that are ready: AVERROR(EAGAIN) when it needs more time or pictures, AVERROR_EOF at the end
+        int r;
+        while ((r = avcodec_receive_packet(cx, pk)) >= 0) { take(pk); av_packet_unref(pk); }
+        return r;
+    };
+    int r = avcodec_send_frame(cx, f);
+    for (int waited = 0; r == AVERROR(EAGAIN) && waited < 2000; waited++) {
+        const int d = drain();
+        if (d != AVERROR(EAGAIN)) return d;
+        r = avcodec_send_frame(cx, f);
+        if (r == AVERROR(EAGAIN)) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    if (r < 0) return r;
+    if (f) { const int d = drain(); return d == AVERROR(EAGAIN) || d == AVERROR_EOF ? 0 : d; }
+    for (int waited = 0; waited < 5000; waited++) {   // the end: what is still inside the encoder (a hardware one takes its time)
+        const int d = drain();
+        if (d == AVERROR_EOF) return 0;
+        if (d != AVERROR(EAGAIN)) return d;
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    return AVERROR(EAGAIN);
 }
 
 const char* codecName(Codec c) {
@@ -134,20 +283,43 @@ const char* audioCodecName(AudioCodec c) {
     }
 }
 
-const std::vector<EncoderInfo>& videoEncoders() {
-    static const std::vector<EncoderInfo> list = [] {
-        std::vector<EncoderInfo> v;
+namespace {
+struct VideoProbe {
+    std::vector<EncoderInfo> list;
+    std::vector<EncoderProblem> problems;
+};
+const VideoProbe& videoProbe() {
+    static const VideoProbe probe = [] {
+        VideoProbe p;
         for (const Candidate& k : kVideo) {
             const AVCodec* c = avcodec_find_encoder_by_name(k.name);
-            if (!c || !videoOpens(c)) continue;
+            if (!c) continue;   // not in this FFmpeg
+            bool hw = k.hw;
+            std::string why = tryVideo(c, hw);
+            if (!why.empty() && isMf(k.name)) {   // no hardware encoder behind Media Foundation: Windows' own
+                p.problems.push_back({std::string(k.name) + " (hardware)", why});
+                hw = false;
+                why = tryVideo(c, false);
+            }
+            if (!why.empty()) { p.problems.push_back({k.name, why}); continue; }
             EncoderInfo e;
-            e.name = k.name; e.codec = k.codec; e.hardware = k.hw;
-            e.label = std::string(codecName(k.codec)) + " (" + k.name + ")";
-            v.push_back(e);
+            e.name = k.name; e.codec = k.codec; e.hardware = hw;
+            e.label = std::string(codecName(k.codec)) + " (" + k.name + (isMf(k.name) ? (hw ? ", hardware" : ", software") : "") + ")";
+            p.list.push_back(e);
         }
-        return v;
+        return p;
     }();
-    return list;
+    return probe;
+}
+} // namespace
+
+const std::vector<EncoderInfo>& videoEncoders() { return videoProbe().list; }
+const std::vector<EncoderProblem>& videoEncoderProblems() { return videoProbe().problems; }
+
+bool encoderHardware(const std::string& name) {
+    for (const EncoderInfo& e : videoEncoders()) if (e.name == name) return e.hardware;
+    for (const Candidate& k : kVideo) if (name == k.name) return k.hw;
+    return false;
 }
 
 const std::vector<EncoderInfo>& audioEncoders() {

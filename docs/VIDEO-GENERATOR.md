@@ -161,12 +161,17 @@ A 7 MHz channel carries 7/8 of these, a 6 MHz channel 6/8. The **Digital Televis
 The window lists only the encoders that really work on this computer: each one is tried when the window first opens. MPEG-2 video is
 always there and is used when the chosen encoder is missing.
 
-- The FFmpeg that comes with the OnAir packages is built under the LGPL and has MPEG-2 video, MPEG-1 Layer II and AAC. H.264 and H.265 are
-  shown greyed out with "not in this FFmpeg".
-- OnAir built against the system's FFmpeg (most Linux distributions) usually has libx264 and libx265 as well, and AC-3.
+- The FFmpeg in the Linux and macOS packages is built under the LGPL and has MPEG-2 video, MPEG-1 Layer II, AAC and AC-3 only. The Windows
+  package has MPEG-2 video, MPEG-1 Layer II, AAC and AC-3, and H.264 and H.265 through Windows Media Foundation: the graphics card's
+  encoder when it has one, else Windows' own (H.265 needs the HEVC Video Extensions from the Microsoft Store).
+- OnAir built against the system's FFmpeg (most Linux distributions, MSYS2 on Windows) usually has libx264 and libx265 as well, and AC-3.
 - Hardware encoders (NVIDIA NVENC, Intel Quick Sync, AMD AMF, Apple VideoToolbox, Windows Media Foundation) are listed when the build
-  has them and the hardware is there. Preset, latency tuning and CRF are x264 / x265 options; they are greyed out for other encoders.
-  VAAPI encoders are not offered: they need the pictures on the GPU.
+  has them and the hardware is there: each one encodes a few pictures as a trial. Preset, latency tuning and CRF are x264 / x265
+  options; they are greyed out for other encoders. VAAPI encoders are not offered: they need the pictures on the GPU.
+- When an encoder or a whole codec is missing, an orange **(!)** appears next to the Video codec list. Hover it to see which hardware
+  encoders are not available and why (the graphics card or driver they need, and FFmpeg's own message).
+- If an encoder refuses the profile or B-frames at Start, it starts once more without them and the status line shows an orange
+  "(simplified)"; hover it for the reason.
 
 ## Overlay
 

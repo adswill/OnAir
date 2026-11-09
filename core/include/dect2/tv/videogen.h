@@ -52,6 +52,7 @@ struct GenStats {
     double kbps = 0;                          // measured TS rate
     int lateFrames = 0;                       // live: frames the encoder was too slow for
     std::string videoEncoder, audioEncoder;   // the FFmpeg encoders actually used
+    std::string notice;                       // the video encoder had to be opened without the profile / B-frames (and why)
     std::string error;
 };
 
