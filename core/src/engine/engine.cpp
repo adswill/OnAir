@@ -618,6 +618,9 @@ void Engine::resetReceiver(int a) {
     case 267: rxWx_[6].reset(); break;
     case 268: rxWx_[7].reset(); break;
     case 269: rxWx_[8].reset(); break;
+    case 270: rxWx_[9].reset(); break;
+    case 271: rxWx_[10].reset(); break;
+    case 272: rxWx_[11].reset(); break;
     case 237: rxFy3m_.reset(); break;
     case 238: rxPh2_.reset(); break;
     case 239: rxPh3_.reset(); break;

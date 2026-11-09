@@ -325,6 +325,9 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 267: return pollStd(rxWx_[6], 267, t, seqs[226], &RxTelemetry::wxsat);   // 6
     case 268: return pollStd(rxWx_[7], 268, t, seqs[227], &RxTelemetry::wxsat);   // 7
     case 269: return pollStd(rxWx_[8], 269, t, seqs[228], &RxTelemetry::wxsat);   // 8
+    case 270: return pollStd(rxWx_[9], 270, t, seqs[229], &RxTelemetry::wxsat);   // 9
+    case 271: return pollStd(rxWx_[10], 271, t, seqs[230], &RxTelemetry::wxsat);   // 10
+    case 272: return pollStd(rxWx_[11], 272, t, seqs[231], &RxTelemetry::wxsat);   // 11
     case 236: return pollStd(rxFy3a_, 236, t, seqs[195], &RxTelemetry::fy3a);   // FY-3 AHRPT (slot 195)
     case 237: return pollStd(rxFy3m_, 237, t, seqs[196], &RxTelemetry::fy3m);   // FY-3 MPT (slot 196)
     case 238: return pollStd(rxPh2_, 238, t, seqs[197], &RxTelemetry::pactorhf);   // PACTOR-II (slot 197)

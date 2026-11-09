@@ -94,7 +94,7 @@ void msuGsVisBuild(int counter, std::vector<uint8_t>& f);
 int awsDecodeCadu(const uint8_t coded[kAwsCoded], uint8_t vcdu[kAwsVcdu]);   // errors corrected, -1 failed
 void awsEncodeCadu(const uint8_t vcdu[kAwsVcdu], uint8_t cadu[kAwsCadu]);
 // VCDU -> space packets (1109 data bytes a frame, first header pointer in the first two)
-struct AwsPacket { int apid = 0, seqFlag = 0; std::vector<uint8_t> data; };
+struct AwsPacket { int apid = 0, seqFlag = 0, seq = 0; std::vector<uint8_t> data; };
 class AwsDemux {
 public:
     std::function<void(const AwsPacket&)> onPacket;
@@ -114,6 +114,23 @@ struct MwrDecoder {
 };
 // one MWR scan cut into space packets (flags 01, 00, 10) as bytes of the packet stream
 void mwrBuildPackets(int line, int vcid, int& seq, std::vector<uint8_t>& stream);
-void awsBuildVcdu(int vcid, uint32_t counter, std::vector<uint8_t>& stream, std::vector<uint8_t>& starts, uint8_t vcdu[kAwsVcdu]);
+// MSG raw: SEVIRI packets on APID 2046 (one per 16 steps of the sequence count, 14392 bytes). Three lines of each of the eleven standard channels per 0.6 s step, nine HRV lines
+// split over the packets 11 to 15. Pictures are reduced for memory: standard channels 2:1 (1917 wide), HRV 3:1.
+constexpr int kSeviriApid = 2046, kSeviriPkt = 14378 + 8, kSeviriNrmWidth = 3834, kSeviriHrvWidth = 5751, kSeviriNrmChannels = 11, kSeviriNrmLines = 4482, kSeviriHrvLines = 13500;
+constexpr int kSeviriNrmOutW = kSeviriNrmWidth / 2, kSeviriHrvOutW = kSeviriHrvWidth / 3, kSeviriNrmOutH = kSeviriNrmLines / 2, kSeviriHrvOutH = kSeviriHrvLines / 3;
+struct SeviriPacket {
+    int chunk = 0;                    // 0 .. 10 standard channel, 11 .. 15 HRV
+    int line = 0;                     // of the disc, from the time in the packet
+    std::vector<uint16_t> px;         // 3 x 3834, 2 x 5751 or 1 x 5751 counts in the order the swap of the focal plane leaves them
+    bool valid = false;
+};
+// scid: 322, 323 or 324 (MSG-2, -3, -4); others carry no known clock
+SeviriPacket seviriDecode(int scid, const AwsPacket& p);
+const char* seviriSatName(int scid);
+bool seviriChannelSwapped(int chunk);
+// The test signal: one step (16 packets) for a scan position, as bytes of space packets (header included)
+void seviriBuildStep(int scid, int line, int& seqCount, std::vector<uint8_t>& out);
+
+void awsBuildVcdu(int vcid, uint32_t counter, std::vector<uint8_t>& stream, std::vector<uint8_t>& starts, uint8_t vcdu[kAwsVcdu], int scid = kAwsScid);
 
 } // namespace dect2::wxsat

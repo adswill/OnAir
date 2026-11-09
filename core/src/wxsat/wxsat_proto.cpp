@@ -20,6 +20,9 @@ const WxProfileInfo& wxProfile(int p) {
         {"arktikardas", "Arktika-M RDAS", kWxFirstFamily + 6, 7865.0, 45e6, 40e6, 30720000.0, "MSU-GS IR", false},
         {"arktikaggak", "Arktika-M GGAK", kWxFirstFamily + 7, 1703.0, 1.024e6, 20e3, 5000.0, "GGAK", false},
         {"awsl", "AWS L-band", kWxFirstFamily + 8, 1707.0, 6e6, 4e6, 1785000.0, "MWR", false},
+        {"msgraw", "MSG Raw Data", kWxFirstFamily + 9, 1686.83, 6e6, 5.5e6, 3750000.0, "SEVIRI", false},
+        {"himawaricast", "HimawariCast", kWxFirstFamily + 10, 1002.0, 6e6, 4.1e6, 2586148.0, "AHI", false},
+        {"geonetcast", "GeoNetCast", kWxFirstFamily + 11, 1070.0, 50e6, 46.8e6, 30000000.0, "files", false},
     };
     return t[p < 0 || p >= kWxNumProfiles ? 0 : p];
 }
@@ -361,6 +364,7 @@ void AwsDemux::take(const uint8_t* p, size_t n) {
         AwsPacket pk;
         pk.apid = (buf_[off] & 7) << 8 | buf_[off + 1];
         pk.seqFlag = buf_[off + 2] >> 6;
+        pk.seq = (buf_[off + 2] & 0x3F) << 8 | buf_[off + 3];
         pk.data.assign(buf_.begin() + (std::ptrdiff_t)off + 6, buf_.begin() + (std::ptrdiff_t)(off + 6 + (size_t)len));
         packets++;
         if (onPacket) onPacket(pk);
@@ -429,10 +433,88 @@ void mwrBuildPackets(int ln, int vcid, int& seq, std::vector<uint8_t>& s) {
     }
 }
 
-void awsBuildVcdu(int vcid, uint32_t counter, std::vector<uint8_t>& s, std::vector<uint8_t>& starts, uint8_t v[kAwsVcdu]) {
+// ------------------------------------------------------------ SEVIRI (MSG raw). Packet layout and the clock of each satellite from SatDump's meteosat_support.
+static bool seviriClock(int scid, double& offset, double& extra) {
+    if (scid == 322) { offset = 18249 + 1310; extra = 6442; return true; }
+    if (scid == 323) { offset = 18249; extra = 34738; return true; }
+    if (scid == 324) { offset = 18249 + 731; extra = 42207; return true; }
+    return false;
+}
+const char* seviriSatName(int scid) { return scid == 322 ? "Meteosat-9 (MSG-2)" : scid == 323 ? "Meteosat-10 (MSG-3)" : scid == 324 ? "Meteosat-11 (MSG-4)" : scid == 321 ? "Meteosat-8 (MSG-1)" : ""; }
+bool seviriChannelSwapped(int chunk) { return chunk == 3 || chunk == 4 || chunk == 8 || chunk == 9 || chunk == 10; }
+
+SeviriPacket seviriDecode(int scid, const AwsPacket& p) {
+    SeviriPacket o;
+    double offset = 0, extra = 0;
+    if (p.apid != kSeviriApid || p.data.size() < 8 + 14377 || !seviriClock(scid, offset, extra)) return o;
+    const uint8_t* d = p.data.data();
+    const uint32_t days = (uint32_t)d[0] << 8 | d[1], ms = (uint32_t)d[2] << 24 | (uint32_t)d[3] << 16 | (uint32_t)d[4] << 8 | d[5];
+    const double t = offset * 86400.0 + days * 18.204444444 * 3600.0 + ms / 65536.0 + extra;
+    o.chunk = p.seq & 15;
+    const double pos = std::fmod(t, 900.0);
+    const int n = o.chunk < 11 ? 3 * kSeviriNrmWidth : o.chunk < 15 ? 2 * kSeviriHrvWidth : kSeviriHrvWidth;
+    o.line = o.chunk < 11 ? (int)(pos / (300.0 / 1494.0)) : (int)(pos / (100.0 / 1494.0)) + (o.chunk - 11) * 2;
+    o.px.resize((size_t)n);
+    const uint8_t* b = d + 8;
+    const size_t bytes = p.data.size() - 8;
+    uint32_t acc = 0; int have = 0; size_t in = 0;
+    for (int i = 0; i < n; i++) {
+        while (have < 10 && in < bytes) { acc = acc << 8 | b[in++]; have += 8; }
+        if (have < 10) { o.px.resize((size_t)i); break; }
+        o.px[(size_t)i] = (uint16_t)(acc >> (have - 10) & 1023);
+        have -= 10;
+    }
+    o.valid = (int)o.px.size() == n;
+    return o;
+}
+
+void seviriBuildStep(int scid, int line, int& seqCount, std::vector<uint8_t>& out) {
+    double offset = 0, extra = 0;
+    if (!seviriClock(scid, offset, extra)) return;
+    // the receiver reads the time modulo 15 minutes: set the milliseconds so that it lands on this scan position (a little past it, against rounding)
+    const double base = std::fmod(offset * 86400.0 + extra, 900.0);
+    const double want = (line + 0.25) * (300.0 / 1494.0);
+    const double s = std::fmod(want - base + 900.0 * 4, 900.0);
+    const uint32_t ms = (uint32_t)std::llround(s * 65536.0);
+    for (int chunk = 0; chunk < 16; chunk++) {
+        const int n = chunk < 11 ? 3 * kSeviriNrmWidth : chunk < 15 ? 2 * kSeviriHrvWidth : kSeviriHrvWidth;
+        std::vector<uint8_t> pay(8 + 14378, 0);
+        pay[0] = 0; pay[1] = 0;
+        pay[2] = (uint8_t)(ms >> 24); pay[3] = (uint8_t)(ms >> 16); pay[4] = (uint8_t)(ms >> 8); pay[5] = (uint8_t)ms;
+        uint32_t acc = 0; int have = 0; size_t w = 8;
+        for (int i = 0; i < n; i++) {
+            int v;
+            if (chunk < 11) {
+                const int k = i / kSeviriNrmWidth, x = i % kSeviriNrmWidth, c = seviriChannelSwapped(chunk) ? 2 - k : k;
+                v = wxTestPixel(chunk, x, (line + c) % 400) & 1023;
+            } else {
+                const int k = i / kSeviriHrvWidth, x = i % kSeviriHrvWidth;
+                v = wxTestPixel(11, x, (line * 3 + (chunk - 11) * 2 + k) % 400) & 1023;
+            }
+            acc = acc << 10 | (uint32_t)v; have += 10;
+            while (have >= 8 && w < pay.size()) { pay[w++] = (uint8_t)(acc >> (have - 8)); have -= 8; }
+        }
+        if (have > 0 && w < pay.size()) pay[w++] = (uint8_t)(acc << (8 - have));
+        const size_t at = out.size();
+        out.resize(at + 6);
+        out[at] = (uint8_t)(0x00 | kSeviriApid >> 8);
+        out[at + 1] = (uint8_t)kSeviriApid;
+        // the low four bits of the count name the chunk
+        const int sc = (seqCount & ~15) | chunk;
+        out[at + 2] = (uint8_t)(0xC0 | (sc >> 8 & 0x3F));
+        out[at + 3] = (uint8_t)sc;
+        const int len = (int)pay.size() - 1;
+        out[at + 4] = (uint8_t)(len >> 8);
+        out[at + 5] = (uint8_t)len;
+        out.insert(out.end(), pay.begin(), pay.end());
+    }
+    seqCount += 16;
+}
+
+void awsBuildVcdu(int vcid, uint32_t counter, std::vector<uint8_t>& s, std::vector<uint8_t>& starts, uint8_t v[kAwsVcdu], int scid) {
     std::memset(v, 0, kAwsVcdu);
-    v[0] = (uint8_t)(0x40 | (kAwsScid >> 2));
-    v[1] = (uint8_t)((kAwsScid & 3) << 6 | (vcid & 63));
+    v[0] = (uint8_t)(0x40 | (scid >> 2));
+    v[1] = (uint8_t)((scid & 3) << 6 | (vcid & 63));
     v[2] = (uint8_t)(counter >> 16); v[3] = (uint8_t)(counter >> 8); v[4] = (uint8_t)counter;
     const size_t n = kAwsVcdu - 8;
     int fhp = 0x7FF;

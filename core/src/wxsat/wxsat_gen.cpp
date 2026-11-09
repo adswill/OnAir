@@ -39,6 +39,8 @@ struct WxsatGenerator::Impl {
     dect2::normal_distribution<float> nd{0.f, 1.f};
     hrpt::CcsdsEncoder enc;
     std::unique_ptr<GgakGenerator> ggak;
+    std::unique_ptr<ModeSynth> dvb;      // HimawariCast, GeoNetCast: the DVB-S2 chain with the test carousel in its transport stream
+    int msgLine = 0, msgSeq = 0;
     int line = 0;
     uint32_t counter = 0, vcCounter = 0;
     int nrz = 0, seq = 0, minor = 0, hirsEl = 0;
@@ -55,11 +57,21 @@ struct WxsatGenerator::Impl {
             ggak = std::make_unique<GgakGenerator>(g);
             return;
         }
+        if (P == kWxHimawariCast || P == kWxGeoNetCast) {
+            SynthConfig sc;
+            sc.modeOpt[0] = 0; sc.modeOpt[3] = 2; sc.modeOpt[4] = 0; sc.modeOpt[5] = 1;     // DVB-S2, roll-off 0.20, normal frames, pilots: the pipelines' settings
+            sc.modeOpt[1] = P == kWxHimawariCast ? 0 : 1;                                   // QPSK 2/3 (MODCOD 5), 8PSK 5/6 (MODCOD 15)
+            sc.modeOpt[2] = P == kWxHimawariCast ? 6 : 9;
+            sc.modeVal[0] = c.fileSymbolRate > 0 ? c.fileSymbolRate : info.symbolRate;
+            sc.snrDb = c.snrDb; sc.cfoHz = c.cfoHz; sc.sroPpm = c.clockPpm;
+            dvb = makeDvbsSynth(sc, c.rate, wxsat::filecastTestTs(P));
+            return;
+        }
         rng.seed(cfg.seed);
-        syms = P == kWxAws ? 2 : 1;
+        syms = (P == kWxAws || P == kWxMsgRaw) ? 2 : 1;
         amp = c.amp;
         if (P == kWxApt) { audioRate = c.rate; if (c.snrDb < 99) sigma = amp / std::sqrt(2 * std::pow(10.0, c.snrDb / 10)) * std::sqrt(c.rate / 40000.0); return; }
-        const double alpha = (P == kWxNoaaHrpt || P == kWxMeteorHrpt || P == kWxNoaaDsb) ? 1.0 : P == kWxAws ? 0.45 : 0.5;
+        const double alpha = (P == kWxNoaaHrpt || P == kWxMeteorHrpt || P == kWxNoaaDsb) ? 1.0 : P == kWxAws ? 0.45 : P == kWxMsgRaw ? 0.35 : 0.5;
         tab.resize((size_t)(2 * kSpan * kTabRes + 1));
         double e = 0;
         for (size_t i = 0; i < tab.size(); i++) {
@@ -139,6 +151,20 @@ struct WxsatGenerator::Impl {
                 while (rdasVis.size() < wxsat::kRdasPayload) { std::vector<uint8_t> f; wxsat::msuGsVisBuild(line * 4 % 17200, f); rdasVis.insert(rdasVis.end(), f.begin(), f.end()); }
                 makeRdasCadu(2, rdasVis);
             }
+            break;
+        }
+        case kWxMsgRaw: {
+            while (awsStream.size() < wxsat::kAwsVcdu - 8) {
+                const size_t before = awsStream.size();
+                wxsat::seviriBuildStep(323, msgLine, msgSeq, awsStream);
+                msgLine += 3;
+                awsStarts.resize(awsStream.size(), 0);
+                for (size_t k = 0; k < 16; k++) awsStarts[before + k * (wxsat::kSeviriPkt + 6)] = 1;
+            }
+            uint8_t v[wxsat::kAwsVcdu], cadu[wxsat::kAwsCadu];
+            wxsat::awsBuildVcdu(0, vcCounter++, awsStream, awsStarts, v, 323);
+            wxsat::awsEncodeCadu(v, cadu);
+            for (int i = 0; i < wxsat::kAwsCadu * 8; i++) { uint8_t a, b; enc.push(cadu[i >> 3] >> (7 - (i & 7)) & 1, a, b); bits.push_back(a); bits.push_back(b); }
             break;
         }
         case kWxAws: {
@@ -242,6 +268,7 @@ struct WxsatGenerator::Impl {
 
     void generate(cf32* out, size_t n) {
         if (P == kWxArktikaGgak) { ggak->generate(out, n); return; }
+        if (dvb) { dvb->generate(out, n); return; }
         if (P == kWxApt) { genApt(out, n); return; }
         genPsk(out, n);
     }
