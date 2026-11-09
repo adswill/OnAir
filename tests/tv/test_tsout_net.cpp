@@ -81,6 +81,9 @@ int main() {
         const auto t0 = Clk::now();
         std::thread ru([&] { uint8_t b[2048]; while (!stop) { const auto n = sockRecv(rx, b, sizeof b); if (n > 0) cap.d.push_back({std::chrono::duration<double>(Clk::now() - t0).count(), std::vector<uint8_t>(b, b + n)}); } });
         std::thread rh([&] { uint8_t b[8192]; sockRecvTimeout(h, 200); while (!stop) { const auto n = sockRecv(h, b, sizeof b); if (n > 0) http.insert(http.end(), b, b + n); else if (n == 0) break; } });
+        // The server takes a viewer on its own thread (up to 100 ms in select, then the request): packets sent before that are not for it.
+        for (int i = 0; i < 500 && out.stats().httpClients < 1; i++) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        CHECK(out.stats().httpClients == 1, "the HTTP viewer was taken (%d)", out.stats().httpClients);
         int cc = 0; size_t sent = 0;
         feed(out, 2.0, 4.0, cc, sent);
         std::this_thread::sleep_for(std::chrono::milliseconds(600));

@@ -82,6 +82,7 @@ struct OutputManager::Impl {
     std::mutex hmu;
     struct Viewer { sock_t s; int blocked = 0; };
     std::vector<Viewer> viewers;
+    std::atomic<int> httpClients{0};   // written under hmu, read by stats() under mu
     uint16_t rtpSeq = 0;
     uint32_t rtpTs = 0;
     Clock::time_point lastDue = Clock::now();
@@ -116,7 +117,7 @@ struct OutputManager::Impl {
             sockClose(viewers[i].s);
             viewers.erase(viewers.begin() + (std::ptrdiff_t)i);
         }
-        st.httpClients = (int)viewers.size();
+        httpClients.store((int)viewers.size());
     }
     void stopHttp() {
         if (hrun.exchange(false) && hthread.joinable()) hthread.join();
@@ -124,7 +125,7 @@ struct OutputManager::Impl {
         std::lock_guard<std::mutex> hl(hmu);
         for (auto& v : viewers) sockClose(v.s);
         viewers.clear();
-        st.httpOpen = false; st.httpClients = 0; st.httpPortInUse = 0;
+        st.httpOpen = false; httpClients.store(0); st.httpPortInUse = 0;
     }
     // mu held
     void startHttp(const OutputConfig& c) {
@@ -175,7 +176,7 @@ struct OutputManager::Impl {
 #endif
                 setNonBlocking(c);
                 std::lock_guard<std::mutex> hl(hmu);
-                if (viewers.size() < 16) { viewers.push_back({c, 0}); st.httpClients = (int)viewers.size(); }
+                if (viewers.size() < 16) { viewers.push_back({c, 0}); httpClients.store((int)viewers.size()); }
                 else sockClose(c);
             }
         });
@@ -443,6 +444,6 @@ void OutputManager::burstDone(double frameSeconds) {
     I.cv.notify_all();
 }
 
-OutputStats OutputManager::stats() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->st; }
+OutputStats OutputManager::stats() const { std::lock_guard<std::mutex> lk(p_->mu); OutputStats s = p_->st; s.httpClients = p_->httpClients.load(); return s; }
 
 } // namespace dect2

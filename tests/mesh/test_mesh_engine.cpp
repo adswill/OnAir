@@ -79,8 +79,16 @@ int main() {
     TuneSettings t2 = t;
     t2.centerHz += 1e6;
     e.retuneReset(t2);
-    std::this_thread::sleep_for(std::chrono::milliseconds(800));
+    // The reset reaches the receiver only after the delivery hold and the blocks already queued, which took more than 800 ms on a loaded macOS
+    // runner; the count only rises without a reset, so waiting longer cannot let a missing reset pass.
     RxTelemetry r2;
+    const auto tr = std::chrono::steady_clock::now();
+    double resetAfter = -1;
+    while (std::chrono::duration<double>(std::chrono::steady_clock::now() - tr).count() < 10) {
+        if (e.latestRx(r2, 0) && r2.mesh.blocksOk < m.blocksOk) { resetAfter = std::chrono::duration<double>(std::chrono::steady_clock::now() - tr).count(); break; }
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+    printf("the retune reached the receiver after %.2f s\n", resetAfter);
     // (the test signal starts again: a frame or two may already be back)
     CHECK(e.latestRx(r2, 0) && r2.seq > last && r2.mesh.blocksOk < m.blocksOk && r2.mesh.nodes.size() >= m.nodes.size(), "after a retune: seq %llu, %llu frames, %zu nodes (%zu before)",
           (unsigned long long)r2.seq, (unsigned long long)r2.mesh.blocksOk, r2.mesh.nodes.size(), m.nodes.size());
