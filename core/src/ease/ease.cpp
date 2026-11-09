@@ -129,6 +129,16 @@ void addDrmHit(std::vector<DrmHit>& h, double khz, float snr) {
     std::sort(h.begin(), h.end(), [](const DrmHit& a, const DrmHit& b) { return a.snrDb > b.snrDb; });
 }
 
+void AlignMeter::update(float db, bool valid) {
+    if (!valid) { level_ = 0; return; }
+    if (level_ == 0) level_ = db; else level_ += 0.25f * (db - level_);
+    if (!havePeak_ || level_ > peak_) { peak_ = level_; havePeak_ = true; }
+}
+
+float AlignMeter::fraction() const { return std::max(0.f, std::min(1.f, level_ / 30.f)); }
+float AlignMeter::peakFraction() const { return havePeak_ ? std::max(0.f, std::min(1.f, peak_ / 30.f)) : 0.f; }
+double AlignMeter::toneHz() const { return 300.0 + 1200.0 * fraction(); }
+
 bool modeNotUsedIn(const std::string& name, const std::string& country) {
     if (country.empty()) return false;
     static const struct { const char* name; const char* usedIn; } k[] = {   // space-separated: broadcasters' published deployments, not complete lists of every small user

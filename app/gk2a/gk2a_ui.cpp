@@ -2,6 +2,7 @@
 // segments, schedule and additional-data text), the receiver details, a "why not decoding" line, and the KMA decryption keys.
 #include "ui/kit/mode_panel.h"
 #include "app.h"
+#include "ease/ease_ui.h"
 #include "panels/gallery.h"
 #include "gfx/gfx.h"
 #include "platform/platform.h"
@@ -314,6 +315,7 @@ void list(App& a) {
 }
 
 void receiver(App& a) {
+    easeui::alignButton(a, "gk2a", a.rx.gk2a.snrDb, live(a) && a.rx.gk2a.snrDb > 0);
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const Gk2aTelemetry& t = telOf(a);
     const int link = t.link;

@@ -509,6 +509,11 @@ void ipSection(App& a, const DvbsTelemetry& t) {
 
 void receiver(App& a) {
     const DvbsTelemetry& t = a.rx.dvbs;
+    {   // aim on the strongest carrier in view, or the locked one
+        float best = t.snrDb; bool any = t.state > 0 && t.snrDb > 0;
+        for (const auto& c : t.carriers) if (c.snrDb > best) { best = c.snrDb; any = true; }
+        easeui::alignButton(a, "dvbs", best, live(a) && any);
+    }
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     {   // the network's own transponder list; the polarisation of a row goes to the warning below (pn 1 vertical, 2 horizontal; the NIT has 0 H, 1 V)
         int pol = -1;

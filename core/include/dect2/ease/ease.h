@@ -77,6 +77,22 @@ bool freqRegionApplies(const std::string& region, const std::string& country);
 struct DrmHit { double khz = 0; float snrDb = 0; };
 void addDrmHit(std::vector<DrmHit>& hits, double khz, float snrDb);
 
+// ---- Dish alignment: the level bar, peak hold and the tone a level maps to.
+class AlignMeter {
+public:
+    void update(float db, bool valid);
+    void resetPeak() { havePeak_ = false; }
+    float level() const { return level_; }
+    bool hasPeak() const { return havePeak_; }
+    float peak() const { return peak_; }
+    float fraction() const;                 // 0..1 of the bar (0 to 30 dB)
+    float peakFraction() const;
+    double toneHz() const;                  // 300 Hz at 0 dB rising to 1500 Hz at 30 dB
+private:
+    float level_ = 0, peak_ = 0;
+    bool havePeak_ = false;
+};
+
 // ---- Regional modes: true when this mode's signals exist only elsewhere. False for every mode without a tag and when the country (ISO code) is unknown.
 bool modeNotUsedIn(const std::string& modeName, const std::string& country);
 

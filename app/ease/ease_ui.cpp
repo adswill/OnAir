@@ -4,6 +4,7 @@
 #include "dect2/inmsat/inmsat_satid.h"
 #include "i18n/i18n.h"
 #include "dect2/ease/repeaters.h"
+#include "dect2/audio/audioout.h"
 #include "dect2/ease/nit.h"
 #include "platform/platform.h"
 #include <filesystem>
@@ -174,6 +175,69 @@ bool nitTransponders(App& a, int kind, bool locked, bool inverted, int& pol) {
         ImGui::EndTable();
     }
     return tuned;
+}
+
+namespace {
+struct AlignSt { bool open = false, tone = false; dect2::ease::AlignMeter m; std::unique_ptr<dect2::AudioOut> out; double phase = 0; float amp = 0; int family = -1; };
+AlignSt gAlign;
+
+void alignStopTone() { if (gAlign.out) { gAlign.out->stop(); gAlign.out.reset(); } gAlign.amp = 0; }
+
+void alignToneTick(App& a, bool wanted) {
+    if (!wanted) { alignStopTone(); return; }
+    if (!gAlign.out) {
+        gAlign.out = std::make_unique<dect2::AudioOut>();
+        if (!gAlign.out->start(48000)) { gAlign.out.reset(); gAlign.tone = false; return; }
+        gAlign.out->setStartThreshold(48000 / 20);
+    }
+    gAlign.out->setVolume(a.volume);
+    gAlign.out->setMuted(a.muted);
+    int n = 48000 / 15 - gAlign.out->bufferedFrames();
+    if (n < 96) return;
+    if (n > 2048) n = 2048;
+    float buf[2048 * 2];
+    const float w = 2.f * 3.14159265f * (float)gAlign.m.toneHz() / 48000.f;
+    for (int i = 0; i < n; i++) {
+        gAlign.amp += 0.004f * (0.15f - gAlign.amp);
+        const float v = gAlign.amp * std::sin((float)gAlign.phase);
+        buf[2 * i] = buf[2 * i + 1] = v;
+        gAlign.phase += w;
+        if (gAlign.phase > 2 * 3.14159265) gAlign.phase -= 2 * 3.14159265;
+    }
+    gAlign.out->write(buf, n);
+}
+}
+
+void alignButton(App& a, const char* id, float db, bool valid) {
+    AlignSt& g = gAlign;
+    if (g.family != a.family) { g.family = a.family; g.open = false; g.tone = false; g.m = dect2::ease::AlignMeter(); }
+    if (ImGui::SmallButton(tr("Align"))) { g.open = !g.open; if (g.open) g.m.resetPeak(); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("A large level bar with peak hold, for pointing a dish."));
+    if (!g.open) { g.tone = false; alignToneTick(a, false); return; }
+    g.m.update(db, valid && a.engine.running());
+    ImGui::SetNextWindowSize(ImVec2(380 * gUi, 0), ImGuiCond_Once);
+    const std::string title = std::string(tr("Align the dish")) + "###align" + id;
+    if (!ImGui::Begin(title.c_str(), &g.open, ImGuiWindowFlags_AlwaysAutoResize)) { ImGui::End(); alignToneTick(a, false); return; }
+    char b[48]; snprintf(b, sizeof b, "%.1f dB", g.m.level());
+    ImGui::PushFont(a.mono, 0);
+    ImGui::TextUnformatted(valid ? b : tr("no signal yet"));
+    ImGui::PopFont();
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    const ImVec2 p = ImGui::GetCursorScreenPos(), size(340 * gUi, 44 * gUi);
+    ImGui::Dummy(size);
+    dl->AddRectFilled(p, ImVec2(p.x + size.x, p.y + size.y), IM_COL32(35, 38, 42, 255), 3 * gUi);
+    dl->AddRectFilled(p, ImVec2(p.x + size.x * g.m.fraction(), p.y + size.y), IM_COL32(90, 200, 120, 255), 3 * gUi);
+    if (g.m.hasPeak()) {
+        const float x = p.x + size.x * g.m.peakFraction();
+        dl->AddLine(ImVec2(x, p.y - 2), ImVec2(x, p.y + size.y + 2), IM_COL32(240, 220, 90, 255), 3 * gUi);
+    }
+    if (g.m.hasPeak()) { ImGui::TextDisabled(tr("Peak %.1f dB"), g.m.peak()); ImGui::SameLine(); }
+    if (ImGui::SmallButton(tr("Reset peak"))) g.m.resetPeak();
+    ImGui::Checkbox(tr("Sound tone"), &g.tone);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Rises with the level, so you can aim without looking at the screen. Off until ticked."));
+    ImGui::TextDisabled("%s", tr("Move the dish in small steps and let the bar settle after each one."));
+    ImGui::End();
+    alignToneTick(a, g.tone && g.open && a.engine.running());
 }
 
 void codecNotice(App& a) {

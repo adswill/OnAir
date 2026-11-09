@@ -21,6 +21,9 @@ void repeaterPicker(App& a, const char* mode);
 // pol then holds the satellite polarisation of that row (0 horizontal, 1 vertical, -1 none).
 bool nitTransponders(App& a, int kind, bool locked, bool inverted, int& pol);
 
+// "Align": a big level bar with peak hold for aiming a dish, from one frame's level in dB over the noise. The tone is off until ticked and is never remembered.
+void alignButton(App& a, const char* id, float db, bool valid);
+
 // A voice mode whose codec is not installed: said on the mode's own screen before the first call, with the install guide; Hide is remembered per mode.
 void codecNotice(App& a);
 

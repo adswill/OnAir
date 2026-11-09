@@ -165,11 +165,27 @@ static void testDrmHits() {
     CHECK(h.size() == 3); CHECK(h[0].khz == 11650); CHECK(h[1].khz == 7325 && h[1].snrDb == 15); CHECK(h[2].khz == 9500);
 }
 
+static void testAlign() {
+    AlignMeter m;
+    CHECK(!m.hasPeak()); CHECK(m.fraction() == 0);
+    for (int i = 0; i < 60; i++) m.update(10, true);
+    CHECK(std::fabs(m.level() - 10) < 0.1); CHECK(std::fabs(m.peak() - 10) < 0.1);
+    for (int i = 0; i < 60; i++) m.update(20, true);
+    const float p = m.peak(); CHECK(p > 19.5f);
+    for (int i = 0; i < 60; i++) m.update(5, true);
+    CHECK(std::fabs(m.level() - 5) < 0.2);
+    CHECK(m.peak() == p);                                 // held
+    m.update(0, false); CHECK(m.level() == 0); CHECK(m.peak() == p);
+    m.resetPeak(); CHECK(!m.hasPeak());
+    m.update(40, true); CHECK(m.fraction() == 1.0f); CHECK(m.toneHz() == 1500.0);
+    m.update(0, false); CHECK(m.toneHz() == 300.0);
+}
+
 int testNavtex();
 int testRepeaters();
 
 int main() {
-    testSonde(); testGeo(); testPreselect(); testFollowAndDsc(); testRegions(); testAutoBand(); testHunt(); testDrmHits();
+    testSonde(); testGeo(); testPreselect(); testFollowAndDsc(); testRegions(); testAutoBand(); testHunt(); testDrmHits(); testAlign();
     fails += testNavtex();
     fails += testRepeaters();
     if (!fails) printf("ease ok\n");
