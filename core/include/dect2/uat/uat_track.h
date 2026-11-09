@@ -1,7 +1,9 @@
 #pragma once
+#include "dect2/uat/uat_nexrad.h"
 #include "uat_proto.h"
 #include "uat_tel.h"
 #include <deque>
+#include <map>
 #include <unordered_map>
 
 namespace dect2 {
@@ -24,6 +26,8 @@ private:
     struct Rec { UatAircraft ac; double last = 0; };
     std::unordered_map<uint32_t, Rec> ac_;
     std::deque<UatFisbProduct> fisb_;
+    struct RadarBlock { UatNexradBlock b; double t = 0; };
+    std::map<uint64_t, RadarBlock> radar_;
     std::deque<UatFrameInfo> log_;
     double expirySec_ = 60;
     bool refValid_ = false;

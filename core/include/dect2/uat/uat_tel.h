@@ -42,6 +42,8 @@ struct UatFisbProduct {
     double timeSec = 0;
 };
 
+struct UatNexradCell { float lat, lon, dLat, dLon; uint8_t value; };   // one bin of a NEXRAD block
+
 struct UatFrameInfo {
     std::string hex;
     std::string kind;            // "ADS-B", "TIS-B", "FIS-B", "UAT"
@@ -72,8 +74,11 @@ struct UatTelemetry {
     double refLat = 0, refLon = 0;
     std::vector<UatAircraft> aircraft;
     std::vector<UatFisbProduct> fisb;
+    std::vector<UatNexradCell> nexrad;   // bins with an echo (value >= 2) of the latest radar blocks, at most kUatNexradMax
     std::vector<UatFrameInfo> framesLog;
 };
+
+constexpr size_t kUatNexradMax = 20000;
 
 inline std::string uatSummary(const UatTelemetry& t) {
     char b[220];

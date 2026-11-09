@@ -71,6 +71,8 @@ bool uatDecodeFrame(const UatRawFrame& raw, UatDecoded& out) {
         for (unsigned i = 0; i < mdb.num_info_frames; i++) {
             const auto& fr = mdb.info_frames[i];
             if (!fr.is_fisb) continue;
+            if (fr.fisb.product_id == 63 || fr.fisb.product_id == 64) uatNexradDecode((uint16_t)fr.fisb.product_id, fr.fisb.data, (size_t)fr.fisb.length, out.nexrad);
+            if (out.kind == UatDecoded::Kind::Fisb) continue;   // the text of the first product stands for the frame
             out.kind = UatDecoded::Kind::Fisb;
             out.fisb.productId = fr.fisb.product_id;
             out.fisb.title = uatFisbProductName(fr.fisb.product_id);
@@ -78,8 +80,8 @@ bool uatDecodeFrame(const UatRawFrame& raw, UatDecoded& out) {
             out.fisb.timeSec = raw.timeSec;
             out.summary = out.fisb.title;
             if (!out.fisb.text.empty()) out.summary += ": " + out.fisb.text.substr(0, 120);
-            return true;
         }
+        if (out.kind == UatDecoded::Kind::Fisb) return true;
         out.kind = UatDecoded::Kind::Other;
         out.summary = "UAT uplink application data";
         return true;
